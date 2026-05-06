@@ -333,7 +333,7 @@ function api(params, onSuccess, onError) {
     return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
   }).join('&');
 
-  fetch(url, { redirect: 'follow' })
+  fetch(url, {   method: 'GET',   mode: 'cors' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data && data.error) {
