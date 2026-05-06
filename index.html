@@ -158,6 +158,7 @@
       </div>
       <div class="error-msg" id="err-s2"></div>
       <button class="btn btn-primary" onclick="continuar_s2()">Continuar →</button>
+      <button class="btn btn-secondary" onclick="volver('s1')">← Volver</button>
     </div>
   </div>
 
@@ -176,6 +177,7 @@
       </div>
       <div class="error-msg" id="err-s3a"></div>
       <button class="btn btn-primary" onclick="continuar_s3a()">Continuar →</button>
+      <button class="btn btn-secondary" onclick="volver('s2')">← Volver</button>
     </div>
   </div>
 
@@ -190,6 +192,7 @@
       </div>
       <div class="error-msg" id="err-s3b"></div>
       <button class="btn btn-primary" onclick="continuar_s3b()">Continuar →</button>
+      <button class="btn btn-secondary" onclick="volver('s3a')">← Volver</button>
     </div>
   </div>
 
@@ -213,6 +216,7 @@
       <textarea class="textarea-otro" id="txt-otro" placeholder="Ej: Tengo casco pero me faltan rodilleras y coderas"></textarea>
       <div class="error-msg" id="err-s3c"></div>
       <button class="btn btn-primary" onclick="continuar_s3c()">Guardar y continuar →</button>
+      <button class="btn btn-secondary" onclick="volver('s3b')">← Volver</button>
     </div>
   </div>
 
@@ -230,6 +234,7 @@
       <div id="lista-fechas"></div>
       <div class="error-msg" id="err-s4"></div>
       <button class="btn btn-primary" onclick="continuar_s4()">Continuar →</button>
+      <button class="btn btn-secondary" onclick="volver('s2')">← Volver</button>
     </div>
   </div>
 
@@ -242,6 +247,7 @@
       <p>Al confirmar te comprometes a asistir al entrenamiento. Si por alguna razón no puedes venir, <strong>avisa lo antes posible</strong> para liberar tu cupo y para no llevarte las cosas de gana.</p>
       <div class="error-msg" id="err-s5"></div>
       <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarReserva()" style="margin-top:14px;">Confirmar mi reserva</button>
+      <button class="btn btn-secondary" onclick="volver('s4')">← Volver</button>
     </div>
   </div>
 
@@ -265,6 +271,10 @@
 </div>
 
 <script>
+
+function volver(pantallaAnterior) {
+  ir(pantallaAnterior);
+}
 // ─── CAMBIA ESTA URL por la del nuevo despliegue de Apps Script ───────────────
 var BACKEND = 'https://script.google.com/macros/s/AKfycbw8SSL0ANdhCQf4SbcVkTgk0De5Jih-yoMp_kUJyTZC_x5CejINnim4VrM_Lof-w2oT/exec';
 // ─────────────────────────────────────────────────────────────────────────────
