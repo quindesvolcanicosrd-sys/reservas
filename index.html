@@ -417,11 +417,11 @@ function continuar_s1() {
 
   ir('s-carga');
 
-  api({
-    action: 'validarPin',
-    nombre: encodeURIComponent(E.nombre),
-    pin: pin
-  },
+api({
+  action: 'validarPin',
+  nombre: E.nombre,
+  pin: pin
+},
 
   function(res) {
 
