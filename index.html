@@ -136,6 +136,48 @@
     </div>
   </div>
 
+ <!-- S1b: PIN -->
+<div class="pantalla" id="s1b">
+  <div class="card">
+    <div class="seccion-label">Verificación</div>
+
+    <h2>Ingresa tu PIN</h2>
+
+    <p>
+      Introduce tu PIN de 4 dígitos para continuar.
+    </p>
+
+    <input
+      type="password"
+      id="input-pin"
+      maxlength="4"
+      inputmode="numeric"
+      pattern="[0-9]*"
+      placeholder="••••"
+      style="
+        width:100%;
+        padding:14px;
+        border:2px solid #e5e5e5;
+        border-radius:8px;
+        font-size:1.2rem;
+        text-align:center;
+        letter-spacing:8px;
+        margin-bottom:14px;
+      "
+    >
+
+    <div class="error-msg" id="err-pin"></div>
+
+    <button class="btn btn-primary" onclick="continuar_pin()">
+      Continuar →
+    </button>
+
+    <button class="btn btn-secondary" onclick="volver('s1')">
+      ← Volver
+    </button>
+  </div>
+</div>
+
   <!-- Carga general -->
   <div class="pantalla" id="s-carga">
     <div class="card"><div class="loader"><div class="spinner"></div><p>Cargando tu información...</p></div></div>
