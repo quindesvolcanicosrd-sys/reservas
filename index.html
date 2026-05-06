@@ -318,7 +318,7 @@ function volver(pantallaAnterior) {
   ir(pantallaAnterior);
 }
 // ─── CAMBIA ESTA URL por la del nuevo despliegue de Apps Script ───────────────
-var BACKEND = 'https://script.google.com/macros/s/AKfycbzySsr_yBUNejYthVQAyt3GqG7ytCXG37gdMnGbmS4eW8gk09SNQcBWQOdaTRETxzmH8g/exec';
+var BACKEND = 'https://script.google.com/macros/s/AKfycbxvuBaIgB-FBQY5gTvDgwqBkkwYvp456QnvcHIZi-nXSQSzSxj89kuZpADDy3blEqZN/exec';
 // ─────────────────────────────────────────────────────────────────────────────
 
 var E = {
@@ -419,7 +419,7 @@ function continuar_s1() {
 
   api({
     action: 'validarPin',
-    nombre: E.nombre,
+    nombre: encodeURIComponent(E.nombre),
     pin: pin
   },
 
