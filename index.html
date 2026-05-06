@@ -393,15 +393,60 @@ function selOp(label, name, val) {
 // S1
 function continuar_s1() {
   var nombre = document.getElementById('sel-nombre').value.trim();
-  if (!nombre) { err('err-s1', 'Por favor selecciona tu nombre.'); return; }
+
+  if (!nombre) {
+    err('err-s1', 'Por favor selecciona tu nombre.');
+    return;
+  }
+
   E.nombre = nombre;
+
+  document.getElementById('input-pin').value = '';
+
+  ir('s1b');
+}
+
+ function continuar_pin() {
+
+  var pin = document.getElementById('input-pin').value.trim();
+
+  if (!/^\d{4}$/.test(pin)) {
+    err('err-pin', 'Ingresa un PIN válido de 4 dígitos.');
+    return;
+  }
+
   ir('s-carga');
-  api({ action: 'getDatosPersona', nombre: nombre }, function(datos) {
-    if (!datos) { ir('s1'); err('err-s1', 'No se encontraron datos para este nombre.'); return; }
-    E.datos = datos;
+
+  api({
+    action: 'validarPin',
+    nombre: E.nombre,
+    pin: pin
+  },
+
+  function(res) {
+
+    if (!res.valido) {
+      ir('s1b');
+      err('err-pin', 'PIN incorrecto.');
+      return;
+    }
+
+    E.datos = res.datos;
+
     renderEquip();
+
     ir('s2');
-  }, function(e) { ir('s1'); err('err-s1', 'Error: ' + e.message); });
+
+  },
+
+  function(e) {
+
+    ir('s1b');
+
+    err('err-pin', 'Error: ' + e.message);
+
+  });
+
 }
 
 // S2
