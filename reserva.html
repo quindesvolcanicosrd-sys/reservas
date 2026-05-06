@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reserva Equipamiento - Mirlxs RD</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f0f0; min-height: 100vh; }
+
+  .header {
+    background: #1a1a1a;
+    padding: 20px;
+    text-align: center;
+  }
+  .header h1 { color: #F97316; font-size: 1.3rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+  .header p { color: #999; font-size: 0.82rem; margin-top: 4px; }
+
+  .contenedor { max-width: 480px; margin: 0 auto; padding: 16px; }
+
+  .paso-indicator { display: flex; justify-content: center; align-items: center; gap: 6px; padding: 16px 0; }
+  .paso-dot { width: 10px; height: 10px; border-radius: 50%; background: #ddd; transition: all 0.3s; }
+  .paso-dot.activo { background: #F97316; transform: scale(1.2); }
+  .paso-dot.completado { background: #22c55e; }
+
+  .pantalla { display: none; }
+  .pantalla.activa { display: block; animation: fadeIn 0.25s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .card { background: white; border-radius: 14px; padding: 24px; margin-bottom: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); }
+
+  .seccion-label { font-size: 0.72rem; font-weight: 700; color: #F97316; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
+  .card h2 { font-size: 1.2rem; color: #1a1a1a; margin-bottom: 14px; line-height: 1.3; }
+  .card p { color: #666; font-size: 0.9rem; line-height: 1.5; margin-bottom: 12px; }
+
+  .select-wrapper { position: relative; margin-bottom: 14px; }
+  select {
+    width: 100%; padding: 13px 40px 13px 14px;
+    border: 2px solid #e5e5e5; border-radius: 8px;
+    font-size: 0.95rem; color: #1a1a1a; background: white;
+    appearance: none; -webkit-appearance: none; cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  select:focus { outline: none; border-color: #F97316; }
+  .select-wrapper::after { content: '▾'; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #F97316; pointer-events: none; font-size: 1rem; }
+
+  .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px; }
+  .btn-primary { background: #F97316; color: white; }
+  .btn-primary:hover { background: #e86510; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-secondary { background: #f5f5f5; color: #555; margin-top: 10px; }
+  .btn-secondary:hover { background: #e8e8e8; }
+
+  .opciones { display: flex; flex-direction: column; gap: 9px; margin-bottom: 14px; }
+  .opcion {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 14px; border: 2px solid #e5e5e5;
+    border-radius: 8px; cursor: pointer; transition: all 0.2s;
+    font-size: 0.92rem; color: #1a1a1a;
+  }
+  .opcion:hover { border-color: #F97316; background: #fff8f4; }
+  .opcion.sel { border-color: #F97316; background: #fff8f4; }
+  .opcion input[type="radio"] { accent-color: #F97316; width: 17px; height: 17px; flex-shrink: 0; }
+
+  .resumen {
+    background: #fafafa; border-left: 4px solid #F97316;
+    border-radius: 0 8px 8px 0; padding: 14px; margin-bottom: 18px;
+  }
+  .resumen .r-titulo { font-weight: 700; color: #1a1a1a; font-size: 0.95rem; margin-bottom: 10px; }
+  .resumen .r-fila { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee; font-size: 0.88rem; }
+  .resumen .r-fila:last-child { border-bottom: none; }
+  .resumen .r-label { color: #888; }
+  .resumen .r-valor { font-weight: 600; color: #1a1a1a; text-align: right; max-width: 60%; }
+
+  .fecha-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 14px; border: 2px solid #e5e5e5;
+    border-radius: 8px; margin-bottom: 9px; cursor: pointer; transition: all 0.2s;
+  }
+  .fecha-item:hover:not(.agotada) { border-color: #F97316; background: #fff8f4; }
+  .fecha-item.sel { border-color: #F97316; background: #fff8f4; }
+  .fecha-item.agotada { opacity: 0.55; cursor: not-allowed; background: #f8f8f8; }
+  .fecha-item input[type="radio"] { accent-color: #F97316; width: 17px; height: 17px; flex-shrink: 0; }
+  .fecha-nombre { font-size: 0.9rem; font-weight: 600; color: #1a1a1a; }
+  .fecha-razon { font-size: 0.78rem; color: #F97316; margin-top: 2px; }
+
+  .loader { text-align: center; padding: 40px 20px; color: #888; }
+  .spinner { width: 38px; height: 38px; border: 3px solid #eee; border-top-color: #F97316; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px; padding: 11px 14px; font-size: 0.88rem; margin-bottom: 12px; display: none; }
+
+  .textarea-otro { width: 100%; padding: 10px 12px; border: 2px solid #e5e5e5; border-radius: 8px; font-size: 0.88rem; margin-top: 8px; resize: vertical; min-height: 75px; display: none; font-family: inherit; }
+  .textarea-otro:focus { outline: none; border-color: #F97316; }
+
+  .exito-icon { font-size: 3.5rem; text-align: center; margin-bottom: 14px; }
+  .exito-titulo { font-size: 1.3rem; font-weight: 800; color: #1a1a1a; text-align: center; margin-bottom: 12px; }
+  .exito-texto { color: #666; text-align: center; line-height: 1.6; font-size: 0.92rem; }
+  .exito-detalle { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; margin: 16px 0; font-size: 0.88rem; color: #166534; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🛼 Mirlxs Roller Derby Quito</h1>
+  <p>Reserva de equipamiento para entrenamientos</p>
+</div>
+
+<div class="contenedor">
+
+  <div class="paso-indicator">
+    <div class="paso-dot activo" id="dot1"></div>
+    <div class="paso-dot" id="dot2"></div>
+    <div class="paso-dot" id="dot3"></div>
+  </div>
+
+  <!-- S1: Nombre -->
+  <div class="pantalla activa" id="s1">
+    <div class="card">
+      <div class="seccion-label">Paso 1 de 3</div>
+      <h2>Selecciona tu nombre</h2>
+      <p>Elige tu nombre de la lista para ver tu equipamiento asignado.</p>
+      <div class="select-wrapper">
+        <select id="sel-nombre"><option value="">— Elige tu nombre —</option></select>
+      </div>
+      <div class="error-msg" id="err-s1"></div>
+      <button class="btn btn-primary" onclick="continuar_s1()">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- Carga general -->
+  <div class="pantalla" id="s-carga">
+    <div class="card"><div class="loader"><div class="spinner"></div><p>Cargando tu información...</p></div></div>
+  </div>
+
+  <!-- S2: Equipamiento -->
+  <div class="pantalla" id="s2">
+    <div class="card">
+      <div class="seccion-label">Paso 2 de 3 — Equipamiento</div>
+      <h2 id="s2-titulo"></h2>
+      <div class="resumen" id="s2-resumen"></div>
+      <p>¿Es correcta esta información?</p>
+      <div class="opciones" id="s2-opciones">
+        <label class="opcion" onclick="selOp(this,'conf','si')">
+          <input type="radio" name="conf" value="si"> Sí, es correcto
+        </label>
+        <label class="opcion" onclick="selOp(this,'conf','no')">
+          <input type="radio" name="conf" value="no"> No, quiero rectificarlo
+        </label>
+      </div>
+      <div class="error-msg" id="err-s2"></div>
+      <button class="btn btn-primary" onclick="continuar_s2()">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- S3a: Editar — patines -->
+  <div class="pantalla" id="s3a">
+    <div class="card">
+      <div class="seccion-label">Editar equipamiento — 1/3</div>
+      <h2>¿Necesitas patines prestados?</h2>
+      <div class="opciones">
+        <label class="opcion" onclick="selOp(this,'edit-pat','Sí')">
+          <input type="radio" name="edit-pat" value="Sí"> Sí, necesito patines
+        </label>
+        <label class="opcion" onclick="selOp(this,'edit-pat','No')">
+          <input type="radio" name="edit-pat" value="No"> No, tengo mis propios patines
+        </label>
+      </div>
+      <div class="error-msg" id="err-s3a"></div>
+      <button class="btn btn-primary" onclick="continuar_s3a()">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- S3b: Editar — talla -->
+  <div class="pantalla" id="s3b">
+    <div class="card">
+      <div class="seccion-label">Editar equipamiento — 2/3</div>
+      <h2>¿Qué talla necesitas?</h2>
+      <p>Estas son las tallas disponibles en el equipo.</p>
+      <div class="select-wrapper">
+        <select id="sel-talla"><option value="">— Elige una talla —</option></select>
+      </div>
+      <div class="error-msg" id="err-s3b"></div>
+      <button class="btn btn-primary" onclick="continuar_s3b()">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- S3c: Editar — protecciones -->
+  <div class="pantalla" id="s3c">
+    <div class="card">
+      <div class="seccion-label">Editar equipamiento — 3/3</div>
+      <h2>¿Necesitas protecciones?</h2>
+      <p>Protecciones completas incluyen: Casco, Rodilleras, Coderas y Muñequeras.</p>
+      <div class="opciones">
+        <label class="opcion" onclick="selOp(this,'edit-protec','Sí')">
+          <input type="radio" name="edit-protec" value="Sí"> Sí, necesito protecciones completas
+        </label>
+        <label class="opcion" onclick="selOp(this,'edit-protec','No')">
+          <input type="radio" name="edit-protec" value="No"> No, tengo mis propias protecciones
+        </label>
+        <label class="opcion" onclick="selOp(this,'edit-protec','Otro')">
+          <input type="radio" name="edit-protec" value="Otro"> Otro (especifica abajo)
+        </label>
+      </div>
+      <textarea class="textarea-otro" id="txt-otro" placeholder="Ej: Tengo casco pero me faltan rodilleras y coderas"></textarea>
+      <div class="error-msg" id="err-s3c"></div>
+      <button class="btn btn-primary" onclick="continuar_s3c()">Guardar y continuar →</button>
+    </div>
+  </div>
+
+  <!-- Carga fechas -->
+  <div class="pantalla" id="s-carga-fechas">
+    <div class="card"><div class="loader"><div class="spinner"></div><p>Verificando disponibilidad de fechas...</p></div></div>
+  </div>
+
+  <!-- S4: Fecha -->
+  <div class="pantalla" id="s4">
+    <div class="card">
+      <div class="seccion-label">Paso 3 de 3 — Fecha</div>
+      <h2>¿A qué entrenamiento asistirás?</h2>
+      <p>Selecciona la fecha para que te llevemos el equipamiento.</p>
+      <div id="lista-fechas"></div>
+      <div class="error-msg" id="err-s4"></div>
+      <button class="btn btn-primary" onclick="continuar_s4()">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- S5: Confirmar -->
+  <div class="pantalla" id="s5">
+    <div class="card">
+      <div class="seccion-label">Confirmar reserva</div>
+      <h2>Resumen de tu reserva</h2>
+      <div class="resumen" id="s5-resumen"></div>
+      <p>Al confirmar te comprometes a asistir al entrenamiento. Si por alguna razón no puedes venir, <strong>avisa lo antes posible</strong> para liberar tu cupo y para no llevarte las cosas de gana.</p>
+      <div class="error-msg" id="err-s5"></div>
+      <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarReserva()" style="margin-top:14px;">🛼 Confirmar mi reserva</button>
+    </div>
+  </div>
+
+  <!-- Carga confirmar -->
+  <div class="pantalla" id="s-carga-conf">
+    <div class="card"><div class="loader"><div class="spinner"></div><p>Guardando tu reserva...</p></div></div>
+  </div>
+
+  <!-- S6: Éxito -->
+  <div class="pantalla" id="s6">
+    <div class="card">
+      <div class="exito-icon">🎉</div>
+      <div class="exito-titulo">¡Tu reserva está confirmada!</div>
+      <div class="exito-detalle" id="s6-detalle"></div>
+      <div class="exito-texto">
+        Si por alguna razón no puedes venir al entrenamiento, avisa lo antes posible así liberamos tu cupo para alguien más y tampoco te llevamos las cosas de gana. ¡Nos vemos en la pista! 🛼
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── CAMBIA ESTA URL por la del nuevo despliegue de Apps Script ───────────────
+var BACKEND = 'https://script.google.com/macros/s/TU_DEPLOYMENT_ID/exec';
+// ─────────────────────────────────────────────────────────────────────────────
+
+var E = {
+  nombre: '', datos: null,
+  conf: '', editPat: '', editTalla: '', editProtec: '',
+  fecha: ''
+};
+
+// Helper: llama al backend con fetch
+function api(params, onSuccess, onError) {
+  var url = BACKEND + '?' + Object.keys(params).map(function(k) {
+    return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+  }).join('&');
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data && data.error) {
+        onError({ message: data.error });
+      } else {
+        onSuccess(data);
+      }
+    })
+    .catch(function(e) { onError(e); });
+}
+
+window.onload = function() {
+  api({ action: 'getNombres' }, function(nombres) {
+    var sel = document.getElementById('sel-nombre');
+    nombres.forEach(function(n) {
+      var o = document.createElement('option');
+      o.value = o.textContent = n;
+      sel.appendChild(o);
+    });
+  }, function(e) {
+    err('err-s1', 'Error al cargar nombres: ' + e.message);
+  });
+};
+
+// Navegación
+function ir(id) {
+  document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
+  document.getElementById(id).classList.add('activa');
+  window.scrollTo(0, 0);
+  var pasos = { s1:1, 's-carga':1, s2:2, s3a:2, s3b:2, s3c:2, 's-carga-fechas':3, s4:3, s5:3, 's-carga-conf':3, s6:3 };
+  var p = pasos[id] || 1;
+  for (var i = 1; i <= 3; i++) {
+    var d = document.getElementById('dot'+i);
+    d.className = 'paso-dot' + (i < p ? ' completado' : i === p ? ' activo' : '');
+  }
+}
+
+function err(id, msg) {
+  var el = document.getElementById(id);
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(function() { el.style.display = 'none'; }, 5000);
+}
+
+function selOp(label, name, val) {
+  document.querySelectorAll('input[name="'+name+'"]').forEach(function(r) {
+    r.closest('.opcion').classList.remove('sel');
+  });
+  label.classList.add('sel');
+  if (name === 'conf') E.conf = val;
+  if (name === 'edit-pat') E.editPat = val;
+  if (name === 'edit-protec') {
+    E.editProtec = val;
+    document.getElementById('txt-otro').style.display = val === 'Otro' ? 'block' : 'none';
+  }
+}
+
+// S1
+function continuar_s1() {
+  var nombre = document.getElementById('sel-nombre').value.trim();
+  if (!nombre) { err('err-s1', 'Por favor selecciona tu nombre.'); return; }
+  E.nombre = nombre;
+  ir('s-carga');
+  api({ action: 'getDatosPersona', nombre: nombre }, function(datos) {
+    if (!datos) { ir('s1'); err('err-s1', 'No se encontraron datos para este nombre.'); return; }
+    E.datos = datos;
+    renderEquip();
+    ir('s2');
+  }, function(e) { ir('s1'); err('err-s1', 'Error: ' + e.message); });
+}
+
+// S2
+function renderEquip() {
+  var d = E.datos;
+  var pat = d.necesitaPatines, tal = d.talla, pro = d.necesitaProtecciones;
+  var titulos = {
+    '00': '✅ No necesitas equipamiento prestado',
+    '10': '🛼 Necesitas patines, pero no protecciones',
+    '01': '🛡️ No necesitas patines, pero sí protecciones',
+    '11': '🛼🛡️ Necesitas patines y protecciones'
+  };
+  var k = (pat.toLowerCase() !== 'no' ? '1' : '0') + (pro.toLowerCase() !== 'no' ? '1' : '0');
+  document.getElementById('s2-titulo').textContent = titulos[k] || 'Tu equipamiento';
+  var h = '<div class="r-titulo">Detalle</div>';
+  h += fila('¿Necesita patines?', pat);
+  if (tal) h += fila('Talla', tal);
+  h += fila('¿Necesita protecciones?', pro);
+  document.getElementById('s2-resumen').innerHTML = h;
+}
+
+function fila(label, val) {
+  return '<div class="r-fila"><span class="r-label">'+label+'</span><span class="r-valor">'+val+'</span></div>';
+}
+
+function continuar_s2() {
+  if (!E.conf) { err('err-s2', 'Por favor selecciona una opción.'); return; }
+  if (E.conf === 'si') {
+    cargarFechas();
+  } else {
+    E.editPat = ''; E.editTalla = ''; E.editProtec = '';
+    document.querySelectorAll('input[name="edit-pat"], input[name="edit-protec"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
+    document.getElementById('txt-otro').style.display = 'none';
+    ir('s3a');
+  }
+}
+
+// S3a
+function continuar_s3a() {
+  if (!E.editPat) { err('err-s3a', 'Por favor selecciona una opción.'); return; }
+  if (E.editPat === 'Sí') {
+    api({ action: 'getTallasDisponibles' }, function(tallas) {
+      var sel = document.getElementById('sel-talla');
+      sel.innerHTML = '<option value="">— Elige una talla —</option>';
+      tallas.forEach(function(t) { var o = document.createElement('option'); o.value = o.textContent = t; sel.appendChild(o); });
+      ir('s3b');
+    }, function(e) { err('err-s3a', 'Error: ' + e.message); });
+  } else {
+    E.editTalla = '';
+    ir('s3c');
+  }
+}
+
+// S3b
+function continuar_s3b() {
+  var t = document.getElementById('sel-talla').value;
+  if (!t) { err('err-s3b', 'Por favor selecciona una talla.'); return; }
+  E.editTalla = t;
+  ir('s3c');
+}
+
+// S3c
+function continuar_s3c() {
+  if (!E.editProtec) { err('err-s3c', 'Por favor selecciona una opción.'); return; }
+  var protecFinal = E.editProtec;
+  if (protecFinal === 'Otro') {
+    var txt = document.getElementById('txt-otro').value.trim();
+    if (!txt) { err('err-s3c', 'Por favor describe qué necesitas.'); return; }
+    protecFinal = txt;
+  }
+  api({
+    action: 'actualizarEquipamientoPersona',
+    nombre: E.nombre,
+    necesitaPatines: E.editPat,
+    talla: E.editTalla,
+    necesitaProtecciones: protecFinal
+  }, function() {
+    E.datos.necesitaPatines      = E.editPat;
+    E.datos.talla                = E.editTalla;
+    E.datos.necesitaProtecciones = protecFinal;
+    E.conf = '';
+    document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
+    renderEquip();
+    ir('s2');
+  }, function(e) { err('err-s3c', 'Error al guardar: ' + e.message); });
+}
+
+// S4
+function cargarFechas() {
+  ir('s-carga-fechas');
+  var d = E.datos;
+  var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
+  api({
+    action: 'getFechasDisponibles',
+    nombre: E.nombre,
+    talla: talla,
+    necesitaProtecciones: d.necesitaProtecciones
+  }, function(fechas) {
+    var disponibles = fechas.filter(function(f) { return f.disponible; });
+    var html = '';
+    if (fechas.length === 0) {
+      html = '<p style="color:#888;text-align:center;">No hay fechas disponibles.</p>';
+    } else {
+      fechas.forEach(function(f) {
+        if (f.disponible) {
+          html += '<div class="fecha-item" onclick="selFecha(this,\'' + f.fecha.replace(/'/g,"\\'") + '\')">' +
+            '<input type="radio" name="fecha" value="' + f.fecha + '">' +
+            '<div><div class="fecha-nombre">' + f.fecha + '</div></div></div>';
+        } else {
+          html += '<div class="fecha-item agotada">' +
+            '<div><div class="fecha-nombre">' + f.fecha + '</div>' +
+            '<div class="fecha-razon">⚠ ' + f.razon + '</div></div></div>';
+        }
+      });
+    }
+    document.getElementById('lista-fechas').innerHTML = html;
+    if (disponibles.length === 0) {
+      err('err-s4', 'No hay cupos disponibles actualmente. Puedes volver a revisar más tarde.');
+    }
+    ir('s4');
+  }, function(e) { ir('s2'); err('err-s2', 'Error al verificar fechas: ' + e.message); });
+}
+
+function selFecha(el, fecha) {
+  document.querySelectorAll('.fecha-item').forEach(function(f) { f.classList.remove('sel'); });
+  el.classList.add('sel');
+  E.fecha = fecha;
+}
+
+function continuar_s4() {
+  if (!E.fecha) { err('err-s4', 'Por favor selecciona una fecha.'); return; }
+  var d = E.datos;
+  var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
+  var h = '<div class="r-titulo">Tu reserva</div>';
+  h += fila('Nombre', E.nombre);
+  h += fila('Fecha', E.fecha);
+  h += fila('Patines', d.necesitaPatines + (talla ? ' — Talla ' + talla : ''));
+  h += fila('Protecciones', d.necesitaProtecciones);
+  document.getElementById('s5-resumen').innerHTML = h;
+  ir('s5');
+}
+
+// S5
+function confirmarReserva() {
+  var btn = document.getElementById('btn-confirmar');
+  btn.disabled = true;
+  ir('s-carga-conf');
+  var d = E.datos;
+  var talla  = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
+  var protec = d.necesitaProtecciones.toLowerCase() !== 'no' ? d.necesitaProtecciones : '';
+  api({
+    action: 'guardarReserva',
+    nombre: E.nombre,
+    fecha: E.fecha,
+    talla: talla,
+    protecciones: protec
+  }, function(res) {
+    if (res.exito) {
+      document.getElementById('s6-detalle').textContent =
+        E.nombre + ' — ' + E.fecha + (talla ? ' — Patines talla ' + talla : '') + (protec ? ' — Con protecciones' : '');
+      ir('s6');
+    } else {
+      ir('s5'); btn.disabled = false;
+      err('err-s5', res.mensaje);
+    }
+  }, function(e) {
+    ir('s5'); btn.disabled = false;
+    err('err-s5', 'Error al guardar: ' + e.message);
+  });
+}
+</script>
+</body>
+</html>
