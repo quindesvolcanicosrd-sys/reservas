@@ -765,6 +765,9 @@ function continuar_pago() {
     err('err-pago', 'Debes confirmar que realizaste el pago.');
     return;
   }
+  var btn = document.getElementById('btn-confirmar');
+  btn.disabled = false;
+  btn.textContent = 'Confirmar mi reserva';
   var d = E.datos;
   var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
   var h = '<div class="r-titulo">Tu reserva</div>';
