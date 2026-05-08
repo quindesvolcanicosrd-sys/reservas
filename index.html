@@ -157,6 +157,16 @@
   }
   .btn-cancelar:hover { background: #fee2e2; }
 
+  .datos-seccion { border: 2px solid #e5e5e5; border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+  .datos-seccion-titulo { display: flex; justify-content: space-between; padding: 13px 14px; font-weight: 700; font-size: 0.9rem; cursor: pointer; background: #fafafa; }
+  .datos-seccion-titulo:hover { background: #f0f0f0; }
+  .datos-seccion-body { padding: 14px; display: none; }
+  .datos-seccion-body.abierta { display: block; }
+  .datos-campo { margin-bottom: 11px; }
+  .datos-campo label { display: block; font-size: 0.78rem; color: #888; font-weight: 600; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .datos-campo input, .datos-campo textarea { width: 100%; padding: 10px 12px; border: 2px solid #e5e5e5; border-radius: 8px; font-size: 0.92rem; font-family: inherit; }
+  .datos-campo input:focus, .datos-campo textarea:focus { outline: none; border-color: #F97316; }
+
   .aviso-pendiente {
     background: #fffbeb; border: 1px solid #fde68a;
     border-radius: 8px; padding: 12px 14px;
@@ -246,6 +256,12 @@
         <div class="hb-icon">➕</div>
         <div class="hb-titulo" style="color:#1a1a1a;">Nueva reserva</div>
         <div class="hb-sub">Reserva equipamiento para un entrenamiento</div>
+      </div>
+
+      <div class="home-boton" onclick="irEditarDatos()">
+        <div class="hb-icon">✏️</div>
+        <div class="hb-titulo" style="color:#1a1a1a;">Editar mis datos</div>
+        <div class="hb-sub">Actualiza tu información personal</div>
       </div>
     </div>
   </div>
@@ -431,6 +447,94 @@
         Puedes revisar el estado de tu reserva en cualquier momento entrando a <strong>"Ver mis reservas"</strong>. Si no puedes venir, cancela tu reserva desde ahí para liberar el cupo.
       </div>
       <button class="btn btn-secondary" onclick="irHomeDesdeExito()" style="margin-top:18px;">Ir a mis reservas</button>
+    </div>
+  </div>
+
+<!-- S-DATOS: Editar datos personales -->
+  <div class="pantalla" id="s-datos">
+    <div class="card">
+      <div class="seccion-label">Mis datos</div>
+      <h2>Editar mis datos personales</h2>
+      <p style="font-size:0.83rem;color:#888;margin-bottom:18px;">Si necesitas cambiar un dato que no aparece aquí, contacta a unx administradorx del equipo.</p>
+
+      <!-- Datos generales -->
+      <div class="datos-seccion">
+        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-general')">Datos generales <span>▾</span></div>
+        <div class="datos-seccion-body" id="sec-general">
+          <div class="datos-campo"><label>Nombre Derby</label><input type="text" id="d-nombreDerby"></div>
+          <div class="datos-campo"><label>Número Derby</label><input type="text" id="d-numeroDerby"></div>
+          <div class="datos-campo"><label>Pronombres</label><input type="text" id="d-pronombres"></div>
+          <div class="datos-campo"><label>Dieta / restricciones</label><input type="text" id="d-dieta"></div>
+          <button class="btn btn-primary" style="margin-top:8px;" onclick="guardarSeccion(['nombreDerby','numeroDerby','pronombres','dieta'], this)">Guardar sección</button>
+        </div>
+      </div>
+
+      <!-- Contacto -->
+      <div class="datos-seccion">
+        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-contacto')">Contacto <span>▾</span></div>
+        <div class="datos-seccion-body" id="sec-contacto">
+          <div class="datos-campo"><label>Prefijo</label><input type="text" id="d-prefijo"></div>
+          <div class="datos-campo"><label>Teléfono</label><input type="tel" id="d-telefono"></div>
+          <div class="datos-campo"><label>Email</label><input type="email" id="d-email"></div>
+          <button class="btn btn-primary" style="margin-top:8px;" onclick="guardarSeccion(['prefijo','telefono','email'], this)">Guardar sección</button>
+        </div>
+      </div>
+
+      <!-- Dirección -->
+      <div class="datos-seccion">
+        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-direccion')">Dirección <span>▾</span></div>
+        <div class="datos-seccion-body" id="sec-direccion">
+          <div class="datos-campo"><label>Calle principal</label><input type="text" id="d-callePrincipal"></div>
+          <div class="datos-campo"><label>Calle secundaria</label><input type="text" id="d-calleSecundaria"></div>
+          <div class="datos-campo"><label>Numeración</label><input type="text" id="d-numeracion"></div>
+          <div class="datos-campo"><label>Sector o barrio</label><input type="text" id="d-sector"></div>
+          <div class="datos-campo"><label>Cantón</label><input type="text" id="d-canton"></div>
+          <button class="btn btn-primary" style="margin-top:8px;" onclick="guardarSeccion(['callePrincipal','calleSecundaria','numeracion','sector','canton'], this)">Guardar sección</button>
+        </div>
+      </div>
+
+      <!-- Contacto emergencia 1 -->
+      <div class="datos-seccion">
+        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-emerg1')">Contacto de emergencia 1 <span>▾</span></div>
+        <div class="datos-seccion-body" id="sec-emerg1">
+          <div class="datos-campo"><label>Nombre completo</label><input type="text" id="d-emerg1Nombre"></div>
+          <div class="datos-campo"><label>Relación</label><input type="text" id="d-emerg1Relacion"></div>
+          <div class="datos-campo"><label>Prefijo</label><input type="text" id="d-emerg1Prefijo"></div>
+          <div class="datos-campo"><label>Teléfono</label><input type="tel" id="d-emerg1Telefono"></div>
+          <button class="btn btn-primary" style="margin-top:8px;" onclick="guardarSeccion(['emerg1Nombre','emerg1Relacion','emerg1Prefijo','emerg1Telefono'], this)">Guardar sección</button>
+        </div>
+      </div>
+
+      <!-- Contacto emergencia 2 -->
+      <div class="datos-seccion">
+        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-emerg2')">Contacto de emergencia 2 <span>▾</span></div>
+        <div class="datos-seccion-body" id="sec-emerg2">
+          <div class="datos-campo"><label>Nombre completo</label><input type="text" id="d-emerg2Nombre"></div>
+          <div class="datos-campo"><label>Relación</label><input type="text" id="d-emerg2Relacion"></div>
+          <div class="datos-campo"><label>Prefijo</label><input type="text" id="d-emerg2Prefijo"></div>
+          <div class="datos-campo"><label>Teléfono</label><input type="tel" id="d-emerg2Telefono"></div>
+          <button class="btn btn-primary" style="margin-top:8px;" onclick="guardarSeccion(['emerg2Nombre','emerg2Relacion','emerg2Prefijo','emerg2Telefono'], this)">Guardar sección</button>
+        </div>
+      </div>
+
+      <!-- Salud -->
+      <div class="datos-seccion">
+        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-salud')">Salud <span>▾</span></div>
+        <div class="datos-seccion-body" id="sec-salud">
+          <div class="datos-campo"><label>Enfermedad diagnosticada</label><input type="text" id="d-enfermedad"></div>
+          <div class="datos-campo"><label>¿Presenta alergias?</label><input type="text" id="d-alergias"></div>
+          <div class="datos-campo"><label>Descripción de alergias</label><textarea id="d-alergiasDesc" class="textarea-otro" style="display:block;"></textarea></div>
+          <div class="datos-campo"><label>Antecedentes médicos</label><textarea id="d-antecedentes" class="textarea-otro" style="display:block;"></textarea></div>
+          <div class="datos-campo"><label>¿Toma medicamentos?</label><input type="text" id="d-medicamentos"></div>
+          <div class="datos-campo"><label>Descripción de medicamentos</label><textarea id="d-medicamentosDesc" class="textarea-otro" style="display:block;"></textarea></div>
+          <div class="datos-campo"><label>Tipo de atención médica</label><input type="text" id="d-atencionMedica"></div>
+          <div class="datos-campo"><label>Seguro privado</label><input type="text" id="d-seguro"></div>
+          <div class="datos-campo"><label>Contacto del seguro</label><input type="text" id="d-seguroContacto"></div>
+          <button class="btn btn-primary" style="margin-top:8px;" onclick="guardarSeccion(['enfermedad','alergias','alergiasDesc','antecedentes','medicamentos','medicamentosDesc','atencionMedica','seguro','seguroContacto'], this)">Guardar sección</button>
+        </div>
+      </div>
+
+      <button class="btn btn-secondary" onclick="volver('s-home')" style="margin-top:8px;">← Volver</button>
     </div>
   </div>
 
@@ -820,6 +924,58 @@ function confirmarReserva() {
   }, function(e) {
     ir('s5'); btn.disabled = false;
     err('err-s5', 'Error al guardar: ' + e.message);
+  });
+}
+// ─── EDITAR DATOS ─────────────────────────────────────────────────────────────
+var datosCompletos = {};
+
+function irEditarDatos() {
+  ir('s-carga');
+  api({ action: 'getDatosCompletos', nombre: E.nombre }, function(datos) {
+    if (!datos) { ir('s-home'); alert('No se pudieron cargar tus datos.'); return; }
+    datosCompletos = datos;
+    var campos = ['nombreDerby','numeroDerby','pronombres','dieta','prefijo','telefono','email',
+      'callePrincipal','calleSecundaria','numeracion','sector','canton',
+      'emerg1Nombre','emerg1Relacion','emerg1Prefijo','emerg1Telefono',
+      'emerg2Nombre','emerg2Relacion','emerg2Prefijo','emerg2Telefono',
+      'enfermedad','alergias','alergiasDesc','antecedentes',
+      'medicamentos','medicamentosDesc','atencionMedica','seguro','seguroContacto'];
+    campos.forEach(function(c) {
+      var el = document.getElementById('d-' + c);
+      if (el) el.value = datos[c] || '';
+    });
+    ir('s-datos');
+  }, function(e) { ir('s-home'); alert('Error: ' + e.message); });
+}
+
+function toggleSeccion(id) {
+  document.getElementById(id).classList.toggle('abierta');
+}
+
+function guardarSeccion(campos, btn) {
+  var payload = {};
+  campos.forEach(function(c) {
+    var el = document.getElementById('d-' + c);
+    if (el) payload[c] = el.value.trim();
+  });
+  var textoOriginal = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Guardando...';
+  api({
+    action: 'actualizarDatosPersona',
+    nombre: E.nombre,
+    datos: JSON.stringify(payload)
+  }, function(res) {
+    btn.disabled = false;
+    btn.textContent = res.exito ? '✅ Guardado' : textoOriginal;
+    if (res.exito) {
+      Object.assign(datosCompletos, payload);
+      setTimeout(function() { btn.textContent = textoOriginal; }, 2500);
+    }
+  }, function(e) {
+    btn.disabled = false;
+    btn.textContent = textoOriginal;
+    alert('Error al guardar: ' + e.message);
   });
 }
 </script>
