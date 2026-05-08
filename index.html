@@ -42,6 +42,7 @@
     transition: border-color 0.2s;
   }
   select:focus { outline: none; border-color: #F97316; }
+  select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; }
   .select-wrapper::after { content: '▾'; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #F97316; pointer-events: none; font-size: 1rem; }
 
   .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -97,6 +98,71 @@
   .exito-titulo { font-size: 1.3rem; font-weight: 800; color: #1a1a1a; text-align: center; margin-bottom: 12px; }
   .exito-texto { color: #666; text-align: center; line-height: 1.6; font-size: 0.92rem; }
   .exito-detalle { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; margin: 16px 0; font-size: 0.88rem; color: #166534; text-align: center; }
+
+  /* Home screen */
+  .home-boton {
+    border: 2px solid #e5e5e5; border-radius: 12px; padding: 20px;
+    margin-bottom: 12px; cursor: pointer; transition: all 0.2s;
+    text-align: center;
+  }
+  .home-boton:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+  .home-boton.principal { border-color: #F97316; background: #fff8f4; }
+  .home-boton.principal:hover { background: #fff0e6; }
+  .home-boton .hb-icon { font-size: 2rem; margin-bottom: 6px; }
+  .home-boton .hb-titulo { font-weight: 800; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .home-boton.principal .hb-titulo { color: #F97316; }
+  .home-boton .hb-sub { font-size: 0.83rem; color: #888; }
+
+  /* Pago screen */
+  .pago-metodo {
+    border: 2px solid #e5e5e5; border-radius: 10px;
+    padding: 14px; margin-bottom: 12px;
+  }
+  .pago-header {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 700; font-size: 0.95rem; color: #1a1a1a;
+    margin-bottom: 10px;
+  }
+  .pago-icon { font-size: 1.3rem; }
+  .pago-fila { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.85rem; border-bottom: 1px solid #f0f0f0; }
+  .pago-fila:last-child { border-bottom: none; }
+  .pago-label { color: #999; }
+  .pago-valor { font-weight: 600; color: #1a1a1a; }
+  .chk-pago-label {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: #fffbeb; border: 1.5px solid #fde68a;
+    border-radius: 8px; padding: 13px; margin: 16px 0;
+    cursor: pointer; font-size: 0.88rem; color: #1a1a1a; line-height: 1.4;
+  }
+  .chk-pago-label input { width: 18px; height: 18px; accent-color: #F97316; flex-shrink: 0; margin-top: 1px; }
+
+  /* Mis reservas */
+  .reserva-card {
+    border: 2px solid #e5e5e5; border-radius: 10px;
+    padding: 14px; margin-bottom: 10px;
+  }
+  .reserva-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .reserva-fecha { font-weight: 700; font-size: 0.95rem; color: #1a1a1a; }
+  .badge { padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+  .badge-pendiente { background: #fffbeb; color: #d97706; }
+  .badge-confirmada { background: #f0fdf4; color: #16a34a; }
+  .badge-cancelada { background: #fef2f2; color: #dc2626; }
+  .reserva-detalle { font-size: 0.85rem; color: #666; margin-bottom: 4px; }
+  .btn-cancelar {
+    width: 100%; margin-top: 10px; padding: 9px;
+    background: #fef2f2; color: #dc2626;
+    border: 1.5px solid #fecaca; border-radius: 7px;
+    font-size: 0.85rem; font-weight: 700; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-cancelar:hover { background: #fee2e2; }
+
+  .aviso-pendiente {
+    background: #fffbeb; border: 1px solid #fde68a;
+    border-radius: 8px; padding: 12px 14px;
+    font-size: 0.85rem; color: #92400e;
+    margin-bottom: 14px; text-align: center;
+  }
 </style>
 </head>
 <body>
@@ -109,25 +175,26 @@
 <div class="contenedor">
 
   <div class="paso-indicator">
-    <div class="paso-dot activo" id="dot1"></div>
+    <div class="paso-dot" id="dot1"></div>
     <div class="paso-dot" id="dot2"></div>
     <div class="paso-dot" id="dot3"></div>
+    <div class="paso-dot" id="dot4"></div>
   </div>
 
   <!-- S1: Nombre -->
   <div class="pantalla activa" id="s1">
     <div class="card">
-      <div class="seccion-label">Paso 1 de 3</div>
+      <div class="seccion-label">Inicio</div>
       <h2>Selecciona tu nombre</h2>
-<p>Elige tu nombre de la lista.</p>
-<p style="font-size:0.85rem; color:#666; margin-bottom:14px;">
-  Si tu nombre no está en la lista debes inscribirte al equipo utilizando 
-  <a href="https://docs.google.com/forms/d/e/1FAIpQLScfZRUBRizzsnNu0tQrtYSB-AI4HIknBWstGzJHPvTXz0JPcQ/viewform?usp=header" 
-     target="_blank" 
-     style="color:#F97316; font-weight:600; text-decoration:none;">
-     este formulario
-  </a>.
-</p>
+      <p>Elige tu nombre de la lista.</p>
+      <p style="font-size:0.85rem; color:#666; margin-bottom:14px;">
+        Si tu nombre no está en la lista debes inscribirte al equipo utilizando
+        <a href="https://docs.google.com/forms/d/e/1FAIpQLScfZRUBRizzsnNu0tQrtYSB-AI4HIknBWstGzJHPvTXz0JPcQ/viewform?usp=header"
+           target="_blank"
+           style="color:#F97316; font-weight:600; text-decoration:none;">
+           este formulario
+        </a>.
+      </p>
       <div class="select-wrapper">
         <select id="sel-nombre" disabled style="color:#aaa;"><option value="">⏳ Cargando nombres...</option></select>
       </div>
@@ -136,57 +203,67 @@
     </div>
   </div>
 
- <!-- S1b: PIN -->
-<div class="pantalla" id="s1b">
-  <div class="card">
-    <div class="seccion-label">Verificación</div>
-
-    <h2>Ingresa tu PIN</h2>
-
-    <p>
-      Introduce tu PIN de 4 dígitos para continuar.
-    </p>
-
-    <input
-      type="password"
-      id="input-pin"
-      maxlength="4"
-      inputmode="numeric"
-      pattern="[0-9]*"
-      placeholder="••••"
-      style="
-        width:100%;
-        padding:14px;
-        border:2px solid #e5e5e5;
-        border-radius:8px;
-        font-size:1.2rem;
-        text-align:center;
-        letter-spacing:8px;
-        margin-bottom:14px;
-      "
-    >
-
-    <div class="error-msg" id="err-pin"></div>
-
-    <button class="btn btn-primary" onclick="continuar_pin()">
-      Continuar →
-    </button>
-
-    <button class="btn btn-secondary" onclick="volver('s1')">
-      ← Volver
-    </button>
+  <!-- S1b: PIN -->
+  <div class="pantalla" id="s1b">
+    <div class="card">
+      <div class="seccion-label">Verificación</div>
+      <h2>Ingresa tu PIN</h2>
+      <p>Introduce tu PIN de 4 dígitos para continuar.</p>
+      <input
+        type="password"
+        id="input-pin"
+        maxlength="4"
+        inputmode="numeric"
+        pattern="[0-9]*"
+        placeholder="••••"
+        style="width:100%;padding:14px;border:2px solid #e5e5e5;border-radius:8px;font-size:1.2rem;text-align:center;letter-spacing:8px;margin-bottom:14px;"
+      >
+      <div class="error-msg" id="err-pin"></div>
+      <button class="btn btn-primary" onclick="continuar_pin()">Continuar →</button>
+      <button class="btn btn-secondary" onclick="volver('s1')">← Volver</button>
+    </div>
   </div>
-</div>
 
   <!-- Carga general -->
   <div class="pantalla" id="s-carga">
     <div class="card"><div class="loader"><div class="spinner"></div><p>Cargando tu información...</p></div></div>
   </div>
 
+  <!-- S-HOME: Pantalla principal post-login -->
+  <div class="pantalla" id="s-home">
+    <div class="card" style="text-align:center; padding-bottom:28px;">
+      <div style="font-size:2.8rem; margin-bottom:10px;">🛼</div>
+      <h2 id="home-saludo" style="text-align:center; margin-bottom:6px;"></h2>
+      <p style="margin-bottom:22px;">¿Qué quieres hacer hoy?</p>
+
+      <div class="home-boton principal" onclick="irMisReservas()">
+        <div class="hb-icon">📋</div>
+        <div class="hb-titulo">Ver mis reservas</div>
+        <div class="hb-sub">Revisa el estado o cancela una reserva</div>
+      </div>
+
+      <div class="home-boton" onclick="irNuevaReserva()">
+        <div class="hb-icon">➕</div>
+        <div class="hb-titulo" style="color:#1a1a1a;">Nueva reserva</div>
+        <div class="hb-sub">Reserva equipamiento para un entrenamiento</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- S-MISRESERVAS: Ver y gestionar reservas -->
+  <div class="pantalla" id="s-misreservas">
+    <div class="card">
+      <div class="seccion-label">Mis reservas</div>
+      <h2 id="misres-titulo">Tus reservas</h2>
+      <div id="misres-lista"></div>
+      <button class="btn btn-secondary" onclick="volver('s-home')" style="margin-top:4px;">← Volver</button>
+    </div>
+  </div>
+
   <!-- S2: Equipamiento -->
   <div class="pantalla" id="s2">
     <div class="card">
-      <div class="seccion-label">Paso 2 de 3 — Equipamiento</div>
+      <div class="seccion-label">Paso 1 de 4 — Equipamiento</div>
       <h2 id="s2-titulo"></h2>
       <div class="resumen" id="s2-resumen"></div>
       <p>¿Es correcta esta información?</p>
@@ -200,7 +277,7 @@
       </div>
       <div class="error-msg" id="err-s2"></div>
       <button class="btn btn-primary" onclick="continuar_s2()">Continuar →</button>
-      <button class="btn btn-secondary" onclick="volver('s1')">← Volver</button>
+      <button class="btn btn-secondary" onclick="volver('s-home')">← Volver</button>
     </div>
   </div>
 
@@ -270,7 +347,7 @@
   <!-- S4: Fecha -->
   <div class="pantalla" id="s4">
     <div class="card">
-      <div class="seccion-label">Paso 3 de 3 — Fecha</div>
+      <div class="seccion-label">Paso 2 de 4 — Fecha</div>
       <h2>¿A qué entrenamiento asistirás?</h2>
       <p>Selecciona la fecha para que te llevemos el equipamiento.</p>
       <div id="lista-fechas"></div>
@@ -280,16 +357,59 @@
     </div>
   </div>
 
+  <!-- S-PAGO: Pantalla de pago -->
+  <div class="pantalla" id="s-pago">
+    <div class="card">
+      <div class="seccion-label">Paso 3 de 4 — Pago</div>
+      <h2>Realiza tu pago</h2>
+      <p>Elige uno de los métodos de pago y transfiere el monto correspondiente antes de continuar.</p>
+
+      <!-- DeUna -->
+      <div class="pago-metodo">
+        <div class="pago-header">
+          <span class="pago-icon">📱</span>
+          DeUna · Banco Pichincha
+        </div>
+        <div class="pago-fila"><span class="pago-label">Cuenta de ahorro</span><span class="pago-valor">7702756890</span></div>
+        <div class="pago-fila"><span class="pago-label">Titular</span><span class="pago-valor">David Santiago Rojas Baez</span></div>
+        <div class="pago-fila"><span class="pago-label">CI</span><span class="pago-valor">1721443180</span></div>
+      </div>
+
+      <!-- Banco Internacional -->
+      <div class="pago-metodo">
+        <div class="pago-header">
+          <span class="pago-icon">🏦</span>
+          Banco Internacional
+        </div>
+        <div class="pago-fila"><span class="pago-label">Tipo</span><span class="pago-valor">Cuenta de ahorros</span></div>
+        <div class="pago-fila"><span class="pago-label">N° de cuenta</span><span class="pago-valor">398027628</span></div>
+        <div class="pago-fila"><span class="pago-label">Titular</span><span class="pago-valor">Victor Del Bono</span></div>
+        <div class="pago-fila"><span class="pago-label">CI</span><span class="pago-valor">1759369331</span></div>
+        <div class="pago-fila"><span class="pago-label">Cel</span><span class="pago-valor">0962773052</span></div>
+      </div>
+
+      <label class="chk-pago-label">
+        <input type="checkbox" id="chk-pago" onchange="toggleBtnPago()">
+        Ya realicé mi pago y entiendo que mi reserva quedará <strong>&nbsp;pendiente</strong>&nbsp; hasta que sea verificada por el equipo.
+      </label>
+
+      <div class="error-msg" id="err-pago"></div>
+      <button class="btn btn-primary" id="btn-pago" onclick="continuar_pago()" disabled>Continuar →</button>
+      <button class="btn btn-secondary" onclick="volver('s4')">← Volver</button>
+    </div>
+  </div>
+
   <!-- S5: Confirmar -->
   <div class="pantalla" id="s5">
     <div class="card">
-      <div class="seccion-label">Confirmar reserva</div>
+      <div class="seccion-label">Paso 4 de 4 — Confirmar</div>
       <h2>Resumen de tu reserva</h2>
       <div class="resumen" id="s5-resumen"></div>
-      <p>Al confirmar te comprometes a asistir al entrenamiento. Si por alguna razón no puedes venir, <strong>avisa lo antes posible</strong> para liberar tu cupo y para no llevarte las cosas de gana.</p>
+      <p>Al confirmar nos avisas que ya realizaste el pago. <strong>Revisaremos tu transferencia</strong> y recibirás una confirmación por correo cuando esté aprobada.</p>
+      <p style="margin-top:10px;">Si por alguna razón no puedes venir, <strong>avisa lo antes posible</strong> para liberar tu cupo.</p>
       <div class="error-msg" id="err-s5"></div>
       <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarReserva()" style="margin-top:14px;">Confirmar mi reserva</button>
-      <button class="btn btn-secondary" onclick="volver('s4')">← Volver</button>
+      <button class="btn btn-secondary" onclick="volver('s-pago')">← Volver</button>
     </div>
   </div>
 
@@ -302,24 +422,23 @@
   <div class="pantalla" id="s6">
     <div class="card">
       <div class="exito-icon">🎉</div>
-      <div class="exito-titulo">¡Tu reserva está confirmada!</div>
+      <div class="exito-titulo">¡Reserva registrada!</div>
       <div class="exito-detalle" id="s6-detalle"></div>
-      <div class="exito-texto">
-        Si por alguna razón no puedes venir al entrenamiento, avisa lo antes posible así liberamos tu cupo para alguien más y tampoco te llevamos las cosas de gana.
+      <div class="aviso-pendiente">
+        ⏳ Tu reserva está <strong>pendiente de verificación de pago</strong>. Recibirás un correo cuando esté confirmada.
       </div>
+      <div class="exito-texto">
+        Puedes revisar el estado de tu reserva en cualquier momento entrando a <strong>"Ver mis reservas"</strong>. Si no puedes venir, cancela tu reserva desde ahí para liberar el cupo.
+      </div>
+      <button class="btn btn-secondary" onclick="irHomeDesdeExito()" style="margin-top:18px;">Ir a mis reservas</button>
     </div>
   </div>
 
 </div>
 
 <script>
-
-function volver(pantallaAnterior) {
-  ir(pantallaAnterior);
-}
-// ─── CAMBIA ESTA URL por la del nuevo despliegue de Apps Script ───────────────
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
 var BACKEND = 'https://script.google.com/macros/s/AKfycbwBVVUoXVLmd2BrpNP0_inCCSYwDvlh4y1mbuUDtG2hQSMEN4ftOv-PhR_u_Tl1ug/exec';
-// ─────────────────────────────────────────────────────────────────────────────
 
 var E = {
   nombre: '', datos: null,
@@ -327,50 +446,66 @@ var E = {
   fecha: ''
 };
 
-// Helper: llama al backend con fetch
+// ─── API ─────────────────────────────────────────────────────────────────────
 function api(params, onSuccess, onError) {
   var url = BACKEND + '?' + Object.keys(params).map(function(k) {
     return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
   }).join('&');
-
-  fetch(url, {   method: 'GET',   mode: 'cors' })
+  fetch(url, { method: 'GET', mode: 'cors' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (data && data.error) {
-        onError({ message: data.error });
-      } else {
-        onSuccess(data);
-      }
+      if (data && data.error) { onError({ message: data.error }); }
+      else { onSuccess(data); }
     })
     .catch(function(e) { onError(e); });
 }
 
+// ─── INIT ────────────────────────────────────────────────────────────────────
 window.onload = function() {
   api({ action: 'getNombres' }, function(nombres) {
     var sel = document.getElementById('sel-nombre');
-sel.innerHTML = '<option value="">— Elige tu nombre —</option>'; sel.disabled = false; sel.style.color = '';
-nombres.forEach(function(n) {
+    sel.innerHTML = '<option value="">— Elige tu nombre —</option>';
+    nombres.forEach(function(n) {
       var o = document.createElement('option');
       o.value = o.textContent = n;
       sel.appendChild(o);
     });
+    sel.disabled = false;
+    sel.style.color = '';
   }, function(e) {
     err('err-s1', 'Error al cargar nombres: ' + e.message);
   });
 };
 
-// Navegación
+// ─── NAVEGACIÓN ──────────────────────────────────────────────────────────────
 function ir(id) {
   document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
   document.getElementById(id).classList.add('activa');
   window.scrollTo(0, 0);
-  var pasos = { s1:1, 's-carga':1, s2:2, s3a:2, s3b:2, s3c:2, 's-carga-fechas':3, s4:3, s5:3, 's-carga-conf':3, s6:3 };
+
+  var sinPasos = ['s1', 's1b', 's-home', 's-misreservas', 's-carga', 's6'];
+  var dotContainer = document.querySelector('.paso-indicator');
+
+  if (sinPasos.indexOf(id) !== -1) {
+    dotContainer.style.display = 'none';
+    return;
+  }
+  dotContainer.style.display = 'flex';
+
+  var pasos = {
+    's2':1, 's3a':1, 's3b':1, 's3c':1,
+    's-carga-fechas':2, 's4':2,
+    's-pago':3,
+    's5':4, 's-carga-conf':4
+  };
   var p = pasos[id] || 1;
-  for (var i = 1; i <= 3; i++) {
+  for (var i = 1; i <= 4; i++) {
     var d = document.getElementById('dot'+i);
     d.className = 'paso-dot' + (i < p ? ' completado' : i === p ? ' activo' : '');
   }
 }
+
+function volver(pantallaAnterior) { ir(pantallaAnterior); }
 
 function err(id, msg) {
   var el = document.getElementById(id);
@@ -391,66 +526,87 @@ function selOp(label, name, val) {
   }
 }
 
-// S1
+// ─── S1: Nombre ──────────────────────────────────────────────────────────────
 function continuar_s1() {
   var nombre = document.getElementById('sel-nombre').value.trim();
-
-  if (!nombre) {
-    err('err-s1', 'Por favor selecciona tu nombre.');
-    return;
-  }
-
+  if (!nombre) { err('err-s1', 'Por favor selecciona tu nombre.'); return; }
   E.nombre = nombre;
-
   document.getElementById('input-pin').value = '';
-
   ir('s1b');
 }
 
- function continuar_pin() {
-
+// ─── S1b: PIN ────────────────────────────────────────────────────────────────
+function continuar_pin() {
   var pin = document.getElementById('input-pin').value.trim();
-
-  if (!/^\d{4}$/.test(pin)) {
-    err('err-pin', 'Ingresa un PIN válido de 4 dígitos.');
-    return;
-  }
-
+  if (!/^\d{4}$/.test(pin)) { err('err-pin', 'Ingresa un PIN válido de 4 dígitos.'); return; }
   ir('s-carga');
-
-api({
-  action: 'validarPin',
-  nombre: E.nombre,
-  pin: pin
-},
-
-  function(res) {
-
-    if (!res.valido) {
-      ir('s1b');
-      err('err-pin', 'PIN incorrecto.');
-      return;
-    }
-
+  api({ action: 'validarPin', nombre: E.nombre, pin: pin }, function(res) {
+    if (!res.valido) { ir('s1b'); err('err-pin', 'PIN incorrecto.'); return; }
     E.datos = res.datos;
-
-    renderEquip();
-
-    ir('s2');
-
-  },
-
-  function(e) {
-
-    ir('s1b');
-
-    err('err-pin', 'Error: ' + e.message);
-
-  });
-
+    document.getElementById('home-saludo').textContent = '¡Hola, ' + E.nombre + '!';
+    ir('s-home');
+  }, function(e) { ir('s1b'); err('err-pin', 'Error: ' + e.message); });
 }
 
-// S2
+// ─── HOME ────────────────────────────────────────────────────────────────────
+function irMisReservas() {
+  ir('s-carga');
+  api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
+    renderMisReservas(reservas);
+    ir('s-misreservas');
+  }, function(e) {
+    ir('s-home');
+    alert('Error al cargar reservas: ' + e.message);
+  });
+}
+
+function irNuevaReserva() {
+  E.conf = '';
+  document.querySelectorAll('input[name="conf"]').forEach(function(r) {
+    r.checked = false; r.closest('.opcion').classList.remove('sel');
+  });
+  renderEquip();
+  ir('s2');
+}
+
+function irHomeDesdeExito() {
+  irMisReservas();
+}
+
+// ─── MIS RESERVAS ────────────────────────────────────────────────────────────
+function renderMisReservas(reservas) {
+  var html = '';
+  if (!reservas || reservas.length === 0) {
+    html = '<p style="text-align:center;color:#888;padding:20px 0;">No tienes reservas todavía.</p>';
+  } else {
+    reservas.forEach(function(r) {
+      var badgeClass = r.estado === 'Confirmada' ? 'badge-confirmada' : r.estado === 'Cancelada' ? 'badge-cancelada' : 'badge-pendiente';
+      var icon = r.estado === 'Confirmada' ? '✅' : r.estado === 'Cancelada' ? '❌' : '⏳';
+      html += '<div class="reserva-card">';
+      html += '<div class="reserva-header">';
+      html += '<span class="reserva-fecha">' + r.fecha + '</span>';
+      html += '<span class="badge ' + badgeClass + '">' + icon + ' ' + r.estado + '</span>';
+      html += '</div>';
+      if (r.talla) html += '<div class="reserva-detalle">🛼 Patines talla ' + r.talla + '</div>';
+      if (r.protecciones) html += '<div class="reserva-detalle">🛡️ ' + r.protecciones + '</div>';
+      if (r.estado !== 'Cancelada') {
+        html += '<button class="btn-cancelar" onclick="cancelarRes(\'' + r.fecha.replace(/'/g, "\\'") + '\')">Cancelar esta reserva</button>';
+      }
+      html += '</div>';
+    });
+  }
+  document.getElementById('misres-lista').innerHTML = html;
+}
+
+function cancelarRes(fecha) {
+  if (!confirm('¿Segura que quieres cancelar tu reserva para el ' + fecha + '?')) return;
+  api({ action: 'cancelarReserva', nombre: E.nombre, fecha: fecha }, function(res) {
+    if (res.exito) { irMisReservas(); }
+    else { alert('Error al cancelar. Por favor intenta de nuevo.'); }
+  }, function(e) { alert('Error: ' + e.message); });
+}
+
+// ─── S2: Equipamiento ────────────────────────────────────────────────────────
 function renderEquip() {
   var d = E.datos;
   var pat = d.necesitaPatines, tal = d.talla, pro = d.necesitaProtecciones;
@@ -479,13 +635,15 @@ function continuar_s2() {
     cargarFechas();
   } else {
     E.editPat = ''; E.editTalla = ''; E.editProtec = '';
-    document.querySelectorAll('input[name="edit-pat"], input[name="edit-protec"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
+    document.querySelectorAll('input[name="edit-pat"], input[name="edit-protec"]').forEach(function(r) {
+      r.checked = false; r.closest('.opcion').classList.remove('sel');
+    });
     document.getElementById('txt-otro').style.display = 'none';
     ir('s3a');
   }
 }
 
-// S3a
+// ─── S3a ─────────────────────────────────────────────────────────────────────
 function continuar_s3a() {
   if (!E.editPat) { err('err-s3a', 'Por favor selecciona una opción.'); return; }
   if (E.editPat === 'Sí') {
@@ -501,7 +659,7 @@ function continuar_s3a() {
   }
 }
 
-// S3b
+// ─── S3b ─────────────────────────────────────────────────────────────────────
 function continuar_s3b() {
   var t = document.getElementById('sel-talla').value;
   if (!t) { err('err-s3b', 'Por favor selecciona una talla.'); return; }
@@ -509,7 +667,7 @@ function continuar_s3b() {
   ir('s3c');
 }
 
-// S3c
+// ─── S3c ─────────────────────────────────────────────────────────────────────
 function continuar_s3c() {
   if (!E.editProtec) { err('err-s3c', 'Por favor selecciona una opción.'); return; }
   var protecFinal = E.editProtec;
@@ -535,7 +693,7 @@ function continuar_s3c() {
   }, function(e) { err('err-s3c', 'Error al guardar: ' + e.message); });
 }
 
-// S4
+// ─── S4: Fechas ──────────────────────────────────────────────────────────────
 function cargarFechas() {
   ir('s-carga-fechas');
   var d = E.datos;
@@ -579,6 +737,23 @@ function selFecha(el, fecha) {
 
 function continuar_s4() {
   if (!E.fecha) { err('err-s4', 'Por favor selecciona una fecha.'); return; }
+  // Reset checkbox al entrar a pago
+  document.getElementById('chk-pago').checked = false;
+  document.getElementById('btn-pago').disabled = true;
+  ir('s-pago');
+}
+
+// ─── S-PAGO ──────────────────────────────────────────────────────────────────
+function toggleBtnPago() {
+  var chk = document.getElementById('chk-pago');
+  document.getElementById('btn-pago').disabled = !chk.checked;
+}
+
+function continuar_pago() {
+  if (!document.getElementById('chk-pago').checked) {
+    err('err-pago', 'Debes confirmar que realizaste el pago.');
+    return;
+  }
   var d = E.datos;
   var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
   var h = '<div class="r-titulo">Tu reserva</div>';
@@ -590,7 +765,7 @@ function continuar_s4() {
   ir('s5');
 }
 
-// S5
+// ─── S5: Confirmar ───────────────────────────────────────────────────────────
 function confirmarReserva() {
   var btn = document.getElementById('btn-confirmar');
   btn.disabled = true;
