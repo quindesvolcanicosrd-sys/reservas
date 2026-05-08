@@ -424,7 +424,7 @@
       <div class="exito-icon">🎉</div>
       <div class="exito-titulo">¡Reserva registrada!</div>
       <div class="exito-detalle" id="s6-detalle"></div>
-      <div class="aviso-pendiente">
+      <div class="aviso-pendiente" id="s6-email-aviso">
         ⏳ Tu reserva está <strong>pendiente de verificación de pago</strong>. Recibirás un correo cuando esté confirmada.
       </div>
       <div class="exito-texto">
@@ -795,8 +795,12 @@ function confirmarReserva() {
     protecciones: protec
   }, function(res) {
     if (res.exito) {
-      document.getElementById('s6-detalle').textContent =
+document.getElementById('s6-detalle').textContent =
         E.nombre + ' — ' + E.fecha + (talla ? ' — Patines talla ' + talla : '') + (protec ? ' — Con protecciones' : '');
+      var emailAviso = document.getElementById('s6-email-aviso');
+      if (E.datos && E.datos.email) {
+        emailAviso.textContent = '⏳ Tu reserva está pendiente de verificación de pago. Recibirás un correo de confirmación en ' + E.datos.email + '.';
+      }
       ir('s6');
     } else {
       ir('s5'); btn.disabled = false;
