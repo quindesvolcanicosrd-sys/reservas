@@ -129,7 +129,7 @@
   </a>.
 </p>
       <div class="select-wrapper">
-        <select id="sel-nombre"><option value="">— Elige tu nombre —</option></select>
+        <select id="sel-nombre"><option value="">Cargando nombres...</option></select>
       </div>
       <div class="error-msg" id="err-s1"></div>
       <button class="btn btn-primary" onclick="continuar_s1()">Continuar →</button>
@@ -348,7 +348,8 @@ function api(params, onSuccess, onError) {
 window.onload = function() {
   api({ action: 'getNombres' }, function(nombres) {
     var sel = document.getElementById('sel-nombre');
-    nombres.forEach(function(n) {
+sel.innerHTML = '<option value="">— Elige tu nombre —</option>';
+nombres.forEach(function(n) {
       var o = document.createElement('option');
       o.value = o.textContent = n;
       sel.appendChild(o);
