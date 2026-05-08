@@ -771,8 +771,8 @@ function confirmarReserva() {
   btn.disabled = true;
   ir('s-carga-conf');
   var d = E.datos;
-  var talla  = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
-  var protec = d.necesitaProtecciones.toLowerCase() !== 'no' ? d.necesitaProtecciones : '';
+  var talla  = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : 'No';
+  var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : 'No';
   api({
     action: 'guardarReserva',
     nombre: E.nombre,
