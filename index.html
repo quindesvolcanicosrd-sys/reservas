@@ -599,11 +599,22 @@ function renderMisReservas(reservas) {
 }
 
 function cancelarRes(fecha) {
-  if (!confirm('¿Segurx que quieres cancelar tu reserva para el ' + fecha + '?')) return;
+  if (!confirm('¿Segura que quieres cancelar tu reserva para el ' + fecha + '?')) return;
+  var btn = event.target;
+  btn.disabled = true;
+  btn.textContent = '⏳ Cancelando...';
   api({ action: 'cancelarReserva', nombre: E.nombre, fecha: fecha }, function(res) {
     if (res.exito) { irMisReservas(); }
-    else { alert('Error al cancelar. Por favor intenta de nuevo.'); }
-  }, function(e) { alert('Error: ' + e.message); });
+    else {
+      btn.disabled = false;
+      btn.textContent = 'Cancelar esta reserva';
+      alert('Error al cancelar. Por favor intenta de nuevo.');
+    }
+  }, function(e) {
+    btn.disabled = false;
+    btn.textContent = 'Cancelar esta reserva';
+    alert('Error: ' + e.message);
+  });
 }
 
 // ─── S2: Equipamiento ────────────────────────────────────────────────────────
