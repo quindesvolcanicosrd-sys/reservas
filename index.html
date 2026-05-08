@@ -656,7 +656,8 @@ function continuar_pin() {
 function irMisReservas() {
   ir('s-carga');
   api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
-    renderMisReservas(reservas);
+    _todasReservas = reservas;
+    renderMisReservas(reservas, false);
     ir('s-misreservas');
   }, function(e) {
     ir('s-home');
@@ -678,12 +679,13 @@ function irHomeDesdeExito() {
 }
 
 // ─── MIS RESERVAS ────────────────────────────────────────────────────────────
-function renderMisReservas(reservas) {
+function renderMisReservas(reservas, mostrarTodas) {
   var html = '';
   if (!reservas || reservas.length === 0) {
     html = '<p style="text-align:center;color:#888;padding:20px 0;">No tienes reservas todavía.</p>';
   } else {
-    reservas.forEach(function(r) {
+    var visibles = mostrarTodas ? reservas : reservas.slice(0, 3);
+    visibles.forEach(function(r) {
       var badgeClass = r.estado === 'Confirmada' ? 'badge-confirmada' : r.estado === 'Cancelada' ? 'badge-cancelada' : 'badge-pendiente';
       var icon = r.estado === 'Confirmada' ? '✅' : r.estado === 'Cancelada' ? '❌' : '⏳';
       html += '<div class="reserva-card">';
@@ -705,7 +707,15 @@ function renderMisReservas(reservas) {
       html += '</div>';
     });
   }
+if (!mostrarTodas && reservas.length > 3) {
+    html += '<button class="btn btn-secondary" style="margin-top:4px;" onclick="verTodasReservas()">Ver reservas anteriores</button>';
+  }
   document.getElementById('misres-lista').innerHTML = html;
+}
+
+var _todasReservas = [];
+function verTodasReservas() {
+  renderMisReservas(_todasReservas, true);
 }
 
 function cancelarRes(fecha) {
