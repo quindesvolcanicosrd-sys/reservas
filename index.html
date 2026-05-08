@@ -795,8 +795,19 @@ function confirmarReserva() {
     protecciones: protec
   }, function(res) {
     if (res.exito) {
-document.getElementById('s6-detalle').textContent =
-        E.nombre + ' — ' + E.fecha + (talla ? ' — Patines talla ' + talla : '') + (protec ? ' — Con protecciones' : '');
+      var necesitaPatines = talla && talla !== 'No';
+      var necesitaProtec  = protec && protec !== 'No';
+      var equipMsg;
+      if (necesitaPatines && necesitaProtec) {
+        equipMsg = 'Necesita patines talla ' + talla + ' y protecciones';
+      } else if (necesitaPatines) {
+        equipMsg = 'Necesita patines talla ' + talla;
+      } else if (necesitaProtec) {
+        equipMsg = 'Necesita protecciones';
+      } else {
+        equipMsg = 'No necesita equipamiento';
+      }
+      document.getElementById('s6-detalle').textContent = E.nombre + ' · ' + E.fecha + ' · ' + equipMsg;
       var emailAviso = document.getElementById('s6-email-aviso');
       if (E.datos && E.datos.email) {
         emailAviso.textContent = '⏳ Tu reserva está pendiente de verificación de pago. Recibirás un correo de confirmación en ' + E.datos.email + '.';
