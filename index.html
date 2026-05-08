@@ -542,7 +542,7 @@
 
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
-var BACKEND = 'https://script.google.com/macros/s/AKfycbxxtLDWEZRA1EwWM03pntfmmH7toTMMoVY7J9VSffNXJQs0jgAHq-G-ORRW-dXKsQWeVw/exec';
+var BACKEND = 'https://script.google.com/macros/s/AKfycbyTFLtqmFqWs4wl3gt-_7RF_kONNssf3zWOEY6tOvg5iktpUllXbLIlHJbc98krjUeH/exec';
 
 var E = {
   nombre: '', datos: null,
@@ -691,8 +691,14 @@ function renderMisReservas(reservas) {
       html += '<span class="reserva-fecha">' + r.fecha + '</span>';
       html += '<span class="badge ' + badgeClass + '">' + icon + ' ' + r.estado + '</span>';
       html += '</div>';
-      if (r.talla) html += '<div class="reserva-detalle">🛼 Patines talla ' + r.talla + '</div>';
-      if (r.protecciones) html += '<div class="reserva-detalle">🛡️ ' + r.protecciones + '</div>';
+      var tienePat  = r.talla && r.talla !== 'No';
+      var tieneProc = r.protecciones && r.protecciones !== 'No';
+      var equipMsg;
+      if (tienePat && tieneProc)  equipMsg = '🛼🛡️ Patines talla ' + r.talla + ' y protecciones';
+      else if (tienePat)          equipMsg = '🛼 Patines talla ' + r.talla;
+      else if (tieneProc)         equipMsg = '🛡️ ' + r.protecciones;
+      else                        equipMsg = '✅ Sin equipamiento prestado';
+      html += '<div class="reserva-detalle">' + equipMsg + '</div>';
       if (r.estado !== 'Cancelada') {
         html += '<button class="btn-cancelar" onclick="cancelarRes(\'' + r.fecha.replace(/'/g, "\\'") + '\')">Cancelar esta reserva</button>';
       }
