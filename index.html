@@ -357,15 +357,15 @@
 
   <!-- Carga fechas -->
   <div class="pantalla" id="s-carga-fechas">
-    <div class="card"><div class="loader"><div class="spinner"></div><p>Verificando disponibilidad de fechas...</p></div></div>
+    <div class="card"><div class="loader"><div class="spinner"></div><p>Verificando próximas fechas...</p></div></div>
   </div>
 
   <!-- S4: Fecha -->
   <div class="pantalla" id="s4">
     <div class="card">
       <div class="seccion-label">Paso 2 de 4 — Fecha</div>
-      <h2>¿A qué entrenamiento asistirás?</h2>
-      <p>Selecciona la fecha para que te llevemos el equipamiento.</p>
+      <h2>¿A qué entrenamiento/s asistirás?</h2>
+      <p>Puedes seleccionar una o más fechas.</p>
       <div id="lista-fechas"></div>
       <div class="error-msg" id="err-s4"></div>
       <button class="btn btn-primary" onclick="continuar_s4()">Continuar →</button>
@@ -547,7 +547,7 @@ var BACKEND = 'https://script.google.com/macros/s/AKfycbx8Fa0exM8LAAJe94HkEWTMVP
 var E = {
   nombre: '', datos: null,
   conf: '', editPat: '', editTalla: '', editProtec: '',
-  fecha: ''
+  fecha: '', fechas: []
 };
 
 // ─── API ─────────────────────────────────────────────────────────────────────
@@ -667,6 +667,7 @@ function irMisReservas() {
 
 function irNuevaReserva() {
   E.conf = '';
+  E.fechas = [];
   document.querySelectorAll('input[name="conf"]').forEach(function(r) {
     r.checked = false; r.closest('.opcion').classList.remove('sel');
   });
@@ -842,8 +843,8 @@ function cargarFechas() {
     } else {
       fechas.forEach(function(f) {
         if (f.disponible) {
-          html += '<div class="fecha-item" onclick="selFecha(this,\'' + f.fecha.replace(/'/g,"\\'") + '\')">' +
-            '<input type="radio" name="fecha" value="' + f.fecha + '">' +
+          html += '<div class="fecha-item" onclick="toggleFecha(this,\'' + f.fecha.replace(/'/g,"\\'") + '\')">' +
+            '<input type="checkbox" name="fecha" value="' + f.fecha + '" style="accent-color:#F97316;width:17px;height:17px;flex-shrink:0;">' +
             '<div><div class="fecha-nombre">' + f.fecha + '</div></div></div>';
         } else {
           html += '<div class="fecha-item agotada">' +
@@ -860,14 +861,15 @@ function cargarFechas() {
   }, function(e) { ir('s2'); err('err-s2', 'Error al verificar fechas: ' + e.message); });
 }
 
-function selFecha(el, fecha) {
-  document.querySelectorAll('.fecha-item').forEach(function(f) { f.classList.remove('sel'); });
-  el.classList.add('sel');
-  E.fecha = fecha;
+function toggleFecha(el, fecha) {
+  var chk = el.querySelector('input[type="checkbox"]');
+  chk.checked = !chk.checked;
+  el.classList.toggle('sel', chk.checked);
+  E.fechas = Array.from(document.querySelectorAll('input[name="fecha"]:checked')).map(function(c) { return c.value; });
 }
 
 function continuar_s4() {
-  if (!E.fecha) { err('err-s4', 'Por favor selecciona una fecha.'); return; }
+  if (!E.fechas || E.fechas.length === 0) { err('err-s4', 'Por favor selecciona al menos una fecha.'); return; }
   // Reset checkbox al entrar a pago
   document.getElementById('chk-pago').checked = false;
   document.getElementById('btn-pago').disabled = true;
@@ -892,7 +894,7 @@ function continuar_pago() {
   var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
   var h = '<div class="r-titulo">Tu reserva</div>';
   h += fila('Nombre', E.nombre);
-  h += fila('Fecha', E.fecha);
+  h += fila('Fecha/s', E.fechas.join(' · '));
   h += fila('Patines', d.necesitaPatines + (talla ? ' — Talla ' + talla : ''));
   h += fila('Protecciones', d.necesitaProtecciones);
   document.getElementById('s5-resumen').innerHTML = h;
@@ -907,40 +909,46 @@ function confirmarReserva() {
   var d = E.datos;
   var talla  = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : 'No';
   var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : 'No';
-  api({
-    action: 'guardarReserva',
-    nombre: E.nombre,
-    fecha: E.fecha,
-    talla: talla,
-    protecciones: protec
-  }, function(res) {
-    if (res.exito) {
-      var necesitaPatines = talla && talla !== 'No';
-      var necesitaProtec  = protec && protec !== 'No';
+
+  var pendientes = E.fechas.slice();
+  var errores = [];
+
+  function guardarSiguiente() {
+    if (pendientes.length === 0) {
+      // Todas guardadas
+      var necesitaPatines = talla !== 'No';
+      var necesitaProtec  = protec !== 'No';
       var equipMsg;
-      if (necesitaPatines && necesitaProtec) {
-        equipMsg = 'Necesita patines talla ' + talla + ' y protecciones';
-      } else if (necesitaPatines) {
-        equipMsg = 'Necesita patines talla ' + talla;
-      } else if (necesitaProtec) {
-        equipMsg = 'Necesita protecciones';
-      } else {
-        equipMsg = 'No necesita equipamiento';
-      }
-      document.getElementById('s6-detalle').textContent = E.nombre + ' · ' + E.fecha + ' · ' + equipMsg;
+      if (necesitaPatines && necesitaProtec) equipMsg = 'Patines talla ' + talla + ' y protecciones';
+      else if (necesitaPatines)              equipMsg = 'Patines talla ' + talla;
+      else if (necesitaProtec)               equipMsg = 'Protecciones';
+      else                                   equipMsg = 'Sin equipamiento prestado';
+      document.getElementById('s6-detalle').textContent =
+        E.nombre + ' · ' + E.fechas.join(', ') + ' · ' + equipMsg;
       var emailAviso = document.getElementById('s6-email-aviso');
       if (E.datos && E.datos.email) {
-        emailAviso.textContent = '⏳ Tu reserva está pendiente de verificación de pago. Recibirás un correo de confirmación en ' + E.datos.email + '.';
+        emailAviso.textContent = '⏳ Tu/s reserva/s están pendientes de verificación de pago. Recibirás un correo de confirmación en ' + E.datos.email + '.';
       }
       ir('s6');
-    } else {
-      ir('s5'); btn.disabled = false;
-      err('err-s5', res.mensaje);
+      return;
     }
-  }, function(e) {
-    ir('s5'); btn.disabled = false;
-    err('err-s5', 'Error al guardar: ' + e.message);
-  });
+    var fecha = pendientes.shift();
+    api({
+      action: 'guardarReserva',
+      nombre: E.nombre,
+      fecha: fecha,
+      talla: talla,
+      protecciones: protec
+    }, function(res) {
+      if (!res.exito) errores.push(fecha + ': ' + res.mensaje);
+      guardarSiguiente();
+    }, function(e) {
+      errores.push(fecha + ': ' + e.message);
+      guardarSiguiente();
+    });
+  }
+
+  guardarSiguiente();
 }
 // ─── EDITAR DATOS ─────────────────────────────────────────────────────────────
 var datosCompletos = {};
