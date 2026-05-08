@@ -599,7 +599,7 @@ function renderMisReservas(reservas) {
 }
 
 function cancelarRes(fecha) {
-  if (!confirm('¿Segura que quieres cancelar tu reserva para el ' + fecha + '?')) return;
+  if (!confirm('¿Segurx que quieres cancelar tu reserva para el ' + fecha + '?')) return;
   api({ action: 'cancelarReserva', nombre: E.nombre, fecha: fecha }, function(res) {
     if (res.exito) { irMisReservas(); }
     else { alert('Error al cancelar. Por favor intenta de nuevo.'); }
