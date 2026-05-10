@@ -8,11 +8,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #FEE8D9; min-height: 100vh; }
 
-  .header {
-    background: #1a1a1a;
-    padding: 20px;
-    text-align: center;
-  }
+  .header { background: #1a1a1a; padding: 20px; text-align: center; }
   .header h1 { color: #F97316; font-size: 1.3rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
   .header p { color: #999; font-size: 0.82rem; margin-top: 4px; }
 
@@ -34,13 +30,7 @@
   .card p { color: #666; font-size: 0.9rem; line-height: 1.5; margin-bottom: 12px; }
 
   .select-wrapper { position: relative; margin-bottom: 14px; }
-  select {
-    width: 100%; padding: 13px 40px 13px 14px;
-    border: 2px solid #e5e5e5; border-radius: 8px;
-    font-size: 0.95rem; color: #1a1a1a; background: white;
-    appearance: none; -webkit-appearance: none; cursor: pointer;
-    transition: border-color 0.2s;
-  }
+  select { width: 100%; padding: 13px 40px 13px 14px; border: 2px solid #e5e5e5; border-radius: 8px; font-size: 0.95rem; color: #1a1a1a; background: white; appearance: none; -webkit-appearance: none; cursor: pointer; transition: border-color 0.2s; }
   select:focus { outline: none; border-color: #F97316; }
   select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; }
   .select-wrapper::after { content: '▾'; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #F97316; pointer-events: none; font-size: 1rem; }
@@ -53,31 +43,19 @@
   .btn-secondary:hover { background: #e8e8e8; }
 
   .opciones { display: flex; flex-direction: column; gap: 9px; margin-bottom: 14px; }
-  .opcion {
-    display: flex; align-items: center; gap: 12px;
-    padding: 13px 14px; border: 2px solid #e5e5e5;
-    border-radius: 8px; cursor: pointer; transition: all 0.2s;
-    font-size: 0.92rem; color: #1a1a1a;
-  }
+  .opcion { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border: 2px solid #e5e5e5; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 0.92rem; color: #1a1a1a; }
   .opcion:hover { border-color: #F97316; background: #fff8f4; }
   .opcion.sel { border-color: #F97316; background: #fff8f4; }
   .opcion input[type="radio"] { accent-color: #F97316; width: 17px; height: 17px; flex-shrink: 0; }
 
-  .resumen {
-    background: #fafafa; border-left: 4px solid #F97316;
-    border-radius: 0 8px 8px 0; padding: 14px; margin-bottom: 18px;
-  }
+  .resumen { background: #fafafa; border-left: 4px solid #F97316; border-radius: 0 8px 8px 0; padding: 14px; margin-bottom: 18px; }
   .resumen .r-titulo { font-weight: 700; color: #1a1a1a; font-size: 0.95rem; margin-bottom: 10px; }
   .resumen .r-fila { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee; font-size: 0.88rem; }
   .resumen .r-fila:last-child { border-bottom: none; }
   .resumen .r-label { color: #888; }
   .resumen .r-valor { font-weight: 600; color: #1a1a1a; text-align: right; max-width: 60%; }
 
-  .fecha-item {
-    display: flex; align-items: center; gap: 12px;
-    padding: 13px 14px; border: 2px solid #e5e5e5;
-    border-radius: 8px; margin-bottom: 9px; cursor: pointer; transition: all 0.2s;
-  }
+  .fecha-item { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border: 2px solid #e5e5e5; border-radius: 8px; margin-bottom: 9px; cursor: pointer; transition: all 0.2s; }
   .fecha-item:hover:not(.agotada) { border-color: #F97316; background: #fff8f4; }
   .fecha-item.sel { border-color: #F97316; background: #fff8f4; }
   .fecha-item.agotada { opacity: 0.55; cursor: not-allowed; background: #f8f8f8; }
@@ -99,12 +77,7 @@
   .exito-texto { color: #666; text-align: center; line-height: 1.6; font-size: 0.92rem; }
   .exito-detalle { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; margin: 16px 0; font-size: 0.88rem; color: #166534; text-align: center; }
 
-  /* Home screen */
-  .home-boton {
-    border: 2px solid #e5e5e5; border-radius: 12px; padding: 20px;
-    margin-bottom: 12px; cursor: pointer; transition: all 0.2s;
-    text-align: center;
-  }
+  .home-boton { border: 2px solid #e5e5e5; border-radius: 12px; padding: 20px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; text-align: center; }
   .home-boton:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
   .home-boton.principal { border-color: #F97316; background: #fff8f4; }
   .home-boton.principal:hover { background: #fff0e6; }
@@ -113,101 +86,31 @@
   .home-boton.principal .hb-titulo { color: #F97316; }
   .home-boton .hb-sub { font-size: 0.83rem; color: #888; }
 
-  /* Pago screen */
-  .pago-metodo {
-    border: 2px solid #e5e5e5; border-radius: 10px;
-    padding: 14px; margin-bottom: 12px;
-  }
-  .pago-header {
-    display: flex; align-items: center; gap: 8px;
-    font-weight: 700; font-size: 0.95rem; color: #1a1a1a;
-    margin-bottom: 10px;
-  }
+  .pago-metodo { border: 2px solid #e5e5e5; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+  .pago-header { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.95rem; color: #1a1a1a; margin-bottom: 10px; }
   .pago-icon { font-size: 1.3rem; }
   .pago-fila { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.85rem; border-bottom: 1px solid #f0f0f0; }
   .pago-fila:last-child { border-bottom: none; }
   .pago-label { color: #999; }
   .pago-valor { font-weight: 600; color: #1a1a1a; }
 
-  /* Total a pagar — caja verde reutilizable */
-  .total-box {
-    background: #f0fdf4;
-    border: 2px solid #22c55e;
-    border-radius: 10px;
-    padding: 14px 16px;
-    text-align: center;
-    font-weight: 800;
-    font-size: 1.05rem;
-    color: #166534;
-  }
-  .total-box .total-detalle {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: #4ade80;
-    margin-top: 3px;
-  }
+  .total-box { background: #f0fdf4; border: 2px solid #22c55e; border-radius: 10px; padding: 14px 16px; text-align: center; font-weight: 800; font-size: 1.05rem; color: #166534; }
+  .total-box .total-detalle { font-size: 0.8rem; font-weight: 500; color: #4ade80; margin-top: 3px; }
 
-  /* Selector tipo pago en S4 */
-  .tipo-pago-wrapper {
-    background: #fffbeb;
-    border: 1.5px solid #fde68a;
-    border-radius: 10px;
-    padding: 14px;
-    margin-bottom: 16px;
-  }
-  .tipo-pago-titulo {
-    font-weight: 700;
-    font-size: 0.88rem;
-    color: #92400e;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    margin-bottom: 10px;
-  }
+  .tipo-pago-wrapper { background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+  .tipo-pago-titulo { font-weight: 700; font-size: 0.88rem; color: #92400e; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
   .tipo-pago-wrapper .opciones { margin-bottom: 0; }
 
-  /* Nota de pago */
-  .nota-pago-wrapper {
-    background: #f8f8f8;
-    border: 2px solid #e5e5e5;
-    border-radius: 10px;
-    padding: 14px;
-    margin-top: 16px;
-  }
-  .nota-pago-label {
-    display: block;
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: #555;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 8px;
-  }
-  .nota-pago-input {
-    width: 100%;
-    padding: 11px 12px;
-    border: 2px solid #e5e5e5;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-family: inherit;
-    background: white;
-    transition: border-color 0.2s;
-  }
+  .nota-pago-wrapper { background: #f8f8f8; border: 2px solid #e5e5e5; border-radius: 10px; padding: 14px; margin-top: 16px; }
+  .nota-pago-label { display: block; font-size: 0.8rem; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .nota-pago-input { width: 100%; padding: 11px 12px; border: 2px solid #e5e5e5; border-radius: 8px; font-size: 0.9rem; font-family: inherit; background: white; transition: border-color 0.2s; }
   .nota-pago-input:focus { outline: none; border-color: #F97316; }
   .nota-pago-hint { font-size: 0.78rem; color: #999; margin-top: 6px; line-height: 1.4; }
 
-  .chk-pago-label {
-    display: flex; align-items: flex-start; gap: 10px;
-    background: #fffbeb; border: 1.5px solid #fde68a;
-    border-radius: 8px; padding: 13px; margin: 16px 0;
-    cursor: pointer; font-size: 0.88rem; color: #1a1a1a; line-height: 1.4;
-  }
+  .chk-pago-label { display: flex; align-items: flex-start; gap: 10px; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 8px; padding: 13px; margin: 16px 0; cursor: pointer; font-size: 0.88rem; color: #1a1a1a; line-height: 1.4; }
   .chk-pago-label input { width: 18px; height: 18px; accent-color: #F97316; flex-shrink: 0; margin-top: 1px; }
 
-  /* Mis reservas */
-  .reserva-card {
-    border: 2px solid #e5e5e5; border-radius: 10px;
-    padding: 14px; margin-bottom: 10px;
-  }
+  .reserva-card { border: 2px solid #e5e5e5; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
   .reserva-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
   .reserva-fecha { font-weight: 700; font-size: 0.95rem; color: #1a1a1a; }
   .badge { padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
@@ -215,40 +118,100 @@
   .badge-confirmada { background: #f0fdf4; color: #16a34a; }
   .badge-cancelada { background: #fef2f2; color: #dc2626; }
   .reserva-detalle { font-size: 0.85rem; color: #666; margin-bottom: 4px; }
-  .btn-cancelar {
-    width: 100%; margin-top: 10px; padding: 9px;
-    background: #fef2f2; color: #dc2626;
-    border: 1.5px solid #fecaca; border-radius: 7px;
-    font-size: 0.85rem; font-weight: 700; cursor: pointer;
-    transition: all 0.2s;
-  }
+  .btn-cancelar { width: 100%; margin-top: 10px; padding: 9px; background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; border-radius: 7px; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
   .btn-cancelar:hover { background: #fee2e2; }
 
-  .datos-seccion { border: 2px solid #e5e5e5; border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
-  .datos-seccion-titulo { display: flex; justify-content: space-between; padding: 13px 14px; font-weight: 700; font-size: 0.9rem; cursor: pointer; background: #fafafa; }
-  .datos-seccion-titulo:hover { background: #f0f0f0; }
-  .datos-seccion-body { padding: 14px; display: none; }
-  .datos-seccion-body.abierta { display: block; }
-  .datos-campo { margin-bottom: 11px; }
-  .datos-campo label { display: block; font-size: 0.78rem; color: #888; font-weight: 600; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .datos-campo input, .datos-campo textarea { width: 100%; padding: 10px 12px; border: 2px solid #e5e5e5; border-radius: 8px; font-size: 0.92rem; font-family: inherit; }
-  .datos-campo input:focus, .datos-campo textarea:focus { outline: none; border-color: #F97316; }
+  .aviso-pendiente { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 14px; font-size: 0.85rem; color: #92400e; margin-bottom: 14px; text-align: center; }
 
-  .aviso-pendiente {
-    background: #fffbeb; border: 1px solid #fde68a;
-    border-radius: 8px; padding: 12px 14px;
-    font-size: 0.85rem; color: #92400e;
-    margin-bottom: 14px; text-align: center;
+  /* ── Editar datos ─────────────────────────────────────────── */
+  .datos-seccion { border: 2px solid #e5e5e5; border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
+  .datos-seccion-titulo {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 16px; font-weight: 700; font-size: 0.92rem;
+    cursor: pointer; background: #fafafa; transition: background 0.15s;
+    color: #1a1a1a;
   }
+  .datos-seccion-titulo:hover { background: #f0f0f0; }
+  .datos-seccion-titulo .sec-icon { font-size: 1.1rem; margin-right: 8px; }
+  .datos-seccion-titulo .sec-chevron { color: #aaa; font-size: 0.9rem; transition: transform 0.2s; }
+  .datos-seccion-titulo.abierta .sec-chevron { transform: rotate(180deg); }
+  .datos-seccion-body { padding: 16px; display: none; border-top: 1px solid #f0f0f0; }
+  .datos-seccion-body.abierta { display: block; }
+
+  .datos-campo { margin-bottom: 13px; }
+  .datos-campo label {
+    display: block; font-size: 0.75rem; color: #888; font-weight: 700;
+    margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .datos-campo input[type="text"],
+  .datos-campo input[type="tel"],
+  .datos-campo input[type="email"],
+  .datos-campo input[type="date"] {
+    width: 100%; padding: 10px 12px; border: 2px solid #e5e5e5;
+    border-radius: 8px; font-size: 0.92rem; font-family: inherit;
+    transition: border-color 0.2s; background: white;
+  }
+  .datos-campo input:focus { outline: none; border-color: #F97316; }
+  .datos-campo .select-wrapper { margin-bottom: 0; }
+  .datos-campo textarea {
+    width: 100%; padding: 10px 12px; border: 2px solid #e5e5e5;
+    border-radius: 8px; font-size: 0.9rem; font-family: inherit;
+    resize: vertical; min-height: 75px; transition: border-color 0.2s;
+  }
+  .datos-campo textarea:focus { outline: none; border-color: #F97316; }
+
+  .campo-condicional { display: none; }
+  .campo-condicional.visible { display: block; }
+
+  .chk-opcion {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border: 2px solid #e5e5e5;
+    border-radius: 8px; cursor: pointer;
+    font-size: 0.88rem; margin-bottom: 7px; transition: all 0.2s;
+  }
+  .chk-opcion:hover { border-color: #F97316; background: #fff8f4; }
+  .chk-opcion input[type="checkbox"] { accent-color: #F97316; width: 16px; height: 16px; flex-shrink: 0; }
+
+  .aviso-legal {
+    background: #f0f9ff; border: 1.5px solid #bae6fd;
+    border-radius: 8px; padding: 10px 12px;
+    font-size: 0.8rem; color: #0369a1;
+    margin-bottom: 14px; line-height: 1.5;
+  }
+  .aviso-legal strong { color: #0284c7; }
+
+  .privacy-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 12px; background: #fafafa; border: 2px solid #e5e5e5;
+    border-radius: 8px; margin-bottom: 10px;
+  }
+  .privacy-row label { font-size: 0.85rem; color: #555; font-weight: 500; }
+  .privacy-row select {
+    padding: 6px 28px 6px 10px; border: 2px solid #e5e5e5;
+    border-radius: 6px; font-size: 0.85rem;
+    background: white; max-width: 120px;
+  }
+
+  .btn-guardar-sec {
+    width: 100%; margin-top: 14px; padding: 12px;
+    background: #F97316; color: white; border: none;
+    border-radius: 8px; font-size: 0.9rem; font-weight: 700;
+    cursor: pointer; transition: all 0.2s; text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .btn-guardar-sec:hover { background: #e86510; }
+  .btn-guardar-sec:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-guardar-sec.exito { background: #16a34a; }
+
+  .datos-hint { font-size: 0.78rem; color: #aaa; margin-top: 4px; line-height: 1.4; }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <img
-  src="https://lh7-rt.googleusercontent.com/formsz/AN7BsVDADaiTnT6twEqZzMtv3MeF5anRhH6TISJYLf8ho_9aTM2vufibSJMFehEILQDgudaxCdpjJdCGSbFUambF_rhWm67bOnIbMO6eRq7aOnCnKWMVO7dVRtQrRhYxpcAYQTXFZ-aK-vFg-Ia6hfL4DC_LHlrVxnpykdK2rj0PODqEGlaqJ3bJGjhv3Dqk26bL3VWfp7jECo74hi8rJw=w1535?key=OMv_8mN2YNUQ4euOep_7VQ"
-  alt="Mirlxs Roller Derby Quito"
-  style="max-width:220px;width:100%;height:auto;display:block;margin:auto;">
+  <img src="https://lh7-rt.googleusercontent.com/formsz/AN7BsVDADaiTnT6twEqZzMtv3MeF5anRhH6TISJYLf8ho_9aTM2vufibSJMFehEILQDgudaxCdpjJdCGSbFUambF_rhWm67bOnIbMO6eRq7aOnCnKWMVO7dVRtQrRhYxpcAYQTXFZ-aK-vFg-Ia6hfL4DC_LHlrVxnpykdK2rj0PODqEGlaqJ3bJGjhv3Dqk26bL3VWfp7jECo74hi8rJw=w1535?key=OMv_8mN2YNUQ4euOep_7VQ"
+    alt="Mirlxs Roller Derby Quito"
+    style="max-width:220px;width:100%;height:auto;display:block;margin:auto;">
   <p>Reserva de equipamiento para entrenamientos</p>
 </div>
 
@@ -267,13 +230,10 @@
       <div class="seccion-label">Inicio</div>
       <h2>Selecciona tu nombre</h2>
       <p>Elige tu nombre de la lista.</p>
-      <p style="font-size:0.85rem; color:#666; margin-bottom:14px;">
+      <p style="font-size:0.85rem;color:#666;margin-bottom:14px;">
         Si tu nombre no está en la lista debes inscribirte al equipo utilizando
         <a href="https://docs.google.com/forms/d/e/1FAIpQLScfZRUBRizzsnNu0tQrtYSB-AI4HIknBWstGzJHPvTXz0JPcQ/viewform?usp=header"
-           target="_blank"
-           style="color:#F97316; font-weight:600; text-decoration:none;">
-           este formulario
-        </a>.
+           target="_blank" style="color:#F97316;font-weight:600;text-decoration:none;">este formulario</a>.
       </p>
       <div class="select-wrapper">
         <select id="sel-nombre" disabled style="color:#aaa;"><option value="">⏳ Cargando nombres...</option></select>
@@ -288,16 +248,9 @@
     <div class="card">
       <div class="seccion-label">Verificación</div>
       <h2>Ingresa tu PIN</h2>
-      <p>Introduce tu PIN de 4 dígitos para continuar. ¿Olvidaste tu PIN? Contacta con alguien del equipo para que te ayude.</p>
-      <input
-        type="password"
-        id="input-pin"
-        maxlength="4"
-        inputmode="numeric"
-        pattern="[0-9]*"
-        placeholder="••••"
-        style="width:100%;padding:14px;border:2px solid #e5e5e5;border-radius:8px;font-size:1.2rem;text-align:center;letter-spacing:8px;margin-bottom:14px;"
-      >
+      <p>Introduce tu PIN de 4 dígitos para continuar. ¿Olvidaste tu PIN? Contacta con alguien del equipo.</p>
+      <input type="password" id="input-pin" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••"
+        style="width:100%;padding:14px;border:2px solid #e5e5e5;border-radius:8px;font-size:1.2rem;text-align:center;letter-spacing:8px;margin-bottom:14px;">
       <div class="error-msg" id="err-pin"></div>
       <button class="btn btn-primary" onclick="continuar_pin()">Continuar →</button>
       <button class="btn btn-secondary" onclick="volver('s1')">← Volver</button>
@@ -311,23 +264,20 @@
 
   <!-- S-HOME -->
   <div class="pantalla" id="s-home">
-    <div class="card" style="text-align:center; padding-bottom:28px;">
-      <div style="font-size:2.8rem; margin-bottom:10px;">🛼</div>
-      <h2 id="home-saludo" style="text-align:center; margin-bottom:6px;"></h2>
+    <div class="card" style="text-align:center;padding-bottom:28px;">
+      <div style="font-size:2.8rem;margin-bottom:10px;">🛼</div>
+      <h2 id="home-saludo" style="text-align:center;margin-bottom:6px;"></h2>
       <p style="margin-bottom:22px;">¿Qué quieres hacer hoy?</p>
-
       <div class="home-boton principal" onclick="irMisReservas()">
         <div class="hb-icon">📋</div>
         <div class="hb-titulo">Ver mis reservas</div>
         <div class="hb-sub">Revisa el estado o cancela una reserva</div>
       </div>
-
       <div class="home-boton" onclick="irNuevaReserva()">
         <div class="hb-icon">➕</div>
         <div class="hb-titulo" style="color:#1a1a1a;">Nueva reserva / pago</div>
         <div class="hb-sub">Reserva equipamiento o registra tu pago</div>
       </div>
-
       <div class="home-boton" onclick="irEditarDatos()">
         <div class="hb-icon">✏️</div>
         <div class="hb-titulo" style="color:#1a1a1a;">Editar mis datos</div>
@@ -354,12 +304,8 @@
       <div class="resumen" id="s2-resumen"></div>
       <p>¿Es correcta esta información?</p>
       <div class="opciones" id="s2-opciones">
-        <label class="opcion" onclick="selOp(this,'conf','si')">
-          <input type="radio" name="conf" value="si"> Sí, es correcto
-        </label>
-        <label class="opcion" onclick="selOp(this,'conf','no')">
-          <input type="radio" name="conf" value="no"> No, quiero rectificarlo
-        </label>
+        <label class="opcion" onclick="selOp(this,'conf','si')"><input type="radio" name="conf" value="si"> Sí, es correcto</label>
+        <label class="opcion" onclick="selOp(this,'conf','no')"><input type="radio" name="conf" value="no"> No, quiero rectificarlo</label>
       </div>
       <div class="error-msg" id="err-s2"></div>
       <button class="btn btn-primary" onclick="continuar_s2()">Continuar →</button>
@@ -367,18 +313,14 @@
     </div>
   </div>
 
-  <!-- S3a: Editar — patines -->
+  <!-- S3a -->
   <div class="pantalla" id="s3a">
     <div class="card">
       <div class="seccion-label">Editar equipamiento — 1/3</div>
       <h2>¿Necesitas patines prestados?</h2>
       <div class="opciones">
-        <label class="opcion" onclick="selOp(this,'edit-pat','Sí')">
-          <input type="radio" name="edit-pat" value="Sí"> Sí, necesito patines
-        </label>
-        <label class="opcion" onclick="selOp(this,'edit-pat','No')">
-          <input type="radio" name="edit-pat" value="No"> No, tengo mis propios patines
-        </label>
+        <label class="opcion" onclick="selOp(this,'edit-pat','Sí')"><input type="radio" name="edit-pat" value="Sí"> Sí, necesito patines</label>
+        <label class="opcion" onclick="selOp(this,'edit-pat','No')"><input type="radio" name="edit-pat" value="No"> No, tengo mis propios patines</label>
       </div>
       <div class="error-msg" id="err-s3a"></div>
       <button class="btn btn-primary" onclick="continuar_s3a()">Continuar →</button>
@@ -386,37 +328,29 @@
     </div>
   </div>
 
-  <!-- S3b: Editar — talla -->
+  <!-- S3b -->
   <div class="pantalla" id="s3b">
     <div class="card">
       <div class="seccion-label">Editar equipamiento — 2/3</div>
       <h2>¿Qué talla necesitas?</h2>
       <p>Estas son las tallas disponibles en el equipo.</p>
-      <div class="select-wrapper">
-        <select id="sel-talla"><option value="">— Elige una talla —</option></select>
-      </div>
+      <div class="select-wrapper"><select id="sel-talla"><option value="">— Elige una talla —</option></select></div>
       <div class="error-msg" id="err-s3b"></div>
       <button class="btn btn-primary" onclick="continuar_s3b()">Continuar →</button>
       <button class="btn btn-secondary" onclick="volver('s3a')">← Volver</button>
     </div>
   </div>
 
-  <!-- S3c: Editar — protecciones -->
+  <!-- S3c -->
   <div class="pantalla" id="s3c">
     <div class="card">
       <div class="seccion-label">Editar equipamiento — 3/3</div>
       <h2>¿Necesitas protecciones?</h2>
       <p>Protecciones completas incluyen: Casco, Rodilleras, Coderas y Muñequeras.</p>
       <div class="opciones">
-        <label class="opcion" onclick="selOp(this,'edit-protec','Sí')">
-          <input type="radio" name="edit-protec" value="Sí"> Sí, necesito protecciones completas
-        </label>
-        <label class="opcion" onclick="selOp(this,'edit-protec','No')">
-          <input type="radio" name="edit-protec" value="No"> No, tengo mis propias protecciones
-        </label>
-        <label class="opcion" onclick="selOp(this,'edit-protec','Otro')">
-          <input type="radio" name="edit-protec" value="Otro"> Otro (especifica abajo)
-        </label>
+        <label class="opcion" onclick="selOp(this,'edit-protec','Sí')"><input type="radio" name="edit-protec" value="Sí"> Sí, necesito protecciones completas</label>
+        <label class="opcion" onclick="selOp(this,'edit-protec','No')"><input type="radio" name="edit-protec" value="No"> No, tengo mis propias protecciones</label>
+        <label class="opcion" onclick="selOp(this,'edit-protec','Otro')"><input type="radio" name="edit-protec" value="Otro"> Otro (especifica abajo)</label>
       </div>
       <textarea class="textarea-otro" id="txt-otro" placeholder="Ej: Tengo casco pero me faltan rodilleras y coderas"></textarea>
       <div class="error-msg" id="err-s3c"></div>
@@ -430,108 +364,68 @@
     <div class="card"><div class="loader"><div class="spinner"></div><p>Verificando próximas fechas...</p></div></div>
   </div>
 
-  <!-- S4: Fecha -->
+  <!-- S4: Fecha y pago -->
   <div class="pantalla" id="s4">
     <div class="card">
       <div class="seccion-label">Paso 2 de 4 — Fecha y pago</div>
       <h2>¿Cómo quieres pagar?</h2>
-
-      <!-- Selector tipo de pago (solo visible si puede pagar mensual) -->
       <div class="tipo-pago-wrapper" id="s4-tipo-pago-wrapper" style="display:none;">
         <div class="tipo-pago-titulo">💳 Tipo de pago</div>
         <div class="opciones">
           <label class="opcion" id="opcion-tipo-mensual" onclick="selTipoPago('mensual', this)">
             <input type="radio" name="tipo-pago" value="mensual">
-            <div>
-              <div style="font-weight:700;">Pago mensual</div>
-              <div style="font-size:0.8rem;color:#888;margin-top:2px;">No necesitas seleccionar clases</div>
-            </div>
+            <div><div style="font-weight:700;">Pago mensual</div><div style="font-size:0.8rem;color:#888;margin-top:2px;">No necesitas seleccionar clases</div></div>
           </label>
           <label class="opcion" id="opcion-tipo-clase" onclick="selTipoPago('clase', this)">
             <input type="radio" name="tipo-pago" value="clase">
-            <div>
-              <div style="font-weight:700;">Pago por clase</div>
-              <div style="font-size:0.8rem;color:#888;margin-top:2px;">Selecciona las clases que asistirás</div>
-            </div>
+            <div><div style="font-weight:700;">Pago por clase</div><div style="font-size:0.8rem;color:#888;margin-top:2px;">Selecciona las clases que asistirás</div></div>
           </label>
         </div>
       </div>
-
-      <!-- Subtítulo dinámico para la lista de fechas -->
       <p id="s4-fechas-subtitulo" style="margin-bottom:12px;">Selecciona los entrenamientos a los que asistirás.</p>
-
       <div id="lista-fechas"></div>
-
-      <!-- Total a pagar -->
-      <div id="s4-total-box" style="display:none; margin: 14px 0;">
-        <div class="total-box">
-          <div id="s4-total-monto"></div>
-          <div class="total-detalle" id="s4-total-detalle"></div>
-        </div>
+      <div id="s4-total-box" style="display:none;margin:14px 0;">
+        <div class="total-box"><div id="s4-total-monto"></div><div class="total-detalle" id="s4-total-detalle"></div></div>
       </div>
-
       <div class="error-msg" id="err-s4"></div>
       <button class="btn btn-primary" onclick="continuar_s4()">Continuar →</button>
       <button class="btn btn-secondary" onclick="volver('s2')">← Volver</button>
     </div>
   </div>
 
-  <!-- S-PAGO: Pantalla de pago -->
+  <!-- S-PAGO -->
   <div class="pantalla" id="s-pago">
     <div class="card">
       <div class="seccion-label">Paso 3 de 4 — Pago</div>
       <h2>Realiza tu pago</h2>
-
-      <!-- Total a pagar -->
       <div class="total-box" id="s-pago-total" style="margin-bottom:18px;">
         <div id="s-pago-total-monto"></div>
         <div class="total-detalle" id="s-pago-total-detalle"></div>
       </div>
-
       <p>Transfiere el monto indicado usando uno de estos métodos antes de continuar.</p>
-
-      <!-- DeUna -->
       <div class="pago-metodo">
-        <div class="pago-header">
-          <span class="pago-icon">📱</span>
-          DeUna · Banco Pichincha
-        </div>
+        <div class="pago-header"><span class="pago-icon">📱</span>DeUna · Banco Pichincha</div>
         <div class="pago-fila"><span class="pago-label">Cuenta de ahorro</span><span class="pago-valor">7702756890</span></div>
         <div class="pago-fila"><span class="pago-label">Titular</span><span class="pago-valor">David Santiago Rojas Baez</span></div>
         <div class="pago-fila"><span class="pago-label">CI</span><span class="pago-valor">1721443180</span></div>
       </div>
-
-      <!-- Banco Internacional -->
       <div class="pago-metodo">
-        <div class="pago-header">
-          <span class="pago-icon">🏦</span>
-          Banco Internacional
-        </div>
+        <div class="pago-header"><span class="pago-icon">🏦</span>Banco Internacional</div>
         <div class="pago-fila"><span class="pago-label">Tipo</span><span class="pago-valor">Cuenta de ahorros</span></div>
         <div class="pago-fila"><span class="pago-label">N° de cuenta</span><span class="pago-valor">398027628</span></div>
         <div class="pago-fila"><span class="pago-label">Titular</span><span class="pago-valor">Victor Del Bono</span></div>
         <div class="pago-fila"><span class="pago-label">CI</span><span class="pago-valor">1759369331</span></div>
         <div class="pago-fila"><span class="pago-label">Cel</span><span class="pago-valor">0962773052</span></div>
       </div>
-
-      <!-- Confirmación pago -->
       <label class="chk-pago-label">
         <input type="checkbox" id="chk-pago" onchange="toggleBtnPago()">
         Ya realicé mi pago y entiendo que mi reserva quedará pendiente hasta que sea verificada por el equipo.
       </label>
-
-      <!-- Nota de pago -->
       <div class="nota-pago-wrapper">
         <label class="nota-pago-label" for="nota-pago">Referencia de pago</label>
-        <input
-          type="text"
-          id="nota-pago"
-          class="nota-pago-input"
-          placeholder="Ej: Juan Pérez — pago de María García"
-        >
-        <p class="nota-pago-hint">Escribe el nombre completo con el que realizaste la transferencia y el nombre del mirlx al que pertenece el pago.</p>
+        <input type="text" id="nota-pago" class="nota-pago-input" placeholder="Ej: Juan Pérez — pago de María García">
+        <p class="nota-pago-hint">Escribe el nombre con el que realizaste la transferencia y el nombre del mirlx al que pertenece el pago.</p>
       </div>
-
       <div class="error-msg" id="err-pago"></div>
       <button class="btn btn-primary" id="btn-pago" onclick="continuar_pago()" disabled style="margin-top:16px;">Continuar →</button>
       <button class="btn btn-secondary" onclick="volver('s4')">← Volver</button>
@@ -544,8 +438,8 @@
       <div class="seccion-label">Paso 4 de 4 — Confirmar</div>
       <h2>Resumen de tu reserva</h2>
       <div class="resumen" id="s5-resumen"></div>
-      <p>Al confirmar nos avisas que ya realizaste el pago. <strong>Revisaremos tu transferencia</strong> y recibirás una confirmación por correo cuando esté aprobada.</p>
-      <p style="margin-top:10px;">Si por alguna razón no puedes venir, <strong>avisa lo antes posible</strong> para liberar tu cupo.</p>
+      <p>Al confirmar nos avisas que ya realizaste el pago. <strong>Revisaremos tu transferencia</strong> y recibirás confirmación por correo cuando esté aprobada.</p>
+      <p style="margin-top:10px;">Si no puedes venir, <strong>avisa lo antes posible</strong> para liberar tu cupo.</p>
       <div class="error-msg" id="err-s5"></div>
       <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarReserva()" style="margin-top:14px;">Confirmar mi reserva</button>
       <button class="btn btn-secondary" onclick="volver('s-pago')">← Volver</button>
@@ -563,12 +457,8 @@
       <div class="exito-icon">🎉</div>
       <div class="exito-titulo" id="s6-titulo">¡Reserva registrada!</div>
       <div class="exito-detalle" id="s6-detalle"></div>
-      <div class="aviso-pendiente" id="s6-email-aviso">
-        ⏳ Tu reserva está <strong>pendiente de verificación de pago</strong>. Recibirás un correo cuando esté confirmada.
-      </div>
-      <div class="exito-texto" id="s6-texto">
-        Puedes revisar el estado de tu reserva en cualquier momento entrando a <strong>"Ver mis reservas"</strong>. Si no puedes venir, cancela tu reserva desde ahí para liberar el cupo.
-      </div>
+      <div class="aviso-pendiente" id="s6-email-aviso">⏳ Tu reserva está <strong>pendiente de verificación de pago</strong>. Recibirás un correo cuando esté confirmada.</div>
+      <div class="exito-texto" id="s6-texto">Puedes revisar el estado de tu reserva en cualquier momento desde <strong>"Ver mis reservas"</strong>.</div>
       <button class="btn btn-secondary" onclick="irHomeDesdeExito()" style="margin-top:18px;">← Volver al inicio</button>
     </div>
   </div>
@@ -577,77 +467,429 @@
   <div class="pantalla" id="s-datos">
     <div class="card">
       <div class="seccion-label">Mis datos</div>
-      <h2>Editar mis datos personales</h2>
-      <p style="font-size:0.83rem;color:#888;margin-bottom:18px;">Si necesitas cambiar un dato que no aparece aquí, contacta a unx administradorx del equipo.</p>
+      <h2>Editar mis datos</h2>
+      <p style="font-size:0.83rem;color:#888;margin-bottom:18px;">
+        Los cambios se guardan sección por sección. Si necesitas modificar tu nombre o PIN, contacta a una administradora.
+      </p>
 
+      <!-- 1. Datos de entrenamiento -->
       <div class="datos-seccion">
-        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-general')">Datos generales <span>▾</span></div>
+        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-general', this)">
+          <span><span class="sec-icon">🛼</span>Datos de entrenamiento</span>
+          <span class="sec-chevron">▾</span>
+        </div>
         <div class="datos-seccion-body" id="sec-general">
-          <div class="datos-campo"><label>Nombre Derby</label><input type="text" id="d-nombreDerby"></div>
-          <div class="datos-campo"><label>Número Derby</label><input type="text" id="d-numeroDerby"></div>
-          <div class="datos-campo"><label>Pronombres</label><input type="text" id="d-pronombres"></div>
-          <div class="datos-campo"><label>Dieta / restricciones</label><input type="text" id="d-dieta"></div>
-          <button class="btn btn-primary" style="margin-top:8px;" onclick="guardarSeccion(['nombreDerby','numeroDerby','pronombres','dieta'], this)">Guardar sección</button>
+          <div class="datos-campo">
+            <label>Nombre Derby</label>
+            <input type="text" id="d-nombreDerby" placeholder="Ej: Roller Reina">
+          </div>
+          <div class="datos-campo">
+            <label>Número Derby</label>
+            <input type="text" id="d-numeroDerby" placeholder="Ej: 47">
+          </div>
+          <div class="datos-campo">
+            <label>Pronombres</label>
+            <div class="select-wrapper">
+              <select id="d-pronombres">
+                <option value="">— Selecciona —</option>
+                <option value="Ella/ella">Ella/ella</option>
+                <option value="Él/él">Él/él</option>
+                <option value="Elle/elle">Elle/elle</option>
+                <option value="Ellx/ellx">Ellx/ellx</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+          </div>
+          <div class="datos-campo">
+            <label>Dieta o restricción alimentaria</label>
+            <div class="select-wrapper">
+              <select id="d-dieta">
+                <option value="">— Selecciona —</option>
+                <option value="Ninguna">Ninguna</option>
+                <option value="Vegetarianx">Vegetarianx</option>
+                <option value="Veganx">Veganx</option>
+                <option value="Celíacx">Celíacx</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn-guardar-sec" onclick="guardarSeccion('sec-general', this)">Guardar</button>
         </div>
       </div>
 
+      <!-- 2. Contacto -->
       <div class="datos-seccion">
-        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-contacto')">Contacto <span>▾</span></div>
+        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-contacto', this)">
+          <span><span class="sec-icon">📞</span>Contacto</span>
+          <span class="sec-chevron">▾</span>
+        </div>
         <div class="datos-seccion-body" id="sec-contacto">
-          <div class="datos-campo"><label>Prefijo</label><input type="text" id="d-prefijo"></div>
-          <div class="datos-campo"><label>Teléfono</label><input type="tel" id="d-telefono"></div>
-          <div class="datos-campo"><label>Email</label><input type="email" id="d-email"></div>
-          <button class="btn btn-primary" style="margin-top:8px;" onclick="guardarSeccion(['prefijo','telefono','email'], this)">Guardar sección</button>
+          <div class="datos-campo">
+            <label>Prefijo telefónico</label>
+            <div class="select-wrapper">
+              <select id="d-prefijo">
+                <option value="">— Selecciona —</option>
+                <option value="🇪🇨 +593 (Ecuador)">🇪🇨 +593 (Ecuador)</option>
+                <option value="🇨🇴 +57 (Colombia)">🇨🇴 +57 (Colombia)</option>
+                <option value="🇵🇪 +51 (Perú)">🇵🇪 +51 (Perú)</option>
+                <option value="🇻🇪 +58 (Venezuela)">🇻🇪 +58 (Venezuela)</option>
+                <option value="🇦🇷 +54 (Argentina)">🇦🇷 +54 (Argentina)</option>
+                <option value="🇨🇱 +56 (Chile)">🇨🇱 +56 (Chile)</option>
+                <option value="🇧🇴 +591 (Bolivia)">🇧🇴 +591 (Bolivia)</option>
+                <option value="🇲🇽 +52 (México)">🇲🇽 +52 (México)</option>
+                <option value="🇺🇸 +1 (Estados Unidos)">🇺🇸 +1 (Estados Unidos)</option>
+                <option value="🇪🇸 +34 (España)">🇪🇸 +34 (España)</option>
+                <option value="🇬🇧 +44 (Reino Unido)">🇬🇧 +44 (Reino Unido)</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+          </div>
+          <div class="datos-campo">
+            <label>Número de teléfono</label>
+            <input type="tel" id="d-telefono" placeholder="Ej: 0991234567">
+          </div>
+          <div class="datos-campo">
+            <label>Correo electrónico</label>
+            <input type="email" id="d-email" placeholder="Ej: nombre@correo.com">
+          </div>
+          <button class="btn-guardar-sec" onclick="guardarSeccion('sec-contacto', this)">Guardar</button>
         </div>
       </div>
 
+      <!-- 3. Cumpleaños -->
       <div class="datos-seccion">
-        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-direccion')">Dirección <span>▾</span></div>
+        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-cumple', this)">
+          <span><span class="sec-icon">🎂</span>Cumpleaños</span>
+          <span class="sec-chevron">▾</span>
+        </div>
+        <div class="datos-seccion-body" id="sec-cumple">
+          <div class="datos-campo">
+            <label>Fecha de nacimiento</label>
+            <input type="date" id="d-fechaNacimiento">
+          </div>
+          <div class="privacy-row">
+            <label for="d-fechaPublica">¿Fecha de cumpleaños visible para el equipo?</label>
+            <div class="select-wrapper" style="margin-bottom:0;min-width:90px;">
+              <select id="d-fechaPublica">
+                <option value="Sí">Sí</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+          </div>
+          <div class="privacy-row">
+            <label for="d-edadPublica">¿Edad visible para el equipo?</label>
+            <div class="select-wrapper" style="margin-bottom:0;min-width:90px;">
+              <select id="d-edadPublica">
+                <option value="Sí">Sí</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn-guardar-sec" onclick="guardarSeccion('sec-cumple', this)">Guardar</button>
+        </div>
+      </div>
+
+      <!-- 4. Identidad legal -->
+      <div class="datos-seccion">
+        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-legal', this)">
+          <span><span class="sec-icon">🪪</span>Identidad legal</span>
+          <span class="sec-chevron">▾</span>
+        </div>
+        <div class="datos-seccion-body" id="sec-legal">
+          <div class="aviso-legal">
+            🔒 <strong>Esta información es confidencial.</strong> Solo se usa para trámites legales y situaciones de emergencia. No es visible para otras participantes.
+          </div>
+          <div class="datos-campo">
+            <label>Tipo de documento</label>
+            <div class="select-wrapper">
+              <select id="d-tipoDocumento">
+                <option value="">— Selecciona —</option>
+                <option value="Cédula">Cédula</option>
+                <option value="DNI">DNI</option>
+                <option value="Pasaporte">Pasaporte</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+          </div>
+          <div class="datos-campo">
+            <label>Número de documento</label>
+            <input type="text" id="d-numeroDocumento" placeholder="Ej: 1712345678">
+          </div>
+          <div class="datos-campo">
+            <label>País emisor del documento</label>
+            <div class="select-wrapper">
+              <select id="d-paisExpedicion">
+                <option value="">— Selecciona —</option>
+                <option value="Ecuador">Ecuador</option>
+                <option value="Colombia">Colombia</option>
+                <option value="Perú">Perú</option>
+                <option value="Venezuela">Venezuela</option>
+                <option value="Argentina">Argentina</option>
+                <option value="Chile">Chile</option>
+                <option value="Bolivia">Bolivia</option>
+                <option value="Brasil">Brasil</option>
+                <option value="México">México</option>
+                <option value="Paraguay">Paraguay</option>
+                <option value="Uruguay">Uruguay</option>
+                <option value="Cuba">Cuba</option>
+                <option value="República Dominicana">República Dominicana</option>
+                <option value="Estados Unidos">Estados Unidos</option>
+                <option value="Canadá">Canadá</option>
+                <option value="España">España</option>
+                <option value="Alemania">Alemania</option>
+                <option value="Francia">Francia</option>
+                <option value="Italia">Italia</option>
+                <option value="Reino Unido">Reino Unido</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+          </div>
+          <div class="datos-campo">
+            <label>Nombre legal completo</label>
+            <input type="text" id="d-nombreLegal" placeholder="Tal como aparece en tu documento">
+          </div>
+          <button class="btn-guardar-sec" onclick="guardarSeccion('sec-legal', this)">Guardar</button>
+        </div>
+      </div>
+
+      <!-- 5. Dirección -->
+      <div class="datos-seccion">
+        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-direccion', this)">
+          <span><span class="sec-icon">📍</span>Dirección</span>
+          <span class="sec-chevron">▾</span>
+        </div>
         <div class="datos-seccion-body" id="sec-direccion">
-          <div class="datos-campo"><label>Calle principal</label><input type="text" id="d-callePrincipal"></div>
-          <div class="datos-campo"><label>Calle secundaria</label><input type="text" id="d-calleSecundaria"></div>
-          <div class="datos-campo"><label>Numeración</label><input type="text" id="d-numeracion"></div>
-          <div class="datos-campo"><label>Sector o barrio</label><input type="text" id="d-sector"></div>
-          <div class="datos-campo"><label>Cantón</label><input type="text" id="d-canton"></div>
-          <button class="btn btn-primary" style="margin-top:8px;" onclick="guardarSeccion(['callePrincipal','calleSecundaria','numeracion','sector','canton'], this)">Guardar sección</button>
+          <div class="datos-campo">
+            <label>Calle principal</label>
+            <input type="text" id="d-callePrincipal" placeholder="Ej: Av. Amazonas">
+          </div>
+          <div class="datos-campo">
+            <label>Calle secundaria</label>
+            <input type="text" id="d-calleSecundaria" placeholder="Ej: Av. Colón">
+          </div>
+          <div class="datos-campo">
+            <label>Numeración</label>
+            <input type="text" id="d-numeracion" placeholder="Ej: N24-56">
+          </div>
+          <div class="datos-campo">
+            <label>Sector o barrio</label>
+            <input type="text" id="d-sector" placeholder="Ej: La Mariscal">
+          </div>
+          <div class="datos-campo">
+            <label>Cantón</label>
+            <div class="select-wrapper">
+              <select id="d-canton">
+                <option value="">— Selecciona —</option>
+                <option value="Quito">Quito</option>
+                <option value="Cayambe">Cayambe</option>
+                <option value="Mejía">Mejía</option>
+                <option value="Pedro Moncayo">Pedro Moncayo</option>
+                <option value="Rumiñahui">Rumiñahui</option>
+                <option value="Santo Domingo">Santo Domingo</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn-guardar-sec" onclick="guardarSeccion('sec-direccion', this)">Guardar</button>
         </div>
       </div>
 
+      <!-- 6. Contacto emergencia 1 -->
       <div class="datos-seccion">
-        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-emerg1')">Contacto de emergencia 1 <span>▾</span></div>
+        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-emerg1', this)">
+          <span><span class="sec-icon">🆘</span>Contacto de emergencia 1</span>
+          <span class="sec-chevron">▾</span>
+        </div>
         <div class="datos-seccion-body" id="sec-emerg1">
-          <div class="datos-campo"><label>Nombre completo</label><input type="text" id="d-emerg1Nombre"></div>
-          <div class="datos-campo"><label>Relación</label><input type="text" id="d-emerg1Relacion"></div>
-          <div class="datos-campo"><label>Prefijo</label><input type="text" id="d-emerg1Prefijo"></div>
-          <div class="datos-campo"><label>Teléfono</label><input type="tel" id="d-emerg1Telefono"></div>
-          <button class="btn btn-primary" style="margin-top:8px;" onclick="guardarSeccion(['emerg1Nombre','emerg1Relacion','emerg1Prefijo','emerg1Telefono'], this)">Guardar sección</button>
+          <div class="datos-campo">
+            <label>Nombre completo</label>
+            <input type="text" id="d-emerg1Nombre" placeholder="Ej: Ana Pérez">
+          </div>
+          <div class="datos-campo">
+            <label>Relación</label>
+            <div class="select-wrapper">
+              <select id="d-emerg1Relacion">
+                <option value="">— Selecciona —</option>
+                <option value="Amigx">Amigx</option>
+                <option value="Familiar">Familiar</option>
+                <option value="Pareja">Pareja</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+          </div>
+          <div class="datos-campo">
+            <label>Prefijo telefónico</label>
+            <div class="select-wrapper">
+              <select id="d-emerg1Prefijo">
+                <option value="">— Selecciona —</option>
+                <option value="🇪🇨 +593 (Ecuador)">🇪🇨 +593 (Ecuador)</option>
+                <option value="🇨🇴 +57 (Colombia)">🇨🇴 +57 (Colombia)</option>
+                <option value="🇵🇪 +51 (Perú)">🇵🇪 +51 (Perú)</option>
+                <option value="🇻🇪 +58 (Venezuela)">🇻🇪 +58 (Venezuela)</option>
+                <option value="🇦🇷 +54 (Argentina)">🇦🇷 +54 (Argentina)</option>
+                <option value="🇨🇱 +56 (Chile)">🇨🇱 +56 (Chile)</option>
+                <option value="🇲🇽 +52 (México)">🇲🇽 +52 (México)</option>
+                <option value="🇺🇸 +1 (Estados Unidos)">🇺🇸 +1 (Estados Unidos)</option>
+                <option value="🇪🇸 +34 (España)">🇪🇸 +34 (España)</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+          </div>
+          <div class="datos-campo">
+            <label>Número de teléfono</label>
+            <input type="tel" id="d-emerg1Telefono" placeholder="Ej: 0991234567">
+          </div>
+          <button class="btn-guardar-sec" onclick="guardarSeccion('sec-emerg1', this)">Guardar</button>
         </div>
       </div>
 
+      <!-- 7. Contacto emergencia 2 -->
       <div class="datos-seccion">
-        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-emerg2')">Contacto de emergencia 2 <span>▾</span></div>
+        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-emerg2', this)">
+          <span><span class="sec-icon">🆘</span>Contacto de emergencia 2</span>
+          <span class="sec-chevron">▾</span>
+        </div>
         <div class="datos-seccion-body" id="sec-emerg2">
-          <div class="datos-campo"><label>Nombre completo</label><input type="text" id="d-emerg2Nombre"></div>
-          <div class="datos-campo"><label>Relación</label><input type="text" id="d-emerg2Relacion"></div>
-          <div class="datos-campo"><label>Prefijo</label><input type="text" id="d-emerg2Prefijo"></div>
-          <div class="datos-campo"><label>Teléfono</label><input type="tel" id="d-emerg2Telefono"></div>
-          <button class="btn btn-primary" style="margin-top:8px;" onclick="guardarSeccion(['emerg2Nombre','emerg2Relacion','emerg2Prefijo','emerg2Telefono'], this)">Guardar sección</button>
+          <div class="datos-campo">
+            <label>Nombre completo</label>
+            <input type="text" id="d-emerg2Nombre" placeholder="Ej: Carlos López">
+          </div>
+          <div class="datos-campo">
+            <label>Relación</label>
+            <div class="select-wrapper">
+              <select id="d-emerg2Relacion">
+                <option value="">— Selecciona —</option>
+                <option value="Amigx">Amigx</option>
+                <option value="Familiar">Familiar</option>
+                <option value="Pareja">Pareja</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+          </div>
+          <div class="datos-campo">
+            <label>Prefijo telefónico</label>
+            <div class="select-wrapper">
+              <select id="d-emerg2Prefijo">
+                <option value="">— Selecciona —</option>
+                <option value="🇪🇨 +593 (Ecuador)">🇪🇨 +593 (Ecuador)</option>
+                <option value="🇨🇴 +57 (Colombia)">🇨🇴 +57 (Colombia)</option>
+                <option value="🇵🇪 +51 (Perú)">🇵🇪 +51 (Perú)</option>
+                <option value="🇻🇪 +58 (Venezuela)">🇻🇪 +58 (Venezuela)</option>
+                <option value="🇦🇷 +54 (Argentina)">🇦🇷 +54 (Argentina)</option>
+                <option value="🇨🇱 +56 (Chile)">🇨🇱 +56 (Chile)</option>
+                <option value="🇲🇽 +52 (México)">🇲🇽 +52 (México)</option>
+                <option value="🇺🇸 +1 (Estados Unidos)">🇺🇸 +1 (Estados Unidos)</option>
+                <option value="🇪🇸 +34 (España)">🇪🇸 +34 (España)</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+          </div>
+          <div class="datos-campo">
+            <label>Número de teléfono</label>
+            <input type="tel" id="d-emerg2Telefono" placeholder="Ej: 0987654321">
+          </div>
+          <button class="btn-guardar-sec" onclick="guardarSeccion('sec-emerg2', this)">Guardar</button>
         </div>
       </div>
 
+      <!-- 8. Salud -->
       <div class="datos-seccion">
-        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-salud')">Salud <span>▾</span></div>
+        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-salud', this)">
+          <span><span class="sec-icon">🏥</span>Salud</span>
+          <span class="sec-chevron">▾</span>
+        </div>
         <div class="datos-seccion-body" id="sec-salud">
-          <div class="datos-campo"><label>Enfermedad diagnosticada</label><input type="text" id="d-enfermedad"></div>
-          <div class="datos-campo"><label>¿Presenta alergias?</label><input type="text" id="d-alergias"></div>
-          <div class="datos-campo"><label>Descripción de alergias</label><textarea id="d-alergiasDesc" class="textarea-otro" style="display:block;"></textarea></div>
-          <div class="datos-campo"><label>Antecedentes médicos</label><textarea id="d-antecedentes" class="textarea-otro" style="display:block;"></textarea></div>
-          <div class="datos-campo"><label>¿Toma medicamentos?</label><input type="text" id="d-medicamentos"></div>
-          <div class="datos-campo"><label>Descripción de medicamentos</label><textarea id="d-medicamentosDesc" class="textarea-otro" style="display:block;"></textarea></div>
-          <div class="datos-campo"><label>Tipo de atención médica</label><input type="text" id="d-atencionMedica"></div>
-          <div class="datos-campo"><label>Seguro privado</label><input type="text" id="d-seguro"></div>
-          <div class="datos-campo"><label>Contacto del seguro</label><input type="text" id="d-seguroContacto"></div>
-          <button class="btn btn-primary" style="margin-top:8px;" onclick="guardarSeccion(['enfermedad','alergias','alergiasDesc','antecedentes','medicamentos','medicamentosDesc','atencionMedica','seguro','seguroContacto'], this)">Guardar sección</button>
+
+          <div class="datos-campo">
+            <label>Enfermedades diagnosticadas</label>
+            <p class="datos-hint" style="margin-bottom:8px;">Selecciona todas las que apliquen.</p>
+            <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Asma"> Asma</label>
+            <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Diabetes"> Diabetes</label>
+            <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Hipertensión"> Hipertensión</label>
+            <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Cardiopatía"> Cardiopatía</label>
+            <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Epilepsia"> Epilepsia</label>
+            <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Trastornos de coagulación"> Trastornos de coagulación</label>
+            <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Problemas osteomusculares"> Problemas osteomusculares</label>
+            <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Otro"> Otro</label>
+          </div>
+
+          <div class="datos-campo" style="margin-top:4px;">
+            <label>¿Presentas alergias?</label>
+            <div class="select-wrapper">
+              <select id="d-alergias" onchange="toggleCondicional('d-alergias', ['Sí','Tal vez'], 'campo-alergiasDesc')">
+                <option value="">— Selecciona —</option>
+                <option value="Sí">Sí</option>
+                <option value="No">No</option>
+                <option value="Tal vez">Tal vez</option>
+              </select>
+            </div>
+          </div>
+          <div class="datos-campo campo-condicional" id="campo-alergiasDesc">
+            <label>Descripción de alergias</label>
+            <textarea id="d-alergiasDesc" placeholder="Ej: Alergia a la penicilina y al látex"></textarea>
+          </div>
+
+          <div class="datos-campo">
+            <label>Antecedentes médicos</label>
+            <p class="datos-hint" style="margin-bottom:8px;">Selecciona todos los que apliquen.</p>
+            <label class="chk-opcion"><input type="checkbox" data-group="antecedentes" value="Cirugías previas"> Cirugías previas</label>
+            <label class="chk-opcion"><input type="checkbox" data-group="antecedentes" value="Hospitalización último año"> Hospitalización en el último año</label>
+            <label class="chk-opcion"><input type="checkbox" data-group="antecedentes" value="Lesiones deportivas"> Lesiones deportivas</label>
+            <label class="chk-opcion"><input type="checkbox" data-group="antecedentes" value="Otro"> Otro</label>
+          </div>
+
+          <div class="datos-campo">
+            <label>¿Tomas medicamentos o suplementos diarios?</label>
+            <div class="select-wrapper">
+              <select id="d-medicamentos" onchange="toggleCondicional('d-medicamentos', ['Sí'], 'campo-medicamentosDesc')">
+                <option value="">— Selecciona —</option>
+                <option value="Sí">Sí</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+          </div>
+          <div class="datos-campo campo-condicional" id="campo-medicamentosDesc">
+            <label>Descripción de medicamentos</label>
+            <textarea id="d-medicamentosDesc" placeholder="Ej: Loratadina 10mg cada 12 horas"></textarea>
+          </div>
+
+          <div class="datos-campo">
+            <label>Tipo de atención médica en emergencia</label>
+            <div class="select-wrapper">
+              <select id="d-atencionMedica" onchange="toggleCondicional('d-atencionMedica', ['Seguro Privado'], 'campo-seguro')">
+                <option value="">— Selecciona —</option>
+                <option value="MSP">MSP (Ministerio de Salud Pública)</option>
+                <option value="IESS">IESS</option>
+                <option value="Seguro Privado">Seguro Privado</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+          </div>
+          <div class="campo-condicional" id="campo-seguro">
+            <div class="datos-campo">
+              <label>Nombre del seguro privado</label>
+              <div class="select-wrapper">
+                <select id="d-seguro">
+                  <option value="">— Selecciona —</option>
+                  <option value="Saludsa">Saludsa</option>
+                  <option value="Ecuasanitas">Ecuasanitas</option>
+                  <option value="Humana">Humana</option>
+                  <option value="BMI">BMI</option>
+                  <option value="Confiamed">Confiamed</option>
+                  <option value="BUPA">BUPA</option>
+                  <option value="Pan American">Pan American</option>
+                  <option value="CruzBlanca">CruzBlanca</option>
+                  <option value="Otro">Otro</option>
+                </select>
+              </div>
+            </div>
+            <div class="datos-campo">
+              <label>Número de contacto del seguro</label>
+              <input type="tel" id="d-seguroContacto" placeholder="Ej: 1800-123456">
+            </div>
+          </div>
+
+          <button class="btn-guardar-sec" onclick="guardarSeccion('sec-salud', this)">Guardar</button>
         </div>
       </div>
 
@@ -658,22 +900,19 @@
 </div>
 
 <script>
-// ─── CONFIG ──────────────────────────────────────────────────────────────────
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
 var BACKEND = 'https://script.google.com/macros/s/AKfycbx0eKDlMJBJieJcWf0lLEm9q_Yc3SPivwOn-3mtFpIugrzwCcZj3BYlmxAYhWuvTd7MIA/exec';
 
-// ─── ESTADO GLOBAL ───────────────────────────────────────────────────────────
+// ─── ESTADO GLOBAL ────────────────────────────────────────────────────────────
 var E = {
   nombre: '', datos: null,
   conf: '', editPat: '', editTalla: '', editProtec: '',
-  fechas: [],
-  tipoPago: 'clase',      // 'clase' | 'mensual'
-  precioPorClase: 0,
-  precioMensual: 0,
-  totalPago: 0,
-  notaPago: ''
+  fechas: [], tipoPago: 'clase',
+  precioPorClase: 0, precioMensual: 0,
+  totalPago: 0, notaPago: ''
 };
 
-// ─── API ─────────────────────────────────────────────────────────────────────
+// ─── API ──────────────────────────────────────────────────────────────────────
 function api(params, onSuccess, onError) {
   var url = BACKEND + '?' + Object.keys(params).map(function(k) {
     return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
@@ -687,9 +926,8 @@ function api(params, onSuccess, onError) {
     .catch(function(e) { onError(e); });
 }
 
-// ─── INIT ────────────────────────────────────────────────────────────────────
+// ─── INIT ─────────────────────────────────────────────────────────────────────
 window.onload = function() {
-  // Cargar nombres
   api({ action: 'getNombres' }, function(nombres) {
     var sel = document.getElementById('sel-nombre');
     sel.innerHTML = '<option value="">— Elige tu nombre —</option>';
@@ -700,38 +938,26 @@ window.onload = function() {
     });
     sel.disabled = false;
     sel.style.color = '';
-  }, function(e) {
-    err('err-s1', 'Error al cargar nombres: ' + e.message);
-  });
+  }, function(e) { err('err-s1', 'Error al cargar nombres: ' + e.message); });
 
-  // Cargar precios desde hoja Pagos (I2 = por clase, J2 = mensual)
   api({ action: 'getPreciosClases' }, function(precios) {
     E.precioPorClase = parseFloat(precios.precioPorClase) || 0;
     E.precioMensual  = parseFloat(precios.precioMensual)  || 0;
-  }, function() { /* silencioso, defaults a 0 */ });
+  }, function() {});
 };
 
-// ─── NAVEGACIÓN ──────────────────────────────────────────────────────────────
+// ─── NAVEGACIÓN ───────────────────────────────────────────────────────────────
 function ir(id) {
   document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
   document.getElementById(id).classList.add('activa');
   window.scrollTo(0, 0);
 
-  var sinPasos = ['s1', 's1b', 's-home', 's-misreservas', 's-carga', 's6', 's-datos'];
+  var sinPasos = ['s1','s1b','s-home','s-misreservas','s-carga','s6','s-datos'];
   var dotContainer = document.querySelector('.paso-indicator');
-
-  if (sinPasos.indexOf(id) !== -1) {
-    dotContainer.style.display = 'none';
-    return;
-  }
+  if (sinPasos.indexOf(id) !== -1) { dotContainer.style.display = 'none'; return; }
   dotContainer.style.display = 'flex';
 
-  var pasos = {
-    's2':1, 's3a':1, 's3b':1, 's3c':1,
-    's-carga-fechas':2, 's4':2,
-    's-pago':3,
-    's5':4, 's-carga-conf':4
-  };
+  var pasos = { 's2':1,'s3a':1,'s3b':1,'s3c':1,'s-carga-fechas':2,'s4':2,'s-pago':3,'s5':4,'s-carga-conf':4 };
   var p = pasos[id] || 1;
   for (var i = 1; i <= 4; i++) {
     var d = document.getElementById('dot'+i);
@@ -739,7 +965,7 @@ function ir(id) {
   }
 }
 
-function volver(pantallaAnterior) { ir(pantallaAnterior); }
+function volver(id) { ir(id); }
 
 function err(id, msg) {
   var el = document.getElementById(id);
@@ -752,15 +978,15 @@ function selOp(label, name, val) {
     r.closest('.opcion').classList.remove('sel');
   });
   label.classList.add('sel');
-  if (name === 'conf') E.conf = val;
-  if (name === 'edit-pat') E.editPat = val;
+  if (name === 'conf')        E.conf = val;
+  if (name === 'edit-pat')    E.editPat = val;
   if (name === 'edit-protec') {
     E.editProtec = val;
     document.getElementById('txt-otro').style.display = val === 'Otro' ? 'block' : 'none';
   }
 }
 
-// ─── S1: Nombre ──────────────────────────────────────────────────────────────
+// ─── S1 ───────────────────────────────────────────────────────────────────────
 function continuar_s1() {
   var nombre = document.getElementById('sel-nombre').value.trim();
   if (!nombre) { err('err-s1', 'Por favor selecciona tu nombre.'); return; }
@@ -769,7 +995,7 @@ function continuar_s1() {
   ir('s1b');
 }
 
-// ─── S1b: PIN ────────────────────────────────────────────────────────────────
+// ─── S1b: PIN ─────────────────────────────────────────────────────────────────
 function continuar_pin() {
   var pin = document.getElementById('input-pin').value.trim();
   if (!/^\d{4}$/.test(pin)) { err('err-pin', 'Ingresa un PIN válido de 4 dígitos.'); return; }
@@ -782,25 +1008,18 @@ function continuar_pin() {
   }, function(e) { ir('s1b'); err('err-pin', 'Error: ' + e.message); });
 }
 
-// ─── HOME ────────────────────────────────────────────────────────────────────
+// ─── HOME ─────────────────────────────────────────────────────────────────────
 function irMisReservas() {
   ir('s-carga');
   api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
     _todasReservas = reservas;
     renderMisReservas(reservas, false);
     ir('s-misreservas');
-  }, function(e) {
-    ir('s-home');
-    alert('Error al cargar reservas: ' + e.message);
-  });
+  }, function(e) { ir('s-home'); alert('Error al cargar reservas: ' + e.message); });
 }
 
 function irNuevaReserva() {
-  E.conf = '';
-  E.fechas = [];
-  E.tipoPago = 'clase';
-  E.totalPago = 0;
-  E.notaPago = '';
+  E.conf = ''; E.fechas = []; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = '';
   document.querySelectorAll('input[name="conf"]').forEach(function(r) {
     r.checked = false; r.closest('.opcion').classList.remove('sel');
   });
@@ -808,11 +1027,10 @@ function irNuevaReserva() {
   ir('s2');
 }
 
-function irHomeDesdeExito() {
-  ir('s-home');
-}
+function irHomeDesdeExito() { ir('s-home'); }
 
-// ─── MIS RESERVAS ────────────────────────────────────────────────────────────
+// ─── MIS RESERVAS ─────────────────────────────────────────────────────────────
+var _todasReservas = [];
 function renderMisReservas(reservas, mostrarTodas) {
   var html = '';
   if (!reservas || reservas.length === 0) {
@@ -822,21 +1040,18 @@ function renderMisReservas(reservas, mostrarTodas) {
     visibles.forEach(function(r) {
       var badgeClass = r.estado === 'Confirmada' ? 'badge-confirmada' : r.estado === 'Cancelada' ? 'badge-cancelada' : 'badge-pendiente';
       var icon = r.estado === 'Confirmada' ? '✅' : r.estado === 'Cancelada' ? '❌' : '⏳';
-      html += '<div class="reserva-card">';
-      html += '<div class="reserva-header">';
-      html += '<span class="reserva-fecha">' + r.fecha + '</span>';
-      html += '<span class="badge ' + badgeClass + '">' + icon + ' ' + r.estado + '</span>';
-      html += '</div>';
       var tienePat  = r.talla && r.talla !== 'No';
       var tieneProc = r.protecciones && r.protecciones !== 'No';
-      var equipMsg;
-      if (tienePat && tieneProc)  equipMsg = '🛼🛡️ Patines talla ' + r.talla + ' y protecciones';
-      else if (tienePat)          equipMsg = '🛼 Patines talla ' + r.talla;
-      else if (tieneProc)         equipMsg = '🛡️ ' + r.protecciones;
-      else                        equipMsg = '✅ Sin equipamiento prestado';
+      var equipMsg  = tienePat && tieneProc ? '🛼🛡️ Patines T.' + r.talla + ' y protecciones'
+                    : tienePat              ? '🛼 Patines talla ' + r.talla
+                    : tieneProc             ? '🛡️ ' + r.protecciones
+                    :                         '✅ Sin equipamiento prestado';
+      html += '<div class="reserva-card">';
+      html += '<div class="reserva-header"><span class="reserva-fecha">' + r.fecha + '</span>';
+      html += '<span class="badge ' + badgeClass + '">' + icon + ' ' + r.estado + '</span></div>';
       html += '<div class="reserva-detalle">' + equipMsg + '</div>';
       if (r.estado !== 'Cancelada') {
-        html += '<button class="btn-cancelar" onclick="cancelarRes(\'' + r.fecha.replace(/'/g, "\\'") + '\')">Cancelar esta reserva</button>';
+        html += '<button class="btn-cancelar" onclick="cancelarRes(\'' + r.fecha.replace(/'/g,"\\'") + '\')">Cancelar esta reserva</button>';
       }
       html += '</div>';
     });
@@ -847,29 +1062,19 @@ function renderMisReservas(reservas, mostrarTodas) {
   document.getElementById('misres-lista').innerHTML = html;
 }
 
-var _todasReservas = [];
 function verTodasReservas() { renderMisReservas(_todasReservas, true); }
 
 function cancelarRes(fecha) {
   if (!confirm('¿Segura que quieres cancelar tu reserva para el ' + fecha + '?')) return;
   var btn = event.target;
-  btn.disabled = true;
-  btn.textContent = '⏳ Cancelando...';
+  btn.disabled = true; btn.textContent = '⏳ Cancelando...';
   api({ action: 'cancelarReserva', nombre: E.nombre, fecha: fecha }, function(res) {
     if (res.exito) { irMisReservas(); }
-    else {
-      btn.disabled = false;
-      btn.textContent = 'Cancelar esta reserva';
-      alert('Error al cancelar. Por favor intenta de nuevo.');
-    }
-  }, function(e) {
-    btn.disabled = false;
-    btn.textContent = 'Cancelar esta reserva';
-    alert('Error: ' + e.message);
-  });
+    else { btn.disabled = false; btn.textContent = 'Cancelar esta reserva'; alert('Error al cancelar.'); }
+  }, function(e) { btn.disabled = false; btn.textContent = 'Cancelar esta reserva'; alert('Error: ' + e.message); });
 }
 
-// ─── S2: Equipamiento ────────────────────────────────────────────────────────
+// ─── S2: Equipamiento ─────────────────────────────────────────────────────────
 function renderEquip() {
   var d = E.datos;
   var pat = d.necesitaPatines, tal = d.talla, pro = d.necesitaProtecciones;
@@ -898,7 +1103,7 @@ function continuar_s2() {
     cargarFechas();
   } else {
     E.editPat = ''; E.editTalla = ''; E.editProtec = '';
-    document.querySelectorAll('input[name="edit-pat"], input[name="edit-protec"]').forEach(function(r) {
+    document.querySelectorAll('input[name="edit-pat"],input[name="edit-protec"]').forEach(function(r) {
       r.checked = false; r.closest('.opcion').classList.remove('sel');
     });
     document.getElementById('txt-otro').style.display = 'none';
@@ -906,7 +1111,7 @@ function continuar_s2() {
   }
 }
 
-// ─── S3a ─────────────────────────────────────────────────────────────────────
+// ─── S3a ──────────────────────────────────────────────────────────────────────
 function continuar_s3a() {
   if (!E.editPat) { err('err-s3a', 'Por favor selecciona una opción.'); return; }
   if (E.editPat === 'Sí') {
@@ -917,20 +1122,18 @@ function continuar_s3a() {
       ir('s3b');
     }, function(e) { err('err-s3a', 'Error: ' + e.message); });
   } else {
-    E.editTalla = '';
-    ir('s3c');
+    E.editTalla = ''; ir('s3c');
   }
 }
 
-// ─── S3b ─────────────────────────────────────────────────────────────────────
+// ─── S3b ──────────────────────────────────────────────────────────────────────
 function continuar_s3b() {
   var t = document.getElementById('sel-talla').value;
   if (!t) { err('err-s3b', 'Por favor selecciona una talla.'); return; }
-  E.editTalla = t;
-  ir('s3c');
+  E.editTalla = t; ir('s3c');
 }
 
-// ─── S3c ─────────────────────────────────────────────────────────────────────
+// ─── S3c ──────────────────────────────────────────────────────────────────────
 function continuar_s3c() {
   if (!E.editProtec) { err('err-s3c', 'Por favor selecciona una opción.'); return; }
   var protecFinal = E.editProtec;
@@ -956,82 +1159,53 @@ function continuar_s3c() {
   }, function(e) { err('err-s3c', 'Error al guardar: ' + e.message); });
 }
 
-// ─── LÓGICA DE PRECIOS ────────────────────────────────────────────────────────
-// Devuelve true si la persona tiene equipo propio completo (patines Y protecciones)
-// Solo en ese caso puede elegir pago mensual
+// ─── PRECIOS / TIPO PAGO ──────────────────────────────────────────────────────
 function canPayMonthly() {
   if (!E.datos) return false;
-  return E.datos.necesitaPatines.toLowerCase() === 'no' &&
-         E.datos.necesitaProtecciones.toLowerCase() === 'no';
+  return E.datos.necesitaPatines.toLowerCase() === 'no' && E.datos.necesitaProtecciones.toLowerCase() === 'no';
 }
 
-// Cambia el tipo de pago seleccionado en S4
 function selTipoPago(tipo, label) {
-  document.querySelectorAll('input[name="tipo-pago"]').forEach(function(r) {
-    r.closest('.opcion').classList.remove('sel');
-  });
+  document.querySelectorAll('input[name="tipo-pago"]').forEach(function(r) { r.closest('.opcion').classList.remove('sel'); });
   label.classList.add('sel');
   E.tipoPago = tipo;
-
-  // Resetear fechas seleccionadas al cambiar tipo
   E.fechas = [];
-  document.querySelectorAll('input[name="fecha"]').forEach(function(c) {
-    c.checked = false;
-    c.closest('.fecha-item').classList.remove('sel');
-  });
-
-  var subtitulo = document.getElementById('s4-fechas-subtitulo');
-  if (tipo === 'mensual') {
-    subtitulo.textContent = 'Opcionalmente, puedes seleccionar a qué entrenamientos asistirás este mes.';
-  } else {
-    subtitulo.textContent = 'Selecciona los entrenamientos a los que asistirás.';
-  }
-
+  document.querySelectorAll('input[name="fecha"]').forEach(function(c) { c.checked = false; c.closest('.fecha-item').classList.remove('sel'); });
+  document.getElementById('s4-fechas-subtitulo').textContent = tipo === 'mensual'
+    ? 'Opcionalmente, puedes seleccionar a qué entrenamientos asistirás este mes.'
+    : 'Selecciona los entrenamientos a los que asistirás.';
   actualizarTotalS4();
 }
 
-// Recalcula y muestra el total en S4
 function actualizarTotalS4() {
-  var boxEl     = document.getElementById('s4-total-box');
-  var montoEl   = document.getElementById('s4-total-monto');
+  var boxEl = document.getElementById('s4-total-box');
+  var montoEl = document.getElementById('s4-total-monto');
   var detalleEl = document.getElementById('s4-total-detalle');
-
   if (E.tipoPago === 'mensual') {
-    var total = E.precioMensual;
-    E.totalPago = total;
-    montoEl.textContent   = 'Total a pagar: $' + total.toFixed(2);
+    E.totalPago = E.precioMensual;
+    montoEl.textContent = 'Total a pagar: $' + E.precioMensual.toFixed(2);
     detalleEl.textContent = 'Pago mensual';
-    boxEl.style.display   = 'block';
+    boxEl.style.display = 'block';
   } else {
     var n = E.fechas.length;
-    if (n === 0) {
-      boxEl.style.display = 'none';
-      E.totalPago = 0;
-      return;
-    }
-    var totalClase = n * E.precioPorClase;
-    E.totalPago = totalClase;
-    montoEl.textContent   = 'Total a pagar: $' + totalClase.toFixed(2);
+    if (n === 0) { boxEl.style.display = 'none'; E.totalPago = 0; return; }
+    E.totalPago = n * E.precioPorClase;
+    montoEl.textContent = 'Total a pagar: $' + E.totalPago.toFixed(2);
     detalleEl.textContent = n + (n === 1 ? ' clase' : ' clases') + ' × $' + E.precioPorClase.toFixed(2);
-    boxEl.style.display   = 'block';
+    boxEl.style.display = 'block';
   }
 }
 
-// ─── S4: Fechas ──────────────────────────────────────────────────────────────
+// ─── S4: Fechas ───────────────────────────────────────────────────────────────
 function cargarFechas() {
   ir('s-carga-fechas');
   var d = E.datos;
   var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
-
   api({
-    action: 'getFechasDisponibles',
-    nombre: E.nombre,
-    talla: talla,
-    necesitaProtecciones: d.necesitaProtecciones
+    action: 'getFechasDisponibles', nombre: E.nombre,
+    talla: talla, necesitaProtecciones: d.necesitaProtecciones
   }, function(fechas) {
     var disponibles = fechas.filter(function(f) { return f.disponible; });
-
-    // Construir lista de fechas
     var html = '';
     if (fechas.length === 0) {
       html = '<p style="color:#888;text-align:center;">No hay fechas disponibles.</p>';
@@ -1049,18 +1223,13 @@ function cargarFechas() {
       });
     }
     document.getElementById('lista-fechas').innerHTML = html;
-
-    // Resetear estado de fechas
     E.fechas = [];
 
-    // Mostrar u ocultar selector de tipo de pago
     var puedeMensual = canPayMonthly();
-    var wrapper   = document.getElementById('s4-tipo-pago-wrapper');
+    var wrapper = document.getElementById('s4-tipo-pago-wrapper');
     var subtitulo = document.getElementById('s4-fechas-subtitulo');
-    var boxEl     = document.getElementById('s4-total-box');
 
     if (puedeMensual) {
-      // Mostrar selector: por defecto "mensual"
       wrapper.style.display = 'block';
       E.tipoPago = 'mensual';
       var radioMensual = document.querySelector('input[name="tipo-pago"][value="mensual"]');
@@ -1071,18 +1240,15 @@ function cargarFechas() {
       subtitulo.textContent = 'Opcionalmente, puedes seleccionar a qué entrenamientos asistirás este mes.';
       actualizarTotalS4();
     } else {
-      // Ocultar selector, solo pago por clase
       wrapper.style.display = 'none';
       E.tipoPago = 'clase';
       subtitulo.textContent = 'Selecciona los entrenamientos a los que asistirás.';
-      boxEl.style.display = 'none';
+      document.getElementById('s4-total-box').style.display = 'none';
       E.totalPago = 0;
-
       if (disponibles.length === 0) {
-        err('err-s4', 'No hay cupos disponibles actualmente. Puedes volver a revisar más tarde.');
+        err('err-s4', 'No hay cupos disponibles actualmente.');
       }
     }
-
     ir('s4');
   }, function(e) { ir('s2'); err('err-s2', 'Error al verificar fechas: ' + e.message); });
 }
@@ -1096,208 +1262,207 @@ function toggleFecha(el, fecha) {
 }
 
 function continuar_s4() {
-  // Validación: pago por clase requiere al menos una fecha
   if (E.tipoPago === 'clase' && (!E.fechas || E.fechas.length === 0)) {
-    err('err-s4', 'Por favor selecciona al menos una fecha.');
-    return;
+    err('err-s4', 'Por favor selecciona al menos una fecha.'); return;
   }
-  // Mensual: asegurarse de que el total esté calculado
-  if (E.tipoPago === 'mensual') {
-    E.totalPago = E.precioMensual;
-  }
-
-  // Actualizar pantalla de pago con el total
+  if (E.tipoPago === 'mensual') E.totalPago = E.precioMensual;
   var esClase = E.tipoPago === 'clase';
-  document.getElementById('s-pago-total-monto').textContent =
-    'Total a pagar: $' + (E.totalPago || 0).toFixed(2);
+  document.getElementById('s-pago-total-monto').textContent = 'Total a pagar: $' + (E.totalPago || 0).toFixed(2);
   document.getElementById('s-pago-total-detalle').textContent = esClase
     ? E.fechas.length + (E.fechas.length === 1 ? ' clase' : ' clases') + ' × $' + E.precioPorClase.toFixed(2)
     : 'Pago mensual';
-
-  // Reset pantalla pago
   document.getElementById('chk-pago').checked = false;
   document.getElementById('btn-pago').disabled = true;
   document.getElementById('nota-pago').value = '';
   ir('s-pago');
 }
 
-// ─── S-PAGO ──────────────────────────────────────────────────────────────────
+// ─── S-PAGO ───────────────────────────────────────────────────────────────────
 function toggleBtnPago() {
-  var chk = document.getElementById('chk-pago');
-  document.getElementById('btn-pago').disabled = !chk.checked;
+  document.getElementById('btn-pago').disabled = !document.getElementById('chk-pago').checked;
 }
 
 function continuar_pago() {
-  if (!document.getElementById('chk-pago').checked) {
-    err('err-pago', 'Debes confirmar que realizaste el pago.');
-    return;
-  }
-
+  if (!document.getElementById('chk-pago').checked) { err('err-pago', 'Debes confirmar que realizaste el pago.'); return; }
   E.notaPago = document.getElementById('nota-pago').value.trim();
-
-  var btn = document.getElementById('btn-confirmar');
-  btn.disabled = false;
-  btn.textContent = 'Confirmar mi reserva';
-
+  document.getElementById('btn-confirmar').disabled = false;
+  document.getElementById('btn-confirmar').textContent = 'Confirmar mi reserva';
   var d = E.datos;
   var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
-
   var h = '<div class="r-titulo">Tu reserva</div>';
   h += fila('Nombre', E.nombre);
   h += fila('Tipo de pago', E.tipoPago === 'mensual' ? '📅 Mensual' : '🎟️ Por clase');
   h += fila('Total', '$' + (E.totalPago || 0).toFixed(2));
-  if (E.tipoPago === 'clase') {
-    h += fila('Fecha/s', E.fechas.join(' · '));
-  } else if (E.fechas.length > 0) {
-    h += fila('Asistirá a', E.fechas.join(' · '));
-  }
+  if (E.tipoPago === 'clase') h += fila('Fecha/s', E.fechas.join(' · '));
+  else if (E.fechas.length > 0) h += fila('Asistirá a', E.fechas.join(' · '));
   h += fila('Patines', d.necesitaPatines + (talla ? ' — Talla ' + talla : ''));
   h += fila('Protecciones', d.necesitaProtecciones);
   if (E.notaPago) h += fila('Referencia pago', E.notaPago);
-
   document.getElementById('s5-resumen').innerHTML = h;
   ir('s5');
 }
 
-// ─── S5: Confirmar ───────────────────────────────────────────────────────────
+// ─── S5: Confirmar ────────────────────────────────────────────────────────────
 function confirmarReserva() {
   var btn = document.getElementById('btn-confirmar');
   btn.disabled = true;
   ir('s-carga-conf');
-
   var d = E.datos;
   var talla  = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : 'No';
   var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : 'No';
 
-  // Finaliza el flujo: guarda nota en Pagos y muestra pantalla de éxito
   function finalizar() {
     var fechasStr = E.fechas.length > 0 ? E.fechas.join(', ') : (E.tipoPago === 'mensual' ? 'mensual (sin clases seleccionadas)' : '—');
-
-    // Guardar nota de pago en hoja Pagos columna K (fire-and-forget)
-    api({
-      action: 'guardarNotaPago',
-      nombre:   E.nombre,
-      tipoPago: E.tipoPago,
-      monto:    (E.totalPago || 0).toFixed(2),
-      nota:     E.notaPago || '—',
-      fechas:   fechasStr
-    }, function() {}, function() {});
-
-    // Texto del detalle en pantalla de éxito
-    var equipMsg;
-    if (talla !== 'No' && protec !== 'No') equipMsg = 'Patines T.' + talla + ' y protecciones';
-    else if (talla !== 'No')               equipMsg = 'Patines talla ' + talla;
-    else if (protec !== 'No')              equipMsg = 'Protecciones';
-    else                                   equipMsg = 'Equipo propio';
-
-    var detalleTexto;
-    if (E.tipoPago === 'mensual') {
-      detalleTexto = E.nombre + ' · Pago mensual ($' + (E.totalPago || 0).toFixed(2) + ') · ' + equipMsg;
-    } else {
-      detalleTexto = E.nombre + ' · ' + E.fechas.join(', ') + ' · ' + equipMsg;
-    }
+    api({ action: 'guardarNotaPago', nombre: E.nombre, tipoPago: E.tipoPago, monto: (E.totalPago || 0).toFixed(2), nota: E.notaPago || '—', fechas: fechasStr }, function() {}, function() {});
+    var equipMsg = talla !== 'No' && protec !== 'No' ? 'Patines T.' + talla + ' y protecciones'
+                 : talla !== 'No' ? 'Patines talla ' + talla
+                 : protec !== 'No' ? 'Protecciones' : 'Equipo propio';
+    var detalleTexto = E.tipoPago === 'mensual'
+      ? E.nombre + ' · Pago mensual ($' + (E.totalPago || 0).toFixed(2) + ') · ' + equipMsg
+      : E.nombre + ' · ' + E.fechas.join(', ') + ' · ' + equipMsg;
     document.getElementById('s6-detalle').textContent = detalleTexto;
-
-    // Título y texto de éxito según tipo
     if (E.tipoPago === 'mensual') {
       document.getElementById('s6-titulo').textContent = '¡Pago mensual registrado!';
-      document.getElementById('s6-texto').textContent =
-        'Verificaremos tu transferencia y recibirás confirmación por correo. Si tienes reservas activas, puedes revisarlas desde el menú principal.';
+      document.getElementById('s6-texto').textContent = 'Verificaremos tu transferencia y recibirás confirmación por correo.';
     } else {
       document.getElementById('s6-titulo').textContent = '¡Reserva registrada!';
-      document.getElementById('s6-texto').textContent =
-        'Puedes revisar el estado de tu reserva en cualquier momento. Si no puedes venir, cancélala para liberar el cupo.';
+      document.getElementById('s6-texto').textContent = 'Puedes revisar el estado desde "Ver mis reservas". Si no puedes venir, cancela para liberar el cupo.';
     }
-
-    // Aviso de email
-    var emailAviso = document.getElementById('s6-email-aviso');
     if (E.datos && E.datos.email) {
-      emailAviso.textContent =
-        '⏳ Tu pago está pendiente de verificación. Recibirás un correo en ' + E.datos.email + ' cuando esté confirmado.';
+      document.getElementById('s6-email-aviso').textContent = '⏳ Tu pago está pendiente de verificación. Recibirás un correo en ' + E.datos.email + ' cuando esté confirmado.';
     }
-
     ir('s6');
   }
 
   if (E.tipoPago === 'mensual') {
-    // Pago mensual: no se crean reservas de equipamiento, solo se guarda la nota
     finalizar();
-
   } else {
-    // Pago por clase: crear una reserva por cada fecha seleccionada
     var pendientes = E.fechas.slice();
-    var errores = [];
-
     function guardarSiguiente() {
-      if (pendientes.length === 0) {
-        finalizar();
-        return;
-      }
+      if (pendientes.length === 0) { finalizar(); return; }
       var fecha = pendientes.shift();
-      api({
-        action: 'guardarReserva',
-        nombre: E.nombre,
-        fecha:  fecha,
-        talla:  talla,
-        protecciones: protec
-      }, function(res) {
-        if (!res.exito) errores.push(fecha + ': ' + res.mensaje);
-        guardarSiguiente();
-      }, function(e) {
-        errores.push(fecha + ': ' + e.message);
-        guardarSiguiente();
-      });
+      api({ action: 'guardarReserva', nombre: E.nombre, fecha: fecha, talla: talla, protecciones: protec },
+        function() { guardarSiguiente(); },
+        function() { guardarSiguiente(); }
+      );
     }
-
     guardarSiguiente();
   }
 }
 
 // ─── EDITAR DATOS ─────────────────────────────────────────────────────────────
-var datosCompletos = {};
-
 function irEditarDatos() {
   ir('s-carga');
   api({ action: 'getDatosCompletos', nombre: E.nombre }, function(datos) {
     if (!datos) { ir('s-home'); alert('No se pudieron cargar tus datos.'); return; }
-    datosCompletos = datos;
-    var campos = ['nombreDerby','numeroDerby','pronombres','dieta','prefijo','telefono','email',
+
+    // Inputs, selects y textareas simples
+    var camposSimples = [
+      'nombreDerby','numeroDerby','pronombres','dieta',
+      'prefijo','telefono','email',
+      'fechaNacimiento','fechaPublica','edadPublica',
+      'tipoDocumento','paisExpedicion','numeroDocumento','nombreLegal',
       'callePrincipal','calleSecundaria','numeracion','sector','canton',
       'emerg1Nombre','emerg1Relacion','emerg1Prefijo','emerg1Telefono',
       'emerg2Nombre','emerg2Relacion','emerg2Prefijo','emerg2Telefono',
-      'enfermedad','alergias','alergiasDesc','antecedentes',
-      'medicamentos','medicamentosDesc','atencionMedica','seguro','seguroContacto'];
-    campos.forEach(function(c) {
+      'alergias','alergiasDesc',
+      'medicamentos','medicamentosDesc',
+      'atencionMedica','seguro','seguroContacto'
+    ];
+    camposSimples.forEach(function(c) {
       var el = document.getElementById('d-' + c);
-      if (el) el.value = datos[c] || '';
+      if (el && datos[c] !== undefined) el.value = datos[c] || '';
     });
+
+    // Checkboxes: enfermedad
+    document.querySelectorAll('input[data-group="enfermedad"]').forEach(function(cb) { cb.checked = false; });
+    if (datos.enfermedad) {
+      datos.enfermedad.split(',').map(function(s) { return s.trim(); }).forEach(function(val) {
+        var cb = document.querySelector('input[data-group="enfermedad"][value="' + val + '"]');
+        if (cb) cb.checked = true;
+      });
+    }
+
+    // Checkboxes: antecedentes
+    document.querySelectorAll('input[data-group="antecedentes"]').forEach(function(cb) { cb.checked = false; });
+    if (datos.antecedentes) {
+      datos.antecedentes.split(',').map(function(s) { return s.trim(); }).forEach(function(val) {
+        var cb = document.querySelector('input[data-group="antecedentes"][value="' + val + '"]');
+        if (cb) cb.checked = true;
+      });
+    }
+
+    // Campos condicionales: mostrar/ocultar según valores cargados
+    var alergias = datos.alergias || '';
+    var elAlergiasDesc = document.getElementById('campo-alergiasDesc');
+    elAlergiasDesc.classList.toggle('visible', alergias === 'Sí' || alergias === 'Tal vez');
+
+    var meds = datos.medicamentos || '';
+    document.getElementById('campo-medicamentosDesc').classList.toggle('visible', meds === 'Sí');
+
+    var atencion = datos.atencionMedica || '';
+    document.getElementById('campo-seguro').classList.toggle('visible', atencion === 'Seguro Privado');
+
     ir('s-datos');
   }, function(e) { ir('s-home'); alert('Error: ' + e.message); });
 }
 
-function toggleSeccion(id) {
-  document.getElementById(id).classList.toggle('abierta');
+// ─── TOGGLE SECCIÓN ───────────────────────────────────────────────────────────
+function toggleSeccion(id, titulo) {
+  var body = document.getElementById(id);
+  body.classList.toggle('abierta');
+  if (titulo) titulo.classList.toggle('abierta', body.classList.contains('abierta'));
 }
 
-function guardarSeccion(campos, btn) {
+// ─── TOGGLE CONDICIONAL ───────────────────────────────────────────────────────
+function toggleCondicional(selectId, valoresActivos, campoId) {
+  var val = document.getElementById(selectId).value;
+  var visible = valoresActivos.indexOf(val) !== -1;
+  document.getElementById(campoId).classList.toggle('visible', visible);
+}
+
+// ─── GUARDAR SECCIÓN ─────────────────────────────────────────────────────────
+function guardarSeccion(secId, btn) {
+  var sec = document.getElementById(secId);
   var payload = {};
-  campos.forEach(function(c) {
-    var el = document.getElementById('d-' + c);
-    if (el) payload[c] = el.value.trim();
+
+  // Inputs, selects, textareas con id="d-*"
+  sec.querySelectorAll('input[id^="d-"]:not([type="checkbox"]):not([type="radio"]), select[id^="d-"], textarea[id^="d-"]').forEach(function(el) {
+    payload[el.id.replace('d-', '')] = el.value.trim();
   });
+
+  // Grupos de checkboxes
+  var cbGroups = {};
+  sec.querySelectorAll('input[type="checkbox"][data-group]').forEach(function(cb) {
+    var g = cb.getAttribute('data-group');
+    if (!cbGroups[g]) cbGroups[g] = [];
+    if (cb.checked) cbGroups[g].push(cb.value);
+  });
+  Object.keys(cbGroups).forEach(function(g) {
+    payload[g] = cbGroups[g].join(', ');
+  });
+
+  if (Object.keys(payload).length === 0) return;
+
   var textoOriginal = btn.textContent;
   btn.disabled = true;
   btn.textContent = '⏳ Guardando...';
+
   api({
     action: 'actualizarDatosPersona',
     nombre: E.nombre,
     datos: JSON.stringify(payload)
   }, function(res) {
     btn.disabled = false;
-    btn.textContent = res.exito ? '✅ Guardado' : textoOriginal;
     if (res.exito) {
-      Object.assign(datosCompletos, payload);
-      setTimeout(function() { btn.textContent = textoOriginal; }, 2500);
+      btn.textContent = '✅ Guardado';
+      btn.classList.add('exito');
+      setTimeout(function() {
+        btn.textContent = textoOriginal;
+        btn.classList.remove('exito');
+      }, 2500);
+    } else {
+      btn.textContent = textoOriginal;
     }
   }, function(e) {
     btn.disabled = false;
