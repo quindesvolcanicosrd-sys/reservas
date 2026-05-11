@@ -1593,9 +1593,20 @@ function continuar_s4() {
   document.getElementById('s-pago-total-detalle').textContent = esClase
     ? E.fechas.length + (E.fechas.length === 1 ? ' clase' : ' clases') + ' × $' + E.precioPorClase.toFixed(2)
     : 'Pago mensual';
-  document.getElementById('chk-pago').checked = false;
+document.getElementById('chk-pago').checked = false;
   document.getElementById('btn-pago').disabled = true;
   document.getElementById('nota-pago').value = '';
+  // Resetear estado WhatsApp
+  E.wpEnviado = false;
+  var btnWp = document.getElementById('btn-wp');
+  btnWp.className = 'btn-wp-inactivo';
+  btnWp.innerHTML = '<span style="font-size:1.1rem;">📲</span> Enviar comprobante por WhatsApp';
+  var hint = document.querySelector('.wp-hint');
+  if (hint) { hint.textContent = 'Envía tu comprobante para agilizar la verificación de tu reserva.'; hint.classList.remove('wp-confirmado'); }
+  // Armar link de WhatsApp con contexto
+  var fechasTexto = E.tipoPago === 'mensual' ? 'pago mensual' : E.fechas.join(', ');
+  var msgWp = 'Hola! Soy ' + E.nombre + ' y acabo de realizar mi pago de $' + (E.totalPago || 0).toFixed(2) + ' (' + fechasTexto + '). Te envío el comprobante 🧾';
+  btnWp.href = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp);
   ir('s-pago');
 }
 
@@ -1604,8 +1615,17 @@ function toggleBtnPago() {
   document.getElementById('btn-pago').disabled = !document.getElementById('chk-pago').checked;
 }
 
+ function marcarWpEnviado(el) {
+  E.wpEnviado = true;
+  el.className = 'btn-wp-activo';
+  el.innerHTML = '<span style="font-size:1.1rem;">✅</span> Comprobante enviado';
+  var hint = document.querySelector('.wp-hint');
+  if (hint) { hint.textContent = '¡Gracias! Revisaremos tu pago a la brevedad.'; hint.classList.add('wp-confirmado'); }
+}
+
 function continuar_pago() {
   if (!document.getElementById('chk-pago').checked) { err('err-pago', 'Debes confirmar que realizaste el pago.'); return; }
+  if (!E.wpEnviado) { err('err-pago', '📲 Envía tu comprobante por WhatsApp para agilizar la revisión de tu reserva.'); return; }
   E.notaPago = document.getElementById('nota-pago').value.trim();
   document.getElementById('btn-confirmar').disabled = false;
   document.getElementById('btn-confirmar').textContent = 'Confirmar mi reserva';
