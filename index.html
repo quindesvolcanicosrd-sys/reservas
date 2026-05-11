@@ -1673,28 +1673,27 @@ document.getElementById('chk-pago').checked = false;
   var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : '';
   var equipLinea = '';
   if (talla && protec && protec.toLowerCase() !== 'no') {
-    equipLinea = '🛼 Necesitaré patines talla ' + talla + ' y protecciones.';
+    equipLinea = 'Necesitare patines talla ' + talla + ' y protecciones.';
   } else if (talla) {
-    equipLinea = '🛼 Necesitaré patines talla ' + talla + '.';
+    equipLinea = 'Necesitare patines talla ' + talla + '.';
   } else if (protec && protec.toLowerCase() !== 'no') {
-    equipLinea = '🛡️ Necesitaré protecciones (' + protec + ').';
+    equipLinea = 'Necesitare protecciones (' + protec + ').';
   } else {
-    equipLinea = '✅ Llevaré mi propio equipamiento.';
+    equipLinea = 'Llevare mi propio equipamiento.';
   }
 
-  // Líneas de fechas o pago mensual
   var lineasFechas = '';
   if (E.tipoPago === 'mensual') {
-    lineasFechas = '📅 Pago mensual — $' + (E.totalPago || 0).toFixed(2);
+    lineasFechas = 'Pago mensual - $' + (E.totalPago || 0).toFixed(2);
   } else {
-    lineasFechas = E.fechas.map(function(f) { return '• ' + f; }).join('\n');
+    lineasFechas = E.fechas.map(function(f) { return '- ' + f; }).join('\n');
   }
 
   var msgWp =
     '¡Hola! Soy *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '*.\n\n' +
-    '📋 *Clases reservadas:*\n' + lineasFechas + '\n\n' +
+    '*Clases reservadas:*\n' + lineasFechas + '\n\n' +
     equipLinea + '\n\n' +
-    'Te envío el comprobante adjunto. Si no lo ves, por favor solicítamelo. ¡Gracias! 🙏';
+    'Te envío el comprobante adjunto. Si no lo ves, por favor solicítamelo. ¡Gracias!';
 
   btnWp.href = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp);
   ir('s-pago');
