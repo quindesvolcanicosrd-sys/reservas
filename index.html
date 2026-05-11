@@ -1683,13 +1683,10 @@ function cargarFechas() {
     if (puedeMensual) {
       wrapper.style.display = 'block';
       E.tipoPago = 'mensual';
-      var radioMensual = document.querySelector('input[name="tipo-pago"][value="mensual"]');
-      var radioClase   = document.querySelector('input[name="tipo-pago"][value="clase"]');
-      radioMensual.checked = true;
-      radioMensual.closest('.opcion').classList.add('sel');
-      radioClase.closest('.opcion').classList.remove('sel');
-      subtitulo.textContent = 'Opcionalmente, puedes seleccionar a qué entrenamientos asistirás este mes.';
-      actualizarTotalS4();
+
+var opcionMensual = document.getElementById('opcion-tipo-mensual');
+
+selTipoPago('mensual', opcionMensual);
     } else {
       wrapper.style.display = 'none';
       E.tipoPago = 'clase';
