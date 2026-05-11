@@ -483,8 +483,12 @@
   <!-- S4: Fecha y pago -->
   <div class="pantalla" id="s4">
     <div class="card">
-      <div class="seccion-label">Paso 2 de 4 — Fecha y pago</div>
-      <h2>Selecciona la fecha/s en las que asistirás</h2>
+      <div class="seccion-label">${necesitaEquipamiento
+  ? 'Paso 2 de 4 — Fecha y pago'
+  : 'Paso 2 de 4 — Selecciona el tipo de modalidad'}</div>
+      <h2>${necesitaEquipamiento ? `
+  <!-- TODO el bloque de selección de fechas -->
+` : ''}</h2>
       <div class="tipo-pago-wrapper" id="s4-tipo-pago-wrapper" style="display:none;">
         <div class="tipo-pago-titulo">💳 Tipo de pago</div>
         <div class="opciones">
@@ -535,19 +539,31 @@
       </div>
       <label class="chk-pago-label">
         <input type="checkbox" id="chk-pago" onchange="toggleBtnPago()">
-        Ya realicé mi pago y entiendo que mi reserva quedará pendiente hasta que sea verificada por el equipo.
+        ${
+  canPayMonthly()
+    ? 'Ya realicé mi pago y entiendo este estará pendiente hasta que sea verificada por el equipo.'
+    : 'Ya realicé mi pago y entiendo que mi reserva quedará pendiente hasta que sea verificada por el equipo.'
+}
       </label>
       <div class="nota-pago-wrapper">
         <label class="nota-pago-label" for="nota-pago">Referencia de pago</label>
         <input type="text" id="nota-pago" class="nota-pago-input" placeholder="Ej: Juan Pérez — pago de María García">
-        <p class="nota-pago-hint">Escribe tu nombre o referencia de a quien corresponde la reserva así sabemos que el pago corresponde a tí.</p>
+        <p class="nota-pago-hint">${
+  canPayMonthly()
+    ? 'Escribe tu nombre o referencia así sabemos que el pago corresponde a tí.'
+    : 'Escribe tu nombre o referencia de a quien corresponde la reserva así sabemos que el pago corresponde a tí.'
+}</p>
       </div>
       <div id="wp-wrapper" style="margin-top:16px;">
         <a id="btn-wp" href="#" target="_blank" onclick="marcarWpEnviado(this)" class="btn-wp-inactivo">
           <span style="font-size:1.1rem;">📲</span>
           Enviar comprobante por WhatsApp
         </a>
-        <p class="wp-hint">Envía tu comprobante para agilizar la verificación de tu reserva.</p>
+        <p class="wp-hint">${
+  canPayMonthly()
+    ? 'Envía tu comprobante para agilizar la verificación de tu pago.'
+    : 'Envía tu comprobante para agilizar la verificación de tu reserva.'
+}</p>
       </div>
       <div class="error-msg" id="err-pago"></div>
       <button class="btn btn-primary" id="btn-pago" onclick="continuar_pago()" disabled style="margin-top:16px;">Continuar →</button>
@@ -1326,7 +1342,12 @@ var TOP_BAR_CONFIG = {
   's3a':           { titulo: 'Editar equipamiento',   volver: 's2' },
   's3b':           { titulo: 'Editar equipamiento',   volver: 's3a' },
   's3c':           { titulo: 'Editar equipamiento',   volver: 's3b' },
-  's4':            { titulo: 'Fecha y pago',          volver: 's2' },
+  's4': {
+  titulo: canPayMonthly()
+    ? 'Selecciona el tipo de modalidad'
+    : 'Fecha y pago',
+  volver: 's2'
+},
   's-pago':        { titulo: 'Pago',                  volver: 's4' },
   's5':            { titulo: 'Confirmar reserva',     volver: 's-pago' },
   's-misreservas': { titulo: 'Mis reservas',          volver: 's-home' },
@@ -1577,9 +1598,20 @@ function selTipoPago(tipo, label) {
   E.tipoPago = tipo;
   E.fechas = [];
   document.querySelectorAll('input[name="fecha"]').forEach(function(c) { c.checked = false; c.closest('.fecha-item').classList.remove('sel'); });
-  document.getElementById('s4-fechas-subtitulo').textContent = tipo === 'mensual'
+  var subtitulo = document.getElementById('s4-fechas-subtitulo');
+var listaFechas = document.getElementById('lista-fechas');
+
+if (tipo === 'mensual' && canPayMonthly()) {
+  subtitulo.style.display = 'none';
+  listaFechas.style.display = 'none';
+} else {
+  subtitulo.style.display = 'block';
+  listaFechas.style.display = 'block';
+
+  subtitulo.textContent = tipo === 'mensual'
     ? 'Opcionalmente, puedes seleccionar a qué entrenamientos asistirás este mes.'
     : 'Selecciona los próximos entrenamientos a los que asistirás.';
+}
   actualizarTotalS4();
 }
 
