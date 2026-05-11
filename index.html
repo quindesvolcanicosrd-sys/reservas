@@ -99,8 +99,18 @@
   .exito-icon { font-size: 3.5rem; text-align: center; margin-bottom: 14px; }
   .exito-titulo { font-size: 1.3rem; font-weight: 800; color: #1a1a1a; text-align: center; margin-bottom: 12px; }
   .exito-texto { color: #666; text-align: center; line-height: 1.6; font-size: 0.92rem; }
-  .exito-detalle { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; margin: 16px 0; font-size: 0.88rem; color: #166534; text-align: center; }
-
+.exito-detalle {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 14px;
+  margin: 16px 0;
+  font-size: 0.88rem;
+  color: #166534;
+  text-align: left;
+  white-space: pre-line;
+  line-height: 1.6;
+}
   .home-boton { border: 2px solid #e5e5e5; border-radius: 12px; padding: 20px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; text-align: center; }
   .home-boton:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
   .home-boton.principal { border-color: #F97316; background: #fff8f4; }
@@ -578,7 +588,7 @@
   <div class="pantalla" id="s6">
     <div class="card">
       <div class="exito-icon">🎉</div>
-      <div class="exito-titulo" id="s6-titulo">¡Reserva registrada!</div>
+      <div class="exito-titulo" id="s6-titulo">¡Reserva/Pago registrado!</div>
       <div class="exito-detalle" id="s6-detalle"></div>
       <div class="aviso-pendiente" id="s6-email-aviso">⏳ Tu reserva está <strong>pendiente de verificación de pago</strong>. Recibirás un correo cuando esté confirmada.</div>
       <div class="exito-texto" id="s6-texto">Puedes revisar el estado de tu reserva en cualquier momento desde <strong>"Ver mis reservas"</strong>.</div>
@@ -1808,27 +1818,91 @@ function confirmarReserva() {
   var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : 'No';
 
   function finalizar() {
-    var fechasStr = E.fechas.length > 0 ? E.fechas.join(', ') : (E.tipoPago === 'mensual' ? 'mensual (sin clases seleccionadas)' : '—');
-    api({ action: 'guardarNotaPago', nombre: E.nombre, tipoPago: E.tipoPago, monto: (E.totalPago || 0).toFixed(2), nota: E.notaPago || '—', fechas: fechasStr }, function() {}, function() {});
-    var equipMsg = talla !== 'No' && protec !== 'No' ? 'Patines T.' + talla + ' y protecciones'
-                 : talla !== 'No' ? 'Patines talla ' + talla
-                 : protec !== 'No' ? 'Protecciones' : 'Equipo propio';
-    var detalleTexto = E.tipoPago === 'mensual'
-      ? E.nombre + ' · Pago mensual ($' + (E.totalPago || 0).toFixed(2) + ') · ' + equipMsg
-      : E.nombre + ' · ' + E.fechas.join(', ') + ' · ' + equipMsg;
-    document.getElementById('s6-detalle').textContent = detalleTexto;
-    if (E.tipoPago === 'mensual') {
-      document.getElementById('s6-titulo').textContent = '¡Pago mensual registrado!';
-      document.getElementById('s6-texto').textContent = 'Verificaremos tu transferencia y recibirás confirmación por correo.';
-    } else {
-      document.getElementById('s6-titulo').textContent = '¡Reserva registrada!';
-      document.getElementById('s6-texto').textContent = 'Puedes revisar el estado desde "Ver mis reservas". Si no puedes venir, cancela para liberar el cupo.';
-    }
-    if (E.datos && E.datos.email) {
-      document.getElementById('s6-email-aviso').textContent = '⏳ Tu pago está pendiente de verificación. Recibirás un correo en ' + E.datos.email + ' cuando esté confirmado.';
-    }
-    ir('s6');
+
+  var fechasStr = E.fechas.length > 0
+    ? E.fechas.join(', ')
+    : (E.tipoPago === 'mensual'
+        ? 'mensual (sin clases seleccionadas)'
+        : '—');
+
+  api({
+    action: 'guardarNotaPago',
+    nombre: E.nombre,
+    tipoPago: E.tipoPago,
+    monto: (E.totalPago || 0).toFixed(2),
+    nota: E.notaPago || '—',
+    fechas: fechasStr
+  }, function() {}, function() {});
+
+  var talla = E.datos.necesitaPatines || 'No';
+  var protec = E.datos.necesitaProtecciones || 'No';
+
+  var necesitaEquipo =
+    talla !== 'No' ||
+    protec !== 'No';
+
+  var equipMsg =
+    talla !== 'No' && protec !== 'No'
+      ? 'Patines T.' + talla + ' y protecciones'
+      : talla !== 'No'
+        ? 'Patines talla ' + talla
+        : protec !== 'No'
+          ? 'Protecciones'
+          : 'Equipo propio';
+
+  var fechasHtml = '';
+
+  if (E.tipoPago === 'mensual') {
+
+    fechasHtml =
+      '· Pago mensual ($' + (E.totalPago || 0).toFixed(2) + ')';
+
+  } else {
+
+    fechasHtml = E.fechas.map(function(f) {
+      return '· ' + f;
+    }).join('<br>');
+
   }
+
+  document.getElementById('s6-detalle').innerHTML =
+    '<strong>' + E.nombre + '</strong>' +
+    '<br><br>' +
+    fechasHtml +
+    '<br><br>' +
+    '· ' + equipMsg;
+
+  if (necesitaEquipo) {
+
+    document.getElementById('s6-titulo').textContent =
+      '¡Reserva registrada!';
+
+    document.getElementById('s6-texto').innerHTML =
+      'Puedes revisar el estado desde <strong>"Ver mis reservas"</strong>. ' +
+      'Si no puedes venir, cancela para liberar el cupo.';
+
+  } else {
+
+    document.getElementById('s6-titulo').textContent =
+      '¡Pago registrado!';
+
+    document.getElementById('s6-texto').innerHTML =
+      'Puedes revisar el estado de tu pago desde <strong>"Ver mis reservas"</strong>.';
+
+  }
+
+  if (E.datos && E.datos.email) {
+
+    document.getElementById('s6-email-aviso').textContent =
+      '⏳ Tu pago está pendiente de verificación. ' +
+      'Recibirás un correo en ' + E.datos.email +
+      ' cuando esté confirmado.';
+
+  }
+
+  ir('s6');
+
+}
 
   if (E.tipoPago === 'mensual') {
     finalizar();
