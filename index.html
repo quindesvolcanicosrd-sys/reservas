@@ -2001,19 +2001,16 @@ function confirmarReserva() {
       email: E.datos.email || ''
     }, function() {}, function() {});
 
-    var tallaLocal = E.datos.necesitaPatines || 'No';
-    var protecLocal = E.datos.necesitaProtecciones || 'No';
+var necesitaPatinesLocal = (E.datos.necesitaPatines || '').toLowerCase() !== 'no' && E.datos.necesitaPatines;
+    var tallaLocal = E.datos.talla || '';
+    var protecLocal = (E.datos.necesitaProtecciones || '').toLowerCase() !== 'no' ? E.datos.necesitaProtecciones : '';
 
-    var necesitaEquipo = tallaLocal !== 'No' || protecLocal !== 'No';
+    var necesitaEquipo = !!necesitaPatinesLocal || !!protecLocal;
 
-    var equipMsg =
-      tallaLocal !== 'No' && protecLocal !== 'No'
-        ? 'Patines T.' + tallaLocal + ' y protecciones'
-        : tallaLocal !== 'No'
-          ? 'Patines talla ' + tallaLocal
-          : protecLocal !== 'No'
-            ? 'Protecciones'
-            : 'Equipamiento propio';
+    var equipMsg = necesitaEquipo
+      ? (necesitaPatinesLocal ? '· Patines: Sí (talla ' + (tallaLocal || '?') + ')\n' : '') +
+        (protecLocal ? '· Protecciones: Sí (' + protecLocal + ')' : '')
+      : '· Equipamiento propio';
 
     var fechasHtml = '';
 
