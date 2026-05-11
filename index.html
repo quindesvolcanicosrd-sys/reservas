@@ -2008,8 +2008,8 @@ var necesitaPatinesLocal = (E.datos.necesitaPatines || '').toLowerCase() !== 'no
     var necesitaEquipo = !!necesitaPatinesLocal || !!protecLocal;
 
     var equipMsg = necesitaEquipo
-      ? (necesitaPatinesLocal ? '· Patines: Sí (talla ' + (tallaLocal || '?') + ')\n' : '') +
-        (protecLocal ? '· Protecciones: Sí (' + protecLocal + ')' : '')
+      ? (necesitaPatinesLocal ? 'Patines: Sí (talla ' + (tallaLocal || '?') + ')\n' : '') +
+        (protecLocal ? '· Protecciones: Necesita protecciones (' + protecLocal + ')' : '')
       : '· Equipamiento propio';
 
     var fechasHtml = '';
