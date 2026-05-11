@@ -1557,7 +1557,7 @@ function selTipoPago(tipo, label) {
   document.querySelectorAll('input[name="fecha"]').forEach(function(c) { c.checked = false; c.closest('.fecha-item').classList.remove('sel'); });
   document.getElementById('s4-fechas-subtitulo').textContent = tipo === 'mensual'
     ? 'Opcionalmente, puedes seleccionar a qué entrenamientos asistirás este mes.'
-    : 'Selecciona los entrenamientos a los que asistirás.';
+    : 'Selecciona los próximos entrenamientos a los que asistirás.';
   actualizarTotalS4();
 }
 
