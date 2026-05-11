@@ -442,13 +442,13 @@
       <p style="margin-bottom:22px;">¿Qué quieres hacer hoy?</p>
       <div class="home-boton principal" onclick="irMisReservas()">
         <div class="hb-icon">📋</div>
-        <div class="hb-titulo">Ver mis reservas</div>
-        <div class="hb-sub">Revisa el estado o cancela una reserva</div>
+<div class="hb-titulo" id="home-btn-mis-titulo">Ver mis reservas</div>
+        <div class="hb-sub" id="home-btn-mis-sub">Revisa el estado o cancela una reserva</div>
       </div>
       <div class="home-boton" onclick="irNuevaReserva()">
         <div class="hb-icon">➕</div>
-        <div class="hb-titulo" style="color:#1a1a1a;">Nueva reserva / pago</div>
-        <div class="hb-sub">Reserva equipamiento o registra tu pago</div>
+<div class="hb-titulo" id="home-btn-nueva-titulo" style="color:#1a1a1a;">Nueva reserva / pago</div>
+        <div class="hb-sub" id="home-btn-nueva-sub">Reserva equipamiento o registra tu pago</div>
       </div>
       <div class="home-boton" onclick="irEditarDatos()">
         <div class="hb-icon">✏️</div>
@@ -461,8 +461,8 @@
   <!-- S-MISRESERVAS -->
   <div class="pantalla" id="s-misreservas">
     <div class="card">
-      <div class="seccion-label">Mis reservas</div>
-      <h2 id="misres-titulo">Tus reservas</h2>
+      <div class="seccion-label" id="misres-label">Mis reservas</div>
+      <h2 id="misres-titulo">Tus reservas</h2><h2 id="misres-titulo">Tus reservas</h2>
       <div id="misres-lista"></div>
       <button class="btn btn-secondary" onclick="volver('s-home')" style="margin-top:4px;">← Volver</button>
     </div>
@@ -637,10 +637,10 @@
   <div class="pantalla" id="s5">
     <div class="card">
       <div class="seccion-label">Paso 4 de 4 — Confirmar</div>
-      <h2>Resumen de tu reserva</h2>
+      <h2 id="s5-titulo-h2">Resumen de tu reserva</h2>
       <div class="resumen" id="s5-resumen"></div>
       <p>Al confirmar nos avisas que ya realizaste el pago. <strong>Revisaremos tu transferencia</strong> y recibirás confirmación por correo cuando esté aprobada.</p>
-      <p style="margin-top:10px;">Si no puedes venir, <strong>avisa lo antes posible</strong> para liberar tu cupo.</p>
+      <p id="s5-liberar-cupo" style="margin-top:10px;">Si no puedes venir, <strong>avisa lo antes posible</strong> para liberar tu cupo.</p>
       <div class="error-msg" id="err-s5"></div>
       <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarReserva()" style="margin-top:14px;">Confirmar mi reserva</button>
       <button class="btn btn-secondary" onclick="volver('s-pago')">← Volver</button>
@@ -1503,8 +1503,19 @@ function continuar_pin() {
   ir('s-carga');
   api({ action: 'validarPin', nombre: E.nombre, pin: pin }, function(res) {
     if (!res.valido) { ir('s1b'); err('err-pin', 'PIN incorrecto.'); return; }
-    E.datos = res.datos;
+E.datos = res.datos;
     document.getElementById('home-saludo').textContent = '¡Hola, ' + E.nombre + '!';
+    if (necesitaEquipo()) {
+      document.getElementById('home-btn-mis-titulo').textContent = 'Ver mis reservas';
+      document.getElementById('home-btn-mis-sub').textContent = 'Revisa el estado o cancela una reserva';
+      document.getElementById('home-btn-nueva-titulo').textContent = 'Nueva reserva / pago';
+      document.getElementById('home-btn-nueva-sub').textContent = 'Reserva equipamiento o registra tu pago';
+    } else {
+      document.getElementById('home-btn-mis-titulo').textContent = 'Ver mis pagos';
+      document.getElementById('home-btn-mis-sub').textContent = 'Revisa el estado de tus pagos';
+      document.getElementById('home-btn-nueva-titulo').textContent = 'Nuevo pago';
+      document.getElementById('home-btn-nueva-sub').textContent = 'Registra tu pago mensual o por clase';
+    }
     ir('s-home');
   }, function(e) { ir('s1b'); err('err-pin', 'Error: ' + e.message); });
 }
@@ -1514,6 +1525,8 @@ function irMisReservas() {
   ir('s-carga');
   api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
     _todasReservas = reservas;
+    document.getElementById('misres-label').textContent = necesitaEquipo() ? 'Mis reservas' : 'Mis pagos';
+    document.getElementById('misres-titulo').textContent = necesitaEquipo() ? 'Tus reservas' : 'Tus pagos';
     renderMisReservas(reservas, false);
     ir('s-misreservas');
   }, function(e) { ir('s-home'); alert('Error al cargar reservas: ' + e.message); });
@@ -1535,7 +1548,7 @@ var _todasReservas = [];
 function renderMisReservas(reservas, mostrarTodas) {
   var html = '';
   if (!reservas || reservas.length === 0) {
-    html = '<p style="text-align:center;color:#888;padding:20px 0;">No tienes reservas todavía.</p>';
+    html = '<p style="text-align:center;color:#888;padding:20px 0;">No tienes ' + (necesitaEquipo() ? 'reservas' : 'pagos') + ' todavía.</p>';
   } else {
     var visibles = mostrarTodas ? reservas : reservas.slice(0, 3);
     visibles.forEach(function(r) {
@@ -1552,7 +1565,7 @@ function renderMisReservas(reservas, mostrarTodas) {
       html += '<span class="badge ' + badgeClass + '">' + icon + ' ' + r.estado + '</span></div>';
       html += '<div class="reserva-detalle">' + equipMsg + '</div>';
       if (r.estado !== 'Cancelada') {
-        html += '<button class="btn-cancelar" onclick="cancelarRes(\'' + r.fecha.replace(/'/g,"\\'") + '\')">Cancelar esta reserva</button>';
+        html += '<button class="btn-cancelar" onclick="cancelarRes(\'' + r.fecha.replace(/'/g,"\\'") + '\')">' + (necesitaEquipo() ? 'Cancelar esta reserva' : 'Cancelar este pago') + '</button>';
       }
       html += '</div>';
     });
@@ -1566,7 +1579,7 @@ function renderMisReservas(reservas, mostrarTodas) {
 function verTodasReservas() { renderMisReservas(_todasReservas, true); }
 
 function cancelarRes(fecha) {
-  if (!confirm('¿Segura que quieres cancelar tu reserva para el ' + fecha + '?')) return;
+  if (!confirm('¿Segura que quieres cancelar ' + (necesitaEquipo() ? 'tu reserva' : 'tu pago') + ' para el ' + fecha + '?')) return;
   var btn = event.target;
   btn.disabled = true; btn.textContent = '⏳ Cancelando...';
   api({ action: 'cancelarReserva', nombre: E.nombre, fecha: fecha }, function(res) {
@@ -1669,6 +1682,7 @@ function canPayMonthly() {
   if (!E.datos) return false;
   return E.datos.necesitaPatines.toLowerCase() === 'no' && E.datos.necesitaProtecciones.toLowerCase() === 'no';
 }
+function necesitaEquipo() { return !canPayMonthly(); }
 function actualizarTextosPago() {
 
   var necesitaEquipamiento = !canPayMonthly();
@@ -1827,7 +1841,7 @@ function cargarFechas() {
       document.getElementById('s4-meses-wrapper').style.display = 'none';
       document.querySelectorAll('#lista-meses input').forEach(function(cb) { cb.checked = false; });
       E.meses = [];
-      E.totalPago = 0;v
+      E.totalPago = 0;
       if (disponibles.length === 0) {
         err('err-s4', 'No hay cupos disponibles actualmente.');
       }
@@ -1936,8 +1950,10 @@ function continuar_pago() {
   if (!document.getElementById('chk-pago').checked) { err('err-pago', 'Debes confirmar que realizaste el pago.'); return; }
   if (!E.wpEnviado) { err('err-pago', '📲 Envía tu comprobante por WhatsApp para agilizar la revisión de tu reserva.'); return; }
   E.notaPago = document.getElementById('nota-pago').value.trim();
-  document.getElementById('btn-confirmar').disabled = false;
-  document.getElementById('btn-confirmar').textContent = 'Confirmar mi reserva';
+document.getElementById('btn-confirmar').disabled = false;
+  document.getElementById('btn-confirmar').textContent = necesitaEquipo() ? 'Confirmar mi reserva' : 'Confirmar mi pago';
+  document.getElementById('s5-titulo-h2').textContent = necesitaEquipo() ? 'Resumen de tu reserva' : 'Resumen de tu pago';
+  document.getElementById('s5-liberar-cupo').style.display = necesitaEquipo() ? 'block' : 'none';
   var d = E.datos;
   var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
   var h = '<div class="r-titulo">Tu reserva</div>';
