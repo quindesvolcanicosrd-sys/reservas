@@ -159,8 +159,20 @@
   .datos-seccion-titulo .sec-icon { font-size: 1.1rem; margin-right: 8px; }
   .datos-seccion-titulo .sec-chevron { color: #aaa; font-size: 0.9rem; transition: transform 0.2s; }
   .datos-seccion-titulo.abierta .sec-chevron { transform: rotate(180deg); }
-  .datos-seccion-body { padding: 16px; display: none; border-top: 1px solid #f0f0f0; }
-  .datos-seccion-body.abierta { display: block; }
+  .datos-seccion-body {
+  padding: 0 16px;
+  max-height: 0;
+  overflow: hidden;
+  border-top: 0px solid #f0f0f0;
+  transition: max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+              padding 0.3s ease,
+              border-top-width 0.3s ease;
+}
+.datos-seccion-body.abierta {
+  max-height: 2000px;
+  padding: 16px;
+  border-top: 1px solid #f0f0f0;
+}
 
   .datos-campo { margin-bottom: 13px; }
   .datos-campo label {
@@ -1782,8 +1794,19 @@ function irEditarDatos() {
 // ─── TOGGLE SECCIÓN ───────────────────────────────────────────────────────────
 function toggleSeccion(id, titulo) {
   var body = document.getElementById(id);
-  body.classList.toggle('abierta');
-  if (titulo) titulo.classList.toggle('abierta', body.classList.contains('abierta'));
+  var estaAbierta = body.classList.contains('abierta');
+
+  // Cierra todos los demás primero (opcional — quita este bloque si quieres varios abiertos a la vez)
+  document.querySelectorAll('.datos-seccion-body.abierta').forEach(function(el) {
+    if (el.id !== id) {
+      el.classList.remove('abierta');
+      var otroTitulo = el.previousElementSibling;
+      if (otroTitulo) otroTitulo.classList.remove('abierta');
+    }
+  });
+
+  body.classList.toggle('abierta', !estaAbierta);
+  if (titulo) titulo.classList.toggle('abierta', !estaAbierta);
 }
 
 // ─── TOGGLE CONDICIONAL ───────────────────────────────────────────────────────
