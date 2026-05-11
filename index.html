@@ -603,7 +603,7 @@
           </div>
           <div class="datos-campo">
             <label>Número de teléfono</label>
-            <input type="tel" id="d-telefono" placeholder="Ej: 0991234567">
+            <input type="tel" id="d-telefono" placeholder="Ej: 0991234567" oninput="limpiarTelefono(this)">
           </div>
           <div class="datos-campo">
             <label>Correo electrónico</label>
@@ -917,7 +917,7 @@
           </div>
           <div class="datos-campo">
             <label>Número de teléfono</label>
-            <input type="tel" id="d-emerg1Telefono" placeholder="Ej: 0991234567">
+            <input type="tel" id="d-emerg1Telefono" placeholder="Ej: 0991234567" oninput="limpiarTelefono(this)">
           </div>
           <button class="btn-guardar-sec" onclick="guardarSeccion('sec-emerg1', this)">Guardar</button>
         </div>
@@ -1006,7 +1006,7 @@
           </div>
           <div class="datos-campo">
             <label>Número de teléfono</label>
-            <input type="tel" id="d-emerg2Telefono" placeholder="Ej: 0987654321">
+            <input type="tel" id="d-emerg2Telefono" placeholder="Ej: 0987654321" oninput="limpiarTelefono(this)">
           </div>
           <button class="btn-guardar-sec" onclick="guardarSeccion('sec-emerg2', this)">Guardar</button>
         </div>
@@ -1794,6 +1794,20 @@ function guardarSeccion(secId, btn) {
   var payload = {};
 
   // Validación específica para salud
+  // Validación de teléfonos
+  var camposTel = { 'sec-contacto': 'd-telefono', 'sec-emerg1': 'd-emerg1Telefono', 'sec-emerg2': 'd-emerg2Telefono' };
+  if (camposTel[secId]) {
+    var telEl = document.getElementById(camposTel[secId]);
+    if (telEl && telEl.value.trim()) {
+      var tel = telEl.value.trim();
+      if (!/^[0-9]{7,15}$/.test(tel)) {
+        alert('El número de teléfono debe tener entre 7 y 15 dígitos y solo puede contener números.');
+        return;
+      }
+    }
+  }
+
+  // Validación específica para salud
   if (secId === 'sec-salud') {
     var alVal = document.getElementById('d-alergias') ? document.getElementById('d-alergias').value : '';
     var medVal = document.getElementById('d-medicamentos') ? document.getElementById('d-medicamentos').value : '';
@@ -1875,6 +1889,10 @@ function guardarSeccion(secId, btn) {
     btn.textContent = textoOriginal;
     alert('Error al guardar: ' + e.message);
   });
+}
+
+ function limpiarTelefono(input) {
+  input.value = input.value.replace(/[^0-9]/g, '');
 }
 </script>
 </body>
