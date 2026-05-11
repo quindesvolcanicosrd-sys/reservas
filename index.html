@@ -1723,8 +1723,8 @@ function continuar_pago() {
   h += fila('Nombre', E.nombre);
   h += fila('Tipo de pago', E.tipoPago === 'mensual' ? '📅 Mensual' : '🎟️ Por clase');
   h += fila('Total', '$' + (E.totalPago || 0).toFixed(2));
-  if (E.tipoPago === 'clase') h += fila('Fecha/s', E.fechas.join(' · '));
-  else if (E.fechas.length > 0) h += fila('Asistirá a', E.fechas.join(' · '));
+  if (E.tipoPago === 'clase') h += fila('Fecha/s', E.fechas.map(f => '• ' + f).join('<br>'));
+  else if (E.fechas.length > 0) h += fila('Asistirá a', E.fechas.map(f => '• ' + f).join('<br>'));
   h += fila('Patines', d.necesitaPatines + (talla ? ' — Talla ' + talla : ''));
   h += fila('Protecciones', d.necesitaProtecciones);
   if (E.notaPago) h += fila('Referencia pago', E.notaPago);
