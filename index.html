@@ -510,7 +510,7 @@
 
   <!-- Carga fechas -->
   <div class="pantalla" id="s-carga-fechas">
-    <div class="card"><div class="loader"><div class="spinner"></div><p>Verificando...</p></div></div>
+    <div class="card"><div class="loader"><div class="spinner"></div><p>Verificando próximas fechas...</p></div></div>
   </div>
 
   <!-- S4: Fecha y pago -->
@@ -533,24 +533,25 @@
       </div>
       <p id="s4-fechas-subtitulo" style="margin-bottom:12px;">Selecciona los entrenamientos a los que asistirás.</p>
       <div id="lista-fechas"></div>
+
+<!-- ── FIX 1: onchange añadido a cada checkbox de mes ── -->
 <div id="s4-meses-wrapper" style="display:none;margin-top:14px;">
   <div class="subtitulo" style="margin-bottom:8px;">
     Selecciona 1 o más meses
   </div>
-
   <div id="lista-meses" class="meses-grid">
-    <label class="mes-item"><input type="checkbox" value="Enero"> Enero</label>
-    <label class="mes-item"><input type="checkbox" value="Febrero"> Febrero</label>
-    <label class="mes-item"><input type="checkbox" value="Marzo"> Marzo</label>
-    <label class="mes-item"><input type="checkbox" value="Abril"> Abril</label>
-    <label class="mes-item"><input type="checkbox" value="Mayo"> Mayo</label>
-    <label class="mes-item"><input type="checkbox" value="Junio"> Junio</label>
-    <label class="mes-item"><input type="checkbox" value="Julio"> Julio</label>
-    <label class="mes-item"><input type="checkbox" value="Agosto"> Agosto</label>
-    <label class="mes-item"><input type="checkbox" value="Septiembre"> Septiembre</label>
-    <label class="mes-item"><input type="checkbox" value="Octubre"> Octubre</label>
-    <label class="mes-item"><input type="checkbox" value="Noviembre"> Noviembre</label>
-    <label class="mes-item"><input type="checkbox" value="Diciembre"> Diciembre</label>
+    <label class="mes-item"><input type="checkbox" value="Enero" onchange="actualizarTotalS4()"> Enero</label>
+    <label class="mes-item"><input type="checkbox" value="Febrero" onchange="actualizarTotalS4()"> Febrero</label>
+    <label class="mes-item"><input type="checkbox" value="Marzo" onchange="actualizarTotalS4()"> Marzo</label>
+    <label class="mes-item"><input type="checkbox" value="Abril" onchange="actualizarTotalS4()"> Abril</label>
+    <label class="mes-item"><input type="checkbox" value="Mayo" onchange="actualizarTotalS4()"> Mayo</label>
+    <label class="mes-item"><input type="checkbox" value="Junio" onchange="actualizarTotalS4()"> Junio</label>
+    <label class="mes-item"><input type="checkbox" value="Julio" onchange="actualizarTotalS4()"> Julio</label>
+    <label class="mes-item"><input type="checkbox" value="Agosto" onchange="actualizarTotalS4()"> Agosto</label>
+    <label class="mes-item"><input type="checkbox" value="Septiembre" onchange="actualizarTotalS4()"> Septiembre</label>
+    <label class="mes-item"><input type="checkbox" value="Octubre" onchange="actualizarTotalS4()"> Octubre</label>
+    <label class="mes-item"><input type="checkbox" value="Noviembre" onchange="actualizarTotalS4()"> Noviembre</label>
+    <label class="mes-item"><input type="checkbox" value="Diciembre" onchange="actualizarTotalS4()"> Diciembre</label>
   </div>
 </div>
 
@@ -1177,8 +1178,8 @@
                 </optgroup>
               </select>
             </div>
-            <div class="campo-condicional" id="campo-emerg1PrefijoOtro">
-              <input type="text" id="d-emerg1PrefijoOtro" class="otro-texto" placeholder="Ej: +972" style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
+            <div class="campo-condicional" id="campo-emerg2PrefijoOtro">
+              <input type="text" id="d-emerg2PrefijoOtro" class="otro-texto" placeholder="Ej: +972" style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
             </div>
           </div>
           <div class="datos-campo">
@@ -1692,6 +1693,8 @@ function selTipoPago(tipo, label) {
 
   actualizarTotalS4();
 }
+
+// ── FIX 1 companion: actualizarTotalS4 lee los checkboxes con onchange ────────
 function actualizarTotalS4() {
   var total = 0;
 
@@ -1725,10 +1728,11 @@ function actualizarTotalS4() {
   if (total > 0) {
     box.style.display = 'block';
     box.innerHTML =
+      '<div class="total-box">' +
       '<div>Total a pagar:</div>' +
       '<div style="font-size:1.5rem;font-weight:800;">$' +
       total.toFixed(2) +
-      '</div>';
+      '</div></div>';
   } else {
     box.style.display = 'none';
   }
@@ -1771,9 +1775,8 @@ function cargarFechas() {
       wrapper.style.display = 'block';
       E.tipoPago = 'mensual';
 
-var opcionMensual = document.getElementById('opcion-tipo-mensual');
-
-selTipoPago('mensual', opcionMensual);
+      var opcionMensual = document.getElementById('opcion-tipo-mensual');
+      selTipoPago('mensual', opcionMensual);
     } else {
       wrapper.style.display = 'none';
       E.tipoPago = 'clase';
@@ -1785,7 +1788,7 @@ selTipoPago('mensual', opcionMensual);
       }
     }
     actualizarTextosPago();
-ir('s4');
+    ir('s4');
   }, function(e) { ir('s2'); err('err-s2', 'Error al verificar fechas: ' + e.message); });
 }
 
@@ -1820,7 +1823,7 @@ function continuar_s4() {
   document.getElementById('s-pago-total-detalle').textContent = esClase
     ? E.fechas.length + (E.fechas.length === 1 ? ' clase' : ' clases') + ' × $' + E.precioPorClase.toFixed(2)
     : E.meses.join(', ');
-document.getElementById('chk-pago').checked = false;
+  document.getElementById('chk-pago').checked = false;
   document.getElementById('btn-pago').disabled = true;
   document.getElementById('nota-pago').value = '';
   // Resetear estado WhatsApp
@@ -1849,21 +1852,17 @@ document.getElementById('chk-pago').checked = false;
 
   var lineasFechas;
 
-if (E.tipoPago === 'mensual') {
-
-  lineasFechas =
-    'Meses pagados:\n- ' +
-    E.meses.join('\n- ') +
-    '\n\nTotal: $' +
-    (E.totalPago || 0).toFixed(2);
-
-} else {
-
-  lineasFechas = E.fechas
-    .map(function(f) { return '- ' + f; })
-    .join('\n');
-
-}
+  if (E.tipoPago === 'mensual') {
+    lineasFechas =
+      'Meses pagados:\n- ' +
+      E.meses.join('\n- ') +
+      '\n\nTotal: $' +
+      (E.totalPago || 0).toFixed(2);
+  } else {
+    lineasFechas = E.fechas
+      .map(function(f) { return '- ' + f; })
+      .join('\n');
+  }
 
   var msgWp =
     '¡Hola! Soy *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '*.\n\n' +
@@ -1880,7 +1879,7 @@ function toggleBtnPago() {
   document.getElementById('btn-pago').disabled = !document.getElementById('chk-pago').checked;
 }
 
- function marcarWpEnviado(el) {
+function marcarWpEnviado(el) {
   E.wpEnviado = true;
   el.className = 'btn-wp-activo';
   el.innerHTML = '<span style="font-size:1.1rem;">✅</span> Comprobante enviado';
@@ -1900,8 +1899,12 @@ function continuar_pago() {
   h += fila('Nombre', E.nombre);
   h += fila('Tipo de pago', E.tipoPago === 'mensual' ? '📅 Mensual' : '🎟️ Por clase');
   h += fila('Total', '$' + (E.totalPago || 0).toFixed(2));
-  if (E.tipoPago === 'clase') h += fila('Fecha/s', E.fechas.map(f => '• ' + f).join('<br>'));
-  else if (E.fechas.length > 0) h += fila('Asistirá a', E.fechas.map(f => '• ' + f).join('<br>'));
+  // ── FIX 2: mostrar meses en el resumen de confirmación ──────────────────────
+  if (E.tipoPago === 'clase') {
+    h += fila('Fecha/s', E.fechas.map(function(f) { return '• ' + f; }).join('<br>'));
+  } else if (E.meses && E.meses.length > 0) {
+    h += fila('Meses pagados', E.meses.map(function(m) { return '• ' + m; }).join('<br>'));
+  }
   h += fila('Patines', d.necesitaPatines + (talla ? ' — Talla ' + talla : ''));
   h += fila('Protecciones', d.necesitaProtecciones);
   if (E.notaPago) h += fila('Referencia pago', E.notaPago);
@@ -1920,95 +1923,89 @@ function confirmarReserva() {
 
   function finalizar() {
 
-  var fechasStr = E.fechas.length > 0
-    ? E.fechas.join(', ')
-    : (E.tipoPago === 'mensual'
-        ? 'mensual (sin clases seleccionadas)'
-        : '—');
+    var fechasStr = E.fechas.length > 0
+      ? E.fechas.join(', ')
+      : (E.tipoPago === 'mensual'
+          ? 'mensual (sin clases seleccionadas)'
+          : '—');
 
-api({
-  action: 'guardarNotaPago',
-  nombre: E.nombre,
-  tipoPago: E.tipoPago,
-  monto: (E.totalPago || 0).toFixed(2),
-  nota: E.notaPago || '—',
-  fechas: fechasStr,
-  meses: E.meses.join(', '),
-  email: E.datos.email || ''
-}, function() {}, function() {});
+    api({
+      action: 'guardarNotaPago',
+      nombre: E.nombre,
+      tipoPago: E.tipoPago,
+      monto: (E.totalPago || 0).toFixed(2),
+      nota: E.notaPago || '—',
+      fechas: fechasStr,
+      meses: E.meses.join(', '),
+      email: E.datos.email || ''
+    }, function() {}, function() {});
 
-  var talla = E.datos.necesitaPatines || 'No';
-  var protec = E.datos.necesitaProtecciones || 'No';
+    var tallaLocal = E.datos.necesitaPatines || 'No';
+    var protecLocal = E.datos.necesitaProtecciones || 'No';
 
-  var necesitaEquipo =
-    talla !== 'No' ||
-    protec !== 'No';
+    var necesitaEquipo = tallaLocal !== 'No' || protecLocal !== 'No';
 
-  var equipMsg =
-    talla !== 'No' && protec !== 'No'
-      ? 'Patines T.' + talla + ' y protecciones'
-      : talla !== 'No'
-        ? 'Patines talla ' + talla
-        : protec !== 'No'
-          ? 'Protecciones'
-          : 'Equipamiento propio';
+    var equipMsg =
+      tallaLocal !== 'No' && protecLocal !== 'No'
+        ? 'Patines T.' + tallaLocal + ' y protecciones'
+        : tallaLocal !== 'No'
+          ? 'Patines talla ' + tallaLocal
+          : protecLocal !== 'No'
+            ? 'Protecciones'
+            : 'Equipamiento propio';
 
-  var fechasHtml = '';
+    var fechasHtml = '';
 
+    if (E.tipoPago === 'mensual') {
+      fechasHtml =
+        '· Pago mensual ($' + (E.totalPago || 0).toFixed(2) + ')\n' +
+        E.meses.map(function(m) { return '· ' + m; }).join('\n');
+    } else {
+      fechasHtml = E.fechas.map(function(f) {
+        return '· ' + f;
+      }).join('\n');
+    }
+
+    document.getElementById('s6-detalle').innerHTML =
+      '<strong>' + E.nombre + '</strong>' +
+      '<br><br>' +
+      fechasHtml +
+      '<br><br>' +
+      '· ' + equipMsg;
+
+    if (necesitaEquipo) {
+      document.getElementById('s6-titulo').textContent = '¡Reserva registrada!';
+      document.getElementById('s6-texto').innerHTML =
+        'Puedes revisar el estado desde <strong>"Ver mis reservas"</strong>. ' +
+        'Si no puedes venir, cancela para liberar el cupo.';
+    } else {
+      document.getElementById('s6-titulo').textContent = '¡Pago registrado!';
+      document.getElementById('s6-texto').innerHTML =
+        'Puedes revisar el estado de tu pago desde <strong>"Ver mis reservas"</strong>.';
+    }
+
+    if (E.datos && E.datos.email) {
+      document.getElementById('s6-email-aviso').textContent =
+        '⏳ Tu pago está pendiente de verificación. ' +
+        'Recibirás un correo en ' + E.datos.email +
+        ' cuando esté confirmado.';
+    }
+
+    ir('s6');
+  }
+
+  // ── FIX 3: guardar en hoja Reservas también para pago mensual ───────────────
   if (E.tipoPago === 'mensual') {
-
-    fechasHtml =
-      '· Pago mensual ($' + (E.totalPago || 0).toFixed(2) + ')';
-
-  } else {
-
-    fechasHtml = E.fechas.map(function(f) {
-      return '· ' + f;
-    }).join('<br>');
-
-  }
-
-  document.getElementById('s6-detalle').innerHTML =
-    '<strong>' + E.nombre + '</strong>' +
-    '<br><br>' +
-    fechasHtml +
-    '<br><br>' +
-    '· ' + equipMsg;
-
-  if (necesitaEquipo) {
-
-    document.getElementById('s6-titulo').textContent =
-      '¡Reserva registrada!';
-
-    document.getElementById('s6-texto').innerHTML =
-      'Puedes revisar el estado desde <strong>"Ver mis reservas"</strong>. ' +
-      'Si no puedes venir, cancela para liberar el cupo.';
-
-  } else {
-
-    document.getElementById('s6-titulo').textContent =
-      '¡Pago registrado!';
-
-    document.getElementById('s6-texto').innerHTML =
-      'Puedes revisar el estado de tu pago desde <strong>"Ver mis reservas"</strong>.';
-
-  }
-
-  if (E.datos && E.datos.email) {
-
-    document.getElementById('s6-email-aviso').textContent =
-      '⏳ Tu pago está pendiente de verificación. ' +
-      'Recibirás un correo en ' + E.datos.email +
-      ' cuando esté confirmado.';
-
-  }
-
-  ir('s6');
-
-}
-
-  if (E.tipoPago === 'mensual') {
-    finalizar();
+    var pendientesMeses = E.meses.slice();
+    function guardarMesSiguiente() {
+      if (pendientesMeses.length === 0) { finalizar(); return; }
+      var mes = pendientesMeses.shift();
+      api({ action: 'guardarReserva', nombre: E.nombre, fecha: mes, talla: talla, protecciones: protec },
+        function() { guardarMesSiguiente(); },
+        function() { guardarMesSiguiente(); }
+      );
+    }
+    guardarMesSiguiente();
   } else {
     var pendientes = E.fechas.slice();
     function guardarSiguiente() {
@@ -2023,8 +2020,6 @@ api({
   }
 }
 
-// ─── EDITAR DATOS ─────────────────────────────────────────────────────────────
-// ─── EDITAR DATOS ─────────────────────────────────────────────────────────────
 // ─── EDITAR DATOS ─────────────────────────────────────────────────────────────
 var OPCIONES_PREFIJO = [
   '🇪🇨 +593 (Ecuador)','🇨🇴 +57 (Colombia)','🇵🇪 +51 (Perú)','🇻🇪 +58 (Venezuela)',
@@ -2047,7 +2042,6 @@ var OPCIONES_PREFIJO = [
   '🇦🇺 +61 (Australia)','🇳🇿 +64 (Nueva Zelanda)'
 ];
 
-// Carga un select intentando match exacto; si no existe en opciones, pone "Otro" + texto
 function cargarSelect(selectId, valor, otroInputId, campoOtroId) {
   var sel = document.getElementById(selectId);
   if (!sel || valor === undefined) return;
@@ -2068,7 +2062,6 @@ function irEditarDatos() {
   api({ action: 'getDatosCompletos', nombre: E.nombre }, function(datos) {
     if (!datos) { ir('s-home'); alert('No se pudieron cargar tus datos.'); return; }
 
-    // Campos simples (inputs, selects directos, textareas con id="d-*")
     var camposSimples = [
       'nombreDerby','numeroDerby','telefono','email',
       'fechaNacimiento','fechaPublica','edadPublica',
@@ -2086,7 +2079,6 @@ function irEditarDatos() {
       if (el && datos[c] !== undefined) el.value = datos[c] || '';
     });
 
-    // Selects con posible "Otro"
     cargarSelect('d-dieta',         datos.dieta,         'd-dietaOtro',         'campo-dietaOtro');
     cargarSelect('d-canton',        datos.canton,        'd-cantonOtro',        'campo-cantonOtro');
     cargarSelect('d-paisExpedicion',datos.paisExpedicion, null,                  null);
@@ -2094,19 +2086,16 @@ function irEditarDatos() {
     cargarSelect('d-emerg1Relacion',datos.emerg1Relacion, null,                  null);
     cargarSelect('d-emerg2Relacion',datos.emerg2Relacion, null,                  null);
 
-    // Prefijos (con Otro)
     cargarSelect('d-prefijo',       datos.prefijo,       'd-prefijoOtro',       'campo-prefijoOtro');
     cargarSelect('d-emerg1Prefijo', datos.emerg1Prefijo, 'd-emerg1PrefijoOtro', 'campo-emerg1PrefijoOtro');
     cargarSelect('d-emerg2Prefijo', datos.emerg2Prefijo, 'd-emerg2PrefijoOtro', 'campo-emerg2PrefijoOtro');
 
-    // Pronombres: checkboxes múltiples
     document.querySelectorAll('input[data-group="pronombres"]').forEach(function(cb) { cb.checked = false; });
     var inpPronOtro = document.getElementById('d-pronombresOtro');
     if (inpPronOtro) inpPronOtro.value = '';
     document.getElementById('campo-pronombresOtro').classList.remove('visible');
 
     if (datos.pronombres) {
-      var opcionesFijas = ['Ella/ella','Él/él','Elle/elle','Ellx/ellx'];
       datos.pronombres.split(',').map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(val) {
         var cb = document.querySelector('input[data-group="pronombres"][value="' + val + '"]');
         if (cb) {
@@ -2120,7 +2109,6 @@ function irEditarDatos() {
       });
     }
 
-    // Checkboxes enfermedad
     document.querySelectorAll('input[data-group="enfermedad"]').forEach(function(cb) { cb.checked = false; });
     document.getElementById('campo-enfermedadOtro').classList.remove('visible');
     if (datos.enfermedad) {
@@ -2138,7 +2126,6 @@ function irEditarDatos() {
       });
     }
 
-    // Checkboxes antecedentes (el valor guardado puede incluir " | Detalle: ...")
     document.querySelectorAll('input[data-group="antecedentes"]').forEach(function(cb) { cb.checked = false; });
     document.getElementById('campo-antecedentesOtro').classList.remove('visible');
     document.getElementById('campo-antecedentesDetalle').classList.remove('visible');
@@ -2165,7 +2152,6 @@ function irEditarDatos() {
       toggleDetalleAntecedentes();
     }
 
-    // Campos condicionales por select
     var alergias = datos.alergias || '';
     document.getElementById('campo-alergiasDesc').classList.toggle('visible', alergias === 'Sí' || alergias === 'Tal vez');
     var meds = datos.medicamentos || '';
@@ -2177,12 +2163,10 @@ function irEditarDatos() {
   }, function(e) { ir('s-home'); alert('Error: ' + e.message); });
 }
 
-// ─── TOGGLE SECCIÓN ───────────────────────────────────────────────────────────
 function toggleSeccion(id, titulo) {
   var body = document.getElementById(id);
   var estaAbierta = body.classList.contains('abierta');
 
-  // Cierra todos los demás primero (opcional — quita este bloque si quieres varios abiertos a la vez)
   document.querySelectorAll('.datos-seccion-body.abierta').forEach(function(el) {
     if (el.id !== id) {
       el.classList.remove('abierta');
@@ -2195,40 +2179,33 @@ function toggleSeccion(id, titulo) {
   if (titulo) titulo.classList.toggle('abierta', !estaAbierta);
 }
 
-// ─── TOGGLE CONDICIONAL ───────────────────────────────────────────────────────
 function toggleCondicional(selectId, valoresActivos, campoId) {
   var val = document.getElementById(selectId).value;
   document.getElementById(campoId).classList.toggle('visible', valoresActivos.indexOf(val) !== -1);
 }
 
-// Muestra/oculta input de texto cuando se selecciona "Otro" en un select
 function toggleOtroSelect(campo) {
   var sel = document.getElementById('d-' + campo);
   var campoEl = document.getElementById('campo-' + campo + 'Otro');
   if (campoEl) campoEl.classList.toggle('visible', sel && sel.value === 'Otro');
 }
 
-// Muestra/oculta input de texto cuando se marca "Otro" en un grupo de checkboxes
 function toggleOtroCheckbox(grupo) {
   var cb = document.querySelector('input[data-group="' + grupo + '"][value="Otro"]');
   var campoEl = document.getElementById('campo-' + grupo + 'Otro');
   if (campoEl) campoEl.classList.toggle('visible', cb && cb.checked);
 }
 
-// Muestra el textarea de detalle de antecedentes si hay alguno seleccionado
 function toggleDetalleAntecedentes() {
   var alguno = document.querySelectorAll('input[data-group="antecedentes"]:checked').length > 0;
   var campoEl = document.getElementById('campo-antecedentesDetalle');
   if (campoEl) campoEl.classList.toggle('visible', alguno);
 }
 
-// ─── GUARDAR SECCIÓN ─────────────────────────────────────────────────────────
 function guardarSeccion(secId, btn) {
   var sec = document.getElementById(secId);
   var payload = {};
 
-  // Validación específica para salud
-  // Validación de teléfonos
   var camposTel = { 'sec-contacto': 'd-telefono', 'sec-emerg1': 'd-emerg1Telefono', 'sec-emerg2': 'd-emerg2Telefono' };
   if (camposTel[secId]) {
     var telEl = document.getElementById(camposTel[secId]);
@@ -2241,7 +2218,6 @@ function guardarSeccion(secId, btn) {
     }
   }
 
-  // Validación específica para salud
   if (secId === 'sec-salud') {
     var alVal = document.getElementById('d-alergias') ? document.getElementById('d-alergias').value : '';
     var medVal = document.getElementById('d-medicamentos') ? document.getElementById('d-medicamentos').value : '';
@@ -2255,7 +2231,6 @@ function guardarSeccion(secId, btn) {
     }
   }
 
-  // Inputs, selects y textareas con id="d-*" (excluyendo .otro-texto que se resuelven abajo)
   sec.querySelectorAll(
     'input[id^="d-"]:not([type="checkbox"]):not([type="radio"]):not(.otro-texto),' +
     'select[id^="d-"],' +
@@ -2264,7 +2239,6 @@ function guardarSeccion(secId, btn) {
     payload[el.id.replace('d-', '')] = el.value.trim();
   });
 
-  // Resolver selects con "Otro": si el select vale "Otro", usar el texto del input correspondiente
   ['dieta','canton','prefijo','emerg1Prefijo','emerg2Prefijo','seguro'].forEach(function(campo) {
     if (payload[campo] === 'Otro') {
       var inp = sec.querySelector('#d-' + campo + 'Otro');
@@ -2272,7 +2246,6 @@ function guardarSeccion(secId, btn) {
     }
   });
 
-  // Checkboxes agrupados
   var cbGroups = {};
   sec.querySelectorAll('input[type="checkbox"][data-group]').forEach(function(cb) {
     var g = cb.getAttribute('data-group');
@@ -2290,13 +2263,12 @@ function guardarSeccion(secId, btn) {
     payload[g] = vals.join(', ');
   });
 
-  // Antecedentes: si hay detalle adicional, añadirlo al valor
   if (payload['antecedentes'] !== undefined) {
     var detalle = document.getElementById('d-antecedentesDetalle');
     if (detalle && detalle.value.trim()) {
       payload['antecedentes'] = payload['antecedentes'] + ' | Detalle: ' + detalle.value.trim();
     }
-    delete payload['antecedentesDetalle']; // no es campo de hoja directo
+    delete payload['antecedentesDetalle'];
   }
 
   if (Object.keys(payload).length === 0) return;
@@ -2325,28 +2297,17 @@ function guardarSeccion(secId, btn) {
   });
 }
 
- function limpiarTelefono(input) {
+function limpiarTelefono(input) {
   input.value = input.value.replace(/[^0-9]/g, '');
 }
- function solicitarNuevoPIN(){
 
-  const email = ((E.datos && E.datos.email) || '').trim();
-
-  const subject = encodeURIComponent(
-    'Solicitud de nuevo PIN - ' + email
+function solicitarNuevoPIN(){
+  var email = ((E.datos && E.datos.email) || '').trim();
+  var subject = encodeURIComponent('Solicitud de nuevo PIN - ' + email);
+  var body = encodeURIComponent(
+    'Hola,\n\nNecesito solicitar un nuevo PIN de acceso para mis reservas.\n\nEmail registrado: ' + email + '\n\nGracias.'
   );
-
-  const body = encodeURIComponent(
-    'Hola,\n\n' +
-    'Necesito solicitar un nuevo PIN de acceso para mis reservas.\n\n' +
-    'Email registrado: ' + email + '\n\n' +
-    'Gracias.'
-  );
-
-  window.location.href =
-    'mailto:quindesvolcanicosrd@gmail.com' +
-    '?subject=' + subject +
-    '&body=' + body;
+  window.location.href = 'mailto:quindesvolcanicosrd@gmail.com?subject=' + subject + '&body=' + body;
 }
 </script>
 </body>
