@@ -318,6 +318,29 @@
 .btn-forgot-pin:hover{
   opacity:.9;
 }
+
+ .meses-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mes-item {
+  background: #fafafa;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.mes-item input {
+  accent-color: #F97316;
+}
 </style>
 </head>
 <body>
@@ -510,7 +533,28 @@
       </div>
       <p id="s4-fechas-subtitulo" style="margin-bottom:12px;">Selecciona los entrenamientos a los que asistirás.</p>
       <div id="lista-fechas"></div>
-      <div id="s4-total-box" style="display:none;margin:14px 0;">
+<div id="s4-meses-wrapper" style="display:none;margin-top:14px;">
+  <div class="subtitulo" style="margin-bottom:8px;">
+    Selecciona 1 o más meses
+  </div>
+
+  <div id="lista-meses" class="meses-grid">
+    <label class="mes-item"><input type="checkbox" value="Enero"> Enero</label>
+    <label class="mes-item"><input type="checkbox" value="Febrero"> Febrero</label>
+    <label class="mes-item"><input type="checkbox" value="Marzo"> Marzo</label>
+    <label class="mes-item"><input type="checkbox" value="Abril"> Abril</label>
+    <label class="mes-item"><input type="checkbox" value="Mayo"> Mayo</label>
+    <label class="mes-item"><input type="checkbox" value="Junio"> Junio</label>
+    <label class="mes-item"><input type="checkbox" value="Julio"> Julio</label>
+    <label class="mes-item"><input type="checkbox" value="Agosto"> Agosto</label>
+    <label class="mes-item"><input type="checkbox" value="Septiembre"> Septiembre</label>
+    <label class="mes-item"><input type="checkbox" value="Octubre"> Octubre</label>
+    <label class="mes-item"><input type="checkbox" value="Noviembre"> Noviembre</label>
+    <label class="mes-item"><input type="checkbox" value="Diciembre"> Diciembre</label>
+  </div>
+</div>
+
+<div id="s4-total-box" style="display:none;margin:14px 0;">
         <div class="total-box"><div id="s4-total-monto"></div><div class="total-detalle" id="s4-total-detalle"></div></div>
       </div>
       <div class="error-msg" id="err-s4"></div>
@@ -1291,6 +1335,7 @@ var E = {
   nombre: '', datos: null,
   conf: '', editPat: '', editTalla: '', editProtec: '',
   fechas: [], tipoPago: 'clase',
+  meses: [],
   precioPorClase: 0, precioMensual: 0,
   totalPago: 0, notaPago: '', wpEnviado: false
 };
@@ -1616,44 +1661,76 @@ function actualizarTextosPago() {
 }
 
 function selTipoPago(tipo, label) {
-  document.querySelectorAll('input[name="tipo-pago"]').forEach(function(r) { r.closest('.opcion').classList.remove('sel'); });
+  document.querySelectorAll('input[name="tipo-pago"]').forEach(function(r) {
+    r.closest('.opcion').classList.remove('sel');
+  });
+
   label.classList.add('sel');
+
   E.tipoPago = tipo;
   E.fechas = [];
-  document.querySelectorAll('input[name="fecha"]').forEach(function(c) { c.checked = false; c.closest('.fecha-item').classList.remove('sel'); });
+
+  document.querySelectorAll('input[name="fecha"]').forEach(function(c) {
+    c.checked = false;
+    c.closest('.fecha-item').classList.remove('sel');
+  });
+
   var subtitulo = document.getElementById('s4-fechas-subtitulo');
-var listaFechas = document.getElementById('lista-fechas');
+  var listaFechas = document.getElementById('lista-fechas');
 
-if (tipo === 'mensual' && canPayMonthly()) {
-  subtitulo.style.display = 'none';
-  listaFechas.style.display = 'none';
-} else {
-  subtitulo.style.display = 'block';
-  listaFechas.style.display = 'block';
+  if (tipo === 'mensual' && canPayMonthly()) {
+    subtitulo.style.display = 'none';
+    listaFechas.style.display = 'none';
+  } else {
+    subtitulo.style.display = 'block';
+    listaFechas.style.display = 'block';
 
-  subtitulo.textContent = tipo === 'mensual'
-    ? 'Opcionalmente, puedes seleccionar a qué entrenamientos asistirás este mes.'
-    : 'Selecciona los próximos entrenamientos a los que asistirás.';
-}
+    subtitulo.textContent = tipo === 'mensual'
+      ? 'Opcionalmente, puedes seleccionar a qué entrenamientos asistirás este mes.'
+      : 'Selecciona los próximos entrenamientos a los que asistirás.';
+  }
+
   actualizarTotalS4();
 }
-
 function actualizarTotalS4() {
-  var boxEl = document.getElementById('s4-total-box');
-  var montoEl = document.getElementById('s4-total-monto');
-  var detalleEl = document.getElementById('s4-total-detalle');
+  var total = 0;
+
   if (E.tipoPago === 'mensual') {
-    E.totalPago = E.precioMensual;
-    montoEl.textContent = 'Total a pagar: $' + E.precioMensual.toFixed(2);
-    detalleEl.textContent = 'Pago mensual';
-    boxEl.style.display = 'block';
+
+    var mesesSeleccionados = Array.from(
+      document.querySelectorAll('#lista-meses input:checked')
+    ).map(function(cb) {
+      return cb.value;
+    });
+
+    E.meses = mesesSeleccionados;
+
+    total = mesesSeleccionados.length * E.precioMensual;
+
+    document.getElementById('s4-meses-wrapper').style.display = 'block';
+
   } else {
-    var n = E.fechas.length;
-    if (n === 0) { boxEl.style.display = 'none'; E.totalPago = 0; return; }
-    E.totalPago = n * E.precioPorClase;
-    montoEl.textContent = 'Total a pagar: $' + E.totalPago.toFixed(2);
-    detalleEl.textContent = n + (n === 1 ? ' clase' : ' clases') + ' × $' + E.precioPorClase.toFixed(2);
-    boxEl.style.display = 'block';
+
+    total = E.fechas.length * E.precioPorClase;
+
+    document.getElementById('s4-meses-wrapper').style.display = 'none';
+
+    E.meses = [];
+  }
+
+  E.totalPago = total;
+
+  var box = document.getElementById('s4-total-box');
+
+  if (total > 0) {
+    box.style.display = 'block';
+    box.innerHTML =
+      '<div>Total a pagar:</div>' +
+      '<div style="font-size:1.5rem;font-weight:800;">$' +
+      total.toFixed(2) +
+      '</div>';
+  } else {
+    box.style.display = 'none';
   }
 }
 
@@ -1721,15 +1798,28 @@ function toggleFecha(el, fecha) {
 }
 
 function continuar_s4() {
-  if (E.tipoPago === 'clase' && (!E.fechas || E.fechas.length === 0)) {
-    err('err-s4', 'Por favor selecciona al menos una fecha.'); return;
+
+  if (E.tipoPago === 'mensual') {
+
+    if (!E.meses || E.meses.length === 0) {
+      err('err-s4', 'Por favor selecciona al menos un mes.');
+      return;
+    }
+
+  } else {
+
+    if (!E.fechas || E.fechas.length === 0) {
+      err('err-s4', 'Por favor selecciona al menos una fecha.');
+      return;
+    }
+
   }
-  if (E.tipoPago === 'mensual') E.totalPago = E.precioMensual;
+  
   var esClase = E.tipoPago === 'clase';
   document.getElementById('s-pago-total-monto').textContent = 'Total a pagar: $' + (E.totalPago || 0).toFixed(2);
   document.getElementById('s-pago-total-detalle').textContent = esClase
     ? E.fechas.length + (E.fechas.length === 1 ? ' clase' : ' clases') + ' × $' + E.precioPorClase.toFixed(2)
-    : 'Pago mensual';
+    : E.meses.join(', ');
 document.getElementById('chk-pago').checked = false;
   document.getElementById('btn-pago').disabled = true;
   document.getElementById('nota-pago').value = '';
@@ -1757,9 +1847,11 @@ document.getElementById('chk-pago').checked = false;
     equipLinea = 'Llevare mi propio equipamiento.';
   }
 
-  var lineasFechas = '';
-  if (E.tipoPago === 'mensual') {
-    lineasFechas = 'Pago mensual - $' + (E.totalPago || 0).toFixed(2);
+  var lineasFechas =
+  'Meses pagados:\n- ' +
+  E.meses.join('\n- ') +
+  '\n\nTotal: $' +
+  (E.totalPago || 0).toFixed(2);
   } else {
     lineasFechas = E.fechas.map(function(f) { return '- ' + f; }).join('\n');
   }
@@ -1825,14 +1917,16 @@ function confirmarReserva() {
         ? 'mensual (sin clases seleccionadas)'
         : '—');
 
-  api({
-    action: 'guardarNotaPago',
-    nombre: E.nombre,
-    tipoPago: E.tipoPago,
-    monto: (E.totalPago || 0).toFixed(2),
-    nota: E.notaPago || '—',
-    fechas: fechasStr
-  }, function() {}, function() {});
+api({
+  action: 'guardarNotaPago',
+  nombre: E.nombre,
+  tipoPago: E.tipoPago,
+  monto: (E.totalPago || 0).toFixed(2),
+  nota: E.notaPago || '—',
+  fechas: fechasStr,
+  meses: E.meses.join(', '),
+  email: E.datos.email || ''
+}, function() {}, function() {});
 
   var talla = E.datos.necesitaPatines || 'No';
   var protec = E.datos.necesitaProtecciones || 'No';
@@ -2227,7 +2321,7 @@ function guardarSeccion(secId, btn) {
 }
  function solicitarNuevoPIN(){
 
-  const email = (E.email || '').trim();
+  const email = ((E.datos && E.datos.email) || '').trim();
 
   const subject = encodeURIComponent(
     'Solicitud de nuevo PIN - ' + email
