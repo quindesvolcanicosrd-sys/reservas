@@ -292,6 +292,22 @@
     text-transform: uppercase; letter-spacing: 1px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
+ .btn-forgot-pin{
+  width:100%;
+  margin-top:12px;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  background:#d9f3ff;
+  color:#055160;
+  font-weight:600;
+  cursor:pointer;
+  transition:.2s;
+}
+
+.btn-forgot-pin:hover{
+  opacity:.9;
+}
 </style>
 </head>
 <body>
@@ -345,6 +361,13 @@
       <input type="password" id="input-pin" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••"
         style="width:100%;padding:14px;border:2px solid #e5e5e5;border-radius:8px;font-size:1.2rem;text-align:center;letter-spacing:8px;margin-bottom:14px;">
       <div class="error-msg" id="err-pin"></div>
+           <button
+        type="button"
+        class="btn-forgot-pin"
+        onclick="solicitarNuevoPIN()"
+      >
+        ¿Olvidaste tu PIN?
+      </button>
       <button class="btn btn-primary" onclick="continuar_pin()">Continuar →</button>
       <button class="btn btn-secondary" onclick="volver('s1')">← Volver</button>
     </div>
@@ -2084,6 +2107,26 @@ function guardarSeccion(secId, btn) {
 
  function limpiarTelefono(input) {
   input.value = input.value.replace(/[^0-9]/g, '');
+}
+ function solicitarNuevoPIN(){
+
+  const email = (E.email || '').trim();
+
+  const subject = encodeURIComponent(
+    'Solicitud de nuevo PIN - ' + email
+  );
+
+  const body = encodeURIComponent(
+    'Hola,\n\n' +
+    'Necesito solicitar un nuevo PIN de acceso para mis reservas.\n\n' +
+    'Email registrado: ' + email + '\n\n' +
+    'Gracias.'
+  );
+
+  window.location.href =
+    'mailto:quindesvolcanicosrd@gmail.com' +
+    '?subject=' + subject +
+    '&body=' + body;
 }
 </script>
 </body>
