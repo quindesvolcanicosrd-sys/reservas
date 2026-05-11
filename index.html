@@ -1329,7 +1329,7 @@
 
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-var BACKEND = 'https://script.google.com/macros/s/AKfycbxBafyRLkvO9T-xQnpsf-fy5TZDLsWmEQBUZp6GhyJAvawRlLMoyrxm2uS9ezu7ciULcA/exec';
+var BACKEND = 'https://script.google.com/macros/s/AKfycbw3qmWj-xIhSLJfY-aRkZEo6vSE6-uwj0K4ou7_r3e_mnIHWApjSSGSjxPGH4wt0AybWw/exec';
 
 // ─── ESTADO GLOBAL ────────────────────────────────────────────────────────────
 var E = {
@@ -1679,13 +1679,16 @@ function selTipoPago(tipo, label) {
   var subtitulo = document.getElementById('s4-fechas-subtitulo');
   var listaFechas = document.getElementById('lista-fechas');
 
-  if (tipo === 'mensual' && canPayMonthly()) {
+if (tipo === 'mensual' && canPayMonthly()) {
     subtitulo.style.display = 'none';
     listaFechas.style.display = 'none';
+    document.getElementById('s4-meses-wrapper').style.display = 'block';
   } else {
     subtitulo.style.display = 'block';
     listaFechas.style.display = 'block';
-
+    document.getElementById('s4-meses-wrapper').style.display = 'none';
+    document.querySelectorAll('#lista-meses input').forEach(function(cb) { cb.checked = false; });
+    E.meses = [];
     subtitulo.textContent = tipo === 'mensual'
       ? 'Opcionalmente, puedes seleccionar a qué entrenamientos asistirás este mes.'
       : 'Selecciona los próximos entrenamientos a los que asistirás.';
@@ -2000,7 +2003,7 @@ function confirmarReserva() {
     function guardarMesSiguiente() {
       if (pendientesMeses.length === 0) { finalizar(); return; }
       var mes = pendientesMeses.shift();
-      api({ action: 'guardarReserva', nombre: E.nombre, fecha: mes, talla: talla, protecciones: protec },
+api({ action: 'guardarReserva', nombre: E.nombre, fecha: mes, talla: talla, protecciones: protec, monto: E.precioMensual.toFixed(2), email: E.datos.email || '' },
         function() { guardarMesSiguiente(); },
         function() { guardarMesSiguiente(); }
       );
@@ -2011,7 +2014,7 @@ function confirmarReserva() {
     function guardarSiguiente() {
       if (pendientes.length === 0) { finalizar(); return; }
       var fecha = pendientes.shift();
-      api({ action: 'guardarReserva', nombre: E.nombre, fecha: fecha, talla: talla, protecciones: protec },
+      api({ action: 'guardarReserva', nombre: E.nombre, fecha: fecha, talla: talla, protecciones: protec, monto: E.precioPorClase.toFixed(2), email: E.datos.email || '' },
         function() { guardarSiguiente(); },
         function() { guardarSiguiente(); }
       );
