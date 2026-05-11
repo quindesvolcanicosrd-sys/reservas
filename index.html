@@ -267,6 +267,31 @@
   .wp-hint.wp-confirmado {
     color: #16a34a; font-weight: 600;
   }
+
+ .top-bar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(254, 232, 217, 0.92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none; align-items: center; gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(249,115,22,0.15);
+  }
+  .top-bar.visible { display: flex; }
+  .top-bar-back {
+    background: white; border: 2px solid #e5e5e5;
+    border-radius: 8px; padding: 7px 12px;
+    font-size: 0.85rem; font-weight: 700; color: #555;
+    cursor: pointer; transition: all 0.18s ease;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .top-bar-back:hover { border-color: #F97316; color: #F97316; background: #fff8f4; }
+  .top-bar-back:active { transform: scale(0.96); }
+  .top-bar-titulo {
+    font-size: 0.82rem; font-weight: 700; color: #888;
+    text-transform: uppercase; letter-spacing: 1px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
 </style>
 </head>
 <body>
@@ -280,6 +305,11 @@
 </div>
 
 <div class="contenedor">
+
+ <div class="top-bar" id="top-bar">
+    <button class="top-bar-back" id="top-bar-btn">← Atrás</button>
+    <span class="top-bar-titulo" id="top-bar-titulo"></span>
+  </div>
 
   <div class="paso-indicator">
     <div class="paso-dot" id="dot1"></div>
@@ -498,7 +528,6 @@
         <p class="wp-hint">Envía tu comprobante para agilizar la verificación de tu reserva.</p>
       </div>
       <div class="error-msg" id="err-pago"></div>
-      <button class="btn btn-primary" id="btn-pago" onclick="continuar_pago()" disabled style="margin-top:12px;">Continuar →</button>
       <button class="btn btn-primary" id="btn-pago" onclick="continuar_pago()" disabled style="margin-top:16px;">Continuar →</button>
       <button class="btn btn-secondary" onclick="volver('s4')">← Volver</button>
     </div>
@@ -1269,11 +1298,44 @@ window.onload = function() {
 };
 
 // ─── NAVEGACIÓN ───────────────────────────────────────────────────────────────
+var TOP_BAR_CONFIG = {
+  's1b':           { titulo: 'Verificación',         volver: 's1' },
+  's2':            { titulo: 'Equipamiento',          volver: 's-home' },
+  's3a':           { titulo: 'Editar equipamiento',   volver: 's2' },
+  's3b':           { titulo: 'Editar equipamiento',   volver: 's3a' },
+  's3c':           { titulo: 'Editar equipamiento',   volver: 's3b' },
+  's4':            { titulo: 'Fecha y pago',          volver: 's2' },
+  's-pago':        { titulo: 'Pago',                  volver: 's4' },
+  's5':            { titulo: 'Confirmar reserva',     volver: 's-pago' },
+  's-misreservas': { titulo: 'Mis reservas',          volver: 's-home' },
+  's-datos':       { titulo: 'Editar mis datos',      volver: 's-home' },
+  's6':            { titulo: 'Reserva registrada',    volver: null },
+};
+
 function ir(id) {
   document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
   document.getElementById(id).classList.add('activa');
   window.scrollTo(0, 0);
 
+  // Top bar
+  var topBar    = document.getElementById('top-bar');
+  var topBtn    = document.getElementById('top-bar-btn');
+  var topTitulo = document.getElementById('top-bar-titulo');
+  var cfg = TOP_BAR_CONFIG[id];
+  if (cfg) {
+    topBar.classList.add('visible');
+    topTitulo.textContent = cfg.titulo;
+    if (cfg.volver) {
+      topBtn.style.display = '';
+      topBtn.onclick = function() { volver(cfg.volver); };
+    } else {
+      topBtn.style.display = 'none';
+    }
+  } else {
+    topBar.classList.remove('visible');
+  }
+
+  // Dots
   var sinPasos = ['s1','s1b','s-home','s-misreservas','s-carga','s6','s-datos'];
   var dotContainer = document.querySelector('.paso-indicator');
   if (sinPasos.indexOf(id) !== -1) { dotContainer.style.display = 'none'; return; }
@@ -1605,7 +1667,35 @@ document.getElementById('chk-pago').checked = false;
   if (hint) { hint.textContent = 'Envía tu comprobante para agilizar la verificación de tu reserva.'; hint.classList.remove('wp-confirmado'); }
   // Armar link de WhatsApp con contexto
   var fechasTexto = E.tipoPago === 'mensual' ? 'pago mensual' : E.fechas.join(', ');
-  var msgWp = 'Hola! Soy ' + E.nombre + ' y acabo de realizar mi pago de $' + (E.totalPago || 0).toFixed(2) + ' (' + fechasTexto + '). Te envío el comprobante 🧾';
+  // Equipamiento
+  var d = E.datos;
+  var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : '';
+  var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : '';
+  var equipLinea = '';
+  if (talla && protec && protec.toLowerCase() !== 'no') {
+    equipLinea = '🛼 Necesitaré patines talla ' + talla + ' y protecciones.';
+  } else if (talla) {
+    equipLinea = '🛼 Necesitaré patines talla ' + talla + '.';
+  } else if (protec && protec.toLowerCase() !== 'no') {
+    equipLinea = '🛡️ Necesitaré protecciones (' + protec + ').';
+  } else {
+    equipLinea = '✅ Llevaré mi propio equipamiento.';
+  }
+
+  // Líneas de fechas o pago mensual
+  var lineasFechas = '';
+  if (E.tipoPago === 'mensual') {
+    lineasFechas = '📅 Pago mensual — $' + (E.totalPago || 0).toFixed(2);
+  } else {
+    lineasFechas = E.fechas.map(function(f) { return '• ' + f; }).join('\n');
+  }
+
+  var msgWp =
+    '¡Hola! Soy *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '*.\n\n' +
+    '📋 *Clases reservadas:*\n' + lineasFechas + '\n\n' +
+    equipLinea + '\n\n' +
+    'Te envío el comprobante adjunto. Si no lo ves, por favor solicítamelo. ¡Gracias! 🙏';
+
   btnWp.href = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp);
   ir('s-pago');
 }
