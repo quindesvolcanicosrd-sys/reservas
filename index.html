@@ -487,32 +487,20 @@
             <label>Número Derby</label>
             <input type="text" id="d-numeroDerby" placeholder="Ej: 47">
           </div>
-          <div class="datos-campo">
-            <label>Pronombres</label>
-            <div class="select-wrapper">
-              <select id="d-pronombres">
-                <option value="">— Selecciona —</option>
-                <option value="Ella/ella">Ella/ella</option>
-                <option value="Él/él">Él/él</option>
-                <option value="Elle/elle">Elle/elle</option>
-                <option value="Ellx/ellx">Ellx/ellx</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
+           <div class="datos-campo">
+             <label>Pronombres</label>
+             <p class="datos-hint" style="margin-bottom:8px;">Selecciona todos los que apliquen.</p>
+             <label class="chk-opcion"><input type="checkbox" data-group="pronombres" value="Ella/ella"> Ella/ella</label>
+             <label class="chk-opcion"><input type="checkbox" data-group="pronombres" value="Él/él"> Él/él</label>
+             <label class="chk-opcion"><input type="checkbox" data-group="pronombres" value="Elle/elle"> Elle/elle</label>
+             <label class="chk-opcion"><input type="checkbox" data-group="pronombres" value="Ellx/ellx"> Ellx/ellx</label>
+             <label class="chk-opcion"><input type="checkbox" data-group="pronombres" value="Otro" onchange="toggleOtroCheckbox('pronombres')"> Otro</label>
+             <div class="campo-condicional" id="campo-pronombresOtro">
+               <input type="text" id="d-pronombresOtro" class="otro-texto" placeholder="Ej: Xe/xem" style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
+             </div>
+           </div>
           </div>
-          <div class="datos-campo">
-            <label>Dieta o restricción alimentaria</label>
-            <div class="select-wrapper">
-              <select id="d-dieta">
-                <option value="">— Selecciona —</option>
-                <option value="Ninguna">Ninguna</option>
-                <option value="Vegetarianx">Vegetarianx</option>
-                <option value="Veganx">Veganx</option>
-                <option value="Celíacx">Celíacx</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
-          </div>
+
           <button class="btn-guardar-sec" onclick="guardarSeccion('sec-general', this)">Guardar</button>
         </div>
       </div>
@@ -524,24 +512,94 @@
           <span class="sec-chevron">▾</span>
         </div>
         <div class="datos-seccion-body" id="sec-contacto">
-          <div class="datos-campo">
+<div class="datos-campo">
             <label>Prefijo telefónico</label>
             <div class="select-wrapper">
-              <select id="d-prefijo">
+              <select id="d-prefijo" onchange="toggleOtroSelect('prefijo')">
                 <option value="">— Selecciona —</option>
-                <option value="🇪🇨 +593 (Ecuador)">🇪🇨 +593 (Ecuador)</option>
-                <option value="🇨🇴 +57 (Colombia)">🇨🇴 +57 (Colombia)</option>
-                <option value="🇵🇪 +51 (Perú)">🇵🇪 +51 (Perú)</option>
-                <option value="🇻🇪 +58 (Venezuela)">🇻🇪 +58 (Venezuela)</option>
-                <option value="🇦🇷 +54 (Argentina)">🇦🇷 +54 (Argentina)</option>
-                <option value="🇨🇱 +56 (Chile)">🇨🇱 +56 (Chile)</option>
-                <option value="🇧🇴 +591 (Bolivia)">🇧🇴 +591 (Bolivia)</option>
-                <option value="🇲🇽 +52 (México)">🇲🇽 +52 (México)</option>
-                <option value="🇺🇸 +1 (Estados Unidos)">🇺🇸 +1 (Estados Unidos)</option>
-                <option value="🇪🇸 +34 (España)">🇪🇸 +34 (España)</option>
-                <option value="🇬🇧 +44 (Reino Unido)">🇬🇧 +44 (Reino Unido)</option>
-                <option value="Otro">Otro</option>
+                <optgroup label="— América del Sur —">
+                  <option value="🇪🇨 +593 (Ecuador)">🇪🇨 +593 Ecuador</option>
+                  <option value="🇨🇴 +57 (Colombia)">🇨🇴 +57 Colombia</option>
+                  <option value="🇵🇪 +51 (Perú)">🇵🇪 +51 Perú</option>
+                  <option value="🇻🇪 +58 (Venezuela)">🇻🇪 +58 Venezuela</option>
+                  <option value="🇦🇷 +54 (Argentina)">🇦🇷 +54 Argentina</option>
+                  <option value="🇨🇱 +56 (Chile)">🇨🇱 +56 Chile</option>
+                  <option value="🇧🇴 +591 (Bolivia)">🇧🇴 +591 Bolivia</option>
+                  <option value="🇧🇷 +55 (Brasil)">🇧🇷 +55 Brasil</option>
+                  <option value="🇵🇾 +595 (Paraguay)">🇵🇾 +595 Paraguay</option>
+                  <option value="🇺🇾 +598 (Uruguay)">🇺🇾 +598 Uruguay</option>
+                </optgroup>
+                <optgroup label="— América Central y Caribe —">
+                  <option value="🇬🇹 +502 (Guatemala)">🇬🇹 +502 Guatemala</option>
+                  <option value="🇭🇳 +504 (Honduras)">🇭🇳 +504 Honduras</option>
+                  <option value="🇸🇻 +503 (El Salvador)">🇸🇻 +503 El Salvador</option>
+                  <option value="🇳🇮 +505 (Nicaragua)">🇳🇮 +505 Nicaragua</option>
+                  <option value="🇨🇷 +506 (Costa Rica)">🇨🇷 +506 Costa Rica</option>
+                  <option value="🇵🇦 +507 (Panamá)">🇵🇦 +507 Panamá</option>
+                  <option value="🇨🇺 +53 (Cuba)">🇨🇺 +53 Cuba</option>
+                  <option value="🇩🇴 +1809 (Rep. Dominicana)">🇩🇴 +1809 Rep. Dominicana</option>
+                  <option value="🇭🇹 +509 (Haití)">🇭🇹 +509 Haití</option>
+                  <option value="🇯🇲 +1876 (Jamaica)">🇯🇲 +1876 Jamaica</option>
+                </optgroup>
+                <optgroup label="— América del Norte —">
+                  <option value="🇲🇽 +52 (México)">🇲🇽 +52 México</option>
+                  <option value="🇺🇸 +1 (Estados Unidos)">🇺🇸 +1 Estados Unidos</option>
+                  <option value="🇨🇦 +1 (Canadá)">🇨🇦 +1 Canadá</option>
+                </optgroup>
+                <optgroup label="— Europa —">
+                  <option value="🇪🇸 +34 (España)">🇪🇸 +34 España</option>
+                  <option value="🇵🇹 +351 (Portugal)">🇵🇹 +351 Portugal</option>
+                  <option value="🇫🇷 +33 (Francia)">🇫🇷 +33 Francia</option>
+                  <option value="🇮🇹 +39 (Italia)">🇮🇹 +39 Italia</option>
+                  <option value="🇩🇪 +49 (Alemania)">🇩🇪 +49 Alemania</option>
+                  <option value="🇬🇧 +44 (Reino Unido)">🇬🇧 +44 Reino Unido</option>
+                  <option value="🇳🇱 +31 (Países Bajos)">🇳🇱 +31 Países Bajos</option>
+                  <option value="🇧🇪 +32 (Bélgica)">🇧🇪 +32 Bélgica</option>
+                  <option value="🇨🇭 +41 (Suiza)">🇨🇭 +41 Suiza</option>
+                  <option value="🇦🇹 +43 (Austria)">🇦🇹 +43 Austria</option>
+                  <option value="🇸🇪 +46 (Suecia)">🇸🇪 +46 Suecia</option>
+                  <option value="🇳🇴 +47 (Noruega)">🇳🇴 +47 Noruega</option>
+                  <option value="🇩🇰 +45 (Dinamarca)">🇩🇰 +45 Dinamarca</option>
+                  <option value="🇫🇮 +358 (Finlandia)">🇫🇮 +358 Finlandia</option>
+                  <option value="🇵🇱 +48 (Polonia)">🇵🇱 +48 Polonia</option>
+                  <option value="🇷🇺 +7 (Rusia)">🇷🇺 +7 Rusia</option>
+                  <option value="🇺🇦 +380 (Ucrania)">🇺🇦 +380 Ucrania</option>
+                  <option value="🇬🇷 +30 (Grecia)">🇬🇷 +30 Grecia</option>
+                  <option value="🇹🇷 +90 (Turquía)">🇹🇷 +90 Turquía</option>
+                  <option value="🇷🇴 +40 (Rumania)">🇷🇴 +40 Rumania</option>
+                  <option value="🇨🇿 +420 (Rep. Checa)">🇨🇿 +420 Rep. Checa</option>
+                  <option value="🇭🇺 +36 (Hungría)">🇭🇺 +36 Hungría</option>
+                </optgroup>
+                <optgroup label="— Asia —">
+                  <option value="🇨🇳 +86 (China)">🇨🇳 +86 China</option>
+                  <option value="🇯🇵 +81 (Japón)">🇯🇵 +81 Japón</option>
+                  <option value="🇰🇷 +82 (Corea del Sur)">🇰🇷 +82 Corea del Sur</option>
+                  <option value="🇮🇳 +91 (India)">🇮🇳 +91 India</option>
+                  <option value="🇮🇱 +972 (Israel)">🇮🇱 +972 Israel</option>
+                  <option value="🇦🇪 +971 (Emiratos Árabes)">🇦🇪 +971 Emiratos Árabes</option>
+                  <option value="🇸🇦 +966 (Arabia Saudita)">🇸🇦 +966 Arabia Saudita</option>
+                  <option value="🇵🇭 +63 (Filipinas)">🇵🇭 +63 Filipinas</option>
+                  <option value="🇮🇩 +62 (Indonesia)">🇮🇩 +62 Indonesia</option>
+                  <option value="🇹🇭 +66 (Tailandia)">🇹🇭 +66 Tailandia</option>
+                  <option value="🇻🇳 +84 (Vietnam)">🇻🇳 +84 Vietnam</option>
+                  <option value="🇲🇾 +60 (Malasia)">🇲🇾 +60 Malasia</option>
+                  <option value="🇸🇬 +65 (Singapur)">🇸🇬 +65 Singapur</option>
+                </optgroup>
+                <optgroup label="— África —">
+                  <option value="🇿🇦 +27 (Sudáfrica)">🇿🇦 +27 Sudáfrica</option>
+                  <option value="🇲🇦 +212 (Marruecos)">🇲🇦 +212 Marruecos</option>
+                  <option value="🇳🇬 +234 (Nigeria)">🇳🇬 +234 Nigeria</option>
+                  <option value="🇰🇪 +254 (Kenia)">🇰🇪 +254 Kenia</option>
+                  <option value="🇪🇬 +20 (Egipto)">🇪🇬 +20 Egipto</option>
+                </optgroup>
+                <optgroup label="— Oceanía —">
+                  <option value="🇦🇺 +61 (Australia)">🇦🇺 +61 Australia</option>
+                  <option value="🇳🇿 +64 (Nueva Zelanda)">🇳🇿 +64 Nueva Zelanda</option>
+                </optgroup>
               </select>
+            </div>
+            <div class="campo-condicional" id="campo-prefijoOtro">
+              <input type="text" id="d-prefijoOtro" class="otro-texto" placeholder="Ej: +972" style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
             </div>
           </div>
           <div class="datos-campo">
@@ -615,32 +673,112 @@
             <label>Número de documento</label>
             <input type="text" id="d-numeroDocumento" placeholder="Ej: 1712345678">
           </div>
-          <div class="datos-campo">
+<div class="datos-campo">
             <label>País emisor del documento</label>
             <div class="select-wrapper">
               <select id="d-paisExpedicion">
                 <option value="">— Selecciona —</option>
-                <option value="Ecuador">Ecuador</option>
-                <option value="Colombia">Colombia</option>
-                <option value="Perú">Perú</option>
-                <option value="Venezuela">Venezuela</option>
-                <option value="Argentina">Argentina</option>
-                <option value="Chile">Chile</option>
-                <option value="Bolivia">Bolivia</option>
-                <option value="Brasil">Brasil</option>
-                <option value="México">México</option>
-                <option value="Paraguay">Paraguay</option>
-                <option value="Uruguay">Uruguay</option>
-                <option value="Cuba">Cuba</option>
-                <option value="República Dominicana">República Dominicana</option>
-                <option value="Estados Unidos">Estados Unidos</option>
-                <option value="Canadá">Canadá</option>
-                <option value="España">España</option>
-                <option value="Alemania">Alemania</option>
-                <option value="Francia">Francia</option>
-                <option value="Italia">Italia</option>
-                <option value="Reino Unido">Reino Unido</option>
-                <option value="Otro">Otro</option>
+                <optgroup label="— Más frecuentes —">
+                  <option value="Ecuador">Ecuador</option>
+                  <option value="Colombia">Colombia</option>
+                  <option value="Venezuela">Venezuela</option>
+                  <option value="Perú">Perú</option>
+                  <option value="Argentina">Argentina</option>
+                </optgroup>
+                <optgroup label="— América del Sur —">
+                  <option value="Bolivia">Bolivia</option>
+                  <option value="Brasil">Brasil</option>
+                  <option value="Chile">Chile</option>
+                  <option value="Guyana">Guyana</option>
+                  <option value="Paraguay">Paraguay</option>
+                  <option value="Surinam">Surinam</option>
+                  <option value="Trinidad y Tobago">Trinidad y Tobago</option>
+                  <option value="Uruguay">Uruguay</option>
+                </optgroup>
+                <optgroup label="— América Central y Caribe —">
+                  <option value="Belice">Belice</option>
+                  <option value="Costa Rica">Costa Rica</option>
+                  <option value="Cuba">Cuba</option>
+                  <option value="El Salvador">El Salvador</option>
+                  <option value="Guatemala">Guatemala</option>
+                  <option value="Haití">Haití</option>
+                  <option value="Honduras">Honduras</option>
+                  <option value="Jamaica">Jamaica</option>
+                  <option value="México">México</option>
+                  <option value="Nicaragua">Nicaragua</option>
+                  <option value="Panamá">Panamá</option>
+                  <option value="República Dominicana">República Dominicana</option>
+                </optgroup>
+                <optgroup label="— América del Norte —">
+                  <option value="Canadá">Canadá</option>
+                  <option value="Estados Unidos">Estados Unidos</option>
+                </optgroup>
+                <optgroup label="— Europa —">
+                  <option value="Alemania">Alemania</option>
+                  <option value="Austria">Austria</option>
+                  <option value="Bélgica">Bélgica</option>
+                  <option value="Bulgaria">Bulgaria</option>
+                  <option value="Croacia">Croacia</option>
+                  <option value="Dinamarca">Dinamarca</option>
+                  <option value="Eslovaquia">Eslovaquia</option>
+                  <option value="Eslovenia">Eslovenia</option>
+                  <option value="España">España</option>
+                  <option value="Estonia">Estonia</option>
+                  <option value="Finlandia">Finlandia</option>
+                  <option value="Francia">Francia</option>
+                  <option value="Grecia">Grecia</option>
+                  <option value="Hungría">Hungría</option>
+                  <option value="Irlanda">Irlanda</option>
+                  <option value="Italia">Italia</option>
+                  <option value="Letonia">Letonia</option>
+                  <option value="Lituania">Lituania</option>
+                  <option value="Noruega">Noruega</option>
+                  <option value="Países Bajos">Países Bajos</option>
+                  <option value="Polonia">Polonia</option>
+                  <option value="Portugal">Portugal</option>
+                  <option value="Reino Unido">Reino Unido</option>
+                  <option value="Rep. Checa">Rep. Checa</option>
+                  <option value="Rumania">Rumania</option>
+                  <option value="Rusia">Rusia</option>
+                  <option value="Suecia">Suecia</option>
+                  <option value="Suiza">Suiza</option>
+                  <option value="Turquía">Turquía</option>
+                  <option value="Ucrania">Ucrania</option>
+                </optgroup>
+                <optgroup label="— Asia —">
+                  <option value="Arabia Saudita">Arabia Saudita</option>
+                  <option value="Bangladesh">Bangladesh</option>
+                  <option value="China">China</option>
+                  <option value="Corea del Sur">Corea del Sur</option>
+                  <option value="Emiratos Árabes">Emiratos Árabes</option>
+                  <option value="Filipinas">Filipinas</option>
+                  <option value="India">India</option>
+                  <option value="Indonesia">Indonesia</option>
+                  <option value="Israel">Israel</option>
+                  <option value="Japón">Japón</option>
+                  <option value="Malasia">Malasia</option>
+                  <option value="Pakistán">Pakistán</option>
+                  <option value="Singapur">Singapur</option>
+                  <option value="Tailandia">Tailandia</option>
+                  <option value="Vietnam">Vietnam</option>
+                </optgroup>
+                <optgroup label="— África —">
+                  <option value="Angola">Angola</option>
+                  <option value="Camerún">Camerún</option>
+                  <option value="Egipto">Egipto</option>
+                  <option value="Etiopía">Etiopía</option>
+                  <option value="Ghana">Ghana</option>
+                  <option value="Kenia">Kenia</option>
+                  <option value="Marruecos">Marruecos</option>
+                  <option value="Nigeria">Nigeria</option>
+                  <option value="Senegal">Senegal</option>
+                  <option value="Sudáfrica">Sudáfrica</option>
+                  <option value="Tanzania">Tanzania</option>
+                </optgroup>
+                <optgroup label="— Oceanía —">
+                  <option value="Australia">Australia</option>
+                  <option value="Nueva Zelanda">Nueva Zelanda</option>
+                </optgroup>
               </select>
             </div>
           </div>
@@ -675,10 +813,10 @@
             <label>Sector o barrio</label>
             <input type="text" id="d-sector" placeholder="Ej: La Mariscal">
           </div>
-          <div class="datos-campo">
+<div class="datos-campo">
             <label>Cantón</label>
             <div class="select-wrapper">
-              <select id="d-canton">
+              <select id="d-canton" onchange="toggleOtroSelect('canton')">
                 <option value="">— Selecciona —</option>
                 <option value="Quito">Quito</option>
                 <option value="Cayambe">Cayambe</option>
@@ -688,6 +826,9 @@
                 <option value="Santo Domingo">Santo Domingo</option>
                 <option value="Otro">Otro</option>
               </select>
+            </div>
+            <div class="campo-condicional" id="campo-cantonOtro">
+              <input type="text" id="d-cantonOtro" class="otro-texto" placeholder="Escribe tu cantón" style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
             </div>
           </div>
           <button class="btn-guardar-sec" onclick="guardarSeccion('sec-direccion', this)">Guardar</button>
@@ -717,22 +858,62 @@
               </select>
             </div>
           </div>
-          <div class="datos-campo">
+<div class="datos-campo">
             <label>Prefijo telefónico</label>
             <div class="select-wrapper">
-              <select id="d-emerg1Prefijo">
+              <select id="d-emerg1Prefijo" onchange="toggleOtroSelect('emerg1Prefijo')">
                 <option value="">— Selecciona —</option>
-                <option value="🇪🇨 +593 (Ecuador)">🇪🇨 +593 (Ecuador)</option>
-                <option value="🇨🇴 +57 (Colombia)">🇨🇴 +57 (Colombia)</option>
-                <option value="🇵🇪 +51 (Perú)">🇵🇪 +51 (Perú)</option>
-                <option value="🇻🇪 +58 (Venezuela)">🇻🇪 +58 (Venezuela)</option>
-                <option value="🇦🇷 +54 (Argentina)">🇦🇷 +54 (Argentina)</option>
-                <option value="🇨🇱 +56 (Chile)">🇨🇱 +56 (Chile)</option>
-                <option value="🇲🇽 +52 (México)">🇲🇽 +52 (México)</option>
-                <option value="🇺🇸 +1 (Estados Unidos)">🇺🇸 +1 (Estados Unidos)</option>
-                <option value="🇪🇸 +34 (España)">🇪🇸 +34 (España)</option>
-                <option value="Otro">Otro</option>
+                <optgroup label="— América del Sur —">
+                  <option value="🇪🇨 +593 (Ecuador)">🇪🇨 +593 Ecuador</option>
+                  <option value="🇨🇴 +57 (Colombia)">🇨🇴 +57 Colombia</option>
+                  <option value="🇵🇪 +51 (Perú)">🇵🇪 +51 Perú</option>
+                  <option value="🇻🇪 +58 (Venezuela)">🇻🇪 +58 Venezuela</option>
+                  <option value="🇦🇷 +54 (Argentina)">🇦🇷 +54 Argentina</option>
+                  <option value="🇨🇱 +56 (Chile)">🇨🇱 +56 Chile</option>
+                  <option value="🇧🇴 +591 (Bolivia)">🇧🇴 +591 Bolivia</option>
+                  <option value="🇧🇷 +55 (Brasil)">🇧🇷 +55 Brasil</option>
+                  <option value="🇵🇾 +595 (Paraguay)">🇵🇾 +595 Paraguay</option>
+                  <option value="🇺🇾 +598 (Uruguay)">🇺🇾 +598 Uruguay</option>
+                </optgroup>
+                <optgroup label="— América Central y Caribe —">
+                  <option value="🇬🇹 +502 (Guatemala)">🇬🇹 +502 Guatemala</option>
+                  <option value="🇭🇳 +504 (Honduras)">🇭🇳 +504 Honduras</option>
+                  <option value="🇸🇻 +503 (El Salvador)">🇸🇻 +503 El Salvador</option>
+                  <option value="🇳🇮 +505 (Nicaragua)">🇳🇮 +505 Nicaragua</option>
+                  <option value="🇨🇷 +506 (Costa Rica)">🇨🇷 +506 Costa Rica</option>
+                  <option value="🇵🇦 +507 (Panamá)">🇵🇦 +507 Panamá</option>
+                  <option value="🇨🇺 +53 (Cuba)">🇨🇺 +53 Cuba</option>
+                  <option value="🇩🇴 +1809 (Rep. Dominicana)">🇩🇴 +1809 Rep. Dominicana</option>
+                </optgroup>
+                <optgroup label="— América del Norte —">
+                  <option value="🇲🇽 +52 (México)">🇲🇽 +52 México</option>
+                  <option value="🇺🇸 +1 (Estados Unidos)">🇺🇸 +1 Estados Unidos</option>
+                  <option value="🇨🇦 +1 (Canadá)">🇨🇦 +1 Canadá</option>
+                </optgroup>
+                <optgroup label="— Europa —">
+                  <option value="🇪🇸 +34 (España)">🇪🇸 +34 España</option>
+                  <option value="🇵🇹 +351 (Portugal)">🇵🇹 +351 Portugal</option>
+                  <option value="🇫🇷 +33 (Francia)">🇫🇷 +33 Francia</option>
+                  <option value="🇮🇹 +39 (Italia)">🇮🇹 +39 Italia</option>
+                  <option value="🇩🇪 +49 (Alemania)">🇩🇪 +49 Alemania</option>
+                  <option value="🇬🇧 +44 (Reino Unido)">🇬🇧 +44 Reino Unido</option>
+                  <option value="🇷🇺 +7 (Rusia)">🇷🇺 +7 Rusia</option>
+                  <option value="🇺🇦 +380 (Ucrania)">🇺🇦 +380 Ucrania</option>
+                </optgroup>
+                <optgroup label="— Asia / África / Oceanía —">
+                  <option value="🇨🇳 +86 (China)">🇨🇳 +86 China</option>
+                  <option value="🇯🇵 +81 (Japón)">🇯🇵 +81 Japón</option>
+                  <option value="🇮🇳 +91 (India)">🇮🇳 +91 India</option>
+                  <option value="🇮🇱 +972 (Israel)">🇮🇱 +972 Israel</option>
+                  <option value="🇦🇪 +971 (Emiratos Árabes)">🇦🇪 +971 Emiratos Árabes</option>
+                  <option value="🇿🇦 +27 (Sudáfrica)">🇿🇦 +27 Sudáfrica</option>
+                  <option value="🇦🇺 +61 (Australia)">🇦🇺 +61 Australia</option>
+                  <option value="🇳🇿 +64 (Nueva Zelanda)">🇳🇿 +64 Nueva Zelanda</option>
+                </optgroup>
               </select>
+            </div>
+            <div class="campo-condicional" id="campo-emerg1PrefijoOtro">
+              <input type="text" id="d-emerg1PrefijoOtro" class="otro-texto" placeholder="Ej: +972" style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
             </div>
           </div>
           <div class="datos-campo">
@@ -766,22 +947,62 @@
               </select>
             </div>
           </div>
-          <div class="datos-campo">
+<div class="datos-campo">
             <label>Prefijo telefónico</label>
             <div class="select-wrapper">
-              <select id="d-emerg2Prefijo">
+              <select id="d-emerg2Prefijo" onchange="toggleOtroSelect('emerg2Prefijo')">
                 <option value="">— Selecciona —</option>
-                <option value="🇪🇨 +593 (Ecuador)">🇪🇨 +593 (Ecuador)</option>
-                <option value="🇨🇴 +57 (Colombia)">🇨🇴 +57 (Colombia)</option>
-                <option value="🇵🇪 +51 (Perú)">🇵🇪 +51 (Perú)</option>
-                <option value="🇻🇪 +58 (Venezuela)">🇻🇪 +58 (Venezuela)</option>
-                <option value="🇦🇷 +54 (Argentina)">🇦🇷 +54 (Argentina)</option>
-                <option value="🇨🇱 +56 (Chile)">🇨🇱 +56 (Chile)</option>
-                <option value="🇲🇽 +52 (México)">🇲🇽 +52 (México)</option>
-                <option value="🇺🇸 +1 (Estados Unidos)">🇺🇸 +1 (Estados Unidos)</option>
-                <option value="🇪🇸 +34 (España)">🇪🇸 +34 (España)</option>
-                <option value="Otro">Otro</option>
+                <optgroup label="— América del Sur —">
+                  <option value="🇪🇨 +593 (Ecuador)">🇪🇨 +593 Ecuador</option>
+                  <option value="🇨🇴 +57 (Colombia)">🇨🇴 +57 Colombia</option>
+                  <option value="🇵🇪 +51 (Perú)">🇵🇪 +51 Perú</option>
+                  <option value="🇻🇪 +58 (Venezuela)">🇻🇪 +58 Venezuela</option>
+                  <option value="🇦🇷 +54 (Argentina)">🇦🇷 +54 Argentina</option>
+                  <option value="🇨🇱 +56 (Chile)">🇨🇱 +56 Chile</option>
+                  <option value="🇧🇴 +591 (Bolivia)">🇧🇴 +591 Bolivia</option>
+                  <option value="🇧🇷 +55 (Brasil)">🇧🇷 +55 Brasil</option>
+                  <option value="🇵🇾 +595 (Paraguay)">🇵🇾 +595 Paraguay</option>
+                  <option value="🇺🇾 +598 (Uruguay)">🇺🇾 +598 Uruguay</option>
+                </optgroup>
+                <optgroup label="— América Central y Caribe —">
+                  <option value="🇬🇹 +502 (Guatemala)">🇬🇹 +502 Guatemala</option>
+                  <option value="🇭🇳 +504 (Honduras)">🇭🇳 +504 Honduras</option>
+                  <option value="🇸🇻 +503 (El Salvador)">🇸🇻 +503 El Salvador</option>
+                  <option value="🇳🇮 +505 (Nicaragua)">🇳🇮 +505 Nicaragua</option>
+                  <option value="🇨🇷 +506 (Costa Rica)">🇨🇷 +506 Costa Rica</option>
+                  <option value="🇵🇦 +507 (Panamá)">🇵🇦 +507 Panamá</option>
+                  <option value="🇨🇺 +53 (Cuba)">🇨🇺 +53 Cuba</option>
+                  <option value="🇩🇴 +1809 (Rep. Dominicana)">🇩🇴 +1809 Rep. Dominicana</option>
+                </optgroup>
+                <optgroup label="— América del Norte —">
+                  <option value="🇲🇽 +52 (México)">🇲🇽 +52 México</option>
+                  <option value="🇺🇸 +1 (Estados Unidos)">🇺🇸 +1 Estados Unidos</option>
+                  <option value="🇨🇦 +1 (Canadá)">🇨🇦 +1 Canadá</option>
+                </optgroup>
+                <optgroup label="— Europa —">
+                  <option value="🇪🇸 +34 (España)">🇪🇸 +34 España</option>
+                  <option value="🇵🇹 +351 (Portugal)">🇵🇹 +351 Portugal</option>
+                  <option value="🇫🇷 +33 (Francia)">🇫🇷 +33 Francia</option>
+                  <option value="🇮🇹 +39 (Italia)">🇮🇹 +39 Italia</option>
+                  <option value="🇩🇪 +49 (Alemania)">🇩🇪 +49 Alemania</option>
+                  <option value="🇬🇧 +44 (Reino Unido)">🇬🇧 +44 Reino Unido</option>
+                  <option value="🇷🇺 +7 (Rusia)">🇷🇺 +7 Rusia</option>
+                  <option value="🇺🇦 +380 (Ucrania)">🇺🇦 +380 Ucrania</option>
+                </optgroup>
+                <optgroup label="— Asia / África / Oceanía —">
+                  <option value="🇨🇳 +86 (China)">🇨🇳 +86 China</option>
+                  <option value="🇯🇵 +81 (Japón)">🇯🇵 +81 Japón</option>
+                  <option value="🇮🇳 +91 (India)">🇮🇳 +91 India</option>
+                  <option value="🇮🇱 +972 (Israel)">🇮🇱 +972 Israel</option>
+                  <option value="🇦🇪 +971 (Emiratos Árabes)">🇦🇪 +971 Emiratos Árabes</option>
+                  <option value="🇿🇦 +27 (Sudáfrica)">🇿🇦 +27 Sudáfrica</option>
+                  <option value="🇦🇺 +61 (Australia)">🇦🇺 +61 Australia</option>
+                  <option value="🇳🇿 +64 (Nueva Zelanda)">🇳🇿 +64 Nueva Zelanda</option>
+                </optgroup>
               </select>
+            </div>
+            <div class="campo-condicional" id="campo-emerg1PrefijoOtro">
+              <input type="text" id="d-emerg1PrefijoOtro" class="otro-texto" placeholder="Ej: +972" style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
             </div>
           </div>
           <div class="datos-campo">
@@ -810,7 +1031,10 @@
             <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Epilepsia"> Epilepsia</label>
             <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Trastornos de coagulación"> Trastornos de coagulación</label>
             <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Problemas osteomusculares"> Problemas osteomusculares</label>
-            <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Otro"> Otro</label>
+            <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Otro" onchange="toggleOtroCheckbox('enfermedad')"> Otro</label>
+            <div class="campo-condicional" id="campo-enfermedadOtro">
+              <input type="text" id="d-enfermedadOtro" class="otro-texto" placeholder="Ej: Lupus, hipotiroidismo..." style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
+            </div>
           </div>
 
           <div class="datos-campo" style="margin-top:4px;">
@@ -829,13 +1053,37 @@
             <textarea id="d-alergiasDesc" placeholder="Ej: Alergia a la penicilina y al látex"></textarea>
           </div>
 
+          <div class="datos-campo" style="margin-top:4px;">
+            <label>Dieta o restricción alimentaria</label>
+            <div class="select-wrapper">
+              <select id="d-dieta" onchange="toggleOtroSelect('dieta')">
+                <option value="">— Selecciona —</option>
+                <option value="Ninguna">Ninguna</option>
+                <option value="Vegetarianx">Vegetarianx</option>
+                <option value="Veganx">Veganx</option>
+                <option value="Celíacx">Celíacx</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+            <div class="campo-condicional" id="campo-dietaOtro">
+              <input type="text" id="d-dietaOtro" class="otro-texto" placeholder="Describe tu dieta o restricción" style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
+            </div>
+          </div>
+
           <div class="datos-campo">
             <label>Antecedentes médicos</label>
             <p class="datos-hint" style="margin-bottom:8px;">Selecciona todos los que apliquen.</p>
-            <label class="chk-opcion"><input type="checkbox" data-group="antecedentes" value="Cirugías previas"> Cirugías previas</label>
-            <label class="chk-opcion"><input type="checkbox" data-group="antecedentes" value="Hospitalización último año"> Hospitalización en el último año</label>
-            <label class="chk-opcion"><input type="checkbox" data-group="antecedentes" value="Lesiones deportivas"> Lesiones deportivas</label>
-            <label class="chk-opcion"><input type="checkbox" data-group="antecedentes" value="Otro"> Otro</label>
+            <label class="chk-opcion"><input type="checkbox" data-group="antecedentes" value="Cirugías previas" onchange="toggleDetalleAntecedentes()"> Cirugías previas</label>
+            <label class="chk-opcion"><input type="checkbox" data-group="antecedentes" value="Hospitalización último año" onchange="toggleDetalleAntecedentes()"> Hospitalización en el último año</label>
+            <label class="chk-opcion"><input type="checkbox" data-group="antecedentes" value="Lesiones deportivas" onchange="toggleDetalleAntecedentes()"> Lesiones deportivas</label>
+            <label class="chk-opcion"><input type="checkbox" data-group="antecedentes" value="Otro" onchange="toggleOtroCheckbox('antecedentes'); toggleDetalleAntecedentes()"> Otro</label>
+            <div class="campo-condicional" id="campo-antecedentesOtro">
+              <input type="text" id="d-antecedentesOtro" class="otro-texto" placeholder="Ej: enfermedad autoinmune" style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
+            </div>
+            <div class="campo-condicional" id="campo-antecedentesDetalle" style="margin-top:10px;">
+              <label style="display:block;font-size:0.75rem;color:#888;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;">Detalle adicional (opcional)</label>
+              <textarea id="d-antecedentesDetalle" placeholder="Si deseas agregar más información sobre tus antecedentes, escríbela aquí." style="width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.9rem;font-family:inherit;resize:vertical;min-height:70px;"></textarea>
+            </div>
           </div>
 
           <div class="datos-campo">
@@ -869,7 +1117,7 @@
             <div class="datos-campo">
               <label>Nombre del seguro privado</label>
               <div class="select-wrapper">
-                <select id="d-seguro">
+                <select id="d-seguro" onchange="toggleOtroSelect('seguro')">
                   <option value="">— Selecciona —</option>
                   <option value="Saludsa">Saludsa</option>
                   <option value="Ecuasanitas">Ecuasanitas</option>
@@ -881,6 +1129,9 @@
                   <option value="CruzBlanca">CruzBlanca</option>
                   <option value="Otro">Otro</option>
                 </select>
+              </div>
+              <div class="campo-condicional" id="campo-seguroOtro">
+                <input type="text" id="d-seguroOtro" class="otro-texto" placeholder="Nombre del seguro" style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
               </div>
             </div>
             <div class="datos-campo">
@@ -1351,55 +1602,152 @@ function confirmarReserva() {
 }
 
 // ─── EDITAR DATOS ─────────────────────────────────────────────────────────────
+// ─── EDITAR DATOS ─────────────────────────────────────────────────────────────
+// ─── EDITAR DATOS ─────────────────────────────────────────────────────────────
+var OPCIONES_PREFIJO = [
+  '🇪🇨 +593 (Ecuador)','🇨🇴 +57 (Colombia)','🇵🇪 +51 (Perú)','🇻🇪 +58 (Venezuela)',
+  '🇦🇷 +54 (Argentina)','🇨🇱 +56 (Chile)','🇧🇴 +591 (Bolivia)','🇧🇷 +55 (Brasil)',
+  '🇵🇾 +595 (Paraguay)','🇺🇾 +598 (Uruguay)','🇲🇽 +52 (México)','🇬🇹 +502 (Guatemala)',
+  '🇭🇳 +504 (Honduras)','🇸🇻 +503 (El Salvador)','🇳🇮 +505 (Nicaragua)','🇨🇷 +506 (Costa Rica)',
+  '🇵🇦 +507 (Panamá)','🇨🇺 +53 (Cuba)','🇩🇴 +1809 (Rep. Dominicana)','🇭🇹 +509 (Haití)',
+  '🇯🇲 +1876 (Jamaica)','🇺🇸 +1 (Estados Unidos)','🇨🇦 +1 (Canadá)',
+  '🇪🇸 +34 (España)','🇵🇹 +351 (Portugal)','🇫🇷 +33 (Francia)','🇮🇹 +39 (Italia)',
+  '🇩🇪 +49 (Alemania)','🇬🇧 +44 (Reino Unido)','🇳🇱 +31 (Países Bajos)','🇧🇪 +32 (Bélgica)',
+  '🇨🇭 +41 (Suiza)','🇦🇹 +43 (Austria)','🇸🇪 +46 (Suecia)','🇳🇴 +47 (Noruega)',
+  '🇩🇰 +45 (Dinamarca)','🇫🇮 +358 (Finlandia)','🇵🇱 +48 (Polonia)','🇷🇺 +7 (Rusia)',
+  '🇺🇦 +380 (Ucrania)','🇬🇷 +30 (Grecia)','🇹🇷 +90 (Turquía)','🇷🇴 +40 (Rumania)',
+  '🇨🇿 +420 (Rep. Checa)','🇭🇺 +36 (Hungría)',
+  '🇨🇳 +86 (China)','🇯🇵 +81 (Japón)','🇰🇷 +82 (Corea del Sur)','🇮🇳 +91 (India)',
+  '🇮🇱 +972 (Israel)','🇦🇪 +971 (Emiratos Árabes)','🇸🇦 +966 (Arabia Saudita)',
+  '🇵🇭 +63 (Filipinas)','🇮🇩 +62 (Indonesia)','🇹🇭 +66 (Tailandia)','🇻🇳 +84 (Vietnam)',
+  '🇲🇾 +60 (Malasia)','🇸🇬 +65 (Singapur)',
+  '🇿🇦 +27 (Sudáfrica)','🇲🇦 +212 (Marruecos)','🇳🇬 +234 (Nigeria)','🇰🇪 +254 (Kenia)','🇪🇬 +20 (Egipto)',
+  '🇦🇺 +61 (Australia)','🇳🇿 +64 (Nueva Zelanda)'
+];
+
+// Carga un select intentando match exacto; si no existe en opciones, pone "Otro" + texto
+function cargarSelect(selectId, valor, otroInputId, campoOtroId) {
+  var sel = document.getElementById(selectId);
+  if (!sel || valor === undefined) return;
+  var opciones = Array.from(sel.options).map(function(o) { return o.value; });
+  if (valor && opciones.indexOf(valor) !== -1) {
+    sel.value = valor;
+  } else if (valor) {
+    sel.value = 'Otro';
+    if (otroInputId) { var inp = document.getElementById(otroInputId); if (inp) inp.value = valor; }
+    if (campoOtroId) { var c = document.getElementById(campoOtroId); if (c) c.classList.add('visible'); }
+  } else {
+    sel.value = '';
+  }
+}
+
 function irEditarDatos() {
   ir('s-carga');
   api({ action: 'getDatosCompletos', nombre: E.nombre }, function(datos) {
     if (!datos) { ir('s-home'); alert('No se pudieron cargar tus datos.'); return; }
 
-    // Inputs, selects y textareas simples
+    // Campos simples (inputs, selects directos, textareas con id="d-*")
     var camposSimples = [
-      'nombreDerby','numeroDerby','pronombres','dieta',
-      'prefijo','telefono','email',
+      'nombreDerby','numeroDerby','telefono','email',
       'fechaNacimiento','fechaPublica','edadPublica',
-      'tipoDocumento','paisExpedicion','numeroDocumento','nombreLegal',
-      'callePrincipal','calleSecundaria','numeracion','sector','canton',
-      'emerg1Nombre','emerg1Relacion','emerg1Prefijo','emerg1Telefono',
-      'emerg2Nombre','emerg2Relacion','emerg2Prefijo','emerg2Telefono',
+      'tipoDocumento','numeroDocumento','nombreLegal',
+      'callePrincipal','calleSecundaria','numeracion','sector',
+      'emerg1Nombre','emerg1Telefono',
+      'emerg2Nombre','emerg2Telefono',
       'alergias','alergiasDesc',
       'medicamentos','medicamentosDesc',
-      'atencionMedica','seguro','seguroContacto'
+      'atencionMedica','seguroContacto',
+      'antecedentesDetalle'
     ];
     camposSimples.forEach(function(c) {
       var el = document.getElementById('d-' + c);
       if (el && datos[c] !== undefined) el.value = datos[c] || '';
     });
 
-    // Checkboxes: enfermedad
+    // Selects con posible "Otro"
+    cargarSelect('d-dieta',         datos.dieta,         'd-dietaOtro',         'campo-dietaOtro');
+    cargarSelect('d-canton',        datos.canton,        'd-cantonOtro',        'campo-cantonOtro');
+    cargarSelect('d-paisExpedicion',datos.paisExpedicion, null,                  null);
+    cargarSelect('d-seguro',        datos.seguro,        'd-seguroOtro',        'campo-seguroOtro');
+    cargarSelect('d-emerg1Relacion',datos.emerg1Relacion, null,                  null);
+    cargarSelect('d-emerg2Relacion',datos.emerg2Relacion, null,                  null);
+
+    // Prefijos (con Otro)
+    cargarSelect('d-prefijo',       datos.prefijo,       'd-prefijoOtro',       'campo-prefijoOtro');
+    cargarSelect('d-emerg1Prefijo', datos.emerg1Prefijo, 'd-emerg1PrefijoOtro', 'campo-emerg1PrefijoOtro');
+    cargarSelect('d-emerg2Prefijo', datos.emerg2Prefijo, 'd-emerg2PrefijoOtro', 'campo-emerg2PrefijoOtro');
+
+    // Pronombres: checkboxes múltiples
+    document.querySelectorAll('input[data-group="pronombres"]').forEach(function(cb) { cb.checked = false; });
+    var inpPronOtro = document.getElementById('d-pronombresOtro');
+    if (inpPronOtro) inpPronOtro.value = '';
+    document.getElementById('campo-pronombresOtro').classList.remove('visible');
+
+    if (datos.pronombres) {
+      var opcionesFijas = ['Ella/ella','Él/él','Elle/elle','Ellx/ellx'];
+      datos.pronombres.split(',').map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(val) {
+        var cb = document.querySelector('input[data-group="pronombres"][value="' + val + '"]');
+        if (cb) {
+          cb.checked = true;
+        } else {
+          var cbOtro = document.querySelector('input[data-group="pronombres"][value="Otro"]');
+          if (cbOtro) cbOtro.checked = true;
+          if (inpPronOtro) inpPronOtro.value = val;
+          document.getElementById('campo-pronombresOtro').classList.add('visible');
+        }
+      });
+    }
+
+    // Checkboxes enfermedad
     document.querySelectorAll('input[data-group="enfermedad"]').forEach(function(cb) { cb.checked = false; });
+    document.getElementById('campo-enfermedadOtro').classList.remove('visible');
     if (datos.enfermedad) {
-      datos.enfermedad.split(',').map(function(s) { return s.trim(); }).forEach(function(val) {
+      datos.enfermedad.split(',').map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(val) {
         var cb = document.querySelector('input[data-group="enfermedad"][value="' + val + '"]');
-        if (cb) cb.checked = true;
+        if (cb) {
+          cb.checked = true;
+        } else {
+          var cbOtro = document.querySelector('input[data-group="enfermedad"][value="Otro"]');
+          if (cbOtro) cbOtro.checked = true;
+          var inp = document.getElementById('d-enfermedadOtro');
+          if (inp) inp.value = val;
+          document.getElementById('campo-enfermedadOtro').classList.add('visible');
+        }
       });
     }
 
-    // Checkboxes: antecedentes
+    // Checkboxes antecedentes (el valor guardado puede incluir " | Detalle: ...")
     document.querySelectorAll('input[data-group="antecedentes"]').forEach(function(cb) { cb.checked = false; });
+    document.getElementById('campo-antecedentesOtro').classList.remove('visible');
+    document.getElementById('campo-antecedentesDetalle').classList.remove('visible');
+    var elDetalle = document.getElementById('d-antecedentesDetalle');
+    if (elDetalle) elDetalle.value = '';
+
     if (datos.antecedentes) {
-      datos.antecedentes.split(',').map(function(s) { return s.trim(); }).forEach(function(val) {
+      var partes = datos.antecedentes.split(' | Detalle: ');
+      var antBase = partes[0];
+      if (partes[1] && elDetalle) elDetalle.value = partes[1];
+
+      antBase.split(',').map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(val) {
         var cb = document.querySelector('input[data-group="antecedentes"][value="' + val + '"]');
-        if (cb) cb.checked = true;
+        if (cb) {
+          cb.checked = true;
+        } else {
+          var cbOtro = document.querySelector('input[data-group="antecedentes"][value="Otro"]');
+          if (cbOtro) cbOtro.checked = true;
+          var inp = document.getElementById('d-antecedentesOtro');
+          if (inp) inp.value = val;
+          document.getElementById('campo-antecedentesOtro').classList.add('visible');
+        }
       });
+      toggleDetalleAntecedentes();
     }
 
-    // Campos condicionales: mostrar/ocultar según valores cargados
+    // Campos condicionales por select
     var alergias = datos.alergias || '';
-    var elAlergiasDesc = document.getElementById('campo-alergiasDesc');
-    elAlergiasDesc.classList.toggle('visible', alergias === 'Sí' || alergias === 'Tal vez');
-
+    document.getElementById('campo-alergiasDesc').classList.toggle('visible', alergias === 'Sí' || alergias === 'Tal vez');
     var meds = datos.medicamentos || '';
     document.getElementById('campo-medicamentosDesc').classList.toggle('visible', meds === 'Sí');
-
     var atencion = datos.atencionMedica || '';
     document.getElementById('campo-seguro').classList.toggle('visible', atencion === 'Seguro Privado');
 
@@ -1417,8 +1765,28 @@ function toggleSeccion(id, titulo) {
 // ─── TOGGLE CONDICIONAL ───────────────────────────────────────────────────────
 function toggleCondicional(selectId, valoresActivos, campoId) {
   var val = document.getElementById(selectId).value;
-  var visible = valoresActivos.indexOf(val) !== -1;
-  document.getElementById(campoId).classList.toggle('visible', visible);
+  document.getElementById(campoId).classList.toggle('visible', valoresActivos.indexOf(val) !== -1);
+}
+
+// Muestra/oculta input de texto cuando se selecciona "Otro" en un select
+function toggleOtroSelect(campo) {
+  var sel = document.getElementById('d-' + campo);
+  var campoEl = document.getElementById('campo-' + campo + 'Otro');
+  if (campoEl) campoEl.classList.toggle('visible', sel && sel.value === 'Otro');
+}
+
+// Muestra/oculta input de texto cuando se marca "Otro" en un grupo de checkboxes
+function toggleOtroCheckbox(grupo) {
+  var cb = document.querySelector('input[data-group="' + grupo + '"][value="Otro"]');
+  var campoEl = document.getElementById('campo-' + grupo + 'Otro');
+  if (campoEl) campoEl.classList.toggle('visible', cb && cb.checked);
+}
+
+// Muestra el textarea de detalle de antecedentes si hay alguno seleccionado
+function toggleDetalleAntecedentes() {
+  var alguno = document.querySelectorAll('input[data-group="antecedentes"]:checked').length > 0;
+  var campoEl = document.getElementById('campo-antecedentesDetalle');
+  if (campoEl) campoEl.classList.toggle('visible', alguno);
 }
 
 // ─── GUARDAR SECCIÓN ─────────────────────────────────────────────────────────
@@ -1426,12 +1794,38 @@ function guardarSeccion(secId, btn) {
   var sec = document.getElementById(secId);
   var payload = {};
 
-  // Inputs, selects, textareas con id="d-*"
-  sec.querySelectorAll('input[id^="d-"]:not([type="checkbox"]):not([type="radio"]), select[id^="d-"], textarea[id^="d-"]').forEach(function(el) {
+  // Validación específica para salud
+  if (secId === 'sec-salud') {
+    var alVal = document.getElementById('d-alergias') ? document.getElementById('d-alergias').value : '';
+    var medVal = document.getElementById('d-medicamentos') ? document.getElementById('d-medicamentos').value : '';
+    if ((alVal === 'Sí' || alVal === 'Tal vez') && !document.getElementById('d-alergiasDesc').value.trim()) {
+      alert('Por favor describe tus alergias antes de guardar.');
+      return;
+    }
+    if (medVal === 'Sí' && !document.getElementById('d-medicamentosDesc').value.trim()) {
+      alert('Por favor describe tus medicamentos antes de guardar.');
+      return;
+    }
+  }
+
+  // Inputs, selects y textareas con id="d-*" (excluyendo .otro-texto que se resuelven abajo)
+  sec.querySelectorAll(
+    'input[id^="d-"]:not([type="checkbox"]):not([type="radio"]):not(.otro-texto),' +
+    'select[id^="d-"],' +
+    'textarea[id^="d-"]:not(.otro-texto)'
+  ).forEach(function(el) {
     payload[el.id.replace('d-', '')] = el.value.trim();
   });
 
-  // Grupos de checkboxes
+  // Resolver selects con "Otro": si el select vale "Otro", usar el texto del input correspondiente
+  ['dieta','canton','prefijo','emerg1Prefijo','emerg2Prefijo','seguro'].forEach(function(campo) {
+    if (payload[campo] === 'Otro') {
+      var inp = sec.querySelector('#d-' + campo + 'Otro');
+      if (inp && inp.value.trim()) payload[campo] = inp.value.trim();
+    }
+  });
+
+  // Checkboxes agrupados
   var cbGroups = {};
   sec.querySelectorAll('input[type="checkbox"][data-group]').forEach(function(cb) {
     var g = cb.getAttribute('data-group');
@@ -1439,8 +1833,24 @@ function guardarSeccion(secId, btn) {
     if (cb.checked) cbGroups[g].push(cb.value);
   });
   Object.keys(cbGroups).forEach(function(g) {
-    payload[g] = cbGroups[g].join(', ');
+    var vals = cbGroups[g].map(function(v) {
+      if (v === 'Otro') {
+        var inp = sec.querySelector('#d-' + g + 'Otro');
+        return inp && inp.value.trim() ? inp.value.trim() : '';
+      }
+      return v;
+    }).filter(Boolean);
+    payload[g] = vals.join(', ');
   });
+
+  // Antecedentes: si hay detalle adicional, añadirlo al valor
+  if (payload['antecedentes'] !== undefined) {
+    var detalle = document.getElementById('d-antecedentesDetalle');
+    if (detalle && detalle.value.trim()) {
+      payload['antecedentes'] = payload['antecedentes'] + ' | Detalle: ' + detalle.value.trim();
+    }
+    delete payload['antecedentesDetalle']; // no es campo de hoja directo
+  }
 
   if (Object.keys(payload).length === 0) return;
 
@@ -1457,10 +1867,7 @@ function guardarSeccion(secId, btn) {
     if (res.exito) {
       btn.textContent = '✅ Guardado';
       btn.classList.add('exito');
-      setTimeout(function() {
-        btn.textContent = textoOriginal;
-        btn.classList.remove('exito');
-      }, 2500);
+      setTimeout(function() { btn.textContent = textoOriginal; btn.classList.remove('exito'); }, 2500);
     } else {
       btn.textContent = textoOriginal;
     }
