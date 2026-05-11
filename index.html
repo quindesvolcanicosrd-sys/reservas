@@ -1847,14 +1847,23 @@ document.getElementById('chk-pago').checked = false;
     equipLinea = 'Llevare mi propio equipamiento.';
   }
 
-  var lineasFechas =
-  'Meses pagados:\n- ' +
-  E.meses.join('\n- ') +
-  '\n\nTotal: $' +
-  (E.totalPago || 0).toFixed(2);
-  } else {
-    lineasFechas = E.fechas.map(function(f) { return '- ' + f; }).join('\n');
-  }
+  var lineasFechas;
+
+if (E.tipoPago === 'mensual') {
+
+  lineasFechas =
+    'Meses pagados:\n- ' +
+    E.meses.join('\n- ') +
+    '\n\nTotal: $' +
+    (E.totalPago || 0).toFixed(2);
+
+} else {
+
+  lineasFechas = E.fechas
+    .map(function(f) { return '- ' + f; })
+    .join('\n');
+
+}
 
   var msgWp =
     '¡Hola! Soy *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '*.\n\n' +
