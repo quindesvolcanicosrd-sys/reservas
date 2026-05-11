@@ -527,13 +527,13 @@
       <textarea class="textarea-otro" id="txt-otro" placeholder="Ej: Tengo casco pero me faltan rodilleras y coderas"></textarea>
       <div class="error-msg" id="err-s3c"></div>
       <button class="btn btn-primary" onclick="continuar_s3c()">Guardar y continuar →</button>
-      <button class="btn btn-secondary" onclick="volver('s3b')">← Volver</button>
+      <button class="btn btn-secondary" onclick="volver(E.editPat === 'No' ? 's3a' : 's3b')">← Volver</button>
     </div>
   </div>
 
   <!-- Carga fechas -->
   <div class="pantalla" id="s-carga-fechas">
-    <div class="card"><div class="loader"><div class="spinner"></div><p>Verificando...</p></div></div>
+    <div class="card"><div class="loader"><div class="spinner"></div><p>Verificando próximas fechas...</p></div></div>
   </div>
 
   <!-- S4: Fecha y pago -->
@@ -639,7 +639,7 @@
       <div class="seccion-label">Paso 4 de 4 — Confirmar</div>
       <h2 id="s5-titulo-h2">Resumen de tu reserva</h2>
       <div class="resumen" id="s5-resumen"></div>
-      <p>Al confirmar nos avisas que ya realizaste el pago. <strong>Revisaremos tu transferencia</strong> y recibirás confirmación por correo cuando esté aprobada.</p>
+      <p>Al confirmar nos avisas que ya realizaste el pago. <strong>Revisaremos tu transferencia</strong> y recibirás confirmación por correo o cuando esté aprobada.</p>
       <p id="s5-liberar-cupo" style="margin-top:10px;">Si no puedes venir, <strong>avisa lo antes posible</strong> para liberar tu cupo.</p>
       <div class="error-msg" id="err-s5"></div>
       <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarReserva()" style="margin-top:14px;">Confirmar mi reserva</button>
