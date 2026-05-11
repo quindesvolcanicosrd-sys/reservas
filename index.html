@@ -341,9 +341,32 @@
 .mes-item input {
   accent-color: #F97316;
 }
+
+#loading-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(255,255,255,0.65);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  z-index: 9999;
+  display: none;
+  align-items: center; justify-content: center;
+}
+.loading-card {
+  background: white; border-radius: 14px; padding: 28px 40px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.13); text-align: center;
+}
+.loading-card .spinner { margin: 0 auto 14px; }
+.loading-card p { color: #666; font-size: 0.92rem; margin: 0; }
 </style>
 </head>
 <body>
+
+<div id="loading-overlay">
+  <div class="loading-card">
+    <div class="spinner"></div>
+    <p id="loading-msg">Cargando...</p>
+  </div>
+</div>
 
 <div class="header">
   <div class="header-banner">
@@ -535,7 +558,7 @@
       <div id="lista-fechas"></div>
 
 <!-- ── FIX 1: onchange añadido a cada checkbox de mes ── -->
-<div id="s4-meses-wrapper" style="display:none;margin-top:14px;">
+<div id="s4-meses-wrapper" style="display:none;margin-top:14px;margin-bottom:22px;">
   <div class="subtitulo" style="margin-bottom:8px;">
     Selecciona 1 o más meses
   </div>
@@ -1331,6 +1354,15 @@
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 var BACKEND = 'https://script.google.com/macros/s/AKfycbw3qmWj-xIhSLJfY-aRkZEo6vSE6-uwj0K4ou7_r3e_mnIHWApjSSGSjxPGH4wt0AybWw/exec';
 
+ function mostrarCargando(msg) {
+  var el = document.getElementById('loading-overlay');
+  document.getElementById('loading-msg').textContent = msg || 'Cargando...';
+  el.style.display = 'flex';
+}
+function ocultarCargando() {
+  document.getElementById('loading-overlay').style.display = 'none';
+}
+
 // ─── ESTADO GLOBAL ────────────────────────────────────────────────────────────
 var E = {
   nombre: '', datos: null,
@@ -1357,6 +1389,7 @@ function api(params, onSuccess, onError) {
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 window.onload = function() {
+  mostrarCargando('Cargando lista...');
   api({ action: 'getNombres' }, function(nombres) {
     var sel = document.getElementById('sel-nombre');
     sel.innerHTML = '<option value="">— Elige tu nombre —</option>';
@@ -1367,7 +1400,8 @@ window.onload = function() {
     });
     sel.disabled = false;
     sel.style.color = '';
-  }, function(e) { err('err-s1', 'Error al cargar nombres: ' + e.message); });
+    ocultarCargando();
+  }, function(e) { ocultarCargando(); err('err-s1', 'Error al cargar nombres: ' + e.message); });
 
   api({ action: 'getPreciosClases' }, function(precios) {
     E.precioPorClase = parseFloat(precios.precioPorClase) || 0;
@@ -1581,13 +1615,15 @@ function continuar_s2() {
 // ─── S3a ──────────────────────────────────────────────────────────────────────
 function continuar_s3a() {
   if (!E.editPat) { err('err-s3a', 'Por favor selecciona una opción.'); return; }
-  if (E.editPat === 'Sí') {
+if (E.editPat === 'Sí') {
+    mostrarCargando('Cargando tallas...');
     api({ action: 'getTallasDisponibles' }, function(tallas) {
       var sel = document.getElementById('sel-talla');
       sel.innerHTML = '<option value="">— Elige una talla —</option>';
       tallas.forEach(function(t) { var o = document.createElement('option'); o.value = o.textContent = t; sel.appendChild(o); });
+      ocultarCargando();
       ir('s3b');
-    }, function(e) { err('err-s3a', 'Error: ' + e.message); });
+    }, function(e) { ocultarCargando(); err('err-s3a', 'Error: ' + e.message); });
   } else {
     E.editTalla = ''; ir('s3c');
   }
@@ -1609,6 +1645,7 @@ function continuar_s3c() {
     if (!txt) { err('err-s3c', 'Por favor describe qué necesitas.'); return; }
     protecFinal = txt;
   }
+  mostrarCargando('Guardando equipamiento...');
   api({
     action: 'actualizarEquipamientoPersona',
     nombre: E.nombre,
@@ -1616,6 +1653,7 @@ function continuar_s3c() {
     talla: E.editTalla,
     necesitaProtecciones: protecFinal
   }, function() {
+    ocultarCargando();
     E.datos.necesitaPatines      = E.editPat;
     E.datos.talla                = E.editTalla;
     E.datos.necesitaProtecciones = protecFinal;
@@ -1623,7 +1661,7 @@ function continuar_s3c() {
     document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
     renderEquip();
     ir('s2');
-  }, function(e) { err('err-s3c', 'Error al guardar: ' + e.message); });
+  }, function(e) { ocultarCargando(); err('err-s3c', 'Error al guardar: ' + e.message); });
 }
 
 // ─── PRECIOS / TIPO PAGO ──────────────────────────────────────────────────────
