@@ -483,12 +483,8 @@
   <!-- S4: Fecha y pago -->
   <div class="pantalla" id="s4">
     <div class="card">
-      <div class="seccion-label">${necesitaEquipamiento
-  ? 'Paso 2 de 4 — Fecha y pago'
-  : 'Paso 2 de 4 — Selecciona el tipo de modalidad'}</div>
-      <h2>${necesitaEquipamiento ? `
-  <!-- TODO el bloque de selección de fechas -->
-` : ''}</h2>
+      <div class="seccion-label" id="s4-label"></div>
+<h2 id="s4-titulo"></h2>
       <div class="tipo-pago-wrapper" id="s4-tipo-pago-wrapper" style="display:none;">
         <div class="tipo-pago-titulo">💳 Tipo de pago</div>
         <div class="opciones">
@@ -538,32 +534,20 @@
         <div class="pago-fila"><span class="pago-label">Cel</span><span class="pago-valor">0962773052</span></div>
       </div>
       <label class="chk-pago-label">
-        <input type="checkbox" id="chk-pago" onchange="toggleBtnPago()">
-        ${
-  canPayMonthly()
-    ? 'Ya realicé mi pago y entiendo este estará pendiente hasta que sea verificada por el equipo.'
-    : 'Ya realicé mi pago y entiendo que mi reserva quedará pendiente hasta que sea verificada por el equipo.'
-}
-      </label>
+  <input type="checkbox" id="chk-pago" onchange="toggleBtnPago()">
+  <span id="chk-pago-texto"></span>
+</label>
       <div class="nota-pago-wrapper">
         <label class="nota-pago-label" for="nota-pago">Referencia de pago</label>
         <input type="text" id="nota-pago" class="nota-pago-input" placeholder="Ej: Juan Pérez — pago de María García">
-        <p class="nota-pago-hint">${
-  canPayMonthly()
-    ? 'Escribe tu nombre o referencia así sabemos que el pago corresponde a tí.'
-    : 'Escribe tu nombre o referencia de a quien corresponde la reserva así sabemos que el pago corresponde a tí.'
-}</p>
+        <p class="nota-pago-hint" id="nota-pago-hint"></p>
       </div>
       <div id="wp-wrapper" style="margin-top:16px;">
         <a id="btn-wp" href="#" target="_blank" onclick="marcarWpEnviado(this)" class="btn-wp-inactivo">
           <span style="font-size:1.1rem;">📲</span>
           Enviar comprobante por WhatsApp
         </a>
-        <p class="wp-hint">${
-  canPayMonthly()
-    ? 'Envía tu comprobante para agilizar la verificación de tu pago.'
-    : 'Envía tu comprobante para agilizar la verificación de tu reserva.'
-}</p>
+        <p class="wp-hint" id="wp-hint"></p>
       </div>
       <div class="error-msg" id="err-pago"></div>
       <button class="btn btn-primary" id="btn-pago" onclick="continuar_pago()" disabled style="margin-top:16px;">Continuar →</button>
@@ -1591,6 +1575,35 @@ function canPayMonthly() {
   if (!E.datos) return false;
   return E.datos.necesitaPatines.toLowerCase() === 'no' && E.datos.necesitaProtecciones.toLowerCase() === 'no';
 }
+function actualizarTextosPago() {
+
+  var necesitaEquipamiento = !canPayMonthly();
+
+  document.getElementById('s4-label').textContent =
+    necesitaEquipamiento
+      ? 'Paso 2 de 4 — Fecha y pago'
+      : 'Paso 2 de 4 — Selecciona el tipo de modalidad';
+
+  document.getElementById('s4-titulo').textContent =
+    necesitaEquipamiento
+      ? 'Selecciona los entrenamientos'
+      : 'Selecciona tu modalidad';
+
+  document.getElementById('chk-pago-texto').textContent =
+    canPayMonthly()
+      ? 'Ya realicé mi pago y entiendo este estará pendiente hasta que sea verificada por el equipo.'
+      : 'Ya realicé mi pago y entiendo que mi reserva quedará pendiente hasta que sea verificada por el equipo.';
+
+  document.getElementById('nota-pago-hint').textContent =
+    canPayMonthly()
+      ? 'Escribe tu nombre o referencia así sabemos que el pago corresponde a tí.'
+      : 'Escribe tu nombre o referencia de a quien corresponde la reserva así sabemos que el pago corresponde a tí.';
+
+  document.getElementById('wp-hint').textContent =
+    canPayMonthly()
+      ? 'Envía tu comprobante para agilizar la verificación de tu pago.'
+      : 'Envía tu comprobante para agilizar la verificación de tu reserva.';
+}
 
 function selTipoPago(tipo, label) {
   document.querySelectorAll('input[name="tipo-pago"]').forEach(function(r) { r.closest('.opcion').classList.remove('sel'); });
@@ -1687,7 +1700,8 @@ function cargarFechas() {
         err('err-s4', 'No hay cupos disponibles actualmente.');
       }
     }
-    ir('s4');
+    actualizarTextosPago();
+ir('s4');
   }, function(e) { ir('s2'); err('err-s2', 'Error al verificar fechas: ' + e.message); });
 }
 
