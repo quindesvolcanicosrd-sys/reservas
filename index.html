@@ -649,7 +649,7 @@
 
   <!-- Carga confirmar -->
   <div class="pantalla" id="s-carga-conf">
-    <div class="card"><div class="loader"><div class="spinner"></div><p>Guardando tu reserva...</p></div></div>
+    <div class="card"><div class="loader"><div class="spinner"></div><p>Guardando tu reserva/pago...</p></div></div>
   </div>
 
   <!-- S6: Éxito -->
@@ -1824,7 +1824,10 @@ function cargarFechas() {
       E.tipoPago = 'clase';
       subtitulo.textContent = 'Selecciona los entrenamientos a los que asistirás.';
       document.getElementById('s4-total-box').style.display = 'none';
-      E.totalPago = 0;
+      document.getElementById('s4-meses-wrapper').style.display = 'none';
+      document.querySelectorAll('#lista-meses input').forEach(function(cb) { cb.checked = false; });
+      E.meses = [];
+      E.totalPago = 0;v
       if (disponibles.length === 0) {
         err('err-s4', 'No hay cupos disponibles actualmente.');
       }
