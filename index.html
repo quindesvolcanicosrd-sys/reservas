@@ -240,6 +240,33 @@
   .btn-guardar-sec.exito { background: #16a34a; }
 
   .datos-hint { font-size: 0.78rem; color: #aaa; margin-top: 4px; line-height: 1.4; }
+
+ .btn-wp-inactivo, .btn-wp-activo {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; padding: 13px 16px; border-radius: 8px; border: none;
+    font-size: 0.92rem; font-weight: 700; cursor: pointer;
+    text-decoration: none; transition: all 0.25s ease;
+    letter-spacing: 0.3px;
+  }
+  .btn-wp-inactivo {
+    background: #dcfce7; color: #166534;
+    border: 2px solid #86efac;
+  }
+  .btn-wp-inactivo:hover {
+    background: #bbf7d0; border-color: #4ade80;
+  }
+  .btn-wp-activo {
+    background: #16a34a; color: white;
+    border: 2px solid #15803d;
+    pointer-events: none;
+  }
+  .wp-hint {
+    font-size: 0.78rem; color: #999; margin-top: 8px;
+    text-align: center; line-height: 1.4;
+  }
+  .wp-hint.wp-confirmado {
+    color: #16a34a; font-weight: 600;
+  }
 </style>
 </head>
 <body>
@@ -463,7 +490,15 @@
         <input type="text" id="nota-pago" class="nota-pago-input" placeholder="Ej: Juan Pérez — pago de María García">
         <p class="nota-pago-hint">Escribe el nombre con el que realizaste la transferencia y el nombre del mirlx al que pertenece el pago.</p>
       </div>
+      <div id="wp-wrapper" style="margin-top:16px;">
+        <a id="btn-wp" href="#" target="_blank" onclick="marcarWpEnviado(this)" class="btn-wp-inactivo">
+          <span style="font-size:1.1rem;">📲</span>
+          Enviar comprobante por WhatsApp
+        </a>
+        <p class="wp-hint">Envía tu comprobante para agilizar la verificación de tu reserva.</p>
+      </div>
       <div class="error-msg" id="err-pago"></div>
+      <button class="btn btn-primary" id="btn-pago" onclick="continuar_pago()" disabled style="margin-top:12px;">Continuar →</button>
       <button class="btn btn-primary" id="btn-pago" onclick="continuar_pago()" disabled style="margin-top:16px;">Continuar →</button>
       <button class="btn btn-secondary" onclick="volver('s4')">← Volver</button>
     </div>
@@ -1196,7 +1231,7 @@ var E = {
   conf: '', editPat: '', editTalla: '', editProtec: '',
   fechas: [], tipoPago: 'clase',
   precioPorClase: 0, precioMensual: 0,
-  totalPago: 0, notaPago: ''
+  totalPago: 0, notaPago: '', wpEnviado: false
 };
 
 // ─── API ──────────────────────────────────────────────────────────────────────
