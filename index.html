@@ -8,10 +8,21 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #FEE8D9; min-height: 100vh; }
 
-  .header { background: #1a1a1a; padding: 20px; text-align: center; }
-  .header h1 { color: #F97316; font-size: 1.3rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
-  .header p { color: #999; font-size: 0.82rem; margin-top: 4px; }
-
+  .header { background: #1a1a1a; text-align: center; overflow: hidden; }
+.header-banner {
+  width: 100%; max-height: 180px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: #111;
+}
+.header-banner img {
+  width: 100%; height: 180px; object-fit: cover; object-position: center top;
+  display: block; opacity: 0.92;
+}
+.header p {
+  color: #aaa; font-size: 0.82rem;
+  padding: 10px 20px 14px;
+  margin: 0; letter-spacing: 0.5px;
+}
   .contenedor { max-width: 480px; margin: 0 auto; padding: 16px; }
 
   .paso-indicator { display: flex; justify-content: center; align-items: center; gap: 6px; padding: 16px 0; }
@@ -20,8 +31,21 @@
   .paso-dot.completado { background: #22c55e; }
 
   .pantalla { display: none; }
-  .pantalla.activa { display: block; animation: fadeIn 0.25s ease; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .pantalla.activa { display: block; animation: fadeIn 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+ .card { animation: cardIn 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
+@keyframes cardIn { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+.home-boton { transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), box-shadow 0.2s ease, background 0.15s; }
+.btn { transition: background 0.18s ease, transform 0.12s ease, opacity 0.2s; }
+.btn-primary:active { transform: scale(0.97); }
+.btn-secondary:active { transform: scale(0.97); }
+
+.datos-seccion-body { transition: none; }
+.datos-seccion-titulo { transition: background 0.15s ease; }
+.opcion { transition: border-color 0.18s ease, background 0.18s ease; }
+.chk-opcion { transition: border-color 0.18s ease, background 0.18s ease; }
 
   .card { background: white; border-radius: 14px; padding: 24px; margin-bottom: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); }
 
@@ -209,9 +233,10 @@
 <body>
 
 <div class="header">
-  <img src="https://lh7-rt.googleusercontent.com/formsz/AN7BsVDADaiTnT6twEqZzMtv3MeF5anRhH6TISJYLf8ho_9aTM2vufibSJMFehEILQDgudaxCdpjJdCGSbFUambF_rhWm67bOnIbMO6eRq7aOnCnKWMVO7dVRtQrRhYxpcAYQTXFZ-aK-vFg-Ia6hfL4DC_LHlrVxnpykdK2rj0PODqEGlaqJ3bJGjhv3Dqk26bL3VWfp7jECo74hi8rJw=w1535?key=OMv_8mN2YNUQ4euOep_7VQ"
-    alt="Mirlxs Roller Derby Quito"
-    style="max-width:220px;width:100%;height:auto;display:block;margin:auto;">
+  <div class="header-banner">
+    <img src="https://lh7-rt.googleusercontent.com/formsz/AN7BsVDADaiTnT6twEqZzMtv3MeF5anRhH6TISJYLf8ho_9aTM2vufibSJMFehEILQDgudaxCdpjJdCGSbFUambF_rhWm67bOnIbMO6eRq7aOnCnKWMVO7dVRtQrRhYxpcAYQTXFZ-aK-vFg-Ia6hfL4DC_LHlrVxnpykdK2rj0PODqEGlaqJ3bJGjhv3Dqk26bL3VWfp7jECo74hi8rJw=w1535?key=OMv_8mN2YNUQ4euOep_7VQ"
+      alt="Mirlxs Roller Derby Quito">
+  </div>
   <p>Reserva de equipamiento para entrenamientos</p>
 </div>
 
