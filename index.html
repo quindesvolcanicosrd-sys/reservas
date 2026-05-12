@@ -10,12 +10,12 @@
 
   .header { background: #1a1a1a; text-align: center; overflow: hidden; }
 .header-banner {
-  width: 100%; max-height: 180px; overflow: hidden;
+  width: 100%; max-height: 90px; overflow: hidden;
   display: flex; align-items: center; justify-content: center;
   background: #fff;
 }
 .header-banner img {
-  height: 180px; object-fit: cover; object-position: center top;
+  height: 90px; object-fit: cover; object-position: center top;
   display: block; opacity: 0.92;
 }
 .header p {
@@ -414,7 +414,7 @@
       <div class="seccion-label">Verificación</div>
       <h2>Ingresa tu PIN</h2>
       <p>Introduce tu PIN de 4 dígitos para continuar.</p>
-      <input type="password" id="input-pin" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••"
+      <input type="tel" id="input-pin" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••"
         style="width:100%;padding:14px;border:2px solid #e5e5e5;border-radius:8px;font-size:1.2rem;text-align:center;letter-spacing:8px;margin-bottom:14px;">
       <div class="error-msg" id="err-pin"></div>
            <button
