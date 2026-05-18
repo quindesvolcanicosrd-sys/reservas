@@ -1884,11 +1884,13 @@ function continuar_s4() {
   document.getElementById('nota-pago').value = '';
   // Resetear estado WhatsApp
   E.wpEnviado = false;
-  var btnWp = document.getElementById('btn-wp');
+var btnWp = document.getElementById('btn-wp');
+if (btnWp) {
   btnWp.className = 'btn-wp-inactivo';
   btnWp.innerHTML = '<span style="font-size:1.1rem;">📲</span> Enviar comprobante por WhatsApp';
-  var hint = document.querySelector('.wp-hint');
-  if (hint) { hint.textContent = 'Envía tu comprobante para agilizar la verificación de tu reserva.'; hint.classList.remove('wp-confirmado'); }
+}
+var hint = document.querySelector('.wp-hint');
+if (hint) { hint.textContent = 'Envía tu comprobante para agilizar la verificación de tu reserva.'; hint.classList.remove('wp-confirmado'); }
   // Armar link de WhatsApp con contexto
   var fechasTexto = E.tipoPago === 'mensual' ? 'pago mensual' : E.fechas.join(', ');
   // Equipamiento
