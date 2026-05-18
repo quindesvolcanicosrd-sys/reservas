@@ -1361,12 +1361,14 @@ function ocultarCargando() {
 
 // ─── ESTADO GLOBAL ────────────────────────────────────────────────────────────
 var E = {
+ 
   nombre: '', datos: null,
   conf: '', editPat: '', editTalla: '', editProtec: '',
   fechas: [], tipoPago: 'clase',
   meses: [],
   precioPorClase: 0, precioMensual: 0,
-  totalPago: 0, notaPago: '', wpEnviado: false
+  totalPago: 0, notaPago: '', wpEnviado: false.
+  wpUrl: ''   // ← agregar esto
 };
 
 // ─── API ──────────────────────────────────────────────────────────────────────
@@ -1928,7 +1930,7 @@ if (hint) { hint.textContent = 'Envía tu comprobante para agilizar la verificac
     equipLinea + '\n\n' +
     'Te envío el comprobante adjunto. Si no lo ves, por favor solicítamelo. ¡Gracias!';
 
-  if (btnWp) btnWp.href = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp);
+  E.wpUrl = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp);
   ir('s-pago');
 }
 
@@ -2373,10 +2375,9 @@ function solicitarNuevoPIN(){
     return;
   }
   // Abrir WhatsApp
-  var btnWp = document.getElementById('btn-wp');
-  if (btnWp && btnWp.href && btnWp.href !== '#') {
-    window.open(btnWp.href, '_blank');
-  }
+  if (E.wpUrl) {
+  window.open(E.wpUrl, '_blank');
+}
   E.wpEnviado = true;
   continuar_pago();
 }
