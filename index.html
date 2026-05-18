@@ -2375,8 +2375,8 @@ function solicitarNuevoPIN(){
     return;
   }
   // Abrir WhatsApp
-  if (E.wpUrl) {
-  window.open(E.wpUrl, '_blank');
+if (E.wpUrl) {
+  window.location.href = E.wpUrl;
 }
   E.wpEnviado = true;
   continuar_pago();
