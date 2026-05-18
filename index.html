@@ -620,15 +620,11 @@
         <input type="text" id="nota-pago" class="nota-pago-input" placeholder="Ej: Juan Pérez — pago de María García">
         <p class="nota-pago-hint" id="nota-pago-hint"></p>
       </div>
-      <div id="wp-wrapper" style="margin-top:16px;">
-        <a id="btn-wp" href="#" target="_blank" onclick="marcarWpEnviado(this)" class="btn-wp-inactivo">
-          <span style="font-size:1.1rem;">📲</span>
-          Enviar comprobante por WhatsApp
-        </a>
-        <p class="wp-hint" id="wp-hint"></p>
-      </div>
-      <div class="error-msg" id="err-pago"></div>
-      <button class="btn btn-primary" id="btn-pago" onclick="continuar_pago()" disabled style="margin-top:16px;">Continuar →</button>
+      <div id="wp-wrapper" style="display:none;"></div>
+<div class="error-msg" id="err-pago"></div>
+<button class="btn btn-primary" id="btn-pago" onclick="continuar_pago_y_wp()" disabled style="margin-top:16px;">
+  Continuar y enviar comprobante 📲
+</button>
       <button class="btn btn-secondary" onclick="volver('s4')">← Volver</button>
     </div>
   </div>
