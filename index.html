@@ -1928,7 +1928,7 @@ if (hint) { hint.textContent = 'Envía tu comprobante para agilizar la verificac
     equipLinea + '\n\n' +
     'Te envío el comprobante adjunto. Si no lo ves, por favor solicítamelo. ¡Gracias!';
 
-  btnWp.href = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp);
+  if (btnWp) btnWp.href = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp);
   ir('s-pago');
 }
 
