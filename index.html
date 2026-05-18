@@ -623,7 +623,7 @@
       <div id="wp-wrapper" style="display:none;"></div>
 <div class="error-msg" id="err-pago"></div>
 <button class="btn btn-primary" id="btn-pago" onclick="continuar_pago_y_wp()" disabled style="margin-top:16px;">
-  Continuar y enviar comprobante 📲
+  Continuar →
 </button>
       <button class="btn btn-secondary" onclick="volver('s4')">← Volver</button>
     </div>
@@ -656,7 +656,11 @@
       <div class="exito-detalle" id="s6-detalle"></div>
       <div class="aviso-pendiente" id="s6-email-aviso">⏳ Tu reserva está <strong>pendiente de verificación de pago</strong>. Recibirás un correo cuando esté confirmada.</div>
       <div class="exito-texto" id="s6-texto">Puedes revisar el estado de tu reserva en cualquier momento desde <strong>"Ver mis reservas"</strong>.</div>
-      <button class="btn btn-secondary" onclick="irHomeDesdeExito()" style="margin-top:18px;">← Volver al inicio</button>
+      <a id="btn-wp-exito" href="#" target="_blank" class="btn-wp-inactivo" style="margin-top:18px;display:flex;">
+        <span style="font-size:1.1rem;">📲</span>
+        Enviar comprobante por WhatsApp
+      </a>
+      <button class="btn btn-secondary" onclick="irHomeDesdeExito()" style="margin-top:10px;">← Volver al inicio</button>
     </div>
   </div>
 
@@ -2050,6 +2054,8 @@ var necesitaPatinesLocal = (E.datos.necesitaPatines || '').toLowerCase() !== 'no
         ' cuando esté confirmado.';
     }
 
+var btnWpExito = document.getElementById('btn-wp-exito');
+    if (btnWpExito && E.wpUrl) btnWpExito.href = E.wpUrl;
     ir('s6');
   }
 
@@ -2375,12 +2381,8 @@ function solicitarNuevoPIN(){
     return;
   }
   // Abrir WhatsApp
-if (E.wpUrl) {
-  window.location.href = E.wpUrl;
-}
-  E.wpEnviado = true;
+E.wpEnviado = true;
   continuar_pago();
-}
 </script>
 </body>
 </html>
