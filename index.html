@@ -2363,6 +2363,20 @@ function solicitarNuevoPIN(){
   );
   window.location.href = 'mailto:quindesvolcanicosrd@gmail.com?subject=' + subject + '&body=' + body;
 }
+
+ function continuar_pago_y_wp() {
+  if (!document.getElementById('chk-pago').checked) {
+    err('err-pago', 'Debes confirmar que realizaste el pago.');
+    return;
+  }
+  // Abrir WhatsApp
+  var btnWp = document.getElementById('btn-wp');
+  if (btnWp && btnWp.href && btnWp.href !== '#') {
+    window.open(btnWp.href, '_blank');
+  }
+  E.wpEnviado = true;
+  continuar_pago();
+}
 </script>
 </body>
 </html>
