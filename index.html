@@ -1703,7 +1703,8 @@ function actualizarTextosPago() {
       ? 'Escribe tu nombre o referencia así sabemos que el pago corresponde a tí.'
       : 'Escribe tu nombre o referencia de a quien corresponde la reserva así sabemos que el pago corresponde a tí.';
 
-  document.getElementById('wp-hint').textContent =
+  var wpHintEl = document.getElementById('wp-hint');
+if (wpHintEl) wpHintEl.textContent =
     canPayMonthly()
       ? 'Envía tu comprobante para agilizar la verificación de tu pago.'
       : 'Envía tu comprobante para agilizar la verificación de tu reserva.';
