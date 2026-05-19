@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Reserva Equipamiento - Mirlxs RD</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; background: #FEE8D9; min-height: 100vh; }
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FEE8D9; min-height: 100vh; }
 
   .header { background: #1a1a1a; text-align: center; overflow: hidden; }
 .header-banner {
@@ -1507,11 +1508,11 @@ function continuar_pin() {
     if (!res.valido) { ir('s1b'); err('err-pin', 'PIN incorrecto.'); return; }
 E.datos = res.datos;
     document.getElementById('home-saludo').textContent = '¡Hola, ' + E.nombre + '!';
-    if (necesitaEquipo()) {
+   if (necesitaEquipo()) {
       document.getElementById('home-btn-mis-titulo').textContent = 'Ver mis reservas';
-      document.getElementById('home-btn-mis-sub').textContent = 'Revisa el estado o cancela una reserva';
-      document.getElementById('home-btn-nueva-titulo').textContent = 'Nueva reserva / pago';
-      document.getElementById('home-btn-nueva-sub').textContent = 'Reserva equipamiento o registra tu pago';
+      document.getElementById('home-btn-mis-sub').textContent = 'Revisa el estado de tus reservas';
+      document.getElementById('home-btn-nueva-titulo').textContent = 'Nueva reserva';
+      document.getElementById('home-btn-nueva-sub').textContent = 'Registra tu reserva';
     } else {
       document.getElementById('home-btn-mis-titulo').textContent = 'Ver mis pagos';
       document.getElementById('home-btn-mis-sub').textContent = 'Revisa el estado de tus pagos';
