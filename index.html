@@ -459,7 +459,7 @@ select, option, optgroup {
       
       <div style="position: relative; margin-bottom: 16px;">
   <input type="password" id="input-pin" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••"
-    style="width:100%;padding:16px 45px 16px 16px;border:2px solid #e5e5e5;border-radius:12px;font-size:1.6rem;text-align:center;letter-spacing:14px; background: #fafafa; transition: all 0.3s ease; font-family: 'Montserrat', sans-serif;">
+    style="width:100%;padding:16px 45px 16px 45px;border:2px solid #e5e5e5;border-radius:12px;font-size:1.6rem;text-align:center;letter-spacing:14px; background: #fafafa; transition: all 0.3s ease; font-family: 'Montserrat', sans-serif;">
   <button type="button" id="btn-toggle-pin" onclick="togglePinVisibility()"
     style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #888; transition: color 0.2s; padding: 4px; display: flex; align-items: center; justify-content: center;">
     <span class="material-symbols-outlined">visibility</span>
@@ -615,9 +615,10 @@ select, option, optgroup {
 
         <div id="meses-pasados-wrapper" style="margin-bottom:14px;">
           <button onclick="toggleMesesPasados()" id="btn-meses-pasados"
-            style="width:100%;text-align:left;padding:12px 16px;background:#f5f5f5;border:2px solid #e5e5e5;border-radius:10px;font-size:0.9rem;font-weight:700;color:#666;cursor:pointer;transition:background 0.2s;">
-            ▶ Meses pasados
-          </button>
+    style="width:100%;text-align:left;padding:12px 16px;background:#f5f5f5;border:2px solid #e5e5e5;border-radius:10px;font-size:0.9rem;font-weight:700;color:#666;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px;">
+    <span id="chevron-meses" class="material-symbols-outlined" style="font-size:1.1rem;transition:transform 0.3s;color:#888;">chevron_right</span>
+    <span>Meses pasados</span>
+</button>
           <div id="lista-meses-pasados" style="display:none;margin-top:10px;" class="meses-grid"></div>
         </div>
 
@@ -1069,9 +1070,11 @@ function generarMeses() {
 function crearMesItem(nombre) { return '<label class="mes-item"><input type="checkbox" value="' + nombre + '" onchange="actualizarTotalS4()"> ' + nombre + '</label>'; }
 
 function toggleMesesPasados() {
-  var lista = document.getElementById('lista-meses-pasados'); var btn = document.getElementById('btn-meses-pasados');
+  var lista = document.getElementById('lista-meses-pasados');
+  var chevron = document.getElementById('chevron-meses');
   var abierto = lista.style.display !== 'none';
-  lista.style.display = abierto ? 'none' : 'grid'; btn.textContent = (abierto ? '▶' : '▼') + ' Meses pasados';
+  lista.style.display = abierto ? 'none' : 'grid';
+  if (chevron) chevron.style.transform = abierto ? '' : 'rotate(90deg)';
 }
 
 // ─── NAVEGACIÓN ───────────────────────────────────────────────────────────────
@@ -1427,6 +1430,8 @@ function confirmarReserva() {
   function finalizar() {
     var fechasStr = E.fechas.length > 0 ? E.fechas.join(', ') : (E.tipoPago === 'mensual' ? 'mensual (sin clases seleccionadas)' : '—');
     api({ action: 'guardarNotaPago', nombre: E.nombre, tipoPago: E.tipoPago, monto: (E.totalPago || 0).toFixed(2), nota: E.notaPago || '—', fechas: fechasStr, talla: talla, protecciones: protec }, function() {}, function() {});
+    var fechasResumen = E.tipoPago === 'mensual' ? E.meses : E.fechas;
+api({ action: 'enviarResumenReservas', nombre: E.nombre, fechas: JSON.stringify(fechasResumen), talla: talla, protecciones: protec, email: E.datos.email || '', montoTotal: (E.totalPago || 0).toFixed(2) }, function() {}, function() {});
     
     // CORRECCIÓN 1: Marcar el cupón como usado siempre que se haya aplicado, sin importar el monto final
     if (E.cuponAplicado) { 
