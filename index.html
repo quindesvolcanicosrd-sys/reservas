@@ -966,7 +966,7 @@ select, option, optgroup {
 
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-var BACKEND = 'https://script.google.com/macros/s/AKfycbw5ZWhR0Mnh8fPqu3C8d6PkVIGn3aT5_5KgCn0F_Kx78nlYLOMv2RMNEt_zMR2KxMOz0w/exec';
+var BACKEND = 'https://script.google.com/macros/s/AKfycbxb_W-yk_dbMQ6KY6RuG6qwILvaBjodTO612WsuXiuHsyMyfzcjW26EeLGb7RzBEPkj9Q/exec';
 
 // --- NUEVA LÓGICA PARA ANIMACIÓN DE CARGA ---
 function mostrarCargando(msg) {
@@ -1426,7 +1426,7 @@ function confirmarReserva() {
   
   function finalizar() {
     var fechasStr = E.fechas.length > 0 ? E.fechas.join(', ') : (E.tipoPago === 'mensual' ? 'mensual (sin clases seleccionadas)' : '—');
-    api({ action: 'guardarNotaPago', nombre: E.nombre, tipoPago: E.tipoPago, monto: (E.totalPago || 0).toFixed(2), nota: E.notaPago || '—', fechas: fechasStr, meses: E.meses.join(', '), email: E.datos.email || '' }, function() {}, function() {});
+    api({ action: 'guardarNotaPago', nombre: E.nombre, tipoPago: E.tipoPago, monto: (E.totalPago || 0).toFixed(2), nota: E.notaPago || '—', fechas: fechasStr, talla: talla, protecciones: protec }, function() {}, function() {});
     
     // CORRECCIÓN 1: Marcar el cupón como usado siempre que se haya aplicado, sin importar el monto final
     if (E.cuponAplicado) { 
