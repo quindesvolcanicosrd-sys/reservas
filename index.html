@@ -2120,7 +2120,6 @@ function construirResumenS5(backTarget) {
     ? '🎟️ 1ª clase gratis + $' + E.totalPago.toFixed(2) + ' por ' + (E.fechas.length - 1) + ' clase' + (E.fechas.length > 2 ? 's' : '') + ' adicional' + (E.fechas.length > 2 ? 'es' : '')
     : '🎟️ $0.00 — Primera clase gratis';
   h += fila('Total', '<span style="color:#16a34a;font-weight:800;">' + textoTotal + '</span>');
-Con esto: 1 fecha + cupón = $0 y salta pago, 2+ fechas + cupón = cobra las extras y muestra 
   } else {
     h += fila('Total', '$' + (E.totalPago || 0).toFixed(2));
   }
