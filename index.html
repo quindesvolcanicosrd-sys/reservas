@@ -7,9 +7,9 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FEE8D9; }
+body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FDF3EB; color: #1a1a1a; } /* Fondo ligeramente más suave */
 
-  .header { background: #1a1a1a; text-align: center; overflow: hidden; }
+.header { background: #1a1a1a; text-align: center; overflow: hidden; }
 .header-banner {
   width: 100%; max-height: 90px; overflow: hidden;
   display: flex; align-items: center; justify-content: center;
@@ -17,359 +17,318 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
 }
 .header-banner img {
   height: 90px; object-fit: cover; object-position: center top;
-  display: block; opacity: 0.92;
+  display: block; opacity: 0.95;
 }
 .header p {
   color: #aaa; font-size: 0.82rem;
   padding: 10px 20px 14px;
   margin: 0; letter-spacing: 0.5px;
 }
-  .contenedor { max-width: 480px; margin: 0 auto; padding: 16px; }
+.contenedor { max-width: 480px; margin: 0 auto; padding: 16px; }
 
-  .paso-indicator { display: flex; justify-content: center; align-items: center; gap: 6px; padding: 16px 0; }
-  .paso-dot { width: 10px; height: 10px; border-radius: 50%; background: #ddd; transition: all 0.3s; }
-  .paso-dot.activo { background: #F97316; transform: scale(1.2); }
-  .paso-dot.completado { background: #22c55e; }
+.paso-indicator { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 16px 0; }
+.paso-dot { width: 10px; height: 10px; border-radius: 50%; background: #e5e5e5; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+.paso-dot.activo { background: #F97316; transform: scale(1.3); }
+.paso-dot.completado { background: #22c55e; }
 
-  .pantalla { display: none; }
-  .pantalla.activa { display: block; animation: fadeIn 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+/* Transiciones de Pantalla Fluidas */
+.pantalla { display: none; }
+.pantalla.activa { display: block; animation: smoothSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
- .card { animation: cardIn 0.35s cubic-bezier(0.22, 1, 0.36, 1); }
-@keyframes cardIn { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes smoothSlideUp { 
+  from { opacity: 0; transform: translateY(20px); } 
+  to { opacity: 1; transform: translateY(0); } 
+}
 
-.home-boton { transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), box-shadow 0.2s ease, background 0.15s; }
-.btn { transition: background 0.18s ease, transform 0.12s ease, opacity 0.2s; }
-.btn-primary:active { transform: scale(0.97); }
-.btn-secondary:active { transform: scale(0.97); }
+/* Pulido de Tarjetas (Cards) */
+.card { 
+  background: white; 
+  border-radius: 20px; /* Bordes más redondeados y modernos */
+  padding: 28px 24px; 
+  margin-bottom: 16px; 
+  box-shadow: 0 10px 40px rgba(0,0,0,0.05); /* Sombra más amplia y suave */
+  border: 1px solid rgba(255,255,255,0.8);
+}
 
-.datos-seccion-body { transition: none; }
-.datos-seccion-titulo { transition: background 0.15s ease; }
-.opcion { transition: border-color 0.18s ease, background 0.18s ease; }
-.chk-opcion { transition: border-color 0.18s ease, background 0.18s ease; }
+.seccion-label { font-size: 0.72rem; font-weight: 700; color: #F97316; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+.card h2 { font-size: 1.35rem; color: #1a1a1a; margin-bottom: 14px; line-height: 1.3; font-weight: 800; }
+.card p { color: #666; font-size: 0.92rem; line-height: 1.6; margin-bottom: 16px; }
 
-  .card { background: white; border-radius: 14px; padding: 24px; margin-bottom: 14px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); }
+/* Controles de Formulario Pulidos */
+.select-wrapper { position: relative; margin-bottom: 14px; }
+select, input[type="text"], input[type="tel"], input[type="email"], input[type="date"], input[type="password"], textarea { 
+  width: 100%; 
+  padding: 14px 16px; 
+  border: 2px solid #e5e5e5; 
+  border-radius: 12px; 
+  font-size: 0.95rem; 
+  color: #1a1a1a; 
+  background: #fafafa; 
+  appearance: none; -webkit-appearance: none; 
+  transition: all 0.3s ease; 
+  font-family: inherit;
+}
+select { padding-right: 40px; cursor: pointer; }
+.select-wrapper::after { content: '▾'; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: #F97316; pointer-events: none; font-size: 1.1rem; }
 
-  .seccion-label { font-size: 0.72rem; font-weight: 700; color: #F97316; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
-  .card h2 { font-size: 1.2rem; color: #1a1a1a; margin-bottom: 14px; line-height: 1.3; }
-  .card p { color: #666; font-size: 0.9rem; line-height: 1.5; margin-bottom: 12px; }
+/* Efecto Focus (Anillo brillante) */
+select:focus, input:focus, textarea:focus { 
+  outline: none; 
+  border-color: #F97316; 
+  background: white;
+  box-shadow: 0 0 0 4px rgba(249,115,22,0.15); 
+}
+select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-color: #eee; }
 
-  .select-wrapper { position: relative; margin-bottom: 14px; }
-  select { width: 100%; padding: 13px 40px 13px 14px; border: 2px solid #e5e5e5; border-radius: 8px; font-size: 0.95rem; color: #1a1a1a; background: white; appearance: none; -webkit-appearance: none; cursor: pointer; transition: border-color 0.2s; }
-  select:focus { outline: none; border-color: #F97316; }
-  select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; }
-  .select-wrapper::after { content: '▾'; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #F97316; pointer-events: none; font-size: 1rem; }
+/* Botones Mejorados */
+.btn { 
+  width: 100%; padding: 16px; border: none; border-radius: 12px; 
+  font-size: 0.95rem; font-weight: 700; cursor: pointer; 
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
+  text-transform: uppercase; letter-spacing: 0.5px; 
+}
+.btn-primary { 
+  background: #F97316; color: white; 
+  box-shadow: 0 4px 14px rgba(249,115,22,0.3);
+}
+.btn-primary:hover:not(:disabled) { 
+  background: #ea6407; 
+  transform: translateY(-2px); 
+  box-shadow: 0 6px 20px rgba(249,115,22,0.4); 
+}
+.btn-primary:active:not(:disabled) { transform: translateY(0) scale(0.98); box-shadow: 0 2px 8px rgba(249,115,22,0.3); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
 
-  .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.5px; }
-  .btn-primary { background: #F97316; color: white; }
-  .btn-primary:hover { background: #e86510; }
-  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-secondary { background: #f5f5f5; color: #555; margin-top: 10px; }
-  .btn-secondary:hover { background: #e8e8e8; }
+.btn-secondary { background: #f5f5f5; color: #555; margin-top: 12px; }
+.btn-secondary:hover { background: #ebebeb; transform: translateY(-2px); }
+.btn-secondary:active { transform: translateY(0) scale(0.98); }
 
-  .opciones { display: flex; flex-direction: column; gap: 9px; margin-bottom: 14px; }
-  .opcion { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border: 2px solid #e5e5e5; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-size: 0.92rem; color: #1a1a1a; }
-  .opcion:hover { border-color: #F97316; background: #fff8f4; }
-  .opcion.sel { border-color: #F97316; background: #fff8f4; }
-  .opcion input[type="radio"] { accent-color: #F97316; width: 17px; height: 17px; flex-shrink: 0; }
+/* Opciones seleccionables */
+.opciones { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.opcion { 
+  display: flex; align-items: center; gap: 14px; padding: 14px 16px; 
+  border: 2px solid #e5e5e5; border-radius: 12px; cursor: pointer; 
+  transition: all 0.25s ease; font-size: 0.92rem; color: #1a1a1a; background: #fafafa;
+}
+.opcion:hover { border-color: #fb923c; background: #fffcf9; }
+.opcion.sel { border-color: #F97316; background: #fff8f4; box-shadow: 0 4px 12px rgba(249,115,22,0.08); }
+.opcion input[type="radio"] { accent-color: #F97316; width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; }
 
-  .resumen { background: #fafafa; border-left: 4px solid #F97316; border-radius: 0 8px 8px 0; padding: 14px; margin-bottom: 18px; }
-  .resumen .r-titulo { font-weight: 700; color: #1a1a1a; font-size: 0.95rem; margin-bottom: 10px; }
-  .resumen .r-fila { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee; font-size: 0.88rem; }
-  .resumen .r-fila:last-child { border-bottom: none; }
-  .resumen .r-label { color: #888; }
-  .resumen .r-valor { font-weight: 600; color: #1a1a1a; text-align: right; max-width: 80%; }
+/* Resumen visual */
+.resumen { background: #fafafa; border-left: 4px solid #F97316; border-radius: 0 12px 12px 0; padding: 16px; margin-bottom: 20px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
+.resumen .r-titulo { font-weight: 800; color: #1a1a1a; font-size: 0.95rem; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.resumen .r-fila { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eaeaea; font-size: 0.9rem; }
+.resumen .r-fila:last-child { border-bottom: none; padding-bottom: 0; }
+.resumen .r-label { color: #888; }
+.resumen .r-valor { font-weight: 600; color: #1a1a1a; text-align: right; max-width: 75%; }
 
-  .fecha-item { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border: 2px solid #e5e5e5; border-radius: 8px; margin-bottom: 9px; cursor: pointer; transition: all 0.2s; }
-  .fecha-item:hover:not(.agotada) { border-color: #F97316; background: #fff8f4; }
-  .fecha-item.sel { border-color: #F97316; background: #fff8f4; }
-  .fecha-item.agotada { opacity: 0.55; cursor: not-allowed; background: #f8f8f8; }
-  .fecha-item input[type="checkbox"] { accent-color: #F97316; width: 17px; height: 17px; flex-shrink: 0; }
-  .fecha-nombre { font-size: 0.9rem; font-weight: 600; color: #1a1a1a; }
-  .fecha-razon { font-size: 0.78rem; color: #F97316; margin-top: 2px; }
+/* Fechas items */
+.fecha-item { 
+  display: flex; align-items: center; gap: 14px; padding: 14px 16px; 
+  border: 2px solid #e5e5e5; border-radius: 12px; margin-bottom: 10px; 
+  cursor: pointer; transition: all 0.25s ease; background: #fafafa;
+}
+.fecha-item:hover:not(.agotada) { border-color: #fb923c; transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+.fecha-item.sel { border-color: #F97316; background: #fff8f4; }
+.fecha-item.agotada { opacity: 0.5; cursor: not-allowed; background: #f0f0f0; border-color: #eee; }
+.fecha-item input[type="checkbox"] { accent-color: #F97316; width: 18px; height: 18px; flex-shrink: 0; }
+.fecha-nombre { font-size: 0.92rem; font-weight: 700; color: #1a1a1a; }
+.fecha-razon { font-size: 0.8rem; color: #F97316; margin-top: 4px; font-weight: 500; }
 
-  .loader { text-align: center; padding: 40px 20px; color: #888; }
-  .spinner { width: 38px; height: 38px; border: 3px solid #eee; border-top-color: #F97316; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* Utilidades */
+.loader { text-align: center; padding: 40px 20px; color: #888; }
+.spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top-color: #F97316; border-radius: 50%; animation: spin 0.8s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-  .error-msg { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px; padding: 11px 14px; font-size: 0.88rem; margin-bottom: 12px; display: none; }
+.error-msg { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 10px; padding: 12px 16px; font-size: 0.9rem; margin-bottom: 16px; display: none; font-weight: 500; }
 
-  .textarea-otro { width: 100%; padding: 10px 12px; border: 2px solid #e5e5e5; border-radius: 8px; font-size: 0.88rem; margin-top: 8px; resize: vertical; min-height: 75px; display: none; font-family: inherit; margin-bottom: 15px;}
-  .textarea-otro:focus { outline: none; border-color: #F97316; }
+.textarea-otro { resize: vertical; min-height: 80px; margin-top: 10px; margin-bottom: 16px; display: none; }
 
-  .exito-icon { font-size: 3.5rem; text-align: center; margin-bottom: 14px; }
-  .exito-titulo { font-size: 1.3rem; font-weight: 800; color: #1a1a1a; text-align: center; margin-bottom: 12px; }
-  .exito-texto { color: #666; text-align: center; line-height: 1.6; font-size: 0.92rem; }
+/* Animación de Éxito */
+@keyframes popBounce {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  80% { transform: scale(0.95); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.exito-icon { font-size: 4rem; text-align: center; margin-bottom: 16px; animation: popBounce 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+.exito-titulo { font-size: 1.5rem; font-weight: 800; color: #1a1a1a; text-align: center; margin-bottom: 12px; }
+.exito-texto { color: #666; text-align: center; line-height: 1.6; font-size: 0.95rem; }
 .exito-detalle {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 8px;
-  padding: 14px;
-  margin: 16px 0;
-  font-size: 0.88rem;
-  color: #166534;
-  text-align: left;
-  white-space: pre-line;
-  line-height: 1.6;
-}
-  .home-boton { border: 2px solid #e5e5e5; border-radius: 12px; padding: 20px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; text-align: center; }
-  .home-boton:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
-  .home-boton.principal { border-color: #F97316; background: #fff8f4; }
-  .home-boton.principal:hover { background: #fff0e6; }
-  .home-boton .hb-icon { font-size: 2rem; margin-bottom: 6px; }
-  .home-boton .hb-titulo { font-weight: 800; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-  .home-boton.principal .hb-titulo { color: #F97316; }
-  .home-boton .hb-sub { font-size: 0.83rem; color: #888; }
-
-  .pago-metodo { border: 2px solid #e5e5e5; border-radius: 10px; padding: 14px; margin-bottom: 12px; }
-  .pago-header { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.95rem; color: #1a1a1a; margin-bottom: 10px; }
-  .pago-icon { font-size: 1.3rem; }
-  .pago-fila { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.85rem; border-bottom: 1px solid #f0f0f0; }
-  .pago-fila:last-child { border-bottom: none; }
-  .pago-label { color: #999; }
-  .pago-valor { font-weight: 600; color: #1a1a1a; }
-
-  .total-box { background: #f0fdf4; border: 2px solid #22c55e; border-radius: 10px; padding: 14px 16px; text-align: center; font-weight: 800; font-size: 1.05rem; color: #166534; }
-  .total-box .total-detalle { font-size: 0.8rem; font-weight: 500; color: #4ade80; margin-top: 3px; }
-
-  .tipo-pago-wrapper { background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 10px; padding: 14px; margin-bottom: 16px; }
-  .tipo-pago-titulo { font-weight: 700; font-size: 0.88rem; color: #92400e; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
-  .tipo-pago-wrapper .opciones { margin-bottom: 0; }
-
-  .nota-pago-wrapper { background: #f8f8f8; border: 2px solid #e5e5e5; border-radius: 10px; padding: 14px; margin-top: 16px; }
-  .nota-pago-label { display: block; font-size: 0.8rem; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-  .nota-pago-input { width: 100%; padding: 11px 12px; border: 2px solid #e5e5e5; border-radius: 8px; font-size: 0.9rem; font-family: inherit; background: white; transition: border-color 0.2s; }
-  .nota-pago-input:focus { outline: none; border-color: #F97316; }
-  .nota-pago-hint { font-size: 0.78rem; color: #999; margin-top: 6px; line-height: 1.4; }
-
-  .chk-pago-label { display: flex; align-items: flex-start; gap: 10px; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 8px; padding: 13px; margin: 16px 0; cursor: pointer; font-size: 0.88rem; color: #1a1a1a; line-height: 1.4; }
-  .chk-pago-label input { width: 18px; height: 18px; accent-color: #F97316; flex-shrink: 0; margin-top: 1px; }
-
-  .reserva-card { border: 2px solid #e5e5e5; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
-  .reserva-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .reserva-fecha { font-weight: 700; font-size: 0.95rem; color: #1a1a1a; }
-  .badge { padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
-  .badge-pendiente { background: #fffbeb; color: #d97706; }
-  .badge-confirmada { background: #f0fdf4; color: #16a34a; }
-  .badge-cancelada { background: #fef2f2; color: #dc2626; }
-  .reserva-detalle { font-size: 0.85rem; color: #666; margin-bottom: 4px; }
-  .btn-cancelar { width: 100%; margin-top: 10px; padding: 9px; background: #fef2f2; color: #dc2626; border: 1.5px solid #fecaca; border-radius: 7px; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
-  .btn-cancelar:hover { background: #fee2e2; }
-
-  .aviso-pendiente { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 14px; font-size: 0.85rem; color: #92400e; margin-bottom: 14px; text-align: center; }
-
-  /* ── Editar datos ─────────────────────────────────────────── */
-  .datos-seccion { border: 2px solid #e5e5e5; border-radius: 12px; margin-bottom: 10px; overflow: hidden; }
-  .datos-seccion-titulo {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 14px 16px; font-weight: 700; font-size: 0.92rem;
-    cursor: pointer; background: #fafafa; transition: background 0.15s;
-    color: #1a1a1a;
-  }
-  .datos-seccion-titulo:hover { background: #f0f0f0; }
-  .datos-seccion-titulo .sec-icon { font-size: 1.1rem; margin-right: 8px; }
-  .datos-seccion-titulo .sec-chevron { color: #aaa; font-size: 0.9rem; transition: transform 0.2s; }
-  .datos-seccion-titulo.abierta .sec-chevron { transform: rotate(180deg); }
-  .datos-seccion-body {
-  padding: 0 16px;
-  max-height: 0;
-  overflow: hidden;
-  border-top: 0px solid #f0f0f0;
-  transition: max-height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-              padding 0.3s ease,
-              border-top-width 0.3s ease;
-}
-.datos-seccion-body.abierta {
-  max-height: 2000px;
-  padding: 16px;
-  border-top: 1px solid #f0f0f0;
+  background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px;
+  padding: 16px; margin: 20px 0; font-size: 0.9rem; color: #166534;
+  text-align: left; white-space: pre-line; line-height: 1.6; box-shadow: 0 4px 12px rgba(34,197,94,0.08);
 }
 
-  .datos-campo { margin-bottom: 13px; }
-  .datos-campo label {
-    display: block; font-size: 0.75rem; color: #888; font-weight: 700;
-    margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;
-  }
-  .datos-campo input[type="text"],
-  .datos-campo input[type="tel"],
-  .datos-campo input[type="email"],
-  .datos-campo input[type="date"] {
-    width: 100%; padding: 10px 12px; border: 2px solid #e5e5e5;
-    border-radius: 8px; font-size: 0.92rem; font-family: inherit;
-    transition: border-color 0.2s; background: white;
-  }
-  .datos-campo input:focus { outline: none; border-color: #F97316; }
-  .datos-campo .select-wrapper { margin-bottom: 0; }
-  .datos-campo textarea {
-    width: 100%; padding: 10px 12px; border: 2px solid #e5e5e5;
-    border-radius: 8px; font-size: 0.9rem; font-family: inherit;
-    resize: vertical; min-height: 75px; transition: border-color 0.2s;
-  }
-  .datos-campo textarea:focus { outline: none; border-color: #F97316; }
+/* Home Botones */
+.home-boton { 
+  border: 2px solid #e5e5e5; border-radius: 16px; padding: 24px 20px; 
+  margin-bottom: 14px; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
+  text-align: center; background: #fafafa;
+}
+.home-boton:hover { transform: translateY(-4px); box-shadow: 0 10px 24px rgba(0,0,0,0.06); border-color: #d4d4d4; }
+.home-boton.principal { border-color: #F97316; background: #fff8f4; }
+.home-boton.principal:hover { background: #fff4ec; border-color: #ea6407; }
+.home-boton .hb-icon { font-size: 2.2rem; margin-bottom: 10px; }
+.home-boton .hb-titulo { font-weight: 800; font-size: 1.05rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.home-boton.principal .hb-titulo { color: #F97316; }
+.home-boton .hb-sub { font-size: 0.85rem; color: #777; line-height: 1.4; }
 
-  .campo-condicional { display: none; }
-  .campo-condicional.visible { display: block; }
+/* Pagos */
+.pago-metodo { border: 2px solid #e5e5e5; border-radius: 12px; padding: 16px; margin-bottom: 14px; background: #fafafa; }
+.pago-header { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1rem; color: #1a1a1a; margin-bottom: 12px; }
+.pago-icon { font-size: 1.4rem; }
+.pago-fila { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.88rem; border-bottom: 1px solid #eaeaea; }
+.pago-fila:last-child { border-bottom: none; padding-bottom: 0; }
+.pago-label { color: #888; font-weight: 500; }
+.pago-valor { font-weight: 700; color: #1a1a1a; }
 
-  .chk-opcion {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 12px; border: 2px solid #e5e5e5;
-    border-radius: 8px; cursor: pointer;
-    font-size: 0.88rem; margin-bottom: 7px; transition: all 0.2s;
-  }
-  .chk-opcion:hover { border-color: #F97316; background: #fff8f4; }
-  .chk-opcion input[type="checkbox"] { accent-color: #F97316; width: 16px; height: 16px; flex-shrink: 0; }
+.total-box { background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 18px; text-align: center; font-weight: 800; font-size: 1.1rem; color: #166534; box-shadow: 0 4px 14px rgba(34,197,94,0.1); }
+.total-box .total-detalle { font-size: 0.85rem; font-weight: 600; color: #4ade80; margin-top: 6px; }
 
-  .aviso-legal {
-    background: #f0f9ff; border: 1.5px solid #bae6fd;
-    border-radius: 8px; padding: 10px 12px;
-    font-size: 0.8rem; color: #0369a1;
-    margin-bottom: 14px; line-height: 1.5;
-  }
-  .aviso-legal strong { color: #0284c7; }
+.tipo-pago-wrapper { background: #fffbeb; border: 2px solid #fde68a; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+.tipo-pago-titulo { font-weight: 800; font-size: 0.9rem; color: #92400e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;}
 
-  .privacy-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 12px; background: #fafafa; border: 2px solid #e5e5e5;
-    border-radius: 8px; margin-bottom: 10px;
-  }
-  .privacy-row label { font-size: 0.85rem; color: #555; font-weight: 500; }
-  .privacy-row select {
-    padding: 6px 28px 6px 10px; border: 2px solid #e5e5e5;
-    border-radius: 6px; font-size: 0.85rem;
-    background: white; max-width: 120px;
-  }
+.nota-pago-wrapper { background: #fafafa; border: 2px solid #e5e5e5; border-radius: 12px; padding: 16px; margin-top: 20px; }
+.nota-pago-label { display: block; font-size: 0.82rem; font-weight: 800; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+.nota-pago-input { width: 100%; border: 2px solid #e5e5e5; border-radius: 10px; font-size: 0.95rem; }
+.nota-pago-hint { font-size: 0.82rem; color: #888; margin-top: 8px; line-height: 1.5; }
 
-  .btn-guardar-sec {
-    width: 100%; margin-top: 14px; padding: 12px;
-    background: #F97316; color: white; border: none;
-    border-radius: 8px; font-size: 0.9rem; font-weight: 700;
-    cursor: pointer; transition: all 0.2s; text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .btn-guardar-sec:hover { background: #e86510; }
-  .btn-guardar-sec:disabled { opacity: 0.5; cursor: not-allowed; }
-  .btn-guardar-sec.exito { background: #16a34a; }
+.chk-pago-label { display: flex; align-items: flex-start; gap: 12px; background: #fffbeb; border: 2px solid #fde68a; border-radius: 12px; padding: 16px; margin: 20px 0; cursor: pointer; font-size: 0.92rem; font-weight: 500; color: #92400e; line-height: 1.5; transition: all 0.2s; }
+.chk-pago-label:hover { background: #fef3c7; }
+.chk-pago-label input { width: 20px; height: 20px; accent-color: #d97706; flex-shrink: 0; margin-top: 2px; cursor: pointer; }
 
-  .datos-hint { font-size: 0.78rem; color: #aaa; margin-top: 4px; line-height: 1.4; }
+/* Reservas Lista */
+.reserva-card { border: 2px solid #e5e5e5; border-radius: 12px; padding: 16px; margin-bottom: 12px; background: #fafafa; transition: transform 0.2s; }
+.reserva-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+.reserva-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.reserva-fecha { font-weight: 800; font-size: 1rem; color: #1a1a1a; }
+.badge { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+.badge-pendiente { background: #fef3c7; color: #b45309; }
+.badge-confirmada { background: #dcfce7; color: #166534; }
+.badge-cancelada { background: #fee2e2; color: #991b1b; }
+.reserva-detalle { font-size: 0.9rem; color: #555; margin-bottom: 6px; font-weight: 500; }
+.btn-cancelar { width: 100%; margin-top: 12px; padding: 12px; background: #fef2f2; color: #dc2626; border: 2px solid #fecaca; border-radius: 10px; font-size: 0.9rem; font-weight: 800; cursor: pointer; transition: all 0.2s; }
+.btn-cancelar:hover { background: #fee2e2; transform: translateY(-1px); }
 
- .btn-wp-inactivo, .btn-wp-activo {
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    width: 100%; padding: 13px 16px; border-radius: 8px; border: none;
-    font-size: 0.92rem; font-weight: 700; cursor: pointer;
-    text-decoration: none; transition: all 0.25s ease;
-    letter-spacing: 0.3px;
-  }
-  .btn-wp-inactivo {
-    background: #dcfce7; color: #166534;
-    border: 2px solid #86efac;
-  }
-  .btn-wp-inactivo:hover {
-    background: #bbf7d0; border-color: #4ade80;
-  }
-  .btn-wp-activo {
-    background: #16a34a; color: white;
-    border: 2px solid #15803d;
-    pointer-events: none;
-  }
-  .wp-hint {
-    font-size: 0.78rem; color: #999; margin-top: 8px;
-    text-align: center; line-height: 1.4;
-  }
-  .wp-hint.wp-confirmado {
-    color: #16a34a; font-weight: 600;
-  }
+.aviso-pendiente { background: #fffbeb; border: 2px solid #fde68a; border-radius: 10px; padding: 14px 16px; font-size: 0.9rem; font-weight: 500; color: #92400e; margin-bottom: 16px; text-align: center; line-height: 1.5; }
 
- .top-bar {
-    position: sticky; top: 0; z-index: 100;
-    background: rgba(254, 232, 217, 0.92);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    display: none; align-items: center; gap: 12px;
-    padding: 12px 16px;
-    border-bottom: 1px solid rgba(249,115,22,0.15);
-  }
-  .top-bar.visible { display: flex; }
-  .top-bar-back {
-    background: white; border: 2px solid #e5e5e5;
-    border-radius: 8px; padding: 7px 12px;
-    font-size: 0.85rem; font-weight: 700; color: #555;
-    cursor: pointer; transition: all 0.18s ease;
-    white-space: nowrap; flex-shrink: 0;
-  }
-  .top-bar-back:hover { border-color: #F97316; color: #F97316; background: #fff8f4; }
-  .top-bar-back:active { transform: scale(0.96); }
-  .top-bar-titulo {
-    font-size: 0.82rem; font-weight: 700; color: #888;
-    text-transform: uppercase; letter-spacing: 1px;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
- .btn-forgot-pin{
-  width:100%;
-  padding:12px;
-  border:none;
-  border-radius:12px;
-  background:#d9f3ff;
-  color:#055160;
-  font-weight:600;
-  cursor:pointer;
-  transition:.2s;
-  margin-bottom: 12px;
+/* Acordeón Datos Personales */
+.datos-seccion { border: 2px solid #e5e5e5; border-radius: 14px; margin-bottom: 12px; overflow: hidden; background: white; transition: border-color 0.3s; }
+.datos-seccion:focus-within { border-color: #F97316; }
+.datos-seccion-titulo {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 20px; font-weight: 800; font-size: 0.95rem;
+  cursor: pointer; background: #fafafa; transition: background 0.2s;
+  color: #1a1a1a;
+}
+.datos-seccion-titulo:hover { background: #f0f0f0; }
+.datos-seccion-titulo .sec-icon { font-size: 1.2rem; margin-right: 10px; }
+.datos-seccion-titulo .sec-chevron { color: #888; font-size: 1.1rem; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.datos-seccion-titulo.abierta .sec-chevron { transform: rotate(180deg); color: #F97316; }
+.datos-seccion-body {
+  padding: 0 20px; max-height: 0; overflow: hidden;
+  transition: max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s ease, border-top-width 0.3s ease;
+}
+.datos-seccion-body.abierta { max-height: 2500px; padding: 20px; border-top: 1px solid #f0f0f0; }
+
+.datos-campo { margin-bottom: 16px; }
+.datos-campo label {
+  display: block; font-size: 0.78rem; color: #777; font-weight: 800;
+  margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.campo-condicional { display: none; margin-top: 10px;}
+.campo-condicional.visible { display: block; animation: smoothSlideUp 0.3s ease forwards; }
+
+.chk-opcion {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; border: 2px solid #e5e5e5;
+  border-radius: 12px; cursor: pointer;
+  font-size: 0.92rem; margin-bottom: 8px; transition: all 0.2s; font-weight: 500; background: #fafafa;
+}
+.chk-opcion:hover { border-color: #fb923c; background: #fffcf9; }
+.chk-opcion input[type="checkbox"] { accent-color: #F97316; width: 18px; height: 18px; flex-shrink: 0; cursor: pointer;}
+
+.aviso-legal {
+  background: #f0f9ff; border: 2px solid #bae6fd;
+  border-radius: 10px; padding: 14px 16px;
+  font-size: 0.85rem; color: #0369a1;
+  margin-bottom: 18px; line-height: 1.5; font-weight: 500;
 }
 
-.btn-forgot-pin:hover{
-  opacity:.9;
+.privacy-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; background: #fafafa; border: 2px solid #e5e5e5;
+  border-radius: 12px; margin-bottom: 12px;
 }
+.privacy-row label { font-size: 0.88rem; color: #444; font-weight: 600; margin: 0; text-transform: none; letter-spacing: 0; }
+.privacy-row select { padding: 8px 30px 8px 12px; max-width: 100px; margin-bottom: 0;}
 
- .meses-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  margin-top: 10px;
+.btn-guardar-sec {
+  width: 100%; margin-top: 18px; padding: 14px;
+  background: #F97316; color: white; border: none;
+  border-radius: 12px; font-size: 0.95rem; font-weight: 800;
+  cursor: pointer; transition: all 0.3s; text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
+.btn-guardar-sec:hover:not(:disabled) { background: #ea6407; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(249,115,22,0.3); }
+.btn-guardar-sec.exito { background: #16a34a; box-shadow: 0 4px 12px rgba(22,163,74,0.3); }
 
-.mes-item {
-  background: #fafafa;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
+.datos-hint { font-size: 0.8rem; color: #888; margin-top: 6px; line-height: 1.4; }
 
-.mes-item input {
-  accent-color: #F97316;
+/* Botones WhatsApp */
+.btn-wp-inactivo, .btn-wp-activo, .btn-wp-grupo {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 16px; border-radius: 12px; border: none;
+  font-size: 0.95rem; font-weight: 800; cursor: pointer;
+  text-decoration: none; transition: all 0.3s ease;
+  letter-spacing: 0.3px; margin-top: 12px;
 }
+.btn-wp-inactivo { background: #dcfce7; color: #166534; border: 2px solid #86efac; }
+.btn-wp-inactivo:hover { background: #bbf7d0; border-color: #4ade80; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(34,197,94,0.15); }
+.btn-wp-activo { background: #16a34a; color: white; border: 2px solid #15803d; pointer-events: none; }
+.btn-wp-grupo { background: #25D366; color: white; margin-top: 16px; box-shadow: 0 4px 12px rgba(37,211,102,0.3); }
+.btn-wp-grupo:hover { background: #1ebe5d; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(37,211,102,0.4); }
+
+/* Glassmorphism Top Bar */
+.top-bar {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(253, 243, 235, 0.85); /* Coincide con el nuevo fondo sutil */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: none; align-items: center; gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(249,115,22,0.15);
+  margin: -16px -16px 16px -16px; /* Para que ocupe todo el ancho del contenedor */
+}
+.top-bar.visible { display: flex; }
+.top-bar-back {
+  background: white; border: 2px solid #e5e5e5;
+  border-radius: 10px; padding: 8px 14px;
+  font-size: 0.88rem; font-weight: 800; color: #555;
+  cursor: pointer; transition: all 0.2s ease;
+  white-space: nowrap; flex-shrink: 0;
+}
+.top-bar-back:hover { border-color: #F97316; color: #F97316; background: #fff8f4; transform: translateY(-1px); }
+.top-bar-titulo { font-size: 0.85rem; font-weight: 800; color: #888; text-transform: uppercase; letter-spacing: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.btn-forgot-pin { width:100%; padding:14px; border:none; border-radius:12px; background:#e0f2fe; color:#0369a1; font-weight:800; cursor:pointer; transition:all 0.3s; margin-bottom: 16px; font-size: 0.95rem; }
+.btn-forgot-pin:hover { background: #bae6fd; transform: translateY(-1px); }
+
+.meses-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }
+.mes-item { background: #fafafa; border: 2px solid #e5e5e5; border-radius: 10px; padding: 12px 14px; font-size: 0.92rem; font-weight: 600; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s; }
+.mes-item:hover { border-color: #fb923c; background: #fffcf9; }
+.mes-item input { accent-color: #F97316; width: 16px; height: 16px; cursor: pointer; }
 
 #loading-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(255,255,255,0.65);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  z-index: 9999;
-  display: none;
-  align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.75);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  z-index: 9999; display: none; align-items: center; justify-content: center;
 }
-.loading-card {
-  background: white; border-radius: 14px; padding: 28px 40px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.13); text-align: center;
-}
-.loading-card .spinner { margin: 0 auto 14px; }
-.loading-card p { color: #666; font-size: 0.92rem; margin: 0; }
-
-.btn-wp-grupo {
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  width: 100%; padding: 13px 16px; border-radius: 8px;
-  background: #25D366; color: white; font-weight: 700; font-size: 0.92rem;
-  text-decoration: none; margin-top: 10px; border: none;
-  letter-spacing: 0.3px; transition: background 0.2s;
-}
-.btn-wp-grupo:hover { background: #1ebe5d; }
-.btn-wp-grupo svg { flex-shrink: 0; }
-
-  
+.loading-card { background: white; border-radius: 20px; padding: 32px 48px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); text-align: center; border: 1px solid rgba(0,0,0,0.05); }
+.loading-card .spinner { margin: 0 auto 16px; }
+.loading-card p { color: #555; font-size: 0.95rem; font-weight: 600; margin: 0; }
 </style>
 </head>
 <body>
@@ -405,16 +364,15 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
     <div class="paso-dot" id="dot4"></div>
   </div>
 
-  <!-- S1: Nombre -->
   <div class="pantalla activa" id="s1">
     <div class="card">
       <div class="seccion-label">Bienvenidx</div>
       <h2>Inicia sesión al portal de reservas</h2>
       <p>Elige tu nombre de la lista para hacer una reserva, editar tus datos personales o cancelar una reserva.</p>
-      <p style="font-size:0.85rem;color:#666;margin-bottom:14px;">
+      <p style="font-size:0.85rem;color:#666;margin-bottom:14px; font-weight: 500;">
         Si tu nombre no está en la lista debes inscribirte al equipo utilizando
         <a href="https://docs.google.com/forms/d/e/1FAIpQLScfZRUBRizzsnNu0tQrtYSB-AI4HIknBWstGzJHPvTXz0JPcQ/viewform?usp=header"
-           target="_blank" style="color:#F97316;font-weight:600;text-decoration:none;">este formulario</a>.
+           target="_blank" style="color:#F97316;font-weight:700;text-decoration:none;">este formulario</a>.
       </p>
       <div class="select-wrapper">
         <select id="sel-nombre" disabled style="color:#aaa;"><option value="">⏳ Cargando...</option></select>
@@ -431,55 +389,55 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
     </div>
   </div>
 
-  <!-- S1b: PIN -->
   <div class="pantalla" id="s1b">
     <div class="card">
       <div class="seccion-label">Verificación</div>
       <h2>Ingresa tu PIN</h2>
       <p>Introduce tu PIN de 4 dígitos para continuar.</p>
-      <input type="tel" id="input-pin" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••"
-        style="width:100%;padding:14px;border:2px solid #e5e5e5;border-radius:8px;font-size:1.2rem;text-align:center;letter-spacing:8px;margin-bottom:14px;">
+      
+      <div style="position: relative; margin-bottom: 16px;">
+        <input type="password" id="input-pin" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••"
+          style="width:100%;padding:16px 45px 16px 16px;border:2px solid #e5e5e5;border-radius:12px;font-size:1.6rem;text-align:center;letter-spacing:14px; background: #fafafa; transition: all 0.3s ease;">
+        <button type="button" id="btn-toggle-pin" onclick="togglePinVisibility()"
+          style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.4rem; cursor: pointer; color: #888; transition: color 0.2s; padding: 4px;">
+          👁️
+        </button>
+      </div>
       <div class="error-msg" id="err-pin"></div>
-           <button
-        type="button"
-        class="btn-forgot-pin"
-        onclick="solicitarNuevoPIN()"
-      >
-        ¿Olvidaste tu PIN?
-      </button>
+      <button type="button" class="btn-forgot-pin" onclick="solicitarNuevoPIN()">¿Olvidaste tu PIN?</button>
       <button class="btn btn-primary" onclick="continuar_pin()">Continuar →</button>
       <button class="btn btn-secondary" onclick="volver('s1')">← Volver</button>
     </div>
   </div>
 
-  <!-- Carga general -->
   <div class="pantalla" id="s-carga">
     <div class="card"><div class="loader"><div class="spinner"></div><p>Cargando tu información...</p></div></div>
   </div>
 
-  <!-- S-HOME -->
   <div class="pantalla" id="s-home">
-    <div class="card" style="text-align:center;padding-bottom:28px;">
-      <div style="font-size:2.8rem;margin-bottom:10px;">🛼</div>
-      <h2 id="home-saludo" style="text-align:center;margin-bottom:6px;"></h2>
-      <p style="margin-bottom:22px;">¿Qué quieres hacer hoy?</p>
-<div id="banner-cupon" style="display:none;background:linear-gradient(135deg,#fff8e1,#fef3c7);border:2px solid #fbbf24;border-radius:10px;padding:12px 14px;margin-bottom:14px;">
-        <div style="display:flex;align-items:flex-start;gap:10px;">
-          <span style="font-size:1.4rem;flex-shrink:0;">🎟️</span>
-          <div>
-            <div style="font-weight:800;color:#b45309;font-size:0.88rem;">¡Tienes un cupón disponible!</div>
-            <div style="font-size:0.76rem;color:#92400e;margin-top:3px;"><strong>¡Vale por una clase gratis!</strong> Úsalo en tu próxima reserva individual reservando por clase. Personal e intransferible.</div>
+    <div class="card" style="text-align:center;padding-bottom:32px;">
+      <div style="font-size:3.2rem;margin-bottom:12px; animation: popBounce 0.6s cubic-bezier(0.16,1,0.3,1);">🛼</div>
+      <h2 id="home-saludo" style="text-align:center;margin-bottom:8px;"></h2>
+      <p style="margin-bottom:24px; font-weight: 500;">¿Qué quieres hacer hoy?</p>
+      
+      <div id="banner-cupon" style="display:none;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:2px solid #fbbf24;border-radius:14px;padding:16px;margin-bottom:18px; box-shadow: 0 4px 12px rgba(245,158,11,0.1);">
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <span style="font-size:1.6rem;flex-shrink:0;">🎟️</span>
+          <div style="text-align: left;">
+            <div style="font-weight:800;color:#b45309;font-size:0.95rem;">¡Tienes un cupón disponible!</div>
+            <div style="font-size:0.8rem;color:#92400e;margin-top:4px; line-height: 1.4;"><strong>¡Vale por una clase gratis!</strong> Úsalo en tu próxima reserva individual. Personal e intransferible.</div>
           </div>
         </div>
       </div>
+
       <div class="home-boton principal" onclick="irMisReservas()">
         <div class="hb-icon">📋</div>
-<div class="hb-titulo" id="home-btn-mis-titulo">Ver mis reservas</div>
+        <div class="hb-titulo" id="home-btn-mis-titulo">Ver mis reservas</div>
         <div class="hb-sub" id="home-btn-mis-sub">Revisa el estado o cancela una reserva</div>
       </div>
       <div class="home-boton" onclick="irNuevaReserva()">
         <div class="hb-icon">➕</div>
-<div class="hb-titulo" id="home-btn-nueva-titulo" style="color:#1a1a1a;">Nueva reserva / pago</div>
+        <div class="hb-titulo" id="home-btn-nueva-titulo" style="color:#1a1a1a;">Nueva reserva / pago</div>
         <div class="hb-sub" id="home-btn-nueva-sub">Reserva equipamiento o registra tu pago</div>
       </div>
       <div class="home-boton" onclick="irEditarDatos()">
@@ -490,23 +448,21 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
     </div>
   </div>
 
-  <!-- S-MISRESERVAS -->
   <div class="pantalla" id="s-misreservas">
     <div class="card">
       <div class="seccion-label" id="misres-label">Mis reservas</div>
       <h2 id="misres-titulo">Tus reservas</h2>
       <div id="misres-lista"></div>
-      <button class="btn btn-secondary" onclick="volver('s-home')" style="margin-top:4px;">← Volver</button>
+      <button class="btn btn-secondary" onclick="volver('s-home')" style="margin-top:8px;">← Volver</button>
     </div>
   </div>
 
-  <!-- S2: Equipamiento -->
   <div class="pantalla" id="s2">
     <div class="card">
       <div class="seccion-label">Paso 1 de 4 — Equipamiento</div>
       <h2 id="s2-titulo"></h2>
       <div class="resumen" id="s2-resumen"></div>
-      <p>¿Es correcta esta información?</p>
+      <p style="font-weight: 600;">¿Es correcta esta información?</p>
       <div class="opciones" id="s2-opciones">
         <label class="opcion" onclick="selOp(this,'conf','si')"><input type="radio" name="conf" value="si"> Sí, es correcto</label>
         <label class="opcion" onclick="selOp(this,'conf','no')"><input type="radio" name="conf" value="no"> No, quiero rectificarlo</label>
@@ -517,7 +473,6 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
     </div>
   </div>
 
-  <!-- S3a -->
   <div class="pantalla" id="s3a">
     <div class="card">
       <div class="seccion-label">Editar equipamiento — 1/3</div>
@@ -532,7 +487,6 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
     </div>
   </div>
 
-  <!-- S3b -->
   <div class="pantalla" id="s3b">
     <div class="card">
       <div class="seccion-label">Editar equipamiento — 2/3</div>
@@ -545,7 +499,6 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
     </div>
   </div>
 
-  <!-- S3c -->
   <div class="pantalla" id="s3c">
     <div class="card">
       <div class="seccion-label">Editar equipamiento — 3/3</div>
@@ -563,62 +516,57 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
     </div>
   </div>
 
-  <!-- Carga fechas -->
   <div class="pantalla" id="s-carga-fechas">
     <div class="card"><div class="loader"><div class="spinner"></div><p>Verificando próximas fechas...</p></div></div>
   </div>
 
-  <!-- S4: Fecha y pago -->
   <div class="pantalla" id="s4">
     <div class="card">
       <div class="seccion-label" id="s4-label"></div>
-<h2 id="s4-titulo"></h2>
+      <h2 id="s4-titulo"></h2>
       <div class="tipo-pago-wrapper" id="s4-tipo-pago-wrapper" style="display:none;">
         <div class="tipo-pago-titulo">💳 Tipo de pago</div>
-        <div class="opciones">
+        <div class="opciones" style="margin-bottom: 0;">
           <label class="opcion" id="opcion-tipo-mensual" onclick="selTipoPago('mensual', this)">
             <input type="radio" name="tipo-pago" value="mensual">
-            <div><div style="font-weight:700;">Pago mensual</div><div style="font-size:0.8rem;color:#888;margin-top:2px;">No necesitas seleccionar clases</div></div>
+            <div><div style="font-weight:800;">Pago mensual</div><div style="font-size:0.82rem;color:#888;margin-top:2px;">No necesitas seleccionar clases</div></div>
           </label>
           <label class="opcion" id="opcion-tipo-clase" onclick="selTipoPago('clase', this)">
             <input type="radio" name="tipo-pago" value="clase">
-            <div><div style="font-weight:700;">Pago por clase</div><div style="font-size:0.8rem;color:#888;margin-top:2px;">Selecciona las clases que asistirás</div></div>
+            <div><div style="font-weight:800;">Pago por clase</div><div style="font-size:0.82rem;color:#888;margin-top:2px;">Selecciona las clases que asistirás</div></div>
           </label>
         </div>
       </div>
-      <p id="s4-fechas-subtitulo" style="margin-bottom:12px;">Selecciona los entrenamientos a los que asistirás.</p>
+      <p id="s4-fechas-subtitulo" style="margin-bottom:16px; font-weight: 500;">Selecciona los entrenamientos a los que asistirás.</p>
       <div id="lista-fechas"></div>
 
-<!-- ── FIX 1: onchange añadido a cada checkbox de mes ── -->
-<div id="s4-cupon-wrapper" style="display:none;margin:14px 0;">
-        <label style="display:flex;align-items:center;gap:10px;background:#fff8e1;border:2px solid #fbbf24;border-radius:10px;padding:13px;cursor:pointer;">
-          <input type="checkbox" id="chk-cupon" style="accent-color:#F97316;width:18px;height:18px;flex-shrink:0;" onchange="toggleCupon(this)">
+      <div id="s4-cupon-wrapper" style="display:none;margin:18px 0;">
+        <label style="display:flex;align-items:center;gap:12px;background:#fffbeb;border:2px solid #fbbf24;border-radius:12px;padding:16px;cursor:pointer;transition:all 0.2s;">
+          <input type="checkbox" id="chk-cupon" style="accent-color:#F97316;width:20px;height:20px;flex-shrink:0;" onchange="toggleCupon(this)">
           <div>
-            <div style="font-weight:800;color:#b45309;font-size:0.9rem;">🎟️ Aplicar cupón</div>
-            <div style="font-size:0.78rem;color:#92400e;margin-top:2px;"><strong>Válido para 1 clase gratis.</strong> Personal e intransferible.</div>
+            <div style="font-weight:800;color:#b45309;font-size:0.95rem;">🎟️ Aplicar cupón</div>
+            <div style="font-size:0.8rem;color:#92400e;margin-top:2px;"><strong>Válido para 1 clase gratis.</strong> Personal e intransferible.</div>
           </div>
         </label>
       </div>
-      <div id="s4-meses-wrapper" style="display:none;margin-top:14px;margin-bottom:22px;">
+      <div id="s4-meses-wrapper" style="display:none;margin-top:16px;margin-bottom:24px;">
 
-  <!-- Meses pasados (colapsado) -->
-  <div id="meses-pasados-wrapper" style="margin-bottom:12px;">
-    <button onclick="toggleMesesPasados()" id="btn-meses-pasados"
-      style="width:100%;text-align:left;padding:10px 14px;background:#f5f5f5;border:1px solid #ddd;border-radius:8px;font-size:0.88rem;font-weight:600;color:#888;cursor:pointer;">
-      ▶ Meses pasados
-    </button>
-    <div id="lista-meses-pasados" style="display:none;margin-top:8px;" class="meses-grid"></div>
-  </div>
+        <div id="meses-pasados-wrapper" style="margin-bottom:14px;">
+          <button onclick="toggleMesesPasados()" id="btn-meses-pasados"
+            style="width:100%;text-align:left;padding:12px 16px;background:#f5f5f5;border:2px solid #e5e5e5;border-radius:10px;font-size:0.9rem;font-weight:700;color:#666;cursor:pointer;transition:background 0.2s;">
+            ▶ Meses pasados
+          </button>
+          <div id="lista-meses-pasados" style="display:none;margin-top:10px;" class="meses-grid"></div>
+        </div>
 
-  <!-- Meses futuros (siempre visibles) -->
-  <div class="subtitulo" style="margin-bottom:8px;font-size:0.85rem;color:#555;font-weight:600;">
-    Selecciona 1 o más meses
-  </div>
-  <div id="lista-meses" class="meses-grid"></div>
+        <div class="subtitulo" style="margin-bottom:10px;font-size:0.88rem;color:#555;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;">
+          Selecciona 1 o más meses
+        </div>
+        <div id="lista-meses" class="meses-grid"></div>
 
-</div>
+      </div>
 
-<div id="s4-total-box" style="display:none;margin:14px 0;">
+      <div id="s4-total-box" style="display:none;margin:18px 0;">
         <div class="total-box"><div id="s4-total-monto"></div><div class="total-detalle" id="s4-total-detalle"></div></div>
       </div>
       <div class="error-msg" id="err-s4"></div>
@@ -627,16 +575,16 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
     </div>
   </div>
 
-  <!-- S-PAGO -->
   <div class="pantalla" id="s-pago">
     <div class="card">
       <div class="seccion-label">Paso 3 de 4 — Pago</div>
       <h2>Realiza tu pago</h2>
-      <div class="total-box" id="s-pago-total" style="margin-bottom:18px;">
+      <div class="total-box" id="s-pago-total" style="margin-bottom:20px;">
         <div id="s-pago-total-monto"></div>
         <div class="total-detalle" id="s-pago-total-detalle"></div>
       </div>
-      <p>Transfiere el monto indicado usando uno de estos métodos antes de continuar.</p>
+      <p style="font-weight: 500;">Transfiere el monto indicado usando uno de estos métodos antes de continuar.</p>
+      
       <div class="pago-metodo">
         <div class="pago-header"><span class="pago-icon">📱</span>DeUna · Banco Pichincha</div>
         <div class="pago-fila"><span class="pago-label">Cuenta de ahorro</span><span class="pago-valor">7702756890</span></div>
@@ -651,44 +599,44 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
         <div class="pago-fila"><span class="pago-label">CI</span><span class="pago-valor">1759369331</span></div>
         <div class="pago-fila"><span class="pago-label">Cel</span><span class="pago-valor">0962773052</span></div>
       </div>
+      
       <label class="chk-pago-label">
-  <input type="checkbox" id="chk-pago" onchange="toggleBtnPago()">
-  <span id="chk-pago-texto"></span>
-</label>
+        <input type="checkbox" id="chk-pago" onchange="toggleBtnPago()">
+        <span id="chk-pago-texto"></span>
+      </label>
+      
       <div class="nota-pago-wrapper">
         <label class="nota-pago-label" for="nota-pago">Referencia de pago</label>
         <input type="text" id="nota-pago" class="nota-pago-input" placeholder="Ej: Juan Pérez — pago de María García">
         <p class="nota-pago-hint" id="nota-pago-hint"></p>
       </div>
+      
       <div id="wp-wrapper" style="display:none;"></div>
-<div class="error-msg" id="err-pago"></div>
-<button class="btn btn-primary" id="btn-pago" onclick="continuar_pago_y_wp()" disabled style="margin-top:16px;">
-  Continuar →
-</button>
+      <div class="error-msg" id="err-pago"></div>
+      <button class="btn btn-primary" id="btn-pago" onclick="continuar_pago_y_wp()" disabled style="margin-top:20px;">
+        Continuar →
+      </button>
       <button class="btn btn-secondary" onclick="volver('s4')">← Volver</button>
     </div>
   </div>
 
-  <!-- S5: Confirmar -->
   <div class="pantalla" id="s5">
     <div class="card">
       <div class="seccion-label">Paso 4 de 4 — Confirmar</div>
       <h2 id="s5-titulo-h2">Resumen de tu reserva</h2>
       <div class="resumen" id="s5-resumen"></div>
       <p>Al confirmar nos avisas que ya realizaste el pago. <strong>Revisaremos tu transferencia</strong> y recibirás confirmación por correo o cuando esté aprobada.</p>
-      <p id="s5-liberar-cupo" style="margin-top:10px;">Si no puedes venir, <strong>avisa lo antes posible</strong> para liberar tu cupo.</p>
+      <p id="s5-liberar-cupo" style="margin-top:12px;">Si no puedes venir, <strong>avisa lo antes posible</strong> para liberar tu cupo.</p>
       <div class="error-msg" id="err-s5"></div>
-      <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarReserva()" style="margin-top:14px;">Confirmar mi reserva</button>
+      <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarReserva()" style="margin-top:16px;">Confirmar mi reserva</button>
       <button class="btn btn-secondary" onclick="volver('s-pago')">← Volver</button>
     </div>
   </div>
 
-  <!-- Carga confirmar -->
   <div class="pantalla" id="s-carga-conf">
     <div class="card"><div class="loader"><div class="spinner"></div><p>Guardando tu reserva/pago...</p></div></div>
   </div>
 
-  <!-- S6: Éxito -->
   <div class="pantalla" id="s6">
     <div class="card">
       <div class="exito-icon">🎉</div>
@@ -696,31 +644,29 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
       <div class="exito-detalle" id="s6-detalle"></div>
       <div class="aviso-pendiente" id="s6-email-aviso">⏳ Tu reserva está <strong>pendiente de verificación de pago</strong>. Recibirás un mail cuando esté confirmada.</div>
       <div class="exito-texto" id="s6-texto">Puedes revisar el estado de tu reserva en cualquier momento desde <strong>"Ver mis reservas"</strong>.</div>
-      <a id="btn-wp-exito" href="#" target="_blank" class="btn-wp-inactivo" style="margin-top:18px;display:flex;">
-        <span style="font-size:1.1rem;">📲</span>
+      <a id="btn-wp-exito" href="#" target="_blank" class="btn-wp-inactivo" style="margin-top:20px;display:flex;">
+        <span style="font-size:1.2rem;">📲</span>
         Enviar comprobante por WhatsApp
       </a>
-      <a class="btn-wp-grupo" href="https://chat.whatsapp.com/FPupGnd1c9g1oVXu9VudKK" target="_blank">
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white">
-    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-    <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.845L.057 23.571a.75.75 0 0 0 .92.921l5.763-1.473A11.943 11.943 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.006-1.374l-.36-.214-3.713.949.981-3.625-.235-.374A9.818 9.818 0 1 1 12 21.818z"/>
-  </svg>
-  Únete al grupo de WhatsApp
-</a>    
-      <button class="btn btn-secondary" onclick="irHomeDesdeExito()" style="margin-top:10px;">← Volver al inicio</button>
+      <a class="btn-wp-grupo" href="https://chat.whatsapp.com/FPupGnd1c9g1oVXu9VudKK" target="_blank" style="margin-top: 12px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.845L.057 23.571a.75.75 0 0 0 .92.921l5.763-1.473A11.943 11.943 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.006-1.374l-.36-.214-3.713.949.981-3.625-.235-.374A9.818 9.818 0 1 1 12 21.818z"/>
+        </svg>
+        Únete al grupo de WhatsApp
+      </a>    
+      <button class="btn btn-secondary" onclick="irHomeDesdeExito()" style="margin-top:14px;">← Volver al inicio</button>
     </div>
   </div>
 
-  <!-- S-DATOS: Editar datos personales -->
   <div class="pantalla" id="s-datos">
     <div class="card">
       <div class="seccion-label">Mis datos</div>
       <h2>Editar mis datos</h2>
-      <p style="font-size:0.83rem;color:#888;margin-bottom:18px;">
+      <p style="font-size:0.88rem;color:#888;margin-bottom:20px; line-height: 1.5;">
         Los cambios se guardan sección por sección. Si necesitas modificar tu nombre o PIN, contacta a una administradora.
       </p>
 
-      <!-- 1. Datos de entrenamiento -->
       <div class="datos-seccion">
         <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-general', this)">
           <span><span class="sec-icon">🛼</span>Datos de entrenamiento</span>
@@ -737,29 +683,28 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
           </div>
            <div class="datos-campo">
              <label>Pronombres</label>
-             <p class="datos-hint" style="margin-bottom:8px;">Selecciona todos los que apliquen.</p>
+             <p class="datos-hint" style="margin-bottom:10px;">Selecciona todos los que apliquen.</p>
              <label class="chk-opcion"><input type="checkbox" data-group="pronombres" value="Ella/ella"> Ella/ella</label>
              <label class="chk-opcion"><input type="checkbox" data-group="pronombres" value="Él/él"> Él/él</label>
              <label class="chk-opcion"><input type="checkbox" data-group="pronombres" value="Elle/elle"> Elle/elle</label>
              <label class="chk-opcion"><input type="checkbox" data-group="pronombres" value="Ellx/ellx"> Ellx/ellx</label>
              <label class="chk-opcion"><input type="checkbox" data-group="pronombres" value="Otro" onchange="toggleOtroCheckbox('pronombres')"> Otro</label>
              <div class="campo-condicional" id="campo-pronombresOtro">
-               <input type="text" id="d-pronombresOtro" class="otro-texto" placeholder="Ej: Xe/xem" style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
-</div>
+               <input type="text" id="d-pronombresOtro" class="otro-texto" placeholder="Ej: Xe/xem">
+             </div>
            </div>
 
           <button class="btn-guardar-sec" onclick="guardarSeccion('sec-general', this)">Guardar</button>
         </div>
       </div>
 
-      <!-- 2. Contacto -->
       <div class="datos-seccion">
         <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-contacto', this)">
           <span><span class="sec-icon">📞</span>Contacto</span>
           <span class="sec-chevron">▾</span>
         </div>
         <div class="datos-seccion-body" id="sec-contacto">
-<div class="datos-campo">
+          <div class="datos-campo">
             <label>Prefijo telefónico</label>
             <div class="select-wrapper">
               <select id="d-prefijo" onchange="toggleOtroSelect('prefijo')">
@@ -771,82 +716,12 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
                   <option value="🇻🇪 +58 (Venezuela)">🇻🇪 +58 Venezuela</option>
                   <option value="🇦🇷 +54 (Argentina)">🇦🇷 +54 Argentina</option>
                   <option value="🇨🇱 +56 (Chile)">🇨🇱 +56 Chile</option>
-                  <option value="🇧🇴 +591 (Bolivia)">🇧🇴 +591 Bolivia</option>
-                  <option value="🇧🇷 +55 (Brasil)">🇧🇷 +55 Brasil</option>
-                  <option value="🇵🇾 +595 (Paraguay)">🇵🇾 +595 Paraguay</option>
-                  <option value="🇺🇾 +598 (Uruguay)">🇺🇾 +598 Uruguay</option>
                 </optgroup>
-                <optgroup label="— América Central y Caribe —">
-                  <option value="🇬🇹 +502 (Guatemala)">🇬🇹 +502 Guatemala</option>
-                  <option value="🇭🇳 +504 (Honduras)">🇭🇳 +504 Honduras</option>
-                  <option value="🇸🇻 +503 (El Salvador)">🇸🇻 +503 El Salvador</option>
-                  <option value="🇳🇮 +505 (Nicaragua)">🇳🇮 +505 Nicaragua</option>
-                  <option value="🇨🇷 +506 (Costa Rica)">🇨🇷 +506 Costa Rica</option>
-                  <option value="🇵🇦 +507 (Panamá)">🇵🇦 +507 Panamá</option>
-                  <option value="🇨🇺 +53 (Cuba)">🇨🇺 +53 Cuba</option>
-                  <option value="🇩🇴 +1809 (Rep. Dominicana)">🇩🇴 +1809 Rep. Dominicana</option>
-                  <option value="🇭🇹 +509 (Haití)">🇭🇹 +509 Haití</option>
-                  <option value="🇯🇲 +1876 (Jamaica)">🇯🇲 +1876 Jamaica</option>
-                </optgroup>
-                <optgroup label="— América del Norte —">
-                  <option value="🇲🇽 +52 (México)">🇲🇽 +52 México</option>
-                  <option value="🇺🇸 +1 (Estados Unidos)">🇺🇸 +1 Estados Unidos</option>
-                  <option value="🇨🇦 +1 (Canadá)">🇨🇦 +1 Canadá</option>
-                </optgroup>
-                <optgroup label="— Europa —">
-                  <option value="🇪🇸 +34 (España)">🇪🇸 +34 España</option>
-                  <option value="🇵🇹 +351 (Portugal)">🇵🇹 +351 Portugal</option>
-                  <option value="🇫🇷 +33 (Francia)">🇫🇷 +33 Francia</option>
-                  <option value="🇮🇹 +39 (Italia)">🇮🇹 +39 Italia</option>
-                  <option value="🇩🇪 +49 (Alemania)">🇩🇪 +49 Alemania</option>
-                  <option value="🇬🇧 +44 (Reino Unido)">🇬🇧 +44 Reino Unido</option>
-                  <option value="🇳🇱 +31 (Países Bajos)">🇳🇱 +31 Países Bajos</option>
-                  <option value="🇧🇪 +32 (Bélgica)">🇧🇪 +32 Bélgica</option>
-                  <option value="🇨🇭 +41 (Suiza)">🇨🇭 +41 Suiza</option>
-                  <option value="🇦🇹 +43 (Austria)">🇦🇹 +43 Austria</option>
-                  <option value="🇸🇪 +46 (Suecia)">🇸🇪 +46 Suecia</option>
-                  <option value="🇳🇴 +47 (Noruega)">🇳🇴 +47 Noruega</option>
-                  <option value="🇩🇰 +45 (Dinamarca)">🇩🇰 +45 Dinamarca</option>
-                  <option value="🇫🇮 +358 (Finlandia)">🇫🇮 +358 Finlandia</option>
-                  <option value="🇵🇱 +48 (Polonia)">🇵🇱 +48 Polonia</option>
-                  <option value="🇷🇺 +7 (Rusia)">🇷🇺 +7 Rusia</option>
-                  <option value="🇺🇦 +380 (Ucrania)">🇺🇦 +380 Ucrania</option>
-                  <option value="🇬🇷 +30 (Grecia)">🇬🇷 +30 Grecia</option>
-                  <option value="🇹🇷 +90 (Turquía)">🇹🇷 +90 Turquía</option>
-                  <option value="🇷🇴 +40 (Rumania)">🇷🇴 +40 Rumania</option>
-                  <option value="🇨🇿 +420 (Rep. Checa)">🇨🇿 +420 Rep. Checa</option>
-                  <option value="🇭🇺 +36 (Hungría)">🇭🇺 +36 Hungría</option>
-                </optgroup>
-                <optgroup label="— Asia —">
-                  <option value="🇨🇳 +86 (China)">🇨🇳 +86 China</option>
-                  <option value="🇯🇵 +81 (Japón)">🇯🇵 +81 Japón</option>
-                  <option value="🇰🇷 +82 (Corea del Sur)">🇰🇷 +82 Corea del Sur</option>
-                  <option value="🇮🇳 +91 (India)">🇮🇳 +91 India</option>
-                  <option value="🇮🇱 +972 (Israel)">🇮🇱 +972 Israel</option>
-                  <option value="🇦🇪 +971 (Emiratos Árabes)">🇦🇪 +971 Emiratos Árabes</option>
-                  <option value="🇸🇦 +966 (Arabia Saudita)">🇸🇦 +966 Arabia Saudita</option>
-                  <option value="🇵🇭 +63 (Filipinas)">🇵🇭 +63 Filipinas</option>
-                  <option value="🇮🇩 +62 (Indonesia)">🇮🇩 +62 Indonesia</option>
-                  <option value="🇹🇭 +66 (Tailandia)">🇹🇭 +66 Tailandia</option>
-                  <option value="🇻🇳 +84 (Vietnam)">🇻🇳 +84 Vietnam</option>
-                  <option value="🇲🇾 +60 (Malasia)">🇲🇾 +60 Malasia</option>
-                  <option value="🇸🇬 +65 (Singapur)">🇸🇬 +65 Singapur</option>
-                </optgroup>
-                <optgroup label="— África —">
-                  <option value="🇿🇦 +27 (Sudáfrica)">🇿🇦 +27 Sudáfrica</option>
-                  <option value="🇲🇦 +212 (Marruecos)">🇲🇦 +212 Marruecos</option>
-                  <option value="🇳🇬 +234 (Nigeria)">🇳🇬 +234 Nigeria</option>
-                  <option value="🇰🇪 +254 (Kenia)">🇰🇪 +254 Kenia</option>
-                  <option value="🇪🇬 +20 (Egipto)">🇪🇬 +20 Egipto</option>
-                </optgroup>
-                <optgroup label="— Oceanía —">
-                  <option value="🇦🇺 +61 (Australia)">🇦🇺 +61 Australia</option>
-                  <option value="🇳🇿 +64 (Nueva Zelanda)">🇳🇿 +64 Nueva Zelanda</option>
-                </optgroup>
+                <option value="Otro">Otro...</option>
               </select>
             </div>
             <div class="campo-condicional" id="campo-prefijoOtro">
-              <input type="text" id="d-prefijoOtro" class="otro-texto" placeholder="Ej: +972" style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
+              <input type="text" id="d-prefijoOtro" class="otro-texto" placeholder="Ej: +972">
             </div>
           </div>
           <div class="datos-campo">
@@ -861,7 +736,6 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
         </div>
       </div>
 
-      <!-- 3. Cumpleaños -->
       <div class="datos-seccion">
         <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-cumple', this)">
           <span><span class="sec-icon">🎂</span>Cumpleaños</span>
@@ -874,7 +748,7 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
           </div>
           <div class="privacy-row">
             <label for="d-fechaPublica">¿Quieres que tu fecha de cumpleaños sea pública?</label>
-            <div class="select-wrapper" style="margin-bottom:0;min-width:90px;">
+            <div class="select-wrapper" style="margin-bottom:0;min-width:100px;">
               <select id="d-fechaPublica">
                 <option value="Sí">Sí</option>
                 <option value="No">No</option>
@@ -883,7 +757,7 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
           </div>
           <div class="privacy-row">
             <label for="d-edadPublica">¿Quieres que tu edad sea pública?</label>
-            <div class="select-wrapper" style="margin-bottom:0;min-width:90px;">
+            <div class="select-wrapper" style="margin-bottom:0;min-width:100px;">
               <select id="d-edadPublica">
                 <option value="Sí">Sí</option>
                 <option value="No">No</option>
@@ -894,7 +768,6 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
         </div>
       </div>
 
-      <!-- 4. Identidad legal -->
       <div class="datos-seccion">
         <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-legal', this)">
           <span><span class="sec-icon">🪪</span>Identidad legal</span>
@@ -920,112 +793,15 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
             <label>Número de documento</label>
             <input type="text" id="d-numeroDocumento" placeholder="Ej: 1712345678">
           </div>
-<div class="datos-campo">
+          <div class="datos-campo">
             <label>País emisor del documento</label>
             <div class="select-wrapper">
               <select id="d-paisExpedicion">
                 <option value="">— Selecciona —</option>
-                <optgroup label="— Más frecuentes —">
-                  <option value="Ecuador">Ecuador</option>
-                  <option value="Colombia">Colombia</option>
-                  <option value="Venezuela">Venezuela</option>
-                  <option value="Perú">Perú</option>
-                  <option value="Argentina">Argentina</option>
-                </optgroup>
-                <optgroup label="— América del Sur —">
-                  <option value="Bolivia">Bolivia</option>
-                  <option value="Brasil">Brasil</option>
-                  <option value="Chile">Chile</option>
-                  <option value="Guyana">Guyana</option>
-                  <option value="Paraguay">Paraguay</option>
-                  <option value="Surinam">Surinam</option>
-                  <option value="Trinidad y Tobago">Trinidad y Tobago</option>
-                  <option value="Uruguay">Uruguay</option>
-                </optgroup>
-                <optgroup label="— América Central y Caribe —">
-                  <option value="Belice">Belice</option>
-                  <option value="Costa Rica">Costa Rica</option>
-                  <option value="Cuba">Cuba</option>
-                  <option value="El Salvador">El Salvador</option>
-                  <option value="Guatemala">Guatemala</option>
-                  <option value="Haití">Haití</option>
-                  <option value="Honduras">Honduras</option>
-                  <option value="Jamaica">Jamaica</option>
-                  <option value="México">México</option>
-                  <option value="Nicaragua">Nicaragua</option>
-                  <option value="Panamá">Panamá</option>
-                  <option value="República Dominicana">República Dominicana</option>
-                </optgroup>
-                <optgroup label="— América del Norte —">
-                  <option value="Canadá">Canadá</option>
-                  <option value="Estados Unidos">Estados Unidos</option>
-                </optgroup>
-                <optgroup label="— Europa —">
-                  <option value="Alemania">Alemania</option>
-                  <option value="Austria">Austria</option>
-                  <option value="Bélgica">Bélgica</option>
-                  <option value="Bulgaria">Bulgaria</option>
-                  <option value="Croacia">Croacia</option>
-                  <option value="Dinamarca">Dinamarca</option>
-                  <option value="Eslovaquia">Eslovaquia</option>
-                  <option value="Eslovenia">Eslovenia</option>
-                  <option value="España">España</option>
-                  <option value="Estonia">Estonia</option>
-                  <option value="Finlandia">Finlandia</option>
-                  <option value="Francia">Francia</option>
-                  <option value="Grecia">Grecia</option>
-                  <option value="Hungría">Hungría</option>
-                  <option value="Irlanda">Irlanda</option>
-                  <option value="Italia">Italia</option>
-                  <option value="Letonia">Letonia</option>
-                  <option value="Lituania">Lituania</option>
-                  <option value="Noruega">Noruega</option>
-                  <option value="Países Bajos">Países Bajos</option>
-                  <option value="Polonia">Polonia</option>
-                  <option value="Portugal">Portugal</option>
-                  <option value="Reino Unido">Reino Unido</option>
-                  <option value="Rep. Checa">Rep. Checa</option>
-                  <option value="Rumania">Rumania</option>
-                  <option value="Rusia">Rusia</option>
-                  <option value="Suecia">Suecia</option>
-                  <option value="Suiza">Suiza</option>
-                  <option value="Turquía">Turquía</option>
-                  <option value="Ucrania">Ucrania</option>
-                </optgroup>
-                <optgroup label="— Asia —">
-                  <option value="Arabia Saudita">Arabia Saudita</option>
-                  <option value="Bangladesh">Bangladesh</option>
-                  <option value="China">China</option>
-                  <option value="Corea del Sur">Corea del Sur</option>
-                  <option value="Emiratos Árabes">Emiratos Árabes</option>
-                  <option value="Filipinas">Filipinas</option>
-                  <option value="India">India</option>
-                  <option value="Indonesia">Indonesia</option>
-                  <option value="Israel">Israel</option>
-                  <option value="Japón">Japón</option>
-                  <option value="Malasia">Malasia</option>
-                  <option value="Pakistán">Pakistán</option>
-                  <option value="Singapur">Singapur</option>
-                  <option value="Tailandia">Tailandia</option>
-                  <option value="Vietnam">Vietnam</option>
-                </optgroup>
-                <optgroup label="— África —">
-                  <option value="Angola">Angola</option>
-                  <option value="Camerún">Camerún</option>
-                  <option value="Egipto">Egipto</option>
-                  <option value="Etiopía">Etiopía</option>
-                  <option value="Ghana">Ghana</option>
-                  <option value="Kenia">Kenia</option>
-                  <option value="Marruecos">Marruecos</option>
-                  <option value="Nigeria">Nigeria</option>
-                  <option value="Senegal">Senegal</option>
-                  <option value="Sudáfrica">Sudáfrica</option>
-                  <option value="Tanzania">Tanzania</option>
-                </optgroup>
-                <optgroup label="— Oceanía —">
-                  <option value="Australia">Australia</option>
-                  <option value="Nueva Zelanda">Nueva Zelanda</option>
-                </optgroup>
+                <option value="Ecuador">Ecuador</option>
+                <option value="Colombia">Colombia</option>
+                <option value="Venezuela">Venezuela</option>
+                <option value="Otro">Otro</option>
               </select>
             </div>
           </div>
@@ -1037,7 +813,6 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
         </div>
       </div>
 
-      <!-- 5. Dirección -->
       <div class="datos-seccion">
         <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-direccion', this)">
           <span><span class="sec-icon">📍</span>Dirección</span>
@@ -1060,7 +835,7 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
             <label>Sector o barrio</label>
             <input type="text" id="d-sector" placeholder="Ej: La Mariscal">
           </div>
-<div class="datos-campo">
+          <div class="datos-campo">
             <label>Cantón</label>
             <div class="select-wrapper">
               <select id="d-canton" onchange="toggleOtroSelect('canton')">
@@ -1068,21 +843,17 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
                 <option value="Quito">Quito</option>
                 <option value="Cayambe">Cayambe</option>
                 <option value="Mejía">Mejía</option>
-                <option value="Pedro Moncayo">Pedro Moncayo</option>
-                <option value="Rumiñahui">Rumiñahui</option>
-                <option value="Santo Domingo">Santo Domingo</option>
                 <option value="Otro">Otro</option>
               </select>
             </div>
             <div class="campo-condicional" id="campo-cantonOtro">
-              <input type="text" id="d-cantonOtro" class="otro-texto" placeholder="Escribe tu cantón" style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
+              <input type="text" id="d-cantonOtro" class="otro-texto" placeholder="Escribe tu cantón">
             </div>
           </div>
           <button class="btn-guardar-sec" onclick="guardarSeccion('sec-direccion', this)">Guardar</button>
         </div>
       </div>
 
-      <!-- 6. Contacto emergencia 1 -->
       <div class="datos-seccion">
         <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-emerg1', this)">
           <span><span class="sec-icon">🆘</span>Contacto de emergencia 1</span>
@@ -1105,62 +876,17 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
               </select>
             </div>
           </div>
-<div class="datos-campo">
+          <div class="datos-campo">
             <label>Prefijo telefónico</label>
             <div class="select-wrapper">
               <select id="d-emerg1Prefijo" onchange="toggleOtroSelect('emerg1Prefijo')">
                 <option value="">— Selecciona —</option>
-                <optgroup label="— América del Sur —">
-                  <option value="🇪🇨 +593 (Ecuador)">🇪🇨 +593 Ecuador</option>
-                  <option value="🇨🇴 +57 (Colombia)">🇨🇴 +57 Colombia</option>
-                  <option value="🇵🇪 +51 (Perú)">🇵🇪 +51 Perú</option>
-                  <option value="🇻🇪 +58 (Venezuela)">🇻🇪 +58 Venezuela</option>
-                  <option value="🇦🇷 +54 (Argentina)">🇦🇷 +54 Argentina</option>
-                  <option value="🇨🇱 +56 (Chile)">🇨🇱 +56 Chile</option>
-                  <option value="🇧🇴 +591 (Bolivia)">🇧🇴 +591 Bolivia</option>
-                  <option value="🇧🇷 +55 (Brasil)">🇧🇷 +55 Brasil</option>
-                  <option value="🇵🇾 +595 (Paraguay)">🇵🇾 +595 Paraguay</option>
-                  <option value="🇺🇾 +598 (Uruguay)">🇺🇾 +598 Uruguay</option>
-                </optgroup>
-                <optgroup label="— América Central y Caribe —">
-                  <option value="🇬🇹 +502 (Guatemala)">🇬🇹 +502 Guatemala</option>
-                  <option value="🇭🇳 +504 (Honduras)">🇭🇳 +504 Honduras</option>
-                  <option value="🇸🇻 +503 (El Salvador)">🇸🇻 +503 El Salvador</option>
-                  <option value="🇳🇮 +505 (Nicaragua)">🇳🇮 +505 Nicaragua</option>
-                  <option value="🇨🇷 +506 (Costa Rica)">🇨🇷 +506 Costa Rica</option>
-                  <option value="🇵🇦 +507 (Panamá)">🇵🇦 +507 Panamá</option>
-                  <option value="🇨🇺 +53 (Cuba)">🇨🇺 +53 Cuba</option>
-                  <option value="🇩🇴 +1809 (Rep. Dominicana)">🇩🇴 +1809 Rep. Dominicana</option>
-                </optgroup>
-                <optgroup label="— América del Norte —">
-                  <option value="🇲🇽 +52 (México)">🇲🇽 +52 México</option>
-                  <option value="🇺🇸 +1 (Estados Unidos)">🇺🇸 +1 Estados Unidos</option>
-                  <option value="🇨🇦 +1 (Canadá)">🇨🇦 +1 Canadá</option>
-                </optgroup>
-                <optgroup label="— Europa —">
-                  <option value="🇪🇸 +34 (España)">🇪🇸 +34 España</option>
-                  <option value="🇵🇹 +351 (Portugal)">🇵🇹 +351 Portugal</option>
-                  <option value="🇫🇷 +33 (Francia)">🇫🇷 +33 Francia</option>
-                  <option value="🇮🇹 +39 (Italia)">🇮🇹 +39 Italia</option>
-                  <option value="🇩🇪 +49 (Alemania)">🇩🇪 +49 Alemania</option>
-                  <option value="🇬🇧 +44 (Reino Unido)">🇬🇧 +44 Reino Unido</option>
-                  <option value="🇷🇺 +7 (Rusia)">🇷🇺 +7 Rusia</option>
-                  <option value="🇺🇦 +380 (Ucrania)">🇺🇦 +380 Ucrania</option>
-                </optgroup>
-                <optgroup label="— Asia / África / Oceanía —">
-                  <option value="🇨🇳 +86 (China)">🇨🇳 +86 China</option>
-                  <option value="🇯🇵 +81 (Japón)">🇯🇵 +81 Japón</option>
-                  <option value="🇮🇳 +91 (India)">🇮🇳 +91 India</option>
-                  <option value="🇮🇱 +972 (Israel)">🇮🇱 +972 Israel</option>
-                  <option value="🇦🇪 +971 (Emiratos Árabes)">🇦🇪 +971 Emiratos Árabes</option>
-                  <option value="🇿🇦 +27 (Sudáfrica)">🇿🇦 +27 Sudáfrica</option>
-                  <option value="🇦🇺 +61 (Australia)">🇦🇺 +61 Australia</option>
-                  <option value="🇳🇿 +64 (Nueva Zelanda)">🇳🇿 +64 Nueva Zelanda</option>
-                </optgroup>
+                <option value="🇪🇨 +593 (Ecuador)">🇪🇨 +593 Ecuador</option>
+                <option value="Otro">Otro</option>
               </select>
             </div>
             <div class="campo-condicional" id="campo-emerg1PrefijoOtro">
-              <input type="text" id="d-emerg1PrefijoOtro" class="otro-texto" placeholder="Ej: +972" style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
+              <input type="text" id="d-emerg1PrefijoOtro" class="otro-texto" placeholder="Ej: +972">
             </div>
           </div>
           <div class="datos-campo">
@@ -1171,227 +897,7 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
         </div>
       </div>
 
-      <!-- 7. Contacto emergencia 2 -->
-      <div class="datos-seccion">
-        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-emerg2', this)">
-          <span><span class="sec-icon">🆘</span>Contacto de emergencia 2</span>
-          <span class="sec-chevron">▾</span>
-        </div>
-        <div class="datos-seccion-body" id="sec-emerg2">
-          <div class="datos-campo">
-            <label>Nombre completo</label>
-            <input type="text" id="d-emerg2Nombre" placeholder="Ej: Carlos López">
-          </div>
-          <div class="datos-campo">
-            <label>Relación</label>
-            <div class="select-wrapper">
-              <select id="d-emerg2Relacion">
-                <option value="">— Selecciona —</option>
-                <option value="Amigx">Amigx</option>
-                <option value="Familiar">Familiar</option>
-                <option value="Pareja">Pareja</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
-          </div>
-<div class="datos-campo">
-            <label>Prefijo telefónico</label>
-            <div class="select-wrapper">
-              <select id="d-emerg2Prefijo" onchange="toggleOtroSelect('emerg2Prefijo')">
-                <option value="">— Selecciona —</option>
-                <optgroup label="— América del Sur —">
-                  <option value="🇪🇨 +593 (Ecuador)">🇪🇨 +593 Ecuador</option>
-                  <option value="🇨🇴 +57 (Colombia)">🇨🇴 +57 Colombia</option>
-                  <option value="🇵🇪 +51 (Perú)">🇵🇪 +51 Perú</option>
-                  <option value="🇻🇪 +58 (Venezuela)">🇻🇪 +58 Venezuela</option>
-                  <option value="🇦🇷 +54 (Argentina)">🇦🇷 +54 Argentina</option>
-                  <option value="🇨🇱 +56 (Chile)">🇨🇱 +56 Chile</option>
-                  <option value="🇧🇴 +591 (Bolivia)">🇧🇴 +591 Bolivia</option>
-                  <option value="🇧🇷 +55 (Brasil)">🇧🇷 +55 Brasil</option>
-                  <option value="🇵🇾 +595 (Paraguay)">🇵🇾 +595 Paraguay</option>
-                  <option value="🇺🇾 +598 (Uruguay)">🇺🇾 +598 Uruguay</option>
-                </optgroup>
-                <optgroup label="— América Central y Caribe —">
-                  <option value="🇬🇹 +502 (Guatemala)">🇬🇹 +502 Guatemala</option>
-                  <option value="🇭🇳 +504 (Honduras)">🇭🇳 +504 Honduras</option>
-                  <option value="🇸🇻 +503 (El Salvador)">🇸🇻 +503 El Salvador</option>
-                  <option value="🇳🇮 +505 (Nicaragua)">🇳🇮 +505 Nicaragua</option>
-                  <option value="🇨🇷 +506 (Costa Rica)">🇨🇷 +506 Costa Rica</option>
-                  <option value="🇵🇦 +507 (Panamá)">🇵🇦 +507 Panamá</option>
-                  <option value="🇨🇺 +53 (Cuba)">🇨🇺 +53 Cuba</option>
-                  <option value="🇩🇴 +1809 (Rep. Dominicana)">🇩🇴 +1809 Rep. Dominicana</option>
-                </optgroup>
-                <optgroup label="— América del Norte —">
-                  <option value="🇲🇽 +52 (México)">🇲🇽 +52 México</option>
-                  <option value="🇺🇸 +1 (Estados Unidos)">🇺🇸 +1 Estados Unidos</option>
-                  <option value="🇨🇦 +1 (Canadá)">🇨🇦 +1 Canadá</option>
-                </optgroup>
-                <optgroup label="— Europa —">
-                  <option value="🇪🇸 +34 (España)">🇪🇸 +34 España</option>
-                  <option value="🇵🇹 +351 (Portugal)">🇵🇹 +351 Portugal</option>
-                  <option value="🇫🇷 +33 (Francia)">🇫🇷 +33 Francia</option>
-                  <option value="🇮🇹 +39 (Italia)">🇮🇹 +39 Italia</option>
-                  <option value="🇩🇪 +49 (Alemania)">🇩🇪 +49 Alemania</option>
-                  <option value="🇬🇧 +44 (Reino Unido)">🇬🇧 +44 Reino Unido</option>
-                  <option value="🇷🇺 +7 (Rusia)">🇷🇺 +7 Rusia</option>
-                  <option value="🇺🇦 +380 (Ucrania)">🇺🇦 +380 Ucrania</option>
-                </optgroup>
-                <optgroup label="— Asia / África / Oceanía —">
-                  <option value="🇨🇳 +86 (China)">🇨🇳 +86 China</option>
-                  <option value="🇯🇵 +81 (Japón)">🇯🇵 +81 Japón</option>
-                  <option value="🇮🇳 +91 (India)">🇮🇳 +91 India</option>
-                  <option value="🇮🇱 +972 (Israel)">🇮🇱 +972 Israel</option>
-                  <option value="🇦🇪 +971 (Emiratos Árabes)">🇦🇪 +971 Emiratos Árabes</option>
-                  <option value="🇿🇦 +27 (Sudáfrica)">🇿🇦 +27 Sudáfrica</option>
-                  <option value="🇦🇺 +61 (Australia)">🇦🇺 +61 Australia</option>
-                  <option value="🇳🇿 +64 (Nueva Zelanda)">🇳🇿 +64 Nueva Zelanda</option>
-                </optgroup>
-              </select>
-            </div>
-            <div class="campo-condicional" id="campo-emerg2PrefijoOtro">
-              <input type="text" id="d-emerg2PrefijoOtro" class="otro-texto" placeholder="Ej: +972" style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
-            </div>
-          </div>
-          <div class="datos-campo">
-            <label>Número de teléfono</label>
-            <input type="tel" id="d-emerg2Telefono" placeholder="Ej: 0987654321" oninput="limpiarTelefono(this)">
-          </div>
-          <button class="btn-guardar-sec" onclick="guardarSeccion('sec-emerg2', this)">Guardar</button>
-        </div>
-      </div>
-
-      <!-- 8. Salud -->
-      <div class="datos-seccion">
-        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-salud', this)">
-          <span><span class="sec-icon">🏥</span>Salud</span>
-          <span class="sec-chevron">▾</span>
-        </div>
-        <div class="datos-seccion-body" id="sec-salud">
-
-          <div class="datos-campo">
-            <label>Enfermedades diagnosticadas</label>
-            <p class="datos-hint" style="margin-bottom:8px;">Selecciona todas las que apliquen.</p>
-            <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Asma"> Asma</label>
-            <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Diabetes"> Diabetes</label>
-            <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Hipertensión"> Hipertensión</label>
-            <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Cardiopatía"> Cardiopatía</label>
-            <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Epilepsia"> Epilepsia</label>
-            <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Trastornos de coagulación"> Trastornos de coagulación</label>
-            <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Problemas osteomusculares"> Problemas osteomusculares</label>
-            <label class="chk-opcion"><input type="checkbox" data-group="enfermedad" value="Otro" onchange="toggleOtroCheckbox('enfermedad')"> Otro</label>
-            <div class="campo-condicional" id="campo-enfermedadOtro">
-              <input type="text" id="d-enfermedadOtro" class="otro-texto" placeholder="Ej: Lupus, hipotiroidismo..." style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
-            </div>
-          </div>
-
-          <div class="datos-campo" style="margin-top:4px;">
-            <label>¿Presentas alergias?</label>
-            <div class="select-wrapper">
-              <select id="d-alergias" onchange="toggleCondicional('d-alergias', ['Sí','Tal vez'], 'campo-alergiasDesc')">
-                <option value="">— Selecciona —</option>
-                <option value="Sí">Sí</option>
-                <option value="No">No</option>
-                <option value="Tal vez">Tal vez</option>
-              </select>
-            </div>
-          </div>
-          <div class="datos-campo campo-condicional" id="campo-alergiasDesc">
-            <label>Descripción de alergias</label>
-            <textarea id="d-alergiasDesc" placeholder="Ej: Alergia a la penicilina y al látex"></textarea>
-          </div>
-
-          <div class="datos-campo" style="margin-top:4px;">
-            <label>Dieta o restricción alimentaria</label>
-            <div class="select-wrapper">
-              <select id="d-dieta" onchange="toggleOtroSelect('dieta')">
-                <option value="">— Selecciona —</option>
-                <option value="Ninguna">Ninguna</option>
-                <option value="Vegetarianx">Vegetarianx</option>
-                <option value="Veganx">Veganx</option>
-                <option value="Celíacx">Celíacx</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
-            <div class="campo-condicional" id="campo-dietaOtro">
-              <input type="text" id="d-dietaOtro" class="otro-texto" placeholder="Describe tu dieta o restricción" style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
-            </div>
-          </div>
-
-          <div class="datos-campo">
-            <label>Antecedentes médicos</label>
-            <p class="datos-hint" style="margin-bottom:8px;">Selecciona todos los que apliquen.</p>
-            <label class="chk-opcion"><input type="checkbox" data-group="antecedentes" value="Cirugías previas" onchange="toggleDetalleAntecedentes()"> Cirugías previas</label>
-            <label class="chk-opcion"><input type="checkbox" data-group="antecedentes" value="Hospitalización último año" onchange="toggleDetalleAntecedentes()"> Hospitalización en el último año</label>
-            <label class="chk-opcion"><input type="checkbox" data-group="antecedentes" value="Lesiones deportivas" onchange="toggleDetalleAntecedentes()"> Lesiones deportivas</label>
-            <label class="chk-opcion"><input type="checkbox" data-group="antecedentes" value="Otro" onchange="toggleOtroCheckbox('antecedentes'); toggleDetalleAntecedentes()"> Otro</label>
-            <div class="campo-condicional" id="campo-antecedentesOtro">
-              <input type="text" id="d-antecedentesOtro" class="otro-texto" placeholder="Ej: enfermedad autoinmune" style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
-            </div>
-            <div class="campo-condicional" id="campo-antecedentesDetalle" style="margin-top:10px;">
-              <label style="display:block;font-size:0.75rem;color:#888;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;">Detalle adicional (opcional)</label>
-              <textarea id="d-antecedentesDetalle" placeholder="Si deseas agregar más información sobre tus antecedentes, escríbela aquí." style="width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.9rem;font-family:inherit;resize:vertical;min-height:70px;"></textarea>
-            </div>
-          </div>
-
-          <div class="datos-campo">
-            <label>¿Tomas medicamentos o suplementos diarios?</label>
-            <div class="select-wrapper">
-              <select id="d-medicamentos" onchange="toggleCondicional('d-medicamentos', ['Sí'], 'campo-medicamentosDesc')">
-                <option value="">— Selecciona —</option>
-                <option value="Sí">Sí</option>
-                <option value="No">No</option>
-              </select>
-            </div>
-          </div>
-          <div class="datos-campo campo-condicional" id="campo-medicamentosDesc">
-            <label>Descripción de medicamentos</label>
-            <textarea id="d-medicamentosDesc" placeholder="Ej: Loratadina 10mg cada 12 horas"></textarea>
-          </div>
-
-          <div class="datos-campo">
-            <label>Tipo de atención médica en emergencia</label>
-            <div class="select-wrapper">
-              <select id="d-atencionMedica" onchange="toggleCondicional('d-atencionMedica', ['Seguro Privado'], 'campo-seguro')">
-                <option value="">— Selecciona —</option>
-                <option value="MSP">MSP (Ministerio de Salud Pública)</option>
-                <option value="IESS">IESS</option>
-                <option value="Seguro Privado">Seguro Privado</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
-          </div>
-          <div class="campo-condicional" id="campo-seguro">
-            <div class="datos-campo">
-              <label>Nombre del seguro privado</label>
-              <div class="select-wrapper">
-                <select id="d-seguro" onchange="toggleOtroSelect('seguro')">
-                  <option value="">— Selecciona —</option>
-                  <option value="Saludsa">Saludsa</option>
-                  <option value="Ecuasanitas">Ecuasanitas</option>
-                  <option value="Humana">Humana</option>
-                  <option value="BMI">BMI</option>
-                  <option value="Confiamed">Confiamed</option>
-                  <option value="BUPA">BUPA</option>
-                  <option value="Pan American">Pan American</option>
-                  <option value="CruzBlanca">CruzBlanca</option>
-                  <option value="Otro">Otro</option>
-                </select>
-              </div>
-              <div class="campo-condicional" id="campo-seguroOtro">
-                <input type="text" id="d-seguroOtro" class="otro-texto" placeholder="Nombre del seguro" style="margin-top:8px;width:100%;padding:10px 12px;border:2px solid #e5e5e5;border-radius:8px;font-size:0.92rem;font-family:inherit;">
-              </div>
-            </div>
-            <div class="datos-campo">
-              <label>Número de contacto del seguro</label>
-              <input type="tel" id="d-seguroContacto" placeholder="Ej: 1800-123456">
-            </div>
-          </div>
-
-          <button class="btn-guardar-sec" onclick="guardarSeccion('sec-salud', this)">Guardar</button>
-        </div>
-      </div>
-
-      <button class="btn btn-secondary" onclick="volver('s-home')" style="margin-top:8px;">← Volver</button>
+      <button class="btn btn-secondary" onclick="volver('s-home')" style="margin-top:12px;">← Volver</button>
     </div>
   </div>
 
@@ -1401,48 +907,47 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 var BACKEND = 'https://script.google.com/macros/s/AKfycbwDdwB1u1Kl0JTOOSCr1c9AyA111CcCvusdj23b7zHkdaEuoV2Ryt3A_m38PRDFjtiuEA/exec';
 
- function mostrarCargando(msg) {
+function mostrarCargando(msg) {
   var el = document.getElementById('loading-overlay');
   document.getElementById('loading-msg').textContent = msg || 'Cargando...';
   el.style.display = 'flex';
 }
-function ocultarCargando() {
-  document.getElementById('loading-overlay').style.display = 'none';
+function ocultarCargando() { document.getElementById('loading-overlay').style.display = 'none'; }
+
+// ─── FUNCIONES NUEVAS JS ──────────────────────────────────────────────────────
+function togglePinVisibility() {
+  var pinInput = document.getElementById('input-pin');
+  var btn = document.getElementById('btn-toggle-pin');
+  if (pinInput.type === 'password') {
+    pinInput.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    pinInput.type = 'password';
+    btn.textContent = '👁️';
+  }
 }
 
 // ─── ESTADO GLOBAL ────────────────────────────────────────────────────────────
 var E = {
- 
   nombre: '', datos: null,
   conf: '', editPat: '', editTalla: '', editProtec: '',
-  fechas: [], tipoPago: 'clase',
-  meses: [],
+  fechas: [], tipoPago: 'clase', meses: [],
   precioPorClase: 0, precioMensual: 0,
-  totalPago: 0, notaPago: '', wpEnviado: false,
-  wpUrl: '',   // ← agregar esto
-  cuponAplicado: false
+  totalPago: 0, notaPago: '', wpEnviado: false, wpUrl: '', cuponAplicado: false
 };
 
-// Cupón disponible = backend lo habilitó Y no está marcado como usado en este dispositivo
 function tieneCuponDisponible() {
   if (!E.datos || !E.datos.cuponDisponible) return false;
   return localStorage.getItem('cupon_' + E.nombre) !== 'usado';
 }
-function marcarCuponUsadoLocal() {
-  localStorage.setItem('cupon_' + E.nombre, 'usado');
-}
+function marcarCuponUsadoLocal() { localStorage.setItem('cupon_' + E.nombre, 'usado'); }
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 function api(params, onSuccess, onError) {
-  var url = BACKEND + '?' + Object.keys(params).map(function(k) {
-    return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
-  }).join('&');
+  var url = BACKEND + '?' + Object.keys(params).map(function(k) { return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); }).join('&');
   fetch(url, { method: 'GET', mode: 'cors' })
     .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data && data.error) { onError({ message: data.error }); }
-      else { onSuccess(data); }
-    })
+    .then(function(data) { if (data && data.error) { onError({ message: data.error }); } else { onSuccess(data); } })
     .catch(function(e) { onError(e); });
 }
 
@@ -1452,113 +957,65 @@ window.onload = function() {
   api({ action: 'getNombres' }, function(nombres) {
     var sel = document.getElementById('sel-nombre');
     sel.innerHTML = '<option value="">— Elige tu nombre —</option>';
-    nombres.forEach(function(n) {
-      var o = document.createElement('option');
-      o.value = o.textContent = n;
-      sel.appendChild(o);
-    });
-    sel.disabled = false;
-    sel.style.color = '';
-    ocultarCargando();
+    nombres.forEach(function(n) { var o = document.createElement('option'); o.value = o.textContent = n; sel.appendChild(o); });
+    sel.disabled = false; sel.style.color = ''; ocultarCargando();
   }, function(e) { ocultarCargando(); err('err-s1', 'Error al cargar nombres: ' + e.message); });
 
   api({ action: 'getPreciosClases' }, function(precios) {
     E.precioPorClase = parseFloat(precios.precioPorClase) || 0;
     E.precioMensual  = parseFloat(precios.precioMensual)  || 0;
   }, function() {});
-
   generarMeses();
 };
 
-// ─── MESES DINÁMICOS ──────────────────────────────────────────────────────────
-var NOMBRES_MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-                     'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+var NOMBRES_MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 function generarMeses() {
-  var hoy = new Date();
-  var mesActual = hoy.getMonth(); // 0-11
-
+  var hoy = new Date(); var mesActual = hoy.getMonth();
   var listaPasados = document.getElementById('lista-meses-pasados');
   var listaFuturos = document.getElementById('lista-meses');
   var wrapperPasados = document.getElementById('meses-pasados-wrapper');
 
-  listaPasados.innerHTML = '';
-  listaFuturos.innerHTML = '';
+  listaPasados.innerHTML = ''; listaFuturos.innerHTML = '';
 
-  // Meses pasados (0 hasta mesActual-1)
-  if (mesActual === 0) {
-    wrapperPasados.style.display = 'none';
-  } else {
+  if (mesActual === 0) { wrapperPasados.style.display = 'none'; } else {
     wrapperPasados.style.display = 'block';
-    for (var i = 0; i < mesActual; i++) {
-      listaPasados.innerHTML += crearMesItem(NOMBRES_MESES[i]);
-    }
+    for (var i = 0; i < mesActual; i++) { listaPasados.innerHTML += crearMesItem(NOMBRES_MESES[i]); }
   }
-
-  // Meses actuales y futuros (mesActual hasta 11)
-  for (var j = mesActual; j < 12; j++) {
-    listaFuturos.innerHTML += crearMesItem(NOMBRES_MESES[j]);
-  }
+  for (var j = mesActual; j < 12; j++) { listaFuturos.innerHTML += crearMesItem(NOMBRES_MESES[j]); }
 }
 
-function crearMesItem(nombre) {
-  return '<label class="mes-item">' +
-    '<input type="checkbox" value="' + nombre + '" onchange="actualizarTotalS4()"> ' +
-    nombre + '</label>';
-}
+function crearMesItem(nombre) { return '<label class="mes-item"><input type="checkbox" value="' + nombre + '" onchange="actualizarTotalS4()"> ' + nombre + '</label>'; }
 
 function toggleMesesPasados() {
-  var lista = document.getElementById('lista-meses-pasados');
-  var btn = document.getElementById('btn-meses-pasados');
+  var lista = document.getElementById('lista-meses-pasados'); var btn = document.getElementById('btn-meses-pasados');
   var abierto = lista.style.display !== 'none';
-  lista.style.display = abierto ? 'none' : 'grid';
-  btn.textContent = (abierto ? '▶' : '▼') + ' Meses pasados';
+  lista.style.display = abierto ? 'none' : 'grid'; btn.textContent = (abierto ? '▶' : '▼') + ' Meses pasados';
 }
 
 // ─── NAVEGACIÓN ───────────────────────────────────────────────────────────────
 var TOP_BAR_CONFIG = {
-  's1b':           { titulo: 'Verificación',         volver: 's1' },
-  's2':            { titulo: 'Equipamiento',          volver: 's-home' },
-  's3a':           { titulo: 'Editar equipamiento',   volver: 's2' },
-  's3b':           { titulo: 'Editar equipamiento',   volver: 's3a' },
-  's3c':           { titulo: 'Editar equipamiento',   volver: 's3b' },
-  's4': {
-  titulo: canPayMonthly()
-    ? 'Selecciona el tipo de modalidad'
-    : 'Fecha y pago',
-  volver: 's2'
-},
-  's-pago':        { titulo: 'Pago',                  volver: 's4' },
-  's5':            { titulo: 'Confirmar reserva',     volver: 's-pago' },
-  's-misreservas': { titulo: 'Mis reservas',          volver: 's-home' },
-  's-datos':       { titulo: 'Editar mis datos',      volver: 's-home' },
-  's6':            { titulo: 'Pago registrado',    volver: null },
+  's1b': { titulo: 'Verificación', volver: 's1' }, 's2': { titulo: 'Equipamiento', volver: 's-home' },
+  's3a': { titulo: 'Editar equipamiento', volver: 's2' }, 's3b': { titulo: 'Editar equipamiento', volver: 's3a' },
+  's3c': { titulo: 'Editar equipamiento', volver: 's3b' },
+  's4': { titulo: canPayMonthly() ? 'Selecciona el tipo de modalidad' : 'Fecha y pago', volver: 's2' },
+  's-pago': { titulo: 'Pago', volver: 's4' }, 's5': { titulo: 'Confirmar reserva', volver: 's-pago' },
+  's-misreservas': { titulo: 'Mis reservas', volver: 's-home' }, 's-datos': { titulo: 'Editar mis datos', volver: 's-home' },
+  's6': { titulo: 'Pago registrado', volver: null }
 };
 
 function ir(id) {
   document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
   document.getElementById(id).classList.add('activa');
-  window.scrollTo(0, 0);
+  window.scrollTo({ top: 0, behavior: 'smooth' }); // Navegación más fluida
 
-  // Top bar
-  var topBar    = document.getElementById('top-bar');
-  var topBtn    = document.getElementById('top-bar-btn');
-  var topTitulo = document.getElementById('top-bar-titulo');
+  var topBar = document.getElementById('top-bar'); var topBtn = document.getElementById('top-bar-btn'); var topTitulo = document.getElementById('top-bar-titulo');
   var cfg = TOP_BAR_CONFIG[id];
   if (cfg) {
-    topBar.classList.add('visible');
-    topTitulo.textContent = cfg.titulo;
-    if (cfg.volver) {
-      topBtn.style.display = '';
-      topBtn.onclick = function() { volver(cfg.volver); };
-    } else {
-      topBtn.style.display = 'none';
-    }
-  } else {
-    topBar.classList.remove('visible');
-  }
+    topBar.classList.add('visible'); topTitulo.textContent = cfg.titulo;
+    if (cfg.volver) { topBtn.style.display = ''; topBtn.onclick = function() { volver(cfg.volver); }; } else { topBtn.style.display = 'none'; }
+  } else { topBar.classList.remove('visible'); }
 
-  // Dots
   var sinPasos = ['s1','s1b','s-home','s-misreservas','s-carga','s6','s-datos'];
   var dotContainer = document.querySelector('.paso-indicator');
   if (sinPasos.indexOf(id) !== -1) { dotContainer.style.display = 'none'; return; }
@@ -1571,7 +1028,6 @@ function ir(id) {
     d.className = 'paso-dot' + (i < p ? ' completado' : i === p ? ' activo' : '');
   }
 }
-
 function volver(id) { ir(id); }
 
 function err(id, msg) {
@@ -1581,37 +1037,31 @@ function err(id, msg) {
 }
 
 function selOp(label, name, val) {
-  document.querySelectorAll('input[name="'+name+'"]').forEach(function(r) {
-    r.closest('.opcion').classList.remove('sel');
-  });
+  document.querySelectorAll('input[name="'+name+'"]').forEach(function(r) { r.closest('.opcion').classList.remove('sel'); });
   label.classList.add('sel');
-  if (name === 'conf')        E.conf = val;
-  if (name === 'edit-pat')    E.editPat = val;
+  if (name === 'conf') E.conf = val;
+  if (name === 'edit-pat') E.editPat = val;
   if (name === 'edit-protec') {
-    E.editProtec = val;
-    document.getElementById('txt-otro').style.display = val === 'Otro' ? 'block' : 'none';
+    E.editProtec = val; document.getElementById('txt-otro').style.display = val === 'Otro' ? 'block' : 'none';
   }
 }
 
-// ─── S1 ───────────────────────────────────────────────────────────────────────
+// Flujos de Lógica de Botones - Se mantienen sin alteración estructural principal.
 function continuar_s1() {
   var nombre = document.getElementById('sel-nombre').value.trim();
   if (!nombre) { err('err-s1', 'Por favor selecciona tu nombre.'); return; }
-  E.nombre = nombre;
-  document.getElementById('input-pin').value = '';
-  ir('s1b');
+  E.nombre = nombre; document.getElementById('input-pin').value = ''; ir('s1b');
 }
 
-// ─── S1b: PIN ─────────────────────────────────────────────────────────────────
 function continuar_pin() {
   var pin = document.getElementById('input-pin').value.trim();
   if (!/^\d{4}$/.test(pin)) { err('err-pin', 'Ingresa un PIN válido de 4 dígitos.'); return; }
   ir('s-carga');
   api({ action: 'validarPin', nombre: E.nombre, pin: pin }, function(res) {
     if (!res.valido) { ir('s1b'); err('err-pin', 'PIN incorrecto.'); return; }
-E.datos = res.datos;
+    E.datos = res.datos;
     document.getElementById('home-saludo').textContent = '¡Hola, ' + E.nombre + '!';
-   if (necesitaEquipo()) {
+    if (necesitaEquipo()) {
       document.getElementById('home-btn-mis-titulo').textContent = 'Ver mis reservas';
       document.getElementById('home-btn-mis-sub').textContent = 'Revisa el estado de tus reservas';
       document.getElementById('home-btn-nueva-titulo').textContent = 'Nueva reserva';
@@ -1622,39 +1072,31 @@ E.datos = res.datos;
       document.getElementById('home-btn-nueva-titulo').textContent = 'Nuevo pago';
       document.getElementById('home-btn-nueva-sub').textContent = 'Registra tu pago mensual o por clase';
     }
-var bannerCupon = document.getElementById('banner-cupon');
+    var bannerCupon = document.getElementById('banner-cupon');
     if (bannerCupon) bannerCupon.style.display = tieneCuponDisponible() ? 'block' : 'none';
     ir('s-home');
   }, function(e) { ir('s1b'); err('err-pin', 'Error: ' + e.message); });
 }
 
-// ─── HOME ─────────────────────────────────────────────────────────────────────
 function irMisReservas() {
   ir('s-carga');
   api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
     _todasReservas = reservas;
     document.getElementById('misres-label').textContent = necesitaEquipo() ? 'Mis reservas' : 'Mis pagos';
     document.getElementById('misres-titulo').textContent = necesitaEquipo() ? 'Tus reservas' : 'Tus pagos';
-    renderMisReservas(reservas, false);
-    ir('s-misreservas');
+    renderMisReservas(reservas, false); ir('s-misreservas');
   }, function(e) { ir('s-home'); alert('Error al cargar reservas: ' + e.message); });
 }
 
 function irNuevaReserva() {
-  E.conf = ''; E.fechas = []; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = '';
-  E.cuponAplicado = false;
-  var chkC = document.getElementById('chk-cupon');
-  if (chkC) chkC.checked = false;
-  document.querySelectorAll('input[name="conf"]').forEach(function(r) {
-    r.checked = false; r.closest('.opcion').classList.remove('sel');
-  });
-  renderEquip();
-  ir('s2');
+  E.conf = ''; E.fechas = []; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = ''; E.cuponAplicado = false;
+  var chkC = document.getElementById('chk-cupon'); if (chkC) chkC.checked = false;
+  document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
+  renderEquip(); ir('s2');
 }
 
 function irHomeDesdeExito() { ir('s-home'); }
 
-// ─── MIS RESERVAS ─────────────────────────────────────────────────────────────
 var _todasReservas = [];
 function renderMisReservas(reservas, mostrarTodas) {
   var html = '';
@@ -1665,102 +1107,62 @@ function renderMisReservas(reservas, mostrarTodas) {
     visibles.forEach(function(r) {
       var badgeClass = r.estado === 'Confirmada' ? 'badge-confirmada' : r.estado === 'Cancelada' ? 'badge-cancelada' : 'badge-pendiente';
       var icon = r.estado === 'Confirmada' ? '✅' : r.estado === 'Cancelada' ? '❌' : '⏳';
-      var tienePat  = r.talla && r.talla !== 'No';
-      var tieneProc = r.protecciones && r.protecciones !== 'No';
-      var equipMsg  = tienePat && tieneProc ? '🛼🛡️ Patines T.' + r.talla + ' y protecciones'
-                    : tienePat              ? '🛼 Patines talla ' + r.talla
-                    : tieneProc             ? '🛡️ ' + r.protecciones
-                    :                         '✅ Sin equipamiento prestado';
-      html += '<div class="reserva-card">';
-      html += '<div class="reserva-header"><span class="reserva-fecha">' + r.fecha + '</span>';
-      html += '<span class="badge ' + badgeClass + '">' + icon + ' ' + r.estado + '</span></div>';
-      html += '<div class="reserva-detalle">' + equipMsg + '</div>';
-      if (r.estado !== 'Cancelada') {
-        html += '<button class="btn-cancelar" onclick="cancelarRes(\'' + r.fecha.replace(/'/g,"\\'") + '\')">' + (necesitaEquipo() ? 'Cancelar esta reserva' : 'Cancelar este pago') + '</button>';
-      }
+      var tienePat  = r.talla && r.talla !== 'No'; var tieneProc = r.protecciones && r.protecciones !== 'No';
+      var equipMsg  = tienePat && tieneProc ? '🛼🛡️ Patines T.' + r.talla + ' y protecciones' : tienePat ? '🛼 Patines talla ' + r.talla : tieneProc ? '🛡️ ' + r.protecciones : '✅ Sin equipamiento prestado';
+      html += '<div class="reserva-card"><div class="reserva-header"><span class="reserva-fecha">' + r.fecha + '</span><span class="badge ' + badgeClass + '">' + icon + ' ' + r.estado + '</span></div><div class="reserva-detalle">' + equipMsg + '</div>';
+      if (r.estado !== 'Cancelada') { html += '<button class="btn-cancelar" onclick="cancelarRes(\'' + r.fecha.replace(/'/g,"\\'") + '\')">' + (necesitaEquipo() ? 'Cancelar esta reserva' : 'Cancelar este pago') + '</button>'; }
       html += '</div>';
     });
-    if (!mostrarTodas && reservas.length > 3) {
-      html += '<button class="btn btn-secondary" style="margin-top:4px;" onclick="verTodasReservas()">Ver reservas anteriores</button>';
-    }
+    if (!mostrarTodas && reservas.length > 3) { html += '<button class="btn btn-secondary" style="margin-top:8px;" onclick="verTodasReservas()">Ver reservas anteriores</button>'; }
   }
   document.getElementById('misres-lista').innerHTML = html;
 }
 
 function verTodasReservas() { renderMisReservas(_todasReservas, true); }
-
 function cancelarRes(fecha) {
   if (!confirm('¿Segura que quieres cancelar ' + (necesitaEquipo() ? 'tu reserva' : 'tu pago') + ' para el ' + fecha + '?')) return;
-  var btn = event.target;
-  btn.disabled = true; btn.textContent = '⏳ Cancelando...';
-  api({ action: 'cancelarReserva', nombre: E.nombre, fecha: fecha }, function(res) {
-    if (res.exito) { irMisReservas(); }
-    else { btn.disabled = false; btn.textContent = 'Cancelar esta reserva'; alert('Error al cancelar.'); }
-  }, function(e) { btn.disabled = false; btn.textContent = 'Cancelar esta reserva'; alert('Error: ' + e.message); });
+  var btn = event.target; btn.disabled = true; btn.textContent = '⏳ Cancelando...';
+  api({ action: 'cancelarReserva', nombre: E.nombre, fecha: fecha }, function(res) { if (res.exito) { irMisReservas(); } else { btn.disabled = false; btn.textContent = 'Cancelar esta reserva'; alert('Error al cancelar.'); } }, function(e) { btn.disabled = false; btn.textContent = 'Cancelar esta reserva'; alert('Error: ' + e.message); });
 }
 
-// ─── S2: Equipamiento ─────────────────────────────────────────────────────────
 function renderEquip() {
-  var d = E.datos;
-  var pat = d.necesitaPatines, tal = d.talla, pro = d.necesitaProtecciones;
-  var titulos = {
-    '00': '✅ No necesitas equipamiento prestado',
-    '10': '🛼 Necesitas patines, pero no protecciones',
-    '01': '🛡️ No necesitas patines, pero sí protecciones',
-    '11': '🛼🛡️ Necesitas patines y protecciones'
-  };
+  var d = E.datos; var pat = d.necesitaPatines, tal = d.talla, pro = d.necesitaProtecciones;
+  var titulos = { '00': '✅ No necesitas equipamiento prestado', '10': '🛼 Necesitas patines, pero no protecciones', '01': '🛡️ No necesitas patines, pero sí protecciones', '11': '🛼🛡️ Necesitas patines y protecciones' };
   var k = (pat.toLowerCase() !== 'no' ? '1' : '0') + (pro.toLowerCase() !== 'no' ? '1' : '0');
   document.getElementById('s2-titulo').textContent = titulos[k] || 'Tu equipamiento';
   var h = '<div class="r-titulo">Detalle</div>';
-  h += fila('¿Necesita patines?', pat);
-  if (tal) h += fila('Talla', tal);
-  h += fila('¿Necesita protecciones?', pro);
+  h += fila('¿Necesita patines?', pat); if (tal) h += fila('Talla', tal); h += fila('¿Necesita protecciones?', pro);
   document.getElementById('s2-resumen').innerHTML = h;
 }
-
-function fila(label, val) {
-  return '<div class="r-fila"><span class="r-label">'+label+'</span><span class="r-valor">'+val+'</span></div>';
-}
+function fila(label, val) { return '<div class="r-fila"><span class="r-label">'+label+'</span><span class="r-valor">'+val+'</span></div>'; }
 
 function continuar_s2() {
   if (!E.conf) { err('err-s2', 'Por favor selecciona una opción.'); return; }
-  if (E.conf === 'si') {
-    cargarFechas();
-  } else {
+  if (E.conf === 'si') { cargarFechas(); } else {
     E.editPat = ''; E.editTalla = ''; E.editProtec = '';
-    document.querySelectorAll('input[name="edit-pat"],input[name="edit-protec"]').forEach(function(r) {
-      r.checked = false; r.closest('.opcion').classList.remove('sel');
-    });
-    document.getElementById('txt-otro').style.display = 'none';
-    ir('s3a');
+    document.querySelectorAll('input[name="edit-pat"],input[name="edit-protec"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
+    document.getElementById('txt-otro').style.display = 'none'; ir('s3a');
   }
 }
 
-// ─── S3a ──────────────────────────────────────────────────────────────────────
 function continuar_s3a() {
   if (!E.editPat) { err('err-s3a', 'Por favor selecciona una opción.'); return; }
-if (E.editPat === 'Sí') {
+  if (E.editPat === 'Sí') {
     mostrarCargando('Cargando tallas...');
     api({ action: 'getTallasDisponibles' }, function(tallas) {
-      var sel = document.getElementById('sel-talla');
-      sel.innerHTML = '<option value="">— Elige una talla —</option>';
+      var sel = document.getElementById('sel-talla'); sel.innerHTML = '<option value="">— Elige una talla —</option>';
       tallas.forEach(function(t) { var o = document.createElement('option'); o.value = o.textContent = t; sel.appendChild(o); });
-      ocultarCargando();
-      ir('s3b');
+      ocultarCargando(); ir('s3b');
     }, function(e) { ocultarCargando(); err('err-s3a', 'Error: ' + e.message); });
-  } else {
-    E.editTalla = ''; ir('s3c');
-  }
+  } else { E.editTalla = ''; ir('s3c'); }
 }
 
-// ─── S3b ──────────────────────────────────────────────────────────────────────
 function continuar_s3b() {
   var t = document.getElementById('sel-talla').value;
   if (!t) { err('err-s3b', 'Por favor selecciona una talla.'); return; }
   E.editTalla = t; ir('s3c');
 }
 
-// ─── S3c ──────────────────────────────────────────────────────────────────────
 function continuar_s3c() {
   if (!E.editProtec) { err('err-s3c', 'Por favor selecciona una opción.'); return; }
   var protecFinal = E.editProtec;
@@ -1770,814 +1172,236 @@ function continuar_s3c() {
     protecFinal = txt;
   }
   mostrarCargando('Guardando equipamiento...');
-  api({
-    action: 'actualizarEquipamientoPersona',
-    nombre: E.nombre,
-    necesitaPatines: E.editPat,
-    talla: E.editTalla,
-    necesitaProtecciones: protecFinal
-  }, function() {
-    ocultarCargando();
-    E.datos.necesitaPatines      = E.editPat;
-    E.datos.talla                = E.editTalla;
-    E.datos.necesitaProtecciones = protecFinal;
-    E.conf = '';
+  api({ action: 'actualizarEquipamientoPersona', nombre: E.nombre, necesitaPatines: E.editPat, talla: E.editTalla, necesitaProtecciones: protecFinal }, function() {
+    ocultarCargando(); E.datos.necesitaPatines = E.editPat; E.datos.talla = E.editTalla; E.datos.necesitaProtecciones = protecFinal; E.conf = '';
     document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
-    renderEquip();
-    ir('s2');
+    renderEquip(); ir('s2');
   }, function(e) { ocultarCargando(); err('err-s3c', 'Error al guardar: ' + e.message); });
 }
 
-// ─── PRECIOS / TIPO PAGO ──────────────────────────────────────────────────────
-function canPayMonthly() {
-  if (!E.datos) return false;
-  return E.datos.necesitaPatines.toLowerCase() === 'no' && E.datos.necesitaProtecciones.toLowerCase() === 'no';
-}
+function canPayMonthly() { if (!E.datos) return false; return E.datos.necesitaPatines.toLowerCase() === 'no' && E.datos.necesitaProtecciones.toLowerCase() === 'no'; }
 function necesitaEquipo() { return !canPayMonthly(); }
 function actualizarTextosPago() {
-
   var necesitaEquipamiento = !canPayMonthly();
-
-  document.getElementById('s4-label').textContent =
-    necesitaEquipamiento
-      ? 'Paso 2 de 4 — Fecha y pago'
-      : 'Paso 2 de 4 — Selecciona el tipo de modalidad';
-
-  document.getElementById('s4-titulo').textContent =
-    necesitaEquipamiento
-      ? 'Selecciona los entrenamientos'
-      : 'Selecciona tu modalidad';
-
-  document.getElementById('chk-pago-texto').textContent =
-    canPayMonthly()
-      ? 'Ya realicé mi pago y entiendo este estará pendiente hasta que sea verificada por el equipo.'
-      : 'Ya realicé mi pago y entiendo que mi reserva quedará pendiente hasta que sea verificada por el equipo.';
-
-  document.getElementById('nota-pago-hint').textContent =
-    canPayMonthly()
-      ? 'Escribe tu nombre o referencia así sabemos que el pago corresponde a tí.'
-      : 'Escribe tu nombre o referencia de a quien corresponde la reserva así sabemos que el pago corresponde a tí.';
-
-  var wpHintEl = document.getElementById('wp-hint');
-if (wpHintEl) wpHintEl.textContent =
-    canPayMonthly()
-      ? 'Envía tu comprobante para agilizar la verificación de tu pago.'
-      : 'Envía tu comprobante para agilizar la verificación de tu reserva.';
+  document.getElementById('s4-label').textContent = necesitaEquipamiento ? 'Paso 2 de 4 — Fecha y pago' : 'Paso 2 de 4 — Selecciona el tipo de modalidad';
+  document.getElementById('s4-titulo').textContent = necesitaEquipamiento ? 'Selecciona los entrenamientos' : 'Selecciona tu modalidad';
+  document.getElementById('chk-pago-texto').textContent = canPayMonthly() ? 'Ya realicé mi pago y entiendo este estará pendiente hasta que sea verificada por el equipo.' : 'Ya realicé mi pago y entiendo que mi reserva quedará pendiente hasta que sea verificada por el equipo.';
+  document.getElementById('nota-pago-hint').textContent = canPayMonthly() ? 'Escribe tu nombre o referencia así sabemos que el pago corresponde a tí.' : 'Escribe tu nombre o referencia de a quien corresponde la reserva así sabemos que el pago corresponde a tí.';
 }
 
 function selTipoPago(tipo, label) {
-  document.querySelectorAll('input[name="tipo-pago"]').forEach(function(r) {
-    r.checked = false;
-    r.closest('.opcion').classList.remove('sel');
-  });
-  label.classList.add('sel');
-  var radio = label.querySelector('input[type="radio"]');
-  if (radio) radio.checked = true;
-  E.tipoPago = tipo;
-  E.fechas = [];
-
-  document.querySelectorAll('input[name="fecha"]').forEach(function(c) {
-    c.checked = false;
-    c.closest('.fecha-item').classList.remove('sel');
-  });
-
-  var subtitulo = document.getElementById('s4-fechas-subtitulo');
-  var listaFechas = document.getElementById('lista-fechas');
-
-if (tipo === 'mensual' && canPayMonthly()) {
-    subtitulo.style.display = 'none';
-    listaFechas.style.display = 'none';
-    document.getElementById('s4-meses-wrapper').style.display = 'block';
-    // Ocultar y desactivar cupón en modo mensual
-    var cw = document.getElementById('s4-cupon-wrapper');
-    if (cw) cw.style.display = 'none';
-    var cc = document.getElementById('chk-cupon');
-    if (cc) cc.checked = false;
-    E.cuponAplicado = false;
+  document.querySelectorAll('input[name="tipo-pago"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
+  label.classList.add('sel'); var radio = label.querySelector('input[type="radio"]'); if (radio) radio.checked = true;
+  E.tipoPago = tipo; E.fechas = [];
+  document.querySelectorAll('input[name="fecha"]').forEach(function(c) { c.checked = false; c.closest('.fecha-item').classList.remove('sel'); });
+  var subtitulo = document.getElementById('s4-fechas-subtitulo'); var listaFechas = document.getElementById('lista-fechas');
+  if (tipo === 'mensual' && canPayMonthly()) {
+    subtitulo.style.display = 'none'; listaFechas.style.display = 'none'; document.getElementById('s4-meses-wrapper').style.display = 'block';
+    var cw = document.getElementById('s4-cupon-wrapper'); if (cw) cw.style.display = 'none';
+    var cc = document.getElementById('chk-cupon'); if (cc) cc.checked = false; E.cuponAplicado = false;
   } else {
-    subtitulo.style.display = 'block';
-    listaFechas.style.display = 'block';
-    document.getElementById('s4-meses-wrapper').style.display = 'none';
-    document.querySelectorAll('#lista-meses input').forEach(function(cb) { cb.checked = false; });
-    E.meses = [];
-    subtitulo.textContent = tipo === 'mensual'
-      ? 'Opcionalmente, puedes seleccionar a qué entrenamientos asistirás este mes.'
-      : 'Selecciona los próximos entrenamientos a los que asistirás.';
-    // Mostrar cupón en modo clase si está disponible
-    var cw2 = document.getElementById('s4-cupon-wrapper');
-    if (cw2) cw2.style.display = tieneCuponDisponible() ? 'block' : 'none';
+    subtitulo.style.display = 'block'; listaFechas.style.display = 'block'; document.getElementById('s4-meses-wrapper').style.display = 'none';
+    document.querySelectorAll('#lista-meses input').forEach(function(cb) { cb.checked = false; }); E.meses = [];
+    subtitulo.textContent = tipo === 'mensual' ? 'Opcionalmente, puedes seleccionar a qué entrenamientos asistirás este mes.' : 'Selecciona los próximos entrenamientos a los que asistirás.';
+    var cw2 = document.getElementById('s4-cupon-wrapper'); if (cw2) cw2.style.display = tieneCuponDisponible() ? 'block' : 'none';
   }
-
   actualizarTotalS4();
 }
 
-function toggleCupon(cb) {
-  E.cuponAplicado = cb.checked;
-  actualizarTotalS4();
-}
+function toggleCupon(cb) { E.cuponAplicado = cb.checked; actualizarTotalS4(); }
 
-// ── FIX 1 companion: actualizarTotalS4 lee los checkboxes con onchange ────────
 function actualizarTotalS4() {
   var total = 0;
-
   if (E.tipoPago === 'mensual') {
-
-   var mesesSeleccionados = Array.from(
-      document.querySelectorAll('#lista-meses input:checked, #lista-meses-pasados input:checked')
-    ).map(function(cb) {
-      return cb.value;
-    });
-
-    E.meses = mesesSeleccionados;
-
-    total = mesesSeleccionados.length * E.precioMensual;
-
+    var mesesSeleccionados = Array.from(document.querySelectorAll('#lista-meses input:checked, #lista-meses-pasados input:checked')).map(function(cb) { return cb.value; });
+    E.meses = mesesSeleccionados; total = mesesSeleccionados.length * E.precioMensual;
     document.getElementById('s4-meses-wrapper').style.display = 'block';
-
   } else {
-
-    total = E.fechas.length * E.precioPorClase;
-
-    document.getElementById('s4-meses-wrapper').style.display = 'none';
-
-    E.meses = [];
+    total = E.fechas.length * E.precioPorClase; document.getElementById('s4-meses-wrapper').style.display = 'none'; E.meses = [];
   }
-
-  // Cupón activo: fuerza total a $0
-  if (E.cuponAplicado && E.tipoPago === 'clase') {   total = Math.max(0, E.fechas.length - 1) * E.precioPorClase; }
-
+  if (E.cuponAplicado && E.tipoPago === 'clase') { total = Math.max(0, E.fechas.length - 1) * E.precioPorClase; }
   E.totalPago = total;
-
   var box = document.getElementById('s4-total-box');
-
   if (E.cuponAplicado && E.tipoPago === 'clase') {
-  box.style.display = 'block';
-  var extras = E.fechas.length - 1;
-  box.innerHTML =
-    '<div class="total-box" style="background:#f0fdf4;border-color:#22c55e;">' +
-    '<div style="color:#166534;">🎟️ Cupón aplicado — Clase gratis</div>' +
-    (extras > 0
-      ? '<div style="font-size:1.5rem;font-weight:800;color:#16a34a;">$' + total.toFixed(2) + '</div>' +
-        '<div style="font-size:0.78rem;color:#4ade80;">' + extras + ' clase' + (extras > 1 ? 's' : '') + ' adicional' + (extras > 1 ? 'es' : '') + ' × $' + E.precioPorClase.toFixed(2) + '</div>'
-      : '<div style="font-size:1.5rem;font-weight:800;color:#16a34a;">$0.00</div>' +
-        '<div style="font-size:0.78rem;color:#4ade80;">Clase gratis ✓</div>'
-    ) +
-    '</div>';
-} else if (total > 0) {
-    box.style.display = 'block';
-    box.innerHTML =
-      '<div class="total-box">' +
-      '<div>Total a pagar:</div>' +
-      '<div style="font-size:1.5rem;font-weight:800;">$' +
-      total.toFixed(2) +
-      '</div></div>';
-  } else {
-    box.style.display = 'none';
-  }
+    box.style.display = 'block'; var extras = E.fechas.length - 1;
+    box.innerHTML = '<div class="total-box" style="background:#f0fdf4;border-color:#22c55e;"><div style="color:#166534;">🎟️ Cupón aplicado — Clase gratis</div>' +
+      (extras > 0 ? '<div style="font-size:1.6rem;font-weight:800;color:#16a34a;">$' + total.toFixed(2) + '</div><div style="font-size:0.8rem;color:#4ade80;">' + extras + ' clase' + (extras > 1 ? 's' : '') + ' adicional' + (extras > 1 ? 'es' : '') + ' × $' + E.precioPorClase.toFixed(2) + '</div>'
+                  : '<div style="font-size:1.6rem;font-weight:800;color:#16a34a;">$0.00</div><div style="font-size:0.8rem;color:#4ade80;">Clase gratis ✓</div>') + '</div>';
+  } else if (total > 0) { box.style.display = 'block'; box.innerHTML = '<div class="total-box"><div>Total a pagar:</div><div style="font-size:1.6rem;font-weight:800;">$' + total.toFixed(2) + '</div></div>'; } else { box.style.display = 'none'; }
 }
 
-// ─── S4: Fechas ───────────────────────────────────────────────────────────────
 function cargarFechas() {
   ir('s-carga-fechas');
-  var d = E.datos;
-  var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
-  api({
-    action: 'getFechasDisponibles', nombre: E.nombre,
-    talla: talla, necesitaProtecciones: d.necesitaProtecciones
-  }, function(fechas) {
+  var d = E.datos; var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
+  api({ action: 'getFechasDisponibles', nombre: E.nombre, talla: talla, necesitaProtecciones: d.necesitaProtecciones }, function(fechas) {
     var disponibles = fechas.filter(function(f) { return f.disponible; });
     var html = '';
-    if (fechas.length === 0) {
-      html = '<p style="color:#888;text-align:center;">No hay fechas disponibles.</p>';
-    } else {
+    if (fechas.length === 0) { html = '<p style="color:#888;text-align:center;">No hay fechas disponibles.</p>'; } else {
       fechas.forEach(function(f) {
-        if (f.disponible) {
-          html += '<div class="fecha-item" onclick="toggleFecha(this,\'' + f.fecha.replace(/'/g,"\\'") + '\')">' +
-            '<input type="checkbox" name="fecha" value="' + f.fecha + '" style="accent-color:#F97316;width:17px;height:17px;flex-shrink:0;">' +
-            '<div><div class="fecha-nombre">' + f.fecha + '</div></div></div>';
-        } else {
-          html += '<div class="fecha-item agotada">' +
-            '<div><div class="fecha-nombre">' + f.fecha + '</div>' +
-            '<div class="fecha-razon">⚠ ' + f.razon + '</div></div></div>';
-        }
+        if (f.disponible) { html += '<div class="fecha-item" onclick="toggleFecha(this,\'' + f.fecha.replace(/'/g,"\\'") + '\')"><input type="checkbox" name="fecha" value="' + f.fecha + '"><div><div class="fecha-nombre">' + f.fecha + '</div></div></div>'; }
+        else { html += '<div class="fecha-item agotada"><div><div class="fecha-nombre">' + f.fecha + '</div><div class="fecha-razon">⚠ ' + f.razon + '</div></div></div>'; }
       });
     }
-    document.getElementById('lista-fechas').innerHTML = html;
-    E.fechas = [];
-
-    var puedeMensual = canPayMonthly();
-    var wrapper = document.getElementById('s4-tipo-pago-wrapper');
-    var subtitulo = document.getElementById('s4-fechas-subtitulo');
-
-    if (puedeMensual) {
-      wrapper.style.display = 'block';
-      E.tipoPago = 'mensual';
-
-      var opcionMensual = document.getElementById('opcion-tipo-mensual');
-      selTipoPago('mensual', opcionMensual);
-    } else {
-      wrapper.style.display = 'none';
-      E.tipoPago = 'clase';
-      subtitulo.textContent = 'Selecciona los entrenamientos a los que asistirás.';
-      document.getElementById('s4-total-box').style.display = 'none';
-      document.getElementById('s4-meses-wrapper').style.display = 'none';
-      document.querySelectorAll('#lista-meses input').forEach(function(cb) { cb.checked = false; });
-      E.meses = [];
-      E.totalPago = 0;
-      if (disponibles.length === 0) {
-        err('err-s4', 'No hay cupos disponibles actualmente.');
-      }
+    document.getElementById('lista-fechas').innerHTML = html; E.fechas = [];
+    var puedeMensual = canPayMonthly(); var wrapper = document.getElementById('s4-tipo-pago-wrapper'); var subtitulo = document.getElementById('s4-fechas-subtitulo');
+    if (puedeMensual) { wrapper.style.display = 'block'; E.tipoPago = 'mensual'; selTipoPago('mensual', document.getElementById('opcion-tipo-mensual')); }
+    else {
+      wrapper.style.display = 'none'; E.tipoPago = 'clase'; subtitulo.textContent = 'Selecciona los entrenamientos a los que asistirás.';
+      document.getElementById('s4-total-box').style.display = 'none'; document.getElementById('s4-meses-wrapper').style.display = 'none';
+      document.querySelectorAll('#lista-meses input').forEach(function(cb) { cb.checked = false; }); E.meses = []; E.totalPago = 0;
+      if (disponibles.length === 0) { err('err-s4', 'No hay cupos disponibles actualmente.'); }
     }
-actualizarTextosPago();
-    // Cupón: solo visible en modo "por clase"
-    var cuponWrap = document.getElementById('s4-cupon-wrapper');
-    var chkCupon  = document.getElementById('chk-cupon');
+    actualizarTextosPago();
+    var cuponWrap = document.getElementById('s4-cupon-wrapper'); var chkCupon  = document.getElementById('chk-cupon');
     if (cuponWrap) cuponWrap.style.display = (!puedeMensual && tieneCuponDisponible()) ? 'block' : 'none';
-    if (chkCupon) chkCupon.checked = false;
-    E.cuponAplicado = false;
+    if (chkCupon) chkCupon.checked = false; E.cuponAplicado = false;
     ir('s4');
   }, function(e) { ir('s2'); err('err-s2', 'Error al verificar fechas: ' + e.message); });
 }
 
 function toggleFecha(el, fecha) {
-  var chk = el.querySelector('input[type="checkbox"]');
-  chk.checked = !chk.checked;
-  el.classList.toggle('sel', chk.checked);
-  E.fechas = Array.from(document.querySelectorAll('input[name="fecha"]:checked')).map(function(c) { return c.value; });
-  actualizarTotalS4();
+  var chk = el.querySelector('input[type="checkbox"]'); chk.checked = !chk.checked; el.classList.toggle('sel', chk.checked);
+  E.fechas = Array.from(document.querySelectorAll('input[name="fecha"]:checked')).map(function(c) { return c.value; }); actualizarTotalS4();
 }
 
 function continuar_s4() {
-
-  if (E.tipoPago === 'mensual') {
-
-    if (!E.meses || E.meses.length === 0) {
-      err('err-s4', 'Por favor selecciona al menos un mes.');
-      return;
-    }
-
-} else {
-
-    if (!E.fechas || E.fechas.length === 0) {
-      err('err-s4', 'Por favor selecciona al menos una fecha.');
-      return;
-    }
-
-    }
-  
+  if (E.tipoPago === 'mensual') { if (!E.meses || E.meses.length === 0) { err('err-s4', 'Por favor selecciona al menos un mes.'); return; } }
+  else { if (!E.fechas || E.fechas.length === 0) { err('err-s4', 'Por favor selecciona al menos una fecha.'); return; } }
   var esClase = E.tipoPago === 'clase';
   document.getElementById('s-pago-total-monto').textContent = 'Total a pagar: $' + (E.totalPago || 0).toFixed(2);
-  document.getElementById('s-pago-total-detalle').textContent = esClase
-    ? E.fechas.length + (E.fechas.length === 1 ? ' clase' : ' clases') + ' × $' + E.precioPorClase.toFixed(2)
-    : E.meses.join(', ');
-  document.getElementById('chk-pago').checked = false;
-  document.getElementById('btn-pago').disabled = true;
-  document.getElementById('nota-pago').value = '';
-  // Resetear estado WhatsApp
-  E.wpEnviado = false;
-var btnWp = document.getElementById('btn-wp');
-if (btnWp) {
-  btnWp.className = 'btn-wp-inactivo';
-  btnWp.innerHTML = '<span style="font-size:1.1rem;">📲</span> Enviar comprobante por WhatsApp';
-}
-var hint = document.querySelector('.wp-hint');
-if (hint) { hint.textContent = 'Envía tu comprobante para agilizar la verificación de tu reserva.'; hint.classList.remove('wp-confirmado'); }
-  // Armar link de WhatsApp con contexto
-  var fechasTexto = E.tipoPago === 'mensual' ? 'pago mensual' : E.fechas.join(', ');
-  // Equipamiento
-  var d = E.datos;
-  var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : '';
-  var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : '';
-  var equipLinea = '';
-  if (talla && protec && protec.toLowerCase() !== 'no') {
-    equipLinea = 'Necesitare patines talla ' + talla + ' y protecciones.';
-  } else if (talla) {
-    equipLinea = 'Necesitare patines talla ' + talla + '.';
-  } else if (protec && protec.toLowerCase() !== 'no') {
-    equipLinea = 'Necesitare protecciones (' + protec + ').';
-  } else {
-    equipLinea = 'Llevare mi propio equipamiento.';
-  }
-
-  var lineasFechas;
-
-  if (E.tipoPago === 'mensual') {
-    lineasFechas =
-      'Meses pagados:\n- ' +
-      E.meses.join('\n- ') +
-      '\n\nTotal: $' +
-      (E.totalPago || 0).toFixed(2);
-  } else {
-    lineasFechas = E.fechas
-      .map(function(f) { return '- ' + f; })
-      .join('\n');
-  }
-
-  var msgWp =
-    '¡Hola! Soy *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '*.\n\n' +
-    '*Clases reservadas:*\n' + lineasFechas + '\n\n' +
-    equipLinea + '\n\n' +
-    'Te envío el comprobante adjunto. Si no lo ves, por favor solicítamelo. ¡Gracias!';
-
-E.wpUrl = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp);
-
-  // Con cupón: saltar pantalla de pago, ir directo al resumen
-  if (E.cuponAplicado) {
-    E.notaPago = 'Cupón primera clase gratis';
-    construirResumenS5('s4');
-    ir('s5');
-    return;
-  }
-
+  document.getElementById('s-pago-total-detalle').textContent = esClase ? E.fechas.length + (E.fechas.length === 1 ? ' clase' : ' clases') + ' × $' + E.precioPorClase.toFixed(2) : E.meses.join(', ');
+  document.getElementById('chk-pago').checked = false; document.getElementById('btn-pago').disabled = true; document.getElementById('nota-pago').value = ''; E.wpEnviado = false;
+  var lineasFechas = E.tipoPago === 'mensual' ? 'Meses pagados:\n- ' + E.meses.join('\n- ') + '\n\nTotal: $' + (E.totalPago || 0).toFixed(2) : E.fechas.map(function(f) { return '- ' + f; }).join('\n');
+  var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : ''; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : '';
+  var equipLinea = (talla && protec && protec.toLowerCase() !== 'no') ? 'Necesitare patines talla ' + talla + ' y protecciones.' : (talla) ? 'Necesitare patines talla ' + talla + '.' : (protec && protec.toLowerCase() !== 'no') ? 'Necesitare protecciones (' + protec + ').' : 'Llevare mi propio equipamiento.';
+  var msgWp = '¡Hola! Soy *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '*.\n\n*Clases reservadas:*\n' + lineasFechas + '\n\n' + equipLinea + '\n\nTe envío el comprobante adjunto. Si no lo ves, por favor solicítamelo. ¡Gracias!';
+  E.wpUrl = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp);
+  if (E.cuponAplicado) { E.notaPago = 'Cupón primera clase gratis'; construirResumenS5('s4'); ir('s5'); return; }
   ir('s-pago');
 }
 
-// ─── S-PAGO ───────────────────────────────────────────────────────────────────
-function toggleBtnPago() {
-  document.getElementById('btn-pago').disabled = !document.getElementById('chk-pago').checked;
-}
-
-function marcarWpEnviado(el) {
-  E.wpEnviado = true;
-  el.className = 'btn-wp-activo';
-  el.innerHTML = '<span style="font-size:1.1rem;">✅</span> Comprobante enviado';
-  var hint = document.querySelector('.wp-hint');
-  if (hint) { hint.textContent = '¡Gracias! Revisaremos tu pago a la brevedad.'; hint.classList.add('wp-confirmado'); }
-}
+function toggleBtnPago() { document.getElementById('btn-pago').disabled = !document.getElementById('chk-pago').checked; }
 
 function construirResumenS5(backTarget) {
-  document.getElementById('btn-confirmar').disabled = false;
-  document.getElementById('btn-confirmar').textContent = necesitaEquipo() ? 'Confirmar mi reserva' : 'Confirmar mi pago';
-  document.getElementById('s5-titulo-h2').textContent = necesitaEquipo() ? 'Resumen de tu reserva' : 'Resumen de tu pago';
-  document.getElementById('s5-liberar-cupo').style.display = necesitaEquipo() ? 'block' : 'none';
-  var d = E.datos;
-  var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
+  document.getElementById('btn-confirmar').disabled = false; document.getElementById('btn-confirmar').textContent = necesitaEquipo() ? 'Confirmar mi reserva' : 'Confirmar mi pago';
+  document.getElementById('s5-titulo-h2').textContent = necesitaEquipo() ? 'Resumen de tu reserva' : 'Resumen de tu pago'; document.getElementById('s5-liberar-cupo').style.display = necesitaEquipo() ? 'block' : 'none';
+  var d = E.datos; var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
   var h = '<div class="r-titulo">Tu reserva</div>';
-  h += fila('Nombre', E.nombre);
-  h += fila('Tipo de pago', E.tipoPago === 'mensual' ? '📅 Mensual' : '🎟️ Por clase');
-  if (E.cuponAplicado) {
-  var textoTotal = E.totalPago > 0
-    ? '🎟️ 1ª clase gratis + $' + E.totalPago.toFixed(2) + ' por ' + (E.fechas.length - 1) + ' clase' + (E.fechas.length > 2 ? 's' : '') + ' adicional' + (E.fechas.length > 2 ? 'es' : '')
-    : '🎟️ $0.00 — Primera clase gratis';
-  h += fila('Total', '<span style="color:#16a34a;font-weight:800;">' + textoTotal + '</span>');
-  } else {
-    h += fila('Total', '$' + (E.totalPago || 0).toFixed(2));
-  }
-  // ── FIX 2: mostrar meses en el resumen de confirmación ──────────────────────
-  if (E.tipoPago === 'clase') {
-    h += fila('Fecha/s', E.fechas.map(function(f) { return '• ' + f; }).join('<br>'));
-  } else if (E.meses && E.meses.length > 0) {
-    h += fila('Meses pagados', E.meses.map(function(m) { return '• ' + m; }).join('<br>'));
-  }
-  h += fila('Patines', d.necesitaPatines + (talla ? ' — Talla ' + talla : ''));
-  h += fila('Protecciones', d.necesitaProtecciones);
-  if (E.notaPago) h += fila('Referencia pago', E.notaPago);
+  h += fila('Nombre', E.nombre); h += fila('Tipo de pago', E.tipoPago === 'mensual' ? '📅 Mensual' : '🎟️ Por clase');
+  if (E.cuponAplicado) { var textoTotal = E.totalPago > 0 ? '🎟️ 1ª clase gratis + $' + E.totalPago.toFixed(2) : '🎟️ $0.00 — Primera clase gratis'; h += fila('Total', '<span style="color:#16a34a;font-weight:800;">' + textoTotal + '</span>'); }
+  else { h += fila('Total', '<span style="font-weight:800;">$' + (E.totalPago || 0).toFixed(2) + '</span>'); }
+  if (E.tipoPago === 'clase') { h += fila('Fecha/s', E.fechas.map(function(f) { return '• ' + f; }).join('<br>')); } else if (E.meses && E.meses.length > 0) { h += fila('Meses pagados', E.meses.map(function(m) { return '• ' + m; }).join('<br>')); }
+  h += fila('Patines', d.necesitaPatines + (talla ? ' — Talla ' + talla : '')); h += fila('Protecciones', d.necesitaProtecciones); if (E.notaPago) h += fila('Referencia pago', E.notaPago);
   document.getElementById('s5-resumen').innerHTML = h;
-  // Ajustar botón "← Volver" de S5 según el flujo
-  var s5Back = document.querySelector('#s5 .btn-secondary');
-  if (s5Back) s5Back.onclick = function() { volver(backTarget || 's-pago'); };
+  var s5Back = document.querySelector('#s5 .btn-secondary'); if (s5Back) s5Back.onclick = function() { volver(backTarget || 's-pago'); };
 }
 
 function continuar_pago() {
   if (!document.getElementById('chk-pago').checked) { err('err-pago', 'Debes confirmar que realizaste el pago.'); return; }
-  if (!E.wpEnviado) { err('err-pago', '📲 Envía tu comprobante por WhatsApp para agilizar la revisión de tu reserva.'); return; }
-  E.notaPago = document.getElementById('nota-pago').value.trim();
-  construirResumenS5('s-pago');
-  ir('s5');
+  E.notaPago = document.getElementById('nota-pago').value.trim(); construirResumenS5('s-pago'); ir('s5');
 }
 
-// ─── S5: Confirmar ────────────────────────────────────────────────────────────
 function confirmarReserva() {
-  var btn = document.getElementById('btn-confirmar');
-  btn.disabled = true;
-  ir('s-carga-conf');
-  var d = E.datos;
-  var talla  = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : 'No';
-  var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : 'No';
-
+  var btn = document.getElementById('btn-confirmar'); btn.disabled = true; ir('s-carga-conf');
+  var d = E.datos; var talla  = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : 'No'; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : 'No';
   function finalizar() {
-
-    var fechasStr = E.fechas.length > 0
-      ? E.fechas.join(', ')
-      : (E.tipoPago === 'mensual'
-          ? 'mensual (sin clases seleccionadas)'
-          : '—');
-
-api({
-      action: 'guardarNotaPago',
-      nombre: E.nombre,
-      tipoPago: E.tipoPago,
-      monto: (E.totalPago || 0).toFixed(2),
-      nota: E.notaPago || '—',
-      fechas: fechasStr,
-      meses: E.meses.join(', '),
-      email: E.datos.email || ''
-    }, function() {}, function() {});
-
-    // Marcar cupón como usado (localStorage + ocultar banner)
-    if (E.cuponAplicado && E.totalPago === 0) {
-      marcarCuponUsadoLocal();
-      var bannerCuponUsado = document.getElementById('banner-cupon');
-      if (bannerCuponUsado) bannerCuponUsado.style.display = 'none';
-    }
-
-var necesitaPatinesLocal = (E.datos.necesitaPatines || '').toLowerCase() !== 'no' && E.datos.necesitaPatines;
-    var tallaLocal = E.datos.talla || '';
-    var protecLocal = (E.datos.necesitaProtecciones || '').toLowerCase() !== 'no' ? E.datos.necesitaProtecciones : '';
-
+    var fechasStr = E.fechas.length > 0 ? E.fechas.join(', ') : (E.tipoPago === 'mensual' ? 'mensual (sin clases seleccionadas)' : '—');
+    api({ action: 'guardarNotaPago', nombre: E.nombre, tipoPago: E.tipoPago, monto: (E.totalPago || 0).toFixed(2), nota: E.notaPago || '—', fechas: fechasStr, meses: E.meses.join(', '), email: E.datos.email || '' }, function() {}, function() {});
+    if (E.cuponAplicado && E.totalPago === 0) { marcarCuponUsadoLocal(); var bannerCuponUsado = document.getElementById('banner-cupon'); if (bannerCuponUsado) bannerCuponUsado.style.display = 'none'; }
+    var necesitaPatinesLocal = (E.datos.necesitaPatines || '').toLowerCase() !== 'no' && E.datos.necesitaPatines; var tallaLocal = E.datos.talla || ''; var protecLocal = (E.datos.necesitaProtecciones || '').toLowerCase() !== 'no' ? E.datos.necesitaProtecciones : '';
     var necesitaEquipo = !!necesitaPatinesLocal || !!protecLocal;
-
-    var equipMsg = necesitaEquipo
-      ? (necesitaPatinesLocal ? 'Patines: Sí (talla ' + (tallaLocal || '?') + ')\n' : '') +
-        (protecLocal ? '· Protecciones: Necesita protecciones (' + protecLocal + ')' : '')
-      : 'Equipamiento propio';
-
-    var fechasHtml = '';
-
-    if (E.tipoPago === 'mensual') {
-      fechasHtml =
-        '· Pago mensual ($' + (E.totalPago || 0).toFixed(2) + ')\n' +
-        E.meses.map(function(m) { return '· ' + m; }).join('\n');
-    } else {
-      fechasHtml = E.fechas.map(function(f) {
-        return '· ' + f;
-      }).join('\n');
-    }
-
-    document.getElementById('s6-detalle').innerHTML =
-      '<strong>' + E.nombre + '</strong>' +
-      '<br><br>' +
-      fechasHtml +
-      '<br><br>' +
-      '· ' + equipMsg;
-
-    if (necesitaEquipo) {
-      document.getElementById('s6-titulo').textContent = '¡Reserva registrada!';
-      document.getElementById('s6-texto').innerHTML =
-        'Puedes revisar el estado desde <strong>"Ver mis reservas"</strong>. ' +
-        'Si no puedes venir, cancela para liberar el cupo.';
-    } else {
-      document.getElementById('s6-titulo').textContent = '¡Pago registrado!';
-      document.getElementById('s6-texto').innerHTML =
-        'Puedes revisar el estado de tu pago desde <strong>"Ver mis reservas"</strong>.';
-    }
-
-if (E.cuponAplicado) {
-      var avisoEl = document.getElementById('s6-email-aviso');
-      avisoEl.textContent = '🎟️ Tu cupón de primera clase fue aplicado. ¡Nos vemos en el entrenamiento!';
-      avisoEl.style.cssText = 'background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 14px;font-size:0.85rem;color:#166534;margin-bottom:14px;text-align:center;';
-    } else if (E.datos && E.datos.email) {
-      document.getElementById('s6-email-aviso').textContent =
-        '⏳ Tu pago está pendiente de verificación. ' +
-        'Recibirás un correo en ' + E.datos.email +
-        ' cuando esté confirmado.';
-    }
-
-var btnWpExito = document.getElementById('btn-wp-exito');
-    if (E.cuponAplicado) {
-      if (btnWpExito) btnWpExito.style.display = 'none';
-    } else if (btnWpExito && E.wpUrl) {
-      btnWpExito.href = E.wpUrl;
-      btnWpExito.style.display = '';
-    }
-    ir('s6');}
-
-  // ── FIX 3: guardar en hoja Reservas también para pago mensual ───────────────
+    var equipMsg = necesitaEquipo ? (necesitaPatinesLocal ? 'Patines: Sí (talla ' + (tallaLocal || '?') + ')\n' : '') + (protecLocal ? '· Protecciones: Necesita protecciones (' + protecLocal + ')' : '') : 'Equipamiento propio';
+    var fechasHtml = ''; if (E.tipoPago === 'mensual') { fechasHtml = '· Pago mensual ($' + (E.totalPago || 0).toFixed(2) + ')\n' + E.meses.map(function(m) { return '· ' + m; }).join('\n'); } else { fechasHtml = E.fechas.map(function(f) { return '· ' + f; }).join('\n'); }
+    document.getElementById('s6-detalle').innerHTML = '<strong>' + E.nombre + '</strong><br><br>' + fechasHtml + '<br><br>· ' + equipMsg;
+    if (necesitaEquipo) { document.getElementById('s6-titulo').textContent = '¡Reserva registrada!'; document.getElementById('s6-texto').innerHTML = 'Puedes revisar el estado desde <strong>"Ver mis reservas"</strong>. Si no puedes venir, cancela para liberar el cupo.'; } else { document.getElementById('s6-titulo').textContent = '¡Pago registrado!'; document.getElementById('s6-texto').innerHTML = 'Puedes revisar el estado de tu pago desde <strong>"Ver mis reservas"</strong>.'; }
+    if (E.cuponAplicado) { var avisoEl = document.getElementById('s6-email-aviso'); avisoEl.textContent = '🎟️ Tu cupón de primera clase fue aplicado. ¡Nos vemos en el entrenamiento!'; avisoEl.style.cssText = 'background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;font-size:0.9rem;color:#166534;margin-bottom:18px;text-align:center;box-shadow: 0 4px 12px rgba(34,197,94,0.1);'; } else if (E.datos && E.datos.email) { document.getElementById('s6-email-aviso').textContent = '⏳ Tu pago está pendiente de verificación. Recibirás un correo en ' + E.datos.email + ' cuando esté confirmado.'; }
+    var btnWpExito = document.getElementById('btn-wp-exito'); if (E.cuponAplicado) { if (btnWpExito) btnWpExito.style.display = 'none'; } else if (btnWpExito && E.wpUrl) { btnWpExito.href = E.wpUrl; btnWpExito.style.display = ''; }
+    ir('s6');
+  }
   if (E.tipoPago === 'mensual') {
     var pendientesMeses = E.meses.slice();
-    function guardarMesSiguiente() {
-      if (pendientesMeses.length === 0) { finalizar(); return; }
-      var mes = pendientesMeses.shift();
-api({ action: 'guardarReserva', nombre: E.nombre, fecha: mes, talla: talla, protecciones: protec, monto: E.precioMensual.toFixed(2), email: E.datos.email || '' },
-        function() { guardarMesSiguiente(); },
-        function() { guardarMesSiguiente(); }
-      );
-    }
+    function guardarMesSiguiente() { if (pendientesMeses.length === 0) { finalizar(); return; } var mes = pendientesMeses.shift(); api({ action: 'guardarReserva', nombre: E.nombre, fecha: mes, talla: talla, protecciones: protec, monto: E.precioMensual.toFixed(2), email: E.datos.email || '' }, function() { guardarMesSiguiente(); }, function() { guardarMesSiguiente(); }); }
     guardarMesSiguiente();
   } else {
     var pendientes = E.fechas.slice();
-    function guardarSiguiente() {
-      if (pendientes.length === 0) { finalizar(); return; }
-      var fecha = pendientes.shift();
-api({ action: 'guardarReserva', nombre: E.nombre, fecha: fecha, talla: talla, protecciones: protec, monto: E.cuponAplicado ? '0.00' : E.precioPorClase.toFixed(2), email: E.datos.email || '' },
-        function() { guardarSiguiente(); },
-        function() { guardarSiguiente(); }
-      );
-    }
+    function guardarSiguiente() { if (pendientes.length === 0) { finalizar(); return; } var fecha = pendientes.shift(); api({ action: 'guardarReserva', nombre: E.nombre, fecha: fecha, talla: talla, protecciones: protec, monto: E.cuponAplicado ? '0.00' : E.precioPorClase.toFixed(2), email: E.datos.email || '' }, function() { guardarSiguiente(); }, function() { guardarSiguiente(); }); }
     guardarSiguiente();
   }
 }
 
-// ─── EDITAR DATOS ─────────────────────────────────────────────────────────────
-var OPCIONES_PREFIJO = [
-  '🇪🇨 +593 (Ecuador)','🇨🇴 +57 (Colombia)','🇵🇪 +51 (Perú)','🇻🇪 +58 (Venezuela)',
-  '🇦🇷 +54 (Argentina)','🇨🇱 +56 (Chile)','🇧🇴 +591 (Bolivia)','🇧🇷 +55 (Brasil)',
-  '🇵🇾 +595 (Paraguay)','🇺🇾 +598 (Uruguay)','🇲🇽 +52 (México)','🇬🇹 +502 (Guatemala)',
-  '🇭🇳 +504 (Honduras)','🇸🇻 +503 (El Salvador)','🇳🇮 +505 (Nicaragua)','🇨🇷 +506 (Costa Rica)',
-  '🇵🇦 +507 (Panamá)','🇨🇺 +53 (Cuba)','🇩🇴 +1809 (Rep. Dominicana)','🇭🇹 +509 (Haití)',
-  '🇯🇲 +1876 (Jamaica)','🇺🇸 +1 (Estados Unidos)','🇨🇦 +1 (Canadá)',
-  '🇪🇸 +34 (España)','🇵🇹 +351 (Portugal)','🇫🇷 +33 (Francia)','🇮🇹 +39 (Italia)',
-  '🇩🇪 +49 (Alemania)','🇬🇧 +44 (Reino Unido)','🇳🇱 +31 (Países Bajos)','🇧🇪 +32 (Bélgica)',
-  '🇨🇭 +41 (Suiza)','🇦🇹 +43 (Austria)','🇸🇪 +46 (Suecia)','🇳🇴 +47 (Noruega)',
-  '🇩🇰 +45 (Dinamarca)','🇫🇮 +358 (Finlandia)','🇵🇱 +48 (Polonia)','🇷🇺 +7 (Rusia)',
-  '🇺🇦 +380 (Ucrania)','🇬🇷 +30 (Grecia)','🇹🇷 +90 (Turquía)','🇷🇴 +40 (Rumania)',
-  '🇨🇿 +420 (Rep. Checa)','🇭🇺 +36 (Hungría)',
-  '🇨🇳 +86 (China)','🇯🇵 +81 (Japón)','🇰🇷 +82 (Corea del Sur)','🇮🇳 +91 (India)',
-  '🇮🇱 +972 (Israel)','🇦🇪 +971 (Emiratos Árabes)','🇸🇦 +966 (Arabia Saudita)',
-  '🇵🇭 +63 (Filipinas)','🇮🇩 +62 (Indonesia)','🇹🇭 +66 (Tailandia)','🇻🇳 +84 (Vietnam)',
-  '🇲🇾 +60 (Malasia)','🇸🇬 +65 (Singapur)',
-  '🇿🇦 +27 (Sudáfrica)','🇲🇦 +212 (Marruecos)','🇳🇬 +234 (Nigeria)','🇰🇪 +254 (Kenia)','🇪🇬 +20 (Egipto)',
-  '🇦🇺 +61 (Australia)','🇳🇿 +64 (Nueva Zelanda)'
-];
-
+// ─── EDICIÓN DE DATOS ─────────────────────────────────────────────────────────
 function cargarSelect(selectId, valor, otroInputId, campoOtroId) {
-  var sel = document.getElementById(selectId);
-  if (!sel || valor === undefined) return;
+  var sel = document.getElementById(selectId); if (!sel || valor === undefined) return;
   var opciones = Array.from(sel.options).map(function(o) { return o.value; });
-  if (valor && opciones.indexOf(valor) !== -1) {
-    sel.value = valor;
-  } else if (valor) {
-    sel.value = 'Otro';
-    if (otroInputId) { var inp = document.getElementById(otroInputId); if (inp) inp.value = valor; }
-    if (campoOtroId) { var c = document.getElementById(campoOtroId); if (c) c.classList.add('visible'); }
-  } else {
-    sel.value = '';
-  }
+  if (valor && opciones.indexOf(valor) !== -1) { sel.value = valor; } else if (valor) { sel.value = 'Otro'; if (otroInputId) { var inp = document.getElementById(otroInputId); if (inp) inp.value = valor; } if (campoOtroId) { var c = document.getElementById(campoOtroId); if (c) c.classList.add('visible'); } } else { sel.value = ''; }
 }
 
 function irEditarDatos() {
   ir('s-carga');
   api({ action: 'getDatosCompletos', nombre: E.nombre }, function(datos) {
     if (!datos) { ir('s-home'); alert('No se pudieron cargar tus datos.'); return; }
-
-    var camposSimples = [
-      'nombreDerby','numeroDerby','telefono','email',
-      'fechaNacimiento','fechaPublica','edadPublica',
-      'tipoDocumento','numeroDocumento','nombreLegal',
-      'callePrincipal','calleSecundaria','numeracion','sector',
-      'emerg1Nombre','emerg1Telefono',
-      'emerg2Nombre','emerg2Telefono',
-      'alergias','alergiasDesc',
-      'medicamentos','medicamentosDesc',
-      'atencionMedica','seguroContacto',
-      'antecedentesDetalle'
-    ];
-    camposSimples.forEach(function(c) {
-      var el = document.getElementById('d-' + c);
-      if (el && datos[c] !== undefined) el.value = datos[c] || '';
-    });
-
-    cargarSelect('d-dieta',         datos.dieta,         'd-dietaOtro',         'campo-dietaOtro');
-    cargarSelect('d-canton',        datos.canton,        'd-cantonOtro',        'campo-cantonOtro');
-    cargarSelect('d-paisExpedicion',datos.paisExpedicion, null,                  null);
-    cargarSelect('d-seguro',        datos.seguro,        'd-seguroOtro',        'campo-seguroOtro');
-    cargarSelect('d-emerg1Relacion',datos.emerg1Relacion, null,                  null);
-    cargarSelect('d-emerg2Relacion',datos.emerg2Relacion, null,                  null);
-
-    cargarSelect('d-prefijo',       datos.prefijo,       'd-prefijoOtro',       'campo-prefijoOtro');
+    var camposSimples = ['nombreDerby','numeroDerby','telefono','email','fechaNacimiento','fechaPublica','edadPublica','tipoDocumento','numeroDocumento','nombreLegal','callePrincipal','calleSecundaria','numeracion','sector','emerg1Nombre','emerg1Telefono','emerg2Nombre','emerg2Telefono','alergias','alergiasDesc','medicamentos','medicamentosDesc','atencionMedica','seguroContacto','antecedentesDetalle'];
+    camposSimples.forEach(function(c) { var el = document.getElementById('d-' + c); if (el && datos[c] !== undefined) el.value = datos[c] || ''; });
+    cargarSelect('d-canton', datos.canton, 'd-cantonOtro', 'campo-cantonOtro');
+    cargarSelect('d-paisExpedicion',datos.paisExpedicion, null, null);
+    cargarSelect('d-emerg1Relacion',datos.emerg1Relacion, null, null);
+    cargarSelect('d-prefijo', datos.prefijo, 'd-prefijoOtro', 'campo-prefijoOtro');
     cargarSelect('d-emerg1Prefijo', datos.emerg1Prefijo, 'd-emerg1PrefijoOtro', 'campo-emerg1PrefijoOtro');
-    cargarSelect('d-emerg2Prefijo', datos.emerg2Prefijo, 'd-emerg2PrefijoOtro', 'campo-emerg2PrefijoOtro');
-
+    
     document.querySelectorAll('input[data-group="pronombres"]').forEach(function(cb) { cb.checked = false; });
-    var inpPronOtro = document.getElementById('d-pronombresOtro');
-    if (inpPronOtro) inpPronOtro.value = '';
-    document.getElementById('campo-pronombresOtro').classList.remove('visible');
-
-    if (datos.pronombres) {
-      datos.pronombres.split(',').map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(val) {
-        var cb = document.querySelector('input[data-group="pronombres"][value="' + val + '"]');
-        if (cb) {
-          cb.checked = true;
-        } else {
-          var cbOtro = document.querySelector('input[data-group="pronombres"][value="Otro"]');
-          if (cbOtro) cbOtro.checked = true;
-          if (inpPronOtro) inpPronOtro.value = val;
-          document.getElementById('campo-pronombresOtro').classList.add('visible');
-        }
-      });
-    }
-
-    document.querySelectorAll('input[data-group="enfermedad"]').forEach(function(cb) { cb.checked = false; });
-    document.getElementById('campo-enfermedadOtro').classList.remove('visible');
-    if (datos.enfermedad) {
-      datos.enfermedad.split(',').map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(val) {
-        var cb = document.querySelector('input[data-group="enfermedad"][value="' + val + '"]');
-        if (cb) {
-          cb.checked = true;
-        } else {
-          var cbOtro = document.querySelector('input[data-group="enfermedad"][value="Otro"]');
-          if (cbOtro) cbOtro.checked = true;
-          var inp = document.getElementById('d-enfermedadOtro');
-          if (inp) inp.value = val;
-          document.getElementById('campo-enfermedadOtro').classList.add('visible');
-        }
-      });
-    }
-
-    document.querySelectorAll('input[data-group="antecedentes"]').forEach(function(cb) { cb.checked = false; });
-    document.getElementById('campo-antecedentesOtro').classList.remove('visible');
-    document.getElementById('campo-antecedentesDetalle').classList.remove('visible');
-    var elDetalle = document.getElementById('d-antecedentesDetalle');
-    if (elDetalle) elDetalle.value = '';
-
-    if (datos.antecedentes) {
-      var partes = datos.antecedentes.split(' | Detalle: ');
-      var antBase = partes[0];
-      if (partes[1] && elDetalle) elDetalle.value = partes[1];
-
-      antBase.split(',').map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(val) {
-        var cb = document.querySelector('input[data-group="antecedentes"][value="' + val + '"]');
-        if (cb) {
-          cb.checked = true;
-        } else {
-          var cbOtro = document.querySelector('input[data-group="antecedentes"][value="Otro"]');
-          if (cbOtro) cbOtro.checked = true;
-          var inp = document.getElementById('d-antecedentesOtro');
-          if (inp) inp.value = val;
-          document.getElementById('campo-antecedentesOtro').classList.add('visible');
-        }
-      });
-      toggleDetalleAntecedentes();
-    }
-
-    var alergias = datos.alergias || '';
-    document.getElementById('campo-alergiasDesc').classList.toggle('visible', alergias === 'Sí' || alergias === 'Tal vez');
-    var meds = datos.medicamentos || '';
-    document.getElementById('campo-medicamentosDesc').classList.toggle('visible', meds === 'Sí');
-    var atencion = datos.atencionMedica || '';
-    document.getElementById('campo-seguro').classList.toggle('visible', atencion === 'Seguro Privado');
-
+    var inpPronOtro = document.getElementById('d-pronombresOtro'); if (inpPronOtro) inpPronOtro.value = ''; document.getElementById('campo-pronombresOtro').classList.remove('visible');
+    if (datos.pronombres) { datos.pronombres.split(',').map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(val) { var cb = document.querySelector('input[data-group="pronombres"][value="' + val + '"]'); if (cb) { cb.checked = true; } else { var cbOtro = document.querySelector('input[data-group="pronombres"][value="Otro"]'); if (cbOtro) cbOtro.checked = true; if (inpPronOtro) inpPronOtro.value = val; document.getElementById('campo-pronombresOtro').classList.add('visible'); } }); }
     ir('s-datos');
   }, function(e) { ir('s-home'); alert('Error: ' + e.message); });
 }
 
 function toggleSeccion(id, titulo) {
-  var body = document.getElementById(id);
-  var estaAbierta = body.classList.contains('abierta');
-
-  document.querySelectorAll('.datos-seccion-body.abierta').forEach(function(el) {
-    if (el.id !== id) {
-      el.classList.remove('abierta');
-      var otroTitulo = el.previousElementSibling;
-      if (otroTitulo) otroTitulo.classList.remove('abierta');
-    }
-  });
-
-  body.classList.toggle('abierta', !estaAbierta);
-  if (titulo) titulo.classList.toggle('abierta', !estaAbierta);
+  var body = document.getElementById(id); var estaAbierta = body.classList.contains('abierta');
+  document.querySelectorAll('.datos-seccion-body.abierta').forEach(function(el) { if (el.id !== id) { el.classList.remove('abierta'); var otroTitulo = el.previousElementSibling; if (otroTitulo) otroTitulo.classList.remove('abierta'); } });
+  body.classList.toggle('abierta', !estaAbierta); if (titulo) titulo.classList.toggle('abierta', !estaAbierta);
 }
 
-function toggleCondicional(selectId, valoresActivos, campoId) {
-  var val = document.getElementById(selectId).value;
-  document.getElementById(campoId).classList.toggle('visible', valoresActivos.indexOf(val) !== -1);
-}
-
-function toggleOtroSelect(campo) {
-  var sel = document.getElementById('d-' + campo);
-  var campoEl = document.getElementById('campo-' + campo + 'Otro');
-  if (campoEl) campoEl.classList.toggle('visible', sel && sel.value === 'Otro');
-}
-
-function toggleOtroCheckbox(grupo) {
-  var cb = document.querySelector('input[data-group="' + grupo + '"][value="Otro"]');
-  var campoEl = document.getElementById('campo-' + grupo + 'Otro');
-  if (campoEl) campoEl.classList.toggle('visible', cb && cb.checked);
-}
-
-function toggleDetalleAntecedentes() {
-  var alguno = document.querySelectorAll('input[data-group="antecedentes"]:checked').length > 0;
-  var campoEl = document.getElementById('campo-antecedentesDetalle');
-  if (campoEl) campoEl.classList.toggle('visible', alguno);
-}
+function toggleOtroSelect(campo) { var sel = document.getElementById('d-' + campo); var campoEl = document.getElementById('campo-' + campo + 'Otro'); if (campoEl) campoEl.classList.toggle('visible', sel && sel.value === 'Otro'); }
+function toggleOtroCheckbox(grupo) { var cb = document.querySelector('input[data-group="' + grupo + '"][value="Otro"]'); var campoEl = document.getElementById('campo-' + grupo + 'Otro'); if (campoEl) campoEl.classList.toggle('visible', cb && cb.checked); }
 
 function guardarSeccion(secId, btn) {
-  var sec = document.getElementById(secId);
-  var payload = {};
-
-  var camposTel = { 'sec-contacto': 'd-telefono', 'sec-emerg1': 'd-emerg1Telefono', 'sec-emerg2': 'd-emerg2Telefono' };
-  if (camposTel[secId]) {
-    var telEl = document.getElementById(camposTel[secId]);
-    if (telEl && telEl.value.trim()) {
-      var tel = telEl.value.trim();
-      if (!/^[0-9]{7,15}$/.test(tel)) {
-        alert('El número de teléfono debe tener entre 7 y 15 dígitos y solo puede contener números.');
-        return;
-      }
-    }
-  }
-
-  if (secId === 'sec-salud') {
-    var alVal = document.getElementById('d-alergias') ? document.getElementById('d-alergias').value : '';
-    var medVal = document.getElementById('d-medicamentos') ? document.getElementById('d-medicamentos').value : '';
-    if ((alVal === 'Sí' || alVal === 'Tal vez') && !document.getElementById('d-alergiasDesc').value.trim()) {
-      alert('Por favor describe tus alergias antes de guardar.');
-      return;
-    }
-    if (medVal === 'Sí' && !document.getElementById('d-medicamentosDesc').value.trim()) {
-      alert('Por favor describe tus medicamentos antes de guardar.');
-      return;
-    }
-  }
-
-  sec.querySelectorAll(
-    'input[id^="d-"]:not([type="checkbox"]):not([type="radio"]):not(.otro-texto),' +
-    'select[id^="d-"],' +
-    'textarea[id^="d-"]:not(.otro-texto)'
-  ).forEach(function(el) {
-    payload[el.id.replace('d-', '')] = el.value.trim();
-  });
-
-  ['dieta','canton','prefijo','emerg1Prefijo','emerg2Prefijo','seguro'].forEach(function(campo) {
-    if (payload[campo] === 'Otro') {
-      var inp = sec.querySelector('#d-' + campo + 'Otro');
-      if (inp && inp.value.trim()) payload[campo] = inp.value.trim();
-    }
-  });
-
-  var cbGroups = {};
-  sec.querySelectorAll('input[type="checkbox"][data-group]').forEach(function(cb) {
-    var g = cb.getAttribute('data-group');
-    if (!cbGroups[g]) cbGroups[g] = [];
-    if (cb.checked) cbGroups[g].push(cb.value);
-  });
-  Object.keys(cbGroups).forEach(function(g) {
-    var vals = cbGroups[g].map(function(v) {
-      if (v === 'Otro') {
-        var inp = sec.querySelector('#d-' + g + 'Otro');
-        return inp && inp.value.trim() ? inp.value.trim() : '';
-      }
-      return v;
-    }).filter(Boolean);
-    payload[g] = vals.join(', ');
-  });
-
-  if (payload['antecedentes'] !== undefined) {
-    var detalle = document.getElementById('d-antecedentesDetalle');
-    if (detalle && detalle.value.trim()) {
-      payload['antecedentes'] = payload['antecedentes'] + ' | Detalle: ' + detalle.value.trim();
-    }
-    delete payload['antecedentesDetalle'];
-  }
-
+  var sec = document.getElementById(secId); var payload = {};
+  var camposTel = { 'sec-contacto': 'd-telefono', 'sec-emerg1': 'd-emerg1Telefono' };
+  if (camposTel[secId]) { var telEl = document.getElementById(camposTel[secId]); if (telEl && telEl.value.trim()) { var tel = telEl.value.trim(); if (!/^[0-9]{7,15}$/.test(tel)) { alert('El número de teléfono debe tener entre 7 y 15 dígitos y solo puede contener números.'); return; } } }
+  sec.querySelectorAll('input[id^="d-"]:not([type="checkbox"]):not([type="radio"]):not(.otro-texto), select[id^="d-"], textarea[id^="d-"]:not(.otro-texto)').forEach(function(el) { payload[el.id.replace('d-', '')] = el.value.trim(); });
+  ['canton','prefijo','emerg1Prefijo'].forEach(function(campo) { if (payload[campo] === 'Otro') { var inp = sec.querySelector('#d-' + campo + 'Otro'); if (inp && inp.value.trim()) payload[campo] = inp.value.trim(); } });
+  var cbGroups = {}; sec.querySelectorAll('input[type="checkbox"][data-group]').forEach(function(cb) { var g = cb.getAttribute('data-group'); if (!cbGroups[g]) cbGroups[g] = []; if (cb.checked) cbGroups[g].push(cb.value); });
+  Object.keys(cbGroups).forEach(function(g) { var vals = cbGroups[g].map(function(v) { if (v === 'Otro') { var inp = sec.querySelector('#d-' + g + 'Otro'); return inp && inp.value.trim() ? inp.value.trim() : ''; } return v; }).filter(Boolean); payload[g] = vals.join(', '); });
   if (Object.keys(payload).length === 0) return;
-
-  var textoOriginal = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = '⏳ Guardando...';
-
-  api({
-    action: 'actualizarDatosPersona',
-    nombre: E.nombre,
-    datos: JSON.stringify(payload)
-  }, function(res) {
-    btn.disabled = false;
-    if (res.exito) {
-      btn.textContent = '✅ Guardado';
-      btn.classList.add('exito');
-      setTimeout(function() { btn.textContent = textoOriginal; btn.classList.remove('exito'); }, 2500);
-    } else {
-      btn.textContent = textoOriginal;
-    }
-  }, function(e) {
-    btn.disabled = false;
-    btn.textContent = textoOriginal;
-    alert('Error al guardar: ' + e.message);
-  });
+  var textoOriginal = btn.textContent; btn.disabled = true; btn.textContent = '⏳ Guardando...';
+  api({ action: 'actualizarDatosPersona', nombre: E.nombre, datos: JSON.stringify(payload) }, function(res) {
+    btn.disabled = false; if (res.exito) { btn.textContent = '✅ Guardado'; btn.classList.add('exito'); setTimeout(function() { btn.textContent = textoOriginal; btn.classList.remove('exito'); }, 2500); } else { btn.textContent = textoOriginal; }
+  }, function(e) { btn.disabled = false; btn.textContent = textoOriginal; alert('Error al guardar: ' + e.message); });
 }
 
-function limpiarTelefono(input) {
-  input.value = input.value.replace(/[^0-9]/g, '');
-}
+function limpiarTelefono(input) { input.value = input.value.replace(/[^0-9]/g, ''); }
 
 function solicitarNuevoPIN(){
   var email = ((E.datos && E.datos.email) || '').trim();
   var subject = encodeURIComponent('Solicitud de nuevo PIN - ' + email);
-  var body = encodeURIComponent(
-    'Hola,\n\nNecesito solicitar un nuevo PIN de acceso para mis reservas.\n\nEmail registrado: ' + email + '\n\nGracias.'
-  );
+  var body = encodeURIComponent('Hola,\n\nNecesito solicitar un nuevo PIN de acceso para mis reservas.\n\nEmail registrado: ' + email + '\n\nGracias.');
   window.location.href = 'mailto:quindesvolcanicosrd@gmail.com?subject=' + subject + '&body=' + body;
 }
 
 function continuar_pago_y_wp() {
-  if (!document.getElementById('chk-pago').checked) {
-    err('err-pago', 'Debes confirmar que realizaste el pago.');
-    return;
-  }
-
-  // Abrir WhatsApp
-  E.wpEnviado = true;
-  continuar_pago();
+  if (!document.getElementById('chk-pago').checked) { err('err-pago', 'Debes confirmar que realizaste el pago.'); return; }
+  E.wpEnviado = true; continuar_pago();
 }
 </script>
-</script>
-<footer style="text-align:center;padding:24px 16px;font-size:0.8rem;margin-top:20px;">
-  <div style="margin-bottom:12px;font-weight:700;color:#5a3a25;letter-spacing:1px;text-transform:uppercase;font-size:0.65rem;">Quindes Volcan&#xED;cos ● Mirlxs - Roller Derby Quito</div>
-  <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px 20px;">
-    <a href="https://www.quindesvolcanicos.com/" target="_blank" style="color:#7a5a45;text-decoration:none;">&#x1F310; Web</a>
-    <a href="https://www.instagram.com/quindesvolcanicosrd/" target="_blank" style="color:#7a5a45;text-decoration:none;">&#x1F4F8; Instagram</a>
-    <a href="https://wa.me/593998690423" target="_blank" style="color:#7a5a45;text-decoration:none;">&#x1F4AC; WhatsApp</a>
-    <a href="http://m.me/QuindesVolcanicosRD" target="_blank" style="color:#7a5a45;text-decoration:none;">&#x1F4D8; Facebook</a>
-    <a href="mailto:quindesvolcanicosrd@gmail.com" style="color:#7a5a45;text-decoration:none;">&#x2709;&#xFE0F; Correo</a>
+
+<footer style="text-align:center;padding:32px 20px;font-size:0.85rem;margin-top:24px;">
+  <div style="margin-bottom:16px;font-weight:800;color:#5a3a25;letter-spacing:1px;text-transform:uppercase;font-size:0.75rem;">Quindes Volcánicos ● Mirlxs - Roller Derby Quito</div>
+  <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:16px 24px;">
+    <a href="https://www.quindesvolcanicos.com/" target="_blank" style="color:#7a5a45;text-decoration:none;font-weight:600;transition:color 0.2s;">🌐 Web</a>
+    <a href="https://www.instagram.com/quindesvolcanicosrd/" target="_blank" style="color:#7a5a45;text-decoration:none;font-weight:600;transition:color 0.2s;">📸 Instagram</a>
+    <a href="https://wa.me/593998690423" target="_blank" style="color:#7a5a45;text-decoration:none;font-weight:600;transition:color 0.2s;">💬 WhatsApp</a>
+    <a href="http://m.me/QuindesVolcanicosRD" target="_blank" style="color:#7a5a45;text-decoration:none;font-weight:600;transition:color 0.2s;">📘 Facebook</a>
+    <a href="mailto:quindesvolcanicosrd@gmail.com" style="color:#7a5a45;text-decoration:none;font-weight:600;transition:color 0.2s;">✉️ Correo</a>
   </div>
 </footer>
 </body>
