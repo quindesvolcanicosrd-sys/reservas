@@ -1376,6 +1376,8 @@ function confirmarReserva() {
     // CORRECCIÓN 1: Marcar el cupón como usado siempre que se haya aplicado, sin importar el monto final
     if (E.cuponAplicado) { 
       marcarCuponUsadoLocal(); 
+      // Le avisamos al Google Sheet que cambie la columna AY a FALSE
+      api({ action: 'marcarCuponUsado', nombre: E.nombre }, function(){}, function(){});
       var bannerCuponUsado = document.getElementById('banner-cupon'); 
       if (bannerCuponUsado) bannerCuponUsado.style.display = 'none'; 
     }
@@ -1418,7 +1420,14 @@ function confirmarReserva() {
     guardarMesSiguiente();
   } else {
     var pendientes = E.fechas.slice();
-    function guardarSiguiente() { if (pendientes.length === 0) { finalizar(); return; } var fecha = pendientes.shift(); api({ action: 'guardarReserva', nombre: E.nombre, fecha: fecha, talla: talla, protecciones: protec, monto: E.cuponAplicado ? '0.00' : E.precioPorClase.toFixed(2), email: E.datos.email || '' }, function() { guardarSiguiente(); }, function() { guardarSiguiente(); }); }
+    var cuponAplicadoEnLoop = E.cuponAplicado; // Control para cobrar $0 solo la primera vez
+    function guardarSiguiente() { 
+      if (pendientes.length === 0) { finalizar(); return; } 
+      var fecha = pendientes.shift(); 
+      var montoClase = cuponAplicadoEnLoop ? '0.00' : E.precioPorClase.toFixed(2);
+      cuponAplicadoEnLoop = false; // Desactivamos el cupón para las siguientes clases
+      api({ action: 'guardarReserva', nombre: E.nombre, fecha: fecha, talla: talla, protecciones: protec, monto: montoClase, email: E.datos.email || '' }, function() { guardarSiguiente(); }, function() { guardarSiguiente(); }); 
+    }
     guardarSiguiente();
   }
 }
