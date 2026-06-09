@@ -966,7 +966,7 @@ select, option, optgroup {
 
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-var BACKEND = 'https://script.google.com/macros/s/AKfycby0VV-mK4SXkUSfvIXPlxn_AtF4MpalrK0-55jLCy-H-TSuvS1efhtXo5FnqVtsCrjVMw/exec';
+var BACKEND = 'https://script.google.com/macros/s/AKfycbwNuGlBPzTQuRaSbLYSeJ1FQpsuljSWKWA4cyIuPmXKs5g3kcDgd15PH_mIRzhWZJFSHQ/exec';
 
 // --- NUEVA LÓGICA PARA ANIMACIÓN DE CARGA ---
 function mostrarCargando(msg) {
@@ -1478,20 +1478,8 @@ function confirmarReserva() {
     var cuponAplicadoEnLoop = E.cuponAplicado; // Control para cobrar $0 solo la primera vez
     function guardarSiguiente() { 
       if (pendientes.length === 0) {
-
-  api({
-    action: 'enviarResumenReservas',
-    nombre: E.nombre,
-    fechas: JSON.stringify(E.fechas),
-    talla: talla,
-    protecciones: protec,
-    email: E.datos.email || '',
-    montoTotal: E.totalPago.toFixed(2)
-  }, function() {
-    finalizar();
-  }, function() {
-    finalizar();
-  });
+// Se eliminó el envío automático de correo al usuario
+finalizar();
 
   return;
 } 
