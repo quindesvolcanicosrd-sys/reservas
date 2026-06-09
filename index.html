@@ -937,10 +937,10 @@ function togglePinVisibility() {
   var btn = document.getElementById('btn-toggle-pin');
   if (pinInput.type === 'password') {
     pinInput.type = 'text';
-    btn.textContent = '🙈';
+    btn.innerHTML = '<span class="material-symbols-outlined">visibility_off</span>';
   } else {
     pinInput.type = 'password';
-    btn.textContent = '👁️';
+    btn.innerHTML = '<span class="material-symbols-outlined">visibility</span>';
   }
 }
 
@@ -975,8 +975,17 @@ window.onload = function() {
     var sel = document.getElementById('sel-nombre');
     sel.innerHTML = '<option value="">— Elige tu nombre —</option>';
     nombres.forEach(function(n) { var o = document.createElement('option'); o.value = o.textContent = n; sel.appendChild(o); });
-    sel.disabled = false; sel.style.color = ''; ocultarCargando();
-  }, function(e) { ocultarCargando(); err('err-s1', 'Error al cargar nombres: ' + e.message); });
+    sel.disabled = false; sel.style.color = ''; 
+    
+    /* ESTA LÍNEA ES NUEVA: Apaga el spinner cuando carga */
+    document.getElementById('loader-nombres').style.display = 'none'; 
+    
+    ocultarCargando();
+  }, function(e) { 
+    ocultarCargando(); 
+    document.getElementById('loader-nombres').style.display = 'none';
+    err('err-s1', 'Error al cargar nombres: ' + e.message); 
+  });
 
   api({ action: 'getPreciosClases' }, function(precios) {
     E.precioPorClase = parseFloat(precios.precioPorClase) || 0;
