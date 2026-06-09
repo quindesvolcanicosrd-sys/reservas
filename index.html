@@ -1477,7 +1477,24 @@ function confirmarReserva() {
     var pendientes = E.fechas.slice();
     var cuponAplicadoEnLoop = E.cuponAplicado; // Control para cobrar $0 solo la primera vez
     function guardarSiguiente() { 
-      if (pendientes.length === 0) { finalizar(); return; } 
+      if (pendientes.length === 0) {
+
+  api({
+    action: 'enviarResumenReservas',
+    nombre: E.nombre,
+    fechas: JSON.stringify(E.fechas),
+    talla: talla,
+    protecciones: protec,
+    email: E.datos.email || '',
+    montoTotal: E.totalPago.toFixed(2)
+  }, function() {
+    finalizar();
+  }, function() {
+    finalizar();
+  });
+
+  return;
+} 
       var fecha = pendientes.shift(); 
       var montoClase = cuponAplicadoEnLoop ? '0.00' : E.precioPorClase.toFixed(2);
       cuponAplicadoEnLoop = false; // Desactivamos el cupón para las siguientes clases
