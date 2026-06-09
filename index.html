@@ -11,6 +11,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FDF3EB; color: #1a1a1a; } 
+/* Forzar herencia de fuente en todos los elementos de formulario y botones de la app */
+button, input, select, textarea { font-family: inherit; }
 
 .header { background: #1a1a1a; text-align: center; overflow: hidden; }
 .header-banner {
@@ -1134,38 +1136,52 @@ function continuar_s1() {
 function continuar_pin() {
   var pin = document.getElementById('input-pin').value.trim();
   if (!/^\d{4}$/.test(pin)) { err('err-pin', 'Ingresa un PIN válido de 4 dígitos.'); return; }
+  
   mostrarCargando('Verificando tu PIN...');
+  
   api({ action: 'validarPin', nombre: E.nombre, pin: pin }, function(res) {
-    ocultarCargando();
-    if (!res.valido) { ir('s1b'); err('err-pin', 'PIN incorrecto.'); return; }
-    E.datos = res.datos;
-    document.getElementById('home-saludo').textContent = '¡Hola, ' + E.nombre + '!';
-    if (necesitaEquipo()) {
-      document.getElementById('home-btn-mis-titulo').textContent = 'Ver mis reservas';
-      document.getElementById('home-btn-mis-sub').textContent = 'Revisa el estado de tus reservas';
-      document.getElementById('home-btn-nueva-titulo').textContent = 'Nueva reserva';
-      document.getElementById('home-btn-nueva-sub').textContent = 'Registra tu reserva';
-    } else {
-      document.getElementById('home-btn-mis-titulo').textContent = 'Ver mis pagos';
-      document.getElementById('home-btn-mis-sub').textContent = 'Revisa el estado de tus pagos';
-      document.getElementById('home-btn-nueva-titulo').textContent = 'Nuevo pago';
-      document.getElementById('home-btn-nueva-sub').textContent = 'Registra tu pago mensual o por clase';
-    }
-    var bannerCupon = document.getElementById('banner-cupon');
-    if (bannerCupon) bannerCupon.style.display = tieneCuponDisponible() ? 'block' : 'none';
-    ir('s-home');
+    if (!res.valido) { ocultarCargando(); ir('s1b'); err('err-pin', 'PIN incorrecto.'); return; }
+    
+    E.datos = res.datos; // Datos básicos para la lógica de equipo
+    
+    mostrarCargando('Cargando tus reservas...');
+    api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
+      _todasReservas = reservas;
+      
+      mostrarCargando('Cargando tu perfil...');
+      api({ action: 'getDatosCompletos', nombre: E.nombre }, function(datos) {
+        ocultarCargando();
+        if (!datos) { ir('s-home'); alert('No se pudieron cargar tus datos de perfil.'); return; }
+        
+        E.datosCompletos = datos; // Guardamos el perfil en la memoria
+        
+        document.getElementById('home-saludo').textContent = '¡Hola, ' + E.nombre + '!';
+        if (necesitaEquipo()) {
+          document.getElementById('home-btn-mis-titulo').textContent = 'Ver mis reservas';
+          document.getElementById('home-btn-mis-sub').textContent = 'Revisa el estado de tus reservas';
+          document.getElementById('home-btn-nueva-titulo').textContent = 'Nueva reserva';
+          document.getElementById('home-btn-nueva-sub').textContent = 'Registra tu reserva';
+        } else {
+          document.getElementById('home-btn-mis-titulo').textContent = 'Ver mis pagos';
+          document.getElementById('home-btn-mis-sub').textContent = 'Revisa el estado de tus pagos';
+          document.getElementById('home-btn-nueva-titulo').textContent = 'Nuevo pago';
+          document.getElementById('home-btn-nueva-sub').textContent = 'Registra tu pago mensual o por clase';
+        }
+        var bannerCupon = document.getElementById('banner-cupon');
+        if (bannerCupon) bannerCupon.style.display = tieneCuponDisponible() ? 'block' : 'none';
+        ir('s-home');
+      }, function(e) { ocultarCargando(); ir('s-home'); alert('Error al cargar perfil: ' + e.message); });
+      
+    }, function(e) { ocultarCargando(); ir('s-home'); alert('Error al cargar reservas: ' + e.message); });
+    
   }, function(e) { ocultarCargando(); ir('s1b'); err('err-pin', 'Error: ' + e.message); });
 }
 
 function irMisReservas() {
-  mostrarCargando('Cargando tu información...');
-  api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
-    ocultarCargando();
-    _todasReservas = reservas;
-    document.getElementById('misres-label').textContent = necesitaEquipo() ? 'Mis reservas' : 'Mis pagos';
-    document.getElementById('misres-titulo').textContent = necesitaEquipo() ? 'Tus reservas' : 'Tus pagos';
-    renderMisReservas(reservas, false); ir('s-misreservas');
-  }, function(e) { ocultarCargando(); ir('s-home'); alert('Error al cargar reservas: ' + e.message); });
+  document.getElementById('misres-label').textContent = necesitaEquipo() ? 'Mis reservas' : 'Mis pagos';
+  document.getElementById('misres-titulo').textContent = necesitaEquipo() ? 'Tus reservas' : 'Tus pagos';
+  renderMisReservas(_todasReservas || [], false); 
+  ir('s-misreservas');
 }
 
 function irNuevaReserva() {
@@ -1202,7 +1218,16 @@ function verTodasReservas() { renderMisReservas(_todasReservas, true); }
 function cancelarRes(fecha) {
   if (!confirm('¿Segura que quieres cancelar ' + (necesitaEquipo() ? 'tu reserva' : 'tu pago') + ' para el ' + fecha + '?')) return;
   var btn = event.target; btn.disabled = true; btn.innerHTML = '<span class="btn-spinner" style="border-top-color:#dc2626; border-color:rgba(220,38,38,0.3);"></span>Cancelando...';
-  api({ action: 'cancelarReserva', nombre: E.nombre, fecha: fecha }, function(res) { if (res.exito) { irMisReservas(); } else { btn.disabled = false; btn.innerHTML = 'Cancelar esta reserva'; alert('Error al cancelar.'); } }, function(e) { btn.disabled = false; btn.innerHTML = 'Cancelar esta reserva'; alert('Error: ' + e.message); });
+  api({ action: 'cancelarReserva', nombre: E.nombre, fecha: fecha }, function(res) { 
+    if (res.exito) { 
+      if (typeof _todasReservas !== 'undefined' && _todasReservas) {
+        _todasReservas = _todasReservas.filter(function(r) { return r.fecha !== fecha; });
+      }
+      irMisReservas(); 
+    } else { 
+      btn.disabled = false; btn.innerHTML = 'Cancelar esta reserva'; alert('Error al cancelar.'); 
+    } 
+  }, function(e) { btn.disabled = false; btn.innerHTML = 'Cancelar esta reserva'; alert('Error: ' + e.message); });
 }
 
 function renderEquip() {
@@ -1469,23 +1494,21 @@ function cargarSelect(selectId, valor, otroInputId, campoOtroId) {
 }
 
 function irEditarDatos() {
-  mostrarCargando('Cargando tu información...');
-  api({ action: 'getDatosCompletos', nombre: E.nombre }, function(datos) {
-    ocultarCargando();
-    if (!datos) { ir('s-home'); alert('No se pudieron cargar tus datos.'); return; }
-    var camposSimples = ['nombreDerby','numeroDerby','telefono','email','fechaNacimiento','fechaPublica','edadPublica','tipoDocumento','numeroDocumento','nombreLegal','callePrincipal','calleSecundaria','numeracion','sector','emerg1Nombre','emerg1Telefono','emerg2Nombre','emerg2Telefono','alergias','alergiasDesc','medicamentos','medicamentosDesc','atencionMedica','seguroContacto','antecedentesDetalle'];
-    camposSimples.forEach(function(c) { var el = document.getElementById('d-' + c); if (el && datos[c] !== undefined) el.value = datos[c] || ''; });
-    cargarSelect('d-canton', datos.canton, 'd-cantonOtro', 'campo-cantonOtro');
-    cargarSelect('d-paisExpedicion',datos.paisExpedicion, null, null);
-    cargarSelect('d-emerg1Relacion',datos.emerg1Relacion, null, null);
-    cargarSelect('d-prefijo', datos.prefijo, 'd-prefijoOtro', 'campo-prefijoOtro');
-    cargarSelect('d-emerg1Prefijo', datos.emerg1Prefijo, 'd-emerg1PrefijoOtro', 'campo-emerg1PrefijoOtro');
-    
-    document.querySelectorAll('input[data-group="pronombres"]').forEach(function(cb) { cb.checked = false; });
-    var inpPronOtro = document.getElementById('d-pronombresOtro'); if (inpPronOtro) inpPronOtro.value = ''; document.getElementById('campo-pronombresOtro').classList.remove('visible');
-    if (datos.pronombres) { datos.pronombres.split(',').map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(val) { var cb = document.querySelector('input[data-group="pronombres"][value="' + val + '"]'); if (cb) { cb.checked = true; } else { var cbOtro = document.querySelector('input[data-group="pronombres"][value="Otro"]'); if (cbOtro) cbOtro.checked = true; if (inpPronOtro) inpPronOtro.value = val; document.getElementById('campo-pronombresOtro').classList.add('visible'); } }); }
-    ir('s-datos');
-  }, function(e) { ocultarCargando(); ir('s-home'); alert('Error: ' + e.message); });
+  var datos = E.datosCompletos;
+  if (!datos) { alert('No se encontraron datos pre-cargados.'); ir('s-home'); return; }
+  
+  var camposSimples = ['nombreDerby','numeroDerby','telefono','email','fechaNacimiento','fechaPublica','edadPublica','tipoDocumento','numeroDocumento','nombreLegal','callePrincipal','calleSecundaria','numeracion','sector','emerg1Nombre','emerg1Telefono','emerg2Nombre','emerg2Telefono','alergias','alergiasDesc','medicamentos','medicamentosDesc','atencionMedica','seguroContacto','antecedentesDetalle'];
+  camposSimples.forEach(function(c) { var el = document.getElementById('d-' + c); if (el && datos[c] !== undefined) el.value = datos[c] || ''; });
+  cargarSelect('d-canton', datos.canton, 'd-cantonOtro', 'campo-cantonOtro');
+  cargarSelect('d-paisExpedicion',datos.paisExpedicion, null, null);
+  cargarSelect('d-emerg1Relacion',datos.emerg1Relacion, null, null);
+  cargarSelect('d-prefijo', datos.prefijo, 'd-prefijoOtro', 'campo-prefijoOtro');
+  cargarSelect('d-emerg1Prefijo', datos.emerg1Prefijo, 'd-emerg1PrefijoOtro', 'campo-emerg1PrefijoOtro');
+  
+  document.querySelectorAll('input[data-group="pronombres"]').forEach(function(cb) { cb.checked = false; });
+  var inpPronOtro = document.getElementById('d-pronombresOtro'); if (inpPronOtro) inpPronOtro.value = ''; document.getElementById('campo-pronombresOtro').classList.remove('visible');
+  if (datos.pronombres) { datos.pronombres.split(',').map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(val) { var cb = document.querySelector('input[data-group="pronombres"][value="' + val + '"]'); if (cb) { cb.checked = true; } else { var cbOtro = document.querySelector('input[data-group="pronombres"][value="Otro"]'); if (cbOtro) cbOtro.checked = true; if (inpPronOtro) inpPronOtro.value = val; document.getElementById('campo-pronombresOtro').classList.add('visible'); } }); }
+  ir('s-datos');
 }
 
 function toggleSeccion(id, titulo) {
@@ -1508,7 +1531,16 @@ function guardarSeccion(secId, btn) {
   if (Object.keys(payload).length === 0) return;
   var textoOriginal = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Guardando...';
   api({ action: 'actualizarDatosPersona', nombre: E.nombre, datos: JSON.stringify(payload) }, function(res) {
-    btn.disabled = false; if (res.exito) { btn.innerHTML = '✓ Guardado'; btn.classList.add('exito'); setTimeout(function() { btn.innerHTML = textoOriginal; btn.classList.remove('exito'); }, 2500); } else { btn.innerHTML = textoOriginal; }
+    btn.disabled = false; 
+    if (res.exito) { 
+      btn.innerHTML = '✓ Guardado'; 
+      btn.classList.add('exito'); 
+      if (!E.datosCompletos) E.datosCompletos = {};
+      for (var k in payload) { E.datosCompletos[k] = payload[k]; }
+      setTimeout(function() { btn.innerHTML = textoOriginal; btn.classList.remove('exito'); }, 2500); 
+    } else { 
+      btn.innerHTML = textoOriginal; 
+    }
   }, function(e) { btn.disabled = false; btn.innerHTML = textoOriginal; alert('Error al guardar: ' + e.message); });
 }
 
