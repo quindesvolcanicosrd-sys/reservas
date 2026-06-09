@@ -463,6 +463,15 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
       <div style="font-size:2.8rem;margin-bottom:10px;">🛼</div>
       <h2 id="home-saludo" style="text-align:center;margin-bottom:6px;"></h2>
       <p style="margin-bottom:22px;">¿Qué quieres hacer hoy?</p>
+<div id="banner-cupon" style="display:none;background:linear-gradient(135deg,#fff8e1,#fef3c7);border:2px solid #fbbf24;border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <span style="font-size:1.4rem;flex-shrink:0;">🎟️</span>
+          <div>
+            <div style="font-weight:800;color:#b45309;font-size:0.88rem;">¡Tienes un cupón de primera clase gratis!</div>
+            <div style="font-size:0.76rem;color:#92400e;margin-top:3px;">Úsalo en tu próxima reserva individual. Personal e intransferible.</div>
+          </div>
+        </div>
+      </div>
       <div class="home-boton principal" onclick="irMisReservas()">
         <div class="hb-icon">📋</div>
 <div class="hb-titulo" id="home-btn-mis-titulo">Ver mis reservas</div>
@@ -581,7 +590,16 @@ body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FE
       <div id="lista-fechas"></div>
 
 <!-- ── FIX 1: onchange añadido a cada checkbox de mes ── -->
-<div id="s4-meses-wrapper" style="display:none;margin-top:14px;margin-bottom:22px;">
+<div id="s4-cupon-wrapper" style="display:none;margin:14px 0;">
+        <label style="display:flex;align-items:center;gap:10px;background:#fff8e1;border:2px solid #fbbf24;border-radius:10px;padding:13px;cursor:pointer;">
+          <input type="checkbox" id="chk-cupon" style="accent-color:#F97316;width:18px;height:18px;flex-shrink:0;" onchange="toggleCupon(this)">
+          <div>
+            <div style="font-weight:800;color:#b45309;font-size:0.9rem;">🎟️ Usar mi cupón de primera clase gratis</div>
+            <div style="font-size:0.78rem;color:#92400e;margin-top:2px;">Válido para 1 clase. Personal e intransferible.</div>
+          </div>
+        </label>
+      </div>
+      <div id="s4-meses-wrapper" style="display:none;margin-top:14px;margin-bottom:22px;">
 
   <!-- Meses pasados (colapsado) -->
   <div id="meses-pasados-wrapper" style="margin-bottom:12px;">
@@ -1401,8 +1419,18 @@ var E = {
   meses: [],
   precioPorClase: 0, precioMensual: 0,
   totalPago: 0, notaPago: '', wpEnviado: false,
-  wpUrl: ''   // ← agregar esto
+  wpUrl: '',   // ← agregar esto
+  cuponAplicado: false
 };
+
+// Cupón disponible = backend lo habilitó Y no está marcado como usado en este dispositivo
+function tieneCuponDisponible() {
+  if (!E.datos || !E.datos.cuponDisponible) return false;
+  return localStorage.getItem('cupon_' + E.nombre) !== 'usado';
+}
+function marcarCuponUsadoLocal() {
+  localStorage.setItem('cupon_' + E.nombre, 'usado');
+}
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 function api(params, onSuccess, onError) {
@@ -1594,6 +1622,8 @@ E.datos = res.datos;
       document.getElementById('home-btn-nueva-titulo').textContent = 'Nuevo pago';
       document.getElementById('home-btn-nueva-sub').textContent = 'Registra tu pago mensual o por clase';
     }
+var bannerCupon = document.getElementById('banner-cupon');
+    if (bannerCupon) bannerCupon.style.display = tieneCuponDisponible() ? 'block' : 'none';
     ir('s-home');
   }, function(e) { ir('s1b'); err('err-pin', 'Error: ' + e.message); });
 }
@@ -1612,6 +1642,9 @@ function irMisReservas() {
 
 function irNuevaReserva() {
   E.conf = ''; E.fechas = []; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = '';
+  E.cuponAplicado = false;
+  var chkC = document.getElementById('chk-cupon');
+  if (chkC) chkC.checked = false;
   document.querySelectorAll('input[name="conf"]').forEach(function(r) {
     r.checked = false; r.closest('.opcion').classList.remove('sel');
   });
@@ -1815,6 +1848,12 @@ if (tipo === 'mensual' && canPayMonthly()) {
     subtitulo.style.display = 'none';
     listaFechas.style.display = 'none';
     document.getElementById('s4-meses-wrapper').style.display = 'block';
+    // Ocultar y desactivar cupón en modo mensual
+    var cw = document.getElementById('s4-cupon-wrapper');
+    if (cw) cw.style.display = 'none';
+    var cc = document.getElementById('chk-cupon');
+    if (cc) cc.checked = false;
+    E.cuponAplicado = false;
   } else {
     subtitulo.style.display = 'block';
     listaFechas.style.display = 'block';
@@ -1824,8 +1863,16 @@ if (tipo === 'mensual' && canPayMonthly()) {
     subtitulo.textContent = tipo === 'mensual'
       ? 'Opcionalmente, puedes seleccionar a qué entrenamientos asistirás este mes.'
       : 'Selecciona los próximos entrenamientos a los que asistirás.';
+    // Mostrar cupón en modo clase si está disponible
+    var cw2 = document.getElementById('s4-cupon-wrapper');
+    if (cw2) cw2.style.display = tieneCuponDisponible() ? 'block' : 'none';
   }
 
+  actualizarTotalS4();
+}
+
+function toggleCupon(cb) {
+  E.cuponAplicado = cb.checked;
   actualizarTotalS4();
 }
 
@@ -1856,11 +1903,22 @@ function actualizarTotalS4() {
     E.meses = [];
   }
 
+  // Cupón activo: fuerza total a $0
+  if (E.cuponAplicado && E.tipoPago === 'clase') { total = 0; }
+
   E.totalPago = total;
 
   var box = document.getElementById('s4-total-box');
 
-  if (total > 0) {
+  if (E.cuponAplicado && E.tipoPago === 'clase') {
+    box.style.display = 'block';
+    box.innerHTML =
+      '<div class="total-box" style="background:#f0fdf4;border-color:#22c55e;">' +
+      '<div style="color:#166534;">🎟️ Cupón aplicado</div>' +
+      '<div style="font-size:1.5rem;font-weight:800;color:#16a34a;">$0.00</div>' +
+      '<div style="font-size:0.78rem;color:#4ade80;">Primera clase gratis ✓</div>' +
+      '</div>';
+  } else if (total > 0) {
     box.style.display = 'block';
     box.innerHTML =
       '<div class="total-box">' +
@@ -1925,7 +1983,13 @@ function cargarFechas() {
         err('err-s4', 'No hay cupos disponibles actualmente.');
       }
     }
-    actualizarTextosPago();
+actualizarTextosPago();
+    // Cupón: solo visible en modo "por clase"
+    var cuponWrap = document.getElementById('s4-cupon-wrapper');
+    var chkCupon  = document.getElementById('chk-cupon');
+    if (cuponWrap) cuponWrap.style.display = (!puedeMensual && tieneCuponDisponible()) ? 'block' : 'none';
+    if (chkCupon) chkCupon.checked = false;
+    E.cuponAplicado = false;
     ir('s4');
   }, function(e) { ir('s2'); err('err-s2', 'Error al verificar fechas: ' + e.message); });
 }
@@ -1947,10 +2011,15 @@ function continuar_s4() {
       return;
     }
 
-  } else {
+} else {
 
     if (!E.fechas || E.fechas.length === 0) {
       err('err-s4', 'Por favor selecciona al menos una fecha.');
+      return;
+    }
+
+    if (E.cuponAplicado && E.fechas.length > 1) {
+      err('err-s4', 'El cupón de primera clase aplica a 1 sola clase. Selecciona solo una fecha o desactiva el cupón.');
       return;
     }
 
@@ -2010,7 +2079,16 @@ if (hint) { hint.textContent = 'Envía tu comprobante para agilizar la verificac
     equipLinea + '\n\n' +
     'Te envío el comprobante adjunto. Si no lo ves, por favor solicítamelo. ¡Gracias!';
 
-  E.wpUrl = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp);
+E.wpUrl = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp);
+
+  // Con cupón: saltar pantalla de pago, ir directo al resumen
+  if (E.cuponAplicado) {
+    E.notaPago = 'Cupón primera clase gratis';
+    construirResumenS5('s4');
+    ir('s5');
+    return;
+  }
+
   ir('s-pago');
 }
 
@@ -2027,11 +2105,8 @@ function marcarWpEnviado(el) {
   if (hint) { hint.textContent = '¡Gracias! Revisaremos tu pago a la brevedad.'; hint.classList.add('wp-confirmado'); }
 }
 
-function continuar_pago() {
-  if (!document.getElementById('chk-pago').checked) { err('err-pago', 'Debes confirmar que realizaste el pago.'); return; }
-  if (!E.wpEnviado) { err('err-pago', '📲 Envía tu comprobante por WhatsApp para agilizar la revisión de tu reserva.'); return; }
-  E.notaPago = document.getElementById('nota-pago').value.trim();
-document.getElementById('btn-confirmar').disabled = false;
+function construirResumenS5(backTarget) {
+  document.getElementById('btn-confirmar').disabled = false;
   document.getElementById('btn-confirmar').textContent = necesitaEquipo() ? 'Confirmar mi reserva' : 'Confirmar mi pago';
   document.getElementById('s5-titulo-h2').textContent = necesitaEquipo() ? 'Resumen de tu reserva' : 'Resumen de tu pago';
   document.getElementById('s5-liberar-cupo').style.display = necesitaEquipo() ? 'block' : 'none';
@@ -2040,7 +2115,11 @@ document.getElementById('btn-confirmar').disabled = false;
   var h = '<div class="r-titulo">Tu reserva</div>';
   h += fila('Nombre', E.nombre);
   h += fila('Tipo de pago', E.tipoPago === 'mensual' ? '📅 Mensual' : '🎟️ Por clase');
-  h += fila('Total', '$' + (E.totalPago || 0).toFixed(2));
+  if (E.cuponAplicado) {
+    h += fila('Total', '<span style="color:#16a34a;font-weight:800;">🎟️ $0.00 — Primera clase gratis</span>');
+  } else {
+    h += fila('Total', '$' + (E.totalPago || 0).toFixed(2));
+  }
   // ── FIX 2: mostrar meses en el resumen de confirmación ──────────────────────
   if (E.tipoPago === 'clase') {
     h += fila('Fecha/s', E.fechas.map(function(f) { return '• ' + f; }).join('<br>'));
@@ -2051,6 +2130,16 @@ document.getElementById('btn-confirmar').disabled = false;
   h += fila('Protecciones', d.necesitaProtecciones);
   if (E.notaPago) h += fila('Referencia pago', E.notaPago);
   document.getElementById('s5-resumen').innerHTML = h;
+  // Ajustar botón "← Volver" de S5 según el flujo
+  var s5Back = document.querySelector('#s5 .btn-secondary');
+  if (s5Back) s5Back.onclick = function() { volver(backTarget || 's-pago'); };
+}
+
+function continuar_pago() {
+  if (!document.getElementById('chk-pago').checked) { err('err-pago', 'Debes confirmar que realizaste el pago.'); return; }
+  if (!E.wpEnviado) { err('err-pago', '📲 Envía tu comprobante por WhatsApp para agilizar la revisión de tu reserva.'); return; }
+  E.notaPago = document.getElementById('nota-pago').value.trim();
+  construirResumenS5('s-pago');
   ir('s5');
 }
 
@@ -2071,7 +2160,7 @@ function confirmarReserva() {
           ? 'mensual (sin clases seleccionadas)'
           : '—');
 
-    api({
+api({
       action: 'guardarNotaPago',
       nombre: E.nombre,
       tipoPago: E.tipoPago,
@@ -2081,6 +2170,13 @@ function confirmarReserva() {
       meses: E.meses.join(', '),
       email: E.datos.email || ''
     }, function() {}, function() {});
+
+    // Marcar cupón como usado (localStorage + ocultar banner)
+    if (E.cuponAplicado) {
+      marcarCuponUsadoLocal();
+      var bannerCuponUsado = document.getElementById('banner-cupon');
+      if (bannerCuponUsado) bannerCuponUsado.style.display = 'none';
+    }
 
 var necesitaPatinesLocal = (E.datos.necesitaPatines || '').toLowerCase() !== 'no' && E.datos.necesitaPatines;
     var tallaLocal = E.datos.talla || '';
@@ -2123,7 +2219,11 @@ var necesitaPatinesLocal = (E.datos.necesitaPatines || '').toLowerCase() !== 'no
         'Puedes revisar el estado de tu pago desde <strong>"Ver mis reservas"</strong>.';
     }
 
-    if (E.datos && E.datos.email) {
+if (E.cuponAplicado) {
+      var avisoEl = document.getElementById('s6-email-aviso');
+      avisoEl.textContent = '🎟️ Tu cupón de primera clase fue aplicado. ¡Nos vemos en el entrenamiento!';
+      avisoEl.style.cssText = 'background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 14px;font-size:0.85rem;color:#166534;margin-bottom:14px;text-align:center;';
+    } else if (E.datos && E.datos.email) {
       document.getElementById('s6-email-aviso').textContent =
         '⏳ Tu pago está pendiente de verificación. ' +
         'Recibirás un correo en ' + E.datos.email +
@@ -2131,9 +2231,13 @@ var necesitaPatinesLocal = (E.datos.necesitaPatines || '').toLowerCase() !== 'no
     }
 
 var btnWpExito = document.getElementById('btn-wp-exito');
-    if (btnWpExito && E.wpUrl) btnWpExito.href = E.wpUrl;
+    if (E.cuponAplicado) {
+      if (btnWpExito) btnWpExito.style.display = 'none';
+    } else if (btnWpExito && E.wpUrl) {
+      btnWpExito.href = E.wpUrl;
+      btnWpExito.style.display = '';
+    }
     ir('s6');
-  }
 
   // ── FIX 3: guardar en hoja Reservas también para pago mensual ───────────────
   if (E.tipoPago === 'mensual') {
@@ -2152,7 +2256,7 @@ api({ action: 'guardarReserva', nombre: E.nombre, fecha: mes, talla: talla, prot
     function guardarSiguiente() {
       if (pendientes.length === 0) { finalizar(); return; }
       var fecha = pendientes.shift();
-      api({ action: 'guardarReserva', nombre: E.nombre, fecha: fecha, talla: talla, protecciones: protec, monto: E.precioPorClase.toFixed(2), email: E.datos.email || '' },
+api({ action: 'guardarReserva', nombre: E.nombre, fecha: fecha, talla: talla, protecciones: protec, monto: E.cuponAplicado ? '0.00' : E.precioPorClase.toFixed(2), email: E.datos.email || '' },
         function() { guardarSiguiente(); },
         function() { guardarSiguiente(); }
       );
