@@ -1358,7 +1358,7 @@ function construirResumenS5(backTarget) {
   var d = E.datos; var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
   var h = '<div class="r-titulo">Tu reserva</div>';
   h += fila('Nombre', E.nombre); h += fila('Tipo de pago', E.tipoPago === 'mensual' ? '📅 Mensual' : '🎟️ Por clase');
-  if (E.cuponAplicado) { var textoTotal = E.totalPago > 0 ? '🎟️ Cllase gratis + $' + E.totalPago.toFixed(2) : '🎟️ $0.00 — Clase gratis'; h += fila('Total', '<span style="color:#16a34a;font-weight:800;">' + textoTotal + '</span>'); }
+  if (E.cuponAplicado) { var textoTotal = E.totalPago > 0 ? '🎟️ Clase gratis + $' + E.totalPago.toFixed(2) : '🎟️ $0.00 — Clase gratis'; h += fila('Total', '<span style="color:#16a34a;font-weight:800;">' + textoTotal + '</span>'); }
   else { h += fila('Total', '<span style="font-weight:800;">$' + (E.totalPago || 0).toFixed(2) + '</span>'); }
   if (E.tipoPago === 'clase') { h += fila('Fecha/s', E.fechas.map(function(f) { return '• ' + f; }).join('<br>')); } else if (E.meses && E.meses.length > 0) { h += fila('Meses pagados', E.meses.map(function(m) { return '• ' + m; }).join('<br>')); }
   h += fila('Patines', d.necesitaPatines + (talla ? ' — Talla ' + talla : '')); h += fila('Protecciones', d.necesitaProtecciones); if (E.notaPago) h += fila('Referencia pago', E.notaPago);
