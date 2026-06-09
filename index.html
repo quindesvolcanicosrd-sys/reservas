@@ -1346,7 +1346,7 @@ function continuar_s4() {
   var equipLinea = (talla && protec && protec.toLowerCase() !== 'no') ? 'Necesitare patines talla ' + talla + ' y protecciones.' : (talla) ? 'Necesitare patines talla ' + talla + '.' : (protec && protec.toLowerCase() !== 'no') ? 'Necesitare protecciones (' + protec + ').' : 'Llevare mi propio equipamiento.';
   var msgWp = '¡Hola! Soy *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '*.\n\n*Clases reservadas:*\n' + lineasFechas + '\n\n' + equipLinea + '\n\nTe envío el comprobante adjunto. Si no lo ves, por favor solicítamelo. ¡Gracias!';
   E.wpUrl = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp);
-  if (E.cuponAplicado) { E.notaPago = 'Cupón primera clase gratis'; construirResumenS5('s4'); ir('s5'); return; }
+  if (E.cuponAplicado) { E.notaPago = 'Cupón clase gratis'; construirResumenS5('s4'); ir('s5'); return; }
   ir('s-pago');
 }
 
