@@ -1011,7 +1011,7 @@ function api(params, onSuccess, onError) {
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 window.onload = function() {
   // Ya no llamamos a mostrarCargando aquí porque el CSS ya lo inicializó en FLEX
-  document.getElementById('loading-msg').textContent = 'Cargando lista...';
+  document.getElementById('loading-msg').textContent = 'Cargando...';
   
   api({ action: 'getNombres' }, function(nombres) {
     var sel = document.getElementById('sel-nombre');
