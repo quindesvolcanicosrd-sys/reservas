@@ -1340,7 +1340,19 @@ function continuar_s4() {
   else { if (!E.fechas || E.fechas.length === 0) { err('err-s4', 'Por favor selecciona al menos una fecha.'); return; } }
   var esClase = E.tipoPago === 'clase';
   document.getElementById('s-pago-total-monto').textContent = 'Total a pagar: $' + (E.totalPago || 0).toFixed(2);
-  document.getElementById('s-pago-total-detalle').textContent = esClase ? E.fechas.length + (E.fechas.length === 1 ? ' clase' : ' clases') + ' × $' + E.precioPorClase.toFixed(2) : E.meses.join(', ');
+  
+  var detalleTexto = '';
+  if (esClase) {
+    if (E.cuponAplicado) {
+      var extras = E.fechas.length - 1;
+      detalleTexto = '🎟️ 1 clase gratis' + (extras > 0 ? ' y ' + extras + (extras === 1 ? ' clase' : ' clases') + ' × $' + E.precioPorClase.toFixed(2) : '');
+    } else {
+      detalleTexto = E.fechas.length + (E.fechas.length === 1 ? ' clase' : ' clases') + ' × $' + E.precioPorClase.toFixed(2);
+    }
+  } else {
+    detalleTexto = E.meses.join(', ');
+  }
+  document.getElementById('s-pago-total-detalle').textContent = detalleTexto;
   document.getElementById('chk-pago').checked = false; document.getElementById('btn-pago').disabled = true; document.getElementById('nota-pago').value = ''; E.wpEnviado = false;
   var lineasFechas = E.tipoPago === 'mensual' ? 'Meses pagados:\n- ' + E.meses.join('\n- ') + '\n\nTotal: $' + (E.totalPago || 0).toFixed(2) : E.fechas.map(function(f) { return '- ' + f; }).join('\n');
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : ''; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : '';
