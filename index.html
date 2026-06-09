@@ -92,6 +92,7 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
 
 /* Botones Mejorados */
 .btn { 
+  font-family: inherit; /* Esta línea soluciona el problema de la fuente */
   width: 100%; padding: 16px; border: none; border-radius: 12px; 
   font-size: 0.95rem; font-weight: 700; cursor: pointer; 
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
@@ -677,7 +678,7 @@ select, option, optgroup {
       <div class="seccion-label">Paso 4 de 4 — Confirmar</div>
       <h2 id="s5-titulo-h2">Resumen de tu reserva</h2>
       <div class="resumen" id="s5-resumen"></div>
-      <p>Al confirmar nos avisas que ya realizaste el pago. <strong>Revisaremos tu transferencia</strong> y recibirás confirmación por correo o cuando esté aprobada.</p>
+      <p id="s5-aviso-pago">Al confirmar nos avisas que ya realizaste el pago. <strong>Revisaremos tu transferencia</strong> y recibirás confirmación por correo o cuando esté aprobada.</p>
       <p id="s5-liberar-cupo" style="margin-top:12px;">Si no puedes venir, <strong>avisa lo antes posible</strong> para liberar tu cupo.</p>
       <div class="error-msg" id="err-s5"></div>
       <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarReserva()" style="margin-top:16px;">Confirmar mi reserva</button>
@@ -1346,7 +1347,8 @@ function continuar_s4() {
   var equipLinea = (talla && protec && protec.toLowerCase() !== 'no') ? 'Necesitare patines talla ' + talla + ' y protecciones.' : (talla) ? 'Necesitare patines talla ' + talla + '.' : (protec && protec.toLowerCase() !== 'no') ? 'Necesitare protecciones (' + protec + ').' : 'Llevare mi propio equipamiento.';
   var msgWp = '¡Hola! Soy *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '*.\n\n*Clases reservadas:*\n' + lineasFechas + '\n\n' + equipLinea + '\n\nTe envío el comprobante adjunto. Si no lo ves, por favor solicítamelo. ¡Gracias!';
   E.wpUrl = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp);
-  if (E.cuponAplicado) { E.notaPago = 'Cupón clase gratis'; construirResumenS5('s4'); ir('s5'); return; }
+  /* Solo saltamos el pago si el cupón está aplicado Y el total es exactamente cero */
+  if (E.cuponAplicado && E.totalPago === 0) { E.notaPago = 'Cupón clase gratis'; construirResumenS5('s4'); ir('s5'); return; }
   ir('s-pago');
 }
 
@@ -1355,6 +1357,7 @@ function toggleBtnPago() { document.getElementById('btn-pago').disabled = !docum
 function construirResumenS5(backTarget) {
   document.getElementById('btn-confirmar').disabled = false; document.getElementById('btn-confirmar').textContent = necesitaEquipo() ? 'Confirmar mi reserva' : 'Confirmar mi pago';
   document.getElementById('s5-titulo-h2').textContent = necesitaEquipo() ? 'Resumen de tu reserva' : 'Resumen de tu pago'; document.getElementById('s5-liberar-cupo').style.display = necesitaEquipo() ? 'block' : 'none';
+  var avisoPago = document.getElementById('s5-aviso-pago'); if(avisoPago) avisoPago.style.display = (E.totalPago === 0) ? 'none' : 'block';
   var d = E.datos; var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
   var h = '<div class="r-titulo">Tu reserva</div>';
   h += fila('Nombre', E.nombre); h += fila('Tipo de pago', E.tipoPago === 'mensual' ? '📅 Mensual' : '🎟️ Por clase');
