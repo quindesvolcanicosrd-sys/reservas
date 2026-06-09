@@ -544,7 +544,7 @@ select, option, optgroup {
       <div class="seccion-label">Editar equipamiento — 2/3</div>
       <h2>¿Qué talla necesitas?</h2>
       <p>Estas son las tallas disponibles en el equipo.</p>
-      <div class="select-wrapper"><select id="sel-talla"><option value="">Elige una talla</option></select></div>
+      <div class="select-wrapper"><select id="sel-talla"><option value=""></option></select></div>
       <div class="error-msg" id="err-s3b"></div>
       <button class="btn btn-primary" onclick="continuar_s3b()">Continuar →</button>
       <button class="btn btn-secondary" onclick="volver('s3a')">← Volver</button>
@@ -759,7 +759,7 @@ select, option, optgroup {
             <label>Prefijo telefónico</label>
             <div class="select-wrapper">
               <select id="d-prefijo" onchange="toggleOtroSelect('prefijo')">
-                <option value="">Selecciona</option>
+                <option value=""></option>
                 <optgroup label="América del Sur">
                   <option value="🇪🇨 +593 (Ecuador)">🇪🇨 +593 Ecuador</option>
                   <option value="🇨🇴 +57 (Colombia)">🇨🇴 +57 Colombia</option>
@@ -832,7 +832,7 @@ select, option, optgroup {
             <label>Tipo de documento</label>
             <div class="select-wrapper">
               <select id="d-tipoDocumento">
-                <option value="">Selecciona</option>
+                <option value=""></option>
                 <option value="Cédula">Cédula</option>
                 <option value="DNI">DNI</option>
                 <option value="Pasaporte">Pasaporte</option>
@@ -848,7 +848,7 @@ select, option, optgroup {
             <label>País emisor del documento</label>
             <div class="select-wrapper">
               <select id="d-paisExpedicion">
-                <option value="">Selecciona</option>
+                <option value=""></option>
                 <option value="Ecuador">Ecuador</option>
                 <option value="Colombia">Colombia</option>
                 <option value="Venezuela">Venezuela</option>
@@ -890,7 +890,7 @@ select, option, optgroup {
             <label>Cantón</label>
             <div class="select-wrapper">
               <select id="d-canton" onchange="toggleOtroSelect('canton')">
-                <option value="">Selecciona</option>
+                <option value=""></option>
                 <option value="Quito">Quito</option>
                 <option value="Cayambe">Cayambe</option>
                 <option value="Mejía">Mejía</option>
@@ -919,7 +919,7 @@ select, option, optgroup {
             <label>Relación</label>
             <div class="select-wrapper">
               <select id="d-emerg1Relacion">
-                <option value="">Selecciona</option>
+                <option value=""></option>
                 <option value="Amigx">Amigx</option>
                 <option value="Familiar">Familiar</option>
                 <option value="Pareja">Pareja</option>
@@ -931,7 +931,7 @@ select, option, optgroup {
             <label>Prefijo telefónico</label>
             <div class="select-wrapper">
               <select id="d-emerg1Prefijo" onchange="toggleOtroSelect('emerg1Prefijo')">
-                <option value="">Selecciona</option>
+                <option value=""></option>
                 <option value="🇪🇨 +593 (Ecuador)">🇪🇨 +593 Ecuador</option>
                 <option value="Otro">Otro</option>
               </select>
@@ -1020,7 +1020,7 @@ window.onload = function() {
   
   api({ action: 'getNombres' }, function(nombres) {
     var sel = document.getElementById('sel-nombre');
-    sel.innerHTML = '<option value="">Elige tu nombre</option>';
+    sel.innerHTML = '<option value=""></option>';
     nombres.forEach(function(n) { var o = document.createElement('option'); o.value = o.textContent = n; sel.appendChild(o); });
     sel.disabled = false; sel.style.color = ''; 
     
@@ -1220,7 +1220,7 @@ function continuar_s3a() {
   if (E.editPat === 'Sí') {
     mostrarCargando('Cargando tallas...');
     api({ action: 'getTallasDisponibles' }, function(tallas) {
-      var sel = document.getElementById('sel-talla'); sel.innerHTML = '<option value="">Elige una talla</option>';
+      var sel = document.getElementById('sel-talla'); sel.innerHTML = '<option value=""></option>';
       tallas.forEach(function(t) { var o = document.createElement('option'); o.value = o.textContent = t; sel.appendChild(o); });
       ocultarCargando(); ir('s3b');
     }, function(e) { ocultarCargando(); err('err-s3a', 'Error: ' + e.message); });
