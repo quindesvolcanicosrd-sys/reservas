@@ -1904,21 +1904,26 @@ function actualizarTotalS4() {
   }
 
   // Cupón activo: fuerza total a $0
-  if (E.cuponAplicado && E.tipoPago === 'clase') { total = 0; }
+  if (E.cuponAplicado && E.tipoPago === 'clase') {   total = Math.max(0, E.fechas.length - 1) * E.precioPorClase; }
 
   E.totalPago = total;
 
   var box = document.getElementById('s4-total-box');
 
   if (E.cuponAplicado && E.tipoPago === 'clase') {
-    box.style.display = 'block';
-    box.innerHTML =
-      '<div class="total-box" style="background:#f0fdf4;border-color:#22c55e;">' +
-      '<div style="color:#166534;">🎟️ Cupón aplicado</div>' +
-      '<div style="font-size:1.5rem;font-weight:800;color:#16a34a;">$0.00</div>' +
-      '<div style="font-size:0.78rem;color:#4ade80;">Primera clase gratis ✓</div>' +
-      '</div>';
-  } else if (total > 0) {
+  box.style.display = 'block';
+  var extras = E.fechas.length - 1;
+  box.innerHTML =
+    '<div class="total-box" style="background:#f0fdf4;border-color:#22c55e;">' +
+    '<div style="color:#166534;">🎟️ Cupón aplicado — 1ª clase gratis</div>' +
+    (extras > 0
+      ? '<div style="font-size:1.5rem;font-weight:800;color:#16a34a;">$' + total.toFixed(2) + '</div>' +
+        '<div style="font-size:0.78rem;color:#4ade80;">' + extras + ' clase' + (extras > 1 ? 's' : '') + ' adicional' + (extras > 1 ? 'es' : '') + ' × $' + E.precioPorClase.toFixed(2) + '</div>'
+      : '<div style="font-size:1.5rem;font-weight:800;color:#16a34a;">$0.00</div>' +
+        '<div style="font-size:0.78rem;color:#4ade80;">Primera clase gratis ✓</div>'
+    ) +
+    '</div>';
+} else if (total > 0) {
     box.style.display = 'block';
     box.innerHTML =
       '<div class="total-box">' +
@@ -2018,12 +2023,7 @@ function continuar_s4() {
       return;
     }
 
-    if (E.cuponAplicado && E.fechas.length > 1) {
-      err('err-s4', 'El cupón de primera clase aplica a 1 sola clase. Selecciona solo una fecha o desactiva el cupón.');
-      return;
     }
-
-  }
   
   var esClase = E.tipoPago === 'clase';
   document.getElementById('s-pago-total-monto').textContent = 'Total a pagar: $' + (E.totalPago || 0).toFixed(2);
@@ -2172,7 +2172,7 @@ api({
     }, function() {}, function() {});
 
     // Marcar cupón como usado (localStorage + ocultar banner)
-    if (E.cuponAplicado) {
+    if (E.cuponAplicado && E.totalPago === 0) {
       marcarCuponUsadoLocal();
       var bannerCuponUsado = document.getElementById('banner-cupon');
       if (bannerCuponUsado) bannerCuponUsado.style.display = 'none';
