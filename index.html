@@ -75,9 +75,11 @@ select { padding-right: 40px; cursor: pointer; }
 .select-wrapper::after { content: '▾'; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: #F97316; pointer-events: none; font-size: 1.1rem; transition: transform 0.3s; }
 select:focus + .select-wrapper::after { transform: translateY(-50%) rotate(180deg); }
 
-/* Estilo de texto de ayuda (Placeholders) */
+/* Estilo de texto de ayuda (Placeholders y Desplegables cerrados) */
 ::placeholder { color: #a89587; font-style: italic; font-size: 0.9rem; opacity: 1; }
-select option[value=""] { color: #a89587; font-style: italic; }
+select:has(option[value=""]:checked) { color: #a89587; font-style: italic; font-size: 0.9rem; }
+select option { color: #1a1a1a; font-style: normal; font-size: 1rem; }
+select option[value=""] { color: #a89587; font-style: italic; font-size: 0.9rem; }
 
 /* Efecto Focus (Anillo brillante) */
 select:focus, input:focus, textarea:focus {
@@ -475,7 +477,7 @@ select, option, optgroup {
           <span style="font-size:1.6rem;flex-shrink:0;">🎟️</span>
           <div style="text-align: left;">
             <div style="font-weight:800;color:#b45309;font-size:0.95rem;">¡Tienes un cupón disponible!</div>
-            <div style="font-size:0.8rem;color:#92400e;margin-top:4px; line-height: 1.4;"><strong>¡Vale por una clase gratis!</strong> Úsalo en tu próxima reserva individual. Personal e intransferible.</div>
+            <div style="font-size:0.8rem;color:#92400e;margin-top:4px; line-height: 1.4;"><strong>¡Vale por una clase gratis!</strong> Úsalo en tu próxima reserva individual. Tu cupón es personal e intransferible.</div>
           </div>
         </div>
       </div>
