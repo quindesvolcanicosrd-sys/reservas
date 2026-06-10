@@ -73,7 +73,7 @@ select, input[type="text"], input[type="tel"], input[type="email"], input[type="
   font-family: inherit;
 }
 select { padding-right: 40px; cursor: pointer; }
-.select-wrapper::after { content: '▾'; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: #F97316; pointer-events: none; font-size: 1.1rem; transition: transform 0.3s; }
+.select-wrapper::after { font-family: 'Material Symbols Outlined'; content: 'expand_more'; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #F97316; pointer-events: none; font-size: 1.3rem; transition: transform 0.3s; }
 select:focus + .select-wrapper::after { transform: translateY(-50%) rotate(180deg); }
 
 /* Estilo de texto de ayuda (Placeholders y Desplegables cerrados) */
@@ -588,7 +588,7 @@ select, option, optgroup {
   </select>
 </div>
       <div class="error-msg" id="err-s1"></div>
-      <button class="btn btn-primary" onclick="continuar_s1()">Continuar →</button>
+      <button class="btn btn-primary" onclick="continuar_s1()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
       <a class="btn-wp-grupo" href="https://chat.whatsapp.com/FPupGnd1c9g1oVXu9VudKK" target="_blank">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white">
           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
@@ -617,7 +617,7 @@ select, option, optgroup {
 </div>
       <div class="error-msg" id="err-pin"></div>
       <button type="button" class="btn-forgot-pin" onclick="solicitarNuevoPIN()">¿Olvidaste tu PIN?</button>
-      <button class="btn btn-primary" onclick="continuar_pin()">Continuar →</button>
+      <button class="btn btn-primary" onclick="continuar_pin()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
       <button class="btn btn-secondary" onclick="volver('s1')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
   </div>
@@ -683,7 +683,7 @@ select, option, optgroup {
         <label class="opcion" onclick="selOp(this,'conf','no')"><input type="radio" name="conf" value="no"> No, quiero rectificarlo</label>
       </div>
       <div class="error-msg" id="err-s2"></div>
-      <button class="btn btn-primary" onclick="continuar_s2()">Continuar →</button>
+      <button class="btn btn-primary" onclick="continuar_s2()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
       <button class="btn btn-secondary" onclick="volver('s-home')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
   </div>
@@ -697,7 +697,7 @@ select, option, optgroup {
         <label class="opcion" onclick="selOp(this,'edit-pat','No')"><input type="radio" name="edit-pat" value="No"> No, tengo mis propios patines</label>
       </div>
       <div class="error-msg" id="err-s3a"></div>
-      <button class="btn btn-primary" onclick="continuar_s3a()">Continuar →</button>
+      <button class="btn btn-primary" onclick="continuar_s3a()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
       <button class="btn btn-secondary" onclick="volver('s2')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
   </div>
@@ -709,7 +709,7 @@ select, option, optgroup {
       <p>Estas son las tallas disponibles en el equipo.</p>
       <div class="select-wrapper"><select id="sel-talla"><option value="">Elige una talla</option></select></div>
       <div class="error-msg" id="err-s3b"></div>
-      <button class="btn btn-primary" onclick="continuar_s3b()">Continuar →</button>
+      <button class="btn btn-primary" onclick="continuar_s3b()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
       <button class="btn btn-secondary" onclick="volver('s3a')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
   </div>
@@ -726,7 +726,7 @@ select, option, optgroup {
       </div>
       <textarea class="textarea-otro" id="txt-otro" placeholder="Ej: Tengo casco pero me faltan rodilleras y coderas"></textarea>
       <div class="error-msg" id="err-s3c"></div>
-      <button class="btn btn-primary" onclick="continuar_s3c()">Guardar y continuar →</button>
+      <button class="btn btn-primary" onclick="continuar_s3c()">Guardar y Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
       <button class="btn btn-secondary" onclick="volver(E.editPat === 'No' ? 's3a' : 's3b')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
   </div>
@@ -792,7 +792,7 @@ select, option, optgroup {
         <div class="total-box"><div id="s4-total-monto"></div><div class="total-detalle" id="s4-total-detalle"></div></div>
       </div>
       <div class="error-msg" id="err-s4"></div>
-      <button class="btn btn-primary" onclick="continuar_s4()">Continuar →</button>
+      <button class="btn btn-primary" onclick="continuar_s4()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
       <button class="btn btn-secondary" onclick="volver('s2')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
   </div>
@@ -836,7 +836,7 @@ select, option, optgroup {
       <div id="wp-wrapper" style="display:none;"></div>
       <div class="error-msg" id="err-pago"></div>
       <button class="btn btn-primary" id="btn-pago" onclick="continuar_pago_y_wp()" disabled style="margin-top:20px;">
-        Continuar →
+        Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span>
       </button>
       <button class="btn btn-secondary" onclick="volver('s4')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
