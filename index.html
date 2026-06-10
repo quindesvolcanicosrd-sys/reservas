@@ -657,6 +657,9 @@ select, option, optgroup {
         <div class="hb-titulo" style="color:#1a1a1a;">Editar mis datos</div>
         <div class="hb-sub">Actualiza tu información personal</div>
       </div>
+      <button class="btn btn-secondary" style="margin-top:4px;" onclick="cerrarSesion()">
+        <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">logout</span> Cerrar sesión
+      </button>
     </div>
   </div>
 
@@ -1389,6 +1392,12 @@ function irNuevaReserva() {
 }
 
 function irHomeDesdeExito() { ir('s-home'); }
+function cerrarSesion() {
+  if (!confirm('¿Cerrar sesión?')) return;
+  localStorage.removeItem('session');
+  E.nombre = ''; E.datos = null; E.datosCompletos = null; _todasReservas = [];
+  ir('s1');
+}
 
 var _todasReservas = [];
 function renderMisReservas(reservas, mostrarTodas) {
