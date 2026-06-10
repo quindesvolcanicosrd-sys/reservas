@@ -2,7 +2,9 @@
    Estrategia: network-first con fallback a cache (solo recursos del mismo origen).
    Las llamadas a la API de Apps Script (script.google.com) NUNCA se cachean. */
 
-var CACHE = 'mirlxs-v1';
+importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+
+var CACHE = 'mirlxs-v2';
 
 self.addEventListener('install', function (e) {
   self.skipWaiting();
