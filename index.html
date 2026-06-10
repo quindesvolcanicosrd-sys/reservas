@@ -515,6 +515,22 @@ select, option, optgroup {
   .select-wrapper::after { color: #fb923c; }
   .select-spinner { border-color: #333; border-top-color: #F97316; }
   .btn-spinner { border-color: rgba(255,255,255,0.2); border-top-color: white; }
+
+  /* Fix textos con colores inline */
+  .home-boton .hb-titulo { color: #f0f0f0 !important; }
+  .card p, .card a[style] { color: #aaa !important; }
+  p strong { color: #e0e0e0; }
+  #s5-aviso-pago, #s5-liberar-cupo { color: #aaa; }
+
+  /* Fix input PIN en dark */
+  #input-pin { background: #252525; color: #f0f0f0; border-color: #333; }
+  #input-pin::placeholder { color: #555 !important; }
+
+  /* Fix dots del PIN en dark */
+  #pd0, #pd1, #pd2, #pd3 { background: #2a2a2a !important; border-color: #444 !important; }
+
+  /* Fix footer */
+  footer a { color: #a48672 !important; }
 }
   
 </style>
@@ -586,36 +602,16 @@ select, option, optgroup {
       <h2>Ingresa tu PIN</h2>
       <p>Introduce tu PIN de 4 dígitos para continuar.</p>
       
-      <input type="hidden" id="input-pin">
-
-<div style="display:flex;justify-content:center;gap:20px;margin:20px 0 8px;">
+      <div style="display:flex;justify-content:center;gap:20px;margin:24px 0 16px;">
   <span id="pd0" style="width:18px;height:18px;border-radius:50%;border:2.5px solid #e5e5e5;background:#fafafa;display:inline-block;transition:all 0.2s;"></span>
   <span id="pd1" style="width:18px;height:18px;border-radius:50%;border:2.5px solid #e5e5e5;background:#fafafa;display:inline-block;transition:all 0.2s;"></span>
   <span id="pd2" style="width:18px;height:18px;border-radius:50%;border:2.5px solid #e5e5e5;background:#fafafa;display:inline-block;transition:all 0.2s;"></span>
   <span id="pd3" style="width:18px;height:18px;border-radius:50%;border:2.5px solid #e5e5e5;background:#fafafa;display:inline-block;transition:all 0.2s;"></span>
 </div>
-<div id="pin-nums-display" style="display:none;text-align:center;font-size:1.6rem;font-weight:800;letter-spacing:10px;color:#1a1a1a;min-height:32px;margin-bottom:4px;"></div>
-<div style="text-align:right;margin-bottom:12px;">
-  <button type="button" id="btn-toggle-pin" onclick="togglePinVisibility()"
-    style="background:none;border:none;cursor:pointer;color:#888;transition:color 0.2s;padding:4px;">
-    <span class="material-symbols-outlined">visibility</span>
-  </button>
-</div>
-
-<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:280px;margin:0 auto 20px;">
-  <button type="button" class="btn-pin-key" onclick="pinInput('1')">1</button>
-  <button type="button" class="btn-pin-key" onclick="pinInput('2')">2</button>
-  <button type="button" class="btn-pin-key" onclick="pinInput('3')">3</button>
-  <button type="button" class="btn-pin-key" onclick="pinInput('4')">4</button>
-  <button type="button" class="btn-pin-key" onclick="pinInput('5')">5</button>
-  <button type="button" class="btn-pin-key" onclick="pinInput('6')">6</button>
-  <button type="button" class="btn-pin-key" onclick="pinInput('7')">7</button>
-  <button type="button" class="btn-pin-key" onclick="pinInput('8')">8</button>
-  <button type="button" class="btn-pin-key" onclick="pinInput('9')">9</button>
-  <div></div>
-  <button type="button" class="btn-pin-key" onclick="pinInput('0')">0</button>
-  <button type="button" class="btn-pin-key" onclick="pinDelete()" style="font-size:1rem;color:#888;">⌫</button>
-</div>
+<input type="tel" id="input-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+  placeholder="• • • •"
+  style="text-align:center;font-size:1.8rem;letter-spacing:10px;margin-bottom:20px;"
+  oninput="syncPinDots()" onkeydown="if(event.key==='Enter') continuar_pin()">
       <div class="error-msg" id="err-pin"></div>
       <button type="button" class="btn-forgot-pin" onclick="solicitarNuevoPIN()">¿Olvidaste tu PIN?</button>
       <button class="btn btn-primary" onclick="continuar_pin()">Continuar →</button>
@@ -650,7 +646,7 @@ select, option, optgroup {
       </div>
       <div class="home-boton" onclick="irNuevaReserva()">
         <div class="hb-icon">➕</div>
-        <div class="hb-titulo" id="home-btn-nueva-titulo" style="color:#1a1a1a;">Nueva reserva / pago</div>
+        <div class="hb-titulo" id="home-btn-nueva-titulo">Nueva reserva / pago</div>
         <div class="hb-sub" id="home-btn-nueva-sub">Reserva equipamiento o registra tu pago</div>
       </div>
       <div class="home-boton" onclick="irEditarDatos()">
@@ -1145,56 +1141,21 @@ function ocultarCargando() {
 }
 
 // ─── FUNCIONES NUEVAS JS ──────────────────────────────────────────────────────
-var _pinValue = '';
-
-function pinInput(digit) {
-  if (_pinValue.length >= 4) return;
-  _pinValue += digit;
-  document.getElementById('input-pin').value = _pinValue;
-  _updatePinDisplay();
-}
-
-function pinDelete() {
-  _pinValue = _pinValue.slice(0, -1);
-  document.getElementById('input-pin').value = _pinValue;
-  _updatePinDisplay();
-}
-
-function _updatePinDisplay() {
-  var showNums = document.getElementById('pin-nums-display').style.display !== 'none';
+function syncPinDots() {
+  var inp = document.getElementById('input-pin');
+  var val = inp.value.replace(/\D/g,'').slice(0,4);
+  inp.value = val;
   for (var i = 0; i < 4; i++) {
-    var dot = document.getElementById('pd' + i);
+    var dot = document.getElementById('pd'+i);
     if (dot) {
-      dot.style.background   = i < _pinValue.length ? '#F97316' : '#fafafa';
-      dot.style.borderColor  = i < _pinValue.length ? '#F97316' : '#e5e5e5';
+      dot.style.background  = i < val.length ? '#F97316' : '#fafafa';
+      dot.style.borderColor = i < val.length ? '#F97316' : '#e5e5e5';
     }
   }
-  if (showNums) document.getElementById('pin-nums-display').textContent = _pinValue;
 }
-
 function resetPinPad() {
-  _pinValue = '';
   document.getElementById('input-pin').value = '';
-  _updatePinDisplay();
-  document.getElementById('pin-nums-display').style.display = 'none';
-  ['pd0','pd1','pd2','pd3'].forEach(function(id) { var el = document.getElementById(id); if (el) el.style.display = 'inline-block'; });
-  document.getElementById('btn-toggle-pin').innerHTML = '<span class="material-symbols-outlined">visibility</span>';
-}
-
-function togglePinVisibility() {
-  var numsDisplay = document.getElementById('pin-nums-display');
-  var btn = document.getElementById('btn-toggle-pin');
-  var showingNums = numsDisplay.style.display !== 'none';
-  if (showingNums) {
-    numsDisplay.style.display = 'none';
-    ['pd0','pd1','pd2','pd3'].forEach(function(id) { var el = document.getElementById(id); if (el) el.style.display = 'inline-block'; });
-    btn.innerHTML = '<span class="material-symbols-outlined">visibility</span>';
-  } else {
-    numsDisplay.style.display = 'block';
-    numsDisplay.textContent = _pinValue;
-    ['pd0','pd1','pd2','pd3'].forEach(function(id) { var el = document.getElementById(id); if (el) el.style.display = 'none'; });
-    btn.innerHTML = '<span class="material-symbols-outlined">visibility_off</span>';
-  }
+  syncPinDots();
 }
 
 // ─── ESTADO GLOBAL ────────────────────────────────────────────────────────────
@@ -1360,7 +1321,7 @@ function continuar_s1() {
 }
 
 function continuar_pin() {
-  var pin = _pinValue;
+  var pin = document.getElementById('input-pin').value;
   if (!/^\d{4}$/.test(pin)) { err('err-pin', 'Ingresa un PIN válido de 4 dígitos.'); return; }
   
   mostrarCargando('Verificando tu PIN...');
@@ -1794,12 +1755,10 @@ function continuar_pago_y_wp() {
   E.wpEnviado = true; continuar_pago();
 }
 
- document.addEventListener('keydown', function(e) {
+document.addEventListener('keydown', function(e) {
   if (!document.getElementById('s1b').classList.contains('activa')) return;
-  if (e.key >= '0' && e.key <= '9') pinInput(e.key);
-  else if (e.key === 'Backspace') { e.preventDefault(); pinDelete(); }
-  else if (e.key === 'Enter') continuar_pin();
-}); 
+  if (e.key === 'Enter') continuar_pin();
+});
 </script>
 
 <footer style="text-align:center;padding: 0px 20px 25px;;font-size:0.85rem;">
