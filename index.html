@@ -560,7 +560,7 @@ select, option, optgroup {
 <div class="contenedor">
 
  <div class="top-bar" id="top-bar">
-    <button class="top-bar-back" id="top-bar-btn">← Atrás</button>
+    <button class="top-bar-back" id="top-bar-btn"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Atrás</button>
     <span class="top-bar-titulo" id="top-bar-titulo"></span>
   </div>
 
@@ -618,7 +618,7 @@ select, option, optgroup {
       <div class="error-msg" id="err-pin"></div>
       <button type="button" class="btn-forgot-pin" onclick="solicitarNuevoPIN()">¿Olvidaste tu PIN?</button>
       <button class="btn btn-primary" onclick="continuar_pin()">Continuar →</button>
-      <button class="btn btn-secondary" onclick="volver('s1')">← Volver</button>
+      <button class="btn btn-secondary" onclick="volver('s1')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
   </div>
 
@@ -665,7 +665,7 @@ select, option, optgroup {
       <div class="seccion-label" id="misres-label">Mis reservas</div>
       <h2 id="misres-titulo">Tus reservas</h2>
       <div id="misres-lista"></div>
-      <button class="btn btn-secondary" onclick="volver('s-home')" style="margin-top:8px;">← Volver</button>
+      <button class="btn btn-secondary" onclick="volver('s-home')" style="margin-top:8px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
   </div>
 
@@ -681,7 +681,7 @@ select, option, optgroup {
       </div>
       <div class="error-msg" id="err-s2"></div>
       <button class="btn btn-primary" onclick="continuar_s2()">Continuar →</button>
-      <button class="btn btn-secondary" onclick="volver('s-home')">← Volver</button>
+      <button class="btn btn-secondary" onclick="volver('s-home')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
   </div>
 
@@ -695,7 +695,7 @@ select, option, optgroup {
       </div>
       <div class="error-msg" id="err-s3a"></div>
       <button class="btn btn-primary" onclick="continuar_s3a()">Continuar →</button>
-      <button class="btn btn-secondary" onclick="volver('s2')">← Volver</button>
+      <button class="btn btn-secondary" onclick="volver('s2')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
   </div>
 
@@ -707,7 +707,7 @@ select, option, optgroup {
       <div class="select-wrapper"><select id="sel-talla"><option value="">Elige una talla</option></select></div>
       <div class="error-msg" id="err-s3b"></div>
       <button class="btn btn-primary" onclick="continuar_s3b()">Continuar →</button>
-      <button class="btn btn-secondary" onclick="volver('s3a')">← Volver</button>
+      <button class="btn btn-secondary" onclick="volver('s3a')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
   </div>
 
@@ -724,7 +724,7 @@ select, option, optgroup {
       <textarea class="textarea-otro" id="txt-otro" placeholder="Ej: Tengo casco pero me faltan rodilleras y coderas"></textarea>
       <div class="error-msg" id="err-s3c"></div>
       <button class="btn btn-primary" onclick="continuar_s3c()">Guardar y continuar →</button>
-      <button class="btn btn-secondary" onclick="volver(E.editPat === 'No' ? 's3a' : 's3b')">← Volver</button>
+      <button class="btn btn-secondary" onclick="volver(E.editPat === 'No' ? 's3a' : 's3b')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
   </div>
 
@@ -790,7 +790,7 @@ select, option, optgroup {
       </div>
       <div class="error-msg" id="err-s4"></div>
       <button class="btn btn-primary" onclick="continuar_s4()">Continuar →</button>
-      <button class="btn btn-secondary" onclick="volver('s2')">← Volver</button>
+      <button class="btn btn-secondary" onclick="volver('s2')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
   </div>
 
@@ -835,7 +835,7 @@ select, option, optgroup {
       <button class="btn btn-primary" id="btn-pago" onclick="continuar_pago_y_wp()" disabled style="margin-top:20px;">
         Continuar →
       </button>
-      <button class="btn btn-secondary" onclick="volver('s4')">← Volver</button>
+      <button class="btn btn-secondary" onclick="volver('s4')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
   </div>
 
@@ -848,7 +848,7 @@ select, option, optgroup {
       <p id="s5-liberar-cupo" style="margin-top:12px;">Si no puedes venir, <strong>avisa lo antes posible</strong> para liberar tu cupo.</p>
       <div class="error-msg" id="err-s5"></div>
       <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarReserva()" style="margin-top:16px;">Confirmar mi reserva</button>
-      <button class="btn btn-secondary" onclick="volver('s-pago')">← Volver</button>
+      <button class="btn btn-secondary" onclick="volver('s-pago')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
   </div>
 
@@ -874,7 +874,7 @@ select, option, optgroup {
         </svg>
         Únete al grupo de WhatsApp
       </a>    
-      <button class="btn btn-secondary" onclick="irHomeDesdeExito()" style="margin-top:14px;">← Volver al inicio</button>
+      <button class="btn btn-secondary" onclick="irHomeDesdeExito()" style="margin-top:14px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver al inicio</button>
     </div>
   </div>
 
@@ -1115,7 +1115,7 @@ select, option, optgroup {
         </div>
       </div>
 
-      <button class="btn btn-secondary" onclick="volver('s-home')" style="margin-top:12px;">← Volver</button>
+      <button class="btn btn-secondary" onclick="volver('s-home')" style="margin-top:12px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
   </div>
 
