@@ -16,13 +16,12 @@ button, input, select, textarea { font-family: inherit; }
 
 .header { background: #1a1a1a; text-align: center; overflow: hidden; }
 .header-banner {
-  width: 100%; max-height: 90px; overflow: hidden;
-  display: flex; align-items: center; justify-content: center;
-  background: #fff;
+  max-height: 90px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; margin: 15px;
 }
 .header-banner img {
   height: 90px; object-fit: cover; object-position: center top;
-  display: block; opacity: 0.95;
+  display: block; opacity: 0.95; 
 }
 .header p {
   color: #aaa; font-size: 0.82rem;
@@ -531,6 +530,10 @@ select, option, optgroup {
 
   /* Fix footer */
   footer a { color: #a48672 !important; }
+
+  select option { color: #f0f0f0 !important; background: #252525; }
+  select option[value=""] { color: #666 !important; background: #252525; }
+  select optgroup { background: #1e1e1e; color: #888; }
 }
   
 </style>
