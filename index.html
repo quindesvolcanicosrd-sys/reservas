@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
 
 <link rel="manifest" href="manifest.json">
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>  
 <meta name="theme-color" content="#F97316">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -795,9 +796,12 @@ select, option, optgroup {
           <div>
             <div style="font-weight:800;color:#b45309;font-size:0.95rem;">🎟️ Aplicar cupón</div>
             <div style="font-size:0.8rem;color:#92400e;margin-top:2px;"><strong>Válido para 1 clase gratis.</strong> Personal e intransferible.</div>
-          </div>
+</div>
         </label>
       </div>
+
+      <div id="s4-credito-banner" style="display:none;margin:18px 0;background:#fffbeb;border:2px solid #fbbf24;border-radius:12px;padding:14px 16px;font-size:0.88rem;color:#92400e;line-height:1.5;"></div>
+
 <div id="s4-meses-wrapper" style="display:none;margin-top:16px;margin-bottom:24px;">
 
         <div id="meses-pasados-wrapper" style="margin-bottom:8px;">
@@ -1162,6 +1166,21 @@ select, option, optgroup {
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 var BACKEND = 'https://script.google.com/macros/s/AKfycbxGxnYNI2WTNodJiBRasTfdnwWG5Qgciljx1qtZTALp10xZIkuviyAxBdoW04jp5MYV_A/exec';
 
+var _token = '';
+
+function sha256Hex(str) {
+  var data = new TextEncoder().encode(str);
+  return crypto.subtle.digest('SHA-256', data).then(function(buf) {
+    return Array.prototype.map.call(new Uint8Array(buf), function(b) {
+      return b.toString(16).padStart(2, '0');
+    }).join('');
+  });
+}
+
+function contarCreditos() {
+  return (_todasReservas || []).filter(function(r) { return r.estado === 'Reagendar'; }).length;
+}  
+
 // --- NUEVA LÓGICA PARA ANIMACIÓN DE CARGA ---
 function mostrarCargando(msg) {
   var el = document.getElementById('loading-overlay');
@@ -1220,7 +1239,7 @@ var E = {
   conf: '', editPat: '', editTalla: '', editProtec: '',
   fechas: [], tipoPago: 'clase', meses: [],
   precioPorClase: 0, precioMensual: 0,
-  totalPago: 0, notaPago: '', wpEnviado: false, wpUrl: '', cuponAplicado: false
+  totalPago: 0, notaPago: '', wpEnviado: false, wpUrl: '', cuponAplicado: false, creditosUsados: 0
 };
 
 function tieneCuponDisponible() {
@@ -1231,6 +1250,7 @@ function marcarCuponUsadoLocal() { localStorage.setItem('cupon_' + E.nombre, 'us
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 function api(params, onSuccess, onError) {
+  if (_token && !params.token) params.token = _token;
   var url = BACKEND + '?' + Object.keys(params).map(function(k) { return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]); }).join('&');
   fetch(url, { method: 'GET', mode: 'cors' })
     .then(function(r) { return r.json(); })
@@ -1241,8 +1261,29 @@ function api(params, onSuccess, onError) {
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 window.onload = function() {
   // Ya no llamamos a mostrarCargando aquí porque el CSS ya lo inicializó en FLEX
-document.getElementById('loading-msg').textContent = 'Cargando...';      var session = localStorage.getItem('session');   if (session) {     try {       var s = JSON.parse(session);       E.nombre = s.nombre; E.datos = s.datos; E.datosCompletos = s.datosCompletos;       mostrarCargando('Cargando tus reservas...');       api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {         _todasReservas = reservas;         ocultarCargando();         document.getElementById('home-saludo').textContent = '¡Hola, ' + E.nombre + '!';         var bannerCupon = document.getElementById('banner-cupon');         if (bannerCupon) bannerCupon.style.display = tieneCuponDisponible() ? 'block' : 'none';         if (necesitaEquipo()) {           document.getElementById('home-btn-mis-titulo').textContent = 'Ver mis reservas';           document.getElementById('home-btn-mis-sub').textContent = 'Revisa el estado de tus reservas';           document.getElementById('home-btn-nueva-titulo').textContent = 'Nueva reserva';           document.getElementById('home-btn-nueva-sub').textContent = 'Registra tu reserva';         } else {           document.getElementById('home-btn-mis-titulo').textContent = 'Ver mis pagos';           document.getElementById('home-btn-mis-sub').textContent = 'Revisa el estado de tus pagos';           document.getElementById('home-btn-nueva-titulo').textContent = 'Nuevo pago';           document.getElementById('home-btn-nueva-sub').textContent = 'Registra tu pago mensual o por clase';         }         ir('s-home');       }, function() { ocultarCargando(); localStorage.removeItem('session'); });     } catch(e) { localStorage.removeItem('session'); }   }
-  
+document.getElementById('loading-msg').textContent = 'Cargando...';
+
+  var session = localStorage.getItem('session');
+  if (session) {
+    try {
+      var s = JSON.parse(session);
+      if (s.token && s.nombre) {
+        _token = s.token; E.nombre = s.nombre;
+        mostrarCargando('Restaurando tu sesión...');
+        api({ action: 'restaurarSesion' }, function(res) {
+          if (!res.valido) { localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); return; }
+          E.datos = res.datos; E.datosCompletos = res.datos;
+          vincularPush(E.nombre);
+          api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
+            _todasReservas = reservas;
+            ocultarCargando(); prepararHome(); ir('s-home');
+          }, function() { ocultarCargando(); prepararHome(); ir('s-home'); });
+        }, function() { localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); });
+      } else {
+        localStorage.removeItem('session');  // formato viejo con datos personales → se elimina
+      }
+    } catch (ex) { localStorage.removeItem('session'); }
+  }  
   api({ action: 'getNombres' }, function(nombres) {
     var sel = document.getElementById('sel-nombre');
     sel.innerHTML = '<option value="">Elige tu nombre</option>';
@@ -1394,47 +1435,52 @@ function continuar_pin() {
   var pin = document.getElementById('input-pin').value;
   if (!/^\d{4}$/.test(pin)) { err('err-pin', 'Ingresa un PIN válido de 4 dígitos.'); return; }
   _validandoPin = true;
-  
   mostrarCargando('Verificando tu PIN...');
-  
-api({ action: 'validarPin', nombre: E.nombre, pin: pin }, function(res) {
-    _validandoPin = false;
-    if (!res.valido) { ocultarCargando(); resetPinPad(); ir('s1b'); err('err-pin', 'PIN incorrecto.'); return; }
-    
-    E.datos = res.datos; // Datos básicos para la lógica de equipo
-    
-    mostrarCargando('Cargando tus reservas...');
-    api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
-      _todasReservas = reservas;
-      
-      mostrarCargando('Cargando tu perfil...');
-      api({ action: 'getDatosCompletos', nombre: E.nombre }, function(datos) {
+
+  sha256Hex(pin + '|' + E.nombre).then(function(hash) {
+    api({ action: 'validarPin', nombre: E.nombre, pinHash: hash }, function(res) {
+      _validandoPin = false;
+      if (!res.valido) {
+        ocultarCargando(); resetPinPad(); ir('s1b');
+        err('err-pin', res.bloqueado
+          ? 'Demasiados intentos fallidos. Espera 15 minutos e intenta de nuevo.'
+          : 'PIN incorrecto.');
+        return;
+      }
+      _token = res.token || '';
+      E.datos = res.datos;
+      E.datosCompletos = res.datos;
+      // Sesión liviana: solo nombre + token. Nada de datos personales en el dispositivo.
+      localStorage.setItem('session', JSON.stringify({ nombre: E.nombre, token: _token }));
+      vincularPush(E.nombre);
+
+      mostrarCargando('Cargando tus reservas...');
+      api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
+        _todasReservas = reservas;
         ocultarCargando();
-        if (!datos) { ir('s-home'); alert('No se pudieron cargar tus datos de perfil.'); return; }
-        
-        E.datosCompletos = datos; // Guardamos el perfil en la memoria
-        
-        document.getElementById('home-saludo').textContent = '¡Hola, ' + E.nombre + '!';
-        if (necesitaEquipo()) {
-          document.getElementById('home-btn-mis-titulo').textContent = 'Ver mis reservas';
-          document.getElementById('home-btn-mis-sub').textContent = 'Revisa el estado de tus reservas';
-          document.getElementById('home-btn-nueva-titulo').textContent = 'Nueva reserva';
-          document.getElementById('home-btn-nueva-sub').textContent = 'Registra tu reserva';
-        } else {
-          document.getElementById('home-btn-mis-titulo').textContent = 'Ver mis pagos';
-          document.getElementById('home-btn-mis-sub').textContent = 'Revisa el estado de tus pagos';
-          document.getElementById('home-btn-nueva-titulo').textContent = 'Nuevo pago';
-          document.getElementById('home-btn-nueva-sub').textContent = 'Registra tu pago mensual o por clase';
-        }
-        var bannerCupon = document.getElementById('banner-cupon');
-        if (bannerCupon) bannerCupon.style.display = tieneCuponDisponible() ? 'block' : 'none';
-localStorage.setItem('session', JSON.stringify({ nombre: E.nombre, datos: E.datos, datosCompletos: E.datosCompletos }));
+        prepararHome();
         ir('s-home');
-      }, function(e) { ocultarCargando(); ir('s-home'); alert('Error al cargar perfil: ' + e.message); });
-      
-    }, function(e) { ocultarCargando(); ir('s-home'); alert('Error al cargar reservas: ' + e.message); });
-    
-  }, function(e) { _validandoPin = false; ocultarCargando(); ir('s1b'); err('err-pin', 'Error: ' + e.message); });
+      }, function(e2) { ocultarCargando(); prepararHome(); ir('s-home'); alert('Error al cargar reservas: ' + e2.message); });
+
+    }, function(e1) { _validandoPin = false; ocultarCargando(); ir('s1b'); err('err-pin', 'Error: ' + e1.message); });
+  });
+}
+
+function prepararHome() {
+  document.getElementById('home-saludo').textContent = '¡Hola, ' + E.nombre + '!';
+  if (necesitaEquipo()) {
+    document.getElementById('home-btn-mis-titulo').textContent = 'Ver mis reservas';
+    document.getElementById('home-btn-mis-sub').textContent = 'Revisa el estado de tus reservas';
+    document.getElementById('home-btn-nueva-titulo').textContent = 'Nueva reserva';
+    document.getElementById('home-btn-nueva-sub').textContent = 'Registra tu reserva';
+  } else {
+    document.getElementById('home-btn-mis-titulo').textContent = 'Ver mis pagos';
+    document.getElementById('home-btn-mis-sub').textContent = 'Revisa el estado de tus pagos';
+    document.getElementById('home-btn-nueva-titulo').textContent = 'Nuevo pago';
+    document.getElementById('home-btn-nueva-sub').textContent = 'Registra tu pago mensual o por clase';
+  }
+  var bannerCupon = document.getElementById('banner-cupon');
+  if (bannerCupon) bannerCupon.style.display = tieneCuponDisponible() ? 'block' : 'none';
 }
 
 function irMisReservas() {
@@ -1445,7 +1491,7 @@ function irMisReservas() {
 }
 
 function irNuevaReserva() {
-  E.conf = ''; E.fechas = []; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = ''; E.cuponAplicado = false;
+    E.conf = ''; E.fechas = []; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = ''; E.cuponAplicado = false; E.creditosUsados = 0;
   var chkC = document.getElementById('chk-cupon'); if (chkC) chkC.checked = false;
   document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
   renderEquip(); ir('s2');
@@ -1454,8 +1500,11 @@ function irNuevaReserva() {
 function irHomeDesdeExito() { ir('s-home'); }
 function cerrarSesion() {
   if (!confirm('¿Cerrar sesión?')) return;
+  api({ action: 'cerrarSesion' }, function(){}, function(){});
   localStorage.removeItem('session');
+  _token = '';
   E.nombre = ''; E.datos = null; E.datosCompletos = null; _todasReservas = [];
+  var sel = document.getElementById('sel-nombre'); if (sel) sel.value = '';
   ir('s1');
 }
 
@@ -1468,11 +1517,11 @@ function renderMisReservas(reservas, mostrarTodas) {
     var visibles = mostrarTodas ? reservas : reservas.slice(0, 3);
     visibles.forEach(function(r) {
 var badgeClass = r.estado === 'Confirmada' ? 'badge-confirmada' : r.estado === 'Cancelada' ? 'badge-cancelada' : 'badge-pendiente';
-      var icon = r.estado === 'Confirmada' ? '✅' : r.estado === 'Cancelada' ? '❌' : r.estado === 'Reagendar' ? '🔁' : '⏳';
+      var icon = r.estado === 'Confirmada' ? '✅' : r.estado === 'Cancelada' ? '❌' : r.estado === 'Reagendar' ? '🔁' : r.estado === 'Crédito usado' ? '🎟️' : '⏳';
       var tienePat  = r.talla && r.talla !== 'No'; var tieneProc = r.protecciones && r.protecciones !== 'No';
       var equipMsg  = tienePat && tieneProc ? '🛼🛡️ Patines T.' + r.talla + ' y protecciones' : tienePat ? '🛼 Patines talla ' + r.talla : tieneProc ? '🛡️ ' + r.protecciones : '✅ Sin equipamiento prestado';
-      html += '<div class="reserva-card"><div class="reserva-header"><span class="reserva-fecha">' + r.fecha + '</span><span class="badge ' + badgeClass + '">' + icon + ' ' + r.estado + '</span></div><div class="reserva-detalle">' + equipMsg + '</div>';       if (r.estado === 'Reagendar') { html += '<div style="font-size:0.82rem;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;margin-bottom:6px;">🔁 El entrenamiento fue cancelado. <strong>Tienes una clase a favor:</strong> haz una nueva reserva y escribe "Reagendado" en la referencia de pago — no necesitas pagar de nuevo.</div>'; }
-      if (r.estado !== 'Cancelada') { html += '<button class="btn-cancelar" onclick="cancelarRes(\'' + r.fecha.replace(/'/g,"\\'") + '\')">' + (necesitaEquipo() ? 'Cancelar esta reserva' : 'Cancelar este pago') + '</button>'; }
+      html += '<div class="reserva-card"><div class="reserva-header"><span class="reserva-fecha">' + r.fecha + '</span><span class="badge ' + badgeClass + '">' + icon + ' ' + r.estado + '</span></div><div class="reserva-detalle">' + equipMsg + '</div>';       if (r.estado === 'Reagendar') { html += '<div style="font-size:0.82rem;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;margin-bottom:6px;">🔁 El entrenamiento fue cancelado. <strong>Tienes una clase a favor</strong> que se descontará automáticamente en tu próxima reserva. 🛼</div>'; }
+      if (r.estado === 'Pendiente' || r.estado === 'Confirmada') { html += '<button class="btn-cancelar" onclick="cancelarRes(\'' + r.fecha.replace(/'/g,"\\'") + '\')">' + (necesitaEquipo() ? 'Cancelar esta reserva' : 'Cancelar este pago') + '</button>'; }
       html += '</div>';
     });
     if (!mostrarTodas && reservas.length > 3) { html += '<button class="btn btn-secondary" style="margin-top:8px;" onclick="verTodasReservas()">Ver reservas anteriores</button>'; }
@@ -1582,23 +1631,58 @@ function selTipoPago(tipo, label) {
 function toggleCupon(cb) { E.cuponAplicado = cb.checked; actualizarTotalS4(); }
 
 function actualizarTotalS4() {
-  var total = 0;
+  var total = 0, gratisCredito = 0, gratisCupon = 0, cobradas = 0;
+  E.creditosUsados = 0;
+  var bannerCred = document.getElementById('s4-credito-banner');
+
   if (E.tipoPago === 'mensual') {
     var mesesSeleccionados = Array.from(document.querySelectorAll('#lista-meses input:checked, #lista-meses-pasados input:checked')).map(function(cb) { return cb.value; });
-    E.meses = mesesSeleccionados; total = mesesSeleccionados.length * E.precioMensual;
+    E.meses = mesesSeleccionados;
+    total = mesesSeleccionados.length * E.precioMensual;
     document.getElementById('s4-meses-wrapper').style.display = 'block';
+    if (bannerCred) bannerCred.style.display = 'none';
   } else {
-    total = E.fechas.length * E.precioPorClase; document.getElementById('s4-meses-wrapper').style.display = 'none'; E.meses = [];
+    document.getElementById('s4-meses-wrapper').style.display = 'none';
+    E.meses = [];
+    var creditos = contarCreditos();
+    gratisCredito = Math.min(creditos, E.fechas.length);
+    gratisCupon   = (E.cuponAplicado && E.fechas.length > gratisCredito) ? 1 : 0;
+    cobradas      = Math.max(0, E.fechas.length - gratisCredito - gratisCupon);
+    total         = cobradas * E.precioPorClase;
+    E.creditosUsados = gratisCredito;
+
+    if (bannerCred) {
+      if (creditos > 0) {
+        bannerCred.style.display = 'block';
+        bannerCred.innerHTML = '🔁 Tienes <strong>' + creditos + (creditos === 1 ? ' clase a favor' : ' clases a favor') + '</strong> por entrenamientos cancelados. ' +
+          (gratisCredito > 0
+            ? 'Se ' + (gratisCredito === 1 ? 'aplicó 1 clase gratis a esta reserva ✅' : 'aplicaron ' + gratisCredito + ' clases gratis a esta reserva ✅')
+            : 'Se descontará automáticamente al seleccionar fechas.');
+      } else { bannerCred.style.display = 'none'; }
+    }
   }
-  if (E.cuponAplicado && E.tipoPago === 'clase') { total = Math.max(0, E.fechas.length - 1) * E.precioPorClase; }
+
   E.totalPago = total;
+
   var box = document.getElementById('s4-total-box');
-  if (E.cuponAplicado && E.tipoPago === 'clase') {
-    box.style.display = 'block'; var extras = E.fechas.length - 1;
-    box.innerHTML = '<div class="total-box" style="background:#f0fdf4;border-color:#22c55e;"><div style="color:#166534;">🎟️ Cupón aplicado — Clase gratis</div>' +
-      (extras > 0 ? '<div style="font-size:1.6rem;font-weight:800;color:#16a34a;">$' + total.toFixed(2) + '</div><div style="font-size:0.8rem;color:#4ade80;">' + extras + ' clase' + (extras > 1 ? 's' : '') + ' adicional' + (extras > 1 ? 'es' : '') + ' × $' + E.precioPorClase.toFixed(2) + '</div>'
-                  : '<div style="font-size:1.6rem;font-weight:800;color:#16a34a;">$0.00</div><div style="font-size:0.8rem;color:#4ade80;">Clase gratis ✓</div>') + '</div>';
-  } else if (total > 0) { box.style.display = 'block'; box.innerHTML = '<div class="total-box"><div>Total a pagar:</div><div style="font-size:1.6rem;font-weight:800;">$' + total.toFixed(2) + '</div></div>'; } else { box.style.display = 'none'; }
+  if (E.tipoPago === 'clase' && (gratisCredito > 0 || gratisCupon > 0) && E.fechas.length > 0) {
+    var partes = [];
+    if (gratisCredito > 0) partes.push('🔁 ' + gratisCredito + (gratisCredito === 1 ? ' clase a favor' : ' clases a favor'));
+    if (gratisCupon > 0) partes.push('🎟️ 1 clase con cupón');
+    box.style.display = 'block';
+    box.innerHTML = '<div class="total-box" style="background:#f0fdf4;border-color:#22c55e;">' +
+      '<div style="color:#166534;">' + partes.join(' + ') + '</div>' +
+      '<div style="font-size:1.6rem;font-weight:800;color:#16a34a;">$' + total.toFixed(2) + '</div>' +
+      (cobradas > 0
+        ? '<div style="font-size:0.8rem;color:#4ade80;">' + cobradas + ' clase' + (cobradas > 1 ? 's' : '') + ' × $' + E.precioPorClase.toFixed(2) + '</div>'
+        : '<div style="font-size:0.8rem;color:#4ade80;">Sin costo ✓</div>') +
+      '</div>';
+  } else if (total > 0) {
+    box.style.display = 'block';
+    box.innerHTML = '<div class="total-box"><div>Total a pagar:</div><div style="font-size:1.6rem;font-weight:800;">$' + total.toFixed(2) + '</div></div>';
+  } else {
+    box.style.display = 'none';
+  }
 }
 
 function cargarFechas() {
@@ -1645,13 +1729,14 @@ function continuar_s4() {
   document.getElementById('s-pago-total-monto').textContent = 'Total a pagar: $' + (E.totalPago || 0).toFixed(2);
   
   var detalleTexto = '';
-  if (esClase) {
-    if (E.cuponAplicado) {
-      var extras = E.fechas.length - 1;
-      detalleTexto = '🎟️ 1 clase gratis' + (extras > 0 ? ' y ' + extras + (extras === 1 ? ' clase' : ' clases') + ' × $' + E.precioPorClase.toFixed(2) : '');
-    } else {
-      detalleTexto = E.fechas.length + (E.fechas.length === 1 ? ' clase' : ' clases') + ' × $' + E.precioPorClase.toFixed(2);
-    }
+if (esClase) {
+    var partesDet = [];
+    if (E.creditosUsados > 0) partesDet.push('🔁 ' + E.creditosUsados + (E.creditosUsados === 1 ? ' clase a favor' : ' clases a favor'));
+    var conCupon = E.cuponAplicado && E.fechas.length > (E.creditosUsados || 0);
+    if (conCupon) partesDet.push('🎟️ 1 clase con cupón');
+    var cobradasDet = E.fechas.length - (E.creditosUsados || 0) - (conCupon ? 1 : 0);
+    if (cobradasDet > 0) partesDet.push(cobradasDet + (cobradasDet === 1 ? ' clase' : ' clases') + ' × $' + E.precioPorClase.toFixed(2));
+    detalleTexto = partesDet.join(' + ');
   } else {
     detalleTexto = E.meses.join(', ');
   }
@@ -1663,7 +1748,12 @@ function continuar_s4() {
   var msgWp = '¡Hola! Soy *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '*.\n\n*Clases reservadas:*\n' + lineasFechas + '\n\n' + equipLinea + '\n\nTe envío el comprobante adjunto. Si no lo ves, por favor solicítamelo. ¡Gracias!';
   E.wpUrl = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp);
   /* Solo saltamos el pago si el cupón está aplicado Y el total es exactamente cero */
-  if (E.cuponAplicado && E.totalPago === 0) { E.notaPago = 'Cupón clase gratis'; construirResumenS5('s4'); ir('s5'); return; }
+  if ((E.cuponAplicado || E.creditosUsados > 0) && E.totalPago === 0) {
+    E.notaPago = E.creditosUsados > 0
+      ? 'Clase(s) a favor por entrenamiento cancelado' + (E.cuponAplicado ? ' + cupón' : '')
+      : 'Cupón clase gratis';
+    construirResumenS5('s4'); ir('s5'); return;
+  }
   ir('s-pago');
 }
 
@@ -1676,7 +1766,13 @@ function construirResumenS5(backTarget) {
   var d = E.datos; var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
   var h = '<div class="r-titulo">Tu reserva</div>';
   h += fila('Nombre', E.nombre); h += fila('Tipo de pago', E.tipoPago === 'mensual' ? '📅 Mensual' : '🎟️ Por clase');
-  if (E.cuponAplicado) { var textoTotal = E.totalPago > 0 ? '🎟️ Clase gratis + $' + E.totalPago.toFixed(2) : '🎟️ $0.00 — Clase gratis'; h += fila('Total', '<span style="color:#16a34a;font-weight:800;">' + textoTotal + '</span>'); }
+if (E.cuponAplicado || E.creditosUsados > 0) {
+    var partesT = [];
+    if (E.creditosUsados > 0) partesT.push('🔁 ' + E.creditosUsados + ' a favor');
+    if (E.cuponAplicado) partesT.push('🎟️ cupón');
+    var textoTotal = (E.totalPago > 0 ? '$' + E.totalPago.toFixed(2) + ' + ' : '$0.00 — ') + partesT.join(' + ');
+    h += fila('Total', '<span style="color:#16a34a;font-weight:800;">' + textoTotal + '</span>');
+  }
   else { h += fila('Total', '<span style="font-weight:800;">$' + (E.totalPago || 0).toFixed(2) + '</span>'); }
   if (E.tipoPago === 'clase') {     h += '<div style="padding: 10px 0; border-bottom: 1px solid #eaeaea; font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Fecha/s:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + E.fechas.map(function(f) { return '• ' + f; }).join('<br>') + '</div></div>';   } else if (E.meses && E.meses.length > 0) {     h += '<div style="padding: 10px 0; border-bottom: 1px solid #eaeaea; font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Meses pagados:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + E.meses.map(function(m) { return '• ' + m; }).join('<br>') + '</div></div>';   }
   h += fila('Patines', d.necesitaPatines + (talla ? ' — Talla ' + talla : '')); h += fila('Protecciones', d.necesitaProtecciones); if (E.notaPago) h += fila('Referencia pago', E.notaPago);
@@ -1696,6 +1792,13 @@ function confirmarReserva() {
   function finalizar() {
     var fechasStr = E.fechas.length > 0 ? E.fechas.join(', ') : (E.tipoPago === 'mensual' ? 'mensual (sin clases seleccionadas)' : '—');
     api({ action: 'guardarNotaPago', nombre: E.nombre, tipoPago: E.tipoPago, monto: (E.totalPago || 0).toFixed(2), nota: E.notaPago || '—', fechas: fechasStr, talla: talla, protecciones: protec }, function() {}, function() {});
+    if (E.creditosUsados > 0) {
+      api({ action: 'usarCreditos', nombre: E.nombre, cantidad: E.creditosUsados }, function(){}, function(){});
+      var porMarcar = E.creditosUsados;
+      (_todasReservas || []).forEach(function(r) {
+        if (porMarcar > 0 && r.estado === 'Reagendar') { r.estado = 'Crédito usado'; porMarcar--; }
+      });
+    }
     var fechasResumen = E.tipoPago === 'mensual' ? E.meses : E.fechas;
 api({ action: 'enviarResumenReservas', nombre: E.nombre, fechas: JSON.stringify(fechasResumen), talla: talla, protecciones: protec, email: E.datos.email || '', montoTotal: (E.totalPago || 0).toFixed(2) }, function() {}, function() {});
     
@@ -1746,7 +1849,7 @@ api({ action: 'enviarResumenReservas', nombre: E.nombre, fechas: JSON.stringify(
     guardarMesSiguiente();
   } else {
     var pendientes = E.fechas.slice();
-    var cuponAplicadoEnLoop = E.cuponAplicado; // Control para cobrar $0 solo la primera vez
+    var gratisRestantes = (E.creditosUsados || 0) + ((E.cuponAplicado && E.fechas.length > (E.creditosUsados || 0)) ? 1 : 0);
     function guardarSiguiente() { 
       if (pendientes.length === 0) {
 // Se eliminó el envío automático de correo al usuario
@@ -1755,8 +1858,8 @@ finalizar();
   return;
 } 
       var fecha = pendientes.shift(); 
-      var montoClase = cuponAplicadoEnLoop ? '0.00' : E.precioPorClase.toFixed(2);
-      cuponAplicadoEnLoop = false; // Desactivamos el cupón para las siguientes clases
+var montoClase = gratisRestantes > 0 ? '0.00' : E.precioPorClase.toFixed(2);
+      if (gratisRestantes > 0) gratisRestantes--;
       api({ action: 'guardarReserva', nombre: E.nombre, fecha: fecha, talla: talla, protecciones: protec, monto: montoClase, email: E.datos.email || '' }, function() { guardarSiguiente(); }, function() { guardarSiguiente(); }); 
     }
     guardarSiguiente();
@@ -1899,6 +2002,19 @@ window.addEventListener('popstate', function(ev) {
   ir(id, true);
 });
 history.replaceState({ pantalla: 's1' }, '', '#s1');
+// ─── OneSignal ────────────────────────────────────────────────────────────────
+window.OneSignalDeferred = window.OneSignalDeferred || [];
+OneSignalDeferred.push(function(OneSignal) {
+  OneSignal.init({ appId: 'f434ccdc-bcca-40b6-bb64-16b662b8b0d9', serviceWorkerPath: 'sw.js' });
+});
+
+function vincularPush(nombre) {
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(function(OneSignal) {
+    OneSignal.login(nombre).catch(function(){});
+    OneSignal.Notifications.requestPermission().catch(function(){});
+  });
+}  
 </script>
 <div id="pwa-banner" style="display:none;position:fixed;bottom:16px;left:16px;right:16px;max-width:448px;margin:0 auto;background:white;border:2px solid #F97316;border-radius:16px;padding:18px;z-index:9000;box-shadow:0 10px 30px rgba(0,0,0,0.25);animation:smoothSlideUp 0.5s cubic-bezier(0.16,1,0.3,1);">
   <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">
