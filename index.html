@@ -548,7 +548,7 @@ select, option, optgroup {
   <div class="header-banner">
     <a href="#" onclick="if(E.datos){volver('s-home');}else{volver('s1');} return false;"
        style="display:block;cursor:pointer;">
-      <img src="https://drive.google.com/uc?export=view&id=1Os-zGYxwMqiQFmkzyDBk9rjaOWWM0UBo"
+      <img src="https://drive.google.com/thumbnail?id=1Os-zGYxwMqiQFmkzyDBk9rjaOWWM0UBo&sz=w600"
         alt="Mirlxs Roller Derby Quito">
     </a>
   </div>
@@ -605,7 +605,7 @@ select, option, optgroup {
 <div style="position:relative;margin:20px 0 20px;">
   <input type="password" id="input-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4"
     placeholder="• • • •"
-    style="text-align:center;font-size:1.8rem;letter-spacing:8px;padding-right:50px;"
+    style="text-align:center;font-size:1.8rem;letter-spacing:8px;padding-left:50px;padding-right:50px;"
     oninput="syncPinDots()" onkeydown="if(event.key==='Enter') continuar_pin()">
   <button type="button" onclick="togglePinVisibility()"
     style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#888;padding:4px;line-height:1;">
@@ -1605,7 +1605,7 @@ function construirResumenS5(backTarget) {
   h += fila('Nombre', E.nombre); h += fila('Tipo de pago', E.tipoPago === 'mensual' ? '📅 Mensual' : '🎟️ Por clase');
   if (E.cuponAplicado) { var textoTotal = E.totalPago > 0 ? '🎟️ Clase gratis + $' + E.totalPago.toFixed(2) : '🎟️ $0.00 — Clase gratis'; h += fila('Total', '<span style="color:#16a34a;font-weight:800;">' + textoTotal + '</span>'); }
   else { h += fila('Total', '<span style="font-weight:800;">$' + (E.totalPago || 0).toFixed(2) + '</span>'); }
-  if (E.tipoPago === 'clase') {     h += '<div style="padding: 10px 0; border-bottom: 1px solid #eaeaea; font-size: 0.9rem;"><div class="r-label" style="margin-bottom: 6px;">Fecha/s:</div><div style="font-weight: 600; color: #1a1a1a; line-height: 1.6; text-align: left;">' + E.fechas.map(function(f) { return '• ' + f; }).join('<br>') + '</div></div>';   } else if (E.meses && E.meses.length > 0) {     h += '<div style="padding: 10px 0; border-bottom: 1px solid #eaeaea; font-size: 0.9rem;"><div class="r-label" style="margin-bottom: 6px;">Meses pagados:</div><div style="font-weight: 600; color: #1a1a1a; line-height: 1.6; text-align: left;">' + E.meses.map(function(m) { return '• ' + m; }).join('<br>') + '</div></div>';   }
+  if (E.tipoPago === 'clase') {     h += '<div style="padding: 10px 0; border-bottom: 1px solid #eaeaea; font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Fecha/s:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + E.fechas.map(function(f) { return '• ' + f; }).join('<br>') + '</div></div>';   } else if (E.meses && E.meses.length > 0) {     h += '<div style="padding: 10px 0; border-bottom: 1px solid #eaeaea; font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Meses pagados:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + E.meses.map(function(m) { return '• ' + m; }).join('<br>') + '</div></div>';   }
   h += fila('Patines', d.necesitaPatines + (talla ? ' — Talla ' + talla : '')); h += fila('Protecciones', d.necesitaProtecciones); if (E.notaPago) h += fila('Referencia pago', E.notaPago);
   document.getElementById('s5-resumen').innerHTML = h;
   var s5Back = document.querySelector('#s5 .btn-secondary'); if (s5Back) s5Back.onclick = function() { volver(backTarget || 's-pago'); };
