@@ -387,6 +387,10 @@ select, option, optgroup {
   border-radius: 50%; animation: spin 0.8s linear infinite;
   vertical-align: middle; margin-right: 8px; margin-top: -2px;
 }
+
+.btn-pin-key { padding:18px 8px; background:white; border:2px solid #e5e5e5; border-radius:14px; font-size:1.4rem; font-weight:700; cursor:pointer; transition:all 0.15s ease; font-family:inherit; color:#1a1a1a; }
+.btn-pin-key:hover { background:#fff8f4; border-color:#fb923c; }
+.btn-pin-key:active { background:#fff8f4; border-color:#F97316; transform:scale(0.93); }
   
 </style>
 </head>
@@ -457,13 +461,35 @@ select, option, optgroup {
       <h2>Ingresa tu PIN</h2>
       <p>Introduce tu PIN de 4 dígitos para continuar.</p>
       
-      <div style="position: relative; margin-bottom: 16px;">
-  <input type="password" id="input-pin" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="••••"
-    style="width:100%;padding:16px 45px 16px 45px;border:2px solid #e5e5e5;border-radius:12px;font-size:1.6rem;text-align:center;letter-spacing:14px; background: #fafafa; transition: all 0.3s ease; font-family: 'Montserrat', sans-serif;">
+      <input type="hidden" id="input-pin">
+
+<div style="display:flex;justify-content:center;gap:20px;margin:20px 0 8px;">
+  <span id="pd0" style="width:18px;height:18px;border-radius:50%;border:2.5px solid #e5e5e5;background:#fafafa;display:inline-block;transition:all 0.2s;"></span>
+  <span id="pd1" style="width:18px;height:18px;border-radius:50%;border:2.5px solid #e5e5e5;background:#fafafa;display:inline-block;transition:all 0.2s;"></span>
+  <span id="pd2" style="width:18px;height:18px;border-radius:50%;border:2.5px solid #e5e5e5;background:#fafafa;display:inline-block;transition:all 0.2s;"></span>
+  <span id="pd3" style="width:18px;height:18px;border-radius:50%;border:2.5px solid #e5e5e5;background:#fafafa;display:inline-block;transition:all 0.2s;"></span>
+</div>
+<div id="pin-nums-display" style="display:none;text-align:center;font-size:1.6rem;font-weight:800;letter-spacing:10px;color:#1a1a1a;min-height:32px;margin-bottom:4px;"></div>
+<div style="text-align:right;margin-bottom:12px;">
   <button type="button" id="btn-toggle-pin" onclick="togglePinVisibility()"
-    style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #888; transition: color 0.2s; padding: 4px; display: flex; align-items: center; justify-content: center;">
+    style="background:none;border:none;cursor:pointer;color:#888;transition:color 0.2s;padding:4px;">
     <span class="material-symbols-outlined">visibility</span>
   </button>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:280px;margin:0 auto 20px;">
+  <button type="button" class="btn-pin-key" onclick="pinInput('1')">1</button>
+  <button type="button" class="btn-pin-key" onclick="pinInput('2')">2</button>
+  <button type="button" class="btn-pin-key" onclick="pinInput('3')">3</button>
+  <button type="button" class="btn-pin-key" onclick="pinInput('4')">4</button>
+  <button type="button" class="btn-pin-key" onclick="pinInput('5')">5</button>
+  <button type="button" class="btn-pin-key" onclick="pinInput('6')">6</button>
+  <button type="button" class="btn-pin-key" onclick="pinInput('7')">7</button>
+  <button type="button" class="btn-pin-key" onclick="pinInput('8')">8</button>
+  <button type="button" class="btn-pin-key" onclick="pinInput('9')">9</button>
+  <div></div>
+  <button type="button" class="btn-pin-key" onclick="pinInput('0')">0</button>
+  <button type="button" class="btn-pin-key" onclick="pinDelete()" style="font-size:1rem;color:#888;">⌫</button>
 </div>
       <div class="error-msg" id="err-pin"></div>
       <button type="button" class="btn-forgot-pin" onclick="solicitarNuevoPIN()">¿Olvidaste tu PIN?</button>
@@ -611,21 +637,27 @@ select, option, optgroup {
           </div>
         </label>
       </div>
-      <div id="s4-meses-wrapper" style="display:none;margin-top:16px;margin-bottom:24px;">
+<div id="s4-meses-wrapper" style="display:none;margin-top:16px;margin-bottom:24px;">
 
-        <div id="meses-pasados-wrapper" style="margin-bottom:14px;">
+        <div id="meses-pasados-wrapper" style="margin-bottom:8px;">
           <button onclick="toggleMesesPasados()" id="btn-meses-pasados"
-    style="width:100%;text-align:left;padding:12px 16px;background:#f5f5f5;border:2px solid #e5e5e5;border-radius:10px;font-size:0.9rem;font-weight:700;color:#666;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px;">
-    <span id="chevron-meses" class="material-symbols-outlined" style="font-size:1.1rem;transition:transform 0.3s;color:#888;">chevron_right</span>
-    <span>Meses pasados</span>
-</button>
+            style="width:100%;text-align:left;padding:12px 16px;background:#f5f5f5;border:2px solid #e5e5e5;border-radius:10px;font-size:0.9rem;font-weight:700;color:#666;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px;">
+            <span id="chevron-meses" class="material-symbols-outlined" style="font-size:1.1rem;transition:transform 0.3s;color:#888;">chevron_right</span>
+            <span>Meses pasados</span>
+          </button>
           <div id="lista-meses-pasados" style="display:none;margin-top:10px;" class="meses-grid"></div>
         </div>
 
-        <div class="subtitulo" style="margin-bottom:10px;font-size:0.88rem;color:#555;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;">
-          Selecciona 1 o más meses
+        <div id="meses-actuales-wrapper" style="margin-bottom:8px;">
+          <button onclick="toggleMesesActuales()" id="btn-meses-actuales"
+            style="width:100%;text-align:left;padding:12px 16px;background:#f5f5f5;border:2px solid #e5e5e5;border-radius:10px;font-size:0.9rem;font-weight:700;color:#555;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px;">
+            <span id="chevron-meses-actuales" class="material-symbols-outlined" style="font-size:1.1rem;transition:transform 0.3s;color:#F97316;transform:rotate(90deg);">chevron_right</span>
+            <span>Meses actuales y futuros</span>
+          </button>
+          <div id="lista-meses-container" style="margin-top:10px;">
+            <div id="lista-meses" class="meses-grid"></div>
+          </div>
         </div>
-        <div id="lista-meses" class="meses-grid"></div>
 
       </div>
 
@@ -733,7 +765,7 @@ select, option, optgroup {
       <div class="datos-seccion">
         <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-general', this)">
           <span><span class="sec-icon">🛼</span>Datos de entrenamiento</span>
-          <span class="sec-chevron">▾</span>
+          <span class="sec-chevron material-symbols-outlined">expand_more</span>
         </div>
         <div class="datos-seccion-body" id="sec-general">
           <div class="datos-campo">
@@ -763,7 +795,7 @@ select, option, optgroup {
       <div class="datos-seccion">
         <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-contacto', this)">
           <span><span class="sec-icon">📞</span>Contacto</span>
-          <span class="sec-chevron">▾</span>
+          <span class="sec-chevron material-symbols-outlined">expand_more</span>
         </div>
         <div class="datos-seccion-body" id="sec-contacto">
           <div class="datos-campo">
@@ -801,7 +833,7 @@ select, option, optgroup {
       <div class="datos-seccion">
         <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-cumple', this)">
           <span><span class="sec-icon">🎂</span>Cumpleaños</span>
-          <span class="sec-chevron">▾</span>
+          <span class="sec-chevron material-symbols-outlined">expand_more</span>
         </div>
         <div class="datos-seccion-body" id="sec-cumple">
           <div class="datos-campo">
@@ -833,7 +865,7 @@ select, option, optgroup {
       <div class="datos-seccion">
         <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-legal', this)">
           <span><span class="sec-icon">🪪</span>Identidad legal</span>
-          <span class="sec-chevron">▾</span>
+          <span class="sec-chevron material-symbols-outlined">expand_more</span>
         </div>
         <div class="datos-seccion-body" id="sec-legal">
           <div class="aviso-legal">
@@ -878,7 +910,7 @@ select, option, optgroup {
       <div class="datos-seccion">
         <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-direccion', this)">
           <span><span class="sec-icon">📍</span>Dirección</span>
-          <span class="sec-chevron">▾</span>
+          <span class="sec-chevron material-symbols-outlined">expand_more</span>
         </div>
         <div class="datos-seccion-body" id="sec-direccion">
           <div class="datos-campo">
@@ -919,7 +951,7 @@ select, option, optgroup {
       <div class="datos-seccion">
         <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-emerg1', this)">
           <span><span class="sec-icon">🆘</span>Contacto de emergencia 1</span>
-          <span class="sec-chevron">▾</span>
+          <span class="sec-chevron material-symbols-outlined">expand_more</span>
         </div>
         <div class="datos-seccion-body" id="sec-emerg1">
           <div class="datos-campo">
@@ -988,15 +1020,55 @@ function ocultarCargando() {
 }
 
 // ─── FUNCIONES NUEVAS JS ──────────────────────────────────────────────────────
+var _pinValue = '';
+
+function pinInput(digit) {
+  if (_pinValue.length >= 4) return;
+  _pinValue += digit;
+  document.getElementById('input-pin').value = _pinValue;
+  _updatePinDisplay();
+}
+
+function pinDelete() {
+  _pinValue = _pinValue.slice(0, -1);
+  document.getElementById('input-pin').value = _pinValue;
+  _updatePinDisplay();
+}
+
+function _updatePinDisplay() {
+  var showNums = document.getElementById('pin-nums-display').style.display !== 'none';
+  for (var i = 0; i < 4; i++) {
+    var dot = document.getElementById('pd' + i);
+    if (dot) {
+      dot.style.background   = i < _pinValue.length ? '#F97316' : '#fafafa';
+      dot.style.borderColor  = i < _pinValue.length ? '#F97316' : '#e5e5e5';
+    }
+  }
+  if (showNums) document.getElementById('pin-nums-display').textContent = _pinValue;
+}
+
+function resetPinPad() {
+  _pinValue = '';
+  document.getElementById('input-pin').value = '';
+  _updatePinDisplay();
+  document.getElementById('pin-nums-display').style.display = 'none';
+  ['pd0','pd1','pd2','pd3'].forEach(function(id) { var el = document.getElementById(id); if (el) el.style.display = 'inline-block'; });
+  document.getElementById('btn-toggle-pin').innerHTML = '<span class="material-symbols-outlined">visibility</span>';
+}
+
 function togglePinVisibility() {
-  var pinInput = document.getElementById('input-pin');
+  var numsDisplay = document.getElementById('pin-nums-display');
   var btn = document.getElementById('btn-toggle-pin');
-  if (pinInput.type === 'password') {
-    pinInput.type = 'text';
-    btn.innerHTML = '<span class="material-symbols-outlined">visibility_off</span>';
-  } else {
-    pinInput.type = 'password';
+  var showingNums = numsDisplay.style.display !== 'none';
+  if (showingNums) {
+    numsDisplay.style.display = 'none';
+    ['pd0','pd1','pd2','pd3'].forEach(function(id) { var el = document.getElementById(id); if (el) el.style.display = 'inline-block'; });
     btn.innerHTML = '<span class="material-symbols-outlined">visibility</span>';
+  } else {
+    numsDisplay.style.display = 'block';
+    numsDisplay.textContent = _pinValue;
+    ['pd0','pd1','pd2','pd3'].forEach(function(id) { var el = document.getElementById(id); if (el) el.style.display = 'none'; });
+    btn.innerHTML = '<span class="material-symbols-outlined">visibility_off</span>';
   }
 }
 
@@ -1070,11 +1142,37 @@ function generarMeses() {
 function crearMesItem(nombre) { return '<label class="mes-item"><input type="checkbox" value="' + nombre + '" onchange="actualizarTotalS4()"> ' + nombre + '</label>'; }
 
 function toggleMesesPasados() {
-  var lista = document.getElementById('lista-meses-pasados');
-  var chevron = document.getElementById('chevron-meses');
-  var abierto = lista.style.display !== 'none';
-  lista.style.display = abierto ? 'none' : 'grid';
-  if (chevron) chevron.style.transform = abierto ? '' : 'rotate(90deg)';
+  var lista    = document.getElementById('lista-meses-pasados');
+  var chevron  = document.getElementById('chevron-meses');
+  var abierto  = lista.style.display === 'grid';
+  if (!abierto) {
+    lista.style.display = 'grid';
+    if (chevron) chevron.style.transform = 'rotate(90deg)';
+    var container = document.getElementById('lista-meses-container');
+    var chevronA  = document.getElementById('chevron-meses-actuales');
+    if (container) container.style.display = 'none';
+    if (chevronA)  chevronA.style.transform = '';
+  } else {
+    lista.style.display = 'none';
+    if (chevron) chevron.style.transform = '';
+  }
+}
+
+function toggleMesesActuales() {
+  var container = document.getElementById('lista-meses-container');
+  var chevronA  = document.getElementById('chevron-meses-actuales');
+  var abierto   = container.style.display !== 'none';
+  if (!abierto) {
+    container.style.display = 'block';
+    if (chevronA) chevronA.style.transform = 'rotate(90deg)';
+    var lista   = document.getElementById('lista-meses-pasados');
+    var chevron = document.getElementById('chevron-meses');
+    if (lista)   lista.style.display = 'none';
+    if (chevron) chevron.style.transform = '';
+  } else {
+    container.style.display = 'none';
+    if (chevronA) chevronA.style.transform = '';
+  }
 }
 
 // ─── NAVEGACIÓN ───────────────────────────────────────────────────────────────
@@ -1133,17 +1231,17 @@ function selOp(label, name, val) {
 function continuar_s1() {
   var nombre = document.getElementById('sel-nombre').value.trim();
   if (!nombre) { err('err-s1', 'Por favor selecciona tu nombre.'); return; }
-  E.nombre = nombre; document.getElementById('input-pin').value = ''; ir('s1b');
+  E.nombre = nombre; resetPinPad(); ir('s1b');
 }
 
 function continuar_pin() {
-  var pin = document.getElementById('input-pin').value.trim();
+  var pin = _pinValue;
   if (!/^\d{4}$/.test(pin)) { err('err-pin', 'Ingresa un PIN válido de 4 dígitos.'); return; }
   
   mostrarCargando('Verificando tu PIN...');
   
   api({ action: 'validarPin', nombre: E.nombre, pin: pin }, function(res) {
-    if (!res.valido) { ocultarCargando(); ir('s1b'); err('err-pin', 'PIN incorrecto.'); return; }
+    if (!res.valido) { ocultarCargando(); resetPinPad(); ir('s1b'); err('err-pin', 'PIN incorrecto.'); return; }
     
     E.datos = res.datos; // Datos básicos para la lógica de equipo
     
@@ -1368,8 +1466,11 @@ function cargarFechas() {
 }
 
 function toggleFecha(el, fecha) {
-  var chk = el.querySelector('input[type="checkbox"]'); chk.checked = !chk.checked; el.classList.toggle('sel', chk.checked);
-  E.fechas = Array.from(document.querySelectorAll('input[name="fecha"]:checked')).map(function(c) { return c.value; }); actualizarTotalS4();
+  var chk = el.querySelector('input[type="checkbox"]');
+  if (event.target !== chk) chk.checked = !chk.checked;
+  el.classList.toggle('sel', chk.checked);
+  E.fechas = Array.from(document.querySelectorAll('input[name="fecha"]:checked')).map(function(c) { return c.value; });
+  actualizarTotalS4();
 }
 
 function continuar_s4() {
@@ -1567,6 +1668,13 @@ function continuar_pago_y_wp() {
   if (!document.getElementById('chk-pago').checked) { err('err-pago', 'Debes confirmar que realizaste el pago.'); return; }
   E.wpEnviado = true; continuar_pago();
 }
+
+ document.addEventListener('keydown', function(e) {
+  if (!document.getElementById('s1b').classList.contains('activa')) return;
+  if (e.key >= '0' && e.key <= '9') pinInput(e.key);
+  else if (e.key === 'Backspace') { e.preventDefault(); pinDelete(); }
+  else if (e.key === 'Enter') continuar_pin();
+}); 
 </script>
 
 <footer style="text-align:center;padding: 0px 20px 25px;;font-size:0.85rem;">
