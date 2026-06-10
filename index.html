@@ -1143,19 +1143,25 @@ function ocultarCargando() {
 // ─── FUNCIONES NUEVAS JS ──────────────────────────────────────────────────────
 function syncPinDots() {
   var inp = document.getElementById('input-pin');
-  var val = inp.value.replace(/\D/g,'').slice(0,4);
-  inp.value = val;
-  for (var i = 0; i < 4; i++) {
-    var dot = document.getElementById('pd'+i);
-    if (dot) {
-      dot.style.background  = i < val.length ? '#F97316' : '#fafafa';
-      dot.style.borderColor = i < val.length ? '#F97316' : '#e5e5e5';
-    }
-  }
+  inp.value = inp.value.replace(/\D/g,'').slice(0,4);
 }
 function resetPinPad() {
-  document.getElementById('input-pin').value = '';
-  syncPinDots();
+  var inp = document.getElementById('input-pin');
+  inp.value = '';
+  inp.type = 'password';
+  var icon = document.getElementById('toggle-pin-icon');
+  if (icon) icon.textContent = 'visibility';
+}
+function togglePinVisibility() {
+  var inp = document.getElementById('input-pin');
+  var icon = document.getElementById('toggle-pin-icon');
+  if (inp.type === 'password') {
+    inp.type = 'tel';
+    icon.textContent = 'visibility_off';
+  } else {
+    inp.type = 'password';
+    icon.textContent = 'visibility';
+  }
 }
 
 // ─── ESTADO GLOBAL ────────────────────────────────────────────────────────────
