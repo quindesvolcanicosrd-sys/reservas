@@ -606,7 +606,7 @@ select, option, optgroup {
     <div class="paso-dot" id="dot4"></div>
   </div>
 
-  <div class="pantalla activa" id="s1">
+  <div class="pantalla" id="s1">
     <div class="card">
       <div class="seccion-label">Bienvenidx</div>
       <h2>Inicia sesión al portal de reservas</h2>
@@ -676,6 +676,17 @@ select, option, optgroup {
           </div>
         </div>
       </div>
+      <div id="notif-banner" style="display:none;background:#f0f9ff;border:2px solid #bae6fd;border-radius:14px;padding:14px 16px;margin-bottom:18px;">
+  <div style="display:flex;align-items:flex-start;gap:12px;">
+    <span style="font-size:1.4rem;flex-shrink:0;">🔔</span>
+    <div style="flex:1;text-align:left;">
+      <div style="font-weight:800;color:#0369a1;font-size:0.92rem;">Recibe avisos al instante</div>
+      <div style="font-size:0.8rem;color:#0284c7;margin-top:3px;line-height:1.4;">Entérate cuando <strong>confirmen tu reserva</strong>, si un <strong>entrenamiento se cancela</strong> o llega tu <strong>comprobante</strong>.</div>
+      <button onclick="activarPush()" style="margin-top:10px;padding:8px 16px;background:#0ea5e9;color:white;border:none;border-radius:8px;font-weight:700;font-size:0.85rem;cursor:pointer;font-family:inherit;">Activar notificaciones</button>
+    </div>
+    <button onclick="document.getElementById('notif-banner').style.display='none';localStorage.setItem('notif_dismiss','1')" style="background:none;border:none;cursor:pointer;color:#7dd3fc;font-size:1.2rem;line-height:1;padding:2px;flex-shrink:0;">✕</button>
+  </div>
+</div>
 
       <div class="home-boton principal" onclick="irMisReservas()">
         <div class="hb-icon">📋</div>
@@ -1263,26 +1274,30 @@ window.onload = function() {
   // Ya no llamamos a mostrarCargando aquí porque el CSS ya lo inicializó en FLEX
 document.getElementById('loading-msg').textContent = 'Cargando...';
 
+  var _restaurando = false;
   var session = localStorage.getItem('session');
   if (session) {
     try {
       var s = JSON.parse(session);
       if (s.token && s.nombre) {
+        _restaurando = true;
+        window._restaurandoSesion = true;
         _token = s.token; E.nombre = s.nombre;
         mostrarCargando('Restaurando tu sesión...');
         api({ action: 'restaurarSesion' }, function(res) {
-          if (!res.valido) { localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); return; }
+          window._restaurandoSesion = false;
+          if (!res.valido) { localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true); return; }
           E.datos = res.datos; E.datosCompletos = res.datos;
           vincularPush(E.nombre);
           api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
             _todasReservas = reservas;
             ocultarCargando(); prepararHome(); ir('s-home');
           }, function() { ocultarCargando(); prepararHome(); ir('s-home'); });
-        }, function() { localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); });
-      } else {
-        localStorage.removeItem('session');  // formato viejo con datos personales → se elimina
-      }
+        }, function() { window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true); });
+      } else { localStorage.removeItem('session'); }
     } catch (ex) { localStorage.removeItem('session'); }
+  }
+  if (!_restaurando) { ir('s1', true); }
   }  
   api({ action: 'getNombres' }, function(nombres) {
     var sel = document.getElementById('sel-nombre');
@@ -1291,7 +1306,7 @@ document.getElementById('loading-msg').textContent = 'Cargando...';
     sel.disabled = false; sel.style.color = ''; 
     
     document.getElementById('loader-nombres').style.display = 'none'; 
-    ocultarCargando();
+    if (!window._restaurandoSesion) ocultarCargando();
   }, function(e) { 
     ocultarCargando(); 
     document.getElementById('loader-nombres').style.display = 'none';
@@ -1481,7 +1496,13 @@ function prepararHome() {
   }
   var bannerCupon = document.getElementById('banner-cupon');
   if (bannerCupon) bannerCupon.style.display = tieneCuponDisponible() ? 'block' : 'none';
-}
+  var notifBanner = document.getElementById('notif-banner');
+  if (notifBanner) {
+    var yaDescarto = localStorage.getItem('notif_dismiss') === '1';
+    var yaActivado = 'Notification' in window && Notification.permission === 'granted';
+    notifBanner.style.display = (!yaDescarto && !yaActivado) ? 'block' : 'none';
+  }
+}  // ← cierre de prepararHome
 
 function irMisReservas() {
   document.getElementById('misres-label').textContent = necesitaEquipo() ? 'Mis reservas' : 'Mis pagos';
@@ -1941,10 +1962,6 @@ function continuar_pago_y_wp() {
 var _deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e) { e.preventDefault(); _deferredPrompt = e; });
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(function(){});
-}
-
 function esStandalone() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
@@ -2010,11 +2027,55 @@ OneSignalDeferred.push(function(OneSignal) {
 
 function vincularPush(nombre) {
   window.OneSignalDeferred = window.OneSignalDeferred || [];
-  OneSignalDeferred.push(function(OneSignal) {
-    OneSignal.login(nombre).catch(function(){});
-    OneSignal.Notifications.requestPermission().catch(function(){});
+  OneSignalDeferred.push(async function(OneSignal) {
+    try {
+      await OneSignal.login(nombre);
+      // Si ya tenía permiso previo (reinstalación, etc.), asegura que esté suscrito
+      if (OneSignal.Notifications.permissionNative === 'granted') {
+        await OneSignal.User.PushSubscription.optIn().catch(function(){});
+        var b = document.getElementById('notif-banner');
+        if (b) b.style.display = 'none';
+      }
+    } catch(e) { console.log('OS login:', e); }
   });
-}  
+}
+function activarPush() {
+  var ua = navigator.userAgent;
+  var esIOS = /iPhone|iPad|iPod/.test(ua);
+
+  if (esIOS) {
+    var esSafariReal = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+    if (!esSafariReal) {
+      alert('📱 En iPhone/iPad las notificaciones solo funcionan con Safari.\n\n1. Abre este sitio en Safari\n2. Instala la app (Compartir → "Agregar a pantalla de inicio")\n3. Activa las notificaciones desde la app instalada.');
+      return;
+    }
+    if (!esStandalone()) {
+      alert('📱 Para recibir notificaciones en iPhone/iPad primero debes instalar la app:\n\n1. Toca el botón Compartir de Safari\n2. Elige "Agregar a pantalla de inicio"\n3. Abre la app desde tu pantalla de inicio y activa las notificaciones ahí. 🛼');
+      return;
+    }
+  }
+
+  if (!('Notification' in window)) {
+    alert('Tu navegador no soporta notificaciones. Usa Chrome, Edge o Firefox en Android/desktop.');
+    return;
+  }
+  if (Notification.permission === 'denied') {
+    alert('Las notificaciones están bloqueadas. Ve a Configuración del navegador → Notificaciones y permite este sitio.');
+    return;
+  }
+
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    try {
+      var granted = await OneSignal.Notifications.requestPermission();
+      if (granted) {
+        await OneSignal.User.PushSubscription.optIn().catch(function(){});
+        document.getElementById('notif-banner').style.display = 'none';
+        localStorage.setItem('notif_dismiss', '1');
+      }
+    } catch(e) { console.log('OS activar:', e); }
+  });
+}
 </script>
 <div id="pwa-banner" style="display:none;position:fixed;bottom:16px;left:16px;right:16px;max-width:448px;margin:0 auto;background:white;border:2px solid #F97316;border-radius:16px;padding:18px;z-index:9000;box-shadow:0 10px 30px rgba(0,0,0,0.25);animation:smoothSlideUp 0.5s cubic-bezier(0.16,1,0.3,1);">
   <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">
