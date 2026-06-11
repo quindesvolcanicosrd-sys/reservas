@@ -1277,6 +1277,14 @@ window.onload = function() {
   // Ya no llamamos a mostrarCargando aquí porque el CSS ya lo inicializó en FLEX
 document.getElementById('loading-msg').textContent = 'Cargando...';
 
+  setTimeout(function() {
+    var ov = document.getElementById('loading-overlay');
+    if (ov && ov.style.display !== 'none' && !ov.classList.contains('fade-out')) {
+      ocultarCargando();
+      if (!E.datos) ir('s1', true);
+    }
+  }, 12000);
+
   var _restaurando = false;
   var session = localStorage.getItem('session');
   if (session) {
@@ -1311,7 +1319,7 @@ if (!_restaurando) { ir('s1', true); }
     document.getElementById('loader-nombres').style.display = 'none'; 
     if (!window._restaurandoSesion) ocultarCargando();
   }, function(e) { 
-    ocultarCargando(); 
+    if (!window._restaurandoSesion) ocultarCargando(); 
     document.getElementById('loader-nombres').style.display = 'none';
     err('err-s1', 'Error al cargar nombres: ' + e.message); 
   });
