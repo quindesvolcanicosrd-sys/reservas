@@ -1300,8 +1300,8 @@ document.getElementById('loading-msg').textContent = 'Cargando...';
       } else { localStorage.removeItem('session'); }
     } catch (ex) { localStorage.removeItem('session'); }
   }
-  if (!_restaurando) { ir('s1', true); }
-  }  
+if (!_restaurando) { ir('s1', true); }
+
   api({ action: 'getNombres' }, function(nombres) {
     var sel = document.getElementById('sel-nombre');
     sel.innerHTML = '<option value="">Elige tu nombre</option>';
