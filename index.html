@@ -8,7 +8,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
 
 <link rel="manifest" href="manifest.json">
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>  
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <meta name="theme-color" content="#F97316">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -632,8 +633,11 @@ select, option, optgroup {
           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
           <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.845L.057 23.571a.75.75 0 0 0 .92.921l5.763-1.473A11.943 11.943 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.006-1.374l-.36-.214-3.713.949.981-3.625-.235-.374A9.818 9.818 0 1 1 12 21.818z"/>
         </svg>
-        Únete al grupo de WhatsApp
+Únete al grupo de WhatsApp
       </a>
+      <button class="btn btn-secondary" style="margin-top:14px;" onclick="irAdminLogin()">
+        <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">admin_panel_settings</span> Administradorx
+      </button>
     </div>
   </div>
 
@@ -1170,15 +1174,474 @@ select, option, optgroup {
         </div>
       </div>
 
-      <button class="btn btn-secondary" onclick="volver('s-home')" style="margin-top:12px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
+<button class="btn btn-secondary" onclick="volver('s-home')" style="margin-top:12px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
   </div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+      <button class="btn btn-secondary" style="margin-top:14px;" onclick="irAdminLogin()">
+        <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">admin_panel_settings</span> Administradorx
+      </button>
+  <div class="pantalla" id="s-admin-login">
+    <div class="card" style="text-align:center;">
+      <div class="seccion-label">Administradorx</div>
+      <h2>Acceso administradorx</h2>
+      <p>Inicia sesión con la cuenta de Google autorizada del equipo.</p>
+      <div id="g-signin-btn" style="display:flex;justify-content:center;margin:24px 0;"></div>
+      <div class="error-msg" id="err-admin-login"></div>
+      <button class="btn btn-secondary" onclick="volver('s1')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
+    </div>
+  </div>
+
+  <div class="pantalla" id="s-admin-home">
+    <div class="card" style="text-align:center;padding-bottom:32px;">
+      <div style="font-size:3rem;margin-bottom:10px;">🛡️</div>
+      <h2 style="text-align:center;margin-bottom:4px;">Panel administradorx</h2>
+      <p id="admin-email-label" style="margin-bottom:24px;font-size:0.85rem;"></p>
+
+      <div class="home-boton principal" onclick="adminIrReservas()">
+        <div class="hb-icon">✅</div>
+        <div class="hb-titulo" style="color:#F97316;">Revisar reservas</div>
+        <div class="hb-sub">Aprueba, revisa o cancela reservas y pagos</div>
+      </div>
+      <div class="home-boton" onclick="adminIrQueLlevar()">
+        <div class="hb-icon">🎒</div>
+        <div class="hb-titulo" style="color:#1a1a1a;">Qué llevar</div>
+        <div class="hb-sub">Equipamiento a llevar a los próximos entrenamientos</div>
+      </div>
+      <div class="home-boton" onclick="adminIrNotif()">
+        <div class="hb-icon">📣</div>
+        <div class="hb-titulo" style="color:#1a1a1a;">Enviar notificación</div>
+        <div class="hb-sub">Push inmediata o programada a todes o a una persona</div>
+      </div>
+      <div class="home-boton" onclick="adminIrEquip()">
+        <div class="hb-icon">🛼</div>
+        <div class="hb-titulo" style="color:#1a1a1a;">Equipamiento</div>
+        <div class="hb-sub">Edita tallas, cantidades y protecciones disponibles</div>
+      </div>
+      <div class="home-boton" onclick="adminIrUsuarios()">
+        <div class="hb-icon">👥</div>
+        <div class="hb-titulo" style="color:#1a1a1a;">Usuarios</div>
+        <div class="hb-sub">Lista y eliminación de personas registradas</div>
+      </div>
+      <div class="home-boton" onclick="adminIrAdmins()">
+        <div class="hb-icon">🔑</div>
+        <div class="hb-titulo" style="color:#1a1a1a;">Administradorxs</div>
+        <div class="hb-sub">Invita o quita cuentas con acceso admin</div>
+      </div>
+      <button class="btn btn-secondary" style="margin-top:4px;" onclick="adminCerrarSesionLocal()">
+        <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">logout</span> Cerrar sesión admin
+      </button>
+    </div>
+  </div>
+
+  <div class="pantalla" id="s-admin-reservas">
+    <div class="card">
+      <div class="seccion-label">Admin — Reservas</div>
+      <h2>Reservas y pagos</h2>
+      <div class="opciones" style="flex-direction:row;gap:8px;margin-bottom:18px;">
+        <label class="opcion sel" style="flex:1;justify-content:center;padding:10px;" onclick="adminFiltroReservas('pendientes', this)"><span style="font-weight:700;font-size:0.85rem;">⏳ Pendientes</span></label>
+        <label class="opcion" style="flex:1;justify-content:center;padding:10px;" onclick="adminFiltroReservas('todas', this)"><span style="font-weight:700;font-size:0.85rem;">📋 Todas</span></label>
+      </div>
+      <div id="admin-reservas-lista"></div>
+      <button class="btn btn-secondary" onclick="volver('s-admin-home')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
+    </div>
+  </div>
+
+  <div class="pantalla" id="s-admin-notif">
+    <div class="card">
+      <div class="seccion-label">Admin — Notificaciones</div>
+      <h2>Enviar notificación push</h2>
+      <div class="datos-campo">
+        <label>Título</label>
+        <input type="text" id="adm-notif-titulo" placeholder="Ej: ¡Entrenamiento especial este sábado!">
+      </div>
+      <div class="datos-campo">
+        <label>Mensaje</label>
+        <textarea id="adm-notif-msg" style="min-height:90px;resize:vertical;" placeholder="Texto de la notificación..."></textarea>
+      </div>
+      <div class="datos-campo">
+        <label>Destinatarix</label>
+        <div class="select-wrapper">
+          <select id="adm-notif-destino"><option value="todos">📢 Todes (suscritxs)</option></select>
+        </div>
+      </div>
+      <div class="datos-campo">
+        <label>Programar envío (opcional)</label>
+        <input type="datetime-local" id="adm-notif-fecha" style="width:100%;padding:14px 16px;border:2px solid #e5e5e5;border-radius:12px;font-size:0.95rem;background:#fafafa;font-family:inherit;">
+        <p class="datos-hint">Déjalo vacío para enviar de inmediato. La hora es la de tu dispositivo.</p>
+      </div>
+      <div class="error-msg" id="err-admin-notif"></div>
+      <button class="btn btn-primary" id="btn-adm-notif" onclick="adminEnviarNotif()">Enviar notificación 📣</button>
+      <button class="btn btn-secondary" onclick="volver('s-admin-home')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
+    </div>
+  </div>
+
+  <div class="pantalla" id="s-admin-quellevar">
+    <div class="card">
+      <div class="seccion-label">Admin — Qué llevar</div>
+      <h2>Equipamiento a llevar</h2>
+      <p style="font-size:0.85rem;">Recibirás un push <strong>1 día antes</strong> y <strong>2 horas antes</strong> de cada entrenamiento si hay que llevar equipamiento (con notificaciones activadas).</p>
+      <div id="admin-quellevar-lista"></div>
+      <button class="btn btn-secondary" onclick="volver('s-admin-home')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
+    </div>
+  </div>
+
+  <div class="pantalla" id="s-admin-equip">
+    <div class="card">
+      <div class="seccion-label">Admin — Equipamiento</div>
+      <h2>Patines y protecciones</h2>
+      <div id="admin-equip-lista"></div>
+      <button class="btn btn-secondary" style="margin-top:4px;" onclick="adminAgregarTalla()">➕ Agregar talla</button>
+      <div class="datos-campo" style="margin-top:18px;">
+        <label>Sets de protecciones completas</label>
+        <input type="number" id="adm-equip-protec" min="0" style="max-width:140px;">
+      </div>
+      <div class="error-msg" id="err-admin-equip"></div>
+      <button class="btn btn-primary" onclick="adminGuardarEquip()">Guardar cambios</button>
+      <button class="btn btn-secondary" onclick="volver('s-admin-home')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
+    </div>
+  </div>
+
+  <div class="pantalla" id="s-admin-usuarios">
+    <div class="card">
+      <div class="seccion-label">Admin — Usuarios</div>
+      <h2>Personas registradas</h2>
+      <p style="font-size:0.85rem;color:#dc2626;font-weight:600;">⚠️ Eliminar borra la fila completa de la hoja Mirlxs. No se puede deshacer desde la app.</p>
+      <div id="admin-usuarios-lista"></div>
+      <button class="btn btn-secondary" onclick="volver('s-admin-home')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
+    </div>
+  </div>
+
+  <div class="pantalla" id="s-admin-admins">
+    <div class="card">
+      <div class="seccion-label">Admin — Accesos</div>
+      <h2>Administradorxs</h2>
+      <div class="datos-campo">
+        <label>Invitar nuevo admin (email de Google)</label>
+        <input type="email" id="adm-nuevo-email" placeholder="ejemplo@gmail.com">
+        <p class="datos-hint">La persona invitada podrá entrar con su cuenta de Google desde "Administradorx".</p>
+      </div>
+      <button class="btn btn-primary" onclick="adminInvitar()">Invitar</button>
+      <div class="error-msg" id="err-admin-admins"></div>
+      <div id="admin-admins-lista" style="margin-top:20px;"></div>
+      <button class="btn btn-secondary" onclick="volver('s-admin-home')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
+    </div>
+  </div>
+<script>
+
+var GOOGLE_CLIENT_ID_FRONT = '632992894668-gnbb5cclsmfdcnve0g34kmue1c72h73q.apps.googleusercontent.com ';
+
+var _adminToken = '';
+var _adminEmail = '';
+var _admTodasReservas = [];
+var _admFiltro = 'pendientes';
+var _gisInicializado = false;
+
+var ADMIN_PANTALLAS = ['s-admin-login','s-admin-home','s-admin-reservas','s-admin-notif','s-admin-quellevar','s-admin-equip','s-admin-usuarios','s-admin-admins'];
+
+function adminApi(params, onSuccess, onError) {
+  params.adminToken = _adminToken;
+  api(params, onSuccess, function(e) {
+    if (e.message && e.message.indexOf('Sesión admin') !== -1) {
+      adminCerrarSesionLocal(true);
+      err('err-admin-login', 'Tu sesión admin expiró. Vuelve a iniciar sesión.');
+    }
+    onError(e);
+  });
+}
+
+function irAdminLogin() {
+  // Restaurar sesión admin guardada
+  var s = localStorage.getItem('adminSession');
+  if (s) {
+    try {
+      var d = JSON.parse(s);
+      if (d.adminToken && d.email && Date.now() < (d.exp || 0)) {
+        _adminToken = d.adminToken; _adminEmail = d.email;
+        adminEntrar(); return;
+      }
+    } catch (ex) {}
+    localStorage.removeItem('adminSession');
+  }
+  ir('s-admin-login');
+  iniciarGoogleSignIn();
+}
+
+function iniciarGoogleSignIn() {
+  if (typeof google === 'undefined' || !google.accounts) {
+    setTimeout(iniciarGoogleSignIn, 300); return;  // el script GSI aún carga
+  }
+  if (!_gisInicializado) {
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID_FRONT, callback: onGoogleCredential });
+    _gisInicializado = true;
+  }
+  var cont = document.getElementById('g-signin-btn');
+  cont.innerHTML = '';
+  google.accounts.id.renderButton(cont, { theme: 'outline', size: 'large', text: 'signin_with', locale: 'es' });
+}
+
+function onGoogleCredential(resp) {
+  mostrarCargando('Verificando acceso...');
+  api({ action: 'adminLogin', idToken: resp.credential }, function(res) {
+    ocultarCargando();
+    if (!res.ok) { err('err-admin-login', res.error || 'Acceso denegado.'); return; }
+    _adminToken = res.adminToken; _adminEmail = res.email;
+    localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, exp: Date.now() + 11.5 * 3600 * 1000 }));
+    // Vincular push de admin (para recordatorios "qué llevar")
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
+    adminEntrar();
+  }, function(e) { ocultarCargando(); err('err-admin-login', 'Error: ' + e.message); });
+}
+
+function adminEntrar() {
+  document.getElementById('admin-email-label').textContent = '👤 ' + _adminEmail;
+  ir('s-admin-home');
+}
+
+function adminCerrarSesionLocal(silencioso) {
+  if (!silencioso && !confirm('¿Cerrar sesión de administradorx?')) return;
+  if (_adminToken) api({ action: 'adminCerrarSesion', adminToken: _adminToken }, function(){}, function(){});
+  _adminToken = ''; _adminEmail = '';
+  localStorage.removeItem('adminSession');
+  if (!silencioso) ir('s1');
+}
+
+// ── Reservas ──────────────────────────────────────────────────────────────────
+function adminIrReservas() {
+  mostrarCargando('Cargando reservas...');
+  adminApi({ action: 'adminGetReservas' }, function(res) {
+    _admTodasReservas = res || [];
+    ocultarCargando();
+    adminRenderReservas();
+    ir('s-admin-reservas');
+  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+}
+
+function adminFiltroReservas(filtro, label) {
+  _admFiltro = filtro;
+  document.querySelectorAll('#s-admin-reservas .opcion').forEach(function(o) { o.classList.remove('sel'); });
+  label.classList.add('sel');
+  adminRenderReservas();
+}
+
+function adminRenderReservas() {
+  var lista = _admFiltro === 'pendientes'
+    ? _admTodasReservas.filter(function(r) { return r.estado === 'Pendiente'; })
+    : _admTodasReservas;
+  var html = '';
+  if (lista.length === 0) {
+    html = '<p style="text-align:center;color:#888;padding:20px 0;">' + (_admFiltro === 'pendientes' ? 'No hay reservas pendientes. 🎉' : 'No hay reservas.') + '</p>';
+  } else {
+    lista.forEach(function(r) {
+      var badgeClass = r.estado === 'Confirmada' ? 'badge-confirmada' : r.estado === 'Cancelada' ? 'badge-cancelada' : 'badge-pendiente';
+      var equip = [];
+      if (r.talla && r.talla.toLowerCase() !== 'no') equip.push('🛼 ' + r.talla);
+      if (r.protecciones && r.protecciones.toLowerCase() !== 'no') equip.push('🛡️ ' + r.protecciones);
+      html += '<div class="reserva-card">' +
+        '<div class="reserva-header"><span class="reserva-fecha">' + r.nombre + '</span><span class="badge ' + badgeClass + '">' + r.estado + '</span></div>' +
+        '<div class="reserva-detalle">📅 ' + r.fecha + '</div>' +
+        '<div class="reserva-detalle">' + (equip.length ? equip.join(' · ') : '✅ Equipo propio') + (r.monto ? ' · 💵 ' + r.monto : '') + '</div>';
+      if (r.estado === 'Pendiente') {
+        html += '<div style="display:flex;gap:8px;margin-top:10px;">' +
+          '<button class="btn btn-primary" style="padding:11px;font-size:0.82rem;" onclick="adminCambiarEstado(' + r.fila + ',\'Confirmada\',this)">✅ Aprobar</button>' +
+          '<button class="btn-cancelar" style="margin-top:0;" onclick="adminCambiarEstado(' + r.fila + ',\'Cancelada\',this)">❌ Cancelar</button>' +
+          '</div>';
+      } else if (r.estado === 'Confirmada') {
+        html += '<button class="btn-cancelar" onclick="adminCambiarEstado(' + r.fila + ',\'Cancelada\',this)">❌ Cancelar esta reserva</button>';
+      }
+      html += '</div>';
+    });
+  }
+  document.getElementById('admin-reservas-lista').innerHTML = html;
+}
+
+function adminCambiarEstado(fila, estado, btn) {
+  if (!confirm('¿Marcar esta reserva como "' + estado + '"? Se notificará a la persona.')) return;
+  btn.disabled = true;
+  adminApi({ action: 'adminSetEstadoReserva', fila: fila, estado: estado }, function(res) {
+    if (res.exito) {
+      _admTodasReservas.forEach(function(r) { if (r.fila === fila) r.estado = estado; });
+      adminRenderReservas();
+    } else { btn.disabled = false; alert(res.error || 'Error al actualizar.'); }
+  }, function(e) { btn.disabled = false; alert('Error: ' + e.message); });
+}
+
+// ── Notificaciones ────────────────────────────────────────────────────────────
+function adminIrNotif() {
+  // Poblar destinatarios con la lista de nombres del login
+  var selNombres = document.getElementById('sel-nombre');
+  var selDest = document.getElementById('adm-notif-destino');
+  selDest.innerHTML = '<option value="todos">📢 Todes (suscritxs)</option>';
+  if (selNombres) {
+    Array.from(selNombres.options).forEach(function(o) {
+      if (o.value) { var op = document.createElement('option'); op.value = op.textContent = o.value; selDest.appendChild(op); }
+    });
+  }
+  document.getElementById('adm-notif-titulo').value = '';
+  document.getElementById('adm-notif-msg').value = '';
+  document.getElementById('adm-notif-fecha').value = '';
+  ir('s-admin-notif');
+}
+
+function adminEnviarNotif() {
+  var titulo = document.getElementById('adm-notif-titulo').value.trim();
+  var msg = document.getElementById('adm-notif-msg').value.trim();
+  var destino = document.getElementById('adm-notif-destino').value;
+  var fechaVal = document.getElementById('adm-notif-fecha').value;
+  if (!titulo || !msg) { err('err-admin-notif', 'Completa el título y el mensaje.'); return; }
+  var sendAfter = '';
+  if (fechaVal) {
+    var f = new Date(fechaVal);
+    if (isNaN(f.getTime()) || f.getTime() < Date.now() + 60000) { err('err-admin-notif', 'La fecha programada debe ser al menos 1 minuto en el futuro.'); return; }
+    sendAfter = f.toISOString();
+  }
+  var btn = document.getElementById('btn-adm-notif');
+  btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Enviando...';
+  adminApi({ action: 'adminEnviarPush', titulo: titulo, mensaje: msg, destino: destino, sendAfter: sendAfter }, function(res) {
+    btn.disabled = false; btn.innerHTML = 'Enviar notificación 📣';
+    if (res.exito) {
+      alert(sendAfter ? '✅ Notificación programada.' : '✅ Notificación enviada.');
+      document.getElementById('adm-notif-titulo').value = ''; document.getElementById('adm-notif-msg').value = ''; document.getElementById('adm-notif-fecha').value = '';
+    } else { err('err-admin-notif', res.error || 'Error al enviar.'); }
+  }, function(e) { btn.disabled = false; btn.innerHTML = 'Enviar notificación 📣'; err('err-admin-notif', 'Error: ' + e.message); });
+}
+
+// ── Qué llevar ────────────────────────────────────────────────────────────────
+function adminIrQueLlevar() {
+  mostrarCargando('Cargando...');
+  adminApi({ action: 'adminGetQueLlevar' }, function(res) {
+    ocultarCargando();
+    var html = '';
+    if (!res || res.length === 0) {
+      html = '<p style="text-align:center;color:#888;padding:20px 0;">No hay equipamiento asignado por ahora. 🎉</p>';
+    } else {
+      res.forEach(function(q) {
+        var equip = [];
+        if (q.patines && q.patines.toLowerCase() !== 'no') equip.push('🛼 Patines ' + q.patines);
+        if (q.protecciones && q.protecciones.toLowerCase() !== 'no') equip.push('🛡️ Protecciones');
+        html += '<div class="reserva-card">' +
+          '<div class="reserva-header"><span class="reserva-fecha">' + q.nombre + '</span></div>' +
+          '<div class="reserva-detalle">' + (equip.join(' · ') || '—') + '</div>' +
+          '<div class="reserva-detalle">📅 ' + q.fecha + '</div></div>';
+      });
+    }
+    document.getElementById('admin-quellevar-lista').innerHTML = html;
+    ir('s-admin-quellevar');
+  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+}
+
+// ── Equipamiento ──────────────────────────────────────────────────────────────
+function adminIrEquip() {
+  mostrarCargando('Cargando equipamiento...');
+  adminApi({ action: 'adminGetEquipamiento' }, function(res) {
+    ocultarCargando();
+    var html = '<div class="r-fila" style="display:flex;gap:8px;font-weight:800;font-size:0.78rem;text-transform:uppercase;color:#888;padding:4px 0;"><span style="flex:1;">Talla</span><span style="width:110px;">Cantidad</span><span style="width:42px;"></span></div>';
+    (res.tallas || []).forEach(function(t) { html += adminFilaTallaHtml(t.talla, t.cantidad); });
+    document.getElementById('admin-equip-lista').innerHTML = html;
+    document.getElementById('adm-equip-protec').value = res.protecciones || 0;
+    ir('s-admin-equip');
+  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+}
+
+function adminFilaTallaHtml(talla, cantidad) {
+  return '<div class="adm-fila-talla" style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">' +
+    '<input type="text" class="adm-talla" value="' + (talla || '') + '" placeholder="Ej: 38" style="flex:1;">' +
+    '<input type="number" class="adm-cant" value="' + (cantidad != null ? cantidad : 1) + '" min="0" style="width:110px;">' +
+    '<button onclick="this.parentElement.remove()" style="width:42px;height:42px;border:2px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:10px;cursor:pointer;font-weight:800;">✕</button>' +
+    '</div>';
+}
+
+function adminAgregarTalla() {
+  document.getElementById('admin-equip-lista').insertAdjacentHTML('beforeend', adminFilaTallaHtml('', 1));
+}
+
+function adminGuardarEquip() {
+  var tallas = [];
+  document.querySelectorAll('#admin-equip-lista .adm-fila-talla').forEach(function(f) {
+    var t = f.querySelector('.adm-talla').value.trim();
+    var c = parseInt(f.querySelector('.adm-cant').value, 10) || 0;
+    if (t) tallas.push({ talla: t, cantidad: c });
+  });
+  var protec = parseInt(document.getElementById('adm-equip-protec').value, 10) || 0;
+  mostrarCargando('Guardando...');
+  adminApi({ action: 'adminGuardarEquipamiento', tallas: JSON.stringify(tallas), protecciones: protec }, function(res) {
+    ocultarCargando();
+    if (res.exito) { alert('✅ Equipamiento actualizado.'); } else { err('err-admin-equip', res.error || 'Error.'); }
+  }, function(e) { ocultarCargando(); err('err-admin-equip', 'Error: ' + e.message); });
+}
+
+// ── Usuarios ──────────────────────────────────────────────────────────────────
+function adminIrUsuarios() {
+  mostrarCargando('Cargando usuarios...');
+  adminApi({ action: 'adminGetUsuarios' }, function(res) {
+    ocultarCargando();
+    var html = '';
+    (res || []).forEach(function(u) {
+      html += '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
+        '<div><div style="font-weight:800;">' + u.nombre + '</div><div style="font-size:0.8rem;color:#888;">' + (u.email || 'sin email') + '</div></div>' +
+        '<button onclick="adminEliminarUsuarioClick(\'' + u.nombre.replace(/'/g, "\\'") + '\')" style="border:2px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;font-size:0.8rem;flex-shrink:0;">Eliminar</button>' +
+        '</div>';
+    });
+    document.getElementById('admin-usuarios-lista').innerHTML = html || '<p style="text-align:center;color:#888;">Sin usuarios.</p>';
+    ir('s-admin-usuarios');
+  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+}
+
+function adminEliminarUsuarioClick(nombre) {
+  var escrito = prompt('⚠️ Vas a ELIMINAR a "' + nombre + '" y todos sus datos de la hoja Mirlxs.\n\nPara confirmar, escribe el nombre exactamente:');
+  if (escrito === null) return;
+  if (escrito.trim() !== nombre) { alert('El nombre no coincide. No se eliminó nada.'); return; }
+  mostrarCargando('Eliminando...');
+  adminApi({ action: 'adminEliminarUsuario', nombre: nombre }, function(res) {
+    ocultarCargando();
+    if (res.exito) { adminIrUsuarios(); } else { alert(res.error || 'Error al eliminar.'); }
+  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+}
+
+// ── Administradorxs ───────────────────────────────────────────────────────────
+function adminIrAdmins() {
+  mostrarCargando('Cargando...');
+  adminApi({ action: 'adminGetAdmins' }, function(res) {
+    ocultarCargando();
+    var html = '';
+    (res || []).forEach(function(a) {
+      html += '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
+        '<div><div style="font-weight:700;font-size:0.9rem;">' + a.email + (a.principal ? ' <span class="badge badge-confirmada" style="margin-left:6px;">Principal</span>' : '') + '</div>' +
+        (a.invitadoPor ? '<div style="font-size:0.78rem;color:#888;">Invitado por ' + a.invitadoPor + '</div>' : '') + '</div>' +
+        (!a.principal && _adminEmail === 'quindesvolcanicosrd@gmail.com'
+          ? '<button onclick="adminQuitarClick(\'' + a.email + '\')" style="border:2px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;font-size:0.8rem;flex-shrink:0;">Quitar</button>'
+          : '') +
+        '</div>';
+    });
+    document.getElementById('admin-admins-lista').innerHTML = html;
+    ir('s-admin-admins');
+  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+}
+
+function adminInvitar() {
+  var email = document.getElementById('adm-nuevo-email').value.trim();
+  if (!email) { err('err-admin-admins', 'Escribe un email.'); return; }
+  adminApi({ action: 'adminAgregarAdmin', email: email, invitadoPor: _adminEmail }, function(res) {
+    if (res.exito) { document.getElementById('adm-nuevo-email').value = ''; adminIrAdmins(); }
+    else { err('err-admin-admins', res.error || 'Error.'); }
+  }, function(e) { err('err-admin-admins', 'Error: ' + e.message); });
+}
+
+function adminQuitarClick(email) {
+  if (!confirm('¿Quitar acceso admin a ' + email + '?')) return;
+  adminApi({ action: 'adminQuitarAdmin', email: email, solicitante: _adminEmail }, function(res) {
+    if (res.exito) { adminIrAdmins(); } else { alert(res.error || 'Error.'); }
+  }, function(e) { alert('Error: ' + e.message); });
+}
+</script>
 
 </div>
 
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-var BACKEND = 'https://script.google.com/macros/s/AKfycbzEJ9wyFK7AerO7Aofx_4VoVIHXrskOwdU5xRpkSDKhRInCPIZOiBgxJUe8mkWF0hfcIw/exec';
+var BACKEND = 'https://script.google.com/macros/s/AKfycbxErg8AqcTMR90d1WQnvqxslfZ7m287Co-1Gp7_OLEA0z4BnR2yOd-VaYspzLuF0dxmiQ/exec';
 
 var _token = '';
 
@@ -1392,7 +1855,14 @@ var TOP_BAR_CONFIG = {
   's4': { titulo: canPayMonthly() ? 'Selecciona el tipo de modalidad' : 'Fecha y pago', volver: 's2' },
   's-pago': { titulo: 'Pago', volver: 's4' }, 's5': { titulo: 'Confirmar reserva', volver: 's-pago' },
   's-misreservas': { titulo: 'Mis reservas', volver: 's-home' }, 's-datos': { titulo: 'Editar mis datos', volver: 's-home' },
-  's6': { titulo: 'Pago registrado', volver: null }
+  's6': { titulo: 'Pago registrado', volver: null },
+  's-admin-login': { titulo: 'Administradorx', volver: 's1' },
+  's-admin-reservas': { titulo: 'Reservas', volver: 's-admin-home' },
+  's-admin-notif': { titulo: 'Notificaciones', volver: 's-admin-home' },
+  's-admin-quellevar': { titulo: 'Qué llevar', volver: 's-admin-home' },
+  's-admin-equip': { titulo: 'Equipamiento', volver: 's-admin-home' },
+  's-admin-usuarios': { titulo: 'Usuarios', volver: 's-admin-home' },
+  's-admin-admins': { titulo: 'Administradorxs', volver: 's-admin-home' }
 };
 
 function ir(id, desdeHistorial) {
@@ -1419,7 +1889,7 @@ function ir(id, desdeHistorial) {
     if (cfg.volver) { topBtn.style.display = ''; topBtn.onclick = function() { volver(cfg.volver); }; } else { topBtn.style.display = 'none'; }
   } else { topBar.classList.remove('visible'); }
 
-  var sinPasos = ['s1','s1b','s-home','s-misreservas','s-carga','s6','s-datos'];
+var sinPasos = ['s1','s1b','s-home','s-misreservas','s-carga','s6','s-datos'].concat(ADMIN_PANTALLAS);
   var dotContainer = document.querySelector('.paso-indicator');
   if (sinPasos.indexOf(id) !== -1) { dotContainer.style.display = 'none'; return; }
   dotContainer.style.display = 'flex';
@@ -2026,7 +2496,7 @@ function pwaCerrar() {
 window.addEventListener('popstate', function(ev) {
   var id = (ev.state && ev.state.pantalla) || (E.datos ? 's-home' : 's1');
   if (E.datos && (id === 's1' || id === 's1b')) id = 's-home';   // con sesión activa no volver al login
-  if (!E.datos && id !== 's1' && id !== 's1b') id = 's1';        // sin sesión no entrar a pantallas internas
+var esAdminPantalla = ADMIN_PANTALLAS.indexOf(id) !== -1;   if (!E.datos && !esAdminPantalla && id !== 's1' && id !== 's1b') id = 's1';   if (esAdminPantalla && id !== 's-admin-login' && !_adminToken) id = 's1';
   ir(id, true);
 });
 history.replaceState({ pantalla: 's1' }, '', '#s1');
@@ -2086,6 +2556,313 @@ function activarPush() {
       }
     } catch(e) { console.log('OS activar:', e); }
   });
+}
+</script>
+<script>
+var GOOGLE_CLIENT_ID_FRONT = '632992894668-gnbb5cclsmfdcnve0g34kmue1c72h73q.apps.googleusercontent.com';
+
+var _adminToken = '';
+var _adminEmail = '';
+var _admTodasReservas = [];
+var _admFiltro = 'pendientes';
+var _gisInicializado = false;
+
+var ADMIN_PANTALLAS = ['s-admin-login','s-admin-home','s-admin-reservas','s-admin-notif','s-admin-quellevar','s-admin-equip','s-admin-usuarios','s-admin-admins'];
+
+function adminApi(params, onSuccess, onError) {
+  params.adminToken = _adminToken;
+  api(params, onSuccess, function(e) {
+    if (e.message && e.message.indexOf('Sesión admin') !== -1) {
+      adminCerrarSesionLocal(true);
+      err('err-admin-login', 'Tu sesión admin expiró. Vuelve a iniciar sesión.');
+    }
+    onError(e);
+  });
+}
+
+function irAdminLogin() {
+  // Restaurar sesión admin guardada
+  var s = localStorage.getItem('adminSession');
+  if (s) {
+    try {
+      var d = JSON.parse(s);
+      if (d.adminToken && d.email && Date.now() < (d.exp || 0)) {
+        _adminToken = d.adminToken; _adminEmail = d.email;
+        adminEntrar(); return;
+      }
+    } catch (ex) {}
+    localStorage.removeItem('adminSession');
+  }
+  ir('s-admin-login');
+  iniciarGoogleSignIn();
+}
+
+function iniciarGoogleSignIn() {
+  if (typeof google === 'undefined' || !google.accounts) {
+    setTimeout(iniciarGoogleSignIn, 300); return;  // el script GSI aún carga
+  }
+  if (!_gisInicializado) {
+    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID_FRONT, callback: onGoogleCredential });
+    _gisInicializado = true;
+  }
+  var cont = document.getElementById('g-signin-btn');
+  cont.innerHTML = '';
+  google.accounts.id.renderButton(cont, { theme: 'outline', size: 'large', text: 'signin_with', locale: 'es' });
+}
+
+function onGoogleCredential(resp) {
+  mostrarCargando('Verificando acceso...');
+  api({ action: 'adminLogin', idToken: resp.credential }, function(res) {
+    ocultarCargando();
+    if (!res.ok) { err('err-admin-login', res.error || 'Acceso denegado.'); return; }
+    _adminToken = res.adminToken; _adminEmail = res.email;
+    localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, exp: Date.now() + 11.5 * 3600 * 1000 }));
+    // Vincular push de admin (para recordatorios "qué llevar")
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
+    adminEntrar();
+  }, function(e) { ocultarCargando(); err('err-admin-login', 'Error: ' + e.message); });
+}
+
+function adminEntrar() {
+  document.getElementById('admin-email-label').textContent = '👤 ' + _adminEmail;
+  ir('s-admin-home');
+}
+
+function adminCerrarSesionLocal(silencioso) {
+  if (!silencioso && !confirm('¿Cerrar sesión de administradorx?')) return;
+  if (_adminToken) api({ action: 'adminCerrarSesion', adminToken: _adminToken }, function(){}, function(){});
+  _adminToken = ''; _adminEmail = '';
+  localStorage.removeItem('adminSession');
+  if (!silencioso) ir('s1');
+}
+
+// ── Reservas ──────────────────────────────────────────────────────────────────
+function adminIrReservas() {
+  mostrarCargando('Cargando reservas...');
+  adminApi({ action: 'adminGetReservas' }, function(res) {
+    _admTodasReservas = res || [];
+    ocultarCargando();
+    adminRenderReservas();
+    ir('s-admin-reservas');
+  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+}
+
+function adminFiltroReservas(filtro, label) {
+  _admFiltro = filtro;
+  document.querySelectorAll('#s-admin-reservas .opcion').forEach(function(o) { o.classList.remove('sel'); });
+  label.classList.add('sel');
+  adminRenderReservas();
+}
+
+function adminRenderReservas() {
+  var lista = _admFiltro === 'pendientes'
+    ? _admTodasReservas.filter(function(r) { return r.estado === 'Pendiente'; })
+    : _admTodasReservas;
+  var html = '';
+  if (lista.length === 0) {
+    html = '<p style="text-align:center;color:#888;padding:20px 0;">' + (_admFiltro === 'pendientes' ? 'No hay reservas pendientes. 🎉' : 'No hay reservas.') + '</p>';
+  } else {
+    lista.forEach(function(r) {
+      var badgeClass = r.estado === 'Confirmada' ? 'badge-confirmada' : r.estado === 'Cancelada' ? 'badge-cancelada' : 'badge-pendiente';
+      var equip = [];
+      if (r.talla && r.talla.toLowerCase() !== 'no') equip.push('🛼 ' + r.talla);
+      if (r.protecciones && r.protecciones.toLowerCase() !== 'no') equip.push('🛡️ ' + r.protecciones);
+      html += '<div class="reserva-card">' +
+        '<div class="reserva-header"><span class="reserva-fecha">' + r.nombre + '</span><span class="badge ' + badgeClass + '">' + r.estado + '</span></div>' +
+        '<div class="reserva-detalle">📅 ' + r.fecha + '</div>' +
+        '<div class="reserva-detalle">' + (equip.length ? equip.join(' · ') : '✅ Equipo propio') + (r.monto ? ' · 💵 ' + r.monto : '') + '</div>';
+      if (r.estado === 'Pendiente') {
+        html += '<div style="display:flex;gap:8px;margin-top:10px;">' +
+          '<button class="btn btn-primary" style="padding:11px;font-size:0.82rem;" onclick="adminCambiarEstado(' + r.fila + ',\'Confirmada\',this)">✅ Aprobar</button>' +
+          '<button class="btn-cancelar" style="margin-top:0;" onclick="adminCambiarEstado(' + r.fila + ',\'Cancelada\',this)">❌ Cancelar</button>' +
+          '</div>';
+      } else if (r.estado === 'Confirmada') {
+        html += '<button class="btn-cancelar" onclick="adminCambiarEstado(' + r.fila + ',\'Cancelada\',this)">❌ Cancelar esta reserva</button>';
+      }
+      html += '</div>';
+    });
+  }
+  document.getElementById('admin-reservas-lista').innerHTML = html;
+}
+
+function adminCambiarEstado(fila, estado, btn) {
+  if (!confirm('¿Marcar esta reserva como "' + estado + '"? Se notificará a la persona.')) return;
+  btn.disabled = true;
+  adminApi({ action: 'adminSetEstadoReserva', fila: fila, estado: estado }, function(res) {
+    if (res.exito) {
+      _admTodasReservas.forEach(function(r) { if (r.fila === fila) r.estado = estado; });
+      adminRenderReservas();
+    } else { btn.disabled = false; alert(res.error || 'Error al actualizar.'); }
+  }, function(e) { btn.disabled = false; alert('Error: ' + e.message); });
+}
+
+// ── Notificaciones ────────────────────────────────────────────────────────────
+function adminIrNotif() {
+  // Poblar destinatarios con la lista de nombres del login
+  var selNombres = document.getElementById('sel-nombre');
+  var selDest = document.getElementById('adm-notif-destino');
+  selDest.innerHTML = '<option value="todos">📢 Todes (suscritxs)</option>';
+  if (selNombres) {
+    Array.from(selNombres.options).forEach(function(o) {
+      if (o.value) { var op = document.createElement('option'); op.value = op.textContent = o.value; selDest.appendChild(op); }
+    });
+  }
+  document.getElementById('adm-notif-titulo').value = '';
+  document.getElementById('adm-notif-msg').value = '';
+  document.getElementById('adm-notif-fecha').value = '';
+  ir('s-admin-notif');
+}
+
+function adminEnviarNotif() {
+  var titulo = document.getElementById('adm-notif-titulo').value.trim();
+  var msg = document.getElementById('adm-notif-msg').value.trim();
+  var destino = document.getElementById('adm-notif-destino').value;
+  var fechaVal = document.getElementById('adm-notif-fecha').value;
+  if (!titulo || !msg) { err('err-admin-notif', 'Completa el título y el mensaje.'); return; }
+  var sendAfter = '';
+  if (fechaVal) {
+    var f = new Date(fechaVal);
+    if (isNaN(f.getTime()) || f.getTime() < Date.now() + 60000) { err('err-admin-notif', 'La fecha programada debe ser al menos 1 minuto en el futuro.'); return; }
+    sendAfter = f.toISOString();
+  }
+  var btn = document.getElementById('btn-adm-notif');
+  btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Enviando...';
+  adminApi({ action: 'adminEnviarPush', titulo: titulo, mensaje: msg, destino: destino, sendAfter: sendAfter }, function(res) {
+    btn.disabled = false; btn.innerHTML = 'Enviar notificación 📣';
+    if (res.exito) {
+      alert(sendAfter ? '✅ Notificación programada.' : '✅ Notificación enviada.');
+      document.getElementById('adm-notif-titulo').value = ''; document.getElementById('adm-notif-msg').value = ''; document.getElementById('adm-notif-fecha').value = '';
+    } else { err('err-admin-notif', res.error || 'Error al enviar.'); }
+  }, function(e) { btn.disabled = false; btn.innerHTML = 'Enviar notificación 📣'; err('err-admin-notif', 'Error: ' + e.message); });
+}
+
+// ── Qué llevar ────────────────────────────────────────────────────────────────
+function adminIrQueLlevar() {
+  mostrarCargando('Cargando...');
+  adminApi({ action: 'adminGetQueLlevar' }, function(res) {
+    ocultarCargando();
+    var html = '';
+    if (!res || res.length === 0) {
+      html = '<p style="text-align:center;color:#888;padding:20px 0;">No hay equipamiento asignado por ahora. 🎉</p>';
+    } else {
+      res.forEach(function(q) {
+        var equip = [];
+        if (q.patines && q.patines.toLowerCase() !== 'no') equip.push('🛼 Patines ' + q.patines);
+        if (q.protecciones && q.protecciones.toLowerCase() !== 'no') equip.push('🛡️ Protecciones');
+        html += '<div class="reserva-card">' +
+          '<div class="reserva-header"><span class="reserva-fecha">' + q.nombre + '</span></div>' +
+          '<div class="reserva-detalle">' + (equip.join(' · ') || '—') + '</div>' +
+          '<div class="reserva-detalle">📅 ' + q.fecha + '</div></div>';
+      });
+    }
+    document.getElementById('admin-quellevar-lista').innerHTML = html;
+    ir('s-admin-quellevar');
+  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+}
+
+// ── Equipamiento ──────────────────────────────────────────────────────────────
+function adminIrEquip() {
+  mostrarCargando('Cargando equipamiento...');
+  adminApi({ action: 'adminGetEquipamiento' }, function(res) {
+    ocultarCargando();
+    var html = '<div class="r-fila" style="display:flex;gap:8px;font-weight:800;font-size:0.78rem;text-transform:uppercase;color:#888;padding:4px 0;"><span style="flex:1;">Talla</span><span style="width:110px;">Cantidad</span><span style="width:42px;"></span></div>';
+    (res.tallas || []).forEach(function(t) { html += adminFilaTallaHtml(t.talla, t.cantidad); });
+    document.getElementById('admin-equip-lista').innerHTML = html;
+    document.getElementById('adm-equip-protec').value = res.protecciones || 0;
+    ir('s-admin-equip');
+  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+}
+
+function adminFilaTallaHtml(talla, cantidad) {
+  return '<div class="adm-fila-talla" style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">' +
+    '<input type="text" class="adm-talla" value="' + (talla || '') + '" placeholder="Ej: 38" style="flex:1;">' +
+    '<input type="number" class="adm-cant" value="' + (cantidad != null ? cantidad : 1) + '" min="0" style="width:110px;">' +
+    '<button onclick="this.parentElement.remove()" style="width:42px;height:42px;border:2px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:10px;cursor:pointer;font-weight:800;">✕</button>' +
+    '</div>';
+}
+
+function adminAgregarTalla() {
+  document.getElementById('admin-equip-lista').insertAdjacentHTML('beforeend', adminFilaTallaHtml('', 1));
+}
+
+function adminGuardarEquip() {
+  var tallas = [];
+  document.querySelectorAll('#admin-equip-lista .adm-fila-talla').forEach(function(f) {
+    var t = f.querySelector('.adm-talla').value.trim();
+    var c = parseInt(f.querySelector('.adm-cant').value, 10) || 0;
+    if (t) tallas.push({ talla: t, cantidad: c });
+  });
+  var protec = parseInt(document.getElementById('adm-equip-protec').value, 10) || 0;
+  mostrarCargando('Guardando...');
+  adminApi({ action: 'adminGuardarEquipamiento', tallas: JSON.stringify(tallas), protecciones: protec }, function(res) {
+    ocultarCargando();
+    if (res.exito) { alert('✅ Equipamiento actualizado.'); } else { err('err-admin-equip', res.error || 'Error.'); }
+  }, function(e) { ocultarCargando(); err('err-admin-equip', 'Error: ' + e.message); });
+}
+
+// ── Usuarios ──────────────────────────────────────────────────────────────────
+function adminIrUsuarios() {
+  mostrarCargando('Cargando usuarios...');
+  adminApi({ action: 'adminGetUsuarios' }, function(res) {
+    ocultarCargando();
+    var html = '';
+    (res || []).forEach(function(u) {
+      html += '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
+        '<div><div style="font-weight:800;">' + u.nombre + '</div><div style="font-size:0.8rem;color:#888;">' + (u.email || 'sin email') + '</div></div>' +
+        '<button onclick="adminEliminarUsuarioClick(\'' + u.nombre.replace(/'/g, "\\'") + '\')" style="border:2px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;font-size:0.8rem;flex-shrink:0;">Eliminar</button>' +
+        '</div>';
+    });
+    document.getElementById('admin-usuarios-lista').innerHTML = html || '<p style="text-align:center;color:#888;">Sin usuarios.</p>';
+    ir('s-admin-usuarios');
+  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+}
+
+function adminEliminarUsuarioClick(nombre) {
+  var escrito = prompt('⚠️ Vas a ELIMINAR a "' + nombre + '" y todos sus datos de la hoja Mirlxs.\n\nPara confirmar, escribe el nombre exactamente:');
+  if (escrito === null) return;
+  if (escrito.trim() !== nombre) { alert('El nombre no coincide. No se eliminó nada.'); return; }
+  mostrarCargando('Eliminando...');
+  adminApi({ action: 'adminEliminarUsuario', nombre: nombre }, function(res) {
+    ocultarCargando();
+    if (res.exito) { adminIrUsuarios(); } else { alert(res.error || 'Error al eliminar.'); }
+  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+}
+
+// ── Administradorxs ───────────────────────────────────────────────────────────
+function adminIrAdmins() {
+  mostrarCargando('Cargando...');
+  adminApi({ action: 'adminGetAdmins' }, function(res) {
+    ocultarCargando();
+    var html = '';
+    (res || []).forEach(function(a) {
+      html += '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
+        '<div><div style="font-weight:700;font-size:0.9rem;">' + a.email + (a.principal ? ' <span class="badge badge-confirmada" style="margin-left:6px;">Principal</span>' : '') + '</div>' +
+        (a.invitadoPor ? '<div style="font-size:0.78rem;color:#888;">Invitado por ' + a.invitadoPor + '</div>' : '') + '</div>' +
+        (!a.principal && _adminEmail === 'quindesvolcanicosrd@gmail.com'
+          ? '<button onclick="adminQuitarClick(\'' + a.email + '\')" style="border:2px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;font-size:0.8rem;flex-shrink:0;">Quitar</button>'
+          : '') +
+        '</div>';
+    });
+    document.getElementById('admin-admins-lista').innerHTML = html;
+    ir('s-admin-admins');
+  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+}
+
+function adminInvitar() {
+  var email = document.getElementById('adm-nuevo-email').value.trim();
+  if (!email) { err('err-admin-admins', 'Escribe un email.'); return; }
+  adminApi({ action: 'adminAgregarAdmin', email: email, invitadoPor: _adminEmail }, function(res) {
+    if (res.exito) { document.getElementById('adm-nuevo-email').value = ''; adminIrAdmins(); }
+    else { err('err-admin-admins', res.error || 'Error.'); }
+  }, function(e) { err('err-admin-admins', 'Error: ' + e.message); });
+}
+
+function adminQuitarClick(email) {
+  if (!confirm('¿Quitar acceso admin a ' + email + '?')) return;
+  adminApi({ action: 'adminQuitarAdmin', email: email, solicitante: _adminEmail }, function(res) {
+    if (res.exito) { adminIrAdmins(); } else { alert(res.error || 'Error.'); }
+  }, function(e) { alert('Error: ' + e.message); });
 }
 </script>
 <div id="pwa-banner" style="display:none;position:fixed;bottom:16px;left:16px;right:16px;max-width:448px;margin:0 auto;background:white;border:2px solid #F97316;border-radius:16px;padding:18px;z-index:9000;box-shadow:0 10px 30px rgba(0,0,0,0.25);animation:smoothSlideUp 0.5s cubic-bezier(0.16,1,0.3,1);">
