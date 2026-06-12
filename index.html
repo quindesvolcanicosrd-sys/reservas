@@ -634,6 +634,9 @@ select, option, optgroup {
         </svg>
 Únete al grupo de WhatsApp
       </a>
+      <button class="btn btn-secondary" style="margin-top:14px;" onclick="irAdminLogin()">
+        <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">admin_panel_settings</span> Administradorx
+      </button>
     </div>
   </div>
 
@@ -1174,10 +1177,7 @@ select, option, optgroup {
     </div>
   </div>
 
-<script src="https://accounts.google.com/gsi/client" async defer></script>
-      <button class="btn btn-secondary" style="margin-top:14px;" onclick="irAdminLogin()">
-        <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">admin_panel_settings</span> Administradorx
-      </button>
+
   <div class="pantalla" id="s-admin-login">
     <div class="card" style="text-align:center;">
       <div class="seccion-label">Administradorx</div>
@@ -1326,7 +1326,7 @@ select, option, optgroup {
   </div>
 <script>
 
-var GOOGLE_CLIENT_ID_FRONT = '632992894668-gnbb5cclsmfdcnve0g34kmue1c72h73q.apps.googleusercontent.com ';
+var GOOGLE_CLIENT_ID_FRONT = '632992894668-gnbb5cclsmfdcnve0g34kmue1c72h73q.apps.googleusercontent.com';
 
 var _adminToken = '';
 var _adminEmail = '';
@@ -1731,14 +1731,36 @@ function api(params, onSuccess, onError) {
     .catch(function(e) { onError(e); });
 }
 
+// ─── API POST (para payloads grandes como JWT) ────────────────────────────────
+function apiPost(params, onSuccess, onError) {
+  var body = Object.keys(params).map(function(k) {
+    return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+  }).join('&');
+  fetch(BACKEND, {
+    method: 'POST',
+    mode: 'cors',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data && data.error) { onError({ message: data.error }); } else { onSuccess(data); }
+  })
+  .catch(function(e) { onError(e); });
+} 
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 window.onload = function() {
-  // Ya no llamamos a mostrarCargando aquí porque el CSS ya lo inicializó en FLEX
-document.getElementById('loading-msg').textContent = 'Cargando...';
+  // Limpiar estado previo (defensivo contra bfcache parcial)
+  document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
+  var ov = document.getElementById('loading-overlay');
+  ov.classList.remove('fade-out');
+  ov.style.display = 'flex';
+  document.getElementById('loading-msg').textContent = 'Cargando...';
 
   setTimeout(function() {
-    var ov = document.getElementById('loading-overlay');
-    if (ov && ov.style.display !== 'none' && !ov.classList.contains('fade-out')) {
+    var ov2 = document.getElementById('loading-overlay');
+    if (ov2 && ov2.style.display !== 'none' && !ov2.classList.contains('fade-out')) {
       ocultarCargando();
       if (!E.datos) ir('s1', true);
     }
@@ -1767,20 +1789,19 @@ document.getElementById('loading-msg').textContent = 'Cargando...';
       } else { localStorage.removeItem('session'); }
     } catch (ex) { localStorage.removeItem('session'); }
   }
-if (!_restaurando) { ir('s1', true); }
+  if (!_restaurando) { ir('s1', true); }
 
   api({ action: 'getNombres' }, function(nombres) {
     var sel = document.getElementById('sel-nombre');
     sel.innerHTML = '<option value="">Elige tu nombre</option>';
     nombres.forEach(function(n) { var o = document.createElement('option'); o.value = o.textContent = n; sel.appendChild(o); });
-    sel.disabled = false; sel.style.color = ''; 
-    
-    document.getElementById('loader-nombres').style.display = 'none'; 
-    if (!window._restaurandoSesion) ocultarCargando();
-  }, function(e) { 
-    if (!window._restaurandoSesion) ocultarCargando(); 
+    sel.disabled = false; sel.style.color = '';
     document.getElementById('loader-nombres').style.display = 'none';
-    err('err-s1', 'Error al cargar nombres: ' + e.message); 
+    if (!window._restaurandoSesion) ocultarCargando();
+  }, function(e) {
+    if (!window._restaurandoSesion) ocultarCargando();
+    document.getElementById('loader-nombres').style.display = 'none';
+    err('err-s1', 'Error al cargar nombres: ' + e.message);
   });
 
   api({ action: 'getPreciosClases' }, function(precios) {
@@ -1789,6 +1810,24 @@ if (!_restaurando) { ir('s1', true); }
   }, function() {});
   generarMeses();
 };
+
+// ─── Fix bfcache: detecta restauración desde caché del navegador ──────────────
+window.addEventListener('pageshow', function(e) {
+  if (e.persisted) {
+    // La página fue restaurada desde bfcache — resetear a estado conocido
+    document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
+    var ov = document.getElementById('loading-overlay');
+    ov.classList.remove('fade-out');
+    ov.style.display = 'flex';
+    if (E.datos) {
+      prepararHome();
+      ir('s-home');
+    } else {
+      ir('s1', true);
+    }
+    ocultarCargando();
+  }
+});
 
 var NOMBRES_MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -1848,7 +1887,7 @@ var TOP_BAR_CONFIG = {
   's1b': { titulo: 'Verificación', volver: 's1' }, 's2': { titulo: 'Equipamiento', volver: 's-home' },
   's3a': { titulo: 'Editar equipamiento', volver: 's2' }, 's3b': { titulo: 'Editar equipamiento', volver: 's3a' },
   's3c': { titulo: 'Editar equipamiento', volver: 's3b' },
-  's4': { titulo: canPayMonthly() ? 'Selecciona el tipo de modalidad' : 'Fecha y pago', volver: 's2' },
+  's4': { titulo: function() { return canPayMonthly() ? 'Selecciona el tipo de modalidad' : 'Fecha y pago'; }, volver: 's2' },
   's-pago': { titulo: 'Pago', volver: 's4' }, 's5': { titulo: 'Confirmar reserva', volver: 's-pago' },
   's-misreservas': { titulo: 'Mis reservas', volver: 's-home' }, 's-datos': { titulo: 'Editar mis datos', volver: 's-home' },
   's6': { titulo: 'Pago registrado', volver: null },
@@ -1881,7 +1920,7 @@ function ir(id, desdeHistorial) {
   var topBar = document.getElementById('top-bar'); var topBtn = document.getElementById('top-bar-btn'); var topTitulo = document.getElementById('top-bar-titulo');
   var cfg = TOP_BAR_CONFIG[id];
   if (cfg) {
-    topBar.classList.add('visible'); topTitulo.textContent = cfg.titulo;
+    topBar.classList.add('visible'); topTitulo.textContent = typeof cfg.titulo === 'function' ? cfg.titulo() : cfg.titulo;
     if (cfg.volver) { topBtn.style.display = ''; topBtn.onclick = function() { volver(cfg.volver); }; } else { topBtn.style.display = 'none'; }
   } else { topBar.classList.remove('visible'); }
 
@@ -2503,17 +2542,18 @@ OneSignalDeferred.push(function(OneSignal) {
 });
 
 function vincularPush(nombre) {
+  if (!window.OneSignalDeferred) return;
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   OneSignalDeferred.push(async function(OneSignal) {
     try {
       await OneSignal.login(nombre);
-      // Si ya tenía permiso previo (reinstalación, etc.), asegura que esté suscrito
-      if (OneSignal.Notifications.permissionNative === 'granted') {
+      var perm = await OneSignal.Notifications.permissionNative;
+      if (perm === 'granted') {
         await OneSignal.User.PushSubscription.optIn().catch(function(){});
         var b = document.getElementById('notif-banner');
         if (b) b.style.display = 'none';
       }
-    } catch(e) { console.log('OS login:', e); }
+    } catch(e) { console.warn('OneSignal vincularPush:', e.message); }
   });
 }
 function activarPush() {
@@ -2555,9 +2595,7 @@ function activarPush() {
 }
 </script>
 <script>
-var GOOGLE_CLIENT_ID_FRONT = '632992894668-gnbb5cclsmfdcnve0g34kmue1c72h73q.apps.googleusercontent.com';
 
-var _adminToken = '';
 var _adminEmail = '';
 var _admTodasReservas = [];
 var _admFiltro = 'pendientes';
@@ -2608,16 +2646,16 @@ function iniciarGoogleSignIn() {
 
 function onGoogleCredential(resp) {
   mostrarCargando('Verificando acceso...');
-  api({ action: 'adminLogin', idToken: resp.credential }, function(res) {
+  // CAMBIO: usa apiPost para evitar el límite de URL con el JWT largo
+  apiPost({ action: 'adminLogin', idToken: resp.credential }, function(res) {
     ocultarCargando();
     if (!res.ok) { err('err-admin-login', res.error || 'Acceso denegado.'); return; }
     _adminToken = res.adminToken; _adminEmail = res.email;
     localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, exp: Date.now() + 11.5 * 3600 * 1000 }));
-    // Vincular push de admin (para recordatorios "qué llevar")
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
     adminEntrar();
-  }, function(e) { ocultarCargando(); err('err-admin-login', 'Error: ' + e.message); });
+  }, function(e) { ocultarCargando(); err('err-admin-login', 'Error al verificar acceso. Intenta de nuevo.'); });
 }
 
 function adminEntrar() {
