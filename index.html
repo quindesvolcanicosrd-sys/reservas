@@ -126,7 +126,7 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
 .btn-primary:active:not(:disabled) { transform: translateY(0) scale(0.98); box-shadow: 0 2px 8px rgba(249,115,22,0.3); }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
 
-.btn-secondary { background: #f5f5f5; color: #555; margin-top: 12px; }
+.btn-secondary { background: #f5f5f5; color: #555; margin-top: 12px; border: 2px solid #d4d4d4; }
 .btn-secondary:hover { background: #ebebeb; transform: translateY(-2px); }
 .btn-secondary:active { transform: translateY(0) scale(0.98); }
 
@@ -427,7 +427,7 @@ select, option, optgroup {
   .opcion:hover { background: #2a2a2a; border-color: #fb923c; }
   .opcion.sel { background: #2a1a0e; border-color: #F97316; }
 
-  .btn-secondary { background: #2a2a2a; color: #ccc; }
+  .btn-secondary { background: #2a2a2a; color: #ccc; border-color: #3a3a3a; }
   .btn-secondary:hover { background: #333; }
   .btn-pin-key { background: #252525; border-color: #333; color: #f0f0f0; }
   .btn-pin-key:hover { background: #2a2a2a; border-color: #fb923c; }
@@ -553,14 +553,18 @@ select, option, optgroup {
   .btn-wp-grupo { color: white !important; }
 .btn-wp-inactivo { color: #4ade80 !important; }
   .hmr-texto .hmr-titulo { color: #f0f0f0; }
-  .hmr { border-bottom-color: rgba(255,255,255,0.08); }
-  .home-mobile-actions { border-top-color: rgba(255,255,255,0.08); }
+  .hmr-texto .hmr-sub { color: #aaa; }
+  .hmr { border-bottom-color: rgba(255,255,255,0.1); }
+  .home-mobile-actions { border-top-color: rgba(255,255,255,0.1); }
   .hmr-btn-round { background: #2a2a2a; }
-  .btn-logout-mobile .material-symbols-outlined { color: #666; }
-  #modal-contacto > div { background: #1c1c1c !important; }
+  .btn-logout-mobile .material-symbols-outlined { color: #F97316; }
+#modal-contacto > div { background: #1c1c1c !important; }
   #modal-contacto a[href] { background: #252525 !important; color: #f0f0f0 !important; }
   #modal-contacto button { background: #2a2a2a !important; color: #ccc !important; }
   #modal-contacto .modal-ct { color: #f0f0f0 !important; }
+  #modal-nav-inner { background: #1c1c1c !important; }
+  #modal-nav-titulo { color: #f0f0f0 !important; }
+  #modal-nav-texto { color: #ccc !important; }
 }
 /* ─── MOBILE: viewport optimizado ────────────────────────────────────────── */
 @media (max-width: 600px) {
@@ -610,7 +614,7 @@ select, option, optgroup {
 .hmr-texto .hmr-sub { font-size: 0.77rem; color: #888; }
 .hmr-btn-round { width: 44px; height: 44px; flex-shrink: 0; background: #1a1a1a; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; }
 .hmr-btn-round .material-symbols-outlined { font-size: 1.2rem; color: white; }
-.btn-logout-mobile { background: none; border: none; cursor: pointer; color: #888; padding: 8px; border-radius: 10px; font-family: inherit; line-height: 1; }
+.btn-logout-mobile { background: rgba(249,115,22,0.12); border: 2px solid rgba(249,115,22,0.25); cursor: pointer; color: #F97316; padding: 8px; border-radius: 10px; font-family: inherit; line-height: 1; }
 .btn-logout-mobile .material-symbols-outlined { font-size: 1.5rem; vertical-align: middle; }
 </style>
 </head>
@@ -758,7 +762,7 @@ select, option, optgroup {
       </button>
 
       <div class="home-mobile-actions">
-        <div class="hmr">
+        <div class="hmr" id="row-notif-home">
           <div class="hmr-texto">
             <div class="hmr-titulo">Activar las notificaciones</div>
             <div class="hmr-sub">No te pierdas de ninguna notificación</div>
@@ -1785,8 +1789,11 @@ var notifBanner = document.getElementById('notif-banner');
     notifBanner.style.display = (!yaDescarto && !yaActivado) ? 'block' : 'none';
   }
   // Mobile home: toggle notificaciones + row instalar app
+  var notifActivas = 'Notification' in window && Notification.permission === 'granted';
   var tNotif = document.getElementById('toggle-notif');
-  if (tNotif) tNotif.checked = ('Notification' in window && Notification.permission === 'granted');
+  if (tNotif) tNotif.checked = notifActivas;
+  var rowNotif = document.getElementById('row-notif-home');
+  if (rowNotif) rowNotif.style.display = notifActivas ? 'none' : '';
   var rowInstalar = document.getElementById('row-instalar-app');
   if (rowInstalar) rowInstalar.style.display = esStandalone() ? 'none' : '';
 }  // ← cierre de prepararHome
@@ -2270,8 +2277,58 @@ function mostrarBannerPWA() {
   document.getElementById('pwa-banner').style.display = 'block';
 }
 
+function navegadorRecomendado() {
+  var ua = navigator.userAgent;
+  var esIOS = /iPhone|iPad|iPod/.test(ua);
+  var esAndroid = /Android/.test(ua);
+  if (esIOS) {
+    var esSafariReal = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+    if (!esSafariReal) { mostrarModalNavegador('ios-safari'); return false; }
+  }
+  if (esAndroid) {
+    var esChromeAndroid = /Chrome\//.test(ua) && !/EdgA|OPR\/|SamsungBrowser/.test(ua);
+    if (!esChromeAndroid) { mostrarModalNavegador('android-chrome'); return false; }
+  }
+  return true;
+}
+
+function mostrarModalNavegador(tipo) {
+  var m = document.getElementById('modal-navegador');
+  var icon = document.getElementById('modal-nav-icon');
+  var titulo = document.getElementById('modal-nav-titulo');
+  var texto = document.getElementById('modal-nav-texto');
+  icon.textContent = tipo === 'android-chrome' ? '🌐' : tipo === 'ios-instalar' ? '📲' : '📱';
+  titulo.textContent = tipo === 'android-chrome' ? 'Usa Chrome en Android' :
+                       tipo === 'ios-instalar'   ? 'Instala la app primero' :
+                                                   'Usa Safari en iPhone/iPad';
+  if (tipo === 'android-chrome') {
+    texto.innerHTML = 'En Android el portal funciona con <strong>Google Chrome</strong>.<br><br>' +
+      '1️⃣ Copia la dirección de abajo<br>' +
+      '2️⃣ Ábrela en <strong>Chrome</strong><br>' +
+      '3️⃣ Inicia sesión con tu PIN<br>' +
+      '4️⃣ Toca <em>"Instalar app"</em> y sigue los pasos';
+  } else if (tipo === 'ios-safari') {
+    texto.innerHTML = 'En iPhone/iPad el portal funciona con <strong>Safari</strong>.<br><br>' +
+      '1️⃣ Copia la dirección de abajo<br>' +
+      '2️⃣ Ábrela en <strong>Safari</strong><br>' +
+      '3️⃣ Inicia sesión con tu PIN<br>' +
+      '4️⃣ Toca <em>"Instalar app"</em> y sigue los pasos';
+  } else {
+    texto.innerHTML = 'En iPhone/iPad necesitas instalar la app para recibir notificaciones:<br><br>' +
+      '1️⃣ Toca el botón <strong>Compartir</strong> de Safari<br>' +
+      '2️⃣ Elige <strong>"Agregar a pantalla de inicio"</strong><br>' +
+      '3️⃣ Abre la app instalada y activa las notificaciones';
+  }
+  m.style.display = 'flex';
+}
+
+function cerrarModalNavegador() {
+  document.getElementById('modal-navegador').style.display = 'none';
+}
+
 function pwaInstalar() {
-  if (_deferredPrompt) {           // Chrome/Edge: prompt nativo
+  if (!navegadorRecomendado()) return;
+  if (_deferredPrompt) {
     _deferredPrompt.prompt();
     _deferredPrompt.userChoice.then(function() { pwaCerrar(); });
     return;
@@ -2280,15 +2337,12 @@ function pwaInstalar() {
   var box = document.getElementById('pwa-instrucciones');
   var html = '';
   if (nav === 'ios') {
-    html = '<strong>En iPhone/iPad:</strong><br>1. Toca el botón <strong>Compartir</strong> <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">ios_share</span> en la barra del navegador.<br>2. Desliza y elige <strong>"Agregar a pantalla de inicio"</strong>.<br>3. Toca <strong>Agregar</strong>. 🛼';
-  } else if (nav === 'firefox') {
-    html = '<strong>En Firefox (Android):</strong><br>1. Toca el menú <strong>⋮</strong>.<br>2. Elige <strong>"Agregar a pantalla principal"</strong> o <strong>"Instalar"</strong>.<br><br><em>En Firefox de escritorio no es posible instalar apps; usa Chrome o Edge.</em>';
+    html = '<strong>En iPhone/iPad (Safari):</strong><br>1. Toca el botón <strong>Compartir</strong> <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">ios_share</span> en la barra del navegador.<br>2. Desliza y elige <strong>"Agregar a pantalla de inicio"</strong>.<br>3. Toca <strong>Agregar</strong>. 🛼';
   } else if (nav === 'chromium') {
-    html = '<strong>En Chrome/Edge:</strong><br>• Móvil: menú <strong>⋮</strong> → <strong>"Agregar a la pantalla principal"</strong> / <strong>"Instalar app"</strong>.<br>• Escritorio: icono de instalación <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">install_desktop</span> en la barra de direcciones.';
+    html = '<strong>En Chrome:</strong><br>• Móvil: menú <strong>⋮</strong> → <strong>"Agregar a la pantalla principal"</strong>.<br>• Escritorio: icono <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">install_desktop</span> en la barra de direcciones.';
   } else {
-    html = '⚠️ <strong>Navegador no soportado.</strong> Para instalar la app abre este sitio en <strong>Chrome</strong>, <strong>Edge</strong>, <strong>Safari</strong> (iPhone) o <strong>Firefox</strong> (Android).';
+    html = '⚠️ Usa <strong>Chrome</strong> (Android) o <strong>Safari</strong> (iPhone/iPad) para instalar la app.';
   }
-// Si estamos en mobile, el pwa-banner está oculto, mostramos alert
   if (window.innerWidth <= 600) {
     alert(html.replace(/<[^>]+>/g, ''));
   } else {
@@ -2337,22 +2391,31 @@ function cerrarContacto() { var m=document.getElementById('modal-contacto'); if(
 function toggleNotifHome(cb) {
   if (!cb.checked) { alert('Para desactivar, ve a la configuración de notificaciones de tu navegador.'); cb.checked = true; return; }
   activarPush();
-  setTimeout(function() { if('Notification' in window && Notification.permission !== 'granted') cb.checked = false; }, 1500);
+  setTimeout(function() {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      var row = document.getElementById('row-notif-home');
+      if (row) {
+        var t = row.querySelector('.hmr-titulo');
+        var s = row.querySelector('.hmr-sub');
+        if (t) t.textContent = 'Notificaciones activadas';
+        if (s) s.textContent = 'No te perderás de ninguna notificación ✅';
+        setTimeout(function() {
+          row.style.transition = 'opacity 0.6s ease';
+          row.style.opacity = '0';
+          setTimeout(function() { row.style.display = 'none'; }, 650);
+        }, 1800);
+      }
+    } else { cb.checked = false; }
+  }, 1500);
 }
 function activarPush() {
+  if (!navegadorRecomendado()) return;
   var ua = navigator.userAgent;
   var esIOS = /iPhone|iPad|iPod/.test(ua);
 
-  if (esIOS) {
-    var esSafariReal = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
-    if (!esSafariReal) {
-      alert('📱 En iPhone/iPad las notificaciones solo funcionan con Safari.\n\n1. Abre este sitio en Safari\n2. Instala la app (Compartir → "Agregar a pantalla de inicio")\n3. Activa las notificaciones desde la app instalada.');
-      return;
-    }
-    if (!esStandalone()) {
-      alert('📱 Para recibir notificaciones en iPhone/iPad primero debes instalar la app:\n\n1. Toca el botón Compartir de Safari\n2. Elige "Agregar a pantalla de inicio"\n3. Abre la app desde tu pantalla de inicio y activa las notificaciones ahí. 🛼');
-      return;
-    }
+  if (esIOS && !esStandalone()) {
+    mostrarModalNavegador('ios-instalar');
+    return;
   }
 
   if (!('Notification' in window)) {
@@ -2684,6 +2747,16 @@ function adminQuitarClick(email) {
   }, function(e) { alert('Error: ' + e.message); });
 }
 </script>
+  <div id="modal-navegador" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.65);align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarModalNavegador()">
+  <div id="modal-nav-inner" style="background:white;border-radius:20px;padding:28px 20px;width:88%;max-width:340px;text-align:center;">
+    <div id="modal-nav-icon" style="font-size:2.8rem;margin-bottom:12px;"></div>
+    <div id="modal-nav-titulo" style="font-weight:800;font-size:1.05rem;margin-bottom:10px;color:#1a1a1a;"></div>
+    <div id="modal-nav-texto" style="font-size:0.88rem;color:#555;line-height:1.8;margin-bottom:16px;text-align:left;"></div>
+    <div style="background:#fff8f4;border:2px solid #fde8d4;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:0.85rem;font-weight:700;color:#F97316;word-break:break-all;text-align:center;">reservas.quindesvolcanicos.com</div>
+    <button onclick="cerrarModalNavegador()" style="width:100%;padding:14px;background:#F97316;color:white;border:none;border-radius:12px;font-weight:800;cursor:pointer;font-family:inherit;font-size:0.95rem;">Entendido</button>
+  </div>
+</div>
+
   <div id="modal-contacto" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.65);align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarContacto()">
   <div style="background:white;border-radius:20px;padding:28px 20px;width:85%;max-width:320px;text-align:center;">
     <div class="modal-ct" style="font-weight:800;font-size:0.95rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:20px;color:#1a1a1a;">Contáctanos</div>
@@ -2710,10 +2783,6 @@ function adminQuitarClick(email) {
   
 <footer style="text-align:center;padding: 0px 20px 25px;;font-size:0.85rem;">
   <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:16px 24px;">
-    
-    <a href="https://www.quindesvolcanicos.com/" target="_blank" style="display:flex;align-items:center;gap:6px;color:#a48672;text-decoration:none;font-weight:600;transition:color 0.2s;">
-      <span class="material-symbols-outlined" style="font-size:1.1rem;">language</span> Web
-    </a>
     
     <a href="https://www.instagram.com/quindesvolcanicosrd/" target="_blank" style="display:flex;align-items:center;gap:6px;color:#a48672;text-decoration:none;font-weight:600;transition:color 0.2s;">
       <span class="material-symbols-outlined" style="font-size:1.1rem;">favorite</span> Instagram
