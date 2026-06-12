@@ -2496,7 +2496,7 @@ function iniciarGoogleSignIn() {
 function onGoogleCredential(resp) {
   mostrarCargando('Verificando acceso...');
   // CAMBIO: usa apiPost para evitar el límite de URL con el JWT largo
-  apiPost({ action: 'adminLogin', idToken: resp.credential }, function(res) {
+  api({ action: 'adminLogin', idToken: resp.credential }, function(res) {
     ocultarCargando();
     if (!res.ok) { err('err-admin-login', res.error || 'Acceso denegado.'); return; }
     _adminToken = res.adminToken; _adminEmail = res.email;
