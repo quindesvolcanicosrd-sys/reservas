@@ -8,7 +8,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
 
 <link rel="manifest" href="manifest.json">
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script> 
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <meta name="theme-color" content="#F97316">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -550,13 +551,33 @@ select, option, optgroup {
   select optgroup { background: #1e1e1e; color: #888; }
 
   .btn-wp-grupo { color: white !important; }
-  .btn-wp-inactivo { color: #4ade80 !important; }
+.btn-wp-inactivo { color: #4ade80 !important; }
+  .hmr-texto .hmr-titulo { color: #f0f0f0; }
+  .hmr { border-bottom-color: rgba(255,255,255,0.08); }
+  .home-mobile-actions { border-top-color: rgba(255,255,255,0.08); }
+  .hmr-btn-round { background: #2a2a2a; }
+  .btn-logout-mobile .material-symbols-outlined { color: #666; }
+  #modal-contacto > div { background: #1c1c1c !important; }
+  #modal-contacto a[href] { background: #252525 !important; color: #f0f0f0 !important; }
+  #modal-contacto button { background: #2a2a2a !important; color: #ccc !important; }
+  #modal-contacto .modal-ct { color: #f0f0f0 !important; }
 }
 /* ─── MOBILE: viewport optimizado ────────────────────────────────────────── */
 @media (max-width: 600px) {
   body.logueada .header,
   body.logueada footer { display: none; }
   body.logueada .contenedor { padding-top: 6px; }
+  
+/* Ocultar popups invasivos */
+  #notif-banner { display: none !important; }
+  #pwa-banner { display: none !important; }
+  /* Mostrar header y acciones del home mobile */
+  .home-top-mobile { display: flex !important; position: relative; align-items: center; justify-content: center; padding: 10px 0 6px; margin-bottom: 4px; }
+  .home-emoji-mobile { font-size: 2.8rem; animation: popBounce 0.6s cubic-bezier(0.16,1,0.3,1); }
+  .home-emoji-desktop { display: none !important; }
+  .btn-logout-mobile { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+  #btn-logout-desktop { display: none; }
+  .home-mobile-actions { display: block !important; margin-top: 8px; border-top: 1px solid rgba(128,128,128,0.12); }
 
   /* Cards planas: el contenido ocupa la pantalla sin "caja dentro de caja" */
   .card {
@@ -574,6 +595,23 @@ select, option, optgroup {
   #pwa-banner div[style*="font-weight:800"] { color: #f0f0f0 !important; }
   #pwa-instrucciones { background: #252525 !important; border-color: #333 !important; color: #ccc !important; }
 }  
+/* ─── MOBILE HOME: componentes específicos ────────────────────────── */
+.home-top-mobile { display: none; }
+.home-emoji-desktop { display: block; }
+.home-mobile-actions { display: none; }
+.toggle-switch { position: relative; display: inline-block; width: 48px; height: 26px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #ccc; border-radius: 26px; transition: 0.3s; }
+.toggle-slider:before { content: ''; position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+.toggle-switch input:checked + .toggle-slider { background: #F97316; }
+.toggle-switch input:checked + .toggle-slider:before { transform: translateX(22px); }
+.hmr { display: flex; align-items: center; justify-content: space-between; padding: 14px 4px; border-bottom: 1px solid rgba(128,128,128,0.12); }
+.hmr-texto .hmr-titulo { font-size: 0.8rem; font-weight: 800; color: #1a1a1a; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 3px; }
+.hmr-texto .hmr-sub { font-size: 0.77rem; color: #888; }
+.hmr-btn-round { width: 44px; height: 44px; flex-shrink: 0; background: #1a1a1a; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; }
+.hmr-btn-round .material-symbols-outlined { font-size: 1.2rem; color: white; }
+.btn-logout-mobile { background: none; border: none; cursor: pointer; color: #888; padding: 8px; border-radius: 10px; font-family: inherit; line-height: 1; }
+.btn-logout-mobile .material-symbols-outlined { font-size: 1.5rem; vertical-align: middle; }
 </style>
 </head>
 <body>
@@ -667,9 +705,15 @@ select, option, optgroup {
     <div class="card"><div class="loader"><div class="spinner"></div><p>Cargando tu información...</p></div></div>
   </div>
 
-  <div class="pantalla" id="s-home">
+<div class="pantalla" id="s-home">
     <div class="card" style="text-align:center;padding-bottom:32px;">
-      <div style="font-size:3.2rem;margin-bottom:12px; animation: popBounce 0.6s cubic-bezier(0.16,1,0.3,1);">🛼</div>
+      <div class="home-top-mobile">
+        <span class="home-emoji-mobile">🛼</span>
+        <button class="btn-logout-mobile" onclick="cerrarSesion()" title="Cerrar sesión">
+          <span class="material-symbols-outlined">logout</span>
+        </button>
+      </div>
+      <div class="home-emoji-desktop" style="font-size:3.2rem;margin-bottom:12px;animation:popBounce 0.6s cubic-bezier(0.16,1,0.3,1);">🛼</div>
       <h2 id="home-saludo" style="text-align:center;margin-bottom:8px;"></h2>
       <p style="margin-bottom:24px; font-weight: 500;">¿Qué quieres hacer hoy?</p>
       
@@ -709,9 +753,40 @@ select, option, optgroup {
         <div class="hb-titulo" style="color:#1a1a1a;">Editar mis datos</div>
         <div class="hb-sub">Actualiza tu información personal</div>
       </div>
-      <button class="btn btn-secondary" style="margin-top:4px;" onclick="cerrarSesion()">
+      <button id="btn-logout-desktop" class="btn btn-secondary" style="margin-top:4px;" onclick="cerrarSesion()">
         <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">logout</span> Cerrar sesión
       </button>
+
+      <div class="home-mobile-actions">
+        <div class="hmr">
+          <div class="hmr-texto">
+            <div class="hmr-titulo">Activar las notificaciones</div>
+            <div class="hmr-sub">No te pierdas de ninguna notificación</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="toggle-notif" onchange="toggleNotifHome(this)">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="hmr" id="row-instalar-app">
+          <div class="hmr-texto">
+            <div class="hmr-titulo">Instalar la app</div>
+            <div class="hmr-sub">Instala el portal de reservas como app</div>
+          </div>
+          <button class="hmr-btn-round" onclick="pwaInstalar()">
+            <span class="material-symbols-outlined">download</span>
+          </button>
+        </div>
+        <div class="hmr">
+          <div class="hmr-texto">
+            <div class="hmr-titulo">Contáctanos</div>
+            <div class="hmr-sub">Escríbenos por redes o correo</div>
+          </div>
+          <button class="hmr-btn-round" onclick="abrirContacto()">
+            <span class="material-symbols-outlined">share</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1324,315 +1399,6 @@ select, option, optgroup {
       <button class="btn btn-secondary" onclick="volver('s-admin-home')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
     </div>
   </div>
-<script>
-
-var GOOGLE_CLIENT_ID_FRONT = '632992894668-gnbb5cclsmfdcnve0g34kmue1c72h73q.apps.googleusercontent.com';
-
-var _adminToken = '';
-var _adminEmail = '';
-var _admTodasReservas = [];
-var _admFiltro = 'pendientes';
-var _gisInicializado = false;
-
-var ADMIN_PANTALLAS = ['s-admin-login','s-admin-home','s-admin-reservas','s-admin-notif','s-admin-quellevar','s-admin-equip','s-admin-usuarios','s-admin-admins'];
-
-function adminApi(params, onSuccess, onError) {
-  params.adminToken = _adminToken;
-  api(params, onSuccess, function(e) {
-    if (e.message && e.message.indexOf('Sesión admin') !== -1) {
-      adminCerrarSesionLocal(true);
-      err('err-admin-login', 'Tu sesión admin expiró. Vuelve a iniciar sesión.');
-    }
-    onError(e);
-  });
-}
-
-function irAdminLogin() {
-  // Restaurar sesión admin guardada
-  var s = localStorage.getItem('adminSession');
-  if (s) {
-    try {
-      var d = JSON.parse(s);
-      if (d.adminToken && d.email && Date.now() < (d.exp || 0)) {
-        _adminToken = d.adminToken; _adminEmail = d.email;
-        adminEntrar(); return;
-      }
-    } catch (ex) {}
-    localStorage.removeItem('adminSession');
-  }
-  ir('s-admin-login');
-  iniciarGoogleSignIn();
-}
-
-function iniciarGoogleSignIn() {
-  if (typeof google === 'undefined' || !google.accounts) {
-    setTimeout(iniciarGoogleSignIn, 300); return;  // el script GSI aún carga
-  }
-  if (!_gisInicializado) {
-    google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID_FRONT, callback: onGoogleCredential });
-    _gisInicializado = true;
-  }
-  var cont = document.getElementById('g-signin-btn');
-  cont.innerHTML = '';
-  google.accounts.id.renderButton(cont, { theme: 'outline', size: 'large', text: 'signin_with', locale: 'es' });
-}
-
-function onGoogleCredential(resp) {
-  mostrarCargando('Verificando acceso...');
-  api({ action: 'adminLogin', idToken: resp.credential }, function(res) {
-    ocultarCargando();
-    if (!res.ok) { err('err-admin-login', res.error || 'Acceso denegado.'); return; }
-    _adminToken = res.adminToken; _adminEmail = res.email;
-    localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, exp: Date.now() + 11.5 * 3600 * 1000 }));
-    // Vincular push de admin (para recordatorios "qué llevar")
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
-    adminEntrar();
-  }, function(e) { ocultarCargando(); err('err-admin-login', 'Error: ' + e.message); });
-}
-
-function adminEntrar() {
-  document.getElementById('admin-email-label').textContent = '👤 ' + _adminEmail;
-  ir('s-admin-home');
-}
-
-function adminCerrarSesionLocal(silencioso) {
-  if (!silencioso && !confirm('¿Cerrar sesión de administradorx?')) return;
-  if (_adminToken) api({ action: 'adminCerrarSesion', adminToken: _adminToken }, function(){}, function(){});
-  _adminToken = ''; _adminEmail = '';
-  localStorage.removeItem('adminSession');
-  if (!silencioso) ir('s1');
-}
-
-// ── Reservas ──────────────────────────────────────────────────────────────────
-function adminIrReservas() {
-  mostrarCargando('Cargando reservas...');
-  adminApi({ action: 'adminGetReservas' }, function(res) {
-    _admTodasReservas = res || [];
-    ocultarCargando();
-    adminRenderReservas();
-    ir('s-admin-reservas');
-  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
-}
-
-function adminFiltroReservas(filtro, label) {
-  _admFiltro = filtro;
-  document.querySelectorAll('#s-admin-reservas .opcion').forEach(function(o) { o.classList.remove('sel'); });
-  label.classList.add('sel');
-  adminRenderReservas();
-}
-
-function adminRenderReservas() {
-  var lista = _admFiltro === 'pendientes'
-    ? _admTodasReservas.filter(function(r) { return r.estado === 'Pendiente'; })
-    : _admTodasReservas;
-  var html = '';
-  if (lista.length === 0) {
-    html = '<p style="text-align:center;color:#888;padding:20px 0;">' + (_admFiltro === 'pendientes' ? 'No hay reservas pendientes. 🎉' : 'No hay reservas.') + '</p>';
-  } else {
-    lista.forEach(function(r) {
-      var badgeClass = r.estado === 'Confirmada' ? 'badge-confirmada' : r.estado === 'Cancelada' ? 'badge-cancelada' : 'badge-pendiente';
-      var equip = [];
-      if (r.talla && r.talla.toLowerCase() !== 'no') equip.push('🛼 ' + r.talla);
-      if (r.protecciones && r.protecciones.toLowerCase() !== 'no') equip.push('🛡️ ' + r.protecciones);
-      html += '<div class="reserva-card">' +
-        '<div class="reserva-header"><span class="reserva-fecha">' + r.nombre + '</span><span class="badge ' + badgeClass + '">' + r.estado + '</span></div>' +
-        '<div class="reserva-detalle">📅 ' + r.fecha + '</div>' +
-        '<div class="reserva-detalle">' + (equip.length ? equip.join(' · ') : '✅ Equipo propio') + (r.monto ? ' · 💵 ' + r.monto : '') + '</div>';
-      if (r.estado === 'Pendiente') {
-        html += '<div style="display:flex;gap:8px;margin-top:10px;">' +
-          '<button class="btn btn-primary" style="padding:11px;font-size:0.82rem;" onclick="adminCambiarEstado(' + r.fila + ',\'Confirmada\',this)">✅ Aprobar</button>' +
-          '<button class="btn-cancelar" style="margin-top:0;" onclick="adminCambiarEstado(' + r.fila + ',\'Cancelada\',this)">❌ Cancelar</button>' +
-          '</div>';
-      } else if (r.estado === 'Confirmada') {
-        html += '<button class="btn-cancelar" onclick="adminCambiarEstado(' + r.fila + ',\'Cancelada\',this)">❌ Cancelar esta reserva</button>';
-      }
-      html += '</div>';
-    });
-  }
-  document.getElementById('admin-reservas-lista').innerHTML = html;
-}
-
-function adminCambiarEstado(fila, estado, btn) {
-  if (!confirm('¿Marcar esta reserva como "' + estado + '"? Se notificará a la persona.')) return;
-  btn.disabled = true;
-  adminApi({ action: 'adminSetEstadoReserva', fila: fila, estado: estado }, function(res) {
-    if (res.exito) {
-      _admTodasReservas.forEach(function(r) { if (r.fila === fila) r.estado = estado; });
-      adminRenderReservas();
-    } else { btn.disabled = false; alert(res.error || 'Error al actualizar.'); }
-  }, function(e) { btn.disabled = false; alert('Error: ' + e.message); });
-}
-
-// ── Notificaciones ────────────────────────────────────────────────────────────
-function adminIrNotif() {
-  // Poblar destinatarios con la lista de nombres del login
-  var selNombres = document.getElementById('sel-nombre');
-  var selDest = document.getElementById('adm-notif-destino');
-  selDest.innerHTML = '<option value="todos">📢 Todes (suscritxs)</option>';
-  if (selNombres) {
-    Array.from(selNombres.options).forEach(function(o) {
-      if (o.value) { var op = document.createElement('option'); op.value = op.textContent = o.value; selDest.appendChild(op); }
-    });
-  }
-  document.getElementById('adm-notif-titulo').value = '';
-  document.getElementById('adm-notif-msg').value = '';
-  document.getElementById('adm-notif-fecha').value = '';
-  ir('s-admin-notif');
-}
-
-function adminEnviarNotif() {
-  var titulo = document.getElementById('adm-notif-titulo').value.trim();
-  var msg = document.getElementById('adm-notif-msg').value.trim();
-  var destino = document.getElementById('adm-notif-destino').value;
-  var fechaVal = document.getElementById('adm-notif-fecha').value;
-  if (!titulo || !msg) { err('err-admin-notif', 'Completa el título y el mensaje.'); return; }
-  var sendAfter = '';
-  if (fechaVal) {
-    var f = new Date(fechaVal);
-    if (isNaN(f.getTime()) || f.getTime() < Date.now() + 60000) { err('err-admin-notif', 'La fecha programada debe ser al menos 1 minuto en el futuro.'); return; }
-    sendAfter = f.toISOString();
-  }
-  var btn = document.getElementById('btn-adm-notif');
-  btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Enviando...';
-  adminApi({ action: 'adminEnviarPush', titulo: titulo, mensaje: msg, destino: destino, sendAfter: sendAfter }, function(res) {
-    btn.disabled = false; btn.innerHTML = 'Enviar notificación 📣';
-    if (res.exito) {
-      alert(sendAfter ? '✅ Notificación programada.' : '✅ Notificación enviada.');
-      document.getElementById('adm-notif-titulo').value = ''; document.getElementById('adm-notif-msg').value = ''; document.getElementById('adm-notif-fecha').value = '';
-    } else { err('err-admin-notif', res.error || 'Error al enviar.'); }
-  }, function(e) { btn.disabled = false; btn.innerHTML = 'Enviar notificación 📣'; err('err-admin-notif', 'Error: ' + e.message); });
-}
-
-// ── Qué llevar ────────────────────────────────────────────────────────────────
-function adminIrQueLlevar() {
-  mostrarCargando('Cargando...');
-  adminApi({ action: 'adminGetQueLlevar' }, function(res) {
-    ocultarCargando();
-    var html = '';
-    if (!res || res.length === 0) {
-      html = '<p style="text-align:center;color:#888;padding:20px 0;">No hay equipamiento asignado por ahora. 🎉</p>';
-    } else {
-      res.forEach(function(q) {
-        var equip = [];
-        if (q.patines && q.patines.toLowerCase() !== 'no') equip.push('🛼 Patines ' + q.patines);
-        if (q.protecciones && q.protecciones.toLowerCase() !== 'no') equip.push('🛡️ Protecciones');
-        html += '<div class="reserva-card">' +
-          '<div class="reserva-header"><span class="reserva-fecha">' + q.nombre + '</span></div>' +
-          '<div class="reserva-detalle">' + (equip.join(' · ') || '—') + '</div>' +
-          '<div class="reserva-detalle">📅 ' + q.fecha + '</div></div>';
-      });
-    }
-    document.getElementById('admin-quellevar-lista').innerHTML = html;
-    ir('s-admin-quellevar');
-  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
-}
-
-// ── Equipamiento ──────────────────────────────────────────────────────────────
-function adminIrEquip() {
-  mostrarCargando('Cargando equipamiento...');
-  adminApi({ action: 'adminGetEquipamiento' }, function(res) {
-    ocultarCargando();
-    var html = '<div class="r-fila" style="display:flex;gap:8px;font-weight:800;font-size:0.78rem;text-transform:uppercase;color:#888;padding:4px 0;"><span style="flex:1;">Talla</span><span style="width:110px;">Cantidad</span><span style="width:42px;"></span></div>';
-    (res.tallas || []).forEach(function(t) { html += adminFilaTallaHtml(t.talla, t.cantidad); });
-    document.getElementById('admin-equip-lista').innerHTML = html;
-    document.getElementById('adm-equip-protec').value = res.protecciones || 0;
-    ir('s-admin-equip');
-  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
-}
-
-function adminFilaTallaHtml(talla, cantidad) {
-  return '<div class="adm-fila-talla" style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">' +
-    '<input type="text" class="adm-talla" value="' + (talla || '') + '" placeholder="Ej: 38" style="flex:1;">' +
-    '<input type="number" class="adm-cant" value="' + (cantidad != null ? cantidad : 1) + '" min="0" style="width:110px;">' +
-    '<button onclick="this.parentElement.remove()" style="width:42px;height:42px;border:2px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:10px;cursor:pointer;font-weight:800;">✕</button>' +
-    '</div>';
-}
-
-function adminAgregarTalla() {
-  document.getElementById('admin-equip-lista').insertAdjacentHTML('beforeend', adminFilaTallaHtml('', 1));
-}
-
-function adminGuardarEquip() {
-  var tallas = [];
-  document.querySelectorAll('#admin-equip-lista .adm-fila-talla').forEach(function(f) {
-    var t = f.querySelector('.adm-talla').value.trim();
-    var c = parseInt(f.querySelector('.adm-cant').value, 10) || 0;
-    if (t) tallas.push({ talla: t, cantidad: c });
-  });
-  var protec = parseInt(document.getElementById('adm-equip-protec').value, 10) || 0;
-  mostrarCargando('Guardando...');
-  adminApi({ action: 'adminGuardarEquipamiento', tallas: JSON.stringify(tallas), protecciones: protec }, function(res) {
-    ocultarCargando();
-    if (res.exito) { alert('✅ Equipamiento actualizado.'); } else { err('err-admin-equip', res.error || 'Error.'); }
-  }, function(e) { ocultarCargando(); err('err-admin-equip', 'Error: ' + e.message); });
-}
-
-// ── Usuarios ──────────────────────────────────────────────────────────────────
-function adminIrUsuarios() {
-  mostrarCargando('Cargando usuarios...');
-  adminApi({ action: 'adminGetUsuarios' }, function(res) {
-    ocultarCargando();
-    var html = '';
-    (res || []).forEach(function(u) {
-      html += '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
-        '<div><div style="font-weight:800;">' + u.nombre + '</div><div style="font-size:0.8rem;color:#888;">' + (u.email || 'sin email') + '</div></div>' +
-        '<button onclick="adminEliminarUsuarioClick(\'' + u.nombre.replace(/'/g, "\\'") + '\')" style="border:2px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;font-size:0.8rem;flex-shrink:0;">Eliminar</button>' +
-        '</div>';
-    });
-    document.getElementById('admin-usuarios-lista').innerHTML = html || '<p style="text-align:center;color:#888;">Sin usuarios.</p>';
-    ir('s-admin-usuarios');
-  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
-}
-
-function adminEliminarUsuarioClick(nombre) {
-  var escrito = prompt('⚠️ Vas a ELIMINAR a "' + nombre + '" y todos sus datos de la hoja Mirlxs.\n\nPara confirmar, escribe el nombre exactamente:');
-  if (escrito === null) return;
-  if (escrito.trim() !== nombre) { alert('El nombre no coincide. No se eliminó nada.'); return; }
-  mostrarCargando('Eliminando...');
-  adminApi({ action: 'adminEliminarUsuario', nombre: nombre }, function(res) {
-    ocultarCargando();
-    if (res.exito) { adminIrUsuarios(); } else { alert(res.error || 'Error al eliminar.'); }
-  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
-}
-
-// ── Administradorxs ───────────────────────────────────────────────────────────
-function adminIrAdmins() {
-  mostrarCargando('Cargando...');
-  adminApi({ action: 'adminGetAdmins' }, function(res) {
-    ocultarCargando();
-    var html = '';
-    (res || []).forEach(function(a) {
-      html += '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
-        '<div><div style="font-weight:700;font-size:0.9rem;">' + a.email + (a.principal ? ' <span class="badge badge-confirmada" style="margin-left:6px;">Principal</span>' : '') + '</div>' +
-        (a.invitadoPor ? '<div style="font-size:0.78rem;color:#888;">Invitado por ' + a.invitadoPor + '</div>' : '') + '</div>' +
-        (!a.principal && _adminEmail === 'quindesvolcanicosrd@gmail.com'
-          ? '<button onclick="adminQuitarClick(\'' + a.email + '\')" style="border:2px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;font-size:0.8rem;flex-shrink:0;">Quitar</button>'
-          : '') +
-        '</div>';
-    });
-    document.getElementById('admin-admins-lista').innerHTML = html;
-    ir('s-admin-admins');
-  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
-}
-
-function adminInvitar() {
-  var email = document.getElementById('adm-nuevo-email').value.trim();
-  if (!email) { err('err-admin-admins', 'Escribe un email.'); return; }
-  adminApi({ action: 'adminAgregarAdmin', email: email, invitadoPor: _adminEmail }, function(res) {
-    if (res.exito) { document.getElementById('adm-nuevo-email').value = ''; adminIrAdmins(); }
-    else { err('err-admin-admins', res.error || 'Error.'); }
-  }, function(e) { err('err-admin-admins', 'Error: ' + e.message); });
-}
-
-function adminQuitarClick(email) {
-  if (!confirm('¿Quitar acceso admin a ' + email + '?')) return;
-  adminApi({ action: 'adminQuitarAdmin', email: email, solicitante: _adminEmail }, function(res) {
-    if (res.exito) { adminIrAdmins(); } else { alert(res.error || 'Error.'); }
-  }, function(e) { alert('Error: ' + e.message); });
-}
-</script>
-
 </div>
 
 <script>
@@ -2012,12 +1778,17 @@ function prepararHome() {
   }
   var bannerCupon = document.getElementById('banner-cupon');
   if (bannerCupon) bannerCupon.style.display = tieneCuponDisponible() ? 'block' : 'none';
-  var notifBanner = document.getElementById('notif-banner');
+var notifBanner = document.getElementById('notif-banner');
   if (notifBanner) {
     var yaDescarto = localStorage.getItem('notif_dismiss') === '1';
     var yaActivado = 'Notification' in window && Notification.permission === 'granted';
     notifBanner.style.display = (!yaDescarto && !yaActivado) ? 'block' : 'none';
   }
+  // Mobile home: toggle notificaciones + row instalar app
+  var tNotif = document.getElementById('toggle-notif');
+  if (tNotif) tNotif.checked = ('Notification' in window && Notification.permission === 'granted');
+  var rowInstalar = document.getElementById('row-instalar-app');
+  if (rowInstalar) rowInstalar.style.display = esStandalone() ? 'none' : '';
 }  // ← cierre de prepararHome
 
 function irMisReservas() {
@@ -2547,7 +2318,7 @@ function vincularPush(nombre) {
   OneSignalDeferred.push(async function(OneSignal) {
     try {
       await OneSignal.login(nombre);
-      var perm = await OneSignal.Notifications.permissionNative;
+var perm = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
       if (perm === 'granted') {
         await OneSignal.User.PushSubscription.optIn().catch(function(){});
         var b = document.getElementById('notif-banner');
@@ -2555,6 +2326,13 @@ function vincularPush(nombre) {
       }
     } catch(e) { console.warn('OneSignal vincularPush:', e.message); }
   });
+}
+  function abrirContacto() { var m=document.getElementById('modal-contacto'); if(m){m.style.display='flex';} }
+function cerrarContacto() { var m=document.getElementById('modal-contacto'); if(m){m.style.display='none';} }
+function toggleNotifHome(cb) {
+  if (!cb.checked) { alert('Para desactivar, ve a la configuración de notificaciones de tu navegador.'); cb.checked = true; return; }
+  activarPush();
+  setTimeout(function() { if('Notification' in window && Notification.permission !== 'granted') cb.checked = false; }, 1500);
 }
 function activarPush() {
   var ua = navigator.userAgent;
@@ -2596,6 +2374,8 @@ function activarPush() {
 </script>
 <script>
 
+var GOOGLE_CLIENT_ID_FRONT = '632992894668-gnbb5cclsmfdcnve0g34kmue1c72h73q.apps.googleusercontent.com';
+var _adminToken = '';
 var _adminEmail = '';
 var _admTodasReservas = [];
 var _admFiltro = 'pendientes';
@@ -2899,6 +2679,15 @@ function adminQuitarClick(email) {
   }, function(e) { alert('Error: ' + e.message); });
 }
 </script>
+  <div id="modal-contacto" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.65);align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarContacto()">
+  <div style="background:white;border-radius:20px;padding:28px 20px;width:85%;max-width:320px;text-align:center;">
+    <div class="modal-ct" style="font-weight:800;font-size:0.95rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:20px;color:#1a1a1a;">Contáctanos</div>
+    <a href="https://wa.me/593998690423" target="_blank" style="display:flex;align-items:center;gap:12px;background:#f5f5f5;border-radius:12px;padding:14px 16px;margin-bottom:10px;text-decoration:none;color:#1a1a1a;font-weight:700;font-size:0.95rem;"><span class="material-symbols-outlined" style="color:#25D366;">forum</span> WhatsApp</a>
+    <a href="https://www.instagram.com/quindesvolcanicosrd/" target="_blank" style="display:flex;align-items:center;gap:12px;background:#f5f5f5;border-radius:12px;padding:14px 16px;margin-bottom:10px;text-decoration:none;color:#1a1a1a;font-weight:700;font-size:0.95rem;"><span class="material-symbols-outlined" style="color:#E1306C;">favorite</span> Instagram</a>
+    <a href="mailto:quindesvolcanicosrd@gmail.com" style="display:flex;align-items:center;gap:12px;background:#f5f5f5;border-radius:12px;padding:14px 16px;margin-bottom:16px;text-decoration:none;color:#1a1a1a;font-weight:700;font-size:0.95rem;"><span class="material-symbols-outlined" style="color:#F97316;">mail</span> Mail</a>
+    <button onclick="cerrarContacto()" style="width:100%;padding:12px;background:#f0f0f0;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;color:#555;">Cerrar</button>
+  </div>
+</div>
 <div id="pwa-banner" style="display:none;position:fixed;bottom:16px;left:16px;right:16px;max-width:448px;margin:0 auto;background:white;border:2px solid #F97316;border-radius:16px;padding:18px;z-index:9000;box-shadow:0 10px 30px rgba(0,0,0,0.25);animation:smoothSlideUp 0.5s cubic-bezier(0.16,1,0.3,1);">
   <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">
     <span style="font-size:1.8rem;flex-shrink:0;">🛼</span>
