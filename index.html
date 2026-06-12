@@ -2288,9 +2288,14 @@ function pwaInstalar() {
   } else {
     html = '⚠️ <strong>Navegador no soportado.</strong> Para instalar la app abre este sitio en <strong>Chrome</strong>, <strong>Edge</strong>, <strong>Safari</strong> (iPhone) o <strong>Firefox</strong> (Android).';
   }
-  box.innerHTML = html;
-  box.style.display = 'block';
-  document.getElementById('pwa-btn-instalar').style.display = 'none';
+// Si estamos en mobile, el pwa-banner está oculto, mostramos alert
+  if (window.innerWidth <= 600) {
+    alert(html.replace(/<[^>]+>/g, ''));
+  } else {
+    box.innerHTML = html;
+    box.style.display = 'block';
+    document.getElementById('pwa-btn-instalar').style.display = 'none';
+  }
 }
 
 function pwaCerrar() {
