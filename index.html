@@ -2646,7 +2646,7 @@ function adminRenderReservas() {
       html += '<div><div style="font-weight:800;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.8px;color:#F97316;">' + fechaCorta + (fechaExtra ? '<span style="color:#aaa;font-weight:600;margin-left:6px;font-size:0.75rem;text-transform:none;letter-spacing:0;">' + fechaExtra + '</span>' : '') + '</div></div>';
       html += '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.75rem;color:#aaa;font-weight:600;">' + count + ' reserva' + (count !== 1 ? 's' : '') + '</span><span class="material-symbols-outlined" style="font-size:1.1rem;color:#aaa;transition:transform 0.3s;' + (abierto ? 'transform:rotate(180deg);' : '') + '">expand_more</span></div>';
       html += '</div>';
-      html += '<div id="' + grupoId + '" style="padding:10px 10px 4px;' + (abierto ? 'max-height:2000px;opacity:1;' : 'max-height:0px;opacity:0;') + '">';
+      html += '<div id="' + grupoId + '" style="padding:10px 10px 4px;' + (abierto ? 'max-height:2000px;opacity:1;' : 'max-height:0px;opacity:0;') + '">';
 
       grupos[fecha].forEach(function(r) {
         var badgeClass = r.estado === 'Confirmada' ? 'badge-confirmada' : r.estado === 'Cancelada' ? 'badge-cancelada' : 'badge-pendiente';
