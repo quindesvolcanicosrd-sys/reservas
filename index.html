@@ -2556,6 +2556,30 @@ function adminRenderReservas() {
     ? _admTodasReservas.filter(function(r) { return r.estado === 'Pendiente'; })
     : _admTodasReservas;
 
+  // Filtrar solo fechas actuales y futuras en modo "Todas"
+  if (_admFiltro === 'todas') {
+    var hoy = new Date(); hoy.setHours(0,0,0,0);
+    var meses = {enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11};
+    lista = lista.filter(function(r) {
+      var f = r.fecha.toString().toLowerCase().trim();
+      // Pago mensual: solo nombre del mes
+      if (meses[f] !== undefined) {
+        var inicioMes = new Date(hoy.getFullYear(), meses[f], 1);
+        return inicioMes >= new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      }
+      // Fecha de clase: extraer día y mes
+      var mDia = f.match(/(\d{1,2})\s+de\s+([a-záéíóúñ]+)/);
+      if (mDia && meses[mDia[2].normalize('NFD').replace(/[\u0300-\u036f]/g,'')] !== undefined) {
+        var mes = meses[mDia[2].normalize('NFD').replace(/[\u0300-\u036f]/g,'')];
+        var anio = hoy.getFullYear();
+        var fechaClase = new Date(anio, mes, parseInt(mDia[1]));
+        if (fechaClase < new Date(hoy.getFullYear(), hoy.getMonth(), 1)) fechaClase.setFullYear(anio + 1);
+        return fechaClase >= hoy;
+      }
+      return true; // si no puede parsear, la muestra igual
+    });
+  }
+
   // Poblar select de fechas únicas (solo en modo "Todas")
   var selFecha = document.getElementById('filtro-fecha-reservas');
   var wrapper = document.getElementById('filtro-fecha-wrapper');
