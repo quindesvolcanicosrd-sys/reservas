@@ -1324,8 +1324,13 @@ select, option, optgroup {
         <label class="opcion" style="flex:1;justify-content:center;padding:10px;" onclick="adminFiltroReservas('todas', this)"><span style="font-weight:700;font-size:0.85rem;">📋 Todas</span></label>
       </div>
       <div class="select-wrapper" id="filtro-fecha-wrapper" style="display:none;margin-bottom:12px;">
-        <select id="filtro-fecha-reservas" onchange="adminRenderReservas()">
-          <option value="">📅 Todos los entrenamientos</option>
+        <select id="filtro-mes-reservas" onchange="adminRenderReservas()">
+          <option value="0">Enero</option><option value="1">Febrero</option>
+          <option value="2">Marzo</option><option value="3">Abril</option>
+          <option value="4">Mayo</option><option value="5">Junio</option>
+          <option value="6">Julio</option><option value="7">Agosto</option>
+          <option value="8">Septiembre</option><option value="9">Octubre</option>
+          <option value="10">Noviembre</option><option value="11">Diciembre</option>
         </select>
       </div>
       <div id="admin-reservas-lista"></div>
@@ -2579,27 +2584,31 @@ function adminRenderReservas() {
     });
   }
 
-  // Poblar select de fechas únicas (solo en modo "Todas")
-  var selFecha = document.getElementById('filtro-fecha-reservas');
+// Filtro por mes (solo en modo "Todas")
+  var selMes = document.getElementById('filtro-mes-reservas');
   var wrapper = document.getElementById('filtro-fecha-wrapper');
+  var mesesMap = {enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11};
   if (_admFiltro === 'todas') {
-    var fechasUnicas = [];
-    _admTodasReservas.forEach(function(r) { if (r.fecha && fechasUnicas.indexOf(r.fecha) === -1) fechasUnicas.push(r.fecha); });
-    var valorActual = selFecha.value;
-    selFecha.innerHTML = '<option value="">📅 Todos los entrenamientos</option>';
-    fechasUnicas.forEach(function(f) {
-      var op = document.createElement('option');
-      op.value = op.textContent = f;
-      if (f === valorActual) op.selected = true;
-      selFecha.appendChild(op);
-    });
     wrapper.style.display = '';
-    if (selFecha.value) lista = lista.filter(function(r) { return r.fecha === selFecha.value; });
+    // Seleccionar mes actual por defecto la primera vez
+    if (!selMes._inicializado) { selMes.value = String(new Date().getMonth()); selMes._inicializado = true; }
+    var mesSeleccionado = parseInt(selMes.value);
+    lista = lista.filter(function(r) {
+      var f = r.fecha.toString().toLowerCase().trim();
+      // Pago mensual: nombre del mes
+      if (mesesMap[f] !== undefined) return mesesMap[f] === mesSeleccionado;
+      // Fecha de clase: extraer mes del texto
+      var mDia = f.match(/(\d{1,2})\s+de\s+([a-záéíóúñ]+)/);
+      if (mDia) {
+        var mesNombre = mDia[2].normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        return mesesMap[mesNombre] === mesSeleccionado;
+      }
+      return true;
+    });
   } else {
     wrapper.style.display = 'none';
-    selFecha.value = '';
   }
-
+  
   // Agrupar por fecha
   var grupos = {}, orden = [];
   lista.forEach(function(r) {
