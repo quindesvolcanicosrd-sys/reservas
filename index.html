@@ -2632,18 +2632,34 @@ function adminIrQueLlevar() {
   mostrarCargando('Cargando...');
   adminApi({ action: 'adminGetQueLlevar' }, function(res) {
     ocultarCargando();
-    var html = '';
+var html = '';
     if (!res || res.length === 0) {
       html = '<p style="text-align:center;color:#888;padding:20px 0;">No hay equipamiento asignado por ahora. 🎉</p>';
     } else {
+      // Agrupar por fecha
+      var grupos = {};
+      var orden = [];
       res.forEach(function(q) {
-        var equip = [];
-        if (q.patines && q.patines.toLowerCase() !== 'no') equip.push('🛼 Patines ' + q.patines);
-        if (q.protecciones && q.protecciones.toLowerCase() !== 'no') equip.push('🛡️ Protecciones');
-        html += '<div class="reserva-card">' +
-          '<div class="reserva-header"><span class="reserva-fecha">' + q.nombre + '</span></div>' +
-          '<div class="reserva-detalle">' + (equip.join(' · ') || '—') + '</div>' +
-          '<div class="reserva-detalle">📅 ' + q.fecha + '</div></div>';
+        if (!grupos[q.fecha]) { grupos[q.fecha] = []; orden.push(q.fecha); }
+        grupos[q.fecha].push(q);
+      });
+      orden.forEach(function(fecha) {
+        html += '<div style="margin-bottom:20px;">';
+        html += '<div style="font-weight:800;font-size:0.85rem;text-transform:uppercase;letter-spacing:1px;color:#F97316;padding:8px 4px 10px;">' + fecha + '</div>';
+        grupos[fecha].forEach(function(q) {
+          var equip = [];if (q.patines && q.patines.toLowerCase() !== 'no') equip.push('🛼 Patines ' + q.patines);
+          if (q.protecciones && q.protecciones.toLowerCase() !== 'no') {
+            var protecTexto = q.protecciones.toLowerCase() === 'sí' || q.protecciones.toLowerCase() === 'si'
+              ? '🛡️ Protecciones completas'
+              : '🛡️ ' + q.protecciones;
+            equip.push(protecTexto);
+          }
+          html += '<div class="reserva-card" style="margin-bottom:8px;">' +
+            '<div style="font-weight:800;">' + q.nombre + '</div>' +
+            '<div class="reserva-detalle" style="margin-top:4px;">' + (equip.join(' · ') || '—') + '</div>' +
+            '</div>';
+        });
+        html += '</div>';
       });
     }
     document.getElementById('admin-quellevar-lista').innerHTML = html;
