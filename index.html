@@ -262,6 +262,12 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
   padding: 0 20px; max-height: 0; overflow: hidden; opacity: 0;
   transition: max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s ease, opacity 0.3s ease;
 }
+[id^="grp-res-"] {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
 .datos-seccion-body.abierta { max-height: 2500px; padding: 20px; opacity: 1; border-top: 1px solid #f0f0f0; }
 
 .datos-campo { margin-bottom: 16px; }
@@ -565,9 +571,15 @@ select, option, optgroup {
   #modal-contacto a[href] { background: #252525 !important; color: #f0f0f0 !important; }
   #modal-contacto button { background: #2a2a2a !important; color: #ccc !important; }
   #modal-contacto .modal-ct { color: #f0f0f0 !important; }
-  #modal-nav-inner { background: #1c1c1c !important; }
+#modal-nav-inner { background: #1c1c1c !important; }
   #modal-nav-titulo { color: #f0f0f0 !important; }
   #modal-nav-texto { color: #ccc !important; }
+  /* Acordeón reservas dark mode */
+  [id^="grp-res-"] { background: #1c1c1c; }
+  [id^="grp-res-"] + div,
+  div:has(> [id^="grp-res-"]) { border-color: #333 !important; }
+  div:has(> [id^="grp-res-"]) > div:first-child { background: #252525 !important; }
+  div:has(> [id^="grp-res-"]) > div:first-child span { color: #aaa !important; }
 }
 /* ─── MOBILE: viewport optimizado ────────────────────────────────────────── */
 @media (max-width: 600px) {
@@ -2634,7 +2646,7 @@ function adminRenderReservas() {
       html += '<div><div style="font-weight:800;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.8px;color:#F97316;">' + fechaCorta + (fechaExtra ? '<span style="color:#aaa;font-weight:600;margin-left:6px;font-size:0.75rem;text-transform:none;letter-spacing:0;">' + fechaExtra + '</span>' : '') + '</div></div>';
       html += '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.75rem;color:#aaa;font-weight:600;">' + count + ' reserva' + (count !== 1 ? 's' : '') + '</span><span class="material-symbols-outlined" style="font-size:1.1rem;color:#aaa;transition:transform 0.3s;' + (abierto ? 'transform:rotate(180deg);' : '') + '">expand_more</span></div>';
       html += '</div>';
-      html += '<div id="' + grupoId + '" style="' + (abierto ? '' : 'display:none;') + 'padding:10px 10px 4px;">';
+      html += '<div id="' + grupoId + '" style="padding:10px 10px 4px;' + (abierto ? 'max-height:2000px;opacity:1;' : 'max-height:0px;opacity:0;') + '">';
 
       grupos[fecha].forEach(function(r) {
         var badgeClass = r.estado === 'Confirmada' ? 'badge-confirmada' : r.estado === 'Cancelada' ? 'badge-cancelada' : 'badge-pendiente';
@@ -2664,18 +2676,19 @@ function adminRenderReservas() {
 function toggleGrupoReserva(id, header) {
   var contenido = document.getElementById(id);
   var chevron = header.querySelector('.material-symbols-outlined');
-  var abierto = contenido.style.display !== 'none';
-  if (abierto) {
-    contenido.style.display = 'none';
-    if (chevron) chevron.style.transform = '';
-  } else {
-    // Cerrar todos los otros grupos
-    document.querySelectorAll('[id^="grp-res-"]').forEach(function(el) {
-      el.style.display = 'none';
-      var h = el.previousElementSibling;
-      if (h) { var c = h.querySelector('.material-symbols-outlined'); if (c) c.style.transform = ''; }
-    });
-    contenido.style.display = 'block';
+  var abierto = contenido.style.maxHeight && contenido.style.maxHeight !== '0px';
+
+  // Cerrar todos
+  document.querySelectorAll('[id^="grp-res-"]').forEach(function(el) {
+    el.style.maxHeight = '0px';
+    el.style.opacity = '0';
+    var h = el.previousElementSibling;
+    if (h) { var c = h.querySelector('.material-symbols-outlined'); if (c) c.style.transform = ''; }
+  });
+
+  if (!abierto) {
+    contenido.style.maxHeight = contenido.scrollHeight + 200 + 'px';
+    contenido.style.opacity = '1';
     if (chevron) chevron.style.transform = 'rotate(180deg)';
   }
 }
