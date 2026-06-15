@@ -1588,7 +1588,7 @@ var E = {
   conf: '', editPat: '', editTalla: '', editProtec: '',
   fechas: [], tipoPago: 'clase', meses: [],
   precioPorClase: 0, precioMensual: 0,
-  totalPago: 0, notaPago: '', wpEnviado: false, wpUrl: '', cuponAplicado: false, creditosUsados: 0
+  totalPago: 0, notaPago: '', wpEnviado: false, wpUrl: '', cuponAplicado: false, creditosUsados: 0, reagendando: false
 };
 
 function tieneCuponDisponible() {
@@ -1775,8 +1775,8 @@ var TOP_BAR_CONFIG = {
   's1b': { titulo: 'Verificación', volver: 's1' }, 's2': { titulo: 'Equipamiento', volver: 's-home' },
   's3a': { titulo: 'Editar equipamiento', volver: 's2' }, 's3b': { titulo: 'Editar equipamiento', volver: 's3a' },
   's3c': { titulo: 'Editar equipamiento', volver: 's3b' },
-  's4': { titulo: function() { return canPayMonthly() ? 'Selecciona el tipo de modalidad' : 'Fecha y pago'; }, volver: 's2' },
-  's-pago': { titulo: 'Pago', volver: 's4' }, 's5': { titulo: 'Confirmar reserva', volver: 's-pago' },
+  's4': { titulo: function() { return E.reagendando ? 'Reagendar clase' : canPayMonthly() ? 'Selecciona el tipo de modalidad' : 'Fecha y pago'; }, volver: function() { return E.reagendando ? 's-home' : 's2'; } },
+  's-pago': { titulo: 'Pago', volver: 's4' }, 's5': { titulo: 'Confirmar reserva', volver: function() { return (E.creditosUsados > 0 || E.cuponAplicado) && E.totalPago === 0 ? 's4' : 's-pago'; } },
   's-misreservas': { titulo: 'Historial de reservas', volver: 's-home' }, 's-datos': { titulo: 'Editar mis datos', volver: 's-home' },
   's6': { titulo: 'Pago registrado', volver: null },
   's-admin-login': { titulo: 'Administradorx', volver: 's1' },
@@ -1809,7 +1809,8 @@ function ir(id, desdeHistorial) {
   var cfg = TOP_BAR_CONFIG[id];
   if (cfg) {
     topBar.classList.add('visible'); topTitulo.textContent = typeof cfg.titulo === 'function' ? cfg.titulo() : cfg.titulo;
-    if (cfg.volver) { topBtn.style.display = ''; topBtn.onclick = function() { volver(cfg.volver); }; } else { topBtn.style.display = 'none'; }
+  var _volverTarget = typeof cfg.volver === 'function' ? cfg.volver() : cfg.volver;
+    if (_volverTarget) { topBtn.style.display = ''; topBtn.onclick = function() { volver(_volverTarget); }; } else { topBtn.style.display = 'none'; }
   } else { topBar.classList.remove('visible'); }
 
 var sinPasos = ['s1','s1b','s-home','s-misreservas','s-carga','s6','s-datos'].concat(ADMIN_PANTALLAS);
@@ -1913,10 +1914,18 @@ function irMisReservas() {
 }
 
 function irNuevaReserva() {
-    E.conf = ''; E.fechas = []; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = ''; E.cuponAplicado = false; E.creditosUsados = 0;
+    E.conf = ''; E.fechas = []; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = ''; E.cuponAplicado = false; E.creditosUsados = 0; E.reagendando = false;
   var chkC = document.getElementById('chk-cupon'); if (chkC) chkC.checked = false;
   document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
   renderEquip(); ir('s2');
+}
+
+function iniciarReagendamiento() {
+  E.conf = ''; E.fechas = []; E.tipoPago = 'clase'; E.totalPago = 0;
+  E.notaPago = ''; E.cuponAplicado = false; E.creditosUsados = 0; E.reagendando = true;
+  var chkC = document.getElementById('chk-cupon'); if (chkC) chkC.checked = false;
+  document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
+  cargarFechas();
 }
 
 function irHomeDesdeExito() {
@@ -1931,7 +1940,7 @@ function cerrarSesion() {
   api({ action: 'cerrarSesion' }, function(){}, function(){});
   localStorage.removeItem('session');
   _token = '';
-  E.nombre = ''; E.datos = null; E.datosCompletos = null; _todasReservas = [];
+  E.nombre = ''; E.datos = null; E.datosCompletos = null; _todasReservas = []; E.reagendando = false;
   var sel = document.getElementById('sel-nombre'); if (sel) sel.value = '';
   ir('s1');
 }
@@ -2060,7 +2069,10 @@ function _renderCardHome(r, hoy) {
   h += '<div style="font-weight:800;font-size:0.88rem;flex:1;margin-right:8px;line-height:1.3;">' + r.fecha + '</div>';
   h += '<span style="padding:3px 10px;border-radius:20px;font-size:0.7rem;font-weight:800;background:' + bBg + ';color:' + bColor + ';white-space:nowrap;">' + bIcon + ' ' + estado + '</span></div>';
   h += '<div style="font-size:0.82rem;color:#666;margin-bottom:' + (estado === 'Reagendar' ? '6' : '8') + 'px;">' + equipMsg + '</div>';
-  if (estado === 'Reagendar') h += '<div style="font-size:0.78rem;color:#7c3aed;background:#ede9fe;border-radius:8px;padding:6px 10px;margin-bottom:8px;">🔁 Tenés una clase a favor — se aplica automáticamente en tu próxima reserva</div>';
+if (estado === 'Reagendar') {
+    h += '<div style="font-size:0.78rem;color:#7c3aed;background:#ede9fe;border-radius:8px;padding:6px 10px;margin-bottom:8px;">🔁 Clase a favor por entrenamiento cancelado</div>';
+    h += '<button class="btn btn-primary" style="margin-top:8px;padding:12px;background:#7c3aed;box-shadow:0 4px 14px rgba(124,58,237,0.3);" onclick="iniciarReagendamiento()">🔁 Reagendar clase</button>';
+  }
   if (estado === 'Pendiente' || estado === 'Confirmada') h += '<button class="btn-cancelar" style="margin-top:2px;" onclick="cancelarRes(\'' + r.fecha.replace(/'/g,"\\'") + '\')">Cancelar esta reserva</button>';
   h += '</div>'; return h;
 }
@@ -2310,10 +2322,10 @@ function cargarFechas() {
       });
     }
     document.getElementById('lista-fechas').innerHTML = html; E.fechas = [];
-    var puedeMensual = canPayMonthly(); var wrapper = document.getElementById('s4-tipo-pago-wrapper'); var subtitulo = document.getElementById('s4-fechas-subtitulo');
+    var puedeMensual = canPayMonthly() && !E.reagendando; var wrapper = document.getElementById('s4-tipo-pago-wrapper'); var subtitulo = document.getElementById('s4-fechas-subtitulo');
     if (puedeMensual) { wrapper.style.display = 'block'; E.tipoPago = 'mensual'; selTipoPago('mensual', document.getElementById('opcion-tipo-mensual')); }
     else {
-      wrapper.style.display = 'none'; E.tipoPago = 'clase'; subtitulo.textContent = 'Selecciona los entrenamientos a los que asistirás.';
+      wrapper.style.display = 'none'; E.tipoPago = 'clase'; subtitulo.textContent = E.reagendando ? 'Seleccioná la nueva fecha para tu clase a favor.' : 'Selecciona los entrenamientos a los que asistirás.';
       document.getElementById('s4-total-box').style.display = 'none'; document.getElementById('s4-meses-wrapper').style.display = 'none';
       document.querySelectorAll('#lista-meses input').forEach(function(cb) { cb.checked = false; }); E.meses = []; E.totalPago = 0;
       if (disponibles.length === 0) { err('err-s4', 'No hay cupos disponibles actualmente.'); }
@@ -2429,14 +2441,18 @@ api({ action: 'enviarResumenReservas', nombre: E.nombre, fechas: JSON.stringify(
     var fechasHtml = ''; if (E.tipoPago === 'mensual') { fechasHtml = '· Pago mensual ($' + (E.totalPago || 0).toFixed(2) + ')\n' + E.meses.map(function(m) { return '· ' + m; }).join('\n'); } else { fechasHtml = E.fechas.map(function(f) { return '· ' + f; }).join('\n'); }
     
     document.getElementById('s6-detalle').innerHTML = '<strong>' + E.nombre + '</strong><br><br>' + fechasHtml + '<br><br>· ' + equipMsg;
-    if (necesitaEquipo) { document.getElementById('s6-titulo').textContent = '¡Reserva registrada!'; document.getElementById('s6-texto').innerHTML = 'Puedes revisar el estado desde <strong>"Ver mis reservas"</strong>. Si no puedes venir, cancela para liberar el cupo.'; } else { document.getElementById('s6-titulo').textContent = '¡Pago registrado!'; document.getElementById('s6-texto').innerHTML = 'Puedes revisar el estado de tu pago desde <strong>"Ver mis reservas"</strong>.'; }
+    if (E.reagendando) { document.getElementById('s6-titulo').textContent = '🔁 ¡Clase reagendada!'; document.getElementById('s6-texto').innerHTML = 'Tu nueva reserva está <strong>pendiente de confirmación</strong>. Podés ver el estado desde "Ver mis reservas".'; }
+    else if (necesitaEquipo) { document.getElementById('s6-titulo').textContent = '¡Reserva registrada!'; document.getElementById('s6-texto').innerHTML = 'Puedes revisar el estado desde <strong>"Ver mis reservas"</strong>. Si no puedes venir, cancela para liberar el cupo.'; } else { document.getElementById('s6-titulo').textContent = '¡Pago registrado!'; document.getElementById('s6-texto').innerHTML = 'Puedes revisar el estado de tu pago desde <strong>"Ver mis reservas"</strong>.'; }
     
     // CORRECCIÓN 2: Lógica visual del comprobante y WhatsApp atada al costo total
     var avisoEl = document.getElementById('s6-email-aviso');
     var btnWpExito = document.getElementById('btn-wp-exito');
 
-    if (E.totalPago === 0) {
-      if (E.cuponAplicado) { 
+if (E.totalPago === 0) {
+      if (E.reagendando) {
+        avisoEl.textContent = '🔁 Clase reagendada. Te avisaremos por correo cuando sea confirmada.';
+        avisoEl.style.cssText = 'background:#faf5ff;border:1px solid #ddd6fe;border-radius:12px;padding:16px;font-size:0.9rem;color:#6d28d9;margin-bottom:18px;text-align:center;';
+      } else if (E.cuponAplicado) { 
         avisoEl.textContent = '🎟️ Tu cupón fue aplicado. ¡Nos vemos en el entrenamiento!'; 
         avisoEl.style.cssText = 'background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;font-size:0.9rem;color:#166534;margin-bottom:18px;text-align:center;box-shadow: 0 4px 12px rgba(34,197,94,0.1);'; 
       }
@@ -2452,6 +2468,7 @@ api({ action: 'enviarResumenReservas', nombre: E.nombre, fechas: JSON.stringify(
     }
   }
   
+E.reagendando = false;
   ocultarCargando(); ir('s6');
 }
 
