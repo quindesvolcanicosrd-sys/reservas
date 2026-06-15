@@ -1362,8 +1362,9 @@ select, option, optgroup {
       <div class="seccion-label">Admin — Qué llevar</div>
       <h2>Equipamiento a llevar</h2>
       <p style="font-size:0.85rem;">Recibirás un push <strong>1 día antes</strong> y <strong>2 horas antes</strong> de cada entrenamiento si hay que llevar equipamiento (con notificaciones activadas).</p>
-      <div id="admin-quellevar-lista"></div>
-      <button class="btn btn-secondary" onclick="volver('s-admin-home')"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver</button>
+<div id="admin-quellevar-lista"></div>
+      <button class="btn btn-secondary" style="margin-bottom:8px;" onclick="adminRefreshQueLlevar()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span> Actualizar lista</button>
+      <button class="btn btn-secondary" onclick="volver('s-admin-home')">
     </div>
   </div>
 
@@ -2628,10 +2629,22 @@ function adminEnviarNotif() {
 }
 
 // ── Qué llevar ────────────────────────────────────────────────────────────────
+function adminRefreshQueLlevar() {
+  var lista = document.getElementById('admin-quellevar-lista');
+  if (lista) lista.innerHTML = '<div style="text-align:center;padding:20px;"><div class="spinner" style="width:28px;height:28px;border-width:3px;margin:0 auto;"></div></div>';
+  adminApi({ action: 'adminGetQueLlevar' }, function(res) {
+    adminRenderQueLlevar(res);
+  }, function(e) { alert('Error al actualizar: ' + e.message); });
+}
+
 function adminIrQueLlevar() {
   mostrarCargando('Cargando...');
   adminApi({ action: 'adminGetQueLlevar' }, function(res) {
-    ocultarCargando();
+    ocultarCargando(); adminRenderQueLlevar(res); ir('s-admin-quellevar');
+  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+}
+
+function adminRenderQueLlevar(res) {
 var html = '';
     if (!res || res.length === 0) {
       html = '<p style="text-align:center;color:#888;padding:20px 0;">No hay equipamiento asignado por ahora. 🎉</p>';
@@ -2656,7 +2669,8 @@ var diasSemana = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','S�
       });
       orden.forEach(function(fecha) {
         html += '<div style="margin-bottom:20px;">';
-        html += '<div style="font-weight:800;font-size:0.85rem;text-transform:uppercase;letter-spacing:1px;color:#F97316;padding:8px 4px 10px;">' + fecha + '</div>';
+        var count = grupos[fecha].length;
+        html += '<div style="display:flex;align-items:baseline;gap:8px;padding:8px 4px 10px;"><span style="font-weight:800;font-size:0.85rem;text-transform:uppercase;letter-spacing:1px;color:#F97316;">' + fecha + '</span><span style="font-size:0.78rem;color:#aaa;font-weight:600;">' + count + ' persona' + (count !== 1 ? 's' : '') + '</span></div>';
         grupos[fecha].forEach(function(q) {
           var equip = [];if (q.patines && q.patines.toLowerCase() !== 'no') equip.push('🛼 Patines ' + q.patines);
           if (q.protecciones && q.protecciones.toLowerCase() !== 'no') {
@@ -2673,9 +2687,7 @@ var diasSemana = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','S�
         html += '</div>';
       });
     }
-    document.getElementById('admin-quellevar-lista').innerHTML = html;
-    ir('s-admin-quellevar');
-  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+document.getElementById('admin-quellevar-lista').innerHTML = html;
 }
 
 // ── Equipamiento ──────────────────────────────────────────────────────────────
