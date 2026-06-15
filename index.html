@@ -2639,7 +2639,18 @@ var html = '';
       // Agrupar por fecha
       var grupos = {};
       var orden = [];
+var diasSemana = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+      var mesesNombres = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+      function formatFechaQL(val) {
+        if (!val || !val.toString().includes('GMT')) return val;
+        var f = new Date(val);
+        var dia = f.getUTCDate();
+        var mes = f.getUTCMonth();
+        var anio = f.getUTCFullYear();
+        return diasSemana[new Date(Date.UTC(anio, mes, dia)).getUTCDay()] + ' ' + dia + ' de ' + mesesNombres[mes] + ' de ' + anio;
+      }
       res.forEach(function(q) {
+        q.fecha = formatFechaQL(q.fecha);
         if (!grupos[q.fecha]) { grupos[q.fecha] = []; orden.push(q.fecha); }
         grupos[q.fecha].push(q);
       });
