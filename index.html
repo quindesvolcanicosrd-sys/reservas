@@ -382,7 +382,13 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
 .loading-card { background: white; border-radius: 20px; padding: 32px 48px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); text-align: center; border: 1px solid rgba(0,0,0,0.05); width: 240px; min-height: 130px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .loading-card .spinner { margin: 0 auto 16px; flex-shrink: 0; }
 .loading-card p { color: #555; font-size: 0.95rem; font-weight: 600; margin: 0; min-height: 24px; transition: opacity 0.3s ease; }
-.loading-logo { display: none; }
+.loading-logo { display: none; opacity: 0; }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.loading-logo.visible    { animation: fadeInUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.1s both; }
+.loading-card .spinner   { opacity: 0; }
+.loading-card .spinner.visible { animation: fadeInUp 0.4s ease 0.6s both; }
+.loading-card p          { opacity: 0; }
+.loading-card p.visible  { animation: fadeInUp 0.4s ease 0.9s both; }
 @media (max-width: 600px) {
   #loading-overlay { background: #FDF3EB; backdrop-filter: none; -webkit-backdrop-filter: none; }
   .loading-card { background: transparent; border-radius: 0; padding: 32px; box-shadow: none; border: none; width: 100%; max-width: 100%; }
@@ -570,7 +576,8 @@ select, option, optgroup {
   #modal-contacto a[href] { background: #252525 !important; color: #f0f0f0 !important; }
   #modal-contacto button { background: #2a2a2a !important; color: #ccc !important; }
   #modal-contacto .modal-ct { color: #f0f0f0 !important; }
-#modal-nav-inner { background: #1c1c1c !important; }
+#s1 button[onclick="abrirContacto()"] { background: #2d1f5e !important; color: #c4b5fd !important; border-color: #6d28d9 !important; }
+  #modal-nav-inner { background: #1c1c1c !important; }
   #modal-nav-titulo { color: #f0f0f0 !important; }
   #modal-nav-texto { color: #ccc !important; }
   /* Acordeón reservas dark mode */
@@ -692,6 +699,9 @@ select, option, optgroup {
         </svg>
 Únete al grupo de WhatsApp
       </a>
+      <button onclick="abrirContacto()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;border-radius:12px;border:none;font-size:0.95rem;font-weight:800;cursor:pointer;text-decoration:none;transition:all 0.3s ease;margin-top:12px;background:#ede9fe;color:#6d28d9;border:2px solid #c4b5fd;font-family:inherit;">
+        <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">share</span> Contáctanos
+      </button>
       <button class="btn btn-secondary" style="margin-top:14px;" onclick="irAdminLogin()">
         <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">admin_panel_settings</span> Administradorx
       </button>
@@ -1454,11 +1464,19 @@ function contarCreditos() {
 function mostrarCargando(msg) {
   var el = document.getElementById('loading-overlay');
   var msgEl = document.getElementById('loading-msg');
-var estaOculto = el.style.display === 'none';
+  var estaOculto = el.style.display === 'none';
   el.classList.remove('fade-out');
   el.classList.remove('fade-in');
   el.style.display = 'flex';
-  if (estaOculto) { void el.offsetWidth; el.classList.add('fade-in'); }
+  if (estaOculto) {
+    void el.offsetWidth;
+    // Secuencia de fade in: logo → spinner → texto
+    var logo = el.querySelector('.loading-logo');
+    var spinner = el.querySelector('.spinner');
+    if (logo) { logo.classList.remove('visible'); void logo.offsetWidth; logo.classList.add('visible'); }
+    if (spinner) { spinner.classList.remove('visible'); void spinner.offsetWidth; spinner.classList.add('visible'); }
+    msgEl.classList.remove('visible'); void msgEl.offsetWidth; msgEl.classList.add('visible');
+  }
   if (msgEl.textContent === (msg || 'Cargando...')) return;
   msgEl.style.opacity = '0';
   setTimeout(function() {
