@@ -392,7 +392,7 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
 @media (max-width: 600px) {
   #loading-overlay { background: #FDF3EB; backdrop-filter: none; -webkit-backdrop-filter: none; }
   .loading-card { background: transparent; border-radius: 0; padding: 32px; box-shadow: none; border: none; width: 100%; max-width: 100%; }
-  .loading-logo { display: block; width: 88px; height: 88px; border-radius: 50%; object-fit: cover; object-position: center top; margin: 0 auto 28px; filter: drop-shadow(0 4px 16px rgba(249,115,22,0.2)); animation: popBounce 0.6s cubic-bezier(0.16,1,0.3,1); }
+.loading-logo { display: block; width: 88px; height: 88px; border-radius: 50%; object-fit: cover; object-position: center top; margin: 0 auto 28px; filter: drop-shadow(0 4px 16px rgba(249,115,22,0.2)); }
 }
 @media (max-width: 600px) and (prefers-color-scheme: dark) {
   #loading-overlay { background: #1a1a1a; }
@@ -1485,11 +1485,21 @@ function mostrarCargando(msg) {
   if (estaOculto) {
     void el.offsetWidth;
     // Secuencia de fade in: logo → spinner → texto
-    var logo = el.querySelector('.loading-logo');
+var logo = el.querySelector('.loading-logo');
     var spinner = el.querySelector('.spinner');
-    if (logo) { logo.classList.remove('visible'); void logo.offsetWidth; logo.classList.add('visible'); }
-    if (spinner) { spinner.classList.remove('visible'); void spinner.offsetWidth; spinner.classList.add('visible'); }
-    msgEl.classList.remove('visible'); void msgEl.offsetWidth; msgEl.classList.add('visible');
+    if (logo) {
+      logo.style.opacity = '0';
+      logo.classList.remove('visible');
+      setTimeout(function() { logo.classList.add('visible'); }, 20);
+    }
+    if (spinner) {
+      spinner.style.opacity = '0';
+      spinner.classList.remove('visible');
+      setTimeout(function() { spinner.classList.add('visible'); }, 20);
+    }
+    msgEl.style.opacity = '0';
+    msgEl.classList.remove('visible');
+    setTimeout(function() { msgEl.classList.add('visible'); }, 20);
   }
   if (msgEl.textContent === (msg || 'Cargando...')) return;
   msgEl.style.opacity = '0';
