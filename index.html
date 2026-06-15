@@ -1919,7 +1919,13 @@ function irNuevaReserva() {
   renderEquip(); ir('s2');
 }
 
-function irHomeDesdeExito() { ir('s-home'); }
+function irHomeDesdeExito() {
+  api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
+    _todasReservas = reservas;
+    renderHomeReservas();
+  }, function() { renderHomeReservas(); });
+  ir('s-home');
+}
 function cerrarSesion() {
   if (!confirm('¿Cerrar sesión?')) return;
   api({ action: 'cerrarSesion' }, function(){}, function(){});
@@ -2148,7 +2154,7 @@ renderHomeReservas();
     } else { 
       btn.disabled = false; btn.innerHTML = 'Cancelar esta reserva'; alert('Error al cancelar.');
     } 
-  }, function(e) { btn.disabled = false; btn.innerHTML = 'Cancelar esta reserva'; alert('Error: ' + e.message); });
+  }, function(e) { btn.disabled = false; btn.innerHTML = 'Cancelar'; alert('Error: ' + e.message); });
 }
 
 function renderEquip() {
