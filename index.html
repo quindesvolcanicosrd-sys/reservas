@@ -368,6 +368,41 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
 .mes-item input { accent-color: #F97316; width: 16px; height: 16px; cursor: pointer; transition: transform 0.2s; }
 .mes-item:hover input { transform: scale(1.1); }
 
+/* ─── HOME: Botones acción compactos ──────────────────────────────────────── */
+.btn-accion-home {
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;
+  padding:14px 10px; border:2px solid #e5e5e5; border-radius:14px;
+  background:#fafafa; cursor:pointer; font-family:inherit;
+  font-size:0.75rem; font-weight:700; color:#1a1a1a;
+  text-transform:uppercase; letter-spacing:0.5px;
+  transition:all 0.3s cubic-bezier(0.16,1,0.3,1);
+}
+.btn-accion-home:hover { transform:translateY(-3px); box-shadow:0 6px 16px rgba(0,0,0,0.07); border-color:#F97316; background:#fff8f4; }
+.btn-accion-home:active { transform:translateY(0) scale(0.97); }
+
+.btn-home-sub {
+  flex:1; padding:10px 12px; border:1.5px solid #e5e5e5; border-radius:10px;
+  background:transparent; color:#888; font-size:0.78rem; font-weight:700;
+  cursor:pointer; transition:all 0.3s ease; font-family:inherit; text-align:center;
+}
+.btn-home-sub:hover:not(:disabled) { border-color:#F97316; color:#F97316; background:#fff8f4; }
+.btn-home-sub:disabled { opacity:0.32; cursor:not-allowed; }
+
+/* ─── HOME: Cards de reservas ──────────────────────────────────────────────── */
+.res-card-home {
+  border:2px solid #e5e5e5; border-radius:14px; padding:14px 16px;
+  margin-bottom:10px; background:#fafafa; text-align:left;
+  animation:smoothSlideUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
+}
+.res-card-home.vigente       { border-color:#22c55e; background:#f0fdf4; }
+.res-card-home.vencimiento   { border-color:#f59e0b; background:#fffbeb; }
+.res-card-home.vencida       { border-color:#ef4444; background:#fef2f2; }
+.res-card-home.futura        { border-color:#d4d4d4; background:#f5f5f5; opacity:0.7; }
+.res-card-home.pendiente-mens{ border-color:#f59e0b; background:#fffbeb; }
+.res-card-home.confirmada-clase { border-color:#22c55e; background:#f0fdf4; }
+.res-card-home.pendiente-clase  { border-color:#f59e0b; background:#fffbeb; }
+.res-card-home.reagendar-clase  { border-color:#8b5cf6; background:#faf5ff; }
+
 /* --- CARGADOR --- */
 @keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
 #loading-overlay {
@@ -585,8 +620,21 @@ select, option, optgroup {
   [id^="grp-res-"] { background: #1c1c1c; }
   [id^="grp-res-"] + div,
   div:has(> [id^="grp-res-"]) { border-color: #333 !important; }
-  div:has(> [id^="grp-res-"]) > div:first-child { background: #252525 !important; }
+div:has(> [id^="grp-res-"]) > div:first-child { background: #252525 !important; }
   div:has(> [id^="grp-res-"]) > div:first-child span { color: #aaa !important; }
+  .btn-accion-home { background:#252525; border-color:#333; color:#f0f0f0; }
+  .btn-accion-home:hover { border-color:#F97316; background:#2a1a0e; }
+  .btn-home-sub { background:transparent; border-color:#333; color:#666; }
+  .btn-home-sub:hover:not(:disabled) { border-color:#F97316; color:#fb923c; background:#2a1a0e; }
+  .res-card-home { background:#252525; border-color:#333; }
+  .res-card-home.vigente       { background:#052e16; border-color:#166534; }
+  .res-card-home.vencimiento   { background:#1e1a0a; border-color:#7c6a1a; }
+  .res-card-home.vencida       { background:#2d0a0a; border-color:#7f1d1d; }
+  .res-card-home.futura        { background:#1a1a1a; border-color:#2a2a2a; }
+  .res-card-home.pendiente-mens{ background:#1e1a0a; border-color:#7c6a1a; }
+  .res-card-home.confirmada-clase { background:#052e16; border-color:#166534; }
+  .res-card-home.pendiente-clase  { background:#1e1a0a; border-color:#7c6a1a; }
+  .res-card-home.reagendar-clase  { background:#1e1531; border-color:#5b21b6; }
 }
 /* ─── MOBILE: viewport optimizado ────────────────────────────────────────── */
 @media (max-width: 600px) {
@@ -783,20 +831,21 @@ footer { display: block; }
   </div>
 </div>
 
-      <div class="home-boton principal" onclick="irMisReservas()">
-        <div class="hb-icon">📋</div>
-        <div class="hb-titulo" id="home-btn-mis-titulo">Ver mis reservas</div>
-        <div class="hb-sub" id="home-btn-mis-sub">Revisa el estado o cancela una reserva</div>
+<div style="display:flex;gap:10px;margin-bottom:22px;">
+        <button class="btn-accion-home" onclick="irNuevaReserva()">
+          <span style="font-size:1.5rem;">➕</span><span>Nueva reserva</span>
+        </button>
+        <button class="btn-accion-home" onclick="irEditarDatos()">
+          <span style="font-size:1.5rem;">✏️</span><span>Editar datos</span>
+        </button>
       </div>
-      <div class="home-boton" onclick="irNuevaReserva()">
-        <div class="hb-icon">➕</div>
-        <div class="hb-titulo" id="home-btn-nueva-titulo">Nueva reserva / pago</div>
-        <div class="hb-sub" id="home-btn-nueva-sub">Reserva equipamiento o registra tu pago</div>
-      </div>
-      <div class="home-boton" onclick="irEditarDatos()">
-        <div class="hb-icon">✏️</div>
-        <div class="hb-titulo" style="color:#1a1a1a;">Editar mis datos</div>
-        <div class="hb-sub">Actualiza tu información personal</div>
+      <div style="text-align:left;">
+        <div style="font-size:0.72rem;font-weight:700;color:#F97316;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Mis reservas</div>
+        <div id="home-reservas-lista"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button id="btn-ver-mas-home" class="btn-home-sub" onclick="verMasHomeReservas()">Ver más ▾</button>
+          <button id="btn-historial-home" class="btn-home-sub" onclick="irMisReservas()">📋 Historial</button>
+        </div>
       </div>
       <button id="btn-logout-desktop" class="btn btn-secondary" style="margin-top:4px;" onclick="cerrarSesion()">
         <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">logout</span> Cerrar sesión
@@ -835,12 +884,14 @@ footer { display: block; }
     </div>
   </div>
 
-  <div class="pantalla" id="s-misreservas">
+<div class="pantalla" id="s-misreservas">
     <div class="card">
-      <div class="seccion-label" id="misres-label">Mis reservas</div>
-      <h2 id="misres-titulo">Tus reservas</h2>
-      <div id="misres-lista"></div>
-      
+      <div class="seccion-label">Historial</div>
+      <h2>Todas mis reservas</h2>
+      <div class="select-wrapper" style="margin-bottom:16px;">
+        <select id="sel-mes-historial" onchange="renderHistorial()"></select>
+      </div>
+      <div id="historial-lista"></div>
     </div>
   </div>
 
@@ -1458,7 +1509,7 @@ footer { display: block; }
 
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-var BACKEND = 'https://script.google.com/macros/s/AKfycbyb32-WmfQZBZBPI_AeMPulKhS1YHRlQO4CQchExNAOAg2ViBL4-pZ7Ms6fTBkIJTFEdA/exec';
+var BACKEND = 'https://script.google.com/macros/s/AKfycby0qH41BaYdawea9n89QBPtCF5doyribstdmKFP8hLgAhANvPkkGtpcPy5qbJTW61JALg/exec';
 
 var _token = '';
 
@@ -1726,7 +1777,7 @@ var TOP_BAR_CONFIG = {
   's3c': { titulo: 'Editar equipamiento', volver: 's3b' },
   's4': { titulo: function() { return canPayMonthly() ? 'Selecciona el tipo de modalidad' : 'Fecha y pago'; }, volver: 's2' },
   's-pago': { titulo: 'Pago', volver: 's4' }, 's5': { titulo: 'Confirmar reserva', volver: 's-pago' },
-  's-misreservas': { titulo: 'Mis reservas', volver: 's-home' }, 's-datos': { titulo: 'Editar mis datos', volver: 's-home' },
+  's-misreservas': { titulo: 'Historial de reservas', volver: 's-home' }, 's-datos': { titulo: 'Editar mis datos', volver: 's-home' },
   's6': { titulo: 'Pago registrado', volver: null },
   's-admin-login': { titulo: 'Administradorx', volver: 's1' },
   's-admin-reservas': { titulo: 'Reservas', volver: 's-admin-home' },
@@ -1836,17 +1887,7 @@ function continuar_pin() {
 
 function prepararHome() {
   document.getElementById('home-saludo').textContent = '¡Hola, ' + E.nombre + '!';
-  if (necesitaEquipo()) {
-    document.getElementById('home-btn-mis-titulo').textContent = 'Ver mis reservas';
-    document.getElementById('home-btn-mis-sub').textContent = 'Revisa el estado de tus reservas';
-    document.getElementById('home-btn-nueva-titulo').textContent = 'Hacer una reserva';
-    document.getElementById('home-btn-nueva-sub').textContent = 'Registra tu reserva';
-  } else {
-    document.getElementById('home-btn-mis-titulo').textContent = 'Ver mis reservas y pagos';
-    document.getElementById('home-btn-mis-sub').textContent = 'Revisa el estado de tus pagos y reservas';
-    document.getElementById('home-btn-nueva-titulo').textContent = 'Hacer una reserva o pago';
-    document.getElementById('home-btn-nueva-sub').textContent = 'Registra tu pago mensual o reserva por clase';
-  }
+renderHomeReservas();
   var bannerCupon = document.getElementById('banner-cupon');
   if (bannerCupon) bannerCupon.style.display = tieneCuponDisponible() ? 'block' : 'none';
 var notifBanner = document.getElementById('notif-banner');
@@ -1866,9 +1907,8 @@ var notifBanner = document.getElementById('notif-banner');
 }  // ← cierre de prepararHome
 
 function irMisReservas() {
-  document.getElementById('misres-label').textContent = necesitaEquipo() ? 'Mis reservas' : 'Mis pagos';
-  document.getElementById('misres-titulo').textContent = necesitaEquipo() ? 'Tus reservas' : 'Tus pagos';
-  renderMisReservas(_todasReservas || [], false); 
+  _poblarSelectMesHistorial();
+  renderHistorial();
   ir('s-misreservas');
 }
 
@@ -1891,27 +1931,211 @@ function cerrarSesion() {
 }
 
 var _todasReservas = [];
-function renderMisReservas(reservas, mostrarTodas) {
-  var html = '';
-  if (!reservas || reservas.length === 0) {
-    html = '<p style="text-align:center;color:#888;padding:20px 0;">No tienes ' + (necesitaEquipo() ? 'reservas' : 'pagos') + ' todavía.</p>';
-  } else {
-    var visibles = mostrarTodas ? reservas : reservas.slice(0, 3);
-    visibles.forEach(function(r) {
-var badgeClass = r.estado === 'Confirmada' ? 'badge-confirmada' : r.estado === 'Cancelada' ? 'badge-cancelada' : 'badge-pendiente';
-      var icon = r.estado === 'Confirmada' ? '✅' : r.estado === 'Cancelada' ? '❌' : r.estado === 'Reagendar' ? '🔁' : r.estado === 'Crédito usado' ? '🎟️' : '⏳';
-      var tienePat  = r.talla && r.talla !== 'No'; var tieneProc = r.protecciones && r.protecciones !== 'No';
-      var equipMsg  = tienePat && tieneProc ? '🛼🛡️ Patines T.' + r.talla + ' y protecciones' : tienePat ? '🛼 Patines talla ' + r.talla : tieneProc ? '🛡️ ' + r.protecciones : '✅ Sin equipamiento prestado';
-      html += '<div class="reserva-card"><div class="reserva-header"><span class="reserva-fecha">' + r.fecha + '</span><span class="badge ' + badgeClass + '">' + icon + ' ' + r.estado + '</span></div><div class="reserva-detalle">' + equipMsg + '</div>';       if (r.estado === 'Reagendar') { html += '<div style="font-size:0.82rem;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;margin-bottom:6px;">🔁 El entrenamiento fue cancelado. <strong>Tienes una clase a favor</strong> que se descontará automáticamente en tu próxima reserva. 🛼</div>'; }
-      if (r.estado === 'Pendiente' || r.estado === 'Confirmada') { html += '<button class="btn-cancelar" onclick="cancelarRes(\'' + r.fecha.replace(/'/g,"\\'") + '\')">' + (necesitaEquipo() ? 'Cancelar esta reserva' : 'Cancelar este pago') + '</button>'; }
-      html += '</div>';
-    });
-    if (!mostrarTodas && reservas.length > 3) { html += '<button class="btn btn-secondary" style="margin-top:8px;" onclick="verTodasReservas()">Ver reservas anteriores</button>'; }
-  }
-  document.getElementById('misres-lista').innerHTML = html;
+function verTodasReservas() { irMisReservas(); }
+
+// ─── HOME CARDS + HISTORIAL ───────────────────────────────────────────────────
+var _MESES_MAP = {enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11};
+var _MESES_DISPLAY = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+var _homeExpandido = false;
+
+function _parseFechaSimple(str) {
+  if (!str) return null;
+  var m = str.toString().trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  var d = new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
+  d.setHours(0,0,0,0); return d;
 }
 
-function verTodasReservas() { renderMisReservas(_todasReservas, true); }
+function _parseFechaStr(fechaStr) {
+  var m = fechaStr.match(/(\d{1,2})\s+de\s+([a-záéíóúñ]+)/i);
+  if (!m) return null;
+  var mesRaw = m[2].toLowerCase();
+  var mesNorm = mesRaw.normalize ? mesRaw.normalize('NFD').replace(/[\u0300-\u036f]/g,'') : mesRaw;
+  var mes = _MESES_MAP[mesNorm];
+  if (mes === undefined) return null;
+  var d = new Date(new Date().getFullYear(), mes, parseInt(m[1]));
+  d.setHours(0,0,0,0); return d;
+}
+
+function _clasificarReservas(todas, hoy) {
+  var tieneActivaMensual = todas.some(function(r) {
+    if (_MESES_MAP[r.fecha.toLowerCase().trim()] === undefined) return false;
+    if (r.estado === 'Cancelada') return false;
+    var vh = _parseFechaSimple(r.validezHasta);
+    return !vh || hoy <= vh;
+  });
+  var activas = [], historial = [], expMostr = false;
+  todas.forEach(function(r) {
+    var f = r.fecha.toLowerCase().trim(), estado = r.estado;
+    if (estado === 'Cancelada' || estado === 'Crédito usado') { historial.push(r); return; }
+    if (_MESES_MAP[f] !== undefined) {
+      var vh = _parseFechaSimple(r.validezHasta);
+      var exp = vh ? hoy > vh : false;
+      if (exp) { (!tieneActivaMensual && !expMostr) ? (activas.push(r), expMostr = true) : historial.push(r); }
+      else activas.push(r);
+    } else {
+      var fd = _parseFechaStr(r.fecha);
+      if (!fd) { historial.push(r); return; }
+      fd >= hoy ? activas.push(r) : historial.push(r);
+    }
+  });
+  return { activas: activas, historial: historial };
+}
+
+function renderHomeReservas() {
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var cl = _clasificarReservas(_todasReservas || [], hoy);
+  var activas = cl.activas, historial = cl.historial;
+  var container = document.getElementById('home-reservas-lista');
+  var btnVerMas = document.getElementById('btn-ver-mas-home');
+  var btnHist = document.getElementById('btn-historial-home');
+  _homeExpandido = false;
+  var html = activas.length === 0
+    ? '<p style="text-align:center;color:#888;padding:16px 0;font-size:0.88rem;">No tienes reservas activas. ¡Hacé una nueva! 🛼</p>'
+    : activas.slice(0, 2).map(function(r) { return _renderCardHome(r, hoy); }).join('');
+  container.innerHTML = html;
+  if (btnVerMas) { btnVerMas.disabled = activas.length <= 2; btnVerMas.textContent = 'Ver más ▾'; }
+  if (btnHist)   btnHist.disabled = historial.length === 0;
+}
+
+function verMasHomeReservas() {
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var activas = _clasificarReservas(_todasReservas || [], hoy).activas;
+  _homeExpandido = !_homeExpandido;
+  var toShow = _homeExpandido ? activas : activas.slice(0, 2);
+  var container = document.getElementById('home-reservas-lista');
+  container.style.opacity = '0';
+  setTimeout(function() {
+    container.innerHTML = toShow.map(function(r) { return _renderCardHome(r, hoy); }).join('');
+    container.style.transition = 'opacity 0.3s ease';
+    container.style.opacity = '1';
+  }, 150);
+  var btn = document.getElementById('btn-ver-mas-home');
+  if (btn) btn.textContent = _homeExpandido ? 'Ver menos ▴' : 'Ver más ▾';
+}
+
+function _renderCardHome(r, hoy) {
+  var f = r.fecha.toLowerCase().trim(), estado = r.estado;
+  if (_MESES_MAP[f] !== undefined) {
+    var vh = _parseFechaSimple(r.validezHasta);
+    var inicioMes = new Date(hoy.getFullYear(), _MESES_MAP[f], 1); inicioMes.setHours(0,0,0,0);
+    var exp = vh ? hoy > vh : false;
+    var dias = vh ? Math.ceil((vh.getTime() - hoy.getTime()) / 86400000) : 999;
+    var tipo = exp ? 'vencida' : inicioMes > hoy ? 'futura' : dias <= 15 ? 'vencimiento' : 'vigente';
+    if (estado === 'Pendiente') tipo = 'pendiente-mens';
+    var nombreMes = r.fecha.charAt(0).toUpperCase() + r.fecha.slice(1);
+    var icons = {vencida:'❌',futura:'🔒',vencimiento:'⚠️','pendiente-mens':'⏳',vigente:'✅'};
+    var colors = {vencida:'#dc2626',futura:'#aaa',vencimiento:'#b45309','pendiente-mens':'#b45309',vigente:'#166534'};
+    var labels = {vencida:'Pago vencido',futura:'Mes futuro',vencimiento:'Próximo a cumplirse','pendiente-mens':'Pendiente de verificación',vigente:'Pago activo'};
+    var h = '<div class="res-card-home ' + tipo + '">';
+    h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">';
+    h += '<div><div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:' + colors[tipo] + ';margin-bottom:4px;">' + icons[tipo] + ' ' + labels[tipo] + '</div>';
+    h += '<div style="font-weight:800;font-size:1.05rem;">' + nombreMes + '</div></div>';
+    if (r.monto) h += '<span style="font-weight:800;color:#F97316;font-size:0.95rem;margin-left:8px;flex-shrink:0;">' + r.monto + '</span>';
+    h += '</div>';
+    if (r.fechaPago && tipo !== 'futura') h += '<div style="font-size:0.8rem;color:#888;margin-bottom:2px;">Pagado el ' + r.fechaPago + '</div>';
+    if (vh && tipo !== 'futura' && tipo !== 'pendiente-mens') h += '<div style="font-size:0.8rem;color:#888;">Válido hasta el ' + r.validezHasta + '</div>';
+    if (tipo === 'futura') h += '<div style="font-size:0.8rem;color:#aaa;">Vigente desde el 1 de ' + nombreMes + '</div>';
+    if (tipo === 'pendiente-mens') h += '<div style="font-size:0.8rem;color:#888;margin-top:2px;">Esperando verificación del pago</div>';
+    if (tipo === 'vencida') h += '<button class="btn btn-primary" style="margin-top:12px;padding:12px;" onclick="irNuevaReserva()">Hacer nuevo pago mensual</button>';
+    if (tipo === 'pendiente-mens') h += '<button class="btn-cancelar" style="margin-top:10px;" onclick="cancelarRes(\'' + r.fecha.replace(/'/g,"\\'") + '\')">Cancelar</button>';
+    h += '</div>'; return h;
+  }
+  var tipoC = estado === 'Confirmada' ? 'confirmada-clase' : estado === 'Reagendar' ? 'reagendar-clase' : 'pendiente-clase';
+  var tienePat = r.talla && r.talla.toLowerCase() !== 'no';
+  var tieneProc = r.protecciones && r.protecciones.toLowerCase() !== 'no';
+  var equipMsg = tienePat && tieneProc ? '🛼 T.' + r.talla + ' · 🛡️ Protecciones' :
+                 tienePat ? '🛼 Patines talla ' + r.talla : tieneProc ? '🛡️ ' + r.protecciones : '✅ Equipo propio';
+  var bIcon = {Confirmada:'✅',Reagendar:'🔁',Pendiente:'⏳'}[estado] || '⏳';
+  var bColor = {Confirmada:'#166534',Reagendar:'#6d28d9',Pendiente:'#b45309'}[estado] || '#b45309';
+  var bBg = {Confirmada:'#dcfce7',Reagendar:'#ede9fe',Pendiente:'#fef3c7'}[estado] || '#fef3c7';
+  var h = '<div class="res-card-home ' + tipoC + '">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">';
+  h += '<div style="font-weight:800;font-size:0.88rem;flex:1;margin-right:8px;line-height:1.3;">' + r.fecha + '</div>';
+  h += '<span style="padding:3px 10px;border-radius:20px;font-size:0.7rem;font-weight:800;background:' + bBg + ';color:' + bColor + ';white-space:nowrap;">' + bIcon + ' ' + estado + '</span></div>';
+  h += '<div style="font-size:0.82rem;color:#666;margin-bottom:' + (estado === 'Reagendar' ? '6' : '8') + 'px;">' + equipMsg + '</div>';
+  if (estado === 'Reagendar') h += '<div style="font-size:0.78rem;color:#7c3aed;background:#ede9fe;border-radius:8px;padding:6px 10px;margin-bottom:8px;">🔁 Tenés una clase a favor — se aplica automáticamente en tu próxima reserva</div>';
+  if (estado === 'Pendiente' || estado === 'Confirmada') h += '<button class="btn-cancelar" style="margin-top:2px;" onclick="cancelarRes(\'' + r.fecha.replace(/'/g,"\\'") + '\')">Cancelar esta reserva</button>';
+  h += '</div>'; return h;
+}
+
+function _poblarSelectMesHistorial() {
+  var sel = document.getElementById('sel-mes-historial');
+  if (!sel) return;
+  var anio = new Date().getFullYear(), mesActual = new Date().getMonth();
+  sel.innerHTML = '';
+  _MESES_DISPLAY.forEach(function(m, i) {
+    var o = document.createElement('option');
+    o.value = String(i); o.textContent = m + ' ' + anio; sel.appendChild(o);
+  });
+  sel.value = String(mesActual);
+}
+
+function _getMesReserva(r) {
+  var f = r.fecha.toLowerCase().trim();
+  if (_MESES_MAP[f] !== undefined) return _MESES_MAP[f];
+  var m = f.match(/\d{1,2}\s+de\s+([a-záéíóúñ]+)/i);
+  if (!m) return -1;
+  var mn = m[1].normalize ? m[1].normalize('NFD').replace(/[\u0300-\u036f]/g,'') : m[1];
+  return _MESES_MAP[mn] !== undefined ? _MESES_MAP[mn] : -1;
+}
+
+function renderHistorial() {
+  var sel = document.getElementById('sel-mes-historial');
+  if (!sel) return;
+  var mesNum = parseInt(sel.value);
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var hist = _clasificarReservas(_todasReservas || [], hoy).historial;
+  var delMes = hist.filter(function(r) { return _getMesReserva(r) === mesNum; });
+  var grupos = {}, orden = [];
+  delMes.forEach(function(r) { if (!grupos[r.fecha]) { grupos[r.fecha] = []; orden.push(r.fecha); } grupos[r.fecha].push(r); });
+  var html = '';
+  if (delMes.length === 0) {
+    html = '<p style="text-align:center;color:#888;padding:24px 0;">No hay reservas archivadas en este mes.</p>';
+  } else {
+    orden.forEach(function(fecha, idx) {
+      var gId = 'hgrp-' + idx, abierto = idx === 0, count = grupos[fecha].length;
+      html += '<div style="border:2px solid #e5e5e5;border-radius:12px;margin-bottom:10px;overflow:hidden;">';
+      html += '<div onclick="toggleGrupoHistorial(\'' + gId + '\',this)" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;background:#fafafa;">';
+      html += '<span style="font-weight:800;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.8px;color:#F97316;">' + fecha + '</span>';
+      html += '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.75rem;color:#aaa;font-weight:600;">' + count + ' reserva' + (count !== 1 ? 's' : '') + '</span>';
+      html += '<span class="material-symbols-outlined" style="font-size:1.1rem;color:#aaa;transition:transform 0.3s;' + (abierto ? 'transform:rotate(180deg);' : '') + '">expand_more</span></div></div>';
+      html += '<div id="' + gId + '" style="overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1),opacity 0.3s ease;' + (abierto ? 'max-height:2000px;opacity:1;padding:10px 10px 4px;' : 'max-height:0;opacity:0;padding:0;') + '">';
+      grupos[fecha].forEach(function(r) { html += _renderCardHistorial(r); });
+      html += '</div></div>';
+    });
+  }
+  document.getElementById('historial-lista').innerHTML = html;
+}
+
+function _renderCardHistorial(r) {
+  var bMap = {Confirmada:['badge-confirmada','✅'],Cancelada:['badge-cancelada','❌'],Pendiente:['badge-pendiente','⏳'],Reagendar:['badge-pendiente','🔁'],'Crédito usado':['badge-confirmada','🎟️']};
+  var b = bMap[r.estado] || ['badge-pendiente','?'];
+  var tP = r.talla && r.talla.toLowerCase() !== 'no';
+  var tR = r.protecciones && r.protecciones.toLowerCase() !== 'no';
+  var eq = tP && tR ? '🛼 T.' + r.talla + ' · 🛡️ Protecciones' : tP ? '🛼 Talla ' + r.talla : tR ? '🛡️ ' + r.protecciones : '✅ Equipo propio';
+  var h = '<div class="reserva-card" style="margin-bottom:8px;">';
+  h += '<div class="reserva-header"><span class="reserva-fecha">' + r.fecha + '</span>';
+  h += '<span class="badge ' + b[0] + '">' + b[1] + ' ' + r.estado + '</span></div>';
+  h += '<div class="reserva-detalle">' + eq + '</div>';
+  if (r.monto) h += '<div style="font-size:0.78rem;color:#888;margin-top:3px;">💵 ' + r.monto + '</div>';
+  h += '</div>'; return h;
+}
+
+function toggleGrupoHistorial(id, header) {
+  var el = document.getElementById(id), chevron = header.querySelector('.material-symbols-outlined');
+  var abierto = el.style.maxHeight && el.style.maxHeight !== '0px' && el.style.maxHeight !== '0';
+  document.querySelectorAll('[id^="hgrp-"]').forEach(function(e2) {
+    e2.style.maxHeight = '0'; e2.style.opacity = '0'; e2.style.padding = '0';
+    var hd = e2.previousElementSibling;
+    if (hd) { var c = hd.querySelector('.material-symbols-outlined'); if (c) c.style.transform = ''; }
+  });
+  if (!abierto) {
+    el.style.maxHeight = el.scrollHeight + 200 + 'px';
+    el.style.opacity = '1'; el.style.padding = '10px 10px 4px';
+    if (chevron) chevron.style.transform = 'rotate(180deg)';
+  }
+}
 function cancelarRes(fecha) {
   if (!confirm('¿Segura que quieres cancelar ' + (necesitaEquipo() ? 'tu reserva' : 'tu pago') + ' para el ' + fecha + '?')) return;
   var btn = event.target; btn.disabled = true; btn.innerHTML = '<span class="btn-spinner" style="border-top-color:#dc2626; border-color:rgba(220,38,38,0.3);"></span>Cancelando...';
@@ -1920,9 +2144,9 @@ function cancelarRes(fecha) {
     if (typeof _todasReservas !== 'undefined' && _todasReservas) {
         _todasReservas.forEach(function(r) { if (r.fecha === fecha && r.estado !== 'Cancelada') r.estado = 'Cancelada'; });
       }
-      irMisReservas(); 
+renderHomeReservas();
     } else { 
-      btn.disabled = false; btn.innerHTML = 'Cancelar esta reserva'; alert('Error al cancelar.'); 
+      btn.disabled = false; btn.innerHTML = 'Cancelar esta reserva'; alert('Error al cancelar.');
     } 
   }, function(e) { btn.disabled = false; btn.innerHTML = 'Cancelar esta reserva'; alert('Error: ' + e.message); });
 }
