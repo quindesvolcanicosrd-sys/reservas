@@ -371,7 +371,7 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
 /* --- CARGADOR --- */
 @keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
 #loading-overlay {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%; min-height: 100dvh;
+  position: fixed; inset: 0;
   background: rgba(255,255,255,0.75);
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   z-index: 9999; display: flex;
@@ -2646,7 +2646,7 @@ function adminRenderReservas() {
       html += '<div><div style="font-weight:800;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.8px;color:#F97316;">' + fechaCorta + (fechaExtra ? '<span style="color:#aaa;font-weight:600;margin-left:6px;font-size:0.75rem;text-transform:none;letter-spacing:0;">' + fechaExtra + '</span>' : '') + '</div></div>';
       html += '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.75rem;color:#aaa;font-weight:600;">' + count + ' reserva' + (count !== 1 ? 's' : '') + '</span><span class="material-symbols-outlined" style="font-size:1.1rem;color:#aaa;transition:transform 0.3s;' + (abierto ? 'transform:rotate(180deg);' : '') + '">expand_more</span></div>';
       html += '</div>';
-      html += '<div id="' + grupoId + '" style="padding:10px 10px 4px;' + (abierto ? 'max-height:2000px;opacity:1;' : 'max-height:0px;opacity:0;') + '">';
+html += '<div id="' + grupoId + '" style="' + (abierto ? 'max-height:2000px;opacity:1;padding:10px 10px 4px;' : 'max-height:0px;opacity:0;padding:0;') + '">';
 
       grupos[fecha].forEach(function(r) {
         var badgeClass = r.estado === 'Confirmada' ? 'badge-confirmada' : r.estado === 'Cancelada' ? 'badge-cancelada' : 'badge-pendiente';
@@ -2679,16 +2679,18 @@ function toggleGrupoReserva(id, header) {
   var abierto = contenido.style.maxHeight && contenido.style.maxHeight !== '0px';
 
   // Cerrar todos
-  document.querySelectorAll('[id^="grp-res-"]').forEach(function(el) {
+document.querySelectorAll('[id^="grp-res-"]').forEach(function(el) {
     el.style.maxHeight = '0px';
     el.style.opacity = '0';
+    el.style.padding = '0';
     var h = el.previousElementSibling;
     if (h) { var c = h.querySelector('.material-symbols-outlined'); if (c) c.style.transform = ''; }
   });
 
   if (!abierto) {
-    contenido.style.maxHeight = contenido.scrollHeight + 200 + 'px';
+contenido.style.maxHeight = contenido.scrollHeight + 200 + 'px';
     contenido.style.opacity = '1';
+    contenido.style.padding = '10px 10px 4px';
     if (chevron) chevron.style.transform = 'rotate(180deg)';
   }
 }
