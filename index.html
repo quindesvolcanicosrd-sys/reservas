@@ -2171,7 +2171,7 @@ function toggleGrupoHistorial(id, header) {
 }
 function cancelarRes(fecha) {
   if (!confirm('¿Segura que quieres cancelar ' + (necesitaEquipo() ? 'tu reserva' : 'tu pago') + ' para el ' + fecha + '?')) return;
-  var btn = event.target; btn.disabled = true; btn.innerHTML = '<span class="btn-spinner" style="border-top-color:#dc2626; border-color:rgba(220,38,38,0.3);"></span>Cancelando...';
+  var btn = event.target; btn.disabled = true; btn.innerHTML = '<span class="btn-spinner" style="border-color:rgba(220,38,38,0.3); border-top-color:#dc2626;"></span>Cancelando...';
   api({ action: 'cancelarReserva', nombre: E.nombre, fecha: fecha }, function(res) { 
     if (res.exito) { 
     if (typeof _todasReservas !== 'undefined' && _todasReservas) {
