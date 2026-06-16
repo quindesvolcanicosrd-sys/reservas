@@ -2115,10 +2115,9 @@ function renderHistorial() {
     orden.forEach(function(fecha, idx) {
       var gId = 'hgrp-' + idx, abierto = idx === 0, count = grupos[fecha].length;
       html += '<div style="border:2px solid #e5e5e5;border-radius:12px;margin-bottom:10px;overflow:hidden;">';
-      html += '<div onclick="toggleGrupoHistorial(\'' + gId + '\',this)" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;background:#fafafa;">';
+      html += '<div onclick="toggleGrupoHistorial(\'' + gId + '\',this)" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;" class="datos-seccion-titulo">';
       html += '<span style="font-weight:800;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.8px;color:#F97316;">' + fecha + '</span>';
-      html += '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.75rem;color:#aaa;font-weight:600;">' + count + ' reserva' + (count !== 1 ? 's' : '') + '</span>';
-      html += '<span class="material-symbols-outlined" style="font-size:1.1rem;color:#aaa;transition:transform 0.3s;' + (abierto ? 'transform:rotate(180deg);' : '') + '">expand_more</span></div></div>';
+      html += '<span class="material-symbols-outlined" style="font-size:1.1rem;color:#aaa;transition:transform 0.3s;' + (abierto ? 'transform:rotate(180deg);' : '') + '">expand_more</span></div>';
       html += '<div id="' + gId + '" style="overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1),opacity 0.3s ease;' + (abierto ? 'max-height:2000px;opacity:1;padding:10px 10px 4px;' : 'max-height:0;opacity:0;padding:0;') + '">';
       grupos[fecha].forEach(function(r) { html += _renderCardHistorial(r); });
       html += '</div></div>';
@@ -2133,9 +2132,9 @@ function _renderCardHistorial(r) {
   var tP = r.talla && r.talla.toLowerCase() !== 'no';
   var tR = r.protecciones && r.protecciones.toLowerCase() !== 'no';
   var eq = tP && tR ? '🛼 T.' + r.talla + ' · 🛡️ Protecciones' : tP ? '🛼 Talla ' + r.talla : tR ? '🛡️ ' + r.protecciones : '✅ Equipo propio';
-  var h = '<div class="reserva-card" style="margin-bottom:8px;">';
-  h += '<div class="reserva-header"><span class="reserva-fecha">' + r.fecha + '</span>';
-  h += '<span class="badge ' + b[0] + '">' + b[1] + ' ' + r.estado + '</span></div>';
+var h = '<div class="reserva-card" style="margin-bottom:8px;">';
+  h += '<div class="reserva-header" style="align-items:flex-start;gap:8px;"><span class="reserva-fecha" style="font-size:0.82rem;flex:1;min-width:0;">' + r.fecha + '</span>';
+  h += '<span class="badge ' + b[0] + '" style="flex-shrink:0;white-space:nowrap;">' + b[1] + ' ' + r.estado + '</span></div>';
   h += '<div class="reserva-detalle">' + eq + '</div>';
   if (r.monto) h += '<div style="font-size:0.78rem;color:#888;margin-top:3px;">💵 ' + r.monto + '</div>';
   h += '</div>'; return h;
