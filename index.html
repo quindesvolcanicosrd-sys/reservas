@@ -847,8 +847,8 @@ footer { display: block; }
           <button id="btn-historial-home" class="btn-home-sub" onclick="irMisReservas()">📋 Historial</button>
         </div>
         <div style="display:flex;flex-direction:column;gap:14px;margin-top:14px;">
-          <button id="btn-nueva-reserva-home" onclick="irNuevaReserva()" style="width:100%;padding:14px;border:2px solid #f97316;border-radius:12px;background:transparent;color:#f97316 !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;">➕ Nueva reserva / pago</button>
-          <button onclick="irEditarDatos()" style="width:100%;padding:14px;border:2px solid #f97316;border-radius:12px;background:transparent;color:#f97316 !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;">✏️ Editar mis datos</button>
+          <button id="btn-nueva-reserva-home" onclick="irNuevaReserva()" style="width:100%;padding:14px;border:2px solid #f97316;border-radius:12px;background:rgba(249,115,22,0.12);color:#f97316 !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;">➕ Nueva reserva / pago</button>
+          <button onclick="irEditarDatos()" style="width:100%;padding:14px;border:2px solid #f97316;border-radius:12px;background:rgba(249,115,22,0.12);color:#f97316 !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;">✏️ Editar mis datos</button>
         </div>
       </div>
 <button id="btn-logout-desktop" class="btn btn-secondary" style="margin-top:20px;" onclick="cerrarSesion()">
@@ -2012,7 +2012,7 @@ function renderHomeReservas() {
   _homeExpandido = false;
 var labelMisReservas = document.getElementById('label-mis-reservas');
   var html = activas.length === 0
-    ? '<button onclick="irNuevaReserva()" style="width:100%;padding:14px;border:2px solid #f97316;border-radius:12px;background:transparent;color:#f97316 !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;animation:pulseBtn 2.4s ease-in-out infinite;">🛼 Hacer una reserva / pago</button>'
+? '<button onclick="irNuevaReserva()" style="width:100%;padding:14px;border:2px solid #f97316;border-radius:12px;background:rgba(249,115,22,0.12);color:#f97316 !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;animation:pulseBtn 2.4s ease-in-out infinite;">🛼 Hacer una reserva / pago</button>'
     : activas.slice(0, 2).map(function(r) { return _renderCardHome(r, hoy); }).join('');
   container.innerHTML = html;
   if (labelMisReservas) labelMisReservas.style.display = activas.length === 0 ? 'none' : '';
