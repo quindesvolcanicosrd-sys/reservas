@@ -1515,7 +1515,7 @@ footer { display: block; }
 
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-var BACKEND = 'https://script.google.com/macros/s/AKfycby0qH41BaYdawea9n89QBPtCF5doyribstdmKFP8hLgAhANvPkkGtpcPy5qbJTW61JALg/exec';
+var BACKEND = 'https://script.google.com/macros/s/AKfycbymBd-oIHdgqU2nUVSnhZXJ4hJE2XbPhbB2kLs0Nf1YSjx20wX5onZvyCA7faTWp0E-0g/exec';
 
 var _token = '';
 
@@ -3100,8 +3100,11 @@ var diasSemana = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','S�
               : '🛡️ ' + q.protecciones;
             equip.push(protecTexto);
           }
+var pronBadge = q.pronombres
+            ? '<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:20px;background:#3a3a3a;color:#bbb;font-size:0.68rem;font-weight:600;vertical-align:middle;">' + q.pronombres + '</span>'
+            : '';
           html += '<div class="reserva-card" style="margin-bottom:8px;">' +
-            '<div style="font-weight:800;">' + q.nombre + '</div>' +
+            '<div style="font-weight:800;">' + q.nombre + pronBadge + '</div>' +
             '<div class="reserva-detalle" style="margin-top:4px;">' + (equip.join(' · ') || '—') + '</div>' +
             '</div>';
         });
