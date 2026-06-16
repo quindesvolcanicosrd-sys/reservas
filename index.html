@@ -847,7 +847,7 @@ footer { display: block; }
       <div style="text-align:left;">
         <div style="font-size:0.72rem;font-weight:700;color:#F97316;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Mis reservas</div>
         <div id="home-reservas-lista"></div>
-        <div style="display:flex;gap:8px;margin-top:10px;margin-bottom:10px;">
+<div id="fila-botones-home" style="display:flex;gap:8px;margin-top:10px;margin-bottom:10px;">
           <button id="btn-ver-mas-home" class="btn-home-sub" onclick="verMasHomeReservas()">Ver más ▾</button>
           <button id="btn-historial-home" class="btn-home-sub" onclick="irMisReservas()">📋 Historial</button>
         </div>
@@ -2015,8 +2015,14 @@ var html = activas.length === 0
     ? '<p style="text-align:center;color:#888;padding:16px 0 10px;font-size:0.88rem;">No tienes reservas activas.</p><button onclick="irNuevaReserva()" style="width:100%;padding:14px;border:none;border-radius:12px;background:#64748b;color:white;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;animation:pulseBtn 2.4s ease-in-out infinite;">🛼 Hacer una reserva / pago</button>'
     : activas.slice(0, 2).map(function(r) { return _renderCardHome(r, hoy); }).join('');
   container.innerHTML = html;
-  if (btnVerMas) { btnVerMas.disabled = activas.length <= 2; btnVerMas.textContent = 'Ver más ▾'; }
-  if (btnHist)   btnHist.disabled = historial.length === 0;
+var filasBotones = document.getElementById('fila-botones-home');
+  if (activas.length === 0) {
+    if (filasBotones) filasBotones.style.display = 'none';
+  } else {
+    if (filasBotones) filasBotones.style.display = 'flex';
+    if (btnVerMas) { btnVerMas.style.display = activas.length <= 2 ? 'none' : ''; btnVerMas.textContent = 'Ver más ▾'; }
+    if (btnHist)   btnHist.style.display = historial.length === 0 ? 'none' : '';
+  }
 }
 
 function verMasHomeReservas() {
