@@ -403,6 +403,11 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
 .res-card-home.pendiente-clase  { border-color:#f59e0b; background:#fffbeb; }
 .res-card-home.reagendar-clase  { border-color:#8b5cf6; background:#faf5ff; }
 
+@keyframes pulseBtn {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(100,116,139,0); opacity: 1; }
+  50% { box-shadow: 0 0 18px 6px rgba(100,116,139,0.35); opacity: 0.82; }
+}
+
 /* --- CARGADOR --- */
 @keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
 #loading-overlay {
@@ -2006,8 +2011,8 @@ function renderHomeReservas() {
   var btnVerMas = document.getElementById('btn-ver-mas-home');
   var btnHist = document.getElementById('btn-historial-home');
   _homeExpandido = false;
-  var html = activas.length === 0
-    ? '<p style="text-align:center;color:#888;padding:16px 0;font-size:0.88rem;">No tienes reservas activas. ¡Hacé una nueva! 🛼</p>'
+var html = activas.length === 0
+    ? '<p style="text-align:center;color:#888;padding:16px 0 10px;font-size:0.88rem;">No tienes reservas activas.</p><button onclick="irNuevaReserva()" style="width:100%;padding:14px;border:none;border-radius:12px;background:#64748b;color:white;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;animation:pulseBtn 2.4s ease-in-out infinite;">🛼 Hacer una reserva / pago</button>'
     : activas.slice(0, 2).map(function(r) { return _renderCardHome(r, hoy); }).join('');
   container.innerHTML = html;
   if (btnVerMas) { btnVerMas.disabled = activas.length <= 2; btnVerMas.textContent = 'Ver más ▾'; }
