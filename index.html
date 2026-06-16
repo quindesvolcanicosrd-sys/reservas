@@ -2012,7 +2012,7 @@ function renderHomeReservas() {
   var btnHist = document.getElementById('btn-historial-home');
   _homeExpandido = false;
 var html = activas.length === 0
-    ? '<p style="text-align:center;color:#888;padding:16px 0 10px;font-size:0.88rem;">No tienes reservas activas.</p><button onclick="irNuevaReserva()" style="width:100%;padding:14px;border:none;border-radius:12px;background:#64748b;color:white;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;animation:pulseBtn 2.4s ease-in-out infinite;">Hacer una reserva / pago</button>'
+    ? '<p style="width:100%;padding:14px;border:none;border-radius:12px;background:rgba(249,115,22,0.12);color:#f97316;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;animation:pulseBtn 2.4s ease-in-out infinite;border: 2px solid rgba(249,115,22,0.25);/*! padding-bottom: 10px;">Hacer una reserva / pago</button>'
     : activas.slice(0, 2).map(function(r) { return _renderCardHome(r, hoy); }).join('');
   container.innerHTML = html;
 var filasBotones = document.getElementById('fila-botones-home');
