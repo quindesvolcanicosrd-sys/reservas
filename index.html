@@ -837,7 +837,7 @@ footer { display: block; }
 </div>
 
 <div style="text-align:left;">
-        <div style="font-size:0.72rem;font-weight:700;color:#F97316;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Mis reservas</div>
+        <div id="label-mis-reservas" style="font-size:0.72rem;font-weight:700;color:#F97316;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Mis reservas</div>
         <div id="home-reservas-lista"></div>
         <div id="fila-botones-home" style="display:flex;gap:8px;margin-top:10px;margin-bottom:10px;">
           <button id="btn-ver-mas-home" class="btn-home-sub" onclick="verMasHomeReservas()">Ver más ▾</button>
@@ -2007,10 +2007,12 @@ function renderHomeReservas() {
   var btnVerMas = document.getElementById('btn-ver-mas-home');
   var btnHist = document.getElementById('btn-historial-home');
   _homeExpandido = false;
-var html = activas.length === 0
-    ? '<p style="text-align:center;color:#888;font-size:0.88rem;">No tienes reservas activas.</p><button onclick="irNuevaReserva()" style="width:100%;padding:14px;border:2px solid #f97316;border-radius:12px;background:transparent;color:#f97316 !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;animation:pulseBtn 2.4s ease-in-out infinite;">🛼 Hacer una reserva / pago</button>'
+var labelMisReservas = document.getElementById('label-mis-reservas');
+  var html = activas.length === 0
+    ? '<button onclick="irNuevaReserva()" style="width:100%;padding:14px;border:2px solid #f97316;border-radius:12px;background:transparent;color:#f97316 !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;animation:pulseBtn 2.4s ease-in-out infinite;">🛼 Hacer una reserva / pago</button>'
     : activas.slice(0, 2).map(function(r) { return _renderCardHome(r, hoy); }).join('');
   container.innerHTML = html;
+  if (labelMisReservas) labelMisReservas.style.display = activas.length === 0 ? 'none' : '';
 var filasBotones = document.getElementById('fila-botones-home');
   var btnNueva = document.getElementById('btn-nueva-reserva-home');
   if (activas.length === 0) {
