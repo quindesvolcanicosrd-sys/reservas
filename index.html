@@ -836,20 +836,16 @@ footer { display: block; }
   </div>
 </div>
 
-<div style="display:flex;gap:10px;margin-bottom:22px;">
-        <button class="btn-accion-home" onclick="irNuevaReserva()">
-          <span style="font-size:1.5rem;">➕</span><span>Nueva reserva</span>
-        </button>
-        <button class="btn-accion-home" onclick="irEditarDatos()">
-          <span style="font-size:1.5rem;">✏️</span><span>Editar datos</span>
-        </button>
-      </div>
-      <div style="text-align:left;">
+<div style="text-align:left;">
         <div style="font-size:0.72rem;font-weight:700;color:#F97316;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Mis reservas</div>
         <div id="home-reservas-lista"></div>
-<div id="fila-botones-home" style="display:flex;gap:8px;margin-top:10px;margin-bottom:10px;">
+        <div id="fila-botones-home" style="display:flex;gap:8px;margin-top:10px;margin-bottom:10px;">
           <button id="btn-ver-mas-home" class="btn-home-sub" onclick="verMasHomeReservas()">Ver más ▾</button>
           <button id="btn-historial-home" class="btn-home-sub" onclick="irMisReservas()">📋 Historial</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
+          <button id="btn-nueva-reserva-home" onclick="irNuevaReserva()" style="width:100%;padding:14px;border:2px solid #f97316;border-radius:12px;background:transparent;color:#f97316;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;">➕ Nueva reserva / pago</button>
+          <button onclick="irEditarDatos()" style="width:100%;padding:14px;border:2px solid #e5e5e5;border-radius:12px;background:transparent;color:#888;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;">✏️ Editar mis datos</button>
         </div>
       </div>
       <button id="btn-logout-desktop" class="btn btn-secondary" style="margin-top:4px;" onclick="cerrarSesion()">
@@ -2016,12 +2012,15 @@ var html = activas.length === 0
     : activas.slice(0, 2).map(function(r) { return _renderCardHome(r, hoy); }).join('');
   container.innerHTML = html;
 var filasBotones = document.getElementById('fila-botones-home');
+  var btnNueva = document.getElementById('btn-nueva-reserva-home');
   if (activas.length === 0) {
     if (filasBotones) filasBotones.style.display = 'none';
+    if (btnNueva) btnNueva.style.display = 'none';
   } else {
     if (filasBotones) filasBotones.style.display = 'flex';
     if (btnVerMas) { btnVerMas.style.display = activas.length <= 2 ? 'none' : ''; btnVerMas.textContent = 'Ver más ▾'; }
     if (btnHist)   btnHist.style.display = historial.length === 0 ? 'none' : '';
+    if (btnNueva) btnNueva.style.display = '';
   }
 }
 
