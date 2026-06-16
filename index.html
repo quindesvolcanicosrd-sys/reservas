@@ -624,9 +624,12 @@ select, option, optgroup {
   /* Acordeón reservas dark mode */
   [id^="grp-res-"] { background: #1c1c1c; }
   [id^="grp-res-"] + div,
-  div:has(> [id^="grp-res-"]) { border-color: #333 !important; }
-div:has(> [id^="grp-res-"]) > div:first-child { background: #252525 !important; }
+div:has(> [id^="grp-res-"]) { border-color: #333 !important; }
+  div:has(> [id^="grp-res-"]) > div:first-child { background: #252525 !important; }
   div:has(> [id^="grp-res-"]) > div:first-child span { color: #aaa !important; }
+  div:has(> [id^="hgrp-"]) { border-color: #333 !important; }
+  div:has(> [id^="hgrp-"]) > div:first-child { background: #252525 !important; }
+  div:has(> [id^="hgrp-"]) > div:first-child span { color: #aaa !important; }
   .btn-accion-home { background:#252525; border-color:#333; color:#f0f0f0; }
   .btn-accion-home:hover { border-color:#F97316; background:#2a1a0e; }
   .btn-home-sub { background:transparent; border-color:#333; color:#666; }
