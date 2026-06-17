@@ -781,8 +781,8 @@ footer { display: block; }
       <h2>Inicia sesión</h2>
      
 <!-- Google Sign-In -->
-<div id="google-btn-wrapper" style="margin-bottom:10px;border:2px solid #e5e5e5;border-radius:14px;background:#fafafa;padding:10px;overflow:hidden;">
-        <div id="g-signin-btn-usuario" style="min-height:52px;overflow:hidden;border-radius:10px;animation:fadeInBtn 0.4s ease 0.7s both;display:flex;justify-content:center;align-items:center;width:100%;"></div>
+<div id="google-btn-wrapper" style="margin-bottom:10px;border:2px solid #e5e5e5;border-radius:14px;overflow:hidden;line-height:0;">
+        <div id="g-signin-btn-usuario" style="min-height:50px;animation:fadeInBtn 0.4s ease 0.7s both;display:flex;justify-content:center;align-items:center;width:100%;"></div>
       </div>
       <div class="error-msg" id="err-google-login"></div>
 
@@ -2709,7 +2709,7 @@ function iniciarGoogleSignInUsuario() {
 var cont = document.getElementById('g-signin-btn-usuario');
   if (!cont) return;
   cont.innerHTML = '';
-  var ancho = cont.parentElement ? (cont.parentElement.offsetWidth - 24) : 320;
+  var ancho = cont.parentElement ? cont.parentElement.offsetWidth : 320;
   var esOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
   google.accounts.id.renderButton(cont, {
     theme: esOscuro ? 'filled_black' : 'outline',
