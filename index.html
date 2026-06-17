@@ -806,7 +806,7 @@ footer { display: block; }
               <input type="password" id="input-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4"
                 placeholder="• • • •"
                 style="text-align:center;font-size:1.8rem;letter-spacing:8px;padding-left:50px;padding-right:50px;"
-                oninput="syncPinDots()" onkeydown="if(event.key==='Enter') continuar_pin()">
+                oninput="syncPinDots()" onkeydown="if(event.key==='Enter') continuar_pin_desde_s1()">
               <button type="button" onclick="togglePinVisibility()"
                 style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#888;padding:4px;line-height:1;">
                 <span class="material-symbols-outlined" id="toggle-pin-icon">visibility</span>
@@ -1591,8 +1591,8 @@ function syncPinDots() {
   var inp = document.getElementById('input-pin');
   inp.value = inp.value.replace(/\D/g,'').slice(0,4);
   if (inp.value.length === 4) {
-    inp.blur();              // cierra el teclado en mobile
-    continuar_pin();         // valida e ingresa automáticamente
+    inp.blur();
+    continuar_pin_desde_s1(); // setea E.nombre antes de validar
   }
 }
 function resetPinPad() {
@@ -1917,8 +1917,8 @@ function continuar_pin() {
   sha256Hex(pin + '|' + E.nombre).then(function(hash) {
     api({ action: 'validarPin', nombre: E.nombre, pinHash: hash }, function(res) {
       _validandoPin = false;
-      if (!res.valido) {
-        ocultarCargando(); resetPinPad(); ir('s1b');
+if (!res.valido) {
+        ocultarCargando(); resetPinPad();
         err('err-pin', res.bloqueado
           ? 'Demasiados intentos fallidos. Espera 15 minutos e intenta de nuevo.'
           : 'PIN incorrecto.');
