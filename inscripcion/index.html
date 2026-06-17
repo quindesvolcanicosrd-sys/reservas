@@ -836,8 +836,11 @@ function initGIS() {
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCred });
   var cont = document.getElementById('gsignin-btn');
   cont.innerHTML = '';
+cont.style.opacity = '0';
+  cont.style.transition = 'opacity 0.4s ease';
   google.accounts.id.renderButton(cont, { theme:'outline', size:'large', text:'signin_with', locale:'es', width:280 });
   _gisReady = true;
+  setTimeout(function() { cont.style.opacity = '1'; }, 600);
 }
 
 function onGoogleCred(resp) {
