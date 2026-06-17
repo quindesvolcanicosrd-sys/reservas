@@ -77,7 +77,9 @@ button, input, select, textarea { font-family: inherit; }
            margin: 0 auto 14px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes skeletonShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-.loading-txt { color: var(--muted); font-size: 0.9rem; font-weight: 600; }
+@media (prefers-color-scheme: dark) {
+  #gsignin-skeleton { background: linear-gradient(90deg,#2a2a2a 25%,#383838 50%,#2a2a2a 75%) !important; background-size: 200% 100% !important; }
+}.loading-txt { color: var(--muted); font-size: 0.9rem; font-weight: 600; }
 
 /* ─── LAYOUT ─────────────────────────────────────────────────────────── */
 .page-wrap {
@@ -631,9 +633,9 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
       <p id="form-subtitulo" style="font-size:0.88rem;color:var(--muted);margin-bottom:4px;line-height:1.5;">
         Usamos Google para verificar tu correo y evitar registros duplicados.
       </p>
-      <div style="position:relative;height:44px;display:flex;justify-content:center;margin-top:20px;margin-bottom:0px;">
-  <div id="gsignin-skeleton" style="position:absolute;inset:0;width:280px;margin:0 auto;border-radius:4px;background:linear-gradient(90deg,var(--border) 25%,rgba(229,229,229,0.5) 50%,var(--border) 75%);background-size:200% 100%;animation:skeletonShimmer 1.2s ease-in-out infinite;transition:opacity 0.4s ease;z-index:1;"></div>
-  <div class="gsignin-wrap" id="gsignin-btn" style="height:44px;overflow:hidden;"></div>
+      <div style="position:relative;height:44px;width:280px;margin:20px auto 0;">
+  <div id="gsignin-skeleton" style="position:absolute;inset:0;border-radius:4px;background:linear-gradient(90deg,#d1d1d1 25%,#e8e8e8 50%,#d1d1d1 75%);background-size:200% 100%;animation:skeletonShimmer 1.2s ease-in-out infinite;transition:opacity 0.4s ease;z-index:2;"></div>
+  <div class="gsignin-wrap" id="gsignin-btn" style="position:absolute;inset:0;overflow:hidden;"></div>
 </div>
       <div class="error-msg" id="err-p0"></div>
     </div>
