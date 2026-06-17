@@ -1718,7 +1718,7 @@ api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
     } catch (ex) { localStorage.removeItem('session'); }
   }
 if (!_restaurando) { ir('s1', true); }
-  iniciarGoogleSignInUsuario();
+  requestAnimationFrame(function() { requestAnimationFrame(iniciarGoogleSignInUsuario); });
   api({ action: 'getNombres' }, function(nombres) {
     var sel = document.getElementById('sel-nombre');
     sel.innerHTML = '<option value="">Elige tu nombre</option>';
@@ -2706,19 +2706,29 @@ function iniciarGoogleSignInUsuario() {
     });
     _gisUsuarioInicializado = true;
   }
-var cont = document.getElementById('g-signin-btn-usuario');
+  var cont = document.getElementById('g-signin-btn-usuario');
   if (!cont) return;
   cont.innerHTML = '';
-  var ancho = cont.parentElement ? cont.parentElement.offsetWidth : 320;
+  var anchoBruto = cont.parentElement ? cont.parentElement.offsetWidth : 320;
+  var ancho = Math.min(400, Math.floor(anchoBruto) || 320); // 400 es el máximo que acepta Google
   var esOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
   google.accounts.id.renderButton(cont, {
     theme: esOscuro ? 'filled_black' : 'outline',
     size: 'large',
     text: 'continue_with',
     locale: 'es',
-    width: ancho || 320
+    width: ancho
   });
 }
+
+// Reintenta el cálculo si cambia el tamaño de pantalla (rotación, resize, etc.)
+var _reRenderGoogleBtnTimeout = null;
+window.addEventListener('resize', function() {
+  clearTimeout(_reRenderGoogleBtnTimeout);
+  _reRenderGoogleBtnTimeout = setTimeout(function() {
+    if (document.getElementById('g-signin-btn-usuario')) iniciarGoogleSignInUsuario();
+  }, 250);
+});
 
 function onGoogleCredentialUsuario(resp) {
   mostrarCargando('Verificando tu cuenta...');
