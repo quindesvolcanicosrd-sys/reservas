@@ -30,7 +30,11 @@
   --purple-bg: #ede9fe;
   --shadow:    0 10px 40px rgba(0,0,0,0.06);
   --radius:    14px;
-  --radius-sm: 10px;
+--radius-sm: 10px;
+  --dp-chip: rgba(249,115,22,0.08);
+  --dp-text2: var(--muted);
+  --dp-text3: var(--hint);
+  --dp-text4: rgba(127,127,127,0.3);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -453,6 +457,86 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
   font-family: inherit; color: var(--muted); transition: background 0.2s;
 }
 .modal-ct-close:hover { background: #d4d4d4; }
+/* ─── FNAC TRIGGER ──────────────────────────────────────────────────── */
+.fnac-trigger-btn {
+  width:100%; display:flex; align-items:center; justify-content:space-between;
+  padding:13px 16px; border:2px solid var(--border); border-radius:var(--radius-sm);
+  background:var(--surface); color:var(--text); font-size:0.95rem; font-weight:500;
+  cursor:pointer; transition:border-color 0.25s, box-shadow 0.25s; font-family:inherit;
+}
+.fnac-trigger-btn:focus { outline:none; border-color:var(--brand); box-shadow:0 0 0 4px rgba(249,115,22,0.14); }
+.fnac-placeholder { color:var(--hint); font-style:italic; font-size:0.88rem; }
+
+/* ─── DATE PICKER MODAL ─────────────────────────────────────────────── */
+#date-picker-modal {
+  position:fixed; inset:0; z-index:2000; display:flex; align-items:center;
+  justify-content:center; background:rgba(0,0,0,0.55); backdrop-filter:blur(4px);
+  padding:24px; opacity:0; pointer-events:none; transition:opacity 0.25s ease;
+}
+#date-picker-modal.active { opacity:1; pointer-events:all; }
+.dp-card {
+  background:var(--surface); border-radius:28px; width:100%; max-width:340px;
+  overflow:hidden; transform:scale(0.92) translateY(12px); opacity:0;
+  transition:transform 0.28s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s ease;
+}
+#date-picker-modal.active .dp-card { transform:scale(1) translateY(0); opacity:1; }
+.dp-header { padding:24px 24px 8px; }
+.dp-header-label { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:var(--dp-text3); margin-bottom:4px; }
+.dp-selected-date { font-size:28px; font-weight:400; color:var(--text); line-height:1.2; }
+.dp-nav { display:flex; align-items:center; justify-content:space-between; padding:8px 12px 4px; }
+#dp-nav-arrows { display:none !important; }
+.dp-nav-chips { display:flex; gap:2px; align-items:center; }
+.dp-nav-label {
+  display:inline-flex; align-items:center; gap:4px; padding:8px 14px;
+  border-radius:99px; background:transparent; border:none; font-size:15px;
+  font-weight:700; color:var(--text); cursor:pointer; font-family:inherit;
+  transition:background 0.15s; -webkit-tap-highlight-color:transparent;
+}
+.dp-nav-label:active { background:var(--dp-chip); }
+.dp-nav-btn { width:40px; height:40px; border-radius:50%; border:none; background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; }
+.dp-nav-btn:active { background:var(--dp-chip); }
+.dp-nav-btn .material-symbols-outlined { font-size:20px; color:var(--dp-text2); }
+.dp-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; padding:4px 12px 8px; }
+.dp-day-label { text-align:center; font-size:11px; font-weight:700; color:var(--dp-text3); padding:6px 0; }
+.dp-day {
+  aspect-ratio:1; border-radius:50%; border:none; background:transparent;
+  font-size:14px; font-weight:400; color:var(--text); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  -webkit-tap-highlight-color:transparent; transition:background 0.15s;
+}
+.dp-day:hover { background:var(--dp-chip); }
+.dp-day.dp-selected { background:var(--brand); color:#fff; font-weight:700; }
+.dp-day.dp-other-month { color:var(--dp-text4); }
+.dp-day.dp-today:not(.dp-selected) { border:1.5px solid var(--brand); color:var(--brand); }
+.dp-error {
+  margin:0 12px; padding:10px 14px; border-radius:10px;
+  background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3);
+  font-size:13px; font-weight:600; color:#dc2626; text-align:center;
+}
+.dp-footer { display:flex; justify-content:flex-end; gap:12px; padding:16px 20px 28px; }
+.dp-btn { padding:13px 24px; border-radius:9999px; border:none; font-size:14px; font-weight:700; cursor:pointer; -webkit-tap-highlight-color:transparent; text-transform:uppercase; letter-spacing:0.05em; font-family:inherit; }
+.dp-btn-cancel { background:transparent; color:var(--dp-text2); }
+.dp-btn-cancel:active { background:var(--dp-chip); }
+.dp-btn-ok { background:var(--brand); color:#fff; }
+.dp-btn-ok:active { filter:brightness(0.9); }
+.dp-year-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:16px 20px; max-height:220px; overflow-y:scroll; }
+.dp-year-btn { padding:14px 4px; border-radius:14px; border:none; font-size:15px; font-weight:500; color:var(--text); background:transparent; cursor:pointer; text-align:center; -webkit-tap-highlight-color:transparent; font-family:inherit; }
+.dp-year-btn.dp-year-selected { background:var(--brand); color:#fff; font-weight:700; }
+.dp-year-btn:active { background:var(--dp-chip); }
+.dp-month-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:8px 16px 16px; }
+.dp-month-btn { padding:14px 6px; border:none; border-radius:12px; background:transparent; color:var(--text); font-size:14px; font-weight:500; cursor:pointer; text-align:center; -webkit-tap-highlight-color:transparent; transition:background 0.15s; font-family:inherit; }
+.dp-month-btn:active { background:var(--dp-chip); }
+.dp-month-selected { background:var(--brand); color:#fff; font-weight:700; }
+@keyframes dpFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+#dp-days { display:contents; animation:dpFadeIn 0.18s ease; }
+#dp-year-grid, #dp-month-grid { animation:dpFadeIn 0.18s ease; }
+@media (prefers-color-scheme: dark) {
+  .dp-card { background:#1c1c1c; }
+  .dp-day { color:#f0f0f0; }
+  .dp-nav-label { color:#f0f0f0; }
+  .dp-year-btn { color:#f0f0f0; }
+  .dp-month-btn { color:#f0f0f0 !important; }
+}
 </style>
 </head>
 
@@ -485,6 +569,42 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
       <span class="material-symbols-outlined" style="color:#F97316;">mail</span> Mail
     </a>
     <button class="modal-ct-close" onclick="cerrarContacto()">Cerrar</button>
+  </div>
+</div>
+
+<!-- ─── DATE PICKER MODAL ───────────────────────────────────────────── -->
+<div id="date-picker-modal">
+  <div class="dp-card">
+    <div class="dp-header">
+      <div class="dp-header-label">Fecha de nacimiento</div>
+      <div class="dp-selected-date" id="dp-selected-label">Sin seleccionar</div>
+    </div>
+    <div class="dp-nav">
+      <div class="dp-nav-chips">
+        <button type="button" class="dp-nav-label" id="dp-month-label">Enero</button>
+        <button type="button" class="dp-nav-label" id="dp-year-label">1990</button>
+      </div>
+      <div id="dp-nav-arrows" style="display:flex;gap:4px;">
+        <button type="button" class="dp-nav-btn" id="dp-prev"><span class="material-symbols-outlined">chevron_left</span></button>
+        <button type="button" class="dp-nav-btn" id="dp-next"><span class="material-symbols-outlined">chevron_right</span></button>
+      </div>
+    </div>
+    <div id="dp-grid-wrap">
+      <div class="dp-grid">
+        <div class="dp-day-label">Lu</div><div class="dp-day-label">Ma</div>
+        <div class="dp-day-label">Mi</div><div class="dp-day-label">Ju</div>
+        <div class="dp-day-label">Vi</div><div class="dp-day-label">Sa</div>
+        <div class="dp-day-label">Do</div>
+        <div id="dp-days" style="display:contents;"></div>
+      </div>
+    </div>
+    <div id="dp-year-grid" class="dp-year-grid" style="display:none;"></div>
+    <div id="dp-month-grid" class="dp-month-grid" style="display:none;"></div>
+    <div class="dp-error" id="dp-error" style="display:none;"></div>
+    <div class="dp-footer">
+      <button type="button" class="dp-btn dp-btn-cancel" id="dp-cancel">Cancelar</button>
+      <button type="button" class="dp-btn dp-btn-ok" id="dp-ok">OK</button>
+    </div>
   </div>
 </div>
 
@@ -552,17 +672,11 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 <div class="sub-permisos visible" id="sub-fecha">
             <div style="padding:12px 16px 10px;border-top:1px solid var(--border);">
               <label style="font-size:0.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px;">Fecha de nacimiento <span class="req">*</span></label>
-              <div class="fecha-nac-grid">
-                <div class="select-wrap">
-                  <select id="fnac-dia" aria-label="Día" onchange="onFechaNacSelectChange()"><option value="">Día</option></select>
-                </div>
-                <div class="select-wrap">
-                  <select id="fnac-mes" aria-label="Mes" onchange="onFechaNacSelectChange()"><option value="">Mes</option></select>
-                </div>
-                <div class="select-wrap">
-                  <select id="fnac-anio" aria-label="Año" onchange="onFechaNacSelectChange()"><option value="">Año</option></select>
-                </div>
-              </div>
+              <button type="button" class="fnac-trigger-btn" onclick="abrirPickerFecha()">
+                <span id="fnac-display" class="fnac-placeholder">Seleccionar fecha</span>
+                <span class="material-symbols-outlined" style="color:var(--brand);font-size:1.1rem;flex-shrink:0;">edit_calendar</span>
+              </button>
+              <input type="hidden" id="fnac-iso" value="">
               <p class="dato-hint" style="margin-top:6px;">Necesaria para verificar que eres mayor de 18 años.</p>
             </div>
             <div class="sub-perm-row">
@@ -944,23 +1058,18 @@ function poblarSelectFechaNac() {
 }
 
 function obtenerFechaNacISO() {
-  var d = document.getElementById('fnac-dia').value;
-  var m = document.getElementById('fnac-mes').value;
-  var a = document.getElementById('fnac-anio').value;
-  if (!d || !m || !a) return '';
-  return a + '-' + m + '-' + d;
+  return document.getElementById('fnac-iso').value || '';
 }
 
 function establecerFechaNacEnSelects(iso) {
   if (!iso) return;
-  var partes = iso.split('-');
-  if (partes.length !== 3) return;
-  var selA = document.getElementById('fnac-anio');
-  var selM = document.getElementById('fnac-mes');
-  var selD = document.getElementById('fnac-dia');
-  if (selA) selA.value = partes[0];
-  if (selM) selM.value = partes[1];
-  if (selD) selD.value = partes[2];
+  document.getElementById('fnac-iso').value = iso;
+  var p = iso.split('-');
+  if (p.length === 3) {
+    var disp = document.getElementById('fnac-display');
+    disp.textContent = parseInt(p[2])+' '+MESES[parseInt(p[1])-1]+' '+p[0];
+    disp.classList.remove('fnac-placeholder');
+  }
 }
 
 function onFechaNacSelectChange() {
@@ -1130,11 +1239,171 @@ function ocultarCargando() {
 function abrirContacto()  { document.getElementById('modal-contacto').classList.add('visible'); }
 function cerrarContacto() { document.getElementById('modal-contacto').classList.remove('visible'); }
 
+// ─── DATE PICKER ─────────────────────────────────────────────────────────────
+var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+var dpState = {
+  viewYear:1990, viewMonth:0,
+  selYear:null, selMonth:null, selDay:null,
+  yearMode:false, monthMode:false,
+  onConfirm:null
+};
+
+function parseFecha(str) {
+  if (!str) return null;
+  var iso = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return { month:parseInt(iso[2])-1, day:parseInt(iso[3]), year:parseInt(iso[1]) };
+  var slash = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slash) { var a=parseInt(slash[1]),b=parseInt(slash[2]),y=parseInt(slash[3]); return b>12?{day:b,month:a-1,year:y}:{day:a,month:b-1,year:y}; }
+  return null;
+}
+
+function formatFecha(y,m,d) {
+  return String(d).padStart(2,'0')+'/'+String(m+1).padStart(2,'0')+'/'+y;
+}
+
+function abrirPickerFecha() {
+  var actual = document.getElementById('fnac-iso').value;
+  var display = '';
+  if (actual) { var p=actual.split('-'); if(p.length===3) display=p[2]+'/'+p[1]+'/'+p[0]; }
+  abrirDatePicker(display, function(val) {
+    var parts = val.split('/');
+    var iso = parts[2]+'-'+parts[1]+'-'+parts[0];
+    document.getElementById('fnac-iso').value = iso;
+    var p = parseFecha(val);
+    var disp = document.getElementById('fnac-display');
+    if (p) { disp.textContent = p.day+' '+MESES[p.month]+' '+p.year; disp.classList.remove('fnac-placeholder'); }
+    G.fechaNac = iso;
+    calcularMayorEdad(iso);
+  });
+}
+
+function abrirDatePicker(valorActual, onConfirm) {
+  var parsed = parseFecha(valorActual);
+  dpState.viewYear  = (parsed && parsed.year)  ? parsed.year  : 1990;
+  dpState.viewMonth = (parsed && typeof parsed.month==='number') ? parsed.month : 0;
+  dpState.selYear   = parsed ? parsed.year  : null;
+  dpState.selMonth  = (parsed && typeof parsed.month==='number') ? parsed.month : null;
+  dpState.selDay    = parsed ? parsed.day   : null;
+  dpState.yearMode  = false; dpState.monthMode = false;
+  dpState.onConfirm = onConfirm;
+  var errEl = document.getElementById('dp-error');
+  if (errEl) { errEl.style.display='none'; errEl.textContent=''; }
+  renderDatePicker();
+  document.getElementById('date-picker-modal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarDatePicker() {
+  document.getElementById('date-picker-modal').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function renderDatePicker() {
+  var safeMonth = (Number.isInteger(dpState.viewMonth) && dpState.viewMonth>=0 && dpState.viewMonth<=11) ? dpState.viewMonth : 0;
+  var safeYear  = (Number.isInteger(dpState.viewYear)  && dpState.viewYear>1900) ? dpState.viewYear : 1990;
+  var lbl = document.getElementById('dp-selected-label');
+  if (lbl) lbl.textContent = (Number.isInteger(dpState.selYear) && Number.isInteger(dpState.selMonth) && Number.isInteger(dpState.selDay)) ? dpState.selDay+' '+MESES[dpState.selMonth]+' '+dpState.selYear : 'Sin seleccionar';
+  var monthEl = document.getElementById('dp-month-label');
+  var yearEl  = document.getElementById('dp-year-label');
+  if (monthEl) monthEl.textContent = MESES[safeMonth];
+  if (yearEl)  yearEl.textContent  = safeYear;
+  var gridWrap  = document.getElementById('dp-grid-wrap');
+  var yearGrid  = document.getElementById('dp-year-grid');
+  var monthGrid = document.getElementById('dp-month-grid');
+  if (dpState.yearMode) {
+    gridWrap.style.display='none'; yearGrid.style.display='grid'; if(monthGrid) monthGrid.style.display='none';
+    renderYearGrid();
+  } else if (dpState.monthMode) {
+    gridWrap.style.display='none'; yearGrid.style.display='none'; if(monthGrid){monthGrid.style.display='grid'; renderMonthGrid();}
+  } else {
+    gridWrap.style.display='block'; yearGrid.style.display='none'; if(monthGrid) monthGrid.style.display='none';
+    renderDaysGrid();
+  }
+}
+
+function renderDaysGrid() {
+  var vy = (Number.isInteger(dpState.viewYear) && dpState.viewYear>1900) ? dpState.viewYear : 1990;
+  var vm = (Number.isInteger(dpState.viewMonth) && dpState.viewMonth>=0 && dpState.viewMonth<=11) ? dpState.viewMonth : 0;
+  var daysEl = document.getElementById('dp-days');
+  daysEl.innerHTML='';
+  var firstDay = new Date(vy,vm,1).getDay();
+  var daysInMonth = new Date(vy,vm+1,0).getDate();
+  var offset = (firstDay+6)%7;
+  var today = new Date();
+  for (var i=0; i<offset; i++) { var b=document.createElement('div'); b.className='dp-day dp-other-month'; daysEl.appendChild(b); }
+  for (var d=1; d<=daysInMonth; d++) {
+    (function(day){
+      var btn=document.createElement('button'); btn.type='button'; btn.className='dp-day'; btn.textContent=day;
+      var isSel = dpState.selYear===vy && dpState.selMonth===vm && dpState.selDay===day;
+      var isToday = today.getFullYear()===vy && today.getMonth()===vm && today.getDate()===day;
+      if (isSel) btn.classList.add('dp-selected'); else if (isToday) btn.classList.add('dp-today');
+      btn.addEventListener('click',function(){ dpState.selYear=vy; dpState.selMonth=vm; dpState.selDay=day; animateDp(); renderDatePicker(); });
+      daysEl.appendChild(btn);
+    })(d);
+  }
+}
+
+function renderYearGrid() {
+  var yearGrid=document.getElementById('dp-year-grid'); yearGrid.innerHTML='';
+  var curYear=new Date().getFullYear();
+  for (var y=curYear; y>=1920; y--) {
+    (function(yr){
+      var btn=document.createElement('button'); btn.type='button';
+      btn.className='dp-year-btn'+(yr===dpState.viewYear?' dp-year-selected':''); btn.textContent=yr;
+      btn.addEventListener('click',function(){ dpState.viewYear=yr; dpState.selYear=yr; dpState.yearMode=false; dpState.monthMode=false; if(typeof dpState.viewMonth!=='number'||dpState.viewMonth<0||dpState.viewMonth>11) dpState.viewMonth=0; animateDp(); renderDatePicker(); });
+      yearGrid.appendChild(btn);
+    })(y);
+  }
+  requestAnimationFrame(function(){ var sel=yearGrid.querySelector('.dp-year-selected'); if(sel) sel.scrollIntoView({block:'center'}); });
+}
+
+function renderMonthGrid() {
+  var monthGrid=document.getElementById('dp-month-grid'); if(!monthGrid) return; monthGrid.innerHTML='';
+  MESES.forEach(function(nombre,idx){
+    var btn=document.createElement('button'); btn.type='button';
+    btn.className='dp-month-btn'+(idx===dpState.viewMonth?' dp-month-selected':''); btn.textContent=nombre;
+    btn.addEventListener('click',function(){ dpState.viewMonth=idx; dpState.selMonth=idx; dpState.monthMode=false; animateDp(); renderDatePicker(); });
+    monthGrid.appendChild(btn);
+  });
+}
+
+function animateDp() {
+  var targets=['dp-grid-wrap','dp-year-grid','dp-month-grid','dp-month-label','dp-year-label','dp-selected-label','dp-days'].map(function(id){return document.getElementById(id);});
+  targets.forEach(function(el){ if(!el) return; el.style.transition='none'; el.style.opacity='0'; el.style.transform='translateY(4px)'; });
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){
+    targets.forEach(function(el){ if(!el) return; el.style.transition='opacity 0.18s ease, transform 0.18s cubic-bezier(0.4,0,0.2,1)'; el.style.opacity='1'; el.style.transform='translateY(0)'; });
+  });});
+}
+
+function initDatePickerListeners() {
+  document.getElementById('dp-prev')&&document.getElementById('dp-prev').addEventListener('click',function(){ dpState.viewMonth--; if(dpState.viewMonth<0){dpState.viewMonth=11;dpState.viewYear--;} animateDp('prev'); renderDatePicker(); });
+  document.getElementById('dp-next')&&document.getElementById('dp-next').addEventListener('click',function(){ dpState.viewMonth++; if(dpState.viewMonth>11){dpState.viewMonth=0;dpState.viewYear++;} animateDp('next'); renderDatePicker(); });
+  var dpModal=document.getElementById('date-picker-modal');
+  if (dpModal) {
+    dpModal.addEventListener('click',function(e){
+      var tgt=e.target;
+      if (tgt.id==='dp-month-label'||tgt.closest&&tgt.closest('#dp-month-label')) { e.preventDefault(); e.stopPropagation(); dpState.monthMode=!dpState.monthMode; dpState.yearMode=false; animateDp(); renderDatePicker(); }
+      else if (tgt.id==='dp-year-label'||tgt.closest&&tgt.closest('#dp-year-label')) { e.preventDefault(); e.stopPropagation(); dpState.yearMode=!dpState.yearMode; dpState.monthMode=false; animateDp(); renderDatePicker(); }
+      else if (tgt===dpModal) cerrarDatePicker();
+    });
+  }
+  document.getElementById('dp-cancel')&&document.getElementById('dp-cancel').addEventListener('click',cerrarDatePicker);
+  document.getElementById('dp-ok')&&document.getElementById('dp-ok').addEventListener('click',function(){
+    var errEl=document.getElementById('dp-error');
+    if (!dpState.selDay) { if(errEl){errEl.textContent='Falta seleccionar el día';errEl.style.display='block';clearTimeout(errEl._t);errEl._t=setTimeout(function(){errEl.style.display='none';},3000);} return; }
+    if (errEl) errEl.style.display='none';
+    var val=formatFecha(dpState.selYear,dpState.selMonth,dpState.selDay);
+    if (dpState.onConfirm) dpState.onConfirm(val);
+    cerrarDatePicker();
+  });
+}
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-window.onload = function() {
+  window.onload = function() {
   poblarPaises();
-  poblarSelectFechaNac();
   cargarTallas();
+  initDatePickerListeners();
   initGIS();
   ocultarCargando();
 };
