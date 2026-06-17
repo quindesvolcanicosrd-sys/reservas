@@ -776,11 +776,7 @@ footer { display: block; }
     <div class="card">
       <div class="seccion-label">Bienvenidx</div>
       <h2>Inicia sesión al portal de reservas</h2>
-      <p style="font-size:0.85rem;color:#666;margin-bottom:14px; font-weight: 500;">
-        ¿Tu cuenta no esta registrada? inscribirte al equipo utilizando
-        <a href="https://docs.google.com/forms/d/e/1FAIpQLScfZRUBRizzsnNu0tQrtYSB-AI4HIknBWstGzJHPvTXz0JPcQ/viewform?usp=header"
-           target="_blank" style="color:#F97316;font-weight:700;text-decoration:none;">este formulario</a>.
-      </p>
+     
 <!-- Google Sign-In -->
       <div id="gsignin-usuario" style="margin-bottom:4px;min-height:44px;height:44px;overflow:hidden;animation:fadeInBtn 0.4s ease 0.7s both;display:flex;justify-content:center;align-items:center;"></div>
       <div class="error-msg" id="err-google-login"></div>
@@ -2703,16 +2699,21 @@ function iniciarGoogleSignInUsuario() {
   var cont = document.getElementById('gsignin-usuario');
   if (!cont) return;
   cont.innerHTML = '';
-  google.accounts.id.renderButton(cont, { theme: 'outline', size: 'large', text: 'signin_with', locale: 'es', width: 320 });
+  var ancho = cont.parentElement ? cont.parentElement.offsetWidth : 320;
+  google.accounts.id.renderButton(cont, { theme: 'outline', size: 'large', text: 'continue_with', locale: 'es', width: ancho || 320 });
 }
 
 function onGoogleCredentialUsuario(resp) {
   mostrarCargando('Verificando tu cuenta...');
   apiPost({ action: 'loginGoogle', idToken: resp.credential }, function(res) {
-    if (!res.valido) {
+if (!res.valido) {
       ocultarCargando();
+      if (res.noRegistrado) {
+        window.location.href = 'https://reservas.quindesvolcanicos.com/inscripcion';
+        return;
+      }
       var errEl = document.getElementById('err-google-login');
-      errEl.textContent = res.error || 'No encontramos una cuenta con ese correo. ¿Ya estás inscritx?';
+      errEl.textContent = res.error || 'Error al iniciar sesión. Intenta de nuevo.';
       errEl.style.display = 'block';
       setTimeout(function(){ errEl.style.display = 'none'; }, 5000);
       return;
