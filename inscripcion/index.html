@@ -237,6 +237,10 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
   flex-shrink: 0; transition: border-color 0.25s;
 }
 
+.fecha-nac-grid { display:flex; gap:8px; }
+.fecha-nac-grid .select-wrap { flex:1; min-width:0; }
+.fecha-nac-grid select { padding-right:30px; }
+
 /* ─── OPCIONES RADIO / CHECKBOXES ────────────────────────────────────── */
 .opciones { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
 .opcion {
@@ -524,10 +528,25 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
           ¿Qué quieres que Mirlxs guarde de tu cuenta? Puedes cambiarlo desde la app en cualquier momento.
         </p>
 
-        <div class="campo" style="margin-bottom:16px;">
+<div class="campo" style="margin-bottom:16px;">
           <label>Fecha de nacimiento <span class="req">*</span></label>
-          <input type="date" id="input-fecha-nac"
-            onchange="onFechaNacChange(this)">
+          <div class="fecha-nac-grid">
+            <div class="select-wrap">
+              <select id="fnac-dia" aria-label="Día" onchange="onFechaNacSelectChange()">
+                <option value="">Día</option>
+              </select>
+            </div>
+            <div class="select-wrap">
+              <select id="fnac-mes" aria-label="Mes" onchange="onFechaNacSelectChange()">
+                <option value="">Mes</option>
+              </select>
+            </div>
+            <div class="select-wrap">
+              <select id="fnac-anio" aria-label="Año" onchange="onFechaNacSelectChange()">
+                <option value="">Año</option>
+              </select>
+            </div>
+          </div>
           <p class="dato-hint">Solo usamos esto para saber si eres mayor de 18 años. No se comparte con nadie a menos que lo elijas abajo.</p>
         </div>
 
@@ -552,13 +571,9 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
             <span class="toggle-slider"></span>
           </label>
         </div>
-        <div class="sub-permisos" id="sub-fecha">
+<div class="sub-permisos" id="sub-fecha">
             <div style="padding:12px 16px 4px;border-top:1px solid var(--border);">
-              <label style="font-size:0.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px;">Tu fecha de nacimiento</label>
-              <input type="date" id="input-fecha-nac"
-                style="width:100%;padding:10px 14px;border:2px solid var(--border);border-radius:var(--radius-sm);font-size:0.92rem;background:var(--surface);color:var(--text);"
-                onchange="onFechaNacChange(this)">
-              <p style="font-size:0.75rem;color:var(--hint);margin-top:6px;">Solo se usa para calcular tu edad y desearte feliz cumpleaños.</p>
+              <p style="font-size:0.78rem;color:var(--hint);line-height:1.4;">Usaremos la fecha que ingresaste arriba ⬆️</p>
             </div>
             <div class="sub-perm-row">
               <label>¿Fecha pública para el equipo?</label>
