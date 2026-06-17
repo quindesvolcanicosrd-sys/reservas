@@ -1843,7 +1843,7 @@ function ir(id, desdeHistorial) {
   }
 
   // Modo logueada: ocultar banner y footer en mobile para ganar espacio
-  document.body.classList.toggle('logueada', id !== 's1' && id !== 's1b');
+  document.body.classList.toggle('logueada', id !== 's1');
 
   // Sugerir instalación de la PWA al llegar al home
   if (id === 's-home') setTimeout(mostrarBannerPWA, 1200);
@@ -1856,7 +1856,7 @@ function ir(id, desdeHistorial) {
     if (_volverTarget) { topBtn.style.display = ''; topBtn.onclick = function() { volver(_volverTarget); }; } else { topBtn.style.display = 'none'; }
   } else { topBar.classList.remove('visible'); }
 
-var sinPasos = ['s1','s1b','s-home','s-misreservas','s-carga','s6','s-datos'].concat(ADMIN_PANTALLAS);
+var sinPasos = ['s1','s-home','s-misreservas','s-carga','s6','s-datos'].concat(ADMIN_PANTALLAS);
   if (E.reagendando) sinPasos = sinPasos.concat(['s4','s5','s-carga-conf']);
   var dotContainer = document.querySelector('.paso-indicator');
   if (sinPasos.indexOf(id) !== -1) { dotContainer.style.display = 'none'; return; }
@@ -2897,8 +2897,9 @@ function pwaCerrar() {
 // ─── Navegación por gestos (historial del navegador) ─────────────────────────
 window.addEventListener('popstate', function(ev) {
   var id = (ev.state && ev.state.pantalla) || (E.datos ? 's-home' : 's1');
-  if (E.datos && (id === 's1' || id === 's1b')) id = 's-home';   // con sesión activa no volver al login
-var esAdminPantalla = ADMIN_PANTALLAS.indexOf(id) !== -1;   if (!E.datos && !esAdminPantalla && id !== 's1' && id !== 's1b') id = 's1';   if (esAdminPantalla && id !== 's-admin-login' && !_adminToken) id = 's1';
+  if (id === 's1b') id = E.datos ? 's-home' : 's1';
+  if (E.datos && id === 's1') id = 's-home';
+var esAdminPantalla = ADMIN_PANTALLAS.indexOf(id) !== -1;   if (!E.datos && !esAdminPantalla && id !== 's1') id = 's1';   if (esAdminPantalla && id !== 's-admin-login' && !_adminToken) id = 's1';
   ir(id, true);
 });
 history.replaceState({ pantalla: 's1' }, '', '#s1');
