@@ -3030,8 +3030,17 @@ function iniciarGoogleSignIn() {
     _gisInicializado = true;
   }
   var cont = document.getElementById('g-signin-btn');
-  cont.innerHTML = '';
-  google.accounts.id.renderButton(cont, { theme: 'outline', size: 'large', text: 'signin_with', locale: 'es' });
+  if (cont) { // Validación para evitar errores si el elemento no existe en la página
+    cont.innerHTML = '';
+    google.accounts.id.renderButton(cont, { 
+      theme: 'outline', 
+      size: 'large', 
+      text: 'signin_with', 
+      locale: 'es',
+      shape: 'pill',  // <--- Hace el botón redondeado nativamente
+      width: cont.offsetWidth || '320' // <--- Detecta el ancho de tu contenedor automáticamente
+    });
+  }
 }
 
 function onGoogleCredential(resp) {
