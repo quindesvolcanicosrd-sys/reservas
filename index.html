@@ -1681,9 +1681,11 @@ api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
             _todasReservas = reservas;
             prepararHome(); ir('s-home');
             window._restaurandoSesion = false; ocultarCargando();
+             /* POPUP FECHA NACIMIENTO — desactivado temporalmente
             if (E.datos && !E.datos.permisosConfigurados) {
               setTimeout(function() { mostrarModalPermisos(E.nombre, E.datos.fotoPerfil || ''); }, 600);
             }
+            */
           }, function() { prepararHome(); ir('s-home'); window._restaurandoSesion = false; ocultarCargando(); });
         }, function() { window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true); });
       } else { localStorage.removeItem('session'); }
