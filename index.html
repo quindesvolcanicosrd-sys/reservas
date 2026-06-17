@@ -1895,12 +1895,14 @@ api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
         ocultarCargando();
         prepararHome();
         ir('s-home');
+/* POPUP FECHA NACIMIENTO — desactivado temporalmente
         // Modal de primer login si permisos no configurados
         if (E.datos && !E.datos.permisosConfigurados) {
           setTimeout(function() {
             mostrarModalPermisos(E.nombre, E.datos.fotoPerfil || '');
           }, 600);
         }
+        */
       }, function(e2) { ocultarCargando(); prepararHome(); ir('s-home'); alert('Error al cargar reservas: ' + e2.message); });
 
     }, function(e1) { _validandoPin = false; ocultarCargando(); ir('s1b'); err('err-pin', 'Error: ' + e1.message); });
