@@ -1828,6 +1828,8 @@ var TOP_BAR_CONFIG = {
 };
 
 function ir(id, desdeHistorial) {
+  // Pantallas eliminadas — redirigir a s1
+  if (id === 's1b' || !document.getElementById(id)) { ir('s1', true); return; }
   document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
   document.getElementById(id).classList.add('activa');
   window.scrollTo({ top: 0, behavior: 'smooth' });
