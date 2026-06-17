@@ -3038,7 +3038,7 @@ function iniciarGoogleSignIn() {
       text: 'signin_with', 
       locale: 'es',
       shape: 'pill',  // <--- Hace el botón redondeado nativamente
-      width: cont.offsetWidth || '320' // <--- Detecta el ancho de tu contenedor automáticamente
+      width: (cont.offsetWidth > 100 ? cont.offsetWidth : 320)
     });
   }
 }
