@@ -629,7 +629,7 @@ select, option, optgroup {
   #modal-contacto .modal-ct { color: #f0f0f0 !important; }
 #s1 button[onclick="abrirContacto()"] { background: #2d1f5e !important; color: #c4b5fd !important; border-color: #6d28d9 !important; }
   #google-btn-wrapper { background: #252525 !important; border-color: #2a2a2a !important; }
-  #pin-acordeon-header { background: #252525 !important; }
+  #pin-acordeon-header { background: #1f1f1f !important; }
   #pin-acordeon-header span { color: #aaa !important; }
   #pin-acordeon-body { background: #1c1c1c; }
   #pin-acordeon-body > div { background: #1c1c1c; }
@@ -790,9 +790,9 @@ footer { display: block; }
       <!-- Acordeón PIN -->
       <div style="border:2px solid #e5e5e5;border-radius:14px;overflow:hidden;margin-bottom:24px;">
         <div onclick="togglePinAcordeon()" id="pin-acordeon-header"
-          style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;background:#fafafa;transition:background 0.2s;">
+          style="display:flex;align-items:center;justify-content:center;padding:14px 18px;cursor:pointer;background:#fafafa;transition:background 0.2s;position:relative;">
           <span style="font-size:0.9rem;font-weight:700;color:#555;">🔑 Continuar con PIN</span>
-          <span class="material-symbols-outlined" id="pin-acordeon-chevron" style="color:#aaa;font-size:1.1rem;transition:transform 0.3s;">expand_more</span>
+          <span class="material-symbols-outlined" id="pin-acordeon-chevron" style="color:#aaa;font-size:1.1rem;transition:transform 0.3s;position:absolute;right:18px;top:50%;transform:translateY(-50%);">expand_more</span>
         </div>
         <div id="pin-acordeon-body" style="max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1),opacity 0.3s ease;opacity:0;">
           <div style="padding:16px 18px 20px;">
@@ -2769,13 +2769,13 @@ function togglePinAcordeon() {
   if (!abierto) {
     body.style.maxHeight = '400px';
     body.style.opacity = '1';
-    chevron.style.transform = 'rotate(180deg)';
+    chevron.style.transform = 'translateY(-50%) rotate(180deg)';
     header.style.background = '#fff8f4';
     chevron.style.color = '#F97316';
   } else {
     body.style.maxHeight = '0';
     body.style.opacity = '0';
-    chevron.style.transform = '';
+    chevron.style.transform = 'translateY(-50%)';
     header.style.background = '#fafafa';
     chevron.style.color = '#aaa';
   }
