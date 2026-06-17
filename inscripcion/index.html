@@ -76,6 +76,7 @@ button, input, select, textarea { font-family: inherit; }
            animation: spin 0.8s cubic-bezier(0.6,0.2,0.4,0.8) infinite;
            margin: 0 auto 14px; }
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes skeletonShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .loading-txt { color: var(--muted); font-size: 0.9rem; font-weight: 600; }
 
 /* ─── LAYOUT ─────────────────────────────────────────────────────────── */
@@ -630,7 +631,9 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
       <p id="form-subtitulo" style="font-size:0.88rem;color:var(--muted);margin-bottom:4px;line-height:1.5;">
         Usamos Google para verificar tu correo y evitar registros duplicados.
       </p>
-      <div class="gsignin-wrap" id="gsignin-btn" style="margin-top:20px;margin-bottom:0px;height:44px;overflow:hidden;"></div>
+      <div class="gsignin-wrap" id="gsignin-btn" style="margin-top:20px;margin-bottom:0px;height:44px;overflow:hidden;">
+        <div id="gsignin-skeleton" style="width:280px;height:44px;border-radius:4px;background:linear-gradient(90deg,var(--border) 25%,rgba(229,229,229,0.5) 50%,var(--border) 75%);background-size:200% 100%;animation:skeletonShimmer 1.2s ease-in-out infinite;"></div>
+      </div>
       <div class="error-msg" id="err-p0"></div>
     </div>
 
