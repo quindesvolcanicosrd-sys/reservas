@@ -1035,13 +1035,23 @@ function errMsg(id, msg) {
 function mostrarCargando(msg) {
   var ov  = document.getElementById('loading-overlay');
   var txt = ov.querySelector('.loading-txt');
-  ov.classList.remove('fade-out'); ov.style.display='flex';
+  ov.style.opacity = '0';
+  ov.style.display = 'flex';
+  ov.classList.remove('fade-out');
+  void ov.offsetWidth; // fuerza reflow para que la transición arranque
+  ov.style.transition = 'opacity 0.35s ease';
+  ov.style.opacity = '1';
   if (txt && msg) txt.textContent = msg;
 }
 function ocultarCargando() {
   var ov = document.getElementById('loading-overlay');
-  ov.classList.add('fade-out');
-  setTimeout(function(){ ov.style.display='none'; ov.classList.remove('fade-out'); }, 400);
+  ov.style.transition = 'opacity 0.35s ease';
+  ov.style.opacity = '0';
+  setTimeout(function(){
+    ov.style.display = 'none';
+    ov.style.opacity = '';
+    ov.style.transition = '';
+  }, 380);
 }
 
 function abrirContacto()  { document.getElementById('modal-contacto').classList.add('visible'); }
