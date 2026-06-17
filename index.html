@@ -3030,15 +3030,15 @@ function iniciarGoogleSignIn() {
     _gisInicializado = true;
   }
   var cont = document.getElementById('g-signin-btn');
-  if (cont) { // Validación para evitar errores si el elemento no existe en la página
+  if (cont) { 
     cont.innerHTML = '';
     google.accounts.id.renderButton(cont, { 
       theme: 'outline', 
       size: 'large', 
       text: 'signin_with', 
       locale: 'es',
-      shape: 'pill',  // <--- Hace el botón redondeado nativamente
-      width: (cont.offsetWidth > 100 ? cont.offsetWidth : 320)
+      shape: 'pill',  
+      width: 320 // <--- Forzamos el ancho exacto en píxeles para romper el conflicto de la animación
     });
   }
 }
