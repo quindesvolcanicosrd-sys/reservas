@@ -986,12 +986,15 @@ function enviarForm() {
     .filter(Boolean);
   if (prons.length === 0) { errMsg('err-form','Selecciona al menos un pronombre.'); return; }
 
-  if (!G.fechaNac) {
-    var mayor = document.getElementById('f-mayor').value;
-    if (!mayor) { errMsg('err-form','Indica si eres mayor de 18 años.'); return; }
-    G.mayorEdad = mayor;
+  // Fecha de nacimiento siempre obligatoria — determina AW
+  var inputFechaNac = document.getElementById('input-fecha-nac');
+  if (!inputFechaNac || !inputFechaNac.value) {
+    errMsg('err-form','La fecha de nacimiento es obligatoria.');
+    inputFechaNac && inputFechaNac.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
   }
-
+  G.fechaNac = inputFechaNac.value;
+  calcularMayorEdad(G.fechaNac);
   var tel    = document.getElementById('f-telefono').value.trim();
   var minLen = parseInt(document.getElementById('f-tel-minlen').value) || 6;
   var maxLen = _paisSel ? _paisSel.max : 15;
