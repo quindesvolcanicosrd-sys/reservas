@@ -619,7 +619,10 @@ select, option, optgroup {
   #modal-contacto button { background: #2a2a2a !important; color: #ccc !important; }
   #modal-contacto .modal-ct { color: #f0f0f0 !important; }
 #s1 button[onclick="abrirContacto()"] { background: #2d1f5e !important; color: #c4b5fd !important; border-color: #6d28d9 !important; }
-#modal-permisos > div { background: #1c1c1c !important; }
+#pin-acordeon-header { background: #252525 !important; border-color: #2a2a2a !important; }
+  #pin-acordeon-header span { color: #aaa !important; }
+  #pin-acordeon-body > div { background: #1c1c1c; }
+  #modal-permisos > div { background: #1c1c1c !important; }
   #modal-permisos div[style*="background:#fafafa"] { background: #252525 !important; border-color: #2a2a2a !important; }
   #modal-permisos div[style*="border-top:1px"] { border-color: #333 !important; }
   #modal-permisos div[style*="font-weight:600"] { color: #f0f0f0 !important; }
@@ -763,14 +766,48 @@ footer { display: block; }
         <a href="https://docs.google.com/forms/d/e/1FAIpQLScfZRUBRizzsnNu0tQrtYSB-AI4HIknBWstGzJHPvTXz0JPcQ/viewform?usp=header"
            target="_blank" style="color:#F97316;font-weight:700;text-decoration:none;">este formulario</a>.
       </p>
-      <div class="select-wrapper">
-  <div id="loader-nombres" class="select-spinner"></div>
-  <select id="sel-nombre" disabled style="color:#aaa;">
-    <option value="">Cargando nombres...</option>
-  </select>
-</div>
-      <div class="error-msg" id="err-s1"></div>
-<button class="btn btn-primary" onclick="continuar_s1()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+<!-- Google Sign-In -->
+      <div id="gsignin-usuario" style="margin-bottom:4px;min-height:44px;height:44px;overflow:hidden;animation:fadeInBtn 0.4s ease 0.7s both;"></div>
+      <div class="error-msg" id="err-google-login"></div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin:18px 0 14px;">
+        <div style="flex:1;height:1px;background:#e5e5e5;"></div>
+        <span style="font-size:0.78rem;color:#aaa;font-weight:600;white-space:nowrap;">o continúa con PIN</span>
+        <div style="flex:1;height:1px;background:#e5e5e5;"></div>
+      </div>
+
+      <!-- Acordeón PIN -->
+      <div style="border:2px solid #e5e5e5;border-radius:14px;overflow:hidden;">
+        <div onclick="togglePinAcordeon()" id="pin-acordeon-header"
+          style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;background:#fafafa;transition:background 0.2s;">
+          <span style="font-size:0.9rem;font-weight:700;color:#555;">🔑 Iniciar con PIN</span>
+          <span class="material-symbols-outlined" id="pin-acordeon-chevron" style="color:#aaa;font-size:1.1rem;transition:transform 0.3s;">expand_more</span>
+        </div>
+        <div id="pin-acordeon-body" style="max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1),opacity 0.3s ease;opacity:0;">
+          <div style="padding:16px 18px 20px;">
+            <div class="select-wrapper" style="margin-bottom:14px;">
+              <div id="loader-nombres" class="select-spinner"></div>
+              <select id="sel-nombre" disabled style="color:#aaa;">
+                <option value="">Cargando nombres...</option>
+              </select>
+            </div>
+            <div style="position:relative;margin-bottom:14px;">
+              <input type="password" id="input-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+                placeholder="• • • •"
+                style="text-align:center;font-size:1.8rem;letter-spacing:8px;padding-left:50px;padding-right:50px;"
+                oninput="syncPinDots()" onkeydown="if(event.key==='Enter') continuar_pin()">
+              <button type="button" onclick="togglePinVisibility()"
+                style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#888;padding:4px;line-height:1;">
+                <span class="material-symbols-outlined" id="toggle-pin-icon">visibility</span>
+              </button>
+            </div>
+            <div class="error-msg" id="err-s1"></div>
+            <div class="error-msg" id="err-pin"></div>
+            <button type="button" class="btn-forgot-pin" onclick="solicitarNuevoPIN()" style="margin-bottom:12px;">¿Olvidaste tu PIN?</button>
+            <button class="btn btn-primary" onclick="continuar_pin_desde_s1()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+          </div>
+        </div>
+      </div>
       <div style="border-top:1px solid #a89587;margin:25px 0;"></div>
       <a class="btn-wp-grupo" href="https://chat.whatsapp.com/FPupGnd1c9g1oVXu9VudKK" target="_blank">
        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -1691,8 +1728,8 @@ api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
       } else { localStorage.removeItem('session'); }
     } catch (ex) { localStorage.removeItem('session'); }
   }
-  if (!_restaurando) { ir('s1', true); }
-
+if (!_restaurando) { ir('s1', true); }
+  iniciarGoogleSignInUsuario();
   api({ action: 'getNombres' }, function(nombres) {
     var sel = document.getElementById('sel-nombre');
     sel.innerHTML = '<option value="">Elige tu nombre</option>';
@@ -2663,6 +2700,90 @@ function actualizarFotoPerfil(url) {
   if (emojiD && url) {
     emojiD.innerHTML = '<img src="' + url + '" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid #F97316;margin-bottom:12px;" onerror="this.textContent=\'🛼\'">';
   }
+}
+
+// ─── LOGIN GOOGLE USUARIOS ────────────────────────────────────────────────────
+var _gisUsuarioInicializado = false;
+
+function iniciarGoogleSignInUsuario() {
+  if (typeof google === 'undefined' || !google.accounts) {
+    setTimeout(iniciarGoogleSignInUsuario, 300); return;
+  }
+  if (!_gisUsuarioInicializado) {
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID_FRONT,
+      callback: onGoogleCredentialUsuario
+    });
+    _gisUsuarioInicializado = true;
+  }
+  var cont = document.getElementById('gsignin-usuario');
+  if (!cont) return;
+  cont.innerHTML = '';
+  google.accounts.id.renderButton(cont, { theme: 'outline', size: 'large', text: 'signin_with', locale: 'es', width: 320 });
+}
+
+function onGoogleCredentialUsuario(resp) {
+  mostrarCargando('Verificando tu cuenta...');
+  apiPost({ action: 'loginGoogle', idToken: resp.credential }, function(res) {
+    if (!res.valido) {
+      ocultarCargando();
+      var errEl = document.getElementById('err-google-login');
+      errEl.textContent = res.error || 'No encontramos una cuenta con ese correo. ¿Ya estás inscritx?';
+      errEl.style.display = 'block';
+      setTimeout(function(){ errEl.style.display = 'none'; }, 5000);
+      return;
+    }
+    _token = res.token || '';
+    E.nombre = res.nombre;
+    E.datos = res.datos;
+    E.datosCompletos = res.datos;
+    localStorage.setItem('session', JSON.stringify({ nombre: E.nombre, token: _token }));
+    vincularPush(E.nombre);
+    mostrarCargando('Cargando tus reservas...');
+    api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
+      _todasReservas = reservas;
+      ocultarCargando();
+      prepararHome();
+      ir('s-home');
+      if (E.datos && !E.datos.permisosConfigurados) {
+        setTimeout(function() { mostrarModalPermisos(E.nombre, E.datos.fotoPerfil || ''); }, 600);
+      }
+    }, function() { ocultarCargando(); prepararHome(); ir('s-home'); });
+  }, function(e) {
+    ocultarCargando();
+    var errEl = document.getElementById('err-google-login');
+    errEl.textContent = 'Error de conexión. Intenta de nuevo.';
+    errEl.style.display = 'block';
+    setTimeout(function(){ errEl.style.display = 'none'; }, 5000);
+  });
+}
+
+// ─── ACORDEÓN PIN ─────────────────────────────────────────────────────────────
+function togglePinAcordeon() {
+  var body = document.getElementById('pin-acordeon-body');
+  var chevron = document.getElementById('pin-acordeon-chevron');
+  var header = document.getElementById('pin-acordeon-header');
+  var abierto = body.style.maxHeight && body.style.maxHeight !== '0px';
+  if (!abierto) {
+    body.style.maxHeight = '400px';
+    body.style.opacity = '1';
+    chevron.style.transform = 'rotate(180deg)';
+    header.style.background = '#fff8f4';
+    chevron.style.color = '#F97316';
+  } else {
+    body.style.maxHeight = '0';
+    body.style.opacity = '0';
+    chevron.style.transform = '';
+    header.style.background = '#fafafa';
+    chevron.style.color = '#aaa';
+  }
+}
+
+function continuar_pin_desde_s1() {
+  var nombre = document.getElementById('sel-nombre').value.trim();
+  if (!nombre) { err('err-s1', 'Por favor selecciona tu nombre.'); return; }
+  E.nombre = nombre;
+  continuar_pin();
 }
 
 function solicitarNuevoPIN(){
