@@ -185,7 +185,7 @@ button, input, select, textarea { font-family: inherit; }
   transition: max-height 0.4s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease;
   background: rgba(249,115,22,0.04);
 }
-.sub-permisos.visible { max-height: 300px; opacity: 1; }
+.sub-permisos.visible { max-height: 500px; opacity: 1; }
 .sub-perm-row {
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 16px 12px 32px; gap: 12px; border-top: 1px solid var(--border);
@@ -528,28 +528,6 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
           ¿Qué quieres que Mirlxs guarde de tu cuenta? Puedes cambiarlo desde la app en cualquier momento.
         </p>
 
-<div class="campo" style="margin-bottom:16px;">
-          <label>Fecha de nacimiento <span class="req">*</span></label>
-          <div class="fecha-nac-grid">
-            <div class="select-wrap">
-              <select id="fnac-dia" aria-label="Día" onchange="onFechaNacSelectChange()">
-                <option value="">Día</option>
-              </select>
-            </div>
-            <div class="select-wrap">
-              <select id="fnac-mes" aria-label="Mes" onchange="onFechaNacSelectChange()">
-                <option value="">Mes</option>
-              </select>
-            </div>
-            <div class="select-wrap">
-              <select id="fnac-anio" aria-label="Año" onchange="onFechaNacSelectChange()">
-                <option value="">Año</option>
-              </select>
-            </div>
-          </div>
-          <p class="dato-hint">Solo usamos esto para saber si eres mayor de 18 años. No se comparte con nadie a menos que lo elijas abajo.</p>
-        </div>
-
         <div class="perm-box">
         <div class="perm-row">
           <div>
@@ -571,9 +549,21 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
             <span class="toggle-slider"></span>
           </label>
         </div>
-<div class="sub-permisos" id="sub-fecha">
-            <div style="padding:12px 16px 4px;border-top:1px solid var(--border);">
-              <p style="font-size:0.78rem;color:var(--hint);line-height:1.4;">Usaremos la fecha que ingresaste arriba ⬆️</p>
+<div class="sub-permisos visible" id="sub-fecha">
+            <div style="padding:12px 16px 10px;border-top:1px solid var(--border);">
+              <label style="font-size:0.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px;">Fecha de nacimiento <span class="req">*</span></label>
+              <div class="fecha-nac-grid">
+                <div class="select-wrap">
+                  <select id="fnac-dia" aria-label="Día" onchange="onFechaNacSelectChange()"><option value="">Día</option></select>
+                </div>
+                <div class="select-wrap">
+                  <select id="fnac-mes" aria-label="Mes" onchange="onFechaNacSelectChange()"><option value="">Mes</option></select>
+                </div>
+                <div class="select-wrap">
+                  <select id="fnac-anio" aria-label="Año" onchange="onFechaNacSelectChange()"><option value="">Año</option></select>
+                </div>
+              </div>
+              <p class="dato-hint" style="margin-top:6px;">Necesaria para verificar que eres mayor de 18 años.</p>
             </div>
             <div class="sub-perm-row">
               <label>¿Fecha pública para el equipo?</label>
@@ -926,7 +916,6 @@ function actualizarPreviewPerfil() {
 function onTogFoto(cb)  { G.guardarFoto  = cb.checked; }
 function onTogFecha(cb) {
   G.guardarFecha = cb.checked;
-  document.getElementById('sub-fecha').classList.toggle('visible', cb.checked);
 }
 
 var MESES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
