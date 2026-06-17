@@ -430,8 +430,11 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 <!-- ─── LOADING ──────────────────────────────────────────────────────── -->
 <div id="loading-overlay">
   <div class="loading-inner">
-    <img src="https://drive.google.com/thumbnail?id=1Os-zGYxwMqiQFmkzyDBk9rjaOWWM0UBo&sz=w600"
-         class="loading-logo" alt="Mirlxs">
+<img src="https://drive.google.com/thumbnail?id=1Os-zGYxwMqiQFmkzyDBk9rjaOWWM0UBo&sz=w600"
+         class="loading-logo" alt="Mirlxs"
+         style="opacity:0;transition:opacity 0.3s ease;"
+         onload="this.style.opacity='1'"
+         onerror="this.style.display='none'">
     <div class="spinner"></div>
     <p class="loading-txt">Cargando...</p>
   </div>
@@ -459,11 +462,14 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 
   <div class="header">
     <a href="https://reservas.quindesvolcanicos.com">
-      <img src="https://drive.google.com/thumbnail?id=1Os-zGYxwMqiQFmkzyDBk9rjaOWWM0UBo&sz=w600"
-           class="header-logo" alt="Mirlxs Roller Derby Quito">
+<img src="https://drive.google.com/thumbnail?id=1Os-zGYxwMqiQFmkzyDBk9rjaOWWM0UBo&sz=w600"
+           class="header-logo" alt="Mirlxs Roller Derby Quito"
+           style="opacity:0;transition:opacity 0.3s ease;"
+           onload="this.style.opacity='1'"
+           onerror="this.style.display='none'">
     </a>
-    <div class="header-title">Mirlxs Roller Derby Quito</div>
-    <p class="header-sub">Inscripción al equipo. Te pediremos información básica — el resto lo completas después desde la app.</p>
+    <div class="header-title">Inscripción a Mirlxs Roller Derby Quito</div>
+    <p class="header-sub">Te pediremos información básica para registrarte. Una vez registradx podrás hacer reservas en nuestra plataforma.</p>
   </div>
 
   <div class="progress-wrap" id="progress-wrap">
