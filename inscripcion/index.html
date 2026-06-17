@@ -1028,6 +1028,16 @@ function enviarForm() {
   G.edadPublica  = document.getElementById('tog-edad-pub').checked;
   if (!G.guardarFoto) G.foto = '';
 
+  var inputFechaNac = document.getElementById('input-fecha-nac');
+  if (G.guardarFecha && inputFechaNac && inputFechaNac.value) {
+    G.fechaNac = inputFechaNac.value;
+    calcularMayorEdad(G.fechaNac);
+  }
+  if (G.guardarFecha && !G.fechaNac) {
+    errMsg('err-form', 'Por favor ingresa tu fecha de nacimiento.');
+    return;
+  }
+
   mostrarCargando('Creando tu cuenta...');
 
   apiPost({
