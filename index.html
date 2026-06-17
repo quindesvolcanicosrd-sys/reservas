@@ -840,29 +840,6 @@ footer { display: block; }
     </div>
   </div>
 
-  <div class="pantalla" id="s1b">
-    <div class="card">
-      <div class="seccion-label">Verificación</div>
-      <h2>Ingresa tu PIN</h2>
-      <p>Introduce tu PIN de 4 dígitos para continuar.</p>
-      
-<div style="position:relative;margin:20px 0 20px;">
-  <input type="password" id="input-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4"
-    placeholder="• • • •"
-    style="text-align:center;font-size:1.8rem;letter-spacing:8px;padding-left:50px;padding-right:50px;"
-    oninput="syncPinDots()" onkeydown="if(event.key==='Enter') continuar_pin()">
-  <button type="button" onclick="togglePinVisibility()"
-    style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#888;padding:4px;line-height:1;">
-    <span class="material-symbols-outlined" id="toggle-pin-icon">visibility</span>
-  </button>
-</div>
-      <div class="error-msg" id="err-pin"></div>
-      <button type="button" class="btn-forgot-pin" onclick="solicitarNuevoPIN()">¿Olvidaste tu PIN?</button>
-      <button class="btn btn-primary" onclick="continuar_pin()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
-      
-    </div>
-  </div>
-
   <div class="pantalla" id="s-carga">
     <div class="card"><div class="loader"><div class="spinner"></div><p>Cargando tu información...</p></div></div>
   </div>
@@ -1838,7 +1815,7 @@ function toggleMesesActuales() {
 
 // ─── NAVEGACIÓN ───────────────────────────────────────────────────────────────
 var TOP_BAR_CONFIG = {
-  's1b': { titulo: 'Verificación', volver: 's1' }, 's2': { titulo: 'Equipamiento', volver: 's-home' },
+  's2': { titulo: 'Equipamiento', volver: 's-home' },
   's3a': { titulo: 'Editar equipamiento', volver: 's2' }, 's3b': { titulo: 'Editar equipamiento', volver: 's3a' },
   's3c': { titulo: 'Editar equipamiento', volver: 's3b' },
   's4': { titulo: function() { return E.reagendando ? 'Reagendar clase' : canPayMonthly() ? 'Selecciona el tipo de modalidad' : 'Fecha y pago'; }, volver: function() { return E.reagendando ? 's-home' : 's2'; } },
