@@ -897,10 +897,9 @@ function onGoogleCred(resp) {
     sp.classList.add('visible');
     // Autocompletar nombre
     if (G.nombre) { var fn = document.getElementById('f-nombre'); if (!fn.value) fn.value = G.nombre; }
-// Si Google nos dio la fecha, pre-rellenar el campo
+// Si Google nos dio la fecha, pre-rellenar los selectores
     if (G.fechaNac) {
-      var inp = document.getElementById('input-fecha-nac');
-      if (inp) inp.value = G.fechaNac;
+      establecerFechaNacEnSelects(G.fechaNac);
       calcularMayorEdad(G.fechaNac);
     }
     // Desbloquear form con pequeño delay para que se vea la animación en cascada
@@ -928,23 +927,58 @@ function onTogFoto(cb)  { G.guardarFoto  = cb.checked; }
 function onTogFecha(cb) {
   G.guardarFecha = cb.checked;
   document.getElementById('sub-fecha').classList.toggle('visible', cb.checked);
-  if (cb.checked) {
-    setTimeout(function() {
-      var inp = document.getElementById('input-fecha-nac');
-      // Si Google ya nos dio la fecha, pre-rellenar
-      if (G.fechaNac && inp && !inp.value) inp.value = G.fechaNac;
-    }, 100);
+}
+
+var MESES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function poblarSelectFechaNac() {
+  var selD = document.getElementById('fnac-dia');
+  var selM = document.getElementById('fnac-mes');
+  var selA = document.getElementById('fnac-anio');
+  if (!selD || !selM || !selA) return;
+  for (var d = 1; d <= 31; d++) {
+    var od = document.createElement('option');
+    od.value = (d < 10 ? '0' : '') + d; od.textContent = d;
+    selD.appendChild(od);
+  }
+  MESES_ES.forEach(function(nombre, idx) {
+    var om = document.createElement('option');
+    om.value = (idx + 1 < 10 ? '0' : '') + (idx + 1); om.textContent = nombre;
+    selM.appendChild(om);
+  });
+  var anioActual = new Date().getFullYear();
+  for (var a = anioActual; a >= anioActual - 100; a--) {
+    var oa = document.createElement('option');
+    oa.value = '' + a; oa.textContent = '' + a;
+    selA.appendChild(oa);
   }
 }
 
-function onFechaNacChange(inp) {
-  if (!inp.value) return;
-  // Actualizar G.fechaNac con el valor manual
-  G.fechaNac = inp.value;
-  // Recalcular mayoría de edad con esta fecha
-  calcularMayorEdad(inp.value);
-  // Ocultar bloque manual de +18 si ya lo calculamos
-  document.getElementById('bloque-mayor').style.display = 'none';
+function obtenerFechaNacISO() {
+  var d = document.getElementById('fnac-dia').value;
+  var m = document.getElementById('fnac-mes').value;
+  var a = document.getElementById('fnac-anio').value;
+  if (!d || !m || !a) return '';
+  return a + '-' + m + '-' + d;
+}
+
+function establecerFechaNacEnSelects(iso) {
+  if (!iso) return;
+  var partes = iso.split('-');
+  if (partes.length !== 3) return;
+  var selA = document.getElementById('fnac-anio');
+  var selM = document.getElementById('fnac-mes');
+  var selD = document.getElementById('fnac-dia');
+  if (selA) selA.value = partes[0];
+  if (selM) selM.value = partes[1];
+  if (selD) selD.value = partes[2];
+}
+
+function onFechaNacSelectChange() {
+  var iso = obtenerFechaNacISO();
+  if (!iso) return;
+  G.fechaNac = iso;
+  calcularMayorEdad(iso);
 }
 
 function calcularMayorEdad(fechaStr) {
@@ -1004,14 +1038,14 @@ function enviarForm() {
     .filter(Boolean);
   if (prons.length === 0) { errMsg('err-form','Selecciona al menos un pronombre.'); return; }
 
-  // Fecha de nacimiento siempre obligatoria — determina AW
-  var inputFechaNac = document.getElementById('input-fecha-nac');
-  if (!inputFechaNac || !inputFechaNac.value) {
+// Fecha de nacimiento siempre obligatoria — determina AW
+  var fechaNacISO = obtenerFechaNacISO();
+  if (!fechaNacISO) {
     errMsg('err-form','La fecha de nacimiento es obligatoria.');
-    inputFechaNac && inputFechaNac.scrollIntoView({behavior:'smooth',block:'center'});
+    document.getElementById('fnac-dia').scrollIntoView({behavior:'smooth',block:'center'});
     return;
   }
-  G.fechaNac = inputFechaNac.value;
+  G.fechaNac = fechaNacISO;
   calcularMayorEdad(G.fechaNac);
   var tel    = document.getElementById('f-telefono').value.trim();
   var minLen = parseInt(document.getElementById('f-tel-minlen').value) || 6;
@@ -1110,6 +1144,7 @@ function cerrarContacto() { document.getElementById('modal-contacto').classList.
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 window.onload = function() {
   poblarPaises();
+  poblarSelectFechaNac();
   cargarTallas();
   initGIS();
   ocultarCargando();
