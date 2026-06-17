@@ -1689,9 +1689,24 @@ window.onload = function() {
     }
   }, 12000);
 
-  var _restaurando = false;
+var _restaurando = false;
+
+  // ── Restaurar sesión admin si existe y es válida ──
+  var adminSession = localStorage.getItem('adminSession');
+  if (adminSession) {
+    try {
+      var ad = JSON.parse(adminSession);
+      if (ad.adminToken && ad.email && Date.now() < (ad.exp || 0)) {
+        _restaurando = true;
+        _adminToken = ad.adminToken; _adminEmail = ad.email;
+        adminEntrar();
+        ocultarCargando();
+      } else { localStorage.removeItem('adminSession'); }
+    } catch (ex) { localStorage.removeItem('adminSession'); }
+  }
+
   var session = localStorage.getItem('session');
-  if (session) {
+  if (!_restaurando && session) {
     try {
       var s = JSON.parse(session);
       if (s.token && s.nombre) {
