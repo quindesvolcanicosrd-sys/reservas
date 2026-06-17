@@ -305,11 +305,17 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 .btn-secondary:hover { background: rgba(249,115,22,0.18); transform: translateY(-2px); }
 
 @keyframes pulseBtn {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); border-color: transparent; }
-  50% { box-shadow: 0 0 28px 10px rgba(249,115,22,0.5); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); border-color: rgba(249,115,22,0.35); }
+  50% { box-shadow: 0 0 24px 8px rgba(249,115,22,0.4); border-color: rgba(249,115,22,0.7); }
 }
-.btn-pulse { animation: pulseBtn 2.4s ease-in-out infinite; }
-
+.btn-pulse {
+  animation: pulseBtn 2.4s ease-in-out infinite;
+  background: rgba(249,115,22,0.1) !important;
+  color: var(--brand) !important;
+  border: 2px solid rgba(249,115,22,0.35);
+  box-shadow: none !important;
+}
+.btn-pulse:hover { background: rgba(249,115,22,0.18) !important; transform: translateY(-2px); }
 .btn-spinner {
   display: inline-block; width: 18px; height: 18px;
   border: 2px solid rgba(255,255,255,0.35); border-top-color: white;
