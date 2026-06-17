@@ -882,9 +882,12 @@ function onGoogleCred(resp) {
     sp.classList.add('visible');
     // Autocompletar nombre
     if (G.nombre) { var fn = document.getElementById('f-nombre'); if (!fn.value) fn.value = G.nombre; }
-    // Mayor de 18
-    if (!G.fechaNac) { document.getElementById('bloque-mayor').style.display = 'block'; }
-    else { calcularMayorEdad(G.fechaNac); }
+// Si Google nos dio la fecha, pre-rellenar el campo
+    if (G.fechaNac) {
+      var inp = document.getElementById('input-fecha-nac');
+      if (inp) inp.value = G.fechaNac;
+      calcularMayorEdad(G.fechaNac);
+    }
     // Desbloquear form con pequeño delay para que se vea la animación en cascada
     setTimeout(desbloquearForm, 250);
   }, function(e){ ocultarCargando(); errMsg('err-p0','Error de conexión: '+e.message); });
@@ -1024,16 +1027,6 @@ function enviarForm() {
   G.fechaPublica = document.getElementById('tog-fecha-pub').checked;
   G.edadPublica  = document.getElementById('tog-edad-pub').checked;
   if (!G.guardarFoto) G.foto = '';
-
-  var inputFechaNac = document.getElementById('input-fecha-nac');
-  if (G.guardarFecha && inputFechaNac && inputFechaNac.value) {
-    G.fechaNac = inputFechaNac.value;
-    calcularMayorEdad(G.fechaNac);
-  }
-  if (G.guardarFecha && !G.fechaNac) {
-    errMsg('err-form', 'Por favor ingresa tu fecha de nacimiento.');
-    return;
-  }
 
   mostrarCargando('Creando tu cuenta...');
 
