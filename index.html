@@ -831,10 +831,7 @@ footer { display: block; }
         <span class="material-symbols-outlined" style="font-size:1rem;">share</span> Contáctanos
       </button>
       </div>
-      <button class="btn btn-secondary" style="margin-top:10px;font-size:0.82rem;padding:12px;text-transform:none;letter-spacing:0;" onclick="irAdminLogin()">
-        <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">admin_panel_settings</span> Administradorx
-      </button>
-    </div>
+      </div>
   </div>
 
   <div class="pantalla" id="s-carga">
@@ -1762,7 +1759,9 @@ window.addEventListener('pageshow', function(e) {
     var ov = document.getElementById('loading-overlay');
     ov.classList.remove('fade-out');
     ov.style.display = 'flex';
-    if (E.datos) {
+    if (_adminToken) {
+      ir('s-admin-home');
+    } else if (E.datos) {
       prepararHome();
       ir('s-home');
     } else {
