@@ -521,9 +521,17 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
         </div>
       </div>
       <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;line-height:1.5;">
-        ¿Qué quieres que Mirlxs guarde de tu cuenta? Puedes cambiarlo desde la app en cualquier momento.
-      </p>
-      <div class="perm-box">
+          ¿Qué quieres que Mirlxs guarde de tu cuenta? Puedes cambiarlo desde la app en cualquier momento.
+        </p>
+
+        <div class="campo" style="margin-bottom:16px;">
+          <label>Fecha de nacimiento <span class="req">*</span></label>
+          <input type="date" id="input-fecha-nac"
+            onchange="onFechaNacChange(this)">
+          <p class="dato-hint">Solo usamos esto para saber si eres mayor de 18 años. No se comparte con nadie a menos que lo elijas abajo.</p>
+        </div>
+
+        <div class="perm-box">
         <div class="perm-row">
           <div>
             <div class="perm-label">📸 Foto de perfil</div>
@@ -595,20 +603,6 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
           <input type="text" id="f-pron-otro" placeholder="Ej: Xe/xem">
         </div>
       </div>
-
-      <div id="bloque-mayor" style="display:none;">
-        <div class="campo">
-          <label>¿Eres mayor de 18 años? <span class="req">*</span></label>
-          <div class="select-wrap">
-            <select id="f-mayor">
-              <option value="">Selecciona</option>
-              <option value="Mayor de 18">Sí, soy mayor de 18 años</option>
-              <option value="Menor de 18">No, tengo menos de 18 años</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
       <div class="campo">
         <label>País <span class="req">*</span></label>
         <div class="prefijo-wrap">
