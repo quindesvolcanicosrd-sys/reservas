@@ -631,9 +631,10 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
       <p id="form-subtitulo" style="font-size:0.88rem;color:var(--muted);margin-bottom:4px;line-height:1.5;">
         Usamos Google para verificar tu correo y evitar registros duplicados.
       </p>
-      <div class="gsignin-wrap" id="gsignin-btn" style="margin-top:20px;margin-bottom:0px;height:44px;overflow:hidden;">
-        <div id="gsignin-skeleton" style="width:280px;height:44px;border-radius:4px;background:linear-gradient(90deg,var(--border) 25%,rgba(229,229,229,0.5) 50%,var(--border) 75%);background-size:200% 100%;animation:skeletonShimmer 1.2s ease-in-out infinite;"></div>
-      </div>
+      <div style="position:relative;height:44px;display:flex;justify-content:center;margin-top:20px;margin-bottom:0px;">
+  <div id="gsignin-skeleton" style="position:absolute;inset:0;width:280px;margin:0 auto;border-radius:4px;background:linear-gradient(90deg,var(--border) 25%,rgba(229,229,229,0.5) 50%,var(--border) 75%);background-size:200% 100%;animation:skeletonShimmer 1.2s ease-in-out infinite;transition:opacity 0.4s ease;z-index:1;"></div>
+  <div class="gsignin-wrap" id="gsignin-btn" style="height:44px;overflow:hidden;"></div>
+</div>
       <div class="error-msg" id="err-p0"></div>
     </div>
 
@@ -969,7 +970,8 @@ function initGIS() {
   var cont = document.getElementById('gsignin-btn');
   cont.innerHTML = '';
 google.accounts.id.renderButton(cont, { theme:'outline', size:'large', text:'signin_with', locale:'es', width:280 });
-  _gisReady = true;
+  var sk = document.getElementById('gsignin-skeleton');
+  if (sk) { sk.style.opacity = '0'; setTimeout(function(){ sk.style.display = 'none'; }, 400); }  _gisReady = true;
   cont.style.animation = 'fadeInBtn 0.4s ease 0.7s both';
 }
 
