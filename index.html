@@ -619,9 +619,12 @@ select, option, optgroup {
   #modal-contacto button { background: #2a2a2a !important; color: #ccc !important; }
   #modal-contacto .modal-ct { color: #f0f0f0 !important; }
 #s1 button[onclick="abrirContacto()"] { background: #2d1f5e !important; color: #c4b5fd !important; border-color: #6d28d9 !important; }
-#pin-acordeon-header { background: #252525 !important; border-color: #2a2a2a !important; }
+#pin-acordeon-header { background: #252525 !important; }
   #pin-acordeon-header span { color: #aaa !important; }
+  #pin-acordeon-body { background: #1c1c1c; }
   #pin-acordeon-body > div { background: #1c1c1c; }
+  #pin-acordeon-body select { background: #252525 !important; border-color: #333 !important; color: #f0f0f0 !important; }
+  #pin-acordeon-body .select-wrapper::after { color: #fb923c; }
   #modal-permisos > div { background: #1c1c1c !important; }
   #modal-permisos div[style*="background:#fafafa"] { background: #252525 !important; border-color: #2a2a2a !important; }
   #modal-permisos div[style*="border-top:1px"] { border-color: #333 !important; }
@@ -767,7 +770,7 @@ footer { display: block; }
            target="_blank" style="color:#F97316;font-weight:700;text-decoration:none;">este formulario</a>.
       </p>
 <!-- Google Sign-In -->
-      <div id="gsignin-usuario" style="margin-bottom:4px;min-height:44px;height:44px;overflow:hidden;animation:fadeInBtn 0.4s ease 0.7s both;"></div>
+      <div id="gsignin-usuario" style="margin-bottom:4px;min-height:44px;height:44px;overflow:hidden;animation:fadeInBtn 0.4s ease 0.7s both;display:flex;justify-content:center;"></div>
       <div class="error-msg" id="err-google-login"></div>
 
       <div style="display:flex;align-items:center;gap:10px;margin:18px 0 14px;">
