@@ -463,7 +463,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
            class="header-logo" alt="Mirlxs Roller Derby Quito">
     </a>
     <div class="header-title">Mirlxs Roller Derby Quito</div>
-    <p class="header-sub">Inscripción al equipo. Te pediremos información básica — el resto lo completás después desde la app.</p>
+    <p class="header-sub">Inscripción al equipo. Te pediremos información básica — el resto lo completas después desde la app.</p>
   </div>
 
   <div class="progress-wrap" id="progress-wrap">
@@ -481,7 +481,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
       <p style="margin-bottom:16px;">Usamos tu cuenta de Google para verificar tu correo y configurar tu ingreso. Nada se publica ni se comparte con terceros.</p>
 
       <div class="gsignin-info">
-        🔒 Solo leeremos tu correo para evitar registros duplicados. Los otros datos son opcionales y los controlás tu.
+        🔒 Solo leeremos tu correo para evitar registros duplicados. Los otros datos son opcionales y los controlas tú.
       </div>
 
       <div class="gsignin-wrap" id="gsignin-btn"></div>
@@ -499,7 +499,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
         </div>
 
         <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;line-height:1.5;">
-          ¿Qué querés que Mirlxs guarde de tu cuenta? Podés cambiar esto en cualquier momento desde la app.
+          ¿Qué quieres que Mirlxs guarde de tu cuenta? Puedes cambiar esto en cualquier momento desde la app.
         </p>
 
         <div class="perm-box">
@@ -563,7 +563,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 
       <div class="campo">
         <label>Nombre de pista <span class="req">*</span></label>
-        <input type="text" id="f-nombre" placeholder="Como querés que todes te llamen"
+        <input type="text" id="f-nombre" placeholder="Como quieres que todes te llamen"
                oninput="validarNombreLive(this)" autocomplete="off">
         <p class="dato-hint">Solo letras y espacios. Mínimo 2 caracteres. Este será tu nombre de acceso en la app.</p>
         <p id="hint-nombre-ok" style="font-size:0.78rem;color:#16a34a;margin-top:4px;display:none;">✓ Disponible</p>
@@ -614,7 +614,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
         <div class="prefijo-wrap">
           <div class="prefijo-flag" id="pref-flag">🇪🇨</div>
           <input type="text" id="f-prefijo-txt" list="paises-list"
-                 placeholder="Ecuador +593 o buscá tu país"
+                 placeholder="Ecuador +593 o busca tu país"
                  oninput="onPrefijoInput(this)" autocomplete="off">
           <input type="hidden" id="f-prefijo-val" value="🇪🇨 +593 (Ecuador)">
           <input type="hidden" id="f-prefijo-code" value="593">
@@ -642,10 +642,10 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
   <div class="pantalla" id="p3">
     <div class="card">
       <div class="sec-label">Paso 4 — Equipamiento</div>
-      <h2>¿Qué necesitás del equipo?</h2>
+      <h2>¿Qué necesitas del equipo?</h2>
 
       <div class="campo">
-        <label>¿Necesitás patines prestados? <span class="req">*</span></label>
+        <label>¿Necesitas patines prestados? <span class="req">*</span></label>
         <div class="opciones">
           <label class="opcion" onclick="selPat(this,'Sí')">
             <input type="radio" name="patines" value="Sí"> Sí, necesito patines
@@ -668,7 +668,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
       </div>
 
       <div class="campo">
-        <label>¿Necesitás protecciones? <span class="req">*</span></label>
+        <label>¿Necesitas protecciones? <span class="req">*</span></label>
         <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;line-height:1.5;">
           Casco, rodilleras, coderas y muñequeras.
         </p>
@@ -712,7 +712,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
       <div class="exito-title">¡Bienvenidx al equipo!</div>
       <p class="exito-sub">
         Tu cuenta <span class="exito-nombre" id="exito-nombre"></span> fue creada con éxito.<br>
-        Ya podés reservar equipamiento y gestionar tus clases desde la app.
+        Ya puedes reservar equipamiento y gestionar tus clases desde la app.
       </p>
 
       <a href="https://chat.whatsapp.com/FPupGnd1c9g1oVXu9VudKK" target="_blank"
@@ -920,14 +920,14 @@ function onGoogleCred(resp) {
     // Si no viene, la pedimos manualmente en p1
     G.fechaNac  = payload.birthdate || '';
   } catch(ex) {
-    ocultarCargando(); errMsg('err-p0','Error al leer el token. Intentá de nuevo.'); return;
+    ocultarCargando(); errMsg('err-p0','Error al leer el token. Intenta de nuevo.'); return;
   }
 
   // Verificar que el email no esté ya registrado
   apiGet({ action:'verificarEmailDisponible', email:G.email }, function(res){
     ocultarCargando();
     if (!res.disponible) {
-      errMsg('err-p0', 'Este correo ya tiene una cuenta registrada ("' + res.nombre + '"). Podés iniciar sesión directamente en la app.');
+      errMsg('err-p0', 'Este correo ya tiene una cuenta registrada ("' + res.nombre + '"). Puedes iniciar sesión directamente en la app.');
       return;
     }
     // Mostrar preview de perfil
@@ -1027,11 +1027,11 @@ function continuar_p1() {
       }
       return cb.value;
     }).filter(Boolean);
-  if (prons.length === 0) { errMsg('err-p1','Seleccioná al menos un pronombre.'); return; }
+  if (prons.length === 0) { errMsg('err-p1','Selecciona al menos un pronombre.'); return; }
 
   if (!G.fechaNac) {
     var mayor = document.getElementById('f-mayor').value;
-    if (!mayor) { errMsg('err-p1','Indicá si sos mayor de 18 años.'); return; }
+    if (!mayor) { errMsg('err-p1','Indica si eres mayor de 18 años.'); return; }
     G.mayorEdad = mayor;
   }
 
@@ -1067,7 +1067,7 @@ function selProtec(label, val) {
 function cargarTallas() {
   apiGet({action:'getTallasDisponibles'}, function(tallas){
     var sel = document.getElementById('f-talla');
-    sel.innerHTML = '<option value="">Elegí una talla</option>';
+    sel.innerHTML = '<option value="">Elige una talla</option>';
     tallas.forEach(function(t){
       var o=document.createElement('option'); o.value=o.textContent=t; sel.appendChild(o);
     });
@@ -1077,20 +1077,20 @@ function cargarTallas() {
 // ─── ENVIAR ───────────────────────────────────────────────────────────────────
 function enviarForm() {
   var patRad = document.querySelector('input[name="patines"]:checked');
-  if (!patRad) { errMsg('err-p3','Indicá si necesitás patines.'); return; }
+  if (!patRad) { errMsg('err-p3','Indica si necesitas patines.'); return; }
   var patines = patRad.value;
   var talla   = '';
   if (patines === 'Sí') {
     talla = document.getElementById('f-talla').value;
-    if (!talla) { errMsg('err-p3','Seleccioná una talla de patines.'); return; }
+    if (!talla) { errMsg('err-p3','Selecciona una talla de patines.'); return; }
   }
 
   var protecRad = document.querySelector('input[name="protec"]:checked');
-  if (!protecRad) { errMsg('err-p3','Indicá si necesitás protecciones.'); return; }
+  if (!protecRad) { errMsg('err-p3','Indica si necesitas protecciones.'); return; }
   var protec = protecRad.value;
   if (protec === 'Otro') {
     var otroT = document.getElementById('f-protec-otro').value.trim();
-    if (!otroT) { errMsg('err-p3','Describí qué protecciones necesitás.'); return; }
+    if (!otroT) { errMsg('err-p3','Describe qué protecciones necesitas.'); return; }
     protec = otroT;
   }
 
@@ -1131,7 +1131,7 @@ function enviarForm() {
                  res.error && res.error.toLowerCase().includes('correo')  ? 0 : 3;
       irPaso(paso);
       var errIds = ['err-p0','err-p1','err-p2','err-p3'];
-      errMsg(errIds[paso] || 'err-p3', res.error || 'Error al registrarse. Intentá de nuevo.');
+      errMsg(errIds[paso] || 'err-p3', res.error || 'Error al registrarse. Intenta de nuevo.');
     }
   }, function(e){
     irPaso(3);
