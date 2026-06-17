@@ -389,6 +389,23 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
   ::placeholder { color: #555 !important; }
 }
 
+/* ─── FORM LOCK STATE ────────────────────────────────────────────────── */
+.form-locked {
+  opacity: 0.32;
+  pointer-events: none;
+  user-select: none;
+  filter: blur(0.4px);
+  transition: opacity 0.5s cubic-bezier(0.16,1,0.3,1), filter 0.5s ease;
+}
+.form-unlocked {
+  opacity: 1; pointer-events: auto; user-select: auto; filter: none;
+  animation: unlockForm 0.55s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes unlockForm {
+  from { opacity: 0.32; transform: translateY(8px); filter: blur(0.4px); }
+  to   { opacity: 1;    transform: translateY(0);   filter: none; }
+}
+
 /* ─── MODAL CONTACTO ─────────────────────────────────────────────────── */
 #modal-contacto {
   display: none; position: fixed; inset: 0; z-index: 9500;
@@ -471,106 +488,83 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
     <div class="header-title">Inscripción a Mirlxs Roller Derby Quito</div>
   </div>
 
-  <div class="progress-wrap" id="progress-wrap">
-    <div class="prog-dot active" id="d1"></div>
-    <div class="prog-dot" id="d2"></div>
-    <div class="prog-dot" id="d3"></div>
-    <div class="prog-dot" id="d4"></div>
-  </div>
+  <!-- ══ FORMULARIO ÚNICO ══════════════════════════════════════════════ -->
+  <div class="card" id="form-card">
 
-  <!-- ══ PASO 0: Google Sign-In + permisos ══════════════════════════════ -->
-  <div class="pantalla activa" id="p0">
-    <div class="card">
-      <div class="sec-label">Paso 1 — Registra tu cuenta</div>
-      <h2>Inscríbete con tu cuenta de Google</h2>
-          <p class="header-sub">Te pediremos información básica para registrarte. Una vez registradx podrás hacer reservas en nuestra plataforma.</p>
-      <div class="gsignin-info">
-        🔒 leeremos tu correo para evitar registros duplicados y darte acceso a la plataforma de manera segura. Tú controlarás que datos sabremos de tu cuenta.
-      </div>
-
-      <div class="gsignin-wrap" id="gsignin-btn"></div>
+    <!-- Google Sign-In -->
+    <div id="section-google">
+      <div class="sec-label">Inscripción al equipo</div>
+      <h2 id="form-titulo">Conecta tu cuenta para empezar</h2>
+      <p id="form-subtitulo" style="font-size:0.88rem;color:var(--muted);margin-bottom:4px;line-height:1.5;">
+        Usamos Google para verificar tu correo y evitar registros duplicados.
+      </p>
+      <div class="gsignin-wrap" id="gsignin-btn" style="margin-top:20px;margin-bottom:4px;"></div>
       <div class="error-msg" id="err-p0"></div>
+    </div>
 
-      <!-- Se muestra luego del sign-in -->
-      <div id="permisos-wrap" style="display:none;">
-
-        <div class="profile-preview" id="profile-preview">
-          <div class="profile-avatar-placeholder" id="pf-initials">?</div>
-          <div class="profile-info-text">
-            <div class="profile-name" id="pf-name">—</div>
-            <div class="profile-email" id="pf-email">—</div>
-          </div>
+    <!-- Preview + permisos (aparece tras sign-in) -->
+    <div id="section-permisos" class="campo-cond">
+      <div class="profile-preview" id="profile-preview">
+        <div class="profile-avatar-placeholder" id="pf-initials">?</div>
+        <div class="profile-info-text">
+          <div class="profile-name" id="pf-name">—</div>
+          <div class="profile-email" id="pf-email">—</div>
         </div>
-
-        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;line-height:1.5;">
-          ¿Qué quieres que Mirlxs guarde de tu cuenta? Puedes cambiar esto en cualquier momento desde la app.
-        </p>
-
-        <div class="perm-box">
-          <!-- Foto -->
-          <div class="perm-row">
-            <div>
-              <div class="perm-label">📸 Foto de perfil</div>
-              <div class="perm-sub">Se muestra en tu home en vez del 🛼</div>
-            </div>
+      </div>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;line-height:1.5;">
+        ¿Qué quieres que Mirlxs guarde de tu cuenta? Puedes cambiarlo desde la app en cualquier momento.
+      </p>
+      <div class="perm-box">
+        <div class="perm-row">
+          <div>
+            <div class="perm-label">📸 Foto de perfil</div>
+            <div class="perm-sub">Se muestra en tu home en vez del 🛼</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="tog-foto" onchange="onTogFoto(this)">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="perm-row">
+          <div>
+            <div class="perm-label">🎂 Fecha de nacimiento</div>
+            <div class="perm-sub">Para que te deseen feliz cumpleaños en el grupo</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="tog-fecha" onchange="onTogFecha(this)">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="sub-permisos" id="sub-fecha">
+          <div class="sub-perm-row">
+            <label>¿Fecha pública para el equipo?</label>
             <label class="toggle-switch">
-              <input type="checkbox" id="tog-foto" onchange="onTogFoto(this)">
+              <input type="checkbox" id="tog-fecha-pub">
               <span class="toggle-slider"></span>
             </label>
           </div>
-          <!-- Fecha de nacimiento -->
-          <div class="perm-row">
-            <div>
-              <div class="perm-label">🎂 Fecha de nacimiento</div>
-              <div class="perm-sub">Para que te deseen feliz cumpleaños en el grupo</div>
-            </div>
+          <div class="sub-perm-row">
+            <label>¿Edad pública para el equipo?</label>
             <label class="toggle-switch">
-              <input type="checkbox" id="tog-fecha" onchange="onTogFecha(this)">
+              <input type="checkbox" id="tog-edad-pub">
               <span class="toggle-slider"></span>
             </label>
           </div>
-          <!-- Sub-permisos fecha -->
-          <div class="sub-permisos" id="sub-fecha">
-            <div class="sub-perm-row">
-              <label>¿Fecha pública para el equipo?</label>
-              <label class="toggle-switch">
-                <input type="checkbox" id="tog-fecha-pub">
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-            <div class="sub-perm-row">
-              <label>¿Edad pública para el equipo?</label>
-              <label class="toggle-switch">
-                <input type="checkbox" id="tog-edad-pub">
-                <span class="toggle-slider"></span>
-              </label>
-            </div>
-          </div>
         </div>
-
-        <p id="aviso-fecha-requerida" style="display:none;font-size:0.8rem;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin:10px 0;line-height:1.5;">
-          📅 Si queremos calcular si sos mayor de 18 necesitamos tu fecha de nacimiento de Google. Si no la tenés configurada en tu cuenta, te la preguntaremos en el siguiente paso.
-        </p>
-
-        <button class="btn btn-primary" onclick="continuar_p0()" style="margin-top:16px;">
-          Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span>
-        </button>
       </div>
     </div>
-  </div>
 
-  <!-- ══ PASO 1: Nombre + pronombres ═══════════════════════════════════ -->
-  <div class="pantalla" id="p1">
-    <div class="card">
-      <div class="sec-label">Paso 2 — Tu identidad en el equipo</div>
-      <h2>¿Cómo te llamamos?</h2>
+    <hr class="divider" id="divider-form" style="display:none;margin:20px 0;">
+
+    <!-- Campos (bloqueados hasta sign-in) -->
+    <div id="section-form" class="form-locked">
 
       <div class="campo">
         <label>Nombre de pista <span class="req">*</span></label>
         <input type="text" id="f-nombre" placeholder="Como quieres que todes te llamen"
                oninput="validarNombreLive(this)" autocomplete="off">
-        <p class="dato-hint">Solo letras y espacios. Mínimo 2 caracteres. Este será tu nombre de acceso en la app.</p>
-        <p id="hint-nombre-ok" style="font-size:0.78rem;color:#16a34a;margin-top:4px;display:none;">✓ Disponible</p>
+        <p class="dato-hint">Solo letras y espacios. Mínimo 2 caracteres.</p>
+        <p id="hint-nombre-ok" style="font-size:0.78rem;color:#16a34a;margin-top:4px;display:none;">✓ Nombre válido</p>
       </div>
 
       <div class="campo">
@@ -582,14 +576,13 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
           <input type="checkbox" name="pron" value="Otro" onchange="toggleOtroPron(this)"> Otro
         </label>
         <div class="campo-cond" id="cond-pron-otro">
-          <input type="text" id="f-pron-otro" placeholder="Ej: Xe/xem" style="margin-top:2px;">
+          <input type="text" id="f-pron-otro" placeholder="Ej: Xe/xem">
         </div>
       </div>
 
-      <!-- Mayor de 18: solo se muestra si Google no dio la fecha -->
       <div id="bloque-mayor" style="display:none;">
         <div class="campo">
-          <label>¿Sos mayor de 18 años? <span class="req">*</span></label>
+          <label>¿Eres mayor de 18 años? <span class="req">*</span></label>
           <div class="select-wrap">
             <select id="f-mayor">
               <option value="">Selecciona</option>
@@ -599,19 +592,6 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
           </div>
         </div>
       </div>
-
-      <div class="error-msg" id="err-p1"></div>
-      <button class="btn btn-primary" onclick="continuar_p1()">
-        Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- ══ PASO 2: Teléfono ═══════════════════════════════════════════════ -->
-  <div class="pantalla" id="p2">
-    <div class="card">
-      <div class="sec-label">Paso 3 — Contacto</div>
-      <h2>Tu número de teléfono</h2>
 
       <div class="campo">
         <label>País <span class="req">*</span></label>
@@ -635,19 +615,6 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
         <p class="dato-hint">Sin prefijo ni espacios.</p>
       </div>
 
-      <div class="error-msg" id="err-p2"></div>
-      <button class="btn btn-primary" onclick="continuar_p2()">
-        Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- ══ PASO 3: Equipamiento ═══════════════════════════════════════════ -->
-  <div class="pantalla" id="p3">
-    <div class="card">
-      <div class="sec-label">Paso 4 — Equipamiento</div>
-      <h2>¿Qué necesitas del equipo?</h2>
-
       <div class="campo">
         <label>¿Necesitas patines prestados? <span class="req">*</span></label>
         <div class="opciones">
@@ -658,14 +625,11 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
             <input type="radio" name="patines" value="No"> No, tengo mis propios patines
           </label>
         </div>
-
         <div class="campo-cond" id="cond-talla">
-          <div class="campo" style="margin-bottom:0;">
+          <div class="campo" style="margin-bottom:0;padding-top:2px;">
             <label>Talla de patines <span class="req">*</span></label>
             <div class="select-wrap">
-              <select id="f-talla">
-                <option value="">Cargando tallas...</option>
-              </select>
+              <select id="f-talla"><option value="">Elige una talla</option></select>
             </div>
           </div>
         </div>
@@ -694,23 +658,16 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
         </div>
       </div>
 
-      <div class="error-msg" id="err-p3"></div>
-      <button class="btn btn-primary" id="btn-enviar" onclick="enviarForm()">
+      <div class="error-msg" id="err-form"></div>
+      <button class="btn btn-primary" id="btn-enviar" onclick="enviarForm()" style="margin-top:8px;">
         Inscribirme 🛼
       </button>
-    </div>
-  </div>
 
-  <!-- ══ PASO ENVIANDO ══════════════════════════════════════════════════ -->
-  <div class="pantalla" id="p-enviando">
-    <div class="card" style="text-align:center;padding:48px 24px;">
-      <div class="spinner" style="width:48px;height:48px;border-width:4px;margin:0 auto 20px;"></div>
-      <p style="font-weight:600;color:var(--muted);">Creando tu cuenta...</p>
-    </div>
-  </div>
+    </div><!-- /section-form -->
+  </div><!-- /form-card -->
 
-  <!-- ══ ÉXITO ══════════════════════════════════════════════════════════ -->
-  <div class="pantalla" id="p-exito">
+  <!-- ÉXITO -->
+  <div id="section-exito" style="display:none;">
     <div class="card" style="text-align:center;">
       <span class="exito-icon">🎉</span>
       <div class="exito-title">¡Bienvenidx al equipo!</div>
@@ -718,21 +675,17 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
         Tu cuenta <span class="exito-nombre" id="exito-nombre"></span> fue creada con éxito.<br>
         Ya puedes reservar equipamiento y gestionar tus clases desde la app.
       </p>
-
-      <a href="https://chat.whatsapp.com/FPupGnd1c9g1oVXu9VudKK" target="_blank"
-         class="btn btn-green">
+      <a href="https://chat.whatsapp.com/FPupGnd1c9g1oVXu9VudKK" target="_blank" class="btn btn-green">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white">
           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
           <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.845L.057 23.571a.75.75 0 0 0 .92.921l5.763-1.473A11.943 11.943 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.006-1.374l-.36-.214-3.713.949.981-3.625-.235-.374A9.818 9.818 0 1 1 12 21.818z"/>
         </svg>
         Unirse al grupo de WhatsApp
       </a>
-
       <button class="btn btn-purple" onclick="abrirContacto()">
         <span class="material-symbols-outlined" style="font-size:1.1rem;">share</span>
         ¿Dudas o preguntas? Contáctanos
       </button>
-
       <a href="https://reservas.quindesvolcanicos.com" class="btn btn-primary btn-pulse">
         <span class="material-symbols-outlined" style="font-size:1.1rem;">calendar_month</span>
         ¡Hacer mi primera reserva!
@@ -867,36 +820,14 @@ function apiGet(params, ok, fail) {
   .catch(fail);
 }
 
-// ─── PANTALLAS ────────────────────────────────────────────────────────────────
-var _paso = 0;
-function irPaso(n, sinHistorial) {
-  var ids = ['p0','p1','p2','p3','p-enviando','p-exito'];
-  ids.forEach(function(id){ var el=document.getElementById(id); if(el){ el.classList.remove('activa'); el.style.display=''; }});
-  var el = document.getElementById(ids[n] || n);
-  if (!el) return;
-  el.classList.add('activa');
-  _paso = n;
-  actualizarProgress(n);
-  window.scrollTo({top:0,behavior:'smooth'});
-  if (!sinHistorial && n < 4) history.pushState({paso:n},'','#p'+n);
+// ─── UNLOCK ──────────────────────────────────────────────────────────────────
+function desbloquearForm() {
+  var sf = document.getElementById('section-form');
+  sf.classList.remove('form-locked');
+  sf.classList.add('form-unlocked');
+  var div = document.getElementById('divider-form');
+  if (div) { div.style.display = ''; div.style.animation = 'slideUp 0.4s 0.15s both'; }
 }
-
-function actualizarProgress(n) {
-  var wrap = document.getElementById('progress-wrap');
-  if (n >= 4) { wrap.style.opacity='0'; return; }
-  wrap.style.opacity='1';
-  for(var i=1;i<=4;i++){
-    var d=document.getElementById('d'+i);
-    if(!d) continue;
-    if(i-1 < n) { d.className='prog-dot done'; }
-    else if(i-1===n) { d.className='prog-dot active'; }
-    else { d.className='prog-dot'; }
-  }
-}
-
-window.addEventListener('popstate', function(e){
-  if(e.state && typeof e.state.paso === 'number') irPaso(e.state.paso, true);
-});
 
 // ─── GOOGLE SIGN-IN ───────────────────────────────────────────────────────────
 var _gisReady = false;
@@ -912,34 +843,39 @@ function initGIS() {
 
 function onGoogleCred(resp) {
   mostrarCargando('Verificando cuenta...');
-  // Decodificar JWT payload (no verificamos firma en cliente — solo para UX)
   try {
     var parts   = resp.credential.split('.');
-    var payload = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/,'/')));
-    G.idToken   = resp.credential;
-    G.email     = (payload.email || '').toLowerCase();
-    G.nombre    = (payload.given_name || payload.name || '').split(' ')[0];
-    G.foto      = payload.picture || '';
-    // Fecha de nacimiento: Google raramente la incluye en el ID token
-    // Si no viene, la pedimos manualmente en p1
-    G.fechaNac  = payload.birthdate || '';
+    var payload = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
+    G.idToken  = resp.credential;
+    G.email    = (payload.email || '').toLowerCase();
+    G.nombre   = (payload.given_name || payload.name || '').split(' ')[0];
+    G.foto     = payload.picture || '';
+    G.fechaNac = payload.birthdate || '';
   } catch(ex) {
     ocultarCargando(); errMsg('err-p0','Error al leer el token. Intenta de nuevo.'); return;
   }
 
-  // Verificar que el email no esté ya registrado
   apiGet({ action:'verificarEmailDisponible', email:G.email }, function(res){
     ocultarCargando();
     if (!res.disponible) {
-      errMsg('err-p0', 'Este correo ya tiene una cuenta registrada ("' + res.nombre + '"). Puedes iniciar sesión directamente en la app.');
+      errMsg('err-p0','Este correo ya tiene una cuenta registrada ("' + res.nombre + '"). Puedes iniciar sesión directamente en la app.');
       return;
     }
-    // Mostrar preview de perfil
-    actualizarPreviewPerfil();
-    document.getElementById('permisos-wrap').style.display = 'block';
-    document.getElementById('permisos-wrap').style.animation = 'slideUp 0.4s cubic-bezier(0.16,1,0.3,1) both';
+    // Ocultar botón Google, actualizar título
     document.getElementById('gsignin-btn').style.display = 'none';
-    if (!G.fechaNac) document.getElementById('aviso-fecha-requerida').style.display = 'block';
+    document.getElementById('form-titulo').textContent = '¡Casi listo! Completa tu registro';
+    document.getElementById('form-subtitulo').style.display = 'none';
+    // Mostrar permisos
+    actualizarPreviewPerfil();
+    var sp = document.getElementById('section-permisos');
+    sp.classList.add('visible');
+    // Autocompletar nombre
+    if (G.nombre) { var fn = document.getElementById('f-nombre'); if (!fn.value) fn.value = G.nombre; }
+    // Mayor de 18
+    if (!G.fechaNac) { document.getElementById('bloque-mayor').style.display = 'block'; }
+    else { calcularMayorEdad(G.fechaNac); }
+    // Desbloquear form con pequeño delay para que se vea la animación en cascada
+    setTimeout(desbloquearForm, 250);
   }, function(e){ ocultarCargando(); errMsg('err-p0','Error de conexión: '+e.message); });
 }
 
@@ -965,31 +901,6 @@ function onTogFecha(cb) {
   document.getElementById('sub-fecha').classList.toggle('visible', cb.checked);
 }
 
-function continuar_p0() {
-  G.guardarFoto   = document.getElementById('tog-foto').checked;
-  G.guardarFecha  = document.getElementById('tog-fecha').checked;
-  G.fechaPublica  = document.getElementById('tog-fecha-pub').checked;
-  G.edadPublica   = document.getElementById('tog-edad-pub').checked;
-  if (!G.guardarFoto)  G.foto = '';
-  if (!G.guardarFecha) { /* conservamos G.fechaNac solo para calcular mayoría */ }
-
-  // Auto-completar nombre en p1 si Google lo dio
-  if (G.nombre) {
-    var fn = document.getElementById('f-nombre');
-    if (!fn.value) fn.value = G.nombre;
-  }
-
-  // Mostrar bloque mayor de 18 si Google no tiene la fecha
-  if (!G.fechaNac) {
-    document.getElementById('bloque-mayor').style.display = 'block';
-  } else {
-    calcularMayorEdad(G.fechaNac);
-    document.getElementById('bloque-mayor').style.display = 'none';
-  }
-
-  irPaso(1);
-}
-
 function calcularMayorEdad(fechaStr) {
   var fn = new Date(fechaStr);
   if (isNaN(fn.getTime())) { G.mayorEdad = ''; return; }
@@ -1004,56 +915,12 @@ function calcularMayorEdad(fechaStr) {
 var _nombreTimer = null;
 function validarNombreLive(inp) {
   inp.value = inp.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]/g,'');
-  clearTimeout(_nombreTimer);
-  document.getElementById('hint-nombre-ok').style.display='none';
-  if (inp.value.trim().length < 2) return;
-  _nombreTimer = setTimeout(function(){
-    apiGet({action:'verificarEmailDisponible',email:inp.value.trim()+'__nombre_check__'}, function(){}, function(){});
-    // Solo feedback visual básico (la verificación real es en el backend al enviar)
-    document.getElementById('hint-nombre-ok').style.display='block';
-  }, 600);
+  var ok = document.getElementById('hint-nombre-ok');
+  if (ok) ok.style.display = inp.value.trim().length >= 2 ? 'block' : 'none';
 }
 
 function toggleOtroPron(cb) {
   document.getElementById('cond-pron-otro').classList.toggle('visible', cb.checked);
-}
-
-function continuar_p1() {
-  var nombre = document.getElementById('f-nombre').value.trim();
-  if (!nombre || nombre.length < 2) { errMsg('err-p1','El nombre debe tener al menos 2 caracteres.'); return; }
-  if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]+$/.test(nombre)) { errMsg('err-p1','Solo se permiten letras y espacios.'); return; }
-
-  var prons = Array.from(document.querySelectorAll('input[name="pron"]:checked'))
-    .map(function(cb){
-      if (cb.value==='Otro') {
-        var t=document.getElementById('f-pron-otro').value.trim();
-        return t || null;
-      }
-      return cb.value;
-    }).filter(Boolean);
-  if (prons.length === 0) { errMsg('err-p1','Selecciona al menos un pronombre.'); return; }
-
-  if (!G.fechaNac) {
-    var mayor = document.getElementById('f-mayor').value;
-    if (!mayor) { errMsg('err-p1','Indica si eres mayor de 18 años.'); return; }
-    G.mayorEdad = mayor;
-  }
-
-  irPaso(2);
-}
-
-// ─── PASO 2 ───────────────────────────────────────────────────────────────────
-function continuar_p2() {
-  var tel    = document.getElementById('f-telefono').value.trim();
-  var minLen = parseInt(document.getElementById('f-tel-minlen').value) || 6;
-  var maxLen = _paisSel ? _paisSel.max : 15;
-  if (!tel) { errMsg('err-p2','El número de teléfono es obligatorio.'); return; }
-  if (!/^\d+$/.test(tel)) { errMsg('err-p2','Solo se permiten números, sin espacios ni guiones.'); return; }
-  if (tel.length < minLen || tel.length > maxLen) {
-    errMsg('err-p2','El número debe tener entre ' + minLen + ' y ' + maxLen + ' dígitos para ' + (_paisSel ? _paisSel.nombre : 'este país') + '.');
-    return;
-  }
-  irPaso(3);
 }
 
 // ─── PASO 3: Equipamiento ─────────────────────────────────────────────────────
@@ -1080,66 +947,81 @@ function cargarTallas() {
 
 // ─── ENVIAR ───────────────────────────────────────────────────────────────────
 function enviarForm() {
+  if (!G.idToken) { errMsg('err-form','Primero conecta tu cuenta de Google.'); return; }
+
+  var nombre = document.getElementById('f-nombre').value.trim();
+  if (!nombre || nombre.length < 2) { errMsg('err-form','El nombre debe tener al menos 2 caracteres.'); document.getElementById('f-nombre').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]+$/.test(nombre)) { errMsg('err-form','El nombre solo puede contener letras y espacios.'); return; }
+
+  var prons = Array.from(document.querySelectorAll('input[name="pron"]:checked'))
+    .map(function(cb){ return cb.value==='Otro' ? document.getElementById('f-pron-otro').value.trim() : cb.value; })
+    .filter(Boolean);
+  if (prons.length === 0) { errMsg('err-form','Selecciona al menos un pronombre.'); return; }
+
+  if (!G.fechaNac) {
+    var mayor = document.getElementById('f-mayor').value;
+    if (!mayor) { errMsg('err-form','Indica si eres mayor de 18 años.'); return; }
+    G.mayorEdad = mayor;
+  }
+
+  var tel    = document.getElementById('f-telefono').value.trim();
+  var minLen = parseInt(document.getElementById('f-tel-minlen').value) || 6;
+  var maxLen = _paisSel ? _paisSel.max : 15;
+  if (!tel) { errMsg('err-form','El número de teléfono es obligatorio.'); return; }
+  if (!/^\d+$/.test(tel)) { errMsg('err-form','Solo se permiten números en el teléfono.'); return; }
+  if (tel.length < minLen || tel.length > maxLen) { errMsg('err-form','El número debe tener entre ' + minLen + ' y ' + maxLen + ' dígitos para ' + (_paisSel ? _paisSel.nombre : 'este país') + '.'); return; }
+
   var patRad = document.querySelector('input[name="patines"]:checked');
-  if (!patRad) { errMsg('err-p3','Indica si necesitas patines.'); return; }
-  var patines = patRad.value;
-  var talla   = '';
+  if (!patRad) { errMsg('err-form','Indica si necesitas patines.'); return; }
+  var patines = patRad.value, talla = '';
   if (patines === 'Sí') {
     talla = document.getElementById('f-talla').value;
-    if (!talla) { errMsg('err-p3','Selecciona una talla de patines.'); return; }
+    if (!talla) { errMsg('err-form','Selecciona una talla de patines.'); return; }
   }
 
   var protecRad = document.querySelector('input[name="protec"]:checked');
-  if (!protecRad) { errMsg('err-p3','Indica si necesitas protecciones.'); return; }
+  if (!protecRad) { errMsg('err-form','Indica si necesitas protecciones.'); return; }
   var protec = protecRad.value;
   if (protec === 'Otro') {
     var otroT = document.getElementById('f-protec-otro').value.trim();
-    if (!otroT) { errMsg('err-p3','Describe qué protecciones necesitas.'); return; }
+    if (!otroT) { errMsg('err-form','Describe qué protecciones necesitas.'); return; }
     protec = otroT;
   }
 
-  var nombre = document.getElementById('f-nombre').value.trim();
-  var prons  = Array.from(document.querySelectorAll('input[name="pron"]:checked'))
-    .map(function(cb){ return cb.value==='Otro' ? document.getElementById('f-pron-otro').value.trim() : cb.value; })
-    .filter(Boolean).join(', ');
-  var prefijo  = document.getElementById('f-prefijo-val').value;
-  var telefono = document.getElementById('f-telefono').value.trim();
-  var fechaNacGuardar = G.guardarFecha ? (G.fechaNac || '') : '';
+  G.guardarFoto  = document.getElementById('tog-foto').checked;
+  G.guardarFecha = document.getElementById('tog-fecha').checked;
+  G.fechaPublica = document.getElementById('tog-fecha-pub').checked;
+  G.edadPublica  = document.getElementById('tog-edad-pub').checked;
+  if (!G.guardarFoto) G.foto = '';
 
-  irPaso(4); // p-enviando
+  mostrarCargando('Creando tu cuenta...');
 
   apiPost({
-    action:               'inscribirPersona',
-    nombre:               nombre,
-    email:                G.email,
-    idToken:              G.idToken,
-    pronombres:           prons,
-    prefijo:              prefijo,
-    telefono:             telefono,
-    necesitaPatines:      patines,
-    talla:                talla,
-    necesitaProtecciones: protec,
-    foto:                 G.guardarFoto ? G.foto : '',
-    fechaNac:             fechaNacGuardar,
-    guardarFecha:         G.guardarFecha ? 'si' : 'no',
-    fechaPublica:         G.fechaPublica ? 'Sí' : 'No',
-    edadPublica:          G.edadPublica  ? 'Sí' : 'No',
-    mayorEdad:            G.mayorEdad
+    action:'inscribirPersona', nombre:nombre, email:G.email, idToken:G.idToken,
+    pronombres:prons.join(', '), prefijo:document.getElementById('f-prefijo-val').value,
+    telefono:tel, necesitaPatines:patines, talla:talla, necesitaProtecciones:protec,
+    foto:G.guardarFoto ? G.foto : '',
+    fechaNac:G.guardarFecha ? (G.fechaNac || '') : '',
+    guardarFecha:G.guardarFecha ? 'si' : 'no',
+    fechaPublica:G.fechaPublica ? 'Sí' : 'No',
+    edadPublica:G.edadPublica  ? 'Sí' : 'No',
+    mayorEdad:G.mayorEdad
   }, function(res){
+    ocultarCargando();
     if (res.exito) {
       document.getElementById('exito-nombre').textContent = nombre;
-      irPaso(5); // p-exito
+      document.getElementById('form-card').style.display = 'none';
+      var ex = document.getElementById('section-exito');
+      ex.style.display = 'block';
+      ex.style.animation = 'slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both';
+      window.scrollTo({top:0,behavior:'smooth'});
     } else {
-      // Volver al paso correcto según el error
-      var paso = res.error && res.error.toLowerCase().includes('nombre') ? 1 :
-                 res.error && res.error.toLowerCase().includes('correo')  ? 0 : 3;
-      irPaso(paso);
-      var errIds = ['err-p0','err-p1','err-p2','err-p3'];
-      errMsg(errIds[paso] || 'err-p3', res.error || 'Error al registrarse. Intenta de nuevo.');
+      errMsg('err-form', res.error || 'Error al registrarse. Intenta de nuevo.');
+      window.scrollTo({top:0,behavior:'smooth'});
     }
   }, function(e){
-    irPaso(3);
-    errMsg('err-p3','Error de conexión: ' + e.message);
+    ocultarCargando();
+    errMsg('err-form','Error de conexión: ' + e.message);
   });
 }
 
@@ -1171,7 +1053,6 @@ window.onload = function() {
   poblarPaises();
   cargarTallas();
   initGIS();
-  history.replaceState({paso:0},'','#p0');
   ocultarCargando();
 };
 </script>
