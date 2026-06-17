@@ -1544,7 +1544,7 @@ footer { display: block; }
 
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-var BACKEND = 'https://script.google.com/macros/s/AKfycbwZEw_-3bxbJ0FKR38UubahmV9s9BUi8J_Nq7hlf2B_R0Xe8xFSBlnaBAK7Ot1GFL4uMQ/exec';
+var BACKEND = 'https://script.google.com/macros/s/AKfycbyhhIRwGhkOZ3XmThugFgKpi5qiJvcHAIgRbjQYGJnTkizRHnwneCMzIpmRYwIL6kRWUw/exec';
 
 var _token = '';
 
@@ -2733,6 +2733,16 @@ window.addEventListener('resize', function() {
 function onGoogleCredentialUsuario(resp) {
   mostrarCargando('Verificando tu cuenta...');
   apiPost({ action: 'loginGoogle', idToken: resp.credential }, function(res) {
+    if (res.esAdmin) {
+      ocultarCargando();
+      _adminToken = res.adminToken;
+      _adminEmail = res.email;
+      localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, exp: Date.now() + 11.5 * 3600 * 1000 }));
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
+      adminEntrar();
+      return;
+    }
 if (!res.valido) {
       ocultarCargando();
       if (res.noRegistrado) {
