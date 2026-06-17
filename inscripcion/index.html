@@ -497,7 +497,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
       <p id="form-subtitulo" style="font-size:0.88rem;color:var(--muted);margin-bottom:4px;line-height:1.5;">
         Usamos Google para verificar tu correo y evitar registros duplicados.
       </p>
-      <div class="gsignin-wrap" id="gsignin-btn" style="margin-top:20px;margin-bottom:0px;"></div>
+      <div class="gsignin-wrap" id="gsignin-btn" style="margin-top:20px;margin-bottom:0px;min-height:44px;"></div>
       <div class="error-msg" id="err-p0"></div>
     </div>
 
@@ -836,23 +836,8 @@ function initGIS() {
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCred });
   var cont = document.getElementById('gsignin-btn');
   cont.innerHTML = '';
-cont.style.opacity = '0';
-  cont.style.transition = 'opacity 0.45s ease';
-  google.accounts.id.renderButton(cont, { theme:'outline', size:'large', text:'signin_with', locale:'es', width:280 });
+google.accounts.id.renderButton(cont, { theme:'outline', size:'large', text:'signin_with', locale:'es', width:280 });
   _gisReady = true;
-  var observer = new MutationObserver(function(mutations, obs) {
-    var iframe = cont.querySelector('iframe');
-    if (iframe) {
-      iframe.addEventListener('load', function() {
-        setTimeout(function() { cont.style.opacity = '1'; }, 80);
-        obs.disconnect();
-      });
-      obs.disconnect();
-    }
-  });
-  observer.observe(cont, { childList: true, subtree: true });
-  // Fallback por si el observer falla
-  setTimeout(function() { if (cont.style.opacity !== '1') cont.style.opacity = '1'; }, 1200);
 }
 
 function onGoogleCred(resp) {
