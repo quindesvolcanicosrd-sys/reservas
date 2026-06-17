@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inscripción — Mirlxs Roller Derby Quito</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<meta name="theme-color" content="#F97316">
+
+<style>
+/* ─── RESET + TOKENS ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg:        #FDF3EB;
+  --surface:   #ffffff;
+  --border:    #e5e5e5;
+  --text:      #1a1a1a;
+  --muted:     #777;
+  --hint:      #a89587;
+  --brand:     #F97316;
+  --brand-dk:  #ea6407;
+  --green:     #22c55e;
+  --green-bg:  #f0fdf4;
+  --green-bdr: #bbf7d0;
+  --purple:    #7c3aed;
+  --purple-bg: #ede9fe;
+  --shadow:    0 10px 40px rgba(0,0,0,0.06);
+  --radius:    14px;
+  --radius-sm: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:        #111111;
+    --surface:   #1c1c1c;
+    --border:    #2a2a2a;
+    --text:      #f0f0f0;
+    --muted:     #888;
+    --hint:      #555;
+    --shadow:    0 10px 40px rgba(0,0,0,0.4);
+  }
+}
+
+body {
+  font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+button, input, select, textarea { font-family: inherit; }
+
+/* ─── LOADING OVERLAY ────────────────────────────────────────────────── */
+#loading-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+#loading-overlay.fade-out { opacity: 0; visibility: hidden; }
+
+.loading-inner { text-align: center; }
+.loading-logo  { width: 80px; height: 80px; border-radius: 50%; object-fit: cover;
+                 object-position: center top; margin: 0 auto 24px;
+                 filter: drop-shadow(0 4px 16px rgba(249,115,22,0.2)); }
+.spinner { width: 36px; height: 36px; border: 3px solid var(--border);
+           border-top-color: var(--brand); border-radius: 50%;
+           animation: spin 0.8s cubic-bezier(0.6,0.2,0.4,0.8) infinite;
+           margin: 0 auto 14px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-txt { color: var(--muted); font-size: 0.9rem; font-weight: 600; }
+
+/* ─── LAYOUT ─────────────────────────────────────────────────────────── */
+.page-wrap {
+  max-width: 480px; margin: 0 auto; padding: 0 16px 40px;
+}
+
+.header {
+  text-align: center; padding: 28px 16px 0;
+}
+.header-logo {
+  width: 82px; height: 82px; border-radius: 50%; object-fit: cover;
+  object-position: center top; margin: 0 auto 14px; display: block;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+}
+.header-title {
+  font-size: 0.72rem; font-weight: 700; color: var(--brand);
+  text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px;
+}
+.header-sub {
+  font-size: 0.82rem; color: var(--muted); line-height: 1.5;
+  padding: 0 8px 20px;
+}
+
+/* ─── PROGRESS BAR ───────────────────────────────────────────────────── */
+.progress-wrap {
+  display: flex; gap: 6px; padding: 10px 0 20px;
+  justify-content: center;
+}
+.prog-dot {
+  height: 6px; border-radius: 4px; transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+  background: var(--border);
+  width: 28px;
+}
+.prog-dot.done  { background: var(--green); }
+.prog-dot.active { background: var(--brand); width: 48px; }
+
+/* ─── PANTALLAS ──────────────────────────────────────────────────────── */
+.pantalla { display: none; }
+.pantalla.activa {
+  display: block;
+  animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── CARD ───────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 28px 24px;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+@media (max-width: 600px) {
+  .card { background: transparent; border: none; box-shadow: none; padding: 16px 4px; }
+}
+
+.sec-label {
+  font-size: 0.7rem; font-weight: 700; color: var(--brand);
+  text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;
+}
+.card h2 { font-size: 1.3rem; font-weight: 800; margin-bottom: 10px; line-height: 1.3; }
+.card p  { font-size: 0.88rem; color: var(--muted); line-height: 1.6; }
+
+/* ─── GOOGLE SIGN-IN WRAPPER ─────────────────────────────────────────── */
+.gsignin-wrap {
+  display: flex; justify-content: center; margin: 20px 0;
+}
+.gsignin-info {
+  background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius-sm);
+  padding: 12px 14px; font-size: 0.82rem; color: #0369a1;
+  margin-bottom: 16px; line-height: 1.5;
+}
+@media (prefers-color-scheme: dark) {
+  .gsignin-info { background: #0a1929; border-color: #1d4ed8; color: #93c5fd; }
+}
+
+/* ─── PERMISOS GOOGLE ────────────────────────────────────────────────── */
+.perm-box {
+  background: var(--bg); border: 2px solid var(--border);
+  border-radius: var(--radius-sm); overflow: hidden;
+  margin-bottom: 6px;
+}
+.perm-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; gap: 12px;
+}
+.perm-row + .perm-row { border-top: 1px solid var(--border); }
+.perm-label { font-size: 0.88rem; font-weight: 600; color: var(--text); }
+.perm-sub   { font-size: 0.78rem; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+
+.toggle-switch { position: relative; display: inline-block; width: 48px; height: 26px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; cursor: pointer; inset: 0;
+  background: #2c1c11; border-radius: 26px; transition: 0.3s;
+}
+.toggle-slider::before {
+  content: ''; position: absolute; height: 20px; width: 20px;
+  left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s;
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--brand); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(22px); }
+
+.sub-permisos {
+  overflow: hidden; max-height: 0; opacity: 0;
+  transition: max-height 0.4s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease;
+  background: rgba(249,115,22,0.04);
+}
+.sub-permisos.visible { max-height: 300px; opacity: 1; }
+.sub-perm-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px 12px 32px; gap: 12px; border-top: 1px solid var(--border);
+}
+.sub-perm-row label { font-size: 0.82rem; font-weight: 600; color: var(--muted); }
+
+/* ─── CAMPOS ──────────────────────────────────────────────────────────── */
+.campo { margin-bottom: 18px; }
+.campo label {
+  display: block; font-size: 0.74rem; font-weight: 700;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.campo label span.req { color: #dc2626; }
+
+input[type="text"], input[type="email"], input[type="tel"],
+input[type="date"], input[type="password"], textarea, select {
+  width: 100%; padding: 13px 16px;
+  border: 2px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 0.95rem; color: var(--text);
+  background: var(--surface);
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+  appearance: none; -webkit-appearance: none;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none; border-color: var(--brand);
+  box-shadow: 0 0 0 4px rgba(249,115,22,0.14);
+  background: var(--surface);
+}
+input:disabled { opacity: 0.6; cursor: not-allowed; }
+::placeholder { color: var(--hint); font-style: italic; font-size: 0.88rem; }
+
+.select-wrap { position: relative; }
+.select-wrap::after {
+  font-family: 'Material Symbols Outlined'; content: 'expand_more';
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  color: var(--brand); pointer-events: none; font-size: 1.2rem;
+}
+
+.dato-hint { font-size: 0.78rem; color: var(--hint); margin-top: 6px; line-height: 1.4; }
+
+/* ─── PREFIJO CON DATALIST ───────────────────────────────────────────── */
+.prefijo-wrap { display: flex; gap: 8px; }
+.prefijo-wrap input[type="text"] { width: 100%; }
+.prefijo-flag {
+  min-width: 48px; height: 48px; border: 2px solid var(--border);
+  border-radius: var(--radius-sm); display: flex; align-items: center;
+  justify-content: center; font-size: 1.4rem; background: var(--surface);
+  flex-shrink: 0; transition: border-color 0.25s;
+}
+
+/* ─── OPCIONES RADIO / CHECKBOXES ────────────────────────────────────── */
+.opciones { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.opcion {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 16px; border: 2px solid var(--border);
+  border-radius: var(--radius-sm); cursor: pointer;
+  font-size: 0.92rem; background: var(--surface);
+  transition: all 0.25s ease;
+}
+.opcion:hover { border-color: #fb923c; background: rgba(249,115,22,0.04); transform: translateX(3px); }
+.opcion.sel   { border-color: var(--brand); background: rgba(249,115,22,0.07); }
+.opcion input[type="radio"], .opcion input[type="checkbox"] {
+  accent-color: var(--brand); width: 18px; height: 18px;
+  flex-shrink: 0; cursor: pointer;
+}
+
+.chk-opcion {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 14px; border: 2px solid var(--border);
+  border-radius: var(--radius-sm); cursor: pointer;
+  font-size: 0.9rem; margin-bottom: 6px;
+  background: var(--surface); transition: all 0.25s ease;
+}
+.chk-opcion:hover { border-color: #fb923c; background: rgba(249,115,22,0.04); transform: translateX(3px); }
+.chk-opcion input { accent-color: var(--brand); width: 18px; height: 18px; flex-shrink: 0; }
+
+.campo-cond {
+  overflow: hidden; max-height: 0; opacity: 0;
+  transition: max-height 0.45s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease, padding 0.3s;
+  padding: 0;
+}
+.campo-cond.visible { max-height: 600px; opacity: 1; padding-top: 10px; }
+
+/* ─── BOTONES ─────────────────────────────────────────────────────────── */
+.btn {
+  width: 100%; padding: 15px; border: none; border-radius: var(--radius-sm);
+  font-size: 0.95rem; font-weight: 700; cursor: pointer;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  text-decoration: none;
+}
+.btn-primary {
+  background: var(--brand); color: white;
+  box-shadow: 0 4px 14px rgba(249,115,22,0.3);
+}
+.btn-primary:hover { background: var(--brand-dk); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(249,115,22,0.4); }
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-green {
+  background: #16a34a; color: white;
+  box-shadow: 0 4px 14px rgba(34,197,94,0.3);
+  margin-bottom: 10px;
+}
+.btn-green:hover { background: #15803d; transform: translateY(-2px); }
+
+.btn-purple {
+  background: var(--purple); color: white;
+  box-shadow: 0 4px 14px rgba(124,58,237,0.3);
+  margin-bottom: 10px;
+}
+.btn-purple:hover { background: #6d28d9; transform: translateY(-2px); }
+
+.btn-secondary { background: rgba(249,115,22,0.1); color: var(--brand); border: 2px solid rgba(249,115,22,0.3); margin-top: 4px; }
+.btn-secondary:hover { background: rgba(249,115,22,0.18); transform: translateY(-2px); }
+
+@keyframes pulseBtn {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); border-color: transparent; }
+  50% { box-shadow: 0 0 28px 10px rgba(249,115,22,0.5); }
+}
+.btn-pulse { animation: pulseBtn 2.4s ease-in-out infinite; }
+
+.btn-spinner {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,0.35); border-top-color: white;
+  border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+
+/* ─── MENSAJES ────────────────────────────────────────────────────────── */
+.error-msg {
+  background: #fef2f2; color: #dc2626;
+  border: 1px solid #fecaca; border-radius: var(--radius-sm);
+  padding: 12px 16px; font-size: 0.88rem; font-weight: 500;
+  display: none; margin-bottom: 14px;
+  animation: fadeIn 0.35s ease;
+}
+.aviso {
+  background: #f0f9ff; border: 1px solid #bae6fd;
+  border-radius: var(--radius-sm); padding: 12px 14px;
+  font-size: 0.82rem; color: #0369a1; margin-bottom: 14px;
+  line-height: 1.5;
+}
+@keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+
+@media (prefers-color-scheme: dark) {
+  .error-msg { background: #2d1515; border-color: #7f1d1d; color: #fca5a5; }
+  .aviso { background: #0a1929; border-color: #1d4ed8; color: #93c5fd; }
+}
+
+/* ─── ÉXITO ───────────────────────────────────────────────────────────── */
+@keyframes popBounce {
+  0%   { transform: scale(0.4); opacity: 0; }
+  60%  { transform: scale(1.2); opacity: 1; }
+  80%  { transform: scale(0.93); }
+  100% { transform: scale(1); }
+}
+.exito-icon  { font-size: 4rem; text-align: center; margin-bottom: 16px; animation: popBounce 0.7s cubic-bezier(0.16,1,0.3,1); display: block; }
+.exito-title { font-size: 1.5rem; font-weight: 800; text-align: center; margin-bottom: 8px; }
+.exito-sub   { color: var(--muted); text-align: center; font-size: 0.92rem; line-height: 1.6; margin-bottom: 24px; }
+.exito-nombre{ color: var(--brand); font-weight: 800; }
+
+/* ─── NOMBRE PERFIL PREVIEW ──────────────────────────────────────────── */
+.profile-preview {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(249,115,22,0.06); border: 2px solid rgba(249,115,22,0.2);
+  border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 16px;
+}
+.profile-avatar {
+  width: 44px; height: 44px; border-radius: 50%; object-fit: cover;
+  border: 2px solid var(--brand); flex-shrink: 0;
+}
+.profile-avatar-placeholder {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--brand); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; font-weight: 800; flex-shrink: 0;
+}
+.profile-info-text { flex: 1; }
+.profile-name { font-weight: 800; font-size: 0.92rem; }
+.profile-email { font-size: 0.78rem; color: var(--muted); }
+
+/* ─── SEPARADOR ───────────────────────────────────────────────────────── */
+.divider {
+  border: none; border-top: 1px solid var(--border);
+  margin: 24px 0;
+}
+
+/* ─── DARK MODE FIXES ─────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  input, select, textarea { background: #252525; border-color: #252525; color: #f0f0f0; }
+  input:focus, select:focus, textarea:focus { background: #2a2a2a; }
+  .opcion, .chk-opcion { background: #252525; border-color: #252525; color: #f0f0f0; }
+  .opcion:hover, .chk-opcion:hover { background: #2a2a2a; }
+  .opcion.sel { background: #2a1a0e; border-color: var(--brand); }
+  .perm-box { background: #1c1c1c; }
+  .sub-permisos { background: rgba(249,115,22,0.05); }
+  .prefijo-flag { background: #252525; border-color: #252525; }
+  .btn-secondary { background: rgba(249,115,22,0.1); }
+  ::placeholder { color: #555 !important; }
+}
+
+/* ─── MODAL CONTACTO ─────────────────────────────────────────────────── */
+#modal-contacto {
+  display: none; position: fixed; inset: 0; z-index: 9500;
+  background: rgba(0,0,0,0.65); align-items: center; justify-content: center;
+}
+#modal-contacto.visible { display: flex; animation: fadeIn 0.25s ease; }
+#modal-ct-inner {
+  background: var(--surface); border-radius: 20px;
+  padding: 28px 20px; width: 85%; max-width: 320px; text-align: center;
+}
+@media (prefers-color-scheme: dark) {
+  #modal-ct-inner { background: #1c1c1c; }
+  #modal-ct-inner a { background: #252525 !important; color: #f0f0f0 !important; }
+  #modal-ct-inner button { background: #2a2a2a !important; color: #ccc !important; }
+}
+.modal-ct-title {
+  font-weight: 800; font-size: 0.95rem; text-transform: uppercase;
+  letter-spacing: 1px; margin-bottom: 20px; color: var(--text);
+}
+.modal-ct-link {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--bg); border-radius: var(--radius-sm);
+  padding: 14px 16px; margin-bottom: 10px; text-decoration: none;
+  color: var(--text); font-weight: 700; font-size: 0.95rem;
+  transition: background 0.2s;
+}
+.modal-ct-link:hover { filter: brightness(0.96); }
+.modal-ct-close {
+  width: 100%; padding: 12px; background: var(--border); border: none;
+  border-radius: var(--radius-sm); font-weight: 700; cursor: pointer;
+  font-family: inherit; color: var(--muted); transition: background 0.2s;
+}
+.modal-ct-close:hover { background: #d4d4d4; }
+</style>
+</head>
+
+<body>
+
+<!-- ─── LOADING ──────────────────────────────────────────────────────── -->
+<div id="loading-overlay">
+  <div class="loading-inner">
+    <img src="https://drive.google.com/thumbnail?id=1Os-zGYxwMqiQFmkzyDBk9rjaOWWM0UBo&sz=w600"
+         class="loading-logo" alt="Mirlxs">
+    <div class="spinner"></div>
+    <p class="loading-txt">Cargando...</p>
+  </div>
+</div>
+
+<!-- ─── MODAL CONTACTO ───────────────────────────────────────────────── -->
+<div id="modal-contacto" onclick="if(event.target===this)cerrarContacto()">
+  <div id="modal-ct-inner">
+    <div class="modal-ct-title">Contáctanos</div>
+    <a href="https://wa.me/593998690423" target="_blank" class="modal-ct-link">
+      <span class="material-symbols-outlined" style="color:#25D366;">forum</span> WhatsApp
+    </a>
+    <a href="https://www.instagram.com/quindesvolcanicosrd/" target="_blank" class="modal-ct-link">
+      <span class="material-symbols-outlined" style="color:#E1306C;">favorite</span> Instagram
+    </a>
+    <a href="mailto:quindesvolcanicosrd@gmail.com" class="modal-ct-link">
+      <span class="material-symbols-outlined" style="color:#F97316;">mail</span> Mail
+    </a>
+    <button class="modal-ct-close" onclick="cerrarContacto()">Cerrar</button>
+  </div>
+</div>
+
+<!-- ─── CONTENIDO ────────────────────────────────────────────────────── -->
+<div class="page-wrap">
+
+  <div class="header">
+    <a href="https://reservas.quindesvolcanicos.com">
+      <img src="https://drive.google.com/thumbnail?id=1Os-zGYxwMqiQFmkzyDBk9rjaOWWM0UBo&sz=w600"
+           class="header-logo" alt="Mirlxs Roller Derby Quito">
+    </a>
+    <div class="header-title">Mirlxs Roller Derby Quito</div>
+    <p class="header-sub">Inscripción al equipo. Te pediremos información básica — el resto lo completás después desde la app.</p>
+  </div>
+
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="prog-dot active" id="d1"></div>
+    <div class="prog-dot" id="d2"></div>
+    <div class="prog-dot" id="d3"></div>
+    <div class="prog-dot" id="d4"></div>
+  </div>
+
+  <!-- ══ PASO 0: Google Sign-In + permisos ══════════════════════════════ -->
+  <div class="pantalla activa" id="p0">
+    <div class="card">
+      <div class="sec-label">Paso 1 — Tu cuenta</div>
+      <h2>Empezá con Google</h2>
+      <p style="margin-bottom:16px;">Usamos tu cuenta de Google para verificar tu correo. Nada se publica ni se comparte con terceros.</p>
+
+      <div class="gsignin-info">
+        🔒 Solo leeremos tu correo para evitar registros duplicados. Los otros datos son opcionales y los controlás vos.
+      </div>
+
+      <div class="gsignin-wrap" id="gsignin-btn"></div>
+      <div class="error-msg" id="err-p0"></div>
+
+      <!-- Se muestra luego del sign-in -->
+      <div id="permisos-wrap" style="display:none;">
+
+        <div class="profile-preview" id="profile-preview">
+          <div class="profile-avatar-placeholder" id="pf-initials">?</div>
+          <div class="profile-info-text">
+            <div class="profile-name" id="pf-name">—</div>
+            <div class="profile-email" id="pf-email">—</div>
+          </div>
+        </div>
+
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;line-height:1.5;">
+          ¿Qué querés que Mirlxs guarde de tu cuenta? Podés cambiar esto en cualquier momento desde la app.
+        </p>
+
+        <div class="perm-box">
+          <!-- Foto -->
+          <div class="perm-row">
+            <div>
+              <div class="perm-label">📸 Foto de perfil</div>
+              <div class="perm-sub">Se muestra en tu home en vez del 🛼</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="tog-foto" onchange="onTogFoto(this)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <!-- Fecha de nacimiento -->
+          <div class="perm-row">
+            <div>
+              <div class="perm-label">🎂 Fecha de nacimiento</div>
+              <div class="perm-sub">Para que te deseen feliz cumpleaños en el grupo</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="tog-fecha" onchange="onTogFecha(this)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <!-- Sub-permisos fecha -->
+          <div class="sub-permisos" id="sub-fecha">
+            <div class="sub-perm-row">
+              <label>¿Fecha pública para el equipo?</label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="tog-fecha-pub">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            <div class="sub-perm-row">
+              <label>¿Edad pública para el equipo?</label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="tog-edad-pub">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <p id="aviso-fecha-requerida" style="display:none;font-size:0.8rem;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;margin:10px 0;line-height:1.5;">
+          📅 Si queremos calcular si sos mayor de 18 necesitamos tu fecha de nacimiento de Google. Si no la tenés configurada en tu cuenta, te la preguntaremos en el siguiente paso.
+        </p>
+
+        <button class="btn btn-primary" onclick="continuar_p0()" style="margin-top:16px;">
+          Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PASO 1: Nombre + pronombres ═══════════════════════════════════ -->
+  <div class="pantalla" id="p1">
+    <div class="card">
+      <div class="sec-label">Paso 2 — Tu identidad en el equipo</div>
+      <h2>¿Cómo te llamamos?</h2>
+
+      <div class="campo">
+        <label>Nombre de pista <span class="req">*</span></label>
+        <input type="text" id="f-nombre" placeholder="Como querés que todes te llamen"
+               oninput="validarNombreLive(this)" autocomplete="off">
+        <p class="dato-hint">Solo letras y espacios. Mínimo 2 caracteres. Este será tu nombre de acceso en la app.</p>
+        <p id="hint-nombre-ok" style="font-size:0.78rem;color:#16a34a;margin-top:4px;display:none;">✓ Disponible</p>
+      </div>
+
+      <div class="campo">
+        <label>Pronombres <span class="req">*</span></label>
+        <label class="chk-opcion"><input type="checkbox" name="pron" value="Ella/ella"> Ella/ella</label>
+        <label class="chk-opcion"><input type="checkbox" name="pron" value="Él/él"> Él/él</label>
+        <label class="chk-opcion"><input type="checkbox" name="pron" value="Elle/elle"> Elle/elle</label>
+        <label class="chk-opcion">
+          <input type="checkbox" name="pron" value="Otro" onchange="toggleOtroPron(this)"> Otro
+        </label>
+        <div class="campo-cond" id="cond-pron-otro">
+          <input type="text" id="f-pron-otro" placeholder="Ej: Xe/xem" style="margin-top:2px;">
+        </div>
+      </div>
+
+      <!-- Mayor de 18: solo se muestra si Google no dio la fecha -->
+      <div id="bloque-mayor" style="display:none;">
+        <div class="campo">
+          <label>¿Sos mayor de 18 años? <span class="req">*</span></label>
+          <div class="select-wrap">
+            <select id="f-mayor">
+              <option value="">Selecciona</option>
+              <option value="Mayor de 18">Sí, soy mayor de 18 años</option>
+              <option value="Menor de 18">No, tengo menos de 18 años</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="error-msg" id="err-p1"></div>
+      <button class="btn btn-primary" onclick="continuar_p1()">
+        Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ PASO 2: Teléfono ═══════════════════════════════════════════════ -->
+  <div class="pantalla" id="p2">
+    <div class="card">
+      <div class="sec-label">Paso 3 — Contacto</div>
+      <h2>Tu número de teléfono</h2>
+
+      <div class="campo">
+        <label>País <span class="req">*</span></label>
+        <div class="prefijo-wrap">
+          <div class="prefijo-flag" id="pref-flag">🇪🇨</div>
+          <input type="text" id="f-prefijo-txt" list="paises-list"
+                 placeholder="Ecuador +593 o buscá tu país"
+                 oninput="onPrefijoInput(this)" autocomplete="off">
+          <input type="hidden" id="f-prefijo-val" value="🇪🇨 +593 (Ecuador)">
+          <input type="hidden" id="f-prefijo-code" value="593">
+          <input type="hidden" id="f-tel-minlen" value="10">
+          <datalist id="paises-list"></datalist>
+        </div>
+        <p class="dato-hint" id="pref-hint">Ecuador → mínimo 10 dígitos</p>
+      </div>
+
+      <div class="campo">
+        <label>Número de teléfono <span class="req">*</span></label>
+        <input type="tel" id="f-telefono" placeholder="Ej: 0991234567"
+               oninput="soloNumeros(this)" inputmode="numeric">
+        <p class="dato-hint">Sin prefijo ni espacios.</p>
+      </div>
+
+      <div class="error-msg" id="err-p2"></div>
+      <button class="btn btn-primary" onclick="continuar_p2()">
+        Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ PASO 3: Equipamiento ═══════════════════════════════════════════ -->
+  <div class="pantalla" id="p3">
+    <div class="card">
+      <div class="sec-label">Paso 4 — Equipamiento</div>
+      <h2>¿Qué necesitás del equipo?</h2>
+
+      <div class="campo">
+        <label>¿Necesitás patines prestados? <span class="req">*</span></label>
+        <div class="opciones">
+          <label class="opcion" onclick="selPat(this,'Sí')">
+            <input type="radio" name="patines" value="Sí"> Sí, necesito patines
+          </label>
+          <label class="opcion" onclick="selPat(this,'No')">
+            <input type="radio" name="patines" value="No"> No, tengo mis propios patines
+          </label>
+        </div>
+
+        <div class="campo-cond" id="cond-talla">
+          <div class="campo" style="margin-bottom:0;">
+            <label>Talla de patines <span class="req">*</span></label>
+            <div class="select-wrap">
+              <select id="f-talla">
+                <option value="">Cargando tallas...</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label>¿Necesitás protecciones? <span class="req">*</span></label>
+        <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;line-height:1.5;">
+          Casco, rodilleras, coderas y muñequeras.
+        </p>
+        <div class="opciones">
+          <label class="opcion" onclick="selProtec(this,'Sí')">
+            <input type="radio" name="protec" value="Sí"> Sí, necesito protecciones completas
+          </label>
+          <label class="opcion" onclick="selProtec(this,'No')">
+            <input type="radio" name="protec" value="No"> No, tengo mis propias protecciones
+          </label>
+          <label class="opcion" onclick="selProtec(this,'Otro')">
+            <input type="radio" name="protec" value="Otro"> Otro (tengo algunas pero me faltan otras)
+          </label>
+        </div>
+        <div class="campo-cond" id="cond-protec-otro">
+          <input type="text" id="f-protec-otro"
+                 placeholder="Ej: Tengo casco pero me faltan rodilleras y coderas"
+                 style="margin-top:4px;">
+        </div>
+      </div>
+
+      <div class="error-msg" id="err-p3"></div>
+      <button class="btn btn-primary" id="btn-enviar" onclick="enviarForm()">
+        Inscribirme 🛼
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ PASO ENVIANDO ══════════════════════════════════════════════════ -->
+  <div class="pantalla" id="p-enviando">
+    <div class="card" style="text-align:center;padding:48px 24px;">
+      <div class="spinner" style="width:48px;height:48px;border-width:4px;margin:0 auto 20px;"></div>
+      <p style="font-weight:600;color:var(--muted);">Creando tu cuenta...</p>
+    </div>
+  </div>
+
+  <!-- ══ ÉXITO ══════════════════════════════════════════════════════════ -->
+  <div class="pantalla" id="p-exito">
+    <div class="card" style="text-align:center;">
+      <span class="exito-icon">🎉</span>
+      <div class="exito-title">¡Bienvenidx al equipo!</div>
+      <p class="exito-sub">
+        Tu cuenta <span class="exito-nombre" id="exito-nombre"></span> fue creada con éxito.<br>
+        Ya podés reservar equipamiento y gestionar tus clases desde la app.
+      </p>
+
+      <a href="https://chat.whatsapp.com/FPupGnd1c9g1oVXu9VudKK" target="_blank"
+         class="btn btn-green">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="white">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.845L.057 23.571a.75.75 0 0 0 .92.921l5.763-1.473A11.943 11.943 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.006-1.374l-.36-.214-3.713.949.981-3.625-.235-.374A9.818 9.818 0 1 1 12 21.818z"/>
+        </svg>
+        Unirse al grupo de WhatsApp
+      </a>
+
+      <button class="btn btn-purple" onclick="abrirContacto()">
+        <span class="material-symbols-outlined" style="font-size:1.1rem;">share</span>
+        ¿Dudas o preguntas? Contáctanos
+      </button>
+
+      <a href="https://reservas.quindesvolcanicos.com" class="btn btn-primary btn-pulse">
+        <span class="material-symbols-outlined" style="font-size:1.1rem;">calendar_month</span>
+        ¡Hacer mi primera reserva!
+      </a>
+    </div>
+  </div>
+
+</div><!-- /page-wrap -->
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+var BACKEND = 'https://script.google.com/macros/s/AKfycbxH0s-BrhzV_jxxWDYre_7w2NaWBpAayrDAmegvJQMjWey5PGtll5D-aMNWP__BfwoVrw/exec';
+var GOOGLE_CLIENT_ID = '632992894668-gnbb5cclsmfdcnve0g34kmue1c72h73q.apps.googleusercontent.com';
+
+// ─── DATOS RECOGIDOS ──────────────────────────────────────────────────────────
+var G = {
+  idToken:     '',
+  email:       '',
+  nombre:      '',     // nombre de Google (opcional)
+  foto:        '',     // URL foto Google (opcional)
+  fechaNac:    '',     // ISO date de Google (opcional)
+  guardarFoto: false,
+  guardarFecha:false,
+  fechaPublica:false,
+  edadPublica: false,
+  mayorEdad:   ''      // calculado o elegido
+};
+
+// ─── PAÍSES + PREFIJOS ────────────────────────────────────────────────────────
+var PAISES = [
+  { nombre:'Ecuador',flag:'🇪🇨',code:'593',min:10,max:10 },
+  { nombre:'Colombia',flag:'🇨🇴',code:'57',min:10,max:10 },
+  { nombre:'Perú',flag:'🇵🇪',code:'51',min:9,max:9 },
+  { nombre:'Venezuela',flag:'🇻🇪',code:'58',min:10,max:11 },
+  { nombre:'Argentina',flag:'🇦🇷',code:'54',min:10,max:11 },
+  { nombre:'Chile',flag:'🇨🇱',code:'56',min:9,max:9 },
+  { nombre:'Bolivia',flag:'🇧🇴',code:'591',min:8,max:8 },
+  { nombre:'Uruguay',flag:'🇺🇾',code:'598',min:8,max:9 },
+  { nombre:'Paraguay',flag:'🇵🇾',code:'595',min:9,max:9 },
+  { nombre:'México',flag:'🇲🇽',code:'52',min:10,max:10 },
+  { nombre:'España',flag:'🇪🇸',code:'34',min:9,max:9 },
+  { nombre:'Estados Unidos',flag:'🇺🇸',code:'1',min:10,max:10 },
+  { nombre:'Canadá',flag:'🇨🇦',code:'1',min:10,max:10 },
+  { nombre:'Brasil',flag:'🇧🇷',code:'55',min:10,max:11 },
+  { nombre:'Costa Rica',flag:'🇨🇷',code:'506',min:8,max:8 },
+  { nombre:'Panamá',flag:'🇵🇦',code:'507',min:8,max:8 },
+  { nombre:'Guatemala',flag:'🇬🇹',code:'502',min:8,max:8 },
+  { nombre:'Honduras',flag:'🇭🇳',code:'504',min:8,max:8 },
+  { nombre:'El Salvador',flag:'🇸🇻',code:'503',min:8,max:8 },
+  { nombre:'Nicaragua',flag:'🇳🇮',code:'505',min:8,max:8 },
+  { nombre:'Cuba',flag:'🇨🇺',code:'53',min:8,max:8 },
+  { nombre:'República Dominicana',flag:'🇩🇴',code:'1',min:10,max:10 },
+  { nombre:'Puerto Rico',flag:'🇵🇷',code:'1',min:10,max:10 },
+  { nombre:'Alemania',flag:'🇩🇪',code:'49',min:10,max:12 },
+  { nombre:'Francia',flag:'🇫🇷',code:'33',min:9,max:9 },
+  { nombre:'Italia',flag:'🇮🇹',code:'39',min:9,max:11 },
+  { nombre:'Portugal',flag:'🇵🇹',code:'351',min:9,max:9 },
+  { nombre:'Reino Unido',flag:'🇬🇧',code:'44',min:10,max:10 },
+  { nombre:'Países Bajos',flag:'🇳🇱',code:'31',min:9,max:9 },
+  { nombre:'Suiza',flag:'🇨🇭',code:'41',min:9,max:9 },
+  { nombre:'Australia',flag:'🇦🇺',code:'61',min:9,max:9 },
+  { nombre:'Japón',flag:'🇯🇵',code:'81',min:10,max:11 },
+  { nombre:'Israel',flag:'🇮🇱',code:'972',min:9,max:9 },
+  { nombre:'China',flag:'🇨🇳',code:'86',min:11,max:11 }
+];
+var _paisSel = PAISES[0]; // Ecuador por defecto
+
+function poblarPaises() {
+  var dl = document.getElementById('paises-list');
+  PAISES.forEach(function(p) {
+    var opt = document.createElement('option');
+    opt.value = p.flag + ' ' + p.nombre + ' +' + p.code;
+    dl.appendChild(opt);
+  });
+  document.getElementById('f-prefijo-txt').value = '🇪🇨 Ecuador +593';
+}
+
+function onPrefijoInput(inp) {
+  var q = inp.value.toLowerCase().replace(/\s+/g,' ').trim();
+  var encontrado = PAISES.find(function(p) {
+    return p.nombre.toLowerCase().includes(q) ||
+           ('+' + p.code).includes(q) ||
+           p.code.includes(q.replace('+','')) ||
+           (p.flag + ' ' + p.nombre + ' +' + p.code).toLowerCase() === q;
+  });
+  if (!encontrado) {
+    // buscar por opcion exacta del datalist
+    var opts = document.querySelectorAll('#paises-list option');
+    opts.forEach(function(o) { if (o.value.toLowerCase() === q) {
+      var m = o.value.match(/\+(\d+)/);
+      if (m) encontrado = PAISES.find(function(p) { return p.code === m[1]; });
+    }});
+  }
+  if (encontrado) {
+    _paisSel = encontrado;
+    document.getElementById('pref-flag').textContent = encontrado.flag;
+    document.getElementById('f-prefijo-val').value   = encontrado.flag + ' +' + encontrado.code + ' (' + encontrado.nombre + ')';
+    document.getElementById('f-prefijo-code').value  = encontrado.code;
+    document.getElementById('f-tel-minlen').value    = encontrado.min;
+    var hint = encontrado.nombre + ' → mínimo ' + encontrado.min;
+    if (encontrado.max !== encontrado.min) hint += ', máximo ' + encontrado.max + ' dígitos';
+    else hint += ' dígitos exactos';
+    document.getElementById('pref-hint').textContent = hint;
+  }
+}
+
+function soloNumeros(inp) {
+  inp.value = inp.value.replace(/\D/g,'');
+}
+
+// ─── API ──────────────────────────────────────────────────────────────────────
+function apiPost(params, ok, fail) {
+  var body = Object.keys(params).map(function(k) {
+    return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+  }).join('&');
+  fetch(BACKEND, {
+    method:'POST', mode:'cors',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body: body
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){ d && d.error ? fail({message:d.error}) : ok(d); })
+  .catch(fail);
+}
+function apiGet(params, ok, fail) {
+  var url = BACKEND + '?' + Object.keys(params).map(function(k){
+    return encodeURIComponent(k)+'='+encodeURIComponent(params[k]);
+  }).join('&');
+  fetch(url, {method:'GET', mode:'cors'})
+  .then(function(r){ return r.json(); })
+  .then(function(d){ d && d.error ? fail({message:d.error}) : ok(d); })
+  .catch(fail);
+}
+
+// ─── PANTALLAS ────────────────────────────────────────────────────────────────
+var _paso = 0;
+function irPaso(n, sinHistorial) {
+  var ids = ['p0','p1','p2','p3','p-enviando','p-exito'];
+  ids.forEach(function(id){ var el=document.getElementById(id); if(el){ el.classList.remove('activa'); el.style.display=''; }});
+  var el = document.getElementById(ids[n] || n);
+  if (!el) return;
+  el.classList.add('activa');
+  _paso = n;
+  actualizarProgress(n);
+  window.scrollTo({top:0,behavior:'smooth'});
+  if (!sinHistorial && n < 4) history.pushState({paso:n},'','#p'+n);
+}
+
+function actualizarProgress(n) {
+  var wrap = document.getElementById('progress-wrap');
+  if (n >= 4) { wrap.style.opacity='0'; return; }
+  wrap.style.opacity='1';
+  for(var i=1;i<=4;i++){
+    var d=document.getElementById('d'+i);
+    if(!d) continue;
+    if(i-1 < n) { d.className='prog-dot done'; }
+    else if(i-1===n) { d.className='prog-dot active'; }
+    else { d.className='prog-dot'; }
+  }
+}
+
+window.addEventListener('popstate', function(e){
+  if(e.state && typeof e.state.paso === 'number') irPaso(e.state.paso, true);
+});
+
+// ─── GOOGLE SIGN-IN ───────────────────────────────────────────────────────────
+var _gisReady = false;
+function initGIS() {
+  if (_gisReady) return;
+  if (typeof google === 'undefined') { setTimeout(initGIS, 200); return; }
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCred });
+  var cont = document.getElementById('gsignin-btn');
+  cont.innerHTML = '';
+  google.accounts.id.renderButton(cont, { theme:'outline', size:'large', text:'signin_with', locale:'es', width:280 });
+  _gisReady = true;
+}
+
+function onGoogleCred(resp) {
+  mostrarCargando('Verificando cuenta...');
+  // Decodificar JWT payload (no verificamos firma en cliente — solo para UX)
+  try {
+    var parts   = resp.credential.split('.');
+    var payload = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/,'/')));
+    G.idToken   = resp.credential;
+    G.email     = (payload.email || '').toLowerCase();
+    G.nombre    = (payload.given_name || payload.name || '').split(' ')[0];
+    G.foto      = payload.picture || '';
+    // Fecha de nacimiento: Google raramente la incluye en el ID token
+    // Si no viene, la pedimos manualmente en p1
+    G.fechaNac  = payload.birthdate || '';
+  } catch(ex) {
+    ocultarCargando(); errMsg('err-p0','Error al leer el token. Intentá de nuevo.'); return;
+  }
+
+  // Verificar que el email no esté ya registrado
+  apiGet({ action:'verificarEmailDisponible', email:G.email }, function(res){
+    ocultarCargando();
+    if (!res.disponible) {
+      errMsg('err-p0', 'Este correo ya tiene una cuenta registrada ("' + res.nombre + '"). Podés iniciar sesión directamente en la app.');
+      return;
+    }
+    // Mostrar preview de perfil
+    actualizarPreviewPerfil();
+    document.getElementById('permisos-wrap').style.display = 'block';
+    document.getElementById('permisos-wrap').style.animation = 'slideUp 0.4s cubic-bezier(0.16,1,0.3,1) both';
+    document.getElementById('gsignin-btn').style.display = 'none';
+    if (!G.fechaNac) document.getElementById('aviso-fecha-requerida').style.display = 'block';
+  }, function(e){ ocultarCargando(); errMsg('err-p0','Error de conexión: '+e.message); });
+}
+
+function actualizarPreviewPerfil() {
+  document.getElementById('pf-email').textContent = G.email;
+  if (G.nombre) {
+    document.getElementById('pf-name').textContent = G.nombre;
+    document.getElementById('pf-initials').textContent = G.nombre.charAt(0).toUpperCase();
+    if (G.foto) {
+      var img = document.createElement('img');
+      img.src = G.foto; img.className='profile-avatar'; img.alt='';
+      img.id = 'pf-initials';
+      document.getElementById('pf-initials').replaceWith(img);
+    }
+  } else {
+    document.getElementById('pf-initials').textContent = G.email.charAt(0).toUpperCase();
+  }
+}
+
+function onTogFoto(cb)  { G.guardarFoto  = cb.checked; }
+function onTogFecha(cb) {
+  G.guardarFecha = cb.checked;
+  document.getElementById('sub-fecha').classList.toggle('visible', cb.checked);
+}
+
+function continuar_p0() {
+  G.guardarFoto   = document.getElementById('tog-foto').checked;
+  G.guardarFecha  = document.getElementById('tog-fecha').checked;
+  G.fechaPublica  = document.getElementById('tog-fecha-pub').checked;
+  G.edadPublica   = document.getElementById('tog-edad-pub').checked;
+  if (!G.guardarFoto)  G.foto = '';
+  if (!G.guardarFecha) { /* conservamos G.fechaNac solo para calcular mayoría */ }
+
+  // Auto-completar nombre en p1 si Google lo dio
+  if (G.nombre) {
+    var fn = document.getElementById('f-nombre');
+    if (!fn.value) fn.value = G.nombre;
+  }
+
+  // Mostrar bloque mayor de 18 si Google no tiene la fecha
+  if (!G.fechaNac) {
+    document.getElementById('bloque-mayor').style.display = 'block';
+  } else {
+    calcularMayorEdad(G.fechaNac);
+    document.getElementById('bloque-mayor').style.display = 'none';
+  }
+
+  irPaso(1);
+}
+
+function calcularMayorEdad(fechaStr) {
+  var fn = new Date(fechaStr);
+  if (isNaN(fn.getTime())) { G.mayorEdad = ''; return; }
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var edad = hoy.getFullYear() - fn.getFullYear();
+  var m = hoy.getMonth() - fn.getMonth();
+  if (m < 0 || (m===0 && hoy.getDate() < fn.getDate())) edad--;
+  G.mayorEdad = edad >= 18 ? 'Sí, declaro ser mayor de 18 años de edad' : 'No, tengo menos de 18 años';
+}
+
+// ─── PASO 1 ───────────────────────────────────────────────────────────────────
+var _nombreTimer = null;
+function validarNombreLive(inp) {
+  inp.value = inp.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]/g,'');
+  clearTimeout(_nombreTimer);
+  document.getElementById('hint-nombre-ok').style.display='none';
+  if (inp.value.trim().length < 2) return;
+  _nombreTimer = setTimeout(function(){
+    apiGet({action:'verificarEmailDisponible',email:inp.value.trim()+'__nombre_check__'}, function(){}, function(){});
+    // Solo feedback visual básico (la verificación real es en el backend al enviar)
+    document.getElementById('hint-nombre-ok').style.display='block';
+  }, 600);
+}
+
+function toggleOtroPron(cb) {
+  document.getElementById('cond-pron-otro').classList.toggle('visible', cb.checked);
+}
+
+function continuar_p1() {
+  var nombre = document.getElementById('f-nombre').value.trim();
+  if (!nombre || nombre.length < 2) { errMsg('err-p1','El nombre debe tener al menos 2 caracteres.'); return; }
+  if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]+$/.test(nombre)) { errMsg('err-p1','Solo se permiten letras y espacios.'); return; }
+
+  var prons = Array.from(document.querySelectorAll('input[name="pron"]:checked'))
+    .map(function(cb){
+      if (cb.value==='Otro') {
+        var t=document.getElementById('f-pron-otro').value.trim();
+        return t || null;
+      }
+      return cb.value;
+    }).filter(Boolean);
+  if (prons.length === 0) { errMsg('err-p1','Seleccioná al menos un pronombre.'); return; }
+
+  if (!G.fechaNac) {
+    var mayor = document.getElementById('f-mayor').value;
+    if (!mayor) { errMsg('err-p1','Indicá si sos mayor de 18 años.'); return; }
+    G.mayorEdad = mayor;
+  }
+
+  irPaso(2);
+}
+
+// ─── PASO 2 ───────────────────────────────────────────────────────────────────
+function continuar_p2() {
+  var tel    = document.getElementById('f-telefono').value.trim();
+  var minLen = parseInt(document.getElementById('f-tel-minlen').value) || 6;
+  var maxLen = _paisSel ? _paisSel.max : 15;
+  if (!tel) { errMsg('err-p2','El número de teléfono es obligatorio.'); return; }
+  if (!/^\d+$/.test(tel)) { errMsg('err-p2','Solo se permiten números, sin espacios ni guiones.'); return; }
+  if (tel.length < minLen || tel.length > maxLen) {
+    errMsg('err-p2','El número debe tener entre ' + minLen + ' y ' + maxLen + ' dígitos para ' + (_paisSel ? _paisSel.nombre : 'este país') + '.');
+    return;
+  }
+  irPaso(3);
+}
+
+// ─── PASO 3: Equipamiento ─────────────────────────────────────────────────────
+function selPat(label, val) {
+  document.querySelectorAll('input[name="patines"]').forEach(function(r){ r.closest('.opcion').classList.remove('sel'); });
+  label.classList.add('sel');
+  document.getElementById('cond-talla').classList.toggle('visible', val==='Sí');
+}
+function selProtec(label, val) {
+  document.querySelectorAll('input[name="protec"]').forEach(function(r){ r.closest('.opcion').classList.remove('sel'); });
+  label.classList.add('sel');
+  document.getElementById('cond-protec-otro').classList.toggle('visible', val==='Otro');
+}
+
+function cargarTallas() {
+  apiGet({action:'getTallasDisponibles'}, function(tallas){
+    var sel = document.getElementById('f-talla');
+    sel.innerHTML = '<option value="">Elegí una talla</option>';
+    tallas.forEach(function(t){
+      var o=document.createElement('option'); o.value=o.textContent=t; sel.appendChild(o);
+    });
+  }, function(){ /* silencioso, el backend valida */ });
+}
+
+// ─── ENVIAR ───────────────────────────────────────────────────────────────────
+function enviarForm() {
+  var patRad = document.querySelector('input[name="patines"]:checked');
+  if (!patRad) { errMsg('err-p3','Indicá si necesitás patines.'); return; }
+  var patines = patRad.value;
+  var talla   = '';
+  if (patines === 'Sí') {
+    talla = document.getElementById('f-talla').value;
+    if (!talla) { errMsg('err-p3','Seleccioná una talla de patines.'); return; }
+  }
+
+  var protecRad = document.querySelector('input[name="protec"]:checked');
+  if (!protecRad) { errMsg('err-p3','Indicá si necesitás protecciones.'); return; }
+  var protec = protecRad.value;
+  if (protec === 'Otro') {
+    var otroT = document.getElementById('f-protec-otro').value.trim();
+    if (!otroT) { errMsg('err-p3','Describí qué protecciones necesitás.'); return; }
+    protec = otroT;
+  }
+
+  var nombre = document.getElementById('f-nombre').value.trim();
+  var prons  = Array.from(document.querySelectorAll('input[name="pron"]:checked'))
+    .map(function(cb){ return cb.value==='Otro' ? document.getElementById('f-pron-otro').value.trim() : cb.value; })
+    .filter(Boolean).join(', ');
+  var prefijo  = document.getElementById('f-prefijo-val').value;
+  var telefono = document.getElementById('f-telefono').value.trim();
+  var fechaNacGuardar = G.guardarFecha ? (G.fechaNac || '') : '';
+
+  irPaso(4); // p-enviando
+
+  apiPost({
+    action:               'inscribirPersona',
+    nombre:               nombre,
+    email:                G.email,
+    idToken:              G.idToken,
+    pronombres:           prons,
+    prefijo:              prefijo,
+    telefono:             telefono,
+    necesitaPatines:      patines,
+    talla:                talla,
+    necesitaProtecciones: protec,
+    foto:                 G.guardarFoto ? G.foto : '',
+    fechaNac:             fechaNacGuardar,
+    guardarFecha:         G.guardarFecha ? 'si' : 'no',
+    fechaPublica:         G.fechaPublica ? 'Sí' : 'No',
+    edadPublica:          G.edadPublica  ? 'Sí' : 'No',
+    mayorEdad:            G.mayorEdad
+  }, function(res){
+    if (res.exito) {
+      document.getElementById('exito-nombre').textContent = nombre;
+      irPaso(5); // p-exito
+    } else {
+      // Volver al paso correcto según el error
+      var paso = res.error && res.error.toLowerCase().includes('nombre') ? 1 :
+                 res.error && res.error.toLowerCase().includes('correo')  ? 0 : 3;
+      irPaso(paso);
+      var errIds = ['err-p0','err-p1','err-p2','err-p3'];
+      errMsg(errIds[paso] || 'err-p3', res.error || 'Error al registrarse. Intentá de nuevo.');
+    }
+  }, function(e){
+    irPaso(3);
+    errMsg('err-p3','Error de conexión: ' + e.message);
+  });
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function errMsg(id, msg) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(function(){ el.style.display='none'; }, 6000);
+}
+
+function mostrarCargando(msg) {
+  var ov  = document.getElementById('loading-overlay');
+  var txt = ov.querySelector('.loading-txt');
+  ov.classList.remove('fade-out'); ov.style.display='flex';
+  if (txt && msg) txt.textContent = msg;
+}
+function ocultarCargando() {
+  var ov = document.getElementById('loading-overlay');
+  ov.classList.add('fade-out');
+  setTimeout(function(){ ov.style.display='none'; ov.classList.remove('fade-out'); }, 400);
+}
+
+function abrirContacto()  { document.getElementById('modal-contacto').classList.add('visible'); }
+function cerrarContacto() { document.getElementById('modal-contacto').classList.remove('visible'); }
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+window.onload = function() {
+  poblarPaises();
+  cargarTallas();
+  initGIS();
+  history.replaceState({paso:0},'','#p0');
+  ocultarCargando();
+};
+</script>
+</body>
+</html>
