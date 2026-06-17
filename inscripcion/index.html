@@ -837,10 +837,22 @@ function initGIS() {
   var cont = document.getElementById('gsignin-btn');
   cont.innerHTML = '';
 cont.style.opacity = '0';
-  cont.style.transition = 'opacity 0.4s ease';
+  cont.style.transition = 'opacity 0.45s ease';
   google.accounts.id.renderButton(cont, { theme:'outline', size:'large', text:'signin_with', locale:'es', width:280 });
   _gisReady = true;
-  setTimeout(function() { cont.style.opacity = '1'; }, 600);
+  var observer = new MutationObserver(function(mutations, obs) {
+    var iframe = cont.querySelector('iframe');
+    if (iframe) {
+      iframe.addEventListener('load', function() {
+        setTimeout(function() { cont.style.opacity = '1'; }, 80);
+        obs.disconnect();
+      });
+      obs.disconnect();
+    }
+  });
+  observer.observe(cont, { childList: true, subtree: true });
+  // Fallback por si el observer falla
+  setTimeout(function() { if (cont.style.opacity !== '1') cont.style.opacity = '1'; }, 1200);
 }
 
 function onGoogleCred(resp) {
