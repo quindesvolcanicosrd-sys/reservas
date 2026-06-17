@@ -781,8 +781,8 @@ footer { display: block; }
       <h2>Inicia sesión al portal de reservas</h2>
      
 <!-- Google Sign-In -->
-      <div id="google-btn-wrapper" style="margin-bottom:10px;">
-        <div id="g-signin-btn" style="min-height:52px;overflow:visible;animation:fadeInBtn 0.4s ease 0.7s both;display:flex;justify-content:center;align-items:center;width:100%;padding:4px 0;"></div>
+<div id="google-btn-wrapper" style="margin-bottom:10px;">
+        <div id="g-signin-btn-usuario" style="min-height:52px;overflow:visible;animation:fadeInBtn 0.4s ease 0.7s both;display:flex;justify-content:center;align-items:center;width:100%;padding:4px 0;"></div>
       </div>
       <div class="error-msg" id="err-google-login"></div>
 
@@ -2706,11 +2706,18 @@ function iniciarGoogleSignInUsuario() {
     });
     _gisUsuarioInicializado = true;
   }
-  var cont = document.getElementById('gsignin-usuario');
+  var cont = document.getElementById('g-signin-btn-usuario');
   if (!cont) return;
   cont.innerHTML = '';
   var ancho = cont.parentElement ? cont.parentElement.offsetWidth : 320;
-  google.accounts.id.renderButton(cont, { theme: 'outline', size: 'large', text: 'continue_with', locale: 'es', width: ancho || 320 });
+  var esOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  google.accounts.id.renderButton(cont, {
+    theme: esOscuro ? 'filled_black' : 'outline',
+    size: 'large',
+    text: 'continue_with',
+    locale: 'es',
+    width: ancho || 320
+  });
 }
 
 function onGoogleCredentialUsuario(resp) {
