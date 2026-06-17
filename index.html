@@ -417,6 +417,8 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
 #gsignin-usuario > div,
 #gsignin-usuario iframe {
   margin: 0 auto !important;
+  border: none !important;
+  box-shadow: none !important;
 }
   #loading-overlay {
   position: fixed; inset: 0;
@@ -626,7 +628,7 @@ select, option, optgroup {
   #modal-contacto button { background: #2a2a2a !important; color: #ccc !important; }
   #modal-contacto .modal-ct { color: #f0f0f0 !important; }
 #s1 button[onclick="abrirContacto()"] { background: #2d1f5e !important; color: #c4b5fd !important; border-color: #6d28d9 !important; }
-#s1 div[style*="background:#fafafa"] { background: #252525 !important; border-color: #2a2a2a !important; }
+  #google-btn-wrapper { background: #252525 !important; border-color: #2a2a2a !important; }
   #pin-acordeon-header { background: #252525 !important; }
   #pin-acordeon-header span { color: #aaa !important; }
   #pin-acordeon-body { background: #1c1c1c; }
@@ -778,11 +780,9 @@ footer { display: block; }
       <div class="seccion-label">Bienvenidx</div>
       <h2>Inicia sesión al portal de reservas</h2>
      
-<!-- Google Sign-In — mismo estilo que el acordeón PIN -->
-      <div style="border:2px solid #e5e5e5;border-radius:14px;overflow:hidden;margin-bottom:10px;background:#fafafa;">
-        <div style="display:flex;align-items:center;justify-content:center;padding:6px 18px;">
-          <div id="gsignin-usuario" style="min-height:44px;height:44px;overflow:hidden;animation:fadeInBtn 0.4s ease 0.7s both;display:flex;justify-content:center;align-items:center;width:100%;"></div>
-        </div>
+<!-- Google Sign-In -->
+      <div id="google-btn-wrapper" style="border-radius:14px;margin-bottom:10px;background:#fafafa;border:2px solid #e5e5e5;">
+        <div id="gsignin-usuario" style="min-height:52px;overflow:visible;animation:fadeInBtn 0.4s ease 0.7s both;display:flex;justify-content:center;align-items:center;width:100%;padding:4px 0;"></div>
       </div>
       <div class="error-msg" id="err-google-login"></div>
 
