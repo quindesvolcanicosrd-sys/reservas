@@ -631,8 +631,8 @@ select, option, optgroup {
   #modal-contacto .modal-ct { color: #f0f0f0 !important; }
 #s1 button[onclick="abrirContacto()"] { background: #2d1f5e !important; color: #c4b5fd !important; border-color: #6d28d9 !important; }
   #google-btn-wrapper { background: none !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
-  #pin-acordeon-header { background: #1f1f1f !important; }
-  #pin-acordeon-header span { color: #aaa !important; }
+#pin-acordeon-header { background: #e55a00 !important; }
+  #pin-acordeon-header span { color: white !important; }
   #pin-acordeon-body { background: #1c1c1c; }
   #pin-acordeon-body > div { background: #1c1c1c; }
   #pin-acordeon-body select { background: #202124  !important; border-color: #333 !important; color: #f0f0f0 !important; }
@@ -848,10 +848,10 @@ footer { display: block; }
       <!-- Acordeón PIN -->
       <div style="border:2px solid #e5e5e5;border-radius:4px;overflow:hidden;margin-bottom:24px;">
         <div onclick="togglePinAcordeon()" id="pin-acordeon-header"
-  style="display:flex;align-items:center;justify-content:center;padding:11px 18px;min-height:44px;cursor:pointer;background:#fafafa;transition:background 0.2s;position:relative;">
-  <span class="material-symbols-outlined" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:1.3rem;color:#555;">dialpad</span>
-  <span style="font-size:0.9rem;font-weight:700;color:#555;">Continuar con PIN</span>
-  <span class="material-symbols-outlined" id="pin-acordeon-chevron" style="color:#aaa;font-size:1.1rem;transition:transform 0.3s;position:absolute;right:18px;top:50%;transform:translateY(-50%);">expand_more</span>
+style="display:flex;align-items:center;justify-content:center;padding:11px 18px;min-height:44px;cursor:pointer;background:#F97316;transition:background 0.2s;position:relative;">
+  <span class="material-symbols-outlined" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:1.3rem;color:white;">dialpad</span>
+  <span style="font-size:0.9rem;font-weight:700;color:white;">Continuar con PIN</span>
+  <span class="material-symbols-outlined" id="pin-acordeon-chevron" style="color:white;font-size:1.1rem;transition:transform 0.3s;position:absolute;right:18px;top:50%;transform:translateY(-50%);">expand_more</span>
 </div>
         <div id="pin-acordeon-body" style="max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1),opacity 0.3s ease;opacity:0;">
           <div style="padding:16px 18px 20px;">
@@ -878,6 +878,10 @@ footer { display: block; }
           </div>
         </div>
       </div>
+<p style="text-align:center;font-size:0.82rem;color:#888;margin:0 0 14px;">
+  ¿Sin cuenta registrada? 
+  <a href="https://reservas.quindesvolcanicos.com/inscripcion" style="color:#F97316;font-weight:700;text-decoration:none;">Regístrate aquí</a>
+</p>
 <div style="border-top:1px solid rgba(168,149,135,0.3);margin:8px 0 16px;"></div>
       <div style="display:flex;gap:10px;margin-bottom:0;">
       <a class="btn-wp-grupo" href="https://chat.whatsapp.com/FPupGnd1c9g1oVXu9VudKK" target="_blank" style="margin-top:0;flex:1;font-size:0.82rem;padding:13px 10px;">       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -2900,14 +2904,14 @@ function togglePinAcordeon() {
     body.style.maxHeight = '400px';
     body.style.opacity = '1';
     chevron.style.transform = 'translateY(-50%) rotate(180deg)';
-    header.style.background = '#fff8f4';
-    chevron.style.color = '#F97316';
+    header.style.background = '#ea6407';
+    chevron.style.color = 'white';
   } else {
     body.style.maxHeight = '0';
     body.style.opacity = '0';
     chevron.style.transform = 'translateY(-50%)';
-    header.style.background = '#fafafa';
-    chevron.style.color = '#aaa';
+    header.style.background = '#F97316';
+    chevron.style.color = 'white';
   }
 }
 
