@@ -677,6 +677,9 @@ div:has(> [id^="grp-res-"]) { border-color: #202124  !important; }
 .res-card-home.reagendar-clase  { background:#1e1531; border-color:#5b21b6; }
   .res-card-equip { color: #bbb; }
   /* date picker mis datos */
+  #modal-eliminar-cuenta > div { background: #1c1c1c !important; }
+  #modal-eliminar-cuenta input { background: #202124 !important; border-color: #333 !important; color: #f0f0f0 !important; }
+  #modal-eliminar-cuenta .mec-nombre { color: #fb923c !important; }
   .fnac-trigger-btn { background:#202124 !important; border-color:#202124 !important; color:#f0f0f0 !important; }
   .fnac-placeholder { color:#555 !important; }
   #ddp-modal .ddp-card { background:#1c1c1c !important; }
@@ -1609,7 +1612,7 @@ footer { display: block; }
 
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-var BACKEND = 'https://script.google.com/macros/s/AKfycbwLgi4mme3w_nIG2226opCDFhn8rKi0lwYKbeY0zAylWBEHyQ4VeSz6fL9UF5q3lAXOkA/exec';
+var BACKEND = 'https://script.google.com/macros/s/AKfycbyUp1ayoVNmPpBPL1DrflIuamGpe7H0EIUNw19xneXdRLqbhHvNMhRcFINE3W0ZDJjXFg/exec';
 
 var _token = '';
 
@@ -3112,22 +3115,64 @@ function activarPush() {
   });
 }
 function eliminarCuenta() {
-  var confirmacion = prompt('⚠️ Esta acción es permanente.\n\nPara confirmar, escribe tu nombre exactamente:\n"' + E.nombre + '"');
-  if (confirmacion === null) return;
-  if (confirmacion.trim() !== E.nombre) { alert('El nombre no coincide. No se eliminó nada.'); return; }
-  if (!confirm('¿Estás segurx? Se borrarán TODOS tus datos y reservas de forma permanente.')) return;
-  mostrarCargando('Eliminando tu cuenta...');
+  document.getElementById('mec-nombre-label').textContent = E.nombre;
+  document.getElementById('mec-input').value = '';
+  document.getElementById('err-mec').style.display = 'none';
+  mecValidar();
+  var overlay = document.getElementById('modal-eliminar-cuenta');
+  var inner = overlay.querySelector('div');
+  overlay.style.display = 'flex';
+  void overlay.offsetWidth;
+  overlay.style.opacity = '1';
+  inner.style.opacity = '1';
+  inner.style.transform = 'scale(1) translateY(0)';
+  document.body.style.overflow = 'hidden';
+  setTimeout(function() { document.getElementById('mec-input').focus(); }, 300);
+}
+
+function mecValidar() {
+  var val = (document.getElementById('mec-input').value || '').trim();
+  var btn = document.getElementById('mec-btn-confirmar');
+  var ok = val === E.nombre;
+  btn.disabled = !ok;
+  btn.style.opacity = ok ? '1' : '0.4';
+  btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+}
+
+function mecCerrar() {
+  var overlay = document.getElementById('modal-eliminar-cuenta');
+  var inner = overlay.querySelector('div');
+  overlay.style.opacity = '0';
+  inner.style.opacity = '0';
+  inner.style.transform = 'scale(0.92) translateY(12px)';
+  setTimeout(function() { overlay.style.display = 'none'; document.body.style.overflow = ''; }, 300);
+}
+
+function mecConfirmar() {
+  var btn = document.getElementById('mec-btn-confirmar');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="btn-spinner"></span>Eliminando...';
   api({ action: 'eliminarCuenta', nombre: E.nombre }, function(res) {
-    ocultarCargando();
+    mecCerrar();
     if (res.exito) {
-      localStorage.removeItem('session');
-      _token = ''; E.nombre = ''; E.datos = null; E.datosCompletos = null; _todasReservas = [];
-      alert('Tu cuenta fue eliminada. Hasta pronto 🛼');
-      ir('s1');
+      setTimeout(function() {
+        localStorage.removeItem('session');
+        _token = ''; E.nombre = ''; E.datos = null; E.datosCompletos = null; _todasReservas = [];
+        document.body.style.overflow = '';
+        ir('s1');
+      }, 310);
     } else {
-      alert('Error al eliminar: ' + (res.error || 'Intenta de nuevo.'));
+      btn.disabled = false; btn.innerHTML = 'Eliminar mi cuenta';
+      var e = document.getElementById('err-mec');
+      e.textContent = res.error || 'Error al eliminar. Intenta de nuevo.';
+      e.style.display = 'block';
     }
-  }, function(e) { ocultarCargando(); alert('Error de conexión: ' + e.message); });
+  }, function(e) {
+    btn.disabled = false; btn.innerHTML = 'Eliminar mi cuenta';
+    var errEl = document.getElementById('err-mec');
+    errEl.textContent = 'Error de conexión: ' + e.message;
+    errEl.style.display = 'block';
+  });
 }
 </script>
 <script>
@@ -3795,6 +3840,22 @@ function adminQuitarClick(email) {
   </div>
 </div>
   
+<div id="modal-eliminar-cuenta" style="display:none;position:fixed;inset:0;z-index:9800;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;padding:16px;opacity:0;transition:opacity 0.3s ease;">
+  <div style="background:white;border-radius:20px;padding:28px 24px;width:100%;max-width:400px;transform:scale(0.92) translateY(12px);transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1),opacity 0.3s ease;opacity:0;">
+    <div style="font-size:2.4rem;text-align:center;margin-bottom:12px;">🗑️</div>
+    <div style="font-weight:800;font-size:1.05rem;color:#dc2626;text-align:center;margin-bottom:8px;">Eliminar cuenta</div>
+    <p style="font-size:0.85rem;color:#666;text-align:center;margin-bottom:20px;line-height:1.5;">Esta acción es <strong>permanente e irreversible</strong>. Se borrarán todos tus datos y reservas.</p>
+    <div style="background:#fef2f2;border:2px solid #fecaca;border-radius:12px;padding:14px 16px;margin-bottom:18px;">
+      <div style="font-size:0.78rem;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Para confirmar, escribe tu nombre:</div>
+      <div class="mec-nombre" style="font-size:0.88rem;font-weight:800;color:#dc2626;margin-bottom:10px;" id="mec-nombre-label"></div>
+      <input type="text" id="mec-input" placeholder="Escribe tu nombre aquí..." style="width:100%;padding:12px 14px;border:2px solid #fecaca;border-radius:10px;font-size:0.88rem;font-family:inherit;outline:none;" oninput="mecValidar()">
+    </div>
+    <div class="error-msg" id="err-mec" style="margin-bottom:12px;"></div>
+    <button id="mec-btn-confirmar" onclick="mecConfirmar()" disabled style="width:100%;padding:14px;background:#dc2626;color:white;border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;opacity:0.4;transition:opacity 0.2s;">Eliminar mi cuenta</button>
+    <button onclick="mecCerrar()" style="width:100%;padding:13px;background:transparent;color:#888;border:2px solid #e5e5e5;border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
+  </div>
+</div>
+
 <footer style="text-align:center;padding: 0px 20px 25px;;font-size:0.85rem;">
   <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:16px 24px;">
     
