@@ -2658,14 +2658,20 @@ cargarSelect('d-emerg1Prefijo', datos.emerg1Prefijo, 'd-emerg1PrefijoOtro', 'cam
 // Mostrar fecha nacimiento (solo lectura)
   var fnDisp = document.getElementById('d-fechaNacimiento-display');
   if (fnDisp) {
-    if (datos.fechaNacimiento) {
-      var fp = datos.fechaNacimiento.split('-');
-      fnDisp.textContent = fp.length === 3
-        ? parseInt(fp[2]) + ' de ' + _MESES_DDP[parseInt(fp[1])-1] + ' de ' + fp[0]
-        : datos.fechaNacimiento;
-    } else {
-      fnDisp.textContent = '—';
+    var fnRaw = (datos.fechaNacimiento || '').toString().trim();
+    var fnText = '—';
+    if (fnRaw) {
+      var fpIso = fnRaw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (fpIso) {
+        fnText = parseInt(fpIso[3]) + ' de ' + _MESES_DDP[parseInt(fpIso[2])-1] + ' de ' + fpIso[1];
+      } else {
+        var d = new Date(fnRaw);
+        if (!isNaN(d.getTime())) {
+          fnText = d.getUTCDate() + ' de ' + _MESES_DDP[d.getUTCMonth()] + ' de ' + d.getUTCFullYear();
+        }
+      }
     }
+    fnDisp.textContent = fnText;
   }
 
   document.querySelectorAll('input[data-group="pronombres"]').forEach(function(cb) { cb.checked = false; });
