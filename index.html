@@ -855,11 +855,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 </div>
         <div id="pin-acordeon-body" style="max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1),opacity 0.3s ease;opacity:0;">
           <div style="padding:16px 18px 20px;">
-            <div class="select-wrapper" style="margin-bottom:14px;">
-              <div id="loader-nombres" class="select-spinner"></div>
-              <select id="sel-nombre" disabled style="color:#aaa;">
-                <option value="">Cargando nombres...</option>
-              </select>
+            <div style="margin-bottom:14px;">
+              <input type="text" id="inp-nombre-pin" placeholder="Tu nombre o correo registrado" autocomplete="off" autocapitalize="off" style="width:100%;" onkeydown="if(event.key==='Enter') continuar_pin_desde_s1()">
             </div>
             <div style="position:relative;margin-bottom:14px;">
               <input type="password" id="input-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4"
@@ -873,7 +870,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             </div>
             <div class="error-msg" id="err-s1"></div>
             <div class="error-msg" id="err-pin"></div>
-            <button type="button" class="btn-forgot-pin" onclick="solicitarNuevoPIN()" style="margin-bottom:12px;">¿Olvidaste tu PIN?</button>
+            <button type="button" class="btn-forgot-pin" onclick="solicitarNuevoPIN()" style="margin-bottom:8px;">¿Olvidaste tu PIN?</button>
+<button type="button" class="btn-forgot-pin" onclick="solicitarNombreUsuario()" style="margin-bottom:12px;">¿Olvidaste tu nombre de usuario?</button>
             <button class="btn btn-primary" onclick="continuar_pin_desde_s1()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
           </div>
         </div>
@@ -1617,7 +1615,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-var BACKEND = 'https://script.google.com/macros/s/AKfycbyUp1ayoVNmPpBPL1DrflIuamGpe7H0EIUNw19xneXdRLqbhHvNMhRcFINE3W0ZDJjXFg/exec';
+var BACKEND = 'https://script.google.com/macros/s/AKfycbxMt_DyIDdjGyl6JDPOx4vXwkXAsacE2P04gXagAJZ7L_nWrd3yQMD7jy2v6cP_2RK22w/exec';
 
 var _token = '';
 
@@ -1807,18 +1805,7 @@ api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
   }
 if (!_restaurando) { ir('s1', true); }
   requestAnimationFrame(function() { requestAnimationFrame(iniciarGoogleSignInUsuario); });
-  api({ action: 'getNombres' }, function(nombres) {
-    var sel = document.getElementById('sel-nombre');
-    sel.innerHTML = '<option value="">Elige tu nombre</option>';
-    nombres.forEach(function(n) { var o = document.createElement('option'); o.value = o.textContent = n; sel.appendChild(o); });
-    sel.disabled = false; sel.style.color = '';
-    document.getElementById('loader-nombres').style.display = 'none';
-    if (!window._restaurandoSesion) ocultarCargando();
-  }, function(e) {
-    if (!window._restaurandoSesion) ocultarCargando();
-    document.getElementById('loader-nombres').style.display = 'none';
-    err('err-s1', 'Error al cargar nombres: ' + e.message);
-  });
+  if (!window._restaurandoSesion) ocultarCargando();
 
   api({ action: 'getPreciosClases' }, function(precios) {
     E.precioPorClase = parseFloat(precios.precioPorClase) || 0;
@@ -2916,10 +2903,24 @@ function togglePinAcordeon() {
 }
 
 function continuar_pin_desde_s1() {
-  var nombre = document.getElementById('sel-nombre').value.trim();
-  if (!nombre) { err('err-s1', 'Por favor selecciona tu nombre.'); return; }
-  E.nombre = nombre;
-  continuar_pin();
+  var val = document.getElementById('inp-nombre-pin').value.trim();
+  if (!val) { err('err-s1', 'Ingresa tu nombre o correo registrado.'); return; }
+  if (val.indexOf('@') !== -1) {
+    mostrarCargando('Verificando...');
+    api({ action: 'resolverNombre', identificador: val }, function(res) {
+      ocultarCargando();
+      if (!res.encontrado) { err('err-s1', 'No encontramos ninguna cuenta con ese correo.'); return; }
+      E.nombre = res.nombre;
+      continuar_pin();
+    }, function(e) { ocultarCargando(); err('err-s1', 'Error de conexión: ' + e.message); });
+  } else {
+    E.nombre = val;
+    continuar_pin();
+  }
+}
+
+function solicitarNombreUsuario() {
+  window.location.href = 'mailto:quindesvolcanicosrd@gmail.com?subject=' + encodeURIComponent('Consulta nombre de usuario') + '&body=' + encodeURIComponent('Hola,\n\nOlvidé el nombre con que me registré.\n\nMi correo: \n\nGracias.');
 }
 
 function solicitarNuevoPIN(){
@@ -3508,14 +3509,13 @@ function adminCambiarEstado(fila, estado, btn) {
 // ── Notificaciones ────────────────────────────────────────────────────────────
 function adminIrNotif() {
   // Poblar destinatarios con la lista de nombres del login
-  var selNombres = document.getElementById('sel-nombre');
-  var selDest = document.getElementById('adm-notif-destino');
+var selDest = document.getElementById('adm-notif-destino');
   selDest.innerHTML = '<option value="todos">📢 Todes (suscritxs)</option>';
-  if (selNombres) {
-    Array.from(selNombres.options).forEach(function(o) {
-      if (o.value) { var op = document.createElement('option'); op.value = op.textContent = o.value; selDest.appendChild(op); }
+  adminApi({ action: 'adminGetUsuarios' }, function(res) {
+    (res || []).forEach(function(u) {
+      var op = document.createElement('option'); op.value = op.textContent = u.nombre; selDest.appendChild(op);
     });
-  }
+  }, function() {});
   document.getElementById('adm-notif-titulo').value = '';
   document.getElementById('adm-notif-msg').value = '';
   document.getElementById('adm-notif-fecha').value = '';
