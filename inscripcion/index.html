@@ -792,6 +792,24 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
         </div>
       </div>
 
+      <div class="campo" style="margin-top:20px;">
+        <label>PIN de acceso <span style="font-size:0.78rem;font-weight:400;color:var(--hint);text-transform:none;letter-spacing:0;">(opcional)</span></label>
+        <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;line-height:1.5;">
+          Crea un PIN de 4 dígitos para poder entrar sin Google. Útil si usás un dispositivo compartido o sin tu cuenta guardada.
+        </p>
+        <div style="position:relative;">
+          <input type="password" id="f-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+                 placeholder="• • • •"
+                 style="text-align:center;font-size:1.6rem;letter-spacing:6px;padding-left:44px;padding-right:44px;"
+                 oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)">
+          <button type="button" onclick="togglePinVisibilityForm()"
+                  style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#888;padding:4px;line-height:1;">
+            <span class="material-symbols-outlined" id="toggle-pin-icon-form">visibility</span>
+          </button>
+        </div>
+        <p class="dato-hint">Solo 4 dígitos numéricos. Dejalo vacío si preferís entrar solo con Google.</p>
+      </div>
+
       <div class="error-msg" id="err-form"></div>
       <button class="btn btn-primary" id="btn-enviar" onclick="enviarForm()" style="margin-top:8px;">
         Inscribirme
@@ -831,8 +849,17 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 
 <script>
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
-var BACKEND = 'https://script.google.com/macros/s/AKfycbwHj2AO5JRKJFBF-seW6z9a2jiv1KOAx0SJZjddywDbYsnjdysnjHmRRaCDRctvrfgHxw/exec';
+var BACKEND = 'https://script.google.com/macros/s/AKfycbzLGEgJVXAqezM1QV9aVztIPtifzfBHBleTUFJDLDXWjqVgJkMvfvZ7lA0LuUHdonfY/exec';
 var GOOGLE_CLIENT_ID = '632992894668-gnbb5cclsmfdcnve0g34kmue1c72h73q.apps.googleusercontent.com';
+
+function sha256Hex(str) {
+  var data = new TextEncoder().encode(str);
+  return crypto.subtle.digest('SHA-256', data).then(function(buf) {
+    return Array.prototype.map.call(new Uint8Array(buf), function(b) {
+      return b.toString(16).padStart(2, '0');
+    }).join('');
+  });
+}
 
 // ─── DATOS RECOGIDOS ──────────────────────────────────────────────────────────
 var G = {
@@ -971,7 +998,8 @@ function initGIS() {
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCred });
   var cont = document.getElementById('gsignin-btn');
   cont.innerHTML = '';
-google.accounts.id.renderButton(cont, { theme:'outline', size:'large', text:'signin_with', locale:'es', width:280 });
+  var esOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  google.accounts.id.renderButton(cont, { theme: esOscuro ? 'filled_black' : 'outline', size:'large', text:'signin_with', locale:'es', width:280 });
   var sk = document.getElementById('gsignin-skeleton');
   if (sk) { sk.style.opacity = '0'; setTimeout(function(){ sk.style.display = 'none'; }, 400); }  _gisReady = true;
   cont.style.animation = 'fadeInBtn 0.4s ease 0.7s both';
@@ -1175,41 +1203,51 @@ function enviarForm() {
     protec = otroT;
   }
 
-  G.guardarFoto  = document.getElementById('tog-foto').checked;
+G.guardarFoto  = document.getElementById('tog-foto').checked;
   G.guardarFecha = document.getElementById('tog-fecha').checked;
   G.fechaPublica = document.getElementById('tog-fecha-pub').checked;
   G.edadPublica  = document.getElementById('tog-edad-pub').checked;
   if (!G.guardarFoto) G.foto = '';
 
-  mostrarCargando('Creando tu cuenta...');
+  var pin = (document.getElementById('f-pin') || {}).value || '';
 
-  apiPost({
-    action:'inscribirPersona', nombre:nombre, email:G.email, idToken:G.idToken,
-    pronombres:prons.join(', '), prefijo:document.getElementById('f-prefijo-val').value,
-    telefono:tel, necesitaPatines:patines, talla:talla, necesitaProtecciones:protec,
-    foto:G.guardarFoto ? G.foto : '',
-    fechaNac:G.guardarFecha ? (G.fechaNac || '') : '',
-    guardarFecha:G.guardarFecha ? 'si' : 'no',
-    fechaPublica:G.fechaPublica ? 'Sí' : 'No',
-    edadPublica:G.edadPublica  ? 'Sí' : 'No',
-    mayorEdad:G.mayorEdad
-  }, function(res){
-    ocultarCargando();
-    if (res.exito) {
-      document.getElementById('exito-nombre').textContent = nombre;
-      document.getElementById('form-card').style.display = 'none';
-      var ex = document.getElementById('section-exito');
-      ex.style.display = 'block';
-      ex.style.animation = 'slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both';
-      window.scrollTo({top:0,behavior:'smooth'});
-    } else {
-      errMsg('err-form', res.error || 'Error al registrarse. Intenta de nuevo.');
-      window.scrollTo({top:0,behavior:'smooth'});
-    }
-  }, function(e){
-    ocultarCargando();
-    errMsg('err-form','Error de conexión: ' + e.message);
-  });
+  function _doEnviar(pinHash) {
+    mostrarCargando('Creando tu cuenta...');
+    apiPost({
+      action:'inscribirPersona', nombre:nombre, email:G.email, idToken:G.idToken,
+      pronombres:prons.join(', '), prefijo:document.getElementById('f-prefijo-val').value,
+      telefono:tel, necesitaPatines:patines, talla:talla, necesitaProtecciones:protec,
+      foto:G.guardarFoto ? G.foto : '',
+      fechaNac:G.guardarFecha ? (G.fechaNac || '') : '',
+      guardarFecha:G.guardarFecha ? 'si' : 'no',
+      fechaPublica:G.fechaPublica ? 'Sí' : 'No',
+      edadPublica:G.edadPublica  ? 'Sí' : 'No',
+      mayorEdad:G.mayorEdad,
+      pinHash: pinHash || ''
+    }, function(res){
+      ocultarCargando();
+      if (res.exito) {
+        document.getElementById('exito-nombre').textContent = nombre;
+        document.getElementById('form-card').style.display = 'none';
+        var ex = document.getElementById('section-exito');
+        ex.style.display = 'block';
+        ex.style.animation = 'slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both';
+        window.scrollTo({top:0,behavior:'smooth'});
+      } else {
+        errMsg('err-form', res.error || 'Error al registrarse. Intenta de nuevo.');
+        window.scrollTo({top:0,behavior:'smooth'});
+      }
+    }, function(e){
+      ocultarCargando();
+      errMsg('err-form','Error de conexión: ' + e.message);
+    });
+  }
+
+  if (pin && /^\d{4}$/.test(pin)) {
+    sha256Hex(pin + '|' + nombre).then(function(hash) { _doEnviar(hash); });
+  } else {
+    _doEnviar('');
+  }
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -1403,6 +1441,13 @@ function initDatePickerListeners() {
     if (dpState.onConfirm) dpState.onConfirm(val);
     cerrarDatePicker();
   });
+}
+
+function togglePinVisibilityForm() {
+  var inp = document.getElementById('f-pin');
+  var icon = document.getElementById('toggle-pin-icon-form');
+  if (inp.type === 'password') { inp.type = 'tel'; icon.textContent = 'visibility_off'; }
+  else { inp.type = 'password'; icon.textContent = 'visibility'; }
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
