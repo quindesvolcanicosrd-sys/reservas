@@ -997,8 +997,7 @@ function initGIS() {
   google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCred });
   var cont = document.getElementById('gsignin-btn');
   cont.innerHTML = '';
-  var esOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  google.accounts.id.renderButton(cont, { theme: esOscuro ? 'filled_black' : 'outline', size:'large', text:'signin_with', locale:'es', width:280 });
+  google.accounts.id.renderButton(cont, { theme: 'filled_blue', size:'large', text:'signin_with', locale:'es', width:280 });
   var sk = document.getElementById('gsignin-skeleton');
   if (sk) { sk.style.opacity = '0'; setTimeout(function(){ sk.style.display = 'none'; }, 400); }  _gisReady = true;
   cont.style.animation = 'fadeInBtn 0.4s ease 0.7s both';
