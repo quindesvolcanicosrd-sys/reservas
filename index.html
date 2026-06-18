@@ -1438,11 +1438,18 @@ footer { display: block; }
       </div>
 
 
+    <div style="margin-top:32px;padding-top:20px;border-top:2px solid #fee2e2;">
+        <div style="font-size:0.78rem;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Zona de peligro</div>
+        <button onclick="eliminarCuenta()" style="width:100%;padding:14px;background:#fef2f2;color:#dc2626;border:2px solid #fecaca;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all 0.3s;">
+          🗑️ Eliminar mi cuenta
+        </button>
+        <p style="font-size:0.78rem;color:#aaa;margin-top:8px;line-height:1.4;text-align:center;">Esta acción es permanente e irreversible. Se borrarán todos tus datos.</p>
+      </div>
     </div>
   </div>
 
 
-  <div class="pantalla" id="s-admin-login">
+  <div class="pantalla" id="s-admin-login">  <div class="pantalla" id="s-admin-login">
     <div class="card" style="text-align:center;">
       <div class="seccion-label">Administradorx</div>
       <h2>Acceso administradorx</h2>
@@ -3104,10 +3111,28 @@ function activarPush() {
     } catch(e) { console.log('OS activar:', e); }
   });
 }
+function eliminarCuenta() {
+  var confirmacion = prompt('⚠️ Esta acción es permanente.\n\nPara confirmar, escribe tu nombre exactamente:\n"' + E.nombre + '"');
+  if (confirmacion === null) return;
+  if (confirmacion.trim() !== E.nombre) { alert('El nombre no coincide. No se eliminó nada.'); return; }
+  if (!confirm('¿Estás segurx? Se borrarán TODOS tus datos y reservas de forma permanente.')) return;
+  mostrarCargando('Eliminando tu cuenta...');
+  api({ action: 'eliminarCuenta', nombre: E.nombre }, function(res) {
+    ocultarCargando();
+    if (res.exito) {
+      localStorage.removeItem('session');
+      _token = ''; E.nombre = ''; E.datos = null; E.datosCompletos = null; _todasReservas = [];
+      alert('Tu cuenta fue eliminada. Hasta pronto 🛼');
+      ir('s1');
+    } else {
+      alert('Error al eliminar: ' + (res.error || 'Intenta de nuevo.'));
+    }
+  }, function(e) { ocultarCargando(); alert('Error de conexión: ' + e.message); });
+}
 </script>
 <script>
 
-// ─── DATE PICKER (Mis Datos) ──────────────────────────────────────────────────
+// ─── DATE PICKER (Mis Datos) ──────────────────────────────────────────────────// ─── DATE PICKER (Mis Datos) ──────────────────────────────────────────────────
 var _MESES_DDP = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 var _ddpSt = { vy:1990, vm:0, sy:null, sm:null, sd:null, yearMode:false, monthMode:false };
 
