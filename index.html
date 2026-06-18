@@ -2933,6 +2933,11 @@ api({ action: 'resolverNombre', identificador: val }, function(res) {
   }
 }
 
+function irAlRegistro() {
+  var token = window._tokenPendienteRegistro || '';
+  window.location.href = 'https://reservas.quindesvolcanicos.com/inscripcion/' + (token ? '?token=' + encodeURIComponent(token) : '');
+}
+
 function solicitarNombreUsuario() {
   window.location.href = 'mailto:quindesvolcanicosrd@gmail.com?subject=' + encodeURIComponent('Consulta nombre de usuario') + '&body=' + encodeURIComponent('Hola,\n\nOlvidé el nombre con que me registré.\n\nMi correo: \n\nGracias.');
 }
