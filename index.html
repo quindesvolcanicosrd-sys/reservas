@@ -840,8 +840,11 @@ footer { display: block; }
      
 <!-- Google Sign-In -->
       <div id="google-btn-wrapper" style="margin-bottom:10px;line-height:0;">
-      <div id="g-signin-btn-usuario" style="min-height:50px;animation:fadeInBtn 0.4s ease 0.7s both;display:flex;justify-content:center;align-items:center;width:100%;"></div>
-      </div>
+  <div style="position:relative;height:44px;width:100%;max-width:400px;margin:0 auto;">
+    <div id="gsignin-skeleton-main" style="position:absolute;inset:0;border-radius:4px;background:linear-gradient(90deg,#d1d1d1 25%,#e8e8e8 50%,#d1d1d1 75%);background-size:200% 100%;animation:skeletonShimmer 1.2s ease-in-out infinite;transition:opacity 0.4s ease;z-index:2;"></div>
+    <div id="g-signin-btn-usuario" style="position:absolute;inset:0;display:flex;justify-content:center;align-items:center;"></div>
+  </div>
+</div>
       <div class="error-msg" id="err-google-login"></div>
       <div id="msg-no-registrado" style="display:none;background:#fff8f4;border:2px solid #F97316;border-radius:12px;padding:16px;margin-top:12px;text-align:center;animation:fadeIn 0.35s ease;">
         <div style="font-size:1.6rem;margin-bottom:8px;">🛼</div>
@@ -2827,6 +2830,8 @@ function iniciarGoogleSignInUsuario() {
     locale: 'es',
     width: ancho
   });
+  var skMain = document.getElementById('gsignin-skeleton-main');
+  if (skMain) { skMain.style.opacity = '0'; setTimeout(function(){ skMain.style.display = 'none'; }, 400); }
 }
 
 // Reintenta el cálculo si cambia el tamaño de pantalla (rotación, resize, etc.)
