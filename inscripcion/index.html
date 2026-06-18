@@ -817,11 +817,16 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
     </div><!-- /section-form -->
   </div><!-- /form-card -->
 
-  <!-- ÉXITO -->
+<!-- TRANSICIÓN ÉXITO → RESERVA -->
   <div id="section-exito" style="display:none;">
-    <div class="card" style="text-align:center;">
-      <span class="exito-icon">🎉</span>
-      <div class="exito-title">¡Bienvenidx al equipo!</div>
+    <div class="card" style="text-align:center;padding:52px 24px;">
+      <div id="exito-check" style="font-size:4rem;margin-bottom:16px;">✅</div>
+      <div class="exito-title">¡Bienvenidx, <span id="exito-nombre" class="exito-nombre"></span>!</div>
+      <p class="exito-sub" style="margin-bottom:28px;">Tu cuenta fue creada con éxito.</p>
+      <div class="spinner" style="margin:0 auto 14px;"></div>
+      <p id="exito-loader-txt" style="font-size:0.85rem;color:var(--muted);font-weight:600;">Preparando tu primera reserva...</p>
+    </div>
+  </div>
       <p class="exito-sub">
         <span class="exito-nombre" id="exito-nombre"></span>, tu cuenta fue creada con éxito.<br>
         Ya puedes reservar equipamiento y gestionar tus clases.
@@ -1231,6 +1236,22 @@ G.guardarFoto  = document.getElementById('tog-foto').checked;
         ex.style.display = 'block';
         ex.style.animation = 'slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both';
         window.scrollTo({top:0,behavior:'smooth'});
+        // Construir params para la reserva
+        var _patinesParam = patines === 'Sí' ? 'si' : 'no';
+        var _protecParam  = protec  === 'No' ? 'no' : 'si';
+        var _params = 'nuevx=1'
+          + '&nombre='   + encodeURIComponent(nombre)
+          + '&patines='  + _patinesParam
+          + '&protec='   + _protecParam
+          + (_patinesParam === 'si' && talla ? '&talla=' + encodeURIComponent(talla) : '');
+        // Cambiar texto del loader a los 1.6s y redirigir a los 2.8s
+        setTimeout(function() {
+          var lt = document.getElementById('exito-loader-txt');
+          if (lt) lt.textContent = '¡Listo! Redirigiendo...';
+        }, 1600);
+        setTimeout(function() {
+          window.location.href = 'https://reservas.quindesvolcanicos.com?' + _params;
+        }, 2800);
       } else {
         errMsg('err-form', res.error || 'Error al registrarse. Intenta de nuevo.');
         window.scrollTo({top:0,behavior:'smooth'});
