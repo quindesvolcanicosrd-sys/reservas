@@ -843,6 +843,13 @@ footer { display: block; }
       <div id="g-signin-btn-usuario" style="min-height:50px;animation:fadeInBtn 0.4s ease 0.7s both;display:flex;justify-content:center;align-items:center;width:100%;"></div>
       </div>
       <div class="error-msg" id="err-google-login"></div>
+      <div id="msg-no-registrado" style="display:none;background:#fff8f4;border:2px solid #F97316;border-radius:12px;padding:16px;margin-top:12px;text-align:center;animation:fadeIn 0.35s ease;">
+        <div style="font-size:1.6rem;margin-bottom:8px;">🛼</div>
+        <div style="font-weight:800;font-size:0.95rem;color:#1a1a1a;margin-bottom:6px;">No encontramos tu cuenta</div>
+        <p style="font-size:0.82rem;color:#777;margin-bottom:14px;line-height:1.5;">El correo <strong id="msg-nr-email"></strong> no está registrado en Mirlxs. ¿Querés unirte al equipo?</p>
+        <button id="btn-ir-registro" onclick="irAlRegistro()" style="width:100%;padding:13px;background:#F97316;color:white;border:none;border-radius:10px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;">Registrarme ahora</button>
+        <button onclick="document.getElementById('msg-no-registrado').style.display='none'" style="width:100%;padding:11px;background:transparent;color:#aaa;border:none;font-size:0.82rem;cursor:pointer;font-family:inherit;margin-top:6px;">Cancelar</button>
+      </div>
 
 
       <!-- Acordeón PIN -->
@@ -2847,7 +2854,15 @@ function onGoogleCredentialUsuario(resp) {
 if (!res.valido) {
       ocultarCargando();
 if (res.noRegistrado) {
-        window.location.href = 'https://reservas.quindesvolcanicos.com/inscripcion/?token=' + encodeURIComponent(resp.credential);
+        window._tokenPendienteRegistro = resp.credential;
+        var emailMostrar = '';
+        try {
+          var p = resp.credential.split('.');
+          var pl = JSON.parse(atob(p[1].replace(/-/g,'+').replace(/_/g,'/')));
+          emailMostrar = pl.email || '';
+        } catch(ex) {}
+        document.getElementById('msg-nr-email').textContent = emailMostrar;
+        document.getElementById('msg-no-registrado').style.display = 'block';
         return;
       }
       var errEl = document.getElementById('err-google-login');
