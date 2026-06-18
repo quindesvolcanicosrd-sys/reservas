@@ -2907,9 +2907,8 @@ function continuar_pin_desde_s1() {
   if (!val) { err('err-s1', 'Ingresa tu nombre o correo registrado.'); return; }
   if (val.indexOf('@') !== -1) {
     mostrarCargando('Verificando...');
-    api({ action: 'resolverNombre', identificador: val }, function(res) {
-      ocultarCargando();
-      if (!res.encontrado) { err('err-s1', 'No encontramos ninguna cuenta con ese correo.'); return; }
+api({ action: 'resolverNombre', identificador: val }, function(res) {
+      if (!res.encontrado) { ocultarCargando(); err('err-s1', 'No encontramos ninguna cuenta con ese correo.'); return; }
       E.nombre = res.nombre;
       continuar_pin();
     }, function(e) { ocultarCargando(); err('err-s1', 'Error de conexión: ' + e.message); });
