@@ -630,7 +630,10 @@ select, option, optgroup {
   #modal-contacto button { background: #2a2a2a !important; color: #ccc !important; }
   #modal-contacto .modal-ct { color: #f0f0f0 !important; }
 #s1 button[onclick="abrirContacto()"] { background: #2d1f5e !important; color: #c4b5fd !important; border-color: #6d28d9 !important; }
-  #google-btn-wrapper { background: none !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
+  #msg-no-registrado { background: #2a1a0e !important; border-color: #F97316 !important; }
+  #msg-nr-titulo { color: #f0f0f0 !important; }
+  #msg-no-registrado p { color: #999 !important; }
+  #msg-no-registrado strong { color: #fb923c !important; }  #google-btn-wrapper { background: none !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
 #pin-acordeon-header { background: #e55a00 !important; }
   #pin-acordeon-header span { color: white !important; }
   #pin-acordeon-body { background: #1c1c1c; }
@@ -847,10 +850,9 @@ footer { display: block; }
 </div>
       <div class="error-msg" id="err-google-login"></div>
       <div id="msg-no-registrado" style="display:none;background:#fff8f4;border:2px solid #F97316;border-radius:12px;padding:16px;margin-top:12px;text-align:center;animation:fadeIn 0.35s ease;">
-        <div style="font-size:1.6rem;margin-bottom:8px;">🛼</div>
-        <div style="font-weight:800;font-size:0.95rem;color:#1a1a1a;margin-bottom:6px;">No encontramos tu cuenta</div>
-        <p style="font-size:0.82rem;color:#777;margin-bottom:14px;line-height:1.5;">El correo <strong id="msg-nr-email"></strong> no está registrado en Mirlxs. ¿Querés unirte al equipo?</p>
-        <button id="btn-ir-registro" onclick="irAlRegistro()" style="width:100%;padding:13px;background:#F97316;color:white;border:none;border-radius:10px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;">Registrarme ahora</button>
+        <div id="msg-nr-titulo" style="font-weight:800;font-size:0.9rem;color:#1a1a1a;margin-bottom:6px;">Correo no registrado</div>
+        <p style="font-size:0.82rem;color:#777;margin-bottom:14px;line-height:1.5;"><strong id="msg-nr-email"></strong> no tiene cuenta en Mirlxs.</p>
+        <button id="btn-ir-registro" onclick="irAlRegistro()" style="width:100%;padding:13px;background:#F97316;color:white;border:none;border-radius:10px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;">Inscribirme</button>
         <button onclick="document.getElementById('msg-no-registrado').style.display='none'" style="width:100%;padding:11px;background:transparent;color:#aaa;border:none;font-size:0.82rem;cursor:pointer;font-family:inherit;margin-top:6px;">Cancelar</button>
       </div>
 
@@ -2808,7 +2810,7 @@ var _gisUsuarioInicializado = false;
 
 function iniciarGoogleSignInUsuario() {
   if (typeof google === 'undefined' || !google.accounts) {
-    setTimeout(iniciarGoogleSignInUsuario, 300); return;
+    setTimeout(iniciarGoogleSignInUsuario, 200); return;
   }
   if (!_gisUsuarioInicializado) {
     google.accounts.id.initialize({
@@ -2820,9 +2822,7 @@ function iniciarGoogleSignInUsuario() {
   var cont = document.getElementById('g-signin-btn-usuario');
   if (!cont) return;
   cont.innerHTML = '';
-  var anchoBruto = cont.parentElement ? cont.parentElement.offsetWidth : 320;
-  var ancho = Math.min(400, Math.floor(anchoBruto) || 320); // 400 es el máximo que acepta Google
-  var esOscuro = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var ancho = Math.min(400, (cont.parentElement ? cont.parentElement.offsetWidth : 0) || 300);
   google.accounts.id.renderButton(cont, {
     theme: 'filled_blue',
     size: 'large',
@@ -2833,15 +2833,6 @@ function iniciarGoogleSignInUsuario() {
   var skMain = document.getElementById('gsignin-skeleton-main');
   if (skMain) { skMain.style.opacity = '0'; setTimeout(function(){ skMain.style.display = 'none'; }, 400); }
 }
-
-// Reintenta el cálculo si cambia el tamaño de pantalla (rotación, resize, etc.)
-var _reRenderGoogleBtnTimeout = null;
-window.addEventListener('resize', function() {
-  clearTimeout(_reRenderGoogleBtnTimeout);
-  _reRenderGoogleBtnTimeout = setTimeout(function() {
-    if (document.getElementById('g-signin-btn-usuario')) iniciarGoogleSignInUsuario();
-  }, 250);
-});
 
 function onGoogleCredentialUsuario(resp) {
   mostrarCargando('Verificando tu cuenta...');
