@@ -843,7 +843,7 @@ footer { display: block; }
      
 <!-- Google Sign-In -->
       <div id="google-btn-wrapper" style="margin-bottom:10px;line-height:0;">
-  <div style="position:relative;height:44px;width:100%;max-width:400px;margin:0 auto;">
+  <div style="position:relative;height:44px;width:280px;margin:0 auto;">
     <div id="gsignin-skeleton-main" style="position:absolute;inset:0;border-radius:4px;background:linear-gradient(90deg,#d1d1d1 25%,#e8e8e8 50%,#d1d1d1 75%);background-size:200% 100%;animation:skeletonShimmer 1.2s ease-in-out infinite;transition:opacity 0.4s ease;z-index:2;"></div>
     <div id="g-signin-btn-usuario" style="position:absolute;inset:0;display:flex;justify-content:center;align-items:center;"></div>
   </div>
@@ -2809,31 +2809,27 @@ function actualizarFotoPerfil(url) {
 var _gisUsuarioInicializado = false;
 
 function iniciarGoogleSignInUsuario() {
+  if (_gisUsuarioInicializado) return;
   if (typeof google === 'undefined' || !google.accounts) {
     setTimeout(iniciarGoogleSignInUsuario, 200); return;
   }
-  if (!_gisUsuarioInicializado) {
-    google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID_FRONT,
-      callback: onGoogleCredentialUsuario
-    });
-    _gisUsuarioInicializado = true;
-  }
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID_FRONT,
+    callback: onGoogleCredentialUsuario
+  });
+  _gisUsuarioInicializado = true;
   var cont = document.getElementById('g-signin-btn-usuario');
   if (!cont) return;
-  cont.innerHTML = '';
-  var ancho = Math.min(400, (cont.parentElement ? cont.parentElement.offsetWidth : 0) || 300);
   google.accounts.id.renderButton(cont, {
     theme: 'filled_blue',
     size: 'large',
     text: 'continue_with',
     locale: 'es',
-    width: ancho
+    width: 280
   });
   var skMain = document.getElementById('gsignin-skeleton-main');
   if (skMain) { skMain.style.opacity = '0'; setTimeout(function(){ skMain.style.display = 'none'; }, 400); }
 }
-
 function onGoogleCredentialUsuario(resp) {
   mostrarCargando('Verificando tu cuenta...');
   apiPost({ action: 'loginGoogle', idToken: resp.credential }, function(res) {
