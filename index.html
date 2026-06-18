@@ -486,6 +486,8 @@ select, option, optgroup {
   }
   select:focus, input:focus, textarea:focus { background: #2a2a2a; }
   select:disabled { background: #1e1e1e; color: #555; border-color: #2a2a2a; }
+  input[readonly] { background: #1e1e1e !important; color: #555 !important; border-color: #2a2a2a !important; cursor: not-allowed !important; }
+  #d-fechaNacimiento-display { background: #1e1e1e !important; border-color: #2a2a2a !important; color: #555 !important; }
   ::placeholder { color: #555 !important; }
 
   .opcion { background: #202124 ; border-color: #202124 ; color: #f0f0f0; }
@@ -628,7 +630,7 @@ select, option, optgroup {
   #modal-contacto button { background: #2a2a2a !important; color: #ccc !important; }
   #modal-contacto .modal-ct { color: #f0f0f0 !important; }
 #s1 button[onclick="abrirContacto()"] { background: #2d1f5e !important; color: #c4b5fd !important; border-color: #6d28d9 !important; }
-  #google-btn-wrapper { background: none !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
+  #google-btn-wrapper { background: none !important; border: 2px solid #3a3a3a !important; box-shadow: none !important; padding: 0 !important; border-radius: 14px !important; }
   #pin-acordeon-header { background: #1f1f1f !important; }
   #pin-acordeon-header span { color: #aaa !important; }
   #pin-acordeon-body { background: #1c1c1c; }
@@ -1266,7 +1268,8 @@ footer { display: block; }
           </div>
           <div class="datos-campo">
             <label>Correo electrónico</label>
-            <input type="email" id="d-email" placeholder="Ej: nombre@correo.com">
+            <input type="email" id="d-email" placeholder="Ej: nombre@correo.com" readonly style="background:#f5f5f5;color:#aaa;cursor:not-allowed;">
+            <p class="datos-hint">El correo no puede modificarse desde aquí. Contactá a unx administradorx si necesitás cambiarlo.</p>
           </div>
           <button class="btn-guardar-sec" onclick="guardarSeccion('sec-contacto', this)">Guardar</button>
         </div>
@@ -1280,12 +1283,8 @@ footer { display: block; }
         <div class="datos-seccion-body" id="sec-cumple">
           <div class="datos-campo" style="margin-bottom:16px;">
             <label>Fecha de nacimiento</label>
-            <button type="button" class="fnac-trigger-btn" onclick="abrirPickerMisDatos()">
-              <span id="ddp-trigger-display" class="fnac-placeholder">Seleccionar fecha</span>
-              <span class="material-symbols-outlined" style="color:#F97316;font-size:1.1rem;flex-shrink:0;">edit_calendar</span>
-            </button>
-            <input type="hidden" id="d-fechaNacimiento" value="">
-            <p class="datos-hint">Solo visible para el equipo si activás los permisos abajo.</p>
+            <div id="d-fechaNacimiento-display" style="padding:13px 16px;border:2px solid #e5e5e5;border-radius:12px;background:#f5f5f5;color:#aaa;font-size:0.88rem;cursor:not-allowed;min-height:48px;display:flex;align-items:center;">—</div>
+            <p class="datos-hint">La fecha de nacimiento no puede modificarse. Contactá a unx administradorx si necesitás hacer una corrección.</p>
           </div>
           <div class="privacy-row">
             <label for="d-fechaPublica">¿Quieres que tu fecha de cumpleaños sea pública?</label>
@@ -2656,20 +2655,16 @@ function irEditarDatos() {
   cargarSelect('d-prefijo', datos.prefijo, 'd-prefijoOtro', 'campo-prefijoOtro');
 cargarSelect('d-emerg1Prefijo', datos.emerg1Prefijo, 'd-emerg1PrefijoOtro', 'campo-emerg1PrefijoOtro');
 
-  // Cargar fecha nacimiento en date picker
-  var fnInput = document.getElementById('d-fechaNacimiento');
-  var fnDisp  = document.getElementById('ddp-trigger-display');
-  if (fnInput) fnInput.value = datos.fechaNacimiento || '';
+// Mostrar fecha nacimiento (solo lectura)
+  var fnDisp = document.getElementById('d-fechaNacimiento-display');
   if (fnDisp) {
     if (datos.fechaNacimiento) {
       var fp = datos.fechaNacimiento.split('-');
-      if (fp.length === 3) {
-        fnDisp.textContent = parseInt(fp[2])+' de '+_MESES_DDP[parseInt(fp[1])-1]+' de '+fp[0];
-        fnDisp.classList.remove('fnac-placeholder');
-      }
+      fnDisp.textContent = fp.length === 3
+        ? parseInt(fp[2]) + ' de ' + _MESES_DDP[parseInt(fp[1])-1] + ' de ' + fp[0]
+        : datos.fechaNacimiento;
     } else {
-      fnDisp.textContent = 'Seleccionar fecha';
-      fnDisp.classList.add('fnac-placeholder');
+      fnDisp.textContent = '—';
     }
   }
 
@@ -2692,8 +2687,7 @@ function guardarSeccion(secId, btn) {
   var sec = document.getElementById(secId); var payload = {};
   var camposTel = { 'sec-contacto': 'd-telefono', 'sec-emerg1': 'd-emerg1Telefono' };
   if (camposTel[secId]) { var telEl = document.getElementById(camposTel[secId]); if (telEl && telEl.value.trim()) { var tel = telEl.value.trim(); if (!/^[0-9]{7,15}$/.test(tel)) { alert('El número de teléfono debe tener entre 7 y 15 dígitos y solo puede contener números.'); return; } } }
-  sec.querySelectorAll('input[id^="d-"]:not([type="checkbox"]):not([type="radio"]):not(.otro-texto), select[id^="d-"], textarea[id^="d-"]:not(.otro-texto)').forEach(function(el) { payload[el.id.replace('d-', '')] = el.value.trim(); });
-  ['canton','prefijo','emerg1Prefijo'].forEach(function(campo) { if (payload[campo] === 'Otro') { var inp = sec.querySelector('#d-' + campo + 'Otro'); if (inp && inp.value.trim()) payload[campo] = inp.value.trim(); } });
+sec.querySelectorAll('input[id^="d-"]:not([type="checkbox"]):not([type="radio"]):not(.otro-texto):not([readonly]), select[id^="d-"], textarea[id^="d-"]:not(.otro-texto)').forEach(function(el) { payload[el.id.replace('d-', '')] = el.value.trim(); });  ['canton','prefijo','emerg1Prefijo'].forEach(function(campo) { if (payload[campo] === 'Otro') { var inp = sec.querySelector('#d-' + campo + 'Otro'); if (inp && inp.value.trim()) payload[campo] = inp.value.trim(); } });
   var cbGroups = {}; sec.querySelectorAll('input[type="checkbox"][data-group]').forEach(function(cb) { var g = cb.getAttribute('data-group'); if (!cbGroups[g]) cbGroups[g] = []; if (cb.checked) cbGroups[g].push(cb.value); });
   Object.keys(cbGroups).forEach(function(g) { var vals = cbGroups[g].map(function(v) { if (v === 'Otro') { var inp = sec.querySelector('#d-' + g + 'Otro'); return inp && inp.value.trim() ? inp.value.trim() : ''; } return v; }).filter(Boolean); payload[g] = vals.join(', '); });
   if (Object.keys(payload).length === 0) return;
@@ -3000,23 +2994,20 @@ function pwaInstalar() {
     _deferredPrompt.userChoice.then(function() { pwaCerrar(); });
     return;
   }
-  var nav = detectarNavegador();
-  var box = document.getElementById('pwa-instrucciones');
-  var html = '';
+var nav = detectarNavegador();
   if (nav === 'ios') {
-    html = '<strong>En iPhone/iPad (Safari):</strong><br>1. Toca el botón <strong>Compartir</strong> <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">ios_share</span> en la barra del navegador.<br>2. Desliza y elige <strong>"Agregar a pantalla de inicio"</strong>.<br>3. Toca <strong>Agregar</strong>. 🛼';
-  } else if (nav === 'chromium') {
-    html = '<strong>En Chrome:</strong><br>• Móvil: menú <strong>⋮</strong> → <strong>"Agregar a la pantalla principal"</strong>.<br>• Escritorio: icono <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">install_desktop</span> en la barra de direcciones.';
-  } else {
-    html = '⚠️ Usa <strong>Chrome</strong> (Android o Windows/Linux/MacOs) o <strong>Safari</strong> (iPhone/iPad) para instalar la app.';
+    mostrarModalNavegador('ios-instalar');
+    return;
   }
-  if (window.innerWidth <= 600) {
-    alert(html.replace(/<[^>]+>/g, ''));
-  } else {
-    box.innerHTML = html;
-    box.style.display = 'block';
-    document.getElementById('pwa-btn-instalar').style.display = 'none';
-  }
+  var banner = document.getElementById('pwa-banner');
+  var box = document.getElementById('pwa-instrucciones');
+  var btnInstalar = document.getElementById('pwa-btn-instalar');
+  var html = nav === 'chromium'
+    ? '<strong>En Chrome:</strong><br>• Móvil: menú <strong>⋮</strong> → <strong>"Agregar a la pantalla principal"</strong>.<br>• Escritorio: icono <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">install_desktop</span> en la barra de direcciones.'
+    : '⚠️ Usa <strong>Chrome</strong> (Android) o <strong>Safari</strong> (iPhone/iPad) para instalar la app.';
+  if (box) { box.innerHTML = html; box.style.display = 'block'; }
+  if (btnInstalar) btnInstalar.style.display = 'none';
+  if (banner) banner.style.display = 'block';
 }
 
 function pwaCerrar() {
@@ -3527,6 +3518,11 @@ var diasSemana = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','S�
 var pronBadge = q.pronombres
             ? '<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:20px;background:#3a3a3a;color:#bbb;font-size:0.68rem;font-weight:600;vertical-align:middle;">' + q.pronombres + '</span>'
             : '';
+          if (!q.waLink && q.telefono) {
+            var prefijoMatch = (q.prefijo || '').match(/\+(\d+)/);
+            var codigoPais = prefijoMatch ? prefijoMatch[1] : '593';
+            q.waLink = 'https://wa.me/' + codigoPais + q.telefono.replace(/\D/g,'').replace(/^0+/,'');
+          }
           var waBtnQL = q.waLink
             ? '<a href="' + q.waLink + '" target="_blank" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:#25D366;flex-shrink:0;text-decoration:none;margin-left:8px;vertical-align:middle;">' +
               '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.845L.057 23.571a.75.75 0 0 0 .92.921l5.763-1.473A11.943 11.943 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.006-1.374l-.36-.214-3.713.949.981-3.625-.235-.374A9.818 9.818 0 1 1 12 21.818z"/></svg>' +
