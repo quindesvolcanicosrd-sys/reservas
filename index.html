@@ -2855,8 +2855,8 @@ function onGoogleCredentialUsuario(resp) {
     }
 if (!res.valido) {
       ocultarCargando();
-      if (res.noRegistrado) {
-        window.location.href = 'https://reservas.quindesvolcanicos.com/inscripcion';
+if (res.noRegistrado) {
+        window.location.href = 'https://reservas.quindesvolcanicos.com/inscripcion/?token=' + encodeURIComponent(resp.credential);
         return;
       }
       var errEl = document.getElementById('err-google-login');
