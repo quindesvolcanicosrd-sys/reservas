@@ -674,6 +674,13 @@ div:has(> [id^="grp-res-"]) { border-color: #202124  !important; }
   .res-card-home.pendiente-clase  { background:#1e1a0a; border-color:#7c6a1a; }
 .res-card-home.reagendar-clase  { background:#1e1531; border-color:#5b21b6; }
   .res-card-equip { color: #bbb; }
+  /* date picker mis datos */
+  .fnac-trigger-btn { background:#202124 !important; border-color:#202124 !important; color:#f0f0f0 !important; }
+  .fnac-placeholder { color:#555 !important; }
+  #ddp-modal .ddp-card { background:#1c1c1c !important; }
+  .ddp-selected-date, .ddp-nav-label, .ddp-day, .ddp-year-btn, .ddp-month-btn { color:#f0f0f0 !important; }
+  .ddp-day.ddp-other { color:rgba(127,127,127,0.25) !important; }
+  .ddp-btn-cancel { color:#aaa !important; }
 }
 /* ─── MOBILE: viewport optimizado ────────────────────────────────────────── */
 @media (max-width: 600px) {
@@ -739,6 +746,52 @@ div:has(> [id^="grp-res-"]) { border-color: #202124  !important; }
 @media (max-width: 600px) { #btn-contacto-login { display: flex; } }
 footer { display: block; }
 @media (max-width: 600px) { footer { display: none !important; } }
+
+/* ─── FNAC TRIGGER & DATE PICKER (Mis Datos) ────────────────────────── */
+.fnac-trigger-btn {
+  width:100%; display:flex; align-items:center; justify-content:space-between;
+  padding:13px 16px; border:2px solid #e5e5e5; border-radius:12px;
+  background:#fafafa; color:#1a1a1a; font-size:0.88rem; font-weight:500;
+  cursor:pointer; transition:border-color 0.25s, box-shadow 0.25s; font-family:inherit;
+}
+.fnac-trigger-btn:focus { outline:none; border-color:#F97316; box-shadow:0 0 0 4px rgba(249,115,22,0.14); }
+.fnac-placeholder { color:#a89587; font-style:italic; font-size:0.88rem; }
+#ddp-modal {
+  position:fixed; inset:0; z-index:9700; display:flex; align-items:center;
+  justify-content:center; background:rgba(0,0,0,0.55); backdrop-filter:blur(4px);
+  padding:24px; opacity:0; pointer-events:none; transition:opacity 0.25s ease;
+}
+#ddp-modal.active { opacity:1; pointer-events:all; }
+#ddp-modal .ddp-card {
+  background:#fff; border-radius:28px; width:100%; max-width:340px;
+  overflow:hidden; transform:scale(0.92) translateY(12px); opacity:0;
+  transition:transform 0.28s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s ease;
+}
+#ddp-modal.active .ddp-card { transform:scale(1) translateY(0); opacity:1; }
+.ddp-header { padding:24px 24px 8px; }
+.ddp-header-label { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px; color:#a89587; margin-bottom:4px; }
+.ddp-selected-date { font-size:28px; font-weight:400; color:#1a1a1a; line-height:1.2; }
+.ddp-nav { display:flex; align-items:center; justify-content:space-between; padding:8px 12px 4px; }
+.ddp-nav-chips { display:flex; gap:2px; align-items:center; }
+.ddp-nav-label { display:inline-flex; align-items:center; gap:4px; padding:8px 14px; border-radius:99px; background:transparent; border:none; font-size:15px; font-weight:700; color:#1a1a1a; cursor:pointer; font-family:inherit; transition:background 0.15s; -webkit-tap-highlight-color:transparent; }
+.ddp-nav-label:active { background:rgba(249,115,22,0.08); }
+.ddp-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; padding:4px 12px 8px; }
+.ddp-day-label { text-align:center; font-size:11px; font-weight:700; color:#a89587; padding:6px 0; }
+.ddp-day { aspect-ratio:1; border-radius:50%; border:none; background:transparent; font-size:14px; color:#1a1a1a; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s; -webkit-tap-highlight-color:transparent; }
+.ddp-day:hover { background:rgba(249,115,22,0.08); }
+.ddp-day.ddp-sel { background:#F97316; color:#fff; font-weight:700; }
+.ddp-day.ddp-other { color:rgba(127,127,127,0.3); }
+.ddp-day.ddp-today:not(.ddp-sel) { border:1.5px solid #F97316; color:#F97316; }
+.ddp-footer { display:flex; justify-content:flex-end; gap:12px; padding:16px 20px 28px; }
+.ddp-btn { padding:13px 24px; border-radius:9999px; border:none; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; text-transform:uppercase; letter-spacing:0.05em; }
+.ddp-btn-cancel { background:transparent; color:#777; }
+.ddp-btn-ok { background:#F97316; color:#fff; }
+.ddp-year-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:16px 20px; max-height:220px; overflow-y:scroll; }
+.ddp-year-btn { padding:14px 4px; border-radius:14px; border:none; font-size:15px; color:#1a1a1a; background:transparent; cursor:pointer; text-align:center; font-family:inherit; }
+.ddp-year-btn.ddp-year-sel { background:#F97316; color:#fff; font-weight:700; }
+.ddp-month-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:8px 16px 16px; }
+.ddp-month-btn { padding:14px 6px; border:none; border-radius:12px; background:transparent; color:#1a1a1a; font-size:14px; cursor:pointer; text-align:center; transition:background 0.15s; font-family:inherit; -webkit-tap-highlight-color:transparent; }
+.ddp-month-btn.ddp-month-sel { background:#F97316; color:#fff; font-weight:700; }
 </style>
 </head>
 <body>
@@ -1225,6 +1278,15 @@ footer { display: block; }
           <span class="sec-chevron material-symbols-outlined">expand_more</span>
         </div>
         <div class="datos-seccion-body" id="sec-cumple">
+          <div class="datos-campo" style="margin-bottom:16px;">
+            <label>Fecha de nacimiento</label>
+            <button type="button" class="fnac-trigger-btn" onclick="abrirPickerMisDatos()">
+              <span id="ddp-trigger-display" class="fnac-placeholder">Seleccionar fecha</span>
+              <span class="material-symbols-outlined" style="color:#F97316;font-size:1.1rem;flex-shrink:0;">edit_calendar</span>
+            </button>
+            <input type="hidden" id="d-fechaNacimiento" value="">
+            <p class="datos-hint">Solo visible para el equipo si activás los permisos abajo.</p>
+          </div>
           <div class="privacy-row">
             <label for="d-fechaPublica">¿Quieres que tu fecha de cumpleaños sea pública?</label>
             <div class="select-wrapper" style="margin-bottom:0;min-width:100px;">
@@ -1541,7 +1603,7 @@ footer { display: block; }
 
 <script>
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
-var BACKEND = 'https://script.google.com/macros/s/AKfycbyhhIRwGhkOZ3XmThugFgKpi5qiJvcHAIgRbjQYGJnTkizRHnwneCMzIpmRYwIL6kRWUw/exec';
+var BACKEND = 'https://script.google.com/macros/s/AKfycbzLGEgJVXAqezM1QV9aVztIPtifzfBHBleTUFJDLDXWjqVgJkMvfvZ7lA0LuUHdonfY/exec';
 
 var _token = '';
 
@@ -2232,10 +2294,16 @@ function toggleGrupoHistorial(id, header) {
 function cancelarRes(fecha) {
   if (!confirm('¿Segura que quieres cancelar ' + (necesitaEquipo() ? 'tu reserva' : 'tu pago') + ' para el ' + fecha + '?')) return;
   var btn = event.target; btn.disabled = true; btn.innerHTML = '<span class="btn-spinner" style="border-color:rgba(220,38,38,0.3); border-top-color:#dc2626;"></span>Cancelando...';
-  api({ action: 'cancelarReserva', nombre: E.nombre, fecha: fecha }, function(res) { 
+api({ action: 'cancelarReserva', nombre: E.nombre, fecha: fecha }, function(res) { 
     if (res.exito) { 
-    if (typeof _todasReservas !== 'undefined' && _todasReservas) {
+      if (typeof _todasReservas !== 'undefined' && _todasReservas) {
         _todasReservas.forEach(function(r) { if (r.fecha === fecha && r.estado !== 'Cancelada') r.estado = 'Cancelada'; });
+      }
+      if (res.cuponRestaurado) {
+        localStorage.removeItem('cupon_' + E.nombre);
+        if (E.datos) E.datos.cuponDisponible = true;
+        var bCupon = document.getElementById('banner-cupon');
+        if (bCupon) bCupon.style.display = 'block';
       }
 renderHomeReservas();
     } else { 
@@ -2586,8 +2654,25 @@ function irEditarDatos() {
   cargarSelect('d-paisExpedicion',datos.paisExpedicion, null, null);
   cargarSelect('d-emerg1Relacion',datos.emerg1Relacion, null, null);
   cargarSelect('d-prefijo', datos.prefijo, 'd-prefijoOtro', 'campo-prefijoOtro');
-  cargarSelect('d-emerg1Prefijo', datos.emerg1Prefijo, 'd-emerg1PrefijoOtro', 'campo-emerg1PrefijoOtro');
-  
+cargarSelect('d-emerg1Prefijo', datos.emerg1Prefijo, 'd-emerg1PrefijoOtro', 'campo-emerg1PrefijoOtro');
+
+  // Cargar fecha nacimiento en date picker
+  var fnInput = document.getElementById('d-fechaNacimiento');
+  var fnDisp  = document.getElementById('ddp-trigger-display');
+  if (fnInput) fnInput.value = datos.fechaNacimiento || '';
+  if (fnDisp) {
+    if (datos.fechaNacimiento) {
+      var fp = datos.fechaNacimiento.split('-');
+      if (fp.length === 3) {
+        fnDisp.textContent = parseInt(fp[2])+' de '+_MESES_DDP[parseInt(fp[1])-1]+' de '+fp[0];
+        fnDisp.classList.remove('fnac-placeholder');
+      }
+    } else {
+      fnDisp.textContent = 'Seleccionar fecha';
+      fnDisp.classList.add('fnac-placeholder');
+    }
+  }
+
   document.querySelectorAll('input[data-group="pronombres"]').forEach(function(cb) { cb.checked = false; });
   var inpPronOtro = document.getElementById('d-pronombresOtro'); if (inpPronOtro) inpPronOtro.value = ''; document.getElementById('campo-pronombresOtro').classList.remove('visible');
   if (datos.pronombres) { datos.pronombres.split(',').map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(val) { var cb = document.querySelector('input[data-group="pronombres"][value="' + val + '"]'); if (cb) { cb.checked = true; } else { var cbOtro = document.querySelector('input[data-group="pronombres"][value="Otro"]'); if (cbOtro) cbOtro.checked = true; if (inpPronOtro) inpPronOtro.value = val; document.getElementById('campo-pronombresOtro').classList.add('visible'); } }); }
@@ -3024,6 +3109,84 @@ function activarPush() {
 }
 </script>
 <script>
+
+// ─── DATE PICKER (Mis Datos) ──────────────────────────────────────────────────
+var _MESES_DDP = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+var _ddpSt = { vy:1990, vm:0, sy:null, sm:null, sd:null, yearMode:false, monthMode:false };
+
+function abrirPickerMisDatos() {
+  var iso = document.getElementById('d-fechaNacimiento').value;
+  if (iso) { var p=iso.split('-'); if(p.length===3){ _ddpSt.vy=parseInt(p[0]); _ddpSt.vm=parseInt(p[1])-1; _ddpSt.sy=parseInt(p[0]); _ddpSt.sm=parseInt(p[1])-1; _ddpSt.sd=parseInt(p[2]); } }
+  else { _ddpSt.vy=1990; _ddpSt.vm=0; _ddpSt.sy=null; _ddpSt.sm=null; _ddpSt.sd=null; }
+  _ddpSt.yearMode=false; _ddpSt.monthMode=false;
+  _ddpRender();
+  document.getElementById('ddp-modal').classList.add('active');
+  document.body.style.overflow='hidden';
+}
+function _ddpCerrar() { document.getElementById('ddp-modal').classList.remove('active'); document.body.style.overflow=''; }
+function _ddpRender() {
+  var lbl=document.getElementById('ddp-sel-label');
+  if(lbl) lbl.textContent=(_ddpSt.sy&&_ddpSt.sd)?_ddpSt.sd+' '+_MESES_DDP[_ddpSt.sm]+' '+_ddpSt.sy:'Sin seleccionar';
+  var mEl=document.getElementById('ddp-mes-label'); if(mEl) mEl.textContent=_MESES_DDP[_ddpSt.vm];
+  var yEl=document.getElementById('ddp-anio-label'); if(yEl) yEl.textContent=_ddpSt.vy;
+  var gw=document.getElementById('ddp-grid-wrap'), yg=document.getElementById('ddp-anios'), mg=document.getElementById('ddp-meses');
+  if(_ddpSt.yearMode){gw.style.display='none';yg.style.display='grid';if(mg)mg.style.display='none';_ddpRenderAnios();}
+  else if(_ddpSt.monthMode){gw.style.display='none';yg.style.display='none';if(mg){mg.style.display='grid';_ddpRenderMeses();}}
+  else{gw.style.display='block';yg.style.display='none';if(mg)mg.style.display='none';_ddpRenderDias();}
+}
+function _ddpRenderDias() {
+  var vy=_ddpSt.vy,vm=_ddpSt.vm,el=document.getElementById('ddp-dias');el.innerHTML='';
+  var fd=new Date(vy,vm,1).getDay(),dim=new Date(vy,vm+1,0).getDate(),off=(fd+6)%7,hoy=new Date();
+  for(var i=0;i<off;i++){var b=document.createElement('div');b.className='ddp-day ddp-other';el.appendChild(b);}
+  for(var d=1;d<=dim;d++){(function(day){
+    var btn=document.createElement('button');btn.type='button';btn.className='ddp-day';btn.textContent=day;
+    if(_ddpSt.sy===vy&&_ddpSt.sm===vm&&_ddpSt.sd===day)btn.classList.add('ddp-sel');
+    else if(hoy.getFullYear()===vy&&hoy.getMonth()===vm&&hoy.getDate()===day)btn.classList.add('ddp-today');
+    btn.onclick=function(){_ddpSt.sy=vy;_ddpSt.sm=vm;_ddpSt.sd=day;_ddpRender();};
+    el.appendChild(btn);
+  })(d);}
+}
+function _ddpRenderAnios() {
+  var yg=document.getElementById('ddp-anios');yg.innerHTML='';
+  for(var y=new Date().getFullYear();y>=1920;y--){(function(yr){
+    var btn=document.createElement('button');btn.type='button';
+    btn.className='ddp-year-btn'+(yr===_ddpSt.vy?' ddp-year-sel':'');btn.textContent=yr;
+    btn.onclick=function(){_ddpSt.vy=yr;_ddpSt.sy=yr;_ddpSt.yearMode=false;_ddpRender();};
+    yg.appendChild(btn);
+  })(y);}
+  requestAnimationFrame(function(){var s=yg.querySelector('.ddp-year-sel');if(s)s.scrollIntoView({block:'center'});});
+}
+function _ddpRenderMeses() {
+  var mg=document.getElementById('ddp-meses');if(!mg)return;mg.innerHTML='';
+  _MESES_DDP.forEach(function(n,idx){
+    var btn=document.createElement('button');btn.type='button';
+    btn.className='ddp-month-btn'+(idx===_ddpSt.vm?' ddp-month-sel':'');btn.textContent=n;
+    btn.onclick=function(){_ddpSt.vm=idx;_ddpSt.sm=idx;_ddpSt.monthMode=false;_ddpRender();};
+    mg.appendChild(btn);
+  });
+}
+(function(){
+  document.addEventListener('DOMContentLoaded',function(){
+    var modal=document.getElementById('ddp-modal');
+    if(!modal)return;
+    modal.addEventListener('click',function(e){
+      var t=e.target;
+      if(t.id==='ddp-mes-label'||t.closest&&t.closest('#ddp-mes-label')){_ddpSt.monthMode=!_ddpSt.monthMode;_ddpSt.yearMode=false;_ddpRender();}
+      else if(t.id==='ddp-anio-label'||t.closest&&t.closest('#ddp-anio-label')){_ddpSt.yearMode=!_ddpSt.yearMode;_ddpSt.monthMode=false;_ddpRender();}
+      else if(t===modal)_ddpCerrar();
+    });
+    var canc=document.getElementById('ddp-cancelar'); if(canc)canc.onclick=_ddpCerrar;
+    var ok=document.getElementById('ddp-ok');
+    if(ok)ok.onclick=function(){
+      if(!_ddpSt.sd)return;
+      var iso=_ddpSt.sy+'-'+String(_ddpSt.sm+1).padStart(2,'0')+'-'+String(_ddpSt.sd).padStart(2,'0');
+      document.getElementById('d-fechaNacimiento').value=iso;
+      var disp=document.getElementById('ddp-trigger-display');
+      if(disp){disp.textContent=_ddpSt.sd+' de '+_MESES_DDP[_ddpSt.sm]+' de '+_ddpSt.sy;disp.classList.remove('fnac-placeholder');}
+      _ddpCerrar();
+    };
+  });
+})();
 
 var GOOGLE_CLIENT_ID_FRONT = '632992894668-gnbb5cclsmfdcnve0g34kmue1c72h73q.apps.googleusercontent.com';
 var _adminToken = '';
@@ -3558,7 +3721,39 @@ function adminQuitarClick(email) {
     <button onclick="cerrarContacto()" style="width:100%;padding:12px;background:#f0f0f0;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;color:#555;">Cerrar</button>
   </div>
 </div>
-<div id="pwa-banner" style="display:none;position:fixed;bottom:16px;left:16px;right:16px;max-width:448px;margin:0 auto;background:white;border:2px solid #F97316;border-radius:16px;padding:18px;z-index:9000;box-shadow:0 10px 30px rgba(0,0,0,0.25);animation:smoothSlideUp 0.5s cubic-bezier(0.16,1,0.3,1);">
+
+ <!-- Date Picker — Mis Datos -->
+<div id="ddp-modal">
+  <div class="ddp-card">
+    <div class="ddp-header">
+      <div class="ddp-header-label">Fecha de nacimiento</div>
+      <div class="ddp-selected-date" id="ddp-sel-label">Sin seleccionar</div>
+    </div>
+    <div class="ddp-nav">
+      <div class="ddp-nav-chips">
+        <button type="button" class="ddp-nav-label" id="ddp-mes-label">Enero</button>
+        <button type="button" class="ddp-nav-label" id="ddp-anio-label">1990</button>
+      </div>
+    </div>
+    <div id="ddp-grid-wrap">
+      <div class="ddp-grid">
+        <div class="ddp-day-label">Lu</div><div class="ddp-day-label">Ma</div>
+        <div class="ddp-day-label">Mi</div><div class="ddp-day-label">Ju</div>
+        <div class="ddp-day-label">Vi</div><div class="ddp-day-label">Sa</div>
+        <div class="ddp-day-label">Do</div>
+        <div id="ddp-dias" style="display:contents;"></div>
+      </div>
+    </div>
+    <div id="ddp-anios" class="ddp-year-grid" style="display:none;"></div>
+    <div id="ddp-meses" class="ddp-month-grid" style="display:none;"></div>
+    <div class="ddp-footer">
+      <button type="button" class="ddp-btn ddp-btn-cancel" id="ddp-cancelar">Cancelar</button>
+      <button type="button" class="ddp-btn ddp-btn-ok" id="ddp-ok">OK</button>
+    </div>
+  </div>
+</div>
+
+<div id="pwa-banner" style="display:none;position:fixed;bottom:16px;left:16px;right:16px;max-width:448px;margin:0 auto;background:white;border:2px solid #F97316;border-radius:16px;padding:18px;z-index:9000;box-shadow:0 10px 30px rgba(0,0,0,0.25);animation:smoothSlideUp 0.5s cubic-bezier(0.16,1,0.3,1);"> 
   <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">
     <span style="font-size:1.8rem;flex-shrink:0;">🛼</span>
     <div>
