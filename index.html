@@ -2846,10 +2846,18 @@ var ancho = Math.min(400, cont.parentElement ? cont.parentElement.offsetWidth : 
     locale: 'es',
     width: ancho
   });
-  cont.style.animation = 'fadeInBtn 0.4s ease 0.7s both';
 var skMain = document.getElementById('gsignin-skeleton-main');
   if (skMain) { skMain.style.opacity = '0'; setTimeout(function(){ skMain.style.display = 'none'; }, 400); }
-if (!window._restaurandoSesion) setTimeout(ocultarCargando, 2500);
+if (!window._restaurandoSesion) {
+    var _gObs = new MutationObserver(function() {
+      var iframe = document.querySelector('#g-signin-btn-usuario iframe');
+      if (!iframe) return;
+      _gObs.disconnect();
+      ocultarCargando();
+    });
+    _gObs.observe(document.getElementById('g-signin-btn-usuario'), { childList: true, subtree: true });
+    setTimeout(function() { _gObs.disconnect(); ocultarCargando(); }, 6000);
+  }
 }
 function onGoogleCredentialUsuario(resp) {
   mostrarCargando('Verificando tu cuenta...');
