@@ -82,6 +82,7 @@ select, input[type="text"], input[type="tel"], input[type="email"], input[type="
   font-size: 0.88rem; 
   color: #1a1a1a; 
   background: #fafafa; 
+  border: 2px solid #e5e5e5;
   appearance: none; -webkit-appearance: none; 
   transition: all 0.3s ease; 
   font-family: inherit;
@@ -488,7 +489,7 @@ select, option, optgroup {
   select:disabled { background: #1e1e1e; color: #555; border-color: #2a2a2a; }
   input[readonly] { background: #1e1e1e !important; color: #555 !important; border-color: #2a2a2a !important; cursor: not-allowed !important; }
   #d-fechaNacimiento-display { background: #1e1e1e !important; border-color: #2a2a2a !important; color: #555 !important; }
-  ::placeholder { color: #555 !important; }
+::placeholder { color: #8a8a8a !important; }
 
   .opcion { background: #181818 ; border-color: #181818 ; color: #f0f0f0; }
   .opcion:hover { background: #2a2a2a; border-color: #fb923c; }
@@ -605,7 +606,7 @@ select, option, optgroup {
 
   /* Fix input PIN en dark */
   #input-pin { background: #181818 ; color: #f0f0f0; border-color: #181818 ; }
-  #input-pin::placeholder { color: #555 !important; }
+#input-pin::placeholder { color: #8a8a8a !important; }
   #input-pin:-webkit-autofill,
   #input-pin:-webkit-autofill:hover,
   #input-pin:-webkit-autofill:focus { -webkit-box-shadow: 0 0 0 1000px #181818 inset !important; -webkit-text-fill-color: #f0f0f0 !important; }
@@ -804,11 +805,13 @@ footer { display: block; }
 #input-pin {
   line-height: 1;
 }
-#input-pin:-webkit-autofill,
-#input-pin:-webkit-autofill:hover,
-#input-pin:-webkit-autofill:focus {
-  -webkit-box-shadow: 0 0 0 1000px #fafafa7a inset !important;
-  -webkit-text-fill-color: #1a1a1a !important;
+@media (prefers-color-scheme: light) {
+  #input-pin:-webkit-autofill,
+  #input-pin:-webkit-autofill:hover,
+  #input-pin:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px #fafafa7a inset !important;
+    -webkit-text-fill-color: #1a1a1a !important;
+  }
 }
   
 </style>
