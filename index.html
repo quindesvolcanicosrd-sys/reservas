@@ -2839,7 +2839,14 @@ var ancho = Math.min(400, cont.parentElement ? cont.parentElement.offsetWidth : 
   cont.style.animation = 'fadeInBtn 0.4s ease 0.7s both';
 var skMain = document.getElementById('gsignin-skeleton-main');
   if (skMain) { skMain.style.opacity = '0'; setTimeout(function(){ skMain.style.display = 'none'; }, 400); }
-  if (!window._restaurandoSesion) setTimeout(ocultarCargando, 400);
+  if (!window._restaurandoSesion) {
+    // Esperar a que el iframe de Google termine de pintar antes de ocultar el loader
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        setTimeout(ocultarCargando, 300);
+      });
+    });
+  }
 }
 function onGoogleCredentialUsuario(resp) {
   mostrarCargando('Verificando tu cuenta...');
