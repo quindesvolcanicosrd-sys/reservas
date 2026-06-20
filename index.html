@@ -2849,16 +2849,7 @@ var ancho = Math.min(400, cont.parentElement ? cont.parentElement.offsetWidth : 
   cont.style.animation = 'fadeInBtn 0.4s ease 0.7s both';
 var skMain = document.getElementById('gsignin-skeleton-main');
   if (skMain) { skMain.style.opacity = '0'; setTimeout(function(){ skMain.style.display = 'none'; }, 400); }
-  if (!window._restaurandoSesion) {
-    var _obs = new MutationObserver(function(mutations, obs) {
-      var iframe = cont.querySelector('iframe');
-      if (!iframe) return;
-      obs.disconnect();
-      setTimeout(ocultarCargando, 500);
-    });
-    _obs.observe(cont, { childList: true, subtree: true });
-    setTimeout(function() { _obs.disconnect(); ocultarCargando(); }, 5000);
-  }
+if (!window._restaurandoSesion) setTimeout(ocultarCargando, 2500);
 }
 function onGoogleCredentialUsuario(resp) {
   mostrarCargando('Verificando tu cuenta...');
@@ -2884,7 +2875,10 @@ if (res.noRegistrado) {
           emailMostrar = pl.email || '';
         } catch(ex) {}
         document.getElementById('msg-nr-email').textContent = emailMostrar;
-        document.getElementById('msg-no-registrado').style.display = 'block';
+        var msgNR = document.getElementById('msg-no-registrado');
+        msgNR.style.display = 'block';
+        msgNR.style.animation = 'fadeIn 0.35s ease';
+        ocultarCargando();
         return;
       }
       var errEl = document.getElementById('err-google-login');
