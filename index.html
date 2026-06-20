@@ -2853,7 +2853,7 @@ if (!window._restaurandoSesion) {
       var iframe = document.querySelector('#g-signin-btn-usuario iframe');
       if (!iframe) return;
       _gObs.disconnect();
-      ocultarCargando();
+      setTimeout(ocultarCargando, 350);
     });
     _gObs.observe(document.getElementById('g-signin-btn-usuario'), { childList: true, subtree: true });
     setTimeout(function() { _gObs.disconnect(); ocultarCargando(); }, 6000);
