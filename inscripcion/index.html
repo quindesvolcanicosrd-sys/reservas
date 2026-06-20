@@ -1007,7 +1007,8 @@ function onGoogleCred(resp) {
       return;
     }
     // Ocultar botón Google, actualizar título
-    document.getElementById('gsignin-btn').style.display = 'none';
+    var gWrap = document.getElementById('gsignin-btn');
+    if (gWrap && gWrap.parentElement) gWrap.parentElement.style.display = 'none';
     document.getElementById('form-titulo').textContent = 'Completa tu registro';
     document.getElementById('form-subtitulo').style.display = 'none';
     // Mostrar permisos
