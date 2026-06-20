@@ -83,9 +83,11 @@ select, input[type="text"], input[type="tel"], input[type="email"], input[type="
   color: #1a1a1a; 
   background: #fafafa; 
   border: 2px solid #e5e5e5;
-  appearance: none; -webkit-appearance: none; 
+  appearance: none; -webkit-appearance: none; -moz-appearance: none;
+  outline: none;
   transition: all 0.3s ease; 
   font-family: inherit;
+  caret-color: #F97316;
 }
 select { padding-right: 40px; cursor: pointer; }
 .select-wrapper::after { font-family: 'Material Symbols Outlined'; content: 'expand_more'; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #F97316; pointer-events: none; font-size: 1.3rem; transition: transform 0.3s; }
@@ -604,9 +606,10 @@ select, option, optgroup {
   p strong { color: #e0e0e0; }
   #s5-aviso-pago, #s5-liberar-cupo { color: #aaa; }
 
-  /* Fix input PIN en dark */
+/* Fix input PIN en dark */
   #input-pin { background: #181818 ; color: #f0f0f0; border-color: #181818 ; }
-#input-pin::placeholder { color: #8a8a8a !important; }
+  #input-pin:focus { border-color: #F97316; background: #2a2a2a; box-shadow: 0 0 0 4px rgba(249,115,22,0.15); }
+  #input-pin::placeholder { color: #8a8a8a !important; }
   #input-pin:-webkit-autofill,
   #input-pin:-webkit-autofill:hover,
   #input-pin:-webkit-autofill:focus { -webkit-box-shadow: 0 0 0 1000px #181818 inset !important; -webkit-text-fill-color: #f0f0f0 !important; }
