@@ -849,13 +849,14 @@ footer { display: block; }
   </div>
 </div>
       <div class="error-msg" id="err-google-login"></div>
-<div id="msg-no-registrado" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px 16px;margin-top:10px;margin-bottom:14px;animation:fadeIn 0.35s ease;">        <div style="font-size:0.88rem;font-weight:600;color:#dc2626;margin-bottom:8px;">⚠️ <strong id="msg-nr-email"></strong> no tiene cuenta registrada.</div>
-        <button onclick="irAlRegistro()" style="width:100%;padding:10px;background:#dc2626;color:white;border:none;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;">Registrarme con este correo</button>
+<div id="msg-no-registrado" class="error-msg" style="display:none;margin-top:10px;">
+        <strong id="msg-nr-email"></strong> no tiene cuenta registrada.
+        <button onclick="irAlRegistro()" style="display:block;width:100%;margin-top:8px;padding:9px;background:#dc2626;color:white;border:none;border-radius:8px;font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;">Registrarme con este correo</button>
       </div>
 
 
       <!-- Acordeón PIN -->
-      <div style="border:2px solid #e5e5e5;border-radius:4px;overflow:hidden;margin-bottom:24px;">
+      <div style="border:2px solid #e5e5e5;border-radius:4px;overflow:hidden;margin-bottom:14px;">
         <div onclick="togglePinAcordeon()" id="pin-acordeon-header"
 style="display:flex;align-items:center;justify-content:center;padding:11px 18px;min-height:44px;cursor:pointer;background:#F97316;transition:background 0.2s;position:relative;">
   <span class="material-symbols-outlined" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:1.3rem;color:white;">dialpad</span>
@@ -1961,16 +1962,26 @@ function volver(id) { ir(id); }
 
 function err(id, msg) {
   var el = document.getElementById(id);
+  clearTimeout(el._errTimer);
+  el.style.cssText = '';
   el.textContent = msg;
-  el.style.animation = 'none';
   el.style.display = 'block';
   void el.offsetWidth;
   el.style.animation = 'fadeIn 0.35s ease';
-  clearTimeout(el._errTimer);
   el._errTimer = setTimeout(function() {
-    el.style.animation = 'fadeOut 0.35s ease forwards';
-    setTimeout(function(){ el.style.display = 'none'; el.style.animation = ''; }, 340);
-  }, 4660);
+    var h = el.scrollHeight;
+    el.style.overflow = 'hidden';
+    el.style.maxHeight = h + 'px';
+    void el.offsetWidth;
+    el.style.animation = 'fadeOut 0.3s ease forwards';
+    el.style.transition = 'max-height 0.35s 0.2s ease, padding 0.35s 0.2s ease, margin 0.35s 0.2s ease';
+    setTimeout(function() {
+      el.style.maxHeight = '0';
+      el.style.paddingTop = '0'; el.style.paddingBottom = '0';
+      el.style.marginTop = '0'; el.style.marginBottom = '0';
+    }, 50);
+    setTimeout(function() { el.style.cssText = ''; el.style.display = 'none'; }, 600);
+  }, 4400);
 }
 
 function selOp(label, name, val) {
@@ -2840,12 +2851,14 @@ var ancho = Math.min(400, cont.parentElement ? cont.parentElement.offsetWidth : 
 var skMain = document.getElementById('gsignin-skeleton-main');
   if (skMain) { skMain.style.opacity = '0'; setTimeout(function(){ skMain.style.display = 'none'; }, 400); }
   if (!window._restaurandoSesion) {
-    // Esperar a que el iframe de Google termine de pintar antes de ocultar el loader
-    requestAnimationFrame(function() {
-      requestAnimationFrame(function() {
-        setTimeout(ocultarCargando, 300);
-      });
+    var _obs = new MutationObserver(function(mutations, obs) {
+      var iframe = cont.querySelector('iframe');
+      if (!iframe) return;
+      obs.disconnect();
+      setTimeout(ocultarCargando, 500);
     });
+    _obs.observe(cont, { childList: true, subtree: true });
+    setTimeout(function() { _obs.disconnect(); ocultarCargando(); }, 5000);
   }
 }
 function onGoogleCredentialUsuario(resp) {
