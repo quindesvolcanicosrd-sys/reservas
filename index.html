@@ -2829,8 +2829,9 @@ var ancho = Math.min(400, cont.parentElement ? cont.parentElement.offsetWidth : 
     width: ancho
   });
   cont.style.animation = 'fadeInBtn 0.4s ease 0.7s both';
-  var skMain = document.getElementById('gsignin-skeleton-main');
+var skMain = document.getElementById('gsignin-skeleton-main');
   if (skMain) { skMain.style.opacity = '0'; setTimeout(function(){ skMain.style.display = 'none'; }, 400); }
+  if (!window._restaurandoSesion) setTimeout(ocultarCargando, 400);
 }
 function onGoogleCredentialUsuario(resp) {
   mostrarCargando('Verificando tu cuenta...');
