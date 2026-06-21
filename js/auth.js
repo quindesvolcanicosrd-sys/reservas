@@ -144,7 +144,7 @@ function continuar_pin() {
         ocultarCargando(); resetPinPad();
         err('err-pin', res.bloqueado
           ? 'Demasiados intentos fallidos. Espera 15 minutos e intenta de nuevo.'
-          : 'PIN o nombre incorrecto.');
+          : 'PIN incorrecto.');
         return;
       }
       _token = res.token || '';
