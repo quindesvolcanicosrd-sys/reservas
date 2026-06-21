@@ -12,6 +12,11 @@
 .home-boton.principal .hb-titulo { color: #F97316; }
 .home-boton .hb-sub { font-size: 0.85rem; color: #777; line-height: 1.4; }
 
+@keyframes pulseBtn {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); border-color: #f97316; }
+  50% { box-shadow: 0 0 24px 10px rgba(249,115,22,0.55); border-color: rgba(249,115,22,0.6); }
+}
+
 .btn-accion-home {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
   padding: 14px 10px; border: 2px solid #e5e5e5; border-radius: 14px;
@@ -30,12 +35,6 @@
 }
 .btn-home-sub:hover:not(:disabled) { border-color: #F97316; color: #F97316; background: #fff8f4; }
 .btn-home-sub:disabled { opacity: 0.32; cursor: not-allowed; }
-
-.btn-home-cta {
-  width: 100%; padding: 14px; border: 2px solid #f97316; border-radius: 12px;
-  background: rgba(249,115,22,0.12); color: #f97316 !important; text-align: center;
-  font-size: 0.88rem; font-weight: 700; cursor: pointer; font-family: inherit; letter-spacing: 0.3px;
-}
 
 .res-card-home {
   border: 2px solid #e5e5e5; border-radius: 14px; padding: 14px 16px;
@@ -85,7 +84,6 @@
   .btn-accion-home:hover { border-color: #F97316; background: #2a1a0e; }
   .btn-home-sub { background: transparent; border-color: #333; color: #666; }
   .btn-home-sub:hover:not(:disabled) { border-color: #F97316; color: #fb923c; background: #2a1a0e; }
-  .btn-home-cta { background: #2a1a0e; border-color: #F97316; color: #fb923c !important; }
   .res-card-home { background: #181818; border-color: #333; }
   .res-card-home.vigente       { background: #052e16; border-color: #166534; }
   .res-card-home.vencimiento   { background: #1e1a0a; border-color: #7c6a1a; }
