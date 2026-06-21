@@ -20,6 +20,7 @@
   #loading-overlay .spinner { opacity: 0; }
   #loading-msg { opacity: 0; visibility: hidden; }
 }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 600px) {
   #loading-overlay { background: #FDF3EB; backdrop-filter: none; -webkit-backdrop-filter: none; }
   .loading-card { background: transparent; border-radius: 0; padding: 32px; box-shadow: none; border: none; width: 100%; max-width: 100%; }
