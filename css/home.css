@@ -1,0 +1,108 @@
+.home-boton {
+  border: 2px solid #e5e5e5; border-radius: 16px; padding: 24px 20px;
+  margin-bottom: 14px; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: center; background: #fafafa;
+}
+.home-boton:hover { transform: translateY(-4px); box-shadow: 0 10px 24px rgba(0,0,0,0.06); border-color: #d4d4d4; }
+.home-boton.principal { border-color: #F97316; background: #fff8f4; }
+.home-boton.principal:hover { background: #fff4ec; border-color: #ea6407; transform: translateY(-4px); }
+.home-boton .hb-icon { font-size: 2.2rem; margin-bottom: 10px; transition: transform 0.3s; }
+.home-boton:hover .hb-icon { transform: scale(1.1); }
+.home-boton .hb-titulo { font-weight: 800; font-size: 1.05rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.home-boton.principal .hb-titulo { color: #F97316; }
+.home-boton .hb-sub { font-size: 0.85rem; color: #777; line-height: 1.4; }
+
+@keyframes pulseBtn {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); border-color: #f97316; }
+  50% { box-shadow: 0 0 24px 10px rgba(249,115,22,0.55); border-color: rgba(249,115,22,0.6); }
+}
+
+.btn-accion-home {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 10px; border: 2px solid #e5e5e5; border-radius: 14px;
+  background: #fafafa; cursor: pointer; font-family: inherit;
+  font-size: 0.75rem; font-weight: 700; color: #1a1a1a;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+}
+.btn-accion-home:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.07); border-color: #F97316; background: #fff8f4; }
+.btn-accion-home:active { transform: translateY(0) scale(0.97); }
+
+.btn-home-sub {
+  flex: 1; padding: 10px 12px; border: 1.5px solid #e5e5e5; border-radius: 10px;
+  background: transparent; color: #888; font-size: 0.78rem; font-weight: 700;
+  cursor: pointer; transition: all 0.3s ease; font-family: inherit; text-align: center;
+}
+.btn-home-sub:hover:not(:disabled) { border-color: #F97316; color: #F97316; background: #fff8f4; }
+.btn-home-sub:disabled { opacity: 0.32; cursor: not-allowed; }
+
+.res-card-home {
+  border: 2px solid #e5e5e5; border-radius: 14px; padding: 14px 16px;
+  margin-bottom: 10px; background: #fafafa; text-align: left;
+  animation: smoothSlideUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
+}
+.res-card-home.vigente       { border-color: #22c55e; background: #f0fdf4; }
+.res-card-home.vencimiento   { border-color: #f59e0b; background: #fffbeb; }
+.res-card-home.vencida       { border-color: #ef4444; background: #fef2f2; }
+.res-card-home.futura        { border-color: #d4d4d4; background: #f5f5f5; opacity: 0.7; }
+.res-card-home.pendiente-mens{ border-color: #f59e0b; background: #fffbeb; }
+.res-card-home.confirmada-clase { border-color: #22c55e; background: #f0fdf4; }
+.res-card-home.pendiente-clase  { border-color: #f59e0b; background: #fffbeb; }
+.res-card-home.reagendar-clase  { border-color: #8b5cf6; background: #faf5ff; }
+.res-card-equip { color: #666; }
+
+.home-top-mobile { display: none; }
+.home-emoji-desktop { display: block; }
+.home-mobile-actions { display: none; }
+.hmr { display: flex; align-items: center; justify-content: space-between; padding: 14px 4px; border-bottom: 1px solid rgba(128,128,128,0.12); }
+.hmr-texto { text-align: left; }
+.hmr-texto .hmr-titulo { font-size: 0.8rem; font-weight: 800; color: #f97316; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 3px; }
+.hmr-texto .hmr-sub { font-size: 0.77rem; color: #888; }
+.hmr-btn-round { width: 44px; height: 44px; flex-shrink: 0; background: rgba(249,115,22,0.12); border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; }
+.hmr-btn-round .material-symbols-outlined { font-size: 1.2rem; color: #f97316; }
+.btn-logout-mobile { background: rgba(249,115,22,0.12); border: 2px solid rgba(249,115,22,0.25); cursor: pointer; color: #F97316; padding: 8px; border-radius: 10px; font-family: inherit; line-height: 1; }
+.btn-logout-mobile .material-symbols-outlined { font-size: 1.5rem; vertical-align: middle; }
+#btn-logout-desktop { display: block; }
+
+@media (max-width: 600px) {
+  .home-top-mobile { display: flex !important; position: relative; align-items: center; justify-content: center; padding: 10px 0 6px; margin-bottom: 4px; }
+  .home-emoji-mobile { font-size: 2.8rem; animation: popBounce 0.6s cubic-bezier(0.16,1,0.3,1); }
+  .home-emoji-desktop { display: none !important; }
+  .btn-logout-mobile { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+  #btn-logout-desktop { display: none; }
+  .home-mobile-actions { display: block !important; margin-top: 8px; border-top: 1px solid rgba(128,128,128,0.12); }
+}
+
+@media (prefers-color-scheme: dark) {
+  .home-boton { background: #181818; border-color: #181818; }
+  .home-boton:hover { border-color: #444; }
+  .home-boton.principal { background: #2a1a0e; border-color: #F97316; }
+  .home-boton.principal:hover { background: #321f10; border-color: #fb923c; }
+  .home-boton .hb-titulo { color: #f0f0f0; }
+  .home-boton .hb-sub { color: #888; }
+  .btn-accion-home { background: #181818; border-color: #333; color: #f0f0f0; }
+  .btn-accion-home:hover { border-color: #F97316; background: #2a1a0e; }
+  .btn-home-sub { background: transparent; border-color: #333; color: #666; }
+  .btn-home-sub:hover:not(:disabled) { border-color: #F97316; color: #fb923c; background: #2a1a0e; }
+  .res-card-home { background: #181818; border-color: #333; }
+  .res-card-home.vigente       { background: #052e16; border-color: #166534; }
+  .res-card-home.vencimiento   { background: #1e1a0a; border-color: #7c6a1a; }
+  .res-card-home.vencida       { background: #2d0a0a; border-color: #7f1d1d; }
+  .res-card-home.futura        { background: #1a1a1a; border-color: #2a2a2a; }
+  .res-card-home.pendiente-mens{ background: #1e1a0a; border-color: #7c6a1a; }
+  .res-card-home.confirmada-clase { background: #052e16; border-color: #166534; }
+  .res-card-home.pendiente-clase  { background: #1e1a0a; border-color: #7c6a1a; }
+  .res-card-home.reagendar-clase  { background: #1e1531; border-color: #5b21b6; }
+  .res-card-equip { color: #bbb; }
+  .hmr-texto .hmr-titulo { color: #f97316; }
+  .hmr-texto .hmr-sub { color: #aaa; }
+  .hmr { border-bottom-color: rgba(255,255,255,0.1); }
+  .home-mobile-actions { border-top-color: rgba(255,255,255,0.1); }
+  .hmr-btn-round { background: #2a2a2a; }
+  .btn-logout-mobile .material-symbols-outlined { color: #F97316; }
+  #btn-meses-pasados, #btn-meses-actuales { background: #181818 !important; border-color: #181818 !important; color: #aaa !important; }
+  #pwa-banner { background: #1c1c1c !important; border-color: #F97316 !important; }
+  #pwa-banner div { color: #aaa; }
+  #pwa-banner div[style*="font-weight:800"] { color: #f0f0f0 !important; }
+  #pwa-instrucciones { background: #181818 !important; border-color: #181818 !important; color: #ccc !important; }
+}

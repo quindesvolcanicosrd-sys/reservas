@@ -1,0 +1,6 @@
+/* Admin panel reutiliza clases de ui.css, home.css y reservas.css */
+@media (prefers-color-scheme: dark) {
+  #modal-nav-inner { background: #1c1c1c !important; }
+  #modal-nav-titulo { color: #f0f0f0 !important; }
+  #modal-nav-texto { color: #ccc !important; }
+}

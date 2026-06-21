@@ -1,0 +1,79 @@
+.datos-seccion { border: 2px solid #e5e5e5; border-radius: 14px; margin-bottom: 12px; overflow: hidden; background: white; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.datos-seccion:focus-within { border-color: #F97316; box-shadow: 0 4px 12px rgba(249,115,22,0.1); }
+.datos-seccion-titulo {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 20px; font-weight: 800; font-size: 0.88rem;
+  cursor: pointer; background: #fafafa; transition: background 0.3s; color: #1a1a1a;
+}
+.datos-seccion-titulo:hover { background: #f0f0f0; }
+.datos-seccion-titulo .sec-icon { font-size: 1.2rem; margin-right: 10px; }
+.datos-seccion-titulo .sec-chevron { color: #888; font-size: 1.1rem; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+.datos-seccion-titulo.abierta .sec-chevron { transform: rotate(180deg); color: #F97316; }
+.datos-seccion-body {
+  padding: 0 20px; max-height: 0; overflow: hidden; opacity: 0;
+  transition: max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1), padding 0.3s ease, opacity 0.3s ease;
+}
+[id^="grp-res-"] {
+  overflow: hidden; max-height: 0; opacity: 0;
+  transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+.datos-seccion-body.abierta { max-height: 2500px; padding: 20px; opacity: 1; border-top: 1px solid #f0f0f0; }
+
+/* ─── DATE PICKER (Mis Datos — ddp-*) ─────────────────────────────────── */
+#ddp-modal {
+  position: fixed; inset: 0; z-index: 9700; display: flex; align-items: center;
+  justify-content: center; background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+  padding: 24px; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+}
+#ddp-modal.active { opacity: 1; pointer-events: all; }
+#ddp-modal .ddp-card {
+  background: #fff; border-radius: 28px; width: 100%; max-width: 340px;
+  overflow: hidden; transform: scale(0.92) translateY(12px); opacity: 0;
+  transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s ease;
+}
+#ddp-modal.active .ddp-card { transform: scale(1) translateY(0); opacity: 1; }
+.ddp-header { padding: 24px 24px 8px; }
+.ddp-header-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #a89587; margin-bottom: 4px; }
+.ddp-selected-date { font-size: 28px; font-weight: 400; color: #1a1a1a; line-height: 1.2; }
+.ddp-nav { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px 4px; }
+.ddp-nav-chips { display: flex; gap: 2px; align-items: center; }
+.ddp-nav-label { display: inline-flex; align-items: center; gap: 4px; padding: 8px 14px; border-radius: 99px; background: transparent; border: none; font-size: 15px; font-weight: 700; color: #1a1a1a; cursor: pointer; font-family: inherit; transition: background 0.15s; -webkit-tap-highlight-color: transparent; }
+.ddp-nav-label:active { background: rgba(249,115,22,0.08); }
+.ddp-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; padding: 4px 12px 8px; }
+.ddp-day-label { text-align: center; font-size: 11px; font-weight: 700; color: #a89587; padding: 6px 0; }
+.ddp-day { aspect-ratio: 1; border-radius: 50%; border: none; background: transparent; font-size: 14px; color: #1a1a1a; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s; -webkit-tap-highlight-color: transparent; }
+.ddp-day:hover { background: rgba(249,115,22,0.08); }
+.ddp-day.ddp-sel { background: #F97316; color: #fff; font-weight: 700; }
+.ddp-day.ddp-other { color: rgba(127,127,127,0.3); }
+.ddp-day.ddp-today:not(.ddp-sel) { border: 1.5px solid #F97316; color: #F97316; }
+.ddp-footer { display: flex; justify-content: flex-end; gap: 12px; padding: 16px 20px 28px; }
+.ddp-btn { padding: 13px 24px; border-radius: 9999px; border: none; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; text-transform: uppercase; letter-spacing: 0.05em; }
+.ddp-btn-cancel { background: transparent; color: #777; }
+.ddp-btn-ok { background: #F97316; color: #fff; }
+.ddp-year-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; padding: 16px 20px; max-height: 220px; overflow-y: scroll; }
+.ddp-year-btn { padding: 14px 4px; border-radius: 14px; border: none; font-size: 15px; color: #1a1a1a; background: transparent; cursor: pointer; text-align: center; font-family: inherit; }
+.ddp-year-btn.ddp-year-sel { background: #F97316; color: #fff; font-weight: 700; }
+.ddp-month-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; padding: 8px 16px 16px; }
+.ddp-month-btn { padding: 14px 6px; border: none; border-radius: 12px; background: transparent; color: #1a1a1a; font-size: 14px; cursor: pointer; text-align: center; transition: background 0.15s; font-family: inherit; -webkit-tap-highlight-color: transparent; }
+.ddp-month-btn.ddp-month-sel { background: #F97316; color: #fff; font-weight: 700; }
+
+@media (prefers-color-scheme: dark) {
+  .datos-seccion { background: #1c1c1c; border-color: #2a2a2a; }
+  .datos-seccion-titulo { background: #181818; color: #f0f0f0; }
+  .datos-seccion-titulo:hover { background: #2a2a2a; }
+  .datos-seccion-body.abierta { border-top-color: #333; }
+  #ddp-modal .ddp-card { background: #1c1c1c !important; }
+  .ddp-selected-date, .ddp-nav-label, .ddp-day, .ddp-year-btn, .ddp-month-btn { color: #f0f0f0 !important; }
+  .ddp-day.ddp-other { color: rgba(127,127,127,0.25) !important; }
+  .ddp-btn-cancel { color: #aaa !important; }
+  #modal-permisos > div { background: #1c1c1c !important; }
+  #modal-permisos div[style*="background:#fafafa"] { background: #181818 !important; border-color: #2a2a2a !important; }
+  #modal-permisos div[style*="border-top:1px"] { border-color: #333 !important; }
+  #modal-permisos div[style*="font-weight:600"] { color: #f0f0f0 !important; }
+  #modal-permisos div[style*="font-weight:800"] { color: #f0f0f0 !important; }
+  #modal-permisos p, #modal-permisos div[style*="color:#777"] { color: #888 !important; }
+  #mp-fecha { background: #181818 !important; border-color: #2a2a2a !important; color: #f0f0f0 !important; }
+  #modal-eliminar-cuenta > div { background: #1c1c1c !important; }
+  #modal-eliminar-cuenta input { background: #181818 !important; border-color: #333 !important; color: #f0f0f0 !important; }
+  #modal-eliminar-cuenta .mec-nombre { color: #fb923c !important; }
+}
