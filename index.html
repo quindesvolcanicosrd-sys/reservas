@@ -177,8 +177,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <button id="btn-historial-home" class="btn-home-sub" onclick="irMisReservas()">📋 Historial</button>
         </div>
         <div style="display:flex;flex-direction:column;gap:14px;margin-top:14px;">
-          <button id="btn-nueva-reserva-home" class="btn-home-cta" onclick="irNuevaReserva()">➕ Nueva reserva</button>
-          <button onclick="irEditarDatos()" class="btn-home-cta">✏️ Editar mis datos</button>
+          <button id="btn-nueva-reserva-home" onclick="irNuevaReserva()" style="width:100%;padding:14px;border:2px solid #f97316;border-radius:12px;background:rgba(249,115,22,0.12);color:#f97316 !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;">➕ Nueva reserva</button>
+          <button onclick="irEditarDatos()" style="width:100%;padding:14px;border:2px solid #f97316;border-radius:12px;background:rgba(249,115,22,0.12);color:#f97316 !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;">✏️ Editar mis datos</button>
         </div>
       </div>
 <button id="btn-logout-desktop" class="btn btn-secondary" style="margin-top:20px;" onclick="cerrarSesion()">
@@ -683,7 +683,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
     <div style="margin-top:32px;padding-top:20px;border-top:2px solid #fee2e2;">
         <div style="font-size:0.78rem;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Zona de peligro</div>
-        <button class="btn-cancelar" onclick="eliminarCuenta()">🗑️ Eliminar mi cuenta</button>
+        <button onclick="eliminarCuenta()" style="width:100%;padding:14px;background:#fef2f2;color:#dc2626;border:2px solid #fecaca;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all 0.3s;">
+          🗑️ Eliminar mi cuenta
+        </button>
         <p style="font-size:0.78rem;color:#aaa;margin-top:8px;line-height:1.4;text-align:center;">Esta acción es permanente e irreversible. Se borrarán todos tus datos.</p>
       </div>
     </div>
@@ -989,7 +991,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <input type="text" id="mec-input" placeholder="Escribe tu nombre aquí..." style="width:100%;padding:12px 14px;border:2px solid #fecaca;border-radius:10px;font-size:0.88rem;font-family:inherit;outline:none;" oninput="mecValidar()">
     </div>
     <div class="error-msg" id="err-mec" style="margin-bottom:12px;"></div>
-    <button id="mec-btn-confirmar" class="btn-danger-solid" onclick="mecConfirmar()" disabled style="opacity:0.4;transition:opacity 0.2s;">Eliminar mi cuenta</button>
+    <button id="mec-btn-confirmar" onclick="mecConfirmar()" disabled style="width:100%;padding:14px;background:#dc2626;color:white;border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;opacity:0.4;transition:opacity 0.2s;">Eliminar mi cuenta</button>
     <button onclick="mecCerrar()" style="width:100%;padding:13px;background:transparent;color:#888;border:2px solid #e5e5e5;border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
   </div>
 </div>
