@@ -68,7 +68,7 @@ reservas/
 | `.seccion-label` | Etiqueta naranja uppercase pequeña |
 | `input, select, textarea` | Estilo base de campos de formulario |
 | `.select-wrapper::after` | Flecha expand_more naranja en selects |
-| `.btn / .btn-primary / .btn-secondary` | Botones base, primario naranja, secundario outline |
+| `.btn / .btn-primary / .btn-secondary / .btn-danger-solid` | Botones base: primario naranja, secundario outline, peligro sólido (rojo) |
 | `.opciones / .opcion / .opcion.sel` | Grupo de radios/checkboxes con borde; .sel = seleccionado |
 | `.chk-opcion` | Checkbox con estilo de opción |
 | `.resumen / .r-fila / .r-label / .r-valor` | Bloque de resumen de reserva |
@@ -98,8 +98,7 @@ reservas/
 | Clase / selector | Descripción |
 |---|---|
 | `.home-boton / .home-boton.principal` | Botón de acción en home y admin-home |
-| `@keyframes pulseBtn` | Pulso naranja para botón destacado |
-| `.btn-accion-home / .btn-home-sub` | Botones secundarios en home |
+| `.btn-accion-home / .btn-home-sub / .btn-home-cta` | Botones secundarios y de acción principal en home |
 | `.res-card-home` | Tarjeta de reserva en home |
 | `.res-card-home.vigente/vencimiento/vencida/futura/pendiente-mens/confirmada-clase/pendiente-clase/reagendar-clase` | Variantes de estado de tarjeta |
 | `.home-top-mobile` | Fila superior en móvil (emoji + logout) |
