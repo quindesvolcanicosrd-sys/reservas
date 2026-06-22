@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: #FDF3EB; color: #1a1a1a; }
+body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); }
 button, input, select, textarea { font-family: inherit; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -22,13 +22,13 @@ button, input, select, textarea { font-family: inherit; }
 
 .spinner {
   width: 40px; height: 40px; border: 4px solid #f3f3f3;
-  border-top-color: #F97316; border-radius: 50%;
+  border-top-color: var(--brand); border-radius: 50%;
   animation: spin 0.8s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
   margin: 0 auto 16px;
 }
 
 #loading-overlay {
-  position: fixed; inset: 0; background: #FDF3EB; z-index: 9999;
+  position: fixed; inset: 0; background: var(--bg); z-index: 9999;
   display: flex; align-items: center; justify-content: center;
   transition: opacity 0.4s ease, visibility 0.4s ease;
 }
@@ -36,7 +36,7 @@ button, input, select, textarea { font-family: inherit; }
 #loading-overlay.fade-in { animation: overlayFadeIn 0.35s ease both; }
 
 .error-msg {
-  background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;
+  background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-bdr);
   border-radius: 10px; padding: 12px 16px; font-size: 0.9rem;
   margin-bottom: 16px; display: none; font-weight: 500; animation: fadeIn 0.4s ease;
 }
@@ -48,11 +48,11 @@ button, input, select, textarea { font-family: inherit; }
   vertical-align: middle; margin-right: 8px; margin-top: -2px;
 }
 
-::placeholder { color: #a89587; font-style: italic; font-size: 0.9rem; opacity: 1; }
+::placeholder { color: var(--hint); font-style: italic; font-size: 0.9rem; opacity: 1; }
 
 .toggle-switch { position: relative; display: inline-block; width: 48px; height: 26px; flex-shrink: 0; }
 .toggle-switch input { opacity: 0; width: 0; height: 0; }
-.toggle-slider { position: absolute; cursor: pointer; inset: 0; background: rgb(44, 28, 17); border-radius: 26px; transition: 0.3s; }
+.toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #2C1A0E; border-radius: 26px; transition: 0.3s; }
 .toggle-slider:before { content: ''; position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
 .toggle-switch input:checked + .toggle-slider { background: rgb(249, 115, 22); }
 .toggle-switch input:checked + .toggle-slider:before { transform: translateX(22px); }
@@ -60,11 +60,11 @@ button, input, select, textarea { font-family: inherit; }
 .fnac-trigger-btn {
   width: 100%; display: flex; align-items: center; justify-content: space-between;
   padding: 13px 16px; border: 0px solid #e5e5e5; border-radius: 12px;
-  background: #fafafa; color: #1a1a1a; font-size: 0.88rem; font-weight: 500;
+  background: var(--surface-2); color: var(--text); font-size: 0.88rem; font-weight: 500;
   cursor: pointer; transition: border-color 0.25s, box-shadow 0.25s; font-family: inherit;
 }
 .fnac-trigger-btn:focus { outline: none; border-color: #F97316; box-shadow: 0 0 0 4px rgba(249,115,22,0.14); }
-.fnac-placeholder { color: #a89587; font-style: italic; font-size: 0.88rem; }
+.fnac-placeholder { color: var(--hint); font-style: italic; font-size: 0.88rem; }
 
 .pantalla { display: none; }
 .pantalla.activa { display: block; animation: smoothSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -72,13 +72,6 @@ button, input, select, textarea { font-family: inherit; }
 select, option, optgroup { font-family: 'Montserrat', sans-serif !important; }
 
 @media (prefers-color-scheme: dark) {
-  body { background: #111; color: #f0f0f0; }
-  #loading-overlay { background: #1a1a1a; }
-  .spinner { border-color: #181818; border-top-color: #F97316; }
-  .error-msg { background: #2d1515; border-color: #7f1d1d; color: #fca5a5; }
-  .fnac-trigger-btn { background: #181818 !important; border-color: #181818 !important; color: #f0f0f0 !important; }
-  .fnac-placeholder { color: #555 !important; }
-  ::placeholder { color: #8a8a8a !important; }
   #gsignin-skeleton, #gsignin-skeleton-main {
     background: linear-gradient(90deg,#2c1c11 25%,#383838 50%,#2a2a2a 75%) !important;
     background-size: 200% 100% !important;

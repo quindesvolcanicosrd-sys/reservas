@@ -1,0 +1,115 @@
+/* ═══════════════════════════════════════════════════════
+   MIRLXS — Sistema de colores unificado
+   Editar aquí para cambiar el aspecto visual completo
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+
+  /* ── Brand ───────────────────────────────────────────── */
+  --brand:          #F97316;
+  --brand-dk:       #ea6407;
+  --brand-light:    rgba(249,115,22,0.13);
+  --brand-lighter:  rgba(249,115,22,0.07);
+  --brand-glow:     rgba(249,115,22,0.25);
+
+  /* ── Fondo ───────────────────────────────────────────── */
+  --bg:             #FDF3EB;
+  --bg-2:           #F7EAE0;
+
+  /* ── Superficies ─────────────────────────────────────── */
+  --surface:        rgba(255,248,244,0.82);
+  --surface-2:      rgba(255,242,234,0.6);
+  --surface-3:      rgba(255,235,220,0.45);
+  --surface-blur:   blur(16px);
+
+  /* ── Bordes ──────────────────────────────────────────── */
+  --border:         rgba(249,115,22,0.15);
+  --border-2:       rgba(249,115,22,0.08);
+
+  /* ── Texto ───────────────────────────────────────────── */
+  --text:           #2C1A0E;
+  --text-2:         #6B3E26;
+  --muted:          #9A6A52;
+  --hint:           #B89080;
+
+  /* ── Estados ─────────────────────────────────────────── */
+  --success:        #22c55e;
+  --success-bg:     rgba(34,197,94,0.1);
+  --success-bdr:    rgba(34,197,94,0.3);
+  --warning:        #f59e0b;
+  --warning-bg:     rgba(245,158,11,0.1);
+  --warning-bdr:    rgba(245,158,11,0.3);
+  --danger:         #dc2626;
+  --danger-bg:      rgba(220,38,38,0.1);
+  --danger-bdr:     rgba(220,38,38,0.3);
+  --info:           #0ea5e9;
+  --info-bg:        rgba(14,165,233,0.1);
+  --info-bdr:       rgba(14,165,233,0.3);
+
+  /* ── Botones ─────────────────────────────────────────── */
+  --btn-primary-bg:     var(--brand-light);
+  --btn-primary-color:  var(--brand);
+  --btn-primary-hover:  rgba(249,115,22,0.22);
+  --btn-secondary-bg:   var(--surface-2);
+  --btn-secondary-color:var(--text-2);
+
+  /* ── Cards ───────────────────────────────────────────── */
+  --card-bg:        var(--surface);
+  --card-border:    var(--border);
+  --card-shadow:    0 8px 32px rgba(249,115,22,0.08);
+  --card-blur:      var(--surface-blur);
+
+  /* ── Radius ──────────────────────────────────────────── */
+  --radius-sm:      10px;
+  --radius:         14px;
+  --radius-lg:      20px;
+  --radius-full:    9999px;
+
+  /* ── Sombras ─────────────────────────────────────────── */
+  --shadow-sm:      0 4px 12px rgba(249,115,22,0.08);
+  --shadow:         0 8px 32px rgba(249,115,22,0.1);
+  --shadow-lg:      0 16px 48px rgba(249,115,22,0.15);
+}
+
+/* ── DARK MODE ───────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Fondo */
+    --bg:             #170900;
+    --bg-2:           #1f0d00;
+
+    /* Superficies — capas translúcidas naranjas sobre el bg oscuro */
+    --surface:        rgba(249,115,22,0.07);
+    --surface-2:      rgba(249,115,22,0.04);
+    --surface-3:      rgba(249,115,22,0.02);
+
+    /* Bordes */
+    --border:         rgba(249,115,22,0.18);
+    --border-2:       rgba(249,115,22,0.1);
+
+    /* Texto */
+    --text:           #F0E0D0;
+    --text-2:         #C9A090;
+    --muted:          #9A7060;
+    --hint:           #6A4030;
+
+    /* Sombras */
+    --shadow-sm:      0 4px 12px rgba(0,0,0,0.4);
+    --shadow:         0 8px 32px rgba(0,0,0,0.5);
+    --shadow-lg:      0 16px 48px rgba(0,0,0,0.6);
+
+    /* Cards */
+    --card-bg:        rgba(249,115,22,0.06);
+    --card-shadow:    0 8px 32px rgba(0,0,0,0.4);
+
+    /* Botones */
+    --btn-secondary-bg:    rgba(249,115,22,0.08);
+    --btn-secondary-color: #C9A090;
+
+    /* Estados dark */
+    --success-bg:     rgba(34,197,94,0.08);
+    --warning-bg:     rgba(245,158,11,0.08);
+    --danger-bg:      rgba(220,38,38,0.08);
+    --info-bg:        rgba(14,165,233,0.08);
+  }
+}

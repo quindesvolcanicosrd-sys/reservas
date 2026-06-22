@@ -1,11 +1,11 @@
-.datos-seccion { border: 0px solid #e5e5e5; border-radius: 14px; margin-bottom: 12px; overflow: hidden; background: white; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.datos-seccion { border: 0px solid var(--border); border-radius: 14px; margin-bottom: 12px; overflow: hidden; background: var(--card-bg); backdrop-filter: var(--card-blur); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 .datos-seccion:focus-within { border-color: #F97316; box-shadow: 0 4px 12px rgba(249,115,22,0.1); }
 .datos-seccion-titulo {
   display: flex; justify-content: space-between; align-items: center;
   padding: 16px 20px; font-weight: 800; font-size: 0.88rem;
-  cursor: pointer; background: #fafafa; transition: background 0.3s; color: #1a1a1a;
+  cursor: pointer; background: var(--surface-2); transition: background 0.3s; color: var(--text);
 }
-.datos-seccion-titulo:hover { background: #f0f0f0; }
+.datos-seccion-titulo:hover { background: var(--surface-3); }
 .datos-seccion-titulo .sec-icon { font-size: 1.2rem; margin-right: 10px; }
 .datos-seccion-titulo .sec-chevron { color: #888; font-size: 1.1rem; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
 .datos-seccion-titulo.abierta .sec-chevron { transform: rotate(180deg); color: #F97316; }
@@ -58,22 +58,18 @@
 .ddp-month-btn.ddp-month-sel { background: #F97316; color: #fff; font-weight: 700; }
 
 @media (prefers-color-scheme: dark) {
-  .datos-seccion { background: #1c1c1c; border-color: #2c1c11; }
-  .datos-seccion-titulo { background: #181818; color: #f0f0f0; }
-  .datos-seccion-titulo:hover { background: #2c1c11; }
-  .datos-seccion-body.abierta { border-top-color: #333; }
-  #ddp-modal .ddp-card { background: #1c1c1c !important; }
-  .ddp-selected-date, .ddp-nav-label, .ddp-day, .ddp-year-btn, .ddp-month-btn { color: #f0f0f0 !important; }
+  #ddp-modal .ddp-card { background: rgba(23,9,0,0.97) !important; }
+  .ddp-selected-date, .ddp-nav-label, .ddp-day, .ddp-year-btn, .ddp-month-btn { color: var(--text) !important; }
   .ddp-day.ddp-other { color: rgba(127,127,127,0.25) !important; }
-  .ddp-btn-cancel { color: #aaa !important; }
-  #modal-permisos > div { background: #1c1c1c !important; }
-  #modal-permisos div[style*="background:#fafafa"] { background: #181818 !important; border-color: #2c1c11 !important; }
-  #modal-permisos div[style*="border-top:1px"] { border-color: #333 !important; }
-  #modal-permisos div[style*="font-weight:600"] { color: #f0f0f0 !important; }
-  #modal-permisos div[style*="font-weight:800"] { color: #f0f0f0 !important; }
-  #modal-permisos p, #modal-permisos div[style*="color:#777"] { color: #888 !important; }
-  #mp-fecha { background: #181818 !important; border-color: #2c1c11 !important; color: #f0f0f0 !important; }
-  #modal-eliminar-cuenta > div { background: #1c1c1c !important; }
-  #modal-eliminar-cuenta input { background: #181818 !important; border-color: #333 !important; color: #f0f0f0 !important; }
-  #modal-eliminar-cuenta .mec-nombre { color: #fb923c !important; }
+  .ddp-btn-cancel { color: var(--muted) !important; }
+  #modal-permisos > div { background: rgba(23,9,0,0.97) !important; }
+  #modal-permisos div[style*="background:#fafafa"] { background: rgba(249,115,22,0.04) !important; border-color: rgba(249,115,22,0.15) !important; }
+  #modal-permisos div[style*="border-top:1px"] { border-color: var(--border) !important; }
+  #modal-permisos div[style*="font-weight:600"] { color: var(--text) !important; }
+  #modal-permisos div[style*="font-weight:800"] { color: var(--text) !important; }
+  #modal-permisos p, #modal-permisos div[style*="color:#777"] { color: var(--muted) !important; }
+  #mp-fecha { background: var(--surface-2) !important; border-color: var(--border) !important; color: var(--text) !important; }
+  #modal-eliminar-cuenta > div { background: rgba(23,9,0,0.97) !important; }
+  #modal-eliminar-cuenta input { background: var(--surface-2) !important; border-color: var(--border) !important; color: var(--text) !important; }
+  #modal-eliminar-cuenta .mec-nombre { color: var(--brand) !important; }
 }

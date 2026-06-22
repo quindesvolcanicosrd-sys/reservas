@@ -13,6 +13,7 @@ reservas/
 ├── manifest.json               Web App Manifest (íconos, nombre, tema)
 │
 ├── css/
+│   ├── colors.css              FUENTE ÚNICA DE VERDAD de colores — se importa primero en index.html e inscripcion/index.html
 │   ├── global.css              Reset, body, keyframes, spinner, overlay, toggle-switch, pantalla
 │   ├── ui.css                  Componentes reutilizables: card, inputs, btn, opciones, resumen, top-bar
 │   ├── login.css               Pantalla s1: header-banner, gsignin skeleton, acordeón PIN
@@ -141,10 +142,31 @@ reservas/
 |---|---|
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
+### css/colors.css (nuevo — fuente única de verdad)
+| Variable | Descripción |
+|---|---|
+| `--brand / --brand-dk / --brand-light / --brand-lighter / --brand-glow` | Naranja principal y variantes |
+| `--bg / --bg-2` | Colores de fondo de página |
+| `--surface / --surface-2 / --surface-3 / --surface-blur` | Capas de superficie translúcidas (glassmorphism) |
+| `--border / --border-2` | Bordes suaves naranjas translúcidos |
+| `--text / --text-2 / --muted / --hint` | Escala de texto (oscuro → tenue) |
+| `--success / --success-bg / --success-bdr` | Estado verde |
+| `--warning / --warning-bg / --warning-bdr` | Estado amarillo |
+| `--danger / --danger-bg / --danger-bdr` | Estado rojo |
+| `--info / --info-bg / --info-bdr` | Estado azul |
+| `--btn-primary-bg/color/hover / --btn-secondary-bg/color` | Tokens de botones |
+| `--card-bg / --card-border / --card-shadow / --card-blur` | Tokens de cards |
+| `--radius-sm / --radius / --radius-lg / --radius-full` | Radios de borde |
+| `--shadow-sm / --shadow / --shadow-lg` | Sombras |
+> Dark mode automático via `@media (prefers-color-scheme: dark)` en colors.css.
+> global.css, ui.css, home.css, reservas.css, perfil.css e inscripcion/inscripcion.css consumen estas variables y ya no definen paletas propias.
+
 ### inscripcion/inscripcion.css
+> ⚠️ Ya no tiene bloque `:root` propio ni `@media dark` de tokens — los provee `../css/colors.css` importado en `inscripcion/index.html`.
+> Solo conserva variables locales: `--green / --purple / --dp-*`.
+
 | Clase / selector | Descripción |
 |---|---|
-| `:root` | Tokens CSS: --bg, --surface, --border, --text, --brand, --radius, --dp-* |
 | `#loading-overlay / .loading-inner / .loading-logo / .loading-txt` | Overlay de carga con opacidad (no clase-toggle) |
 | `.page-wrap` | Wrapper centrado max-width 480px |
 | `.header / .header-logo / .header-title / .header-sub` | Encabezado con logo |

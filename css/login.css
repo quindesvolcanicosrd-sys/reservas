@@ -65,6 +65,17 @@
 footer { display: block; }
 @media (max-width: 600px) { footer { display: none !important; } }
 
+#pin-acordeon-body .btn-primary {
+  background: var(--brand);
+  color: white;
+  box-shadow: 0 4px 14px var(--brand-glow);
+}
+#pin-acordeon-body .btn-primary:hover:not(:disabled) {
+  background: var(--brand-dk);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--brand-glow);
+}
+
 @media (prefers-color-scheme: dark) {
   .loading-card { border-color: #2c1c11; } .loading-card p { color: #aaa; }
   .btn-pin-key { background: #181818; border-color: #181818; color: #f0f0f0; }

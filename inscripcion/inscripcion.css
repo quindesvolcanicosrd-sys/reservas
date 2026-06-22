@@ -1,39 +1,16 @@
-/* ─── RESET + TOKENS ─────────────────────────────────────────────────── */
+/* ─── RESET ───────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 :root {
-  --bg:        #FDF3EB;
-  --surface:   #ffffff;
-  --border:    #e5e5e5;
-  --text:      #1a1a1a;
-  --muted:     #777;
-  --hint:      #a89587;
-  --brand:     #F97316;
-  --brand-dk:  #ea6407;
   --green:     #22c55e;
   --green-bg:  #f0fdf4;
   --green-bdr: #bbf7d0;
   --purple:    #7c3aed;
   --purple-bg: #ede9fe;
-  --shadow:    0 10px 40px rgba(0,0,0,0.06);
-  --radius:    14px;
-  --radius-sm: 10px;
   --dp-chip: rgba(249,115,22,0.08);
   --dp-text2: var(--muted);
   --dp-text3: var(--hint);
   --dp-text4: rgba(127,127,127,0.3);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg:        #111111;
-    --surface:   #1c1c1c4f;
-    --border:    #2c1c11;
-    --text:      #f0f0f0;
-    --muted:     #888;
-    --hint:      #555;
-    --shadow:    0 10px 40px rgba(0,0,0,0.4);
-  }
 }
 
 body {
@@ -169,7 +146,7 @@ button, input, select, textarea { font-family: inherit; }
 }
 .toggle-slider::before {
   content: ''; position: absolute; height: 20px; width: 20px;
-  left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s;
+  left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.3s;
 }
 .toggle-switch input:checked + .toggle-slider { background: var(--brand); }
 .toggle-switch input:checked + .toggle-slider::before { transform: translateX(22px); }
