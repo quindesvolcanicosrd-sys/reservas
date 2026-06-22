@@ -66,26 +66,26 @@ footer { display: block; }
 @media (max-width: 600px) { footer { display: none !important; } }
 
 @media (prefers-color-scheme: dark) {
-  .loading-card { border-color: #2a2a2a; } .loading-card p { color: #aaa; }
+  .loading-card { border-color: #2c1c11; } .loading-card p { color: #aaa; }
   .btn-pin-key { background: #181818; border-color: #181818; color: #f0f0f0; }
-  .btn-pin-key:hover { background: #2a2a2a; border-color: #fb923c; }
+  .btn-pin-key:hover { background: #2c1c11; border-color: #fb923c; }
   .btn-pin-key:active { background: #2a1a0e; border-color: #F97316; }
   .btn-forgot-pin { background: #0a1929; color: #60a5fa; }
   #input-pin { background: #181818; color: #f0f0f0; border-color: #181818; }
-  #input-pin:focus { border-color: #F97316; background: #2a2a2a; box-shadow: 0 0 0 4px rgba(249,115,22,0.15); }
+  #input-pin:focus { border-color: #F97316; background: #2c1c11; box-shadow: 0 0 0 4px rgba(249,115,22,0.15); }
   #input-pin::placeholder { color: #8a8a8a !important; }
   #input-pin:-webkit-autofill,
   #input-pin:-webkit-autofill:hover,
   #input-pin:-webkit-autofill:focus { -webkit-box-shadow: 0 0 0 1000px #181818 inset !important; -webkit-text-fill-color: #f0f0f0 !important; }
-  #pd0, #pd1, #pd2, #pd3 { background: #2a2a2a !important; border-color: #444 !important; }
+  #pd0, #pd1, #pd2, #pd3 { background: #2c1c11 !important; border-color: #444 !important; }
   footer a { color: #8a8a8a !important; }
-  #pin-acordeon-header { background: #e55a00 !important; border-color: #2a2a2a !important; }
+  #pin-acordeon-header { background: #e55a00 !important; border-color: #2c1c11 !important; }
   #pin-acordeon-header span { color: white !important; }
   #pin-acordeon-body { background: #1c1c1c; }
   #pin-acordeon-body > div { background: #1c1c1c; }
   #pin-acordeon-body select { background: #181818 !important; border-color: #333 !important; color: #f0f0f0 !important; }
   #pin-acordeon-body .select-wrapper::after { color: #fb923c; }
-  #s1 div[style*="border:2px solid #e5e5e5;border-radius:4px"] { border-color: #2a2a2a !important; }
+  #s1 div[style*="border:2px solid #e5e5e5;border-radius:4px"] { border-color: #2c1c11 !important; }
   #s1 div[style*="flex:1;height:1px"] { background: #333 !important; }
   #s1 span[style*="color:#aaa"] { color: #555 !important; }
   #s1 button[onclick="abrirContacto()"] { background: #2d1f5e !important; color: #c4b5fd !important; border-color: #6d28d9 !important; }

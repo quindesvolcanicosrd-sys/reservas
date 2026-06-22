@@ -80,7 +80,7 @@ select, option, optgroup { font-family: 'Montserrat', sans-serif !important; }
   .fnac-placeholder { color: #555 !important; }
   ::placeholder { color: #8a8a8a !important; }
   #gsignin-skeleton, #gsignin-skeleton-main {
-    background: linear-gradient(90deg,#2a2a2a 25%,#383838 50%,#2a2a2a 75%) !important;
+    background: linear-gradient(90deg,#2c1c11 25%,#383838 50%,#2a2a2a 75%) !important;
     background-size: 200% 100% !important;
   }
 }

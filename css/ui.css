@@ -153,7 +153,7 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
 
 /* ─── DARK MODE ──────────────────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
-  .card { background: #1c1c1c; border-color: #2a2a2a; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+  .card { background: #1c1c1c; border-color: #2c1c11; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
   .card h2 { color: #f0f0f0; }
   .card p { color: #aaa; }
   .seccion-label { color: #fb923c; }
@@ -162,16 +162,16 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
   input[type="date"], input[type="password"], textarea {
     background: #181818; border-color: #181818; color: #f0f0f0;
   }
-  select:focus, input:focus, textarea:focus { background: #2a2a2a; }
-  select:disabled { background: #1e1e1e; color: #555; border-color: #2a2a2a; }
-  input[readonly] { background: #1e1e1e !important; color: #555 !important; border-color: #2a2a2a !important; cursor: not-allowed !important; }
-  #d-fechaNacimiento-display { background: #1e1e1e !important; border-color: #2a2a2a !important; color: #555 !important; }
+  select:focus, input:focus, textarea:focus { background: #2c1c11; }
+  select:disabled { background: #1e1e1e; color: #555; border-color: #2c1c11; }
+  input[readonly] { background: #1e1e1e !important; color: #555 !important; border-color: #2c1c11 !important; cursor: not-allowed !important; }
+  #d-fechaNacimiento-display { background: #1e1e1e !important; border-color: #2c1c11 !important; color: #555 !important; }
 
   .opcion { background: #181818; border-color: #181818; color: #f0f0f0; }
-  .opcion:hover { background: #2a2a2a; border-color: #fb923c; }
+  .opcion:hover { background: #2c1c11; border-color: #fb923c; }
   .opcion.sel { background: #2a1a0e; border-color: #F97316; }
 
-  .btn-secondary { background: #2a2a2a; color: #ccc; border-color: #3a3a3a; }
+  .btn-secondary { background: #2c1c11; color: #ccc; border-color: #3a3a3a; }
   .btn-secondary:hover { background: #333; }
 
   .resumen { background: #181818; }
@@ -187,7 +187,7 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
   .datos-campo label { color: #777; }
   .datos-hint { color: #666; }
   .chk-opcion { background: #181818; border-color: #181818; color: #f0f0f0; }
-  .chk-opcion:hover { background: #2a2a2a; border-color: #fb923c; }
+  .chk-opcion:hover { background: #2c1c11; border-color: #fb923c; }
   .aviso-legal { background: #0a1929; border-color: #1d4ed8; color: #93c5fd; }
   .privacy-row { background: #181818; border-color: #181818; }
   .privacy-row label { color: #ccc; }
@@ -216,7 +216,7 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
   div:has(> [id^="hgrp-"]) > div:first-child span { color: #aaa !important; }
   #modal-contacto > div { background: #1c1c1c !important; }
   #modal-contacto a[href] { background: #181818 !important; color: #f0f0f0 !important; }
-  #modal-contacto button { background: #2a2a2a !important; color: #ccc !important; }
+  #modal-contacto button { background: #2c1c11 !important; color: #ccc !important; }
   #modal-contacto .modal-ct { color: #f0f0f0 !important; }
 }
 
