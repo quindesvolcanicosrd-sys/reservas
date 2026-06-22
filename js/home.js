@@ -5,6 +5,15 @@ var _homeExpandido = false;
 
 function prepararHome() {
   document.getElementById('home-saludo').textContent = '¡Hola, ' + E.nombre + '!';
+  var foto = E.datos && E.datos.fotoPerfil ? E.datos.fotoPerfil : '';
+  var emojiMobile  = document.querySelector('.home-emoji-mobile');
+  var emojiDesktop = document.querySelector('.home-emoji-desktop');
+  if (foto) {
+    var imgStyle = 'width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid #F97316;animation:popBounce 0.6s cubic-bezier(0.16,1,0.3,1);';
+    var imgTag = '<img src="' + foto + '" style="' + imgStyle + '" onerror="this.replaceWith(document.createTextNode(\'🛼\'))">';
+    if (emojiMobile)  emojiMobile.outerHTML  = '<span class="home-emoji-mobile">'  + imgTag + '</span>';
+    if (emojiDesktop) emojiDesktop.outerHTML = '<div class="home-emoji-desktop" style="font-size:3.2rem;margin-bottom:12px;">' + imgTag + '</div>';
+  }
   renderHomeReservas();
   var bannerCupon = document.getElementById('banner-cupon');
   if (bannerCupon) bannerCupon.style.display = tieneCuponDisponible() ? 'block' : 'none';
