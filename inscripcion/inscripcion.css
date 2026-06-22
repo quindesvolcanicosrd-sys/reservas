@@ -27,7 +27,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg:        #111111;
-    --surface:   #1c1c1c;
+    --surface:   #1c1c1c4f;
     --border:    #2c1c11;
     --text:      #f0f0f0;
     --muted:     #888;
@@ -385,7 +385,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
   .opcion, .chk-opcion { background: #252525; border-color: #252525; color: #f0f0f0; }
   .opcion:hover, .chk-opcion:hover { background: #2c1c11; }
   .opcion.sel { background: #2a1a0e; border-color: var(--brand); }
-  .perm-box { background: #1c1c1c; }
+  .perm-box { background: #1c1c1c4f; }
   .sub-permisos { background: rgba(249,115,22,0.05); }
   .prefijo-flag { background: #252525; border-color: #252525; }
   .btn-secondary { background: rgba(249,115,22,0.1); }
@@ -425,7 +425,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
   padding: 28px 20px; width: 85%; max-width: 320px; text-align: center;
 }
 @media (prefers-color-scheme: dark) {
-  #modal-ct-inner { background: #1c1c1c; }
+  #modal-ct-inner { background: #1c1c1c4f; }
   #modal-ct-inner a { background: #252525 !important; color: #f0f0f0 !important; }
   #modal-ct-inner button { background: #2c1c11 !important; color: #ccc !important; }
 }
@@ -522,7 +522,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 #dp-days { display:contents; animation:dpFadeIn 0.18s ease; }
 #dp-year-grid, #dp-month-grid { animation:dpFadeIn 0.18s ease; }
 @media (prefers-color-scheme: dark) {
-  .dp-card { background:#1c1c1c; }
+  .dp-card { background:#1c1c1c4f; }
   .dp-day { color:#f0f0f0; }
   .dp-nav-label { color:#f0f0f0; }
   .dp-year-btn { color:#f0f0f0; }
