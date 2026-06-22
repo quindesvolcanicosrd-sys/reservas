@@ -148,12 +148,15 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <h2 id="home-saludo" style="text-align:center;margin-bottom:8px;"></h2>
       <p style="margin-bottom:24px; font-weight: 500;">¿Qué quieres hacer hoy?</p>
 
-      <div id="banner-cupon" style="display:none;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:2px solid #fbbf24;border-radius:14px;padding:16px;margin-bottom:18px; box-shadow: 0 4px 12px rgba(245,158,11,0.1);">
-        <div style="display:flex;align-items:flex-start;gap:12px;">
+      <div id="banner-cupon" style="display:none;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:2px solid #fbbf24;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 12px rgba(245,158,11,0.1);overflow:hidden;">
+        <div onclick="toggleBannerCupon()" style="display:flex;align-items:center;gap:12px;padding:16px;cursor:pointer;">
           <span style="font-size:1.6rem;flex-shrink:0;">🎟️</span>
-          <div style="text-align: left;">
-            <div style="font-weight:800;color:#b45309;font-size:0.95rem;">¡Tienes un cupón disponible!</div>
-            <div style="font-size:0.8rem;color:#92400e;margin-top:4px; line-height: 1.4;"><strong>¡Vale por una clase gratis!</strong> Úsalo en tu próxima reserva individual seleccionando reserva por clase. Tu cupón es personal e intransferible.</div>
+          <div style="flex:1;font-weight:800;color:#b45309;font-size:0.95rem;">¡Tienes un cupón disponible!</div>
+          <span class="material-symbols-outlined" id="banner-cupon-chevron" style="color:#b45309;font-size:1.2rem;transition:transform 0.3s;">expand_more</span>
+        </div>
+        <div id="banner-cupon-body" style="max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1);">
+          <div style="padding:0 16px 16px 16px;font-size:0.8rem;color:#92400e;line-height:1.5;border-top:1px solid rgba(251,191,36,0.4);padding-top:12px;">
+            <strong>¡Vale por una clase gratis!</strong> Úsalo en tu próxima reserva individual seleccionando reserva por clase. Tu cupón es personal e intransferible.
           </div>
         </div>
       </div>
@@ -177,13 +180,17 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <button id="btn-historial-home" class="btn-home-sub" onclick="irMisReservas()">📋 Historial</button>
         </div>
         <div style="display:flex;flex-direction:column;gap:14px;margin-top:14px;">
-          <button id="btn-nueva-reserva-home" onclick="irNuevaReserva()" style="width:100%;padding:14px;border:2px solid #f97316;border-radius:12px;background:rgba(249,115,22,0.12);color:#f97316 !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;">➕ Nueva reserva</button>
-          <button onclick="irEditarDatos()" style="width:100%;padding:14px;border:2px solid #f97316;border-radius:12px;background:rgba(249,115,22,0.12);color:#f97316 !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;">✏️ Editar mis datos</button>
+          <button id="btn-nueva-reserva-home" onclick="irNuevaReserva()" style="width:100%;padding:14px;border:2px solid #f97316;border-radius:12px;background:rgba(249,115,22,0.12);color:#f97316 !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">calendar_add_on</span> Nueva reserva</button>
         </div>
       </div>
-<button id="btn-logout-desktop" class="btn btn-secondary" style="margin-top:20px;" onclick="cerrarSesion()">
-        <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">logout</span> Cerrar sesión
-      </button>
+  <div style="display:flex;gap:10px;margin-top:20px;">
+    <button id="btn-editar-desktop" class="btn btn-secondary" style="flex:1;margin-top:0;" onclick="irEditarDatos()">
+      <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">account_circle</span> Mis datos
+    </button>
+    <button id="btn-logout-desktop" class="btn btn-secondary" style="flex:1;margin-top:0;" onclick="cerrarSesion()">
+      <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">logout</span> Cerrar sesión
+    </button>
+  </div>
 
       <div class="home-mobile-actions" style="margin-top:20px;">
         <div class="hmr" id="row-notif-home">
@@ -231,7 +238,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
   <div class="pantalla" id="s2">
     <div class="card">
-      <div class="seccion-label">Paso 1 de 4 — Equipamiento</div>
+      <div class="seccion-label">Paso 1 de 4</div>
       <h2 id="s2-titulo"></h2>
       <div class="resumen" id="s2-resumen"></div>
       <p style="font-weight: 600;">¿Es correcta esta información?</p>
@@ -305,7 +312,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           </label>
           <label class="opcion" id="opcion-tipo-clase" onclick="selTipoPago('clase', this)">
             <input type="radio" name="tipo-pago" value="clase">
-            <div><div style="font-weight:800;">Pago por clase</div><div style="font-size:0.82rem;color:#888;margin-top:2px;">Selecciona las clases que asistirás</div></div>
+            <div style="flex:1;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-weight:800;">Pago por clase</span><span id="pill-cupon" style="display:none;background:#fef3c7;color:#b45309;border:1px solid #fbbf24;border-radius:99px;font-size:0.72rem;font-weight:800;padding:2px 10px;">🎟️ tienes un cupón</span></div><div style="font-size:0.82rem;color:#888;margin-top:2px;">Selecciona las clases que asistirás</div></div>
           </label>
         </div>
       </div>
@@ -359,7 +366,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
   <div class="pantalla" id="s-pago">
     <div class="card">
-      <div class="seccion-label">Paso 3 de 4 — Pago</div>
+      <div class="seccion-label">Paso 3 de 4</div>
       <h2>Realiza tu pago</h2>
       <div class="total-box" id="s-pago-total" style="margin-bottom:20px;">
         <div id="s-pago-total-monto"></div>
@@ -367,19 +374,23 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
       <p style="font-weight: 500;">Transfiere el monto indicado usando uno de estos métodos antes de continuar.</p>
 
-      <div class="pago-metodo">
-        <div class="pago-header"><span class="pago-icon">📱</span>DeUna · Banco Pichincha</div>
-        <div class="pago-fila"><span class="pago-label">Cuenta de ahorro</span><span class="pago-valor">7702756890</span></div>
-        <div class="pago-fila"><span class="pago-label">Titular</span><span class="pago-valor">David Santiago Rojas Baez</span></div>
-        <div class="pago-fila"><span class="pago-label">CI</span><span class="pago-valor">1721443180</span></div>
+      <div class="pago-metodo" style="padding:0;overflow:hidden;">
+        <div class="pago-header" onclick="togglePagoMetodo(this)" style="cursor:pointer;padding:16px;justify-content:space-between;"><div style="display:flex;align-items:center;gap:10px;"><span class="pago-icon">📱</span>DeUna · Banco Pichincha</div><span class="material-symbols-outlined" style="font-size:1.1rem;color:#888;transition:transform 0.3s;">expand_more</span></div>
+        <div class="pago-metodo-body" style="max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1);padding:0 16px;">
+          <div class="pago-fila"><span class="pago-label">Cuenta de ahorro</span><span class="pago-valor">7702756890</span></div>
+          <div class="pago-fila"><span class="pago-label">Titular</span><span class="pago-valor">David Santiago Rojas Baez</span></div>
+          <div class="pago-fila"><span class="pago-label">CI</span><span class="pago-valor">1721443180</span></div>
+        </div>
       </div>
-      <div class="pago-metodo">
-        <div class="pago-header"><span class="pago-icon">🏦</span>Banco Internacional</div>
-        <div class="pago-fila"><span class="pago-label">Tipo</span><span class="pago-valor">Cuenta de ahorros</span></div>
-        <div class="pago-fila"><span class="pago-label">N° de cuenta</span><span class="pago-valor">398027628</span></div>
-        <div class="pago-fila"><span class="pago-label">Titular</span><span class="pago-valor">Victor Del Bono</span></div>
-        <div class="pago-fila"><span class="pago-label">CI</span><span class="pago-valor">1759369331</span></div>
-        <div class="pago-fila"><span class="pago-label">Cel</span><span class="pago-valor">0962773052</span></div>
+      <div class="pago-metodo" style="padding:0;overflow:hidden;">
+        <div class="pago-header" onclick="togglePagoMetodo(this)" style="cursor:pointer;padding:16px;justify-content:space-between;"><div style="display:flex;align-items:center;gap:10px;"><span class="pago-icon">🏦</span>Banco Internacional</div><span class="material-symbols-outlined" style="font-size:1.1rem;color:#888;transition:transform 0.3s;">expand_more</span></div>
+        <div class="pago-metodo-body" style="max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1);padding:0 16px;">
+          <div class="pago-fila"><span class="pago-label">Tipo</span><span class="pago-valor">Cuenta de ahorros</span></div>
+          <div class="pago-fila"><span class="pago-label">N° de cuenta</span><span class="pago-valor">398027628</span></div>
+          <div class="pago-fila"><span class="pago-label">Titular</span><span class="pago-valor">Victor Del Bono</span></div>
+          <div class="pago-fila"><span class="pago-label">CI</span><span class="pago-valor">1759369331</span></div>
+          <div class="pago-fila"><span class="pago-label">Cel</span><span class="pago-valor">0962773052</span></div>
+        </div>
       </div>
 
       <label class="chk-pago-label">
@@ -404,7 +415,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
   <div class="pantalla" id="s5">
     <div class="card">
-      <div class="seccion-label">Paso 4 de 4 — Confirmar</div>
+      <div class="seccion-label">Paso 4 de 4</div>
       <h2 id="s5-titulo-h2">Resumen de tu reserva</h2>
       <div class="resumen" id="s5-resumen"></div>
       <p id="s5-aviso-pago">Al confirmar nos avisas que ya realizaste el pago. <strong>Revisaremos tu transferencia</strong> y recibirás confirmación por correo o cuando esté aprobada.</p>
@@ -995,6 +1006,18 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <button onclick="mecCerrar()" style="width:100%;padding:13px;background:transparent;color:#888;border:2px solid #e5e5e5;border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
   </div>
 </div>
+
+  <div id="modal-wp-comprobante" style="display:none;position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;padding:16px;">
+    <div style="background:white;border-radius:20px;padding:28px 24px;width:100%;max-width:400px;text-align:center;">
+      <div style="font-size:2.4rem;margin-bottom:12px;">📲</div>
+      <div style="font-weight:800;font-size:1.05rem;color:#1a1a1a;margin-bottom:8px;">Enviá tu comprobante</div>
+      <p style="font-size:0.85rem;color:#666;margin-bottom:20px;line-height:1.5;">Para confirmar tu reserva más rápido, enviá el comprobante de pago por WhatsApp ahora.</p>
+      <a id="modal-wp-btn" href="#" target="_blank" onclick="modalWpEnviado()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:15px;background:#16a34a;color:white;border-radius:12px;font-weight:800;font-size:0.95rem;text-decoration:none;margin-bottom:10px;">
+        <span style="font-size:1.2rem;">📲</span> Enviar comprobante
+      </a>
+      <button onclick="modalWpSaltear()" style="width:100%;padding:13px;background:transparent;color:#aaa;border:none;border-radius:12px;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;">Lo haré después</button>
+    </div>
+  </div>
 
 <footer style="text-align:center;padding: 0px 20px 25px;;font-size:0.85rem;">
   <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:16px 24px;">

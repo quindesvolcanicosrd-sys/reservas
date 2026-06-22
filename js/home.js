@@ -295,3 +295,11 @@ function cancelarRes(fecha) {
     }
   }, function(e) { btn.disabled = false; btn.innerHTML = 'Cancelar'; alert('Error: ' + e.message); });
 }
+
+function toggleBannerCupon() {
+  var body = document.getElementById('banner-cupon-body');
+  var chevron = document.getElementById('banner-cupon-chevron');
+  var abierto = body.style.maxHeight && body.style.maxHeight !== '0px';
+  body.style.maxHeight = abierto ? '0' : '200px';
+  chevron.style.transform = abierto ? '' : 'rotate(180deg)';
+}

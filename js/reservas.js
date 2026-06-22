@@ -75,7 +75,7 @@ function necesitaEquipo() { return !canPayMonthly(); }
 
 function actualizarTextosPago() {
   var necesitaEquipamiento = !canPayMonthly();
-  document.getElementById('s4-label').textContent = E.reagendando ? 'Reagendar clase' : necesitaEquipamiento ? 'Paso 2 de 4 — Fecha y pago' : 'Paso 2 de 4 — Selecciona el tipo de modalidad';
+  document.getElementById('s4-label').textContent = E.reagendando ? 'Reagendar clase' : 'Paso 2 de 4';
   document.getElementById('s4-titulo').textContent = necesitaEquipamiento ? 'Próximos entrenamientos' : 'Selecciona tu modalidad';
   document.getElementById('chk-pago-texto').textContent = canPayMonthly() ? 'Ya realicé mi pago y entiendo este estará pendiente hasta que sea verificada por el equipo.' : 'Ya realicé mi pago y entiendo que mi reserva quedará pendiente hasta que sea verificada por el equipo.';
   document.getElementById('nota-pago-hint').textContent = canPayMonthly() ? 'Escribe tu nombre o referencia así sabemos que el pago corresponde a tí.' : 'Escribe tu nombre o referencia de a quien corresponde la reserva así sabemos que el pago corresponde a tí.';
@@ -182,6 +182,7 @@ function cargarFechas() {
     actualizarTextosPago();
     var cuponWrap = document.getElementById('s4-cupon-wrapper'); var chkCupon = document.getElementById('chk-cupon');
     if (cuponWrap) cuponWrap.style.display = (!puedeMensual && tieneCuponDisponible()) ? 'block' : 'none';
+    var pillCupon = document.getElementById('pill-cupon'); if (pillCupon) pillCupon.style.display = tieneCuponDisponible() ? 'inline-block' : 'none';
     if (chkCupon) chkCupon.checked = false; E.cuponAplicado = false;
     ocultarCargando(); ir('s4');
   }, function(e) { ocultarCargando(); ir('s2'); err('err-s2', 'Error al verificar fechas: ' + e.message); });
@@ -259,7 +260,22 @@ function continuar_pago() {
 
 function continuar_pago_y_wp() {
   if (!document.getElementById('chk-pago').checked) { err('err-pago', 'Debes confirmar que realizaste el pago.'); return; }
-  E.wpEnviado = true; continuar_pago();
+  var modal = document.getElementById('modal-wp-comprobante');
+  var btnWp = document.getElementById('modal-wp-btn');
+  if (btnWp && E.wpUrl) btnWp.href = E.wpUrl;
+  if (modal) { modal.style.display = 'flex'; }
+}
+function modalWpEnviado() {
+  E.wpEnviado = true;
+  var modal = document.getElementById('modal-wp-comprobante');
+  if (modal) modal.style.display = 'none';
+  continuar_pago();
+}
+function modalWpSaltear() {
+  E.wpEnviado = false;
+  var modal = document.getElementById('modal-wp-comprobante');
+  if (modal) modal.style.display = 'none';
+  continuar_pago();
 }
 
 function confirmarReserva() {

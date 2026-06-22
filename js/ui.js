@@ -163,6 +163,15 @@ function toggleMesesPasados() {
   }
 }
 
+function togglePagoMetodo(header) {
+  var body = header.nextElementSibling;
+  var chevron = header.querySelector('.material-symbols-outlined');
+  var abierto = body.style.maxHeight && body.style.maxHeight !== '0px';
+  body.style.maxHeight = abierto ? '0' : body.scrollHeight + 'px';
+  body.style.paddingBottom = abierto ? '0' : '16px';
+  if (chevron) chevron.style.transform = abierto ? '' : 'rotate(180deg)';
+}
+
 function toggleMesesActuales() {
   var container = document.getElementById('lista-meses-container');
   var chevronA  = document.getElementById('chevron-meses-actuales');
