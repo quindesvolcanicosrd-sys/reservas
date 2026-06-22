@@ -76,7 +76,6 @@ footer { display: block; }
   #input-pin::placeholder { color: #8a8a8a !important; }
   #input-pin:-webkit-autofill,
   #input-pin:-webkit-autofill:hover,
-  #input-pin:-webkit-autofill:focus { -webkit-box-shadow: 0 0 0 1000px #181818 inset !important; -webkit-text-fill-color: #f0f0f0 !important; }
   #pd0, #pd1, #pd2, #pd3 { background: #2c1c11 !important; border-color: #444 !important; }
   footer a { color: #8a8a8a !important; }
   #pin-acordeon-header { background: #e55a00 !important; border-color: #2c1c11 !important; }
