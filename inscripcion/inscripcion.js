@@ -381,8 +381,15 @@ function enviarForm() {
           window.location.href = 'https://reservas.quindesvolcanicos.com?' + _params;
         }, 2800);
       } else {
-        errMsg('err-form', res.error || 'Error al registrarse. Intenta de nuevo.');
-        window.scrollTo({top:0,behavior:'smooth'});
+        var msgError = res.error || 'Error al registrarse. Intenta de nuevo.';
+        var esConflictoNombre = msgError.toLowerCase().indexOf('nombre') !== -1 || msgError.toLowerCase().indexOf('existe') !== -1 || msgError.toLowerCase().indexOf('registrado') !== -1;
+        errMsg('err-form', esConflictoNombre ? 'Ese nombre ya está registrado. Elegí uno diferente: tu nombre derby, apodo o agregá tu apellido.' : msgError);
+        if (esConflictoNombre) {
+          var inp = document.getElementById('f-nombre');
+          if (inp) { inp.focus(); inp.select(); inp.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        } else {
+          window.scrollTo({top:0,behavior:'smooth'});
+        }
       }
     }, function(e){
       ocultarCargando();
@@ -390,11 +397,26 @@ function enviarForm() {
     });
   }
 
-  if (pin && /^\d{4}$/.test(pin)) {
-    sha256Hex(pin + '|' + nombre).then(function(hash) { _doEnviar(hash); });
-  } else {
-    _doEnviar('');
+  function ejecutarEnvio() {
+    if (pin && /^\d{4}$/.test(pin)) {
+      sha256Hex(pin + '|' + nombre).then(function(hash) { _doEnviar(hash); });
+    } else {
+      _doEnviar('');
+    }
   }
+
+  apiGet({ action: 'verificarNombreDisponible', nombre: nombre }, function(res) {
+    if (res && res.disponible === false) {
+      errMsg('err-form', 'Ese nombre ya está registrado. Por favor elegí uno diferente: podés usar tu nombre derby, apodo o agregar tu apellido.');
+      var inp = document.getElementById('f-nombre');
+      if (inp) { inp.focus(); inp.select(); inp.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    } else {
+      ejecutarEnvio();
+    }
+  }, function() {
+    // Si el endpoint no existe o falla, continuar igual — inscribirPersona manejará el conflicto
+    ejecutarEnvio();
+  });
 }
 
 function errMsg(id, msg) {
