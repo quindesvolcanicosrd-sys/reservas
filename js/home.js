@@ -116,7 +116,7 @@ function _renderCardHome(r, hoy) {
     var tipo = exp ? 'vencida' : inicioMes > hoy ? 'futura' : dias <= 15 ? 'vencimiento' : 'vigente';
     if (estado === 'Pendiente') tipo = 'pendiente-mens';
     var nombreMes = r.fecha.charAt(0).toUpperCase() + r.fecha.slice(1);
-    var icons = {vencida:'❌',futura:'🔒',vencimiento:'⚠️','pendiente-mens':'⏳',vigente:'✅'};
+    var icons = {vencida:'<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">cancel</span>',futura:'<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">lock</span>',vencimiento:'<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">warning</span>','pendiente-mens':'<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">hourglass_empty</span>',vigente:'<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">check_circle</span>'};
     var colors = {vencida:'#dc2626',futura:'#aaa',vencimiento:'#b45309','pendiente-mens':'#b45309',vigente:'#166534'};
     var labels = {vencida:'Pago vencido',futura:'Mes futuro',vencimiento:'Próximo a cumplirse','pendiente-mens':'Pendiente de verificación',vigente:'Pago activo'};
     var h = '<div class="res-card-home ' + tipo + '">';
@@ -136,9 +136,12 @@ function _renderCardHome(r, hoy) {
   var tipoC = estado === 'Confirmada' ? 'confirmada-clase' : estado === 'Reagendar' ? 'reagendar-clase' : 'pendiente-clase';
   var tienePat = r.talla && r.talla.toLowerCase() !== 'no';
   var tieneProc = r.protecciones && r.protecciones.toLowerCase() !== 'no';
-  var equipMsg = tienePat && tieneProc ? '🛼 T.' + r.talla + ' · 🛡️ Protecciones' :
-                 tienePat ? '🛼 Patines talla ' + r.talla : tieneProc ? '🛡️ ' + r.protecciones : '✅ Equipo propio';
-  var bIcon = {Confirmada:'✅',Reagendar:'🔁',Pendiente:'⏳'}[estado] || '⏳';
+  var icoP = '<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">roller_skating</span>';
+  var icoR = '<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">shield</span>';
+  var icoOk = '<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">check_circle</span>';
+  var equipMsg = tienePat && tieneProc ? icoP + ' T.' + r.talla + ' · ' + icoR + ' Protecciones' :
+                 tienePat ? icoP + ' Patines talla ' + r.talla : tieneProc ? icoR + ' ' + r.protecciones : icoOk + ' Equipo propio';
+  var bIcon = {Confirmada:'<span class="material-symbols-outlined" style="font-size:0.9rem;vertical-align:middle;">check_circle</span>',Reagendar:'<span class="material-symbols-outlined" style="font-size:0.9rem;vertical-align:middle;">event_repeat</span>',Pendiente:'<span class="material-symbols-outlined" style="font-size:0.9rem;vertical-align:middle;">hourglass_empty</span>'}[estado] || '<span class="material-symbols-outlined" style="font-size:0.9rem;vertical-align:middle;">hourglass_empty</span>';
   var bColor = {Confirmada:'#166534',Reagendar:'#6d28d9',Pendiente:'#b45309'}[estado] || '#b45309';
   var bBg = {Confirmada:'#dcfce7',Reagendar:'#ede9fe',Pendiente:'#fef3c7'}[estado] || '#fef3c7';
   var h = '<div class="res-card-home ' + tipoC + '">';
@@ -251,7 +254,10 @@ function _renderCardHistorial(r) {
   var b = bMap[r.estado] || ['badge-pendiente','?'];
   var tP = r.talla && r.talla.toLowerCase() !== 'no';
   var tR = r.protecciones && r.protecciones.toLowerCase() !== 'no';
-  var eq = tP && tR ? '🛼 T.' + r.talla + ' · 🛡️ Protecciones' : tP ? '🛼 Talla ' + r.talla : tR ? '🛡️ ' + r.protecciones : '✅ Equipo propio';
+  var icoP = '<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">roller_skating</span>';
+  var icoR = '<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">shield</span>';
+  var icoOk = '<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">check_circle</span>';
+  var eq = tP && tR ? icoP + ' T.' + r.talla + ' · ' + icoR + ' Protecciones' : tP ? icoP + ' Talla ' + r.talla : tR ? icoR + ' ' + r.protecciones : icoOk + ' Equipo propio';
   var h = '<div class="reserva-card" style="margin-bottom:8px;">';
   h += '<div class="reserva-header" style="align-items:flex-start;gap:8px;"><span class="reserva-fecha" style="font-size:0.82rem;flex:1;min-width:0;">' + r.fecha + '</span>';
   h += '<span class="badge ' + b[0] + '" style="flex-shrink:0;white-space:nowrap;">' + b[1] + ' ' + r.estado + '</span></div>';

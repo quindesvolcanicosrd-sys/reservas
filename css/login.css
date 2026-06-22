@@ -27,7 +27,7 @@
   .loading-logo { display: block; width: 88px; height: 88px; border-radius: 50%; object-fit: cover; object-position: center top; margin: 0 auto 28px; filter: drop-shadow(0 4px 16px rgba(249,115,22,0.2)); }
 }
 @media (max-width: 600px) and (prefers-color-scheme: dark) {
-  #loading-overlay { background: #1a1a1a; }
+  #loading-overlay { background: var(--bg); }
 }
 
 #gsignin-usuario > div, #gsignin-usuario iframe {

@@ -285,6 +285,20 @@ window.onload = function() {
     } catch (ex) { localStorage.removeItem('session'); }
   }
   if (!_restaurando) { ir('s1', true); }
+  var _urlParams = new URLSearchParams(location.search);
+  if (_urlParams.get('nuevx') === '1') {
+    var _nombreNuevx = _urlParams.get('nombre') || '';
+    var _patinesNuevx = _urlParams.get('patines') || 'no';
+    var _protecNuevx = _urlParams.get('protec') || 'no';
+    var _tallaNuevx = _urlParams.get('talla') || '';
+    if (_nombreNuevx && E.datos) {
+      E.datos.necesitaPatines = _patinesNuevx === 'si' ? 'Sí' : 'No';
+      E.datos.necesitaProtecciones = _protecNuevx === 'si' ? 'Sí' : 'No';
+      if (_tallaNuevx) E.datos.talla = _tallaNuevx;
+      history.replaceState({}, '', location.pathname);
+      setTimeout(function() { cargarFechas(); }, 300);
+    }
+  }
   requestAnimationFrame(function() { requestAnimationFrame(iniciarGoogleSignInUsuario); });
 
   api({ action: 'getPreciosClases' }, function(precios) {

@@ -684,13 +684,53 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
       </div>
 
+      <div class="datos-seccion">
+        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-emerg2', this)">
+          <span><span class="sec-icon">🆘</span>Contacto de emergencia 2</span>
+          <span class="sec-chevron material-symbols-outlined">expand_more</span>
+        </div>
+        <div class="datos-seccion-body" id="sec-emerg2">
+          <div class="datos-campo">
+            <label>Nombre completo</label>
+            <input type="text" id="d-emerg2Nombre" placeholder="Ej: Carlos López">
+          </div>
+          <div class="datos-campo">
+            <label>Relación</label>
+            <div class="select-wrapper">
+              <select id="d-emerg2Relacion">
+                <option value="">Selecciona</option>
+                <option value="Amigx">Amigx</option>
+                <option value="Familiar">Familiar</option>
+                <option value="Pareja">Pareja</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+          </div>
+          <div class="datos-campo">
+            <label>Prefijo telefónico</label>
+            <div class="select-wrapper">
+              <select id="d-emerg2Prefijo" onchange="toggleOtroSelect('emerg2Prefijo')">
+                <option value="">Selecciona</option>
+                <option value="🇪🇨 +593 (Ecuador)">🇪🇨 +593 Ecuador</option>
+                <option value="Otro">Otro</option>
+              </select>
+            </div>
+            <div class="campo-condicional" id="campo-emerg2PrefijoOtro">
+              <input type="text" id="d-emerg2PrefijoOtro" class="otro-texto" placeholder="Ej: +972">
+            </div>
+          </div>
+          <div class="datos-campo">
+            <label>Número de teléfono</label>
+            <input type="tel" id="d-emerg2Telefono" placeholder="Ej: 0991234567" oninput="limpiarTelefono(this)">
+          </div>
+          <button class="btn-guardar-sec" onclick="guardarSeccion('sec-emerg2', this)">Guardar</button>
+        </div>
+      </div>
 
-    <div style="margin-top:32px;padding-top:20px;border-top:2px solid #fee2e2;">
-        <div style="font-size:0.78rem;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Zona de peligro</div>
-        <button onclick="eliminarCuenta()" style="width:100%;padding:14px;background:#fef2f2;color:#dc2626;border:2px solid #fecaca;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;transition:all 0.3s;">
-          🗑️ Eliminar mi cuenta
+    <div style="margin-top:32px;">
+        <button onclick="eliminarCuenta()" style="width:100%;padding:14px;background:rgba(220,38,38,0.1);color:#dc2626;border:none;border-radius:12px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.3s;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <span class="material-symbols-outlined" style="font-size:1.1rem;">delete</span> Eliminar mi cuenta
         </button>
-        <p style="font-size:0.78rem;color:#aaa;margin-top:8px;line-height:1.4;text-align:center;">Esta acción es permanente e irreversible. Se borrarán todos tus datos.</p>
       </div>
     </div>
   </div>

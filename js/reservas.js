@@ -329,7 +329,7 @@ function confirmarReserva() {
       if (btnWpExito && E.wpUrl) { btnWpExito.href = E.wpUrl; btnWpExito.style.display = 'flex'; }
     }
     E.reagendando = false;
-    ocultarCargando(); ir('s6');
+    ocultarCargando(); ir('s6'); setTimeout(lanzarConfetti, 400);
   }
 
   if (E.tipoPago === 'mensual') {

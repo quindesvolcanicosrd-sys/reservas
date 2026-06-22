@@ -9,6 +9,8 @@ function irEditarDatos() {
   cargarSelect('d-emerg1Relacion',datos.emerg1Relacion, null, null);
   cargarSelect('d-prefijo', datos.prefijo, 'd-prefijoOtro', 'campo-prefijoOtro');
   cargarSelect('d-emerg1Prefijo', datos.emerg1Prefijo, 'd-emerg1PrefijoOtro', 'campo-emerg1PrefijoOtro');
+  cargarSelect('d-emerg2Relacion', datos.emerg2Relacion, null, null);
+  cargarSelect('d-emerg2Prefijo', datos.emerg2Prefijo, 'd-emerg2PrefijoOtro', 'campo-emerg2PrefijoOtro');
 
   var fnDisp = document.getElementById('d-fechaNacimiento-display');
   if (fnDisp) {
@@ -42,7 +44,7 @@ function cargarSelect(selectId, valor, otroInputId, campoOtroId) {
 
 function guardarSeccion(secId, btn) {
   var sec = document.getElementById(secId); var payload = {};
-  var camposTel = { 'sec-contacto': 'd-telefono', 'sec-emerg1': 'd-emerg1Telefono' };
+  var camposTel = { 'sec-contacto': 'd-telefono', 'sec-emerg1': 'd-emerg1Telefono', 'sec-emerg2': 'd-emerg2Telefono' };
   if (camposTel[secId]) { var telEl = document.getElementById(camposTel[secId]); if (telEl && telEl.value.trim()) { var tel = telEl.value.trim(); if (!/^[0-9]{7,15}$/.test(tel)) { alert('El número de teléfono debe tener entre 7 y 15 dígitos y solo puede contener números.'); return; } } }
   sec.querySelectorAll('input[id^="d-"]:not([type="checkbox"]):not([type="radio"]):not(.otro-texto):not([readonly]), select[id^="d-"], textarea[id^="d-"]:not(.otro-texto)').forEach(function(el) { payload[el.id.replace('d-', '')] = el.value.trim(); });
   ['canton','prefijo','emerg1Prefijo'].forEach(function(campo) { if (payload[campo] === 'Otro') { var inp = sec.querySelector('#d-' + campo + 'Otro'); if (inp && inp.value.trim()) payload[campo] = inp.value.trim(); } });

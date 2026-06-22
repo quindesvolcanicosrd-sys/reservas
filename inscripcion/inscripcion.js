@@ -374,6 +374,8 @@ function enviarForm() {
         setTimeout(function() {
           var lt = document.getElementById('exito-loader-txt');
           if (lt) lt.textContent = '¡Listo! Redirigiendo...';
+          var btnWpG = document.getElementById('btn-wp-grupo-exito');
+          if (btnWpG) btnWpG.style.display = 'flex';
         }, 1600);
         setTimeout(function() {
           window.location.href = 'https://reservas.quindesvolcanicos.com?' + _params;
@@ -461,5 +463,10 @@ window.onload = function() {
   } else {
     initGIS();
     ocultarCargando();
+  }
+  var _ref = document.referrer;
+  var _btnBack = document.getElementById('btn-back-inscripcion');
+  if (_btnBack && (_ref.includes('reservas.quindesvolcanicos.com') || _urlToken)) {
+    _btnBack.style.display = 'flex';
   }
 };

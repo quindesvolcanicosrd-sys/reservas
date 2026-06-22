@@ -227,6 +227,7 @@ reservas/
 | `crearMesItem(nombre)` | Devuelve HTML de un checkbox mes-item |
 | `toggleMesesPasados()` | Expande/colapsa la lista de meses pasados en s4 |
 | `toggleMesesActuales()` | Expande/colapsa la lista de meses actuales/futuros en s4 |
+| `lanzarConfetti()` | Animación canvas de confetti en s6; se llama con setTimeout(400ms) tras confirmarReserva() |
 
 ### js/home.js
 | Función / variable | Descripción |
@@ -282,9 +283,9 @@ reservas/
 ### js/perfil.js
 | Función / variable | Descripción |
 |---|---|
-| `irEditarDatos()` | Carga los datos del usuario en los inputs de s-datos y navega |
+| `irEditarDatos()` | Carga los datos del usuario en los inputs de s-datos y navega — incluye sec-emerg2 (segundo contacto de emergencia) |
 | `cargarSelect(selectId, valor, otroInputId, campoOtroId)` | Rellena un select con valor, mostrando "Otro" si corresponde |
-| `guardarSeccion(secId, btn)` | Lee los campos de una sección de datos y los guarda via API |
+| `guardarSeccion(secId, btn)` | Lee los campos de una sección de datos y los guarda via API — secciones con teléfono: sec-contacto, sec-emerg1, sec-emerg2 |
 | `toggleSeccion(id, titulo)` | Colapsa/expande una sección en Editar datos |
 | `toggleOtroSelect(campo)` | Muestra/oculta el input libre cuando el select vale "Otro" |
 | `toggleOtroCheckbox(grupo)` | Muestra/oculta el input libre cuando el checkbox "Otro" está marcado |
@@ -377,7 +378,7 @@ reservas/
 | `irAlRegistro()` | Redirige a inscripcion/ con el token de Google como query param |
 | `solicitarNombreUsuario()` | Abre mailto para solicitar el nombre de usuario al equipo |
 | `solicitarNuevoPIN()` | Abre mailto para solicitar un nuevo PIN al equipo |
-| `window.onload` | Punto de entrada: restaura sesión admin o usuario, o muestra s1; llama generarMeses() |
+| `window.onload` | Punto de entrada: restaura sesión admin o usuario, o muestra s1; llama generarMeses(); lee params `?nuevx=1&nombre=&patines=&protec=&talla=` post-inscripción para pre-cargar fechas |
 | `pageshow listener` | Bfcache fix: restaura la pantalla correcta al volver con el botón atrás |
 
 ### shared/date-picker.js
@@ -429,7 +430,9 @@ reservas/
 | `abrirContacto() / cerrarContacto()` | Muestra/oculta el modal de contacto de inscripcion |
 | `abrirPickerFecha()` | Llama a abrirDatePicker() (shared) con callback que actualiza fnac-iso y G.fechaNac |
 | `togglePinVisibilityForm()` | Alterna visibilidad del PIN en el formulario de inscripcion |
-| `window.onload` | Pobla países y tallas, inicializa date picker listeners, lanza GIS o procesa token de URL |
+| `window.onload` | Pobla países y tallas, inicializa date picker listeners, lanza GIS o procesa token de URL; muestra `#btn-back-inscripcion` si el referrer es el dominio principal o hay token |
+| `#btn-back-inscripcion` | Flecha atrás en el header (inicialmente `display:none`); visible si vino de reservas.quindesvolcanicos.com o con ?token= |
+| `#btn-wp-grupo-exito` | Botón "Únete al grupo de WhatsApp" en section-exito; aparece a los 1.6s tras registro exitoso |
 
 ---
 
