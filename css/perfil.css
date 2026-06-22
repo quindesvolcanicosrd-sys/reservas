@@ -1,4 +1,4 @@
-.datos-seccion { border: 0px solid var(--border); border-radius: 14px; margin-bottom: 12px; overflow: hidden; background: var(--card-bg); backdrop-filter: var(--card-blur); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.datos-seccion { border: 0px solid var(--border); border-radius: 14px; margin-bottom: 12px; overflow: hidden; background: var(--card-bg); backdrop-filter: var(--card-blur); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .datos-seccion:focus-within { border-color: #F97316; box-shadow: 0 4px 12px rgba(249,115,22,0.1); }
 .datos-seccion-titulo {
   display: flex; justify-content: space-between; align-items: center;

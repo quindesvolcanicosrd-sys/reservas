@@ -63,7 +63,7 @@ function cerrarContacto() { var m = document.getElementById('modal-contacto'); i
 
 var TOP_BAR_CONFIG = {
   's2': { titulo: 'Equipamiento', volver: 's-home' },
-  's3a': { titulo: 'Editar equipamiento', volver: 's2' }, 's3b': { titulo: 'Editar equipamiento', volver: 's3a' },
+  's3a': { titulo: 'Editar equipamiento', volver: function() { return E.editandoDesdeHome ? 's-home' : 's2'; } }, 's3b': { titulo: 'Editar equipamiento', volver: 's3a' },
   's3c': { titulo: 'Editar equipamiento', volver: 's3b' },
   's4': { titulo: function() { return E.reagendando ? 'Reagendar clase' : canPayMonthly() ? 'Selecciona el tipo de modalidad' : 'Fecha y pago'; }, volver: function() { return E.reagendando ? 's-home' : 's2'; } },
   's-pago': { titulo: 'Pago', volver: 's4' }, 's5': { titulo: 'Confirmar reserva', volver: function() { return (E.creditosUsados > 0 || E.cuponAplicado) && E.totalPago === 0 ? 's4' : 's-pago'; } },

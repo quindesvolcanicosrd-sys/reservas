@@ -3,7 +3,7 @@ var E = {
   conf: '', editPat: '', editTalla: '', editProtec: '',
   fechas: [], tipoPago: 'clase', meses: [],
   precioPorClase: 0, precioMensual: 0,
-  totalPago: 0, notaPago: '', wpEnviado: false, wpUrl: '', cuponAplicado: false, creditosUsados: 0, reagendando: false
+  totalPago: 0, notaPago: '', wpEnviado: false, wpUrl: '', cuponAplicado: false, creditosUsados: 0, reagendando: false, editandoDesdeHome: false
 };
 
 function tieneCuponDisponible() {
@@ -18,7 +18,7 @@ function contarCreditos() {
 
 function renderEquip() {
   var d = E.datos; var pat = d.necesitaPatines, tal = d.talla, pro = d.necesitaProtecciones;
-  var titulos = { '00': '✅ No necesitas equipamiento prestado', '10': '🛼 Necesitas patines, pero no protecciones', '01': '🛡️ No necesitas patines, pero sí protecciones', '11': '🛼🛡️ Necesitas patines y protecciones' };
+  var titulos = { '00': 'No necesitas equipamiento prestado', '10': 'Necesitas patines, pero no protecciones', '01': 'No necesitas patines, pero sí protecciones', '11': 'Necesitas patines y protecciones' };
   var k = (pat.toLowerCase() !== 'no' ? '1' : '0') + (pro.toLowerCase() !== 'no' ? '1' : '0');
   document.getElementById('s2-titulo').textContent = titulos[k] || 'Tu equipamiento';
   var h = '<div class="r-titulo">Detalle</div>';
@@ -66,7 +66,7 @@ function continuar_s3c() {
   api({ action: 'actualizarEquipamientoPersona', nombre: E.nombre, necesitaPatines: E.editPat, talla: E.editTalla, necesitaProtecciones: protecFinal }, function() {
     ocultarCargando(); E.datos.necesitaPatines = E.editPat; E.datos.talla = E.editTalla; E.datos.necesitaProtecciones = protecFinal; E.conf = '';
     document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
-    renderEquip(); ir('s2');
+    if (E.editandoDesdeHome) { E.editandoDesdeHome = false; ir('s-home'); } else { renderEquip(); ir('s2'); }
   }, function(e) { ocultarCargando(); err('err-s3c', 'Error al guardar: ' + e.message); });
 }
 

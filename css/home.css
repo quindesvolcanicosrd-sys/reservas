@@ -68,7 +68,9 @@
   .home-top-mobile { display: flex !important; position: relative; align-items: center; justify-content: center; padding: 10px 0 6px; margin-bottom: 4px; }
   .home-emoji-mobile { font-size: 2.8rem; animation: popBounce 0.6s cubic-bezier(0.16,1,0.3,1); }
   .home-emoji-desktop { display: none !important; }
-  .btn-logout-mobile { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+  .home-top-acciones { position: absolute; right: 0; top: 50%; transform: translateY(-50%); display: flex; gap: 6px; }
+  .btn-logout-mobile { position: static; }
+  #btn-editar-desktop { display: none; }
   #btn-logout-desktop { display: none; }
   .home-mobile-actions { display: block !important; margin-top: 8px; border-top: 1px solid rgba(128,128,128,0.12); }
 }

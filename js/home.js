@@ -36,7 +36,7 @@ function irNuevaReserva() {
   E.conf = ''; E.fechas = []; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = ''; E.cuponAplicado = false; E.creditosUsados = 0; E.reagendando = false;
   var chkC = document.getElementById('chk-cupon'); if (chkC) chkC.checked = false;
   document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
-  renderEquip(); ir('s2');
+  if (canPayMonthly()) { cargarFechas(); } else { renderEquip(); ir('s2'); }
 }
 
 function irMisReservas() {
@@ -106,6 +106,50 @@ function verMasHomeReservas() {
   if (btn) btn.textContent = _homeExpandido ? 'Ver menos ▴' : 'Ver más ▾';
 }
 
+function _parsearFechaCard(fechaStr) {
+  var partes = fechaStr.split(' - ');
+  return { fechaPura: (partes[0] || fechaStr).trim(), hora: (partes[1] || '').trim(), lugar: (partes[2] || '').trim() };
+}
+
+function _formatarFechaRelativa(fechaPura) {
+  var m = fechaPura.match(/(\d{1,2})\s+de\s+([a-záéíóúñ]+)/i);
+  if (!m) return fechaPura;
+  var mesNorm = m[2].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  var mes = _MESES_MAP[mesNorm];
+  if (mes === undefined) return fechaPura;
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var fd = new Date(hoy.getFullYear(), mes, parseInt(m[1])); fd.setHours(0,0,0,0);
+  if (fd < hoy) fd.setFullYear(hoy.getFullYear() + 1);
+  var diff = Math.round((fd - hoy) / 86400000);
+  if (diff === 1) return 'Mañana';
+  if (diff === 2) return 'Pasado mañana';
+  var dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  var dn = dias[fd.getDay()];
+  if (diff >= 3 && diff <= 6) return 'Este ' + dn;
+  if (diff >= 7 && diff <= 13) return dn + ' que viene';
+  return fechaPura;
+}
+
+function reagendarDesdeCard(fecha, btn) {
+  if (!confirm('Se cancelará tu reserva para ' + fecha + ' y podrás elegir una nueva fecha. ¿Continuar?')) return;
+  btn.disabled = true;
+  api({ action: 'cancelarReserva', nombre: E.nombre, fecha: fecha }, function(res) {
+    if (res.exito) {
+      if (_todasReservas) _todasReservas.forEach(function(r) { if (r.fecha === fecha && r.estado !== 'Cancelada') r.estado = 'Cancelada'; });
+      if (res.cuponRestaurado) { localStorage.removeItem('cupon_' + E.nombre); if (E.datos) E.datos.cuponDisponible = true; }
+      irNuevaReserva();
+    } else { btn.disabled = false; alert('Error al cancelar.'); }
+  }, function(e) { btn.disabled = false; alert('Error: ' + e.message); });
+}
+
+function irEditarEquipDesdeHome() {
+  E.editandoDesdeHome = true;
+  E.editPat = ''; E.editTalla = ''; E.editProtec = '';
+  document.querySelectorAll('input[name="edit-pat"],input[name="edit-protec"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
+  document.getElementById('txt-otro').style.display = 'none';
+  ir('s3a');
+}
+
 function _renderCardHome(r, hoy) {
   var f = r.fecha.toLowerCase().trim(), estado = r.estado;
   if (_MESES_MAP[f] !== undefined) {
@@ -133,6 +177,8 @@ function _renderCardHome(r, hoy) {
     if (tipo === 'pendiente-mens') h += '<button class="btn-cancelar" style="margin-top:10px;" onclick="cancelarRes(\'' + r.fecha.replace(/'/g,"\\'") + '\')">Cancelar</button>';
     h += '</div>'; return h;
   }
+  var fp = _parsearFechaCard(r.fecha);
+  var fechaHuman = _formatarFechaRelativa(fp.fechaPura);
   var tipoC = estado === 'Confirmada' ? 'confirmada-clase' : estado === 'Reagendar' ? 'reagendar-clase' : 'pendiente-clase';
   var tienePat = r.talla && r.talla.toLowerCase() !== 'no';
   var tieneProc = r.protecciones && r.protecciones.toLowerCase() !== 'no';
@@ -141,19 +187,28 @@ function _renderCardHome(r, hoy) {
   var icoOk = '<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">check_circle</span>';
   var equipMsg = tienePat && tieneProc ? icoP + ' T.' + r.talla + ' · ' + icoR + ' Protecciones' :
                  tienePat ? icoP + ' Patines talla ' + r.talla : tieneProc ? icoR + ' ' + r.protecciones : icoOk + ' Equipo propio';
-  var bIcon = {Confirmada:'<span class="material-symbols-outlined" style="font-size:0.9rem;vertical-align:middle;">check_circle</span>',Reagendar:'<span class="material-symbols-outlined" style="font-size:0.9rem;vertical-align:middle;">event_repeat</span>',Pendiente:'<span class="material-symbols-outlined" style="font-size:0.9rem;vertical-align:middle;">hourglass_empty</span>'}[estado] || '<span class="material-symbols-outlined" style="font-size:0.9rem;vertical-align:middle;">hourglass_empty</span>';
-  var bColor = {Confirmada:'#166534',Reagendar:'#6d28d9',Pendiente:'#b45309'}[estado] || '#b45309';
-  var bBg = {Confirmada:'#dcfce7',Reagendar:'#ede9fe',Pendiente:'#fef3c7'}[estado] || '#fef3c7';
+  var shadowMap = { Confirmada: 'rgba(34,197,94,0.35)', Reagendar: 'rgba(124,58,237,0.35)', Pendiente: 'rgba(245,158,11,0.35)' };
+  var bShadow = shadowMap[estado] || shadowMap['Pendiente'];
+  var bIcon = { Confirmada: '<span class="material-symbols-outlined" style="font-size:0.9rem;vertical-align:middle;">check_circle</span>', Reagendar: '<span class="material-symbols-outlined" style="font-size:0.9rem;vertical-align:middle;">event_repeat</span>', Pendiente: '<span class="material-symbols-outlined" style="font-size:0.9rem;vertical-align:middle;">hourglass_empty</span>' }[estado] || '';
+  var bColor = { Confirmada: '#166534', Reagendar: '#6d28d9', Pendiente: '#b45309' }[estado] || '#b45309';
+  var bBg = { Confirmada: '#dcfce7', Reagendar: '#ede9fe', Pendiente: '#fef3c7' }[estado] || '#fef3c7';
   var h = '<div class="res-card-home ' + tipoC + '">';
-  h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">';
-  h += '<div style="font-weight:800;font-size:0.88rem;flex:1;margin-right:8px;line-height:1.3;">' + r.fecha + '</div>';
-  h += '<span style="padding:3px 10px;border-radius:20px;font-size:0.7rem;font-weight:800;background:' + bBg + ';color:' + bColor + ';white-space:nowrap;">' + bIcon + ' ' + estado + '</span></div>';
-  h += '<div class="res-card-equip" style="font-size:0.82rem;margin-bottom:' + (estado === 'Reagendar' ? '6' : '8') + 'px;">' + equipMsg + '</div>';
+  h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">';
+  h += '<div style="flex:1;margin-right:8px;"><div style="font-weight:800;font-size:0.88rem;line-height:1.3;">' + fechaHuman + (fp.hora ? ' · ' + fp.hora : '') + '</div>';
+  if (fp.lugar) h += '<div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">' + fp.lugar + '</div>';
+  h += '</div>';
+  h += '<span style="padding:3px 10px;border-radius:20px;font-size:0.7rem;font-weight:800;background:' + bBg + ';color:' + bColor + ';white-space:nowrap;box-shadow:0 2px 6px ' + bShadow + ';">' + bIcon + ' ' + estado + '</span></div>';
+  if (tienePat || tieneProc) h += '<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:6px 0 2px;">Lo que te llevarán:</div>';
+  h += '<div class="res-card-equip" style="font-size:0.82rem;margin-bottom:8px;">' + equipMsg + '</div>';
   if (estado === 'Reagendar') {
     h += '<div style="font-size:0.78rem;color:#7c3aed;background:#ede9fe;border-radius:8px;padding:6px 10px;margin-bottom:8px;">🔁 Clase a favor por entrenamiento cancelado</div>';
     h += '<button class="btn btn-primary" style="margin-top:8px;padding:12px;background:#7c3aed;box-shadow:0 4px 14px rgba(124,58,237,0.3);" onclick="iniciarReagendamiento()">🔁 Reagendar clase</button>';
   }
-  if (estado === 'Pendiente' || estado === 'Confirmada') h += '<button class="btn-cancelar" style="margin-top:2px;" onclick="cancelarRes(\'' + r.fecha.replace(/'/g,"\\'") + '\')">Cancelar esta reserva</button>';
+  if (estado === 'Pendiente' || estado === 'Confirmada') {
+    h += '<button class="btn-cancelar" style="margin-top:2px;" onclick="cancelarRes(\'' + r.fecha.replace(/'/g,"\\'") + '\')">Cancelar esta reserva</button>';
+    h += '<button onclick="reagendarDesdeCard(\'' + r.fecha.replace(/'/g,"\\'") + '\',this)" style="width:100%;margin-top:6px;padding:10px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:10px;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:inherit;">↔ Reagendar fecha</button>';
+    h += '<button onclick="irEditarEquipDesdeHome()" style="width:100%;margin-top:6px;padding:10px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:10px;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:inherit;"><span class="material-symbols-outlined" style="font-size:0.9rem;vertical-align:middle;">tune</span> Cambiar equipamiento</button>';
+  }
   h += '</div>'; return h;
 }
 

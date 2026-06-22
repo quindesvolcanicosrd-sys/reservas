@@ -152,6 +152,14 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
 
 .textarea-otro { resize: vertical; min-height: 80px; margin-top: 10px; margin-bottom: 16px; display: none; animation: fadeIn 0.3s ease; }
 
+@media (prefers-color-scheme: light) {
+  select, input[type="text"], input[type="tel"], input[type="email"],
+  input[type="date"], input[type="password"], textarea {
+    background: rgba(255,255,255,0.9);
+    border: 1px solid rgba(249,115,22,0.18);
+  }
+}
+
 /* ─── DARK MODE ──────────────────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
 /* solo overrides específicos no cubiertos por variables */

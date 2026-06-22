@@ -1,8 +1,22 @@
+function guardarEquipPerfil(btn) {
+  var pat = document.getElementById('d-necesitaPatines').value;
+  var talla = document.getElementById('d-talla').value.trim();
+  var protec = document.getElementById('d-necesitaProtecciones').value;
+  var textoOriginal = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Guardando...';
+  api({ action: 'actualizarEquipamientoPersona', nombre: E.nombre, necesitaPatines: pat, talla: talla, necesitaProtecciones: protec }, function() {
+    btn.disabled = false;
+    if (E.datos) { E.datos.necesitaPatines = pat; E.datos.talla = talla; E.datos.necesitaProtecciones = protec; }
+    btn.innerHTML = '✓ Guardado'; btn.classList.add('exito');
+    setTimeout(function() { btn.innerHTML = textoOriginal; btn.classList.remove('exito'); }, 2500);
+  }, function(e) { btn.disabled = false; btn.innerHTML = textoOriginal; alert('Error: ' + e.message); });
+}
+
 function irEditarDatos() {
   var datos = E.datosCompletos;
   if (!datos) { alert('No se encontraron datos pre-cargados.'); ir('s-home'); return; }
 
-  var camposSimples = ['nombreDerby','numeroDerby','telefono','email','fechaPublica','edadPublica','tipoDocumento','numeroDocumento','nombreLegal','callePrincipal','calleSecundaria','numeracion','sector','emerg1Nombre','emerg1Telefono','emerg2Nombre','emerg2Telefono','alergias','alergiasDesc','medicamentos','medicamentosDesc','atencionMedica','seguroContacto','antecedentesDetalle'];
+  var camposSimples = ['nombreDerby','numeroDerby','telefono','email','fechaPublica','edadPublica','tipoDocumento','numeroDocumento','nombreLegal','callePrincipal','calleSecundaria','numeracion','sector','emerg1Nombre','emerg1Telefono','emerg2Nombre','emerg2Telefono','talla','alergias','alergiasDesc','medicamentos','medicamentosDesc','atencionMedica','seguroContacto','antecedentesDetalle'];
   camposSimples.forEach(function(c) { var el = document.getElementById('d-' + c); if (el && datos[c] !== undefined) el.value = datos[c] || ''; });
   cargarSelect('d-canton', datos.canton, 'd-cantonOtro', 'campo-cantonOtro');
   cargarSelect('d-paisExpedicion',datos.paisExpedicion, null, null);
@@ -11,6 +25,8 @@ function irEditarDatos() {
   cargarSelect('d-emerg1Prefijo', datos.emerg1Prefijo, 'd-emerg1PrefijoOtro', 'campo-emerg1PrefijoOtro');
   cargarSelect('d-emerg2Relacion', datos.emerg2Relacion, null, null);
   cargarSelect('d-emerg2Prefijo', datos.emerg2Prefijo, 'd-emerg2PrefijoOtro', 'campo-emerg2PrefijoOtro');
+  cargarSelect('d-necesitaPatines', datos.necesitaPatines, null, null);
+  cargarSelect('d-necesitaProtecciones', datos.necesitaProtecciones, null, null);
 
   var fnDisp = document.getElementById('d-fechaNacimiento-display');
   if (fnDisp) {
