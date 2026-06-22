@@ -76,7 +76,7 @@ function necesitaEquipo() { return !canPayMonthly(); }
 function actualizarTextosPago() {
   var necesitaEquipamiento = !canPayMonthly();
   document.getElementById('s4-label').textContent = E.reagendando ? 'Reagendar clase' : necesitaEquipamiento ? 'Paso 2 de 4 — Fecha y pago' : 'Paso 2 de 4 — Selecciona el tipo de modalidad';
-  document.getElementById('s4-titulo').textContent = necesitaEquipamiento ? 'Selecciona los entrenamientos' : 'Selecciona tu modalidad';
+  document.getElementById('s4-titulo').textContent = necesitaEquipamiento ? 'Próximos entrenamientos' : 'Selecciona tu modalidad';
   document.getElementById('chk-pago-texto').textContent = canPayMonthly() ? 'Ya realicé mi pago y entiendo este estará pendiente hasta que sea verificada por el equipo.' : 'Ya realicé mi pago y entiendo que mi reserva quedará pendiente hasta que sea verificada por el equipo.';
   document.getElementById('nota-pago-hint').textContent = canPayMonthly() ? 'Escribe tu nombre o referencia así sabemos que el pago corresponde a tí.' : 'Escribe tu nombre o referencia de a quien corresponde la reserva así sabemos que el pago corresponde a tí.';
 }
