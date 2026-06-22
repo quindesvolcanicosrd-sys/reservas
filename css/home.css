@@ -1,5 +1,5 @@
 .home-boton {
-  border: 2px solid #e5e5e5; border-radius: 16px; padding: 24px 20px;
+  border: 0px solid #e5e5e5; border-radius: 16px; padding: 24px 20px;
   margin-bottom: 14px; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   text-align: center; background: #fafafa;
 }
@@ -19,7 +19,7 @@
 
 .btn-accion-home {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
-  padding: 14px 10px; border: 2px solid #e5e5e5; border-radius: 14px;
+  padding: 14px 10px; border: 0px solid #e5e5e5; border-radius: 14px;
   background: #fafafa; cursor: pointer; font-family: inherit;
   font-size: 0.75rem; font-weight: 700; color: #1a1a1a;
   text-transform: uppercase; letter-spacing: 0.5px;
@@ -37,7 +37,7 @@
 .btn-home-sub:disabled { opacity: 0.32; cursor: not-allowed; }
 
 .res-card-home {
-  border: 2px solid #e5e5e5; border-radius: 14px; padding: 14px 16px;
+  border: 0px solid #e5e5e5; border-radius: 14px; padding: 14px 16px;
   margin-bottom: 10px; background: #fafafa; text-align: left;
   animation: smoothSlideUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
 }
@@ -60,7 +60,7 @@
 .hmr-texto .hmr-sub { font-size: 0.77rem; color: #888; }
 .hmr-btn-round { width: 44px; height: 44px; flex-shrink: 0; background: rgba(249,115,22,0.12); border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; }
 .hmr-btn-round .material-symbols-outlined { font-size: 1.2rem; color: #f97316; }
-.btn-logout-mobile { background: rgba(249,115,22,0.12); border: 2px solid rgba(249,115,22,0.25); cursor: pointer; color: #F97316; padding: 8px; border-radius: 10px; font-family: inherit; line-height: 1; }
+.btn-logout-mobile { background: rgba(249,115,22,0.12); border: 0px solid rgba(249,115,22,0.25); cursor: pointer; color: #F97316; padding: 8px; border-radius: 10px; font-family: inherit; line-height: 1; }
 .btn-logout-mobile .material-symbols-outlined { font-size: 1.5rem; vertical-align: middle; }
 #btn-logout-desktop { display: block; }
 
