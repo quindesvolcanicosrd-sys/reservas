@@ -150,7 +150,7 @@ function adminRenderReservas() {
 
   var html = '';
   if (lista.length === 0) {
-    html = '<p style="text-align:center;color:color: var(--muted);padding:20px 0;">' + (_admFiltro === 'pendientes' ? 'No hay reservas pendientes. 🎉' : 'No hay reservas.') + '</p>';
+    html = '<p style="text-align:center;color:var(--muted);padding:20px 0;">' + (_admFiltro === 'pendientes' ? 'No hay reservas pendientes. 🎉' : 'No hay reservas.') + '</p>';
   } else {
     orden.forEach(function(fecha, idx) {
       var count = grupos[fecha].length;
@@ -160,15 +160,15 @@ function adminRenderReservas() {
       var fechaCorta = partesFecha[0];
       var fechaExtra = partesFecha.slice(1).join(' · ');
 
-      html += '<div style="border:2px solid #e5e5e5;border-radius:12px;margin-bottom:10px;overflow:hidden;">';
-      html += '<div onclick="toggleGrupoReserva(\'' + grupoId + '\', this)" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;background:#fafafa;">';
-      html += '<div><div style="font-weight:800;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.8px;color:#F97316;">' + fechaCorta + '</div></div>';
-      html += '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.75rem;color:#aaa;font-weight:600;">' + count + ' reserva' + (count !== 1 ? 's' : '') + '</span><span class="material-symbols-outlined" style="font-size:1.1rem;color:#aaa;transition:transform 0.3s;' + (abierto ? 'transform:rotate(180deg);' : '') + '">expand_more</span></div>';
+      html += '<div style="border:2px solid var(--border-light);border-radius:12px;margin-bottom:10px;overflow:hidden;">';
+      html += '<div onclick="toggleGrupoReserva(\'' + grupoId + '\', this)" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;background:var(--surface-light);">';
+      html += '<div><div style="font-weight:800;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--brand);">' + fechaCorta + '</div></div>';
+      html += '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.75rem;color:var(--dk-text-muted);font-weight:600;">' + count + ' reserva' + (count !== 1 ? 's' : '') + '</span><span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--dk-text-muted);transition:transform 0.3s;' + (abierto ? 'transform:rotate(180deg);' : '') + '">expand_more</span></div>';
       html += '</div>';
       html += '<div id="' + grupoId + '" style="' + (abierto ? 'max-height:2000px;opacity:1;padding:10px 10px 4px;' : 'max-height:0px;opacity:0;padding:0;') + '">';
 
       if (fechaExtra) {
-        html += '<div style="font-size:0.78rem;color:#aaa;font-weight:600;padding:0 4px 10px;">' + fechaExtra + '</div>';
+        html += '<div style="font-size:0.78rem;color:var(--dk-text-muted);font-weight:600;padding:0 4px 10px;">' + fechaExtra + '</div>';
       }
       grupos[fecha].forEach(function(r) {
         var badgeClass = r.estado === 'Confirmada' ? 'badge-confirmada' : r.estado === 'Cancelada' ? 'badge-cancelada' : 'badge-pendiente';
@@ -280,7 +280,7 @@ function adminIrQueLlevar() {
 function adminRenderQueLlevar(res) {
   var html = '';
   if (!res || res.length === 0) {
-    html = '<p style="text-align:center;color:color: var(--muted);padding:20px 0;">No hay equipamiento asignado por ahora. 🎉</p>';
+    html = '<p style="text-align:center;color:var(--muted);padding:20px 0;">No hay equipamiento asignado por ahora. 🎉</p>';
   } else {
     var grupos = {}, orden = [];
     var diasSemana = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
@@ -299,20 +299,20 @@ function adminRenderQueLlevar(res) {
     orden.forEach(function(fecha) {
       html += '<div style="margin-bottom:20px;">';
       var count = grupos[fecha].length;
-      html += '<div style="display:flex;align-items:baseline;gap:8px;padding:8px 4px 10px;"><span style="font-weight:800;font-size:0.85rem;text-transform:uppercase;letter-spacing:1px;color:#F97316;">' + fecha + '</span><span style="font-size:0.78rem;color:#aaa;font-weight:600;">' + count + ' persona' + (count !== 1 ? 's' : '') + '</span></div>';
+      html += '<div style="display:flex;align-items:baseline;gap:8px;padding:8px 4px 10px;"><span style="font-weight:800;font-size:0.85rem;text-transform:uppercase;letter-spacing:1px;color:var(--brand);">' + fecha + '</span><span style="font-size:0.78rem;color:var(--dk-text-muted);font-weight:600;">' + count + ' persona' + (count !== 1 ? 's' : '') + '</span></div>';
       grupos[fecha].forEach(function(q) {
         var equip = []; if (q.patines && q.patines.toLowerCase() !== 'no') equip.push('🛼 Patines ' + q.patines);
         if (q.protecciones && q.protecciones.toLowerCase() !== 'no') {
           var protecTexto = q.protecciones.toLowerCase() === 'sí' || q.protecciones.toLowerCase() === 'si' ? '🛡️ Protecciones completas' : '🛡️ ' + q.protecciones;
           equip.push(protecTexto);
         }
-        var pronBadge = q.pronombres ? '<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:20px;background:#3a3a3a;color:#bbb;font-size:0.68rem;font-weight:600;vertical-align:middle;">' + q.pronombres + '</span>' : '';
+        var pronBadge = q.pronombres ? '<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:20px;background:var(--dk-badge-bg);color:var(--dk-badge-text);font-size:0.68rem;font-weight:600;vertical-align:middle;">' + q.pronombres + '</span>' : '';
         if (!q.waLink && q.telefono) {
           var prefijoMatch = (q.prefijo || '').match(/\+(\d+)/);
           var codigoPais = prefijoMatch ? prefijoMatch[1] : '593';
           q.waLink = 'https://wa.me/' + codigoPais + q.telefono.replace(/\D/g,'').replace(/^0+/,'');
         }
-        var waBtnQL = q.waLink ? '<a href="' + q.waLink + '" target="_blank" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:#25D366;flex-shrink:0;text-decoration:none;margin-left:8px;vertical-align:middle;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.845L.057 23.571a.75.75 0 0 0 .92.921l5.763-1.473A11.943 11.943 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.006-1.374l-.36-.214-3.713.949.981-3.625-.235-.374A9.818 9.818 0 1 1 12 21.818z"/></svg></a>' : '';
+        var waBtnQL = q.waLink ? '<a href="' + q.waLink + '" target="_blank" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--wa-brand);flex-shrink:0;text-decoration:none;margin-left:8px;vertical-align:middle;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.845L.057 23.571a.75.75 0 0 0 .92.921l5.763-1.473A11.943 11.943 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.006-1.374l-.36-.214-3.713.949.981-3.625-.235-.374A9.818 9.818 0 1 1 12 21.818z"/></svg></a>' : '';
         html += '<div class="reserva-card" style="margin-bottom:8px;"><div style="display:flex;align-items:center;justify-content:space-between;"><div style="font-weight:800;">' + q.nombre + pronBadge + '</div>' + waBtnQL + '</div><div class="reserva-detalle" style="margin-top:4px;">' + (equip.join(' · ') || '—') + '</div></div>';
       });
       html += '</div>';
@@ -326,7 +326,7 @@ function adminIrEquip() {
   mostrarCargando('Cargando equipamiento...');
   adminApi({ action: 'adminGetEquipamiento' }, function(res) {
     ocultarCargando();
-    var html = '<div class="r-fila" style="display:flex;gap:8px;font-weight:800;font-size:0.78rem;text-transform:uppercase;color:color: var(--muted);padding:4px 0;"><span style="flex:1;">Talla</span><span style="width:110px;">Cantidad</span><span style="width:42px;"></span></div>';
+    var html = '<div class="r-fila" style="display:flex;gap:8px;font-weight:800;font-size:0.78rem;text-transform:uppercase;color:var(--muted);padding:4px 0;"><span style="flex:1;">Talla</span><span style="width:110px;">Cantidad</span><span style="width:42px;"></span></div>';
     (res.tallas || []).forEach(function(t) { html += adminFilaTallaHtml(t.talla, t.cantidad); });
     document.getElementById('admin-equip-lista').innerHTML = html;
     document.getElementById('adm-equip-protec').value = res.protecciones || 0;
@@ -338,7 +338,7 @@ function adminFilaTallaHtml(talla, cantidad) {
   return '<div class="adm-fila-talla" style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">' +
     '<input type="text" class="adm-talla" value="' + (talla || '') + '" placeholder="Ej: 38" style="flex:1;">' +
     '<input type="number" class="adm-cant" value="' + (cantidad != null ? cantidad : 1) + '" min="0" style="width:110px;">' +
-    '<button onclick="this.parentElement.remove()" style="width:42px;height:42px;border:2px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:10px;cursor:pointer;font-weight:800;">✕</button>' +
+    '<button onclick="this.parentElement.remove()" style="width:42px;height:42px;border:2px solid var(--error-light-border);background:var(--error-lightest);color:var(--error);border-radius:10px;cursor:pointer;font-weight:800;">✕</button>' +
     '</div>';
 }
 
@@ -369,11 +369,11 @@ function adminIrUsuarios() {
     var html = '';
     (res || []).forEach(function(u) {
       html += '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
-        '<div><div style="font-weight:800;">' + u.nombre + '</div><div style="font-size:0.8rem;color:color: var(--muted);">' + (u.email || 'sin email') + '</div></div>' +
-        '<button onclick="adminEliminarUsuarioClick(\'' + u.nombre.replace(/'/g, "\\'") + '\')" style="border:2px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;font-size:0.8rem;flex-shrink:0;">Eliminar</button>' +
+        '<div><div style="font-weight:800;">' + u.nombre + '</div><div style="font-size:0.8rem;color:var(--muted);">' + (u.email || 'sin email') + '</div></div>' +
+        '<button onclick="adminEliminarUsuarioClick(\'' + u.nombre.replace(/'/g, "\\'") + '\')" style="border:2px solid var(--error-light-border);background:var(--error-lightest);color:var(--error);border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;font-size:0.8rem;flex-shrink:0;">Eliminar</button>' +
         '</div>';
     });
-    document.getElementById('admin-usuarios-lista').innerHTML = html || '<p style="text-align:center;color:color: var(--muted);">Sin usuarios.</p>';
+    document.getElementById('admin-usuarios-lista').innerHTML = html || '<p style="text-align:center;color:var(--muted);">Sin usuarios.</p>';
     ir('s-admin-usuarios');
   }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
 }
@@ -398,9 +398,9 @@ function adminIrAdmins() {
     (res || []).forEach(function(a) {
       html += '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
         '<div><div style="font-weight:700;font-size:0.9rem;">' + a.email + (a.principal ? ' <span class="badge badge-confirmada" style="margin-left:6px;">Principal</span>' : '') + '</div>' +
-        (a.invitadoPor ? '<div style="font-size:0.78rem;color:color: var(--muted);">Invitado por ' + a.invitadoPor + '</div>' : '') + '</div>' +
+        (a.invitadoPor ? '<div style="font-size:0.78rem;color:var(--muted);">Invitado por ' + a.invitadoPor + '</div>' : '') + '</div>' +
         (!a.principal && _adminEmail === 'quindesvolcanicosrd@gmail.com'
-          ? '<button onclick="adminQuitarClick(\'' + a.email + '\')" style="border:2px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;font-size:0.8rem;flex-shrink:0;">Quitar</button>'
+          ? '<button onclick="adminQuitarClick(\'' + a.email + '\')" style="border:2px solid var(--error-light-border);background:var(--error-lightest);color:var(--error);border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;font-size:0.8rem;flex-shrink:0;">Quitar</button>'
           : '') +
         '</div>';
     });

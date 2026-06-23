@@ -25,6 +25,8 @@
   --error:          #dc2626;
   --error-light:    rgba(220,38,38,0.1);
   --error-border:   rgba(220,38,38,0.3);
+  --purple:         #7c3aed;
+  --purple-light:   #ede9fe;
   --purple-bg:      rgba(124,58,237,0.1);
   --purple-border:  rgba(124,58,237,0.35);
   --purple-hover:   rgba(124,58,237,0.18);
@@ -160,6 +162,28 @@
   --dk-modal-btn-bg:     #2c1c11;
   --dk-modal-btn-text:   #ccc;
   --dk-datepicker-bg:    #22140ae5;
+  --dk-skeleton-shine-2: #2a2a2a;
+  --dk-surface-opaque:   #1c1c1c;
+  --dk-input-bg:         #181818;
+  --dk-pin-press:        #2a1a0e;
+  --dk-brand-burn:       #e55a00;
+  --dk-info-text-2:      #60a5fa;
+  --dk-text-muted:       #aaa;
+  --dk-text-muted-2:     #8a8a8a;
+  --dk-border-dark:      #444;
+  --dk-border-darker:    #333;
+  --dk-purple-bg:        #2d1f5e;
+  --dk-purple-text:      #c4b5fd;
+  --dk-purple-mid:       #6d28d9;
+  --error-light-border:  #fecaca;
+  --error-lightest:      #fef2f2;
+  --dk-badge-bg:         #3a3a3a;
+  --dk-badge-text:       #bbb;
+  --success-lightest:    #dcfce7;
+  --border-softest:      #eaeaea;
+  --purple-lightest:     #faf5ff;
+  --purple-border-soft:  #ddd6fe;
+  --amber-border:        #fde68a;
 }
 
 /* ── DARK MODE ───────────────────────────────────────────── */

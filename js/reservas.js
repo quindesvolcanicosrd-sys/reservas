@@ -142,12 +142,12 @@ function actualizarTotalS4() {
     if (gratisCredito > 0) partes.push('🔁 ' + gratisCredito + (gratisCredito === 1 ? ' clase a favor' : ' clases a favor'));
     if (gratisCupon > 0) partes.push('🎟️ 1 clase con cupón');
     box.style.display = 'block';
-    box.innerHTML = '<div class="total-box" style="background:#f0fdf4;border-color:#22c55e;">' +
-      '<div style="color:#166534;">' + partes.join(' + ') + '</div>' +
-      '<div style="font-size:1.6rem;font-weight:800;color:#16a34a;">$' + total.toFixed(2) + '</div>' +
+    box.innerHTML = '<div class="total-box" style="background:var(--green-light);border-color:var(--success);">' +
+      '<div style="color:var(--green-dark);">' + partes.join(' + ') + '</div>' +
+      '<div style="font-size:1.6rem;font-weight:800;color:var(--success-dark);">$' + total.toFixed(2) + '</div>' +
       (cobradas > 0
-        ? '<div style="font-size:0.8rem;color:#4ade80;">' + cobradas + ' clase' + (cobradas > 1 ? 's' : '') + ' × $' + E.precioPorClase.toFixed(2) + '</div>'
-        : '<div style="font-size:0.8rem;color:#4ade80;">Sin costo ✓</div>') +
+        ? '<div style="font-size:0.8rem;color:var(--success-bright);">' + cobradas + ' clase' + (cobradas > 1 ? 's' : '') + ' × $' + E.precioPorClase.toFixed(2) + '</div>'
+        : '<div style="font-size:0.8rem;color:var(--success-bright);">Sin costo ✓</div>') +
       '</div>';
   } else if (total > 0) {
     box.style.display = 'block';
@@ -244,10 +244,10 @@ function construirResumenS5(backTarget) {
     if (E.creditosUsados > 0) partesT.push('🔁 ' + E.creditosUsados + ' a favor');
     if (E.cuponAplicado) partesT.push('🎟️ cupón');
     var textoTotal = (E.totalPago > 0 ? '$' + E.totalPago.toFixed(2) + ' + ' : '$0.00 — ') + partesT.join(' + ');
-    h += fila('Total', '<span style="color:#16a34a;font-weight:800;">' + textoTotal + '</span>');
+    h += fila('Total', '<span style="color:var(--success-dark);font-weight:800;">' + textoTotal + '</span>');
   }
   else { h += fila('Total', '<span style="font-weight:800;">$' + (E.totalPago || 0).toFixed(2) + '</span>'); }
-  if (E.tipoPago === 'clase') {     h += '<div style="padding: 10px 0; border-bottom: 1px solid #eaeaea; font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Fecha/s:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + E.fechas.map(function(f) { return '• ' + f; }).join('<br>') + '</div></div>';   } else if (E.meses && E.meses.length > 0) {     h += '<div style="padding: 10px 0; border-bottom: 1px solid #eaeaea; font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Meses pagados:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + E.meses.map(function(m) { return '• ' + m; }).join('<br>') + '</div></div>';   }
+  if (E.tipoPago === 'clase') {     h += '<div style="padding: 10px 0; border-bottom: 1px solid var(--border-softest); font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Fecha/s:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + E.fechas.map(function(f) { return '• ' + f; }).join('<br>') + '</div></div>';   } else if (E.meses && E.meses.length > 0) {     h += '<div style="padding: 10px 0; border-bottom: 1px solid var(--border-softest); font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Meses pagados:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + E.meses.map(function(m) { return '• ' + m; }).join('<br>') + '</div></div>';   }
   h += fila('Patines', d.necesitaPatines + (talla ? ' — Talla ' + talla : '')); h += fila('Protecciones', d.necesitaProtecciones); if (E.notaPago) h += fila('Referencia pago', E.notaPago);
   document.getElementById('s5-resumen').innerHTML = h;
   var s5Back = document.querySelector('#s5 .btn-secondary'); if (s5Back) s5Back.onclick = function() { volver(backTarget || 's-pago'); };
@@ -316,16 +316,16 @@ function confirmarReserva() {
     if (E.totalPago === 0) {
       if (E.reagendando) {
         avisoEl.textContent = '🔁 Clase reagendada. Te avisaremos por correo cuando sea confirmada.';
-        avisoEl.style.cssText = 'background:#faf5ff;border:1px solid #ddd6fe;border-radius:12px;padding:16px;font-size:0.9rem;color:#6d28d9;margin-bottom:18px;text-align:center;';
+        avisoEl.style.cssText = 'background:var(--purple-lightest);border:1px solid var(--purple-border-soft);border-radius:12px;padding:16px;font-size:0.9rem;color:var(--dk-purple-mid);margin-bottom:18px;text-align:center;';
       } else if (E.cuponAplicado) {
         avisoEl.textContent = '🎟️ Tu cupón fue aplicado. ¡Nos vemos en el entrenamiento!';
-        avisoEl.style.cssText = 'background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;font-size:0.9rem;color:#166534;margin-bottom:18px;text-align:center;box-shadow: 0 4px 12px rgba(34,197,94,0.1);';
+        avisoEl.style.cssText = 'background:var(--green-light);border:1px solid #bbf7d0;border-radius:12px;padding:16px;font-size:0.9rem;color:var(--green-dark);margin-bottom:18px;text-align:center;box-shadow: 0 4px 12px rgba(34,197,94,0.1);';
       }
       if (btnWpExito) btnWpExito.style.display = 'none';
     } else {
       var emailText = (E.datos && E.datos.email) ? ' en ' + E.datos.email : '';
       avisoEl.textContent = (E.cuponAplicado ? '🎟️ Cupón aplicado. ' : '') + '⏳ Tu pago está pendiente de verificación. Recibirás un correo' + emailText + ' cuando esté confirmado.';
-      avisoEl.style.cssText = 'background:#fffbeb;border:2px solid #fde68a;border-radius:10px;padding:14px 16px;font-size:0.9rem;font-weight:500;color:#92400e;margin-bottom:16px;text-align:center;line-height:1.5;';
+      avisoEl.style.cssText = 'background:#fffbeb;border:2px solid var(--amber-border);border-radius:10px;padding:14px 16px;font-size:0.9rem;font-weight:500;color:var(--amber-darker);margin-bottom:16px;text-align:center;line-height:1.5;';
       if (btnWpExito && E.wpUrl) { btnWpExito.href = E.wpUrl; btnWpExito.style.display = 'flex'; }
     }
     E.reagendando = false;

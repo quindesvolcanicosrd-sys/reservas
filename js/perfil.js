@@ -156,11 +156,11 @@ function saltarPermisos() {
 function actualizarFotoPerfil(url) {
   var emoji = document.getElementById('home-emoji-mobile');
   if (emoji && url) {
-    emoji.innerHTML = '<img src="' + url + '" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid #F97316;" onerror="this.parentElement.textContent=\'🛼\'">';
+    emoji.innerHTML = '<img src="' + url + '" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid var(--brand);" onerror="this.parentElement.textContent=\'🛼\'">';
   }
   var emojiD = document.querySelector('.home-emoji-desktop');
   if (emojiD && url) {
-    emojiD.innerHTML = '<img src="' + url + '" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid #F97316;margin-bottom:12px;" onerror="this.textContent=\'🛼\'">';
+    emojiD.innerHTML = '<img src="' + url + '" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid var(--brand);margin-bottom:12px;" onerror="this.textContent=\'🛼\'">';
   }
 }
 

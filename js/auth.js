@@ -100,11 +100,11 @@ function togglePinAcordeon() {
   if (!abierto) {
     body.style.maxHeight = '400px'; body.style.opacity = '1';
     chevron.style.transform = 'translateY(-50%) rotate(180deg)';
-    header.style.background = '#ea6407'; chevron.style.color = 'white';
+    header.style.background = 'var(--brand-dk)'; chevron.style.color = 'white';
   } else {
     body.style.maxHeight = '0'; body.style.opacity = '0';
     chevron.style.transform = 'translateY(-50%)';
-    header.style.background = '#F97316'; chevron.style.color = 'white';
+    header.style.background = 'var(--brand)'; chevron.style.color = 'white';
   }
 }
 

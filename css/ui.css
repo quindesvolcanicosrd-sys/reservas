@@ -169,14 +169,14 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
   [id^="grp-res-"] + div,
   div:has(> [id^="grp-res-"]) { border-color: rgba(249,115,22,0.1) !important; }
   div:has(> [id^="grp-res-"]) > div:first-child { background: rgba(249,115,22,0.04) !important; }
-  div:has(> [id^="grp-res-"]) > div:first-child span { color: #C9A090 !important; }
+  div:has(> [id^="grp-res-"]) > div:first-child span { color: var(--text-2) !important; }
   div:has(> [id^="hgrp-"]) { border-color: rgba(249,115,22,0.1) !important; }
   div:has(> [id^="hgrp-"]) > div:first-child { background: rgba(249,115,22,0.04) !important; }
-  div:has(> [id^="hgrp-"]) > div:first-child span { color: #C9A090 !important; }
+  div:has(> [id^="hgrp-"]) > div:first-child span { color: var(--text-2) !important; }
   #modal-contacto > div { background: rgba(23,9,0,0.95) !important; }
-  #modal-contacto a[href] { background: rgba(249,115,22,0.06) !important; color: #F0E0D0 !important; }
-  #modal-contacto button { background: rgba(249,115,22,0.1) !important; color: #C9A090 !important; }
-  #modal-contacto .modal-ct { color: #F0E0D0 !important; }
+  #modal-contacto a[href] { background: rgba(249,115,22,0.06) !important; color: var(--text) !important; }
+  #modal-contacto button { background: rgba(249,115,22,0.1) !important; color: var(--text-2) !important; }
+  #modal-contacto .modal-ct { color: var(--text) !important; }
 }
 
 /* ─── MOBILE ─────────────────────────────────────────────────────────────── */

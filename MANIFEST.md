@@ -60,6 +60,8 @@ reservas/
 | `.fnac-trigger-btn / .fnac-placeholder` | Botón disparador de date picker |
 | `.pantalla / .pantalla.activa` | Control de visibilidad de pantallas (SPA) |
 | `select, option, optgroup` | Fuerza Montserrat en dropdowns |
+| `.btn-wp-grupo` | Botón verde de grupo de WhatsApp (movido desde reservas.css) |
+| `.otro-texto` | Input de texto libre que hereda de input[type="text"] global; solo añade `width:100%` |
 
 ### css/ui.css
 | Clase / selector | Descripción |
@@ -142,24 +144,34 @@ reservas/
 |---|---|
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
-### css/colors.css (nuevo — fuente única de verdad)
-| Variable | Descripción |
+### css/colors.css — fuente única de verdad de colores
+> **Regla:** ningún archivo CSS o JS debe hardcodear un color hex que tenga variable aquí.
+> Importado primero en `index.html` e `inscripcion/index.html`.
+> Dark mode automático via `@media (prefers-color-scheme: dark)` al final del archivo.
+> Los archivos JS (`admin.js`, `home.js`, `reservas.js`, `perfil.js`, `auth.js`) usan `var(--nombre)` en sus strings de estilo inline. Excepción intencional: array de colores de confetti en `ui.js` L204 (valores pasados directamente a canvas, no son CSS).
+
+| Grupo | Variables principales |
 |---|---|
-| `--brand / --brand-dk / --brand-light / --brand-lighter / --brand-glow` | Naranja principal y variantes |
-| `--bg / --bg-2` | Colores de fondo de página |
-| `--surface / --surface-2 / --surface-3 / --surface-blur` | Capas de superficie translúcidas (glassmorphism) |
-| `--border / --border-2` | Bordes suaves naranjas translúcidos |
-| `--text / --text-2 / --muted / --hint` | Escala de texto (oscuro → tenue) |
-| `--success / --success-bg / --success-bdr` | Estado verde |
-| `--warning / --warning-bg / --warning-bdr` | Estado amarillo |
-| `--danger / --danger-bg / --danger-bdr` | Estado rojo |
-| `--info / --info-bg / --info-bdr` | Estado azul |
-| `--btn-primary-bg/color/hover / --btn-secondary-bg/color` | Tokens de botones |
-| `--card-bg / --card-border / --card-shadow / --card-blur` | Tokens de cards |
-| `--radius-sm / --radius / --radius-lg / --radius-full` | Radios de borde |
-| `--shadow-sm / --shadow / --shadow-lg` | Sombras |
-> Dark mode automático via `@media (prefers-color-scheme: dark)` en colors.css.
-> global.css, ui.css, home.css, reservas.css, perfil.css e inscripcion/inscripcion.css consumen estas variables y ya no definen paletas propias.
+| **Brand core** | `--brand / --brand-dk / --brand-secondary` |
+| **Brand variants** | `--brand-subtle / --brand-mid / --brand-soft / --brand-hover / --brand-light / --brand-lighter / --brand-glow / --brand-pulse / --brand-strong / --brand-zero / --brand-30 / --brand-40 / --brand-06 / --brand-55 / --brand-60` |
+| **Fondo / Superficie** | `--bg / --bg-2 / --surface / --surface-2 / --surface-3 / --surface-blur` |
+| **Bordes** | `--border / --border-2 / --border-light / --border-mid` |
+| **Texto** | `--text / --text-2 / --muted / --hint` |
+| **Neutros** | `--neutral-dark / --neutral-gray / --neutral-mid / --neutral-light` |
+| **Sombras** | `--shadow-sm / --shadow / --shadow-lg / --black-xs / --black-sm / --black-md` |
+| **Estados** | `--success / --danger / --warning / --info` (+ `-bg / -bdr` para cada uno) |
+| **Success/Green** | `--success-dark / --success-bright / --success-border-dark / --success-shadow / --green-dark / --green-light / --green-border` |
+| **Error** | `--error / --error-light / --error-border / --error-bg` |
+| **Amber** | `--amber / --amber-light / --amber-lighter / --amber-dark / --amber-darker / --amber-accent` |
+| **Purple** | `--purple / --purple-light / --purple-bg / --purple-border / --purple-hover / --purple-bg-light / --purple-border-light` |
+| **WhatsApp** | `--wa-bg / --wa-bg-hover / --wa-brand` |
+| **Botones / Cards / Radius** | `--btn-primary-* / --btn-secondary-* / --card-* / --radius-sm / --radius / --radius-lg / --radius-full` |
+| **Brand warm** | `--brand-warm / --brand-warm-2` |
+| **Divisores** | `--gray-divider` |
+| **Dark mode tokens** | `--dk-skeleton-base / --dk-skeleton-shine / --dk-skeleton-shine-2 / --dk-info-bg / --dk-info-border / --dk-info-text / --dk-info-text-2 / --dk-error-bg / --dk-error-border / --dk-error-text / --dk-modal-overlay / --dk-modal-item-bg / --dk-modal-text / --dk-modal-btn-bg / --dk-modal-btn-text / --dk-datepicker-bg / --dk-surface-opaque / --dk-input-bg / --dk-pin-press / --dk-brand-burn / --dk-text-muted / --dk-text-muted-2 / --dk-border-dark / --dk-border-darker / --dk-purple-bg / --dk-purple-text / --dk-purple-mid / --dk-badge-bg / --dk-badge-text` |
+| **Error light** | `--error-light-border / --error-lightest` |
+| **Light state backgrounds** | `--success-lightest / --purple-lightest / --purple-border-soft` |
+| **Softest borders** | `--border-softest / --amber-border` |
 
 ### inscripcion/inscripcion.css
 > ⚠️ Ya no tiene bloque `:root` propio ni `@media dark` de tokens — los provee `../css/colors.css` importado en `inscripcion/index.html`.
@@ -234,7 +246,7 @@ reservas/
 |---|---|
 | `_todasReservas` | Array con todas las reservas del usuario (cargadas al login) |
 | `prepararHome()` | Inicializa la pantalla home: saludo, foto, banner cupón/notif, render reservas |
-| `irNuevaReserva()` | Navega al flujo de reserva desde home (ir s2) |
+| `irNuevaReserva(skipEquip)` | Navega al flujo de reserva; `skipEquip=true` salta s2-s3 e va directo a `cargarFechas()` (usado post-inscripción vía parámetro `?nuevx=1`) |
 | `irMisReservas()` | Navega al historial completo (ir s-misreservas) |
 | `verTodasReservas()` | Alias de irMisReservas() |
 | `iniciarReagendamiento()` | Activa E.reagendando y navega a s4 para reagendar |
@@ -378,7 +390,7 @@ reservas/
 | `irAlRegistro()` | Redirige a inscripcion/ con el token de Google como query param |
 | `solicitarNombreUsuario()` | Abre mailto para solicitar el nombre de usuario al equipo |
 | `solicitarNuevoPIN()` | Abre mailto para solicitar un nuevo PIN al equipo |
-| `window.onload` | Punto de entrada: restaura sesión admin o usuario, o muestra s1; llama generarMeses(); lee params `?nuevx=1&nombre=&patines=&protec=&talla=` post-inscripción para pre-cargar fechas |
+| `window.onload` | Punto de entrada: restaura sesión admin o usuario, o muestra s1; llama generarMeses(); lee params `?nuevx=1&nombre=&patines=&protec=&talla=` post-inscripción para pre-cargar fechas (requiere `inscribirPersona` en el `doGet` del Apps Script backend) |
 | `pageshow listener` | Bfcache fix: restaura la pantalla correcta al volver con el botón atrás |
 
 ### shared/date-picker.js
@@ -432,6 +444,8 @@ reservas/
 | `togglePinVisibilityForm()` | Alterna visibilidad del PIN en el formulario de inscripcion |
 | `window.onload` | Pobla países y tallas, inicializa date picker listeners, lanza GIS o procesa token de URL; muestra `#btn-back-inscripcion` si el referrer es el dominio principal o hay token |
 | `#btn-back-inscripcion` | Flecha atrás en el header (inicialmente `display:none`); visible si vino de reservas.quindesvolcanicos.com o con ?token= |
+| `_wpUnido` | Flag booleano que indica si el usuario ya unió al grupo de WhatsApp en esta sesión de inscripción |
+| `wpGrupoUnido()` | Callback del botón de grupo WA en section-exito; marca `_wpUnido=true` y actualiza el botón a estado "unido" |
 | `#btn-wp-grupo-exito` | Botón "Únete al grupo de WhatsApp" en section-exito; aparece a los 1.6s tras registro exitoso |
 
 ---
@@ -522,3 +536,21 @@ config.js → api.js → ui.js → home.js → reservas.js → perfil.js → adm
 ../js/config.js → ../shared/date-picker.js → inscripcion.js
 ```
 `inscripcion.js` redefine sus propias versiones locales de `apiPost`/`apiGet`, `mostrarCargando`/`ocultarCargando` y `abrirContacto`/`cerrarContacto` — no usa las de la app principal.
+
+---
+
+## 6. Reglas globales del proyecto
+
+### Colores
+Todos los colores deben declararse como variables CSS en `css/colors.css`. Ningún archivo CSS, JS o HTML puede hardcodear un valor hex, rgb o rgba para el que exista variable equivalente disponible.  
+**Excepción única:** valores pasados directamente a librerías JS que no interpretan CSS (ej: array de colores del confetti en `ui.js` L204).
+
+### Clases CSS
+Toda clase nueva debe definirse en el archivo CSS correspondiente a su sección:
+- Antes de crear una clase nueva, verificar si ya existe una equivalente en `global.css` o en el CSS de la sección.
+- Clases compartidas entre secciones → `global.css`.
+- Clases específicas de una sección → CSS de esa sección (`login.css`, `home.css`, `reservas.css`, `perfil.css`, etc.).
+
+### Estilos inline
+Evitar estilos inline en HTML y en strings JS. Si un estilo se repite más de una vez, convertirlo en clase CSS.  
+> Bug corregido: el patrón `color:color: var(...)` (prefijo duplicado en strings JS) fue detectado y corregido en `home.js` (L172, L173, L175) y `admin.js` (L372, L401).
