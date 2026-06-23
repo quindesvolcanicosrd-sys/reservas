@@ -69,10 +69,10 @@ reservas/
 | `.contenedor` | Wrapper centrado max-width 480px con padding |
 | `.card` | Tarjeta blanca con border-radius; transparente en móvil |
 | `.seccion-label` | Etiqueta naranja uppercase pequeña |
-| `input, select, textarea` | Estilo base de campos de formulario |
+| `input, select, textarea` | Estilo base de campos de formulario; estado `:focus` usa `var(--surface)` en lugar de colores hardcodeados |
 | `.select-wrapper::after` | Flecha expand_more naranja en selects |
 | `.btn / .btn-primary / .btn-secondary` | Botones base, primario naranja, secundario outline |
-| `.opciones / .opcion / .opcion.sel` | Grupo de radios/checkboxes con borde; .sel = seleccionado |
+| `.opciones / .opcion / .opcion.sel` | Grupo de radios/checkboxes con borde; .sel = seleccionado; `:hover` usa `var(--brand-lightest)` en lugar de colores hardcodeados |
 | `.chk-opcion` | Checkbox con estilo de opción |
 | `.resumen / .r-fila / .r-label / .r-valor` | Bloque de resumen de reserva |
 | `.badge / .badge-*` | Chips de estado (confirmada, pendiente, etc.) |
