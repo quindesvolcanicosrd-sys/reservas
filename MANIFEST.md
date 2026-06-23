@@ -445,7 +445,7 @@ reservas/
 | `abrirPickerFecha()` | Llama a abrirDatePicker() (shared) con callback que actualiza fnac-iso y G.fechaNac |
 | `togglePinVisibilityForm()` | Alterna visibilidad del PIN en el formulario de inscripcion |
 | `window.onload` | Pobla países y tallas, inicializa date picker listeners, lanza GIS o procesa token de URL; muestra `#btn-back-inscripcion` si el referrer es el dominio principal o hay token |
-| `#btn-back-inscripcion` | Flecha atrás en el header (inicialmente `display:none`); visible si vino de reservas.quindesvolcanicos.com o con ?token= |
+| `#btn-back-inscripcion` | Flecha atrás en el header (inicialmente `display:none`); visible si vino de reservas.quindesvolcanicos.com o con ?token=; usa exactamente el mismo estilo inline que `.top-bar-back` (`background:var(--brand-light)`, ícono `color:var(--brand)`) |
 | `_wpUnido` | Flag booleano que indica si el usuario ya unió al grupo de WhatsApp en esta sesión de inscripción |
 | `wpGrupoUnido()` | Callback del botón de grupo WA en section-exito; marca `_wpUnido=true` y actualiza el botón a estado "unido" |
 | `#btn-wp-grupo-exito` | Botón "Únete al grupo de WhatsApp" en section-exito; aparece a los 1.6s tras registro exitoso |
