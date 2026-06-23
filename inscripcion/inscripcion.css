@@ -499,7 +499,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 #dp-days { display:contents; animation:dpFadeIn 0.18s ease; }
 #dp-year-grid, #dp-month-grid { animation:dpFadeIn 0.18s ease; }
 @media (prefers-color-scheme: dark) {
-  .dp-card { background:#1c1c1c4f; }
+  .dp-card { background:#22140ae5; }  
   .dp-day { color:#f0f0f0; }
   .dp-nav-label { color:#f0f0f0; }
   .dp-year-btn { color:#f0f0f0; }
