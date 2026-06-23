@@ -163,7 +163,7 @@ function cargarFechas() {
   api({ action: 'getFechasDisponibles', nombre: E.nombre, talla: talla, necesitaProtecciones: d.necesitaProtecciones }, function(fechas) {
     var disponibles = fechas.filter(function(f) { return f.disponible; });
     var html = '';
-    if (fechas.length === 0) { html = '<p style="color:#888;text-align:center;">No hay fechas disponibles.</p>'; } else {
+    if (fechas.length === 0) { html = '<p style="color:color: var(--muted);text-align:center;">No hay fechas disponibles.</p>'; } else {
       fechas.forEach(function(f) {
         if (f.disponible) { html += '<div class="fecha-item" onclick="toggleFecha(this,\'' + f.fecha.replace(/'/g,"\\'") + '\')"><input type="checkbox" name="fecha" value="' + f.fecha + '"><div><div class="fecha-nombre">' + f.fecha + '</div></div></div>'; }
         else { html += '<div class="fecha-item agotada"><div><div class="fecha-nombre">' + f.fecha + '</div><div class="fecha-razon">⚠ ' + f.razon + '</div></div></div>'; }

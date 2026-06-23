@@ -57,7 +57,7 @@
 .hmr { display: flex; align-items: center; justify-content: space-between; padding: 14px 4px; border-bottom: 1px solid rgba(128,128,128,0.12); }
 .hmr-texto { text-align: left; }
 .hmr-texto .hmr-titulo { font-size: 0.8rem; font-weight: 800; color: #f97316; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 3px; }
-.hmr-texto .hmr-sub { font-size: 0.77rem; color: color: var(--muted);; }
+.hmr-texto .hmr-sub { font-size: 0.77rem; color: color: var(--muted); }
 .hmr-btn-round { width: 44px; height: 44px; flex-shrink: 0; background: var(--brand-light); border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; }
 .hmr-btn-round .material-symbols-outlined { font-size: 1.2rem; color: var(--brand); }
 .btn-logout-mobile { background: var(--brand-light); border: 0px solid rgba(249,115,22,0.25); cursor: pointer; color: var(--brand); padding: 8px; border-radius: 10px; font-family: inherit; line-height: 1; }

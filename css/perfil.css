@@ -7,7 +7,7 @@
 }
 .datos-seccion-titulo:hover { background: var(--surface-3); }
 .datos-seccion-titulo .sec-icon { font-size: 1.2rem; margin-right: 10px; }
-.datos-seccion-titulo .sec-chevron { color: color: var(--muted);; font-size: 1.1rem; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+.datos-seccion-titulo .sec-chevron { color: color: var(--muted); font-size: 1.1rem; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
 .datos-seccion-titulo.abierta .sec-chevron { transform: rotate(180deg); color: #F97316; }
 .datos-seccion-body {
   padding: 0 20px; max-height: 0; overflow: hidden; opacity: 0;

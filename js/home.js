@@ -169,10 +169,10 @@ function _renderCardHome(r, hoy) {
     h += '<div style="font-weight:800;font-size:1.05rem;">' + nombreMes + '</div></div>';
     if (r.monto) h += '<span style="font-weight:800;color:#F97316;font-size:0.95rem;margin-left:8px;flex-shrink:0;">' + r.monto + '</span>';
     h += '</div>';
-    if (r.fechaPago && tipo !== 'futura') h += '<div style="font-size:0.8rem;color:#888;margin-bottom:2px;">Pagado el ' + r.fechaPago + '</div>';
-    if (vh && tipo !== 'futura' && tipo !== 'pendiente-mens') h += '<div style="font-size:0.8rem;color:#888;">Válido hasta el ' + r.validezHasta + '</div>';
+    if (r.fechaPago && tipo !== 'futura') h += '<div style="font-size:0.8rem;color:color: var(--muted);margin-bottom:2px;">Pagado el ' + r.fechaPago + '</div>';
+    if (vh && tipo !== 'futura' && tipo !== 'pendiente-mens') h += '<div style="font-size:0.8rem;color:color: var(--muted);">Válido hasta el ' + r.validezHasta + '</div>';
     if (tipo === 'futura') h += '<div style="font-size:0.8rem;color:#aaa;">Vigente desde el 1 de ' + nombreMes + '</div>';
-    if (tipo === 'pendiente-mens') h += '<div style="font-size:0.8rem;color:#888;margin-top:2px;">Esperando verificación del pago</div>';
+    if (tipo === 'pendiente-mens') h += '<div style="font-size:0.8rem;color:color: var(--muted);margin-top:2px;">Esperando verificación del pago</div>';
     if (tipo === 'vencida') h += '<button class="btn btn-primary" style="margin-top:12px;padding:12px;" onclick="irNuevaReserva()">Hacer nuevo pago mensual</button>';
     if (tipo === 'pendiente-mens') h += '<button class="btn-cancelar" style="margin-top:10px;" onclick="cancelarRes(\'' + r.fecha.replace(/'/g,"\\'") + '\')">Cancelar</button>';
     h += '</div>'; return h;
@@ -288,7 +288,7 @@ function renderHistorial() {
   delMes.forEach(function(r) { if (!grupos[r.fecha]) { grupos[r.fecha] = []; orden.push(r.fecha); } grupos[r.fecha].push(r); });
   var html = '';
   if (delMes.length === 0) {
-    html = '<p style="text-align:center;color:#888;padding:24px 0;">No hay reservas archivadas en este mes.</p>';
+    html = '<p style="text-align:center;color:color: var(--muted);padding:24px 0;">No hay reservas archivadas en este mes.</p>';
   } else {
     orden.forEach(function(fecha, idx) {
       var gId = 'hgrp-' + idx, abierto = idx === 0, count = grupos[fecha].length;
@@ -317,7 +317,7 @@ function _renderCardHistorial(r) {
   h += '<div class="reserva-header" style="align-items:flex-start;gap:8px;"><span class="reserva-fecha" style="font-size:0.82rem;flex:1;min-width:0;">' + r.fecha + '</span>';
   h += '<span class="badge ' + b[0] + '" style="flex-shrink:0;white-space:nowrap;">' + b[1] + ' ' + r.estado + '</span></div>';
   h += '<div class="reserva-detalle">' + eq + '</div>';
-  if (r.monto) h += '<div style="font-size:0.78rem;color:#888;margin-top:3px;">💵 ' + r.monto + '</div>';
+  if (r.monto) h += '<div style="font-size:0.78rem;color:color: var(--muted);margin-top:3px;">💵 ' + r.monto + '</div>';
   h += '</div>'; return h;
 }
 

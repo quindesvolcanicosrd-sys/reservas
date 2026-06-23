@@ -99,13 +99,13 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
                 style="text-align:center;font-size:1.8rem;letter-spacing:8px;padding-left:50px;padding-right:50px;"
                 oninput="syncPinDots()" onkeydown="if(event.key==='Enter') continuar_pin_desde_s1()">
               <button type="button" onclick="togglePinVisibility()"
-                style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:color: var(--muted);;padding:4px;line-height:1;">
+                style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:color: var(--muted);padding:4px;line-height:1;">
                 <span class="material-symbols-outlined" id="toggle-pin-icon">visibility</span>
               </button>
             </div>
             <div class="error-msg" id="err-s1"></div>
             <div class="error-msg" id="err-pin"></div>
-            <div style="text-align:center;margin-bottom:14px;font-size:0.8rem;color:color: var(--muted);;">
+            <div style="text-align:center;margin-bottom:14px;font-size:0.8rem;color:color: var(--muted);">
               <a onclick="solicitarNuevoPIN()" style="color:#0369a1;cursor:pointer;font-weight:600;">¿Olvidaste tu PIN?</a>
               <span style="margin:0 8px;color:#ccc;">·</span>
               <a onclick="solicitarNombreUsuario()" style="color:#0369a1;cursor:pointer;font-weight:600;">¿Olvidaste tu usuario?</a>
@@ -114,7 +114,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           </div>
         </div>
       </div>
-<p style="text-align:center;font-size:0.82rem;color:color: var(--muted);;margin:0 0 14px;">
+<p style="text-align:center;font-size:0.82rem;color:color: var(--muted);margin:0 0 14px;">
   ¿Sin cuenta registrada?
   <a href="https://reservas.quindesvolcanicos.com/inscripcion" style="color:#F97316;font-weight:700;text-decoration:none;">Regístrate aquí</a>
 </p>
@@ -306,11 +306,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="opciones" style="margin-bottom: 0;">
           <label class="opcion" id="opcion-tipo-mensual" onclick="selTipoPago('mensual', this)">
             <input type="radio" name="tipo-pago" value="mensual">
-            <div><div style="font-weight:800;">Pago mensual</div><div style="font-size:0.82rem;color:color: var(--muted);;margin-top:2px;">No necesitas seleccionar clases</div></div>
+            <div><div style="font-weight:800;">Pago mensual</div><div style="font-size:0.82rem;color:color: var(--muted);margin-top:2px;">No necesitas seleccionar clases</div></div>
           </label>
           <label class="opcion" id="opcion-tipo-clase" onclick="selTipoPago('clase', this)">
             <input type="radio" name="tipo-pago" value="clase">
-            <div style="flex:1;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-weight:800;">Pago por clase</span><span id="pill-cupon" style="display:none;background:#fef3c7;color:#b45309;border:1px solid #fbbf24;border-radius:99px;font-size:0.72rem;font-weight:800;padding:2px 10px;">🎟️ tienes un cupón</span></div><div style="font-size:0.82rem;color:color: var(--muted);;margin-top:2px;">Selecciona las clases que asistirás</div></div>
+            <div style="flex:1;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-weight:800;">Pago por clase</span><span id="pill-cupon" style="display:none;background:#fef3c7;color:#b45309;border:1px solid #fbbf24;border-radius:99px;font-size:0.72rem;font-weight:800;padding:2px 10px;">🎟️ tienes un cupón</span></div><div style="font-size:0.82rem;color:color: var(--muted);margin-top:2px;">Selecciona las clases que asistirás</div></div>
           </label>
         </div>
       </div>
@@ -334,7 +334,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div id="meses-pasados-wrapper" style="margin-bottom:8px;">
           <button onclick="toggleMesesPasados()" id="btn-meses-pasados"
             style="width:100%;text-align:left;padding:12px 16px;background:#f5f5f5;border:2px solid #e5e5e5;border-radius:10px;font-size:0.9rem;font-weight:700;color:#666;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px;">
-            <span id="chevron-meses" class="material-symbols-outlined" style="font-size:1.1rem;transition:transform 0.3s;color:color: var(--muted);;">chevron_right</span>
+            <span id="chevron-meses" class="material-symbols-outlined" style="font-size:1.1rem;transition:transform 0.3s;color:color: var(--muted);">chevron_right</span>
             <span>Meses pasados</span>
           </button>
           <div id="lista-meses-pasados" style="display:none;margin-top:10px;" class="meses-grid"></div>
@@ -373,7 +373,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <p style="font-weight: 500;">Transfiere el monto indicado usando uno de estos métodos antes de continuar.</p>
 
       <div class="pago-metodo" style="padding:0;overflow:hidden;">
-        <div class="pago-header" onclick="togglePagoMetodo(this)" style="cursor:pointer;padding:16px;justify-content:space-between;"><div style="display:flex;align-items:center;gap:10px;"><span class="pago-icon">📱</span>DeUna · Banco Pichincha</div><span class="material-symbols-outlined" style="font-size:1.1rem;color:color: var(--muted);;transition:transform 0.3s;">expand_more</span></div>
+        <div class="pago-header" onclick="togglePagoMetodo(this)" style="cursor:pointer;padding:16px;justify-content:space-between;"><div style="display:flex;align-items:center;gap:10px;"><span class="pago-icon">📱</span>DeUna · Banco Pichincha</div><span class="material-symbols-outlined" style="font-size:1.1rem;color:color: var(--muted);transition:transform 0.3s;">expand_more</span></div>
         <div class="pago-metodo-body" style="max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1);padding:0 16px;">
           <div class="pago-fila"><span class="pago-label">Cuenta de ahorro</span><span class="pago-valor">7702756890</span></div>
           <div class="pago-fila"><span class="pago-label">Titular</span><span class="pago-valor">David Santiago Rojas Baez</span></div>
@@ -381,7 +381,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
       </div>
       <div class="pago-metodo" style="padding:0;overflow:hidden;">
-        <div class="pago-header" onclick="togglePagoMetodo(this)" style="cursor:pointer;padding:16px;justify-content:space-between;"><div style="display:flex;align-items:center;gap:10px;"><span class="pago-icon">🏦</span>Banco Internacional</div><span class="material-symbols-outlined" style="font-size:1.1rem;color:color: var(--muted);;transition:transform 0.3s;">expand_more</span></div>
+        <div class="pago-header" onclick="togglePagoMetodo(this)" style="cursor:pointer;padding:16px;justify-content:space-between;"><div style="display:flex;align-items:center;gap:10px;"><span class="pago-icon">🏦</span>Banco Internacional</div><span class="material-symbols-outlined" style="font-size:1.1rem;color:color: var(--muted);transition:transform 0.3s;">expand_more</span></div>
         <div class="pago-metodo-body" style="max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1);padding:0 16px;">
           <div class="pago-fila"><span class="pago-label">Tipo</span><span class="pago-valor">Cuenta de ahorros</span></div>
           <div class="pago-fila"><span class="pago-label">N° de cuenta</span><span class="pago-valor">398027628</span></div>
@@ -454,7 +454,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="card">
       <div class="seccion-label">Mis datos</div>
       <h2>Editar mis datos</h2>
-      <p style="font-size:0.88rem;color:color: var(--muted);;margin-bottom:20px; line-height: 1.5;">
+      <p style="font-size:0.88rem;color:color: var(--muted);margin-bottom:20px; line-height: 1.5;">
         Los cambios se guardan sección por sección. <strong>Si necesitas modificar tu nombre o PIN, contacta a unx administradorx.</strong>
       </p>
 
@@ -1074,7 +1074,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
     <div class="error-msg" id="err-mec" style="margin-bottom:12px;"></div>
     <button id="mec-btn-confirmar" onclick="mecConfirmar()" disabled style="width:100%;padding:14px;background:#dc2626;color:white;border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;opacity:0.4;transition:opacity 0.2s;">Eliminar mi cuenta</button>
-    <button onclick="mecCerrar()" style="width:100%;padding:13px;background:transparent;color:color: var(--muted);;border:2px solid #e5e5e5;border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
+    <button onclick="mecCerrar()" style="width:100%;padding:13px;background:transparent;color:color: var(--muted);border:2px solid #e5e5e5;border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
 </div>
 
   <div id="modal-wp-comprobante" style="display:none;position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;padding:16px;">

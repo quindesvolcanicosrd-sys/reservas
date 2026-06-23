@@ -150,7 +150,7 @@ function adminRenderReservas() {
 
   var html = '';
   if (lista.length === 0) {
-    html = '<p style="text-align:center;color:#888;padding:20px 0;">' + (_admFiltro === 'pendientes' ? 'No hay reservas pendientes. 🎉' : 'No hay reservas.') + '</p>';
+    html = '<p style="text-align:center;color:color: var(--muted);padding:20px 0;">' + (_admFiltro === 'pendientes' ? 'No hay reservas pendientes. 🎉' : 'No hay reservas.') + '</p>';
   } else {
     orden.forEach(function(fecha, idx) {
       var count = grupos[fecha].length;
@@ -280,7 +280,7 @@ function adminIrQueLlevar() {
 function adminRenderQueLlevar(res) {
   var html = '';
   if (!res || res.length === 0) {
-    html = '<p style="text-align:center;color:#888;padding:20px 0;">No hay equipamiento asignado por ahora. 🎉</p>';
+    html = '<p style="text-align:center;color:color: var(--muted);padding:20px 0;">No hay equipamiento asignado por ahora. 🎉</p>';
   } else {
     var grupos = {}, orden = [];
     var diasSemana = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
@@ -326,7 +326,7 @@ function adminIrEquip() {
   mostrarCargando('Cargando equipamiento...');
   adminApi({ action: 'adminGetEquipamiento' }, function(res) {
     ocultarCargando();
-    var html = '<div class="r-fila" style="display:flex;gap:8px;font-weight:800;font-size:0.78rem;text-transform:uppercase;color:#888;padding:4px 0;"><span style="flex:1;">Talla</span><span style="width:110px;">Cantidad</span><span style="width:42px;"></span></div>';
+    var html = '<div class="r-fila" style="display:flex;gap:8px;font-weight:800;font-size:0.78rem;text-transform:uppercase;color:color: var(--muted);padding:4px 0;"><span style="flex:1;">Talla</span><span style="width:110px;">Cantidad</span><span style="width:42px;"></span></div>';
     (res.tallas || []).forEach(function(t) { html += adminFilaTallaHtml(t.talla, t.cantidad); });
     document.getElementById('admin-equip-lista').innerHTML = html;
     document.getElementById('adm-equip-protec').value = res.protecciones || 0;
@@ -369,11 +369,11 @@ function adminIrUsuarios() {
     var html = '';
     (res || []).forEach(function(u) {
       html += '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
-        '<div><div style="font-weight:800;">' + u.nombre + '</div><div style="font-size:0.8rem;color:#888;">' + (u.email || 'sin email') + '</div></div>' +
+        '<div><div style="font-weight:800;">' + u.nombre + '</div><div style="font-size:0.8rem;color:color: var(--muted);">' + (u.email || 'sin email') + '</div></div>' +
         '<button onclick="adminEliminarUsuarioClick(\'' + u.nombre.replace(/'/g, "\\'") + '\')" style="border:2px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;font-size:0.8rem;flex-shrink:0;">Eliminar</button>' +
         '</div>';
     });
-    document.getElementById('admin-usuarios-lista').innerHTML = html || '<p style="text-align:center;color:#888;">Sin usuarios.</p>';
+    document.getElementById('admin-usuarios-lista').innerHTML = html || '<p style="text-align:center;color:color: var(--muted);">Sin usuarios.</p>';
     ir('s-admin-usuarios');
   }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
 }
@@ -398,7 +398,7 @@ function adminIrAdmins() {
     (res || []).forEach(function(a) {
       html += '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
         '<div><div style="font-weight:700;font-size:0.9rem;">' + a.email + (a.principal ? ' <span class="badge badge-confirmada" style="margin-left:6px;">Principal</span>' : '') + '</div>' +
-        (a.invitadoPor ? '<div style="font-size:0.78rem;color:#888;">Invitado por ' + a.invitadoPor + '</div>' : '') + '</div>' +
+        (a.invitadoPor ? '<div style="font-size:0.78rem;color:color: var(--muted);">Invitado por ' + a.invitadoPor + '</div>' : '') + '</div>' +
         (!a.principal && _adminEmail === 'quindesvolcanicosrd@gmail.com'
           ? '<button onclick="adminQuitarClick(\'' + a.email + '\')" style="border:2px solid #fecaca;background:#fef2f2;color:#dc2626;border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;font-size:0.8rem;flex-shrink:0;">Quitar</button>'
           : '') +
