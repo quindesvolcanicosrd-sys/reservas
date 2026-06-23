@@ -10,7 +10,26 @@
   --brand-dk:       #ea6407;
   --brand-light:    rgba(249,115,22,0.13);
   --brand-lighter:  rgba(249,115,22,0.07);
+  --brand-subtle:   rgba(249,115,22,0.04);
   --brand-glow:     rgba(249,115,22,0.25);
+  --brand-mid:      rgba(249,115,22,0.14);
+  --brand-soft:     rgba(249,115,22,0.1);
+  --brand-hover:    rgba(249,115,22,0.18);
+  --brand-pulse:    rgba(249,115,22,0.35);
+  --brand-strong:   rgba(249,115,22,0.7);
+  --brand-zero:     rgba(249,115,22,0);
+  --brand-30:       rgba(249,115,22,0.3);
+  --brand-40:       rgba(249,115,22,0.4);
+  --brand-06:       rgba(249,115,22,0.06);
+  --brand-secondary:#fb923c;
+  --error:          #dc2626;
+  --error-light:    rgba(220,38,38,0.1);
+  --error-border:   rgba(220,38,38,0.3);
+  --purple-bg:      rgba(124,58,237,0.1);
+  --purple-border:  rgba(124,58,237,0.35);
+  --purple-hover:   rgba(124,58,237,0.18);
+  --overlay:        rgba(0,0,0,0.65);
+  --overlay-light:  rgba(0,0,0,0.55);
 
   /* ── Fondo ───────────────────────────────────────────── */
   --bg:             #FDF3EB;
@@ -69,6 +88,62 @@
   --shadow-sm:      0 4px 12px rgba(249,115,22,0.08);
   --shadow:         0 8px 32px rgba(249,115,22,0.1);
   --shadow-lg:      0 16px 48px rgba(249,115,22,0.15);
+
+  /* ── Colores extendidos ──────────────────────────────── */
+  --success-dark:   #16a34a;
+  --amber:          #fbbf24;
+  --amber-light:    #fef3c7;
+  --amber-lighter:  #fffbeb;
+  --amber-dark:     #b45309;
+  --amber-darker:   #92400e;
+  --info:           #0ea5e9;
+  --info-dark:      #0369a1;
+  --green-dark:     #166534;
+  --green-light:    #f0fdf4;
+  --green-border:   #bbf7d0;
+
+  /* Neutros */
+  --neutral-dark:        #1a1a1a;
+  --neutral-gray:        #777;
+  --neutral-mid:         #666;
+  --neutral-light:       #555;
+  --border-light:        #e5e5e5;
+  --border-mid:          #d4d4d4;
+  --surface-light:       #fafafa;
+  --disabled-bg:         #f0f0f0;
+  --disabled-border:     #eee;
+
+  /* Sombras negras */
+  --black-xs:            rgba(0,0,0,0.04);
+  --black-sm:            rgba(0,0,0,0.06);
+  --black-md:            rgba(0,0,0,0.07);
+
+  /* Brand warm */
+  --brand-warm:          #fff8f4;
+  --brand-warm-2:        #fffcf9;
+  --brand-55:            rgba(249,115,22,0.55);
+  --brand-60:            rgba(249,115,22,0.6);
+
+  /* WhatsApp */
+  --wa-bg:               rgba(37,211,102,0.1);
+  --wa-bg-hover:         rgba(37,211,102,0.18);
+  --wa-brand:            #25D366;
+  --success-border-dark: #15803d;
+  --success-bright:      #4ade80;
+  --success-shadow:      rgba(34,197,94,0.08);
+
+  /* Error */
+  --error-bg:            #fee2e2;
+
+  /* Amber */
+  --amber-accent:        #d97706;
+
+  /* Purple */
+  --purple-bg-light:     rgba(124,58,237,0.08);
+  --purple-border-light: rgba(124,58,237,0.3);
+
+  /* Divisores */
+  --gray-divider:        rgba(128,128,128,0.12);
 }
 
 /* ── DARK MODE ───────────────────────────────────────────── */

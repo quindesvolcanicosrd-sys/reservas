@@ -77,3 +77,15 @@ select, option, optgroup { font-family: 'Montserrat', sans-serif !important; }
     background-size: 200% 100% !important;
   }
 }
+
+/* WhatsApp grupo */
+.btn-wp-grupo {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 16px; border-radius: 12px; border: none;
+  font-size: 0.88rem; font-weight: 800; cursor: pointer;
+  text-decoration: none; transition: all 0.3s ease; letter-spacing: 0.3px;
+  margin-top: 16px; background: rgba(37,211,102,0.1); color: var(--success);
+}
+.btn-wp-grupo:hover { background: rgba(37,211,102,0.18); border-color: #25D366; transform: translateY(-2px); }
+
+.otro-texto { width: 100%; }

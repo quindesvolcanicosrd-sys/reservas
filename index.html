@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<meta name="theme-color" content="#F97316">
+<meta name="theme-color" content="var(--brand)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -83,7 +83,7 @@
       <!-- Acordeón PIN -->
       <div style="border:2px solid #e55a00;border-radius:4px;overflow:hidden;margin-bottom:10px;">
         <div onclick="togglePinAcordeon()" id="pin-acordeon-header"
-style="display:flex;align-items:center;justify-content:center;padding:11px 18px;min-height:44px;cursor:pointer;background:#F97316;transition:background 0.2s;position:relative;">
+style="display:flex;align-items:center;justify-content:center;padding:11px 18px;min-height:44px;cursor:pointer;background:var(--brand);transition:background 0.2s;position:relative;">
   <span class="material-symbols-outlined" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:1.3rem;color:white;">dialpad</span>
   <span style="font-size:0.9rem;font-weight:700;color:white;">Continuar con PIN</span>
   <span class="material-symbols-outlined" id="pin-acordeon-chevron" style="color:white;font-size:1.1rem;transition:transform 0.3s;position:absolute;right:18px;top:50%;transform:translateY(-50%);">expand_more</span>
@@ -99,16 +99,16 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
                 style="text-align:center;font-size:1.8rem;letter-spacing:8px;padding-left:50px;padding-right:50px;"
                 oninput="syncPinDots()" onkeydown="if(event.key==='Enter') continuar_pin_desde_s1()">
               <button type="button" onclick="togglePinVisibility()"
-                style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:color: var(--muted);padding:4px;line-height:1;">
+                style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color: var(--muted);padding:4px;line-height:1;">
                 <span class="material-symbols-outlined" id="toggle-pin-icon">visibility</span>
               </button>
             </div>
             <div class="error-msg" id="err-s1"></div>
             <div class="error-msg" id="err-pin"></div>
-            <div style="text-align:center;margin-bottom:14px;font-size:0.8rem;color:color: var(--muted);">
-              <a onclick="solicitarNuevoPIN()" style="color:#0369a1;cursor:pointer;font-weight:600;">¿Olvidaste tu PIN?</a>
+            <div style="text-align:center;margin-bottom:14px;font-size:0.8rem;color: var(--muted);">
+              <a onclick="solicitarNuevoPIN()" style="color:var(--info-dark);cursor:pointer;font-weight:600;">¿Olvidaste tu PIN?</a>
               <span style="margin:0 8px;color:#ccc;">·</span>
-              <a onclick="solicitarNombreUsuario()" style="color:#0369a1;cursor:pointer;font-weight:600;">¿Olvidaste tu usuario?</a>
+              <a onclick="solicitarNombreUsuario()" style="color:var(--info-dark);cursor:pointer;font-weight:600;">¿Olvidaste tu usuario?</a>
             </div>
             <button class="btn btn-primary" onclick="continuar_pin_desde_s1()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
           </div>
@@ -116,7 +116,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
 <p style="text-align:center;font-size:0.82rem;margin:0 0 14px;">
   ¿Sin cuenta registrada?
-  <a href="https://reservas.quindesvolcanicos.com/inscripcion" style="color:#F97316;font-weight:700;text-decoration:none;">Regístrate aquí</a>
+  <a href="https://reservas.quindesvolcanicos.com/inscripcion" style="color:var(--brand);font-weight:700;text-decoration:none;">Regístrate aquí</a>
 </p>
 <div style="border-top:1px solid rgba(168,149,135,0.3);margin:8px 0 16px;"></div>
   <p style="text-align:center;font-size:0.82rem;color:var(--muted);margin:0;">
@@ -146,14 +146,14 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <h2 id="home-saludo" style="text-align:center;margin-bottom:8px;"></h2>
       <p style="margin-bottom:24px; font-weight: 500;">¿Qué quieres hacer hoy?</p>
 
-      <div id="banner-cupon" style="display:none;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:2px solid #fbbf24;border-radius:14px;margin-bottom:18px;box-shadow:0 4px 12px rgba(245,158,11,0.1);overflow:hidden;">
+      <div id="banner-cupon" style="display:none;background:linear-gradient(135deg,var(--amber-lighter),var(--amber-light));border:2px solid var(--amber);border-radius:14px;margin-bottom:18px;box-shadow:0 4px 12px rgba(245,158,11,0.1);overflow:hidden;">
         <div onclick="toggleBannerCupon()" style="display:flex;align-items:center;gap:12px;padding:16px;cursor:pointer;">
           <span style="font-size:1.6rem;flex-shrink:0;">🎟️</span>
-          <div style="flex:1;font-weight:800;color:#b45309;font-size:0.95rem;">¡Tienes un cupón disponible!</div>
-          <span class="material-symbols-outlined" id="banner-cupon-chevron" style="color:#b45309;font-size:1.2rem;transition:transform 0.3s;">expand_more</span>
+          <div style="flex:1;font-weight:800;color:var(--amber-dark);font-size:0.95rem;">¡Tienes un cupón disponible!</div>
+          <span class="material-symbols-outlined" id="banner-cupon-chevron" style="color:var(--amber-dark);font-size:1.2rem;transition:transform 0.3s;">expand_more</span>
         </div>
         <div id="banner-cupon-body" style="max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1);">
-          <div style="padding:0 16px 16px 16px;font-size:0.8rem;color:#92400e;line-height:1.5;border-top:1px solid rgba(251,191,36,0.4);padding-top:12px;">
+          <div style="padding:0 16px 16px 16px;font-size:0.8rem;color:var(--amber-darker);line-height:1.5;border-top:1px solid rgba(251,191,36,0.4);padding-top:12px;">
             <strong>¡Vale por una clase gratis!</strong> Úsalo en tu próxima reserva individual seleccionando reserva por clase. Tu cupón es personal e intransferible.
           </div>
         </div>
@@ -162,23 +162,23 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div style="display:flex;align-items:flex-start;gap:12px;">
     <span style="font-size:1.4rem;flex-shrink:0;">🔔</span>
     <div style="flex:1;text-align:left;">
-      <div style="font-weight:800;color:#0369a1;font-size:0.92rem;">Recibe avisos al instante</div>
-      <div style="font-size:0.8rem;color:#0284c7;margin-top:3px;line-height:1.4;">Entérate cuando <strong>confirmen tu reserva</strong>, si un <strong>entrenamiento se cancela</strong> o llega tu <strong>comprobante</strong>.</div>
-      <button onclick="activarPush()" style="margin-top:10px;padding:8px 16px;background:#0ea5e9;color:white;border:none;border-radius:8px;font-weight:700;font-size:0.85rem;cursor:pointer;font-family:inherit;">Activar notificaciones</button>
+      <div style="font-weight:800;color:var(--info-dark);font-size:0.92rem;">Recibe avisos al instante</div>
+      <div style="font-size:0.8rem;color:var(--info-dark);margin-top:3px;line-height:1.4;">Entérate cuando <strong>confirmen tu reserva</strong>, si un <strong>entrenamiento se cancela</strong> o llega tu <strong>comprobante</strong>.</div>
+      <button onclick="activarPush()" style="margin-top:10px;padding:8px 16px;background:var(--info);color:white;border:none;border-radius:8px;font-weight:700;font-size:0.85rem;cursor:pointer;font-family:inherit;">Activar notificaciones</button>
     </div>
     <button onclick="document.getElementById('notif-banner').style.display='none';localStorage.setItem('notif_dismiss','1')" style="background:none;border:none;cursor:pointer;color:#7dd3fc;font-size:1.2rem;line-height:1;padding:2px;flex-shrink:0;">✕</button>
   </div>
 </div>
 
 <div style="text-align:left;">
-        <div id="label-mis-reservas" style="font-size:0.72rem;font-weight:700;color:#F97316;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Mis reservas</div>
+        <div id="label-mis-reservas" style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Mis reservas</div>
         <div id="home-reservas-lista"></div>
         <div id="fila-botones-home" style="display:flex;gap:8px;margin-top:10px;margin-bottom:10px;">
           <button id="btn-ver-mas-home" class="btn-home-sub" onclick="verMasHomeReservas()">Ver más ▾</button>
           <button id="btn-historial-home" class="btn-home-sub" onclick="irMisReservas()">📋 Historial</button>
         </div>
         <div style="display:flex;flex-direction:column;gap:14px;margin-top:14px;">
-          <button id="btn-nueva-reserva-home" onclick="irNuevaReserva()" style="width:100%;padding:14px;border:none;border-radius:12px;background:rgba(249,115,22,0.12);color:#f97316 !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">calendar_add_on</span> Nueva reserva</button>
+          <button id="btn-nueva-reserva-home" onclick="irNuevaReserva()" style="width:100%;padding:14px;border:none;border-radius:12px;background:var(--brand-light);color:var(--brand) !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">calendar_add_on</span> Nueva reserva</button>
         </div>
       </div>
   <div style="display:flex;gap:10px;margin-top:20px;">
@@ -306,11 +306,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="opciones" style="margin-bottom: 0;">
           <label class="opcion" id="opcion-tipo-mensual" onclick="selTipoPago('mensual', this)">
             <input type="radio" name="tipo-pago" value="mensual">
-            <div><div style="font-weight:800;">Pago mensual</div><div style="font-size:0.82rem;color:color: var(--muted);margin-top:2px;">No necesitas seleccionar clases</div></div>
+            <div><div style="font-weight:800;">Pago mensual</div><div style="font-size:0.82rem;color: var(--muted);margin-top:2px;">No necesitas seleccionar clases</div></div>
           </label>
           <label class="opcion" id="opcion-tipo-clase" onclick="selTipoPago('clase', this)">
             <input type="radio" name="tipo-pago" value="clase">
-            <div style="flex:1;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-weight:800;">Pago por clase</span><span id="pill-cupon" style="display:none;background:#fef3c7;color:#b45309;border:1px solid #fbbf24;border-radius:99px;font-size:0.72rem;font-weight:800;padding:2px 10px;">🎟️ tienes un cupón</span></div><div style="font-size:0.82rem;color:color: var(--muted);margin-top:2px;">Selecciona las clases que asistirás</div></div>
+            <div style="flex:1;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-weight:800;">Pago por clase</span><span id="pill-cupon" style="display:none;background:var(--amber-light);color:var(--amber-dark);border:1px solid var(--amber);border-radius:99px;font-size:0.72rem;font-weight:800;padding:2px 10px;">🎟️ tienes un cupón</span></div><div style="font-size:0.82rem;color: var(--muted);margin-top:2px;">Selecciona las clases que asistirás</div></div>
           </label>
         </div>
       </div>
@@ -318,23 +318,23 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div id="lista-fechas"></div>
 
       <div id="s4-cupon-wrapper" style="display:none;margin:18px 0;">
-        <label style="display:flex;align-items:center;gap:12px;background:#fffbeb;border:2px solid #fbbf24;border-radius:12px;padding:16px;cursor:pointer;transition:all 0.2s;">
-          <input type="checkbox" id="chk-cupon" style="accent-color:#F97316;width:20px;height:20px;flex-shrink:0;" onchange="toggleCupon(this)">
+        <label style="display:flex;align-items:center;gap:12px;background:var(--amber-lighter);border:2px solid var(--amber);border-radius:12px;padding:16px;cursor:pointer;transition:all 0.2s;">
+          <input type="checkbox" id="chk-cupon" style="accent-color:var(--brand);width:20px;height:20px;flex-shrink:0;" onchange="toggleCupon(this)">
           <div>
-            <div style="font-weight:800;color:#b45309;font-size:0.95rem;">🎟️ Aplicar cupón</div>
-            <div style="font-size:0.8rem;color:#92400e;margin-top:2px;"><strong>Válido para 1 clase gratis.</strong> Personal e intransferible.</div>
+            <div style="font-weight:800;color:var(--amber-dark);font-size:0.95rem;">🎟️ Aplicar cupón</div>
+            <div style="font-size:0.8rem;color:var(--amber-darker);margin-top:2px;"><strong>Válido para 1 clase gratis.</strong> Personal e intransferible.</div>
 </div>
         </label>
       </div>
 
-      <div id="s4-credito-banner" style="display:none;margin:18px 0;background:#fffbeb;border:2px solid #fbbf24;border-radius:12px;padding:14px 16px;font-size:0.88rem;color:#92400e;line-height:1.5;"></div>
+      <div id="s4-credito-banner" style="display:none;margin:18px 0;background:var(--amber-lighter);border:2px solid var(--amber);border-radius:12px;padding:14px 16px;font-size:0.88rem;color:var(--amber-darker);line-height:1.5;"></div>
 
 <div id="s4-meses-wrapper" style="display:none;margin-top:16px;margin-bottom:24px;">
 
         <div id="meses-pasados-wrapper" style="margin-bottom:8px;">
           <button onclick="toggleMesesPasados()" id="btn-meses-pasados"
             style="width:100%;text-align:left;padding:12px 16px;background:#f5f5f5;border:2px solid #e5e5e5;border-radius:10px;font-size:0.9rem;font-weight:700;color:#666;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px;">
-            <span id="chevron-meses" class="material-symbols-outlined" style="font-size:1.1rem;transition:transform 0.3s;color:color: var(--muted);">chevron_right</span>
+            <span id="chevron-meses" class="material-symbols-outlined" style="font-size:1.1rem;transition:transform 0.3s;color: var(--muted);">chevron_right</span>
             <span>Meses pasados</span>
           </button>
           <div id="lista-meses-pasados" style="display:none;margin-top:10px;" class="meses-grid"></div>
@@ -343,7 +343,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div id="meses-actuales-wrapper" style="margin-bottom:8px;">
           <button onclick="toggleMesesActuales()" id="btn-meses-actuales"
             style="width:100%;text-align:left;padding:12px 16px;background:#f5f5f5;border:2px solid #e5e5e5;border-radius:10px;font-size:0.9rem;font-weight:700;color:#555;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:8px;">
-            <span id="chevron-meses-actuales" class="material-symbols-outlined" style="font-size:1.1rem;transition:transform 0.3s;color:#F97316;transform:rotate(90deg);">chevron_right</span>
+            <span id="chevron-meses-actuales" class="material-symbols-outlined" style="font-size:1.1rem;transition:transform 0.3s;color:var(--brand);transform:rotate(90deg);">chevron_right</span>
             <span>Meses actuales y futuros</span>
           </button>
           <div id="lista-meses-container" style="margin-top:10px;">
@@ -373,7 +373,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <p style="font-weight: 500;">Transfiere el monto indicado usando uno de estos métodos antes de continuar.</p>
 
       <div class="pago-metodo" style="padding:0;overflow:hidden;">
-        <div class="pago-header" onclick="togglePagoMetodo(this)" style="cursor:pointer;padding:16px;justify-content:space-between;"><div style="display:flex;align-items:center;gap:10px;"><span class="pago-icon">📱</span>DeUna · Banco Pichincha</div><span class="material-symbols-outlined" style="font-size:1.1rem;color:color: var(--muted);transition:transform 0.3s;">expand_more</span></div>
+        <div class="pago-header" onclick="togglePagoMetodo(this)" style="cursor:pointer;padding:16px;justify-content:space-between;"><div style="display:flex;align-items:center;gap:10px;"><span class="pago-icon">📱</span>DeUna · Banco Pichincha</div><span class="material-symbols-outlined" style="font-size:1.1rem;color: var(--muted);transition:transform 0.3s;">expand_more</span></div>
         <div class="pago-metodo-body" style="max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1);padding:0 16px;">
           <div class="pago-fila"><span class="pago-label">Cuenta de ahorro</span><span class="pago-valor">7702756890</span></div>
           <div class="pago-fila"><span class="pago-label">Titular</span><span class="pago-valor">David Santiago Rojas Baez</span></div>
@@ -381,7 +381,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
       </div>
       <div class="pago-metodo" style="padding:0;overflow:hidden;">
-        <div class="pago-header" onclick="togglePagoMetodo(this)" style="cursor:pointer;padding:16px;justify-content:space-between;"><div style="display:flex;align-items:center;gap:10px;"><span class="pago-icon">🏦</span>Banco Internacional</div><span class="material-symbols-outlined" style="font-size:1.1rem;color:color: var(--muted);transition:transform 0.3s;">expand_more</span></div>
+        <div class="pago-header" onclick="togglePagoMetodo(this)" style="cursor:pointer;padding:16px;justify-content:space-between;"><div style="display:flex;align-items:center;gap:10px;"><span class="pago-icon">🏦</span>Banco Internacional</div><span class="material-symbols-outlined" style="font-size:1.1rem;color: var(--muted);transition:transform 0.3s;">expand_more</span></div>
         <div class="pago-metodo-body" style="max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1);padding:0 16px;">
           <div class="pago-fila"><span class="pago-label">Tipo</span><span class="pago-valor">Cuenta de ahorros</span></div>
           <div class="pago-fila"><span class="pago-label">N° de cuenta</span><span class="pago-valor">398027628</span></div>
@@ -454,7 +454,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="card">
       <div class="seccion-label">Mis datos</div>
       <h2>Editar mis datos</h2>
-      <p style="font-size:0.88rem;color:color: var(--muted);margin-bottom:20px; line-height: 1.5;">
+      <p style="font-size:0.88rem;color: var(--muted);margin-bottom:20px; line-height: 1.5;">
         Los cambios se guardan sección por sección. <strong>Si necesitas modificar tu nombre o PIN, contacta a unx administradorx.</strong>
       </p>
 
@@ -792,7 +792,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
       <div class="home-boton principal" onclick="adminIrReservas()">
         <div class="hb-icon">✅</div>
-        <div class="hb-titulo" style="color:#F97316;">Revisar reservas</div>
+        <div class="hb-titulo" style="color:var(--brand);">Revisar reservas</div>
         <div class="hb-sub">Aprueba, revisa o cancela reservas y pagos</div>
       </div>
       <div class="home-boton" onclick="adminIrQueLlevar()">
@@ -991,7 +991,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
 
       <div class="error-msg" id="err-modal-permisos"></div>
-      <button onclick="guardarPermisos()" style="width:100%;padding:15px;background:#F97316;color:white;border:none;border-radius:12px;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px;" id="btn-guardar-permisos">Guardar y continuar</button>
+      <button onclick="guardarPermisos()" style="width:100%;padding:15px;background:var(--brand);color:white;border:none;border-radius:12px;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px;" id="btn-guardar-permisos">Guardar y continuar</button>
       <button onclick="saltarPermisos()" style="width:100%;padding:13px;background:transparent;color:#aaa;border:2px solid #e5e5e5;border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Ahora no (se preguntará de nuevo)</button>
     </div>
   </div>
@@ -1001,17 +1001,17 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div id="modal-nav-icon" style="font-size:2.8rem;margin-bottom:12px;"></div>
     <div id="modal-nav-titulo" style="font-weight:800;font-size:1.05rem;margin-bottom:10px;color:#1a1a1a;"></div>
     <div id="modal-nav-texto" style="font-size:0.88rem;color:#555;line-height:1.8;margin-bottom:16px;text-align:left;"></div>
-    <div style="background:#fff8f4;border:2px solid #fde8d4;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:0.85rem;font-weight:700;color:#F97316;word-break:break-all;text-align:center;">reservas.quindesvolcanicos.com</div>
-    <button onclick="cerrarModalNavegador()" style="width:100%;padding:14px;background:#F97316;color:white;border:none;border-radius:12px;font-weight:800;cursor:pointer;font-family:inherit;font-size:0.95rem;">Entendido</button>
+    <div style="background:#fff8f4;border:2px solid #fde8d4;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:0.85rem;font-weight:700;color:var(--brand);word-break:break-all;text-align:center;">reservas.quindesvolcanicos.com</div>
+    <button onclick="cerrarModalNavegador()" style="width:100%;padding:14px;background:var(--brand);color:white;border:none;border-radius:12px;font-weight:800;cursor:pointer;font-family:inherit;font-size:0.95rem;">Entendido</button>
   </div>
 </div>
 
   <div id="modal-contacto" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.65);align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarContacto()">
   <div style="background:white;border-radius:20px;padding:28px 20px;width:85%;max-width:320px;text-align:center;">
-    <div class="modal-ct" style="font-weight:800;font-size:0.95rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:20px;color:#1a1a1a;">Contáctanos</div>
+    <div class="modal-ct" style="font-weight:800;font-size:0.95rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:20px;">Contáctanos</div>
     <a href="https://wa.me/593998690423" target="_blank" style="display:flex;align-items:center;gap:12px;background:#f5f5f5;border-radius:12px;padding:14px 16px;margin-bottom:10px;text-decoration:none;color:#1a1a1a;font-weight:700;font-size:0.95rem;"><span class="material-symbols-outlined" style="color:#25D366;">forum</span> WhatsApp</a>
     <a href="https://www.instagram.com/quindesvolcanicosrd/" target="_blank" style="display:flex;align-items:center;gap:12px;background:#f5f5f5;border-radius:12px;padding:14px 16px;margin-bottom:10px;text-decoration:none;color:#1a1a1a;font-weight:700;font-size:0.95rem;"><span class="material-symbols-outlined" style="color:#E1306C;">favorite</span> Instagram</a>
-    <a href="mailto:quindesvolcanicosrd@gmail.com" style="display:flex;align-items:center;gap:12px;background:#f5f5f5;border-radius:12px;padding:14px 16px;margin-bottom:16px;text-decoration:none;color:#1a1a1a;font-weight:700;font-size:0.95rem;"><span class="material-symbols-outlined" style="color:#F97316;">mail</span> Mail</a>
+    <a href="mailto:quindesvolcanicosrd@gmail.com" style="display:flex;align-items:center;gap:12px;background:#f5f5f5;border-radius:12px;padding:14px 16px;margin-bottom:16px;text-decoration:none;color:#1a1a1a;font-weight:700;font-size:0.95rem;"><span class="material-symbols-outlined" style="color:var(--brand);">mail</span> Mail</a>
     <button onclick="cerrarContacto()" style="width:100%;padding:12px;background:#f0f0f0;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;color:#555;">Cerrar</button>
   </div>
 </div>
@@ -1047,7 +1047,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 </div>
 
-<div id="pwa-banner" style="display:none;position:fixed;bottom:16px;left:16px;right:16px;max-width:448px;margin:0 auto;background:white;border:2px solid #F97316;border-radius:16px;padding:18px;z-index:9000;box-shadow:0 10px 30px rgba(0,0,0,0.25);animation:smoothSlideUp 0.5s cubic-bezier(0.16,1,0.3,1);">
+<div id="pwa-banner" style="display:none;position:fixed;bottom:16px;left:16px;right:16px;max-width:448px;margin:0 auto;background:white;border:2px solid var(--brand);border-radius:16px;padding:18px;z-index:9000;box-shadow:0 10px 30px rgba(0,0,0,0.25);animation:smoothSlideUp 0.5s cubic-bezier(0.16,1,0.3,1);">
   <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">
     <span style="font-size:1.8rem;flex-shrink:0;">🛼</span>
     <div>
@@ -1074,7 +1074,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
     <div class="error-msg" id="err-mec" style="margin-bottom:12px;"></div>
     <button id="mec-btn-confirmar" onclick="mecConfirmar()" disabled style="width:100%;padding:14px;background:#dc2626;color:white;border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;opacity:0.4;transition:opacity 0.2s;">Eliminar mi cuenta</button>
-    <button onclick="mecCerrar()" style="width:100%;padding:13px;background:transparent;color:color: var(--muted);border:2px solid #e5e5e5;border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
+    <button onclick="mecCerrar()" style="width:100%;padding:13px;background:transparent;color: var(--muted);border:2px solid #e5e5e5;border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
 </div>
 
   <div id="modal-wp-comprobante" style="display:none;position:fixed;inset:0;z-index:9900;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;padding:16px;">
@@ -1082,7 +1082,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div style="font-size:2.4rem;margin-bottom:12px;">📲</div>
       <div style="font-weight:800;font-size:1.05rem;color:#1a1a1a;margin-bottom:8px;">Enviá tu comprobante</div>
       <p style="font-size:0.85rem;color:#666;margin-bottom:20px;line-height:1.5;">Para confirmar tu reserva más rápido, enviá el comprobante de pago por WhatsApp ahora.</p>
-      <a id="modal-wp-btn" href="#" target="_blank" onclick="modalWpEnviado()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:15px;background:#16a34a;color:white;border-radius:12px;font-weight:800;font-size:0.95rem;text-decoration:none;margin-bottom:10px;">
+      <a id="modal-wp-btn" href="#" target="_blank" onclick="modalWpEnviado()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:15px;background:var(--success-dark);color:white;border-radius:12px;font-weight:800;font-size:0.95rem;text-decoration:none;margin-bottom:10px;">
         <span style="font-size:1.2rem;">📲</span> Enviar comprobante
       </a>
       <button onclick="modalWpSaltear()" style="width:100%;padding:13px;background:transparent;color:#aaa;border:none;border-radius:12px;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;">Lo haré después</button>
