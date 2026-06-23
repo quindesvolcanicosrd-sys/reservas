@@ -48,6 +48,14 @@ var PAISES = [
   { nombre:'China',flag:'🇨🇳',code:'86',min:11,max:11 }
 ];
 var _paisSel = PAISES[0];
+var _wpUnido = false;
+function wpGrupoUnido() {
+  _wpUnido = true;
+  var btn = document.getElementById('btn-wp-grupo-form');
+  if (btn) { btn.style.background = 'rgba(37,211,102,0.25)'; btn.style.fontWeight = '900'; }
+  var enviar = document.getElementById('btn-enviar');
+  if (enviar) { enviar.style.opacity = '1'; enviar.style.pointerEvents = ''; }
+}
 
 function poblarPaises() {
   var dl = document.getElementById('paises-list');
@@ -279,8 +287,8 @@ function cargarTallas() {
 }
 
 function enviarForm() {
-  if (!G.idToken) { errMsg('err-form','Primero conecta tu cuenta de Google.'); return; }
-
+if (!G.idToken) { errMsg('err-form','Primero conecta tu cuenta de Google.'); return; }
+  if (!_wpUnido) { errMsg('err-form','Por favor únete al grupo de WhatsApp presionando el botón de arriba.'); return; }
   var nombre = document.getElementById('f-nombre').value.trim();
   if (!nombre || nombre.length < 2) { errMsg('err-form','El nombre debe tener al menos 2 caracteres.'); document.getElementById('f-nombre').scrollIntoView({behavior:'smooth',block:'center'}); return; }
   if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]+$/.test(nombre)) { errMsg('err-form','El nombre solo puede contener letras y espacios.'); return; }

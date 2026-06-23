@@ -297,7 +297,7 @@ window.onload = function() {
       E.datos.necesitaProtecciones = _protecNuevx === 'si' ? 'Sí' : 'No';
       if (_tallaNuevx) E.datos.talla = _tallaNuevx;
       history.replaceState({}, '', location.pathname);
-      setTimeout(function() { cargarFechas(); }, 300);
+      setTimeout(function() { irNuevaReserva(_patinesNuevx === 'si'); }, 300);
     }
   }
   requestAnimationFrame(function() { requestAnimationFrame(iniciarGoogleSignInUsuario); });

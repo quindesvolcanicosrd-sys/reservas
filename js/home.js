@@ -32,11 +32,11 @@ function prepararHome() {
   if (rowInstalar) rowInstalar.style.display = esStandalone() ? 'none' : '';
 }
 
-function irNuevaReserva() {
+function irNuevaReserva(skipEquip) {
   E.conf = ''; E.fechas = []; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = ''; E.cuponAplicado = false; E.creditosUsados = 0; E.reagendando = false;
   var chkC = document.getElementById('chk-cupon'); if (chkC) chkC.checked = false;
   document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
-  if (canPayMonthly()) { cargarFechas(); } else { renderEquip(); ir('s2'); }
+  if (skipEquip || canPayMonthly()) { cargarFechas(); } else { renderEquip(); ir('s2'); }
 }
 
 function irMisReservas() {
