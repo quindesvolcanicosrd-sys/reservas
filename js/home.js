@@ -16,7 +16,15 @@ function prepararHome() {
   }
   renderHomeReservas();
   var bannerCupon = document.getElementById('banner-cupon');
-  if (bannerCupon) bannerCupon.style.display = tieneCuponDisponible() ? 'block' : 'none';
+  if (bannerCupon) {
+    api({ action: 'getCuponDisponible', nombre: E.nombre }, function(res) {
+      if (E.datos) E.datos.cuponDisponible = res.cuponDisponible === true;
+      if (res.cuponDisponible) localStorage.removeItem('cupon_' + E.nombre);
+      bannerCupon.style.display = tieneCuponDisponible() ? 'block' : 'none';
+    }, function() {
+      bannerCupon.style.display = tieneCuponDisponible() ? 'block' : 'none';
+    });
+  }
   var notifBanner = document.getElementById('notif-banner');
   if (notifBanner) {
     var yaDescarto = localStorage.getItem('notif_dismiss') === '1';

@@ -245,7 +245,7 @@ reservas/
 | Función / variable | Descripción |
 |---|---|
 | `_todasReservas` | Array con todas las reservas del usuario (cargadas al login) |
-| `prepararHome()` | Inicializa la pantalla home: saludo, foto, banner cupón/notif, render reservas |
+| `prepararHome()` | Inicializa la pantalla home: saludo, foto, banner cupón/notif, render reservas. Refresca `cuponDisponible` desde el backend (`getCuponDisponible`) en cada visita a la home |
 | `irNuevaReserva(skipEquip)` | Navega al flujo de reserva; `skipEquip=true` salta s2-s3 e va directo a `cargarFechas()` (usado post-inscripción vía parámetro `?nuevx=1`) |
 | `irMisReservas()` | Navega al historial completo (ir s-misreservas) |
 | `verTodasReservas()` | Alias de irMisReservas() |
@@ -263,6 +263,8 @@ reservas/
 | `_renderCardHistorial(r)` | Genera HTML de una tarjeta de reserva para historial |
 | `toggleGrupoHistorial(id, header)` | Colapsa/expande un grupo de historial |
 | `cancelarRes(fecha)` | Solicita confirmación y llama API para cancelar una reserva |
+
+> **Acciones de backend utilizadas:** `getCuponDisponible` (llamada en `prepararHome()` para refrescar el estado del cupón en cada visita a la home)
 
 ### js/reservas.js
 | Función / variable | Descripción |
