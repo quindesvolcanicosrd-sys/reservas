@@ -70,6 +70,9 @@ button, input, select, textarea { font-family: inherit; }
   font-size: 0.82rem; color: var(--muted); line-height: 1.5;
   padding: 0 8px 20px;
 }
+@media (max-width: 600px) {
+  .header-logo { display: none; }
+}
 
 /* ─── PROGRESS BAR ───────────────────────────────────────────────────── */
 .progress-wrap {
