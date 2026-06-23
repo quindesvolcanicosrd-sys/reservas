@@ -332,7 +332,7 @@ function enviarForm() {
 
   function _doEnviar(pinHash) {
     mostrarCargando('Creando tu cuenta...');
-    apiPost({
+    apiGet({
       action:'inscribirPersona', nombre:nombre, email:G.email, idToken:G.idToken,
       pronombres:prons.join(', '), prefijo:document.getElementById('f-prefijo-val').value,
       telefono:tel, necesitaPatines:patines, talla:talla, necesitaProtecciones:protec,
