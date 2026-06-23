@@ -53,6 +53,9 @@ button, input, select, textarea { font-family: inherit; }
 
 .header {
   text-align: center; padding: 28px 16px 0;
+  position: sticky; top: 0; z-index: 100;
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
 }
 .header-logo {
   width: 82px; height: 82px; border-radius: 50%; object-fit: cover;
