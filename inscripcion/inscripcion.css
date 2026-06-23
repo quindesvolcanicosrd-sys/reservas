@@ -2,15 +2,15 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 :root {
-  --green:     #22c55e;
-  --green-bg:  #f0fdf4;
-  --green-bdr: #bbf7d0;
+  --green:     var(--success);
+  --green-bg:  var(--success-bg);
+  --green-bdr: var(--success-bdr);
   --purple:    #7c3aed;
   --purple-bg: #ede9fe;
-  --dp-chip: rgba(249,115,22,0.08);
+  --dp-chip: var(--border-2);
   --dp-text2: var(--muted);
   --dp-text3: var(--hint);
-  --dp-text4: rgba(127,127,127,0.3);
+  --dp-text4: var(--hint);
 }
 
 body {
@@ -57,7 +57,7 @@ button, input, select, textarea { font-family: inherit; }
 .header-logo {
   width: 82px; height: 82px; border-radius: 50%; object-fit: cover;
   object-position: center top; margin: 0 auto 14px; display: block;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+  filter: drop-shadow(0 4px 12px var(--brand-glow));
 }
 .header-title {
   font-size: 0.72rem; font-weight: 700; color: var(--brand);
@@ -97,7 +97,7 @@ button, input, select, textarea { font-family: inherit; }
   background: var(--surface);
   border-radius: var(--radius);
   padding: 28px 24px;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: 1px solid var(--border-2);
 }
 
 @media (max-width: 600px) {
@@ -116,8 +116,8 @@ button, input, select, textarea { font-family: inherit; }
   display: flex; justify-content: center; margin: 20px 0;
 }
 .gsignin-info {
-  background: #f0f9ff; border: 1px solid #bae6fd; border-radius: var(--radius-sm);
-  padding: 12px 14px; font-size: 0.82rem; color: #0369a1;
+  background: var(--info-bg); border: 1px solid var(--info-bdr); border-radius: var(--radius-sm);
+  padding: 12px 14px; font-size: 0.82rem; color: var(--info);
   margin-bottom: 16px; line-height: 1.5;
 }
 @media (prefers-color-scheme: dark) {
@@ -298,16 +298,16 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ─── MENSAJES ────────────────────────────────────────────────────────── */
 .error-msg {
-  background: #fef2f2; color: #dc2626;
-  border: 1px solid #fecaca; border-radius: var(--radius-sm);
+  background: var(--danger-bg); color: var(--danger);
+  border: 1px solid var(--danger-bdr); border-radius: var(--radius-sm);
   padding: 12px 16px; font-size: 0.88rem; font-weight: 500;
   display: none; margin-bottom: 14px; margin-top: 14px;
   animation: fadeIn 0.35s ease;
 }
 .aviso {
-  background: #f0f9ff; border: 1px solid #bae6fd;
+  background: var(--info-bg); border: 1px solid var(--info-bdr);
   border-radius: var(--radius-sm); padding: 12px 14px;
-  font-size: 0.82rem; color: #0369a1; margin-bottom: 14px;
+  font-size: 0.82rem; color: var(--info); margin-bottom: 14px;
   line-height: 1.5;
 }
 @keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
@@ -357,16 +357,16 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ─── DARK MODE FIXES ─────────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
-  input, select, textarea { background: #252525; border-color: #252525; color: #f0f0f0; }
-  input:focus, select:focus, textarea:focus { background: #2c1c11; }
-  .opcion, .chk-opcion { background: #252525; border-color: #252525; color: #f0f0f0; }
-  .opcion:hover, .chk-opcion:hover { background: #2c1c11; }
-  .opcion.sel { background: #2a1a0e; border-color: var(--brand); }
-  .perm-box { background: #1c1c1c4f; }
-  .sub-permisos { background: rgba(249,115,22,0.05); }
-  .prefijo-flag { background: #252525; border-color: #252525; }
-  .btn-secondary { background: rgba(249,115,22,0.1); }
-  ::placeholder { color: #555 !important; }
+  input, select, textarea { background: var(--surface); border-color: var(--border); color: var(--text); }
+  input:focus, select:focus, textarea:focus { background: var(--bg-2); }
+  .opcion, .chk-opcion { background: var(--surface); border-color: var(--border); color: var(--text); }
+  .opcion:hover, .chk-opcion:hover { background: var(--bg-2); }
+  .opcion.sel { background: var(--brand-lighter); border-color: var(--brand); }
+  .perm-box { background: var(--surface-3); }
+  .sub-permisos { background: var(--surface-2); }
+  .prefijo-flag { background: var(--surface); border-color: var(--border); }
+  .btn-secondary { background: var(--btn-secondary-bg); }
+  ::placeholder { color: var(--hint) !important; }
 }
 
 /* ─── FORM LOCK STATE ────────────────────────────────────────────────── */
@@ -423,7 +423,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
   border-radius: var(--radius-sm); font-weight: 700; cursor: pointer;
   font-family: inherit; color: var(--muted); transition: background 0.2s;
 }
-.modal-ct-close:hover { background: #d4d4d4; }
+.modal-ct-close:hover { background: var(--bg-2); }
 
 /* ─── FNAC TRIGGER ──────────────────────────────────────────────────── */
 .fnac-trigger-btn {

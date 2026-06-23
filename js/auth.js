@@ -12,7 +12,8 @@ function iniciarGoogleSignInUsuario() {
   _gisUsuarioInicializado = true;
   var cont = document.getElementById('g-signin-btn-usuario');
   if (!cont) return;
-  var ancho = Math.min(400, window.innerWidth - 48);
+  var wrapper = document.getElementById('google-btn-wrapper');
+  var ancho = Math.min(400, wrapper ? wrapper.offsetWidth : window.innerWidth - 48);
   google.accounts.id.renderButton(cont, {
     theme: 'filled_blue', size: 'large', text: 'continue_with', locale: 'es', width: ancho
   });
