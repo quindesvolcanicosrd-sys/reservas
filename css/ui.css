@@ -133,7 +133,7 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
   background: color-mix(in srgb, var(--bg) 85%, transparent);
   backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
   display: none; align-items: center; gap: 12px;
-  padding: 10px 16px; margin: -16px -16px 16px -16px;
+  padding: 10px 16px; margin: -17px -16px 16px -16px;
   transition: all 0.3s ease;
 }
 .top-bar.visible { display: flex; animation: smoothSlideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
