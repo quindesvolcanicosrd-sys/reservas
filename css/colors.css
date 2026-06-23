@@ -144,6 +144,22 @@
 
   /* Divisores */
   --gray-divider:        rgba(128,128,128,0.12);
+
+  /* Dark mode tokens */
+  --dk-skeleton-base:    #2c1c11;
+  --dk-skeleton-shine:   #383838;
+  --dk-info-bg:          #0a1929;
+  --dk-info-border:      #1d4ed8;
+  --dk-info-text:        #93c5fd;
+  --dk-error-bg:         #2d1515;
+  --dk-error-border:     #7f1d1d;
+  --dk-error-text:       #fca5a5;
+  --dk-modal-overlay:    #1c1c1c4f;
+  --dk-modal-item-bg:    #252525;
+  --dk-modal-text:       #f0f0f0;
+  --dk-modal-btn-bg:     #2c1c11;
+  --dk-modal-btn-text:   #ccc;
+  --dk-datepicker-bg:    #22140ae5;
 }
 
 /* ── DARK MODE ───────────────────────────────────────────── */

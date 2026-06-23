@@ -42,7 +42,7 @@ button, input, select, textarea { font-family: inherit; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes skeletonShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 @media (prefers-color-scheme: dark) {
-  #gsignin-skeleton, #gsignin-skeleton-main { background: linear-gradient(90deg,#2c1c11 25%,#383838 50%,#2c1c11 75%) !important; background-size: 200% 100% !important; }
+  #gsignin-skeleton, #gsignin-skeleton-main { background: linear-gradient(90deg,var(--dk-skeleton-base) 25%,var(--dk-skeleton-shine) 50%,var(--dk-skeleton-base) 75%) !important; background-size: 200% 100% !important; }
 }
 .loading-txt { color: var(--muted); font-size: 0.9rem; font-weight: 600; }
 
@@ -127,7 +127,7 @@ button, input, select, textarea { font-family: inherit; }
   margin-bottom: 16px; line-height: 1.5;
 }
 @media (prefers-color-scheme: dark) {
-  .gsignin-info { background: #0a1929; border-color: #1d4ed8; color: #93c5fd; }
+  .gsignin-info { background: var(--dk-info-bg); border-color: var(--dk-info-border); color: var(--dk-info-text); }
 }
 
 /* ─── PERMISOS GOOGLE ────────────────────────────────────────────────── */
@@ -319,8 +319,8 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 @keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
 
 @media (prefers-color-scheme: dark) {
-  .error-msg { background: #2d1515; border-color: #7f1d1d; color: #fca5a5; }
-  .aviso { background: #0a1929; border-color: #1d4ed8; color: #93c5fd; }
+  .error-msg { background: var(--dk-error-bg); border-color: var(--dk-error-border); color: var(--dk-error-text); }
+  .aviso { background: var(--dk-info-bg); border-color: var(--dk-info-border); color: var(--dk-info-text); }
 }
 
 /* ─── ÉXITO ───────────────────────────────────────────────────────────── */
@@ -408,9 +408,9 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
   padding: 28px 20px; width: 85%; max-width: 320px; text-align: center;
 }
 @media (prefers-color-scheme: dark) {
-  #modal-ct-inner { background: #1c1c1c4f; }
-  #modal-ct-inner a { background: #252525 !important; color: #f0f0f0 !important; }
-  #modal-ct-inner button { background: #2c1c11 !important; color: #ccc !important; }
+  #modal-ct-inner { background: var(--dk-modal-overlay); }
+  #modal-ct-inner a { background: var(--dk-modal-item-bg) !important; color: var(--dk-modal-text) !important; }
+  #modal-ct-inner button { background: var(--dk-modal-btn-bg) !important; color: var(--dk-modal-btn-text) !important; }
 }
 .modal-ct-title {
   font-weight: 800; font-size: 0.88rem; text-transform: uppercase;
@@ -505,9 +505,9 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 #dp-days { display:contents; animation:dpFadeIn 0.18s ease; }
 #dp-year-grid, #dp-month-grid { animation:dpFadeIn 0.18s ease; }
 @media (prefers-color-scheme: dark) {
-  .dp-card { background:#22140ae5; }  
-  .dp-day { color:#f0f0f0; }
-  .dp-nav-label { color:#f0f0f0; }
-  .dp-year-btn { color:#f0f0f0; }
-  .dp-month-btn { color:#f0f0f0 !important; }
+  .dp-card { background:var(--dk-datepicker-bg); }
+  .dp-day { color:var(--dk-modal-text); }
+  .dp-nav-label { color:var(--dk-modal-text); }
+  .dp-year-btn { color:var(--dk-modal-text); }
+  .dp-month-btn { color:var(--dk-modal-text) !important; }
 }
