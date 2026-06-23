@@ -82,7 +82,7 @@ reservas/
 | `.privacy-row` | Fila de toggle de privacidad |
 | `.btn-guardar-sec` | Botón guardar sección en datos |
 | `.datos-hint` | Texto de ayuda gris bajo un campo |
-| `.top-bar / .top-bar-back / .top-bar-titulo` | Barra de navegación superior con botón atrás |
+| `.top-bar / .top-bar-back / .top-bar-titulo` | Barra de navegación superior sticky (position:sticky, top:0, z-index:100) con botón atrás |
 | `.paso-indicator / .paso-dot` | Indicador de pasos (4 dots) del flujo de reserva |
 | `.loader` | Contenedor centrado spinner + texto |
 | `.textarea-otro` | Textarea para opciones "Otro" |
@@ -181,7 +181,7 @@ reservas/
 |---|---|
 | `#loading-overlay / .loading-inner / .loading-logo / .loading-txt` | Overlay de carga con opacidad (no clase-toggle) |
 | `.page-wrap` | Wrapper centrado max-width 480px |
-| `.header / .header-logo / .header-title / .header-sub` | Encabezado con logo |
+| `.header / .header-logo / .header-title / .header-sub` | Encabezado sticky (position:sticky, top:0, z-index:100), layout flex con gap:12px, padding compacto 12px 16px |
 | `.progress-wrap / .prog-dot / .prog-dot.done / .prog-dot.active` | Barra de progreso de pasos |
 | `.pantalla / .pantalla.activa` | Control de pantallas (local, no compartido) |
 | `.card / .sec-label` | Card y etiqueta de sección |
