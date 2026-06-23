@@ -121,7 +121,7 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
 .btn-guardar-sec:hover:not(:disabled) { background: #ea6407; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(249,115,22,0.3); }
 .btn-guardar-sec.exito { background: #16a34a; box-shadow: 0 4px 12px rgba(22,163,74,0.3); animation: popBounce 0.4s; }
 
-.loader { text-align: center; padding: 40px 20px; color: #888; }
+.loader { text-align: center; padding: 40px 20px; color: color: var(--muted);; }
 
 .paso-indicator { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 16px 0; }
 .paso-dot { width: 10px; height: 10px; border-radius: 50%; background: #f973164d; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
