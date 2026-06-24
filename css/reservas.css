@@ -4,7 +4,7 @@
   cursor: pointer; transition: all 0.3s ease; background: var(--surface-2);
 }
 .fecha-item:hover:not(.agotada) { border-color: var(--brand-secondary); transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.05); }
-.fecha-item.sel { border-color: var(--brand); background: #fff8f4; }
+.fecha-item.sel { border-color: var(--brand); background: var(--brand-warm); }
 .fecha-item.agotada { opacity: 0.5; cursor: not-allowed; background: var(--disabled-bg); border-color: var(--disabled-border); }
 .fecha-item input[type="checkbox"] { accent-color: var(--brand); width: 18px; height: 18px; flex-shrink: 0; transition: transform 0.2s; }
 .fecha-item.sel input[type="checkbox"] { transform: scale(1.15); }

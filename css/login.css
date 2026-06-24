@@ -8,11 +8,11 @@
   display: block; opacity: 0.95; border-radius: 50%;
   filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
 }
-.header p { color: #aaa; font-size: 0.82rem; padding: 10px 20px 14px; margin: 0; letter-spacing: 0.5px; }
+.header p { color: var(--text-faint); font-size: 0.82rem; padding: 10px 20px 14px; margin: 0; letter-spacing: 0.5px; }
 
 .loading-card { padding: 32px 48px; text-align: center; min-height: 130px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .loading-card .spinner { margin: 0 auto 16px; flex-shrink: 0; }
-.loading-card p { color: #555; font-size: 0.88rem; font-weight: 600; margin: 0; min-height: 24px; transition: opacity 0.3s ease; }
+.loading-card p { color: var(--neutral-light); font-size: 0.88rem; font-weight: 600; margin: 0; min-height: 24px; transition: opacity 0.3s ease; }
 .loading-logo { display: none; }
 
 @media (max-width: 600px) {
@@ -36,18 +36,18 @@
 
 .btn-forgot-pin {
   width: 100%; padding: 14px; border: none; border-radius: 12px;
-  background: #e0f2fe; color: #0369a1; font-weight: 800;
+  background: var(--info-btn-bg); color: var(--info-dark); font-weight: 800;
   cursor: pointer; transition: all 0.3s; margin-bottom: 16px; font-size: 0.88rem;
 }
-.btn-forgot-pin:hover { background: #bae6fd; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(3,105,161,0.1); }
+.btn-forgot-pin:hover { background: var(--info-btn-hover); transform: translateY(-2px); box-shadow: 0 4px 12px var(--info-shadow); }
 
 .btn-pin-key {
-  padding: 18px 8px; background: white; border: 0px solid #e5e5e5;
+  padding: 18px 8px; background: var(--white); border: 0px solid #e5e5e5;
   border-radius: 14px; font-size: 1.4rem; font-weight: 700; cursor: pointer;
-  transition: all 0.15s ease; font-family: inherit; color: #1a1a1a;
+  transition: all 0.15s ease; font-family: inherit; color: var(--neutral-dark);
 }
-.btn-pin-key:hover { background: #fff8f4; border-color: #fb923c; }
-.btn-pin-key:active { background: #fff8f4; border-color: #F97316; transform: scale(0.93); }
+.btn-pin-key:hover { background: var(--brand-warm); border-color: var(--brand-secondary); }
+.btn-pin-key:active { background: var(--brand-warm); border-color: var(--brand); transform: scale(0.93); }
 
 #input-pin { line-height: 1; }
 @media (prefers-color-scheme: light) {

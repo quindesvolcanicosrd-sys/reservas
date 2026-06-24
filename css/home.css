@@ -5,7 +5,7 @@
 }
 .home-boton:hover { transform: translateY(-4px); box-shadow: 0 10px 24px var(--black-sm); border-color: var(--border-mid); }
 .home-boton.principal { border-color: var(--brand); background: var(--brand-lighter); }
-.home-boton.principal:hover { background: #fff4ec; border-color: var(--brand-dk); transform: translateY(-4px); }
+.home-boton.principal:hover { background: var(--brand-warm-3); border-color: var(--brand-dk); transform: translateY(-4px); }
 .home-boton .hb-icon { font-size: 2.2rem; margin-bottom: 10px; transition: transform 0.3s; }
 .home-boton:hover .hb-icon { transform: scale(1.1); }
 .home-boton .hb-titulo { font-weight: 800; font-size: 1.05rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }

@@ -52,9 +52,9 @@ button, input, select, textarea { font-family: inherit; }
 
 .toggle-switch { position: relative; display: inline-block; width: 48px; height: 26px; flex-shrink: 0; }
 .toggle-switch input { opacity: 0; width: 0; height: 0; }
-.toggle-slider { position: absolute; cursor: pointer; inset: 0; background: rgba(249,115,22,0.2); border-radius: 26px; transition: 0.3s; }
-.toggle-slider:before { content: ''; position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
-.toggle-switch input:checked + .toggle-slider { background: rgb(249, 115, 22); }
+.toggle-slider { position: absolute; cursor: pointer; inset: 0; background: var(--brand-20); border-radius: 26px; transition: 0.3s; }
+.toggle-slider:before { content: ''; position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px; background: var(--white); border-radius: 50%; transition: 0.3s; }
+.toggle-switch input:checked + .toggle-slider { background: var(--brand); }
 .toggle-switch input:checked + .toggle-slider:before { transform: translateX(22px); }
 
 .fnac-trigger-btn {
@@ -84,8 +84,8 @@ select, option, optgroup { font-family: 'Montserrat', sans-serif !important; }
   width: 100%; padding: 16px; border-radius: 12px; border: none;
   font-size: 0.88rem; font-weight: 800; cursor: pointer;
   text-decoration: none; transition: all 0.3s ease; letter-spacing: 0.3px;
-  margin-top: 16px; background: rgba(37,211,102,0.1); color: var(--success);
+  margin-top: 16px; background: var(--wa-bg); color: var(--success);
 }
-.btn-wp-grupo:hover { background: rgba(37,211,102,0.18); border-color: #25D366; transform: translateY(-2px); }
+.btn-wp-grupo:hover { background: var(--wa-bg-hover); border-color: var(--wa-brand); transform: translateY(-2px); }
 
 .otro-texto { width: 100%; }

@@ -13,7 +13,7 @@
 select, input[type="text"], input[type="tel"], input[type="email"], input[type="date"], input[type="password"], textarea {
   width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 0.88rem; color: var(--text);
   background: var(--surface-2); border: 0px solid var(--border); appearance: none; -webkit-appearance: none;
-  -moz-appearance: none; outline: none; transition: all 0.3s ease; font-family: inherit; caret-color: #F97316;
+  -moz-appearance: none; outline: none; transition: all 0.3s ease; font-family: inherit; caret-color: var(--brand);
 }
 select { padding-right: 40px; cursor: pointer; }
 .select-wrapper::after {
@@ -22,19 +22,19 @@ select { padding-right: 40px; cursor: pointer; }
   color: var(--brand); pointer-events: none; font-size: 1.3rem; transition: transform 0.3s;
 }
 select:focus + .select-wrapper::after { transform: translateY(-50%) rotate(180deg); }
-select:has(option[value=""]:checked) { color: #a89587; font-style: italic; font-size: 0.9rem; }
-select option { color: #1a1a1a; font-style: normal; font-size: 1rem; }
-select option[value=""] { color: #a89587; font-style: italic; font-size: 0.9rem; }
+select:has(option[value=""]:checked) { color: var(--placeholder-color); font-style: italic; font-size: 0.9rem; }
+select option { color: var(--neutral-dark); font-style: normal; font-size: 1rem; }
+select option[value=""] { color: var(--placeholder-color); font-style: italic; font-size: 0.9rem; }
 select:focus, input:focus, textarea:focus {
-  outline: none; border-color: #F97316; background: var(--surface);
+  outline: none; border-color: var(--brand); background: var(--surface);
   box-shadow: 0 0 0 4px rgba(249,115,22,0.15);
 }
-select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-color: #eee; }
+select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cursor: not-allowed; border-color: var(--disabled-border); }
 
 .select-spinner {
   position: absolute; right: 40px; top: calc(50% - 10px);
-  width: 20px; height: 20px; border: 0px solid #e5e5e5;
-  border-top-color: #F97316; border-radius: 50%;
+  width: 20px; height: 20px; border: 0px solid var(--border-light);
+  border-top-color: var(--brand); border-radius: 50%;
   animation: spin 0.8s linear infinite; pointer-events: none;
 }
 
@@ -52,7 +52,7 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
 .btn-primary:active:not(:disabled) { transform: translateY(0) scale(0.98); }
 .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn-secondary { background: var(--btn-secondary-bg); color: var(--btn-secondary-color); margin-top: 12px; border: none; }
-.btn-secondary:hover { background: #ebebeb; transform: translateY(-2px); }
+.btn-secondary:hover { background: var(--btn-secondary-hover-bg); transform: translateY(-2px); }
 .btn-secondary:active { transform: translateY(0) scale(0.98); }
 
 .opciones { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
@@ -61,17 +61,17 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
   border: 0px solid var(--border); border-radius: 12px; cursor: pointer;
   transition: all 0.3s ease; font-size: 0.92rem; color: var(--text); background: var(--surface-2);
 }
-.opcion:hover { border-color: #fb923c; background: var(--brand-lightest, rgba(249,115,22,0.06)); transform: translateX(4px); }
+.opcion:hover { border-color: #fb923c; background: var(--brand-lightest); transform: translateX(4px); }
 .opcion.sel { border-color: var(--brand); background: var(--brand-lighter); box-shadow: 0 4px 12px rgba(249,115,22,0.08); transform: scale(1.02); }
 .opcion input[type="radio"] { accent-color: #F97316; width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; transition: transform 0.2s; }
 .opcion.sel input[type="radio"] { transform: scale(1.1); }
 
 .chk-opcion {
   display: flex; align-items: center; gap: 12px; padding: 12px 16px;
-  border: 0px solid #e5e5e5; border-radius: 12px; cursor: pointer;
-  font-size: 0.92rem; margin-bottom: 8px; transition: all 0.3s; font-weight: 500; background: #fafafa;
+  border: 0px solid var(--border-light); border-radius: 12px; cursor: pointer;
+  font-size: 0.92rem; margin-bottom: 8px; transition: all 0.3s; font-weight: 500; background: var(--surface-light);
 }
-.chk-opcion:hover { border-color: #fb923c; background: #fffcf9; transform: translateX(4px); }
+.chk-opcion:hover { border-color: var(--brand-secondary); background: var(--brand-warm-2); transform: translateX(4px); }
 .chk-opcion input[type="checkbox"] { accent-color: #F97316; width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; transition: transform 0.2s; }
 .chk-opcion:hover input[type="checkbox"] { transform: scale(1.1); }
 
@@ -89,7 +89,7 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
 
 .datos-campo { margin-bottom: 16px; }
 .datos-campo label {
-  display: block; font-size: 0.78rem; color: #777; font-weight: 800;
+  display: block; font-size: 0.78rem; color: var(--neutral-gray); font-weight: 800;
   margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;
 }
 .datos-hint { font-size: 0.8rem; color: var(--muted); margin-top: 6px; line-height: 1.4; }
@@ -108,8 +108,8 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
   padding: 14px 16px; background: var(--surface-2); border: 0px solid var(--border);
   border-radius: 12px; margin-bottom: 12px; transition: all 0.3s;
 }
-.privacy-row:hover { border-color: #cbd5e1; box-shadow: 0 4px 8px rgba(0,0,0,0.03); }
-.privacy-row label { font-size: 0.88rem; color: #444; font-weight: 600; margin: 0; text-transform: none; letter-spacing: 0; }
+.privacy-row:hover { border-color: var(--border-slate); box-shadow: 0 4px 8px rgba(0,0,0,0.03); }
+.privacy-row label { font-size: 0.88rem; color: var(--text-mid); font-weight: 600; margin: 0; text-transform: none; letter-spacing: 0; }
 .privacy-row select { padding: 8px 30px 8px 12px; max-width: 100px; margin-bottom: 0; }
 
 .btn-guardar-sec {
@@ -177,6 +177,10 @@ select:disabled { background: #f5f5f5; color: #aaa; cursor: not-allowed; border-
   #modal-contacto a[href] { background: rgba(249,115,22,0.06) !important; color: var(--text) !important; }
   #modal-contacto button { background: rgba(249,115,22,0.1) !important; color: var(--text-2) !important; }
   #modal-contacto .modal-ct { color: var(--text) !important; }
+  .chk-opcion { background: var(--surface-2); border-color: var(--border); color: var(--text); }
+  .chk-opcion:hover { background: var(--brand-subtle); border-color: var(--brand-secondary); }
+  .btn-secondary:hover { background: var(--surface-2); }
+  select:disabled { background: var(--surface-2); color: var(--muted); border-color: var(--border); }
 }
 
 /* ─── MOBILE ─────────────────────────────────────────────────────────────── */
