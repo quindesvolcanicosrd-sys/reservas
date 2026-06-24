@@ -92,7 +92,7 @@ select, option, optgroup { font-family: 'Montserrat', sans-serif !important; }
 .modal-info {
   position: fixed; inset: 0; z-index: 8000;
   display: flex; align-items: center; justify-content: center;
-  background: var(--overlay); padding: 16px;
+  background: rgba(0,0,0,0.55); padding: 16px;
   animation: fadeIn 0.25s ease;
 }
 .modal-info-card {
@@ -104,19 +104,16 @@ select, option, optgroup { font-family: 'Montserrat', sans-serif !important; }
 .modal-info-titulo { font-size: 1.15rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
 .modal-info-sub    { font-size: 0.82rem; color: var(--muted); margin-bottom: 20px; }
 .modal-info-item   { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 16px; }
-.modal-info-icon   {
-  width: 36px; height: 36px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
+.modal-info-icon   { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .modal-info-icon .material-symbols-outlined { font-size: 1.2rem; }
-.mi-orange { background: var(--brand-light);   color: var(--brand); }
-.mi-green  { background: var(--success-bg);    color: var(--success); }
-.mi-blue   { background: var(--info-bg);       color: var(--info); }
-.mi-amber  { background: var(--amber-light);   color: var(--amber-dark); }
-.mi-purple { background: var(--purple-light);  color: var(--purple); }
-.modal-info-label { font-size: 0.87rem; font-weight: 700; color: var(--text); margin-bottom: 3px; }
-.modal-info-desc  { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
-.modal-info-hr    { border: none; border-top: 1px solid var(--border-2); margin: 14px 0; }
+.mi-orange { background: var(--brand-light);  color: var(--brand); }
+.mi-green  { background: var(--success-bg);   color: var(--success); }
+.mi-blue   { background: var(--info-bg);      color: var(--info); }
+.mi-amber  { background: var(--amber-light);  color: var(--amber-dark); }
+.mi-purple { background: var(--purple-light); color: var(--purple); }
+.modal-info-label  { font-size: 0.87rem; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.modal-info-desc   { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+.modal-info-hr     { border: none; border-top: 1px solid var(--border-2); margin: 14px 0; width: 100%; }
 .modal-info-footer { display: flex; gap: 10px; margin-top: 20px; }
 .modal-info-footer .btn-secondary { flex: 1; font-size: 0.8rem; }
 .modal-info-footer .btn-primary   { flex: 2; }
