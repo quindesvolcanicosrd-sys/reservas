@@ -38,13 +38,22 @@ function prepararHome() {
   if (rowNotif) rowNotif.style.display = notifActivas ? 'none' : '';
   var rowInstalar = document.getElementById('row-instalar-app');
   if (rowInstalar) rowInstalar.style.display = esStandalone() ? 'none' : '';
+  setTimeout(function() {
+    if (!_yaVioModal('home')) {
+      var mh = document.getElementById('modal-info-home');
+      if (mh) mh.style.display = 'flex';
+    }
+  }, 900);
 }
 
 function irNuevaReserva(skipEquip) {
   E.conf = ''; E.fechas = []; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = ''; E.cuponAplicado = false; E.creditosUsados = 0; E.reagendando = false;
   var chkC = document.getElementById('chk-cupon'); if (chkC) chkC.checked = false;
   document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
-  if (skipEquip || canPayMonthly()) { cargarFechas(); } else { renderEquip(); ir('s2'); }
+  var _doReserva = function() {
+    if (skipEquip || canPayMonthly()) { cargarFechas(); } else { renderEquip(); ir('s2'); }
+  };
+  mostrarModalInfoReserva(_doReserva);
 }
 
 function irMisReservas() {

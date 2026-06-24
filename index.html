@@ -1093,5 +1093,112 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
 
+<!-- ─── MODAL INFO: RESERVA ──────────────────────────────────────────── -->
+<div id="modal-info-reserva" class="modal-info" style="display:none;">
+  <div class="modal-info-card">
+    <div class="modal-info-titulo">Tu primera reserva</div>
+    <div class="modal-info-sub">Leé esto antes de elegir tus fechas</div>
+
+    <div class="modal-info-item">
+      <div class="modal-info-icon mi-orange"><span class="material-symbols-outlined">calendar_month</span></div>
+      <div>
+        <div class="modal-info-label">Fechas disponibles</div>
+        <div class="modal-info-desc">Podés seleccionar varias clases a la vez de las que estén disponibles.</div>
+      </div>
+    </div>
+
+    <div class="modal-info-item">
+      <div class="modal-info-icon mi-amber"><span class="material-symbols-outlined">roller_skating</span></div>
+      <div>
+        <div class="modal-info-label">Equipamiento limitado</div>
+        <div class="modal-info-desc">Si tu talla ya fue reservada para esa fecha, no aparecerá disponible.</div>
+      </div>
+    </div>
+
+    <div class="modal-info-item" id="mri-modalidad-clase" style="display:none;">
+      <div class="modal-info-icon mi-blue"><span class="material-symbols-outlined">confirmation_number</span></div>
+      <div>
+        <div class="modal-info-label">Modalidad: por clase</div>
+        <div class="modal-info-desc">Como usás equipamiento prestado, reservás clase por clase.</div>
+      </div>
+    </div>
+
+    <div class="modal-info-item" id="mri-modalidad-mes" style="display:none;">
+      <div class="modal-info-icon mi-blue"><span class="material-symbols-outlined">calendar_view_month</span></div>
+      <div>
+        <div class="modal-info-label">Modalidad: clase o mes completo</div>
+        <div class="modal-info-desc">Como tenés tu propio equipamiento, podés reservar clase por clase o el mes completo.</div>
+      </div>
+    </div>
+
+    <div class="modal-info-item">
+      <div class="modal-info-icon mi-green"><span class="material-symbols-outlined">payments</span></div>
+      <div>
+        <div class="modal-info-label">Pago</div>
+        <div class="modal-info-desc">Aceptamos DeUna o Banco Internacional. Enviá tu comprobante por WhatsApp.</div>
+      </div>
+    </div>
+
+    <div class="modal-info-item" id="mri-cupon" style="display:none;">
+      <hr class="modal-info-hr" style="margin-bottom:16px;">
+      <div class="modal-info-icon mi-purple"><span class="material-symbols-outlined">card_giftcard</span></div>
+      <div>
+        <div class="modal-info-label">Por cierto.... ¡Tenés un cupón de clase gratis!</div>
+        <div class="modal-info-desc">Seleccioná 1 clase de la lista y activá el cupón que aparece debajo.</div>
+      </div>
+    </div>
+
+    <div class="modal-info-footer">
+      <button class="btn btn-secondary" onclick="modalInfoLater('reserva')">Recuérdame luego</button>
+      <button class="btn btn-primary" onclick="modalInfoOk('reserva')">¡Entendido!</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MODAL INFO: HOME ─────────────────────────────────────────────── -->
+<div id="modal-info-home" class="modal-info" style="display:none;">
+  <div class="modal-info-card">
+    <div class="modal-info-titulo">Bienvenidx a tu espacio</div>
+    <div class="modal-info-sub">Un recorrido rápido por la app</div>
+
+    <div class="modal-info-item">
+      <div class="modal-info-icon mi-orange"><span class="material-symbols-outlined">calendar_add_on</span></div>
+      <div>
+        <div class="modal-info-label">Hacer una reserva</div>
+        <div class="modal-info-desc">Usá el botón principal para elegir fechas y reservar tu lugar.</div>
+      </div>
+    </div>
+
+    <div class="modal-info-item">
+      <div class="modal-info-icon mi-blue"><span class="material-symbols-outlined">event_available</span></div>
+      <div>
+        <div class="modal-info-label">Tus reservas</div>
+        <div class="modal-info-desc">Aparecen aquí siempre y cuando tengas 1 o más reservas realizadas. Podés ver si están pendientes o confirmadas.</div>
+      </div>
+    </div>
+
+    <div class="modal-info-item">
+      <div class="modal-info-icon mi-amber"><span class="material-symbols-outlined">swap_horiz</span></div>
+      <div>
+        <div class="modal-info-label">Cancelar o reagendar</div>
+        <div class="modal-info-desc">Desde cada tarjeta podés cancelar o cambiar la fecha de tu reserva.</div>
+      </div>
+    </div>
+
+    <div class="modal-info-item">
+      <div class="modal-info-icon mi-green"><span class="material-symbols-outlined">manage_accounts</span></div>
+      <div>
+        <div class="modal-info-label">Editá tu perfil y cerrá sesión cuando quieras</div>
+        <div class="modal-info-desc">Cambiá el equipamiento, completá información de salud y emergencia y mucho más.</div>
+      </div>
+    </div>
+
+    <div class="modal-info-footer">
+      <button class="btn btn-secondary" onclick="modalInfoLater('home')">Recuérdame luego</button>
+      <button class="btn btn-primary" onclick="modalInfoOk('home')">¡Entendido!</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

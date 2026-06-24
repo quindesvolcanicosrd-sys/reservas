@@ -62,6 +62,8 @@ reservas/
 | `select, option, optgroup` | Fuerza Montserrat en dropdowns |
 | `.btn-wp-grupo` | Botón verde de grupo de WhatsApp (movido desde reservas.css) |
 | `.otro-texto` | Input de texto libre que hereda de input[type="text"] global; solo añade `width:100%` |
+| `.modal-info / .modal-info-card / .modal-info-titulo / .modal-info-sub / .modal-info-item / .modal-info-icon / .modal-info-label / .modal-info-desc / .modal-info-hr / .modal-info-footer` | Modal informativo de primera vez (overlay fijo z-index 8000, card centrada) |
+| `.mi-orange / .mi-green / .mi-blue / .mi-amber / .mi-purple` | Variantes de color para `.modal-info-icon` |
 
 ### css/ui.css
 | Clase / selector | Descripción |
@@ -217,6 +219,12 @@ reservas/
 | `.fnac-trigger-btn / .fnac-placeholder` | Botón disparador de date picker |
 | `#date-picker-modal / .dp-card / .dp-header / .dp-nav / .dp-grid / .dp-day / .dp-footer / .dp-btn / .dp-year-grid / .dp-month-grid` | Date picker dp-* completo |
 
+### IDs relevantes de index.html
+| ID | Descripción |
+|---|---|
+| `#modal-info-reserva` | Modal info primera reserva; items condicionales `#mri-modalidad-clase` / `#mri-modalidad-mes` / `#mri-cupon` |
+| `#modal-info-home` | Modal info primera visita a home |
+
 ---
 
 ## 3. JS — Funciones por módulo
@@ -254,13 +262,19 @@ reservas/
 | `toggleMesesPasados()` | Expande/colapsa la lista de meses pasados en s4 |
 | `toggleMesesActuales()` | Expande/colapsa la lista de meses actuales/futuros en s4 |
 | `lanzarConfetti()` | Animación canvas de confetti en s6; se llama con setTimeout(400ms) tras confirmarReserva() |
+| `_modalInfoKey(id)` | genera la clave de localStorage/sessionStorage por modal e usuario |
+| `_yaVioModal(id)` | true si el modal fue marcado como visto (localStorage) o pospuesto (sessionStorage) |
+| `modalInfoOk(id)` | marca como visto permanente y cierra; ejecuta callback si id=reserva |
+| `modalInfoLater(id)` | marca como pospuesto (sessionStorage) y cierra; ejecuta callback si id=reserva |
+| `mostrarModalInfoReserva(callback)` | muestra modal-info-reserva si no fue visto; adapta items condicionales (modalidad y cupón) según E.datos; ejecuta callback directamente si ya fue visto |
+| `window._modalInfoReservaCallback` | callback guardado para ejecutar tras cerrar el modal de reserva |
 
 ### js/home.js
 | Función / variable | Descripción |
 |---|---|
 | `_todasReservas` | Array con todas las reservas del usuario (cargadas al login) |
-| `prepararHome()` | Inicializa la pantalla home: saludo, foto, banner cupón/notif, render reservas. Refresca `cuponDisponible` desde el backend (`getCuponDisponible`) en cada visita a la home |
-| `irNuevaReserva(skipEquip)` | Navega al flujo de reserva; `skipEquip=true` salta s2-s3 e va directo a `cargarFechas()` (usado post-inscripción vía parámetro `?nuevx=1`) |
+| `prepararHome()` | Inicializa la pantalla home: saludo, foto, banner cupón/notif, render reservas. Refresca `cuponDisponible` desde el backend (`getCuponDisponible`) en cada visita a la home. Muestra `#modal-info-home` con delay de 900ms si el usuario no lo ha visto aún |
+| `irNuevaReserva(skipEquip)` | Navega al flujo de reserva; `skipEquip=true` salta s2-s3 e va directo a `cargarFechas()` (usado post-inscripción vía parámetro `?nuevx=1`). Pasa por `mostrarModalInfoReserva()` antes de navegar; el callback ejecuta la lógica de navegación |
 | `irMisReservas()` | Navega al historial completo (ir s-misreservas) |
 | `verTodasReservas()` | Alias de irMisReservas() |
 | `iniciarReagendamiento()` | Activa E.reagendando y navega a s4 para reagendar |

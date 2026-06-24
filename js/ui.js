@@ -234,3 +234,46 @@ function lanzarConfetti() {
   }
   animar();
 }
+
+/* ─── MODALES INFO ─────────────────────────────────────────────────── */
+function _modalInfoKey(id) { return 'modal_info_' + id + '_' + (E.nombre || ''); }
+
+function _yaVioModal(id) {
+  var k = _modalInfoKey(id);
+  return localStorage.getItem(k) === 'visto' || sessionStorage.getItem(k) === 'luego';
+}
+
+function modalInfoOk(id) {
+  localStorage.setItem(_modalInfoKey(id), 'visto');
+  var el = document.getElementById('modal-info-' + id);
+  if (el) el.style.display = 'none';
+  if (id === 'reserva' && window._modalInfoReservaCallback) {
+    var cb = window._modalInfoReservaCallback;
+    window._modalInfoReservaCallback = null;
+    cb();
+  }
+}
+
+function modalInfoLater(id) {
+  sessionStorage.setItem(_modalInfoKey(id), 'luego');
+  var el = document.getElementById('modal-info-' + id);
+  if (el) el.style.display = 'none';
+  if (id === 'reserva' && window._modalInfoReservaCallback) {
+    var cb = window._modalInfoReservaCallback;
+    window._modalInfoReservaCallback = null;
+    cb();
+  }
+}
+
+function mostrarModalInfoReserva(callback) {
+  if (_yaVioModal('reserva')) { callback(); return; }
+  var puedeMonthly = canPayMonthly();
+  var elClase = document.getElementById('mri-modalidad-clase');
+  var elMes   = document.getElementById('mri-modalidad-mes');
+  var elCupon = document.getElementById('mri-cupon');
+  if (elClase) elClase.style.display = puedeMonthly ? 'none' : '';
+  if (elMes)   elMes.style.display   = puedeMonthly ? '' : 'none';
+  if (elCupon) elCupon.style.display = tieneCuponDisponible() ? '' : 'none';
+  window._modalInfoReservaCallback = callback;
+  document.getElementById('modal-info-reserva').style.display = 'flex';
+}
