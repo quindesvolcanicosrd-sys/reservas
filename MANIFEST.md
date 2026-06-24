@@ -156,7 +156,7 @@ reservas/
 - **inscripcion.css** — Bordes 1px activados en: `.perm-box`, `.opcion`, `.chk-opcion`, `.profile-preview`
 - **index.html** — Todos los colores hardcodeados eliminados; reemplazados por variables CSS (`--danger`, `--white`, `--neutral-dark`, `--neutral-gray`, `--neutral-mid`, `--neutral-light`, `--neutral-lighter`, `--overlay`, `--overlay-dark`, `--border-light`, `--disabled-bg`, `--disabled-bg-2`, `--text-faint`, `--surface-light`, `--warning-bg`, `--amber-30`, `--info-bg-light`, `--info-btn-hover`, `--info-light`, `--wa-brand`, `--instagram`, `--brand-warm`, `--brand-warm-border`, `--border-warm`, `--dk-brand-burn`, `--danger-dark`, `--error-lightest`, `--error-light-border`, `--disabled-border`, `--placeholder-color`); skeleton usa `--skeleton-base` / `--skeleton-shine`
 - **colors.css** — Nuevas variables: `--skeleton-base` (#d1d1d1), `--skeleton-shine` (#e8e8e8)
-- **inscripcion/index.html** — Todos los colores hardcodeados eliminados: iconos del modal contacto usan `--wa-brand`, `--instagram`, `--brand`; skeleton usa `--skeleton-base`/`--skeleton-shine`; hint-nombre-ok usa `--success-dark`; btn-wp-grupo-exito usa `--wa-bg`/`--success-dark`. Excepción intencional: `<meta name="theme-color">` no soporta var() CSS.
+- **inscripcion/index.html** — Todos los colores hardcodeados eliminados: iconos del modal contacto usan `--wa-brand`, `--instagram`, `--brand`; skeleton usa `--skeleton-base`/`--skeleton-shine`; hint-nombre-ok usa `--success-dark`; btn-wp-grupo-exito usa `--wa-bg`/`--success-dark`. Excepción intencional: `<meta name="theme-color">` no soporta var() CSS. Ahora importa `../css/global.css` entre `colors.css` e `inscripcion.css`. El header usa `<span class="header-title">` en lugar del logo/enlace.
 
 ### css/colors.css — fuente única de verdad de colores
 > **Regla:** ningún archivo CSS o JS debe hardcodear un color hex que tenga variable aquí.
@@ -195,7 +195,7 @@ reservas/
 |---|---|
 | `#loading-overlay / .loading-inner / .loading-logo / .loading-txt` | Overlay de carga con opacidad (no clase-toggle) |
 | `.page-wrap` | Wrapper centrado max-width 480px |
-| `.header / .header-logo / .header-title / .header-sub` | Encabezado sticky (position:sticky, top:0, z-index:100), layout flex con gap:12px, padding compacto 12px 16px |
+| `.header / .header-logo / .header-title / .header-sub` | Encabezado sticky (position:sticky, top:0, z-index:100), layout flex con gap:12px, padding compacto 12px 16px; `.header-title` tiene `flex:1` y `text-align:center` para funcionar como flex item centrado |
 | `.progress-wrap / .prog-dot / .prog-dot.done / .prog-dot.active` | Barra de progreso de pasos |
 | `.pantalla / .pantalla.activa` | Control de pantallas (local, no compartido) |
 | `.card / .sec-label` | Card y etiqueta de sección |
@@ -452,7 +452,7 @@ reservas/
 | `selPat(label, val)` | Selecciona opción de patines y muestra/oculta selector de talla |
 | `selProtec(label, val)` | Selecciona opción de protecciones y muestra/oculta input libre |
 | `cargarTallas()` | Carga tallas disponibles desde el backend y las pone en el select |
-| `enviarForm()` | Valida todos los campos y envía la inscripción al backend; redirige a la app |
+| `enviarForm()` | Valida todos los campos y envía la inscripción al backend; redirige a la app (ya no valida `_wpUnido`) |
 | `errMsg(id, msg)` | Muestra un error en el elemento id con auto-ocultado a los 6s |
 | `mostrarCargando(msg) / ocultarCargando()` | Overlay de carga con fade de opacidad (diferente al de la app principal) |
 | `abrirContacto() / cerrarContacto()` | Muestra/oculta el modal de contacto de inscripcion |

@@ -288,7 +288,6 @@ function cargarTallas() {
 
 function enviarForm() {
 if (!G.idToken) { errMsg('err-form','Primero conecta tu cuenta de Google.'); return; }
-  if (!_wpUnido) { errMsg('err-form','Por favor únete al grupo de WhatsApp presionando el botón de arriba.'); return; }
   var nombre = document.getElementById('f-nombre').value.trim();
   if (!nombre || nombre.length < 2) { errMsg('err-form','El nombre debe tener al menos 2 caracteres.'); document.getElementById('f-nombre').scrollIntoView({behavior:'smooth',block:'center'}); return; }
   if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]+$/.test(nombre)) { errMsg('err-form','El nombre solo puede contener letras y espacios.'); return; }
