@@ -96,7 +96,7 @@ select, option, optgroup { font-family: 'Montserrat', sans-serif !important; }
   animation: fadeIn 0.25s ease;
 }
 .modal-info-card {
-  background: var(--surface); border-radius: var(--radius);
+  background: var(--modal-info-card-bg); border-radius: var(--radius);
   padding: 24px 20px 20px; width: 100%; max-width: 360px;
   border: 2px solid var(--brand); max-height: 90vh; overflow-y: auto;
   animation: smoothSlideUp 0.3s cubic-bezier(0.16,1,0.3,1);

@@ -147,6 +147,7 @@ reservas/
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **colors.css** — Nueva variable `--modal-info-card-bg`: `#ffffff` en light, `rgba(23,9,0,0.97)` en dark; usada en `.modal-info-card` (global.css) y en los modales inline de index.html
 - **colors.css** — Añadidos overrides dark mode para: `--surface-light`, `--disabled-bg`, `--disabled-bg-2`, `--disabled-border`, `--border-light`, `--btn-secondary-hover-bg`, `--brand-warm`, `--brand-warm-2`, `--brand-warm-3`, `--info-btn-bg`, `--info-btn-hover`, `--green-light`, `--error-bg`, `--amber-light`, `--amber-lighter`, `--neutral-dark`, `--text-mid`, `--text-faint`, `--border-slate`, `--border-mid`
 - **colors.css** — Añadidos overrides dark mode para variables de colores claros: `--error-lightest`, `--error-light-border`, `--error-light`, `--purple-light`, `--purple-lightest`, `--purple-border-soft`, `--purple-bg`, `--amber-border`, `--success-lightest`, `--green-border`, `--info-bg-light`, `--info-light`, `--skeleton-base`, `--skeleton-shine`, `--border-softest`, `--border-warm`, `--brand-warm-border`, `--neutral-lighter`
 - **ui.css** — Añadido `select option, select optgroup { background: var(--bg); color: var(--text); }` en bloque dark mode para mejorar aspecto de selects nativos
@@ -183,7 +184,7 @@ reservas/
 | **WhatsApp** | `--wa-bg / --wa-bg-hover / --wa-brand` |
 | **Botones / Cards / Radius** | `--btn-primary-* / --btn-secondary-* / --card-* / --radius-sm / --radius / --radius-lg / --radius-full` |
 | **Divisores** | `--gray-divider` |
-| **Especiales y utilidades** | `--placeholder-color / --text-ghost / --white / --white-40 / --info-btn-bg / --info-btn-hover / --info-shadow` |
+| **Especiales y utilidades** | `--placeholder-color / --text-ghost / --white / --white-40 / --info-btn-bg / --info-btn-hover / --info-shadow / --modal-info-card-bg` |
 | **Dark mode tokens** | `--dk-skeleton-base / --dk-skeleton-shine / --dk-skeleton-shine-2 / --dk-info-bg / --dk-info-border / --dk-info-text / --dk-info-text-2 / --dk-error-bg / --dk-error-border / --dk-error-text / --dk-modal-overlay / --dk-modal-item-bg / --dk-modal-text / --dk-modal-btn-bg / --dk-modal-btn-text / --dk-datepicker-bg / --dk-surface-opaque / --dk-input-bg / --dk-pin-press / --dk-brand-burn / --dk-text-muted / --dk-text-ghost / --dk-text-muted-2 / --dk-border-dark / --dk-border-darker / --dk-purple-bg / --dk-purple-text / --dk-purple-mid / --dk-badge-bg / --dk-badge-text / --dk-overlay-95 / --dk-overlay-97` |
 
 > ¹ `--brand-06` es alias de `--brand-lightest` (mismo valor `rgba(249,115,22,0.06)`).  

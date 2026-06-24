@@ -218,6 +218,7 @@
   --info-btn-bg:        #e0f2fe;
   --info-btn-hover:     #bae6fd;
   --info-shadow:        rgba(3,105,161,0.1);
+  --modal-info-card-bg: #ffffff;
 }
 
 /* ── DARK MODE ───────────────────────────────────────────── */
@@ -322,5 +323,6 @@
     --border-warm:         rgba(249,115,22,0.15);
     --brand-warm-border:   rgba(249,115,22,0.2);
     --neutral-lighter:     #666;
+    --modal-info-card-bg:  rgba(23,9,0,0.97);
   }
 }
