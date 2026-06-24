@@ -290,5 +290,37 @@
     --text-faint:          #6a5a50;
     --border-slate:        rgba(249,115,22,0.2);
     --border-mid:          rgba(249,115,22,0.15);
+
+    /* Errores dark */
+    --error-lightest:      rgba(220,38,38,0.12);
+    --error-light-border:  rgba(220,38,38,0.3);
+    --error-light:         rgba(220,38,38,0.08);
+
+    /* Púrpura dark */
+    --purple-light:        rgba(124,58,237,0.2);
+    --purple-lightest:     rgba(124,58,237,0.08);
+    --purple-border-soft:  rgba(124,58,237,0.25);
+    --purple-bg:           rgba(124,58,237,0.15);
+
+    /* Amber dark */
+    --amber-border:        rgba(245,158,11,0.3);
+
+    /* Success dark */
+    --success-lightest:    rgba(34,197,94,0.1);
+    --green-border:        rgba(34,197,94,0.2);
+
+    /* Info dark */
+    --info-bg-light:       var(--dk-info-bg);
+    --info-light:          var(--dk-info-text);
+
+    /* Skeleton dark */
+    --skeleton-base:       #2a1a0e;
+    --skeleton-shine:      #3a2a1e;
+
+    /* Bordes y superficies dark */
+    --border-softest:      rgba(249,115,22,0.1);
+    --border-warm:         rgba(249,115,22,0.15);
+    --brand-warm-border:   rgba(249,115,22,0.2);
+    --neutral-lighter:     #666;
   }
 }

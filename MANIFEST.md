@@ -146,6 +146,8 @@ reservas/
 
 ### Cambios recientes
 - **colors.css** — Añadidos overrides dark mode para: `--surface-light`, `--disabled-bg`, `--disabled-bg-2`, `--disabled-border`, `--border-light`, `--btn-secondary-hover-bg`, `--brand-warm`, `--brand-warm-2`, `--brand-warm-3`, `--info-btn-bg`, `--info-btn-hover`, `--green-light`, `--error-bg`, `--amber-light`, `--amber-lighter`, `--neutral-dark`, `--text-mid`, `--text-faint`, `--border-slate`, `--border-mid`
+- **colors.css** — Añadidos overrides dark mode para variables de colores claros: `--error-lightest`, `--error-light-border`, `--error-light`, `--purple-light`, `--purple-lightest`, `--purple-border-soft`, `--purple-bg`, `--amber-border`, `--success-lightest`, `--green-border`, `--info-bg-light`, `--info-light`, `--skeleton-base`, `--skeleton-shine`, `--border-softest`, `--border-warm`, `--brand-warm-border`, `--neutral-lighter`
+- **ui.css** — Añadido `select option, select optgroup { background: var(--bg); color: var(--text); }` en bloque dark mode para mejorar aspecto de selects nativos
 - **colors.css** — Nuevas variables light: `--neutral-lighter` (#ccc), `--overlay-dark` (rgba 0,0,0,0.7), `--danger-dark` (#991b1b), `--info-bg-light` (#f0f9ff), `--info-light` (#7dd3fc), `--amber-30` (rgba amber 0.4), `--instagram` (#E1306C), `--border-warm` (rgba 168,149,135,0.3), `--brand-warm-border` (#fde8d4)
 - **ui.css** — Bordes 1px activados en: `.opcion`, `.chk-opcion`, `.privacy-row`, `.aviso-legal`
 - **reservas.css** — Bordes 1px activados en: `.fecha-item`, `.pago-metodo`, `.mes-item`, `.reserva-card`, `.aviso-pendiente`, `.tipo-pago-wrapper`, `.nota-pago-wrapper`, `.chk-pago-label`, `.total-box`, `.btn-wp-inactivo`
