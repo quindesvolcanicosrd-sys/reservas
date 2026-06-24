@@ -153,26 +153,25 @@ reservas/
 | Grupo | Variables principales |
 |---|---|
 | **Brand core** | `--brand / --brand-dk / --brand-secondary` |
-| **Brand variants** | `--brand-subtle / --brand-mid / --brand-soft / --brand-hover / --brand-light / --brand-lighter / --brand-glow / --brand-pulse / --brand-strong / --brand-zero / --brand-30 / --brand-40 / --brand-06 / --brand-08 / --brand-20 / --brand-focus / --brand-lightest / --brand-55 / --brand-60 / --brand-warm-3` |
+| **Brand variants** | `--brand-zero / --brand-subtle / --brand-lightest / --brand-06¹ / --brand-lighter / --brand-08 / --brand-soft / --brand-light / --brand-mid / --brand-focus / --brand-hover / --brand-20 / --brand-glow / --brand-30 / --brand-pulse / --brand-40 / --brand-55 / --brand-60 / --brand-strong / --brand-warm / --brand-warm-2 / --brand-warm-3` |
 | **Fondo / Superficie** | `--bg / --bg-2 / --surface / --surface-2 / --surface-3 / --surface-blur` |
 | **Bordes** | `--border / --border-2 / --border-light / --border-mid / --border-slate` |
 | **Texto** | `--text / --text-2 / --muted / --hint / --text-faint / --text-mid` |
-| **Neutros** | `--neutral-dark / --neutral-gray / --neutral-mid / --neutral-light / --disabled-bg-2` |
-| **Sombras** | `--shadow-sm / --shadow / --shadow-lg / --black-xs / --black-sm / --black-xxs / --black-03 / --black-15 / --black-05 / --black-md` |
+| **Neutros** | `--neutral-dark / --neutral-gray / --neutral-mid / --neutral-light / --text-faint / --text-mid / --disabled-bg-2 / --btn-secondary-hover-bg / --border-light / --border-slate / --border-mid / --border-softest / --surface-light / --disabled-bg / --disabled-border` |
+| **Sombras** | `--shadow-sm / --shadow / --shadow-lg / --black-xxs / --black-03 / --black-xs / --black-05 / --black-sm / --black-md / --black-15` |
 | **Estados** | `--success / --danger / --warning / --info` (+ `-bg / -bdr` para cada uno) |
-| **Success/Green** | `--success-dark / --success-bright / --success-border-dark / --success-shadow / --success-glow / --success-shadow-hover / --green-dark / --green-light / --green-border` |
-| **Error** | `--error / --error-light / --error-border / --error-bg` |
-| **Amber** | `--amber / --amber-light / --amber-lighter / --amber-dark / --amber-darker / --amber-accent` |
-| **Purple** | `--purple / --purple-light / --purple-bg / --purple-border / --purple-hover / --purple-bg-light / --purple-border-light` |
+| **Success/Green** | `--success-dark / --success-bright / --success-border-dark / --success-shadow / --success-glow / --success-shadow-hover / --success-lightest / --green-dark / --green-light / --green-border` |
+| **Error** | `--error² / --error-light² / --error-border² / --error-bg / --error-light-border / --error-lightest` |
+| **Amber** | `--amber / --amber-light / --amber-lighter / --amber-dark / --amber-darker / --amber-accent / --amber-border` |
+| **Purple** | `--purple / --purple-light / --purple-bg / --purple-border / --purple-hover / --purple-bg-light / --purple-border-light / --purple-lightest / --purple-border-soft` |
 | **WhatsApp** | `--wa-bg / --wa-bg-hover / --wa-brand` |
-| **Botones / Cards / Radius** | `--btn-primary-* / --btn-secondary-* / --btn-secondary-hover-bg / --card-* / --radius-sm / --radius / --radius-lg / --radius-full` |
-| **Brand warm** | `--brand-warm / --brand-warm-2` |
+| **Botones / Cards / Radius** | `--btn-primary-* / --btn-secondary-* / --card-* / --radius-sm / --radius / --radius-lg / --radius-full` |
 | **Divisores** | `--gray-divider` |
-| **Placeholders / Info** | `--placeholder-color / --text-ghost / --white / --white-40 / --info-btn-bg / --info-btn-hover / --info-shadow` |
+| **Especiales y utilidades** | `--placeholder-color / --text-ghost / --white / --white-40 / --info-btn-bg / --info-btn-hover / --info-shadow` |
 | **Dark mode tokens** | `--dk-skeleton-base / --dk-skeleton-shine / --dk-skeleton-shine-2 / --dk-info-bg / --dk-info-border / --dk-info-text / --dk-info-text-2 / --dk-error-bg / --dk-error-border / --dk-error-text / --dk-modal-overlay / --dk-modal-item-bg / --dk-modal-text / --dk-modal-btn-bg / --dk-modal-btn-text / --dk-datepicker-bg / --dk-surface-opaque / --dk-input-bg / --dk-pin-press / --dk-brand-burn / --dk-text-muted / --dk-text-ghost / --dk-text-muted-2 / --dk-border-dark / --dk-border-darker / --dk-purple-bg / --dk-purple-text / --dk-purple-mid / --dk-badge-bg / --dk-badge-text / --dk-overlay-95 / --dk-overlay-97` |
-| **Error light** | `--error-light-border / --error-lightest` |
-| **Light state backgrounds** | `--success-lightest / --purple-lightest / --purple-border-soft` |
-| **Softest borders** | `--border-softest / --amber-border` |
+
+> ¹ `--brand-06` es alias de `--brand-lightest` (mismo valor `rgba(249,115,22,0.06)`).  
+> ² `--error / --error-light / --error-border` son aliases de `--danger / --danger-bg / --danger-bdr`. El duplicado de `--info` en la sección "Colores extendidos" fue eliminado — solo existe en `/* ── Estados */`.
 
 ### inscripcion/inscripcion.css
 > ⚠️ Ya no tiene bloque `:root` propio ni `@media dark` de tokens — los provee `../css/colors.css` importado en `inscripcion/index.html`.

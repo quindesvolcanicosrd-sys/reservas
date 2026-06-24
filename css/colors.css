@@ -8,28 +8,32 @@
   /* ── Brand ───────────────────────────────────────────── */
   --brand:          #F97316;
   --brand-dk:       #ea6407;
-  --brand-light:    rgba(249,115,22,0.13);
-  --brand-lighter:  rgba(249,115,22,0.07);
-  --brand-subtle:   rgba(249,115,22,0.04);
-  --brand-glow:     rgba(249,115,22,0.25);
-  --brand-mid:      rgba(249,115,22,0.14);
-  --brand-soft:     rgba(249,115,22,0.1);
-  --brand-hover:    rgba(249,115,22,0.18);
-  --brand-pulse:    rgba(249,115,22,0.35);
-  --brand-strong:   rgba(249,115,22,0.7);
-  --brand-zero:     rgba(249,115,22,0);
-  --brand-30:       rgba(249,115,22,0.3);
-  --brand-40:       rgba(249,115,22,0.4);
-  --brand-06:       rgba(249,115,22,0.06);
-  --brand-08:           rgba(249,115,22,0.08);
-  --brand-20:           rgba(249,115,22,0.2);
-  --brand-focus:    rgba(249,115,22,0.15);
-  --brand-lightest:     rgba(249,115,22,0.06);
-  --brand-warm-3:       #fff4ec;
   --brand-secondary:#fb923c;
-  --error:          #dc2626;
-  --error-light:    rgba(220,38,38,0.1);
-  --error-border:   rgba(220,38,38,0.3);
+  --brand-zero:     rgba(249,115,22,0);
+  --brand-subtle:   rgba(249,115,22,0.04);
+  --brand-lightest: rgba(249,115,22,0.06);
+  --brand-06:       var(--brand-lightest);
+  --brand-lighter:  rgba(249,115,22,0.07);
+  --brand-08:       rgba(249,115,22,0.08);
+  --brand-soft:     rgba(249,115,22,0.1);
+  --brand-light:    rgba(249,115,22,0.13);
+  --brand-mid:      rgba(249,115,22,0.14);
+  --brand-focus:    rgba(249,115,22,0.15);
+  --brand-hover:    rgba(249,115,22,0.18);
+  --brand-20:       rgba(249,115,22,0.2);
+  --brand-glow:     rgba(249,115,22,0.25);
+  --brand-30:       rgba(249,115,22,0.3);
+  --brand-pulse:    rgba(249,115,22,0.35);
+  --brand-40:       rgba(249,115,22,0.4);
+  --brand-55:       rgba(249,115,22,0.55);
+  --brand-60:       rgba(249,115,22,0.6);
+  --brand-strong:   rgba(249,115,22,0.7);
+  --brand-warm:          #fff8f4;
+  --brand-warm-2:        #fffcf9;
+  --brand-warm-3:        #fff4ec;
+  --error:          var(--danger);
+  --error-light:    var(--danger-bg);
+  --error-border:   var(--danger-bdr);
   --purple:         #7c3aed;
   --purple-light:   #ede9fe;
   --purple-bg:      rgba(124,58,237,0.1);
@@ -62,6 +66,13 @@
   --success:        #22c55e;
   --success-bg:     rgba(34,197,94,0.1);
   --success-bdr:    rgba(34,197,94,0.3);
+  --success-dark:   #16a34a;
+  --success-bright: #4ade80;
+  --success-border-dark: #15803d;
+  --success-shadow:      rgba(34,197,94,0.08);
+  --success-glow:        rgba(22,163,74,0.3);
+  --success-shadow-hover: rgba(34,197,94,0.15);
+  --success-lightest:    #dcfce7;
   --warning:        #f59e0b;
   --warning-bg:     rgba(245,158,11,0.1);
   --warning-bdr:    rgba(245,158,11,0.3);
@@ -71,6 +82,7 @@
   --info:           #0ea5e9;
   --info-bg:        rgba(14,165,233,0.1);
   --info-bdr:       rgba(14,165,233,0.3);
+  --info-dark:      #0369a1;
 
   /* ── Botones ─────────────────────────────────────────── */
   --btn-primary-bg:     var(--brand-light);
@@ -78,7 +90,6 @@
   --btn-primary-hover:  rgba(249,115,22,0.22);
   --btn-secondary-bg:   var(--surface-2);
   --btn-secondary-color:var(--text-2);
-  --btn-secondary-hover-bg: #ebebeb;
 
   /* ── Cards ───────────────────────────────────────────── */
   --card-bg:        var(--surface);
@@ -97,68 +108,59 @@
   --shadow:         0 8px 32px rgba(249,115,22,0.1);
   --shadow-lg:      0 16px 48px rgba(249,115,22,0.15);
 
-  /* ── Colores extendidos ──────────────────────────────── */
-  --success-dark:   #16a34a;
-  --amber:          #fbbf24;
-  --amber-light:    #fef3c7;
-  --amber-lighter:  #fffbeb;
-  --amber-dark:     #b45309;
-  --amber-darker:   #92400e;
-  --info:           #0ea5e9;
-  --info-dark:      #0369a1;
-  --green-dark:     #166534;
-  --green-light:    #f0fdf4;
-  --green-border:   #bbf7d0;
-
   /* Neutros */
   --neutral-dark:        #1a1a1a;
   --neutral-gray:        #777;
   --neutral-mid:         #666;
   --neutral-light:       #555;
-  --text-faint:         #aaa;
-  --text-mid:           #444;
-  --disabled-bg-2:      #f5f5f5;
+  --text-faint:          #aaa;
+  --text-mid:            #444;
+  --disabled-bg-2:       #f5f5f5;
+  --btn-secondary-hover-bg: #ebebeb;
   --border-light:        #e5e5e5;
-  --border-slate:       #cbd5e1;
+  --border-slate:        #cbd5e1;
   --border-mid:          #d4d4d4;
+  --border-softest:      #eaeaea;
   --surface-light:       #fafafa;
   --disabled-bg:         #f0f0f0;
   --disabled-border:     #eee;
 
   /* Sombras negras */
-  --black-xs:            rgba(0,0,0,0.04);
-  --black-sm:            rgba(0,0,0,0.06);
   --black-xxs:      rgba(0,0,0,0.02);
-  --black-03:           rgba(0,0,0,0.03);
-  --black-15:       rgba(0,0,0,0.15);
+  --black-03:       rgba(0,0,0,0.03);
+  --black-xs:       rgba(0,0,0,0.04);
   --black-05:       rgba(0,0,0,0.05);
-  --black-md:            rgba(0,0,0,0.07);
+  --black-sm:       rgba(0,0,0,0.06);
+  --black-md:       rgba(0,0,0,0.07);
+  --black-15:       rgba(0,0,0,0.15);
 
-  /* Brand warm */
-  --brand-warm:          #fff8f4;
-  --brand-warm-2:        #fffcf9;
-  --brand-55:            rgba(249,115,22,0.55);
-  --brand-60:            rgba(249,115,22,0.6);
+  /* Amber */
+  --amber:          #fbbf24;
+  --amber-light:    #fef3c7;
+  --amber-lighter:  #fffbeb;
+  --amber-dark:     #b45309;
+  --amber-darker:   #92400e;
+  --amber-accent:   #d97706;
+  --amber-border:   #fde68a;
+
+  /* Green / Error extendidos */
+  --green-dark:     #166534;
+  --green-light:    #f0fdf4;
+  --green-border:   #bbf7d0;
+  --error-bg:       #fee2e2;
+  --error-light-border: #fecaca;
+  --error-lightest: #fef2f2;
+
+  /* Purple extendido */
+  --purple-bg-light:     rgba(124,58,237,0.08);
+  --purple-border-light: rgba(124,58,237,0.3);
+  --purple-lightest:     #faf5ff;
+  --purple-border-soft:  #ddd6fe;
 
   /* WhatsApp */
   --wa-bg:               rgba(37,211,102,0.1);
   --wa-bg-hover:         rgba(37,211,102,0.18);
   --wa-brand:            #25D366;
-  --success-border-dark: #15803d;
-  --success-bright:      #4ade80;
-  --success-shadow:      rgba(34,197,94,0.08);
-  --success-glow:   rgba(22,163,74,0.3);
-  --success-shadow-hover: rgba(34,197,94,0.15);
-
-  /* Error */
-  --error-bg:            #fee2e2;
-
-  /* Amber */
-  --amber-accent:        #d97706;
-
-  /* Purple */
-  --purple-bg-light:     rgba(124,58,237,0.08);
-  --purple-border-light: rgba(124,58,237,0.3);
 
   /* Divisores */
   --gray-divider:        rgba(128,128,128,0.12);
@@ -166,9 +168,11 @@
   /* Dark mode tokens */
   --dk-skeleton-base:    #2c1c11;
   --dk-skeleton-shine:   #383838;
+  --dk-skeleton-shine-2: #2a2a2a;
   --dk-info-bg:          #0a1929;
   --dk-info-border:      #1d4ed8;
   --dk-info-text:        #93c5fd;
+  --dk-info-text-2:      #60a5fa;
   --dk-error-bg:         #2d1515;
   --dk-error-border:     #7f1d1d;
   --dk-error-text:       #fca5a5;
@@ -178,39 +182,28 @@
   --dk-modal-btn-bg:     #2c1c11;
   --dk-modal-btn-text:   #ccc;
   --dk-datepicker-bg:    #22140ae5;
-  --dk-skeleton-shine-2: #2a2a2a;
   --dk-surface-opaque:   #1c1c1c;
   --dk-input-bg:         #181818;
   --dk-pin-press:        #2a1a0e;
   --dk-brand-burn:       #e55a00;
-  --dk-info-text-2:      #60a5fa;
   --dk-text-muted:       #aaa;
-  --dk-text-ghost:      rgba(127,127,127,0.25);
+  --dk-text-ghost:       rgba(127,127,127,0.25);
   --dk-text-muted-2:     #8a8a8a;
   --dk-border-dark:      #444;
   --dk-border-darker:    #333;
   --dk-purple-bg:        #2d1f5e;
   --dk-purple-text:      #c4b5fd;
   --dk-purple-mid:       #6d28d9;
-  --error-light-border:  #fecaca;
-  --error-lightest:      #fef2f2;
   --dk-badge-bg:         #3a3a3a;
   --dk-badge-text:       #bbb;
-  --dk-overlay-95:  rgba(23,9,0,0.95);
-  --dk-overlay-97:  rgba(23,9,0,0.97);
-  --success-lightest:    #dcfce7;
-  --border-softest:      #eaeaea;
-  --purple-lightest:     #faf5ff;
-  --purple-border-soft:  #ddd6fe;
-  --amber-border:        #fde68a;
+  --dk-overlay-95:       rgba(23,9,0,0.95);
+  --dk-overlay-97:       rgba(23,9,0,0.97);
 
-  /* Placeholders y textos especiales */
+  /* ── Especiales y utilidades ─────────────────────────── */
   --placeholder-color:  #a89587;
   --text-ghost:         rgba(127,127,127,0.3);
   --white:              #ffffff;
   --white-40:           rgba(255,255,255,0.4);
-
-  /* Botón info */
   --info-btn-bg:        #e0f2fe;
   --info-btn-hover:     #bae6fd;
   --info-shadow:        rgba(3,105,161,0.1);
