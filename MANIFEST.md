@@ -144,6 +144,14 @@ reservas/
 |---|---|
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
+### Cambios recientes
+- **colors.css** — Añadidos overrides dark mode para: `--surface-light`, `--disabled-bg`, `--disabled-bg-2`, `--disabled-border`, `--border-light`, `--btn-secondary-hover-bg`, `--brand-warm`, `--brand-warm-2`, `--brand-warm-3`, `--info-btn-bg`, `--info-btn-hover`, `--green-light`, `--error-bg`, `--amber-light`, `--amber-lighter`, `--neutral-dark`, `--text-mid`, `--text-faint`, `--border-slate`, `--border-mid`
+- **ui.css** — Bordes 1px activados en: `.opcion`, `.chk-opcion`, `.privacy-row`, `.aviso-legal`
+- **reservas.css** — Bordes 1px activados en: `.fecha-item`, `.pago-metodo`, `.mes-item`, `.reserva-card`, `.aviso-pendiente`, `.tipo-pago-wrapper`, `.nota-pago-wrapper`, `.chk-pago-label`, `.total-box`, `.btn-wp-inactivo`
+- **home.css** — Bordes 1px activados en: `.res-card-home`, `.home-boton`, `.btn-accion-home`
+- **perfil.css** — Bordes 1px activados en: `.datos-seccion`
+- **inscripcion.css** — Bordes 1px activados en: `.perm-box`, `.opcion`, `.chk-opcion`, `.profile-preview`
+
 ### css/colors.css — fuente única de verdad de colores
 > **Regla:** ningún archivo CSS o JS debe hardcodear un color hex que tenga variable aquí.
 > Importado primero en `index.html` e `inscripcion/index.html`.

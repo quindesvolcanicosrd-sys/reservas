@@ -130,7 +130,7 @@ button, input, select, textarea { font-family: inherit; }
 
 /* ─── PERMISOS GOOGLE ────────────────────────────────────────────────── */
 .perm-box {
-  background: var(--bg); border: 0px solid var(--border);
+  background: var(--bg); border: 1px solid var(--border);
   border-radius: var(--radius-sm); overflow: hidden;
   margin-bottom: 6px;
 }
@@ -220,7 +220,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 .opciones { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
 .opcion {
   display: flex; align-items: center; gap: 14px;
-  padding: 13px 16px; border: 0px solid var(--border);
+  padding: 13px 16px; border: 1px solid var(--border);
   border-radius: var(--radius-sm); cursor: pointer;
   font-size: 0.92rem; background: var(--surface);
   transition: all 0.25s ease;
@@ -234,7 +234,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .chk-opcion {
   display: flex; align-items: center; gap: 12px;
-  padding: 11px 14px; border: 0px solid var(--border);
+  padding: 11px 14px; border: 1px solid var(--border);
   border-radius: var(--radius-sm); cursor: pointer;
   font-size: 0.9rem; margin-bottom: 6px;
   background: var(--surface); transition: all 0.25s ease;
@@ -336,7 +336,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 /* ─── NOMBRE PERFIL PREVIEW ──────────────────────────────────────────── */
 .profile-preview {
   display: flex; align-items: center; gap: 12px;
-  background: var(--brand-06); border: 0px solid var(--brand-glow);
+  background: var(--brand-06); border: 1px solid var(--brand-glow);
   border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 16px;
 }
 .profile-avatar {

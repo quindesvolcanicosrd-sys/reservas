@@ -1,5 +1,5 @@
 .home-boton {
-  border: 0px solid var(--border); border-radius: 16px; padding: 24px 20px;
+  border: 1px solid var(--border); border-radius: 16px; padding: 24px 20px;
   margin-bottom: 14px; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   text-align: center; background: var(--surface-2);
 }
@@ -19,7 +19,7 @@
 
 .btn-accion-home {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
-  padding: 14px 10px; border: 0px solid var(--border-light); border-radius: 14px;
+  padding: 14px 10px; border: 1px solid var(--border-light); border-radius: 14px;
   background: var(--surface-light); cursor: pointer; font-family: inherit;
   font-size: 0.75rem; font-weight: 700; color: var(--neutral-dark);
   text-transform: uppercase; letter-spacing: 0.5px;
@@ -37,7 +37,7 @@
 .btn-home-sub:disabled { opacity: 0.32; cursor: not-allowed; }
 
 .res-card-home {
-  border: 0px solid var(--border); border-radius: 14px; padding: 14px 16px;
+  border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px;
   margin-bottom: 10px; background: var(--surface-2); text-align: left;
   animation: smoothSlideUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
 }

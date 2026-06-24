@@ -249,5 +249,35 @@
     --warning-bg:     rgba(245,158,11,0.08);
     --danger-bg:      rgba(220,38,38,0.08);
     --info-bg:        rgba(14,165,233,0.08);
+
+    /* Superficies neutras → versiones oscuras */
+    --surface-light:       rgba(249,115,22,0.05);
+    --disabled-bg:         rgba(255,255,255,0.06);
+    --disabled-bg-2:       rgba(255,255,255,0.05);
+    --disabled-border:     rgba(249,115,22,0.12);
+    --border-light:        rgba(249,115,22,0.12);
+    --btn-secondary-hover-bg: rgba(249,115,22,0.1);
+
+    /* Brand warm → tints oscuros */
+    --brand-warm:          rgba(249,115,22,0.08);
+    --brand-warm-2:        rgba(249,115,22,0.05);
+    --brand-warm-3:        rgba(249,115,22,0.1);
+
+    /* Info → dark */
+    --info-btn-bg:         #0a1929;
+    --info-btn-hover:      rgba(14,165,233,0.15);
+
+    /* Estados extendidos → dark */
+    --green-light:         rgba(34,197,94,0.06);
+    --error-bg:            #2d1515;
+    --amber-light:         rgba(245,158,11,0.08);
+    --amber-lighter:       rgba(245,158,11,0.04);
+
+    /* Neutros → invertidos */
+    --neutral-dark:        var(--text);
+    --text-mid:            #b0a090;
+    --text-faint:          #6a5a50;
+    --border-slate:        rgba(249,115,22,0.2);
+    --border-mid:          rgba(249,115,22,0.15);
   }
 }

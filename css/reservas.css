@@ -1,6 +1,6 @@
 .fecha-item {
   display: flex; align-items: center; gap: 14px; padding: 14px 16px;
-  border: 0px solid var(--border); border-radius: 12px; margin-bottom: 10px;
+  border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px;
   cursor: pointer; transition: all 0.3s ease; background: var(--surface-2);
 }
 .fecha-item:hover:not(.agotada) { border-color: var(--brand-secondary); transform: translateY(-2px); box-shadow: 0 6px 12px var(--black-05); }
@@ -11,7 +11,7 @@
 .fecha-nombre { font-size: 0.92rem; font-weight: 700; }
 .fecha-razon { font-size: 0.8rem; color: var(--brand); margin-top: 4px; font-weight: 500; }
 
-.pago-metodo { border: 0px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; background: var(--surface-2); }
+.pago-metodo { border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; background: var(--surface-2); }
 .pago-header { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1rem; color: var(--text); margin-bottom: 12px; }
 .pago-icon { font-size: 1.4rem; }
 .pago-fila { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.88rem; border-bottom: 1px solid var(--border); }
@@ -19,22 +19,22 @@
 .pago-label { color: var(--muted); font-weight: 500; }
 .pago-valor { font-weight: 700; color: var(--text); }
 
-.total-box { background: var(--success-bg); border: 0px solid var(--success-bdr); border-radius: 12px; padding: 18px; text-align: center; font-weight: 800; font-size: 1.1rem; color: var(--success); box-shadow: 0 4px 14px var(--success-shadow); }
+.total-box { background: var(--success-bg); border: 1px solid var(--success-bdr); border-radius: 12px; padding: 18px; text-align: center; font-weight: 800; font-size: 1.1rem; color: var(--success); box-shadow: 0 4px 14px var(--success-shadow); }
 .total-box .total-detalle { font-size: 0.85rem; font-weight: 600; color: var(--success-bright); margin-top: 6px; }
 
-.tipo-pago-wrapper { background: var(--warning-bg); border: 0px solid var(--warning-bdr); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+.tipo-pago-wrapper { background: var(--warning-bg); border: 1px solid var(--warning-bdr); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
 .tipo-pago-titulo { font-weight: 800; font-size: 0.9rem; color: var(--amber-darker); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 
-.nota-pago-wrapper { background: var(--surface-2); border: 0px solid var(--border); border-radius: 12px; padding: 16px; margin-top: 20px; }
+.nota-pago-wrapper { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-top: 20px; }
 .nota-pago-label { display: block; font-size: 0.82rem; font-weight: 800; color: var(--neutral-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
 .nota-pago-input { width: 100%; border: 0px solid var(--border-light); border-radius: 10px; font-size: 0.88rem; }
 .nota-pago-hint { font-size: 0.82rem; color: var(--muted); margin-top: 8px; line-height: 1.5; }
 
-.chk-pago-label { display: flex; align-items: flex-start; gap: 12px; background: var(--warning-bg); border: 0px solid var(--warning-bdr); border-radius: 12px; padding: 16px; margin: 20px 0; cursor: pointer; font-size: 0.92rem; font-weight: 500; color: var(--text-2); line-height: 1.5; transition: all 0.3s; }
+.chk-pago-label { display: flex; align-items: flex-start; gap: 12px; background: var(--warning-bg); border: 1px solid var(--warning-bdr); border-radius: 12px; padding: 16px; margin: 20px 0; cursor: pointer; font-size: 0.92rem; font-weight: 500; color: var(--text-2); line-height: 1.5; transition: all 0.3s; }
 .chk-pago-label:hover { background: var(--amber-light); transform: scale(1.02); }
 .chk-pago-label input { width: 20px; height: 20px; accent-color: var(--amber-accent); flex-shrink: 0; margin-top: 2px; cursor: pointer; }
 
-.reserva-card { border: 0px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; background: var(--surface-2); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.reserva-card { border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; background: var(--surface-2); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 .reserva-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px var(--black-sm); border-color: var(--border-mid); }
 .reserva-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .reserva-fecha { font-weight: 800; font-size: 1rem; color: var(--text); }
@@ -42,10 +42,10 @@
 .btn-cancelar { width: 100%; margin-top: 12px; padding: 12px; background: var(--danger-bg); color: var(--danger); border: 0px solid var(--danger-bdr); border-radius: 10px; font-size: 0.9rem; font-weight: 800; cursor: pointer; transition: all 0.2s; }
 .btn-cancelar:hover { background: var(--error-bg); transform: translateY(-2px); box-shadow: 0 4px 8px var(--error-light); }
 
-.aviso-pendiente { background: var(--warning-bg); border: 0px solid var(--warning-bdr); border-radius: 10px; padding: 14px 16px; font-size: 0.9rem; font-weight: 500; color: var(--text-2); margin-bottom: 16px; text-align: center; line-height: 1.5; }
+.aviso-pendiente { background: var(--warning-bg); border: 1px solid var(--warning-bdr); border-radius: 10px; padding: 14px 16px; font-size: 0.9rem; font-weight: 500; color: var(--text-2); margin-bottom: 16px; text-align: center; line-height: 1.5; }
 
 .meses-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }
-.mes-item { background: var(--surface-2); border: 0px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 0.92rem; font-weight: 600; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.3s; }
+.mes-item { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 0.92rem; font-weight: 600; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.3s; }
 .mes-item:hover { border-color: var(--brand-secondary); background: var(--brand-warm-2); transform: translateY(-2px); box-shadow: 0 4px 10px var(--black-xs); }
 .mes-item input { accent-color: var(--brand); width: 16px; height: 16px; cursor: pointer; transition: transform 0.2s; }
 .mes-item:hover input { transform: scale(1.1); }
@@ -56,7 +56,7 @@
   font-size: 0.88rem; font-weight: 800; cursor: pointer;
   text-decoration: none; transition: all 0.3s ease; letter-spacing: 0.3px; margin-top: 12px;
 }
-.btn-wp-inactivo { background: var(--success-bg); color: var(--success); border: 0px solid var(--success-bdr); }
+.btn-wp-inactivo { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-bdr); }
 .btn-wp-inactivo:hover { background: var(--green-border); border-color: var(--success-bright); transform: translateY(-2px); box-shadow: 0 4px 12px var(--success-shadow-hover); }
 .btn-wp-activo { background: var(--success-dark); color: var(--white); border: 0px solid var(--success-border-dark); pointer-events: none; }
 .btn-wp-grupo { background: var(--wa-bg); color: var(--success); margin-top: 16px; }
