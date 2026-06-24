@@ -6,7 +6,7 @@
 .header-banner img {
   height: 90px; object-fit: cover; object-position: center top;
   display: block; opacity: 0.95; border-radius: 50%;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+  filter: drop-shadow(0 4px 12px var(--black-15));
 }
 .header p { color: var(--text-faint); font-size: 0.82rem; padding: 10px 20px 14px; margin: 0; letter-spacing: 0.5px; }
 
@@ -22,9 +22,9 @@
 }
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 600px) {
-  #loading-overlay { background: #FDF3EB; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  #loading-overlay { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
   .loading-card { background: transparent; border-radius: 0; padding: 32px; box-shadow: none; border: none; width: 100%; max-width: 100%; }
-  .loading-logo { display: block; width: 88px; height: 88px; border-radius: 50%; object-fit: cover; object-position: center top; margin: 0 auto 28px; filter: drop-shadow(0 4px 16px rgba(249,115,22,0.2)); }
+  .loading-logo { display: block; width: 88px; height: 88px; border-radius: 50%; object-fit: cover; object-position: center top; margin: 0 auto 28px; filter: drop-shadow(0 4px 16px var(--brand-20)); }
 }
 @media (max-width: 600px) and (prefers-color-scheme: dark) {
   #loading-overlay { background: var(--bg); }
@@ -42,7 +42,7 @@
 .btn-forgot-pin:hover { background: var(--info-btn-hover); transform: translateY(-2px); box-shadow: 0 4px 12px var(--info-shadow); }
 
 .btn-pin-key {
-  padding: 18px 8px; background: var(--white); border: 0px solid #e5e5e5;
+  padding: 18px 8px; background: var(--white); border: 0px solid var(--border-light);
   border-radius: 14px; font-size: 1.4rem; font-weight: 700; cursor: pointer;
   transition: all 0.15s ease; font-family: inherit; color: var(--neutral-dark);
 }
@@ -55,7 +55,7 @@
   #input-pin:-webkit-autofill:hover,
   #input-pin:-webkit-autofill:focus {
     -webkit-box-shadow: 0 0 0 1000px #fafafa7a inset !important;
-    -webkit-text-fill-color: #1a1a1a !important;
+    -webkit-text-fill-color: var(--neutral-dark) !important;
   }
 }
 
@@ -67,7 +67,7 @@ footer { display: block; }
 
 #pin-acordeon-body .btn-primary {
   background: var(--brand);
-  color: white;
+  color: var(--white);
   box-shadow: 0 4px 14px var(--brand-glow);
 }
 #pin-acordeon-body .btn-primary:hover:not(:disabled) {
@@ -90,14 +90,14 @@ footer { display: block; }
   #pd0, #pd1, #pd2, #pd3 { background: var(--dk-skeleton-base) !important; border-color: var(--dk-border-dark) !important; }
   footer a { color: var(--dk-text-muted-2) !important; }
   #pin-acordeon-header { background: var(--dk-brand-burn) !important; border-color: var(--dk-skeleton-base) !important; }
-  #pin-acordeon-header span { color: white !important; }
+  #pin-acordeon-header span { color: var(--white) !important; }
   #pin-acordeon-body { background: var(--dk-surface-opaque); }
   #pin-acordeon-body > div { background: var(--dk-surface-opaque); }
   #pin-acordeon-body select { background: var(--dk-input-bg) !important; border-color: var(--dk-border-darker) !important; color: var(--dk-modal-text) !important; }
   #pin-acordeon-body .select-wrapper::after { color: var(--brand-secondary); }
   #s1 div[style*="border:2px solid #e5e5e5;border-radius:4px"] { border-color: var(--dk-skeleton-base) !important; }
   #s1 div[style*="flex:1;height:1px"] { background: var(--dk-border-darker) !important; }
-  #s1 span[style*="color:#aaa"] { color: #555 !important; }
+  #s1 span[style*="color:#aaa"] { color: var(--neutral-light) !important; }
   #s1 button[onclick="abrirContacto()"] { background: var(--dk-purple-bg) !important; color: var(--dk-purple-text) !important; border-color: var(--dk-purple-mid) !important; }
   #google-btn-wrapper { background: none !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
 }

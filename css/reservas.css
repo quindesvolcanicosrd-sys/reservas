@@ -3,7 +3,7 @@
   border: 0px solid var(--border); border-radius: 12px; margin-bottom: 10px;
   cursor: pointer; transition: all 0.3s ease; background: var(--surface-2);
 }
-.fecha-item:hover:not(.agotada) { border-color: var(--brand-secondary); transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.05); }
+.fecha-item:hover:not(.agotada) { border-color: var(--brand-secondary); transform: translateY(-2px); box-shadow: 0 6px 12px var(--black-05); }
 .fecha-item.sel { border-color: var(--brand); background: var(--brand-warm); }
 .fecha-item.agotada { opacity: 0.5; cursor: not-allowed; background: var(--disabled-bg); border-color: var(--disabled-border); }
 .fecha-item input[type="checkbox"] { accent-color: var(--brand); width: 18px; height: 18px; flex-shrink: 0; transition: transform 0.2s; }
@@ -57,8 +57,8 @@
   text-decoration: none; transition: all 0.3s ease; letter-spacing: 0.3px; margin-top: 12px;
 }
 .btn-wp-inactivo { background: var(--success-bg); color: var(--success); border: 0px solid var(--success-bdr); }
-.btn-wp-inactivo:hover { background: var(--green-border); border-color: var(--success-bright); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(34,197,94,0.15); }
-.btn-wp-activo { background: var(--success-dark); color: white; border: 0px solid var(--success-border-dark); pointer-events: none; }
+.btn-wp-inactivo:hover { background: var(--green-border); border-color: var(--success-bright); transform: translateY(-2px); box-shadow: 0 4px 12px var(--success-shadow-hover); }
+.btn-wp-activo { background: var(--success-dark); color: var(--white); border: 0px solid var(--success-border-dark); pointer-events: none; }
 .btn-wp-grupo { background: var(--wa-bg); color: var(--success); margin-top: 16px; }
 .btn-wp-grupo:hover { background: var(--wa-bg-hover); border-color: var(--wa-brand); transform: translateY(-2px); }
 

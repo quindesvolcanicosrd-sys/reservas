@@ -23,6 +23,7 @@
   --brand-06:       rgba(249,115,22,0.06);
   --brand-08:           rgba(249,115,22,0.08);
   --brand-20:           rgba(249,115,22,0.2);
+  --brand-focus:    rgba(249,115,22,0.15);
   --brand-lightest:     rgba(249,115,22,0.06);
   --brand-warm-3:       #fff4ec;
   --brand-secondary:#fb923c;
@@ -127,6 +128,9 @@
   /* Sombras negras */
   --black-xs:            rgba(0,0,0,0.04);
   --black-sm:            rgba(0,0,0,0.06);
+  --black-xxs:      rgba(0,0,0,0.02);
+  --black-15:       rgba(0,0,0,0.15);
+  --black-05:       rgba(0,0,0,0.05);
   --black-md:            rgba(0,0,0,0.07);
 
   /* Brand warm */
@@ -142,6 +146,8 @@
   --success-border-dark: #15803d;
   --success-bright:      #4ade80;
   --success-shadow:      rgba(34,197,94,0.08);
+  --success-glow:   rgba(22,163,74,0.3);
+  --success-shadow-hover: rgba(34,197,94,0.15);
 
   /* Error */
   --error-bg:            #fee2e2;
@@ -178,6 +184,7 @@
   --dk-brand-burn:       #e55a00;
   --dk-info-text-2:      #60a5fa;
   --dk-text-muted:       #aaa;
+  --dk-text-ghost:      rgba(127,127,127,0.25);
   --dk-text-muted-2:     #8a8a8a;
   --dk-border-dark:      #444;
   --dk-border-darker:    #333;
@@ -188,6 +195,8 @@
   --error-lightest:      #fef2f2;
   --dk-badge-bg:         #3a3a3a;
   --dk-badge-text:       #bbb;
+  --dk-overlay-95:  rgba(23,9,0,0.95);
+  --dk-overlay-97:  rgba(23,9,0,0.97);
   --success-lightest:    #dcfce7;
   --border-softest:      #eaeaea;
   --purple-lightest:     #faf5ff;
@@ -198,6 +207,7 @@
   --placeholder-color:  #a89587;
   --text-ghost:         rgba(127,127,127,0.3);
   --white:              #ffffff;
+  --white-40:           rgba(255,255,255,0.4);
 
   /* Botón info */
   --info-btn-bg:        #e0f2fe;

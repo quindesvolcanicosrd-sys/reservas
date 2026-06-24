@@ -58,18 +58,18 @@
 .ddp-month-btn.ddp-month-sel { background: var(--brand); color: var(--white); font-weight: 700; }
 
 @media (prefers-color-scheme: dark) {
-  #ddp-modal .ddp-card { background: rgba(23,9,0,0.97) !important; }
+  #ddp-modal .ddp-card { background: var(--dk-overlay-97) !important; }
   .ddp-selected-date, .ddp-nav-label, .ddp-day, .ddp-year-btn, .ddp-month-btn { color: var(--text) !important; }
-  .ddp-day.ddp-other { color: rgba(127,127,127,0.25) !important; }
+  .ddp-day.ddp-other { color: var(--dk-text-ghost) !important; }
   .ddp-btn-cancel { color: var(--muted) !important; }
-  #modal-permisos > div { background: rgba(23,9,0,0.97) !important; }
-  #modal-permisos div[style*="background:#fafafa"] { background: rgba(249,115,22,0.04) !important; border-color: rgba(249,115,22,0.15) !important; }
+  #modal-permisos > div { background: var(--dk-overlay-97) !important; }
+  #modal-permisos div[style*="background:#fafafa"] { background: var(--brand-subtle) !important; border-color: var(--brand-focus) !important; }
   #modal-permisos div[style*="border-top:1px"] { border-color: var(--border) !important; }
   #modal-permisos div[style*="font-weight:600"] { color: var(--text) !important; }
   #modal-permisos div[style*="font-weight:800"] { color: var(--text) !important; }
   #modal-permisos p, #modal-permisos div[style*="color:#777"] { color: var(--muted) !important; }
   #mp-fecha { background: var(--surface-2) !important; border-color: var(--border) !important; color: var(--text) !important; }
-  #modal-eliminar-cuenta > div { background: rgba(23,9,0,0.97) !important; }
+  #modal-eliminar-cuenta > div { background: var(--dk-overlay-97) !important; }
   #modal-eliminar-cuenta input { background: var(--surface-2) !important; border-color: var(--border) !important; color: var(--text) !important; }
   #modal-eliminar-cuenta .mec-nombre { color: var(--brand) !important; }
 }
