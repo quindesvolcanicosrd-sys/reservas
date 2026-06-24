@@ -108,7 +108,7 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
   padding: 14px 16px; background: var(--surface-2); border: 0px solid var(--border);
   border-radius: 12px; margin-bottom: 12px; transition: all 0.3s;
 }
-.privacy-row:hover { border-color: var(--border-slate); box-shadow: 0 4px 8px rgba(0,0,0,0.03); }
+.privacy-row:hover { border-color: var(--border-slate); box-shadow: 0 4px 8px var(--black-03); }
 .privacy-row label { font-size: 0.88rem; color: var(--text-mid); font-weight: 600; margin: 0; text-transform: none; letter-spacing: 0; }
 .privacy-row select { padding: 8px 30px 8px 12px; max-width: 100px; margin-bottom: 0; }
 

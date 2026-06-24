@@ -158,7 +158,7 @@ reservas/
 | **Bordes** | `--border / --border-2 / --border-light / --border-mid / --border-slate` |
 | **Texto** | `--text / --text-2 / --muted / --hint / --text-faint / --text-mid` |
 | **Neutros** | `--neutral-dark / --neutral-gray / --neutral-mid / --neutral-light / --disabled-bg-2` |
-| **Sombras** | `--shadow-sm / --shadow / --shadow-lg / --black-xs / --black-sm / --black-xxs / --black-15 / --black-05 / --black-md` |
+| **Sombras** | `--shadow-sm / --shadow / --shadow-lg / --black-xs / --black-sm / --black-xxs / --black-03 / --black-15 / --black-05 / --black-md` |
 | **Estados** | `--success / --danger / --warning / --info` (+ `-bg / -bdr` para cada uno) |
 | **Success/Green** | `--success-dark / --success-bright / --success-border-dark / --success-shadow / --success-glow / --success-shadow-hover / --green-dark / --green-light / --green-border` |
 | **Error** | `--error / --error-light / --error-border / --error-bg` |
