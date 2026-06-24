@@ -357,6 +357,8 @@ if (!G.idToken) { errMsg('err-form','Primero conecta tu cuenta de Google.'); ret
         document.getElementById('form-card').style.display = 'none';
         var ex = document.getElementById('section-exito');
         ex.style.display = 'block';
+        var _hdr = document.querySelector('.header');
+        if (_hdr) _hdr.style.display = 'none';
         ex.style.animation = 'slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both';
         window.scrollTo({top:0,behavior:'smooth'});
         var _patinesParam = patines === 'Sí' ? 'si' : 'no';
@@ -365,12 +367,11 @@ if (!G.idToken) { errMsg('err-form','Primero conecta tu cuenta de Google.'); ret
           + '&nombre='   + encodeURIComponent(nombre)
           + '&patines='  + _patinesParam
           + '&protec='   + _protecParam
-          + (_patinesParam === 'si' && talla ? '&talla=' + encodeURIComponent(talla) : '');
+          + (_patinesParam === 'si' && talla ? '&talla=' + encodeURIComponent(talla) : '')
+          + '&token=' + encodeURIComponent(G.idToken || '');
         setTimeout(function() {
           var lt = document.getElementById('exito-loader-txt');
           if (lt) lt.textContent = '¡Listo! Redirigiendo...';
-          var btnWpG = document.getElementById('btn-wp-grupo-exito');
-          if (btnWpG) btnWpG.style.display = 'flex';
         }, 1600);
         setTimeout(function() {
           window.location.href = 'https://reservas.quindesvolcanicos.com?' + _params;

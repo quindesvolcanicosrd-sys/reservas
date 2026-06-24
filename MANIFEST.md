@@ -392,7 +392,7 @@ reservas/
 |---|---|
 | `_gisUsuarioInicializado` | Flag para evitar doble init de Google Sign-In usuario |
 | `iniciarGoogleSignInUsuario()` | Inicializa y renderiza el botón GIS del usuario en s1 |
-| `onGoogleCredentialUsuario(resp)` | Callback GIS usuario: login, detección admin, o muestra "no registrado" |
+| `onGoogleCredentialUsuario(resp)` | Callback GIS usuario: login, detección admin, o muestra "no registrado"; tras cargar reservas, si `window._pendingNuevx` está presente aplica datos de equipamiento en E.datos y llama `irNuevaReserva(true)` saltando el modal de permisos |
 | `togglePinAcordeon()` | Abre/cierra el acordeón PIN en s1 |
 | `continuar_pin_desde_s1()` | Resuelve nombre/email y llama continuar_pin() |
 | `continuar_s1()` | (legacy) Toma nombre del select y navega a s1b |
@@ -406,7 +406,8 @@ reservas/
 | `irAlRegistro()` | Redirige a inscripcion/ con el token de Google como query param |
 | `solicitarNombreUsuario()` | Abre mailto para solicitar el nombre de usuario al equipo |
 | `solicitarNuevoPIN()` | Abre mailto para solicitar un nuevo PIN al equipo |
-| `window.onload` | Punto de entrada: restaura sesión admin o usuario, o muestra s1; llama generarMeses(); lee params `?nuevx=1&nombre=&patines=&protec=&talla=` post-inscripción para pre-cargar fechas (requiere `inscribirPersona` en el `doGet` del Apps Script backend) |
+| `window.onload` | Punto de entrada: restaura sesión admin o usuario, o muestra s1; llama generarMeses(); lee params `?nuevx=1&patines=&protec=&talla=&token=` post-inscripción: si hay `token` y no hay sesión activa, guarda equipamiento en `window._pendingNuevx` y llama `onGoogleCredentialUsuario` directamente para auto-login |
+| `window._pendingNuevx` | Objeto temporal `{ patines, protec, talla }` guardado por `window.onload` al detectar `?nuevx=1+token`; consumido y limpiado por `onGoogleCredentialUsuario` para navegar a reserva directa post-inscripción |
 | `pageshow listener` | Bfcache fix: restaura la pantalla correcta al volver con el botón atrás |
 
 ### shared/date-picker.js
@@ -452,7 +453,7 @@ reservas/
 | `selPat(label, val)` | Selecciona opción de patines y muestra/oculta selector de talla |
 | `selProtec(label, val)` | Selecciona opción de protecciones y muestra/oculta input libre |
 | `cargarTallas()` | Carga tallas disponibles desde el backend y las pone en el select |
-| `enviarForm()` | Valida todos los campos y envía la inscripción al backend; redirige a la app (ya no valida `_wpUnido`) |
+| `enviarForm()` | Valida todos los campos y envía la inscripción al backend; al mostrar section-exito oculta `.header`; ya no muestra `btn-wp-grupo-exito`; redirige a la app con `&token=G.idToken` incluido en la URL (ya no valida `_wpUnido`) |
 | `errMsg(id, msg)` | Muestra un error en el elemento id con auto-ocultado a los 6s |
 | `mostrarCargando(msg) / ocultarCargando()` | Overlay de carga con fade de opacidad (diferente al de la app principal) |
 | `abrirContacto() / cerrarContacto()` | Muestra/oculta el modal de contacto de inscripcion |

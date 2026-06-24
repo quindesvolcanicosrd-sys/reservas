@@ -78,9 +78,20 @@ function onGoogleCredentialUsuario(resp) {
       _todasReservas = reservas;
       ocultarCargando();
       prepararHome();
-      ir('s-home');
-      if (E.datos && !E.datos.permisosConfigurados) {
-        setTimeout(function() { mostrarModalPermisos(E.nombre, E.datos.fotoPerfil || ''); }, 600);
+      if (window._pendingNuevx) {
+        var _pnx = window._pendingNuevx;
+        window._pendingNuevx = null;
+        if (E.datos) {
+          E.datos.necesitaPatines      = _pnx.patines === 'si' ? 'Sí' : 'No';
+          E.datos.necesitaProtecciones = _pnx.protec  === 'si' ? 'Sí' : 'No';
+          if (_pnx.talla) E.datos.talla = _pnx.talla;
+        }
+        setTimeout(function() { irNuevaReserva(true); }, 300);
+      } else {
+        ir('s-home');
+        if (E.datos && !E.datos.permisosConfigurados) {
+          setTimeout(function() { mostrarModalPermisos(E.nombre, E.datos.fotoPerfil || ''); }, 600);
+        }
       }
     }, function() { ocultarCargando(); prepararHome(); ir('s-home'); });
   }, function(e) {
@@ -288,16 +299,15 @@ window.onload = function() {
   if (!_restaurando) { ir('s1', true); }
   var _urlParams = new URLSearchParams(location.search);
   if (_urlParams.get('nuevx') === '1') {
-    var _nombreNuevx = _urlParams.get('nombre') || '';
     var _patinesNuevx = _urlParams.get('patines') || 'no';
-    var _protecNuevx = _urlParams.get('protec') || 'no';
-    var _tallaNuevx = _urlParams.get('talla') || '';
-    if (_nombreNuevx && E.datos) {
-      E.datos.necesitaPatines = _patinesNuevx === 'si' ? 'Sí' : 'No';
-      E.datos.necesitaProtecciones = _protecNuevx === 'si' ? 'Sí' : 'No';
-      if (_tallaNuevx) E.datos.talla = _tallaNuevx;
-      history.replaceState({}, '', location.pathname);
-      setTimeout(function() { irNuevaReserva(_patinesNuevx === 'si'); }, 300);
+    var _protecNuevx  = _urlParams.get('protec')  || 'no';
+    var _tallaNuevx   = _urlParams.get('talla')   || '';
+    var _tokenNuevx   = _urlParams.get('token')   || '';
+    history.replaceState({}, '', location.pathname);
+    if (_tokenNuevx && !_restaurando) {
+      window._pendingNuevx = { patines: _patinesNuevx, protec: _protecNuevx, talla: _tallaNuevx };
+      mostrarCargando('Iniciando tu sesión...');
+      onGoogleCredentialUsuario({ credential: _tokenNuevx });
     }
   }
   requestAnimationFrame(function() { requestAnimationFrame(iniciarGoogleSignInUsuario); });
