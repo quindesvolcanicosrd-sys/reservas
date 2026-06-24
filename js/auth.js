@@ -259,6 +259,17 @@ window.onload = function() {
     }
   }, 12000);
 
+  var _urlParams = new URLSearchParams(location.search);
+  var _tokenNuevx = '';
+  if (_urlParams.get('nuevx') === '1') {
+    var _patinesNuevx = _urlParams.get('patines') || 'no';
+    var _protecNuevx  = _urlParams.get('protec')  || 'no';
+    var _tallaNuevx   = _urlParams.get('talla')   || '';
+    _tokenNuevx = _urlParams.get('token') || '';
+    window._pendingNuevx = { patines: _patinesNuevx, protec: _protecNuevx, talla: _tallaNuevx };
+    history.replaceState({}, '', location.pathname);
+  }
+
   var _restaurando = false;
 
   var adminSession = localStorage.getItem('adminSession');
@@ -289,25 +300,24 @@ window.onload = function() {
           vincularPush(E.nombre);
           api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
             _todasReservas = reservas;
-            prepararHome(); ir('s-home');
+            prepararHome();
             window._restaurandoSesion = false; ocultarCargando();
+            if (window._pendingNuevx) {
+              var _pnx = window._pendingNuevx; window._pendingNuevx = null;
+              if (E.datos) { E.datos.necesitaPatines = _pnx.patines === 'si' ? 'Sí' : 'No'; E.datos.necesitaProtecciones = _pnx.protec === 'si' ? 'Sí' : 'No'; if (_pnx.talla) E.datos.talla = _pnx.talla; }
+              setTimeout(function() { irNuevaReserva(true); }, 300);
+            } else { ir('s-home'); }
           }, function() { prepararHome(); ir('s-home'); window._restaurandoSesion = false; ocultarCargando(); });
         }, function() { window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true); });
       } else { localStorage.removeItem('session'); }
     } catch (ex) { localStorage.removeItem('session'); }
   }
-  if (!_restaurando) { ir('s1', true); }
-  var _urlParams = new URLSearchParams(location.search);
-  if (_urlParams.get('nuevx') === '1') {
-    var _patinesNuevx = _urlParams.get('patines') || 'no';
-    var _protecNuevx  = _urlParams.get('protec')  || 'no';
-    var _tallaNuevx   = _urlParams.get('talla')   || '';
-    var _tokenNuevx   = _urlParams.get('token')   || '';
-    history.replaceState({}, '', location.pathname);
-    if (_tokenNuevx && !_restaurando) {
-      window._pendingNuevx = { patines: _patinesNuevx, protec: _protecNuevx, talla: _tallaNuevx };
+  if (!_restaurando) {
+    if (_tokenNuevx) {
       mostrarCargando('Iniciando tu sesión...');
       onGoogleCredentialUsuario({ credential: _tokenNuevx });
+    } else {
+      ir('s1', true);
     }
   }
   requestAnimationFrame(function() { requestAnimationFrame(iniciarGoogleSignInUsuario); });

@@ -356,7 +356,10 @@ if (!G.idToken) { errMsg('err-form','Primero conecta tu cuenta de Google.'); ret
         document.getElementById('exito-nombre').textContent = nombre;
         document.getElementById('form-card').style.display = 'none';
         var ex = document.getElementById('section-exito');
-        ex.style.display = 'block';
+        ex.style.display = 'flex';
+        ex.style.minHeight = '100vh';
+        ex.style.alignItems = 'center';
+        ex.style.justifyContent = 'center';
         var _hdr = document.querySelector('.header');
         if (_hdr) _hdr.style.display = 'none';
         ex.style.animation = 'slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both';

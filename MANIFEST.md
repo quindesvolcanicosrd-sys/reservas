@@ -406,8 +406,8 @@ reservas/
 | `irAlRegistro()` | Redirige a inscripcion/ con el token de Google como query param |
 | `solicitarNombreUsuario()` | Abre mailto para solicitar el nombre de usuario al equipo |
 | `solicitarNuevoPIN()` | Abre mailto para solicitar un nuevo PIN al equipo |
-| `window.onload` | Punto de entrada: restaura sesión admin o usuario, o muestra s1; llama generarMeses(); lee params `?nuevx=1&patines=&protec=&talla=&token=` post-inscripción: si hay `token` y no hay sesión activa, guarda equipamiento en `window._pendingNuevx` y llama `onGoogleCredentialUsuario` directamente para auto-login |
-| `window._pendingNuevx` | Objeto temporal `{ patines, protec, talla }` guardado por `window.onload` al detectar `?nuevx=1+token`; consumido y limpiado por `onGoogleCredentialUsuario` para navegar a reserva directa post-inscripción |
+| `window.onload` | Punto de entrada; lee URL params al inicio (antes de checks de sesión) y si `?nuevx=1` setea `window._pendingNuevx` y captura `_tokenNuevx`; restaura sesión admin o usuario; si `_restaurando=true`, el callback de `restaurarSesion` también consume `_pendingNuevx`; si `!_restaurando` y hay `_tokenNuevx`, llama `onGoogleCredentialUsuario` directamente sin mostrar s1; llama generarMeses() |
+| `window._pendingNuevx` | Objeto temporal `{ patines, protec, talla }` seteado al inicio de `window.onload` (antes de cualquier check de sesión) al detectar `?nuevx=1`; consumido y limpiado tanto por `restaurarSesion` callback como por `onGoogleCredentialUsuario` para navegar a reserva directa post-inscripción |
 | `pageshow listener` | Bfcache fix: restaura la pantalla correcta al volver con el botón atrás |
 
 ### shared/date-picker.js
