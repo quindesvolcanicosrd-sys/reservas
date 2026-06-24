@@ -146,11 +146,13 @@ reservas/
 
 ### Cambios recientes
 - **colors.css** — Añadidos overrides dark mode para: `--surface-light`, `--disabled-bg`, `--disabled-bg-2`, `--disabled-border`, `--border-light`, `--btn-secondary-hover-bg`, `--brand-warm`, `--brand-warm-2`, `--brand-warm-3`, `--info-btn-bg`, `--info-btn-hover`, `--green-light`, `--error-bg`, `--amber-light`, `--amber-lighter`, `--neutral-dark`, `--text-mid`, `--text-faint`, `--border-slate`, `--border-mid`
+- **colors.css** — Nuevas variables light: `--neutral-lighter` (#ccc), `--overlay-dark` (rgba 0,0,0,0.7), `--danger-dark` (#991b1b), `--info-bg-light` (#f0f9ff), `--info-light` (#7dd3fc), `--amber-30` (rgba amber 0.4), `--instagram` (#E1306C), `--border-warm` (rgba 168,149,135,0.3), `--brand-warm-border` (#fde8d4)
 - **ui.css** — Bordes 1px activados en: `.opcion`, `.chk-opcion`, `.privacy-row`, `.aviso-legal`
 - **reservas.css** — Bordes 1px activados en: `.fecha-item`, `.pago-metodo`, `.mes-item`, `.reserva-card`, `.aviso-pendiente`, `.tipo-pago-wrapper`, `.nota-pago-wrapper`, `.chk-pago-label`, `.total-box`, `.btn-wp-inactivo`
 - **home.css** — Bordes 1px activados en: `.res-card-home`, `.home-boton`, `.btn-accion-home`
 - **perfil.css** — Bordes 1px activados en: `.datos-seccion`
 - **inscripcion.css** — Bordes 1px activados en: `.perm-box`, `.opcion`, `.chk-opcion`, `.profile-preview`
+- **index.html** — Todos los colores hardcodeados eliminados; reemplazados por variables CSS (`--danger`, `--white`, `--neutral-dark`, `--neutral-gray`, `--neutral-mid`, `--neutral-light`, `--neutral-lighter`, `--overlay`, `--overlay-dark`, `--border-light`, `--disabled-bg`, `--disabled-bg-2`, `--text-faint`, `--surface-light`, `--warning-bg`, `--amber-30`, `--info-bg-light`, `--info-btn-hover`, `--info-light`, `--wa-brand`, `--instagram`, `--brand-warm`, `--brand-warm-border`, `--border-warm`, `--dk-brand-burn`, `--danger-dark`, `--error-lightest`, `--error-light-border`, `--disabled-border`, `--placeholder-color`)
 
 ### css/colors.css — fuente única de verdad de colores
 > **Regla:** ningún archivo CSS o JS debe hardcodear un color hex que tenga variable aquí.

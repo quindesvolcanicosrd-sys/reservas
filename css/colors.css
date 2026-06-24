@@ -41,6 +41,7 @@
   --purple-hover:   rgba(124,58,237,0.18);
   --overlay:        rgba(0,0,0,0.65);
   --overlay-light:  rgba(0,0,0,0.55);
+  --overlay-dark:   rgba(0,0,0,0.7);
 
   /* ── Fondo ───────────────────────────────────────────── */
   --bg:             #FDF3EB;
@@ -55,6 +56,8 @@
   /* ── Bordes ──────────────────────────────────────────── */
   --border:         rgba(249,115,22,0.22);
   --border-2:       rgba(249,115,22,0.08);
+  --border-warm:    rgba(168,149,135,0.3);
+  --brand-warm-border: #fde8d4;
 
   /* ── Texto ───────────────────────────────────────────── */
   --text:           #2C1A0E;
@@ -79,9 +82,12 @@
   --danger:         #dc2626;
   --danger-bg:      rgba(220,38,38,0.1);
   --danger-bdr:     rgba(220,38,38,0.3);
+  --danger-dark:    #991b1b;
   --info:           #0ea5e9;
   --info-bg:        rgba(14,165,233,0.1);
   --info-bdr:       rgba(14,165,233,0.3);
+  --info-bg-light:  #f0f9ff;
+  --info-light:     #7dd3fc;
   --info-dark:      #0369a1;
 
   /* ── Botones ─────────────────────────────────────────── */
@@ -113,6 +119,7 @@
   --neutral-gray:        #777;
   --neutral-mid:         #666;
   --neutral-light:       #555;
+  --neutral-lighter:     #ccc;
   --text-faint:          #aaa;
   --text-mid:            #444;
   --disabled-bg-2:       #f5f5f5;
@@ -142,6 +149,7 @@
   --amber-darker:   #92400e;
   --amber-accent:   #d97706;
   --amber-border:   #fde68a;
+  --amber-30:       rgba(251,191,36,0.4);
 
   /* Green / Error extendidos */
   --green-dark:     #166534;
@@ -161,6 +169,7 @@
   --wa-bg:               rgba(37,211,102,0.1);
   --wa-bg-hover:         rgba(37,211,102,0.18);
   --wa-brand:            #25D366;
+  --instagram:           #E1306C;
 
   /* Divisores */
   --gray-divider:        rgba(128,128,128,0.12);
