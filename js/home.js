@@ -39,6 +39,7 @@ function prepararHome() {
   var rowInstalar = document.getElementById('row-instalar-app');
   if (rowInstalar) rowInstalar.style.display = esStandalone() ? 'none' : '';
   setTimeout(function() {
+    console.log('[modal-home] intentando mostrar, activa:', document.getElementById('s-home').classList.contains('activa'));
     if (!_yaVioModal('home') && document.getElementById('s-home').classList.contains('activa')) {
       var mh = document.getElementById('modal-info-home');
       if (mh) mh.style.display = 'flex';
