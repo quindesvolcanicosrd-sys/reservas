@@ -92,13 +92,13 @@ select, option, optgroup { font-family: 'Montserrat', sans-serif !important; }
 .modal-info {
   position: fixed; inset: 0; z-index: 8000;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.55); padding: 16px;
+  background: rgba(0,0,0,0.75); padding: 16px;
   animation: fadeIn 0.25s ease;
 }
 .modal-info-card {
-  background: var(--surface); border-radius: var(--radius);
+  background: var(--surface-2); border-radius: var(--radius);
   padding: 24px 20px 20px; width: 100%; max-width: 360px;
-  border: 1px solid var(--border-2); max-height: 90vh; overflow-y: auto;
+  border: 2px solid var(--brand); max-height: 90vh; overflow-y: auto;
   animation: smoothSlideUp 0.3s cubic-bezier(0.16,1,0.3,1);
 }
 .modal-info-titulo { font-size: 1.15rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
