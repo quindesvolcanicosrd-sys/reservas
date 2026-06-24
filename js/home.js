@@ -41,11 +41,7 @@ function prepararHome() {
   setTimeout(function() {
     if (!_yaVioModal('home') && document.getElementById('s-home').classList.contains('activa')) {
       var mh = document.getElementById('modal-info-home');
-      if (mh) {
-        mh.style.cssText = 'display:flex !important; position:fixed; inset:0; z-index:8000; align-items:center; justify-content:center; background:rgba(0,0,0,0.82); padding:16px;';
-        var mhCard = mh.querySelector('.modal-info-card');
-        if (mhCard) { mhCard.style.background = 'var(--surface)'; mhCard.style.border = '2px solid var(--brand)'; }
-      }
+      if (mh) mh.style.display = 'flex';
     }
   }, 500);
 }

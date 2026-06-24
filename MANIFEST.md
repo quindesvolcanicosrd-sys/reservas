@@ -222,8 +222,8 @@ reservas/
 ### IDs relevantes de index.html
 | ID | Descripción |
 |---|---|
-| `#modal-info-reserva` | Modal info primera reserva; items condicionales `#mri-modalidad-clase` / `#mri-modalidad-mes` / `#mri-cupon` |
-| `#modal-info-home` | Modal info primera visita a home |
+| `#modal-info-reserva` | Modal info primera reserva; items condicionales `#mri-modalidad-clase` / `#mri-modalidad-mes` / `#mri-cupon`; estilos críticos inline en el HTML (mismo patrón que `#modal-contacto`) |
+| `#modal-info-home` | Modal info primera visita a home; estilos críticos inline en el HTML |
 
 ---
 
@@ -266,14 +266,14 @@ reservas/
 | `_yaVioModal(id)` | true si el modal fue marcado como visto (localStorage) o pospuesto (sessionStorage) |
 | `modalInfoOk(id)` | marca como visto permanente y cierra; ejecuta callback si id=reserva |
 | `modalInfoLater(id)` | marca como pospuesto (sessionStorage) y cierra; ejecuta callback si id=reserva |
-| `mostrarModalInfoReserva(callback)` | muestra modal-info-reserva si no fue visto; adapta items condicionales (modalidad y cupón) según E.datos; aplica estilos inline críticos (cssText) para garantizar visibilidad independiente del CSS; ejecuta callback directamente si ya fue visto |
+| `mostrarModalInfoReserva(callback)` | muestra modal-info-reserva si no fue visto; adapta items condicionales (modalidad y cupón) según E.datos; ejecuta callback directamente si ya fue visto |
 | `window._modalInfoReservaCallback` | callback guardado para ejecutar tras cerrar el modal de reserva |
 
 ### js/home.js
 | Función / variable | Descripción |
 |---|---|
 | `_todasReservas` | Array con todas las reservas del usuario (cargadas al login) |
-| `prepararHome()` | Inicializa la pantalla home: saludo, foto, banner cupón/notif, render reservas. Refresca `cuponDisponible` desde el backend (`getCuponDisponible`) en cada visita a la home. Muestra `#modal-info-home` con delay de 500ms aplicando estilos inline críticos (cssText) para garantizar visibilidad independiente del CSS |
+| `prepararHome()` | Inicializa la pantalla home: saludo, foto, banner cupón/notif, render reservas. Refresca `cuponDisponible` desde el backend (`getCuponDisponible`) en cada visita a la home. Muestra `#modal-info-home` con delay de 500ms si el usuario no lo ha visto aún |
 | `irNuevaReserva(skipEquip)` | Navega al flujo de reserva; `skipEquip=true` salta s2-s3 e va directo a `cargarFechas()` (usado post-inscripción vía parámetro `?nuevx=1`). Pasa por `mostrarModalInfoReserva()` antes de navegar; el callback ejecuta la lógica de navegación |
 | `irMisReservas()` | Navega al historial completo (ir s-misreservas) |
 | `verTodasReservas()` | Alias de irMisReservas() |

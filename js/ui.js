@@ -275,8 +275,5 @@ function mostrarModalInfoReserva(callback) {
   if (elMes)   elMes.style.display   = puedeMonthly ? '' : 'none';
   if (elCupon) elCupon.style.display = tieneCuponDisponible() ? '' : 'none';
   window._modalInfoReservaCallback = callback;
-  var _mri = document.getElementById('modal-info-reserva');
-  _mri.style.cssText = 'display:flex !important; position:fixed; inset:0; z-index:8000; align-items:center; justify-content:center; background:rgba(0,0,0,0.82); padding:16px;';
-  var _mriCard = _mri.querySelector('.modal-info-card');
-  if (_mriCard) { _mriCard.style.background = 'var(--surface)'; _mriCard.style.border = '2px solid var(--brand)'; }
+  document.getElementById('modal-info-reserva').style.display = 'flex';
 }
