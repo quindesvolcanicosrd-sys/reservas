@@ -115,7 +115,7 @@ select, option, optgroup { font-family: 'Montserrat', sans-serif !important; }
 .modal-info-desc   { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
 .modal-info-hr     { border: none; border-top: 1px solid var(--border-2); margin: 14px 0; width: 100%; }
 .modal-info-footer { display: flex; gap: 10px; margin-top: 20px; }
-.modal-info-footer .btn-secondary { flex: 1; font-size: 0.8rem; white-space: nowrap; }
-.modal-info-footer .btn-primary   { flex: 1; }
+.modal-info-footer .btn-secondary { flex: 1; font-size: 0.78rem; white-space: nowrap; padding-left: 6px; padding-right: 6px; }
+.modal-info-footer .btn-primary   { flex: 1; font-size: 0.78rem; }
 
 .otro-texto { width: 100%; }
