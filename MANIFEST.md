@@ -254,7 +254,7 @@ reservas/
 | `abrirContacto()` | Muestra el modal #modal-contacto |
 | `cerrarContacto()` | Oculta el modal #modal-contacto |
 | `TOP_BAR_CONFIG` | Objeto de configuración de título y destino "volver" por pantalla |
-| `ir(id, desdeHistorial)` | Navega a una pantalla: activa .pantalla, pushState, actualiza top-bar y paso-dots |
+| `ir(id, desdeHistorial)` | Navega a una pantalla: activa .pantalla, pushState, actualiza top-bar y paso-dots; cuando id==='s-home' también muestra `#modal-info-home` con delay 600ms si el usuario no lo ha visto |
 | `volver(id)` | Alias de ir(); lo llama top-bar-btn |
 | `popstate listener` | Restaura pantalla correcta al usar el botón atrás del navegador |
 | `NOMBRES_MESES` | Array ['Enero'…'Diciembre'] para labels de meses |
@@ -274,7 +274,7 @@ reservas/
 | Función / variable | Descripción |
 |---|---|
 | `_todasReservas` | Array con todas las reservas del usuario (cargadas al login) |
-| `prepararHome()` | Inicializa la pantalla home: saludo, foto, banner cupón/notif, render reservas. Refresca `cuponDisponible` desde el backend (`getCuponDisponible`) en cada visita a la home. Muestra `#modal-info-home` con delay de 500ms si el usuario no lo ha visto aún |
+| `prepararHome()` | Inicializa la pantalla home: saludo, foto, banner cupón/notif, render reservas. Refresca `cuponDisponible` desde el backend (`getCuponDisponible`) en cada visita a la home |
 | `irNuevaReserva(skipEquip)` | Navega al flujo de reserva; `skipEquip=true` salta s2-s3 e va directo a `cargarFechas()` (usado post-inscripción vía parámetro `?nuevx=1`) |
 | `irMisReservas()` | Navega al historial completo (ir s-misreservas) |
 | `verTodasReservas()` | Alias de irMisReservas() |

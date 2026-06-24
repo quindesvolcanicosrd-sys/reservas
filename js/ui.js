@@ -91,7 +91,15 @@ function ir(id, desdeHistorial) {
 
   document.body.classList.toggle('logueada', id !== 's1');
 
-  if (id === 's-home') setTimeout(mostrarBannerPWA, 1200);
+  if (id === 's-home') {
+    setTimeout(mostrarBannerPWA, 1200);
+    setTimeout(function() {
+      if (!_yaVioModal('home')) {
+        var mh = document.getElementById('modal-info-home');
+        if (mh) mh.style.display = 'flex';
+      }
+    }, 600);
+  }
 
   var topBar = document.getElementById('top-bar'); var topBtn = document.getElementById('top-bar-btn'); var topTitulo = document.getElementById('top-bar-titulo');
   var cfg = TOP_BAR_CONFIG[id];
