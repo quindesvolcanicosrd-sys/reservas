@@ -131,6 +131,8 @@
   --surface-light:       #fafafa;
   --disabled-bg:         #f0f0f0;
   --disabled-border:     #eee;
+  --skeleton-base:       #d1d1d1;
+  --skeleton-shine:      #e8e8e8;
 
   /* Sombras negras */
   --black-xxs:      rgba(0,0,0,0.02);
