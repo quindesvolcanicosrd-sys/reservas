@@ -281,7 +281,9 @@ function mostrarModalInfoReserva(callback) {
   var elCupon = document.getElementById('mri-cupon');
   if (elClase) elClase.style.display = puedeMonthly ? 'none' : '';
   if (elMes)   elMes.style.display   = puedeMonthly ? '' : 'none';
-  if (elCupon) elCupon.style.display = tieneCuponDisponible() ? '' : 'none';
-  window._modalInfoReservaCallback = callback;
+var elCuponHr = document.getElementById('mri-cupon-hr');
+  var mostrarCupon = tieneCuponDisponible();
+  if (elCupon) elCupon.style.display = mostrarCupon ? '' : 'none';
+  if (elCuponHr) elCuponHr.style.display = mostrarCupon ? '' : 'none';  window._modalInfoReservaCallback = callback;
   document.getElementById('modal-info-reserva').style.display = 'flex';
 }
