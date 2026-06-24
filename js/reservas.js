@@ -185,6 +185,11 @@ function cargarFechas() {
     var pillCupon = document.getElementById('pill-cupon'); if (pillCupon) pillCupon.style.display = tieneCuponDisponible() ? 'inline-block' : 'none';
     if (chkCupon) chkCupon.checked = false; E.cuponAplicado = false;
     ocultarCargando(); ir('s4');
+    setTimeout(function() {
+      if (!_yaVioModal('reserva') && document.getElementById('s4').classList.contains('activa')) {
+        mostrarModalInfoReserva(function(){});
+      }
+    }, 400);
   }, function(e) { ocultarCargando(); ir('s2'); err('err-s2', 'Error al verificar fechas: ' + e.message); });
 }
 
