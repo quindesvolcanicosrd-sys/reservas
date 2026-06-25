@@ -274,7 +274,8 @@ reservas/
 | Función / variable | Descripción |
 |---|---|
 | `_todasReservas` | Array con todas las reservas del usuario (cargadas al login) |
-| `prepararHome()` | Inicializa la pantalla home: saludo, foto, banner cupón/notif, render reservas. Refresca `cuponDisponible` desde el backend (`getCuponDisponible`) en cada visita a la home |
+| `_proximosData` | Mapa de fecha → `{mapsUrl, descripcion, horaFin, duracion}` de próximos entrenamientos; cargado en `prepararHome()` via `getProximosEntrenamientos` |
+| `prepararHome()` | Inicializa la pantalla home: saludo, foto, banner cupón/notif, render reservas. Refresca `cuponDisponible` desde el backend (`getCuponDisponible`) y carga `_proximosData` via `getProximosEntrenamientos` en cada visita a la home |
 | `irNuevaReserva(skipEquip)` | Navega al flujo de reserva; `skipEquip=true` salta s2-s3 e va directo a `cargarFechas()` (usado post-inscripción vía parámetro `?nuevx=1`) |
 | `irMisReservas()` | Navega al historial completo (ir s-misreservas) |
 | `verTodasReservas()` | Alias de irMisReservas() |
@@ -293,7 +294,7 @@ reservas/
 | `toggleGrupoHistorial(id, header)` | Colapsa/expande un grupo de historial |
 | `cancelarRes(fecha)` | Solicita confirmación y llama API para cancelar una reserva |
 
-> **Acciones de backend utilizadas:** `getCuponDisponible` (llamada en `prepararHome()` para refrescar el estado del cupón en cada visita a la home)
+> **Acciones de backend utilizadas:** `getCuponDisponible` (llamada en `prepararHome()` para refrescar el estado del cupón en cada visita a la home); `getProximosEntrenamientos` (llamada en `prepararHome()` para poblar `_proximosData` y mostrar pills de Maps/info en las cards de home)
 
 ### js/reservas.js
 | Función / variable | Descripción |
@@ -314,7 +315,7 @@ reservas/
 | `selTipoPago(tipo, label)` | Selecciona tipo mensual/clase y actualiza UI de s4 |
 | `toggleCupon(cb)` | Activa/desactiva cupón en E y recalcula total |
 | `actualizarTotalS4()` | Recalcula total según fechas/meses/cupón/créditos y actualiza la UI |
-| `cargarFechas()` | Llama API getFechasDisponibles y renderiza los ítems en s4; muestra `modal-info-reserva` con delay de 400ms si es la primera vez que el usuario llega a s4 |
+| `cargarFechas()` | Llama API `getFechasDisponibles` (ahora devuelve también `mapsUrl`, `descripcion`, `horaFin`, `duracion`) y renderiza los ítems en s4 con pill "Cómo llegar" e info inline cuando existen; muestra `modal-info-reserva` con delay de 400ms si es la primera vez que el usuario llega a s4 |
 | `toggleFecha(el, fecha)` | Agrega/quita una fecha de E.fechas y actualiza total |
 | `continuar_s4()` | Valida selección de fechas/meses y navega a s-pago o s5 |
 | `toggleBtnPago()` | Habilita/deshabilita btn-pago según checkbox chk-pago |

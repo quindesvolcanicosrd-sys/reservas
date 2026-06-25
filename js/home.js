@@ -1,4 +1,5 @@
 var _todasReservas = [];
+var _proximosData = {};
 var _MESES_MAP = {enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11};
 var _MESES_DISPLAY = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 var _homeExpandido = false;
@@ -15,6 +16,11 @@ function prepararHome() {
     if (emojiDesktop) emojiDesktop.outerHTML = '<div class="home-emoji-desktop" style="font-size:3.2rem;margin-bottom:12px;">' + imgTag + '</div>';
   }
   renderHomeReservas();
+  api({ action: 'getProximosEntrenamientos' }, function(proximos) {
+    _proximosData = {};
+    (proximos || []).forEach(function(p) { _proximosData[p.fecha] = p; });
+    renderHomeReservas();
+  });
   var bannerCupon = document.getElementById('banner-cupon');
   if (bannerCupon) {
     api({ action: 'getCuponDisponible', nombre: E.nombre }, function(res) {
@@ -211,6 +217,18 @@ function _renderCardHome(r, hoy) {
   if (estado === 'Reagendar') {
     h += '<div style="font-size:0.78rem;color:var(--purple);background:var(--purple-light);border-radius:8px;padding:6px 10px;margin-bottom:8px;">🔁 Clase a favor por entrenamiento cancelado</div>';
     h += '<button class="btn btn-primary" style="margin-top:8px;padding:12px;background:var(--purple);box-shadow:0 4px 14px rgba(124,58,237,0.3);" onclick="iniciarReagendamiento()">🔁 Reagendar clase</button>';
+  }
+  var _prx = _proximosData[r.fecha] || {};
+  if (_prx.mapsUrl || _prx.descripcion || _prx.horaFin || _prx.duracion) {
+    var _infoId = 'prx-' + r.fecha.replace(/[^a-z0-9]/gi, '');
+    h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px;">';
+    if (_prx.mapsUrl) h += '<a href="' + _prx.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;background:var(--brand-light);color:var(--brand);border:1px solid var(--brand-warm-border);border-radius:20px;padding:4px 10px;font-size:0.75rem;font-weight:700;text-decoration:none;"><span class="material-symbols-outlined" style="font-size:0.85rem;">location_on</span>Cómo llegar</a>';
+    if (_prx.descripcion || _prx.horaFin || _prx.duracion) h += '<button onclick="event.stopPropagation();var _el=document.getElementById(\'' + _infoId + '\');_el.style.display=_el.style.display===\'none\'?\'block\':\'none\'" style="display:inline-flex;align-items:center;gap:4px;background:transparent;color:var(--muted);border:1px solid var(--border-light);border-radius:20px;padding:4px 10px;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;"><span class="material-symbols-outlined" style="font-size:0.85rem;">info</span>Más info</button>';
+    h += '</div>';
+    h += '<div id="' + _infoId + '" style="display:none;padding:8px 10px;background:var(--surface-light);border-radius:8px;border:1px solid var(--border-light);font-size:0.8rem;color:var(--muted);margin-bottom:6px;line-height:1.5;">';
+    if (_prx.descripcion) h += '<div style="margin-bottom:4px;">' + _prx.descripcion + '</div>';
+    if (_prx.horaFin || _prx.duracion) h += '<div style="font-size:0.75rem;color:var(--dk-text-muted);">' + (_prx.horaFin ? '<span class="material-symbols-outlined" style="font-size:0.8rem;vertical-align:middle;">schedule</span> Finaliza: ' + _prx.horaFin : '') + (_prx.horaFin && _prx.duracion ? ' · ' : '') + (_prx.duracion ? '<span class="material-symbols-outlined" style="font-size:0.8rem;vertical-align:middle;">timer</span> ' + _prx.duracion : '') + '</div>';
+    h += '</div>';
   }
   if (estado === 'Pendiente' || estado === 'Confirmada') {
     h += '<button class="btn-cancelar" style="margin-top:2px;" onclick="cancelarRes(\'' + r.fecha.replace(/'/g,"\\'") + '\')">Cancelar esta reserva</button>';

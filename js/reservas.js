@@ -165,8 +165,14 @@ function cargarFechas() {
     var html = '';
     if (fechas.length === 0) { html = '<p style="color:color: var(--muted);text-align:center;">No hay fechas disponibles.</p>'; } else {
       fechas.forEach(function(f) {
-        if (f.disponible) { html += '<div class="fecha-item" onclick="toggleFecha(this,\'' + f.fecha.replace(/'/g,"\\'") + '\')"><input type="checkbox" name="fecha" value="' + f.fecha + '"><div><div class="fecha-nombre">' + f.fecha + '</div></div></div>'; }
-        else { html += '<div class="fecha-item agotada"><div><div class="fecha-nombre">' + f.fecha + '</div><div class="fecha-razon">⚠ ' + f.razon + '</div></div></div>'; }
+        var _fExtra = (f.mapsUrl || f.descripcion || f.horaFin || f.duracion)
+          ? '<div style="margin-top:6px;display:flex;flex-direction:column;gap:4px;">' +
+            (f.mapsUrl ? '<a href="' + f.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;background:var(--brand-light);color:var(--brand);border:1px solid var(--brand-warm-border);border-radius:20px;padding:4px 10px;font-size:0.72rem;font-weight:700;text-decoration:none;width:fit-content;"><span class="material-symbols-outlined" style="font-size:0.82rem;">location_on</span>Cómo llegar</a>' : '') +
+            ((f.descripcion || f.horaFin || f.duracion) ? '<div style="font-size:0.75rem;color:var(--muted);line-height:1.4;">' + (f.descripcion ? '<div>' + f.descripcion + '</div>' : '') + ((f.horaFin || f.duracion) ? '<div style="margin-top:2px;">' + (f.horaFin ? '🕐 Finaliza: ' + f.horaFin : '') + (f.horaFin && f.duracion ? ' · ' : '') + (f.duracion ? '⏱ ' + f.duracion : '') + '</div>' : '') + '</div>' : '') +
+            '</div>'
+          : '';
+        if (f.disponible) { html += '<div class="fecha-item" onclick="toggleFecha(this,\'' + f.fecha.replace(/'/g,"\\'") + '\')"><input type="checkbox" name="fecha" value="' + f.fecha + '"><div><div class="fecha-nombre">' + f.fecha + '</div>' + _fExtra + '</div></div>'; }
+        else { html += '<div class="fecha-item agotada"><div><div class="fecha-nombre">' + f.fecha + '</div><div class="fecha-razon">⚠ ' + f.razon + '</div>' + _fExtra + '</div></div>'; }
       });
     }
     document.getElementById('lista-fechas').innerHTML = html; E.fechas = [];
