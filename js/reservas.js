@@ -165,10 +165,17 @@ function cargarFechas() {
     var html = '';
     if (fechas.length === 0) { html = '<p style="color:color: var(--muted);text-align:center;">No hay fechas disponibles.</p>'; } else {
       fechas.forEach(function(f) {
+        var _fId = 'fi-' + f.fecha.replace(/[^a-z0-9]/gi, '');
         var _fExtra = (f.mapsUrl || f.descripcion || f.horaFin || f.duracion)
-          ? '<div style="margin-top:6px;display:flex;flex-direction:column;gap:4px;">' +
-            (f.mapsUrl ? '<a href="' + f.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;background:var(--brand-light);color:var(--brand);border:1px solid var(--brand-warm-border);border-radius:20px;padding:4px 10px;font-size:0.72rem;font-weight:700;text-decoration:none;width:fit-content;"><span class="material-symbols-outlined" style="font-size:0.82rem;">location_on</span>Cómo llegar</a>' : '') +
-            ((f.descripcion || f.horaFin || f.duracion) ? '<div style="font-size:0.75rem;color:var(--muted);line-height:1.4;">' + (f.descripcion ? '<div>' + f.descripcion + '</div>' : '') + ((f.horaFin || f.duracion) ? '<div style="margin-top:2px;">' + (f.horaFin ? '🕐 Finaliza: ' + f.horaFin : '') + (f.horaFin && f.duracion ? ' · ' : '') + (f.duracion ? '⏱ ' + f.duracion : '') + '</div>' : '') + '</div>' : '') +
+          ? '<div style="margin-top:6px;">' +
+            (f.mapsUrl ? '<a href="' + f.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;background:var(--brand-light);color:var(--brand);border:1px solid var(--brand-warm-border);border-radius:20px;padding:4px 10px;font-size:0.72rem;font-weight:700;text-decoration:none;margin-bottom:6px;"><span class="material-symbols-outlined" style="font-size:0.82rem;">location_on</span>Cómo llegar</a>' : '') +
+            ((f.descripcion || f.horaFin || f.duracion)
+              ? '<button onclick="event.stopPropagation();var _e=document.getElementById(\'' + _fId + '\');var _i=document.getElementById(\'' + _fId + 'i\');var _o=_e.style.display!==\'none\';_e.style.display=_o?\'none\':\'block\';_i.style.transform=_o?\'\':\' rotate(180deg)\';" style="display:flex;align-items:center;width:100%;background:transparent;color:var(--brand);border:none;padding:4px 0;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;gap:4px;">Ver más información sobre este evento<span class="material-symbols-outlined" id="' + _fId + 'i" style="font-size:1rem;margin-left:auto;transition:transform 0.25s;">expand_more</span></button>' +
+              '<div id="' + _fId + '" style="display:none;padding:10px 12px;background:var(--surface-light);border-radius:10px;border:1px solid var(--border-light);font-size:0.78rem;color:var(--muted);margin-top:4px;line-height:1.5;box-shadow:0 2px 8px rgba(0,0,0,0.08);">' +
+              (f.descripcion ? '<div style="margin-bottom:6px;">' + f.descripcion + '</div>' : '') +
+              ((f.horaFin || f.duracion) ? '<div style="font-size:0.75rem;color:var(--dk-text-muted);display:flex;gap:10px;flex-wrap:wrap;">' + (f.horaFin ? '<span><span class="material-symbols-outlined" style="font-size:0.85rem;vertical-align:middle;">schedule</span> ' + f.horaFin + '</span>' : '') + (f.duracion ? '<span><span class="material-symbols-outlined" style="font-size:0.85rem;vertical-align:middle;">timer</span> ' + f.duracion + '</span>' : '') + '</div>' : '') +
+              '</div>'
+              : '') +
             '</div>'
           : '';
         if (f.disponible) { html += '<div class="fecha-item" onclick="toggleFecha(this,\'' + f.fecha.replace(/'/g,"\\'") + '\')"><input type="checkbox" name="fecha" value="' + f.fecha + '"><div><div class="fecha-nombre">' + f.fecha + '</div>' + _fExtra + '</div></div>'; }

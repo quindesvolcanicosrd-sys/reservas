@@ -221,13 +221,15 @@ function _renderCardHome(r, hoy) {
   var _prx = _proximosData[r.fecha] || {};
   if (_prx.mapsUrl || _prx.descripcion || _prx.horaFin || _prx.duracion) {
     var _infoId = 'prx-' + r.fecha.replace(/[^a-z0-9]/gi, '');
-    h += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 4px;">';
-    if (_prx.mapsUrl) h += '<a href="' + _prx.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;background:var(--brand-light);color:var(--brand);border:1px solid var(--brand-warm-border);border-radius:20px;padding:4px 10px;font-size:0.75rem;font-weight:700;text-decoration:none;"><span class="material-symbols-outlined" style="font-size:0.85rem;">location_on</span>Cómo llegar</a>';
-    if (_prx.descripcion || _prx.horaFin || _prx.duracion) h += '<button onclick="event.stopPropagation();var _el=document.getElementById(\'' + _infoId + '\');_el.style.display=_el.style.display===\'none\'?\'block\':\'none\'" style="display:inline-flex;align-items:center;gap:4px;background:transparent;color:var(--muted);border:1px solid var(--border-light);border-radius:20px;padding:4px 10px;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;"><span class="material-symbols-outlined" style="font-size:0.85rem;">info</span>Más info</button>';
-    h += '</div>';
-    h += '<div id="' + _infoId + '" style="display:none;padding:8px 10px;background:var(--surface-light);border-radius:8px;border:1px solid var(--border-light);font-size:0.8rem;color:var(--muted);margin-bottom:6px;line-height:1.5;">';
-    if (_prx.descripcion) h += '<div style="margin-bottom:4px;">' + _prx.descripcion + '</div>';
-    if (_prx.horaFin || _prx.duracion) h += '<div style="font-size:0.75rem;color:var(--dk-text-muted);">' + (_prx.horaFin ? '<span class="material-symbols-outlined" style="font-size:0.8rem;vertical-align:middle;">schedule</span> Finaliza: ' + _prx.horaFin : '') + (_prx.horaFin && _prx.duracion ? ' · ' : '') + (_prx.duracion ? '<span class="material-symbols-outlined" style="font-size:0.8rem;vertical-align:middle;">timer</span> ' + _prx.duracion : '') + '</div>';
+    h += '<div style="margin:8px 0 4px;">';
+    if (_prx.mapsUrl) h += '<a href="' + _prx.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;background:var(--brand-light);color:var(--brand);border:1px solid var(--brand-warm-border);border-radius:20px;padding:4px 10px;font-size:0.75rem;font-weight:700;text-decoration:none;margin-bottom:6px;"><span class="material-symbols-outlined" style="font-size:0.85rem;">location_on</span>Cómo llegar</a>';
+    if (_prx.descripcion || _prx.horaFin || _prx.duracion) {
+      h += '<button onclick="event.stopPropagation();var _e=document.getElementById(\'' + _infoId + '\');var _i=document.getElementById(\'' + _infoId + 'i\');var _o=_e.style.display!==\'none\';_e.style.display=_o?\'none\':\'block\';_i.style.transform=_o?\'\':\' rotate(180deg)\';" style="display:flex;align-items:center;width:100%;background:transparent;color:var(--brand);border:none;padding:4px 0;font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;gap:4px;">Ver más información sobre este evento<span class="material-symbols-outlined" id="' + _infoId + 'i" style="font-size:1rem;margin-left:auto;transition:transform 0.25s;">expand_more</span></button>';
+      h += '<div id="' + _infoId + '" style="display:none;padding:10px 12px;background:var(--surface-light);border-radius:10px;border:1px solid var(--border-light);font-size:0.8rem;color:var(--muted);margin-top:4px;line-height:1.5;box-shadow:0 2px 8px rgba(0,0,0,0.08);">';
+      if (_prx.descripcion) h += '<div style="margin-bottom:6px;">' + _prx.descripcion + '</div>';
+      if (_prx.horaFin || _prx.duracion) h += '<div style="font-size:0.75rem;color:var(--dk-text-muted);display:flex;gap:10px;flex-wrap:wrap;">' + (_prx.horaFin ? '<span><span class="material-symbols-outlined" style="font-size:0.85rem;vertical-align:middle;">schedule</span> ' + _prx.horaFin + '</span>' : '') + (_prx.duracion ? '<span><span class="material-symbols-outlined" style="font-size:0.85rem;vertical-align:middle;">timer</span> ' + _prx.duracion + '</span>' : '') + '</div>';
+      h += '</div>';
+    }
     h += '</div>';
   }
   if (estado === 'Pendiente' || estado === 'Confirmada') {
