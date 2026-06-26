@@ -180,9 +180,15 @@ function togglePagoMetodo(header) {
   var body = header.nextElementSibling;
   var chevron = header.querySelector('.material-symbols-outlined');
   var abierto = body.style.maxHeight && body.style.maxHeight !== '0px';
-  body.style.maxHeight = abierto ? '0' : body.scrollHeight + 'px';
-  body.style.paddingBottom = abierto ? '0' : '16px';
-  body.style.paddingTop = abierto ? '0' : '12px';
+  if (!abierto) {
+    body.style.paddingBottom = '16px';
+    body.style.paddingTop = '12px';
+    setTimeout(function() { body.style.maxHeight = body.scrollHeight + 'px'; }, 10);
+  } else {
+    body.style.maxHeight = '0';
+    body.style.paddingBottom = '0';
+    body.style.paddingTop = '0';
+  }
   if (chevron) chevron.style.transform = abierto ? '' : 'rotate(180deg)';
 }
 

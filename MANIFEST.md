@@ -188,6 +188,7 @@ reservas/
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **home.js + index.html + css/home.css + css/ui.css + ui.js** — Fix foto perfil, cancel/reagendar flow, más info en cards, acordeón pago: `prepararHome` reemplaza `getProximosEntrenamientos` con `getFechasDisponibles` para enriquecer `_todasReservas` con `mapsUrl/horaFin/duracion/descripcion`; `_renderCardHome` usa `hasInfo` para mostrar panel "Más información" con descripción + pills (maps/horaFin/duracion); foto de perfil busca `fotoUrl|foto|fotoPerfil|picture|photoUrl`; badges usan `font-weight:600` + icono `hourglass_empty` para Pendiente; `confirmarCambioFecha` abre modal `#modal-confirm-reagendar` (bottom-sheet); nuevas funciones: `ejecutarReagendamiento`, `cerrarModalReagendar`; `ejecutarCancelacion` usa `mostrarCargando` + filtra `_todasReservas` + vuelve a s-home; `cancelarRes(fecha, onSuccess)` acepta callback; modal `#modal-confirm-cancel` usa `var(--bg)` fondo sólido; pantalla `s-gestionar` ya no usa `seccion-label` ni el wrapper `sg-reserva-info` — muestra fecha directamente como header; `home-nombre` y `home-saludo-small` tienen `text-align:left`; `.badge` tiene `display:inline-flex;align-items:center;gap:4px`; nueva clase `.badge-reagendar`; `togglePagoMetodo` aplica padding antes de expandir para evitar corte de contenido
 - **index.html + home.js + home.css + perfil.js + ui.js** — Rediseño home y flujo gestionar reserva: nueva `.home-profile-row` con avatar, saludo y botones icono reemplaza el bloque emoji/logout; nueva `_renderCardHome` genera `.res-card-nueva` con pills de hora/lugar/equip y botón "Cancelar reserva" que abre `s-gestionar`; nueva pantalla `s-gestionar` permite cambiar fecha o cancelar con toggle + confirmación modal (`#modal-confirm-cancel`); sección sec-equip en s-datos rediseñada con resumen y botón paso-a-paso; nuevas funciones en home.js: `abrirGestionar`, `setModoGestionar`, `cargarFechasGestionar`, `selFechaGestionar`, `confirmarCambioFecha`, `abrirModalConfirmCancel`, `cerrarModalConfirmCancel`, `ejecutarCancelacion`, `_toggleCardBody`; nuevas funciones en perfil.js: `_poblarResumenEquipPerfil`, `irEditarEquipDesdeHome`; nuevas clases CSS en home.css: `.home-profile-row`, `.home-avatar`, `.home-nombre`, `.home-icon-btn`, `.home-subtitulo`, `.res-card-nueva`, `.rn-*`, `.btn-cancel-text`, `.sg-*`
 - **index.html + ui.js + reservas.css + reservas.js** — Nuevo selector de meses unificado en s4: `#s4-meses-wrapper` ahora contiene solo `#lista-meses-unificada.meses-grid-pills`; `generarMeses()` renderiza los 12 meses en un grid de 3 columnas con `.meses-divider` antes del mes actual y detecta meses con reservas `Confirmada` desde `_todasReservas` para mostrar badge "Pagado" (`.mes-confirmado`); `crearMesItem` tiene firma `(nombre, esPasado, confirmado)`; eliminadas `toggleMesesPasados()` y `toggleMesesActuales()`; nuevas clases CSS: `.meses-grid-pills`, `.meses-divider`, `.mes-past`, `.mes-confirmado`, `.mes-nombre`, `.mes-badge`; fix en `selTipoPago()`: controla visibilidad de `#lista-fechas` y `#s4-fechas-subtitulo` vs `#s4-meses-wrapper` y llama `generarMeses()` al seleccionar mensual
 - **home.js** — `irNuevaReserva()` simplificada: siempre llama `cargarFechas()` directamente, elimina la bifurcación `canPayMonthly()`/`skipEquip`
@@ -279,7 +280,8 @@ reservas/
 | `#modal-equip-aviso` | Modal de aviso de disponibilidad de equipamiento: se muestra en `cargarFechas()` si hay fechas agotadas por equip; lista en `#modal-equip-lista`; botón "Actualizar mi equipamiento" llama `irEditarEquipDesdeModal()` |
 | `#modal-info-reserva` | Modal info primera reserva; items condicionales `#mri-modalidad-clase` / `#mri-modalidad-mes` / `#mri-cupon`; estilos críticos inline en el HTML (mismo patrón que `#modal-contacto`) |
 | `#modal-info-home` | Modal info primera visita a home; estilos críticos inline en el HTML |
-| `#modal-confirm-cancel` | Modal bottom-sheet de confirmación de cancelación de reserva; se abre desde `abrirModalConfirmCancel()`; contiene avisos de cupón y pago; botón confirmar llama `ejecutarCancelacion()` |
+| `#modal-confirm-cancel` | Modal bottom-sheet de confirmación de cancelación de reserva; se abre desde `abrirModalConfirmCancel()`; contiene avisos de cupón y pago; botón confirmar llama `ejecutarCancelacion()`; usa `var(--bg)` como fondo |
+| `#modal-confirm-reagendar` | Modal bottom-sheet de confirmación de reagendamiento; se abre desde `confirmarCambioFecha()`; muestra fecha, pills hora/lugar y equipo; botón confirmar llama `ejecutarReagendamiento()` |
 
 ---
 
@@ -345,10 +347,12 @@ reservas/
 | `setModoGestionar(modo)` | Alterna entre panel "reagendar" y "cancelar" en s-gestionar |
 | `cargarFechasGestionar()` | Carga fechas disponibles para reagendar via API y las renderiza |
 | `selFechaGestionar(el, fecha)` | Selecciona una fecha disponible en s-gestionar |
-| `confirmarCambioFecha()` | Confirma el reagendamiento navegando a s5 con la nueva fecha |
+| `confirmarCambioFecha()` | Abre modal `#modal-confirm-reagendar` con resumen de la nueva fecha |
+| `ejecutarReagendamiento()` | Llama API `reagendarReserva`, actualiza `_todasReservas` y vuelve a home |
+| `cerrarModalReagendar()` | Cierra el modal `#modal-confirm-reagendar` |
 | `abrirModalConfirmCancel()` | Muestra el modal de confirmación de cancelación |
 | `cerrarModalConfirmCancel()` | Cierra el modal de confirmación de cancelación |
-| `ejecutarCancelacion()` | Ejecuta la cancelación llamando a `cancelarRes()` |
+| `ejecutarCancelacion()` | Cierra modal, muestra loading, llama `cancelarRes` con callback, filtra reserva cancelada y vuelve a home |
 | `_parseFechaSimple(str)` | Parsea "DD/MM/YYYY" → Date |
 | `_parseFechaStr(fechaStr)` | Parsea fechas con formato "Sábado 12 de Enero (09:00)" → Date |
 | `_clasificarReservas(todas, hoy)` | Separa reservas en activas e historial según fecha y estado |
@@ -357,7 +361,7 @@ reservas/
 | `renderHistorial()` | Renderiza el historial filtrado por mes con grupos colapsables |
 | `_renderCardHistorial(r)` | Genera HTML de una tarjeta de reserva para historial |
 | `toggleGrupoHistorial(id, header)` | Colapsa/expande un grupo de historial |
-| `cancelarRes(fecha)` | Llama API para cancelar una reserva y actualiza el listado |
+| `cancelarRes(fecha, onSuccess)` | Llama API para cancelar una reserva; si `onSuccess` es provisto lo llama al éxito, si no llama `renderHomeReservas()` |
 
 > **Acciones de backend utilizadas:** `getCuponDisponible` (llamada en `prepararHome()` para refrescar el estado del cupón en cada visita a la home); `getProximosEntrenamientos` (llamada en `prepararHome()` para poblar `_proximosData` y mostrar pills de Maps/info en las cards de home)
 

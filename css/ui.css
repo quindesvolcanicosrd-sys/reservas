@@ -82,9 +82,10 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
 .resumen .r-label { color: var(--muted); }
 .resumen .r-valor { font-weight: 600; color: var(--text); text-align: right; max-width: 75%; }
 
-.badge { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
-.badge-pendiente { background: var(--warning-bg); color: var(--warning); }
-.badge-confirmada { background: var(--success-bg); color: var(--success); }
+.badge { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; display:inline-flex; align-items:center; gap:4px; }
+.badge-pendiente { background: var(--warning-bg); color: var(--warning); font-weight:600; }
+.badge-confirmada { background: var(--success-bg); color: var(--success); font-weight:600; }
+.badge-reagendar { background: var(--purple-bg); color: var(--purple); font-weight:600; }
 .badge-cancelada { background: var(--danger-bg); color: var(--danger); }
 
 .datos-campo { margin-bottom: 16px; }

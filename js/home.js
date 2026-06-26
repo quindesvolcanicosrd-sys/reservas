@@ -9,18 +9,28 @@ function prepararHome() {
   if (saludoEl) saludoEl.textContent = E.nombre + '!';
   var avatarEl = document.getElementById('home-avatar');
   if (avatarEl) {
-    if (E.datos && E.datos.fotoUrl) {
-      avatarEl.innerHTML = '<img src="' + E.datos.fotoUrl + '" alt="">';
+    var foto = E.datos && (E.datos.fotoUrl || E.datos.foto || E.datos.fotoPerfil || E.datos.picture || E.datos.photoUrl || '');
+    if (foto) {
+      avatarEl.innerHTML = '<img src="' + foto + '" alt="">';
     } else {
       avatarEl.textContent = (E.nombre || '?').charAt(0).toUpperCase();
     }
   }
   renderHomeReservas();
-  api({ action: 'getProximosEntrenamientos' }, function(proximos) {
-    _proximosData = {};
-    (proximos || []).forEach(function(p) { _proximosData[p.fecha] = p; });
+  var d = E.datos;
+  var talla = d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
+  api({ action: 'getFechasDisponibles', nombre: E.nombre, talla: talla, necesitaProtecciones: d.necesitaProtecciones }, function(fechas) {
+    var infoMap = {};
+    fechas.forEach(function(f) { infoMap[f.fecha] = f; });
+    _todasReservas = (_todasReservas || []).map(function(r) {
+      var info = infoMap[r.fecha];
+      if (info) {
+        r.mapsUrl = info.mapsUrl || ''; r.horaFin = info.horaFin || ''; r.duracion = info.duracion || ''; r.descripcion = info.descripcion || '';
+      }
+      return r;
+    });
     renderHomeReservas();
-  });
+  }, function() { renderHomeReservas(); });
   var bannerCupon = document.getElementById('banner-cupon');
   if (bannerCupon) {
     api({ action: 'getCuponDisponible', nombre: E.nombre }, function(res) {
@@ -165,11 +175,11 @@ function _renderCardHome(r, hoy) {
   var estadoClase = r.estado === 'Confirmada' ? 'confirmada-clase' : r.estado === 'Reagendar' ? 'reagendar-clase' : 'pendiente-clase';
   var badgeHtml = '';
   if (r.estado === 'Confirmada') {
-    badgeHtml = '<span class="badge badge-confirmada"><span class="material-symbols-outlined" style="font-size:11px;">check_circle</span>Confirmada</span>';
+    badgeHtml = '<span class="badge badge-confirmada"><span class="material-symbols-outlined">check_circle</span>Confirmada</span>';
   } else if (r.estado === 'Reagendar') {
-    badgeHtml = '<span class="badge badge-reagendar"><span class="material-symbols-outlined" style="font-size:11px;">swap_horiz</span>Reagendar</span>';
+    badgeHtml = '<span class="badge badge-reagendar"><span class="material-symbols-outlined">swap_horiz</span>Reagendar</span>';
   } else {
-    badgeHtml = '<span class="badge badge-pendiente"><span class="material-symbols-outlined" style="font-size:11px;">pending</span>Pendiente</span>';
+    badgeHtml = '<span class="badge badge-pendiente"><span class="material-symbols-outlined">hourglass_empty</span>Pendiente</span>';
   }
 
   var necesitaPatines = r.necesitaPatines && r.necesitaPatines.toLowerCase() !== 'no';
@@ -186,16 +196,23 @@ function _renderCardHome(r, hoy) {
   var fechaEsc = (r.fecha || '').replace(/'/g, "\\'");
   var filaEsc = r.fila || '';
 
+  var hasInfo = !!(r.descripcion || r.mapsUrl || r.horaFin || r.duracion || lugar);
   var bodyHtml = '';
-  if (lugar) {
+  if (hasInfo) {
     bodyHtml = '<div class="rn-body" id="' + uid + '-body">' +
-      '<div class="rn-body-inner">' +
-      '<strong><span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;">location_on</span> ' + lugar + '</strong>' +
-      (r.mapsUrl ? '<div class="fi-pills"><a class="fi-pill fi-pill-maps" href="' + r.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-symbols-outlined">near_me</span>Cómo llegar</a></div>' : '') +
-      '</div></div>';
+      '<div class="rn-body-inner">';
+    if (r.descripcion) bodyHtml += '<p style="margin-bottom:10px;">' + r.descripcion + '</p>';
+    if (lugar || r.mapsUrl || r.horaFin || r.duracion) {
+      bodyHtml += '<div class="fi-pills">';
+      if (r.mapsUrl) bodyHtml += '<a class="fi-pill fi-pill-maps" href="' + r.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-symbols-outlined">near_me</span>Cómo llegar</a>';
+      if (r.horaFin) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">schedule</span>Fin ' + r.horaFin + '</span>';
+      if (r.duracion) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">timer</span>' + r.duracion + '</span>';
+      bodyHtml += '</div>';
+    }
+    bodyHtml += '</div></div>';
   }
 
-  var masInfoHtml = lugar
+  var masInfoHtml = hasInfo
     ? '<div class="rn-divider"></div>' +
       '<div class="rn-mas-info" id="' + uid + '-toggle" onclick="_toggleCardBody(\'' + uid + '\')">' +
       '<span>Más información</span><span class="material-symbols-outlined rn-chevron">expand_more</span></div>' +
@@ -347,9 +364,7 @@ function toggleGrupoHistorial(id, header) {
   }
 }
 
-function cancelarRes(fecha) {
-  if (!confirm('¿Segura que quieres cancelar ' + (necesitaEquipo() ? 'tu reserva' : 'tu pago') + ' para el ' + fecha + '?')) return;
-  var btn = event.target; btn.disabled = true; btn.innerHTML = '<span class="btn-spinner" style="border-color:rgba(220,38,38,0.3); border-top-color:var(--error);"></span>Cancelando...';
+function cancelarRes(fecha, onSuccess) {
   api({ action: 'cancelarReserva', nombre: E.nombre, fecha: fecha }, function(res) {
     if (res.exito) {
       if (typeof _todasReservas !== 'undefined' && _todasReservas) {
@@ -361,11 +376,11 @@ function cancelarRes(fecha) {
         var bCupon = document.getElementById('banner-cupon');
         if (bCupon) bCupon.style.display = 'block';
       }
-      renderHomeReservas();
+      if (onSuccess) { onSuccess(); } else { renderHomeReservas(); }
     } else {
-      btn.disabled = false; btn.innerHTML = 'Cancelar esta reserva'; alert('Error al cancelar.');
+      alert('Error al cancelar.');
     }
-  }, function(e) { btn.disabled = false; btn.innerHTML = 'Cancelar'; alert('Error: ' + e.message); });
+  }, function(e) { alert('Error: ' + e.message); });
 }
 
 function toggleBannerCupon() {
@@ -453,10 +468,47 @@ function selFechaGestionar(el, fecha) {
 
 function confirmarCambioFecha() {
   if (!_sgFechaSeleccionada) return;
-  E.reagendando = true; E.fechas = [_sgFechaSeleccionada]; E.tipoPago = 'clase';
-  E.totalPago = 0; E.notaPago = 'Reagendamiento'; E.cuponAplicado = false; E.creditosUsados = 1;
-  construirResumenS5('s-gestionar');
-  ir('s5');
+  var partes = (_sgFechaSeleccionada || '').split(' - ');
+  var fechaTexto = (partes[0] || _sgFechaSeleccionada).trim();
+  var hora = partes[1] ? partes[1].trim() : '';
+  var lugar = partes[2] ? partes[2].trim() : '';
+  var d = E.datos;
+  var equipMsg = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no')
+    ? 'Patines talla ' + (d.talla || '?')
+    : 'Equipo propio';
+
+  var modal = document.getElementById('modal-confirm-reagendar');
+  if (!modal) return;
+  document.getElementById('mcr-fecha').textContent = fechaTexto;
+  var pillsEl = document.getElementById('mcr-pills');
+  pillsEl.innerHTML = '';
+  if (hora) pillsEl.innerHTML += '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + hora + '</span>';
+  if (lugar) pillsEl.innerHTML += '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
+  document.getElementById('mcr-equip').textContent = equipMsg;
+  modal.style.display = 'flex';
+}
+
+function ejecutarReagendamiento() {
+  var modal = document.getElementById('modal-confirm-reagendar');
+  if (modal) modal.style.display = 'none';
+  mostrarCargando('Reagendando...');
+  api({ action: 'reagendarReserva', nombre: E.nombre, fechaAnterior: _sgFechaActual, fechaNueva: _sgFechaSeleccionada }, function() {
+    _todasReservas = (_todasReservas || []).map(function(r) {
+      if (r.fecha === _sgFechaActual) { r.fecha = _sgFechaSeleccionada; r.estado = 'Pendiente'; }
+      return r;
+    });
+    ocultarCargando();
+    ir('s-home');
+    setTimeout(function() { prepararHome(); }, 100);
+  }, function(e) {
+    ocultarCargando();
+    alert('Error al reagendar: ' + (e.message || 'Intenta de nuevo'));
+  });
+}
+
+function cerrarModalReagendar() {
+  var modal = document.getElementById('modal-confirm-reagendar');
+  if (modal) modal.style.display = 'none';
 }
 
 function abrirModalConfirmCancel() {
@@ -471,5 +523,11 @@ function cerrarModalConfirmCancel() {
 
 function ejecutarCancelacion() {
   cerrarModalConfirmCancel();
-  cancelarRes(_sgFechaActual);
+  mostrarCargando('Cancelando reserva...');
+  cancelarRes(_sgFechaActual, function() {
+    _todasReservas = (_todasReservas || []).filter(function(r) { return r.fecha !== _sgFechaActual; });
+    ocultarCargando();
+    ir('s-home');
+    setTimeout(function() { renderHomeReservas(); }, 100);
+  });
 }
