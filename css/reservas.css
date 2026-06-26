@@ -45,8 +45,7 @@
 .total-box { background: var(--success-bg); border: 1px solid var(--success-bdr); border-radius: 12px; padding: 18px; text-align: center; font-weight: 800; font-size: 1.1rem; color: var(--success); box-shadow: 0 4px 14px var(--success-shadow); }
 .total-box .total-detalle { font-size: 0.85rem; font-weight: 600; color: var(--success-bright); margin-top: 6px; }
 
-.tipo-pago-wrapper { background: var(--warning-bg); border: 1px solid var(--warning-bdr); border-radius: 12px; padding: 16px; margin-bottom: 20px; }
-.tipo-pago-titulo { font-weight: 800; font-size: 0.9rem; color: var(--amber-darker); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.tipo-pago-wrapper { border-radius: 12px; margin-bottom: 20px; }
 
 .nota-pago-wrapper { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-top: 20px; }
 .nota-pago-label { display: block; font-size: 0.82rem; font-weight: 800; color: var(--neutral-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
@@ -89,6 +88,16 @@
 .exito-titulo { font-size: 1.5rem; font-weight: 800; color: var(--text); text-align: center; margin-bottom: 12px; }
 .exito-texto { color: var(--muted); text-align: center; line-height: 1.6; font-size: 0.88rem; }
 .exito-detalle { background: var(--green-light); border: 1px solid var(--green-border); border-radius: 12px; padding: 16px; margin: 20px 0; font-size: 0.9rem; color: var(--green-dark); text-align: left; white-space: pre-line; line-height: 1.6; box-shadow: 0 4px 12px var(--success-shadow); }
+
+/* ─── segmented control tipo de pago ────────────────────────────── */
+.tp-seg { display: inline-flex; position: relative; background: var(--brand-subtle); border: 1.5px solid var(--border); border-radius: 99px; }
+.tp-slider { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 99px; background: var(--brand); z-index: 0; width: 0; }
+.tp-slider.animado { transition: transform .35s cubic-bezier(.16,1,.3,1), width .35s cubic-bezier(.16,1,.3,1); }
+.tp-opt { position: relative; z-index: 1; padding: 11px 22px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; color: var(--muted); transition: color .25s; user-select: none; white-space: nowrap; border-radius: 99px; }
+.tp-opt.active { color: var(--white); }
+.tp-cupon-ico { font-size: 1rem; }
+.tp-hint { display: none; align-items: flex-start; gap: 7px; font-size: 0.78rem; color: var(--purple); background: var(--purple-bg); border: 1px solid var(--purple-border-soft); border-radius: 10px; padding: 9px 12px; margin-top: 10px; line-height: 1.5; }
+.tp-hint.visible { display: flex; }
 
 /* ─── DARK MODE ──────────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {

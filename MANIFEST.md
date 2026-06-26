@@ -137,7 +137,12 @@ reservas/
 | `.fecha-razon` | Razón de cupo agotado (0.8rem, --brand) |
 | `.pago-metodo / .pago-header / .pago-fila / .pago-label / .pago-valor / .pago-icon` | Bloque de método de pago (s-pago) |
 | `.total-box / .total-detalle` | Caja de total con monto y detalle |
-| `.tipo-pago-wrapper / .tipo-pago-titulo` | Selector clase vs mensual en s4 |
+| `.tipo-pago-wrapper` | Contenedor del selector de tipo de pago en s4 (solo margen, sin fondo amber) |
+| `.tp-seg` | Segmented control: inline-flex, fondo --brand-subtle, borde, border-radius 99px |
+| `.tp-slider / .tp-slider.animado` | Pastilla deslizante (position absolute, fondo --brand); `.animado` habilita transición CSS |
+| `.tp-opt / .tp-opt.active` | Opción del segmented control; `.active` pone color --white |
+| `.tp-cupon-ico` | Ícono `confirmation_number` visible en "Por clase" solo si hay cupón |
+| `.tp-hint / .tp-hint.visible` | Aviso de cupón bajo el control (`.visible` lo hace `display:flex`) |
 | `.nota-pago-wrapper / .nota-pago-label / .nota-pago-input / .nota-pago-hint` | Campo referencia de pago |
 | `.chk-pago-label` | Checkbox "Ya realicé el pago" |
 | `.reserva-card` | Tarjeta de reserva en historial |
@@ -166,6 +171,7 @@ reservas/
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **index.html + reservas.css + reservas.js** — Selector de tipo de pago en s4 reemplazado por segmented control con slider animado (`.tp-seg`, `.tp-slider`, `.tp-opt`); `#pill-cupon` eliminado y reemplazado por `#tp-cupon-ico` (dentro del botón) y `#tp-cupon-hint` (aviso bajo el control); `selTipoPago` ya no recibe segundo arg; nueva función privada `_updateTpSlider(animate)`; `.tipo-pago-titulo` eliminado de reservas.css
 - **reservas.css + reservas.js** — Nuevo diseño de cards de selección en s4: sistema `.fi-*` (`.fi-header`, `.fi-content`, `.fi-title`, `.fi-pills`, `.fi-pill-hora/lugar/maps/fin/dur`, `.fi-circle`, `.fi-footer`, `.fi-body`, `.fi-body-inner`, `.fi-desc`, `.fi-extra`); `cargarFechas()` parsea `f.fecha` por `" - "` para extraer hora y lugar; `toggleFecha()` recibe la `.fecha-item` directamente; nueva función `toggleFechaExpand()` para el panel colapsable de info; dark mode para `fi-pill-hora` y `fi-pill-fin` en bloque `@media dark` de reservas.css
 - **reservas.js + home.js** — Layout de pills en fecha-items y cards de home reorganizado: "Más info ▾" ahora aparece a la izquierda como único pill en la fila; "Cómo llegar" se movió dentro del cuerpo expandido de "Más info" (ya no es un pill independiente en la card)
 - **index.html** — `pago-metodo-body`: `padding-bottom` inicial cambiado de `16px` a `0`; el JS (`togglePagoMetodo` en ui.js) lo maneja al abrir/cerrar
@@ -338,7 +344,8 @@ reservas/
 | `canPayMonthly()` | True si el usuario no necesita equipo prestado (habilita pago mensual) |
 | `necesitaEquipo()` | Inverso de canPayMonthly() |
 | `actualizarTextosPago()` | Actualiza textos de s4 y s-pago según tipo de pago y reagendamiento |
-| `selTipoPago(tipo, label)` | Selecciona tipo mensual/clase y actualiza UI de s4 |
+| `selTipoPago(tipo)` | Selecciona tipo mensual/clase: actualiza `E.tipoPago`, clases `.active` en tp-opts, llama `_updateTpSlider(true)`, `actualizarTextosPago()` y `actualizarTotalS4()` |
+| `_updateTpSlider(animate)` | Posiciona el `.tp-slider` sobre la opción activa usando `offsetWidth`/`offsetLeft`; `animate=false` al inicializar (evita animación en primer render) |
 | `toggleCupon(cb)` | Activa/desactiva cupón en E y recalcula total |
 | `actualizarTotalS4()` | Recalcula total según fechas/meses/cupón/créditos y actualiza la UI |
 | `cargarFechas()` | Llama API `getFechasDisponibles`; parsea `f.fecha` (split por `" - "` para extraer `fechaTexto`, `hora`, `lugar`; también soporta campos separados `f.hora`/`f.lugar`); renderiza nuevas cards `.fi-*` con pills de hora/lugar en header y panel expandible de info (si `hasInfo`); muestra `modal-info-reserva` con delay 400ms si es la primera visita a s4 |

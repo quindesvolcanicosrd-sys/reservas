@@ -81,23 +81,27 @@ function actualizarTextosPago() {
   document.getElementById('nota-pago-hint').textContent = canPayMonthly() ? 'Escribe tu nombre o referencia así sabemos que el pago corresponde a tí.' : 'Escribe tu nombre o referencia de a quien corresponde la reserva así sabemos que el pago corresponde a tí.';
 }
 
-function selTipoPago(tipo, label) {
-  document.querySelectorAll('input[name="tipo-pago"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
-  label.classList.add('sel'); var radio = label.querySelector('input[type="radio"]'); if (radio) radio.checked = true;
-  E.tipoPago = tipo; E.fechas = [];
-  document.querySelectorAll('input[name="fecha"]').forEach(function(c) { c.checked = false; c.closest('.fecha-item').classList.remove('sel'); });
-  var subtitulo = document.getElementById('s4-fechas-subtitulo'); var listaFechas = document.getElementById('lista-fechas');
-  if (tipo === 'mensual' && canPayMonthly()) {
-    subtitulo.style.display = 'none'; listaFechas.style.display = 'none'; document.getElementById('s4-meses-wrapper').style.display = 'block';
-    var cw = document.getElementById('s4-cupon-wrapper'); if (cw) cw.style.display = 'none';
-    var cc = document.getElementById('chk-cupon'); if (cc) cc.checked = false; E.cuponAplicado = false;
-  } else {
-    subtitulo.style.display = 'block'; listaFechas.style.display = 'block'; document.getElementById('s4-meses-wrapper').style.display = 'none';
-    document.querySelectorAll('#lista-meses input').forEach(function(cb) { cb.checked = false; }); E.meses = [];
-    subtitulo.textContent = tipo === 'mensual' ? 'Opcionalmente, puedes seleccionar a qué entrenamientos asistirás este mes.' : 'Selecciona los próximos entrenamientos a los que asistirás.';
-    var cw2 = document.getElementById('s4-cupon-wrapper'); if (cw2) cw2.style.display = tieneCuponDisponible() ? 'block' : 'none';
-  }
+function selTipoPago(tipo) {
+  E.tipoPago = tipo;
+  document.getElementById('opcion-tipo-clase').classList.toggle('active', tipo === 'clase');
+  document.getElementById('opcion-tipo-mensual').classList.toggle('active', tipo === 'mensual');
+  _updateTpSlider(true);
+  actualizarTextosPago();
   actualizarTotalS4();
+}
+
+function _updateTpSlider(animate) {
+  var tipo = E.tipoPago;
+  var slider = document.getElementById('tp-slider');
+  var activeOpt = document.getElementById(tipo === 'clase' ? 'opcion-tipo-clase' : 'opcion-tipo-mensual');
+  if (!slider || !activeOpt) return;
+  if (animate) {
+    slider.classList.add('animado');
+  } else {
+    slider.classList.remove('animado');
+  }
+  slider.style.width = activeOpt.offsetWidth + 'px';
+  slider.style.transform = 'translateX(' + activeOpt.offsetLeft + 'px)';
 }
 
 function toggleCupon(cb) { E.cuponAplicado = cb.checked; actualizarTotalS4(); }
@@ -208,8 +212,10 @@ function cargarFechas() {
     }
     document.getElementById('lista-fechas').innerHTML = html; E.fechas = [];
     var puedeMensual = canPayMonthly() && !E.reagendando; var wrapper = document.getElementById('s4-tipo-pago-wrapper'); var subtitulo = document.getElementById('s4-fechas-subtitulo');
-    if (puedeMensual) { wrapper.style.display = 'block'; E.tipoPago = 'mensual'; selTipoPago('mensual', document.getElementById('opcion-tipo-mensual')); }
-    else {
+    if (puedeMensual) {
+      wrapper.style.display = 'block'; selTipoPago('mensual');
+      setTimeout(function() { _updateTpSlider(false); }, 30);
+    } else {
       wrapper.style.display = 'none'; E.tipoPago = 'clase'; subtitulo.textContent = E.reagendando ? 'Seleccioná la nueva fecha para tu clase a favor.' : 'Selecciona los entrenamientos a los que asistirás.';
       subtitulo.style.display = 'block'; document.getElementById('lista-fechas').style.display = 'block';
       document.getElementById('s4-total-box').style.display = 'none'; document.getElementById('s4-meses-wrapper').style.display = 'none';
@@ -219,7 +225,11 @@ function cargarFechas() {
     actualizarTextosPago();
     var cuponWrap = document.getElementById('s4-cupon-wrapper'); var chkCupon = document.getElementById('chk-cupon');
     if (cuponWrap) cuponWrap.style.display = (!puedeMensual && tieneCuponDisponible()) ? 'block' : 'none';
-    var pillCupon = document.getElementById('pill-cupon'); if (pillCupon) pillCupon.style.display = tieneCuponDisponible() ? 'inline-block' : 'none';
+    var icoCupon = document.getElementById('tp-cupon-ico');
+    var hintCupon = document.getElementById('tp-cupon-hint');
+    var tieneCupon = tieneCuponDisponible();
+    if (icoCupon) icoCupon.style.display = tieneCupon ? 'inline-flex' : 'none';
+    if (hintCupon) hintCupon.classList.toggle('visible', tieneCupon);
     if (chkCupon) chkCupon.checked = false; E.cuponAplicado = false;
     ocultarCargando(); ir('s4');
     setTimeout(function() {

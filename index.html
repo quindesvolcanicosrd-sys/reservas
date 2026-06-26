@@ -302,16 +302,19 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div class="seccion-label" id="s4-label"></div>
       <h2 id="s4-titulo"></h2>
       <div class="tipo-pago-wrapper" id="s4-tipo-pago-wrapper" style="display:none;">
-        <div class="tipo-pago-titulo">💳 Tipo de pago</div>
-        <div class="opciones" style="margin-bottom: 0;">
-          <label class="opcion" id="opcion-tipo-mensual" onclick="selTipoPago('mensual', this)">
-            <input type="radio" name="tipo-pago" value="mensual">
-            <div><div style="font-weight:800;">Pago mensual</div><div style="font-size:0.82rem;color: var(--muted);margin-top:2px;">No necesitas seleccionar clases</div></div>
-          </label>
-          <label class="opcion" id="opcion-tipo-clase" onclick="selTipoPago('clase', this)">
-            <input type="radio" name="tipo-pago" value="clase">
-            <div style="flex:1;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-weight:800;">Pago por clase</span><span id="pill-cupon" style="display:none;background:var(--amber-light);color:var(--amber-dark);border:1px solid var(--amber);border-radius:99px;font-size:0.72rem;font-weight:800;padding:2px 10px;">🎟️ tienes un cupón</span></div><div style="font-size:0.82rem;color: var(--muted);margin-top:2px;">Selecciona las clases que asistirás</div></div>
-          </label>
+        <div class="tp-seg" id="tp-seg">
+          <div class="tp-slider" id="tp-slider"></div>
+          <div class="tp-opt active" id="opcion-tipo-clase" onclick="selTipoPago('clase')">
+            <span class="material-symbols-outlined tp-cupon-ico" id="tp-cupon-ico" style="display:none;">confirmation_number</span>
+            <span>Por clase</span>
+          </div>
+          <div class="tp-opt" id="opcion-tipo-mensual" onclick="selTipoPago('mensual')">
+            <span>Mensual</span>
+          </div>
+        </div>
+        <div class="tp-hint" id="tp-cupon-hint">
+          <span class="material-symbols-outlined" style="font-size:0.85rem;flex-shrink:0;">confirmation_number</span>
+          Tenés un cupón disponible — solo aplica en pago por clase
         </div>
       </div>
       <p id="s4-fechas-subtitulo" style="margin-bottom:16px; font-weight: 500;">Selecciona las fechas a las que asistirás.</p>
