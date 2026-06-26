@@ -256,7 +256,7 @@ function cargarFechas() {
         mostrarModalInfoReserva(function(){});
       }
     }, 400);
-  }, function(e) { ocultarCargando(); ir('s-home'); });
+  }, function(e) { ocultarCargando(); ir('s-home'); alert('Error cargarFechas: ' + e.message); });
 }
 
 function toggleFecha(el, fecha) {
