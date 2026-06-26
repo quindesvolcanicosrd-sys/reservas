@@ -231,6 +231,12 @@ function cargarFechas() {
     if (icoCupon) icoCupon.style.display = tieneCupon ? 'inline-flex' : 'none';
     if (hintCupon) hintCupon.classList.toggle('visible', tieneCupon);
     if (chkCupon) chkCupon.checked = false; E.cuponAplicado = false;
+    var agotadasEquip = fechas.filter(function(f) {
+      return !f.disponible && f.razon && /patines|talla|protec|equip/i.test(f.razon);
+    });
+    if (agotadasEquip.length > 0) {
+      setTimeout(function() { mostrarModalEquip(agotadasEquip); }, 300);
+    }
     ocultarCargando(); ir('s4');
     setTimeout(function() {
       if (!_yaVioModal('reserva') && document.getElementById('s4').classList.contains('activa')) {
@@ -251,6 +257,29 @@ function toggleFecha(el, fecha) {
 function toggleFechaExpand(footer, event) {
   event.stopPropagation();
   footer.closest('.fecha-item').classList.toggle('open');
+}
+
+function mostrarModalEquip(fechasAfectadas) {
+  var lista = document.getElementById('modal-equip-lista');
+  if (!lista) return;
+  lista.innerHTML = fechasAfectadas.map(function(f) {
+    return '<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:0.8rem;">' +
+      '<div style="font-weight:700;color:var(--text);margin-bottom:3px;">' + f.fecha + '</div>' +
+      '<div style="color:var(--brand);font-weight:600;">⚠ ' + f.razon + '</div>' +
+      '</div>';
+  }).join('');
+  var modal = document.getElementById('modal-equip-aviso');
+  if (modal) modal.style.display = 'flex';
+}
+
+function cerrarModalEquip() {
+  var modal = document.getElementById('modal-equip-aviso');
+  if (modal) modal.style.display = 'none';
+}
+
+function irEditarEquipDesdeModal() {
+  cerrarModalEquip();
+  irEditarDatos();
 }
 
 function continuar_s4() {

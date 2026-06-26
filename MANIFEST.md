@@ -171,6 +171,8 @@ reservas/
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **home.js** — `irNuevaReserva()` simplificada: siempre llama `cargarFechas()` directamente, elimina la bifurcación `canPayMonthly()`/`skipEquip`
+- **index.html + reservas.js + ui.css** — Nuevo `#modal-equip-aviso`: se dispara en `cargarFechas()` si hay fechas agotadas por razón de equipamiento (regex `patines|talla|protec|equip`); lista items en `#modal-equip-lista`; funciones `mostrarModalEquip`, `cerrarModalEquip`, `irEditarEquipDesdeModal`; dark mode override en ui.css
 - **index.html + reservas.css + reservas.js** — Selector de tipo de pago en s4 reemplazado por segmented control con slider animado (`.tp-seg`, `.tp-slider`, `.tp-opt`); `#pill-cupon` eliminado y reemplazado por `#tp-cupon-ico` (dentro del botón) y `#tp-cupon-hint` (aviso bajo el control); `selTipoPago` ya no recibe segundo arg; nueva función privada `_updateTpSlider(animate)`; `.tipo-pago-titulo` eliminado de reservas.css
 - **reservas.css + reservas.js** — Nuevo diseño de cards de selección en s4: sistema `.fi-*` (`.fi-header`, `.fi-content`, `.fi-title`, `.fi-pills`, `.fi-pill-hora/lugar/maps/fin/dur`, `.fi-circle`, `.fi-footer`, `.fi-body`, `.fi-body-inner`, `.fi-desc`, `.fi-extra`); `cargarFechas()` parsea `f.fecha` por `" - "` para extraer hora y lugar; `toggleFecha()` recibe la `.fecha-item` directamente; nueva función `toggleFechaExpand()` para el panel colapsable de info; dark mode para `fi-pill-hora` y `fi-pill-fin` en bloque `@media dark` de reservas.css
 - **reservas.js + home.js** — Layout de pills en fecha-items y cards de home reorganizado: "Más info ▾" ahora aparece a la izquierda como único pill en la fila; "Cómo llegar" se movió dentro del cuerpo expandido de "Más info" (ya no es un pill independiente en la card)
@@ -255,6 +257,7 @@ reservas/
 ### IDs relevantes de index.html
 | ID | Descripción |
 |---|---|
+| `#modal-equip-aviso` | Modal de aviso de disponibilidad de equipamiento: se muestra en `cargarFechas()` si hay fechas agotadas por equip; lista en `#modal-equip-lista`; botón "Actualizar mi equipamiento" llama `irEditarEquipDesdeModal()` |
 | `#modal-info-reserva` | Modal info primera reserva; items condicionales `#mri-modalidad-clase` / `#mri-modalidad-mes` / `#mri-cupon`; estilos críticos inline en el HTML (mismo patrón que `#modal-contacto`) |
 | `#modal-info-home` | Modal info primera visita a home; estilos críticos inline en el HTML |
 
@@ -308,7 +311,7 @@ reservas/
 | `_todasReservas` | Array con todas las reservas del usuario (cargadas al login) |
 | `_proximosData` | Mapa de fecha → `{mapsUrl, descripcion, horaFin, duracion}` de próximos entrenamientos; cargado en `prepararHome()` via `getProximosEntrenamientos`; usada en `_renderCardHome()` para mostrar pill "Más info" (único pill en la fila) con "Cómo llegar" dentro del cuerpo expandido |
 | `prepararHome()` | Inicializa la pantalla home: saludo, foto, banner cupón/notif, render reservas. Refresca `cuponDisponible` desde el backend (`getCuponDisponible`) y carga `_proximosData` via `getProximosEntrenamientos` en cada visita a la home |
-| `irNuevaReserva(skipEquip)` | Navega al flujo de reserva; `skipEquip=true` salta s2-s3 e va directo a `cargarFechas()` (usado post-inscripción vía parámetro `?nuevx=1`) |
+| `irNuevaReserva(skipEquip)` | Navega al flujo de reserva: resetea estado E y siempre llama `cargarFechas()` directamente (el parámetro `skipEquip` queda por compatibilidad pero ya no se evalúa) |
 | `irMisReservas()` | Navega al historial completo (ir s-misreservas) |
 | `verTodasReservas()` | Alias de irMisReservas() |
 | `iniciarReagendamiento()` | Activa E.reagendando y navega a s4 para reagendar |
@@ -351,6 +354,9 @@ reservas/
 | `cargarFechas()` | Llama API `getFechasDisponibles`; parsea `f.fecha` (split por `" - "` para extraer `fechaTexto`, `hora`, `lugar`; también soporta campos separados `f.hora`/`f.lugar`); renderiza nuevas cards `.fi-*` con pills de hora/lugar en header y panel expandible de info (si `hasInfo`); muestra `modal-info-reserva` con delay 400ms si es la primera visita a s4 |
 | `toggleFecha(el, fecha)` | Recibe la `.fecha-item` (onclick en `.fi-header`); toglea el checkbox oculto, la clase `.sel` y actualiza `E.fechas` |
 | `toggleFechaExpand(footer, event)` | Expande/colapsa el panel de info de una card: hace `stopPropagation` y toglea `.open` en la `.fecha-item` |
+| `mostrarModalEquip(fechasAfectadas)` | Muestra `#modal-equip-aviso` con la lista de fechas agotadas por falta de equipamiento (filtradas en `cargarFechas()` por regex sobre `f.razon`) |
+| `cerrarModalEquip()` | Cierra `#modal-equip-aviso` |
+| `irEditarEquipDesdeModal()` | Cierra el modal de equip y navega a `irEditarDatos()` |
 | `continuar_s4()` | Valida selección de fechas/meses y navega a s-pago o s5 |
 | `toggleBtnPago()` | Habilita/deshabilita btn-pago según checkbox chk-pago |
 | `construirResumenS5(backTarget)` | Renderiza el resumen completo en s5 |

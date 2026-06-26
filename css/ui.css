@@ -175,6 +175,7 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
   div:has(> [id^="hgrp-"]) > div:first-child span { color: var(--text-2) !important; }
   #modal-contacto > div { background: var(--dk-overlay-95) !important; }
   #modal-wp-comprobante > div { background: var(--dk-overlay-97) !important; }
+  #modal-equip-aviso > div { background: var(--dk-overlay-97) !important; }
   #modal-contacto a[href] { background: var(--brand-06) !important; color: var(--text) !important; }
   #modal-contacto button { background: var(--brand-soft) !important; color: var(--text-2) !important; }
   #modal-contacto .modal-ct { color: var(--text) !important; }
