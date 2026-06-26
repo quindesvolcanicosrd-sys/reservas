@@ -82,3 +82,50 @@
   #pwa-banner div[style*="font-weight:800"] { color: var(--text) !important; }
   #pwa-instrucciones { background: var(--surface-2) !important; border-color: var(--border) !important; color: var(--text) !important; }
 }
+
+/* ── Profile row ─────────────────────────────────────── */
+.home-profile-row { display:flex; align-items:center; gap:10px; margin-bottom:20px; }
+.home-avatar { width:46px; height:46px; border-radius:50%; background:var(--brand); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:17px; color:var(--white); flex-shrink:0; overflow:hidden; }
+.home-avatar img { width:100%; height:100%; object-fit:cover; }
+.home-profile-name { flex:1; }
+.home-saludo-small { font-size:0.72rem; color:var(--muted); font-weight:500; }
+.home-nombre { font-size:1.05rem; font-weight:800; margin:0; line-height:1.2; }
+.home-icon-btns { display:flex; gap:6px; }
+.home-icon-btn { width:38px; height:38px; border-radius:10px; background:var(--surface-2); border:1.5px solid var(--border-light); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--brand); transition:background 0.15s; }
+.home-icon-btn:hover { background:var(--brand-lightest); }
+.home-icon-btn .material-symbols-outlined { font-size:18px; }
+.home-subtitulo { margin-bottom:20px; font-weight:500; font-size:0.88rem; color:var(--muted); }
+
+/* ── Cards rediseñadas ───────────────────────────────── */
+.res-card-nueva { background:var(--surface-2); border:1.5px solid var(--border-light); border-radius:14px; margin-bottom:10px; overflow:hidden; }
+.res-card-nueva .rn-header { padding:13px 14px 11px; }
+.res-card-nueva .rn-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:9px; }
+.res-card-nueva .rn-date { font-size:0.9rem; font-weight:800; }
+.res-card-nueva .rn-divider { height:1px; background:var(--border-light); }
+.res-card-nueva .rn-mas-info { display:flex; align-items:center; justify-content:space-between; padding:9px 14px; cursor:pointer; color:var(--muted); font-size:0.77rem; font-weight:600; user-select:none; transition:color 0.15s; }
+.res-card-nueva .rn-mas-info:hover { color:var(--brand); }
+.res-card-nueva .rn-mas-info .rn-chevron { font-size:16px; transition:transform 0.3s; }
+.res-card-nueva .rn-mas-info.open .rn-chevron { transform:rotate(180deg); }
+.res-card-nueva .rn-body { max-height:0; overflow:hidden; transition:max-height 0.35s ease; background:var(--surface-light,var(--surface-2)); }
+.res-card-nueva .rn-body.open { max-height:200px; }
+.res-card-nueva .rn-body-inner { padding:10px 14px 14px; font-size:0.77rem; color:var(--muted); line-height:1.65; }
+.res-card-nueva .rn-body-inner .fi-pills { margin-top:8px; }
+.res-card-nueva .rn-cancel-wrap { text-align:center; padding:8px 14px 12px; }
+.btn-cancel-text { background:none; border:none; color:var(--danger); font-size:0.74rem; font-weight:600; cursor:pointer; font-family:inherit; text-decoration:underline; text-underline-offset:3px; }
+.btn-cancel-text:hover { opacity:0.8; }
+
+/* ── Pantalla gestionar ──────────────────────────────── */
+.sg-toggle-row { display:flex; gap:8px; margin-bottom:16px; }
+.sg-toggle-opt { flex:1; padding:9px; border-radius:10px; border:1.5px solid var(--border-light); background:var(--surface-2); color:var(--muted); font-size:0.77rem; font-weight:700; cursor:pointer; font-family:inherit; text-align:center; transition:all 0.15s; }
+.sg-toggle-opt.active { border-color:var(--brand); color:var(--brand); background:var(--brand-lightest); }
+.sg-fecha-item { background:var(--surface-2); border:1.5px solid var(--border-light); border-radius:12px; margin-bottom:8px; overflow:hidden; cursor:pointer; transition:border-color 0.15s; }
+.sg-fecha-item:hover { border-color:var(--brand); }
+.sg-fecha-item.sel { border-color:var(--brand); background:var(--brand-lightest); }
+.sg-fecha-item .sfi-header { display:flex; align-items:center; justify-content:space-between; padding:11px 13px; }
+.sg-fecha-item .sfi-title { font-size:0.88rem; font-weight:700; margin-bottom:6px; }
+.sg-fecha-item .sfi-circle { width:24px; height:24px; border-radius:50%; border:2px solid var(--border-light); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all 0.15s; }
+.sg-fecha-item .sfi-circle .material-symbols-outlined { font-size:14px; color:transparent; }
+.sg-fecha-item.sel .sfi-circle { background:var(--brand); border-color:var(--brand); }
+.sg-fecha-item.sel .sfi-circle .material-symbols-outlined { color:var(--white); }
+.sg-no-fechas { background:var(--surface-2); border:1.5px solid var(--border-light); border-radius:12px; padding:16px; text-align:center; font-size:0.8rem; color:var(--muted); line-height:1.6; }
+.sg-no-fechas .material-symbols-outlined { font-size:2rem; display:block; margin-bottom:8px; color:var(--brand); }

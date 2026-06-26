@@ -27,6 +27,7 @@ function irEditarDatos() {
   cargarSelect('d-emerg2Prefijo', datos.emerg2Prefijo, 'd-emerg2PrefijoOtro', 'campo-emerg2PrefijoOtro');
   cargarSelect('d-necesitaPatines', datos.necesitaPatines, null, null);
   cargarSelect('d-necesitaProtecciones', datos.necesitaProtecciones, null, null);
+  _poblarResumenEquipPerfil();
 
   var fnDisp = document.getElementById('d-fechaNacimiento-display');
   if (fnDisp) {
@@ -223,6 +224,26 @@ function mecConfirmar() {
     errEl.textContent = 'Error de conexión: ' + e.message;
     errEl.style.display = 'block';
   });
+}
+
+function _poblarResumenEquipPerfil() {
+  var el = document.getElementById('equip-resumen-perfil');
+  if (!el || !E.datos) return;
+  var d = E.datos;
+  var pat = d.necesitaPatines || '—';
+  var tal = d.talla || '';
+  var pro = d.necesitaProtecciones || '—';
+  el.innerHTML =
+    '<strong>Patines:</strong> ' + pat + (tal ? ' — Talla ' + tal : '') + '<br>' +
+    '<strong>Protecciones:</strong> ' + pro;
+}
+
+function irEditarEquipDesdeHome() {
+  E.editPat = ''; E.editTalla = ''; E.editProtec = ''; E.editandoDesdeHome = true;
+  document.querySelectorAll('input[name="edit-pat"],input[name="edit-protec"]').forEach(function(r) {
+    r.checked = false; r.closest('.opcion').classList.remove('sel');
+  });
+  ir('s3a');
 }
 
 // ─── DATE PICKER (Mis Datos — ddp-*) ─────────────────────────────────────────

@@ -124,19 +124,22 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <div class="pantalla" id="s-home">
     <div class="card" style="text-align:center;padding-bottom:32px;">
-      <div class="home-top-mobile">
-        <span class="home-emoji-mobile">🛼</span>
-        <div class="home-top-acciones">
-          <button class="btn-logout-mobile" onclick="irEditarDatos()" title="Mis datos">
-            <span class="material-symbols-outlined">account_circle</span>
-          </button>
-          <button class="btn-logout-mobile" onclick="cerrarSesion()" title="Cerrar sesión">
-            <span class="material-symbols-outlined">logout</span>
-          </button>
-        </div>
-      </div>
-      <div class="home-emoji-desktop" style="font-size:3.2rem;margin-bottom:12px;animation:popBounce 0.6s cubic-bezier(0.16,1,0.3,1);">🛼</div>
-      <h2 id="home-saludo" style="text-align:center;margin-bottom:8px;"></h2>
+<div class="home-profile-row">
+  <div class="home-avatar" id="home-avatar"></div>
+  <div class="home-profile-name">
+    <div class="home-saludo-small">¡Hola,</div>
+    <h2 id="home-saludo" class="home-nombre"></h2>
+  </div>
+  <div class="home-icon-btns">
+    <button class="home-icon-btn" onclick="irEditarDatos()" title="Mis datos">
+      <span class="material-symbols-outlined">account_circle</span>
+    </button>
+    <button class="home-icon-btn" onclick="cerrarSesion()" title="Cerrar sesión">
+      <span class="material-symbols-outlined">logout</span>
+    </button>
+  </div>
+</div>
+<p class="home-subtitulo">¿Qué quieres hacer hoy?</p>
 
       <div id="banner-cupon" style="display:none;background:linear-gradient(135deg,var(--amber-lighter),var(--amber-light));border:2px solid var(--amber);border-radius:14px;margin-bottom:18px;box-shadow:0 4px 12px var(--warning-bg);overflow:hidden;">
         <div onclick="toggleBannerCupon()" style="display:flex;align-items:center;gap:12px;padding:16px;cursor:pointer;">
@@ -173,15 +176,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <button id="btn-nueva-reserva-home" onclick="irNuevaReserva()" style="width:100%;padding:14px;border:none;border-radius:12px;background:var(--brand-light);color:var(--brand) !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">calendar_add_on</span> Nueva reserva</button>
         </div>
       </div>
-  <div style="display:flex;gap:10px;margin-top:20px;">
-    <button id="btn-editar-desktop" class="btn btn-secondary" style="flex:1;margin-top:0;" onclick="irEditarDatos()">
-      <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">account_circle</span> Mis datos
-    </button>
-    <button id="btn-logout-desktop" class="btn btn-secondary" style="flex:1;margin-top:0;" onclick="cerrarSesion()">
-      <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">logout</span> Cerrar sesión
-    </button>
-  </div>
-
       <div class="home-mobile-actions" style="margin-top:20px;">
         <div class="hmr" id="row-notif-home">
           <div class="hmr-texto">
@@ -288,6 +282,36 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div class="pantalla" id="s-carga-fechas">
     <div class="card"><div class="loader"><div class="spinner"></div><p>Verificando próximas fechas...</p></div></div>
   </div>
+
+<div class="pantalla" id="s-gestionar">
+  <div class="card">
+    <div class="seccion-label" id="sg-label">Gestionar reserva</div>
+    <div id="sg-reserva-info" style="background:var(--surface-2);border:1px solid var(--border-light);border-radius:12px;padding:12px 14px;margin-bottom:16px;">
+      <div id="sg-fecha-texto" style="font-size:0.9rem;font-weight:800;color:var(--text);margin-bottom:8px;"></div>
+      <div id="sg-fecha-pills" class="fi-pills"></div>
+    </div>
+    <div class="sg-toggle-row" id="sg-toggle-row">
+      <button class="sg-toggle-opt active" id="sg-opt-reagendar" onclick="setModoGestionar('reagendar')">Cambiar de fecha</button>
+      <button class="sg-toggle-opt" id="sg-opt-cancelar" onclick="setModoGestionar('cancelar')">Cancelar</button>
+    </div>
+    <div id="sg-panel-reagendar">
+      <div class="seccion-label" style="margin-bottom:10px;">Fechas disponibles</div>
+      <div id="sg-lista-fechas"></div>
+      <div class="error-msg" id="err-sg"></div>
+    </div>
+    <div id="sg-panel-cancelar" style="display:none;">
+      <div style="background:var(--danger-bg);border:1.5px solid var(--danger-border, var(--danger));border-radius:12px;padding:14px 16px;font-size:0.82rem;color:var(--danger);line-height:1.6;">
+        <span class="material-symbols-outlined" style="font-size:1.4rem;vertical-align:middle;display:block;margin-bottom:8px;">warning</span>
+        <strong>¿Cancelar esta reserva?</strong><br><br>
+        Al cancelar, el cupo quedará disponible para otras personas. Si cambias de idea, deberás hacer una nueva reserva y el cupo podría no estar disponible.
+      </div>
+    </div>
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
+      <button class="btn btn-primary" id="sg-btn-confirmar-fecha" onclick="confirmarCambioFecha()" style="display:none;">Confirmar nueva fecha</button>
+      <button class="btn btn-secondary" id="sg-btn-cancelar-res" onclick="abrirModalConfirmCancel()" style="display:none;color:var(--danger);border-color:var(--danger);">Cancelar esta reserva</button>
+    </div>
+  </div>
+</div>
 
   <div class="pantalla" id="s4">
     <div class="card">
@@ -463,41 +487,21 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
       </div>
 
-      <div class="datos-seccion">
-        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-equip', this)">
-          <span><span class="sec-icon">⚙️</span>Equipamiento</span>
-          <span class="sec-chevron material-symbols-outlined">expand_more</span>
-        </div>
-        <div class="datos-seccion-body" id="sec-equip">
-          <div class="datos-campo">
-            <label>¿Necesitas patines prestados?</label>
-            <div class="select-wrapper">
-              <select id="d-necesitaPatines">
-                <option value="Sí">Sí, necesito patines</option>
-                <option value="No">No, tengo los míos</option>
-              </select>
-            </div>
-          </div>
-          <div class="datos-campo">
-            <label>Talla de patines</label>
-            <div class="select-wrapper">
-  <select id="d-talla">
-    <option value="">Cargando tallas...</option>
-  </select>
+<div class="datos-seccion">
+  <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-equip', this)">
+    <span><span class="sec-icon">⚙️</span>Equipamiento</span>
+    <span class="sec-chevron material-symbols-outlined">expand_more</span>
+  </div>
+  <div class="datos-seccion-body" id="sec-equip">
+    <div id="equip-resumen-perfil" style="background:var(--surface-2);border:1px solid var(--border-light);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:0.82rem;color:var(--muted);line-height:1.8;">
+      Cargando...
+    </div>
+    <button class="btn btn-secondary" style="width:100%;margin-top:0;" onclick="irEditarEquipDesdeHome()">
+      <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">roller_skating</span> Actualizar equipamiento
+    </button>
+    <p class="datos-hint" style="margin-top:8px;">Podras editar patines, talla y protecciones paso a paso.</p>
+  </div>
 </div>
-          </div>
-          <div class="datos-campo">
-            <label>¿Necesitas protecciones prestadas?</label>
-            <div class="select-wrapper">
-              <select id="d-necesitaProtecciones">
-                <option value="Sí">Sí, necesito protecciones</option>
-                <option value="No">No, tengo las mías</option>
-              </select>
-            </div>
-          </div>
-          <button class="btn-guardar-sec" onclick="guardarEquipPerfil(this)">Guardar</button>
-        </div>
-      </div>
 
       <div class="datos-seccion">
         <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-contacto', this)">
@@ -1186,6 +1190,24 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">manage_accounts</span> Actualizar mi equipamiento
     </button>
     <button onclick="cerrarModalEquip()" style="width:100%;padding:13px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:12px;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;">Entendido, continuar</button>
+  </div>
+</div>
+
+<div id="modal-confirm-cancel" style="display:none;position:fixed;inset:0;z-index:9950;background:var(--overlay-dark);align-items:flex-end;justify-content:center;padding:0;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;">
+    <div style="font-size:2rem;text-align:center;margin-bottom:10px;">⚠️</div>
+    <div style="font-weight:800;font-size:1rem;color:var(--danger);text-align:center;margin-bottom:8px;">¿Estás segurx?</div>
+    <p style="font-size:0.82rem;color:var(--muted);text-align:center;margin-bottom:16px;line-height:1.5;">Esta acción no se puede deshacer. Antes de confirmar, ten en cuenta:</p>
+    <div style="background:var(--warning-bg);border:1px solid var(--warning-border,var(--amber));border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:0.79rem;color:var(--amber-darker,var(--text));line-height:1.6;display:flex;gap:8px;align-items:flex-start;">
+      <span class="material-symbols-outlined" style="font-size:15px;flex-shrink:0;margin-top:1px;color:var(--warning);">confirmation_number</span>
+      <span>Si usaste un cupón de descuento en esta reserva, <strong>se perderá</strong> al cancelar.</span>
+    </div>
+    <div style="background:var(--warning-bg);border:1px solid var(--warning-border,var(--amber));border-radius:10px;padding:10px 12px;margin-bottom:20px;font-size:0.79rem;color:var(--amber-darker,var(--text));line-height:1.6;display:flex;gap:8px;align-items:flex-start;">
+      <span class="material-symbols-outlined" style="font-size:15px;flex-shrink:0;margin-top:1px;color:var(--warning);">payments</span>
+      <span>Si ya realizaste el pago, <strong>es posible que no sea reembolsado</strong>. Contacta al equipo si necesitas más información.</span>
+    </div>
+    <button onclick="ejecutarCancelacion()" style="width:100%;padding:13px;background:var(--danger);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;">Sí, cancelar mi reserva</button>
+    <button onclick="cerrarModalConfirmCancel()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:1px solid var(--border-light);border-radius:12px;font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;">Volver</button>
   </div>
 </div>
 

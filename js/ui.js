@@ -67,6 +67,7 @@ var TOP_BAR_CONFIG = {
   's3c': { titulo: 'Editar equipamiento', volver: function() { return E.editPat === 'Sí' ? 's3b' : 's3a'; } },
   's4': { titulo: function() { return E.reagendando ? 'Reagendar clase' : canPayMonthly() ? 'Nueva reserva' : 'Fecha y pago'; }, volver: function() { return 's-home'; } },
   's-pago': { titulo: 'Pago', volver: 's4' }, 's5': { titulo: 'Confirmar reserva', volver: function() { return (E.creditosUsados > 0 || E.cuponAplicado) && E.totalPago === 0 ? 's4' : 's-pago'; } },
+  's-gestionar': { titulo: 'Gestionar reserva', volver: 's-home' },
   's-misreservas': { titulo: 'Historial de reservas', volver: 's-home' }, 's-datos': { titulo: 'Editar mis datos', volver: 's-home' },
   's-admin-login': { titulo: 'Administradorx', volver: 's1' },
   's-admin-reservas': { titulo: 'Reservas', volver: 's-admin-home' },
@@ -108,7 +109,7 @@ function ir(id, desdeHistorial) {
     if (_volverTarget) { topBtn.style.display = ''; topBtn.onclick = function() { volver(_volverTarget); }; } else { topBtn.style.display = 'none'; }
   } else { topBar.classList.remove('visible'); }
 
-  var sinPasos = ['s1','s-home','s-misreservas','s-carga','s6','s-datos'].concat(ADMIN_PANTALLAS);
+  var sinPasos = ['s1','s-home','s-misreservas','s-carga','s6','s-datos','s-gestionar'].concat(ADMIN_PANTALLAS);
   if (E.reagendando) sinPasos = sinPasos.concat(['s4','s5','s-carga-conf']);
   var dotContainer = document.querySelector('.paso-indicator');
   if (sinPasos.indexOf(id) !== -1) { if (dotContainer) dotContainer.style.display = 'none'; return; }

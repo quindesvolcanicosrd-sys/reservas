@@ -5,15 +5,15 @@ var _MESES_DISPLAY = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','
 var _homeExpandido = false;
 
 function prepararHome() {
-  document.getElementById('home-saludo').textContent = '¡Hola, ' + E.nombre + '!';
-  var foto = E.datos && E.datos.fotoPerfil ? E.datos.fotoPerfil : '';
-  var emojiMobile  = document.querySelector('.home-emoji-mobile');
-  var emojiDesktop = document.querySelector('.home-emoji-desktop');
-  if (foto) {
-    var imgStyle = 'width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid var(--brand);animation:popBounce 0.6s cubic-bezier(0.16,1,0.3,1);';
-    var imgTag = '<img src="' + foto + '" style="' + imgStyle + '" onerror="this.replaceWith(document.createTextNode(\'🛼\'))">';
-    if (emojiMobile)  emojiMobile.outerHTML  = '<span class="home-emoji-mobile">'  + imgTag + '</span>';
-    if (emojiDesktop) emojiDesktop.outerHTML = '<div class="home-emoji-desktop" style="font-size:3.2rem;margin-bottom:12px;">' + imgTag + '</div>';
+  var saludoEl = document.getElementById('home-saludo');
+  if (saludoEl) saludoEl.textContent = E.nombre + '!';
+  var avatarEl = document.getElementById('home-avatar');
+  if (avatarEl) {
+    if (E.datos && E.datos.fotoUrl) {
+      avatarEl.innerHTML = '<img src="' + E.datos.fotoUrl + '" alt="">';
+    } else {
+      avatarEl.textContent = (E.nombre || '?').charAt(0).toUpperCase();
+    }
   }
   renderHomeReservas();
   api({ action: 'getProximosEntrenamientos' }, function(proximos) {
@@ -156,88 +156,71 @@ function reagendarDesdeCard(fecha, btn) {
   }, function(e) { btn.disabled = false; alert('Error: ' + e.message); });
 }
 
-function irEditarEquipDesdeHome() {
-  E.editandoDesdeHome = true;
-  E.editPat = ''; E.editTalla = ''; E.editProtec = '';
-  document.querySelectorAll('input[name="edit-pat"],input[name="edit-protec"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
-  document.getElementById('txt-otro').style.display = 'none';
-  ir('s3a');
+function _renderCardHome(r, hoy) {
+  var partes = (r.fecha || '').split(' - ');
+  var fechaTexto = (partes[0] || r.fecha).trim();
+  var hora = partes[1] ? partes[1].trim() : '';
+  var lugar = partes[2] ? partes[2].trim() : '';
+
+  var estadoClase = r.estado === 'Confirmada' ? 'confirmada-clase' : r.estado === 'Reagendar' ? 'reagendar-clase' : 'pendiente-clase';
+  var badgeHtml = '';
+  if (r.estado === 'Confirmada') {
+    badgeHtml = '<span class="badge badge-confirmada"><span class="material-symbols-outlined" style="font-size:11px;">check_circle</span>Confirmada</span>';
+  } else if (r.estado === 'Reagendar') {
+    badgeHtml = '<span class="badge badge-reagendar"><span class="material-symbols-outlined" style="font-size:11px;">swap_horiz</span>Reagendar</span>';
+  } else {
+    badgeHtml = '<span class="badge badge-pendiente"><span class="material-symbols-outlined" style="font-size:11px;">pending</span>Pendiente</span>';
+  }
+
+  var necesitaPatines = r.necesitaPatines && r.necesitaPatines.toLowerCase() !== 'no';
+  var equipPill = necesitaPatines
+    ? '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">roller_skating</span>Patines' + (r.talla ? ' talla ' + r.talla : '') + '</span>'
+    : '<span class="fi-pill fi-pill-equip"><span class="material-symbols-outlined">check_circle</span>Llevas tu equipo</span>';
+
+  var pillsHtml = '<div class="fi-pills">';
+  if (hora) pillsHtml += '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + hora + '</span>';
+  if (lugar) pillsHtml += '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
+  pillsHtml += equipPill + '</div>';
+
+  var uid = 'rcard-' + (r.fila || Math.random().toString(36).slice(2));
+  var fechaEsc = (r.fecha || '').replace(/'/g, "\\'");
+  var filaEsc = r.fila || '';
+
+  var bodyHtml = '';
+  if (lugar) {
+    bodyHtml = '<div class="rn-body" id="' + uid + '-body">' +
+      '<div class="rn-body-inner">' +
+      '<strong><span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle;">location_on</span> ' + lugar + '</strong>' +
+      (r.mapsUrl ? '<div class="fi-pills"><a class="fi-pill fi-pill-maps" href="' + r.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-symbols-outlined">near_me</span>Cómo llegar</a></div>' : '') +
+      '</div></div>';
+  }
+
+  var masInfoHtml = lugar
+    ? '<div class="rn-divider"></div>' +
+      '<div class="rn-mas-info" id="' + uid + '-toggle" onclick="_toggleCardBody(\'' + uid + '\')">' +
+      '<span>Más información</span><span class="material-symbols-outlined rn-chevron">expand_more</span></div>' +
+      bodyHtml
+    : '';
+
+  return '<div class="res-card-home res-card-nueva ' + estadoClase + '">' +
+    '<div class="rn-header">' +
+    '<div class="rn-top"><div class="rn-date">' + fechaTexto + '</div>' + badgeHtml + '</div>' +
+    pillsHtml +
+    '</div>' +
+    masInfoHtml +
+    '<div class="rn-divider"></div>' +
+    '<div class="rn-cancel-wrap">' +
+    '<button class="btn-cancel-text" onclick="abrirGestionar(\'' + fechaEsc + '\',' + filaEsc + ')">Cancelar reserva</button>' +
+    '</div>' +
+    '</div>';
 }
 
-function _renderCardHome(r, hoy) {
-  var f = r.fecha.toLowerCase().trim(), estado = r.estado;
-  if (_MESES_MAP[f] !== undefined) {
-    var vh = _parseFechaSimple(r.validezHasta);
-    var inicioMes = new Date(hoy.getFullYear(), _MESES_MAP[f], 1); inicioMes.setHours(0,0,0,0);
-    var exp = vh ? hoy > vh : false;
-    var dias = vh ? Math.ceil((vh.getTime() - hoy.getTime()) / 86400000) : 999;
-    var tipo = exp ? 'vencida' : inicioMes > hoy ? 'futura' : dias <= 15 ? 'vencimiento' : 'vigente';
-    if (estado === 'Pendiente') tipo = 'pendiente-mens';
-    var nombreMes = r.fecha.charAt(0).toUpperCase() + r.fecha.slice(1);
-    var icons = {vencida:'<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">cancel</span>',futura:'<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">lock</span>',vencimiento:'<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">warning</span>','pendiente-mens':'<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">hourglass_empty</span>',vigente:'<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">check_circle</span>'};
-    var colors = {vencida:'var(--error)',futura:'var(--dk-text-muted)',vencimiento:'var(--amber-dark)','pendiente-mens':'var(--amber-dark)',vigente:'var(--green-dark)'};
-    var labels = {vencida:'Pago vencido',futura:'Mes futuro',vencimiento:'Próximo a cumplirse','pendiente-mens':'Pendiente de verificación',vigente:'Pago activo'};
-    var h = '<div class="res-card-home ' + tipo + '">';
-    h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">';
-    h += '<div><div style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:' + colors[tipo] + ';margin-bottom:4px;">' + icons[tipo] + ' ' + labels[tipo] + '</div>';
-    h += '<div style="font-weight:800;font-size:1.05rem;">' + nombreMes + '</div></div>';
-    if (r.monto) h += '<span style="font-weight:800;color:var(--brand);font-size:0.95rem;margin-left:8px;flex-shrink:0;">' + r.monto + '</span>';
-    h += '</div>';
-    if (r.fechaPago && tipo !== 'futura') h += '<div style="font-size:0.8rem;color:var(--muted);margin-bottom:2px;">Pagado el ' + r.fechaPago + '</div>';
-    if (vh && tipo !== 'futura' && tipo !== 'pendiente-mens') h += '<div style="font-size:0.8rem;color:var(--muted);">Válido hasta el ' + r.validezHasta + '</div>';
-    if (tipo === 'futura') h += '<div style="font-size:0.8rem;color:var(--dk-text-muted);">Vigente desde el 1 de ' + nombreMes + '</div>';
-    if (tipo === 'pendiente-mens') h += '<div style="font-size:0.8rem;color:var(--muted);margin-top:2px;">Esperando verificación del pago</div>';
-    if (tipo === 'vencida') h += '<button class="btn btn-primary" style="margin-top:12px;padding:12px;" onclick="irNuevaReserva()">Hacer nuevo pago mensual</button>';
-    if (tipo === 'pendiente-mens') h += '<button class="btn-cancelar" style="margin-top:10px;" onclick="cancelarRes(\'' + r.fecha.replace(/'/g,"\\'") + '\')">Cancelar</button>';
-    h += '</div>'; return h;
-  }
-  var fp = _parsearFechaCard(r.fecha);
-  var fechaHuman = _formatarFechaRelativa(fp.fechaPura);
-  var tipoC = estado === 'Confirmada' ? 'confirmada-clase' : estado === 'Reagendar' ? 'reagendar-clase' : 'pendiente-clase';
-  var tienePat = r.talla && r.talla.toLowerCase() !== 'no';
-  var tieneProc = r.protecciones && r.protecciones.toLowerCase() !== 'no';
-  var icoP = '<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">roller_skating</span>';
-  var icoR = '<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">shield</span>';
-  var icoOk = '<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">check_circle</span>';
-  var equipMsg = tienePat && tieneProc ? icoP + ' T.' + r.talla + ' · ' + icoR + ' Protecciones' :
-                 tienePat ? icoP + ' Patines talla ' + r.talla : tieneProc ? icoR + ' ' + r.protecciones : icoOk + ' Equipo propio';
-  var shadowMap = { Confirmada: 'rgba(34,197,94,0.35)', Reagendar: 'rgba(124,58,237,0.35)', Pendiente: 'rgba(245,158,11,0.35)' };
-  var bShadow = shadowMap[estado] || shadowMap['Pendiente'];
-  var bIcon = { Confirmada: '<span class="material-symbols-outlined" style="font-size:0.9rem;vertical-align:middle;">check_circle</span>', Reagendar: '<span class="material-symbols-outlined" style="font-size:0.9rem;vertical-align:middle;">event_repeat</span>', Pendiente: '<span class="material-symbols-outlined" style="font-size:0.9rem;vertical-align:middle;">hourglass_empty</span>' }[estado] || '';
-  var bColor = { Confirmada: 'var(--green-dark)', Reagendar: 'var(--dk-purple-mid)', Pendiente: 'var(--amber-dark)' }[estado] || 'var(--amber-dark)';
-  var bBg = { Confirmada: 'var(--success-lightest)', Reagendar: 'var(--purple-light)', Pendiente: 'var(--amber-light)' }[estado] || 'var(--amber-light)';
-  var h = '<div class="res-card-home ' + tipoC + '">';
-  h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">';
-  h += '<div style="flex:1;margin-right:8px;"><div style="font-weight:800;font-size:0.88rem;line-height:1.3;">' + fechaHuman + (fp.hora ? ' · ' + fp.hora : '') + '</div>';
-  if (fp.lugar) h += '<div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">' + fp.lugar + '</div>';
-  h += '</div>';
-  h += '<span style="padding:3px 10px;border-radius:20px;font-size:0.7rem;font-weight:800;background:' + bBg + ';color:' + bColor + ';white-space:nowrap;box-shadow:0 2px 6px ' + bShadow + ';">' + bIcon + ' ' + estado + '</span></div>';
-  if (tienePat || tieneProc) h += '<div style="font-size:0.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin:6px 0 2px;">Lo que te llevarán:</div>';
-  h += '<div class="res-card-equip" style="font-size:0.82rem;margin-bottom:8px;">' + equipMsg + '</div>';
-  if (estado === 'Reagendar') {
-    h += '<div style="font-size:0.78rem;color:var(--purple);background:var(--purple-light);border-radius:8px;padding:6px 10px;margin-bottom:8px;">🔁 Clase a favor por entrenamiento cancelado</div>';
-    h += '<button class="btn btn-primary" style="margin-top:8px;padding:12px;background:var(--purple);box-shadow:0 4px 14px rgba(124,58,237,0.3);" onclick="iniciarReagendamiento()">🔁 Reagendar clase</button>';
-  }
-  var _prx = _proximosData[r.fecha] || {};
-  if (_prx.mapsUrl || _prx.descripcion || _prx.horaFin || _prx.duracion) {
-    var _infoId = 'prx-' + r.fecha.replace(/[^a-z0-9]/gi, '');
-    h += '<div style="margin:8px 0 4px;">';
-    h += '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
-    h += '<button onclick="event.stopPropagation();var _e=document.getElementById(\'' + _infoId + '\');var _i=document.getElementById(\'' + _infoId + 'i\');var _o=_e.style.display!==\'none\';_e.style.display=_o?\'none\':\'block\';_i.style.transform=_o?\'rotate(180deg)\':\'\';" style="display:inline-flex;align-items:center;gap:4px;background:var(--surface-light);color:var(--muted);border:1px solid var(--border-light);border-radius:20px;padding:4px 10px;font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;"><span class="material-symbols-outlined" style="font-size:0.85rem;">info</span>Más info<span class="material-symbols-outlined" id="' + _infoId + 'i" style="font-size:0.85rem;transition:transform 0.25s;">expand_more</span></button>';
-    h += '</div>';
-    h += '<div id="' + _infoId + '" style="display:none;padding:10px 12px;background:var(--surface-light);border-radius:10px;border:1px solid var(--border-light);font-size:0.8rem;color:var(--muted);margin-top:6px;line-height:1.5;box-shadow:0 2px 8px rgba(0,0,0,0.08);">';
-    if (_prx.mapsUrl) h += '<div style="margin-bottom:8px;"><a href="' + _prx.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;background:var(--brand-light);color:var(--brand);border:1px solid var(--brand-warm-border);border-radius:20px;padding:4px 10px;font-size:0.75rem;font-weight:700;text-decoration:none;"><span class="material-symbols-outlined" style="font-size:0.85rem;">location_on</span>Cómo llegar</a></div>';
-    if (_prx.descripcion) h += '<div style="margin-bottom:6px;">' + _prx.descripcion + '</div>';
-    if (_prx.horaFin || _prx.duracion) h += '<div style="font-size:0.75rem;color:var(--dk-text-muted);display:flex;gap:10px;flex-wrap:wrap;">' + (_prx.horaFin ? '<span><span class="material-symbols-outlined" style="font-size:0.85rem;vertical-align:middle;">schedule</span> ' + _prx.horaFin + '</span>' : '') + (_prx.duracion ? '<span><span class="material-symbols-outlined" style="font-size:0.85rem;vertical-align:middle;">timer</span> ' + _prx.duracion + '</span>' : '') + '</div>';
-    h += '</div>';
-    h += '</div>';
-  }
-  if (estado === 'Pendiente' || estado === 'Confirmada') {
-    h += '<button class="btn-cancelar" style="margin-top:2px;" onclick="cancelarRes(\'' + r.fecha.replace(/'/g,"\\'") + '\')">Cancelar esta reserva</button>';
-    h += '<button onclick="reagendarDesdeCard(\'' + r.fecha.replace(/'/g,"\\'") + '\',this)" style="width:100%;margin-top:6px;padding:10px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:10px;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:inherit;">↔ Reagendar fecha</button>';
-    h += '<button onclick="irEditarEquipDesdeHome()" style="width:100%;margin-top:6px;padding:10px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:10px;font-size:0.8rem;font-weight:600;cursor:pointer;font-family:inherit;"><span class="material-symbols-outlined" style="font-size:0.9rem;vertical-align:middle;">tune</span> Cambiar equipamiento</button>';
-  }
-  h += '</div>'; return h;
+function _toggleCardBody(uid) {
+  var toggle = document.getElementById(uid + '-toggle');
+  var body = document.getElementById(uid + '-body');
+  if (!toggle || !body) return;
+  toggle.classList.toggle('open');
+  body.classList.toggle('open');
 }
 
 function _parseFechaSimple(str) {
@@ -391,4 +374,102 @@ function toggleBannerCupon() {
   var abierto = body.style.maxHeight && body.style.maxHeight !== '0px';
   body.style.maxHeight = abierto ? '0' : '200px';
   chevron.style.transform = abierto ? '' : 'rotate(180deg)';
+}
+
+/* ── Gestionar reserva ──────────────────────────────── */
+var _sgFechaActual = '';
+var _sgFilaActual = null;
+var _sgFechaSeleccionada = '';
+
+function abrirGestionar(fecha, fila) {
+  _sgFechaActual = fecha; _sgFilaActual = fila; _sgFechaSeleccionada = '';
+  var partes = (fecha || '').split(' - ');
+  var fechaTexto = (partes[0] || fecha).trim();
+  var hora = partes[1] ? partes[1].trim() : '';
+  var lugar = partes[2] ? partes[2].trim() : '';
+  document.getElementById('sg-fecha-texto').textContent = fechaTexto;
+  var pillsEl = document.getElementById('sg-fecha-pills');
+  pillsEl.innerHTML = '';
+  if (hora) pillsEl.innerHTML += '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + hora + '</span>';
+  if (lugar) pillsEl.innerHTML += '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
+  setModoGestionar('reagendar');
+  cargarFechasGestionar();
+  ir('s-gestionar');
+}
+
+function setModoGestionar(modo) {
+  document.getElementById('sg-opt-reagendar').classList.toggle('active', modo === 'reagendar');
+  document.getElementById('sg-opt-cancelar').classList.toggle('active', modo === 'cancelar');
+  document.getElementById('sg-panel-reagendar').style.display = modo === 'reagendar' ? '' : 'none';
+  document.getElementById('sg-panel-cancelar').style.display = modo === 'cancelar' ? '' : 'none';
+  document.getElementById('sg-btn-confirmar-fecha').style.display = (modo === 'reagendar' && _sgFechaSeleccionada) ? '' : 'none';
+  document.getElementById('sg-btn-cancelar-res').style.display = modo === 'cancelar' ? '' : 'none';
+}
+
+function cargarFechasGestionar() {
+  var lista = document.getElementById('sg-lista-fechas');
+  lista.innerHTML = '<div class="loader"><div class="spinner"></div><p>Cargando fechas...</p></div>';
+  var d = E.datos;
+  var talla = d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
+  api({ action: 'getFechasDisponibles', nombre: E.nombre, talla: talla, necesitaProtecciones: d.necesitaProtecciones }, function(fechas) {
+    var disponibles = fechas.filter(function(f) { return f.disponible && f.fecha !== _sgFechaActual; });
+    if (disponibles.length === 0) {
+      var sinEquip = talla || (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no');
+      lista.innerHTML = '<div class="sg-no-fechas">' +
+        '<span class="material-symbols-outlined">' + (sinEquip ? 'roller_skating' : 'event_busy') + '</span>' +
+        '<strong>' + (sinEquip ? 'Sin disponibilidad para tu equipamiento' : 'No hay fechas disponibles') + '</strong><br><br>' +
+        (sinEquip ? 'No hay cupos con tu equipamiento en los próximos entrenamientos. Puedes actualizar tu equipamiento o volver más tarde.' : 'No hay entrenamientos disponibles en este momento. Vuelve más tarde.') +
+        (sinEquip ? '<br><br><button class="btn btn-secondary" style="margin-top:0;" onclick="irEditarDatos()"><span class=\'material-symbols-outlined\' style=\'font-size:1rem;vertical-align:middle;\'>manage_accounts</span> Actualizar equipamiento</button>' : '') +
+        '</div>';
+      return;
+    }
+    lista.innerHTML = disponibles.map(function(f) {
+      var partes = f.fecha.split(' - ');
+      var texto = (partes[0] || f.fecha).trim();
+      var hora = f.hora || (partes[1] ? partes[1].trim() : '');
+      var lugar = f.lugar || (partes[2] ? partes[2].trim() : '');
+      var fechaEsc = f.fecha.replace(/'/g, "\\'");
+      return '<div class="sg-fecha-item" onclick="selFechaGestionar(this,\'' + fechaEsc + '\')">' +
+        '<div class="sfi-header">' +
+        '<div><div class="sfi-title">' + texto + '</div>' +
+        '<div class="fi-pills">' +
+        (hora ? '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + hora + '</span>' : '') +
+        (lugar ? '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>' : '') +
+        '</div></div>' +
+        '<div class="sfi-circle"><span class="material-symbols-outlined">check</span></div>' +
+        '</div></div>';
+    }).join('');
+  }, function() {
+    lista.innerHTML = '<p style="color:var(--danger);font-size:0.82rem;">Error al cargar fechas. Intenta de nuevo.</p>';
+  });
+}
+
+function selFechaGestionar(el, fecha) {
+  document.querySelectorAll('.sg-fecha-item').forEach(function(x) { x.classList.remove('sel'); });
+  el.classList.add('sel');
+  _sgFechaSeleccionada = fecha;
+  document.getElementById('sg-btn-confirmar-fecha').style.display = '';
+}
+
+function confirmarCambioFecha() {
+  if (!_sgFechaSeleccionada) return;
+  E.reagendando = true; E.fechas = [_sgFechaSeleccionada]; E.tipoPago = 'clase';
+  E.totalPago = 0; E.notaPago = 'Reagendamiento'; E.cuponAplicado = false; E.creditosUsados = 1;
+  construirResumenS5('s-gestionar');
+  ir('s5');
+}
+
+function abrirModalConfirmCancel() {
+  var m = document.getElementById('modal-confirm-cancel');
+  if (m) m.style.display = 'flex';
+}
+
+function cerrarModalConfirmCancel() {
+  var m = document.getElementById('modal-confirm-cancel');
+  if (m) m.style.display = 'none';
+}
+
+function ejecutarCancelacion() {
+  cerrarModalConfirmCancel();
+  cancelarRes(_sgFechaActual);
 }

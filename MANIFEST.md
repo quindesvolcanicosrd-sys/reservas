@@ -107,10 +107,26 @@ reservas/
 | `.btn-accion-home / .btn-home-sub` | Botones secundarios en home |
 | `.res-card-home` | Tarjeta de reserva en home |
 | `.res-card-home.vigente/vencimiento/vencida/futura/pendiente-mens/confirmada-clase/pendiente-clase/reagendar-clase` | Variantes de estado de tarjeta |
-| `.home-top-mobile` | Fila superior en móvil (emoji + logout) |
-| `.home-emoji-mobile / .home-emoji-desktop` | Emoji 🛼 solo en móvil o solo en desktop |
+| `.home-top-mobile` | Fila superior en móvil (emoji + logout) — legacy, puede quedar en CSS para retrocompat |
+| `.home-emoji-mobile / .home-emoji-desktop` | Emoji 🛼 solo en móvil o solo en desktop — legacy |
+| `.home-profile-row` | Fila de perfil nueva: avatar + nombre + botones de icono |
+| `.home-avatar` | Avatar circular 46×46px con inicial o foto del usuario |
+| `.home-profile-name` | Columna de texto con saludo pequeño y nombre |
+| `.home-saludo-small` | Texto "¡Hola," en pequeño sobre el nombre |
+| `.home-nombre` | Nombre del usuario en la fila de perfil (h2, 1.05rem, 800) |
+| `.home-icon-btns` | Fila de botones de icono (datos, logout) |
+| `.home-icon-btn` | Botón circular de icono 38×38px |
+| `.home-subtitulo` | Subtítulo "¿Qué quieres hacer hoy?" bajo la fila de perfil |
+| `.res-card-nueva` | Nueva tarjeta de reserva con header, pills, "Más info" colapsable y wrap de cancelar |
+| `.rn-header / .rn-top / .rn-date / .rn-divider` | Partes del header de la card nueva |
+| `.rn-mas-info / .rn-chevron / .rn-body / .rn-body-inner` | Panel colapsable "Más información" de la card |
+| `.rn-cancel-wrap` | Zona inferior con el botón "Cancelar reserva" |
+| `.btn-cancel-text` | Botón de texto subrayado para cancelar reserva |
+| `.sg-toggle-row / .sg-toggle-opt` | Toggle de modo en s-gestionar (Cambiar fecha / Cancelar) |
+| `.sg-fecha-item / .sfi-header / .sfi-title / .sfi-circle` | Card de fecha disponible en s-gestionar |
+| `.sg-no-fechas` | Mensaje cuando no hay fechas disponibles en s-gestionar |
 | `.hmr / .hmr-texto / .hmr-titulo / .hmr-sub / .hmr-btn-round` | Filas de acciones móviles (notif, instalar, contacto) |
-| `.btn-logout-mobile` | Botón de logout circular en móvil |
+| `.btn-logout-mobile` | Botón de logout circular en móvil — legacy |
 
 ### css/reservas.css
 | Clase / selector | Descripción |
@@ -172,6 +188,7 @@ reservas/
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **index.html + home.js + home.css + perfil.js + ui.js** — Rediseño home y flujo gestionar reserva: nueva `.home-profile-row` con avatar, saludo y botones icono reemplaza el bloque emoji/logout; nueva `_renderCardHome` genera `.res-card-nueva` con pills de hora/lugar/equip y botón "Cancelar reserva" que abre `s-gestionar`; nueva pantalla `s-gestionar` permite cambiar fecha o cancelar con toggle + confirmación modal (`#modal-confirm-cancel`); sección sec-equip en s-datos rediseñada con resumen y botón paso-a-paso; nuevas funciones en home.js: `abrirGestionar`, `setModoGestionar`, `cargarFechasGestionar`, `selFechaGestionar`, `confirmarCambioFecha`, `abrirModalConfirmCancel`, `cerrarModalConfirmCancel`, `ejecutarCancelacion`, `_toggleCardBody`; nuevas funciones en perfil.js: `_poblarResumenEquipPerfil`, `irEditarEquipDesdeHome`; nuevas clases CSS en home.css: `.home-profile-row`, `.home-avatar`, `.home-nombre`, `.home-icon-btn`, `.home-subtitulo`, `.res-card-nueva`, `.rn-*`, `.btn-cancel-text`, `.sg-*`
 - **index.html + ui.js + reservas.css + reservas.js** — Nuevo selector de meses unificado en s4: `#s4-meses-wrapper` ahora contiene solo `#lista-meses-unificada.meses-grid-pills`; `generarMeses()` renderiza los 12 meses en un grid de 3 columnas con `.meses-divider` antes del mes actual y detecta meses con reservas `Confirmada` desde `_todasReservas` para mostrar badge "Pagado" (`.mes-confirmado`); `crearMesItem` tiene firma `(nombre, esPasado, confirmado)`; eliminadas `toggleMesesPasados()` y `toggleMesesActuales()`; nuevas clases CSS: `.meses-grid-pills`, `.meses-divider`, `.mes-past`, `.mes-confirmado`, `.mes-nombre`, `.mes-badge`; fix en `selTipoPago()`: controla visibilidad de `#lista-fechas` y `#s4-fechas-subtitulo` vs `#s4-meses-wrapper` y llama `generarMeses()` al seleccionar mensual
 - **home.js** — `irNuevaReserva()` simplificada: siempre llama `cargarFechas()` directamente, elimina la bifurcación `canPayMonthly()`/`skipEquip`
 - **index.html + reservas.js + ui.css** — Nuevo `#modal-equip-aviso`: se dispara en `cargarFechas()` si hay fechas agotadas por razón de equipamiento (regex `patines|talla|protec|equip`); lista items en `#modal-equip-lista`; funciones `mostrarModalEquip`, `cerrarModalEquip`, `irEditarEquipDesdeModal`; dark mode override en ui.css
@@ -262,6 +279,7 @@ reservas/
 | `#modal-equip-aviso` | Modal de aviso de disponibilidad de equipamiento: se muestra en `cargarFechas()` si hay fechas agotadas por equip; lista en `#modal-equip-lista`; botón "Actualizar mi equipamiento" llama `irEditarEquipDesdeModal()` |
 | `#modal-info-reserva` | Modal info primera reserva; items condicionales `#mri-modalidad-clase` / `#mri-modalidad-mes` / `#mri-cupon`; estilos críticos inline en el HTML (mismo patrón que `#modal-contacto`) |
 | `#modal-info-home` | Modal info primera visita a home; estilos críticos inline en el HTML |
+| `#modal-confirm-cancel` | Modal bottom-sheet de confirmación de cancelación de reserva; se abre desde `abrirModalConfirmCancel()`; contiene avisos de cupón y pago; botón confirmar llama `ejecutarCancelacion()` |
 
 ---
 
@@ -309,16 +327,28 @@ reservas/
 | Función / variable | Descripción |
 |---|---|
 | `_todasReservas` | Array con todas las reservas del usuario (cargadas al login) |
-| `_proximosData` | Mapa de fecha → `{mapsUrl, descripcion, horaFin, duracion}` de próximos entrenamientos; cargado en `prepararHome()` via `getProximosEntrenamientos`; usada en `_renderCardHome()` para mostrar pill "Más info" (único pill en la fila) con "Cómo llegar" dentro del cuerpo expandido |
-| `prepararHome()` | Inicializa la pantalla home: saludo, foto, banner cupón/notif, render reservas. Refresca `cuponDisponible` desde el backend (`getCuponDisponible`) y carga `_proximosData` via `getProximosEntrenamientos` en cada visita a la home |
-| `irNuevaReserva(skipEquip)` | Navega al flujo de reserva: resetea estado E y siempre llama `cargarFechas()` directamente (el parámetro `skipEquip` queda por compatibilidad pero ya no se evalúa) |
+| `_proximosData` | Mapa de fecha → `{mapsUrl, descripcion, horaFin, duracion}` de próximos entrenamientos; cargado en `prepararHome()` via `getProximosEntrenamientos`; usada en `_renderCardHome()` |
+| `_sgFechaActual` | Fecha de la reserva que se está gestionando en s-gestionar |
+| `_sgFilaActual` | Fila (índice) de la reserva que se está gestionando |
+| `_sgFechaSeleccionada` | Nueva fecha seleccionada en s-gestionar para reagendar |
+| `prepararHome()` | Inicializa la pantalla home: avatar, saludo, banner cupón/notif, render reservas. Refresca `cuponDisponible` y `_proximosData` en cada visita |
+| `irNuevaReserva(skipEquip)` | Navega al flujo de reserva: resetea estado E y siempre llama `cargarFechas()` directamente |
 | `irMisReservas()` | Navega al historial completo (ir s-misreservas) |
 | `verTodasReservas()` | Alias de irMisReservas() |
 | `iniciarReagendamiento()` | Activa E.reagendando y navega a s4 para reagendar |
 | `irHomeDesdeExito()` | Vuelve a home desde s6 y refresca reservas |
-| `renderHomeReservas()` | Renderiza las tarjetas de reserva activas en home (máx 3 si no expandido) |
+| `renderHomeReservas()` | Renderiza las tarjetas de reserva activas en home (máx 2 si no expandido) |
 | `verMasHomeReservas()` | Expande el listado de home para mostrar todas las reservas |
-| `_renderCardHome(r, hoy)` | Genera HTML de una tarjeta de reserva para home con clase de estado |
+| `_renderCardHome(r, hoy)` | Genera HTML de tarjeta nueva (`.res-card-nueva`) con pills de hora/lugar, badge de estado y botón "Cancelar reserva" que abre s-gestionar |
+| `_toggleCardBody(uid)` | Expande/colapsa el panel "Más información" de una card |
+| `abrirGestionar(fecha, fila)` | Abre s-gestionar con los datos de la reserva seleccionada |
+| `setModoGestionar(modo)` | Alterna entre panel "reagendar" y "cancelar" en s-gestionar |
+| `cargarFechasGestionar()` | Carga fechas disponibles para reagendar via API y las renderiza |
+| `selFechaGestionar(el, fecha)` | Selecciona una fecha disponible en s-gestionar |
+| `confirmarCambioFecha()` | Confirma el reagendamiento navegando a s5 con la nueva fecha |
+| `abrirModalConfirmCancel()` | Muestra el modal de confirmación de cancelación |
+| `cerrarModalConfirmCancel()` | Cierra el modal de confirmación de cancelación |
+| `ejecutarCancelacion()` | Ejecuta la cancelación llamando a `cancelarRes()` |
 | `_parseFechaSimple(str)` | Parsea "DD/MM/YYYY" → Date |
 | `_parseFechaStr(fechaStr)` | Parsea fechas con formato "Sábado 12 de Enero (09:00)" → Date |
 | `_clasificarReservas(todas, hoy)` | Separa reservas en activas e historial según fecha y estado |
@@ -327,7 +357,7 @@ reservas/
 | `renderHistorial()` | Renderiza el historial filtrado por mes con grupos colapsables |
 | `_renderCardHistorial(r)` | Genera HTML de una tarjeta de reserva para historial |
 | `toggleGrupoHistorial(id, header)` | Colapsa/expande un grupo de historial |
-| `cancelarRes(fecha)` | Solicita confirmación y llama API para cancelar una reserva |
+| `cancelarRes(fecha)` | Llama API para cancelar una reserva y actualiza el listado |
 
 > **Acciones de backend utilizadas:** `getCuponDisponible` (llamada en `prepararHome()` para refrescar el estado del cupón en cada visita a la home); `getProximosEntrenamientos` (llamada en `prepararHome()` para poblar `_proximosData` y mostrar pills de Maps/info en las cards de home)
 
@@ -367,7 +397,9 @@ reservas/
 ### js/perfil.js
 | Función / variable | Descripción |
 |---|---|
-| `irEditarDatos()` | Carga los datos del usuario en los inputs de s-datos y navega — incluye sec-emerg2 (segundo contacto de emergencia) |
+| `irEditarDatos()` | Carga los datos del usuario en los inputs de s-datos y navega — incluye sec-emerg2 (segundo contacto de emergencia); llama `_poblarResumenEquipPerfil()` tras los cargarSelect |
+| `_poblarResumenEquipPerfil()` | Renderiza el resumen de equipamiento (patines, talla, protecciones) en `#equip-resumen-perfil` |
+| `irEditarEquipDesdeHome()` | Navega al flujo de edición de equipamiento (s3a) limpiando el estado previo y seteando `E.editandoDesdeHome = true` |
 | `cargarSelect(selectId, valor, otroInputId, campoOtroId)` | Rellena un select con valor, mostrando "Otro" si corresponde |
 | `guardarSeccion(secId, btn)` | Lee los campos de una sección de datos y los guarda via API — secciones con teléfono: sec-contacto, sec-emerg1, sec-emerg2 |
 | `toggleSeccion(id, titulo)` | Colapsa/expande una sección en Editar datos |
@@ -558,6 +590,7 @@ reservas/
 | `s5` | Resumen y confirmación |
 | `s-carga-conf` | Loading mientras guarda la reserva |
 | `s6` | Éxito: reserva registrada |
+| `s-gestionar` | Gestionar reserva activa: cambiar fecha o cancelar |
 | `s-misreservas` | Historial completo de reservas |
 | `s-datos` | Editar mis datos |
 | `s-carga` | Loading genérico (bfcache / restauración) |
