@@ -136,3 +136,5 @@
 .sg-fecha-item.sel .sfi-circle .material-symbols-outlined { color:var(--white); }
 .sg-no-fechas { background:var(--surface-2); border:1.5px solid var(--border-light); border-radius:12px; padding:16px; text-align:center; font-size:0.8rem; color:var(--muted); line-height:1.6; }
 .sg-no-fechas .material-symbols-outlined { font-size:2rem; display:block; margin-bottom:8px; color:var(--brand); }
+.rn-equip-estado { display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
+.rn-estado-txt { font-size:0.71rem; font-weight:600; display:inline-flex; align-items:center; gap:3px; }

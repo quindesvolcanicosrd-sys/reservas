@@ -173,24 +173,23 @@ function _renderCardHome(r, hoy) {
   var lugar = partes[2] ? partes[2].trim() : '';
 
   var estadoClase = r.estado === 'Confirmada' ? 'confirmada-clase' : r.estado === 'Reagendar' ? 'reagendar-clase' : 'pendiente-clase';
-  var badgeHtml = '';
-  if (r.estado === 'Confirmada') {
-    badgeHtml = '<span class="badge badge-confirmada"><span class="material-symbols-outlined">check_circle</span>Confirmada</span>';
-  } else if (r.estado === 'Reagendar') {
-    badgeHtml = '<span class="badge badge-reagendar"><span class="material-symbols-outlined">swap_horiz</span>Reagendar</span>';
-  } else {
-    badgeHtml = '<span class="badge badge-pendiente"><span class="material-symbols-outlined">hourglass_empty</span>Pendiente</span>';
-  }
+  var estadoColor = r.estado === 'Confirmada' ? 'var(--success-dark)' : r.estado === 'Cancelada' ? 'var(--danger)' : r.estado === 'Reagendar' ? 'var(--dk-purple-mid)' : 'var(--brand)';
+  var estadoIcono = r.estado === 'Confirmada' ? 'check_circle' : r.estado === 'Cancelada' ? 'cancel' : r.estado === 'Reagendar' ? 'swap_horiz' : 'hourglass_empty';
+  var estadoTexto = r.estado || 'Pendiente';
 
   var necesitaPatines = r.necesitaPatines && r.necesitaPatines.toLowerCase() !== 'no';
-  var equipPill = necesitaPatines
-    ? '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">roller_skating</span>Patines' + (r.talla ? ' talla ' + r.talla : '') + '</span>'
-    : '<span class="fi-pill fi-pill-equip"><span class="material-symbols-outlined">check_circle</span>Llevas tu equipo</span>';
+  var equipTexto = necesitaPatines ? 'Patines' + (r.talla ? ' talla ' + r.talla : '') : 'Llevas tu equipo';
+  var equipIcono = necesitaPatines ? 'roller_skating' : 'check_circle';
+  var equipClase = necesitaPatines ? 'fi-pill fi-pill-patines' : 'fi-pill fi-pill-equip';
+  var equipPill = '<div class="rn-equip-estado">' +
+    '<span class="' + equipClase + '"><span class="material-symbols-outlined">' + equipIcono + '</span>' + equipTexto + '</span>' +
+    '<span class="rn-estado-txt" style="color:' + estadoColor + '"><span class="material-symbols-outlined" style="font-size:13px;">' + estadoIcono + '</span>' + estadoTexto + '</span>' +
+    '</div>';
 
   var pillsHtml = '<div class="fi-pills">';
   if (hora) pillsHtml += '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + hora + '</span>';
   if (lugar) pillsHtml += '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
-  pillsHtml += equipPill + '</div>';
+  pillsHtml += '</div>' + equipPill;
 
   var uid = 'rcard-' + (r.fila || Math.random().toString(36).slice(2));
   var fechaEsc = (r.fecha || '').replace(/'/g, "\\'");
@@ -221,7 +220,7 @@ function _renderCardHome(r, hoy) {
 
   return '<div class="res-card-home res-card-nueva ' + estadoClase + '">' +
     '<div class="rn-header">' +
-    '<div class="rn-top"><div class="rn-date">' + fechaTexto + '</div>' + badgeHtml + '</div>' +
+    '<div class="rn-top"><div class="rn-date">' + fechaTexto + '</div></div>' +
     pillsHtml +
     '</div>' +
     masInfoHtml +
