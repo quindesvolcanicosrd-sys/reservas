@@ -99,17 +99,24 @@
 /* ── Cards rediseñadas ───────────────────────────────── */
 .res-card-nueva { background:var(--surface-2); border:1.5px solid var(--border-light); border-radius:14px; margin-bottom:10px; overflow:hidden; }
 .res-card-nueva .rn-header { padding:13px 14px 11px; }
-.res-card-nueva .rn-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:9px; }
+.res-card-nueva .rn-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:5px; }
 .res-card-nueva .rn-date { font-size:0.9rem; font-weight:800; }
+.badge-pendiente { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--warning-bg); color:var(--amber-dark); border:1px solid var(--amber); white-space:nowrap; }
+.badge-confirmada { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--green-light); color:var(--green-dark); border:1px solid var(--success); white-space:nowrap; }
+.badge-reagendar { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--purple-lightest); color:var(--dk-purple-mid); border:1px solid var(--purple-border-soft); white-space:nowrap; }
+.badge-cancelada { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--danger-bg); color:var(--danger); border:1px solid var(--danger); white-space:nowrap; }
+.badge .material-symbols-outlined { font-size:13px; }
 .res-card-nueva .rn-divider { height:1px; background:var(--border-light); }
 .res-card-nueva .rn-mas-info { display:flex; align-items:center; justify-content:space-between; padding:9px 14px; cursor:pointer; color:var(--muted); font-size:0.77rem; font-weight:600; user-select:none; transition:color 0.15s; }
 .res-card-nueva .rn-mas-info:hover { color:var(--brand); }
 .res-card-nueva .rn-mas-info .rn-chevron { font-size:16px; transition:transform 0.3s; }
 .res-card-nueva .rn-mas-info.open .rn-chevron { transform:rotate(180deg); }
-.res-card-nueva .rn-body { max-height:0; overflow:hidden; transition:max-height 0.35s ease; background:var(--surface-light,var(--surface-2)); }
+.res-card-nueva .rn-body { max-height:0; overflow:hidden; transition:max-height 0.35s ease; background:var(--surface-2); }
 .res-card-nueva .rn-body.open { max-height:200px; }
 .res-card-nueva .rn-body-inner { padding:10px 14px 14px; font-size:0.77rem; color:var(--muted); line-height:1.65; }
-.res-card-nueva .rn-body-inner .fi-pills { margin-top:8px; }
+.res-card-nueva .rn-body-inner .fi-pills { margin-top:10px; display:flex; flex-wrap:wrap; gap:6px; }
+.res-card-nueva .rn-body-inner .fi-pill { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--surface-2); color:var(--muted); border:1px solid var(--border-light); }
+.res-card-nueva .rn-body-inner .fi-pill-maps { color:var(--brand); border-color:var(--brand); background:var(--brand-lightest); }
 .res-card-nueva .rn-cancel-wrap { text-align:center; padding:8px 14px 12px; }
 .btn-cancel-text { background:none; border:none; color:var(--danger); font-size:0.74rem; font-weight:600; cursor:pointer; font-family:inherit; text-decoration:underline; text-underline-offset:3px; }
 .btn-cancel-text:hover { opacity:0.8; }
