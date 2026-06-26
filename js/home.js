@@ -192,7 +192,13 @@ var equipPillHtml = '<span class="' + equipClase + '"><span class="material-symb
 
   var pillsHtml = '<div class="fi-pills">';
   if (hora) pillsHtml += '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + hora + '</span>';
-  if (lugar) pillsHtml += '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
+  if (lugar) {
+  if (r.mapsUrl) {
+    pillsHtml += '<a class="fi-pill fi-pill-lugar fi-pill-lugar-fusionado" href="' + r.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-symbols-outlined">location_on</span>' + lugar + '<span class="fi-pill-fusionado-sep"></span><span class="material-symbols-outlined">near_me</span>Cómo llegar</a>';
+  } else {
+    pillsHtml += '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
+  }
+}
   pillsHtml += '</div>';
 
   var uid = 'rcard-' + (r.fila || Math.random().toString(36).slice(2));
@@ -202,7 +208,7 @@ var equipPillHtml = '<span class="' + equipClase + '"><span class="material-symb
   var bodyHtml = '<div class="rn-body" id="' + uid + '-body"><div class="rn-body-inner">';
   if (r.descripcion) bodyHtml += '<p style="margin-bottom:10px;">' + r.descripcion + '</p>';
   bodyHtml += '<div class="fi-pills">' + equipPillHtml;
-  if (r.mapsUrl) bodyHtml += '<a class="fi-pill fi-pill-maps" href="' + r.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-symbols-outlined">near_me</span>Cómo llegar</a>';
+  
   if (r.horaFin) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">schedule</span>Fin ' + r.horaFin + '</span>';
   if (r.duracion) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">timer</span>' + r.duracion + '</span>';
   bodyHtml += '</div></div></div>';
