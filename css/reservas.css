@@ -1,14 +1,37 @@
-.fecha-item {
-  display: flex; align-items: center; gap: 14px; padding: 14px 16px;
-  border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px;
-  cursor: pointer; transition: all 0.3s ease; background: var(--surface-2);
-}
-.fecha-item:hover:not(.agotada) { border-color: var(--brand-secondary); transform: translateY(-2px); box-shadow: 0 6px 12px var(--black-05); }
+/* ─── fecha-item cards (s4) ─────────────────────────────────────── */
+.fecha-item { border: 1px solid var(--border); border-radius: 14px; margin-bottom: 10px; background: var(--surface-2); overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s; }
 .fecha-item.sel { border-color: var(--brand); background: var(--brand-warm); }
 .fecha-item.agotada { opacity: 0.5; cursor: not-allowed; background: var(--disabled-bg); border-color: var(--disabled-border); }
-.fecha-item input[type="checkbox"] { accent-color: var(--brand); width: 18px; height: 18px; flex-shrink: 0; transition: transform 0.2s; }
-.fecha-item.sel input[type="checkbox"] { transform: scale(1.15); }
-.fecha-nombre { font-size: 0.92rem; font-weight: 700; }
+
+.fi-header { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px 12px; cursor: pointer; }
+.fi-content { flex: 1; min-width: 0; }
+.fi-title { font-size: 0.92rem; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.fi-pills { display: flex; gap: 7px; flex-wrap: wrap; }
+.fi-pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 99px; font-size: 0.72rem; font-weight: 600; }
+.fi-pill .material-symbols-outlined { font-size: 0.85rem; }
+.fi-pill-hora { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border-soft); }
+.fi-pill-lugar { background: var(--brand-warm); color: var(--brand); border: 1px solid var(--brand-warm-border); }
+.fi-pill-maps { background: var(--brand-warm); color: var(--brand); border: 1px solid var(--brand-warm-border); text-decoration: none; }
+.fi-pill-fin { background: var(--info-btn-bg); color: var(--info); border: 1px solid var(--info-btn-hover); }
+.fi-pill-dur { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-bdr); }
+
+.fi-circle { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--brand-30); flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 1px; transition: background 0.2s, border-color 0.2s; }
+.fi-circle .material-symbols-outlined { font-size: 1rem; color: transparent; }
+.fecha-item.sel .fi-circle { background: var(--brand); border-color: var(--brand); }
+.fecha-item.sel .fi-circle .material-symbols-outlined { color: var(--white); }
+
+.fi-footer { border-top: 1px solid var(--border-2); padding: 10px 16px; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s; }
+.fi-footer:hover { background: var(--brand-subtle); }
+.fi-footer-label { font-size: 0.72rem; font-weight: 600; color: var(--muted); }
+.fi-footer-chevron { font-size: 1rem; color: var(--brand); transition: transform 0.3s; }
+.fecha-item.open .fi-footer-chevron { transform: rotate(180deg); }
+
+.fi-body { max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0.16,1,0.3,1); }
+.fecha-item.open .fi-body { max-height: 400px; }
+.fi-body-inner { padding: 14px 16px 16px; border-top: 1px solid var(--border-2); }
+.fi-desc { font-size: 0.8rem; color: var(--text-2); line-height: 1.65; margin-bottom: 12px; }
+.fi-extra { display: flex; gap: 7px; flex-wrap: wrap; }
+
 .fecha-razon { font-size: 0.8rem; color: var(--brand); margin-top: 4px; font-weight: 500; }
 
 .pago-metodo { border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; background: var(--surface-2); }
@@ -66,4 +89,10 @@
 .exito-titulo { font-size: 1.5rem; font-weight: 800; color: var(--text); text-align: center; margin-bottom: 12px; }
 .exito-texto { color: var(--muted); text-align: center; line-height: 1.6; font-size: 0.88rem; }
 .exito-detalle { background: var(--green-light); border: 1px solid var(--green-border); border-radius: 12px; padding: 16px; margin: 20px 0; font-size: 0.9rem; color: var(--green-dark); text-align: left; white-space: pre-line; line-height: 1.6; box-shadow: 0 4px 12px var(--success-shadow); }
+
+/* ─── DARK MODE ──────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .fi-pill-hora { color: var(--dk-purple-text); }
+  .fi-pill-fin  { color: var(--dk-info-text); }
+}
 

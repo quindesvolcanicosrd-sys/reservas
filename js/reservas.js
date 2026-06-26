@@ -163,23 +163,47 @@ function cargarFechas() {
   api({ action: 'getFechasDisponibles', nombre: E.nombre, talla: talla, necesitaProtecciones: d.necesitaProtecciones }, function(fechas) {
     var disponibles = fechas.filter(function(f) { return f.disponible; });
     var html = '';
-    if (fechas.length === 0) { html = '<p style="color:color: var(--muted);text-align:center;">No hay fechas disponibles.</p>'; } else {
+    if (fechas.length === 0) { html = '<p style="color:var(--muted);text-align:center;">No hay fechas disponibles.</p>'; } else {
       fechas.forEach(function(f) {
-        var _fId = 'fi-' + f.fecha.replace(/[^a-z0-9]/gi, '');
-        var _fExtra = (f.mapsUrl || f.descripcion || f.horaFin || f.duracion)
-          ? '<div style="margin-top:6px;">' +
-            '<div style="display:flex;gap:6px;flex-wrap:wrap;">' +
-            '<button onclick="event.stopPropagation();var _e=document.getElementById(\'' + _fId + '\');var _i=document.getElementById(\'' + _fId + 'i\');var _o=_e.style.display!==\'none\';_e.style.display=_o?\'none\':\'block\';_i.style.transform=_o?\'rotate(180deg)\':\'\';" style="display:inline-flex;align-items:center;gap:4px;background:var(--surface-light);color:var(--muted);border:1px solid var(--border-light);border-radius:20px;padding:4px 10px;font-size:0.72rem;font-weight:600;cursor:pointer;font-family:inherit;"><span class="material-symbols-outlined" style="font-size:0.82rem;">info</span>Más info<span class="material-symbols-outlined" id="' + _fId + 'i" style="font-size:0.82rem;transition:transform 0.25s;">expand_more</span></button>' +
-            '</div>' +
-            '<div id="' + _fId + '" style="display:none;padding:10px 12px;background:var(--surface-light);border-radius:10px;border:1px solid var(--border-light);font-size:0.78rem;color:var(--muted);margin-top:6px;line-height:1.5;box-shadow:0 2px 8px rgba(0,0,0,0.08);">' +
-            (f.mapsUrl ? '<div style="margin-bottom:8px;"><a href="' + f.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="display:inline-flex;align-items:center;gap:4px;background:var(--brand-light);color:var(--brand);border:1px solid var(--brand-warm-border);border-radius:20px;padding:4px 10px;font-size:0.72rem;font-weight:700;text-decoration:none;"><span class="material-symbols-outlined" style="font-size:0.82rem;">location_on</span>Cómo llegar</a></div>' : '') +
-            (f.descripcion ? '<div style="margin-bottom:6px;">' + f.descripcion + '</div>' : '') +
-            ((f.horaFin || f.duracion) ? '<div style="font-size:0.75rem;color:var(--dk-text-muted);display:flex;gap:10px;flex-wrap:wrap;">' + (f.horaFin ? '<span><span class="material-symbols-outlined" style="font-size:0.85rem;vertical-align:middle;">schedule</span> ' + f.horaFin + '</span>' : '') + (f.duracion ? '<span><span class="material-symbols-outlined" style="font-size:0.85rem;vertical-align:middle;">timer</span> ' + f.duracion + '</span>' : '') + '</div>' : '') +
-            '</div>' +
-            '</div>'
-          : '';
-        if (f.disponible) { html += '<div class="fecha-item" onclick="toggleFecha(this,\'' + f.fecha.replace(/'/g,"\\'") + '\')"><input type="checkbox" name="fecha" value="' + f.fecha + '"><div><div class="fecha-nombre">' + f.fecha + '</div>' + _fExtra + '</div></div>'; }
-        else { html += '<div class="fecha-item agotada"><div><div class="fecha-nombre">' + f.fecha + '</div><div class="fecha-razon">⚠ ' + f.razon + '</div>' + _fExtra + '</div></div>'; }
+        var partes = f.fecha.split(' - ');
+        var fechaTexto = (partes[0] || f.fecha).trim();
+        var hora = f.hora || (partes[1] ? partes[1].trim() : '');
+        var lugar = f.lugar || (partes[2] ? partes[2].trim() : '');
+        var hasInfo = !!(f.descripcion || f.mapsUrl || f.horaFin || f.duracion);
+        var fechaEsc = f.fecha.replace(/'/g, "\\'");
+
+        var pillsHtml = '<div class="fi-pills">';
+        if (hora) pillsHtml += '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + hora + '</span>';
+        if (lugar) pillsHtml += '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
+        pillsHtml += '</div>';
+
+        if (f.disponible) {
+          html += '<div class="fecha-item">';
+          html += '<div class="fi-header" onclick="toggleFecha(this.closest(\'.fecha-item\'),\'' + fechaEsc + '\')">';
+          html += '<div class="fi-content"><div class="fi-title">' + fechaTexto + '</div>' + pillsHtml + '</div>';
+          html += '<div class="fi-circle"><span class="material-symbols-outlined">check</span></div>';
+          html += '<input type="checkbox" name="fecha" value="' + f.fecha + '" style="display:none">';
+          html += '</div>';
+          if (hasInfo) {
+            html += '<div class="fi-footer" onclick="toggleFechaExpand(this,event)">';
+            html += '<span class="fi-footer-label">Más información</span>';
+            html += '<span class="material-symbols-outlined fi-footer-chevron">expand_more</span>';
+            html += '</div>';
+            html += '<div class="fi-body"><div class="fi-body-inner">';
+            if (f.descripcion) html += '<p class="fi-desc">' + f.descripcion + '</p>';
+            html += '<div class="fi-extra">';
+            if (f.mapsUrl) html += '<a class="fi-pill fi-pill-maps" href="' + f.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-symbols-outlined">near_me</span>Cómo llegar</a>';
+            if (f.horaFin) html += '<span class="fi-pill fi-pill-fin"><span class="material-symbols-outlined">schedule</span>Fin ' + f.horaFin + '</span>';
+            if (f.duracion) html += '<span class="fi-pill fi-pill-dur"><span class="material-symbols-outlined">timer</span>' + f.duracion + '</span>';
+            html += '</div></div></div>';
+          }
+          html += '</div>';
+        } else {
+          html += '<div class="fecha-item agotada">';
+          html += '<div class="fi-header">';
+          html += '<div class="fi-content"><div class="fi-title">' + fechaTexto + '</div>' + pillsHtml + '<div class="fecha-razon">⚠ ' + f.razon + '</div></div>';
+          html += '</div></div>';
+        }
       });
     }
     document.getElementById('lista-fechas').innerHTML = html; E.fechas = [];
@@ -208,10 +232,15 @@ function cargarFechas() {
 
 function toggleFecha(el, fecha) {
   var chk = el.querySelector('input[type="checkbox"]');
-  if (event.target !== chk) chk.checked = !chk.checked;
+  chk.checked = !chk.checked;
   el.classList.toggle('sel', chk.checked);
   E.fechas = Array.from(document.querySelectorAll('input[name="fecha"]:checked')).map(function(c) { return c.value; });
   actualizarTotalS4();
+}
+
+function toggleFechaExpand(footer, event) {
+  event.stopPropagation();
+  footer.closest('.fecha-item').classList.toggle('open');
 }
 
 function continuar_s4() {

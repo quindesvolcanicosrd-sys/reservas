@@ -115,7 +115,26 @@ reservas/
 ### css/reservas.css
 | Clase / selector | Descripción |
 |---|---|
-| `.fecha-item` | Ítem de fecha seleccionable en s4 |
+| `.fecha-item` | Card contenedor de fecha en s4 (borde, radius 14px, overflow hidden); `.sel` = seleccionada (borde --brand, fondo --brand-warm); `.agotada` = sin cupo; `.open` = panel de info expandido |
+| `.fi-header` | Fila principal clickeable de la card: flex, gap 12px, padding 14px 16px 12px |
+| `.fi-content` | Columna de texto (flex:1, min-width:0) |
+| `.fi-title` | Nombre de la fecha (0.92rem, font-weight 700) |
+| `.fi-pills` | Fila de pills de hora/lugar (flex, gap 7px, flex-wrap) |
+| `.fi-pill` | Pill base: inline-flex, padding 4px 10px, border-radius 99px, 0.72rem; el `.material-symbols-outlined` dentro usa 0.85rem |
+| `.fi-pill-hora` | Pill hora: fondo --purple-bg, color --purple, borde --purple-border-soft |
+| `.fi-pill-lugar` | Pill lugar: fondo --brand-warm, color --brand, borde --brand-warm-border |
+| `.fi-pill-maps` | Pill "Cómo llegar" (`<a>`): mismo color que fi-pill-lugar, text-decoration none |
+| `.fi-pill-fin` | Pill hora de fin: fondo --info-btn-bg, color --info, borde --info-btn-hover |
+| `.fi-pill-dur` | Pill duración: fondo --success-bg, color --success, borde --success-bdr |
+| `.fi-circle` | Círculo de selección 28×28px (borde --brand-30); en `.sel` → fondo --brand, icono --white |
+| `.fi-footer` | Franja "Más información" (borde-top, padding 10px 16px, cursor pointer); hover → --brand-subtle |
+| `.fi-footer-label` | Label del footer (0.72rem, --muted) |
+| `.fi-footer-chevron` | Chevron del footer (1rem, --brand); en `.open` rota 180deg |
+| `.fi-body` | Panel colapsable (max-height:0 → 400px en `.open`, transición cubic-bezier) |
+| `.fi-body-inner` | Contenido del panel (padding 14px 16px 16px, borde-top --border-2) |
+| `.fi-desc` | Descripción en el panel (0.8rem, --text-2, line-height 1.65) |
+| `.fi-extra` | Fila de pills informativos dentro del panel (flex, gap 7px) |
+| `.fecha-razon` | Razón de cupo agotado (0.8rem, --brand) |
 | `.pago-metodo / .pago-header / .pago-fila / .pago-label / .pago-valor / .pago-icon` | Bloque de método de pago (s-pago) |
 | `.total-box / .total-detalle` | Caja de total con monto y detalle |
 | `.tipo-pago-wrapper / .tipo-pago-titulo` | Selector clase vs mensual en s4 |
@@ -147,6 +166,7 @@ reservas/
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **reservas.css + reservas.js** — Nuevo diseño de cards de selección en s4: sistema `.fi-*` (`.fi-header`, `.fi-content`, `.fi-title`, `.fi-pills`, `.fi-pill-hora/lugar/maps/fin/dur`, `.fi-circle`, `.fi-footer`, `.fi-body`, `.fi-body-inner`, `.fi-desc`, `.fi-extra`); `cargarFechas()` parsea `f.fecha` por `" - "` para extraer hora y lugar; `toggleFecha()` recibe la `.fecha-item` directamente; nueva función `toggleFechaExpand()` para el panel colapsable de info; dark mode para `fi-pill-hora` y `fi-pill-fin` en bloque `@media dark` de reservas.css
 - **reservas.js + home.js** — Layout de pills en fecha-items y cards de home reorganizado: "Más info ▾" ahora aparece a la izquierda como único pill en la fila; "Cómo llegar" se movió dentro del cuerpo expandido de "Más info" (ya no es un pill independiente en la card)
 - **index.html** — `pago-metodo-body`: `padding-bottom` inicial cambiado de `16px` a `0`; el JS (`togglePagoMetodo` en ui.js) lo maneja al abrir/cerrar
 - **reservas.css** — `.pago-header`: `margin-bottom` cambiado de `12px` a `0` para evitar filtración de espacio cuando el acordeón está cerrado
@@ -321,8 +341,9 @@ reservas/
 | `selTipoPago(tipo, label)` | Selecciona tipo mensual/clase y actualiza UI de s4 |
 | `toggleCupon(cb)` | Activa/desactiva cupón en E y recalcula total |
 | `actualizarTotalS4()` | Recalcula total según fechas/meses/cupón/créditos y actualiza la UI |
-| `cargarFechas()` | Llama API `getFechasDisponibles` (ahora devuelve también `mapsUrl`, `descripcion`, `horaFin`, `duracion`) y renderiza los ítems en s4 con pill único "Más info" (a la izquierda); al expandirlo muestra pill "Cómo llegar" (si `mapsUrl`) seguido de descripción y horarios (`_fId = 'fi-' + f.fecha...`); muestra `modal-info-reserva` con delay de 400ms si es la primera vez que el usuario llega a s4 |
-| `toggleFecha(el, fecha)` | Agrega/quita una fecha de E.fechas y actualiza total |
+| `cargarFechas()` | Llama API `getFechasDisponibles`; parsea `f.fecha` (split por `" - "` para extraer `fechaTexto`, `hora`, `lugar`; también soporta campos separados `f.hora`/`f.lugar`); renderiza nuevas cards `.fi-*` con pills de hora/lugar en header y panel expandible de info (si `hasInfo`); muestra `modal-info-reserva` con delay 400ms si es la primera visita a s4 |
+| `toggleFecha(el, fecha)` | Recibe la `.fecha-item` (onclick en `.fi-header`); toglea el checkbox oculto, la clase `.sel` y actualiza `E.fechas` |
+| `toggleFechaExpand(footer, event)` | Expande/colapsa el panel de info de una card: hace `stopPropagation` y toglea `.open` en la `.fecha-item` |
 | `continuar_s4()` | Valida selección de fechas/meses y navega a s-pago o s5 |
 | `toggleBtnPago()` | Habilita/deshabilita btn-pago según checkbox chk-pago |
 | `construirResumenS5(backTarget)` | Renderiza el resumen completo en s5 |
