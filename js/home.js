@@ -531,7 +531,7 @@ function ejecutarReagendamiento() {
     });
     ocultarCargando();
     ir('s-home');
-    setTimeout(function() { prepararHome(); }, 100);
+    setTimeout(function() { _renderHomeReservas(); mostrarToast('¡Fecha cambiada con éxito! 📅', 'ok'); }, 100);
   }, function(e) {
     ocultarCargando();
     alert('Error al reagendar: ' + (e.message || 'Intenta de nuevo'));

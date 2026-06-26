@@ -283,3 +283,17 @@ var elCuponHr = document.getElementById('mri-cupon-hr');
   if (elCuponHr) elCuponHr.style.display = mostrarCupon ? '' : 'none';  window._modalInfoReservaCallback = callback;
   document.getElementById('modal-info-reserva').style.display = 'flex';
 }
+
+function mostrarToast(msg, tipo) {
+  var t = document.getElementById('app-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'app-toast';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.className = 'app-toast' + (tipo === 'error' ? ' app-toast-error' : tipo === 'ok' ? ' app-toast-ok' : '');
+  t.classList.add('visible');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(function() { t.classList.remove('visible'); }, 3000);
+}
