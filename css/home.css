@@ -37,7 +37,7 @@
 .btn-home-sub:disabled { opacity: 0.32; cursor: not-allowed; }
 
 .res-card-home {
-  border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px;
+  border: 1px solid var(--border); border-radius: 14px; padding: 6px 0px;
   margin-bottom: 10px; background: var(--surface-2); text-align: left;
   animation: smoothSlideUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
 }
