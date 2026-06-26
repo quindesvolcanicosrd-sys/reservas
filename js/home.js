@@ -401,24 +401,57 @@ function abrirGestionar(fecha, fila) {
   var partes = (fecha || '').split(' - ');
   var fechaTexto = (partes[0] || fecha).trim();
   var hora = partes[1] ? partes[1].trim() : '';
+  var subtitulo = fechaTexto + (hora ? ' · ' + hora : '');
+  var lugar = partes[2] ? partes[2].trim() : '';
+  if (lugar) subtitulo += ' · ' + lugar;
+  document.getElementById('sg-sheet-subtitulo').textContent = subtitulo;
+  sheetVolverOpciones();
+  var overlay = document.getElementById('sheet-gestionar-overlay');
+  var sheet = document.getElementById('sheet-gestionar');
+  overlay.style.display = 'block';
+  sheet.style.display = 'block';
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      sheet.style.transform = 'translateY(0)';
+    });
+  });
+}
+
+function cerrarSheetGestionar() {
+  var sheet = document.getElementById('sheet-gestionar');
+  var overlay = document.getElementById('sheet-gestionar-overlay');
+  sheet.style.transform = 'translateY(100%)';
+  setTimeout(function() {
+    sheet.style.display = 'none';
+    overlay.style.display = 'none';
+  }, 350);
+}
+
+function sheetVolverOpciones() {
+  document.getElementById('sg-sheet-opciones').style.display = '';
+  document.getElementById('sg-sheet-cancelar').style.display = 'none';
+}
+
+function sheetIrCancelar() {
+  document.getElementById('sg-sheet-opciones').style.display = 'none';
+  document.getElementById('sg-sheet-cancelar').style.display = '';
+}
+
+function sheetIrReagendar() {
+  cerrarSheetGestionar();
+  var partes = (_sgFechaActual || '').split(' - ');
+  var fechaTexto = (partes[0] || _sgFechaActual).trim();
+  var hora = partes[1] ? partes[1].trim() : '';
   var lugar = partes[2] ? partes[2].trim() : '';
   document.getElementById('sg-fecha-texto').textContent = fechaTexto;
   var pillsEl = document.getElementById('sg-fecha-pills');
   pillsEl.innerHTML = '';
   if (hora) pillsEl.innerHTML += '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + hora + '</span>';
   if (lugar) pillsEl.innerHTML += '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
-  setModoGestionar('reagendar');
+  _sgFechaSeleccionada = '';
+  document.getElementById('sg-btn-confirmar-fecha').style.display = 'none';
   cargarFechasGestionar();
-  ir('s-gestionar');
-}
-
-function setModoGestionar(modo) {
-  document.getElementById('sg-opt-reagendar').classList.toggle('active', modo === 'reagendar');
-  document.getElementById('sg-opt-cancelar').classList.toggle('active', modo === 'cancelar');
-  document.getElementById('sg-panel-reagendar').style.display = modo === 'reagendar' ? '' : 'none';
-  document.getElementById('sg-panel-cancelar').style.display = modo === 'cancelar' ? '' : 'none';
-  document.getElementById('sg-btn-confirmar-fecha').style.display = (modo === 'reagendar' && _sgFechaSeleccionada) ? '' : 'none';
-  document.getElementById('sg-btn-cancelar-res').style.display = modo === 'cancelar' ? '' : 'none';
+  setTimeout(function() { ir('s-gestionar'); }, 360);
 }
 
 function cargarFechasGestionar() {
@@ -511,23 +544,16 @@ function cerrarModalReagendar() {
   if (modal) modal.style.display = 'none';
 }
 
-function abrirModalConfirmCancel() {
-  var m = document.getElementById('modal-confirm-cancel');
-  if (m) m.style.display = 'flex';
-}
-
-function cerrarModalConfirmCancel() {
-  var m = document.getElementById('modal-confirm-cancel');
-  if (m) m.style.display = 'none';
-}
-
 function ejecutarCancelacion() {
-  cerrarModalConfirmCancel();
+  cerrarSheetGestionar();
   mostrarCargando('Cancelando reserva...');
-  cancelarRes(_sgFechaActual, function() {
+  api({ action: 'cancelarReserva', nombre: E.nombre, fecha: _sgFechaActual }, function() {
     _todasReservas = (_todasReservas || []).filter(function(r) { return r.fecha !== _sgFechaActual; });
     ocultarCargando();
     ir('s-home');
     setTimeout(function() { renderHomeReservas(); }, 100);
+  }, function(e) {
+    ocultarCargando();
+    alert('Error al cancelar: ' + (e.message || 'Intenta de nuevo'));
   });
 }
