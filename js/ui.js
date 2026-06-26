@@ -111,14 +111,15 @@ function ir(id, desdeHistorial) {
   var sinPasos = ['s1','s-home','s-misreservas','s-carga','s6','s-datos'].concat(ADMIN_PANTALLAS);
   if (E.reagendando) sinPasos = sinPasos.concat(['s4','s5','s-carga-conf']);
   var dotContainer = document.querySelector('.paso-indicator');
-  if (sinPasos.indexOf(id) !== -1) { dotContainer.style.display = 'none'; return; }
-  dotContainer.style.display = 'flex';
-
-  var pasos = { 's2':1,'s3a':1,'s3b':1,'s3c':1,'s-carga-fechas':2,'s4':2,'s-pago':3,'s5':4,'s-carga-conf':4 };
-  var p = pasos[id] || 1;
-  for (var i = 1; i <= 4; i++) {
-    var d = document.getElementById('dot'+i);
-    d.className = 'paso-dot' + (i < p ? ' completado' : i === p ? ' activo' : '');
+  if (sinPasos.indexOf(id) !== -1) { if (dotContainer) dotContainer.style.display = 'none'; return; }
+  if (dotContainer) {
+    dotContainer.style.display = 'flex';
+    var pasos = { 's2':1,'s3a':1,'s3b':1,'s3c':1,'s-carga-fechas':2,'s4':2,'s-pago':3,'s5':4,'s-carga-conf':4 };
+    var p = pasos[id] || 1;
+    for (var i = 1; i <= 4; i++) {
+      var d = document.getElementById('dot'+i);
+      if (d) d.className = 'paso-dot' + (i < p ? ' completado' : i === p ? ' activo' : '');
+    }
   }
 }
 function volver(id) { ir(id); }
