@@ -181,44 +181,39 @@ function _renderCardHome(r, hoy) {
   var equipTexto = necesitaPatines ? 'Patines' + (r.talla ? ' talla ' + r.talla : '') : 'Llevas tu equipo';
   var equipIcono = necesitaPatines ? 'roller_skating' : 'check_circle';
   var equipClase = necesitaPatines ? 'fi-pill fi-pill-patines' : 'fi-pill fi-pill-equip';
-  var equipPill = '<div class="rn-equip-estado">' +
-    '<span class="' + equipClase + '"><span class="material-symbols-outlined">' + equipIcono + '</span>' + equipTexto + '</span>' +
-    '<span class="rn-estado-txt" style="color:' + estadoColor + '"><span class="material-symbols-outlined" style="font-size:13px;">' + estadoIcono + '</span>' + estadoTexto + '</span>' +
+var equipPillHtml = '<span class="' + equipClase + '"><span class="material-symbols-outlined">' + equipIcono + '</span>' + equipTexto + '</span>';
+  var estadoLabel = r.estado === 'Confirmada' ? 'Reserva confirmada' : r.estado === 'Cancelada' ? 'Reserva cancelada' : r.estado === 'Reagendar' ? 'Clase a favor' : 'Reserva pendiente';
+  var statusBarClase = 'rn-status-' + (r.estado === 'Confirmada' ? 'confirmada' : r.estado === 'Cancelada' ? 'cancelada' : r.estado === 'Reagendar' ? 'reagendar' : 'pendiente');
+  var statusBar = '<div class="rn-status-bar ' + statusBarClase + '" onclick="abrirModalEstados()">' +
+    '<span class="material-symbols-outlined">' + estadoIcono + '</span>' +
+    '<span>' + estadoLabel + '</span>' +
+    '<span class="rn-status-link">¿Qué significa esto?</span>' +
     '</div>';
 
   var pillsHtml = '<div class="fi-pills">';
   if (hora) pillsHtml += '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + hora + '</span>';
   if (lugar) pillsHtml += '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
-  pillsHtml += '</div>' + equipPill;
+  pillsHtml += '</div>';
 
   var uid = 'rcard-' + (r.fila || Math.random().toString(36).slice(2));
   var fechaEsc = (r.fecha || '').replace(/'/g, "\\'");
   var filaEsc = r.fila || '';
 
-  var hasInfo = !!(r.descripcion || r.mapsUrl || r.horaFin || r.duracion || lugar);
-  var bodyHtml = '';
-  if (hasInfo) {
-    bodyHtml = '<div class="rn-body" id="' + uid + '-body">' +
-      '<div class="rn-body-inner">';
-    if (r.descripcion) bodyHtml += '<p style="margin-bottom:10px;">' + r.descripcion + '</p>';
-    if (lugar || r.mapsUrl || r.horaFin || r.duracion) {
-      bodyHtml += '<div class="fi-pills">';
-      if (r.mapsUrl) bodyHtml += '<a class="fi-pill fi-pill-maps" href="' + r.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-symbols-outlined">near_me</span>Cómo llegar</a>';
-      if (r.horaFin) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">schedule</span>Fin ' + r.horaFin + '</span>';
-      if (r.duracion) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">timer</span>' + r.duracion + '</span>';
-      bodyHtml += '</div>';
-    }
-    bodyHtml += '</div></div>';
-  }
+  var bodyHtml = '<div class="rn-body" id="' + uid + '-body"><div class="rn-body-inner">';
+  if (r.descripcion) bodyHtml += '<p style="margin-bottom:10px;">' + r.descripcion + '</p>';
+  bodyHtml += '<div class="fi-pills">' + equipPillHtml;
+  if (r.mapsUrl) bodyHtml += '<a class="fi-pill fi-pill-maps" href="' + r.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-symbols-outlined">near_me</span>Cómo llegar</a>';
+  if (r.horaFin) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">schedule</span>Fin ' + r.horaFin + '</span>';
+  if (r.duracion) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">timer</span>' + r.duracion + '</span>';
+  bodyHtml += '</div></div></div>';
 
-  var masInfoHtml = hasInfo
-    ? '<div class="rn-divider"></div>' +
-      '<div class="rn-mas-info" id="' + uid + '-toggle" onclick="_toggleCardBody(\'' + uid + '\')">' +
-      '<span>Más información</span><span class="material-symbols-outlined rn-chevron">expand_more</span></div>' +
-      bodyHtml
-    : '';
+  var masInfoHtml = '<div class="rn-divider"></div>' +
+    '<div class="rn-mas-info" id="' + uid + '-toggle" onclick="_toggleCardBody(\'' + uid + '\')">' +
+    '<span>Más información</span><span class="material-symbols-outlined rn-chevron">expand_more</span></div>' +
+    bodyHtml;
 
   return '<div class="res-card-home res-card-nueva ' + estadoClase + '">' +
+    statusBar +
     '<div class="rn-header">' +
     '<div class="rn-top"><div class="rn-date">' + fechaTexto + '</div></div>' +
     pillsHtml +
@@ -555,4 +550,12 @@ function ejecutarCancelacion() {
     ocultarCargando();
     alert('Error al cancelar: ' + (e.message || 'Intenta de nuevo'));
   });
+}
+function abrirModalEstados() {
+  var m = document.getElementById('modal-estados-reserva');
+  if (m) m.style.display = 'flex';
+}
+function cerrarModalEstados() {
+  var m = document.getElementById('modal-estados-reserva');
+  if (m) m.style.display = 'none';
 }

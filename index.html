@@ -165,11 +165,13 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 </div>
 
 <div style="text-align:left;">
-        <div id="label-mis-reservas" style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">Mis reservas</div>
-        <div id="home-reservas-lista"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+  <div id="label-mis-reservas" style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;">Mis reservas</div>
+  <button onclick="irMisReservas()" style="background:none;border:none;color:var(--brand);font-size:0.72rem;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:underline;text-underline-offset:3px;padding:0;">Ver historial</button>
+</div>        <div id="home-reservas-lista"></div>
         <div id="fila-botones-home" style="display:flex;gap:8px;margin-top:10px;margin-bottom:10px;">
           <button id="btn-ver-mas-home" class="btn-home-sub" onclick="verMasHomeReservas()">Ver más ▾</button>
-          <button id="btn-historial-home" class="btn-home-sub" onclick="irMisReservas()">📋 Historial</button>
+          
         </div>
         <div style="display:flex;flex-direction:column;gap:14px;margin-top:14px;">
           <button id="btn-nueva-reserva-home" onclick="irNuevaReserva()" style="width:100%;padding:14px;border:none;border-radius:12px;background:var(--brand-light);color:var(--brand) !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">calendar_add_on</span> Nueva reserva</button>
@@ -1230,6 +1232,28 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
     <button onclick="ejecutarReagendamiento()" style="width:100%;padding:13px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;">Confirmar nuevo entrenamiento</button>
     <button onclick="cerrarModalReagendar()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:1px solid var(--border-light);border-radius:12px;font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;">Volver</button>
+  </div>
+</div>
+
+<div id="modal-estados-reserva" style="display:none;position:fixed;inset:0;z-index:9900;background:var(--overlay-dark);align-items:center;justify-content:center;padding:16px;" onclick="if(event.target===this)cerrarModalEstados()">
+  <div style="background:var(--bg);border:1px solid var(--border-light);border-radius:20px;padding:24px 20px 20px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto;">
+    <div style="font-size:0.68rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:16px;text-align:center;">Estado de tu reserva</div>
+    <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;background:var(--green-light);border:1px solid var(--success);border-radius:12px;padding:14px;">
+      <span class="material-symbols-outlined" style="color:var(--success-dark);flex-shrink:0;font-size:1.4rem;">check_circle</span>
+      <div><div style="font-weight:800;font-size:0.88rem;color:var(--success-dark);margin-bottom:4px;">Confirmada</div>
+      <div style="font-size:0.78rem;color:var(--green-dark);line-height:1.5;">Tu reserva fue revisada y aprobada. Tu comprobante o pago fue verificado con éxito. Si necesitas equipamiento, te lo tendremos listo.</div></div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;background:var(--warning-bg);border:1px solid var(--amber);border-radius:12px;padding:14px;">
+      <span class="material-symbols-outlined" style="color:var(--brand);flex-shrink:0;font-size:1.4rem;">hourglass_empty</span>
+      <div><div style="font-weight:800;font-size:0.88rem;color:var(--brand);margin-bottom:4px;">Pendiente</div>
+      <div style="font-size:0.78rem;color:var(--amber-darker);line-height:1.5;">Tu reserva aún no fue aprobada. No podrás asistir al entrenamiento hasta que sea verificada. Te avisaremos por correo cuando esté confirmada.</div></div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:20px;background:var(--danger-bg);border:1px solid var(--danger);border-radius:12px;padding:14px;">
+      <span class="material-symbols-outlined" style="color:var(--danger);flex-shrink:0;font-size:1.4rem;">cancel</span>
+      <div><div style="font-weight:800;font-size:0.88rem;color:var(--danger);margin-bottom:4px;">Cancelada</div>
+      <div style="font-size:0.78rem;color:var(--danger);line-height:1.5;">Tu reserva fue cancelada y no asistirás a esta fecha. Si fue un error, puedes hacer una nueva reserva.</div></div>
+    </div>
+    <button onclick="cerrarModalEstados()" style="width:100%;padding:13px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;">¡Entendido!</button>
   </div>
 </div>
 

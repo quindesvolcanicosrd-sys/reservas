@@ -46,9 +46,9 @@
 .res-card-home.vencida       { border-color: var(--danger-bdr); background: var(--danger-bg); }
 .res-card-home.futura        { border-color: var(--border); background: var(--surface-3); opacity: 0.7; }
 .res-card-home.pendiente-mens{ border-color: var(--warning-bdr); background: var(--warning-bg); }
-.res-card-home.confirmada-clase { border-color: var(--success-bdr); background: var(--success-bg); }
-.res-card-home.pendiente-clase  { border-color: var(--warning-bdr); background: var(--warning-bg); }
-.res-card-home.reagendar-clase  { border-color: var(--purple-border-light); background: var(--purple-bg-light); }
+.res-card-home.confirmada-clase { border-color:var(--border-light); background:var(--surface-2); }
+.res-card-home.pendiente-clase  { border-color:var(--border-light); background:var(--surface-2); }
+.res-card-home.reagendar-clase  { border-color:var(--border-light); background:var(--surface-2); }
 .res-card-equip { color: var(--neutral-mid); }
 
 .home-top-mobile { display: none; }
@@ -141,3 +141,11 @@
 .sg-no-fechas .material-symbols-outlined { font-size:2rem; display:block; margin-bottom:8px; color:var(--brand); }
 .rn-equip-estado { display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
 .rn-estado-txt { font-size:0.71rem; font-weight:600; display:inline-flex; align-items:center; gap:3px; }
+/* ── Status bar ──────────────────────────────────────── */
+.rn-status-bar { display:flex; align-items:center; gap:8px; padding:9px 14px; font-size:0.78rem; font-weight:700; cursor:pointer; }
+.rn-status-bar .material-symbols-outlined { font-size:15px; flex-shrink:0; }
+.rn-status-link { margin-left:auto; font-size:0.7rem; font-weight:600; text-decoration:underline; text-underline-offset:2px; opacity:0.85; white-space:nowrap; }
+.rn-status-pendiente { background:var(--brand); color:var(--white); }
+.rn-status-confirmada { background:var(--success-dark); color:var(--white); }
+.rn-status-cancelada { background:var(--danger); color:var(--white); }
+.rn-status-reagendar { background:var(--dk-purple-mid,#7c3aed); color:var(--white); }
