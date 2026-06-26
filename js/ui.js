@@ -68,7 +68,6 @@ var TOP_BAR_CONFIG = {
   's4': { titulo: function() { return E.reagendando ? 'Reagendar clase' : canPayMonthly() ? 'Selecciona el tipo de modalidad' : 'Fecha y pago'; }, volver: function() { return (E.reagendando || canPayMonthly()) ? 's-home' : 's2'; } },
   's-pago': { titulo: 'Pago', volver: 's4' }, 's5': { titulo: 'Confirmar reserva', volver: function() { return (E.creditosUsados > 0 || E.cuponAplicado) && E.totalPago === 0 ? 's4' : 's-pago'; } },
   's-misreservas': { titulo: 'Historial de reservas', volver: 's-home' }, 's-datos': { titulo: 'Editar mis datos', volver: 's-home' },
-  's6': { titulo: 'Pago registrado', volver: null },
   's-admin-login': { titulo: 'Administradorx', volver: 's1' },
   's-admin-reservas': { titulo: 'Reservas', volver: 's-admin-home' },
   's-admin-notif': { titulo: 'Notificaciones', volver: 's-admin-home' },
@@ -177,6 +176,7 @@ function togglePagoMetodo(header) {
   var abierto = body.style.maxHeight && body.style.maxHeight !== '0px';
   body.style.maxHeight = abierto ? '0' : body.scrollHeight + 'px';
   body.style.paddingBottom = abierto ? '0' : '16px';
+  body.style.paddingTop = abierto ? '0' : '12px';
   if (chevron) chevron.style.transform = abierto ? '' : 'rotate(180deg)';
 }
 

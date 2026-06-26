@@ -147,6 +147,12 @@ reservas/
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **reservas.js + home.js** — Layout de pills en fecha-items y cards de home reorganizado: "Más info ▾" ahora aparece a la izquierda como único pill en la fila; "Cómo llegar" se movió dentro del cuerpo expandido de "Más info" (ya no es un pill independiente en la card)
+- **index.html** — `pago-metodo-body`: `padding-bottom` inicial cambiado de `16px` a `0`; el JS (`togglePagoMetodo` en ui.js) lo maneja al abrir/cerrar
+- **reservas.css** — `.pago-header`: `margin-bottom` cambiado de `12px` a `0` para evitar filtración de espacio cuando el acordeón está cerrado
+- **ui.js / togglePagoMetodo** — Añadido `body.style.paddingTop = abierto ? '0' : '12px'` para restaurar el espaciado superior al abrir el acordeón de pago
+- **ui.css dark mode** — Añadido `#modal-wp-comprobante > div { background: var(--dk-overlay-97) !important; }` dentro de `@media (prefers-color-scheme: dark)`
+- **ui.js / TOP_BAR_CONFIG** — Entrada `'s6'` eliminada; `ir()` ya tenía el `else { topBar.classList.remove('visible'); }` — s6 ahora oculta la top bar automáticamente; la pantalla usa su propio `exito-titulo` y `exito-icon`
 - **colors.css** — Nueva variable `--modal-info-card-bg`: `#ffffff` en light, `rgba(23,9,0,0.97)` en dark; usada en `.modal-info-card` (global.css) y en los modales inline de index.html
 - **colors.css** — Añadidos overrides dark mode para: `--surface-light`, `--disabled-bg`, `--disabled-bg-2`, `--disabled-border`, `--border-light`, `--btn-secondary-hover-bg`, `--brand-warm`, `--brand-warm-2`, `--brand-warm-3`, `--info-btn-bg`, `--info-btn-hover`, `--green-light`, `--error-bg`, `--amber-light`, `--amber-lighter`, `--neutral-dark`, `--text-mid`, `--text-faint`, `--border-slate`, `--border-mid`
 - **colors.css** — Añadidos overrides dark mode para variables de colores claros: `--error-lightest`, `--error-light-border`, `--error-light`, `--purple-light`, `--purple-lightest`, `--purple-border-soft`, `--purple-bg`, `--amber-border`, `--success-lightest`, `--green-border`, `--info-bg-light`, `--info-light`, `--skeleton-base`, `--skeleton-shine`, `--border-softest`, `--border-warm`, `--brand-warm-border`, `--neutral-lighter`
@@ -274,7 +280,7 @@ reservas/
 | Función / variable | Descripción |
 |---|---|
 | `_todasReservas` | Array con todas las reservas del usuario (cargadas al login) |
-| `_proximosData` | Mapa de fecha → `{mapsUrl, descripcion, horaFin, duracion}` de próximos entrenamientos; cargado en `prepararHome()` via `getProximosEntrenamientos`; usada en `_renderCardHome()` para mostrar pill de Maps y sección info colapsable con chevron Material Symbols |
+| `_proximosData` | Mapa de fecha → `{mapsUrl, descripcion, horaFin, duracion}` de próximos entrenamientos; cargado en `prepararHome()` via `getProximosEntrenamientos`; usada en `_renderCardHome()` para mostrar pill "Más info" (único pill en la fila) con "Cómo llegar" dentro del cuerpo expandido |
 | `prepararHome()` | Inicializa la pantalla home: saludo, foto, banner cupón/notif, render reservas. Refresca `cuponDisponible` desde el backend (`getCuponDisponible`) y carga `_proximosData` via `getProximosEntrenamientos` en cada visita a la home |
 | `irNuevaReserva(skipEquip)` | Navega al flujo de reserva; `skipEquip=true` salta s2-s3 e va directo a `cargarFechas()` (usado post-inscripción vía parámetro `?nuevx=1`) |
 | `irMisReservas()` | Navega al historial completo (ir s-misreservas) |
@@ -315,7 +321,7 @@ reservas/
 | `selTipoPago(tipo, label)` | Selecciona tipo mensual/clase y actualiza UI de s4 |
 | `toggleCupon(cb)` | Activa/desactiva cupón en E y recalcula total |
 | `actualizarTotalS4()` | Recalcula total según fechas/meses/cupón/créditos y actualiza la UI |
-| `cargarFechas()` | Llama API `getFechasDisponibles` (ahora devuelve también `mapsUrl`, `descripcion`, `horaFin`, `duracion`) y renderiza los ítems en s4 con pill "Cómo llegar" y sección info colapsable con chevron (`expand_more`) por fecha (`_fId = 'fi-' + f.fecha...`); muestra `modal-info-reserva` con delay de 400ms si es la primera vez que el usuario llega a s4 |
+| `cargarFechas()` | Llama API `getFechasDisponibles` (ahora devuelve también `mapsUrl`, `descripcion`, `horaFin`, `duracion`) y renderiza los ítems en s4 con pill único "Más info" (a la izquierda); al expandirlo muestra pill "Cómo llegar" (si `mapsUrl`) seguido de descripción y horarios (`_fId = 'fi-' + f.fecha...`); muestra `modal-info-reserva` con delay de 400ms si es la primera vez que el usuario llega a s4 |
 | `toggleFecha(el, fecha)` | Agrega/quita una fecha de E.fechas y actualiza total |
 | `continuar_s4()` | Valida selección de fechas/meses y navega a s-pago o s5 |
 | `toggleBtnPago()` | Habilita/deshabilita btn-pago según checkbox chk-pago |
