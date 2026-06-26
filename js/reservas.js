@@ -66,7 +66,7 @@ function continuar_s3c() {
   api({ action: 'actualizarEquipamientoPersona', nombre: E.nombre, necesitaPatines: E.editPat, talla: E.editTalla, necesitaProtecciones: protecFinal }, function() {
     ocultarCargando(); E.datos.necesitaPatines = E.editPat; E.datos.talla = E.editTalla; E.datos.necesitaProtecciones = protecFinal; E.conf = '';
     document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
-    if (E.editandoDesdeHome) { E.editandoDesdeHome = false; ir('s-home'); } else { renderEquip(); ir('s2'); }
+    if (E.editandoDesdeHome) { E.editandoDesdeHome = false; ir('s-home'); } else { cargarFechas(); }
   }, function(e) { ocultarCargando(); err('err-s3c', 'Error al guardar: ' + e.message); });
 }
 
@@ -256,7 +256,7 @@ function cargarFechas() {
         mostrarModalInfoReserva(function(){});
       }
     }, 400);
-  }, function(e) { ocultarCargando(); ir('s2'); err('err-s2', 'Error al verificar fechas: ' + e.message); });
+  }, function(e) { ocultarCargando(); ir('s-home'); });
 }
 
 function toggleFecha(el, fecha) {
