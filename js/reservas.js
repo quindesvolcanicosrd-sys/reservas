@@ -85,6 +85,19 @@ function selTipoPago(tipo) {
   E.tipoPago = tipo;
   document.getElementById('opcion-tipo-clase').classList.toggle('active', tipo === 'clase');
   document.getElementById('opcion-tipo-mensual').classList.toggle('active', tipo === 'mensual');
+  var listaFechas = document.getElementById('lista-fechas');
+  var subtitulo = document.getElementById('s4-fechas-subtitulo');
+  var wrapperMeses = document.getElementById('s4-meses-wrapper');
+  if (tipo === 'mensual') {
+    if (listaFechas) listaFechas.style.display = 'none';
+    if (subtitulo) subtitulo.style.display = 'none';
+    if (wrapperMeses) wrapperMeses.style.display = 'block';
+    generarMeses();
+  } else {
+    if (listaFechas) listaFechas.style.display = 'block';
+    if (subtitulo) subtitulo.style.display = 'block';
+    if (wrapperMeses) wrapperMeses.style.display = 'none';
+  }
   _updateTpSlider(true);
   actualizarTextosPago();
   actualizarTotalS4();

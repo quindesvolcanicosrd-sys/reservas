@@ -148,7 +148,8 @@ reservas/
 | `.reserva-card` | Tarjeta de reserva en historial |
 | `.btn-cancelar` | Botón cancelar reserva |
 | `.aviso-pendiente` | Aviso amarillo de pago pendiente |
-| `.meses-grid / .mes-item` | Grid de checkboxes de meses (pago mensual) |
+| `.meses-grid-pills / .meses-divider` | Grid de pills de meses (pago mensual): 3 columnas, divisor antes del mes actual |
+| `.mes-item / .mes-past / .mes-confirmado / .mes-nombre / .mes-badge` | Pill de mes: pasado (opacidad 0.4), confirmado (verde/sin pointer-events), badge "Pagado" con ícono check_circle |
 | `.btn-wp-inactivo / .btn-wp-activo / .btn-wp-grupo` | Botones de WhatsApp (comprobante / grupo) |
 | `.exito-* / .exito-titulo / .exito-detalle / .exito-texto` | Pantalla de éxito s6 |
 
@@ -171,6 +172,7 @@ reservas/
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **index.html + ui.js + reservas.css + reservas.js** — Nuevo selector de meses unificado en s4: `#s4-meses-wrapper` ahora contiene solo `#lista-meses-unificada.meses-grid-pills`; `generarMeses()` renderiza los 12 meses en un grid de 3 columnas con `.meses-divider` antes del mes actual y detecta meses con reservas `Confirmada` desde `_todasReservas` para mostrar badge "Pagado" (`.mes-confirmado`); `crearMesItem` tiene firma `(nombre, esPasado, confirmado)`; eliminadas `toggleMesesPasados()` y `toggleMesesActuales()`; nuevas clases CSS: `.meses-grid-pills`, `.meses-divider`, `.mes-past`, `.mes-confirmado`, `.mes-nombre`, `.mes-badge`; fix en `selTipoPago()`: controla visibilidad de `#lista-fechas` y `#s4-fechas-subtitulo` vs `#s4-meses-wrapper` y llama `generarMeses()` al seleccionar mensual
 - **home.js** — `irNuevaReserva()` simplificada: siempre llama `cargarFechas()` directamente, elimina la bifurcación `canPayMonthly()`/`skipEquip`
 - **index.html + reservas.js + ui.css** — Nuevo `#modal-equip-aviso`: se dispara en `cargarFechas()` si hay fechas agotadas por razón de equipamiento (regex `patines|talla|protec|equip`); lista items en `#modal-equip-lista`; funciones `mostrarModalEquip`, `cerrarModalEquip`, `irEditarEquipDesdeModal`; dark mode override en ui.css
 - **index.html + reservas.css + reservas.js** — Selector de tipo de pago en s4 reemplazado por segmented control con slider animado (`.tp-seg`, `.tp-slider`, `.tp-opt`); `#pill-cupon` eliminado y reemplazado por `#tp-cupon-ico` (dentro del botón) y `#tp-cupon-hint` (aviso bajo el control); `selTipoPago` ya no recibe segundo arg; nueva función privada `_updateTpSlider(animate)`; `.tipo-pago-titulo` eliminado de reservas.css
@@ -293,10 +295,8 @@ reservas/
 | `volver(id)` | Alias de ir(); lo llama top-bar-btn |
 | `popstate listener` | Restaura pantalla correcta al usar el botón atrás del navegador |
 | `NOMBRES_MESES` | Array ['Enero'…'Diciembre'] para labels de meses |
-| `generarMeses()` | Genera los checkboxes de meses en s4 separados en pasados/futuros |
-| `crearMesItem(nombre)` | Devuelve HTML de un checkbox mes-item |
-| `toggleMesesPasados()` | Expande/colapsa la lista de meses pasados en s4 |
-| `toggleMesesActuales()` | Expande/colapsa la lista de meses actuales/futuros en s4 |
+| `generarMeses()` | Renderiza en #lista-meses-unificada; detecta meses confirmados desde _todasReservas; inserta .meses-divider antes del mes actual |
+| `crearMesItem(nombre, esPasado, confirmado)` | Devuelve HTML de un label mes-item con badge "Pagado" si confirmado |
 | `lanzarConfetti()` | Animación canvas de confetti en s6; se llama con setTimeout(400ms) tras confirmarReserva() |
 | `_modalInfoKey(id)` | genera la clave de localStorage/sessionStorage por modal e usuario |
 | `_yaVioModal(id)` | true si el modal fue marcado como visto (localStorage) o pospuesto (sessionStorage) |

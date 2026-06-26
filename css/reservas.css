@@ -66,11 +66,26 @@
 
 .aviso-pendiente { background: var(--warning-bg); border: 1px solid var(--warning-bdr); border-radius: 10px; padding: 14px 16px; font-size: 0.9rem; font-weight: 500; color: var(--text-2); margin-bottom: 16px; text-align: center; line-height: 1.5; }
 
-.meses-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }
-.mes-item { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 0.92rem; font-weight: 600; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.3s; }
-.mes-item:hover { border-color: var(--brand-secondary); background: var(--brand-warm-2); transform: translateY(-2px); box-shadow: 0 4px 10px var(--black-xs); }
-.mes-item input { accent-color: var(--brand); width: 16px; height: 16px; cursor: pointer; transition: transform 0.2s; }
-.mes-item:hover input { transform: scale(1.1); }
+.meses-grid-pills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
+.meses-divider { grid-column: 1 / -1; height: 1px; background: var(--border); margin: 4px 0; }
+
+.mes-item {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; padding: 11px 6px; border-radius: 99px;
+  border: 1px solid var(--border); background: var(--surface-2);
+  color: var(--muted); font-size: 0.8rem; font-weight: 700;
+  text-align: center; cursor: pointer; transition: all 0.2s; user-select: none; line-height: 1;
+}
+.mes-item input[type="checkbox"] { display: none; }
+.mes-item:not(.mes-past):not(.mes-confirmado):hover { border-color: var(--brand-secondary); color: var(--text-2); }
+.mes-item:has(input:checked):not(.mes-confirmado) { background: var(--brand); border-color: var(--brand); color: var(--white); }
+.mes-past { opacity: 0.4; }
+.mes-past:hover { opacity: 0.65; }
+.mes-confirmado { background: var(--success-bg); border-color: var(--success-bdr); color: var(--success); cursor: default; pointer-events: none; opacity: 1; }
+.mes-nombre { line-height: 1; }
+.mes-badge { display: flex; align-items: center; gap: 3px; font-size: 0.6rem; font-weight: 700; color: var(--success); }
+.mes-badge .material-symbols-outlined { font-size: 0.72rem; }
 
 .btn-wp-inactivo, .btn-wp-activo, .btn-wp-grupo {
   display: flex; align-items: center; justify-content: center; gap: 10px;

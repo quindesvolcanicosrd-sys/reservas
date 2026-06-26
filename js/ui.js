@@ -137,37 +137,40 @@ history.replaceState({ pantalla: 's1' }, '', '#s1');
 var NOMBRES_MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 function generarMeses() {
-  var hoy = new Date(); var mesActual = hoy.getMonth();
-  var listaPasados = document.getElementById('lista-meses-pasados');
-  var listaFuturos = document.getElementById('lista-meses');
-  var wrapperPasados = document.getElementById('meses-pasados-wrapper');
+  var hoy = new Date();
+  var mesActual = hoy.getMonth();
+  var lista = document.getElementById('lista-meses-unificada');
+  if (!lista) return;
 
-  listaPasados.innerHTML = ''; listaFuturos.innerHTML = '';
+  var mesesConfirmados = (_todasReservas || [])
+    .filter(function(r) { return r.estado === 'Confirmada'; })
+    .map(function(r) { return r.fecha.toLowerCase().trim(); });
 
-  if (mesActual === 0) { wrapperPasados.style.display = 'none'; } else {
-    wrapperPasados.style.display = 'block';
-    for (var i = 0; i < mesActual; i++) { listaPasados.innerHTML += crearMesItem(NOMBRES_MESES[i]); }
+  var html = '';
+  for (var i = 0; i < 12; i++) {
+    if (i === mesActual && mesActual > 0) {
+      html += '<div class="meses-divider"></div>';
+    }
+    var nombre = NOMBRES_MESES[i];
+    var esPasado = i < mesActual;
+    var confirmado = mesesConfirmados.indexOf(nombre.toLowerCase()) !== -1;
+    html += crearMesItem(nombre, esPasado, confirmado);
   }
-  for (var j = mesActual; j < 12; j++) { listaFuturos.innerHTML += crearMesItem(NOMBRES_MESES[j]); }
+  lista.innerHTML = html;
 }
 
-function crearMesItem(nombre) { return '<label class="mes-item"><input type="checkbox" value="' + nombre + '" onchange="actualizarTotalS4()"> ' + nombre + '</label>'; }
-
-function toggleMesesPasados() {
-  var lista    = document.getElementById('lista-meses-pasados');
-  var chevron  = document.getElementById('chevron-meses');
-  var abierto  = lista.style.display === 'grid';
-  if (!abierto) {
-    lista.style.display = 'grid';
-    if (chevron) chevron.style.transform = 'rotate(90deg)';
-    var container = document.getElementById('lista-meses-container');
-    var chevronA  = document.getElementById('chevron-meses-actuales');
-    if (container) container.style.display = 'none';
-    if (chevronA)  chevronA.style.transform = '';
-  } else {
-    lista.style.display = 'none';
-    if (chevron) chevron.style.transform = '';
-  }
+function crearMesItem(nombre, esPasado, confirmado) {
+  var clases = 'mes-item' + (esPasado ? ' mes-past' : '') + (confirmado ? ' mes-confirmado' : '');
+  var badge = confirmado
+    ? '<span class="mes-badge"><span class="material-symbols-outlined">check_circle</span>Pagado</span>'
+    : '';
+  var disabled = confirmado ? ' disabled checked' : '';
+  var onchange = confirmado ? '' : ' onchange="actualizarTotalS4()"';
+  return '<label class="' + clases + '">' +
+    '<input type="checkbox" value="' + nombre + '"' + disabled + onchange + '>' +
+    '<span class="mes-nombre">' + nombre + '</span>' +
+    badge +
+    '</label>';
 }
 
 function togglePagoMetodo(header) {
@@ -180,22 +183,6 @@ function togglePagoMetodo(header) {
   if (chevron) chevron.style.transform = abierto ? '' : 'rotate(180deg)';
 }
 
-function toggleMesesActuales() {
-  var container = document.getElementById('lista-meses-container');
-  var chevronA  = document.getElementById('chevron-meses-actuales');
-  var abierto   = container.style.display !== 'none';
-  if (!abierto) {
-    container.style.display = 'block';
-    if (chevronA) chevronA.style.transform = 'rotate(90deg)';
-    var lista   = document.getElementById('lista-meses-pasados');
-    var chevron = document.getElementById('chevron-meses');
-    if (lista)   lista.style.display = 'none';
-    if (chevron) chevron.style.transform = '';
-  } else {
-    container.style.display = 'none';
-    if (chevronA) chevronA.style.transform = '';
-  }
-}
 
 function lanzarConfetti() {
   var canvas = document.getElementById('confetti-canvas');
