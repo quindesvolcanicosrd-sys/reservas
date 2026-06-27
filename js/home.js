@@ -22,7 +22,7 @@ function prepararHome() {
     if (foto) { navAvatar.innerHTML = '<img src="' + foto + '" alt="">'; }
     else { navAvatar.textContent = (E.nombre || '?').charAt(0).toUpperCase(); }
   }
-  renderHomeReservas();
+  _renderHomeReservas();
   var d = E.datos;
   var talla = d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
   api({ action: 'getFechasDisponibles', nombre: E.nombre, talla: talla, necesitaProtecciones: d.necesitaProtecciones }, function(fechas) {
@@ -35,8 +35,8 @@ function prepararHome() {
       }
       return r;
     });
-    renderHomeReservas();
-  }, function() { renderHomeReservas(); });
+    _renderHomeReservas();
+  }, function() { _renderHomeReservas(); });
   var bannerCupon = document.getElementById('banner-cupon');
   if (bannerCupon) {
     api({ action: 'getCuponDisponible', nombre: E.nombre }, function(res) {
@@ -89,8 +89,8 @@ function iniciarReagendamiento() {
 function irHomeDesdeExito() {
   api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
     _todasReservas = reservas;
-    renderHomeReservas();
-  }, function() { renderHomeReservas(); });
+    _renderHomeReservas();
+  }, function() { _renderHomeReservas(); });
   ir('s-home');
 }
 
@@ -395,7 +395,7 @@ function cancelarRes(fecha, onSuccess) {
         var bCupon = document.getElementById('banner-cupon');
         if (bCupon) bCupon.style.display = 'block';
       }
-      if (onSuccess) { onSuccess(); } else { renderHomeReservas(); }
+      if (onSuccess) { onSuccess(); } else { _renderHomeReservas(); }
     } else {
       alert('Error al cancelar.');
     }
