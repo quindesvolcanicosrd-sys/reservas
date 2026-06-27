@@ -50,10 +50,6 @@
   <div class="home-nav-inner">
     <div class="home-nav-left" onclick="irEditarDatos()" style="cursor:pointer;">
       <div class="home-avatar home-avatar-nav" id="home-avatar-nav"></div>
-      <div class="home-nav-texto" id="home-nav-texto">
-        <div class="home-saludo-small">¡Hola,</div>
-        <div class="home-nombre" id="home-saludo"></div>
-      </div>
       <div class="home-nav-seccion" id="home-nav-seccion">MIS RESERVAS</div>
     </div>
     <div class="home-nav-acciones">
@@ -177,36 +173,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 </div>        
 <div id="home-reservas-lista"></div>
       </div>
-      <div class="home-mobile-actions" style="margin-top:20px;">
-        <div class="hmr" id="row-notif-home">
-          <div class="hmr-texto">
-            <div class="hmr-titulo">Activar las notificaciones</div>
-            <div class="hmr-sub">No te pierdas de ninguna notificación</div>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="toggle-notif" onchange="toggleNotifHome(this)">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-        <div class="hmr" id="row-instalar-app">
-          <div class="hmr-texto">
-            <div class="hmr-titulo">Instalar la app</div>
-            <div class="hmr-sub">Instala el portal de reservas como app</div>
-          </div>
-          <button class="hmr-btn-round" onclick="pwaInstalar()">
-            <span class="material-symbols-outlined">download</span>
-          </button>
-        </div>
-        <div class="hmr">
-          <div class="hmr-texto">
-            <div class="hmr-titulo">Contáctanos</div>
-            <div class="hmr-sub">Escríbenos por redes o correo</div>
-          </div>
-          <button class="hmr-btn-round" onclick="abrirContacto()">
-            <span class="material-symbols-outlined">share</span>
-          </button>
-        </div>
-      </div>
+      
     </div>
   </div>
 
@@ -734,8 +701,36 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
       </div>
 
-    <div style="margin-top:8px;margin-bottom:8px;">
-      <button onclick="cerrarSesion()" style="width:100%;padding:14px;background:transparent;color:var(--muted);border:1px solid var(--border-light);border-radius:12px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
+    <div class="datos-seccion" style="margin-top:8px;">
+      <div class="hmr" id="row-notif-home">
+        <div class="hmr-texto">
+          <div class="hmr-titulo">Notificaciones</div>
+          <div class="hmr-sub">Recibe avisos de tus reservas al instante</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="toggle-notif" onchange="toggleNotifHome(this)">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="hmr" id="row-instalar-app">
+        <div class="hmr-texto">
+          <div class="hmr-titulo">Instalar la app</div>
+          <div class="hmr-sub">Agrega el portal a tu pantalla de inicio</div>
+        </div>
+        <button class="hmr-btn-round" onclick="pwaInstalar()">
+          <span class="material-symbols-outlined">download</span>
+        </button>
+      </div>
+      <div class="hmr">
+        <div class="hmr-texto">
+          <div class="hmr-titulo">Contáctanos</div>
+          <div class="hmr-sub">Escríbenos por redes o correo</div>
+        </div>
+        <button class="hmr-btn-round" onclick="abrirContacto()">
+          <span class="material-symbols-outlined">share</span>
+        </button>
+      </div>
+    </div> style="width:100%;padding:14px;background:transparent;color:var(--muted);border:1px solid var(--border-light);border-radius:12px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
         <span class="material-symbols-outlined" style="font-size:1.1rem;">logout</span>Cerrar sesión
       </button>
     </div> style="width:100%;padding:14px;background:var(--danger-bg);color:var(--danger);border:none;border-radius:12px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.3s;display:flex;align-items:center;justify-content:center;gap:8px;">

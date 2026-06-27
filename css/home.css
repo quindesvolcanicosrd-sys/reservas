@@ -170,7 +170,7 @@
 
 /* compacto al scrollear */
 .home-nav-seccion { font-size:0.72rem; font-weight:700; color:var(--brand); text-transform:uppercase; letter-spacing:1.5px; opacity:0; max-width:0; overflow:hidden; transition:all 0.3s ease; white-space:nowrap; }
-.home-nav-fixed.compacto .home-nav-texto { max-width:0; opacity:0; margin:0; padding:0; overflow:hidden; }
+
 .home-nav-fixed.compacto .home-nav-seccion { opacity:1; max-width:200px; }
 .home-nav-fixed.compacto .home-avatar-nav { width:34px; height:34px; font-size:13px; }
 .home-nav-fixed.compacto .btn-nueva-reserva-nav-label { display:none; }
