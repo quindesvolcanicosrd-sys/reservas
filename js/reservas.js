@@ -125,7 +125,7 @@ function actualizarTotalS4() {
   var bannerCred = document.getElementById('s4-credito-banner');
 
   if (E.tipoPago === 'mensual') {
-    var mesesSeleccionados = Array.from(document.querySelectorAll('#lista-meses input:checked, #lista-meses-pasados input:checked')).map(function(cb) { return cb.value; });
+    var mesesSeleccionados = Array.from(document.querySelectorAll('#lista-meses-unificada input:checked')).map(function(cb) { return cb.value; });
     E.meses = mesesSeleccionados;
     total = mesesSeleccionados.length * E.precioMensual;
     document.getElementById('s4-meses-wrapper').style.display = 'block';
@@ -232,7 +232,7 @@ function cargarFechas() {
       wrapper.style.display = 'none'; E.tipoPago = 'clase'; subtitulo.textContent = E.reagendando ? 'Seleccioná la nueva fecha para tu clase a favor.' : 'Selecciona uno o varios entrenamientos a los que asistirás.';
       subtitulo.style.display = 'block'; document.getElementById('lista-fechas').style.display = 'block';
       document.getElementById('s4-total-box').style.display = 'none'; document.getElementById('s4-meses-wrapper').style.display = 'none';
-      document.querySelectorAll('#lista-meses input').forEach(function(cb) { cb.checked = false; }); E.meses = []; E.totalPago = 0;
+      document.querySelectorAll('#lista-meses-unificada input').forEach(function(cb) { cb.checked = false; }); E.meses = []; E.totalPago = 0;
       if (disponibles.length === 0) { err('err-s4', 'No hay cupos disponibles actualmente.'); }
     }
     actualizarTextosPago();
