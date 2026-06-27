@@ -16,6 +16,12 @@ function prepararHome() {
       avatarEl.textContent = (E.nombre || '?').charAt(0).toUpperCase();
     }
   }
+  var navAvatar = document.getElementById('home-avatar-nav');
+  if (navAvatar) {
+    var foto = E.datos && (E.datos.fotoUrl || E.datos.foto || E.datos.picture || E.datos.photoUrl || '');
+    if (foto) { navAvatar.innerHTML = '<img src="' + foto + '" alt="">'; }
+    else { navAvatar.textContent = (E.nombre || '?').charAt(0).toUpperCase(); }
+  }
   renderHomeReservas();
   var d = E.datos;
   var talla = d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
@@ -54,6 +60,7 @@ function prepararHome() {
   if (rowNotif) rowNotif.style.display = notifActivas ? 'none' : '';
   var rowInstalar = document.getElementById('row-instalar-app');
   if (rowInstalar) rowInstalar.style.display = esStandalone() ? 'none' : '';
+  _initHomeNav();
 }
 
 function irNuevaReserva(skipEquip) {
@@ -93,8 +100,6 @@ function _renderHomeReservas() {
   var activas = cl.activas;
   var container = document.getElementById('home-reservas-lista');
   var labelMisReservas = document.getElementById('label-mis-reservas');
-  var btnNueva = document.getElementById('btn-nueva-reserva-home');
-  var filasBotones = document.getElementById('fila-botones-home');
 
   var html = activas.length === 0
     ? '<button onclick="irNuevaReserva()" style="width:100%;padding:14px;border:2px solid var(--brand);border-radius:12px;background:rgba(249,115,22,0.12);color:var(--brand) !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;animation:pulseBtn 2.4s ease-in-out infinite;">📅 Hacer una reserva</button>'
@@ -102,13 +107,6 @@ function _renderHomeReservas() {
 
   container.innerHTML = html;
   if (labelMisReservas) labelMisReservas.style.display = activas.length === 0 ? 'none' : '';
-  if (activas.length === 0) {
-    if (filasBotones) filasBotones.style.display = 'none';
-    if (btnNueva) btnNueva.style.display = 'none';
-  } else {
-    if (filasBotones) filasBotones.style.display = 'flex';
-    if (btnNueva) btnNueva.style.display = '';
-  }
 }
 
 function verMasHomeReservas() {
@@ -604,4 +602,30 @@ function _recargarYRenderReservas(callback) {
       if (callback) callback();
     }, function() { _renderHomeReservas(); setTimeout(_initScrollReservas, 50); if (callback) callback(); });
   }, function() { _renderHomeReservas(); setTimeout(_initScrollReservas, 50); if (callback) callback(); });
+}
+
+function _initHomeNav() {
+  var nav = document.getElementById('home-nav');
+  var spacer = document.getElementById('home-nav-spacer');
+  if (!nav) return;
+  nav.style.display = 'flex';
+
+  var header = document.querySelector('.header');
+  var headerH = header ? header.offsetHeight : 0;
+  nav.style.top = headerH + 'px';
+  if (spacer) spacer.style.height = (nav.offsetHeight + 8) + 'px';
+
+  var contenedor = document.querySelector('.contenedor');
+  if (!contenedor) return;
+
+  function onScroll() {
+    var scrollY = contenedor.scrollTop || window.scrollY || 0;
+    nav.classList.toggle('compacto', scrollY > 40);
+  }
+
+  contenedor.removeEventListener('scroll', onScroll);
+  contenedor.addEventListener('scroll', onScroll);
+  window.removeEventListener('scroll', onScroll);
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
 }

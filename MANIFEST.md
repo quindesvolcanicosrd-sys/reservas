@@ -109,14 +109,23 @@ reservas/
 | `.res-card-home.vigente/vencimiento/vencida/futura/pendiente-mens/confirmada-clase/pendiente-clase/reagendar-clase` | Variantes de estado de tarjeta |
 | `.home-top-mobile` | Fila superior en móvil (emoji + logout) — legacy, puede quedar en CSS para retrocompat |
 | `.home-emoji-mobile / .home-emoji-desktop` | Emoji 🛼 solo en móvil o solo en desktop — legacy |
-| `.home-profile-row` | Fila de perfil nueva: avatar + nombre + botones de icono |
+| `.home-profile-row` | Fila de perfil — legacy, reemplazada por `#home-nav`; clase conservada en CSS para retrocompat |
 | `.home-avatar` | Avatar circular 46×46px con inicial o foto del usuario |
 | `.home-profile-name` | Columna de texto con saludo pequeño y nombre |
-| `.home-saludo-small` | Texto "¡Hola," en pequeño sobre el nombre |
-| `.home-nombre` | Nombre del usuario en la fila de perfil (h2, 1.05rem, 800) |
-| `.home-icon-btns` | Fila de botones de icono (datos, logout) |
-| `.home-icon-btn` | Botón circular de icono 38×38px |
-| `.home-subtitulo` | Subtítulo "¿Qué quieres hacer hoy?" bajo la fila de perfil |
+| `.home-saludo-small` | Texto "¡Hola," en pequeño sobre el nombre (usado dentro de `.home-nav-texto` del nav fijo) |
+| `.home-nombre` | Nombre del usuario (0.95rem, 800 en nav; clase compartida) |
+| `.home-icon-btns` | Fila de botones de icono — legacy |
+| `.home-icon-btn` | Botón circular de icono 38×38px; ahora se usa en el nav fijo (logout) |
+| `.home-subtitulo` | Subtítulo "¿Qué quieres hacer hoy?" — legacy |
+| `.home-nav-fixed` | Nav fija: position:fixed, top dinámica (calculada por `_initHomeNav`), z-index 900, blur backdrop |
+| `.home-nav-inner` | Contenedor interno del nav: flex, max-width 600px, padding 10px 16px |
+| `.home-nav-left` | Columna izquierda del nav (avatar + texto); clickeable → `irEditarDatos()` |
+| `.home-avatar-nav` | Avatar 40×40px en el nav fijo; hover muestra borde brand |
+| `.home-nav-texto` | Wrapper texto del nav (saludo + nombre); se colapsa con `.compacto` |
+| `.home-nav-acciones` | Columna derecha del nav (btn nueva reserva + logout) |
+| `.btn-nueva-reserva-nav` | Botón "Nueva reserva" en el nav fijo (brand, border-radius 12px, shadow) |
+| `.btn-nueva-reserva-nav-label` | Label de texto del botón nav; se oculta en `.compacto` y en pantallas ≤360px |
+| `.home-nav-fixed.compacto` | Estado compacto al scrollear: colapsa texto nav, reduce avatar, oculta label del botón |
 | `.res-card-nueva` | Nueva tarjeta de reserva con header, pills, "Más info" colapsable y wrap de cancelar |
 | `.rn-header / .rn-top / .rn-date / .rn-divider` | Partes del header de la card nueva |
 | `.rn-mas-info / .rn-chevron / .rn-body / .rn-body-inner` | Panel colapsable "Más información" de la card |
@@ -188,6 +197,7 @@ reservas/
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **index.html + css/home.css + js/home.js + js/ui.js** — Nav fija en s-home: nuevo `#home-nav.home-nav-fixed` posicionado fuera de `.contenedor` (fixed, z-index 900, blur backdrop); contiene avatar clickeable (`#home-avatar-nav`, click → `irEditarDatos()`), nombre del usuario (`#home-saludo`), botón "Nueva reserva" (`.btn-nueva-reserva-nav`) y botón logout; `#home-nav-spacer` ocupa el espacio vertical en la card; `_initHomeNav()` calcula `top` según altura del `.header`, ajusta el `spacer` y registra listener de scroll para aplicar clase `.compacto` (oculta texto del nav, reduce avatar, colapsa label del botón) al pasar 40px; `prepararHome()` sincroniza `#home-avatar-nav` con foto/inicial; `ir()` en ui.js muestra/oculta `#home-nav` según pantalla activa; eliminados: `.home-profile-row` con avatar/saludo/botones icono de la card, botón `#btn-nueva-reserva-home` del interior de la card; botón logout ahora solo existe en el nav fijo
 - **home.js + index.html** — Refactor cancel/reagendar via bottom sheet: `abrirGestionar` abre `#sheet-gestionar` (bottom-sheet animado con `translateY`) en lugar de navegar a `s-gestionar`; nuevas funciones: `cerrarSheetGestionar`, `sheetVolverOpciones`, `sheetIrCancelar`, `sheetIrReagendar`; `sheetIrReagendar` cierra el sheet y navega a `s-gestionar` (solo reagendar) con delay de 360ms; `ejecutarCancelacion` llama `api` directamente, filtra `_todasReservas` y vuelve a home; eliminadas: `setModoGestionar`, `abrirModalConfirmCancel`, `cerrarModalConfirmCancel`; `s-gestionar` simplificado: solo muestra lista de fechas para reagendar (sin toggle, sin panel cancelar); eliminado `#modal-confirm-cancel`; nuevo overlay `#sheet-gestionar-overlay` + sheet `#sheet-gestionar` con dos estados: opciones y confirmar cancelación
 - **home.js + index.html + css/home.css + css/ui.css + ui.js** — Fix foto perfil, cancel/reagendar flow, más info en cards, acordeón pago: `prepararHome` reemplaza `getProximosEntrenamientos` con `getFechasDisponibles` para enriquecer `_todasReservas` con `mapsUrl/horaFin/duracion/descripcion`; `_renderCardHome` usa `hasInfo` para mostrar panel "Más información" con descripción + pills (maps/horaFin/duracion); foto de perfil busca `fotoUrl|foto|fotoPerfil|picture|photoUrl`; badges usan `font-weight:600` + icono `hourglass_empty` para Pendiente; `confirmarCambioFecha` abre modal `#modal-confirm-reagendar` (bottom-sheet); nuevas funciones: `ejecutarReagendamiento`, `cerrarModalReagendar`; `ejecutarCancelacion` usa `mostrarCargando` + filtra `_todasReservas` + vuelve a s-home; `cancelarRes(fecha, onSuccess)` acepta callback; pantalla `s-gestionar` muestra fecha directamente como header; `home-nombre` y `home-saludo-small` tienen `text-align:left`; `.badge` tiene `display:inline-flex;align-items:center;gap:4px`; nueva clase `.badge-reagendar`; `togglePagoMetodo` aplica padding antes de expandir para evitar corte de contenido
 - **index.html + home.js + home.css + perfil.js + ui.js** — Rediseño home y flujo gestionar reserva: nueva `.home-profile-row` con avatar, saludo y botones icono reemplaza el bloque emoji/logout; nueva `_renderCardHome` genera `.res-card-nueva` con pills de hora/lugar/equip y botón "Cancelar reserva" que abre `s-gestionar`; nueva pantalla `s-gestionar` permite cambiar fecha o cancelar con toggle + confirmación modal (`#modal-confirm-cancel`); sección sec-equip en s-datos rediseñada con resumen y botón paso-a-paso; nuevas funciones en home.js: `abrirGestionar`, `setModoGestionar`, `cargarFechasGestionar`, `selFechaGestionar`, `confirmarCambioFecha`, `abrirModalConfirmCancel`, `cerrarModalConfirmCancel`, `ejecutarCancelacion`, `_toggleCardBody`; nuevas funciones en perfil.js: `_poblarResumenEquipPerfil`, `irEditarEquipDesdeHome`; nuevas clases CSS en home.css: `.home-profile-row`, `.home-avatar`, `.home-nombre`, `.home-icon-btn`, `.home-subtitulo`, `.res-card-nueva`, `.rn-*`, `.btn-cancel-text`, `.sg-*`
@@ -278,6 +288,10 @@ reservas/
 ### IDs relevantes de index.html
 | ID | Descripción |
 |---|---|
+| `#home-nav` | Nav fija (`.home-nav-fixed`) posicionada fuera de `.contenedor`; contiene avatar clickeable, nombre usuario, btn nueva reserva y logout; gestionada por `_initHomeNav()` y `ir()` |
+| `#home-avatar-nav` | Avatar circular 40×40 en el nav fijo; sincronizado con foto/inicial por `prepararHome()` |
+| `#home-nav-spacer` | Spacer en `s-home` que ocupa la altura del nav para evitar que el contenido quede tapado; altura ajustada dinámicamente por `_initHomeNav()` |
+| `#home-saludo` | Elemento con el nombre del usuario; ahora vive dentro de `#home-nav` (antes en `.home-profile-row` de la card) |
 | `#modal-equip-aviso` | Modal de aviso de disponibilidad de equipamiento: se muestra en `cargarFechas()` si hay fechas agotadas por equip; lista en `#modal-equip-lista`; botón "Actualizar mi equipamiento" llama `irEditarEquipDesdeModal()` |
 | `#modal-info-reserva` | Modal info primera reserva; items condicionales `#mri-modalidad-clase` / `#mri-modalidad-mes` / `#mri-cupon`; estilos críticos inline en el HTML (mismo patrón que `#modal-contacto`) |
 | `#modal-info-home` | Modal info primera visita a home; estilos críticos inline en el HTML |
@@ -313,7 +327,7 @@ reservas/
 | `abrirContacto()` | Muestra el modal #modal-contacto |
 | `cerrarContacto()` | Oculta el modal #modal-contacto |
 | `TOP_BAR_CONFIG` | Objeto de configuración de título y destino "volver" por pantalla |
-| `ir(id, desdeHistorial)` | Navega a una pantalla: activa .pantalla, pushState, actualiza top-bar y paso-dots; cuando id==='s-home' también muestra `#modal-info-home` con delay 600ms si el usuario no lo ha visto |
+| `ir(id, desdeHistorial)` | Navega a una pantalla: activa .pantalla, pushState, actualiza top-bar y paso-dots; muestra/oculta `#home-nav` según `id === 's-home'`; cuando id==='s-home' también muestra `#modal-info-home` con delay 600ms si el usuario no lo ha visto |
 | `volver(id)` | Alias de ir(); lo llama top-bar-btn |
 | `popstate listener` | Restaura pantalla correcta al usar el botón atrás del navegador |
 | `NOMBRES_MESES` | Array ['Enero'…'Diciembre'] para labels de meses |
@@ -335,7 +349,7 @@ reservas/
 | `_sgFechaActual` | Fecha de la reserva que se está gestionando en s-gestionar |
 | `_sgFilaActual` | Fila (índice) de la reserva que se está gestionando |
 | `_sgFechaSeleccionada` | Nueva fecha seleccionada en s-gestionar para reagendar |
-| `prepararHome()` | Inicializa la pantalla home: avatar, saludo, banner cupón/notif, render reservas. Refresca `cuponDisponible` y `_proximosData` en cada visita |
+| `prepararHome()` | Inicializa la pantalla home: avatar, saludo, banner cupón/notif, render reservas. Refresca `cuponDisponible` y `_proximosData` en cada visita. Sincroniza `#home-avatar-nav` con foto/inicial y llama `_initHomeNav()` |
 | `irNuevaReserva(skipEquip)` | Navega al flujo de reserva: resetea estado E y siempre llama `cargarFechas()` directamente |
 | `irMisReservas()` | Navega al historial completo (ir s-misreservas) |
 | `verTodasReservas()` | Alias de irMisReservas() |
@@ -366,6 +380,7 @@ reservas/
 | `_renderCardHistorial(r)` | Genera HTML de una tarjeta de reserva para historial |
 | `toggleGrupoHistorial(id, header)` | Colapsa/expande un grupo de historial |
 | `cancelarRes(fecha, onSuccess)` | Llama API para cancelar una reserva; si `onSuccess` es provisto lo llama al éxito, si no llama `renderHomeReservas()` |
+| `_initHomeNav()` | Inicializa la nav fija: calcula `top` según altura del `.header`, ajusta altura del `#home-nav-spacer`, registra listener de scroll en `.contenedor` y `window` para aplicar/quitar clase `.compacto` cuando `scrollY > 40` |
 
 > **Acciones de backend utilizadas:** `getCuponDisponible` (llamada en `prepararHome()` para refrescar el estado del cupón en cada visita a la home); `getProximosEntrenamientos` (llamada en `prepararHome()` para poblar `_proximosData` y mostrar pills de Maps/info en las cards de home)
 

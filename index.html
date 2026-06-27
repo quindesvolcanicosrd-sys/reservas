@@ -46,6 +46,27 @@
   </div>
 </div>
 
+<div id="home-nav" class="home-nav-fixed" style="display:none;">
+  <div class="home-nav-inner">
+    <div class="home-nav-left" onclick="irEditarDatos()" style="cursor:pointer;">
+      <div class="home-avatar home-avatar-nav" id="home-avatar-nav"></div>
+      <div class="home-nav-texto" id="home-nav-texto">
+        <div class="home-saludo-small">¡Hola,</div>
+        <div class="home-nombre" id="home-saludo"></div>
+      </div>
+    </div>
+    <div class="home-nav-acciones">
+      <button class="btn-nueva-reserva-nav" onclick="irNuevaReserva()">
+        <span class="material-symbols-outlined">calendar_add_on</span>
+        <span class="btn-nueva-reserva-nav-label">Nueva reserva</span>
+      </button>
+      <button class="home-icon-btn" onclick="cerrarSesion()" title="Cerrar sesión">
+        <span class="material-symbols-outlined">logout</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="contenedor">
 
  <div class="top-bar" id="top-bar">
@@ -124,21 +145,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <div class="pantalla" id="s-home">
     <div class="card" style="text-align:center;padding-bottom:32px;">
-<div class="home-profile-row">
-  <div class="home-avatar" id="home-avatar"></div>
-  <div class="home-profile-name">
-    <div class="home-saludo-small">¡Hola,</div>
-    <h2 id="home-saludo" class="home-nombre"></h2>
-  </div>
-  <div class="home-icon-btns">
-    <button class="home-icon-btn" onclick="irEditarDatos()" title="Mis datos">
-      <span class="material-symbols-outlined">account_circle</span>
-    </button>
-    <button class="home-icon-btn" onclick="cerrarSesion()" title="Cerrar sesión">
-      <span class="material-symbols-outlined">logout</span>
-    </button>
-  </div>
-</div>
+<div id="home-nav-spacer" style="height:64px;"></div>
 
       <div id="banner-cupon" style="display:none;background:linear-gradient(135deg,var(--amber-lighter),var(--amber-light));border:2px solid var(--amber);border-radius:14px;margin-bottom:18px;box-shadow:0 4px 12px var(--warning-bg);overflow:hidden;">
         <div onclick="toggleBannerCupon()" style="display:flex;align-items:center;gap:12px;padding:16px;cursor:pointer;">
@@ -170,9 +177,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <button onclick="irMisReservas()" style="background:none;border:none;color:var(--brand);font-size:0.72rem;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:underline;text-underline-offset:3px;padding:0;">Ver historial</button>
 </div>        
 <div id="home-reservas-lista"></div>
-        <div style="display:flex;flex-direction:column;gap:14px;margin-top:14px;">
-          <button id="btn-nueva-reserva-home" onclick="irNuevaReserva()" style="width:100%;padding:14px;border:none;border-radius:12px;background:var(--brand-light);color:var(--brand) !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">calendar_add_on</span> Nueva reserva</button>
-        </div>
       </div>
       <div class="home-mobile-actions" style="margin-top:20px;">
         <div class="hmr" id="row-notif-home">
