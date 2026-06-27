@@ -68,7 +68,7 @@ var TOP_BAR_CONFIG = {
   's4': { titulo: function() { return E.reagendando ? 'Reagendar clase' : canPayMonthly() ? 'Nueva reserva' : 'Fecha y pago'; }, volver: function() { return 's-home'; } },
   's-pago': { titulo: 'Pago', volver: 's4' }, 's5': { titulo: 'Confirmar reserva', volver: function() { return (E.creditosUsados > 0 || E.cuponAplicado) && E.totalPago === 0 ? 's4' : 's-pago'; } },
   's-gestionar': { titulo: 'Re-agendar fecha', volver: 's-home' },
-  's-misreservas': { titulo: 'Historial de reservas', volver: 's-home' }, 's-datos': { titulo: 'Editar mis datos', volver: 's-home' },
+  's-misreservas': { titulo: 'Historial de reservas', volver: 's-home' }, 's-datos': { titulo: 'Ajustes del perfil', volver: 's-home' },
   's-admin-login': { titulo: 'Administradorx', volver: 's1' },
   's-admin-reservas': { titulo: 'Reservas', volver: 's-admin-home' },
   's-admin-notif': { titulo: 'Notificaciones', volver: 's-admin-home' },

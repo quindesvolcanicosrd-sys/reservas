@@ -1,93 +1,57 @@
-function guardarEquipPerfil(btn) {
-  var pat = document.getElementById('d-necesitaPatines').value;
-  var talla = document.getElementById('d-talla').value.trim();
-  var protec = document.getElementById('d-necesitaProtecciones').value;
-  var textoOriginal = btn.innerHTML;
-  btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Guardando...';
-  api({ action: 'actualizarEquipamientoPersona', nombre: E.nombre, necesitaPatines: pat, talla: talla, necesitaProtecciones: protec }, function() {
-    btn.disabled = false;
-    if (E.datos) { E.datos.necesitaPatines = pat; E.datos.talla = talla; E.datos.necesitaProtecciones = protec; }
-    btn.innerHTML = '✓ Guardado'; btn.classList.add('exito');
-    setTimeout(function() { btn.innerHTML = textoOriginal; btn.classList.remove('exito'); }, 2500);
-  }, function(e) { btn.disabled = false; btn.innerHTML = textoOriginal; alert('Error: ' + e.message); });
-}
-
 function irEditarDatos() {
-  var datos = E.datosCompletos;
-  if (!datos) { alert('No se encontraron datos pre-cargados.'); ir('s-home'); return; }
-
-  var camposSimples = ['nombreDerby','numeroDerby','telefono','email','fechaPublica','edadPublica','tipoDocumento','numeroDocumento','nombreLegal','callePrincipal','calleSecundaria','numeracion','sector','emerg1Nombre','emerg1Telefono','emerg2Nombre','emerg2Telefono','talla','alergias','alergiasDesc','medicamentos','medicamentosDesc','atencionMedica','seguroContacto','antecedentesDetalle'];
-  camposSimples.forEach(function(c) { var el = document.getElementById('d-' + c); if (el && datos[c] !== undefined) el.value = datos[c] || ''; });
-  cargarSelect('d-canton', datos.canton, 'd-cantonOtro', 'campo-cantonOtro');
-  cargarSelect('d-paisExpedicion',datos.paisExpedicion, null, null);
-  cargarSelect('d-emerg1Relacion',datos.emerg1Relacion, null, null);
-  cargarSelect('d-prefijo', datos.prefijo, 'd-prefijoOtro', 'campo-prefijoOtro');
-  cargarSelect('d-emerg1Prefijo', datos.emerg1Prefijo, 'd-emerg1PrefijoOtro', 'campo-emerg1PrefijoOtro');
-  cargarSelect('d-emerg2Relacion', datos.emerg2Relacion, null, null);
-  cargarSelect('d-emerg2Prefijo', datos.emerg2Prefijo, 'd-emerg2PrefijoOtro', 'campo-emerg2PrefijoOtro');
-  cargarSelect('d-necesitaPatines', datos.necesitaPatines, null, null);
-  cargarSelect('d-necesitaProtecciones', datos.necesitaProtecciones, null, null);
-  _poblarResumenEquipPerfil();
-
-  var fnDisp = document.getElementById('d-fechaNacimiento-display');
-  if (fnDisp) {
-    var fnRaw = (datos.fechaNacimiento || '').toString().trim();
-    var fnText = '—';
-    if (fnRaw) {
-      var fpIso = fnRaw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-      if (fpIso) {
-        fnText = parseInt(fpIso[3]) + ' de ' + _MESES_DDP[parseInt(fpIso[2])-1] + ' de ' + fpIso[1];
-      } else {
-        var d = new Date(fnRaw);
-        if (!isNaN(d.getTime())) {
-          fnText = d.getUTCDate() + ' de ' + _MESES_DDP[d.getUTCMonth()] + ' de ' + d.getUTCFullYear();
-        }
-      }
-    }
-    fnDisp.textContent = fnText;
+  if (!E.datos) return;
+  var d = E.datos;
+  // Hero
+  var avatarEl = document.getElementById('aj-avatar');
+  if (avatarEl) {
+    var foto = d.fotoPerfil || '';
+    if (foto) { avatarEl.innerHTML = '<img src="' + foto + '" alt="">'; }
+    else { avatarEl.textContent = (E.nombre || '?').charAt(0).toUpperCase(); }
   }
-
-  document.querySelectorAll('input[data-group="pronombres"]').forEach(function(cb) { cb.checked = false; });
-  var inpPronOtro = document.getElementById('d-pronombresOtro'); if (inpPronOtro) inpPronOtro.value = ''; document.getElementById('campo-pronombresOtro').classList.remove('visible');
-  if (datos.pronombres) { datos.pronombres.split(',').map(function(s) { return s.trim(); }).filter(Boolean).forEach(function(val) { var cb = document.querySelector('input[data-group="pronombres"][value="' + val + '"]'); if (cb) { cb.checked = true; } else { var cbOtro = document.querySelector('input[data-group="pronombres"][value="Otro"]'); if (cbOtro) cbOtro.checked = true; if (inpPronOtro) inpPronOtro.value = val; document.getElementById('campo-pronombresOtro').classList.add('visible'); } }); }
+  var heroName = document.getElementById('aj-hero-name');
+  var heroSub = document.getElementById('aj-hero-sub');
+  if (heroName) heroName.textContent = d.nombreDerby || E.nombre || '—';
+  if (heroSub) {
+    var partes = [];
+    if (d.numeroDerby) partes.push('#' + d.numeroDerby);
+    if (d.pronombres) partes.push(d.pronombres.split(',').map(function(p){ return p.trim().split('/')[0]; }).join(', '));
+    heroSub.textContent = partes.join(' · ') || '—';
+  }
+  // Equipamiento
+  var eqVal = document.getElementById('aj-equip-val');
+  if (eqVal) {
+    var eqPartes = [];
+    var pat = d.necesitaPatines || '';
+    if (pat.toLowerCase() !== 'no' && pat) { eqPartes.push('Patines' + (d.talla ? ' talla ' + d.talla : '')); }
+    var pro = d.necesitaProtecciones || '';
+    if (pro.toLowerCase() !== 'no' && pro) { eqPartes.push('Protecciones: ' + pro); } else { eqPartes.push('Protecciones propias'); }
+    eqVal.textContent = eqPartes.join(' · ') || '—';
+  }
+  // Teléfono
+  var telVal = document.getElementById('aj-tel-val');
+  if (telVal) telVal.textContent = (d.prefijo ? d.prefijo.match(/\+\d+/)?.[0] || '' : '') + ' ' + (d.telefono || '') || '—';
+  // Privacidad
+  var privVal = document.getElementById('aj-priv-val');
+  if (privVal) {
+    var fp = d.fechaPublica === 'Sí' ? 'Fecha pública' : 'Fecha privada';
+    var ep = d.edadPublica === 'Sí' ? 'Edad pública' : 'Edad privada';
+    privVal.textContent = fp + ' · ' + ep;
+  }
+  // Legal
+  var legVal = document.getElementById('aj-legal-val');
+  if (legVal) legVal.textContent = [d.tipoDocumento, d.paisExpedicion].filter(Boolean).join(' · ') || '—';
+  // Dirección
+  var dirVal = document.getElementById('aj-dir-val');
+  if (dirVal) dirVal.textContent = [d.sector, d.canton].filter(Boolean).join(', ') || '—';
+  // Emergencias
+  var emVal = document.getElementById('aj-emerg-val');
+  if (emVal) emVal.textContent = [d.emerg1Nombre, d.emerg2Nombre].filter(Boolean).join(' · ') || '—';
+  // Notif toggle
+  _poblarResumenEquipPerfil();
   ir('s-datos');
 }
 
-function cargarSelect(selectId, valor, otroInputId, campoOtroId) {
-  var sel = document.getElementById(selectId); if (!sel || valor === undefined) return;
-  var opciones = Array.from(sel.options).map(function(o) { return o.value; });
-  if (valor && opciones.indexOf(valor) !== -1) { sel.value = valor; } else if (valor) { sel.value = 'Otro'; if (otroInputId) { var inp = document.getElementById(otroInputId); if (inp) inp.value = valor; } if (campoOtroId) { var c = document.getElementById(campoOtroId); if (c) c.classList.add('visible'); } } else { sel.value = ''; }
-}
-
-function guardarSeccion(secId, btn) {
-  var sec = document.getElementById(secId); var payload = {};
-  var camposTel = { 'sec-contacto': 'd-telefono', 'sec-emerg1': 'd-emerg1Telefono', 'sec-emerg2': 'd-emerg2Telefono' };
-  if (camposTel[secId]) { var telEl = document.getElementById(camposTel[secId]); if (telEl && telEl.value.trim()) { var tel = telEl.value.trim(); if (!/^[0-9]{7,15}$/.test(tel)) { alert('El número de teléfono debe tener entre 7 y 15 dígitos y solo puede contener números.'); return; } } }
-  sec.querySelectorAll('input[id^="d-"]:not([type="checkbox"]):not([type="radio"]):not(.otro-texto):not([readonly]), select[id^="d-"], textarea[id^="d-"]:not(.otro-texto)').forEach(function(el) { payload[el.id.replace('d-', '')] = el.value.trim(); });
-  ['canton','prefijo','emerg1Prefijo'].forEach(function(campo) { if (payload[campo] === 'Otro') { var inp = sec.querySelector('#d-' + campo + 'Otro'); if (inp && inp.value.trim()) payload[campo] = inp.value.trim(); } });
-  var cbGroups = {}; sec.querySelectorAll('input[type="checkbox"][data-group]').forEach(function(cb) { var g = cb.getAttribute('data-group'); if (!cbGroups[g]) cbGroups[g] = []; if (cb.checked) cbGroups[g].push(cb.value); });
-  Object.keys(cbGroups).forEach(function(g) { var vals = cbGroups[g].map(function(v) { if (v === 'Otro') { var inp = sec.querySelector('#d-' + g + 'Otro'); return inp && inp.value.trim() ? inp.value.trim() : ''; } return v; }).filter(Boolean); payload[g] = vals.join(', '); });
-  if (Object.keys(payload).length === 0) return;
-  var textoOriginal = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Guardando...';
-  api({ action: 'actualizarDatosPersona', nombre: E.nombre, datos: JSON.stringify(payload) }, function(res) {
-    btn.disabled = false;
-    if (res.exito) {
-      btn.innerHTML = '✓ Guardado'; btn.classList.add('exito');
-      if (!E.datosCompletos) E.datosCompletos = {};
-      for (var k in payload) { E.datosCompletos[k] = payload[k]; }
-      setTimeout(function() { btn.innerHTML = textoOriginal; btn.classList.remove('exito'); }, 2500);
-    } else { btn.innerHTML = textoOriginal; }
-  }, function(e) { btn.disabled = false; btn.innerHTML = textoOriginal; alert('Error al guardar: ' + e.message); });
-}
-
-function toggleSeccion(id, titulo) {
-  var body = document.getElementById(id); var estaAbierta = body.classList.contains('abierta');
-  document.querySelectorAll('.datos-seccion-body.abierta').forEach(function(el) { if (el.id !== id) { el.classList.remove('abierta'); var otroTitulo = el.previousElementSibling; if (otroTitulo) otroTitulo.classList.remove('abierta'); } });
-  body.classList.toggle('abierta', !estaAbierta); if (titulo) titulo.classList.toggle('abierta', !estaAbierta);
-}
-
-function toggleOtroSelect(campo) { var sel = document.getElementById('d-' + campo); var campoEl = document.getElementById('campo-' + campo + 'Otro'); if (campoEl) campoEl.classList.toggle('visible', sel && sel.value === 'Otro'); }
-function toggleOtroCheckbox(grupo) { var cb = document.querySelector('input[data-group="' + grupo + '"][value="Otro"]'); var campoEl = document.getElementById('campo-' + grupo + 'Otro'); if (campoEl) campoEl.classList.toggle('visible', cb && cb.checked); }
+function irEditarPerfil() { irAjSub('aj-sub-perfil'); }
 
 function limpiarTelefono(input) { input.value = input.value.replace(/[^0-9]/g, ''); }
 
@@ -323,3 +287,387 @@ function _ddpRenderMeses() {
     };
   });
 })();
+
+/* ── Ajustes: navegación de sub-pantallas ─────────────── */
+function irAjSub(id) {
+  var sub = document.getElementById(id);
+  if (!sub) return;
+  _ajCargarSub(id);
+  sub.classList.add('activa');
+}
+
+function cerrarAjSub(id) {
+  var sub = document.getElementById(id);
+  if (sub) sub.classList.remove('activa');
+}
+
+function _ajCargarSub(id) {
+  var d = E.datos; if (!d) return;
+  if (id === 'aj-sub-perfil') {
+    var inp = document.getElementById('aj-nombreDerby'); if (inp) inp.value = d.nombreDerby || '';
+    var inp2 = document.getElementById('aj-numeroDerby'); if (inp2) inp2.value = d.numeroDerby || '';
+    _ajCargarPronombres(d.pronombres || '');
+  } else if (id === 'aj-sub-contacto') {
+    var em = document.getElementById('aj-email-display'); if (em) em.textContent = d.email || '—';
+    _ajSetPrefijo('aj-prefijo-display', 'aj-prefijo-val', d.prefijo || '');
+    var tel = document.getElementById('aj-telefono'); if (tel) tel.value = d.telefono || '';
+  } else if (id === 'aj-sub-privacidad') {
+    var fn = document.getElementById('aj-fn-display');
+    if (fn) {
+      var fnRaw = (d.fechaNacimiento || '').toString().trim();
+      fn.textContent = fnRaw ? fnRaw : '—';
+    }
+    var fp = document.getElementById('aj-fechaPublica'); if (fp) fp.value = d.fechaPublica || 'No';
+    var ep = document.getElementById('aj-edadPublica'); if (ep) ep.value = d.edadPublica || 'No';
+  } else if (id === 'aj-sub-legal') {
+    _ajActivarPill('aj-tipoDoc-pills', d.tipoDocumento || '');
+    var nd = document.getElementById('aj-numeroDoc'); if (nd) nd.value = d.numeroDocumento || '';
+    var pd = document.getElementById('aj-pais-display'); if (pd) pd.textContent = d.paisExpedicion || 'Selecciona';
+    _ajPaisActual = d.paisExpedicion || '';
+    var nl = document.getElementById('aj-nombreLegal'); if (nl) nl.value = d.nombreLegal || '';
+  } else if (id === 'aj-sub-direccion') {
+    var campos = ['callePrincipal','calleSecundaria','numeracion','sector'];
+    campos.forEach(function(c) { var el = document.getElementById('aj-'+c); if (el) el.value = d[c] || ''; });
+    _ajActivarPill('aj-canton-pills', d.canton || '');
+  } else if (id === 'aj-sub-emerg') {
+    var e1n = document.getElementById('aj-e1nombre'); if (e1n) e1n.value = d.emerg1Nombre || '';
+    _ajActivarPill('aj-e1rel-pills', d.emerg1Relacion || '');
+    _ajSetPrefijo('aj-e1pref-display', 'aj-e1prefijo', d.emerg1Prefijo || '');
+    var e1t = document.getElementById('aj-e1telefono'); if (e1t) e1t.value = d.emerg1Telefono || '';
+    var e2n = document.getElementById('aj-e2nombre'); if (e2n) e2n.value = d.emerg2Nombre || '';
+    _ajActivarPill('aj-e2rel-pills', d.emerg2Relacion || '');
+    _ajSetPrefijo('aj-e2pref-display', 'aj-e2prefijo', d.emerg2Prefijo || '');
+    var e2t = document.getElementById('aj-e2telefono'); if (e2t) e2t.value = d.emerg2Telefono || '';
+  }
+}
+
+function _ajActivarPill(containerId, valor) {
+  var container = document.getElementById(containerId); if (!container) return;
+  container.querySelectorAll('.aj-pill').forEach(function(p) { p.classList.remove('activa','activa-outline'); });
+  var encontrado = false;
+  container.querySelectorAll('.aj-pill:not(.aj-pill-otro)').forEach(function(p) {
+    if (p.dataset.val === valor) { p.classList.add('activa'); encontrado = true; }
+  });
+  if (!encontrado && valor) {
+    var otro = container.querySelector('.aj-pill-otro');
+    if (otro) { otro.dataset.val = valor; otro.classList.add('activa-outline'); }
+  }
+}
+
+function _ajCargarPronombres(pronStr) {
+  var pills = document.querySelectorAll('#aj-pron-pills .aj-pill:not(.aj-pill-otro)');
+  pills.forEach(function(p) { p.classList.remove('activa'); });
+  var otros = pronStr.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+  var otroTexto = '';
+  otros.forEach(function(v) {
+    var found = false;
+    pills.forEach(function(p) { if (p.dataset.val === v) { p.classList.add('activa'); found = true; } });
+    if (!found) otroTexto = v;
+  });
+  var otroPill = document.querySelector('#aj-pron-pills .aj-pill-otro');
+  var otroDisplay = document.getElementById('aj-pron-otro-display');
+  if (otroTexto) {
+    if (otroPill) otroPill.classList.add('activa-outline');
+    if (otroDisplay) { otroDisplay.textContent = 'Otro: ' + otroTexto; otroDisplay.style.display = 'block'; }
+  } else {
+    if (otroPill) otroPill.classList.remove('activa','activa-outline');
+    if (otroDisplay) otroDisplay.style.display = 'none';
+  }
+}
+
+function ajSinglePill(el) {
+  var container = el.closest('.aj-pills-row');
+  container.querySelectorAll('.aj-pill').forEach(function(p) { p.classList.remove('activa','activa-outline'); });
+  el.classList.add('activa');
+}
+
+function ajTogglePill(el) {
+  el.classList.toggle('activa');
+}
+
+function _ajGetPronombres() {
+  var vals = [];
+  document.querySelectorAll('#aj-pron-pills .aj-pill:not(.aj-pill-otro).activa').forEach(function(p) { vals.push(p.dataset.val); });
+  var otroDisplay = document.getElementById('aj-pron-otro-display');
+  var otroPill = document.querySelector('#aj-pron-pills .aj-pill-otro');
+  if (otroPill && (otroPill.classList.contains('activa') || otroPill.classList.contains('activa-outline')) && otroDisplay && otroDisplay.textContent) {
+    vals.push(otroDisplay.textContent.replace('Otro: ',''));
+  }
+  return vals.join(', ');
+}
+
+function _ajGetSinglePill(containerId) {
+  var el = document.querySelector('#' + containerId + ' .aj-pill.activa, #' + containerId + ' .aj-pill.activa-outline');
+  return el ? el.dataset.val : '';
+}
+
+/* ── Pronombre "Otro" ──────────────────────────────────── */
+var _ajSheetTextoCallback = null;
+
+function ajAbrirOtroPron() {
+  ajAbrirSheetTexto('aj-sheet-canton', 'Escribe tu pronombre', 'Ej: Xe/xem, Xo...', function(v) {
+    var otroPill = document.querySelector('#aj-pron-pills .aj-pill-otro');
+    var otroDisplay = document.getElementById('aj-pron-otro-display');
+    if (otroPill) otroPill.classList.add('activa-outline');
+    if (otroDisplay) { otroDisplay.textContent = 'Otro: ' + v; otroDisplay.style.display = 'block'; }
+  });
+}
+
+/* ── Bottom sheet genérico de texto ───────────────────── */
+function ajAbrirSheetTexto(sheetId, titulo, placeholder, callback) {
+  _ajSheetTextoCallback = callback;
+  var tit = document.getElementById('aj-sheet-texto-titulo');
+  var inp = document.getElementById('aj-sheet-texto-input');
+  if (tit) tit.textContent = titulo;
+  if (inp) { inp.value = ''; inp.placeholder = placeholder; }
+  var ov = document.getElementById('aj-sheet-texto-overlay');
+  var sh = document.getElementById('aj-sheet-texto');
+  if (ov) ov.style.display = 'block';
+  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
+  setTimeout(function(){ var i = document.getElementById('aj-sheet-texto-input'); if (i) i.focus(); }, 400);
+}
+
+function ajCerrarSheetTexto() {
+  var sh = document.getElementById('aj-sheet-texto');
+  var ov = document.getElementById('aj-sheet-texto-overlay');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function(){
+    if (sh) sh.style.display = 'none';
+    if (ov) ov.style.display = 'none';
+    _ajSheetTextoCallback = null;
+  }, 350);
+}
+
+function ajConfirmarSheetTexto() {
+  var v = (document.getElementById('aj-sheet-texto-input').value || '').trim();
+  if (!v) return;
+  if (_ajSheetTextoCallback) _ajSheetTextoCallback(v);
+  ajCerrarSheetTexto();
+}
+
+function ajSetPillOtro(container, valor) {
+  if (!container) return;
+  container.querySelectorAll('.aj-pill').forEach(function(p) { p.classList.remove('activa','activa-outline'); });
+  var otro = container.querySelector('.aj-pill-otro');
+  if (otro) { otro.dataset.val = valor; otro.classList.add('activa-outline'); }
+}
+
+/* ── Bottom sheet prefijo ─────────────────────────────── */
+var _AJ_PREFIJOS = [
+  {pais:'Ecuador', bandera:'🇪🇨', cod:'+593'},
+  {pais:'Colombia', bandera:'🇨🇴', cod:'+57'},
+  {pais:'Perú', bandera:'🇵🇪', cod:'+51'},
+  {pais:'Venezuela', bandera:'🇻🇪', cod:'+58'},
+  {pais:'Argentina', bandera:'🇦🇷', cod:'+54'},
+  {pais:'Chile', bandera:'🇨🇱', cod:'+56'},
+  {pais:'México', bandera:'🇲🇽', cod:'+52'},
+  {pais:'España', bandera:'🇪🇸', cod:'+34'},
+  {pais:'Estados Unidos', bandera:'🇺🇸', cod:'+1'},
+  {pais:'Uruguay', bandera:'🇺🇾', cod:'+598'},
+  {pais:'Paraguay', bandera:'🇵🇾', cod:'+595'},
+  {pais:'Bolivia', bandera:'🇧🇴', cod:'+591'},
+];
+var _ajPrefijoTarget = { displayId: 'aj-prefijo-display', hiddenId: null };
+
+function _ajSetPrefijo(displayId, hiddenId, valorGuardado) {
+  var el = document.getElementById(displayId);
+  if (!el) return;
+  if (!valorGuardado) { el.textContent = 'Selecciona'; return; }
+  var match = _AJ_PREFIJOS.find(function(p) {
+    return valorGuardado.indexOf(p.pais) !== -1 || valorGuardado.indexOf(p.cod) !== -1;
+  });
+  el.textContent = match ? match.bandera + ' ' + match.cod + ' ' + match.pais : valorGuardado;
+  if (hiddenId) { var h = document.getElementById(hiddenId); if (h) h.value = valorGuardado; }
+}
+
+function ajAbrirSheetPrefijo() {
+  _ajPrefijoTarget = { displayId: 'aj-prefijo-display', hiddenId: null };
+  _ajRenderPrefijos(_AJ_PREFIJOS);
+  var ov = document.getElementById('aj-sheet-prefijo-overlay');
+  var sh = document.getElementById('aj-sheet-prefijo');
+  if (ov) ov.style.display = 'block';
+  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
+  var s = document.getElementById('aj-prefijo-search'); if (s) s.value = '';
+}
+
+function ajAbrirSheetPrefijoTarget(displayId, hiddenId) {
+  _ajPrefijoTarget = { displayId: displayId, hiddenId: hiddenId };
+  _ajRenderPrefijos(_AJ_PREFIJOS);
+  var ov = document.getElementById('aj-sheet-prefijo-overlay');
+  var sh = document.getElementById('aj-sheet-prefijo');
+  if (ov) ov.style.display = 'block';
+  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
+  var s = document.getElementById('aj-prefijo-search'); if (s) s.value = '';
+}
+
+function ajCerrarSheetPrefijo() {
+  var sh = document.getElementById('aj-sheet-prefijo');
+  var ov = document.getElementById('aj-sheet-prefijo-overlay');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function(){ if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+
+function _ajRenderPrefijos(lista) {
+  var html = lista.map(function(p) {
+    return '<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border-light);cursor:pointer;font-size:0.85rem;" onclick="ajSelPrefijo(\'' + p.pais.replace(/'/g,"\\'") + '\')">' +
+      '<span style="font-size:1.2rem;">' + p.bandera + '</span>' +
+      '<span style="flex:1;color:var(--text);font-weight:600;">' + p.pais + '</span>' +
+      '<span style="color:var(--muted);">' + p.cod + '</span>' +
+      '</div>';
+  }).join('');
+  var list = document.getElementById('aj-prefijo-list');
+  if (list) list.innerHTML = html || '<div style="padding:16px;text-align:center;color:var(--muted);font-size:0.82rem;">Sin resultados</div>';
+}
+
+function ajFiltrarPrefijos(q) {
+  var f = _AJ_PREFIJOS.filter(function(p) {
+    return p.pais.toLowerCase().includes(q.toLowerCase()) || p.cod.includes(q);
+  });
+  _ajRenderPrefijos(f);
+}
+
+function ajSelPrefijo(pais) {
+  var p = _AJ_PREFIJOS.find(function(x) { return x.pais === pais; });
+  if (!p) return;
+  var val = p.bandera + ' ' + p.cod + ' (' + p.pais + ')';
+  var disp = document.getElementById(_ajPrefijoTarget.displayId);
+  if (disp) disp.textContent = p.bandera + ' ' + p.cod + ' ' + p.pais;
+  if (_ajPrefijoTarget.hiddenId) { var h = document.getElementById(_ajPrefijoTarget.hiddenId); if (h) h.value = val; }
+  ajCerrarSheetPrefijo();
+}
+
+/* ── Bottom sheet país emisor ─────────────────────────── */
+var _ajPaisActual = '';
+var _AJ_PAISES = ['Ecuador','Colombia','Venezuela','Perú','Argentina','Chile','México','España','Estados Unidos','Uruguay','Paraguay','Bolivia'];
+
+function ajAbrirSheetPais() {
+  var html = _AJ_PAISES.map(function(p) {
+    var sel = p === _ajPaisActual;
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border-light);cursor:pointer;font-size:0.85rem;color:' + (sel ? 'var(--brand)' : 'var(--text)') + ';font-weight:' + (sel ? '700' : '500') + ';" onclick="ajSelPais(\'' + p.replace(/'/g,"\\'") + '\')">' +
+      '<span>' + p + '</span>' +
+      (sel ? '<span class="material-symbols-outlined" style="font-size:1rem;color:var(--brand);">check</span>' : '') +
+      '</div>';
+  }).join('') +
+  '<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;font-size:0.85rem;color:var(--muted);" onclick="ajSelPaisOtro()"><span>Otro...</span><span class="material-symbols-outlined" style="font-size:1rem;">chevron_right</span></div>';
+  var list = document.getElementById('aj-pais-list');
+  if (list) list.innerHTML = html;
+  var ov = document.getElementById('aj-sheet-pais-overlay');
+  var sh = document.getElementById('aj-sheet-pais');
+  if (ov) ov.style.display = 'block';
+  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
+}
+
+function ajCerrarSheetPais() {
+  var sh = document.getElementById('aj-sheet-pais');
+  var ov = document.getElementById('aj-sheet-pais-overlay');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function(){ if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+
+function ajSelPais(pais) {
+  _ajPaisActual = pais;
+  var disp = document.getElementById('aj-pais-display');
+  if (disp) disp.textContent = pais;
+  ajCerrarSheetPais();
+}
+
+function ajSelPaisOtro() {
+  ajCerrarSheetPais();
+  ajAbrirSheetTexto('aj-sheet-texto', 'País emisor', 'Escribe el nombre del país', function(v) {
+    _ajPaisActual = v;
+    var disp = document.getElementById('aj-pais-display');
+    if (disp) disp.textContent = v;
+  });
+}
+
+/* ── Validar teléfono ─────────────────────────────────── */
+function ajValidarTel(inp) {
+  var v = inp.value.replace(/\D/g, '');
+  inp.value = v;
+  var hint = inp.nextElementSibling;
+  if (v.length > 0 && (v.length < 7 || v.length > 15)) {
+    inp.style.borderColor = 'var(--danger)';
+    if (hint && hint.classList.contains('datos-hint')) { hint.textContent = 'El número debe tener entre 7 y 15 dígitos.'; hint.style.color = 'var(--danger)'; }
+  } else {
+    inp.style.borderColor = '';
+    if (hint && hint.classList.contains('datos-hint')) { hint.textContent = ''; hint.style.color = ''; }
+  }
+}
+
+/* ── Guardar cada sub-sección ─────────────────────────── */
+function ajGuardarPerfil(btn) {
+  var payload = {
+    nombreDerby: document.getElementById('aj-nombreDerby').value.trim(),
+    numeroDerby: document.getElementById('aj-numeroDerby').value.trim(),
+    pronombres: _ajGetPronombres()
+  };
+  _ajGuardar(payload, btn, 'aj-sub-perfil');
+}
+
+function ajGuardarContacto(btn) {
+  var tel = document.getElementById('aj-telefono').value.trim();
+  if (tel && (tel.length < 7 || tel.length > 15)) { err('err-aj-contacto', 'El número debe tener entre 7 y 15 dígitos.'); return; }
+  var prefijoDisp = document.getElementById('aj-prefijo-display');
+  var prefijoVal = prefijoDisp ? prefijoDisp.textContent : '';
+  var match = _AJ_PREFIJOS.find(function(p) { return prefijoVal.indexOf(p.pais) !== -1; });
+  var prefijoGuardar = match ? match.bandera + ' ' + match.cod + ' (' + match.pais + ')' : prefijoVal;
+  _ajGuardar({ prefijo: prefijoGuardar, telefono: tel }, btn, 'aj-sub-contacto');
+}
+
+function ajGuardarPrivacidad(btn) {
+  _ajGuardar({
+    fechaPublica: document.getElementById('aj-fechaPublica').value,
+    edadPublica: document.getElementById('aj-edadPublica').value
+  }, btn, 'aj-sub-privacidad');
+}
+
+function ajGuardarLegal(btn) {
+  _ajGuardar({
+    tipoDocumento: _ajGetSinglePill('aj-tipoDoc-pills'),
+    numeroDocumento: document.getElementById('aj-numeroDoc').value.trim(),
+    paisExpedicion: _ajPaisActual,
+    nombreLegal: document.getElementById('aj-nombreLegal').value.trim()
+  }, btn, 'aj-sub-legal');
+}
+
+function ajGuardarDireccion(btn) {
+  _ajGuardar({
+    callePrincipal: document.getElementById('aj-callePrincipal').value.trim(),
+    calleSecundaria: document.getElementById('aj-calleSecundaria').value.trim(),
+    numeracion: document.getElementById('aj-numeracion').value.trim(),
+    sector: document.getElementById('aj-sector').value.trim(),
+    canton: _ajGetSinglePill('aj-canton-pills')
+  }, btn, 'aj-sub-direccion');
+}
+
+function ajGuardarEmerg(btn) {
+  var e1pref = document.getElementById('aj-e1prefijo');
+  var e2pref = document.getElementById('aj-e2prefijo');
+  _ajGuardar({
+    emerg1Nombre: document.getElementById('aj-e1nombre').value.trim(),
+    emerg1Relacion: _ajGetSinglePill('aj-e1rel-pills'),
+    emerg1Prefijo: e1pref ? e1pref.value : '',
+    emerg1Telefono: document.getElementById('aj-e1telefono').value.trim(),
+    emerg2Nombre: document.getElementById('aj-e2nombre').value.trim(),
+    emerg2Relacion: _ajGetSinglePill('aj-e2rel-pills'),
+    emerg2Prefijo: e2pref ? e2pref.value : '',
+    emerg2Telefono: document.getElementById('aj-e2telefono').value.trim()
+  }, btn, 'aj-sub-emerg');
+}
+
+function _ajGuardar(payload, btn, subId) {
+  if (btn) { btn.textContent = 'Guardando...'; btn.disabled = true; }
+  api({ action: 'actualizarDatosPersona', nombre: E.nombre, token: _getSessionToken(), datos: JSON.stringify(payload) }, function() {
+    Object.assign(E.datos, payload);
+    if (btn) { btn.textContent = 'Guardado ✓'; btn.classList.add('exito'); setTimeout(function(){ btn.textContent = 'Guardar cambios'; btn.disabled = false; btn.classList.remove('exito'); }, 2000); }
+    irEditarDatos();
+    cerrarAjSub(subId);
+  }, function(e) {
+    if (btn) { btn.textContent = 'Guardar cambios'; btn.disabled = false; }
+    alert('Error al guardar: ' + (e.message || 'Intenta de nuevo'));
+  });
+}
+
+function _getSessionToken() {
+  try { return localStorage.getItem('session_token') || ''; } catch(e) { return ''; }
+}

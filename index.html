@@ -405,344 +405,337 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 
   <div class="pantalla" id="s-datos">
-    <div class="card">
-      <div class="seccion-label">Mis datos</div>
-      <h2>Editar mis datos</h2>
-      <p style="font-size:0.88rem;color: var(--muted);margin-bottom:20px; line-height: 1.5;">
-        Los cambios se guardan sección por sección. <strong>Si necesitas modificar tu nombre o PIN, contacta a unx administradorx.</strong>
-      </p>
+  <div class="card">
 
-      <div class="datos-seccion">
-        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-general', this)">
-          <span><span class="sec-icon">🛼</span>Roller Derby</span>
-          <span class="sec-chevron material-symbols-outlined">expand_more</span>
+    <!-- Hero perfil -->
+    <div class="aj-hero" onclick="irEditarPerfil()">
+      <div class="aj-avatar" id="aj-avatar"></div>
+      <div class="aj-hero-info">
+        <div class="aj-hero-name" id="aj-hero-name">—</div>
+        <div class="aj-hero-sub" id="aj-hero-sub">—</div>
+      </div>
+      <div class="aj-hero-edit"><span class="material-symbols-outlined">edit</span></div>
+    </div>
+
+    <!-- Equipamiento -->
+    <div class="aj-sec-label">Equipamiento</div>
+    <div class="aj-group">
+      <div class="aj-row" onclick="irEditarEquipDesdeHome()">
+        <div class="aj-icon aj-icon-orange"><span class="material-symbols-outlined">roller_skating</span></div>
+        <div class="aj-content">
+          <div class="aj-title">Mis patines y protecciones</div>
+          <div class="aj-value" id="aj-equip-val">—</div>
         </div>
-        <div class="datos-seccion-body" id="sec-general">
-          <div class="datos-campo">
-            <label>Nombre Derby</label>
-            <input type="text" id="d-nombreDerby" placeholder="Ej: Roller Reina">
-          </div>
-          <div class="datos-campo">
-            <label>Número Derby</label>
-            <input type="text" id="d-numeroDerby" placeholder="Ej: 47">
-          </div>
-           <div class="datos-campo">
-             <label>Pronombres</label>
-             <p class="datos-hint" style="margin-bottom:10px;">Selecciona todos los que apliquen.</p>
-             <label class="chk-opcion"><input type="checkbox" data-group="pronombres" value="Ella/ella"> Ella</label>
-             <label class="chk-opcion"><input type="checkbox" data-group="pronombres" value="Él/él"> Él</label>
-             <label class="chk-opcion"><input type="checkbox" data-group="pronombres" value="Elle/elle"> Elle</label>
-             <label class="chk-opcion"><input type="checkbox" data-group="pronombres" value="Otro" onchange="toggleOtroCheckbox('pronombres')"> Otro</label>
-             <div class="campo-condicional" id="campo-pronombresOtro">
-               <input type="text" id="d-pronombresOtro" class="otro-texto" placeholder="Ej: Xe/xem">
-             </div>
-           </div>
+        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
+      </div>
+    </div>
 
-          <button class="btn-guardar-sec" onclick="guardarSeccion('sec-general', this)">Guardar</button>
+    <!-- Contacto y privacidad -->
+    <div class="aj-sec-label">Contacto y privacidad</div>
+    <div class="aj-group">
+      <div class="aj-row" onclick="irAjSub('aj-sub-contacto')">
+        <div class="aj-icon aj-icon-blue"><span class="material-symbols-outlined">phone</span></div>
+        <div class="aj-content">
+          <div class="aj-title">Teléfono</div>
+          <div class="aj-value" id="aj-tel-val">—</div>
+        </div>
+        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
+      </div>
+      <div class="aj-row" onclick="irAjSub('aj-sub-privacidad')">
+        <div class="aj-icon aj-icon-purple"><span class="material-symbols-outlined">lock</span></div>
+        <div class="aj-content">
+          <div class="aj-title">Privacidad</div>
+          <div class="aj-value" id="aj-priv-val">—</div>
+        </div>
+        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
+      </div>
+    </div>
+
+    <!-- Seguridad y emergencias -->
+    <div class="aj-sec-label">Seguridad y emergencias</div>
+    <div class="aj-group">
+      <div class="aj-row" onclick="irAjSub('aj-sub-legal')">
+        <div class="aj-icon aj-icon-amber"><span class="material-symbols-outlined">badge</span></div>
+        <div class="aj-content">
+          <div class="aj-title">Identidad legal</div>
+          <div class="aj-value" id="aj-legal-val">—</div>
+        </div>
+        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
+      </div>
+      <div class="aj-row" onclick="irAjSub('aj-sub-direccion')">
+        <div class="aj-icon aj-icon-green"><span class="material-symbols-outlined">home_pin</span></div>
+        <div class="aj-content">
+          <div class="aj-title">Dirección</div>
+          <div class="aj-value" id="aj-dir-val">—</div>
+        </div>
+        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
+      </div>
+      <div class="aj-row" onclick="irAjSub('aj-sub-emerg')">
+        <div class="aj-icon aj-icon-red"><span class="material-symbols-outlined">emergency</span></div>
+        <div class="aj-content">
+          <div class="aj-title">Contactos de emergencia</div>
+          <div class="aj-value" id="aj-emerg-val">—</div>
+        </div>
+        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
+      </div>
+    </div>
+
+    <!-- Aplicación -->
+    <div class="aj-sec-label">Aplicación</div>
+    <div class="aj-app-rows">
+      <div class="aj-app-row" id="row-notif-home">
+        <div class="aj-icon aj-icon-orange"><span class="material-symbols-outlined">notifications</span></div>
+        <div class="aj-content">
+          <div class="aj-title">Notificaciones</div>
+          <div class="aj-value">Reservas, cambios y avisos</div>
+        </div>
+        <label class="toggle-switch"><input type="checkbox" id="toggle-notif" onchange="toggleNotifHome(this)"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="aj-app-row" id="row-instalar-app">
+        <div class="aj-icon aj-icon-muted"><span class="material-symbols-outlined">install_mobile</span></div>
+        <div class="aj-content">
+          <div class="aj-title">Instalar la app</div>
+          <div class="aj-value">Agrega el portal a tu inicio</div>
+        </div>
+        <button class="aj-app-btn" onclick="pwaInstalar()"><span class="material-symbols-outlined">download</span></button>
+      </div>
+      <div class="aj-app-row">
+        <div class="aj-icon aj-icon-muted"><span class="material-symbols-outlined">share</span></div>
+        <div class="aj-content">
+          <div class="aj-title">Contáctanos</div>
+          <div class="aj-value">WhatsApp, Instagram, correo</div>
+        </div>
+        <button class="aj-app-btn" onclick="abrirContacto()"><span class="material-symbols-outlined">chevron_right</span></button>
+      </div>
+    </div>
+
+    <!-- Zona cuenta -->
+    <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px;">
+      <button onclick="cerrarSesion()" class="aj-btn-logout"><span class="material-symbols-outlined" style="font-size:1.1rem;">logout</span>Cerrar sesión</button>
+      <button onclick="eliminarCuenta()" class="aj-btn-delete"><span class="material-symbols-outlined" style="font-size:1.1rem;">delete</span>Eliminar cuenta</button>
+    </div>
+
+  </div>
+
+  <!-- SUB: Perfil (derby) -->
+  <div class="aj-sub" id="aj-sub-perfil">
+    <div class="aj-sub-bar">
+      <button class="top-bar-back" onclick="cerrarAjSub('aj-sub-perfil')"><span class="material-symbols-outlined">arrow_back</span></button>
+      <span class="top-bar-titulo">Mi perfil</span>
+    </div>
+    <div class="aj-sub-inner">
+      <div class="datos-campo"><label>Nombre Derby</label><input type="text" id="aj-nombreDerby" placeholder="Ej: Roller Reina"></div>
+      <div class="datos-campo"><label>Número Derby</label><input type="text" id="aj-numeroDerby" placeholder="Ej: 47"></div>
+      <div class="datos-campo">
+        <label>Pronombres</label>
+        <p class="datos-hint" style="margin-bottom:10px;">Selecciona todos los que apliquen.</p>
+        <div class="aj-pills-row" id="aj-pron-pills">
+          <span class="aj-pill" data-val="Ella/ella" onclick="ajTogglePill(this,true)">Ella</span>
+          <span class="aj-pill" data-val="Él/él" onclick="ajTogglePill(this,true)">Él</span>
+          <span class="aj-pill" data-val="Elle/elle" onclick="ajTogglePill(this,true)">Elle</span>
+          <span class="aj-pill aj-pill-otro" data-val="Otro" onclick="ajAbrirOtroPron()">Otro...</span>
+        </div>
+        <div id="aj-pron-otro-display" style="display:none;margin-top:8px;font-size:0.78rem;color:var(--brand);"></div>
+      </div>
+      <button class="btn-guardar-sec" onclick="ajGuardarPerfil(this)">Guardar cambios</button>
+    </div>
+  </div>
+
+  <!-- SUB: Contacto -->
+  <div class="aj-sub" id="aj-sub-contacto">
+    <div class="aj-sub-bar">
+      <button class="top-bar-back" onclick="cerrarAjSub('aj-sub-contacto')"><span class="material-symbols-outlined">arrow_back</span></button>
+      <span class="top-bar-titulo">Contacto</span>
+    </div>
+    <div class="aj-sub-inner">
+      <div class="datos-campo">
+        <label>Email (cuenta de Google)</label>
+        <div id="aj-email-display" style="padding:13px 16px;border-radius:12px;background:var(--disabled-bg-2);color:var(--text-faint);font-size:0.88rem;cursor:not-allowed;">—</div>
+        <p class="datos-hint">No puede modificarse. Contacta a un administrador si necesitas cambiarlo.</p>
+      </div>
+      <div class="datos-campo">
+        <label>Código de país</label>
+        <button class="aj-selector-btn" id="aj-prefijo-btn" onclick="ajAbrirSheetPrefijo()">
+          <span id="aj-prefijo-display">Selecciona</span>
+          <span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--muted);">expand_more</span>
+        </button>
+      </div>
+      <div class="datos-campo">
+        <label>Número de teléfono</label>
+        <input type="tel" id="aj-telefono" placeholder="Ej: 0991234567" oninput="ajValidarTel(this)">
+        <p class="datos-hint" id="aj-tel-hint">Entre 7 y 15 dígitos numéricos.</p>
+      </div>
+      <div class="error-msg" id="err-aj-contacto"></div>
+      <button class="btn-guardar-sec" onclick="ajGuardarContacto(this)">Guardar cambios</button>
+    </div>
+  </div>
+
+  <!-- SUB: Privacidad -->
+  <div class="aj-sub" id="aj-sub-privacidad">
+    <div class="aj-sub-bar">
+      <button class="top-bar-back" onclick="cerrarAjSub('aj-sub-privacidad')"><span class="material-symbols-outlined">arrow_back</span></button>
+      <span class="top-bar-titulo">Privacidad</span>
+    </div>
+    <div class="aj-sub-inner">
+      <div class="datos-campo">
+        <label>Fecha de nacimiento</label>
+        <div id="aj-fn-display" style="padding:13px 16px;border-radius:12px;background:var(--disabled-bg-2);color:var(--text-faint);font-size:0.88rem;cursor:not-allowed;">—</div>
+        <p class="datos-hint">No puede modificarse. Contacta a un administrador si necesitas una corrección.</p>
+      </div>
+      <div class="privacy-row" style="margin-top:8px;">
+        <label for="aj-fechaPublica" style="font-size:0.88rem;color:var(--text-mid);font-weight:600;margin:0;text-transform:none;letter-spacing:0;">Compartir fecha de cumpleaños</label>
+        <div class="select-wrapper" style="margin-bottom:0;min-width:80px;"><select id="aj-fechaPublica"><option value="Sí">Sí</option><option value="No">No</option></select></div>
+      </div>
+      <div class="privacy-row">
+        <label for="aj-edadPublica" style="font-size:0.88rem;color:var(--text-mid);font-weight:600;margin:0;text-transform:none;letter-spacing:0;">Compartir mi edad</label>
+        <div class="select-wrapper" style="margin-bottom:0;min-width:80px;"><select id="aj-edadPublica"><option value="Sí">Sí</option><option value="No">No</option></select></div>
+      </div>
+      <div class="error-msg" id="err-aj-privacidad"></div>
+      <button class="btn-guardar-sec" onclick="ajGuardarPrivacidad(this)">Guardar cambios</button>
+    </div>
+  </div>
+
+  <!-- SUB: Identidad legal -->
+  <div class="aj-sub" id="aj-sub-legal">
+    <div class="aj-sub-bar">
+      <button class="top-bar-back" onclick="cerrarAjSub('aj-sub-legal')"><span class="material-symbols-outlined">arrow_back</span></button>
+      <span class="top-bar-titulo">Identidad legal</span>
+    </div>
+    <div class="aj-sub-inner">
+      <div class="aviso-legal">🔒 <strong>Confidencial.</strong> Solo para trámites legales y emergencias. No es visible para otras participantes.</div>
+      <div class="datos-campo">
+        <label>Tipo de documento</label>
+        <div class="aj-pills-row" id="aj-tipoDoc-pills">
+          <span class="aj-pill" data-val="Cédula" onclick="ajSinglePill(this)">Cédula</span>
+          <span class="aj-pill" data-val="DNI" onclick="ajSinglePill(this)">DNI</span>
+          <span class="aj-pill" data-val="Pasaporte" onclick="ajSinglePill(this)">Pasaporte</span>
+          <span class="aj-pill aj-pill-otro" data-val="Otro" onclick="ajSinglePill(this)">Otro</span>
         </div>
       </div>
-
-<div class="datos-seccion">
-  <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-equip', this)">
-    <span><span class="sec-icon">⚙️</span>Equipamiento</span>
-    <span class="sec-chevron material-symbols-outlined">expand_more</span>
-  </div>
-  <div class="datos-seccion-body" id="sec-equip">
-    <div id="equip-resumen-perfil" style="background:var(--surface-2);border:1px solid var(--border-light);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:0.82rem;color:var(--muted);line-height:1.8;">
-      Cargando...
+      <div class="datos-campo"><label>Número de documento</label><input type="text" id="aj-numeroDoc"></div>
+      <div class="datos-campo">
+        <label>País emisor</label>
+        <button class="aj-selector-btn" id="aj-pais-btn" onclick="ajAbrirSheetPais()">
+          <span id="aj-pais-display">Selecciona</span>
+          <span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--muted);">expand_more</span>
+        </button>
+      </div>
+      <div class="datos-campo"><label>Nombre legal completo</label><input type="text" id="aj-nombreLegal" placeholder="Tal como aparece en tu documento"></div>
+      <div class="error-msg" id="err-aj-legal"></div>
+      <button class="btn-guardar-sec" onclick="ajGuardarLegal(this)">Guardar cambios</button>
     </div>
-    <button class="btn btn-secondary" style="width:100%;margin-top:0;" onclick="irEditarEquipDesdeHome()">
-      <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">roller_skating</span> Actualizar equipamiento
-    </button>
-    <p class="datos-hint" style="margin-top:8px;">Podras editar patines, talla y protecciones paso a paso.</p>
   </div>
+
+  <!-- SUB: Dirección -->
+  <div class="aj-sub" id="aj-sub-direccion">
+    <div class="aj-sub-bar">
+      <button class="top-bar-back" onclick="cerrarAjSub('aj-sub-direccion')"><span class="material-symbols-outlined">arrow_back</span></button>
+      <span class="top-bar-titulo">Dirección</span>
+    </div>
+    <div class="aj-sub-inner">
+      <div class="datos-campo"><label>Calle principal</label><input type="text" id="aj-callePrincipal" placeholder="Ej: Av. Amazonas"></div>
+      <div class="datos-campo"><label>Calle secundaria</label><input type="text" id="aj-calleSecundaria" placeholder="Ej: Av. Colón"></div>
+      <div class="datos-campo"><label>Numeración</label><input type="text" id="aj-numeracion" placeholder="Ej: N24-56"></div>
+      <div class="datos-campo"><label>Sector</label><input type="text" id="aj-sector" placeholder="Ej: La Mariscal"></div>
+      <div class="datos-campo">
+        <label>Cantón</label>
+        <div class="aj-pills-row" id="aj-canton-pills">
+          <span class="aj-pill" data-val="Quito" onclick="ajSinglePill(this)">Quito</span>
+          <span class="aj-pill" data-val="Cayambe" onclick="ajSinglePill(this)">Cayambe</span>
+          <span class="aj-pill" data-val="Mejía" onclick="ajSinglePill(this)">Mejía</span>
+          <span class="aj-pill aj-pill-otro" data-val="" onclick="ajAbrirSheetTexto('aj-sheet-canton','Escribe tu cantón','Ej: Pedro Moncayo', function(v){ ajSetPillOtro(document.getElementById('aj-canton-pills'),v); })">Otro...</span>
+        </div>
+      </div>
+      <div class="error-msg" id="err-aj-direccion"></div>
+      <button class="btn-guardar-sec" onclick="ajGuardarDireccion(this)">Guardar cambios</button>
+    </div>
+  </div>
+
+  <!-- SUB: Emergencias -->
+  <div class="aj-sub" id="aj-sub-emerg">
+    <div class="aj-sub-bar">
+      <button class="top-bar-back" onclick="cerrarAjSub('aj-sub-emerg')"><span class="material-symbols-outlined">arrow_back</span></button>
+      <span class="top-bar-titulo">Contactos de emergencia</span>
+    </div>
+    <div class="aj-sub-inner">
+      <div class="seccion-label">Contacto 1</div>
+      <div class="datos-campo"><label>Nombre</label><input type="text" id="aj-e1nombre" placeholder="Ej: Ana Pérez"></div>
+      <div class="datos-campo">
+        <label>Relación</label>
+        <div class="aj-pills-row" id="aj-e1rel-pills">
+          <span class="aj-pill" data-val="Amigx" onclick="ajSinglePill(this)">Amigx</span>
+          <span class="aj-pill" data-val="Familiar" onclick="ajSinglePill(this)">Familiar</span>
+          <span class="aj-pill" data-val="Pareja" onclick="ajSinglePill(this)">Pareja</span>
+          <span class="aj-pill aj-pill-otro" data-val="" onclick="ajAbrirSheetTexto('aj-sheet-e1rel','Escribe la relación','Ej: Compañerx de trabajo', function(v){ ajSetPillOtro(document.getElementById('aj-e1rel-pills'),v); })">Otro...</span>
+        </div>
+      </div>
+      <div class="datos-campo"><label>Prefijo</label>
+        <button class="aj-selector-btn" id="aj-e1pref-btn" onclick="ajAbrirSheetPrefijoTarget('aj-e1pref-display','aj-e1prefijo')">
+          <span id="aj-e1pref-display">Selecciona</span>
+          <span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--muted);">expand_more</span>
+        </button>
+        <input type="hidden" id="aj-e1prefijo">
+      </div>
+      <div class="datos-campo"><label>Teléfono</label><input type="tel" id="aj-e1telefono" placeholder="Ej: 0991234567" oninput="ajValidarTel(this)"></div>
+
+      <div style="height:1px;background:var(--border-light);margin:16px 0;"></div>
+      <div class="seccion-label">Contacto 2</div>
+      <div class="datos-campo"><label>Nombre</label><input type="text" id="aj-e2nombre" placeholder="Ej: Carlos López"></div>
+      <div class="datos-campo">
+        <label>Relación</label>
+        <div class="aj-pills-row" id="aj-e2rel-pills">
+          <span class="aj-pill" data-val="Amigx" onclick="ajSinglePill(this)">Amigx</span>
+          <span class="aj-pill" data-val="Familiar" onclick="ajSinglePill(this)">Familiar</span>
+          <span class="aj-pill" data-val="Pareja" onclick="ajSinglePill(this)">Pareja</span>
+          <span class="aj-pill aj-pill-otro" data-val="" onclick="ajAbrirSheetTexto('aj-sheet-e2rel','Escribe la relación','Ej: Compañerx de trabajo', function(v){ ajSetPillOtro(document.getElementById('aj-e2rel-pills'),v); })">Otro...</span>
+        </div>
+      </div>
+      <div class="datos-campo"><label>Prefijo</label>
+        <button class="aj-selector-btn" id="aj-e2pref-btn" onclick="ajAbrirSheetPrefijoTarget('aj-e2pref-display','aj-e2prefijo')">
+          <span id="aj-e2pref-display">Selecciona</span>
+          <span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--muted);">expand_more</span>
+        </button>
+        <input type="hidden" id="aj-e2prefijo">
+      </div>
+      <div class="datos-campo"><label>Teléfono</label><input type="tel" id="aj-e2telefono" placeholder="Ej: 0991234567" oninput="ajValidarTel(this)"></div>
+      <div class="error-msg" id="err-aj-emerg"></div>
+      <button class="btn-guardar-sec" onclick="ajGuardarEmerg(this)">Guardar cambios</button>
+    </div>
+  </div>
+
+  <!-- BOTTOM SHEET: Prefijo (reutilizable) -->
+  <div id="aj-sheet-prefijo-overlay" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);" onclick="ajCerrarSheetPrefijo()"></div>
+  <div id="aj-sheet-prefijo" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9601;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;max-height:75vh;flex-direction:column;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
+    <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 4px;flex-shrink:0;"></div>
+    <div style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:8px 16px 12px;border-bottom:1px solid var(--border-light);flex-shrink:0;">Código de país</div>
+    <input type="text" id="aj-prefijo-search" placeholder="Buscar país o código..." style="margin:12px 16px;padding:10px 14px;background:var(--surface-2);border:1.5px solid var(--border-light);border-radius:10px;font-size:0.85rem;font-family:inherit;width:calc(100% - 32px);flex-shrink:0;" oninput="ajFiltrarPrefijos(this.value)">
+    <div id="aj-prefijo-list" style="overflow-y:auto;flex:1;"></div>
+  </div>
+
+  <!-- BOTTOM SHEET: País emisor -->
+  <div id="aj-sheet-pais-overlay" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);" onclick="ajCerrarSheetPais()"></div>
+  <div id="aj-sheet-pais" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9601;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;max-height:65vh;flex-direction:column;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
+    <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 4px;flex-shrink:0;"></div>
+    <div style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:8px 16px 12px;border-bottom:1px solid var(--border-light);flex-shrink:0;">País emisor del documento</div>
+    <div id="aj-pais-list" style="overflow-y:auto;flex:1;"></div>
+  </div>
+
+  <!-- BOTTOM SHEET: Texto genérico -->
+  <div id="aj-sheet-texto-overlay" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);" onclick="ajCerrarSheetTexto()"></div>
+  <div id="aj-sheet-texto" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9601;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;padding:0 0 32px;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
+    <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 4px;"></div>
+    <div id="aj-sheet-texto-titulo" style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:8px 16px 12px;border-bottom:1px solid var(--border-light);"></div>
+    <div style="padding:16px;">
+      <input type="text" id="aj-sheet-texto-input" style="width:100%;padding:13px 16px;background:var(--surface-2);border:1.5px solid var(--brand);border-radius:12px;font-size:0.88rem;font-family:inherit;" placeholder="">
+      <button onclick="ajConfirmarSheetTexto()" style="width:100%;padding:13px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-top:10px;">Confirmar</button>
+      <button onclick="ajCerrarSheetTexto()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:none;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
+    </div>
+  </div>
+
 </div>
 
-      <div class="datos-seccion">
-        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-contacto', this)">
-          <span><span class="sec-icon">📞</span>Contacto</span>
-          <span class="sec-chevron material-symbols-outlined">expand_more</span>
-        </div>
-        <div class="datos-seccion-body" id="sec-contacto">
-          <div class="datos-campo">
-            <label>Prefijo telefónico</label>
-            <div class="select-wrapper">
-              <select id="d-prefijo" onchange="toggleOtroSelect('prefijo')">
-                <option value="">Selecciona</option>
-                <optgroup label="América del Sur">
-                  <option value="🇪🇨 +593 (Ecuador)">🇪🇨 +593 Ecuador</option>
-                  <option value="🇨🇴 +57 (Colombia)">🇨🇴 +57 Colombia</option>
-                  <option value="🇵🇪 +51 (Perú)">🇵🇪 +51 Perú</option>
-                  <option value="🇻🇪 +58 (Venezuela)">🇻🇪 +58 Venezuela</option>
-                  <option value="🇦🇷 +54 (Argentina)">🇦🇷 +54 Argentina</option>
-                  <option value="🇨🇱 +56 (Chile)">🇨🇱 +56 Chile</option>
-                </optgroup>
-                <option value="Otro">Otro...</option>
-              </select>
-            </div>
-            <div class="campo-condicional" id="campo-prefijoOtro">
-              <input type="text" id="d-prefijoOtro" class="otro-texto" placeholder="Ej: +972">
-            </div>
-          </div>
-          <div class="datos-campo">
-            <label>Número de teléfono</label>
-            <input type="tel" id="d-telefono" placeholder="Ej: 0991234567" oninput="limpiarTelefono(this)">
-          </div>
-          <div class="datos-campo">
-            <label>Correo electrónico</label>
-            <input type="email" id="d-email" placeholder="Ej: nombre@correo.com" readonly style="background:var(--disabled-bg-2);color:var(--text-faint);cursor:not-allowed;">
-            <p class="datos-hint">El correo no puede modificarse desde aquí. Contactá a unx administradorx si necesitás cambiarlo.</p>
-          </div>
-          <button class="btn-guardar-sec" onclick="guardarSeccion('sec-contacto', this)">Guardar</button>
-        </div>
-      </div>
 
-      <div class="datos-seccion">
-        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-cumple', this)">
-          <span><span class="sec-icon">🎂</span>Cumpleaños</span>
-          <span class="sec-chevron material-symbols-outlined">expand_more</span>
-        </div>
-        <div class="datos-seccion-body" id="sec-cumple">
-          <div class="datos-campo" style="margin-bottom:16px;">
-            <label>Fecha de nacimiento</label>
-            <div id="d-fechaNacimiento-display" style="padding:13px 16px;border:2px solid var(--border-light);border-radius:12px;background:var(--disabled-bg-2);color:var(--text-faint);font-size:0.88rem;cursor:not-allowed;min-height:48px;display:flex;align-items:center;">—</div>
-            <p class="datos-hint">La fecha de nacimiento no puede modificarse. Contactá a unx administradorx si necesitás hacer una corrección.</p>
-          </div>
-          <div class="privacy-row">
-            <label for="d-fechaPublica">¿Quieres que tu fecha de cumpleaños sea pública?</label>
-            <div class="select-wrapper" style="margin-bottom:0;min-width:100px;">
-              <select id="d-fechaPublica">
-                <option value="Sí">Sí</option>
-                <option value="No">No</option>
-              </select>
-            </div>
-          </div>
-          <div class="privacy-row">
-            <label for="d-edadPublica">¿Quieres que tu edad sea pública?</label>
-            <div class="select-wrapper" style="margin-bottom:0;min-width:100px;">
-              <select id="d-edadPublica">
-                <option value="Sí">Sí</option>
-                <option value="No">No</option>
-              </select>
-            </div>
-          </div>
-          <button class="btn-guardar-sec" onclick="guardarSeccion('sec-cumple', this)">Guardar</button>
-        </div>
-      </div>
-
-      <div class="datos-seccion">
-        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-legal', this)">
-          <span><span class="sec-icon">🪪</span>Identidad legal</span>
-          <span class="sec-chevron material-symbols-outlined">expand_more</span>
-        </div>
-        <div class="datos-seccion-body" id="sec-legal">
-          <div class="aviso-legal">
-            🔒 <strong>Esta información es confidencial.</strong> Solo se usa para trámites legales y situaciones de emergencia. No es visible para otras participantes.
-          </div>
-          <div class="datos-campo">
-            <label>Tipo de documento</label>
-            <div class="select-wrapper">
-              <select id="d-tipoDocumento">
-                <option value="">Selecciona</option>
-                <option value="Cédula">Cédula</option>
-                <option value="DNI">DNI</option>
-                <option value="Pasaporte">Pasaporte</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
-          </div>
-          <div class="datos-campo">
-            <label>Número de documento</label>
-            <input type="text" id="d-numeroDocumento" placeholder="Ej: 1712345678">
-          </div>
-          <div class="datos-campo">
-            <label>País emisor del documento</label>
-            <div class="select-wrapper">
-              <select id="d-paisExpedicion">
-                <option value="">Selecciona</option>
-                <option value="Ecuador">Ecuador</option>
-                <option value="Colombia">Colombia</option>
-                <option value="Venezuela">Venezuela</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
-          </div>
-          <div class="datos-campo">
-            <label>Nombre legal completo</label>
-            <input type="text" id="d-nombreLegal" placeholder="Tal como aparece en tu documento">
-          </div>
-          <button class="btn-guardar-sec" onclick="guardarSeccion('sec-legal', this)">Guardar</button>
-        </div>
-      </div>
-
-      <div class="datos-seccion">
-        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-direccion', this)">
-          <span><span class="sec-icon">📍</span>Dirección</span>
-          <span class="sec-chevron material-symbols-outlined">expand_more</span>
-        </div>
-        <div class="datos-seccion-body" id="sec-direccion">
-          <div class="datos-campo">
-            <label>Calle principal</label>
-            <input type="text" id="d-callePrincipal" placeholder="Ej: Av. Amazonas">
-          </div>
-          <div class="datos-campo">
-            <label>Calle secundaria</label>
-            <input type="text" id="d-calleSecundaria" placeholder="Ej: Av. Colón">
-          </div>
-          <div class="datos-campo">
-            <label>Numeración</label>
-            <input type="text" id="d-numeracion" placeholder="Ej: N24-56">
-          </div>
-          <div class="datos-campo">
-            <label>Sector o barrio</label>
-            <input type="text" id="d-sector" placeholder="Ej: La Mariscal">
-          </div>
-          <div class="datos-campo">
-            <label>Cantón</label>
-            <div class="select-wrapper">
-              <select id="d-canton" onchange="toggleOtroSelect('canton')">
-                <option value="">Selecciona</option>
-                <option value="Quito">Quito</option>
-                <option value="Cayambe">Cayambe</option>
-                <option value="Mejía">Mejía</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
-            <div class="campo-condicional" id="campo-cantonOtro">
-              <input type="text" id="d-cantonOtro" class="otro-texto" placeholder="Escribe tu cantón">
-            </div>
-          </div>
-          <button class="btn-guardar-sec" onclick="guardarSeccion('sec-direccion', this)">Guardar</button>
-        </div>
-      </div>
-
-      <div class="datos-seccion">
-        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-emerg1', this)">
-          <span><span class="sec-icon">🆘</span>Contacto de emergencia 1</span>
-          <span class="sec-chevron material-symbols-outlined">expand_more</span>
-        </div>
-        <div class="datos-seccion-body" id="sec-emerg1">
-          <div class="datos-campo">
-            <label>Nombre completo</label>
-            <input type="text" id="d-emerg1Nombre" placeholder="Ej: Ana Pérez">
-          </div>
-          <div class="datos-campo">
-            <label>Relación</label>
-            <div class="select-wrapper">
-              <select id="d-emerg1Relacion">
-                <option value="">Selecciona</option>
-                <option value="Amigx">Amigx</option>
-                <option value="Familiar">Familiar</option>
-                <option value="Pareja">Pareja</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
-          </div>
-          <div class="datos-campo">
-            <label>Prefijo telefónico</label>
-            <div class="select-wrapper">
-              <select id="d-emerg1Prefijo" onchange="toggleOtroSelect('emerg1Prefijo')">
-                <option value="">Selecciona</option>
-                <option value="🇪🇨 +593 (Ecuador)">🇪🇨 +593 Ecuador</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
-            <div class="campo-condicional" id="campo-emerg1PrefijoOtro">
-              <input type="text" id="d-emerg1PrefijoOtro" class="otro-texto" placeholder="Ej: +972">
-            </div>
-          </div>
-          <div class="datos-campo">
-            <label>Número de teléfono</label>
-            <input type="tel" id="d-emerg1Telefono" placeholder="Ej: 0991234567" oninput="limpiarTelefono(this)">
-          </div>
-          <button class="btn-guardar-sec" onclick="guardarSeccion('sec-emerg1', this)">Guardar</button>
-        </div>
-      </div>
-
-      <div class="datos-seccion">
-        <div class="datos-seccion-titulo" onclick="toggleSeccion('sec-emerg2', this)">
-          <span><span class="sec-icon">🆘</span>Contacto de emergencia 2</span>
-          <span class="sec-chevron material-symbols-outlined">expand_more</span>
-        </div>
-        <div class="datos-seccion-body" id="sec-emerg2">
-          <div class="datos-campo">
-            <label>Nombre completo</label>
-            <input type="text" id="d-emerg2Nombre" placeholder="Ej: Carlos López">
-          </div>
-          <div class="datos-campo">
-            <label>Relación</label>
-            <div class="select-wrapper">
-              <select id="d-emerg2Relacion">
-                <option value="">Selecciona</option>
-                <option value="Amigx">Amigx</option>
-                <option value="Familiar">Familiar</option>
-                <option value="Pareja">Pareja</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
-          </div>
-          <div class="datos-campo">
-            <label>Prefijo telefónico</label>
-            <div class="select-wrapper">
-              <select id="d-emerg2Prefijo" onchange="toggleOtroSelect('emerg2Prefijo')">
-                <option value="">Selecciona</option>
-                <option value="🇪🇨 +593 (Ecuador)">🇪🇨 +593 Ecuador</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
-            <div class="campo-condicional" id="campo-emerg2PrefijoOtro">
-              <input type="text" id="d-emerg2PrefijoOtro" class="otro-texto" placeholder="Ej: +972">
-            </div>
-          </div>
-          <div class="datos-campo">
-            <label>Número de teléfono</label>
-            <input type="tel" id="d-emerg2Telefono" placeholder="Ej: 0991234567" oninput="limpiarTelefono(this)">
-          </div>
-          <button class="btn-guardar-sec" onclick="guardarSeccion('sec-emerg2', this)">Guardar</button>
-        </div>
-      </div>
-
-    <div class="datos-seccion" style="margin-top:8px;">
-      <div class="hmr" id="row-notif-home">
-        <div class="hmr-texto">
-          <div class="hmr-titulo">Notificaciones</div>
-          <div class="hmr-sub">Recibe avisos de tus reservas al instante</div>
-        </div>
-        <label class="toggle-switch">
-          <input type="checkbox" id="toggle-notif" onchange="toggleNotifHome(this)">
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-      <div class="hmr" id="row-instalar-app">
-        <div class="hmr-texto">
-          <div class="hmr-titulo">Instalar la app</div>
-          <div class="hmr-sub">Agrega el portal a tu pantalla de inicio</div>
-        </div>
-        <button class="hmr-btn-round" onclick="pwaInstalar()">
-          <span class="material-symbols-outlined">download</span>
-        </button>
-      </div>
-      <div class="hmr">
-        <div class="hmr-texto">
-          <div class="hmr-titulo">Contáctanos</div>
-          <div class="hmr-sub">Escríbenos por redes o correo</div>
-        </div>
-        <button class="hmr-btn-round" onclick="abrirContacto()">
-          <span class="material-symbols-outlined">share</span>
-        </button>
-      </div>
-    </div> style="width:100%;padding:14px;background:transparent;color:var(--muted);border:1px solid var(--border-light);border-radius:12px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
-        <span class="material-symbols-outlined" style="font-size:1.1rem;">logout</span>Cerrar sesión
-      </button>
-    </div> style="width:100%;padding:14px;background:var(--danger-bg);color:var(--danger);border:none;border-radius:12px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.3s;display:flex;align-items:center;justify-content:center;gap:8px;">
-          <span class="material-symbols-outlined" style="font-size:1.1rem;">delete</span> Eliminar mi cuenta
-        </button>
-      </div>
-    </div>
-  </div>
-
-
-  <div class="pantalla" id="s-admin-login">
+    <div class="pantalla" id="s-admin-login">
     <div class="card" style="text-align:center;">
       <div class="seccion-label">Administradorx</div>
       <h2>Acceso administradorx</h2>
