@@ -168,11 +168,17 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
   <div id="label-mis-reservas" style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;">Mis reservas</div>
   <button onclick="irMisReservas()" style="background:none;border:none;color:var(--brand);font-size:0.72rem;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:underline;text-underline-offset:3px;padding:0;">Ver historial</button>
-</div>        <div id="home-reservas-lista"></div>
-        <div id="fila-botones-home" style="display:flex;gap:8px;margin-top:10px;margin-bottom:10px;">
-          <button id="btn-ver-mas-home" class="btn-home-sub" onclick="verMasHomeReservas()">Ver más ▾</button>
-          
-        </div>
+</div>        
+<div class="reservas-scroll-outer" id="reservas-scroll-outer">
+  <div class="reservas-scroll-wrap" id="reservas-scroll-wrap">
+    <div id="home-reservas-lista"></div>
+  </div>
+</div>
+<div id="fila-botones-home" style="display:flex;justify-content:center;margin-top:4px;margin-bottom:6px;">
+  <button id="btn-ver-mas-home" class="btn-ver-mas-chevron" onclick="verMasHomeReservas()" aria-label="Ver más reservas">
+    <span class="material-symbols-outlined" id="chevron-ver-mas">expand_more</span>
+  </button>
+</div>
         <div style="display:flex;flex-direction:column;gap:14px;margin-top:14px;">
           <button id="btn-nueva-reserva-home" onclick="irNuevaReserva()" style="width:100%;padding:14px;border:none;border-radius:12px;background:var(--brand-light);color:var(--brand) !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">calendar_add_on</span> Nueva reserva</button>
         </div>

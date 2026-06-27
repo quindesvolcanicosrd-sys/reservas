@@ -115,19 +115,38 @@ function renderHomeReservas() {
 }
 
 function verMasHomeReservas() {
-  var hoy = new Date(); hoy.setHours(0,0,0,0);
-  var activas = _clasificarReservas(_todasReservas || [], hoy).activas;
-  _homeExpandido = !_homeExpandido;
-  var toShow = _homeExpandido ? activas : activas.slice(0, 2);
-  var container = document.getElementById('home-reservas-lista');
-  container.style.opacity = '0';
-  setTimeout(function() {
-    container.innerHTML = toShow.map(function(r) { return _renderCardHome(r, hoy); }).join('');
-    container.style.transition = 'opacity 0.3s ease';
-    container.style.opacity = '1';
-  }, 150);
+  var wrap = document.getElementById('reservas-scroll-wrap');
   var btn = document.getElementById('btn-ver-mas-home');
-  if (btn) btn.textContent = _homeExpandido ? 'Ver menos ▴' : 'Ver más ▾';
+  if (!wrap) return;
+  var estaAbajo = wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 10;
+  if (estaAbajo) {
+    wrap.scrollTo({ top: 0, behavior: 'smooth' });
+  } else {
+    wrap.scrollTo({ top: wrap.scrollTop + 220, behavior: 'smooth' });
+  }
+}
+
+function _initScrollReservas() {
+  var wrap = document.getElementById('reservas-scroll-wrap');
+  var btn = document.getElementById('btn-ver-mas-home');
+  var fila = document.getElementById('fila-botones-home');
+  if (!wrap) return;
+  function actualizarEstado() {
+    var scrollable = wrap.scrollHeight > wrap.clientHeight + 4;
+    if (fila) fila.style.display = scrollable ? 'flex' : 'none';
+    var enTop = wrap.scrollTop < 10;
+    var enBottom = wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 10;
+    if (enTop && enBottom) { wrap.className = wrap.className.replace(/sin-mascara\w*/g,'').trim() + ' sin-mascaras'; }
+    else if (enTop) { wrap.className = wrap.className.replace(/sin-mascara\w*|sin-mascaras/g,'').trim() + ' sin-mascara-top'; }
+    else if (enBottom) { wrap.className = wrap.className.replace(/sin-mascara\w*|sin-mascaras/g,'').trim() + ' sin-mascara-bottom'; if (btn) btn.classList.add('arriba'); }
+    else { wrap.className = wrap.className.replace(/sin-mascara\w*|sin-mascaras/g,'').trim(); if (btn) btn.classList.remove('arriba'); }
+    if (!enBottom && btn) btn.classList.remove('arriba');
+    if (enBottom && btn) btn.classList.add('arriba');
+    if (!enBottom && !enTop && btn) btn.classList.remove('arriba');
+  }
+  wrap.removeEventListener('scroll', actualizarEstado);
+  wrap.addEventListener('scroll', actualizarEstado);
+  actualizarEstado();
 }
 
 function _parsearFechaCard(fechaStr) {
@@ -579,7 +598,8 @@ function _recargarYRenderReservas(callback) {
         return r;
       });
       _renderHomeReservas();
+      setTimeout(_initScrollReservas, 50);
       if (callback) callback();
-    }, function() { _renderHomeReservas(); if (callback) callback(); });
-  }, function() { _renderHomeReservas(); if (callback) callback(); });
+    }, function() { _renderHomeReservas(); setTimeout(_initScrollReservas, 50); if (callback) callback(); });
+  }, function() { _renderHomeReservas(); setTimeout(_initScrollReservas, 50); if (callback) callback(); });
 }
