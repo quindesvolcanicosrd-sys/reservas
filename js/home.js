@@ -230,7 +230,7 @@ var equipPillHtml = '<span class="' + equipClase + '"><span class="material-symb
   
   if (r.horaFin) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">schedule</span>Fin ' + r.horaFin + '</span>';
   if (r.duracion) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">timer</span>' + r.duracion + '</span>';
-  bodyHtml += '</div></div></div>';
+  bodyHtml += '</div><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-light);text-align:center;"><button class="btn-cancel-text" onclick="abrirGestionar(\'' + fechaEsc + '\',' + filaEsc + ')">Re-agendar o cancelar reserva</button></div></div></div>';
 
   var masInfoHtml = '<div class="rn-divider"></div>' +
     '<div class="rn-mas-info" id="' + uid + '-toggle" onclick="_toggleCardBody(\'' + uid + '\')">' +
@@ -244,10 +244,7 @@ var equipPillHtml = '<span class="' + equipClase + '"><span class="material-symb
     pillsHtml +
     '</div>' +
     masInfoHtml +
-    '<div class="rn-divider"></div>' +
-    '<div class="rn-cancel-wrap">' +
-    '<button class="btn-cancel-text" onclick="abrirGestionar(\'' + fechaEsc + '\',' + filaEsc + ')">Re-agendar o cancelar reserva</button>' +
-    '</div>' +
+    
     '</div>';
 }
 
