@@ -286,7 +286,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <div class="pantalla" id="s-gestionar">
   <div class="card">
-    <div class="seccion-label">Cambiar de fecha</div>
+    <div class="seccion-label">Fecha a re-agendar</div>
     <div id="sg-fecha-texto" style="font-size:1.1rem;font-weight:800;color:var(--text);margin-bottom:10px;"></div>
     <div id="sg-fecha-pills" class="fi-pills" style="margin-bottom:16px;"></div>
     <div id="sg-panel-reagendar">
@@ -1220,8 +1220,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <div id="modal-confirm-reagendar" style="display:none;position:fixed;inset:0;z-index:9950;background:var(--overlay-dark);align-items:flex-end;justify-content:center;padding:0;">
   <div style="background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;">
-    <div style="font-size:2rem;text-align:center;margin-bottom:10px;">📅</div>
-    <div style="font-weight:800;font-size:1rem;color:var(--text);text-align:center;margin-bottom:16px;">¿Confirmar cambio de fecha?</div>
+    <div style="text-align:center;margin-bottom:10px;"><span class="material-symbols-outlined" style="font-size:2.4rem;color:var(--brand);">calendar_month</span></div>
+    <div style="font-weight:800;font-size:0.95rem;color:var(--text);text-align:center;margin-bottom:16px;line-height:1.5;">¿Confirmas el cambio de fecha del <span id="mcr-fecha-anterior" style="color:var(--brand);font-weight:800;"></span> a esta nueva fecha?</div>
     <div style="background:var(--surface-2);border:1px solid var(--border-light);border-radius:12px;padding:12px 14px;margin-bottom:16px;">
       <div id="mcr-fecha" style="font-size:0.92rem;font-weight:800;color:var(--text);margin-bottom:8px;"></div>
       <div id="mcr-pills" class="fi-pills" style="margin-bottom:8px;"></div>
@@ -1230,7 +1230,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <span id="mcr-equip"></span>
       </div>
     </div>
-    <button onclick="ejecutarReagendamiento()" style="width:100%;padding:13px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;">Confirmar nuevo entrenamiento</button>
+    <button onclick="ejecutarReagendamiento()" style="width:100%;padding:13px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;">Confirmar nueva fecha</button>
     <button onclick="cerrarModalReagendar()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:1px solid var(--border-light);border-radius:12px;font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;">Volver</button>
   </div>
 </div>

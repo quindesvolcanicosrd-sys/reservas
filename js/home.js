@@ -227,7 +227,7 @@ var equipPillHtml = '<span class="' + equipClase + '"><span class="material-symb
     masInfoHtml +
     '<div class="rn-divider"></div>' +
     '<div class="rn-cancel-wrap">' +
-    '<button class="btn-cancel-text" onclick="abrirGestionar(\'' + fechaEsc + '\',' + filaEsc + ')">Cancelar reserva</button>' +
+    '<button class="btn-cancel-text" onclick="abrirGestionar(\'' + fechaEsc + '\',' + filaEsc + ')">Re-agendar o cancelar reserva</button>' +
     '</div>' +
     '</div>';
 }
@@ -512,6 +512,10 @@ function confirmarCambioFecha() {
 
   var modal = document.getElementById('modal-confirm-reagendar');
   if (!modal) return;
+  var fechaAnteriorPartes = (_sgFechaActual || '').split(' - ');
+  var fechaAnteriorTexto = (fechaAnteriorPartes[0] || _sgFechaActual).trim();
+  var elFechaAnt = document.getElementById('mcr-fecha-anterior');
+  if (elFechaAnt) elFechaAnt.textContent = fechaAnteriorTexto;
   document.getElementById('mcr-fecha').textContent = fechaTexto;
   var pillsEl = document.getElementById('mcr-pills');
   pillsEl.innerHTML = '';
@@ -526,13 +530,9 @@ function ejecutarReagendamiento() {
   if (modal) modal.style.display = 'none';
   mostrarCargando('Reagendando...');
   api({ action: 'reagendarReserva', nombre: E.nombre, fechaAnterior: _sgFechaActual, fechaNueva: _sgFechaSeleccionada }, function() {
-    _todasReservas = (_todasReservas || []).map(function(r) {
-      if (r.fecha === _sgFechaActual) { r.fecha = _sgFechaSeleccionada; r.estado = 'Pendiente'; }
-      return r;
-    });
     ocultarCargando();
     ir('s-home');
-    setTimeout(function() { _renderHomeReservas(); mostrarToast('¡Fecha cambiada con éxito! 📅', 'ok'); }, 100);
+    setTimeout(function() { _recargarYRenderReservas(function() { mostrarToast('¡Fecha cambiada con éxito! 📅', 'ok'); }); }, 100);
   }, function(e) {
     ocultarCargando();
     alert('Error al reagendar: ' + (e.message || 'Intenta de nuevo'));
@@ -548,10 +548,9 @@ function ejecutarCancelacion() {
   cerrarSheetGestionar();
   mostrarCargando('Cancelando reserva...');
   api({ action: 'cancelarReserva', nombre: E.nombre, fecha: _sgFechaActual }, function() {
-    _todasReservas = (_todasReservas || []).filter(function(r) { return r.fecha !== _sgFechaActual; });
-    ocultarCargando();
+ocultarCargando();
     ir('s-home');
-    setTimeout(function() { renderHomeReservas(); }, 100);
+    setTimeout(function() { _recargarYRenderReservas(function() { mostrarToast('Reserva cancelada', 'ok'); }); }, 100);
   }, function(e) {
     ocultarCargando();
     alert('Error al cancelar: ' + (e.message || 'Intenta de nuevo'));
@@ -564,4 +563,23 @@ function abrirModalEstados() {
 function cerrarModalEstados() {
   var m = document.getElementById('modal-estados-reserva');
   if (m) m.style.display = 'none';
+}
+
+function _recargarYRenderReservas(callback) {
+  api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
+    _todasReservas = reservas || [];
+    var d = E.datos;
+    var talla = d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
+    api({ action: 'getFechasDisponibles', nombre: E.nombre, talla: talla, necesitaProtecciones: d.necesitaProtecciones }, function(fechas) {
+      var infoMap = {};
+      fechas.forEach(function(f) { infoMap[f.fecha] = f; });
+      _todasReservas = _todasReservas.map(function(r) {
+        var info = infoMap[r.fecha];
+        if (info) { r.mapsUrl = info.mapsUrl || ''; r.horaFin = info.horaFin || ''; r.duracion = info.duracion || ''; r.descripcion = info.descripcion || ''; }
+        return r;
+      });
+      _renderHomeReservas();
+      if (callback) callback();
+    }, function() { _renderHomeReservas(); if (callback) callback(); });
+  }, function() { _renderHomeReservas(); if (callback) callback(); });
 }
