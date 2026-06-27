@@ -60,9 +60,7 @@
         <span class="material-symbols-outlined">calendar_add_on</span>
         <span class="btn-nueva-reserva-nav-label">Nueva reserva</span>
       </button>
-      <button class="home-icon-btn" onclick="cerrarSesion()" title="Cerrar sesión">
-        <span class="material-symbols-outlined">logout</span>
-      </button>
+      
     </div>
   </div>
 </div>
@@ -735,8 +733,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
       </div>
 
-    <div style="margin-top:32px;">
-        <button onclick="eliminarCuenta()" style="width:100%;padding:14px;background:var(--danger-bg);color:var(--danger);border:none;border-radius:12px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.3s;display:flex;align-items:center;justify-content:center;gap:8px;">
+    <div style="margin-top:8px;margin-bottom:8px;">
+      <button onclick="cerrarSesion()" style="width:100%;padding:14px;background:transparent;color:var(--muted);border:1px solid var(--border-light);border-radius:12px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
+        <span class="material-symbols-outlined" style="font-size:1.1rem;">logout</span>Cerrar sesión
+      </button>
+    </div> style="width:100%;padding:14px;background:var(--danger-bg);color:var(--danger);border:none;border-radius:12px;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.3s;display:flex;align-items:center;justify-content:center;gap:8px;">
           <span class="material-symbols-outlined" style="font-size:1.1rem;">delete</span> Eliminar mi cuenta
         </button>
       </div>

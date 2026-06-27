@@ -610,9 +610,7 @@ function _initHomeNav() {
   if (!nav) return;
   nav.style.display = 'flex';
 
-  var header = document.querySelector('.header');
-  var headerH = header ? header.offsetHeight : 0;
-  nav.style.top = headerH + 'px';
+  nav.style.top = '0';
   if (spacer) spacer.style.height = (nav.offsetHeight + 8) + 'px';
 
   var contenedor = document.querySelector('.contenedor');
