@@ -87,29 +87,26 @@ function irHomeDesdeExito() {
   ir('s-home');
 }
 
-function renderHomeReservas() {
+function _renderHomeReservas() {
   var hoy = new Date(); hoy.setHours(0,0,0,0);
   var cl = _clasificarReservas(_todasReservas || [], hoy);
-  var activas = cl.activas, historial = cl.historial;
+  var activas = cl.activas;
   var container = document.getElementById('home-reservas-lista');
-  var btnVerMas = document.getElementById('btn-ver-mas-home');
-  var btnHist = document.getElementById('btn-historial-home');
-  _homeExpandido = false;
   var labelMisReservas = document.getElementById('label-mis-reservas');
+  var btnNueva = document.getElementById('btn-nueva-reserva-home');
+  var filasBotones = document.getElementById('fila-botones-home');
+
   var html = activas.length === 0
     ? '<button onclick="irNuevaReserva()" style="width:100%;padding:14px;border:2px solid var(--brand);border-radius:12px;background:rgba(249,115,22,0.12);color:var(--brand) !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;animation:pulseBtn 2.4s ease-in-out infinite;">📅 Hacer una reserva</button>'
-    : activas.slice(0, 2).map(function(r) { return _renderCardHome(r, hoy); }).join('');
+    : activas.map(function(r) { return _renderCardHome(r, hoy); }).join('');
+
   container.innerHTML = html;
   if (labelMisReservas) labelMisReservas.style.display = activas.length === 0 ? 'none' : '';
-  var filasBotones = document.getElementById('fila-botones-home');
-  var btnNueva = document.getElementById('btn-nueva-reserva-home');
   if (activas.length === 0) {
     if (filasBotones) filasBotones.style.display = 'none';
     if (btnNueva) btnNueva.style.display = 'none';
   } else {
     if (filasBotones) filasBotones.style.display = 'flex';
-    if (btnVerMas) { btnVerMas.style.display = activas.length <= 2 ? 'none' : ''; btnVerMas.textContent = ''; }
-    if (btnHist)   btnHist.style.display = historial.length === 0 ? 'none' : '';
     if (btnNueva) btnNueva.style.display = '';
   }
 }
