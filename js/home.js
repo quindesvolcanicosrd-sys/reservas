@@ -108,7 +108,7 @@ function renderHomeReservas() {
     if (btnNueva) btnNueva.style.display = 'none';
   } else {
     if (filasBotones) filasBotones.style.display = 'flex';
-    if (btnVerMas) { btnVerMas.style.display = activas.length <= 2 ? 'none' : ''; btnVerMas.textContent = 'Ver más ▾'; }
+    if (btnVerMas) { btnVerMas.style.display = activas.length <= 2 ? 'none' : ''; btnVerMas.textContent = ''; }
     if (btnHist)   btnHist.style.display = historial.length === 0 ? 'none' : '';
     if (btnNueva) btnNueva.style.display = '';
   }
@@ -116,37 +116,45 @@ function renderHomeReservas() {
 
 function verMasHomeReservas() {
   var wrap = document.getElementById('reservas-scroll-wrap');
-  var btn = document.getElementById('btn-ver-mas-home');
   if (!wrap) return;
   var estaAbajo = wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 10;
-  if (estaAbajo) {
-    wrap.scrollTo({ top: 0, behavior: 'smooth' });
-  } else {
-    wrap.scrollTo({ top: wrap.scrollTop + 220, behavior: 'smooth' });
-  }
+  wrap.scrollTo({ top: estaAbajo ? 0 : wrap.scrollTop + 260, behavior: 'smooth' });
 }
 
 function _initScrollReservas() {
   var wrap = document.getElementById('reservas-scroll-wrap');
-  var btn = document.getElementById('btn-ver-mas-home');
+  var btn  = document.getElementById('btn-ver-mas-home');
   var fila = document.getElementById('fila-botones-home');
   if (!wrap) return;
-  function actualizarEstado() {
+
+  function actualizarMascara() {
     var scrollable = wrap.scrollHeight > wrap.clientHeight + 4;
-    if (fila) fila.style.display = scrollable ? 'flex' : 'none';
-    var enTop = wrap.scrollTop < 10;
-    var enBottom = wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 10;
-    if (enTop && enBottom) { wrap.className = wrap.className.replace(/sin-mascara\w*/g,'').trim() + ' sin-mascaras'; }
-    else if (enTop) { wrap.className = wrap.className.replace(/sin-mascara\w*|sin-mascaras/g,'').trim() + ' sin-mascara-top'; }
-    else if (enBottom) { wrap.className = wrap.className.replace(/sin-mascara\w*|sin-mascaras/g,'').trim() + ' sin-mascara-bottom'; if (btn) btn.classList.add('arriba'); }
-    else { wrap.className = wrap.className.replace(/sin-mascara\w*|sin-mascaras/g,'').trim(); if (btn) btn.classList.remove('arriba'); }
-    if (!enBottom && btn) btn.classList.remove('arriba');
-    if (enBottom && btn) btn.classList.add('arriba');
-    if (!enBottom && !enTop && btn) btn.classList.remove('arriba');
+    if (!scrollable) {
+      wrap.className = wrap.className.replace(/mask-\w+|sin-mascara/g,'').trim() + ' sin-mascara';
+      if (fila) fila.style.display = 'none';
+      return;
+    }
+    if (fila) fila.style.display = 'flex';
+    var top    = wrap.scrollTop < 8;
+    var bottom = wrap.scrollTop + wrap.clientHeight >= wrap.scrollHeight - 8;
+    wrap.classList.remove('mask-middle','mask-top','sin-mascara');
+    if (top && bottom) {
+      wrap.classList.add('sin-mascara');
+    } else if (top) {
+      /* sin máscara arriba, fade abajo — clase por defecto, no agregar nada */
+    } else if (bottom) {
+      wrap.classList.add('mask-top');
+      if (btn) btn.classList.add('arriba');
+    } else {
+      wrap.classList.add('mask-middle');
+      if (btn) btn.classList.remove('arriba');
+    }
+    if (!bottom && btn) btn.classList.remove('arriba');
   }
-  wrap.removeEventListener('scroll', actualizarEstado);
-  wrap.addEventListener('scroll', actualizarEstado);
-  actualizarEstado();
+
+  wrap.removeEventListener('scroll', actualizarMascara);
+  wrap.addEventListener('scroll', actualizarMascara);
+  actualizarMascara();
 }
 
 function _parsearFechaCard(fechaStr) {

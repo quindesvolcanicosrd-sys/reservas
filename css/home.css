@@ -153,12 +153,12 @@
 .fi-pill-fusionado-sep { width:1px; height:12px; background:currentColor; opacity:0.3; margin:0 4px; flex-shrink:0; }
 /* ── Scroll lista reservas ───────────────────────────── */
 .reservas-scroll-outer { position:relative; }
-.reservas-scroll-wrap { max-height:420px; overflow-y:auto; scrollbar-width:none; -ms-overflow-style:none; -webkit-mask-image:linear-gradient(to bottom, transparent 0px, black 28px, black calc(100% - 28px), transparent 100%); mask-image:linear-gradient(to bottom, transparent 0px, black 28px, black calc(100% - 28px), transparent 100%); }
+.reservas-scroll-wrap { max-height:440px; overflow-y:scroll; scrollbar-width:none; -ms-overflow-style:none; -webkit-mask-image:linear-gradient(to bottom, black 0%, black calc(100% - 36px), transparent 100%); mask-image:linear-gradient(to bottom, black 0%, black calc(100% - 36px), transparent 100%); }
 .reservas-scroll-wrap::-webkit-scrollbar { display:none; }
-.reservas-scroll-wrap.sin-mascara-top { -webkit-mask-image:linear-gradient(to bottom, black 0%, black calc(100% - 28px), transparent 100%); mask-image:linear-gradient(to bottom, black 0%, black calc(100% - 28px), transparent 100%); }
-.reservas-scroll-wrap.sin-mascara-bottom { -webkit-mask-image:linear-gradient(to bottom, transparent 0px, black 28px, black 100%); mask-image:linear-gradient(to bottom, transparent 0px, black 28px, black 100%); }
-.reservas-scroll-wrap.sin-mascaras { -webkit-mask-image:none; mask-image:none; }
-.btn-ver-mas-chevron { background:none; border:none; cursor:pointer; color:var(--muted); padding:4px 12px; display:flex; align-items:center; justify-content:center; transition:color 0.15s; }
+.reservas-scroll-wrap.mask-middle { -webkit-mask-image:linear-gradient(to bottom, transparent 0px, black 36px, black calc(100% - 36px), transparent 100%); mask-image:linear-gradient(to bottom, transparent 0px, black 36px, black calc(100% - 36px), transparent 100%); }
+.reservas-scroll-wrap.mask-top { -webkit-mask-image:linear-gradient(to bottom, transparent 0px, black 36px, black 100%); mask-image:linear-gradient(to bottom, transparent 0px, black 36px, black 100%); }
+.reservas-scroll-wrap.sin-mascara { -webkit-mask-image:none; mask-image:none; }
+.btn-ver-mas-chevron { background:none; border:none; cursor:pointer; color:var(--muted); padding:2px 12px; display:flex; align-items:center; justify-content:center; transition:color 0.2s; width:100%; }
 .btn-ver-mas-chevron:hover { color:var(--brand); }
-.btn-ver-mas-chevron .material-symbols-outlined { font-size:1.6rem; transition:transform 0.3s; }
+.btn-ver-mas-chevron .material-symbols-outlined { font-size:1.6rem; transition:transform 0.35s cubic-bezier(0.16,1,0.3,1); }
 .btn-ver-mas-chevron.arriba .material-symbols-outlined { transform:rotate(180deg); }
