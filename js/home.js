@@ -17,11 +17,11 @@ function prepararHome() {
     }
   }
   var navAvatar = document.getElementById('home-avatar-nav');
-  if (navAvatar) {
-    var foto = E.datos && (E.datos.fotoUrl || E.datos.foto || E.datos.picture || E.datos.photoUrl || '');
-    if (foto) { navAvatar.innerHTML = '<img src="' + foto + '" alt="">'; }
-    else { navAvatar.textContent = (E.nombre || '?').charAt(0).toUpperCase(); }
-  }
+if (navAvatar) {
+  var foto = E.datos && (E.datos.fotoPerfil || E.datos.fotoUrl || E.datos.foto || E.datos.picture || E.datos.photoUrl || '');
+  if (foto) { navAvatar.innerHTML = '<img src="' + foto + '" alt="" style="width:100%;height:100%;object-fit:cover;">'; }
+  else { navAvatar.textContent = (E.nombre || '?').charAt(0).toUpperCase(); }
+}
   _renderHomeReservas();
   var d = E.datos;
   var talla = d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
