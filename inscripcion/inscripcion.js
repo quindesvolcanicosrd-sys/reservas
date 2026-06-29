@@ -24,7 +24,7 @@ var _AJ_PREFIJOS = [
 var _inscPrefijoSel = _AJ_PREFIJOS[0];
 
 /* ── Inicialización ─────────────────────────── */
-window.onload = function() {
+document.addEventListener('DOMContentLoaded', function() {
   try {
     _inscRenderProg();
     _inscCargarTallas();
@@ -36,7 +36,7 @@ window.onload = function() {
   } finally {
     ocultarCargando();
   }
-};
+});
 
 function ocultarCargando() {
   var ov = document.getElementById('loading-overlay');
