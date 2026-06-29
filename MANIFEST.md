@@ -15,7 +15,8 @@ reservas/
 ├── css/
 │   ├── colors.css              FUENTE ÚNICA DE VERDAD de colores — se importa primero en index.html e inscripcion/index.html
 │   ├── global.css              Reset, body, keyframes, spinner, overlay, toggle-switch, pantalla
-│   ├── ui.css                  Componentes reutilizables: card, inputs, btn, opciones, resumen, top-bar
+│   ├── ui.css                  Componentes reutilizables: card, inputs, btn, opciones, resumen
+│   ├── nav.css                 Barra de navegación unificada: .app-nav y variantes (.app-nav-fixed, .app-nav-sticky)
 │   ├── login.css               Pantalla s1: header-banner, gsignin skeleton, acordeón PIN
 │   ├── home.css                Pantalla s-home: home-boton, res-card-home (estados), hmr rows, btn-logout
 │   ├── reservas.css            Pantallas s2–s6: fecha-item, pago-metodo, total-box, meses-grid, btn-wp-*
@@ -65,6 +66,23 @@ reservas/
 | `.modal-info / .modal-info-card / .modal-info-titulo / .modal-info-sub / .modal-info-item / .modal-info-icon / .modal-info-label / .modal-info-desc / .modal-info-hr / .modal-info-footer` | Modal informativo de primera vez (overlay fijo z-index 8000, card centrada) |
 | `.mi-orange / .mi-green / .mi-blue / .mi-amber / .mi-purple` | Variantes de color para `.modal-info-icon` |
 
+### css/nav.css
+| Clase / selector | Descripción |
+|---|---|
+| `.app-nav` | Base compartida: flex, altura 56px, blur backdrop, borde brand inferior |
+| `.app-nav-fixed` | Nav fija (home): position:fixed, top:0, z-index:900 |
+| `.app-nav-sticky` | Nav sticky (pantallas internas): position:sticky, top:0, z-index:100, animación smoothSlideDown |
+| `.app-nav-back` | Botón atrás: 40×40px, border-radius 12px, fondo brand-light |
+| `.app-nav-title` | Título centrado con position:absolute y pointer-events:none |
+| `.app-nav-actions` | Contenedor de acciones derechas (flex, gap 8px) |
+| `.app-nav-icon-btn` | Botón icono cuadrado (40×40px) para acciones secundarias |
+| `.app-nav-cta` | Botón CTA principal ("Nueva reserva"): brand, border-radius 12px, shadow |
+| `.app-nav-cta-label` | Label de texto del CTA; se oculta en `.compacto` y ≤360px |
+| `.app-nav-avatar` | Avatar circular 38×38px del usuario |
+| `.app-nav-section` | Label de sección (ej: "MIS RESERVAS"); aparece al scrollear en estado compacto |
+| `.app-nav-fixed.compacto` | Estado compacto al scrollear: oculta label CTA, muestra sección |
+| `@keyframes smoothSlideDown` | Animación de entrada de la nav sticky (desde arriba) |
+
 ### css/ui.css
 | Clase / selector | Descripción |
 |---|---|
@@ -84,7 +102,6 @@ reservas/
 | `.privacy-row` | Fila de toggle de privacidad |
 | `.btn-guardar-sec` | Botón guardar sección en datos |
 | `.datos-hint` | Texto de ayuda gris bajo un campo |
-| `.top-bar / .top-bar-back / .top-bar-titulo` | Barra de navegación superior sticky (position:sticky, top:0, z-index:100) con botón atrás |
 | `.paso-indicator / .paso-dot` | Indicador de pasos (4 dots) del flujo de reserva |
 | `.loader` | Contenedor centrado spinner + texto |
 | `.textarea-otro` | Textarea para opciones "Otro" |
@@ -117,15 +134,11 @@ reservas/
 | `.home-icon-btns` | Fila de botones de icono — legacy |
 | `.home-icon-btn` | Botón circular de icono 38×38px; ahora se usa en el nav fijo (logout) |
 | `.home-subtitulo` | Subtítulo "¿Qué quieres hacer hoy?" — legacy |
-| `.home-nav-fixed` | Nav fija: position:fixed, top dinámica (calculada por `_initHomeNav`), z-index 900, blur backdrop |
-| `.home-nav-inner` | Contenedor interno del nav: flex, max-width 600px, padding 10px 16px |
-| `.home-nav-left` | Columna izquierda del nav (avatar + texto); clickeable → `irEditarDatos()` |
-| `.home-avatar-nav` | Avatar 40×40px en el nav fijo; hover muestra borde brand |
-| `.home-nav-texto` | Wrapper texto del nav (saludo + nombre); se colapsa con `.compacto` |
-| `.home-nav-acciones` | Columna derecha del nav (btn nueva reserva + logout) |
-| `.btn-nueva-reserva-nav` | Botón "Nueva reserva" en el nav fijo (brand, border-radius 12px, shadow) |
-| `.btn-nueva-reserva-nav-label` | Label de texto del botón nav; se oculta en `.compacto` y en pantallas ≤360px |
-| `.home-nav-fixed.compacto` | Estado compacto al scrollear: colapsa texto nav, reduce avatar, oculta label del botón |
+| ~~`.home-nav-fixed`~~ | Eliminado — reemplazado por `.app-nav.app-nav-fixed` en `css/nav.css` |
+| ~~`.home-nav-inner / .home-nav-left / .home-nav-texto / .home-nav-acciones`~~ | Eliminados — estructura simplificada con clases `.app-nav-*` |
+| ~~`.home-avatar-nav`~~ | Eliminado — reemplazado por `.app-nav-avatar` en `css/nav.css` |
+| ~~`.btn-nueva-reserva-nav / .btn-nueva-reserva-nav-label`~~ | Eliminados — reemplazados por `.app-nav-cta / .app-nav-cta-label` |
+| ~~`.home-nav-fixed.compacto`~~ | Eliminado — el compacto ahora es `.app-nav-fixed.compacto` en `css/nav.css` |
 | `.res-card-nueva` | Nueva tarjeta de reserva con header, pills, "Más info" colapsable y wrap de cancelar |
 | `.rn-header / .rn-top / .rn-date / .rn-divider` | Partes del header de la card nueva |
 | `.rn-mas-info / .rn-chevron / .rn-body / .rn-body-inner` | Panel colapsable "Más información" de la card |
@@ -191,12 +204,15 @@ reservas/
 | `.ddp-year-grid / .ddp-year-btn / .ddp-year-selected` | Grilla de selección de año |
 | `.ddp-month-grid / .ddp-month-btn / .ddp-month-selected` | Grilla de selección de mes |
 
+> **Nota:** `.aj-sub-bar` fue eliminado — las sub-pantallas usan `.app-nav` de `css/nav.css`.
+
 ### css/admin.css
 | Clase / selector | Descripción |
 |---|---|
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **css/nav.css (nuevo) + index.html + css/ui.css + css/home.css + css/perfil.css + js/ui.js** — Nav unificada en nav.css: nuevo archivo `css/nav.css` con clases `.app-nav`, `.app-nav-fixed`, `.app-nav-sticky`, `.app-nav-back`, `.app-nav-title`, `.app-nav-actions`, `.app-nav-icon-btn`, `.app-nav-cta`, `.app-nav-avatar`, `.app-nav-section`; `#top-bar` migrado a `.app-nav.app-nav-sticky` con `display:flex/none` en lugar de clase `.visible`; `#home-nav` migrado a `.app-nav.app-nav-fixed` con avatar/section/cta unificados; las 6 `.aj-sub-bar` migradas a `.app-nav` inline en cada sub; eliminados: `.top-bar`, `.top-bar-back`, `.top-bar-titulo` (ui.css), `.home-nav-fixed` y relacionados (home.css), `.aj-sub-bar` (perfil.css); `@keyframes smoothSlideDown` movido a nav.css; `ir()` actualizado a `style.display='flex'/'none'` en lugar de classList
 - **css/perfil.css + index.html + js/perfil.js + js/reservas.js + js/ui.js** — Fix ajustes perfil: `.aj-sub` usa `position:fixed` (z-index 500) en vez de `position:absolute`; bottom sheets (`aj-sheet-prefijo`, `aj-sheet-pais`, `aj-sheet-texto`) movidos fuera del `.card` a `<body>`; toggles de privacidad cambiados de `<select>` a `<input type="checkbox">`; `cerrarSesion()` ahora pasa por `ajAbrirSheetLogout()` con confirmación; nuevas funciones: `_ajFormatearFecha`, `ajAbrirSheetLogout`, `ajCerrarSheetLogout`; nuevo elemento: `aj-sheet-logout`, `aj-sheet-logout-overlay`; back de equipamiento (`s3a`) va a `s-datos` cuando `editandoDesdeHome`; back de `continuar_s3c` va a `s-datos` en lugar de `s-home`
 - **index.html + css/perfil.css + js/perfil.js + js/ui.js** — Rediseño completo de s-datos → "Ajustes del perfil": nueva estructura con hero de perfil clickeable + sub-pantallas posicionadas absolutas (`.aj-sub`) para cada sección: `aj-sub-perfil`, `aj-sub-contacto`, `aj-sub-privacidad`, `aj-sub-legal`, `aj-sub-direccion`, `aj-sub-emerg`; bottom sheets: `aj-sheet-prefijo`, `aj-sheet-pais`, `aj-sheet-texto`; nuevo sistema de pills (`.aj-pill`, `.aj-pill-otro`, `.activa`, `.activa-outline`) en lugar de selects; `irEditarDatos()` reescrita para poblar resumen en la pantalla principal en lugar de llenar inputs; `irEditarPerfil()` abre sub via `irAjSub()`; funciones eliminadas: `guardarSeccion`, `toggleSeccion`, `toggleOtroSelect`, `toggleOtroCheckbox`, `cargarSelect`, `guardarEquipPerfil`; funciones nuevas: `irAjSub`, `cerrarAjSub`, `ajSinglePill`, `ajTogglePill`, `ajAbrirOtroPron`, `ajAbrirSheetTexto`, `ajCerrarSheetTexto`, `ajConfirmarSheetTexto`, `ajSetPillOtro`, `ajAbrirSheetPrefijo`, `ajAbrirSheetPrefijoTarget`, `ajCerrarSheetPrefijo`, `ajSelPrefijo`, `ajFiltrarPrefijos`, `ajAbrirSheetPais`, `ajCerrarSheetPais`, `ajSelPais`, `ajSelPaisOtro`, `ajValidarTel`, `ajGuardarPerfil`, `ajGuardarContacto`, `ajGuardarPrivacidad`, `ajGuardarLegal`, `ajGuardarDireccion`, `ajGuardarEmerg`, `_ajGuardar`, `_ajCargarSub`, `_ajActivarPill`, `_ajCargarPronombres`, `_ajGetPronombres`, `_ajGetSinglePill`, `_ajSetPrefijo`, `_ajRenderPrefijos`, `_getSessionToken`; variables nuevas: `_AJ_PREFIJOS`, `_AJ_PAISES`, `_ajPaisActual`, `_ajPrefijoTarget`, `_ajSheetTextoCallback`; nuevas clases CSS en perfil.css: `.aj-*` (hero, group, row, icon, pill, selector-btn, sub, app-row, btn-logout, btn-delete); prefijo `d-` de IDs de inputs reemplazado por `aj-` en s-datos
 - **index.html + css/home.css + js/home.js + js/ui.js** — Nav fija en s-home: nuevo `#home-nav.home-nav-fixed` posicionado fuera de `.contenedor` (fixed, z-index 900, blur backdrop); contiene avatar clickeable (`#home-avatar-nav`, click → `irEditarDatos()`), nombre del usuario (`#home-saludo`), botón "Nueva reserva" (`.btn-nueva-reserva-nav`) y botón logout; `#home-nav-spacer` ocupa el espacio vertical en la card; `_initHomeNav()` calcula `top` según altura del `.header`, ajusta el `spacer` y registra listener de scroll para aplicar clase `.compacto` (oculta texto del nav, reduce avatar, colapsa label del botón) al pasar 40px; `prepararHome()` sincroniza `#home-avatar-nav` con foto/inicial; `ir()` en ui.js muestra/oculta `#home-nav` según pantalla activa; eliminados: `.home-profile-row` con avatar/saludo/botones icono de la card, botón `#btn-nueva-reserva-home` del interior de la card; botón logout ahora solo existe en el nav fijo
@@ -290,8 +306,8 @@ reservas/
 ### IDs relevantes de index.html
 | ID | Descripción |
 |---|---|
-| `#home-nav` | Nav fija (`.home-nav-fixed`) posicionada fuera de `.contenedor`; contiene avatar clickeable, nombre usuario, btn nueva reserva y logout; gestionada por `_initHomeNav()` y `ir()` |
-| `#home-avatar-nav` | Avatar circular 40×40 en el nav fijo; sincronizado con foto/inicial por `prepararHome()` |
+| `#home-nav` | Nav fija (`.app-nav.app-nav-fixed`) posicionada fuera de `.contenedor`; contiene avatar (`.app-nav-avatar`), section label y botón CTA; gestionada por `_initHomeNav()` y `_renderHomeReservas()` via `style.display` |
+| `#home-avatar-nav` | Avatar circular 38×38 (`.app-nav-avatar`) en el nav fijo; sincronizado con foto/inicial por `prepararHome()` |
 | `#home-nav-spacer` | Spacer en `s-home` que ocupa la altura del nav para evitar que el contenido quede tapado; altura ajustada dinámicamente por `_initHomeNav()` |
 | `#home-saludo` | Elemento con el nombre del usuario; ahora vive dentro de `#home-nav` (antes en `.home-profile-row` de la card) |
 | `#modal-equip-aviso` | Modal de aviso de disponibilidad de equipamiento: se muestra en `cargarFechas()` si hay fechas agotadas por equip; lista en `#modal-equip-lista`; botón "Actualizar mi equipamiento" llama `irEditarEquipDesdeModal()` |
@@ -329,7 +345,7 @@ reservas/
 | `abrirContacto()` | Muestra el modal #modal-contacto |
 | `cerrarContacto()` | Oculta el modal #modal-contacto |
 | `TOP_BAR_CONFIG` | Objeto de configuración de título y destino "volver" por pantalla |
-| `ir(id, desdeHistorial)` | Navega a una pantalla: activa .pantalla, pushState, actualiza top-bar y paso-dots; muestra/oculta `#home-nav` según `id === 's-home'`; cuando id==='s-home' también muestra `#modal-info-home` con delay 600ms si el usuario no lo ha visto |
+| `ir(id, desdeHistorial)` | Navega a una pantalla: activa .pantalla, pushState, actualiza top-bar (`style.display='flex'/'none'` en lugar de clase `.visible`) y paso-dots; cuando id==='s-home' muestra `#modal-info-home` con delay 600ms si el usuario no lo ha visto |
 | `volver(id)` | Alias de ir(); lo llama top-bar-btn |
 | `popstate listener` | Restaura pantalla correcta al usar el botón atrás del navegador |
 | `NOMBRES_MESES` | Array ['Enero'…'Diciembre'] para labels de meses |

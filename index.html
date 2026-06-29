@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css">
+<link rel="stylesheet" href="css/nav.css">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 </head>
@@ -47,28 +48,26 @@
   </div>
 </div>
 
-<div id="home-nav" class="home-nav-fixed" style="display:none;">
-  <div class="home-nav-inner">
-    <div class="home-nav-left" onclick="irEditarDatos()" style="cursor:pointer;">
-      <div class="home-avatar home-avatar-nav" id="home-avatar-nav"></div>
-      <div class="home-nav-seccion" id="home-nav-seccion">MIS RESERVAS</div>
-    </div>
-    <div class="home-nav-acciones">
-      <button class="btn-nueva-reserva-nav" onclick="irNuevaReserva()">
-        <span class="material-symbols-outlined">calendar_add_on</span>
-        <span class="btn-nueva-reserva-nav-label">Nueva reserva</span>
-      </button>
-      
-    </div>
+<div id="home-nav" class="app-nav app-nav-fixed" style="display:none;">
+  <div class="app-nav-avatar" id="home-avatar-nav" onclick="irEditarDatos()"></div>
+  <div class="app-nav-section" id="home-nav-seccion">MIS RESERVAS</div>
+  <div class="app-nav-actions">
+    <button class="app-nav-cta" onclick="irNuevaReserva()">
+      <span class="material-symbols-outlined">calendar_add_on</span>
+      <span class="app-nav-cta-label">Nueva reserva</span>
+    </button>
   </div>
 </div>
 
 <div class="contenedor">
 
- <div class="top-bar" id="top-bar">
-    <button class="top-bar-back" id="top-bar-btn"><span class="material-symbols-outlined" style="font-size:1.5rem;vertical-align:middle;">arrow_back</span> Atrás</button>
-    <span class="top-bar-titulo" id="top-bar-titulo"></span>
-  </div>
+<div class="app-nav app-nav-sticky" id="top-bar" style="display:none;">
+  <button class="app-nav-back" id="top-bar-btn">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </button>
+  <span class="app-nav-title" id="top-bar-titulo"></span>
+  <div style="width:40px;flex-shrink:0;"></div>
+</div>
 
   <div class="pantalla" id="s1">
     <div class="card">
@@ -1036,9 +1035,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <!-- SUB: Perfil (derby) -->
 <div class="aj-sub" id="aj-sub-perfil">
-  <div class="aj-sub-bar">
-    <button class="top-bar-back" onclick="cerrarAjSub('aj-sub-perfil')"><span class="material-symbols-outlined">arrow_back</span></button>
-    <span class="top-bar-titulo">Mi perfil</span>
+  <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
+    <button class="app-nav-back" onclick="cerrarAjSub('aj-sub-perfil')">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </button>
+    <span class="app-nav-title">Mi perfil</span>
+    <div style="width:40px;flex-shrink:0;"></div>
   </div>
   <div class="aj-sub-inner">
     <div class="datos-campo"><label>Nombre Derby</label><input type="text" id="aj-nombreDerby" placeholder="Ej: Roller Reina"></div>
@@ -1060,9 +1062,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <!-- SUB: Contacto -->
 <div class="aj-sub" id="aj-sub-contacto">
-  <div class="aj-sub-bar">
-    <button class="top-bar-back" onclick="cerrarAjSub('aj-sub-contacto')"><span class="material-symbols-outlined">arrow_back</span></button>
-    <span class="top-bar-titulo">Contacto</span>
+  <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
+    <button class="app-nav-back" onclick="cerrarAjSub('aj-sub-contacto')">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </button>
+    <span class="app-nav-title">Contacto</span>
+    <div style="width:40px;flex-shrink:0;"></div>
   </div>
   <div class="aj-sub-inner">
     <div class="datos-campo">
@@ -1089,9 +1094,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <!-- SUB: Privacidad -->
 <div class="aj-sub" id="aj-sub-privacidad">
-  <div class="aj-sub-bar">
-    <button class="top-bar-back" onclick="cerrarAjSub('aj-sub-privacidad')"><span class="material-symbols-outlined">arrow_back</span></button>
-    <span class="top-bar-titulo">Privacidad</span>
+  <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
+    <button class="app-nav-back" onclick="cerrarAjSub('aj-sub-privacidad')">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </button>
+    <span class="app-nav-title">Privacidad</span>
+    <div style="width:40px;flex-shrink:0;"></div>
   </div>
   <div class="aj-sub-inner">
     <div class="datos-campo">
@@ -1114,9 +1122,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <!-- SUB: Identidad legal -->
 <div class="aj-sub" id="aj-sub-legal">
-  <div class="aj-sub-bar">
-    <button class="top-bar-back" onclick="cerrarAjSub('aj-sub-legal')"><span class="material-symbols-outlined">arrow_back</span></button>
-    <span class="top-bar-titulo">Identidad legal</span>
+  <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
+    <button class="app-nav-back" onclick="cerrarAjSub('aj-sub-legal')">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </button>
+    <span class="app-nav-title">Identidad legal</span>
+    <div style="width:40px;flex-shrink:0;"></div>
   </div>
   <div class="aj-sub-inner">
     <div class="aviso-legal">🔒 <strong>Confidencial.</strong> Solo para trámites legales y emergencias. No es visible para otras participantes.</div>
@@ -1145,9 +1156,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <!-- SUB: Dirección -->
 <div class="aj-sub" id="aj-sub-direccion">
-  <div class="aj-sub-bar">
-    <button class="top-bar-back" onclick="cerrarAjSub('aj-sub-direccion')"><span class="material-symbols-outlined">arrow_back</span></button>
-    <span class="top-bar-titulo">Dirección</span>
+  <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
+    <button class="app-nav-back" onclick="cerrarAjSub('aj-sub-direccion')">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </button>
+    <span class="app-nav-title">Dirección</span>
+    <div style="width:40px;flex-shrink:0;"></div>
   </div>
   <div class="aj-sub-inner">
     <div class="datos-campo"><label>Calle principal</label><input type="text" id="aj-callePrincipal" placeholder="Ej: Av. Amazonas"></div>
@@ -1170,9 +1184,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <!-- SUB: Emergencias -->
 <div class="aj-sub" id="aj-sub-emerg">
-  <div class="aj-sub-bar">
-    <button class="top-bar-back" onclick="cerrarAjSub('aj-sub-emerg')"><span class="material-symbols-outlined">arrow_back</span></button>
-    <span class="top-bar-titulo">Contactos de emergencia</span>
+  <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
+    <button class="app-nav-back" onclick="cerrarAjSub('aj-sub-emerg')">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </button>
+    <span class="app-nav-title">Contactos de emergencia</span>
+    <div style="width:40px;flex-shrink:0;"></div>
   </div>
   <div class="aj-sub-inner">
     <div class="seccion-label">Contacto 1</div>

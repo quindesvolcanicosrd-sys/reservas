@@ -115,7 +115,6 @@
 
 .aj-sub { display:none; position:fixed; inset:0; background:var(--bg); z-index:950; flex-direction:column; overflow:hidden; }
 .aj-sub.activa { display:flex; animation:smoothSlideUp 0.3s cubic-bezier(0.16,1,0.3,1); }
-.aj-sub-bar { display:flex; align-items:center; gap:12px; padding:10px 16px; background:color-mix(in srgb,var(--bg) 85%,transparent); backdrop-filter:blur(12px); border-bottom:1px solid var(--border-light); flex-shrink:0; position:relative; }
 .aj-sub-inner { overflow-y:auto; flex:1; padding:16px; }
 
 .aj-pills-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }

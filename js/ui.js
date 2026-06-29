@@ -104,10 +104,10 @@ function ir(id, desdeHistorial) {
     var topBar = document.getElementById('top-bar'); var topBtn = document.getElementById('top-bar-btn'); var topTitulo = document.getElementById('top-bar-titulo');
   var cfg = TOP_BAR_CONFIG[id];
   if (cfg) {
-    topBar.classList.add('visible'); topTitulo.textContent = typeof cfg.titulo === 'function' ? cfg.titulo() : cfg.titulo;
+    topBar.style.display = 'flex'; topTitulo.textContent = typeof cfg.titulo === 'function' ? cfg.titulo() : cfg.titulo;
     var _volverTarget = typeof cfg.volver === 'function' ? cfg.volver() : cfg.volver;
     if (_volverTarget) { topBtn.style.display = ''; topBtn.onclick = function() { volver(_volverTarget); }; } else { topBtn.style.display = 'none'; }
-  } else { topBar.classList.remove('visible'); }
+  } else { topBar.style.display = 'none'; }
 
   var sinPasos = ['s1','s-home','s-misreservas','s-carga','s6','s-datos','s-gestionar'].concat(ADMIN_PANTALLAS);
   if (E.reagendando) sinPasos = sinPasos.concat(['s4','s5','s-carga-conf']);
