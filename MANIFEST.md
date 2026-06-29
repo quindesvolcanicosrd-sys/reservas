@@ -212,6 +212,7 @@ reservas/
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **inscripcion/index.html + inscripcion/inscripcion.js + inscripcion/inscripcion.css** — Rediseño completo del flujo de inscripción: formulario único → 8 pasos progresivos (Google → foto/fecha → nombre/pronombres → teléfono → patines → talla → protecciones → PIN/WA); nuevas clases CSS: `.insc-nav`, `.insc-nav-back`, `.insc-nav-title`, `.insc-nav-ph`, `.insc-prog`, `.insc-prog-dot`, `.insc-step`, `.insc-scroll`, `.insc-profile-preview`, `.insc-avatar`, `.insc-profile-name`, `.insc-profile-email`, `.insc-tog-row`, `.insc-tog-label`, `.insc-tog-hint`; reutiliza clases de `css/reservas.css`: `.equip-pills-bin`, `.equip-pill-bin`, `.equip-tallas-grid`, `.equip-talla-pill`, `.equip-pills-protec`, `.equip-pill-protec`; reutiliza clases de `css/perfil.css`: `.aj-pill`, `.aj-pill-otro`, `.aj-pills-row`, `.aj-selector-btn`; bottom sheets: `insc-sheet-prefijo`, `insc-sheet-pron`, `insc-sheet-protec`; fecha importada de Google cuando está disponible; date picker como fallback; `inscripcion/index.html` enlaza ahora `../css/reservas.css` y `../css/perfil.css` además de los estilos previos; `inscripcion.js` reescrito con `_INSC_STEPS`, `_INSC_TITLES`, navegación por pasos, API GET local (usa `BACKEND`/`GOOGLE_CLIENT_ID`/`sha256Hex` de `../js/config.js`); función `iniciarDatePicker()` como wrapper de `initDatePickerListeners()`; IDs internos del date-picker modal renombrados: `dp-sel-label`, `dp-dias`, `dp-anios`, `dp-meses`, `dp-mes-label`, `dp-anio-label`
 - **index.html + css/reservas.css + js/reservas.js** — Flujo equipamiento rediseñado con pills: s3a, s3b, s3c usan pills en vez de radio buttons y select; nuevo grid de tallas `.equip-tallas-grid` con `.equip-talla-pill`; bottom sheet `#bs-protec` / `#bs-protec-overlay` para la opción "Otro" en protecciones; nuevas clases CSS en reservas.css: `.equip-pills-bin`, `.equip-pill-bin`, `.equip-pill-ico`, `.equip-pill-label`, `.equip-tallas-grid`, `.equip-talla-pill`, `.equip-pills-protec`, `.equip-pill-protec`, `.equip-pico`, `.equip-ptxt`, `.equip-ptit`, `.equip-psub`, `.equip-pcheck`; funciones nuevas en reservas.js: `selPillBin`, `selPillProtec`, `selTallaEquip`, `abrirBsProtec`, `cerrarBsProtec`, `cancelarOtroProtec`, `confirmarOtroProtec`, `continuar_s3a` (reemplazada), `continuar_s3b` (reemplazada), `continuar_s3c_nuevo` (reemplaza `continuar_s3c`)
 - **css/nav.css (nuevo) + index.html + css/ui.css + css/home.css + css/perfil.css + js/ui.js** — Nav unificada en nav.css: nuevo archivo `css/nav.css` con clases `.app-nav`, `.app-nav-fixed`, `.app-nav-sticky`, `.app-nav-back`, `.app-nav-title`, `.app-nav-actions`, `.app-nav-icon-btn`, `.app-nav-cta`, `.app-nav-avatar`, `.app-nav-section`; `#top-bar` migrado a `.app-nav.app-nav-sticky` con `display:flex/none` en lugar de clase `.visible`; `#home-nav` migrado a `.app-nav.app-nav-fixed` con avatar/section/cta unificados; las 6 `.aj-sub-bar` migradas a `.app-nav` inline en cada sub; eliminados: `.top-bar`, `.top-bar-back`, `.top-bar-titulo` (ui.css), `.home-nav-fixed` y relacionados (home.css), `.aj-sub-bar` (perfil.css); `@keyframes smoothSlideDown` movido a nav.css; `ir()` actualizado a `style.display='flex'/'none'` en lugar de classList
 - **css/perfil.css + index.html + js/perfil.js + js/reservas.js + js/ui.js** — Fix ajustes perfil: `.aj-sub` usa `position:fixed` (z-index 500) en vez de `position:absolute`; bottom sheets (`aj-sheet-prefijo`, `aj-sheet-pais`, `aj-sheet-texto`) movidos fuera del `.card` a `<body>`; toggles de privacidad cambiados de `<select>` a `<input type="checkbox">`; `cerrarSesion()` ahora pasa por `ajAbrirSheetLogout()` con confirmación; nuevas funciones: `_ajFormatearFecha`, `ajAbrirSheetLogout`, `ajCerrarSheetLogout`; nuevo elemento: `aj-sheet-logout`, `aj-sheet-logout-overlay`; back de equipamiento (`s3a`) va a `s-datos` cuando `editandoDesdeHome`; back de `continuar_s3c` va a `s-datos` en lugar de `s-home`
@@ -573,41 +574,62 @@ reservas/
 ### inscripcion/inscripcion.js
 | Función / variable | Descripción |
 |---|---|
-| `BACKEND / GOOGLE_CLIENT_ID / sha256Hex` | Copia local de config (inscripcion no carga js/config.js en producción, lo define aquí) |
-| `G` | Estado del formulario: idToken, email, nombre, foto, fechaNac, permisos, mayorEdad |
-| `PAISES / _paisSel` | Lista de países con código/bandera/longitud de teléfono y país seleccionado activo |
-| `poblarPaises()` | Llena el datalist de países y establece Ecuador por defecto |
-| `onPrefijoInput(inp)` | Detecta el país al escribir en el campo de prefijo y actualiza la bandera |
-| `soloNumeros(inp)` | Elimina todo lo que no sea dígito en el input |
-| `apiPost(params, ok, fail)` | POST local (sin token) al backend para inscripcion |
-| `apiGet(params, ok, fail)` | GET local (sin token) al backend para inscripcion |
-| `desbloquearForm()` | Anima y desbloquea el formulario tras Google Sign-In exitoso |
-| `initGIS()` | Inicializa y renderiza el botón Google Sign-In de inscripcion |
-| `onGoogleCred(resp)` | Callback GIS inscripcion: verifica email disponible y desbloquea el form |
-| `actualizarPreviewPerfil()` | Muestra nombre, inicial y foto del usuario en el preview |
-| `onTogFoto(cb) / onTogFecha(cb)` | Sincroniza G.guardarFoto / G.guardarFecha con el toggle |
-| `MESES_ES` | Array de meses cortos en español (Ene…Dic) para los selects |
-| `poblarSelectFechaNac()` | Llena los selects de día, mes y año de fecha de nacimiento |
-| `obtenerFechaNacISO()` | Lee el hidden input fnac-iso y devuelve el valor ISO |
-| `establecerFechaNacEnSelects(iso)` | Rellena el display de fecha a partir de un string ISO |
-| `onFechaNacSelectChange()` | Sincroniza G.fechaNac y calcula mayoría de edad al cambiar los selects |
-| `calcularMayorEdad(fechaStr)` | Calcula si la persona tiene ≥18 años y actualiza G.mayorEdad |
-| `validarNombreLive(inp)` | Limpia caracteres inválidos y muestra/oculta hint de nombre válido |
-| `toggleOtroPron(cb)` | Muestra/oculta el input libre de pronombres |
-| `selPat(label, val)` | Selecciona opción de patines y muestra/oculta selector de talla |
-| `selProtec(label, val)` | Selecciona opción de protecciones y muestra/oculta input libre |
-| `cargarTallas()` | Carga tallas disponibles desde el backend y las pone en el select |
-| `enviarForm()` | Valida todos los campos y envía la inscripción al backend; al mostrar section-exito oculta `.header`; ya no muestra `btn-wp-grupo-exito`; redirige a la app con `&token=G.idToken` incluido en la URL (ya no valida `_wpUnido`) |
-| `errMsg(id, msg)` | Muestra un error en el elemento id con auto-ocultado a los 6s |
-| `mostrarCargando(msg) / ocultarCargando()` | Overlay de carga con fade de opacidad (diferente al de la app principal) |
-| `abrirContacto() / cerrarContacto()` | Muestra/oculta el modal de contacto de inscripcion |
-| `abrirPickerFecha()` | Llama a abrirDatePicker() (shared) con callback que actualiza fnac-iso y G.fechaNac |
-| `togglePinVisibilityForm()` | Alterna visibilidad del PIN en el formulario de inscripcion |
-| `window.onload` | Pobla países y tallas, inicializa date picker listeners, lanza GIS o procesa token de URL; muestra `#btn-back-inscripcion` si el referrer es el dominio principal o hay token |
-| `#btn-back-inscripcion` | Flecha atrás en el header (inicialmente `display:none`); visible si vino de reservas.quindesvolcanicos.com o con ?token=; usa exactamente el mismo estilo inline que `.top-bar-back` (`background:var(--brand-light)`, ícono `color:var(--brand)`) |
-| `_wpUnido` | Flag booleano que indica si el usuario ya unió al grupo de WhatsApp en esta sesión de inscripción |
-| `wpGrupoUnido()` | Callback del botón de grupo WA en section-exito; marca `_wpUnido=true` y actualiza el botón a estado "unido" |
-| `#btn-wp-grupo-exito` | Botón "Únete al grupo de WhatsApp" en section-exito; aparece a los 1.6s tras registro exitoso |
+| `G` | Estado del formulario: email, idToken, nombre, foto, guardarFoto, fechaNac, mayorEdad, fechaPublica, edadPublica |
+| `_INSC_STEPS` | Array de IDs de los 8 pasos del flujo: `insc-step-1` … `insc-step-6` (incluyendo 5a/5b/5c) |
+| `_INSC_TITLES` | Títulos del nav por paso; actualizados en `_inscRenderProg()` |
+| `_inscCurIdx` | Índice del paso activo |
+| `_inscNecesitaPatines` | Flag: true si el usuario seleccionó "Sí, necesito patines" en 5a |
+| `_inscWpUnido` | Flag: true si el usuario tocó el enlace del grupo de WhatsApp en paso 6 |
+| `_inscProtecOtro` | Texto libre de protecciones personalizado (confirmado en bottom sheet) |
+| `_AJ_PREFIJOS` | Lista de 12 países con `{pais, bandera, cod, min, max}` |
+| `_inscPrefijoSel` | Objeto del país seleccionado activo (por defecto Ecuador) |
+| `ocultarCargando()` | Fade-out opacity del overlay de carga y `display:none` tras 400ms |
+| `mostrarCargando(msg)` | Muestra el overlay de carga con mensaje; actualiza `#loading-msg` |
+| `_inscRenderProg()` | Renderiza los dots de progreso, actualiza el título del nav y muestra/oculta el botón atrás |
+| `inscMostrarPaso(idx)` | Activa el paso `idx` (clase `activo`), desactiva el resto, scrollea arriba |
+| `inscPasoAnterior()` | Vuelve al paso anterior; si está en 5c sin patines, vuelve a 5a |
+| `iniciarGoogleSignIn()` | Inicializa GIS con `GOOGLE_CLIENT_ID` y renderiza el botón en `#gsignin-btn` |
+| `onGoogleCredentialInscripcion(response)` | Callback GIS: verifica email vía `verificarGoogle`, si libre avanza a paso 2 |
+| `_inscPoblarPaso2(res)` | Rellena avatar, nombre y email del paso 2; muestra fecha importada si viene de Google o el date picker si no |
+| `_inscFormatFecha(iso)` | Convierte `YYYY-MM-DD` a `"D de mes de YYYY"` en español |
+| `inscToggleFoto(tog)` | Muestra foto de Google en `#insc-avatar` si el toggle está activo |
+| `abrirPickerFecha()` | Abre el date picker compartido (`abrirDatePicker`) con callback que actualiza `#fnac-iso` y `G.fechaNac` |
+| `inscContinuar2()` | Valida fecha, calcula mayoría de edad, guarda toggles de privacidad y avanza a paso 3 |
+| `inscValidarNombre(inp)` | Limpia caracteres inválidos del input de nombre en tiempo real |
+| `inscTogglePron(el)` | Toggle de clase `activa` en una pill de pronombre |
+| `inscAbrirOtroPron()` | Abre el bottom sheet `insc-sheet-pron` y hace focus en el input |
+| `inscCancelarOtroPron()` | Cierra el sheet de pronombre; desactiva la pill Otro si el input está vacío |
+| `inscConfirmarOtroPron()` | Guarda el pronombre personalizado, activa la pill Otro con su valor y cierra el sheet |
+| `_inscGetPronombres()` | Recorre pills activas y devuelve una cadena separada por coma |
+| `inscContinuar3()` | Valida nombre y pronombres; guarda `G.nombre` y avanza a paso 4 |
+| `inscValidarTel(inp)` | Limpia no-dígitos y valida longitud según `_inscPrefijoSel` en tiempo real |
+| `inscContinuar4()` | Valida teléfono y avanza a paso 5a |
+| `inscAbrirSheetPrefijo()` | Reinicia el filtro y abre el bottom sheet de prefijo |
+| `inscCerrarSheetPrefijo()` | Cierra el bottom sheet de prefijo |
+| `_inscRenderPrefijos(lista)` | Genera los ítems de la lista de países en `#insc-prefijo-list` |
+| `inscFiltrarPrefijos(q)` | Filtra `_AJ_PREFIJOS` por nombre o código y re-renderiza |
+| `inscSelPrefijo(pais)` | Selecciona un país, actualiza `_inscPrefijoSel` y `#insc-prefijo-display`, cierra el sheet |
+| `inscSelBin(el, containerId)` | Selecciona una pill binaria (Sí/No); añade clase `sel-si`/`sel-no`; actualiza `_inscNecesitaPatines` |
+| `inscContinuar5a()` | Si hay selección: si necesita patines va a 5b, si no va a 5c |
+| `_inscCargarTallas()` | Carga tallas via `getTallasDisponibles` y renderiza `.equip-talla-pill` en `#insc-tallas-grid` |
+| `inscSelTalla(el, talla)` | Selecciona una pill de talla y actualiza `#f-talla` |
+| `inscContinuar5b()` | Valida que haya talla seleccionada y avanza a 5c |
+| `inscSelProtec(el)` | Selecciona una pill de protecciones; si val=`Otro` abre el bottom sheet de protecciones |
+| `inscCancelarOtroProtec()` | Cierra el sheet; si el textarea está vacío deselecciona todas las pills |
+| `inscConfirmarOtroProtec()` | Guarda el texto en `_inscProtecOtro`, actualiza el sub-label de la pill y cierra el sheet |
+| `inscContinuar5c()` | Valida que haya protección seleccionada y avanza a paso 6 |
+| `inscWpUnido()` | Marca `_inscWpUnido=true` y cambia el botón de WA a estado `btn-wp-activo` |
+| `inscTogglePinVis()` | Alterna type `password`/`text` en `#f-pin` y cambia el icono |
+| `inscEnviarSinPin()` | Limpia el PIN y llama `inscEnviar()` |
+| `inscEnviar()` | Valida que el usuario se haya unido a WA; recopila todos los datos de `G` y los pasos; llama `inscribirPersona` via `apiGet`; al éxito muestra `#section-exito` y redirige a la app con parámetros `nuevx=1` + `token` |
+| `_inscAbrirSheet(ovId, shId)` | Muestra el overlay y anima el sheet de `translateY(100%)` a `translateY(0)` via doble `requestAnimationFrame` |
+| `_inscCerrarSheet(ovId, shId)` | Regresa el sheet a `translateY(100%)` y oculta overlay y sheet tras 350ms |
+| `errMsg(id, msg)` | Muestra error con auto-ocultado a los 6s |
+| `abrirContacto() / cerrarContacto()` | Muestra/oculta `#modal-contacto-insc` |
+| `iniciarDatePicker()` | Wrapper que llama `initDatePickerListeners()` si la función existe |
+| `onload()` | Inicializa GIS (verifica disponibilidad de `google.accounts`; si no está disponible carga el script dinámicamente) |
+| `apiGet(params, ok, fail)` | GET al backend usando `BACKEND` de `../js/config.js`; sin token de sesión |
+| `window.onload` | Punto de entrada: renderiza prog, carga tallas, inicializa date picker, renderiza prefijos, muestra paso 0, oculta cargando; llama `onload()` para iniciar GIS |
 
 ---
 

@@ -1,476 +1,439 @@
-var G = {
-  idToken:     '',
-  email:       '',
-  nombre:      '',
-  foto:        '',
-  fechaNac:    '',
-  guardarFoto: false,
-  guardarFecha:false,
-  fechaPublica:false,
-  edadPublica: false,
-  mayorEdad:   ''
+/* ══ INSCRIPCIÓN — Flujo por pasos ══════════════════════════════════ */
+
+var G = { email:'', idToken:'', nombre:'', foto:'', guardarFoto:false, fechaNac:'', mayorEdad:false };
+var _INSC_STEPS = ['insc-step-1','insc-step-2','insc-step-3','insc-step-4','insc-step-5a','insc-step-5b','insc-step-5c','insc-step-6'];
+var _INSC_TITLES = ['Inscripción','Tu perfil','Tu identidad','Contacto','Equipamiento','Equipamiento','Equipamiento','Último paso'];
+var _inscCurIdx = 0;
+var _inscNecesitaPatines = false;
+var _inscWpUnido = false;
+var _inscProtecOtro = '';
+var _AJ_PREFIJOS = [
+  {pais:'Ecuador',bandera:'🇪🇨',cod:'+593',min:10,max:10},
+  {pais:'Colombia',bandera:'🇨🇴',cod:'+57',min:10,max:10},
+  {pais:'Perú',bandera:'🇵🇪',cod:'+51',min:9,max:9},
+  {pais:'Venezuela',bandera:'🇻🇪',cod:'+58',min:10,max:10},
+  {pais:'Argentina',bandera:'🇦🇷',cod:'+54',min:10,max:11},
+  {pais:'Chile',bandera:'🇨🇱',cod:'+56',min:9,max:9},
+  {pais:'México',bandera:'🇲🇽',cod:'+52',min:10,max:10},
+  {pais:'España',bandera:'🇪🇸',cod:'+34',min:9,max:9},
+  {pais:'Estados Unidos',bandera:'🇺🇸',cod:'+1',min:10,max:10},
+  {pais:'Uruguay',bandera:'🇺🇾',cod:'+598',min:8,max:9},
+  {pais:'Bolivia',bandera:'🇧🇴',cod:'+591',min:8,max:8},
+  {pais:'Paraguay',bandera:'🇵🇾',cod:'+595',min:9,max:9},
+];
+var _inscPrefijoSel = _AJ_PREFIJOS[0];
+
+/* ── Inicialización ─────────────────────────── */
+window.onload = function() {
+  _inscRenderProg();
+  _inscCargarTallas();
+  iniciarDatePicker();
+  _inscRenderPrefijos(_AJ_PREFIJOS);
+  inscMostrarPaso(0);
+  ocultarCargando();
 };
 
-var PAISES = [
-  { nombre:'Ecuador',flag:'🇪🇨',code:'593',min:10,max:10 },
-  { nombre:'Colombia',flag:'🇨🇴',code:'57',min:10,max:10 },
-  { nombre:'Perú',flag:'🇵🇪',code:'51',min:9,max:9 },
-  { nombre:'Venezuela',flag:'🇻🇪',code:'58',min:10,max:11 },
-  { nombre:'Argentina',flag:'🇦🇷',code:'54',min:10,max:11 },
-  { nombre:'Chile',flag:'🇨🇱',code:'56',min:9,max:9 },
-  { nombre:'Bolivia',flag:'🇧🇴',code:'591',min:8,max:8 },
-  { nombre:'Uruguay',flag:'🇺🇾',code:'598',min:8,max:9 },
-  { nombre:'Paraguay',flag:'🇵🇾',code:'595',min:9,max:9 },
-  { nombre:'México',flag:'🇲🇽',code:'52',min:10,max:10 },
-  { nombre:'España',flag:'🇪🇸',code:'34',min:9,max:9 },
-  { nombre:'Estados Unidos',flag:'🇺🇸',code:'1',min:10,max:10 },
-  { nombre:'Canadá',flag:'🇨🇦',code:'1',min:10,max:10 },
-  { nombre:'Brasil',flag:'🇧🇷',code:'55',min:10,max:11 },
-  { nombre:'Costa Rica',flag:'🇨🇷',code:'506',min:8,max:8 },
-  { nombre:'Panamá',flag:'🇵🇦',code:'507',min:8,max:8 },
-  { nombre:'Guatemala',flag:'🇬🇹',code:'502',min:8,max:8 },
-  { nombre:'Honduras',flag:'🇭🇳',code:'504',min:8,max:8 },
-  { nombre:'El Salvador',flag:'🇸🇻',code:'503',min:8,max:8 },
-  { nombre:'Nicaragua',flag:'🇳🇮',code:'505',min:8,max:8 },
-  { nombre:'Cuba',flag:'🇨🇺',code:'53',min:8,max:8 },
-  { nombre:'República Dominicana',flag:'🇩🇴',code:'1',min:10,max:10 },
-  { nombre:'Puerto Rico',flag:'🇵🇷',code:'1',min:10,max:10 },
-  { nombre:'Alemania',flag:'🇩🇪',code:'49',min:10,max:12 },
-  { nombre:'Francia',flag:'🇫🇷',code:'33',min:9,max:9 },
-  { nombre:'Italia',flag:'🇮🇹',code:'39',min:9,max:11 },
-  { nombre:'Portugal',flag:'🇵🇹',code:'351',min:9,max:9 },
-  { nombre:'Reino Unido',flag:'🇬🇧',code:'44',min:10,max:10 },
-  { nombre:'Países Bajos',flag:'🇳🇱',code:'31',min:9,max:9 },
-  { nombre:'Suiza',flag:'🇨🇭',code:'41',min:9,max:9 },
-  { nombre:'Australia',flag:'🇦🇺',code:'61',min:9,max:9 },
-  { nombre:'Japón',flag:'🇯🇵',code:'81',min:10,max:11 },
-  { nombre:'Israel',flag:'🇮🇱',code:'972',min:9,max:9 },
-  { nombre:'China',flag:'🇨🇳',code:'86',min:11,max:11 }
-];
-var _paisSel = PAISES[0];
-var _wpUnido = false;
-function wpGrupoUnido() {
-  _wpUnido = true;
-  var btn = document.getElementById('btn-wp-grupo-form');
-  if (btn) { btn.style.background = 'rgba(37,211,102,0.25)'; btn.style.fontWeight = '900'; }
-  var enviar = document.getElementById('btn-enviar');
-  if (enviar) { enviar.style.opacity = '1'; enviar.style.pointerEvents = ''; }
+function ocultarCargando() {
+  var ov = document.getElementById('loading-overlay');
+  if (ov) { ov.style.opacity='0'; setTimeout(function(){ ov.style.display='none'; }, 400); }
+}
+function mostrarCargando(msg) {
+  var ov = document.getElementById('loading-overlay');
+  var m = document.getElementById('loading-msg');
+  if (m) m.textContent = msg || 'Cargando...';
+  if (ov) { ov.style.display='flex'; ov.style.opacity='1'; }
 }
 
-function poblarPaises() {
-  var dl = document.getElementById('paises-list');
-  PAISES.forEach(function(p) {
-    var opt = document.createElement('option');
-    opt.value = p.flag + ' ' + p.nombre + ' +' + p.code;
-    dl.appendChild(opt);
-  });
-  document.getElementById('f-prefijo-txt').value = '🇪🇨 Ecuador +593';
-}
-
-function onPrefijoInput(inp) {
-  var q = inp.value.toLowerCase().replace(/\s+/g,' ').trim();
-  var encontrado = PAISES.find(function(p) {
-    return p.nombre.toLowerCase().includes(q) ||
-           ('+' + p.code).includes(q) ||
-           p.code.includes(q.replace('+','')) ||
-           (p.flag + ' ' + p.nombre + ' +' + p.code).toLowerCase() === q;
-  });
-  if (!encontrado) {
-    var opts = document.querySelectorAll('#paises-list option');
-    opts.forEach(function(o) { if (o.value.toLowerCase() === q) {
-      var m = o.value.match(/\+(\d+)/);
-      if (m) encontrado = PAISES.find(function(p) { return p.code === m[1]; });
-    }});
-  }
-  if (encontrado) {
-    _paisSel = encontrado;
-    document.getElementById('pref-flag').textContent = encontrado.flag;
-    document.getElementById('f-prefijo-val').value   = encontrado.flag + ' +' + encontrado.code + ' (' + encontrado.nombre + ')';
-    document.getElementById('f-prefijo-code').value  = encontrado.code;
-    document.getElementById('f-tel-minlen').value    = encontrado.min;
-    var hint = encontrado.nombre + ' → mínimo ' + encontrado.min;
-    if (encontrado.max !== encontrado.min) hint += ', máximo ' + encontrado.max + ' dígitos';
-    else hint += ' dígitos exactos';
-    document.getElementById('pref-hint').textContent = hint;
-  }
-}
-
-function soloNumeros(inp) { inp.value = inp.value.replace(/\D/g,''); }
-
-function apiPost(params, ok, fail) {
-  var body = Object.keys(params).map(function(k) {
-    return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
-  }).join('&');
-  fetch(BACKEND, {
-    method:'POST', mode:'cors',
-    headers:{'Content-Type':'application/x-www-form-urlencoded'},
-    body: body
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(d){ d && d.error ? fail({message:d.error}) : ok(d); })
-  .catch(fail);
-}
-function apiGet(params, ok, fail) {
-  var url = BACKEND + '?' + Object.keys(params).map(function(k){
-    return encodeURIComponent(k)+'='+encodeURIComponent(params[k]);
-  }).join('&');
-  fetch(url, {method:'GET', mode:'cors'})
-  .then(function(r){ return r.json(); })
-  .then(function(d){ d && d.error ? fail({message:d.error}) : ok(d); })
-  .catch(fail);
-}
-
-function desbloquearForm() {
-  var sf = document.getElementById('section-form');
-  sf.classList.remove('form-locked');
-  sf.classList.add('form-unlocked');
-  var div = document.getElementById('divider-form');
-  if (div) { div.style.display = ''; div.style.animation = 'slideUp 0.4s 0.15s both'; }
-}
-
-var _gisReady = false;
-function initGIS() {
-  if (_gisReady) return;
-  if (typeof google === 'undefined') { setTimeout(initGIS, 200); return; }
-  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: onGoogleCred });
-  var cont = document.getElementById('gsignin-btn');
+/* ── Navegación entre pasos ─────────────────── */
+function _inscRenderProg() {
+  var cont = document.getElementById('insc-prog'); if (!cont) return;
+  var total = _INSC_STEPS.length;
   cont.innerHTML = '';
-  google.accounts.id.renderButton(cont, { theme: 'filled_blue', size:'large', text:'signin_with', locale:'es', width:280 });
-  var sk = document.getElementById('gsignin-skeleton');
-  if (sk) { sk.style.opacity = '0'; setTimeout(function(){ sk.style.display = 'none'; }, 400); }
-  _gisReady = true;
-  cont.style.animation = 'fadeInBtn 0.4s ease 0.7s both';
+  for (var i = 0; i < total; i++) {
+    var d = document.createElement('div');
+    d.className = 'insc-prog-dot' + (i < _inscCurIdx ? ' done' : i === _inscCurIdx ? ' active' : '');
+    cont.appendChild(d);
+  }
+  var t = document.getElementById('insc-nav-title');
+  if (t) t.textContent = _INSC_TITLES[_inscCurIdx] || 'Inscripción';
+  var back = document.getElementById('insc-back');
+  var ph = document.getElementById('insc-nav-ph');
+  if (back) back.style.display = _inscCurIdx > 0 ? 'flex' : 'none';
+  if (ph) ph.style.display = _inscCurIdx > 0 ? 'none' : 'block';
 }
 
-function onGoogleCred(resp) {
-  mostrarCargando('Verificando cuenta...');
-  try {
-    var parts   = resp.credential.split('.');
-    var payload = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
-    G.idToken  = resp.credential;
-    G.email    = (payload.email || '').toLowerCase();
-    G.nombre   = (payload.given_name || payload.name || '').split(' ')[0];
-    G.foto     = payload.picture || '';
-    G.fechaNac = payload.birthdate || '';
-  } catch(ex) {
-    ocultarCargando(); errMsg('err-p0','Error al leer el token. Intenta de nuevo.'); return;
-  }
-
-  apiGet({ action:'verificarEmailDisponible', email:G.email }, function(res){
-    ocultarCargando();
-    if (!res.disponible) {
-      errMsg('err-p0','Este correo ya tiene una cuenta registrada ("' + res.nombre + '"). Puedes iniciar sesión directamente en la app.');
-      return;
-    }
-    var gWrap = document.getElementById('gsignin-btn');
-    if (gWrap && gWrap.parentElement) gWrap.parentElement.style.display = 'none';
-    document.getElementById('form-titulo').textContent = 'Completa tu registro';
-    document.getElementById('form-subtitulo').style.display = 'none';
-    actualizarPreviewPerfil();
-    var sp = document.getElementById('section-permisos');
-    sp.classList.add('visible');
-    if (G.nombre) { var fn = document.getElementById('f-nombre'); if (!fn.value) fn.value = G.nombre; }
-    if (G.fechaNac) {
-      establecerFechaNacEnSelects(G.fechaNac);
-      calcularMayorEdad(G.fechaNac);
-    }
-    setTimeout(desbloquearForm, 250);
-  }, function(e){ ocultarCargando(); errMsg('err-p0','Error de conexión: '+e.message); });
-}
-
-function actualizarPreviewPerfil() {
-  document.getElementById('pf-email').textContent = G.email;
-  if (G.nombre) {
-    document.getElementById('pf-name').textContent = G.nombre;
-    document.getElementById('pf-initials').textContent = G.nombre.charAt(0).toUpperCase();
-    if (G.foto) {
-      var img = document.createElement('img');
-      img.src = G.foto; img.className='profile-avatar'; img.alt='';
-      img.id = 'pf-initials';
-      document.getElementById('pf-initials').replaceWith(img);
-    }
-  } else {
-    document.getElementById('pf-initials').textContent = G.email.charAt(0).toUpperCase();
-  }
-}
-
-function onTogFoto(cb)  { G.guardarFoto  = cb.checked; }
-function onTogFecha(cb) { G.guardarFecha = cb.checked; }
-
-var MESES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-
-function poblarSelectFechaNac() {
-  var selD = document.getElementById('fnac-dia');
-  var selM = document.getElementById('fnac-mes');
-  var selA = document.getElementById('fnac-anio');
-  if (!selD || !selM || !selA) return;
-  for (var d = 1; d <= 31; d++) {
-    var od = document.createElement('option');
-    od.value = (d < 10 ? '0' : '') + d; od.textContent = d;
-    selD.appendChild(od);
-  }
-  MESES_ES.forEach(function(nombre, idx) {
-    var om = document.createElement('option');
-    om.value = (idx + 1 < 10 ? '0' : '') + (idx + 1); om.textContent = nombre;
-    selM.appendChild(om);
+function inscMostrarPaso(idx) {
+  _INSC_STEPS.forEach(function(s, i) {
+    var el = document.getElementById(s);
+    if (el) el.classList.toggle('activo', i === idx);
   });
-  var anioActual = new Date().getFullYear();
-  for (var a = anioActual; a >= anioActual - 100; a--) {
-    var oa = document.createElement('option');
-    oa.value = '' + a; oa.textContent = '' + a;
-    selA.appendChild(oa);
+  _inscCurIdx = idx;
+  _inscRenderProg();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function inscPasoAnterior() {
+  if (_INSC_STEPS[_inscCurIdx] === 'insc-step-5c' && !_inscNecesitaPatines) {
+    inscMostrarPaso(_INSC_STEPS.indexOf('insc-step-5a')); return;
+  }
+  inscMostrarPaso(Math.max(_inscCurIdx - 1, 0));
+}
+
+/* ── Google Sign-In ─────────────────────────── */
+function iniciarGoogleSignIn() {
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: onGoogleCredentialInscripcion,
+    context: 'signup'
+  });
+  google.accounts.id.renderButton(document.getElementById('gsignin-btn'), {
+    theme: 'outline', size: 'large', width: document.getElementById('gsignin-btn').offsetWidth || 300
+  });
+  var sk = document.getElementById('gsignin-skeleton');
+  if (sk) setTimeout(function() { sk.style.opacity = '0'; setTimeout(function() { sk.style.display = 'none'; }, 400); }, 800);
+}
+
+function onGoogleCredentialInscripcion(response) {
+  mostrarCargando('Verificando cuenta...');
+  apiGet({ action: 'verificarGoogle', idToken: response.credential }, function(res) {
+    ocultarCargando();
+    if (res.yaRegistrado) { errMsg('err-p1', 'Esta cuenta ya está registrada. Inicia sesión desde la app principal.'); return; }
+    G.email = res.email; G.idToken = response.credential; G.foto = res.foto || '';
+    _inscPoblarPaso2(res);
+    inscMostrarPaso(1);
+  }, function(e) { ocultarCargando(); errMsg('err-p1', 'Error al verificar: ' + (e.message || 'Intenta de nuevo')); });
+}
+
+function _inscPoblarPaso2(res) {
+  var av = document.getElementById('insc-avatar');
+  var nm = document.getElementById('insc-profile-name');
+  var em = document.getElementById('insc-profile-email');
+  if (nm) nm.textContent = res.nombre || res.email;
+  if (em) em.textContent = res.email;
+  if (av) { av.textContent = (res.nombre || res.email || '?').charAt(0).toUpperCase(); }
+  if (res.fechaNac) {
+    var disp = document.getElementById('fecha-importada-display');
+    var btn = document.getElementById('fnac-btn');
+    var hint = document.getElementById('fnac-hint');
+    if (disp) { disp.textContent = 'Importada de Google: ' + _inscFormatFecha(res.fechaNac); disp.style.display = 'block'; }
+    if (btn) btn.style.display = 'none';
+    if (hint) hint.style.display = 'none';
+    document.getElementById('fnac-iso').value = res.fechaNac;
+    G.fechaNac = res.fechaNac;
+  } else {
+    var disp2 = document.getElementById('fecha-importada-display');
+    var btn2 = document.getElementById('fnac-btn');
+    var hint2 = document.getElementById('fnac-hint');
+    if (disp2) disp2.style.display = 'none';
+    if (btn2) btn2.style.display = 'flex';
+    if (hint2) hint2.style.display = 'block';
   }
 }
 
-function obtenerFechaNacISO() {
-  return document.getElementById('fnac-iso').value || '';
+function _inscFormatFecha(iso) {
+  var meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var d = new Date(iso);
+  if (isNaN(d)) return iso;
+  return d.getUTCDate() + ' de ' + meses[d.getUTCMonth()] + ' de ' + d.getUTCFullYear();
 }
 
-function establecerFechaNacEnSelects(iso) {
-  if (!iso) return;
-  document.getElementById('fnac-iso').value = iso;
-  var p = iso.split('-');
-  if (p.length === 3) {
-    var disp = document.getElementById('fnac-display');
-    disp.textContent = parseInt(p[2])+' '+MESES[parseInt(p[1])-1]+' '+p[0];
-    disp.classList.remove('fnac-placeholder');
+/* ── Paso 2: foto y fecha ───────────────────── */
+function inscToggleFoto(tog) {
+  var av = document.getElementById('insc-avatar');
+  G.guardarFoto = tog.checked;
+  if (!av) return;
+  if (tog.checked && G.foto) {
+    av.innerHTML = '<img src="' + G.foto + '" alt="">';
+  } else {
+    av.innerHTML = (G.email || '?').charAt(0).toUpperCase();
   }
 }
 
-function onFechaNacSelectChange() {
-  var iso = obtenerFechaNacISO();
-  if (!iso) return;
-  G.fechaNac = iso;
-  calcularMayorEdad(iso);
+function abrirPickerFecha() {
+  abrirDatePicker(function(isoStr) {
+    document.getElementById('fnac-iso').value = isoStr;
+    G.fechaNac = isoStr;
+    var btn = document.getElementById('fnac-btn');
+    var span = btn ? btn.querySelector('.fnac-placeholder') : null;
+    if (span) { span.textContent = _inscFormatFecha(isoStr); span.style.color = 'var(--text)'; span.style.fontStyle = 'normal'; }
+  });
 }
 
-function calcularMayorEdad(fechaStr) {
-  var fn = new Date(fechaStr);
-  if (isNaN(fn.getTime())) { G.mayorEdad = ''; return; }
-  var hoy = new Date(); hoy.setHours(0,0,0,0);
-  var edad = hoy.getFullYear() - fn.getFullYear();
-  var m = hoy.getMonth() - fn.getMonth();
-  if (m < 0 || (m===0 && hoy.getDate() < fn.getDate())) edad--;
-  G.mayorEdad = edad >= 18 ? 'Sí, declaro ser mayor de 18 años de edad' : 'No, tengo menos de 18 años';
+function inscContinuar2() {
+  var fnac = document.getElementById('fnac-iso').value || G.fechaNac;
+  if (!fnac) { errMsg('err-p2', 'La fecha de nacimiento es obligatoria.'); return; }
+  G.fechaNac = fnac;
+  var d = new Date(fnac);
+  var hoy = new Date();
+  var edad = hoy.getFullYear() - d.getUTCFullYear();
+  G.mayorEdad = edad >= 18;
+  G.guardarFoto = document.getElementById('tog-foto').checked;
+  G.fechaPublica = document.getElementById('tog-fecha-pub').checked ? 'Sí' : 'No';
+  G.edadPublica = document.getElementById('tog-edad-pub').checked ? 'Sí' : 'No';
+  inscMostrarPaso(_INSC_STEPS.indexOf('insc-step-3'));
 }
 
-var _nombreTimer = null;
-function validarNombreLive(inp) {
-  inp.value = inp.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]/g,'');
+/* ── Paso 3: nombre y pronombres ────────────── */
+function inscValidarNombre(inp) {
+  inp.value = inp.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]/g, '');
   var ok = document.getElementById('hint-nombre-ok');
   if (ok) ok.style.display = inp.value.trim().length >= 2 ? 'block' : 'none';
 }
 
-function toggleOtroPron(cb) {
-  document.getElementById('cond-pron-otro').classList.toggle('visible', cb.checked);
+function inscTogglePron(el) {
+  el.classList.toggle('activa');
 }
 
-function selPat(label, val) {
-  document.querySelectorAll('input[name="patines"]').forEach(function(r){ r.closest('.opcion').classList.remove('sel'); });
-  label.classList.add('sel');
-  document.getElementById('cond-talla').classList.toggle('visible', val==='Sí');
-}
-function selProtec(label, val) {
-  document.querySelectorAll('input[name="protec"]').forEach(function(r){ r.closest('.opcion').classList.remove('sel'); });
-  label.classList.add('sel');
-  document.getElementById('cond-protec-otro').classList.toggle('visible', val==='Otro');
+function inscAbrirOtroPron() {
+  _inscAbrirSheet('insc-sheet-pron-overlay', 'insc-sheet-pron');
+  setTimeout(function() { var i = document.getElementById('insc-pron-otro-inp'); if (i) i.focus(); }, 400);
 }
 
-function cargarTallas() {
-  apiGet({action:'getTallasDisponibles'}, function(tallas){
-    var sel = document.getElementById('f-talla');
-    sel.innerHTML = '<option value="">Elige una talla</option>';
-    tallas.forEach(function(t){
-      var o=document.createElement('option'); o.value=o.textContent=t; sel.appendChild(o);
-    });
-  }, function(){ /* silencioso, el backend valida */ });
+function inscCancelarOtroPron() {
+  var v = (document.getElementById('insc-pron-otro-inp').value || '').trim();
+  var otroPill = document.querySelector('#insc-pron-pills .aj-pill-otro');
+  if (!v && otroPill) otroPill.classList.remove('activa');
+  _inscCerrarSheet('insc-sheet-pron-overlay', 'insc-sheet-pron');
 }
 
-function enviarForm() {
-if (!G.idToken) { errMsg('err-form','Primero conecta tu cuenta de Google.'); return; }
-  var nombre = document.getElementById('f-nombre').value.trim();
-  if (!nombre || nombre.length < 2) { errMsg('err-form','El nombre debe tener al menos 2 caracteres.'); document.getElementById('f-nombre').scrollIntoView({behavior:'smooth',block:'center'}); return; }
-  if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]+$/.test(nombre)) { errMsg('err-form','El nombre solo puede contener letras y espacios.'); return; }
+function inscConfirmarOtroPron() {
+  var v = (document.getElementById('insc-pron-otro-inp').value || '').trim();
+  if (!v) return;
+  var otroPill = document.querySelector('#insc-pron-pills .aj-pill-otro');
+  if (otroPill) { otroPill.classList.add('activa'); otroPill.dataset.val = v; }
+  var disp = document.getElementById('insc-pron-otro-display');
+  if (disp) { disp.textContent = 'Otro: ' + v; disp.style.display = 'block'; }
+  _inscCerrarSheet('insc-sheet-pron-overlay', 'insc-sheet-pron');
+}
 
-  var prons = Array.from(document.querySelectorAll('input[name="pron"]:checked'))
-    .map(function(cb){ return cb.value==='Otro' ? document.getElementById('f-pron-otro').value.trim() : cb.value; })
-    .filter(Boolean);
-  if (prons.length === 0) { errMsg('err-form','Selecciona al menos un pronombre.'); return; }
+function _inscGetPronombres() {
+  var vals = [];
+  document.querySelectorAll('#insc-pron-pills .aj-pill.activa').forEach(function(p) {
+    var v = p.dataset.val || p.textContent.trim();
+    if (v && v !== 'Otro...') vals.push(v);
+  });
+  return vals.join(', ');
+}
 
-  var fechaNacISO = obtenerFechaNacISO();
-  if (!fechaNacISO) {
-    errMsg('err-form','La fecha de nacimiento es obligatoria.');
-    document.getElementById('fnac-dia').scrollIntoView({behavior:'smooth',block:'center'});
-    return;
+function inscContinuar3() {
+  var nombre = (document.getElementById('f-nombre').value || '').trim();
+  if (!nombre || nombre.length < 2) { errMsg('err-p3', 'El nombre debe tener al menos 2 caracteres.'); return; }
+  if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]+$/.test(nombre)) { errMsg('err-p3', 'El nombre solo puede contener letras y espacios.'); return; }
+  var prons = _inscGetPronombres();
+  if (!prons) { errMsg('err-p3', 'Selecciona al menos un pronombre.'); return; }
+  G.nombre = nombre;
+  inscMostrarPaso(_INSC_STEPS.indexOf('insc-step-4'));
+}
+
+/* ── Paso 4: teléfono ───────────────────────── */
+function inscValidarTel(inp) {
+  inp.value = inp.value.replace(/\D/g, '');
+  var hint = document.getElementById('insc-tel-hint');
+  var min = _inscPrefijoSel ? _inscPrefijoSel.min : 7;
+  var max = _inscPrefijoSel ? _inscPrefijoSel.max : 15;
+  if (inp.value.length > 0 && (inp.value.length < min || inp.value.length > max)) {
+    inp.style.borderColor = 'var(--danger)';
+    if (hint) { hint.textContent = 'Debe tener entre ' + min + ' y ' + max + ' dígitos para ' + (_inscPrefijoSel ? _inscPrefijoSel.pais : 'este país') + '.'; hint.style.color = 'var(--danger)'; }
+  } else {
+    inp.style.borderColor = '';
+    if (hint) { hint.textContent = 'Sin prefijo ni espacios.'; hint.style.color = ''; }
   }
-  G.fechaNac = fechaNacISO;
-  calcularMayorEdad(G.fechaNac);
-  var tel    = document.getElementById('f-telefono').value.trim();
-  var minLen = parseInt(document.getElementById('f-tel-minlen').value) || 6;
-  var maxLen = _paisSel ? _paisSel.max : 15;
-  if (!tel) { errMsg('err-form','El número de teléfono es obligatorio.'); return; }
-  if (!/^\d+$/.test(tel)) { errMsg('err-form','Solo se permiten números en el teléfono.'); return; }
-  if (tel.length < minLen || tel.length > maxLen) { errMsg('err-form','El número debe tener entre ' + minLen + ' y ' + maxLen + ' dígitos para ' + (_paisSel ? _paisSel.nombre : 'este país') + '.'); return; }
+}
 
-  var patRad = document.querySelector('input[name="patines"]:checked');
-  if (!patRad) { errMsg('err-form','Indica si necesitas patines.'); return; }
-  var patines = patRad.value, talla = '';
-  if (patines === 'Sí') {
-    talla = document.getElementById('f-talla').value;
-    if (!talla) { errMsg('err-form','Selecciona una talla de patines.'); return; }
+function inscContinuar4() {
+  var tel = (document.getElementById('f-telefono').value || '').trim();
+  if (!tel) { errMsg('err-p4', 'El número de teléfono es obligatorio.'); return; }
+  var min = _inscPrefijoSel ? _inscPrefijoSel.min : 7;
+  var max = _inscPrefijoSel ? _inscPrefijoSel.max : 15;
+  if (tel.length < min || tel.length > max) { errMsg('err-p4', 'Número inválido para ' + (_inscPrefijoSel ? _inscPrefijoSel.pais : 'este país') + '.'); return; }
+  inscMostrarPaso(_INSC_STEPS.indexOf('insc-step-5a'));
+}
+
+/* ── Bottom sheet prefijo ────────────────────── */
+function inscAbrirSheetPrefijo() {
+  _inscRenderPrefijos(_AJ_PREFIJOS);
+  _inscAbrirSheet('insc-sheet-prefijo-overlay', 'insc-sheet-prefijo');
+  var s = document.getElementById('insc-prefijo-search'); if (s) s.value = '';
+}
+function inscCerrarSheetPrefijo() { _inscCerrarSheet('insc-sheet-prefijo-overlay', 'insc-sheet-prefijo'); }
+function _inscRenderPrefijos(lista) {
+  var html = lista.map(function(p) {
+    return '<div style="display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--border-light);cursor:pointer;font-size:0.85rem;" onclick="inscSelPrefijo(\'' + p.pais.replace(/'/g,"\\'") + '\')">' +
+      '<span style="font-size:1.2rem;">' + p.bandera + '</span>' +
+      '<span style="flex:1;color:var(--text);font-weight:600;">' + p.pais + '</span>' +
+      '<span style="color:var(--muted);">' + p.cod + '</span>' +
+      '</div>';
+  }).join('');
+  var list = document.getElementById('insc-prefijo-list');
+  if (list) list.innerHTML = html || '<div style="padding:16px;text-align:center;color:var(--muted);">Sin resultados</div>';
+}
+function inscFiltrarPrefijos(q) {
+  var f = _AJ_PREFIJOS.filter(function(p) { return p.pais.toLowerCase().includes(q.toLowerCase()) || p.cod.includes(q); });
+  _inscRenderPrefijos(f);
+}
+function inscSelPrefijo(pais) {
+  var p = _AJ_PREFIJOS.find(function(x) { return x.pais === pais; });
+  if (!p) return;
+  _inscPrefijoSel = p;
+  var disp = document.getElementById('insc-prefijo-display');
+  if (disp) disp.textContent = p.bandera + ' ' + p.cod + ' ' + p.pais;
+  inscCerrarSheetPrefijo();
+}
+
+/* ── Paso 5A: patines ───────────────────────── */
+function inscSelBin(el, containerId) {
+  var container = document.getElementById(containerId); if (!container) return;
+  container.querySelectorAll('.equip-pill-bin').forEach(function(p) { p.classList.remove('sel-si','sel-no'); });
+  var val = el.dataset.val;
+  el.classList.add(val === 'Sí' ? 'sel-si' : 'sel-no');
+  _inscNecesitaPatines = val === 'Sí';
+}
+function inscContinuar5a() {
+  var sel = document.querySelector('#insc-patines-pills .equip-pill-bin.sel-si, #insc-patines-pills .equip-pill-bin.sel-no');
+  if (!sel) { errMsg('err-p5a', 'Selecciona una opción.'); return; }
+  if (_inscNecesitaPatines) { inscMostrarPaso(_INSC_STEPS.indexOf('insc-step-5b')); }
+  else { inscMostrarPaso(_INSC_STEPS.indexOf('insc-step-5c')); }
+}
+
+/* ── Paso 5B: talla ─────────────────────────── */
+function _inscCargarTallas() {
+  var grid = document.getElementById('insc-tallas-grid'); if (!grid) return;
+  apiGet({ action: 'getTallasDisponibles' }, function(tallas) {
+    grid.innerHTML = (tallas || []).map(function(t) {
+      return '<div class="equip-talla-pill" onclick="inscSelTalla(this,\'' + t + '\')">' + t + '</div>';
+    }).join('');
+  }, function() {
+    grid.innerHTML = '<p style="color:var(--danger);font-size:0.82rem;">Error al cargar tallas.</p>';
+  });
+}
+function inscSelTalla(el, talla) {
+  document.querySelectorAll('#insc-tallas-grid .equip-talla-pill').forEach(function(p) { p.classList.remove('sel'); });
+  el.classList.add('sel');
+  document.getElementById('f-talla').value = talla;
+}
+function inscContinuar5b() {
+  if (!document.getElementById('f-talla').value) { errMsg('err-p5b', 'Selecciona una talla.'); return; }
+  inscMostrarPaso(_INSC_STEPS.indexOf('insc-step-5c'));
+}
+
+/* ── Paso 5C: protecciones ──────────────────── */
+function inscSelProtec(el) {
+  document.querySelectorAll('#insc-protec-pills .equip-pill-protec').forEach(function(p) { p.classList.remove('sel'); });
+  el.classList.add('sel');
+  if (el.dataset.val === 'Otro') {
+    setTimeout(function() {
+      _inscAbrirSheet('insc-sheet-protec-overlay', 'insc-sheet-protec');
+      setTimeout(function() { var i = document.getElementById('insc-protec-otro-inp'); if (i) i.focus(); }, 400);
+    }, 150);
   }
+}
+function inscCancelarOtroProtec() {
+  var v = (document.getElementById('insc-protec-otro-inp').value || '').trim();
+  if (!v) document.querySelectorAll('#insc-protec-pills .equip-pill-protec').forEach(function(p) { p.classList.remove('sel'); });
+  _inscCerrarSheet('insc-sheet-protec-overlay', 'insc-sheet-protec');
+}
+function inscConfirmarOtroProtec() {
+  var v = (document.getElementById('insc-protec-otro-inp').value || '').trim();
+  if (!v) return;
+  _inscProtecOtro = v;
+  var sub = document.getElementById('insc-protec-otro-sub');
+  if (sub) { sub.textContent = '"' + v + '"'; sub.style.color = 'var(--brand)'; }
+  _inscCerrarSheet('insc-sheet-protec-overlay', 'insc-sheet-protec');
+}
+function inscContinuar5c() {
+  var sel = document.querySelector('#insc-protec-pills .equip-pill-protec.sel');
+  if (!sel) { errMsg('err-p5c', 'Selecciona una opción.'); return; }
+  inscMostrarPaso(_INSC_STEPS.indexOf('insc-step-6'));
+}
 
-  var protecRad = document.querySelector('input[name="protec"]:checked');
-  if (!protecRad) { errMsg('err-form','Indica si necesitas protecciones.'); return; }
-  var protec = protecRad.value;
-  if (protec === 'Otro') {
-    var otroT = document.getElementById('f-protec-otro').value.trim();
-    if (!otroT) { errMsg('err-form','Describe qué protecciones necesitas.'); return; }
-    protec = otroT;
-  }
-
-  G.guardarFoto  = document.getElementById('tog-foto').checked;
-  G.guardarFecha = document.getElementById('tog-fecha').checked;
-  G.fechaPublica = document.getElementById('tog-fecha-pub').checked;
-  G.edadPublica  = document.getElementById('tog-edad-pub').checked;
-  if (!G.guardarFoto) G.foto = '';
-
-  var pin = (document.getElementById('f-pin') || {}).value || '';
-
+/* ── Paso 6: PIN + WA + envío ───────────────── */
+function inscWpUnido() {
+  _inscWpUnido = true;
+  var btn = document.getElementById('btn-wp-grupo-insc');
+  if (btn) { btn.className = 'btn-wp-activo'; btn.innerHTML = '<span style="font-size:1.2rem;">✅</span> ¡Ya estás en el grupo!'; }
+}
+function inscTogglePinVis() {
+  var inp = document.getElementById('f-pin');
+  var ico = document.getElementById('insc-pin-ico');
+  if (!inp) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  if (ico) ico.textContent = inp.type === 'password' ? 'visibility' : 'visibility_off';
+}
+function inscEnviarSinPin() { document.getElementById('f-pin').value = ''; inscEnviar(); }
+function inscEnviar() {
+  if (!_inscWpUnido) { errMsg('err-p6', 'Por favor únete al grupo de WhatsApp antes de finalizar.'); return; }
+  var nombre = G.nombre;
+  var prons = _inscGetPronombres();
+  var patines = _inscNecesitaPatines ? 'Sí' : 'No';
+  var talla = document.getElementById('f-talla').value || '';
+  var protecSel = document.querySelector('#insc-protec-pills .equip-pill-protec.sel');
+  var protec = protecSel ? (protecSel.dataset.val === 'Otro' ? _inscProtecOtro : protecSel.dataset.val) : '';
+  var tel = (document.getElementById('f-telefono').value || '').trim();
+  var prefVal = _inscPrefijoSel ? _inscPrefijoSel.bandera + ' ' + _inscPrefijoSel.cod + ' (' + _inscPrefijoSel.pais + ')' : '';
+  var pin = (document.getElementById('f-pin').value || '').trim();
+  mostrarCargando('Creando tu cuenta...');
   function _doEnviar(pinHash) {
-    mostrarCargando('Creando tu cuenta...');
     apiGet({
       action:'inscribirPersona', nombre:nombre, email:G.email, idToken:G.idToken,
-      pronombres:prons.join(', '), prefijo:document.getElementById('f-prefijo-val').value,
-      telefono:tel, necesitaPatines:patines, talla:talla, necesitaProtecciones:protec,
+      pronombres:prons, prefijo:prefVal, telefono:tel,
+      necesitaPatines:patines, talla:talla, necesitaProtecciones:protec,
       foto:G.guardarFoto ? G.foto : '',
-      fechaNac:G.guardarFecha ? (G.fechaNac || '') : '',
-      guardarFecha:G.guardarFecha ? 'si' : 'no',
-      fechaPublica:G.fechaPublica ? 'Sí' : 'No',
-      edadPublica:G.edadPublica  ? 'Sí' : 'No',
-      mayorEdad:G.mayorEdad,
-      pinHash: pinHash || ''
-    }, function(res){
+      fechaNac:G.fechaNac, guardarFecha:'si',
+      fechaPublica:G.fechaPublica || 'No', edadPublica:G.edadPublica || 'No',
+      mayorEdad:G.mayorEdad, pinHash:pinHash||''
+    }, function(res) {
       ocultarCargando();
       if (res.exito) {
         document.getElementById('exito-nombre').textContent = nombre;
-        document.getElementById('form-card').style.display = 'none';
-        var ex = document.getElementById('section-exito');
-        ex.style.display = 'flex';
-        ex.style.minHeight = '100vh';
-        ex.style.alignItems = 'center';
-        ex.style.justifyContent = 'center';
-        var _hdr = document.querySelector('.header');
-        if (_hdr) _hdr.style.display = 'none';
-        ex.style.animation = 'slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both';
-        window.scrollTo({top:0,behavior:'smooth'});
-        var _patinesParam = patines === 'Sí' ? 'si' : 'no';
-        var _protecParam  = protec  === 'No' ? 'no' : 'si';
-        var _params = 'nuevx=1'
-          + '&nombre='   + encodeURIComponent(nombre)
-          + '&patines='  + _patinesParam
-          + '&protec='   + _protecParam
-          + (_patinesParam === 'si' && talla ? '&talla=' + encodeURIComponent(talla) : '')
-          + '&token=' + encodeURIComponent(G.idToken || '');
+        document.querySelector('.page-wrap').innerHTML = document.getElementById('section-exito').outerHTML;
+        document.getElementById('section-exito').style.display = 'block';
         setTimeout(function() {
-          var lt = document.getElementById('exito-loader-txt');
-          if (lt) lt.textContent = '¡Listo! Redirigiendo...';
-        }, 1600);
-        setTimeout(function() {
-          window.location.href = 'https://reservas.quindesvolcanicos.com?' + _params;
+          window.location.href = 'https://reservas.quindesvolcanicos.com?nuevx=1&nombre=' + encodeURIComponent(nombre) + '&patines=' + (patines==='Sí'?'si':'no') + '&protec=' + (protec==='No'?'no':'si') + (talla?'&talla='+encodeURIComponent(talla):'') + '&token=' + encodeURIComponent(G.idToken||'');
         }, 2800);
       } else {
-        var msgError = res.error || 'Error al registrarse. Intenta de nuevo.';
-        errMsg('err-form', msgError);
-        window.scrollTo({top:0,behavior:'smooth'});
+        errMsg('err-p6', res.error || 'Error al registrarse. Intenta de nuevo.');
       }
-    }, function(e){
-      ocultarCargando();
-      errMsg('err-form','Error de conexión: ' + e.message);
-    });
+    }, function(e) { ocultarCargando(); errMsg('err-p6', 'Error: ' + (e.message || 'Intenta de nuevo')); });
   }
-
-  function ejecutarEnvio() {
-    if (pin && /^\d{4}$/.test(pin)) {
-      sha256Hex(pin + '|' + nombre).then(function(hash) { _doEnviar(hash); });
-    } else {
-      _doEnviar('');
-    }
-  }
-
-  ejecutarEnvio();
+  if (pin && pin.length === 4) {
+    sha256Hex(pin).then(function(hash) { _doEnviar(hash); }).catch(function() { _doEnviar(''); });
+  } else { _doEnviar(''); }
 }
 
+/* ── Helpers ─────────────────────────────────── */
+function _inscAbrirSheet(ovId, shId) {
+  var ov = document.getElementById(ovId); var sh = document.getElementById(shId);
+  if (ov) ov.style.display = 'block';
+  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform='translateY(0)'; }); }); }
+}
+function _inscCerrarSheet(ovId, shId) {
+  var sh = document.getElementById(shId); var ov = document.getElementById(ovId);
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function(){ if(sh)sh.style.display='none'; if(ov)ov.style.display='none'; }, 350);
+}
 function errMsg(id, msg) {
-  var el = document.getElementById(id);
-  if (!el) return;
+  var el = document.getElementById(id); if (!el) return;
   el.textContent = msg; el.style.display = 'block';
   setTimeout(function(){ el.style.display='none'; }, 6000);
 }
+function abrirContacto() { var m=document.getElementById('modal-contacto-insc'); if(m)m.style.display='flex'; }
+function cerrarContacto() { var m=document.getElementById('modal-contacto-insc'); if(m)m.style.display='none'; }
 
-function mostrarCargando(msg) {
-  var ov  = document.getElementById('loading-overlay');
-  var txt = ov.querySelector('.loading-txt');
-  ov.style.opacity = '0';
-  ov.style.display = 'flex';
-  ov.classList.remove('fade-out');
-  void ov.offsetWidth;
-  ov.style.transition = 'opacity 0.35s ease';
-  ov.style.opacity = '1';
-  if (txt && msg) txt.textContent = msg;
-}
-function ocultarCargando() {
-  var ov = document.getElementById('loading-overlay');
-  ov.style.transition = 'opacity 0.35s ease';
-  ov.style.opacity = '0';
-  setTimeout(function(){
-    ov.style.display = 'none';
-    ov.style.opacity = '';
-    ov.style.transition = '';
-  }, 380);
+/* ── Google GIS init ─────────────────────────── */
+function iniciarDatePicker() {
+  if (typeof initDatePickerListeners === 'function') initDatePickerListeners();
 }
 
-function abrirContacto()  { document.getElementById('modal-contacto').classList.add('visible'); }
-function cerrarContacto() { document.getElementById('modal-contacto').classList.remove('visible'); }
-
-function abrirPickerFecha() {
-  var actual = document.getElementById('fnac-iso').value;
-  var display = '';
-  if (actual) { var p=actual.split('-'); if(p.length===3) display=p[2]+'/'+p[1]+'/'+p[0]; }
-  abrirDatePicker(display, function(val) {
-    var parts = val.split('/');
-    var iso = parts[2]+'-'+parts[1]+'-'+parts[0];
-    document.getElementById('fnac-iso').value = iso;
-    var p = parseFecha(val);
-    var disp = document.getElementById('fnac-display');
-    if (p) { disp.textContent = p.day+' '+MESES[p.month]+' '+p.year; disp.classList.remove('fnac-placeholder'); }
-    G.fechaNac = iso;
-    calcularMayorEdad(iso);
-  });
+function onload() {
+  if (typeof google !== 'undefined' && google.accounts) { iniciarGoogleSignIn(); }
+  else { var s=document.createElement('script'); s.src='https://accounts.google.com/gsi/client'; s.onload=iniciarGoogleSignIn; document.head.appendChild(s); }
 }
 
-function togglePinVisibilityForm() {
-  var inp = document.getElementById('f-pin');
-  var icon = document.getElementById('toggle-pin-icon-form');
-  if (inp.type === 'password') { inp.type = 'tel'; icon.textContent = 'visibility_off'; }
-  else { inp.type = 'password'; icon.textContent = 'visibility'; }
+/* ── API helper (GET como en la app) ─────────── */
+function apiGet(params, ok, fail) {
+  var qs = Object.keys(params).map(function(k){ return encodeURIComponent(k)+'='+encodeURIComponent(params[k]||''); }).join('&');
+  fetch(BACKEND + '?' + qs)
+    .then(function(r){ return r.json(); })
+    .then(function(d){ if(d.error&&fail)fail(new Error(d.error));else if(ok)ok(d); })
+    .catch(function(e){ if(fail)fail(e); });
 }
-
-window.onload = function() {
-  poblarPaises();
-  cargarTallas();
-  initDatePickerListeners();
-  var _urlToken = new URLSearchParams(location.search).get('token');
-  if (_urlToken) {
-    ocultarCargando();
-    onGoogleCred({ credential: _urlToken });
-  } else {
-    initGIS();
-    ocultarCargando();
-  }
-  var _ref = document.referrer;
-  var _btnBack = document.getElementById('btn-back-inscripcion');
-  if (_btnBack && (_ref.includes('reservas.quindesvolcanicos.com') || _urlToken)) {
-    _btnBack.style.display = 'flex';
-  }
-};

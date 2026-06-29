@@ -12,56 +12,32 @@
 <meta name="theme-color" content="#F97316">
 <link rel="stylesheet" href="../css/colors.css">
 <link rel="stylesheet" href="../css/global.css">
+<link rel="stylesheet" href="../css/reservas.css">
+<link rel="stylesheet" href="../css/perfil.css">
 <link rel="stylesheet" href="inscripcion.css">
 </head>
 
 <body>
 
-<!-- ─── LOADING ──────────────────────────────────────────────────────── -->
-<div id="loading-overlay">
+<div id="loading-overlay" style="opacity:1;transition:opacity 0.4s ease;">
   <div class="loading-inner">
-<img src="https://drive.google.com/thumbnail?id=1Os-zGYxwMqiQFmkzyDBk9rjaOWWM0UBo&sz=w600"
-         class="loading-logo" alt="Mirlxs"
-         style="opacity:0;transition:opacity 0.3s ease;"
-         onload="this.style.opacity='1'"
-         onerror="this.style.display='none'">
+    <img src="https://drive.google.com/thumbnail?id=1Os-zGYxwMqiQFmkzyDBk9rjaOWWM0UBo&sz=w600" class="loading-logo" alt="">
     <div class="spinner"></div>
-    <p class="loading-txt">Cargando...</p>
+    <p class="loading-txt" id="loading-msg">Cargando...</p>
   </div>
 </div>
 
-<!-- ─── MODAL CONTACTO ───────────────────────────────────────────────── -->
-<div id="modal-contacto" onclick="if(event.target===this)cerrarContacto()">
-  <div id="modal-ct-inner">
-    <div class="modal-ct-title">Contáctanos</div>
-    <a href="https://wa.me/593998690423" target="_blank" class="modal-ct-link">
-      <span class="material-symbols-outlined" style="color:var(--wa-brand);">forum</span> WhatsApp
-    </a>
-    <a href="https://www.instagram.com/quindesvolcanicosrd/" target="_blank" class="modal-ct-link">
-      <span class="material-symbols-outlined" style="color:var(--instagram);">favorite</span> Instagram
-    </a>
-    <a href="mailto:quindesvolcanicosrd@gmail.com" class="modal-ct-link">
-      <span class="material-symbols-outlined" style="color:var(--brand);">mail</span> Mail
-    </a>
-    <button class="modal-ct-close" onclick="cerrarContacto()">Cerrar</button>
-  </div>
-</div>
-
-<!-- ─── DATE PICKER MODAL ───────────────────────────────────────────── -->
-<div id="date-picker-modal">
+<!-- Date picker compartido -->
+<div id="date-picker-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:16px;">
   <div class="dp-card">
     <div class="dp-header">
       <div class="dp-header-label">Fecha de nacimiento</div>
-      <div class="dp-selected-date" id="dp-selected-label">Sin seleccionar</div>
+      <div class="dp-selected-date" id="dp-sel-label">Sin seleccionar</div>
     </div>
     <div class="dp-nav">
       <div class="dp-nav-chips">
-        <button type="button" class="dp-nav-label" id="dp-month-label">Enero</button>
-        <button type="button" class="dp-nav-label" id="dp-year-label">1990</button>
-      </div>
-      <div id="dp-nav-arrows" style="display:flex;gap:4px;">
-        <button type="button" class="dp-nav-btn" id="dp-prev"><span class="material-symbols-outlined">chevron_left</span></button>
-        <button type="button" class="dp-nav-btn" id="dp-next"><span class="material-symbols-outlined">chevron_right</span></button>
+        <button type="button" class="dp-nav-label" id="dp-mes-label">Enero</button>
+        <button type="button" class="dp-nav-label" id="dp-anio-label">1990</button>
       </div>
     </div>
     <div id="dp-grid-wrap">
@@ -70,241 +46,302 @@
         <div class="dp-day-label">Mi</div><div class="dp-day-label">Ju</div>
         <div class="dp-day-label">Vi</div><div class="dp-day-label">Sa</div>
         <div class="dp-day-label">Do</div>
-        <div id="dp-days" style="display:contents;"></div>
+        <div id="dp-dias" style="display:contents;"></div>
       </div>
     </div>
-    <div id="dp-year-grid" class="dp-year-grid" style="display:none;"></div>
-    <div id="dp-month-grid" class="dp-month-grid" style="display:none;"></div>
-    <div class="dp-error" id="dp-error" style="display:none;"></div>
+    <div id="dp-anios" class="dp-year-grid" style="display:none;"></div>
+    <div id="dp-meses" class="dp-month-grid" style="display:none;"></div>
     <div class="dp-footer">
       <button type="button" class="dp-btn dp-btn-cancel" id="dp-cancel">Cancelar</button>
       <button type="button" class="dp-btn dp-btn-ok" id="dp-ok">OK</button>
     </div>
+    <div class="dp-error" id="dp-error" style="display:none;"></div>
   </div>
 </div>
 
-<!-- ─── CONTENIDO ────────────────────────────────────────────────────── -->
 <div class="page-wrap">
 
-  <div class="header">
-    <a href="https://reservas.quindesvolcanicos.com" id="btn-back-inscripcion" style="display:none;background:var(--brand-light);border-radius:10px;padding:8px;border:none;cursor:pointer;transition:all 0.3s ease;flex-shrink:0;text-decoration:none;">
-      <span class="material-symbols-outlined" style="color:var(--brand);font-size:1.5rem;">arrow_back</span>
-    </a>
-    <span class="header-title">Inscripción al equipo</span>
+  <!-- NAV -->
+  <div class="insc-nav" id="insc-nav">
+    <button class="insc-nav-back" id="insc-back" onclick="inscPasoAnterior()" style="display:none;">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </button>
+    <div class="insc-nav-ph" id="insc-nav-ph"></div>
+    <span class="insc-nav-title" id="insc-nav-title">Inscripción</span>
+    <div class="insc-nav-ph"></div>
   </div>
 
-  <!-- ══ FORMULARIO ÚNICO ══════════════════════════════════════════════ -->
-  <div class="card" id="form-card">
+  <!-- PROGRESS DOTS -->
+  <div class="insc-prog" id="insc-prog"></div>
 
-    <!-- Google Sign-In -->
-    <div id="section-google">
-      <h2 id="form-titulo">Conecta tu cuenta para empezar</h2>
-      <p id="form-subtitulo" style="font-size:0.88rem;color:var(--muted);margin-bottom:4px;line-height:1.5;">
-        Usamos Google para verificar tu correo y evitar registros duplicados.
-      </p>
-      <div style="position:relative;height:44px;width:280px;margin:20px auto 0;">
-  <div id="gsignin-skeleton" style="position:absolute;inset:0;border-radius:4px;background:linear-gradient(90deg,var(--skeleton-base) 25%,var(--skeleton-shine) 50%,var(--skeleton-base) 75%);background-size:200% 100%;animation:skeletonShimmer 1.2s ease-in-out infinite;transition:opacity 0.4s ease;z-index:2;"></div>
-<div class="gsignin-wrap" id="gsignin-btn" style="position:absolute;inset:0;margin:0;"></div>
-</div>
-      <div class="error-msg" id="err-p0"></div>
-    </div>
-
-    <!-- Preview + permisos (aparece tras sign-in) -->
-    <div id="section-permisos" class="campo-cond">
-      <div class="profile-preview" id="profile-preview">
-        <div class="profile-avatar-placeholder" id="pf-initials">?</div>
-        <div class="profile-info-text">
-          <div class="profile-name" id="pf-name">—</div>
-          <div class="profile-email" id="pf-email">—</div>
+  <!-- ── PASO 1: Google ── -->
+  <div class="insc-step" id="insc-step-1">
+    <div class="insc-scroll">
+      <div class="sec-label">Únete al equipo</div>
+      <h2>Conecta tu cuenta de Google</h2>
+      <p style="font-size:0.88rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">Usamos Google para verificar tu correo y evitar registros duplicados.</p>
+      <div class="aviso" style="margin-bottom:20px;">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:flex-start;gap:8px;font-size:0.82rem;line-height:1.5;"><span style="color:var(--success);font-weight:800;flex-shrink:0;">✓</span>Solo lectura — nunca enviaremos spam o correos que no sean notificaciones</div>
+          <div style="display:flex;align-items:flex-start;gap:8px;font-size:0.82rem;line-height:1.5;"><span style="color:var(--success);font-weight:800;flex-shrink:0;">✓</span>No necesitarás contraseña para ingresar</div>
+          <div style="display:flex;align-items:flex-start;gap:8px;font-size:0.82rem;line-height:1.5;"><span style="color:var(--success);font-weight:800;flex-shrink:0;">✓</span>Podrás revocar el acceso en cualquier momento eliminando tu cuenta desde Ajustes</div>
         </div>
       </div>
-      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;line-height:1.5;">
-          ¿Qué quieres que Mirlxs guarde de tu cuenta? Luego podrás cambiar estos ajustes desde Editar mis datos en cualquier momento.
-        </p>
+      <div style="position:relative;height:44px;width:100%;max-width:400px;margin:0 auto;">
+        <div id="gsignin-skeleton" style="position:absolute;inset:0;border-radius:4px;background:linear-gradient(90deg,var(--skeleton-base) 25%,var(--skeleton-shine) 50%,var(--skeleton-base) 75%);background-size:200% 100%;animation:skeletonShimmer 1.2s ease-in-out infinite;z-index:2;"></div>
+        <div class="gsignin-wrap" id="gsignin-btn" style="position:absolute;inset:0;display:flex;justify-content:center;align-items:center;"></div>
+      </div>
+      <div class="error-msg" id="err-p1"></div>
+    </div>
+  </div>
 
-        <div class="perm-box">
-        <div class="perm-row">
-          <div>
-            <div class="perm-label">📸 Foto de perfil</div>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="tog-foto" onchange="onTogFoto(this)">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-        <div class="perm-row">
-          <div>
-            <div class="perm-label">🎂 Fecha de nacimiento</div>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="tog-fecha" onchange="onTogFecha(this)">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-<div class="sub-permisos visible" id="sub-fecha">
-            <div style="padding:12px 16px 10px;border-top:1px solid var(--border);">
-              <label style="font-size:0.74rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:8px;">Fecha de nacimiento <span class="req">*</span></label>
-              <button type="button" class="fnac-trigger-btn" onclick="abrirPickerFecha()">
-                <span id="fnac-display" class="fnac-placeholder">Seleccionar fecha</span>
-                <span class="material-symbols-outlined" style="color:var(--brand);font-size:1.1rem;flex-shrink:0;">edit_calendar</span>
-              </button>
-              <input type="hidden" id="fnac-iso" value="">
-            </div>
-            <div class="sub-perm-row">
-              <label>¿Fecha pública para el equipo?</label>
-            <label class="toggle-switch">
-              <input type="checkbox" id="tog-fecha-pub">
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
-          <div class="sub-perm-row">
-            <label>¿Edad pública para el equipo?</label>
-            <label class="toggle-switch">
-              <input type="checkbox" id="tog-edad-pub">
-              <span class="toggle-slider"></span>
-            </label>
-          </div>
+  <!-- ── PASO 2: Foto y fecha ── -->
+  <div class="insc-step" id="insc-step-2">
+    <div class="insc-scroll">
+      <div class="sec-label">Tu cuenta</div>
+      <h2>Personaliza tu perfil</h2>
+      <div class="insc-profile-preview">
+        <div class="insc-avatar" id="insc-avatar"></div>
+        <div>
+          <div class="insc-profile-name" id="insc-profile-name">—</div>
+          <div class="insc-profile-email" id="insc-profile-email">—</div>
         </div>
       </div>
+      <div class="insc-tog-row">
+        <div><div class="insc-tog-label">Usar foto de Google</div><div class="insc-tog-hint">Como foto de perfil en la app</div></div>
+        <label class="toggle-switch"><input type="checkbox" id="tog-foto" onchange="inscToggleFoto(this)"><span class="toggle-slider"></span></label>
+      </div>
+      <div class="campo" style="margin-top:12px;">
+        <label>Fecha de nacimiento <span style="color:var(--brand);">*</span></label>
+        <div id="fecha-importada-display" style="padding:12px 14px;border-radius:12px;background:var(--disabled-bg-2);color:var(--text-faint);font-size:0.88rem;display:none;"></div>
+        <button type="button" class="fnac-trigger-btn" id="fnac-btn" onclick="abrirPickerFecha()" style="display:none;">
+          <span class="fnac-placeholder" id="fnac-display">Selecciona tu fecha de nacimiento</span>
+          <span class="material-symbols-outlined" style="color:var(--brand);font-size:1.1rem;">calendar_month</span>
+        </button>
+        <input type="hidden" id="fnac-iso">
+        <p class="dato-hint" id="fnac-hint" style="display:none;">Requerida para verificar que eres mayor de 18 años.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+        <div class="insc-tog-row">
+          <div><div class="insc-tog-label">Fecha pública para el equipo</div><div class="insc-tog-hint">Si está activada será visible para el equipo</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="tog-fecha-pub"><span class="toggle-slider"></span></label>
+        </div>
+        <div class="insc-tog-row">
+          <div><div class="insc-tog-label">Edad pública para el equipo</div><div class="insc-tog-hint">Si está activada será visible para el equipo</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="tog-edad-pub"><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+      <div class="error-msg" id="err-p2"></div>
+      <button class="btn btn-primary" style="margin-top:16px;" onclick="inscContinuar2()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
     </div>
+  </div>
 
-    <hr class="divider" id="divider-form" style="margin:28px 0;">
-
-    <!-- Campos (bloqueados hasta sign-in) -->
-    <div id="section-form" class="form-locked">
-
+  <!-- ── PASO 3: Nombre y pronombres ── -->
+  <div class="insc-step" id="insc-step-3">
+    <div class="insc-scroll">
+      <div class="sec-label">Tu identidad</div>
+      <h2>¿Cómo te llamamos?</h2>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:18px;line-height:1.5;">Este nombre aparecerá en tus reservas y comunicaciones del equipo.</p>
       <div class="campo">
-        <label>Nombre <span class="req">*</span></label>
-        <input type="text" id="f-nombre" placeholder="Como quieres que todes te llamen"
-               oninput="validarNombreLive(this)" autocomplete="off">
-        <p class="dato-hint">Solo letras y espacios. Mínimo 2 caracteres.</p>
+        <label>Nombre o nombre derby <span style="color:var(--brand);">*</span></label>
+        <input type="text" id="f-nombre" placeholder="Ej: Roller Reina o María García" oninput="inscValidarNombre(this)">
+        <p class="dato-hint">Mínimo 2 caracteres. Solo letras y espacios.</p>
         <p id="hint-nombre-ok" style="font-size:0.78rem;color:var(--success-dark);margin-top:4px;display:none;">✓ Nombre válido</p>
       </div>
-
       <div class="campo">
-        <label>Pronombres <span class="req">*</span></label>
-        <label class="chk-opcion"><input type="checkbox" name="pron" value="Ella/ella"> Ella/ella</label>
-        <label class="chk-opcion"><input type="checkbox" name="pron" value="Él/él"> Él/él</label>
-        <label class="chk-opcion"><input type="checkbox" name="pron" value="Elle/elle"> Elle/elle</label>
-        <label class="chk-opcion">
-          <input type="checkbox" name="pron" value="Otro" onchange="toggleOtroPron(this)"> Otro
-        </label>
-        <div class="campo-cond" id="cond-pron-otro">
-          <input type="text" id="f-pron-otro" placeholder="Ej: Xe/xem">
+        <label>Pronombres <span style="color:var(--brand);">*</span></label>
+        <div class="aj-pills-row" id="insc-pron-pills">
+          <span class="aj-pill" data-val="Ella/ella" onclick="inscTogglePron(this)">Ella</span>
+          <span class="aj-pill" data-val="Él/él" onclick="inscTogglePron(this)">Él</span>
+          <span class="aj-pill" data-val="Elle/elle" onclick="inscTogglePron(this)">Elle</span>
+          <span class="aj-pill aj-pill-otro" data-val="" onclick="inscAbrirOtroPron()">Otro...</span>
         </div>
+        <p class="dato-hint" style="margin-top:6px;">Selecciona todos los que apliquen.</p>
+        <div id="insc-pron-otro-display" style="display:none;margin-top:8px;font-size:0.78rem;color:var(--brand);"></div>
+      </div>
+      <div class="error-msg" id="err-p3"></div>
+      <button class="btn btn-primary" onclick="inscContinuar3()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+    </div>
+  </div>
+
+  <!-- ── PASO 4: Teléfono ── -->
+  <div class="insc-step" id="insc-step-4">
+    <div class="insc-scroll">
+      <div class="sec-label">Contacto</div>
+      <h2>¿Cómo te contactamos?</h2>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:18px;line-height:1.5;">Lo usaremos solo para avisos importantes del equipo.</p>
+      <div class="campo">
+        <label>Código de país <span style="color:var(--brand);">*</span></label>
+        <button type="button" class="aj-selector-btn" onclick="inscAbrirSheetPrefijo()">
+          <span id="insc-prefijo-display">Selecciona</span>
+          <span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--muted);">expand_more</span>
+        </button>
       </div>
       <div class="campo">
-        <label>País <span class="req">*</span></label>
-        <div class="prefijo-wrap">
-          <div class="prefijo-flag" id="pref-flag">🇪🇨</div>
-          <input type="text" id="f-prefijo-txt" list="paises-list"
-                 placeholder="Ecuador +593 o busca tu país"
-                 oninput="onPrefijoInput(this)" autocomplete="off">
-          <input type="hidden" id="f-prefijo-val" value="🇪🇨 +593 (Ecuador)">
-          <input type="hidden" id="f-prefijo-code" value="593">
-          <input type="hidden" id="f-tel-minlen" value="10">
-          <datalist id="paises-list"></datalist>
-        </div>
-        <p class="dato-hint" id="pref-hint">Ecuador → mínimo 10 dígitos</p>
+        <label>Número de teléfono <span style="color:var(--brand);">*</span></label>
+        <input type="tel" id="f-telefono" placeholder="Ej: 0991234567" oninput="inscValidarTel(this)">
+        <p class="dato-hint" id="insc-tel-hint">Sin prefijo ni espacios.</p>
       </div>
+      <div class="error-msg" id="err-p4"></div>
+      <button class="btn btn-primary" onclick="inscContinuar4()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+    </div>
+  </div>
 
-      <div class="campo">
-        <label>Número de teléfono <span class="req">*</span></label>
-        <input type="tel" id="f-telefono" placeholder="Ej: 0991234567"
-               oninput="soloNumeros(this)" inputmode="numeric">
-        <p class="dato-hint">Sin prefijo ni espacios.</p>
-      </div>
-
-      <div class="campo">
-        <label>¿Necesitas patines prestados? <span class="req">*</span></label>
-        <div class="opciones">
-          <label class="opcion" onclick="selPat(this,'Sí')">
-            <input type="radio" name="patines" value="Sí"> Sí, necesito patines
-          </label>
-          <label class="opcion" onclick="selPat(this,'No')">
-            <input type="radio" name="patines" value="No"> No, tengo mis propios patines
-          </label>
+  <!-- ── PASO 5A: Patines ── -->
+  <div class="insc-step" id="insc-step-5a">
+    <div class="insc-scroll">
+      <div class="sec-label">Equipamiento — 1/3</div>
+      <h2>¿Necesitas patines prestados?</h2>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:20px;line-height:1.5;">Selecciona si necesitas que te prestemos patines para entrenar.</p>
+      <div class="equip-pills-bin" id="insc-patines-pills">
+        <div class="equip-pill-bin" data-val="Sí" onclick="inscSelBin(this,'insc-patines-pills')">
+          <span class="material-symbols-outlined equip-pill-ico">roller_skating</span>
+          <span class="equip-pill-label">Sí, necesito</span>
         </div>
-        <div class="campo-cond" id="cond-talla">
-          <div class="campo" style="margin-bottom:0;padding-top:2px;">
-            <label>Talla de patines <span class="req">*</span></label>
-            <div class="select-wrap">
-              <select id="f-talla"><option value="">Elige una talla</option></select>
-            </div>
+        <div class="equip-pill-bin" data-val="No" onclick="inscSelBin(this,'insc-patines-pills')">
+          <span class="material-symbols-outlined equip-pill-ico">check_circle</span>
+          <span class="equip-pill-label">Tengo los míos</span>
+        </div>
+      </div>
+      <div class="error-msg" id="err-p5a"></div>
+      <button class="btn btn-primary" onclick="inscContinuar5a()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+    </div>
+  </div>
+
+  <!-- ── PASO 5B: Talla ── -->
+  <div class="insc-step" id="insc-step-5b">
+    <div class="insc-scroll">
+      <div class="sec-label">Equipamiento — 2/3</div>
+      <h2>¿Qué talla necesitas?</h2>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:18px;line-height:1.5;">Solo aparecen las tallas disponibles en el equipo.</p>
+      <div class="equip-tallas-grid" id="insc-tallas-grid"></div>
+      <p class="dato-hint" style="margin-bottom:16px;">Las tallas en gris están agotadas.</p>
+      <input type="hidden" id="f-talla">
+      <div class="error-msg" id="err-p5b"></div>
+      <button class="btn btn-primary" onclick="inscContinuar5b()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+    </div>
+  </div>
+
+  <!-- ── PASO 5C: Protecciones ── -->
+  <div class="insc-step" id="insc-step-5c">
+    <div class="insc-scroll">
+      <div class="sec-label">Equipamiento — 3/3</div>
+      <h2>¿Necesitas protecciones?</h2>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:18px;line-height:1.5;">Protecciones completas incluyen casco, rodilleras, coderas y muñequeras.</p>
+      <div class="equip-pills-protec" id="insc-protec-pills">
+        <div class="equip-pill-protec" data-val="Sí" onclick="inscSelProtec(this)">
+          <span class="material-symbols-outlined equip-pico">shield</span>
+          <div class="equip-ptxt"><div class="equip-ptit">Sí, necesito protecciones completas</div></div>
+          <div class="equip-pcheck"><span class="material-symbols-outlined">check</span></div>
+        </div>
+        <div class="equip-pill-protec" data-val="No" onclick="inscSelProtec(this)">
+          <span class="material-symbols-outlined equip-pico">check_circle</span>
+          <div class="equip-ptxt"><div class="equip-ptit">No, tengo las mías</div></div>
+          <div class="equip-pcheck"><span class="material-symbols-outlined">check</span></div>
+        </div>
+        <div class="equip-pill-protec" data-val="Otro" id="insc-protec-otro-pill" onclick="inscSelProtec(this)">
+          <span class="material-symbols-outlined equip-pico">help_outline</span>
+          <div class="equip-ptxt">
+            <div class="equip-ptit">Tengo algunas, me faltan otras</div>
+            <div class="equip-psub" id="insc-protec-otro-sub">Toca para especificar</div>
           </div>
+          <div class="equip-pcheck"><span class="material-symbols-outlined">check</span></div>
         </div>
       </div>
+      <div class="error-msg" id="err-p5c"></div>
+      <button class="btn btn-primary" onclick="inscContinuar5c()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+    </div>
+  </div>
 
-      <div class="campo">
-        <label>¿Necesitas protecciones? <span class="req">*</span></label>
-        <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;line-height:1.5;">
-          Casco, rodilleras, coderas y muñequeras.
-        </p>
-        <div class="opciones">
-          <label class="opcion" onclick="selProtec(this,'Sí')">
-            <input type="radio" name="protec" value="Sí"> Sí, necesito protecciones completas
-          </label>
-          <label class="opcion" onclick="selProtec(this,'No')">
-            <input type="radio" name="protec" value="No"> No, tengo mis propias protecciones
-          </label>
-          <label class="opcion" onclick="selProtec(this,'Otro')">
-            <input type="radio" name="protec" value="Otro"> Otro (tengo algunas pero me faltan otras)
-          </label>
-        </div>
-        <div class="campo-cond" id="cond-protec-otro">
-          <input type="text" id="f-protec-otro"
-                 placeholder="Ej: Tengo casco pero me faltan rodilleras y coderas"
-                 style="margin-top:4px;">
-        </div>
+  <!-- ── PASO 6: PIN + WA ── -->
+  <div class="insc-step" id="insc-step-6">
+    <div class="insc-scroll">
+      <div class="sec-label">Último paso</div>
+      <h2>¡Ya casi estás!</h2>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:16px;line-height:1.5;">Crea un PIN opcional para ingresar sin Google, y únete al grupo del equipo.</p>
+      <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;background:var(--surface-2);border:1px solid var(--border-light);color:var(--muted);font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px;">
+        <span class="material-symbols-outlined" style="font-size:0.85rem;">lock</span>PIN — Opcional
       </div>
-
-      <div class="campo" style="margin-top:20px;">
-        <label>PIN de acceso <span style="font-size:0.78rem;font-weight:400;color:var(--hint);text-transform:none;letter-spacing:0;">(opcional)</span></label>
-        <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;line-height:1.5;">
-          Crea un PIN de 4 dígitos para poder ingresar sin Google. Útil si usás un dispositivo compartido o sin tu cuenta de google.
-        </p>
-        <div style="position:relative;">
-          <input type="password" id="f-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4"
-                 placeholder="• • • •"
-                 style="text-align:center;font-size:1.6rem;letter-spacing:6px;padding-left:44px;padding-right:44px;"
-                 oninput="this.value=this.value.replace(/\D/g,'').slice(0,4)">
-          <button type="button" onclick="togglePinVisibilityForm()"
-                  style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;line-height:1;">
-            <span class="material-symbols-outlined" id="toggle-pin-icon-form">visibility</span>
-          </button>
-        </div>
+      <div style="position:relative;margin-bottom:6px;">
+        <input type="password" id="f-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+          placeholder="• • • •"
+          style="text-align:center;font-size:1.8rem;letter-spacing:8px;padding-left:50px;padding-right:50px;width:100%;">
+        <button type="button" onclick="inscTogglePinVis()"
+          style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;">
+          <span class="material-symbols-outlined" id="insc-pin-ico">visibility</span>
+        </button>
       </div>
-
-      <div class="error-msg" id="err-form"></div>
-      <a class="btn-wp-grupo" href="https://chat.whatsapp.com/FPupGnd1c9g1oVXu9VudKK" target="_blank">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.845L.057 23.571a.75.75 0 0 0 .92.921l5.763-1.473A11.943 11.943 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.006-1.374l-.36-.214-3.713.949.981-3.625-.235-.374A9.818 9.818 0 1 1 12 21.818z"/>
-        </svg>
-        Únete al grupo
-      </a>
-      <button class="btn btn-primary" id="btn-enviar" onclick="enviarForm()" style="margin-top:8px;">
-        Inscribirme
-      </button>
-
-    </div><!-- /section-form -->
-  </div><!-- /form-card -->
-
-<!-- TRANSICIÓN ÉXITO → RESERVA -->
-  <div id="section-exito" style="display:none;">
-    <div class="card" style="text-align:center;padding:52px 24px;">
-      <div id="exito-check" style="font-size:4rem;margin-bottom:16px;">✅</div>
-      <div class="exito-title">¡Bienvenidx, <span id="exito-nombre" class="exito-nombre"></span>!</div>
-      <p class="exito-sub" style="margin-bottom:28px;">Tu cuenta fue creada con éxito.</p>
-      <div class="spinner" style="margin:0 auto 14px;"></div>
-      <p id="exito-loader-txt" style="font-size:0.85rem;color:var(--muted);font-weight:600;">Preparando tu primera reserva...</p>
-      <a href="https://chat.whatsapp.com/FPupGnd1c9g1oVXu9VudKK" target="_blank" id="btn-wp-grupo-exito" style="display:none;margin-top:20px;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;background:var(--wa-bg);color:var(--success-dark);border-radius:12px;font-weight:800;font-size:0.88rem;text-decoration:none;">
+      <p class="dato-hint" style="text-align:center;margin-bottom:16px;">4 dígitos. Puedes omitirlo e ingresar siempre con Google.</p>
+      <div style="height:1px;background:var(--border-light);margin:14px 0;"></div>
+      <div style="font-size:0.88rem;font-weight:700;color:var(--text);margin-bottom:4px;">Únete al equipo en WhatsApp</div>
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:12px;line-height:1.5;">Ahí compartimos avisos, fotos y noticias del equipo.</p>
+      <a id="btn-wp-grupo-insc" href="https://chat.whatsapp.com/FPupGnd1c9g1oVXu9VudKK" target="_blank"
+        onclick="inscWpUnido()" class="btn-wp-inactivo" style="margin-bottom:14px;display:flex;">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.845L.057 23.571a.75.75 0 0 0 .92.921l5.763-1.473A11.943 11.943 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.006-1.374l-.36-.214-3.713.949.981-3.625-.235-.374A9.818 9.818 0 1 1 12 21.818z"/></svg>
         Únete al grupo de WhatsApp
       </a>
+      <div style="height:1px;background:var(--border-light);margin:14px 0;"></div>
+      <div class="error-msg" id="err-p6"></div>
+      <button class="btn btn-primary" onclick="inscEnviar()">Completar inscripción <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">check</span></button>
+      <button class="btn btn-secondary" onclick="inscEnviarSinPin()" style="margin-top:10px;">Omitir PIN y finalizar</button>
     </div>
   </div>
-</div><!-- /page-wrap -->
+
+  <!-- ── ÉXITO ── -->
+  <div id="section-exito" style="display:none;text-align:center;padding:40px 20px;">
+    <div style="font-size:4rem;margin-bottom:16px;">🎉</div>
+    <h2 style="margin-bottom:8px;">¡Bienvenidx al equipo!</h2>
+    <p id="exito-nombre" style="font-size:1.1rem;font-weight:800;color:var(--brand);margin-bottom:12px;"></p>
+    <p style="color:var(--muted);font-size:0.88rem;line-height:1.6;margin-bottom:20px;">Tu cuenta fue creada con éxito. En un momento te redirigiremos a la app para hacer tu primera reserva.</p>
+    <div id="exito-loader-txt" style="font-size:0.78rem;color:var(--muted);">Redirigiendo...</div>
+  </div>
+
+</div><!-- end page-wrap -->
+
+<!-- BOTTOM SHEET: Prefijo -->
+<div id="insc-sheet-prefijo-overlay" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);" onclick="inscCerrarSheetPrefijo()"></div>
+<div id="insc-sheet-prefijo" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9601;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;max-height:75vh;flex-direction:column;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
+  <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 4px;flex-shrink:0;"></div>
+  <div style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:8px 16px 12px;border-bottom:1px solid var(--border-light);flex-shrink:0;">Código de país</div>
+  <input type="text" id="insc-prefijo-search" placeholder="Buscar país o código..." style="margin:12px 16px;padding:10px 14px;background:var(--surface-2);border:1.5px solid var(--border-light);border-radius:10px;font-size:0.85rem;font-family:inherit;width:calc(100% - 32px);flex-shrink:0;" oninput="inscFiltrarPrefijos(this.value)">
+  <div id="insc-prefijo-list" style="overflow-y:auto;flex:1;"></div>
+</div>
+
+<!-- BOTTOM SHEET: Pronombre otro -->
+<div id="insc-sheet-pron-overlay" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);" onclick="inscCancelarOtroPron()"></div>
+<div id="insc-sheet-pron" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9601;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;padding:0 0 32px;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
+  <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 4px;"></div>
+  <div style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:8px 16px 12px;border-bottom:1px solid var(--border-light);">Pronombre personalizado</div>
+  <div style="padding:16px;">
+    <input type="text" id="insc-pron-otro-inp" style="width:100%;padding:13px 16px;background:var(--surface-2);border:1.5px solid var(--brand);border-radius:12px;font-size:0.88rem;font-family:inherit;" placeholder="Ej: Xe/xem, Xo...">
+    <button onclick="inscConfirmarOtroPron()" style="width:100%;padding:13px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-top:10px;">Confirmar</button>
+    <button onclick="inscCancelarOtroPron()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:none;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
+  </div>
+</div>
+
+<!-- BOTTOM SHEET: Protecciones otro -->
+<div id="insc-sheet-protec-overlay" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);" onclick="inscCancelarOtroProtec()"></div>
+<div id="insc-sheet-protec" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9601;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;padding:0 0 32px;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
+  <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 4px;"></div>
+  <div style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:8px 16px 12px;border-bottom:1px solid var(--border-light);">Especifica qué necesitas</div>
+  <div style="padding:16px;">
+    <textarea id="insc-protec-otro-inp" style="width:100%;min-height:80px;padding:13px 16px;background:var(--surface-2);border:1.5px solid var(--brand);border-radius:12px;font-size:0.88rem;font-family:inherit;resize:none;outline:none;" placeholder="Ej: Tengo casco pero me faltan rodilleras y coderas"></textarea>
+    <p style="font-size:0.72rem;color:var(--muted);margin-top:6px;margin-bottom:14px;">Cuéntanos qué protecciones necesitas y buscaremos cómo ayudarte.</p>
+    <button onclick="inscConfirmarOtroProtec()" style="width:100%;padding:13px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;">Confirmar</button>
+    <button onclick="inscCancelarOtroProtec()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:none;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
+  </div>
+</div>
+
+<!-- Modal contacto -->
+<div id="modal-contacto-insc" style="display:none;position:fixed;inset:0;z-index:9500;background:var(--overlay);align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarContacto()">
+  <div style="background:var(--white);border-radius:20px;padding:28px 20px;width:85%;max-width:320px;text-align:center;">
+    <div style="font-weight:800;font-size:0.95rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:20px;">Contáctanos</div>
+    <a href="https://wa.me/593998690423" target="_blank" style="display:flex;align-items:center;gap:12px;background:var(--surface-light);border-radius:12px;padding:14px 16px;margin-bottom:10px;text-decoration:none;color:var(--neutral-dark);font-weight:700;font-size:0.95rem;"><span class="material-symbols-outlined" style="color:var(--wa-brand);">forum</span>WhatsApp</a>
+    <a href="https://www.instagram.com/quindesvolcanicosrd/" target="_blank" style="display:flex;align-items:center;gap:12px;background:var(--surface-light);border-radius:12px;padding:14px 16px;margin-bottom:10px;text-decoration:none;color:var(--neutral-dark);font-weight:700;font-size:0.95rem;"><span class="material-symbols-outlined" style="color:var(--instagram);">favorite</span>Instagram</a>
+    <a href="mailto:quindesvolcanicosrd@gmail.com" style="display:flex;align-items:center;gap:12px;background:var(--surface-light);border-radius:12px;padding:14px 16px;margin-bottom:16px;text-decoration:none;color:var(--neutral-dark);font-weight:700;font-size:0.95rem;"><span class="material-symbols-outlined" style="color:var(--brand);">mail</span>Mail</a>
+    <button onclick="document.getElementById('modal-contacto-insc').style.display='none'" style="width:100%;padding:12px;background:var(--disabled-bg);border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">Cerrar</button>
+  </div>
+</div>
 
 <script src="../js/config.js"></script>
 <script src="../shared/date-picker.js"></script>
