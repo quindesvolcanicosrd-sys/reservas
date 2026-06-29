@@ -106,8 +106,8 @@ function _renderHomeReservas() {
   var labelMisRes = document.getElementById('label-mis-reservas');
   var verHistBtn = document.querySelector('[onclick="irMisReservas()"]');
 
-  if (activas.length === 0) {
-    if (homeNav) homeNav.style.display = 'none';
+  if (homeNav) homeNav.style.display = activas.length > 0 ? 'flex' : 'none';
+  if (homeNavSpacer) homeNavSpacer.style.display = activas.length > 0 ? '' : 'none';
     if (homeNavSpacer) homeNavSpacer.style.display = 'none';
     if (labelMisRes) labelMisRes.style.display = 'none';
     if (verHistBtn) verHistBtn.style.display = 'none';
@@ -645,9 +645,7 @@ function _initHomeNav() {
   var nav = document.getElementById('home-nav');
   var spacer = document.getElementById('home-nav-spacer');
   if (!nav) return;
-  var _hoyNav = new Date(); _hoyNav.setHours(0,0,0,0);
-  var _clNav = _clasificarReservas(_todasReservas || [], _hoyNav);
-  nav.style.display = _clNav.activas.length > 0 ? 'flex' : 'none';
+  // display controlado exclusivamente por _renderHomeReservas
 
   nav.style.top = '0';
   if (spacer) spacer.style.height = (nav.offsetHeight + 8) + 'px';
