@@ -101,10 +101,7 @@ function ir(id, desdeHistorial) {
     }, 600);
   }
 
-  var homeNav = document.getElementById('home-nav');
-  if (homeNav) homeNav.style.display = id === 's-home' ? 'flex' : 'none';
-
-  var topBar = document.getElementById('top-bar'); var topBtn = document.getElementById('top-bar-btn'); var topTitulo = document.getElementById('top-bar-titulo');
+    var topBar = document.getElementById('top-bar'); var topBtn = document.getElementById('top-bar-btn'); var topTitulo = document.getElementById('top-bar-titulo');
   var cfg = TOP_BAR_CONFIG[id];
   if (cfg) {
     topBar.classList.add('visible'); topTitulo.textContent = typeof cfg.titulo === 'function' ? cfg.titulo() : cfg.titulo;
