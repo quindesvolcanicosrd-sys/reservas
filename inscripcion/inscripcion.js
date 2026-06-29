@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
     iniciarDatePicker();
     _inscRenderPrefijos(_AJ_PREFIJOS);
     inscMostrarPaso(0);
+    _inscIniciarGoogleSignIn();
   } catch(e) {
     console.error('[INSC] Error en init:', e);
   } finally {
@@ -429,7 +430,7 @@ function iniciarDatePicker() {
   if (typeof initDatePickerListeners === 'function') initDatePickerListeners();
 }
 
-function onload() {
+function _inscIniciarGoogleSignIn() {
   if (typeof google !== 'undefined' && google.accounts) { iniciarGoogleSignIn(); }
   else { var s=document.createElement('script'); s.src='https://accounts.google.com/gsi/client'; s.onload=iniciarGoogleSignIn; document.head.appendChild(s); }
 }
