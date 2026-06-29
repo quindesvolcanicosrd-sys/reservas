@@ -645,7 +645,9 @@ function _initHomeNav() {
   var nav = document.getElementById('home-nav');
   var spacer = document.getElementById('home-nav-spacer');
   if (!nav) return;
-  nav.style.display = 'flex';
+  var _hoyNav = new Date(); _hoyNav.setHours(0,0,0,0);
+  var _clNav = _clasificarReservas(_todasReservas || [], _hoyNav);
+  nav.style.display = _clNav.activas.length > 0 ? 'flex' : 'none';
 
   nav.style.top = '0';
   if (spacer) spacer.style.height = (nav.offsetHeight + 8) + 'px';
