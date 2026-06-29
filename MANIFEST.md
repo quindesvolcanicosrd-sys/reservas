@@ -212,6 +212,7 @@ reservas/
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **index.html + css/reservas.css + js/reservas.js** — Flujo equipamiento rediseñado con pills: s3a, s3b, s3c usan pills en vez de radio buttons y select; nuevo grid de tallas `.equip-tallas-grid` con `.equip-talla-pill`; bottom sheet `#bs-protec` / `#bs-protec-overlay` para la opción "Otro" en protecciones; nuevas clases CSS en reservas.css: `.equip-pills-bin`, `.equip-pill-bin`, `.equip-pill-ico`, `.equip-pill-label`, `.equip-tallas-grid`, `.equip-talla-pill`, `.equip-pills-protec`, `.equip-pill-protec`, `.equip-pico`, `.equip-ptxt`, `.equip-ptit`, `.equip-psub`, `.equip-pcheck`; funciones nuevas en reservas.js: `selPillBin`, `selPillProtec`, `selTallaEquip`, `abrirBsProtec`, `cerrarBsProtec`, `cancelarOtroProtec`, `confirmarOtroProtec`, `continuar_s3a` (reemplazada), `continuar_s3b` (reemplazada), `continuar_s3c_nuevo` (reemplaza `continuar_s3c`)
 - **css/nav.css (nuevo) + index.html + css/ui.css + css/home.css + css/perfil.css + js/ui.js** — Nav unificada en nav.css: nuevo archivo `css/nav.css` con clases `.app-nav`, `.app-nav-fixed`, `.app-nav-sticky`, `.app-nav-back`, `.app-nav-title`, `.app-nav-actions`, `.app-nav-icon-btn`, `.app-nav-cta`, `.app-nav-avatar`, `.app-nav-section`; `#top-bar` migrado a `.app-nav.app-nav-sticky` con `display:flex/none` en lugar de clase `.visible`; `#home-nav` migrado a `.app-nav.app-nav-fixed` con avatar/section/cta unificados; las 6 `.aj-sub-bar` migradas a `.app-nav` inline en cada sub; eliminados: `.top-bar`, `.top-bar-back`, `.top-bar-titulo` (ui.css), `.home-nav-fixed` y relacionados (home.css), `.aj-sub-bar` (perfil.css); `@keyframes smoothSlideDown` movido a nav.css; `ir()` actualizado a `style.display='flex'/'none'` en lugar de classList
 - **css/perfil.css + index.html + js/perfil.js + js/reservas.js + js/ui.js** — Fix ajustes perfil: `.aj-sub` usa `position:fixed` (z-index 500) en vez de `position:absolute`; bottom sheets (`aj-sheet-prefijo`, `aj-sheet-pais`, `aj-sheet-texto`) movidos fuera del `.card` a `<body>`; toggles de privacidad cambiados de `<select>` a `<input type="checkbox">`; `cerrarSesion()` ahora pasa por `ajAbrirSheetLogout()` con confirmación; nuevas funciones: `_ajFormatearFecha`, `ajAbrirSheetLogout`, `ajCerrarSheetLogout`; nuevo elemento: `aj-sheet-logout`, `aj-sheet-logout-overlay`; back de equipamiento (`s3a`) va a `s-datos` cuando `editandoDesdeHome`; back de `continuar_s3c` va a `s-datos` en lugar de `s-home`
 - **index.html + css/perfil.css + js/perfil.js + js/ui.js** — Rediseño completo de s-datos → "Ajustes del perfil": nueva estructura con hero de perfil clickeable + sub-pantallas posicionadas absolutas (`.aj-sub`) para cada sección: `aj-sub-perfil`, `aj-sub-contacto`, `aj-sub-privacidad`, `aj-sub-legal`, `aj-sub-direccion`, `aj-sub-emerg`; bottom sheets: `aj-sheet-prefijo`, `aj-sheet-pais`, `aj-sheet-texto`; nuevo sistema de pills (`.aj-pill`, `.aj-pill-otro`, `.activa`, `.activa-outline`) en lugar de selects; `irEditarDatos()` reescrita para poblar resumen en la pantalla principal en lugar de llenar inputs; `irEditarPerfil()` abre sub via `irAjSub()`; funciones eliminadas: `guardarSeccion`, `toggleSeccion`, `toggleOtroSelect`, `toggleOtroCheckbox`, `cargarSelect`, `guardarEquipPerfil`; funciones nuevas: `irAjSub`, `cerrarAjSub`, `ajSinglePill`, `ajTogglePill`, `ajAbrirOtroPron`, `ajAbrirSheetTexto`, `ajCerrarSheetTexto`, `ajConfirmarSheetTexto`, `ajSetPillOtro`, `ajAbrirSheetPrefijo`, `ajAbrirSheetPrefijoTarget`, `ajCerrarSheetPrefijo`, `ajSelPrefijo`, `ajFiltrarPrefijos`, `ajAbrirSheetPais`, `ajCerrarSheetPais`, `ajSelPais`, `ajSelPaisOtro`, `ajValidarTel`, `ajGuardarPerfil`, `ajGuardarContacto`, `ajGuardarPrivacidad`, `ajGuardarLegal`, `ajGuardarDireccion`, `ajGuardarEmerg`, `_ajGuardar`, `_ajCargarSub`, `_ajActivarPill`, `_ajCargarPronombres`, `_ajGetPronombres`, `_ajGetSinglePill`, `_ajSetPrefijo`, `_ajRenderPrefijos`, `_getSessionToken`; variables nuevas: `_AJ_PREFIJOS`, `_AJ_PAISES`, `_ajPaisActual`, `_ajPrefijoTarget`, `_ajSheetTextoCallback`; nuevas clases CSS en perfil.css: `.aj-*` (hero, group, row, icon, pill, selector-btn, sub, app-row, btn-logout, btn-delete); prefijo `d-` de IDs de inputs reemplazado por `aj-` en s-datos
@@ -316,6 +317,13 @@ reservas/
 | `#sheet-gestionar-overlay` | Overlay oscuro detrás del bottom sheet de gestión; `onclick` cierra el sheet |
 | `#sheet-gestionar` | Bottom sheet de gestión de reserva (dos estados: opciones y cancelar); se abre animado desde abajo; `#sg-sheet-subtitulo` muestra fecha/hora/lugar |
 | `#modal-confirm-reagendar` | Modal bottom-sheet de confirmación de reagendamiento; se abre desde `confirmarCambioFecha()`; muestra fecha, pills hora/lugar y equipo; botón confirmar llama `ejecutarReagendamiento()` |
+| `#bs-protec-overlay` | Overlay oscuro del bottom sheet de protecciones personalizadas; `onclick` cancela |
+| `#bs-protec` | Bottom sheet para especificar protecciones parciales ("Otro"); contiene `#bs-protec-input` (textarea), Confirmar y Cancelar |
+| `#s3a-pills` | Contenedor de pills binarias (Sí/No patines) en s3a |
+| `#tallas-grid` | Grid de `.equip-talla-pill` generado dinámicamente en s3b con tallas de la API |
+| `#s3c-pills` | Contenedor de pills de protecciones en s3c |
+| `#pill-protec-otro` | Pill "Tengo algunas, me faltan otras" en s3c; abre bs-protec al seleccionarse |
+| `#protec-otro-sub` | Sub-label de la pill Otro; se actualiza con el texto confirmado tras cerrar bs-protec |
 
 ---
 
@@ -412,9 +420,16 @@ reservas/
 | `renderEquip()` | Renderiza el resumen de equipamiento en s2 |
 | `fila(label, val)` | Helper que genera HTML de una fila de resumen |
 | `continuar_s2()` | Valida confirmación de equipamiento y navega a s3a o s4 |
-| `continuar_s3a()` | Guarda selección de patines en E y navega a s3b o s3c |
-| `continuar_s3b()` | Guarda talla de patines en E y navega a s3c |
-| `continuar_s3c()` | Guarda protecciones en E y navega a cargarFechas |
+| `selPillBin(el, containerId, hiddenId)` | Selecciona una pill binaria (Sí/No) en flujo equipamiento; actualiza E.editPat y el hidden input |
+| `selPillProtec(el)` | Selecciona una pill de protecciones; abre bottom sheet bs-protec si val==='Otro' |
+| `selTallaEquip(el, talla)` | Selecciona una talla en el grid de s3b; actualiza E.editTalla y #sel-talla |
+| `abrirBsProtec()` | Abre el bottom sheet de protecciones personalizadas con animación |
+| `cerrarBsProtec()` | Cierra el bottom sheet con animación translateY(100%) |
+| `cancelarOtroProtec()` | Cancela el bottom sheet; si el textarea está vacío, deselecciona la pill |
+| `confirmarOtroProtec()` | Guarda el texto libre como E.editProtec y actualiza el sub-label de la pill |
+| `continuar_s3a()` | Valida E.editPat; si Sí carga tallas vía API y renderiza grid en s3b; si No salta a s3c |
+| `continuar_s3b()` | Valida #sel-talla; guarda E.editTalla y navega a s3c |
+| `continuar_s3c_nuevo()` | Valida E.editProtec; guarda equipamiento vía API y navega según editandoDesdeHome |
 | `canPayMonthly()` | True si el usuario no necesita equipo prestado (habilita pago mensual) |
 | `necesitaEquipo()` | Inverso de canPayMonthly() |
 | `actualizarTextosPago()` | Actualiza textos de s4 y s-pago según tipo de pago y reagendamiento |

@@ -120,3 +120,37 @@
   .fi-pill-fin  { color: var(--dk-info-text); }
 }
 
+/* ── Pills flujo equipamiento ────────────────── */
+.equip-pills-bin { display:flex; gap:10px; margin-bottom:24px; }
+.equip-pill-bin { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:20px 10px; border-radius:16px; border:1.5px solid var(--border-light); background:var(--surface-2); cursor:pointer; transition:all 0.15s; user-select:none; }
+.equip-pill-ico { font-size:1.8rem; color:var(--muted); }
+.equip-pill-label { font-size:0.82rem; font-weight:700; color:var(--muted); text-align:center; }
+.equip-pill-bin:hover { border-color:var(--brand); background:var(--brand-light); }
+.equip-pill-bin.sel-si { border-color:var(--success); background:var(--success-bg); }
+.equip-pill-bin.sel-si .equip-pill-ico { color:var(--success); }
+.equip-pill-bin.sel-si .equip-pill-label { color:var(--success-dark); }
+.equip-pill-bin.sel-no { border-color:var(--brand); background:var(--brand-light); }
+.equip-pill-bin.sel-no .equip-pill-ico { color:var(--brand); }
+.equip-pill-bin.sel-no .equip-pill-label { color:var(--brand); }
+
+.equip-tallas-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:8px; }
+.equip-talla-pill { display:flex; align-items:center; justify-content:center; padding:14px 6px; border-radius:12px; border:1.5px solid var(--border-light); background:var(--surface-2); cursor:pointer; font-size:0.88rem; font-weight:700; color:var(--muted); transition:all 0.15s; user-select:none; }
+.equip-talla-pill:hover { border-color:var(--brand); color:var(--brand); }
+.equip-talla-pill.sel { border-color:var(--brand); background:var(--brand-light); color:var(--brand); }
+.equip-talla-pill.agotada { opacity:0.35; cursor:not-allowed; pointer-events:none; }
+
+.equip-pills-protec { display:flex; flex-direction:column; gap:8px; margin-bottom:24px; }
+.equip-pill-protec { display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:14px; border:1.5px solid var(--border-light); background:var(--surface-2); cursor:pointer; transition:all 0.15s; user-select:none; }
+.equip-pico { font-size:1.2rem; color:var(--muted); flex-shrink:0; }
+.equip-ptxt { flex:1; }
+.equip-ptit { font-size:0.82rem; font-weight:700; color:var(--muted); }
+.equip-psub { font-size:0.68rem; color:var(--border-light); margin-top:2px; }
+.equip-pcheck { width:22px; height:22px; border-radius:50%; border:2px solid var(--border-light); flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.equip-pcheck .material-symbols-outlined { font-size:14px; color:transparent; }
+.equip-pill-protec:hover { border-color:var(--brand); }
+.equip-pill-protec.sel { border-color:var(--brand); background:var(--brand-light); }
+.equip-pill-protec.sel .equip-pico { color:var(--brand); }
+.equip-pill-protec.sel .equip-ptit { color:var(--brand); }
+.equip-pill-protec.sel .equip-pcheck { background:var(--brand); border-color:var(--brand); }
+.equip-pill-protec.sel .equip-pcheck .material-symbols-outlined { color:var(--white); }
+

@@ -36,16 +36,103 @@ function continuar_s2() {
   }
 }
 
+/* ── Pills equipamiento ─────────────────────── */
+function selPillBin(el, containerId, hiddenId) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  container.querySelectorAll('.equip-pill-bin').forEach(function(p) {
+    p.classList.remove('sel-si', 'sel-no');
+  });
+  var val = el.dataset.val;
+  el.classList.add(val === 'Sí' ? 'sel-si' : 'sel-no');
+  E.editPat = val;
+  var hidden = document.getElementById(hiddenId + '-val');
+  if (hidden) hidden.value = val;
+}
+
+function selPillProtec(el) {
+  document.querySelectorAll('#s3c-pills .equip-pill-protec').forEach(function(p) {
+    p.classList.remove('sel');
+  });
+  el.classList.add('sel');
+  var val = el.dataset.val;
+  if (val === 'Otro') {
+    setTimeout(abrirBsProtec, 150);
+  } else {
+    E.editProtec = val;
+    document.getElementById('edit-protec-val').value = val;
+    var sub = document.getElementById('protec-otro-sub');
+    if (sub) { sub.textContent = 'Toca para especificar'; sub.style.color = ''; }
+  }
+}
+
+function abrirBsProtec() {
+  var ov = document.getElementById('bs-protec-overlay');
+  var bs = document.getElementById('bs-protec');
+  if (ov) ov.style.display = 'block';
+  if (bs) {
+    bs.style.display = 'block';
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() { bs.style.transform = 'translateY(0)'; });
+    });
+    setTimeout(function() {
+      var inp = document.getElementById('bs-protec-input');
+      if (inp) inp.focus();
+    }, 400);
+  }
+}
+
+function cerrarBsProtec() {
+  var bs = document.getElementById('bs-protec');
+  var ov = document.getElementById('bs-protec-overlay');
+  if (bs) bs.style.transform = 'translateY(100%)';
+  setTimeout(function() {
+    if (bs) bs.style.display = 'none';
+    if (ov) ov.style.display = 'none';
+  }, 350);
+}
+
+function cancelarOtroProtec() {
+  cerrarBsProtec();
+  var inp = document.getElementById('bs-protec-input');
+  if (inp && !inp.value.trim()) {
+    document.querySelectorAll('#s3c-pills .equip-pill-protec').forEach(function(p) {
+      p.classList.remove('sel');
+    });
+    E.editProtec = '';
+  }
+}
+
+function confirmarOtroProtec() {
+  var v = (document.getElementById('bs-protec-input').value || '').trim();
+  if (!v) return;
+  E.editProtec = v;
+  document.getElementById('edit-protec-val').value = v;
+  var sub = document.getElementById('protec-otro-sub');
+  if (sub) { sub.textContent = '"' + v + '"'; sub.style.color = 'var(--brand)'; }
+  cerrarBsProtec();
+}
+
 function continuar_s3a() {
   if (!E.editPat) { err('err-s3a', 'Por favor selecciona una opción.'); return; }
   if (E.editPat === 'Sí') {
     mostrarCargando('Cargando tallas...');
     api({ action: 'getTallasDisponibles' }, function(tallas) {
-      var sel = document.getElementById('sel-talla'); sel.innerHTML = '<option value="">Elige una talla</option>';
-      tallas.forEach(function(t) { var o = document.createElement('option'); o.value = o.textContent = t; sel.appendChild(o); });
+      var grid = document.getElementById('tallas-grid');
+      grid.innerHTML = tallas.map(function(t) {
+        return '<div class="equip-talla-pill" onclick="selTallaEquip(this,\'' + t + '\')">' + t + '</div>';
+      }).join('');
+      document.getElementById('sel-talla').value = '';
       ocultarCargando(); ir('s3b');
     }, function(e) { ocultarCargando(); err('err-s3a', 'Error: ' + e.message); });
   } else { E.editTalla = ''; ir('s3c'); }
+}
+
+function selTallaEquip(el, talla) {
+  document.querySelectorAll('#tallas-grid .equip-talla-pill').forEach(function(p) { p.classList.remove('sel'); });
+  el.classList.add('sel');
+  document.getElementById('sel-talla').value = talla;
+  E.editTalla = talla;
 }
 
 function continuar_s3b() {
@@ -54,18 +141,16 @@ function continuar_s3b() {
   E.editTalla = t; ir('s3c');
 }
 
-function continuar_s3c() {
-  if (!E.editProtec) { err('err-s3c', 'Por favor selecciona una opción.'); return; }
+function continuar_s3c_nuevo() {
   var protecFinal = E.editProtec;
-  if (protecFinal === 'Otro') {
-    var txt = document.getElementById('txt-otro').value.trim();
-    if (!txt) { err('err-s3c', 'Por favor describe qué necesitas.'); return; }
-    protecFinal = txt;
-  }
+  if (!protecFinal) { err('err-s3c', 'Por favor selecciona una opción.'); return; }
   mostrarCargando('Guardando equipamiento...');
   api({ action: 'actualizarEquipamientoPersona', nombre: E.nombre, necesitaPatines: E.editPat, talla: E.editTalla, necesitaProtecciones: protecFinal }, function() {
-    ocultarCargando(); E.datos.necesitaPatines = E.editPat; E.datos.talla = E.editTalla; E.datos.necesitaProtecciones = protecFinal; E.conf = '';
-    document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
+    ocultarCargando();
+    E.datos.necesitaPatines = E.editPat;
+    E.datos.talla = E.editTalla;
+    E.datos.necesitaProtecciones = protecFinal;
+    E.editProtec = '';
     if (E.editandoDesdeHome) { E.editandoDesdeHome = false; ir('s-datos'); } else { cargarFechas(); }
   }, function(e) { ocultarCargando(); err('err-s3c', 'Error al guardar: ' + e.message); });
 }

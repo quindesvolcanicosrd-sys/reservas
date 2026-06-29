@@ -206,44 +206,66 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
   <div class="pantalla" id="s3a">
     <div class="card">
-      <div class="seccion-label">Editar equipamiento — 1/3</div>
+      <div class="seccion-label">Equipamiento — 1/3</div>
       <h2>¿Necesitas patines prestados?</h2>
-      <div class="opciones">
-        <label class="opcion" onclick="selOp(this,'edit-pat','Sí')"><input type="radio" name="edit-pat" value="Sí"> Sí, necesito patines</label>
-        <label class="opcion" onclick="selOp(this,'edit-pat','No')"><input type="radio" name="edit-pat" value="No"> No, tengo mis propios patines</label>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:22px;">Selecciona si necesitas que te prestemos patines para entrenar.</p>
+      <div class="equip-pills-bin" id="s3a-pills">
+        <div class="equip-pill-bin" data-val="Sí" onclick="selPillBin(this,'s3a-pills','edit-pat')">
+          <span class="material-symbols-outlined equip-pill-ico">roller_skating</span>
+          <span class="equip-pill-label">Sí, necesito</span>
+        </div>
+        <div class="equip-pill-bin" data-val="No" onclick="selPillBin(this,'s3a-pills','edit-pat')">
+          <span class="material-symbols-outlined equip-pill-ico">check_circle</span>
+          <span class="equip-pill-label">Tengo los míos</span>
+        </div>
       </div>
+      <input type="hidden" name="edit-pat" id="edit-pat-val">
       <div class="error-msg" id="err-s3a"></div>
       <button class="btn btn-primary" onclick="continuar_s3a()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
-
     </div>
   </div>
 
   <div class="pantalla" id="s3b">
     <div class="card">
-      <div class="seccion-label">Editar equipamiento — 2/3</div>
+      <div class="seccion-label">Equipamiento — 2/3</div>
       <h2>¿Qué talla necesitas?</h2>
-      <p>Estas son las tallas disponibles en el equipo.</p>
-      <div class="select-wrapper"><select id="sel-talla"><option value="">Elige una talla</option></select></div>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:20px;">Solo aparecen las tallas disponibles en el equipo.</p>
+      <div class="equip-tallas-grid" id="tallas-grid"></div>
+      <p style="font-size:0.7rem;color:var(--muted);margin-bottom:18px;margin-top:4px;">Las tallas en gris están agotadas para los próximos entrenamientos.</p>
+      <input type="hidden" id="sel-talla">
       <div class="error-msg" id="err-s3b"></div>
       <button class="btn btn-primary" onclick="continuar_s3b()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
-
     </div>
   </div>
 
   <div class="pantalla" id="s3c">
     <div class="card">
-      <div class="seccion-label">Editar equipamiento — 3/3</div>
+      <div class="seccion-label">Equipamiento — 3/3</div>
       <h2>¿Necesitas protecciones?</h2>
-      <p>Protecciones completas incluyen: Casco, Rodilleras, Coderas y Muñequeras.</p>
-      <div class="opciones">
-        <label class="opcion" onclick="selOp(this,'edit-protec','Sí')"><input type="radio" name="edit-protec" value="Sí"> Sí, necesito protecciones completas</label>
-        <label class="opcion" onclick="selOp(this,'edit-protec','No')"><input type="radio" name="edit-protec" value="No"> No, tengo mis propias protecciones</label>
-        <label class="opcion" onclick="selOp(this,'edit-protec','Otro')"><input type="radio" name="edit-protec" value="Otro"> Otro (especifica abajo)</label>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:22px;">Protecciones completas incluyen casco, rodilleras, coderas y muñequeras.</p>
+      <div class="equip-pills-protec" id="s3c-pills">
+        <div class="equip-pill-protec" data-val="Sí" onclick="selPillProtec(this)">
+          <span class="material-symbols-outlined equip-pico">shield</span>
+          <div class="equip-ptxt"><div class="equip-ptit">Sí, necesito protecciones completas</div></div>
+          <div class="equip-pcheck"><span class="material-symbols-outlined">check</span></div>
+        </div>
+        <div class="equip-pill-protec" data-val="No" onclick="selPillProtec(this)">
+          <span class="material-symbols-outlined equip-pico">check_circle</span>
+          <div class="equip-ptxt"><div class="equip-ptit">No, tengo las mías</div></div>
+          <div class="equip-pcheck"><span class="material-symbols-outlined">check</span></div>
+        </div>
+        <div class="equip-pill-protec" data-val="Otro" id="pill-protec-otro" onclick="selPillProtec(this)">
+          <span class="material-symbols-outlined equip-pico">help_outline</span>
+          <div class="equip-ptxt">
+            <div class="equip-ptit">Tengo algunas, me faltan otras</div>
+            <div class="equip-psub" id="protec-otro-sub">Toca para especificar</div>
+          </div>
+          <div class="equip-pcheck"><span class="material-symbols-outlined">check</span></div>
+        </div>
       </div>
-      <textarea class="textarea-otro" id="txt-otro" placeholder="Ej: Tengo casco pero me faltan rodilleras y coderas"></textarea>
+      <input type="hidden" id="edit-protec-val">
       <div class="error-msg" id="err-s3c"></div>
-      <button class="btn btn-primary" onclick="continuar_s3c()">Guardar y Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
-
+      <button class="btn btn-primary" onclick="continuar_s3c_nuevo()">Guardar y continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
     </div>
   </div>
 
@@ -1272,6 +1294,18 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div style="padding:16px 16px 0;display:flex;flex-direction:column;gap:10px;">
     <button onclick="cerrarSesion()" style="width:100%;padding:13px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;"><span class="material-symbols-outlined" style="font-size:1.1rem;">logout</span>Sí, cerrar sesión</button>
     <button onclick="ajCerrarSheetLogout()" style="width:100%;padding:12px;background:transparent;border:1px solid var(--border-light);border-radius:12px;color:var(--muted);font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;">Cancelar</button>
+  </div>
+</div>
+
+<div id="bs-protec-overlay" style="display:none;position:fixed;inset:0;z-index:9700;background:var(--overlay-dark);" onclick="cancelarOtroProtec()"></div>
+<div id="bs-protec" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9701;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
+  <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 6px;"></div>
+  <div style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:6px 16px 14px;border-bottom:1px solid var(--border-light);">Especifica qué necesitas</div>
+  <div style="padding:16px 16px 28px;">
+    <textarea id="bs-protec-input" style="width:100%;min-height:80px;padding:12px 14px;background:var(--surface-2);border:1.5px solid var(--brand);border-radius:12px;color:var(--text);font-size:0.85rem;font-family:inherit;resize:none;outline:none;line-height:1.5;" placeholder="Ej: Tengo casco pero me faltan rodilleras y coderas"></textarea>
+    <p style="font-size:0.7rem;color:var(--muted);margin-top:6px;margin-bottom:14px;line-height:1.4;">Cuéntanos qué protecciones necesitas y buscaremos cómo ayudarte.</p>
+    <button onclick="confirmarOtroProtec()" style="width:100%;padding:13px;background:var(--brand);border:none;border-radius:12px;color:var(--white);font-size:0.85rem;font-weight:800;cursor:pointer;font-family:inherit;">Confirmar</button>
+    <button onclick="cancelarOtroProtec()" style="width:100%;padding:10px;background:transparent;border:none;color:var(--muted);font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
   </div>
 </div>
 
