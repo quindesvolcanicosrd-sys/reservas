@@ -25,12 +25,17 @@ var _inscPrefijoSel = _AJ_PREFIJOS[0];
 
 /* ── Inicialización ─────────────────────────── */
 window.onload = function() {
-  _inscRenderProg();
-  _inscCargarTallas();
-  iniciarDatePicker();
-  _inscRenderPrefijos(_AJ_PREFIJOS);
-  inscMostrarPaso(0);
-  ocultarCargando();
+  try {
+    _inscRenderProg();
+    _inscCargarTallas();
+    iniciarDatePicker();
+    _inscRenderPrefijos(_AJ_PREFIJOS);
+    inscMostrarPaso(0);
+  } catch(e) {
+    console.error('[INSC] Error en init:', e);
+  } finally {
+    ocultarCargando();
+  }
 };
 
 function ocultarCargando() {
