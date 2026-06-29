@@ -204,9 +204,16 @@ function _poblarResumenEquipPerfil() {
 
 function irEditarEquipDesdeHome() {
   E.editPat = ''; E.editTalla = ''; E.editProtec = ''; E.editandoDesdeHome = true;
-  document.querySelectorAll('input[name="edit-pat"],input[name="edit-protec"]').forEach(function(r) {
-    r.checked = false; r.closest('.opcion').classList.remove('sel');
+  document.querySelectorAll('#s3a-pills .equip-pill-bin').forEach(function(p) {
+    p.classList.remove('sel-si','sel-no');
   });
+  document.querySelectorAll('#s3c-pills .equip-pill-protec').forEach(function(p) {
+    p.classList.remove('sel');
+  });
+  var sub = document.getElementById('protec-otro-sub');
+  if (sub) { sub.textContent = 'Toca para especificar'; sub.style.color = ''; }
+  var bsInp = document.getElementById('bs-protec-input');
+  if (bsInp) bsInp.value = '';
   ir('s3a');
 }
 
