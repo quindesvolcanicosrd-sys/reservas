@@ -106,8 +106,8 @@ function _renderHomeReservas() {
   var labelMisRes = document.getElementById('label-mis-reservas');
   var verHistBtn = document.querySelector('[onclick="irMisReservas()"]');
 
-  if (homeNav) homeNav.style.display = activas.length > 0 ? 'flex' : 'none';
-  if (homeNavSpacer) homeNavSpacer.style.display = activas.length > 0 ? '' : 'none';
+  if (activas.length === 0) {
+    if (homeNav) homeNav.style.display = 'none';
     if (homeNavSpacer) homeNavSpacer.style.display = 'none';
     if (labelMisRes) labelMisRes.style.display = 'none';
     if (verHistBtn) verHistBtn.style.display = 'none';
