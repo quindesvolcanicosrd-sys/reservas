@@ -315,10 +315,10 @@ function _ajCargarSub(id) {
     var fn = document.getElementById('aj-fn-display');
     if (fn) {
       var fnRaw = (d.fechaNacimiento || '').toString().trim();
-      fn.textContent = fnRaw ? fnRaw : '—';
+      fn.textContent = fnRaw ? _ajFormatearFecha(fnRaw) : '—';
     }
-    var fp = document.getElementById('aj-fechaPublica'); if (fp) fp.value = d.fechaPublica || 'No';
-    var ep = document.getElementById('aj-edadPublica'); if (ep) ep.value = d.edadPublica || 'No';
+    var fp = document.getElementById('aj-fechaPublica'); if (fp) fp.checked = (d.fechaPublica === 'Sí');
+    var ep = document.getElementById('aj-edadPublica'); if (ep) ep.checked = (d.edadPublica === 'Sí');
   } else if (id === 'aj-sub-legal') {
     _ajActivarPill('aj-tipoDoc-pills', d.tipoDocumento || '');
     var nd = document.getElementById('aj-numeroDoc'); if (nd) nd.value = d.numeroDocumento || '';
@@ -616,8 +616,8 @@ function ajGuardarContacto(btn) {
 
 function ajGuardarPrivacidad(btn) {
   _ajGuardar({
-    fechaPublica: document.getElementById('aj-fechaPublica').value,
-    edadPublica: document.getElementById('aj-edadPublica').value
+    fechaPublica: document.getElementById('aj-fechaPublica').checked ? 'Sí' : 'No',
+    edadPublica: document.getElementById('aj-edadPublica').checked ? 'Sí' : 'No'
   }, btn, 'aj-sub-privacidad');
 }
 
@@ -670,4 +670,26 @@ function _ajGuardar(payload, btn, subId) {
 
 function _getSessionToken() {
   try { return localStorage.getItem('session_token') || ''; } catch(e) { return ''; }
+}
+
+function _ajFormatearFecha(fechaStr) {
+  if (!fechaStr) return '—';
+  var meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var d = new Date(fechaStr);
+  if (isNaN(d.getTime())) return fechaStr;
+  return d.getDate() + ' de ' + meses[d.getMonth()] + ' de ' + d.getFullYear();
+}
+
+function ajAbrirSheetLogout() {
+  var ov = document.getElementById('aj-sheet-logout-overlay');
+  var sh = document.getElementById('aj-sheet-logout');
+  if (ov) ov.style.display = 'block';
+  if (sh) { sh.style.display = 'block'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
+}
+
+function ajCerrarSheetLogout() {
+  var sh = document.getElementById('aj-sheet-logout');
+  var ov = document.getElementById('aj-sheet-logout-overlay');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function(){ if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
 }
