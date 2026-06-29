@@ -101,8 +101,45 @@ function _renderHomeReservas() {
   var container = document.getElementById('home-reservas-lista');
   var labelMisReservas = document.getElementById('label-mis-reservas');
 
+  var homeNav = document.getElementById('home-nav');
+  var homeNavSpacer = document.getElementById('home-nav-spacer');
+  var labelMisRes = document.getElementById('label-mis-reservas');
+  var verHistBtn = document.querySelector('[onclick="irMisReservas()"]');
+
+  if (activas.length === 0) {
+    if (homeNav) homeNav.style.display = 'none';
+    if (homeNavSpacer) homeNavSpacer.style.display = 'none';
+    if (labelMisRes) labelMisRes.style.display = 'none';
+    if (verHistBtn) verHistBtn.style.display = 'none';
+  } else {
+    if (homeNav) homeNav.style.display = 'flex';
+    if (homeNavSpacer) homeNavSpacer.style.display = '';
+    if (labelMisRes) labelMisRes.style.display = '';
+    if (verHistBtn) verHistBtn.style.display = '';
+  }
+
+  var fotoUrl = E.datos && (E.datos.fotoPerfil || '');
+  var avatarHtml = fotoUrl
+    ? '<img src="' + fotoUrl + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="">'
+    : (E.nombre || '?').charAt(0).toUpperCase();
+
   var html = activas.length === 0
-    ? '<button onclick="irNuevaReserva()" style="width:100%;padding:14px;border:2px solid var(--brand);border-radius:12px;background:rgba(249,115,22,0.12);color:var(--brand) !important;text-align:center;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.3px;animation:pulseBtn 2.4s ease-in-out infinite;">📅 Hacer una reserva</button>'
+    ? '<div class="empty-state-home">' +
+        '<div class="empty-state-topbar">' +
+          '<div class="empty-state-avatar" onclick="irEditarDatos()">' + avatarHtml + '</div>' +
+          '<button class="empty-state-contacto" onclick="abrirContacto()"><span class="material-symbols-outlined">forum</span>¿Dudas? Contáctanos</button>' +
+        '</div>' +
+        '<div class="empty-state-body">' +
+          '<div class="empty-state-icon"><span class="material-symbols-outlined">calendar_month</span></div>' +
+          '<div class="empty-state-saludo">¡Hola, ' + (E.nombre || '') + '!</div>' +
+          '<div class="empty-state-msg">Todavía no tienes ninguna reserva.<br>¿Te animas a hacer una?</div>' +
+          '<button onclick="irNuevaReserva()" class="empty-state-btn"><span class="material-symbols-outlined">calendar_add_on</span>Nueva reserva</button>' +
+          '<div class="empty-state-links">' +
+            '<span class="empty-state-link" onclick="irMisReservas()">Ver historial de reservas</span>' +
+            '<span class="empty-state-link empty-state-link-muted" onclick="irEditarDatos()">Editar mi perfil</span>' +
+          '</div>' +
+        '</div>' +
+      '</div>'
     : activas.map(function(r) { return _renderCardHome(r, hoy); }).join('');
 
   container.innerHTML = html;
