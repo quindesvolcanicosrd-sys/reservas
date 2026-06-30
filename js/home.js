@@ -240,10 +240,11 @@ function _renderCardHome(r, hoy) {
   var necesitaProtec = r.protecciones && r.protecciones !== '' && r.protecciones.toLowerCase() !== 'no';
   var equipPillHtml = '';
   if (necesitaPatines) {
-    equipPillHtml += '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">roller_skating</span>Te llevamos patines' + (r.talla ? ' talla ' + r.talla : '') + '</span>';
+    equipPillHtml += '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">roller_skating</span>' + (r.talla || '') + '</span>';
   }
   if (necesitaProtec) {
-    equipPillHtml += '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">shield</span>Te llevamos protecciones</span>';
+    var protecTexto = (r.protecciones.toLowerCase() === 'sí' || r.protecciones.toLowerCase() === 'si' || r.protecciones.toLowerCase() === 'completas' || r.protecciones.toLowerCase().indexOf('completa') !== -1) ? 'Protecciones completas' : r.protecciones;
+    equipPillHtml += '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">shield</span>' + protecTexto + '</span>';
   }
   if (!necesitaPatines && !necesitaProtec) {
     equipPillHtml = '<span class="fi-pill fi-pill-equip"><span class="material-symbols-outlined">check_circle</span>Llevas tu equipo</span>';
