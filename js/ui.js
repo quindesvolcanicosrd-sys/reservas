@@ -109,6 +109,9 @@ function ir(id, desdeHistorial) {
     if (_volverTarget) { topBtn.style.display = ''; topBtn.onclick = function() { volver(_volverTarget); }; } else { topBtn.style.display = 'none'; }
   } else { topBar.style.display = 'none'; }
 
+  var homeNav = document.getElementById('home-nav');
+  if (homeNav) homeNav.style.display = (id === 's-home') ? '' : 'none';
+
   var sinPasos = ['s1','s-home','s-misreservas','s-carga','s6','s-datos','s-gestionar'].concat(ADMIN_PANTALLAS);
   if (E.reagendando) sinPasos = sinPasos.concat(['s4','s5','s-carga-conf']);
   var dotContainer = document.querySelector('.paso-indicator');

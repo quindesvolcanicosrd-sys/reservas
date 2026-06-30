@@ -186,6 +186,8 @@ function selTipoPago(tipo) {
   _updateTpSlider(true);
   actualizarTextosPago();
   actualizarTotalS4();
+  var cuponWrap = document.getElementById('s4-cupon-wrapper');
+  if (cuponWrap) cuponWrap.style.display = (tipo === 'clase' && tieneCuponDisponible()) ? 'block' : 'none';
 }
 
 function _updateTpSlider(animate) {
@@ -329,7 +331,7 @@ function cargarFechas() {
     }
     actualizarTextosPago();
     var cuponWrap = document.getElementById('s4-cupon-wrapper'); var chkCupon = document.getElementById('chk-cupon');
-    if (cuponWrap) cuponWrap.style.display = (!puedeMensual && tieneCuponDisponible()) ? 'block' : 'none';
+    if (cuponWrap) cuponWrap.style.display = (E.tipoPago === 'clase' && tieneCuponDisponible()) ? 'block' : 'none';
     var icoCupon = document.getElementById('tp-cupon-ico');
     var hintCupon = document.getElementById('tp-cupon-hint');
     var tieneCupon = tieneCuponDisponible();
