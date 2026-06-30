@@ -54,7 +54,7 @@
 .nota-pago-input { width: 100%; border: 0px solid var(--border-light); border-radius: 10px; font-size: 0.88rem; }
 .nota-pago-hint { font-size: 0.82rem; color: var(--muted); margin-top: 8px; line-height: 1.5; }
 
-.chk-pago-label { display: flex; align-items: flex-start; gap: 12px; background: var(--warning-bg); border: 1px solid var(--warning-bdr); border-radius: 12px; padding: 16px; margin: 20px 0; cursor: pointer; font-size: 0.92rem; font-weight: 500; color: var(--text-2); line-height: 1.5; transition: all 0.3s; }
+.chk-pago-label { display: flex; align-items: center; gap: 12px; background: var(--warning-bg); border: 1px solid var(--warning-bdr); border-radius: 12px; padding: 16px; margin: 20px 0; cursor: pointer; font-size: 0.92rem; font-weight: 500; color: var(--text-2); line-height: 1.5; transition: all 0.3s; }
 .chk-pago-label:hover { background: var(--amber-light); transform: scale(1.02); }
 .chk-pago-label input { width: 20px; height: 20px; accent-color: var(--amber-accent); flex-shrink: 0; margin-top: 2px; cursor: pointer; }
 
@@ -160,4 +160,9 @@
 #s4-cupon-wrapper .fi-circle .material-symbols-outlined { font-size:1rem; color:transparent; transition:color 0.2s; }
 #s4-cupon-wrapper .fi-circle.sel-cupon { background:var(--brand); border-color:var(--brand); }
 #s4-cupon-wrapper .fi-circle.sel-cupon .material-symbols-outlined { color:var(--white); }
+
+.chk-pago-label .fi-circle { flex-shrink:0; }
+.chk-pago-label .fi-circle.sel-pago { background:var(--brand); border-color:var(--brand); }
+.chk-pago-label .fi-circle.sel-pago .material-symbols-outlined { color:var(--white); }
+.chk-pago-label.sel { background:var(--brand-warm); border-color:var(--brand); }
 

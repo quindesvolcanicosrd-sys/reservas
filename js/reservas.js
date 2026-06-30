@@ -467,7 +467,13 @@ function continuar_s4() {
   ir('s-pago');
 }
 
-function toggleBtnPago() { document.getElementById('btn-pago').disabled = !document.getElementById('chk-pago').checked; }
+function toggleBtnPago() {
+  document.getElementById('btn-pago').disabled = !document.getElementById('chk-pago').checked;
+  var circle = document.getElementById('chk-pago-circle');
+  var lbl = document.querySelector('.chk-pago-label');
+  if (circle) circle.classList.toggle('sel-pago', document.getElementById('chk-pago').checked);
+  if (lbl) lbl.classList.toggle('sel', document.getElementById('chk-pago').checked);
+}
 
 function construirResumenS5(backTarget) {
   document.getElementById('btn-confirmar').disabled = false; document.getElementById('btn-confirmar').textContent = necesitaEquipo() ? 'Confirmar mi reserva' : 'Confirmar mi pago';

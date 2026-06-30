@@ -365,9 +365,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
       </div>
 
-      <label class="chk-pago-label">
-        <input type="checkbox" id="chk-pago" onchange="toggleBtnPago()">
-        <span id="chk-pago-texto"></span>
+      <label class="chk-pago-label" for="chk-pago">
+        <input type="checkbox" id="chk-pago" onchange="toggleBtnPago()" style="display:none;">
+        <span id="chk-pago-texto" style="flex:1;"></span>
+        <div class="fi-circle" id="chk-pago-circle"><span class="material-symbols-outlined">check</span></div>
       </label>
 
       <div class="nota-pago-wrapper">
