@@ -101,13 +101,24 @@ function iniciarGoogleSignIn() {
     callback: onGoogleCredentialInscripcion,
     context: 'signup'
   });
-  setTimeout(function() {
-    google.accounts.id.renderButton(document.getElementById('gsignin-btn'), {
-      theme: 'filled_blue', size: 'large', text: 'continue_with', locale: 'es', width: document.getElementById('gsignin-btn').offsetWidth || 300
-    });
-  }, 1000);
+  var cont = document.getElementById('gsignin-btn');
+  if (!cont) return;
+  google.accounts.id.renderButton(cont, {
+    theme: 'filled_blue', size: 'large', text: 'continue_with', locale: 'es',
+    width: cont.offsetWidth || 300
+  });
   var sk = document.getElementById('gsignin-skeleton');
-  if (sk) setTimeout(function() { sk.style.opacity = '0'; setTimeout(function() { sk.style.display = 'none'; }, 400); }, 1200);
+  if (sk) {
+    var _obs = new MutationObserver(function() {
+      var iframe = cont.querySelector('iframe');
+      if (!iframe) return;
+      _obs.disconnect();
+      sk.style.opacity = '0';
+      setTimeout(function() { sk.style.display = 'none'; }, 400);
+    });
+    _obs.observe(cont, { childList: true, subtree: true });
+    setTimeout(function() { _obs.disconnect(); }, 6000);
+  }
 }
 
 function onGoogleCredentialInscripcion(response) {
