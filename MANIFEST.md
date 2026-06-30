@@ -212,6 +212,7 @@ reservas/
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **js/home.js** — Detección de protecciones en cards de home más robusta: `necesitaProtec` ahora también excluye valores que empiezan con "no," (ej. "No, tengo las mías"), no solo el literal `'no'`; `protecTexto` se calcula vía `protecLower` y devuelve `''` para esos casos de "no" (en vez de mostrarlos como si fueran necesidad real), y sigue normalizando a "Protecciones completas" cuando el valor es genérico ("sí"/"completa...").
 - **js/home.js** — Pills de equipamiento en cards de home ahora muestran solo el número de talla (sin texto "Te llevamos patines") y el texto real de protecciones (o "Protecciones completas" si el valor es genérico).
 - **js/home.js** — `_renderCardHome()` ahora detecta equipamiento usando `r.talla` y `r.protecciones` (campos reales de `getReservasPersona`) en vez de `r.necesitaPatines` y `r.necesitaProtecciones` que no existen en esa respuesta del backend.
 - **js/home.js** — `_renderCardHome()` ahora genera pills separados para patines y protecciones ("Te llevamos patines talla X" / "Te llevamos protecciones") en vez de un solo pill que ignoraba protecciones. "Llevas tu equipo" solo aparece si no necesita ninguno de los dos.

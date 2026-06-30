@@ -237,13 +237,16 @@ function _renderCardHome(r, hoy) {
   var estadoTexto = r.estado || 'Pendiente';
 
   var necesitaPatines = r.talla && r.talla !== '' && r.talla.toLowerCase() !== 'no';
-  var necesitaProtec = r.protecciones && r.protecciones !== '' && r.protecciones.toLowerCase() !== 'no';
+  var necesitaProtec = r.protecciones && r.protecciones !== '' && r.protecciones.toLowerCase() !== 'no' && r.protecciones.toLowerCase().indexOf('no,') !== 0;
   var equipPillHtml = '';
   if (necesitaPatines) {
     equipPillHtml += '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">roller_skating</span>' + (r.talla || '') + '</span>';
   }
   if (necesitaProtec) {
-    var protecTexto = (r.protecciones.toLowerCase() === 'sí' || r.protecciones.toLowerCase() === 'si' || r.protecciones.toLowerCase() === 'completas' || r.protecciones.toLowerCase().indexOf('completa') !== -1) ? 'Protecciones completas' : r.protecciones;
+    var protecLower = r.protecciones.toLowerCase();
+    var protecTexto = (protecLower === 'no' || protecLower === 'no, tengo las mías' || protecLower === 'no, tengo las mias') ? '' :
+      (protecLower.indexOf('completa') !== -1 || protecLower === 'sí' || protecLower === 'si') ? 'Protecciones completas' : r.protecciones;
+    if (!protecTexto) { }
     equipPillHtml += '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">shield</span>' + protecTexto + '</span>';
   }
   if (!necesitaPatines && !necesitaProtec) {
