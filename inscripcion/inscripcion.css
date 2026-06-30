@@ -516,11 +516,6 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 }
 
 /* ── Flujo por pasos ─────────────────────────── */
-.insc-nav { display:flex; align-items:center; padding:0 16px; height:54px; background:color-mix(in srgb,var(--bg) 92%,transparent); backdrop-filter:blur(12px); border-bottom:1px solid rgba(249,115,22,0.2); position:sticky; top:0; z-index:100; gap:10px; position:relative; flex-shrink:0; }
-.insc-nav-back { width:38px; height:38px; border-radius:11px; background:var(--brand-light); border:none; display:flex; align-items:center; justify-content:center; color:var(--brand); flex-shrink:0; cursor:pointer; }
-.insc-nav-back .material-symbols-outlined { font-size:1.3rem; }
-.insc-nav-title { position:absolute; left:0; right:0; text-align:center; font-size:0.75rem; font-weight:800; color:var(--brand); text-transform:uppercase; letter-spacing:1.2px; pointer-events:none; }
-.insc-nav-ph { width:38px; flex-shrink:0; }
 .insc-prog { display:flex; align-items:center; justify-content:center; gap:5px; padding:10px 0 4px; flex-shrink:0; }
 .insc-prog-dot { width:7px; height:7px; border-radius:50%; background:var(--border-light); transition:all 0.3s; }
 .insc-prog-dot.done { background:var(--brand); opacity:0.45; }

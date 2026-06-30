@@ -4,6 +4,7 @@ var G = { email:'', idToken:'', nombre:'', foto:'', guardarFoto:false, fechaNac:
 var _INSC_STEPS = ['insc-step-1','insc-step-2','insc-step-3','insc-step-4','insc-step-5a','insc-step-5b','insc-step-5c','insc-step-6'];
 var _INSC_TITLES = ['Inscripción','Tu perfil','Tu identidad','Contacto','Equipamiento','Equipamiento','Equipamiento','Último paso'];
 var _inscCurIdx = 0;
+var _inscVinoConToken = false;
 var _inscNecesitaPatines = false;
 var _inscWpUnido = false;
 var _inscProtecOtro = '';
@@ -33,7 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
     inscMostrarPaso(0);
     _inscIniciarGoogleSignIn();
     var _tokenUrl = new URLSearchParams(window.location.search).get('token');
-    if (_tokenUrl) { onGoogleCredentialInscripcion({ credential: _tokenUrl }); }
+    if (_tokenUrl) { _inscVinoConToken = true; onGoogleCredentialInscripcion({ credential: _tokenUrl }); }
   } catch(e) {
     console.error('[INSC] Error en init:', e);
   } finally {
@@ -66,7 +67,7 @@ function _inscRenderProg() {
   if (t) t.textContent = _INSC_TITLES[_inscCurIdx] || 'Inscripción';
   var back = document.getElementById('insc-back');
   var ph = document.getElementById('insc-nav-ph');
-  if (back) back.style.display = _inscCurIdx > 0 ? 'flex' : 'none';
+  if (back) back.style.display = (_inscCurIdx > 0 || _inscVinoConToken) ? 'flex' : 'none';
   if (ph) ph.style.display = _inscCurIdx > 0 ? 'none' : 'block';
 }
 
@@ -81,10 +82,14 @@ function inscMostrarPaso(idx) {
 }
 
 function inscPasoAnterior() {
+  if (_inscCurIdx === 0) {
+    if (_inscVinoConToken) { window.location.href = 'https://reservas.quindesvolcanicos.com/#s1'; }
+    return;
+  }
   if (_INSC_STEPS[_inscCurIdx] === 'insc-step-5c' && !_inscNecesitaPatines) {
     inscMostrarPaso(_INSC_STEPS.indexOf('insc-step-5a')); return;
   }
-  inscMostrarPaso(Math.max(_inscCurIdx - 1, 0));
+  inscMostrarPaso(_inscCurIdx - 1);
 }
 
 /* ── Google Sign-In ─────────────────────────── */
