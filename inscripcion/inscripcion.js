@@ -100,11 +100,13 @@ function iniciarGoogleSignIn() {
     callback: onGoogleCredentialInscripcion,
     context: 'signup'
   });
-  google.accounts.id.renderButton(document.getElementById('gsignin-btn'), {
-    theme: 'filled_blue', size: 'large', text: 'continue_with', locale: 'es', width: document.getElementById('gsignin-btn').offsetWidth || 300
-  });
+  setTimeout(function() {
+    google.accounts.id.renderButton(document.getElementById('gsignin-btn'), {
+      theme: 'filled_blue', size: 'large', text: 'continue_with', locale: 'es', width: document.getElementById('gsignin-btn').offsetWidth || 300
+    });
+  }, 1000);
   var sk = document.getElementById('gsignin-skeleton');
-  if (sk) setTimeout(function() { sk.style.opacity = '0'; setTimeout(function() { sk.style.display = 'none'; }, 400); }, 800);
+  if (sk) setTimeout(function() { sk.style.opacity = '0'; setTimeout(function() { sk.style.display = 'none'; }, 400); }, 1200);
 }
 
 function onGoogleCredentialInscripcion(response) {
