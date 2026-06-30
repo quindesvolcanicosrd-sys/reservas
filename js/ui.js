@@ -110,7 +110,16 @@ function ir(id, desdeHistorial) {
   } else { topBar.style.display = 'none'; }
 
   var homeNav = document.getElementById('home-nav');
-  if (homeNav) homeNav.style.display = (id === 's-home') ? '' : 'none';
+  if (homeNav) {
+    if (id !== 's-home') {
+      homeNav.style.display = 'none';
+    } else {
+      var _tieneActivas = (typeof _todasReservas !== 'undefined' && _todasReservas && _todasReservas.some(function(r) {
+        return r.estado !== 'Cancelada' && r.estado !== 'Crédito usado';
+      }));
+      homeNav.style.display = _tieneActivas ? 'flex' : 'none';
+    }
+  }
 
   var sinPasos = ['s1','s-home','s-misreservas','s-carga','s6','s-datos','s-gestionar'].concat(ADMIN_PANTALLAS);
   if (E.reagendando) sinPasos = sinPasos.concat(['s4','s5','s-carga-conf']);
