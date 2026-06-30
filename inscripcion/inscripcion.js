@@ -93,7 +93,7 @@ function iniciarGoogleSignIn() {
     context: 'signup'
   });
   google.accounts.id.renderButton(document.getElementById('gsignin-btn'), {
-    theme: 'outline', size: 'large', width: document.getElementById('gsignin-btn').offsetWidth || 300
+    theme: 'filled_blue', size: 'large', text: 'continue_with', locale: 'es', width: document.getElementById('gsignin-btn').offsetWidth || 300
   });
   var sk = document.getElementById('gsignin-skeleton');
   if (sk) setTimeout(function() { sk.style.opacity = '0'; setTimeout(function() { sk.style.display = 'none'; }, 400); }, 800);
@@ -156,7 +156,7 @@ function inscToggleFoto(tog) {
 }
 
 function abrirPickerFecha() {
-  abrirDatePicker(function(isoStr) {
+  abrirDatePicker(G.fechaNac || '', function(isoStr) {
     document.getElementById('fnac-iso').value = isoStr;
     G.fechaNac = isoStr;
     var btn = document.getElementById('fnac-btn');
