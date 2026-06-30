@@ -237,10 +237,17 @@ function _renderCardHome(r, hoy) {
   var estadoTexto = r.estado || 'Pendiente';
 
   var necesitaPatines = r.necesitaPatines && r.necesitaPatines.toLowerCase() !== 'no';
-  var equipTexto = necesitaPatines ? 'Patines' + (r.talla ? ' talla ' + r.talla : '') : 'Llevas tu equipo';
-  var equipIcono = necesitaPatines ? 'roller_skating' : 'check_circle';
-  var equipClase = necesitaPatines ? 'fi-pill fi-pill-patines' : 'fi-pill fi-pill-equip';
-var equipPillHtml = '<span class="' + equipClase + '"><span class="material-symbols-outlined">' + equipIcono + '</span>' + equipTexto + '</span>';
+  var necesitaProtec = r.necesitaProtecciones && r.necesitaProtecciones.toLowerCase() !== 'no';
+  var equipPillHtml = '';
+  if (necesitaPatines) {
+    equipPillHtml += '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">roller_skating</span>Te llevamos patines' + (r.talla ? ' talla ' + r.talla : '') + '</span>';
+  }
+  if (necesitaProtec) {
+    equipPillHtml += '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">shield</span>Te llevamos protecciones</span>';
+  }
+  if (!necesitaPatines && !necesitaProtec) {
+    equipPillHtml = '<span class="fi-pill fi-pill-equip"><span class="material-symbols-outlined">check_circle</span>Llevas tu equipo</span>';
+  }
   var estadoLabel = r.estado === 'Confirmada' ? 'Reserva confirmada' : r.estado === 'Cancelada' ? 'Reserva cancelada' : r.estado === 'Reagendar' ? 'Clase a favor' : 'Reserva pendiente';
   var statusBarClase = 'rn-status-' + (r.estado === 'Confirmada' ? 'confirmada' : r.estado === 'Cancelada' ? 'cancelada' : r.estado === 'Reagendar' ? 'reagendar' : 'pendiente');
   var statusBar = '<div class="rn-status-bar ' + statusBarClase + '" onclick="abrirModalEstados()">' +
