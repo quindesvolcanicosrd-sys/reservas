@@ -144,7 +144,7 @@
 .equip-pico { font-size:1.2rem; color:var(--muted); flex-shrink:0; }
 .equip-ptxt { flex:1; }
 .equip-ptit { font-size:0.82rem; font-weight:700; color:var(--muted); }
-.equip-psub { font-size:0.68rem; color:var(--border-light); margin-top:2px; }
+.equip-psub { font-size:0.68rem; color:var(--muted); margin-top:2px; }
 .equip-pcheck { width:22px; height:22px; border-radius:50%; border:2px solid var(--border-light); flex-shrink:0; display:flex; align-items:center; justify-content:center; }
 .equip-pcheck .material-symbols-outlined { font-size:14px; color:transparent; }
 .equip-pill-protec:hover { border-color:var(--brand); }
