@@ -39,9 +39,11 @@ if (navAvatar) {
     });
     _renderHomeReservas();
     if (homeContent) { setTimeout(function() { homeContent.style.opacity = '1'; }, 50); }
+    ocultarCargando();
   }, function() {
     _renderHomeReservas();
     if (homeContent) { homeContent.style.opacity = '1'; }
+    ocultarCargando();
   });
   var bannerCupon = document.getElementById('banner-cupon');
   if (bannerCupon) {

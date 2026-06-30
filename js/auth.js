@@ -87,13 +87,12 @@ function onGoogleCredentialUsuario(resp) {
         }
         setTimeout(function() { irNuevaReserva(true); }, 300);
       } else {
-        ocultarCargando();
         ir('s-home');
         if (E.datos && !E.datos.permisosConfigurados) {
           setTimeout(function() { mostrarModalPermisos(E.nombre, E.datos.fotoPerfil || ''); }, 600);
         }
       }
-    }, function() { ocultarCargando(); prepararHome(); ir('s-home'); });
+    }, function() { prepararHome(); ir('s-home'); });
   }, function(e) {
     ocultarCargando();
     var errEl = document.getElementById('err-google-login');
@@ -171,7 +170,7 @@ function continuar_pin() {
         ocultarCargando();
         prepararHome();
         ir('s-home');
-      }, function(e2) { ocultarCargando(); prepararHome(); ir('s-home'); alert('Error al cargar reservas: ' + e2.message); });
+      }, function(e2) { prepararHome(); ir('s-home'); alert('Error al cargar reservas: ' + e2.message); });
 
     }, function(e1) { _validandoPin = false; ocultarCargando(); ir('s1b'); err('err-pin', 'Error: ' + e1.message); });
   });
@@ -306,8 +305,8 @@ window.onload = function() {
               var _pnx = window._pendingNuevx; window._pendingNuevx = null;
               if (E.datos) { E.datos.necesitaPatines = _pnx.patines === 'si' ? 'Sí' : 'No'; E.datos.necesitaProtecciones = _pnx.protec === 'si' ? 'Sí' : 'No'; if (_pnx.talla) E.datos.talla = _pnx.talla; }
               setTimeout(function() { irNuevaReserva(true); }, 300);
-            } else { ocultarCargando(); ir('s-home'); }
-          }, function() { prepararHome(); ir('s-home'); window._restaurandoSesion = false; ocultarCargando(); });
+            } else { ir('s-home'); }
+          }, function() { prepararHome(); ir('s-home'); window._restaurandoSesion = false; });
         }, function() { window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true); });
       } else { localStorage.removeItem('session'); }
     } catch (ex) { localStorage.removeItem('session'); }
@@ -335,9 +334,8 @@ window.addEventListener('pageshow', function(e) {
     var ov = document.getElementById('loading-overlay');
     ov.classList.remove('fade-out');
     ov.style.display = 'flex';
-    if (_adminToken) { ir('s-admin-home'); }
+    if (_adminToken) { ir('s-admin-home'); ocultarCargando(); }
     else if (E.datos) { prepararHome(); ir('s-home'); }
-    else { ir('s1', true); }
-    ocultarCargando();
+    else { ir('s1', true); ocultarCargando(); }
   }
 });
