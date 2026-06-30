@@ -76,7 +76,6 @@ function onGoogleCredentialUsuario(resp) {
     mostrarCargando('Cargando tus reservas...');
     api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
       _todasReservas = reservas;
-      ocultarCargando();
       prepararHome();
       if (window._pendingNuevx) {
         var _pnx = window._pendingNuevx;
@@ -88,6 +87,7 @@ function onGoogleCredentialUsuario(resp) {
         }
         setTimeout(function() { irNuevaReserva(true); }, 300);
       } else {
+        ocultarCargando();
         ir('s-home');
         if (E.datos && !E.datos.permisosConfigurados) {
           setTimeout(function() { mostrarModalPermisos(E.nombre, E.datos.fotoPerfil || ''); }, 600);
@@ -301,12 +301,12 @@ window.onload = function() {
           api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
             _todasReservas = reservas;
             prepararHome();
-            window._restaurandoSesion = false; ocultarCargando();
+            window._restaurandoSesion = false;
             if (window._pendingNuevx) {
               var _pnx = window._pendingNuevx; window._pendingNuevx = null;
               if (E.datos) { E.datos.necesitaPatines = _pnx.patines === 'si' ? 'Sí' : 'No'; E.datos.necesitaProtecciones = _pnx.protec === 'si' ? 'Sí' : 'No'; if (_pnx.talla) E.datos.talla = _pnx.talla; }
               setTimeout(function() { irNuevaReserva(true); }, 300);
-            } else { ir('s-home'); }
+            } else { ocultarCargando(); ir('s-home'); }
           }, function() { prepararHome(); ir('s-home'); window._restaurandoSesion = false; ocultarCargando(); });
         }, function() { window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true); });
       } else { localStorage.removeItem('session'); }
