@@ -63,7 +63,7 @@ function _inscRenderProg() {
     d.className = 'insc-prog-dot' + (i < _inscCurIdx ? ' done' : i === _inscCurIdx ? ' active' : '');
     cont.appendChild(d);
   }
-  cont.style.display = (_inscCurIdx === 0) ? 'none' : 'flex';
+  cont.style.display = 'flex';
   var t = document.getElementById('insc-nav-title');
   if (t) t.textContent = _INSC_TITLES[_inscCurIdx] || 'Inscripción';
   var back = document.getElementById('insc-back');
