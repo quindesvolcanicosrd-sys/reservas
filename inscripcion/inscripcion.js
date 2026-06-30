@@ -7,6 +7,7 @@ var _inscCurIdx = 0;
 var _inscVinoConToken = false;
 var _inscNecesitaPatines = false;
 var _inscWpUnido = false;
+var _inscEnviando = false;
 var _inscProtecOtro = '';
 var _AJ_PREFIJOS = [
   {pais:'Ecuador',bandera:'🇪🇨',cod:'+593',min:10,max:10},
@@ -411,7 +412,9 @@ function inscTogglePinVis() {
 }
 function inscEnviarSinPin() { document.getElementById('f-pin').value = ''; inscEnviar(); }
 function inscEnviar() {
+  if (_inscEnviando) return;
   if (!_inscWpUnido) { errMsg('err-p6', 'Por favor únete al grupo de WhatsApp antes de finalizar.'); return; }
+  _inscEnviando = true;
   var nombre = G.nombre;
   var prons = _inscGetPronombres();
   var patines = _inscNecesitaPatines ? 'Sí' : 'No';
@@ -433,6 +436,7 @@ function inscEnviar() {
       mayorEdad:G.mayorEdad, pinHash:pinHash||''
     }, function(res) {
       ocultarCargando();
+      _inscEnviando = false;
       if (res.exito) {
         document.getElementById('exito-nombre').textContent = nombre;
         document.querySelector('.page-wrap').innerHTML = document.getElementById('section-exito').outerHTML;
@@ -443,7 +447,7 @@ function inscEnviar() {
       } else {
         errMsg('err-p6', res.error || 'Error al registrarse. Intenta de nuevo.');
       }
-    }, function(e) { ocultarCargando(); errMsg('err-p6', 'Error: ' + (e.message || 'Intenta de nuevo')); });
+    }, function(e) { ocultarCargando(); _inscEnviando = false; errMsg('err-p6', 'Error: ' + (e.message || 'Intenta de nuevo')); });
   }
   if (pin && pin.length === 4) {
     sha256Hex(pin).then(function(hash) { _doEnviar(hash); }).catch(function() { _doEnviar(''); });
