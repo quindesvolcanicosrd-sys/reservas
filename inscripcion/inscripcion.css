@@ -486,7 +486,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 .dp-day.dp-other-month { color:var(--dp-text4); }
 .dp-day.dp-today:not(.dp-selected) { border:1.5px solid var(--brand); color:var(--brand); }
 .dp-error {
-  margin:0 12px; padding:10px 14px; border-radius:10px;
+  margin:10px 12px 14px; padding:10px 14px; border-radius:10px;
   background:var(--error-light); border:1px solid var(--error-border);
   font-size:13px; font-weight:600; color:var(--error); text-align:center;
 }
