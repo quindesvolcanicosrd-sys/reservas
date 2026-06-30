@@ -1,4 +1,4 @@
-var BACKEND = 'https://script.google.com/macros/s/AKfycbxeEGUN7VQRwINKq2W6awrkudiQ7BdVm4snYykhLfjC4lZguTSK-dE7hgGa0DqvV-aXhQ/exec';
+var BACKEND = 'https://script.google.com/macros/s/AKfycbxtW72R2qD9Tfj8FMWoHpOODzue-Qg_ObDnv76ym8xl1SzwQb4hyMXHQ0zvY_6wo-nTHA/exec';
 var GOOGLE_CLIENT_ID = '632992894668-gnbb5cclsmfdcnve0g34kmue1c72h73q.apps.googleusercontent.com';
 
 function sha256Hex(str) {
