@@ -141,6 +141,11 @@ function _inscPoblarPaso2(res) {
   if (nm) nm.textContent = res.nombre || res.email;
   if (em) em.textContent = res.email;
   if (av) { av.textContent = (res.nombre || res.email || '?').charAt(0).toUpperCase(); }
+  var fNombre = document.getElementById('f-nombre');
+  if (fNombre && res.nombre && !fNombre.value) {
+    fNombre.value = res.nombre;
+    inscValidarNombre(fNombre);
+  }
   if (res.fechaNac) {
     var disp = document.getElementById('fecha-importada-display');
     var btn = document.getElementById('fnac-btn');
