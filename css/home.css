@@ -171,4 +171,8 @@
 .empty-state-link { font-size:0.76rem; color:var(--muted); text-decoration:underline; text-underline-offset:3px; cursor:pointer; font-weight:600; }
 .empty-state-link:hover { color:var(--brand); }
 .empty-state-link-muted { font-size:0.7rem; color:var(--border-light); }
+
+#historial-pills-mes::-webkit-scrollbar { display:none; }
+.historial-pill-mes { flex-shrink:0; padding:8px 16px; border-radius:99px; border:1.5px solid var(--border); background:transparent; color:var(--muted); font-size:0.82rem; font-weight:700; cursor:pointer; transition:all 0.2s; white-space:nowrap; font-family:inherit; }
+.historial-pill-mes.activa { background:var(--brand); border-color:var(--brand); color:var(--white); }
 .empty-state-link-muted:hover { color:var(--muted); } 

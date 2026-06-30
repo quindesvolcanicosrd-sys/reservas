@@ -181,9 +181,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="card">
       <div class="seccion-label">Historial</div>
       <h2>Todas mis reservas</h2>
-      <div class="select-wrapper" style="margin-bottom:16px;">
-        <select id="sel-mes-historial" onchange="renderHistorial()"></select>
-      </div>
+      <div id="historial-pills-mes" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;scrollbar-width:none;-ms-overflow-style:none;"></div>
       <div id="historial-lista"></div>
     </div>
   </div>

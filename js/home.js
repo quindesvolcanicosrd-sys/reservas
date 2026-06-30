@@ -341,15 +341,32 @@ function _clasificarReservas(todas, hoy) {
 }
 
 function _poblarSelectMesHistorial() {
-  var sel = document.getElementById('sel-mes-historial');
-  if (!sel) return;
-  var anio = new Date().getFullYear(), mesActual = new Date().getMonth();
-  sel.innerHTML = '';
-  _MESES_DISPLAY.forEach(function(m, i) {
-    var o = document.createElement('option');
-    o.value = String(i); o.textContent = m + ' ' + anio; sel.appendChild(o);
+  var cont = document.getElementById('historial-pills-mes');
+  if (!cont) return;
+  var hoy = new Date();
+  var hist = _clasificarReservas(_todasReservas || [], hoy).historial;
+  var mesesConReservas = {};
+  hist.forEach(function(r) {
+    var m = _getMesReserva(r);
+    if (m >= 0) mesesConReservas[m] = true;
   });
-  sel.value = String(mesActual);
+  var mesActual = hoy.getMonth();
+  if (Object.keys(mesesConReservas).length === 0) {
+    mesesConReservas[mesActual] = true;
+  }
+  var mesesOrdenados = Object.keys(mesesConReservas).map(Number).sort(function(a,b){return b-a;});
+  cont.innerHTML = mesesOrdenados.map(function(m) {
+    var activa = m === mesActual ? ' activa' : '';
+    return '<button class="historial-pill-mes' + activa + '" data-mes="' + m + '" onclick="seleccionarPillMes(this,' + m + ')">' + _MESES_DISPLAY[m] + ' ' + hoy.getFullYear() + '</button>';
+  }).join('');
+  window._historialMesActual = mesesOrdenados[0] !== undefined ? mesesOrdenados[0] : mesActual;
+}
+
+function seleccionarPillMes(pill, mes) {
+  document.querySelectorAll('.historial-pill-mes').forEach(function(p){ p.classList.remove('activa'); });
+  pill.classList.add('activa');
+  window._historialMesActual = mes;
+  renderHistorial();
 }
 
 function _getMesReserva(r) {
@@ -362,9 +379,7 @@ function _getMesReserva(r) {
 }
 
 function renderHistorial() {
-  var sel = document.getElementById('sel-mes-historial');
-  if (!sel) return;
-  var mesNum = parseInt(sel.value);
+  var mesNum = (window._historialMesActual !== undefined) ? window._historialMesActual : new Date().getMonth();
   var hoy = new Date(); hoy.setHours(0,0,0,0);
   var hist = _clasificarReservas(_todasReservas || [], hoy).historial;
   var delMes = hist.filter(function(r) { return _getMesReserva(r) === mesNum; });

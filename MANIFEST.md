@@ -212,6 +212,7 @@ reservas/
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **index.html + css/home.css + js/home.js** — Historial de reservas: selector de mes reemplazado de `<select>` por pills scrolleables horizontales (`#historial-pills-mes`) — solo muestra meses que tienen reservas reales. Nuevas funciones: `seleccionarPillMes()` y `_poblarSelectMesHistorial()` reescrita. Estado del mes seleccionado en `window._historialMesActual`.
 - **index.html** — Overlay de `#modal-agotada-overlay`: `background` cambiado de `var(--overlay)` a `rgba(0,0,0,0.72)` + `backdrop-filter:blur(6px)` (y `-webkit-backdrop-filter`) para oscurecer y desenfocar el fondo; la card interior cambió `background:var(--surface)` a `var(--bg)` para contrastar mejor sobre el blur oscuro.
 - **index.html** — Selector de cupón (`#s4-cupon-wrapper`): círculo de selección movido al lado derecho para ser consistente con los selectores de fecha; emoji 🎟️ reemplazado por ícono Material Symbols `confirmation_number`.
 - **js/reservas.js + index.html** — 3 fixes sobre el flujo de fecha agotada: (1) Modal viejo `#modal-equip-aviso` ("Sin disponibilidad de equipamiento") deshabilitado — la llamada `mostrarModalEquip(agotadasEquip)` en `cargarFechas()` quedó comentada (ya no se dispara), porque quedó redundante con el nuevo modal por-card `#modal-agotada-overlay`; el HTML, las funciones (`mostrarModalEquip`/`cerrarModalEquip`/`irEditarEquipDesdeModal`) y el dark-mode override en `ui.css` quedan intactos sin invocarse. (2) Contraste de `<p id="modal-agotada-msg">` mejorado: `color:var(--muted)` → `color:var(--text)`. (3) Título del modal cambiado de "No disponible" a "No disponible para esta fecha".
@@ -425,7 +426,8 @@ reservas/
 | `_parseFechaSimple(str)` | Parsea "DD/MM/YYYY" → Date |
 | `_parseFechaStr(fechaStr)` | Parsea fechas con formato "Sábado 12 de Enero (09:00)" → Date |
 | `_clasificarReservas(todas, hoy)` | Separa reservas en activas e historial según fecha y estado |
-| `_poblarSelectMesHistorial()` | Llena el select de filtro de mes en historial |
+| `_poblarSelectMesHistorial()` | Renderiza en `#historial-pills-mes` las pills de mes que tienen reservas reales en el historial (solo meses con datos); marca `.activa` el mes actual y guarda el mes a mostrar en `window._historialMesActual` |
+| `seleccionarPillMes(pill, mes)` | Marca la pill clickeada como `.activa`, actualiza `window._historialMesActual` y llama `renderHistorial()` |
 | `_getMesReserva(r)` | Extrae el número de mes (0-11) de una reserva |
 | `renderHistorial()` | Renderiza el historial filtrado por mes con grupos colapsables |
 | `_renderCardHistorial(r)` | Genera HTML de una tarjeta de reserva para historial |
@@ -716,7 +718,7 @@ reservas/
 | `dp-` | Date picker de Inscripción (shared/date-picker.js) | `dp-days`, `dp-month-label` |
 | `s4-` | Elementos de la pantalla s4 | `s4-total-box`, `s4-meses-wrapper` |
 | `btn-` | Botones nombrados | `btn-pago`, `btn-confirmar`, `btn-ver-mas-home` |
-| `sel-` | Selects nombrados | `sel-talla`, `sel-mes-historial` |
+| `sel-` | Selects nombrados | `sel-talla` |
 | `mec-` | Modal de eliminación de cuenta | `mec-input`, `mec-btn-confirmar` |
 
 ### Convenciones de nombrado JS
