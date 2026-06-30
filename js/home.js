@@ -236,9 +236,8 @@ function _renderCardHome(r, hoy) {
   var estadoIcono = r.estado === 'Confirmada' ? 'check_circle' : r.estado === 'Cancelada' ? 'cancel' : r.estado === 'Reagendar' ? 'swap_horiz' : 'hourglass_empty';
   var estadoTexto = r.estado || 'Pendiente';
 
-  console.log('[EQUIP]', r.fecha, '| patines:', r.necesitaPatines, '| talla:', r.talla, '| protec:', r.necesitaProtecciones);
-  var necesitaPatines = r.necesitaPatines && r.necesitaPatines.toLowerCase() !== 'no';
-  var necesitaProtec = r.necesitaProtecciones && r.necesitaProtecciones.toLowerCase() !== 'no';
+  var necesitaPatines = r.talla && r.talla !== '' && r.talla.toLowerCase() !== 'no';
+  var necesitaProtec = r.protecciones && r.protecciones !== '' && r.protecciones.toLowerCase() !== 'no';
   var equipPillHtml = '';
   if (necesitaPatines) {
     equipPillHtml += '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">roller_skating</span>Te llevamos patines' + (r.talla ? ' talla ' + r.talla : '') + '</span>';
