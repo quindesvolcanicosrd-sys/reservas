@@ -103,6 +103,8 @@ function iniciarGoogleSignIn() {
   });
   var cont = document.getElementById('gsignin-btn');
   if (!cont) return;
+  cont.style.opacity = '0';
+  cont.style.transition = 'opacity 0.4s ease';
   google.accounts.id.renderButton(cont, {
     theme: 'filled_blue', size: 'large', text: 'continue_with', locale: 'es',
     width: cont.offsetWidth || 300
@@ -113,11 +115,14 @@ function iniciarGoogleSignIn() {
       var iframe = cont.querySelector('iframe');
       if (!iframe) return;
       _obs.disconnect();
-      sk.style.opacity = '0';
-      setTimeout(function() { sk.style.display = 'none'; }, 400);
+      setTimeout(function() {
+        sk.style.opacity = '0';
+        cont.style.opacity = '1';
+        setTimeout(function() { sk.style.display = 'none'; }, 400);
+      }, 250);
     });
     _obs.observe(cont, { childList: true, subtree: true });
-    setTimeout(function() { _obs.disconnect(); }, 6000);
+    setTimeout(function() { _obs.disconnect(); cont.style.opacity = '1'; }, 6000);
   }
 }
 
