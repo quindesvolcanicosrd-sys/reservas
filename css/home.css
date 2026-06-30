@@ -114,8 +114,8 @@
 .res-card-nueva .rn-mas-info:hover { color:var(--brand); }
 .res-card-nueva .rn-mas-info .rn-chevron { font-size:16px; transition:transform 0.3s; }
 .res-card-nueva .rn-mas-info.open .rn-chevron { transform:rotate(180deg); }
-.res-card-nueva .rn-body { max-height:0; overflow:hidden; transition:max-height 0.35s ease; background:var(--surface-2); }
-.res-card-nueva .rn-body.open { max-height:200px; }
+.res-card-nueva .rn-body { max-height:0; overflow:hidden; transition:max-height 0.5s cubic-bezier(0.16,1,0.3,1); background:var(--surface-2); }
+.res-card-nueva .rn-body.open { max-height:600px; }
 .res-card-nueva .rn-body-inner { padding:0px 14px 14px; font-size:0.77rem; color:var(--muted); line-height:1.65; }
 .res-card-nueva .rn-body-inner .fi-pills { margin-top:10px; display:flex; flex-wrap:wrap; gap:6px; }
 .res-card-nueva .rn-body-inner .fi-pill { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--surface-2); color:var(--muted); border:1px solid var(--border-light); }

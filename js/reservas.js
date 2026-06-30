@@ -204,7 +204,13 @@ function _updateTpSlider(animate) {
   slider.style.transform = 'translateX(' + activeOpt.offsetLeft + 'px)';
 }
 
-function toggleCupon(cb) { E.cuponAplicado = cb.checked; actualizarTotalS4(); }
+function toggleCupon(cb) {
+  E.cuponAplicado = cb.checked;
+  var circle = document.getElementById('cupon-circle');
+  if (circle) circle.classList.toggle('sel-cupon', cb.checked);
+  actualizarTotalS4();
+  actualizarTextosPago();
+}
 
 function actualizarTotalS4() {
   var total = 0, gratisCredito = 0, gratisCupon = 0, cobradas = 0;
@@ -303,9 +309,12 @@ function cargarFechas() {
           }
           html += '</div>';
         } else {
-          html += '<div class="fecha-item agotada">';
-          html += '<div class="fi-header">';
+          var fechaEscAgot = f.fecha.replace(/'/g, "\\'");
+          var razonEsc = (f.razon || '').replace(/'/g, "\\'");
+          html += '<div class="fecha-item agotada-pendiente" id="fi-' + fechaEscAgot.replace(/\s/g,'_') + '">';
+          html += '<div class="fi-header" onclick="inscFechaAgotadaClick(this,\'' + fechaEscAgot + '\',\'' + razonEsc + '\')">';
           html += '<div class="fi-content"><div class="fi-title">' + fechaTexto + '</div>' + pillsHtml + '<div class="fecha-razon">⚠ ' + f.razon + '</div></div>';
+          html += '<div class="fi-circle"><span class="material-symbols-outlined">check</span></div>';
           html += '</div></div>';
         }
       });
@@ -367,6 +376,37 @@ function toggleFecha(el, fecha) {
 function toggleFechaExpand(footer, event) {
   event.stopPropagation();
   footer.closest('.fecha-item').classList.toggle('open');
+}
+
+function inscFechaAgotadaClick(el, fecha, razon) {
+  var card = el.closest('.fecha-item');
+  if (!card || card.classList.contains('agotada')) return;
+  abrirModalAgotada(razon, function() {
+    card.classList.remove('agotada-pendiente');
+    card.classList.add('agotada');
+    el.onclick = null;
+  });
+}
+
+function abrirModalAgotada(razon, onCerrar) {
+  var overlay = document.getElementById('modal-agotada-overlay');
+  var msg = document.getElementById('modal-agotada-msg');
+  if (!overlay || !msg) return;
+  msg.textContent = razon || 'No hay disponibilidad para esta fecha con tu configuración actual.';
+  overlay.style.display = 'flex';
+  requestAnimationFrame(function() { overlay.style.opacity = '1'; });
+  window._modalAgotadaCb = onCerrar;
+}
+
+function cerrarModalAgotada() {
+  var overlay = document.getElementById('modal-agotada-overlay');
+  if (!overlay) return;
+  overlay.style.opacity = '0';
+  setTimeout(function() { overlay.style.display = 'none'; }, 300);
+  if (typeof window._modalAgotadaCb === 'function') {
+    window._modalAgotadaCb();
+    window._modalAgotadaCb = null;
+  }
 }
 
 function mostrarModalEquip(fechasAfectadas) {

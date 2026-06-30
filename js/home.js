@@ -42,9 +42,9 @@ if (navAvatar) {
     api({ action: 'getCuponDisponible', nombre: E.nombre }, function(res) {
       if (E.datos) E.datos.cuponDisponible = res.cuponDisponible === true;
       if (res.cuponDisponible) localStorage.removeItem('cupon_' + E.nombre);
-      bannerCupon.style.display = tieneCuponDisponible() ? 'block' : 'none';
+      bannerCupon.style.display = 'none';
     }, function() {
-      bannerCupon.style.display = tieneCuponDisponible() ? 'block' : 'none';
+      bannerCupon.style.display = 'none';
     });
   }
   var notifBanner = document.getElementById('notif-banner');
@@ -430,7 +430,7 @@ function cancelarRes(fecha, onSuccess) {
         localStorage.removeItem('cupon_' + E.nombre);
         if (E.datos) E.datos.cuponDisponible = true;
         var bCupon = document.getElementById('banner-cupon');
-        if (bCupon) bCupon.style.display = 'block';
+        if (bCupon) bCupon.style.display = 'none';
       }
       if (onSuccess) { onSuccess(); } else { _renderHomeReservas(); }
     } else {

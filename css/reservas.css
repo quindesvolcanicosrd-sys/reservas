@@ -2,6 +2,8 @@
 .fecha-item { border: 1px solid var(--border); border-radius: 14px; margin-bottom: 10px; background: var(--surface-2); overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s; }
 .fecha-item.sel { border-color: var(--brand); background: var(--brand-warm); }
 .fecha-item.agotada { opacity: 0.5; cursor: not-allowed; background: var(--disabled-bg); border-color: var(--disabled-border); }
+.fecha-item.agotada-pendiente { opacity:1; cursor:pointer; }
+.fecha-item.agotada-pendiente .fi-circle { opacity:0.35; }
 
 .fi-header { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px 12px; cursor: pointer; }
 .fi-content { flex: 1; min-width: 0; }
@@ -153,4 +155,9 @@
 .equip-pill-protec.sel .equip-ptit { color:var(--brand); }
 .equip-pill-protec.sel .equip-pcheck { background:var(--brand); border-color:var(--brand); }
 .equip-pill-protec.sel .equip-pcheck .material-symbols-outlined { color:var(--white); }
+
+#s4-cupon-wrapper .fi-circle { width:28px; height:28px; border-radius:50%; border:2px solid var(--brand-30); display:flex; align-items:center; justify-content:center; transition:background 0.2s, border-color 0.2s; flex-shrink:0; }
+#s4-cupon-wrapper .fi-circle .material-symbols-outlined { font-size:1rem; color:transparent; transition:color 0.2s; }
+#s4-cupon-wrapper .fi-circle.sel-cupon { background:var(--brand); border-color:var(--brand); }
+#s4-cupon-wrapper .fi-circle.sel-cupon .material-symbols-outlined { color:var(--white); }
 

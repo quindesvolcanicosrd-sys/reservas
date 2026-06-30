@@ -312,8 +312,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div id="lista-fechas"></div>
 
       <div id="s4-cupon-wrapper" style="display:none;margin:18px 0;">
-        <label style="display:flex;align-items:center;gap:12px;background:var(--amber-lighter);border:2px solid var(--amber);border-radius:12px;padding:16px;cursor:pointer;transition:all 0.2s;">
-          <input type="checkbox" id="chk-cupon" style="accent-color:var(--brand);width:20px;height:20px;flex-shrink:0;" onchange="toggleCupon(this)">
+        <label for="chk-cupon" style="display:flex;align-items:center;gap:12px;background:var(--amber-lighter);border:2px solid var(--amber);border-radius:12px;padding:16px;cursor:pointer;transition:all 0.2s;">
+          <input type="checkbox" id="chk-cupon" style="display:none;" onchange="toggleCupon(this)">
+          <div class="fi-circle" id="cupon-circle"><span class="material-symbols-outlined">check</span></div>
           <div>
             <div style="font-weight:800;color:var(--amber-dark);font-size:0.95rem;">🎟️ Aplicar cupón</div>
             <div style="font-size:0.8rem;color:var(--amber-darker);margin-top:2px;"><strong>Válido para 1 clase gratis.</strong> Personal e intransferible.</div>
@@ -975,6 +976,14 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 </div>
 
+<div id="modal-agotada-overlay" style="display:none;opacity:0;position:fixed;inset:0;z-index:9500;background:var(--overlay);align-items:center;justify-content:center;padding:24px;transition:opacity 0.3s ease;" onclick="if(event.target===this)cerrarModalAgotada()">
+  <div style="background:var(--surface);border-radius:20px;padding:24px;max-width:340px;width:100%;text-align:center;">
+    <span class="material-symbols-outlined" style="font-size:2.5rem;color:var(--brand);margin-bottom:12px;display:block;">event_busy</span>
+    <h3 style="margin:0 0 8px;font-size:1.1rem;">No disponible</h3>
+    <p id="modal-agotada-msg" style="color:var(--muted);font-size:0.88rem;margin:0 0 20px;line-height:1.6;"></p>
+    <button class="btn btn-primary" onclick="cerrarModalAgotada()">Entendido</button>
+  </div>
+</div>
 
 <div id="sheet-gestionar-overlay" style="display:none;position:fixed;inset:0;z-index:9800;background:var(--overlay-dark);" onclick="cerrarSheetGestionar()"></div>
 <div id="sheet-gestionar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9801;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;padding:20px 20px 32px;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
