@@ -90,6 +90,7 @@ function irHomeDesdeExito() {
   api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
     _todasReservas = reservas;
     _renderHomeReservas();
+    prepararHome();
   }, function() { _renderHomeReservas(); });
   ir('s-home');
 }
