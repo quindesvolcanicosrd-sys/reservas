@@ -1,8 +1,8 @@
 /* ══ INSCRIPCIÓN — Flujo por pasos ══════════════════════════════════ */
 
 var G = { email:'', idToken:'', nombre:'', foto:'', guardarFoto:false, fechaNac:'', mayorEdad:false };
-var _INSC_STEPS = ['insc-step-1','insc-step-2','insc-step-3','insc-step-4','insc-step-5a','insc-step-5b','insc-step-5c','insc-step-6'];
-var _INSC_TITLES = ['Inscripción','Tu perfil','Tu identidad','Contacto','Equipamiento','Equipamiento','Equipamiento','Último paso'];
+var _INSC_STEPS = ['insc-step-1','insc-step-3','insc-step-4','insc-step-5a','insc-step-5b','insc-step-5c','insc-step-6'];
+var _INSC_TITLES = ['Tu perfil','Tu identidad','Contacto','Equipamiento','Equipamiento','Equipamiento','Último paso'];
 var _inscCurIdx = 0;
 var _inscVinoConToken = false;
 var _inscNecesitaPatines = false;
@@ -109,13 +109,26 @@ function iniciarGoogleSignIn() {
 
 function onGoogleCredentialInscripcion(response) {
   mostrarCargando('Verificando cuenta...');
+  var _t0 = Date.now();
+  var MIN_DELAY = 650;
+  function _continuar(fn) {
+    var elapsed = Date.now() - _t0;
+    var falta = MIN_DELAY - elapsed;
+    if (falta > 0) { setTimeout(fn, falta); } else { fn(); }
+  }
   apiGet({ action: 'verificarGoogle', idToken: response.credential }, function(res) {
-    ocultarCargando();
-    if (res.yaRegistrado) { errMsg('err-p1', 'Esta cuenta ya está registrada. Inicia sesión desde la app principal.'); return; }
-    G.email = res.email; G.idToken = response.credential; G.foto = res.foto || '';
-    _inscPoblarPaso2(res);
-    inscMostrarPaso(1);
-  }, function(e) { ocultarCargando(); errMsg('err-p1', 'Error al verificar: ' + (e.message || 'Intenta de nuevo')); });
+    _continuar(function() {
+      ocultarCargando();
+      if (res.yaRegistrado) { errMsg('err-p1', 'Esta cuenta ya está registrada. Inicia sesión desde la app principal.'); return; }
+      G.email = res.email; G.idToken = response.credential; G.foto = res.foto || '';
+      _inscDesbloquearForm(res);
+    });
+  }, function(e) {
+    _continuar(function() {
+      ocultarCargando();
+      errMsg('err-p1', 'Error al verificar: ' + (e.message || 'Intenta de nuevo'));
+    });
+  });
 }
 
 function _inscPoblarPaso2(res) {
@@ -141,6 +154,26 @@ function _inscPoblarPaso2(res) {
     if (disp2) disp2.style.display = 'none';
     if (btn2) btn2.style.display = 'flex';
     if (hint2) hint2.style.display = 'block';
+  }
+}
+
+function _inscDesbloquearForm(res) {
+  _inscPoblarPaso2(res);
+  var card = document.getElementById('insc-google-card');
+  var fields = document.getElementById('insc-form-fields');
+  if (card) {
+    card.style.transition = 'opacity 0.35s ease, max-height 0.4s ease';
+    card.style.maxHeight = card.scrollHeight + 'px';
+    void card.offsetWidth;
+    card.style.opacity = '0';
+    card.style.maxHeight = '0';
+    card.style.overflow = 'hidden';
+    card.style.marginTop = '0';
+    setTimeout(function() { card.style.display = 'none'; }, 420);
+  }
+  if (fields) {
+    fields.classList.remove('form-locked');
+    fields.classList.add('form-unlocked');
   }
 }
 

@@ -73,65 +73,64 @@
   <!-- PROGRESS DOTS -->
   <div class="insc-prog" id="insc-prog"></div>
 
-  <!-- ── PASO 1: Google ── -->
+  <!-- ── PASO 1: Cuenta y perfil ── -->
   <div class="insc-step" id="insc-step-1">
     <div class="insc-scroll">
-      <div class="sec-label">Únete al equipo</div>
-      <h2>Conecta tu cuenta de Google</h2>
-      <p style="font-size:0.88rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">Usamos Google para verificar tu correo y evitar registros duplicados.</p>
-      <div class="aviso" style="margin-bottom:20px;">
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          <div style="display:flex;align-items:flex-start;gap:8px;font-size:0.82rem;line-height:1.5;"><span style="color:var(--success);font-weight:800;flex-shrink:0;">✓</span>Solo lectura — nunca enviaremos spam o correos que no sean notificaciones</div>
-          <div style="display:flex;align-items:flex-start;gap:8px;font-size:0.82rem;line-height:1.5;"><span style="color:var(--success);font-weight:800;flex-shrink:0;">✓</span>No necesitarás contraseña para ingresar</div>
-          <div style="display:flex;align-items:flex-start;gap:8px;font-size:0.82rem;line-height:1.5;"><span style="color:var(--success);font-weight:800;flex-shrink:0;">✓</span>Podrás revocar el acceso en cualquier momento eliminando tu cuenta desde Ajustes</div>
-        </div>
-      </div>
-      <div style="position:relative;height:44px;width:100%;max-width:400px;margin:0 auto;">
-        <div id="gsignin-skeleton" style="position:absolute;inset:0;border-radius:4px;background:linear-gradient(90deg,var(--skeleton-base) 25%,var(--skeleton-shine) 50%,var(--skeleton-base) 75%);background-size:200% 100%;animation:skeletonShimmer 1.2s ease-in-out infinite;z-index:2;"></div>
-        <div class="gsignin-wrap" id="gsignin-btn" style="position:absolute;inset:0;display:flex;justify-content:center;align-items:center;"></div>
-      </div>
-      <div class="error-msg" id="err-p1"></div>
-    </div>
-  </div>
 
-  <!-- ── PASO 2: Foto y fecha ── -->
-  <div class="insc-step" id="insc-step-2">
-    <div class="insc-scroll">
-      <div class="sec-label">Tu cuenta</div>
-      <h2>Personaliza tu perfil</h2>
-      <div class="insc-profile-preview">
-        <div class="insc-avatar" id="insc-avatar"></div>
+      <!-- Card de Google: visible mientras no hay sesión confirmada -->
+      <div id="insc-google-card">
+        <div class="sec-label">Únete al equipo</div>
+        <h2>Conecta tu cuenta de Google</h2>
+        <p style="font-size:0.88rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">Usamos Google para verificar tu correo y evitar registros duplicados.</p>
+        <div class="aviso" style="margin-bottom:20px;">
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:0.82rem;line-height:1.5;"><span style="color:var(--success);font-weight:800;flex-shrink:0;">✓</span>Solo lectura — nunca enviaremos spam o correos que no sean notificaciones</div>
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:0.82rem;line-height:1.5;"><span style="color:var(--success);font-weight:800;flex-shrink:0;">✓</span>No necesitarás contraseña para ingresar</div>
+            <div style="display:flex;align-items:flex-start;gap:8px;font-size:0.82rem;line-height:1.5;"><span style="color:var(--success);font-weight:800;flex-shrink:0;">✓</span>Podrás revocar el acceso en cualquier momento eliminando tu cuenta desde Ajustes</div>
+          </div>
+        </div>
+        <div style="position:relative;height:44px;width:100%;max-width:400px;margin:0 auto;">
+          <div id="gsignin-skeleton" style="position:absolute;inset:0;border-radius:4px;background:linear-gradient(90deg,var(--skeleton-base) 25%,var(--skeleton-shine) 50%,var(--skeleton-base) 75%);background-size:200% 100%;animation:skeletonShimmer 1.2s ease-in-out infinite;z-index:2;"></div>
+          <div class="gsignin-wrap" id="gsignin-btn" style="position:absolute;inset:0;display:flex;justify-content:center;align-items:center;"></div>
+        </div>
+        <div class="error-msg" id="err-p1"></div>
+      </div>
+
+      <!-- Campos del formulario: bloqueados hasta confirmar Google -->
+      <div id="insc-form-fields" class="form-locked" style="margin-top:24px;">
+        <div class="sec-label">Tu cuenta</div>
         <div>
           <div class="insc-profile-name" id="insc-profile-name">—</div>
           <div class="insc-profile-email" id="insc-profile-email">—</div>
         </div>
-      </div>
-      <div class="insc-tog-row">
-        <div><div class="insc-tog-label">Usar foto de Google</div><div class="insc-tog-hint">Como foto de perfil en la app</div></div>
-        <label class="toggle-switch"><input type="checkbox" id="tog-foto" onchange="inscToggleFoto(this)"><span class="toggle-slider"></span></label>
-      </div>
-      <div class="campo" style="margin-top:12px;">
-        <label>Fecha de nacimiento <span style="color:var(--brand);">*</span></label>
-        <div id="fecha-importada-display" style="padding:12px 14px;border-radius:12px;background:var(--disabled-bg-2);color:var(--text-faint);font-size:0.88rem;display:none;"></div>
-        <button type="button" class="fnac-trigger-btn" id="fnac-btn" onclick="abrirPickerFecha()" style="display:none;">
-          <span class="fnac-placeholder" id="fnac-display">Selecciona tu fecha de nacimiento</span>
-          <span class="material-symbols-outlined" style="color:var(--brand);font-size:1.1rem;">calendar_month</span>
-        </button>
-        <input type="hidden" id="fnac-iso">
-        <p class="dato-hint" id="fnac-hint" style="display:none;">Requerida para verificar que eres mayor de 18 años.</p>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
         <div class="insc-tog-row">
-          <div><div class="insc-tog-label">Fecha pública para el equipo</div><div class="insc-tog-hint">Si está activada será visible para el equipo</div></div>
-          <label class="toggle-switch"><input type="checkbox" id="tog-fecha-pub"><span class="toggle-slider"></span></label>
+          <div><div class="insc-tog-label">Usar foto de Google</div><div class="insc-tog-hint">Como foto de perfil en la app</div></div>
+          <label class="toggle-switch"><input type="checkbox" id="tog-foto" onchange="inscToggleFoto(this)"><span class="toggle-slider"></span></label>
         </div>
-        <div class="insc-tog-row">
-          <div><div class="insc-tog-label">Edad pública para el equipo</div><div class="insc-tog-hint">Si está activada será visible para el equipo</div></div>
-          <label class="toggle-switch"><input type="checkbox" id="tog-edad-pub"><span class="toggle-slider"></span></label>
+        <div class="campo" style="margin-top:12px;">
+          <label>Fecha de nacimiento <span style="color:var(--brand);">*</span></label>
+          <div id="fecha-importada-display" style="padding:12px 14px;border-radius:12px;background:var(--disabled-bg-2);color:var(--text-faint);font-size:0.88rem;display:none;"></div>
+          <button type="button" class="fnac-trigger-btn" id="fnac-btn" onclick="abrirPickerFecha()" style="display:none;">
+            <span class="fnac-placeholder" id="fnac-display">Selecciona tu fecha de nacimiento</span>
+            <span class="material-symbols-outlined" style="color:var(--brand);font-size:1.1rem;">calendar_month</span>
+          </button>
+          <input type="hidden" id="fnac-iso">
+          <p class="dato-hint" id="fnac-hint" style="display:none;">Requerida para verificar que eres mayor de 18 años.</p>
         </div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+          <div class="insc-tog-row">
+            <div><div class="insc-tog-label">Fecha pública para el equipo</div><div class="insc-tog-hint">Si está activada será visible para el equipo</div></div>
+            <label class="toggle-switch"><input type="checkbox" id="tog-fecha-pub"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="insc-tog-row">
+            <div><div class="insc-tog-label">Edad pública para el equipo</div><div class="insc-tog-hint">Si está activada será visible para el equipo</div></div>
+            <label class="toggle-switch"><input type="checkbox" id="tog-edad-pub"><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+        <div class="error-msg" id="err-p2"></div>
+        <button class="btn btn-primary" style="margin-top:16px;" onclick="inscContinuar2()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
       </div>
-      <div class="error-msg" id="err-p2"></div>
-      <button class="btn btn-primary" style="margin-top:16px;" onclick="inscContinuar2()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+
     </div>
   </div>
 
