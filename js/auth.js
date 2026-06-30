@@ -167,7 +167,6 @@ function continuar_pin() {
       mostrarCargando('Cargando tus reservas...');
       api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
         _todasReservas = reservas;
-        ocultarCargando();
         prepararHome();
         ir('s-home');
       }, function(e2) { prepararHome(); ir('s-home'); alert('Error al cargar reservas: ' + e2.message); });
