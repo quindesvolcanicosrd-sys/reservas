@@ -212,6 +212,7 @@ reservas/
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **js/home.js** — `prepararHome()` ahora oculta `#home-reservas-lista` (`opacity:0`) durante el primer render síncrono (datos sin enriquecer) y lo revela con fade-in solo después de que `getFechasDisponibles` responda con `horaFin`/`duracion`/`descripcion` completos — elimina el parpadeo de cards incompletas al cargar la home.
 - **js/home.js** — `irHomeDesdeExito()` ahora llama a `prepararHome()` después de recibir las reservas frescas, para enriquecer las cards con `horaFin`, `duracion`, `descripcion` y `mapsUrl` — antes esos datos nunca se cargaban al volver desde una reserva exitosa.
 - **js/home.js** — Detección de protecciones en cards de home más robusta: `necesitaProtec` ahora también excluye valores que empiezan con "no," (ej. "No, tengo las mías"), no solo el literal `'no'`; `protecTexto` se calcula vía `protecLower` y devuelve `''` para esos casos de "no" (en vez de mostrarlos como si fueran necesidad real), y sigue normalizando a "Protecciones completas" cuando el valor es genérico ("sí"/"completa...").
 - **js/home.js** — Pills de equipamiento en cards de home ahora muestran solo el número de talla (sin texto "Te llevamos patines") y el texto real de protecciones (o "Protecciones completas" si el valor es genérico).

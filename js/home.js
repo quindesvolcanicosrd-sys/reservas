@@ -22,6 +22,8 @@ if (navAvatar) {
   if (foto) { navAvatar.innerHTML = '<img src="' + foto + '" alt="" style="width:100%;height:100%;object-fit:cover;">'; }
   else { navAvatar.textContent = (E.nombre || '?').charAt(0).toUpperCase(); }
 }
+  var homeContent = document.getElementById('home-reservas-lista');
+  if (homeContent) { homeContent.style.opacity = '0'; homeContent.style.transition = 'opacity 0.3s ease'; }
   _renderHomeReservas();
   var d = E.datos;
   var talla = d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
@@ -36,7 +38,11 @@ if (navAvatar) {
       return r;
     });
     _renderHomeReservas();
-  }, function() { _renderHomeReservas(); });
+    if (homeContent) { setTimeout(function() { homeContent.style.opacity = '1'; }, 50); }
+  }, function() {
+    _renderHomeReservas();
+    if (homeContent) { homeContent.style.opacity = '1'; }
+  });
   var bannerCupon = document.getElementById('banner-cupon');
   if (bannerCupon) {
     api({ action: 'getCuponDisponible', nombre: E.nombre }, function(res) {
