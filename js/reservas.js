@@ -311,8 +311,15 @@ function cargarFechas() {
     document.getElementById('lista-fechas').innerHTML = html; E.fechas = [];
     var puedeMensual = canPayMonthly() && !E.reagendando; var wrapper = document.getElementById('s4-tipo-pago-wrapper'); var subtitulo = document.getElementById('s4-fechas-subtitulo');
     if (puedeMensual) {
-      wrapper.style.display = 'block'; selTipoPago('mensual');
-      setTimeout(function() { _updateTpSlider(false); }, 30);
+      wrapper.style.display = 'block';
+      E.tipoPago = 'mensual';
+      document.getElementById('opcion-tipo-clase').classList.remove('active');
+      document.getElementById('opcion-tipo-mensual').classList.add('active');
+      if (document.getElementById('lista-fechas')) document.getElementById('lista-fechas').style.display = 'none';
+      if (subtitulo) subtitulo.style.display = 'none';
+      if (document.getElementById('s4-meses-wrapper')) document.getElementById('s4-meses-wrapper').style.display = 'block';
+      generarMeses();
+      actualizarTotalS4();
     } else {
       wrapper.style.display = 'none'; E.tipoPago = 'clase'; subtitulo.textContent = E.reagendando ? 'Seleccioná la nueva fecha para tu clase a favor.' : 'Selecciona uno o varios entrenamientos a los que asistirás.';
       subtitulo.style.display = 'block'; document.getElementById('lista-fechas').style.display = 'block';
@@ -336,6 +343,9 @@ function cargarFechas() {
       setTimeout(function() { mostrarModalEquip(agotadasEquip); }, 300);
     }
     ocultarCargando(); ir('s4');
+    if (puedeMensual) {
+      setTimeout(function() { _updateTpSlider(false); }, 50);
+    }
     setTimeout(function() {
       if (!_yaVioModal('reserva') && document.getElementById('s4').classList.contains('activa')) {
         mostrarModalInfoReserva(function(){});
