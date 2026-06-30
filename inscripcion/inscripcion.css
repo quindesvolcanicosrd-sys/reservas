@@ -517,7 +517,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* ── Flujo por pasos ─────────────────────────── */
 .insc-prog { display:flex; align-items:center; justify-content:center; gap:5px; padding:10px 0 4px; flex-shrink:0; }
-.insc-prog-dot { width:7px; height:7px; border-radius:50%; background:var(--border); transition:all 0.3s; }
+.insc-prog-dot { width:7px; height:7px; border-radius:50%; background:var(--neutral-gray); transition:all 0.3s; }
 .insc-prog-dot.done { background:var(--brand); opacity:0.7; }
 .insc-prog-dot.active { background:var(--brand); width:20px; border-radius:4px; }
 .insc-step { display:none; }
