@@ -350,9 +350,10 @@ function cargarFechas() {
     var agotadasEquip = fechas.filter(function(f) {
       return !f.disponible && f.razon && /patines|talla|protec|equip/i.test(f.razon);
     });
-    if (agotadasEquip.length > 0) {
-      setTimeout(function() { mostrarModalEquip(agotadasEquip); }, 300);
-    }
+    // Modal viejo deshabilitado: reemplazado por el modal por-card #modal-agotada-overlay (inscFechaAgotadaClick)
+    // if (agotadasEquip.length > 0) {
+    //   setTimeout(function() { mostrarModalEquip(agotadasEquip); }, 300);
+    // }
     ocultarCargando(); ir('s4');
     if (puedeMensual) {
       setTimeout(function() { _updateTpSlider(false); }, 50);
