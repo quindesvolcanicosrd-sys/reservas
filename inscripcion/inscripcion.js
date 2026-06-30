@@ -22,7 +22,7 @@ var _AJ_PREFIJOS = [
   {pais:'Bolivia',bandera:'🇧🇴',cod:'+591',min:8,max:8},
   {pais:'Paraguay',bandera:'🇵🇾',cod:'+595',min:9,max:9},
 ];
-var _inscPrefijoSel = _AJ_PREFIJOS[0];
+var _inscPrefijoSel = null;
 
 /* ── Inicialización ─────────────────────────── */
 document.addEventListener('DOMContentLoaded', function() {
@@ -288,6 +288,7 @@ function inscValidarTel(inp) {
 }
 
 function inscContinuar4() {
+  if (!_inscPrefijoSel) { errMsg('err-p4', 'Selecciona un código de país.'); return; }
   var tel = (document.getElementById('f-telefono').value || '').trim();
   if (!tel) { errMsg('err-p4', 'El número de teléfono es obligatorio.'); return; }
   var min = _inscPrefijoSel ? _inscPrefijoSel.min : 7;
@@ -397,7 +398,7 @@ function inscContinuar5c() {
 function inscWpUnido() {
   _inscWpUnido = true;
   var btn = document.getElementById('btn-wp-grupo-insc');
-  if (btn) { btn.className = 'btn-wp-activo'; btn.innerHTML = '<span style="font-size:1.2rem;">✅</span> ¡Ya estás en el grupo!'; }
+  if (btn) { btn.className = 'btn-wp-activo'; btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:1.2rem;vertical-align:middle;">check_circle</span> ¡Ya estás en el grupo!'; }
 }
 function inscTogglePinVis() {
   var inp = document.getElementById('f-pin');
