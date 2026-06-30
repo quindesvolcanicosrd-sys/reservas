@@ -32,6 +32,8 @@ document.addEventListener('DOMContentLoaded', function() {
     _inscRenderPrefijos(_AJ_PREFIJOS);
     inscMostrarPaso(0);
     _inscIniciarGoogleSignIn();
+    var _tokenUrl = new URLSearchParams(window.location.search).get('token');
+    if (_tokenUrl) { onGoogleCredentialInscripcion({ credential: _tokenUrl }); }
   } catch(e) {
     console.error('[INSC] Error en init:', e);
   } finally {
