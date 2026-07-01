@@ -32,6 +32,9 @@ document.addEventListener('DOMContentLoaded', function() {
     _inscCargarTallas();
     iniciarDatePicker();
     _inscRenderPrefijos(_AJ_PREFIJOS);
+    _inscPrefijoSel = _AJ_PREFIJOS[0];
+    var _prefijoDispDefault = document.getElementById('insc-prefijo-display');
+    if (_prefijoDispDefault) _prefijoDispDefault.textContent = _inscPrefijoSel.bandera + ' ' + _inscPrefijoSel.cod + ' ' + _inscPrefijoSel.pais;
     inscMostrarPaso(0);
     _inscIniciarGoogleSignIn();
     var _tokenUrl = new URLSearchParams(window.location.search).get('token');
