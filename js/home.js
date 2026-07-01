@@ -86,7 +86,8 @@ function refrescarMisReservas(callback, btn) {
   });
 }
 
-var _ptrStartY = 0, _ptrArrastrando = false, _ptrRefrescando = false, _ptrDistActual = 0;
+var _ptrStartY = 0, _ptrArrastrando = false, _ptrRefrescando = false, _ptrProgreso = 0;
+var _PTR_RANGO = 140, _PTR_MAX_VISUAL = 70;
 
 function _ptrEnMisReservas() {
   var s = document.getElementById('s-home');
@@ -98,7 +99,9 @@ window.addEventListener('touchstart', function(e) {
   if ((window.scrollY || 0) > 0) return;
   _ptrStartY = e.touches[0].clientY;
   _ptrArrastrando = true;
-  _ptrDistActual = 0;
+  _ptrProgreso = 0;
+  var anillo = document.getElementById('ptr-spinner');
+  if (anillo) { anillo.style.animation = 'none'; anillo.style.transform = 'rotate(0deg)'; }
 }, { passive: true });
 
 window.addEventListener('touchmove', function(e) {
@@ -106,27 +109,43 @@ window.addEventListener('touchmove', function(e) {
   var delta = e.touches[0].clientY - _ptrStartY;
   if (delta <= 0) { _ptrArrastrando = false; _ptrOcultarIndicador(); return; }
   var ind = document.getElementById('ptr-indicator');
-  if (!ind) return;
-  var dist = Math.min(delta / 2, 60);
-  _ptrDistActual = dist;
+  var anillo = document.getElementById('ptr-spinner');
+  if (!ind || !anillo) return;
+  var progreso = Math.min(delta / _PTR_RANGO, 1);
+  _ptrProgreso = progreso;
+  var offsetY = _PTR_MAX_VISUAL * (1 - Math.pow(1 - progreso, 2)); // resistencia tipo goma elástica
+  var escala = 0.7 + 0.3 * progreso;
   ind.style.transition = 'none';
-  ind.style.opacity = Math.min(dist / 40, 1);
-  ind.style.transform = 'translate(-50%,' + (dist - 40) + 'px)';
+  ind.style.opacity = Math.min(progreso / 0.3, 1);
+  ind.style.transform = 'translate(-50%,' + (offsetY - _PTR_MAX_VISUAL) + 'px) scale(' + escala + ')';
+  anillo.style.transform = 'rotate(' + (progreso * 360) + 'deg)';
 }, { passive: true });
 
 window.addEventListener('touchend', function() {
   if (!_ptrArrastrando) return;
   _ptrArrastrando = false;
   var ind = document.getElementById('ptr-indicator');
-  var dist = _ptrDistActual;
-  _ptrDistActual = 0;
-  if (!ind) return;
+  var anillo = document.getElementById('ptr-spinner');
+  var progreso = _ptrProgreso;
+  _ptrProgreso = 0;
+  if (!ind || !anillo) return;
   ind.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
-  if (dist >= 45) {
+  if (progreso >= 1) {
     _ptrRefrescando = true;
     ind.style.opacity = '1';
-    ind.style.transform = 'translate(-50%,20px)';
-    refrescarMisReservas(function() { _ptrRefrescando = false; _ptrOcultarIndicador(); });
+    ind.style.transform = 'translate(-50%,0) scale(1)';
+    anillo.style.animation = '';    // vuelve al spin infinito propio de .spinner
+    anillo.style.transform = '';
+    var yaResolvio = false;
+    var backstop = setTimeout(function() {
+      if (yaResolvio) return;
+      yaResolvio = true; _ptrRefrescando = false; _ptrOcultarIndicador();
+    }, 10000); // por si el fetch nunca resuelve (sin timeout propio en api()), no bloquear el gesto para siempre
+    refrescarMisReservas(function() {
+      if (yaResolvio) return;
+      yaResolvio = true; clearTimeout(backstop);
+      _ptrRefrescando = false; _ptrOcultarIndicador();
+    });
   } else {
     _ptrOcultarIndicador();
   }
@@ -134,10 +153,12 @@ window.addEventListener('touchend', function() {
 
 function _ptrOcultarIndicador() {
   var ind = document.getElementById('ptr-indicator');
+  var anillo = document.getElementById('ptr-spinner');
   if (!ind) return;
   ind.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
   ind.style.opacity = '0';
-  ind.style.transform = 'translate(-50%,-40px)';
+  ind.style.transform = 'translate(-50%,-50px) scale(0.7)';
+  if (anillo) { anillo.style.animation = 'none'; anillo.style.transform = 'rotate(0deg)'; }
 }
 
 function irNuevaReserva(skipEquip) {

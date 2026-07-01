@@ -62,8 +62,10 @@
   </div>
 </div>
 
-<div id="ptr-indicator" style="position:fixed;left:50%;top:64px;z-index:850;opacity:0;transform:translate(-50%,-40px);transition:opacity 0.25s ease,transform 0.25s ease;pointer-events:none;">
-  <div class="spinner" style="width:26px;height:26px;border-width:3px;"></div>
+<div id="ptr-indicator" style="position:fixed;left:50%;top:70px;z-index:950;opacity:0;transform:translate(-50%,-50px) scale(0.7);transition:opacity 0.25s ease,transform 0.25s ease;pointer-events:none;">
+  <div style="width:36px;height:36px;border-radius:50%;background:var(--surface);box-shadow:var(--card-shadow);display:flex;align-items:center;justify-content:center;">
+    <div class="spinner" id="ptr-spinner" style="width:20px;height:20px;border-width:3px;animation:none;"></div>
+  </div>
 </div>
 
 <div class="contenedor">
