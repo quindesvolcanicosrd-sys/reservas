@@ -45,6 +45,7 @@
 
   /* ── Fondo ───────────────────────────────────────────── */
   /* Si cambiás --bg (light), actualizá a mano el <meta name="theme-color" media="(prefers-color-scheme: light)"> en index.html e inscripcion/index.html — los meta tags no soportan var(). */
+  /* También actualizá a mano background_color/theme_color en manifest.json (barra de gestos de Android en PWA instalada) — el manifest solo admite un valor único, sin variante dark, así que usa el valor light. */
   --bg:             #FDF3EB;
   --bg-2:           #F7EAE0;
 
