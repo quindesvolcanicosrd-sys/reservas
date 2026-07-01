@@ -100,7 +100,7 @@
           </div>
         </div>
         <div class="insc-tog-row">
-          <div><div class="insc-tog-label">Usar foto de Google</div><div class="insc-tog-hint">Como foto de perfil en la app</div></div>
+          <div><div class="insc-tog-label">Usar foto de Google</div></div>
           <label class="toggle-switch"><input type="checkbox" id="tog-foto" onchange="inscToggleFoto(this)"><span class="toggle-slider"></span></label>
         </div>
         <div class="campo" style="margin-top:12px;">
@@ -111,15 +111,14 @@
             <span class="material-symbols-outlined" style="color:var(--brand);font-size:1.1rem;">calendar_month</span>
           </button>
           <input type="hidden" id="fnac-iso">
-          <p class="dato-hint" id="fnac-hint" style="display:none;">Requerida para verificar que eres mayor de 18 años.</p>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
           <div class="insc-tog-row">
-            <div><div class="insc-tog-label">Fecha pública para el equipo</div><div class="insc-tog-hint">Si está activada será visible para el equipo</div></div>
+            <div><div class="insc-tog-label">Fecha pública para el equipo</div></div>
             <label class="toggle-switch"><input type="checkbox" id="tog-fecha-pub"><span class="toggle-slider"></span></label>
           </div>
           <div class="insc-tog-row">
-            <div><div class="insc-tog-label">Edad pública para el equipo</div><div class="insc-tog-hint">Si está activada será visible para el equipo</div></div>
+            <div><div class="insc-tog-label">Edad pública para el equipo</div></div>
             <label class="toggle-switch"><input type="checkbox" id="tog-edad-pub"><span class="toggle-slider"></span></label>
           </div>
         </div>
@@ -135,11 +134,9 @@
     <div class="insc-scroll">
       <div class="sec-label">Tu identidad</div>
       <h2>¿Cómo te llamamos?</h2>
-      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:18px;line-height:1.5;">Este nombre aparecerá en tus reservas y comunicaciones del equipo.</p>
       <div class="campo">
         <label>Nombre <span style="color:var(--brand);">*</span></label>
         <input type="text" id="f-nombre" placeholder="¿Cómo quieres que te llamemos?" oninput="inscValidarNombre(this)">
-        <p class="dato-hint">Mínimo 2 caracteres. Solo letras y espacios. Puedes cambiarlo si quieres.</p>
         <p id="hint-nombre-ok" style="font-size:0.78rem;color:var(--success-dark);margin-top:4px;display:none;">✓ Nombre válido</p>
       </div>
       <div class="campo">
@@ -150,7 +147,6 @@
           <span class="aj-pill" data-val="Elle/elle" onclick="inscTogglePron(this)">Elle</span>
           <span class="aj-pill aj-pill-otro" data-val="" onclick="inscAbrirOtroPron()">Otro...</span>
         </div>
-        <p class="dato-hint" style="margin-top:6px;">Selecciona todos los que apliquen.</p>
         <div id="insc-pron-otro-display" style="display:none;margin-top:8px;font-size:0.78rem;color:var(--brand);"></div>
       </div>
       <div class="error-msg" id="err-p3"></div>
@@ -163,7 +159,6 @@
     <div class="insc-scroll">
       <div class="sec-label">Contacto</div>
       <h2>¿Cómo te contactamos?</h2>
-      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:18px;line-height:1.5;">Lo usaremos solo para avisos importantes del equipo.</p>
       <div class="campo">
         <label>Código de país <span style="color:var(--brand);">*</span></label>
         <button type="button" class="aj-selector-btn" onclick="inscAbrirSheetPrefijo()">
@@ -174,7 +169,6 @@
       <div class="campo">
         <label>Número de teléfono <span style="color:var(--brand);">*</span></label>
         <input type="tel" id="f-telefono" placeholder="Ej: 0991234567" oninput="inscValidarTel(this)">
-        <p class="dato-hint" id="insc-tel-hint">Sin prefijo ni espacios.</p>
       </div>
       <div class="error-msg" id="err-p4"></div>
       <button class="btn btn-primary" onclick="inscContinuar4()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
@@ -186,7 +180,6 @@
     <div class="insc-scroll">
       <div class="sec-label">Equipamiento — 1/3</div>
       <h2>¿Necesitas patines prestados?</h2>
-      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:20px;line-height:1.5;">Selecciona si necesitas que te prestemos patines para entrenar.</p>
       <div class="equip-pills-bin" id="insc-patines-pills">
         <div class="equip-pill-bin" data-val="Sí" onclick="inscSelBin(this,'insc-patines-pills')">
           <span class="material-symbols-outlined equip-pill-ico">roller_skating</span>
@@ -207,9 +200,7 @@
     <div class="insc-scroll">
       <div class="sec-label">Equipamiento — 2/3</div>
       <h2>¿Qué talla necesitas?</h2>
-      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:18px;line-height:1.5;">Solo aparecen las tallas disponibles en el equipo.</p>
       <div class="equip-tallas-grid" id="insc-tallas-grid"></div>
-      <p class="dato-hint" style="margin-bottom:16px;">Las tallas en gris están agotadas.</p>
       <input type="hidden" id="f-talla">
       <div class="error-msg" id="err-p5b"></div>
       <button class="btn btn-primary" onclick="inscContinuar5b()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
@@ -221,7 +212,6 @@
     <div class="insc-scroll">
       <div class="sec-label">Equipamiento — 3/3</div>
       <h2>¿Necesitas protecciones?</h2>
-      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:18px;line-height:1.5;">Protecciones completas incluyen casco, rodilleras, coderas y muñequeras.</p>
       <div class="equip-pills-protec" id="insc-protec-pills">
         <div class="equip-pill-protec" data-val="Sí" onclick="inscSelProtec(this)">
           <span class="material-symbols-outlined equip-pico">shield</span>
