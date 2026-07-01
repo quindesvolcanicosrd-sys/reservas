@@ -2,7 +2,7 @@
 
 var G = { email:'', idToken:'', nombre:'', foto:'', guardarFoto:false, fechaNac:'', mayorEdad:false };
 var _INSC_STEPS = ['insc-step-1','insc-step-3','insc-step-4','insc-step-5a','insc-step-5b','insc-step-5c','insc-step-6'];
-var _INSC_TITLES = ['Crear perfil','Tu identidad','Contacto','Equipamiento','Equipamiento','Equipamiento','Último paso'];
+var _INSC_TITLES = ['Crear perfil','Crear perfil','Crear perfil','Crear perfil','Crear perfil','Crear perfil','Crear perfil'];
 var _inscCurIdx = 0;
 var _inscVinoConToken = false;
 var _inscNecesitaPatines = false;
