@@ -71,6 +71,8 @@ function _inscRenderProg() {
   var ph = document.getElementById('insc-nav-ph');
   if (back) back.style.display = (_inscCurIdx > 0 || _inscVinoConToken) ? 'flex' : 'none';
   if (ph) ph.style.display = _inscCurIdx > 0 ? 'none' : 'block';
+  var btnHome = document.getElementById('insc-btn-home');
+  if (btnHome) btnHome.style.display = (_inscCurIdx === 0) ? 'flex' : 'none';
 }
 
 function inscMostrarPaso(idx) {
@@ -471,7 +473,7 @@ function inscEnviar() {
     }, function(e) { ocultarCargando(); _inscEnviando = false; errMsg('err-p6', 'Error: ' + (e.message || 'Intenta de nuevo')); });
   }
   if (pin && pin.length === 4) {
-    sha256Hex(pin).then(function(hash) { _doEnviar(hash); }).catch(function() { _doEnviar(''); });
+    sha256Hex(pin + '|' + G.nombre).then(function(hash) { _doEnviar(hash); }).catch(function() { _doEnviar(''); });
   } else { _doEnviar(''); }
 }
 

@@ -163,7 +163,6 @@ function actualizarTextosPago() {
   document.getElementById('s4-label').textContent = E.reagendando ? 'Reagendar clase' : 'Paso 1 de 3';
   document.getElementById('s4-titulo').textContent = necesitaEquipamiento ? 'Próximos entrenamientos' : '¿Cómo quieres pagar?';
   document.getElementById('chk-pago-texto').textContent = canPayMonthly() ? 'Ya realicé mi pago y entiendo este estará pendiente hasta que sea verificada por el equipo.' : 'Realicé mi pago y entiendo que mi reserva quedará pendiente.';
-  document.getElementById('nota-pago-hint').textContent = canPayMonthly() ? 'Escribe tu nombre o referencia así sabemos que el pago corresponde a tí.' : 'Escribe tu nombre o referencia de a quien corresponde la reserva así sabemos que el pago corresponde a tí.';
 }
 
 function selTipoPago(tipo) {
@@ -452,7 +451,7 @@ function continuar_s4() {
     detalleTexto = E.meses.join(', ');
   }
   document.getElementById('s-pago-total-detalle').textContent = detalleTexto;
-  document.getElementById('chk-pago').checked = false; document.getElementById('btn-pago').disabled = true; document.getElementById('nota-pago').value = ''; E.wpEnviado = false;
+  document.getElementById('chk-pago').checked = false; document.getElementById('btn-pago').disabled = true; E.wpEnviado = false;
   var lineasFechas = E.tipoPago === 'mensual' ? 'Meses pagados:\n- ' + E.meses.join('\n- ') + '\n\nTotal: $' + (E.totalPago || 0).toFixed(2) : E.fechas.map(function(f) { return '- ' + f; }).join('\n');
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : ''; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : '';
   var equipLinea = (talla && protec && protec.toLowerCase() !== 'no') ? 'Necesitare patines talla ' + talla + ' y protecciones.' : (talla) ? 'Necesitare patines talla ' + talla + '.' : (protec && protec.toLowerCase() !== 'no') ? 'Necesitare protecciones (' + protec + ').' : 'Llevare mi propio equipamiento.';
@@ -498,7 +497,7 @@ function construirResumenS5(backTarget) {
 
 function continuar_pago() {
   if (!document.getElementById('chk-pago').checked) { err('err-pago', 'Debes confirmar que realizaste el pago.'); return; }
-  E.notaPago = document.getElementById('nota-pago').value.trim(); construirResumenS5('s-pago'); ir('s5');
+  E.notaPago = E.nombre || ''; construirResumenS5('s-pago'); ir('s5');
 }
 
 function continuar_pago_y_wp() {
