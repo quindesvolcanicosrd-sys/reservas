@@ -195,13 +195,17 @@ function togglePinVisibility() {
 }
 
 function cerrarSesion() {
-  if (!confirm('¿Cerrar sesión?')) return;
   api({ action: 'cerrarSesion' }, function(){}, function(){});
   localStorage.removeItem('session');
   _token = '';
   E.nombre = ''; E.datos = null; E.datosCompletos = null; _todasReservas = []; E.reagendando = false;
   var sel = document.getElementById('sel-nombre'); if (sel) sel.value = '';
   ir('s1');
+}
+
+function confirmarCerrarSesion() {
+  ajCerrarSheetLogout();
+  setTimeout(cerrarSesion, 350);
 }
 
 function cerrarMsgNoRegistrado() {
