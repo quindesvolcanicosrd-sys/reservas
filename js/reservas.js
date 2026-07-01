@@ -107,6 +107,7 @@ function confirmarOtroProtec() {
   var vals = [];
   document.querySelectorAll('#bs-protec-pills .aj-pill.activa').forEach(function(p) { vals.push(p.dataset.val); });
   if (!vals.length) { err('err-bs-protec', 'Selecciona al menos una opción.'); return; }
+  if (vals.length === 4) { err('err-bs-protec', 'Si necesitas las 4 protecciones, selecciona la opción "Sí, necesito protecciones completas".'); return; }
   var v = vals.join(', ');
   E.editProtec = v;
   document.getElementById('edit-protec-val').value = v;

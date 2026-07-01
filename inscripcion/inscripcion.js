@@ -414,6 +414,7 @@ function inscConfirmarOtroProtec() {
   var vals = [];
   document.querySelectorAll('#insc-protec-otro-pills .aj-pill.activa').forEach(function(p) { vals.push(p.dataset.val); });
   if (!vals.length) { errMsg('err-insc-protec-sheet', 'Selecciona al menos una opción.'); return; }
+  if (vals.length === 4) { errMsg('err-insc-protec-sheet', 'Si necesitas las 4 protecciones, selecciona la opción "Sí, necesito protecciones completas".'); return; }
   var v = vals.join(', ');
   _inscProtecOtro = v;
   var sub = document.getElementById('insc-protec-otro-sub');
