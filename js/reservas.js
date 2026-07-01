@@ -521,17 +521,18 @@ function continuar_s4() {
     detalleTexto = E.meses.join(', ');
   }
   document.getElementById('s-pago-total-detalle').textContent = detalleTexto;
-  document.getElementById('chk-pago').checked = false; document.getElementById('btn-pago').disabled = true; E.wpEnviado = false;
+  document.getElementById('chk-pago').checked = false; document.getElementById('btn-pago').disabled = true;
   var lineasFechas = E.tipoPago === 'mensual' ? 'Meses pagados:\n- ' + E.meses.join('\n- ') + '\n\nTotal: $' + (E.totalPago || 0).toFixed(2) : E.fechas.map(function(f) { return '- ' + f; }).join('\n');
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : ''; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : '';
   var equipLinea = (talla && protec && protec.toLowerCase() !== 'no') ? 'Necesitare patines talla ' + talla + ' y protecciones.' : (talla) ? 'Necesitare patines talla ' + talla + '.' : (protec && protec.toLowerCase() !== 'no') ? 'Necesitare protecciones (' + protec + ').' : 'Llevare mi propio equipamiento.';
   var msgWp = '¡Hola! Soy *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '*.\n\n*Clases reservadas:*\n' + lineasFechas + '\n\n' + equipLinea + '\n\nTe envío el comprobante adjunto. Si no lo ves, por favor solicítamelo. ¡Gracias!';
   E.wpUrl = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp);
+  var btnWpPago = document.getElementById('btn-wp-pago'); if (btnWpPago) btnWpPago.href = E.wpUrl;
   if ((E.cuponAplicado || E.creditosUsados > 0) && E.totalPago === 0) {
     E.notaPago = E.creditosUsados > 0
       ? 'Clase(s) a favor por entrenamiento cancelado' + (E.cuponAplicado ? ' + cupón' : '')
       : 'Cupón clase gratis';
-    abrirSheetConfirmarReserva(); return;
+    confirmarReserva(document.getElementById('btn-s4-continuar')); return;
   }
   ir('s-pago');
 }
@@ -544,71 +545,14 @@ function toggleBtnPago() {
   if (lbl) lbl.classList.toggle('sel', document.getElementById('chk-pago').checked);
 }
 
-function abrirSheetConfirmarReserva() {
-  var btn = document.getElementById('btn-confirmar');
-  btn.disabled = false; btn.textContent = necesitaEquipo() ? 'Confirmar mi reserva' : 'Confirmar mi pago';
-  var h = '<p style="margin:0 0 10px;font-size:0.85rem;color:var(--text);">' + (necesitaEquipo() ? 'Reservarás estas clases:' : 'Confirmarás este pago:') + '</p>';
-  if (E.tipoPago === 'clase') {
-    h += '<div style="padding-bottom:10px;font-size:0.9rem;"><div style="font-weight:600;line-height:1.6;text-align:left;">' + E.fechas.map(function(f) { return '• ' + f; }).join('<br>') + '</div></div>';
-  } else if (E.meses && E.meses.length > 0) {
-    h += '<div style="padding-bottom:10px;font-size:0.9rem;"><div style="font-weight:600;line-height:1.6;text-align:left;">' + E.meses.map(function(m) { return '• ' + m; }).join('<br>') + '</div></div>';
-  }
-  if (E.cuponAplicado || E.creditosUsados > 0) {
-    var partesT = [];
-    if (E.creditosUsados > 0) partesT.push('🔁 ' + E.creditosUsados + ' a favor');
-    if (E.cuponAplicado) partesT.push('🎟️ cupón');
-    var textoTotal = (E.totalPago > 0 ? '$' + E.totalPago.toFixed(2) + ' + ' : '$0.00 — ') + partesT.join(' + ');
-    h += fila('Total', '<span style="color:var(--success-dark);font-weight:800;">' + textoTotal + '</span>');
-  } else {
-    h += fila('Total', '<span style="font-weight:800;">$' + (E.totalPago || 0).toFixed(2) + '</span>');
-  }
-  document.getElementById('sheet-confirmar-resumen').innerHTML = h;
-  var errEl = document.getElementById('err-sheet-confirmar'); if (errEl) errEl.style.display = 'none';
-  var ov = document.getElementById('sheet-confirmar-reserva-overlay');
-  var sh = document.getElementById('sheet-confirmar-reserva');
-  if (ov) ov.style.display = 'block';
-  if (sh) {
-    sh.style.display = 'block';
-    requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
-  }
-}
-
-function cerrarSheetConfirmarReserva() {
-  var sh = document.getElementById('sheet-confirmar-reserva');
-  var ov = document.getElementById('sheet-confirmar-reserva-overlay');
-  if (sh) sh.style.transform = 'translateY(100%)';
-  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
-}
-
 function continuar_pago() {
   if (!document.getElementById('chk-pago').checked) { err('err-pago', 'Debes confirmar que realizaste el pago.'); return; }
-  E.notaPago = E.nombre || ''; abrirSheetConfirmarReserva();
+  E.notaPago = E.nombre || ''; confirmarReserva(document.getElementById('btn-pago'));
 }
 
-function continuar_pago_y_wp() {
-  if (!document.getElementById('chk-pago').checked) { err('err-pago', 'Debes confirmar que realizaste el pago.'); return; }
-  var modal = document.getElementById('modal-wp-comprobante');
-  var btnWp = document.getElementById('modal-wp-btn');
-  if (btnWp && E.wpUrl) btnWp.href = E.wpUrl;
-  if (modal) { modal.style.display = 'flex'; }
-}
-function modalWpEnviado() {
-  E.wpEnviado = true;
-  var modal = document.getElementById('modal-wp-comprobante');
-  if (modal) modal.style.display = 'none';
-  continuar_pago();
-}
-function modalWpSaltear() {
-  E.wpEnviado = false;
-  var modal = document.getElementById('modal-wp-comprobante');
-  if (modal) modal.style.display = 'none';
-  continuar_pago();
-}
-
-function confirmarReserva() {
-  var shConf = document.getElementById('sheet-confirmar-reserva'); if (shConf) shConf.style.display = 'none';
-  var ovConf = document.getElementById('sheet-confirmar-reserva-overlay'); if (ovConf) ovConf.style.display = 'none';
-  var btn = document.getElementById('btn-confirmar'); btn.disabled = true; mostrarCargando('Guardando tu reserva/pago...');
+function confirmarReserva(btn) {
+  if (btn) btn.disabled = true;
+  mostrarCargando('Guardando tu reserva/pago...');
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : 'No'; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : 'No';
 
   function finalizar() {
