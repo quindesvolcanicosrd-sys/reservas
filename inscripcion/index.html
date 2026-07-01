@@ -290,9 +290,15 @@
   <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 4px;"></div>
   <div style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:8px 16px 12px;border-bottom:1px solid var(--border-light);">Especifica qué necesitas</div>
   <div style="padding:16px;">
-    <textarea id="insc-protec-otro-inp" style="width:100%;min-height:80px;padding:13px 16px;background:var(--surface-2);border:1.5px solid var(--brand);border-radius:12px;font-size:0.88rem;font-family:inherit;resize:none;outline:none;" placeholder="Ej: Tengo casco pero me faltan rodilleras y coderas"></textarea>
-    <p style="font-size:0.72rem;color:var(--muted);margin-top:6px;margin-bottom:14px;">Cuéntanos qué protecciones necesitas.</p>
-    <button onclick="inscConfirmarOtroProtec()" style="width:100%;padding:13px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;">Confirmar</button>
+    <p style="font-size:0.72rem;color:var(--muted);margin-top:0;margin-bottom:12px;">Toca todas las que necesites.</p>
+    <div class="aj-pills-row" id="insc-protec-otro-pills">
+      <span class="aj-pill" data-val="Casco" onclick="inscToggleProtecItem(this)">Casco</span>
+      <span class="aj-pill" data-val="Muñequeras" onclick="inscToggleProtecItem(this)">Muñequeras</span>
+      <span class="aj-pill" data-val="Coderas" onclick="inscToggleProtecItem(this)">Coderas</span>
+      <span class="aj-pill" data-val="Rodilleras" onclick="inscToggleProtecItem(this)">Rodilleras</span>
+    </div>
+    <div class="error-msg" id="err-insc-protec-sheet" style="margin-top:10px;"></div>
+    <button onclick="inscConfirmarOtroProtec()" style="width:100%;padding:13px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-top:16px;">Confirmar</button>
     <button onclick="inscCancelarOtroProtec()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:none;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
   </div>
 </div>

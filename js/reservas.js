@@ -75,11 +75,11 @@ function abrirBsProtec() {
     requestAnimationFrame(function() {
       requestAnimationFrame(function() { bs.style.transform = 'translateY(0)'; });
     });
-    setTimeout(function() {
-      var inp = document.getElementById('bs-protec-input');
-      if (inp) inp.focus();
-    }, 400);
   }
+}
+
+function toggleProtecItem(el) {
+  el.classList.toggle('activa');
 }
 
 function cerrarBsProtec() {
@@ -94,8 +94,8 @@ function cerrarBsProtec() {
 
 function cancelarOtroProtec() {
   cerrarBsProtec();
-  var inp = document.getElementById('bs-protec-input');
-  if (inp && !inp.value.trim()) {
+  var hayAlguna = document.querySelector('#bs-protec-pills .aj-pill.activa');
+  if (!hayAlguna) {
     document.querySelectorAll('#s3c-pills .equip-pill-protec').forEach(function(p) {
       p.classList.remove('sel');
     });
@@ -104,8 +104,10 @@ function cancelarOtroProtec() {
 }
 
 function confirmarOtroProtec() {
-  var v = (document.getElementById('bs-protec-input').value || '').trim();
-  if (!v) return;
+  var vals = [];
+  document.querySelectorAll('#bs-protec-pills .aj-pill.activa').forEach(function(p) { vals.push(p.dataset.val); });
+  if (!vals.length) { err('err-bs-protec', 'Selecciona al menos una opción.'); return; }
+  var v = vals.join(', ');
   E.editProtec = v;
   document.getElementById('edit-protec-val').value = v;
   var sub = document.getElementById('protec-otro-sub');

@@ -212,8 +212,7 @@ function irEditarEquipDesdeHome() {
   });
   var sub = document.getElementById('protec-otro-sub');
   if (sub) { sub.textContent = 'Toca para especificar'; sub.style.color = ''; }
-  var bsInp = document.getElementById('bs-protec-input');
-  if (bsInp) bsInp.value = '';
+  document.querySelectorAll('#bs-protec-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   ir('s3a');
 }
 

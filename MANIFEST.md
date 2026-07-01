@@ -212,6 +212,7 @@ reservas/
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **inscripcion/index.html + inscripcion/inscripcion.js + index.html + js/reservas.js + js/perfil.js + js/home.js** — Protecciones parciales ("Otro"/"Tengo algunas, me faltan otras"): el textarea de texto libre del bottom sheet se reemplazó por 4 pills de selección múltiple (Casco, Muñequeras, Coderas, Rodilleras), reutilizando el patrón `.aj-pill`/`.aj-pills-row`/`.activa` (`css/perfil.css`) ya usado para pronombres — sin agregar CSS nuevo. Lógica duplicada por archivo/pantalla, igual que ya ocurre con pronombres (`inscTogglePron` en inscripcion.js vs `ajTogglePill` en perfil.js), ya que inscripcion.js y js/reservas.js son bundles independientes sin módulo compartido (aparte de `shared/date-picker.js`): (1) **inscripcion/inscripcion.js** (paso 5C, sheet `#insc-sheet-protec`) — nueva `inscToggleProtecItem(el)` togglea `.activa` en `#insc-protec-otro-pills`; `inscConfirmarOtroProtec()` ahora junta los `data-val` de las pills `.activa` con `', '` (en vez de leer el textarea), valida al menos 1 seleccionada (`errMsg('err-insc-protec-sheet', 'Selecciona al menos una opción.')`, mismo patrón que `inscContinuar3()` para pronombres) y sigue guardando el resultado en `_inscProtecOtro`; `inscCancelarOtroProtec()` verifica pills `.activa` en vez del valor del textarea; se quitó el auto-focus al textarea (ya no existe) de `inscSelProtec()`. (2) **js/reservas.js** (pantalla s3c, sheet `#bs-protec`, usada tanto en una reserva nueva como al editar equipamiento desde "Ajustes del perfil" vía `irEditarEquipDesdeHome()`) — mismo patrón: nueva `toggleProtecItem(el)`, `confirmarOtroProtec()` junta pills `.activa` de `#bs-protec-pills` con `', '` y valida con `err('err-bs-protec', ...)`, `cancelarOtroProtec()` verifica `.activa` en vez del textarea, `abrirBsProtec()` ya no enfoca un input inexistente. (3) **js/perfil.js** no tiene su propio sheet de protecciones (la edición de equipo desde "Ajustes del perfil" reutiliza las pantallas s3a-s3c de reservas.js, no un panel `aj-sub-*`); solo se actualizó `irEditarEquipDesdeHome()` para resetear `#bs-protec-pills .aj-pill.activa` en vez del `#bs-protec-input` (textarea) que ya no existe. (4) **js/home.js** (`_renderCardHome()`) — cuando el valor de protecciones no matchea "completa"/"sí"/"si" ni es "No", ahora antepone `'Necesita: '` al texto (ej. "Necesita: Casco, Coderas") en vez de mostrar la lista pelada. No requirió cambios: `js/perfil.js` (`irEditarDatos()`, ya mostraba `'Protecciones: ' + valor` tal cual, funciona igual con una lista separada por comas) ni el flujo de payload/redirect/auth.js arreglado en el fix anterior (sigue tratando `necesitaProtecciones` como string opaco, sin asumir booleano).
 - **inscripcion/inscripcion.js + js/auth.js** — Fix bug de datos: al elegir "Tengo algunas, me faltan otras" en protecciones (paso 5C de inscripción) y confirmar el detalle en el bottom sheet (`inscConfirmarOtroProtec()` guarda el texto libre en `_inscProtecOtro`, ej. "Me falta casco"), tanto la reserva creada justo después del registro como "Ajustes del perfil" mostraban "Protecciones completas"/"Protecciones: Sí" como si se hubiera elegido la opción 1. La causa no estaba en `inscConfirmarOtroProtec()`/`inscEnviar()` (que arman bien el payload `necesitaProtecciones` hacia `inscribirPersona`, con el string libre), sino en el redirect post-registro exitoso: `inscEnviar()` línea ~471 armaba la URL `?nuevx=1&...&protec=...` colapsando el string libre a un booleano (`protec==='No'?'no':'si'`), y luego `js/auth.js` (`onGoogleCredentialUsuario()` y el callback de `restaurarSesion`) al consumir `window._pendingNuevx` reexpandía ese booleano a un literal fijo `'Sí'`/`'No'`, pisando `E.datos.necesitaProtecciones` y perdiendo el detalle antes de que se creara la primera reserva (`irNuevaReserva(true)`) y de que se poblara "Ajustes del perfil" (`irEditarDatos()` en `js/perfil.js`, que lee `E.datos.necesitaProtecciones` tal cual sin normalizar). Fix: `inscEnviar()` ahora manda `'&protec=' + encodeURIComponent(protec || 'No')` (el string real, no un booleano); `js/auth.js` ahora asigna `E.datos.necesitaProtecciones = _pnx.protec ? _pnx.protec : 'No'` en ambos puntos (sin `decodeURIComponent` extra — `URLSearchParams.get()` ya decodifica el query string, así que decodificar de nuevo rompía con `URIError` si el texto libre contenía un `%` literal, ej. "50%"). `js/home.js` (`_renderCardHome()`, clasifica por `indexOf('completa')`/`'sí'`/`'si'` vs texto libre) y `js/perfil.js` (`irEditarDatos()`) no requirieron cambios: ya manejaban correctamente un string libre en `necesitaProtecciones`, solo recibían el valor ya dañado por auth.js.
 - **inscripcion/inscripcion.js** — Título de nav de inscripción cambiado de "Crear perfil" a "Crear cuenta" en los 7 pasos (`_INSC_TITLES`).
 - **inscripcion/inscripcion.js** — Eliminada la validación obligatoria de unirse al grupo de WhatsApp antes de completar la inscripción: `inscEnviar()` ya no chequea `_inscWpUnido` ni muestra el error "Por favor únete al grupo de WhatsApp antes de finalizar." — el botón "Únete al grupo de WhatsApp" y la sección siguen mostrándose igual (invitación informativa, `inscWpUnido()` sigue actualizando su estado visual a "¡Ya estás en el grupo!" al tocarlo), pero "Completar inscripción" ya no depende de haberlo tocado.
@@ -366,7 +367,7 @@ reservas/
 | `#sheet-gestionar` | Bottom sheet de gestión de reserva (dos estados: opciones y cancelar); se abre animado desde abajo; `#sg-sheet-subtitulo` muestra fecha/hora/lugar |
 | `#modal-confirm-reagendar` | Modal bottom-sheet de confirmación de reagendamiento; se abre desde `confirmarCambioFecha()`; muestra fecha, pills hora/lugar y equipo; botón confirmar llama `ejecutarReagendamiento()` |
 | `#bs-protec-overlay` | Overlay oscuro del bottom sheet de protecciones personalizadas; `onclick` cancela |
-| `#bs-protec` | Bottom sheet para especificar protecciones parciales ("Otro"); contiene `#bs-protec-input` (textarea), Confirmar y Cancelar |
+| `#bs-protec` | Bottom sheet para especificar protecciones parciales ("Otro"); contiene `#bs-protec-pills` (4 pills multi-select: Casco/Muñequeras/Coderas/Rodilleras, `.aj-pill`/`.activa`), `#err-bs-protec`, Confirmar y Cancelar |
 | `#s3a-pills` | Contenedor de pills binarias (Sí/No patines) en s3a |
 | `#tallas-grid` | Grid de `.equip-talla-pill` generado dinámicamente en s3b con tallas de la API |
 | `#s3c-pills` | Contenedor de pills de protecciones en s3c |
@@ -474,8 +475,9 @@ reservas/
 | `selTallaEquip(el, talla)` | Selecciona una talla en el grid de s3b; actualiza E.editTalla y #sel-talla |
 | `abrirBsProtec()` | Abre el bottom sheet de protecciones personalizadas con animación |
 | `cerrarBsProtec()` | Cierra el bottom sheet con animación translateY(100%) |
-| `cancelarOtroProtec()` | Cancela el bottom sheet; si el textarea está vacío, deselecciona la pill |
-| `confirmarOtroProtec()` | Guarda el texto libre como E.editProtec y actualiza el sub-label de la pill |
+| `toggleProtecItem(el)` | Togglea `.activa` en una pill de `#bs-protec-pills` (selección múltiple e independiente, patrón `ajTogglePill`) |
+| `cancelarOtroProtec()` | Cancela el bottom sheet; si no hay ninguna pill `.activa` en `#bs-protec-pills`, deselecciona la pill "Otro" |
+| `confirmarOtroProtec()` | Valida al menos 1 pill `.activa` en `#bs-protec-pills` (si no, `err('err-bs-protec', ...)`); junta los `data-val` con `', '` y lo guarda como E.editProtec; actualiza el sub-label de la pill |
 | `continuar_s3a()` | Valida E.editPat; si Sí carga tallas vía API y renderiza grid en s3b; si No salta a s3c |
 | `continuar_s3b()` | Valida #sel-talla; guarda E.editTalla y navega a s3c |
 | `continuar_s3c_nuevo()` | Valida E.editProtec; guarda equipamiento vía API y navega según editandoDesdeHome |
@@ -628,7 +630,7 @@ reservas/
 | `_inscCurIdx` | Índice del paso activo |
 | `_inscNecesitaPatines` | Flag: true si el usuario seleccionó "Sí, necesito patines" en 5a |
 | `_inscWpUnido` | Flag: true si el usuario tocó el enlace del grupo de WhatsApp en paso 6 |
-| `_inscProtecOtro` | Texto libre de protecciones personalizado (confirmado en bottom sheet) |
+| `_inscProtecOtro` | Protecciones parciales seleccionadas en el bottom sheet (`#insc-protec-otro-pills`), cadena separada por coma ej. `"Casco, Coderas"` |
 | `_AJ_PREFIJOS` | Lista de 12 países con `{pais, bandera, cod, min, max}` |
 | `_inscPrefijoSel` | Objeto del país seleccionado activo (por defecto Ecuador) |
 | `ocultarCargando()` | Fade-out opacity del overlay de carga y `display:none` tras 400ms |
@@ -660,8 +662,9 @@ reservas/
 | `inscSelTalla(el, talla)` | Selecciona una pill de talla y actualiza `#f-talla` |
 | `inscContinuar5b()` | Valida que haya talla seleccionada y avanza a 5c |
 | `inscSelProtec(el)` | Selecciona una pill de protecciones; si val=`Otro` abre el bottom sheet de protecciones |
-| `inscCancelarOtroProtec()` | Cierra el sheet; si el textarea está vacío deselecciona todas las pills |
-| `inscConfirmarOtroProtec()` | Guarda el texto en `_inscProtecOtro`, actualiza el sub-label de la pill y cierra el sheet |
+| `inscToggleProtecItem(el)` | Togglea `.activa` en una pill de `#insc-protec-otro-pills` (selección múltiple, patrón `inscTogglePron`) |
+| `inscCancelarOtroProtec()` | Cierra el sheet; si no hay ninguna pill `.activa` en `#insc-protec-otro-pills`, deselecciona la pill "Otro" |
+| `inscConfirmarOtroProtec()` | Valida al menos 1 pill `.activa` (si no, `errMsg('err-insc-protec-sheet', ...)`); junta los `data-val` con `', '` en `_inscProtecOtro`, actualiza el sub-label de la pill y cierra el sheet |
 | `inscContinuar5c()` | Valida que haya protección seleccionada y avanza a paso 6 |
 | `inscWpUnido()` | Marca `_inscWpUnido=true` y cambia el botón de WA a estado `btn-wp-activo` |
 | `inscTogglePinVis()` | Alterna type `password`/`text` en `#f-pin` y cambia el icono |

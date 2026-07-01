@@ -399,20 +399,22 @@ function inscSelProtec(el) {
   document.querySelectorAll('#insc-protec-pills .equip-pill-protec').forEach(function(p) { p.classList.remove('sel'); });
   el.classList.add('sel');
   if (el.dataset.val === 'Otro') {
-    setTimeout(function() {
-      _inscAbrirSheet('insc-sheet-protec-overlay', 'insc-sheet-protec');
-      setTimeout(function() { var i = document.getElementById('insc-protec-otro-inp'); if (i) i.focus(); }, 400);
-    }, 150);
+    setTimeout(function() { _inscAbrirSheet('insc-sheet-protec-overlay', 'insc-sheet-protec'); }, 150);
   }
 }
+function inscToggleProtecItem(el) {
+  el.classList.toggle('activa');
+}
 function inscCancelarOtroProtec() {
-  var v = (document.getElementById('insc-protec-otro-inp').value || '').trim();
-  if (!v) document.querySelectorAll('#insc-protec-pills .equip-pill-protec').forEach(function(p) { p.classList.remove('sel'); });
+  var hayAlguna = document.querySelector('#insc-protec-otro-pills .aj-pill.activa');
+  if (!hayAlguna) document.querySelectorAll('#insc-protec-pills .equip-pill-protec').forEach(function(p) { p.classList.remove('sel'); });
   _inscCerrarSheet('insc-sheet-protec-overlay', 'insc-sheet-protec');
 }
 function inscConfirmarOtroProtec() {
-  var v = (document.getElementById('insc-protec-otro-inp').value || '').trim();
-  if (!v) return;
+  var vals = [];
+  document.querySelectorAll('#insc-protec-otro-pills .aj-pill.activa').forEach(function(p) { vals.push(p.dataset.val); });
+  if (!vals.length) { errMsg('err-insc-protec-sheet', 'Selecciona al menos una opción.'); return; }
+  var v = vals.join(', ');
   _inscProtecOtro = v;
   var sub = document.getElementById('insc-protec-otro-sub');
   if (sub) { sub.textContent = '"' + v + '"'; sub.style.color = 'var(--brand)'; }

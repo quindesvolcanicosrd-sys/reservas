@@ -1326,9 +1326,15 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 6px;"></div>
   <div style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:6px 16px 14px;border-bottom:1px solid var(--border-light);">Especifica qué necesitas</div>
   <div style="padding:16px 16px 28px;">
-    <textarea id="bs-protec-input" style="width:100%;min-height:80px;padding:12px 14px;background:var(--surface-2);border:1.5px solid var(--brand);border-radius:12px;color:var(--text);font-size:0.85rem;font-family:inherit;resize:none;outline:none;line-height:1.5;" placeholder="Ej: Tengo casco pero me faltan rodilleras y coderas"></textarea>
-    <p style="font-size:0.7rem;color:var(--muted);margin-top:6px;margin-bottom:14px;line-height:1.4;">Cuéntanos qué protecciones necesitas y buscaremos cómo ayudarte.</p>
-    <button onclick="confirmarOtroProtec()" style="width:100%;padding:13px;background:var(--brand);border:none;border-radius:12px;color:var(--white);font-size:0.85rem;font-weight:800;cursor:pointer;font-family:inherit;">Confirmar</button>
+    <p style="font-size:0.7rem;color:var(--muted);margin-top:0;margin-bottom:12px;line-height:1.4;">Toca todas las que necesites.</p>
+    <div class="aj-pills-row" id="bs-protec-pills">
+      <span class="aj-pill" data-val="Casco" onclick="toggleProtecItem(this)">Casco</span>
+      <span class="aj-pill" data-val="Muñequeras" onclick="toggleProtecItem(this)">Muñequeras</span>
+      <span class="aj-pill" data-val="Coderas" onclick="toggleProtecItem(this)">Coderas</span>
+      <span class="aj-pill" data-val="Rodilleras" onclick="toggleProtecItem(this)">Rodilleras</span>
+    </div>
+    <div class="error-msg" id="err-bs-protec" style="margin-top:10px;"></div>
+    <button onclick="confirmarOtroProtec()" style="width:100%;padding:13px;background:var(--brand);border:none;border-radius:12px;color:var(--white);font-size:0.85rem;font-weight:800;cursor:pointer;font-family:inherit;margin-top:16px;">Confirmar</button>
     <button onclick="cancelarOtroProtec()" style="width:100%;padding:10px;background:transparent;border:none;color:var(--muted);font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
   </div>
 </div>
