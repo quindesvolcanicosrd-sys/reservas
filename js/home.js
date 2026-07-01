@@ -285,7 +285,7 @@ function _renderCardHome(r, hoy) {
   var filaEsc = r.fila || '';
 
   var bodyHtml = '<div class="rn-body" id="' + uid + '-body"><div class="rn-body-inner">';
-  if (r.descripcion) bodyHtml += '<p style="margin-bottom:10px;">' + r.descripcion + '</p>';
+  if (r.descripcion) bodyHtml += '<p style="margin-bottom:25px;">' + r.descripcion + '</p>';
   bodyHtml += '<div class="fi-pills">' + equipPillHtml;
   
   if (r.horaFin) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">schedule</span>Fin ' + r.horaFin + '</span>';
