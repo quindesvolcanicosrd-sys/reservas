@@ -386,8 +386,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div class="seccion-label">Paso 3 de 3</div>
       <h2 id="s5-titulo-h2">Resumen de tu reserva</h2>
       <div class="resumen" id="s5-resumen"></div>
-      <p id="s5-aviso-pago">Al confirmar nos avisas que ya realizaste el pago. <strong>Revisaremos tu transferencia y tu reserva quedará pendiente</strong>. Recibirás confirmación por correo o <strong>cuando esté aprobada.</strong></p>
-      <p id="s5-liberar-cupo" style="margin-top:12px;">Si no puedes venir, <strong>avisa lo antes posible</strong> para liberar tu cupo o para evitar que movilicemos tus pertenencias.</p>
+      <p id="s5-aviso-pago">Al confirmar nos avisas que ya realizaste el pago. <strong>Revisaremos tu transferencia y tu reserva quedará pendiente</strong>. Recibirás confirmación por correo o <strong>cuando esté aprobada.</strong> <button onclick="abrirModalInfoEstado()" style="background:none;border:none;cursor:pointer;font-size:inherit;font-weight:700;color:var(--brand);padding:0;font-family:inherit;text-decoration:underline;">¿Qué significa esto?</button></p>
+      <p id="s5-liberar-cupo" style="margin-top:12px;">Si no puedes venir, <strong>avisa lo antes posible</strong> para liberar tu cupo o para evitar que movilicemos tus pertenencias. <button onclick="abrirModalInfoPolitica()" style="background:none;border:none;cursor:pointer;font-size:inherit;font-weight:700;color:var(--brand);padding:0;font-family:inherit;text-decoration:underline;">¿Qué significa esto?</button></p>
       <div class="error-msg" id="err-s5"></div>
       <button class="btn btn-primary" id="btn-confirmar" onclick="confirmarReserva()" style="margin-top:16px;">Confirmar mi reserva</button>
 
@@ -968,6 +968,38 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <span class="material-symbols-outlined" style="font-size:2.5rem;color:var(--brand);margin-bottom:12px;display:block;">event_busy</span>
     <p id="modal-agotada-msg" style="color:var(--text);font-size:0.88rem;margin:0 0 20px;line-height:1.6;"></p>
     <button class="btn btn-primary" onclick="cerrarModalAgotada()">Entendido</button>
+  </div>
+</div>
+
+<!-- Modal: Qué significa estado de reserva -->
+<div id="modal-info-estado" style="display:none;opacity:0;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;transition:opacity 0.3s ease;" onclick="if(event.target===this)cerrarModalInfoEstado()">
+  <div style="background:var(--surface);border-radius:20px;padding:24px;max-width:360px;width:100%;">
+    <h3 style="margin:0 0 16px;font-size:1.05rem;color:var(--text);">Estado de tu reserva</h3>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:var(--success-bg);border:1px solid var(--success-bdr);border-radius:12px;">
+        <span class="material-symbols-outlined" style="color:var(--success);font-size:1.3rem;flex-shrink:0;">check_circle</span>
+        <div><div style="font-weight:800;color:var(--success);font-size:0.88rem;">Confirmada</div><div style="font-size:0.82rem;color:var(--text);margin-top:3px;line-height:1.5;">Tu reserva fue revisada y aprobada. Tu comprobante o pago fue verificado con éxito. Si necesitas equipamiento, te lo tendremos listo.</div></div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:var(--warning-bg);border:1px solid var(--warning-bdr);border-radius:12px;">
+        <span class="material-symbols-outlined" style="color:var(--brand);font-size:1.3rem;flex-shrink:0;">hourglass_empty</span>
+        <div><div style="font-weight:800;color:var(--brand);font-size:0.88rem;">Pendiente</div><div style="font-size:0.82rem;color:var(--text);margin-top:3px;line-height:1.5;">Tu reserva aún no fue aprobada. No deberías asistir al entrenamiento hasta que sea confirmada. Te avisaremos por correo cuando esté confirmada.</div></div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:12px;background:var(--danger-bg);border:1px solid var(--danger-bdr);border-radius:12px;">
+        <span class="material-symbols-outlined" style="color:var(--danger);font-size:1.3rem;flex-shrink:0;">cancel</span>
+        <div><div style="font-weight:800;color:var(--danger);font-size:0.88rem;">Cancelada</div><div style="font-size:0.82rem;color:var(--text);margin-top:3px;line-height:1.5;">Tu reserva fue cancelada y no asistirás a esta fecha. Si fue un error, puedes hacer una nueva reserva.</div></div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="cerrarModalInfoEstado()">¡Entendido!</button>
+  </div>
+</div>
+
+<!-- Modal: Política de responsabilidad de reservas -->
+<div id="modal-info-politica" style="display:none;opacity:0;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;transition:opacity 0.3s ease;" onclick="if(event.target===this)cerrarModalInfoPolitica()">
+  <div style="background:var(--surface);border-radius:20px;padding:24px;max-width:360px;width:100%;">
+    <h3 style="margin:0 0 12px;font-size:1.05rem;color:var(--text);">Tu responsabilidad al reservar</h3>
+    <p style="font-size:0.88rem;color:var(--text);line-height:1.6;margin:0 0 12px;">Cuando reservas, nosotros coordinamos el equipamiento y nos preparamos para recibirte. Si no puedes venir, es tu responsabilidad <strong>avisar con anticipación</strong> para liberar el cupo y evitar que movilicemos tu equipamiento de gana.</p>
+    <p style="font-size:0.88rem;color:var(--text);line-height:1.6;margin:0 0 20px;">Si no avisas y no asistes, nos reservamos el derecho de <strong>no volver a llevarte equipamiento</strong> en futuras reservas o de no realizar reembolsos. Cuida el cupo — hay personas en lista de espera.</p>
+    <button class="btn btn-primary" onclick="cerrarModalInfoPolitica()">Entendido</button>
   </div>
 </div>
 

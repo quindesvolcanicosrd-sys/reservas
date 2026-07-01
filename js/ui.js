@@ -309,3 +309,28 @@ function mostrarToast(msg, tipo) {
   clearTimeout(t._timer);
   t._timer = setTimeout(function() { t.classList.remove('visible'); }, 3000);
 }
+
+function abrirModalInfoEstado() {
+  var m = document.getElementById('modal-info-estado');
+  if (!m) return;
+  m.style.display = 'flex';
+  requestAnimationFrame(function() { m.style.opacity = '1'; });
+}
+function cerrarModalInfoEstado() {
+  var m = document.getElementById('modal-info-estado');
+  if (!m) return;
+  m.style.opacity = '0';
+  setTimeout(function() { m.style.display = 'none'; }, 300);
+}
+function abrirModalInfoPolitica() {
+  var m = document.getElementById('modal-info-politica');
+  if (!m) return;
+  m.style.display = 'flex';
+  requestAnimationFrame(function() { m.style.opacity = '1'; });
+}
+function cerrarModalInfoPolitica() {
+  var m = document.getElementById('modal-info-politica');
+  if (!m) return;
+  m.style.opacity = '0';
+  setTimeout(function() { m.style.display = 'none'; }, 300);
+}
