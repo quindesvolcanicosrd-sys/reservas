@@ -440,7 +440,6 @@ function inscTogglePinVis() {
 function inscEnviarSinPin() { document.getElementById('f-pin').value = ''; inscEnviar(); }
 function inscEnviar() {
   if (_inscEnviando) return;
-  if (!_inscWpUnido) { errMsg('err-p6', 'Por favor únete al grupo de WhatsApp antes de finalizar.'); return; }
   _inscEnviando = true;
   var nombre = G.nombre;
   var prons = _inscGetPronombres();
