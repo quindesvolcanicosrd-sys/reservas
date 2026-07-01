@@ -162,7 +162,7 @@ function _ptrOcultarIndicador() {
 }
 
 function irNuevaReserva(skipEquip) {
-  E.conf = ''; E.fechas = []; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = ''; E.cuponAplicado = false; E.creditosUsados = 0; E.reagendando = false;
+  E.conf = ''; E.fechas = []; E.tallasPorFecha = {}; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = ''; E.cuponAplicado = false; E.creditosUsados = 0; E.reagendando = false;
   var chkC = document.getElementById('chk-cupon'); if (chkC) chkC.checked = false;
   document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
   cargarFechas();
@@ -177,7 +177,7 @@ function irMisReservas() {
 function verTodasReservas() { irMisReservas(); }
 
 function iniciarReagendamiento() {
-  E.conf = ''; E.fechas = []; E.tipoPago = 'clase'; E.totalPago = 0;
+  E.conf = ''; E.fechas = []; E.tallasPorFecha = {}; E.tipoPago = 'clase'; E.totalPago = 0;
   E.notaPago = ''; E.cuponAplicado = false; E.creditosUsados = 0; E.reagendando = true;
   var chkC = document.getElementById('chk-cupon'); if (chkC) chkC.checked = false;
   document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
@@ -421,12 +421,19 @@ function _toggleCardBody(uid) {
   body.classList.toggle('open');
 }
 
-var _tallaSheetFecha = '', _tallaSheetActual = '', _tallaSheetSel = '';
+var _tallaSheetFecha = '', _tallaSheetActual = '', _tallaSheetSel = '', _tallaSheetModo = 'existente', _tallaSheetSlug = '';
 
 function abrirSheetTalla(fecha, tallaActual) {
-  _tallaSheetFecha = fecha; _tallaSheetActual = tallaActual; _tallaSheetSel = '';
+  _tallaSheetModo = 'existente';
   var titulo = document.getElementById('sheet-talla-titulo');
   if (titulo) titulo.textContent = 'Cambiar talla para el entrenamiento del ' + fecha;
+  var btn = document.getElementById('btn-confirmar-talla');
+  if (btn) btn.textContent = 'Confirmar talla';
+  _abrirSheetTallaBase(fecha, tallaActual);
+}
+
+function _abrirSheetTallaBase(fecha, tallaActual) {
+  _tallaSheetFecha = fecha; _tallaSheetActual = tallaActual; _tallaSheetSel = '';
   var grid = document.getElementById('sheet-talla-grid');
   if (grid) grid.innerHTML = '<div class="loader" style="grid-column:1/-1;padding:20px 0;"><div class="spinner" style="width:26px;height:26px;border-width:3px;"></div></div>';
   var errEl = document.getElementById('err-sheet-talla');
@@ -487,6 +494,7 @@ function cerrarSheetTalla() {
 
 function confirmarTallaSheet() {
   if (!_tallaSheetSel || _tallaSheetSel === _tallaSheetActual) return;
+  if (_tallaSheetModo === 'nueva-reserva') { _confirmarTallaNuevaReserva(); return; }
   var btn = document.getElementById('btn-confirmar-talla');
   if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
   api({ action: 'actualizarTallaReserva', nombre: E.nombre, fecha: _tallaSheetFecha, tallaNueva: _tallaSheetSel }, function() {

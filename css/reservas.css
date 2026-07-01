@@ -1,5 +1,5 @@
 /* ─── fecha-item cards (s4) ─────────────────────────────────────── */
-.fecha-item { border: 1px solid var(--border); border-radius: 14px; margin-bottom: 10px; background: var(--surface-2); overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s; }
+.fecha-item { position: relative; border: 1px solid var(--border); border-radius: 14px; margin-bottom: 10px; background: var(--surface-2); overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s; }
 .fecha-item.sel { border-color: var(--brand); background: var(--brand-warm); }
 .fecha-item.agotada { opacity: 0.5; cursor: not-allowed; background: var(--disabled-bg); border-color: var(--disabled-border); }
 .fecha-item.agotada-pendiente { opacity:1; cursor:pointer; }
