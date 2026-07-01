@@ -18,6 +18,7 @@ function detectarNavegador() {
 
 function mostrarBannerPWA() {
   if (esStandalone()) return;
+  if (!/iPhone|iPad|iPod|Android/.test(navigator.userAgent)) return;
   if (localStorage.getItem('pwa_dismiss') === '1') return;
   document.getElementById('pwa-banner').style.display = 'block';
 }
