@@ -82,7 +82,7 @@ function onGoogleCredentialUsuario(resp) {
         window._pendingNuevx = null;
         if (E.datos) {
           E.datos.necesitaPatines      = _pnx.patines === 'si' ? 'Sí' : 'No';
-          E.datos.necesitaProtecciones = _pnx.protec  === 'si' ? 'Sí' : 'No';
+          E.datos.necesitaProtecciones = _pnx.protec ? _pnx.protec : 'No';
           if (_pnx.talla) E.datos.talla = _pnx.talla;
         }
         setTimeout(function() { irNuevaReserva(true); }, 300);
@@ -302,7 +302,7 @@ window.onload = function() {
             window._restaurandoSesion = false;
             if (window._pendingNuevx) {
               var _pnx = window._pendingNuevx; window._pendingNuevx = null;
-              if (E.datos) { E.datos.necesitaPatines = _pnx.patines === 'si' ? 'Sí' : 'No'; E.datos.necesitaProtecciones = _pnx.protec === 'si' ? 'Sí' : 'No'; if (_pnx.talla) E.datos.talla = _pnx.talla; }
+              if (E.datos) { E.datos.necesitaPatines = _pnx.patines === 'si' ? 'Sí' : 'No'; E.datos.necesitaProtecciones = _pnx.protec ? _pnx.protec : 'No'; if (_pnx.talla) E.datos.talla = _pnx.talla; }
               setTimeout(function() { irNuevaReserva(true); }, 300);
             } else { ir('s-home'); }
           }, function() { prepararHome(); ir('s-home'); window._restaurandoSesion = false; });

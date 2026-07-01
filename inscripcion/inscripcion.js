@@ -468,7 +468,7 @@ function inscEnviar() {
         document.querySelector('.page-wrap').innerHTML = document.getElementById('section-exito').outerHTML;
         document.getElementById('section-exito').style.display = 'block';
         setTimeout(function() {
-          window.location.href = 'https://reservas.quindesvolcanicos.com?nuevx=1&nombre=' + encodeURIComponent(nombre) + '&patines=' + (patines==='Sí'?'si':'no') + '&protec=' + (protec==='No'?'no':'si') + (talla?'&talla='+encodeURIComponent(talla):'') + '&token=' + encodeURIComponent(G.idToken||'');
+          window.location.href = 'https://reservas.quindesvolcanicos.com?nuevx=1&nombre=' + encodeURIComponent(nombre) + '&patines=' + (patines==='Sí'?'si':'no') + '&protec=' + encodeURIComponent(protec || 'No') + (talla?'&talla='+encodeURIComponent(talla):'') + '&token=' + encodeURIComponent(G.idToken||'');
         }, 2800);
       } else {
         errMsg('err-p6', res.error || 'Error al registrarse. Intenta de nuevo.');
