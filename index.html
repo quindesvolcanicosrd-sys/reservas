@@ -344,7 +344,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div id="s-pago-total-monto"></div>
         <div class="total-detalle" id="s-pago-total-detalle"></div>
       </div>
-      <p style="font-weight: 500;">Transfiere el monto con uno de estos métodos.</p>
+      <p style="font-weight: 500;">Transfiere el monto usando uno de estos métodos.</p>
 
       <div class="pago-metodo" style="padding:0;overflow:hidden;">
         <div class="pago-header" onclick="togglePagoMetodo(this)" style="cursor:pointer;padding:16px;justify-content:space-between;"><div style="display:flex;align-items:center;gap:10px;"><span class="pago-icon">📱</span>DeUna · Banco Pichincha</div><span class="material-symbols-outlined" style="font-size:1.1rem;color: var(--muted);transition:transform 0.3s;">expand_more</span></div>
@@ -370,6 +370,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <span id="chk-pago-texto" style="flex:1;"></span>
         <div class="fi-circle" id="chk-pago-circle"><span class="material-symbols-outlined">check</span></div>
       </label>
+
+      <div class="nota-pago-wrapper">
+        <label class="nota-pago-label" for="nota-pago">Referencia de pago</label>
+        <input type="text" id="nota-pago" class="nota-pago-input" placeholder="Ej: Juan Pérez, pago de María García">
+        <p class="nota-pago-hint" id="nota-pago-hint"></p>
+      </div>
 
       <div id="wp-wrapper" style="display:none;"></div>
       <div class="error-msg" id="err-pago"></div>
