@@ -343,12 +343,19 @@ function _renderCardHome(r, hoy) {
   var estadoColor = r.estado === 'Confirmada' ? 'var(--success-dark)' : r.estado === 'Cancelada' ? 'var(--danger)' : r.estado === 'Reagendar' ? 'var(--dk-purple-mid)' : 'var(--brand)';
   var estadoIcono = r.estado === 'Confirmada' ? 'check_circle' : r.estado === 'Cancelada' ? 'cancel' : r.estado === 'Reagendar' ? 'swap_horiz' : 'hourglass_empty';
   var estadoTexto = r.estado || 'Pendiente';
+  var fechaEsc = (r.fecha || '').replace(/'/g, "\\'");
 
   var necesitaPatines = r.talla && r.talla !== '' && r.talla.toLowerCase() !== 'no';
   var necesitaProtec = r.protecciones && r.protecciones !== '' && r.protecciones.toLowerCase() !== 'no' && r.protecciones.toLowerCase().indexOf('no,') !== 0;
   var equipPillHtml = '';
   if (necesitaPatines) {
-    equipPillHtml += '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">roller_skating</span>' + (r.talla || '') + '</span>';
+    var puedeEditarTalla = (r.estado === 'Pendiente' || r.estado === 'Confirmada');
+    if (puedeEditarTalla) {
+      var tallaEsc = (r.talla || '').replace(/'/g, "\\'");
+      equipPillHtml += '<span class="fi-pill fi-pill-patines" style="cursor:pointer;" onclick="abrirSheetTalla(\'' + fechaEsc + '\',\'' + tallaEsc + '\')"><span class="material-symbols-outlined">roller_skating</span>' + (r.talla || '') + '<span class="material-symbols-outlined">edit</span></span>';
+    } else {
+      equipPillHtml += '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">roller_skating</span>' + (r.talla || '') + '</span>';
+    }
   }
   if (necesitaProtec) {
     var protecLower = r.protecciones.toLowerCase();
@@ -380,7 +387,6 @@ function _renderCardHome(r, hoy) {
   pillsHtml += '</div>';
 
   var uid = 'rcard-' + (r.fila || Math.random().toString(36).slice(2));
-  var fechaEsc = (r.fecha || '').replace(/'/g, "\\'");
   var filaEsc = r.fila || '';
 
   var bodyHtml = '<div class="rn-body" id="' + uid + '-body"><div class="rn-body-inner">';
@@ -413,6 +419,84 @@ function _toggleCardBody(uid) {
   if (!toggle || !body) return;
   toggle.classList.toggle('open');
   body.classList.toggle('open');
+}
+
+var _tallaSheetFecha = '', _tallaSheetActual = '', _tallaSheetSel = '';
+
+function abrirSheetTalla(fecha, tallaActual) {
+  _tallaSheetFecha = fecha; _tallaSheetActual = tallaActual; _tallaSheetSel = '';
+  var titulo = document.getElementById('sheet-talla-titulo');
+  if (titulo) titulo.textContent = 'Cambiar talla para el entrenamiento del ' + fecha;
+  var grid = document.getElementById('sheet-talla-grid');
+  if (grid) grid.innerHTML = '<div class="loader" style="grid-column:1/-1;padding:20px 0;"><div class="spinner" style="width:26px;height:26px;border-width:3px;"></div></div>';
+  var errEl = document.getElementById('err-sheet-talla');
+  if (errEl) errEl.style.display = 'none';
+  _habilitarConfirmarTalla(false);
+  var ov = document.getElementById('sheet-talla-overlay');
+  var sh = document.getElementById('sheet-talla');
+  if (ov) ov.style.display = 'block';
+  if (sh) {
+    sh.style.display = 'block';
+    requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  }
+  api({ action: 'getTallasDisponiblesParaFecha', fecha: fecha, nombreExcluir: E.nombre }, function(tallas) {
+    _renderGridSheetTalla(tallas || []);
+  }, function() {
+    if (grid) grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:0.8rem;">No se pudieron cargar las tallas. Intenta de nuevo.</p>';
+  });
+}
+
+function _renderGridSheetTalla(tallas) {
+  var grid = document.getElementById('sheet-talla-grid');
+  if (!grid) return;
+  grid.innerHTML = tallas.map(function(t) {
+    var esActual = t.talla === _tallaSheetActual;
+    var clases = 'aj-pill' + (t.disponible ? '' : ' no-disponible') + (esActual && t.disponible ? ' talla-actual' : '');
+    var onclick = t.disponible ? 'seleccionarTallaSheet(this,\'' + t.talla + '\')' : 'avisarTallaNoDisponible(\'' + t.talla + '\')';
+    return '<span class="' + clases + '" style="justify-content:center;" onclick="' + onclick + '">' + t.talla + '</span>';
+  }).join('');
+}
+
+function seleccionarTallaSheet(el, talla) {
+  document.querySelectorAll('#sheet-talla-grid .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  _tallaSheetSel = talla;
+  var errEl = document.getElementById('err-sheet-talla');
+  if (errEl) errEl.style.display = 'none';
+  _habilitarConfirmarTalla(talla !== _tallaSheetActual);
+}
+
+function avisarTallaNoDisponible(talla) {
+  err('err-sheet-talla', 'Talla ' + talla + ' no disponible: ya fue reservada por otra persona para este entrenamiento.');
+}
+
+function _habilitarConfirmarTalla(habilitar) {
+  var btn = document.getElementById('btn-confirmar-talla');
+  if (!btn) return;
+  btn.disabled = !habilitar;
+  btn.style.opacity = habilitar ? '1' : '0.4';
+  btn.style.cursor = habilitar ? 'pointer' : 'not-allowed';
+}
+
+function cerrarSheetTalla() {
+  var sh = document.getElementById('sheet-talla');
+  var ov = document.getElementById('sheet-talla-overlay');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+
+function confirmarTallaSheet() {
+  if (!_tallaSheetSel || _tallaSheetSel === _tallaSheetActual) return;
+  var btn = document.getElementById('btn-confirmar-talla');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+  api({ action: 'actualizarTallaReserva', nombre: E.nombre, fecha: _tallaSheetFecha, tallaNueva: _tallaSheetSel }, function() {
+    if (btn) btn.textContent = 'Confirmar talla';
+    cerrarSheetTalla();
+    _recargarYRenderReservas(function() { mostrarToast('Talla actualizada', 'ok'); });
+  }, function(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirmar talla'; }
+    err('err-sheet-talla', e.message || 'No se pudo actualizar la talla. Intenta de nuevo.');
+  });
 }
 
 function _parseFechaSimple(str) {

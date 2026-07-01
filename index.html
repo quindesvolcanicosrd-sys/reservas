@@ -1348,5 +1348,18 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 </div>
 
+<div id="sheet-talla-overlay" style="display:none;position:fixed;inset:0;z-index:9700;background:var(--overlay-dark);" onclick="cerrarSheetTalla()"></div>
+<div id="sheet-talla" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9701;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
+  <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 6px;"></div>
+  <div id="sheet-talla-titulo" style="font-size:0.85rem;font-weight:800;color:var(--text);text-align:center;padding:6px 16px 4px;">Cambiar talla</div>
+  <div style="padding:0 16px 28px;">
+    <p style="font-size:0.7rem;color:var(--muted);margin-top:0;margin-bottom:12px;line-height:1.4;text-align:center;">Las tallas tachadas ya fueron reservadas por otra persona para esta fecha.</p>
+    <div class="aj-pills-row" id="sheet-talla-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"></div>
+    <div class="error-msg" id="err-sheet-talla" style="margin-top:10px;"></div>
+    <button id="btn-confirmar-talla" onclick="confirmarTallaSheet()" disabled style="width:100%;padding:13px;background:var(--brand);border:none;border-radius:12px;color:var(--white);font-size:0.85rem;font-weight:800;cursor:pointer;font-family:inherit;margin-top:16px;opacity:0.4;">Confirmar talla</button>
+    <button onclick="cerrarSheetTalla()" style="width:100%;padding:10px;background:transparent;border:none;color:var(--muted);font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
+  </div>
+</div>
+
 </body>
 </html>
