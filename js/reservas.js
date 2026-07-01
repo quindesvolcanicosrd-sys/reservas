@@ -526,7 +526,7 @@ function continuar_s4() {
     if (esClase) { totalFechasEl.innerHTML = E.fechas.map(function(f) { return '• ' + f; }).join('<br>'); totalFechasEl.style.display = 'block'; }
     else { totalFechasEl.style.display = 'none'; }
   }
-  document.getElementById('chk-pago').checked = false; document.getElementById('btn-pago').disabled = true;
+  _resetChkPago();
   var lineasFechas = E.tipoPago === 'mensual' ? 'Meses pagados:\n- ' + E.meses.join('\n- ') + '\n\nTotal: $' + (E.totalPago || 0).toFixed(2) : E.fechas.map(function(f) { return '- ' + f; }).join('\n');
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : ''; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : '';
   var equipLinea = (talla && protec && protec.toLowerCase() !== 'no') ? 'Necesitare patines talla ' + talla + ' y protecciones.' : (talla) ? 'Necesitare patines talla ' + talla + '.' : (protec && protec.toLowerCase() !== 'no') ? 'Necesitare protecciones (' + protec + ').' : 'Llevare mi propio equipamiento.';
@@ -548,6 +548,13 @@ function toggleBtnPago() {
   var lbl = document.querySelector('.chk-pago-label');
   if (circle) circle.classList.toggle('sel-pago', document.getElementById('chk-pago').checked);
   if (lbl) lbl.classList.toggle('sel', document.getElementById('chk-pago').checked);
+}
+
+function _resetChkPago() {
+  var chk = document.getElementById('chk-pago'); if (chk) chk.checked = false;
+  var btn = document.getElementById('btn-pago'); if (btn) btn.disabled = true;
+  var circle = document.getElementById('chk-pago-circle'); if (circle) circle.classList.remove('sel-pago');
+  var lbl = document.querySelector('.chk-pago-label'); if (lbl) lbl.classList.remove('sel');
 }
 
 function continuar_pago() {

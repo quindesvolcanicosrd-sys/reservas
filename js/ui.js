@@ -106,6 +106,10 @@ function ir(id, desdeHistorial, sinTrampa) {
     }, 600);
   }
 
+  if (id === 's-pago' && typeof _resetChkPago === 'function') {
+    _resetChkPago();
+  }
+
     var topBar = document.getElementById('top-bar'); var topBtn = document.getElementById('top-bar-btn'); var topTitulo = document.getElementById('top-bar-titulo');
   var cfg = TOP_BAR_CONFIG[id];
   if (cfg) {
