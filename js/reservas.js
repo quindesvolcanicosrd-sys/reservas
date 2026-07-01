@@ -261,7 +261,7 @@ function actualizarTotalS4() {
       '</div>';
   } else if (total > 0) {
     box.style.display = 'block';
-    box.innerHTML = '<div class="total-box"><div>Total a pagar:</div><div style="font-size:1.6rem;font-weight:800;">$' + total.toFixed(2) + '</div></div>';
+    box.innerHTML = '<div class="total-box"><div>Total:</div><div style="font-size:1.6rem;font-weight:800;">$' + total.toFixed(2) + '</div></div>';
   } else {
     box.style.display = 'none';
   }
@@ -437,7 +437,7 @@ function continuar_s4() {
   if (E.tipoPago === 'mensual') { if (!E.meses || E.meses.length === 0) { err('err-s4', 'Por favor selecciona al menos un mes.'); return; } }
   else { if (!E.fechas || E.fechas.length === 0) { err('err-s4', 'Por favor selecciona al menos una fecha.'); return; } }
   var esClase = E.tipoPago === 'clase';
-  document.getElementById('s-pago-total-monto').textContent = 'Total a pagar: $' + (E.totalPago || 0).toFixed(2);
+  document.getElementById('s-pago-total-monto').textContent = 'Total: $' + (E.totalPago || 0).toFixed(2);
 
   var detalleTexto = '';
   if (esClase) {
