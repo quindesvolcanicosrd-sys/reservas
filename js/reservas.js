@@ -605,8 +605,8 @@ function confirmarReserva(btn) {
     h += fila('Patines', d.necesitaPatines || 'No'); h += fila('Protecciones', d.necesitaProtecciones); if (E.notaPago) h += fila('Referencia pago', E.notaPago);
     document.getElementById('s6-resumen').innerHTML = h;
 
-    if (E.reagendando) { document.getElementById('s6-titulo').textContent = '🔁 ¡Clase reagendada!'; document.getElementById('s6-texto').innerHTML = 'Tu nueva reserva está <strong>pendiente de confirmación</strong>. Podés ver el estado desde "Mis reservas".'; }
-    else if (necesitaEquipoLocal) { document.getElementById('s6-titulo').textContent = '¡Reserva registrada!'; document.getElementById('s6-texto').innerHTML = 'Puedes revisar el estado desde <strong>Mis reservas</strong>. Si no puedes venir, cancela para liberar el cupo.'; } else { document.getElementById('s6-titulo').textContent = '¡Pago registrado!'; document.getElementById('s6-texto').innerHTML = 'Puedes revisar el estado de tu pago desde <strong>"Ver mis reservas"</strong>.'; }
+    if (E.reagendando) { document.getElementById('s6-titulo').textContent = '🔁 ¡Clase reagendada!'; document.getElementById('s6-texto').innerHTML = 'Tu nueva reserva está <strong>pendiente de confirmación</strong>. Podés ver el estado desde "Mis reservas".'; document.getElementById('s6-texto').style.display = 'block'; }
+    else if (necesitaEquipoLocal) { document.getElementById('s6-titulo').textContent = '¡Reserva registrada!'; document.getElementById('s6-texto').style.display = 'none'; } else { document.getElementById('s6-titulo').textContent = '¡Pago registrado!'; document.getElementById('s6-texto').innerHTML = 'Puedes revisar el estado de tu pago desde <strong>"Ver mis reservas"</strong>.'; document.getElementById('s6-texto').style.display = 'block'; }
 
     var avisoEl = document.getElementById('s6-email-aviso');
     var avisoPagoEl = document.getElementById('s6-aviso-pago');
