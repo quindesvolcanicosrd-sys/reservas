@@ -86,7 +86,7 @@ function refrescarMisReservas(callback, btn) {
   });
 }
 
-var _ptrStartY = 0, _ptrArrastrando = false, _ptrRefrescando = false;
+var _ptrStartY = 0, _ptrArrastrando = false, _ptrRefrescando = false, _ptrDistActual = 0;
 
 function _ptrEnMisReservas() {
   var s = document.getElementById('s-home');
@@ -98,6 +98,7 @@ window.addEventListener('touchstart', function(e) {
   if ((window.scrollY || 0) > 0) return;
   _ptrStartY = e.touches[0].clientY;
   _ptrArrastrando = true;
+  _ptrDistActual = 0;
 }, { passive: true });
 
 window.addEventListener('touchmove', function(e) {
@@ -107,6 +108,7 @@ window.addEventListener('touchmove', function(e) {
   var ind = document.getElementById('ptr-indicator');
   if (!ind) return;
   var dist = Math.min(delta / 2, 60);
+  _ptrDistActual = dist;
   ind.style.transition = 'none';
   ind.style.opacity = Math.min(dist / 40, 1);
   ind.style.transform = 'translate(-50%,' + (dist - 40) + 'px)';
@@ -116,9 +118,9 @@ window.addEventListener('touchend', function() {
   if (!_ptrArrastrando) return;
   _ptrArrastrando = false;
   var ind = document.getElementById('ptr-indicator');
+  var dist = _ptrDistActual;
+  _ptrDistActual = 0;
   if (!ind) return;
-  var m = /translate\(-50%,(-?[\d.]+)px\)/.exec(ind.style.transform);
-  var dist = m ? parseFloat(m[1]) + 40 : 0;
   ind.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
   if (dist >= 45) {
     _ptrRefrescando = true;
@@ -162,6 +164,15 @@ function iniciarReagendamiento() {
 }
 
 function irHomeDesdeExito() {
+  var homeContent = document.getElementById('home-reservas-lista');
+  if (homeContent) {
+    homeContent.style.transition = 'opacity 0.3s ease';
+    homeContent.style.opacity = '0';
+    setTimeout(function() {
+      homeContent.innerHTML = '<div class="loader" style="padding:24px 0;"><div class="spinner"></div></div>';
+      homeContent.style.opacity = '1';
+    }, 50);
+  }
   api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
     _todasReservas = reservas;
     _renderHomeReservas();
