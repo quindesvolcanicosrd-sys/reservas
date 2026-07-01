@@ -61,6 +61,8 @@ function selOp(label, name, val) {
 function abrirContacto() { var m = document.getElementById('modal-contacto'); if (m) { m.style.display = 'flex'; } }
 function cerrarContacto() { var m = document.getElementById('modal-contacto'); if (m) { m.style.display = 'none'; } }
 
+var PANTALLAS_RAIZ = ['s1', 's-home', 's-admin-home'];
+
 var TOP_BAR_CONFIG = {
   's2': { titulo: 'Equipamiento', volver: 's-home' },
   's3a': { titulo: 'Editar equipamiento', volver: function() { return E.editandoDesdeHome ? 's-datos' : 's-home'; } }, 's3b': { titulo: 'Editar equipamiento', volver: 's3a' },
@@ -78,7 +80,7 @@ var TOP_BAR_CONFIG = {
   's-admin-admins': { titulo: 'Administradorxs', volver: 's-admin-home' }
 };
 
-function ir(id, desdeHistorial) {
+function ir(id, desdeHistorial, sinTrampa) {
   if (id === 's1b' || !document.getElementById(id)) { ir('s1', true); return; }
   document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
   document.getElementById(id).classList.add('activa');
@@ -87,6 +89,9 @@ function ir(id, desdeHistorial) {
   var sinHistorial = ['s-carga', 's-carga-fechas', 's-carga-conf'];
   if (!desdeHistorial && sinHistorial.indexOf(id) === -1) {
     history.pushState({ pantalla: id }, '', '#' + id);
+  }
+  if (!sinTrampa && PANTALLAS_RAIZ.indexOf(id) !== -1) {
+    history.pushState({ pantalla: id }, '', '#' + id); // entrada "trampa": atrás en una pantalla raíz no debe navegar ni salir de la app
   }
 
   document.body.classList.toggle('logueada', id !== 's1');
@@ -148,6 +153,7 @@ if (id === 's2') id = E.datos ? 's-home' : 's1';
   ir(id, true);
 });
 history.replaceState({ pantalla: 's1' }, '', '#s1');
+history.pushState({ pantalla: 's1' }, '', '#s1'); // entrada "trampa" inicial, ver PANTALLAS_RAIZ en ir()
 
 var NOMBRES_MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 

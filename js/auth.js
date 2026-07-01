@@ -339,8 +339,8 @@ window.addEventListener('pageshow', function(e) {
     var ov = document.getElementById('loading-overlay');
     ov.classList.remove('fade-out');
     ov.style.display = 'flex';
-    if (_adminToken) { ir('s-admin-home'); ocultarCargando(); }
-    else if (E.datos) { prepararHome(); ir('s-home'); }
-    else { ir('s1', true); ocultarCargando(); }
+    if (_adminToken) { ir('s-admin-home', true, true); ocultarCargando(); }
+    else if (E.datos) { prepararHome(); ir('s-home', true, true); }
+    else { ir('s1', true, true); ocultarCargando(); }
   }
 });
