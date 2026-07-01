@@ -44,6 +44,7 @@
   --overlay-dark:   rgba(0,0,0,0.7);
 
   /* ── Fondo ───────────────────────────────────────────── */
+  /* Si cambiás --bg (light), actualizá a mano el <meta name="theme-color" media="(prefers-color-scheme: light)"> en index.html e inscripcion/index.html — los meta tags no soportan var(). */
   --bg:             #FDF3EB;
   --bg-2:           #F7EAE0;
 
@@ -225,6 +226,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     /* Fondo */
+    /* Si cambiás --bg (dark), actualizá a mano el <meta name="theme-color" media="(prefers-color-scheme: dark)"> en index.html e inscripcion/index.html — los meta tags no soportan var(). */
     --bg:             #170900;
     --bg-2:           #1f0d00;
 

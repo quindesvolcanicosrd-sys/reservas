@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
     _inscPrefijoSel = _AJ_PREFIJOS[0];
     var _prefijoDispDefault = document.getElementById('insc-prefijo-display');
     if (_prefijoDispDefault) _prefijoDispDefault.textContent = _inscPrefijoSel.bandera + ' ' + _inscPrefijoSel.cod + ' ' + _inscPrefijoSel.pais;
-    inscMostrarPaso(0);
+    inscMostrarPaso(0, true);
     _inscIniciarGoogleSignIn();
     var _tokenUrl = new URLSearchParams(window.location.search).get('token');
     if (_tokenUrl) { _inscVinoConToken = true; onGoogleCredentialInscripcion({ credential: _tokenUrl }); }
@@ -78,7 +78,7 @@ function _inscRenderProg() {
   if (btnHome) btnHome.style.display = (_inscCurIdx === 0) ? 'flex' : 'none';
 }
 
-function inscMostrarPaso(idx) {
+function inscMostrarPaso(idx, desdeHistorial) {
   _INSC_STEPS.forEach(function(s, i) {
     var el = document.getElementById(s);
     if (el) el.classList.toggle('activo', i === idx);
@@ -86,6 +86,7 @@ function inscMostrarPaso(idx) {
   _inscCurIdx = idx;
   _inscRenderProg();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (!desdeHistorial) history.pushState({ pasoInsc: idx }, '', '#paso-' + (idx + 1));
 }
 
 function inscPasoAnterior() {
@@ -98,6 +99,12 @@ function inscPasoAnterior() {
   }
   inscMostrarPaso(_inscCurIdx - 1);
 }
+
+window.addEventListener('popstate', function(ev) {
+  var idx = (ev.state && typeof ev.state.pasoInsc === 'number') ? ev.state.pasoInsc : 0;
+  inscMostrarPaso(idx, true);
+});
+history.replaceState({ pasoInsc: 0 }, '', '#paso-1');
 
 /* ── Google Sign-In ─────────────────────────── */
 function iniciarGoogleSignIn() {
