@@ -46,7 +46,7 @@
 
 .total-box { background: var(--success-bg); border: 1px solid var(--success-bdr); border-radius: 12px; padding: 18px; text-align: center; font-weight: 800; font-size: 1.1rem; color: var(--success); box-shadow: 0 4px 14px var(--success-shadow); }
 .total-box .total-detalle { font-size: 0.85rem; font-weight: 600; color: var(--success-bright); margin-top: 6px; }
-.total-box .total-fechas-lista { font-size: 0.78rem; font-weight: 600; color: var(--success-bright); margin-top: 8px; line-height: 1.6; text-align: left; }
+.total-box .total-fechas-lista { font-size: 0.78rem; font-weight: 600; color: var(--success-bright); margin-top: 8px; line-height: 1.6; text-align: center; }
 
 .tipo-pago-wrapper { border-radius: 12px; margin-bottom: 20px; }
 
