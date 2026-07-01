@@ -521,6 +521,11 @@ function continuar_s4() {
     detalleTexto = E.meses.join(', ');
   }
   document.getElementById('s-pago-total-detalle').textContent = detalleTexto;
+  var totalFechasEl = document.getElementById('s-pago-total-fechas');
+  if (totalFechasEl) {
+    if (esClase) { totalFechasEl.innerHTML = E.fechas.map(function(f) { return '• ' + f; }).join('<br>'); totalFechasEl.style.display = 'block'; }
+    else { totalFechasEl.style.display = 'none'; }
+  }
   document.getElementById('chk-pago').checked = false; document.getElementById('btn-pago').disabled = true;
   var lineasFechas = E.tipoPago === 'mensual' ? 'Meses pagados:\n- ' + E.meses.join('\n- ') + '\n\nTotal: $' + (E.totalPago || 0).toFixed(2) : E.fechas.map(function(f) { return '- ' + f; }).join('\n');
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : ''; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : '';
