@@ -68,7 +68,7 @@ var TOP_BAR_CONFIG = {
   's3a': { titulo: 'Editar equipamiento', volver: function() { return E.editandoDesdeHome ? 's-datos' : 's-home'; } }, 's3b': { titulo: 'Editar equipamiento', volver: 's3a' },
   's3c': { titulo: 'Editar equipamiento', volver: function() { return E.editPat === 'Sí' ? 's3b' : 's3a'; } },
   's4': { titulo: function() { return E.reagendando ? 'Reagendar clase' : canPayMonthly() ? 'Nueva reserva' : 'Fecha y pago'; }, volver: function() { return 's-home'; } },
-  's-pago': { titulo: 'Pago', volver: 's4' }, 's5': { titulo: 'Confirmar reserva', volver: function() { return (E.creditosUsados > 0 || E.cuponAplicado) && E.totalPago === 0 ? 's4' : 's-pago'; } },
+  's-pago': { titulo: 'Pago', volver: 's4' },
   's-gestionar': { titulo: 'Re-agendar fecha', volver: 's-home' },
   's-misreservas': { titulo: 'Historial de reservas', volver: 's-home' }, 's-datos': { titulo: 'Ajustes del perfil', volver: 's-home' },
   's-admin-login': { titulo: 'Administradorx', volver: 's1' },
@@ -127,12 +127,12 @@ function ir(id, desdeHistorial, sinTrampa) {
   }
 
   var sinPasos = ['s1','s-home','s-misreservas','s-carga','s6','s-datos','s-gestionar'].concat(ADMIN_PANTALLAS);
-  if (E.reagendando) sinPasos = sinPasos.concat(['s4','s5','s-carga-conf']);
+  if (E.reagendando) sinPasos = sinPasos.concat(['s4','s-carga-conf']);
   var dotContainer = document.querySelector('.paso-indicator');
   if (sinPasos.indexOf(id) !== -1) { if (dotContainer) dotContainer.style.display = 'none'; return; }
   if (dotContainer) {
     dotContainer.style.display = 'flex';
-    var pasos = { 's2':1,'s3a':1,'s3b':1,'s3c':1,'s-carga-fechas':2,'s4':2,'s-pago':3,'s5':4,'s-carga-conf':4 };
+    var pasos = { 's2':1,'s3a':1,'s3b':1,'s3c':1,'s-carga-fechas':2,'s4':2,'s-pago':3,'s-carga-conf':3 };
     var p = pasos[id] || 1;
     for (var i = 1; i <= 4; i++) {
       var d = document.getElementById('dot'+i);

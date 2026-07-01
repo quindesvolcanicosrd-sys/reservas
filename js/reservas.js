@@ -165,7 +165,7 @@ function necesitaEquipo() { return !canPayMonthly(); }
 
 function actualizarTextosPago() {
   var necesitaEquipamiento = !canPayMonthly();
-  document.getElementById('s4-label').textContent = E.reagendando ? 'Reagendar clase' : 'Paso 1 de 3';
+  document.getElementById('s4-label').textContent = E.reagendando ? 'Reagendar clase' : 'Paso 1 de 2';
   document.getElementById('s4-titulo').textContent = necesitaEquipamiento ? 'Próximos entrenamientos' : '¿Cómo quieres pagar?';
   document.getElementById('chk-pago-texto').textContent = canPayMonthly() ? 'Ya realicé mi pago y entiendo este estará pendiente hasta que sea verificada por el equipo.' : 'Realicé mi pago y entiendo que mi reserva quedará pendiente.';
 }
@@ -531,7 +531,7 @@ function continuar_s4() {
     E.notaPago = E.creditosUsados > 0
       ? 'Clase(s) a favor por entrenamiento cancelado' + (E.cuponAplicado ? ' + cupón' : '')
       : 'Cupón clase gratis';
-    construirResumenS5('s4'); ir('s5'); return;
+    abrirSheetConfirmarReserva(); return;
   }
   ir('s-pago');
 }
@@ -544,30 +544,45 @@ function toggleBtnPago() {
   if (lbl) lbl.classList.toggle('sel', document.getElementById('chk-pago').checked);
 }
 
-function construirResumenS5(backTarget) {
-  document.getElementById('btn-confirmar').disabled = false; document.getElementById('btn-confirmar').textContent = necesitaEquipo() ? 'Confirmar mi reserva' : 'Confirmar mi pago';
-  document.getElementById('s5-titulo-h2').textContent = necesitaEquipo() ? 'Resumen de tu reserva' : 'Resumen de tu pago'; document.getElementById('s5-liberar-cupo').style.display = necesitaEquipo() ? 'block' : 'none';
-  var avisoPago = document.getElementById('s5-aviso-pago'); if(avisoPago) avisoPago.style.display = (E.totalPago === 0) ? 'none' : 'block';
-  var d = E.datos; var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
-  var h = '<div class="r-titulo">Tu reserva</div>';
-  h += fila('Nombre', E.nombre); h += fila('Tipo de pago', E.tipoPago === 'mensual' ? '📅 Mensual' : '🎟️ Por clase');
+function abrirSheetConfirmarReserva() {
+  var btn = document.getElementById('btn-confirmar');
+  btn.disabled = false; btn.textContent = necesitaEquipo() ? 'Confirmar mi reserva' : 'Confirmar mi pago';
+  var h = '<p style="margin:0 0 10px;font-size:0.85rem;color:var(--text);">' + (necesitaEquipo() ? 'Reservarás estas clases:' : 'Confirmarás este pago:') + '</p>';
+  if (E.tipoPago === 'clase') {
+    h += '<div style="padding-bottom:10px;font-size:0.9rem;"><div style="font-weight:600;line-height:1.6;text-align:left;">' + E.fechas.map(function(f) { return '• ' + f; }).join('<br>') + '</div></div>';
+  } else if (E.meses && E.meses.length > 0) {
+    h += '<div style="padding-bottom:10px;font-size:0.9rem;"><div style="font-weight:600;line-height:1.6;text-align:left;">' + E.meses.map(function(m) { return '• ' + m; }).join('<br>') + '</div></div>';
+  }
   if (E.cuponAplicado || E.creditosUsados > 0) {
     var partesT = [];
     if (E.creditosUsados > 0) partesT.push('🔁 ' + E.creditosUsados + ' a favor');
     if (E.cuponAplicado) partesT.push('🎟️ cupón');
     var textoTotal = (E.totalPago > 0 ? '$' + E.totalPago.toFixed(2) + ' + ' : '$0.00 — ') + partesT.join(' + ');
     h += fila('Total', '<span style="color:var(--success-dark);font-weight:800;">' + textoTotal + '</span>');
+  } else {
+    h += fila('Total', '<span style="font-weight:800;">$' + (E.totalPago || 0).toFixed(2) + '</span>');
   }
-  else { h += fila('Total', '<span style="font-weight:800;">$' + (E.totalPago || 0).toFixed(2) + '</span>'); }
-  if (E.tipoPago === 'clase') {     h += '<div style="padding: 10px 0; border-bottom: 1px solid var(--border-softest); font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Fecha/s:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + E.fechas.map(function(f) { return '• ' + f; }).join('<br>') + '</div></div>';   } else if (E.meses && E.meses.length > 0) {     h += '<div style="padding: 10px 0; border-bottom: 1px solid var(--border-softest); font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Meses pagados:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + E.meses.map(function(m) { return '• ' + m; }).join('<br>') + '</div></div>';   }
-  h += fila('Patines', d.necesitaPatines + (talla ? ' — Talla ' + talla : '')); h += fila('Protecciones', d.necesitaProtecciones); if (E.notaPago) h += fila('Referencia pago', E.notaPago);
-  document.getElementById('s5-resumen').innerHTML = h;
-  var s5Back = document.querySelector('#s5 .btn-secondary'); if (s5Back) s5Back.onclick = function() { volver(backTarget || 's-pago'); };
+  document.getElementById('sheet-confirmar-resumen').innerHTML = h;
+  var errEl = document.getElementById('err-sheet-confirmar'); if (errEl) errEl.style.display = 'none';
+  var ov = document.getElementById('sheet-confirmar-reserva-overlay');
+  var sh = document.getElementById('sheet-confirmar-reserva');
+  if (ov) ov.style.display = 'block';
+  if (sh) {
+    sh.style.display = 'block';
+    requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  }
+}
+
+function cerrarSheetConfirmarReserva() {
+  var sh = document.getElementById('sheet-confirmar-reserva');
+  var ov = document.getElementById('sheet-confirmar-reserva-overlay');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
 }
 
 function continuar_pago() {
   if (!document.getElementById('chk-pago').checked) { err('err-pago', 'Debes confirmar que realizaste el pago.'); return; }
-  E.notaPago = E.nombre || ''; construirResumenS5('s-pago'); ir('s5');
+  E.notaPago = E.nombre || ''; abrirSheetConfirmarReserva();
 }
 
 function continuar_pago_y_wp() {
@@ -591,6 +606,8 @@ function modalWpSaltear() {
 }
 
 function confirmarReserva() {
+  var shConf = document.getElementById('sheet-confirmar-reserva'); if (shConf) shConf.style.display = 'none';
+  var ovConf = document.getElementById('sheet-confirmar-reserva-overlay'); if (ovConf) ovConf.style.display = 'none';
   var btn = document.getElementById('btn-confirmar'); btn.disabled = true; mostrarCargando('Guardando tu reserva/pago...');
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : 'No'; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : 'No';
 
@@ -616,28 +633,55 @@ function confirmarReserva() {
 
     var necesitaPatinesLocal = (E.datos.necesitaPatines || '').toLowerCase() !== 'no' && E.datos.necesitaPatines; var tallaLocal = E.datos.talla || ''; var protecLocal = (E.datos.necesitaProtecciones || '').toLowerCase() !== 'no' ? E.datos.necesitaProtecciones : '';
     var necesitaEquipoLocal = !!necesitaPatinesLocal || !!protecLocal;
-    var equipMsg = necesitaEquipoLocal ? (necesitaPatinesLocal ? 'Patines: Sí (talla ' + (tallaLocal || '?') + ')\n' : '') + (protecLocal ? '· Protecciones: Necesita protecciones (' + protecLocal + ')' : '') : 'Equipamiento propio';
-    var fechasHtml = ''; if (E.tipoPago === 'mensual') { fechasHtml = '· Pago mensual ($' + (E.totalPago || 0).toFixed(2) + ')\n' + E.meses.map(function(m) { return '· ' + m; }).join('\n'); } else { fechasHtml = E.fechas.map(function(f) { return '· ' + f; }).join('\n'); }
 
-    document.getElementById('s6-detalle').innerHTML = '<strong>' + E.nombre + '</strong><br><br>' + fechasHtml + '<br><br>· ' + equipMsg;
+    var h = fila('Nombre', E.nombre); h += fila('Tipo de pago', E.tipoPago === 'mensual' ? '📅 Mensual' : '🎟️ Por clase');
+    if (E.cuponAplicado || E.creditosUsados > 0) {
+      var partesT = [];
+      if (E.creditosUsados > 0) partesT.push('🔁 ' + E.creditosUsados + ' a favor');
+      if (E.cuponAplicado) partesT.push('🎟️ cupón');
+      var textoTotal = (E.totalPago > 0 ? '$' + E.totalPago.toFixed(2) + ' + ' : '$0.00 — ') + partesT.join(' + ');
+      h += fila('Total', '<span style="color:var(--success-dark);font-weight:800;">' + textoTotal + '</span>');
+    } else {
+      h += fila('Total', '<span style="font-weight:800;">$' + (E.totalPago || 0).toFixed(2) + '</span>');
+    }
+    if (E.tipoPago === 'clase') {
+      var fechasConTalla = E.fechas.map(function(f) {
+        var tFecha = (E.tallasPorFecha && E.tallasPorFecha[f]) ? E.tallasPorFecha[f] : tallaLocal;
+        return '• ' + f + (necesitaPatinesLocal && tFecha ? ' — Talla ' + tFecha : '');
+      }).join('<br>');
+      h += '<div style="padding: 10px 0; border-bottom: 1px solid var(--border-softest); font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Fecha/s:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + fechasConTalla + '</div></div>';
+    } else if (E.meses && E.meses.length > 0) {
+      h += '<div style="padding: 10px 0; border-bottom: 1px solid var(--border-softest); font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Meses pagados:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + E.meses.map(function(m) { return '• ' + m; }).join('<br>') + '</div></div>';
+    }
+    h += fila('Patines', d.necesitaPatines || 'No'); h += fila('Protecciones', d.necesitaProtecciones); if (E.notaPago) h += fila('Referencia pago', E.notaPago);
+    document.getElementById('s6-resumen').innerHTML = h;
+
     if (E.reagendando) { document.getElementById('s6-titulo').textContent = '🔁 ¡Clase reagendada!'; document.getElementById('s6-texto').innerHTML = 'Tu nueva reserva está <strong>pendiente de confirmación</strong>. Podés ver el estado desde "Mis reservas".'; }
     else if (necesitaEquipoLocal) { document.getElementById('s6-titulo').textContent = '¡Reserva registrada!'; document.getElementById('s6-texto').innerHTML = 'Puedes revisar el estado desde <strong>Mis reservas</strong>. Si no puedes venir, cancela para liberar el cupo.'; } else { document.getElementById('s6-titulo').textContent = '¡Pago registrado!'; document.getElementById('s6-texto').innerHTML = 'Puedes revisar el estado de tu pago desde <strong>"Ver mis reservas"</strong>.'; }
 
     var avisoEl = document.getElementById('s6-email-aviso');
+    var avisoPagoEl = document.getElementById('s6-aviso-pago');
+    var liberarCupoEl = document.getElementById('s6-liberar-cupo');
     var btnWpExito = document.getElementById('btn-wp-exito');
+    if (liberarCupoEl) liberarCupoEl.style.display = necesitaEquipoLocal ? 'block' : 'none';
     if (E.totalPago === 0) {
+      if (avisoPagoEl) avisoPagoEl.style.display = 'none';
       if (E.reagendando) {
         avisoEl.textContent = '🔁 Clase reagendada. Te avisaremos por correo cuando sea confirmada.';
-        avisoEl.style.cssText = 'background:var(--purple-lightest);border:1px solid var(--purple-border-soft);border-radius:12px;padding:16px;font-size:0.9rem;color:var(--dk-purple-mid);margin-bottom:18px;text-align:center;';
+        avisoEl.style.cssText = 'background:var(--purple-lightest);border:1px solid var(--purple-border-soft);border-radius:12px;padding:16px;font-size:0.9rem;color:var(--dk-purple-mid);margin-bottom:18px;text-align:center;display:block;';
       } else if (E.cuponAplicado) {
         avisoEl.textContent = '🎟️ Tu cupón fue aplicado. ¡Nos vemos en el entrenamiento!';
-        avisoEl.style.cssText = 'background:var(--green-light);border:1px solid #bbf7d0;border-radius:12px;padding:16px;font-size:0.9rem;color:var(--green-dark);margin-bottom:18px;text-align:center;box-shadow: 0 4px 12px rgba(34,197,94,0.1);';
+        avisoEl.style.cssText = 'background:var(--green-light);border:1px solid #bbf7d0;border-radius:12px;padding:16px;font-size:0.9rem;color:var(--green-dark);margin-bottom:18px;text-align:center;box-shadow: 0 4px 12px rgba(34,197,94,0.1);display:block;';
+      } else if (E.creditosUsados > 0) {
+        avisoEl.textContent = '🔁 Reserva registrada con tus clases a favor. ¡Nos vemos en el entrenamiento!';
+        avisoEl.style.cssText = 'background:var(--green-light);border:1px solid #bbf7d0;border-radius:12px;padding:16px;font-size:0.9rem;color:var(--green-dark);margin-bottom:18px;text-align:center;box-shadow: 0 4px 12px rgba(34,197,94,0.1);display:block;';
+      } else {
+        avisoEl.style.display = 'none';
       }
       if (btnWpExito) btnWpExito.style.display = 'none';
     } else {
-      var emailText = (E.datos && E.datos.email) ? ' en ' + E.datos.email : '';
-      avisoEl.textContent = (E.cuponAplicado ? '🎟️ Cupón aplicado. ' : '') + '⏳ Tu Reserva está pendiente de verificación. Recibirás un correo' + emailText + ' cuando esté confirmada.';
-      avisoEl.style.cssText = 'background:#fffbeb;border:2px solid var(--amber-border);border-radius:10px;padding:14px 16px;font-size:0.9rem;font-weight:500;color:var(--amber-darker);margin-bottom:16px;text-align:center;line-height:1.5;';
+      avisoEl.style.display = 'none';
+      if (avisoPagoEl) avisoPagoEl.style.display = 'block';
       if (btnWpExito && E.wpUrl) { btnWpExito.href = E.wpUrl; btnWpExito.style.display = 'flex'; }
     }
     E.reagendando = false;
