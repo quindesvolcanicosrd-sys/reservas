@@ -72,7 +72,7 @@ function _inscRenderProg() {
   if (back) back.style.display = (_inscCurIdx > 0 || _inscVinoConToken) ? 'flex' : 'none';
   if (ph) ph.style.display = _inscCurIdx > 0 ? 'none' : 'block';
   var btnHome = document.getElementById('insc-btn-home');
-  if (btnHome) btnHome.style.display = (_inscCurIdx === 0) ? 'flex' : 'none';
+  if (btnHome) btnHome.style.display = 'flex';
 }
 
 function inscMostrarPaso(idx) {
