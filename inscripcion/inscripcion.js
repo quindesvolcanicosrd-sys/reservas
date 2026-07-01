@@ -257,27 +257,28 @@ function inscTogglePron(el) {
   el.classList.toggle('activa');
 }
 
-function inscAbrirOtroPron() {
-  _inscAbrirSheet('insc-sheet-pron-overlay', 'insc-sheet-pron');
-  setTimeout(function() { var i = document.getElementById('insc-pron-otro-inp'); if (i) i.focus(); }, 400);
-}
-
-function inscCancelarOtroPron() {
-  var v = (document.getElementById('insc-pron-otro-inp').value || '').trim();
-  var otroPill = document.querySelector('#insc-pron-pills .aj-pill-otro');
-  if (!v && otroPill) otroPill.classList.remove('activa');
-  _inscCerrarSheet('insc-sheet-pron-overlay', 'insc-sheet-pron');
-}
-
-function inscConfirmarOtroPron() {
-  var v = (document.getElementById('insc-pron-otro-inp').value || '').trim();
-  if (!v) return;
-  var otroPill = document.querySelector('#insc-pron-pills .aj-pill-otro');
-  if (otroPill) { otroPill.classList.add('activa'); otroPill.dataset.val = v; }
-  var disp = document.getElementById('insc-pron-otro-display');
-  if (disp) { disp.textContent = 'Otro: ' + v; disp.style.display = 'block'; }
-  _inscCerrarSheet('insc-sheet-pron-overlay', 'insc-sheet-pron');
-}
+// Opción "Otro" de pronombres eliminada del HTML (paso 3) — funciones comentadas, sin referencias vivas.
+// function inscAbrirOtroPron() {
+//   _inscAbrirSheet('insc-sheet-pron-overlay', 'insc-sheet-pron');
+//   setTimeout(function() { var i = document.getElementById('insc-pron-otro-inp'); if (i) i.focus(); }, 400);
+// }
+//
+// function inscCancelarOtroPron() {
+//   var v = (document.getElementById('insc-pron-otro-inp').value || '').trim();
+//   var otroPill = document.querySelector('#insc-pron-pills .aj-pill-otro');
+//   if (!v && otroPill) otroPill.classList.remove('activa');
+//   _inscCerrarSheet('insc-sheet-pron-overlay', 'insc-sheet-pron');
+// }
+//
+// function inscConfirmarOtroPron() {
+//   var v = (document.getElementById('insc-pron-otro-inp').value || '').trim();
+//   if (!v) return;
+//   var otroPill = document.querySelector('#insc-pron-pills .aj-pill-otro');
+//   if (otroPill) { otroPill.classList.add('activa'); otroPill.dataset.val = v; }
+//   var disp = document.getElementById('insc-pron-otro-display');
+//   if (disp) { disp.textContent = 'Otro: ' + v; disp.style.display = 'block'; }
+//   _inscCerrarSheet('insc-sheet-pron-overlay', 'insc-sheet-pron');
+// }
 
 function _inscGetPronombres() {
   var vals = [];

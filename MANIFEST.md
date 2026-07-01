@@ -212,6 +212,7 @@ reservas/
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **inscripcion/index.html + inscripcion/inscripcion.js** — Eliminada la opción "Otro..." de pronombres en el paso 3 ("Tu identidad") de inscripción: quitada la pill `aj-pill-otro` y `#insc-pron-otro-display` de `#insc-pron-pills`, y eliminado el bottom sheet `insc-sheet-pron`/`insc-sheet-pron-overlay` (ya inalcanzable sin la pill que lo abría). `inscAbrirOtroPron()`, `inscCancelarOtroPron()` e `inscConfirmarOtroPron()` quedaron comentadas en `inscripcion.js` por no tener ya ninguna referencia viva en el HTML. `_inscGetPronombres()` no requirió cambios — solo deja de encontrar pills con clase `aj-pill-otro`.
 - **index.html + js/ui.js** — Agregados `modal-info-estado` (explica estados Confirmada/Pendiente/Cancelada) y `modal-info-politica` (explica responsabilidad del usuario al reservar). Links "¿Qué significa esto?" agregados en la pantalla de resumen s5 (uno junto a "cuando esté aprobada" que abre `modal-info-estado`, otro junto a "tus pertenencias" que abre `modal-info-politica`). Funciones: `abrirModalInfoEstado`, `cerrarModalInfoEstado`, `abrirModalInfoPolitica`, `cerrarModalInfoPolitica` en `js/ui.js`. Nota: `modal-info-estado` es independiente del `modal-estados-reserva` ya existente (con contenido casi idéntico, usado por el link "¿Qué significa esto?" del status bar de las cards de home vía `abrirModalEstados()` en `js/home.js`) — se mantuvo separado a propósito para no tocar esa funcionalidad existente; quedan dos modales con contenido solapado.
 - **index.html + js/reservas.js** — Ícono de WhatsApp en los botones "Enviar comprobante" (`#btn-wp-exito` en s6 y `#modal-wp-btn` en `#modal-wp-comprobante`) cambiado del emoji 📲 al SVG oficial de WhatsApp (`fill="white"`, 20×20).
 - **index.html + js/reservas.js** — Eliminado el campo "Referencia de pago" (`.nota-pago-wrapper` con `#nota-pago`/`#nota-pago-hint`) de `s-pago`. `actualizarTextosPago()` ya no escribe en `#nota-pago-hint`; `construirResumenS5()` ya no limpia `#nota-pago`; `continuar_pago()` ahora asigna `E.notaPago = E.nombre || ''` en vez de leer el input inexistente.
@@ -638,9 +639,6 @@ reservas/
 | `inscContinuar2()` | Valida fecha, calcula mayoría de edad, guarda toggles de privacidad y avanza a paso 3 |
 | `inscValidarNombre(inp)` | Limpia caracteres inválidos del input de nombre en tiempo real |
 | `inscTogglePron(el)` | Toggle de clase `activa` en una pill de pronombre |
-| `inscAbrirOtroPron()` | Abre el bottom sheet `insc-sheet-pron` y hace focus en el input |
-| `inscCancelarOtroPron()` | Cierra el sheet de pronombre; desactiva la pill Otro si el input está vacío |
-| `inscConfirmarOtroPron()` | Guarda el pronombre personalizado, activa la pill Otro con su valor y cierra el sheet |
 | `_inscGetPronombres()` | Recorre pills activas y devuelve una cadena separada por coma |
 | `inscContinuar3()` | Valida nombre y pronombres; guarda `G.nombre` y avanza a paso 4 |
 | `inscValidarTel(inp)` | Limpia no-dígitos y valida longitud según `_inscPrefijoSel` en tiempo real |
