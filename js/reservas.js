@@ -356,6 +356,7 @@ function cargarFechas() {
     // if (agotadasEquip.length > 0) {
     //   setTimeout(function() { mostrarModalEquip(agotadasEquip); }, 300);
     // }
+    window._nuevxCargandoFechas = false;
     ocultarCargando(); ir('s4');
     if (puedeMensual) {
       setTimeout(function() { _updateTpSlider(false); }, 50);
@@ -365,7 +366,7 @@ function cargarFechas() {
         mostrarModalInfoReserva(function(){});
       }
     }, 400);
-  }, function(e) { ocultarCargando(); ir('s-home'); alert('Error cargarFechas: ' + e.message); });
+  }, function(e) { window._nuevxCargandoFechas = false; ocultarCargando(); ir('s-home'); alert('Error cargarFechas: ' + e.message); });
 }
 
 function toggleFecha(el, fecha) {

@@ -265,6 +265,8 @@ window.onload = function() {
     var _tallaNuevx   = _urlParams.get('talla')   || '';
     _tokenNuevx = _urlParams.get('token') || '';
     window._pendingNuevx = { patines: _patinesNuevx, protec: _protecNuevx, talla: _tallaNuevx };
+    window._nuevxCargandoFechas = true;
+    setTimeout(function() { window._nuevxCargandoFechas = false; }, 15000);
     history.replaceState({}, '', location.pathname);
   }
 
