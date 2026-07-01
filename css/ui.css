@@ -184,6 +184,7 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
 }
 @media (min-width: 601px) {
   #btn-contacto-login { display: none !important; }
+  #btn-refrescar-home { display: flex !important; }
 }
 
 @media (max-width: 600px) {

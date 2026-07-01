@@ -52,11 +52,18 @@
   <div class="app-nav-avatar" id="home-avatar-nav" onclick="irEditarDatos()"></div>
   <div class="app-nav-section" id="home-nav-seccion">MIS RESERVAS</div>
   <div class="app-nav-actions">
+    <button class="app-nav-icon-btn" id="btn-refrescar-home" onclick="refrescarMisReservas(null, this)" title="Actualizar" style="display:none;">
+      <span class="material-symbols-outlined">refresh</span>
+    </button>
     <button class="app-nav-cta" onclick="irNuevaReserva()">
       <span class="material-symbols-outlined">calendar_add_on</span>
       <span class="app-nav-cta-label">Nueva reserva</span>
     </button>
   </div>
+</div>
+
+<div id="ptr-indicator" style="position:fixed;left:50%;top:64px;z-index:850;opacity:0;transform:translate(-50%,-40px);transition:opacity 0.25s ease,transform 0.25s ease;pointer-events:none;">
+  <div class="spinner" style="width:26px;height:26px;border-width:3px;"></div>
 </div>
 
 <div class="contenedor">

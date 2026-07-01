@@ -71,6 +71,73 @@ if (navAvatar) {
   _initHomeNav();
 }
 
+function refrescarMisReservas(callback, btn) {
+  var icon = btn ? btn.querySelector('.material-symbols-outlined') : null;
+  if (icon) icon.style.animation = 'spin 0.6s linear infinite';
+  api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
+    _todasReservas = reservas;
+    prepararHome();
+    if (icon) icon.style.animation = '';
+    if (callback) callback();
+  }, function() {
+    _renderHomeReservas();
+    if (icon) icon.style.animation = '';
+    if (callback) callback();
+  });
+}
+
+var _ptrStartY = 0, _ptrArrastrando = false, _ptrRefrescando = false;
+
+function _ptrEnMisReservas() {
+  var s = document.getElementById('s-home');
+  return !!(s && s.classList.contains('activa'));
+}
+
+window.addEventListener('touchstart', function(e) {
+  if (!_ptrEnMisReservas() || _ptrRefrescando) return;
+  if ((window.scrollY || 0) > 0) return;
+  _ptrStartY = e.touches[0].clientY;
+  _ptrArrastrando = true;
+}, { passive: true });
+
+window.addEventListener('touchmove', function(e) {
+  if (!_ptrArrastrando) return;
+  var delta = e.touches[0].clientY - _ptrStartY;
+  if (delta <= 0) { _ptrArrastrando = false; _ptrOcultarIndicador(); return; }
+  var ind = document.getElementById('ptr-indicator');
+  if (!ind) return;
+  var dist = Math.min(delta / 2, 60);
+  ind.style.transition = 'none';
+  ind.style.opacity = Math.min(dist / 40, 1);
+  ind.style.transform = 'translate(-50%,' + (dist - 40) + 'px)';
+}, { passive: true });
+
+window.addEventListener('touchend', function() {
+  if (!_ptrArrastrando) return;
+  _ptrArrastrando = false;
+  var ind = document.getElementById('ptr-indicator');
+  if (!ind) return;
+  var m = /translate\(-50%,(-?[\d.]+)px\)/.exec(ind.style.transform);
+  var dist = m ? parseFloat(m[1]) + 40 : 0;
+  ind.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+  if (dist >= 45) {
+    _ptrRefrescando = true;
+    ind.style.opacity = '1';
+    ind.style.transform = 'translate(-50%,20px)';
+    refrescarMisReservas(function() { _ptrRefrescando = false; _ptrOcultarIndicador(); });
+  } else {
+    _ptrOcultarIndicador();
+  }
+});
+
+function _ptrOcultarIndicador() {
+  var ind = document.getElementById('ptr-indicator');
+  if (!ind) return;
+  ind.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+  ind.style.opacity = '0';
+  ind.style.transform = 'translate(-50%,-40px)';
+}
+
 function irNuevaReserva(skipEquip) {
   E.conf = ''; E.fechas = []; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = ''; E.cuponAplicado = false; E.creditosUsados = 0; E.reagendando = false;
   var chkC = document.getElementById('chk-cupon'); if (chkC) chkC.checked = false;
