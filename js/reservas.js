@@ -567,7 +567,7 @@ function confirmarReserva() {
       if (btnWpExito) btnWpExito.style.display = 'none';
     } else {
       var emailText = (E.datos && E.datos.email) ? ' en ' + E.datos.email : '';
-      avisoEl.textContent = (E.cuponAplicado ? '🎟️ Cupón aplicado. ' : '') + '⏳ Tu pago está pendiente de verificación. Recibirás un correo' + emailText + ' cuando esté confirmado.';
+      avisoEl.textContent = (E.cuponAplicado ? '🎟️ Cupón aplicado. ' : '') + '⏳ Tu Reserva está pendiente de verificación. Recibirás un correo' + emailText + ' cuando esté confirmada.';
       avisoEl.style.cssText = 'background:#fffbeb;border:2px solid var(--amber-border);border-radius:10px;padding:14px 16px;font-size:0.9rem;font-weight:500;color:var(--amber-darker);margin-bottom:16px;text-align:center;line-height:1.5;';
       if (btnWpExito && E.wpUrl) { btnWpExito.href = E.wpUrl; btnWpExito.style.display = 'flex'; }
     }
