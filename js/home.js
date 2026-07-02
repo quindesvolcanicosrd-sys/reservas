@@ -23,10 +23,12 @@ if (navAvatar) {
   else { navAvatar.textContent = (E.nombre || '?').charAt(0).toUpperCase(); }
 }
   var homeContent = document.getElementById('home-reservas-lista');
+  var homeContenidoFinalListo = false;
   if (homeContent) { homeContent.style.opacity = '0'; homeContent.style.transition = 'opacity 0.3s ease'; }
   _renderHomeReservas();
   if (homeContent) {
     setTimeout(function() {
+      if (homeContenidoFinalListo) return; // el fetch ya resolvió y pintó el contenido real; no lo pisamos con el loader
       homeContent.innerHTML = '<div class="loader" style="padding:24px 0;"><div class="spinner"></div></div>';
       homeContent.style.opacity = '1';
     }, 50);
@@ -43,10 +45,12 @@ if (navAvatar) {
       }
       return r;
     });
+    homeContenidoFinalListo = true;
     _renderHomeReservas();
     if (homeContent) { homeContent.style.opacity = '1'; void homeContent.offsetWidth; homeContent.style.animation = 'fadeIn 0.3s ease'; }
     if (!window._nuevxCargandoFechas) ocultarCargando();
   }, function() {
+    homeContenidoFinalListo = true;
     _renderHomeReservas();
     if (homeContent) { homeContent.style.opacity = '1'; void homeContent.offsetWidth; homeContent.style.animation = 'fadeIn 0.3s ease'; }
     if (!window._nuevxCargandoFechas) ocultarCargando();

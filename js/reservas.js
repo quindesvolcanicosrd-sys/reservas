@@ -598,21 +598,30 @@ function confirmarReserva(btn) {
     var fechasExitosas = E.fechas.filter(function(f) { return itemsFallidos.indexOf(f) === -1; });
     var mesesExitosos = E.meses.filter(function(m) { return itemsFallidos.indexOf(m) === -1; });
 
+    var secundariosTotal = 2 + (E.creditosUsados > 0 ? 1 : 0) + (E.cuponAplicado ? 1 : 0);
+    var secundariosListos = 0;
+    function secundarioTerminado() {
+      secundariosListos++;
+      if (secundariosListos === secundariosTotal && !huboFalloParcial && fallosSecundarios.length > 0) {
+        mostrarToast('Reserva guardada. Un detalle no se procesó, contáctanos si algo no cuadra.', 'error');
+      }
+    }
+
     var fechasStr = fechasExitosas.length > 0 ? fechasExitosas.join(', ') : (E.tipoPago === 'mensual' ? 'mensual (sin clases seleccionadas)' : '—');
-    api({ action: 'guardarNotaPago', nombre: E.nombre, tipoPago: E.tipoPago, monto: (E.totalPago || 0).toFixed(2), nota: E.notaPago || '—', fechas: fechasStr, talla: talla, protecciones: protec }, function() {}, function() { fallosSecundarios.push('nota de pago'); });
+    api({ action: 'guardarNotaPago', nombre: E.nombre, tipoPago: E.tipoPago, monto: (E.totalPago || 0).toFixed(2), nota: E.notaPago || '—', fechas: fechasStr, talla: talla, protecciones: protec }, function() { secundarioTerminado(); }, function() { fallosSecundarios.push('nota de pago'); secundarioTerminado(); });
     if (E.creditosUsados > 0) {
-      api({ action: 'usarCreditos', nombre: E.nombre, cantidad: E.creditosUsados }, function(){}, function(){ fallosSecundarios.push('créditos a favor'); });
+      api({ action: 'usarCreditos', nombre: E.nombre, cantidad: E.creditosUsados }, function(){ secundarioTerminado(); }, function(){ fallosSecundarios.push('créditos a favor'); secundarioTerminado(); });
       var porMarcar = E.creditosUsados;
       (_todasReservas || []).forEach(function(r) {
         if (porMarcar > 0 && r.estado === 'Reagendar') { r.estado = 'Crédito usado'; porMarcar--; }
       });
     }
     var fechasResumen = E.tipoPago === 'mensual' ? mesesExitosos : fechasExitosas;
-    api({ action: 'enviarResumenReservas', nombre: E.nombre, fechas: JSON.stringify(fechasResumen), talla: talla, protecciones: protec, email: E.datos.email || '', montoTotal: (E.totalPago || 0).toFixed(2) }, function() {}, function() { fallosSecundarios.push('resumen por email'); });
+    api({ action: 'enviarResumenReservas', nombre: E.nombre, fechas: JSON.stringify(fechasResumen), talla: talla, protecciones: protec, email: E.datos.email || '', montoTotal: (E.totalPago || 0).toFixed(2) }, function() { secundarioTerminado(); }, function() { fallosSecundarios.push('resumen por email'); secundarioTerminado(); });
 
     if (E.cuponAplicado) {
       marcarCuponUsadoLocal();
-      api({ action: 'marcarCuponUsado', nombre: E.nombre }, function(){}, function(){ fallosSecundarios.push('cupón'); });
+      api({ action: 'marcarCuponUsado', nombre: E.nombre }, function(){ secundarioTerminado(); }, function(){ fallosSecundarios.push('cupón'); secundarioTerminado(); });
       var bannerCuponUsado = document.getElementById('banner-cupon');
       if (bannerCuponUsado) bannerCuponUsado.style.display = 'none';
     }
@@ -675,7 +684,6 @@ function confirmarReserva(btn) {
     if (huboFalloParcial) {
       mostrarToast('Algunas fechas no se pudieron guardar', 'error');
     } else {
-      if (fallosSecundarios.length > 0) mostrarToast('Reserva guardada. Un detalle no se procesó, contáctanos si algo no cuadra.', 'error');
       setTimeout(lanzarConfetti, 400);
     }
   }
