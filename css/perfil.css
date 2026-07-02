@@ -115,7 +115,7 @@
 
 .aj-sub { display:none; position:fixed; inset:0; background:var(--bg); z-index:950; flex-direction:column; overflow:hidden; }
 .aj-sub.activa { display:flex; animation:smoothSlideUp 0.3s var(--ease-sheet); }
-.aj-sub-inner { overflow-y:auto; flex:1; padding:16px; }
+.aj-sub-inner { overflow-y:auto; flex:1; padding:var(--space-screen); }
 
 .aj-pills-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
 .aj-pill { display:inline-flex; align-items:center; padding:7px 16px; border-radius:20px; font-size:0.78rem; font-weight:700; cursor:pointer; border:1.5px solid var(--border-light); background:var(--surface-2); color:var(--muted); transition:all 0.15s; user-select:none; }
