@@ -216,11 +216,18 @@ function irHomeDesdeExito() {
   api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
     reservasListas = true;
     _todasReservas = reservas;
+    // Corrige #home-nav/#home-nav-spacer apenas se conocen las reservas reales — sin esto,
+    // ir('s-home') (más abajo) ya decidió la visibilidad del nav con datos viejos, y
+    // prepararHome(true) no vuelve a tocarla hasta que resuelva getFechasDisponibles (otro
+    // fetch más). Adelantar la sincronización evita que el spinner intermedio se vea
+    // aplastado bajo el nav durante esa segunda espera (ver frente #4 del changelog).
+    _sincronizarNavHome();
     // prepararHome(true) hace el único render real (con saltarFadeInicial=true no repite
     // su propio fade/spinner) — así queda una sola transición en vez de dos en secuencia.
     prepararHome(true);
   }, function() {
     reservasListas = true;
+    _sincronizarNavHome();
     // aunque falle, dejamos que prepararHome(true) haga el render final (con lo que haya
     // en _todasReservas) para que el contenedor vuelva a opacity:1 con fadeIn — si solo se
     // llamaba _renderHomeReservas() acá, un error antes de los 50ms dejaba el contenedor
@@ -230,13 +237,14 @@ function irHomeDesdeExito() {
   ir('s-home');
 }
 
-function _renderHomeReservas() {
+function _sincronizarNavHome() {
+  // Fuente única de si #home-nav/#home-nav-spacer/label/"Ver historial" deben estar
+  // visibles — separado de _renderHomeReservas() para poder llamarlo apenas se conoce
+  // _todasReservas (irHomeDesdeExito()), sin esperar a pintar las cards. El spacer se
+  // mide acá mismo (no en _initHomeNav()) para que nunca quede calculado a partir de
+  // un #home-nav que en ese instante seguía oculto (ver frente #4 del changelog).
   var hoy = new Date(); hoy.setHours(0,0,0,0);
-  var cl = _clasificarReservas(_todasReservas || [], hoy);
-  var activas = cl.activas;
-  var container = document.getElementById('home-reservas-lista');
-  var labelMisReservas = document.getElementById('label-mis-reservas');
-
+  var activas = _clasificarReservas(_todasReservas || [], hoy).activas;
   var homeNav = document.getElementById('home-nav');
   var homeNavSpacer = document.getElementById('home-nav-spacer');
   var labelMisRes = document.getElementById('label-mis-reservas');
@@ -249,10 +257,21 @@ function _renderHomeReservas() {
     if (verHistBtn) verHistBtn.style.display = 'none';
   } else {
     if (homeNav) homeNav.style.display = 'flex';
-    if (homeNavSpacer) homeNavSpacer.style.display = '';
+    if (homeNavSpacer) {
+      homeNavSpacer.style.display = '';
+      if (homeNav) homeNavSpacer.style.height = (homeNav.offsetHeight + 8) + 'px';
+    }
     if (labelMisRes) labelMisRes.style.display = '';
     if (verHistBtn) verHistBtn.style.display = '';
   }
+  return activas;
+}
+
+function _renderHomeReservas() {
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var activas = _sincronizarNavHome();
+  var container = document.getElementById('home-reservas-lista');
+  var labelMisReservas = document.getElementById('label-mis-reservas');
 
   var fotoUrl = E.datos && (E.datos.fotoPerfil || '');
   var avatarHtml = fotoUrl
