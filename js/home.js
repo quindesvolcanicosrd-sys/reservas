@@ -123,7 +123,7 @@ window.addEventListener('touchstart', function(e) {
 window.addEventListener('touchmove', function(e) {
   if (!_ptrArrastrando) return;
   var delta = e.touches[0].clientY - _ptrStartY;
-  if (delta <= 0) { _ptrArrastrando = false; _ptrOcultarIndicador(); return; }
+  if (delta <= 0) { _ptrProgreso = 0; _ptrOcultarIndicador(); return; }
   var ind = document.getElementById('ptr-indicator');
   var anillo = document.getElementById('ptr-spinner');
   if (!ind || !anillo) return;
