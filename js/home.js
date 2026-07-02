@@ -438,6 +438,8 @@ function _abrirSheetTallaBase(fecha, tallaActual) {
   if (grid) grid.innerHTML = '<div class="loader" style="grid-column:1/-1;padding:20px 0;"><div class="spinner" style="width:26px;height:26px;border-width:3px;"></div></div>';
   var errEl = document.getElementById('err-sheet-talla');
   if (errEl) errEl.style.display = 'none';
+  var avisoProtec = document.getElementById('sheet-talla-aviso-protec');
+  if (avisoProtec) avisoProtec.style.display = 'none';
   _habilitarConfirmarTalla(false);
   var ov = document.getElementById('sheet-talla-overlay');
   var sh = document.getElementById('sheet-talla');

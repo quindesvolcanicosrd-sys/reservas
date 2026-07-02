@@ -7,6 +7,7 @@ var E = {
 };
 
 var _conflictosTalla = {};
+var _fechasPosibleProtecRiesgo = {};
 
 function tieneCuponDisponible() {
   if (!E.datos || !E.datos.cuponDisponible) return false;
@@ -274,10 +275,16 @@ function actualizarTotalS4() {
 function cargarFechas() {
   mostrarCargando('Verificando próximas fechas...');
   var d = E.datos; var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
+  var necesitaProtec = d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no';
+  function esTallaAgotada(f) {
+    return !f.disponible && talla && f.razon &&
+      f.razon.trim().toLowerCase() === ('sin patines talla ' + talla + ' disponibles').toLowerCase();
+  }
   api({ action: 'getFechasDisponibles', nombre: E.nombre, talla: talla, necesitaProtecciones: d.necesitaProtecciones }, function(fechas) {
-    var disponibles = fechas.filter(function(f) { return f.disponible; });
+    var disponibles = fechas.filter(function(f) { return f.disponible || esTallaAgotada(f); });
     var html = '';
     var fechasAChequearTalla = [];
+    var fechasTallaAgotadaSync = [];
     if (fechas.length === 0) { html = '<p style="color:var(--muted);text-align:center;">No hay fechas disponibles.</p>'; } else {
       fechas.forEach(function(f) {
         var partes = f.fecha.split(' - ');
@@ -292,9 +299,14 @@ function cargarFechas() {
         if (lugar) pillsHtml += '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
         pillsHtml += '</div>';
 
-        if (f.disponible) {
+        var esAgotadaTalla = esTallaAgotada(f);
+        if (f.disponible || esAgotadaTalla) {
           var slugFecha = f.fecha.replace(/\s/g,'_');
-          if (talla) fechasAChequearTalla.push({ fecha: f.fecha, slug: slugFecha });
+          if (esAgotadaTalla) {
+            fechasTallaAgotadaSync.push({ fecha: f.fecha, slug: slugFecha, riesgoProtec: necesitaProtec });
+          } else if (talla) {
+            fechasAChequearTalla.push({ fecha: f.fecha, slug: slugFecha });
+          }
           html += '<div class="fecha-item" id="fi-' + slugFecha + '">';
           html += '<span class="badge badge-pendiente" id="fi-badge-' + slugFecha + '" style="display:none;position:absolute;top:8px;right:8px;"><span class="material-symbols-outlined" style="font-size:0.85rem;">priority_high</span></span>';
           html += '<div class="fi-header" onclick="manejarClickFecha(this.closest(\'.fecha-item\'),\'' + fechaEsc + '\',\'' + slugFecha + '\')">';
@@ -328,7 +340,12 @@ function cargarFechas() {
         }
       });
     }
-    document.getElementById('lista-fechas').innerHTML = html; E.fechas = []; E.tallasPorFecha = {}; _conflictosTalla = {};
+    document.getElementById('lista-fechas').innerHTML = html; E.fechas = []; E.tallasPorFecha = {}; _conflictosTalla = {}; _fechasPosibleProtecRiesgo = {};
+    fechasTallaAgotadaSync.forEach(function(item) {
+      _conflictosTalla[item.fecha] = true;
+      if (item.riesgoProtec) _fechasPosibleProtecRiesgo[item.fecha] = true;
+      _mostrarConflictoTalla(item.slug, talla);
+    });
     fechasAChequearTalla.forEach(function(item) { _chequearTallaFecha(item.fecha, item.slug); });
     var puedeMensual = canPayMonthly() && !E.reagendando; var wrapper = document.getElementById('s4-tipo-pago-wrapper'); var subtitulo = document.getElementById('s4-fechas-subtitulo');
     if (puedeMensual) {
@@ -431,6 +448,8 @@ function abrirSheetTallaNuevaReserva(fecha, tallaActual, slug) {
   var btn = document.getElementById('btn-confirmar-talla');
   if (btn) btn.textContent = 'Usar esta talla para este día';
   _abrirSheetTallaBase(fecha, tallaActual);
+  var avisoProtec = document.getElementById('sheet-talla-aviso-protec');
+  if (avisoProtec) avisoProtec.style.display = _fechasPosibleProtecRiesgo[fecha] ? 'block' : 'none';
 }
 
 function _confirmarTallaNuevaReserva() {
