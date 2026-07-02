@@ -295,16 +295,26 @@ function _ddpRenderMeses() {
 })();
 
 /* ── Ajustes: navegación de sub-pantallas ─────────────── */
-function irAjSub(id) {
+var _ajSubAbierto = null; // id del aj-sub-* actualmente abierto, o null
+
+function irAjSub(id, desdeHistorial) {
   var sub = document.getElementById(id);
   if (!sub) return;
   _ajCargarSub(id);
   sub.classList.add('activa');
+  _ajSubAbierto = id;
+  if (!desdeHistorial) {
+    history.pushState({ pantalla: 's-datos', ajSub: id }, '', '#' + id);
+  }
 }
 
-function cerrarAjSub(id) {
+function cerrarAjSub(id, desdeHistorial) {
   var sub = document.getElementById(id);
   if (sub) sub.classList.remove('activa');
+  _ajSubAbierto = null;
+  if (!desdeHistorial) {
+    history.pushState({ pantalla: 's-datos' }, '', '#s-datos');
+  }
 }
 
 function _ajCargarSub(id) {
@@ -667,7 +677,7 @@ function _ajGuardar(payload, btn, subId) {
     Object.assign(E.datos, payload);
     if (btn) { btn.textContent = 'Guardar cambios'; btn.disabled = false; }
     irEditarDatos();
-    cerrarAjSub(subId);
+    cerrarAjSub(subId, true);
     mostrarToast('Datos guardados', 'ok');
   }, function(e) {
     if (btn) { btn.textContent = 'Guardar cambios'; btn.disabled = false; }

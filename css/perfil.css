@@ -104,8 +104,8 @@
 .aj-icon-red { background:var(--danger-bg); color:var(--danger); }
 .aj-icon-muted { background:var(--surface-light); color:var(--muted); }
 .aj-content { flex:1; min-width:0; }
-.aj-title { font-size:0.85rem; font-weight:700; color:var(--text); }
-.aj-value { font-size:0.72rem; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.aj-title { font-size:0.90rem; font-weight:700; color:var(--text); }
+.aj-value { font-size:0.76rem; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .aj-chevron { color:var(--border-light); font-size:1rem; }
 
 .aj-app-rows { display:flex; flex-direction:column; gap:0; border-bottom:1px solid var(--border-softest,var(--border-light)); }

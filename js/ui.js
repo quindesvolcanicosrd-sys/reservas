@@ -147,6 +147,7 @@ function ir(id, desdeHistorial, sinTrampa) {
 function volver(id) { ir(id); }
 
 window.addEventListener('popstate', function(ev) {
+  if (_ajSubAbierto) { cerrarAjSub(_ajSubAbierto, true); return; }
   var id = (ev.state && ev.state.pantalla) || (E.datos ? 's-home' : 's1');
 if (id === 's2') id = E.datos ? 's-home' : 's1';
   if (id === 's1b') id = E.datos ? 's-home' : 's1';

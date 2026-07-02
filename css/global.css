@@ -1,7 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-body { font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); overscroll-behavior-y: contain; }
+body { font-family: 'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); overscroll-behavior-y: contain; }
 html { overscroll-behavior-y: contain; }
 button, input, select, textarea { font-family: inherit; }
 
@@ -32,7 +32,7 @@ button, input, select, textarea { font-family: inherit; }
 .pantalla { display: none; }
 .pantalla.activa { display: block; animation: smoothSlideUp 0.6s var(--ease-sheet) forwards; }
 
-select, option, optgroup { font-family: 'Montserrat', sans-serif !important; }
+select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important; }
 
 @media (prefers-color-scheme: dark) {
   #gsignin-skeleton, #gsignin-skeleton-main {
