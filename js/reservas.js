@@ -308,12 +308,12 @@ function cargarFechas() {
             fechasAChequearTalla.push({ fecha: f.fecha, slug: slugFecha });
           }
           html += '<div class="fecha-item" id="fi-' + slugFecha + '">';
-          html += '<span class="badge badge-pendiente" id="fi-badge-' + slugFecha + '" style="display:none;position:absolute;top:8px;right:8px;"><span class="material-symbols-outlined" style="font-size:0.85rem;">priority_high</span></span>';
           html += '<div class="fi-header" onclick="manejarClickFecha(this.closest(\'.fecha-item\'),\'' + fechaEsc + '\',\'' + slugFecha + '\')">';
           html += '<div class="fi-content"><div class="fi-title">' + fechaTexto + '</div>' + pillsHtml + '</div>';
           html += '<div class="fi-circle"><span class="material-symbols-outlined">check</span></div>';
           html += '<input type="checkbox" name="fecha" value="' + f.fecha + '" style="display:none">';
           html += '</div>';
+          html += '<div class="fi-conflicto-talla" id="fi-conflicto-' + slugFecha + '" style="display:none;font-size:0.75rem;padding:0 16px 10px;"></div>';
           if (hasInfo) {
             html += '<div class="fi-footer" onclick="toggleFechaExpand(this,event)">';
             html += '<span class="fi-footer-label">Más información</span>';
@@ -328,7 +328,6 @@ function cargarFechas() {
             html += '</div></div></div>';
           }
           html += '</div>';
-          html += '<div class="fi-conflicto-talla" id="fi-conflicto-' + slugFecha + '" style="display:none;font-size:0.75rem;margin:-4px 0 10px 6px;"></div>';
         } else {
           var fechaEscAgot = f.fecha.replace(/'/g, "\\'");
           var razonEsc = (f.razon || '').replace(/'/g, "\\'");
@@ -418,9 +417,7 @@ function _chequearTallaFecha(fecha, slug) {
 }
 
 function _mostrarConflictoTalla(slug, talla) {
-  var badge = document.getElementById('fi-badge-' + slug);
   var texto = document.getElementById('fi-conflicto-' + slug);
-  if (badge) { badge.style.display = 'inline-flex'; badge.style.animation = 'fadeIn 0.3s ease'; }
   if (texto) {
     texto.textContent = 'Talla ' + talla + ' no disponible — selecciona el evento para cambiar la talla en esta fecha';
     texto.style.color = 'var(--warning)';
@@ -430,9 +427,7 @@ function _mostrarConflictoTalla(slug, talla) {
 }
 
 function _resolverConflictoTalla(slug, talla) {
-  var badge = document.getElementById('fi-badge-' + slug);
   var texto = document.getElementById('fi-conflicto-' + slug);
-  if (badge) { badge.style.animation = 'fadeOut 0.3s ease forwards'; setTimeout(function() { badge.style.display = 'none'; }, 300); }
   if (texto) {
     texto.textContent = 'Talla ' + talla + ' asignada para este día';
     texto.style.color = 'var(--success-dark)';
