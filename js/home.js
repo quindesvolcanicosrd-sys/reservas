@@ -201,9 +201,20 @@ function iniciarReagendamiento() {
 }
 
 function irHomeDesdeExito() {
+  // ir() primero: así el nav forzado más abajo aparece ya sobre #s-home (position:fixed,
+  // independiente de qué .pantalla esté activa) en vez de asomar un instante sobre s6.
+  ir('s-home');
   var homeContent = document.getElementById('home-reservas-lista');
   var reservasListas = false; // mismo guard que homeContenidoFinalListo en prepararHome(): evita que el
                                // spinner pise contenido si getReservasPersona resuelve antes de los 50ms
+  // Llegar acá implica que confirmarReserva() ya guardó al menos una reserva nueva (s6 solo
+  // se muestra si al menos una fecha/mes tuvo éxito) — no hace falta esperar la respuesta de
+  // getReservasPersona para saber que el nav/header deben estar visibles. Sin esto, el spinner
+  // quedaba "suelto" (sin nav ni "MIS RESERVAS"/"Ver historial" arriba) durante toda la espera
+  // de red, y recién aparecía con el layout completo cuando el fetch resolvía — dos aspectos
+  // visualmente distintos de la misma transición en vez de una sola (verificado con capturas
+  // de pantalla cuadro a cuadro contra index.html real).
+  _sincronizarNavHome(true);
   if (homeContent) {
     homeContent.style.transition = 'opacity 0.3s ease';
     homeContent.style.opacity = '0';
@@ -216,33 +227,39 @@ function irHomeDesdeExito() {
   api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
     reservasListas = true;
     _todasReservas = reservas;
-    // Corrige #home-nav/#home-nav-spacer apenas se conocen las reservas reales — sin esto,
-    // ir('s-home') (más abajo) ya decidió la visibilidad del nav con datos viejos, y
-    // prepararHome(true) no vuelve a tocarla hasta que resuelva getFechasDisponibles (otro
-    // fetch más). Adelantar la sincronización evita que el spinner intermedio se vea
-    // aplastado bajo el nav durante esa segunda espera (ver frente #4 del changelog).
+    // Confirma/corrige con datos reales (por si activas.length terminara siendo 0, caso
+    // extremo) — ya no hace falta para la ventana de espera, esa la cubre el forzado de arriba.
     _sincronizarNavHome();
     // prepararHome(true) hace el único render real (con saltarFadeInicial=true no repite
     // su propio fade/spinner) — así queda una sola transición en vez de dos en secuencia.
     prepararHome(true);
   }, function() {
     reservasListas = true;
-    _sincronizarNavHome();
+    // getReservasPersona falló — no hay datos nuevos para confirmar nada, así que se
+    // mantiene forzado en vez de re-sincronizar con _todasReservas (todavía desactualizado,
+    // podría no incluir la reserva recién creada y esconder el nav de nuevo sin motivo).
+    // Pendiente conocido, no resuelto acá: si además getFechasDisponibles (dentro de
+    // prepararHome(true), más abajo) también falla o resuelve con datos que dejan
+    // activas.length en 0, su propio _renderHomeReservas() vuelve a llamar a
+    // _sincronizarNavHome() sin forzar y podría ocultar el nav de nuevo — falla compuesta
+    // de dos fetches fallando en la misma navegación, poco probable, señalada para otra pasada.
+    _sincronizarNavHome(true);
     // aunque falle, dejamos que prepararHome(true) haga el render final (con lo que haya
     // en _todasReservas) para que el contenedor vuelva a opacity:1 con fadeIn — si solo se
     // llamaba _renderHomeReservas() acá, un error antes de los 50ms dejaba el contenedor
     // en opacity:0 para siempre.
     prepararHome(true);
   });
-  ir('s-home');
 }
 
-function _sincronizarNavHome() {
+function _sincronizarNavHome(forzarVisible) {
   // Fuente única de si #home-nav/#home-nav-spacer/label/"Ver historial" deben estar
   // visibles — separado de _renderHomeReservas() para poder llamarlo apenas se conoce
   // _todasReservas (irHomeDesdeExito()), sin esperar a pintar las cards. El spacer se
   // mide acá mismo (no en _initHomeNav()) para que nunca quede calculado a partir de
   // un #home-nav que en ese instante seguía oculto (ver frente #4 del changelog).
+  // forzarVisible=true salta el chequeo de _todasReservas — usado por irHomeDesdeExito()
+  // apenas se navega a s-home, antes de tener datos frescos (ver ahí el porqué).
   var hoy = new Date(); hoy.setHours(0,0,0,0);
   var activas = _clasificarReservas(_todasReservas || [], hoy).activas;
   var homeNav = document.getElementById('home-nav');
@@ -250,7 +267,7 @@ function _sincronizarNavHome() {
   var labelMisRes = document.getElementById('label-mis-reservas');
   var verHistBtn = document.querySelector('[onclick="irMisReservas()"]');
 
-  if (activas.length === 0) {
+  if (!forzarVisible && activas.length === 0) {
     if (homeNav) homeNav.style.display = 'none';
     if (homeNavSpacer) homeNavSpacer.style.display = 'none';
     if (labelMisRes) labelMisRes.style.display = 'none';
