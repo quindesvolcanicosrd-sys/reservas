@@ -4,7 +4,7 @@ var _MESES_MAP = {enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agost
 var _MESES_DISPLAY = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 var _homeExpandido = false;
 
-function prepararHome() {
+function prepararHome(saltarFadeInicial) {
   var saludoEl = document.getElementById('home-saludo');
   if (saludoEl) saludoEl.textContent = E.nombre + '!';
   var avatarEl = document.getElementById('home-avatar');
@@ -24,14 +24,19 @@ if (navAvatar) {
 }
   var homeContent = document.getElementById('home-reservas-lista');
   var homeContenidoFinalListo = false;
-  if (homeContent) { homeContent.style.opacity = '0'; homeContent.style.transition = 'opacity 0.3s ease'; }
-  _renderHomeReservas();
-  if (homeContent) {
-    setTimeout(function() {
-      if (homeContenidoFinalListo) return; // el fetch ya resolvió y pintó el contenido real; no lo pisamos con el loader
-      homeContent.innerHTML = '<div class="loader" style="padding:24px 0;"><div class="spinner"></div></div>';
-      homeContent.style.opacity = '1';
-    }, 50);
+  if (!saltarFadeInicial) {
+    // saltarFadeInicial=true significa que el caller (ej. irHomeDesdeExito()) ya está
+    // mostrando su propio fade-out/spinner sobre este mismo contenedor — evita que se
+    // repita acá el ciclo completo (contenido real pintado y tapado por un segundo spinner).
+    if (homeContent) { homeContent.style.opacity = '0'; homeContent.style.transition = 'opacity 0.3s ease'; }
+    _renderHomeReservas();
+    if (homeContent) {
+      setTimeout(function() {
+        if (homeContenidoFinalListo) return; // el fetch ya resolvió y pintó el contenido real; no lo pisamos con el loader
+        homeContent.innerHTML = '<div class="loader" style="padding:24px 0;"><div class="spinner"></div></div>';
+        homeContent.style.opacity = '1';
+      }, 50);
+    }
   }
   var d = E.datos;
   var talla = d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
@@ -197,19 +202,31 @@ function iniciarReagendamiento() {
 
 function irHomeDesdeExito() {
   var homeContent = document.getElementById('home-reservas-lista');
+  var reservasListas = false; // mismo guard que homeContenidoFinalListo en prepararHome(): evita que el
+                               // spinner pise contenido si getReservasPersona resuelve antes de los 50ms
   if (homeContent) {
     homeContent.style.transition = 'opacity 0.3s ease';
     homeContent.style.opacity = '0';
     setTimeout(function() {
+      if (reservasListas) return;
       homeContent.innerHTML = '<div class="loader" style="padding:24px 0;"><div class="spinner"></div></div>';
       homeContent.style.opacity = '1';
     }, 50);
   }
   api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
+    reservasListas = true;
     _todasReservas = reservas;
-    _renderHomeReservas();
-    prepararHome();
-  }, function() { _renderHomeReservas(); });
+    // prepararHome(true) hace el único render real (con saltarFadeInicial=true no repite
+    // su propio fade/spinner) — así queda una sola transición en vez de dos en secuencia.
+    prepararHome(true);
+  }, function() {
+    reservasListas = true;
+    // aunque falle, dejamos que prepararHome(true) haga el render final (con lo que haya
+    // en _todasReservas) para que el contenedor vuelva a opacity:1 con fadeIn — si solo se
+    // llamaba _renderHomeReservas() acá, un error antes de los 50ms dejaba el contenedor
+    // en opacity:0 para siempre.
+    prepararHome(true);
+  });
   ir('s-home');
 }
 
