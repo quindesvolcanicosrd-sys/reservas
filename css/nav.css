@@ -66,12 +66,12 @@
 .app-nav-back:active { transform: scale(0.95); }
 .app-nav-back .material-symbols-outlined { font-size: 1.4rem; display: block; }
 
-/* ── Título centrado ─────────────────────────── */
+/* ── Título alineado a la izquierda ──────────── */
 .app-nav-title {
   position: absolute;
   left: 0;
   right: 0;
-  text-align: center;
+  text-align: left;
   font-size: 0.82rem;
   font-weight: 800;
   color: var(--brand);
@@ -81,7 +81,8 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding: 0 64px;
+  padding-left: 80px;
+  padding-right: 64px;
 }
 
 /* ── Acciones derecha ────────────────────────── */

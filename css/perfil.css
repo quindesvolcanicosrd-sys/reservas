@@ -76,6 +76,9 @@
 
 /* ── Ajustes del perfil ──────────────────────────────── */
 .aj-hero { display:flex; align-items:center; gap:14px; margin-bottom:20px; padding:14px; background:var(--surface-2); border-radius:14px; border:1px solid var(--border-light); cursor:pointer; transition:background 0.15s; }
+@media (max-width: 600px) {
+  .aj-hero { margin-top:16px; }
+}
 .aj-hero:hover { background:var(--surface-light); }
 .aj-avatar { width:52px; height:52px; border-radius:50%; background:var(--brand); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px; color:var(--white); flex-shrink:0; overflow:hidden; border:2px solid var(--border-light); }
 .aj-avatar img { width:100%; height:100%; object-fit:cover; }
@@ -85,9 +88,9 @@
 .aj-hero-edit { width:34px; height:34px; border-radius:10px; background:var(--surface-light); border:1px solid var(--border-light); display:flex; align-items:center; justify-content:center; color:var(--brand); flex-shrink:0; }
 .aj-hero-edit .material-symbols-outlined { font-size:1rem; }
 
-.aj-sec-label { font-size:0.65rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin:16px 0 6px; padding-left:2px; }
+.aj-sep { border-top:0.5px solid var(--border); margin:14px 0; }
 
-.aj-group { background:var(--surface-2); border:1px solid var(--border-light); border-radius:14px; overflow:hidden; margin-bottom:10px; }
+.aj-group { margin-bottom:10px; }
 .aj-row { display:flex; align-items:center; gap:12px; padding:13px 14px; cursor:pointer; transition:background 0.15s; border-bottom:1px solid var(--border-softest,var(--border-light)); }
 .aj-row:last-child { border-bottom:none; }
 .aj-row:hover { background:var(--surface-light); }

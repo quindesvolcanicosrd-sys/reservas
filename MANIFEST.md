@@ -94,7 +94,7 @@ Dark mode: `.loading-card`/`.loading-card p` en `@media (prefers-color-scheme: d
 | `.app-nav-fixed` | Nav fija (home): position:fixed, top:0, z-index:900 |
 | `.app-nav-sticky` | Nav sticky (pantallas internas): position:sticky, top:0, z-index:100, animación smoothSlideDown |
 | `.app-nav-back` | Botón atrás: 44×44px (mínimo táctil, antes 40×40px), border-radius 12px, fondo brand-light |
-| `.app-nav-title` | Título centrado con position:absolute y pointer-events:none |
+| `.app-nav-title` | Título con `position:absolute` y `pointer-events:none`; alineado a la izquierda (`text-align:left`, antes centrado) — `padding-left:80px` (antes 64, compartido con el right) para no quedar pegado a `.app-nav-back` (el contenedor absoluto arranca en el padding-edge del nav, *antes* de los 16px de `padding` del `.app-nav`, por lo que con 64px el texto quedaba a solo ~4px del botón); `padding-right:64px` sin cambios, protege del lado de acciones/CTA. Afecta a **todos** los navs de la app que usan esta clase (no solo Ajustes del perfil) |
 | `.app-nav-actions` | Contenedor de acciones derechas (flex, gap 10px, antes 8px) |
 | `.app-nav-icon-btn` | Botón icono cuadrado (44×44px, antes 40×40px) para acciones secundarias |
 | `.app-nav-cta` | Botón CTA principal ("Nueva reserva"): brand, border-radius 12px, shadow, 44px de alto real (`padding:14px 14px`, antes `9px 14px` daba solo 34px) |
@@ -231,6 +231,10 @@ Dark mode: `.loading-card`/`.loading-card p` en `@media (prefers-color-scheme: d
 | `.aj-pills-row / .aj-pill / .aj-pill.activa / .aj-pill.activa-outline` | Fila/grid de pills seleccionables reutilizado en pronombres, protecciones parciales y tallas de reserva |
 | `.aj-pill.no-disponible` | Variante tachada/deshabilitada de `.aj-pill` (talla ya reservada por otra persona para esa fecha); usa `var(--danger)`/`var(--danger-bg)`/`var(--danger-bdr)` (texto/fondo/borde) para distinguirse con contraste de las pills disponibles — antes solo tenía `color:var(--text-faint)`, casi indistinguible del resto |
 | `.aj-pill.talla-actual` | Variante de `.aj-pill` con borde de acento (`var(--brand)`), marca la talla actual de la reserva antes de seleccionar nada en el sheet de cambio de talla |
+| `.aj-hero` | Card de hero de "Ajustes del perfil" (avatar + nombre + editar); `margin-top:16px` solo en `@media (max-width:600px)` para separarla del nav sticky (antes 0, quedaba pegada) |
+| `.aj-sep` | **Nueva** — línea divisoria entre secciones de Ajustes del perfil (`border-top:0.5px solid var(--border); margin:14px 0`), reemplaza a `.aj-sec-label` (eliminada) como forma de comunicar la separación entre grupos, con un criterio más Material/nativo que el label uppercase + cajón. Usada en `index.html` entre los 3 `.aj-group` (Equipamiento / Contacto y privacidad / Seguridad y emergencias) y antes de `.aj-app-rows` |
+| `.aj-group` | Contenedor de filas `.aj-row` en Ajustes del perfil — ya **no** tiene `background`/`border`/`border-radius`/`overflow:hidden` (el "cajón"); la separación entre grupos la da `.aj-sep`, y dentro del grupo cada `.aj-row` conserva su propio `border-bottom` como divisor de fila |
+| ~~`.aj-sec-label`~~ | **Eliminada** — labels uppercase "Contacto y privacidad" / "Seguridad y emergencias" en Ajustes del perfil; sacados de `index.html` y `perfil.css`, reemplazados por `.aj-sep` (ver arriba) |
 
 > **Nota:** `.aj-sub-bar` fue eliminado — las sub-pantallas usan `.app-nav` de `css/nav.css`.
 
