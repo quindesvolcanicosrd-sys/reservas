@@ -207,7 +207,7 @@ reservas/
 | `.ddp-year-grid / .ddp-year-btn / .ddp-year-selected` | Grilla de selección de año |
 | `.ddp-month-grid / .ddp-month-btn / .ddp-month-selected` | Grilla de selección de mes |
 | `.aj-pills-row / .aj-pill / .aj-pill.activa / .aj-pill.activa-outline` | Fila/grid de pills seleccionables reutilizado en pronombres, protecciones parciales y tallas de reserva |
-| `.aj-pill.no-disponible` | Variante tachada/deshabilitada de `.aj-pill` (talla ya reservada por otra persona para esa fecha) |
+| `.aj-pill.no-disponible` | Variante tachada/deshabilitada de `.aj-pill` (talla ya reservada por otra persona para esa fecha); usa `var(--danger)`/`var(--danger-bg)`/`var(--danger-bdr)` (texto/fondo/borde) para distinguirse con contraste de las pills disponibles — antes solo tenía `color:var(--text-faint)`, casi indistinguible del resto |
 | `.aj-pill.talla-actual` | Variante de `.aj-pill` con borde de acento (`var(--brand)`), marca la talla actual de la reserva antes de seleccionar nada en el sheet de cambio de talla |
 
 > **Nota:** `.aj-sub-bar` fue eliminado — las sub-pantallas usan `.app-nav` de `css/nav.css`.
@@ -465,9 +465,8 @@ reservas/
 | `_toggleCardBody(uid)` | Expande/colapsa el panel "Más información" de una card |
 | `abrirSheetTalla(fecha, tallaActual)` | Setea `_tallaSheetModo='existente'`, título "Cambiar talla para el entrenamiento del [fecha]" y botón "Confirmar talla", y delega en `_abrirSheetTallaBase()` |
 | `_abrirSheetTallaBase(fecha, tallaActual)` | Lógica compartida de apertura de `#sheet-talla` (mismo patrón de sheet que `#bs-protec`/`#sheet-gestionar`: overlay + `translateY` animado) entre los dos modos — pide `getTallasDisponiblesParaFecha` y renderiza el grid vía `_renderGridSheetTalla()`. Usada tanto por `abrirSheetTalla()` (`js/home.js`, reserva ya creada) como por `abrirSheetTallaNuevaReserva()` (`js/reservas.js`, selección de fechas al crear una reserva) |
-| `_renderGridSheetTalla(tallas)` | Genera el grid 3 columnas de `.aj-pill` en `#sheet-talla-grid`: disponibles seleccionables, no disponibles con `.no-disponible` (tachada), la talla actual con `.talla-actual` (borde) hasta que el usuario elija otra |
+| `_renderGridSheetTalla(tallas)` | Genera el grid 3 columnas de `.aj-pill` en `#sheet-talla-grid`: disponibles seleccionables (`onclick="seleccionarTallaSheet(...)"`), no disponibles con `.no-disponible` (tachada, sin `onclick` — no disparan ningún mensaje al tocarlas, el contraste rojo de la pill ya comunica que no son seleccionables), la talla actual con `.talla-actual` (borde) hasta que el usuario elija otra |
 | `seleccionarTallaSheet(el, talla)` | Marca `.activa` en la pill tocada; habilita el botón de confirmar solo si la talla elegida es distinta a la actual |
-| `avisarTallaNoDisponible(talla)` | Muestra en `#err-sheet-talla` el mensaje de talla no disponible al tocar una pill tachada |
 | `_habilitarConfirmarTalla(habilitar)` | Habilita/deshabilita `#btn-confirmar-talla` (disabled + opacity 0.4, mismo valor que usa `.btn-primary:disabled` en `ui.css`) |
 | `cerrarSheetTalla()` | Cierra `#sheet-talla` con la misma transición `translateY`/`cubic-bezier` que el resto de los `*-sheet-*` |
 | `confirmarTallaSheet()` | Si `_tallaSheetModo==='nueva-reserva'` delega en `_confirmarTallaNuevaReserva()` (`js/reservas.js`, sin backend); si no (modo `'existente'`), llama `actualizarTallaReserva(E.nombre, fecha, tallaNueva)` — si falla muestra el error en `#err-sheet-talla` (mensaje ya viene armado por el backend vía `api()`); si tiene éxito cierra el sheet y llama `_recargarYRenderReservas()` + `mostrarToast('Talla actualizada','ok')` |

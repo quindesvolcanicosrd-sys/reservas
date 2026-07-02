@@ -121,7 +121,7 @@
 .aj-pill { display:inline-flex; align-items:center; padding:7px 16px; border-radius:20px; font-size:0.78rem; font-weight:700; cursor:pointer; border:1.5px solid var(--border-light); background:var(--surface-2); color:var(--muted); transition:all 0.15s; user-select:none; }
 .aj-pill.activa { background:var(--brand); color:var(--white); border-color:var(--brand); }
 .aj-pill.activa-outline { background:var(--brand-light); color:var(--brand); border-color:var(--brand); }
-.aj-pill.no-disponible { text-decoration:line-through; color:var(--text-faint); cursor:not-allowed; }
+.aj-pill.no-disponible { text-decoration:line-through; color:var(--danger); background:var(--danger-bg); border-color:var(--danger-bdr); cursor:not-allowed; }
 .aj-pill.talla-actual { border-color:var(--brand); }
 
 .aj-selector-btn { width:100%; padding:13px 16px; background:var(--surface-2); border:0; border-radius:12px; color:var(--text); font-size:0.88rem; font-family:inherit; display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition:border-color 0.15s; }

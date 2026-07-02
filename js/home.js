@@ -461,8 +461,8 @@ function _renderGridSheetTalla(tallas) {
   grid.innerHTML = tallas.map(function(t) {
     var esActual = t.talla === _tallaSheetActual;
     var clases = 'aj-pill' + (t.disponible ? '' : ' no-disponible') + (esActual && t.disponible ? ' talla-actual' : '');
-    var onclick = t.disponible ? 'seleccionarTallaSheet(this,\'' + t.talla + '\')' : 'avisarTallaNoDisponible(\'' + t.talla + '\')';
-    return '<span class="' + clases + '" style="justify-content:center;" onclick="' + onclick + '">' + t.talla + '</span>';
+    var onclick = t.disponible ? ' onclick="seleccionarTallaSheet(this,\'' + t.talla + '\')"' : '';
+    return '<span class="' + clases + '" style="justify-content:center;"' + onclick + '>' + t.talla + '</span>';
   }).join('');
 }
 
@@ -473,10 +473,6 @@ function seleccionarTallaSheet(el, talla) {
   var errEl = document.getElementById('err-sheet-talla');
   if (errEl) errEl.style.display = 'none';
   _habilitarConfirmarTalla(talla !== _tallaSheetActual);
-}
-
-function avisarTallaNoDisponible(talla) {
-  err('err-sheet-talla', 'Talla ' + talla + ' no disponible: ya fue reservada por otra persona para este entrenamiento.');
 }
 
 function _habilitarConfirmarTalla(habilitar) {
