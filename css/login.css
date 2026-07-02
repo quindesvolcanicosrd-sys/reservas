@@ -10,25 +10,7 @@
 }
 .header p { color: var(--text-faint); font-size: 0.82rem; padding: 10px 20px 14px; margin: 0; letter-spacing: 0.5px; }
 
-.loading-card { padding: 32px 48px; text-align: center; min-height: 130px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.loading-card .spinner { margin: 0 auto 16px; flex-shrink: 0; }
-.loading-card p { color: var(--neutral-light); font-size: 0.88rem; font-weight: 600; margin: 0; min-height: 24px; transition: opacity 0.3s ease; }
-.loading-logo { display: none; }
-
-@media (max-width: 600px) {
-  .loading-logo { opacity: 0; }
-  #loading-overlay .spinner { opacity: 0; }
-  #loading-msg { opacity: 0; visibility: hidden; }
-}
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@media (max-width: 600px) {
-  #loading-overlay { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
-  .loading-card { background: transparent; border-radius: 0; padding: 32px; box-shadow: none; border: none; width: 100%; max-width: 100%; }
-  .loading-logo { display: block; width: 88px; height: 88px; border-radius: 50%; object-fit: cover; object-position: center top; margin: 0 auto 28px; filter: drop-shadow(0 4px 16px var(--brand-20)); }
-}
-@media (max-width: 600px) and (prefers-color-scheme: dark) {
-  #loading-overlay { background: var(--bg); }
-}
 
 #gsignin-usuario > div, #gsignin-usuario iframe {
   margin: 0 auto !important; border: none !important; box-shadow: none !important;
@@ -77,7 +59,6 @@ footer { display: block; }
 }
 
 @media (prefers-color-scheme: dark) {
-  .loading-card { border-color: var(--dk-skeleton-base); } .loading-card p { color: var(--dk-text-muted); }
   .btn-pin-key { background: var(--dk-input-bg); border-color: var(--dk-input-bg); color: var(--dk-modal-text); }
   .btn-pin-key:hover { background: var(--dk-skeleton-base); border-color: var(--brand-secondary); }
   .btn-pin-key:active { background: var(--dk-pin-press); border-color: var(--brand); }

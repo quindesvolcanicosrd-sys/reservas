@@ -41,7 +41,7 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
 .btn {
   font-family: inherit; width: 100%; padding: 16px; border: none; border-radius: 12px;
   font-size: 0.88rem; font-weight: 700; cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.3s var(--ease-sheet);
   text-transform: uppercase; letter-spacing: 0.5px;
 }
 .btn-primary {
@@ -95,7 +95,7 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
 }
 .datos-hint { font-size: 0.8rem; color: var(--muted); margin-top: 6px; line-height: 1.4; }
 .campo-condicional { display: none; margin-top: 10px; }
-.campo-condicional.visible { display: block; animation: smoothSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.campo-condicional.visible { display: block; animation: smoothSlideUp 0.4s var(--ease-sheet) forwards; }
 
 .aviso-legal {
   background: var(--info-bg); border: 1px solid var(--info-bdr);
@@ -122,10 +122,8 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
 .btn-guardar-sec:hover:not(:disabled) { background: var(--brand-dk); transform: translateY(-2px); box-shadow: 0 4px 12px var(--brand-30); }
 .btn-guardar-sec.exito { background: var(--success-dark); box-shadow: 0 4px 12px var(--success-glow); animation: popBounce 0.4s; }
 
-.loader { text-align: center; padding: 40px 20px; color: var(--muted); }
-
 .paso-indicator { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 16px 0; }
-.paso-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--brand-30); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+.paso-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--brand-30); transition: all 0.4s var(--ease-sheet); }
 .paso-dot.activo { background: var(--brand); transform: scale(1.3); }
 .paso-dot.completado { background: var(--brand); }
 
@@ -202,10 +200,6 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
     border-radius: 24px 24px 0 0 !important;
     max-height: 90vh;
     overflow-y: auto;
-    animation: slideUpModal 0.35s cubic-bezier(0.16,1,0.3,1) both !important;
+    animation: slideUpModal 0.35s var(--ease-sheet) both !important;
   }
-}
-@keyframes slideUpModal {
-  from { transform: translateY(100%); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
 }

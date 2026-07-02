@@ -115,7 +115,7 @@ window.addEventListener('touchmove', function(e) {
   _ptrProgreso = progreso;
   var offsetY = _PTR_MAX_VISUAL * (1 - Math.pow(1 - progreso, 2)); // resistencia tipo goma elástica
   var escala = 0.7 + 0.3 * progreso;
-  ind.style.transition = 'none';
+  ind.classList.add('ptr-sin-transicion');
   ind.style.opacity = Math.min(progreso / 0.3, 1);
   ind.style.transform = 'translate(-50%,' + (offsetY - _PTR_MAX_VISUAL) + 'px) scale(' + escala + ')';
   anillo.style.transform = 'rotate(' + (progreso * 360) + 'deg)';
@@ -129,7 +129,7 @@ window.addEventListener('touchend', function() {
   var progreso = _ptrProgreso;
   _ptrProgreso = 0;
   if (!ind || !anillo) return;
-  ind.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+  ind.classList.remove('ptr-sin-transicion');
   if (progreso >= 1) {
     _ptrRefrescando = true;
     ind.style.opacity = '1';
@@ -155,7 +155,7 @@ function _ptrOcultarIndicador() {
   var ind = document.getElementById('ptr-indicator');
   var anillo = document.getElementById('ptr-spinner');
   if (!ind) return;
-  ind.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+  ind.classList.remove('ptr-sin-transicion');
   ind.style.opacity = '0';
   ind.style.transform = 'translate(-50%,-50px) scale(0.7)';
   if (anillo) { anillo.style.animation = 'none'; anillo.style.transform = 'rotate(0deg)'; }

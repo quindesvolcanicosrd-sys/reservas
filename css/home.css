@@ -1,6 +1,6 @@
 .home-boton {
   border: 1px solid var(--border); border-radius: 16px; padding: 24px 20px;
-  margin-bottom: 14px; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-bottom: 14px; cursor: pointer; transition: all 0.3s var(--ease-sheet);
   text-align: center; background: var(--surface-2);
 }
 .home-boton:hover { transform: translateY(-4px); box-shadow: 0 10px 24px var(--black-sm); border-color: var(--border-mid); }
@@ -12,18 +12,13 @@
 .home-boton.principal .hb-titulo { color: var(--brand); }
 .home-boton .hb-sub { font-size: 0.85rem; color: var(--neutral-gray); line-height: 1.4; }
 
-@keyframes pulseBtn {
-  0%, 100% { box-shadow: 0 0 0 0 var(--brand-zero); border-color: var(--brand); }
-  50% { box-shadow: 0 0 24px 10px var(--brand-55); border-color: var(--brand-60); }
-}
-
 .btn-accion-home {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
   padding: 14px 10px; border: 1px solid var(--border-light); border-radius: 14px;
   background: var(--surface-light); cursor: pointer; font-family: inherit;
   font-size: 0.75rem; font-weight: 700; color: var(--neutral-dark);
   text-transform: uppercase; letter-spacing: 0.5px;
-  transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+  transition: all 0.3s var(--ease-sheet);
 }
 .btn-accion-home:hover { transform: translateY(-3px); box-shadow: 0 6px 16px var(--black-md); border-color: var(--brand); background: var(--brand-warm); }
 .btn-accion-home:active { transform: translateY(0) scale(0.97); }
@@ -39,7 +34,7 @@
 .res-card-home {
   border: 1px solid var(--border); border-radius: 14px; padding: 6px 0px;
   margin-bottom: 10px; background: var(--surface-2); text-align: left;
-  animation: smoothSlideUp 0.4s cubic-bezier(0.16,1,0.3,1) both;
+  animation: smoothSlideUp 0.4s var(--ease-sheet) both;
 }
 .res-card-home.vigente       { border-color: var(--success-bdr); background: var(--success-bg); }
 .res-card-home.vencimiento   { border-color: var(--warning-bdr); background: var(--warning-bg); }
@@ -66,7 +61,7 @@
 
 @media (max-width: 600px) {
   .home-top-mobile { display: flex !important; position: relative; align-items: center; justify-content: center; padding: 10px 0 6px; margin-bottom: 4px; }
-  .home-emoji-mobile { font-size: 2.8rem; animation: popBounce 0.6s cubic-bezier(0.16,1,0.3,1); }
+  .home-emoji-mobile { font-size: 2.8rem; animation: popBounce 0.6s var(--ease-sheet); }
   .home-emoji-desktop { display: none !important; }
   .home-top-acciones { position: absolute; right: 0; top: 50%; transform: translateY(-50%); display: flex; gap: 6px; }
   .btn-logout-mobile { position: static; }
@@ -114,7 +109,7 @@
 .res-card-nueva .rn-mas-info:hover { color:var(--brand); }
 .res-card-nueva .rn-mas-info .rn-chevron { font-size:16px; transition:transform 0.3s; }
 .res-card-nueva .rn-mas-info.open .rn-chevron { transform:rotate(180deg); }
-.res-card-nueva .rn-body { max-height:0; overflow:hidden; transition:max-height 0.5s cubic-bezier(0.16,1,0.3,1); background:transparent; }
+.res-card-nueva .rn-body { max-height:0; overflow:hidden; transition:max-height 0.5s var(--ease-sheet); background:transparent; }
 .res-card-nueva .rn-body.open { max-height:600px; }
 .res-card-nueva .rn-body-inner { padding:12px 14px 14px; font-size:0.77rem; color:var(--muted); line-height:1.65; }
 .res-card-nueva .rn-body-inner .fi-pills { margin-top:10px; display:flex; flex-wrap:wrap; gap:6px; }

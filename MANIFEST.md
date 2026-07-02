@@ -14,7 +14,8 @@ reservas/
 │
 ├── css/
 │   ├── colors.css              FUENTE ÚNICA DE VERDAD de colores — se importa primero en index.html e inscripcion/index.html
-│   ├── global.css              Reset, body, keyframes, spinner, overlay, toggle-switch, pantalla
+│   ├── global.css              Reset, body, error-msg, toggle-switch, pantalla, modales info
+│   ├── estilos.css             FUENTE ÚNICA de toasts, loaders/spinners, pull-to-refresh y keyframes globales — importado en index.html e inscripcion/index.html junto a global.css
 │   ├── ui.css                  Componentes reutilizables: card, inputs, btn, opciones, resumen
 │   ├── nav.css                 Barra de navegación unificada: .app-nav y variantes (.app-nav-fixed, .app-nav-sticky)
 │   ├── login.css               Pantalla s1: header-banner, gsignin skeleton, acordeón PIN
@@ -48,15 +49,13 @@ reservas/
 ## 2. CSS — Clases por archivo
 
 ### css/global.css
+> Keyframes globales, `.spinner`, `#loading-overlay`, `.btn-spinner`, `.loader`, `.app-toast*` y el sistema de pull-to-refresh viven ahora en `css/estilos.css` (ver sección siguiente) — se sacaron de acá y de `css/login.css`/`css/ui.css`/`inscripcion.css` en la consolidación de Fase 1.
+
 | Clase / selector | Descripción |
 |---|---|
 | `*, body, button/input/select/textarea` | Reset y herencia de fuente |
 | `html, body` | `overscroll-behavior-y: contain` — bloquea el pull-to-refresh nativo (reload de página) sin eliminar el rebote/glow nativo del scroll en iOS/Android |
-| `@keyframes spin/fadeIn/fadeOut/popBounce/skeletonShimmer/smoothSlideUp/fadeInBtn` | Animaciones compartidas |
-| `.spinner` | Círculo giratorio de carga |
-| `#loading-overlay` | Overlay de carga fijo, z-index 9999 |
 | `.error-msg` | Mensaje de error rojo con fadeIn |
-| `.btn-spinner` | Spinner inline dentro de botones |
 | `::placeholder` | Estilo de placeholders (itálica, color muted) |
 | `.toggle-switch / .toggle-slider` | Toggle on/off reutilizable |
 | `.fnac-trigger-btn / .fnac-placeholder` | Botón disparador de date picker |
@@ -66,6 +65,27 @@ reservas/
 | `.otro-texto` | Input de texto libre que hereda de input[type="text"] global; solo añade `width:100%` |
 | `.modal-info / .modal-info-card / .modal-info-titulo / .modal-info-sub / .modal-info-item / .modal-info-icon / .modal-info-label / .modal-info-desc / .modal-info-hr / .modal-info-footer` | Modal informativo de primera vez (overlay fijo z-index 8000, card centrada) |
 | `.mi-orange / .mi-green / .mi-blue / .mi-amber / .mi-purple` | Variantes de color para `.modal-info-icon` |
+
+### css/estilos.css
+> Fuente única de 4 sistemas transversales — toasts, loaders/spinners, pull-to-refresh y animaciones/keyframes globales — con el mismo criterio que `nav.css` (archivo dedicado, importado en `index.html` e `inscripcion/index.html` justo después de `global.css`). Creado en la Fase 1 de consolidación de CSS (julio 2026) a partir de un inventario que encontró estos 4 sistemas repartidos entre `global.css`, `login.css`, `ui.css`, `home.css` y duplicados — a veces con valores ligeramente distintos — en `inscripcion.css`.
+
+| Clase / selector | Descripción |
+|---|---|
+| `--ease-sheet` (variable, declarada en `:root` de este archivo) | `cubic-bezier(0.16,1,0.3,1)` — la curva de entrada de bottom sheets/pantallas/paneles colapsables, antes repetida como literal 29 veces en 7 archivos CSS. Reemplazada en todos los usos dentro de archivos `.css`; **las 15 ocurrencias inline en `index.html`, `inscripcion/index.html` y `js/home.js` quedan igual a propósito** (fuera del alcance de esta fase, señaladas para una pasada aparte) |
+| `@keyframes spin / fadeIn / fadeOut / popBounce / skeletonShimmer / fadeInBtn / smoothSlideUp / slideUpModal` | Unificados acá — antes duplicados (a veces con valores distintos) entre `global.css` e `inscripcion.css`. `smoothSlideUp` reemplaza también al `slideUp` local de `inscripcion.css` (`.pantalla.activa` ahí ahora usa `smoothSlideUp 0.6s`, antes tenía su propio `slideUp 0.5s` con un offset de entrada distinto). `slideUpModal` se sumó acá pese a no estar duplicado porque es genérica (usada por 3 modales distintos en `ui.css`) |
+| `@keyframes overlayFadeIn` | **Nueva** — antes `#loading-overlay.fade-in` (en `global.css`) referenciaba esta animación sin que existiera en ningún archivo del proyecto, desde el commit inicial de `global.css` (confirmado con `git log -S`): un no-op silencioso, el overlay aparecía de golpe en vez de con fundido. Reconstruida con el mismo shape que `fadeInBtn` (`from{opacity:0} to{opacity:1}`), consistente con el resto del sistema — es el único cambio de esta fase que además corrige un bug visual real |
+| `@keyframes pulseBtn` | Unificado con los valores de `inscripcion.css` (`.btn-pulse`, el único consumidor real hoy). La copia que tenía `home.css` estaba definida pero **ningún selector la usaba** — se eliminó sin migrar sus valores |
+| `.spinner` | Círculo giratorio de carga — unificado a 40px/borde 4px (el valor de `global.css`). `inscripcion.css` tenía su propia copia a 36px/borde 3px que, por orden de `<link>`, pisaba a la de `global.css` en esa página — ahora es un solo tamaño en toda la app |
+| `.btn-spinner` | Spinner inline en botones — unificado a la versión con `var(--white-40)`; `inscripcion.css` tenía una copia con `rgba(255,255,255,0.35)` hardcodeado |
+| `.loader` | Contenedor centrado spinner + texto (antes en `ui.css`) |
+| `#loading-overlay` / `.fade-out` / `.fade-in` | Overlay de carga de pantalla completa, z-index 9999 — antes duplicado casi idéntico en `inscripcion.css` |
+| `.loading-card` / `.loading-card .spinner` / `.loading-card p` / `.loading-logo` | Wrapper del contenido del loader (logo + spinner + mensaje) — unificado desde `.loading-card` (`login.css`, usado en toda la app pese al nombre del archivo) y `.loading-inner` (`inscripcion.css`, eliminada; el HTML de `inscripcion/index.html` ahora usa `.loading-card` también, y su `<p>` perdió la clase `.loading-txt`, ya cubierta por el selector `.loading-card p`). `.loading-logo` oculta el logo en desktop y solo lo revela ≤600px con `@media` — comportamiento que **no** aplica en la página de inscripción: `inscripcion.css` conserva una única línea (`.loading-logo { display: block; }`) que, por cargarse después de `estilos.css`, fuerza el logo siempre visible ahí — mismo look que tenía antes de esta migración, a propósito no unificado |
+| `.app-toast` / `.app-toast.visible` / `.app-toast-ok` / `.app-toast-error` | Sistema de toast/snackbar (antes en `global.css`, sin cambios de valores) — ver `mostrarToast(msg, tipo)` en `js/ui.js` |
+| `.ptr-indicator` / `.ptr-indicator-inner` / `.ptr-spinner` / `.ptr-indicator.ptr-sin-transicion` | Indicador de pull-to-refresh de "Mis reservas" — antes 100% `style="..."` inline en `index.html`. Los valores que cambian por frame durante el arrastre (`opacity`, `transform` de posición/escala, la rotación manual del anillo) siguen escritos directo por JS en `js/home.js` (no son togglables por clase); solo la estructura estática y el on/off de la transición (`ind.classList.toggle('ptr-sin-transicion')` en vez de `ind.style.transition`) pasaron a clases |
+
+Dark mode: `.loading-card`/`.loading-card p` en `@media (prefers-color-scheme: dark)` al final del archivo (antes en `login.css`).
+
+**Lo que se dejó fuera a propósito** (específico de una sola sección, no genérico): `@keyframes smoothSlideDown` (`nav.css`, solo `.app-nav-sticky`), `@keyframes unlockForm` y `@keyframes dpFadeIn` (`inscripcion.css`, únicas de esa página — el date picker compartido no tiene su CSS centralizado, es un sistema aparte no cubierto por esta fase), `@keyframes fadeInUp` (`login.css` — **código muerto, no la usa ningún selector**, se dejó intacta por no ser parte del pedido).
 
 ### css/nav.css
 | Clase / selector | Descripción |
@@ -104,11 +124,12 @@ reservas/
 | `.btn-guardar-sec` | Botón guardar sección en datos |
 | `.datos-hint` | Texto de ayuda gris bajo un campo |
 | `.paso-indicator / .paso-dot` | Indicador de pasos (3 dots) del flujo de reserva — el JS que lo actualiza (`js/ui.js`, dentro de `ir()`) sigue ahí, pero **no hay ningún `.paso-indicator` en `index.html`**, así que ese bloque nunca corre en la práctica (código muerto detectado al fusionar s5→s6, no se tocó por no ser parte del pedido) |
-| `.loader` | Contenedor centrado spinner + texto |
 | `.textarea-otro` | Textarea para opciones "Otro" |
 | `.select-spinner` | Spinner dentro de un select mientras carga |
 
 ### css/login.css
+> `.loading-card`/`.loading-logo` (loader de pantalla completa, usado en toda la app pese a vivir históricamente acá) se movieron a `css/estilos.css` en la Fase 1 de consolidación — ver esa sección.
+
 | Clase / selector | Descripción |
 |---|---|
 | `.header / .header-banner` | Header con banner/logo en pantalla s1 |
@@ -116,6 +137,7 @@ reservas/
 | `.btn-forgot-pin` | Enlace "¿Olvidaste tu PIN?" |
 | `.btn-pin-key` | Tecla del teclado numérico PIN |
 | `#input-pin` | Input PIN centrado con letra grande; anula autofill |
+| `@keyframes fadeInUp` | **Código muerto** — definida, pero ningún selector del archivo la usa; se dejó intacta, no era parte del pedido de consolidación |
 
 ### css/home.css
 | Clase / selector | Descripción |
@@ -218,6 +240,7 @@ reservas/
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **css/estilos.css (nuevo) + css/global.css + css/login.css + css/ui.css + css/home.css + css/nav.css + css/perfil.css + css/reservas.css + inscripcion/inscripcion.css + index.html + inscripcion/index.html + js/home.js** — Fase 1 de consolidación de CSS (reorganización, sin comportamiento nuevo salvo una excepción explícita abajo): nuevo archivo `css/estilos.css`, mismo criterio que `nav.css`, fuente única para 4 sistemas antes repartidos y en algunos casos duplicados con valores distintos entre `global.css` e `inscripcion.css`: **(1) Toast** — `.app-toast*` movido tal cual desde `global.css`, sin cambios (ya estaba centralizado). **(2) Loaders/spinners** — `.spinner` unificado a 40px/borde 4px (antes `inscripcion.css` tenía 36px/borde 3px, pisando al de `global.css` por orden de `<link>`); `.btn-spinner` unificado a la versión con `var(--white-40)` (inscripcion.css tenía un rgba hardcodeado); `#loading-overlay` y `.loader` (antes en `ui.css`) unificados; `.loading-card` (antes en `login.css`, pese al nombre del archivo se usa en toda la app) y `.loading-inner` de `inscripcion.css` (eliminada) se unificaron en una sola clase `.loading-card` — el HTML de `inscripcion/index.html` se ajustó para usarla; `.loading-logo` conserva un override de una línea en `inscripcion.css` (`display: block`) para que el logo siga siempre visible ahí, ya que el comportamiento de `login.css` (oculto en desktop, visible solo ≤600px) no aplicaba en esa página y no era parte del pedido cambiarlo. **Corrección real de comportamiento, la única de esta fase:** `#loading-overlay.fade-in` referenciaba `@keyframes overlayFadeIn`, que nunca existió en ningún archivo desde el commit inicial de `global.css` (confirmado con `git log -S` — no era una regresión) — el overlay aparecía de golpe en vez de con fundido; se definió con el mismo shape que `fadeInBtn`. **(3) Pull-to-refresh** — `#ptr-indicator` y su spinner, antes 100% `style="..."` inline en `index.html`, ahora usan clases (`.ptr-indicator`, `.ptr-indicator-inner`, `.ptr-spinner`); en `js/home.js`, el on/off de la transición durante el gesto pasó de `ind.style.transition` a `ind.classList.toggle('ptr-sin-transicion')` — los valores que cambian por frame (opacity, transform, rotación del anillo) siguen escritos directo por JS, no son togglables por clase. **(4) Keyframes** — `spin`, `fadeIn`, `fadeOut`, `popBounce`, `skeletonShimmer`, `fadeInBtn`, `smoothSlideUp` unificados (eliminadas las copias de `inscripcion.css`, alguna con valores distintos — ej. `popBounce` tenía escalas de rebote diferentes); `smoothSlideUp` reemplaza también al `slideUp` local de `inscripcion.css` (`.pantalla.activa` ahí). `pulseBtn` se unificó con los valores de `inscripcion.css` (`.btn-pulse`, el único uso real) — la copia de `home.css` estaba definida pero sin ningún selector que la usara, se eliminó sin migrar. `slideUpModal` (antes en `ui.css`) se sumó por ser genérica (3 modales distintos la usan). Se dejaron fuera a propósito por ser específicas de una sola sección: `smoothSlideDown` (`nav.css`), `unlockForm`/`dpFadeIn` (`inscripcion.css`), y `fadeInUp` (`login.css`, código muerto, ningún selector la usa — no se tocó). **(5) `--ease-sheet`** — nueva variable en `estilos.css` (`cubic-bezier(0.16,1,0.3,1)`), reemplaza el literal repetido 29 veces en 7 archivos CSS (`inscripcion.css`, `global.css`, `home.css`, `nav.css`, `perfil.css`, `reservas.css`, `ui.css`); las 15 ocurrencias inline en `index.html`, `inscripcion/index.html` y `js/home.js` quedaron intactas a propósito, señaladas para una pasada aparte. Detalle completo de cada clase en la sección de `css/estilos.css` más arriba.
 - **js/reservas.js + js/ui.js** — Fix del checkbox "ya pagué" (`#chk-pago`, `s-pago`) que quedaba visualmente marcado (círculo naranja `.sel-pago` + `.chk-pago-label.sel`) después de volver a `s4` para cambiar/agregar fechas y reingresar a `s-pago` — el checkbox real quedaba correctamente desmarcado (`continuar_s4()` ya reseteaba `.checked`/`disabled`), pero nada removía las clases visuales, que solo `toggleBtnPago()` toca y que no se disparan al asignar `.checked` por JS (no dispara el evento `change`). Diagnóstico confirmado en dos pasadas: la primera vez se identificó la causa pero el fix nunca llegó a implementarse antes de pasar a otra tarea — se reconfirmó con `git log`/el código actual que `continuar_s4()` seguía intacto. Fix: nueva `_resetChkPago()` (`js/reservas.js`) que resetea *todo* junto (estado real + clases visuales), reemplazando el reset manual en `continuar_s4()`, y **llamada también desde `ir()`** (`js/ui.js`, cuando `id==='s-pago'`, mismo patrón que ya usa para `#home-nav` en `s-home`) — esto cubre además el caso en que el usuario reingresa a `s-pago` con el gesto de "adelante" del navegador (`popstate` → `ir('s-pago', true)` directo), que no pasa por `continuar_s4()` en absoluto y antes no reseteaba nada.
 - **js/reservas.js** — Eliminado el párrafo "Puedes revisar el estado desde Mis reservas. Si no puedes venir, cancela para liberar el cupo." de `s6` (pantalla de éxito) — quedaba redundante con `#s6-liberar-cupo` ("Si no puedes venir, avisa lo antes posible para liberar tu cupo..."), agregado en el cambio de fusión `s5`→`s6`. El texto vivía en `#s6-texto` (`.exito-texto`), un elemento **compartido por 3 mensajes distintos** armados en `confirmarReserva()` según el resultado (reagendada / con equipo / pago simple) — no se podía borrar el elemento entero sin perder los otros dos. Se dejó vacío y oculto (`display:none`) específicamente para la rama `necesitaEquipoLocal`; las otras dos ramas (reagendando, pago simple) ahora también fuerzan `display:block` explícito, para que `#s6-texto` no quede oculto de una reserva anterior si el usuario hace más de una reserva en la misma sesión (`s6` es una pantalla persistente, no se reconstruye).
 - **index.html + css/reservas.css + js/reservas.js** — En el recuadro verde de total de `s-pago` (`#s-pago-total`, `.total-box`), agregada la lista de fechas/clases que se están reservando, debajo de la línea "N clase(s) × $X" — nuevo `<div class="total-fechas-lista" id="s-pago-total-fechas">` dentro de `#s-pago-total`, poblado en `continuar_s4()` con `E.fechas.map(f => '• ' + f).join('<br>')` (el string de cada fecha ya viene listo para mostrar tal cual, sin necesidad de reformatear — mismo compuesto "Fecha - Hora - Lugar" que arma el backend). Solo visible con pago "por clase" (`E.tipoPago==='clase'`); oculto en mensual, donde no aplica (`E.fechas` está vacío, se usa `E.meses`). Nueva clase `.total-fechas-lista` en `css/reservas.css` — `font-size:0.78rem` (mismo valor que ya usa `.aj-pill`, un escalón por debajo del `0.85rem` de `.total-detalle`) y `color:var(--success-bright)` (mismo verde que `.total-detalle`, para sentirse parte del mismo recuadro).
@@ -350,10 +373,10 @@ reservas/
 ### inscripcion/inscripcion.css
 > ⚠️ Ya no tiene bloque `:root` propio ni `@media dark` de tokens — los provee `../css/colors.css` importado en `inscripcion/index.html`.
 > Solo conserva variables locales: `--green / --dp-*`. Ya no define `--purple` ni `--purple-bg`; `.btn-purple` usa `var(--purple-light)` de `colors.css`.
+> **Fase 1 de consolidación (julio 2026):** `#loading-overlay`, `.spinner`, `.btn-spinner` y los `@keyframes spin/skeletonShimmer/fadeIn/popBounce/fadeInBtn/pulseBtn` que tenía copiados localmente (a veces con valores distintos a los de `global.css`) se eliminaron — ahora los provee `../css/estilos.css`, importado en `inscripcion/index.html` junto a `global.css`. `.loading-inner` se renombró a `.loading-card` (en el HTML también) para unificar con el resto de la app; queda una única línea local, `.loading-logo { display: block; }`, para preservar el logo siempre visible acá (a diferencia del resto de la app, donde se oculta en desktop) — ver detalle en la sección de `css/estilos.css`. `.pantalla.activa` usa ahora `smoothSlideUp` (de `estilos.css`) en vez de su `slideUp` local, ya eliminado.
 
 | Clase / selector | Descripción |
 |---|---|
-| `#loading-overlay / .loading-inner / .loading-logo / .loading-txt` | Overlay de carga con opacidad (no clase-toggle) |
 | `.page-wrap` | Wrapper centrado max-width 480px |
 | `.header / .header-logo / .header-title / .header-sub` | Encabezado sticky (position:sticky, top:0, z-index:100), layout flex con gap:12px, padding compacto 12px 16px; `.header-title` tiene `flex:1` y `text-align:center` para funcionar como flex item centrado |
 | `.progress-wrap / .prog-dot / .prog-dot.done / .prog-dot.active` | Barra de progreso de pasos |

@@ -28,7 +28,7 @@
 .fi-footer-chevron { font-size: 1rem; color: var(--brand); transition: transform 0.3s; }
 .fecha-item.open .fi-footer-chevron { transform: rotate(180deg); }
 
-.fi-body { max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0.16,1,0.3,1); }
+.fi-body { max-height: 0; overflow: hidden; transition: max-height 0.4s var(--ease-sheet); }
 .fecha-item.open .fi-body { max-height: 400px; }
 .fi-body-inner { padding: 14px 16px 16px; border-top: 1px solid var(--border-2); }
 .fi-desc { font-size: 0.8rem; color: var(--text-2); line-height: 1.65; margin-bottom: 12px; }
@@ -59,7 +59,7 @@
 .chk-pago-label:hover { background: var(--amber-light); transform: scale(1.02); }
 .chk-pago-label input { width: 20px; height: 20px; accent-color: var(--amber-accent); flex-shrink: 0; margin-top: 2px; cursor: pointer; }
 
-.reserva-card { border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; background: var(--surface-2); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.reserva-card { border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; background: var(--surface-2); transition: all 0.3s var(--ease-sheet); }
 .reserva-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px var(--black-sm); border-color: var(--border-mid); }
 .reserva-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .reserva-fecha { font-weight: 800; font-size: 1rem; color: var(--text); }
@@ -102,7 +102,7 @@
 .btn-wp-grupo { background: var(--wa-bg); color: var(--success); margin-top: 16px; }
 .btn-wp-grupo:hover { background: var(--wa-bg-hover); border-color: var(--wa-brand); transform: translateY(-2px); }
 
-.exito-icon { font-size: 4rem; text-align: center; margin-bottom: 16px; animation: popBounce 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+.exito-icon { font-size: 4rem; text-align: center; margin-bottom: 16px; animation: popBounce 0.6s var(--ease-sheet); }
 .exito-titulo { font-size: 1.5rem; font-weight: 800; color: var(--text); text-align: center; margin-bottom: 12px; }
 .exito-texto { color: var(--muted); text-align: center; line-height: 1.6; font-size: 0.88rem; }
 .exito-detalle { background: var(--green-light); border: 1px solid var(--green-border); border-radius: 12px; padding: 16px; margin: 20px 0; font-size: 0.9rem; color: var(--green-dark); text-align: left; white-space: pre-line; line-height: 1.6; box-shadow: 0 4px 12px var(--success-shadow); }
