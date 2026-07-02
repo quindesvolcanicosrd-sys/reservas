@@ -101,7 +101,7 @@ function pwaCerrar() {
 }
 
 function toggleNotifHome(cb) {
-  if (!cb.checked) { alert('Para desactivar, ve a la configuración de notificaciones de tu navegador.'); cb.checked = true; return; }
+  if (!cb.checked) { mostrarToast('Para desactivar, ve a la configuración de notificaciones de tu navegador.', 'error'); cb.checked = true; return; }
   activarPush();
   setTimeout(function() {
     if ('Notification' in window && Notification.permission === 'granted') {
@@ -127,11 +127,11 @@ function activarPush() {
   var esIOS = /iPhone|iPad|iPod/.test(ua);
   if (esIOS && !esStandalone()) { mostrarModalNavegador('ios-instalar'); return; }
   if (!('Notification' in window)) {
-    alert('Tu navegador no soporta notificaciones. Usa Chrome, Edge o Firefox en Android/desktop.');
+    mostrarToast('Tu navegador no soporta notificaciones. Usa Chrome, Edge o Firefox en Android/desktop.', 'error');
     return;
   }
   if (Notification.permission === 'denied') {
-    alert('Las notificaciones están bloqueadas. Ve a Configuración del navegador → Notificaciones y permite este sitio.');
+    mostrarToast('Las notificaciones están bloqueadas. Ve a Configuración del navegador → Notificaciones y permite este sitio.', 'error');
     return;
   }
   window.OneSignalDeferred = window.OneSignalDeferred || [];

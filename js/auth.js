@@ -169,7 +169,7 @@ function continuar_pin() {
         _todasReservas = reservas;
         prepararHome();
         ir('s-home');
-      }, function(e2) { prepararHome(); ir('s-home'); alert('Error al cargar reservas: ' + e2.message); });
+      }, function(e2) { prepararHome(); ir('s-home'); mostrarToast(e2.message || 'Error al cargar reservas.', 'error'); });
 
     }, function(e1) { _validandoPin = false; ocultarCargando(); ir('s1b'); err('err-pin', 'Error: ' + e1.message); });
   });

@@ -665,12 +665,13 @@ function _ajGuardar(payload, btn, subId) {
   if (btn) { btn.textContent = 'Guardando...'; btn.disabled = true; }
   api({ action: 'actualizarDatosPersona', nombre: E.nombre, token: _getSessionToken(), datos: JSON.stringify(payload) }, function() {
     Object.assign(E.datos, payload);
-    if (btn) { btn.textContent = 'Guardado ✓'; btn.classList.add('exito'); setTimeout(function(){ btn.textContent = 'Guardar cambios'; btn.disabled = false; btn.classList.remove('exito'); }, 2000); }
+    if (btn) { btn.textContent = 'Guardar cambios'; btn.disabled = false; }
     irEditarDatos();
     cerrarAjSub(subId);
+    mostrarToast('Datos guardados', 'ok');
   }, function(e) {
     if (btn) { btn.textContent = 'Guardar cambios'; btn.disabled = false; }
-    alert('Error al guardar: ' + (e.message || 'Intenta de nuevo'));
+    mostrarToast(e.message || 'Error al guardar. Intenta de nuevo.', 'error');
   });
 }
 

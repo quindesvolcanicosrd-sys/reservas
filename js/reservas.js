@@ -339,7 +339,10 @@ function cargarFechas() {
         }
       });
     }
-    document.getElementById('lista-fechas').innerHTML = html; E.fechas = []; E.tallasPorFecha = {}; _conflictosTalla = {}; _fechasPosibleProtecRiesgo = {};
+    var listaFechasEl = document.getElementById('lista-fechas');
+    listaFechasEl.innerHTML = html; E.fechas = []; E.tallasPorFecha = {}; _conflictosTalla = {}; _fechasPosibleProtecRiesgo = {};
+    void listaFechasEl.offsetWidth;
+    listaFechasEl.style.animation = 'fadeIn 0.3s ease';
     fechasTallaAgotadaSync.forEach(function(item) {
       _conflictosTalla[item.fecha] = true;
       if (item.riesgoProtec) _fechasPosibleProtecRiesgo[item.fecha] = true;
@@ -390,7 +393,7 @@ function cargarFechas() {
         mostrarModalInfoReserva(function(){});
       }
     }, 400);
-  }, function(e) { window._nuevxCargandoFechas = false; ocultarCargando(); ir('s-home'); alert('Error cargarFechas: ' + e.message); });
+  }, function(e) { window._nuevxCargandoFechas = false; ocultarCargando(); ir('s-home'); mostrarToast(e.message || 'No se pudieron cargar las fechas disponibles.', 'error'); });
 }
 
 function toggleFecha(el, fecha) {
@@ -580,23 +583,36 @@ function confirmarReserva(btn) {
   if (btn) btn.disabled = true;
   mostrarCargando('Guardando tu reserva/pago...');
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : 'No'; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : 'No';
+  var itemsFallidos = []; // fechas/meses cuyo guardarReserva falló
+  var fallosSecundarios = []; // etiquetas de guardarNotaPago/usarCreditos/enviarResumenReservas/marcarCuponUsado que fallaron
 
   function finalizar() {
-    var fechasStr = E.fechas.length > 0 ? E.fechas.join(', ') : (E.tipoPago === 'mensual' ? 'mensual (sin clases seleccionadas)' : '—');
-    api({ action: 'guardarNotaPago', nombre: E.nombre, tipoPago: E.tipoPago, monto: (E.totalPago || 0).toFixed(2), nota: E.notaPago || '—', fechas: fechasStr, talla: talla, protecciones: protec }, function() {}, function() {});
+    var totalIntentos = E.tipoPago === 'mensual' ? E.meses.length : E.fechas.length;
+    if (totalIntentos > 0 && itemsFallidos.length === totalIntentos) {
+      ocultarCargando();
+      if (btn) btn.disabled = false;
+      mostrarToast('No se pudo guardar tu reserva. Intenta de nuevo.', 'error');
+      return;
+    }
+    var huboFalloParcial = itemsFallidos.length > 0;
+    var fechasExitosas = E.fechas.filter(function(f) { return itemsFallidos.indexOf(f) === -1; });
+    var mesesExitosos = E.meses.filter(function(m) { return itemsFallidos.indexOf(m) === -1; });
+
+    var fechasStr = fechasExitosas.length > 0 ? fechasExitosas.join(', ') : (E.tipoPago === 'mensual' ? 'mensual (sin clases seleccionadas)' : '—');
+    api({ action: 'guardarNotaPago', nombre: E.nombre, tipoPago: E.tipoPago, monto: (E.totalPago || 0).toFixed(2), nota: E.notaPago || '—', fechas: fechasStr, talla: talla, protecciones: protec }, function() {}, function() { fallosSecundarios.push('nota de pago'); });
     if (E.creditosUsados > 0) {
-      api({ action: 'usarCreditos', nombre: E.nombre, cantidad: E.creditosUsados }, function(){}, function(){});
+      api({ action: 'usarCreditos', nombre: E.nombre, cantidad: E.creditosUsados }, function(){}, function(){ fallosSecundarios.push('créditos a favor'); });
       var porMarcar = E.creditosUsados;
       (_todasReservas || []).forEach(function(r) {
         if (porMarcar > 0 && r.estado === 'Reagendar') { r.estado = 'Crédito usado'; porMarcar--; }
       });
     }
-    var fechasResumen = E.tipoPago === 'mensual' ? E.meses : E.fechas;
-    api({ action: 'enviarResumenReservas', nombre: E.nombre, fechas: JSON.stringify(fechasResumen), talla: talla, protecciones: protec, email: E.datos.email || '', montoTotal: (E.totalPago || 0).toFixed(2) }, function() {}, function() {});
+    var fechasResumen = E.tipoPago === 'mensual' ? mesesExitosos : fechasExitosas;
+    api({ action: 'enviarResumenReservas', nombre: E.nombre, fechas: JSON.stringify(fechasResumen), talla: talla, protecciones: protec, email: E.datos.email || '', montoTotal: (E.totalPago || 0).toFixed(2) }, function() {}, function() { fallosSecundarios.push('resumen por email'); });
 
     if (E.cuponAplicado) {
       marcarCuponUsadoLocal();
-      api({ action: 'marcarCuponUsado', nombre: E.nombre }, function(){}, function(){});
+      api({ action: 'marcarCuponUsado', nombre: E.nombre }, function(){}, function(){ fallosSecundarios.push('cupón'); });
       var bannerCuponUsado = document.getElementById('banner-cupon');
       if (bannerCuponUsado) bannerCuponUsado.style.display = 'none';
     }
@@ -615,13 +631,13 @@ function confirmarReserva(btn) {
       h += fila('Total', '<span style="font-weight:800;">$' + (E.totalPago || 0).toFixed(2) + '</span>');
     }
     if (E.tipoPago === 'clase') {
-      var fechasConTalla = E.fechas.map(function(f) {
+      var fechasConTalla = fechasExitosas.map(function(f) {
         var tFecha = (E.tallasPorFecha && E.tallasPorFecha[f]) ? E.tallasPorFecha[f] : tallaLocal;
         return '• ' + f + (necesitaPatinesLocal && tFecha ? ' — Talla ' + tFecha : '');
       }).join('<br>');
       h += '<div style="padding: 10px 0; border-bottom: 1px solid var(--border-softest); font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Fecha/s:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + fechasConTalla + '</div></div>';
-    } else if (E.meses && E.meses.length > 0) {
-      h += '<div style="padding: 10px 0; border-bottom: 1px solid var(--border-softest); font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Meses pagados:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + E.meses.map(function(m) { return '• ' + m; }).join('<br>') + '</div></div>';
+    } else if (mesesExitosos && mesesExitosos.length > 0) {
+      h += '<div style="padding: 10px 0; border-bottom: 1px solid var(--border-softest); font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Meses pagados:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + mesesExitosos.map(function(m) { return '• ' + m; }).join('<br>') + '</div></div>';
     }
     h += fila('Patines', d.necesitaPatines || 'No'); h += fila('Protecciones', d.necesitaProtecciones); if (E.notaPago) h += fila('Referencia pago', E.notaPago);
     document.getElementById('s6-resumen').innerHTML = h;
@@ -655,12 +671,18 @@ function confirmarReserva(btn) {
       if (btnWpExito && E.wpUrl) { btnWpExito.href = E.wpUrl; btnWpExito.style.display = 'flex'; }
     }
     E.reagendando = false;
-    ocultarCargando(); ir('s6'); setTimeout(lanzarConfetti, 400);
+    ocultarCargando(); ir('s6');
+    if (huboFalloParcial) {
+      mostrarToast('Algunas fechas no se pudieron guardar', 'error');
+    } else {
+      if (fallosSecundarios.length > 0) mostrarToast('Reserva guardada. Un detalle no se procesó, contáctanos si algo no cuadra.', 'error');
+      setTimeout(lanzarConfetti, 400);
+    }
   }
 
   if (E.tipoPago === 'mensual') {
     var pendientesMeses = E.meses.slice();
-    function guardarMesSiguiente() { if (pendientesMeses.length === 0) { finalizar(); return; } var mes = pendientesMeses.shift(); api({ action: 'guardarReserva', nombre: E.nombre, fecha: mes, talla: talla, protecciones: protec, monto: E.precioMensual.toFixed(2), email: E.datos.email || '' }, function() { guardarMesSiguiente(); }, function() { guardarMesSiguiente(); }); }
+    function guardarMesSiguiente() { if (pendientesMeses.length === 0) { finalizar(); return; } var mes = pendientesMeses.shift(); api({ action: 'guardarReserva', nombre: E.nombre, fecha: mes, talla: talla, protecciones: protec, monto: E.precioMensual.toFixed(2), email: E.datos.email || '' }, function() { guardarMesSiguiente(); }, function() { itemsFallidos.push(mes); guardarMesSiguiente(); }); }
     guardarMesSiguiente();
   } else {
     var pendientes = E.fechas.slice();
@@ -671,7 +693,7 @@ function confirmarReserva(btn) {
       var montoClase = gratisRestantes > 0 ? '0.00' : E.precioPorClase.toFixed(2);
       if (gratisRestantes > 0) gratisRestantes--;
       var tallaFecha = (E.tallasPorFecha && E.tallasPorFecha[fecha]) ? E.tallasPorFecha[fecha] : talla;
-      api({ action: 'guardarReserva', nombre: E.nombre, fecha: fecha, talla: tallaFecha, protecciones: protec, monto: montoClase, email: E.datos.email || '' }, function() { guardarSiguiente(); }, function() { guardarSiguiente(); });
+      api({ action: 'guardarReserva', nombre: E.nombre, fecha: fecha, talla: tallaFecha, protecciones: protec, monto: montoClase, email: E.datos.email || '' }, function() { guardarSiguiente(); }, function() { itemsFallidos.push(fecha); guardarSiguiente(); });
     }
     guardarSiguiente();
   }

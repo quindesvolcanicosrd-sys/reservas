@@ -85,7 +85,7 @@ function adminIrReservas() {
     ocultarCargando();
     adminRenderReservas();
     ir('s-admin-reservas');
-  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+  }, function(e) { ocultarCargando(); mostrarToast(e.message || 'Error al cargar reservas.', 'error'); });
 }
 
 function adminFiltroReservas(filtro, label) {
@@ -219,8 +219,8 @@ function adminCambiarEstado(fila, estado, btn) {
     if (res.exito) {
       _admTodasReservas.forEach(function(r) { if (r.fila === fila) r.estado = estado; });
       adminRenderReservas();
-    } else { btn.disabled = false; alert(res.error || 'Error al actualizar.'); }
-  }, function(e) { btn.disabled = false; alert('Error: ' + e.message); });
+    } else { btn.disabled = false; mostrarToast(res.error || 'Error al actualizar.', 'error'); }
+  }, function(e) { btn.disabled = false; mostrarToast(e.message || 'Error al actualizar.', 'error'); });
 }
 
 // ── Notificaciones ────────────────────────────────────────────────────────────
@@ -255,7 +255,7 @@ function adminEnviarNotif() {
   adminApi({ action: 'adminEnviarPush', titulo: titulo, mensaje: msg, destino: destino, sendAfter: sendAfter }, function(res) {
     btn.disabled = false; btn.innerHTML = 'Enviar notificación 📣';
     if (res.exito) {
-      alert(sendAfter ? '✅ Notificación programada.' : '✅ Notificación enviada.');
+      mostrarToast(sendAfter ? 'Notificación programada.' : 'Notificación enviada.', 'ok');
       document.getElementById('adm-notif-titulo').value = ''; document.getElementById('adm-notif-msg').value = ''; document.getElementById('adm-notif-fecha').value = '';
     } else { err('err-admin-notif', res.error || 'Error al enviar.'); }
   }, function(e) { btn.disabled = false; btn.innerHTML = 'Enviar notificación 📣'; err('err-admin-notif', 'Error: ' + e.message); });
@@ -267,14 +267,14 @@ function adminRefreshQueLlevar() {
   if (lista) lista.innerHTML = '<div style="text-align:center;padding:20px;"><div class="spinner" style="width:28px;height:28px;border-width:3px;margin:0 auto;"></div></div>';
   adminApi({ action: 'adminGetQueLlevar' }, function(res) {
     adminRenderQueLlevar(res);
-  }, function(e) { alert('Error al actualizar: ' + e.message); });
+  }, function(e) { mostrarToast(e.message || 'Error al actualizar.', 'error'); });
 }
 
 function adminIrQueLlevar() {
   mostrarCargando('Cargando...');
   adminApi({ action: 'adminGetQueLlevar' }, function(res) {
     ocultarCargando(); adminRenderQueLlevar(res); ir('s-admin-quellevar');
-  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+  }, function(e) { ocultarCargando(); mostrarToast(e.message || 'Error al cargar equipamiento.', 'error'); });
 }
 
 function adminRenderQueLlevar(res) {
@@ -331,7 +331,7 @@ function adminIrEquip() {
     document.getElementById('admin-equip-lista').innerHTML = html;
     document.getElementById('adm-equip-protec').value = res.protecciones || 0;
     ir('s-admin-equip');
-  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+  }, function(e) { ocultarCargando(); mostrarToast(e.message || 'Error al cargar equipamiento.', 'error'); });
 }
 
 function adminFilaTallaHtml(talla, cantidad) {
@@ -357,7 +357,7 @@ function adminGuardarEquip() {
   mostrarCargando('Guardando...');
   adminApi({ action: 'adminGuardarEquipamiento', tallas: JSON.stringify(tallas), protecciones: protec }, function(res) {
     ocultarCargando();
-    if (res.exito) { alert('✅ Equipamiento actualizado.'); } else { err('err-admin-equip', res.error || 'Error.'); }
+    if (res.exito) { mostrarToast('Equipamiento actualizado.', 'ok'); } else { err('err-admin-equip', res.error || 'Error.'); }
   }, function(e) { ocultarCargando(); err('err-admin-equip', 'Error: ' + e.message); });
 }
 
@@ -375,18 +375,18 @@ function adminIrUsuarios() {
     });
     document.getElementById('admin-usuarios-lista').innerHTML = html || '<p style="text-align:center;color:var(--muted);">Sin usuarios.</p>';
     ir('s-admin-usuarios');
-  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+  }, function(e) { ocultarCargando(); mostrarToast(e.message || 'Error al cargar usuarios.', 'error'); });
 }
 
 function adminEliminarUsuarioClick(nombre) {
   var escrito = prompt('⚠️ Vas a ELIMINAR a "' + nombre + '" y todos sus datos de la hoja Mirlxs.\n\nPara confirmar, escribe el nombre exactamente:');
   if (escrito === null) return;
-  if (escrito.trim() !== nombre) { alert('El nombre no coincide. No se eliminó nada.'); return; }
+  if (escrito.trim() !== nombre) { mostrarToast('El nombre no coincide. No se eliminó nada.', 'error'); return; }
   mostrarCargando('Eliminando...');
   adminApi({ action: 'adminEliminarUsuario', nombre: nombre }, function(res) {
     ocultarCargando();
-    if (res.exito) { adminIrUsuarios(); } else { alert(res.error || 'Error al eliminar.'); }
-  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+    if (res.exito) { adminIrUsuarios(); } else { mostrarToast(res.error || 'Error al eliminar.', 'error'); }
+  }, function(e) { ocultarCargando(); mostrarToast(e.message || 'Error al eliminar.', 'error'); });
 }
 
 // ── Administradorxs ───────────────────────────────────────────────────────────
@@ -406,7 +406,7 @@ function adminIrAdmins() {
     });
     document.getElementById('admin-admins-lista').innerHTML = html;
     ir('s-admin-admins');
-  }, function(e) { ocultarCargando(); alert('Error: ' + e.message); });
+  }, function(e) { ocultarCargando(); mostrarToast(e.message || 'Error al cargar administradores.', 'error'); });
 }
 
 function adminInvitar() {
@@ -421,6 +421,6 @@ function adminInvitar() {
 function adminQuitarClick(email) {
   if (!confirm('¿Quitar acceso admin a ' + email + '?')) return;
   adminApi({ action: 'adminQuitarAdmin', email: email, solicitante: _adminEmail }, function(res) {
-    if (res.exito) { adminIrAdmins(); } else { alert(res.error || 'Error.'); }
-  }, function(e) { alert('Error: ' + e.message); });
+    if (res.exito) { adminIrAdmins(); } else { mostrarToast(res.error || 'Error.', 'error'); }
+  }, function(e) { mostrarToast(e.message || 'Error.', 'error'); });
 }

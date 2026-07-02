@@ -25,6 +25,12 @@ if (navAvatar) {
   var homeContent = document.getElementById('home-reservas-lista');
   if (homeContent) { homeContent.style.opacity = '0'; homeContent.style.transition = 'opacity 0.3s ease'; }
   _renderHomeReservas();
+  if (homeContent) {
+    setTimeout(function() {
+      homeContent.innerHTML = '<div class="loader" style="padding:24px 0;"><div class="spinner"></div></div>';
+      homeContent.style.opacity = '1';
+    }, 50);
+  }
   var d = E.datos;
   var talla = d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
   api({ action: 'getFechasDisponibles', nombre: E.nombre, talla: talla, necesitaProtecciones: d.necesitaProtecciones }, function(fechas) {
@@ -38,11 +44,11 @@ if (navAvatar) {
       return r;
     });
     _renderHomeReservas();
-    if (homeContent) { setTimeout(function() { homeContent.style.opacity = '1'; }, 50); }
+    if (homeContent) { homeContent.style.opacity = '1'; void homeContent.offsetWidth; homeContent.style.animation = 'fadeIn 0.3s ease'; }
     if (!window._nuevxCargandoFechas) ocultarCargando();
   }, function() {
     _renderHomeReservas();
-    if (homeContent) { homeContent.style.opacity = '1'; }
+    if (homeContent) { homeContent.style.opacity = '1'; void homeContent.offsetWidth; homeContent.style.animation = 'fadeIn 0.3s ease'; }
     if (!window._nuevxCargandoFechas) ocultarCargando();
   });
   var bannerCupon = document.getElementById('banner-cupon');
@@ -82,6 +88,7 @@ function refrescarMisReservas(callback, btn) {
   }, function() {
     _renderHomeReservas();
     if (icon) icon.style.animation = '';
+    mostrarToast('No se pudo actualizar. Intenta de nuevo.', 'error');
     if (callback) callback();
   });
 }
@@ -329,8 +336,8 @@ function reagendarDesdeCard(fecha, btn) {
       if (_todasReservas) _todasReservas.forEach(function(r) { if (r.fecha === fecha && r.estado !== 'Cancelada') r.estado = 'Cancelada'; });
       if (res.cuponRestaurado) { localStorage.removeItem('cupon_' + E.nombre); if (E.datos) E.datos.cuponDisponible = true; }
       irNuevaReserva();
-    } else { btn.disabled = false; alert('Error al cancelar.'); }
-  }, function(e) { btn.disabled = false; alert('Error: ' + e.message); });
+    } else { btn.disabled = false; mostrarToast('Error al cancelar.', 'error'); }
+  }, function(e) { btn.disabled = false; mostrarToast(e.message || 'Error al cancelar.', 'error'); });
 }
 
 function _renderCardHome(r, hoy) {
@@ -464,6 +471,8 @@ function _renderGridSheetTalla(tallas) {
     var onclick = t.disponible ? ' onclick="seleccionarTallaSheet(this,\'' + t.talla + '\')"' : '';
     return '<span class="' + clases + '" style="justify-content:center;"' + onclick + '>' + t.talla + '</span>';
   }).join('');
+  void grid.offsetWidth;
+  grid.style.animation = 'fadeIn 0.3s ease';
 }
 
 function seleccionarTallaSheet(el, talla) {
@@ -609,7 +618,10 @@ function renderHistorial() {
       html += '</div></div>';
     });
   }
-  document.getElementById('historial-lista').innerHTML = html;
+  var histEl = document.getElementById('historial-lista');
+  histEl.innerHTML = html;
+  void histEl.offsetWidth;
+  histEl.style.animation = 'fadeIn 0.3s ease';
 }
 
 function _renderCardHistorial(r) {
@@ -658,9 +670,9 @@ function cancelarRes(fecha, onSuccess) {
       }
       if (onSuccess) { onSuccess(); } else { _renderHomeReservas(); }
     } else {
-      alert('Error al cancelar.');
+      mostrarToast(res.error || 'Error al cancelar.', 'error');
     }
-  }, function(e) { alert('Error: ' + e.message); });
+  }, function(e) { mostrarToast(e.message || 'Error al cancelar.', 'error'); });
 }
 
 function toggleBannerCupon() {
@@ -737,6 +749,7 @@ function sheetIrReagendar() {
 function cargarFechasGestionar() {
   var lista = document.getElementById('sg-lista-fechas');
   lista.innerHTML = '<div class="loader"><div class="spinner"></div><p>Cargando fechas...</p></div>';
+  function _fadeInLista() { void lista.offsetWidth; lista.style.animation = 'fadeIn 0.3s ease'; }
   var d = E.datos;
   var talla = d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
   api({ action: 'getFechasDisponibles', nombre: E.nombre, talla: talla, necesitaProtecciones: d.necesitaProtecciones }, function(fechas) {
@@ -749,6 +762,7 @@ function cargarFechasGestionar() {
         (sinEquip ? 'No hay cupos con tu equipamiento en los próximos entrenamientos. Puedes actualizar tu equipamiento o volver más tarde.' : 'No hay entrenamientos disponibles en este momento. Vuelve más tarde.') +
         (sinEquip ? '<br><br><button class="btn btn-secondary" style="margin-top:0;" onclick="irEditarDatos()"><span class=\'material-symbols-outlined\' style=\'font-size:1rem;vertical-align:middle;\'>manage_accounts</span> Actualizar equipamiento</button>' : '') +
         '</div>';
+      _fadeInLista();
       return;
     }
     lista.innerHTML = disponibles.map(function(f) {
@@ -767,8 +781,10 @@ function cargarFechasGestionar() {
         '<div class="sfi-circle"><span class="material-symbols-outlined">check</span></div>' +
         '</div></div>';
     }).join('');
+    _fadeInLista();
   }, function() {
     lista.innerHTML = '<p style="color:var(--danger);font-size:0.82rem;">Error al cargar fechas. Intenta de nuevo.</p>';
+    _fadeInLista();
   });
 }
 
@@ -815,7 +831,7 @@ function ejecutarReagendamiento() {
     setTimeout(function() { _recargarYRenderReservas(function() { mostrarToast('¡Fecha cambiada con éxito! 📅', 'ok'); }); }, 100);
   }, function(e) {
     ocultarCargando();
-    alert('Error al reagendar: ' + (e.message || 'Intenta de nuevo'));
+    mostrarToast(e.message || 'Error al reagendar. Intenta de nuevo.', 'error');
   });
 }
 
@@ -833,7 +849,7 @@ ocultarCargando();
     setTimeout(function() { _recargarYRenderReservas(function() { mostrarToast('Reserva cancelada', 'ok'); }); }, 100);
   }, function(e) {
     ocultarCargando();
-    alert('Error al cancelar: ' + (e.message || 'Intenta de nuevo'));
+    mostrarToast(e.message || 'Error al cancelar. Intenta de nuevo.', 'error');
   });
 }
 function abrirModalEstados() {
