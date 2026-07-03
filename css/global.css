@@ -49,7 +49,7 @@ button, input, select, textarea { font-family: inherit; }
 .fnac-placeholder { color: var(--hint); font-style: italic; font-size: 0.88rem; }
 
 .pantalla { display: none; }
-.pantalla.activa { display: block; animation: smoothSlideUp 0.6s var(--ease-sheet) forwards; }
+.pantalla.activa { display: block; animation: smoothSlideUp 0.6s var(--ease-sheet); }
 
 select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important; }
 

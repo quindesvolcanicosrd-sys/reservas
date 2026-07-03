@@ -26,7 +26,7 @@
 @keyframes fadeInBtn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes smoothSlideUp {
   from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: none; }
 }
 /* Antes referenciada por #loading-overlay.fade-in sin estar definida en ningún archivo (no-op silencioso desde el commit inicial de global.css) — mismo shape que fadeInBtn */
 @keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -121,3 +121,22 @@
   border-top: 0.5px solid var(--border-light);
 }
 .cta-footer-spacer { height: 80px; }
+
+/* ── CTA Footer fijo (flujo de reserva) ── */
+.cta-footer-fixed {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 523px;
+  padding: 12px var(--space-screen) calc(env(safe-area-inset-bottom, 0px) + 12px);
+  background: var(--bg);
+  border-top: 0.5px solid var(--border-light);
+  z-index: 100;
+}
+/* .card tiene backdrop-filter (var(--card-blur)), y backdrop-filter distinto de "none"
+   convierte al elemento en containing block de sus descendientes position:fixed
+   (los degrada a comportarse como position:absolute). Se neutraliza solo en las
+   pantallas que usan .cta-footer-fixed, sin tocar el backdrop-filter de .card en el resto de la app. */
+#s4 .card, #s-pago .card { backdrop-filter: none; -webkit-backdrop-filter: none; }
