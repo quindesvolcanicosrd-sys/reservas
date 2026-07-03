@@ -22,7 +22,20 @@ button, input, select, textarea { font-family: inherit; }
 
 .toggle-wrap { display: inline-block; flex-shrink: 0; }
 .toggle-btn { position: relative; width: 48px; height: 26px; padding: 0; border: none; border-radius: 26px; background: var(--brand-20); cursor: pointer; transition: background 0.3s; -webkit-tap-highlight-color: transparent; }
-.toggle-thumb { position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px; background: var(--white); border-radius: 50%; transition: transform 0.3s; }
+.toggle-thumb { position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px; background: var(--white); border-radius: 50%; transition: transform 0.3s; display: flex; align-items: center; justify-content: center; }
+.toggle-thumb::after {
+  font-family: 'Material Symbols Outlined';
+  font-size: 13px;
+  font-style: normal;
+  font-variation-settings: 'FILL' 1, 'wght' 600;
+  content: 'close';
+  color: var(--muted);
+  line-height: 1;
+}
+.toggle-on .toggle-thumb::after {
+  content: 'check';
+  color: var(--brand);
+}
 .toggle-btn.toggle-on { background: var(--brand); }
 .toggle-btn.toggle-on .toggle-thumb { transform: translateX(22px); }
 
