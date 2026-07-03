@@ -110,7 +110,7 @@
 .aj-chevron { color:var(--border-light); font-size:1rem; }
 
 .aj-app-rows { display:flex; flex-direction:column; gap:0; border-bottom:1px solid var(--border-softest,var(--border-light)); }
-.aj-app-row { display:flex; align-items:center; gap:12px; padding:12px 14px; border-bottom:1px solid var(--border-softest,var(--border-light)); }
+.aj-app-row { display:flex; align-items:center; gap:12px; padding:12px 15px; border-bottom:1px solid var(--border-softest,var(--border-light)); }
 .aj-app-row:last-child { border-bottom:none; }
 .aj-app-btn { background:none; border:none; cursor:pointer; color:var(--muted); padding:4px; display:flex; align-items:center; }
 
