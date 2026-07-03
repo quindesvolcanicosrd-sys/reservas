@@ -208,3 +208,6 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
     animation: slideUpModal 0.35s var(--ease-sheet) both !important;
   }
 }
+
+#modal-confirm-reagendar,
+#modal-estados-reserva { opacity: 0; transition: opacity 0.25s ease; }

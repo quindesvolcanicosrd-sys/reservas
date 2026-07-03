@@ -100,7 +100,7 @@ function guardarPermisos() {
         E.datos.permisosConfigurados = true;
         if (fotoUrl) E.datos.fotoPerfil = fotoUrl;
       }
-      document.getElementById('modal-permisos').style.display = 'none';
+      var mp = document.getElementById('modal-permisos'); if (mp) { mp.style.opacity = '0'; setTimeout(function(){ mp.style.display = 'none'; }, 250); }
       if (fotoUrl) actualizarFotoPerfil(fotoUrl);
     } else {
       errEl.textContent = res.error || 'Error al guardar.';
@@ -115,7 +115,7 @@ function guardarPermisos() {
 }
 
 function saltarPermisos() {
-  document.getElementById('modal-permisos').style.display = 'none';
+  var mp = document.getElementById('modal-permisos'); if (mp) { mp.style.opacity = '0'; setTimeout(function(){ mp.style.display = 'none'; }, 250); }
 }
 
 function actualizarFotoPerfil(url) {

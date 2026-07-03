@@ -876,11 +876,12 @@ function confirmarCambioFecha() {
   if (lugar) pillsEl.innerHTML += '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
   document.getElementById('mcr-equip').textContent = equipMsg;
   modal.style.display = 'flex';
+  requestAnimationFrame(function(){ modal.style.opacity = '1'; });
 }
 
 function ejecutarReagendamiento() {
   var modal = document.getElementById('modal-confirm-reagendar');
-  if (modal) modal.style.display = 'none';
+  if (modal) { modal.style.opacity = '0'; setTimeout(function(){ modal.style.display = 'none'; }, 250); }
   mostrarCargando('Reagendando...');
   api({ action: 'reagendarReserva', nombre: E.nombre, fechaAnterior: _sgFechaActual, fechaNueva: _sgFechaSeleccionada }, function() {
     ocultarCargando();
@@ -894,7 +895,7 @@ function ejecutarReagendamiento() {
 
 function cerrarModalReagendar() {
   var modal = document.getElementById('modal-confirm-reagendar');
-  if (modal) modal.style.display = 'none';
+  if (modal) { modal.style.opacity = '0'; setTimeout(function(){ modal.style.display = 'none'; }, 250); }
 }
 
 function ejecutarCancelacion() {
@@ -911,11 +912,11 @@ ocultarCargando();
 }
 function abrirModalEstados() {
   var m = document.getElementById('modal-estados-reserva');
-  if (m) m.style.display = 'flex';
+  if (m) { m.style.display = 'flex'; requestAnimationFrame(function(){ m.style.opacity = '1'; }); }
 }
 function cerrarModalEstados() {
   var m = document.getElementById('modal-estados-reserva');
-  if (m) m.style.display = 'none';
+  if (m) { m.style.opacity = '0'; setTimeout(function(){ m.style.display = 'none'; }, 250); }
 }
 
 function _recargarYRenderReservas(callback) {

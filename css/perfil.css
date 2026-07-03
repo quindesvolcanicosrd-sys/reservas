@@ -77,7 +77,7 @@
 /* ── Ajustes del perfil ──────────────────────────────── */
 .aj-hero { display:flex; align-items:center; gap:14px; margin-bottom:20px; padding:14px; background:var(--surface-2); border-radius:14px; border:1px solid var(--border-light); cursor:pointer; transition:background 0.15s; }
 @media (max-width: 600px) {
-  .aj-hero { margin-top:16px; }
+  .aj-hero { margin-top:32px; }
 }
 .aj-hero:hover { background:var(--surface-light); }
 .aj-avatar { width:52px; height:52px; border-radius:50%; background:var(--brand); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px; color:var(--white); flex-shrink:0; overflow:hidden; border:2px solid var(--border-light); }
@@ -110,7 +110,7 @@
 .aj-chevron { color:var(--border-light); font-size:1rem; }
 
 .aj-app-rows { display:flex; flex-direction:column; gap:0; border-bottom:1px solid var(--border-softest,var(--border-light)); }
-.aj-app-row { display:flex; align-items:center; gap:12px; padding:12px 2px; border-bottom:1px solid var(--border-softest,var(--border-light)); }
+.aj-app-row { display:flex; align-items:center; gap:12px; padding:12px 14px; border-bottom:1px solid var(--border-softest,var(--border-light)); }
 .aj-app-row:last-child { border-bottom:none; }
 .aj-app-btn { background:none; border:none; cursor:pointer; color:var(--muted); padding:4px; display:flex; align-items:center; }
 

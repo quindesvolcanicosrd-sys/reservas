@@ -506,12 +506,12 @@ function mostrarModalEquip(fechasAfectadas) {
       '</div>';
   }).join('');
   var modal = document.getElementById('modal-equip-aviso');
-  if (modal) modal.style.display = 'flex';
+  if (modal) { modal.style.opacity = '0'; modal.style.transition = 'opacity 0.25s ease'; modal.style.display = 'flex'; requestAnimationFrame(function(){ modal.style.opacity = '1'; }); }
 }
 
 function cerrarModalEquip() {
   var modal = document.getElementById('modal-equip-aviso');
-  if (modal) modal.style.display = 'none';
+  if (modal) { modal.style.opacity = '0'; setTimeout(function(){ modal.style.display = 'none'; }, 250); }
 }
 
 function irEditarEquipDesdeModal() {
