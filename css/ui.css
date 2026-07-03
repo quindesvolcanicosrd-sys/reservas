@@ -183,6 +183,13 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
        fuera de .contenedor) — .card ya no se ve como card en mobile (sin fondo/
        borde/sombra acá arriba), así que .contenedor pasa a ser la única fuente
        del inset, igualando el presupuesto de las pantallas nuevas (aj-sub/sheets). */
+    backdrop-filter: none;
+    /* .card tenía backdrop-filter:var(--card-blur) (blur(16px)) heredado de la regla
+       base incluso en mobile, donde ya no hay fondo/borde que blurear — imperceptible
+       visualmente, pero un backdrop-filter != none convierte a .card en containing
+       block de sus descendientes position:fixed/absolute (los degrada a absolute).
+       Neutralizado acá de una sola vez para todas las pantallas en mobile, en vez de
+       overrides puntuales por pantalla (ver .cta-footer-fixed en estilos.css). */
   }
 }
 @media (min-width: 601px) {
