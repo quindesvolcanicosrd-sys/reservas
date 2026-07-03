@@ -107,7 +107,7 @@ function _ajSetToggleOn(cb, on) {
 }
 
 function toggleNotifHome(cb) {
-  if (cb.classList.contains('toggle-on')) { mostrarToast('Para desactivar, ve a la configuración de notificaciones de tu navegador.', 'error'); return; }
+  if (cb.classList.contains('toggle-on')) { mostrarToast('Para desactivar, ve a ajustes del navegador.', 'error'); return; }
   _ajSetToggleOn(cb, true);
   activarPush();
   setTimeout(function() {
