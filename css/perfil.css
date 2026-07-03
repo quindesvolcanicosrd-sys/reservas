@@ -88,8 +88,6 @@
 .aj-hero-edit { width:34px; height:34px; border-radius:10px; background:var(--surface-light); border:1px solid var(--border-light); display:flex; align-items:center; justify-content:center; color:var(--brand); flex-shrink:0; }
 .aj-hero-edit .material-symbols-outlined { font-size:1rem; }
 
-.aj-sep { border-top:0.5px solid var(--border); margin:8px 0; }
-
 .aj-group { margin-bottom: 10px; background: var(--surface-2); border-radius: 14px; overflow: hidden; }
 .aj-row { display:flex; align-items:center; gap:12px; padding:14px; min-height:72px; cursor:pointer; transition:background 0.15s; border-bottom:1px solid var(--border-softest,var(--border-light)); }
 .aj-row:last-child { border-bottom:none; }
