@@ -56,9 +56,11 @@
     <button class="app-nav-icon-btn" id="btn-refrescar-home" onclick="refrescarMisReservas(null, this)" title="Actualizar" style="display:none;">
       <span class="material-symbols-outlined">refresh</span>
     </button>
-    <button class="app-nav-cta" onclick="irNuevaReserva()">
+    <button class="app-nav-icon-btn" onclick="irMisReservas()" title="Historial">
+      <span class="material-symbols-outlined">history</span>
+    </button>
+    <button class="app-nav-cta" onclick="irNuevaReserva()" title="Nueva reserva">
       <span class="material-symbols-outlined">calendar_add_on</span>
-      <span class="app-nav-cta-label">Nueva reserva</span>
     </button>
   </div>
 </div>
@@ -177,11 +179,14 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 </div>
 
 <div style="text-align:left;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-  <div id="label-mis-reservas" style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;">Mis reservas</div>
-  <button onclick="irMisReservas()" style="background:none;border:none;color:var(--brand);font-size:0.72rem;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:underline;text-underline-offset:3px;padding:0;">Ver historial</button>
-</div>        
-<div id="home-reservas-lista"></div>
+        <div id="home-reservas-lista"></div>
+<div class="cta-footer-spacer"></div>
+<div class="cta-footer-fixed">
+  <button class="btn btn-primary" onclick="irNuevaReserva()">
+    Hacer una reserva
+    <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span>
+  </button>
+</div>
       </div>
       
     </div>

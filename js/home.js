@@ -264,22 +264,16 @@ function _sincronizarNavHome(forzarVisible) {
   var activas = _clasificarReservas(_todasReservas || [], hoy).activas;
   var homeNav = document.getElementById('home-nav');
   var homeNavSpacer = document.getElementById('home-nav-spacer');
-  var labelMisRes = document.getElementById('label-mis-reservas');
-  var verHistBtn = document.querySelector('[onclick="irMisReservas()"]');
 
   if (!forzarVisible && activas.length === 0) {
     if (homeNav) homeNav.style.display = 'none';
     if (homeNavSpacer) homeNavSpacer.style.display = 'none';
-    if (labelMisRes) labelMisRes.style.display = 'none';
-    if (verHistBtn) verHistBtn.style.display = 'none';
   } else {
     if (homeNav) homeNav.style.display = 'flex';
     if (homeNavSpacer) {
       homeNavSpacer.style.display = '';
       if (homeNav) homeNavSpacer.style.height = (homeNav.offsetHeight + 8) + 'px';
     }
-    if (labelMisRes) labelMisRes.style.display = '';
-    if (verHistBtn) verHistBtn.style.display = '';
   }
   return activas;
 }
@@ -288,7 +282,6 @@ function _renderHomeReservas() {
   var hoy = new Date(); hoy.setHours(0,0,0,0);
   var activas = _sincronizarNavHome();
   var container = document.getElementById('home-reservas-lista');
-  var labelMisReservas = document.getElementById('label-mis-reservas');
 
   var fotoUrl = E.datos && (E.datos.fotoPerfil || '');
   var avatarHtml = fotoUrl
@@ -315,7 +308,6 @@ function _renderHomeReservas() {
     : activas.map(function(r) { return _renderCardHome(r, hoy); }).join('');
 
   container.innerHTML = html;
-  if (labelMisReservas) labelMisReservas.style.display = activas.length === 0 ? 'none' : '';
 }
 
 function verMasHomeReservas() {

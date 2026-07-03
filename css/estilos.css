@@ -142,4 +142,4 @@
    este selector sigue siendo necesario para ancho de escritorio (>600px), donde
    .card conserva su backdrop-filter completo, para todas las pantallas que usan
    .cta-footer-fixed, sin tocar el backdrop-filter de .card en el resto de la app. */
-#s2 .card, #s3a .card, #s3b .card, #s3c .card, #s4 .card, #s-pago .card, #s6 .card { backdrop-filter: none; -webkit-backdrop-filter: none; }
+#s2 .card, #s3a .card, #s3b .card, #s3c .card, #s4 .card, #s-pago .card, #s6 .card, #s-home .card { backdrop-filter: none; -webkit-backdrop-filter: none; }

@@ -178,3 +178,5 @@
   .app-nav-cta-label { display: none; }
   .app-nav-cta { padding: 14px 12px; }
 }
+
+#home-nav .app-nav-section { display: block; opacity: 1; max-width: 200px; }
