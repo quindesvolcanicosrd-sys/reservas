@@ -20,6 +20,12 @@ button, input, select, textarea { font-family: inherit; }
 .toggle-switch input:checked + .toggle-slider { background: var(--brand); }
 .toggle-switch input:checked + .toggle-slider:before { transform: translateX(22px); }
 
+.toggle-wrap { display: inline-block; flex-shrink: 0; }
+.toggle-btn { position: relative; width: 48px; height: 26px; padding: 0; border: none; border-radius: 26px; background: var(--brand-20); cursor: pointer; transition: background 0.3s; -webkit-tap-highlight-color: transparent; }
+.toggle-thumb { position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px; background: var(--white); border-radius: 50%; transition: transform 0.3s; }
+.toggle-btn.toggle-on { background: var(--brand); }
+.toggle-btn.toggle-on .toggle-thumb { transform: translateX(22px); }
+
 .fnac-trigger-btn {
   width: 100%; display: flex; align-items: center; justify-content: space-between;
   padding: 13px 16px; border: 0px solid var(--border-light); border-radius: 12px;

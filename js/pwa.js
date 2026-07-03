@@ -100,8 +100,15 @@ function pwaCerrar() {
   document.getElementById('pwa-banner').style.display = 'none';
 }
 
+function _ajSetToggleOn(cb, on) {
+  cb.classList.toggle('toggle-on', on);
+  cb.classList.toggle('toggle-off', !on);
+  cb.setAttribute('aria-pressed', on ? 'true' : 'false');
+}
+
 function toggleNotifHome(cb) {
-  if (!cb.checked) { mostrarToast('Para desactivar, ve a la configuración de notificaciones de tu navegador.', 'error'); cb.checked = true; return; }
+  if (cb.classList.contains('toggle-on')) { mostrarToast('Para desactivar, ve a la configuración de notificaciones de tu navegador.', 'error'); return; }
+  _ajSetToggleOn(cb, true);
   activarPush();
   setTimeout(function() {
     if ('Notification' in window && Notification.permission === 'granted') {
@@ -117,7 +124,7 @@ function toggleNotifHome(cb) {
           setTimeout(function() { row.style.display = 'none'; }, 650);
         }, 1800);
       }
-    } else if (Notification.permission === 'denied') { cb.checked = false; }
+    } else if (Notification.permission === 'denied') { _ajSetToggleOn(cb, false); }
   }, 1500);
 }
 

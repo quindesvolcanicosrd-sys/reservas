@@ -78,7 +78,7 @@ if (navAvatar) {
   }
   var notifActivas = 'Notification' in window && Notification.permission === 'granted';
   var tNotif = document.getElementById('toggle-notif');
-  if (tNotif) tNotif.checked = notifActivas;
+  if (tNotif) _ajSetToggleOn(tNotif, notifActivas);
   var rowNotif = document.getElementById('row-notif-home');
   if (rowNotif) rowNotif.style.display = notifActivas ? 'none' : '';
   var rowInstalar = document.getElementById('row-instalar-app');
