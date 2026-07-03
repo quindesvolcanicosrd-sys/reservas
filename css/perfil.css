@@ -77,7 +77,7 @@
 /* ── Ajustes del perfil ──────────────────────────────── */
 .aj-hero { display:flex; align-items:center; gap:14px; margin-bottom:20px; padding:14px; background:var(--surface-2); border-radius:14px; border:1px solid var(--border-light); cursor:pointer; transition:background 0.15s; }
 @media (max-width: 600px) {
-  .aj-hero { margin-top:32px; }
+  .aj-hero { margin-top:10px; }
 }
 .aj-hero:hover { background:var(--surface-light); }
 .aj-avatar { width:52px; height:52px; border-radius:50%; background:var(--brand); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px; color:var(--white); flex-shrink:0; overflow:hidden; border:2px solid var(--border-light); }
