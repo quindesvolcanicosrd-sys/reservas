@@ -107,7 +107,7 @@
 .aj-value { font-size:0.76rem; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .aj-chevron { color:var(--border-light); font-size:1rem; }
 
-.aj-app-rows { display:flex; flex-direction:column; gap:0; border-bottom:1px solid var(--border-softest,var(--border-light)); }
+.aj-app-rows { display:flex; flex-direction:column; gap:0; border-bottom:1px solid var(--border-softest,var(--border-light)); background: var(--surface-2); border-radius: 14px; overflow: hidden; }
 .aj-app-row { display:flex; align-items:center; gap:12px; padding:12px 14px; border-bottom:1px solid var(--border-softest,var(--border-light)); }
 .aj-app-row:last-child { border-bottom:none; }
 .aj-app-btn { background:none; border:none; cursor:pointer; color:var(--muted); padding:4px; display:flex; align-items:center; }

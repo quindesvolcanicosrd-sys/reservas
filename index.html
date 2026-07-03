@@ -491,29 +491,29 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
     <!-- Aplicación -->
     <div class="aj-app-rows">
-      <div class="aj-app-row" id="row-notif-home">
+      <div class="aj-app-row" id="row-notif-home" onclick="toggleNotifHome(document.getElementById('toggle-notif'))">
         <div class="aj-icon aj-icon-orange"><span class="material-symbols-outlined">notifications</span></div>
         <div class="aj-content">
           <div class="aj-title">Notificaciones</div>
           <div class="aj-value">Reservas, cambios y avisos</div>
         </div>
-        <div class="toggle-wrap"><button type="button" id="toggle-notif" class="toggle-btn toggle-off" aria-pressed="false" onclick="toggleNotifHome(this)"><span class="toggle-thumb"></span></button></div>
+        <div class="toggle-wrap"><button type="button" id="toggle-notif" class="toggle-btn toggle-off" aria-pressed="false"><span class="toggle-thumb"></span></button></div>
       </div>
-      <div class="aj-app-row" id="row-instalar-app">
+      <div class="aj-app-row" id="row-instalar-app" onclick="pwaInstalar()">
         <div class="aj-icon aj-icon-muted"><span class="material-symbols-outlined">install_mobile</span></div>
         <div class="aj-content">
           <div class="aj-title">Instalar la app</div>
           <div class="aj-value">Agrega el portal a tu inicio</div>
         </div>
-        <button class="aj-app-btn" onclick="pwaInstalar()"><span class="material-symbols-outlined">download</span></button>
+        <button class="aj-app-btn"><span class="material-symbols-outlined">download</span></button>
       </div>
-      <div class="aj-app-row">
+      <div class="aj-app-row" onclick="abrirContacto()">
         <div class="aj-icon aj-icon-muted"><span class="material-symbols-outlined">share</span></div>
         <div class="aj-content">
           <div class="aj-title">Contáctanos</div>
           <div class="aj-value">WhatsApp, Instagram, correo</div>
         </div>
-        <button class="aj-app-btn" onclick="abrirContacto()"><span class="material-symbols-outlined">chevron_right</span></button>
+        <button class="aj-app-btn"><span class="material-symbols-outlined">chevron_right</span></button>
       </div>
     </div>
 
