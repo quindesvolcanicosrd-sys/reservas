@@ -111,3 +111,13 @@
   .loading-card { border-color: var(--dk-skeleton-base); }
   .loading-card p { color: var(--dk-text-muted); }
 }
+
+/* ── CTA Footer fijo ───────────────────────── */
+.cta-footer {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 12px var(--space-screen) calc(env(safe-area-inset-bottom, 0px) + 12px);
+  background: var(--bg);
+  border-top: 0.5px solid var(--border-light);
+}
+.cta-footer-spacer { height: 80px; }
