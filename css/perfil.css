@@ -225,3 +225,11 @@
 }
 .aj-group .privacy-row:last-child { border-bottom: none; }
 .aj-group .privacy-row:hover { box-shadow: none; }
+
+/* Google Places Autocomplete inyecta su propio dropdown (.pac-container) al
+   final de <body> con z-index:1000 por defecto — por debajo de #aj-sheet-places
+   (9601) y su overlay (9600), lo que hacía que los toques en una sugerencia
+   fueran interceptados por el overlay en vez de seleccionar el lugar (bug real,
+   encontrado y confirmado con Playwright: clicks en .pac-item resueltos contra
+   el overlay). */
+.pac-container { z-index: 9700 !important; }

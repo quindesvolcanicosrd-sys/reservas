@@ -852,3 +852,88 @@ function _actualizarResumenEquipAjustes() {
   var el = document.getElementById('aj-equip-val');
   if (el) el.textContent = (pat === 'Sí' ? 'Patines' + (tal ? ' talla ' + tal : '') : 'Sin patines') + ' · ' + (pro === 'Sí' ? 'Protecciones completas' : pro === 'No' ? 'Protecciones propias' : pro);
 }
+
+function _initMapsCallback() { window._mapsLoaded = true; }
+
+/* ── Places Autocomplete (ciudad / dirección) ─ */
+var _ajPlacesCallback = null;
+var _ajPlacesAutocomp = null;
+
+// Mapeo de nombre de país a código ISO para restricción de Places
+var _AJ_PAIS_CODES = {
+  'Ecuador':'EC','Colombia':'CO','Venezuela':'VE','Perú':'PE','Argentina':'AR',
+  'Chile':'CL','México':'MX','España':'ES','Estados Unidos':'US','Uruguay':'UY',
+  'Paraguay':'PY','Bolivia':'BO','Brasil':'BR','Costa Rica':'CR','Panamá':'PA',
+  'Guatemala':'GT','Honduras':'HN','El Salvador':'SV','Nicaragua':'NI',
+  'Cuba':'CU','República Dominicana':'DO','Haití':'HT','Jamaica':'JM',
+  'Puerto Rico':'PR','Canadá':'CA','Francia':'FR','Italia':'IT','Alemania':'DE',
+  'Reino Unido':'GB','Portugal':'PT','Países Bajos':'NL','Bélgica':'BE',
+  'Suiza':'CH','Austria':'AT','Suecia':'SE','Noruega':'NO','Dinamarca':'DK',
+  'Finlandia':'FI','Polonia':'PL','Rusia':'RU','Ucrania':'UA','China':'CN',
+  'Japón':'JP','Corea del Sur':'KR','India':'IN','Australia':'AU',
+  'Nueva Zelanda':'NZ','Sudáfrica':'ZA','Nigeria':'NG','Kenia':'KE',
+  'Marruecos':'MA','Egipto':'EG'
+};
+
+function ajAbrirSheetPlaces(titulo, tipo, displayId, campo) {
+  document.getElementById('aj-places-titulo').textContent = titulo;
+  document.getElementById('aj-places-input').value = '';
+  var ov = document.getElementById('aj-sheet-places-overlay');
+  var sh = document.getElementById('aj-sheet-places');
+  if (ov) ov.style.display = 'block';
+  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform='translateY(0)'; }); }); }
+
+  _ajPlacesCallback = function(valor) {
+    var disp = document.getElementById(displayId);
+    if (disp) { disp.textContent = valor; disp.classList.remove('vacio'); }
+    var payload = {}; payload[campo] = valor;
+    _ajGuardar(payload);
+    ajCerrarSheetPlaces();
+  };
+
+  var inp = document.getElementById('aj-places-input');
+  if (!inp) return;
+
+  // Destruir instancia anterior si existe
+  if (_ajPlacesAutocomp) {
+    google.maps.event.clearInstanceListeners(inp);
+    _ajPlacesAutocomp = null;
+  }
+
+  if (!window._mapsLoaded || typeof google === 'undefined') {
+    // Places no cargado aún — usar input libre como fallback
+    inp.onkeydown = function(e) {
+      if (e.key === 'Enter' && inp.value.trim()) {
+        if (_ajPlacesCallback) _ajPlacesCallback(inp.value.trim());
+      }
+    };
+    return;
+  }
+
+  inp.onkeydown = null; // saca el fallback de Enter por si el sheet se abrió antes de que Maps terminara de cargar
+
+  var opts = { types: tipo === 'ciudad' ? ['(cities)'] : ['address'] };
+  var countryCode = _ajPaisActual ? _AJ_PAIS_CODES[_ajPaisActual] : null;
+  if (countryCode) opts.componentRestrictions = { country: countryCode };
+
+  _ajPlacesAutocomp = new google.maps.places.Autocomplete(inp, opts);
+  _ajPlacesAutocomp.addListener('place_changed', function() {
+    var place = _ajPlacesAutocomp.getPlace();
+    var valor = tipo === 'ciudad'
+      ? (place.address_components
+          ? (place.address_components.find(function(c){ return c.types.includes('locality'); }) || {}).long_name || place.name
+          : place.name)
+      : place.formatted_address || inp.value;
+    if (valor && _ajPlacesCallback) _ajPlacesCallback(valor);
+  });
+
+  setTimeout(function(){ if(inp) inp.focus(); }, 300);
+}
+
+function ajCerrarSheetPlaces() {
+  var sh = document.getElementById('aj-sheet-places');
+  var ov = document.getElementById('aj-sheet-places-overlay');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function(){ if(sh)sh.style.display='none'; if(ov)ov.style.display='none'; }, 350);
+  _ajPlacesCallback = null;
+}
