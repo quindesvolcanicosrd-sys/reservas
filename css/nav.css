@@ -180,13 +180,15 @@
 }
 
 #home-nav .app-nav-section {
-  opacity: 1;
-  max-width: none;
+  opacity: 1 !important;
+  max-width: none !important;
+  overflow: visible !important;
+  flex: 1;
   font-size: 0.86rem;
   font-weight: 800;
   text-align: left;
   letter-spacing: 1.2px;
   color: var(--brand);
   text-transform: uppercase;
-  flex: 1;
+  white-space: nowrap;
 }
