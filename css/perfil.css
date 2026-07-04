@@ -128,3 +128,80 @@
 
 .aj-selector-btn { width:100%; padding:13px 16px; background:var(--surface-2); border:0; border-radius:12px; color:var(--text); font-size:0.88rem; font-family:inherit; display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition:border-color 0.15s; }
 .aj-selector-btn:hover { border-color:var(--brand); }
+
+/* ── Fila de dato (Ajustes del perfil — patrón nuevo) ─── */
+.aj-dato-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 0.5px solid var(--border);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.aj-dato-row:last-child { border-bottom: none; }
+.aj-dato-row:active { background: var(--brand-20); }
+.aj-dato-row.no-tap { cursor: default; }
+.aj-dato-row.no-tap:active { background: none; }
+.aj-dato-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.aj-dato-icon .material-symbols-outlined { font-size: 18px; }
+.aj-dato-texts { flex: 1; min-width: 0; }
+.aj-dato-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--brand-60);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 1px;
+}
+.aj-dato-val {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.aj-dato-val.vacio {
+  color: var(--text-faint);
+  font-style: italic;
+  font-weight: 400;
+}
+.aj-dato-lock .material-symbols-outlined {
+  font-size: 16px;
+  color: var(--text-faint);
+}
+.aj-dato-chevron .material-symbols-outlined {
+  font-size: 16px;
+  color: var(--text-faint);
+}
+.aj-sec-titulo {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--brand-60);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 14px 0 6px;
+}
+.aj-btn-agregar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--brand-20);
+  border: 1.5px dashed var(--brand-30);
+  border-radius: 10px;
+  color: var(--brand);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  margin-top: 12px;
+}
+.aj-btn-agregar .material-symbols-outlined { font-size: 18px; }

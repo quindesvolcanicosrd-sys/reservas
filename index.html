@@ -1100,21 +1100,47 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div style="width:40px;flex-shrink:0;"></div>
   </div>
   <div class="aj-sub-inner">
-    <div class="datos-campo"><label>Nombre Derby</label><input type="text" id="aj-nombreDerby" placeholder="Ej: Roller Reina"></div>
-    <div class="datos-campo"><label>Número Derby</label><input type="text" id="aj-numeroDerby" placeholder="Ej: 47"></div>
-    <div class="datos-campo">
-      <label>Pronombres</label>
-      <p class="datos-hint" style="margin-bottom:10px;">Selecciona todos los que apliquen.</p>
-      <div class="aj-pills-row" id="aj-pron-pills">
-        <span class="aj-pill" data-val="Ella/ella" onclick="ajTogglePill(this,true)">Ella</span>
-        <span class="aj-pill" data-val="Él/él" onclick="ajTogglePill(this,true)">Él</span>
-        <span class="aj-pill" data-val="Elle/elle" onclick="ajTogglePill(this,true)">Elle</span>
+    <div style="text-align:center;margin-bottom:16px;padding-top:8px">
+      <div id="aj-avatar-hero" onclick="mostrarToast('Cambio de foto próximamente disponible.','ok')" style="width:56px;height:56px;border-radius:50%;background:var(--brand-warm);display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;color:var(--brand);margin:0 auto 4px;cursor:pointer;position:relative;">
+        <span class="material-symbols-outlined" style="position:absolute;bottom:0;right:0;width:18px;height:18px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--white);">photo_camera</span>
       </div>
-      <div id="aj-pron-otro-display" style="display:none;margin-top:8px;font-size:0.78rem;color:var(--brand);"></div>
+      <div style="font-size:0.68rem;color:var(--brand-60);margin-top:4px">Toca para cambiar la foto</div>
     </div>
-    <div class="cta-footer-spacer"></div>
-    <div class="cta-footer">
-      <button class="btn-guardar-sec" onclick="ajGuardarPerfil(this)">Guardar cambios</button>
+
+    <div class="aj-dato-row no-tap" onclick="mostrarToast('El nombre no es editable. Contacta a un administrador si necesitas corregirlo.','ok')">
+      <div class="aj-dato-icon" style="background:var(--info-bg-light)"><span class="material-symbols-outlined" style="color:var(--info)">person</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">Nombre</div>
+        <div class="aj-dato-val" id="aj-nombre-display">—</div>
+      </div>
+      <div class="aj-dato-lock"><span class="material-symbols-outlined">lock</span></div>
+    </div>
+
+    <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Nombre Derby','¿Cómo te conocen en la pista?','aj-nombreDerby-val','nombreDerby','Ej: Roller Reina')">
+      <div class="aj-dato-icon" style="background:var(--brand-20)"><span class="material-symbols-outlined" style="color:var(--brand)">star</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">Nombre Derby</div>
+        <div class="aj-dato-val" id="aj-nombreDerby-val">—</div>
+      </div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+    </div>
+
+    <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Número Derby','Tu número de camiseta en el equipo.','aj-numeroDerby-val','numeroDerby','Ej: 47')">
+      <div class="aj-dato-icon" style="background:rgba(167,139,250,0.15)"><span class="material-symbols-outlined" style="color:#a78bfa">tag</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">Número Derby</div>
+        <div class="aj-dato-val vacio" id="aj-numeroDerby-val">Sin número asignado</div>
+      </div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+    </div>
+
+    <div class="aj-dato-row" onclick="ajAbrirSheetPronombres()">
+      <div class="aj-dato-icon" style="background:rgba(52,211,153,0.15)"><span class="material-symbols-outlined" style="color:#34d399">face</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">Pronombres</div>
+        <div class="aj-dato-val" id="aj-pron-val">—</div>
+      </div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
     </div>
   </div>
 </div>
@@ -1129,27 +1155,31 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div style="width:40px;flex-shrink:0;"></div>
   </div>
   <div class="aj-sub-inner">
-    <div class="datos-campo">
-      <label>Email (cuenta de Google)</label>
-      <div id="aj-email-display" style="padding:13px 16px;border-radius:12px;background:var(--disabled-bg-2);color:var(--text-faint);font-size:0.88rem;cursor:not-allowed;">—</div>
-      <p class="datos-hint">No puede modificarse. Contacta a un administrador si necesitas cambiarlo.</p>
+    <div class="aj-dato-row no-tap" onclick="mostrarToast('El email no es editable. Contacta a un administrador si necesitas cambiarlo.','ok')">
+      <div class="aj-dato-icon" style="background:var(--info-bg-light)"><span class="material-symbols-outlined" style="color:var(--info)">mail</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">Email</div>
+        <div class="aj-dato-val" id="aj-email-display" style="opacity:.5">—</div>
+      </div>
+      <div class="aj-dato-lock"><span class="material-symbols-outlined">lock</span></div>
     </div>
-    <div class="datos-campo">
-      <label>Código de país</label>
-      <button class="aj-selector-btn" id="aj-prefijo-btn" onclick="ajAbrirSheetPrefijo()">
-        <span id="aj-prefijo-display">Selecciona</span>
-        <span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--muted);">expand_more</span>
-      </button>
+
+    <div class="aj-dato-row" onclick="ajAbrirSheetPrefijo()">
+      <div class="aj-dato-icon" style="background:rgba(167,139,250,0.15)"><span class="material-symbols-outlined" style="color:#a78bfa">language</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">Prefijo</div>
+        <div class="aj-dato-val" id="aj-prefijo-display">—</div>
+      </div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
     </div>
-    <div class="datos-campo">
-      <label>Número de teléfono</label>
-      <input type="tel" id="aj-telefono" placeholder="Ej: 0991234567" oninput="ajValidarTel(this)">
-      <p class="datos-hint" id="aj-tel-hint">Entre 7 y 15 dígitos numéricos.</p>
-    </div>
-    <div class="error-msg" id="err-aj-contacto"></div>
-    <div class="cta-footer-spacer"></div>
-    <div class="cta-footer">
-      <button class="btn-guardar-sec" onclick="ajGuardarContacto(this)">Guardar cambios</button>
+
+    <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Número de teléfono','Entre 7 y 15 dígitos numéricos.','aj-telefono-val','telefono','Ej: 0962773052')">
+      <div class="aj-dato-icon" style="background:rgba(52,211,153,0.15)"><span class="material-symbols-outlined" style="color:#34d399">phone</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">Número</div>
+        <div class="aj-dato-val" id="aj-telefono-val">—</div>
+      </div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
     </div>
   </div>
 </div>
@@ -1164,23 +1194,22 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div style="width:40px;flex-shrink:0;"></div>
   </div>
   <div class="aj-sub-inner">
-    <div class="datos-campo">
-      <label>Fecha de nacimiento</label>
-      <div id="aj-fn-display" style="padding:13px 16px;border-radius:12px;background:var(--disabled-bg-2);color:var(--text-faint);font-size:0.88rem;cursor:not-allowed;">—</div>
-      <p class="datos-hint">No puede modificarse. Contacta a un administrador si necesitas una corrección.</p>
+    <div class="aj-dato-row no-tap" onclick="mostrarToast('La fecha de nacimiento no es editable. Contacta a un administrador si necesitas corregirla.','ok')" style="margin-bottom:6px">
+      <div class="aj-dato-icon" style="background:var(--brand-20)"><span class="material-symbols-outlined" style="color:var(--brand)">cake</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">Fecha de nacimiento</div>
+        <div class="aj-dato-val" id="aj-fecha-display">—</div>
+      </div>
+      <div class="aj-dato-lock"><span class="material-symbols-outlined">lock</span></div>
     </div>
-    <div class="privacy-row" style="margin-top:8px;">
-      <label style="font-size:0.88rem;color:var(--text-mid);font-weight:600;margin:0;text-transform:none;letter-spacing:0;">Compartir fecha de cumpleaños</label>
-      <label class="toggle-switch"><input type="checkbox" id="aj-fechaPublica"><span class="toggle-slider"></span></label>
+
+    <div class="privacy-row">
+      <label style="font-size:0.88rem;color:var(--text-mid);font-weight:600;margin:0">Compartir fecha de cumpleaños</label>
+      <label class="toggle-switch"><input type="checkbox" id="aj-fechaPublica" onchange="ajGuardarPrivacidadAuto()"><span class="toggle-slider"></span></label>
     </div>
     <div class="privacy-row">
-      <label style="font-size:0.88rem;color:var(--text-mid);font-weight:600;margin:0;text-transform:none;letter-spacing:0;">Compartir mi edad</label>
-      <label class="toggle-switch"><input type="checkbox" id="aj-edadPublica"><span class="toggle-slider"></span></label>
-    </div>
-    <div class="error-msg" id="err-aj-privacidad"></div>
-    <div class="cta-footer-spacer"></div>
-    <div class="cta-footer">
-      <button class="btn-guardar-sec" onclick="ajGuardarPrivacidad(this)">Guardar cambios</button>
+      <label style="font-size:0.88rem;color:var(--text-mid);font-weight:600;margin:0">Compartir mi edad</label>
+      <label class="toggle-switch"><input type="checkbox" id="aj-edadPublica" onchange="ajGuardarPrivacidadAuto()"><span class="toggle-slider"></span></label>
     </div>
   </div>
 </div>
@@ -1195,29 +1224,33 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div style="width:40px;flex-shrink:0;"></div>
   </div>
   <div class="aj-sub-inner">
-    <div class="aviso-legal">🔒 <strong>Confidencial.</strong> Solo para trámites legales y emergencias. No es visible para otras participantes.</div>
-    <div class="datos-campo">
-      <label>Tipo de documento</label>
-      <div class="aj-pills-row" id="aj-tipoDoc-pills">
-        <span class="aj-pill" data-val="Cédula" onclick="ajSinglePill(this)">Cédula</span>
-        <span class="aj-pill" data-val="DNI" onclick="ajSinglePill(this)">DNI</span>
-        <span class="aj-pill" data-val="Pasaporte" onclick="ajSinglePill(this)">Pasaporte</span>
-        <span class="aj-pill aj-pill-otro" data-val="Otro" onclick="ajSinglePill(this)">Otro</span>
+    <p style="font-size:0.72rem;color:var(--brand-60);line-height:1.4;margin-bottom:12px">🔒 Confidencial. Solo para trámites legales y emergencias. No es visible para otras participantes.</p>
+
+    <div class="aj-dato-row" onclick="ajAbrirSheetTipoDoc()">
+      <div class="aj-dato-icon" style="background:rgba(251,191,36,0.15)"><span class="material-symbols-outlined" style="color:var(--amber)">badge</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">Tipo de documento</div>
+        <div class="aj-dato-val vacio" id="aj-tipoDoc-val">—</div>
       </div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
     </div>
-    <div class="datos-campo"><label>Número de documento</label><input type="text" id="aj-numeroDoc"></div>
-    <div class="datos-campo">
-      <label>País emisor</label>
-      <button class="aj-selector-btn" id="aj-pais-btn" onclick="ajAbrirSheetPais()">
-        <span id="aj-pais-display">Selecciona</span>
-        <span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--muted);">expand_more</span>
-      </button>
+
+    <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Número de documento','','aj-numeroDoc-val','numeroDocumento','Ingresa el número')">
+      <div class="aj-dato-icon" style="background:var(--brand-20)"><span class="material-symbols-outlined" style="color:var(--brand)">tag</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">Número de documento</div>
+        <div class="aj-dato-val vacio" id="aj-numeroDoc-val">—</div>
+      </div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
     </div>
-    <div class="datos-campo"><label>Nombre legal completo</label><input type="text" id="aj-nombreLegal" placeholder="Tal como aparece en tu documento"></div>
-    <div class="error-msg" id="err-aj-legal"></div>
-    <div class="cta-footer-spacer"></div>
-    <div class="cta-footer">
-      <button class="btn-guardar-sec" onclick="ajGuardarLegal(this)">Guardar cambios</button>
+
+    <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Nombre legal completo','Tal como aparece en tu documento.','aj-nombreLegal-val','nombreLegal','Ingresa tu nombre legal completo')">
+      <div class="aj-dato-icon" style="background:rgba(167,139,250,0.15)"><span class="material-symbols-outlined" style="color:#a78bfa">person</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">Nombre legal completo</div>
+        <div class="aj-dato-val vacio" id="aj-nombreLegal-val">—</div>
+      </div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
     </div>
   </div>
 </div>
@@ -1232,23 +1265,31 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div style="width:40px;flex-shrink:0;"></div>
   </div>
   <div class="aj-sub-inner">
-    <div class="datos-campo"><label>Calle principal</label><input type="text" id="aj-callePrincipal" placeholder="Ej: Av. Amazonas"></div>
-    <div class="datos-campo"><label>Calle secundaria</label><input type="text" id="aj-calleSecundaria" placeholder="Ej: Av. Colón"></div>
-    <div class="datos-campo"><label>Numeración</label><input type="text" id="aj-numeracion" placeholder="Ej: N24-56"></div>
-    <div class="datos-campo"><label>Sector</label><input type="text" id="aj-sector" placeholder="Ej: La Mariscal"></div>
-    <div class="datos-campo">
-      <label>Cantón</label>
-      <div class="aj-pills-row" id="aj-canton-pills">
-        <span class="aj-pill" data-val="Quito" onclick="ajSinglePill(this)">Quito</span>
-        <span class="aj-pill" data-val="Cayambe" onclick="ajSinglePill(this)">Cayambe</span>
-        <span class="aj-pill" data-val="Mejía" onclick="ajSinglePill(this)">Mejía</span>
-        <span class="aj-pill aj-pill-otro" data-val="" onclick="ajAbrirSheetTexto('aj-sheet-canton','Escribe tu cantón','Ej: Pedro Moncayo', function(v){ ajSetPillOtro(document.getElementById('aj-canton-pills'),v); })">Otro...</span>
+    <div class="aj-dato-row" onclick="ajAbrirSheetPais()">
+      <div class="aj-dato-icon" style="background:rgba(52,211,153,0.15)"><span class="material-symbols-outlined" style="color:#34d399">language</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">País</div>
+        <div class="aj-dato-val" id="aj-pais-val">—</div>
       </div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
     </div>
-    <div class="error-msg" id="err-aj-direccion"></div>
-    <div class="cta-footer-spacer"></div>
-    <div class="cta-footer">
-      <button class="btn-guardar-sec" onclick="ajGuardarDireccion(this)">Guardar cambios</button>
+
+    <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Ciudad','','aj-ciudad-val','ciudad','Ingresa tu ciudad')">
+      <div class="aj-dato-icon" style="background:rgba(99,179,237,0.15)"><span class="material-symbols-outlined" style="color:#63b3ed">location_city</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">Ciudad</div>
+        <div class="aj-dato-val vacio" id="aj-ciudad-val">—</div>
+      </div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+    </div>
+
+    <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Dirección','','aj-direccion-val','callePrincipal','Ingresa tu dirección completa')">
+      <div class="aj-dato-icon" style="background:rgba(167,139,250,0.15)"><span class="material-symbols-outlined" style="color:#a78bfa">home</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">Dirección</div>
+        <div class="aj-dato-val vacio" id="aj-direccion-val">—</div>
+      </div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
     </div>
   </div>
 </div>
@@ -1263,50 +1304,73 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div style="width:40px;flex-shrink:0;"></div>
   </div>
   <div class="aj-sub-inner">
-    <div class="seccion-label">Contacto 1</div>
-    <div class="datos-campo"><label>Nombre</label><input type="text" id="aj-e1nombre" placeholder="Ej: Ana Pérez"></div>
-    <div class="datos-campo">
-      <label>Relación</label>
-      <div class="aj-pills-row" id="aj-e1rel-pills">
-        <span class="aj-pill" data-val="Amigx" onclick="ajSinglePill(this)">Amigx</span>
-        <span class="aj-pill" data-val="Familiar" onclick="ajSinglePill(this)">Familiar</span>
-        <span class="aj-pill" data-val="Pareja" onclick="ajSinglePill(this)">Pareja</span>
-        <span class="aj-pill aj-pill-otro" data-val="" onclick="ajAbrirSheetTexto('aj-sheet-e1rel','Escribe la relación','Ej: Compañerx de trabajo', function(v){ ajSetPillOtro(document.getElementById('aj-e1rel-pills'),v); })">Otro...</span>
+    <div class="aj-sec-titulo">Contacto 1</div>
+
+    <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Nombre del contacto','','aj-em1nombre-val','emerg1Nombre','Nombre completo')">
+      <div class="aj-dato-icon" style="background:rgba(248,113,113,0.15)"><span class="material-symbols-outlined" style="color:#f87171">favorite</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">Nombre</div>
+        <div class="aj-dato-val vacio" id="aj-em1nombre-val">—</div>
+      </div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+    </div>
+
+    <div class="aj-dato-row" onclick="ajAbrirSheetRelacion('emerg1Relacion','aj-em1relacion-val')">
+      <div class="aj-dato-icon" style="background:var(--brand-20)"><span class="material-symbols-outlined" style="color:var(--brand)">people</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">Relación</div>
+        <div class="aj-dato-val vacio" id="aj-em1relacion-val">—</div>
+      </div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+    </div>
+
+    <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Teléfono de emergencia','','aj-em1tel-val','emerg1Telefono','Ej: 0962773052')">
+      <div class="aj-dato-icon" style="background:rgba(52,211,153,0.15)"><span class="material-symbols-outlined" style="color:#34d399">call</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">Teléfono</div>
+        <div class="aj-dato-val vacio" id="aj-em1tel-val">—</div>
+      </div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+    </div>
+
+    <div id="aj-emerg2-wrap" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
+        <div class="aj-sec-titulo" style="margin:0">Contacto 2</div>
+        <button onclick="ajEliminarEmerg2()" style="background:none;border:none;font-size:0.72rem;color:var(--danger);cursor:pointer;font-family:inherit">Eliminar</button>
+      </div>
+
+      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Nombre del contacto','','aj-em2nombre-val','emerg2Nombre','Nombre completo')">
+        <div class="aj-dato-icon" style="background:rgba(248,113,113,0.15)"><span class="material-symbols-outlined" style="color:#f87171">favorite</span></div>
+        <div class="aj-dato-texts">
+          <div class="aj-dato-label">Nombre</div>
+          <div class="aj-dato-val vacio" id="aj-em2nombre-val">—</div>
+        </div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </div>
+
+      <div class="aj-dato-row" onclick="ajAbrirSheetRelacion('emerg2Relacion','aj-em2relacion-val')">
+        <div class="aj-dato-icon" style="background:var(--brand-20)"><span class="material-symbols-outlined" style="color:var(--brand)">people</span></div>
+        <div class="aj-dato-texts">
+          <div class="aj-dato-label">Relación</div>
+          <div class="aj-dato-val vacio" id="aj-em2relacion-val">—</div>
+        </div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </div>
+
+      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Teléfono de emergencia','','aj-em2tel-val','emerg2Telefono','Ej: 0962773052')">
+        <div class="aj-dato-icon" style="background:rgba(52,211,153,0.15)"><span class="material-symbols-outlined" style="color:#34d399">call</span></div>
+        <div class="aj-dato-texts">
+          <div class="aj-dato-label">Teléfono</div>
+          <div class="aj-dato-val vacio" id="aj-em2tel-val">—</div>
+        </div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
       </div>
     </div>
-    <div class="datos-campo"><label>Prefijo</label>
-      <button class="aj-selector-btn" id="aj-e1pref-btn" onclick="ajAbrirSheetPrefijoTarget('aj-e1pref-display','aj-e1prefijo')">
-        <span id="aj-e1pref-display">Selecciona</span>
-        <span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--muted);">expand_more</span>
-      </button>
-      <input type="hidden" id="aj-e1prefijo">
-    </div>
-    <div class="datos-campo"><label>Teléfono</label><input type="tel" id="aj-e1telefono" placeholder="Ej: 0991234567" oninput="ajValidarTel(this)"></div>
-    <div style="height:1px;background:var(--border-light);margin:16px 0;"></div>
-    <div class="seccion-label">Contacto 2</div>
-    <div class="datos-campo"><label>Nombre</label><input type="text" id="aj-e2nombre" placeholder="Ej: Carlos López"></div>
-    <div class="datos-campo">
-      <label>Relación</label>
-      <div class="aj-pills-row" id="aj-e2rel-pills">
-        <span class="aj-pill" data-val="Amigx" onclick="ajSinglePill(this)">Amigx</span>
-        <span class="aj-pill" data-val="Familiar" onclick="ajSinglePill(this)">Familiar</span>
-        <span class="aj-pill" data-val="Pareja" onclick="ajSinglePill(this)">Pareja</span>
-        <span class="aj-pill aj-pill-otro" data-val="" onclick="ajAbrirSheetTexto('aj-sheet-e2rel','Escribe la relación','Ej: Compañerx de trabajo', function(v){ ajSetPillOtro(document.getElementById('aj-e2rel-pills'),v); })">Otro...</span>
-      </div>
-    </div>
-    <div class="datos-campo"><label>Prefijo</label>
-      <button class="aj-selector-btn" id="aj-e2pref-btn" onclick="ajAbrirSheetPrefijoTarget('aj-e2pref-display','aj-e2prefijo')">
-        <span id="aj-e2pref-display">Selecciona</span>
-        <span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--muted);">expand_more</span>
-      </button>
-      <input type="hidden" id="aj-e2prefijo">
-    </div>
-    <div class="datos-campo"><label>Teléfono</label><input type="tel" id="aj-e2telefono" placeholder="Ej: 0991234567" oninput="ajValidarTel(this)"></div>
-    <div class="error-msg" id="err-aj-emerg"></div>
-    <div class="cta-footer-spacer"></div>
-    <div class="cta-footer">
-      <button class="btn-guardar-sec" onclick="ajGuardarEmerg(this)">Guardar cambios</button>
-    </div>
+
+    <button class="aj-btn-agregar" id="aj-btn-agregar-em2" onclick="ajAgregarEmerg2()">
+      <span class="material-symbols-outlined">add</span>
+      Agregar segundo contacto
+    </button>
   </div>
 </div>
 
@@ -1323,18 +1387,20 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <div id="aj-sheet-pais-overlay" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);" onclick="ajCerrarSheetPais()"></div>
 <div id="aj-sheet-pais" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9601;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;max-height:65vh;flex-direction:column;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
   <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 4px;flex-shrink:0;"></div>
-  <div style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:8px 16px 12px;border-bottom:1px solid var(--border-light);flex-shrink:0;">País emisor del documento</div>
+  <div style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:8px 16px 12px;border-bottom:1px solid var(--border-light);flex-shrink:0;">País</div>
   <div id="aj-pais-list" style="overflow-y:auto;flex:1;"></div>
 </div>
 
 <!-- BOTTOM SHEET: Texto genérico -->
 <div id="aj-sheet-texto-overlay" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);" onclick="ajCerrarSheetTexto()"></div>
-<div id="aj-sheet-texto" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9601;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;padding:0 0 32px;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
+<div id="aj-sheet-texto" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9601;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;padding:0 0 32px;flex-direction:column;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
   <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 4px;"></div>
   <div id="aj-sheet-texto-titulo" style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:8px 16px 12px;border-bottom:1px solid var(--border-light);"></div>
+  <div id="aj-sheet-texto-subtitulo" style="display:none;font-size:0.78rem;color:var(--muted);text-align:center;line-height:1.4;padding:12px 16px 0;"></div>
   <div style="padding:16px;">
     <input type="text" id="aj-sheet-texto-input" style="width:100%;padding:13px 16px;background:var(--surface-2);border:1.5px solid var(--brand);border-radius:12px;font-size:0.88rem;font-family:inherit;" placeholder="">
-    <button onclick="ajConfirmarSheetTexto()" style="width:100%;padding:13px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-top:10px;">Confirmar</button>
+    <div class="aj-pills-row" id="aj-sheet-texto-pills" style="display:none;margin-top:0;"></div>
+    <button id="aj-sheet-texto-btn-confirmar" onclick="ajConfirmarSheetTexto()" style="width:100%;padding:13px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-top:10px;">Confirmar</button>
     <button onclick="ajCerrarSheetTexto()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:none;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
   </div>
 </div>

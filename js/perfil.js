@@ -310,144 +310,131 @@ function irAjSub(id, desdeHistorial) {
 
 function cerrarAjSub(id, desdeHistorial) {
   var sub = document.getElementById(id);
-  if (sub) sub.classList.remove('activa');
-  _ajSubAbierto = null;
+  if (sub) {
+    sub.classList.remove('activa');
+    _ajSubAbierto = null;
+  }
   if (!desdeHistorial) {
     history.pushState({ pantalla: 's-datos' }, '', '#s-datos');
   }
 }
 
+function _ajSetDatoVal(id, valor, vacioTexto, marcarVacio) {
+  var el = document.getElementById(id); if (!el) return;
+  if (valor) { el.textContent = valor; if (marcarVacio) el.classList.remove('vacio'); }
+  else { el.textContent = vacioTexto; if (marcarVacio) el.classList.add('vacio'); }
+}
+
 function _ajCargarSub(id) {
   var d = E.datos; if (!d) return;
   if (id === 'aj-sub-perfil') {
-    var inp = document.getElementById('aj-nombreDerby'); if (inp) inp.value = d.nombreDerby || '';
-    var inp2 = document.getElementById('aj-numeroDerby'); if (inp2) inp2.value = d.numeroDerby || '';
-    _ajCargarPronombres(d.pronombres || '');
+    _ajSetDatoVal('aj-nombre-display', d.nombre || E.nombre, '—', false);
+    _ajSetDatoVal('aj-nombreDerby-val', d.nombreDerby, '—', false);
+    _ajSetDatoVal('aj-numeroDerby-val', d.numeroDerby, 'Sin número asignado', true);
+    _ajSetDatoVal('aj-pron-val', d.pronombres, '—', false);
   } else if (id === 'aj-sub-contacto') {
-    var em = document.getElementById('aj-email-display'); if (em) em.textContent = d.email || '—';
-    _ajSetPrefijo('aj-prefijo-display', 'aj-prefijo-val', d.prefijo || '');
-    var tel = document.getElementById('aj-telefono'); if (tel) tel.value = d.telefono || '';
+    _ajSetDatoVal('aj-email-display', d.email, '—', false);
+    _ajSetPrefijo('aj-prefijo-display', null, d.prefijo || '');
+    _ajSetDatoVal('aj-telefono-val', d.telefono, '—', false);
   } else if (id === 'aj-sub-privacidad') {
-    var fn = document.getElementById('aj-fn-display');
-    if (fn) {
-      var fnRaw = (d.fechaNacimiento || '').toString().trim();
-      fn.textContent = fnRaw ? _ajFormatearFecha(fnRaw) : '—';
-    }
+    var fnRaw = (d.fechaNacimiento || '').toString().trim();
+    _ajSetDatoVal('aj-fecha-display', fnRaw ? _ajFormatearFecha(fnRaw) : '', '—', false);
     var fp = document.getElementById('aj-fechaPublica'); if (fp) fp.checked = (d.fechaPublica === 'Sí');
     var ep = document.getElementById('aj-edadPublica'); if (ep) ep.checked = (d.edadPublica === 'Sí');
   } else if (id === 'aj-sub-legal') {
-    _ajActivarPill('aj-tipoDoc-pills', d.tipoDocumento || '');
-    var nd = document.getElementById('aj-numeroDoc'); if (nd) nd.value = d.numeroDocumento || '';
-    var pd = document.getElementById('aj-pais-display'); if (pd) pd.textContent = d.paisExpedicion || 'Selecciona';
-    _ajPaisActual = d.paisExpedicion || '';
-    var nl = document.getElementById('aj-nombreLegal'); if (nl) nl.value = d.nombreLegal || '';
+    _ajSetDatoVal('aj-tipoDoc-val', d.tipoDocumento, '—', true);
+    _ajSetDatoVal('aj-numeroDoc-val', d.numeroDocumento, '—', true);
+    _ajSetDatoVal('aj-nombreLegal-val', d.nombreLegal, '—', true);
   } else if (id === 'aj-sub-direccion') {
-    var campos = ['callePrincipal','calleSecundaria','numeracion','sector'];
-    campos.forEach(function(c) { var el = document.getElementById('aj-'+c); if (el) el.value = d[c] || ''; });
-    _ajActivarPill('aj-canton-pills', d.canton || '');
+    _ajPaisActual = d.pais || '';
+    _ajSetDatoVal('aj-pais-val', d.pais, '—', false);
+    _ajSetDatoVal('aj-ciudad-val', d.ciudad, '—', true);
+    _ajSetDatoVal('aj-direccion-val', d.callePrincipal, '—', true);
   } else if (id === 'aj-sub-emerg') {
-    var e1n = document.getElementById('aj-e1nombre'); if (e1n) e1n.value = d.emerg1Nombre || '';
-    _ajActivarPill('aj-e1rel-pills', d.emerg1Relacion || '');
-    _ajSetPrefijo('aj-e1pref-display', 'aj-e1prefijo', d.emerg1Prefijo || '');
-    var e1t = document.getElementById('aj-e1telefono'); if (e1t) e1t.value = d.emerg1Telefono || '';
-    var e2n = document.getElementById('aj-e2nombre'); if (e2n) e2n.value = d.emerg2Nombre || '';
-    _ajActivarPill('aj-e2rel-pills', d.emerg2Relacion || '');
-    _ajSetPrefijo('aj-e2pref-display', 'aj-e2prefijo', d.emerg2Prefijo || '');
-    var e2t = document.getElementById('aj-e2telefono'); if (e2t) e2t.value = d.emerg2Telefono || '';
+    _ajSetDatoVal('aj-em1nombre-val', d.emerg1Nombre, '—', true);
+    _ajSetDatoVal('aj-em1relacion-val', d.emerg1Relacion, '—', true);
+    _ajSetDatoVal('aj-em1tel-val', d.emerg1Telefono, '—', true);
+    var tieneEmerg2 = !!(d.emerg2Nombre || d.emerg2Relacion || d.emerg2Telefono);
+    var wrap = document.getElementById('aj-emerg2-wrap');
+    var btnAgregar = document.getElementById('aj-btn-agregar-em2');
+    if (wrap) wrap.style.display = tieneEmerg2 ? 'block' : 'none';
+    if (btnAgregar) btnAgregar.style.display = tieneEmerg2 ? 'none' : '';
+    _ajSetDatoVal('aj-em2nombre-val', d.emerg2Nombre, '—', true);
+    _ajSetDatoVal('aj-em2relacion-val', d.emerg2Relacion, '—', true);
+    _ajSetDatoVal('aj-em2tel-val', d.emerg2Telefono, '—', true);
   }
-}
-
-function _ajActivarPill(containerId, valor) {
-  var container = document.getElementById(containerId); if (!container) return;
-  container.querySelectorAll('.aj-pill').forEach(function(p) { p.classList.remove('activa','activa-outline'); });
-  var encontrado = false;
-  container.querySelectorAll('.aj-pill:not(.aj-pill-otro)').forEach(function(p) {
-    if (p.dataset.val === valor) { p.classList.add('activa'); encontrado = true; }
-  });
-  if (!encontrado && valor) {
-    var otro = container.querySelector('.aj-pill-otro');
-    if (otro) { otro.dataset.val = valor; otro.classList.add('activa-outline'); }
-  }
-}
-
-function _ajCargarPronombres(pronStr) {
-  var pills = document.querySelectorAll('#aj-pron-pills .aj-pill:not(.aj-pill-otro)');
-  pills.forEach(function(p) { p.classList.remove('activa'); });
-  var otros = pronStr.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
-  var otroTexto = '';
-  otros.forEach(function(v) {
-    var found = false;
-    pills.forEach(function(p) { if (p.dataset.val === v) { p.classList.add('activa'); found = true; } });
-    if (!found) otroTexto = v;
-  });
-  var otroPill = document.querySelector('#aj-pron-pills .aj-pill-otro');
-  var otroDisplay = document.getElementById('aj-pron-otro-display');
-  if (otroTexto) {
-    if (otroPill) otroPill.classList.add('activa-outline');
-    if (otroDisplay) { otroDisplay.textContent = 'Otro: ' + otroTexto; otroDisplay.style.display = 'block'; }
-  } else {
-    if (otroPill) otroPill.classList.remove('activa','activa-outline');
-    if (otroDisplay) otroDisplay.style.display = 'none';
-  }
-}
-
-function ajSinglePill(el) {
-  var container = el.closest('.aj-pills-row');
-  container.querySelectorAll('.aj-pill').forEach(function(p) { p.classList.remove('activa','activa-outline'); });
-  el.classList.add('activa');
 }
 
 function ajTogglePill(el) {
   el.classList.toggle('activa');
 }
 
-function _ajGetPronombres() {
-  var vals = [];
-  document.querySelectorAll('#aj-pron-pills .aj-pill:not(.aj-pill-otro).activa').forEach(function(p) { vals.push(p.dataset.val); });
-  var otroDisplay = document.getElementById('aj-pron-otro-display');
-  var otroPill = document.querySelector('#aj-pron-pills .aj-pill-otro');
-  if (otroPill && (otroPill.classList.contains('activa') || otroPill.classList.contains('activa-outline')) && otroDisplay && otroDisplay.textContent) {
-    vals.push(otroDisplay.textContent.replace('Otro: ',''));
-  }
-  return vals.join(', ');
-}
-
-function _ajGetSinglePill(containerId) {
-  var el = document.querySelector('#' + containerId + ' .aj-pill.activa, #' + containerId + ' .aj-pill.activa-outline');
-  return el ? el.dataset.val : '';
-}
-
-/* ── Pronombre "Otro" ──────────────────────────────────── */
-var _ajSheetTextoCallback = null;
-
-function ajAbrirOtroPron() {
-  ajAbrirSheetTexto('aj-sheet-canton', 'Escribe tu pronombre', 'Ej: Xe/xem, Xo...', function(v) {
-    var otroPill = document.querySelector('#aj-pron-pills .aj-pill-otro');
-    var otroDisplay = document.getElementById('aj-pron-otro-display');
-    if (otroPill) otroPill.classList.add('activa-outline');
-    if (otroDisplay) { otroDisplay.textContent = 'Otro: ' + v; otroDisplay.style.display = 'block'; }
-  });
-}
-
 /* ── Bottom sheet genérico de texto ───────────────────── */
+var _ajSheetTextoCallback = null;
+var _ajSheetTextoModo = 'texto'; // 'texto' | 'pills-multi' | 'pills-single'
+// Contador de generación: con el rediseño de filas este mismo sheet se abre/cierra
+// mucho más seguido (una fila = un ciclo abrir→guardar→cerrar) que antes, así que
+// es fácil abrir un sheet nuevo dentro de la ventana de 350ms en que el cierre
+// anterior todavía tiene pendiente su setTimeout de limpieza — sin esta guarda,
+// ese cleanup tardío podía nulear el callback del sheet nuevo (o volver a ocultarlo)
+// aunque ya estuviera abierto de nuevo. Cada abrir incrementa el contador; el cierre
+// solo aplica su limpieza si nadie abrió un sheet nuevo mientras tanto.
+var _ajSheetTextoGen = 0;
 function ajAbrirSheetTexto(sheetId, titulo, placeholder, callback) {
+  _ajSheetTextoGen++;
   _ajSheetTextoCallback = callback;
+  _ajSheetTextoModo = 'texto';
   var tit = document.getElementById('aj-sheet-texto-titulo');
   var inp = document.getElementById('aj-sheet-texto-input');
+  var pills = document.getElementById('aj-sheet-texto-pills');
+  var sub = document.getElementById('aj-sheet-texto-subtitulo');
+  var btnConfirmar = document.getElementById('aj-sheet-texto-btn-confirmar');
+  if (sub) sub.style.display = 'none';
+  if (pills) { pills.style.display = 'none'; pills.innerHTML = ''; }
+  if (btnConfirmar) btnConfirmar.style.display = '';
   if (tit) tit.textContent = titulo;
-  if (inp) { inp.value = ''; inp.placeholder = placeholder; }
+  if (inp) { inp.style.display = ''; inp.value = ''; inp.placeholder = placeholder; }
   var ov = document.getElementById('aj-sheet-texto-overlay');
   var sh = document.getElementById('aj-sheet-texto');
   if (ov) ov.style.display = 'block';
   if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
-  setTimeout(function(){ var i = document.getElementById('aj-sheet-texto-input'); if (i) i.focus(); }, 400);
+  setTimeout(function(){ var i = document.getElementById('aj-sheet-texto-input'); if (i && _ajSheetTextoModo === 'texto') i.focus(); }, 400);
+}
+
+/* ── Bottom sheet de texto en modo pills (pronombres/relación/tipo de doc) ── */
+function _ajAbrirSheetTextoPills(titulo, subtitulo, modo, pillsHtml, callback) {
+  _ajSheetTextoGen++;
+  _ajSheetTextoCallback = callback;
+  _ajSheetTextoModo = modo;
+  var tit = document.getElementById('aj-sheet-texto-titulo');
+  var inp = document.getElementById('aj-sheet-texto-input');
+  var pills = document.getElementById('aj-sheet-texto-pills');
+  var sub = document.getElementById('aj-sheet-texto-subtitulo');
+  var btnConfirmar = document.getElementById('aj-sheet-texto-btn-confirmar');
+  if (tit) tit.textContent = titulo;
+  if (sub) { if (subtitulo) { sub.textContent = subtitulo; sub.style.display = 'block'; } else { sub.style.display = 'none'; } }
+  if (inp) inp.style.display = 'none';
+  if (pills) { pills.innerHTML = pillsHtml; pills.style.display = 'flex'; }
+  if (btnConfirmar) btnConfirmar.style.display = (modo === 'pills-single') ? 'none' : '';
+  var ov = document.getElementById('aj-sheet-texto-overlay');
+  var sh = document.getElementById('aj-sheet-texto');
+  if (ov) ov.style.display = 'block';
+  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
+}
+
+function _ajSheetTextoPillSingleClick(el) {
+  var v = el.dataset.val;
+  if (_ajSheetTextoCallback) _ajSheetTextoCallback(v);
+  ajCerrarSheetTexto();
 }
 
 function ajCerrarSheetTexto() {
   var sh = document.getElementById('aj-sheet-texto');
   var ov = document.getElementById('aj-sheet-texto-overlay');
+  var genAlCerrar = _ajSheetTextoGen;
   if (sh) sh.style.transform = 'translateY(100%)';
   setTimeout(function(){
+    if (_ajSheetTextoGen !== genAlCerrar) return; // se abrió un sheet nuevo mientras este cerraba
     if (sh) sh.style.display = 'none';
     if (ov) ov.style.display = 'none';
     _ajSheetTextoCallback = null;
@@ -455,17 +442,18 @@ function ajCerrarSheetTexto() {
 }
 
 function ajConfirmarSheetTexto() {
+  if (_ajSheetTextoModo === 'pills-multi') {
+    var vals = [];
+    document.querySelectorAll('#aj-sheet-texto-pills .aj-pill.activa').forEach(function(p) { vals.push(p.dataset.val); });
+    if (!vals.length) return;
+    if (_ajSheetTextoCallback) _ajSheetTextoCallback(vals.join(', '));
+    ajCerrarSheetTexto();
+    return;
+  }
   var v = (document.getElementById('aj-sheet-texto-input').value || '').trim();
   if (!v) return;
   if (_ajSheetTextoCallback) _ajSheetTextoCallback(v);
   ajCerrarSheetTexto();
-}
-
-function ajSetPillOtro(container, valor) {
-  if (!container) return;
-  container.querySelectorAll('.aj-pill').forEach(function(p) { p.classList.remove('activa','activa-outline'); });
-  var otro = container.querySelector('.aj-pill-otro');
-  if (otro) { otro.dataset.val = valor; otro.classList.add('activa-outline'); }
 }
 
 /* ── Bottom sheet prefijo ─────────────────────────────── */
@@ -506,16 +494,6 @@ function ajAbrirSheetPrefijo() {
   var s = document.getElementById('aj-prefijo-search'); if (s) s.value = '';
 }
 
-function ajAbrirSheetPrefijoTarget(displayId, hiddenId) {
-  _ajPrefijoTarget = { displayId: displayId, hiddenId: hiddenId };
-  _ajRenderPrefijos(_AJ_PREFIJOS);
-  var ov = document.getElementById('aj-sheet-prefijo-overlay');
-  var sh = document.getElementById('aj-sheet-prefijo');
-  if (ov) ov.style.display = 'block';
-  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
-  var s = document.getElementById('aj-prefijo-search'); if (s) s.value = '';
-}
-
 function ajCerrarSheetPrefijo() {
   var sh = document.getElementById('aj-sheet-prefijo');
   var ov = document.getElementById('aj-sheet-prefijo-overlay');
@@ -548,7 +526,14 @@ function ajSelPrefijo(pais) {
   var val = p.bandera + ' ' + p.cod + ' (' + p.pais + ')';
   var disp = document.getElementById(_ajPrefijoTarget.displayId);
   if (disp) disp.textContent = p.bandera + ' ' + p.cod + ' ' + p.pais;
-  if (_ajPrefijoTarget.hiddenId) { var h = document.getElementById(_ajPrefijoTarget.hiddenId); if (h) h.value = val; }
+  if (_ajPrefijoTarget.hiddenId) {
+    var h = document.getElementById(_ajPrefijoTarget.hiddenId); if (h) h.value = val;
+  } else {
+    // Sin hiddenId significa que no hay un formulario capturando este valor para
+    // guardarlo después con un botón — con el rediseño de filas ya no existe ese
+    // botón, así que autoguarda directo (mismo criterio que ajSelPais/ajSelPaisOtro).
+    _ajGuardar({ prefijo: val });
+  }
   ajCerrarSheetPrefijo();
 }
 
@@ -582,93 +567,112 @@ function ajCerrarSheetPais() {
 
 function ajSelPais(pais) {
   _ajPaisActual = pais;
-  var disp = document.getElementById('aj-pais-display');
-  if (disp) disp.textContent = pais;
+  var disp = document.getElementById('aj-pais-val');
+  if (disp) { disp.textContent = pais; disp.classList.remove('vacio'); }
+  _ajGuardar({ pais: pais });
   ajCerrarSheetPais();
 }
 
 function ajSelPaisOtro() {
   ajCerrarSheetPais();
-  ajAbrirSheetTexto('aj-sheet-texto', 'País emisor', 'Escribe el nombre del país', function(v) {
+  ajAbrirSheetTexto('aj-sheet-texto', 'País', 'Escribe el nombre del país', function(v) {
     _ajPaisActual = v;
-    var disp = document.getElementById('aj-pais-display');
-    if (disp) disp.textContent = v;
+    var disp = document.getElementById('aj-pais-val');
+    if (disp) { disp.textContent = v; disp.classList.remove('vacio'); }
+    _ajGuardar({ pais: v });
   });
 }
 
-/* ── Validar teléfono ─────────────────────────────────── */
-function ajValidarTel(inp) {
-  var v = inp.value.replace(/\D/g, '');
-  inp.value = v;
-  var hint = inp.nextElementSibling;
-  if (v.length > 0 && (v.length < 7 || v.length > 15)) {
-    inp.style.borderColor = 'var(--danger)';
-    if (hint && hint.classList.contains('datos-hint')) { hint.textContent = 'El número debe tener entre 7 y 15 dígitos.'; hint.style.color = 'var(--danger)'; }
-  } else {
-    inp.style.borderColor = '';
-    if (hint && hint.classList.contains('datos-hint')) { hint.textContent = ''; hint.style.color = ''; }
-  }
+/* ── Filas de dato: bottom sheet de texto genérico ────── */
+function ajAbrirSheetTextoGenerico(titulo, subtitulo, displayId, campo, placeholder) {
+  var valorActual = (E.datos && E.datos[campo]) || '';
+  ajAbrirSheetTexto('aj-sheet-texto', titulo, placeholder, function(v) {
+    var payload = {}; payload[campo] = v;
+    _ajGuardar(payload);
+    var disp = document.getElementById(displayId);
+    if (disp) { disp.textContent = v; disp.classList.remove('vacio'); }
+  });
+  var sub = document.getElementById('aj-sheet-texto-subtitulo');
+  if (sub) { if (subtitulo) { sub.textContent = subtitulo; sub.style.display = 'block'; } else { sub.style.display = 'none'; } }
+  var inp = document.getElementById('aj-sheet-texto-input');
+  if (inp) inp.value = valorActual;
 }
 
-/* ── Guardar cada sub-sección ─────────────────────────── */
-function ajGuardarPerfil(btn) {
-  var payload = {
-    nombreDerby: document.getElementById('aj-nombreDerby').value.trim(),
-    numeroDerby: document.getElementById('aj-numeroDerby').value.trim(),
-    pronombres: _ajGetPronombres()
-  };
-  _ajGuardar(payload, btn, 'aj-sub-perfil');
+/* ── Pronombres (pills multiselect) ───────────────────── */
+function ajAbrirSheetPronombres() {
+  var actuales = ((E.datos && E.datos.pronombres) || '').split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+  var opciones = ['Ella', 'Él', 'Elle'];
+  var html = opciones.map(function(o) {
+    var sel = actuales.indexOf(o) !== -1;
+    return '<span class="aj-pill' + (sel ? ' activa' : '') + '" data-val="' + o + '" onclick="ajTogglePill(this)">' + o + '</span>';
+  }).join('');
+  _ajAbrirSheetTextoPills('Pronombres', 'Selecciona todos los que apliquen.', 'pills-multi', html, function(valorJoin) {
+    _ajGuardar({
+      pronombres: valorJoin,
+      nombreDerby: (E.datos && E.datos.nombreDerby) || '',
+      numeroDerby: (E.datos && E.datos.numeroDerby) || ''
+    });
+    var disp = document.getElementById('aj-pron-val');
+    if (disp) disp.textContent = valorJoin;
+  });
 }
 
-function ajGuardarContacto(btn) {
-  var tel = document.getElementById('aj-telefono').value.trim();
-  if (tel && (tel.length < 7 || tel.length > 15)) { err('err-aj-contacto', 'El número debe tener entre 7 y 15 dígitos.'); return; }
-  var prefijoDisp = document.getElementById('aj-prefijo-display');
-  var prefijoVal = prefijoDisp ? prefijoDisp.textContent : '';
-  var match = _AJ_PREFIJOS.find(function(p) { return prefijoVal.indexOf(p.pais) !== -1; });
-  var prefijoGuardar = match ? match.bandera + ' ' + match.cod + ' (' + match.pais + ')' : prefijoVal;
-  _ajGuardar({ prefijo: prefijoGuardar, telefono: tel }, btn, 'aj-sub-contacto');
+/* ── Tipo de documento (pills single, guarda al tocar) ── */
+function ajAbrirSheetTipoDoc() {
+  var actual = (E.datos && E.datos.tipoDocumento) || '';
+  var opciones = ['Cédula', 'DNI', 'Pasaporte', 'Otro'];
+  var html = opciones.map(function(o) {
+    var sel = o === actual;
+    return '<span class="aj-pill' + (sel ? ' activa' : '') + '" data-val="' + o + '" onclick="_ajSheetTextoPillSingleClick(this)">' + o + '</span>';
+  }).join('');
+  _ajAbrirSheetTextoPills('Tipo de documento', '', 'pills-single', html, function(v) {
+    _ajGuardar({ tipoDocumento: v });
+    var disp = document.getElementById('aj-tipoDoc-val');
+    if (disp) { disp.textContent = v; disp.classList.remove('vacio'); }
+  });
 }
 
-function ajGuardarPrivacidad(btn) {
+/* ── Relación de contacto de emergencia (pills single) ── */
+function ajAbrirSheetRelacion(campo, displayId) {
+  var actual = (E.datos && E.datos[campo]) || '';
+  var opciones = ['Madre', 'Padre', 'Pareja', 'Hermana/o', 'Amiga/o', 'Otra'];
+  var html = opciones.map(function(o) {
+    var sel = o === actual;
+    return '<span class="aj-pill' + (sel ? ' activa' : '') + '" data-val="' + o + '" onclick="_ajSheetTextoPillSingleClick(this)">' + o + '</span>';
+  }).join('');
+  _ajAbrirSheetTextoPills('Relación', '', 'pills-single', html, function(v) {
+    var payload = {}; payload[campo] = v;
+    _ajGuardar(payload);
+    var disp = document.getElementById(displayId);
+    if (disp) { disp.textContent = v; disp.classList.remove('vacio'); }
+  });
+}
+
+/* ── Privacidad: autoguardado sin botón ───────────────── */
+function ajGuardarPrivacidadAuto() {
   _ajGuardar({
     fechaPublica: document.getElementById('aj-fechaPublica').checked ? 'Sí' : 'No',
     edadPublica: document.getElementById('aj-edadPublica').checked ? 'Sí' : 'No'
-  }, btn, 'aj-sub-privacidad');
+  });
 }
 
-function ajGuardarLegal(btn) {
-  _ajGuardar({
-    tipoDocumento: _ajGetSinglePill('aj-tipoDoc-pills'),
-    numeroDocumento: document.getElementById('aj-numeroDoc').value.trim(),
-    paisExpedicion: _ajPaisActual,
-    nombreLegal: document.getElementById('aj-nombreLegal').value.trim()
-  }, btn, 'aj-sub-legal');
+/* ── Segundo contacto de emergencia (agregar/quitar) ──── */
+function ajAgregarEmerg2() {
+  var wrap = document.getElementById('aj-emerg2-wrap');
+  var btn = document.getElementById('aj-btn-agregar-em2');
+  if (wrap) wrap.style.display = 'block';
+  if (btn) btn.style.display = 'none';
 }
 
-function ajGuardarDireccion(btn) {
-  _ajGuardar({
-    callePrincipal: document.getElementById('aj-callePrincipal').value.trim(),
-    calleSecundaria: document.getElementById('aj-calleSecundaria').value.trim(),
-    numeracion: document.getElementById('aj-numeracion').value.trim(),
-    sector: document.getElementById('aj-sector').value.trim(),
-    canton: _ajGetSinglePill('aj-canton-pills')
-  }, btn, 'aj-sub-direccion');
-}
-
-function ajGuardarEmerg(btn) {
-  var e1pref = document.getElementById('aj-e1prefijo');
-  var e2pref = document.getElementById('aj-e2prefijo');
-  _ajGuardar({
-    emerg1Nombre: document.getElementById('aj-e1nombre').value.trim(),
-    emerg1Relacion: _ajGetSinglePill('aj-e1rel-pills'),
-    emerg1Prefijo: e1pref ? e1pref.value : '',
-    emerg1Telefono: document.getElementById('aj-e1telefono').value.trim(),
-    emerg2Nombre: document.getElementById('aj-e2nombre').value.trim(),
-    emerg2Relacion: _ajGetSinglePill('aj-e2rel-pills'),
-    emerg2Prefijo: e2pref ? e2pref.value : '',
-    emerg2Telefono: document.getElementById('aj-e2telefono').value.trim()
-  }, btn, 'aj-sub-emerg');
+function ajEliminarEmerg2() {
+  var wrap = document.getElementById('aj-emerg2-wrap');
+  var btn = document.getElementById('aj-btn-agregar-em2');
+  if (wrap) wrap.style.display = 'none';
+  if (btn) btn.style.display = '';
+  _ajSetDatoVal('aj-em2nombre-val', '', '—', true);
+  _ajSetDatoVal('aj-em2relacion-val', '', '—', true);
+  _ajSetDatoVal('aj-em2tel-val', '', '—', true);
+  _ajGuardar({ emerg2Nombre: '', emerg2Relacion: '', emerg2Telefono: '' });
 }
 
 function _ajGuardar(payload, btn, subId) {
