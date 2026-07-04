@@ -452,7 +452,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
     <!-- Equipamiento -->
     <div class="aj-group">
-      <div class="aj-row" onclick="irEditarEquipDesdeHome()">
+      <div class="aj-row" onclick="irAjSub('aj-sub-equip')">
         <div class="aj-icon aj-icon-orange"><span class="material-symbols-outlined">roller_skating</span></div>
         <div class="aj-content">
           <div class="aj-title">Mis patines y protecciones</div>
@@ -1090,6 +1090,35 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 </div>
 
+<!-- SUB: Equipamiento (ajustes) -->
+<div class="aj-sub" id="aj-sub-equip">
+  <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
+    <button class="app-nav-back" onclick="cerrarAjSub('aj-sub-equip')">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </button>
+    <span class="app-nav-title">Editar equipamiento</span>
+    <div style="width:40px;flex-shrink:0;"></div>
+  </div>
+  <div class="aj-sub-inner">
+    <div class="aj-dato-row" onclick="ajAbrirSheetTallaAjustes()">
+      <div class="aj-dato-icon" style="background:var(--brand-20)"><span class="material-symbols-outlined" style="color:var(--brand)">roller_skating</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">Patines</div>
+        <div class="aj-dato-val" id="aj-equip-pat-val">—</div>
+      </div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+    </div>
+    <div class="aj-dato-row" onclick="ajAbrirSheetProtecAjustes()">
+      <div class="aj-dato-icon" style="background:var(--info-bg-light)"><span class="material-symbols-outlined" style="color:var(--info)">shield</span></div>
+      <div class="aj-dato-texts">
+        <div class="aj-dato-label">Protecciones</div>
+        <div class="aj-dato-val" id="aj-equip-protec-val">—</div>
+      </div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+    </div>
+  </div>
+</div>
+
 <!-- SUB: Perfil (derby) -->
 <div class="aj-sub" id="aj-sub-perfil">
   <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
@@ -1445,6 +1474,59 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <button id="btn-confirmar-talla" onclick="confirmarTallaSheet()" disabled style="width:100%;padding:13px;background:var(--brand);border:none;border-radius:12px;color:var(--white);font-size:0.85rem;font-weight:800;cursor:pointer;font-family:inherit;margin-top:16px;opacity:0.4;">Confirmar talla</button>
     <button onclick="cerrarSheetTalla()" style="width:100%;padding:10px;background:transparent;border:none;color:var(--muted);font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
   </div>
+</div>
+
+<!-- AJ SHEET: Talla patines (ajustes perfil) -->
+<div id="aj-sheet-talla-aj-overlay" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);" onclick="ajCerrarSheetTallaAjustes()"></div>
+<div id="aj-sheet-talla-aj" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9700;background:var(--bg);border-radius:20px 20px 0 0;padding:20px 16px 32px;transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);transform:translateY(100%);">
+  <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px;"></div>
+  <h3 style="font-size:1.05rem;font-weight:800;margin-bottom:4px;">¿Qué talla necesitas?</h3>
+  <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;">Sin selección significa que no necesitas patines prestados.</p>
+  <div id="aj-talla-aj-grid" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;"></div>
+  <div class="error-msg" id="err-aj-talla"></div>
+  <button class="btn btn-primary" onclick="ajGuardarTallaAjustes(this)" style="width:100%;">Guardar</button>
+  <button onclick="ajCerrarSheetTallaAjustes()" style="width:100%;margin-top:10px;background:none;border:none;font-size:0.82rem;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;padding:8px;">Cancelar</button>
+</div>
+
+<!-- AJ SHEET: Protecciones (ajustes perfil) -->
+<div id="aj-sheet-protec-aj-overlay" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);" onclick="ajCerrarSheetProtecAjustes()"></div>
+<div id="aj-sheet-protec-aj" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9700;background:var(--bg);border-radius:20px 20px 0 0;padding:20px 16px 32px;transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);transform:translateY(100%);">
+  <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px;"></div>
+  <h3 style="font-size:1.05rem;font-weight:800;margin-bottom:4px;">¿Necesitas protecciones?</h3>
+  <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;">Completas incluyen casco, rodilleras, coderas y muñequeras.</p>
+  <div class="equip-pills-protec" id="aj-s3c-pills-aj">
+    <div class="equip-pill-protec" data-val="Sí" onclick="ajSelProtecAjustes(this)">
+      <span class="material-symbols-outlined equip-pico">shield</span>
+      <div class="equip-ptxt"><div class="equip-ptit">Sí, necesito protecciones completas</div></div>
+      <div class="equip-pcheck"><span class="material-symbols-outlined">check</span></div>
+    </div>
+    <div class="equip-pill-protec" data-val="No" onclick="ajSelProtecAjustes(this)">
+      <span class="material-symbols-outlined equip-pico">check_circle</span>
+      <div class="equip-ptxt"><div class="equip-ptit">No, tengo las mías</div></div>
+      <div class="equip-pcheck"><span class="material-symbols-outlined">check</span></div>
+    </div>
+    <div class="equip-pill-protec" data-val="Otro" id="aj-pill-protec-otro-aj" onclick="ajSelProtecAjustes(this)">
+      <span class="material-symbols-outlined equip-pico">help_outline</span>
+      <div class="equip-ptxt">
+        <div class="equip-ptit">Tengo algunas, me faltan otras</div>
+        <div class="equip-psub" id="aj-protec-otro-sub-aj">Toca para especificar</div>
+      </div>
+      <div class="equip-pcheck"><span class="material-symbols-outlined">check</span></div>
+    </div>
+  </div>
+  <div id="aj-bs-protec-parciales" style="display:none;margin-top:14px;">
+    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;">¿Cuáles necesitas?</p>
+    <div class="aj-pills-row" id="aj-bs-protec-pills-aj">
+      <span class="aj-pill" data-val="Casco" onclick="this.classList.toggle('activa')">Casco</span>
+      <span class="aj-pill" data-val="Muñequeras" onclick="this.classList.toggle('activa')">Muñequeras</span>
+      <span class="aj-pill" data-val="Rodilleras" onclick="this.classList.toggle('activa')">Rodilleras</span>
+      <span class="aj-pill" data-val="Coderas" onclick="this.classList.toggle('activa')">Coderas</span>
+    </div>
+    <div class="error-msg" id="err-aj-protec-parciales"></div>
+  </div>
+  <div class="error-msg" id="err-aj-protec-aj" style="margin-top:8px;"></div>
+  <button class="btn btn-primary" onclick="ajGuardarProtecAjustes(this)" style="width:100%;margin-top:16px;">Guardar</button>
+  <button onclick="ajCerrarSheetProtecAjustes()" style="width:100%;margin-top:10px;background:none;border:none;font-size:0.82rem;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;padding:8px;">Cancelar</button>
 </div>
 
 </body>

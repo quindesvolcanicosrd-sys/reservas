@@ -202,20 +202,6 @@ function _poblarResumenEquipPerfil() {
     '<strong>Protecciones:</strong> ' + pro;
 }
 
-function irEditarEquipDesdeHome() {
-  E.editPat = ''; E.editTalla = ''; E.editProtec = ''; E.editandoDesdeHome = true;
-  document.querySelectorAll('#s3a-pills .equip-pill-bin').forEach(function(p) {
-    p.classList.remove('sel-si','sel-no');
-  });
-  document.querySelectorAll('#s3c-pills .equip-pill-protec').forEach(function(p) {
-    p.classList.remove('sel');
-  });
-  var sub = document.getElementById('protec-otro-sub');
-  if (sub) { sub.textContent = 'Toca para especificar'; sub.style.color = ''; }
-  document.querySelectorAll('#bs-protec-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
-  ir('s3a');
-}
-
 // ─── DATE PICKER (Mis Datos — ddp-*) ─────────────────────────────────────────
 var _MESES_DDP = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 var _ddpSt = { vy:1990, vm:0, sy:null, sm:null, sd:null, yearMode:false, monthMode:false };
@@ -327,6 +313,12 @@ function _ajSetDatoVal(id, valor, vacioTexto, marcarVacio) {
 
 function _ajCargarSub(id) {
   var d = E.datos; if (!d) return;
+  if (id === 'aj-sub-equip') {
+    var d = E.datos || {};
+    document.getElementById('aj-equip-pat-val').textContent = d.necesitaPatines === 'Sí' ? 'Talla ' + (d.talla || '—') : 'No necesitas patines';
+    document.getElementById('aj-equip-protec-val').textContent = d.necesitaProtecciones || '—';
+    return;
+  }
   if (id === 'aj-sub-perfil') {
     _ajSetDatoVal('aj-nombre-display', d.nombre || E.nombre, '—', false);
     _ajSetDatoVal('aj-nombreDerby-val', d.nombreDerby, '—', false);
@@ -713,4 +705,135 @@ function ajCerrarSheetLogout() {
   var ov = document.getElementById('aj-sheet-logout-overlay');
   if (sh) sh.style.transform = 'translateY(100%)';
   setTimeout(function(){ if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+
+/* ── Equipamiento (Ajustes del perfil) ────────────────── */
+function ajAbrirSheetTallaAjustes() {
+  var grid = document.getElementById('aj-talla-aj-grid');
+  grid.innerHTML = '<div class="spinner" style="margin:16px auto;"></div>';
+  var ov = document.getElementById('aj-sheet-talla-aj-overlay');
+  var sh = document.getElementById('aj-sheet-talla-aj');
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  api({ action: 'getTallasDisponibles' }, function(tallas) {
+    var tallaActual = E.datos && E.datos.talla ? E.datos.talla : '';
+    grid.innerHTML = tallas.map(function(t) {
+      return '<div class="equip-talla-pill' + (String(t) === String(tallaActual) ? ' sel' : '') + '" onclick="ajSelTallaGridAjustes(this,\'' + t + '\')">' + t + '</div>';
+    }).join('');
+  }, function() {
+    grid.innerHTML = '<p style="color:var(--danger);font-size:0.82rem;">Error al cargar tallas. Intenta de nuevo.</p>';
+  });
+}
+
+function ajSelTallaGridAjustes(el, talla) {
+  var yaSeleccionada = el.classList.contains('sel');
+  document.querySelectorAll('#aj-talla-aj-grid .equip-talla-pill').forEach(function(p) { p.classList.remove('sel'); });
+  if (!yaSeleccionada) el.classList.add('sel');
+}
+
+function ajCerrarSheetTallaAjustes() {
+  var sh = document.getElementById('aj-sheet-talla-aj');
+  var ov = document.getElementById('aj-sheet-talla-aj-overlay');
+  sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { sh.style.display = 'none'; ov.style.display = 'none'; }, 350);
+}
+
+function ajGuardarTallaAjustes(btn) {
+  var sel = document.querySelector('#aj-talla-aj-grid .equip-talla-pill.sel');
+  var talla = sel ? sel.textContent.trim() : '';
+  var necesitaPatines = talla ? 'Sí' : 'No';
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+  api({ action: 'actualizarEquipamientoPersona', nombre: E.nombre, necesitaPatines: necesitaPatines, talla: talla, necesitaProtecciones: E.datos.necesitaProtecciones || 'No' }, function() {
+    E.datos.necesitaPatines = necesitaPatines;
+    E.datos.talla = talla;
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+    document.getElementById('aj-equip-pat-val').textContent = talla ? 'Talla ' + talla : 'No necesitas patines';
+    _actualizarResumenEquipAjustes();
+    ajCerrarSheetTallaAjustes();
+    mostrarToast('Equipamiento actualizado', 'ok');
+  }, function(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+    document.getElementById('err-aj-talla').textContent = e.message || 'Error al guardar.';
+  });
+}
+
+function ajAbrirSheetProtecAjustes() {
+  document.querySelectorAll('#aj-s3c-pills-aj .equip-pill-protec').forEach(function(p) { p.classList.remove('sel'); });
+  document.getElementById('aj-bs-protec-parciales').style.display = 'none';
+  document.querySelectorAll('#aj-bs-protec-pills-aj .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  var sub = document.getElementById('aj-protec-otro-sub-aj');
+  if (sub) { sub.textContent = 'Toca para especificar'; sub.style.color = ''; }
+  var protecActual = E.datos && E.datos.necesitaProtecciones ? E.datos.necesitaProtecciones : '';
+  if (protecActual === 'Sí') {
+    var p = document.querySelector('#aj-s3c-pills-aj .equip-pill-protec[data-val="Sí"]');
+    if (p) p.classList.add('sel');
+  } else if (protecActual === 'No') {
+    var p = document.querySelector('#aj-s3c-pills-aj .equip-pill-protec[data-val="No"]');
+    if (p) p.classList.add('sel');
+  } else if (protecActual) {
+    var p = document.getElementById('aj-pill-protec-otro-aj');
+    if (p) p.classList.add('sel');
+    document.getElementById('aj-bs-protec-parciales').style.display = 'block';
+    protecActual.split(',').forEach(function(v) {
+      var pill = document.querySelector('#aj-bs-protec-pills-aj .aj-pill[data-val="' + v.trim() + '"]');
+      if (pill) pill.classList.add('activa');
+    });
+  }
+  var ov = document.getElementById('aj-sheet-protec-aj-overlay');
+  var sh = document.getElementById('aj-sheet-protec-aj');
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+}
+
+function ajSelProtecAjustes(el) {
+  document.querySelectorAll('#aj-s3c-pills-aj .equip-pill-protec').forEach(function(p) { p.classList.remove('sel'); });
+  el.classList.add('sel');
+  var val = el.dataset.val;
+  document.getElementById('aj-bs-protec-parciales').style.display = val === 'Otro' ? 'block' : 'none';
+}
+
+function ajCerrarSheetProtecAjustes() {
+  var sh = document.getElementById('aj-sheet-protec-aj');
+  var ov = document.getElementById('aj-sheet-protec-aj-overlay');
+  sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { sh.style.display = 'none'; ov.style.display = 'none'; }, 350);
+}
+
+function ajGuardarProtecAjustes(btn) {
+  var sel = document.querySelector('#aj-s3c-pills-aj .equip-pill-protec.sel');
+  if (!sel) { document.getElementById('err-aj-protec-aj').textContent = 'Selecciona una opción.'; return; }
+  var val = sel.dataset.val;
+  var protecFinal;
+  if (val === 'Sí') { protecFinal = 'Sí'; }
+  else if (val === 'No') { protecFinal = 'No'; }
+  else {
+    var vals = [];
+    document.querySelectorAll('#aj-bs-protec-pills-aj .aj-pill.activa').forEach(function(p) { vals.push(p.dataset.val); });
+    if (!vals.length) { document.getElementById('err-aj-protec-parciales').textContent = 'Selecciona al menos una opción.'; return; }
+    if (vals.length === 4) { document.getElementById('err-aj-protec-parciales').textContent = 'Si necesitas las 4, selecciona "protecciones completas".'; return; }
+    protecFinal = vals.join(', ');
+  }
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+  api({ action: 'actualizarEquipamientoPersona', nombre: E.nombre, necesitaPatines: E.datos.necesitaPatines || 'No', talla: E.datos.talla || '', necesitaProtecciones: protecFinal }, function() {
+    E.datos.necesitaProtecciones = protecFinal;
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+    document.getElementById('aj-equip-protec-val').textContent = protecFinal;
+    _actualizarResumenEquipAjustes();
+    ajCerrarSheetProtecAjustes();
+    mostrarToast('Equipamiento actualizado', 'ok');
+  }, function(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+    document.getElementById('err-aj-protec-aj').textContent = e.message || 'Error al guardar.';
+  });
+}
+
+function _actualizarResumenEquipAjustes() {
+  var d = E.datos;
+  var pat = d.necesitaPatines || '—';
+  var tal = d.talla || '';
+  var pro = d.necesitaProtecciones || '—';
+  var el = document.getElementById('aj-equip-val');
+  if (el) el.textContent = (pat === 'Sí' ? 'Patines' + (tal ? ' talla ' + tal : '') : 'Sin patines') + ' · ' + (pro === 'Sí' ? 'Protecciones completas' : pro === 'No' ? 'Protecciones propias' : pro);
 }
