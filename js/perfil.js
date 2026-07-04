@@ -525,7 +525,7 @@ function ajSelPrefijo(pais) {
   } else {
     // Sin hiddenId significa que no hay un formulario capturando este valor para
     // guardarlo después con un botón — con el rediseño de filas ya no existe ese
-    // botón, así que autoguarda directo (mismo criterio que ajSelPais/ajSelPaisOtro).
+    // botón, así que autoguarda directo (mismo criterio que ajSelPais).
     _ajGuardar({ prefijo: val });
   }
   ajCerrarSheetPrefijo();
@@ -533,19 +533,38 @@ function ajSelPrefijo(pais) {
 
 /* ── Bottom sheet país emisor ─────────────────────────── */
 var _ajPaisActual = '';
-var _AJ_PAISES = ['Ecuador','Colombia','Venezuela','Perú','Argentina','Chile','México','España','Estados Unidos','Uruguay','Paraguay','Bolivia'];
+var _AJ_PAISES = [
+  { continente: 'América', paises: ['Antigua y Barbuda','Argentina','Bahamas','Barbados','Belice','Bolivia','Brasil','Canadá','Chile','Colombia','Costa Rica','Cuba','Dominica','Ecuador','El Salvador','Estados Unidos','Granada','Guatemala','Guyana','Haití','Honduras','Jamaica','México','Nicaragua','Panamá','Paraguay','Perú','República Dominicana','San Cristóbal y Nieves','San Vicente y las Granadinas','Santa Lucía','Surinam','Trinidad y Tobago','Uruguay','Venezuela'] },
+  { continente: 'Europa', paises: ['Albania','Alemania','Andorra','Austria','Bélgica','Bielorrusia','Bosnia y Herzegovina','Bulgaria','Chipre','Croacia','Dinamarca','Eslovaquia','Eslovenia','España','Estonia','Finlandia','Francia','Grecia','Hungría','Irlanda','Islandia','Italia','Letonia','Liechtenstein','Lituania','Luxemburgo','Macedonia del Norte','Malta','Moldavia','Mónaco','Montenegro','Noruega','Países Bajos','Polonia','Portugal','Reino Unido','República Checa','Rumania','Rusia','San Marino','Serbia','Suecia','Suiza','Ucrania','Vaticano'] },
+  { continente: 'Asia', paises: ['Afganistán','Arabia Saudita','Armenia','Azerbaiyán','Bangladés','Baréin','Brunéi','Bután','Camboya','Catar','China','Corea del Norte','Corea del Sur','Emiratos Árabes Unidos','Filipinas','Georgia','India','Indonesia','Irak','Irán','Israel','Japón','Jordania','Kazajistán','Kirguistán','Kuwait','Laos','Líbano','Malasia','Maldivas','Mongolia','Myanmar','Nepal','Omán','Pakistán','Palestina','Singapur','Siria','Sri Lanka','Tailandia','Tayikistán','Timor Oriental','Turkmenistán','Turquía','Uzbekistán','Vietnam','Yemen'] },
+  { continente: 'África', paises: ['Angola','Argelia','Benín','Botsuana','Burkina Faso','Burundi','Cabo Verde','Camerún','Chad','Comoras','Costa de Marfil','Egipto','Eritrea','Esuatini','Etiopía','Gabón','Gambia','Ghana','Guinea','Guinea Ecuatorial','Guinea-Bisáu','Kenia','Lesoto','Liberia','Libia','Madagascar','Malaui','Malí','Marruecos','Mauricio','Mauritania','Mozambique','Namibia','Níger','Nigeria','República Centroafricana','República del Congo','República Democrática del Congo','Ruanda','Santo Tomé y Príncipe','Senegal','Seychelles','Sierra Leona','Somalia','Sudáfrica','Sudán','Sudán del Sur','Tanzania','Togo','Túnez','Uganda','Yibuti','Zambia','Zimbabue'] },
+  { continente: 'Oceanía', paises: ['Australia','Fiyi','Islas Marshall','Islas Salomón','Kiribati','Micronesia','Nauru','Nueva Zelanda','Palaos','Papúa Nueva Guinea','Samoa','Tonga','Tuvalu','Vanuatu'] },
+];
+
+function _ajRenderPaises(busqueda) {
+  var html = '';
+  var q = (busqueda || '').toLowerCase().trim();
+  _AJ_PAISES.forEach(function(grupo) {
+    var paises = q ? grupo.paises.filter(function(p) { return p.toLowerCase().includes(q); }) : grupo.paises;
+    if (!paises.length) return;
+    if (!q) html += '<div style="padding:8px 16px 4px;font-size:0.68rem;font-weight:700;color:var(--brand-60);text-transform:uppercase;letter-spacing:0.08em;">' + grupo.continente + '</div>';
+    paises.forEach(function(p) {
+      var sel = p === _ajPaisActual;
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border-light);cursor:pointer;font-size:0.85rem;color:' + (sel ? 'var(--brand)' : 'var(--text)') + ';font-weight:' + (sel ? '700' : '500') + ';" onclick="ajSelPais(\'' + p.replace(/'/g,"\\'") + '\')">' +
+        '<span>' + p + '</span>' +
+        (sel ? '<span class="material-symbols-outlined" style="font-size:1rem;color:var(--brand);">check</span>' : '') +
+        '</div>';
+    });
+  });
+  var list = document.getElementById('aj-pais-list');
+  if (list) list.innerHTML = html || '<div style="padding:16px;text-align:center;color:var(--muted);font-size:0.82rem;">Sin resultados</div>';
+}
+
+function ajFiltrarPaises(q) { _ajRenderPaises(q); }
 
 function ajAbrirSheetPais() {
-  var html = _AJ_PAISES.map(function(p) {
-    var sel = p === _ajPaisActual;
-    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border-light);cursor:pointer;font-size:0.85rem;color:' + (sel ? 'var(--brand)' : 'var(--text)') + ';font-weight:' + (sel ? '700' : '500') + ';" onclick="ajSelPais(\'' + p.replace(/'/g,"\\'") + '\')">' +
-      '<span>' + p + '</span>' +
-      (sel ? '<span class="material-symbols-outlined" style="font-size:1rem;color:var(--brand);">check</span>' : '') +
-      '</div>';
-  }).join('') +
-  '<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;font-size:0.85rem;color:var(--muted);" onclick="ajSelPaisOtro()"><span>Otro...</span><span class="material-symbols-outlined" style="font-size:1rem;">chevron_right</span></div>';
-  var list = document.getElementById('aj-pais-list');
-  if (list) list.innerHTML = html;
+  var s = document.getElementById('aj-pais-search'); if (s) s.value = '';
+  _ajRenderPaises('');
   var ov = document.getElementById('aj-sheet-pais-overlay');
   var sh = document.getElementById('aj-sheet-pais');
   if (ov) ov.style.display = 'block';
@@ -567,15 +586,6 @@ function ajSelPais(pais) {
   ajCerrarSheetPais();
 }
 
-function ajSelPaisOtro() {
-  ajCerrarSheetPais();
-  ajAbrirSheetTexto('aj-sheet-texto', 'País', 'Escribe el nombre del país', function(v) {
-    _ajPaisActual = v;
-    var disp = document.getElementById('aj-pais-val');
-    if (disp) { disp.textContent = v; disp.classList.remove('vacio'); }
-    _ajGuardar({ pais: v });
-  });
-}
 
 /* ── Filas de dato: bottom sheet de texto genérico ────── */
 function ajAbrirSheetTextoGenerico(titulo, subtitulo, displayId, campo, placeholder) {
