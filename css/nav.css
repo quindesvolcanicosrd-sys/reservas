@@ -179,4 +179,14 @@
   .app-nav-cta { padding: 14px 12px; }
 }
 
-#home-nav .app-nav-section { display: block; opacity: 1; max-width: 200px; }
+#home-nav .app-nav-section {
+  opacity: 1;
+  max-width: none;
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-align: left;
+  letter-spacing: 1.2px;
+  color: var(--brand);
+  text-transform: uppercase;
+  flex: 1;
+}
