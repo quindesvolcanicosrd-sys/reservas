@@ -205,3 +205,22 @@
   margin-top: 12px;
 }
 .aj-btn-agregar .material-symbols-outlined { font-size: 18px; }
+
+/* .privacy-row (css/ui.css) es su propia card (fondo/borde/radius) — usada
+   solo acá (verificado por grep), así que dentro de .aj-group se le quita
+   ese look propio para que se lea como una fila más del grupo, no una
+   card anidada dentro de otra. Conserva su padding horizontal propio
+   (16px), que dentro de .aj-group hace falta ya que .aj-dato-row no
+   tiene ninguno (se apoya en el padding de .aj-sub-inner, que .aj-group
+   ya no expone a sus filas). */
+.aj-group .privacy-row {
+  background: none;
+  border: none;
+  border-radius: 0;
+  margin-bottom: 0;
+  padding: 14px 16px;
+  border-bottom: 0.5px solid var(--border);
+  transition: background 0.15s;
+}
+.aj-group .privacy-row:last-child { border-bottom: none; }
+.aj-group .privacy-row:hover { box-shadow: none; }

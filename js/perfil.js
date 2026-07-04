@@ -331,8 +331,10 @@ function _ajCargarSub(id) {
   } else if (id === 'aj-sub-privacidad') {
     var fnRaw = (d.fechaNacimiento || '').toString().trim();
     _ajSetDatoVal('aj-fecha-display', fnRaw ? _ajFormatearFecha(fnRaw) : '', '—', false);
-    var fp = document.getElementById('aj-fechaPublica'); if (fp) fp.checked = (d.fechaPublica === 'Sí');
-    var ep = document.getElementById('aj-edadPublica'); if (ep) ep.checked = (d.edadPublica === 'Sí');
+    var btnF = document.getElementById('aj-fechaPublica');
+    if (btnF) { var onF = d.fechaPublica === 'Sí'; btnF.classList.toggle('toggle-on', onF); btnF.classList.toggle('toggle-off', !onF); btnF.setAttribute('aria-pressed', String(onF)); }
+    var btnE = document.getElementById('aj-edadPublica');
+    if (btnE) { var onE = d.edadPublica === 'Sí'; btnE.classList.toggle('toggle-on', onE); btnE.classList.toggle('toggle-off', !onE); btnE.setAttribute('aria-pressed', String(onE)); }
   } else if (id === 'aj-sub-legal') {
     _ajSetDatoVal('aj-tipoDoc-val', d.tipoDocumento, '—', true);
     _ajSetDatoVal('aj-numeroDoc-val', d.numeroDocumento, '—', true);
@@ -641,11 +643,14 @@ function ajAbrirSheetRelacion(campo, displayId) {
 }
 
 /* ── Privacidad: autoguardado sin botón ───────────────── */
-function ajGuardarPrivacidadAuto() {
-  _ajGuardar({
-    fechaPublica: document.getElementById('aj-fechaPublica').checked ? 'Sí' : 'No',
-    edadPublica: document.getElementById('aj-edadPublica').checked ? 'Sí' : 'No'
-  });
+function ajTogglePriv(btn, campo) {
+  var on = btn.classList.contains('toggle-on');
+  btn.classList.toggle('toggle-on', !on);
+  btn.classList.toggle('toggle-off', on);
+  btn.setAttribute('aria-pressed', String(!on));
+  var payload = {};
+  payload[campo === 'fechaPublica' ? 'fechaPublica' : 'edadPublica'] = !on ? 'Sí' : 'No';
+  _ajGuardar(payload);
 }
 
 /* ── Segundo contacto de emergencia (agregar/quitar) ──── */
