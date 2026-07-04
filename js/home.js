@@ -103,7 +103,7 @@ function refrescarMisReservas(callback, btn) {
 }
 
 var _ptrStartY = 0, _ptrArrastrando = false, _ptrRefrescando = false, _ptrProgreso = 0;
-var _PTR_RANGO = 140, _PTR_MAX_VISUAL = 70;
+var _PTR_RANGO = 75, _PTR_MAX_VISUAL = 52;
 
 function _ptrEnMisReservas() {
   var s = document.getElementById('s-home');
@@ -132,7 +132,7 @@ window.addEventListener('touchmove', function(e) {
   var offsetY = _PTR_MAX_VISUAL * (1 - Math.pow(1 - progreso, 2)); // resistencia tipo goma elástica
   var escala = 0.7 + 0.3 * progreso;
   ind.classList.add('ptr-sin-transicion');
-  ind.style.opacity = Math.min(progreso / 0.3, 1);
+  ind.style.opacity = Math.min(progreso / 0.15, 1);
   ind.style.transform = 'translate(-50%,' + (offsetY - _PTR_MAX_VISUAL) + 'px) scale(' + escala + ')';
   anillo.style.transform = 'rotate(' + (progreso * 360) + 'deg)';
 }, { passive: true });
@@ -150,8 +150,11 @@ window.addEventListener('touchend', function() {
     _ptrRefrescando = true;
     ind.style.opacity = '1';
     ind.style.transform = 'translate(-50%,0) scale(1)';
-    anillo.style.animation = '';    // vuelve al spin infinito propio de .spinner
-    anillo.style.transform = '';
+    anillo.style.transform = 'rotate(0deg)';
+    requestAnimationFrame(function() {
+      anillo.style.animation = '';
+      anillo.style.transform = '';
+    });
     var yaResolvio = false;
     var backstop = setTimeout(function() {
       if (yaResolvio) return;
