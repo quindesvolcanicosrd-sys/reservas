@@ -268,6 +268,8 @@ function _sincronizarNavHome(forzarVisible) {
   var homeNav = document.getElementById('home-nav');
   var homeNavSpacer = document.getElementById('home-nav-spacer');
 
+  if (homeNav) homeNav.classList.toggle('mostrar-cta-label', activas.length === 0);
+
   if (!forzarVisible && activas.length === 0) {
     if (homeNav) homeNav.style.display = 'none';
     if (homeNavSpacer) homeNavSpacer.style.display = 'none';
@@ -301,10 +303,9 @@ function _renderHomeReservas() {
           '<div class="empty-state-icon"><span class="material-symbols-outlined">calendar_month</span></div>' +
           '<div class="empty-state-saludo">¡Hola, ' + (E.nombre || '') + '!</div>' +
           '<div class="empty-state-msg">Todavía no tienes ninguna reserva.<br>¿Te animas a hacer una?</div>' +
-          '<button onclick="irNuevaReserva()" class="empty-state-btn"><span class="material-symbols-outlined">calendar_add_on</span>Nueva reserva</button>' +
           '<div class="empty-state-links">' +
             '<span class="empty-state-link" onclick="irMisReservas()">Ver historial de reservas</span>' +
-            '<span class="empty-state-link empty-state-link-muted" onclick="irEditarDatos()">Editar mi perfil</span>' +
+            '<span class="empty-state-link" onclick="irEditarDatos()">Editar mi perfil</span>' +
           '</div>' +
         '</div>' +
       '</div>'

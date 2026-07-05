@@ -253,11 +253,14 @@ function abrirPickerFecha() {
 function inscContinuar2() {
   var fnac = document.getElementById('fnac-iso').value || G.fechaNac;
   if (!fnac) { errMsg('err-p2', 'La fecha de nacimiento es obligatoria.'); return; }
-  var fn = new Date(fnac);
+  var partes = fnac.indexOf('/') !== -1 ? fnac.split('/') : fnac.split('-');
+  var fn = fnac.indexOf('/') !== -1
+    ? new Date(partes[2], partes[1] - 1, partes[0])
+    : new Date(partes[0], partes[1] - 1, partes[2]);
   var hoy = new Date(); hoy.setHours(0,0,0,0);
-  var edad = hoy.getFullYear() - fn.getUTCFullYear();
-  var dm = hoy.getMonth() - fn.getUTCMonth();
-  if (dm < 0 || (dm === 0 && hoy.getDate() < fn.getUTCDate())) edad--;
+  var edad = hoy.getFullYear() - fn.getFullYear();
+  var dm = hoy.getMonth() - fn.getMonth();
+  if (dm < 0 || (dm === 0 && hoy.getDate() < fn.getDate())) edad--;
   if (edad < 16) { mostrarModalEdadBloqueo(); return; }
   G.fechaNac = fnac;
   G.mayorEdad = edad >= 18;
