@@ -785,6 +785,16 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
 
+  <!-- Modal bloqueo por edad (menor de 16, desde modal-permisos) -->
+  <div id="modal-edad-bloqueo" style="display:none;position:fixed;inset:0;z-index:9660;background:var(--overlay-dark);align-items:center;justify-content:center;padding:16px;">
+    <div style="background:var(--white);border-radius:20px;padding:28px 24px;width:100%;max-width:380px;text-align:center;">
+      <span class="material-symbols-outlined" style="font-size:2.5rem;color:var(--danger);margin-bottom:12px;">block</span>
+      <p style="font-size:0.95rem;color:var(--neutral-dark);line-height:1.6;margin-bottom:20px;">No eres mayor de 16 años, por lo tanto no podrás usar la app. Puedes contactarte con alguien del equipo para más información.</p>
+      <a href="https://wa.me/593998690423" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:15px;background:var(--wa-bg);color:var(--success);border-radius:12px;font-weight:800;text-decoration:none;margin-bottom:10px;"><span class="material-symbols-outlined">forum</span> Contactar por WhatsApp</a>
+      <button onclick="cerrarModalEdadBloqueo()" style="width:100%;padding:13px;background:transparent;color:var(--text-faint);border:2px solid var(--border-light);border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Cerrar</button>
+    </div>
+  </div>
+
   <div id="modal-navegador" style="display:none;position:fixed;inset:0;z-index:9500;background:var(--overlay);align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarModalNavegador()">
   <div id="modal-nav-inner" style="background:var(--white);border-radius:20px;padding:28px 20px;width:88%;max-width:340px;text-align:center;">
     <div id="modal-nav-icon" style="font-size:2.8rem;margin-bottom:12px;"></div>

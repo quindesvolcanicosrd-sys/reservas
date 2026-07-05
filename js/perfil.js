@@ -80,6 +80,13 @@ function guardarPermisos() {
     return;
   }
 
+  var fn = new Date(fecha);
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var edad = hoy.getFullYear() - fn.getUTCFullYear();
+  var dm = hoy.getMonth() - fn.getUTCMonth();
+  if (dm < 0 || (dm === 0 && hoy.getDate() < fn.getUTCDate())) edad--;
+  if (edad < 16) { mostrarModalEdadBloqueo(); return; }
+
   var btn = document.getElementById('btn-guardar-permisos');
   btn.disabled = true;
   btn.textContent = 'Guardando...';
@@ -116,6 +123,15 @@ function guardarPermisos() {
 
 function saltarPermisos() {
   var mp = document.getElementById('modal-permisos'); if (mp) { mp.style.opacity = '0'; setTimeout(function(){ mp.style.display = 'none'; }, 250); }
+}
+
+function mostrarModalEdadBloqueo() {
+  var m = document.getElementById('modal-edad-bloqueo');
+  if (m) m.style.display = 'flex';
+}
+function cerrarModalEdadBloqueo() {
+  var m = document.getElementById('modal-edad-bloqueo');
+  if (m) m.style.display = 'none';
 }
 
 // ─── PIN de acceso (desde modal-permisos) ─────────────────────────────────────
@@ -730,7 +746,7 @@ function ajAbrirSheetTipoDoc() {
 /* ── Relación de contacto de emergencia (pills single) ── */
 function ajAbrirSheetRelacion(campo, displayId) {
   var actual = (E.datos && E.datos[campo]) || '';
-  var opciones = ['Madre', 'Padre', 'Pareja', 'Hermana/o', 'Amiga/o', 'Otra'];
+  var opciones = ['Madre', 'Padre', 'Pareja', 'Hermana/o', 'Amiga/o', 'Familiar', 'Otra'];
   var html = opciones.map(function(o) {
     var sel = o === actual;
     return '<span class="aj-pill' + (sel ? ' activa' : '') + '" data-val="' + o + '" onclick="_ajSheetTextoPillSingleClick(this)">' + o + '</span>';

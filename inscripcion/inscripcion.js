@@ -221,15 +221,23 @@ function _inscFormatFecha(iso) {
 }
 
 /* ── Paso 2: foto y fecha ───────────────────── */
-function inscToggleFoto(tog) {
+function inscToggleFoto(btn) {
+  var on = btn.classList.contains('toggle-on');
+  btn.classList.toggle('toggle-on', !on);
+  btn.classList.toggle('toggle-off', on);
+  btn.setAttribute('aria-pressed', String(!on));
+  G.guardarFoto = !on;
   var av = document.getElementById('insc-avatar');
-  G.guardarFoto = tog.checked;
   if (!av) return;
-  if (tog.checked && G.foto) {
-    av.innerHTML = '<img src="' + G.foto + '" alt="">';
-  } else {
-    av.innerHTML = (G.email || '?').charAt(0).toUpperCase();
-  }
+  if (!on && G.foto) { av.innerHTML = '<img src="' + G.foto + '" alt="">'; }
+  else { av.innerHTML = (G.email || '?').charAt(0).toUpperCase(); }
+}
+
+function _inscToggleClick(btn) {
+  var on = btn.classList.contains('toggle-on');
+  btn.classList.toggle('toggle-on', !on);
+  btn.classList.toggle('toggle-off', on);
+  btn.setAttribute('aria-pressed', String(!on));
 }
 
 function abrirPickerFecha() {
@@ -245,15 +253,27 @@ function abrirPickerFecha() {
 function inscContinuar2() {
   var fnac = document.getElementById('fnac-iso').value || G.fechaNac;
   if (!fnac) { errMsg('err-p2', 'La fecha de nacimiento es obligatoria.'); return; }
+  var fn = new Date(fnac);
+  var hoy = new Date(); hoy.setHours(0,0,0,0);
+  var edad = hoy.getFullYear() - fn.getUTCFullYear();
+  var dm = hoy.getMonth() - fn.getUTCMonth();
+  if (dm < 0 || (dm === 0 && hoy.getDate() < fn.getUTCDate())) edad--;
+  if (edad < 16) { mostrarModalEdadBloqueo(); return; }
   G.fechaNac = fnac;
-  var d = new Date(fnac);
-  var hoy = new Date();
-  var edad = hoy.getFullYear() - d.getUTCFullYear();
   G.mayorEdad = edad >= 18;
-  G.guardarFoto = document.getElementById('tog-foto').checked;
-  G.fechaPublica = document.getElementById('tog-fecha-pub').checked ? 'Sí' : 'No';
-  G.edadPublica = document.getElementById('tog-edad-pub').checked ? 'Sí' : 'No';
+  G.guardarFoto = document.getElementById('tog-foto').classList.contains('toggle-on');
+  G.fechaPublica = document.getElementById('tog-fecha-pub').classList.contains('toggle-on') ? 'Sí' : 'No';
+  G.edadPublica = document.getElementById('tog-edad-pub').classList.contains('toggle-on') ? 'Sí' : 'No';
   inscMostrarPaso(_INSC_STEPS.indexOf('insc-step-3'));
+}
+
+function mostrarModalEdadBloqueo() {
+  var m = document.getElementById('modal-edad-bloqueo');
+  if (m) m.style.display = 'flex';
+}
+function cerrarModalEdadBloqueo() {
+  var m = document.getElementById('modal-edad-bloqueo');
+  if (m) m.style.display = 'none';
 }
 
 /* ── Paso 3: nombre y pronombres ────────────── */
