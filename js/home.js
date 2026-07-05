@@ -372,6 +372,7 @@ function _formatarFechaRelativa(fechaPura) {
   var fd = new Date(hoy.getFullYear(), mes, parseInt(m[1])); fd.setHours(0,0,0,0);
   if (fd < hoy) fd.setFullYear(hoy.getFullYear() + 1);
   var diff = Math.round((fd - hoy) / 86400000);
+  if (diff === 0) return 'Hoy';
   if (diff === 1) return 'Mañana';
   if (diff === 2) return 'Pasado mañana';
   var dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];

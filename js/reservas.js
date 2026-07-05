@@ -288,7 +288,7 @@ function cargarFechas() {
     if (fechas.length === 0) { html = '<p style="color:var(--muted);text-align:center;">No hay fechas disponibles.</p>'; } else {
       fechas.forEach(function(f) {
         var partes = f.fecha.split(' - ');
-        var fechaTexto = (partes[0] || f.fecha).trim();
+        var fechaTexto = _formatarFechaRelativa((partes[0] || f.fecha).trim());
         var hora = f.hora || (partes[1] ? partes[1].trim() : '');
         var lugar = f.lugar || (partes[2] ? partes[2].trim() : '');
         var hasInfo = !!(f.descripcion || f.mapsUrl || f.horaFin || f.duracion);
