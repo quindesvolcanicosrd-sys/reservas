@@ -443,6 +443,8 @@ function _renderCardHome(r, hoy) {
     '<span class="rn-status-link">¿Qué significa esto?</span>' +
     '</div>';
 
+  var esMensual = _MESES_MAP[(r.fecha || '').toLowerCase().trim()] !== undefined;
+
   var pillsHtml = '<div class="fi-pills">';
   if (hora) pillsHtml += '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + hora + '</span>';
   if (lugar) {
@@ -452,6 +454,7 @@ function _renderCardHome(r, hoy) {
     pillsHtml += '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
   }
 }
+  if (esMensual && r.validezHasta) pillsHtml += '<span class="fi-pill"><span class="material-symbols-outlined">event_available</span>Válido hasta ' + r.validezHasta + '</span>';
   pillsHtml += '</div>';
 
   var uid = 'rcard-' + (r.fila || Math.random().toString(36).slice(2));
@@ -699,6 +702,8 @@ function _renderCardHistorial(r) {
   h += '<span class="badge ' + b[0] + '" style="flex-shrink:0;white-space:nowrap;">' + b[1] + ' ' + r.estado + '</span></div>';
   h += '<div class="reserva-detalle">' + eq + '</div>';
   if (r.monto) h += '<div style="font-size:0.78rem;color:var(--muted);margin-top:3px;">💵 ' + r.monto + '</div>';
+  var esMensual = _MESES_MAP[(r.fecha || '').toLowerCase().trim()] !== undefined;
+  if (esMensual && r.validezHasta) h += '<div style="font-size:0.78rem;color:var(--muted);margin-top:3px;">📅 Válido hasta ' + r.validezHasta + '</div>';
   h += '</div>'; return h;
 }
 
