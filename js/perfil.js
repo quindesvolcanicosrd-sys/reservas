@@ -67,10 +67,10 @@ function mostrarModalPermisos(nombre, fotoUrl) {
 }
 
 function guardarPermisos() {
-  var fecha    = document.getElementById('mp-fecha').value;
-  var togFecha = document.getElementById('mp-tog-fecha').checked;
-  var togEdad  = document.getElementById('mp-tog-edad').checked;
-  var togFoto  = document.getElementById('mp-tog-foto').checked;
+  var fecha    = document.getElementById('mp-fecha-iso').value;
+  var togFecha = document.getElementById('mp-tog-fecha').classList.contains('toggle-on');
+  var togEdad  = document.getElementById('mp-tog-edad').classList.contains('toggle-on');
+  var togFoto  = document.getElementById('mp-tog-foto').classList.contains('toggle-on');
   var errEl    = document.getElementById('err-modal-permisos');
 
   if (!fecha) {
@@ -90,7 +90,7 @@ function guardarPermisos() {
     action:       'actualizarPerfilGoogle',
     foto:         fotoUrl,
     fechaNac:     fecha,
-    guardarFecha: togFecha ? 'si' : 'no',
+    guardarFecha: 'si',
     fechaPublica: togFecha ? (togEdad ? 'Sí' : 'No') : 'No',
     edadPublica:  togEdad ? 'Sí' : 'No'
   }, function(res) {
@@ -116,6 +116,79 @@ function guardarPermisos() {
 
 function saltarPermisos() {
   var mp = document.getElementById('modal-permisos'); if (mp) { mp.style.opacity = '0'; setTimeout(function(){ mp.style.display = 'none'; }, 250); }
+}
+
+// ─── PIN de acceso (desde modal-permisos) ─────────────────────────────────────
+function _mpTogglePinClick(btn) {
+  var on = btn.classList.contains('toggle-on');
+  btn.classList.toggle('toggle-on', !on);
+  btn.classList.toggle('toggle-off', on);
+  btn.setAttribute('aria-pressed', String(!on));
+  if (!on) abrirModalPinConfig();
+}
+
+function _mpTogglePinVis() {
+  var inp = document.getElementById('mp-pin-input');
+  var ico = document.getElementById('mp-pin-ico');
+  if (!inp) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  if (ico) ico.textContent = inp.type === 'password' ? 'visibility' : 'visibility_off';
+}
+
+function abrirModalPinConfig() {
+  var inp = document.getElementById('mp-pin-input');
+  if (inp) { inp.value = ''; inp.type = 'password'; }
+  var ico = document.getElementById('mp-pin-ico');
+  if (ico) ico.textContent = 'visibility';
+  var errEl = document.getElementById('err-modal-pin-config');
+  if (errEl) errEl.style.display = 'none';
+  var m = document.getElementById('modal-pin-config');
+  if (m) { m.style.display = 'flex'; m.style.opacity = ''; m.style.animation = 'fadeIn 0.3s ease'; }
+}
+
+function cerrarModalPinConfig(guardado) {
+  var m = document.getElementById('modal-pin-config');
+  if (m) { m.style.opacity = '0'; setTimeout(function(){ m.style.display = 'none'; }, 250); }
+  if (!guardado) {
+    var tog = document.getElementById('mp-tog-pin');
+    if (tog) { tog.classList.remove('toggle-on'); tog.classList.add('toggle-off'); tog.setAttribute('aria-pressed', 'false'); }
+  }
+}
+
+function guardarPinConfig() {
+  var inp   = document.getElementById('mp-pin-input');
+  var pin   = (inp && inp.value || '').trim();
+  var errEl = document.getElementById('err-modal-pin-config');
+
+  if (!/^[0-9]{4}$/.test(pin)) {
+    errEl.textContent = 'Ingresa un PIN de 4 dígitos.';
+    errEl.style.display = 'block';
+    setTimeout(function(){ errEl.style.display = 'none'; }, 4000);
+    return;
+  }
+
+  var btn = document.getElementById('btn-guardar-pin-config');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  sha256Hex(pin + '|' + E.nombre).then(function(hash) {
+    api({ action: 'actualizarPin', nombre: E.nombre, pinHash: hash }, function(res) {
+      btn.disabled = false;
+      btn.textContent = 'Guardar';
+      if (res.exito) {
+        cerrarModalPinConfig(true);
+      } else {
+        errEl.textContent = res.error || 'Error al guardar.';
+        errEl.style.display = 'block';
+        setTimeout(function(){ errEl.style.display = 'none'; }, 4000);
+      }
+    }, function(e) {
+      btn.disabled = false;
+      btn.textContent = 'Guardar';
+      errEl.textContent = 'Error de conexión: ' + e.message;
+      errEl.style.display = 'block';
+    });
+  });
 }
 
 function actualizarFotoPerfil(url) {
@@ -205,9 +278,13 @@ function _poblarResumenEquipPerfil() {
 // ─── DATE PICKER (Mis Datos — ddp-*) ─────────────────────────────────────────
 var _MESES_DDP = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 var _ddpSt = { vy:1990, vm:0, sy:null, sm:null, sd:null, yearMode:false, monthMode:false };
+var _ddpTarget = null; // { hiddenId, displayId } o { callback(iso, label) } — configurado en cada apertura
 
-function abrirPickerMisDatos() {
-  var iso = document.getElementById('d-fechaNacimiento').value;
+function abrirPickerMisDatos(target) {
+  _ddpTarget = target || null;
+  var hiddenId = (_ddpTarget && _ddpTarget.hiddenId) || 'd-fechaNacimiento';
+  var hiddenEl = document.getElementById(hiddenId);
+  var iso = hiddenEl ? hiddenEl.value : '';
   if (iso) { var p=iso.split('-'); if(p.length===3){ _ddpSt.vy=parseInt(p[0]); _ddpSt.vm=parseInt(p[1])-1; _ddpSt.sy=parseInt(p[0]); _ddpSt.sm=parseInt(p[1])-1; _ddpSt.sd=parseInt(p[2]); } }
   else { _ddpSt.vy=1990; _ddpSt.vm=0; _ddpSt.sy=null; _ddpSt.sm=null; _ddpSt.sd=null; }
   _ddpSt.yearMode=false; _ddpSt.monthMode=false;
@@ -272,9 +349,16 @@ function _ddpRenderMeses() {
     if(ok)ok.onclick=function(){
       if(!_ddpSt.sd)return;
       var iso=_ddpSt.sy+'-'+String(_ddpSt.sm+1).padStart(2,'0')+'-'+String(_ddpSt.sd).padStart(2,'0');
-      document.getElementById('d-fechaNacimiento').value=iso;
-      var disp=document.getElementById('ddp-trigger-display');
-      if(disp){disp.textContent=_ddpSt.sd+' de '+_MESES_DDP[_ddpSt.sm]+' de '+_ddpSt.sy;disp.classList.remove('fnac-placeholder');}
+      var label=_ddpSt.sd+' de '+_MESES_DDP[_ddpSt.sm]+' de '+_ddpSt.sy;
+      if (_ddpTarget && typeof _ddpTarget.callback === 'function') {
+        _ddpTarget.callback(iso, label);
+      } else {
+        var hiddenId = (_ddpTarget && _ddpTarget.hiddenId) || 'd-fechaNacimiento';
+        var displayId = (_ddpTarget && _ddpTarget.displayId) || 'ddp-trigger-display';
+        var hidden=document.getElementById(hiddenId); if(hidden) hidden.value=iso;
+        var disp=document.getElementById(displayId);
+        if(disp){disp.textContent=label;disp.classList.remove('fnac-placeholder');}
+      }
       _ddpCerrar();
     };
   });

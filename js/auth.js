@@ -68,6 +68,7 @@ function onGoogleCredentialUsuario(resp) {
       return;
     }
     _token = res.token || '';
+    var _fotoGoogleLogin = res.foto || '';
     E.nombre = res.nombre;
     E.datos = res.datos;
     E.datosCompletos = res.datos;
@@ -89,7 +90,7 @@ function onGoogleCredentialUsuario(resp) {
       } else {
         ir('s-home');
         if (E.datos && !E.datos.permisosConfigurados) {
-          setTimeout(function() { mostrarModalPermisos(E.nombre, E.datos.fotoPerfil || ''); }, 600);
+          setTimeout(function() { mostrarModalPermisos(E.nombre, E.datos.fotoPerfil || _fotoGoogleLogin); }, 600);
         }
       }
     }, function() { prepararHome(); ir('s-home'); });

@@ -719,52 +719,69 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div style="background:var(--white);border-radius:20px;padding:28px 24px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;">
       <div style="font-size:2rem;text-align:center;margin-bottom:12px;">👋</div>
       <div style="font-weight:800;font-size:1.1rem;text-align:center;margin-bottom:6px;color:var(--neutral-dark);" id="mp-saludo"></div>
-      <p style="font-size:0.85rem;color:var(--neutral-gray);text-align:center;margin-bottom:20px;line-height:1.5;">Antes de continuar, cuéntanos un poco más. Podés cambiar esto después desde "Editar mis datos".</p>
+      <p style="font-size:0.85rem;color:var(--neutral-gray);text-align:center;margin-bottom:20px;line-height:1.5;">Antes de continuar, cuéntanos un poco más. Puedes cambiar esto después desde "Editar mis datos".</p>
 
       <!-- Fecha de nacimiento -->
       <div style="margin-bottom:16px;">
         <label style="display:block;font-size:0.74rem;font-weight:700;color:var(--neutral-gray);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Fecha de nacimiento <span style="color:var(--danger);">*</span></label>
-        <input type="date" id="mp-fecha" style="width:100%;padding:13px 16px;border:2px solid var(--border-light);border-radius:12px;font-size:0.95rem;font-family:inherit;">
-        <p style="font-size:0.78px;color:var(--placeholder-color);margin-top:6px;font-size:0.78rem;line-height:1.4;">Solo para saber si eres mayor de 18 años. No se comparte a menos que lo elijas abajo.</p>
+        <button type="button" class="fnac-trigger-btn" id="mp-fecha-btn" onclick="abrirPickerMisDatos({hiddenId:'mp-fecha-iso', displayId:'mp-fecha-display'})">
+          <span class="fnac-placeholder" id="mp-fecha-display">Selecciona una fecha</span>
+          <span class="material-symbols-outlined" style="color:var(--brand);font-size:1.1rem;">calendar_month</span>
+        </button>
+        <input type="hidden" id="mp-fecha-iso">
       </div>
 
       <!-- Toggles privacidad fecha -->
       <div id="mp-fecha-toggles" style="background:var(--surface-light);border:2px solid var(--border-light);border-radius:12px;overflow:hidden;margin-bottom:16px;">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;">
           <div>
-            <div style="font-size:0.88rem;font-weight:600;color:var(--neutral-dark);">🎂 Compartir fecha de cumpleaños</div>
+            <div style="font-size:0.88rem;font-weight:600;color:var(--neutral-dark);display:flex;align-items:center;gap:6px;"><span class="material-symbols-outlined" style="font-size:1.05rem;">cake</span> Compartir fecha de cumpleaños</div>
             <div style="font-size:0.78rem;color:var(--neutral-gray);margin-top:2px;">Para que te deseen feliz cumpleaños</div>
           </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="mp-tog-fecha">
-            <span class="toggle-slider"></span>
-          </label>
+          <div class="toggle-wrap"><button type="button" id="mp-tog-fecha" class="toggle-btn toggle-off" aria-pressed="false"><span class="toggle-thumb"></span></button></div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border-light);">
           <div>
-            <div style="font-size:0.88rem;font-weight:600;color:var(--neutral-dark);">🔢 Compartir mi edad</div>
+            <div style="font-size:0.88rem;font-weight:600;color:var(--neutral-dark);display:flex;align-items:center;gap:6px;"><span class="material-symbols-outlined" style="font-size:1.05rem;">tag</span> Compartir mi edad</div>
             <div style="font-size:0.78rem;color:var(--neutral-gray);margin-top:2px;">Visible para el equipo</div>
           </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="mp-tog-edad">
-            <span class="toggle-slider"></span>
-          </label>
+          <div class="toggle-wrap"><button type="button" id="mp-tog-edad" class="toggle-btn toggle-off" aria-pressed="false"><span class="toggle-thumb"></span></button></div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border-light);">
           <div>
-            <div style="font-size:0.88rem;font-weight:600;color:var(--neutral-dark);">📸 Usar mi foto de Google</div>
+            <div style="font-size:0.88rem;font-weight:600;color:var(--neutral-dark);display:flex;align-items:center;gap:6px;"><span class="material-symbols-outlined" style="font-size:1.05rem;">photo_camera</span> Usar mi foto de Google</div>
             <div style="font-size:0.78rem;color:var(--neutral-gray);margin-top:2px;">Como foto de perfil en la app</div>
           </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="mp-tog-foto">
-            <span class="toggle-slider"></span>
-          </label>
+          <div class="toggle-wrap"><button type="button" id="mp-tog-foto" class="toggle-btn toggle-off" aria-pressed="false"><span class="toggle-thumb"></span></button></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border-light);">
+          <div>
+            <div style="font-size:0.88rem;font-weight:600;color:var(--neutral-dark);display:flex;align-items:center;gap:6px;"><span class="material-symbols-outlined" style="font-size:1.05rem;">lock</span> PIN de acceso</div>
+            <div style="font-size:0.78rem;color:var(--neutral-gray);margin-top:2px;">Protege tu cuenta con un PIN</div>
+          </div>
+          <div class="toggle-wrap"><button type="button" id="mp-tog-pin" class="toggle-btn toggle-off" aria-pressed="false" onclick="_mpTogglePinClick(this)"><span class="toggle-thumb"></span></button></div>
         </div>
       </div>
 
       <div class="error-msg" id="err-modal-permisos"></div>
       <button onclick="guardarPermisos()" style="width:100%;padding:15px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px;" id="btn-guardar-permisos">Guardar y continuar</button>
       <button onclick="saltarPermisos()" style="width:100%;padding:13px;background:transparent;color:var(--text-faint);border:2px solid var(--border-light);border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Ahora no (se preguntará de nuevo)</button>
+    </div>
+  </div>
+
+  <!-- Modal configuración de PIN (desde modal-permisos) -->
+  <div id="modal-pin-config" style="display:none;position:fixed;inset:0;z-index:9650;background:var(--overlay-dark);align-items:center;justify-content:center;padding:16px;">
+    <div style="background:var(--white);border-radius:20px;padding:28px 24px;width:100%;max-width:380px;">
+      <label style="display:block;font-size:0.74rem;font-weight:700;color:var(--neutral-gray);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;text-align:center;">Ingresa tu PIN de acceso</label>
+      <div style="position:relative;margin-bottom:16px;">
+        <input type="password" id="mp-pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="• • • •" style="text-align:center;font-size:1.8rem;letter-spacing:8px;padding:13px 50px;width:100%;border:2px solid var(--border-light);border-radius:12px;font-family:inherit;">
+        <button type="button" onclick="_mpTogglePinVis()" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;">
+          <span class="material-symbols-outlined" id="mp-pin-ico">visibility</span>
+        </button>
+      </div>
+      <div class="error-msg" id="err-modal-pin-config"></div>
+      <button onclick="guardarPinConfig()" style="width:100%;padding:15px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px;" id="btn-guardar-pin-config">Guardar</button>
+      <button onclick="cerrarModalPinConfig(false)" style="width:100%;padding:13px;background:transparent;color:var(--text-faint);border:2px solid var(--border-light);border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
     </div>
   </div>
 
