@@ -489,6 +489,7 @@ function _ajCargarSub(id) {
     if (wrapAlergiasDesc) wrapAlergiasDesc.style.display = (d.alergias === 'Sí') ? 'block' : 'none';
     var wrapMedicamentosDesc = document.getElementById('aj-medicamentosDesc-wrap');
     if (wrapMedicamentosDesc) wrapMedicamentosDesc.style.display = (d.medicamentos === 'Sí') ? 'block' : 'none';
+    _saludMostrarEstado();
   }
 }
 
@@ -804,6 +805,304 @@ function ajAbrirSheetSiNo(titulo, campo, displayId, condWrapId) {
       if (wrap) wrap.style.display = (v === 'Sí') ? 'block' : 'none';
     }
   });
+}
+
+/* ── Wizard "Ficha de salud" (aj-sub-salud) ─────────────
+   Reemplaza las filas planas por un paso a paso propio, mismo motor visual
+   que inscMostrarPaso()/insc-prog de inscripcion/inscripcion.js (array de
+   pasos + índice actual + dots de progreso), adaptado a un flujo interno
+   dentro del panel en vez de una pantalla completa. Un solo _ajGuardar() al
+   terminar el flujo (no campo por campo) — ver _saludFinalizarWizard(). */
+var _SALUD_STEPS = ['salud-paso-1','salud-paso-2','salud-paso-3','salud-paso-4','salud-paso-5','salud-paso-6','salud-paso-7','salud-paso-8','salud-paso-9'];
+var _saludCurIdx = 0;
+var _saludData = {};
+
+function _saludMostrarEstado() {
+  var completado = !!(E.datos && E.datos.atencionMedica);
+  var wizard = document.getElementById('salud-wizard'); if (wizard) wizard.style.display = 'none';
+  var empezar = document.getElementById('salud-card-empezar'); if (empezar) empezar.style.display = completado ? 'none' : 'block';
+  var resumen = document.getElementById('salud-resumen'); if (resumen) resumen.style.display = completado ? 'block' : 'none';
+}
+
+function saludBack() {
+  var wizard = document.getElementById('salud-wizard');
+  if (wizard && wizard.style.display !== 'none') { saludPasoAnterior(); }
+  else { cerrarAjSub('aj-sub-salud'); }
+}
+
+function saludIniciarWizard() {
+  _saludData = {
+    enfermedad: (E.datos && E.datos.enfermedad) || '',
+    alergias: (E.datos && E.datos.alergias) || '',
+    alergiasDesc: (E.datos && E.datos.alergiasDesc) || '',
+    antecedentes: (E.datos && E.datos.antecedentes) || '',
+    dieta: (E.datos && E.datos.dieta) || '',
+    medicamentos: (E.datos && E.datos.medicamentos) || '',
+    medicamentosDesc: (E.datos && E.datos.medicamentosDesc) || '',
+    atencionMedica: (E.datos && E.datos.atencionMedica) || '',
+    seguro: (E.datos && E.datos.seguro) || '',
+    seguroContacto: (E.datos && E.datos.seguroContacto) || ''
+  };
+  var empezar = document.getElementById('salud-card-empezar'); if (empezar) empezar.style.display = 'none';
+  var resumen = document.getElementById('salud-resumen'); if (resumen) resumen.style.display = 'none';
+  var wizard = document.getElementById('salud-wizard'); if (wizard) wizard.style.display = 'block';
+  _saludResetPrefill();
+  _saludPrefillWizard();
+  _saludMostrarPaso(0);
+}
+
+function saludCerrarWizard() { _saludMostrarEstado(); }
+
+function _saludRenderProg() {
+  var cont = document.getElementById('salud-prog'); if (!cont) return;
+  cont.innerHTML = '';
+  for (var i = 0; i < _SALUD_STEPS.length; i++) {
+    var d = document.createElement('div');
+    d.className = 'salud-prog-dot' + (i < _saludCurIdx ? ' done' : i === _saludCurIdx ? ' active' : '');
+    cont.appendChild(d);
+  }
+}
+
+function _saludMostrarPaso(idx) {
+  _SALUD_STEPS.forEach(function(s, i) {
+    var el = document.getElementById(s);
+    if (el) el.classList.toggle('activo', i === idx);
+  });
+  _saludCurIdx = idx;
+  _saludRenderProg();
+  var inner = document.querySelector('#aj-sub-salud .aj-sub-inner');
+  if (inner) inner.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function saludPasoAnterior() {
+  if (_saludCurIdx === 0) { saludCerrarWizard(); return; }
+  var actual = _SALUD_STEPS[_saludCurIdx];
+  if (actual === 'salud-paso-4' && _saludData.alergias === 'No') { _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-2')); return; }
+  if (actual === 'salud-paso-8' && _saludData.medicamentos === 'No') { _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-6')); return; }
+  _saludMostrarPaso(_saludCurIdx - 1);
+}
+
+/* Selección única (Alergias, Dieta, Medicamentos, Atención médica): limpia
+   .activa de los hermanos del mismo contenedor y la deja solo en el tocado
+   — mismo mecanismo que .aj-pill/.activa ya usa el resto de la app, sin
+   pasar por el sheet compartido (acá vive inline dentro del paso). */
+function _saludSelUnica(el, otroWrapId) {
+  var cont = el.parentElement;
+  cont.querySelectorAll('.aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  if (otroWrapId) {
+    var wrap = document.getElementById(otroWrapId);
+    if (wrap) wrap.style.display = (el.dataset.val === 'Otro') ? 'block' : 'none';
+  }
+}
+
+/* Selección múltiple + "Otro" (Enfermedad, Antecedentes): mismo patrón que
+   confirmarOtroProtec()/toggleProtecItem() de js/reservas.js (.aj-pill
+   togglea con ajTogglePill(), ya existente) — acá "Otro" además revela un
+   textarea inline en vez de abrir un bottom sheet aparte. */
+function saludToggleOtro(el, wrapId) {
+  ajTogglePill(el);
+  var wrap = document.getElementById(wrapId);
+  if (wrap) wrap.style.display = el.classList.contains('activa') ? 'block' : 'none';
+}
+
+function saludToggleOtroCheck(chk, wrapId) {
+  var wrap = document.getElementById(wrapId);
+  if (wrap) wrap.style.display = chk.checked ? 'block' : 'none';
+}
+
+function _saludBuscarPill(containerId, val) {
+  var pills = document.querySelectorAll('#' + containerId + ' .aj-pill');
+  for (var i = 0; i < pills.length; i++) { if (pills[i].dataset.val === val) return pills[i]; }
+  return null;
+}
+
+/* Paso 1 — Enfermedad diagnosticada (multi + Otro, con Omitir) */
+function saludContinuar1() {
+  var vals = [];
+  document.querySelectorAll('#salud-enfermedad-pills .aj-pill.activa').forEach(function(p) {
+    if (p.dataset.val === 'Otro') {
+      var t = (document.getElementById('salud-enfermedad-otro-input').value || '').trim();
+      if (t) vals.push(t);
+    } else vals.push(p.dataset.val);
+  });
+  _saludData.enfermedad = vals.join(', ');
+  _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-2'));
+}
+function saludOmitir1() { _saludData.enfermedad = ''; _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-2')); }
+
+/* Paso 2 — Alergias (única: Sí/No/Tal vez) */
+function saludContinuar2() {
+  var sel = document.querySelector('#salud-alergias-pills .aj-pill.activa');
+  if (!sel) { err('err-salud-2', 'Selecciona una opción.'); return; }
+  _saludData.alergias = sel.dataset.val;
+  if (sel.dataset.val === 'No') { _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-4')); }
+  else { _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-3')); }
+}
+
+/* Paso 3 — Detalle de alergias (texto libre, solo si paso 2 !== 'No') */
+function saludContinuar3() {
+  _saludData.alergiasDesc = (document.getElementById('salud-alergiasDesc-input').value || '').trim();
+  _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-4'));
+}
+
+/* Paso 4 — Antecedentes médicos personales (multi + Otro, con Omitir) */
+function saludContinuar4() {
+  var vals = [];
+  document.querySelectorAll('#salud-antecedentes-pills .aj-pill.activa').forEach(function(p) {
+    if (p.dataset.val === 'Otro') {
+      var t = (document.getElementById('salud-antecedentes-otro-input').value || '').trim();
+      if (t) vals.push(t);
+    } else vals.push(p.dataset.val);
+  });
+  _saludData.antecedentes = vals.join(', ');
+  _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-5'));
+}
+function saludOmitir4() { _saludData.antecedentes = ''; _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-5')); }
+
+/* Paso 5 — Dieta (única + Otro) */
+function saludContinuar5() {
+  var sel = document.querySelector('#salud-dieta-pills .aj-pill.activa');
+  if (!sel) { err('err-salud-5', 'Selecciona una opción.'); return; }
+  if (sel.dataset.val === 'Otro') {
+    var t = (document.getElementById('salud-dieta-otro-input').value || '').trim();
+    if (!t) { err('err-salud-5', 'Especifica tu dieta.'); return; }
+    _saludData.dieta = t;
+  } else {
+    _saludData.dieta = sel.dataset.val;
+  }
+  _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-6'));
+}
+
+/* Paso 6 — ¿Toma medicamentos? (única: Sí/No) */
+function saludContinuar6() {
+  var sel = document.querySelector('#salud-medicamentos-pills .aj-pill.activa');
+  if (!sel) { err('err-salud-6', 'Selecciona una opción.'); return; }
+  _saludData.medicamentos = sel.dataset.val;
+  if (sel.dataset.val === 'No') { _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-8')); }
+  else { _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-7')); }
+}
+
+/* Paso 7 — Detalle de medicamentos (texto libre, solo si paso 6 === 'Sí') */
+function saludContinuar7() {
+  _saludData.medicamentosDesc = (document.getElementById('salud-medicamentosDesc-input').value || '').trim();
+  _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-8'));
+}
+
+/* Paso 8 — Atención médica (única: MSP/IESS/Seguro Privado) */
+function saludContinuar8() {
+  var sel = document.querySelector('#salud-atencionMedica-pills .aj-pill.activa');
+  if (!sel) { err('err-salud-8', 'Selecciona una opción.'); return; }
+  _saludData.atencionMedica = sel.dataset.val;
+  if (sel.dataset.val === 'Seguro Privado') { _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-9')); }
+  else { _saludFinalizarWizard(); }
+}
+
+/* Paso 9 — Seguro privado (checkboxes reales, no pills) + contacto — último
+   paso posible del flujo; termina y guarda todo junto */
+function saludContinuar9() {
+  var vals = [];
+  document.querySelectorAll('#salud-seguro-checks input[type="checkbox"]:checked').forEach(function(c) {
+    if (c.value === 'Otro') {
+      var t = (document.getElementById('salud-seguro-otro-input').value || '').trim();
+      if (t) vals.push(t);
+    } else vals.push(c.value);
+  });
+  if (!vals.length) { err('err-salud-9', 'Selecciona al menos una opción.'); return; }
+  _saludData.seguro = vals.join(', ');
+  _saludData.seguroContacto = (document.getElementById('salud-seguroContacto-input').value || '').trim();
+  _saludFinalizarWizard();
+}
+
+/* Persistencia: un solo actualizarDatosPersona() con los 10 campos juntos al
+   terminar el flujo completo (paso 8 si MSP/IESS, paso 9 si Seguro Privado)
+   — no campo por campo en cada paso. Actualiza E.datos de forma optimista
+   (mismo criterio que ajTogglePriv()) para no esperar el round-trip antes de
+   mostrar el resumen. */
+function _saludFinalizarWizard() {
+  var payload = {
+    enfermedad: _saludData.enfermedad, alergias: _saludData.alergias, alergiasDesc: _saludData.alergiasDesc,
+    antecedentes: _saludData.antecedentes, dieta: _saludData.dieta, medicamentos: _saludData.medicamentos,
+    medicamentosDesc: _saludData.medicamentosDesc, atencionMedica: _saludData.atencionMedica,
+    seguro: _saludData.seguro, seguroContacto: _saludData.seguroContacto
+  };
+  _ajGuardar(payload);
+  Object.assign(E.datos, payload);
+  _ajCargarSub('aj-sub-salud');
+}
+
+function _saludResetPrefill() {
+  document.querySelectorAll('#salud-wizard .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  document.querySelectorAll('#salud-seguro-checks input[type="checkbox"]').forEach(function(c) { c.checked = false; });
+  ['salud-enfermedad-otro-wrap','salud-antecedentes-otro-wrap','salud-dieta-otro-wrap','salud-seguro-otro-wrap'].forEach(function(id) {
+    var w = document.getElementById(id); if (w) w.style.display = 'none';
+  });
+  ['salud-enfermedad-otro-input','salud-antecedentes-otro-input','salud-dieta-otro-input','salud-seguro-otro-input',
+   'salud-alergiasDesc-input','salud-medicamentosDesc-input','salud-seguroContacto-input'].forEach(function(id) {
+    var i = document.getElementById(id); if (i) i.value = '';
+  });
+  document.querySelectorAll('#salud-wizard .error-msg').forEach(function(e) { e.style.display = 'none'; });
+}
+
+function _saludPrefillMulti(valor, containerId, otroWrapId, otroInputId) {
+  if (!valor) return;
+  var partes = valor.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+  var otros = [];
+  partes.forEach(function(p) {
+    var pill = _saludBuscarPill(containerId, p);
+    if (pill) pill.classList.add('activa'); else otros.push(p);
+  });
+  if (otros.length) {
+    var otroPill = _saludBuscarPill(containerId, 'Otro');
+    if (otroPill) otroPill.classList.add('activa');
+    var wrap = document.getElementById(otroWrapId); if (wrap) wrap.style.display = 'block';
+    var inp = document.getElementById(otroInputId); if (inp) inp.value = otros.join(', ');
+  }
+}
+
+function _saludPrefillUnica(valor, containerId) {
+  if (!valor) return;
+  var pill = _saludBuscarPill(containerId, valor);
+  if (pill) pill.classList.add('activa');
+}
+
+function _saludPrefillUnicaConOtro(valor, containerId, otroWrapId, otroInputId) {
+  if (!valor) return;
+  var pill = _saludBuscarPill(containerId, valor);
+  if (pill) { pill.classList.add('activa'); return; }
+  var otroPill = _saludBuscarPill(containerId, 'Otro');
+  if (otroPill) otroPill.classList.add('activa');
+  var wrap = document.getElementById(otroWrapId); if (wrap) wrap.style.display = 'block';
+  var inp = document.getElementById(otroInputId); if (inp) inp.value = valor;
+}
+
+function _saludPrefillSeguro(valor) {
+  if (!valor) return;
+  var partes = valor.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+  var otros = [];
+  partes.forEach(function(p) {
+    var chk = document.querySelector('#salud-seguro-checks input[value="' + p.replace(/"/g,'\\"') + '"]');
+    if (chk) chk.checked = true; else otros.push(p);
+  });
+  if (otros.length) {
+    var chkOtro = document.querySelector('#salud-seguro-checks input[value="Otro"]');
+    if (chkOtro) chkOtro.checked = true;
+    var wrap = document.getElementById('salud-seguro-otro-wrap'); if (wrap) wrap.style.display = 'block';
+    var inp = document.getElementById('salud-seguro-otro-input'); if (inp) inp.value = otros.join(', ');
+  }
+}
+
+function _saludPrefillWizard() {
+  _saludPrefillMulti(_saludData.enfermedad, 'salud-enfermedad-pills', 'salud-enfermedad-otro-wrap', 'salud-enfermedad-otro-input');
+  _saludPrefillUnica(_saludData.alergias, 'salud-alergias-pills');
+  document.getElementById('salud-alergiasDesc-input').value = _saludData.alergiasDesc;
+  _saludPrefillMulti(_saludData.antecedentes, 'salud-antecedentes-pills', 'salud-antecedentes-otro-wrap', 'salud-antecedentes-otro-input');
+  _saludPrefillUnicaConOtro(_saludData.dieta, 'salud-dieta-pills', 'salud-dieta-otro-wrap', 'salud-dieta-otro-input');
+  _saludPrefillUnica(_saludData.medicamentos, 'salud-medicamentos-pills');
+  document.getElementById('salud-medicamentosDesc-input').value = _saludData.medicamentosDesc;
+  _saludPrefillUnica(_saludData.atencionMedica, 'salud-atencionMedica-pills');
+  _saludPrefillSeguro(_saludData.seguro);
+  document.getElementById('salud-seguroContacto-input').value = _saludData.seguroContacto;
 }
 
 /* ── Privacidad: autoguardado sin botón ───────────────── */

@@ -1483,118 +1483,268 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <!-- SUB: Salud -->
 <div class="aj-sub" id="aj-sub-salud">
   <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
-    <button class="app-nav-back" onclick="cerrarAjSub('aj-sub-salud')">
+    <button class="app-nav-back" onclick="saludBack()">
       <span class="material-symbols-outlined">arrow_back</span>
     </button>
     <span class="app-nav-title">Salud</span>
     <div style="width:40px;flex-shrink:0;"></div>
   </div>
   <div class="aj-sub-inner">
-    <div class="aj-group">
-      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Enfermedad diagnosticada','','aj-enfermedad-val','enfermedad','Ej: Asma, diabetes')">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">sick</span></div>
-        <div class="aj-dato-texts">
-          <div class="aj-dato-label">Enfermedad diagnosticada</div>
-          <div class="aj-dato-val vacio" id="aj-enfermedad-val">—</div>
-        </div>
-        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-      </div>
 
-      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Dieta','','aj-dieta-val','dieta','Ej: Vegetariana, sin gluten')">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">restaurant</span></div>
+    <!-- Estado: sin completar -->
+    <div id="salud-card-empezar" class="aj-group">
+      <div class="aj-dato-row" onclick="saludIniciarWizard()">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">assignment</span></div>
         <div class="aj-dato-texts">
-          <div class="aj-dato-label">Dieta</div>
-          <div class="aj-dato-val vacio" id="aj-dieta-val">—</div>
-        </div>
-        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-      </div>
-
-      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Antecedentes médicos personales','','aj-antecedentes-val','antecedentes','Ej: Cirugías, fracturas previas')">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">history</span></div>
-        <div class="aj-dato-texts">
-          <div class="aj-dato-label">Antecedentes médicos personales</div>
-          <div class="aj-dato-val vacio" id="aj-antecedentes-val">—</div>
-        </div>
-        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-      </div>
-
-      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Atención médica','','aj-atencionMedica-val','atencionMedica','Ej: Clínica u hospital de preferencia')">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">local_hospital</span></div>
-        <div class="aj-dato-texts">
-          <div class="aj-dato-label">Atención médica</div>
-          <div class="aj-dato-val vacio" id="aj-atencionMedica-val">—</div>
+          <div class="aj-dato-label">Ficha de salud</div>
+          <div class="aj-dato-val vacio">Completar ficha de salud</div>
         </div>
         <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
       </div>
     </div>
 
-    <div class="aj-group">
-      <div class="aj-dato-row" onclick="ajAbrirSheetSiNo('¿Tienes alguna alergia?','alergias','aj-alergias-val','aj-alergiasDesc-wrap')">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">warning</span></div>
-        <div class="aj-dato-texts">
-          <div class="aj-dato-label">Alergias</div>
-          <div class="aj-dato-val vacio" id="aj-alergias-val">—</div>
-        </div>
-        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-      </div>
-    </div>
+    <!-- Estado: completada (filas de lectura, editables individualmente) -->
+    <div id="salud-resumen" style="display:none">
+      <button class="btn btn-secondary" style="margin-bottom:14px;" onclick="saludIniciarWizard()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span> Volver a completar el paso a paso</button>
 
-    <div id="aj-alergiasDesc-wrap" style="display:none">
       <div class="aj-group">
-        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Alergia/s que presenta','','aj-alergiasDesc-val','alergiasDesc','Ej: Penicilina, polen')">
-          <div class="aj-dato-icon"><span class="material-symbols-outlined">list_alt</span></div>
+        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Enfermedad diagnosticada','','aj-enfermedad-val','enfermedad','Ej: Asma, diabetes')">
+          <div class="aj-dato-icon"><span class="material-symbols-outlined">sick</span></div>
           <div class="aj-dato-texts">
-            <div class="aj-dato-label">Alergia/s que presenta</div>
-            <div class="aj-dato-val vacio" id="aj-alergiasDesc-val">—</div>
+            <div class="aj-dato-label">Enfermedad diagnosticada</div>
+            <div class="aj-dato-val vacio" id="aj-enfermedad-val">—</div>
+          </div>
+          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+        </div>
+
+        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Dieta','','aj-dieta-val','dieta','Ej: Vegetariana, sin gluten')">
+          <div class="aj-dato-icon"><span class="material-symbols-outlined">restaurant</span></div>
+          <div class="aj-dato-texts">
+            <div class="aj-dato-label">Dieta</div>
+            <div class="aj-dato-val vacio" id="aj-dieta-val">—</div>
+          </div>
+          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+        </div>
+
+        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Antecedentes médicos personales','','aj-antecedentes-val','antecedentes','Ej: Cirugías, fracturas previas')">
+          <div class="aj-dato-icon"><span class="material-symbols-outlined">history</span></div>
+          <div class="aj-dato-texts">
+            <div class="aj-dato-label">Antecedentes médicos personales</div>
+            <div class="aj-dato-val vacio" id="aj-antecedentes-val">—</div>
+          </div>
+          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+        </div>
+
+        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Atención médica','','aj-atencionMedica-val','atencionMedica','Ej: Clínica u hospital de preferencia')">
+          <div class="aj-dato-icon"><span class="material-symbols-outlined">local_hospital</span></div>
+          <div class="aj-dato-texts">
+            <div class="aj-dato-label">Atención médica</div>
+            <div class="aj-dato-val vacio" id="aj-atencionMedica-val">—</div>
+          </div>
+          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+        </div>
+      </div>
+
+      <div class="aj-group">
+        <div class="aj-dato-row" onclick="ajAbrirSheetSiNo('¿Tienes alguna alergia?','alergias','aj-alergias-val','aj-alergiasDesc-wrap')">
+          <div class="aj-dato-icon"><span class="material-symbols-outlined">warning</span></div>
+          <div class="aj-dato-texts">
+            <div class="aj-dato-label">Alergias</div>
+            <div class="aj-dato-val vacio" id="aj-alergias-val">—</div>
+          </div>
+          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+        </div>
+      </div>
+
+      <div id="aj-alergiasDesc-wrap" style="display:none">
+        <div class="aj-group">
+          <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Alergia/s que presenta','','aj-alergiasDesc-val','alergiasDesc','Ej: Penicilina, polen')">
+            <div class="aj-dato-icon"><span class="material-symbols-outlined">list_alt</span></div>
+            <div class="aj-dato-texts">
+              <div class="aj-dato-label">Alergia/s que presenta</div>
+              <div class="aj-dato-val vacio" id="aj-alergiasDesc-val">—</div>
+            </div>
+            <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="aj-group">
+        <div class="aj-dato-row" onclick="ajAbrirSheetSiNo('¿Tomas algún medicamento?','medicamentos','aj-medicamentos-val','aj-medicamentosDesc-wrap')">
+          <div class="aj-dato-icon"><span class="material-symbols-outlined">medication</span></div>
+          <div class="aj-dato-texts">
+            <div class="aj-dato-label">¿Toma algún medicamento?</div>
+            <div class="aj-dato-val vacio" id="aj-medicamentos-val">—</div>
+          </div>
+          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+        </div>
+      </div>
+
+      <div id="aj-medicamentosDesc-wrap" style="display:none">
+        <div class="aj-group">
+          <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('¿Qué medicamento/s toma diariamente?','','aj-medicamentosDesc-val','medicamentosDesc','Ej: Losartán 50mg, 1 vez al día')">
+            <div class="aj-dato-icon"><span class="material-symbols-outlined">medication_liquid</span></div>
+            <div class="aj-dato-texts">
+              <div class="aj-dato-label">Medicamento/s diarios</div>
+              <div class="aj-dato-val vacio" id="aj-medicamentosDesc-val">—</div>
+            </div>
+            <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="aj-group">
+        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Nombre de seguro privado','','aj-seguro-val','seguro','Ej: Salud S.A.')">
+          <div class="aj-dato-icon"><span class="material-symbols-outlined">health_and_safety</span></div>
+          <div class="aj-dato-texts">
+            <div class="aj-dato-label">Nombre de seguro privado</div>
+            <div class="aj-dato-val vacio" id="aj-seguro-val">—</div>
+          </div>
+          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+        </div>
+
+        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Número de contacto del seguro','','aj-seguroContacto-val','seguroContacto','Ej: 0962773052')">
+          <div class="aj-dato-icon"><span class="material-symbols-outlined">call</span></div>
+          <div class="aj-dato-texts">
+            <div class="aj-dato-label">Número de contacto del seguro</div>
+            <div class="aj-dato-val vacio" id="aj-seguroContacto-val">—</div>
           </div>
           <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
         </div>
       </div>
     </div>
 
-    <div class="aj-group">
-      <div class="aj-dato-row" onclick="ajAbrirSheetSiNo('¿Tomas algún medicamento?','medicamentos','aj-medicamentos-val','aj-medicamentosDesc-wrap')">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">medication</span></div>
-        <div class="aj-dato-texts">
-          <div class="aj-dato-label">¿Toma algún medicamento?</div>
-          <div class="aj-dato-val vacio" id="aj-medicamentos-val">—</div>
+    <!-- Wizard paso a paso -->
+    <div id="salud-wizard" style="display:none">
+      <div class="salud-prog" id="salud-prog"></div>
+
+      <div class="salud-paso" id="salud-paso-1">
+        <h2>Enfermedad diagnosticada</h2>
+        <p>Si no tienes ninguna enfermedad diagnosticada puedes omitir esta sección.</p>
+        <div class="aj-pills-row" id="salud-enfermedad-pills">
+          <span class="aj-pill" data-val="Asma" onclick="ajTogglePill(this)">Asma</span>
+          <span class="aj-pill" data-val="Diabetes" onclick="ajTogglePill(this)">Diabetes</span>
+          <span class="aj-pill" data-val="Hipertensión arterial" onclick="ajTogglePill(this)">Hipertensión arterial</span>
+          <span class="aj-pill" data-val="Cardiopatía" onclick="ajTogglePill(this)">Cardiopatía</span>
+          <span class="aj-pill" data-val="Epilepsia" onclick="ajTogglePill(this)">Epilepsia</span>
+          <span class="aj-pill" data-val="Trastornos de coagulación" onclick="ajTogglePill(this)">Trastornos de coagulación</span>
+          <span class="aj-pill" data-val="Problemas osteomusculares crónicos" onclick="ajTogglePill(this)">Problemas osteomusculares crónicos</span>
+          <span class="aj-pill" data-val="Otro" onclick="saludToggleOtro(this,'salud-enfermedad-otro-wrap')">Otro</span>
         </div>
-        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+        <div id="salud-enfermedad-otro-wrap" style="display:none;">
+          <textarea class="textarea-otro" id="salud-enfermedad-otro-input" placeholder="Especifica"></textarea>
+        </div>
+        <div class="error-msg" id="err-salud-1"></div>
+        <button class="btn btn-primary" style="margin-top:16px;" onclick="saludContinuar1()">Continuar</button>
+        <button onclick="saludOmitir1()" style="width:100%;padding:13px;background:transparent;color:var(--text-faint);border:2px solid var(--border-light);border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:10px;">Omitir</button>
+      </div>
+
+      <div class="salud-paso" id="salud-paso-2">
+        <h2>Alergias</h2>
+        <p>¿Presentas alergias (alimenticias o medicamentosas)?</p>
+        <div class="aj-pills-row" id="salud-alergias-pills">
+          <span class="aj-pill" data-val="Sí" onclick="_saludSelUnica(this)">Sí</span>
+          <span class="aj-pill" data-val="No" onclick="_saludSelUnica(this)">No</span>
+          <span class="aj-pill" data-val="Tal vez" onclick="_saludSelUnica(this)">Tal vez</span>
+        </div>
+        <div class="error-msg" id="err-salud-2"></div>
+        <button class="btn btn-primary" style="margin-top:16px;" onclick="saludContinuar2()">Continuar</button>
+      </div>
+
+      <div class="salud-paso" id="salud-paso-3">
+        <h2>Detalle de alergias</h2>
+        <p>Detalla todas las alergias o situaciones de alergia/s que presentas o hayas presentado.</p>
+        <textarea id="salud-alergiasDesc-input" placeholder="Ej: Penicilina, mariscos"></textarea>
+        <button class="btn btn-primary" style="margin-top:16px;" onclick="saludContinuar3()">Continuar</button>
+      </div>
+
+      <div class="salud-paso" id="salud-paso-4">
+        <h2>Antecedentes médicos personales</h2>
+        <p>Si no tienes ningún antecedente puedes omitir esta sección.</p>
+        <div class="aj-pills-row" id="salud-antecedentes-pills">
+          <span class="aj-pill" data-val="Cirugías previas" onclick="ajTogglePill(this)">Cirugías previas</span>
+          <span class="aj-pill" data-val="Hospitalización en el último año" onclick="ajTogglePill(this)">Hospitalización en el último año</span>
+          <span class="aj-pill" data-val="Lesiones deportivas previas" onclick="ajTogglePill(this)">Lesiones deportivas previas</span>
+          <span class="aj-pill" data-val="Otro" onclick="saludToggleOtro(this,'salud-antecedentes-otro-wrap')">Otro</span>
+        </div>
+        <div id="salud-antecedentes-otro-wrap" style="display:none;">
+          <textarea class="textarea-otro" id="salud-antecedentes-otro-input" placeholder="Especifica"></textarea>
+        </div>
+        <div class="error-msg" id="err-salud-4"></div>
+        <button class="btn btn-primary" style="margin-top:16px;" onclick="saludContinuar4()">Continuar</button>
+        <button onclick="saludOmitir4()" style="width:100%;padding:13px;background:transparent;color:var(--text-faint);border:2px solid var(--border-light);border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:10px;">Omitir</button>
+      </div>
+
+      <div class="salud-paso" id="salud-paso-5">
+        <h2>Dieta</h2>
+        <p>¿Sigues algún tipo de dieta particular?</p>
+        <div class="aj-pills-row" id="salud-dieta-pills">
+          <span class="aj-pill" data-val="Vegetariano" onclick="_saludSelUnica(this,'salud-dieta-otro-wrap')">Vegetariano</span>
+          <span class="aj-pill" data-val="Vegano" onclick="_saludSelUnica(this,'salud-dieta-otro-wrap')">Vegano</span>
+          <span class="aj-pill" data-val="Pescetariano" onclick="_saludSelUnica(this,'salud-dieta-otro-wrap')">Pescetariano</span>
+          <span class="aj-pill" data-val="Otro" onclick="_saludSelUnica(this,'salud-dieta-otro-wrap')">Otro</span>
+        </div>
+        <div id="salud-dieta-otro-wrap" style="display:none;">
+          <textarea class="textarea-otro" id="salud-dieta-otro-input" placeholder="Especifica"></textarea>
+        </div>
+        <div class="error-msg" id="err-salud-5"></div>
+        <button class="btn btn-primary" style="margin-top:16px;" onclick="saludContinuar5()">Continuar</button>
+      </div>
+
+      <div class="salud-paso" id="salud-paso-6">
+        <h2>Medicamentos</h2>
+        <p>¿Tomas algún medicamento/s o suplemento/s de uso diario? (NO medicamentos por enfermedad)</p>
+        <div class="aj-pills-row" id="salud-medicamentos-pills">
+          <span class="aj-pill" data-val="Sí" onclick="_saludSelUnica(this)">Sí</span>
+          <span class="aj-pill" data-val="No" onclick="_saludSelUnica(this)">No</span>
+        </div>
+        <div class="error-msg" id="err-salud-6"></div>
+        <button class="btn btn-primary" style="margin-top:16px;" onclick="saludContinuar6()">Continuar</button>
+      </div>
+
+      <div class="salud-paso" id="salud-paso-7">
+        <h2>Detalle de medicamentos</h2>
+        <p>Especifica nombre de medicamento, dosis y horario. Ej: Loratadina 10 mg cada 12 horas.</p>
+        <textarea id="salud-medicamentosDesc-input" placeholder="Ej: Loratadina 10 mg cada 12 horas"></textarea>
+        <button class="btn btn-primary" style="margin-top:16px;" onclick="saludContinuar7()">Continuar</button>
+      </div>
+
+      <div class="salud-paso" id="salud-paso-8">
+        <h2>Atención médica</h2>
+        <p>Cuéntanos con qué tipo de atención médica tienes o utilizas en caso de emergencia.</p>
+        <div class="aj-pills-row" id="salud-atencionMedica-pills">
+          <span class="aj-pill" data-val="MSP (Ministerio de Salud Pública)" onclick="_saludSelUnica(this)">MSP (Ministerio de Salud Pública)</span>
+          <span class="aj-pill" data-val="IESS" onclick="_saludSelUnica(this)">IESS</span>
+          <span class="aj-pill" data-val="Seguro Privado" onclick="_saludSelUnica(this)">Seguro Privado</span>
+        </div>
+        <div class="error-msg" id="err-salud-8"></div>
+        <button class="btn btn-primary" style="margin-top:16px;" onclick="saludContinuar8()">Continuar</button>
+      </div>
+
+      <div class="salud-paso" id="salud-paso-9">
+        <h2>Seguro privado</h2>
+        <p>¿Cuál es tu seguro privado?</p>
+        <div id="salud-seguro-checks" style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
+          <label style="display:flex;align-items:center;gap:10px;font-size:0.88rem;color:var(--text);"><input type="checkbox" value="Saludsa" style="accent-color:var(--brand);width:18px;height:18px;"> Saludsa</label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:0.88rem;color:var(--text);"><input type="checkbox" value="Ecuasanitas" style="accent-color:var(--brand);width:18px;height:18px;"> Ecuasanitas</label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:0.88rem;color:var(--text);"><input type="checkbox" value="Humana" style="accent-color:var(--brand);width:18px;height:18px;"> Humana</label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:0.88rem;color:var(--text);"><input type="checkbox" value="BMI del Ecuador" style="accent-color:var(--brand);width:18px;height:18px;"> BMI del Ecuador</label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:0.88rem;color:var(--text);"><input type="checkbox" value="Confiamed" style="accent-color:var(--brand);width:18px;height:18px;"> Confiamed</label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:0.88rem;color:var(--text);"><input type="checkbox" value="BUPA Ecuador" style="accent-color:var(--brand);width:18px;height:18px;"> BUPA Ecuador</label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:0.88rem;color:var(--text);"><input type="checkbox" value="Pan American Life" style="accent-color:var(--brand);width:18px;height:18px;"> Pan American Life</label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:0.88rem;color:var(--text);"><input type="checkbox" value="CruzBlanca" style="accent-color:var(--brand);width:18px;height:18px;"> CruzBlanca</label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:0.88rem;color:var(--text);"><input type="checkbox" value="Otro" onchange="saludToggleOtroCheck(this,'salud-seguro-otro-wrap')" style="accent-color:var(--brand);width:18px;height:18px;"> Otro</label>
+        </div>
+        <div id="salud-seguro-otro-wrap" style="display:none;">
+          <textarea class="textarea-otro" id="salud-seguro-otro-input" placeholder="Especifica"></textarea>
+        </div>
+        <div class="error-msg" id="err-salud-9"></div>
+        <p style="font-size:0.85rem;color:var(--text);font-weight:700;margin-top:20px;margin-bottom:8px;">¿Cómo podemos contactar a tu seguro en caso de emergencia?</p>
+        <input type="text" id="salud-seguroContacto-input" placeholder="Ej: 0962773052 o correo de contacto">
+        <button class="btn btn-primary" style="margin-top:16px;" onclick="saludContinuar9()">Guardar y finalizar</button>
       </div>
     </div>
 
-    <div id="aj-medicamentosDesc-wrap" style="display:none">
-      <div class="aj-group">
-        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('¿Qué medicamento/s toma diariamente?','','aj-medicamentosDesc-val','medicamentosDesc','Ej: Losartán 50mg, 1 vez al día')">
-          <div class="aj-dato-icon"><span class="material-symbols-outlined">medication_liquid</span></div>
-          <div class="aj-dato-texts">
-            <div class="aj-dato-label">Medicamento/s diarios</div>
-            <div class="aj-dato-val vacio" id="aj-medicamentosDesc-val">—</div>
-          </div>
-          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="aj-group">
-      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Nombre de seguro privado','','aj-seguro-val','seguro','Ej: Salud S.A.')">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">health_and_safety</span></div>
-        <div class="aj-dato-texts">
-          <div class="aj-dato-label">Nombre de seguro privado</div>
-          <div class="aj-dato-val vacio" id="aj-seguro-val">—</div>
-        </div>
-        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-      </div>
-
-      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Número de contacto del seguro','','aj-seguroContacto-val','seguroContacto','Ej: 0962773052')">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">call</span></div>
-        <div class="aj-dato-texts">
-          <div class="aj-dato-label">Número de contacto del seguro</div>
-          <div class="aj-dato-val vacio" id="aj-seguroContacto-val">—</div>
-        </div>
-        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-      </div>
-    </div>
   </div>
 </div>
 
