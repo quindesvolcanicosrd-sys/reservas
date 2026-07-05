@@ -456,10 +456,12 @@ function _ajCargarSub(id) {
     _ajSetDatoVal('aj-numeroDoc-val', d.numeroDocumento, '—', true);
     _ajSetDatoVal('aj-nombreLegal-val', d.nombreLegal, '—', true);
   } else if (id === 'aj-sub-direccion') {
-    _ajPaisActual = d.pais || '';
-    _ajSetDatoVal('aj-pais-val', d.pais, '—', false);
-    _ajSetDatoVal('aj-ciudad-val', d.ciudad, '—', true);
-    _ajSetDatoVal('aj-direccion-val', d.callePrincipal, '—', true);
+    _ajSetDatoVal('aj-callePrincipal-val', d.callePrincipal, '—', true);
+    _ajSetDatoVal('aj-calleSecundaria-val', d.calleSecundaria, '—', true);
+    _ajSetDatoVal('aj-numeracion-val', d.numeracion, '—', true);
+    _ajSetDatoVal('aj-sector-val', d.sector, '—', true);
+    _ajSetDatoVal('aj-canton-val', d.canton, '—', true);
+    _ajInicializarMapaDireccion();
   } else if (id === 'aj-sub-emerg') {
     _ajSetDatoVal('aj-em1nombre-val', d.emerg1Nombre, '—', true);
     _ajSetDatoVal('aj-em1relacion-val', d.emerg1Relacion, '—', true);
@@ -719,13 +721,14 @@ function ajSelPais(pais) {
 
 
 /* ── Filas de dato: bottom sheet de texto genérico ────── */
-function ajAbrirSheetTextoGenerico(titulo, subtitulo, displayId, campo, placeholder) {
+function ajAbrirSheetTextoGenerico(titulo, subtitulo, displayId, campo, placeholder, onGuardado) {
   var valorActual = (E.datos && E.datos[campo]) || '';
   ajAbrirSheetTexto('aj-sheet-texto', titulo, placeholder, function(v) {
     var payload = {}; payload[campo] = v;
     _ajGuardar(payload);
     var disp = document.getElementById(displayId);
     if (disp) { disp.textContent = v; disp.classList.remove('vacio'); }
+    if (typeof onGuardado === 'function') onGuardado(v);
   });
   var sub = document.getElementById('aj-sheet-texto-subtitulo');
   if (sub) { if (subtitulo) { sub.textContent = subtitulo; sub.style.display = 'block'; } else { sub.style.display = 'none'; } }
@@ -1087,4 +1090,92 @@ function ajCerrarSheetPlaces() {
   if (sh) sh.style.transform = 'translateY(100%)';
   setTimeout(function(){ if(sh)sh.style.display='none'; if(ov)ov.style.display='none'; }, 350);
   _ajPlacesCallback = null;
+}
+// _AJ_PAIS_CODES, ajAbrirSheetPlaces/ajCerrarSheetPlaces (arriba) y ajAbrirSheetPais/
+// ajSelPais/_ajRenderPaises/ajFiltrarPaises/_AJ_PAISES/_ajPaisActual (más abajo) quedan
+// sin ningún llamador desde el rediseño de "Dirección" a mapa interactivo (ver
+// "Cambios recientes") — las filas País/Ciudad se eliminaron y "Dirección" dejó de usar
+// Places Autocomplete. Se dejan huérfanos a propósito (sin invocar), mismo criterio que
+// se usó con mostrarModalEquip en un cambio anterior, por si hace falta revertir.
+
+/* ── Mapa interactivo de Dirección (aj-sub-direccion) ─── */
+var _ajDireccionMap = null;
+var _AJ_QUITO_LATLNG = { lat: -0.1807, lng: -78.4678 };
+
+function _ajInicializarMapaDireccion() {
+  var canvas = document.getElementById('aj-mapa-direccion-canvas');
+  if (!canvas) return;
+  if (typeof google === 'undefined' || !google.maps || !window._mapsLoaded) {
+    canvas.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:0.78rem;text-align:center;padding:16px;">No se pudo cargar el mapa. Intenta más tarde.</div>';
+    return;
+  }
+  function centrarEn(pos) {
+    if (_ajDireccionMap) {
+      _ajDireccionMap.setCenter(pos);
+    } else {
+      _ajDireccionMap = new google.maps.Map(canvas, {
+        center: pos, zoom: 16, disableDefaultUI: true, zoomControl: true, gestureHandling: 'greedy'
+      });
+      _ajDireccionMap.addListener('dragend', _ajOnMapaDireccionDragEnd);
+    }
+  }
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      centrarEn({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+    }, function() {
+      mostrarToast('No pudimos acceder a tu ubicación. Mostrando Quito por defecto.', 'ok');
+      centrarEn(_AJ_QUITO_LATLNG);
+    }, { timeout: 8000 });
+  } else {
+    centrarEn(_AJ_QUITO_LATLNG);
+  }
+}
+
+function _ajOnMapaDireccionDragEnd() {
+  if (!_ajDireccionMap) return;
+  var center = _ajDireccionMap.getCenter();
+  new google.maps.Geocoder().geocode({ location: { lat: center.lat(), lng: center.lng() } }, function(results, status) {
+    if (status !== 'OK' || !results || !results[0]) return;
+    _ajAplicarReverseGeocode(results[0].address_components || []);
+  });
+}
+
+function _ajAplicarReverseGeocode(components) {
+  function buscar(tiposEnOrden) {
+    for (var t = 0; t < tiposEnOrden.length; t++) {
+      for (var i = 0; i < components.length; i++) {
+        if (components[i].types.indexOf(tiposEnOrden[t]) !== -1) return components[i].long_name;
+      }
+    }
+    return '';
+  }
+  var payload = {};
+  var calle = buscar(['route']); if (calle) payload.callePrincipal = calle;
+  var numero = buscar(['street_number']); if (numero) payload.numeracion = numero;
+  var canton = buscar(['administrative_area_level_2', 'locality']); if (canton) payload.canton = canton;
+  var sector = buscar(['neighborhood', 'sublocality']); if (sector) payload.sector = sector;
+  if (!Object.keys(payload).length) return;
+  _ajGuardar(payload);
+  if (payload.callePrincipal) _ajSetDatoVal('aj-callePrincipal-val', payload.callePrincipal, '—', true);
+  if (payload.numeracion) _ajSetDatoVal('aj-numeracion-val', payload.numeracion, '—', true);
+  if (payload.canton) _ajSetDatoVal('aj-canton-val', payload.canton, '—', true);
+  if (payload.sector) _ajSetDatoVal('aj-sector-val', payload.sector, '—', true);
+}
+
+function _ajOnGuardadoDireccion(campo) {
+  return function(valorNuevo) { _ajGeocodeDireccion(campo, valorNuevo); };
+}
+
+function _ajGeocodeDireccion(campo, valorNuevo) {
+  if (typeof google === 'undefined' || !google.maps || !window._mapsLoaded) return;
+  var d = E.datos || {};
+  var calle = campo === 'callePrincipal' ? valorNuevo : (d.callePrincipal || '');
+  var numeracion = campo === 'numeracion' ? valorNuevo : (d.numeracion || '');
+  var sector = campo === 'sector' ? valorNuevo : (d.sector || '');
+  var canton = campo === 'canton' ? valorNuevo : (d.canton || '');
+  var direccion = calle + ' ' + numeracion + ', ' + sector + ', ' + canton;
+  new google.maps.Geocoder().geocode({ address: direccion }, function(results, status) {
+    if (status !== 'OK' || !results || !results[0] || !_ajDireccionMap) return;
+    _ajDireccionMap.setCenter(results[0].geometry.location);
+  });
 }

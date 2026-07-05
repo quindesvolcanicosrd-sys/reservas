@@ -236,3 +236,13 @@
    encontrado y confirmado con Playwright: clicks en .pac-item resueltos contra
    el overlay). */
 .pac-container { z-index: 9700 !important; }
+
+/* Pin fijo del mapa interactivo de Dirección (aj-sub-direccion): el mapa se
+   arrastra debajo, el pin queda anclado al centro del contenedor (patrón
+   Uber/Cabify) — no es un google.maps.Marker. */
+.aj-mapa-pin {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -100%);
+  pointer-events: none; color: var(--brand);
+  filter: drop-shadow(0 3px 4px rgba(0,0,0,0.35));
+}
+.aj-mapa-pin .material-symbols-outlined { font-size: 2.4rem; font-variation-settings: 'FILL' 1; }

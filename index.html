@@ -1341,30 +1341,54 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div style="width:40px;flex-shrink:0;"></div>
   </div>
   <div class="aj-sub-inner">
+    <div id="aj-mapa-direccion" style="position:relative;height:220px;border-radius:12px;overflow:hidden;margin-bottom:8px;background:var(--surface-2);">
+      <div id="aj-mapa-direccion-canvas" style="width:100%;height:100%;"></div>
+      <div class="aj-mapa-pin"><span class="material-symbols-outlined">location_on</span></div>
+    </div>
+    <p style="font-size:0.72rem;color:var(--muted);text-align:center;margin:0 0 14px;">Arrastra el mapa para ajustar el punto — actualizamos tu dirección automáticamente.</p>
+
     <div class="aj-group">
-      <div class="aj-dato-row" onclick="ajAbrirSheetPais()">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">language</span></div>
-        <div class="aj-dato-texts">
-          <div class="aj-dato-label">País</div>
-          <div class="aj-dato-val" id="aj-pais-val">—</div>
-        </div>
-        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-      </div>
-
-      <div class="aj-dato-row" onclick="ajAbrirSheetPlaces('Ciudad','ciudad','aj-ciudad-val','ciudad')">
-        <div class="aj-dato-icon"><span class="material-symbols-outlined">location_city</span></div>
-        <div class="aj-dato-texts">
-          <div class="aj-dato-label">Ciudad</div>
-          <div class="aj-dato-val vacio" id="aj-ciudad-val">—</div>
-        </div>
-        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-      </div>
-
-      <div class="aj-dato-row" onclick="ajAbrirSheetPlaces('Dirección','address','aj-direccion-val','callePrincipal')">
+      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Calle principal','','aj-callePrincipal-val','callePrincipal','Ej: Av. Amazonas', _ajOnGuardadoDireccion('callePrincipal'))">
         <div class="aj-dato-icon"><span class="material-symbols-outlined">home</span></div>
         <div class="aj-dato-texts">
-          <div class="aj-dato-label">Dirección</div>
-          <div class="aj-dato-val vacio" id="aj-direccion-val">—</div>
+          <div class="aj-dato-label">Calle principal</div>
+          <div class="aj-dato-val vacio" id="aj-callePrincipal-val">—</div>
+        </div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </div>
+
+      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Calle secundaria','','aj-calleSecundaria-val','calleSecundaria','Ej: Calle Berlín')">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">signpost</span></div>
+        <div class="aj-dato-texts">
+          <div class="aj-dato-label">Calle secundaria</div>
+          <div class="aj-dato-val vacio" id="aj-calleSecundaria-val">—</div>
+        </div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </div>
+
+      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Numeración','','aj-numeracion-val','numeracion','Ej: N34-123', _ajOnGuardadoDireccion('numeracion'))">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">pin</span></div>
+        <div class="aj-dato-texts">
+          <div class="aj-dato-label">Numeración</div>
+          <div class="aj-dato-val vacio" id="aj-numeracion-val">—</div>
+        </div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </div>
+
+      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Sector','','aj-sector-val','sector','Ej: La Floresta', _ajOnGuardadoDireccion('sector'))">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">location_city</span></div>
+        <div class="aj-dato-texts">
+          <div class="aj-dato-label">Sector</div>
+          <div class="aj-dato-val vacio" id="aj-sector-val">—</div>
+        </div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </div>
+
+      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Cantón','','aj-canton-val','canton','Ej: Quito', _ajOnGuardadoDireccion('canton'))">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">map</span></div>
+        <div class="aj-dato-texts">
+          <div class="aj-dato-label">Cantón</div>
+          <div class="aj-dato-val vacio" id="aj-canton-val">—</div>
         </div>
         <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
       </div>
