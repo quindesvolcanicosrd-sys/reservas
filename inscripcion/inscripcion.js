@@ -305,8 +305,16 @@ function inscContinuar3() {
   if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]+$/.test(nombre)) { errMsg('err-p3', 'El nombre solo puede contener letras y espacios.'); return; }
   var prons = _inscGetPronombres();
   if (!prons) { errMsg('err-p3', 'Selecciona al menos un pronombre.'); return; }
-  G.nombre = nombre;
-  inscMostrarPaso(_INSC_STEPS.indexOf('insc-step-4'));
+  mostrarCargando('Verificando disponibilidad...');
+  apiGet({ action: 'verificarNombreDisponible', nombre: nombre }, function(res) {
+    ocultarCargando();
+    if (!res.disponible) { errMsg('err-p3', 'Este nombre de usuario ya está en uso.'); return; }
+    G.nombre = nombre;
+    inscMostrarPaso(_INSC_STEPS.indexOf('insc-step-4'));
+  }, function(e) {
+    ocultarCargando();
+    errMsg('err-p3', 'Error al verificar: ' + (e.message || 'Intenta de nuevo'));
+  });
 }
 
 /* ── Paso 4: teléfono ───────────────────────── */
