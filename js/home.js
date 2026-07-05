@@ -399,6 +399,13 @@ function _renderCardHome(r, hoy) {
   var hora = partes[1] ? partes[1].trim() : '';
   var lugar = partes[2] ? partes[2].trim() : '';
 
+  var fechaParsed = _parseFechaStr(r.fecha || '');
+  if (fechaParsed) {
+    var manana = new Date(hoy); manana.setDate(manana.getDate() + 1);
+    if (fechaParsed.getTime() === hoy.getTime()) fechaTexto = 'Hoy';
+    else if (fechaParsed.getTime() === manana.getTime()) fechaTexto = 'Mañana';
+  }
+
   var estadoClase = r.estado === 'Confirmada' ? 'confirmada-clase' : r.estado === 'Reagendar' ? 'reagendar-clase' : 'pendiente-clase';
   var estadoColor = r.estado === 'Confirmada' ? 'var(--success-dark)' : r.estado === 'Cancelada' ? 'var(--danger)' : r.estado === 'Reagendar' ? 'var(--dk-purple-mid)' : 'var(--brand)';
   var estadoIcono = r.estado === 'Confirmada' ? 'check_circle' : r.estado === 'Cancelada' ? 'cancel' : r.estado === 'Reagendar' ? 'swap_horiz' : 'hourglass_empty';

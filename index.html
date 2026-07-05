@@ -508,6 +508,18 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
     </div>
 
+    <!-- Salud -->
+    <div class="aj-group">
+      <div class="aj-row" onclick="irAjSub('aj-sub-salud')">
+        <div class="aj-icon aj-icon-orange"><span class="material-symbols-outlined">medical_services</span></div>
+        <div class="aj-content">
+          <div class="aj-title">Salud</div>
+          <div class="aj-value" id="aj-salud-val">—</div>
+        </div>
+        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
+      </div>
+    </div>
+
     <!-- Aplicación -->
     <div class="aj-app-rows">
       <div class="aj-app-row" id="row-notif-home" onclick="toggleNotifHome(document.getElementById('toggle-notif'))">
@@ -792,7 +804,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div style="background:var(--white);border-radius:20px;padding:28px 24px;width:100%;max-width:380px;text-align:center;">
       <span class="material-symbols-outlined" style="font-size:2.5rem;color:var(--danger);margin-bottom:12px;">block</span>
       <p style="font-size:0.95rem;color:var(--neutral-dark);line-height:1.6;margin-bottom:20px;">No eres mayor de 16 años, por lo tanto no podrás usar la app. Puedes contactarte con alguien del equipo para más información.</p>
-      <a href="https://wa.me/593998690423" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:15px;background:var(--wa-bg);color:var(--success);border-radius:12px;font-weight:800;text-decoration:none;margin-bottom:10px;"><span class="material-symbols-outlined">forum</span> Contactar por WhatsApp</a>
+      <a href="https://wa.me/593962773052" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:15px;background:var(--wa-bg);color:var(--success);border-radius:12px;font-weight:800;text-decoration:none;margin-bottom:10px;"><span class="material-symbols-outlined">forum</span> Contactar por WhatsApp</a>
       <button onclick="cerrarModalEdadBloqueo()" style="width:100%;padding:13px;background:transparent;color:var(--text-faint);border:2px solid var(--border-light);border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Cerrar</button>
     </div>
   </div>
@@ -810,7 +822,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div id="modal-contacto" style="display:none;position:fixed;inset:0;z-index:9500;background:var(--overlay);align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarContacto()">
   <div style="background:var(--white);border-radius:20px;padding:28px 20px;width:85%;max-width:320px;text-align:center;">
     <div class="modal-ct" style="font-weight:800;font-size:0.95rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:20px;">Contáctanos</div>
-    <a href="https://wa.me/593998690423" target="_blank" style="display:flex;align-items:center;gap:12px;background:var(--surface-light);border-radius:12px;padding:14px 16px;margin-bottom:10px;text-decoration:none;color:var(--neutral-dark);font-weight:700;font-size:0.95rem;"><span class="material-symbols-outlined" style="color:var(--wa-brand);">forum</span> WhatsApp</a>
+    <a href="https://wa.me/593962773052" target="_blank" style="display:flex;align-items:center;gap:12px;background:var(--surface-light);border-radius:12px;padding:14px 16px;margin-bottom:10px;text-decoration:none;color:var(--neutral-dark);font-weight:700;font-size:0.95rem;"><span class="material-symbols-outlined" style="color:var(--wa-brand);">forum</span> WhatsApp</a>
     <a href="https://www.instagram.com/quindesvolcanicosrd/" target="_blank" style="display:flex;align-items:center;gap:12px;background:var(--surface-light);border-radius:12px;padding:14px 16px;margin-bottom:10px;text-decoration:none;color:var(--neutral-dark);font-weight:700;font-size:0.95rem;"><span class="material-symbols-outlined" style="color:var(--instagram);">favorite</span> Instagram</a>
     <a href="mailto:quindesvolcanicosrd@gmail.com" style="display:flex;align-items:center;gap:12px;background:var(--surface-light);border-radius:12px;padding:14px 16px;margin-bottom:16px;text-decoration:none;color:var(--neutral-dark);font-weight:700;font-size:0.95rem;"><span class="material-symbols-outlined" style="color:var(--brand);">mail</span> Mail</a>
     <button onclick="cerrarContacto()" style="width:100%;padding:12px;background:var(--disabled-bg);border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--neutral-light);">Cerrar</button>
@@ -1441,6 +1453,124 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <span class="material-symbols-outlined">add</span>
       Agregar segundo contacto
     </button>
+  </div>
+</div>
+
+<!-- SUB: Salud -->
+<div class="aj-sub" id="aj-sub-salud">
+  <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
+    <button class="app-nav-back" onclick="cerrarAjSub('aj-sub-salud')">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </button>
+    <span class="app-nav-title">Salud</span>
+    <div style="width:40px;flex-shrink:0;"></div>
+  </div>
+  <div class="aj-sub-inner">
+    <div class="aj-group">
+      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Enfermedad diagnosticada','','aj-enfermedad-val','enfermedad','Ej: Asma, diabetes')">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">sick</span></div>
+        <div class="aj-dato-texts">
+          <div class="aj-dato-label">Enfermedad diagnosticada</div>
+          <div class="aj-dato-val vacio" id="aj-enfermedad-val">—</div>
+        </div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </div>
+
+      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Dieta','','aj-dieta-val','dieta','Ej: Vegetariana, sin gluten')">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">restaurant</span></div>
+        <div class="aj-dato-texts">
+          <div class="aj-dato-label">Dieta</div>
+          <div class="aj-dato-val vacio" id="aj-dieta-val">—</div>
+        </div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </div>
+
+      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Antecedentes médicos personales','','aj-antecedentes-val','antecedentes','Ej: Cirugías, fracturas previas')">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">history</span></div>
+        <div class="aj-dato-texts">
+          <div class="aj-dato-label">Antecedentes médicos personales</div>
+          <div class="aj-dato-val vacio" id="aj-antecedentes-val">—</div>
+        </div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </div>
+
+      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Atención médica','','aj-atencionMedica-val','atencionMedica','Ej: Clínica u hospital de preferencia')">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">local_hospital</span></div>
+        <div class="aj-dato-texts">
+          <div class="aj-dato-label">Atención médica</div>
+          <div class="aj-dato-val vacio" id="aj-atencionMedica-val">—</div>
+        </div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </div>
+    </div>
+
+    <div class="aj-group">
+      <div class="aj-dato-row" onclick="ajAbrirSheetSiNo('¿Tienes alguna alergia?','alergias','aj-alergias-val','aj-alergiasDesc-wrap')">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">warning</span></div>
+        <div class="aj-dato-texts">
+          <div class="aj-dato-label">Alergias</div>
+          <div class="aj-dato-val vacio" id="aj-alergias-val">—</div>
+        </div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </div>
+    </div>
+
+    <div id="aj-alergiasDesc-wrap" style="display:none">
+      <div class="aj-group">
+        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Alergia/s que presenta','','aj-alergiasDesc-val','alergiasDesc','Ej: Penicilina, polen')">
+          <div class="aj-dato-icon"><span class="material-symbols-outlined">list_alt</span></div>
+          <div class="aj-dato-texts">
+            <div class="aj-dato-label">Alergia/s que presenta</div>
+            <div class="aj-dato-val vacio" id="aj-alergiasDesc-val">—</div>
+          </div>
+          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="aj-group">
+      <div class="aj-dato-row" onclick="ajAbrirSheetSiNo('¿Tomas algún medicamento?','medicamentos','aj-medicamentos-val','aj-medicamentosDesc-wrap')">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">medication</span></div>
+        <div class="aj-dato-texts">
+          <div class="aj-dato-label">¿Toma algún medicamento?</div>
+          <div class="aj-dato-val vacio" id="aj-medicamentos-val">—</div>
+        </div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </div>
+    </div>
+
+    <div id="aj-medicamentosDesc-wrap" style="display:none">
+      <div class="aj-group">
+        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('¿Qué medicamento/s toma diariamente?','','aj-medicamentosDesc-val','medicamentosDesc','Ej: Losartán 50mg, 1 vez al día')">
+          <div class="aj-dato-icon"><span class="material-symbols-outlined">medication_liquid</span></div>
+          <div class="aj-dato-texts">
+            <div class="aj-dato-label">Medicamento/s diarios</div>
+            <div class="aj-dato-val vacio" id="aj-medicamentosDesc-val">—</div>
+          </div>
+          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="aj-group">
+      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Nombre de seguro privado','','aj-seguro-val','seguro','Ej: Salud S.A.')">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">health_and_safety</span></div>
+        <div class="aj-dato-texts">
+          <div class="aj-dato-label">Nombre de seguro privado</div>
+          <div class="aj-dato-val vacio" id="aj-seguro-val">—</div>
+        </div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </div>
+
+      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Número de contacto del seguro','','aj-seguroContacto-val','seguroContacto','Ej: 0962773052')">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">call</span></div>
+        <div class="aj-dato-texts">
+          <div class="aj-dato-label">Número de contacto del seguro</div>
+          <div class="aj-dato-val vacio" id="aj-seguroContacto-val">—</div>
+        </div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </div>
+    </div>
   </div>
 </div>
 

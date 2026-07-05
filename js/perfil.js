@@ -46,6 +46,15 @@ function irEditarDatos() {
   // Emergencias
   var emVal = document.getElementById('aj-emerg-val');
   if (emVal) emVal.textContent = [d.emerg1Nombre, d.emerg2Nombre].filter(Boolean).join(' · ') || '—';
+  // Salud
+  var saludVal = document.getElementById('aj-salud-val');
+  if (saludVal) {
+    var saludPartes = [];
+    if (d.enfermedad) saludPartes.push(d.enfermedad);
+    if (d.alergias === 'Sí') saludPartes.push('Alergias');
+    if (d.medicamentos === 'Sí') saludPartes.push('Medicamentos');
+    saludVal.textContent = saludPartes.join(' · ') || '—';
+  }
   // Notif toggle
   _poblarResumenEquipPerfil();
   ir('s-datos');
@@ -463,6 +472,21 @@ function _ajCargarSub(id) {
     _ajSetDatoVal('aj-em2nombre-val', d.emerg2Nombre, '—', true);
     _ajSetDatoVal('aj-em2relacion-val', d.emerg2Relacion, '—', true);
     _ajSetDatoVal('aj-em2tel-val', d.emerg2Telefono, '—', true);
+  } else if (id === 'aj-sub-salud') {
+    _ajSetDatoVal('aj-enfermedad-val', d.enfermedad, '—', true);
+    _ajSetDatoVal('aj-dieta-val', d.dieta, '—', true);
+    _ajSetDatoVal('aj-antecedentes-val', d.antecedentes, '—', true);
+    _ajSetDatoVal('aj-atencionMedica-val', d.atencionMedica, '—', true);
+    _ajSetDatoVal('aj-alergias-val', d.alergias, '—', true);
+    _ajSetDatoVal('aj-alergiasDesc-val', d.alergiasDesc, '—', true);
+    _ajSetDatoVal('aj-medicamentos-val', d.medicamentos, '—', true);
+    _ajSetDatoVal('aj-medicamentosDesc-val', d.medicamentosDesc, '—', true);
+    _ajSetDatoVal('aj-seguro-val', d.seguro, '—', true);
+    _ajSetDatoVal('aj-seguroContacto-val', d.seguroContacto, '—', true);
+    var wrapAlergiasDesc = document.getElementById('aj-alergiasDesc-wrap');
+    if (wrapAlergiasDesc) wrapAlergiasDesc.style.display = (d.alergias === 'Sí') ? 'block' : 'none';
+    var wrapMedicamentosDesc = document.getElementById('aj-medicamentosDesc-wrap');
+    if (wrapMedicamentosDesc) wrapMedicamentosDesc.style.display = (d.medicamentos === 'Sí') ? 'block' : 'none';
   }
 }
 
@@ -756,6 +780,26 @@ function ajAbrirSheetRelacion(campo, displayId) {
     _ajGuardar(payload);
     var disp = document.getElementById(displayId);
     if (disp) { disp.textContent = v; disp.classList.remove('vacio'); }
+  });
+}
+
+/* ── Sí/No genérico (pills single, con reveal opcional de fila condicionada) ── */
+function ajAbrirSheetSiNo(titulo, campo, displayId, condWrapId) {
+  var actual = (E.datos && E.datos[campo]) || '';
+  var opciones = ['Sí', 'No'];
+  var html = opciones.map(function(o) {
+    var sel = o === actual;
+    return '<span class="aj-pill' + (sel ? ' activa' : '') + '" data-val="' + o + '" onclick="_ajSheetTextoPillSingleClick(this)">' + o + '</span>';
+  }).join('');
+  _ajAbrirSheetTextoPills(titulo, '', 'pills-single', html, function(v) {
+    var payload = {}; payload[campo] = v;
+    _ajGuardar(payload);
+    var disp = document.getElementById(displayId);
+    if (disp) { disp.textContent = v; disp.classList.remove('vacio'); }
+    if (condWrapId) {
+      var wrap = document.getElementById(condWrapId);
+      if (wrap) wrap.style.display = (v === 'Sí') ? 'block' : 'none';
+    }
   });
 }
 
