@@ -76,7 +76,7 @@
   #loading-msg { opacity: 0; visibility: hidden; }
   #loading-overlay { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
   .loading-card { background: transparent; border-radius: 0; padding: 32px; box-shadow: none; border: none; width: 100%; max-width: 100%; }
-  .loading-logo { display: block; width: 88px; height: 88px; border-radius: 50%; object-fit: cover; object-position: center top; margin: 0 auto 28px; filter: drop-shadow(0 4px 16px var(--brand-20)); }
+  .loading-logo { display: block; opacity: 1; width: 88px; height: 88px; border-radius: 50%; object-fit: cover; object-position: center top; margin: 0 auto 28px; filter: drop-shadow(0 4px 16px var(--brand-20)); }
 }
 
 /* ── Toast / snackbar ────────────────────────────────── */
