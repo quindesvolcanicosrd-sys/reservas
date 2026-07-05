@@ -381,7 +381,6 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
   #modal-ct-inner { background: var(--dk-modal-overlay); }
   #modal-ct-inner a { background: var(--dk-modal-item-bg) !important; color: var(--dk-modal-text) !important; }
   #modal-ct-inner button { background: var(--dk-modal-btn-bg) !important; color: var(--dk-modal-btn-text) !important; }
-  #modal-edad-bloqueo-card { background: var(--dk-modal-overlay) !important; }
 }
 .modal-ct-title {
   font-weight: 800; font-size: 0.88rem; text-transform: uppercase;
