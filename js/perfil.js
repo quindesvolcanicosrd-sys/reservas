@@ -119,6 +119,13 @@ function saltarPermisos() {
 }
 
 // ─── PIN de acceso (desde modal-permisos) ─────────────────────────────────────
+function _mpToggleClick(btn) {
+  var on = btn.classList.contains('toggle-on');
+  btn.classList.toggle('toggle-on', !on);
+  btn.classList.toggle('toggle-off', on);
+  btn.setAttribute('aria-pressed', String(!on));
+}
+
 function _mpTogglePinClick(btn) {
   var on = btn.classList.contains('toggle-on');
   btn.classList.toggle('toggle-on', !on);

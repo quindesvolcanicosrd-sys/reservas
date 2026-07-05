@@ -738,21 +738,21 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <div style="font-size:0.88rem;font-weight:600;color:var(--neutral-dark);display:flex;align-items:center;gap:6px;"><span class="material-symbols-outlined" style="font-size:1.05rem;">cake</span> Compartir fecha de cumpleaños</div>
             <div style="font-size:0.78rem;color:var(--neutral-gray);margin-top:2px;">Para que te deseen feliz cumpleaños</div>
           </div>
-          <div class="toggle-wrap"><button type="button" id="mp-tog-fecha" class="toggle-btn toggle-off" aria-pressed="false"><span class="toggle-thumb"></span></button></div>
+          <div class="toggle-wrap"><button type="button" id="mp-tog-fecha" class="toggle-btn toggle-off" aria-pressed="false" onclick="_mpToggleClick(this)"><span class="toggle-thumb"></span></button></div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border-light);">
           <div>
             <div style="font-size:0.88rem;font-weight:600;color:var(--neutral-dark);display:flex;align-items:center;gap:6px;"><span class="material-symbols-outlined" style="font-size:1.05rem;">tag</span> Compartir mi edad</div>
             <div style="font-size:0.78rem;color:var(--neutral-gray);margin-top:2px;">Visible para el equipo</div>
           </div>
-          <div class="toggle-wrap"><button type="button" id="mp-tog-edad" class="toggle-btn toggle-off" aria-pressed="false"><span class="toggle-thumb"></span></button></div>
+          <div class="toggle-wrap"><button type="button" id="mp-tog-edad" class="toggle-btn toggle-off" aria-pressed="false" onclick="_mpToggleClick(this)"><span class="toggle-thumb"></span></button></div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border-light);">
           <div>
             <div style="font-size:0.88rem;font-weight:600;color:var(--neutral-dark);display:flex;align-items:center;gap:6px;"><span class="material-symbols-outlined" style="font-size:1.05rem;">photo_camera</span> Usar mi foto de Google</div>
             <div style="font-size:0.78rem;color:var(--neutral-gray);margin-top:2px;">Como foto de perfil en la app</div>
           </div>
-          <div class="toggle-wrap"><button type="button" id="mp-tog-foto" class="toggle-btn toggle-off" aria-pressed="false"><span class="toggle-thumb"></span></button></div>
+          <div class="toggle-wrap"><button type="button" id="mp-tog-foto" class="toggle-btn toggle-off" aria-pressed="false" onclick="_mpToggleClick(this)"><span class="toggle-thumb"></span></button></div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--border-light);">
           <div>
@@ -774,7 +774,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div style="background:var(--white);border-radius:20px;padding:28px 24px;width:100%;max-width:380px;">
       <label style="display:block;font-size:0.74rem;font-weight:700;color:var(--neutral-gray);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;text-align:center;">Ingresa tu PIN de acceso</label>
       <div style="position:relative;margin-bottom:16px;">
-        <input type="password" id="mp-pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="• • • •" style="text-align:center;font-size:1.8rem;letter-spacing:8px;padding:13px 50px;width:100%;border:2px solid var(--border-light);border-radius:12px;font-family:inherit;">
+        <input type="password" id="mp-pin-input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="" style="text-align:center;font-size:1.8rem;letter-spacing:8px;padding:13px 50px;width:100%;border:2px solid var(--border-light);border-radius:12px;font-family:inherit;">
         <button type="button" onclick="_mpTogglePinVis()" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;">
           <span class="material-symbols-outlined" id="mp-pin-ico">visibility</span>
         </button>
