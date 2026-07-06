@@ -223,7 +223,7 @@ Dark mode: `.loading-card`/`.loading-card p` en `@media (prefers-color-scheme: d
 | `.btn-cancelar` | Botón cancelar reserva |
 | `.aviso-pendiente` | Aviso amarillo de pago pendiente |
 | `.meses-grid-pills / .meses-divider` | Grid de pills de meses (pago mensual): 3 columnas, divisor antes del mes actual |
-| `.mes-item / .mes-past / .mes-confirmado / .mes-nombre / .mes-badge` | Pill de mes: pasado (opacidad 0.4), confirmado (verde/sin pointer-events), badge "Pagado" con ícono check_circle |
+| `.mes-item / .mes-past / .mes-confirmado / .mes-disabled / .mes-nombre / .mes-badge` | Pill de mes: pasado (opacidad 0.4), confirmado (verde/sin pointer-events), badge "Pagado" con ícono check_circle, deshabilitado (opacidad 0.4, cursor not-allowed) para meses futuros aún no habilitados para pago |
 | `.btn-wp-inactivo / .btn-wp-activo / .btn-wp-grupo` | Botones de WhatsApp (comprobante / grupo) |
 | `.exito-* / .exito-titulo / .exito-detalle / .exito-texto` | Pantalla de éxito s6 |
 
@@ -558,8 +558,8 @@ Dark mode: `.loading-card`/`.loading-card p` en `@media (prefers-color-scheme: d
 | `volver(id)` | Alias de ir(); lo llama top-bar-btn |
 | `popstate listener` | Restaura pantalla correcta al usar el botón atrás del navegador (sin cambios de lógica al agregar `PANTALLAS_RAIZ` — el atrapamiento vive dentro de `ir()`). Primer guard: si `_ajSubAbierto` (`js/perfil.js`) está seteado, el evento se interpreta como "cerrar el sub-panel de Ajustes del perfil abierto", llama `cerrarAjSub(_ajSubAbierto, true)` y hace `return` sin tocar `.pantalla` — fix de un bug donde el gesto nativo de "atrás" con un `aj-sub-*` abierto (ej. "Mi perfil") retrocedía en el historial real de la SPA sin cerrar el overlay, dejándolo visible sobre la pantalla equivocada (`irAjSub`/`cerrarAjSub` nunca habían empujado estado al historial, ver detalle en `js/perfil.js`) |
 | `NOMBRES_MESES` | Array ['Enero'…'Diciembre'] para labels de meses |
-| `generarMeses()` | Renderiza en #lista-meses-unificada; detecta meses confirmados desde _todasReservas; inserta .meses-divider antes del mes actual |
-| `crearMesItem(nombre, esPasado, confirmado)` | Devuelve HTML de un label mes-item con badge "Pagado" si confirmado |
+| `generarMeses()` | Renderiza en #lista-meses-unificada; detecta meses confirmados desde _todasReservas; inserta .meses-divider antes del mes actual; solo habilita para selección el mes actual y el siguiente (`habilitado = i <= mesActual + 1`) |
+| `crearMesItem(nombre, esPasado, confirmado, habilitado)` | Devuelve HTML de un label mes-item con badge "Pagado" si confirmado; si el mes no es pasado, no está confirmado y `habilitado` es false, lo marca `.mes-disabled` (checkbox disabled, sin onchange) y al hacer click muestra un toast avisando que ese mes aún no está habilitado para pagos |
 | `lanzarConfetti()` | Animación canvas de confetti en s6; se llama con setTimeout(400ms) tras confirmarReserva() |
 | `_modalInfoKey(id)` | genera la clave de localStorage/sessionStorage por modal e usuario |
 | `_yaVioModal(id)` | true si el modal fue marcado como visto (localStorage) o pospuesto (sessionStorage) |

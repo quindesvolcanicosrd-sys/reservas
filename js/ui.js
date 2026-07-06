@@ -180,20 +180,24 @@ function generarMeses() {
     var nombre = NOMBRES_MESES[i];
     var esPasado = i < mesActual;
     var confirmado = mesesConfirmados.indexOf(nombre.toLowerCase()) !== -1;
-    html += crearMesItem(nombre, esPasado, confirmado);
+    var habilitado = i <= mesActual + 1;
+    html += crearMesItem(nombre, esPasado, confirmado, habilitado);
   }
   lista.innerHTML = html;
 }
 
-function crearMesItem(nombre, esPasado, confirmado) {
-  var clases = 'mes-item' + (esPasado ? ' mes-past' : '') + (confirmado ? ' mes-confirmado' : '');
+function crearMesItem(nombre, esPasado, confirmado, habilitado) {
+  var bloqueado = !esPasado && !confirmado && habilitado === false;
+  var clases = 'mes-item' + (esPasado ? ' mes-past' : '') + (confirmado ? ' mes-confirmado' : '') + (bloqueado ? ' mes-disabled' : '');
   var badge = confirmado
     ? '<span class="mes-badge"><span class="material-symbols-outlined">check_circle</span>Pagado</span>'
     : '';
-  var disabled = confirmado ? ' disabled checked' : '';
-  var onchange = confirmado ? '' : ' onchange="actualizarTotalS4()"';
-  return '<label class="' + clases + '">' +
-    '<input type="checkbox" value="' + nombre + '"' + disabled + onchange + '>' +
+  var disabled = (confirmado || bloqueado) ? ' disabled' : '';
+  var checked = confirmado ? ' checked' : '';
+  var onchange = (confirmado || bloqueado) ? '' : ' onchange="actualizarTotalS4()"';
+  var onclickLabel = bloqueado ? ' onclick="event.preventDefault();mostrarToast(\'Esos meses aún no están habilitados para recibir pagos\')"' : '';
+  return '<label class="' + clases + '"' + onclickLabel + '>' +
+    '<input type="checkbox" value="' + nombre + '"' + disabled + checked + onchange + '>' +
     '<span class="mes-nombre">' + nombre + '</span>' +
     badge +
     '</label>';
