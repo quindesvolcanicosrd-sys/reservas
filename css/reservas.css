@@ -16,6 +16,7 @@
 .fi-pill-maps { background: var(--brand-warm); color: var(--brand); border: 1px solid var(--brand-warm-border); text-decoration: none; }
 .fi-pill-fin { background: var(--info-btn-bg); color: var(--info); border: 1px solid var(--info-btn-hover); }
 .fi-pill-dur { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-bdr); }
+.fi-pill-patines { background: var(--warning-bg); color: var(--amber-dark); border: 1px solid var(--amber); }
 .fi-pill-equip { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-bdr); }
 .fi-pill-validez { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border-soft); }
 
