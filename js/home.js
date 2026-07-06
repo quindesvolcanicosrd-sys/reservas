@@ -454,7 +454,6 @@ function _renderCardHome(r, hoy) {
     pillsHtml += '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
   }
 }
-  if (esMensual && r.validezHasta) pillsHtml += '<span class="fi-pill"><span class="material-symbols-outlined">event_available</span>Válido hasta ' + r.validezHasta + '</span>';
   pillsHtml += '</div>';
 
   var uid = 'rcard-' + (r.fila || Math.random().toString(36).slice(2));
@@ -468,19 +467,30 @@ function _renderCardHome(r, hoy) {
   if (r.duracion) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">timer</span>' + r.duracion + '</span>';
   bodyHtml += '</div><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-light);text-align:center;"><button class="btn-cancel-text" onclick="abrirGestionar(\'' + fechaEsc + '\',' + filaEsc + ')">Re-agendar o cancelar reserva</button></div></div></div>';
 
-  var masInfoHtml = '<div class="rn-divider"></div>' +
-    '<div class="rn-mas-info" id="' + uid + '-toggle" onclick="_toggleCardBody(\'' + uid + '\')">' +
-    '<span>Más información</span><span class="material-symbols-outlined rn-chevron">expand_more</span></div>' +
-    bodyHtml;
+  var rnTopExtra = '';
+  if (esMensual) {
+    rnTopExtra = '<div class="rn-top-extra">' + equipPillHtml;
+    if (r.validezHasta) rnTopExtra += '<span class="rn-validez">Válido hasta ' + r.validezHasta + '</span>';
+    rnTopExtra += '</div>';
+  }
+
+  var masInfoHtml;
+  if (esMensual) {
+    masInfoHtml = '<div class="rn-divider"></div><div class="rn-cancel-wrap"><button class="btn-cancel-text" onclick="abrirGestionar(\'' + fechaEsc + '\',' + filaEsc + ')">Cancelar reserva</button></div>';
+  } else {
+    masInfoHtml = '<div class="rn-divider"></div>' +
+      '<div class="rn-mas-info" id="' + uid + '-toggle" onclick="_toggleCardBody(\'' + uid + '\')">' +
+      '<span>Más información</span><span class="material-symbols-outlined rn-chevron">expand_more</span></div>' +
+      bodyHtml;
+  }
 
   return '<div class="res-card-home res-card-nueva ' + estadoClase + '">' +
     statusBar +
     '<div class="rn-header">' +
-    '<div class="rn-top"><div class="rn-date">' + fechaTexto + '</div></div>' +
+    '<div class="rn-top"><div class="rn-date">' + fechaTexto + '</div>' + rnTopExtra + '</div>' +
     pillsHtml +
     '</div>' +
     masInfoHtml +
-    
     '</div>';
 }
 
