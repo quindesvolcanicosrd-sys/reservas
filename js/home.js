@@ -430,7 +430,13 @@ function _renderCardHome(r, hoy) {
     var protecTexto = (protecLower === 'no' || protecLower === 'no, tengo las mías' || protecLower === 'no, tengo las mias') ? '' :
       (protecLower.indexOf('completa') !== -1 || protecLower === 'sí' || protecLower === 'si') ? 'Protecciones completas' : 'Necesita: ' + r.protecciones;
     if (!protecTexto) { }
-    equipPillHtml += '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">shield</span>' + protecTexto + '</span>';
+    var puedeEditarProtec = (r.estado === 'Pendiente' || r.estado === 'Confirmada');
+    if (puedeEditarProtec) {
+      var protecEsc = (r.protecciones || '').replace(/'/g, "\\'");
+      equipPillHtml += '<span class="fi-pill fi-pill-patines" style="cursor:pointer;" onclick="abrirSheetProtecReserva(\'' + fechaEsc + '\',\'' + protecEsc + '\')"><span class="material-symbols-outlined">shield</span>' + protecTexto + '<span class="material-symbols-outlined">edit</span></span>';
+    } else {
+      equipPillHtml += '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">shield</span>' + protecTexto + '</span>';
+    }
   }
   if (!necesitaPatines && !necesitaProtec) {
     equipPillHtml = '<span class="fi-pill fi-pill-equip"><span class="material-symbols-outlined">check_circle</span>Llevas tu equipo</span>';
@@ -591,6 +597,82 @@ function confirmarTallaSheet() {
   }, function(e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Confirmar talla'; }
     err('err-sheet-talla', e.message || 'No se pudo actualizar la talla. Intenta de nuevo.');
+  });
+}
+
+var _protecSheetFecha = '', _protecSheetActual = '';
+
+function abrirSheetProtecReserva(fecha, protecActual) {
+  _protecSheetFecha = fecha; _protecSheetActual = protecActual || '';
+  var titulo = document.getElementById('sheet-protec-reserva-titulo');
+  if (titulo) titulo.textContent = 'Cambiar protecciones para el entrenamiento del ' + fecha;
+  document.querySelectorAll('#s3c-pills-reserva .equip-pill-protec').forEach(function(p) { p.classList.remove('sel'); });
+  document.getElementById('bs-protec-parciales-reserva').style.display = 'none';
+  document.querySelectorAll('#bs-protec-pills-reserva .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  var sub = document.getElementById('protec-otro-sub-reserva');
+  if (sub) { sub.textContent = 'Toca para especificar'; sub.style.color = ''; }
+  var err1 = document.getElementById('err-sheet-protec-reserva'); if (err1) err1.textContent = '';
+  var err2 = document.getElementById('err-protec-parciales-reserva'); if (err2) err2.textContent = '';
+  var protecLower = _protecSheetActual.toLowerCase();
+  if (protecLower === 'sí' || protecLower === 'si') {
+    var p = document.querySelector('#s3c-pills-reserva .equip-pill-protec[data-val="Sí"]');
+    if (p) p.classList.add('sel');
+  } else if (!_protecSheetActual || protecLower === 'no') {
+    var p = document.querySelector('#s3c-pills-reserva .equip-pill-protec[data-val="No"]');
+    if (p) p.classList.add('sel');
+  } else {
+    var p = document.getElementById('pill-protec-otro-reserva');
+    if (p) p.classList.add('sel');
+    document.getElementById('bs-protec-parciales-reserva').style.display = 'block';
+    _protecSheetActual.split(',').forEach(function(v) {
+      var pill = document.querySelector('#bs-protec-pills-reserva .aj-pill[data-val="' + v.trim() + '"]');
+      if (pill) pill.classList.add('activa');
+    });
+  }
+  var ov = document.getElementById('sheet-protec-reserva-overlay');
+  var sh = document.getElementById('sheet-protec-reserva');
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+}
+
+function _selProtecReserva(el) {
+  document.querySelectorAll('#s3c-pills-reserva .equip-pill-protec').forEach(function(p) { p.classList.remove('sel'); });
+  el.classList.add('sel');
+  var val = el.dataset.val;
+  document.getElementById('bs-protec-parciales-reserva').style.display = val === 'Otro' ? 'block' : 'none';
+}
+
+function cerrarSheetProtecReserva() {
+  var sh = document.getElementById('sheet-protec-reserva');
+  var ov = document.getElementById('sheet-protec-reserva-overlay');
+  sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { sh.style.display = 'none'; ov.style.display = 'none'; }, 350);
+}
+
+function confirmarProtecReserva(btn) {
+  var sel = document.querySelector('#s3c-pills-reserva .equip-pill-protec.sel');
+  if (!sel) { err('err-sheet-protec-reserva', 'Selecciona una opción.'); return; }
+  var val = sel.dataset.val;
+  var protecFinal;
+  if (val === 'Sí') { protecFinal = 'Sí'; }
+  else if (val === 'No') { protecFinal = 'No'; }
+  else {
+    var vals = [];
+    document.querySelectorAll('#bs-protec-pills-reserva .aj-pill.activa').forEach(function(p) { vals.push(p.dataset.val); });
+    if (!vals.length) { err('err-protec-parciales-reserva', 'Selecciona al menos una opción.'); return; }
+    if (vals.length === 4) { err('err-protec-parciales-reserva', 'Si necesitas las 4, selecciona "protecciones completas".'); return; }
+    protecFinal = vals.join(', ');
+  }
+  if (protecFinal === _protecSheetActual) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+  api({ action: 'actualizarProtecReserva', nombre: E.nombre, fecha: _protecSheetFecha, protecNueva: protecFinal }, function() {
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirmar protecciones'; }
+    cerrarSheetProtecReserva();
+    _recargarYRenderReservas(function() { mostrarToast('Protecciones actualizadas', 'ok'); });
+  }, function(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirmar protecciones'; }
+    err('err-sheet-protec-reserva', e.message || 'No se pudo actualizar. Intenta de nuevo.');
   });
 }
 

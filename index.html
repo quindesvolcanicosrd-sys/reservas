@@ -1823,6 +1823,48 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 </div>
 
+<!-- Sheet: Cambiar protecciones de una reserva (desde home) -->
+<div id="sheet-protec-reserva-overlay" style="display:none;position:fixed;inset:0;z-index:9700;background:var(--overlay-dark);" onclick="cerrarSheetProtecReserva()"></div>
+<div id="sheet-protec-reserva" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9701;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
+  <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 6px;"></div>
+  <div id="sheet-protec-reserva-titulo" style="font-size:0.85rem;font-weight:800;color:var(--text);text-align:center;padding:6px 16px 4px;">Cambiar protecciones</div>
+  <div style="padding:0 16px 28px;">
+    <div class="equip-pills-protec" id="s3c-pills-reserva">
+      <div class="equip-pill-protec" data-val="Sí" onclick="_selProtecReserva(this)">
+        <span class="material-symbols-outlined equip-pico">shield</span>
+        <div class="equip-ptxt"><div class="equip-ptit">Sí, necesito protecciones completas</div></div>
+        <div class="equip-pcheck"><span class="material-symbols-outlined">check</span></div>
+      </div>
+      <div class="equip-pill-protec" data-val="No" onclick="_selProtecReserva(this)">
+        <span class="material-symbols-outlined equip-pico">check_circle</span>
+        <div class="equip-ptxt"><div class="equip-ptit">No, tengo las mías</div></div>
+        <div class="equip-pcheck"><span class="material-symbols-outlined">check</span></div>
+      </div>
+      <div class="equip-pill-protec" data-val="Otro" id="pill-protec-otro-reserva" onclick="_selProtecReserva(this)">
+        <span class="material-symbols-outlined equip-pico">help_outline</span>
+        <div class="equip-ptxt">
+          <div class="equip-ptit">Tengo algunas, me faltan otras</div>
+          <div class="equip-psub" id="protec-otro-sub-reserva">Toca para especificar</div>
+        </div>
+        <div class="equip-pcheck"><span class="material-symbols-outlined">check</span></div>
+      </div>
+    </div>
+    <div id="bs-protec-parciales-reserva" style="display:none;margin-top:14px;">
+      <p style="font-size:0.78rem;color:var(--muted);margin-bottom:10px;">¿Cuáles necesitas?</p>
+      <div class="aj-pills-row" id="bs-protec-pills-reserva">
+        <span class="aj-pill" data-val="Casco" onclick="this.classList.toggle('activa')">Casco</span>
+        <span class="aj-pill" data-val="Muñequeras" onclick="this.classList.toggle('activa')">Muñequeras</span>
+        <span class="aj-pill" data-val="Rodilleras" onclick="this.classList.toggle('activa')">Rodilleras</span>
+        <span class="aj-pill" data-val="Coderas" onclick="this.classList.toggle('activa')">Coderas</span>
+      </div>
+      <div class="error-msg" id="err-protec-parciales-reserva"></div>
+    </div>
+    <div class="error-msg" id="err-sheet-protec-reserva" style="margin-top:8px;"></div>
+    <button id="btn-confirmar-protec-reserva" onclick="confirmarProtecReserva(this)" style="width:100%;padding:13px;background:var(--brand);border:none;border-radius:12px;color:var(--white);font-size:0.85rem;font-weight:800;cursor:pointer;font-family:inherit;margin-top:16px;">Confirmar protecciones</button>
+    <button onclick="cerrarSheetProtecReserva()" style="width:100%;padding:10px;background:transparent;border:none;color:var(--muted);font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
+  </div>
+</div>
+
 <!-- AJ SHEET: Talla patines (ajustes perfil) -->
 <div id="aj-sheet-talla-aj-overlay" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);" onclick="ajCerrarSheetTallaAjustes()"></div>
 <div id="aj-sheet-talla-aj" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9700;background:var(--bg);border-radius:20px 20px 0 0;padding:20px 16px 32px;transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);transform:translateY(100%);">
