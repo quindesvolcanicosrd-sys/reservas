@@ -502,7 +502,7 @@ function _toggleCardBody(uid) {
   body.classList.toggle('open');
 }
 
-var _tallaSheetFecha = '', _tallaSheetActual = '', _tallaSheetSel = '', _tallaSheetModo = 'existente', _tallaSheetSlug = '';
+var _tallaSheetFecha = '', _tallaSheetActual = '', _tallaSheetSel = null, _tallaSheetModo = 'existente', _tallaSheetSlug = '';
 
 function abrirSheetTalla(fecha, tallaActual) {
   _tallaSheetModo = 'existente';
@@ -514,7 +514,7 @@ function abrirSheetTalla(fecha, tallaActual) {
 }
 
 function _abrirSheetTallaBase(fecha, tallaActual) {
-  _tallaSheetFecha = fecha; _tallaSheetActual = tallaActual; _tallaSheetSel = '';
+  _tallaSheetFecha = fecha; _tallaSheetActual = tallaActual; _tallaSheetSel = null;
   var grid = document.getElementById('sheet-talla-grid');
   if (grid) grid.innerHTML = '<div class="loader" style="grid-column:1/-1;padding:20px 0;"><div class="spinner" style="width:26px;height:26px;border-width:3px;"></div></div>';
   var errEl = document.getElementById('err-sheet-talla');
@@ -539,12 +539,18 @@ function _abrirSheetTallaBase(fecha, tallaActual) {
 function _renderGridSheetTalla(tallas) {
   var grid = document.getElementById('sheet-talla-grid');
   if (!grid) return;
-  grid.innerHTML = tallas.map(function(t) {
+  var html = '';
+  if (_tallaSheetModo === 'existente') {
+    var esActualNo = !_tallaSheetActual;
+    html += '<span class="aj-pill sheet-talla-pill-ancha' + (esActualNo ? ' talla-actual' : '') + '" style="justify-content:center;" onclick="seleccionarTallaSheet(this,\'\')">No necesitaré patines</span>';
+  }
+  html += tallas.map(function(t) {
     var esActual = t.talla === _tallaSheetActual;
     var clases = 'aj-pill' + (t.disponible ? '' : ' no-disponible') + (esActual && t.disponible ? ' talla-actual' : '');
     var onclick = t.disponible ? ' onclick="seleccionarTallaSheet(this,\'' + t.talla + '\')"' : '';
     return '<span class="' + clases + '" style="justify-content:center;"' + onclick + '>' + t.talla + '</span>';
   }).join('');
+  grid.innerHTML = html;
   void grid.offsetWidth;
   grid.style.animation = 'fadeIn 0.3s ease';
 }
@@ -574,7 +580,7 @@ function cerrarSheetTalla() {
 }
 
 function confirmarTallaSheet() {
-  if (!_tallaSheetSel || _tallaSheetSel === _tallaSheetActual) return;
+  if (_tallaSheetSel === null || _tallaSheetSel === _tallaSheetActual) return;
   if (_tallaSheetModo === 'nueva-reserva') { _confirmarTallaNuevaReserva(); return; }
   var btn = document.getElementById('btn-confirmar-talla');
   if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }

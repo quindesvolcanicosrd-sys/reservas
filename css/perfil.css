@@ -128,6 +128,7 @@
 .aj-pill.activa-outline { background:var(--brand-light); color:var(--brand); border-color:var(--brand); }
 .aj-pill.no-disponible { text-decoration:line-through; color:var(--danger); background:var(--danger-bg); border-color:var(--danger-bdr); cursor:not-allowed; }
 .aj-pill.talla-actual { border-color:var(--brand); }
+.sheet-talla-pill-ancha { grid-column: 1 / -1; }
 
 /* Wizard de "Ficha de salud" (aj-sub-salud) — mismo motor visual que
    .insc-prog/.insc-prog-dot/.insc-step de inscripcion/inscripcion.css
