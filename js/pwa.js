@@ -66,9 +66,11 @@ function mostrarModalNavegador(tipo) {
       '3️⃣ Abre la app instalada y activa las notificaciones';
   }
   m.style.display = 'flex';
+  _registrarOverlayAbierto(cerrarModalNavegador);
 }
 
-function cerrarModalNavegador() {
+function cerrarModalNavegador(porGesto) {
+  if (!porGesto) { history.back(); return; }
   document.getElementById('modal-navegador').style.display = 'none';
 }
 

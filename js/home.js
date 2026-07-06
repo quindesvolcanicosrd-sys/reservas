@@ -536,6 +536,7 @@ function _abrirSheetTallaBase(fecha, tallaActual) {
     sh.style.display = 'block';
     requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
   }
+  _registrarOverlayAbierto(cerrarSheetTalla);
   api({ action: 'getTallasDisponiblesParaFecha', fecha: fecha, nombreExcluir: E.nombre }, function(tallas) {
     _renderGridSheetTalla(tallas || []);
   }, function() {
@@ -579,7 +580,8 @@ function _habilitarConfirmarTalla(habilitar) {
   btn.style.cursor = habilitar ? 'pointer' : 'not-allowed';
 }
 
-function cerrarSheetTalla() {
+function cerrarSheetTalla(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var sh = document.getElementById('sheet-talla');
   var ov = document.getElementById('sheet-talla-overlay');
   if (sh) sh.style.transform = 'translateY(100%)';
@@ -635,6 +637,7 @@ function abrirSheetProtecReserva(fecha, protecActual) {
   ov.style.display = 'block';
   sh.style.display = 'block';
   requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(cerrarSheetProtecReserva);
 }
 
 function _selProtecReserva(el) {
@@ -644,7 +647,8 @@ function _selProtecReserva(el) {
   document.getElementById('bs-protec-parciales-reserva').style.display = val === 'Otro' ? 'block' : 'none';
 }
 
-function cerrarSheetProtecReserva() {
+function cerrarSheetProtecReserva(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var sh = document.getElementById('sheet-protec-reserva');
   var ov = document.getElementById('sheet-protec-reserva-overlay');
   sh.style.transform = 'translateY(100%)';
@@ -860,9 +864,11 @@ function abrirSheetEquipHome() {
   ov.style.display = 'block';
   sh.style.display = 'block';
   requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(cerrarSheetEquipHome);
 }
 
-function cerrarSheetEquipHome() {
+function cerrarSheetEquipHome(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var sh = document.getElementById('sheet-equip-home');
   var ov = document.getElementById('sheet-equip-home-overlay');
   sh.style.transform = 'translateY(100%)';
@@ -905,9 +911,11 @@ function abrirGestionar(fecha, fila) {
       sheet.style.transform = 'translateY(0)';
     });
   });
+  _registrarOverlayAbierto(cerrarSheetGestionar);
 }
 
-function cerrarSheetGestionar() {
+function cerrarSheetGestionar(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var sheet = document.getElementById('sheet-gestionar');
   var overlay = document.getElementById('sheet-gestionar-overlay');
   sheet.style.transform = 'translateY(100%)';
@@ -1054,6 +1062,7 @@ function confirmarCambioFecha() {
   document.getElementById('mcr-equip').textContent = equipMsg;
   modal.style.display = 'flex';
   requestAnimationFrame(function(){ modal.style.opacity = '1'; });
+  _registrarOverlayAbierto(cerrarModalReagendar);
 }
 
 function ejecutarReagendamiento() {
@@ -1070,7 +1079,8 @@ function ejecutarReagendamiento() {
   });
 }
 
-function cerrarModalReagendar() {
+function cerrarModalReagendar(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var modal = document.getElementById('modal-confirm-reagendar');
   if (modal) { modal.style.opacity = '0'; setTimeout(function(){ modal.style.display = 'none'; }, 250); }
 }
@@ -1089,9 +1099,10 @@ ocultarCargando();
 }
 function abrirModalEstados() {
   var m = document.getElementById('modal-estados-reserva');
-  if (m) { m.style.display = 'flex'; requestAnimationFrame(function(){ m.style.opacity = '1'; }); }
+  if (m) { m.style.display = 'flex'; requestAnimationFrame(function(){ m.style.opacity = '1'; }); _registrarOverlayAbierto(cerrarModalEstados); }
 }
-function cerrarModalEstados() {
+function cerrarModalEstados(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var m = document.getElementById('modal-estados-reserva');
   if (m) { m.style.opacity = '0'; setTimeout(function(){ m.style.display = 'none'; }, 250); }
 }

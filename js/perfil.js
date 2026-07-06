@@ -73,6 +73,13 @@ function mostrarModalPermisos(nombre, fotoUrl) {
   document.getElementById('mp-saludo').textContent = '¡Hola, ' + nombre + '!';
   el.style.display = 'flex';
   el.style.animation = 'fadeIn 0.3s ease';
+  _registrarOverlayAbierto(_cerrarModalPermisos);
+}
+
+function _cerrarModalPermisos(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var mp = document.getElementById('modal-permisos');
+  if (mp) { mp.style.opacity = '0'; setTimeout(function(){ mp.style.display = 'none'; }, 250); }
 }
 
 function guardarPermisos() {
@@ -116,7 +123,7 @@ function guardarPermisos() {
         E.datos.permisosConfigurados = true;
         if (fotoUrl) E.datos.fotoPerfil = fotoUrl;
       }
-      var mp = document.getElementById('modal-permisos'); if (mp) { mp.style.opacity = '0'; setTimeout(function(){ mp.style.display = 'none'; }, 250); }
+      _cerrarModalPermisos();
       if (fotoUrl) actualizarFotoPerfil(fotoUrl);
     } else {
       errEl.textContent = res.error || 'Error al guardar.';
@@ -131,14 +138,16 @@ function guardarPermisos() {
 }
 
 function saltarPermisos() {
-  var mp = document.getElementById('modal-permisos'); if (mp) { mp.style.opacity = '0'; setTimeout(function(){ mp.style.display = 'none'; }, 250); }
+  _cerrarModalPermisos();
 }
 
 function mostrarModalEdadBloqueo() {
   var m = document.getElementById('modal-edad-bloqueo');
   if (m) m.style.display = 'flex';
+  _registrarOverlayAbierto(cerrarModalEdadBloqueo);
 }
-function cerrarModalEdadBloqueo() {
+function cerrarModalEdadBloqueo(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var m = document.getElementById('modal-edad-bloqueo');
   if (m) m.style.display = 'none';
 }
@@ -248,6 +257,7 @@ function eliminarCuenta() {
   inner.style.transform = 'scale(1) translateY(0)';
   document.body.style.overflow = 'hidden';
   setTimeout(function() { document.getElementById('mec-input').focus(); }, 300);
+  _registrarOverlayAbierto(mecCerrar);
 }
 
 function mecValidar() {
@@ -259,7 +269,8 @@ function mecValidar() {
   btn.style.cursor = ok ? 'pointer' : 'not-allowed';
 }
 
-function mecCerrar() {
+function mecCerrar(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var overlay = document.getElementById('modal-eliminar-cuenta');
   var inner = overlay.querySelector('div');
   overlay.style.opacity = '0';
@@ -323,8 +334,12 @@ function abrirPickerMisDatos(target) {
   _ddpRender();
   document.getElementById('ddp-modal').classList.add('active');
   document.body.style.overflow='hidden';
+  _registrarOverlayAbierto(_ddpCerrar);
 }
-function _ddpCerrar() { document.getElementById('ddp-modal').classList.remove('active'); document.body.style.overflow=''; }
+function _ddpCerrar(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  document.getElementById('ddp-modal').classList.remove('active'); document.body.style.overflow='';
+}
 function _ddpRender() {
   var lbl=document.getElementById('ddp-sel-label');
   if(lbl) lbl.textContent=(_ddpSt.sy&&_ddpSt.sd)?_ddpSt.sd+' '+_MESES_DDP[_ddpSt.sm]+' '+_ddpSt.sy:'Sin seleccionar';
@@ -376,7 +391,7 @@ function _ddpRenderMeses() {
       else if(t.id==='ddp-anio-label'||t.closest&&t.closest('#ddp-anio-label')){_ddpSt.yearMode=!_ddpSt.yearMode;_ddpSt.monthMode=false;_ddpRender();}
       else if(t===modal)_ddpCerrar();
     });
-    var canc=document.getElementById('ddp-cancelar'); if(canc)canc.onclick=_ddpCerrar;
+    var canc=document.getElementById('ddp-cancelar'); if(canc)canc.onclick=function(){_ddpCerrar();};
     var ok=document.getElementById('ddp-ok');
     if(ok)ok.onclick=function(){
       if(!_ddpSt.sd)return;
@@ -527,6 +542,7 @@ function ajAbrirSheetTexto(sheetId, titulo, placeholder, callback) {
   if (ov) ov.style.display = 'block';
   if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
   setTimeout(function(){ var i = document.getElementById('aj-sheet-texto-input'); if (i && _ajSheetTextoModo === 'texto') i.focus(); }, 400);
+  _registrarOverlayAbierto(ajCerrarSheetTexto);
 }
 
 /* ── Bottom sheet de texto en modo pills (pronombres/relación/tipo de doc) ── */
@@ -548,6 +564,7 @@ function _ajAbrirSheetTextoPills(titulo, subtitulo, modo, pillsHtml, callback) {
   var sh = document.getElementById('aj-sheet-texto');
   if (ov) ov.style.display = 'block';
   if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
+  _registrarOverlayAbierto(ajCerrarSheetTexto);
 }
 
 function _ajSheetTextoPillSingleClick(el) {
@@ -556,7 +573,8 @@ function _ajSheetTextoPillSingleClick(el) {
   ajCerrarSheetTexto();
 }
 
-function ajCerrarSheetTexto() {
+function ajCerrarSheetTexto(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var sh = document.getElementById('aj-sheet-texto');
   var ov = document.getElementById('aj-sheet-texto-overlay');
   var genAlCerrar = _ajSheetTextoGen;
@@ -620,9 +638,11 @@ function ajAbrirSheetPrefijo() {
   if (ov) ov.style.display = 'block';
   if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
   var s = document.getElementById('aj-prefijo-search'); if (s) s.value = '';
+  _registrarOverlayAbierto(ajCerrarSheetPrefijo);
 }
 
-function ajCerrarSheetPrefijo() {
+function ajCerrarSheetPrefijo(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var sh = document.getElementById('aj-sheet-prefijo');
   var ov = document.getElementById('aj-sheet-prefijo-overlay');
   if (sh) sh.style.transform = 'translateY(100%)';
@@ -703,9 +723,11 @@ function ajAbrirSheetPais() {
   var sh = document.getElementById('aj-sheet-pais');
   if (ov) ov.style.display = 'block';
   if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
+  _registrarOverlayAbierto(ajCerrarSheetPais);
 }
 
-function ajCerrarSheetPais() {
+function ajCerrarSheetPais(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var sh = document.getElementById('aj-sheet-pais');
   var ov = document.getElementById('aj-sheet-pais-overlay');
   if (sh) sh.style.transform = 'translateY(100%)';
@@ -1166,9 +1188,11 @@ function ajAbrirSheetLogout() {
   var sh = document.getElementById('aj-sheet-logout');
   if (ov) ov.style.display = 'block';
   if (sh) { sh.style.display = 'block'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
+  _registrarOverlayAbierto(ajCerrarSheetLogout);
 }
 
-function ajCerrarSheetLogout() {
+function ajCerrarSheetLogout(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var sh = document.getElementById('aj-sheet-logout');
   var ov = document.getElementById('aj-sheet-logout-overlay');
   if (sh) sh.style.transform = 'translateY(100%)';
@@ -1184,6 +1208,7 @@ function ajAbrirSheetTallaAjustes() {
   ov.style.display = 'block';
   sh.style.display = 'block';
   requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(ajCerrarSheetTallaAjustes);
   api({ action: 'getTallasDisponibles' }, function(tallas) {
     var tallaActual = E.datos && E.datos.talla ? E.datos.talla : '';
     var htmlNo = '<div class="equip-talla-pill equip-talla-pill-no' + (!tallaActual ? ' sel' : '') + '" onclick="ajSelTallaGridAjustes(this,\'\')">No necesito patines</div>';
@@ -1201,7 +1226,8 @@ function ajSelTallaGridAjustes(el, talla) {
   if (!yaSeleccionada) el.classList.add('sel');
 }
 
-function ajCerrarSheetTallaAjustes() {
+function ajCerrarSheetTallaAjustes(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var sh = document.getElementById('aj-sheet-talla-aj');
   var ov = document.getElementById('aj-sheet-talla-aj-overlay');
   sh.style.transform = 'translateY(100%)';
@@ -1254,6 +1280,7 @@ function ajAbrirSheetProtecAjustes() {
   ov.style.display = 'block';
   sh.style.display = 'block';
   requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(ajCerrarSheetProtecAjustes);
 }
 
 function ajSelProtecAjustes(el) {
@@ -1263,7 +1290,8 @@ function ajSelProtecAjustes(el) {
   document.getElementById('aj-bs-protec-parciales').style.display = val === 'Otro' ? 'block' : 'none';
 }
 
-function ajCerrarSheetProtecAjustes() {
+function ajCerrarSheetProtecAjustes(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var sh = document.getElementById('aj-sheet-protec-aj');
   var ov = document.getElementById('aj-sheet-protec-aj-overlay');
   sh.style.transform = 'translateY(100%)';
@@ -1336,6 +1364,7 @@ function ajAbrirSheetPlaces(titulo, tipo, displayId, campo) {
   var sh = document.getElementById('aj-sheet-places');
   if (ov) ov.style.display = 'block';
   if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform='translateY(0)'; }); }); }
+  _registrarOverlayAbierto(ajCerrarSheetPlaces);
 
   _ajPlacesCallback = function(valor) {
     var disp = document.getElementById(displayId);
@@ -1384,7 +1413,8 @@ function ajAbrirSheetPlaces(titulo, tipo, displayId, campo) {
   setTimeout(function(){ if(inp) inp.focus(); }, 300);
 }
 
-function ajCerrarSheetPlaces() {
+function ajCerrarSheetPlaces(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var sh = document.getElementById('aj-sheet-places');
   var ov = document.getElementById('aj-sheet-places-overlay');
   if (sh) sh.style.transform = 'translateY(100%)';

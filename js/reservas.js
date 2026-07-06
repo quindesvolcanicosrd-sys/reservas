@@ -79,13 +79,15 @@ function abrirBsProtec() {
       requestAnimationFrame(function() { bs.style.transform = 'translateY(0)'; });
     });
   }
+  _registrarOverlayAbierto(cerrarBsProtec);
 }
 
 function toggleProtecItem(el) {
   el.classList.toggle('activa');
 }
 
-function cerrarBsProtec() {
+function cerrarBsProtec(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var bs = document.getElementById('bs-protec');
   var ov = document.getElementById('bs-protec-overlay');
   if (bs) bs.style.transform = 'translateY(100%)';
@@ -483,9 +485,11 @@ function abrirModalAgotada(razon, onCerrar) {
   overlay.style.display = 'flex';
   requestAnimationFrame(function() { overlay.style.opacity = '1'; });
   window._modalAgotadaCb = onCerrar;
+  _registrarOverlayAbierto(cerrarModalAgotada);
 }
 
-function cerrarModalAgotada() {
+function cerrarModalAgotada(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var overlay = document.getElementById('modal-agotada-overlay');
   if (!overlay) return;
   overlay.style.opacity = '0';
@@ -507,9 +511,11 @@ function mostrarModalEquip(fechasAfectadas) {
   }).join('');
   var modal = document.getElementById('modal-equip-aviso');
   if (modal) { modal.style.opacity = '0'; modal.style.transition = 'opacity 0.25s ease'; modal.style.display = 'flex'; requestAnimationFrame(function(){ modal.style.opacity = '1'; }); }
+  _registrarOverlayAbierto(cerrarModalEquip);
 }
 
-function cerrarModalEquip() {
+function cerrarModalEquip(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var modal = document.getElementById('modal-equip-aviso');
   if (modal) { modal.style.opacity = '0'; setTimeout(function(){ modal.style.display = 'none'; }, 250); }
 }

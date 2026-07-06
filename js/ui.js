@@ -58,8 +58,11 @@ function selOp(label, name, val) {
   }
 }
 
-function abrirContacto() { var m = document.getElementById('modal-contacto'); if (m) { m.style.display = 'flex'; } }
-function cerrarContacto() { var m = document.getElementById('modal-contacto'); if (m) { m.style.display = 'none'; } }
+function abrirContacto() { var m = document.getElementById('modal-contacto'); if (m) { m.style.display = 'flex'; _registrarOverlayAbierto(cerrarContacto); } }
+function cerrarContacto(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var m = document.getElementById('modal-contacto'); if (m) { m.style.display = 'none'; }
+}
 
 var PANTALLAS_RAIZ = ['s1', 's-home', 's-admin-home'];
 
@@ -101,7 +104,7 @@ function ir(id, desdeHistorial, sinTrampa) {
     setTimeout(function() {
       if (!_yaVioModal('home')) {
         var mh = document.getElementById('modal-info-home');
-        if (mh) mh.style.display = 'flex';
+        if (mh) { mh.style.display = 'flex'; _registrarOverlayAbierto(function(porGesto) { _cerrarModalInfo('home', porGesto); }); }
       }
     }, 600);
   }
@@ -147,6 +150,7 @@ function ir(id, desdeHistorial, sinTrampa) {
 function volver(id) { ir(id); }
 
 window.addEventListener('popstate', function(ev) {
+  if (_overlayStack.length > 0) { var _fn = _overlayStack.pop(); _fn(true); return; }
   if (_ajSubAbierto) { cerrarAjSub(_ajSubAbierto, true); return; }
   var id = (ev.state && ev.state.pantalla) || (E.datos ? 's-home' : 's1');
 if (id === 's2') id = E.datos ? 's-home' : 's1';
@@ -159,6 +163,12 @@ if (id === 's2') id = E.datos ? 's-home' : 's1';
 });
 history.replaceState({ pantalla: 's1' }, '', '#s1');
 history.pushState({ pantalla: 's1' }, '', '#s1'); // entrada "trampa" inicial, ver PANTALLAS_RAIZ en ir()
+
+var _overlayStack = [];
+function _registrarOverlayAbierto(cerrarFn) {
+  history.pushState({ overlay: true }, '', location.hash);
+  _overlayStack.push(cerrarFn);
+}
 
 var NOMBRES_MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -274,26 +284,30 @@ function _yaVioModal(id) {
   return localStorage.getItem(k) === 'visto' || sessionStorage.getItem(k) === 'luego';
 }
 
-function modalInfoOk(id) {
-  localStorage.setItem(_modalInfoKey(id), 'visto');
+function _cerrarModalInfo(id, porGesto) {
+  if (!porGesto) { history.back(); return; }
   var el = document.getElementById('modal-info-' + id);
   if (el) el.style.display = 'none';
+}
+
+function modalInfoOk(id) {
+  localStorage.setItem(_modalInfoKey(id), 'visto');
   if (id === 'reserva' && window._modalInfoReservaCallback) {
     var cb = window._modalInfoReservaCallback;
     window._modalInfoReservaCallback = null;
     cb();
   }
+  _cerrarModalInfo(id);
 }
 
 function modalInfoLater(id) {
   sessionStorage.setItem(_modalInfoKey(id), 'luego');
-  var el = document.getElementById('modal-info-' + id);
-  if (el) el.style.display = 'none';
   if (id === 'reserva' && window._modalInfoReservaCallback) {
     var cb = window._modalInfoReservaCallback;
     window._modalInfoReservaCallback = null;
     cb();
   }
+  _cerrarModalInfo(id);
 }
 
 function mostrarModalInfoReserva(callback) {
@@ -309,6 +323,7 @@ var elCuponHr = document.getElementById('mri-cupon-hr');
   if (elCupon) elCupon.style.display = mostrarCupon ? '' : 'none';
   if (elCuponHr) elCuponHr.style.display = mostrarCupon ? '' : 'none';  window._modalInfoReservaCallback = callback;
   document.getElementById('modal-info-reserva').style.display = 'flex';
+  _registrarOverlayAbierto(function(porGesto) { _cerrarModalInfo('reserva', porGesto); });
 }
 
 function mostrarToast(msg, tipo) {
@@ -330,8 +345,10 @@ function abrirModalInfoEstado() {
   if (!m) return;
   m.style.display = 'flex';
   requestAnimationFrame(function() { m.style.opacity = '1'; });
+  _registrarOverlayAbierto(cerrarModalInfoEstado);
 }
-function cerrarModalInfoEstado() {
+function cerrarModalInfoEstado(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var m = document.getElementById('modal-info-estado');
   if (!m) return;
   m.style.opacity = '0';
@@ -342,8 +359,10 @@ function abrirModalInfoPolitica() {
   if (!m) return;
   m.style.display = 'flex';
   requestAnimationFrame(function() { m.style.opacity = '1'; });
+  _registrarOverlayAbierto(cerrarModalInfoPolitica);
 }
-function cerrarModalInfoPolitica() {
+function cerrarModalInfoPolitica(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var m = document.getElementById('modal-info-politica');
   if (!m) return;
   m.style.opacity = '0';
