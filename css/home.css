@@ -31,7 +31,7 @@
 .btn-home-sub:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); background: var(--brand-warm); }
 .btn-home-sub:disabled { opacity: 0.32; cursor: not-allowed; }
 
-.btn-equip-home { margin-top: 12px; }
+.btn-equip-home { margin-bottom: 10px; }
 
 .res-card-home {
   border: 1px solid var(--border); border-radius: 14px; padding: 6px 0px;
