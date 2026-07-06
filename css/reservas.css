@@ -82,7 +82,7 @@
   color: var(--muted); font-size: 0.8rem; font-weight: 700;
   text-align: center; cursor: pointer; transition: all 0.2s; user-select: none; line-height: 1;
 }
-.mes-item input[type="checkbox"] { display: none; }
+.mes-item input[type="checkbox"], .mes-item input[type="radio"] { display: none; }
 .mes-item:not(.mes-past):not(.mes-confirmado):hover { border-color: var(--brand-secondary); color: var(--text-2); }
 .mes-item:has(input:checked):not(.mes-confirmado) { background: var(--brand); border-color: var(--brand); color: var(--white); }
 .mes-past { opacity: 0.4; }

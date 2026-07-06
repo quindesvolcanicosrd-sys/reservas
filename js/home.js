@@ -763,9 +763,11 @@ function toggleBannerCupon() {
 var _sgFechaActual = '';
 var _sgFilaActual = null;
 var _sgFechaSeleccionada = '';
+var _sgEsMensual = false;
 
 function abrirGestionar(fecha, fila) {
   _sgFechaActual = fecha; _sgFilaActual = fila; _sgFechaSeleccionada = '';
+  _sgEsMensual = _MESES_MAP[(fecha || '').toLowerCase().trim()] !== undefined;
   var partes = (fecha || '').split(' - ');
   var fechaTexto = (partes[0] || fecha).trim();
   var hora = partes[1] ? partes[1].trim() : '';
@@ -823,6 +825,13 @@ function sheetIrReagendar() {
 }
 
 function cargarFechasGestionar() {
+  var labelFecha = document.getElementById('sg-label-fecha');
+  var labelLista = document.getElementById('sg-label-lista');
+  var btnConfirmar = document.getElementById('sg-btn-confirmar-fecha');
+  if (labelFecha) labelFecha.textContent = _sgEsMensual ? 'Mes a cambiar' : 'Fecha a re-agendar';
+  if (labelLista) labelLista.textContent = _sgEsMensual ? 'Elige el nuevo mes' : 'Fechas disponibles para re-agendar';
+  if (btnConfirmar) btnConfirmar.textContent = _sgEsMensual ? 'Confirmar nuevo mes' : 'Confirmar nueva fecha';
+  if (_sgEsMensual) { _cargarMesesGestionar(); return; }
   var lista = document.getElementById('sg-lista-fechas');
   lista.innerHTML = '<div class="loader"><div class="spinner"></div><p>Cargando fechas...</p></div>';
   function _fadeInLista() { void lista.offsetWidth; lista.style.animation = 'fadeIn 0.3s ease'; }
@@ -868,6 +877,35 @@ function selFechaGestionar(el, fecha) {
   document.querySelectorAll('.sg-fecha-item').forEach(function(x) { x.classList.remove('sel'); });
   el.classList.add('sel');
   _sgFechaSeleccionada = fecha;
+  document.getElementById('sg-btn-confirmar-fecha').style.display = '';
+}
+
+function _cargarMesesGestionar() {
+  var lista = document.getElementById('sg-lista-fechas');
+  var actual = (_sgFechaActual || '').toLowerCase().trim();
+  var html = '<div class="meses-grid-pills">';
+  for (var i = 0; i < NOMBRES_MESES.length; i++) {
+    var nombre = NOMBRES_MESES[i];
+    var esActual = nombre.toLowerCase() === actual;
+    html += '<label class="mes-item">' +
+      '<input type="radio" name="sg-mes" value="' + nombre + '"' + (esActual ? ' checked' : '') + ' onchange="selMesGestionar(\'' + nombre + '\')">' +
+      '<span class="mes-nombre">' + nombre + '</span>' +
+      '</label>';
+  }
+  html += '</div>';
+  lista.innerHTML = html;
+  _sgFechaSeleccionada = '';
+  document.getElementById('sg-btn-confirmar-fecha').style.display = 'none';
+}
+
+function selMesGestionar(mes) {
+  var actual = (_sgFechaActual || '').toLowerCase().trim();
+  if (mes.toLowerCase().trim() === actual) {
+    _sgFechaSeleccionada = '';
+    document.getElementById('sg-btn-confirmar-fecha').style.display = 'none';
+    return;
+  }
+  _sgFechaSeleccionada = mes;
   document.getElementById('sg-btn-confirmar-fecha').style.display = '';
 }
 
