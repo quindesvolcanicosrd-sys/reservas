@@ -469,8 +469,8 @@ function _renderCardHome(r, hoy) {
 
   var rnTopExtra = '';
   if (esMensual) {
-    rnTopExtra = '<div class="rn-top-extra">' + equipPillHtml;
-    if (r.validezHasta) rnTopExtra += '<span class="rn-validez">Válido hasta ' + r.validezHasta + '</span>';
+    rnTopExtra = '<div class="rn-top-extra fi-pills">' + equipPillHtml;
+    if (r.validezHasta) rnTopExtra += '<span class="fi-pill fi-pill-validez"><span class="material-symbols-outlined">event_available</span>Válido hasta ' + r.validezHasta + '</span>';
     rnTopExtra += '</div>';
   }
 
