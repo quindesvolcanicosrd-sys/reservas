@@ -54,6 +54,9 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
 .btn-secondary { background: var(--btn-secondary-bg); color: var(--btn-secondary-color); border: none; }
 .btn-secondary:hover { background: var(--btn-secondary-hover-bg); transform: translateY(-2px); }
 .btn-secondary:active { transform: translateY(0) scale(0.98); }
+.btn-outline { background: transparent; color: var(--brand); border: 1.5px solid var(--brand); }
+.btn-outline:hover { background: var(--brand-warm); transform: translateY(-2px); }
+.btn-outline:active { transform: translateY(0) scale(0.98); }
 
 .opciones { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
 .opcion {

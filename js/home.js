@@ -765,6 +765,37 @@ function toggleBannerCupon() {
   chevron.style.transform = abierto ? '' : 'rotate(180deg)';
 }
 
+/* ── Cambiar mi equipamiento (desde home) ────────────── */
+function abrirSheetEquipHome() {
+  var d = E.datos || {};
+  var patVal = document.getElementById('home-equip-pat-val');
+  var protVal = document.getElementById('home-equip-protec-val');
+  if (patVal) patVal.textContent = (d.necesitaPatines === 'Sí') ? 'Talla ' + (d.talla || '?') : 'No necesitas patines';
+  if (protVal) protVal.textContent = d.necesitaProtecciones || '—';
+  var ov = document.getElementById('sheet-equip-home-overlay');
+  var sh = document.getElementById('sheet-equip-home');
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+}
+
+function cerrarSheetEquipHome() {
+  var sh = document.getElementById('sheet-equip-home');
+  var ov = document.getElementById('sheet-equip-home-overlay');
+  sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { sh.style.display = 'none'; ov.style.display = 'none'; }, 350);
+}
+
+function irTallaDesdeHomeEquip() {
+  cerrarSheetEquipHome();
+  setTimeout(function() { ajAbrirSheetTallaAjustes(); }, 360);
+}
+
+function irProtecDesdeHomeEquip() {
+  cerrarSheetEquipHome();
+  setTimeout(function() { ajAbrirSheetProtecAjustes(); }, 360);
+}
+
 /* ── Gestionar reserva ──────────────────────────────── */
 var _sgFechaActual = '';
 var _sgFilaActual = null;
