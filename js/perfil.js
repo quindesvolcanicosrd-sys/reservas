@@ -1186,7 +1186,8 @@ function ajAbrirSheetTallaAjustes() {
   requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
   api({ action: 'getTallasDisponibles' }, function(tallas) {
     var tallaActual = E.datos && E.datos.talla ? E.datos.talla : '';
-    grid.innerHTML = tallas.map(function(t) {
+    var htmlNo = '<div class="equip-talla-pill equip-talla-pill-no' + (!tallaActual ? ' sel' : '') + '" onclick="ajSelTallaGridAjustes(this,\'\')">No necesito patines</div>';
+    grid.innerHTML = htmlNo + tallas.map(function(t) {
       return '<div class="equip-talla-pill' + (String(t) === String(tallaActual) ? ' sel' : '') + '" onclick="ajSelTallaGridAjustes(this,\'' + t + '\')">' + t + '</div>';
     }).join('');
   }, function() {
@@ -1209,7 +1210,7 @@ function ajCerrarSheetTallaAjustes() {
 
 function ajGuardarTallaAjustes(btn) {
   var sel = document.querySelector('#aj-talla-aj-grid .equip-talla-pill.sel');
-  var talla = sel ? sel.textContent.trim() : '';
+  var talla = (sel && !sel.classList.contains('equip-talla-pill-no')) ? sel.textContent.trim() : '';
   var necesitaPatines = talla ? 'Sí' : 'No';
   if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
   api({ action: 'actualizarEquipamientoPersona', nombre: E.nombre, necesitaPatines: necesitaPatines, talla: talla, necesitaProtecciones: E.datos.necesitaProtecciones || 'No' }, function() {
