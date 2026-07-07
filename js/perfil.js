@@ -995,6 +995,7 @@ function saludContinuar5() {
   }
   _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-6'));
 }
+function saludOmitir5() { _saludData.dieta = ''; _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-6')); }
 
 /* Paso 6 — ¿Toma medicamentos? (única: Sí/No) */
 function saludContinuar6() {
