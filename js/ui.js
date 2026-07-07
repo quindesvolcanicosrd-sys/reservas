@@ -190,27 +190,42 @@ function generarMeses() {
     var nombre = NOMBRES_MESES[i];
     var esPasado = i < mesActual;
     var confirmado = mesesConfirmados.indexOf(nombre.toLowerCase()) !== -1;
-    var habilitado = i <= mesActual + 1;
-    html += crearMesItem(nombre, esPasado, confirmado, habilitado);
+    html += crearMesItem(nombre, esPasado, confirmado);
   }
   lista.innerHTML = html;
 }
 
-function crearMesItem(nombre, esPasado, confirmado, habilitado) {
-  var bloqueado = !esPasado && !confirmado && habilitado === false;
-  var clases = 'mes-item' + (esPasado ? ' mes-past' : '') + (confirmado ? ' mes-confirmado' : '') + (bloqueado ? ' mes-disabled' : '');
+function crearMesItem(nombre, esPasado, confirmado) {
+  var clases = 'mes-item' + (esPasado ? ' mes-past' : '') + (confirmado ? ' mes-confirmado' : '');
   var badge = confirmado
     ? '<span class="mes-badge"><span class="material-symbols-outlined">check_circle</span>Pagado</span>'
     : '';
-  var disabled = (confirmado || bloqueado) ? ' disabled' : '';
-  var checked = confirmado ? ' checked' : '';
-  var onchange = (confirmado || bloqueado) ? '' : ' onchange="actualizarTotalS4()"';
-  var onclickLabel = bloqueado ? ' onclick="event.preventDefault();mostrarToast(\'Esos meses aún no están habilitados para recibir pagos\')"' : '';
-  return '<label class="' + clases + '"' + onclickLabel + '>' +
-    '<input type="checkbox" value="' + nombre + '"' + disabled + checked + onchange + '>' +
+  var disabled = confirmado ? ' disabled checked' : '';
+  var onchange = confirmado ? '' : ' onchange="_autoencadenarMeses(this);actualizarTotalS4()"';
+  return '<label class="' + clases + '">' +
+    '<input type="checkbox" value="' + nombre + '"' + disabled + onchange + '>' +
     '<span class="mes-nombre">' + nombre + '</span>' +
     badge +
     '</label>';
+}
+
+function _autoencadenarMeses(el) {
+  if (!el.checked) return;
+  var checkboxes = Array.prototype.slice.call(document.querySelectorAll('#lista-meses-unificada .mes-item input[type="checkbox"]'));
+  var idx = checkboxes.indexOf(el);
+  var agregados = [];
+  for (var i = idx - 1; i >= 0; i--) {
+    var cb = checkboxes[i];
+    var item = cb.closest('.mes-item');
+    if (item.classList.contains('mes-past')) break;
+    if (cb.checked) break;
+    cb.checked = true;
+    agregados.push(cb.value);
+  }
+  if (agregados.length > 0) {
+    agregados.reverse();
+    mostrarToast('Se agregó ' + agregados.join(', ') + ' porque hace falta pagarlo antes de este mes');
+  }
 }
 
 function togglePagoMetodo(header) {
