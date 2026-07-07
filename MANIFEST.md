@@ -623,6 +623,7 @@ Dark mode: `.loading-card`/`.loading-card p` en `@media (prefers-color-scheme: d
 | `sheetIrCancelar()` | Muestra el estado cancelar del sheet (oculta las opciones) |
 | `sheetIrReagendar()` | Cierra el sheet y navega a `s-gestionar` (solo reagendar) con delay 360ms |
 | `ejecutarCancelacion()` | Cierra sheet, muestra loading, llama API cancelar directamente, filtra reserva y vuelve a home |
+| `_recargarYRenderReservas(callback)` | **Fix de gap de carga** — encadena `getReservasPersona` → `getFechasDisponibles` y solo al final repinta `#home-reservas-lista` (usada por `confirmarTallaSheet()`, `confirmarProtecReserva()`, `ejecutarReagendamiento()` y `ejecutarCancelacion()`). Antes no mostraba ningún indicador durante esos dos fetches encadenados: la card vieja (con la reserva recién cancelada/reagendada, o la talla/protección vieja) quedaba visible en silencio hasta que el toast de éxito aparecía de la nada. Ahora replica el mismo patrón de `prepararHome()`: fade-out de `#home-reservas-lista` (`opacity:0`, `transition:opacity 0.3s ease`) y, si a los 50ms el fetch todavía no resolvió, inyecta el mismo spinner de respaldo (`<div class="loader">...<div class="spinner"></div></div>`) con fade-in — el guard `listo` evita pisar el contenido real si el fetch resolvió antes de esos 50ms. Al terminar (éxito o error de cualquiera de los dos fetches, vía el helper interno `_terminar()`), repinta con `_renderHomeReservas()` y hace fade-in con `animation:fadeIn 0.3s ease`, igual que el resto de los renders de esta lista |
 | `_parseFechaSimple(str)` | Parsea "DD/MM/YYYY" → Date |
 | `_parseFechaStr(fechaStr)` | Parsea fechas con formato "Sábado 12 de Enero (09:00)" → Date |
 | `_parsearFechaCard(fechaStr)` | Split de `fechaStr` por `" - "` → `{fechaPura, hora, lugar}` |
@@ -900,6 +901,7 @@ Dark mode: `.loading-card`/`.loading-card p` en `@media (prefers-color-scheme: d
 | `_inscNecesitaPatines` | Flag: true si el usuario seleccionó "Sí, necesito patines" en 5a |
 | `_inscWpUnido` | Flag: true si el usuario tocó el enlace del grupo de WhatsApp en paso 6 |
 | `_inscProtecOtro` | Protecciones parciales seleccionadas en el bottom sheet (`#insc-protec-otro-pills`), cadena separada por coma ej. `"Casco, Coderas"` |
+| `_inscTallasListo` | **Nueva** — `true` una vez que `_inscCargarTallas()` resolvió (éxito o error); leída por `inscContinuar5a()` para decidir si mostrar el spinner de respaldo en `#insc-tallas-grid` (ver "Cambios recientes") |
 | `_AJ_PREFIJOS` | Lista de 12 países con `{pais, bandera, cod, min, max}` |
 | `_inscPrefijoSel` | Objeto del país seleccionado activo (por defecto Ecuador) |
 | `ocultarCargando()` | Fade-out opacity del overlay de carga y `display:none` tras 400ms |
@@ -928,8 +930,8 @@ Dark mode: `.loading-card`/`.loading-card p` en `@media (prefers-color-scheme: d
 | `inscFiltrarPrefijos(q)` | Filtra `_AJ_PREFIJOS` por nombre o código y re-renderiza |
 | `inscSelPrefijo(pais)` | Selecciona un país, actualiza `_inscPrefijoSel` y `#insc-prefijo-display`, cierra el sheet |
 | `inscSelBin(el, containerId)` | Selecciona una pill binaria (Sí/No); añade clase `sel-si`/`sel-no`; actualiza `_inscNecesitaPatines` |
-| `inscContinuar5a()` | Si hay selección: si necesita patines va a 5b, si no va a 5c |
-| `_inscCargarTallas()` | Carga tallas via `getTallasDisponibles` y renderiza `.equip-talla-pill` en `#insc-tallas-grid` |
+| `inscContinuar5a()` | Si hay selección: si necesita patines va a 5b, si no va a 5c. **Fix de gap de carga**: `_inscCargarTallas()` se dispara una sola vez en `DOMContentLoaded`, en paralelo mientras el usuario completa los pasos 1-4 — si todavía no resolvió (`!_inscTallasListo`) al llegar acá, inyecta en `#insc-tallas-grid` el mismo spinner de grid que ya usan `sheet-talla`/`aj-sheet-talla-aj` (`<div class="loader" style="grid-column:1/-1;...">...<div class="spinner">`) antes de mostrar el paso 5b — sin esto, un usuario rápido (o que entra vía `?token=`, que auto-avanza pasos) podía llegar a un grid completamente vacío sin ninguna talla para elegir ni indicación de que algo estaba cargando. Si `_inscTallasListo` ya es `true` (el fetch resolvió mientras completaba pasos anteriores), no toca el grid — ya tiene las tallas reales |
+| `_inscCargarTallas()` | Carga tallas via `getTallasDisponibles` y renderiza `.equip-talla-pill` en `#insc-tallas-grid`; en éxito o error setea `_inscTallasListo = true` (leído por `inscContinuar5a()`) y, en éxito, aplica `animation:fadeIn 0.3s ease` al grid (mismo patrón que `_renderGridSheetTalla()` en `js/home.js`) para que el reemplazo del spinner por las tallas reales no sea un corte brusco |
 | `inscSelTalla(el, talla)` | Selecciona una pill de talla y actualiza `#f-talla` |
 | `inscContinuar5b()` | Valida que haya talla seleccionada y avanza a 5c |
 | `inscSelProtec(el)` | Selecciona una pill de protecciones; si val=`Otro` abre el bottom sheet de protecciones |

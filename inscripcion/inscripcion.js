@@ -9,6 +9,7 @@ var _inscNecesitaPatines = false;
 var _inscWpUnido = false;
 var _inscEnviando = false;
 var _inscProtecOtro = '';
+var _inscTallasListo = false;
 var _AJ_PREFIJOS = [
   {pais:'Ecuador',bandera:'🇪🇨',cod:'+593',min:10,max:10},
   {pais:'Colombia',bandera:'🇨🇴',cod:'+57',min:10,max:10},
@@ -407,7 +408,18 @@ function inscSelBin(el, containerId) {
 function inscContinuar5a() {
   var sel = document.querySelector('#insc-patines-pills .equip-pill-bin.sel-si, #insc-patines-pills .equip-pill-bin.sel-no');
   if (!sel) { errMsg('err-p5a', 'Selecciona una opción.'); return; }
-  if (_inscNecesitaPatines) { inscMostrarPaso(_INSC_STEPS.indexOf('insc-step-5b')); }
+  if (_inscNecesitaPatines) {
+    // _inscCargarTallas() se dispara una sola vez en DOMContentLoaded, en paralelo
+    // mientras el usuario completa los pasos 1-4 — si todavía no resolvió al llegar
+    // acá, el grid quedaba vacío y sin ningún indicador hasta que la respuesta llegara
+    // sola de fondo. Mismo spinner de grid que ya usan sheet-talla (js/home.js) y
+    // aj-sheet-talla-aj (js/perfil.js) para el mismo tipo de grilla.
+    if (!_inscTallasListo) {
+      var grid = document.getElementById('insc-tallas-grid');
+      if (grid) grid.innerHTML = '<div class="loader" style="grid-column:1/-1;padding:20px 0;"><div class="spinner" style="width:26px;height:26px;border-width:3px;"></div></div>';
+    }
+    inscMostrarPaso(_INSC_STEPS.indexOf('insc-step-5b'));
+  }
   else { inscMostrarPaso(_INSC_STEPS.indexOf('insc-step-5c')); }
 }
 
@@ -415,10 +427,14 @@ function inscContinuar5a() {
 function _inscCargarTallas() {
   var grid = document.getElementById('insc-tallas-grid'); if (!grid) return;
   apiGet({ action: 'getTallasDisponibles' }, function(tallas) {
+    _inscTallasListo = true;
     grid.innerHTML = (tallas || []).map(function(t) {
       return '<div class="equip-talla-pill" onclick="inscSelTalla(this,\'' + t + '\')">' + t + '</div>';
     }).join('');
+    void grid.offsetWidth;
+    grid.style.animation = 'fadeIn 0.3s ease';
   }, function() {
+    _inscTallasListo = true;
     grid.innerHTML = '<p style="color:var(--danger);font-size:0.82rem;">Error al cargar tallas.</p>';
   });
 }

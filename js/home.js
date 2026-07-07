@@ -1108,6 +1108,28 @@ function cerrarModalEstados(porGesto) {
 }
 
 function _recargarYRenderReservas(callback) {
+  // Mismo patrón de fade-out + spinner de respaldo que prepararHome(): sin esto, la
+  // card vieja quedaba visible en silencio durante los dos fetches encadenados de acá
+  // abajo, hasta que el toast del caller aparecía de la nada (reagendar/cancelar/
+  // cambiar talla o protecciones desde Mis Reservas).
+  var homeContent = document.getElementById('home-reservas-lista');
+  var listo = false;
+  if (homeContent) {
+    homeContent.style.transition = 'opacity 0.3s ease';
+    homeContent.style.opacity = '0';
+    setTimeout(function() {
+      if (listo) return; // el fetch ya resolvió y pintó el contenido real; no lo pisamos con el loader
+      homeContent.innerHTML = '<div class="loader" style="padding:24px 0;"><div class="spinner"></div></div>';
+      homeContent.style.opacity = '1';
+    }, 50);
+  }
+  function _terminar() {
+    listo = true;
+    _renderHomeReservas();
+    if (homeContent) { homeContent.style.opacity = '1'; void homeContent.offsetWidth; homeContent.style.animation = 'fadeIn 0.3s ease'; }
+    setTimeout(_initScrollReservas, 50);
+    if (callback) callback();
+  }
   api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
     _todasReservas = reservas || [];
     var d = E.datos;
@@ -1120,11 +1142,9 @@ function _recargarYRenderReservas(callback) {
         if (info) { r.mapsUrl = info.mapsUrl || ''; r.horaFin = info.horaFin || ''; r.duracion = info.duracion || ''; r.descripcion = info.descripcion || ''; }
         return r;
       });
-      _renderHomeReservas();
-      setTimeout(_initScrollReservas, 50);
-      if (callback) callback();
-    }, function() { _renderHomeReservas(); setTimeout(_initScrollReservas, 50); if (callback) callback(); });
-  }, function() { _renderHomeReservas(); setTimeout(_initScrollReservas, 50); if (callback) callback(); });
+      _terminar();
+    }, _terminar);
+  }, _terminar);
 }
 
 function _initHomeNav() {
