@@ -360,7 +360,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div class="error-msg" id="err-s4"></div>
       <div class="cta-footer-spacer"></div>
       <div class="cta-footer-fixed">
-        <button class="btn btn-primary" id="btn-s4-continuar" onclick="continuar_s4()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+        <button class="btn btn-outline" id="btn-s4-continuar" onclick="continuar_s4()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
       </div>
     </div>
   </div>
@@ -382,7 +382,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <div class="pago-fila"><span class="pago-label">Cuenta de ahorro</span><span class="pago-valor">7702756890</span></div>
           <div class="pago-fila"><span class="pago-label">Titular</span><span class="pago-valor">David Santiago Rojas Baez</span></div>
           <div class="pago-fila"><span class="pago-label">CI</span><span class="pago-valor">1721443180</span></div>
-          <a href="https://pagar.deuna.app/H92p/person/payment?id=34699738dd140ab641e3993377662e6a210132d2" target="_blank" class="btn btn-secondary" style="display:flex;align-items:center;justify-content:center;gap:6px;margin:12px 0;text-decoration:none;"><span class="material-symbols-outlined" style="font-size:1.1rem;">bolt</span>Pagar con DeUna</a>
+          <a href="https://pagar.deuna.app/H92p/person/payment?id=34699738dd140ab641e3993377662e6a210132d2" target="_blank" class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin:12px 0;text-decoration:none;"><span class="material-symbols-outlined" style="font-size:1.1rem;">bolt</span>Pagar con DeUna</a>
         </div>
       </div>
       <div class="pago-metodo" style="padding:0;overflow:hidden;">
@@ -430,7 +430,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" style="flex-shrink:0;vertical-align:middle;" fill="var(--success-dark)"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
           Enviar comprobante por WhatsApp
         </a>
-        <button class="btn btn-secondary" onclick="irHomeDesdeExito()" style="margin-top:14px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver a Mis Reservas</button>
+        <button class="btn btn-outline" onclick="irHomeDesdeExito()" style="margin-top:14px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver a Mis Reservas</button>
       </div>
     </div>
   </div>
@@ -606,7 +606,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="hb-titulo" style="color:var(--neutral-dark);">Administradorxs</div>
         <div class="hb-sub">Invita o quita cuentas con acceso admin</div>
       </div>
-      <button class="btn btn-secondary" style="margin-top:4px;" onclick="adminCerrarSesionLocal()">
+      <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px;" onclick="adminCerrarSesionLocal()">
         <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">logout</span> Cerrar sesión admin
       </button>
     </div>
@@ -620,7 +620,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <label class="opcion sel" style="flex:1;justify-content:center;padding:10px;" onclick="adminFiltroReservas('pendientes', this)"><span style="font-weight:700;font-size:0.85rem;">⏳ Pendientes</span></label>
         <label class="opcion" style="flex:1;justify-content:center;padding:10px;" onclick="adminFiltroReservas('todas', this)"><span style="font-weight:700;font-size:0.85rem;">📋 Todas</span></label>
       </div>
-      <button class="btn btn-secondary" style="margin-bottom:8px;" onclick="adminIrReservas()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span> Actualizar</button>
+      <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px;" onclick="adminIrReservas()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span> Actualizar</button>
       <div class="select-wrapper" id="filtro-fecha-wrapper" style="display:none;margin-bottom:12px;">
         <select id="filtro-mes-reservas" onchange="adminRenderReservas()">
           <option value="0">Enero</option><option value="1">Febrero</option>
@@ -671,7 +671,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <h2>Equipamiento a llevar</h2>
       <p style="font-size:0.85rem;">Recibirás un push <strong>1 día antes</strong> y <strong>2 horas antes</strong> de cada entrenamiento si hay que llevar equipamiento (con notificaciones activadas).</p>
 <div id="admin-quellevar-lista"></div>
-      <button class="btn btn-secondary" style="margin-bottom:8px;" onclick="adminRefreshQueLlevar()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span> Actualizar lista</button>
+      <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px;" onclick="adminRefreshQueLlevar()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span> Actualizar lista</button>
     </div>
   </div>
 
@@ -680,7 +680,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div class="seccion-label">Admin — Equipamiento</div>
       <h2>Patines y protecciones</h2>
       <div id="admin-equip-lista"></div>
-      <button class="btn btn-secondary" style="margin-top:4px;" onclick="adminAgregarTalla()">➕ Agregar talla</button>
+      <button class="btn-text-simple" style="margin-top:4px;" onclick="adminAgregarTalla()">➕ Agregar talla</button>
       <div class="datos-campo" style="margin-top:18px;">
         <label>Sets de protecciones completas</label>
         <input type="number" id="adm-equip-protec" min="0" style="max-width:140px;">
@@ -871,7 +871,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div id="pwa-instrucciones" style="display:none;font-size:0.84rem;background:var(--surface-light);border:1px solid var(--disabled-border);border-radius:10px;padding:12px 14px;margin-bottom:12px;line-height:1.7;"></div>
   <div style="display:flex;gap:10px;">
     <button class="btn btn-outline" id="pwa-btn-instalar" style="padding:13px;" onclick="pwaInstalar()">Instalar</button>
-    <button class="btn btn-secondary" style="padding:13px;margin-top:0;" onclick="pwaCerrar()">Ahora no</button>
+    <button class="btn-text-simple" style="padding:13px;margin-top:0;" onclick="pwaCerrar()">Ahora no</button>
   </div>
 </div>
 
@@ -947,7 +947,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
 
     <div class="modal-info-footer">
-      <button class="btn btn-secondary" onclick="modalInfoLater('reserva')">Recuérdame luego</button>
+      <button class="btn-text-simple" onclick="modalInfoLater('reserva')">Recuérdame luego</button>
       <button class="btn btn-outline" onclick="modalInfoOk('reserva')">¡Entendido!</button>
     </div>
   </div>
@@ -992,7 +992,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
 
     <div class="modal-info-footer">
-      <button class="btn btn-secondary" onclick="modalInfoLater('home')">Recuérdame luego</button>
+      <button class="btn-text-simple" onclick="modalInfoLater('home')">Recuérdame luego</button>
       <button class="btn btn-outline" onclick="modalInfoOk('home')">¡Entendido!</button>
     </div>
   </div>
@@ -1505,7 +1505,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
     <!-- Estado: completada (filas de lectura, editables individualmente) -->
     <div id="salud-resumen" style="display:none">
-      <button class="btn btn-secondary" style="margin-bottom:14px;" onclick="saludIniciarWizard()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span> Volver a completar el paso a paso</button>
+      <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:14px;" onclick="saludIniciarWizard()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span> Volver a completar el paso a paso</button>
 
       <div class="aj-group">
         <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Enfermedad diagnosticada','','aj-enfermedad-val','enfermedad','Ej: Asma, diabetes')">
@@ -1719,7 +1719,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <span class="aj-pill" data-val="Seguro Privado" onclick="_saludSelUnica(this)">Seguro Privado</span>
         </div>
         <div class="error-msg" id="err-salud-8"></div>
-        <button class="btn btn-primary" style="margin-top:16px;" onclick="saludContinuar8()">Continuar</button>
+        <button class="btn btn-outline" style="margin-top:16px;" onclick="saludContinuar8()">Continuar</button>
       </div>
 
       <div class="salud-paso" id="salud-paso-9">
