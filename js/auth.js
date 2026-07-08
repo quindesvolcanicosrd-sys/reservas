@@ -19,7 +19,7 @@ function iniciarGoogleSignInUsuario() {
   });
   var skMain = document.getElementById('gsignin-skeleton-main');
   if (skMain) { skMain.style.opacity = '0'; setTimeout(function(){ skMain.style.display = 'none'; }, 400); }
-  if (!window._restaurandoSesion) {
+  if (!window._restaurandoSesion && !window._loginAutoEnCurso) {
     var _gObs = new MutationObserver(function() {
       var iframe = document.querySelector('#g-signin-btn-usuario iframe');
       if (!iframe) return;
@@ -308,6 +308,7 @@ window.onload = function() {
   }
   if (!_restaurando) {
     if (_tokenNuevx) {
+      window._loginAutoEnCurso = true;
       mostrarCargando('Iniciando tu sesión...');
       onGoogleCredentialUsuario({ credential: _tokenNuevx });
     } else {
