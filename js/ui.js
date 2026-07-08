@@ -121,6 +121,15 @@ function ir(id, desdeHistorial, sinTrampa) {
     if (_volverTarget) { topBtn.style.display = ''; topBtn.onclick = function() { volver(_volverTarget); }; } else { topBtn.style.display = 'none'; }
   } else { topBar.style.display = 'none'; }
 
+  // Los .cta-footer-fixed viven como hijos directos de <body> (fuera de .pantalla/
+  // .card, ver "Cambios recientes") para no quedar atrapados por el containing
+  // block que .pantalla.activa establece mientras corre su animación de entrada —
+  // acá se oculta el que estuviera visible y se muestra únicamente el que
+  // corresponde a la pantalla nueva (si existe uno para ella).
+  document.querySelectorAll('.cta-footer-fixed').forEach(function(f) { f.style.display = 'none'; });
+  var ctaFooter = document.getElementById('cta-footer-' + id);
+  if (ctaFooter) ctaFooter.style.display = 'block';
+
   var homeNav = document.getElementById('home-nav');
   if (homeNav) {
     if (id !== 's-home') {

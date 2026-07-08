@@ -118,7 +118,15 @@
 .cta-footer-spacer { height: 80px; }
 
 /* ── CTA Footer fijo (flujo de reserva) ── */
+/* Hijo directo de <body> en index.html (fuera de .pantalla/.card), mismo principio
+   arquitectónico que los bottom sheets/modales — así ningún ancestro con transform/
+   animation (ej. .pantalla.activa mientras corre smoothSlideUp, ver "Cambios
+   recientes") puede convertirse en containing block y "atraparlo" fuera del
+   viewport real. display:none por default: js/ui.js (ir()) muestra únicamente
+   el que corresponde a la pantalla activa (id="cta-footer-<id-de-pantalla>"),
+   ocultando el resto. */
 .cta-footer-fixed {
+  display: none;
   position: fixed;
   bottom: 0;
   left: 50%;
@@ -129,11 +137,3 @@
   background: var(--bg);
   z-index: 100;
 }
-/* .card tiene backdrop-filter (var(--card-blur)), y backdrop-filter distinto de "none"
-   convierte al elemento en containing block de sus descendientes position:fixed
-   (los degrada a comportarse como position:absolute). En mobile ya se neutraliza
-   de forma global en el override de .card en ui.css (@media max-width:600px) —
-   este selector sigue siendo necesario para ancho de escritorio (>600px), donde
-   .card conserva su backdrop-filter completo, para todas las pantallas que usan
-   .cta-footer-fixed, sin tocar el backdrop-filter de .card en el resto de la app. */
-#s2 .card, #s3a .card, #s3b .card, #s3c .card, #s4 .card, #s-pago .card, #s6 .card, #s-home .card { backdrop-filter: none; -webkit-backdrop-filter: none; }

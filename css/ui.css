@@ -198,8 +198,10 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
        base incluso en mobile, donde ya no hay fondo/borde que blurear — imperceptible
        visualmente, pero un backdrop-filter != none convierte a .card en containing
        block de sus descendientes position:fixed/absolute (los degrada a absolute).
-       Neutralizado acá de una sola vez para todas las pantallas en mobile, en vez de
-       overrides puntuales por pantalla (ver .cta-footer-fixed en estilos.css). */
+       Neutralizado acá de una sola vez para todas las pantallas en mobile, por las
+       dudas de algún descendiente fixed/absolute futuro — .cta-footer-fixed (antes
+       el motivo original de esta regla) ya no vive dentro de .card en absoluto,
+       ver "Cambios recientes". */
   }
 }
 @media (min-width: 601px) {
