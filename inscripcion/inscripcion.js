@@ -283,8 +283,6 @@ function cerrarModalEdadBloqueo() {
 /* ── Paso 3: nombre y pronombres ────────────── */
 function inscValidarNombre(inp) {
   inp.value = inp.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]/g, '');
-  var ok = document.getElementById('hint-nombre-ok');
-  if (ok) ok.style.display = inp.value.trim().length >= 2 ? 'block' : 'none';
 }
 
 function inscTogglePron(el) {
