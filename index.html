@@ -778,7 +778,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
 
       <div class="error-msg" id="err-modal-permisos"></div>
-      <button onclick="guardarPermisos()" style="width:100%;padding:15px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px;" id="btn-guardar-permisos">Guardar y continuar</button>
+      <button class="btn btn-outline" onclick="guardarPermisos()" style="margin-bottom:10px;" id="btn-guardar-permisos">Guardar</button>
       <button onclick="saltarPermisos()" style="width:100%;padding:13px;background:transparent;color:var(--text-faint);border:2px solid var(--border-light);border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Ahora no (se preguntará de nuevo)</button>
     </div>
   </div>
@@ -794,7 +794,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </button>
       </div>
       <div class="error-msg" id="err-modal-pin-config"></div>
-      <button onclick="guardarPinConfig()" style="width:100%;padding:15px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.95rem;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px;" id="btn-guardar-pin-config">Guardar</button>
+      <button class="btn btn-outline" onclick="guardarPinConfig()" style="margin-bottom:10px;" id="btn-guardar-pin-config">Guardar</button>
       <button onclick="cerrarModalPinConfig(false)" style="width:100%;padding:13px;background:transparent;color:var(--text-faint);border:2px solid var(--border-light);border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
     </div>
   </div>
@@ -815,7 +815,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div id="modal-nav-titulo" style="font-weight:800;font-size:1.05rem;margin-bottom:10px;color:var(--neutral-dark);"></div>
     <div id="modal-nav-texto" style="font-size:0.88rem;color:var(--neutral-light);line-height:1.8;margin-bottom:16px;text-align:left;"></div>
     <div style="background:var(--brand-warm);border:2px solid var(--brand-warm-border);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:0.85rem;font-weight:700;color:var(--brand);word-break:break-all;text-align:center;">reservas.quindesvolcanicos.com</div>
-    <button onclick="cerrarModalNavegador()" style="width:100%;padding:14px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-weight:800;cursor:pointer;font-family:inherit;font-size:0.95rem;">Entendido</button>
+    <button class="btn btn-outline" onclick="cerrarModalNavegador()">Entendido</button>
   </div>
 </div>
 
@@ -1004,7 +1004,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div style="font-weight:800;font-size:1rem;color:var(--text);margin-bottom:8px;">Sin disponibilidad de equipamiento</div>
     <p style="font-size:0.82rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">Para los siguientes entrenamientos no hay equipamiento disponible con tu configuración actual:</p>
     <div id="modal-equip-lista" style="text-align:left;margin-bottom:20px;display:flex;flex-direction:column;gap:8px;"></div>
-    <button onclick="irEditarEquipDesdeModal()" style="width:100%;padding:14px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;">
+    <button class="btn btn-outline" onclick="irEditarEquipDesdeModal()" style="margin-bottom:10px;">
       <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">manage_accounts</span> Actualizar mi equipamiento
     </button>
     <button onclick="cerrarModalEquip()" style="width:100%;padding:13px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:12px;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;">Entendido, continuar</button>
@@ -1100,7 +1100,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <span id="mcr-equip"></span>
       </div>
     </div>
-    <button onclick="ejecutarReagendamiento()" style="width:100%;padding:13px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;">Confirmar nueva fecha</button>
+    <button class="btn btn-outline" onclick="ejecutarReagendamiento()" style="margin-bottom:10px;">Guardar</button>
     <button onclick="cerrarModalReagendar()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:1px solid var(--border-light);border-radius:12px;font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;">Volver</button>
   </div>
 </div>
@@ -1123,7 +1123,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div><div style="font-weight:800;font-size:0.88rem;color:var(--danger);margin-bottom:4px;">Cancelada</div>
       <div style="font-size:0.78rem;color:var(--danger);line-height:1.5;">Tu reserva fue cancelada y no asistirás a esta fecha. Si fue un error, puedes hacer una nueva reserva.</div></div>
     </div>
-    <button onclick="cerrarModalEstados()" style="width:100%;padding:13px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;">¡Entendido!</button>
+    <button class="btn btn-outline" onclick="cerrarModalEstados()">¡Entendido!</button>
   </div>
 </div>
 
@@ -1776,7 +1776,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div style="padding:16px;">
     <input type="text" id="aj-sheet-texto-input" style="width:100%;padding:13px 16px;background:var(--surface-2);border:1.5px solid var(--brand);border-radius:12px;font-size:0.88rem;font-family:inherit;" placeholder="">
     <div class="aj-pills-row" id="aj-sheet-texto-pills" style="display:none;margin-top:0;"></div>
-    <button id="aj-sheet-texto-btn-confirmar" onclick="ajConfirmarSheetTexto()" style="width:100%;padding:13px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-top:10px;">Confirmar</button>
+    <button class="btn btn-outline" id="aj-sheet-texto-btn-confirmar" onclick="ajConfirmarSheetTexto()" style="margin-top:10px;">Guardar</button>
     <button onclick="ajCerrarSheetTexto()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:none;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
   </div>
 </div>
@@ -1786,7 +1786,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 6px;"></div>
   <div style="font-size:1rem;font-weight:800;color:var(--text);text-align:center;padding:10px 16px 16px;border-bottom:1px solid var(--border-light);">¿Cerrar sesión?</div>
   <div style="padding:16px 16px 0;display:flex;flex-direction:column;gap:10px;">
-    <button onclick="confirmarCerrarSesion()" style="width:100%;padding:13px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;"><span class="material-symbols-outlined" style="font-size:1.1rem;">logout</span>Sí, cerrar sesión</button>
+    <button class="btn btn-outline" onclick="confirmarCerrarSesion()" style="display:flex;align-items:center;justify-content:center;gap:8px;"><span class="material-symbols-outlined" style="font-size:1.1rem;">logout</span>Sí, cerrar sesión</button>
     <button onclick="ajCerrarSheetLogout()" style="width:100%;padding:12px;background:transparent;border:1px solid var(--border-light);border-radius:12px;color:var(--muted);font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;">Cancelar</button>
   </div>
 </div>
@@ -1804,7 +1804,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <span class="aj-pill" data-val="Rodilleras" onclick="toggleProtecItem(this)">Rodilleras</span>
     </div>
     <div class="error-msg" id="err-bs-protec" style="margin-top:10px;"></div>
-    <button onclick="confirmarOtroProtec()" style="width:100%;padding:13px;background:var(--brand);border:none;border-radius:12px;color:var(--white);font-size:0.85rem;font-weight:800;cursor:pointer;font-family:inherit;margin-top:16px;">Confirmar</button>
+    <button class="btn btn-outline" onclick="confirmarOtroProtec()" style="margin-top:16px;">Confirmar</button>
     <button onclick="cancelarOtroProtec()" style="width:100%;padding:10px;background:transparent;border:none;color:var(--muted);font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
   </div>
 </div>
@@ -1818,7 +1818,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="aj-pills-row" id="sheet-talla-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"></div>
     <div class="error-msg" id="err-sheet-talla" style="margin-top:10px;"></div>
     <div id="sheet-talla-aviso-protec" style="display:none;font-size:0.72rem;color:var(--warning);text-align:center;margin-top:10px;line-height:1.4;">Esta fecha también podría tener protecciones agotadas — lo confirmaremos al guardar la reserva.</div>
-    <button id="btn-confirmar-talla" onclick="confirmarTallaSheet()" disabled style="width:100%;padding:13px;background:var(--brand);border:none;border-radius:12px;color:var(--white);font-size:0.85rem;font-weight:800;cursor:pointer;font-family:inherit;margin-top:16px;opacity:0.4;">Confirmar talla</button>
+    <button class="btn btn-outline" id="btn-confirmar-talla" onclick="confirmarTallaSheet()" disabled style="margin-top:16px;">Guardar</button>
     <button onclick="cerrarSheetTalla()" style="width:100%;padding:10px;background:transparent;border:none;color:var(--muted);font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
   </div>
 </div>
@@ -1860,7 +1860,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div class="error-msg" id="err-protec-parciales-reserva"></div>
     </div>
     <div class="error-msg" id="err-sheet-protec-reserva" style="margin-top:8px;"></div>
-    <button id="btn-confirmar-protec-reserva" onclick="confirmarProtecReserva(this)" style="width:100%;padding:13px;background:var(--brand);border:none;border-radius:12px;color:var(--white);font-size:0.85rem;font-weight:800;cursor:pointer;font-family:inherit;margin-top:16px;">Confirmar protecciones</button>
+    <button class="btn btn-outline" id="btn-confirmar-protec-reserva" onclick="confirmarProtecReserva(this)" style="margin-top:16px;">Guardar</button>
     <button onclick="cerrarSheetProtecReserva()" style="width:100%;padding:10px;background:transparent;border:none;color:var(--muted);font-size:0.78rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
   </div>
 </div>
