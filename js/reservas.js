@@ -225,7 +225,7 @@ function actualizarTotalS4() {
   var bannerCred = document.getElementById('s4-credito-banner');
 
   if (E.tipoPago === 'mensual') {
-    var mesesSeleccionados = Array.from(document.querySelectorAll('#lista-meses-unificada input:checked')).map(function(cb) { return cb.value; });
+    var mesesSeleccionados = Array.from(document.querySelectorAll('#lista-meses-unificada input:checked:not(:disabled)')).map(function(cb) { return cb.value; });
     E.meses = mesesSeleccionados;
     total = mesesSeleccionados.length * E.precioMensual;
     document.getElementById('s4-meses-wrapper').style.display = 'block';
