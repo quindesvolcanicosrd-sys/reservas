@@ -47,17 +47,6 @@
 footer { display: block; }
 @media (max-width: 600px) { footer { display: none !important; } }
 
-#pin-acordeon-body .btn-primary {
-  background: var(--brand);
-  color: var(--white);
-  box-shadow: 0 4px 14px var(--brand-glow);
-}
-#pin-acordeon-body .btn-primary:hover:not(:disabled) {
-  background: var(--brand-dk);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px var(--brand-glow);
-}
-
 @media (prefers-color-scheme: dark) {
   .btn-pin-key { background: var(--dk-input-bg); border-color: var(--dk-input-bg); color: var(--dk-modal-text); }
   .btn-pin-key:hover { background: var(--dk-skeleton-base); border-color: var(--brand-secondary); }

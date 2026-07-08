@@ -93,9 +93,9 @@
   --info-dark:      #0369a1;
 
   /* ── Botones ─────────────────────────────────────────── */
-  --btn-primary-bg:     var(--brand-light);
-  --btn-primary-color:  var(--brand);
-  --btn-primary-hover:  rgba(249,115,22,0.22);
+  --btn-primary-bg:     var(--brand);
+  --btn-primary-color:  var(--white);
+  --btn-primary-hover:  var(--brand-dk);
   --btn-secondary-bg:   var(--surface-2);
   --btn-secondary-color:var(--text-2);
 
