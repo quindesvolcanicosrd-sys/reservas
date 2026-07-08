@@ -148,7 +148,7 @@ function onGoogleCredentialInscripcion(response) {
     var falta = MIN_DELAY - elapsed;
     if (falta > 0) { setTimeout(fn, falta); } else { fn(); }
   }
-  apiGet({ action: 'verificarGoogle', idToken: response.credential }, function(res) {
+  apiPost({ action: 'verificarGoogle', idToken: response.credential }, function(res) {
     _continuar(function() {
       ocultarCargando();
       if (res.yaRegistrado) { errMsg('err-p1', 'Esta cuenta ya está registrada. Inicia sesión desde la app principal.'); return; }
@@ -509,7 +509,7 @@ function inscEnviar() {
   var pin = (document.getElementById('f-pin').value || '').trim();
   mostrarCargando('Creando tu cuenta...');
   function _doEnviar(pinHash) {
-    apiGet({
+    apiPost({
       action:'inscribirPersona', nombre:nombre, email:G.email, idToken:G.idToken,
       pronombres:prons, prefijo:prefVal, telefono:tel,
       necesitaPatines:patines, talla:talla, necesitaProtecciones:protec,
@@ -575,6 +575,25 @@ function _inscIniciarGoogleSignIn() {
 function apiGet(params, ok, fail) {
   var qs = Object.keys(params).map(function(k){ return encodeURIComponent(k)+'='+encodeURIComponent(params[k]||''); }).join('&');
   fetch(BACKEND + '?' + qs)
+    .then(function(r){ return r.json(); })
+    .then(function(d){ if(d.error&&fail)fail(new Error(d.error));else if(ok)ok(d); })
+    .catch(function(e){ if(fail)fail(e); });
+}
+
+/* ── API helper (POST — mismo patrón que apiPost() de js/api.js) ───────────
+   Reservado para llamadas que cargan un idToken de Google: ese JWT ronda
+   los 1200-1300 caracteres y, sumado al resto de los parámetros, arma una
+   URL de GET de ~2000 caracteres — larga como para que algún punto de la
+   infra la rechace y devuelva HTML en vez de JSON (el JSON.parse: unexpected
+   character at line 1 column 1 reportado al completar la inscripción). Ver
+   detalle en MANIFEST.md. */
+function apiPost(params, ok, fail) {
+  var body = Object.keys(params).map(function(k){ return encodeURIComponent(k)+'='+encodeURIComponent(params[k]||''); }).join('&');
+  fetch(BACKEND, {
+    method: 'POST', mode: 'cors',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body
+  })
     .then(function(r){ return r.json(); })
     .then(function(d){ if(d.error&&fail)fail(new Error(d.error));else if(ok)ok(d); })
     .catch(function(e){ if(fail)fail(e); });
