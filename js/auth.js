@@ -289,7 +289,7 @@ window.onload = function() {
         _token = s.token; E.nombre = s.nombre;
         mostrarCargando('Restaurando tu sesión...');
         api({ action: 'restaurarSesion' }, function(res) {
-          if (!res.valido) { window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true); return; }
+          if (!res.valido || !res.datos) { window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true); return; }
           E.datos = res.datos; E.datosCompletos = res.datos;
           vincularPush(E.nombre);
           api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {

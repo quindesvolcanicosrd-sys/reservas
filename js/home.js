@@ -5,6 +5,15 @@ var _MESES_DISPLAY = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','
 var _homeExpandido = false;
 
 function prepararHome(saltarFadeInicial) {
+  if (!E.datos) {
+    // Backstop: si llegamos acá sin datos de persona (token válido pero sin
+    // registro asociado, error de red silencioso, o cualquier otro caller
+    // futuro que pase por acá con E.datos sin setear), no hay nada real para
+    // pintar — cerrar sesión y volver al login en vez de explotar más abajo
+    // leyendo E.datos.necesitaPatines de un objeto null.
+    if (typeof cerrarSesion === 'function') cerrarSesion();
+    return;
+  }
   var saludoEl = document.getElementById('home-saludo');
   if (saludoEl) saludoEl.textContent = E.nombre + '!';
   var avatarEl = document.getElementById('home-avatar');
