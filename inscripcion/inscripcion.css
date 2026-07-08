@@ -21,10 +21,7 @@ body {
 button, input, select, textarea { font-family: inherit; }
 
 /* ─── LOADING OVERLAY ────────────────────────────────────────────────── */
-/* #loading-overlay, .loading-card, .spinner, .loader: unificados en ../css/estilos.css.
-   A diferencia del app principal, acá el logo se muestra siempre (nunca se oculta
-   en desktop) — override intencional para preservar el look actual de esta página. */
-.loading-logo { display: block; }
+/* #loading-overlay, .loading-card, .spinner, .loader: unificados en ../css/estilos.css. */
 @media (prefers-color-scheme: dark) {
   #gsignin-skeleton, #gsignin-skeleton-main { background: linear-gradient(90deg,var(--dk-skeleton-base) 25%,var(--dk-skeleton-shine) 50%,var(--dk-skeleton-base) 75%) !important; background-size: 200% 100% !important; }
 }
