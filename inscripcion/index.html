@@ -305,14 +305,28 @@
 </div>
 
 <!-- Modal contacto -->
-<div id="modal-contacto-insc" style="display:none;position:fixed;inset:0;z-index:9500;background:var(--overlay);align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarContacto()">
-  <div style="background:var(--white);border-radius:20px;padding:28px 20px;width:85%;max-width:320px;text-align:center;">
-    <div style="font-weight:800;font-size:0.95rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:20px;">Contáctanos</div>
-    <a href="https://wa.me/593962773052" target="_blank" style="display:flex;align-items:center;gap:12px;background:var(--surface-light);border-radius:12px;padding:14px 16px;margin-bottom:10px;text-decoration:none;color:var(--neutral-dark);font-weight:700;font-size:0.95rem;"><span class="material-symbols-outlined" style="color:var(--wa-brand);">forum</span>WhatsApp</a>
-    <a href="https://www.instagram.com/quindesvolcanicosrd/" target="_blank" style="display:flex;align-items:center;gap:12px;background:var(--surface-light);border-radius:12px;padding:14px 16px;margin-bottom:10px;text-decoration:none;color:var(--neutral-dark);font-weight:700;font-size:0.95rem;"><span class="material-symbols-outlined" style="color:var(--instagram);">favorite</span>Instagram</a>
-    <a href="mailto:quindesvolcanicosrd@gmail.com" style="display:flex;align-items:center;gap:12px;background:var(--surface-light);border-radius:12px;padding:14px 16px;margin-bottom:16px;text-decoration:none;color:var(--neutral-dark);font-weight:700;font-size:0.95rem;"><span class="material-symbols-outlined" style="color:var(--brand);">mail</span>Mail</a>
-    <button onclick="document.getElementById('modal-contacto-insc').style.display='none'" style="width:100%;padding:12px;background:var(--disabled-bg);border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">Cerrar</button>
+<div id="modal-contacto-insc-overlay" style="display:none;position:fixed;inset:0;z-index:9500;background:var(--overlay-dark);" onclick="cerrarContacto()"></div>
+<div id="modal-contacto-insc" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9550;background:var(--bg);border-radius:20px 20px 0 0;padding:20px 16px 32px;transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);transform:translateY(100%);">
+  <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px;"></div>
+  <h3 style="font-size:1.05rem;font-weight:800;margin-bottom:16px;text-align:center;">Contáctanos</h3>
+  <div class="aj-group">
+    <a href="https://wa.me/593962773052" target="_blank" class="aj-dato-row">
+      <div class="aj-dato-icon"><span class="material-symbols-outlined">forum</span></div>
+      <div class="aj-dato-texts"><div class="aj-dato-label">WhatsApp</div></div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+    </a>
+    <a href="https://www.instagram.com/quindesvolcanicosrd/" target="_blank" class="aj-dato-row">
+      <div class="aj-dato-icon"><span class="material-symbols-outlined">favorite</span></div>
+      <div class="aj-dato-texts"><div class="aj-dato-label">Instagram</div></div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+    </a>
+    <a href="mailto:quindesvolcanicosrd@gmail.com" class="aj-dato-row">
+      <div class="aj-dato-icon"><span class="material-symbols-outlined">mail</span></div>
+      <div class="aj-dato-texts"><div class="aj-dato-label">Mail</div></div>
+      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+    </a>
   </div>
+  <button onclick="cerrarContacto()" style="width:100%;margin-top:16px;padding:12px;background:var(--disabled-bg);border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">Cerrar</button>
 </div>
 
 <div id="modal-edad-bloqueo" style="display:none;position:fixed;inset:0;z-index:9700;background:var(--overlay);align-items:center;justify-content:center;padding:16px;">

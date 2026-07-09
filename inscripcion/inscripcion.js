@@ -556,8 +556,21 @@ function errMsg(id, msg) {
   el.textContent = msg; el.style.display = 'block';
   setTimeout(function(){ el.style.display='none'; }, 6000);
 }
-function abrirContacto() { var m=document.getElementById('modal-contacto-insc'); if(m)m.style.display='flex'; }
-function cerrarContacto() { var m=document.getElementById('modal-contacto-insc'); if(m)m.style.display='none'; }
+function abrirContacto() {
+  var ov = document.getElementById('modal-contacto-insc-overlay');
+  var m = document.getElementById('modal-contacto-insc');
+  if (!m) return;
+  ov.style.display = 'block';
+  m.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { m.style.transform = 'translateY(0)'; }); });
+}
+function cerrarContacto() {
+  var ov = document.getElementById('modal-contacto-insc-overlay');
+  var m = document.getElementById('modal-contacto-insc');
+  if (!m) return;
+  m.style.transform = 'translateY(100%)';
+  setTimeout(function() { m.style.display = 'none'; ov.style.display = 'none'; }, 350);
+}
 
 /* ── Google GIS init ─────────────────────────── */
 function iniciarDatePicker() {

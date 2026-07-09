@@ -58,10 +58,22 @@ function selOp(label, name, val) {
   }
 }
 
-function abrirContacto() { var m = document.getElementById('modal-contacto'); if (m) { m.style.display = 'flex'; _registrarOverlayAbierto(cerrarContacto); } }
+function abrirContacto() {
+  var ov = document.getElementById('modal-contacto-overlay');
+  var m = document.getElementById('modal-contacto');
+  if (!m) return;
+  ov.style.display = 'block';
+  m.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { m.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(cerrarContacto);
+}
 function cerrarContacto(porGesto) {
   if (!porGesto) { history.back(); return; }
-  var m = document.getElementById('modal-contacto'); if (m) { m.style.display = 'none'; }
+  var ov = document.getElementById('modal-contacto-overlay');
+  var m = document.getElementById('modal-contacto');
+  if (!m) return;
+  m.style.transform = 'translateY(100%)';
+  setTimeout(function() { m.style.display = 'none'; ov.style.display = 'none'; }, 350);
 }
 
 var PANTALLAS_RAIZ = ['s1', 's-home', 's-admin-home'];

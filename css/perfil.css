@@ -156,6 +156,8 @@
   border-bottom: 0.5px solid var(--border);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  text-decoration: none;
+  color: inherit;
 }
 .aj-dato-row:last-child { border-bottom: none; }
 .aj-dato-row:active { background: var(--brand-20); }
