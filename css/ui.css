@@ -148,8 +148,6 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
   }
 }
 
-#modal-contacto .modal-ct { color: var(--neutral-dark); }
-
 /* ─── DARK MODE ──────────────────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
 /* solo overrides específicos no cubiertos por variables */
@@ -161,12 +159,8 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
   div:has(> [id^="hgrp-"]) { border-color: var(--brand-soft) !important; }
   div:has(> [id^="hgrp-"]) > div:first-child { background: var(--brand-subtle) !important; }
   div:has(> [id^="hgrp-"]) > div:first-child span { color: var(--text-2) !important; }
-  #modal-contacto > div { background: var(--dk-overlay-95) !important; }
   #modal-wp-comprobante > div { background: var(--dk-overlay-97) !important; }
   #modal-equip-aviso > div { background: var(--dk-overlay-97) !important; }
-  #modal-contacto a[href] { background: var(--brand-06) !important; color: var(--text) !important; }
-  #modal-contacto button { background: var(--brand-soft) !important; color: var(--text-2) !important; }
-  #modal-contacto .modal-ct { color: var(--text) !important; }
   .chk-opcion { background: var(--surface-2); border-color: var(--border); color: var(--text); }
   .chk-opcion:hover { background: var(--brand-subtle); border-color: var(--brand-secondary); }
   .btn-secondary:hover { background: var(--surface-2); }
@@ -210,13 +204,11 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
 }
 
 @media (max-width: 600px) {
-  #modal-contacto,
   #modal-eliminar-cuenta,
   #modal-wp-comprobante {
     align-items: flex-end !important;
     padding: 0 !important;
   }
-  #modal-contacto > div,
   #modal-eliminar-cuenta > div,
   #modal-wp-comprobante > div {
     width: 100% !important;
