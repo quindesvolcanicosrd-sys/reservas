@@ -525,6 +525,11 @@ function inscEnviar() {
       ocultarCargando();
       _inscEnviando = false;
       if (res.exito) {
+        // Los .cta-footer-fixed viven fuera de .page-wrap (a nivel <body>, ver
+        // inscMostrarPaso()) para no quedar atrapados por el containing block
+        // de .insc-step.activo — por eso no desaparecen solos al reemplazar
+        // .page-wrap por la pantalla de éxito, hay que ocultarlos a mano.
+        document.querySelectorAll('.cta-footer-fixed').forEach(function(f) { f.style.display = 'none'; });
         document.getElementById('exito-nombre').textContent = nombre;
         document.querySelector('.page-wrap').innerHTML = document.getElementById('section-exito').outerHTML;
         var _exitoEl = document.getElementById('section-exito');
