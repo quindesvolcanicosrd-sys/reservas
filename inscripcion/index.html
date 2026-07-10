@@ -126,7 +126,7 @@
           </div>
         </div>
         <div class="error-msg" id="err-p2"></div>
-        <button class="btn btn-primary" style="margin-top:16px;" onclick="inscContinuar2()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+        <div class="cta-footer-spacer"></div>
       </div>
 
     </div>
@@ -149,7 +149,7 @@
         </div>
       </div>
       <div class="error-msg" id="err-p3"></div>
-      <button class="btn btn-primary" onclick="inscContinuar3()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+      <div class="cta-footer-spacer"></div>
     </div>
   </div>
 
@@ -169,7 +169,7 @@
         <input type="tel" id="f-telefono" placeholder="Ej: 0991234567" oninput="inscValidarTel(this)">
       </div>
       <div class="error-msg" id="err-p4"></div>
-      <button class="btn btn-primary" onclick="inscContinuar4()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+      <div class="cta-footer-spacer"></div>
     </div>
   </div>
 
@@ -188,7 +188,7 @@
         </div>
       </div>
       <div class="error-msg" id="err-p5a"></div>
-      <button class="btn btn-primary" onclick="inscContinuar5a()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+      <div class="cta-footer-spacer"></div>
     </div>
   </div>
 
@@ -199,7 +199,7 @@
       <div class="equip-tallas-grid" id="insc-tallas-grid"></div>
       <input type="hidden" id="f-talla">
       <div class="error-msg" id="err-p5b"></div>
-      <button class="btn btn-primary" onclick="inscContinuar5b()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+      <div class="cta-footer-spacer"></div>
     </div>
   </div>
 
@@ -228,7 +228,7 @@
         </div>
       </div>
       <div class="error-msg" id="err-p5c"></div>
-      <button class="btn btn-primary" onclick="inscContinuar5c()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+      <div class="cta-footer-spacer"></div>
     </div>
   </div>
 
@@ -259,8 +259,7 @@
       </a>
       <div style="height:1px;background:var(--border-light);margin:14px 0;"></div>
       <div class="error-msg" id="err-p6"></div>
-      <button class="btn btn-primary" onclick="inscEnviar()">Completar inscripción <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">check</span></button>
-      <button class="btn btn-secondary" onclick="inscEnviarSinPin()" style="margin-top:10px;">Omitir PIN y finalizar</button>
+      <div class="cta-footer-spacer" style="height:150px;"></div>
     </div>
   </div>
 
@@ -336,6 +335,37 @@
     <a href="https://wa.me/593962773052" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:15px;background:var(--wa-bg,#e7f9f1);color:var(--success,#16a34a);border-radius:12px;font-weight:800;text-decoration:none;margin-bottom:10px;"><span class="material-symbols-outlined">forum</span> Contactar por WhatsApp</a>
     <button onclick="cerrarModalEdadBloqueo()" style="width:100%;padding:13px;background:transparent;color:var(--muted);border:2px solid var(--border);border-radius:12px;font-weight:600;cursor:pointer;">Cerrar</button>
   </div>
+</div>
+
+<!-- ── CTA footers fijos de los 7 pasos de inscripción ────────────────────
+     Hijos directos de <body>, fuera de .insc-step a propósito: .insc-step.activo
+     anima transform (smoothSlideUp) igual que .pantalla.activa en la app
+     principal, así que un footer anidado adentro quedaría atrapado por el
+     containing block que eso genera durante la animación de entrada (mismo
+     bug ya encontrado y corregido ahí, ver MANIFEST.md). .cta-footer-fixed
+     ya está disponible acá vía ../css/estilos.css (compartido, sin CSS
+     nuevo). inscMostrarPaso() muestra solo el que corresponde al paso activo. -->
+<div class="cta-footer-fixed" id="cta-footer-insc-step-1">
+  <button class="btn btn-outline" onclick="inscContinuar2()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+</div>
+<div class="cta-footer-fixed" id="cta-footer-insc-step-3">
+  <button class="btn btn-outline" onclick="inscContinuar3()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+</div>
+<div class="cta-footer-fixed" id="cta-footer-insc-step-4">
+  <button class="btn btn-outline" onclick="inscContinuar4()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+</div>
+<div class="cta-footer-fixed" id="cta-footer-insc-step-5a">
+  <button class="btn btn-outline" onclick="inscContinuar5a()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+</div>
+<div class="cta-footer-fixed" id="cta-footer-insc-step-5b">
+  <button class="btn btn-outline" onclick="inscContinuar5b()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+</div>
+<div class="cta-footer-fixed" id="cta-footer-insc-step-5c">
+  <button class="btn btn-outline" onclick="inscContinuar5c()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+</div>
+<div class="cta-footer-fixed" id="cta-footer-insc-step-6">
+  <button class="btn btn-primary" onclick="inscEnviar()">Completar inscripción <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">check</span></button>
+  <button class="btn-text-simple" onclick="inscEnviarSinPin()" style="margin-top:10px;">Omitir PIN y finalizar</button>
 </div>
 
 <script src="../js/config.js"></script>

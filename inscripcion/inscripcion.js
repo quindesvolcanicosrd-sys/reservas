@@ -87,6 +87,12 @@ function inscMostrarPaso(idx, desdeHistorial) {
   _inscCurIdx = idx;
   _inscRenderProg();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Mismo patrón que ir()/js/ui.js en la app principal: .cta-footer-fixed
+  // vive fuera de .insc-step (ver index.html), así que hay que ocultar
+  // todos y mostrar solo el que corresponde al paso nuevo a mano.
+  document.querySelectorAll('.cta-footer-fixed').forEach(function(f) { f.style.display = 'none'; });
+  var footer = document.getElementById('cta-footer-' + _INSC_STEPS[idx]);
+  if (footer) footer.style.display = 'block';
   if (!desdeHistorial) history.pushState({ pasoInsc: idx }, '', '#paso-' + (idx + 1));
 }
 

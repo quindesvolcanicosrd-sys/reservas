@@ -267,6 +267,14 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 .btn-secondary { background: var(--brand-soft); color: var(--brand); border: 0px solid var(--brand-30); margin-top: 4px; }
 .btn-secondary:hover { background: var(--brand-hover); transform: translateY(-2px); }
 
+/* .btn-outline/.btn-text-simple: mismos valores que css/ui.css (app principal,
+   ya con el fix de contraste de --brand-light a --brand-20/--brand-30) —
+   --brand-20/--brand-30 ya estaban disponibles acá vía ../css/colors.css
+   (importado en inscripcion/index.html), sin necesitar duplicar nada. */
+.btn-outline { background: var(--brand-20); color: var(--brand); border: none; }
+.btn-outline:hover { background: var(--brand-30); transform: translateY(-2px); }
+.btn-text-simple { background: none; border: none; color: var(--muted); font-size: 0.88rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+
 /* @keyframes pulseBtn unificado en ../css/estilos.css */
 .btn-pulse {
   animation: pulseBtn 2.4s ease-in-out infinite;
