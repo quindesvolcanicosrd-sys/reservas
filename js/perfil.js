@@ -417,6 +417,11 @@ var _ajSubAbierto = null; // id del aj-sub-* actualmente abierto, o null
 function irAjSub(id, desdeHistorial) {
   var sub = document.getElementById(id);
   if (!sub) return;
+  // Defensivo: #cta-footer-salud es un position:fixed a nivel <body>, ajeno
+  // al propio aj-sub-salud — si quedó visible (wizard a mitad de camino) y
+  // se entra a OTRO sub-panel sin pasar por _saludMostrarEstado(), quedaría
+  // flotando sobre la pantalla equivocada sin esto.
+  if (id !== 'aj-sub-salud' && typeof _saludOcultarFooter === 'function') _saludOcultarFooter();
   _ajCargarSub(id);
   sub.classList.add('activa');
   _ajSubAbierto = id;
@@ -431,6 +436,9 @@ function cerrarAjSub(id, desdeHistorial) {
     sub.classList.remove('activa');
     _ajSubAbierto = null;
   }
+  // Mismo motivo que en irAjSub: cerrar aj-sub-salud por el gesto nativo de
+  // "atrás" (popstate) no pasa por saludCerrarWizard()/_saludMostrarEstado().
+  if (id === 'aj-sub-salud' && typeof _saludOcultarFooter === 'function') _saludOcultarFooter();
   if (!desdeHistorial) {
     history.pushState({ pantalla: 's-datos' }, '', '#s-datos');
   }
@@ -839,11 +847,50 @@ var _SALUD_STEPS = ['salud-paso-1','salud-paso-2','salud-paso-3','salud-paso-4',
 var _saludCurIdx = 0;
 var _saludData = {};
 
+/* Footer fijo compartido (#cta-footer-salud, index.html): un solo par de
+   botones para los 9 pasos en vez de un <button> por paso. "Continuar" llama
+   a la función saludContinuarN() del paso actual; "Omitir" solo se muestra
+   en los pasos 1 y 4 (Enfermedad/Antecedentes, secciones genuinamente
+   opcionales) — el paso 9 es el único que termina el wizard, así que su
+   botón pasa a .btn-primary sólido con texto "Guardar y finalizar" en vez
+   de "Continuar"/.btn-outline. */
+var _SALUD_CONTINUAR_FN = {
+  'salud-paso-1': function() { saludContinuar1(); }, 'salud-paso-2': function() { saludContinuar2(); },
+  'salud-paso-3': function() { saludContinuar3(); }, 'salud-paso-4': function() { saludContinuar4(); },
+  'salud-paso-5': function() { saludContinuar5(); }, 'salud-paso-6': function() { saludContinuar6(); },
+  'salud-paso-7': function() { saludContinuar7(); }, 'salud-paso-8': function() { saludContinuar8(); },
+  'salud-paso-9': function() { saludContinuar9(); }
+};
+var _SALUD_OMITIR_FN = { 'salud-paso-1': function() { saludOmitir1(); }, 'salud-paso-4': function() { saludOmitir4(); } };
+
+function _saludActualizarFooter(idx) {
+  var paso = _SALUD_STEPS[idx];
+  var footer = document.getElementById('cta-footer-salud'); if (footer) footer.style.display = 'block';
+  var btnContinuar = document.getElementById('salud-footer-continuar');
+  if (btnContinuar) {
+    btnContinuar.onclick = _SALUD_CONTINUAR_FN[paso];
+    var esFinal = (paso === 'salud-paso-9');
+    btnContinuar.textContent = esFinal ? 'Guardar y finalizar' : 'Continuar';
+    btnContinuar.classList.toggle('btn-primary', esFinal);
+    btnContinuar.classList.toggle('btn-outline', !esFinal);
+  }
+  var btnOmitir = document.getElementById('salud-footer-omitir');
+  if (btnOmitir) {
+    var fn = _SALUD_OMITIR_FN[paso];
+    btnOmitir.style.display = fn ? 'block' : 'none';
+    btnOmitir.onclick = fn || null;
+  }
+}
+function _saludOcultarFooter() {
+  var footer = document.getElementById('cta-footer-salud'); if (footer) footer.style.display = 'none';
+}
+
 function _saludMostrarEstado() {
   var completado = !!(E.datos && E.datos.atencionMedica);
   var wizard = document.getElementById('salud-wizard'); if (wizard) wizard.style.display = 'none';
   var empezar = document.getElementById('salud-card-empezar'); if (empezar) empezar.style.display = completado ? 'none' : 'block';
   var resumen = document.getElementById('salud-resumen'); if (resumen) resumen.style.display = completado ? 'block' : 'none';
+  _saludOcultarFooter();
 }
 
 function saludBack() {
@@ -894,6 +941,7 @@ function _saludMostrarPaso(idx) {
   _saludRenderProg();
   var inner = document.querySelector('#aj-sub-salud .aj-sub-inner');
   if (inner) inner.scrollTo({ top: 0, behavior: 'smooth' });
+  _saludActualizarFooter(idx);
 }
 
 function saludPasoAnterior() {
@@ -907,25 +955,44 @@ function saludPasoAnterior() {
 /* Selección única (Alergias, Dieta, Medicamentos, Atención médica): limpia
    .activa de los hermanos del mismo contenedor y la deja solo en el tocado
    — mismo mecanismo que .aj-pill/.activa ya usa el resto de la app, sin
-   pasar por el sheet compartido (acá vive inline dentro del paso). */
-function _saludSelUnica(el, otroWrapId) {
+   pasar por el sheet compartido (acá vive inline dentro del paso). Cuando
+   hay otroWrapId (Dieta): si el pill tocado es "Otro" y ya tiene texto
+   propio (.aj-pill-otro-lleno) reabre el textarea para editar en vez de
+   re-togglear; si es "Otro" sin texto, se comporta como antes (abre y
+   enfoca). Elegir cualquier otro pill mientras "Otro" tenía texto propio
+   deja de mostrarlo seleccionado y le resetea el label visual a "Otro"
+   (ver _saludOtroResetVisual) — el texto ya escrito no se pierde, solo se
+   oculta, así que si el usuario vuelve a "Otro" lo encuentra de nuevo. */
+function _saludSelUnica(el, otroWrapId, otroInputId) {
   var cont = el.parentElement;
-  cont.querySelectorAll('.aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  cont.querySelectorAll('.aj-pill').forEach(function(p) {
+    if (p === el) return;
+    p.classList.remove('activa');
+    if (p.classList.contains('aj-pill-otro-lleno')) _saludOtroResetVisual(p);
+  });
   el.classList.add('activa');
-  if (otroWrapId) {
-    var wrap = document.getElementById(otroWrapId);
-    if (wrap) wrap.style.display = (el.dataset.val === 'Otro') ? 'block' : 'none';
-  }
+  if (!otroWrapId) return;
+  var wrap = document.getElementById(otroWrapId);
+  if (el.dataset.val !== 'Otro') { if (wrap) wrap.style.display = 'none'; return; }
+  if (el.classList.contains('aj-pill-otro-lleno')) { _saludOtroAbrirEdicion(otroWrapId, otroInputId); return; }
+  if (wrap) wrap.style.display = 'block';
+  if (otroInputId) { var inp = document.getElementById(otroInputId); if (inp) setTimeout(function() { inp.focus(); }, 50); }
 }
 
 /* Selección múltiple + "Otro" (Enfermedad, Antecedentes): mismo patrón que
    confirmarOtroProtec()/toggleProtecItem() de js/reservas.js (.aj-pill
    togglea con ajTogglePill(), ya existente) — acá "Otro" además revela un
-   textarea inline en vez de abrir un bottom sheet aparte. */
-function saludToggleOtro(el, wrapId) {
+   textarea inline en vez de abrir un bottom sheet aparte. Si el pill ya
+   tiene texto propio (.aj-pill-otro-lleno), tocarlo reabre el textarea
+   para editar en vez de togglear/desactivar (a diferencia del resto de
+   los pills multi, que sí togglean libremente). */
+function saludToggleOtro(el, wrapId, inputId) {
+  if (el.classList.contains('aj-pill-otro-lleno')) { _saludOtroAbrirEdicion(wrapId, inputId); return; }
   ajTogglePill(el);
   var wrap = document.getElementById(wrapId);
-  if (wrap) wrap.style.display = el.classList.contains('activa') ? 'block' : 'none';
+  var activo = el.classList.contains('activa');
+  if (wrap) wrap.style.display = activo ? 'block' : 'none';
+  if (activo && inputId) { var inp = document.getElementById(inputId); if (inp) setTimeout(function() { inp.focus(); }, 50); }
 }
 
 function saludToggleOtroCheck(chk, wrapId) {
@@ -937,6 +1004,51 @@ function _saludBuscarPill(containerId, val) {
   var pills = document.querySelectorAll('#' + containerId + ' .aj-pill');
   for (var i = 0; i < pills.length; i++) { if (pills[i].dataset.val === val) return pills[i]; }
   return null;
+}
+
+/* Chip "Otro" editable (Enfermedad/Antecedentes/Dieta, multi o única): al
+   perder foco con texto, el pill pasa a mostrar ese texto (truncado con
+   ellipsis) + una X para borrarlo en vez del textarea siempre visible.
+   Tocar el texto del pill reabre el textarea para editar (ver
+   saludToggleOtro/_saludSelUnica); tocar la X limpia todo. */
+function _saludOtroAbrirEdicion(wrapId, inputId) {
+  var wrap = document.getElementById(wrapId);
+  var inp = document.getElementById(inputId);
+  if (wrap) wrap.style.display = 'block';
+  if (inp) setTimeout(function() { inp.focus(); }, 50);
+}
+function _saludOtroSetTexto(el, texto) {
+  el.classList.add('activa', 'aj-pill-otro-lleno');
+  var txt = el.querySelector('.aj-pill-otro-txt');
+  if (txt) txt.textContent = texto;
+}
+function _saludOtroResetVisual(el) {
+  el.classList.remove('aj-pill-otro-lleno');
+  var txt = el.querySelector('.aj-pill-otro-txt');
+  if (txt) txt.textContent = 'Otro';
+}
+function _saludOtroLimpiarInterno(el, wrap, inp) {
+  if (inp) inp.value = '';
+  if (wrap) wrap.style.display = 'none';
+  if (el) { el.classList.remove('activa'); _saludOtroResetVisual(el); }
+}
+/* onblur del textarea: hay texto -> convierte el pill en chip con X;
+   vacío -> revierte todo (pill vuelve a "Otro", se desactiva). */
+function saludOtroBlur(inp, containerId, wrapId) {
+  var el = _saludBuscarPill(containerId, 'Otro');
+  if (!el) return;
+  var t = (inp.value || '').trim();
+  var wrap = document.getElementById(wrapId);
+  if (t) { if (wrap) wrap.style.display = 'none'; _saludOtroSetTexto(el, t); }
+  else { _saludOtroLimpiarInterno(el, wrap, inp); }
+}
+/* onclick de la X dentro del chip: limpia texto, desactiva el pill y lo
+   deja igual que si nunca se hubiera usado. */
+function saludOtroLimpiar(xEl, wrapId, inputId) {
+  var el = xEl.closest('.aj-pill');
+  var wrap = document.getElementById(wrapId);
+  var inp = document.getElementById(inputId);
+  _saludOtroLimpiarInterno(el, wrap, inp);
 }
 
 /* Paso 1 — Enfermedad diagnosticada (multi + Otro, con Omitir) */
@@ -1055,7 +1167,7 @@ function _saludFinalizarWizard() {
 }
 
 function _saludResetPrefill() {
-  document.querySelectorAll('#salud-wizard .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  document.querySelectorAll('#salud-wizard .aj-pill').forEach(function(p) { p.classList.remove('activa'); if (p.classList.contains('aj-pill-otro-lleno')) _saludOtroResetVisual(p); });
   document.querySelectorAll('#salud-seguro-checks input[type="checkbox"]').forEach(function(c) { c.checked = false; });
   ['salud-enfermedad-otro-wrap','salud-antecedentes-otro-wrap','salud-dieta-otro-wrap','salud-seguro-otro-wrap'].forEach(function(id) {
     var w = document.getElementById(id); if (w) w.style.display = 'none';
@@ -1076,10 +1188,10 @@ function _saludPrefillMulti(valor, containerId, otroWrapId, otroInputId) {
     if (pill) pill.classList.add('activa'); else otros.push(p);
   });
   if (otros.length) {
+    var texto = otros.join(', ');
     var otroPill = _saludBuscarPill(containerId, 'Otro');
-    if (otroPill) otroPill.classList.add('activa');
-    var wrap = document.getElementById(otroWrapId); if (wrap) wrap.style.display = 'block';
-    var inp = document.getElementById(otroInputId); if (inp) inp.value = otros.join(', ');
+    if (otroPill) _saludOtroSetTexto(otroPill, texto);
+    var inp = document.getElementById(otroInputId); if (inp) inp.value = texto;
   }
 }
 
@@ -1094,8 +1206,7 @@ function _saludPrefillUnicaConOtro(valor, containerId, otroWrapId, otroInputId) 
   var pill = _saludBuscarPill(containerId, valor);
   if (pill) { pill.classList.add('activa'); return; }
   var otroPill = _saludBuscarPill(containerId, 'Otro');
-  if (otroPill) otroPill.classList.add('activa');
-  var wrap = document.getElementById(otroWrapId); if (wrap) wrap.style.display = 'block';
+  if (otroPill) _saludOtroSetTexto(otroPill, valor);
   var inp = document.getElementById(otroInputId); if (inp) inp.value = valor;
 }
 

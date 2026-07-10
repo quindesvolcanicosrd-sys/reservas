@@ -123,6 +123,14 @@
 
 .aj-pills-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
 .aj-pill { display:inline-flex; align-items:center; padding:7px 16px; border-radius:20px; font-size:0.78rem; font-weight:700; cursor:pointer; border:1.5px solid transparent; background:var(--brand-20); color:var(--muted); transition:all 0.15s; user-select:none; }
+/* Pill "Otro" con texto propio (Enfermedad/Antecedentes/Dieta, ver saludToggleOtro
+   y _saludSelUnica en js/perfil.js): .aj-pill-otro-txt trunca con ellipsis si el
+   texto escrito es largo; la X (.aj-pill-otro-x) solo se muestra una vez que el
+   pill quedó "lleno" (.aj-pill-otro-lleno), para borrar sin tener que reabrir el
+   textarea. */
+.aj-pill-otro-txt { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aj-pill-otro-x { display: none; font-size: 14px !important; margin-left: 6px; line-height: 1; }
+.aj-pill-otro-lleno .aj-pill-otro-x { display: inline-flex; }
 .aj-pill.activa { background:var(--brand); color:var(--white); border-color:var(--brand); }
 .aj-pill.activa-outline { background:var(--brand-light); color:var(--brand); border-color:var(--brand); }
 .aj-pill.no-disponible { text-decoration:line-through; color:var(--danger); background:var(--danger-bg); border-color:var(--danger-bdr); cursor:not-allowed; }

@@ -1608,14 +1608,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <span class="aj-pill" data-val="Epilepsia" onclick="ajTogglePill(this)">Epilepsia</span>
           <span class="aj-pill" data-val="Trastornos de coagulación" onclick="ajTogglePill(this)">Trastornos de coagulación</span>
           <span class="aj-pill" data-val="Problemas osteomusculares crónicos" onclick="ajTogglePill(this)">Problemas osteomusculares crónicos</span>
-          <span class="aj-pill" data-val="Otro" onclick="saludToggleOtro(this,'salud-enfermedad-otro-wrap')">Otro</span>
+          <span class="aj-pill" data-val="Otro" onclick="saludToggleOtro(this,'salud-enfermedad-otro-wrap','salud-enfermedad-otro-input')"><span class="aj-pill-otro-txt">Otro</span><span class="aj-pill-otro-x material-symbols-outlined" onclick="event.stopPropagation();saludOtroLimpiar(this,'salud-enfermedad-otro-wrap','salud-enfermedad-otro-input')">close</span></span>
         </div>
         <div id="salud-enfermedad-otro-wrap" style="display:none;">
-          <textarea class="textarea-otro" id="salud-enfermedad-otro-input" placeholder="Especifica"></textarea>
+          <textarea class="textarea-otro" id="salud-enfermedad-otro-input" placeholder="Especifica" onblur="saludOtroBlur(this,'salud-enfermedad-pills','salud-enfermedad-otro-wrap')"></textarea>
         </div>
         <div class="error-msg" id="err-salud-1"></div>
-        <button class="btn btn-outline" style="margin-top:16px;" onclick="saludContinuar1()">Continuar</button>
-        <button onclick="saludOmitir1()" style="width:100%;padding:13px;background:transparent;color:var(--text-faint);border:2px solid var(--border-light);border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:10px;">Omitir</button>
       </div>
 
       <div class="salud-paso" id="salud-paso-2">
@@ -1627,14 +1625,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <span class="aj-pill" data-val="Tal vez" onclick="_saludSelUnica(this)">Tal vez</span>
         </div>
         <div class="error-msg" id="err-salud-2"></div>
-        <button class="btn btn-outline" style="margin-top:16px;" onclick="saludContinuar2()">Continuar</button>
       </div>
 
       <div class="salud-paso" id="salud-paso-3">
         <h2>Detalle de alergias</h2>
         <p>Detalla todas las alergias o situaciones de alergia/s que presentas o hayas presentado.</p>
         <textarea id="salud-alergiasDesc-input" placeholder="Ej: Penicilina, mariscos"></textarea>
-        <button class="btn btn-outline" style="margin-top:16px;" onclick="saludContinuar3()">Continuar</button>
       </div>
 
       <div class="salud-paso" id="salud-paso-4">
@@ -1644,31 +1640,27 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <span class="aj-pill" data-val="Cirugías previas" onclick="ajTogglePill(this)">Cirugías previas</span>
           <span class="aj-pill" data-val="Hospitalización en el último año" onclick="ajTogglePill(this)">Hospitalización en el último año</span>
           <span class="aj-pill" data-val="Lesiones deportivas previas" onclick="ajTogglePill(this)">Lesiones deportivas previas</span>
-          <span class="aj-pill" data-val="Otro" onclick="saludToggleOtro(this,'salud-antecedentes-otro-wrap')">Otro</span>
+          <span class="aj-pill" data-val="Otro" onclick="saludToggleOtro(this,'salud-antecedentes-otro-wrap','salud-antecedentes-otro-input')"><span class="aj-pill-otro-txt">Otro</span><span class="aj-pill-otro-x material-symbols-outlined" onclick="event.stopPropagation();saludOtroLimpiar(this,'salud-antecedentes-otro-wrap','salud-antecedentes-otro-input')">close</span></span>
         </div>
         <div id="salud-antecedentes-otro-wrap" style="display:none;">
-          <textarea class="textarea-otro" id="salud-antecedentes-otro-input" placeholder="Especifica"></textarea>
+          <textarea class="textarea-otro" id="salud-antecedentes-otro-input" placeholder="Especifica" onblur="saludOtroBlur(this,'salud-antecedentes-pills','salud-antecedentes-otro-wrap')"></textarea>
         </div>
         <div class="error-msg" id="err-salud-4"></div>
-        <button class="btn btn-outline" style="margin-top:16px;" onclick="saludContinuar4()">Continuar</button>
-        <button onclick="saludOmitir4()" style="width:100%;padding:13px;background:transparent;color:var(--text-faint);border:2px solid var(--border-light);border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:10px;">Omitir</button>
       </div>
 
       <div class="salud-paso" id="salud-paso-5">
         <h2>Dieta</h2>
         <p>¿Sigues algún tipo de dieta particular?</p>
         <div class="aj-pills-row" id="salud-dieta-pills">
-          <span class="aj-pill" data-val="Vegetariano" onclick="_saludSelUnica(this,'salud-dieta-otro-wrap')">Vegetariano</span>
-          <span class="aj-pill" data-val="Vegano" onclick="_saludSelUnica(this,'salud-dieta-otro-wrap')">Vegano</span>
-          <span class="aj-pill" data-val="Pescetariano" onclick="_saludSelUnica(this,'salud-dieta-otro-wrap')">Pescetariano</span>
-          <span class="aj-pill" data-val="Otro" onclick="_saludSelUnica(this,'salud-dieta-otro-wrap')">Otro</span>
+          <span class="aj-pill" data-val="Vegetariano" onclick="_saludSelUnica(this,'salud-dieta-otro-wrap','salud-dieta-otro-input')">Vegetariano</span>
+          <span class="aj-pill" data-val="Vegano" onclick="_saludSelUnica(this,'salud-dieta-otro-wrap','salud-dieta-otro-input')">Vegano</span>
+          <span class="aj-pill" data-val="Pescetariano" onclick="_saludSelUnica(this,'salud-dieta-otro-wrap','salud-dieta-otro-input')">Pescetariano</span>
+          <span class="aj-pill" data-val="Otro" onclick="_saludSelUnica(this,'salud-dieta-otro-wrap','salud-dieta-otro-input')"><span class="aj-pill-otro-txt">Otro</span><span class="aj-pill-otro-x material-symbols-outlined" onclick="event.stopPropagation();saludOtroLimpiar(this,'salud-dieta-otro-wrap','salud-dieta-otro-input')">close</span></span>
         </div>
         <div id="salud-dieta-otro-wrap" style="display:none;">
-          <textarea class="textarea-otro" id="salud-dieta-otro-input" placeholder="Especifica"></textarea>
+          <textarea class="textarea-otro" id="salud-dieta-otro-input" placeholder="Especifica" onblur="saludOtroBlur(this,'salud-dieta-pills','salud-dieta-otro-wrap')"></textarea>
         </div>
         <div class="error-msg" id="err-salud-5"></div>
-        <button class="btn btn-outline" style="margin-top:16px;" onclick="saludContinuar5()">Continuar</button>
-        <button onclick="saludOmitir5()" style="width:100%;padding:13px;background:transparent;color:var(--text-faint);border:2px solid var(--border-light);border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:10px;">Omitir</button>
       </div>
 
       <div class="salud-paso" id="salud-paso-6">
@@ -1679,14 +1671,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <span class="aj-pill" data-val="No" onclick="_saludSelUnica(this)">No</span>
         </div>
         <div class="error-msg" id="err-salud-6"></div>
-        <button class="btn btn-outline" style="margin-top:16px;" onclick="saludContinuar6()">Continuar</button>
       </div>
 
       <div class="salud-paso" id="salud-paso-7">
         <h2>Detalle de medicamentos</h2>
         <p>Especifica nombre de medicamento, dosis y horario. Ej: Loratadina 10 mg cada 12 horas.</p>
         <textarea id="salud-medicamentosDesc-input" placeholder="Ej: Loratadina 10 mg cada 12 horas"></textarea>
-        <button class="btn btn-outline" style="margin-top:16px;" onclick="saludContinuar7()">Continuar</button>
       </div>
 
       <div class="salud-paso" id="salud-paso-8">
@@ -1698,7 +1688,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <span class="aj-pill" data-val="Seguro Privado" onclick="_saludSelUnica(this)">Seguro Privado</span>
         </div>
         <div class="error-msg" id="err-salud-8"></div>
-        <button class="btn btn-outline" style="margin-top:16px;" onclick="saludContinuar8()">Continuar</button>
       </div>
 
       <div class="salud-paso" id="salud-paso-9">
@@ -1721,8 +1710,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="error-msg" id="err-salud-9"></div>
         <p style="font-size:0.85rem;color:var(--text);font-weight:700;margin-top:20px;margin-bottom:8px;">¿Cómo podemos contactar a tu seguro en caso de emergencia?</p>
         <input type="text" id="salud-seguroContacto-input" placeholder="Ej: 0962773052 o correo de contacto">
-        <button class="btn btn-primary" style="margin-top:16px;" onclick="saludContinuar9()">Guardar y finalizar</button>
       </div>
+
+      <div class="cta-footer-spacer" style="height:150px;"></div>
     </div>
 
   </div>
@@ -1986,6 +1976,19 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     Enviar comprobante por WhatsApp
   </a>
   <button class="btn btn-outline" onclick="irHomeDesdeExito()" style="margin-top:14px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver a Mis Reservas</button>
+</div>
+
+<!-- Footer fijo compartido por los 9 pasos del wizard de Salud (aj-sub-salud).
+     z-index propio (960, > 950 de .aj-sub) porque .cta-footer-fixed vive por
+     default a z-index:100 — acá necesita quedar por ENCIMA del panel aj-sub,
+     no debajo. Hijo directo de <body> por el mismo motivo que el resto de
+     .cta-footer-fixed (evitar el containing block de .aj-sub.activa mientras
+     corre su animación de entrada, mismo mecanismo que .pantalla.activa, ver
+     "Cambios recientes"). Mostrado/ocultado y su contenido actualizado por
+     _saludActualizarFooter() en js/perfil.js. -->
+<div class="cta-footer-fixed" id="cta-footer-salud" style="z-index:960;">
+  <button class="btn btn-outline" id="salud-footer-continuar">Continuar</button>
+  <button class="btn-text-simple" id="salud-footer-omitir" style="display:none;">Omitir</button>
 </div>
 
 </body>
