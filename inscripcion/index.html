@@ -305,27 +305,29 @@
 
 <!-- Modal contacto -->
 <div id="modal-contacto-insc-overlay" style="display:none;position:fixed;inset:0;z-index:9500;background:var(--overlay-dark);" onclick="cerrarContacto()"></div>
-<div id="modal-contacto-insc" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9550;background:var(--bg);border-radius:20px 20px 0 0;padding:20px 16px 32px;transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);transform:translateY(100%);">
-  <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px;"></div>
-  <h3 style="font-size:1.05rem;font-weight:800;margin-bottom:16px;text-align:center;">Contáctanos</h3>
-  <div class="aj-group">
-    <a href="https://wa.me/593962773052" target="_blank" class="aj-dato-row">
-      <div class="aj-dato-icon"><span class="material-symbols-outlined">forum</span></div>
-      <div class="aj-dato-texts"><div class="aj-dato-label">WhatsApp</div></div>
-      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-    </a>
-    <a href="https://www.instagram.com/quindesvolcanicosrd/" target="_blank" class="aj-dato-row">
-      <div class="aj-dato-icon"><span class="material-symbols-outlined">favorite</span></div>
-      <div class="aj-dato-texts"><div class="aj-dato-label">Instagram</div></div>
-      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-    </a>
-    <a href="mailto:quindesvolcanicosrd@gmail.com" class="aj-dato-row">
-      <div class="aj-dato-icon"><span class="material-symbols-outlined">mail</span></div>
-      <div class="aj-dato-texts"><div class="aj-dato-label">Mail</div></div>
-      <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-    </a>
+<div id="modal-contacto-insc" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9550;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;padding:0 0 32px;flex-direction:column;transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);transform:translateY(100%);">
+  <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 4px;"></div>
+  <div style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:8px 16px 12px;border-bottom:1px solid var(--border-light);">Contáctanos</div>
+  <div style="padding:16px;">
+    <div class="aj-group">
+      <a href="https://wa.me/593962773052" target="_blank" class="aj-dato-row">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">forum</span></div>
+        <div class="aj-dato-texts"><div class="aj-dato-label">WhatsApp</div></div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </a>
+      <a href="https://www.instagram.com/quindesvolcanicosrd/" target="_blank" class="aj-dato-row">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">favorite</span></div>
+        <div class="aj-dato-texts"><div class="aj-dato-label">Instagram</div></div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </a>
+      <a href="mailto:quindesvolcanicosrd@gmail.com" class="aj-dato-row">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">mail</span></div>
+        <div class="aj-dato-texts"><div class="aj-dato-label">Mail</div></div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </a>
+    </div>
+    <button onclick="cerrarContacto()" style="width:100%;margin-top:16px;padding:12px;background:var(--disabled-bg);border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">Cerrar</button>
   </div>
-  <button onclick="cerrarContacto()" style="width:100%;margin-top:16px;padding:12px;background:var(--disabled-bg);border:none;border-radius:10px;font-weight:700;cursor:pointer;font-family:inherit;">Cerrar</button>
 </div>
 
 <div id="modal-edad-bloqueo" style="display:none;position:fixed;inset:0;z-index:9700;background:var(--overlay);align-items:center;justify-content:center;padding:16px;">

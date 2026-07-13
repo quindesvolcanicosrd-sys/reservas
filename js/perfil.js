@@ -512,7 +512,14 @@ function _ajCargarSub(id) {
     if (wrapAlergiasDesc) wrapAlergiasDesc.style.display = (d.alergias === 'Sí') ? 'block' : 'none';
     var wrapMedicamentosDesc = document.getElementById('aj-medicamentosDesc-wrap');
     if (wrapMedicamentosDesc) wrapMedicamentosDesc.style.display = (d.medicamentos === 'Sí') ? 'block' : 'none';
-    _saludMostrarEstado();
+    /* Ficha nunca completada: entra directo al wizard en vez de mostrar
+       primero la card "Completar ficha de salud" — si el usuario cancela
+       (saludBack() en el paso 1 -> saludCerrarWizard() -> _saludMostrarEstado()),
+       esa llamada no pasa por acá, así que no hay riesgo de loop; la card
+       queda como fallback hasta que el usuario reabra la subsección o toque
+       "Volver a completar el paso a paso" a mano. */
+    if (!d.atencionMedica) { saludIniciarWizard(); }
+    else { _saludMostrarEstado(); }
   }
 }
 
@@ -801,11 +808,17 @@ function ajAbrirSheetTipoDoc() {
   });
 }
 
-/* ── Relación de contacto de emergencia (pills single) ── */
+/* ── Relación de contacto de emergencia (pills single + "Otra" con texto
+   libre, mismo patrón que el chip "Otro" del wizard de Salud: la pill
+   revela un campo de texto en vez de guardar el literal "Otra") ── */
 function ajAbrirSheetRelacion(campo, displayId) {
   var actual = (E.datos && E.datos[campo]) || '';
   var opciones = ['Madre', 'Padre', 'Pareja', 'Hermana/o', 'Amiga/o', 'Familiar', 'Otra'];
+  var esOtra = !!(actual && opciones.indexOf(actual) === -1);
   var html = opciones.map(function(o) {
+    if (o === 'Otra') {
+      return '<span class="aj-pill' + (esOtra ? ' activa aj-pill-otro-lleno' : '') + '" data-val="Otra" onclick="_ajRelacionOtraClick(this)"><span class="aj-pill-otro-txt">Otra</span><span class="aj-pill-otro-x material-symbols-outlined" onclick="event.stopPropagation();_ajRelacionOtraLimpiar(this)">close</span></span>';
+    }
     var sel = o === actual;
     return '<span class="aj-pill' + (sel ? ' activa' : '') + '" data-val="' + o + '" onclick="_ajSheetTextoPillSingleClick(this)">' + o + '</span>';
   }).join('');
@@ -815,6 +828,46 @@ function ajAbrirSheetRelacion(campo, displayId) {
     var disp = document.getElementById(displayId);
     if (disp) { disp.textContent = v; disp.classList.remove('vacio'); }
   });
+  if (esOtra) {
+    var elOtra = document.querySelector('#aj-sheet-texto-pills .aj-pill[data-val="Otra"]');
+    if (elOtra) { var txt = elOtra.querySelector('.aj-pill-otro-txt'); if (txt) txt.textContent = actual; }
+    var inp = document.getElementById('aj-sheet-texto-input');
+    var btnConfirmar = document.getElementById('aj-sheet-texto-btn-confirmar');
+    if (inp) { inp.style.display = ''; inp.placeholder = 'Especifica la relación'; inp.value = actual; }
+    if (btnConfirmar) btnConfirmar.style.display = '';
+  }
+}
+
+/* onclick de la pill "Otra": revela el input de texto compartido del sheet
+   (#aj-sheet-texto-input) en vez de guardar el literal "Otra" — el propio
+   botón "Guardar" del sheet (ajConfirmarSheetTexto(), sin tocar) ya sabe
+   leer ese input y confirmar en modo pills-single. */
+function _ajRelacionOtraClick(el) {
+  document.querySelectorAll('#aj-sheet-texto-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  var inp = document.getElementById('aj-sheet-texto-input');
+  var btnConfirmar = document.getElementById('aj-sheet-texto-btn-confirmar');
+  if (inp) {
+    inp.style.display = '';
+    inp.placeholder = 'Especifica la relación';
+    inp.value = el.classList.contains('aj-pill-otro-lleno') ? ((el.querySelector('.aj-pill-otro-txt') || {}).textContent || '') : '';
+    setTimeout(function() { inp.focus(); }, 50);
+  }
+  if (btnConfirmar) btnConfirmar.style.display = '';
+}
+
+/* onclick de la X del chip "Otra": limpia el texto y oculta el input,
+   dejando la pill igual que si nunca se hubiera usado. */
+function _ajRelacionOtraLimpiar(xEl) {
+  var el = xEl.closest('.aj-pill');
+  if (el) {
+    el.classList.remove('activa', 'aj-pill-otro-lleno');
+    var txt = el.querySelector('.aj-pill-otro-txt'); if (txt) txt.textContent = 'Otra';
+  }
+  var inp = document.getElementById('aj-sheet-texto-input');
+  if (inp) { inp.style.display = 'none'; inp.value = ''; }
+  var btnConfirmar = document.getElementById('aj-sheet-texto-btn-confirmar');
+  if (btnConfirmar) btnConfirmar.style.display = 'none';
 }
 
 /* ── Sí/No genérico (pills single, con reveal opcional de fila condicionada) ── */
@@ -861,7 +914,7 @@ var _SALUD_CONTINUAR_FN = {
   'salud-paso-7': function() { saludContinuar7(); }, 'salud-paso-8': function() { saludContinuar8(); },
   'salud-paso-9': function() { saludContinuar9(); }
 };
-var _SALUD_OMITIR_FN = { 'salud-paso-1': function() { saludOmitir1(); }, 'salud-paso-4': function() { saludOmitir4(); } };
+var _SALUD_OMITIR_FN = { 'salud-paso-1': function() { saludOmitir1(); }, 'salud-paso-4': function() { saludOmitir4(); }, 'salud-paso-5': function() { saludOmitir5(); } };
 
 function _saludActualizarFooter(idx) {
   var paso = _SALUD_STEPS[idx];
@@ -1254,14 +1307,14 @@ function ajTogglePriv(btn, campo) {
 function ajAgregarEmerg2() {
   var wrap = document.getElementById('aj-emerg2-wrap');
   var btn = document.getElementById('aj-btn-agregar-em2');
-  if (wrap) wrap.style.display = 'block';
+  if (wrap) { wrap.style.display = 'block'; wrap.classList.add('emerg2-anim'); }
   if (btn) btn.style.display = 'none';
 }
 
 function ajEliminarEmerg2() {
   var wrap = document.getElementById('aj-emerg2-wrap');
   var btn = document.getElementById('aj-btn-agregar-em2');
-  if (wrap) wrap.style.display = 'none';
+  if (wrap) { wrap.style.display = 'none'; wrap.classList.remove('emerg2-anim'); }
   if (btn) btn.style.display = '';
   _ajSetDatoVal('aj-em2nombre-val', '', '—', true);
   _ajSetDatoVal('aj-em2relacion-val', '', '—', true);
