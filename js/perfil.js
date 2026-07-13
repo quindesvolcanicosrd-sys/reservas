@@ -450,6 +450,30 @@ function _ajSetDatoVal(id, valor, vacioTexto, marcarVacio) {
   else { el.textContent = vacioTexto; if (marcarVacio) el.classList.add('vacio'); }
 }
 
+/* Oculta/muestra filas .aj-dato-row de campos opcionales dentro de un mismo
+   .aj-group (ej. resumen de Salud) según tengan valor o no, sin envolver
+   cada fila en su propio wrap: :last-child pierde el border-bottom via CSS,
+   así que si se ocultan filas del medio con display:none, el fix tiene que
+   ser en JS — se recalcula qué fila visible queda última y se le fuerza
+   borderBottom:'none' inline, restaurando '' (el borde de la clase) en el
+   resto. Si el .aj-group entero queda sin ninguna fila visible, se oculta
+   también (contenedor vacío con fondo redondeado no debe mostrarse). */
+function _ajAjustarFilasOpcionales(filas) {
+  var visibles = [];
+  var groupEl = null;
+  filas.forEach(function(f) {
+    var val = document.getElementById(f.id);
+    var row = val ? val.closest('.aj-dato-row') : null;
+    if (!row) return;
+    if (!groupEl) groupEl = row.parentElement;
+    var mostrar = !f.opcional || !!f.valor;
+    row.style.display = mostrar ? '' : 'none';
+    if (mostrar) visibles.push(row);
+  });
+  visibles.forEach(function(row, i) { row.style.borderBottom = (i === visibles.length - 1) ? 'none' : ''; });
+  if (groupEl) groupEl.style.display = visibles.length ? '' : 'none';
+}
+
 function _ajCargarSub(id) {
   var d = E.datos; if (!d) return;
   if (id === 'aj-sub-equip') {
@@ -508,10 +532,28 @@ function _ajCargarSub(id) {
     _ajSetDatoVal('aj-medicamentosDesc-val', d.medicamentosDesc, '—', true);
     _ajSetDatoVal('aj-seguro-val', d.seguro, '—', true);
     _ajSetDatoVal('aj-seguroContacto-val', d.seguroContacto, '—', true);
+    /* enfermedad/dieta/antecedentes/seguro/seguroContacto son opcionales en
+       el wizard (se pueden omitir/dejar en blanco) — su fila se oculta por
+       completo si están vacíos. atencionMedica/alergias/medicamentos son
+       obligatorios, siempre visibles. */
+    _ajAjustarFilasOpcionales([
+      { id: 'aj-enfermedad-val', valor: d.enfermedad, opcional: true },
+      { id: 'aj-dieta-val', valor: d.dieta, opcional: true },
+      { id: 'aj-antecedentes-val', valor: d.antecedentes, opcional: true },
+      { id: 'aj-atencionMedica-val', valor: d.atencionMedica, opcional: false }
+    ]);
+    _ajAjustarFilasOpcionales([
+      { id: 'aj-seguro-val', valor: d.seguro, opcional: true },
+      { id: 'aj-seguroContacto-val', valor: d.seguroContacto, opcional: true }
+    ]);
     var wrapAlergiasDesc = document.getElementById('aj-alergiasDesc-wrap');
-    if (wrapAlergiasDesc) wrapAlergiasDesc.style.display = (d.alergias === 'Sí') ? 'block' : 'none';
+    /* alergias='No' nunca visita el paso 3 (detalle) en el wizard — pero
+       'Tal vez' sí (saludContinuar2() solo salta el paso 3 si es 'No'), así
+       que el gate no debe limitarse a 'Sí'. Además exige texto no vacío:
+       se pudo marcar 'Sí'/'Tal vez' y dejar la descripción en blanco. */
+    if (wrapAlergiasDesc) wrapAlergiasDesc.style.display = (d.alergias !== 'No' && !!d.alergiasDesc) ? 'block' : 'none';
     var wrapMedicamentosDesc = document.getElementById('aj-medicamentosDesc-wrap');
-    if (wrapMedicamentosDesc) wrapMedicamentosDesc.style.display = (d.medicamentos === 'Sí') ? 'block' : 'none';
+    if (wrapMedicamentosDesc) wrapMedicamentosDesc.style.display = (d.medicamentos === 'Sí' && !!d.medicamentosDesc) ? 'block' : 'none';
     /* Ficha nunca completada: entra directo al wizard en vez de mostrar
        primero la card "Completar ficha de salud" — si el usuario cancela
        (saludBack() en el paso 1 -> saludCerrarWizard() -> _saludMostrarEstado()),
