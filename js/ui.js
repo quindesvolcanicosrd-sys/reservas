@@ -363,6 +363,7 @@ var elCuponHr = document.getElementById('mri-cupon-hr');
 }
 
 function mostrarToast(msg, tipo) {
+  if (tipo !== 'error') return;
   var t = document.getElementById('app-toast');
   if (!t) {
     t = document.createElement('div');
