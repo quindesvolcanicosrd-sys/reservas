@@ -1695,19 +1695,19 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div class="salud-paso" id="salud-paso-9">
         <h2>Seguro privado</h2>
         <p>¿Cuál es tu seguro privado?</p>
-        <div id="salud-seguro-checks" style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
-          <label style="display:flex;align-items:center;gap:10px;font-size:0.88rem;color:var(--text);"><input type="checkbox" value="Saludsa" style="accent-color:var(--brand);width:18px;height:18px;"> Saludsa</label>
-          <label style="display:flex;align-items:center;gap:10px;font-size:0.88rem;color:var(--text);"><input type="checkbox" value="Ecuasanitas" style="accent-color:var(--brand);width:18px;height:18px;"> Ecuasanitas</label>
-          <label style="display:flex;align-items:center;gap:10px;font-size:0.88rem;color:var(--text);"><input type="checkbox" value="Humana" style="accent-color:var(--brand);width:18px;height:18px;"> Humana</label>
-          <label style="display:flex;align-items:center;gap:10px;font-size:0.88rem;color:var(--text);"><input type="checkbox" value="BMI del Ecuador" style="accent-color:var(--brand);width:18px;height:18px;"> BMI del Ecuador</label>
-          <label style="display:flex;align-items:center;gap:10px;font-size:0.88rem;color:var(--text);"><input type="checkbox" value="Confiamed" style="accent-color:var(--brand);width:18px;height:18px;"> Confiamed</label>
-          <label style="display:flex;align-items:center;gap:10px;font-size:0.88rem;color:var(--text);"><input type="checkbox" value="BUPA Ecuador" style="accent-color:var(--brand);width:18px;height:18px;"> BUPA Ecuador</label>
-          <label style="display:flex;align-items:center;gap:10px;font-size:0.88rem;color:var(--text);"><input type="checkbox" value="Pan American Life" style="accent-color:var(--brand);width:18px;height:18px;"> Pan American Life</label>
-          <label style="display:flex;align-items:center;gap:10px;font-size:0.88rem;color:var(--text);"><input type="checkbox" value="CruzBlanca" style="accent-color:var(--brand);width:18px;height:18px;"> CruzBlanca</label>
-          <label style="display:flex;align-items:center;gap:10px;font-size:0.88rem;color:var(--text);"><input type="checkbox" value="Otro" onchange="saludToggleOtroCheck(this,'salud-seguro-otro-wrap')" style="accent-color:var(--brand);width:18px;height:18px;"> Otro</label>
+        <div class="aj-pills-row" id="salud-seguro-pills">
+          <span class="aj-pill" data-val="Saludsa" onclick="ajTogglePill(this)">Saludsa</span>
+          <span class="aj-pill" data-val="Ecuasanitas" onclick="ajTogglePill(this)">Ecuasanitas</span>
+          <span class="aj-pill" data-val="Humana" onclick="ajTogglePill(this)">Humana</span>
+          <span class="aj-pill" data-val="BMI del Ecuador" onclick="ajTogglePill(this)">BMI del Ecuador</span>
+          <span class="aj-pill" data-val="Confiamed" onclick="ajTogglePill(this)">Confiamed</span>
+          <span class="aj-pill" data-val="BUPA Ecuador" onclick="ajTogglePill(this)">BUPA Ecuador</span>
+          <span class="aj-pill" data-val="Pan American Life" onclick="ajTogglePill(this)">Pan American Life</span>
+          <span class="aj-pill" data-val="CruzBlanca" onclick="ajTogglePill(this)">CruzBlanca</span>
+          <span class="aj-pill" data-val="Otro" onclick="saludToggleOtro(this,'salud-seguro-otro-wrap','salud-seguro-otro-input')"><span class="aj-pill-otro-txt">Otro</span><span class="aj-pill-otro-x material-symbols-outlined" onclick="event.stopPropagation();saludOtroLimpiar(this,'salud-seguro-otro-wrap','salud-seguro-otro-input')">close</span></span>
         </div>
         <div id="salud-seguro-otro-wrap" style="display:none;">
-          <textarea class="textarea-otro" id="salud-seguro-otro-input" placeholder="Especifica"></textarea>
+          <textarea class="textarea-otro" id="salud-seguro-otro-input" placeholder="Especifica" onblur="saludOtroBlur(this,'salud-seguro-pills','salud-seguro-otro-wrap')"></textarea>
         </div>
         <div class="error-msg" id="err-salud-9"></div>
         <p style="font-size:0.85rem;color:var(--text);font-weight:700;margin-top:20px;margin-bottom:8px;">¿Cómo podemos contactar a tu seguro en caso de emergencia?</p>

@@ -1090,11 +1090,6 @@ function saludToggleOtro(el, wrapId, inputId) {
   if (activo && inputId) { var inp = document.getElementById(inputId); if (inp) setTimeout(function() { inp.focus(); }, 50); }
 }
 
-function saludToggleOtroCheck(chk, wrapId) {
-  var wrap = document.getElementById(wrapId);
-  if (wrap) wrap.style.display = chk.checked ? 'block' : 'none';
-}
-
 function _saludBuscarPill(containerId, val) {
   var pills = document.querySelectorAll('#' + containerId + ' .aj-pill');
   for (var i = 0; i < pills.length; i++) { if (pills[i].dataset.val === val) return pills[i]; }
@@ -1225,18 +1220,19 @@ function saludContinuar8() {
   if (!sel) { err('err-salud-8', 'Selecciona una opción.'); return; }
   _saludData.atencionMedica = sel.dataset.val;
   if (sel.dataset.val === 'Seguro Privado') { _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-9')); }
-  else { _saludFinalizarWizard(); }
+  else { _saludData.seguro = ''; _saludData.seguroContacto = ''; _saludFinalizarWizard(); }
 }
 
-/* Paso 9 — Seguro privado (checkboxes reales, no pills) + contacto — último
-   paso posible del flujo; termina y guarda todo junto */
+/* Paso 9 — Seguro privado (pills multi + Otro, mismo patrón que Enfermedad/
+   Antecedentes) + contacto — último paso posible del flujo; termina y guarda
+   todo junto */
 function saludContinuar9() {
   var vals = [];
-  document.querySelectorAll('#salud-seguro-checks input[type="checkbox"]:checked').forEach(function(c) {
-    if (c.value === 'Otro') {
+  document.querySelectorAll('#salud-seguro-pills .aj-pill.activa').forEach(function(p) {
+    if (p.dataset.val === 'Otro') {
       var t = (document.getElementById('salud-seguro-otro-input').value || '').trim();
       if (t) vals.push(t);
-    } else vals.push(c.value);
+    } else vals.push(p.dataset.val);
   });
   if (!vals.length) { err('err-salud-9', 'Selecciona al menos una opción.'); return; }
   _saludData.seguro = vals.join(', ');
@@ -1263,7 +1259,6 @@ function _saludFinalizarWizard() {
 
 function _saludResetPrefill() {
   document.querySelectorAll('#salud-wizard .aj-pill').forEach(function(p) { p.classList.remove('activa'); if (p.classList.contains('aj-pill-otro-lleno')) _saludOtroResetVisual(p); });
-  document.querySelectorAll('#salud-seguro-checks input[type="checkbox"]').forEach(function(c) { c.checked = false; });
   ['salud-enfermedad-otro-wrap','salud-antecedentes-otro-wrap','salud-dieta-otro-wrap','salud-seguro-otro-wrap'].forEach(function(id) {
     var w = document.getElementById(id); if (w) w.style.display = 'none';
   });
@@ -1305,22 +1300,6 @@ function _saludPrefillUnicaConOtro(valor, containerId, otroWrapId, otroInputId) 
   var inp = document.getElementById(otroInputId); if (inp) inp.value = valor;
 }
 
-function _saludPrefillSeguro(valor) {
-  if (!valor) return;
-  var partes = valor.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
-  var otros = [];
-  partes.forEach(function(p) {
-    var chk = document.querySelector('#salud-seguro-checks input[value="' + p.replace(/"/g,'\\"') + '"]');
-    if (chk) chk.checked = true; else otros.push(p);
-  });
-  if (otros.length) {
-    var chkOtro = document.querySelector('#salud-seguro-checks input[value="Otro"]');
-    if (chkOtro) chkOtro.checked = true;
-    var wrap = document.getElementById('salud-seguro-otro-wrap'); if (wrap) wrap.style.display = 'block';
-    var inp = document.getElementById('salud-seguro-otro-input'); if (inp) inp.value = otros.join(', ');
-  }
-}
-
 function _saludPrefillWizard() {
   _saludPrefillMulti(_saludData.enfermedad, 'salud-enfermedad-pills', 'salud-enfermedad-otro-wrap', 'salud-enfermedad-otro-input');
   _saludPrefillUnica(_saludData.alergias, 'salud-alergias-pills');
@@ -1330,7 +1309,7 @@ function _saludPrefillWizard() {
   _saludPrefillUnica(_saludData.medicamentos, 'salud-medicamentos-pills');
   document.getElementById('salud-medicamentosDesc-input').value = _saludData.medicamentosDesc;
   _saludPrefillUnica(_saludData.atencionMedica, 'salud-atencionMedica-pills');
-  _saludPrefillSeguro(_saludData.seguro);
+  _saludPrefillMulti(_saludData.seguro, 'salud-seguro-pills', 'salud-seguro-otro-wrap', 'salud-seguro-otro-input');
   document.getElementById('salud-seguroContacto-input').value = _saludData.seguroContacto;
 }
 
