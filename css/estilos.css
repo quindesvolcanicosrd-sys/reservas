@@ -78,7 +78,7 @@
 .app-toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface); border:1px solid var(--border-light); border-radius:12px; padding:10px 18px; font-size:0.82rem; font-weight:700; color:var(--text); box-shadow:0 6px 24px var(--black-md); z-index:9999; opacity:0; transition:opacity 0.25s ease, transform 0.25s ease; pointer-events:none; max-width:calc(100% - 32px); text-align:center; }
 .app-toast.visible { opacity:1; transform:translateX(-50%) translateY(0); }
 .app-toast.app-toast-ok { border-color:var(--success); color:var(--success-dark); background:var(--green-light); }
-.app-toast.app-toast-error { border-color:var(--danger); color:var(--danger); background:var(--danger-bg); }
+.app-toast.app-toast-error { border-color:var(--danger); color:var(--danger-dark); background:var(--danger-bg); }
 
 /* ── Pull-to-refresh (Mis reservas) ──────────────────────
    Antes 100% inline en index.html — extraído a clases para
@@ -105,6 +105,7 @@
 @media (prefers-color-scheme: dark) {
   .loading-card { border-color: var(--dk-skeleton-base); }
   .loading-card p { color: var(--dk-text-muted); }
+  .app-toast.app-toast-error { background: var(--dk-error-bg); border-color: var(--dk-error-border); color: var(--dk-error-text); }
 }
 
 /* ── CTA Footer fijo ───────────────────────── */
