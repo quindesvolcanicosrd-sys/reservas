@@ -568,6 +568,11 @@ function ajTogglePill(el) {
 /* ── Bottom sheet genérico de texto ───────────────────── */
 var _ajSheetTextoCallback = null;
 var _ajSheetTextoModo = 'texto'; // 'texto' | 'pills-multi' | 'pills-single'
+// Validador opcional del modo 'texto' (ej. longitud de teléfono según país,
+// ver ajAbrirSheetTelefono()) — function(v){ return mensajeDeError || null; }.
+// Se resetea a null al abrir CUALQUIER sheet de texto para que abrir otro
+// campo después de teléfono no herede su validación.
+var _ajSheetTextoValidador = null;
 // Contador de generación: con el rediseño de filas este mismo sheet se abre/cierra
 // mucho más seguido (una fila = un ciclo abrir→guardar→cerrar) que antes, así que
 // es fácil abrir un sheet nuevo dentro de la ventana de 350ms en que el cierre
@@ -580,16 +585,19 @@ function ajAbrirSheetTexto(sheetId, titulo, placeholder, callback) {
   _ajSheetTextoGen++;
   _ajSheetTextoCallback = callback;
   _ajSheetTextoModo = 'texto';
+  _ajSheetTextoValidador = null;
   var tit = document.getElementById('aj-sheet-texto-titulo');
   var inp = document.getElementById('aj-sheet-texto-input');
   var pills = document.getElementById('aj-sheet-texto-pills');
   var sub = document.getElementById('aj-sheet-texto-subtitulo');
   var btnConfirmar = document.getElementById('aj-sheet-texto-btn-confirmar');
+  var errEl = document.getElementById('aj-sheet-texto-error');
   if (sub) sub.style.display = 'none';
   if (pills) { pills.style.display = 'none'; pills.innerHTML = ''; }
+  if (errEl) errEl.style.display = 'none';
   if (btnConfirmar) btnConfirmar.style.display = '';
   if (tit) tit.textContent = titulo;
-  if (inp) { inp.style.display = ''; inp.value = ''; inp.placeholder = placeholder; }
+  if (inp) { inp.style.display = ''; inp.value = ''; inp.placeholder = placeholder; inp.oninput = null; }
   var ov = document.getElementById('aj-sheet-texto-overlay');
   var sh = document.getElementById('aj-sheet-texto');
   if (ov) ov.style.display = 'block';
@@ -651,24 +659,32 @@ function ajConfirmarSheetTexto() {
   }
   var v = (document.getElementById('aj-sheet-texto-input').value || '').trim();
   if (!v) return;
+  if (_ajSheetTextoValidador) {
+    var msgError = _ajSheetTextoValidador(v);
+    if (msgError) {
+      var errEl = document.getElementById('aj-sheet-texto-error');
+      if (errEl) { errEl.textContent = msgError; errEl.style.display = 'block'; }
+      return;
+    }
+  }
   if (_ajSheetTextoCallback) _ajSheetTextoCallback(v);
   ajCerrarSheetTexto();
 }
 
 /* ── Bottom sheet prefijo ─────────────────────────────── */
 var _AJ_PREFIJOS = [
-  {pais:'Ecuador', bandera:'🇪🇨', cod:'+593'},
-  {pais:'Colombia', bandera:'🇨🇴', cod:'+57'},
-  {pais:'Perú', bandera:'🇵🇪', cod:'+51'},
-  {pais:'Venezuela', bandera:'🇻🇪', cod:'+58'},
-  {pais:'Argentina', bandera:'🇦🇷', cod:'+54'},
-  {pais:'Chile', bandera:'🇨🇱', cod:'+56'},
-  {pais:'México', bandera:'🇲🇽', cod:'+52'},
-  {pais:'España', bandera:'🇪🇸', cod:'+34'},
-  {pais:'Estados Unidos', bandera:'🇺🇸', cod:'+1'},
-  {pais:'Uruguay', bandera:'🇺🇾', cod:'+598'},
-  {pais:'Paraguay', bandera:'🇵🇾', cod:'+595'},
-  {pais:'Bolivia', bandera:'🇧🇴', cod:'+591'},
+  {pais:'Ecuador', bandera:'🇪🇨', cod:'+593', min:10, max:10},
+  {pais:'Colombia', bandera:'🇨🇴', cod:'+57', min:10, max:10},
+  {pais:'Perú', bandera:'🇵🇪', cod:'+51', min:9, max:9},
+  {pais:'Venezuela', bandera:'🇻🇪', cod:'+58', min:10, max:10},
+  {pais:'Argentina', bandera:'🇦🇷', cod:'+54', min:10, max:11},
+  {pais:'Chile', bandera:'🇨🇱', cod:'+56', min:9, max:9},
+  {pais:'México', bandera:'🇲🇽', cod:'+52', min:10, max:10},
+  {pais:'España', bandera:'🇪🇸', cod:'+34', min:9, max:9},
+  {pais:'Estados Unidos', bandera:'🇺🇸', cod:'+1', min:10, max:10},
+  {pais:'Uruguay', bandera:'🇺🇾', cod:'+598', min:8, max:9},
+  {pais:'Paraguay', bandera:'🇵🇾', cod:'+595', min:9, max:9},
+  {pais:'Bolivia', bandera:'🇧🇴', cod:'+591', min:8, max:8},
 ];
 var _ajPrefijoTarget = { displayId: 'aj-prefijo-display', campo: 'prefijo' };
 
@@ -805,6 +821,47 @@ function ajAbrirSheetTextoGenerico(titulo, subtitulo, displayId, campo, placehol
   if (sub) { if (subtitulo) { sub.textContent = subtitulo; sub.style.display = 'block'; } else { sub.style.display = 'none'; } }
   var inp = document.getElementById('aj-sheet-texto-input');
   if (inp) inp.value = valorActual;
+}
+
+/* Envuelve el sheet genérico con validación de teléfono: solo dígitos
+   (filtrados en tiempo real) y longitud mínima/máxima según el país del
+   prefijo ya seleccionado (campo prefijoCampo, ver _AJ_PREFIJOS) — mismo
+   criterio que ya usa inscripción. */
+function ajAbrirSheetTelefono(titulo, displayId, campo, prefijoCampo) {
+  var valorActual = (E.datos && E.datos[campo]) || '';
+  var prefVal = (E.datos && E.datos[prefijoCampo]) || '';
+  var pais = _AJ_PREFIJOS.find(function(p) {
+    return prefVal.indexOf(p.pais) !== -1 || prefVal.indexOf(p.cod) !== -1;
+  });
+  var min = pais ? pais.min : 7, max = pais ? pais.max : 15;
+
+  ajAbrirSheetTexto('aj-sheet-texto', titulo, 'Ej: 0962773052', function(v) {
+    var payload = {}; payload[campo] = v;
+    _ajGuardar(payload);
+    var disp = document.getElementById(displayId);
+    if (disp) { disp.textContent = v; disp.classList.remove('vacio'); }
+  });
+
+  var sub = document.getElementById('aj-sheet-texto-subtitulo');
+  if (sub) {
+    sub.textContent = 'Entre ' + min + ' y ' + max + ' dígitos' + (pais ? ' para ' + pais.pais : '') + '. Sin espacios ni caracteres especiales.';
+    sub.style.display = 'block';
+  }
+  var errEl = document.getElementById('aj-sheet-texto-error');
+  if (errEl) errEl.style.display = 'none';
+
+  var inp = document.getElementById('aj-sheet-texto-input');
+  if (inp) {
+    inp.value = valorActual;
+    inp.oninput = function() { limpiarTelefono(this); };
+  }
+
+  _ajSheetTextoValidador = function(v) {
+    if (v.length < min || v.length > max) {
+      return 'Debe tener entre ' + min + ' y ' + max + ' dígitos' + (pais ? ' para ' + pais.pais : '') + '.';
+    }
+    return null;
+  };
 }
 
 /* ── Pronombres (pills multiselect) ───────────────────── */

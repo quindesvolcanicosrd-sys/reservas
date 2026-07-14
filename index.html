@@ -1230,7 +1230,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
       </div>
 
-      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Número de teléfono','Entre 7 y 15 dígitos numéricos.','aj-telefono-val','telefono','Ej: 0962773052')">
+      <div class="aj-dato-row" onclick="ajAbrirSheetTelefono('Número de teléfono','aj-telefono-val','telefono','prefijo')">
         <div class="aj-dato-icon"><span class="material-symbols-outlined">phone</span></div>
         <div class="aj-dato-texts">
           <div class="aj-dato-label">Número</div>
@@ -1421,7 +1421,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
         <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
       </div>
-      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Número de teléfono','Entre 7 y 15 dígitos numéricos.','aj-em1tel-val','emerg1Telefono','Ej: 0962773052')">
+      <div class="aj-dato-row" onclick="ajAbrirSheetTelefono('Número de teléfono','aj-em1tel-val','emerg1Telefono','emerg1Prefijo')">
         <div class="aj-dato-icon"><span class="material-symbols-outlined">call</span></div>
         <div class="aj-dato-texts">
           <div class="aj-dato-label">Número</div>
@@ -1464,7 +1464,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           </div>
           <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
         </div>
-        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Número de teléfono','Entre 7 y 15 dígitos numéricos.','aj-em2tel-val','emerg2Telefono','Ej: 0962773052')">
+        <div class="aj-dato-row" onclick="ajAbrirSheetTelefono('Número de teléfono','aj-em2tel-val','emerg2Telefono','emerg2Prefijo')">
           <div class="aj-dato-icon"><span class="material-symbols-outlined">call</span></div>
           <div class="aj-dato-texts">
             <div class="aj-dato-label">Número</div>
@@ -1775,6 +1775,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div class="bsheet-body">
     <input type="text" id="aj-sheet-texto-input" style="width:100%;padding:13px 16px;background:var(--surface-2);border:1.5px solid var(--brand);border-radius:12px;font-size:0.88rem;font-family:inherit;" placeholder="">
     <div class="aj-pills-row" id="aj-sheet-texto-pills" style="display:none;margin-top:0;"></div>
+    <div class="error-msg" id="aj-sheet-texto-error" style="margin-top:10px;"></div>
     <button class="btn btn-outline" id="aj-sheet-texto-btn-confirmar" onclick="ajConfirmarSheetTexto()" style="margin-top:10px;">Guardar</button>
     <button onclick="ajCerrarSheetTexto()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:none;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
   </div>
