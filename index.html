@@ -1636,10 +1636,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <span class="aj-pill" data-val="Epilepsia" onclick="ajTogglePill(this)">Epilepsia</span>
           <span class="aj-pill" data-val="Trastornos de coagulación" onclick="ajTogglePill(this)">Trastornos de coagulación</span>
           <span class="aj-pill" data-val="Problemas osteomusculares crónicos" onclick="ajTogglePill(this)">Problemas osteomusculares crónicos</span>
-          <span class="aj-pill" data-val="Otro" onclick="saludToggleOtro(this,'salud-enfermedad-otro-wrap','salud-enfermedad-otro-input')"><span class="aj-pill-otro-txt">Otro</span><span class="aj-pill-otro-x material-symbols-outlined" onclick="event.stopPropagation();saludOtroLimpiar(this,'salud-enfermedad-otro-wrap','salud-enfermedad-otro-input')">close</span></span>
-        </div>
-        <div id="salud-enfermedad-otro-wrap" style="display:none;">
-          <textarea class="textarea-otro" id="salud-enfermedad-otro-input" placeholder="Especifica" onblur="saludOtroBlur(this,'salud-enfermedad-pills','salud-enfermedad-otro-wrap')"></textarea>
+          <span class="aj-pill" data-otro-trigger="1" onclick="saludAbrirSheetOtro('salud-enfermedad-pills')">+ Otro</span>
         </div>
         <div class="error-msg" id="err-salud-1"></div>
       </div>
@@ -1668,10 +1665,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <span class="aj-pill" data-val="Cirugías previas" onclick="ajTogglePill(this)">Cirugías previas</span>
           <span class="aj-pill" data-val="Hospitalización en el último año" onclick="ajTogglePill(this)">Hospitalización en el último año</span>
           <span class="aj-pill" data-val="Lesiones deportivas previas" onclick="ajTogglePill(this)">Lesiones deportivas previas</span>
-          <span class="aj-pill" data-val="Otro" onclick="saludToggleOtro(this,'salud-antecedentes-otro-wrap','salud-antecedentes-otro-input')"><span class="aj-pill-otro-txt">Otro</span><span class="aj-pill-otro-x material-symbols-outlined" onclick="event.stopPropagation();saludOtroLimpiar(this,'salud-antecedentes-otro-wrap','salud-antecedentes-otro-input')">close</span></span>
-        </div>
-        <div id="salud-antecedentes-otro-wrap" style="display:none;">
-          <textarea class="textarea-otro" id="salud-antecedentes-otro-input" placeholder="Especifica" onblur="saludOtroBlur(this,'salud-antecedentes-pills','salud-antecedentes-otro-wrap')"></textarea>
+          <span class="aj-pill" data-otro-trigger="1" onclick="saludAbrirSheetOtro('salud-antecedentes-pills')">+ Otro</span>
         </div>
         <div class="error-msg" id="err-salud-4"></div>
       </div>
@@ -1680,13 +1674,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <h2>Dieta</h2>
         <p>¿Sigues algún tipo de dieta particular?</p>
         <div class="aj-pills-row" id="salud-dieta-pills">
-          <span class="aj-pill" data-val="Vegetariano" onclick="_saludSelUnica(this,'salud-dieta-otro-wrap','salud-dieta-otro-input')">Vegetariano</span>
-          <span class="aj-pill" data-val="Vegano" onclick="_saludSelUnica(this,'salud-dieta-otro-wrap','salud-dieta-otro-input')">Vegano</span>
-          <span class="aj-pill" data-val="Pescetariano" onclick="_saludSelUnica(this,'salud-dieta-otro-wrap','salud-dieta-otro-input')">Pescetariano</span>
-          <span class="aj-pill" data-val="Otro" onclick="_saludSelUnica(this,'salud-dieta-otro-wrap','salud-dieta-otro-input')"><span class="aj-pill-otro-txt">Otro</span><span class="aj-pill-otro-x material-symbols-outlined" onclick="event.stopPropagation();saludOtroLimpiar(this,'salud-dieta-otro-wrap','salud-dieta-otro-input')">close</span></span>
-        </div>
-        <div id="salud-dieta-otro-wrap" style="display:none;">
-          <textarea class="textarea-otro" id="salud-dieta-otro-input" placeholder="Especifica" onblur="saludOtroBlur(this,'salud-dieta-pills','salud-dieta-otro-wrap')"></textarea>
+          <span class="aj-pill" data-val="Vegetariano" onclick="_saludSelUnica(this)">Vegetariano</span>
+          <span class="aj-pill" data-val="Vegano" onclick="_saludSelUnica(this)">Vegano</span>
+          <span class="aj-pill" data-val="Pescetariano" onclick="_saludSelUnica(this)">Pescetariano</span>
+          <span class="aj-pill" data-val="Otro" onclick="saludAbrirSheetOtro('salud-dieta-pills','single')"><span class="aj-pill-otro-txt">Otro</span><span class="aj-pill-otro-x material-symbols-outlined" onclick="event.stopPropagation();saludOtroLimpiar(this)">close</span></span>
         </div>
         <div class="error-msg" id="err-salud-5"></div>
       </div>
@@ -1730,10 +1721,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <span class="aj-pill" data-val="BUPA Ecuador" onclick="ajTogglePill(this)">BUPA Ecuador</span>
           <span class="aj-pill" data-val="Pan American Life" onclick="ajTogglePill(this)">Pan American Life</span>
           <span class="aj-pill" data-val="CruzBlanca" onclick="ajTogglePill(this)">CruzBlanca</span>
-          <span class="aj-pill" data-val="Otro" onclick="saludToggleOtro(this,'salud-seguro-otro-wrap','salud-seguro-otro-input')"><span class="aj-pill-otro-txt">Otro</span><span class="aj-pill-otro-x material-symbols-outlined" onclick="event.stopPropagation();saludOtroLimpiar(this,'salud-seguro-otro-wrap','salud-seguro-otro-input')">close</span></span>
-        </div>
-        <div id="salud-seguro-otro-wrap" style="display:none;">
-          <textarea class="textarea-otro" id="salud-seguro-otro-input" placeholder="Especifica" onblur="saludOtroBlur(this,'salud-seguro-pills','salud-seguro-otro-wrap')"></textarea>
+          <span class="aj-pill" data-otro-trigger="1" onclick="saludAbrirSheetOtro('salud-seguro-pills')">+ Otro</span>
         </div>
         <div class="error-msg" id="err-salud-9"></div>
         <p style="font-size:0.85rem;color:var(--text);font-weight:700;margin-top:20px;margin-bottom:8px;">¿Cómo podemos contactar a tu seguro en caso de emergencia?</p>
@@ -1743,6 +1731,20 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div class="cta-footer-spacer" style="height:150px;"></div>
     </div>
 
+  </div>
+</div>
+
+<!-- BOTTOM SHEET: "Otro" del wizard de Salud (Enfermedad/Antecedentes/Seguro en modo multi, Dieta en modo single) -->
+<div id="salud-sheet-otro-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="saludCerrarSheetOtro()"></div>
+<div id="salud-sheet-otro" class="bsheet" style="z-index:9701;">
+  <div class="bsheet-handle"></div>
+  <div class="bsheet-title">Agregar opción personalizada</div>
+  <div class="bsheet-body">
+    <input type="text" id="salud-sheet-otro-input" placeholder="Especifica" style="width:100%;padding:13px 16px;background:var(--surface-2);border:1.5px solid var(--brand);border-radius:12px;font-size:0.88rem;font-family:inherit;">
+    <button class="btn btn-outline" id="salud-sheet-otro-btn-agregar" onclick="saludAgregarItemOtro()" style="margin-top:10px;">Agregar</button>
+    <div id="salud-sheet-otro-lista" style="margin-top:12px;display:flex;flex-direction:column;gap:8px;"></div>
+    <button class="btn btn-primary" id="salud-sheet-otro-btn-listo" onclick="saludConfirmarSheetOtro()" style="margin-top:16px;">Listo</button>
+    <button onclick="saludCerrarSheetOtro()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:none;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
   </div>
 </div>
 

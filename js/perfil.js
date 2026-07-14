@@ -1054,15 +1054,14 @@ function saludPasoAnterior() {
 /* Selección única (Alergias, Dieta, Medicamentos, Atención médica): limpia
    .activa de los hermanos del mismo contenedor y la deja solo en el tocado
    — mismo mecanismo que .aj-pill/.activa ya usa el resto de la app, sin
-   pasar por el sheet compartido (acá vive inline dentro del paso). Cuando
-   hay otroWrapId (Dieta): si el pill tocado es "Otro" y ya tiene texto
-   propio (.aj-pill-otro-lleno) reabre el textarea para editar en vez de
-   re-togglear; si es "Otro" sin texto, se comporta como antes (abre y
-   enfoca). Elegir cualquier otro pill mientras "Otro" tenía texto propio
-   deja de mostrarlo seleccionado y le resetea el label visual a "Otro"
-   (ver _saludOtroResetVisual) — el texto ya escrito no se pierde, solo se
-   oculta, así que si el usuario vuelve a "Otro" lo encuentra de nuevo. */
-function _saludSelUnica(el, otroWrapId, otroInputId) {
+   pasar por el sheet compartido (acá vive inline dentro del paso). Si algún
+   hermano es el chip "Otro" de Dieta con texto propio (.aj-pill-otro-lleno),
+   se le resetea el label visual a "Otro" — el texto ya escrito no se pierde
+   (ver saludConfirmarSheetOtro), solo se oculta, así que si el usuario
+   reabre el sheet de "Otro" lo encuentra de nuevo. El propio pill "Otro" de
+   Dieta ya no pasa por acá (abre `saludAbrirSheetOtro(...,'single')`
+   directo, ver más abajo). */
+function _saludSelUnica(el) {
   var cont = el.parentElement;
   cont.querySelectorAll('.aj-pill').forEach(function(p) {
     if (p === el) return;
@@ -1070,28 +1069,6 @@ function _saludSelUnica(el, otroWrapId, otroInputId) {
     if (p.classList.contains('aj-pill-otro-lleno')) _saludOtroResetVisual(p);
   });
   el.classList.add('activa');
-  if (!otroWrapId) return;
-  var wrap = document.getElementById(otroWrapId);
-  if (el.dataset.val !== 'Otro') { if (wrap) wrap.style.display = 'none'; return; }
-  if (el.classList.contains('aj-pill-otro-lleno')) { _saludOtroAbrirEdicion(otroWrapId, otroInputId); return; }
-  if (wrap) wrap.style.display = 'block';
-  if (otroInputId) { var inp = document.getElementById(otroInputId); if (inp) setTimeout(function() { inp.focus(); }, 50); }
-}
-
-/* Selección múltiple + "Otro" (Enfermedad, Antecedentes): mismo patrón que
-   confirmarOtroProtec()/toggleProtecItem() de js/reservas.js (.aj-pill
-   togglea con ajTogglePill(), ya existente) — acá "Otro" además revela un
-   textarea inline en vez de abrir un bottom sheet aparte. Si el pill ya
-   tiene texto propio (.aj-pill-otro-lleno), tocarlo reabre el textarea
-   para editar en vez de togglear/desactivar (a diferencia del resto de
-   los pills multi, que sí togglean libremente). */
-function saludToggleOtro(el, wrapId, inputId) {
-  if (el.classList.contains('aj-pill-otro-lleno')) { _saludOtroAbrirEdicion(wrapId, inputId); return; }
-  ajTogglePill(el);
-  var wrap = document.getElementById(wrapId);
-  var activo = el.classList.contains('activa');
-  if (wrap) wrap.style.display = activo ? 'block' : 'none';
-  if (activo && inputId) { var inp = document.getElementById(inputId); if (inp) setTimeout(function() { inp.focus(); }, 50); }
 }
 
 function _saludBuscarPill(containerId, val) {
@@ -1100,17 +1077,164 @@ function _saludBuscarPill(containerId, val) {
   return null;
 }
 
-/* Chip "Otro" editable (Enfermedad/Antecedentes/Dieta, multi o única): al
-   perder foco con texto, el pill pasa a mostrar ese texto (truncado con
-   ellipsis) + una X para borrarlo en vez del textarea siempre visible.
-   Tocar el texto del pill reabre el textarea para editar (ver
-   saludToggleOtro/_saludSelUnica); tocar la X limpia todo. */
-function _saludOtroAbrirEdicion(wrapId, inputId) {
-  var wrap = document.getElementById(wrapId);
-  var inp = document.getElementById(inputId);
-  if (wrap) wrap.style.display = 'block';
-  if (inp) setTimeout(function() { inp.focus(); }, 50);
+/* ── "Otro" del wizard de Salud, vía bottom sheet compartido ──────────
+   Reemplaza el textarea inline que antes revelaba cada pill "Otro" (ver
+   "Cambios recientes" — rediseño real, no solo chrome). Dos modos:
+   - 'multi' (Enfermedad/Antecedentes/Seguro): el pill "Otro" es un simple
+     disparador ("+ Otro", sin estado .activa propio) que abre el sheet;
+     cada entrada agregada queda como SU PROPIO pill dinámico individual
+     en la fila principal (marcado con data-dinamico="1"), activo, con su
+     propia X para eliminarlo directo desde la pantalla sin reabrir el sheet.
+   - 'single' (Dieta): el pill "Otro" conserva su look de chip editable
+     (.aj-pill-otro-txt/.aj-pill-otro-x) — el sheet solo cambia CÓMO se
+     ingresa el texto (antes textarea inline, ahora sheet), no qué pasa
+     después de guardar. */
+var _saludOtroSheetPillsRowId = null;
+var _saludOtroSheetModo = 'multi';
+var _saludOtroSheetLista = []; // solo modo 'multi'
+
+function saludAbrirSheetOtro(pillsRowId, modo) {
+  _saludOtroSheetPillsRowId = pillsRowId;
+  _saludOtroSheetModo = modo || 'multi';
+  var input = document.getElementById('salud-sheet-otro-input');
+  var btnAgregar = document.getElementById('salud-sheet-otro-btn-agregar');
+  var lista = document.getElementById('salud-sheet-otro-lista');
+  var btnListo = document.getElementById('salud-sheet-otro-btn-listo');
+  if (_saludOtroSheetModo === 'single') {
+    if (btnAgregar) btnAgregar.style.display = 'none';
+    if (lista) lista.style.display = 'none';
+    if (btnListo) btnListo.textContent = 'Guardar';
+    var pillOtro = _saludBuscarPill(pillsRowId, 'Otro');
+    if (input) input.value = (pillOtro && pillOtro.classList.contains('aj-pill-otro-lleno')) ? (pillOtro.querySelector('.aj-pill-otro-txt').textContent || '') : '';
+  } else {
+    if (btnAgregar) btnAgregar.style.display = '';
+    if (lista) lista.style.display = 'flex';
+    if (btnListo) btnListo.textContent = 'Listo';
+    if (input) input.value = '';
+    _saludOtroSheetLista = Array.prototype.map.call(
+      document.querySelectorAll('#' + pillsRowId + ' .aj-pill[data-dinamico="1"]'),
+      function(p) { return p.dataset.val; }
+    );
+    _saludRenderSheetOtroLista();
+  }
+  var ov = document.getElementById('salud-sheet-otro-overlay');
+  var sh = document.getElementById('salud-sheet-otro');
+  if (ov) ov.style.display = 'block';
+  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
+  setTimeout(function() { if (input) input.focus(); }, 300);
+  _registrarOverlayAbierto(saludCerrarSheetOtro);
 }
+
+function saludCerrarSheetOtro(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var sh = document.getElementById('salud-sheet-otro');
+  var ov = document.getElementById('salud-sheet-otro-overlay');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function(){ if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+
+function _saludRenderSheetOtroLista() {
+  var lista = document.getElementById('salud-sheet-otro-lista');
+  if (!lista) return;
+  lista.innerHTML = '';
+  if (!_saludOtroSheetLista.length) {
+    var vacio = document.createElement('p');
+    vacio.style.cssText = 'font-size:0.78rem;color:var(--muted);text-align:center;margin:4px 0;';
+    vacio.textContent = 'Sin opciones agregadas.';
+    lista.appendChild(vacio);
+    return;
+  }
+  _saludOtroSheetLista.forEach(function(v, i) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface-2);border-radius:10px;font-size:0.85rem;color:var(--text);';
+    var span = document.createElement('span');
+    span.textContent = v;
+    var x = document.createElement('span');
+    x.className = 'material-symbols-outlined';
+    x.style.cssText = 'cursor:pointer;color:var(--muted);font-size:1.1rem;';
+    x.textContent = 'close';
+    x.onclick = function() { saludQuitarItemOtro(i); };
+    row.appendChild(span); row.appendChild(x);
+    lista.appendChild(row);
+  });
+}
+
+function saludAgregarItemOtro() {
+  var input = document.getElementById('salud-sheet-otro-input');
+  var t = (input.value || '').trim();
+  if (!t) return;
+  _saludOtroSheetLista.push(t);
+  input.value = '';
+  _saludRenderSheetOtroLista();
+  input.focus();
+}
+
+function saludQuitarItemOtro(idx) {
+  _saludOtroSheetLista.splice(idx, 1);
+  _saludRenderSheetOtroLista();
+}
+
+/* Botón "Listo"/"Guardar" del sheet — aplica la lista (modo 'multi') o el
+   valor único (modo 'single') al pills-row de destino y cierra. */
+function saludConfirmarSheetOtro() {
+  var pillsRowId = _saludOtroSheetPillsRowId;
+  if (_saludOtroSheetModo === 'single') {
+    var input = document.getElementById('salud-sheet-otro-input');
+    var t = (input.value || '').trim();
+    var pillOtro = _saludBuscarPill(pillsRowId, 'Otro');
+    if (t) {
+      document.querySelectorAll('#' + pillsRowId + ' .aj-pill').forEach(function(p) { if (p !== pillOtro) p.classList.remove('activa'); });
+      if (pillOtro) _saludOtroSetTexto(pillOtro, t);
+    } else if (pillOtro) {
+      pillOtro.classList.remove('activa');
+      _saludOtroResetVisual(pillOtro);
+    }
+    saludCerrarSheetOtro();
+    return;
+  }
+  var cont = document.getElementById(pillsRowId);
+  if (cont) {
+    Array.prototype.forEach.call(cont.querySelectorAll('.aj-pill[data-dinamico="1"]'), function(p) {
+      if (_saludOtroSheetLista.indexOf(p.dataset.val) === -1) p.remove();
+    });
+    var yaPresentes = Array.prototype.map.call(cont.querySelectorAll('.aj-pill[data-dinamico="1"]'), function(p) { return p.dataset.val; });
+    _saludOtroSheetLista.forEach(function(v) {
+      if (yaPresentes.indexOf(v) === -1) _saludCrearPillDinamico(pillsRowId, v);
+    });
+  }
+  saludCerrarSheetOtro();
+}
+
+/* Crea un pill dinámico individual (entrada personalizada agregada vía el
+   sheet) — mismo look de chip que .aj-pill-otro-txt/.aj-pill-otro-x, pero
+   sin la lógica de "reabrir para editar": su X lo elimina directo. Queda
+   .activa desde que existe (no hay estado "existe pero inactivo"). */
+function _saludCrearPillDinamico(containerId, valor) {
+  var cont = document.getElementById(containerId);
+  if (!cont) return;
+  var trigger = cont.querySelector('[data-otro-trigger="1"]');
+  var pill = document.createElement('span');
+  pill.className = 'aj-pill activa aj-pill-otro-lleno'; // .aj-pill-otro-lleno solo para heredar el CSS que muestra la X (.aj-pill-otro-x), no participa en la lógica de "reabrir para editar"
+  pill.dataset.val = valor;
+  pill.dataset.dinamico = '1';
+  var txt = document.createElement('span');
+  txt.className = 'aj-pill-otro-txt';
+  txt.textContent = valor;
+  var x = document.createElement('span');
+  x.className = 'aj-pill-otro-x material-symbols-outlined';
+  x.textContent = 'close';
+  x.onclick = function(ev) { ev.stopPropagation(); saludQuitarPillDinamico(x); };
+  pill.appendChild(txt); pill.appendChild(x);
+  if (trigger) cont.insertBefore(pill, trigger); else cont.appendChild(pill);
+}
+
+/* X de un pill dinámico en la pantalla principal — lo elimina sin reabrir
+   el sheet. */
+function saludQuitarPillDinamico(xEl) {
+  var p = xEl.closest('.aj-pill');
+  if (p) p.remove();
+}
+
 function _saludOtroSetTexto(el, texto) {
   el.classList.add('activa', 'aj-pill-otro-lleno');
   var txt = el.querySelector('.aj-pill-otro-txt');
@@ -1121,28 +1245,11 @@ function _saludOtroResetVisual(el) {
   var txt = el.querySelector('.aj-pill-otro-txt');
   if (txt) txt.textContent = 'Otro';
 }
-function _saludOtroLimpiarInterno(el, wrap, inp) {
-  if (inp) inp.value = '';
-  if (wrap) wrap.style.display = 'none';
-  if (el) { el.classList.remove('activa'); _saludOtroResetVisual(el); }
-}
-/* onblur del textarea: hay texto -> convierte el pill en chip con X;
-   vacío -> revierte todo (pill vuelve a "Otro", se desactiva). */
-function saludOtroBlur(inp, containerId, wrapId) {
-  var el = _saludBuscarPill(containerId, 'Otro');
-  if (!el) return;
-  var t = (inp.value || '').trim();
-  var wrap = document.getElementById(wrapId);
-  if (t) { if (wrap) wrap.style.display = 'none'; _saludOtroSetTexto(el, t); }
-  else { _saludOtroLimpiarInterno(el, wrap, inp); }
-}
-/* onclick de la X dentro del chip: limpia texto, desactiva el pill y lo
-   deja igual que si nunca se hubiera usado. */
-function saludOtroLimpiar(xEl, wrapId, inputId) {
+/* onclick de la X del chip "Otro" de Dieta (modo single): limpia el texto
+   y lo deja igual que si nunca se hubiera usado. */
+function saludOtroLimpiar(xEl) {
   var el = xEl.closest('.aj-pill');
-  var wrap = document.getElementById(wrapId);
-  var inp = document.getElementById(inputId);
-  _saludOtroLimpiarInterno(el, wrap, inp);
+  if (el) { el.classList.remove('activa'); _saludOtroResetVisual(el); }
 }
 
 /* Paso 0 — Intro/consentimiento (sin datos, sin Omitir) */
@@ -1151,12 +1258,7 @@ function saludContinuar0() { _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-
 /* Paso 1 — Enfermedad diagnosticada (multi + Otro, con Omitir) */
 function saludContinuar1() {
   var vals = [];
-  document.querySelectorAll('#salud-enfermedad-pills .aj-pill.activa').forEach(function(p) {
-    if (p.dataset.val === 'Otro') {
-      var t = (document.getElementById('salud-enfermedad-otro-input').value || '').trim();
-      if (t) vals.push(t);
-    } else vals.push(p.dataset.val);
-  });
+  document.querySelectorAll('#salud-enfermedad-pills .aj-pill.activa').forEach(function(p) { vals.push(p.dataset.val); });
   _saludData.enfermedad = vals.join(', ');
   _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-2'));
 }
@@ -1180,12 +1282,7 @@ function saludContinuar3() {
 /* Paso 4 — Antecedentes médicos personales (multi + Otro, con Omitir) */
 function saludContinuar4() {
   var vals = [];
-  document.querySelectorAll('#salud-antecedentes-pills .aj-pill.activa').forEach(function(p) {
-    if (p.dataset.val === 'Otro') {
-      var t = (document.getElementById('salud-antecedentes-otro-input').value || '').trim();
-      if (t) vals.push(t);
-    } else vals.push(p.dataset.val);
-  });
+  document.querySelectorAll('#salud-antecedentes-pills .aj-pill.activa').forEach(function(p) { vals.push(p.dataset.val); });
   _saludData.antecedentes = vals.join(', ');
   _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-5'));
 }
@@ -1196,7 +1293,7 @@ function saludContinuar5() {
   var sel = document.querySelector('#salud-dieta-pills .aj-pill.activa');
   if (!sel) { err('err-salud-5', 'Selecciona una opción.'); return; }
   if (sel.dataset.val === 'Otro') {
-    var t = (document.getElementById('salud-dieta-otro-input').value || '').trim();
+    var t = (sel.querySelector('.aj-pill-otro-txt') || {}).textContent || '';
     if (!t) { err('err-salud-5', 'Especifica tu dieta.'); return; }
     _saludData.dieta = t;
   } else {
@@ -1235,12 +1332,7 @@ function saludContinuar8() {
    todo junto */
 function saludContinuar9() {
   var vals = [];
-  document.querySelectorAll('#salud-seguro-pills .aj-pill.activa').forEach(function(p) {
-    if (p.dataset.val === 'Otro') {
-      var t = (document.getElementById('salud-seguro-otro-input').value || '').trim();
-      if (t) vals.push(t);
-    } else vals.push(p.dataset.val);
-  });
+  document.querySelectorAll('#salud-seguro-pills .aj-pill.activa').forEach(function(p) { vals.push(p.dataset.val); });
   if (!vals.length) { err('err-salud-9', 'Selecciona al menos una opción.'); return; }
   _saludData.seguro = vals.join(', ');
   _saludData.seguroContacto = (document.getElementById('salud-seguroContacto-input').value || '').trim();
@@ -1265,31 +1357,25 @@ function _saludFinalizarWizard() {
 }
 
 function _saludResetPrefill() {
+  document.querySelectorAll('#salud-wizard .aj-pill[data-dinamico="1"]').forEach(function(p) { p.remove(); });
   document.querySelectorAll('#salud-wizard .aj-pill').forEach(function(p) { p.classList.remove('activa'); if (p.classList.contains('aj-pill-otro-lleno')) _saludOtroResetVisual(p); });
-  ['salud-enfermedad-otro-wrap','salud-antecedentes-otro-wrap','salud-dieta-otro-wrap','salud-seguro-otro-wrap'].forEach(function(id) {
-    var w = document.getElementById(id); if (w) w.style.display = 'none';
-  });
-  ['salud-enfermedad-otro-input','salud-antecedentes-otro-input','salud-dieta-otro-input','salud-seguro-otro-input',
-   'salud-alergiasDesc-input','salud-medicamentosDesc-input','salud-seguroContacto-input'].forEach(function(id) {
+  ['salud-alergiasDesc-input','salud-medicamentosDesc-input','salud-seguroContacto-input'].forEach(function(id) {
     var i = document.getElementById(id); if (i) i.value = '';
   });
   document.querySelectorAll('#salud-wizard .error-msg').forEach(function(e) { e.style.display = 'none'; });
 }
 
-function _saludPrefillMulti(valor, containerId, otroWrapId, otroInputId) {
+/* Enfermedad/Antecedentes/Seguro: cada valor guardado que matchee un pill
+   fijo lo activa; el resto se recrea como pills dinámicos individuales
+   (mismo mecanismo que agrega el sheet de "Otro", ver más arriba) — ya no
+   se concatenan en un solo chip de texto. */
+function _saludPrefillMulti(valor, containerId) {
   if (!valor) return;
   var partes = valor.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
-  var otros = [];
   partes.forEach(function(p) {
     var pill = _saludBuscarPill(containerId, p);
-    if (pill) pill.classList.add('activa'); else otros.push(p);
+    if (pill) pill.classList.add('activa'); else _saludCrearPillDinamico(containerId, p);
   });
-  if (otros.length) {
-    var texto = otros.join(', ');
-    var otroPill = _saludBuscarPill(containerId, 'Otro');
-    if (otroPill) _saludOtroSetTexto(otroPill, texto);
-    var inp = document.getElementById(otroInputId); if (inp) inp.value = texto;
-  }
 }
 
 function _saludPrefillUnica(valor, containerId) {
@@ -1298,25 +1384,26 @@ function _saludPrefillUnica(valor, containerId) {
   if (pill) pill.classList.add('activa');
 }
 
-function _saludPrefillUnicaConOtro(valor, containerId, otroWrapId, otroInputId) {
+/* Dieta: si el valor guardado no matchea ningún pill fijo, queda en el
+   chip "Otro" (mismo look de siempre, .aj-pill-otro-txt/.aj-pill-otro-x). */
+function _saludPrefillUnicaConOtro(valor, containerId) {
   if (!valor) return;
   var pill = _saludBuscarPill(containerId, valor);
   if (pill) { pill.classList.add('activa'); return; }
   var otroPill = _saludBuscarPill(containerId, 'Otro');
   if (otroPill) _saludOtroSetTexto(otroPill, valor);
-  var inp = document.getElementById(otroInputId); if (inp) inp.value = valor;
 }
 
 function _saludPrefillWizard() {
-  _saludPrefillMulti(_saludData.enfermedad, 'salud-enfermedad-pills', 'salud-enfermedad-otro-wrap', 'salud-enfermedad-otro-input');
+  _saludPrefillMulti(_saludData.enfermedad, 'salud-enfermedad-pills');
   _saludPrefillUnica(_saludData.alergias, 'salud-alergias-pills');
   document.getElementById('salud-alergiasDesc-input').value = _saludData.alergiasDesc;
-  _saludPrefillMulti(_saludData.antecedentes, 'salud-antecedentes-pills', 'salud-antecedentes-otro-wrap', 'salud-antecedentes-otro-input');
-  _saludPrefillUnicaConOtro(_saludData.dieta, 'salud-dieta-pills', 'salud-dieta-otro-wrap', 'salud-dieta-otro-input');
+  _saludPrefillMulti(_saludData.antecedentes, 'salud-antecedentes-pills');
+  _saludPrefillUnicaConOtro(_saludData.dieta, 'salud-dieta-pills');
   _saludPrefillUnica(_saludData.medicamentos, 'salud-medicamentos-pills');
   document.getElementById('salud-medicamentosDesc-input').value = _saludData.medicamentosDesc;
   _saludPrefillUnica(_saludData.atencionMedica, 'salud-atencionMedica-pills');
-  _saludPrefillMulti(_saludData.seguro, 'salud-seguro-pills', 'salud-seguro-otro-wrap', 'salud-seguro-otro-input');
+  _saludPrefillMulti(_saludData.seguro, 'salud-seguro-pills');
   document.getElementById('salud-seguroContacto-input').value = _saludData.seguroContacto;
 }
 

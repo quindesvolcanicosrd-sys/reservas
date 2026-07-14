@@ -138,8 +138,6 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
 .paso-dot.completado { background: var(--brand); }
 
 
-.textarea-otro { resize: vertical; min-height: 80px; margin-top: 10px; margin-bottom: 16px; animation: fadeIn 0.3s ease; }
-
 @media (prefers-color-scheme: light) {
   select, input[type="text"], input[type="tel"], input[type="email"],
   input[type="date"], input[type="password"], textarea {
