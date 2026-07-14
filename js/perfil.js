@@ -1787,15 +1787,31 @@ function _ajInicializarMapaDireccion() {
       _ajDireccionMap.addListener('dragend', _ajOnMapaDireccionDragEnd);
     }
   }
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(function(pos) {
-      centrarEn({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-    }, function() {
-      mostrarToast('No pudimos acceder a tu ubicación. Mostrando Quito por defecto.', 'ok');
+  function centrarPorGeolocalizacionOFallback() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function(pos) {
+        centrarEn({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      }, function() {
+        mostrarToast('No pudimos acceder a tu ubicación. Mostrando Quito por defecto.', 'ok');
+        centrarEn(_AJ_QUITO_LATLNG);
+      }, { timeout: 8000 });
+    } else {
       centrarEn(_AJ_QUITO_LATLNG);
-    }, { timeout: 8000 });
+    }
+  }
+  var d = E.datos || {};
+  var tieneDireccionGuardada = !!(d.callePrincipal || d.numeracion || d.sector || d.canton);
+  if (tieneDireccionGuardada) {
+    var direccion = (d.callePrincipal || '') + ' ' + (d.numeracion || '') + ', ' + (d.sector || '') + ', ' + (d.canton || '');
+    new google.maps.Geocoder().geocode({ address: direccion }, function(results, status) {
+      if (status === 'OK' && results && results[0]) {
+        centrarEn(results[0].geometry.location);
+      } else {
+        centrarPorGeolocalizacionOFallback();
+      }
+    });
   } else {
-    centrarEn(_AJ_QUITO_LATLNG);
+    centrarPorGeolocalizacionOFallback();
   }
 }
 
