@@ -856,10 +856,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 </div>
 
-<div id="modal-eliminar-cuenta" style="display:none;position:fixed;inset:0;z-index:9800;background:var(--overlay-dark);align-items:center;justify-content:center;padding:16px;opacity:0;transition:opacity 0.3s ease;">
-  <div style="background:var(--white);border-radius:20px;padding:28px 24px;width:100%;max-width:400px;transform:scale(0.92) translateY(12px);transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1),opacity 0.3s ease;opacity:0;">
+<div id="modal-eliminar-cuenta-overlay" class="bsheet-overlay" style="z-index:9800;" onclick="mecCerrar()"></div>
+<div id="modal-eliminar-cuenta" class="bsheet" style="z-index:9801;">
+  <div class="bsheet-handle"></div>
+  <div class="bsheet-title">Eliminar cuenta</div>
+  <div class="bsheet-body">
     <div style="font-size:2.4rem;text-align:center;margin-bottom:12px;">🗑️</div>
-    <div style="font-weight:800;font-size:1.05rem;color:var(--danger);text-align:center;margin-bottom:8px;">Eliminar cuenta</div>
     <p style="font-size:0.85rem;color:var(--neutral-mid);text-align:center;margin-bottom:20px;line-height:1.5;">Esta acción es <strong>permanente e irreversible</strong>. Se borrarán todos tus datos y reservas.</p>
     <div style="background:var(--error-lightest);border:2px solid var(--error-light-border);border-radius:12px;padding:14px 16px;margin-bottom:18px;">
       <div style="font-size:0.78rem;font-weight:700;color:var(--danger-dark);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Para confirmar, escribe tu nombre:</div>
@@ -868,7 +870,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
     <div class="error-msg" id="err-mec" style="margin-bottom:12px;"></div>
     <button id="mec-btn-confirmar" onclick="mecConfirmar()" disabled style="width:100%;padding:14px;background:var(--danger);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;opacity:0.4;transition:opacity 0.2s;">Eliminar mi cuenta</button>
-    <button onclick="mecCerrar()" style="width:100%;padding:13px;background:transparent;color: var(--muted);border:2px solid var(--border-light);border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
+    <button onclick="mecCerrar()" style="width:100%;padding:13px;background:transparent;color:var(--muted);border:2px solid var(--border-light);border-radius:12px;font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
   </div>
 </div>
 

@@ -35,7 +35,7 @@
   0%, 100% { box-shadow: 0 0 0 0 var(--brand-zero); border-color: var(--brand-pulse); }
   50% { box-shadow: 0 0 24px 8px var(--brand-40); border-color: var(--brand-strong); }
 }
-/* Genérica — usada hoy por #modal-eliminar-cuenta en ui.css (mobile); #modal-wp-comprobante ya no existe en index.html, referencia muerta sin limpiar */
+/* Sin ningún consumidor desde que #modal-eliminar-cuenta migró a .bsheet (ver "Cambios recientes") — huérfana, no se elimina en esta pasada */
 @keyframes slideUpModal {
   from { transform: translateY(100%); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }

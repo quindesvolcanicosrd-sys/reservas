@@ -159,7 +159,6 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
   div:has(> [id^="hgrp-"]) { border-color: var(--brand-soft) !important; }
   div:has(> [id^="hgrp-"]) > div:first-child { background: var(--brand-subtle) !important; }
   div:has(> [id^="hgrp-"]) > div:first-child span { color: var(--text-2) !important; }
-  #modal-wp-comprobante > div { background: var(--dk-overlay-97) !important; }
   #modal-equip-aviso > div { background: var(--dk-overlay-97) !important; }
   .chk-opcion { background: var(--surface-2); border-color: var(--border); color: var(--text); }
   .chk-opcion:hover { background: var(--brand-subtle); border-color: var(--brand-secondary); }
@@ -201,23 +200,6 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
 @media (min-width: 601px) {
   #btn-contacto-login { display: none !important; }
   #btn-refrescar-home { display: flex !important; }
-}
-
-@media (max-width: 600px) {
-  #modal-eliminar-cuenta,
-  #modal-wp-comprobante {
-    align-items: flex-end !important;
-    padding: 0 !important;
-  }
-  #modal-eliminar-cuenta > div,
-  #modal-wp-comprobante > div {
-    width: 100% !important;
-    max-width: 100% !important;
-    border-radius: 24px 24px 0 0 !important;
-    max-height: 90vh;
-    overflow-y: auto;
-    animation: slideUpModal 0.35s var(--ease-sheet) both !important;
-  }
 }
 
 #modal-confirm-reagendar,

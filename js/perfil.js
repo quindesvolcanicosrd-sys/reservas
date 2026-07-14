@@ -248,14 +248,10 @@ function eliminarCuenta() {
   document.getElementById('mec-input').value = '';
   document.getElementById('err-mec').style.display = 'none';
   mecValidar();
-  var overlay = document.getElementById('modal-eliminar-cuenta');
-  var inner = overlay.querySelector('div');
-  overlay.style.display = 'flex';
-  void overlay.offsetWidth;
-  overlay.style.opacity = '1';
-  inner.style.opacity = '1';
-  inner.style.transform = 'scale(1) translateY(0)';
-  document.body.style.overflow = 'hidden';
+  var ov = document.getElementById('modal-eliminar-cuenta-overlay');
+  var sh = document.getElementById('modal-eliminar-cuenta');
+  if (ov) ov.style.display = 'block';
+  if (sh) { sh.style.display = 'block'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
   setTimeout(function() { document.getElementById('mec-input').focus(); }, 300);
   _registrarOverlayAbierto(mecCerrar);
 }
@@ -271,12 +267,10 @@ function mecValidar() {
 
 function mecCerrar(porGesto) {
   if (!porGesto) { history.back(); return; }
-  var overlay = document.getElementById('modal-eliminar-cuenta');
-  var inner = overlay.querySelector('div');
-  overlay.style.opacity = '0';
-  inner.style.opacity = '0';
-  inner.style.transform = 'scale(0.92) translateY(12px)';
-  setTimeout(function() { overlay.style.display = 'none'; document.body.style.overflow = ''; }, 300);
+  var sh = document.getElementById('modal-eliminar-cuenta');
+  var ov = document.getElementById('modal-eliminar-cuenta-overlay');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function(){ if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
 }
 
 function mecConfirmar() {

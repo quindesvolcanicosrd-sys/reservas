@@ -71,7 +71,6 @@
   #modal-pin-config > div { background: var(--dk-overlay-97) !important; }
   #modal-pin-config label { color: var(--text) !important; }
   #mp-pin-input { background: var(--surface-2) !important; border-color: var(--border) !important; color: var(--text) !important; }
-  #modal-eliminar-cuenta > div { background: var(--dk-overlay-97) !important; }
   #modal-eliminar-cuenta input { background: var(--surface-2) !important; border-color: var(--border) !important; color: var(--text) !important; }
   #modal-eliminar-cuenta .mec-nombre { color: var(--brand) !important; }
   #modal-edad-bloqueo-card { background: var(--dk-overlay-97) !important; }
