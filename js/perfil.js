@@ -53,7 +53,7 @@ function irEditarDatos() {
     if (d.enfermedad) saludPartes.push(d.enfermedad);
     if (d.alergias === 'Sí') saludPartes.push('Alergias');
     if (d.medicamentos === 'Sí') saludPartes.push('Medicamentos');
-    saludVal.textContent = saludPartes.join(' · ') || '—';
+    saludVal.textContent = saludPartes.join(' · ') || 'Completa los datos de salud';
   }
   // Notif toggle
   _poblarResumenEquipPerfil();
@@ -556,7 +556,7 @@ function _ajCargarSub(id) {
        esa llamada no pasa por acá, así que no hay riesgo de loop; la card
        queda como fallback hasta que el usuario reabra la subsección o toque
        "Volver a completar el paso a paso" a mano. */
-    if (!d.atencionMedica) { saludIniciarWizard(); }
+    if (!d.atencionMedica) { _saludAutoLanzado = true; saludIniciarWizard(); }
     else { _saludMostrarEstado(); }
   }
 }
@@ -929,9 +929,14 @@ function ajAbrirSheetSiNo(titulo, campo, displayId, condWrapId) {
    pasos + índice actual + dots de progreso), adaptado a un flujo interno
    dentro del panel en vez de una pantalla completa. Un solo _ajGuardar() al
    terminar el flujo (no campo por campo) — ver _saludFinalizarWizard(). */
-var _SALUD_STEPS = ['salud-paso-1','salud-paso-2','salud-paso-3','salud-paso-4','salud-paso-5','salud-paso-6','salud-paso-7','salud-paso-8','salud-paso-9'];
+var _SALUD_STEPS = ['salud-paso-0','salud-paso-1','salud-paso-2','salud-paso-3','salud-paso-4','salud-paso-5','salud-paso-6','salud-paso-7','salud-paso-8','salud-paso-9'];
 var _saludCurIdx = 0;
 var _saludData = {};
+// true cuando el wizard se auto-lanzó al entrar a "Salud" sin ficha completa
+// (saltando la card "Completar ficha de salud") — si el usuario da "atrás"
+// desde el paso 0, hay que cerrar el panel entero en vez de mostrar esa card,
+// que en ese caso nunca llegó a verse.
+var _saludAutoLanzado = false;
 
 /* Footer fijo compartido (#cta-footer-salud, index.html): un solo par de
    botones para los 9 pasos en vez de un <button> por paso. "Continuar" llama
@@ -941,6 +946,7 @@ var _saludData = {};
    botón pasa a .btn-primary sólido con texto "Guardar y finalizar" en vez
    de "Continuar"/.btn-outline. */
 var _SALUD_CONTINUAR_FN = {
+  'salud-paso-0': function() { saludContinuar0(); },
   'salud-paso-1': function() { saludContinuar1(); }, 'salud-paso-2': function() { saludContinuar2(); },
   'salud-paso-3': function() { saludContinuar3(); }, 'salud-paso-4': function() { saludContinuar4(); },
   'salud-paso-5': function() { saludContinuar5(); }, 'salud-paso-6': function() { saludContinuar6(); },
@@ -1006,7 +1012,14 @@ function saludIniciarWizard() {
   _saludMostrarPaso(0);
 }
 
-function saludCerrarWizard() { _saludMostrarEstado(); }
+function saludCerrarWizard() {
+  if (_saludAutoLanzado) {
+    _saludAutoLanzado = false;
+    cerrarAjSub('aj-sub-salud');
+    return;
+  }
+  _saludMostrarEstado();
+}
 
 function _saludRenderProg() {
   var cont = document.getElementById('salud-prog'); if (!cont) return;
@@ -1131,6 +1144,9 @@ function saludOtroLimpiar(xEl, wrapId, inputId) {
   var inp = document.getElementById(inputId);
   _saludOtroLimpiarInterno(el, wrap, inp);
 }
+
+/* Paso 0 — Intro/consentimiento (sin datos, sin Omitir) */
+function saludContinuar0() { _saludMostrarPaso(_SALUD_STEPS.indexOf('salud-paso-1')); }
 
 /* Paso 1 — Enfermedad diagnosticada (multi + Otro, con Omitir) */
 function saludContinuar1() {
