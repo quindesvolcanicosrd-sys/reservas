@@ -784,11 +784,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 </div>
 
-  <div id="modal-contacto-overlay" style="display:none;position:fixed;inset:0;z-index:9500;background:var(--overlay-dark);" onclick="cerrarContacto()"></div>
-  <div id="modal-contacto" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9550;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;padding:0 0 32px;flex-direction:column;transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);transform:translateY(100%);">
-    <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 4px;"></div>
-    <div style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:8px 16px 12px;border-bottom:1px solid var(--border-light);">Contáctanos</div>
-    <div style="padding:16px;">
+  <div id="modal-contacto-overlay" class="bsheet-overlay" style="z-index:9500;" onclick="cerrarContacto()"></div>
+  <div id="modal-contacto" class="bsheet" style="z-index:9550;">
+    <div class="bsheet-handle"></div>
+    <div class="bsheet-title">Contáctanos</div>
+    <div class="bsheet-body">
       <div class="aj-group">
         <a href="https://wa.me/593962773052" target="_blank" class="aj-dato-row">
           <div class="aj-dato-icon"><span class="material-symbols-outlined">forum</span></div>
@@ -1032,15 +1032,17 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 </div>
 
-<div id="sheet-gestionar-overlay" style="display:none;position:fixed;inset:0;z-index:9800;background:var(--overlay-dark);" onclick="cerrarSheetGestionar()"></div>
-<div id="sheet-gestionar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9801;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;padding:20px 20px 32px;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
+<div id="sheet-gestionar-overlay" class="bsheet-overlay" style="z-index:9800;" onclick="cerrarSheetGestionar()"></div>
+<div id="sheet-gestionar" class="bsheet" style="z-index:9801;">
+  <div class="bsheet-handle"></div>
 
   <!-- Estado 1: opciones -->
   <div id="sg-sheet-opciones">
-    <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:0 auto 18px;"></div>
-    <div id="sg-sheet-titulo" style="font-size:0.78rem;font-weight:700;color:var(--muted);text-align:center;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Gestionar reserva</div>
-    <div id="sg-sheet-subtitulo" style="font-size:0.92rem;font-weight:800;color:var(--text);text-align:center;margin-bottom:20px;"></div>
-    <div style="display:flex;flex-direction:column;gap:10px;">
+    <div class="bsheet-title">
+      <div id="sg-sheet-titulo">Gestionar reserva</div>
+      <div id="sg-sheet-subtitulo" style="font-size:0.92rem;font-weight:800;color:var(--text);text-transform:none;letter-spacing:normal;margin-top:4px;"></div>
+    </div>
+    <div class="bsheet-body" style="display:flex;flex-direction:column;gap:10px;">
       <button onclick="sheetIrReagendar()" style="width:100%;padding:14px;background:var(--surface-2);border:1.5px solid var(--border-light);border-radius:12px;color:var(--text);font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
         <span class="material-symbols-outlined" style="font-size:1.2rem;">calendar_month</span>Cambiar de fecha
       </button>
@@ -1053,19 +1055,20 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
   <!-- Estado 2: confirmar cancelación -->
   <div id="sg-sheet-cancelar" style="display:none;">
-    <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:0 auto 18px;"></div>
-    <div style="font-size:1rem;font-weight:800;color:var(--danger);text-align:center;margin-bottom:6px;">¿Cancelar esta reserva?</div>
-    <p style="font-size:0.8rem;color:var(--muted);text-align:center;margin-bottom:16px;line-height:1.5;">Al cancelar, el cupo quedará disponible para otras personas. Si cambias de idea, deberás hacer una nueva reserva y el cupo podría no estar disponible.</p>
-    <div style="background:var(--warning-bg);border:1px solid var(--amber);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:0.79rem;color:var(--amber-darker);line-height:1.6;display:flex;gap:8px;align-items:flex-start;">
-      <span class="material-symbols-outlined" style="font-size:15px;flex-shrink:0;margin-top:1px;color:var(--warning);">confirmation_number</span>
-      <span>Esta acción no se puede deshacer. Si usaste un cupón de descuento en esta reserva, <strong>se perderá</strong> al cancelar.</span>
+    <div class="bsheet-title" style="color:var(--danger);">¿Cancelar esta reserva?</div>
+    <div class="bsheet-body">
+      <p style="font-size:0.8rem;color:var(--muted);text-align:center;margin-bottom:16px;line-height:1.5;">Al cancelar, el cupo quedará disponible para otras personas. Si cambias de idea, deberás hacer una nueva reserva y el cupo podría no estar disponible.</p>
+      <div style="background:var(--warning-bg);border:1px solid var(--amber);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:0.79rem;color:var(--amber-darker);line-height:1.6;display:flex;gap:8px;align-items:flex-start;">
+        <span class="material-symbols-outlined" style="font-size:15px;flex-shrink:0;margin-top:1px;color:var(--warning);">confirmation_number</span>
+        <span>Esta acción no se puede deshacer. Si usaste un cupón de descuento en esta reserva, <strong>se perderá</strong> al cancelar.</span>
+      </div>
+      <div style="background:var(--warning-bg);border:1px solid var(--amber);border-radius:10px;padding:10px 12px;margin-bottom:20px;font-size:0.79rem;color:var(--amber-darker);line-height:1.6;display:flex;gap:8px;align-items:flex-start;">
+        <span class="material-symbols-outlined" style="font-size:15px;flex-shrink:0;margin-top:1px;color:var(--warning);">payments</span>
+        <span>Si ya realizaste el pago, <strong>es posible que no sea reembolsado</strong>. Contacta al equipo si necesitas más información.</span>
+      </div>
+      <button onclick="ejecutarCancelacion()" style="width:100%;padding:13px;background:var(--danger);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;">Sí, cancelar mi reserva</button>
+      <button onclick="sheetVolverOpciones()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:1px solid var(--border-light);border-radius:12px;font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;">Volver</button>
     </div>
-    <div style="background:var(--warning-bg);border:1px solid var(--amber);border-radius:10px;padding:10px 12px;margin-bottom:20px;font-size:0.79rem;color:var(--amber-darker);line-height:1.6;display:flex;gap:8px;align-items:flex-start;">
-      <span class="material-symbols-outlined" style="font-size:15px;flex-shrink:0;margin-top:1px;color:var(--warning);">payments</span>
-      <span>Si ya realizaste el pago, <strong>es posible que no sea reembolsado</strong>. Contacta al equipo si necesitas más información.</span>
-    </div>
-    <button onclick="ejecutarCancelacion()" style="width:100%;padding:13px;background:var(--danger);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;">Sí, cancelar mi reserva</button>
-    <button onclick="sheetVolverOpciones()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:1px solid var(--border-light);border-radius:12px;font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;">Volver</button>
   </div>
 </div>
 
@@ -1721,30 +1724,30 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 </div>
 
 <!-- BOTTOM SHEET: Prefijo (reutilizable) -->
-<div id="aj-sheet-prefijo-overlay" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);" onclick="ajCerrarSheetPrefijo()"></div>
-<div id="aj-sheet-prefijo" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9601;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;max-height:75vh;flex-direction:column;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
-  <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 4px;flex-shrink:0;"></div>
-  <div style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:8px 16px 12px;border-bottom:1px solid var(--border-light);flex-shrink:0;">Código de país</div>
+<div id="aj-sheet-prefijo-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="ajCerrarSheetPrefijo()"></div>
+<div id="aj-sheet-prefijo" class="bsheet bsheet-scroll" style="z-index:9601;max-height:75vh;">
+  <div class="bsheet-handle" style="flex-shrink:0;"></div>
+  <div class="bsheet-title" style="flex-shrink:0;">Código de país</div>
   <input type="text" id="aj-prefijo-search" placeholder="Buscar país o código..." style="margin:12px 16px;padding:10px 14px;background:var(--surface-2);border:1.5px solid var(--border-light);border-radius:10px;font-size:0.85rem;font-family:inherit;width:calc(100% - 32px);flex-shrink:0;" oninput="ajFiltrarPrefijos(this.value)">
   <div id="aj-prefijo-list" style="overflow-y:auto;flex:1;"></div>
 </div>
 
 <!-- BOTTOM SHEET: País emisor -->
-<div id="aj-sheet-pais-overlay" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);" onclick="ajCerrarSheetPais()"></div>
-<div id="aj-sheet-pais" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9601;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;max-height:80vh;flex-direction:column;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
-  <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 4px;flex-shrink:0;"></div>
-  <div style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:8px 16px 12px;border-bottom:1px solid var(--border-light);flex-shrink:0;">País</div>
+<div id="aj-sheet-pais-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="ajCerrarSheetPais()"></div>
+<div id="aj-sheet-pais" class="bsheet bsheet-scroll" style="z-index:9601;max-height:80vh;">
+  <div class="bsheet-handle" style="flex-shrink:0;"></div>
+  <div class="bsheet-title" style="flex-shrink:0;">País</div>
   <input type="text" id="aj-pais-search" placeholder="Buscar país..." style="margin:12px 16px;padding:10px 14px;background:var(--surface-2);border:1.5px solid var(--border-light);border-radius:10px;font-size:0.85rem;font-family:inherit;width:calc(100% - 32px);flex-shrink:0;" oninput="ajFiltrarPaises(this.value)">
   <div id="aj-pais-list" style="overflow-y:auto;flex:1;"></div>
 </div>
 
 <!-- BOTTOM SHEET: Texto genérico -->
-<div id="aj-sheet-texto-overlay" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);" onclick="ajCerrarSheetTexto()"></div>
-<div id="aj-sheet-texto" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9601;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;padding:0 0 32px;flex-direction:column;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
-  <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 4px;"></div>
-  <div id="aj-sheet-texto-titulo" style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:8px 16px 12px;border-bottom:1px solid var(--border-light);"></div>
+<div id="aj-sheet-texto-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="ajCerrarSheetTexto()"></div>
+<div id="aj-sheet-texto" class="bsheet" style="z-index:9601;">
+  <div class="bsheet-handle"></div>
+  <div id="aj-sheet-texto-titulo" class="bsheet-title"></div>
   <div id="aj-sheet-texto-subtitulo" style="display:none;font-size:0.78rem;color:var(--muted);text-align:center;line-height:1.4;padding:12px 16px 0;"></div>
-  <div style="padding:16px;">
+  <div class="bsheet-body">
     <input type="text" id="aj-sheet-texto-input" style="width:100%;padding:13px 16px;background:var(--surface-2);border:1.5px solid var(--brand);border-radius:12px;font-size:0.88rem;font-family:inherit;" placeholder="">
     <div class="aj-pills-row" id="aj-sheet-texto-pills" style="display:none;margin-top:0;"></div>
     <button class="btn btn-outline" id="aj-sheet-texto-btn-confirmar" onclick="ajConfirmarSheetTexto()" style="margin-top:10px;">Guardar</button>
@@ -1752,21 +1755,21 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 </div>
 
-<div id="aj-sheet-logout-overlay" style="display:none;position:fixed;inset:0;z-index:9800;background:var(--overlay-dark);" onclick="ajCerrarSheetLogout()"></div>
-<div id="aj-sheet-logout" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9801;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;padding:0 0 32px;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
-  <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 6px;"></div>
-  <div style="font-size:1rem;font-weight:800;color:var(--text);text-align:center;padding:10px 16px 16px;border-bottom:1px solid var(--border-light);">¿Cerrar sesión?</div>
-  <div style="padding:16px 16px 0;display:flex;flex-direction:column;gap:10px;">
+<div id="aj-sheet-logout-overlay" class="bsheet-overlay" style="z-index:9800;" onclick="ajCerrarSheetLogout()"></div>
+<div id="aj-sheet-logout" class="bsheet" style="z-index:9801;">
+  <div class="bsheet-handle"></div>
+  <div class="bsheet-title">¿Cerrar sesión?</div>
+  <div class="bsheet-body" style="display:flex;flex-direction:column;gap:10px;">
     <button class="btn btn-outline" onclick="confirmarCerrarSesion()" style="display:flex;align-items:center;justify-content:center;gap:8px;"><span class="material-symbols-outlined" style="font-size:1.1rem;">logout</span>Sí, cerrar sesión</button>
     <button onclick="ajCerrarSheetLogout()" style="width:100%;padding:12px;background:transparent;border:1px solid var(--border-light);border-radius:12px;color:var(--muted);font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;">Cancelar</button>
   </div>
 </div>
 
-<div id="bs-protec-overlay" style="display:none;position:fixed;inset:0;z-index:9700;background:var(--overlay-dark);" onclick="cancelarOtroProtec()"></div>
-<div id="bs-protec" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9701;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
-  <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 6px;"></div>
-  <div style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:6px 16px 14px;border-bottom:1px solid var(--border-light);">Especifica qué necesitas</div>
-  <div style="padding:16px 16px 28px;">
+<div id="bs-protec-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="cancelarOtroProtec()"></div>
+<div id="bs-protec" class="bsheet" style="z-index:9701;">
+  <div class="bsheet-handle"></div>
+  <div class="bsheet-title">Especifica qué necesitas</div>
+  <div class="bsheet-body">
     <p style="font-size:0.7rem;color:var(--muted);margin-top:0;margin-bottom:12px;line-height:1.4;">Toca todas las que necesites.</p>
     <div class="aj-pills-row" id="bs-protec-pills">
       <span class="aj-pill" data-val="Casco" onclick="toggleProtecItem(this)">Casco</span>
@@ -1780,11 +1783,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 </div>
 
-<div id="sheet-talla-overlay" style="display:none;position:fixed;inset:0;z-index:9700;background:var(--overlay-dark);" onclick="cerrarSheetTalla()"></div>
-<div id="sheet-talla" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9701;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
-  <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 6px;"></div>
-  <div id="sheet-talla-titulo" style="font-size:0.85rem;font-weight:800;color:var(--text);text-align:center;padding:6px 16px 4px;">Cambiar talla</div>
-  <div style="padding:0 16px 28px;">
+<div id="sheet-talla-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="cerrarSheetTalla()"></div>
+<div id="sheet-talla" class="bsheet" style="z-index:9701;">
+  <div class="bsheet-handle"></div>
+  <div id="sheet-talla-titulo" class="bsheet-title">Cambiar talla</div>
+  <div class="bsheet-body">
     <p style="font-size:0.7rem;color:var(--muted);margin-top:0;margin-bottom:12px;line-height:1.4;text-align:center;">Las tallas tachadas ya fueron reservadas por otra persona para esta fecha.</p>
     <div class="aj-pills-row" id="sheet-talla-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;"></div>
     <div class="error-msg" id="err-sheet-talla" style="margin-top:10px;"></div>
@@ -1795,11 +1798,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 </div>
 
 <!-- Sheet: Cambiar protecciones de una reserva (desde home) -->
-<div id="sheet-protec-reserva-overlay" style="display:none;position:fixed;inset:0;z-index:9700;background:var(--overlay-dark);" onclick="cerrarSheetProtecReserva()"></div>
-<div id="sheet-protec-reserva" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9701;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
-  <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 6px;"></div>
-  <div id="sheet-protec-reserva-titulo" style="font-size:0.85rem;font-weight:800;color:var(--text);text-align:center;padding:6px 16px 4px;">Cambiar protecciones</div>
-  <div style="padding:0 16px 28px;">
+<div id="sheet-protec-reserva-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="cerrarSheetProtecReserva()"></div>
+<div id="sheet-protec-reserva" class="bsheet" style="z-index:9701;">
+  <div class="bsheet-handle"></div>
+  <div id="sheet-protec-reserva-titulo" class="bsheet-title">Cambiar protecciones</div>
+  <div class="bsheet-body">
     <div class="equip-pills-protec" id="s3c-pills-reserva">
       <div class="equip-pill-protec" data-val="Sí" onclick="_selProtecReserva(this)">
         <span class="material-symbols-outlined equip-pico">shield</span>
@@ -1837,22 +1840,25 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 </div>
 
 <!-- AJ SHEET: Talla patines (ajustes perfil) -->
-<div id="aj-sheet-talla-aj-overlay" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);" onclick="ajCerrarSheetTallaAjustes()"></div>
-<div id="aj-sheet-talla-aj" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9700;background:var(--bg);border-radius:20px 20px 0 0;padding:20px 16px 32px;transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);transform:translateY(100%);">
-  <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px;"></div>
-  <h3 style="font-size:1.05rem;font-weight:800;margin-bottom:4px;">¿Qué talla necesitas?</h3>
-  <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;">Sin selección significa que no necesitas patines prestados.</p>
-  <div id="aj-talla-aj-grid" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;"></div>
-  <div class="error-msg" id="err-aj-talla"></div>
-  <button class="btn btn-outline" onclick="ajGuardarTallaAjustes(this)" style="width:100%;">Guardar</button>
-  <button onclick="ajCerrarSheetTallaAjustes()" style="width:100%;margin-top:10px;background:none;border:none;font-size:0.82rem;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;padding:8px;">Cancelar</button>
+<div id="aj-sheet-talla-aj-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="ajCerrarSheetTallaAjustes()"></div>
+<div id="aj-sheet-talla-aj" class="bsheet" style="z-index:9700;">
+  <div class="bsheet-handle"></div>
+  <div class="bsheet-title">¿Qué talla necesitas?</div>
+  <div class="bsheet-body">
+    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;">Sin selección significa que no necesitas patines prestados.</p>
+    <div id="aj-talla-aj-grid" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;"></div>
+    <div class="error-msg" id="err-aj-talla"></div>
+    <button class="btn btn-outline" onclick="ajGuardarTallaAjustes(this)" style="width:100%;">Guardar</button>
+    <button onclick="ajCerrarSheetTallaAjustes()" style="width:100%;margin-top:10px;background:none;border:none;font-size:0.82rem;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;padding:8px;">Cancelar</button>
+  </div>
 </div>
 
 <!-- AJ SHEET: Protecciones (ajustes perfil) -->
-<div id="aj-sheet-protec-aj-overlay" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);" onclick="ajCerrarSheetProtecAjustes()"></div>
-<div id="aj-sheet-protec-aj" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9700;background:var(--bg);border-radius:20px 20px 0 0;padding:20px 16px 32px;transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);transform:translateY(100%);">
-  <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px;"></div>
-  <h3 style="font-size:1.05rem;font-weight:800;margin-bottom:4px;">¿Necesitas protecciones?</h3>
+<div id="aj-sheet-protec-aj-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="ajCerrarSheetProtecAjustes()"></div>
+<div id="aj-sheet-protec-aj" class="bsheet" style="z-index:9700;">
+  <div class="bsheet-handle"></div>
+  <div class="bsheet-title">¿Necesitas protecciones?</div>
+  <div class="bsheet-body">
   <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;">Completas incluyen casco, rodilleras, coderas y muñequeras.</p>
   <div class="equip-pills-protec" id="aj-s3c-pills-aj">
     <div class="equip-pill-protec" data-val="Sí" onclick="ajSelProtecAjustes(this)">
@@ -1887,13 +1893,14 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div class="error-msg" id="err-aj-protec-aj" style="margin-top:8px;"></div>
   <button class="btn btn-outline" onclick="ajGuardarProtecAjustes(this)" style="width:100%;margin-top:16px;">Guardar</button>
   <button onclick="ajCerrarSheetProtecAjustes()" style="width:100%;margin-top:10px;background:none;border:none;font-size:0.82rem;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;padding:8px;">Cancelar</button>
+  </div>
 </div>
 
 <!-- BOTTOM SHEET: Places Autocomplete (ciudad / dirección) -->
-<div id="aj-sheet-places-overlay" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);" onclick="ajCerrarSheetPlaces()"></div>
-<div id="aj-sheet-places" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9601;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;flex-direction:column;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);">
-  <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 4px;flex-shrink:0;"></div>
-  <div id="aj-places-titulo" style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:8px 16px 12px;border-bottom:1px solid var(--border-light);flex-shrink:0;"></div>
+<div id="aj-sheet-places-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="ajCerrarSheetPlaces()"></div>
+<div id="aj-sheet-places" class="bsheet" style="z-index:9601;">
+  <div class="bsheet-handle" style="flex-shrink:0;"></div>
+  <div id="aj-places-titulo" class="bsheet-title" style="flex-shrink:0;"></div>
   <div style="padding:12px 16px;flex-shrink:0;">
     <input type="text" id="aj-places-input" placeholder="Escribe para buscar..." autocomplete="off"
       style="width:100%;padding:10px 14px;background:var(--surface-2);border:1.5px solid var(--border-light);border-radius:10px;font-size:0.88rem;font-family:inherit;color:var(--text);">
@@ -1906,11 +1913,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDSGkh2AyuM_-6ngo5-XMPi0NYrXZHEBl8&libraries=places&callback=_initMapsCallback&loading=async" defer></script>
 
 <!-- Sheet: Cambiar mi equipamiento (desde home) -->
-<div id="sheet-equip-home-overlay" style="display:none;position:fixed;inset:0;z-index:9500;background:var(--overlay-dark);" onclick="cerrarSheetEquipHome()"></div>
-<div id="sheet-equip-home" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9550;max-width:480px;margin:0 auto;background:var(--bg);border:1px solid var(--border-light);border-radius:20px 20px 0 0;padding:0 0 32px;flex-direction:column;transition:transform 0.35s cubic-bezier(0.16,1,0.3,1);transform:translateY(100%);">
-  <div style="width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:12px auto 4px;"></div>
-  <div style="font-size:0.72rem;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:1.5px;text-align:center;padding:8px 16px 12px;border-bottom:1px solid var(--border-light);">Cambiar mi equipamiento</div>
-  <div style="padding:16px;">
+<div id="sheet-equip-home-overlay" class="bsheet-overlay" style="z-index:9500;" onclick="cerrarSheetEquipHome()"></div>
+<div id="sheet-equip-home" class="bsheet" style="z-index:9550;">
+  <div class="bsheet-handle"></div>
+  <div class="bsheet-title">Cambiar mi equipamiento</div>
+  <div class="bsheet-body">
     <div class="aj-group">
       <div class="aj-dato-row" onclick="irTallaDesdeHomeEquip()">
         <div class="aj-dato-icon"><span class="material-symbols-outlined">roller_skating</span></div>

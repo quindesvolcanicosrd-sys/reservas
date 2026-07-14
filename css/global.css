@@ -101,3 +101,20 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
 .modal-info-footer .btn-outline      { flex: 1; font-size: 0.78rem; padding: 20px; }
 
 .otro-texto { width: 100%; }
+
+/* ─── BOTTOM SHEETS (chrome compartido: reservas + inscripcion) ──── */
+.bsheet-overlay { display: none; position: fixed; inset: 0; background: var(--overlay-dark); }
+.bsheet {
+  display: none; position: fixed; bottom: 0; left: 0; right: 0; max-width: 480px; margin: 0 auto;
+  background: var(--bg); border: 1px solid var(--border-light); border-radius: 20px 20px 0 0;
+  flex-direction: column; transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.16,1,0.3,1);
+}
+.bsheet-handle { width: 36px; height: 4px; background: var(--border-light); border-radius: 2px; margin: 12px auto 4px; flex-shrink: 0; }
+.bsheet-title {
+  font-size: 0.72rem; font-weight: 700; color: var(--brand); text-transform: uppercase; letter-spacing: 1.5px;
+  text-align: center; padding: 8px 16px 12px; border-bottom: 1px solid var(--border-light); flex-shrink: 0;
+}
+.bsheet-body { padding: 16px; }
+.bsheet-body--flush { padding: 0; }
+.bsheet.bsheet-scroll { max-height: 80vh; }
