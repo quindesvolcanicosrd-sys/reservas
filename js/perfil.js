@@ -506,14 +506,16 @@ function _ajCargarSub(id) {
   } else if (id === 'aj-sub-emerg') {
     _ajSetDatoVal('aj-em1nombre-val', d.emerg1Nombre, '—', true);
     _ajSetDatoVal('aj-em1relacion-val', d.emerg1Relacion, '—', true);
+    _ajSetPrefijo('aj-em1prefijo-display', null, d.emerg1Prefijo || '');
     _ajSetDatoVal('aj-em1tel-val', d.emerg1Telefono, '—', true);
-    var tieneEmerg2 = !!(d.emerg2Nombre || d.emerg2Relacion || d.emerg2Telefono);
+    var tieneEmerg2 = !!(d.emerg2Nombre || d.emerg2Relacion || d.emerg2Prefijo || d.emerg2Telefono);
     var wrap = document.getElementById('aj-emerg2-wrap');
     var btnAgregar = document.getElementById('aj-btn-agregar-em2');
     if (wrap) wrap.style.display = tieneEmerg2 ? 'block' : 'none';
     if (btnAgregar) btnAgregar.style.display = tieneEmerg2 ? 'none' : '';
     _ajSetDatoVal('aj-em2nombre-val', d.emerg2Nombre, '—', true);
     _ajSetDatoVal('aj-em2relacion-val', d.emerg2Relacion, '—', true);
+    _ajSetPrefijo('aj-em2prefijo-display', null, d.emerg2Prefijo || '');
     _ajSetDatoVal('aj-em2tel-val', d.emerg2Telefono, '—', true);
   } else if (id === 'aj-sub-salud') {
     _ajSetDatoVal('aj-enfermedad-val', d.enfermedad, '—', true);
@@ -668,7 +670,7 @@ var _AJ_PREFIJOS = [
   {pais:'Paraguay', bandera:'🇵🇾', cod:'+595'},
   {pais:'Bolivia', bandera:'🇧🇴', cod:'+591'},
 ];
-var _ajPrefijoTarget = { displayId: 'aj-prefijo-display', hiddenId: null };
+var _ajPrefijoTarget = { displayId: 'aj-prefijo-display', campo: 'prefijo' };
 
 function _ajSetPrefijo(displayId, hiddenId, valorGuardado) {
   var el = document.getElementById(displayId);
@@ -681,8 +683,8 @@ function _ajSetPrefijo(displayId, hiddenId, valorGuardado) {
   if (hiddenId) { var h = document.getElementById(hiddenId); if (h) h.value = valorGuardado; }
 }
 
-function ajAbrirSheetPrefijo() {
-  _ajPrefijoTarget = { displayId: 'aj-prefijo-display', hiddenId: null };
+function ajAbrirSheetPrefijo(displayId, campo) {
+  _ajPrefijoTarget = { displayId: displayId || 'aj-prefijo-display', campo: campo || 'prefijo' };
   _ajRenderPrefijos(_AJ_PREFIJOS);
   var ov = document.getElementById('aj-sheet-prefijo-overlay');
   var sh = document.getElementById('aj-sheet-prefijo');
@@ -725,14 +727,9 @@ function ajSelPrefijo(pais) {
   var val = p.bandera + ' ' + p.cod + ' (' + p.pais + ')';
   var disp = document.getElementById(_ajPrefijoTarget.displayId);
   if (disp) disp.textContent = p.bandera + ' ' + p.cod + ' ' + p.pais;
-  if (_ajPrefijoTarget.hiddenId) {
-    var h = document.getElementById(_ajPrefijoTarget.hiddenId); if (h) h.value = val;
-  } else {
-    // Sin hiddenId significa que no hay un formulario capturando este valor para
-    // guardarlo después con un botón — con el rediseño de filas ya no existe ese
-    // botón, así que autoguarda directo (mismo criterio que ajSelPais).
-    _ajGuardar({ prefijo: val });
-  }
+  var payload = {};
+  payload[_ajPrefijoTarget.campo] = val;
+  _ajGuardar(payload);
   ajCerrarSheetPrefijo();
 }
 
@@ -1333,8 +1330,9 @@ function ajEliminarEmerg2() {
   if (btn) btn.style.display = '';
   _ajSetDatoVal('aj-em2nombre-val', '', '—', true);
   _ajSetDatoVal('aj-em2relacion-val', '', '—', true);
+  _ajSetPrefijo('aj-em2prefijo-display', null, '');
   _ajSetDatoVal('aj-em2tel-val', '', '—', true);
-  _ajGuardar({ emerg2Nombre: '', emerg2Relacion: '', emerg2Telefono: '' });
+  _ajGuardar({ emerg2Nombre: '', emerg2Relacion: '', emerg2Prefijo: '', emerg2Telefono: '' });
 }
 
 function _ajGuardar(payload, btn, subId) {

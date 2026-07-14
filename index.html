@@ -1413,10 +1413,18 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
       </div>
 
-      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Teléfono de emergencia','','aj-em1tel-val','emerg1Telefono','Ej: 0962773052')">
+      <div class="aj-dato-row" onclick="ajAbrirSheetPrefijo('aj-em1prefijo-display','emerg1Prefijo')">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">language</span></div>
+        <div class="aj-dato-texts">
+          <div class="aj-dato-label">Prefijo</div>
+          <div class="aj-dato-val" id="aj-em1prefijo-display">—</div>
+        </div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </div>
+      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Número de teléfono','Entre 7 y 15 dígitos numéricos.','aj-em1tel-val','emerg1Telefono','Ej: 0962773052')">
         <div class="aj-dato-icon"><span class="material-symbols-outlined">call</span></div>
         <div class="aj-dato-texts">
-          <div class="aj-dato-label">Teléfono</div>
+          <div class="aj-dato-label">Número</div>
           <div class="aj-dato-val vacio" id="aj-em1tel-val">—</div>
         </div>
         <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
@@ -1448,10 +1456,18 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
         </div>
 
-        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Teléfono de emergencia','','aj-em2tel-val','emerg2Telefono','Ej: 0962773052')">
+        <div class="aj-dato-row" onclick="ajAbrirSheetPrefijo('aj-em2prefijo-display','emerg2Prefijo')">
+          <div class="aj-dato-icon"><span class="material-symbols-outlined">language</span></div>
+          <div class="aj-dato-texts">
+            <div class="aj-dato-label">Prefijo</div>
+            <div class="aj-dato-val" id="aj-em2prefijo-display">—</div>
+          </div>
+          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+        </div>
+        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Número de teléfono','Entre 7 y 15 dígitos numéricos.','aj-em2tel-val','emerg2Telefono','Ej: 0962773052')">
           <div class="aj-dato-icon"><span class="material-symbols-outlined">call</span></div>
           <div class="aj-dato-texts">
-            <div class="aj-dato-label">Teléfono</div>
+            <div class="aj-dato-label">Número</div>
             <div class="aj-dato-val vacio" id="aj-em2tel-val">—</div>
           </div>
           <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
