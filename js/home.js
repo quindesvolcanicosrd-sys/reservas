@@ -4,7 +4,7 @@ var _MESES_MAP = {enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agost
 var _MESES_DISPLAY = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 var _homeExpandido = false;
 
-function prepararHome(saltarFadeInicial) {
+function prepararHome(saltarFadeInicial, onListo) {
   if (!E.datos) {
     // Backstop: si llegamos acá sin datos de persona (token válido pero sin
     // registro asociado, error de red silencioso, o cualquier otro caller
@@ -67,11 +67,13 @@ if (navAvatar) {
     _renderHomeReservas();
     if (homeContent) { homeContent.style.opacity = '1'; void homeContent.offsetWidth; homeContent.style.animation = 'fadeIn 0.3s ease'; }
     if (!window._nuevxCargandoFechas) ocultarCargando();
+    if (onListo) onListo(); // ver refrescarMisReservas(): dispara justo cuando arranca el fadeIn real del contenido
   }, function() {
     homeContenidoFinalListo = true;
     _renderHomeReservas();
     if (homeContent) { homeContent.style.opacity = '1'; void homeContent.offsetWidth; homeContent.style.animation = 'fadeIn 0.3s ease'; }
     if (!window._nuevxCargandoFechas) ocultarCargando();
+    if (onListo) onListo();
   });
   var bannerCupon = document.getElementById('banner-cupon');
   if (bannerCupon) {
@@ -112,13 +114,21 @@ function refrescarMisReservas(callback, btn) {
   if (homeContent) { homeContent.style.transition = 'opacity 0.22s var(--ease-sheet)'; homeContent.style.opacity = '0'; }
   api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
     _todasReservas = reservas;
-    // prepararHome(true): saltarFadeInicial=true evita que repita su propio ciclo de
-    // fade/loader (ya hicimos el fade-out arriba, sin loader) — solo re-pide
+    // prepararHome(true, onListo): saltarFadeInicial=true evita que repita su propio
+    // ciclo de fade/loader (ya hicimos el fade-out arriba, sin loader) — solo re-pide
     // getFechasDisponibles (enriquece mapsUrl/horaFin/duración/descripción, que
-    // getReservasPersona no trae) y al resolver re-renderiza + hace fade-in.
-    prepararHome(true);
-    if (icon) icon.style.animation = '';
-    if (callback) callback();
+    // getReservasPersona no trae). `callback` (que en el touchend de #ptr-indicator
+    // dispara _ptrOcultarIndicador(), y el ícono girando del botón desktop) se
+    // dispara recién en `onListo`, en el mismo instante exacto en que prepararHome()
+    // arranca el fadeIn real del contenido — no apenas resuelve este primer fetch.
+    // Antes se llamaba acá mismo, mientras el segundo fetch (getFechasDisponibles,
+    // dentro de prepararHome) todavía podía tardar 1-2s+ más — el indicador/ícono se
+    // ocultaba/paraba con el contenedor todavía en opacity:0, una ventana sin ningún
+    // loader visible (ver "Cambios recientes").
+    prepararHome(true, function() {
+      if (icon) icon.style.animation = '';
+      if (callback) callback();
+    });
   }, function() {
     if (homeContent) homeContent.style.opacity = '1'; // revierte el fade-out: no hay contenido nuevo que mostrar
     _renderHomeReservas();
