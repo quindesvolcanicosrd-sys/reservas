@@ -320,6 +320,21 @@ function _sincronizarNavHome(forzarVisible) {
       if (homeNav) homeNavSpacer.style.height = (homeNav.offsetHeight + 8) + 'px';
     }
   }
+  // Bug real corregido (ver MANIFEST, "Cambios recientes" — nav duplicado al
+  // volver a Home tras la primera reserva): forzarVisible fuerza #home-nav
+  // ("MIS RESERVAS", estado "con reservas") a mostrarse de inmediato, antes
+  // de tener datos reales — pero #home-empty-topbar (avatar + "¿Dudas?
+  // Contáctanos", estado "sin reservas") seguía sin tocar acá, así que si
+  // venía visible de antes (usuario en su primera reserva) quedaba
+  // superpuesto con #home-nav hasta que _renderHomeReservas() lo resolvía
+  // recién al terminar el fetch de irHomeDesdeExito(). Como forzarVisible
+  // solo se usa cuando el caller YA sabe que hay al menos una reserva activa
+  // (ver esa nota en irHomeDesdeExito()), se oculta acá mismo, en el mismo
+  // instante que se fuerza #home-nav — nunca ambos headers a la vez.
+  if (forzarVisible) {
+    var emptyTopbarForzado = document.getElementById('home-empty-topbar');
+    if (emptyTopbarForzado) emptyTopbarForzado.style.display = 'none';
+  }
   return activas;
 }
 
