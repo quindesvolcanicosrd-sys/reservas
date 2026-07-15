@@ -66,13 +66,13 @@ if (navAvatar) {
     homeContenidoFinalListo = true;
     _renderHomeReservas();
     if (homeContent) { homeContent.style.opacity = '1'; void homeContent.offsetWidth; homeContent.style.animation = 'fadeIn 0.3s ease'; }
-    if (!window._nuevxCargandoFechas) ocultarCargando();
+    if (!window._cargandoFechasReserva) ocultarCargando();
     if (onListo) onListo(); // ver refrescarMisReservas(): dispara justo cuando arranca el fadeIn real del contenido
   }, function() {
     homeContenidoFinalListo = true;
     _renderHomeReservas();
     if (homeContent) { homeContent.style.opacity = '1'; void homeContent.offsetWidth; homeContent.style.animation = 'fadeIn 0.3s ease'; }
-    if (!window._nuevxCargandoFechas) ocultarCargando();
+    if (!window._cargandoFechasReserva) ocultarCargando();
     if (onListo) onListo();
   });
   var bannerCupon = document.getElementById('banner-cupon');

@@ -259,8 +259,12 @@ window.onload = function() {
     var _tallaNuevx   = _urlParams.get('talla')   || '';
     _tokenNuevx = _urlParams.get('token') || '';
     window._pendingNuevx = { patines: _patinesNuevx, protec: _protecNuevx, talla: _tallaNuevx };
-    window._nuevxCargandoFechas = true;
-    setTimeout(function() { window._nuevxCargandoFechas = false; }, 15000);
+    // _cargandoFechasReserva (ver esa nota en cargarFechas(), js/reservas.js):
+    // protege también la cadena completa previa a cargarFechas() en este
+    // flujo (loginGoogle→getReservasPersona→...), que cargarFechas() por sí
+    // sola no puede cubrir porque todavía no arrancó.
+    window._cargandoFechasReserva = true;
+    setTimeout(function() { window._cargandoFechasReserva = false; }, 15000);
     history.replaceState({}, '', location.pathname);
   }
 

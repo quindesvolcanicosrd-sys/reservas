@@ -404,6 +404,18 @@ function _s4TotalOcultarFijo(box) {
 
 function cargarFechas() {
   mostrarCargando('Verificando próximas fechas...');
+  // Bug real de regresión encontrado y corregido (ver MANIFEST, "Cambios
+  // recientes"): mientras este fetch está en curso, el fetch INDEPENDIENTE de
+  // prepararHome() (js/home.js, para poblar las cards de Home) puede resolver
+  // primero y llamar a su propio ocultarCargando() sin saber que este overlay
+  // ya está siendo usado para otra cosa — lo oculta de golpe, revelando Home
+  // de nuevo durante el resto de la espera hasta que este fetch finalmente
+  // resuelve y llama a ir('s4'). _cargandoFechasReserva (reusada del flujo
+  // ?nuevx=1, que ya la seteaba para su propia cadena — ver auth.js) le avisa
+  // a prepararHome() que no toque el overlay mientras tanto; se resetea a
+  // `false` en los 2 callbacks de abajo, sea cual sea el caller que la puso
+  // en `true`.
+  window._cargandoFechasReserva = true;
   var d = E.datos; var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
   var necesitaProtec = d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no';
   function esTallaAgotada(f) {
@@ -515,7 +527,7 @@ function cargarFechas() {
     // if (agotadasEquip.length > 0) {
     //   setTimeout(function() { mostrarModalEquip(agotadasEquip); }, 300);
     // }
-    window._nuevxCargandoFechas = false;
+    window._cargandoFechasReserva = false;
     ocultarCargando(); ir('s4');
     if (puedeMensual) {
       setTimeout(function() { _updateTpSlider(false); }, 50);
@@ -525,7 +537,7 @@ function cargarFechas() {
         mostrarModalInfoReserva(function(){});
       }
     }, 400);
-  }, function(e) { window._nuevxCargandoFechas = false; ocultarCargando(); ir('s-home'); mostrarToast(e.message || 'No se pudieron cargar las fechas disponibles.', 'error'); });
+  }, function(e) { window._cargandoFechasReserva = false; ocultarCargando(); ir('s-home'); mostrarToast(e.message || 'No se pudieron cargar las fechas disponibles.', 'error'); });
 }
 
 function toggleFecha(el, fecha) {
