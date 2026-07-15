@@ -1,9 +1,26 @@
 @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-body { font-family: 'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); overscroll-behavior-y: contain; }
+body {
+  font-family: 'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); overscroll-behavior-y: contain;
+  -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
+  -webkit-touch-callout: none;
+}
 html { overscroll-behavior-y: contain; }
 button, input, select, textarea { font-family: inherit; }
+
+/* Selección de texto deshabilitada globalmente (arriba, en body) para que la
+   app se sienta nativa y no una página web seleccionable — excepciones
+   puntuales donde el usuario SÍ necesita seleccionar/copiar texto: los
+   campos de formulario reales (edición normal) y los datos de transferencia
+   bancaria (.pago-valor, ver "Cambios recientes" — no hay botón "copiar" ni
+   Clipboard API en la app, la única forma de copiarlos hoy es seleccionando
+   el texto a mano). */
+input, textarea,
+.pago-valor {
+  -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; user-select: text;
+  -webkit-touch-callout: default;
+}
 
 .error-msg {
   background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-bdr);
