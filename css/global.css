@@ -174,3 +174,10 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
 .bsheet-body { padding: 16px; }
 .bsheet-body--flush { padding: 0; }
 .bsheet.bsheet-scroll { max-height: 80vh; }
+/* Arrastre real de la manija (shared/bsheet.js, touchstart/touchmove/touchend
+   en .bsheet-handle) — mismo criterio que .ptr-indicator.ptr-sin-transicion
+   (js/home.js): quita la transition mientras el dedo mueve el sheet en
+   tiempo real (sin lag), para no competir con el `transform` que el JS setea
+   en cada touchmove; se reactiva al soltar (cierre real o snap-back), ambos
+   ya animados por la transition normal de .bsheet declarada arriba. */
+.bsheet.bsheet-sin-transicion { transition: none; }
