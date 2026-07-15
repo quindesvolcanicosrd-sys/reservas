@@ -107,7 +107,8 @@ function ir(id, desdeHistorial, sinTrampa) {
   // `desdeHistorial` ya indica si esto viene de un gesto de "atrás"
   // (popstate) — se reusa tal cual como el parámetro `atras` de
   // axisTransicion(), sin necesitar una señal de dirección aparte.
-  if (actual && actual !== nueva) {
+  var animado = !!(actual && actual !== nueva);
+  if (animado) {
     axisTransicion(actual, nueva, !!desdeHistorial,
       function(el) { el.classList.add('activa'); },
       function(el) { el.classList.remove('activa'); });
@@ -141,47 +142,72 @@ function ir(id, desdeHistorial, sinTrampa) {
     _resetChkPago();
   }
 
+  // Chrome de la pantalla (top-bar, footer fijo, home-nav, paso-dots) — ver
+  // "Cambios recientes", bug real de superposición desprolija encontrado al
+  // auditar la propagación del shared axis X a ir(). #top-bar es
+  // position:sticky (NO fixed): vive en flujo normal dentro de .contenedor,
+  // justo antes de todas las .pantalla. Togglear su display de golpe (como
+  // se hacía antes) le cambiaba el alto disponible a mitad de la transición
+  // — mientras la saliente (.axis-leave) sigue en flujo normal durante los
+  // 320ms (a diferencia de la entrante, .axis-enter, position:absolute,
+  // inmune a esto), aparecer/desaparecer #top-bar la empujaba verticalmente,
+  // desalineándola de la entrante y mezclando el contenido de ambas en
+  // pantalla. Fix: si hubo transición animada, este bloque completo
+  // (top-bar + footer + home-nav + paso-dots) se aplica recién cuando
+  // termina — durante el cruce la chrome queda estable en el estado de la
+  // pantalla saliente, sin moverle el piso a nadie. Sin animación (primera
+  // navegación de la sesión, o misma pantalla) se aplica de inmediato, igual
+  // que siempre.
+  var actualizarChrome = function() {
     var topBar = document.getElementById('top-bar'); var topBtn = document.getElementById('top-bar-btn'); var topTitulo = document.getElementById('top-bar-titulo');
-  var cfg = TOP_BAR_CONFIG[id];
-  if (cfg) {
-    topBar.style.display = 'flex'; topTitulo.textContent = typeof cfg.titulo === 'function' ? cfg.titulo() : cfg.titulo;
-    var _volverTarget = typeof cfg.volver === 'function' ? cfg.volver() : cfg.volver;
-    if (_volverTarget) { topBtn.style.display = ''; topBtn.onclick = function() { volver(_volverTarget); }; } else { topBtn.style.display = 'none'; }
-  } else { topBar.style.display = 'none'; }
+    var cfg = TOP_BAR_CONFIG[id];
+    if (cfg) {
+      topBar.style.display = 'flex'; topTitulo.textContent = typeof cfg.titulo === 'function' ? cfg.titulo() : cfg.titulo;
+      var _volverTarget = typeof cfg.volver === 'function' ? cfg.volver() : cfg.volver;
+      if (_volverTarget) { topBtn.style.display = ''; topBtn.onclick = function() { volver(_volverTarget); }; } else { topBtn.style.display = 'none'; }
+    } else { topBar.style.display = 'none'; }
 
-  // Los .cta-footer-fixed viven como hijos directos de <body> (fuera de .pantalla/
-  // .card, ver "Cambios recientes") para no quedar atrapados por el containing
-  // block que .pantalla.activa establece mientras corre su animación de entrada —
-  // acá se oculta el que estuviera visible y se muestra únicamente el que
-  // corresponde a la pantalla nueva (si existe uno para ella).
-  document.querySelectorAll('.cta-footer-fixed').forEach(function(f) { f.style.display = 'none'; });
-  var ctaFooter = document.getElementById('cta-footer-' + id);
-  if (ctaFooter) ctaFooter.style.display = 'block';
+    // Los .cta-footer-fixed viven como hijos directos de <body> (fuera de .pantalla/
+    // .card, ver "Cambios recientes") para no quedar atrapados por el containing
+    // block que .pantalla.activa establece mientras corre su transición de entrada
+    // (shared axis X, ver .axis-enter en css/global.css) y "atrape" al footer
+    // fuera del viewport real. js/ui.js (ir()) muestra solo el que corresponde
+    // a la pantalla activa.
+    document.querySelectorAll('.cta-footer-fixed').forEach(function(f) { f.style.display = 'none'; });
+    var ctaFooter = document.getElementById('cta-footer-' + id);
+    if (ctaFooter) ctaFooter.style.display = 'block';
 
-  var homeNav = document.getElementById('home-nav');
-  if (homeNav) {
-    if (id !== 's-home') {
-      homeNav.style.display = 'none';
-    } else {
-      var _tieneActivas = (typeof _todasReservas !== 'undefined' && _todasReservas && _todasReservas.some(function(r) {
-        return r.estado !== 'Cancelada' && r.estado !== 'Crédito usado';
-      }));
-      homeNav.style.display = _tieneActivas ? 'flex' : 'none';
+    var homeNav = document.getElementById('home-nav');
+    if (homeNav) {
+      if (id !== 's-home') {
+        homeNav.style.display = 'none';
+      } else {
+        var _tieneActivas = (typeof _todasReservas !== 'undefined' && _todasReservas && _todasReservas.some(function(r) {
+          return r.estado !== 'Cancelada' && r.estado !== 'Crédito usado';
+        }));
+        homeNav.style.display = _tieneActivas ? 'flex' : 'none';
+      }
     }
-  }
 
-  var sinPasos = ['s1','s-home','s-misreservas','s-carga','s6','s-datos','s-gestionar'].concat(ADMIN_PANTALLAS);
-  if (E.reagendando) sinPasos = sinPasos.concat(['s4','s-carga-conf']);
-  var dotContainer = document.querySelector('.paso-indicator');
-  if (sinPasos.indexOf(id) !== -1) { if (dotContainer) dotContainer.style.display = 'none'; return; }
-  if (dotContainer) {
-    dotContainer.style.display = 'flex';
-    var pasos = { 's2':1,'s3a':1,'s3b':1,'s3c':1,'s-carga-fechas':2,'s4':2,'s-pago':3,'s-carga-conf':3 };
-    var p = pasos[id] || 1;
-    for (var i = 1; i <= 4; i++) {
-      var d = document.getElementById('dot'+i);
-      if (d) d.className = 'paso-dot' + (i < p ? ' completado' : i === p ? ' activo' : '');
+    var sinPasos = ['s1','s-home','s-misreservas','s-carga','s6','s-datos','s-gestionar'].concat(ADMIN_PANTALLAS);
+    if (E.reagendando) sinPasos = sinPasos.concat(['s4','s-carga-conf']);
+    var dotContainer = document.querySelector('.paso-indicator');
+    if (sinPasos.indexOf(id) !== -1) { if (dotContainer) dotContainer.style.display = 'none'; return; }
+    if (dotContainer) {
+      dotContainer.style.display = 'flex';
+      var pasos = { 's2':1,'s3a':1,'s3b':1,'s3c':1,'s-carga-fechas':2,'s4':2,'s-pago':3,'s-carga-conf':3 };
+      var p = pasos[id] || 1;
+      for (var i = 1; i <= 4; i++) {
+        var d = document.getElementById('dot'+i);
+        if (d) d.className = 'paso-dot' + (i < p ? ' completado' : i === p ? ' activo' : '');
+      }
     }
+  };
+
+  if (animado) {
+    setTimeout(actualizarChrome, 320);
+  } else {
+    actualizarChrome();
   }
 }
 function volver(id) { ir(id); }

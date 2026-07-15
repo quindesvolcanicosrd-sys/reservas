@@ -19,6 +19,20 @@
    mostrar(el)/ocultar(el): callbacks del caller para el toggle de clase real
    (ej. .activa/.activo) — esta función no asume ningún nombre de clase fijo. */
 function axisTransicion(saliente, entrante, atras, mostrar, ocultar) {
+  // .axis-enter usa inset:0 (css/global.css) — ancla al borde de padding del
+  // contenedor posicionado (.contenedor/.page-wrap), ignorando cualquier
+  // hermano en flujo normal ANTES de las .pantalla (ej. #top-bar, sticky,
+  // con altura variable según la pantalla). La saliente (.axis-leave, sigue
+  // en flujo normal) sí respeta esa altura — así que sin este ajuste, la
+  // entrante arrancaba más arriba que la saliente (tapada parcialmente por
+  // #top-bar, con z-index más alto) en vez de alinearse con ella, mezclando
+  // visualmente el cruce. Fix: se lee la posición real de la saliente ANTES
+  // de tocar el DOM (offsetTop, relativo al mismo ancestro posicionado que
+  // usa .axis-enter) y se la aplica como `top` inline a la entrante — si no
+  // hay saliente (primera navegación), se deja el `top:0` por default de la
+  // clase. Ver "Cambios recientes" — auditoría de la propagación del shared
+  // axis X a ir().
+  if (saliente) entrante.style.top = saliente.offsetTop + 'px';
   if (mostrar) mostrar(entrante);
   entrante.classList.add('axis-enter');
   if (saliente) saliente.classList.add('axis-leave');
