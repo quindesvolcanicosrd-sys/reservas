@@ -344,14 +344,30 @@ function _renderHomeReservas() {
     if (avatarEl) avatarEl.innerHTML = avatarHtml;
   }
 
+  // "Cambiar mi equipamiento" del footer fijo (#cta-footer-s-home, index.html,
+  // compartido con el estado "con reservas" — no hay un footer distinto por
+  // estado) se oculta solo en el empty-state, ya que ahora vive también como
+  // pill dentro de .empty-state-links (ver "Cambios recientes" — rediseño del
+  // empty-state). Con reservas activas se restaura tal cual estaba (sin
+  // cambios en ese estado).
+  var btnEquipFooter = document.querySelector('#cta-footer-s-home .btn-equip-home');
+  if (btnEquipFooter) btnEquipFooter.style.display = activas.length === 0 ? 'none' : '';
+
   var html = activas.length === 0
     ? '<div class="empty-state-body">' +
-        '<div class="empty-state-icon"><span class="material-symbols-outlined">calendar_month</span></div>' +
+        // Todo el recuadro es clickeable (irNuevaReserva(), mismo handler que
+        // el botón "Hacer una reserva" del footer, sin duplicar lógica) — el
+        // badge "+" (.empty-state-icon-badge, css/home.css) es decorativo.
+        '<div class="empty-state-icon" onclick="irNuevaReserva()">' +
+          '<span class="material-symbols-outlined">calendar_month</span>' +
+          '<span class="empty-state-icon-badge"><span class="material-symbols-outlined">add</span></span>' +
+        '</div>' +
         '<div class="empty-state-saludo">¡Hola, ' + (E.nombre || '') + '!</div>' +
-        '<div class="empty-state-msg">Todavía no tienes ninguna reserva.<br>¿Te animas a hacer una?</div>' +
+        '<div class="empty-state-msg">Todavía no tienes ninguna reserva.</div>' +
         '<div class="empty-state-links">' +
           '<span class="aj-pill aj-pill-link" onclick="irMisReservas()">Ver historial de reservas</span>' +
           '<span class="aj-pill aj-pill-link" onclick="irEditarDatos()">Editar mi perfil</span>' +
+          '<span class="aj-pill aj-pill-link" onclick="abrirSheetEquipHome()">Cambiar mi equipamiento</span>' +
         '</div>' +
       '</div>'
     : activas.map(function(r) { return _renderCardHome(r, hoy); }).join('');

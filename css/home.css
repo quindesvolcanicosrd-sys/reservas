@@ -165,8 +165,22 @@
 .empty-state-contacto:hover { border-color:var(--brand); color:var(--brand); }
 .empty-state-contacto .material-symbols-outlined { font-size:14px; }
 .empty-state-body { min-height:60vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 12px 32px; }
-.empty-state-icon { width:96px; height:96px; border-radius:28px; background:var(--surface-2); border:1.5px solid var(--border-light); display:flex; align-items:center; justify-content:center; margin:0 auto 22px; }
+/* Clickeable (ver "Cambios recientes" — rediseño del empty-state): dispara
+   irNuevaReserva(), mismo handler que ya usa el botón "Hacer una reserva" del
+   footer — el ícono deja de ser puramente decorativo. position:relative para
+   anclar .empty-state-icon-badge (el "+" circular, ver esa regla abajo). */
+.empty-state-icon { width:96px; height:96px; border-radius:28px; background:var(--surface-2); border:1.5px solid var(--border-light); display:flex; align-items:center; justify-content:center; margin:0 auto 22px; position:relative; cursor:pointer; transition:background 0.15s, border-color 0.15s; }
+.empty-state-icon:hover { background:var(--brand-20); border-color:var(--brand); }
 .empty-state-icon .material-symbols-outlined { font-size:3rem; color:var(--brand); }
+/* Badge "+" tipo FAB, superpuesto sobre el borde inferior del recuadro (mitad
+   adentro/mitad afuera, patrón estándar de badge) — puramente visual, el
+   área clickeable sigue siendo todo .empty-state-icon (pointer-events:none
+   para que el click siempre resuelva sobre el padre). border:3px solid
+   var(--bg) simula el "corte"/halo típico de un FAB superpuesto sobre otro
+   fondo, tanto contra --surface-2 (mitad de arriba) como contra --bg (mitad
+   de abajo, fuera del recuadro). */
+.empty-state-icon-badge { position:absolute; left:50%; bottom:0; transform:translate(-50%, 50%); width:28px; height:28px; border-radius:50%; background:var(--brand); border:3px solid var(--bg); color:var(--white); display:flex; align-items:center; justify-content:center; pointer-events:none; }
+.empty-state-icon-badge .material-symbols-outlined { font-size:16px; color:var(--white); font-weight:700; }
 .empty-state-saludo { font-size:1rem; font-weight:800; color:var(--text); margin-bottom:6px; }
 .empty-state-msg { font-size:0.82rem; color:var(--muted); line-height:1.65; margin-bottom:28px; }
 /* "Ver historial de reservas"/"Editar mi perfil" pasaron de links de texto
