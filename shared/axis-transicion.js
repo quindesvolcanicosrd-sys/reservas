@@ -112,7 +112,23 @@ function axisTransicion(saliente, entrante, atras, mostrar, ocultar) {
    el centrado de .cta-footer-fixed) — nunca se pisa, siempre se antepone.
    cleanup(vigente) recibe un helper `vigente(el)` — mismo guard de epoch que
    axisTransicion() (ver esa nota) para navegación solapada: los callers lo
-   usan para no tocar un elemento que una llamada más nueva ya reclamó. */
+   usan para no tocar un elemento que una llamada más nueva ya reclamó.
+
+   El fade se aplica a los HIJOS DIRECTOS de saliente/entrante, nunca al
+   contenedor — ver MANIFEST, "Cambios recientes" (bug real de bleed-through
+   encontrado con Playwright: #top-bar/.cta-footer-fixed tienen background
+   sólido propio, pero `opacity` en el contenedor vuelve TAMBIÉN
+   transparente ese fondo durante el fade, no solo el texto — con solo
+   16px de desplazamiento, hay una ventana de varios frames donde el
+   contenedor es un "vidrio esmerilado" en vez de un panel sólido, dejando
+   ver lo que esté exactamente detrás en esa franja si la pantalla
+   entrante tiene contenido ahí — ej. la fila "Notificaciones" de
+   `s-datos` asomando detrás/encima del botón "Hacer una reserva" de
+   `s-home` mientras este se desvanecía). El contenedor (fondo sólido) solo
+   se traslada — su opacity nunca se toca, queda como un escudo opaco
+   constante — y son sus hijos (botones/texto/título) los que hacen el
+   fade visual, logrando el mismo efecto percibido sin nunca volver
+   translúcido el fondo. */
 var _axisBarEpoch = 0;
 function axisBarraVertical(saliente, entrante, atras, invertido, cleanup, baseTransform) {
   var prefix = baseTransform ? baseTransform + ' ' : '';
@@ -123,28 +139,40 @@ function axisBarraVertical(saliente, entrante, atras, invertido, cleanup, baseTr
   if (saliente) saliente._axisBarEpoch = epoch;
   if (entrante) entrante._axisBarEpoch = epoch;
 
+  function hijos(el) { return el ? Array.prototype.slice.call(el.children) : []; }
+  var hijosSaliente = hijos(saliente), hijosEntrante = hijos(entrante);
+
   if (entrante) {
     entrante.style.transition = 'none';
     entrante.style.transform = prefix + 'translateY(' + offset + 'px)';
-    entrante.style.opacity = '0';
+    hijosEntrante.forEach(function(h) { h.style.transition = 'none'; h.style.opacity = '0'; });
   }
   if (saliente) {
     saliente.style.transition = 'none';
     saliente.style.transform = prefix + 'translateY(0px)';
-    saliente.style.opacity = '1';
+    hijosSaliente.forEach(function(h) { h.style.transition = 'none'; h.style.opacity = '1'; });
   }
 
   // Doble rAF, mismo motivo que axisTransicion(): pintar el "desde" antes de
   // animar al destino.
   requestAnimationFrame(function() {
     requestAnimationFrame(function() {
-      var t = 'transform 0.32s var(--ease-axis), opacity 0.32s var(--ease-axis)';
-      if (entrante) { entrante.style.transition = t; entrante.style.transform = prefix + 'translateY(0px)'; entrante.style.opacity = '1'; }
-      if (saliente) { saliente.style.transition = t; saliente.style.transform = prefix + 'translateY(' + offset + 'px)'; saliente.style.opacity = '0'; }
+      var tTransform = 'transform 0.32s var(--ease-axis)';
+      var tOpacity = 'opacity 0.32s var(--ease-axis)';
+      if (entrante) {
+        entrante.style.transition = tTransform; entrante.style.transform = prefix + 'translateY(0px)';
+        hijosEntrante.forEach(function(h) { h.style.transition = tOpacity; h.style.opacity = '1'; });
+      }
+      if (saliente) {
+        saliente.style.transition = tTransform; saliente.style.transform = prefix + 'translateY(' + offset + 'px)';
+        hijosSaliente.forEach(function(h) { h.style.transition = tOpacity; h.style.opacity = '0'; });
+      }
     });
   });
 
   setTimeout(function() {
+    hijosEntrante.forEach(function(h) { h.style.opacity = ''; h.style.transition = ''; });
+    hijosSaliente.forEach(function(h) { h.style.opacity = ''; h.style.transition = ''; });
     if (cleanup) cleanup(function(el) { return !!el && el._axisBarEpoch === epoch; });
   }, 320);
 }
@@ -200,7 +228,7 @@ function axisBarraTitulo(barEl, aplicarContenidoNuevo, atras) {
   if (vaAVerse) barEl.style.animation = 'none';
   axisBarraVertical(ghost, vaAVerse ? barEl : null, atras, false, function(vigente) {
     if (ghost) ghost.remove(); // el ghost es siempre nuevo, nunca lo reclama otra llamada
-    if (vaAVerse && vigente(barEl)) { barEl.style.transform = ''; barEl.style.opacity = ''; barEl.style.transition = ''; }
+    if (vaAVerse && vigente(barEl)) { barEl.style.transform = ''; barEl.style.transition = ''; }
   });
 }
 
@@ -220,7 +248,7 @@ function axisFooterFijo(saliente, entrante, atras) {
   }
   if (entrante) entrante.style.display = 'block';
   axisBarraVertical(saliente, entrante, atras, true, function(vigente) {
-    if (saliente && vigente(saliente)) { saliente.style.display = 'none'; saliente.style.transform = ''; saliente.style.opacity = ''; saliente.style.transition = ''; }
-    if (entrante && vigente(entrante)) { entrante.style.transform = ''; entrante.style.opacity = ''; entrante.style.transition = ''; }
+    if (saliente && vigente(saliente)) { saliente.style.display = 'none'; saliente.style.transform = ''; saliente.style.transition = ''; }
+    if (entrante && vigente(entrante)) { entrante.style.transform = ''; entrante.style.transition = ''; }
   }, 'translateX(-50%)');
 }
