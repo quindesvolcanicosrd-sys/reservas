@@ -434,13 +434,32 @@ function _formatarFechaRelativa(fechaPura) {
   if (fd < hoy) fd.setFullYear(hoy.getFullYear() + 1);
   var diff = Math.round((fd - hoy) / 86400000);
   if (diff === 0) return 'Hoy';
+  // "Mañana"/"Pasado mañana" cuentan días hacia adelante, no nombran un día
+  // de la semana — nunca son ambiguos cruzando el límite de semana (a
+  // diferencia de "Este X" más abajo), así que van antes del corte y sin
+  // excepción.
   if (diff === 1) return 'Mañana';
   if (diff === 2) return 'Pasado mañana';
+  // Bug real corregido (ver MANIFEST, "Cambios recientes"): "Este X"/"X que
+  // viene" usaban una ventana fija de días (3-6 / 7-13) sin importar en qué
+  // día de la semana caía "hoy" — con "hoy" a mitad de semana, esa ventana se
+  // corría hacia la semana SIGUIENTE (ej. "Este Lunes" terminaba señalando
+  // el lunes de la semana que viene, no el de esta). Único criterio real de
+  // "semana actual" pedido: hoy hasta el domingo que viene inclusive — si
+  // hoy ya es domingo, la semana actual termina hoy mismo (0 días más). Se
+  // quita "X que viene" por completo: cualquier fecha más allá de ese corte
+  // muestra la fecha real tal cual vino del backend ("Sábado 12 de Enero",
+  // ya en el formato día-de-semana + día + mes pedido) en vez de una
+  // etiqueta relativa — salvo que caiga en otro año que el actual, en cuyo
+  // caso se le suma " de <año>" (el string del backend nunca trae año
+  // propio, así que sin esto una fecha de enero del año que viene se vería
+  // idéntica a una de este enero).
+  var diasHastaFinDeSemana = (7 - hoy.getDay()) % 7;
+  if (diff > diasHastaFinDeSemana) {
+    return fd.getFullYear() !== hoy.getFullYear() ? fechaPura + ' de ' + fd.getFullYear() : fechaPura;
+  }
   var dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-  var dn = dias[fd.getDay()];
-  if (diff >= 3 && diff <= 6) return 'Este ' + dn;
-  if (diff >= 7 && diff <= 13) return dn + ' que viene';
-  return fechaPura;
+  return 'Este ' + dias[fd.getDay()];
 }
 
 function reagendarDesdeCard(fecha, btn) {
