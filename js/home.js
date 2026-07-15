@@ -131,11 +131,15 @@ window.addEventListener('touchstart', function(e) {
 
 window.addEventListener('touchmove', function(e) {
   if (!_ptrArrastrando) return;
-  var delta = e.touches[0].clientY - _ptrStartY;
-  if (delta <= 0) { _ptrProgreso = 0; _ptrOcultarIndicador(); return; }
   var ind = document.getElementById('ptr-indicator');
   var anillo = document.getElementById('ptr-spinner');
   if (!ind || !anillo) return;
+  // Clamp en vez de resetear+ocultar con transición: el dedo humano no es perfectamente
+  // monótono (jitter de unos pocos px hacia arriba durante un arrastre neto hacia abajo),
+  // y volver a activar la transición acá cortaba el seguimiento 1:1 con parpadeos (ver
+  // diagnóstico pull-to-refresh en MANIFEST). Con el clamp el indicador solo se oculta
+  // de verdad al soltar el dedo (touchend), nunca a mitad de gesto.
+  var delta = Math.max(0, e.touches[0].clientY - _ptrStartY);
   var progreso = Math.min(delta / _PTR_RANGO, 1);
   _ptrProgreso = progreso;
   var offsetY = _PTR_MAX_VISUAL * (1 - Math.pow(1 - progreso, 2)); // resistencia tipo goma elástica

@@ -99,7 +99,14 @@
   background: var(--surface); box-shadow: var(--card-shadow);
   display: flex; align-items: center; justify-content: center;
 }
-.ptr-spinner { width: 20px; height: 20px; border-width: 3px; margin: 0; animation: none; }
+/* Sin "animation: none" acá: heredar el spin infinito de .spinner por cascada (misma
+   especificidad, .ptr-spinner definida después) es justo lo que se necesita para que
+   el anillo gire mientras refrescarMisReservas() está en vuelo tras soltar por encima
+   del umbral. js/home.js controla el resto de los estados (arrastre, oculto) con
+   animation:'none' inline, que siempre gana sobre cualquier regla de clase. Antes esta
+   regla pisaba ese spin también en el estado "refrescando" — el anillo quedaba
+   congelado en 0deg todo el fetch, sin feedback de carga (ver diagnóstico PTR). */
+.ptr-spinner { width: 20px; height: 20px; border-width: 3px; margin: 0; }
 
 /* ── Dark mode ───────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
