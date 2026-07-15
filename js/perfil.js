@@ -529,6 +529,24 @@ function _ajCargarSub(id) {
     _ajSetDatoVal('aj-nombreDerby-val', d.nombreDerby, '—', false);
     _ajSetDatoVal('aj-numeroDerby-val', d.numeroDerby, 'Sin número asignado', true);
     _ajSetDatoVal('aj-pron-val', d.pronombres, '—', false);
+    // Bug real corregido (ver MANIFEST, "Cambios recientes"): #aj-avatar-hero
+    // nunca tuvo JS que lo poblara — quedaba siempre con el fondo decorativo
+    // vacío, sin la foto real ni el fallback de inicial que sí usa #aj-avatar
+    // (irEditarDatos(), más arriba en este archivo). Mismo criterio acá,
+    // preservando el badge de cámara (único hijo existente antes de esto,
+    // position:absolute — se reinserta tal cual después, su orden en el DOM
+    // no afecta su posición visual).
+    var avatarHero = document.getElementById('aj-avatar-hero');
+    if (avatarHero) {
+      var badgeCamara = avatarHero.querySelector('.material-symbols-outlined');
+      var fotoHero = d.fotoPerfil || '';
+      if (fotoHero) {
+        avatarHero.innerHTML = '<img src="' + fotoHero + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+      } else {
+        avatarHero.textContent = (E.nombre || '?').charAt(0).toUpperCase();
+      }
+      if (badgeCamara) avatarHero.appendChild(badgeCamara);
+    }
   } else if (id === 'aj-sub-contacto') {
     _ajSetDatoVal('aj-email-display', d.email, '—', false);
     _ajSetPrefijo('aj-prefijo-display', null, d.prefijo || '');
