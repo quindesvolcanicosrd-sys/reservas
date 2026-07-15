@@ -356,7 +356,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="total-detalle" id="s-pago-total-detalle"></div>
         <div class="total-fechas-lista" id="s-pago-total-fechas" style="display:none;"></div>
       </div>
-      <p style="font-weight: 500;">Transfiere el monto mediante:</p>
 
       <a href="https://pagar.deuna.app/H92p/person/payment?id=34699738dd140ab641e3993377662e6a210132d2" target="_blank" class="btn btn-deuna" style="display:flex;align-items:center;justify-content:center;gap:10px;text-decoration:none;margin-bottom:14px;">
         <img src="assets/deuna-logo.svg" alt="" style="height:22px;width:auto;" aria-hidden="true">
@@ -684,6 +683,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <script src="js/config.js"></script>
 <script src="shared/bsheet.js"></script>
+<script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/home.js"></script>
@@ -1974,9 +1974,10 @@ person_cancel
 <!-- ── CTA footers fijos del flujo de reserva ─────────────────────────────
      Hijos directos de <body>, fuera de .pantalla/.card a propósito (mismo
      principio que los bottom sheets/modales) — evita que .pantalla.activa
-     se vuelva containing block mientras corre su animación de entrada
-     (smoothSlideUp) y "atrape" al footer fuera del viewport real. js/ui.js
-     (ir()) muestra solo el que corresponde a la pantalla activa. -->
+     se vuelva containing block mientras corre su transición de entrada
+     (shared axis X, ver .axis-enter en css/global.css) y "atrape" al footer
+     fuera del viewport real. js/ui.js (ir()) muestra solo el que corresponde
+     a la pantalla activa. -->
 <div class="cta-footer-fixed" id="cta-footer-s-home">
   <button class="btn btn-outline btn-equip-home" onclick="abrirSheetEquipHome()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;margin-right:4px;">roller_skating</span>Cambiar mi equipamiento</button>
   <button class="btn btn-primary" onclick="irNuevaReserva()">

@@ -97,8 +97,24 @@ var TOP_BAR_CONFIG = {
 
 function ir(id, desdeHistorial, sinTrampa) {
   if (id === 's1b' || !document.getElementById(id)) { ir('s1', true); return; }
-  document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
-  document.getElementById(id).classList.add('activa');
+  var nueva = document.getElementById(id);
+  var actual = document.querySelector('.pantalla.activa');
+  // Transición "shared axis X" (Material Design 3) — estándar de plataforma,
+  // ver axisTransicion() (shared/axis-transicion.js) y MANIFEST. `actual`
+  // puede ser null en la primerísima navegación de la sesión (nada que
+  // animar de fondo) o coincidir con `nueva` (no debería pasar en uso
+  // normal, pero por seguridad no se anima una pantalla contra sí misma).
+  // `desdeHistorial` ya indica si esto viene de un gesto de "atrás"
+  // (popstate) — se reusa tal cual como el parámetro `atras` de
+  // axisTransicion(), sin necesitar una señal de dirección aparte.
+  if (actual && actual !== nueva) {
+    axisTransicion(actual, nueva, !!desdeHistorial,
+      function(el) { el.classList.add('activa'); },
+      function(el) { el.classList.remove('activa'); });
+  } else {
+    document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
+    nueva.classList.add('activa');
+  }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   var sinHistorial = ['s-carga', 's-carga-fechas', 's-carga-conf'];

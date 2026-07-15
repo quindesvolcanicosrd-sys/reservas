@@ -80,10 +80,24 @@ function _inscRenderProg() {
 }
 
 function inscMostrarPaso(idx, desdeHistorial) {
-  _INSC_STEPS.forEach(function(s, i) {
-    var el = document.getElementById(s);
-    if (el) el.classList.toggle('activo', i === idx);
-  });
+  // Transición "shared axis X" (Material Design 3) — estándar de plataforma,
+  // ver axisTransicion() (../shared/axis-transicion.js) y MANIFEST. `actual`
+  // se calcula con el índice ANTERIOR (_inscCurIdx, todavía sin actualizar) —
+  // en la primerísima llamada (DOMContentLoaded → inscMostrarPaso(0,true))
+  // coincide con `nueva` (ambos insc-step-1), así que cae en el camino
+  // instantáneo de abajo, sin animar el primer paso contra sí mismo.
+  var actual = document.getElementById(_INSC_STEPS[_inscCurIdx]);
+  var nueva = document.getElementById(_INSC_STEPS[idx]);
+  if (actual && nueva && actual !== nueva) {
+    axisTransicion(actual, nueva, !!desdeHistorial,
+      function(el) { el.classList.add('activo'); },
+      function(el) { el.classList.remove('activo'); });
+  } else {
+    _INSC_STEPS.forEach(function(s, i) {
+      var el = document.getElementById(s);
+      if (el) el.classList.toggle('activo', i === idx);
+    });
+  }
   _inscCurIdx = idx;
   _inscRenderProg();
   window.scrollTo({ top: 0, behavior: 'smooth' });

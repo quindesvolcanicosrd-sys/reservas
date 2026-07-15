@@ -49,7 +49,32 @@ button, input, select, textarea { font-family: inherit; }
 .fnac-placeholder { color: var(--hint); font-style: italic; font-size: 0.88rem; }
 
 .pantalla { display: none; }
-.pantalla.activa { display: block; animation: smoothSlideUp 0.6s var(--ease-sheet); }
+.pantalla.activa { display: block; }
+
+/* ═══════════════════════════════════════════════════════
+   Transición "shared axis X" (Material Design 3) — ESTÁNDAR
+   DE PLATAFORMA para navegación entre pantallas/pasos/
+   subsecciones. Piloteada primero en aj-sub-* (css/perfil.css,
+   ver esa entrada + irAjSub()/cerrarAjSub() en js/perfil.js),
+   luego adoptada acá por .pantalla (ir(), js/ui.js) y
+   .insc-step (inscMostrarPaso(), inscripcion/inscripcion.js).
+   La mecánica JS compartida vive en shared/axis-transicion.js
+   (función axisTransicion()) — cualquier flujo de pasos/
+   pantallas nuevo debe llamarla, nunca reimplementar esta
+   animación desde cero. Ver MANIFEST para el detalle completo.
+
+   .axis-enter: la pantalla/paso que entra queda superpuesta
+   (position:absolute, relativo al contenedor con position:relative
+   más cercano — .contenedor en la app principal, .page-wrap en
+   inscripción, ambos ya lo tienen) sobre la que sale, que se queda
+   en flujo normal (solo necesita la transition, .axis-leave) — así
+   ambas quedan montadas/visibles a la vez durante toda la
+   transición, sin apilarse una debajo de la otra en el documento.
+   z-index:2 para pintar por encima de la que sale (z-index:auto). */
+.axis-enter { position: absolute; inset: 0; z-index: 2; overflow-y: auto; }
+.axis-enter, .axis-leave {
+  transition: transform 0.32s var(--ease-axis), opacity 0.32s var(--ease-axis);
+}
 
 select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important; }
 

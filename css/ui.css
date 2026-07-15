@@ -1,4 +1,10 @@
-.contenedor { max-width: 427px; margin: 0 auto; padding: var(--space-screen); }
+/* position:relative: ancla la pantalla que entra (.axis-enter,
+   position:absolute) durante la transición "shared axis X" — ver
+   css/global.css/MANIFEST. Confirmado que ningún position:absolute existente
+   dentro de .contenedor dependía de un ancestro más lejano (todos ya tenían
+   uno más cercano: .select-wrapper, #top-bar sticky, o viven fuera de
+   .contenedor por completo). */
+.contenedor { position: relative; max-width: 427px; margin: 0 auto; padding: var(--space-screen); }
 
 .card {
   background: var(--card-bg); border-radius: 20px; padding: 28px 24px; margin-bottom: 16px;
