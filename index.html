@@ -318,8 +318,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           Tienes un cupón disponible — solo aplica en pago por clase
         </div>
       </div>
-      <p id="s4-fechas-subtitulo" style="margin-bottom:16px; font-weight: 500;">Selecciona las fechas a las que asistirás.</p>
-
+      <!-- Sin texto estático por defecto (ver MANIFEST, "Cambios recientes" —
+           "Selecciona las fechas a las que asistirás." no aportaba suficiente
+           información) — cargarFechas()/selTipoPago() (js/reservas.js) le
+           ponen contenido real y contextual (distinto en reagendamiento) antes
+           de mostrarlo, nunca queda visible vacío. -->
+      <p id="s4-fechas-subtitulo" style="margin-bottom:16px; font-weight: 500; display:none;"></p>
       <!-- Reubicado antes de #lista-fechas (era lo último en la card) — debe
            ser lo primero que se ve al entrar a s4 cuando hay cupón disponible.
            Colapso animado (opacity+max-height+margin en simultáneo, ver
@@ -352,7 +356,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
   <div class="pantalla" id="s-pago">
     <div class="card">
-      <div class="seccion-label">Paso 2 de 2</div>
       <h2>Realiza tu transferencia</h2>
       <div class="total-box" id="s-pago-total" style="margin-bottom:20px;">
         <div id="s-pago-total-monto"></div>

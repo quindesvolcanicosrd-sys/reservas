@@ -166,9 +166,22 @@ function continuar_s3c_nuevo() {
 function canPayMonthly() { if (!E.datos) return false; return E.datos.necesitaPatines.toLowerCase() === 'no' && E.datos.necesitaProtecciones.toLowerCase() === 'no'; }
 function necesitaEquipo() { return !canPayMonthly(); }
 
+// Texto real de #s4-fechas-subtitulo, contextual (distinto en reagendamiento)
+// — usado tanto por cargarFechas() como por selTipoPago() para que el
+// elemento nunca quede visible vacío (ver esa nota en index.html).
+function _s4SubtituloFechasTexto() {
+  return E.reagendando ? 'Seleccioná la nueva fecha para tu clase a favor.' : 'Selecciona uno o varios entrenamientos.';
+}
+
 function actualizarTextosPago() {
   var necesitaEquipamiento = !canPayMonthly();
-  document.getElementById('s4-label').textContent = E.reagendando ? 'Reagendar clase' : 'Paso 1 de 2';
+  // "Paso 1 de 2" se quitó (ver MANIFEST, "Cambios recientes" — no aportaba
+  // suficiente información para el espacio que ocupaba); #s4-label se oculta
+  // por completo salvo en el flujo de reagendamiento, donde sigue siendo un
+  // rótulo real ("Reagendar clase"), no un contador de pasos.
+  var s4Label = document.getElementById('s4-label');
+  if (E.reagendando) { s4Label.textContent = 'Reagendar clase'; s4Label.style.display = ''; }
+  else { s4Label.textContent = ''; s4Label.style.display = 'none'; }
   document.getElementById('s4-titulo').textContent = necesitaEquipamiento ? 'Próximos entrenamientos' : '¿Cómo quieres pagar?';
   document.getElementById('chk-pago-texto').textContent = canPayMonthly() ? 'Ya realicé mi pago y entiendo este estará pendiente hasta que sea verificada por el equipo.' : 'Realicé mi pago y entiendo que mi reserva quedará pendiente.';
 }
@@ -187,7 +200,7 @@ function selTipoPago(tipo) {
     generarMeses();
   } else {
     if (listaFechas) listaFechas.style.display = 'block';
-    if (subtitulo) subtitulo.style.display = 'block';
+    if (subtitulo) { subtitulo.textContent = _s4SubtituloFechasTexto(); subtitulo.style.display = 'block'; }
     if (wrapperMeses) wrapperMeses.style.display = 'none';
   }
   _updateTpSlider(true);
@@ -478,7 +491,7 @@ function cargarFechas() {
       generarMeses();
       actualizarTotalS4();
     } else {
-      wrapper.style.display = 'none'; E.tipoPago = 'clase'; subtitulo.textContent = E.reagendando ? 'Seleccioná la nueva fecha para tu clase a favor.' : 'Selecciona uno o varios entrenamientos.';
+      wrapper.style.display = 'none'; E.tipoPago = 'clase'; subtitulo.textContent = _s4SubtituloFechasTexto();
       subtitulo.style.display = 'block'; document.getElementById('lista-fechas').style.display = 'block';
       var totalFijoReset = document.getElementById('s4-total-fijo');
       if (totalFijoReset) { totalFijoReset.classList.remove('mostrar'); totalFijoReset.style.display = 'none'; }
@@ -642,11 +655,53 @@ function irEditarEquipDesdeModal() {
   irEditarDatos();
 }
 
+// Timer del crossfade de #s-pago-total en curso — mismo criterio que
+// _s4TotalFadeTimer (#s4-total-fijo, actualizarTotalS4()): se cancela y
+// reemplaza si continuar_s4() se vuelve a llamar antes de que termine (ida y
+// vuelta rápida entre s4 y s-pago cambiando de fecha).
+var _pagoTotalFadeTimer = null;
+
+// Actualiza el monto/detalle/fechas de #s-pago-total (ver MANIFEST, "Cambios
+// recientes") — si el contenido cambió respecto al ya mostrado (ej. volver a
+// entrar a s-pago tras cambiar de fecha en s4), hace un crossfade corto
+// (~180ms) en vez de reemplazar el texto de golpe; si es la primera vez
+// (todavía sin monto) lo aplica directo, sin fade.
+function _pagoTotalActualizar(montoTexto, detalleTexto, fechasHtml, mostrarFechas) {
+  var elMonto = document.getElementById('s-pago-total-monto');
+  var elDetalle = document.getElementById('s-pago-total-detalle');
+  var elFechas = document.getElementById('s-pago-total-fechas');
+  if (!elMonto) return;
+  var grupo = [elMonto, elDetalle, elFechas].filter(function(el) { return !!el; });
+  function aplicar() {
+    elMonto.textContent = montoTexto;
+    if (elDetalle) elDetalle.textContent = detalleTexto;
+    if (elFechas) { elFechas.innerHTML = fechasHtml || ''; elFechas.style.display = mostrarFechas ? 'block' : 'none'; }
+  }
+  var huboAntes = elMonto.textContent !== '';
+  var cambio = elMonto.textContent !== montoTexto || (elDetalle && elDetalle.textContent !== detalleTexto);
+  if (_pagoTotalFadeTimer) { clearTimeout(_pagoTotalFadeTimer); _pagoTotalFadeTimer = null; }
+  if (huboAntes && cambio) {
+    grupo.forEach(function(el) { el.style.transition = 'opacity 0.09s var(--ease-sheet)'; el.style.opacity = '0'; });
+    _pagoTotalFadeTimer = setTimeout(function() {
+      _pagoTotalFadeTimer = null;
+      aplicar();
+      grupo.forEach(function(el) { el.style.opacity = '0'; });
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          grupo.forEach(function(el) { el.style.transition = 'opacity 0.09s var(--ease-sheet)'; el.style.opacity = '1'; });
+        });
+      });
+    }, 90);
+  } else {
+    grupo.forEach(function(el) { el.style.opacity = ''; el.style.transition = ''; });
+    aplicar();
+  }
+}
+
 function continuar_s4() {
   if (E.tipoPago === 'mensual') { if (!E.meses || E.meses.length === 0) { err('err-s4', 'Por favor selecciona al menos un mes.'); return; } }
   else { if (!E.fechas || E.fechas.length === 0) { err('err-s4', 'Por favor selecciona al menos una fecha.'); return; } }
   var esClase = E.tipoPago === 'clase';
-  document.getElementById('s-pago-total-monto').textContent = 'Total: $' + (E.totalPago || 0).toFixed(2);
 
   var detalleTexto = '';
   if (esClase) {
@@ -660,12 +715,8 @@ function continuar_s4() {
   } else {
     detalleTexto = E.meses.join(', ');
   }
-  document.getElementById('s-pago-total-detalle').textContent = detalleTexto;
-  var totalFechasEl = document.getElementById('s-pago-total-fechas');
-  if (totalFechasEl) {
-    if (esClase) { totalFechasEl.innerHTML = E.fechas.map(function(f) { return '• ' + f; }).join('<br>'); totalFechasEl.style.display = 'block'; }
-    else { totalFechasEl.style.display = 'none'; }
-  }
+  var fechasHtml = esClase ? E.fechas.map(function(f) { return '• ' + f; }).join('<br>') : '';
+  _pagoTotalActualizar('Total: $' + (E.totalPago || 0).toFixed(2), detalleTexto, fechasHtml, esClase);
   _resetChkPago();
   var lineasFechas = E.tipoPago === 'mensual' ? 'Meses pagados:\n- ' + E.meses.join('\n- ') + '\n\nTotal: $' + (E.totalPago || 0).toFixed(2) : E.fechas.map(function(f) { return '- ' + f; }).join('\n');
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : ''; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : '';
