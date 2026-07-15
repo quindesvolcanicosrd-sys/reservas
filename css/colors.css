@@ -48,6 +48,15 @@
      en cualquier modo — solo usado por .btn-deuna (css/ui.css). */
   --deuna:          #4C1D80;
   --deuna-dk:       #3D1766;
+
+  /* Excepción de marca — naranja oficial de Banco Internacional Ecuador,
+     extraído de su CSS de producción real (bancointernacional.com.ec,
+     .color-naranja/.bt-caja-naranja/#footer-menu svg, todos usan este mismo
+     hex de forma consistente — verificado julio 2026, no adivinado). Sin
+     variante dark, mismo criterio que --brand/--deuna. Usado por el
+     encabezado de "Banco Internacional" en s-pago (index.html). */
+  --banco-internacional:    #EA8E29;
+  --banco-internacional-dk: #BB7221;
   --overlay:        rgba(0,0,0,0.65);
   --overlay-light:  rgba(0,0,0,0.55);
   --overlay-dark:   rgba(0,0,0,0.7);
