@@ -1020,14 +1020,39 @@ function cerrarSheetGestionar(porGesto) {
   }, 350);
 }
 
+// Crossfade entre los 2 estados de #sheet-gestionar (coexisten como
+// hermanos en el DOM, nunca se reemplaza innerHTML): el saliente se
+// desvanece mientras el entrante hace fade-in + slide-up sutil, en vez
+// del display:none/'' seco de antes. Mismo timing/curva (0.3s var(--ease-sheet))
+// y magnitud de slide (translateY(8px), "sutil") que ya usa #s4-total-fijo/
+// #s4-cupon-wrapper (js/reservas.js) para el mismo tipo de aparición.
+function _sgCrossfade(idSaliente, idEntrante) {
+  var saliente = document.getElementById(idSaliente);
+  var entrante = document.getElementById(idEntrante);
+  var trans = 'opacity 0.3s var(--ease-sheet), transform 0.3s var(--ease-sheet)';
+  saliente.style.transition = trans;
+  saliente.style.opacity = '0';
+  saliente.style.transform = 'translateY(8px)';
+  entrante.style.display = '';
+  entrante.style.transition = 'none';
+  entrante.style.opacity = '0';
+  entrante.style.transform = 'translateY(8px)';
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      entrante.style.transition = trans;
+      entrante.style.opacity = '1';
+      entrante.style.transform = 'translateY(0)';
+    });
+  });
+  setTimeout(function() { saliente.style.display = 'none'; }, 300);
+}
+
 function sheetVolverOpciones() {
-  document.getElementById('sg-sheet-opciones').style.display = '';
-  document.getElementById('sg-sheet-cancelar').style.display = 'none';
+  _sgCrossfade('sg-sheet-cancelar', 'sg-sheet-opciones');
 }
 
 function sheetIrCancelar() {
-  document.getElementById('sg-sheet-opciones').style.display = 'none';
-  document.getElementById('sg-sheet-cancelar').style.display = '';
+  _sgCrossfade('sg-sheet-opciones', 'sg-sheet-cancelar');
 }
 
 function sheetIrReagendar() {
