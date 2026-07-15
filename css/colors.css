@@ -39,6 +39,15 @@
   --purple-bg:      rgba(124,58,237,0.1);
   --purple-border:  rgba(124,58,237,0.35);
   --purple-hover:   rgba(124,58,237,0.18);
+
+  /* Excepción de marca — violeta oficial de DeUna (--color-primary de su
+     propia hoja de estilos de producción, deuna.app/_astro/BaseLayout*.css,
+     verificado en julio 2026), no relacionado con --purple de arriba (acento
+     genérico de la app, usado en badges). Sin variante dark: igual que
+     --brand, un color de marca no cambia con el tema, sirve de fondo sólido
+     en cualquier modo — solo usado por .btn-deuna (css/ui.css). */
+  --deuna:          #4C1D80;
+  --deuna-dk:       #3D1766;
   --overlay:        rgba(0,0,0,0.65);
   --overlay-light:  rgba(0,0,0,0.55);
   --overlay-dark:   rgba(0,0,0,0.7);

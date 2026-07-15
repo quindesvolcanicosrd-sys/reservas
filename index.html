@@ -354,15 +354,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
       <p style="font-weight: 500;">Transfiere el monto mediante:</p>
 
-      <div class="pago-metodo" style="padding:0;overflow:hidden;">
-        <div class="pago-header" onclick="togglePagoMetodo(this)" style="cursor:pointer;padding:16px;justify-content:space-between;"><div style="display:flex;align-items:center;gap:10px;"><span class="pago-icon">📱</span>DeUna · Banco Pichincha</div><span class="material-symbols-outlined" style="font-size:1.1rem;color: var(--muted);transition:transform 0.3s;">expand_more</span></div>
-        <div class="pago-metodo-body" style="max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1);padding:0 16px 0;">
-          <div class="pago-fila"><span class="pago-label">Cuenta de ahorro</span><span class="pago-valor">7702756890</span></div>
-          <div class="pago-fila"><span class="pago-label">Titular</span><span class="pago-valor">David Santiago Rojas Baez</span></div>
-          <div class="pago-fila"><span class="pago-label">CI</span><span class="pago-valor">1721443180</span></div>
-          <a href="https://pagar.deuna.app/H92p/person/payment?id=34699738dd140ab641e3993377662e6a210132d2" target="_blank" class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin:12px 0;text-decoration:none;"><span class="material-symbols-outlined" style="font-size:1.1rem;">bolt</span>Pagar con DeUna</a>
-        </div>
-      </div>
+      <a href="https://pagar.deuna.app/H92p/person/payment?id=34699738dd140ab641e3993377662e6a210132d2" target="_blank" class="btn btn-deuna" style="display:flex;align-items:center;justify-content:center;gap:10px;text-decoration:none;margin-bottom:14px;">
+        <img src="assets/deuna-logo.svg" alt="" style="height:22px;width:auto;" aria-hidden="true">
+        Paga con DeUna
+      </a>
       <div class="pago-metodo" style="padding:0;overflow:hidden;">
         <div class="pago-header" onclick="togglePagoMetodo(this)" style="cursor:pointer;padding:16px;justify-content:space-between;"><div style="display:flex;align-items:center;gap:10px;"><span class="pago-icon">🏦</span>Banco Internacional</div><span class="material-symbols-outlined" style="font-size:1.1rem;color: var(--muted);transition:transform 0.3s;">expand_more</span></div>
         <div class="pago-metodo-body" style="max-height:0;overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1);padding:0 16px 0;">

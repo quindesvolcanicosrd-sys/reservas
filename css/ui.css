@@ -58,6 +58,12 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
 .btn-outline:hover { background: var(--brand-30); transform: translateY(-2px); }
 .btn-outline:active { transform: translateY(0) scale(0.98); }
 
+/* Excepción de marca: mismo tamaño/forma que .btn, pero con el violeta
+   oficial de DeUna en vez de --brand — método de pago #s-pago, ver MANIFEST. */
+.btn-deuna { background: var(--deuna); color: var(--white); border: none; }
+.btn-deuna:hover { background: var(--deuna-dk); transform: translateY(-2px); }
+.btn-deuna:active { transform: translateY(0) scale(0.98); }
+
 /* Texto clickeable sin contenedor — Cancelar/Omitir/Cerrar no destructivos.
    Mismo tamaño/peso de fuente que .btn-cancel-text (css/home.css), sin el
    rojo ni el subrayado (reservados ahí para "Cancelar reserva", la única
