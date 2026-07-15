@@ -238,6 +238,7 @@ function solicitarNuevoPIN(){
 
 window.onload = function() {
   document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
+  _pantallaActualId = null;
   var ov = document.getElementById('loading-overlay');
   ov.classList.remove('fade-out');
   ov.style.display = 'flex';
@@ -327,6 +328,7 @@ window.onload = function() {
 window.addEventListener('pageshow', function(e) {
   if (e.persisted) {
     document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
+    _pantallaActualId = null;
     var ov = document.getElementById('loading-overlay');
     ov.classList.remove('fade-out');
     ov.style.display = 'flex';

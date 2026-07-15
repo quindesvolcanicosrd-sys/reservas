@@ -29,7 +29,7 @@ var _inscPrefijoSel = null;
 /* ── Inicialización ─────────────────────────── */
 document.addEventListener('DOMContentLoaded', function() {
   try {
-    _inscRenderProg();
+    _inscRenderProgDots(0);
     _inscCargarTallas();
     iniciarDatePicker();
     _inscRenderPrefijos(_AJ_PREFIJOS);
@@ -59,24 +59,22 @@ function mostrarCargando(msg) {
 }
 
 /* ── Navegación entre pasos ─────────────────── */
-function _inscRenderProg() {
+// Dots de progreso (#insc-prog) — separado del título/botón atrás de
+// #insc-nav (antes todo era una sola _inscRenderProg(), ver "Cambios
+// recientes"): el título/botón atrás ahora se aplican dentro de
+// aplicarInscNav() en inscMostrarPaso(), animados junto con el resto de la
+// barra superior (axisBarraTitulo()) — los dots siguen su propio camino,
+// diferido a los 320ms igual que .paso-indicator en ir() (js/ui.js).
+function _inscRenderProgDots(idx) {
   var cont = document.getElementById('insc-prog'); if (!cont) return;
   var total = _INSC_STEPS.length;
   cont.innerHTML = '';
   for (var i = 0; i < total; i++) {
     var d = document.createElement('div');
-    d.className = 'insc-prog-dot' + (i < _inscCurIdx ? ' done' : i === _inscCurIdx ? ' active' : '');
+    d.className = 'insc-prog-dot' + (i < idx ? ' done' : i === idx ? ' active' : '');
     cont.appendChild(d);
   }
   cont.style.display = 'flex';
-  var t = document.getElementById('insc-nav-title');
-  if (t) t.textContent = _INSC_TITLES[_inscCurIdx] || 'Inscripción';
-  var back = document.getElementById('insc-back');
-  var ph = document.getElementById('insc-nav-ph');
-  if (back) back.style.display = (_inscCurIdx > 0 || _inscVinoConToken) ? 'flex' : 'none';
-  if (ph) ph.style.display = _inscCurIdx > 0 ? 'none' : 'block';
-  var btnHome = document.getElementById('insc-btn-home');
-  if (btnHome) btnHome.style.display = (_inscCurIdx === 0) ? 'flex' : 'none';
 }
 
 function inscMostrarPaso(idx, desdeHistorial) {
@@ -103,28 +101,49 @@ function inscMostrarPaso(idx, desdeHistorial) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   if (!desdeHistorial) history.pushState({ pasoInsc: idx }, '', '#paso-' + (idx + 1));
 
-  // Chrome del paso (título/dots de insc-nav, footer fijo) — mismo criterio
-  // que actualizarChrome() en ir() (js/ui.js, ver MANIFEST, "Cambios
-  // recientes"): si hay transición animada, se difiere hasta que termina
-  // (320ms, mismo valor que axisTransicion()) para que cambie en el mismo
-  // instante en que la entrante termina su transform — antes quedaba
-  // desincronizado (título/footer del paso nuevo aparecían de golpe apenas
-  // arrancaba la animación, mientras el paso saliente todavía ocupaba la
-  // pantalla). Sin animación (primer paso de la sesión, o mismo paso) se
-  // aplica de inmediato, igual que siempre.
-  var actualizarChromeInsc = function() {
-    _inscRenderProg();
-    // .cta-footer-fixed vive fuera de .insc-step (ver index.html), así que
-    // hay que ocultar todos y mostrar solo el que corresponde al paso nuevo
-    // a mano.
-    document.querySelectorAll('.cta-footer-fixed').forEach(function(f) { f.style.display = 'none'; });
-    var footer = document.getElementById('cta-footer-' + _INSC_STEPS[idx]);
-    if (footer) footer.style.display = 'block';
+  // Barra superior (#insc-nav) y footer fijo (.cta-footer-fixed) — mismo
+  // cambio de estrategia que ir() (js/ui.js, ver MANIFEST "Cambios
+  // recientes": 2 intentos previos de sincronizar el TIMING de un swap
+  // instantáneo siguieron mostrando bleed-through real). En vez de diferir
+  // un swap, ambas barras se animan de verdad (slide vertical + fade,
+  // axisBarraTitulo()/axisFooterFijo(), ../shared/axis-transicion.js)
+  // arrancando en el mismo t=0 que axisTransicion() del contenido, con
+  // saliente y entrante montadas en simultáneo durante los 320ms.
+  var aplicarInscNav = function() {
+    var t = document.getElementById('insc-nav-title');
+    if (t) t.textContent = _INSC_TITLES[idx] || 'Inscripción';
+    var back = document.getElementById('insc-back');
+    var ph = document.getElementById('insc-nav-ph');
+    if (back) back.style.display = (idx > 0 || _inscVinoConToken) ? 'flex' : 'none';
+    if (ph) ph.style.display = idx > 0 ? 'none' : 'block';
+    var btnHome = document.getElementById('insc-btn-home');
+    if (btnHome) btnHome.style.display = (idx === 0) ? 'flex' : 'none';
   };
+
+  // .cta-footer-fixed vive fuera de .insc-step (ver index.html) — footer
+  // saliente es el único con display real distinto de 'none' en este
+  // instante, leído ya para que axisFooterFijo() los tenga a ambos montados
+  // desde el t=0 de la animación.
+  var footerSaliente = null;
+  document.querySelectorAll('.cta-footer-fixed').forEach(function(f) { if (getComputedStyle(f).display !== 'none') footerSaliente = f; });
+  var footerEntrante = document.getElementById('cta-footer-' + _INSC_STEPS[idx]) || null;
+
   if (animado) {
-    setTimeout(actualizarChromeInsc, 320);
+    axisBarraTitulo(document.getElementById('insc-nav'), aplicarInscNav, !!desdeHistorial);
+    axisFooterFijo(footerSaliente, footerEntrante, !!desdeHistorial);
   } else {
-    actualizarChromeInsc();
+    aplicarInscNav();
+    document.querySelectorAll('.cta-footer-fixed').forEach(function(f) { f.style.display = 'none'; });
+    if (footerEntrante) footerEntrante.style.display = 'block';
+  }
+
+  // Dots de progreso (#insc-prog) — se difieren igual que .paso-indicator en
+  // ir() (js/ui.js): en flujo normal, sin urgencia de acompañar el cruce.
+  var actualizarDotsInsc = function() { _inscRenderProgDots(idx); };
+  if (animado) {
+    setTimeout(actualizarDotsInsc, 320);
+  } else {
+    actualizarDotsInsc();
   }
 }
 

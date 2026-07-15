@@ -95,10 +95,31 @@ var TOP_BAR_CONFIG = {
   's-admin-admins': { titulo: 'Administradorxs', volver: 's-admin-home' }
 };
 
+// Fuente de verdad de "cuál es la pantalla actual", separada de consultar el
+// DOM (`document.querySelector('.pantalla.activa')`) — ver MANIFEST,
+// "Cambios recientes", bug real encontrado con Playwright durante la
+// auditoría de la nueva estrategia de barras: mientras una transición está
+// en curso, DOS `.pantalla` tienen legítimamente la clase `.activa` a la vez
+// (saliente y entrante, ambas montadas para el cruce) — si una SEGUNDA
+// llamada a `ir()` llega antes de que la primera termine de limpiar (dentro
+// de los mismos 320ms, ej. una cadena async rápida en el arranque de la
+// sesión), `document.querySelector()` devuelve la PRIMERA coincidencia en
+// orden del DOM, no necesariamente la pantalla realmente visible — si esa
+// coincidencia resulta ser la saliente de la transición ANTERIOR (que
+// todavía no terminó su cleanup), la pantalla realmente visible nunca se
+// anima como saliente y se queda con `.activa`/visible para siempre detrás
+// de la nueva (el bleed-through persistente reportado). Fix: `ir()` trackea
+// `_pantallaActualId` él mismo (mismo criterio que `_inscCurIdx` en
+// `inscMostrarPaso()`, que nunca tuvo este bug por la misma razón) en vez de
+// preguntarle al DOM. Los 2 lugares que resetean `.pantalla.activa` por
+// fuera de `ir()` (bootstrap en `window.onload` y el handler de `pageshow`
+// con bfcache, ambos en js/auth.js) también resetean esta variable a null.
+var _pantallaActualId = null;
+
 function ir(id, desdeHistorial, sinTrampa) {
   if (id === 's1b' || !document.getElementById(id)) { ir('s1', true); return; }
   var nueva = document.getElementById(id);
-  var actual = document.querySelector('.pantalla.activa');
+  var actual = _pantallaActualId ? document.getElementById(_pantallaActualId) : null;
   // Transición "shared axis X" (Material Design 3) — estándar de plataforma,
   // ver axisTransicion() (shared/axis-transicion.js) y MANIFEST. `actual`
   // puede ser null en la primerísima navegación de la sesión (nada que
@@ -108,6 +129,7 @@ function ir(id, desdeHistorial, sinTrampa) {
   // (popstate) — se reusa tal cual como el parámetro `atras` de
   // axisTransicion(), sin necesitar una señal de dirección aparte.
   var animado = !!(actual && actual !== nueva);
+  _pantallaActualId = id;
   if (animado) {
     axisTransicion(actual, nueva, !!desdeHistorial,
       function(el) { el.classList.add('activa'); },
@@ -117,18 +139,59 @@ function ir(id, desdeHistorial, sinTrampa) {
     nueva.classList.add('activa');
   }
 
-  // #s4-total-fijo (panel de total fijo de s4, js/reservas.js) — al abandonar
-  // s4 con transición animada, se dispara su salida (fade-out + slide-down,
-  // _s4TotalOcultarFijo()) YA, en sincronía con el axis-leave de s4 que recién
-  // arranca (misma duración, 0.32s, ver css/reservas.css) — así el panel
-  // termina de desvanecerse justo cuando la pantalla completa su salida, en
-  // vez de desaparecer de golpe recién cuando el footer entero cambia a los
-  // 320ms (ver actualizarChrome() más abajo). Vuelve a mostrarse (fade-in +
-  // slide-up) al reentrar a s4, disparado desde ese mismo punto de 320ms —
-  // ver el bloque `if (id === 's4')` dentro de actualizarChrome().
+  // Barra superior (#top-bar) y footer fijo (.cta-footer-fixed) — ver
+  // MANIFEST, "Cambios recientes": **cambio de estrategia** tras 2 intentos
+  // fallidos de sincronizar el TIMING de un swap instantáneo (el bleed-through
+  // reportado persistía con captura real: contenido/footer de la pantalla
+  // saliente seguía viéndose detrás/debajo de la entrante). En vez de mover
+  // el momento del swap, ahora ambas barras se ANIMAN de verdad (slide
+  // vertical + fade, axisBarraTitulo()/axisFooterFijo(),
+  // shared/axis-transicion.js) como parte de la transición — arrancan en el
+  // mismo instante que axisTransicion() del contenido principal (t=0, nunca
+  // diferido), con saliente y entrante montadas y visibles en simultáneo
+  // durante los 320ms, igual que ya se exige para el contenido. Esto
+  // reemplaza por completo el bloque viejo que togglaba topBar/footer de
+  // golpe (ver "Cambios recientes" para el detalle de qué cambió y por qué).
+  var aplicarTopBar = function() {
+    var topBar = document.getElementById('top-bar'); var topBtn = document.getElementById('top-bar-btn'); var topTitulo = document.getElementById('top-bar-titulo');
+    var cfg = TOP_BAR_CONFIG[id];
+    if (cfg) {
+      topBar.style.display = 'flex'; topTitulo.textContent = typeof cfg.titulo === 'function' ? cfg.titulo() : cfg.titulo;
+      var _volverTarget = typeof cfg.volver === 'function' ? cfg.volver() : cfg.volver;
+      if (_volverTarget) { topBtn.style.display = ''; topBtn.onclick = function() { volver(_volverTarget); }; } else { topBtn.style.display = 'none'; }
+    } else { topBar.style.display = 'none'; }
+  };
+
+  // Footer saliente: el único .cta-footer-fixed con display real distinto de
+  // 'none' en este instante (antes de tocar nada) — se lee ya, porque
+  // axisFooterFijo() necesita ambos elementos (saliente/entrante) montados
+  // desde el t=0 de la animación, no reconstruido después.
+  var footerSaliente = null;
+  document.querySelectorAll('.cta-footer-fixed').forEach(function(f) { if (getComputedStyle(f).display !== 'none') footerSaliente = f; });
+  var footerEntrante = document.getElementById('cta-footer-' + id) || null;
+
+  if (animado) {
+    axisBarraTitulo(document.getElementById('top-bar'), aplicarTopBar, !!desdeHistorial);
+    axisFooterFijo(footerSaliente, footerEntrante, !!desdeHistorial);
+  } else {
+    aplicarTopBar();
+    document.querySelectorAll('.cta-footer-fixed').forEach(function(f) { f.style.display = 'none'; });
+    if (footerEntrante) footerEntrante.style.display = 'block';
+  }
+
+  // #s4-total-fijo (panel de total fijo de s4, js/reservas.js): su propia
+  // salida/entrada (fade+slide del panel hijo, independiente del slide del
+  // footer padre — ambos transforms se componen sin pisarse) sigue
+  // arrancando en este mismo t=0, en simultáneo con la animación nueva del
+  // footer (antes estaba pensada para sincronizar con el swap instantáneo a
+  // los 320ms; ahora el footer entero ya anima desde t=0, así que si esto
+  // quedara diferido se vería la barra entrar primero y el total aparecer
+  // recién después, desfasado).
   if (animado && actual && actual.id === 's4' && typeof _s4TotalOcultarFijo === 'function') {
     _s4TotalOcultarFijo(document.getElementById('s4-total-fijo'));
   }
+  if (id === 's4' && typeof actualizarTotalS4 === 'function') actualizarTotalS4();
+
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   var sinHistorial = ['s-carga', 's-carga-fechas', 's-carga-conf'];
@@ -155,50 +218,16 @@ function ir(id, desdeHistorial, sinTrampa) {
     _resetChkPago();
   }
 
-  // Chrome de la pantalla (top-bar, footer fijo, home-nav, paso-dots) — ver
-  // "Cambios recientes", bug real de superposición desprolija encontrado al
-  // auditar la propagación del shared axis X a ir(). #top-bar es
-  // position:sticky (NO fixed): vive en flujo normal dentro de .contenedor,
-  // justo antes de todas las .pantalla. Togglear su display de golpe (como
-  // se hacía antes) le cambiaba el alto disponible a mitad de la transición
-  // — mientras la saliente (.axis-leave) sigue en flujo normal durante los
-  // 320ms (a diferencia de la entrante, .axis-enter, position:absolute,
-  // inmune a esto), aparecer/desaparecer #top-bar la empujaba verticalmente,
-  // desalineándola de la entrante y mezclando el contenido de ambas en
-  // pantalla. Fix: si hubo transición animada, este bloque completo
-  // (top-bar + footer + home-nav + paso-dots) se aplica recién cuando
-  // termina — durante el cruce la chrome queda estable en el estado de la
-  // pantalla saliente, sin moverle el piso a nadie. Sin animación (primera
-  // navegación de la sesión, o misma pantalla) se aplica de inmediato, igual
-  // que siempre.
+  // Chrome restante (home-nav, paso-dots) — top-bar y footer ya se manejan
+  // arriba (animados, t=0). Esto sigue diferido a los 320ms cuando hay
+  // animación: #home-nav vive en flujo normal (no fixed) dentro de
+  // .contenedor, así que togglear su display de golpe a mitad de camino
+  // seguiría corriendo verticalmente a la pantalla saliente (mismo bug
+  // documentado para #top-bar antes de que pasara a animarse aparte) — y
+  // .paso-indicator es puramente informativo (dots), sin urgencia visual de
+  // acompañar el cruce. Sin animación (primera navegación, o misma
+  // pantalla) se aplica de inmediato, igual que siempre.
   var actualizarChrome = function() {
-    var topBar = document.getElementById('top-bar'); var topBtn = document.getElementById('top-bar-btn'); var topTitulo = document.getElementById('top-bar-titulo');
-    var cfg = TOP_BAR_CONFIG[id];
-    if (cfg) {
-      topBar.style.display = 'flex'; topTitulo.textContent = typeof cfg.titulo === 'function' ? cfg.titulo() : cfg.titulo;
-      var _volverTarget = typeof cfg.volver === 'function' ? cfg.volver() : cfg.volver;
-      if (_volverTarget) { topBtn.style.display = ''; topBtn.onclick = function() { volver(_volverTarget); }; } else { topBtn.style.display = 'none'; }
-    } else { topBar.style.display = 'none'; }
-
-    // Los .cta-footer-fixed viven como hijos directos de <body> (fuera de .pantalla/
-    // .card, ver "Cambios recientes") para no quedar atrapados por el containing
-    // block que .pantalla.activa establece mientras corre su transición de entrada
-    // (shared axis X, ver .axis-enter en css/global.css) y "atrape" al footer
-    // fuera del viewport real. js/ui.js (ir()) muestra solo el que corresponde
-    // a la pantalla activa.
-    document.querySelectorAll('.cta-footer-fixed').forEach(function(f) { f.style.display = 'none'; });
-    var ctaFooter = document.getElementById('cta-footer-' + id);
-    if (ctaFooter) ctaFooter.style.display = 'block';
-
-    // #s4-total-fijo — reentrada a s4 (ver nota de salida más arriba, en
-    // ir()): recalcula y, si corresponde mostrarlo, dispara su entrada
-    // (fade-in + slide-up) justo en este mismo instante (320ms, el mismo
-    // punto en que el resto de la chrome de s4 vuelve a mostrarse) — nunca
-    // antes. Si nunca se ocultó (primera entrada a s4 en la sesión, sin
-    // fechas todavía) es un no-op porque no hay ningún cambio de visibilidad
-    // real que animar.
-    if (id === 's4' && typeof actualizarTotalS4 === 'function') actualizarTotalS4();
-
     var homeNav = document.getElementById('home-nav');
     if (homeNav) {
       if (id !== 's-home') {
