@@ -694,7 +694,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/auth.js"></script>
 
   <!-- Modal primer login: permisos Google -->
-  <div id="modal-permisos" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);align-items:center;justify-content:center;padding:16px;">
+  <div id="modal-permisos" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);align-items:center;justify-content:center;padding:16px;transition:opacity 0.25s ease;">
     <div style="background:var(--white);border-radius:20px;padding:28px 24px;width:100%;max-width:420px;max-height:90vh;overflow-y:auto;">
       <div style="font-size:2rem;text-align:center;margin-bottom:12px;">👋</div>
       <div style="font-weight:800;font-size:1.1rem;text-align:center;margin-bottom:6px;color:var(--neutral-dark);" id="mp-saludo"></div>
@@ -765,7 +765,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 
   <!-- Modal bloqueo por edad (menor de 16, desde modal-permisos) -->
-  <div id="modal-edad-bloqueo" style="display:none;position:fixed;inset:0;z-index:9660;background:var(--overlay-dark);align-items:center;justify-content:center;padding:16px;">
+  <div id="modal-edad-bloqueo" style="display:none;opacity:0;position:fixed;inset:0;z-index:9660;background:var(--overlay-dark);align-items:center;justify-content:center;padding:16px;transition:opacity 0.3s ease;">
     <div id="modal-edad-bloqueo-card" style="background:var(--surface);border-radius:20px;padding:28px 24px;width:100%;max-width:380px;text-align:center;">
       <span class="material-symbols-outlined" style="font-size:2.5rem;color:var(--danger);margin-bottom:12px;">block</span>
       <p style="font-size:0.95rem;color:var(--neutral-dark);line-height:1.6;margin-bottom:20px;">No eres mayor de 16 años, por lo tanto no podrás usar la app. Puedes contactarte con alguien del equipo para más información.</p>
@@ -774,7 +774,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
 
-  <div id="modal-navegador" style="display:none;position:fixed;inset:0;z-index:9500;background:var(--overlay);align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarModalNavegador()">
+  <div id="modal-navegador" style="display:none;opacity:0;position:fixed;inset:0;z-index:9500;background:var(--overlay);align-items:center;justify-content:center;transition:opacity 0.3s ease;" onclick="if(event.target===this)cerrarModalNavegador()">
   <div id="modal-nav-inner" style="background:var(--white);border-radius:20px;padding:28px 20px;width:88%;max-width:340px;text-align:center;">
     <div id="modal-nav-icon" style="font-size:2.8rem;margin-bottom:12px;"></div>
     <div id="modal-nav-titulo" style="font-weight:800;font-size:1.05rem;margin-bottom:10px;color:var(--neutral-dark);"></div>

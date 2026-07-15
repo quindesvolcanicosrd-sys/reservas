@@ -72,6 +72,7 @@ function mostrarModalPermisos(nombre, fotoUrl) {
   var el = document.getElementById('modal-permisos');
   document.getElementById('mp-saludo').textContent = '¡Hola, ' + nombre + '!';
   el.style.display = 'flex';
+  el.style.opacity = ''; // limpia el opacity:0 que deja _cerrarModalPermisos() (ver más abajo) por si se reabre
   el.style.animation = 'fadeIn 0.3s ease';
   _registrarOverlayAbierto(_cerrarModalPermisos);
 }
@@ -143,13 +144,13 @@ function saltarPermisos() {
 
 function mostrarModalEdadBloqueo() {
   var m = document.getElementById('modal-edad-bloqueo');
-  if (m) m.style.display = 'flex';
+  if (m) { m.style.display = 'flex'; requestAnimationFrame(function() { m.style.opacity = '1'; }); }
   _registrarOverlayAbierto(cerrarModalEdadBloqueo);
 }
 function cerrarModalEdadBloqueo(porGesto) {
   if (!porGesto) { history.back(); return; }
   var m = document.getElementById('modal-edad-bloqueo');
-  if (m) m.style.display = 'none';
+  if (m) { m.style.opacity = '0'; setTimeout(function() { m.style.display = 'none'; }, 300); }
 }
 
 // ─── PIN de acceso (desde modal-permisos) ─────────────────────────────────────
@@ -417,6 +418,11 @@ function irAjSub(id, desdeHistorial) {
   // flotando sobre la pantalla equivocada sin esto.
   if (id !== 'aj-sub-salud' && typeof _saludOcultarFooter === 'function') _saludOcultarFooter();
   _ajCargarSub(id);
+  // Por si quedó a mitad de una animación de salida (reapertura rápida del
+  // mismo sub-panel, ver cerrarAjSub): limpia el opacity/transform inline de
+  // salida para que la animación de entrada (.aj-sub.activa, CSS) arranque
+  // limpia en vez de heredar un estado a medio camino.
+  sub.style.opacity = ''; sub.style.transform = '';
   sub.classList.add('activa');
   _ajSubAbierto = id;
   if (!desdeHistorial) {
@@ -426,9 +432,25 @@ function irAjSub(id, desdeHistorial) {
 
 function cerrarAjSub(id, desdeHistorial) {
   var sub = document.getElementById(id);
+  // Antes se ocultaba de golpe (classList.remove('activa') → display:none
+  // instantáneo, sin transición de salida) tanto si se cerraba con el botón
+  // atrás propio como con el gesto nativo — a diferencia de todo el resto de
+  // bottom sheets/modales de la app (patrón "animar afuera, recién ahí
+  // ocultar" de _overlayStack, ver MANIFEST). Ahora anima opacity/transform
+  // (mismo desplazamiento que la entrada de smoothSlideUp, invertido) y
+  // recién oculta al terminar, en un setTimeout — mismo mecanismo, aplicado
+  // igual sea que desdeHistorial venga en true (popstate) o falsy (botón).
   if (sub) {
-    sub.classList.remove('activa');
-    _ajSubAbierto = null;
+    _ajSubAbierto = null; // adentro del if (sub): ver nota de _ajGuardar(payload) sin subId más abajo
+    if (sub.classList.contains('activa')) {
+      sub.style.opacity = '0';
+      sub.style.transform = 'translateY(20px)';
+      setTimeout(function() {
+        if (_ajSubAbierto === id) return; // se reabrió el mismo sub-panel antes de terminar la salida
+        sub.classList.remove('activa');
+        sub.style.opacity = ''; sub.style.transform = '';
+      }, 300);
+    }
   }
   // Mismo motivo que en irAjSub: cerrar aj-sub-salud por el gesto nativo de
   // "atrás" (popstate) no pasa por saludCerrarWizard()/_saludMostrarEstado().

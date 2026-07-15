@@ -116,7 +116,7 @@
 
 .aj-btn-delete { width:100%; padding:13px; background:var(--danger-bg); border:1px solid var(--danger); border-radius:12px; color:var(--danger); font-size:0.88rem; font-weight:700; cursor:pointer; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:8px; }
 
-.aj-sub { display:none; position:fixed; inset:0; background:var(--bg); z-index:950; flex-direction:column; overflow:hidden; }
+.aj-sub { display:none; position:fixed; inset:0; background:var(--bg); z-index:950; flex-direction:column; overflow:hidden; transition:opacity 0.3s var(--ease-sheet), transform 0.3s var(--ease-sheet); }
 .aj-sub.activa { display:flex; animation:smoothSlideUp 0.3s var(--ease-sheet); }
 .aj-sub-inner { overflow-y:auto; flex:1; padding:var(--space-screen); }
 

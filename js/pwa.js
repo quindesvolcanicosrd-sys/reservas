@@ -66,12 +66,15 @@ function mostrarModalNavegador(tipo) {
       '3️⃣ Abre la app instalada y activa las notificaciones';
   }
   m.style.display = 'flex';
+  requestAnimationFrame(function() { m.style.opacity = '1'; });
   _registrarOverlayAbierto(cerrarModalNavegador);
 }
 
 function cerrarModalNavegador(porGesto) {
   if (!porGesto) { history.back(); return; }
-  document.getElementById('modal-navegador').style.display = 'none';
+  var m = document.getElementById('modal-navegador');
+  m.style.opacity = '0';
+  setTimeout(function() { m.style.display = 'none'; }, 300);
 }
 
 function pwaInstalar() {
