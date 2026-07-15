@@ -57,7 +57,7 @@ function axisTransicion(saliente, entrante, atras, mostrar, ocultar) {
 
   setTimeout(function() {
     entrante.classList.remove('axis-enter');
-    entrante.style.transform = ''; entrante.style.opacity = '';
+    entrante.style.transform = ''; entrante.style.opacity = ''; entrante.style.top = '';
     if (saliente) {
       saliente.classList.remove('axis-leave');
       saliente.style.transform = ''; saliente.style.opacity = '';
