@@ -418,12 +418,29 @@ function irAjSub(id, desdeHistorial) {
   // flotando sobre la pantalla equivocada sin esto.
   if (id !== 'aj-sub-salud' && typeof _saludOcultarFooter === 'function') _saludOcultarFooter();
   _ajCargarSub(id);
+  // Shared axis X (Material Design 3, ver .aj-sub/#s-datos-card en
+  // css/perfil.css y "Cambios recientes"): el panel nuevo entra
+  // (translateX 100%→0, opacity 0.85→1) mientras #s-datos-card (el fondo)
+  // retrocede levemente (translateX 0→-25%, opacity 1→0.85), en simultáneo.
   // Por si quedó a mitad de una animación de salida (reapertura rápida del
-  // mismo sub-panel, ver cerrarAjSub): limpia el opacity/transform inline de
-  // salida para que la animación de entrada (.aj-sub.activa, CSS) arranque
-  // limpia en vez de heredar un estado a medio camino.
-  sub.style.opacity = ''; sub.style.transform = '';
+  // mismo sub-panel): limpia el inline de sub para que arranque desde el
+  // estado de reposo real de la clase (.aj-sub sin .activa: translateX(100%)/
+  // opacity 0.85), no desde un valor a medio camino.
+  sub.style.transform = ''; sub.style.opacity = '';
   sub.classList.add('activa');
+  // Doble rAF: deja que el navegador pinte el estado de reposo (recién visible
+  // vía display:flex) antes de moverlo al destino — si se setea el transform
+  // final en el mismo tick que se muestra el panel, la transition no tiene
+  // "desde" que animar y el movimiento no se ve (mismo idiom que ya usan los
+  // bottom sheets de la app: abrirContacto(), etc.).
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      sub.style.transform = 'translateX(0)';
+      sub.style.opacity = '1';
+      var fondo = document.getElementById('s-datos-card');
+      if (fondo) { fondo.style.transform = 'translateX(-25%)'; fondo.style.opacity = '0.85'; }
+    });
+  });
   _ajSubAbierto = id;
   if (!desdeHistorial) {
     history.pushState({ pantalla: 's-datos', ajSub: id }, '', '#' + id);
@@ -436,20 +453,28 @@ function cerrarAjSub(id, desdeHistorial) {
   // instantáneo, sin transición de salida) tanto si se cerraba con el botón
   // atrás propio como con el gesto nativo — a diferencia de todo el resto de
   // bottom sheets/modales de la app (patrón "animar afuera, recién ahí
-  // ocultar" de _overlayStack, ver MANIFEST). Ahora anima opacity/transform
-  // (mismo desplazamiento que la entrada de smoothSlideUp, invertido) y
-  // recién oculta al terminar, en un setTimeout — mismo mecanismo, aplicado
-  // igual sea que desdeHistorial venga en true (popstate) o falsy (botón).
+  // ocultar" de _overlayStack, ver MANIFEST). Ahora anima el mismo "shared
+  // axis X" de irAjSub() invertido — el panel sale (translateX 0→100%,
+  // opacity 1→0.85) mientras #s-datos-card vuelve a su lugar (translateX
+  // -25%→0, opacity 0.85→1), en simultáneo — y recién oculta al terminar, en
+  // un setTimeout. Mismo mecanismo sea que desdeHistorial venga en true
+  // (popstate) o falsy (botón). Sin doble rAF acá: a diferencia de la
+  // apertura, ambos elementos ya están montados y pintados con su transform
+  // vigente (el de irAjSub()), así que la transition anima directo desde ese
+  // valor inline sin necesitar forzar un "desde" nuevo.
   if (sub) {
     _ajSubAbierto = null; // adentro del if (sub): ver nota de _ajGuardar(payload) sin subId más abajo
     if (sub.classList.contains('activa')) {
-      sub.style.opacity = '0';
-      sub.style.transform = 'translateY(20px)';
+      var fondo = document.getElementById('s-datos-card');
+      sub.style.transform = 'translateX(100%)';
+      sub.style.opacity = '0.85';
+      if (fondo) { fondo.style.transform = 'translateX(0)'; fondo.style.opacity = '1'; }
       setTimeout(function() {
         if (_ajSubAbierto === id) return; // se reabrió el mismo sub-panel antes de terminar la salida
         sub.classList.remove('activa');
-        sub.style.opacity = ''; sub.style.transform = '';
-      }, 300);
+        sub.style.transform = ''; sub.style.opacity = '';
+        if (fondo) { fondo.style.transform = ''; fondo.style.opacity = ''; }
+      }, 320);
     }
   }
   // Mismo motivo que en irAjSub: cerrar aj-sub-salud por el gesto nativo de

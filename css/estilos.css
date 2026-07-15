@@ -10,6 +10,13 @@
    en toda la app (antes repetida como literal en 7 archivos CSS). */
 :root {
   --ease-sheet: cubic-bezier(0.16, 1, 0.3, 1);
+  /* M3 "emphasized decelerate" — curva del patrón "shared axis X" (transición
+     de sub-pantallas, mismo criterio que usa Android en subsecciones de
+     Ajustes). Deliberadamente distinta de --ease-sheet (pensada para paneles
+     verticales tipo bottom sheet, no para este cruce horizontal). Pilotada en
+     aj-sub-* (css/perfil.css, ver irAjSub()/cerrarAjSub() en js/perfil.js);
+     pensada para reusarse tal cual en ir()/inscMostrarPaso() a futuro. */
+  --ease-axis: cubic-bezier(0.05, 0.7, 0.1, 1);
 }
 
 /* ── Keyframes ───────────────────────────────────────── */

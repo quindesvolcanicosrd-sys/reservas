@@ -116,8 +116,25 @@
 
 .aj-btn-delete { width:100%; padding:13px; background:var(--danger-bg); border:1px solid var(--danger); border-radius:12px; color:var(--danger); font-size:0.88rem; font-weight:700; cursor:pointer; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:8px; }
 
-.aj-sub { display:none; position:fixed; inset:0; background:var(--bg); z-index:950; flex-direction:column; overflow:hidden; transition:opacity 0.3s var(--ease-sheet), transform 0.3s var(--ease-sheet); }
-.aj-sub.activa { display:flex; animation:smoothSlideUp 0.3s var(--ease-sheet); }
+/* Shared axis X (Material Design 3) — piloto de transición para aj-sub-*, ver
+   irAjSub()/cerrarAjSub() (js/perfil.js) y "Cambios recientes". Reemplaza el
+   animation:smoothSlideUp anterior (entrada vertical, sin control de timing
+   entre 2 elementos) por un transition de transform/opacity horizontal,
+   coordinado por JS entre el panel que entra/sale y #s-datos-card (el fondo,
+   ver esa regla más abajo) — mismo idiom que ya usan los bottom sheets de la
+   app (estado inicial inline, doble rAF, transition CSS, setTimeout de
+   limpieza), no animation/keyframes por class-toggle. */
+.aj-sub { display:none; position:fixed; inset:0; background:var(--bg); z-index:950; flex-direction:column; overflow:hidden; transform:translateX(100%); opacity:0.85; transition:transform 0.32s var(--ease-axis), opacity 0.32s var(--ease-axis); }
+.aj-sub.activa { display:flex; }
+/* Fondo que "retrocede" mientras un aj-sub-* entra/sale por encima — dedicado
+   a propósito (no .card genérico ni .pantalla#s-datos, que ya tiene su propia
+   animation:smoothSlideUp vía .pantalla.activa) para no pisar esa lógica ni
+   arriesgar que .pantalla se vuelva containing block de algo inesperado
+   mientras el transform está activo (ver regla documentada en MANIFEST sobre
+   transform/backdrop-filter en .pantalla/.card). Verificado que #s-datos no
+   tiene ningún descendiente position:fixed propio (los que existían — bottom
+   sheets, cta-footer — ya son hijos directos de <body>, ver esa convención). */
+#s-datos-card { transition: transform 0.32s var(--ease-axis), opacity 0.32s var(--ease-axis); }
 .aj-sub-inner { overflow-y:auto; flex:1; padding:var(--space-screen); }
 
 .aj-pills-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
