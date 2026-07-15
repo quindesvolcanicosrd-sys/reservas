@@ -377,12 +377,12 @@ function _renderHomeReservas() {
           '<span class="material-symbols-outlined">calendar_month</span>' +
           '<span class="empty-state-icon-badge"><span class="material-symbols-outlined">add</span></span>' +
         '</div>' +
-        '<div class="empty-state-saludo">¡Hola, ' + (E.nombre || '') + '!</div>' +
-        '<div class="empty-state-msg">Todavía no tienes ninguna reserva.</div>' +
+        '<div class="empty-state-saludo">¿Deseas hacer una reserva?</div>' +
+        '<div class="empty-state-msg">Haz una o más reservas para consultarlas aquí. Presiona el recuadro con el ícono de calendario o el botón de abajo para hacer una reserva. También si deseas puedes:</div>' +
         '<div class="empty-state-links">' +
           '<span class="aj-pill aj-pill-link" onclick="irMisReservas()">Ver historial de reservas</span>' +
-          '<span class="aj-pill aj-pill-link" onclick="irEditarDatos()">Editar mi perfil</span>' +
-          '<span class="aj-pill aj-pill-link" onclick="abrirSheetEquipHome()">Cambiar mi equipamiento</span>' +
+          '<span class="aj-pill aj-pill-link" onclick="irEditarDatos()">Editar tu perfil</span>' +
+          '<span class="aj-pill aj-pill-link" onclick="abrirSheetEquipHome()">Cambiar tu equipamiento</span>' +
         '</div>' +
       '</div>'
     : activas.map(function(r) { return _renderCardHome(r, hoy); }).join('');
