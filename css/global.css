@@ -135,7 +135,21 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
   flex-direction: column; transform: translateY(100%);
   transition: transform 0.35s cubic-bezier(0.16,1,0.3,1);
 }
-.bsheet-handle { width: 36px; height: 4px; background: var(--border-light); border-radius: 2px; margin: 12px auto 4px; flex-shrink: 0; cursor: pointer; }
+/* position:relative + ::before invisible: agranda el área táctil a toda la
+   franja superior del sheet (el alto reservado arriba de .bsheet-title, no
+   solo la barrita de 36×4px) sin tocar el tamaño visual de la barra ni el
+   layout de lo que sigue — position:absolute no empuja nada, así que
+   .bsheet-title queda exactamente donde estaba. Un click dentro de ::before
+   sigue disparando el evento sobre .bsheet-handle (el elemento real; los
+   pseudo-elementos no son nodos targeteables aparte), así que el listener
+   delegado de shared/bsheet.js no necesitó ningún cambio. */
+.bsheet-handle { position: relative; width: 36px; height: 4px; background: var(--border-light); border-radius: 2px; margin: 12px auto 4px; flex-shrink: 0; cursor: pointer; }
+.bsheet-handle::before {
+  content: '';
+  position: absolute;
+  top: -12px; bottom: -4px; /* -12px llega hasta el borde superior real de .bsheet; -4px llega hasta donde arranca .bsheet-title */
+  left: -50vw; right: -50vw; /* ancho de sobra para cubrir cualquier .bsheet (max-width:480px) sin depender de su ancho real */
+}
 .bsheet-title {
   font-size: 0.72rem; font-weight: 700; color: var(--brand); text-transform: uppercase; letter-spacing: 1.5px;
   text-align: center; padding: 8px 16px 12px; border-bottom: 1px solid var(--border-light); flex-shrink: 0;
