@@ -179,12 +179,17 @@ function onGoogleCredentialInscripcion(response) {
 }
 
 function _inscPoblarPaso2(res) {
-  var av = document.getElementById('insc-avatar');
+  var avLetter = document.getElementById('insc-avatar-letter');
+  var avImg = document.getElementById('insc-avatar-img');
   var nm = document.getElementById('insc-profile-name');
   var em = document.getElementById('insc-profile-email');
   if (nm) nm.textContent = res.nombre || res.email;
   if (em) em.textContent = res.email;
-  if (av) { av.textContent = (res.nombre || res.email || '?').charAt(0).toUpperCase(); }
+  if (avLetter) avLetter.textContent = (res.nombre || res.email || '?').charAt(0).toUpperCase();
+  // Precarga la foto de Google ya en este punto (aunque el toggle "Usar foto
+  // de Google" arranque apagado) — así el crossfade de inscToggleFoto() no
+  // tiene que esperar la carga de red a mitad de la animación.
+  if (avImg && G.foto) avImg.src = G.foto;
   var fNombre = document.getElementById('f-nombre');
   if (fNombre && res.nombre && !fNombre.value) {
     fNombre.value = res.nombre;
@@ -243,10 +248,14 @@ function inscToggleFoto(btn) {
   btn.classList.toggle('toggle-off', on);
   btn.setAttribute('aria-pressed', String(!on));
   G.guardarFoto = !on;
-  var av = document.getElementById('insc-avatar');
-  if (!av) return;
-  if (!on && G.foto) { av.innerHTML = '<img src="' + G.foto + '" alt="">'; }
-  else { av.innerHTML = (G.email || '?').charAt(0).toUpperCase(); }
+  // Crossfade entre las 2 capas de #insc-avatar (ver .insc-avatar-layer,
+  // inscripcion.css) — ambas quedan siempre montadas, solo se togglea cuál
+  // tiene .mostrar; nunca se reemplaza innerHTML de golpe.
+  var avLetter = document.getElementById('insc-avatar-letter');
+  var avImg = document.getElementById('insc-avatar-img');
+  var mostrarFoto = !on && !!G.foto;
+  if (avImg) avImg.classList.toggle('mostrar', mostrarFoto);
+  if (avLetter) avLetter.classList.toggle('mostrar', !mostrarFoto);
 }
 
 function _inscToggleClick(btn) {
