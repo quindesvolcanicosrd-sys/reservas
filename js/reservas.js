@@ -297,12 +297,14 @@ function actualizarTotalS4() {
   var box = document.getElementById('s4-total-fijo');
   var mostrarConGratis = E.tipoPago === 'clase' && (gratisCredito > 0 || gratisCupon > 0) && E.fechas.length > 0;
   var mostrarNormal = !mostrarConGratis && total > 0;
+  var mostrarTotal = mostrarConGratis || mostrarNormal;
 
+  var htmlNuevo = '';
   if (mostrarConGratis) {
     var partes = [];
     if (gratisCredito > 0) partes.push('🔁 ' + gratisCredito + (gratisCredito === 1 ? ' clase a favor' : ' clases a favor'));
     if (gratisCupon > 0) partes.push('🎟️ 1 clase con cupón');
-    box.innerHTML = '<div class="total-box" style="background:var(--green-light);border-color:var(--success);">' +
+    htmlNuevo = '<div class="total-box" style="background:var(--green-light);border-color:var(--success);">' +
       '<div style="color:var(--green-dark);">' + partes.join(' + ') + '</div>' +
       '<div style="font-size:1.6rem;font-weight:800;color:var(--success-dark);">$' + total.toFixed(2) + '</div>' +
       (cobradas > 0
@@ -311,26 +313,80 @@ function actualizarTotalS4() {
       htmlCupon +
       '</div>';
   } else if (mostrarNormal) {
-    box.innerHTML = '<div class="total-box"><div>Total:</div><div style="font-size:1.6rem;font-weight:800;">$' + total.toFixed(2) + '</div>' + htmlCupon + '</div>';
+    htmlNuevo = '<div class="total-box"><div>Total:</div><div style="font-size:1.6rem;font-weight:800;">$' + total.toFixed(2) + '</div>' + htmlCupon + '</div>';
   }
 
   // Entrada/salida animada de #s4-total-fijo (fade + slide sutil, .mostrar en
   // css/reservas.css) — solo transiciona en los cambios reales de visibilidad,
   // no en cada actualización de monto mientras ya está visible (evita re-
   // animar en cada fecha que se selecciona/deselecciona).
-  var mostrarTotal = mostrarConGratis || mostrarNormal;
   var totalYaVisible = box.classList.contains('mostrar');
+  var contenidoActual = box.querySelector('.total-box');
+  // Crossfade corto del monto (ver "Cambios recientes"): si el panel ya está
+  // visible y el contenido realmente cambió (monto y/o detalle debajo, ej.
+  // "1 clase × $5.00" -> "2 clases × $10.00" al agregar/quitar una fecha), no
+  // se reemplaza el texto de golpe — _s4TotalCrossfade() hace fade-out del
+  // contenido viejo y fade-in del nuevo. El toggle de `.mostrar` del panel
+  // entero (abajo) sigue siendo aparte, solo para aparecer/desaparecer el
+  // panel completo — no se reinicia en cada cambio de monto.
+  if (mostrarTotal && totalYaVisible && contenidoActual && htmlNuevo !== box.innerHTML) {
+    _s4TotalCrossfade(box, htmlNuevo);
+  } else if (mostrarTotal) {
+    // No hay crossfade en curso que deshacer, pero por si el monto volvió a
+    // coincidir con el ya mostrado a mitad de un crossfade (ráfaga de
+    // clicks), se cancela cualquier fade pendiente y se restaura la opacidad.
+    if (_s4TotalFadeTimer) { clearTimeout(_s4TotalFadeTimer); _s4TotalFadeTimer = null; if (contenidoActual) contenidoActual.style.opacity = ''; }
+    box.innerHTML = htmlNuevo;
+  }
+
   if (mostrarTotal && !totalYaVisible) {
     box.style.display = 'block';
     requestAnimationFrame(function() { requestAnimationFrame(function() { box.classList.add('mostrar'); }); });
   } else if (!mostrarTotal && totalYaVisible) {
-    box.classList.remove('mostrar');
-    setTimeout(function() { if (!box.classList.contains('mostrar')) box.style.display = 'none'; }, 350);
+    _s4TotalOcultarFijo(box);
   } else if (!mostrarTotal) {
     box.style.display = 'none';
   }
 
   _s4SincronizarCuponWrapper();
+}
+
+// Timer del crossfade de monto en curso (ver _s4TotalCrossfade) — module-level
+// para poder cancelarlo si actualizarTotalS4() se vuelve a llamar antes de que
+// termine (ráfaga de fechas agregadas/quitadas seguidas).
+var _s4TotalFadeTimer = null;
+
+// Crossfade corto (~180ms totales: 90ms fade-out + 90ms fade-in) del contenido
+// de #s4-total-fijo cuando el monto/detalle cambia mientras el panel ya está
+// visible — evita el corte seco de reemplazar el texto de un frame al otro.
+// Si se llama de nuevo antes de que el fade-out anterior termine (el usuario
+// sigue tildando/destildando fechas rápido), se cancela el timer viejo y se
+// arranca uno nuevo con el html final — así solo se muestra el valor
+// definitivo, nunca un intermedio de una ráfaga de clicks.
+function _s4TotalCrossfade(box, htmlNuevo) {
+  if (_s4TotalFadeTimer) { clearTimeout(_s4TotalFadeTimer); _s4TotalFadeTimer = null; }
+  var actual = box.querySelector('.total-box');
+  if (actual) { actual.style.transition = 'opacity 0.09s var(--ease-sheet)'; actual.style.opacity = '0'; }
+  _s4TotalFadeTimer = setTimeout(function() {
+    _s4TotalFadeTimer = null;
+    box.innerHTML = htmlNuevo;
+    var nuevo = box.querySelector('.total-box');
+    if (nuevo) {
+      nuevo.style.transition = 'opacity 0.09s var(--ease-sheet)';
+      nuevo.style.opacity = '0';
+      requestAnimationFrame(function() { requestAnimationFrame(function() { nuevo.style.opacity = '1'; }); });
+    }
+  }, 90);
+}
+
+// Oculta #s4-total-fijo con su fade-out/slide-down (.mostrar, css/reservas.css)
+// en vez de un display:none seco — reusada tanto por actualizarTotalS4()
+// (cuando el monto cae a 0 mientras s4 sigue en pantalla) como por el hook de
+// ir() (js/ui.js) que anima la salida del panel al abandonar s4 hacia otra
+// pantalla (ver "Cambios recientes" — sync con el shared axis X).
+function _s4TotalOcultarFijo(box) {
+  box.classList.remove('mostrar');
+  setTimeout(function() { if (!box.classList.contains('mostrar')) box.style.display = 'none'; }, 350);
 }
 
 function cargarFechas() {

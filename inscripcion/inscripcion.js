@@ -88,7 +88,8 @@ function inscMostrarPaso(idx, desdeHistorial) {
   // instantáneo de abajo, sin animar el primer paso contra sí mismo.
   var actual = document.getElementById(_INSC_STEPS[_inscCurIdx]);
   var nueva = document.getElementById(_INSC_STEPS[idx]);
-  if (actual && nueva && actual !== nueva) {
+  var animado = !!(actual && nueva && actual !== nueva);
+  if (animado) {
     axisTransicion(actual, nueva, !!desdeHistorial,
       function(el) { el.classList.add('activo'); },
       function(el) { el.classList.remove('activo'); });
@@ -99,15 +100,32 @@ function inscMostrarPaso(idx, desdeHistorial) {
     });
   }
   _inscCurIdx = idx;
-  _inscRenderProg();
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  // Mismo patrón que ir()/js/ui.js en la app principal: .cta-footer-fixed
-  // vive fuera de .insc-step (ver index.html), así que hay que ocultar
-  // todos y mostrar solo el que corresponde al paso nuevo a mano.
-  document.querySelectorAll('.cta-footer-fixed').forEach(function(f) { f.style.display = 'none'; });
-  var footer = document.getElementById('cta-footer-' + _INSC_STEPS[idx]);
-  if (footer) footer.style.display = 'block';
   if (!desdeHistorial) history.pushState({ pasoInsc: idx }, '', '#paso-' + (idx + 1));
+
+  // Chrome del paso (título/dots de insc-nav, footer fijo) — mismo criterio
+  // que actualizarChrome() en ir() (js/ui.js, ver MANIFEST, "Cambios
+  // recientes"): si hay transición animada, se difiere hasta que termina
+  // (320ms, mismo valor que axisTransicion()) para que cambie en el mismo
+  // instante en que la entrante termina su transform — antes quedaba
+  // desincronizado (título/footer del paso nuevo aparecían de golpe apenas
+  // arrancaba la animación, mientras el paso saliente todavía ocupaba la
+  // pantalla). Sin animación (primer paso de la sesión, o mismo paso) se
+  // aplica de inmediato, igual que siempre.
+  var actualizarChromeInsc = function() {
+    _inscRenderProg();
+    // .cta-footer-fixed vive fuera de .insc-step (ver index.html), así que
+    // hay que ocultar todos y mostrar solo el que corresponde al paso nuevo
+    // a mano.
+    document.querySelectorAll('.cta-footer-fixed').forEach(function(f) { f.style.display = 'none'; });
+    var footer = document.getElementById('cta-footer-' + _INSC_STEPS[idx]);
+    if (footer) footer.style.display = 'block';
+  };
+  if (animado) {
+    setTimeout(actualizarChromeInsc, 320);
+  } else {
+    actualizarChromeInsc();
+  }
 }
 
 function inscPasoAnterior() {

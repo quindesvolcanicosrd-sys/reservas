@@ -116,6 +116,19 @@ function ir(id, desdeHistorial, sinTrampa) {
     document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
     nueva.classList.add('activa');
   }
+
+  // #s4-total-fijo (panel de total fijo de s4, js/reservas.js) — al abandonar
+  // s4 con transición animada, se dispara su salida (fade-out + slide-down,
+  // _s4TotalOcultarFijo()) YA, en sincronía con el axis-leave de s4 que recién
+  // arranca (misma duración, 0.32s, ver css/reservas.css) — así el panel
+  // termina de desvanecerse justo cuando la pantalla completa su salida, en
+  // vez de desaparecer de golpe recién cuando el footer entero cambia a los
+  // 320ms (ver actualizarChrome() más abajo). Vuelve a mostrarse (fade-in +
+  // slide-up) al reentrar a s4, disparado desde ese mismo punto de 320ms —
+  // ver el bloque `if (id === 's4')` dentro de actualizarChrome().
+  if (animado && actual && actual.id === 's4' && typeof _s4TotalOcultarFijo === 'function') {
+    _s4TotalOcultarFijo(document.getElementById('s4-total-fijo'));
+  }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   var sinHistorial = ['s-carga', 's-carga-fechas', 's-carga-conf'];
@@ -176,6 +189,15 @@ function ir(id, desdeHistorial, sinTrampa) {
     document.querySelectorAll('.cta-footer-fixed').forEach(function(f) { f.style.display = 'none'; });
     var ctaFooter = document.getElementById('cta-footer-' + id);
     if (ctaFooter) ctaFooter.style.display = 'block';
+
+    // #s4-total-fijo — reentrada a s4 (ver nota de salida más arriba, en
+    // ir()): recalcula y, si corresponde mostrarlo, dispara su entrada
+    // (fade-in + slide-up) justo en este mismo instante (320ms, el mismo
+    // punto en que el resto de la chrome de s4 vuelve a mostrarse) — nunca
+    // antes. Si nunca se ocultó (primera entrada a s4 en la sesión, sin
+    // fechas todavía) es un no-op porque no hay ningún cambio de visibilidad
+    // real que animar.
+    if (id === 's4' && typeof actualizarTotalS4 === 'function') actualizarTotalS4();
 
     var homeNav = document.getElementById('home-nav');
     if (homeNav) {
