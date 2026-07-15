@@ -154,6 +154,12 @@ window.addEventListener('touchstart', function(e) {
   _ptrProgreso = 0;
   var anillo = document.getElementById('ptr-spinner');
   if (anillo) { anillo.style.animation = 'none'; anillo.style.transform = 'rotate(0deg)'; }
+  // Texto de ayuda ("Desliza hacia abajo para recargar") oculto apenas arranca
+  // el gesto, para no competir con el spinner agrandado mientras se arrastra
+  // — se restaura en _ptrOcultarIndicador(), el único punto de "vuelta a
+  // reposo" tanto si no llegó al umbral como al terminar un refresh real.
+  var ptrHelper = document.getElementById('ptr-helper-texto');
+  if (ptrHelper) ptrHelper.classList.add('ptr-helper-oculto');
 }, { passive: true });
 
 window.addEventListener('touchmove', function(e) {
@@ -218,6 +224,8 @@ function _ptrOcultarIndicador() {
   ind.style.opacity = '0';
   ind.style.transform = 'translate(-50%,-50px) scale(0.7)';
   if (anillo) { anillo.style.animation = 'none'; anillo.style.transform = 'rotate(0deg)'; }
+  var ptrHelper = document.getElementById('ptr-helper-texto');
+  if (ptrHelper) ptrHelper.classList.remove('ptr-helper-oculto');
 }
 
 function irNuevaReserva(skipEquip) {
@@ -307,18 +315,21 @@ function _sincronizarNavHome(forzarVisible) {
   var activas = _clasificarReservas(_todasReservas || [], hoy).activas;
   var homeNav = document.getElementById('home-nav');
   var homeNavSpacer = document.getElementById('home-nav-spacer');
+  var ptrHelper = document.getElementById('ptr-helper-texto');
 
   if (homeNav) homeNav.classList.toggle('mostrar-cta-label', activas.length === 0);
 
   if (!forzarVisible && activas.length === 0) {
     if (homeNav) homeNav.style.display = 'none';
     if (homeNavSpacer) homeNavSpacer.style.display = 'none';
+    if (ptrHelper) ptrHelper.style.display = 'none';
   } else {
     if (homeNav) homeNav.style.display = 'flex';
     if (homeNavSpacer) {
       homeNavSpacer.style.display = '';
       if (homeNav) homeNavSpacer.style.height = (homeNav.offsetHeight + 8) + 'px';
     }
+    if (ptrHelper) ptrHelper.style.display = '';
   }
   // Bug real corregido (ver MANIFEST, "Cambios recientes" — nav duplicado al
   // volver a Home tras la primera reserva): forzarVisible fuerza #home-nav
