@@ -1114,6 +1114,10 @@ function saludBack() {
   else { cerrarAjSub('aj-sub-salud'); }
 }
 
+function saludFilaBloqueada() {
+  mostrarToast('Para editar esta información deberás completar el formulario nuevamente.', 'error');
+}
+
 function saludIniciarWizard() {
   _saludData = {
     enfermedad: (E.datos && E.datos.enfermedad) || '',

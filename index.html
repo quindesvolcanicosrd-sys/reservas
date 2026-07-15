@@ -1519,108 +1519,108 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:14px;" onclick="saludIniciarWizard()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span> Volver a completar el paso a paso</button>
 
       <div class="aj-group">
-        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Enfermedad diagnosticada','','aj-enfermedad-val','enfermedad','Ej: Asma, diabetes')">
+        <div class="aj-dato-row no-tap" onclick="saludFilaBloqueada()">
           <div class="aj-dato-icon"><span class="material-symbols-outlined">sick</span></div>
           <div class="aj-dato-texts">
             <div class="aj-dato-label">Enfermedad diagnosticada</div>
             <div class="aj-dato-val vacio" id="aj-enfermedad-val">—</div>
           </div>
-          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+          <div class="aj-dato-lock"><span class="material-symbols-outlined">lock</span></div>
         </div>
 
-        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Dieta','','aj-dieta-val','dieta','Ej: Vegetariana, sin gluten')">
+        <div class="aj-dato-row no-tap" onclick="saludFilaBloqueada()">
           <div class="aj-dato-icon"><span class="material-symbols-outlined">restaurant</span></div>
           <div class="aj-dato-texts">
             <div class="aj-dato-label">Dieta</div>
             <div class="aj-dato-val vacio" id="aj-dieta-val">—</div>
           </div>
-          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+          <div class="aj-dato-lock"><span class="material-symbols-outlined">lock</span></div>
         </div>
 
-        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Antecedentes médicos personales','','aj-antecedentes-val','antecedentes','Ej: Cirugías, fracturas previas')">
+        <div class="aj-dato-row no-tap" onclick="saludFilaBloqueada()">
           <div class="aj-dato-icon"><span class="material-symbols-outlined">history</span></div>
           <div class="aj-dato-texts">
             <div class="aj-dato-label">Antecedentes médicos personales</div>
             <div class="aj-dato-val vacio" id="aj-antecedentes-val">—</div>
           </div>
-          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+          <div class="aj-dato-lock"><span class="material-symbols-outlined">lock</span></div>
         </div>
 
-        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Atención médica','','aj-atencionMedica-val','atencionMedica','Ej: Clínica u hospital de preferencia')">
+        <div class="aj-dato-row no-tap" onclick="saludFilaBloqueada()">
           <div class="aj-dato-icon"><span class="material-symbols-outlined">local_hospital</span></div>
           <div class="aj-dato-texts">
             <div class="aj-dato-label">Atención médica</div>
             <div class="aj-dato-val vacio" id="aj-atencionMedica-val">—</div>
           </div>
-          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+          <div class="aj-dato-lock"><span class="material-symbols-outlined">lock</span></div>
         </div>
       </div>
 
       <div class="aj-group">
-        <div class="aj-dato-row" onclick="ajAbrirSheetSiNo('¿Tienes alguna alergia?','alergias','aj-alergias-val','aj-alergiasDesc-wrap')">
+        <div class="aj-dato-row no-tap" onclick="saludFilaBloqueada()">
           <div class="aj-dato-icon"><span class="material-symbols-outlined">warning</span></div>
           <div class="aj-dato-texts">
             <div class="aj-dato-label">Alergias</div>
             <div class="aj-dato-val vacio" id="aj-alergias-val">—</div>
           </div>
-          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+          <div class="aj-dato-lock"><span class="material-symbols-outlined">lock</span></div>
         </div>
       </div>
 
       <div id="aj-alergiasDesc-wrap" style="display:none">
         <div class="aj-group">
-          <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Alergia/s que presenta','','aj-alergiasDesc-val','alergiasDesc','Ej: Penicilina, polen')">
+          <div class="aj-dato-row no-tap" onclick="saludFilaBloqueada()">
             <div class="aj-dato-icon"><span class="material-symbols-outlined">list_alt</span></div>
             <div class="aj-dato-texts">
               <div class="aj-dato-label">Alergia/s que presenta</div>
               <div class="aj-dato-val vacio" id="aj-alergiasDesc-val">—</div>
             </div>
-            <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+            <div class="aj-dato-lock"><span class="material-symbols-outlined">lock</span></div>
           </div>
         </div>
       </div>
 
       <div class="aj-group">
-        <div class="aj-dato-row" onclick="ajAbrirSheetSiNo('¿Tomas algún medicamento?','medicamentos','aj-medicamentos-val','aj-medicamentosDesc-wrap')">
+        <div class="aj-dato-row no-tap" onclick="saludFilaBloqueada()">
           <div class="aj-dato-icon"><span class="material-symbols-outlined">medication</span></div>
           <div class="aj-dato-texts">
             <div class="aj-dato-label">¿Toma algún medicamento?</div>
             <div class="aj-dato-val vacio" id="aj-medicamentos-val">—</div>
           </div>
-          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+          <div class="aj-dato-lock"><span class="material-symbols-outlined">lock</span></div>
         </div>
       </div>
 
       <div id="aj-medicamentosDesc-wrap" style="display:none">
         <div class="aj-group">
-          <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('¿Qué medicamento/s toma diariamente?','','aj-medicamentosDesc-val','medicamentosDesc','Ej: Losartán 50mg, 1 vez al día')">
+          <div class="aj-dato-row no-tap" onclick="saludFilaBloqueada()">
             <div class="aj-dato-icon"><span class="material-symbols-outlined">medication_liquid</span></div>
             <div class="aj-dato-texts">
               <div class="aj-dato-label">Medicamento/s diarios</div>
               <div class="aj-dato-val vacio" id="aj-medicamentosDesc-val">—</div>
             </div>
-            <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+            <div class="aj-dato-lock"><span class="material-symbols-outlined">lock</span></div>
           </div>
         </div>
       </div>
 
       <div class="aj-group">
-        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Nombre de seguro privado','','aj-seguro-val','seguro','Ej: Salud S.A.')">
+        <div class="aj-dato-row no-tap" onclick="saludFilaBloqueada()">
           <div class="aj-dato-icon"><span class="material-symbols-outlined">health_and_safety</span></div>
           <div class="aj-dato-texts">
             <div class="aj-dato-label">Nombre de seguro privado</div>
             <div class="aj-dato-val vacio" id="aj-seguro-val">—</div>
           </div>
-          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+          <div class="aj-dato-lock"><span class="material-symbols-outlined">lock</span></div>
         </div>
 
-        <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Número de contacto del seguro','','aj-seguroContacto-val','seguroContacto','Ej: 0962773052')">
+        <div class="aj-dato-row no-tap" onclick="saludFilaBloqueada()">
           <div class="aj-dato-icon"><span class="material-symbols-outlined">call</span></div>
           <div class="aj-dato-texts">
             <div class="aj-dato-label">Número de contacto del seguro</div>
             <div class="aj-dato-val vacio" id="aj-seguroContacto-val">—</div>
           </div>
-          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+          <div class="aj-dato-lock"><span class="material-symbols-outlined">lock</span></div>
         </div>
       </div>
     </div>
