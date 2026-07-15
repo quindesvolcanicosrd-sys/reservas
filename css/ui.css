@@ -64,6 +64,15 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
 .btn-outline:hover { background: var(--brand-30); transform: translateY(-2px); }
 .btn-outline:active { transform: translateY(0) scale(0.98); }
 
+/* Acción destructiva sólida (ej. "Eliminar mi cuenta") — mismo tamaño/forma
+   que .btn, con el rojo de --danger en vez de --brand. Ver MANIFEST,
+   "Cambios recientes" — antes el botón de eliminar cuenta estaba 100%
+   inline (sin mayúsculas/letter-spacing ni hover, una variante propia). */
+.btn-danger { background: var(--danger); color: var(--white); border: none; }
+.btn-danger:hover:not(:disabled) { background: var(--danger-dark); transform: translateY(-2px); }
+.btn-danger:active:not(:disabled) { transform: translateY(0) scale(0.98); }
+.btn-danger:disabled { opacity: 0.4; cursor: not-allowed; }
+
 /* Excepción de marca: mismo tamaño/forma que .btn, pero con el violeta
    oficial de DeUna en vez de --brand — método de pago #s-pago, ver MANIFEST. */
 .btn-deuna { background: var(--deuna); color: var(--white); border: none; }

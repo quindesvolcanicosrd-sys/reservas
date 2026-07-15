@@ -261,9 +261,10 @@ function mecValidar() {
   var val = (document.getElementById('mec-input').value || '').trim();
   var btn = document.getElementById('mec-btn-confirmar');
   var ok = val === E.nombre;
+  // .btn-danger:disabled (css/ui.css) ya maneja opacity/cursor vía CSS —
+  // antes se pisaban acá mismo con inline, antes de que el botón migrara a
+  // la clase compartida (ver MANIFEST, "Cambios recientes").
   btn.disabled = !ok;
-  btn.style.opacity = ok ? '1' : '0.4';
-  btn.style.cursor = ok ? 'pointer' : 'not-allowed';
 }
 
 function mecCerrar(porGesto) {
