@@ -51,6 +51,31 @@
 .total-box .total-detalle { font-size: 0.85rem; font-weight: 600; color: var(--success-bright); margin-top: 6px; }
 .total-box .total-fechas-lista { font-size: 0.78rem; font-weight: 600; color: var(--success-bright); margin-top: 8px; line-height: 1.6; text-align: center; }
 
+/* Panel de total fijo de s4 (#s4-total-fijo, ver actualizarTotalS4() en
+   js/reservas.js) — hijo directo de #cta-footer-s4 (a su vez hijo directo de
+   <body>, ver .cta-footer-fixed), anclado justo encima del botón "Continuar",
+   siempre visible mientras se scrollea la lista de fechas/meses. Entrada/
+   salida animada (fade + slide sutil, --ease-sheet) en vez de un aparecer/
+   desaparecer seco — .mostrar es la única clase que togglea JS, el resto
+   (display/innerHTML) lo maneja actualizarTotalS4() directo. */
+#s4-total-fijo {
+  opacity: 0; transform: translateY(8px); margin-bottom: 12px;
+  transition: opacity 0.32s var(--ease-sheet), transform 0.32s var(--ease-sheet);
+}
+#s4-total-fijo.mostrar { opacity: 1; transform: translateY(0); }
+
+/* Colapso animado de #s4-cupon-wrapper al aplicar el cupón (ver
+   toggleCupon()/quitarCupon()/_s4SincronizarCuponWrapper() en js/reservas.js)
+   — opacity Y max-height/margin en simultáneo (mismo timing/curva), para que
+   #lista-fechas debajo se deslice hacia arriba acompañando el cierre del
+   espacio en tiempo real, no recién cuando termina el fade. */
+#s4-cupon-wrapper {
+  overflow: hidden; max-height: 0; opacity: 0; margin: 0;
+  transition: opacity 0.32s var(--ease-sheet), max-height 0.32s var(--ease-sheet), margin 0.32s var(--ease-sheet);
+}
+#s4-cupon-wrapper.mostrar { max-height: 300px; opacity: 1; margin: 0 0 18px; }
+.s4-cupon-aplicado-linea { font-size: 0.78rem; font-weight: 700; color: var(--amber-dark); margin-top: 6px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+
 .tipo-pago-wrapper { border-radius: 12px; margin-bottom: 20px; }
 
 .nota-pago-wrapper { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-top: 20px; }

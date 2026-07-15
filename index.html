@@ -319,9 +319,13 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
       </div>
       <p id="s4-fechas-subtitulo" style="margin-bottom:16px; font-weight: 500;">Selecciona las fechas a las que asistirás.</p>
-      <div id="lista-fechas"></div>
 
-      <div id="s4-cupon-wrapper" style="display:none;margin:18px 0;">
+      <!-- Reubicado antes de #lista-fechas (era lo último en la card) — debe
+           ser lo primero que se ve al entrar a s4 cuando hay cupón disponible.
+           Colapso animado (opacity+max-height+margin en simultáneo, ver
+           _s4SincronizarCuponWrapper() en js/reservas.js) en vez de
+           display:none seco al aplicar el cupón. -->
+      <div id="s4-cupon-wrapper" style="display:none;">
         <label for="chk-cupon" style="display:flex;align-items:center;gap:12px;background:var(--amber-lighter);border:2px solid var(--amber);border-radius:12px;padding:16px;cursor:pointer;transition:all 0.2s;">
           <input type="checkbox" id="chk-cupon" style="display:none;" onchange="toggleCupon(this)">
           <div style="flex:1;min-width:0;">
@@ -333,17 +337,16 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </label>
       </div>
 
+      <div id="lista-fechas"></div>
+
       <div id="s4-credito-banner" style="display:none;margin:18px 0;background:var(--amber-lighter);border:2px solid var(--amber);border-radius:12px;padding:14px 16px;font-size:0.88rem;color:var(--amber-darker);line-height:1.5;"></div>
 
 <div id="s4-meses-wrapper" style="display:none;margin-top:16px;margin-bottom:24px;">
         <div id="lista-meses-unificada" class="meses-grid-pills"></div>
       </div>
 
-      <div id="s4-total-box" style="display:none;margin:18px 0;">
-        <div class="total-box"><div id="s4-total-monto"></div><div class="total-detalle" id="s4-total-detalle"></div></div>
-      </div>
       <div class="error-msg" id="err-s4"></div>
-      <div class="cta-footer-spacer"></div>
+      <div class="cta-footer-spacer" style="height:220px;"></div>
     </div>
   </div>
 
@@ -2003,6 +2006,7 @@ person_cancel
 </div>
 
 <div class="cta-footer-fixed" id="cta-footer-s4">
+  <div id="s4-total-fijo" style="display:none;"></div>
   <button class="btn btn-outline" id="btn-s4-continuar" onclick="continuar_s4()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
 </div>
 

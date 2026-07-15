@@ -192,9 +192,7 @@ function selTipoPago(tipo) {
   }
   _updateTpSlider(true);
   actualizarTextosPago();
-  actualizarTotalS4();
-  var cuponWrap = document.getElementById('s4-cupon-wrapper');
-  if (cuponWrap) cuponWrap.style.display = (tipo === 'clase' && tieneCuponDisponible()) ? 'block' : 'none';
+  actualizarTotalS4(); // ya llama a _s4SincronizarCuponWrapper() internamente
 }
 
 function _updateTpSlider(animate) {
@@ -215,8 +213,43 @@ function toggleCupon(cb) {
   E.cuponAplicado = cb.checked;
   var circle = document.getElementById('cupon-circle');
   if (circle) circle.classList.toggle('sel-cupon', cb.checked);
-  actualizarTotalS4();
+  actualizarTotalS4(); // ya llama a _s4SincronizarCuponWrapper() internamente — oculta el wrapper si quedó aplicado
   actualizarTextosPago();
+}
+
+// Undo del cupón desde la líneita "Cupón aplicado ✓" del total fijo (ver
+// actualizarTotalS4()) — #s4-cupon-wrapper queda oculto mientras el cupón
+// está aplicado, así que sin esto no había forma de deshacerlo una vez
+// aplicado salvo recargar la pantalla.
+function quitarCupon() {
+  E.cuponAplicado = false;
+  var chk = document.getElementById('chk-cupon');
+  if (chk) chk.checked = false;
+  var circle = document.getElementById('cupon-circle');
+  if (circle) circle.classList.remove('sel-cupon');
+  actualizarTotalS4(); // recalcula sin el descuento y vuelve a mostrar #s4-cupon-wrapper
+  actualizarTextosPago();
+}
+
+// Muestra/oculta #s4-cupon-wrapper con la animación de colapso (opacity +
+// max-height/margin en simultáneo, ver esa regla en css/reservas.css) — única
+// fuente de esta decisión, reemplaza los 3 puntos que antes tocaban
+// cuponWrap.style.display directo (selTipoPago(), cargarFechas(),
+// actualizarTotalS4()). No re-anima si ya está en el estado pedido.
+function _s4SincronizarCuponWrapper() {
+  var w = document.getElementById('s4-cupon-wrapper');
+  if (!w) return;
+  var mostrar = E.tipoPago === 'clase' && tieneCuponDisponible() && !E.cuponAplicado;
+  var yaVisible = w.classList.contains('mostrar');
+  if (mostrar && !yaVisible) {
+    w.style.display = 'block';
+    requestAnimationFrame(function() { requestAnimationFrame(function() { w.classList.add('mostrar'); }); });
+  } else if (!mostrar && yaVisible) {
+    w.classList.remove('mostrar');
+    setTimeout(function() { if (!w.classList.contains('mostrar')) w.style.display = 'none'; }, 350);
+  } else if (!mostrar) {
+    w.style.display = 'none';
+  }
 }
 
 function actualizarTotalS4() {
@@ -253,25 +286,51 @@ function actualizarTotalS4() {
 
   E.totalPago = total;
 
-  var box = document.getElementById('s4-total-box');
-  if (E.tipoPago === 'clase' && (gratisCredito > 0 || gratisCupon > 0) && E.fechas.length > 0) {
+  // Líneita "Cupón aplicado ✓" (clickeable, deshace vía quitarCupon()) — mismo
+  // color ámbar que el resto de la UI de cupón (var(--amber-dark), ver
+  // .s4-cupon-aplicado-linea en css/reservas.css). Solo cuando el cupón está
+  // realmente aplicado Y efectivamente contribuyendo al descuento (gratisCupon>0).
+  var htmlCupon = (E.cuponAplicado && gratisCupon > 0)
+    ? '<div class="s4-cupon-aplicado-linea" onclick="quitarCupon()">🎟️ Cupón aplicado ✓ · Quitar</div>'
+    : '';
+
+  var box = document.getElementById('s4-total-fijo');
+  var mostrarConGratis = E.tipoPago === 'clase' && (gratisCredito > 0 || gratisCupon > 0) && E.fechas.length > 0;
+  var mostrarNormal = !mostrarConGratis && total > 0;
+
+  if (mostrarConGratis) {
     var partes = [];
     if (gratisCredito > 0) partes.push('🔁 ' + gratisCredito + (gratisCredito === 1 ? ' clase a favor' : ' clases a favor'));
     if (gratisCupon > 0) partes.push('🎟️ 1 clase con cupón');
-    box.style.display = 'block';
     box.innerHTML = '<div class="total-box" style="background:var(--green-light);border-color:var(--success);">' +
       '<div style="color:var(--green-dark);">' + partes.join(' + ') + '</div>' +
       '<div style="font-size:1.6rem;font-weight:800;color:var(--success-dark);">$' + total.toFixed(2) + '</div>' +
       (cobradas > 0
         ? '<div style="font-size:0.8rem;color:var(--success-bright);">' + cobradas + ' clase' + (cobradas > 1 ? 's' : '') + ' × $' + E.precioPorClase.toFixed(2) + '</div>'
         : '<div style="font-size:0.8rem;color:var(--success-bright);">Sin costo ✓</div>') +
+      htmlCupon +
       '</div>';
-  } else if (total > 0) {
+  } else if (mostrarNormal) {
+    box.innerHTML = '<div class="total-box"><div>Total:</div><div style="font-size:1.6rem;font-weight:800;">$' + total.toFixed(2) + '</div>' + htmlCupon + '</div>';
+  }
+
+  // Entrada/salida animada de #s4-total-fijo (fade + slide sutil, .mostrar en
+  // css/reservas.css) — solo transiciona en los cambios reales de visibilidad,
+  // no en cada actualización de monto mientras ya está visible (evita re-
+  // animar en cada fecha que se selecciona/deselecciona).
+  var mostrarTotal = mostrarConGratis || mostrarNormal;
+  var totalYaVisible = box.classList.contains('mostrar');
+  if (mostrarTotal && !totalYaVisible) {
     box.style.display = 'block';
-    box.innerHTML = '<div class="total-box"><div>Total:</div><div style="font-size:1.6rem;font-weight:800;">$' + total.toFixed(2) + '</div></div>';
-  } else {
+    requestAnimationFrame(function() { requestAnimationFrame(function() { box.classList.add('mostrar'); }); });
+  } else if (!mostrarTotal && totalYaVisible) {
+    box.classList.remove('mostrar');
+    setTimeout(function() { if (!box.classList.contains('mostrar')) box.style.display = 'none'; }, 350);
+  } else if (!mostrarTotal) {
     box.style.display = 'none';
   }
+
+  _s4SincronizarCuponWrapper();
 }
 
 function cargarFechas() {
@@ -365,19 +424,21 @@ function cargarFechas() {
     } else {
       wrapper.style.display = 'none'; E.tipoPago = 'clase'; subtitulo.textContent = E.reagendando ? 'Seleccioná la nueva fecha para tu clase a favor.' : 'Selecciona uno o varios entrenamientos.';
       subtitulo.style.display = 'block'; document.getElementById('lista-fechas').style.display = 'block';
-      document.getElementById('s4-total-box').style.display = 'none'; document.getElementById('s4-meses-wrapper').style.display = 'none';
+      var totalFijoReset = document.getElementById('s4-total-fijo');
+      if (totalFijoReset) { totalFijoReset.classList.remove('mostrar'); totalFijoReset.style.display = 'none'; }
+      document.getElementById('s4-meses-wrapper').style.display = 'none';
       document.querySelectorAll('#lista-meses-unificada input').forEach(function(cb) { cb.checked = false; }); E.meses = []; E.totalPago = 0;
       if (disponibles.length === 0) { err('err-s4', 'No hay cupos disponibles actualmente.'); }
     }
     actualizarTextosPago();
-    var cuponWrap = document.getElementById('s4-cupon-wrapper'); var chkCupon = document.getElementById('chk-cupon');
-    if (cuponWrap) cuponWrap.style.display = (E.tipoPago === 'clase' && tieneCuponDisponible()) ? 'block' : 'none';
+    var chkCupon = document.getElementById('chk-cupon');
     var icoCupon = document.getElementById('tp-cupon-ico');
     var hintCupon = document.getElementById('tp-cupon-hint');
     var tieneCupon = tieneCuponDisponible();
     if (icoCupon) icoCupon.style.display = tieneCupon ? 'inline-flex' : 'none';
     if (hintCupon) hintCupon.classList.toggle('visible', tieneCupon);
     if (chkCupon) chkCupon.checked = false; E.cuponAplicado = false;
+    _s4SincronizarCuponWrapper();
     var agotadasEquip = fechas.filter(function(f) {
       return !f.disponible && f.razon && /patines|talla|protec|equip/i.test(f.razon);
     });
