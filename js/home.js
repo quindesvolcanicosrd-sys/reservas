@@ -42,7 +42,11 @@ if (navAvatar) {
     if (homeContent) {
       setTimeout(function() {
         if (homeContenidoFinalListo) return; // el fetch ya resolvió y pintó el contenido real; no lo pisamos con el loader
-        homeContent.innerHTML = '<div class="loader" style="padding:24px 0;"><div class="spinner"></div></div>';
+        // min-height + flex centra el spinner dentro del área del contenedor dinámico
+        // en vez de quedar pegado arriba (antes solo tenía padding:24px 0, sin alto
+        // propio) — ver "Cambios recientes", mismo alto aproximado que .empty-state-body
+        // para minimizar el salto de layout cuando el contenido real lo reemplace.
+        homeContent.innerHTML = '<div class="loader" style="min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;"><div class="spinner"></div></div>';
         homeContent.style.opacity = '1';
       }, 50);
     }
@@ -98,12 +102,25 @@ if (navAvatar) {
 function refrescarMisReservas(callback, btn) {
   var icon = btn ? btn.querySelector('.material-symbols-outlined') : null;
   if (icon) icon.style.animation = 'spin 0.6s linear infinite';
+  // Fade-out SOLO de #home-reservas-lista (el contenedor dinámico: ícono+saludo+
+  // empty-state o cards) — nunca del avatar/"¿Dudas? Contáctanos" (#home-empty-topbar,
+  // elemento separado desde el fix de "Cambios recientes"), ni de #home-nav ni del
+  // footer fijo de CTAs, ninguno de los 3 vive dentro de este contenedor. Sin loader
+  // genérico en este flujo — el único feedback de carga es #ptr-indicator (gesto) o
+  // el ícono girando de este mismo botón (refresh de escritorio).
+  var homeContent = document.getElementById('home-reservas-lista');
+  if (homeContent) { homeContent.style.transition = 'opacity 0.22s var(--ease-sheet)'; homeContent.style.opacity = '0'; }
   api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
     _todasReservas = reservas;
-    prepararHome();
+    // prepararHome(true): saltarFadeInicial=true evita que repita su propio ciclo de
+    // fade/loader (ya hicimos el fade-out arriba, sin loader) — solo re-pide
+    // getFechasDisponibles (enriquece mapsUrl/horaFin/duración/descripción, que
+    // getReservasPersona no trae) y al resolver re-renderiza + hace fade-in.
+    prepararHome(true);
     if (icon) icon.style.animation = '';
     if (callback) callback();
   }, function() {
+    if (homeContent) homeContent.style.opacity = '1'; // revierte el fade-out: no hay contenido nuevo que mostrar
     _renderHomeReservas();
     if (icon) icon.style.animation = '';
     mostrarToast('No se pudo actualizar. Intenta de nuevo.', 'error');
@@ -306,20 +323,25 @@ function _renderHomeReservas() {
     ? '<img src="' + fotoUrl + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="">'
     : (E.nombre || '?').charAt(0).toUpperCase();
 
+  // Topbar (avatar + "¿Dudas? Contáctanos") es un elemento persistente fuera de
+  // #home-reservas-lista (index.html) — acá solo se sincroniza su visibilidad/avatar,
+  // nunca se re-crea ni queda expuesta a que un innerHTML del contenedor dinámico
+  // (loader genérico, re-render) se la lleve puesta (ver "Cambios recientes").
+  var emptyTopbar = document.getElementById('home-empty-topbar');
+  if (emptyTopbar) {
+    emptyTopbar.style.display = activas.length === 0 ? 'flex' : 'none';
+    var avatarEl = document.getElementById('home-empty-avatar');
+    if (avatarEl) avatarEl.innerHTML = avatarHtml;
+  }
+
   var html = activas.length === 0
-    ? '<div class="empty-state-home">' +
-        '<div class="empty-state-topbar">' +
-          '<div class="empty-state-avatar" onclick="irEditarDatos()">' + avatarHtml + '</div>' +
-          '<button class="empty-state-contacto" onclick="abrirContacto()"><span class="material-symbols-outlined">forum</span>¿Dudas? Contáctanos</button>' +
-        '</div>' +
-        '<div class="empty-state-body">' +
-          '<div class="empty-state-icon"><span class="material-symbols-outlined">calendar_month</span></div>' +
-          '<div class="empty-state-saludo">¡Hola, ' + (E.nombre || '') + '!</div>' +
-          '<div class="empty-state-msg">Todavía no tienes ninguna reserva.<br>¿Te animas a hacer una?</div>' +
-          '<div class="empty-state-links">' +
-            '<span class="empty-state-link" onclick="irMisReservas()">Ver historial de reservas</span>' +
-            '<span class="empty-state-link" onclick="irEditarDatos()">Editar mi perfil</span>' +
-          '</div>' +
+    ? '<div class="empty-state-body">' +
+        '<div class="empty-state-icon"><span class="material-symbols-outlined">calendar_month</span></div>' +
+        '<div class="empty-state-saludo">¡Hola, ' + (E.nombre || '') + '!</div>' +
+        '<div class="empty-state-msg">Todavía no tienes ninguna reserva.<br>¿Te animas a hacer una?</div>' +
+        '<div class="empty-state-links">' +
+          '<span class="empty-state-link" onclick="irMisReservas()">Ver historial de reservas</span>' +
+          '<span class="empty-state-link" onclick="irEditarDatos()">Editar mi perfil</span>' +
         '</div>' +
       '</div>'
     : activas.map(function(r) { return _renderCardHome(r, hoy); }).join('');
