@@ -196,7 +196,6 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
   footer { display: none; }
   #btn-contacto-login { display: flex !important; }
   #notif-banner { display: none !important; }
-  #pwa-banner { display: none !important; }
   .card {
     background: transparent; border: none;
     box-shadow: none; border-radius: 0; padding: 0;
