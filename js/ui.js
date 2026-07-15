@@ -95,103 +95,29 @@ var TOP_BAR_CONFIG = {
   's-admin-admins': { titulo: 'Administradorxs', volver: 's-admin-home' }
 };
 
-// Fuente de verdad de "cuál es la pantalla actual", separada de consultar el
-// DOM (`document.querySelector('.pantalla.activa')`) — ver MANIFEST,
-// "Cambios recientes", bug real encontrado con Playwright durante la
-// auditoría de la nueva estrategia de barras: mientras una transición está
-// en curso, DOS `.pantalla` tienen legítimamente la clase `.activa` a la vez
-// (saliente y entrante, ambas montadas para el cruce) — si una SEGUNDA
-// llamada a `ir()` llega antes de que la primera termine de limpiar (dentro
-// de los mismos 320ms, ej. una cadena async rápida en el arranque de la
-// sesión), `document.querySelector()` devuelve la PRIMERA coincidencia en
-// orden del DOM, no necesariamente la pantalla realmente visible — si esa
-// coincidencia resulta ser la saliente de la transición ANTERIOR (que
-// todavía no terminó su cleanup), la pantalla realmente visible nunca se
-// anima como saliente y se queda con `.activa`/visible para siempre detrás
-// de la nueva (el bleed-through persistente reportado). Fix: `ir()` trackea
-// `_pantallaActualId` él mismo (mismo criterio que `_inscCurIdx` en
-// `inscMostrarPaso()`, que nunca tuvo este bug por la misma razón) en vez de
-// preguntarle al DOM. Los 2 lugares que resetean `.pantalla.activa` por
-// fuera de `ir()` (bootstrap en `window.onload` y el handler de `pageshow`
-// con bfcache, ambos en js/auth.js) también resetean esta variable a null.
-var _pantallaActualId = null;
-
+// Navegación entre pantallas con fade simple (animation:smoothSlideUp vía
+// .pantalla.activa, ver css/global.css) — ver MANIFEST, "Cambios recientes":
+// se probó acá el shared axis X (axisTransicion()/axisBarraTitulo()/
+// axisFooterFijo(), ver shared/axis-transicion.js) y se revirtió por
+// acumular demasiados bugs de fondo (superposición, footer/título
+// desincronizados, salto de scroll) para el tiempo invertido — se mantiene
+// ÚNICAMENTE en aj-sub-*/irAjSub()/cerrarAjSub() (js/perfil.js), que sigue
+// validado y sin tocar. Este es el mecanismo simple de antes de esa
+// propagación: toggle de clase directo, chrome (top-bar/footer/home-nav/
+// paso-indicator) aplicado de inmediato, sin animar dos pantallas a la vez
+// ni diferir nada a un setTimeout.
 function ir(id, desdeHistorial, sinTrampa) {
   if (id === 's1b' || !document.getElementById(id)) { ir('s1', true); return; }
-  var nueva = document.getElementById(id);
-  var actual = _pantallaActualId ? document.getElementById(_pantallaActualId) : null;
-  // Transición "shared axis X" (Material Design 3) — estándar de plataforma,
-  // ver axisTransicion() (shared/axis-transicion.js) y MANIFEST. `actual`
-  // puede ser null en la primerísima navegación de la sesión (nada que
-  // animar de fondo) o coincidir con `nueva` (no debería pasar en uso
-  // normal, pero por seguridad no se anima una pantalla contra sí misma).
-  // `desdeHistorial` ya indica si esto viene de un gesto de "atrás"
-  // (popstate) — se reusa tal cual como el parámetro `atras` de
-  // axisTransicion(), sin necesitar una señal de dirección aparte.
-  var animado = !!(actual && actual !== nueva);
-  _pantallaActualId = id;
-  if (animado) {
-    axisTransicion(actual, nueva, !!desdeHistorial,
-      function(el) { el.classList.add('activa'); },
-      function(el) { el.classList.remove('activa'); });
-  } else {
-    document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
-    nueva.classList.add('activa');
-  }
-
-  // Barra superior (#top-bar) y footer fijo (.cta-footer-fixed) — ver
-  // MANIFEST, "Cambios recientes": **cambio de estrategia** tras 2 intentos
-  // fallidos de sincronizar el TIMING de un swap instantáneo (el bleed-through
-  // reportado persistía con captura real: contenido/footer de la pantalla
-  // saliente seguía viéndose detrás/debajo de la entrante). En vez de mover
-  // el momento del swap, ahora ambas barras se ANIMAN de verdad (slide
-  // vertical + fade, axisBarraTitulo()/axisFooterFijo(),
-  // shared/axis-transicion.js) como parte de la transición — arrancan en el
-  // mismo instante que axisTransicion() del contenido principal (t=0, nunca
-  // diferido), con saliente y entrante montadas y visibles en simultáneo
-  // durante los 320ms, igual que ya se exige para el contenido. Esto
-  // reemplaza por completo el bloque viejo que togglaba topBar/footer de
-  // golpe (ver "Cambios recientes" para el detalle de qué cambió y por qué).
-  var aplicarTopBar = function() {
-    var topBar = document.getElementById('top-bar'); var topBtn = document.getElementById('top-bar-btn'); var topTitulo = document.getElementById('top-bar-titulo');
-    var cfg = TOP_BAR_CONFIG[id];
-    if (cfg) {
-      topBar.style.display = 'flex'; topTitulo.textContent = typeof cfg.titulo === 'function' ? cfg.titulo() : cfg.titulo;
-      var _volverTarget = typeof cfg.volver === 'function' ? cfg.volver() : cfg.volver;
-      if (_volverTarget) { topBtn.style.display = ''; topBtn.onclick = function() { volver(_volverTarget); }; } else { topBtn.style.display = 'none'; }
-    } else { topBar.style.display = 'none'; }
-  };
-
-  // Footer saliente: el único .cta-footer-fixed con display real distinto de
-  // 'none' en este instante (antes de tocar nada) — se lee ya, porque
-  // axisFooterFijo() necesita ambos elementos (saliente/entrante) montados
-  // desde el t=0 de la animación, no reconstruido después.
-  var footerSaliente = null;
-  document.querySelectorAll('.cta-footer-fixed').forEach(function(f) { if (getComputedStyle(f).display !== 'none') footerSaliente = f; });
-  var footerEntrante = document.getElementById('cta-footer-' + id) || null;
-
-  if (animado) {
-    axisBarraTitulo(document.getElementById('top-bar'), aplicarTopBar, !!desdeHistorial);
-    axisFooterFijo(footerSaliente, footerEntrante, !!desdeHistorial);
-  } else {
-    aplicarTopBar();
-    document.querySelectorAll('.cta-footer-fixed').forEach(function(f) { f.style.display = 'none'; });
-    if (footerEntrante) footerEntrante.style.display = 'block';
-  }
-
   // #s4-total-fijo (panel de total fijo de s4, js/reservas.js): su propia
-  // salida/entrada (fade+slide del panel hijo, independiente del slide del
-  // footer padre — ambos transforms se componen sin pisarse) sigue
-  // arrancando en este mismo t=0, en simultáneo con la animación nueva del
-  // footer (antes estaba pensada para sincronizar con el swap instantáneo a
-  // los 320ms; ahora el footer entero ya anima desde t=0, así que si esto
-  // quedara diferido se vería la barra entrar primero y el total aparecer
-  // recién después, desfasado).
-  if (animado && actual && actual.id === 's4' && typeof _s4TotalOcultarFijo === 'function') {
+  // salida (fade-out + slide-down del panel hijo, independiente de este
+  // mecanismo de pantallas) sigue disparándose al abandonar s4 — feature
+  // separada, sin relación con el shared axis, no tocada por este revert.
+  var actual = document.querySelector('.pantalla.activa');
+  if (actual && actual.id === 's4' && typeof _s4TotalOcultarFijo === 'function') {
     _s4TotalOcultarFijo(document.getElementById('s4-total-fijo'));
   }
-  if (id === 's4' && typeof actualizarTotalS4 === 'function') actualizarTotalS4();
-
+  document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
+  document.getElementById(id).classList.add('activa');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   var sinHistorial = ['s-carga', 's-carga-fechas', 's-carga-conf'];
@@ -218,47 +144,49 @@ function ir(id, desdeHistorial, sinTrampa) {
     _resetChkPago();
   }
 
-  // Chrome restante (home-nav, paso-dots) — top-bar y footer ya se manejan
-  // arriba (animados, t=0). Esto sigue diferido a los 320ms cuando hay
-  // animación: #home-nav vive en flujo normal (no fixed) dentro de
-  // .contenedor, así que togglear su display de golpe a mitad de camino
-  // seguiría corriendo verticalmente a la pantalla saliente (mismo bug
-  // documentado para #top-bar antes de que pasara a animarse aparte) — y
-  // .paso-indicator es puramente informativo (dots), sin urgencia visual de
-  // acompañar el cruce. Sin animación (primera navegación, o misma
-  // pantalla) se aplica de inmediato, igual que siempre.
-  var actualizarChrome = function() {
-    var homeNav = document.getElementById('home-nav');
-    if (homeNav) {
-      if (id !== 's-home') {
-        homeNav.style.display = 'none';
-      } else {
-        var _tieneActivas = (typeof _todasReservas !== 'undefined' && _todasReservas && _todasReservas.some(function(r) {
-          return r.estado !== 'Cancelada' && r.estado !== 'Crédito usado';
-        }));
-        homeNav.style.display = _tieneActivas ? 'flex' : 'none';
-      }
-    }
+  var topBar = document.getElementById('top-bar'); var topBtn = document.getElementById('top-bar-btn'); var topTitulo = document.getElementById('top-bar-titulo');
+  var cfg = TOP_BAR_CONFIG[id];
+  if (cfg) {
+    topBar.style.display = 'flex'; topTitulo.textContent = typeof cfg.titulo === 'function' ? cfg.titulo() : cfg.titulo;
+    var _volverTarget = typeof cfg.volver === 'function' ? cfg.volver() : cfg.volver;
+    if (_volverTarget) { topBtn.style.display = ''; topBtn.onclick = function() { volver(_volverTarget); }; } else { topBtn.style.display = 'none'; }
+  } else { topBar.style.display = 'none'; }
 
-    var sinPasos = ['s1','s-home','s-misreservas','s-carga','s6','s-datos','s-gestionar'].concat(ADMIN_PANTALLAS);
-    if (E.reagendando) sinPasos = sinPasos.concat(['s4','s-carga-conf']);
-    var dotContainer = document.querySelector('.paso-indicator');
-    if (sinPasos.indexOf(id) !== -1) { if (dotContainer) dotContainer.style.display = 'none'; return; }
-    if (dotContainer) {
-      dotContainer.style.display = 'flex';
-      var pasos = { 's2':1,'s3a':1,'s3b':1,'s3c':1,'s-carga-fechas':2,'s4':2,'s-pago':3,'s-carga-conf':3 };
-      var p = pasos[id] || 1;
-      for (var i = 1; i <= 4; i++) {
-        var d = document.getElementById('dot'+i);
-        if (d) d.className = 'paso-dot' + (i < p ? ' completado' : i === p ? ' activo' : '');
-      }
-    }
-  };
+  // Los .cta-footer-fixed viven como hijos directos de <body> (fuera de .pantalla/
+  // .card) para no quedar atrapados por el containing block que .pantalla.activa
+  // establece mientras corre su animación de entrada (smoothSlideUp) y "atrape"
+  // al footer fuera del viewport real. js/ui.js (ir()) muestra solo el que
+  // corresponde a la pantalla activa.
+  document.querySelectorAll('.cta-footer-fixed').forEach(function(f) { f.style.display = 'none'; });
+  var ctaFooter = document.getElementById('cta-footer-' + id);
+  if (ctaFooter) ctaFooter.style.display = 'block';
 
-  if (animado) {
-    setTimeout(actualizarChrome, 320);
-  } else {
-    actualizarChrome();
+  if (id === 's4' && typeof actualizarTotalS4 === 'function') actualizarTotalS4();
+
+  var homeNav = document.getElementById('home-nav');
+  if (homeNav) {
+    if (id !== 's-home') {
+      homeNav.style.display = 'none';
+    } else {
+      var _tieneActivas = (typeof _todasReservas !== 'undefined' && _todasReservas && _todasReservas.some(function(r) {
+        return r.estado !== 'Cancelada' && r.estado !== 'Crédito usado';
+      }));
+      homeNav.style.display = _tieneActivas ? 'flex' : 'none';
+    }
+  }
+
+  var sinPasos = ['s1','s-home','s-misreservas','s-carga','s6','s-datos','s-gestionar'].concat(ADMIN_PANTALLAS);
+  if (E.reagendando) sinPasos = sinPasos.concat(['s4','s-carga-conf']);
+  var dotContainer = document.querySelector('.paso-indicator');
+  if (sinPasos.indexOf(id) !== -1) { if (dotContainer) dotContainer.style.display = 'none'; return; }
+  if (dotContainer) {
+    dotContainer.style.display = 'flex';
+    var pasos = { 's2':1,'s3a':1,'s3b':1,'s3c':1,'s-carga-fechas':2,'s4':2,'s-pago':3,'s-carga-conf':3 };
+    var p = pasos[id] || 1;
+    for (var i = 1; i <= 4; i++) {
+      var d = document.getElementById('dot'+i);
+      if (d) d.className = 'paso-dot' + (i < p ? ' completado' : i === p ? ' activo' : '');
+    }
   }
 }
 function volver(id) { ir(id); }

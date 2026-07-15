@@ -77,19 +77,25 @@ input, textarea,
    Con fondo propio, cualquier .pantalla activa opaca por sí sola, sin
    depender de que nada de abajo esté correctamente oculto. */
 .pantalla { display: none; background: var(--bg); }
-.pantalla.activa { display: block; }
+/* Fade simple de entrada (animation:smoothSlideUp, @keyframes en
+   css/estilos.css) — ver MANIFEST, "Cambios recientes": se probó acá la
+   transición "shared axis X" (piloteada en aj-sub-*, js/perfil.js, luego
+   propagada a .pantalla vía ir(), js/ui.js) y se revirtió por acumular
+   demasiados bugs de fondo (superposición, footer/título desincronizados,
+   salto de scroll) para el tiempo invertido — se mantiene ÚNICAMENTE en
+   aj-sub-* (irAjSub()/cerrarAjSub(), implementación bespoke propia en
+   css/perfil.css, nunca usó estas clases). Las clases .axis-enter/.axis-leave
+   de abajo y shared/axis-transicion.js quedan sin ningún caller activo hoy
+   (no se borraron por si algún flujo futuro los quiere reusar) — no
+   asumir que "siguen en uso por aj-sub-*", no es así. */
+.pantalla.activa { display: block; animation: smoothSlideUp 0.6s var(--ease-sheet); }
 
 /* ═══════════════════════════════════════════════════════
-   Transición "shared axis X" (Material Design 3) — ESTÁNDAR
-   DE PLATAFORMA para navegación entre pantallas/pasos/
-   subsecciones. Piloteada primero en aj-sub-* (css/perfil.css,
-   ver esa entrada + irAjSub()/cerrarAjSub() en js/perfil.js),
-   luego adoptada acá por .pantalla (ir(), js/ui.js) y
-   .insc-step (inscMostrarPaso(), inscripcion/inscripcion.js).
-   La mecánica JS compartida vive en shared/axis-transicion.js
-   (función axisTransicion()) — cualquier flujo de pasos/
-   pantallas nuevo debe llamarla, nunca reimplementar esta
-   animación desde cero. Ver MANIFEST para el detalle completo.
+   Transición "shared axis X" (Material Design 3) — mecánica
+   compartida, hoy sin caller activo (ver nota de arriba y
+   MANIFEST, "Cambios recientes" — revert de ir()/inscMostrarPaso()).
+   Se mantiene por si algún flujo futuro la necesita: la mecánica
+   JS vive en shared/axis-transicion.js (función axisTransicion()).
 
    .axis-enter: la pantalla/paso que entra queda superpuesta
    (position:absolute, relativo al contenedor con position:relative
