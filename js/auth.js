@@ -13,21 +13,53 @@ function iniciarGoogleSignInUsuario() {
   var cont = document.getElementById('g-signin-btn-usuario');
   if (!cont) return;
   var wrapper = document.getElementById('google-btn-wrapper');
-  var ancho = Math.min(400, wrapper ? wrapper.offsetWidth : window.innerWidth - 48);
-  google.accounts.id.renderButton(cont, {
-    theme: 'filled_blue', size: 'large', text: 'continue_with', locale: 'es', width: ancho
-  });
-  var skMain = document.getElementById('gsignin-skeleton-main');
-  if (skMain) { skMain.style.opacity = '0'; setTimeout(function(){ skMain.style.display = 'none'; }, 400); }
-  if (!window._restaurandoSesion && !window._loginAutoEnCurso) {
-    var _gObs = new MutationObserver(function() {
-      var iframe = document.querySelector('#g-signin-btn-usuario iframe');
-      if (!iframe) return;
-      _gObs.disconnect();
-      setTimeout(ocultarCargando, 350);
+  var s1 = document.getElementById('s1');
+
+  function renderizarBoton() {
+    var anchoReal = wrapper ? wrapper.offsetWidth : 0;
+    var ancho = Math.min(400, anchoReal || (window.innerWidth - 48));
+    google.accounts.id.renderButton(cont, {
+      theme: 'filled_blue', size: 'large', text: 'continue_with', locale: 'es', width: ancho
     });
-    _gObs.observe(document.getElementById('g-signin-btn-usuario'), { childList: true, subtree: true });
-    setTimeout(function() { _gObs.disconnect(); ocultarCargando(); }, 6000);
+    var skMain = document.getElementById('gsignin-skeleton-main');
+    if (skMain) { skMain.style.opacity = '0'; setTimeout(function(){ skMain.style.display = 'none'; }, 400); }
+    if (!window._restaurandoSesion && !window._loginAutoEnCurso) {
+      var _gObs = new MutationObserver(function() {
+        var iframe = document.querySelector('#g-signin-btn-usuario iframe');
+        if (!iframe) return;
+        _gObs.disconnect();
+        setTimeout(ocultarCargando, 350);
+      });
+      _gObs.observe(document.getElementById('g-signin-btn-usuario'), { childList: true, subtree: true });
+      setTimeout(function() { _gObs.disconnect(); ocultarCargando(); }, 6000);
+    }
+  }
+
+  // renderButton() graba el width recibido de forma permanente en el iframe
+  // (no se puede volver a renderizar después) -- si #s1 todavía no es la
+  // pantalla activa en este momento (restaurando sesión guardada, o login
+  // automático ?nuevx=1: ninguno de los 2 llama ir('s1') de entrada),
+  // #google-btn-wrapper vive dentro de un .pantalla sin la clase .activa y
+  // su offsetWidth es 0 -- medir ahí deja el botón angosto para siempre en
+  // esta carga de página, aunque el usuario recién vea #s1 mucho después
+  // (ej. al cerrar sesión) -- de ahí el bug siendo intermitente ("a veces"),
+  // depende de qué rama de login tomó esta carga. En vez de arriesgar una
+  // sola lectura al doble rAF fijo de window.onload (o esperar con un timer
+  // acotado, que igual mediría 0 si la sesión dura más que el timer), se
+  // observa la clase de #s1 y se difiere la medición/render hasta el
+  // momento real en que ir('s1') lo activa -- sin importar cuánto tarde.
+  if (s1 && s1.classList.contains('activa')) {
+    renderizarBoton();
+  } else if (s1) {
+    var _obsS1 = new MutationObserver(function() {
+      if (s1.classList.contains('activa')) {
+        _obsS1.disconnect();
+        requestAnimationFrame(function() { requestAnimationFrame(renderizarBoton); });
+      }
+    });
+    _obsS1.observe(s1, { attributes: true, attributeFilter: ['class'] });
+  } else {
+    renderizarBoton();
   }
 }
 
