@@ -57,12 +57,23 @@
    siempre visible mientras se scrollea la lista de fechas/meses. Entrada/
    salida animada (fade + slide sutil, --ease-sheet) en vez de un aparecer/
    desaparecer seco — .mostrar es la única clase que togglea JS, el resto
-   (display/innerHTML) lo maneja actualizarTotalS4() directo. */
+   (display/innerHTML) lo maneja actualizarTotalS4() directo.
+   max-height sumado (ver "Cambios recientes" — fade-out desprolijo al
+   deseleccionar todas las fechas): antes solo transicionaban opacity/
+   transform, así que el alto real (~94px) se mantenía fijo durante los
+   0.32s del fade y recién colapsaba de golpe cuando actualizarTotalS4()
+   aplicaba display:none a los 350ms — el "Continuar" de abajo saltaba de
+   una sola vez en vez de acompañar el cierre. .success-bg (rgba, 8-10% de
+   opacidad) hace que ese fade de opacity casi no se note a simple vista
+   contra el fondo de #cta-footer-s4 (var(--bg), muy oscuro en dark mode) —
+   sin el colapso de alto en simultáneo, el resultado se veía como "nada
+   pasa, y de golpe desaparece" en vez de un cierre prolijo. Mismo patrón
+   ya usado acá mismo para #s4-cupon-wrapper (ver esa entrada, abajo). */
 #s4-total-fijo {
-  opacity: 0; transform: translateY(8px); margin-bottom: 12px;
-  transition: opacity 0.32s var(--ease-sheet), transform 0.32s var(--ease-sheet);
+  opacity: 0; transform: translateY(8px); margin-bottom: 0; max-height: 0; overflow: hidden;
+  transition: opacity 0.32s var(--ease-sheet), transform 0.32s var(--ease-sheet), max-height 0.32s var(--ease-sheet), margin-bottom 0.32s var(--ease-sheet);
 }
-#s4-total-fijo.mostrar { opacity: 1; transform: translateY(0); }
+#s4-total-fijo.mostrar { opacity: 1; transform: translateY(0); max-height: 180px; margin-bottom: 12px; }
 
 /* Colapso animado de #s4-cupon-wrapper al aplicar el cupón (ver
    toggleCupon()/quitarCupon()/_s4SincronizarCuponWrapper() en js/reservas.js)
