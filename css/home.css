@@ -169,9 +169,12 @@
 .empty-state-icon .material-symbols-outlined { font-size:3rem; color:var(--brand); }
 .empty-state-saludo { font-size:1rem; font-weight:800; color:var(--text); margin-bottom:6px; }
 .empty-state-msg { font-size:0.82rem; color:var(--muted); line-height:1.65; margin-bottom:28px; }
-.empty-state-links { display:flex; flex-direction:column; align-items:center; gap:10px; }
-.empty-state-link { font-size:0.76rem; color:var(--muted); text-decoration:underline; text-underline-offset:3px; cursor:pointer; font-weight:600; }
-.empty-state-link:hover { color:var(--brand); }
+/* "Ver historial de reservas"/"Editar mi perfil" pasaron de links de texto
+   subrayado a pills (.aj-pill.aj-pill-link, css/perfil.css) — más visibles sin
+   perder sutileza, reusando el sistema de pills ya existente en vez de un
+   componente nuevo. Fila en vez de columna (antes .empty-state-link, ver
+   changelog) para que se vean como el resto de las filas de pills de la app. */
+.empty-state-links { display:flex; flex-direction:row; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px; }
 
 #historial-pills-mes::-webkit-scrollbar { display:none; }
 .historial-pill-mes { flex-shrink:0; padding:8px 16px; border-radius:99px; background:var(--brand-20); color:var(--muted); font-size:0.82rem; font-weight:700; cursor:pointer; transition:all 0.2s; white-space:nowrap; font-family:inherit; }

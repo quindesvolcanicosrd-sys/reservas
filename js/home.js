@@ -350,8 +350,8 @@ function _renderHomeReservas() {
         '<div class="empty-state-saludo">¡Hola, ' + (E.nombre || '') + '!</div>' +
         '<div class="empty-state-msg">Todavía no tienes ninguna reserva.<br>¿Te animas a hacer una?</div>' +
         '<div class="empty-state-links">' +
-          '<span class="empty-state-link" onclick="irMisReservas()">Ver historial de reservas</span>' +
-          '<span class="empty-state-link" onclick="irEditarDatos()">Editar mi perfil</span>' +
+          '<span class="aj-pill aj-pill-link" onclick="irMisReservas()">Ver historial de reservas</span>' +
+          '<span class="aj-pill aj-pill-link" onclick="irEditarDatos()">Editar mi perfil</span>' +
         '</div>' +
       '</div>'
     : activas.map(function(r) { return _renderCardHome(r, hoy); }).join('');

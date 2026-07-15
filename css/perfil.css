@@ -149,6 +149,15 @@
 .aj-pill-otro-lleno .aj-pill-otro-x { display: inline-flex; }
 .aj-pill.activa { background:var(--brand); color:var(--white); border-color:var(--brand); }
 .aj-pill.activa-outline { background:var(--brand-light); color:var(--brand); border-color:var(--brand); }
+/* Variante de navegación, no de selección — a diferencia de .aj-pill normal
+   (seleccionable, toggleable con .activa/.activa-outline), esta es para links
+   que navegan a otro lado (ej. "Ver historial de reservas"/"Editar mi perfil"
+   del empty-state de home, ver js/home.js) y nunca tienen estado "elegido".
+   Hereda forma/tamaño de .aj-pill (usar junto, class="aj-pill aj-pill-link"),
+   solo cambia el tratamiento visual a algo más sutil: borde en vez de relleno,
+   sin :active/toggle. */
+.aj-pill-link { background:transparent; border-color:var(--border-light); color:var(--muted); }
+.aj-pill-link:hover { background:var(--brand-20); color:var(--brand); border-color:var(--brand); }
 .aj-pill.no-disponible { text-decoration:line-through; color:var(--danger); background:var(--danger-bg); border-color:var(--danger-bdr); cursor:not-allowed; }
 .aj-pill.talla-actual { border-color:var(--brand); }
 .sheet-talla-pill-ancha { grid-column: 1 / -1; }
