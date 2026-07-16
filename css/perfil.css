@@ -63,11 +63,10 @@
   .ddp-day.ddp-other { color: var(--dk-text-ghost) !important; }
   .ddp-btn-cancel { color: var(--muted) !important; }
   #modal-permisos > div { background: var(--dk-overlay-97) !important; }
-  #modal-permisos div[style*="background:#fafafa"] { background: var(--brand-subtle) !important; border-color: var(--brand-focus) !important; }
   #modal-permisos div[style*="border-top:1px"] { border-color: var(--border) !important; }
   #modal-permisos div[style*="font-weight:600"] { color: var(--text) !important; }
   #modal-permisos div[style*="font-weight:800"] { color: var(--text) !important; }
-  #modal-permisos p, #modal-permisos div[style*="color:#777"] { color: var(--muted) !important; }
+  #modal-permisos p { color: var(--muted) !important; }
   #modal-pin-config > div { background: var(--dk-overlay-97) !important; }
   #modal-pin-config label { color: var(--text) !important; }
   #mp-pin-input { background: var(--surface-2) !important; border-color: var(--border) !important; color: var(--text) !important; }
