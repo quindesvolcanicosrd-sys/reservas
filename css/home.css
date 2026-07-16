@@ -146,7 +146,7 @@
 .rn-status-pendiente { background:var(--amber-dark); color:var(--white); }
 .rn-status-confirmada { background:var(--success-dark); color:var(--white); }
 .rn-status-cancelada { background:var(--danger); color:var(--white); }
-.rn-status-reagendar { background:var(--dk-purple-mid,#7c3aed); color:var(--white); }
+.rn-status-reagendar { background:var(--dk-purple-mid,#6d28d9); color:var(--white); }
 .fi-pill-lugar-fusionado { text-decoration:none; }
 .fi-pill-fusionado-sep { width:1px; height:12px; background:currentColor; opacity:0.3; margin:0 4px; flex-shrink:0; }
 

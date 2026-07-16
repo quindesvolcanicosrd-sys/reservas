@@ -36,7 +36,7 @@
   #input-pin:-webkit-autofill,
   #input-pin:-webkit-autofill:hover,
   #input-pin:-webkit-autofill:focus {
-    -webkit-box-shadow: 0 0 0 1000px #fafafa7a inset !important;
+    -webkit-box-shadow: 0 0 0 1000px color-mix(in srgb, var(--surface-light) 48%, transparent) inset !important;
     -webkit-text-fill-color: var(--neutral-dark) !important;
   }
 }

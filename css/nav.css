@@ -128,7 +128,7 @@
   white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
 }
-.app-nav-cta:hover { background: var(--brand-dk, #ea6c00); transform: translateY(-1px); }
+.app-nav-cta:hover { background: var(--brand-dk); transform: translateY(-1px); }
 .app-nav-cta:active { transform: scale(0.97); }
 .app-nav-cta .material-symbols-outlined { font-size: 1rem; }
 .app-nav-cta-label { display: inline; }
