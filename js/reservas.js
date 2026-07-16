@@ -852,10 +852,10 @@ function confirmarReserva(btn) {
         avisoEl.style.cssText = 'background:var(--purple-lightest);border:1px solid var(--purple-border-soft);border-radius:12px;padding:16px;font-size:0.9rem;color:var(--dk-purple-mid);margin-bottom:18px;text-align:center;display:block;';
       } else if (E.cuponAplicado) {
         avisoEl.textContent = '🎟️ Tu cupón fue aplicado. ¡Nos vemos en el entrenamiento!';
-        avisoEl.style.cssText = 'background:var(--green-light);border:1px solid #bbf7d0;border-radius:12px;padding:16px;font-size:0.9rem;color:var(--green-dark);margin-bottom:18px;text-align:center;box-shadow: 0 4px 12px rgba(34,197,94,0.1);display:block;';
+        avisoEl.style.cssText = 'background:var(--green-light);border:1px solid var(--green-border);border-radius:12px;padding:16px;font-size:0.9rem;color:var(--green-dark);margin-bottom:18px;text-align:center;box-shadow: 0 4px 12px var(--success-bg);display:block;';
       } else if (E.creditosUsados > 0) {
         avisoEl.textContent = '🔁 Reserva registrada con tus clases a favor. ¡Nos vemos en el entrenamiento!';
-        avisoEl.style.cssText = 'background:var(--green-light);border:1px solid #bbf7d0;border-radius:12px;padding:16px;font-size:0.9rem;color:var(--green-dark);margin-bottom:18px;text-align:center;box-shadow: 0 4px 12px rgba(34,197,94,0.1);display:block;';
+        avisoEl.style.cssText = 'background:var(--green-light);border:1px solid var(--green-border);border-radius:12px;padding:16px;font-size:0.9rem;color:var(--green-dark);margin-bottom:18px;text-align:center;box-shadow: 0 4px 12px var(--success-bg);display:block;';
       } else {
         avisoEl.style.display = 'none';
       }

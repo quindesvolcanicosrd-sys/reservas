@@ -60,6 +60,7 @@
   --overlay:        rgba(0,0,0,0.65);
   --overlay-light:  rgba(0,0,0,0.55);
   --overlay-dark:   rgba(0,0,0,0.7);
+  --overlay-modal-info: rgba(0,0,0,0.82);
 
   /* ── Fondo ───────────────────────────────────────────── */
   /* Si cambiás --bg (light), actualizá a mano el <meta name="theme-color" media="(prefers-color-scheme: light)"> en index.html e inscripcion/index.html — los meta tags no soportan var(). */
@@ -167,6 +168,8 @@
   --black-sm:       rgba(0,0,0,0.06);
   --black-md:       rgba(0,0,0,0.07);
   --black-15:       rgba(0,0,0,0.15);
+  --black-25:       rgba(0,0,0,0.25);
+  --black-35:       rgba(0,0,0,0.35);
 
   /* Amber */
   --amber:          #fbbf24;

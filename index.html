@@ -848,7 +848,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 </div>
 
-<div id="pwa-banner" style="display:none;position:fixed;bottom:16px;left:16px;right:16px;max-width:448px;margin:0 auto;background:var(--white);border:2px solid var(--brand);border-radius:16px;padding:18px;z-index:9000;box-shadow:0 10px 30px rgba(0,0,0,0.25);animation:smoothSlideUp 0.5s cubic-bezier(0.16,1,0.3,1);">
+<div id="pwa-banner" style="display:none;position:fixed;bottom:16px;left:16px;right:16px;max-width:448px;margin:0 auto;background:var(--white);border:2px solid var(--brand);border-radius:16px;padding:18px;z-index:9000;box-shadow:0 10px 30px var(--black-25);animation:smoothSlideUp 0.5s cubic-bezier(0.16,1,0.3,1);">
   <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">
     <span style="font-size:1.8rem;flex-shrink:0;">🛼</span>
     <div>
@@ -882,7 +882,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 </div>
 
 <!-- ─── MODAL INFO: RESERVA ──────────────────────────────────────────── -->
-<div id="modal-info-reserva" class="modal-info" style="display:none; position:fixed; inset:0; z-index:8000; align-items:center; justify-content:center; background:rgba(0,0,0,0.82); padding:16px;">
+<div id="modal-info-reserva" class="modal-info" style="display:none; position:fixed; inset:0; z-index:8000; align-items:center; justify-content:center; padding:16px;">
   <div class="modal-info-card" style="background:var(--modal-info-card-bg);border:2px solid var(--brand);border-radius:14px;padding:24px 20px 20px;width:100%;max-width:360px;max-height:90vh;overflow-y:auto;">
     <div class="modal-info-titulo">Tu primera reserva</div>
     <div class="modal-info-sub">Leé esto antes de elegir tus fechas</div>
@@ -944,7 +944,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 </div>
 
 <!-- ─── MODAL INFO: HOME ─────────────────────────────────────────────── -->
-<div id="modal-info-home" class="modal-info" style="display:none; position:fixed; inset:0; z-index:8000; align-items:center; justify-content:center; background:rgba(0,0,0,0.82); padding:16px;">
+<div id="modal-info-home" class="modal-info" style="display:none; position:fixed; inset:0; z-index:8000; align-items:center; justify-content:center; padding:16px;">
   <div class="modal-info-card" style="background:var(--modal-info-card-bg);border:2px solid var(--brand);border-radius:14px;padding:24px 20px 20px;width:100%;max-width:360px;max-height:90vh;overflow-y:auto;">
     <div class="modal-info-titulo">Bienvenidx</div>
     <div class="modal-info-sub">Un recorrido rápido por la app</div>
@@ -1001,7 +1001,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 </div>
 
-<div id="modal-agotada-overlay" style="display:none;opacity:0;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;transition:opacity 0.3s ease;" onclick="if(event.target===this)cerrarModalAgotada()">
+<div id="modal-agotada-overlay" style="display:none;opacity:0;position:fixed;inset:0;z-index:9500;background:var(--overlay-dark);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;transition:opacity 0.3s ease;" onclick="if(event.target===this)cerrarModalAgotada()">
   <div style="background:var(--bg);border-radius:20px;padding:24px;max-width:340px;width:100%;text-align:center;">
     <span class="material-symbols-outlined" style="font-size:2.5rem;color:var(--brand);margin-bottom:12px;display:block;">event_busy</span>
     <p id="modal-agotada-msg" style="color:var(--text);font-size:0.88rem;margin:0 0 20px;line-height:1.6;"></p>
@@ -1010,7 +1010,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 </div>
 
 <!-- Modal: Qué significa estado de reserva -->
-<div id="modal-info-estado" style="display:none;opacity:0;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;transition:opacity 0.3s ease;" onclick="if(event.target===this)cerrarModalInfoEstado()">
+<div id="modal-info-estado" style="display:none;opacity:0;position:fixed;inset:0;z-index:9500;background:var(--overlay-dark);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;transition:opacity 0.3s ease;" onclick="if(event.target===this)cerrarModalInfoEstado()">
   <div style="background:var(--bg);border-radius:20px;padding:24px;max-width:360px;width:100%;">
     <h3 style="margin:0 0 16px;font-size:1.05rem;color:var(--text);">Estado de tu reserva</h3>
     <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
@@ -1032,7 +1032,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 </div>
 
 <!-- Modal: Política de responsabilidad de reservas -->
-<div id="modal-info-politica" style="display:none;opacity:0;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;transition:opacity 0.3s ease;" onclick="if(event.target===this)cerrarModalInfoPolitica()">
+<div id="modal-info-politica" style="display:none;opacity:0;position:fixed;inset:0;z-index:9500;background:var(--overlay-dark);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;transition:opacity 0.3s ease;" onclick="if(event.target===this)cerrarModalInfoPolitica()">
   <div style="background:var(--bg);border-radius:20px;padding:24px;max-width:360px;width:100%;">
     <h3 style="margin:0 0 12px;font-size:1.05rem;color:var(--text);">Tu responsabilidad al reservar</h3>
     <p style="font-size:0.88rem;color:var(--text);line-height:1.6;margin:0 0 12px;">Cuando reservas, nosotros coordinamos el equipamiento y nos preparamos para recibirte. Si no puedes venir, es tu responsabilidad <strong>avisar con anticipación</strong> para liberar el cupo y evitar que movilicemos tu equipamiento de gana.</p>

@@ -133,7 +133,7 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
 .modal-info {
   position: fixed; inset: 0; z-index: 8000;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.82); padding: 16px;
+  background: var(--overlay-modal-info); padding: 16px;
   animation: fadeIn 0.25s ease;
 }
 .modal-info-card {

@@ -53,7 +53,7 @@ footer { display: block; }
   .btn-pin-key:active { background: var(--dk-pin-press); border-color: var(--brand); }
   .btn-forgot-pin { background: var(--dk-info-bg); color: var(--dk-info-text-2); }
   #input-pin { background: var(--dk-input-bg); color: var(--dk-modal-text); border-color: var(--dk-input-bg); }
-  #input-pin:focus { border-color: var(--brand); background: var(--dk-skeleton-base); box-shadow: 0 0 0 4px rgba(249,115,22,0.15); }
+  #input-pin:focus { border-color: var(--brand); background: var(--dk-skeleton-base); box-shadow: 0 0 0 4px var(--brand-focus); }
   #input-pin::placeholder { color: var(--dk-text-muted-2) !important; }
   #input-pin:-webkit-autofill,
   #input-pin:-webkit-autofill:hover,
