@@ -65,7 +65,6 @@ footer { display: block; }
   #pin-acordeon-body > div { background: var(--dk-surface-opaque); }
   #pin-acordeon-body select { background: var(--dk-input-bg) !important; border-color: var(--dk-border-darker) !important; color: var(--dk-modal-text) !important; }
   #pin-acordeon-body .select-wrapper::after { color: var(--brand-secondary); }
-  #s1 div[style*="flex:1;height:1px"] { background: var(--dk-border-darker) !important; }
   #s1 button[onclick="abrirContacto()"] { background: var(--dk-purple-bg) !important; color: var(--dk-purple-text) !important; border-color: var(--dk-purple-mid) !important; }
   #google-btn-wrapper { background: none !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
 }
