@@ -106,7 +106,7 @@
    anillo y el borde del círculo (10px cada lado) creció en la misma
    proporción que el resto, para no quedar con el anillo pegado al borde. */
 .ptr-indicator-inner {
-  width: 64px; height: 64px; border-radius: 50%;
+  width: 48px; height: 48px; border-radius: 50%;
   background: var(--surface); box-shadow: var(--card-shadow);
   display: flex; align-items: center; justify-content: center;
 }
@@ -117,7 +117,7 @@
    animation:'none' inline, que siempre gana sobre cualquier regla de clase. Antes esta
    regla pisaba ese spin también en el estado "refrescando" — el anillo quedaba
    congelado en 0deg todo el fetch, sin feedback de carga (ver diagnóstico PTR). */
-.ptr-spinner { width: 44px; height: 44px; border-width: 6px; margin: 0; }
+.ptr-spinner { width: 33px; height: 33px; border-width: 4.5px; margin: 0; }
 /* Texto de ayuda sutil bajo el nav de Home ("Desliza hacia abajo para
    recargar"), ver "Cambios recientes" — visible solo en reposo: JS lo oculta
    (.ptr-helper-oculto) apenas arranca el gesto de arrastre para no competir

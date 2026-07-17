@@ -74,7 +74,7 @@
 
 @media (prefers-color-scheme: dark) {
   #btn-meses-pasados, #btn-meses-actuales { background: var(--surface-2) !important; border-color: var(--border) !important; color: var(--muted) !important; }
-  #pwa-banner { background: var(--surface) !important; border-color: var(--brand) !important; }
+  #pwa-banner { border-color: var(--brand) !important; }
   #pwa-banner div { color: var(--muted); }
   #pwa-banner div[style*="font-weight:800"] { color: var(--text) !important; }
   #pwa-instrucciones { background: var(--surface-2) !important; border-color: var(--border) !important; color: var(--text) !important; }
@@ -191,5 +191,5 @@
 .empty-state-links { display:flex; flex-direction:row; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px; }
 
 #historial-pills-anio::-webkit-scrollbar { display:none; }
-.historial-pill { flex-shrink:0; padding:8px 16px; border-radius:99px; background:var(--brand-20); color:var(--muted); font-size:0.82rem; font-weight:700; cursor:pointer; transition:all 0.2s; white-space:nowrap; font-family:inherit; }
+.historial-pill { flex-shrink:0; padding:8px 16px; border-radius:99px; border:none; background:var(--brand-20); color:var(--muted); font-size:0.82rem; font-weight:700; cursor:pointer; transition:all 0.2s; white-space:nowrap; font-family:inherit; }
 .historial-pill.activa { background:var(--brand); border-color:var(--brand); color:var(--white); } 

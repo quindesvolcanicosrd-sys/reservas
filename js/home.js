@@ -316,7 +316,7 @@ function _sincronizarNavHome(forzarVisible) {
   var homeNavSpacer = document.getElementById('home-nav-spacer');
   var ptrHelper = document.getElementById('ptr-helper-texto');
 
-  if (homeNav) homeNav.classList.toggle('mostrar-cta-label', activas.length === 0);
+  if (homeNav) homeNav.classList.toggle('mostrar-cta-label', !forzarVisible && activas.length === 0);
 
   if (!forzarVisible && activas.length === 0) {
     if (homeNav) homeNav.style.display = 'none';
