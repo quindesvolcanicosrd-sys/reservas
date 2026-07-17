@@ -236,8 +236,7 @@ function irNuevaReserva(skipEquip) {
 }
 
 function irMisReservas() {
-  _poblarSelectMesHistorial();
-  renderHistorial();
+  _poblarPillsAnio();
   ir('s-misreservas');
 }
 
@@ -831,33 +830,44 @@ function _clasificarReservas(todas, hoy) {
   return { activas: activas, historial: historial };
 }
 
-function _poblarSelectMesHistorial() {
-  var cont = document.getElementById('historial-pills-mes');
+function _getAnioReserva(r) {
+  var vh = r.validezHasta ? r.validezHasta.toString().trim() : '';
+  var m = vh.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) return parseInt(m[3]);
+  return new Date().getFullYear();
+}
+
+function _poblarPillsAnio() {
+  var cont = document.getElementById('historial-pills-anio');
   if (!cont) return;
   var hoy = new Date();
   var hist = _clasificarReservas(_todasReservas || [], hoy).historial;
-  var mesesConReservas = {};
+  var aniosConReservas = {};
   hist.forEach(function(r) {
-    var m = _getMesReserva(r);
-    if (m >= 0) mesesConReservas[m] = true;
+    var a = _getAnioReserva(r);
+    if (a) aniosConReservas[a] = true;
   });
-  var mesActual = hoy.getMonth();
-  if (Object.keys(mesesConReservas).length === 0) {
-    mesesConReservas[mesActual] = true;
+  var aniosOrdenados = Object.keys(aniosConReservas).map(Number).sort(function(a,b){return b-a;});
+  if (aniosOrdenados.length === 0) {
+    cont.innerHTML = '';
+    window._historialAnioActual = null;
+    renderHistorialMeses();
+    return;
   }
-  var mesesOrdenados = Object.keys(mesesConReservas).map(Number).sort(function(a,b){return b-a;});
-  cont.innerHTML = mesesOrdenados.map(function(m) {
-    var activa = m === mesActual ? ' activa' : '';
-    return '<button class="historial-pill-mes' + activa + '" data-mes="' + m + '" onclick="seleccionarPillMes(this,' + m + ')">' + _MESES_DISPLAY[m] + ' ' + hoy.getFullYear() + '</button>';
+  cont.innerHTML = aniosOrdenados.map(function(a, idx) {
+    var activa = idx === 0 ? ' activa' : '';
+    return '<button class="historial-pill' + activa + '" data-anio="' + a + '" onclick="seleccionarPillAnio(this,' + a + ')">' + a + '</button>';
   }).join('');
-  window._historialMesActual = mesesOrdenados[0] !== undefined ? mesesOrdenados[0] : mesActual;
+  window._historialAnioActual = aniosOrdenados[0];
+  renderHistorialMeses();
 }
 
-function seleccionarPillMes(pill, mes) {
-  document.querySelectorAll('.historial-pill-mes').forEach(function(p){ p.classList.remove('activa'); });
+function seleccionarPillAnio(pill, anio) {
+  document.querySelectorAll('#historial-pills-anio .historial-pill').forEach(function(p){ p.classList.remove('activa'); });
   pill.classList.add('activa');
-  window._historialMesActual = mes;
-  renderHistorial();
+  window._historialAnioActual = anio;
+  window._historialMesAbierto = undefined;
+  renderHistorialMeses();
 }
 
 function _getMesReserva(r) {
@@ -869,57 +879,46 @@ function _getMesReserva(r) {
   return _MESES_MAP[mn] !== undefined ? _MESES_MAP[mn] : -1;
 }
 
-function renderHistorial() {
-  var mesNum = (window._historialMesActual !== undefined) ? window._historialMesActual : new Date().getMonth();
+function renderHistorialMeses() {
+  var anio = window._historialAnioActual;
   var hoy = new Date(); hoy.setHours(0,0,0,0);
   var hist = _clasificarReservas(_todasReservas || [], hoy).historial;
-  var delMes = hist.filter(function(r) { return _getMesReserva(r) === mesNum; });
-  var grupos = {}, orden = [];
-  delMes.forEach(function(r) { if (!grupos[r.fecha]) { grupos[r.fecha] = []; orden.push(r.fecha); } grupos[r.fecha].push(r); });
-  var html = '';
-  if (delMes.length === 0) {
-    html = '<p style="text-align:center;color:var(--muted);padding:24px 0;">No hay reservas archivadas en este mes.</p>';
-  } else {
-    orden.forEach(function(fecha, idx) {
-      var gId = 'hgrp-' + idx, abierto = idx === 0, count = grupos[fecha].length;
-      html += '<div style="border:2px solid var(--border-light);border-radius:12px;margin-bottom:10px;overflow:hidden;">';
-      html += '<div onclick="toggleGrupoHistorial(\'' + gId + '\',this)" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;" class="datos-seccion-titulo">';
-      html += '<span style="font-weight:800;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--brand);">' + fecha + '</span>';
-      html += '<span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--dk-text-muted);transition:transform 0.3s;' + (abierto ? 'transform:rotate(180deg);' : '') + '">expand_more</span></div>';
-      html += '<div id="' + gId + '" style="overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1),opacity 0.3s ease;' + (abierto ? 'max-height:2000px;opacity:1;padding:10px 10px 4px;' : 'max-height:0;opacity:0;padding:0;') + '">';
-      grupos[fecha].forEach(function(r) { html += _renderCardHistorial(r); });
-      html += '</div></div>';
-    });
+  var delAnio = hist.filter(function(r) { return _getAnioReserva(r) === anio; });
+  var porMes = {};
+  delAnio.forEach(function(r) {
+    var m = _getMesReserva(r);
+    if (m < 0) return;
+    if (!porMes[m]) porMes[m] = [];
+    porMes[m].push(r);
+  });
+  var mesesOrdenados = Object.keys(porMes).map(Number).sort(function(a,b){return b-a;});
+  var wrap = document.getElementById('historial-meses');
+  if (!wrap) return;
+  if (mesesOrdenados.length === 0) {
+    wrap.innerHTML = '<p style="text-align:center;color:var(--muted);padding:24px 0;">No hay reservas archivadas en este año.</p>';
+    return;
   }
-  var histEl = document.getElementById('historial-lista');
-  histEl.innerHTML = html;
-  void histEl.offsetWidth;
-  histEl.style.animation = 'fadeIn 0.3s ease';
+  var html = '';
+  mesesOrdenados.forEach(function(m, idx) {
+    var abierto = idx === 0, mId = 'hmes-' + m;
+    html += '<div style="border:2px solid var(--border-light);border-radius:12px;margin-bottom:10px;overflow:hidden;">';
+    html += '<div onclick="toggleMesHistorial(\'' + mId + '\',this)" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;" class="datos-seccion-titulo">';
+    html += '<span style="font-weight:800;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.8px;color:var(--brand);">' + _MESES_DISPLAY[m] + ' ' + anio + '</span>';
+    html += '<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:0.72rem;color:var(--muted);background:var(--brand-lightest);padding:2px 8px;border-radius:99px;">' + porMes[m].length + '</span>';
+    html += '<span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--dk-text-muted);transition:transform 0.3s;' + (abierto ? 'transform:rotate(180deg);' : '') + '">expand_more</span></div></div>';
+    html += '<div id="' + mId + '" style="overflow:hidden;transition:max-height 0.4s cubic-bezier(0.16,1,0.3,1),opacity 0.3s ease;' + (abierto ? 'max-height:3000px;opacity:1;padding:10px 10px 4px;' : 'max-height:0;opacity:0;padding:0;') + '">';
+    porMes[m].forEach(function(r) { html += _renderCardHistorial(r); });
+    html += '</div></div>';
+  });
+  wrap.innerHTML = html;
+  void wrap.offsetWidth;
+  wrap.style.animation = 'fadeIn 0.3s ease';
 }
 
-function _renderCardHistorial(r) {
-  var bMap = {Confirmada:['badge-confirmada','✅'],Cancelada:['badge-cancelada','❌'],Pendiente:['badge-pendiente','⏳'],Reagendar:['badge-pendiente','🔁'],'Crédito usado':['badge-confirmada','🎟️']};
-  var b = bMap[r.estado] || ['badge-pendiente','?'];
-  var tP = r.talla && r.talla.toLowerCase() !== 'no';
-  var tR = r.protecciones && r.protecciones.toLowerCase() !== 'no';
-  var icoP = '<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">roller_skating</span>';
-  var icoR = '<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">shield</span>';
-  var icoOk = '<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">check_circle</span>';
-  var eq = tP && tR ? icoP + ' T.' + r.talla + ' · ' + icoR + ' Protecciones' : tP ? icoP + ' Talla ' + r.talla : tR ? icoR + ' ' + r.protecciones : icoOk + ' Equipo propio';
-  var h = '<div class="reserva-card" style="margin-bottom:8px;">';
-  h += '<div class="reserva-header" style="align-items:flex-start;gap:8px;"><span class="reserva-fecha" style="font-size:0.82rem;flex:1;min-width:0;">' + r.fecha + '</span>';
-  h += '<span class="badge ' + b[0] + '" style="flex-shrink:0;white-space:nowrap;">' + b[1] + ' ' + r.estado + '</span></div>';
-  h += '<div class="reserva-detalle">' + eq + '</div>';
-  if (r.monto) h += '<div style="font-size:0.78rem;color:var(--muted);margin-top:3px;">💵 ' + r.monto + '</div>';
-  var esMensual = _MESES_MAP[(r.fecha || '').toLowerCase().trim()] !== undefined;
-  if (esMensual && r.validezHasta) h += '<div style="font-size:0.78rem;color:var(--muted);margin-top:3px;">📅 Válido hasta ' + r.validezHasta + '</div>';
-  h += '</div>'; return h;
-}
-
-function toggleGrupoHistorial(id, header) {
+function toggleMesHistorial(id, header) {
   var el = document.getElementById(id), chevron = header.querySelector('.material-symbols-outlined');
   var abierto = el.style.maxHeight && el.style.maxHeight !== '0px' && el.style.maxHeight !== '0';
-  document.querySelectorAll('[id^="hgrp-"]').forEach(function(e2) {
+  document.querySelectorAll('[id^="hmes-"]').forEach(function(e2) {
     e2.style.maxHeight = '0'; e2.style.opacity = '0'; e2.style.padding = '0';
     var hd = e2.previousElementSibling;
     if (hd) { var c = hd.querySelector('.material-symbols-outlined'); if (c) c.style.transform = ''; }
@@ -929,6 +928,52 @@ function toggleGrupoHistorial(id, header) {
     el.style.opacity = '1'; el.style.padding = '10px 10px 4px';
     if (chevron) chevron.style.transform = 'rotate(180deg)';
   }
+}
+
+var _MESES_ABREV = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+
+function _renderCardHistorial(r) {
+  var estStyle = {
+    'Confirmada': ['var(--success-bg)','var(--success-dark)'],
+    'Cancelada': ['var(--danger-bg)','var(--danger-dark)'],
+    'Pendiente': ['var(--warning-bg)','var(--amber-darker)'],
+    'Reagendar': ['var(--warning-bg)','var(--amber-darker)'],
+    'Crédito usado': ['var(--success-bg)','var(--success-dark)']
+  };
+  var es = estStyle[r.estado] || estStyle['Pendiente'];
+  var esMensual = _MESES_MAP[(r.fecha || '').toLowerCase().trim()] !== undefined;
+  var diaNum = '', mesAbr = '', hora = '', lugar = '';
+  if (esMensual) {
+    mesAbr = _MESES_ABREV[_MESES_MAP[r.fecha.toLowerCase().trim()]];
+  } else {
+    var partes = (r.fecha || '').split(' - ');
+    var fechaPura = (partes[0] || '').trim();
+    hora = partes[1] ? partes[1].trim() : '';
+    lugar = partes[2] ? partes[2].trim() : '';
+    var m = fechaPura.match(/(\d{1,2})\s+de\s+([a-záéíóúñ]+)/i);
+    if (m) {
+      diaNum = m[1];
+      var mn = m[2].toLowerCase().normalize ? m[2].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'') : m[2].toLowerCase();
+      if (_MESES_MAP[mn] !== undefined) mesAbr = _MESES_ABREV[_MESES_MAP[mn]];
+    }
+  }
+  var h = '<div style="display:flex;gap:12px;align-items:flex-start;background:var(--surface-2);border:1px solid var(--border-light);border-radius:14px;padding:12px;margin-bottom:8px;">';
+  h += '<div style="flex-shrink:0;width:46px;height:46px;border-radius:10px;background:var(--brand-lightest);display:flex;flex-direction:column;align-items:center;justify-content:center;">';
+  h += '<span style="font-size:0.95rem;font-weight:800;color:var(--brand);line-height:1.1;">' + (diaNum || 'MES') + '</span>';
+  h += '<span style="font-size:0.62rem;font-weight:700;color:var(--muted);letter-spacing:0.5px;">' + mesAbr + '</span></div>';
+  h += '<div style="flex:1;min-width:0;">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">';
+  h += '<div style="font-size:0.82rem;color:var(--text);display:flex;align-items:center;gap:5px;">';
+  h += esMensual ? '<span class="material-symbols-outlined" style="font-size:0.9rem;color:var(--muted);">event_repeat</span>Mensual' : '<span class="material-symbols-outlined" style="font-size:0.9rem;color:var(--muted);">schedule</span>' + hora;
+  h += '</div>';
+  h += '<span style="font-size:0.68rem;font-weight:700;padding:3px 9px;border-radius:99px;background:' + es[0] + ';color:' + es[1] + ';white-space:nowrap;">' + r.estado + '</span></div>';
+  if (!esMensual && lugar) h += '<div style="font-size:0.78rem;color:var(--text-2);display:flex;align-items:center;gap:5px;margin-bottom:6px;"><span class="material-symbols-outlined" style="font-size:0.9rem;color:var(--muted);">location_on</span>' + lugar + '</div>';
+  var pie = '';
+  if (r.monto) pie += '<span style="font-weight:800;color:var(--text);">$' + r.monto + '</span>';
+  if (esMensual && r.validezHasta) pie += (pie ? ' · ' : '') + '<span style="color:var(--muted);">Válido hasta ' + r.validezHasta + '</span>';
+  if (pie) h += '<div style="font-size:0.78rem;">' + pie + '</div>';
+  h += '</div></div>';
+  return h;
 }
 
 function cancelarRes(fecha, onSuccess) {

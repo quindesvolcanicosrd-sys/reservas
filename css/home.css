@@ -190,6 +190,6 @@
    changelog) para que se vean como el resto de las filas de pills de la app. */
 .empty-state-links { display:flex; flex-direction:row; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px; }
 
-#historial-pills-mes::-webkit-scrollbar { display:none; }
-.historial-pill-mes { flex-shrink:0; padding:8px 16px; border-radius:99px; background:var(--brand-20); color:var(--muted); font-size:0.82rem; font-weight:700; cursor:pointer; transition:all 0.2s; white-space:nowrap; font-family:inherit; }
-.historial-pill-mes.activa { background:var(--brand); border-color:var(--brand); color:var(--white); } 
+#historial-pills-anio::-webkit-scrollbar { display:none; }
+.historial-pill { flex-shrink:0; padding:8px 16px; border-radius:99px; background:var(--brand-20); color:var(--muted); font-size:0.82rem; font-weight:700; cursor:pointer; transition:all 0.2s; white-space:nowrap; font-family:inherit; }
+.historial-pill.activa { background:var(--brand); border-color:var(--brand); color:var(--white); } 
