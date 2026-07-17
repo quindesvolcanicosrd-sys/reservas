@@ -1,6 +1,13 @@
 /* ══ INSCRIPCIÓN — Flujo por pasos ══════════════════════════════════ */
 
-var G = { email:'', idToken:'', nombre:'', foto:'', guardarFoto:false, fechaNac:'', mayorEdad:false };
+/* G.fotoGoogle: foto cruda de la cuenta de Google (disponible apenas se
+   verifica la cuenta, para ofrecerla como opción en abrirSheetFotoPerfil()).
+   G.foto: URL final a enviar en inscribirPersona() — empieza vacía (sin
+   foto por defecto, mismo criterio de privacidad que el viejo toggle "Usar
+   foto de Google" apagado por default) y se llena recién cuando la persona
+   elige explícitamente una foto (Google o recorte propio subido), ver
+   js/foto.js. */
+var G = { email:'', idToken:'', nombre:'', foto:'', fotoGoogle:'', fechaNac:'', mayorEdad:false };
 var _INSC_STEPS = ['insc-step-1','insc-step-3','insc-step-4','insc-step-5a','insc-step-5b','insc-step-5c','insc-step-6'];
 var _INSC_TITLES = ['Crear cuenta','Crear cuenta','Crear cuenta','Crear cuenta','Crear cuenta','Crear cuenta','Crear cuenta'];
 var _inscCurIdx = 0;
@@ -167,7 +174,7 @@ function onGoogleCredentialInscripcion(response) {
     _continuar(function() {
       ocultarCargando();
       if (res.yaRegistrado) { errMsg('err-p1', 'Esta cuenta ya está registrada. Inicia sesión desde la app principal.'); return; }
-      G.email = res.email; G.idToken = response.credential; G.foto = res.foto || '';
+      G.email = res.email; G.idToken = response.credential; G.fotoGoogle = res.foto || '';
       _inscDesbloquearForm(res);
     });
   }, function(e) {
@@ -186,10 +193,6 @@ function _inscPoblarPaso2(res) {
   if (nm) nm.textContent = res.nombre || res.email;
   if (em) em.textContent = res.email;
   if (avLetter) avLetter.textContent = (res.nombre || res.email || '?').charAt(0).toUpperCase();
-  // Precarga la foto de Google ya en este punto (aunque el toggle "Usar foto
-  // de Google" arranque apagado) — así el crossfade de inscToggleFoto() no
-  // tiene que esperar la carga de red a mitad de la animación.
-  if (avImg && G.foto) avImg.src = G.foto;
   var fNombre = document.getElementById('f-nombre');
   if (fNombre && res.nombre && !fNombre.value) {
     fNombre.value = res.nombre;
@@ -242,20 +245,20 @@ function _inscFormatFecha(iso) {
 }
 
 /* ── Paso 2: foto y fecha ───────────────────── */
-function inscToggleFoto(btn) {
-  var on = btn.classList.contains('toggle-on');
-  btn.classList.toggle('toggle-on', !on);
-  btn.classList.toggle('toggle-off', on);
-  btn.setAttribute('aria-pressed', String(!on));
-  G.guardarFoto = !on;
-  // Crossfade entre las 2 capas de #insc-avatar (ver .insc-avatar-layer,
-  // inscripcion.css) — ambas quedan siempre montadas, solo se togglea cuál
-  // tiene .mostrar; nunca se reemplaza innerHTML de golpe.
+// Actualiza #insc-avatar con la URL final (o '' para volver a la inicial),
+// llamada por _fotoAplicarResultado() (js/foto.js) tras elegir "Usar foto de
+// Google"/recortar una foto propia/quitar la foto. Crossfade entre las 2
+// capas (.insc-avatar-layer, inscripcion.css) — ambas quedan siempre
+// montadas, solo se togglea cuál tiene .mostrar; nunca se reemplaza
+// innerHTML de golpe.
+function _inscActualizarAvatar(url) {
   var avLetter = document.getElementById('insc-avatar-letter');
   var avImg = document.getElementById('insc-avatar-img');
-  var mostrarFoto = !on && !!G.foto;
-  if (avImg) avImg.classList.toggle('mostrar', mostrarFoto);
-  if (avLetter) avLetter.classList.toggle('mostrar', !mostrarFoto);
+  if (avImg) {
+    if (url) avImg.src = url;
+    avImg.classList.toggle('mostrar', !!url);
+  }
+  if (avLetter) avLetter.classList.toggle('mostrar', !url);
 }
 
 function _inscToggleClick(btn) {
@@ -289,7 +292,6 @@ function inscContinuar2() {
   if (edad < 16) { mostrarModalEdadBloqueo(); return; }
   G.fechaNac = fnac;
   G.mayorEdad = edad >= 18;
-  G.guardarFoto = document.getElementById('tog-foto').classList.contains('toggle-on');
   G.fechaPublica = document.getElementById('tog-fecha-pub').classList.contains('toggle-on') ? 'Sí' : 'No';
   G.edadPublica = document.getElementById('tog-edad-pub').classList.contains('toggle-on') ? 'Sí' : 'No';
   inscMostrarPaso(_INSC_STEPS.indexOf('insc-step-3'));
@@ -535,7 +537,7 @@ function inscEnviar() {
       action:'inscribirPersona', nombre:nombre, email:G.email, idToken:G.idToken,
       pronombres:prons, prefijo:prefVal, telefono:tel,
       necesitaPatines:patines, talla:talla, necesitaProtecciones:protec,
-      foto:G.guardarFoto ? G.foto : '',
+      foto:G.foto,
       fechaNac:G.fechaNac, guardarFecha:'si',
       fechaPublica:G.fechaPublica || 'No', edadPublica:G.edadPublica || 'No',
       mayorEdad:G.mayorEdad, pinHash:pinHash||''

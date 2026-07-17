@@ -18,6 +18,9 @@
 <link rel="stylesheet" href="../css/reservas.css">
 <link rel="stylesheet" href="../css/perfil.css">
 <link rel="stylesheet" href="inscripcion.css">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+<script src="../js/foto.js"></script>
 </head>
 
 <body>
@@ -96,18 +99,20 @@
       <!-- Campos del formulario: bloqueados hasta confirmar Google -->
       <div id="insc-form-fields" class="form-locked" style="margin-top:12px;">
         <div class="insc-profile-preview">
-          <div class="avatar-pill avatar-pill--lg insc-avatar" id="insc-avatar">
-            <span class="avatar-pill-letter insc-avatar-layer mostrar" id="insc-avatar-letter"></span>
-            <img class="insc-avatar-layer" id="insc-avatar-img" alt="">
+          <div style="text-align:center;flex-shrink:0;">
+            <div class="avatar-pill avatar-pill--lg insc-avatar" id="insc-avatar">
+              <span class="avatar-pill-letter insc-avatar-layer mostrar" id="insc-avatar-letter"></span>
+              <img class="insc-avatar-layer" id="insc-avatar-img" alt="">
+            </div>
+            <button type="button" class="avatar-pill-edit-btn" onclick="abrirSheetFotoPerfil('inscripcion')" aria-label="Cambiar foto de perfil">
+              <span class="material-symbols-outlined">photo_camera</span>
+            </button>
           </div>
           <div>
             <div class="insc-profile-name" id="insc-profile-name">—</div>
             <div class="insc-profile-email" id="insc-profile-email">—</div>
+            <div class="insc-foto-origen" id="insc-foto-origen">Sin foto de perfil</div>
           </div>
-        </div>
-        <div class="insc-tog-row">
-          <div><div class="insc-tog-label">Usar foto de Google</div></div>
-          <div class="toggle-wrap"><button type="button" id="tog-foto" class="toggle-btn toggle-off" aria-pressed="false" onclick="inscToggleFoto(this)"><span class="toggle-thumb"></span></button></div>
         </div>
         <div class="campo" style="margin-top:12px;">
           <label>Fecha de nacimiento <span style="color:var(--brand);">*</span></label>
@@ -303,6 +308,40 @@
     <div class="error-msg" id="err-insc-protec-sheet" style="margin-top:10px;"></div>
     <button onclick="inscConfirmarOtroProtec()" style="width:100%;padding:13px;background:var(--brand);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-top:16px;">Confirmar</button>
     <button onclick="inscCancelarOtroProtec()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:none;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px;">Cancelar</button>
+  </div>
+</div>
+
+<!-- BOTTOM SHEET: Foto de perfil (js/foto.js) — mismo markup en ../index.html -->
+<div id="sheet-foto-perfil-overlay" class="bsheet-overlay" style="z-index:9650;" onclick="cerrarSheetFotoPerfil()"></div>
+<div id="sheet-foto-perfil" class="bsheet" style="z-index:9651;">
+  <div class="bsheet-handle"></div>
+  <div class="bsheet-title">Foto de perfil</div>
+  <div class="bsheet-body" style="display:flex;flex-direction:column;gap:10px;">
+    <button type="button" id="sfp-opt-google" onclick="sfpUsarGoogle()" style="width:100%;padding:14px;background:var(--surface-2);border:1.5px solid var(--border-light);border-radius:12px;color:var(--text);font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
+      <span class="material-symbols-outlined" style="font-size:1.2rem;">account_circle</span>Usar foto de Google
+    </button>
+    <button type="button" onclick="sfpDesdeDispositivo()" style="width:100%;padding:14px;background:var(--surface-2);border:1.5px solid var(--border-light);border-radius:12px;color:var(--text);font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
+      <span class="material-symbols-outlined" style="font-size:1.2rem;">photo_library</span>Desde el dispositivo
+    </button>
+    <button type="button" id="sfp-opt-quitar" style="display:none;width:100%;padding:14px;background:var(--danger-bg);border:1.5px solid var(--danger);border-radius:12px;color:var(--danger);font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;align-items:center;justify-content:center;gap:8px;">
+      <span class="material-symbols-outlined" style="font-size:1.2rem;">delete</span>Quitar foto
+    </button>
+    <button type="button" onclick="cerrarSheetFotoPerfil()" style="width:100%;padding:12px;background:transparent;border:none;color:var(--muted);font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL: Recorte de foto de perfil (Cropper.js, js/foto.js) — mismo markup en ../index.html -->
+<div id="modal-crop" style="display:none;position:fixed;inset:0;z-index:9900;background:var(--overlay-dark);flex-direction:column;">
+  <div style="flex-shrink:0;padding:14px 16px;display:flex;align-items:center;justify-content:center;position:relative;">
+    <span style="color:var(--white);font-weight:800;font-size:0.9rem;">Ajusta tu foto</span>
+  </div>
+  <div style="flex:1;position:relative;overflow:hidden;background:#000;min-height:0;">
+    <img id="crop-image" alt="" style="max-width:100%;display:block;">
+    <div class="crop-area"></div>
+  </div>
+  <div style="flex-shrink:0;padding:16px;display:flex;gap:10px;background:var(--bg);">
+    <button type="button" class="btn btn-outline" style="flex:1;" onclick="cancelarCrop()">Cancelar</button>
+    <button type="button" class="btn btn-primary" style="flex:1;" onclick="confirmarCrop()">Recortar</button>
   </div>
 </div>
 

@@ -484,9 +484,10 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 .insc-scroll h2 + p { margin-bottom:16px; }
 .insc-profile-preview { display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--surface-2); border-radius:14px; margin-bottom:14px; border:1px solid var(--border-light); }
 /* #insc-avatar: forma cápsula compartida (.avatar-pill--lg, css/global.css).
-   Crossfade entre foto de Google y avatar por defecto (inicial) al togglear
-   "Usar foto de Google" (inscToggleFoto(), inscripcion.js) — ver MANIFEST,
-   "Cambios recientes". Ambas capas quedan siempre montadas, superpuestas
+   Crossfade entre foto elegida (Google o recorte propio subido) e inicial
+   por defecto (_inscActualizarAvatar(), inscripcion.js, llamada desde
+   _fotoAplicarResultado() en js/foto.js) — ver MANIFEST, "Cambios
+   recientes". Ambas capas quedan siempre montadas, superpuestas
    (position:absolute;inset:0, heredado de `.avatar-pill img`/
    `.avatar-pill-letter` en css/global.css), togleando .mostrar en vez de
    reemplazar el innerHTML de golpe — evita el salto de tamaño/posición y dos
@@ -503,6 +504,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 #insc-avatar .insc-avatar-layer.mostrar { opacity:1; transform:rotate(-45deg) scale(1.42); }
 .insc-profile-name { font-size:0.9rem; font-weight:800; color:var(--text); }
 .insc-profile-email { font-size:0.72rem; color:var(--muted); margin-top:2px; }
+.insc-foto-origen { font-size:0.68rem; color:var(--muted); margin-top:2px; }
 .insc-tog-row { display:flex; align-items:center; justify-content:space-between; padding:11px 14px; background:var(--surface-2); border-radius:12px; margin-bottom:8px; border:1px solid var(--border-light); }
 .insc-tog-label { font-size:0.82rem; font-weight:700; color:var(--text); }
 .insc-tog-hint { font-size:0.68rem; color:var(--muted); margin-top:1px; }

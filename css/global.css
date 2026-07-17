@@ -256,3 +256,21 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
   -webkit-tap-highlight-color: transparent;
 }
 .avatar-pill-edit-btn .material-symbols-outlined { font-size: 20px; color: var(--white); }
+
+/* Overlay decorativo del cropper (#modal-crop, js/foto.js) — misma cápsula
+   rotada de .avatar-pill, pero acá es solo una máscara visual sobre la
+   imagen a recortar (no recorta nada por sí sola, eso lo hace Cropper.js con
+   `aspectRatio: 216/300`); el `box-shadow` gigante oscurece todo lo que
+   queda afuera de la cápsula. */
+.crop-area {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 52%;
+  height: 72%;
+  border-radius: 9999px;
+  transform: translate(-50%, -50%) rotate(45deg);
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.55);
+  border: 2px solid rgba(255,255,255,.5);
+  pointer-events: none;
+}
