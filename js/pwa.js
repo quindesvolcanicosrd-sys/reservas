@@ -177,5 +177,5 @@ function vincularPush(nombre) {
 
 window.OneSignalDeferred = window.OneSignalDeferred || [];
 OneSignalDeferred.push(function(OneSignal) {
-  OneSignal.init({ appId: 'f434ccdc-bcca-40b6-bb64-16b662b8b0d9', serviceWorkerPath: 'sw.js' });
+  OneSignal.init({ appId: 'f434ccdc-bcca-40b6-bb64-16b662b8b0d9' });
 });
