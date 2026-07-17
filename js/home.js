@@ -16,21 +16,12 @@ function prepararHome(saltarFadeInicial, onListo) {
   }
   var saludoEl = document.getElementById('home-saludo');
   if (saludoEl) saludoEl.textContent = E.nombre + '!';
-  var avatarEl = document.getElementById('home-avatar');
-  if (avatarEl) {
-    var foto = E.datos && (E.datos.fotoUrl || E.datos.foto || E.datos.fotoPerfil || E.datos.picture || E.datos.photoUrl || '');
-    if (foto) {
-      avatarEl.innerHTML = '<img src="' + foto + '" alt="">';
-    } else {
-      avatarEl.textContent = (E.nombre || '?').charAt(0).toUpperCase();
-    }
-  }
   var navAvatar = document.getElementById('home-avatar-nav');
-if (navAvatar) {
-  var foto = E.datos && (E.datos.fotoPerfil || E.datos.fotoUrl || E.datos.foto || E.datos.picture || E.datos.photoUrl || '');
-  if (foto) { navAvatar.innerHTML = '<img src="' + foto + '" alt="" style="width:100%;height:100%;object-fit:cover;">'; }
-  else { navAvatar.textContent = (E.nombre || '?').charAt(0).toUpperCase(); }
-}
+  if (navAvatar) {
+    var foto = E.datos && (E.datos.fotoPerfil || E.datos.fotoUrl || E.datos.foto || E.datos.picture || E.datos.photoUrl || '');
+    if (foto) { navAvatar.innerHTML = '<img src="' + foto + '" alt="">'; }
+    else { navAvatar.innerHTML = '<span class="avatar-pill-letter">' + (E.nombre || '?').charAt(0).toUpperCase() + '</span>'; }
+  }
   var homeContent = document.getElementById('home-reservas-lista');
   var homeContenidoFinalListo = false;
   if (!saltarFadeInicial) {
@@ -364,8 +355,8 @@ function _renderHomeReservas() {
 
   var fotoUrl = E.datos && (E.datos.fotoPerfil || '');
   var avatarHtml = fotoUrl
-    ? '<img src="' + fotoUrl + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="">'
-    : (E.nombre || '?').charAt(0).toUpperCase();
+    ? '<img src="' + fotoUrl + '" alt="">'
+    : '<span class="avatar-pill-letter">' + (E.nombre || '?').charAt(0).toUpperCase() + '</span>';
 
   // Topbar (avatar + "¿Dudas? Contáctanos") es un elemento persistente fuera de
   // #home-reservas-lista (index.html) — acá solo se sincroniza su visibilidad/avatar,

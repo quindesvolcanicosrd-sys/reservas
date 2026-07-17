@@ -198,3 +198,61 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
    en cada touchmove; se reactiva al soltar (cierre real o snap-back), ambos
    ya animados por la transition normal de .bsheet declarada arriba. */
 .bsheet.bsheet-sin-transicion { transition: none; }
+
+/* ─── AVATAR PILL (forma cápsula rotada, fuente única compartida — ver
+   MANIFEST, "Cambios recientes") ──────────────────────────────────────
+   Truco: cuadrado redondeado rotado 45° con overflow:hidden recorta la foto/
+   inicial en una cápsula diagonal; el contenido interno (img o
+   .avatar-pill-letter) se contra-rota -45° y se escala 1.42x para volver a
+   quedar upright y cubrir las esquinas que la rotación del contenedor deja
+   expuestas. Un solo lugar para el truco — los módulos solo eligen tamaño
+   (modificador) y, si necesitan animarlo (ver #insc-avatar en
+   inscripcion.css), deben sobreescribir el `transform` completo en vez de
+   agregar una clase más: `.avatar-pill img`/`.avatar-pill-letter` ya usan esa
+   propiedad para la contra-rotación y dos reglas independientes tocándola se
+   pisarían entre sí. */
+.avatar-pill {
+  position: relative;
+  overflow: hidden;
+  transform: rotate(45deg);
+  background: var(--surface-2);
+  flex-shrink: 0;
+}
+.avatar-pill img,
+.avatar-pill .avatar-pill-letter {
+  position: absolute;
+  inset: 0;
+  width: 95%;
+  height: 95%;
+  margin: auto;
+  object-fit: cover;
+  transform: rotate(-45deg) scale(1.42);
+}
+.avatar-pill .avatar-pill-letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: var(--brand);
+}
+/* Tamaños — proporción 216:300 ≈ 0.72, igual que Pivot. */
+.avatar-pill--lg { width: 96px; height: 133px; border-radius: 60px; }
+.avatar-pill--md { width: 88px; height: 122px; border-radius: 55px; }
+.avatar-pill--sm { width: 44px; height: 61px; border-radius: 27.5px; }
+.avatar-pill--lg .avatar-pill-letter { font-size: 34px; }
+.avatar-pill--md .avatar-pill-letter { font-size: 30px; }
+.avatar-pill--sm .avatar-pill-letter { font-size: 15px; }
+
+/* Botón de editar/cámara — ya no es un badge en la esquina del avatar (no
+   queda prolijo sobre una forma rotada); pasa a ser un botón circular
+   separado, superpuesto por debajo del avatar con margen negativo, mismo
+   patrón que .wiz-foto-edit-btn de Pivot. */
+.avatar-pill-edit-btn {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--brand); margin: -22px auto 0;
+  position: relative; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  border: none; cursor: pointer; flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.avatar-pill-edit-btn .material-symbols-outlined { font-size: 20px; color: var(--white); }

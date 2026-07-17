@@ -316,26 +316,6 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 .exito-sub   { color: var(--muted); text-align: center; font-size: 0.92rem; line-height: 1.6; margin-bottom: 24px; }
 .exito-nombre{ color: var(--brand); font-weight: 800; }
 
-/* ─── NOMBRE PERFIL PREVIEW ──────────────────────────────────────────── */
-.profile-preview {
-  display: flex; align-items: center; gap: 12px;
-  background: var(--brand-06); border: 1px solid var(--brand-glow);
-  border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 16px;
-}
-.profile-avatar {
-  width: 44px; height: 44px; border-radius: 50%; object-fit: cover;
-  border: 0px solid var(--brand); flex-shrink: 0;
-}
-.profile-avatar-placeholder {
-  width: 44px; height: 44px; border-radius: 50%;
-  background: var(--brand); color: var(--white);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.2rem; font-weight: 800; flex-shrink: 0;
-}
-.profile-info-text { flex: 1; }
-.profile-name { font-weight: 800; font-size: 0.92rem; }
-.profile-email { font-size: 0.78rem; color: var(--muted); }
-
 /* ─── SEPARADOR ───────────────────────────────────────────────────────── */
 .divider {
   border: none; border-top: 1px solid var(--border);
@@ -503,18 +483,24 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 .insc-scroll h2 { font-size:1.3rem; font-weight:800; margin-bottom:16px; line-height:1.3; }
 .insc-scroll h2 + p { margin-bottom:16px; }
 .insc-profile-preview { display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--surface-2); border-radius:14px; margin-bottom:14px; border:1px solid var(--border-light); }
-.insc-avatar { position:relative; width:48px; height:48px; border-radius:50%; background:var(--brand); font-weight:800; font-size:17px; color:var(--white); flex-shrink:0; overflow:hidden; border:1.5px solid var(--border-light); transition:all 0.3s; }
-/* Crossfade entre foto de Google y avatar por defecto (inicial) al togglear
+/* #insc-avatar: forma cápsula compartida (.avatar-pill--lg, css/global.css).
+   Crossfade entre foto de Google y avatar por defecto (inicial) al togglear
    "Usar foto de Google" (inscToggleFoto(), inscripcion.js) — ver MANIFEST,
    "Cambios recientes". Ambas capas quedan siempre montadas, superpuestas
-   (position:absolute;inset:0 sobre .insc-avatar, que aporta el
-   position:relative), togleando .mostrar en vez de reemplazar el innerHTML
-   de golpe — evita el salto de tamaño/posición y dos imágenes a la vez a
-   mitad de la transición. Scale sutil (0.95→1) sumado al fade para que la
-   que entra se sienta con más "vida" que un fade plano puro. */
-.insc-avatar-layer { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; opacity:0; transform:scale(0.95); transition:opacity 0.22s var(--ease-sheet), transform 0.22s var(--ease-sheet); pointer-events:none; }
-.insc-avatar-layer.mostrar { opacity:1; transform:scale(1); }
-.insc-avatar-img { width:100%; height:100%; object-fit:cover; }
+   (position:absolute;inset:0, heredado de `.avatar-pill img`/
+   `.avatar-pill-letter` en css/global.css), togleando .mostrar en vez de
+   reemplazar el innerHTML de golpe — evita el salto de tamaño/posición y dos
+   imágenes a la vez a mitad de la transición. El `transform` de la cápsula
+   (rotate(-45deg) scale(1.42), fijado por `.avatar-pill`) y el del fade
+   (scale 0.95→1) se pisarían si fueran dos clases sueltas — ambas tocan
+   `transform` sobre el mismo elemento —, así que acá se escribe la
+   combinación ya multiplicada (0.95×1.42=1.349 en reposo, 1.42 mostrado) en
+   una sola regla por estado, escalado sobre el mismo centro de rotación.
+   Selector con #insc-avatar (no solo .insc-avatar-layer) para garantizar más
+   especificidad que `.avatar-pill img`/`.avatar-pill .avatar-pill-letter`
+   sin depender del orden de carga entre global.css e inscripcion.css. */
+#insc-avatar .insc-avatar-layer { opacity:0; transition:opacity 0.22s var(--ease-sheet), transform 0.22s var(--ease-sheet); pointer-events:none; transform:rotate(-45deg) scale(1.349); }
+#insc-avatar .insc-avatar-layer.mostrar { opacity:1; transform:rotate(-45deg) scale(1.42); }
 .insc-profile-name { font-size:0.9rem; font-weight:800; color:var(--text); }
 .insc-profile-email { font-size:0.72rem; color:var(--muted); margin-top:2px; }
 .insc-tog-row { display:flex; align-items:center; justify-content:space-between; padding:11px 14px; background:var(--surface-2); border-radius:12px; margin-bottom:8px; border:1px solid var(--border-light); }

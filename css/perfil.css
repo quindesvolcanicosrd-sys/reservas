@@ -81,8 +81,13 @@
   .aj-hero { margin-top:10px; }
 }
 .aj-hero:hover { background:var(--surface-light); }
-.aj-avatar { width:52px; height:52px; border-radius:50%; background:var(--brand); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:18px; color:var(--white); flex-shrink:0; overflow:hidden; border:2px solid var(--border-light); }
-.aj-avatar img { width:100%; height:100%; object-fit:cover; }
+/* #aj-avatar: forma cápsula compartida (.avatar-pill--md, css/global.css). */
+/* #aj-avatar-hero: mismo modificador --md; a diferencia de #aj-avatar (item
+   flex de .aj-hero, se centra solo), este vive en un wrapper de bloque
+   centrado por texto (`text-align:center`, index.html) — un div con ancho
+   fijo no se centra con eso, necesita su propio margin:auto (el markup
+   inline viejo lo tenía y se perdió al migrar a la clase compartida). */
+#aj-avatar-hero { margin: 0 auto; }
 .aj-hero-info { flex:1; min-width:0; }
 .aj-hero-name { font-size:1rem; font-weight:800; color:var(--text); }
 .aj-hero-sub { font-size:0.72rem; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }

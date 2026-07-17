@@ -6,7 +6,7 @@ function irEditarDatos() {
   if (avatarEl) {
     var foto = d.fotoPerfil || '';
     if (foto) { avatarEl.innerHTML = '<img src="' + foto + '" alt="">'; }
-    else { avatarEl.textContent = (E.nombre || '?').charAt(0).toUpperCase(); }
+    else { avatarEl.innerHTML = '<span class="avatar-pill-letter">' + (E.nombre || '?').charAt(0).toUpperCase() + '</span>'; }
   }
   var heroName = document.getElementById('aj-hero-name');
   var heroSub = document.getElementById('aj-hero-sub');
@@ -125,7 +125,6 @@ function guardarPermisos() {
         if (fotoUrl) E.datos.fotoPerfil = fotoUrl;
       }
       _cerrarModalPermisos();
-      if (fotoUrl) actualizarFotoPerfil(fotoUrl);
     } else {
       errEl.textContent = res.error || 'Error al guardar.';
       errEl.style.display = 'block';
@@ -231,17 +230,6 @@ function guardarPinConfig() {
       errEl.style.display = 'block';
     });
   });
-}
-
-function actualizarFotoPerfil(url) {
-  var emoji = document.getElementById('home-emoji-mobile');
-  if (emoji && url) {
-    emoji.innerHTML = '<img src="' + url + '" style="width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid var(--brand);" onerror="this.parentElement.textContent=\'🛼\'">';
-  }
-  var emojiD = document.querySelector('.home-emoji-desktop');
-  if (emojiD && url) {
-    emojiD.innerHTML = '<img src="' + url + '" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid var(--brand);margin-bottom:12px;" onerror="this.textContent=\'🛼\'">';
-  }
 }
 
 function eliminarCuenta() {
@@ -529,23 +517,19 @@ function _ajCargarSub(id) {
     _ajSetDatoVal('aj-nombreDerby-val', d.nombreDerby, '—', false);
     _ajSetDatoVal('aj-numeroDerby-val', d.numeroDerby, 'Sin número asignado', true);
     _ajSetDatoVal('aj-pron-val', d.pronombres, '—', false);
-    // Bug real corregido (ver MANIFEST, "Cambios recientes"): #aj-avatar-hero
-    // nunca tuvo JS que lo poblara — quedaba siempre con el fondo decorativo
-    // vacío, sin la foto real ni el fallback de inicial que sí usa #aj-avatar
-    // (irEditarDatos(), más arriba en este archivo). Mismo criterio acá,
-    // preservando el badge de cámara (único hijo existente antes de esto,
-    // position:absolute — se reinserta tal cual después, su orden en el DOM
-    // no afecta su posición visual).
+    // #aj-avatar-hero: mismo criterio de foto/inicial que #aj-avatar
+    // (irEditarDatos(), más arriba en este archivo). El botón de cámara ya
+    // no es un badge hijo de este elemento (ver MANIFEST, "Cambios
+    // recientes" — migración a .avatar-pill) sino un <button> hermano
+    // separado, así que el innerHTML de acá no necesita preservarlo.
     var avatarHero = document.getElementById('aj-avatar-hero');
     if (avatarHero) {
-      var badgeCamara = avatarHero.querySelector('.material-symbols-outlined');
       var fotoHero = d.fotoPerfil || '';
       if (fotoHero) {
-        avatarHero.innerHTML = '<img src="' + fotoHero + '" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+        avatarHero.innerHTML = '<img src="' + fotoHero + '" alt="">';
       } else {
-        avatarHero.textContent = (E.nombre || '?').charAt(0).toUpperCase();
+        avatarHero.innerHTML = '<span class="avatar-pill-letter">' + (E.nombre || '?').charAt(0).toUpperCase() + '</span>';
       }
-      if (badgeCamara) avatarHero.appendChild(badgeCamara);
     }
   } else if (id === 'aj-sub-contacto') {
     _ajSetDatoVal('aj-email-display', d.email, '—', false);
