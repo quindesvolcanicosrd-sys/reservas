@@ -71,8 +71,29 @@ function cerrarSheetFotoPerfil(porGesto) {
 }
 function sfpUsarGoogle() {
   cerrarSheetFotoPerfil();
-  var url = _fotoContexto === 'inscripcion' ? (typeof G !== 'undefined' ? G.fotoGoogle : '') : _fotoGoogleUrl;
-  _fotoAplicarResultado(url || '', 'google');
+  if (_fotoContexto === 'inscripcion') {
+    // Solo local acá — todavía no hay cuenta creada (ver inscribirPersona()),
+    // nada que persistir hasta el envío final del formulario.
+    _fotoAplicarResultado(G.fotoGoogle || '', 'google');
+    return;
+  }
+  // Ajustes: persiste en el backend con la misma acción que ya usa
+  // guardarPermisos() (actualizarPerfilGoogle) — solo `foto`, el resto de
+  // los parámetros se dejan sin mandar para que el backend no toque fecha
+  // de nacimiento ni permisos.
+  var url = _fotoGoogleUrl || '';
+  mostrarCargando('Actualizando foto...');
+  api({ action: 'actualizarPerfilGoogle', foto: url }, function(res) {
+    ocultarCargando();
+    if (res && res.exito) {
+      _fotoAplicarResultado(url, 'google');
+    } else {
+      _fotoToast((res && res.error) || 'No se pudo actualizar la foto.');
+    }
+  }, function(e) {
+    ocultarCargando();
+    _fotoToast('Error de conexión: ' + (e && e.message || 'intenta de nuevo'));
+  });
 }
 function sfpDesdeDispositivo() {
   cerrarSheetFotoPerfil();
@@ -125,22 +146,23 @@ function confirmarCrop() {
 }
 
 /* ── Subida al backend ────────────────────────────────────────────────
-   Contrato del backend (Apps Script, fuera de este repo, no se toca desde
-   acá): action `subirFotoPerfil`, params `token`+`base64Data` (data URL o
-   '' para quitar foto), POST (el base64 es muy largo para una URL de GET).
-   Devuelve { exito:true, url } o { exito:false, error }.
-   `token`: en ajustes es el token de sesión real (`_token`, js/api.js). En
-   inscripción todavía no existe cuenta/sesión en ese punto del flujo (el
-   registro se crea recién al final, `inscribirPersona`) — se manda el
-   `idToken` de Google (`G.idToken`) como credencial, es lo único que
-   identifica a la persona antes de que exista su cuenta. Asunción marcada
-   acá a propósito por si el backend espera otra cosa en ese caso. */
+   Dos acciones distintas según contexto (backend Apps Script, fuera de
+   este repo, no se toca desde acá) — ambas POST (el base64 es muy largo
+   para una URL de GET) y devuelven { exito:true, url } o { exito:false,
+   error }:
+   - ajustes: `subirFotoPerfil`, params `token` (sesión real, `_token`,
+     js/api.js) + `base64Data` (data URL o '' para quitar foto).
+   - inscripción: `subirFotoInscripcion`, params `idToken` (JWT de Google,
+     `G.idToken`) + `email` (`G.email`) + `base64Data` — todavía no existe
+     cuenta/sesión en ese punto del flujo (se crea recién al final,
+     `inscribirPersona()`), así que la credencial es el idToken + el email
+     ya verificado en el paso 1 (`verificarGoogle`), no un token de sesión. */
 function _subirFotoRecortada(base64) {
-  var token = _fotoContexto === 'inscripcion'
-    ? (typeof G !== 'undefined' && G ? G.idToken : '')
-    : (typeof _token !== 'undefined' ? _token : '');
   mostrarCargando(base64 ? 'Subiendo foto...' : 'Quitando foto...');
-  apiPost({ action: 'subirFotoPerfil', token: token, base64Data: base64 }, function(res) {
+  var params = _fotoContexto === 'inscripcion'
+    ? { action: 'subirFotoInscripcion', idToken: G.idToken, email: G.email, base64Data: base64 }
+    : { action: 'subirFotoPerfil', token: (typeof _token !== 'undefined' ? _token : ''), base64Data: base64 };
+  apiPost(params, function(res) {
     ocultarCargando();
     if (res && res.exito) {
       _fotoAplicarResultado(res.url || '', 'subida');
