@@ -252,6 +252,19 @@ function quitarCupon() {
 function _s4SincronizarCuponWrapper() {
   var w = document.getElementById('s4-cupon-wrapper');
   if (!w) return;
+  // Bug real de seguridad corregido (ver MANIFEST, "Cambios recientes"): si el cupón
+  // quedó marcado como aplicado (E.cuponAplicado=true) pero tieneCuponDisponible() ya
+  // no lo respalda — ej. esta función se vuelve a llamar tras un re-sync de
+  // getCuponDisponible con dato fresco que corrige un E.datos.cuponDisponible cacheado
+  // desactualizado (sesión restaurada) — la aplicación ya no es válida y no debe seguir
+  // contando en el total. Se revierte con quitarCupon(), mismo mecanismo que el botón
+  // "Quitar" manual (ya resetea checkbox/circle/total/textos de pago en un solo lugar) —
+  // nunca dispara para una aplicación recién exitosa, porque en ese momento
+  // tieneCuponDisponible() todavía es true.
+  if (E.cuponAplicado && !tieneCuponDisponible()) {
+    quitarCupon();
+    return;
+  }
   var mostrar = E.tipoPago === 'clase' && tieneCuponDisponible() && !E.cuponAplicado;
   var yaVisible = w.classList.contains('mostrar');
   if (mostrar && !yaVisible) {

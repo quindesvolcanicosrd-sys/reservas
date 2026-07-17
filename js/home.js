@@ -81,6 +81,15 @@ if (navAvatar) {
       if (E.datos) E.datos.cuponDisponible = res.cuponDisponible === true;
       if (res.cuponDisponible) localStorage.removeItem('cupon_' + E.nombre);
       bannerCupon.style.display = 'none';
+      // Bug real de seguridad corregido (ver MANIFEST): este fetch es async y puede
+      // resolver mientras el usuario ya está en s4 con el cupón marcado desde un valor
+      // cacheado desactualizado (ej. sesión restaurada) — sin este re-sync, el wrapper
+      // de cupón nunca se re-evalúa con el dato fresco y E.cuponAplicado podía quedar
+      // en true (cupón "gratis" sin cupón real disponible) hasta confirmarReserva().
+      var s4El = document.getElementById('s4');
+      if (typeof _s4SincronizarCuponWrapper === 'function' && s4El && s4El.classList.contains('activa')) {
+        _s4SincronizarCuponWrapper();
+      }
     }, function() {
       bannerCupon.style.display = 'none';
     });
