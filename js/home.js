@@ -1237,7 +1237,7 @@ function confirmarCambioFecha() {
   if (lugar) pillsEl.innerHTML += '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
   document.getElementById('mcr-equip').textContent = equipMsg;
   modal.style.display = 'flex';
-  requestAnimationFrame(function(){ modal.style.opacity = '1'; });
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ modal.style.opacity = '1'; }); });
   _registrarOverlayAbierto(cerrarModalReagendar);
 }
 
@@ -1275,7 +1275,7 @@ ocultarCargando();
 }
 function abrirModalEstados() {
   var m = document.getElementById('modal-estados-reserva');
-  if (m) { m.style.display = 'flex'; requestAnimationFrame(function(){ m.style.opacity = '1'; }); _registrarOverlayAbierto(cerrarModalEstados); }
+  if (m) { m.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ m.style.opacity = '1'; }); }); _registrarOverlayAbierto(cerrarModalEstados); }
 }
 function cerrarModalEstados(porGesto) {
   if (!porGesto) { history.back(); return; }

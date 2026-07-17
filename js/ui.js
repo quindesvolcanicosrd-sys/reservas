@@ -402,7 +402,7 @@ function abrirModalInfoEstado() {
   var m = document.getElementById('modal-info-estado');
   if (!m) return;
   m.style.display = 'flex';
-  requestAnimationFrame(function() { m.style.opacity = '1'; });
+  requestAnimationFrame(function() { requestAnimationFrame(function() { m.style.opacity = '1'; }); });
   _registrarOverlayAbierto(cerrarModalInfoEstado);
 }
 function cerrarModalInfoEstado(porGesto) {
@@ -416,7 +416,7 @@ function abrirModalInfoPolitica() {
   var m = document.getElementById('modal-info-politica');
   if (!m) return;
   m.style.display = 'flex';
-  requestAnimationFrame(function() { m.style.opacity = '1'; });
+  requestAnimationFrame(function() { requestAnimationFrame(function() { m.style.opacity = '1'; }); });
   _registrarOverlayAbierto(cerrarModalInfoPolitica);
 }
 function cerrarModalInfoPolitica(porGesto) {

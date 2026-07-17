@@ -66,7 +66,7 @@ function mostrarModalNavegador(tipo) {
       '3️⃣ Abre la app instalada y activa las notificaciones';
   }
   m.style.display = 'flex';
-  requestAnimationFrame(function() { m.style.opacity = '1'; });
+  requestAnimationFrame(function() { requestAnimationFrame(function() { m.style.opacity = '1'; }); });
   _registrarOverlayAbierto(cerrarModalNavegador);
 }
 

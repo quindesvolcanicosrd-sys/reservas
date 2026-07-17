@@ -144,7 +144,7 @@ function saltarPermisos() {
 
 function mostrarModalEdadBloqueo() {
   var m = document.getElementById('modal-edad-bloqueo');
-  if (m) { m.style.display = 'flex'; requestAnimationFrame(function() { m.style.opacity = '1'; }); }
+  if (m) { m.style.display = 'flex'; requestAnimationFrame(function() { requestAnimationFrame(function() { m.style.opacity = '1'; }); }); }
   _registrarOverlayAbierto(cerrarModalEdadBloqueo);
 }
 function cerrarModalEdadBloqueo(porGesto) {
