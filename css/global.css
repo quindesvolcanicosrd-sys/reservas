@@ -261,13 +261,19 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
    rotada de .avatar-pill, pero acá es solo una máscara visual sobre la
    imagen a recortar (no recorta nada por sí sola, eso lo hace Cropper.js con
    `aspectRatio: 216/300`); el `box-shadow` gigante oscurece todo lo que
-   queda afuera de la cápsula. */
+   queda afuera de la cápsula. `width`/`height` NO van acá — ver
+   _fotoAjustarMascara() en js/foto.js: `52%`/`72%` calculados en CSS como
+   porcentaje del contenedor (#crop-viewport, forma arbitraria, no 216:300)
+   daban una cápsula con la proporción equivocada y, rotada 45°, un bounding
+   box mucho más grande que la pantalla (bug real, ver MANIFEST). Ahora se
+   calculan en JS en base al tamaño real de #crop-viewport, con un ajuste de
+   tipo "contain" (nunca excede 52%×72% del contenedor en ninguno de los dos
+   ejes) y se setean como `width`/`height` inline en px — acá solo queda la
+   forma/posición/color, fijas. */
 .crop-area {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 52%;
-  height: 72%;
   border-radius: 9999px;
   transform: translate(-50%, -50%) rotate(45deg);
   box-shadow: 0 0 0 9999px rgba(0,0,0,.55);

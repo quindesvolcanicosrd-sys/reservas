@@ -109,24 +109,60 @@ function sfpQuitarFoto() {
    rotada que .avatar-pill, pero acá es puramente decorativa sobre la
    imagen — el recorte real lo hace Cropper.js con `aspectRatio: 216/300`
    (mismo 216:300 ≈ 0.72 que .avatar-pill--lg/--md/--sm). */
+
+/* Ajusta #crop-area a un tamaño "contain" real: máx. 52% del ancho y 72%
+   del alto de #crop-viewport (el contenedor real, de forma arbitraria —
+   NO necesariamente 216:300), preservando siempre la proporción 216:300
+   exacta y sin exceder ninguno de los dos límites. Calculado en JS (no en
+   CSS con %) porque dos porcentajes independientes de un contenedor que no
+   es 216:300 dan una cápsula deformada — ver el comment de `.crop-area` en
+   css/global.css. Se llama al abrir el modal y en cada resize mientras
+   esté abierto (rotación de pantalla / redimensionar ventana). */
+function _fotoAjustarMascara() {
+  var viewport = document.getElementById('crop-viewport');
+  var mask = document.getElementById('crop-area');
+  if (!viewport || !mask) return;
+  var maxW = viewport.clientWidth * 0.52;
+  var maxH = viewport.clientHeight * 0.72;
+  var ratio = 216 / 300; // width/height
+  var w = maxW, h = w / ratio;
+  if (h > maxH) { h = maxH; w = h * ratio; }
+  mask.style.width = w + 'px';
+  mask.style.height = h + 'px';
+}
+
 function abrirCropper(base64) {
   var img = document.getElementById('crop-image');
   var modal = document.getElementById('modal-crop');
   if (!img || !modal) return;
-  img.src = base64;
+  if (_fotoCropper) { _fotoCropper.destroy(); _fotoCropper = null; }
   modal.style.display = 'flex';
-  requestAnimationFrame(function() {
-    if (_fotoCropper) { _fotoCropper.destroy(); _fotoCropper = null; }
+  _fotoAjustarMascara();
+  window.addEventListener('resize', _fotoAjustarMascara);
+  function initCropper() {
     _fotoCropper = new Cropper(img, {
       aspectRatio: 216 / 300,
       viewMode: 0,
       dragMode: 'move',
       autoCropArea: 1
     });
-  });
+  }
+  // Espera a que la imagen NUEVA termine de cargar antes de crear el
+  // Cropper — crearlo sobre un <img> todavía cargando (o mostrando el
+  // frame anterior) le hace agarrar dimensiones erróneas/momentáneas y
+  // reajustar solo cuando el load real llega, visto como un parpadeo.
+  // Mismo patrón que usa Pivot.
+  img.onload = null;
+  img.src = base64;
+  if (img.complete && img.naturalWidth) {
+    initCropper();
+  } else {
+    img.onload = initCropper;
+  }
 }
 function cancelarCrop() {
   if (_fotoCropper) { _fotoCropper.destroy(); _fotoCropper = null; }
+  window.removeEventListener('resize', _fotoAjustarMascara);
   var modal = document.getElementById('modal-crop');
   if (modal) modal.style.display = 'none';
 }

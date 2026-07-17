@@ -335,9 +335,9 @@
   <div style="flex-shrink:0;padding:14px 16px;display:flex;align-items:center;justify-content:center;position:relative;">
     <span style="color:var(--white);font-weight:800;font-size:0.9rem;">Ajusta tu foto</span>
   </div>
-  <div style="flex:1;position:relative;overflow:hidden;background:#000;min-height:0;">
+  <div id="crop-viewport" style="flex:1;position:relative;overflow:hidden;background:#000;min-height:0;">
     <img id="crop-image" alt="" style="max-width:100%;display:block;">
-    <div class="crop-area"></div>
+    <div class="crop-area" id="crop-area"></div>
   </div>
   <div style="flex-shrink:0;padding:16px;display:flex;gap:10px;background:var(--bg);">
     <button type="button" class="btn btn-outline" style="flex:1;" onclick="cancelarCrop()">Cancelar</button>
