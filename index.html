@@ -29,6 +29,29 @@
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
+<!-- Chrome default de Cropper.js apagado por completo — a propósito acá,
+     después del <link> de cropper.min.css (gana en orden de cascada además
+     de en especificidad, #modal-crop + clase vs. la clase sola de la
+     librería). .cropper-dashed incluida a propósito: es la grilla de "regla
+     de tercios" que Cropper.js muestra SOLO mientras se arrastra/redimensiona
+     (togglea su propia clase cropper-hidden) — invisible en cualquier
+     captura en reposo, por eso sobrevivió 2 rondas de verificación estática
+     de este mismo fix (ver MANIFEST). No mover a css/global.css: perdería la
+     garantía de orden de cascada sobre cropper.min.css. -->
+<style>
+#modal-crop .cropper-view-box,
+#modal-crop .cropper-face,
+#modal-crop .cropper-dashed,
+#modal-crop .cropper-center,
+#modal-crop .cropper-line,
+#modal-crop .cropper-point,
+#modal-crop .cropper-crop-box {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+</style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 <script src="js/foto.js"></script>
 </head>
@@ -1827,7 +1850,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div class="app-nav" style="justify-content:center;">
     <span style="color:var(--brand);font-weight:800;font-size:0.9rem;">Ajusta tu foto</span>
   </div>
-  <div id="crop-viewport" style="flex:1;position:relative;overflow:hidden;background:#000;min-height:0;">
+  <div id="crop-viewport" style="flex:1;position:relative;overflow:hidden;background:color-mix(in srgb, var(--bg) 70%, black);min-height:0;">
     <img id="crop-image" alt="" style="max-width:100%;display:block;">
     <div class="crop-area" id="crop-area"></div>
   </div>

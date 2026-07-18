@@ -19,6 +19,23 @@
 <link rel="stylesheet" href="../css/perfil.css">
 <link rel="stylesheet" href="inscripcion.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
+<!-- Chrome default de Cropper.js apagado por completo — mismo bloque que
+     ../index.html, ver ese archivo para el detalle de por qué vive acá y no
+     en css/global.css. -->
+<style>
+#modal-crop .cropper-view-box,
+#modal-crop .cropper-face,
+#modal-crop .cropper-dashed,
+#modal-crop .cropper-center,
+#modal-crop .cropper-line,
+#modal-crop .cropper-point,
+#modal-crop .cropper-crop-box {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+</style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
 <script src="../js/foto.js"></script>
 </head>
@@ -335,7 +352,7 @@
   <div class="app-nav" style="justify-content:center;">
     <span style="color:var(--brand);font-weight:800;font-size:0.9rem;">Ajusta tu foto</span>
   </div>
-  <div id="crop-viewport" style="flex:1;position:relative;overflow:hidden;background:#000;min-height:0;">
+  <div id="crop-viewport" style="flex:1;position:relative;overflow:hidden;background:color-mix(in srgb, var(--bg) 70%, black);min-height:0;">
     <img id="crop-image" alt="" style="max-width:100%;display:block;">
     <div class="crop-area" id="crop-area"></div>
   </div>

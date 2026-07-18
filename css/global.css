@@ -278,28 +278,21 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
   transform: translate(-50%, -50%) rotate(45deg);
   box-shadow: 0 0 0 9999px rgba(0,0,0,.55);
   pointer-events: none;
-  /* filter:blur(1px) — no es decorativo, es un workaround. Confirmado con
-     Playwright (Chromium y WebKit) que rotate(45deg) + box-shadow de spread
-     gigante sobre border-radius:9999px deja un aro/fleco claro de 1-2px en
-     el borde de la cápsula cuando hay una imagen con degradé debajo (no se
-     ve sobre fondo sólido) — es un artefacto de rasterización del navegador
-     al componer la capa rotada, no un borde/box-shadow adicional (probado
-     aislando el elemento sin Cropper.js de por medio, con y sin rotación,
-     con spreads chicos y gigantes: el aro aparece en cualquier spread en
-     cuanto hay rotate(45deg) + imagen no uniforme debajo). Aumentar el blur
-     del propio box-shadow NO sirve — a spreads grandes el navegador ignora
-     el blur-radius del shadow por completo (confirmado hasta 60px sin
-     ningún cambio visible); un filter:blur() en la capa sí se aplica
-     siempre, y 1px ya es suficiente para eliminar el aro sin ablandar
-     visiblemente la forma de la cápsula. */
-  filter: blur(1px);
+  /* Sin filter:blur() a propósito — se probó blur(1px) como workaround de un
+     artefacto de rasterización (rotate(45deg)+box-shadow de spread gigante
+     deja un fleco claro de 1-2px sobre imágenes con degradé, ver MANIFEST)
+     pero se revirtió: ablandaba la cápsula más de lo aceptable. Queda el
+     trade-off del fleco sin resolver a cambio de mantener el borde nítido. */
 }
-/* Chrome default de Cropper.js (guías punteadas, esquineros, caja de resize)
-   oculto — .crop-area de arriba ya cumple de guía visual y estos elementos
-   quedan duplicados/confusos sobre la cápsula. No afecta mover/zoom: esas
-   interacciones van sobre la imagen (.cropper-canvas/.cropper-drag-box), no
-   sobre estas líneas/puntos, que solo servían para redimensionar el cropbox
-   (deshabilitado con cropBoxResizable:false en js/foto.js). */
-.cropper-view-box { outline: none !important; }
-.cropper-line, .cropper-point { display: none !important; }
-.cropper-face { background-color: transparent !important; }
+/* Chrome default de Cropper.js oculto — .crop-area de arriba ya cumple de
+   guía visual. La regla completa (7 selectores, incluye .cropper-dashed —
+   el faltante real en las 2 vueltas anteriores: es la grilla de "regla de
+   tercios" que Cropper.js muestra SOLO mientras se arrastra/redimensiona
+   (togglea su propia clase cropper-hidden), invisible en cualquier captura
+   en reposo — por eso el bug sobrevivió 2 rondas de verificación estática)
+   vive en index.html/inscripcion/index.html, en un <style> después del
+   <link> de cropper.min.css — a propósito ahí y no acá: gana por
+   especificidad (#modal-crop .clase) Y por orden de cascada sobre el CSS
+   default de la librería, sin depender de que Cropper.js no reescriba
+   estilos inline con !important en alguna versión futura. No duplicar
+   estas reglas acá. */

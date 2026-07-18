@@ -149,6 +149,7 @@ function abrirCropper(base64) {
       center: false,
       highlight: false,
       background: false,
+      modal: false,
       cropBoxResizable: false
     });
   }
