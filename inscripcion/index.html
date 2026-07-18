@@ -328,20 +328,17 @@
   </div>
 </div>
 
-<!-- BOTTOM SHEET: Foto de perfil (js/foto.js) — mismo markup en ../index.html -->
+<!-- BOTTOM SHEET: Foto de perfil (js/foto.js) — a diferencia de ../index.html
+     (ajustes), acá NO hay "Usar foto de Google" (la foto de Google ya se
+     precarga sola al verificar el login, ver inscripcion.js) ni "Quitar
+     foto" (no aplica en inscripción, solo en ajustes de perfil ya creado) -->
 <div id="sheet-foto-perfil-overlay" class="bsheet-overlay" style="z-index:9650;" onclick="cerrarSheetFotoPerfil()"></div>
 <div id="sheet-foto-perfil" class="bsheet" style="z-index:9651;">
   <div class="bsheet-handle"></div>
   <div class="bsheet-title">Foto de perfil</div>
   <div class="bsheet-body" style="display:flex;flex-direction:column;gap:10px;">
-    <button type="button" id="sfp-opt-google" onclick="sfpUsarGoogle()" style="width:100%;padding:14px;background:var(--surface-2);border:1.5px solid var(--border-light);border-radius:12px;color:var(--text);font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
-      <span class="material-symbols-outlined" style="font-size:1.2rem;">account_circle</span>Usar foto de Google
-    </button>
     <button type="button" onclick="sfpDesdeDispositivo()" style="width:100%;padding:14px;background:var(--surface-2);border:1.5px solid var(--border-light);border-radius:12px;color:var(--text);font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
       <span class="material-symbols-outlined" style="font-size:1.2rem;">photo_library</span>Desde el dispositivo
-    </button>
-    <button type="button" id="sfp-opt-quitar" style="display:none;width:100%;padding:14px;background:var(--danger-bg);border:1.5px solid var(--danger);border-radius:12px;color:var(--danger);font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;align-items:center;justify-content:center;gap:8px;">
-      <span class="material-symbols-outlined" style="font-size:1.2rem;">delete</span>Quitar foto
     </button>
     <button type="button" onclick="cerrarSheetFotoPerfil()" style="width:100%;padding:12px;background:transparent;border:none;color:var(--muted);font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
   </div>

@@ -1,12 +1,13 @@
 /* ══ INSCRIPCIÓN — Flujo por pasos ══════════════════════════════════ */
 
 /* G.fotoGoogle: foto cruda de la cuenta de Google (disponible apenas se
-   verifica la cuenta, para ofrecerla como opción en abrirSheetFotoPerfil()).
-   G.foto: URL final a enviar en inscribirPersona() — empieza vacía (sin
-   foto por defecto, mismo criterio de privacidad que el viejo toggle "Usar
-   foto de Google" apagado por default) y se llena recién cuando la persona
-   elige explícitamente una foto (Google o recorte propio subido), ver
-   js/foto.js. */
+   verifica la cuenta). G.foto: URL final a enviar en inscribirPersona() —
+   se precarga automáticamente con G.fotoGoogle apenas el login se verifica
+   (ver "Cambios recientes" — revierte el criterio de privacidad anterior,
+   donde empezaba vacía y había que elegirla a mano vía el sheet; decisión
+   de Victor: más simple para el usuario, un paso menos). Sigue siendo
+   reemplazable en cualquier momento subiendo una foto propia (recorte,
+   js/foto.js) — eso sí sigue intacto. */
 var G = { email:'', idToken:'', nombre:'', foto:'', fotoGoogle:'', fechaNac:'', mayorEdad:false };
 var _INSC_STEPS = ['insc-step-1','insc-step-3','insc-step-4','insc-step-5a','insc-step-5b','insc-step-5c','insc-step-6'];
 var _INSC_TITLES = ['Crear cuenta','Crear cuenta','Crear cuenta','Crear cuenta','Crear cuenta','Crear cuenta','Crear cuenta'];
@@ -175,6 +176,7 @@ function onGoogleCredentialInscripcion(response) {
       ocultarCargando();
       if (res.yaRegistrado) { errMsg('err-p1', 'Esta cuenta ya está registrada. Inicia sesión desde la app principal.'); return; }
       G.email = res.email; G.idToken = response.credential; G.fotoGoogle = res.foto || '';
+      G.foto = G.fotoGoogle; // precargada por defecto, ver comentario arriba
       _inscDesbloquearForm(res);
     });
   }, function(e) {
@@ -187,12 +189,17 @@ function onGoogleCredentialInscripcion(response) {
 
 function _inscPoblarPaso2(res) {
   var avLetter = document.getElementById('insc-avatar-letter');
-  var avImg = document.getElementById('insc-avatar-img');
   var nm = document.getElementById('insc-profile-name');
   var em = document.getElementById('insc-profile-email');
   if (nm) nm.textContent = res.nombre || res.email;
   if (em) em.textContent = res.email;
   if (avLetter) avLetter.textContent = (res.nombre || res.email || '?').charAt(0).toUpperCase();
+  // Avatar: arranca ya mostrando la foto de Google (G.foto precargada más
+  // arriba, en onGoogleCredentialInscripcion) — mismo helper que usa
+  // js/foto.js tras un recorte/subida, con su propio crossfade.
+  if (typeof _inscActualizarAvatar === 'function') _inscActualizarAvatar(G.foto);
+  var origenEl = document.getElementById('insc-foto-origen');
+  if (origenEl) origenEl.textContent = G.foto ? 'Foto de Google' : 'Sin foto de perfil';
   var fNombre = document.getElementById('f-nombre');
   if (fNombre && res.nombre && !fNombre.value) {
     fNombre.value = res.nombre;
@@ -245,19 +252,33 @@ function _inscFormatFecha(iso) {
 }
 
 /* ── Paso 2: foto y fecha ───────────────────── */
-// Actualiza #insc-avatar con la URL final (o '' para volver a la inicial),
-// llamada por _fotoAplicarResultado() (js/foto.js) tras elegir "Usar foto de
-// Google"/recortar una foto propia/quitar la foto. Crossfade entre las 2
-// capas (.insc-avatar-layer, inscripcion.css) — ambas quedan siempre
-// montadas, solo se togglea cuál tiene .mostrar; nunca se reemplaza
-// innerHTML de golpe.
+// Actualiza #insc-avatar con la URL final (o '' para volver a la inicial) —
+// llamada al precargar la foto de Google apenas se verifica el login
+// (_inscPoblarPaso2) y por _fotoAplicarResultado() (js/foto.js) tras
+// recortar una foto propia o quitarla. Crossfade entre las 2 capas
+// (.insc-avatar-layer, inscripcion.css) — ambas quedan siempre montadas,
+// solo se togglea cuál tiene .mostrar; nunca se reemplaza innerHTML de
+// golpe. Caso especial: pasar de una foto a OTRA foto (mismo <img>, ej.
+// Google → recorte propio) no dispara la transition de opacity solo con el
+// toggle de arriba porque avImg ya está en opacity:1 — fade-out primero
+// (quitar .mostrar), swap de src recién con la capa invisible, fade-in
+// después (doble requestAnimationFrame, mismo patrón que el resto de la
+// app para no perderse el frame inicial), en vez de un salto instantáneo.
 function _inscActualizarAvatar(url) {
   var avLetter = document.getElementById('insc-avatar-letter');
   var avImg = document.getElementById('insc-avatar-img');
-  if (avImg) {
-    if (url) avImg.src = url;
-    avImg.classList.toggle('mostrar', !!url);
+  if (!avImg) { if (avLetter) avLetter.classList.toggle('mostrar', !url); return; }
+  if (url && avImg.classList.contains('mostrar')) {
+    avImg.classList.remove('mostrar');
+    setTimeout(function() {
+      avImg.src = url;
+      requestAnimationFrame(function() { requestAnimationFrame(function() { avImg.classList.add('mostrar'); }); });
+    }, 220); // mismo tiempo que la transition de .insc-avatar-layer (inscripcion.css)
+    if (avLetter) avLetter.classList.remove('mostrar');
+    return;
   }
+  if (url) avImg.src = url;
+  avImg.classList.toggle('mostrar', !!url);
   if (avLetter) avLetter.classList.toggle('mostrar', !url);
 }
 

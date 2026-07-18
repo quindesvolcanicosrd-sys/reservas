@@ -72,8 +72,10 @@ function cerrarSheetFotoPerfil(porGesto) {
 function sfpUsarGoogle() {
   cerrarSheetFotoPerfil();
   if (_fotoContexto === 'inscripcion') {
-    // Solo local acá — todavía no hay cuenta creada (ver inscribirPersona()),
-    // nada que persistir hasta el envío final del formulario.
+    // Sin caller real hoy — el sheet de inscripción ya no tiene el botón
+    // "Usar foto de Google" (ver MANIFEST, "Cambios recientes": la foto de
+    // Google se precarga sola al login, ya no hace falta elegirla a mano).
+    // Rama dejada sin quitar por si se revierte; sigue siendo correcta.
     _fotoAplicarResultado(G.fotoGoogle || '', 'google');
     return;
   }
