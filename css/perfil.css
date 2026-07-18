@@ -76,7 +76,7 @@
 }
 
 /* ── Ajustes del perfil ──────────────────────────────── */
-.aj-hero { display:flex; align-items:center; gap:24px; margin-bottom:20px; padding:16px 22px; background:var(--surface-2); border-radius:14px; cursor:pointer; transition:background 0.15s; }
+.aj-hero { display:flex; align-items:center; gap:24px; margin-bottom:20px; padding:16px 22px; background:var(--surface-2); border-radius:650px; cursor:pointer; transition:background 0.15s; }
 @media (max-width: 600px) {
   .aj-hero { margin-top:10px; }
 }
