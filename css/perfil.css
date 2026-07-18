@@ -91,6 +91,11 @@
 .aj-row:last-child { border-bottom:none; }
 .aj-row:hover { background:var(--surface-light); }
 .aj-row:active { background:var(--brand-20); }
+/* Fila puramente informativa (ej. nombre derby/número/pronombres bajo "Foto
+   de perfil"), sin icono ni chevron ni onclick — mismo criterio que
+   `.aj-dato-row.no-tap` de más abajo, pero para `.aj-row`. */
+.aj-row.no-tap { cursor:default; }
+.aj-row.no-tap:hover, .aj-row.no-tap:active { background:none; }
 .aj-icon { width:46px; height:46px; border-radius:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .aj-icon .material-symbols-outlined { font-size:1.375rem; }
 .aj-icon-orange { background:var(--brand-light); color:var(--brand); }

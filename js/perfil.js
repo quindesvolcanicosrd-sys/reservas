@@ -8,6 +8,18 @@ function irEditarDatos() {
     if (foto) { avatarEl.innerHTML = '<img src="' + foto + '" alt="">'; }
     else { avatarEl.innerHTML = '<span class="avatar-pill-letter">' + (E.nombre || '?').charAt(0).toUpperCase() + '</span>'; }
   }
+  // Nombre derby / número / pronombres — mismo formato que el hero viejo
+  // (eliminado, ver MANIFEST "Cambios recientes"), esta es la única fila de
+  // #s-datos que mostraba esta info y no tiene equivalente en otra fila.
+  var derbyNombre = document.getElementById('aj-derby-nombre');
+  var derbySub = document.getElementById('aj-derby-sub');
+  if (derbyNombre) derbyNombre.textContent = d.nombreDerby || E.nombre || '—';
+  if (derbySub) {
+    var partes = [];
+    if (d.numeroDerby) partes.push('#' + d.numeroDerby);
+    if (d.pronombres) partes.push(d.pronombres.split(',').map(function(p){ return p.trim().split('/')[0]; }).join(', '));
+    derbySub.textContent = partes.join(' · ') || '—';
+  }
   // Equipamiento
   var eqVal = document.getElementById('aj-equip-val');
   if (eqVal) {
