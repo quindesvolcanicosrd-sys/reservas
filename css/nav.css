@@ -135,12 +135,11 @@
 
 /* ── Avatar nav ──────────────────────────────── */
 /* Forma cápsula compartida (.avatar-pill--sm, css/global.css); acá solo lo
-   propio del contexto nav. */
-/* margin-left (ver "Cambios recientes"): .avatar-pill--sm rotado 45° tiene
-   un bounding box visual (~74×74) bastante más grande que su caja declarada
-   (44×61) — con el padding:0 16px de .app-nav (pensado para el círculo
-   plano de antes) quedaba casi pegado al borde izquierdo de la pantalla. */
-.app-nav-avatar { cursor: pointer; -webkit-tap-highlight-color: transparent; margin-left: 10px; }
+   propio del contexto nav. Sin margin-left extra desde que .avatar-pill
+   dejó de rotar (ver MANIFEST, "Cambios recientes") — el bounding box real
+   ahora coincide con la caja declarada (61×44), sin el sobrante visual que
+   la cápsula rotada dejaba contra el borde izquierdo de .app-nav. */
+.app-nav-avatar { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 
 /* ── Sección label (compacto al scrollear) ───── */
 .app-nav-section {

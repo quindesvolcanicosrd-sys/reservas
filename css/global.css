@@ -199,22 +199,22 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
    ya animados por la transition normal de .bsheet declarada arriba. */
 .bsheet.bsheet-sin-transicion { transition: none; }
 
-/* ─── AVATAR PILL (forma cápsula rotada, fuente única compartida — ver
-   MANIFEST, "Cambios recientes") ──────────────────────────────────────
-   Truco: cuadrado redondeado rotado 45° con overflow:hidden recorta la foto/
-   inicial en una cápsula diagonal; el contenido interno (img o
-   .avatar-pill-letter) se contra-rota -45° y se escala 1.42x para volver a
-   quedar upright y cubrir las esquinas que la rotación del contenedor deja
-   expuestas. Un solo lugar para el truco — los módulos solo eligen tamaño
-   (modificador) y, si necesitan animarlo (ver #insc-avatar en
-   inscripcion.css), deben sobreescribir el `transform` completo en vez de
-   agregar una clase más: `.avatar-pill img`/`.avatar-pill-letter` ya usan esa
-   propiedad para la contra-rotación y dos reglas independientes tocándola se
-   pisarían entre sí. */
+/* ─── AVATAR PILL (pill horizontal simple, sin rotación — fuente única
+   compartida, ver MANIFEST "Cambios recientes") ─────────────────────────
+   Hasta acá era un cuadrado rotado 45° (contenedor rotado + contenido
+   contra-rotado -45° + scale(1.42), calcado de Pivot) — se abandona ese
+   truco a propósito: fue la causa raíz de los bugs recurrentes del cropper
+   en esta sesión (máscara saliéndose de pantalla, aros de rasterización al
+   rotar box-shadow, chrome de Cropper.js escondido detrás de una diagonal).
+   Ahora es un rectángulo simple más ancho que alto con border-radius:9999px
+   (el navegador lo clampea solo al radio máximo posible — no hace falta
+   recalcularlo por modificador) — mismo lenguaje visual "cápsula/no-círculo"
+   con muchísima menos superficie de bugs. object-fit:cover ya resuelve el
+   recorte de la imagen sin necesitar escalarla a mano. */
 .avatar-pill {
   position: relative;
   overflow: hidden;
-  transform: rotate(45deg);
+  border-radius: 9999px;
   background: var(--surface-2);
   flex-shrink: 0;
 }
@@ -222,11 +222,9 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
 .avatar-pill .avatar-pill-letter {
   position: absolute;
   inset: 0;
-  width: 95%;
-  height: 95%;
-  margin: auto;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  transform: rotate(-45deg) scale(1.42);
 }
 .avatar-pill .avatar-pill-letter {
   display: flex;
@@ -235,54 +233,60 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
   font-weight: 600;
   color: var(--brand);
 }
-/* Tamaños — proporción 216:300 ≈ 0.72, igual que Pivot. */
-.avatar-pill--lg { width: 84px; height: 117px; border-radius: 52.5px; }
-.avatar-pill--md { width: 76px; height: 106px; border-radius: 47.5px; }
-.avatar-pill--sm { width: 44px; height: 61px; border-radius: 27.5px; }
+/* Tamaños — proporción ~1.39:1 (300:216), invertida de la vertical anterior
+   (mismos pares de números, width/height intercambiados). */
+.avatar-pill--lg { width: 117px; height: 84px; }
+.avatar-pill--md { width: 106px; height: 76px; }
+.avatar-pill--sm { width: 61px; height: 44px; }
 .avatar-pill--lg .avatar-pill-letter { font-size: 30px; }
 .avatar-pill--md .avatar-pill-letter { font-size: 26px; }
 .avatar-pill--sm .avatar-pill-letter { font-size: 15px; }
 
-/* Botón de editar/cámara — ya no es un badge en la esquina del avatar (no
-   queda prolijo sobre una forma rotada); pasa a ser un botón circular
-   separado, superpuesto por debajo del avatar con margen negativo, mismo
-   patrón que .wiz-foto-edit-btn de Pivot. */
+/* Botón de editar/cámara — badge circular superpuesto en la esquina
+   inferior derecha del pill (ya no hace falta el botón separado "debajo con
+   margen negativo" que usaba la forma rotada — sin diagonal, un badge de
+   esquina estándar entra prolijo). Vive como hermano de `.avatar-pill`
+   dentro de un wrapper `position:relative` (nunca hijo directo: `.avatar-pill`
+   tiene `overflow:hidden` y recortaría la mitad del badge que sobresale). */
 .avatar-pill-edit-btn {
-  width: 44px; height: 44px; border-radius: 50%;
-  background: var(--brand); margin: -22px auto 0;
-  position: relative; z-index: 2;
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--brand);
+  border: 2px solid var(--bg);
+  z-index: 2;
   display: flex; align-items: center; justify-content: center;
-  border: none; cursor: pointer; flex-shrink: 0;
-  -webkit-tap-highlight-color: transparent;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-.avatar-pill-edit-btn .material-symbols-outlined { font-size: 20px; color: var(--white); }
+.avatar-pill-edit-btn .material-symbols-outlined { font-size: 15px; color: var(--white); }
 
 /* Overlay decorativo del cropper (#modal-crop, js/foto.js) — misma cápsula
-   rotada de .avatar-pill, pero acá es solo una máscara visual sobre la
-   imagen a recortar (no recorta nada por sí sola, eso lo hace Cropper.js con
-   `aspectRatio: 216/300`); el `box-shadow` gigante oscurece todo lo que
-   queda afuera de la cápsula. `width`/`height` NO van acá — ver
-   _fotoAjustarMascara() en js/foto.js: `52%`/`72%` calculados en CSS como
-   porcentaje del contenedor (#crop-viewport, forma arbitraria, no 216:300)
-   daban una cápsula con la proporción equivocada y, rotada 45°, un bounding
-   box mucho más grande que la pantalla (bug real, ver MANIFEST). Ahora se
-   calculan en JS en base al tamaño real de #crop-viewport, con un ajuste de
-   tipo "contain" (nunca excede 52%×72% del contenedor en ninguno de los dos
-   ejes) y se setean como `width`/`height` inline en px — acá solo queda la
-   forma/posición/color, fijas. */
+   que .avatar-pill (ver MANIFEST, "Cambios recientes" — de rotada a
+   horizontal simple), pero acá es solo una máscara visual sobre la imagen a
+   recortar (no recorta nada por sí sola, eso lo hace Cropper.js con
+   `aspectRatio: 300/216`); el `box-shadow` gigante oscurece todo lo que
+   queda afuera de la cápsula. Sin rotate ni cálculo en JS.
+   `width:72%` + `aspect-ratio:300/216` (no `height:52%` fijo — probado
+   primero así, tal cual se pidió, pero en un viewport portrait típico
+   (390×542) da ~281×282px, prácticamente un CÍRCULO, no una cápsula
+   horizontal — 52% de un contenedor que no es 300:216 no preserva esa
+   proporción, mismo problema de fondo que ya documentaba esta regla antes
+   de la rotación, solo que ahora no explota visualmente, se ve mal nomás).
+   `aspect-ratio` es CSS puro (sin JS, sin recalcular en resize) y garantiza
+   la proporción exacta siempre, así que se preservó el espíritu del pedido
+   (simplificar, sacar el cálculo en JS) sin el mismatch de forma. */
 .crop-area {
   position: absolute;
   top: 50%;
   left: 50%;
+  width: 72%;
+  max-height: 52%;
+  aspect-ratio: 300 / 216;
   border-radius: 9999px;
-  transform: translate(-50%, -50%) rotate(45deg);
+  transform: translate(-50%, -50%);
   box-shadow: 0 0 0 9999px rgba(0,0,0,.55);
   pointer-events: none;
-  /* Sin filter:blur() a propósito — se probó blur(1px) como workaround de un
-     artefacto de rasterización (rotate(45deg)+box-shadow de spread gigante
-     deja un fleco claro de 1-2px sobre imágenes con degradé, ver MANIFEST)
-     pero se revirtió: ablandaba la cápsula más de lo aceptable. Queda el
-     trade-off del fleco sin resolver a cambio de mantener el borde nítido. */
 }
 /* Chrome default de Cropper.js oculto — .crop-area de arriba ya cumple de
    guía visual. La regla completa (7 selectores, incluye .cropper-dashed —

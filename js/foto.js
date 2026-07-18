@@ -105,31 +105,14 @@ function sfpQuitarFoto() {
 }
 
 /* ── Cropper ──────────────────────────────────────────────────────────
-   Máscara visual .crop-area (css/global.css): mismo truco de cápsula
-   rotada que .avatar-pill, pero acá es puramente decorativa sobre la
-   imagen — el recorte real lo hace Cropper.js con `aspectRatio: 216/300`
-   (mismo 216:300 ≈ 0.72 que .avatar-pill--lg/--md/--sm). */
-
-/* Ajusta #crop-area a un tamaño "contain" real: máx. 52% del ancho y 72%
-   del alto de #crop-viewport (el contenedor real, de forma arbitraria —
-   NO necesariamente 216:300), preservando siempre la proporción 216:300
-   exacta y sin exceder ninguno de los dos límites. Calculado en JS (no en
-   CSS con %) porque dos porcentajes independientes de un contenedor que no
-   es 216:300 dan una cápsula deformada — ver el comment de `.crop-area` en
-   css/global.css. Se llama al abrir el modal y en cada resize mientras
-   esté abierto (rotación de pantalla / redimensionar ventana). */
-function _fotoAjustarMascara() {
-  var viewport = document.getElementById('crop-viewport');
-  var mask = document.getElementById('crop-area');
-  if (!viewport || !mask) return;
-  var maxW = viewport.clientWidth * 0.52;
-  var maxH = viewport.clientHeight * 0.72;
-  var ratio = 216 / 300; // width/height
-  var w = maxW, h = w / ratio;
-  if (h > maxH) { h = maxH; w = h * ratio; }
-  mask.style.width = w + 'px';
-  mask.style.height = h + 'px';
-}
+   Máscara visual .crop-area (css/global.css): mismo pill horizontal simple
+   que .avatar-pill (ver MANIFEST, "Cambios recientes" — de rotada a
+   horizontal), puramente decorativa sobre la imagen — el recorte real lo
+   hace Cropper.js con `aspectRatio: 300/216` (mismo ~1.39:1 que
+   .avatar-pill--lg/--md/--sm). Sin JS de por medio: `.crop-area` es
+   `width`/`height` fijos en CSS, no hace falta recalcular nada en cada
+   resize (esa función existía solo para lidiar con la cápsula ROTADA, ver
+   MANIFEST). */
 
 function abrirCropper(base64) {
   var img = document.getElementById('crop-image');
@@ -137,11 +120,9 @@ function abrirCropper(base64) {
   if (!img || !modal) return;
   if (_fotoCropper) { _fotoCropper.destroy(); _fotoCropper = null; }
   modal.style.display = 'flex';
-  _fotoAjustarMascara();
-  window.addEventListener('resize', _fotoAjustarMascara);
   function initCropper() {
     _fotoCropper = new Cropper(img, {
-      aspectRatio: 216 / 300,
+      aspectRatio: 300 / 216,
       viewMode: 0,
       dragMode: 'move',
       autoCropArea: 1,
@@ -168,14 +149,13 @@ function abrirCropper(base64) {
 }
 function cancelarCrop() {
   if (_fotoCropper) { _fotoCropper.destroy(); _fotoCropper = null; }
-  window.removeEventListener('resize', _fotoAjustarMascara);
   var modal = document.getElementById('modal-crop');
   if (modal) modal.style.display = 'none';
 }
 function confirmarCrop() {
   if (!_fotoCropper) return;
   var canvas = _fotoCropper.getCroppedCanvas();
-  var MAX_W = 360, MAX_H = 500; // mismo ratio 216:300, tope de tamaño de archivo
+  var MAX_W = 500, MAX_H = 360; // mismo ratio 300:216, tope de tamaño de archivo
   var ratio = Math.min(MAX_W / canvas.width, MAX_H / canvas.height, 1);
   var outW = Math.round(canvas.width * ratio);
   var outH = Math.round(canvas.height * ratio);

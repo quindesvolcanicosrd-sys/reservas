@@ -76,27 +76,19 @@
 }
 
 /* ── Ajustes del perfil ──────────────────────────────── */
-/* gap 14px→24px, padding 14px→16px (ver "Cambios recientes"): #aj-avatar
-   (.avatar-pill--md) rotado 45° tiene un bounding box visual bastante más
-   grande que su caja declarada (88×122) — con el gap/padding viejos (pensados
-   para el círculo plano de antes) quedaba apretado contra el texto y los
-   bordes de la card. */
-.aj-hero { display:flex; align-items:center; gap:24px; margin-bottom:20px; padding:16px 22px; background:var(--surface-2); border-radius:14px; border:1px solid var(--border-light); cursor:pointer; transition:background 0.15s; }
+.aj-hero { display:flex; align-items:center; gap:24px; margin-bottom:20px; padding:16px 22px; background:var(--surface-2); border-radius:14px; cursor:pointer; transition:background 0.15s; }
 @media (max-width: 600px) {
   .aj-hero { margin-top:10px; }
 }
 .aj-hero:hover { background:var(--surface-light); }
-/* #aj-avatar: forma cápsula compartida (.avatar-pill--md, css/global.css). */
-/* #aj-avatar-hero: mismo modificador --md; a diferencia de #aj-avatar (item
-   flex de .aj-hero, se centra solo), este vive en un wrapper de bloque
-   centrado por texto (`text-align:center`, index.html) — un div con ancho
-   fijo no se centra con eso, necesita su propio margin:auto (el markup
-   inline viejo lo tenía y se perdió al migrar a la clase compartida). */
-#aj-avatar-hero { margin: 0 auto; }
+/* #aj-avatar: forma cápsula compartida (.avatar-pill--md, css/global.css).
+   #aj-avatar-hero (aj-sub-perfil, "Mi perfil"): mismo .aj-hero, --lg en vez
+   de --md — ver MANIFEST, "Cambios recientes", layout horizontal nuevo que
+   reemplaza el hero centrado que tenía antes. */
 .aj-hero-info { flex:1; min-width:0; }
 .aj-hero-name { font-size:1rem; font-weight:800; color:var(--text); }
 .aj-hero-sub { font-size:0.72rem; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.aj-hero-edit { width:34px; height:34px; border-radius:10px; background:var(--surface-light); border:1px solid var(--border-light); display:flex; align-items:center; justify-content:center; color:var(--brand); flex-shrink:0; }
+.aj-hero-edit { width:34px; height:34px; border-radius:10px; background:var(--surface-light); display:flex; align-items:center; justify-content:center; color:var(--brand); flex-shrink:0; }
 .aj-hero-edit .material-symbols-outlined { font-size:1rem; }
 
 .aj-group { margin-bottom: 10px; background: var(--surface-2); border-radius: 14px; overflow: hidden; }

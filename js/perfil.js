@@ -513,6 +513,8 @@ function _ajCargarSub(id) {
     return;
   }
   if (id === 'aj-sub-perfil') {
+    var heroName = document.getElementById('aj-hero-perfil-name');
+    if (heroName) heroName.textContent = d.nombre || E.nombre || '—';
     _ajSetDatoVal('aj-nombre-display', d.nombre || E.nombre, '—', false);
     _ajSetDatoVal('aj-nombreDerby-val', d.nombreDerby, '—', false);
     _ajSetDatoVal('aj-numeroDerby-val', d.numeroDerby, 'Sin número asignado', true);

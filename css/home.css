@@ -159,12 +159,11 @@
    min-height y se centra sola. */
 .empty-state-topbar { display:flex; align-items:center; justify-content:space-between; padding:4px 0 16px; }
 /* Forma cápsula compartida (.avatar-pill--sm, css/global.css); acá solo lo
-   propio del contexto empty-state. */
-/* margin-left: mismo motivo que .app-nav-avatar en css/nav.css —
-   .avatar-pill--sm rotado 45° necesita más aire del lado izquierdo del que
-   daba .empty-state-topbar (padding:4px 0 16px, sin padding horizontal
-   propio). */
-.empty-state-avatar { cursor:pointer; margin-left: 10px; }
+   propio del contexto empty-state. Sin margin-left extra desde que
+   .avatar-pill dejó de rotar (ver MANIFEST, "Cambios recientes") — el
+   `padding:var(--space-screen)` de `.contenedor` (ancestro, css/ui.css) ya
+   deja aire suficiente del borde real de pantalla. */
+.empty-state-avatar { cursor:pointer; }
 .empty-state-contacto { display:flex; align-items:center; gap:5px; padding:7px 12px; background:var(--surface-2); border:1.5px solid var(--border-light); border-radius:20px; cursor:pointer; color:var(--muted); font-size:0.7rem; font-weight:700; font-family:inherit; transition:all 0.15s; }
 .empty-state-contacto:hover { border-color:var(--brand); color:var(--brand); }
 .empty-state-contacto .material-symbols-outlined { font-size:14px; }

@@ -1185,12 +1185,17 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div style="width:40px;flex-shrink:0;"></div>
   </div>
   <div class="aj-sub-inner">
-    <div style="text-align:center;margin-bottom:16px;padding-top:8px">
-      <div class="avatar-pill avatar-pill--md" id="aj-avatar-hero"></div>
-      <button type="button" class="avatar-pill-edit-btn" onclick="abrirSheetFotoPerfil('ajustes')" aria-label="Cambiar foto de perfil">
-        <span class="material-symbols-outlined">photo_camera</span>
-      </button>
-      <div style="font-size:0.68rem;color:var(--brand-60);margin-top:4px">Toca para cambiar la foto</div>
+    <div class="aj-hero" style="cursor:default;">
+      <div style="position:relative;flex-shrink:0;">
+        <div class="avatar-pill avatar-pill--lg" id="aj-avatar-hero"></div>
+        <button type="button" class="avatar-pill-edit-btn" onclick="abrirSheetFotoPerfil('ajustes')" aria-label="Cambiar foto de perfil">
+          <span class="material-symbols-outlined">photo_camera</span>
+        </button>
+      </div>
+      <div class="aj-hero-info">
+        <div class="aj-hero-name" id="aj-hero-perfil-name">—</div>
+        <div class="aj-hero-sub">Toca la foto para cambiarla</div>
+      </div>
     </div>
 
     <div class="aj-group">
