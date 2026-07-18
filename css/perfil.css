@@ -81,7 +81,7 @@
    grande que su caja declarada (88×122) — con el gap/padding viejos (pensados
    para el círculo plano de antes) quedaba apretado contra el texto y los
    bordes de la card. */
-.aj-hero { display:flex; align-items:center; gap:24px; margin-bottom:20px; padding:16px; background:var(--surface-2); border-radius:14px; border:1px solid var(--border-light); cursor:pointer; transition:background 0.15s; }
+.aj-hero { display:flex; align-items:center; gap:24px; margin-bottom:20px; padding:16px 22px 16px 16px; background:var(--surface-2); border-radius:14px; border:1px solid var(--border-light); cursor:pointer; transition:background 0.15s; }
 @media (max-width: 600px) {
   .aj-hero { margin-top:10px; }
 }

@@ -236,11 +236,11 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
   color: var(--brand);
 }
 /* Tamaños — proporción 216:300 ≈ 0.72, igual que Pivot. */
-.avatar-pill--lg { width: 96px; height: 133px; border-radius: 60px; }
-.avatar-pill--md { width: 88px; height: 122px; border-radius: 55px; }
+.avatar-pill--lg { width: 84px; height: 117px; border-radius: 52.5px; }
+.avatar-pill--md { width: 76px; height: 106px; border-radius: 47.5px; }
 .avatar-pill--sm { width: 44px; height: 61px; border-radius: 27.5px; }
-.avatar-pill--lg .avatar-pill-letter { font-size: 34px; }
-.avatar-pill--md .avatar-pill-letter { font-size: 30px; }
+.avatar-pill--lg .avatar-pill-letter { font-size: 30px; }
+.avatar-pill--md .avatar-pill-letter { font-size: 26px; }
 .avatar-pill--sm .avatar-pill-letter { font-size: 15px; }
 
 /* Botón de editar/cámara — ya no es un badge en la esquina del avatar (no
@@ -280,3 +280,12 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
   border: 2px solid rgba(255,255,255,.5);
   pointer-events: none;
 }
+/* Chrome default de Cropper.js (guías punteadas, esquineros, caja de resize)
+   oculto — .crop-area de arriba ya cumple de guía visual y estos elementos
+   quedan duplicados/confusos sobre la cápsula. No afecta mover/zoom: esas
+   interacciones van sobre la imagen (.cropper-canvas/.cropper-drag-box), no
+   sobre estas líneas/puntos, que solo servían para redimensionar el cropbox
+   (deshabilitado con cropBoxResizable:false en js/foto.js). */
+.cropper-view-box { outline: none !important; }
+.cropper-line, .cropper-point { display: none !important; }
+.cropper-face { background-color: transparent !important; }

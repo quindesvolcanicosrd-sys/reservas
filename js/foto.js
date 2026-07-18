@@ -144,7 +144,12 @@ function abrirCropper(base64) {
       aspectRatio: 216 / 300,
       viewMode: 0,
       dragMode: 'move',
-      autoCropArea: 1
+      autoCropArea: 1,
+      guides: false,
+      center: false,
+      highlight: false,
+      background: false,
+      cropBoxResizable: false
     });
   }
   // Espera a que la imagen NUEVA termine de cargar antes de crear el
