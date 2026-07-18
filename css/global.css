@@ -277,7 +277,6 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
   border-radius: 9999px;
   transform: translate(-50%, -50%) rotate(45deg);
   box-shadow: 0 0 0 9999px rgba(0,0,0,.55);
-  border: 2px solid rgba(255,255,255,.5);
   pointer-events: none;
 }
 /* Chrome default de Cropper.js (guías punteadas, esquineros, caja de resize)
