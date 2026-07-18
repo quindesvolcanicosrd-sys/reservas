@@ -278,6 +278,21 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
   transform: translate(-50%, -50%) rotate(45deg);
   box-shadow: 0 0 0 9999px rgba(0,0,0,.55);
   pointer-events: none;
+  /* filter:blur(1px) — no es decorativo, es un workaround. Confirmado con
+     Playwright (Chromium y WebKit) que rotate(45deg) + box-shadow de spread
+     gigante sobre border-radius:9999px deja un aro/fleco claro de 1-2px en
+     el borde de la cápsula cuando hay una imagen con degradé debajo (no se
+     ve sobre fondo sólido) — es un artefacto de rasterización del navegador
+     al componer la capa rotada, no un borde/box-shadow adicional (probado
+     aislando el elemento sin Cropper.js de por medio, con y sin rotación,
+     con spreads chicos y gigantes: el aro aparece en cualquier spread en
+     cuanto hay rotate(45deg) + imagen no uniforme debajo). Aumentar el blur
+     del propio box-shadow NO sirve — a spreads grandes el navegador ignora
+     el blur-radius del shadow por completo (confirmado hasta 60px sin
+     ningún cambio visible); un filter:blur() en la capa sí se aplica
+     siempre, y 1px ya es suficiente para eliminar el aro sin ablandar
+     visiblemente la forma de la cápsula. */
+  filter: blur(1px);
 }
 /* Chrome default de Cropper.js (guías punteadas, esquineros, caja de resize)
    oculto — .crop-area de arriba ya cumple de guía visual y estos elementos
