@@ -134,11 +134,8 @@
 .app-nav-cta-label { display: inline; }
 
 /* ── Avatar nav ──────────────────────────────── */
-/* Forma cápsula compartida (.avatar-pill--sm, css/global.css); acá solo lo
-   propio del contexto nav. Sin margin-left extra desde que .avatar-pill
-   dejó de rotar (ver MANIFEST, "Cambios recientes") — el bounding box real
-   ahora coincide con la caja declarada (61×44), sin el sobrante visual que
-   la cápsula rotada dejaba contra el borde izquierdo de .app-nav. */
+/* Forma círculo compartida (.avatar-pill--sm, css/global.css); acá solo lo
+   propio del contexto nav. */
 .app-nav-avatar { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 
 /* ── Sección label (compacto al scrollear) ───── */

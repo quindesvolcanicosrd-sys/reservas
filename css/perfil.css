@@ -76,20 +76,15 @@
 }
 
 /* ── Ajustes del perfil ──────────────────────────────── */
-.aj-hero { display:flex; align-items:center; gap:24px; margin-bottom:20px; padding:16px 22px; background:var(--surface-2); border-radius:650px; cursor:pointer; transition:background 0.15s; }
 @media (max-width: 600px) {
-  .aj-hero { margin-top:10px; }
+  #s-datos-card > .aj-group:first-child { margin-top:10px; }
 }
-.aj-hero:hover { background:var(--surface-light); }
-/* #aj-avatar: forma cápsula compartida (.avatar-pill--md, css/global.css).
-   #aj-avatar-hero (aj-sub-perfil, "Mi perfil"): mismo .aj-hero, --lg en vez
-   de --md — ver MANIFEST, "Cambios recientes", layout horizontal nuevo que
-   reemplaza el hero centrado que tenía antes. */
-.aj-hero-info { flex:1; min-width:0; }
-.aj-hero-name { font-size:1rem; font-weight:800; color:var(--text); }
-.aj-hero-sub { font-size:0.72rem; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.aj-hero-edit { width:34px; height:34px; border-radius:10px; background:var(--surface-light); display:flex; align-items:center; justify-content:center; color:var(--brand); flex-shrink:0; }
-.aj-hero-edit .material-symbols-outlined { font-size:1rem; }
+/* "Foto de perfil" (#s-datos y aj-sub-perfil "Mi perfil"): fila más de la
+   lista, ver MANIFEST "Cambios recientes" — antes un hero grande aparte con
+   el avatar en tamaño lg/md, revertido por decisión de diseño. El avatar
+   circular (.avatar-pill, css/global.css) se achica a 46×46 para igualar a
+   .aj-icon/.aj-dato-icon (mismo tamaño que el resto de íconos de fila). */
+.aj-avatar-row { width:46px; height:46px; }
 
 .aj-group { margin-bottom: 10px; background: var(--surface-2); border-radius: 14px; overflow: hidden; }
 .aj-row { display:flex; align-items:center; gap:12px; padding:14px; min-height:72px; cursor:pointer; transition:background 0.15s; border-bottom:1px solid var(--border-softest,var(--border-light)); }

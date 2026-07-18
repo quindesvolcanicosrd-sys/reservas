@@ -199,22 +199,16 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
    ya animados por la transition normal de .bsheet declarada arriba. */
 .bsheet.bsheet-sin-transicion { transition: none; }
 
-/* ─── AVATAR PILL (pill horizontal simple, sin rotación — fuente única
-   compartida, ver MANIFEST "Cambios recientes") ─────────────────────────
-   Hasta acá era un cuadrado rotado 45° (contenedor rotado + contenido
-   contra-rotado -45° + scale(1.42), calcado de Pivot) — se abandona ese
-   truco a propósito: fue la causa raíz de los bugs recurrentes del cropper
-   en esta sesión (máscara saliéndose de pantalla, aros de rasterización al
-   rotar box-shadow, chrome de Cropper.js escondido detrás de una diagonal).
-   Ahora es un rectángulo simple más ancho que alto con border-radius:9999px
-   (el navegador lo clampea solo al radio máximo posible — no hace falta
-   recalcularlo por modificador) — mismo lenguaje visual "cápsula/no-círculo"
-   con muchísima menos superficie de bugs. object-fit:cover ya resuelve el
-   recorte de la imagen sin necesitar escalarla a mano. */
+/* ─── AVATAR PILL (nombre de clase histórico — es un círculo simple, ver
+   MANIFEST "Cambios recientes": se probaron 2 variantes de cápsula (cuadrado
+   rotado 45° estilo Pivot, y luego un rectángulo horizontal simple) y ambas
+   se revirtieron por decisión de diseño — círculo es el estándar definitivo
+   salvo indicación futura. Sin transforms de ningún tipo. object-fit:cover
+   resuelve el recorte de la imagen sin necesitar escalarla a mano. */
 .avatar-pill {
   position: relative;
   overflow: hidden;
-  border-radius: 9999px;
+  border-radius: 50%;
   background: var(--surface-2);
   flex-shrink: 0;
 }
@@ -233,21 +227,20 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
   font-weight: 600;
   color: var(--brand);
 }
-/* Tamaños — proporción ~1.39:1 (300:216), invertida de la vertical anterior
-   (mismos pares de números, width/height intercambiados). */
-.avatar-pill--lg { width: 117px; height: 84px; }
-.avatar-pill--md { width: 106px; height: 76px; }
-.avatar-pill--sm { width: 61px; height: 44px; }
+/* Tamaños — cuadrados (ancho = alto), tomando el lado más chico de la
+   variante pill horizontal que estuvo activa antes de este revert, para no
+   agrandar el avatar de golpe. */
+.avatar-pill--lg { width: 84px; height: 84px; }
+.avatar-pill--md { width: 76px; height: 76px; }
+.avatar-pill--sm { width: 44px; height: 44px; }
 .avatar-pill--lg .avatar-pill-letter { font-size: 30px; }
 .avatar-pill--md .avatar-pill-letter { font-size: 26px; }
 .avatar-pill--sm .avatar-pill-letter { font-size: 15px; }
 
 /* Botón de editar/cámara — badge circular superpuesto en la esquina
-   inferior derecha del pill (ya no hace falta el botón separado "debajo con
-   margen negativo" que usaba la forma rotada — sin diagonal, un badge de
-   esquina estándar entra prolijo). Vive como hermano de `.avatar-pill`
-   dentro de un wrapper `position:relative` (nunca hijo directo: `.avatar-pill`
-   tiene `overflow:hidden` y recortaría la mitad del badge que sobresale). */
+   inferior derecha del avatar. Vive como hermano de `.avatar-pill` dentro de
+   un wrapper `position:relative` (nunca hijo directo: `.avatar-pill` tiene
+   `overflow:hidden` y recortaría la mitad del badge que sobresale). */
 .avatar-pill-edit-btn {
   position: absolute;
   right: -4px;
@@ -261,29 +254,31 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
 }
 .avatar-pill-edit-btn .material-symbols-outlined { font-size: 15px; color: var(--white); }
 
-/* Overlay decorativo del cropper (#modal-crop, js/foto.js) — misma cápsula
-   que .avatar-pill (ver MANIFEST, "Cambios recientes" — de rotada a
-   horizontal simple), pero acá es solo una máscara visual sobre la imagen a
-   recortar (no recorta nada por sí sola, eso lo hace Cropper.js con
-   `aspectRatio: 300/216`); el `box-shadow` gigante oscurece todo lo que
-   queda afuera de la cápsula. Sin rotate ni cálculo en JS.
-   `width:72%` + `aspect-ratio:300/216` (no `height:52%` fijo — probado
-   primero así, tal cual se pidió, pero en un viewport portrait típico
-   (390×542) da ~281×282px, prácticamente un CÍRCULO, no una cápsula
-   horizontal — 52% de un contenedor que no es 300:216 no preserva esa
-   proporción, mismo problema de fondo que ya documentaba esta regla antes
-   de la rotación, solo que ahora no explota visualmente, se ve mal nomás).
-   `aspect-ratio` es CSS puro (sin JS, sin recalcular en resize) y garantiza
-   la proporción exacta siempre, así que se preservó el espíritu del pedido
-   (simplificar, sacar el cálculo en JS) sin el mismatch de forma. */
+/* Overlay decorativo del cropper (#modal-crop, js/foto.js) — máscara visual
+   circular sobre la imagen a recortar (no recorta nada por sí sola, eso lo
+   hace Cropper.js con `aspectRatio: 1`, cuadrado); el `box-shadow` gigante
+   oscurece todo lo que queda afuera del círculo. Revertida a círculo por
+   decisión de diseño (ver MANIFEST, "Cambios recientes") tras probar 2
+   variantes de cápsula. **Desvío deliberado del pedido literal, con
+   evidencia:** se pidió `width:60%;height:60%` fijos — probado tal cual con
+   Playwright, da una máscara de ~234×412px (verificado en viewport móvil
+   390×844): una ELIPSE, no un círculo, porque `#crop-viewport` (el
+   contenedor real, `flex:1` dentro del modal) no es cuadrado — 60% de un
+   ancho de 390 y 60% de un alto de ~686 no son el mismo número de px (mismo
+   problema de fondo que ya se había diagnosticado y corregido en esta
+   sesión para la cápsula horizontal, ver "Cambios recientes"). Fix:
+   `aspect-ratio:1` en vez de `height:60%` fijo — fuerza el mismo alto que
+   ancho siempre, sin JS ni recalcular en resize; `max-height:60%` de
+   resguardo para viewports muy anchos/bajos donde el 60% del ancho
+   excedería el alto disponible. */
 .crop-area {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 72%;
-  max-height: 52%;
-  aspect-ratio: 300 / 216;
-  border-radius: 9999px;
+  width: 60%;
+  aspect-ratio: 1;
+  max-height: 60%;
+  border-radius: 50%;
   transform: translate(-50%, -50%);
   box-shadow: 0 0 0 9999px rgba(0,0,0,.55);
   pointer-events: none;

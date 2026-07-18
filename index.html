@@ -432,14 +432,16 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div class="pantalla" id="s-datos">
   <div class="card" id="s-datos-card">
 
-    <!-- Hero perfil -->
-    <div class="aj-hero" onclick="irEditarPerfil()">
-      <div class="avatar-pill avatar-pill--md aj-avatar" id="aj-avatar"></div>
-      <div class="aj-hero-info">
-        <div class="aj-hero-name" id="aj-hero-name">—</div>
-        <div class="aj-hero-sub" id="aj-hero-sub">—</div>
+    <!-- Foto de perfil -->
+    <div class="aj-group">
+      <div class="aj-row" onclick="irEditarPerfil()">
+        <div class="avatar-pill aj-avatar-row" id="aj-avatar"></div>
+        <div class="aj-content">
+          <div class="aj-title">Foto de perfil</div>
+          <div class="aj-value">Toca para cambiarla</div>
+        </div>
+        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
       </div>
-      <div class="aj-hero-edit"><span class="material-symbols-outlined aj-chevron">chevron_right</span></div>
     </div>
 
     <!-- Equipamiento -->
@@ -1185,16 +1187,15 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div style="width:40px;flex-shrink:0;"></div>
   </div>
   <div class="aj-sub-inner">
-    <div class="aj-hero" style="cursor:default;">
-      <div style="position:relative;flex-shrink:0;">
-        <div class="avatar-pill avatar-pill--lg" id="aj-avatar-hero"></div>
-        <button type="button" class="avatar-pill-edit-btn" onclick="abrirSheetFotoPerfil('ajustes')" aria-label="Cambiar foto de perfil">
-          <span class="material-symbols-outlined">photo_camera</span>
-        </button>
-      </div>
-      <div class="aj-hero-info">
-        <div class="aj-hero-name" id="aj-hero-perfil-name">—</div>
-        <div class="aj-hero-sub">Toca la foto para cambiarla</div>
+    <!-- Foto de perfil -->
+    <div class="aj-group">
+      <div class="aj-row" onclick="abrirSheetFotoPerfil('ajustes')">
+        <div class="avatar-pill aj-avatar-row" id="aj-avatar-hero"></div>
+        <div class="aj-content">
+          <div class="aj-title">Foto de perfil</div>
+          <div class="aj-value">Toca para cambiarla</div>
+        </div>
+        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
       </div>
     </div>
 

@@ -158,9 +158,8 @@
    flex (antes .empty-state-home) para su alto/centrado: trae su propio
    min-height y se centra sola. */
 .empty-state-topbar { display:flex; align-items:center; justify-content:space-between; padding:4px 0 16px; }
-/* Forma cápsula compartida (.avatar-pill--sm, css/global.css); acá solo lo
-   propio del contexto empty-state. Sin margin-left extra desde que
-   .avatar-pill dejó de rotar (ver MANIFEST, "Cambios recientes") — el
+/* Forma círculo compartida (.avatar-pill--sm, css/global.css); acá solo lo
+   propio del contexto empty-state. Sin margin-left extra — el
    `padding:var(--space-screen)` de `.contenedor` (ancestro, css/ui.css) ya
    deja aire suficiente del borde real de pantalla. */
 .empty-state-avatar { cursor:pointer; }

@@ -105,14 +105,11 @@ function sfpQuitarFoto() {
 }
 
 /* ── Cropper ──────────────────────────────────────────────────────────
-   Máscara visual .crop-area (css/global.css): mismo pill horizontal simple
-   que .avatar-pill (ver MANIFEST, "Cambios recientes" — de rotada a
-   horizontal), puramente decorativa sobre la imagen — el recorte real lo
-   hace Cropper.js con `aspectRatio: 300/216` (mismo ~1.39:1 que
-   .avatar-pill--lg/--md/--sm). Sin JS de por medio: `.crop-area` es
-   `width`/`height` fijos en CSS, no hace falta recalcular nada en cada
-   resize (esa función existía solo para lidiar con la cápsula ROTADA, ver
-   MANIFEST). */
+   Máscara visual .crop-area (css/global.css): círculo simple, puramente
+   decorativa sobre la imagen — el recorte real lo hace Cropper.js con
+   `aspectRatio: 1` (cuadrado, igual que .avatar-pill--lg/--md/--sm). Sin JS
+   de por medio: `.crop-area` es `width`/`height` fijos en CSS, no hace
+   falta recalcular nada en cada resize. */
 
 function abrirCropper(base64) {
   var img = document.getElementById('crop-image');
@@ -122,7 +119,7 @@ function abrirCropper(base64) {
   modal.style.display = 'flex';
   function initCropper() {
     _fotoCropper = new Cropper(img, {
-      aspectRatio: 300 / 216,
+      aspectRatio: 1,
       viewMode: 0,
       dragMode: 'move',
       autoCropArea: 1,

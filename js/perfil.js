@@ -1,21 +1,12 @@
 function irEditarDatos() {
   if (!E.datos) return;
   var d = E.datos;
-  // Hero
+  // Foto de perfil
   var avatarEl = document.getElementById('aj-avatar');
   if (avatarEl) {
     var foto = d.fotoPerfil || '';
     if (foto) { avatarEl.innerHTML = '<img src="' + foto + '" alt="">'; }
     else { avatarEl.innerHTML = '<span class="avatar-pill-letter">' + (E.nombre || '?').charAt(0).toUpperCase() + '</span>'; }
-  }
-  var heroName = document.getElementById('aj-hero-name');
-  var heroSub = document.getElementById('aj-hero-sub');
-  if (heroName) heroName.textContent = d.nombreDerby || E.nombre || '—';
-  if (heroSub) {
-    var partes = [];
-    if (d.numeroDerby) partes.push('#' + d.numeroDerby);
-    if (d.pronombres) partes.push(d.pronombres.split(',').map(function(p){ return p.trim().split('/')[0]; }).join(', '));
-    heroSub.textContent = partes.join(' · ') || '—';
   }
   // Equipamiento
   var eqVal = document.getElementById('aj-equip-val');
@@ -513,17 +504,14 @@ function _ajCargarSub(id) {
     return;
   }
   if (id === 'aj-sub-perfil') {
-    var heroName = document.getElementById('aj-hero-perfil-name');
-    if (heroName) heroName.textContent = d.nombre || E.nombre || '—';
     _ajSetDatoVal('aj-nombre-display', d.nombre || E.nombre, '—', false);
     _ajSetDatoVal('aj-nombreDerby-val', d.nombreDerby, '—', false);
     _ajSetDatoVal('aj-numeroDerby-val', d.numeroDerby, 'Sin número asignado', true);
     _ajSetDatoVal('aj-pron-val', d.pronombres, '—', false);
     // #aj-avatar-hero: mismo criterio de foto/inicial que #aj-avatar
-    // (irEditarDatos(), más arriba en este archivo). El botón de cámara ya
-    // no es un badge hijo de este elemento (ver MANIFEST, "Cambios
-    // recientes" — migración a .avatar-pill) sino un <button> hermano
-    // separado, así que el innerHTML de acá no necesita preservarlo.
+    // (irEditarDatos(), más arriba en este archivo). Ahora es la fila
+    // "Foto de perfil" completa la que abre el sheet de recorte (onclick en
+    // el .aj-row en index.html), no un botón de cámara separado.
     var avatarHero = document.getElementById('aj-avatar-hero');
     if (avatarHero) {
       var fotoHero = d.fotoPerfil || '';
