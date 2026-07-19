@@ -107,11 +107,80 @@ function sfpQuitarFoto() {
 }
 
 /* ── Cropper ──────────────────────────────────────────────────────────
-   Máscara visual .crop-area (css/global.css): círculo simple, puramente
-   decorativa sobre la imagen — el recorte real lo hace Cropper.js con
-   `aspectRatio: 1` (cuadrado, igual que .avatar-pill--lg/--md/--sm). Sin JS
-   de por medio: `.crop-area` es `width`/`height` fijos en CSS, no hace
-   falta recalcular nada en cada resize. */
+   Máscara visual .crop-area (css/global.css): círculo decorativo sobre la
+   imagen — el recorte real lo hace el crop box REAL (invisible) de
+   Cropper.js, con `aspectRatio: 1`. Cropper no soporta un crop box
+   circular nativo, por eso el círculo es un div aparte con su propio
+   `border-radius:50%`.
+
+   BUG REAL encontrado (foto recortada no correspondía a lo que se veía
+   seleccionado en el círculo): `.crop-area` se posicionaba con
+   porcentajes fijos de `#crop-viewport` completo (`top:50%;left:50%;
+   width:60%`), asumiendo que la imagen renderizada llena ese contenedor.
+   Pero el crop box real de Cropper.js (`getCropBoxData()`) se calcula a
+   partir de `autoCropArea`/`viewMode` sobre el CANVAS de la imagen
+   renderizada — que casi nunca llena `#crop-viewport` (una foto de
+   celular es angosta y alta, `#crop-viewport` es todo el alto disponible
+   del modal). Con `cropBoxResizable:false` no hay ningún feedback visual
+   de la librería que delate el desfasaje: eran dos rectángulos calculados
+   por sistemas totalmente independientes, coincidiendo solo por
+   casualidad cuando la imagen es cuadrada. Confirmado con una imagen de
+   prueba con cuadrantes de color: el círculo decorativo quedaba centrado
+   en `#crop-viewport` (ej. 234×234px en `top:302,left:78` en un viewport
+   de 390×844) mientras el crop box real medía 390×390px en `top:224,
+   left:0` — un desfasaje de >100px verificado con Playwright, no
+   cosmético. Se descartaron las 3 causas típicas de este bug en
+   Cropper.js antes de llegar a esta (confirmado con Playwright, abriendo/
+   cerrando el modal 3 veces seguidas sin recargar la página):
+   instancia vieja sin destruir (`abrirCropper()`/`cancelarCrop()` ya
+   llamaban `.destroy()` correctamente, un solo `.cropper-container` en el
+   DOM en las 3 vueltas), Cropper inicializado antes de que la imagen
+   termine de cargar (`initCropper` ya esperaba `img.onload`/
+   `img.complete`, geometría idéntica en las 3 vueltas — no hay carrera) y
+   aspectRatio desactualizado en otro lugar del código (hay un solo
+   `new Cropper(...)` en todo el proyecto, sin duplicados).
+
+   Fix: `.crop-area` deja de ser puro CSS — `_fotoSincronizarMascara()`
+   lee `getCropBoxData()` (el rectángulo real que va a usar
+   `getCroppedCanvas()`) apenas el Cropper está listo (`ready`) y posiciona/
+   dimensiona el círculo en px exactos sobre ese rectángulo, convertido a
+   coordenadas de `#crop-viewport` vía `getBoundingClientRect()` de
+   `.cropper-container` (que Cropper.js inserta ocupando todo
+   `#crop-viewport`). Con `cropBoxResizable:false` y `dragMode:'move'` el
+   crop box no se mueve ni cambia de tamaño después de creado (solo la
+   imagen se arrastra por debajo, confirmado por `getCropBoxData()`
+   idéntico en las 3 vueltas de la prueba) — un solo sync en `ready`
+   alcanza para el caso normal. Único caso donde el crop box real SÍ puede
+   recalcularse solo, sin acción del usuario, es un resize de ventana
+   (`responsive:true`, default de Cropper.js) — ahí si no se vuelve a
+   sincronizar el círculo queda desactualizado igual que antes; se
+   re-sincroniza con un listener de `resize` (debounced 120ms para dejar
+   que el resize interno de Cropper.js termine primero), agregado/quitado
+   junto con el modal. Las reglas CSS de `.crop-area` (`css/global.css`)
+   quedan como fallback/estado inicial nada más — el sync en JS las pisa
+   con estilos inline apenas el crop box real existe. */
+
+function _fotoSincronizarMascara() {
+  var mask = document.getElementById('crop-area');
+  var viewport = document.getElementById('crop-viewport');
+  if (!mask || !viewport || !_fotoCropper) return;
+  var box = _fotoCropper.getCropBoxData();
+  var vpRect = viewport.getBoundingClientRect();
+  var containerEl = viewport.querySelector('.cropper-container');
+  var containerRect = containerEl ? containerEl.getBoundingClientRect() : vpRect;
+  var offsetLeft = containerRect.left - vpRect.left;
+  var offsetTop = containerRect.top - vpRect.top;
+  mask.style.maxHeight = 'none';
+  mask.style.width = box.width + 'px';
+  mask.style.height = box.height + 'px';
+  mask.style.left = (offsetLeft + box.left + box.width / 2) + 'px';
+  mask.style.top = (offsetTop + box.top + box.height / 2) + 'px';
+}
+var _fotoResizeTimer = null;
+function _fotoSincronizarMascaraDiferida() {
+  clearTimeout(_fotoResizeTimer);
+  _fotoResizeTimer = setTimeout(_fotoSincronizarMascara, 120);
+}
 
 function abrirCropper(base64) {
   var img = document.getElementById('crop-image');
@@ -130,8 +199,10 @@ function abrirCropper(base64) {
       highlight: false,
       background: false,
       modal: false,
-      cropBoxResizable: false
+      cropBoxResizable: false,
+      ready: _fotoSincronizarMascara
     });
+    window.addEventListener('resize', _fotoSincronizarMascaraDiferida);
   }
   // Espera a que la imagen NUEVA termine de cargar antes de crear el
   // Cropper — crearlo sobre un <img> todavía cargando (o mostrando el
@@ -147,9 +218,13 @@ function abrirCropper(base64) {
   }
 }
 function cancelarCrop() {
+  window.removeEventListener('resize', _fotoSincronizarMascaraDiferida);
+  clearTimeout(_fotoResizeTimer);
   if (_fotoCropper) { _fotoCropper.destroy(); _fotoCropper = null; }
   var modal = document.getElementById('modal-crop');
   if (modal) modal.style.display = 'none';
+  var mask = document.getElementById('crop-area');
+  if (mask) { mask.style.left = ''; mask.style.top = ''; mask.style.width = ''; mask.style.height = ''; mask.style.maxHeight = ''; }
 }
 function confirmarCrop() {
   if (!_fotoCropper) return;

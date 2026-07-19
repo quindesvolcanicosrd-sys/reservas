@@ -256,21 +256,30 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
 
 /* Overlay decorativo del cropper (#modal-crop, js/foto.js) — máscara visual
    circular sobre la imagen a recortar (no recorta nada por sí sola, eso lo
-   hace Cropper.js con `aspectRatio: 1`, cuadrado); el `box-shadow` gigante
-   oscurece todo lo que queda afuera del círculo. Revertida a círculo por
-   decisión de diseño (ver MANIFEST, "Cambios recientes") tras probar 2
-   variantes de cápsula. **Desvío deliberado del pedido literal, con
-   evidencia:** se pidió `width:60%;height:60%` fijos — probado tal cual con
-   Playwright, da una máscara de ~234×412px (verificado en viewport móvil
-   390×844): una ELIPSE, no un círculo, porque `#crop-viewport` (el
-   contenedor real, `flex:1` dentro del modal) no es cuadrado — 60% de un
-   ancho de 390 y 60% de un alto de ~686 no son el mismo número de px (mismo
-   problema de fondo que ya se había diagnosticado y corregido en esta
-   sesión para la cápsula horizontal, ver "Cambios recientes"). Fix:
-   `aspect-ratio:1` en vez de `height:60%` fijo — fuerza el mismo alto que
-   ancho siempre, sin JS ni recalcular en resize; `max-height:60%` de
-   resguardo para viewports muy anchos/bajos donde el 60% del ancho
-   excedería el alto disponible. */
+   hace el crop box REAL, invisible, de Cropper.js con `aspectRatio: 1`,
+   cuadrado); el `box-shadow` gigante oscurece todo lo que queda afuera del
+   círculo. Revertida a círculo por decisión de diseño (ver MANIFEST,
+   "Cambios recientes") tras probar 2 variantes de cápsula.
+
+   `top/left/width/height` de acá son solo el ESTADO INICIAL/fallback —
+   `_fotoSincronizarMascara()` (js/foto.js) los pisa con valores en px
+   calculados a partir de `getCropBoxData()` (el crop box real de Cropper)
+   apenas la librería está lista, y los limpia de nuevo a estos valores al
+   cerrar el modal. Antes esta máscara era 100% CSS, posicionada con
+   porcentajes de `#crop-viewport` sin ninguna relación con el crop box
+   real — bug real encontrado y confirmado con Playwright (ver detalle
+   completo en el comentario de `_fotoSincronizarMascara()`, js/foto.js):
+   el círculo que el usuario veía y el rectángulo que realmente recortaba
+   `getCroppedCanvas()` eran dos cálculos independientes que solo
+   coincidían por casualidad con una imagen cuadrada — con cualquier foto
+   de aspecto distinto (el caso normal) la selección visual no
+   correspondía a la foto final. **Desvío deliberado del pedido literal,
+   con evidencia (histórico, previo al bug de arriba):** se pidió
+   `width:60%;height:60%` fijos — probado tal cual con Playwright, da una
+   máscara de ~234×412px (verificado en viewport móvil 390×844): una
+   ELIPSE, no un círculo, porque `#crop-viewport` no es cuadrado. Fix de
+   ese momento: `aspect-ratio:1` en vez de `height:60%` fijo; `max-height:
+   60%` de resguardo para viewports muy anchos/bajos. */
 .crop-area {
   position: absolute;
   top: 50%;
