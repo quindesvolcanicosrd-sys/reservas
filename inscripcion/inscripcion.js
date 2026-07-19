@@ -124,6 +124,20 @@ function inscPasoAnterior() {
   inscMostrarPaso(_inscCurIdx - 1);
 }
 
+// #insc-btn-home navega a una página HTML distinta (index.html) — no se
+// puede animar la pantalla de destino (carga desde cero), pero se anima
+// la salida de esta para que la transición no se sienta como un corte
+// abrupto. mostrarCargando() (más arriba en este archivo) reusa el mismo
+// #loading-overlay que ya cubre la carga real de la página siguiente.
+function inscIrHome() {
+  document.body.style.transition = 'opacity 0.25s ease';
+  document.body.style.opacity = '0';
+  mostrarCargando();
+  setTimeout(function() {
+    window.location.href = 'https://reservas.quindesvolcanicos.com/';
+  }, 250);
+}
+
 window.addEventListener('popstate', function(ev) {
   var idx = (ev.state && typeof ev.state.pasoInsc === 'number') ? ev.state.pasoInsc : 0;
   inscMostrarPaso(idx, true);
