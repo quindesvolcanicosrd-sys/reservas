@@ -1,3 +1,27 @@
+// Helper compartido (js/home.js + js/perfil.js) para poblar cualquier
+// .avatar-pill con foto o inicial — antes cada uno de los 4 call sites hacía
+// su propio innerHTML directo (foto ? '<img>' : '<span>inicial</span>'),
+// swap instantáneo sin transición aunque el avatar realmente cambiara (ej.
+// tras subir una foto nueva). No-op si el HTML resultante es idéntico al
+// actual (se llama en cada re-render de home/ajustes, no solo cuando la
+// foto cambia — animar un contenido que no cambió sería ruido, mismo
+// criterio ya usado por axisFooterFijo() para no animar swaps idénticos).
+function _avatarSetFotoOInicial(el, foto, nombre) {
+  if (!el) return;
+  var htmlNuevo = foto
+    ? '<img src="' + foto + '" alt="">'
+    : '<span class="avatar-pill-letter">' + (nombre || '?').charAt(0).toUpperCase() + '</span>';
+  if (el.innerHTML === htmlNuevo) return;
+  if (!el.firstChild) { el.innerHTML = htmlNuevo; return; } // primera vez, nada que crossfadear
+  el.style.transition = 'opacity 0.2s ease';
+  el.style.opacity = '0';
+  setTimeout(function() {
+    el.innerHTML = htmlNuevo;
+    void el.offsetWidth;
+    el.style.opacity = '1';
+  }, 200);
+}
+
 function mostrarCargando(msg) {
   var el = document.getElementById('loading-overlay');
   var msgEl = document.getElementById('loading-msg');

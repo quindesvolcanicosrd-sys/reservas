@@ -2,12 +2,7 @@ function irEditarDatos() {
   if (!E.datos) return;
   var d = E.datos;
   // Foto de perfil
-  var avatarEl = document.getElementById('aj-avatar');
-  if (avatarEl) {
-    var foto = d.fotoPerfil || '';
-    if (foto) { avatarEl.innerHTML = '<img src="' + foto + '" alt="">'; }
-    else { avatarEl.innerHTML = '<span class="avatar-pill-letter">' + (E.nombre || '?').charAt(0).toUpperCase() + '</span>'; }
-  }
+  _avatarSetFotoOInicial(document.getElementById('aj-avatar'), d.fotoPerfil || '', E.nombre);
   // Nombre derby / número / pronombres — mismo formato que el hero viejo
   // (eliminado, ver MANIFEST "Cambios recientes"); título/subtítulo de la
   // propia fila "Foto de perfil" en vez de texto fijo.
@@ -524,15 +519,7 @@ function _ajCargarSub(id) {
     // (irEditarDatos(), más arriba en este archivo). Ahora es la fila
     // "Foto de perfil" completa la que abre el sheet de recorte (onclick en
     // el .aj-row en index.html), no un botón de cámara separado.
-    var avatarHero = document.getElementById('aj-avatar-hero');
-    if (avatarHero) {
-      var fotoHero = d.fotoPerfil || '';
-      if (fotoHero) {
-        avatarHero.innerHTML = '<img src="' + fotoHero + '" alt="">';
-      } else {
-        avatarHero.innerHTML = '<span class="avatar-pill-letter">' + (E.nombre || '?').charAt(0).toUpperCase() + '</span>';
-      }
-    }
+    _avatarSetFotoOInicial(document.getElementById('aj-avatar-hero'), d.fotoPerfil || '', E.nombre);
   } else if (id === 'aj-sub-contacto') {
     _ajSetDatoVal('aj-email-display', d.email, '—', false);
     _ajSetPrefijo('aj-prefijo-display', null, d.prefijo || '');
@@ -779,7 +766,13 @@ function _ajRenderPrefijos(lista) {
       '</div>';
   }).join('');
   var list = document.getElementById('aj-prefijo-list');
-  if (list) list.innerHTML = html || '<div style="padding:16px;text-align:center;color:var(--muted);font-size:0.82rem;">Sin resultados</div>';
+  if (!list) return;
+  list.innerHTML = html || '<div style="padding:16px;text-align:center;color:var(--muted);font-size:0.82rem;">Sin resultados</div>';
+  // Fade rápido (0.09s, no el fadeIn estándar de 0.3s) — se re-renderiza en
+  // cada tecla del buscador, mismo criterio de "frecuente = rápido" que ya
+  // usa _pagoTotalActualizar() para no sentirse lento mientras se escribe.
+  void list.offsetWidth;
+  list.style.animation = 'fadeIn 0.09s ease';
 }
 
 function ajFiltrarPrefijos(q) {
@@ -827,7 +820,11 @@ function _ajRenderPaises(busqueda) {
     });
   });
   var list = document.getElementById('aj-pais-list');
-  if (list) list.innerHTML = html || '<div style="padding:16px;text-align:center;color:var(--muted);font-size:0.82rem;">Sin resultados</div>';
+  if (!list) return;
+  list.innerHTML = html || '<div style="padding:16px;text-align:center;color:var(--muted);font-size:0.82rem;">Sin resultados</div>';
+  // Fade rápido (0.09s), mismo criterio que _ajRenderPrefijos() — ver esa entrada.
+  void list.offsetWidth;
+  list.style.animation = 'fadeIn 0.09s ease';
 }
 
 function ajFiltrarPaises(q) { _ajRenderPaises(q); }
@@ -1606,8 +1603,12 @@ function ajAbrirSheetTallaAjustes() {
     grid.innerHTML = htmlNo + tallas.map(function(t) {
       return '<div class="equip-talla-pill' + (String(t) === String(tallaActual) ? ' sel' : '') + '" onclick="ajSelTallaGridAjustes(this,\'' + t + '\')">' + t + '</div>';
     }).join('');
+    void grid.offsetWidth;
+    grid.style.animation = 'fadeIn 0.3s ease';
   }, function() {
     grid.innerHTML = '<p style="color:var(--danger);font-size:0.82rem;">Error al cargar tallas. Intenta de nuevo.</p>';
+    void grid.offsetWidth;
+    grid.style.animation = 'fadeIn 0.3s ease';
   });
 }
 

@@ -19,8 +19,7 @@ function prepararHome(saltarFadeInicial, onListo) {
   var navAvatar = document.getElementById('home-avatar-nav');
   if (navAvatar) {
     var foto = E.datos && (E.datos.fotoPerfil || E.datos.fotoUrl || E.datos.foto || E.datos.picture || E.datos.photoUrl || '');
-    if (foto) { navAvatar.innerHTML = '<img src="' + foto + '" alt="">'; }
-    else { navAvatar.innerHTML = '<span class="avatar-pill-letter">' + (E.nombre || '?').charAt(0).toUpperCase() + '</span>'; }
+    _avatarSetFotoOInicial(navAvatar, foto, E.nombre);
   }
   var homeContent = document.getElementById('home-reservas-lista');
   var homeContenidoFinalListo = false;
@@ -130,8 +129,12 @@ function refrescarMisReservas(callback, btn) {
       if (callback) callback();
     });
   }, function(e) {
-    if (homeContent) homeContent.style.opacity = '1'; // revierte el fade-out: no hay contenido nuevo que mostrar
+    // Repuebla primero, recién después revierte el fade-out con un fadeIn real
+    // (antes se revertía opacity a 1 ANTES de re-renderizar — el contenido
+    // viejo reaparecía de golpe, sin ninguna transición, a diferencia del
+    // camino de éxito que sí anima la entrada vía prepararHome()).
     _renderHomeReservas();
+    if (homeContent) { homeContent.style.opacity = '1'; void homeContent.offsetWidth; homeContent.style.animation = 'fadeIn 0.3s ease'; }
     if (icon) icon.style.animation = '';
     mostrarToast((e && e.message) || 'No se pudo actualizar. Intenta de nuevo.', 'error');
     if (callback) callback();
@@ -354,9 +357,6 @@ function _renderHomeReservas() {
   var container = document.getElementById('home-reservas-lista');
 
   var fotoUrl = E.datos && (E.datos.fotoPerfil || '');
-  var avatarHtml = fotoUrl
-    ? '<img src="' + fotoUrl + '" alt="">'
-    : '<span class="avatar-pill-letter">' + (E.nombre || '?').charAt(0).toUpperCase() + '</span>';
 
   // Topbar (avatar + "¿Dudas? Contáctanos") es un elemento persistente fuera de
   // #home-reservas-lista (index.html) — acá solo se sincroniza su visibilidad/avatar,
@@ -365,8 +365,7 @@ function _renderHomeReservas() {
   var emptyTopbar = document.getElementById('home-empty-topbar');
   if (emptyTopbar) {
     emptyTopbar.style.display = activas.length === 0 ? 'flex' : 'none';
-    var avatarEl = document.getElementById('home-empty-avatar');
-    if (avatarEl) avatarEl.innerHTML = avatarHtml;
+    _avatarSetFotoOInicial(document.getElementById('home-empty-avatar'), fotoUrl, E.nombre);
   }
 
   // "Cambiar mi equipamiento" del footer fijo (#cta-footer-s-home, index.html,
@@ -1198,6 +1197,8 @@ function _cargarMesesGestionar() {
   }
   html += '</div>';
   lista.innerHTML = html;
+  void lista.offsetWidth;
+  lista.style.animation = 'fadeIn 0.3s ease';
   _sgFechaSeleccionada = '';
   document.getElementById('sg-btn-confirmar-fecha').style.display = 'none';
 }
