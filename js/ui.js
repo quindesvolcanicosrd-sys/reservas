@@ -290,7 +290,7 @@ function _autoencadenarMeses(el) {
   }
   if (agregados.length > 0) {
     agregados.reverse();
-    mostrarToast('Se agregó ' + agregados.join(', ') + ' porque hace falta pagarlo antes de este mes');
+    mostrarToast(agregados.join(', ') + (agregados.length > 1 ? ' también se agregaron' : ' también se agregó'), null, true);
   }
 }
 
@@ -306,7 +306,7 @@ function _autodesencadenarMeses(el) {
     if (cb.checked) { cb.checked = false; quitados.push(cb.value); }
   }
   if (quitados.length > 0) {
-    mostrarToast('Se quitó ' + quitados.join(', ') + ' porque dependían de ' + el.value);
+    mostrarToast(quitados.join(', ') + (quitados.length > 1 ? ' también se quitaron' : ' también se quitó'), null, true);
   }
 }
 
@@ -435,7 +435,17 @@ var elCuponHr = document.getElementById('mri-cupon-hr');
   _registrarOverlayAbierto(function(porGesto) { _cerrarModalInfo('reserva', porGesto); });
 }
 
-function mostrarToast(msg, tipo) {
+// Silencia por default cualquier tipo que no sea 'error' — decisión de
+// diseño intencional de Victor (le resultaban molestos la mayoría de los
+// toasts de éxito/informativos), NO un bug — ver MANIFEST.md, "Reglas
+// globales del proyecto", para el detalle completo antes de "corregir" esto
+// de nuevo en una futura auditoría. `forzar=true` es la válvula de escape
+// explícita para el puñado de casos donde sí hace falta mostrar un toast
+// no-error (hoy solo _autoencadenarMeses()/_autodesencadenarMeses(), más
+// abajo en este archivo) — pasarlo solo en el call site que de verdad lo
+// necesite, nunca reactivar en masa los demás.
+function mostrarToast(msg, tipo, forzar) {
+  if (tipo !== 'error' && !forzar) return;
   var t = document.getElementById('app-toast');
   if (!t) {
     t = document.createElement('div');
