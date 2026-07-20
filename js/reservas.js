@@ -783,7 +783,9 @@ function confirmarReserva(btn) {
   mostrarCargando('Guardando tu reserva/pago...');
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : 'No'; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : 'No';
   var itemsFallidos = []; // fechas/meses cuyo guardarReserva falló
+  var erroresPorFecha = {}; // fecha -> mensaje real del backend (o de red), solo para las que fallaron
   var fallosSecundarios = []; // etiquetas de guardarNotaPago/usarCreditos/enviarResumenReservas/marcarCuponUsado que fallaron
+  var fechasGratisCredito = []; // fechas marcadas monto:'0.00' por venir de un crédito (no del cupón) — ver finalizar()
 
   function finalizar() {
     var totalIntentos = E.tipoPago === 'mensual' ? E.meses.length : E.fechas.length;
@@ -809,10 +811,28 @@ function confirmarReserva(btn) {
     var fechasStr = fechasExitosas.length > 0 ? fechasExitosas.join(', ') : (E.tipoPago === 'mensual' ? 'mensual (sin clases seleccionadas)' : '—');
     api({ action: 'guardarNotaPago', nombre: E.nombre, tipoPago: E.tipoPago, monto: (E.totalPago || 0).toFixed(2), nota: E.notaPago || '—', fechas: fechasStr, talla: talla, protecciones: protec }, function() { secundarioTerminado(); }, function() { fallosSecundarios.push('nota de pago'); secundarioTerminado(); });
     if (E.creditosUsados > 0) {
-      var porMarcar = E.creditosUsados;
-      (_todasReservas || []).forEach(function(r) {
-        if (porMarcar > 0 && r.estado === 'Reagendar') { r.estado = 'Crédito usado'; porMarcar--; }
-      });
+      // Solo se marca como consumido el crédito de una fecha que realmente
+      // se guardó (ver "Cambios recientes" — antes se marcaban los N créditos
+      // de forma incondicional, sin chequear si guardarReserva() de esa fecha
+      // puntual había fallado).
+      var creditosConfirmados = fechasGratisCredito.filter(function(f) { return itemsFallidos.indexOf(f) === -1; }).length;
+      if (creditosConfirmados > 0) {
+        var porMarcar = creditosConfirmados;
+        (_todasReservas || []).forEach(function(r) {
+          if (porMarcar > 0 && r.estado === 'Reagendar') { r.estado = 'Crédito usado'; porMarcar--; }
+        });
+      }
+      if (creditosConfirmados < E.creditosUsados) {
+        var fechasCreditoFallidas = fechasGratisCredito.filter(function(f) { return itemsFallidos.indexOf(f) !== -1; });
+        var detalleErrorCredito = fechasCreditoFallidas.length === 1 ? (erroresPorFecha[fechasCreditoFallidas[0]] || '') : '';
+        var faltantes = E.creditosUsados - creditosConfirmados;
+        mostrarToast(
+          (faltantes === 1 ? 'No se pudo aplicar tu clase a favor' : 'No se pudieron aplicar ' + faltantes + ' clases a favor') +
+          (detalleErrorCredito ? ': ' + detalleErrorCredito : ' para ' + fechasCreditoFallidas.join(', ')) +
+          ' — se mantiene disponible para tu próxima reserva.',
+          'error'
+        );
+      }
       secundarioTerminado();
     }
     var fechasResumen = E.tipoPago === 'mensual' ? mesesExitosos : fechasExitosas;
@@ -893,14 +913,22 @@ function confirmarReserva(btn) {
     guardarMesSiguiente();
   } else {
     var pendientes = E.fechas.slice();
-    var gratisRestantes = (E.creditosUsados || 0) + ((E.cuponAplicado && E.fechas.length > (E.creditosUsados || 0)) ? 1 : 0);
+    // Créditos y cupón se rastrean por separado (antes un solo contador
+    // gratisRestantes que los mezclaba) para poder saber, en finalizar(),
+    // EXACTAMENTE qué fecha puntual consumió un crédito — los créditos se
+    // siguen asignando primero, en el mismo orden que antes.
+    var creditosRestantes = E.creditosUsados || 0;
+    var cuponRestante = (E.cuponAplicado && E.fechas.length > (E.creditosUsados || 0)) ? 1 : 0;
     function guardarSiguiente() {
       if (pendientes.length === 0) { finalizar(); return; }
       var fecha = pendientes.shift();
-      var montoClase = gratisRestantes > 0 ? '0.00' : E.precioPorClase.toFixed(2);
-      if (gratisRestantes > 0) gratisRestantes--;
+      var esGratisCredito = creditosRestantes > 0;
+      var esGratisCupon = !esGratisCredito && cuponRestante > 0;
+      var montoClase = (esGratisCredito || esGratisCupon) ? '0.00' : E.precioPorClase.toFixed(2);
+      if (esGratisCredito) { creditosRestantes--; fechasGratisCredito.push(fecha); }
+      else if (esGratisCupon) { cuponRestante--; }
       var tallaFecha = (E.tallasPorFecha && E.tallasPorFecha[fecha]) ? E.tallasPorFecha[fecha] : talla;
-      api({ action: 'guardarReserva', nombre: E.nombre, fecha: fecha, talla: tallaFecha, protecciones: protec, monto: montoClase, email: E.datos.email || '' }, function() { guardarSiguiente(); }, function() { itemsFallidos.push(fecha); guardarSiguiente(); });
+      api({ action: 'guardarReserva', nombre: E.nombre, fecha: fecha, talla: tallaFecha, protecciones: protec, monto: montoClase, email: E.datos.email || '' }, function() { guardarSiguiente(); }, function(e) { itemsFallidos.push(fecha); erroresPorFecha[fecha] = (e && e.message) || ''; guardarSiguiente(); });
     }
     guardarSiguiente();
   }
