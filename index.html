@@ -161,11 +161,16 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           </div>
         </div>
       </div>
-<p style="text-align:center;font-size:0.82rem;margin:0 0 14px;">
-  ¿Sin cuenta registrada?
-  <a href="https://reservas.quindesvolcanicos.com/inscripcion" style="color:var(--brand);font-weight:700;text-decoration:none;">Regístrate aquí</a>
-</p>
-<div style="border-top:1px solid var(--border-warm);margin:8px 0 16px;"></div>
+<div style="display:flex;align-items:center;gap:12px;margin:18px 0 14px;">
+  <div style="flex:1;height:1px;background:var(--border-warm);"></div>
+  <span style="font-size:0.78rem;color:var(--muted);font-weight:600;">o</span>
+  <div style="flex:1;height:1px;background:var(--border-warm);"></div>
+</div>
+<a href="https://reservas.quindesvolcanicos.com/inscripcion" class="btn btn-outline" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-bottom:10px;">Crear cuenta</a>
+<button type="button" class="btn btn-outline" style="display:flex;align-items:center;justify-content:center;gap:8px;opacity:0.6;margin-bottom:16px;" onclick="mostrarToast('Próximamente','ok')">
+  Crea tu liga
+  <span style="font-size:0.62rem;font-weight:800;text-transform:none;letter-spacing:0;background:var(--brand-30);color:var(--brand);padding:2px 8px;border-radius:20px;">Próximamente</span>
+</button>
   <p style="text-align:center;font-size:0.82rem;color:var(--muted);margin:0;">
     ¿Necesitas ayuda? <a onclick="abrirContacto()" style="color:var(--brand);font-weight:700;cursor:pointer;text-decoration:none;">Contáctanos</a>
   </p>
