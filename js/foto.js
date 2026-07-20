@@ -188,6 +188,7 @@ function abrirCropper(base64) {
   if (!img || !modal) return;
   if (_fotoCropper) { _fotoCropper.destroy(); _fotoCropper = null; }
   modal.style.display = 'flex';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { modal.style.opacity = '1'; }); });
   function initCropper() {
     _fotoCropper = new Cropper(img, {
       aspectRatio: 1,
@@ -233,7 +234,10 @@ function cancelarCrop() {
   clearTimeout(_fotoResizeTimer);
   if (_fotoCropper) { _fotoCropper.destroy(); _fotoCropper = null; }
   var modal = document.getElementById('modal-crop');
-  if (modal) modal.style.display = 'none';
+  if (modal) {
+    modal.style.opacity = '0';
+    setTimeout(function() { modal.style.display = 'none'; }, 300);
+  }
   var mask = document.getElementById('crop-area');
   if (mask) { mask.style.left = ''; mask.style.top = ''; mask.style.width = ''; mask.style.height = ''; mask.style.maxHeight = ''; }
 }
