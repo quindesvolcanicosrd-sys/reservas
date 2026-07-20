@@ -1464,9 +1464,11 @@ function _saludFinalizarWizard() {
     medicamentosDesc: _saludData.medicamentosDesc, atencionMedica: _saludData.atencionMedica,
     seguro: _saludData.seguro, seguroContacto: _saludData.seguroContacto
   };
-  _ajGuardar(payload);
-  Object.assign(E.datos, payload);
-  _ajCargarSub('aj-sub-salud');
+  // E.datos solo se actualiza dentro de _ajGuardar(), tras la respuesta exitosa
+  // del backend (antes se hacía acá mismo, de forma optimista y síncrona, sin
+  // esperar confirmación — si actualizarDatosPersona fallaba, el resumen ya
+  // se veía como "guardado" aunque el backend nunca lo hubiera recibido).
+  _ajGuardar(payload, null, null, function() { _ajCargarSub('aj-sub-salud'); });
 }
 
 function _saludResetPrefill() {
@@ -1551,22 +1553,17 @@ function ajEliminarEmerg2() {
   _ajGuardar({ emerg2Nombre: '', emerg2Relacion: '', emerg2Prefijo: '', emerg2Telefono: '' });
 }
 
-function _ajGuardar(payload, btn, subId) {
+function _ajGuardar(payload, btn, subId, onExito) {
   if (btn) { btn.textContent = 'Guardando...'; btn.disabled = true; }
-  api({ action: 'actualizarDatosPersona', nombre: E.nombre, token: _getSessionToken(), datos: JSON.stringify(payload) }, function() {
+  api({ action: 'actualizarDatosPersona', nombre: E.nombre, datos: JSON.stringify(payload) }, function() {
     Object.assign(E.datos, payload);
     if (btn) { btn.textContent = 'Guardar cambios'; btn.disabled = false; }
-    irEditarDatos();
-    cerrarAjSub(subId, true);
+    if (onExito) { onExito(); } else { irEditarDatos(); cerrarAjSub(subId, true); }
     mostrarToast('Datos guardados', 'ok');
   }, function(e) {
     if (btn) { btn.textContent = 'Guardar cambios'; btn.disabled = false; }
     mostrarToast(e.message || 'Error al guardar. Intenta de nuevo.', 'error');
   });
-}
-
-function _getSessionToken() {
-  try { return localStorage.getItem('session_token') || ''; } catch(e) { return ''; }
 }
 
 function _ajFormatearFecha(fechaStr) {
@@ -1871,10 +1868,18 @@ function _ajInicializarMapaDireccion() {
   }
 }
 
+var _ajDireccionDragSeq = 0;
 function _ajOnMapaDireccionDragEnd() {
   if (!_ajDireccionMap) return;
+  // Geocoder no soporta cancelar una request en vuelo — en vez de eso, cada
+  // arrastre se numera y solo se aplica la respuesta si sigue siendo la del
+  // arrastre más reciente. Sin esto, arrastrar varias veces seguido disparaba
+  // un geocode+guardado en paralelo por cada dragend, y si una respuesta vieja
+  // llegaba después de una más nueva, terminaba pisando la posición final real.
+  var seq = ++_ajDireccionDragSeq;
   var center = _ajDireccionMap.getCenter();
   new google.maps.Geocoder().geocode({ location: { lat: center.lat(), lng: center.lng() } }, function(results, status) {
+    if (seq !== _ajDireccionDragSeq) return;
     if (status !== 'OK' || !results || !results[0]) return;
     _ajAplicarReverseGeocode(results[0].address_components || []);
   });
