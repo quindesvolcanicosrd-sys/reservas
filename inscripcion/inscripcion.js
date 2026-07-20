@@ -494,8 +494,17 @@ function _inscCargarTallas() {
     grid.style.animation = 'fadeIn 0.3s ease';
   }, function() {
     _inscTallasListo = true;
-    grid.innerHTML = '<p style="color:var(--danger);font-size:0.82rem;">Error al cargar tallas.</p>';
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;">' +
+      '<p style="color:var(--danger);font-size:0.82rem;margin-bottom:8px;">Error al cargar tallas.</p>' +
+      '<button type="button" class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin:0 auto;" onclick="_inscReintentarTallas()"><span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">refresh</span> Reintentar</button>' +
+      '</div>';
   });
+}
+function _inscReintentarTallas() {
+  _inscTallasListo = false;
+  var grid = document.getElementById('insc-tallas-grid');
+  if (grid) grid.innerHTML = '<div class="loader" style="grid-column:1/-1;padding:20px 0;"><div class="spinner" style="width:26px;height:26px;border-width:3px;"></div></div>';
+  _inscCargarTallas();
 }
 function inscSelTalla(el, talla) {
   document.querySelectorAll('#insc-tallas-grid .equip-talla-pill').forEach(function(p) { p.classList.remove('sel'); });
@@ -601,9 +610,27 @@ function inscEnviar() {
       }
     }, function(e) { ocultarCargando(); _inscEnviando = false; errMsg('err-p6', 'Error: ' + (e.message || 'Intenta de nuevo')); });
   }
-  if (pin && pin.length === 4) {
-    sha256Hex(pin + '|' + G.nombre).then(function(hash) { _doEnviar(hash); }).catch(function() { _doEnviar(''); });
-  } else { _doEnviar(''); }
+  // Re-chequea disponibilidad justo antes de enviar — ya se verificó en el
+  // paso 3, pero pueden pasar varios pasos/minutos hasta este envío final,
+  // ventana suficiente para que otra persona elija el mismo nombre mientras
+  // tanto (no elimina la carrera del todo — el backend sigue siendo la
+  // fuente de verdad final — pero la reduce a la ventana entre este chequeo
+  // y el guardado real, mucho más chica que la de todo el formulario).
+  apiGet({ action: 'verificarNombreDisponible', nombre: nombre }, function(res) {
+    if (!res.disponible) {
+      ocultarCargando();
+      _inscEnviando = false;
+      errMsg('err-p6', 'Este nombre de usuario ya está en uso. Volvé al paso "¿Cómo te llamamos?" para elegir otro.');
+      return;
+    }
+    if (pin && pin.length === 4) {
+      sha256Hex(pin + '|' + G.nombre).then(function(hash) { _doEnviar(hash); }).catch(function() { _doEnviar(''); });
+    } else { _doEnviar(''); }
+  }, function(e) {
+    ocultarCargando();
+    _inscEnviando = false;
+    errMsg('err-p6', 'Error al verificar disponibilidad: ' + (e.message || 'Intenta de nuevo'));
+  });
 }
 
 /* ── Helpers ─────────────────────────────────── */
