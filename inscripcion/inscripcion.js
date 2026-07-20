@@ -617,10 +617,37 @@ function _inscCerrarSheet(ovId, shId) {
   if (sh) sh.style.transform = 'translateY(100%)';
   setTimeout(function(){ if(sh)sh.style.display='none'; if(ov)ov.style.display='none'; }, 350);
 }
+/* Equivalente local de err() (js/ui.js) — inscripcion/index.html no carga
+   js/ui.js (depende de E/G globales del app principal que acá no existen),
+   mismo criterio que la copia local de apiPost() más abajo: se duplica la
+   función completa en vez de importar el archivo entero. Mismo timing/
+   animación exactos que err(): fadeIn 0.35s al aparecer, 4.4s visible,
+   fadeOut 0.3s + colapso de alto/padding/margin (0.35s, arranca 0.2s
+   después de empezar el fadeOut) antes de display:none — mismas clases
+   CSS fadeIn/fadeOut de css/estilos.css que ya usa .error-msg en toda la
+   app, sin animación nueva. */
 function errMsg(id, msg) {
   var el = document.getElementById(id); if (!el) return;
-  el.textContent = msg; el.style.display = 'block';
-  setTimeout(function(){ el.style.display='none'; }, 6000);
+  clearTimeout(el._errTimer);
+  el.style.cssText = '';
+  el.textContent = msg;
+  el.style.display = 'block';
+  void el.offsetWidth;
+  el.style.animation = 'fadeIn 0.35s ease';
+  el._errTimer = setTimeout(function() {
+    var h = el.scrollHeight;
+    el.style.overflow = 'hidden';
+    el.style.maxHeight = h + 'px';
+    void el.offsetWidth;
+    el.style.animation = 'fadeOut 0.3s ease forwards';
+    el.style.transition = 'max-height 0.35s 0.2s ease, padding 0.35s 0.2s ease, margin 0.35s 0.2s ease';
+    setTimeout(function() {
+      el.style.maxHeight = '0';
+      el.style.paddingTop = '0'; el.style.paddingBottom = '0';
+      el.style.marginTop = '0'; el.style.marginBottom = '0';
+    }, 50);
+    setTimeout(function() { el.style.cssText = ''; el.style.display = 'none'; }, 600);
+  }, 4400);
 }
 function abrirContacto() {
   var ov = document.getElementById('modal-contacto-insc-overlay');
