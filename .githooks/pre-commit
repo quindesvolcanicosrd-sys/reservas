@@ -1,0 +1,37 @@
+#!/bin/sh
+# Cache-busting automático para js/config.js.
+#
+# Por qué existe: GitHub Pages sirve el sitio detrás del CDN de Fastly, que
+# cachea cada archivo por Cache-Control: max-age=600 en sus edges — 10 min
+# fuera del control de cualquier cosa que se haga en el navegador (Service
+# Worker, "Clear site data", etc). Si index.html/inscripcion/index.html piden
+# siempre la misma URL literal "js/config.js", un push que cambie BACKEND
+# puede tardar hasta 10 min en propagarse a cualquier edge que ya lo tenía
+# cacheado. Ver MANIFEST.md ("Cambios recientes") para el diagnóstico completo.
+#
+# Fix: cada <script src="...js/config.js?v=HASH"> lleva el hash de contenido
+# de config.js en el query string. Un cambio de contenido = una URL nueva =
+# cache miss garantizado en Fastly y en el navegador, sin esperar el TTL.
+# Este hook mantiene ese hash sincronizado automáticamente en cada commit
+# que toque js/config.js, para no depender de que alguien se acuerde de
+# actualizarlo a mano.
+#
+# Setup (una sola vez por clon del repo): git config core.hooksPath .githooks
+
+set -e
+
+# Nada que hacer si este commit no toca js/config.js.
+if ! git diff --cached --name-only | grep -qx 'js/config.js'; then
+  exit 0
+fi
+
+HASH=$(git hash-object js/config.js | cut -c1-8)
+
+for f in index.html inscripcion/index.html; do
+  [ -f "$f" ] || continue
+  # Reescribe el query string existente (?v=xxxxxxxx) o lo agrega si no existía.
+  sed -E -i 's#(src="[^"]*js/config\.js)(\?v=[0-9a-f]+)?"#\1?v='"$HASH"'"#' "$f"
+  git add "$f"
+done
+
+echo "pre-commit: js/config.js cambió — cache-busting actualizado a ?v=$HASH en index.html/inscripcion/index.html"
