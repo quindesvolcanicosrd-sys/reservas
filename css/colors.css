@@ -1,11 +1,26 @@
 /* ═══════════════════════════════════════════════════════
    MIRLXS — Sistema de colores unificado
-   Editar aquí para cambiar el aspecto visual completo
-   ═══════════════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════
+   IMPORTANTE (Tanda 1/2 del color de énfasis, ver MANIFEST.md): las
+   variables marcadas "(runtime)" en los comentarios de sección de abajo
+   ya NO se editan acá para cambiar el aspecto visual — `js/color-enfasis.js`
+   las recalcula en tiempo real a partir de un solo color de entrada
+   (`aplicarColorEnfasis(hex)`, hoy hardcodeado a `#F97316`, el mismo
+   naranja de siempre) y las pisa vía `root.style.setProperty()` apenas
+   carga la página. El valor que sigue escrito acá abajo para esas
+   variables es SOLO el fallback del primer paint, antes de que el JS
+   corra — hoy coincide exacto con lo que el JS calcula (mismo naranja de
+   entrada), así que no hay ningún flash ni doble fuente de verdad
+   compitiendo en la práctica, pero editar el hex de acá **no tiene efecto
+   visible** en esas variables puntuales una vez que la página carga. Para
+   cambiar el color de énfasis, la vía real es `js/color-enfasis.js`
+   (Tanda 2: selector de color, todavía no implementado). El resto de las
+   variables (sin la marca "(runtime)") no está tocado por ese archivo y
+   se sigue editando acá normalmente, como siempre. */
 
 :root {
 
-  /* ── Brand ───────────────────────────────────────────── */
+  /* ── Brand (runtime) ─────────────────────────────────── */
   --brand:          #F97316;
   --brand-dk:       #ea6407;
   --brand-secondary:#fb923c;
@@ -62,25 +77,30 @@
   --overlay-dark:   rgba(0,0,0,0.7);
   --overlay-modal-info: rgba(0,0,0,0.82);
 
-  /* ── Fondo ───────────────────────────────────────────── */
-  /* Si cambiás --bg (light), actualizá a mano el <meta name="theme-color" media="(prefers-color-scheme: light)"> en index.html e inscripcion/index.html — los meta tags no soportan var(). */
-  /* También actualizá a mano background_color/theme_color en manifest.json (barra de gestos de Android en PWA instalada) — el manifest solo admite un valor único, sin variante dark, así que usa el valor light. */
+  /* ── Fondo (runtime) ───────────────────────────────────── */
+  /* js/color-enfasis.js sincroniza el <meta name="theme-color"> correspondiente
+     (light/dark, por atributo media) cada vez que recalcula --bg — ya no hace
+     falta tocarlo a mano al cambiar el color de énfasis. manifest.json es la
+     única pieza que SÍ sigue siendo manual (background_color/theme_color, barra
+     de gestos de Android en PWA instalada) — es un archivo estático que el SO
+     lee al instalar, sin ningún mecanismo real de recarga en vivo desde JS de
+     la página; señalado como limitación conocida, sin resolver todavía. */
   --bg:             #FDF3EB;
   --bg-2:           #F7EAE0;
 
-  /* ── Superficies ─────────────────────────────────────── */
+  /* ── Superficies (runtime) ─────────────────────────────── */
   --surface:        rgba(255,255,255,0.90);
   --surface-2:      rgba(255,245,235,0.95);
   --surface-3:      rgba(255,235,220,0.45);
   --surface-blur:   blur(16px);
 
-  /* ── Bordes ──────────────────────────────────────────── */
+  /* ── Bordes (runtime, salvo --border-slate en claro — ver más abajo) ── */
   --border:         rgba(249,115,22,0.22);
   --border-2:       rgba(249,115,22,0.08);
   --border-warm:    rgba(168,149,135,0.3);
   --brand-warm-border: #fde8d4;
 
-  /* ── Texto ───────────────────────────────────────────── */
+  /* ── Texto (runtime) ───────────────────────────────────── */
   --text:           #2C1A0E;
   --text-2:         #6B3E26;
   --muted:          #9A6A52;
@@ -112,6 +132,12 @@
   --info-dark:      #0369a1;
 
   /* ── Botones ─────────────────────────────────────────── */
+  /* --btn-primary-*/--btn-secondary-color son var() de otras variables
+     "(runtime)" de arriba — derivan solas, en cascada, sin que
+     color-enfasis.js necesite tocarlas directo. --btn-secondary-bg SÍ
+     tiene su propio setProperty, pero solo en oscuro (acá en claro sigue
+     siendo el alias var(--surface-2); en la media query de abajo pasa a
+     ser un literal propio, ahí sí hace falta recalcularlo). */
   --btn-primary-bg:     var(--brand);
   --btn-primary-color:  var(--white);
   --btn-primary-hover:  var(--brand-dk);
@@ -119,6 +145,8 @@
   --btn-secondary-color:var(--text-2);
 
   /* ── Cards ───────────────────────────────────────────── */
+  /* --card-bg/--card-border son var() (derivan solas); --card-shadow es
+     "(runtime)" propio, ver sección Sombras de arriba. */
   --card-bg:        var(--surface);
   --card-border:    var(--border);
   --card-shadow:    0 8px 32px rgba(249,115,22,0.08);
@@ -135,12 +163,22 @@
      (ui.css) y .aj-sub-inner (perfil.css), antes 16px duplicado en ambos. */
   --space-screen:   16px;
 
-  /* ── Sombras ─────────────────────────────────────────── */
+  /* ── Sombras (runtime — en oscuro quedan en negro fijo, ver js/color-enfasis.js) ── */
   --shadow-sm:      0 4px 12px rgba(249,115,22,0.08);
   --shadow:         0 8px 32px rgba(249,115,22,0.1);
   --shadow-lg:      0 16px 48px rgba(249,115,22,0.15);
 
-  /* Neutros */
+  /* Neutros — la mayoría "(runtime)": hoy son grises/blancos planos en
+     claro (S=0, la fórmula de color-enfasis.js los reproduce sin cambio,
+     ver ese archivo) pero ya tenían tinte de marca en oscuro, así que
+     quedaron dentro del alcance de la derivación para no dejar la UI
+     "parcialmente actualizada" cuando cambie el color de énfasis (Tanda 2).
+     Únicas excepciones reales, NO tocadas por color-enfasis.js en ningún
+     modo: --neutral-dark/-gray/-mid/-light/-lighter (grises puros sin
+     ningún tinte en ningún modo) y --disabled-bg-2/--disabled-bg (su
+     versión oscura es blanco translúcido, no naranja). --border-slate es
+     "runtime" SOLO en oscuro — su valor claro (#cbd5e1) es azul genuino,
+     no emparentado con la marca, se deja fijo a propósito. */
   --neutral-dark:        #1a1a1a;
   --neutral-gray:        #777;
   --neutral-mid:         #666;
@@ -204,7 +242,14 @@
   /* Divisores */
   --gray-divider:        rgba(128,128,128,0.12);
 
-  /* Dark mode tokens */
+  /* Dark mode tokens — "(runtime)" solo --dk-skeleton-base/--dk-pin-press/
+     --dk-modal-btn-bg (mismo tinte café-marca, aunque no viven dentro de la
+     media query dark — se definen una sola vez porque solo se usan desde
+     contextos ya oscuros) y --dk-brand-burn (naranja literal, fondo del
+     acordeón PIN de login) y --dk-overlay-95/--dk-overlay-97 (atados a
+     --bg oscuro, ver js/color-enfasis.js). El resto de --dk-* de este
+     bloque (skeleton-shine/-shine-2, info/error/modal/badge/border/purple)
+     son grises o colores de estado sin ningún tinte de marca — no derivan. */
   --dk-skeleton-base:    #2c1c11;
   --dk-skeleton-shine:   #383838;
   --dk-skeleton-shine-2: #2a2a2a;
@@ -238,6 +283,8 @@
   --dk-overlay-97:       rgba(23,9,0,0.97);
 
   /* ── Especiales y utilidades ─────────────────────────── */
+  /* --placeholder-color es "(runtime)" (mismo tinte café que --border-warm,
+     literalmente el mismo RGB base) — el resto de esta sección no deriva. */
   --placeholder-color:  #a89587;
   --text-ghost:         rgba(127,127,127,0.3);
   --white:              #ffffff;
@@ -249,10 +296,18 @@
 }
 
 /* ── DARK MODE ───────────────────────────────────────────── */
+/* Mismo aviso que la cabecera del archivo: las variables "(runtime)" de
+   acá adentro también son solo fallback — root.style.setProperty() (inline)
+   gana por especificidad sobre CUALQUIER regla de stylesheet, incluida
+   esta media query, así que una vez que js/color-enfasis.js corre, lo que
+   esté escrito literal acá abajo para esas variables deja de tener efecto
+   visible en la práctica (coincide con lo calculado hoy, mismo naranja de
+   entrada — sin diferencia real, pero el mecanismo real ya no es este
+   bloque). */
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Fondo */
-    /* Si cambiás --bg (dark), actualizá a mano el <meta name="theme-color" media="(prefers-color-scheme: dark)"> en index.html e inscripcion/index.html — los meta tags no soportan var(). */
+    /* Fondo (runtime) */
+    /* js/color-enfasis.js sincroniza el <meta name="theme-color"> de este modo — ver la nota equivalente en la sección "Fondo" del :root claro, más arriba. */
     --bg:             #170900;
     --bg-2:           #1f0d00;
 

@@ -19,6 +19,12 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="css/colors.css">
+<!-- Motor de color de énfasis (Tanda 1/2, ver MANIFEST.md) — recalcula en
+     runtime las variables de colors.css derivadas de la marca. Va apenas
+     después del <link> de colors.css para pisar el fallback estático antes
+     del primer paint real (ambos coinciden hoy, el valor de entrada es el
+     mismo naranja de siempre — sin flash). -->
+<script src="js/color-enfasis.js"></script>
 <link rel="stylesheet" href="css/global.css">
 <link rel="stylesheet" href="css/estilos.css">
 <link rel="stylesheet" href="css/ui.css">
