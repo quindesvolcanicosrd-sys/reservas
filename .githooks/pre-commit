@@ -1,37 +1,58 @@
 #!/bin/sh
-# Cache-busting automático para js/config.js.
+# Cache-busting automático para archivos estáticos con contenido variable
+# referenciados desde index.html/inscripcion/index.html.
 #
 # Por qué existe: GitHub Pages sirve el sitio detrás del CDN de Fastly, que
 # cachea cada archivo por Cache-Control: max-age=600 en sus edges — 10 min
 # fuera del control de cualquier cosa que se haga en el navegador (Service
-# Worker, "Clear site data", etc). Si index.html/inscripcion/index.html piden
-# siempre la misma URL literal "js/config.js", un push que cambie BACKEND
-# puede tardar hasta 10 min en propagarse a cualquier edge que ya lo tenía
-# cacheado. Ver MANIFEST.md ("Cambios recientes") para el diagnóstico completo.
+# Worker, "Clear site data", etc). Si un HTML pide siempre la misma URL
+# literal (ej. "js/config.js"), un push que cambie ese archivo puede tardar
+# hasta 10 min en propagarse a cualquier edge que ya lo tenía cacheado.
+# Ver MANIFEST.md ("Cambios recientes" y "Reglas globales del proyecto" —
+# Cache-busting de archivos estáticos) para el diagnóstico completo.
 #
-# Fix: cada <script src="...js/config.js?v=HASH"> lleva el hash de contenido
-# de config.js en el query string. Un cambio de contenido = una URL nueva =
-# cache miss garantizado en Fastly y en el navegador, sin esperar el TTL.
-# Este hook mantiene ese hash sincronizado automáticamente en cada commit
-# que toque js/config.js, para no depender de que alguien se acuerde de
-# actualizarlo a mano.
+# Fix: cada <script src="...ARCHIVO?v=HASH">/<link href="...ARCHIVO?v=HASH">
+# lleva el hash de contenido del archivo en el query string. Un cambio de
+# contenido = una URL nueva = cache miss garantizado en Fastly y en el
+# navegador, sin esperar el TTL. Este hook mantiene ese hash sincronizado
+# automáticamente en cada commit que toque alguno de los archivos listados
+# abajo, para no depender de que alguien se acuerde de actualizarlo a mano.
+#
+# Para agregar un archivo nuevo a este mecanismo (cualquier JS/CSS con
+# contenido que pueda cambiar y necesite reflejarse de inmediato en
+# producción, no solo config.js): (1) agregarlo a CACHEBUST_FILES abajo,
+# (2) agregarle "?v=<hash>" a mano una vez en cada <script src=.../<link
+# href=... que lo referencie (el hash real: `git hash-object RUTA | cut -c1-8`).
+# De ahí en adelante el hook lo mantiene solo.
 #
 # Setup (una sola vez por clon del repo): git config core.hooksPath .githooks
 
 set -e
 
-# Nada que hacer si este commit no toca js/config.js.
-if ! git diff --cached --name-only | grep -qx 'js/config.js'; then
-  exit 0
-fi
+CACHEBUST_FILES="js/config.js"
 
-HASH=$(git hash-object js/config.js | cut -c1-8)
+HTML_FILES="index.html inscripcion/index.html"
 
-for f in index.html inscripcion/index.html; do
-  [ -f "$f" ] || continue
-  # Reescribe el query string existente (?v=xxxxxxxx) o lo agrega si no existía.
-  sed -E -i 's#(src="[^"]*js/config\.js)(\?v=[0-9a-f]+)?"#\1?v='"$HASH"'"#' "$f"
-  git add "$f"
+STAGED=$(git diff --cached --name-only)
+TOCADO=""
+for f in $CACHEBUST_FILES; do
+  if printf '%s\n' "$STAGED" | grep -qx "$f"; then
+    TOCADO="$TOCADO $f"
+  fi
 done
 
-echo "pre-commit: js/config.js cambió — cache-busting actualizado a ?v=$HASH en index.html/inscripcion/index.html"
+# Nada que hacer si este commit no toca ninguno de los archivos con cache-busting.
+[ -n "$TOCADO" ] || exit 0
+
+for archivo in $TOCADO; do
+  HASH=$(git hash-object "$archivo" | cut -c1-8)
+  # Escapa el único carácter especial de regex esperable en estos paths (el '.' de la extensión).
+  ESCAPADO=$(printf '%s' "$archivo" | sed 's/\./\\./g')
+  for f in $HTML_FILES; do
+    [ -f "$f" ] || continue
+    # Reescribe el query string existente (?v=xxxxxxxx) o lo agrega si no existía.
+    sed -E -i 's#(src="[^"]*'"$ESCAPADO"'|href="[^"]*'"$ESCAPADO"')(\?v=[0-9a-f]+)?"#\1?v='"$HASH"'"#' "$f"
+    git add "$f"
+  done
+  echo "pre-commit: $archivo cambió — cache-busting actualizado a ?v=$HASH"
+done
