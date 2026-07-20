@@ -348,6 +348,7 @@ window.onload = function() {
       mostrarCargando('Iniciando tu sesión...');
       onGoogleCredentialUsuario({ credential: _tokenNuevx });
     } else {
+      ocultarCargando();
       ir('s1', true);
     }
   }
