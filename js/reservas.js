@@ -747,8 +747,7 @@ function continuar_s4() {
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : ''; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : '';
   var equipLinea = (talla && protec && protec.toLowerCase() !== 'no') ? 'Necesitare patines talla ' + talla + ' y protecciones.' : (talla) ? 'Necesitare patines talla ' + talla + '.' : (protec && protec.toLowerCase() !== 'no') ? 'Necesitare protecciones (' + protec + ').' : 'Llevare mi propio equipamiento.';
   var msgWp = '¡Hola! Soy *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '*.\n\n*Clases reservadas:*\n' + lineasFechas + '\n\n' + equipLinea + '\n\nTe envío el comprobante adjunto. Si no lo ves, por favor solicítamelo. ¡Gracias!';
-  E.wpUrl = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp);
-  var btnWpPago = document.getElementById('btn-wp-pago'); if (btnWpPago) btnWpPago.href = E.wpUrl;
+  E.wpUrl = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp); // usado por #btn-wp-exito en s6 (finalizar())
   if ((E.cuponAplicado || E.creditosUsados > 0) && E.totalPago === 0) {
     E.notaPago = E.creditosUsados > 0
       ? 'Clase(s) a favor por entrenamiento cancelado' + (E.cuponAplicado ? ' + cupón' : '')
