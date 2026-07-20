@@ -163,7 +163,7 @@ function continuar_s3c_nuevo() {
   }, function(e) { ocultarCargando(); err('err-s3c', 'Error al guardar: ' + e.message); });
 }
 
-function canPayMonthly() { if (!E.datos) return false; return E.datos.necesitaPatines.toLowerCase() === 'no' && E.datos.necesitaProtecciones.toLowerCase() === 'no'; }
+function canPayMonthly() { if (!E.datos) return false; var d = E.datos; return (!d.necesitaPatines || d.necesitaPatines.toLowerCase() === 'no') && (!d.necesitaProtecciones || d.necesitaProtecciones.toLowerCase() === 'no'); }
 function necesitaEquipo() { return !canPayMonthly(); }
 
 // Texto real de #s4-fechas-subtitulo, contextual (distinto en reagendamiento)
@@ -429,7 +429,7 @@ function cargarFechas() {
   // `false` en los 2 callbacks de abajo, sea cual sea el caller que la puso
   // en `true`.
   window._cargandoFechasReserva = true;
-  var d = E.datos; var talla = d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
+  var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : '';
   var necesitaProtec = d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no';
   function esTallaAgotada(f) {
     return !f.disponible && talla && f.razon &&
