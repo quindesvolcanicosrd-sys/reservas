@@ -243,7 +243,7 @@ function crearMesItem(nombre, esPasado, confirmado) {
     ? '<span class="mes-badge"><span class="material-symbols-outlined">check_circle</span>Pagado</span>'
     : '';
   var disabled = confirmado ? ' disabled checked' : '';
-  var onchange = confirmado ? '' : ' onchange="_autoencadenarMeses(this);actualizarTotalS4()"';
+  var onchange = confirmado ? '' : ' onchange="this.checked ? _autoencadenarMeses(this) : _autodesencadenarMeses(this);actualizarTotalS4()"';
   return '<label class="' + clases + '">' +
     '<input type="checkbox" value="' + nombre + '"' + disabled + onchange + '>' +
     '<span class="mes-nombre">' + nombre + '</span>' +
@@ -267,6 +267,22 @@ function _autoencadenarMeses(el) {
   if (agregados.length > 0) {
     agregados.reverse();
     mostrarToast('Se agregó ' + agregados.join(', ') + ' porque hace falta pagarlo antes de este mes');
+  }
+}
+
+function _autodesencadenarMeses(el) {
+  if (el.checked) return;
+  var checkboxes = Array.prototype.slice.call(document.querySelectorAll('#lista-meses-unificada .mes-item input[type="checkbox"]'));
+  var idx = checkboxes.indexOf(el);
+  var quitados = [];
+  for (var i = idx + 1; i < checkboxes.length; i++) {
+    var cb = checkboxes[i];
+    var item = cb.closest('.mes-item');
+    if (item.classList.contains('mes-confirmado')) break;
+    if (cb.checked) { cb.checked = false; quitados.push(cb.value); }
+  }
+  if (quitados.length > 0) {
+    mostrarToast('Se quitó ' + quitados.join(', ') + ' porque dependían de ' + el.value);
   }
 }
 
