@@ -129,11 +129,11 @@ function refrescarMisReservas(callback, btn) {
       if (icon) icon.style.animation = '';
       if (callback) callback();
     });
-  }, function() {
+  }, function(e) {
     if (homeContent) homeContent.style.opacity = '1'; // revierte el fade-out: no hay contenido nuevo que mostrar
     _renderHomeReservas();
     if (icon) icon.style.animation = '';
-    mostrarToast('No se pudo actualizar. Intenta de nuevo.', 'error');
+    mostrarToast((e && e.message) || 'No se pudo actualizar. Intenta de nuevo.', 'error');
     if (callback) callback();
   });
 }

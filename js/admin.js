@@ -346,7 +346,8 @@ function adminAgregarTalla() {
   document.getElementById('admin-equip-lista').insertAdjacentHTML('beforeend', adminFilaTallaHtml('', 1));
 }
 
-function adminGuardarEquip() {
+function adminGuardarEquip(btn) {
+  if (btn) btn.disabled = true;
   var tallas = [];
   document.querySelectorAll('#admin-equip-lista .adm-fila-talla').forEach(function(f) {
     var t = f.querySelector('.adm-talla').value.trim();
@@ -357,8 +358,9 @@ function adminGuardarEquip() {
   mostrarCargando('Guardando...');
   adminApi({ action: 'adminGuardarEquipamiento', tallas: JSON.stringify(tallas), protecciones: protec }, function(res) {
     ocultarCargando();
+    if (btn) btn.disabled = false;
     if (res.exito) { mostrarToast('Equipamiento actualizado.', 'ok'); } else { err('err-admin-equip', res.error || 'Error.'); }
-  }, function(e) { ocultarCargando(); err('err-admin-equip', 'Error: ' + e.message); });
+  }, function(e) { ocultarCargando(); if (btn) btn.disabled = false; err('err-admin-equip', 'Error: ' + e.message); });
 }
 
 // ── Usuarios ──────────────────────────────────────────────────────────────────
