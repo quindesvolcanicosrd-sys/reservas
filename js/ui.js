@@ -370,6 +370,13 @@ function modalInfoOk(id) {
     window._modalInfoReservaCallback = null;
     cb();
   }
+  // id==='home': mismo patrón que 'reserva' — permite encadenar mostrarModalPermisos()
+  // (js/auth.js) para que no compita por pantalla con modal-info-home, ver esa entrada.
+  if (id === 'home' && window._modalInfoHomeCallback) {
+    var cbHome = window._modalInfoHomeCallback;
+    window._modalInfoHomeCallback = null;
+    cbHome();
+  }
   _cerrarModalInfo(id);
 }
 
@@ -379,6 +386,11 @@ function modalInfoLater(id) {
     var cb = window._modalInfoReservaCallback;
     window._modalInfoReservaCallback = null;
     cb();
+  }
+  if (id === 'home' && window._modalInfoHomeCallback) {
+    var cbHome = window._modalInfoHomeCallback;
+    window._modalInfoHomeCallback = null;
+    cbHome();
   }
   _cerrarModalInfo(id);
 }

@@ -63,6 +63,25 @@ function iniciarGoogleSignInUsuario() {
   }
 }
 
+// Muestra mostrarModalPermisos() (js/perfil.js) si la cuenta todavía no lo
+// configuró — llamada tanto desde login fresco de Google (onGoogleCredentialUsuario)
+// como desde restaurarSesion() exitosa (window.onload), antes solo el primero
+// disparaba este modal: una cuenta que solo mantiene la sesión guardada podía
+// no verlo nunca. Coordinada con modal-info-home (que ir('s-home') puede
+// mostrar 600ms después, si el usuario no lo vio todavía) para que no compitan
+// por pantalla al mismo tiempo — mismo patrón de callback ya usado por
+// mostrarModalInfoReserva()/modalInfoOk()/modalInfoLater() (js/ui.js) para
+// encadenar una acción a que el usuario cierre un modal-info primero.
+function _mostrarPermisosSiHaceFalta(fotoFallback) {
+  if (!(E.datos && !E.datos.permisosConfigurados)) return;
+  var mostrarPermisos = function() { mostrarModalPermisos(E.nombre, E.datos.fotoPerfil || fotoFallback || ''); };
+  if (_yaVioModal('home')) {
+    setTimeout(mostrarPermisos, 600);
+  } else {
+    window._modalInfoHomeCallback = mostrarPermisos;
+  }
+}
+
 function onGoogleCredentialUsuario(resp) {
   mostrarCargando('Verificando tu cuenta...');
   apiPost({ action: 'loginGoogle', idToken: resp.credential }, function(res) {
@@ -121,15 +140,13 @@ function onGoogleCredentialUsuario(resp) {
         setTimeout(function() { irNuevaReserva(true); }, 300);
       } else {
         ir('s-home');
-        if (E.datos && !E.datos.permisosConfigurados) {
-          setTimeout(function() { mostrarModalPermisos(E.nombre, E.datos.fotoPerfil || _fotoGoogleLogin); }, 600);
-        }
+        _mostrarPermisosSiHaceFalta(_fotoGoogleLogin);
       }
     }, function() { prepararHome(); ir('s-home'); });
   }, function(e) {
     ocultarCargando();
     var errEl = document.getElementById('err-google-login');
-    errEl.textContent = 'Error de conexión. Intenta de nuevo.';
+    errEl.textContent = 'Error de conexión: ' + (e && e.message || 'intenta de nuevo');
     errEl.style.display = 'block';
     setTimeout(function(){ errEl.style.display = 'none'; }, 5000);
   });
@@ -336,7 +353,7 @@ window.onload = function() {
               var _pnx = window._pendingNuevx; window._pendingNuevx = null;
               if (E.datos) { E.datos.necesitaPatines = _pnx.patines === 'si' ? 'Sí' : 'No'; E.datos.necesitaProtecciones = _pnx.protec ? _pnx.protec : 'No'; if (_pnx.talla) E.datos.talla = _pnx.talla; }
               setTimeout(function() { irNuevaReserva(true); }, 300);
-            } else { ir('s-home'); }
+            } else { ir('s-home'); _mostrarPermisosSiHaceFalta(); }
           }, function() { prepararHome(); ir('s-home'); window._restaurandoSesion = false; });
         }, function() { window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true); });
       } else { localStorage.removeItem('session'); }
