@@ -200,6 +200,17 @@ function abrirCropper(base64) {
       background: false,
       modal: false,
       cropBoxResizable: false,
+      // cropBoxMovable:false — BUG REAL corregido (recorte final no correspondía
+      // a la selección visual, ver MANIFEST "Cambios recientes"): sin esto, el
+      // crop box quedaba con el default de la librería (movable=true) y un
+      // drag del usuario (pensado para mover la FOTO bajo el visor fijo, la UX
+      // que comunica .crop-area) en realidad movía el crop box invisible —
+      // la máscara decorativa nunca se re-sincroniza fuera de `ready`, así que
+      // no había ningún indicio visual de que el crop box real se había ido a
+      // otra parte de la imagen. Reproducido y confirmado con Playwright
+      // (marcador de color en posición conocida + drag real + comparación
+      // pixel a pixel del resultado) antes de aplicar este fix.
+      cropBoxMovable: false,
       ready: _fotoSincronizarMascara
     });
     window.addEventListener('resize', _fotoSincronizarMascaraDiferida);
