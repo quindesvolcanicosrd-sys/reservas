@@ -304,6 +304,8 @@ Dark mode: `.loading-card`/`.loading-card p` en `@media (prefers-color-scheme: d
 | `.admin-banner-res-*` (`row`/`info`/`nombre`/`fecha`/`actions`) + `.admin-banner-btn` (`-ok`/`-no`) | **Nuevas** (Tanda 2) — fila de una reserva pendiente dentro del banner, con los 2 botones circulares (aprobar/rechazar) separados `gap:16px` (mínimo pedido: ~14px) |
 
 ### Cambios recientes
+- **index.html — `s-admin-quellevar` ("Qué llevar"): eliminado el párrafo "Recibirás un push 1 día antes y 2 horas antes de cada entrenamiento si hay que llevar equipamiento."** Quedó pendiente del plan original de la sesión, sin tocarse en ninguna de las 3 tandas del rediseño del panel admin — solo texto, sin ningún `id`/handler asociado, así que no afecta a `adminRenderQueLlevar()`/`adminRefreshQueLlevar()` ni al banner de equipamiento del dashboard/Mi Liga (Tanda 2/3), que siguen igual.
+
 - **index.html + js/admin.js + js/perfil.js + js/ui.js — Rediseño del panel admin, Tanda 3: "Ajustes adicionales" (color de énfasis + precios de clases) + "Mi Liga" embebido en Ajustes (banners + Administradorxs + Personalización).**
 
   **"Ajustes adicionales" del dashboard (acordeón shell ya existía desde la Tanda 1) gana contenido real:**
