@@ -109,13 +109,20 @@ var TOP_BAR_CONFIG = {
   's4': { titulo: function() { return E.reagendando ? 'Reagendar clase' : 'Nueva reserva'; }, volver: function() { return 's-home'; } },
   's-pago': { titulo: 'Pago', volver: 's4' },
   's-gestionar': { titulo: 'Re-agendar fecha', volver: 's-home' },
-  's-misreservas': { titulo: 'Historial de reservas', volver: 's-home' }, 's-datos': { titulo: 'Ajustes', volver: 's-home' },
+  's-misreservas': { titulo: 'Historial de reservas', volver: 's-home' },
+  // volver dinámico (Tanda 3, ver MANIFEST.md "Cambios recientes"): una
+  // cuenta admin "pura" (dashboardAdmin:true, sin E.datos) llega acá vía Mi
+  // Liga -- volver('s-home') la mandaría a una Home rota (prepararHome()
+  // hace cerrarSesion() sin E.datos) y la desloguearía sin querer. Mismo
+  // criterio ya usado por irEditarDatos()/adminEntrar() para distinguir los
+  // 2 casos: E.datos truthy (usuarix normal, o admin que también paga
+  // cuota) → s-home; sin E.datos (solo llegó por ser admin) → s-admin-home.
+  's-datos': { titulo: 'Ajustes', volver: function() { return E.datos ? 's-home' : 's-admin-home'; } },
   's-admin-login': { titulo: 'Administradorx', volver: 's1' },
   's-admin-reservas': { titulo: 'Reservas', volver: 's-admin-home' },
   's-admin-quellevar': { titulo: 'Qué llevar', volver: 's-admin-home' },
   's-admin-equip': { titulo: 'Equipamiento', volver: 's-admin-home' },
-  's-admin-usuarios': { titulo: 'Usuarios', volver: 's-admin-home' },
-  's-admin-admins': { titulo: 'Administradorxs', volver: 's-admin-home' }
+  's-admin-usuarios': { titulo: 'Usuarios', volver: 's-admin-home' }
 };
 
 // Navegación entre pantallas con fade simple (animation:smoothSlideUp vía

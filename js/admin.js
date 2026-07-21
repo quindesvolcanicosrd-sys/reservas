@@ -19,7 +19,7 @@ var _admDashOrigenRect = null; // rect de la tile que abrió la pantalla complet
 var _admBannerPendientes = null; // null = todavía no llegó la respuesta
 var _admBannerQueLlevar = null;
 
-var ADMIN_PANTALLAS = ['s-admin-login','s-admin-home','s-admin-reservas','s-admin-quellevar','s-admin-equip','s-admin-usuarios','s-admin-admins'];
+var ADMIN_PANTALLAS = ['s-admin-login','s-admin-home','s-admin-reservas','s-admin-quellevar','s-admin-equip','s-admin-usuarios'];
 
 function adminApi(params, onSuccess, onError) {
   params.adminToken = _adminToken;
@@ -94,21 +94,25 @@ function adminEntrar() {
   var nombreEl = document.getElementById('admin-dash-nombre');
   if (nombreEl) nombreEl.textContent = _adminNombre || _adminEmail;
   adminRenderColorEnfasis();
+  _adminCargarPrecios();
   _admDashAbierto = null; _admDashOrigenRect = null;
   ir('s-admin-home');
   _adminCargarBanners();
 }
 
-// Acordeón "Ajustes adicionales" del nuevo dashboard admin -- por ahora solo
-// abre/cierra un cuerpo vacío (estructura visual nada más, ver MANIFEST.md
-// "Cambios recientes"); el contenido real (Usuarios, Administradorxs, color
-// de énfasis, Mi Liga) se agrega en una tanda posterior.
+// Acordeón "Ajustes adicionales" del dashboard admin: color de énfasis +
+// precios de clases (Tanda 3, ver MANIFEST.md "Cambios recientes") — Mi
+// Liga/Usuarios quedan fuera de este acordeón (Mi Liga vive en Ajustes,
+// punto 2 de la Tanda 3; Usuarios sigue sin punto de entrada, ver nota en
+// "Cambios recientes"). max-height pasa de un tope fijo de 400px (Tanda 1,
+// cuerpo vacío) a `scrollHeight` real -- con contenido real adentro, 400px
+// ya no alcanzaba y recortaba el botón "Guardar precios".
 function adminToggleAjustesAdicionales() {
   var body = document.getElementById('admin-extra-acordeon-body');
   var chevron = document.getElementById('admin-extra-acordeon-chevron');
   var abierto = body.style.maxHeight && body.style.maxHeight !== '0px';
   if (!abierto) {
-    body.style.maxHeight = '400px'; body.style.opacity = '1';
+    body.style.maxHeight = body.scrollHeight + 'px'; body.style.opacity = '1';
     chevron.style.transform = 'rotate(180deg)';
   } else {
     body.style.maxHeight = '0'; body.style.opacity = '0';
@@ -127,7 +131,11 @@ function adminToggleAjustesAdicionales() {
 function _adminCerrarTodoAbierto() {
   if (_admDashAbierto === 'notif') {
     _adminCerrarNotifBubbleInterno();
-  } else if (_admDashAbierto === 'admin-banner-pendientes-body' || _admDashAbierto === 'admin-banner-equip-body') {
+  } else if (_admDashAbierto && _admDashAbierto.indexOf('admin-banner-') === 0) {
+    // Cualquier bodyId de banner, con o sin sufijo de scope (Tanda 3, ver
+    // MANIFEST.md "Cambios recientes" -- Mi Liga reusa estos mismos banners
+    // con ids tipo 'admin-banner-pendientes-body-ml') -- ya no se compara
+    // contra los 2 literales sin scope únicamente.
     var body = document.getElementById(_admDashAbierto);
     var chevron = document.getElementById(_admDashAbierto + '-chevron');
     if (body) { body.style.maxHeight = '0'; body.style.opacity = '0'; }
@@ -187,51 +195,65 @@ function _adminVentanaFecha(fechaRaw) {
   return null;
 }
 
-// Carga los datos de los 2 banners condicionales del dashboard en paralelo,
-// apenas se entra a s-admin-home (adminEntrar()) — independiente de
+// Carga los datos de los 2 banners condicionales en paralelo, para el
+// dashboard (adminEntrar(), scope='') o para Mi Liga (_adminCargarMiLiga(),
+// scope='-ml', Tanda 3 — ver MANIFEST.md "Cambios recientes"). Ambos scopes
+// comparten el mismo caché (_admBannerPendientes/_admBannerQueLlevar): cada
+// pantalla lo recarga fresco al entrar, en vez de mantener 2 copias
+// sincronizadas a la vez — más simple, y suficiente porque el dashboard y
+// Mi Liga nunca están visibles los dos al mismo tiempo (uno es .pantalla,
+// el otro un aj-sub-* montado sobre s-datos). Independiente de
 // _admTodasReservas (que sigue siendo responsabilidad de adminIrReservas()/
 // adminRefreshReservas(), para no acoplar el banner con la pantalla completa).
-function _adminCargarBanners() {
+function _adminCargarBanners(scope) {
+  scope = scope || '';
   _admBannerPendientes = null; _admBannerQueLlevar = null;
   adminApi({ action: 'adminGetReservas' }, function(res) {
     _admBannerPendientes = (res || []).filter(function(r) { return r.estado === 'Pendiente'; });
-    _adminRenderBannerPendientes();
-  }, function() { _admBannerPendientes = []; _adminRenderBannerPendientes(); });
+    _adminRenderBannerPendientes(scope);
+  }, function() { _admBannerPendientes = []; _adminRenderBannerPendientes(scope); });
   adminApi({ action: 'adminGetQueLlevar' }, function(res) {
     _admBannerQueLlevar = (res || []).filter(function(q) { q._ventana = _adminVentanaFecha(q.fecha); return q._ventana; });
-    _adminRenderBannerQueLlevar();
-  }, function() { _admBannerQueLlevar = []; _adminRenderBannerQueLlevar(); });
+    _adminRenderBannerQueLlevar(scope);
+  }, function() { _admBannerQueLlevar = []; _adminRenderBannerQueLlevar(scope); });
 }
 
-function _adminRenderBannerPendientes() {
-  var slot = document.getElementById('admin-banner-pendientes-slot');
+function _adminRenderBannerPendientes(scope) {
+  scope = scope || '';
+  var slot = document.getElementById('admin-banner-pendientes-slot' + scope);
   if (!slot) return;
   if (!_admBannerPendientes || _admBannerPendientes.length === 0) { slot.innerHTML = ''; return; }
   var filas = _admBannerPendientes.map(function(r) {
     return '<div class="admin-banner-res-row">' +
       '<div class="admin-banner-res-info"><div class="admin-banner-res-nombre">' + r.nombre + '</div><div class="admin-banner-res-fecha">' + r.fecha + '</div></div>' +
       '<div class="admin-banner-res-actions">' +
-        '<button class="admin-banner-btn admin-banner-btn-ok" onclick="adminBannerSetEstado(' + r.fila + ',\'Confirmada\',this)" aria-label="Aprobar"><span class="material-symbols-outlined">check</span></button>' +
-        '<button class="admin-banner-btn admin-banner-btn-no" onclick="adminBannerSetEstado(' + r.fila + ',\'Cancelada\',this)" aria-label="Rechazar"><span class="material-symbols-outlined">close</span></button>' +
+        '<button class="admin-banner-btn admin-banner-btn-ok" onclick="adminBannerSetEstado(' + r.fila + ',\'Confirmada\',this,\'' + scope + '\')" aria-label="Aprobar"><span class="material-symbols-outlined">check</span></button>' +
+        '<button class="admin-banner-btn admin-banner-btn-no" onclick="adminBannerSetEstado(' + r.fila + ',\'Cancelada\',this,\'' + scope + '\')" aria-label="Rechazar"><span class="material-symbols-outlined">close</span></button>' +
       '</div></div>';
   }).join('');
   var n = _admBannerPendientes.length;
+  // Desde Mi Liga (scope='-ml'), "Ver todas" primero tiene que cerrar el
+  // aj-sub y volver al dashboard antes de poder abrir la pantalla completa
+  // de Reservas -- adminIrReservasDesdeMiLiga() encadena eso; desde el
+  // dashboard mismo, adminIrReservas() de siempre alcanza.
+  var verTodasOnclick = scope ? 'adminIrReservasDesdeMiLiga()' : 'adminIrReservas()';
   slot.innerHTML =
-    '<div class="admin-dash-banner" id="admin-banner-pendientes">' +
-      '<div class="admin-dash-banner-header" onclick="adminToggleBanner(\'admin-banner-pendientes-body\')">' +
+    '<div class="admin-dash-banner" id="admin-banner-pendientes' + scope + '">' +
+      '<div class="admin-dash-banner-header" onclick="adminToggleBanner(\'admin-banner-pendientes-body' + scope + '\')">' +
         '<span class="material-symbols-outlined admin-dash-banner-icon">pending_actions</span>' +
-        '<span class="admin-dash-banner-texto" id="admin-banner-pendientes-texto">Tenés ' + n + ' reserva' + (n !== 1 ? 's' : '') + ' pendiente' + (n !== 1 ? 's' : '') + ' de revisión</span>' +
-        '<span class="material-symbols-outlined admin-dash-banner-chevron" id="admin-banner-pendientes-body-chevron">expand_more</span>' +
+        '<span class="admin-dash-banner-texto" id="admin-banner-pendientes-texto' + scope + '">Tenés ' + n + ' reserva' + (n !== 1 ? 's' : '') + ' pendiente' + (n !== 1 ? 's' : '') + ' de revisión</span>' +
+        '<span class="material-symbols-outlined admin-dash-banner-chevron" id="admin-banner-pendientes-body' + scope + '-chevron">expand_more</span>' +
       '</div>' +
-      '<div class="admin-dash-banner-body" id="admin-banner-pendientes-body">' +
+      '<div class="admin-dash-banner-body" id="admin-banner-pendientes-body' + scope + '">' +
         '<div class="admin-dash-banner-body-inner">' + filas +
-          '<div class="admin-dash-banner-link" onclick="adminIrReservas()">Ver todas las reservas ↗</div>' +
+          '<div class="admin-dash-banner-link" onclick="' + verTodasOnclick + '">Ver todas las reservas ↗</div>' +
         '</div>' +
       '</div>' +
     '</div>';
 }
 
-function adminBannerSetEstado(fila, estado, btn) {
+function adminBannerSetEstado(fila, estado, btn, scope) {
+  scope = scope || '';
   var row = btn.closest('.admin-banner-res-row');
   var botones = row.querySelectorAll('.admin-banner-btn');
   botones.forEach(function(b) { b.disabled = true; });
@@ -243,18 +265,19 @@ function adminBannerSetEstado(fila, estado, btn) {
     setTimeout(function() {
       row.remove();
       var n = _admBannerPendientes.length;
-      var banner = document.getElementById('admin-banner-pendientes');
-      if (n === 0) { if (banner) banner.remove(); _admDashAbierto = null; return; }
-      var texto = document.getElementById('admin-banner-pendientes-texto');
+      var banner = document.getElementById('admin-banner-pendientes' + scope);
+      if (n === 0) { if (banner) banner.remove(); if (_admDashAbierto === 'admin-banner-pendientes-body' + scope) _admDashAbierto = null; return; }
+      var texto = document.getElementById('admin-banner-pendientes-texto' + scope);
       if (texto) texto.textContent = 'Tenés ' + n + ' reserva' + (n !== 1 ? 's' : '') + ' pendiente' + (n !== 1 ? 's' : '') + ' de revisión';
-      var body = document.getElementById('admin-banner-pendientes-body');
+      var body = document.getElementById('admin-banner-pendientes-body' + scope);
       if (body && body.style.maxHeight && body.style.maxHeight !== '0px') body.style.maxHeight = body.scrollHeight + 'px';
     }, 250);
   }, function(e) { botones.forEach(function(b) { b.disabled = false; }); mostrarToast(e.message || 'Error al actualizar.', 'error'); });
 }
 
-function _adminRenderBannerQueLlevar() {
-  var slot = document.getElementById('admin-banner-equip-slot');
+function _adminRenderBannerQueLlevar(scope) {
+  scope = scope || '';
+  var slot = document.getElementById('admin-banner-equip-slot' + scope);
   if (!slot) return;
   if (!_admBannerQueLlevar || _admBannerQueLlevar.length === 0) { slot.innerHTML = ''; return; }
   var tieneHoy = _admBannerQueLlevar.some(function(q) { return q._ventana === 'hoy'; });
@@ -272,13 +295,13 @@ function _adminRenderBannerQueLlevar() {
     porVentana[etiqueta].forEach(function(q) { filas += _adminQueLlevarFilaHtml(q); });
   });
   slot.innerHTML =
-    '<div class="admin-dash-banner" id="admin-banner-equip">' +
-      '<div class="admin-dash-banner-header" onclick="adminToggleBanner(\'admin-banner-equip-body\')">' +
+    '<div class="admin-dash-banner" id="admin-banner-equip' + scope + '">' +
+      '<div class="admin-dash-banner-header" onclick="adminToggleBanner(\'admin-banner-equip-body' + scope + '\')">' +
         '<span class="material-symbols-outlined admin-dash-banner-icon">backpack</span>' +
         '<span class="admin-dash-banner-texto">' + texto + '</span>' +
-        '<span class="material-symbols-outlined admin-dash-banner-chevron" id="admin-banner-equip-body-chevron">expand_more</span>' +
+        '<span class="material-symbols-outlined admin-dash-banner-chevron" id="admin-banner-equip-body' + scope + '-chevron">expand_more</span>' +
       '</div>' +
-      '<div class="admin-dash-banner-body" id="admin-banner-equip-body">' +
+      '<div class="admin-dash-banner-body" id="admin-banner-equip-body' + scope + '">' +
         '<div class="admin-dash-banner-body-inner">' + filas + '</div>' +
       '</div>' +
     '</div>';
@@ -404,21 +427,28 @@ function _adminCerrarFullscreen(pantallaId) {
   }, 320);
 }
 
-// ── Color de énfasis — selector TEMPORAL (ver comentario en index.html) ────────
+// ── Color de énfasis ──────────────────────────────────────────────────────────
 // Paleta de arranque, mismo criterio que el color picker de Pivot: unos
 // pocos presets + personalizado libre via <input type="color">.
 var ADMIN_COLOR_PRESETS = ['#F97316', '#EF4444', '#EC4899', '#A855F7', '#3B82F6', '#14B8A6', '#22C55E', '#F59E0B'];
 
+// El MISMO componente vive en 2 lugares desde la Tanda 3 (ver MANIFEST.md
+// "Cambios recientes"): "Ajustes adicionales" del dashboard y
+// "Personalización" dentro de Mi Liga -- un solo valor de color de énfasis,
+// mostrado (y mantenido en sync) en las 2 instancias a la vez, así que se
+// repinta por clase (`.admin-color-swatches`/`.admin-color-custom-input`,
+// antes ids únicos) en vez de buscar un único id -- sin necesitar trackear
+// "cuál instancia" cambió, las 2 siempre terminan mostrando lo mismo.
 function adminRenderColorEnfasis() {
-  var cont = document.getElementById('admin-color-swatches');
-  if (!cont) return;
+  var conts = document.querySelectorAll('.admin-color-swatches');
+  if (!conts.length) return;
   var actual = (typeof _ceColorActual !== 'undefined' && _ceColorActual) ? _ceColorActual.toLowerCase() : '#f97316';
-  cont.innerHTML = ADMIN_COLOR_PRESETS.map(function(hex) {
+  var html = ADMIN_COLOR_PRESETS.map(function(hex) {
     var sel = hex.toLowerCase() === actual;
     return '<button type="button" class="admin-color-swatch' + (sel ? ' sel' : '') + '" style="background:' + hex + ';" onclick="adminCambiarColorEnfasis(\'' + hex + '\')" aria-label="' + hex + '"></button>';
   }).join('');
-  var custom = document.getElementById('admin-color-custom-input');
-  if (custom) custom.value = actual;
+  conts.forEach(function(cont) { cont.innerHTML = html; });
+  document.querySelectorAll('.admin-color-custom-input').forEach(function(custom) { custom.value = actual; });
 }
 
 function adminCambiarColorEnfasis(hex) {
@@ -428,6 +458,34 @@ function adminCambiarColorEnfasis(hex) {
   adminApi({ action: 'adminSetColorEnfasis', hex: hex }, function(res) {
     if (!res.exito) mostrarToast(res.error || 'No se pudo guardar el color.', 'error');
   }, function(e) { mostrarToast(e.message || 'No se pudo guardar el color.', 'error'); });
+}
+
+// ── Precios de clases (Tanda 3, "Ajustes adicionales") ──────────────────────────
+// getPreciosClases() ya existe y es pública (la usa cualquier persona al
+// reservar, js/auth.js) -- se llama acá con la misma api() sin token admin,
+// reusando también los mismos campos de E (precioPorClase/precioMensual,
+// js/reservas.js) en vez de inventar variables admin-only paralelas.
+function _adminCargarPrecios() {
+  api({ action: 'getPreciosClases' }, function(precios) {
+    E.precioPorClase = parseFloat(precios.precioPorClase) || 0;
+    E.precioMensual = parseFloat(precios.precioMensual) || 0;
+    var elClase = document.getElementById('adm-precio-clase');
+    var elMensual = document.getElementById('adm-precio-mensual');
+    if (elClase) elClase.value = E.precioPorClase || '';
+    if (elMensual) elMensual.value = E.precioMensual || '';
+  }, function() {});
+}
+
+function adminGuardarPrecios(btn) {
+  var pClase = parseFloat(document.getElementById('adm-precio-clase').value);
+  var pMensual = parseFloat(document.getElementById('adm-precio-mensual').value);
+  if (!(pClase > 0) || !(pMensual > 0)) { err('err-admin-precios', 'Ingresa 2 precios válidos, mayores a 0.'); return; }
+  if (btn) btn.disabled = true;
+  adminApi({ action: 'adminSetPreciosClases', precioPorClase: pClase, precioMensual: pMensual }, function(res) {
+    if (btn) btn.disabled = false;
+    if (res.exito) { E.precioPorClase = pClase; E.precioMensual = pMensual; mostrarToast('Precios actualizados.', 'ok'); }
+    else { err('err-admin-precios', res.error || 'Error al guardar.'); }
+  }, function(e) { if (btn) btn.disabled = false; err('err-admin-precios', 'Error: ' + e.message); });
 }
 
 function adminCerrarSesionLocal(silencioso) {
@@ -450,6 +508,18 @@ function adminIrReservas(origenEl) {
       adminRenderReservas();
     }, function(e) { mostrarToast(e.message || 'Error al cargar reservas.', 'error'); });
   });
+}
+
+// "Ver todas las reservas ↗" del banner de pendientes DENTRO de Mi Liga
+// (Tanda 3): a diferencia del mismo link en el dashboard (que ya está sobre
+// s-admin-home), acá primero hay que cerrar el aj-sub-miliga (overlay sobre
+// s-datos) y recién entonces navegar al dashboard antes de poder abrir la
+// pantalla completa de Reservas -- adminIrReservas() sin origenEl encuentra
+// sola la tile real por data-tile, una vez que s-admin-home ya es la
+// pantalla activa.
+function adminIrReservasDesdeMiLiga() {
+  cerrarAjSub('aj-sub-miliga');
+  setTimeout(function() { ir('s-admin-home'); adminIrReservas(); }, 340);
 }
 
 // Botón "Actualizar" DENTRO de s-admin-reservas ya abierta -- a diferencia de
@@ -775,38 +845,106 @@ function adminEliminarUsuarioClick(nombre) {
   }, function(e) { ocultarCargando(); mostrarToast(e.message || 'Error al eliminar.', 'error'); });
 }
 
-// ── Administradorxs ───────────────────────────────────────────────────────────
-function adminIrAdmins() {
-  mostrarCargando('Cargando...');
+// ── Administradorxs (Tanda 3, embebido en Mi Liga — ver MANIFEST.md
+// "Cambios recientes") ───────────────────────────────────────────────────────
+// Reemplaza a la vieja adminIrAdmins()/pantalla s-admin-admins (eliminada,
+// mismo criterio que s-admin-notif en la Tanda 2: Mi Liga muestra "todo de
+// entrada, sin subsecciones", así que la lista vive embebida en
+// #miliga-admins-lista en vez de navegar a una pantalla aparte).
+function _adminCargarAdmins() {
+  var lista = document.getElementById('miliga-admins-lista');
+  if (lista) lista.innerHTML = _skeletonQueLlevarHtml();
   adminApi({ action: 'adminGetAdmins' }, function(res) {
-    ocultarCargando();
-    var html = '';
-    (res || []).forEach(function(a) {
-      html += '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
-        '<div><div style="font-weight:700;font-size:0.9rem;">' + a.email + (a.principal ? ' <span class="badge badge-confirmada" style="margin-left:6px;">Principal</span>' : '') + '</div>' +
-        (a.invitadoPor ? '<div style="font-size:0.78rem;color:var(--muted);">Invitado por ' + a.invitadoPor + '</div>' : '') + '</div>' +
-        (!a.principal && _adminEmail === 'quindesvolcanicosrd@gmail.com'
-          ? '<button onclick="adminQuitarClick(\'' + a.email + '\')" style="border:2px solid var(--error-light-border);background:var(--error-lightest);color:var(--error);border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;font-size:0.8rem;flex-shrink:0;">Quitar</button>'
-          : '') +
-        '</div>';
-    });
-    document.getElementById('admin-admins-lista').innerHTML = html;
-    ir('s-admin-admins');
-  }, function(e) { ocultarCargando(); mostrarToast(e.message || 'Error al cargar administradores.', 'error'); });
+    adminRenderAdmins(res);
+  }, function(e) { mostrarToast(e.message || 'Error al cargar administradores.', 'error'); });
 }
 
-function adminInvitar() {
-  var email = document.getElementById('adm-nuevo-email').value.trim();
-  if (!email) { err('err-admin-admins', 'Escribe un email.'); return; }
-  adminApi({ action: 'adminAgregarAdmin', email: email, invitadoPor: _adminEmail }, function(res) {
-    if (res.exito) { document.getElementById('adm-nuevo-email').value = ''; adminIrAdmins(); }
-    else { err('err-admin-admins', res.error || 'Error.'); }
-  }, function(e) { err('err-admin-admins', 'Error: ' + e.message); });
+function adminRenderAdmins(res) {
+  var html = '';
+  (res || []).forEach(function(a) {
+    html += '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
+      '<div><div style="font-weight:700;font-size:0.9rem;">' + a.email + (a.principal ? ' <span class="badge badge-confirmada" style="margin-left:6px;">Principal</span>' : '') + '</div>' +
+      (a.invitadoPor ? '<div style="font-size:0.78rem;color:var(--muted);">Invitado por ' + a.invitadoPor + '</div>' : '') + '</div>' +
+      (!a.principal && _adminEmail === 'quindesvolcanicosrd@gmail.com'
+        ? '<button onclick="adminQuitarClick(\'' + a.email + '\')" style="border:2px solid var(--error-light-border);background:var(--error-lightest);color:var(--error);border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;font-size:0.8rem;flex-shrink:0;">Quitar</button>'
+        : '') +
+      '</div>';
+  });
+  var lista = document.getElementById('miliga-admins-lista');
+  if (!lista) return;
+  lista.innerHTML = html || '<p style="text-align:center;color:var(--muted);padding:10px 0;">Sin administradorxs.</p>';
+  void lista.offsetWidth; lista.style.animation = 'fadeIn 0.3s ease';
 }
 
 function adminQuitarClick(email) {
   if (!confirm('¿Quitar acceso admin a ' + email + '?')) return;
   adminApi({ action: 'adminQuitarAdmin', email: email, solicitante: _adminEmail }, function(res) {
-    if (res.exito) { adminIrAdmins(); } else { mostrarToast(res.error || 'Error.', 'error'); }
+    if (res.exito) { _adminCargarAdmins(); } else { mostrarToast(res.error || 'Error.', 'error'); }
   }, function(e) { mostrarToast(e.message || 'Error.', 'error'); });
+}
+
+// "Agregar administradorx" — bottom sheet con buscador (mismo patrón que
+// ajAbrirSheetPais()/_ajRenderPaises(), js/perfil.js: lista ya cargada,
+// filtro local por texto). La lista viene de adminGetCandidatosAdmin(), que
+// ya filtra del lado del backend (excluye admins existentes y personas con
+// equipo prestado) — no se duplica ese filtro acá, solo el de texto libre.
+var _admCandidatosAdmin = [];
+
+function adminAbrirSheetAgregarAdmin() {
+  var s = document.getElementById('admin-agregar-search'); if (s) s.value = '';
+  var listaInicial = document.getElementById('admin-agregar-lista');
+  if (listaInicial) listaInicial.innerHTML = '<div style="padding:16px;text-align:center;color:var(--muted);font-size:0.82rem;">Cargando...</div>';
+  var ov = document.getElementById('admin-sheet-agregar-overlay');
+  var sh = document.getElementById('admin-sheet-agregar');
+  if (ov) ov.style.display = 'block';
+  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
+  _registrarOverlayAbierto(adminCerrarSheetAgregarAdmin);
+  adminApi({ action: 'adminGetCandidatosAdmin' }, function(res) {
+    _admCandidatosAdmin = res || [];
+    _adminRenderCandidatosAdmin('');
+  }, function(e) {
+    var lista = document.getElementById('admin-agregar-lista');
+    if (lista) lista.innerHTML = '<div style="padding:16px;text-align:center;color:var(--muted);font-size:0.82rem;">Error al cargar.</div>';
+  });
+}
+
+function adminCerrarSheetAgregarAdmin(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var sh = document.getElementById('admin-sheet-agregar');
+  var ov = document.getElementById('admin-sheet-agregar-overlay');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+
+function _adminFiltrarCandidatosAdmin(q) { _adminRenderCandidatosAdmin(q); }
+
+function _adminRenderCandidatosAdmin(busqueda) {
+  var q = (busqueda || '').toLowerCase().trim();
+  var lista = q ? _admCandidatosAdmin.filter(function(u) { return (u.nombre || '').toLowerCase().indexOf(q) !== -1; }) : _admCandidatosAdmin;
+  var list = document.getElementById('admin-agregar-lista');
+  if (!list) return;
+  if (!lista.length) { list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--muted);font-size:0.82rem;">Sin resultados</div>'; return; }
+  list.innerHTML = lista.map(function(u) {
+    return '<div style="display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border-light);cursor:pointer;font-size:0.85rem;" onclick="adminElegirCandidatoAdmin(\'' + (u.email || '').replace(/'/g, "\\'") + '\')">' +
+      '<div><div style="font-weight:700;">' + u.nombre + '</div><div style="font-size:0.75rem;color:var(--muted);">' + (u.email || '') + '</div></div>' +
+      '</div>';
+  }).join('');
+  void list.offsetWidth; list.style.animation = 'fadeIn 0.09s ease';
+}
+
+function adminElegirCandidatoAdmin(email) {
+  if (!email) return;
+  adminApi({ action: 'adminAgregarAdmin', email: email, invitadoPor: _adminEmail }, function(res) {
+    if (res.exito) { adminCerrarSheetAgregarAdmin(); setTimeout(function() { _adminCargarAdmins(); }, 360); }
+    else { mostrarToast(res.error || 'Error al agregar.', 'error'); }
+  }, function(e) { mostrarToast(e.message || 'Error al agregar.', 'error'); });
+}
+
+// Mi Liga: banners (mismos que el dashboard, scope='-ml') + Administradorxs
+// + Personalización (color de énfasis, mismo componente que "Ajustes
+// adicionales") — "todo de entrada, sin subsecciones" (Tanda 3).
+function _adminCargarMiLiga() {
+  _adminCargarBanners('-ml');
+  _adminCargarAdmins();
+  adminRenderColorEnfasis();
 }
