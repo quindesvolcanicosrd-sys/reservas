@@ -112,7 +112,6 @@ var TOP_BAR_CONFIG = {
   's-misreservas': { titulo: 'Historial de reservas', volver: 's-home' }, 's-datos': { titulo: 'Ajustes', volver: 's-home' },
   's-admin-login': { titulo: 'Administradorx', volver: 's1' },
   's-admin-reservas': { titulo: 'Reservas', volver: 's-admin-home' },
-  's-admin-notif': { titulo: 'Notificaciones', volver: 's-admin-home' },
   's-admin-quellevar': { titulo: 'Qué llevar', volver: 's-admin-home' },
   's-admin-equip': { titulo: 'Equipamiento', volver: 's-admin-home' },
   's-admin-usuarios': { titulo: 'Usuarios', volver: 's-admin-home' },
