@@ -415,20 +415,42 @@ function _s4TotalOcultarFijo(box) {
   setTimeout(function() { if (!box.classList.contains('mostrar')) box.style.display = 'none'; }, 350);
 }
 
+// Skeleton de #lista-fechas mientras cargarFechas() espera la respuesta real
+// — 4 tarjetas placeholder con la misma forma que un .fi-header real
+// (título + 2 pills + círculo), shimmer vía .fi-skel-block (css/reservas.css).
+function _skeletonFechasHtml() {
+  var carta = '<div class="fecha-item fi-skeleton"><div class="fi-header">' +
+    '<div class="fi-content"><div class="fi-skel-block fi-skel-title"></div>' +
+    '<div class="fi-pills"><div class="fi-skel-block fi-skel-pill"></div><div class="fi-skel-block fi-skel-pill"></div></div></div>' +
+    '<div class="fi-skel-block fi-skel-circle"></div></div></div>';
+  return carta.repeat(4);
+}
+
 function cargarFechas() {
-  mostrarCargando('Verificando próximas fechas...');
-  // Bug real de regresión encontrado y corregido (ver MANIFEST, "Cambios
-  // recientes"): mientras este fetch está en curso, el fetch INDEPENDIENTE de
-  // prepararHome() (js/home.js, para poblar las cards de Home) puede resolver
-  // primero y llamar a su propio ocultarCargando() sin saber que este overlay
-  // ya está siendo usado para otra cosa — lo oculta de golpe, revelando Home
-  // de nuevo durante el resto de la espera hasta que este fetch finalmente
-  // resuelve y llama a ir('s4'). _cargandoFechasReserva (reusada del flujo
-  // ?nuevx=1, que ya la seteaba para su propia cadena — ver auth.js) le avisa
-  // a prepararHome() que no toque el overlay mientras tanto; se resetea a
-  // `false` en los 2 callbacks de abajo, sea cual sea el caller que la puso
-  // en `true`.
+  // Overlay de pantalla completa reemplazado por un skeleton contenido en
+  // #lista-fechas: navega a s4 de inmediato en vez de esperar la respuesta
+  // de getFechasDisponibles (ver MANIFEST, "Cambios recientes"). Se fuerza
+  // #lista-fechas visible y se ocultan los wrappers de pago mensual acá
+  // mismo (en vez de dejarlos como hayan quedado de una visita anterior a
+  // s4 dentro de la misma sesión, ej. veniendo de reagendar) — evita mostrar
+  // contenido mensual desactualizado detrás/junto al skeleton; el callback
+  // de abajo decide el estado final real una vez que la respuesta llega,
+  // exactamente igual que antes.
+  //
+  // window._cargandoFechasReserva se sigue seteando aunque esta función ya
+  // no controle ningún overlay propio — sigue siendo la señal que usa
+  // prepararHome() (js/home.js) para no cerrar el loader de boot del flujo
+  // ?nuevx=1 (ver auth.js) antes de tiempo; se resetea a `false` en los 2
+  // callbacks de abajo, igual que antes.
   window._cargandoFechasReserva = true;
+  var wrapperMensualInicial = document.getElementById('s4-tipo-pago-wrapper');
+  var mesesWrapperInicial = document.getElementById('s4-meses-wrapper');
+  var listaFechasSkelEl = document.getElementById('lista-fechas');
+  if (wrapperMensualInicial) wrapperMensualInicial.style.display = 'none';
+  if (mesesWrapperInicial) mesesWrapperInicial.style.display = 'none';
+  if (listaFechasSkelEl) { listaFechasSkelEl.style.display = 'block'; listaFechasSkelEl.innerHTML = _skeletonFechasHtml(); }
+  ir('s4');
+
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : '';
   var necesitaProtec = d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no';
   function esTallaAgotada(f) {
@@ -541,7 +563,6 @@ function cargarFechas() {
     //   setTimeout(function() { mostrarModalEquip(agotadasEquip); }, 300);
     // }
     window._cargandoFechasReserva = false;
-    ocultarCargando(); ir('s4');
     if (puedeMensual) {
       setTimeout(function() { _updateTpSlider(false); }, 50);
     }
@@ -550,7 +571,7 @@ function cargarFechas() {
         mostrarModalInfoReserva(function(){});
       }
     }, 400);
-  }, function(e) { window._cargandoFechasReserva = false; ocultarCargando(); ir('s-home'); mostrarToast(e.message || 'No se pudieron cargar las fechas disponibles.', 'error'); });
+  }, function(e) { window._cargandoFechasReserva = false; ir('s-home'); mostrarToast(e.message || 'No se pudieron cargar las fechas disponibles.', 'error'); });
 }
 
 function toggleFecha(el, fecha) {
@@ -778,8 +799,18 @@ function continuar_pago() {
 }
 
 function confirmarReserva(btn) {
-  if (btn) btn.disabled = true;
-  mostrarCargando('Guardando tu reserva/pago...');
+  // Overlay de pantalla completa reemplazado por spinner inline en el botón
+  // (mismo patrón .btn-spinner que ya usan adminEnviarNotif()/js/admin.js y
+  // mecConfirmar()/js/perfil.js) — la persona se queda viendo s4/s-pago en
+  // vez de que se le tape todo (ver MANIFEST, "Cambios recientes"). Se
+  // guarda el HTML original del botón (en vez de hardcodear el texto a
+  // restaurar, como hacen esos otros 2 call sites) porque esta función
+  // recibe 2 botones distintos según el caller (#btn-s4-continuar desde
+  // continuar_s4() cuando la reserva es 100% gratis, #btn-pago desde
+  // continuar_pago()) — hardcodear un solo string de restauración acoplaría
+  // esta función al markup de ambos botones a la vez.
+  var btnHtmlOriginal = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Guardando...'; }
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : 'No'; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : 'No';
   var itemsFallidos = []; // fechas/meses cuyo guardarReserva falló
   var erroresPorFecha = {}; // fecha -> mensaje real del backend (o de red), solo para las que fallaron
@@ -789,8 +820,7 @@ function confirmarReserva(btn) {
   function finalizar() {
     var totalIntentos = E.tipoPago === 'mensual' ? E.meses.length : E.fechas.length;
     if (totalIntentos > 0 && itemsFallidos.length === totalIntentos) {
-      ocultarCargando();
-      if (btn) btn.disabled = false;
+      if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
       mostrarToast('No se pudo guardar tu reserva. Intenta de nuevo.', 'error');
       return;
     }
@@ -898,7 +928,13 @@ function confirmarReserva(btn) {
       if (btnWpExito && E.wpUrl) { btnWpExito.href = E.wpUrl; btnWpExito.style.display = 'flex'; }
     }
     E.reagendando = false;
-    ocultarCargando(); ir('s6');
+    // Restaurar el botón acá (no solo en el camino de fallo total de arriba)
+    // para que no quede con el spinner/"Guardando..." pegado si la persona
+    // vuelve a s4/s-pago más adelante en la misma sesión (ninguna otra
+    // función repuebla el innerHTML de estos botones, solo _resetChkPago()
+    // vuelve a deshabilitar #btn-pago sin tocar su texto).
+    if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
+    ir('s6');
     if (huboFalloParcial) {
       mostrarToast('Algunas fechas no se pudieron guardar', 'error');
     } else {

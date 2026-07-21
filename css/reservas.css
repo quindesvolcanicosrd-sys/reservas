@@ -25,6 +25,16 @@
 .fecha-item.sel .fi-circle { background: var(--brand); border-color: var(--brand); }
 .fecha-item.sel .fi-circle .material-symbols-outlined { color: var(--white); }
 
+/* Skeleton de #lista-fechas mientras cargarFechas() (js/reservas.js) espera
+   la respuesta real — mismo shimmer que ya usa #gsignin-skeleton-main
+   (index.html), sobre bloques con la forma de un .fi-header real (título +
+   2 pills + círculo). */
+.fi-skeleton .fi-header { align-items: center; cursor: default; }
+.fi-skel-block { background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-shine) 50%, var(--skeleton-base) 75%); background-size: 200% 100%; animation: skeletonShimmer 1.2s ease-in-out infinite; border-radius: 4px; }
+.fi-skel-title { width: 55%; height: 14px; margin-bottom: 10px; }
+.fi-skel-pill { width: 72px; height: 22px; border-radius: 99px; }
+.fi-skel-circle { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; }
+
 .fi-footer { border-top: 1px solid var(--border-2); padding: 10px 16px; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s; }
 .fi-footer:hover { background: var(--brand-subtle); }
 .fi-footer-label { font-size: 0.72rem; font-weight: 600; color: var(--muted); }
