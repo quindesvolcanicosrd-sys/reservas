@@ -6,20 +6,23 @@ var _admTodasReservas = [];
 var _admFiltro = 'pendientes';
 var _gisInicializado = false;
 
-// Tanda 2 del dashboard admin (banners condicionales + burbuja de
-// Notificación + container transform de las 3 tiles de contenido largo) —
-// ver MANIFEST.md "Cambios recientes".
-// `_admDashAbierto` solo trackea lo que puede convivir con el dashboard
-// visible: los 2 acordeones de banner ('admin-banner-pendientes-body'/
-// 'admin-banner-equip-body') o la burbuja de notificación ('notif') — las 3
-// pantallas completas NUNCA conviven con el dashboard (lo tapan por
-// completo), así que no necesitan wrappearse acá para la exclusión mutua.
+// Dashboard admin: banners condicionales + burbujas embebidas de las 4
+// tiles (Revisar reservas / Notificación / Equipamiento / Qué llevar) —
+// ver MANIFEST.md "Cambios recientes". Las 4 tiles usan el MISMO mecanismo
+// de burbuja inline (nunca pantalla completa, nunca navegación) — ver
+// ADMIN_TILE_INFO/adminToggleBurbuja() más abajo. `_admDashAbierto` trackea
+// qué hay abierto entre lo que puede convivir con el dashboard visible: los
+// 2 acordeones de banner ('admin-banner-pendientes-body'/
+// 'admin-banner-equip-body') o una de las 4 burbujas (clave de
+// ADMIN_TILE_INFO: 'notif'/'s-admin-reservas'/'s-admin-equip'/
+// 's-admin-quellevar') — todo vive siempre en el mismo `s-admin-home`, así
+// que sí necesitan exclusión mutua entre sí (a diferencia de cuando 3 de
+// ellas eran pantallas completas que se tapaban por completo).
 var _admDashAbierto = null;
-var _admDashOrigenRect = null; // rect de la tile que abrió la pantalla completa actual, para la animación de cierre
 var _admBannerPendientes = null; // null = todavía no llegó la respuesta
 var _admBannerQueLlevar = null;
 
-var ADMIN_PANTALLAS = ['s-admin-login','s-admin-home','s-admin-reservas','s-admin-quellevar','s-admin-equip','s-admin-usuarios'];
+var ADMIN_PANTALLAS = ['s-admin-login','s-admin-home','s-admin-usuarios'];
 
 function adminApi(params, onSuccess, onError) {
   params.adminToken = _adminToken;
@@ -90,12 +93,15 @@ function onGoogleCredential(resp) {
   }, function(e) { ocultarCargando(); err('err-admin-login', 'Error al verificar acceso. Intenta de nuevo.'); });
 }
 
+// Sin saludo/escudo en el encabezado a propósito (ver MANIFEST.md "Cambios
+// recientes" — corrección de diseño): _adminNombre/_adminEmail siguen
+// usándose en otros lados (Mi Liga no, pero sí quedan disponibles por si
+// hace falta mostrarlos en algún lugar futuro), simplemente no en el
+// encabezado del dashboard.
 function adminEntrar() {
-  var nombreEl = document.getElementById('admin-dash-nombre');
-  if (nombreEl) nombreEl.textContent = _adminNombre || _adminEmail;
   adminRenderColorEnfasis();
   _adminCargarPrecios();
-  _admDashAbierto = null; _admDashOrigenRect = null;
+  _admDashAbierto = null;
   ir('s-admin-home');
   _adminCargarBanners();
 }
@@ -120,17 +126,20 @@ function adminToggleAjustesAdicionales() {
   }
 }
 
-// ── Dashboard admin, Tanda 2: banners condicionales ─────────────────────────────
-// Cierra lo que esté abierto entre los 2 acordeones de banner y la burbuja de
-// notificación (los únicos 3 que pueden convivir con el dashboard visible al
-// mismo tiempo) — llamado al principio de cualquier acción "abrir X" para que
-// nunca queden 2 abiertos a la vez. Defensivo ante cualquier valor viejo que
-// _admDashAbierto pudiera tener (ej. si el gesto nativo de "atrás" saltó por
-// encima de _adminCerrarFullscreen()): cualquier valor que no sea uno de los
-// 3 casos conocidos simplemente se descarta sin tocar el DOM.
+// ── Dashboard admin: banners condicionales + burbujas embebidas ─────────────────
+// Cierra lo que esté abierto entre los 2 acordeones de banner y las 4
+// burbujas de tile (los únicos 6 que pueden convivir con el dashboard
+// visible al mismo tiempo) — llamado al principio de cualquier acción
+// "abrir X" para que nunca queden 2 abiertos a la vez. Defensivo ante
+// cualquier valor viejo que _admDashAbierto pudiera tener: cualquier valor
+// que no matchee ninguno de los casos conocidos simplemente se descarta
+// sin tocar el DOM.
 function _adminCerrarTodoAbierto() {
-  if (_admDashAbierto === 'notif') {
-    _adminCerrarNotifBubbleInterno();
+  if (_admDashAbierto && ADMIN_TILE_INFO[_admDashAbierto]) {
+    var tile = document.querySelector('.admin-dash-tile.admin-tile-activa');
+    if (tile) tile.classList.remove('admin-tile-activa');
+    var bubble = document.getElementById(ADMIN_TILE_INFO[_admDashAbierto].bubbleId);
+    if (bubble) bubble.style.display = 'none';
   } else if (_admDashAbierto && _admDashAbierto.indexOf('admin-banner-') === 0) {
     // Cualquier bodyId de banner, con o sin sufijo de scope (Tanda 3, ver
     // MANIFEST.md "Cambios recientes" -- Mi Liga reusa estos mismos banners
@@ -307,124 +316,92 @@ function _adminRenderBannerQueLlevar(scope) {
     '</div>';
 }
 
-// ── Dashboard admin, Tanda 2: burbuja de "Enviar notificación" ──────────────────
-// Reemplaza a la vieja adminIrNotif()/pantalla s-admin-notif -- mismos ids/
-// campos/función adminEnviarNotif(), ahora embebidos como burbuja bajo la
-// tile en vez de navegar a una pantalla completa (contenido corto, ver
-// MANIFEST.md "Cambios recientes").
-function adminAbrirNotifBubble(tileEl) {
-  var yaAbierto = _admDashAbierto === 'notif';
+// ── Dashboard admin: burbujas embebidas de las 4 tiles ──────────────────────────
+// Corrección de diseño (ver MANIFEST.md "Cambios recientes" — reemplaza el
+// "container transform" a pantalla completa de la Tanda 2 para Revisar
+// reservas/Equipamiento/Qué llevar): las 4 tiles comparten AHORA el mismo
+// mecanismo — el que ya tenía Notificación desde la Tanda 2 — de burbuja
+// embebida anclada justo debajo de su fila del grid, sin importar cuán
+// largo sea el contenido: nunca pantalla completa, nunca navegación, nunca
+// modal. Un solo componente/función para las 4, no una variante por tile.
+// `cargar` de cada tile es responsable de poblar su propio contenido
+// (fetch + render, reusando las funciones ya existentes de cada una).
+var ADMIN_TILE_INFO = {
+  'notif': {
+    bubbleId: 'admin-notif-bubble',
+    cargar: function() {
+      var selDest = document.getElementById('adm-notif-destino');
+      selDest.innerHTML = '<option value="todos">Todes (suscritxs)</option>';
+      adminApi({ action: 'adminGetUsuarios' }, function(res) {
+        (res || []).forEach(function(u) {
+          var op = document.createElement('option'); op.value = op.textContent = u.nombre; selDest.appendChild(op);
+        });
+      }, function() {});
+      document.getElementById('adm-notif-titulo').value = '';
+      document.getElementById('adm-notif-msg').value = '';
+      document.getElementById('adm-notif-fecha').value = '';
+      document.getElementById('err-admin-notif').style.display = 'none';
+    }
+  },
+  's-admin-reservas': {
+    bubbleId: 'admin-burbuja-reservas',
+    listaId: 'admin-reservas-lista',
+    cargar: function() {
+      adminApi({ action: 'adminGetReservas' }, function(res) {
+        _admTodasReservas = res || [];
+        adminRenderReservas();
+      }, function(e) { mostrarToast(e.message || 'Error al cargar reservas.', 'error'); });
+      _adminUpdateFiltroSlider(false);
+    }
+  },
+  's-admin-equip': {
+    bubbleId: 'admin-burbuja-equip',
+    listaId: 'admin-equip-lista',
+    cargar: function() {
+      adminApi({ action: 'adminGetEquipamiento' }, function(res) {
+        adminRenderEquip(res);
+      }, function(e) { mostrarToast(e.message || 'Error al cargar equipamiento.', 'error'); });
+    }
+  },
+  's-admin-quellevar': {
+    bubbleId: 'admin-burbuja-quellevar',
+    listaId: 'admin-quellevar-lista',
+    cargar: function() {
+      adminApi({ action: 'adminGetQueLlevar' }, function(res) {
+        adminRenderQueLlevar(res);
+      }, function(e) { mostrarToast(e.message || 'Error al cargar equipamiento.', 'error'); });
+    }
+  }
+};
+
+// Abre la burbuja de `tileKey` SIEMPRE (sin toggle) -- usada tanto por
+// adminToggleBurbuja() (click directo en la tile) como por callers externos
+// que quieren "asegurar abierta" sin cerrarla si ya lo estaba (adminIrReservas()).
+function _adminAbrirBurbuja(tileKey, tileEl) {
+  var info = ADMIN_TILE_INFO[tileKey];
+  if (!info) return;
   _adminCerrarTodoAbierto();
-  if (yaAbierto) return;
-  var selDest = document.getElementById('adm-notif-destino');
-  selDest.innerHTML = '<option value="todos">📢 Todes (suscritxs)</option>';
-  adminApi({ action: 'adminGetUsuarios' }, function(res) {
-    (res || []).forEach(function(u) {
-      var op = document.createElement('option'); op.value = op.textContent = u.nombre; selDest.appendChild(op);
-    });
-  }, function() {});
-  document.getElementById('adm-notif-titulo').value = '';
-  document.getElementById('adm-notif-msg').value = '';
-  document.getElementById('adm-notif-fecha').value = '';
-  document.getElementById('err-admin-notif').style.display = 'none';
-  tileEl.classList.add('admin-notif-tile-activa');
-  document.getElementById('admin-notif-bubble').style.display = 'block';
-  _admDashAbierto = 'notif';
+  var tile = tileEl || document.querySelector('.admin-dash-tile[data-tile="' + tileKey + '"]');
+  if (tile) tile.classList.add('admin-tile-activa');
+  var bubble = document.getElementById(info.bubbleId);
+  if (bubble) bubble.style.display = 'block';
+  // Skeleton mientras cargan los datos reales (mismo criterio "Fase 2" ya
+  // establecido en el resto de la app: mostrar de inmediato, swap al llegar
+  // la respuesta) -- solo para las 3 tiles con lista propia, Notificación
+  // no tiene ninguna lista que precargar.
+  if (info.listaId) {
+    var lista = document.getElementById(info.listaId);
+    if (lista) lista.innerHTML = _skeletonQueLlevarHtml();
+  }
+  _admDashAbierto = tileKey;
+  info.cargar();
 }
 
-function _adminCerrarNotifBubbleInterno() {
-  var tile = document.querySelector('.admin-dash-tile.admin-notif-tile-activa');
-  if (tile) tile.classList.remove('admin-notif-tile-activa');
-  var bubble = document.getElementById('admin-notif-bubble');
-  if (bubble) bubble.style.display = 'none';
-}
-
-// ── Dashboard admin, Tanda 2: "container transform" de tile a pantalla completa ─
-// Usado por Revisar reservas / Equipamiento / Qué llevar (contenido largo,
-// ver MANIFEST.md "Cambios recientes"): la tile se resalta y de ahí "crece"
-// (técnica FLIP: transform translate+scale desde el rect de la tile hasta el
-// rect natural de la pantalla ya activa, nunca animando width/height/top/left
-// directo) hasta cubrir toda la pantalla, con el mismo color de fondo que
-// tenía la tile resaltada. El botón atrás de #top-bar (ya lo muestra ir() vía
-// TOP_BAR_CONFIG) se reemplaza por la animación inversa antes de volver de
-// verdad al dashboard.
-function _adminAbrirFullscreen(pantallaId, origenEl, contenedorSkeletonId, cargarFn) {
-  _adminCerrarTodoAbierto();
-  var tile = origenEl || document.querySelector('.admin-dash-tile[data-tile="' + pantallaId + '"]');
-  if (!tile) { ir(pantallaId); cargarFn(); return; }
-  tile.classList.add('admin-tile-highlight');
-  setTimeout(function() {
-    tile.classList.remove('admin-tile-highlight');
-    var tileRect = tile.getBoundingClientRect();
-    var tileBg = getComputedStyle(tile).backgroundColor;
-    var skelCont = document.getElementById(contenedorSkeletonId);
-    if (skelCont) skelCont.innerHTML = _skeletonQueLlevarHtml();
-    var pantalla = document.getElementById(pantallaId);
-    pantalla.style.animation = 'none';
-    ir(pantallaId);
-    var fullRect = pantalla.getBoundingClientRect();
-    var bgFinal = getComputedStyle(pantalla).backgroundColor;
-    var scaleX = tileRect.width / fullRect.width;
-    var scaleY = tileRect.height / fullRect.height;
-    var tx = (tileRect.left + tileRect.width / 2) - (fullRect.left + fullRect.width / 2);
-    var ty = (tileRect.top + tileRect.height / 2) - (fullRect.top + fullRect.height / 2);
-    pantalla.style.transformOrigin = 'center center';
-    pantalla.style.overflow = 'hidden';
-    pantalla.style.borderRadius = '14px';
-    pantalla.style.background = tileBg;
-    pantalla.style.transition = 'none';
-    pantalla.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scaleX + ',' + scaleY + ')';
-    void pantalla.offsetWidth;
-    pantalla.style.transition = 'transform 0.38s var(--ease-sheet), border-radius 0.38s var(--ease-sheet), background 0.38s ease';
-    requestAnimationFrame(function() {
-      pantalla.style.transform = 'translate(0,0) scale(1,1)';
-      pantalla.style.borderRadius = '0px';
-      pantalla.style.background = bgFinal;
-    });
-    var topBtn = document.getElementById('top-bar-btn');
-    if (topBtn) topBtn.onclick = function() { _adminCerrarFullscreen(pantallaId); };
-    setTimeout(function() {
-      pantalla.style.transition = '';
-      pantalla.style.transform = '';
-      pantalla.style.borderRadius = '';
-      pantalla.style.overflow = '';
-      pantalla.style.background = '';
-    }, 400);
-    _admDashOrigenRect = tileRect;
-    cargarFn();
-  }, 150);
-}
-
-// Animación inversa: encoge la pantalla activa de vuelta al rect de la tile
-// que la abrió (guardado en _admDashOrigenRect al abrir -- la tile real vive
-// dentro de s-admin-home, oculta con display:none mientras la pantalla
-// completa está activa, así que su rect ya no se puede volver a medir en
-// vivo acá) y recién entonces navega de verdad de vuelta al dashboard.
-function _adminCerrarFullscreen(pantallaId) {
-  var pantalla = document.getElementById(pantallaId);
-  var rect = _admDashOrigenRect;
-  if (!pantalla || !rect) { volver('s-admin-home'); return; }
-  var fullRect = pantalla.getBoundingClientRect();
-  var scaleX = rect.width / fullRect.width;
-  var scaleY = rect.height / fullRect.height;
-  var tx = (rect.left + rect.width / 2) - (fullRect.left + fullRect.width / 2);
-  var ty = (rect.top + rect.height / 2) - (fullRect.top + fullRect.height / 2);
-  pantalla.style.transformOrigin = 'center center';
-  pantalla.style.overflow = 'hidden';
-  pantalla.style.transition = 'transform 0.32s var(--ease-sheet), border-radius 0.32s var(--ease-sheet)';
-  requestAnimationFrame(function() {
-    pantalla.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scaleX + ',' + scaleY + ')';
-    pantalla.style.borderRadius = '14px';
-  });
-  setTimeout(function() {
-    volver('s-admin-home');
-    pantalla.style.transition = '';
-    pantalla.style.transform = '';
-    pantalla.style.borderRadius = '';
-    pantalla.style.overflow = '';
-    _admDashOrigenRect = null;
-    _adminCargarBanners();
-  }, 320);
+// Click directo en una tile: si ya estaba abierta, la cierra (toggle); si
+// no, la abre. Es el único onclick de las 4 tiles del dashboard.
+function adminToggleBurbuja(tileKey, tileEl) {
+  if (_admDashAbierto === tileKey) { _adminCerrarTodoAbierto(); return; }
+  _adminAbrirBurbuja(tileKey, tileEl);
 }
 
 // ── Color de énfasis ──────────────────────────────────────────────────────────
@@ -499,32 +476,29 @@ function adminCerrarSesionLocal(silencioso) {
 // ── Reservas ──────────────────────────────────────────────────────────────────
 // origenEl: la tile que disparó la apertura (pasada como `this` desde
 // index.html); si no llega (ej. el link "Ver todas las reservas ↗" del
-// banner de pendientes), _adminAbrirFullscreen() la busca sola por
-// data-tile="s-admin-reservas".
+// banner de pendientes), _adminAbrirBurbuja() la busca sola por
+// data-tile="s-admin-reservas". A diferencia del click directo en la tile
+// (adminToggleBurbuja(), que cierra si ya estaba abierta), esta función
+// SIEMPRE asegura que la burbuja quede abierta -- la usan "Ver todas ↗" y
+// adminIrReservasDesdeMiLiga(), donde cerrar no tendría sentido.
 function adminIrReservas(origenEl) {
-  _adminAbrirFullscreen('s-admin-reservas', origenEl, 'admin-reservas-lista', function() {
-    adminApi({ action: 'adminGetReservas' }, function(res) {
-      _admTodasReservas = res || [];
-      adminRenderReservas();
-    }, function(e) { mostrarToast(e.message || 'Error al cargar reservas.', 'error'); });
-  });
+  if (_admDashAbierto === 's-admin-reservas') return;
+  _adminAbrirBurbuja('s-admin-reservas', origenEl);
 }
 
 // "Ver todas las reservas ↗" del banner de pendientes DENTRO de Mi Liga
 // (Tanda 3): a diferencia del mismo link en el dashboard (que ya está sobre
 // s-admin-home), acá primero hay que cerrar el aj-sub-miliga (overlay sobre
 // s-datos) y recién entonces navegar al dashboard antes de poder abrir la
-// pantalla completa de Reservas -- adminIrReservas() sin origenEl encuentra
-// sola la tile real por data-tile, una vez que s-admin-home ya es la
-// pantalla activa.
+// burbuja de Reservas -- adminIrReservas() sin origenEl encuentra sola la
+// tile real por data-tile, una vez que s-admin-home ya es la pantalla activa.
 function adminIrReservasDesdeMiLiga() {
   cerrarAjSub('aj-sub-miliga');
   setTimeout(function() { ir('s-admin-home'); adminIrReservas(); }, 340);
 }
 
-// Botón "Actualizar" DENTRO de s-admin-reservas ya abierta -- a diferencia de
-// adminIrReservas(), no dispara ninguna animación (la pantalla ya está
-// activa), solo refresca los datos en el lugar.
+// Botón "Actualizar" DENTRO de la burbuja de Reservas ya abierta -- solo
+// refresca los datos en el lugar.
 function adminRefreshReservas() {
   adminApi({ action: 'adminGetReservas' }, function(res) {
     _admTodasReservas = res || [];
@@ -532,11 +506,31 @@ function adminRefreshReservas() {
   }, function(e) { mostrarToast(e.message || 'Error al cargar reservas.', 'error'); });
 }
 
-function adminFiltroReservas(filtro, label) {
+// Filtro Pendientes/Todas -- segmented control (.tp-seg, mismo componente ya
+// usado para "tipo de pago" en s4/js/reservas.js, ver MANIFEST.md "Cambios
+// recientes" — reemplaza las pills .opcion, que no tenían la forma de pill
+// del resto de la app) en vez de las .opcion/.sel de antes.
+function adminFiltroReservas(filtro) {
   _admFiltro = filtro;
-  document.querySelectorAll('#s-admin-reservas .opcion').forEach(function(o) { o.classList.remove('sel'); });
-  label.classList.add('sel');
+  document.getElementById('admin-filtro-pendientes').classList.toggle('active', filtro === 'pendientes');
+  document.getElementById('admin-filtro-todas').classList.toggle('active', filtro === 'todas');
+  _adminUpdateFiltroSlider(true);
   adminRenderReservas();
+}
+
+// Reposiciona el slider del segmented control -- mismo cálculo que
+// _updateTpSlider() (js/reservas.js), pero sobre los ids propios de este
+// filtro (offsetWidth/offsetLeft solo dan un valor real una vez que la
+// burbuja ya es visible, por eso _adminAbrirBurbuja() la llama recién
+// después de mostrar #admin-burbuja-reservas, sin animar el primer
+// posicionamiento).
+function _adminUpdateFiltroSlider(animate) {
+  var slider = document.getElementById('admin-filtro-slider');
+  var activo = document.getElementById(_admFiltro === 'pendientes' ? 'admin-filtro-pendientes' : 'admin-filtro-todas');
+  if (!slider || !activo) return;
+  slider.classList.toggle('animado', !!animate);
+  slider.style.width = activo.offsetWidth + 'px';
+  slider.style.transform = 'translateX(' + activo.offsetLeft + 'px)';
 }
 
 function adminRenderReservas() {
@@ -594,7 +588,7 @@ function adminRenderReservas() {
 
   var html = '';
   if (lista.length === 0) {
-    html = '<p style="text-align:center;color:var(--muted);padding:20px 0;">' + (_admFiltro === 'pendientes' ? 'No hay reservas pendientes. 🎉' : 'No hay reservas.') + '</p>';
+    html = '<p style="text-align:center;color:var(--muted);padding:20px 0;">' + (_admFiltro === 'pendientes' ? 'No hay reservas pendientes.' : 'No hay reservas.') + '</p>';
   } else {
     orden.forEach(function(fecha, idx) {
       var count = grupos[fecha].length;
@@ -616,19 +610,24 @@ function adminRenderReservas() {
       }
       grupos[fecha].forEach(function(r) {
         var badgeClass = r.estado === 'Confirmada' ? 'badge-confirmada' : r.estado === 'Cancelada' ? 'badge-cancelada' : 'badge-pendiente';
+        // Mismo componente que ya usa js/home.js para patines/protecciones
+        // (.fi-pill/.fi-pill-patines, ver MANIFEST.md "Cambios recientes")
+        // en vez de emojis sueltos en texto plano.
         var equip = [];
-        if (r.talla && r.talla.toLowerCase() !== 'no') equip.push('🛼 ' + r.talla);
-        if (r.protecciones && r.protecciones.toLowerCase() !== 'no') equip.push('🛡️ ' + r.protecciones);
+        if (r.talla && r.talla.toLowerCase() !== 'no') equip.push('<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">roller_skating</span>' + r.talla + '</span>');
+        if (r.protecciones && r.protecciones.toLowerCase() !== 'no') equip.push('<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">shield</span>' + r.protecciones + '</span>');
+        var detalleEquip = equip.length ? equip.join(' ') : '<span class="material-symbols-outlined" style="font-size:0.85rem;vertical-align:-2px;">check_circle</span> Equipo propio';
+        var detalleMonto = r.monto ? ' · <span class="material-symbols-outlined" style="font-size:0.85rem;vertical-align:-2px;">payments</span> ' + r.monto : '';
         html += '<div class="reserva-card" style="margin-bottom:8px;">' +
           '<div class="reserva-header"><span class="reserva-fecha">' + r.nombre + '</span><span class="badge ' + badgeClass + '">' + r.estado + '</span></div>' +
-          '<div class="reserva-detalle">' + (equip.length ? equip.join(' · ') : '✅ Equipo propio') + (r.monto ? ' · 💵 ' + r.monto : '') + '</div>';
+          '<div class="reserva-detalle">' + detalleEquip + detalleMonto + '</div>';
         if (r.estado === 'Pendiente') {
           html += '<div style="display:flex;gap:8px;margin-top:10px;">' +
-            '<button class="btn btn-primary" style="padding:11px;font-size:0.82rem;" onclick="adminCambiarEstado(' + r.fila + ',\'Confirmada\',this)">✅ Aprobar</button>' +
-            '<button class="btn-cancelar" style="margin-top:0;" onclick="adminCambiarEstado(' + r.fila + ',\'Cancelada\',this)">❌ Cancelar</button>' +
+            '<button class="btn btn-primary" style="padding:11px;font-size:0.82rem;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="adminCambiarEstado(' + r.fila + ',\'Confirmada\',this)"><span class="material-symbols-outlined" style="font-size:1rem;">check</span> Aprobar</button>' +
+            '<button class="btn-cancelar" style="margin-top:0;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="adminCambiarEstado(' + r.fila + ',\'Cancelada\',this)"><span class="material-symbols-outlined" style="font-size:1rem;">close</span> Cancelar</button>' +
             '</div>';
         } else if (r.estado === 'Confirmada') {
-          html += '<button class="btn-cancelar" onclick="adminCambiarEstado(' + r.fila + ',\'Cancelada\',this)">❌ Cancelar esta reserva</button>';
+          html += '<button class="btn-cancelar" style="display:flex;align-items:center;justify-content:center;gap:6px;" onclick="adminCambiarEstado(' + r.fila + ',\'Cancelada\',this)"><span class="material-symbols-outlined" style="font-size:1rem;">close</span> Cancelar esta reserva</button>';
         }
         html += '</div>';
       });
@@ -668,8 +667,10 @@ function adminCambiarEstado(fila, estado, btn) {
 }
 
 // ── Notificaciones ────────────────────────────────────────────────────────────
-// adminAbrirNotifBubble()/_adminCerrarNotifBubbleInterno() están más arriba,
-// junto al resto de la mecánica de banners/burbuja del dashboard (Tanda 2).
+// ADMIN_TILE_INFO['notif'].cargar (más arriba) tiene el reset de campos que
+// antes vivía en adminAbrirNotifBubble(), junto al resto de la mecánica de
+// banners/burbuja del dashboard.
+var _BTN_ADM_NOTIF_HTML = '<span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">send</span> Enviar notificación';
 function adminEnviarNotif() {
   var titulo = document.getElementById('adm-notif-titulo').value.trim();
   var msg = document.getElementById('adm-notif-msg').value.trim();
@@ -685,12 +686,12 @@ function adminEnviarNotif() {
   var btn = document.getElementById('btn-adm-notif');
   btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Enviando...';
   adminApi({ action: 'adminEnviarPush', titulo: titulo, mensaje: msg, destino: destino, sendAfter: sendAfter }, function(res) {
-    btn.disabled = false; btn.innerHTML = 'Enviar notificación 📣';
+    btn.disabled = false; btn.innerHTML = _BTN_ADM_NOTIF_HTML;
     if (res.exito) {
       mostrarToast(sendAfter ? 'Notificación programada.' : 'Notificación enviada.', 'ok');
       document.getElementById('adm-notif-titulo').value = ''; document.getElementById('adm-notif-msg').value = ''; document.getElementById('adm-notif-fecha').value = '';
     } else { err('err-admin-notif', res.error || 'Error al enviar.'); }
-  }, function(e) { btn.disabled = false; btn.innerHTML = 'Enviar notificación 📣'; err('err-admin-notif', 'Error: ' + e.message); });
+  }, function(e) { btn.disabled = false; btn.innerHTML = _BTN_ADM_NOTIF_HTML; err('err-admin-notif', 'Error: ' + e.message); });
 }
 
 // ── Qué llevar ────────────────────────────────────────────────────────────────
@@ -710,23 +711,17 @@ function _skeletonQueLlevarHtml() {
   return fila.repeat(4);
 }
 
-function adminIrQueLlevar(origenEl) {
-  _adminAbrirFullscreen('s-admin-quellevar', origenEl, 'admin-quellevar-lista', function() {
-    adminApi({ action: 'adminGetQueLlevar' }, function(res) {
-      adminRenderQueLlevar(res);
-    }, function(e) { mostrarToast(e.message || 'Error al cargar equipamiento.', 'error'); });
-  });
-}
-
 // Fila HTML de una persona (nombre + pronombres + WhatsApp + equipamiento) —
-// extraída para reusarse tal cual tanto en adminRenderQueLlevar() (pantalla
+// extraída para reusarse tal cual tanto en adminRenderQueLlevar() (burbuja
 // completa) como en _adminRenderBannerQueLlevar() (banner embebido del
-// dashboard, Tanda 2, ver MANIFEST.md "Cambios recientes").
+// dashboard, ver MANIFEST.md "Cambios recientes").
 function _adminQueLlevarFilaHtml(q) {
-  var equip = []; if (q.patines && q.patines.toLowerCase() !== 'no') equip.push('🛼 Patines ' + q.patines);
+  // Mismo componente .fi-pill/.fi-pill-patines que adminRenderReservas()
+  // (ver esa entrada en "Cambios recientes") en vez de emojis sueltos.
+  var equip = []; if (q.patines && q.patines.toLowerCase() !== 'no') equip.push('<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">roller_skating</span>Patines ' + q.patines + '</span>');
   if (q.protecciones && q.protecciones.toLowerCase() !== 'no') {
-    var protecTexto = q.protecciones.toLowerCase() === 'sí' || q.protecciones.toLowerCase() === 'si' ? '🛡️ Protecciones completas' : '🛡️ ' + q.protecciones;
-    equip.push(protecTexto);
+    var protecTexto = q.protecciones.toLowerCase() === 'sí' || q.protecciones.toLowerCase() === 'si' ? 'Protecciones completas' : q.protecciones;
+    equip.push('<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">shield</span>' + protecTexto + '</span>');
   }
   var pronBadge = q.pronombres ? '<span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:20px;background:var(--dk-badge-bg);color:var(--dk-badge-text);font-size:0.68rem;font-weight:600;vertical-align:middle;">' + q.pronombres + '</span>' : '';
   if (!q.waLink && q.telefono) {
@@ -735,13 +730,13 @@ function _adminQueLlevarFilaHtml(q) {
     q.waLink = 'https://wa.me/' + codigoPais + q.telefono.replace(/\D/g,'').replace(/^0+/,'');
   }
   var waBtnQL = q.waLink ? '<a href="' + q.waLink + '" target="_blank" style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--wa-brand);flex-shrink:0;text-decoration:none;margin-left:8px;vertical-align:middle;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.528 5.845L.057 23.571a.75.75 0 0 0 .92.921l5.763-1.473A11.943 11.943 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 0 1-5.006-1.374l-.36-.214-3.713.949.981-3.625-.235-.374A9.818 9.818 0 1 1 12 21.818z"/></svg></a>' : '';
-  return '<div class="reserva-card" style="margin-bottom:8px;"><div style="display:flex;align-items:center;justify-content:space-between;"><div style="font-weight:800;">' + q.nombre + pronBadge + '</div>' + waBtnQL + '</div><div class="reserva-detalle" style="margin-top:4px;">' + (equip.join(' · ') || '—') + '</div></div>';
+  return '<div class="reserva-card" style="margin-bottom:8px;"><div style="display:flex;align-items:center;justify-content:space-between;"><div style="font-weight:800;">' + q.nombre + pronBadge + '</div>' + waBtnQL + '</div><div class="reserva-detalle" style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;">' + (equip.join('') || '—') + '</div></div>';
 }
 
 function adminRenderQueLlevar(res) {
   var html = '';
   if (!res || res.length === 0) {
-    html = '<p style="text-align:center;color:var(--muted);padding:20px 0;">No hay equipamiento asignado por ahora. 🎉</p>';
+    html = '<p style="text-align:center;color:var(--muted);padding:20px 0;">No hay equipamiento asignado por ahora.</p>';
   } else {
     var grupos = {}, orden = [];
     var diasSemana = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
@@ -771,14 +766,9 @@ function adminRenderQueLlevar(res) {
 }
 
 // ── Equipamiento ──────────────────────────────────────────────────────────────
-function adminIrEquip(origenEl) {
-  _adminAbrirFullscreen('s-admin-equip', origenEl, 'admin-equip-lista', function() {
-    adminApi({ action: 'adminGetEquipamiento' }, function(res) {
-      adminRenderEquip(res);
-    }, function(e) { mostrarToast(e.message || 'Error al cargar equipamiento.', 'error'); });
-  });
-}
-
+// La tile "Equipamiento" llama adminToggleBurbuja('s-admin-equip', this)
+// directo (ver ADMIN_TILE_INFO más arriba) -- ya no hace falta una función
+// adminIrEquip() propia.
 function adminRenderEquip(res) {
   var html = '<div class="r-fila" style="display:flex;gap:8px;font-weight:800;font-size:0.78rem;text-transform:uppercase;color:var(--muted);padding:4px 0;"><span style="flex:1;">Talla</span><span style="width:110px;">Cantidad</span><span style="width:42px;"></span></div>';
   (res.tallas || []).forEach(function(t) { html += adminFilaTallaHtml(t.talla, t.cantidad); });

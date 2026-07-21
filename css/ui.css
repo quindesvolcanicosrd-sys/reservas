@@ -16,12 +16,23 @@
 .card p { color: var(--muted); font-size: 0.92rem; line-height: 1.6; margin-bottom: 16px; }
 
 .select-wrapper { position: relative; margin-bottom: 14px; }
-select, input[type="text"], input[type="tel"], input[type="email"], input[type="date"], input[type="password"], textarea {
+select, input[type="text"], input[type="tel"], input[type="email"], input[type="date"], input[type="datetime-local"], input[type="number"], input[type="password"], textarea {
   width: 100%; padding: 14px 16px; border-radius: 12px; font-size: 0.88rem; color: var(--text);
   background: var(--surface-2); border: 0px solid var(--border); appearance: none; -webkit-appearance: none;
   -moz-appearance: none; outline: none; transition: all 0.3s ease; font-family: inherit; caret-color: var(--brand);
 }
 select { padding-right: 40px; cursor: pointer; }
+/* input[type=number]: appearance:none de la regla de arriba no basta para
+   sacar las flechitas nativas en todos los motores (confirmado Chromium
+   real necesita además esto) — mismo criterio "sin apariencia default de
+   navegador" que ya aplica al resto de inputs de esta regla. */
+input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; }
+/* input[type=datetime-local]: el ícono nativo de calendario/reloj no se
+   puede recolorear con la paleta de la app en la mayoría de motores — se
+   deja el control nativo (mismo criterio ya aceptado para el selector de
+   fecha nativo en otras partes), pero al menos el resto del campo
+   (fondo/borde/radio/foco) queda consistente con el resto de inputs. */
 .select-wrapper::after {
   font-family: 'Material Symbols Outlined'; content: 'expand_more';
   position: absolute; right: 12px; top: 50%; transform: translateY(-50%);

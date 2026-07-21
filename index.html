@@ -597,40 +597,58 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
   <div class="pantalla" id="s-admin-home">
     <div class="card">
-      <div class="admin-dash-header">
-        <div class="admin-dash-shield">🛡️</div>
-        <div class="admin-dash-saludo">Hola, <span id="admin-dash-nombre">—</span></div>
-      </div>
 
       <div id="admin-dash-banners" class="admin-dash-banners">
         <div id="admin-banner-pendientes-slot"></div>
         <div id="admin-banner-equip-slot"></div>
       </div>
 
-      <div class="admin-dash-grid">
-        <div class="admin-dash-tile" data-tile="s-admin-reservas" onclick="adminIrReservas(this)">
-          <div class="admin-dash-tile-icon">✅</div>
+      <!-- Fila 1: Revisar reservas + Notificación, cada burbuja anclada
+           justo debajo de esta fila (ver MANIFEST.md "Cambios recientes"
+           — corrección de diseño). -->
+      <div class="admin-dash-row">
+        <div class="admin-dash-tile" data-tile="s-admin-reservas" onclick="adminToggleBurbuja('s-admin-reservas', this)">
+          <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">fact_check</span></div>
           <div class="admin-dash-tile-label">Revisar reservas</div>
         </div>
-        <div class="admin-dash-tile" data-tile="notif" onclick="adminAbrirNotifBubble(this)">
-          <div class="admin-dash-tile-icon">📣</div>
+        <div class="admin-dash-tile" data-tile="notif" onclick="adminToggleBurbuja('notif', this)">
+          <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">campaign</span></div>
           <div class="admin-dash-tile-label">Notificación</div>
-        </div>
-        <div class="admin-dash-tile" data-tile="s-admin-equip" onclick="adminIrEquip(this)">
-          <div class="admin-dash-tile-icon">🛼</div>
-          <div class="admin-dash-tile-label">Equipamiento</div>
-        </div>
-        <div class="admin-dash-tile" data-tile="s-admin-quellevar" onclick="adminIrQueLlevar(this)">
-          <div class="admin-dash-tile-icon">🎒</div>
-          <div class="admin-dash-tile-label">Qué llevar</div>
         </div>
       </div>
 
-      <!-- Burbuja de "Enviar notificación" (contenido corto) -- reemplaza a
-           la vieja pantalla s-admin-notif, mismos ids/campos/función
-           adminEnviarNotif(), ver MANIFEST.md "Cambios recientes". -->
-      <div id="admin-notif-bubble" class="admin-notif-bubble" style="display:none;">
-        <div class="admin-notif-bubble-header"><span class="material-symbols-outlined">campaign</span> Enviar notificación</div>
+      <!-- Burbuja "Revisar reservas" (contenido largo) -- mismo componente
+           .admin-tile-bubble que Notificación, ver adminToggleBurbuja()
+           (js/admin.js). Nunca pantalla completa. -->
+      <div id="admin-burbuja-reservas" class="admin-tile-bubble" style="display:none;">
+        <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">fact_check</span> Revisar reservas</div>
+        <div class="tp-seg" id="admin-filtro-seg">
+          <div class="tp-slider" id="admin-filtro-slider"></div>
+          <div class="tp-opt active" id="admin-filtro-pendientes" onclick="adminFiltroReservas('pendientes')">
+            <span class="material-symbols-outlined" style="font-size:1rem;">hourglass_top</span><span>Pendientes</span>
+          </div>
+          <div class="tp-opt" id="admin-filtro-todas" onclick="adminFiltroReservas('todas')">
+            <span class="material-symbols-outlined" style="font-size:1rem;">list_alt</span><span>Todas</span>
+          </div>
+        </div>
+        <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin:14px 0 8px;" onclick="adminRefreshReservas()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span> Actualizar</button>
+        <div class="select-wrapper" id="filtro-fecha-wrapper" style="display:none;margin-bottom:12px;">
+          <select id="filtro-mes-reservas" onchange="adminRenderReservas()">
+            <option value="0">Enero</option><option value="1">Febrero</option>
+            <option value="2">Marzo</option><option value="3">Abril</option>
+            <option value="4">Mayo</option><option value="5">Junio</option>
+            <option value="6">Julio</option><option value="7">Agosto</option>
+            <option value="8">Septiembre</option><option value="9">Octubre</option>
+            <option value="10">Noviembre</option><option value="11">Diciembre</option>
+          </select>
+        </div>
+        <div id="admin-reservas-lista"></div>
+      </div>
+
+      <!-- Burbuja "Enviar notificación" (contenido corto) -- mismos ids/
+           campos/función adminEnviarNotif() de siempre. -->
+      <div id="admin-notif-bubble" class="admin-tile-bubble" style="display:none;">
+        <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">campaign</span> Enviar notificación</div>
         <div class="datos-campo">
           <label>Título</label>
           <input type="text" id="adm-notif-titulo" placeholder="Ej: ¡Entrenamiento especial este sábado!">
@@ -642,21 +660,51 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="datos-campo">
           <label>Destinatarix</label>
           <div class="select-wrapper">
-            <select id="adm-notif-destino"><option value="todos">📢 Todes (suscritxs)</option></select>
+            <select id="adm-notif-destino"><option value="todos">Todes (suscritxs)</option></select>
           </div>
         </div>
         <div class="datos-campo">
           <label>Programar envío (opcional)</label>
-          <input type="datetime-local" id="adm-notif-fecha" style="width:100%;padding:14px 16px;border:2px solid var(--border-light);border-radius:12px;font-size:0.95rem;background:var(--surface-light);font-family:inherit;">
+          <input type="datetime-local" id="adm-notif-fecha">
           <p class="datos-hint">Déjalo vacío para enviar de inmediato. La hora es la de tu dispositivo.</p>
         </div>
         <div class="error-msg" id="err-admin-notif"></div>
-        <button class="btn btn-outline" id="btn-adm-notif" onclick="adminEnviarNotif()">Enviar notificación 📣</button>
+        <button class="btn btn-outline" id="btn-adm-notif" onclick="adminEnviarNotif()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">send</span> Enviar notificación</button>
       </div>
 
-      <!-- Acordeón "Ajustes adicionales" -- estructura visual únicamente en
-           esta tanda (abre/cierra un cuerpo vacío). Contenido real (Usuarios,
-           Administradorxs, Mi Liga, color de énfasis) en tanda posterior. -->
+      <!-- Fila 2: Equipamiento + Qué llevar, mismo criterio que la fila 1. -->
+      <div class="admin-dash-row">
+        <div class="admin-dash-tile" data-tile="s-admin-equip" onclick="adminToggleBurbuja('s-admin-equip', this)">
+          <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">roller_skating</span></div>
+          <div class="admin-dash-tile-label">Equipamiento</div>
+        </div>
+        <div class="admin-dash-tile" data-tile="s-admin-quellevar" onclick="adminToggleBurbuja('s-admin-quellevar', this)">
+          <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">backpack</span></div>
+          <div class="admin-dash-tile-label">Qué llevar</div>
+        </div>
+      </div>
+
+      <!-- Burbuja "Equipamiento" (contenido largo). -->
+      <div id="admin-burbuja-equip" class="admin-tile-bubble" style="display:none;">
+        <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">roller_skating</span> Equipamiento</div>
+        <div id="admin-equip-lista"></div>
+        <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px;" onclick="adminAgregarTalla()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">add</span> Agregar talla</button>
+        <div class="datos-campo" style="margin-top:18px;">
+          <label>Sets de protecciones completas</label>
+          <input type="number" id="adm-equip-protec" min="0" style="max-width:140px;">
+        </div>
+        <div class="error-msg" id="err-admin-equip"></div>
+        <button class="btn btn-outline" onclick="adminGuardarEquip(this)">Guardar cambios</button>
+      </div>
+
+      <!-- Burbuja "Qué llevar" (contenido largo). -->
+      <div id="admin-burbuja-quellevar" class="admin-tile-bubble" style="display:none;">
+        <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">backpack</span> Qué llevar</div>
+        <div id="admin-quellevar-lista"></div>
+        <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px;" onclick="adminRefreshQueLlevar()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span> Actualizar lista</button>
+      </div>
+
+      <!-- Acordeón "Ajustes adicionales" -->
       <div class="aj-group admin-dash-extra">
         <div class="aj-row" onclick="adminToggleAjustesAdicionales()">
           <span class="material-symbols-outlined" style="color:var(--muted);">tune</span>
@@ -667,7 +715,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <div style="padding:2px 14px 16px;">
             <!-- Color de énfasis -- mismo componente reusado en Mi Liga
                  ("Personalización", aj-sub-miliga), ver adminRenderColorEnfasis()
-                 (js/admin.js, Tanda 3). -->
+                 (js/admin.js, Tanda 3). Sin cambios en esta corrección de
+                 diseño, ver MANIFEST.md "Cambios recientes". -->
             <div class="admin-color-enfasis" style="margin-top:0;padding-top:0;border-top:none;">
               <div class="hb-titulo" style="color:var(--neutral-dark);margin-bottom:2px;">🎨 Color de énfasis</div>
               <div class="hb-sub" style="margin-bottom:12px;">Cambia el color principal de la app para cualquier cuenta</div>
@@ -679,7 +728,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             </div>
             <!-- Precios de clases -->
             <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border-light);">
-              <div class="hb-titulo" style="color:var(--neutral-dark);margin-bottom:2px;">💵 Precios de clases</div>
+              <div class="hb-titulo" style="color:var(--neutral-dark);margin-bottom:2px;"><span class="material-symbols-outlined" style="font-size:1rem;vertical-align:-2px;">payments</span> Precios de clases</div>
               <div class="hb-sub" style="margin-bottom:12px;">Se aplican a las próximas reservas de todes</div>
               <div class="datos-campo">
                 <label>Precio por clase (USD)</label>
@@ -706,55 +755,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px;font-size:0.78rem;" onclick="adminCerrarSesionLocal()">
         <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">logout</span> Cerrar sesión
       </button>
-    </div>
-  </div>
-
-  <div class="pantalla" id="s-admin-reservas">
-    <div class="card">
-      <div class="seccion-label">Admin — Reservas</div>
-      <h2>Reservas y pagos</h2>
-      <div class="opciones" style="flex-direction:row;gap:8px;margin-bottom:18px;">
-        <label class="opcion sel" style="flex:1;justify-content:center;padding:10px;" onclick="adminFiltroReservas('pendientes', this)"><span style="font-weight:700;font-size:0.85rem;">⏳ Pendientes</span></label>
-        <label class="opcion" style="flex:1;justify-content:center;padding:10px;" onclick="adminFiltroReservas('todas', this)"><span style="font-weight:700;font-size:0.85rem;">📋 Todas</span></label>
-      </div>
-      <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px;" onclick="adminRefreshReservas()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span> Actualizar</button>
-      <div class="select-wrapper" id="filtro-fecha-wrapper" style="display:none;margin-bottom:12px;">
-        <select id="filtro-mes-reservas" onchange="adminRenderReservas()">
-          <option value="0">Enero</option><option value="1">Febrero</option>
-          <option value="2">Marzo</option><option value="3">Abril</option>
-          <option value="4">Mayo</option><option value="5">Junio</option>
-          <option value="6">Julio</option><option value="7">Agosto</option>
-          <option value="8">Septiembre</option><option value="9">Octubre</option>
-          <option value="10">Noviembre</option><option value="11">Diciembre</option>
-        </select>
-      </div>
-      <div id="admin-reservas-lista"></div>
-
-    </div>
-  </div>
-
-  <div class="pantalla" id="s-admin-quellevar">
-    <div class="card">
-      <div class="seccion-label">Admin — Qué llevar</div>
-      <h2>Equipamiento a llevar</h2>
-<div id="admin-quellevar-lista"></div>
-      <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px;" onclick="adminRefreshQueLlevar()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span> Actualizar lista</button>
-    </div>
-  </div>
-
-  <div class="pantalla" id="s-admin-equip">
-    <div class="card">
-      <div class="seccion-label">Admin — Equipamiento</div>
-      <h2>Patines y protecciones</h2>
-      <div id="admin-equip-lista"></div>
-      <button class="btn-text-simple" style="margin-top:4px;" onclick="adminAgregarTalla()">➕ Agregar talla</button>
-      <div class="datos-campo" style="margin-top:18px;">
-        <label>Sets de protecciones completas</label>
-        <input type="number" id="adm-equip-protec" min="0" style="max-width:140px;">
-      </div>
-      <div class="error-msg" id="err-admin-equip"></div>
-      <button class="btn btn-outline" onclick="adminGuardarEquip(this)">Guardar cambios</button>
-
     </div>
   </div>
 

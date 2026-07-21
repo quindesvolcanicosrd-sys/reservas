@@ -119,9 +119,10 @@ var TOP_BAR_CONFIG = {
   // cuota) → s-home; sin E.datos (solo llegó por ser admin) → s-admin-home.
   's-datos': { titulo: 'Ajustes', volver: function() { return E.datos ? 's-home' : 's-admin-home'; } },
   's-admin-login': { titulo: 'Administradorx', volver: 's1' },
-  's-admin-reservas': { titulo: 'Reservas', volver: 's-admin-home' },
-  's-admin-quellevar': { titulo: 'Qué llevar', volver: 's-admin-home' },
-  's-admin-equip': { titulo: 'Equipamiento', volver: 's-admin-home' },
+  // 's-admin-reservas'/'s-admin-quellevar'/'s-admin-equip' ya NO son
+  // pantallas propias (ver MANIFEST.md "Cambios recientes" — corrección de
+  // diseño: vuelven a ser burbujas embebidas en s-admin-home, nunca
+  // pantalla completa/navegación, así que no necesitan entrada acá).
   's-admin-usuarios': { titulo: 'Usuarios', volver: 's-admin-home' }
 };
 

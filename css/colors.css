@@ -132,7 +132,7 @@
   --info-dark:      #0369a1;
 
   /* ── Botones ─────────────────────────────────────────── */
-  /* --btn-primary-*/--btn-secondary-color son var() de otras variables
+  /* --btn-primary-* y --btn-secondary-color son var() de otras variables
      "(runtime)" de arriba — derivan solas, en cascada, sin que
      color-enfasis.js necesite tocarlas directo. --btn-secondary-bg SÍ
      tiene su propio setProperty, pero solo en oscuro (acá en claro sigue
