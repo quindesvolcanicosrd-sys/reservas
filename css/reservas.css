@@ -193,6 +193,10 @@
 .equip-talla-pill.agotada { opacity:0.35; cursor:not-allowed; pointer-events:none; }
 .equip-talla-pill-no { flex:1 1 100%; padding:14px 16px; }
 
+/* Skeleton de #tallas-grid (continuar_s3a(), js/reservas.js) — mismo shimmer
+   que .fi-skel-block de arriba, sobre la forma real de un .equip-talla-pill. */
+.equip-talla-pill.equip-skel { background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-shine) 50%, var(--skeleton-base) 75%); background-size: 200% 100%; animation: skeletonShimmer 1.2s ease-in-out infinite; border-color: transparent; cursor: default; }
+
 .equip-pills-protec { display:flex; flex-direction:column; gap:8px; margin-bottom:24px; }
 .equip-pill-protec { display:flex; align-items:center; gap:12px; padding:14px 16px; border-radius:14px; border:1.5px solid var(--border-light); background:var(--surface-2); cursor:pointer; transition:all 0.15s; user-select:none; }
 .equip-pico { font-size:1.2rem; color:var(--muted); flex-shrink:0; }

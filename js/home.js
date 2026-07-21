@@ -1064,7 +1064,14 @@ function abrirGestionar(fecha, fila) {
   _registrarOverlayAbierto(cerrarSheetGestionar);
 }
 
+// Bloquea el cierre de #sheet-gestionar/#modal-confirm-reagendar (overlay,
+// "Volver", gesto/botón atrás) mientras ejecutarCancelacion()/
+// ejecutarReagendamiento() tienen una request en vuelo — ver esas 2
+// funciones más abajo (ver MANIFEST, "Cambios recientes").
+var _sgAccionEnCurso = false;
+
 function cerrarSheetGestionar(porGesto) {
+  if (_sgAccionEnCurso) return;
   if (!porGesto) { history.back(); return; }
   var sheet = document.getElementById('sheet-gestionar');
   var overlay = document.getElementById('sheet-gestionar-overlay');
@@ -1103,6 +1110,7 @@ function _sgCrossfade(idSaliente, idEntrante) {
 }
 
 function sheetVolverOpciones() {
+  if (_sgAccionEnCurso) return;
   _sgCrossfade('sg-sheet-cancelar', 'sg-sheet-opciones');
 }
 
@@ -1242,35 +1250,62 @@ function confirmarCambioFecha() {
   _registrarOverlayAbierto(cerrarModalReagendar);
 }
 
-function ejecutarReagendamiento() {
-  var modal = document.getElementById('modal-confirm-reagendar');
-  if (modal) { modal.style.opacity = '0'; setTimeout(function(){ modal.style.display = 'none'; }, 250); }
-  mostrarCargando('Reagendando...');
+// Overlay de pantalla completa reemplazado por spinner inline en el botón
+// de confirmar (mismo patrón .btn-spinner que confirmarReserva()/
+// continuar_s3c_nuevo() — ver MANIFEST, "Cambios recientes"). El modal se
+// deja ABIERTO (con su botón "Volver" también deshabilitado y con
+// _sgAccionEnCurso bloqueando overlay/gesto-atrás) hasta que la respuesta
+// real llega — antes se cerraba de entrada, ANTES incluso de llamar a
+// mostrarCargando(), tapando todo con el overlay mientras tanto.
+function ejecutarReagendamiento(btn) {
+  if (_sgAccionEnCurso) return;
+  _sgAccionEnCurso = true;
+  var btnHtmlOriginal = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Guardando...'; }
+  var btnVolver = document.getElementById('mcr-btn-volver');
+  if (btnVolver) btnVolver.disabled = true;
   api({ action: 'reagendarReserva', nombre: E.nombre, fechaAnterior: _sgFechaActual, fechaNueva: _sgFechaSeleccionada }, function() {
-    ocultarCargando();
+    _sgAccionEnCurso = false;
+    if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
+    if (btnVolver) btnVolver.disabled = false;
+    cerrarModalReagendar();
     ir('s-home');
     setTimeout(function() { _recargarYRenderReservas(function() { mostrarToast('¡Fecha cambiada con éxito! 📅', 'ok'); }); }, 100);
   }, function(e) {
-    ocultarCargando();
+    _sgAccionEnCurso = false;
+    if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
+    if (btnVolver) btnVolver.disabled = false;
+    cerrarModalReagendar();
     mostrarToast(e.message || 'Error al reagendar. Intenta de nuevo.', 'error');
   });
 }
 
 function cerrarModalReagendar(porGesto) {
+  if (_sgAccionEnCurso) return;
   if (!porGesto) { history.back(); return; }
   var modal = document.getElementById('modal-confirm-reagendar');
   if (modal) { modal.style.opacity = '0'; setTimeout(function(){ modal.style.display = 'none'; }, 250); }
 }
 
-function ejecutarCancelacion() {
-  cerrarSheetGestionar();
-  mostrarCargando('Cancelando reserva...');
+function ejecutarCancelacion(btn) {
+  if (_sgAccionEnCurso) return;
+  _sgAccionEnCurso = true;
+  var btnHtmlOriginal = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Cancelando...'; }
+  var btnVolver = document.getElementById('sg-cancelar-btn-volver');
+  if (btnVolver) btnVolver.disabled = true;
   api({ action: 'cancelarReserva', nombre: E.nombre, fecha: _sgFechaActual }, function() {
-ocultarCargando();
+    _sgAccionEnCurso = false;
+    if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
+    if (btnVolver) btnVolver.disabled = false;
+    cerrarSheetGestionar();
     ir('s-home');
     setTimeout(function() { _recargarYRenderReservas(function() { mostrarToast('Reserva cancelada', 'ok'); }); }, 100);
   }, function(e) {
-    ocultarCargando();
+    _sgAccionEnCurso = false;
+    if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
+    if (btnVolver) btnVolver.disabled = false;
+    cerrarSheetGestionar();
     mostrarToast(e.message || 'Error al cancelar. Intenta de nuevo.', 'error');
   });
 }

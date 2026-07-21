@@ -121,18 +121,29 @@ function confirmarOtroProtec() {
   cerrarBsProtec();
 }
 
+// Skeleton de #tallas-grid mientras continuar_s3a() espera getTallasDisponibles
+// — 4 chips placeholder, mismo shimmer que .fi-skel-block (cargarFechas()).
+function _skeletonTallasHtml() {
+  return '<div class="equip-talla-pill equip-skel"></div>'.repeat(4);
+}
+
 function continuar_s3a() {
   if (!E.editPat) { err('err-s3a', 'Por favor selecciona una opción.'); return; }
   if (E.editPat === 'Sí') {
-    mostrarCargando('Cargando tallas...');
+    // Overlay de pantalla completa reemplazado por skeleton en #tallas-grid:
+    // navega a s3b de inmediato, mismo criterio que cargarFechas() (ver
+    // MANIFEST, "Cambios recientes"). Un error acá ya no puede mostrarse en
+    // #err-s3a (esa pantalla ya no está activa) — pasa a #err-s3b.
+    var grid = document.getElementById('tallas-grid');
+    grid.innerHTML = _skeletonTallasHtml();
+    document.getElementById('sel-talla').value = '';
+    ir('s3b');
     api({ action: 'getTallasDisponibles' }, function(tallas) {
-      var grid = document.getElementById('tallas-grid');
       grid.innerHTML = tallas.map(function(t) {
         return '<div class="equip-talla-pill" onclick="selTallaEquip(this,\'' + t + '\')">' + t + '</div>';
       }).join('');
-      document.getElementById('sel-talla').value = '';
-      ocultarCargando(); ir('s3b');
-    }, function(e) { ocultarCargando(); err('err-s3a', 'Error: ' + e.message); });
+      void grid.offsetWidth; grid.style.animation = 'fadeIn 0.3s ease';
+    }, function(e) { err('err-s3b', 'Error: ' + e.message); });
   } else { E.editTalla = ''; ir('s3c'); }
 }
 
@@ -149,18 +160,21 @@ function continuar_s3b() {
   E.editTalla = t; ir('s3c');
 }
 
-function continuar_s3c_nuevo() {
+function continuar_s3c_nuevo(btn) {
   var protecFinal = E.editProtec;
   if (!protecFinal) { err('err-s3c', 'Por favor selecciona una opción.'); return; }
-  mostrarCargando('Guardando equipamiento...');
+  // Overlay de pantalla completa reemplazado por spinner inline en el botón
+  // — mismo patrón que confirmarReserva() (ver MANIFEST, "Cambios recientes").
+  var btnHtmlOriginal = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Guardando...'; }
   api({ action: 'actualizarEquipamientoPersona', nombre: E.nombre, necesitaPatines: E.editPat, talla: E.editTalla, necesitaProtecciones: protecFinal }, function() {
-    ocultarCargando();
     E.datos.necesitaPatines = E.editPat;
     E.datos.talla = E.editTalla;
     E.datos.necesitaProtecciones = protecFinal;
     E.editProtec = '';
+    if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
     if (E.editandoDesdeHome) { E.editandoDesdeHome = false; ir('s-datos'); } else { cargarFechas(); }
-  }, function(e) { ocultarCargando(); err('err-s3c', 'Error al guardar: ' + e.message); });
+  }, function(e) { if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; } err('err-s3c', 'Error al guardar: ' + e.message); });
 }
 
 function canPayMonthly() { if (!E.datos) return false; var d = E.datos; return (!d.necesitaPatines || d.necesitaPatines.toLowerCase() === 'no') && (!d.necesitaProtecciones || d.necesitaProtecciones.toLowerCase() === 'no'); }

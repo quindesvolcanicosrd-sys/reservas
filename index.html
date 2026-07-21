@@ -1127,8 +1127,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <span class="material-symbols-outlined" style="font-size:15px;flex-shrink:0;margin-top:1px;color:var(--warning);">payments</span>
         <span>Si ya realizaste el pago, <strong>es posible que no sea reembolsado</strong>. Contacta al equipo si necesitas más información.</span>
       </div>
-      <button onclick="ejecutarCancelacion()" style="width:100%;padding:13px;background:var(--danger);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;">Sí, cancelar mi reserva</button>
-      <button onclick="sheetVolverOpciones()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:1px solid var(--border-light);border-radius:12px;font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;">Volver</button>
+      <button onclick="ejecutarCancelacion(this)" style="width:100%;padding:13px;background:var(--danger);color:var(--white);border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;">Sí, cancelar mi reserva</button>
+      <button id="sg-cancelar-btn-volver" onclick="sheetVolverOpciones()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:1px solid var(--border-light);border-radius:12px;font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;">Volver</button>
     </div>
   </div>
 </div>
@@ -1145,8 +1145,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <span id="mcr-equip"></span>
       </div>
     </div>
-    <button class="btn btn-outline" onclick="ejecutarReagendamiento()" style="margin-bottom:10px;">Guardar</button>
-    <button onclick="cerrarModalReagendar()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:1px solid var(--border-light);border-radius:12px;font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;">Volver</button>
+    <button class="btn btn-outline" onclick="ejecutarReagendamiento(this)" style="margin-bottom:10px;">Guardar</button>
+    <button id="mcr-btn-volver" onclick="cerrarModalReagendar()" style="width:100%;padding:12px;background:transparent;color:var(--muted);border:1px solid var(--border-light);border-radius:12px;font-size:0.85rem;font-weight:700;cursor:pointer;font-family:inherit;">Volver</button>
   </div>
 </div>
 
@@ -2094,7 +2094,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 </div>
 
 <div class="cta-footer-fixed" id="cta-footer-s3c">
-  <button class="btn btn-outline" onclick="continuar_s3c_nuevo()">Guardar y continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+  <button class="btn btn-outline" onclick="continuar_s3c_nuevo(this)">Guardar y continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
 </div>
 
 <div class="cta-footer-fixed" id="cta-footer-s4">

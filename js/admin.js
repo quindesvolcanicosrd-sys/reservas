@@ -297,11 +297,26 @@ function adminRefreshQueLlevar() {
   }, function(e) { mostrarToast(e.message || 'Error al actualizar.', 'error'); });
 }
 
+// Skeleton de #admin-quellevar-lista mientras adminIrQueLlevar() espera la
+// respuesta real — filas con la forma de un .reserva-card real (nombre +
+// detalle), mismo shimmer que .fi-skel-block/.equip-skel.
+function _skeletonQueLlevarHtml() {
+  var fila = '<div class="reserva-card" style="margin-bottom:8px;"><div class="ql-skel-line ql-skel-line-title"></div><div class="ql-skel-line ql-skel-line-sub"></div></div>';
+  return fila.repeat(4);
+}
+
 function adminIrQueLlevar() {
-  mostrarCargando('Cargando...');
+  // Overlay de pantalla completa reemplazado por skeleton contenido: navega
+  // a s-admin-quellevar de inmediato, mismo criterio que cargarFechas()/
+  // continuar_s3a() (ver MANIFEST, "Cambios recientes"). Si la respuesta
+  // falla, se vuelve a s-admin-home (no tenía sentido dejar a la persona
+  // mirando un skeleton roto en una pantalla nueva).
+  var lista = document.getElementById('admin-quellevar-lista');
+  if (lista) lista.innerHTML = _skeletonQueLlevarHtml();
+  ir('s-admin-quellevar');
   adminApi({ action: 'adminGetQueLlevar' }, function(res) {
-    ocultarCargando(); adminRenderQueLlevar(res); ir('s-admin-quellevar');
-  }, function(e) { ocultarCargando(); mostrarToast(e.message || 'Error al cargar equipamiento.', 'error'); });
+    adminRenderQueLlevar(res);
+  }, function(e) { ir('s-admin-home'); mostrarToast(e.message || 'Error al cargar equipamiento.', 'error'); });
 }
 
 function adminRenderQueLlevar(res) {
@@ -345,7 +360,9 @@ function adminRenderQueLlevar(res) {
       html += '</div>';
     });
   }
-  document.getElementById('admin-quellevar-lista').innerHTML = html;
+  var listaEl = document.getElementById('admin-quellevar-lista');
+  listaEl.innerHTML = html;
+  void listaEl.offsetWidth; listaEl.style.animation = 'fadeIn 0.3s ease';
 }
 
 // ── Equipamiento ──────────────────────────────────────────────────────────────
