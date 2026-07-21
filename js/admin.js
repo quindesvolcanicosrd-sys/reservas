@@ -149,18 +149,38 @@ function adminToggleBanner(bodyId) {
   _admDashAbierto = bodyId;
 }
 
-// Ventana de fecha "hoy"/"mañana" para el banner de equipamiento -- réplica
-// en el frontend del criterio que ya usa recordatoriosQueLlevar() del lado
-// del backend (fuera de este repo, no accesible desde acá) para decidir
-// cuándo mandar el push de recordatorio. Mismo idioma de parseo ya usado en
-// adminRenderQueLlevar() (detección "GMT" + getters UTC) para no introducir
-// una segunda forma de leer estas fechas.
+// Ventana de fecha "hoy"/"mañana" para el banner de equipamiento -- compara
+// DÍA CALENDARIO (hoy o mañana en el sentido de fecha, no de horas restantes
+// hasta el entrenamiento): el banner debe verse durante todo el día
+// calendario, sin importar a qué hora del día se lo evalúe ni la hora exacta
+// del entrenamiento (uno a primera hora de la mañana y otro a última hora de
+// la noche del mismo día deben tratarse exactamente igual). No es una
+// réplica de recordatoriosQueLlevar() del backend (fuera de este repo, no
+// accesible desde acá) -- esa función dispara push puntuales ("1 día antes"/
+// "2 horas antes", ver texto de s-admin-quellevar), un criterio de ventana
+// horaria angosta que no aplica acá a propósito.
+//
+// Bug real corregido: la primera versión comparaba el día de `f` leído con
+// getters UTC contra el día de "ahora" leído con getters LOCALES y luego
+// reenvuelto en Date.UTC() -- dos sistemas de referencia distintos que solo
+// coinciden por casualidad durante gran parte del día. Para Ecuador
+// (GMT-0500, sin horario de verano), cualquier hora local desde
+// aproximadamente las 19:00 en adelante cae, en su equivalente UTC, ya
+// dentro del día calendario UTC siguiente -- así que un entrenamiento de
+// HOY a la noche (ej. 23:30 hora Ecuador) tenía `f.getUTCDate()` un día por
+// delante del "hoy" calculado, y el banner lo mostraba como "mañana" en vez
+// de "hoy" durante esa franja. Fix: usar getters LOCALES en los 2 lados de
+// la comparación (tanto para `f` como para "ahora"), el mismo marco de
+// referencia en ambos -- sin ninguna reinterpretación vía UTC de por medio,
+// coherente con que el resto de la app ya asume que la hora del dispositivo
+// es la hora real de Ecuador (ver "La hora es la de tu dispositivo" en el
+// campo de notificación programada).
 function _adminVentanaFecha(fechaRaw) {
   if (!fechaRaw || !fechaRaw.toString().includes('GMT')) return null;
   var f = new Date(fechaRaw);
-  var claveFecha = Date.UTC(f.getUTCFullYear(), f.getUTCMonth(), f.getUTCDate());
+  var claveFecha = new Date(f.getFullYear(), f.getMonth(), f.getDate()).getTime();
   var ahora = new Date();
-  var claveHoy = Date.UTC(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+  var claveHoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()).getTime();
   var unDia = 86400000;
   if (claveFecha === claveHoy) return 'hoy';
   if (claveFecha === claveHoy + unDia) return 'mañana';
