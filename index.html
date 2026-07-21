@@ -620,6 +620,13 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px;" onclick="irEditarDatos()">
         <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">settings</span> Ajustes
       </button>
+
+      <!-- Parche de acceso temporal: sin esto no hay forma de cerrar sesión
+           admin desde el nuevo dashboard hasta que Usuarios/Administradorxs
+           vuelvan a tener su lugar en la Tanda 3 (ver MANIFEST.md). -->
+      <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px;font-size:0.78rem;" onclick="adminCerrarSesionLocal()">
+        <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">logout</span> Cerrar sesión
+      </button>
     </div>
   </div>
 
