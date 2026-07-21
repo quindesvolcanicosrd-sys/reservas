@@ -578,58 +578,47 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 
   <div class="pantalla" id="s-admin-home">
-    <div class="card" style="text-align:center;padding-bottom:32px;">
-      <div style="font-size:3rem;margin-bottom:10px;">🛡️</div>
-      <h2 style="text-align:center;margin-bottom:4px;">Panel administradorx</h2>
-      <p id="admin-email-label" style="margin-bottom:24px;font-size:0.85rem;"></p>
-
-      <div class="home-boton principal" onclick="adminIrReservas()">
-        <div class="hb-icon">✅</div>
-        <div class="hb-titulo" style="color:var(--brand);">Revisar reservas</div>
-        <div class="hb-sub">Aprueba, revisa o cancela reservas y pagos</div>
-      </div>
-      <div class="home-boton" onclick="adminIrQueLlevar()">
-        <div class="hb-icon">🎒</div>
-        <div class="hb-titulo" style="color:var(--neutral-dark);">Qué llevar</div>
-        <div class="hb-sub">Equipamiento a llevar a los próximos entrenamientos</div>
-      </div>
-      <div class="home-boton" onclick="adminIrNotif()">
-        <div class="hb-icon">📣</div>
-        <div class="hb-titulo" style="color:var(--neutral-dark);">Enviar notificación</div>
-        <div class="hb-sub">Push inmediata o programada a todes o a una persona</div>
-      </div>
-      <div class="home-boton" onclick="adminIrEquip()">
-        <div class="hb-icon">🛼</div>
-        <div class="hb-titulo" style="color:var(--neutral-dark);">Equipamiento</div>
-        <div class="hb-sub">Edita tallas, cantidades y protecciones disponibles</div>
-      </div>
-      <div class="home-boton" onclick="adminIrUsuarios()">
-        <div class="hb-icon">👥</div>
-        <div class="hb-titulo" style="color:var(--neutral-dark);">Usuarios</div>
-        <div class="hb-sub">Lista y eliminación de personas registradas</div>
-      </div>
-      <div class="home-boton" onclick="adminIrAdmins()">
-        <div class="hb-icon">🔑</div>
-        <div class="hb-titulo" style="color:var(--neutral-dark);">Administradorxs</div>
-        <div class="hb-sub">Invita o quita cuentas con acceso admin</div>
+    <div class="card">
+      <div class="admin-dash-header">
+        <div class="admin-dash-shield">🛡️</div>
+        <div class="admin-dash-saludo">Hola, <span id="admin-dash-nombre">—</span></div>
       </div>
 
-      <!-- Selector de color de énfasis — TEMPORAL: fila mínima puesta acá
-           para probar el mecanismo end-to-end. Se muda a la sección "Mi Liga"
-           definitiva cuando se rediseñe el panel de admin (paso 5 de la hoja
-           de ruta, ver MANIFEST.md) — no invertir tiempo en pulir esto más. -->
-      <div class="admin-color-enfasis">
-        <div class="hb-titulo" style="color:var(--neutral-dark);margin-bottom:2px;">🎨 Color de énfasis</div>
-        <div class="hb-sub" style="margin-bottom:12px;">Cambia el color principal de la app para cualquier cuenta</div>
-        <div class="admin-color-swatches" id="admin-color-swatches"></div>
-        <label class="admin-color-custom">
-          Personalizado
-          <input type="color" id="admin-color-custom-input" onchange="adminCambiarColorEnfasis(this.value)">
-        </label>
+      <div id="admin-dash-banners" class="admin-dash-banners"></div>
+
+      <div class="admin-dash-grid">
+        <div class="admin-dash-tile" onclick="adminIrReservas()">
+          <div class="admin-dash-tile-icon">✅</div>
+          <div class="admin-dash-tile-label">Revisar reservas</div>
+        </div>
+        <div class="admin-dash-tile" onclick="adminIrNotif()">
+          <div class="admin-dash-tile-icon">📣</div>
+          <div class="admin-dash-tile-label">Notificación</div>
+        </div>
+        <div class="admin-dash-tile" onclick="adminIrEquip()">
+          <div class="admin-dash-tile-icon">🛼</div>
+          <div class="admin-dash-tile-label">Equipamiento</div>
+        </div>
+        <div class="admin-dash-tile" onclick="adminIrQueLlevar()">
+          <div class="admin-dash-tile-icon">🎒</div>
+          <div class="admin-dash-tile-label">Qué llevar</div>
+        </div>
       </div>
 
-      <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px;" onclick="adminCerrarSesionLocal()">
-        <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">logout</span> Cerrar sesión admin
+      <!-- Acordeón "Ajustes adicionales" -- estructura visual únicamente en
+           esta tanda (abre/cierra un cuerpo vacío). Contenido real (Usuarios,
+           Administradorxs, Mi Liga, color de énfasis) en tanda posterior. -->
+      <div class="aj-group admin-dash-extra">
+        <div class="aj-row" onclick="adminToggleAjustesAdicionales()">
+          <span class="material-symbols-outlined" style="color:var(--muted);">tune</span>
+          <div class="aj-content"><div class="aj-title">Ajustes adicionales</div></div>
+          <span class="material-symbols-outlined aj-chevron" id="admin-extra-acordeon-chevron" style="transition:transform 0.3s;">expand_more</span>
+        </div>
+        <div id="admin-extra-acordeon-body" class="admin-dash-extra-body"></div>
+      </div>
+
+      <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px;" onclick="irEditarDatos()">
+        <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">settings</span> Ajustes
       </button>
     </div>
   </div>

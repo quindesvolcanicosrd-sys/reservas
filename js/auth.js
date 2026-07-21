@@ -86,14 +86,24 @@ function onGoogleCredentialUsuario(resp) {
   mostrarCargando('Verificando tu cuenta...');
   apiPost({ action: 'loginGoogle', idToken: resp.credential }, function(res) {
     if (res.esAdmin) {
-      ocultarCargando();
       _adminToken = res.adminToken;
       _adminEmail = res.email;
-      localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, exp: Date.now() + 11.5 * 3600 * 1000 }));
+      var _plAdmin = _decodificarJwtGoogle(resp.credential);
+      _adminNombre = (_plAdmin && _plAdmin.name) || _adminEmail;
+      localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, nombre: _adminNombre, exp: Date.now() + 11.5 * 3600 * 1000 }));
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
-      adminEntrar();
-      return;
+      // dashboardAdmin:true (o ausente, retrocompatibilidad con cuentas admin
+      // sin fila en Equipo) -- cuenta admin "pura" que no paga cuota: entra al
+      // nuevo dashboard admin (s-admin-home). dashboardAdmin:false -- cuenta
+      // admin que además paga cuota: sigue el flujo normal de usuarix más
+      // abajo (home de reservas), conservando igual _adminToken/_adminEmail
+      // ya guardados arriba para poder acceder a "Mi Liga" desde Ajustes.
+      if (res.dashboardAdmin !== false) {
+        ocultarCargando();
+        adminEntrar();
+        return;
+      }
     }
     if (!res.valido) {
       ocultarCargando();

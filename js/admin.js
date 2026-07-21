@@ -1,6 +1,7 @@
 var GOOGLE_CLIENT_ID_FRONT = '632992894668-gnbb5cclsmfdcnve0g34kmue1c72h73q.apps.googleusercontent.com';
 var _adminToken = '';
 var _adminEmail = '';
+var _adminNombre = '';
 var _admTodasReservas = [];
 var _admFiltro = 'pendientes';
 var _gisInicializado = false;
@@ -24,7 +25,7 @@ function irAdminLogin() {
     try {
       var d = JSON.parse(s);
       if (d.adminToken && d.email && Date.now() < (d.exp || 0)) {
-        _adminToken = d.adminToken; _adminEmail = d.email;
+        _adminToken = d.adminToken; _adminEmail = d.email; _adminNombre = d.nombre || d.email;
         adminEntrar(); return;
       }
     } catch (ex) {}
@@ -32,6 +33,16 @@ function irAdminLogin() {
   }
   ir('s-admin-login');
   iniciarGoogleSignIn();
+}
+
+// Decodifica el payload de un idToken de Google (JWT) para leer datos como
+// `name`/`email` sin ida y vuelta al backend -- mismo idioma ya usado en
+// onGoogleCredentialUsuario() (js/auth.js) para el mensaje "no registrado".
+function _decodificarJwtGoogle(credential) {
+  try {
+    var p = credential.split('.');
+    return JSON.parse(atob(p[1].replace(/-/g,'+').replace(/_/g,'/')));
+  } catch (ex) { return null; }
 }
 
 function iniciarGoogleSignIn() {
@@ -57,7 +68,9 @@ function onGoogleCredential(resp) {
     ocultarCargando();
     if (!res.ok) { err('err-admin-login', res.error || 'Acceso denegado.'); return; }
     _adminToken = res.adminToken; _adminEmail = res.email;
-    localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, exp: Date.now() + 11.5 * 3600 * 1000 }));
+    var _pl = _decodificarJwtGoogle(resp.credential);
+    _adminNombre = (_pl && _pl.name) || _adminEmail;
+    localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, nombre: _adminNombre, exp: Date.now() + 11.5 * 3600 * 1000 }));
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
     adminEntrar();
@@ -65,9 +78,27 @@ function onGoogleCredential(resp) {
 }
 
 function adminEntrar() {
-  document.getElementById('admin-email-label').textContent = '👤 ' + _adminEmail;
+  var nombreEl = document.getElementById('admin-dash-nombre');
+  if (nombreEl) nombreEl.textContent = _adminNombre || _adminEmail;
   adminRenderColorEnfasis();
   ir('s-admin-home');
+}
+
+// Acordeón "Ajustes adicionales" del nuevo dashboard admin -- por ahora solo
+// abre/cierra un cuerpo vacío (estructura visual nada más, ver MANIFEST.md
+// "Cambios recientes"); el contenido real (Usuarios, Administradorxs, color
+// de énfasis, Mi Liga) se agrega en una tanda posterior.
+function adminToggleAjustesAdicionales() {
+  var body = document.getElementById('admin-extra-acordeon-body');
+  var chevron = document.getElementById('admin-extra-acordeon-chevron');
+  var abierto = body.style.maxHeight && body.style.maxHeight !== '0px';
+  if (!abierto) {
+    body.style.maxHeight = '400px'; body.style.opacity = '1';
+    chevron.style.transform = 'rotate(180deg)';
+  } else {
+    body.style.maxHeight = '0'; body.style.opacity = '0';
+    chevron.style.transform = 'rotate(0deg)';
+  }
 }
 
 // ── Color de énfasis — selector TEMPORAL (ver comentario en index.html) ────────
