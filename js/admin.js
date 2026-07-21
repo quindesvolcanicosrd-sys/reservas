@@ -66,7 +66,34 @@ function onGoogleCredential(resp) {
 
 function adminEntrar() {
   document.getElementById('admin-email-label').textContent = '👤 ' + _adminEmail;
+  adminRenderColorEnfasis();
   ir('s-admin-home');
+}
+
+// ── Color de énfasis — selector TEMPORAL (ver comentario en index.html) ────────
+// Paleta de arranque, mismo criterio que el color picker de Pivot: unos
+// pocos presets + personalizado libre via <input type="color">.
+var ADMIN_COLOR_PRESETS = ['#F97316', '#EF4444', '#EC4899', '#A855F7', '#3B82F6', '#14B8A6', '#22C55E', '#F59E0B'];
+
+function adminRenderColorEnfasis() {
+  var cont = document.getElementById('admin-color-swatches');
+  if (!cont) return;
+  var actual = (typeof _ceColorActual !== 'undefined' && _ceColorActual) ? _ceColorActual.toLowerCase() : '#f97316';
+  cont.innerHTML = ADMIN_COLOR_PRESETS.map(function(hex) {
+    var sel = hex.toLowerCase() === actual;
+    return '<button type="button" class="admin-color-swatch' + (sel ? ' sel' : '') + '" style="background:' + hex + ';" onclick="adminCambiarColorEnfasis(\'' + hex + '\')" aria-label="' + hex + '"></button>';
+  }).join('');
+  var custom = document.getElementById('admin-color-custom-input');
+  if (custom) custom.value = actual;
+}
+
+function adminCambiarColorEnfasis(hex) {
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return;
+  aplicarColorEnfasis(hex);
+  adminRenderColorEnfasis();
+  adminApi({ action: 'adminSetColorEnfasis', hex: hex }, function(res) {
+    if (!res.exito) mostrarToast(res.error || 'No se pudo guardar el color.', 'error');
+  }, function(e) { mostrarToast(e.message || 'No se pudo guardar el color.', 'error'); });
 }
 
 function adminCerrarSesionLocal(silencioso) {

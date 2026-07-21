@@ -375,6 +375,16 @@ window.onload = function() {
     E.precioPorClase = parseFloat(precios.precioPorClase) || 0;
     E.precioMensual  = parseFloat(precios.precioMensual)  || 0;
   }, function() {});
+
+  // Color de énfasis guardado (Tanda 3): pedido una sola vez por carga de
+  // página, para cualquier cuenta (no requiere sesión/adminToken — a
+  // propósito, ver nota del backend en MANIFEST.md). Si la celda todavía
+  // está vacía (primera vez) no hay nada que aplicar — color-enfasis.js ya
+  // corrió aplicarColorEnfasis('#F97316') como fallback al cargar el script.
+  api({ action: 'adminGetColorEnfasis' }, function(res) {
+    if (res && res.colorEnfasis) aplicarColorEnfasis(res.colorEnfasis);
+  }, function() {});
+
   generarMeses();
 };
 

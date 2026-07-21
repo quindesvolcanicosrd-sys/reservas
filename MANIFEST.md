@@ -294,6 +294,48 @@ Dark mode: `.loading-card`/`.loading-card p` en `@media (prefers-color-scheme: d
 | `@media dark #modal-nav-inner` | Dark mode para el modal de navegador recomendado |
 
 ### Cambios recientes
+- **js/auth.js + js/admin.js + index.html + css/admin.css — Tanda 3 del "color de énfasis": selector real desde el panel de admin + lectura persistida al cargar la app, sobre el motor de derivación que ya dejaron las Tandas 1/2 (`js/color-enfasis.js`, sin cambios en esta tanda).** Requiere 2 acciones nuevas de backend (Apps Script, fuera de este repo — **documentadas más abajo para que Victor las pegue en `Code.gs`, no aplicadas desde acá**): `adminGetColorEnfasis` (lee `'Ajustes de la app'!A2`) y `adminSetColorEnfasis(hex)` (valida formato hex, escribe esa misma celda).
+
+  **Lectura al cargar (`js/auth.js`, `window.onload`):** junto al `api({action:'getPreciosClases'},...)` ya existente (corre una sola vez por carga de página, sin condicionar a qué rama de login se tomó — login fresco, sesión restaurada, o ninguna), se agrega `api({action:'adminGetColorEnfasis'}, function(res){ if (res && res.colorEnfasis) aplicarColorEnfasis(res.colorEnfasis); }, function(){})`. **A propósito llamado con `api()` (GET plano), no `adminApi()`** — pese al nombre `adminGet...`, esta lectura la necesita **cualquier cuenta** al cargar, no solo un admin logueado (ver nota de backend abajo, el nombre no implica que el backend deba exigir `adminToken` acá). Si la celda está vacía (primera vez, nadie configuró un color todavía) `res.colorEnfasis` llega `''` (falsy) y no se llama a nada — el color que queda aplicado es el fallback `#F97316` que `js/color-enfasis.js` ya corre solo, de forma síncrona, al cargar el script (`aplicarColorEnfasis('#F97316')`, línea final del archivo, sin cambios en esta tanda) — nunca hay un momento sin color aplicado.
+
+  **Selector (`index.html`, dentro de `#s-admin-home`) — TEMPORAL, marcado con comentario en el propio HTML y en `admin.js`:** una fila nueva bajo los botones existentes del panel (antes de "Cerrar sesión admin"), no la sección "Mi Liga" definitiva del paso 5 de la hoja de ruta — se muda ahí cuando se rediseñe el panel de admin. 8 swatches circulares predefinidos (`ADMIN_COLOR_PRESETS` en `js/admin.js`: naranja original + rojo/rosa/violeta/azul/verde-azulado/verde/ámbar, punto de partida tipo Pivot) + un `<input type="color">` para personalizado. `adminRenderColorEnfasis()` pinta los swatches y marca con `.sel` (anillo) el que coincide con `_ceColorActual` (variable ya expuesta por `color-enfasis.js`); se llama al entrar al panel (`adminEntrar()`) para que el estado inicial ya refleje el color activo, no solo tras elegir uno nuevo.
+
+  **`adminCambiarColorEnfasis(hex)` (`js/admin.js`) — feedback local instantáneo + persistencia:** valida `hex` contra `/^#[0-9a-fA-F]{6}$/` (defensa en el cliente; el backend valida de nuevo, ver abajo — nunca confiar solo en el cliente), llama `aplicarColorEnfasis(hex)` de inmediato (color aplicado en pantalla sin esperar ninguna respuesta de red) + `adminRenderColorEnfasis()` (re-pinta el anillo de selección), y recién después dispara `adminApi({action:'adminSetColorEnfasis', hex:hex}, ...)` para persistir — con `adminApi()` (no `api()` plano), a diferencia de la lectura: esta sí es una escritura que solo debe poder hacer un admin logueado, y `adminApi()` ya inyecta `adminToken` automáticamente. Si el guardado falla server-side, se muestra el error real vía `mostrarToast(res.error || '...', 'error')` — el color ya quedó aplicado visualmente en esa sesión igual (falla silenciosa desde la perspectiva visual, pero el toast avisa que no persistió).
+
+  **Backend — pendiente, documentado para pegar en `Code.gs` (Apps Script, sin acceso desde este repo):**
+  ```js
+  // Lectura — SIN validar adminToken a propósito: cualquier cuenta logueada
+  // (no solo admins) la llama al cargar la app, para que el color de
+  // énfasis se vea igual para todes. Ir a doGet(e), agregar el case junto
+  // a los demás 'adminGet*' (adminGetQueLlevar/adminGetUsuarios/etc.):
+  //   case 'adminGetColorEnfasis': return adminGetColorEnfasis();
+  function adminGetColorEnfasis() {
+    var hoja = SpreadsheetApp.getActive().getSheetByName('Ajustes de la app');
+    var hex = String(hoja.getRange('A2').getValue() || '').trim();
+    return { colorEnfasis: hex };
+  }
+
+  // Escritura — SÍ valida sesión admin, mismo criterio que
+  // adminSetEstadoReserva/adminGuardarEquipamiento/adminAgregarAdmin. Ir a
+  // doGet(e) (viaja por GET, como el resto de acciones 'adminSet*' — el
+  // frontend usa adminApi()/api(), nunca apiPost, para este hex corto),
+  // agregar junto a esos:
+  //   case 'adminSetColorEnfasis': return adminSetColorEnfasis(e);
+  // Ajustar el nombre de la función/helper de validación de sesión admin
+  // de la línea de abajo al que ya exista en el proyecto real — se dejó
+  // un nombre de ejemplo, no inventamos uno nuevo sin ver Code.gs.
+  function adminSetColorEnfasis(e) {
+    var admin = validarAdminToken(e.parameter.adminToken); // <- ajustar al helper real
+    if (!admin) return { exito: false, error: 'Sesión admin inválida.' };
+    var hex = String(e.parameter.hex || '').trim();
+    if (!/^#[0-9A-Fa-f]{6}$/.test(hex)) return { exito: false, error: 'Color inválido.' };
+    var hoja = SpreadsheetApp.getActive().getSheetByName('Ajustes de la app');
+    hoja.getRange('A2').setValue(hex);
+    return { exito: true };
+  }
+  ```
+
+  **Verificado sin Playwright/navegador real** (herramienta de navegador no disponible en esta sesión — el usuario canceló la instalación de la extensión Claude in Chrome, sin acceso tampoco a un MCP de Playwright): verificación equivalente por 2 vías. **(1)** Backend mock local (servidor Node temporal en `:8081`, mismo contrato exacto que la documentación de arriba, borrado al terminar) + `js/config.js` apuntado ahí temporalmente (revertido antes de commitear, confirmado con `git diff js/config.js` limpio) — ciclo completo por `curl` replicando las queries reales que arma `api()`/`adminApi()`: lectura inicial `{colorEnfasis:''}` (celda vacía) → `adminSetColorEnfasis` con hex válido + `adminToken` correcto → **nueva request de lectura independiente** (equivalente a otra cuenta cargando la página después) devuelve `{colorEnfasis:'#A855F7'}` — confirma persistencia real del lado servidor, no local/por-dispositivo. Hex inválido y falta de `adminToken` correctamente rechazados por el mock. **(2)** Lógica de cliente ejecutada de verdad en Node (`vm`, con `document`/`window` mínimamente stubbeados): `aplicarColorEnfasis('#F97316')` corre sola al cargar `color-enfasis.js` (fallback confirmado antes de cualquier respuesta de red); `aplicarColorEnfasis('#A855F7')` cambia `--brand` y deriva un `--bg` válido y distinto del original; la regex de `adminCambiarColorEnfasis` extraída del archivo real acepta hex válido y rechaza texto/hex corto. **No verificado visualmente en un navegador real** (swatches en pantalla, click real, reload real de principio a fin) — pendiente confirmar así en cuanto haya herramienta de navegador disponible o Victor lo pruebe manualmente tras pegar el backend.
 - **js/color-enfasis.js (nuevo) + index.html + inscripcion/index.html + css/colors.css — Tanda 1/2 del "color de énfasis" (Material-You-style): motor de derivación de color portado de Pivot, aplicado con el naranja actual (`#F97316`) como valor fijo — todavía sin selector, solo para validar que el mecanismo no cambia nada visible.** Ver la sección `js/color-enfasis.js` más abajo para el detalle de funciones/alcance. Resumen del proceso completo, incluido un bug real encontrado y corregido antes de cerrar la tanda:
 
   **Paso 1 — Inventario, confirmado con Victor antes de escribir código:** de las ~250 variables de `css/colors.css`, se clasificaron en "deriva" (toda variable con algún tinte de marca en cualquiera de los 2 modos, claro u oscuro — decisión explícita de Victor: "el objetivo final es que cambiar el color reconfigure la app de forma coherente, dejar un grupo como neutro fijo generaría una UI parcialmente actualizada") vs. "no deriva" (estados `--success/--danger/--warning/--info`, acentos propios `--purple`/`--amber`, excepciones de marca ajena ya documentadas `--deuna`/`--banco-internacional`/`--wa-brand`, overlays/sombras negras puras, grises sin ningún tinte en ningún modo). Única excepción real encontrada al hacer los números exactos (no visible a simple vista): `--border-slate` es azul genuino en claro (`#cbd5e1`, H≈213°, Tailwind slate-300 — único uso real, `.privacy-row:hover` en `css/ui.css`), sin ninguna relación con la marca, aunque su versión oscura sí es `rgba(249,115,22,...)` — se deja el valor claro fijo, solo el oscuro deriva.

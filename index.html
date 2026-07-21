@@ -613,6 +613,21 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="hb-titulo" style="color:var(--neutral-dark);">Administradorxs</div>
         <div class="hb-sub">Invita o quita cuentas con acceso admin</div>
       </div>
+
+      <!-- Selector de color de énfasis — TEMPORAL: fila mínima puesta acá
+           para probar el mecanismo end-to-end. Se muda a la sección "Mi Liga"
+           definitiva cuando se rediseñe el panel de admin (paso 5 de la hoja
+           de ruta, ver MANIFEST.md) — no invertir tiempo en pulir esto más. -->
+      <div class="admin-color-enfasis">
+        <div class="hb-titulo" style="color:var(--neutral-dark);margin-bottom:2px;">🎨 Color de énfasis</div>
+        <div class="hb-sub" style="margin-bottom:12px;">Cambia el color principal de la app para cualquier cuenta</div>
+        <div class="admin-color-swatches" id="admin-color-swatches"></div>
+        <label class="admin-color-custom">
+          Personalizado
+          <input type="color" id="admin-color-custom-input" onchange="adminCambiarColorEnfasis(this.value)">
+        </label>
+      </div>
+
       <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px;" onclick="adminCerrarSesionLocal()">
         <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">logout</span> Cerrar sesión admin
       </button>

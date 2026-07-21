@@ -4,3 +4,11 @@
   #modal-nav-titulo { color: var(--dk-modal-text) !important; }
   #modal-nav-texto { color: var(--dk-modal-btn-text) !important; }
 }
+
+/* Selector de color de énfasis — TEMPORAL, ver comentario en index.html */
+.admin-color-enfasis { margin:20px 0; padding-top:16px; border-top:1px solid var(--border-light); text-align:left; }
+.admin-color-swatches { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
+.admin-color-swatch { width:36px; height:36px; border-radius:50%; border:2px solid transparent; padding:0; cursor:pointer; }
+.admin-color-swatch.sel { border-color:var(--text); box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--text); }
+.admin-color-custom { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:0.85rem; color:var(--neutral-dark); }
+.admin-color-custom input[type="color"] { width:36px; height:36px; border:none; border-radius:50%; padding:0; cursor:pointer; background:none; }
