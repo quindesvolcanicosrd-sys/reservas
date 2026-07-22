@@ -22,6 +22,24 @@ var _admDashAbierto = null;
 var _admBannerPendientes = null; // null = todavía no llegó la respuesta
 var _admBannerQueLlevar = null;
 
+// Tanda 4 (rediseño panel admin) — ver MANIFEST.md "Cambios recientes":
+// destinatarios de Notificación (bottom sheet con buscador) y hora
+// seleccionada en la rueda de tiempo (la fecha sigue en un <input
+// type="date"> nativo, ya no un <input type="datetime-local">).
+var _admDestinatarios = [];
+var _admNotifHora = null;
+var _admNotifMinuto = null;
+
+// Universo de tallas estándar para las pills de "Agregar talla"
+// (Equipamiento) — EU 30 a 45 con su equivalente US aproximado (referencia
+// para admins, la talla guardada/autoritativa sigue siendo el número EU).
+var TALLAS_EU_US = [
+  { eu: 30, us: '12' }, { eu: 31, us: '13' }, { eu: 32, us: '1' }, { eu: 33, us: '2' },
+  { eu: 34, us: '3' }, { eu: 35, us: '4' }, { eu: 36, us: '5' }, { eu: 37, us: '6' },
+  { eu: 38, us: '7' }, { eu: 39, us: '8' }, { eu: 40, us: '8.5' }, { eu: 41, us: '9.5' },
+  { eu: 42, us: '10.5' }, { eu: 43, us: '11.5' }, { eu: 44, us: '12.5' }, { eu: 45, us: '13.5' }
+];
+
 var ADMIN_PANTALLAS = ['s-admin-login','s-admin-home','s-admin-usuarios'];
 
 function adminApi(params, onSuccess, onError) {
@@ -151,6 +169,7 @@ function _adminCerrarTodoAbierto() {
     if (chevron) chevron.style.transform = '';
   }
   _admDashAbierto = null;
+  _adminRecalcMasAltura();
 }
 
 function adminToggleBanner(bodyId) {
@@ -330,16 +349,19 @@ var ADMIN_TILE_INFO = {
   'notif': {
     bubbleId: 'admin-notif-bubble',
     cargar: function() {
-      var selDest = document.getElementById('adm-notif-destino');
-      selDest.innerHTML = '<option value="todos">Todes (suscritxs)</option>';
+      document.getElementById('adm-notif-destino').value = 'todos';
+      document.getElementById('admin-destino-trigger-label').textContent = 'Todes (suscritxs)';
       adminApi({ action: 'adminGetUsuarios' }, function(res) {
-        (res || []).forEach(function(u) {
-          var op = document.createElement('option'); op.value = op.textContent = u.nombre; selDest.appendChild(op);
-        });
+        _admDestinatarios = (res || []).map(function(u) { return u.nombre; });
+        var buscador = document.getElementById('admin-destino-search');
+        _adminRenderDestinoLista(buscador ? buscador.value : '');
       }, function() {});
       document.getElementById('adm-notif-titulo').value = '';
       document.getElementById('adm-notif-msg').value = '';
       document.getElementById('adm-notif-fecha').value = '';
+      var ahora = new Date();
+      _adminConstruirRuedaTiempo('adm-notif-hora-wheel', 24, ahora.getHours(), function(v) { _admNotifHora = v; });
+      _adminConstruirRuedaTiempo('adm-notif-min-wheel', 60, ahora.getMinutes(), function(v) { _admNotifMinuto = v; });
       document.getElementById('err-admin-notif').style.display = 'none';
     }
   },
@@ -358,6 +380,8 @@ var ADMIN_TILE_INFO = {
     bubbleId: 'admin-burbuja-equip',
     listaId: 'admin-equip-lista',
     cargar: function() {
+      var pillsWrap = document.getElementById('admin-tallas-pills-wrap');
+      if (pillsWrap) pillsWrap.style.display = 'none';
       adminApi({ action: 'adminGetEquipamiento' }, function(res) {
         adminRenderEquip(res);
       }, function(e) { mostrarToast(e.message || 'Error al cargar equipamiento.', 'error'); });
@@ -395,6 +419,7 @@ function _adminAbrirBurbuja(tileKey, tileEl) {
   }
   _admDashAbierto = tileKey;
   info.cargar();
+  _adminRecalcMasAltura();
 }
 
 // Click directo en una tile: si ya estaba abierta, la cierra (toggle); si
@@ -402,6 +427,19 @@ function _adminAbrirBurbuja(tileKey, tileEl) {
 function adminToggleBurbuja(tileKey, tileEl) {
   if (_admDashAbierto === tileKey) { _adminCerrarTodoAbierto(); return; }
   _adminAbrirBurbuja(tileKey, tileEl);
+}
+
+// "Equipamiento" y "Notificación" viven ahora DENTRO del acordeón "Más"
+// (Tanda 4, ver MANIFEST.md "Cambios recientes") -- su max-height se calcula
+// una sola vez al abrirse (adminToggleAjustesAdicionales()), así que cualquier
+// cambio de alto dentro (abrir/cerrar una de sus 2 burbujas, agregar/quitar
+// una fila de talla) necesita recalcularlo o el contenido nuevo queda
+// recortado. No-op si "Más" está cerrado.
+function _adminRecalcMasAltura() {
+  var body = document.getElementById('admin-extra-acordeon-body');
+  if (body && body.style.maxHeight && body.style.maxHeight !== '0px') {
+    body.style.maxHeight = body.scrollHeight + 'px';
+  }
 }
 
 // ── Color de énfasis ──────────────────────────────────────────────────────────
@@ -437,6 +475,46 @@ function adminCambiarColorEnfasis(hex) {
   }, function(e) { mostrarToast(e.message || 'No se pudo guardar el color.', 'error'); });
 }
 
+// Stepper +/- genérico (Tanda 4, ver MANIFEST.md "Cambios recientes") --
+// reemplaza los inputs numéricos con spinner nativo (cantidad de talla,
+// protecciones, precios). El wrapper `.qty-stepper` lleva un
+// `<input type="hidden">` con el valor real (leído por el resto del código
+// tal cual antes) y un `<span class="qty-value">` solo visual; `data-step`/
+// `data-min`/`data-decimals` en el wrapper controlan el incremento.
+function adminStepperChange(btn, delta) {
+  var wrap = btn.parentElement;
+  var hidden = wrap.querySelector('input[type="hidden"]');
+  var span = wrap.querySelector('.qty-value');
+  if (!hidden || !span) return;
+  var step = parseFloat(wrap.dataset.step || '1');
+  var min = parseFloat(wrap.dataset.min || '0');
+  var decimals = wrap.dataset.decimals ? parseInt(wrap.dataset.decimals, 10) : 0;
+  var val = Math.max(min, (parseFloat(hidden.value) || 0) + delta * step);
+  val = parseFloat(val.toFixed(decimals));
+  hidden.value = val;
+  span.textContent = decimals ? val.toFixed(decimals) : String(val);
+}
+
+// Pone el valor inicial de un stepper (al cargar datos del servidor) tanto
+// en el <input type="hidden"> como en su <span class="qty-value"> visual.
+function _adminSetStepperValue(hiddenId, val, decimals) {
+  var hidden = document.getElementById(hiddenId);
+  if (!hidden) return;
+  val = val || 0;
+  hidden.value = val;
+  var span = hidden.parentElement.querySelector('.qty-value');
+  if (span) span.textContent = decimals ? val.toFixed(decimals) : String(val);
+}
+
+// Selector de moneda de "Precios de clases" -- puramente de visualización
+// (USD por defecto): ambos selects (precio por clase / precio mensual) se
+// mantienen sincronizados entre sí, no tiene sentido que difieran ya que es
+// una sola lista de precios. No se persiste al backend -- adminGuardarPrecios()
+// sigue guardando el número tal cual, sin unidad.
+function adminCambiarMoneda(val) {
+  document.querySelectorAll('.admin-moneda-select').forEach(function(s) { s.value = val; });
+}
+
 // ── Precios de clases (Tanda 3, "Ajustes adicionales") ──────────────────────────
 // getPreciosClases() ya existe y es pública (la usa cualquier persona al
 // reservar, js/auth.js) -- se llama acá con la misma api() sin token admin,
@@ -446,10 +524,8 @@ function _adminCargarPrecios() {
   api({ action: 'getPreciosClases' }, function(precios) {
     E.precioPorClase = parseFloat(precios.precioPorClase) || 0;
     E.precioMensual = parseFloat(precios.precioMensual) || 0;
-    var elClase = document.getElementById('adm-precio-clase');
-    var elMensual = document.getElementById('adm-precio-mensual');
-    if (elClase) elClase.value = E.precioPorClase || '';
-    if (elMensual) elMensual.value = E.precioMensual || '';
+    _adminSetStepperValue('adm-precio-clase', E.precioPorClase, 2);
+    _adminSetStepperValue('adm-precio-mensual', E.precioMensual, 2);
   }, function() {});
 }
 
@@ -533,6 +609,44 @@ function _adminUpdateFiltroSlider(animate) {
   slider.style.transform = 'translateX(' + activo.offsetLeft + 'px)';
 }
 
+// Acordeón inline de mes (Reservas > filtro "Todas") — reemplaza el
+// <select> nativo, roto en mobile, por pills (Tanda 4, ver MANIFEST.md
+// "Cambios recientes"). #filtro-mes-reservas pasa de <select> a
+// <input type="hidden">, mismo id/semántica de `.value`/`._inicializado`
+// que ya leía/escribía adminRenderReservas() — sin tocar esa lectura.
+// NOMBRES_MESES es global (js/ui.js, carga antes que este archivo).
+function adminToggleMesAcordeon() {
+  var body = document.getElementById('admin-mes-acordeon-body');
+  var chevron = document.getElementById('admin-mes-chevron');
+  var abrir = !body.classList.contains('abierto');
+  if (abrir) {
+    _adminRenderMesPills();
+    body.classList.add('abierto');
+    chevron.style.transform = 'rotate(180deg)';
+  } else {
+    body.classList.remove('abierto');
+    chevron.style.transform = '';
+  }
+  _adminRecalcMasAltura();
+}
+
+function _adminRenderMesPills() {
+  var hidden = document.getElementById('filtro-mes-reservas');
+  var actual = parseInt(hidden.value, 10);
+  document.getElementById('admin-mes-pills').innerHTML = NOMBRES_MESES.map(function(nombre, idx) {
+    return '<div class="mes-item' + (idx === actual ? ' mes-item-sel' : '') + '" onclick="adminSeleccionarMes(' + idx + ')"><span class="mes-nombre">' + nombre + '</span></div>';
+  }).join('');
+}
+
+function adminSeleccionarMes(idx) {
+  var hidden = document.getElementById('filtro-mes-reservas');
+  hidden.value = String(idx);
+  hidden._inicializado = true;
+  document.getElementById('admin-mes-trigger-label').textContent = NOMBRES_MESES[idx];
+  adminToggleMesAcordeon();
+  adminRenderReservas();
+}
+
 function adminRenderReservas() {
   var lista = _admFiltro === 'pendientes'
     ? _admTodasReservas.filter(function(r) { return r.estado === 'Pendiente'; })
@@ -566,6 +680,7 @@ function adminRenderReservas() {
     wrapper.style.display = '';
     if (!selMes._inicializado) { selMes.value = String(new Date().getMonth()); selMes._inicializado = true; }
     var mesSeleccionado = parseInt(selMes.value);
+    document.getElementById('admin-mes-trigger-label').textContent = NOMBRES_MESES[mesSeleccionado];
     lista = lista.filter(function(r) {
       var f = r.fecha.toString().toLowerCase().trim();
       if (mesesMap[f] !== undefined) return mesesMap[f] === mesSeleccionado;
@@ -578,6 +693,10 @@ function adminRenderReservas() {
     });
   } else {
     wrapper.style.display = 'none';
+    var mesBody = document.getElementById('admin-mes-acordeon-body');
+    if (mesBody) mesBody.classList.remove('abierto');
+    var mesChevron = document.getElementById('admin-mes-chevron');
+    if (mesChevron) mesChevron.style.transform = '';
   }
 
   var grupos = {}, orden = [];
@@ -679,7 +798,12 @@ function adminEnviarNotif() {
   if (!titulo || !msg) { err('err-admin-notif', 'Completa el título y el mensaje.'); return; }
   var sendAfter = '';
   if (fechaVal) {
-    var f = new Date(fechaVal);
+    // La fecha viene de un <input type="date"> nativo, la hora de la rueda
+    // de scroll de abajo (Tanda 4, ver MANIFEST.md "Cambios recientes") --
+    // antes ambas venían juntas de un único <input type="datetime-local">.
+    var hh = String(_admNotifHora != null ? _admNotifHora : 0).padStart(2, '0');
+    var mm = String(_admNotifMinuto != null ? _admNotifMinuto : 0).padStart(2, '0');
+    var f = new Date(fechaVal + 'T' + hh + ':' + mm + ':00');
     if (isNaN(f.getTime()) || f.getTime() < Date.now() + 60000) { err('err-admin-notif', 'La fecha programada debe ser al menos 1 minuto en el futuro.'); return; }
     sendAfter = f.toISOString();
   }
@@ -692,6 +816,94 @@ function adminEnviarNotif() {
       document.getElementById('adm-notif-titulo').value = ''; document.getElementById('adm-notif-msg').value = ''; document.getElementById('adm-notif-fecha').value = '';
     } else { err('err-admin-notif', res.error || 'Error al enviar.'); }
   }, function(e) { btn.disabled = false; btn.innerHTML = _BTN_ADM_NOTIF_HTML; err('err-admin-notif', 'Error: ' + e.message); });
+}
+
+// Selector de hora tipo rueda/scroll (Tanda 4, ver MANIFEST.md "Cambios
+// recientes") — 2 columnas (horas 0-23, minutos 0-59), scroll-snap-type:y
+// mandatory hace que el navegador "trabe" el scroll en cada ítem; el ítem
+// que queda centrado (según scrollTop) es el seleccionado. onChange(valor)
+// se llama tanto al construir (valor inicial) como en cada cambio real.
+function _adminConstruirRuedaTiempo(wheelId, max, valorInicial, onChange) {
+  var wheel = document.getElementById(wheelId);
+  if (!wheel) return;
+  var ITEM_H = 40;
+  var pad = Math.max(0, (wheel.clientHeight - ITEM_H) / 2);
+  var html = '<div style="height:' + pad + 'px;"></div>';
+  for (var i = 0; i < max; i++) {
+    html += '<div class="time-wheel-item" data-val="' + i + '">' + String(i).padStart(2, '0') + '</div>';
+  }
+  html += '<div style="height:' + pad + 'px;"></div>';
+  wheel.innerHTML = html;
+  var timer = null;
+  wheel.onscroll = function() {
+    clearTimeout(timer);
+    timer = setTimeout(function() { _adminSeleccionarRuedaPorScroll(wheel, onChange); }, 130);
+  };
+  Array.prototype.forEach.call(wheel.querySelectorAll('.time-wheel-item'), function(item) {
+    item.onclick = function() { wheel.scrollTo({ top: parseInt(item.dataset.val, 10) * ITEM_H, behavior: 'smooth' }); };
+  });
+  wheel.scrollTop = valorInicial * ITEM_H;
+  _adminMarcarRuedaSeleccion(wheel, valorInicial);
+  onChange(valorInicial);
+}
+
+function _adminSeleccionarRuedaPorScroll(wheel, onChange) {
+  var ITEM_H = 40;
+  var items = wheel.querySelectorAll('.time-wheel-item');
+  var idx = Math.max(0, Math.min(items.length - 1, Math.round(wheel.scrollTop / ITEM_H)));
+  if (wheel.scrollTop !== idx * ITEM_H) wheel.scrollTo({ top: idx * ITEM_H, behavior: 'smooth' });
+  _adminMarcarRuedaSeleccion(wheel, idx);
+  onChange(idx);
+}
+
+function _adminMarcarRuedaSeleccion(wheel, idx) {
+  Array.prototype.forEach.call(wheel.querySelectorAll('.time-wheel-item'), function(item) {
+    item.classList.toggle('time-wheel-sel', parseInt(item.dataset.val, 10) === idx);
+  });
+}
+
+// "Destinatarix" — bottom sheet con buscador (Tanda 4, ver MANIFEST.md
+// "Cambios recientes"): reemplaza al <select> nativo, roto en mobile, con el
+// MISMO componente ya construido para "Agregar administradorx"
+// (adminAbrirSheetAgregarAdmin() más abajo) — buscador + lista, filtro local
+// por texto sobre una lista ya cargada. `#adm-notif-destino` sigue siendo el
+// valor leído por adminEnviarNotif() (ahora un <input type="hidden">).
+function adminAbrirSheetDestino() {
+  var s = document.getElementById('admin-destino-search'); if (s) s.value = '';
+  var ov = document.getElementById('admin-sheet-destino-overlay');
+  var sh = document.getElementById('admin-sheet-destino');
+  if (ov) ov.style.display = 'block';
+  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function(){ requestAnimationFrame(function(){ sh.style.transform = 'translateY(0)'; }); }); }
+  _registrarOverlayAbierto(adminCerrarSheetDestino);
+  _adminRenderDestinoLista('');
+}
+
+function adminCerrarSheetDestino(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var sh = document.getElementById('admin-sheet-destino');
+  var ov = document.getElementById('admin-sheet-destino-overlay');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+
+function _adminFiltrarDestino(q) { _adminRenderDestinoLista(q); }
+
+function _adminRenderDestinoLista(busqueda) {
+  var q = (busqueda || '').toLowerCase().trim();
+  var todos = [{ nombre: 'Todes (suscritxs)', valor: 'todos' }].concat(_admDestinatarios.map(function(n) { return { nombre: n, valor: n }; }));
+  var lista = q ? todos.filter(function(u) { return u.nombre.toLowerCase().indexOf(q) !== -1; }) : todos;
+  var list = document.getElementById('admin-destino-lista');
+  if (!list) return;
+  if (!lista.length) { list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--muted);font-size:0.82rem;">Sin resultados</div>'; return; }
+  list.innerHTML = lista.map(function(u) {
+    return '<div style="display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border-light);cursor:pointer;font-size:0.85rem;font-weight:700;" onclick="adminElegirDestino(\'' + u.valor.replace(/'/g, "\\'") + '\',\'' + u.nombre.replace(/'/g, "\\'") + '\')">' + u.nombre + '</div>';
+  }).join('');
+}
+
+function adminElegirDestino(valor, nombre) {
+  document.getElementById('adm-notif-destino').value = valor;
+  document.getElementById('admin-destino-trigger-label').textContent = nombre;
+  adminCerrarSheetDestino();
 }
 
 // ── Qué llevar ────────────────────────────────────────────────────────────────
@@ -770,24 +982,59 @@ function adminRenderQueLlevar(res) {
 // directo (ver ADMIN_TILE_INFO más arriba) -- ya no hace falta una función
 // adminIrEquip() propia.
 function adminRenderEquip(res) {
-  var html = '<div class="r-fila" style="display:flex;gap:8px;font-weight:800;font-size:0.78rem;text-transform:uppercase;color:var(--muted);padding:4px 0;"><span style="flex:1;">Talla</span><span style="width:110px;">Cantidad</span><span style="width:42px;"></span></div>';
-  (res.tallas || []).forEach(function(t) { html += adminFilaTallaHtml(t.talla, t.cantidad); });
+  var html = (res.tallas || []).map(function(t) { return adminFilaTallaHtml(t.talla, t.cantidad); }).join('');
   var listaEl = document.getElementById('admin-equip-lista');
   listaEl.innerHTML = html;
   void listaEl.offsetWidth; listaEl.style.animation = 'fadeIn 0.3s ease';
-  document.getElementById('adm-equip-protec').value = res.protecciones || 0;
+  _adminSetStepperValue('adm-equip-protec', res.protecciones || 0);
+  _adminRecalcMasAltura();
 }
 
+// Talla: ya no es texto libre -- viene de una pill de TALLAS_EU_US
+// (adminSeleccionarTallaPill()), guardada en el <input type="hidden"
+// class="adm-talla">. Cantidad: stepper +/- genérico (adminStepperChange()),
+// mismo <input type="hidden" class="adm-cant"> de siempre por debajo, así
+// que adminGuardarEquip() no necesitó cambios en cómo lee los valores.
 function adminFilaTallaHtml(talla, cantidad) {
-  return '<div class="adm-fila-talla" style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">' +
-    '<input type="text" class="adm-talla" value="' + (talla || '') + '" placeholder="Ej: 38" style="flex:1;">' +
-    '<input type="number" class="adm-cant" value="' + (cantidad != null ? cantidad : 1) + '" min="0" style="width:110px;">' +
-    '<button onclick="this.parentElement.remove()" style="width:42px;height:42px;border:2px solid var(--error-light-border);background:var(--error-lightest);color:var(--error);border-radius:10px;cursor:pointer;font-weight:800;">✕</button>' +
+  cantidad = cantidad != null ? cantidad : 1;
+  return '<div class="adm-fila-talla">' +
+    '<span class="adm-talla-label">' + talla + '</span>' +
+    '<input type="hidden" class="adm-talla" value="' + talla + '">' +
+    '<div class="qty-stepper" data-step="1" data-min="0">' +
+      '<button type="button" class="qty-btn" onclick="adminStepperChange(this,-1)">−</button>' +
+      '<span class="qty-value">' + cantidad + '</span>' +
+      '<button type="button" class="qty-btn" onclick="adminStepperChange(this,1)">+</button>' +
+      '<input type="hidden" class="adm-cant" value="' + cantidad + '">' +
+    '</div>' +
+    '<button type="button" class="adm-talla-quitar" onclick="this.closest(\'.adm-fila-talla\').remove(); _adminRenderTallasPills(); _adminRecalcMasAltura();">✕</button>' +
     '</div>';
 }
 
-function adminAgregarTalla() {
-  document.getElementById('admin-equip-lista').insertAdjacentHTML('beforeend', adminFilaTallaHtml('', 1));
+// "Agregar talla" -- en vez de un campo de texto libre, muestra pills con
+// las tallas estándar (TALLAS_EU_US) que todavía no estén en la lista (ver
+// MANIFEST.md "Cambios recientes").
+function adminToggleTallasPanel() {
+  var wrap = document.getElementById('admin-tallas-pills-wrap');
+  var abrir = wrap.style.display === 'none';
+  wrap.style.display = abrir ? 'block' : 'none';
+  if (abrir) _adminRenderTallasPills();
+  _adminRecalcMasAltura();
+}
+
+function _adminRenderTallasPills() {
+  var yaAgregadas = Array.prototype.map.call(document.querySelectorAll('#admin-equip-lista .adm-talla'), function(i) { return i.value; });
+  var disponibles = TALLAS_EU_US.filter(function(t) { return yaAgregadas.indexOf(String(t.eu)) === -1; });
+  var cont = document.getElementById('admin-tallas-pills');
+  if (!cont) return;
+  cont.innerHTML = disponibles.length
+    ? disponibles.map(function(t) { return '<span class="aj-pill" onclick="adminSeleccionarTallaPill(' + t.eu + ')">' + t.eu + ' EU · ' + t.us + ' US</span>'; }).join('')
+    : '<span style="font-size:0.8rem;color:var(--muted);">Ya agregaste todas las tallas.</span>';
+}
+
+function adminSeleccionarTallaPill(eu) {
+  document.getElementById('admin-equip-lista').insertAdjacentHTML('beforeend', adminFilaTallaHtml(String(eu), 1));
+  _adminRenderTallasPills();
+  _adminRecalcMasAltura();
 }
 
 function adminGuardarEquip(btn) {

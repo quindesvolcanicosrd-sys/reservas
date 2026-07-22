@@ -80,3 +80,61 @@
 .ql-skel-line { background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-shine) 50%, var(--skeleton-base) 75%); background-size: 200% 100%; animation: skeletonShimmer 1.2s ease-in-out infinite; border-radius: 4px; height: 14px; }
 .ql-skel-line-title { width: 45%; margin-bottom: 10px; }
 .ql-skel-line-sub { width: 70%; height: 12px; }
+
+/* ── Tanda 4 (rediseño panel admin) — ver MANIFEST.md "Cambios recientes" ── */
+
+/* Acordeón de mes en "Reservas" (reemplaza el <select> nativo, roto en
+   mobile, por pills .mes-item/.meses-grid-pills — mismo componente que ya
+   usa el flujo de pago mensual, js/ui.js generarMeses()). */
+.admin-mes-acordeon { border: 1.5px solid var(--border-light); border-radius: 12px; overflow: hidden; background: var(--surface-2); }
+.admin-mes-trigger { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; cursor: pointer; font-size: 0.88rem; font-weight: 700; color: var(--text); }
+.admin-mes-chevron { color: var(--brand); transition: transform 0.3s; }
+.admin-mes-acordeon-body { max-height: 0; overflow: hidden; transition: max-height 0.35s cubic-bezier(0.16,1,0.3,1); }
+.admin-mes-acordeon-body.abierto { max-height: 340px; }
+.admin-mes-acordeon-body .meses-grid-pills { padding: 4px 12px 14px; }
+.mes-item.mes-item-sel { background: var(--brand); border-color: var(--brand); color: var(--white); }
+
+/* Selector de hora tipo rueda/scroll (Notificación) — reemplaza la parte de
+   hora del <input type="datetime-local"> nativo, la fecha sigue siendo
+   <input type="date"> nativo (ese ya se ve bien). 2 columnas con scroll-snap,
+   ítem centrado = seleccionado. */
+.time-wheel-wrap { position: relative; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 10px; height: 160px; background: var(--surface-2); border-radius: 12px; overflow: hidden; }
+.time-wheel { height: 160px; width: 64px; overflow-y: scroll; scroll-snap-type: y mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.time-wheel::-webkit-scrollbar { display: none; }
+.time-wheel-item { height: 40px; display: flex; align-items: center; justify-content: center; scroll-snap-align: center; font-size: 1.05rem; font-weight: 600; color: var(--muted); transition: color 0.15s; user-select: none; cursor: pointer; }
+.time-wheel-item.time-wheel-sel { color: var(--brand); font-size: 1.3rem; font-weight: 800; }
+.time-wheel-sep { font-size: 1.3rem; font-weight: 800; color: var(--brand); flex-shrink: 0; }
+.time-wheel-highlight { position: absolute; left: 8px; right: 8px; top: 50%; height: 40px; transform: translateY(-50%); border-top: 2px solid var(--brand-20); border-bottom: 2px solid var(--brand-20); pointer-events: none; z-index: 1; }
+
+/* Trigger del bottom sheet de Destinatarix — mismo look que un select. */
+.admin-destino-trigger { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-radius: 12px; font-size: 0.88rem; color: var(--text); background: var(--surface-2); border: 0px solid var(--border); font-family: inherit; cursor: pointer; text-align: left; }
+.admin-destino-trigger .material-symbols-outlined { color: var(--brand); font-size: 1.3rem; flex-shrink: 0; }
+
+/* Stepper +/- genérico (cantidad de talla, protecciones, precios) —
+   ver adminStepperChange() (js/admin.js). */
+.qty-stepper { display: inline-flex; align-items: center; justify-content: space-between; gap: 6px; background: var(--surface-2); border: 1.5px solid var(--border-light); border-radius: 10px; padding: 4px 6px; width: 120px; flex-shrink: 0; }
+.qty-btn { width: 30px; height: 30px; border-radius: 8px; border: none; background: var(--brand-20); color: var(--brand); font-size: 1.1rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.qty-btn:hover { background: var(--brand-30); }
+.qty-btn:active { transform: scale(0.94); }
+.qty-value { flex: 1; text-align: center; font-weight: 800; font-size: 0.92rem; color: var(--text); }
+
+/* Fila de talla (Equipamiento) — label fija (viene de una pill, ya no es
+   texto libre) + stepper de cantidad + quitar. */
+.adm-fila-talla { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+.adm-talla-label { flex: 1; font-weight: 700; font-size: 0.88rem; color: var(--text); }
+.adm-talla-quitar { width: 42px; height: 42px; border: 2px solid var(--error-light-border); background: var(--error-lightest); color: var(--error); border-radius: 10px; cursor: pointer; font-weight: 800; flex-shrink: 0; }
+
+/* "Cambia el color" — botón único con ícono de paleta que abre el selector
+   nativo de color (reemplaza el círculo de color visible que había antes,
+   ver MANIFEST.md "Cambios recientes"); el <input type="color"> real queda
+   invisible pero clickeable (position:absolute, 1x1px, opacity:0), el click
+   nativo del <label> lo dispara igual. */
+.admin-color-custom-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: var(--brand-20); color: var(--brand); border-radius: 12px; font-size: 0.85rem; font-weight: 700; cursor: pointer; position: relative; }
+.admin-color-custom-btn:hover { background: var(--brand-30); }
+.admin-color-custom-btn input[type="color"] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+/* Precios de clases: stepper + selector de moneda al lado (USD por
+   defecto) — puramente de visualización, el valor numérico guardado no
+   cambia de unidad según la moneda elegida. */
+.admin-precio-row { display: flex; gap: 10px; align-items: center; }
+.admin-moneda-select { width: auto; min-width: 76px; }
