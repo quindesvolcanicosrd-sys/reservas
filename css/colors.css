@@ -162,6 +162,12 @@
   /* Inset estándar de contenido de pantalla — fuente única entre .contenedor
      (ui.css) y .aj-sub-inner (perfil.css), antes 16px duplicado en ambos. */
   --space-screen:   16px;
+  /* Alto de contenido de .app-bottom-nav (css/nav.css), sin contar el
+     env(safe-area-inset-bottom) que se suma aparte -- fuente única entre la
+     nav en sí, el spacer de scroll de cada pantalla raíz y el offset de
+     #cta-footer-s-home (css/estilos.css), para que los 3 se muevan juntos si
+     el alto de la nav cambia algún día. */
+  --bottom-nav-h:   60px;
 
   /* ── Sombras (runtime — en oscuro quedan en negro fijo, ver js/color-enfasis.js) ── */
   --shadow-sm:      0 4px 12px rgba(249,115,22,0.08);

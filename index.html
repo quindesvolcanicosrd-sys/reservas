@@ -81,7 +81,6 @@
 </div>
 
 <div id="home-nav" class="app-nav app-nav-fixed" style="display:none;">
-  <div class="avatar-pill avatar-pill--sm app-nav-avatar" id="home-avatar-nav" onclick="irEditarDatos()"></div>
   <div class="app-nav-section" id="home-nav-seccion">MIS RESERVAS</div>
   <div class="app-nav-actions">
     <button class="app-nav-icon-btn" id="btn-refrescar-home" onclick="refrescarMisReservas(null, this)" title="Actualizar" style="display:none;">
@@ -96,6 +95,13 @@
     </button>
   </div>
 </div>
+
+<!-- Nav inferior (bottom tab bar), persistente en toda pantalla raíz de la
+     app autenticada (hoy s-home/s-datos) -- ver APP_BOTTOM_NAV_ITEMS y
+     _actualizarBottomNav() (js/ui.js) para el array de ítems y el render
+     data-driven; ver MANIFEST.md "Cambios recientes" para el detalle
+     completo. display:none por default, mismo patrón que #home-nav. -->
+<div id="app-bottom-nav" class="app-bottom-nav" style="display:none;"></div>
 
 <div id="ptr-indicator" class="ptr-indicator">
   <div class="ptr-indicator-inner">
@@ -218,11 +224,15 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <div style="text-align:left;">
         <div class="empty-state-topbar" id="home-empty-topbar" style="display:none;">
-          <div class="avatar-pill avatar-pill--sm empty-state-avatar" id="home-empty-avatar" onclick="irEditarDatos()"></div>
           <button class="empty-state-contacto" onclick="abrirContacto()"><span class="material-symbols-outlined">forum</span>¿Dudas? Contáctanos</button>
         </div>
         <div id="home-reservas-lista"></div>
-<div class="cta-footer-spacer"></div>
+<!-- +var(--bottom-nav-h) sobre el spacer base de siempre (80px, ya pensado
+     para #cta-footer-s-home) -- pura suma: #cta-footer-s-home se levanta
+     exactamente esa misma cantidad (css/estilos.css) para no superponerse
+     con .app-bottom-nav, así que el espacio total que hay que reservar en
+     el scroll crece igual de lo que crece abajo, sin dejar hueco de más. -->
+<div class="cta-footer-spacer" style="height:calc(80px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
       </div>
       
     </div>
@@ -578,6 +588,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <button onclick="ajAbrirSheetLogout()" class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:8px;"><span class="material-symbols-outlined" style="font-size:1.1rem;">logout</span>Cerrar sesión</button>
       <button onclick="eliminarCuenta()" class="aj-btn-delete"><span class="material-symbols-outlined" style="font-size:1.1rem;">delete</span>Eliminar cuenta</button>
     </div>
+
+    <!-- s-datos no tiene ningún .cta-footer-fixed propio -- a diferencia de
+         s-home (que ya reservaba espacio para el suyo), acá el único fixed
+         nuevo que hay que despejar es .app-bottom-nav en sí. -->
+    <div class="cta-footer-spacer" style="height:calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 12px);"></div>
 
   </div>
 

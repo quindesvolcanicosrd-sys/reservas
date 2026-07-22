@@ -150,19 +150,17 @@
 
 
 /* ── Empty state home ────────────────────────────────────
-   .empty-state-topbar (avatar + "¿Dudas? Contáctanos") vive ahora como
-   elemento persistente FUERA de #home-reservas-lista (index.html), nunca
-   como wrapper de .empty-state-body — ver "Cambios recientes" (bug del
-   loader/re-render genérico tapando avatar y contacto durante el refresh
-   de "Mis reservas"). Por eso .empty-state-body ya no depende de un padre
-   flex (antes .empty-state-home) para su alto/centrado: trae su propio
-   min-height y se centra sola. */
-.empty-state-topbar { display:flex; align-items:center; justify-content:space-between; padding:4px 0 16px; }
-/* Forma círculo compartida (.avatar-pill--sm, css/global.css); acá solo lo
-   propio del contexto empty-state. Sin margin-left extra — el
-   `padding:var(--space-screen)` de `.contenedor` (ancestro, css/ui.css) ya
-   deja aire suficiente del borde real de pantalla. */
-.empty-state-avatar { cursor:pointer; }
+   .empty-state-topbar ("¿Dudas? Contáctanos") vive ahora como elemento
+   persistente FUERA de #home-reservas-lista (index.html), nunca como
+   wrapper de .empty-state-body — ver "Cambios recientes" (bug del
+   loader/re-render genérico tapando el contacto durante el refresh de "Mis
+   reservas"). Por eso .empty-state-body ya no depende de un padre flex
+   (antes .empty-state-home) para su alto/centrado: trae su propio
+   min-height y se centra sola. justify-content:flex-end (antes
+   space-between, cuando también vivía acá el avatar clickeable a Ajustes —
+   ver "Cambios recientes", nav inferior) mantiene a "Contáctanos" en el
+   mismo lugar visual de siempre ahora que es el único hijo. */
+.empty-state-topbar { display:flex; align-items:center; justify-content:flex-end; padding:4px 0 16px; }
 .empty-state-contacto { display:flex; align-items:center; gap:5px; padding:7px 12px; background:var(--surface-2); border:1.5px solid var(--border-light); border-radius:20px; cursor:pointer; color:var(--muted); font-size:0.7rem; font-weight:700; font-family:inherit; transition:all 0.15s; }
 .empty-state-contacto:hover { border-color:var(--brand); color:var(--brand); }
 .empty-state-contacto .material-symbols-outlined { font-size:14px; }

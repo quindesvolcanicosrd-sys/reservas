@@ -133,11 +133,6 @@
 .app-nav-cta .material-symbols-outlined { font-size: 1rem; }
 .app-nav-cta-label { display: inline; }
 
-/* ── Avatar nav ──────────────────────────────── */
-/* Forma círculo compartida (.avatar-pill--sm, css/global.css); acá solo lo
-   propio del contexto nav. */
-.app-nav-avatar { cursor: pointer; -webkit-tap-highlight-color: transparent; }
-
 /* ── Sección label (compacto al scrollear) ───── */
 .app-nav-section {
   font-size: 0.72rem;
@@ -179,3 +174,55 @@
 /* ── CTA de "Nueva reserva" en #home-nav: ícono-solo salvo en el estado vacío ── */
 #home-nav-cta-label { display: none; }
 #home-nav.mostrar-cta-label:not(.compacto) #home-nav-cta-label { display: inline; }
+
+/* ── Nav inferior (bottom tab bar) ─────────────
+   Persistente en toda pantalla raíz de la app autenticada (hoy 's-home' y
+   's-datos' -- ver APP_BOTTOM_NAV_ITEMS en js/ui.js, base extensible para
+   secciones futuras como Tareas/Asistencias/Equipo: sumar un ítem al array
+   alcanza, sin tocar este CSS). Mismo criterio visual que .app-nav-fixed --
+   fondo sólido var(--bg), sin blur/transparencia. display:none por default
+   en el <div> de index.html (mismo patrón que #home-nav); _actualizarBottomNav()
+   (js/ui.js) togglea 'flex'/'none' y reconstruye los tabs visibles en cada
+   ir(). */
+.app-bottom-nav {
+  display: flex;
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 523px;
+  z-index: 900;
+  background: var(--bg);
+  /* box-shadow en vez de border-top: mismo hairline visual (0.5px, var(--border-light))
+     pero sin sumar al alto real de la caja -- un border sí lo hace (incluso con
+     box-sizing:border-box, porque acá no hay un `height` explícito del que descontar,
+     el alto lo define el contenido), y ese medio píxel de más rompía por poco el calc()
+     de #cta-footer-s-home/los spacers de scroll (css/estilos.css, index.html), todos
+     calculados contra var(--bottom-nav-h) a secas. */
+  box-shadow: 0 -0.5px 0 var(--border-light);
+  box-sizing: border-box;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.app-bottom-nav-item {
+  flex: 1;
+  height: var(--bottom-nav-h);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.2s ease;
+}
+.app-bottom-nav-item .material-symbols-outlined { font-size: 1.4rem; }
+/* Tab de la pantalla activa, resaltado con el color de énfasis -- el resto
+   queda en var(--muted) por la regla base de arriba, sin clase extra. */
+.app-bottom-nav-item.activo { color: var(--brand); }

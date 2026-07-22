@@ -16,11 +16,6 @@ function prepararHome(saltarFadeInicial, onListo) {
   }
   var saludoEl = document.getElementById('home-saludo');
   if (saludoEl) saludoEl.textContent = E.nombre + '!';
-  var navAvatar = document.getElementById('home-avatar-nav');
-  if (navAvatar) {
-    var foto = E.datos && (E.datos.fotoPerfil || E.datos.fotoUrl || E.datos.foto || E.datos.picture || E.datos.photoUrl || '');
-    _avatarSetFotoOInicial(navAvatar, foto, E.nombre);
-  }
   var homeContent = document.getElementById('home-reservas-lista');
   var homeContenidoFinalListo = false;
   if (!saltarFadeInicial) {
@@ -356,17 +351,12 @@ function _renderHomeReservas() {
   var activas = _sincronizarNavHome();
   var container = document.getElementById('home-reservas-lista');
 
-  var fotoUrl = E.datos && (E.datos.fotoPerfil || '');
-
-  // Topbar (avatar + "¿Dudas? Contáctanos") es un elemento persistente fuera de
-  // #home-reservas-lista (index.html) — acá solo se sincroniza su visibilidad/avatar,
+  // Topbar ("¿Dudas? Contáctanos") es un elemento persistente fuera de
+  // #home-reservas-lista (index.html) — acá solo se sincroniza su visibilidad,
   // nunca se re-crea ni queda expuesta a que un innerHTML del contenedor dinámico
   // (loader genérico, re-render) se la lleve puesta (ver "Cambios recientes").
   var emptyTopbar = document.getElementById('home-empty-topbar');
-  if (emptyTopbar) {
-    emptyTopbar.style.display = activas.length === 0 ? 'flex' : 'none';
-    _avatarSetFotoOInicial(document.getElementById('home-empty-avatar'), fotoUrl, E.nombre);
-  }
+  if (emptyTopbar) emptyTopbar.style.display = activas.length === 0 ? 'flex' : 'none';
 
   // "Cambiar mi equipamiento" del footer fijo (#cta-footer-s-home, index.html,
   // compartido con el estado "con reservas" — no hay un footer distinto por

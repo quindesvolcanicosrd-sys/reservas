@@ -209,6 +209,8 @@ function ir(id, desdeHistorial, sinTrampa) {
     }
   }
 
+  _actualizarBottomNav(id);
+
   var sinPasos = ['s1','s-home','s-misreservas','s-carga','s6','s-datos','s-gestionar'].concat(ADMIN_PANTALLAS);
   if (E.reagendando) sinPasos = sinPasos.concat(['s4','s-carga-conf']);
   var dotContainer = document.querySelector('.paso-indicator');
@@ -224,6 +226,62 @@ function ir(id, desdeHistorial, sinTrampa) {
   }
 }
 function volver(id) { ir(id); }
+
+// Nav inferior (bottom tab bar), persistente en toda pantalla raíz de la app
+// autenticada -- base extensible para secciones futuras (Tareas/Asistencias/
+// Equipo, etc.): un array de ítems en vez de botones hardcodeados, así una
+// sección nueva solo necesita sumar una entrada acá (con su propia
+// 'pantalla' raíz), sin tocar el render de _actualizarBottomNav() ni el CSS
+// de css/nav.css. `visible` decide qué tabs se muestran según el tipo de
+// cuenta (hoy solo distingue admin "pura" de todo el resto, ver
+// _dashboardAdminLimitado en js/admin.js/js/auth.js); `entrar` es opcional
+// y reemplaza al volver(pantalla) por defecto cuando la pantalla necesita
+// poblarse antes de mostrarse -- 'ajustes' lo necesita: para una cuenta
+// normal, #s-datos puede no haberse poblado nunca todavía en la sesión (el
+// login normal aterriza en 's-home', irEditarDatos() recién se llamaba
+// antes desde el avatar clickeable de home, ahora eliminado -- ver
+// MANIFEST.md "Cambios recientes"); un ir('s-datos') a secas dejaría los
+// placeholders "—" la primera vez que se toca este tab.
+var APP_BOTTOM_NAV_ITEMS = [
+  { id: 'reservas', icono: 'calendar_month', texto: 'Reservas', pantalla: 's-home',
+    visible: function() { return !_dashboardAdminLimitado; } },
+  { id: 'ajustes', icono: 'settings', texto: 'Ajustes', pantalla: 's-datos',
+    entrar: function() { irEditarDatos(); },
+    visible: function() { return true; } }
+];
+var _BOTTOM_NAV_PANTALLAS = APP_BOTTOM_NAV_ITEMS.map(function(item) { return item.pantalla; });
+
+function _bottomNavClick(id) {
+  for (var i = 0; i < APP_BOTTOM_NAV_ITEMS.length; i++) {
+    if (APP_BOTTOM_NAV_ITEMS[i].id !== id) continue;
+    var item = APP_BOTTOM_NAV_ITEMS[i];
+    if (item.entrar) item.entrar(); else volver(item.pantalla);
+    return;
+  }
+}
+
+// Llamada desde ir() en cada navegación: si `id` es una de las pantallas
+// raíz de algún ítem, (re)construye los tabs visibles para el tipo de
+// cuenta actual y resalta el de la pantalla activa; si no, oculta la nav
+// entera (pantallas internas -- s2, s-misreservas, aj-sub-*, etc. -- no
+// llevan nav inferior). El cambio de pantalla en sí lo anima ir() como
+// cualquier otra navegación (fade de .pantalla.activa) -- no hay ninguna
+// animación propia acá.
+function _actualizarBottomNav(id) {
+  var nav = document.getElementById('app-bottom-nav');
+  if (!nav) return;
+  if (_BOTTOM_NAV_PANTALLAS.indexOf(id) === -1) { nav.style.display = 'none'; return; }
+  var html = '';
+  APP_BOTTOM_NAV_ITEMS.forEach(function(item) {
+    if (!item.visible()) return;
+    html += '<button type="button" class="app-bottom-nav-item' + (item.pantalla === id ? ' activo' : '') + '" onclick="_bottomNavClick(\'' + item.id + '\')">' +
+      '<span class="material-symbols-outlined">' + item.icono + '</span>' +
+      '<span class="app-bottom-nav-label">' + item.texto + '</span>' +
+      '</button>';
+  });
+  nav.innerHTML = html;
+  nav.style.display = 'flex';
+}
 
 window.addEventListener('popstate', function(ev) {
   if (_overlayStack.length > 0) { var _fn = _overlayStack.pop(); _fn(true); return; }
