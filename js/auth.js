@@ -236,6 +236,20 @@ function continuar_pin() {
       localStorage.setItem('session', JSON.stringify({ nombre: E.nombre, token: _token }));
       vincularPush(E.nombre);
 
+      if (res.esAdmin) {
+        _adminToken = res.adminToken;
+        _adminEmail = res.email;
+        _adminNombre = E.nombre;
+        localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, nombre: _adminNombre, exp: Date.now() + 11.5 * 3600 * 1000 }));
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
+        if (res.dashboardAdmin !== false) {
+          ocultarCargando();
+          adminEntrar();
+          return;
+        }
+      }
+
       mostrarCargando('Cargando tus reservas...');
       api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
         _todasReservas = reservas;
@@ -366,6 +380,20 @@ window.onload = function() {
         api({ action: 'restaurarSesion' }, function(res) {
           if (!res.valido || !res.datos) { window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true); return; }
           E.datos = res.datos; E.datosCompletos = res.datos;
+          if (res.esAdmin) {
+            _adminToken = res.adminToken;
+            _adminEmail = res.email;
+            _adminNombre = E.nombre;
+            localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, nombre: _adminNombre, exp: Date.now() + 11.5 * 3600 * 1000 }));
+            window.OneSignalDeferred = window.OneSignalDeferred || [];
+            OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
+            if (res.dashboardAdmin !== false) {
+              window._restaurandoSesion = false;
+              ocultarCargando();
+              adminEntrar();
+              return;
+            }
+          }
           vincularPush(E.nombre);
           api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
             _todasReservas = reservas;
