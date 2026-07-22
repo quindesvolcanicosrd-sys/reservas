@@ -94,7 +94,7 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
    Mismo tamaño/peso de fuente que .btn-cancel-text (css/home.css), sin el
    rojo ni el subrayado (reservados ahí para "Cancelar reserva", la única
    acción realmente destructiva de este tipo). */
-.btn-text-simple { width: 100%; padding: 13px; background: none; border: none; color: var(--muted); font-size: 0.74rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+.btn-text-simple { width: 100%; padding-bottom: 20px; padding-top: 5px; background: none; border: none; color: var(--muted); font-size: 0.74rem; font-weight: 600; cursor: pointer; font-family: inherit; }
 .btn-text-simple:hover { opacity: 0.8; }
 
 .opciones { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
