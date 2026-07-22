@@ -91,7 +91,12 @@ function onGoogleCredentialUsuario(resp) {
       _dashboardAdminLimitado = (res.dashboardAdmin !== false);
       var _plAdmin = _decodificarJwtGoogle(resp.credential);
       _adminNombre = (_plAdmin && _plAdmin.name) || _adminEmail;
-      localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, nombre: _adminNombre, exp: Date.now() + 11.5 * 3600 * 1000 }));
+      // dashboardAdmin cacheado acá (ver MANIFEST.md "Cambios recientes" --
+      // 2 caminos de restauración competían al recargar): window.onload lo
+      // lee de vuelta para el atajo sin backend de una cuenta admin "pura"
+      // sin fila en Equipo (nunca tiene 'session'/token regular, así que no
+      // hay ningún otro camino del que sacar este dato al restaurar).
+      localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, nombre: _adminNombre, dashboardAdmin: _dashboardAdminLimitado, exp: Date.now() + 11.5 * 3600 * 1000 }));
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
       // dashboardAdmin:true (o ausente, retrocompatibilidad con cuentas admin
@@ -242,7 +247,7 @@ function continuar_pin() {
         _adminEmail = res.email;
         _adminNombre = E.nombre;
         _dashboardAdminLimitado = (res.dashboardAdmin !== false);
-        localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, nombre: _adminNombre, exp: Date.now() + 11.5 * 3600 * 1000 }));
+        localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, nombre: _adminNombre, dashboardAdmin: _dashboardAdminLimitado, exp: Date.now() + 11.5 * 3600 * 1000 }));
         window.OneSignalDeferred = window.OneSignalDeferred || [];
         OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
         if (res.dashboardAdmin !== false) {
@@ -357,21 +362,28 @@ window.onload = function() {
 
   var _restaurando = false;
 
-  var adminSession = localStorage.getItem('adminSession');
-  if (adminSession) {
-    try {
-      var ad = JSON.parse(adminSession);
-      if (ad.adminToken && ad.email && Date.now() < (ad.exp || 0)) {
-        _restaurando = true;
-        _adminToken = ad.adminToken; _adminEmail = ad.email;
-        adminEntrar();
-        ocultarCargando();
-      } else { localStorage.removeItem('adminSession'); }
-    } catch (ex) { localStorage.removeItem('adminSession'); }
-  }
-
+  // Prioridad de restauración (bug real corregido -- ver MANIFEST.md
+  // "Cambios recientes" para el diagnóstico completo): 2 caminos de
+  // restauración competían acá, y 'adminSession' corría siempre primero sin
+  // importar si 'session' también existía -- para una cuenta admin con fila
+  // propia en Equipo (dashboardAdmin:true, pero con datos reales de
+  // usuarix), eso hacía que 'session'/restaurarSesion() ni se intentara: la
+  // cuenta terminaba en Ajustes con E.datos vacío (nunca se pidió al
+  // backend) y _dashboardAdminLimitado en su default `false` (nunca se
+  // seteaba en el atajo de adminSession), mostrando la nav como si fuera
+  // cuenta normal. Fix: 'session' (token regular) corre PRIMERO si existe,
+  // sea cual sea el contenido de 'adminSession' -- es la única fuente que
+  // trae E.datos real vía restaurarSesion() (backend), y de ahí sale
+  // también res.dashboardAdmin con el mismo criterio que ya usa el login
+  // fresco (loginGoogle()/validarPin()). 'adminSession' (cache local, sin
+  // pedir nada al backend) pasa a ser solo el atajo para cuando NO hay
+  // 'session' -- caso real: admin "pura" sin ninguna fila en Equipo, que
+  // nunca recibió un token regular para empezar, así que no hay ningún otro
+  // camino del que "priorizar". En ambos caminos, _dashboardAdminLimitado
+  // queda seteada explícitamente antes de navegar -- nunca se deja en su
+  // default `false` (`js/admin.js`).
   var session = localStorage.getItem('session');
-  if (!_restaurando && session) {
+  if (session) {
     try {
       var s = JSON.parse(session);
       if (s.token && s.nombre) {
@@ -387,7 +399,7 @@ window.onload = function() {
             _adminEmail = res.email;
             _adminNombre = E.nombre;
             _dashboardAdminLimitado = (res.dashboardAdmin !== false);
-            localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, nombre: _adminNombre, exp: Date.now() + 11.5 * 3600 * 1000 }));
+            localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, nombre: _adminNombre, dashboardAdmin: _dashboardAdminLimitado, exp: Date.now() + 11.5 * 3600 * 1000 }));
             window.OneSignalDeferred = window.OneSignalDeferred || [];
             OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
             if (res.dashboardAdmin !== false) {
@@ -412,6 +424,21 @@ window.onload = function() {
       } else { localStorage.removeItem('session'); }
     } catch (ex) { localStorage.removeItem('session'); }
   }
+
+  var adminSession = localStorage.getItem('adminSession');
+  if (!_restaurando && adminSession) {
+    try {
+      var ad = JSON.parse(adminSession);
+      if (ad.adminToken && ad.email && Date.now() < (ad.exp || 0)) {
+        _restaurando = true;
+        _adminToken = ad.adminToken; _adminEmail = ad.email;
+        _dashboardAdminLimitado = (ad.dashboardAdmin !== false);
+        adminEntrar();
+        ocultarCargando();
+      } else { localStorage.removeItem('adminSession'); }
+    } catch (ex) { localStorage.removeItem('adminSession'); }
+  }
+
   if (!_restaurando) {
     if (_tokenNuevx) {
       window._loginAutoEnCurso = true;
