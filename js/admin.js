@@ -124,26 +124,6 @@ function adminEntrar() {
   _adminCargarBanners();
 }
 
-// Acordeón "Ajustes adicionales" del dashboard admin: color de énfasis +
-// precios de clases (Tanda 3, ver MANIFEST.md "Cambios recientes") — Mi
-// Liga/Usuarios quedan fuera de este acordeón (Mi Liga vive en Ajustes,
-// punto 2 de la Tanda 3; Usuarios sigue sin punto de entrada, ver nota en
-// "Cambios recientes"). max-height pasa de un tope fijo de 400px (Tanda 1,
-// cuerpo vacío) a `scrollHeight` real -- con contenido real adentro, 400px
-// ya no alcanzaba y recortaba el botón "Guardar precios".
-function adminToggleAjustesAdicionales() {
-  var body = document.getElementById('admin-extra-acordeon-body');
-  var chevron = document.getElementById('admin-extra-acordeon-chevron');
-  var abierto = body.style.maxHeight && body.style.maxHeight !== '0px';
-  if (!abierto) {
-    body.style.maxHeight = body.scrollHeight + 'px'; body.style.opacity = '1';
-    chevron.style.transform = 'rotate(180deg)';
-  } else {
-    body.style.maxHeight = '0'; body.style.opacity = '0';
-    chevron.style.transform = 'rotate(0deg)';
-  }
-}
-
 // ── Dashboard admin: banners condicionales + burbujas embebidas ─────────────────
 // Cierra lo que esté abierto entre los 2 acordeones de banner y las 4
 // burbujas de tile (los únicos 6 que pueden convivir con el dashboard
@@ -169,7 +149,6 @@ function _adminCerrarTodoAbierto() {
     if (chevron) chevron.style.transform = '';
   }
   _admDashAbierto = null;
-  _adminRecalcMasAltura();
 }
 
 function adminToggleBanner(bodyId) {
@@ -419,7 +398,6 @@ function _adminAbrirBurbuja(tileKey, tileEl) {
   }
   _admDashAbierto = tileKey;
   info.cargar();
-  _adminRecalcMasAltura();
 }
 
 // Click directo en una tile: si ya estaba abierta, la cierra (toggle); si
@@ -429,23 +407,19 @@ function adminToggleBurbuja(tileKey, tileEl) {
   _adminAbrirBurbuja(tileKey, tileEl);
 }
 
-// "Equipamiento" y "Notificación" viven ahora DENTRO del acordeón "Más"
-// (Tanda 4, ver MANIFEST.md "Cambios recientes") -- su max-height se calcula
-// una sola vez al abrirse (adminToggleAjustesAdicionales()), así que cualquier
-// cambio de alto dentro (abrir/cerrar una de sus 2 burbujas, agregar/quitar
-// una fila de talla) necesita recalcularlo o el contenido nuevo queda
-// recortado. No-op si "Más" está cerrado.
-function _adminRecalcMasAltura() {
-  var body = document.getElementById('admin-extra-acordeon-body');
-  if (body && body.style.maxHeight && body.style.maxHeight !== '0px') {
-    body.style.maxHeight = body.scrollHeight + 'px';
-  }
-}
-
 // ── Color de énfasis ──────────────────────────────────────────────────────────
 // Paleta de arranque, mismo criterio que el color picker de Pivot: unos
-// pocos presets + personalizado libre via <input type="color">.
-var ADMIN_COLOR_PRESETS = ['#F97316', '#EF4444', '#EC4899', '#A855F7', '#3B82F6', '#14B8A6', '#22C55E', '#F59E0B'];
+// pocos presets + personalizado libre via <input type="color">. Tanda 5 (ver
+// MANIFEST.md "Cambios recientes"): 2 filas de 7 columnas -- 7 presets
+// "de siempre" (fila 1, se sacó `#F59E0B` amber de la lista original de 8 por
+// ser el tono más parecido a `#F97316` orange, el que menos variedad sumaba)
+// + 6 presets nuevos (fila 2, hues elegidos para no repetir ningún tono de la
+// fila 1: amarillo, lima, cian, índigo, fucsia y un neutro gris-azulado) + el
+// eyedropper como 14º ítem (ver adminRenderColorEnfasis()).
+var ADMIN_COLOR_PRESETS = [
+  '#F97316', '#EF4444', '#EC4899', '#A855F7', '#3B82F6', '#14B8A6', '#22C55E',
+  '#EAB308', '#84CC16', '#06B6D4', '#6366F1', '#D946EF', '#64748B'
+];
 
 // El MISMO componente vive en 2 lugares desde la Tanda 3 (ver MANIFEST.md
 // "Cambios recientes"): "Ajustes adicionales" del dashboard y
@@ -462,6 +436,16 @@ function adminRenderColorEnfasis() {
     var sel = hex.toLowerCase() === actual;
     return '<button type="button" class="admin-color-swatch' + (sel ? ' sel' : '') + '" style="background:' + hex + ';" onclick="adminCambiarColorEnfasis(\'' + hex + '\')" aria-label="' + hex + '"></button>';
   }).join('');
+  // Eyedropper -- 14º ítem del grid de 7 columnas (cae solo al final de la
+  // fila 2), reemplaza al botón "Personalizado" separado que había antes
+  // (Tanda 4, ver MANIFEST.md "Cambios recientes"): mismo tamaño/forma que un
+  // swatch (`.admin-color-swatch`), con el <input type="color"> real
+  // invisible pero clickeable adentro (mismo truco que `.admin-color-custom-btn`,
+  // eliminada).
+  html += '<label class="admin-color-swatch admin-color-eyedropper" aria-label="Personalizado">' +
+    '<span class="material-symbols-outlined">colorize</span>' +
+    '<input type="color" class="admin-color-custom-input" onchange="adminCambiarColorEnfasis(this.value)">' +
+    '</label>';
   conts.forEach(function(cont) { cont.innerHTML = html; });
   document.querySelectorAll('.admin-color-custom-input').forEach(function(custom) { custom.value = actual; });
 }
@@ -509,7 +493,7 @@ function _adminSetStepperValue(hiddenId, val, decimals) {
 // Selector de moneda de "Precios de clases" -- puramente de visualización
 // (USD por defecto): ambos selects (precio por clase / precio mensual) se
 // mantienen sincronizados entre sí, no tiene sentido que difieran ya que es
-// una sola lista de precios. No se persiste al backend -- adminGuardarPrecios()
+// una sola lista de precios. No se persiste al backend -- adminGuardarPreciosAuto()
 // sigue guardando el número tal cual, sin unidad.
 function adminCambiarMoneda(val) {
   document.querySelectorAll('.admin-moneda-select').forEach(function(s) { s.value = val; });
@@ -529,16 +513,23 @@ function _adminCargarPrecios() {
   }, function() {});
 }
 
-function adminGuardarPrecios(btn) {
-  var pClase = parseFloat(document.getElementById('adm-precio-clase').value);
-  var pMensual = parseFloat(document.getElementById('adm-precio-mensual').value);
-  if (!(pClase > 0) || !(pMensual > 0)) { err('err-admin-precios', 'Ingresa 2 precios válidos, mayores a 0.'); return; }
-  if (btn) btn.disabled = true;
-  adminApi({ action: 'adminSetPreciosClases', precioPorClase: pClase, precioMensual: pMensual }, function(res) {
-    if (btn) btn.disabled = false;
-    if (res.exito) { E.precioPorClase = pClase; E.precioMensual = pMensual; mostrarToast('Precios actualizados.', 'ok'); }
-    else { err('err-admin-precios', res.error || 'Error al guardar.'); }
-  }, function(e) { if (btn) btn.disabled = false; err('err-admin-precios', 'Error: ' + e.message); });
+// Guardado automático (Tanda 5, ver MANIFEST.md "Cambios recientes") --
+// reemplaza al botón "Guardar precios": cada tap de cualquiera de los 2
+// steppers llama a esta función, debounceada 500ms (mismo criterio que
+// adminGuardarEquipAuto()) para no disparar una request por cada click
+// rápido consecutivo.
+var _admPreciosGuardarTimer = null;
+function adminGuardarPreciosAuto() {
+  clearTimeout(_admPreciosGuardarTimer);
+  _admPreciosGuardarTimer = setTimeout(function() {
+    var pClase = parseFloat(document.getElementById('adm-precio-clase').value);
+    var pMensual = parseFloat(document.getElementById('adm-precio-mensual').value);
+    if (!(pClase > 0) || !(pMensual > 0)) return;
+    adminApi({ action: 'adminSetPreciosClases', precioPorClase: pClase, precioMensual: pMensual }, function(res) {
+      if (res.exito) { E.precioPorClase = pClase; E.precioMensual = pMensual; mostrarToast('Precios actualizados.', 'ok'); }
+      else { mostrarToast(res.error || 'Error al guardar los precios.', 'error'); }
+    }, function(e) { mostrarToast('Error: ' + e.message, 'error'); });
+  }, 500);
 }
 
 function adminCerrarSesionLocal(silencioso) {
@@ -627,7 +618,6 @@ function adminToggleMesAcordeon() {
     body.classList.remove('abierto');
     chevron.style.transform = '';
   }
-  _adminRecalcMasAltura();
 }
 
 function _adminRenderMesPills() {
@@ -987,26 +977,26 @@ function adminRenderEquip(res) {
   listaEl.innerHTML = html;
   void listaEl.offsetWidth; listaEl.style.animation = 'fadeIn 0.3s ease';
   _adminSetStepperValue('adm-equip-protec', res.protecciones || 0);
-  _adminRecalcMasAltura();
 }
 
 // Talla: ya no es texto libre -- viene de una pill de TALLAS_EU_US
 // (adminSeleccionarTallaPill()), guardada en el <input type="hidden"
 // class="adm-talla">. Cantidad: stepper +/- genérico (adminStepperChange()),
-// mismo <input type="hidden" class="adm-cant"> de siempre por debajo, así
-// que adminGuardarEquip() no necesitó cambios en cómo lee los valores.
+// mismo <input type="hidden" class="adm-cant"> de siempre por debajo. Tanda 5:
+// tanto el stepper como "quitar" disparan adminGuardarEquipAuto() (guardado
+// automático debounced, ver más abajo) -- ya no hay botón "Guardar cambios".
 function adminFilaTallaHtml(talla, cantidad) {
   cantidad = cantidad != null ? cantidad : 1;
   return '<div class="adm-fila-talla">' +
     '<span class="adm-talla-label">' + talla + '</span>' +
     '<input type="hidden" class="adm-talla" value="' + talla + '">' +
     '<div class="qty-stepper" data-step="1" data-min="0">' +
-      '<button type="button" class="qty-btn" onclick="adminStepperChange(this,-1)">−</button>' +
+      '<button type="button" class="qty-btn" onclick="adminStepperChange(this,-1);adminGuardarEquipAuto();">−</button>' +
       '<span class="qty-value">' + cantidad + '</span>' +
-      '<button type="button" class="qty-btn" onclick="adminStepperChange(this,1)">+</button>' +
+      '<button type="button" class="qty-btn" onclick="adminStepperChange(this,1);adminGuardarEquipAuto();">+</button>' +
       '<input type="hidden" class="adm-cant" value="' + cantidad + '">' +
     '</div>' +
-    '<button type="button" class="adm-talla-quitar" onclick="this.closest(\'.adm-fila-talla\').remove(); _adminRenderTallasPills(); _adminRecalcMasAltura();">✕</button>' +
+    '<button type="button" class="adm-talla-quitar" onclick="this.closest(\'.adm-fila-talla\').remove(); _adminRenderTallasPills(); adminGuardarEquipAuto();">✕</button>' +
     '</div>';
 }
 
@@ -1018,7 +1008,6 @@ function adminToggleTallasPanel() {
   var abrir = wrap.style.display === 'none';
   wrap.style.display = abrir ? 'block' : 'none';
   if (abrir) _adminRenderTallasPills();
-  _adminRecalcMasAltura();
 }
 
 function _adminRenderTallasPills() {
@@ -1034,24 +1023,29 @@ function _adminRenderTallasPills() {
 function adminSeleccionarTallaPill(eu) {
   document.getElementById('admin-equip-lista').insertAdjacentHTML('beforeend', adminFilaTallaHtml(String(eu), 1));
   _adminRenderTallasPills();
-  _adminRecalcMasAltura();
+  adminGuardarEquipAuto();
 }
 
-function adminGuardarEquip(btn) {
-  if (btn) btn.disabled = true;
-  var tallas = [];
-  document.querySelectorAll('#admin-equip-lista .adm-fila-talla').forEach(function(f) {
-    var t = f.querySelector('.adm-talla').value.trim();
-    var c = parseInt(f.querySelector('.adm-cant').value, 10) || 0;
-    if (t) tallas.push({ talla: t, cantidad: c });
-  });
-  var protec = parseInt(document.getElementById('adm-equip-protec').value, 10) || 0;
-  mostrarCargando('Guardando...');
-  adminApi({ action: 'adminGuardarEquipamiento', tallas: JSON.stringify(tallas), protecciones: protec }, function(res) {
-    ocultarCargando();
-    if (btn) btn.disabled = false;
-    if (res.exito) { mostrarToast('Equipamiento actualizado.', 'ok'); } else { err('err-admin-equip', res.error || 'Error.'); }
-  }, function(e) { ocultarCargando(); if (btn) btn.disabled = false; err('err-admin-equip', 'Error: ' + e.message); });
+// Guardado automático (Tanda 5, ver MANIFEST.md "Cambios recientes") --
+// reemplaza al botón "Guardar cambios": cada tap de stepper (cantidad/
+// protecciones) o pill (agregar/quitar talla) llama a esta función, que
+// debouncea 500ms para no disparar una request por cada click rápido
+// consecutivo (varios taps seguidos → 1 sola request con el estado final).
+var _admEquipGuardarTimer = null;
+function adminGuardarEquipAuto() {
+  clearTimeout(_admEquipGuardarTimer);
+  _admEquipGuardarTimer = setTimeout(function() {
+    var tallas = [];
+    document.querySelectorAll('#admin-equip-lista .adm-fila-talla').forEach(function(f) {
+      var t = f.querySelector('.adm-talla').value.trim();
+      var c = parseInt(f.querySelector('.adm-cant').value, 10) || 0;
+      if (t) tallas.push({ talla: t, cantidad: c });
+    });
+    var protec = parseInt(document.getElementById('adm-equip-protec').value, 10) || 0;
+    adminApi({ action: 'adminGuardarEquipamiento', tallas: JSON.stringify(tallas), protecciones: protec }, function(res) {
+      if (!res.exito) mostrarToast(res.error || 'Error al guardar equipamiento.', 'error');
+    }, function(e) { mostrarToast('Error: ' + e.message, 'error'); });
+  }, 500);
 }
 
 // ── Usuarios ──────────────────────────────────────────────────────────────────
