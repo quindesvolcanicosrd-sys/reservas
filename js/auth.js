@@ -88,6 +88,7 @@ function onGoogleCredentialUsuario(resp) {
     if (res.esAdmin) {
       _adminToken = res.adminToken;
       _adminEmail = res.email;
+      _dashboardAdminLimitado = (res.dashboardAdmin !== false);
       var _plAdmin = _decodificarJwtGoogle(resp.credential);
       _adminNombre = (_plAdmin && _plAdmin.name) || _adminEmail;
       localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, nombre: _adminNombre, exp: Date.now() + 11.5 * 3600 * 1000 }));
@@ -240,6 +241,7 @@ function continuar_pin() {
         _adminToken = res.adminToken;
         _adminEmail = res.email;
         _adminNombre = E.nombre;
+        _dashboardAdminLimitado = (res.dashboardAdmin !== false);
         localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, nombre: _adminNombre, exp: Date.now() + 11.5 * 3600 * 1000 }));
         window.OneSignalDeferred = window.OneSignalDeferred || [];
         OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
@@ -384,6 +386,7 @@ window.onload = function() {
             _adminToken = res.adminToken;
             _adminEmail = res.email;
             _adminNombre = E.nombre;
+            _dashboardAdminLimitado = (res.dashboardAdmin !== false);
             localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, nombre: _adminNombre, exp: Date.now() + 11.5 * 3600 * 1000 }));
             window.OneSignalDeferred = window.OneSignalDeferred || [];
             OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });

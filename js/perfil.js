@@ -70,7 +70,7 @@ function irEditarDatos() {
   var miligaRow = document.getElementById('aj-group-miliga');
   if (miligaRow) miligaRow.style.display = _adminToken ? '' : 'none';
   var zonaCuenta = document.getElementById('aj-zona-cuenta');
-  if (zonaCuenta) zonaCuenta.style.display = E.datos ? '' : 'none';
+  if (zonaCuenta) zonaCuenta.style.display = (E.datos && !_dashboardAdminLimitado) ? '' : 'none';
   ir('s-datos');
 }
 

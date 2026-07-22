@@ -2,6 +2,11 @@ var GOOGLE_CLIENT_ID_FRONT = '632992894668-gnbb5cclsmfdcnve0g34kmue1c72h73q.apps
 var _adminToken = '';
 var _adminEmail = '';
 var _adminNombre = '';
+// true si esta cuenta admin NO debe comportarse como usuarix normal (no
+// paga cuota) -- independiente de si E.datos está poblado o no. E.datos ya
+// no alcanza solo para decidir esto desde que restaurarSesion()/validarPin()
+// también cargan datos reales para admins sin cuota (ver MANIFEST.md).
+var _dashboardAdminLimitado = false;
 var _admTodasReservas = [];
 var _admFiltro = 'pendientes';
 var _gisInicializado = false;
@@ -563,7 +568,7 @@ function adminGuardarPreciosAuto() {
 function adminCerrarSesionLocal(silencioso) {
   if (!silencioso && !confirm('¿Cerrar sesión de administradorx?')) return;
   if (_adminToken) api({ action: 'adminCerrarSesion', adminToken: _adminToken }, function(){}, function(){});
-  _adminToken = ''; _adminEmail = '';
+  _adminToken = ''; _adminEmail = ''; _dashboardAdminLimitado = false;
   localStorage.removeItem('adminSession');
   if (!silencioso) ir('s1');
 }

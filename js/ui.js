@@ -120,7 +120,7 @@ var TOP_BAR_CONFIG = {
   // MANIFEST.md "Cambios recientes", elimina s-admin-home) → s1, no queda
   // ningún dashboard propio al que volver -- refrescar la página restaura
   // la sesión admin y vuelve a traer a esta misma pantalla (adminEntrar()).
-  's-datos': { titulo: 'Ajustes', volver: function() { return E.datos ? 's-home' : 's1'; } },
+  's-datos': { titulo: 'Ajustes', volver: function() { return (E.datos && !_dashboardAdminLimitado) ? 's-home' : 's1'; } },
   's-admin-login': { titulo: 'Administradorx', volver: 's1' },
   // 's-admin-reservas'/'s-admin-quellevar'/'s-admin-equip'/'notif'/
   // 'admin-color'/'admin-precios' NUNCA son pantallas propias -- viven como
@@ -228,10 +228,11 @@ function volver(id) { ir(id); }
 window.addEventListener('popstate', function(ev) {
   if (_overlayStack.length > 0) { var _fn = _overlayStack.pop(); _fn(true); return; }
   if (_ajSubAbierto) { cerrarAjSub(_ajSubAbierto, true); return; }
-  var id = (ev.state && ev.state.pantalla) || (E.datos ? 's-home' : 's1');
-if (id === 's2') id = E.datos ? 's-home' : 's1';
-  if (id === 's1b') id = E.datos ? 's-home' : 's1';
-  if (E.datos && id === 's1') id = 's-home';
+  var _tieneHomeNormal = E.datos && !_dashboardAdminLimitado;
+  var id = (ev.state && ev.state.pantalla) || (_tieneHomeNormal ? 's-home' : 's1');
+if (id === 's2') id = _tieneHomeNormal ? 's-home' : 's1';
+  if (id === 's1b') id = _tieneHomeNormal ? 's-home' : 's1';
+  if (_tieneHomeNormal && id === 's1') id = 's-home';
   var esAdminPantalla = ADMIN_PANTALLAS.indexOf(id) !== -1;
   // Tanda 7 (ver MANIFEST.md "Cambios recientes" — elimina s-admin-home):
   // una cuenta admin "pura" (sin E.datos) ahora vive en 's-datos' (Ajustes),
@@ -239,7 +240,7 @@ if (id === 's2') id = E.datos ? 's-home' : 's1';
   // un popstate apuntando a 's-datos' la mandaría de vuelta a 's1' por no
   // tener E.datos, aunque sí tenga _adminToken.
   var esAdminEnDatos = id === 's-datos' && _adminToken;
-  if (!E.datos && !esAdminPantalla && !esAdminEnDatos && id !== 's1') id = 's1';
+  if (!_tieneHomeNormal && !esAdminPantalla && !esAdminEnDatos && id !== 's1') id = 's1';
   if (esAdminPantalla && id !== 's-admin-login' && !_adminToken) id = 's1';
   ir(id, true);
 });
