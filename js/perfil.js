@@ -65,12 +65,20 @@ function irEditarDatos() {
   // cualquier cuenta con _adminToken guardado, sea dashboardAdmin true o
   // false (admin "pura" o admin que también paga cuota). "Zona cuenta"
   // (Cerrar sesión/Eliminar cuenta de USUARIX) es lo inverso: solo tiene
-  // sentido con un E.datos real -- una cuenta admin pura ya tiene su propio
-  // "Cerrar sesión" en el dashboard (adminCerrarSesionLocal(), Tanda 1).
+  // sentido con un E.datos real -- una cuenta admin pura SIN fila en Equipo
+  // (sin E.datos) ya tiene su propio "Cerrar sesión" en el dashboard
+  // (adminCerrarSesionLocal(), Tanda 1), y no hay ninguna cuenta de usuarix
+  // real de la que cerrar sesión o que eliminar. Gate en `E.datos` a secas
+  // (no `E.datos && !_dashboardAdminLimitado`, bug real corregido -- ver
+  // MANIFEST.md "Cambios recientes"): una cuenta dashboardAdmin:true CON fila
+  // en Equipo (Paga cuota=No, pero SÍ tiene patines/protecciones propios,
+  // posible desde el fix que le carga E.datos real, ver "Cambios recientes")
+  // es una cuenta de usuarix real igual -- ocultarle Zona cuenta la dejaba
+  // sin forma de cerrar sesión de usuarix ni eliminar su cuenta desde acá.
   var miligaRow = document.getElementById('aj-group-miliga');
   if (miligaRow) miligaRow.style.display = _adminToken ? '' : 'none';
   var zonaCuenta = document.getElementById('aj-zona-cuenta');
-  if (zonaCuenta) zonaCuenta.style.display = (E.datos && !_dashboardAdminLimitado) ? '' : 'none';
+  if (zonaCuenta) zonaCuenta.style.display = E.datos ? '' : 'none';
   ir('s-datos');
 }
 
