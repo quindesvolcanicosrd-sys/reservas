@@ -81,6 +81,11 @@
 </div>
 
 <div id="home-nav" class="app-nav app-nav-fixed" style="display:none;">
+  <!-- Ícono decorativo, no clickeable (sin onclick) -- mismo ícono que el tab
+       "Reservas" de .app-bottom-nav (calendar_month), en el mismo lugar/tamaño
+       que ocupaba el avatar clickeable a Ajustes antes de sacarlo (ver
+       MANIFEST.md "Cambios recientes"). -->
+  <div class="app-nav-back app-nav-back--decorativo" aria-hidden="true"><span class="material-symbols-outlined">calendar_month</span></div>
   <div class="app-nav-section" id="home-nav-seccion">MIS RESERVAS</div>
   <div class="app-nav-actions">
     <button class="app-nav-icon-btn" id="btn-refrescar-home" onclick="refrescarMisReservas(null, this)" title="Actualizar" style="display:none;">

@@ -63,6 +63,17 @@
 .app-nav-back:active { transform: scale(0.95); }
 .app-nav-back .material-symbols-outlined { font-size: 1.4rem; display: block; }
 
+/* ── Variante decorativa (pantallas raíz sin "volver") ─
+   Mismo tamaño/forma/color que .app-nav-back (ocupa exactamente el mismo
+   lugar que la flecha atrás) pero sin ningún feedback interactivo -- no hay
+   onclick que disparar, así que hover/active tampoco deben sugerir que se
+   puede tocar. Usada en #top-bar (s-datos, ver _iconoRaizDeNav()/ir() en
+   js/ui.js) y como ícono estático en #home-nav (s-home) -- mismo ícono que
+   ya usa esa pantalla en .app-bottom-nav-item, ver "Cambios recientes". */
+.app-nav-back--decorativo { cursor: default; }
+.app-nav-back--decorativo:hover { background: var(--brand-light); }
+.app-nav-back--decorativo:active { transform: none; }
+
 /* ── Título alineado a la izquierda ──────────── */
 .app-nav-title {
   position: absolute;

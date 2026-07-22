@@ -182,7 +182,31 @@ function ir(id, desdeHistorial, sinTrampa) {
   if (cfg) {
     topBar.style.display = 'flex'; topTitulo.textContent = typeof cfg.titulo === 'function' ? cfg.titulo() : cfg.titulo;
     var _volverTarget = typeof cfg.volver === 'function' ? cfg.volver() : cfg.volver;
-    if (_volverTarget) { topBtn.style.display = ''; topBtn.onclick = function() { volver(_volverTarget); }; } else { topBtn.style.display = 'none'; }
+    var topBtnIcono = topBtn.querySelector('.material-symbols-outlined');
+    if (_volverTarget) {
+      // Flecha atrás real: navega, mismo comportamiento de siempre.
+      topBtn.style.display = '';
+      topBtn.onclick = function() { volver(_volverTarget); };
+      topBtn.classList.remove('app-nav-back--decorativo');
+      topBtn.removeAttribute('aria-hidden');
+      topBtnIcono.textContent = 'arrow_back';
+    } else {
+      // Sin volver: si `id` es pantalla raíz de la nav inferior (ver
+      // _iconoRaizDeNav()), el slot de la flecha se reusa para un ícono
+      // decorativo (mismo ícono que su tab en .app-bottom-nav, sin onclick
+      // ni feedback de hover/active) en vez de quedar vacío -- si no,
+      // se oculta entero como antes.
+      var _iconoRaiz = _iconoRaizDeNav(id);
+      if (_iconoRaiz) {
+        topBtn.style.display = '';
+        topBtn.onclick = null;
+        topBtn.classList.add('app-nav-back--decorativo');
+        topBtn.setAttribute('aria-hidden', 'true');
+        topBtnIcono.textContent = _iconoRaiz;
+      } else {
+        topBtn.style.display = 'none';
+      }
+    }
   } else { topBar.style.display = 'none'; }
 
   // Los .cta-footer-fixed viven como hijos directos de <body> (fuera de .pantalla/
@@ -262,6 +286,17 @@ var APP_BOTTOM_NAV_ITEMS = [
     visible: function() { return true; } }
 ];
 var _BOTTOM_NAV_PANTALLAS = APP_BOTTOM_NAV_ITEMS.map(function(item) { return item.pantalla; });
+
+// Reusa el `icono` ya definido por ítem para el slot de la flecha atrás de
+// #top-bar cuando una pantalla de TOP_BAR_CONFIG no tiene `volver` (ver
+// ir()) -- fuente única entre el ícono de la nav inferior y el decorativo
+// del header, sin duplicar el nombre del ícono en 2 configs distintas.
+function _iconoRaizDeNav(id) {
+  for (var i = 0; i < APP_BOTTOM_NAV_ITEMS.length; i++) {
+    if (APP_BOTTOM_NAV_ITEMS[i].pantalla === id) return APP_BOTTOM_NAV_ITEMS[i].icono;
+  }
+  return null;
+}
 
 function _bottomNavClick(id) {
   for (var i = 0; i < APP_BOTTOM_NAV_ITEMS.length; i++) {
