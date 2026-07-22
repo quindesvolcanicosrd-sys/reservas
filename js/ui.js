@@ -100,7 +100,7 @@ function cerrarContacto(porGesto) {
   setTimeout(function() { m.style.display = 'none'; ov.style.display = 'none'; }, 350);
 }
 
-var PANTALLAS_RAIZ = ['s1', 's-home', 's-admin-home'];
+var PANTALLAS_RAIZ = ['s1', 's-home'];
 
 var TOP_BAR_CONFIG = {
   's2': { titulo: 'Equipamiento', volver: 's-home' },
@@ -116,14 +116,17 @@ var TOP_BAR_CONFIG = {
   // hace cerrarSesion() sin E.datos) y la desloguearía sin querer. Mismo
   // criterio ya usado por irEditarDatos()/adminEntrar() para distinguir los
   // 2 casos: E.datos truthy (usuarix normal, o admin que también paga
-  // cuota) → s-home; sin E.datos (solo llegó por ser admin) → s-admin-home.
-  's-datos': { titulo: 'Ajustes', volver: function() { return E.datos ? 's-home' : 's-admin-home'; } },
+  // cuota) → s-home; sin E.datos (solo llegó por ser admin, Tanda 7 -- ver
+  // MANIFEST.md "Cambios recientes", elimina s-admin-home) → s1, no queda
+  // ningún dashboard propio al que volver -- refrescar la página restaura
+  // la sesión admin y vuelve a traer a esta misma pantalla (adminEntrar()).
+  's-datos': { titulo: 'Ajustes', volver: function() { return E.datos ? 's-home' : 's1'; } },
   's-admin-login': { titulo: 'Administradorx', volver: 's1' },
-  // 's-admin-reservas'/'s-admin-quellevar'/'s-admin-equip' ya NO son
-  // pantallas propias (ver MANIFEST.md "Cambios recientes" — corrección de
-  // diseño: vuelven a ser burbujas embebidas en s-admin-home, nunca
-  // pantalla completa/navegación, así que no necesitan entrada acá).
-  's-admin-usuarios': { titulo: 'Usuarios', volver: 's-admin-home' }
+  // 's-admin-reservas'/'s-admin-quellevar'/'s-admin-equip'/'notif'/
+  // 'admin-color'/'admin-precios' NUNCA son pantallas propias -- viven como
+  // burbujas embebidas dentro de "Mi Liga" (aj-sub-miliga), nunca pantalla
+  // completa/navegación, así que no necesitan entrada acá.
+  's-admin-usuarios': { titulo: 'Usuarios', volver: 's-datos' }
 };
 
 // Navegación entre pantallas con fade simple (animation:smoothSlideUp vía
@@ -230,7 +233,13 @@ if (id === 's2') id = E.datos ? 's-home' : 's1';
   if (id === 's1b') id = E.datos ? 's-home' : 's1';
   if (E.datos && id === 's1') id = 's-home';
   var esAdminPantalla = ADMIN_PANTALLAS.indexOf(id) !== -1;
-  if (!E.datos && !esAdminPantalla && id !== 's1') id = 's1';
+  // Tanda 7 (ver MANIFEST.md "Cambios recientes" — elimina s-admin-home):
+  // una cuenta admin "pura" (sin E.datos) ahora vive en 's-datos' (Ajustes),
+  // no en ninguna pantalla de ADMIN_PANTALLAS -- sin este permiso explícito,
+  // un popstate apuntando a 's-datos' la mandaría de vuelta a 's1' por no
+  // tener E.datos, aunque sí tenga _adminToken.
+  var esAdminEnDatos = id === 's-datos' && _adminToken;
+  if (!E.datos && !esAdminPantalla && !esAdminEnDatos && id !== 's1') id = 's1';
   if (esAdminPantalla && id !== 's-admin-login' && !_adminToken) id = 's1';
   ir(id, true);
 });

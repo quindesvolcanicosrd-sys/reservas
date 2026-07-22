@@ -6,20 +6,21 @@ var _admTodasReservas = [];
 var _admFiltro = 'pendientes';
 var _gisInicializado = false;
 
-// Dashboard admin: banners condicionales + burbujas embebidas de las 4
-// tiles grandes (Revisar reservas / Notificación / Equipamiento / Qué
-// llevar) + 2 pills chicas (Color / Precios de clases, Tanda 6) — ver
-// MANIFEST.md "Cambios recientes". Las 6 comparten el MISMO mecanismo de
-// burbuja inline (nunca pantalla completa, nunca navegación) — ver
+// "Mi Liga" (aj-sub-miliga, overlay sobre Ajustes/s-datos): banners
+// condicionales + burbujas embebidas de las 4 tiles grandes (Reservas /
+// Notificación / Equipamiento / Qué llevar) + 2 pills chicas (Color /
+// Precios de clases) + Administradorxs — ver MANIFEST.md "Cambios
+// recientes". Tanda 7: se elimina s-admin-home del todo (era un dashboard
+// separado, pantalla propia) y TODO su contenido se muda acá — "Mi Liga" es
+// ahora el único lugar administrativo de la app. Las 6 burbujas comparten el
+// MISMO mecanismo inline (nunca pantalla completa, nunca navegación) — ver
 // ADMIN_TILE_INFO/adminToggleBurbuja() más abajo. `_admDashAbierto` trackea
-// qué hay abierto entre lo que puede convivir con el dashboard visible: los
-// 2 acordeones de banner ('admin-banner-pendientes-body'/
-// 'admin-banner-equip-body') o una de las 6 burbujas (clave de
+// qué hay abierto entre lo que puede convivir con "Mi Liga" visible: los 2
+// acordeones de banner ('admin-banner-pendientes-body-ml'/
+// 'admin-banner-equip-body-ml') o una de las 6 burbujas (clave de
 // ADMIN_TILE_INFO: 'notif'/'s-admin-reservas'/'s-admin-equip'/
 // 's-admin-quellevar'/'admin-color'/'admin-precios') — todo vive siempre en
-// el mismo `s-admin-home`, así que sí necesitan exclusión mutua entre sí (a
-// diferencia de cuando 3 de ellas eran pantallas completas que se tapaban
-// por completo).
+// el mismo `aj-sub-miliga`, así que sí necesitan exclusión mutua entre sí.
 var _admDashAbierto = null;
 var _admBannerPendientes = null; // null = todavía no llegó la respuesta
 var _admBannerQueLlevar = null;
@@ -42,7 +43,7 @@ var TALLAS_EU_US = [
   { eu: 42, us: '10.5' }, { eu: 43, us: '11.5' }, { eu: 44, us: '12.5' }, { eu: 45, us: '13.5' }
 ];
 
-var ADMIN_PANTALLAS = ['s-admin-login','s-admin-home','s-admin-usuarios'];
+var ADMIN_PANTALLAS = ['s-admin-login','s-admin-usuarios'];
 
 function adminApi(params, onSuccess, onError) {
   params.adminToken = _adminToken;
@@ -113,22 +114,27 @@ function onGoogleCredential(resp) {
   }, function(e) { ocultarCargando(); err('err-admin-login', 'Error al verificar acceso. Intenta de nuevo.'); });
 }
 
-// Sin saludo/escudo en el encabezado a propósito (ver MANIFEST.md "Cambios
-// recientes" — corrección de diseño): _adminNombre/_adminEmail siguen
-// usándose en otros lados (Mi Liga no, pero sí quedan disponibles por si
-// hace falta mostrarlos en algún lugar futuro), simplemente no en el
-// encabezado del dashboard.
+// Tanda 7 (ver MANIFEST.md "Cambios recientes" — elimina s-admin-home del
+// todo): esta función ya no navega a ningún dashboard propio -- una cuenta
+// admin "pura" (dashboardAdmin:true) llega directo a Ajustes (irEditarDatos()
+// -> s-datos, con su fallback `d = {}` ya preparado para esto), y desde ahí
+// ve la fila "Mi Liga" como cualquier otra cuenta admin, entrando manualmente
+// cuando quiera. adminRenderColorEnfasis()/_adminCargarPrecios() siguen
+// precargando el color/los precios (Fase 2: contenido listo apenas se abra
+// la burbuja correspondiente dentro de Mi Liga, sin esperar un fetch) --
+// los banners YA NO se precargan acá (antes con scope='', para el dashboard
+// que ya no existe): _adminCargarMiLiga() los carga fresco recién cuando la
+// persona abre "Mi Liga" de verdad.
 function adminEntrar() {
   adminRenderColorEnfasis();
   _adminCargarPrecios();
   _admDashAbierto = null;
-  ir('s-admin-home');
-  _adminCargarBanners();
+  irEditarDatos();
 }
 
-// ── Dashboard admin: banners condicionales + burbujas embebidas ─────────────────
-// Cierra lo que esté abierto entre los 2 acordeones de banner y las 4
-// burbujas de tile (los únicos 6 que pueden convivir con el dashboard
+// ── Mi Liga: banners condicionales + burbujas embebidas ─────────────────────────
+// Cierra lo que esté abierto entre los 2 acordeones de banner y las 6
+// burbujas de tile/pill (las únicas que pueden convivir con "Mi Liga"
 // visible al mismo tiempo) — llamado al principio de cualquier acción
 // "abrir X" para que nunca queden 2 abiertos a la vez. Defensivo ante
 // cualquier valor viejo que _admDashAbierto pudiera tener: cualquier valor
@@ -204,16 +210,16 @@ function _adminVentanaFecha(fechaRaw) {
   return null;
 }
 
-// Carga los datos de los 2 banners condicionales en paralelo, para el
-// dashboard (adminEntrar(), scope='') o para Mi Liga (_adminCargarMiLiga(),
-// scope='-ml', Tanda 3 — ver MANIFEST.md "Cambios recientes"). Ambos scopes
-// comparten el mismo caché (_admBannerPendientes/_admBannerQueLlevar): cada
-// pantalla lo recarga fresco al entrar, en vez de mantener 2 copias
-// sincronizadas a la vez — más simple, y suficiente porque el dashboard y
-// Mi Liga nunca están visibles los dos al mismo tiempo (uno es .pantalla,
-// el otro un aj-sub-* montado sobre s-datos). Independiente de
-// _admTodasReservas (que sigue siendo responsabilidad de adminIrReservas()/
-// adminRefreshReservas(), para no acoplar el banner con la pantalla completa).
+// Carga los datos de los 2 banners condicionales en paralelo. El parámetro
+// `scope` es un resabio de cuando existían 2 contextos distintos (dashboard
+// propio con scope='', Mi Liga con scope='-ml', Tanda 3) — desde la Tanda 7
+// (ver MANIFEST.md "Cambios recientes", elimina s-admin-home) el único
+// caller real es `_adminCargarMiLiga()` con `'-ml'`; se deja el parámetro tal
+// cual (en vez de sacarlo) porque los ids del HTML ya llevan ese sufijo
+// (`admin-banner-pendientes-slot-ml`, etc.) y renombrarlos no es parte de
+// esta simplificación. Independiente de _admTodasReservas (que sigue siendo
+// responsabilidad de adminIrReservas()/adminRefreshReservas(), para no
+// acoplar el banner con la burbuja de Reservas).
 function _adminCargarBanners(scope) {
   scope = scope || '';
   _admBannerPendientes = null; _admBannerQueLlevar = null;
@@ -241,11 +247,12 @@ function _adminRenderBannerPendientes(scope) {
       '</div></div>';
   }).join('');
   var n = _admBannerPendientes.length;
-  // Desde Mi Liga (scope='-ml'), "Ver todas" primero tiene que cerrar el
-  // aj-sub y volver al dashboard antes de poder abrir la pantalla completa
-  // de Reservas -- adminIrReservasDesdeMiLiga() encadena eso; desde el
-  // dashboard mismo, adminIrReservas() de siempre alcanza.
-  var verTodasOnclick = scope ? 'adminIrReservasDesdeMiLiga()' : 'adminIrReservas()';
+  // "Ver todas" abre la burbuja de Reservas directo en el lugar -- Reservas
+  // vive ahora en el mismo "Mi Liga" que este banner (Tanda 7, ver
+  // MANIFEST.md "Cambios recientes"), ya no hace falta navegar a ningún otro
+  // lado (antes, con el dashboard separado, adminIrReservasDesdeMiLiga()
+  // cerraba Mi Liga y navegaba a s-admin-home primero -- eliminada).
+  var verTodasOnclick = 'adminIrReservas()';
   slot.innerHTML =
     '<div class="admin-dash-banner" id="admin-banner-pendientes' + scope + '">' +
       '<div class="admin-dash-banner-header" onclick="adminToggleBanner(\'admin-banner-pendientes-body' + scope + '\')">' +
@@ -421,8 +428,8 @@ function _adminAbrirBurbuja(tileKey, tileEl) {
   info.cargar();
 }
 
-// Click directo en una tile: si ya estaba abierta, la cierra (toggle); si
-// no, la abre. Es el único onclick de las 4 tiles del dashboard.
+// Click directo en una tile/pill: si ya estaba abierta, la cierra (toggle);
+// si no, la abre. Es el único onclick de las 6 (4 tiles + 2 pills) de Mi Liga.
 function adminToggleBurbuja(tileKey, tileEl) {
   if (_admDashAbierto === tileKey) { _adminCerrarTodoAbierto(); return; }
   _adminAbrirBurbuja(tileKey, tileEl);
@@ -442,13 +449,13 @@ var ADMIN_COLOR_PRESETS = [
   '#EAB308', '#84CC16', '#06B6D4', '#6366F1', '#D946EF', '#64748B'
 ];
 
-// El MISMO componente vive en 2 lugares desde la Tanda 3 (ver MANIFEST.md
-// "Cambios recientes"): "Ajustes adicionales" del dashboard y
-// "Personalización" dentro de Mi Liga -- un solo valor de color de énfasis,
-// mostrado (y mantenido en sync) en las 2 instancias a la vez, así que se
-// repinta por clase (`.admin-color-swatches`/`.admin-color-custom-input`,
-// antes ids únicos) en vez de buscar un único id -- sin necesitar trackear
-// "cuál instancia" cambió, las 2 siempre terminan mostrando lo mismo.
+// Un solo valor de color de énfasis, mostrado en sync donde sea que viva
+// `.admin-color-swatches` -- se repinta por clase (no por `id` único) para
+// no necesitar trackear "cuál instancia" cambió, todas terminan mostrando lo
+// mismo. Antes (Tanda 3-6) vivía en 2 lugares a la vez ("Ajustes
+// adicionales"/"Más" del dashboard viejo y "Personalización" de Mi Liga);
+// desde la Tanda 7 (ver MANIFEST.md "Cambios recientes" — elimina
+// s-admin-home) hay una sola instancia real, la burbuja "Color" de Mi Liga.
 function adminRenderColorEnfasis() {
   var conts = document.querySelectorAll('.admin-color-swatches');
   if (!conts.length) return;
@@ -564,25 +571,19 @@ function adminCerrarSesionLocal(silencioso) {
 // ── Reservas ──────────────────────────────────────────────────────────────────
 // origenEl: la tile que disparó la apertura (pasada como `this` desde
 // index.html); si no llega (ej. el link "Ver todas las reservas ↗" del
-// banner de pendientes), _adminAbrirBurbuja() la busca sola por
-// data-tile="s-admin-reservas". A diferencia del click directo en la tile
-// (adminToggleBurbuja(), que cierra si ya estaba abierta), esta función
-// SIEMPRE asegura que la burbuja quede abierta -- la usan "Ver todas ↗" y
-// adminIrReservasDesdeMiLiga(), donde cerrar no tendría sentido.
+// banner de pendientes, dentro del mismo "Mi Liga"), _adminAbrirBurbuja() la
+// busca sola por data-tile="s-admin-reservas". A diferencia del click
+// directo en la tile (adminToggleBurbuja(), que cierra si ya estaba
+// abierta), esta función SIEMPRE asegura que la burbuja quede abierta -- la
+// usa "Ver todas ↗", donde cerrar no tendría sentido. Tanda 7 (ver
+// MANIFEST.md "Cambios recientes"): eliminada adminIrReservasDesdeMiLiga()
+// -- existía solo para cerrar Mi Liga y navegar al dashboard viejo
+// (s-admin-home) antes de poder abrir esta burbuja; con Reservas viviendo ya
+// DENTRO de Mi Liga, "Ver todas ↗" llama a esta función directo, sin navegar
+// a ningún lado.
 function adminIrReservas(origenEl) {
   if (_admDashAbierto === 's-admin-reservas') return;
   _adminAbrirBurbuja('s-admin-reservas', origenEl);
-}
-
-// "Ver todas las reservas ↗" del banner de pendientes DENTRO de Mi Liga
-// (Tanda 3): a diferencia del mismo link en el dashboard (que ya está sobre
-// s-admin-home), acá primero hay que cerrar el aj-sub-miliga (overlay sobre
-// s-datos) y recién entonces navegar al dashboard antes de poder abrir la
-// burbuja de Reservas -- adminIrReservas() sin origenEl encuentra sola la
-// tile real por data-tile, una vez que s-admin-home ya es la pantalla activa.
-function adminIrReservasDesdeMiLiga() {
-  cerrarAjSub('aj-sub-miliga');
-  setTimeout(function() { ir('s-admin-home'); adminIrReservas(); }, 340);
 }
 
 // Botón "Actualizar" DENTRO de la burbuja de Reservas ya abierta -- solo
@@ -1192,11 +1193,17 @@ function adminElegirCandidatoAdmin(email) {
   }, function(e) { mostrarToast(e.message || 'Error al agregar.', 'error'); });
 }
 
-// Mi Liga: banners (mismos que el dashboard, scope='-ml') + Administradorxs
-// + Personalización (color de énfasis, mismo componente que "Ajustes
-// adicionales") — "todo de entrada, sin subsecciones" (Tanda 3).
+// Mi Liga: banners (scope='-ml') + Administradorxs + color de énfasis +
+// precios de clases — "todo de entrada, sin subsecciones" (Tanda 3). Tanda 7
+// (ver MANIFEST.md "Cambios recientes" — elimina s-admin-home): además de
+// Administradorxs/Personalización, "Mi Liga" pasa a tener también las 4
+// tiles operativas (Qué llevar/Reservas/Equipamiento/Notificación, mismo
+// `ADMIN_TILE_INFO`/lazy-load-on-open de siempre, no precargadas acá) y la
+// pill "Precios de clases" (nueva en Mi Liga, `_adminCargarPrecios()` suma a
+// la lista de lo que se precarga fresco al abrir).
 function _adminCargarMiLiga() {
   _adminCargarBanners('-ml');
   _adminCargarAdmins();
   adminRenderColorEnfasis();
+  _adminCargarPrecios();
 }

@@ -94,11 +94,16 @@ function onGoogleCredentialUsuario(resp) {
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
       // dashboardAdmin:true (o ausente, retrocompatibilidad con cuentas admin
-      // sin fila en Equipo) -- cuenta admin "pura" que no paga cuota: entra al
-      // nuevo dashboard admin (s-admin-home). dashboardAdmin:false -- cuenta
-      // admin que además paga cuota: sigue el flujo normal de usuarix más
-      // abajo (home de reservas), conservando igual _adminToken/_adminEmail
-      // ya guardados arriba para poder acceder a "Mi Liga" desde Ajustes.
+      // sin fila en Equipo) -- cuenta admin "pura" que no paga cuota: entra
+      // directo a Ajustes (adminEntrar() -> irEditarDatos() -> s-datos, Tanda
+      // 7 -- ver MANIFEST.md "Cambios recientes", elimina s-admin-home del
+      // todo). Desde ahí ve la fila "Mi Liga" como cualquier otra cuenta
+      // admin y entra manualmente cuando quiera -- ya no hay ningún
+      // dashboard separado al que aterrizar de entrada. dashboardAdmin:false
+      // -- cuenta admin que además paga cuota: sigue el flujo normal de
+      // usuarix más abajo (home de reservas), conservando igual
+      // _adminToken/_adminEmail ya guardados arriba para poder acceder a
+      // "Mi Liga" desde Ajustes.
       if (res.dashboardAdmin !== false) {
         ocultarCargando();
         adminEntrar();
@@ -404,7 +409,12 @@ window.addEventListener('pageshow', function(e) {
     var ov = document.getElementById('loading-overlay');
     ov.classList.remove('fade-out');
     ov.style.display = 'flex';
-    if (_adminToken) { ir('s-admin-home', true, true); ocultarCargando(); }
+    // Tanda 7 (ver MANIFEST.md "Cambios recientes" — elimina s-admin-home):
+    // una cuenta admin "pura" restaurada desde bfcache vuelve a 's-datos'
+    // (Ajustes), no a ningún dashboard propio -- el DOM ya está poblado
+    // (bfcache preserva el heap de JS entero), solo hace falta re-mostrar
+    // la pantalla correcta, mismo criterio que las 2 ramas de abajo.
+    if (_adminToken) { ir('s-datos', true, true); ocultarCargando(); }
     else if (E.datos) { prepararHome(); ir('s-home', true, true); }
     else { ir('s1', true, true); ocultarCargando(); }
   }
