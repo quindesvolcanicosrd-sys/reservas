@@ -110,17 +110,16 @@ var TOP_BAR_CONFIG = {
   's-pago': { titulo: 'Pago', volver: 's4' },
   's-gestionar': { titulo: 'Re-agendar fecha', volver: 's-home' },
   's-misreservas': { titulo: 'Historial de reservas', volver: 's-home' },
-  // volver dinámico (Tanda 3, ver MANIFEST.md "Cambios recientes"): una
-  // cuenta admin "pura" (dashboardAdmin:true, sin E.datos) llega acá vía Mi
-  // Liga -- volver('s-home') la mandaría a una Home rota (prepararHome()
-  // hace cerrarSesion() sin E.datos) y la desloguearía sin querer. Mismo
-  // criterio ya usado por irEditarDatos()/adminEntrar() para distinguir los
-  // 2 casos: E.datos truthy (usuarix normal, o admin que también paga
-  // cuota) → s-home; sin E.datos (solo llegó por ser admin, Tanda 7 -- ver
-  // MANIFEST.md "Cambios recientes", elimina s-admin-home) → s1, no queda
-  // ningún dashboard propio al que volver -- refrescar la página restaura
-  // la sesión admin y vuelve a traer a esta misma pantalla (adminEntrar()).
-  's-datos': { titulo: 'Ajustes', volver: function() { return (E.datos && !_dashboardAdminLimitado) ? 's-home' : 's1'; } },
+  // Sin volver (ver "Cambios recientes" — nav inferior): Ajustes es ahora
+  // una pantalla raíz de APP_BOTTOM_NAV_ITEMS, alcanzable siempre desde la
+  // nav inferior -- no necesita ni debe tener un botón que la redirija hacia
+  // Reservas/Home, mismo criterio que ya aplica a las demás pantallas raíz
+  // (s1/s-home, que ni siquiera pasan por TOP_BAR_CONFIG). `volver` en falsy
+  // (antes una función dinámica s-home/s1 según E.datos/_dashboardAdminLimitado,
+  // ver historial) hace que ir() (js/ui.js) oculte solo el botón atrás
+  // (topBtn.style.display='none') sin ocultar el resto del top-bar -- el
+  // título "AJUSTES" se sigue mostrando, solo desaparece la flecha.
+  's-datos': { titulo: 'Ajustes', volver: null },
   's-admin-login': { titulo: 'Administradorx', volver: 's1' },
   // 's-admin-reservas'/'s-admin-quellevar'/'s-admin-equip'/'notif'/
   // 'admin-color'/'admin-precios' NUNCA son pantallas propias -- viven como
@@ -243,6 +242,19 @@ function volver(id) { ir(id); }
 // MANIFEST.md "Cambios recientes"); un ir('s-datos') a secas dejaría los
 // placeholders "—" la primera vez que se toca este tab.
 var APP_BOTTOM_NAV_ITEMS = [
+  // 'reservas' -- regla de negocio estricta, auditada a propósito (ver
+  // MANIFEST.md "Cambios recientes"): dashboardAdmin:true (admin que no paga
+  // cuota) nunca debe ver este tab, sin excepción -- ni siquiera si esa
+  // cuenta tiene fila en Equipo con necesitaPatines/necesitaProtecciones
+  // cargados (posible desde el fix de E.datos para admins con fila en
+  // Equipo, ver "Cambios recientes"). `!_dashboardAdminLimitado` es la
+  // ÚNICA condición correcta acá -- _dashboardAdminLimitado se deriva
+  // pura y exclusivamente de res.dashboardAdmin (loginGoogle/validarPin/
+  // restaurarSesion, ver js/auth.js), nunca de E.datos ni de ningún campo
+  // de equipamiento. NO agregar un chequeo alternativo tipo "E.datos &&
+  // E.datos.necesitaPatines" ni similar -- eso mostraría el tab a una
+  // cuenta dashboardAdmin:true con equipamiento propio cargado, violando
+  // la regla.
   { id: 'reservas', icono: 'calendar_month', texto: 'Reservas', pantalla: 's-home',
     visible: function() { return !_dashboardAdminLimitado; } },
   { id: 'ajustes', icono: 'settings', texto: 'Ajustes', pantalla: 's-datos',
