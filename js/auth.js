@@ -106,6 +106,13 @@ function onGoogleCredentialUsuario(resp) {
       // "Mi Liga" desde Ajustes.
       if (res.dashboardAdmin !== false) {
         ocultarCargando();
+        if (res.valido && res.datos) {
+          _token = res.token || '';
+          E.nombre = res.nombre;
+          E.datos = res.datos;
+          E.datosCompletos = res.datos;
+          localStorage.setItem('session', JSON.stringify({ nombre: E.nombre, token: _token }));
+        }
         adminEntrar();
         return;
       }
