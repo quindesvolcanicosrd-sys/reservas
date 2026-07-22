@@ -24,6 +24,20 @@
 .admin-dash-tile-icon .material-symbols-outlined { font-size:inherit; color:var(--brand); }
 .admin-dash-tile-label { font-size:0.82rem; font-weight:700; color:var(--text); line-height:1.3; transition:color 0.15s; }
 
+/* "Color"/"Precios de clases" (Tanda 6, ver MANIFEST.md "Cambios recientes"
+   — corrección sobre la Tanda 5, que las había dejado siempre visibles sin
+   acordeón): mismo mecanismo de acordeón/burbuja que las 4 tiles grandes
+   (`.admin-dash-tile` base sin cambios, incluida la mecánica de
+   `.admin-tile-activa`/rombo de más abajo) — `.admin-dash-pill` es solo un
+   modificador visual que las achica al tamaño/forma de `.aj-pill`
+   (css/perfil.css, mismo componente de chip que ya usa el resto de la app)
+   en vez de duplicar esa clase (evita arrastrar modificadores propios de
+   `.aj-pill` que no aplican acá, como `.aj-pill-otro-*`/`.no-disponible`). */
+.admin-dash-pills-row { display:flex; flex-wrap:wrap; gap:10px; margin:2px 0 16px; }
+.admin-dash-tile.admin-dash-pill { display:inline-flex; flex-direction:row; align-items:center; gap:6px; width:auto; padding:7px 16px; border-radius:20px; }
+.admin-dash-tile.admin-dash-pill .admin-dash-tile-icon { font-size:1rem; margin-bottom:0; }
+.admin-dash-tile.admin-dash-pill .admin-dash-tile-label { font-size:0.78rem; }
+
 /* Mecánica única de "burbuja embebida" para las 4 tiles del dashboard —
    Notificación, Revisar reservas, Equipamiento y Qué llevar comparten el
    MISMO componente visual y la misma función JS (adminToggleBurbuja(),
@@ -69,7 +83,10 @@
    recientes"): grid fijo de 7 columnas -- fila 1 = 7 presets, fila 2 = 6
    presets + el eyedropper (14º ítem, cae solo en la última columna de la
    fila 2). `grid-template-columns:repeat(7,1fr)` en vez de `flex-wrap`
-   garantiza siempre 7 por fila sin importar el ancho del viewport. */
+   garantiza siempre 7 por fila sin importar el ancho del viewport.
+   `.admin-color-enfasis` (wrapper con el borde/margen de "sección") sigue
+   usándose en Mi Liga ("Personalización") -- la burbuja del dashboard
+   (Tanda 6) ya no la usa, `.admin-tile-bubble` le da su propio chrome. */
 .admin-color-enfasis { margin:20px 0; padding-top:16px; border-top:1px solid var(--border-light); text-align:left; }
 .admin-color-swatches { display:grid; grid-template-columns:repeat(7, 1fr); justify-items:center; align-items:center; gap:8px; margin-bottom:14px; }
 .admin-color-swatch { width:34px; height:34px; border-radius:50%; border:2px solid transparent; padding:0; cursor:pointer; }

@@ -7,17 +7,19 @@ var _admFiltro = 'pendientes';
 var _gisInicializado = false;
 
 // Dashboard admin: banners condicionales + burbujas embebidas de las 4
-// tiles (Revisar reservas / Notificación / Equipamiento / Qué llevar) —
-// ver MANIFEST.md "Cambios recientes". Las 4 tiles usan el MISMO mecanismo
-// de burbuja inline (nunca pantalla completa, nunca navegación) — ver
+// tiles grandes (Revisar reservas / Notificación / Equipamiento / Qué
+// llevar) + 2 pills chicas (Color / Precios de clases, Tanda 6) — ver
+// MANIFEST.md "Cambios recientes". Las 6 comparten el MISMO mecanismo de
+// burbuja inline (nunca pantalla completa, nunca navegación) — ver
 // ADMIN_TILE_INFO/adminToggleBurbuja() más abajo. `_admDashAbierto` trackea
 // qué hay abierto entre lo que puede convivir con el dashboard visible: los
 // 2 acordeones de banner ('admin-banner-pendientes-body'/
-// 'admin-banner-equip-body') o una de las 4 burbujas (clave de
+// 'admin-banner-equip-body') o una de las 6 burbujas (clave de
 // ADMIN_TILE_INFO: 'notif'/'s-admin-reservas'/'s-admin-equip'/
-// 's-admin-quellevar') — todo vive siempre en el mismo `s-admin-home`, así
-// que sí necesitan exclusión mutua entre sí (a diferencia de cuando 3 de
-// ellas eran pantallas completas que se tapaban por completo).
+// 's-admin-quellevar'/'admin-color'/'admin-precios') — todo vive siempre en
+// el mismo `s-admin-home`, así que sí necesitan exclusión mutua entre sí (a
+// diferencia de cuando 3 de ellas eran pantallas completas que se tapaban
+// por completo).
 var _admDashAbierto = null;
 var _admBannerPendientes = null; // null = todavía no llegó la respuesta
 var _admBannerQueLlevar = null;
@@ -314,7 +316,7 @@ function _adminRenderBannerQueLlevar(scope) {
     '</div>';
 }
 
-// ── Dashboard admin: burbujas embebidas de las 4 tiles ──────────────────────────
+// ── Dashboard admin: burbujas embebidas de las 4 tiles + 2 pills ────────────────
 // Corrección de diseño (ver MANIFEST.md "Cambios recientes" — reemplaza el
 // "container transform" a pantalla completa de la Tanda 2 para Revisar
 // reservas/Equipamiento/Qué llevar): las 4 tiles comparten AHORA el mismo
@@ -324,6 +326,13 @@ function _adminRenderBannerQueLlevar(scope) {
 // modal. Un solo componente/función para las 4, no una variante por tile.
 // `cargar` de cada tile es responsable de poblar su propio contenido
 // (fetch + render, reusando las funciones ya existentes de cada una).
+// Tanda 6 (ver MANIFEST.md "Cambios recientes" — corrección sobre la Tanda 5,
+// que las había dejado siempre visibles sin acordeón): "Color" y "Precios de
+// clases" se suman a esta misma tabla con sus propias claves
+// ('admin-color'/'admin-precios') — mismo mecanismo exacto que las 4 tiles
+// grandes (colapsadas por defecto, "solo una abierta a la vez" entre las 6 +
+// los 2 banners), la única diferencia es visual (pills chicas en vez de
+// tiles grandes, ver `.admin-dash-pill` en css/admin.css).
 var ADMIN_TILE_INFO = {
   'notif': {
     bubbleId: 'admin-notif-bubble',
@@ -374,6 +383,18 @@ var ADMIN_TILE_INFO = {
         adminRenderQueLlevar(res);
       }, function(e) { mostrarToast(e.message || 'Error al cargar equipamiento.', 'error'); });
     }
+  },
+  'admin-color': {
+    bubbleId: 'admin-burbuja-color',
+    // El color de énfasis ya se carga/aplica al entrar (adminEntrar() ->
+    // adminRenderColorEnfasis()) -- acá solo se re-renderiza por si cambió
+    // en otro lado de la misma sesión (ej. Mi Liga), mismo criterio "fresco
+    // al abrir" que las demás tiles aunque acá no haya ningún fetch de por medio.
+    cargar: function() { adminRenderColorEnfasis(); }
+  },
+  'admin-precios': {
+    bubbleId: 'admin-burbuja-precios',
+    cargar: function() { _adminCargarPrecios(); }
   }
 };
 

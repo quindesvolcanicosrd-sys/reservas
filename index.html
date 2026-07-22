@@ -733,17 +733,37 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <button class="btn btn-outline" id="btn-adm-notif" onclick="adminEnviarNotif()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">send</span> Enviar notificación</button>
       </div>
 
-      <!-- Personalización + Precios de clases (Tanda 5 -- ver MANIFEST.md
-           "Cambios recientes"): antes adentro del desplegable "Más",
-           eliminado -- ahora siempre visibles, con menor jerarquía visual
-           (.seccion-label en vez de .hb-titulo, sin card ni botón de
-           guardar propio). -->
-      <div class="admin-color-enfasis" style="margin-top:8px;padding-top:14px;border-top:1px solid var(--border-light);">
-        <div class="seccion-label">Color</div>
+      <!-- Personalización + Precios de clases (Tanda 6 -- ver MANIFEST.md
+           "Cambios recientes"): corrección sobre la Tanda 5 -- vuelven a
+           colapsarse por defecto y a compartir el MISMO mecanismo de
+           acordeón/burbuja (ADMIN_TILE_INFO/adminToggleBurbuja(), mismo
+           grupo "solo una abierta a la vez" que las 4 tiles grandes) en vez
+           de quedar siempre visibles. Única diferencia real con las 4:
+           en vez de tiles grandes iguales, son 2 pills chicas (reusa
+           `.aj-pill`, css/perfil.css -- mismo componente de chip que ya usa
+           el resto de la app) -- .admin-dash-pill es solo un modificador de
+           tamaño/forma sobre `.admin-dash-tile`, la mecánica JS no cambia. -->
+      <div class="admin-dash-pills-row">
+        <div class="admin-dash-tile admin-dash-pill" data-tile="admin-color" onclick="adminToggleBurbuja('admin-color', this)">
+          <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">palette</span></div>
+          <div class="admin-dash-tile-label">Color</div>
+        </div>
+        <div class="admin-dash-tile admin-dash-pill" data-tile="admin-precios" onclick="adminToggleBurbuja('admin-precios', this)">
+          <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">payments</span></div>
+          <div class="admin-dash-tile-label">Precios de clases</div>
+        </div>
+      </div>
+
+      <!-- Burbuja "Color" -- mismo componente .admin-tile-bubble/-header
+           que las 4 tiles grandes. -->
+      <div id="admin-burbuja-color" class="admin-tile-bubble" style="display:none;">
+        <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">palette</span> Color</div>
         <div class="admin-color-swatches"></div>
       </div>
-      <div style="margin-top:16px;">
-        <div class="seccion-label">Precios de clases</div>
+
+      <!-- Burbuja "Precios de clases". -->
+      <div id="admin-burbuja-precios" class="admin-tile-bubble" style="display:none;">
+        <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">payments</span> Precios de clases</div>
         <div class="datos-campo">
           <label>Precio por clase</label>
           <div class="admin-precio-row">
