@@ -4,7 +4,17 @@
    dentro de .contenedor dependía de un ancestro más lejano (todos ya tenían
    uno más cercano: .select-wrapper, #top-bar sticky, o viven fuera de
    .contenedor por completo). */
-.contenedor { position: relative; max-width: 427px; margin: 0 auto; padding: var(--space-screen); }
+/* padding-top explícito (32px, más que los otros 3 lados en 16px) -- aire
+   extra arriba de todo que antes daba el logo circular de Mirlxs
+   (.header/.header-banner, eliminado, ver "Cambios recientes"), que ocupaba
+   ~130px reales en flujo normal antes de .contenedor en TODA pantalla salvo
+   logueada+mobile (única combinación donde ya se ocultaba, ver
+   `body.logueada .contenedor` más abajo, que sigue ganando ahí por
+   especificidad, sin cambios). Sin el logo, dejar el mismo padding que los
+   otros 3 lados pegaba el contenido al borde superior del viewport -- no se
+   buscó replicar el alto exacto del logo (el pedido era sacarlo, no dejar
+   un hueco equivalente), solo un margen razonable. */
+.contenedor { position: relative; max-width: 427px; margin: 0 auto; padding: var(--space-screen); padding-top: 32px; }
 
 .card {
   background: var(--card-bg); border-radius: 20px; padding: 28px 24px; margin-bottom: 16px;
@@ -201,7 +211,6 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
 
 /* ─── MOBILE ─────────────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
-  body.logueada .header,
   body.logueada footer { display: none; }
   body.logueada .contenedor { padding-top: 6px; }
   footer { display: none; }
