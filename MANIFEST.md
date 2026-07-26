@@ -314,6 +314,295 @@ Dark mode: `.loading-card`/`.loading-card p` en `@media (prefers-color-scheme: d
 | `.admin-precio-row / .admin-moneda-select / .admin-precio-stepper` | **Nuevo (Tanda 4, `.admin-precio-stepper` sumada en la Tanda 5)** — fila de "Precios de clases": `.qty-stepper` + `<select class="admin-moneda-select">` (USD por defecto, más opciones) al lado, dentro de un `.select-wrapper` angosto (`width:auto`) para conservar la flechita `::after` ya estilada. `.admin-precio-stepper` (Tanda 5) ensancha el stepper base a 172px porque acá el valor puede llevar decimales ("1000.00", 7 caracteres) — más ancho que un entero simple de cantidad/protecciones. **Tanda 6:** este bloque vive ahora dentro de `#admin-burbuja-precios` (`.admin-tile-bubble`, colapsada por defecto) en vez de un `<div>` siempre visible — sin cambios en las clases de esta fila |
 
 ### Cambios recientes
+- **Backend — Sección Eventos, Tanda 1: 6 funciones nuevas de Apps Script, documentadas para pegar en `Code.gs` (sin acceso desde este repo, nada aplicado desde acá) + instrucción manual para Victor (columna nueva en la hoja `Venues`).** Primera tanda de un build grande de 7 tandas (Eventos: calendario de entrenamientos/torneos/asambleas con RSVP de usuario y toma de asistencia de admin) — esta tanda es 100% backend, sin ningún cambio de HTML/CSS/JS de frontend todavía (llega en la Tanda 3).
+
+  **Paso manual para Victor, antes de pegar el código de abajo — columna nueva en `Venues`:** agregar una columna con el encabezado exacto `Tipo de ícono` (con el acento, así lo busca el código de abajo), con validación de datos tipo lista desplegable: `Entrenamiento`, `Torneo`, `Asamblea` (Victor puede sumar más opciones a la lista más adelante sin tocar código — cualquier valor que no matchee ninguno de los íconos que la Tanda 3 defina en el frontend cae a un ícono genérico, no rompe nada). No hace falta tocar el generador de `Asistencias` — las funciones de abajo resuelven el ícono por `Lugar` contra `Venues` en cada lectura, sin depender de que la fila autogenerada en `Asistencias` copie la columna nueva.
+
+  **Honestidad sobre lo que este repo puede y no puede confirmar:** no hay acceso a `Code.gs` ni a la estructura real de columnas de `Asistencias`/`Log de asistencias`/`Equipo`/`Venues` desde este repo (mismo caso ya documentado para `adminGetColorEnfasis`/`adminSetColorEnfasis`, más abajo). Todo el código que sigue está escrito contra la estructura de columnas tal como la describió Victor en el brief, con nombres de encabezado literales (`hoja.getDataRange().getValues()[0].indexOf('Nombre de Columna')` vía el helper `_colIdx`, nunca índices numéricos hardcodeados) para que tolere columnas reordenadas — pero **los nombres de encabezado en sí, y los 2 helpers marcados `// TODO ajustar`, sí deben confirmarse/ajustarse contra el `Code.gs` real antes de pegar esto**, no son un supuesto verificado.
+
+  **Diseño, 2 decisiones no explícitas en el brief que hubo que resolver:**
+  1. **`getEventosRango` arma el roster de asistencia leyendo `Log de asistencias` completa una sola vez por request** (`_ultimaAsistenciaPorPersonaTodas()`, agrupa por `ID Evento` y se queda solo con la fila más reciente por persona vía `Marca temporal`) — en vez de una query por evento. Con el volumen de un equipo (no miles de filas), es más simple y más barato en cuotas de Apps Script que N lecturas; si el sheet crece mucho esto puede necesitar paginar o filtrar por rango de fecha antes de agrupar, señalado pero no resuelto acá.
+  2. **`adminMarcarAsistencia` acepta las 2 familias de `Estado` de un solo endpoint** (`Asistiré/No asistiré/Tal vez` — RSVP, lo mismo que puede escribir un usuario — y `A tiempo/Tarde/Ausente` — toma de lista real, los chips de la card admin) en vez de 2 acciones separadas, porque el brief describe un solo verbo ("admin escribe acá al pasar lista o editar asistencia de cualquiera") sin distinguir las 2 escrituras. **Sin confirmar con Victor** — si en la práctica conviene separarlas (ej. para que el frontend no tenga que mandar el whitelist correcto a mano), es un cambio de 5 minutos en `ESTADOS_ROLLCALL`/`ESTADOS_RSVP` de abajo, separando el `case` en 2.
+
+  ```js
+  // ============================================================
+  // SECCIÓN EVENTOS — Tanda 1 (backend). Pegar en Code.gs.
+  // Asume esta estructura de hojas (AJUSTAR nombres de encabezado si no
+  // coinciden 1:1 con los reales — no verificado contra Code.gs):
+  //   Asistencias:        ID Evento | Fecha | Lugar | Hora | Estado | A horario | Tarde
+  //   Log de asistencias: ID Evento | Fecha del entrenamiento | Nombre | Origen | Estado | Marca temporal
+  //   Venues:              Lugar | ...columnas de recurrencia... | Tipo de ícono (NUEVA, ver instrucción manual arriba)
+  //   Equipo:               Nombre | ... | Fecha de nacimiento | Fecha nacimiento pública | Edad pública | ...
+  // ============================================================
+
+  function _colIdx(headers, nombre) {
+    var i = headers.indexOf(nombre);
+    if (i === -1) throw new Error('Columna no encontrada: ' + nombre);
+    return i;
+  }
+
+  // ---- Lugar -> Tipo de ícono (Venues) ----
+  function _mapaTipoIconoPorLugar() {
+    var hoja = SpreadsheetApp.getActive().getSheetByName('Venues');
+    var datos = hoja.getDataRange().getValues();
+    var headers = datos[0];
+    var cLugar = _colIdx(headers, 'Lugar');
+    var cTipo = _colIdx(headers, 'Tipo de ícono');
+    var mapa = {};
+    for (var i = 1; i < datos.length; i++) {
+      mapa[datos[i][cLugar]] = datos[i][cTipo] || 'Entrenamiento';
+    }
+    return mapa;
+  }
+
+  // Recorre TODA "Log de asistencias" una sola vez y devuelve, por ID Evento,
+  // solo la fila más reciente (Marca temporal) por Nombre — evita duplicados
+  // cuando alguien cambió de opinión (ej. Asistiré -> Tal vez) más de una vez.
+  function _ultimaAsistenciaPorPersonaTodas() {
+    var hoja = SpreadsheetApp.getActive().getSheetByName('Log de asistencias');
+    var datos = hoja.getDataRange().getValues();
+    var headers = datos[0];
+    var cId = _colIdx(headers, 'ID Evento');
+    var cNombre = _colIdx(headers, 'Nombre');
+    var cOrigen = _colIdx(headers, 'Origen');
+    var cEstado = _colIdx(headers, 'Estado');
+    var cMarca = _colIdx(headers, 'Marca temporal');
+
+    var ultimaPorClave = {}; // 'idEvento|nombre' -> fila ganadora
+    for (var i = 1; i < datos.length; i++) {
+      var fila = datos[i];
+      var clave = fila[cId] + '|' + fila[cNombre];
+      var marca = fila[cMarca];
+      if (!ultimaPorClave[clave] || marca > ultimaPorClave[clave].marca) {
+        ultimaPorClave[clave] = {
+          idEvento: fila[cId], nombre: fila[cNombre],
+          origen: fila[cOrigen], estado: fila[cEstado], marca: marca
+        };
+      }
+    }
+    var porEvento = {};
+    for (var clave in ultimaPorClave) {
+      var r = ultimaPorClave[clave];
+      if (!porEvento[r.idEvento]) porEvento[r.idEvento] = [];
+      porEvento[r.idEvento].push({
+        nombre: r.nombre, estado: r.estado, origen: r.origen,
+        marcaTemporal: Utilities.formatDate(new Date(r.marca), Session.getScriptTimeZone(), "yyyy-MM-dd'T'HH:mm:ss")
+      });
+    }
+    return porEvento;
+  }
+
+  function _fechaDeEvento(idEvento) {
+    var hoja = SpreadsheetApp.getActive().getSheetByName('Asistencias');
+    var datos = hoja.getDataRange().getValues();
+    var headers = datos[0];
+    var cId = _colIdx(headers, 'ID Evento'), cFecha = _colIdx(headers, 'Fecha');
+    for (var i = 1; i < datos.length; i++) {
+      if (String(datos[i][cId]) === String(idEvento)) return datos[i][cFecha];
+    }
+    return '';
+  }
+
+  function _agregarFilaLogAsistencia(idEvento, nombre, origen, estado) {
+    var hoja = SpreadsheetApp.getActive().getSheetByName('Log de asistencias');
+    var headers = hoja.getDataRange().getValues()[0];
+    var fila = [];
+    fila[_colIdx(headers, 'ID Evento')] = idEvento;
+    fila[_colIdx(headers, 'Fecha del entrenamiento')] = _fechaDeEvento(idEvento);
+    fila[_colIdx(headers, 'Nombre')] = nombre;
+    fila[_colIdx(headers, 'Origen')] = origen;
+    fila[_colIdx(headers, 'Estado')] = estado;
+    fila[_colIdx(headers, 'Marca temporal')] = new Date();
+    hoja.appendRow(fila);
+  }
+
+  // ---- 1) getEventosRango(desde, hasta) — GET pública, sin adminToken ----
+  // case 'getEventosRango':
+  //   return getEventosRango(e.parameter.desde, e.parameter.hasta);
+  // desde/hasta: 'YYYY-MM-DD'. Trae TODOS los eventos de Asistencias en el
+  // rango (cualquier Estado — el frontend decide qué hacer con Cancelado/
+  // No se entrena), con el roster de asistencia ya armado por evento.
+  function getEventosRango(desde, hasta) {
+    var hoja = SpreadsheetApp.getActive().getSheetByName('Asistencias');
+    var datos = hoja.getDataRange().getValues();
+    var headers = datos[0];
+    var cId = _colIdx(headers, 'ID Evento');
+    var cFecha = _colIdx(headers, 'Fecha');
+    var cLugar = _colIdx(headers, 'Lugar');
+    var cHora = _colIdx(headers, 'Hora');
+    var cEstado = _colIdx(headers, 'Estado');
+
+    var d0 = new Date(desde), d1 = new Date(hasta);
+    var tipoIconoPorLugar = _mapaTipoIconoPorLugar();
+    var asistPorEvento = _ultimaAsistenciaPorPersonaTodas();
+
+    var eventos = [];
+    for (var i = 1; i < datos.length; i++) {
+      var fila = datos[i];
+      var fecha = fila[cFecha];
+      if (!(fecha instanceof Date) || fecha < d0 || fecha > d1) continue;
+      var idEvento = fila[cId];
+      eventos.push({
+        idEvento: idEvento,
+        fecha: Utilities.formatDate(fecha, Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+        lugar: fila[cLugar],
+        hora: fila[cHora],
+        estado: fila[cEstado],
+        tipoIcono: tipoIconoPorLugar[fila[cLugar]] || 'Entrenamiento',
+        asistencias: asistPorEvento[idEvento] || []
+      });
+    }
+    eventos.sort(function (a, b) { return a.fecha < b.fecha ? -1 : (a.fecha > b.fecha ? 1 : 0); });
+    return { eventos: eventos };
+  }
+
+  // ---- 2) getCumpleañosRango(desde, hasta) — GET pública ----
+  // case 'getCumpleañosRango':
+  //   return getCumpleañosRango(e.parameter.desde, e.parameter.hasta);
+  // Mismo criterio de "público"/"edad pública" que ya usa "Próximos
+  // cumpleaños" — AJUSTAR cNombre/cFNac/cFPub/cEPub a los encabezados
+  // reales de Equipo si esa feature ya existente usa otros nombres.
+  function getCumpleañosRango(desde, hasta) {
+    var hoja = SpreadsheetApp.getActive().getSheetByName('Equipo');
+    var datos = hoja.getDataRange().getValues();
+    var headers = datos[0];
+    var cNombre = _colIdx(headers, 'Nombre');
+    var cFNac = _colIdx(headers, 'Fecha de nacimiento');
+    var cFPub = _colIdx(headers, 'Fecha nacimiento pública');
+    var cEPub = _colIdx(headers, 'Edad pública');
+
+    var d0 = new Date(desde), d1 = new Date(hasta);
+    var resultado = [];
+    for (var i = 1; i < datos.length; i++) {
+      var fila = datos[i];
+      var fnac = fila[cFNac];
+      if (!(fnac instanceof Date) || !fila[cFPub]) continue;
+      var cand1 = new Date(d0.getFullYear(), fnac.getMonth(), fnac.getDate());
+      var cand2 = new Date(d1.getFullYear(), fnac.getMonth(), fnac.getDate());
+      var candidato = (cand1 >= d0 && cand1 <= d1) ? cand1 : ((cand2 >= d0 && cand2 <= d1) ? cand2 : null);
+      if (!candidato) continue;
+      var entrada = {
+        nombre: fila[cNombre],
+        fecha: Utilities.formatDate(candidato, Session.getScriptTimeZone(), 'yyyy-MM-dd')
+      };
+      if (fila[cEPub]) entrada.edad = candidato.getFullYear() - fnac.getFullYear();
+      resultado.push(entrada);
+    }
+    resultado.sort(function (a, b) { return a.fecha < b.fecha ? -1 : (a.fecha > b.fecha ? 1 : 0); });
+    return { cumpleanos: resultado };
+  }
+
+  // ---- 3) marcarAsistenciaUsuario — escritura de usuario ----
+  // case 'marcarAsistenciaUsuario':
+  //   return marcarAsistenciaUsuario(e);
+  // Vía apiPost() (form-urlencoded, _token automático) — mismo patrón que
+  // el resto de escrituras de usuario, NO GET plano como adminSetColorEnfasis
+  // (esa sí viaja por GET porque es de admin, ver más abajo).
+  // TODO ajustar: _resolverPersonaPorToken es un STUB — reemplazar por el
+  // mecanismo real que ya usa restaurarSesion()/guardarReserva() para
+  // resolver la cuenta a partir de e.parameter._token. A propósito NO se
+  // confía en un "nombre" mandado por el cliente para esta función (a
+  // diferencia de adminMarcarAsistencia, donde el admin sí elige a quién).
+  var ESTADOS_RSVP = ['Asistiré', 'No asistiré', 'Tal vez'];
+  function marcarAsistenciaUsuario(e) {
+    var persona = _resolverPersonaPorToken(e.parameter._token); // TODO ajustar
+    if (!persona) return { exito: false, error: 'Sesión inválida.' };
+    var idEvento = String(e.parameter.idEvento || '').trim();
+    var estado = String(e.parameter.estado || '').trim();
+    if (!idEvento) return { exito: false, error: 'Evento inválido.' };
+    if (ESTADOS_RSVP.indexOf(estado) === -1) return { exito: false, error: 'Estado inválido.' };
+    _agregarFilaLogAsistencia(idEvento, persona.nombre, 'Usuario', estado);
+    return { exito: true };
+  }
+
+  // ---- 4) adminMarcarAsistencia — escritura de admin (RSVP u toma de lista) ----
+  // case 'adminMarcarAsistencia':
+  //   return adminMarcarAsistencia(e);
+  // GET con adminToken (mismo patrón que adminSetColorEnfasis). Acepta las
+  // 2 familias de Estado — ver nota de diseño arriba sobre por qué no está
+  // separada en 2 acciones.
+  var ESTADOS_ROLLCALL = ['A tiempo', 'Tarde', 'Ausente'];
+  function adminMarcarAsistencia(e) {
+    var admin = validarAdminToken(e.parameter.adminToken); // TODO ajustar al helper real
+    if (!admin) return { exito: false, error: 'Sesión admin inválida.' };
+    var idEvento = String(e.parameter.idEvento || '').trim();
+    var nombre = String(e.parameter.nombre || '').trim();
+    var estado = String(e.parameter.estado || '').trim();
+    if (!idEvento || !nombre) return { exito: false, error: 'Datos incompletos.' };
+    if (ESTADOS_RSVP.concat(ESTADOS_ROLLCALL).indexOf(estado) === -1) return { exito: false, error: 'Estado inválido.' };
+    _agregarFilaLogAsistencia(idEvento, nombre, 'Admin', estado);
+    return { exito: true };
+  }
+
+  // ---- 5) adminBuscarPersonasParaEvento(idEvento) — GET admin ----
+  // case 'adminBuscarPersonasParaEvento':
+  //   return adminBuscarPersonasParaEvento(e);
+  // Todo Equipo, sin restricción (a diferencia de "Mi Liga") — para el
+  // buscador de "+ Agregar persona" de la card admin. Incluye el estado
+  // actual (si ya marcó algo) para que el frontend pueda mostrarlo de una.
+  function adminBuscarPersonasParaEvento(e) {
+    var admin = validarAdminToken(e.parameter.adminToken); // TODO ajustar al helper real
+    if (!admin) return { exito: false, error: 'Sesión admin inválida.' };
+    var idEvento = String(e.parameter.idEvento || '').trim();
+    var hojaEquipo = SpreadsheetApp.getActive().getSheetByName('Equipo');
+    var datos = hojaEquipo.getDataRange().getValues();
+    var headers = datos[0];
+    var cNombre = _colIdx(headers, 'Nombre');
+    var yaMarcadas = {};
+    (_ultimaAsistenciaPorPersonaTodas()[idEvento] || []).forEach(function (a) { yaMarcadas[a.nombre] = a.estado; });
+    var personas = [];
+    for (var i = 1; i < datos.length; i++) {
+      var nombre = datos[i][cNombre];
+      if (!nombre) continue;
+      personas.push({ nombre: nombre, estadoActual: yaMarcadas[nombre] || null });
+    }
+    return { personas: personas };
+  }
+
+  // ---- 6) getEventosFiltrados(estado, mes, lugar, tipo) — GET pública ----
+  // case 'getEventosFiltrados':
+  //   return getEventosFiltrados(e.parameter.estado, e.parameter.mes, e.parameter.lugar, e.parameter.tipo);
+  // Para la pantalla "Ver todos los entrenamientos". estado: 'proximos' |
+  // 'pasados' | 'todos'; mes: 'YYYY-MM' o '' (todos); lugar/tipo: valor
+  // exacto o '' (todos). No incluye el roster de asistencias (cards
+  // compactas) — el detalle al tocar una lo trae getEventosRango.
+  function getEventosFiltrados(estado, mes, lugar, tipo) {
+    var hoja = SpreadsheetApp.getActive().getSheetByName('Asistencias');
+    var datos = hoja.getDataRange().getValues();
+    var headers = datos[0];
+    var cId = _colIdx(headers, 'ID Evento'), cFecha = _colIdx(headers, 'Fecha'),
+        cLugar = _colIdx(headers, 'Lugar'), cHora = _colIdx(headers, 'Hora'),
+        cEstado = _colIdx(headers, 'Estado');
+    var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    var tipoIconoPorLugar = _mapaTipoIconoPorLugar();
+
+    var eventos = [];
+    for (var i = 1; i < datos.length; i++) {
+      var fila = datos[i];
+      var fecha = fila[cFecha];
+      if (!(fecha instanceof Date)) continue;
+      if (mes && Utilities.formatDate(fecha, Session.getScriptTimeZone(), 'yyyy-MM') !== mes) continue;
+      if (lugar && fila[cLugar] !== lugar) continue;
+      var tipoIcono = tipoIconoPorLugar[fila[cLugar]] || 'Entrenamiento';
+      if (tipo && tipoIcono !== tipo) continue;
+      var esFuturo = fecha >= hoy;
+      if (estado === 'proximos' && !esFuturo) continue;
+      if (estado === 'pasados' && esFuturo) continue;
+      eventos.push({
+        idEvento: fila[cId],
+        fecha: Utilities.formatDate(fecha, Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+        lugar: fila[cLugar], hora: fila[cHora], estado: fila[cEstado], tipoIcono: tipoIcono
+      });
+    }
+    eventos.sort(function (a, b) { return a.fecha < b.fecha ? -1 : (a.fecha > b.fecha ? 1 : 0); });
+    return { eventos: eventos };
+  }
+  ```
+
+  **Dónde enchufar cada `case` en `Code.gs` (no aplicado desde acá):** `getEventosRango`/`getCumpleañosRango`/`getEventosFiltrados` van en `doGet(e)` junto a las demás acciones públicas sin `adminToken` (mismo grupo que `getPreciosClases`); `marcarAsistenciaUsuario` junto a las escrituras de usuario que ya validan `_token` (mismo grupo que `guardarReserva`); `adminMarcarAsistencia`/`adminBuscarPersonasParaEvento` junto a las acciones `adminSet*`/`adminGet*` que validan `adminToken` (mismo grupo que `adminSetColorEnfasis`, más abajo en este MANIFEST).
+
+  **No verificado de ninguna forma** (nada de esto es ejecutable desde este repo — sin Apps Script real, sin mock local esta vez porque no hay contrato de frontend todavía que replicar, a diferencia de la entrada de `adminSetColorEnfasis` más abajo que sí tenía un `js/admin.js` real llamándola). Pendiente: Victor pega el código, ajusta los 2 `TODO` y los nombres de columna si difieren, y prueba las 6 acciones a mano (o se validan juntas recién en la Tanda 3, cuando el frontend empiece a llamarlas de verdad).
+
 - **index.html + css/login.css + css/ui.css — Se saca el logo circular de Mirlxs de toda la app (pedido explícito de Victor).** El `<div class="header">` (`.header-banner` + `<img>` del logo, con su `onclick` para volver a home/login) se elimina de `index.html` por completo.
 
   1. **Dónde era visible realmente — más pantallas de las que Victor había confirmado con captura.** Se auditó `css/ui.css` antes de tocar nada: existía `body.logueada .header, body.logueada footer { display: none; }`, pero **dentro de `@media (max-width: 600px)`** — es decir, esa regla solo ocultaba el logo en pantallas logueadas **en mobile**. En desktop (`>600px`), nada lo ocultaba nunca: el logo era visible en **`s1` (login, cualquier viewport) y en absolutamente cualquier pantalla logueada vista en desktop** (`s-home`, `s-datos`/Ajustes — la que Victor confirmó con su captura —, `s2`, etc.), no solo las 2 pantallas mencionadas en el pedido. Confirmado también que **ningún JS depende de `.header`** (`grep -i header` sobre todo `js/*.js`: cero referencias reales — las únicas coincidencias son otros elementos sin relación, `pin-acordeon-header`/`admin-dash-banner-header`/`rn-header`/`fi-header`/etc.) — de paso corrigió una nota desactualizada de este mismo MANIFEST sobre `_initHomeNav()` (`js/home.js`), que decía que calculaba `top` según la altura de `.header`; el código real hace `nav.style.top = '0'` hardcodeado desde que `#home-nav` pasó a `.app-nav-fixed` (`position:fixed`, `css/nav.css`) — la nota quedó de una arquitectura anterior, corregida en la sección de `js/home.js` de este MANIFEST.
