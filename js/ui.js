@@ -186,6 +186,12 @@ function ir(id, desdeHistorial, sinTrampa) {
   var cfg = TOP_BAR_CONFIG[id];
   if (cfg) {
     topBar.style.display = 'flex'; topTitulo.textContent = typeof cfg.titulo === 'function' ? cfg.titulo() : cfg.titulo;
+    // Detalle de evento (Eventos, ver MANIFEST.md "Cambios recientes"): el
+    // título es el nombre del lugar, puede ser largo -- 2 líneas con
+    // ellipsis en vez del truncado a 1 línea que usa el resto de los
+    // títulos de #top-bar (.app-nav-title base, sin tocar para no afectar
+    // ninguna otra pantalla).
+    topTitulo.classList.toggle('app-nav-title-clamp', id === 's-eventos-detalle');
     var _volverTarget = typeof cfg.volver === 'function' ? cfg.volver() : cfg.volver;
     var topBtnIcono = topBtn.querySelector('.material-symbols-outlined');
     if (_volverTarget) {

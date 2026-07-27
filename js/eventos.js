@@ -353,12 +353,6 @@ function _evHidratarAvatares() {
    -- Tanda 2 deriva mapsUrl/duración/descripción por lugar/tipo genérico en
    vez de pedirle 4 campos propios a cada evento de prueba; la Tanda 3 los
    reemplaza por columnas reales de Venues por evento. */
-function _evHoraFin(e) {
-  var min = _EV_DURACION_MIN_POR_TIPO[e.tipo] || 90;
-  var p = e.horaInicio.split(':');
-  var d = new Date(2000, 0, 1, +p[0], +p[1] + min);
-  return _evPad(d.getHours()) + ':' + _evPad(d.getMinutes());
-}
 function _evDuracionTexto(e) {
   var min = _EV_DURACION_MIN_POR_TIPO[e.tipo] || 90;
   var h = Math.floor(min / 60), m = min % 60;
@@ -378,20 +372,19 @@ function _evFechaCompleta(iso) {
    "+ Agregar persona", ver _evAbrirAgregarPersona() más abajo) sin ninguna
    entrada en e.rsvps para este evento en particular. */
 var _EV_GRUPOS_ASISTENCIA = [
-  { estado: 'Asistiré', label: 'Asisten' },
-  { estado: 'No asistiré', label: 'No asisten' },
-  { estado: 'No jugador', label: 'No jugador' }
+  { estado: 'Asistiré', key: 'Asistiré', label: 'Asisten', clase: 'ev-stat-asisten' },
+  { estado: 'No asistiré', key: 'No asistiré', label: 'No asisten', clase: 'ev-stat-no-asisten' },
+  { estado: 'No jugador', key: 'No jugador', label: 'No jugador', clase: 'ev-stat-no-jugador' }
 ];
-function _evAsistenciaResumenTexto(rsvps, sinResponderCount) {
-  var n = function(estado) { return rsvps.filter(function(p) { return p.estado === estado; }).length; };
-  return 'Asisten ' + n('Asistiré') + ' · No asisten ' + n('No asistiré') + ' · No jugador ' + n('No jugador') + ' · Sin responder ' + sinResponderCount;
-}
-function _evGrupoAsistenciaHtml(label, personas) {
+var _EV_GRUPO_SIN_RESPONDER = { key: 'SinResponder', label: 'Sin responder', clase: 'ev-stat-sin-responder' };
+// `grupoKey` marca el grupo (`data-grupo`) para que _evFiltrarAsistenciaPorGrupo()
+// pueda mostrar/ocultar este bloque sin reconstruir toda la lista.
+function _evGrupoAsistenciaHtml(label, personas, grupoKey) {
   if (!personas.length) return '';
   var filas = personas.map(function(p) {
     return '<div class="ev-asist-persona"><div class="avatar-pill avatar-pill--xs ev-avatar-stack-item" data-nombre="' + p.nombre.replace(/"/g, '&quot;') + '"></div><span>' + p.nombre + '</span></div>';
   }).join('');
-  return '<div class="ev-asist-grupo"><div class="ev-asist-grupo-titulo">' + label + ' (' + personas.length + ')</div>' + filas + '</div>';
+  return '<div class="ev-asist-grupo" data-grupo="' + grupoKey + '"><div class="ev-asist-grupo-titulo">' + label + ' (' + personas.length + ')</div>' + filas + '</div>';
 }
 
 /* ── Variante usuario: "¿Asistiré?" → barra segmentada única, las 3
@@ -735,30 +728,64 @@ function _evRenderDetalle(ev) {
 function _evDetalleInfoHtml(ev) {
   var mapsUrl = _EV_MAPS_URL_POR_LUGAR[ev.lugar];
   var desc = _EV_DESCRIPCION_POR_TIPO[ev.tipo];
-  return '<div class="ev-detalle-tipo"><span class="material-symbols-outlined">' + (_EV_ICONOS[ev.tipo] || 'event') + '</span>' + ev.tipo + '</div>' +
-    '<div class="ev-detalle-dato"><span class="material-symbols-outlined">calendar_month</span>' + _evFechaCompleta(ev.fecha) + '</div>' +
-    '<div class="ev-detalle-dato"><span class="material-symbols-outlined">schedule</span>' + ev.horaInicio + ' a ' + _evHoraFin(ev) + ' (' + _evDuracionTexto(ev) + ')</div>' +
-    (mapsUrl ? '<a class="ev-detalle-pill ev-detalle-pill-maps" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">near_me</span>Cómo llegar</a>' : '') +
+  return '<div class="ev-detalle-header-block">' +
+      '<div class="ev-detalle-icon-grande"><span class="material-symbols-outlined">' + (_EV_ICONOS[ev.tipo] || 'event') + '</span></div>' +
+      '<div>' +
+        '<div class="ev-detalle-tipo">' + ev.tipo + '</div>' +
+        '<div class="ev-detalle-fechahora">' + _evFechaCompleta(ev.fecha) + ' · ' + ev.horaInicio + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="ev-detalle-pills-row">' +
+      '<span class="ev-detalle-pill-sm"><span class="material-symbols-outlined">timer</span>' + _evDuracionTexto(ev) + '</span>' +
+      (mapsUrl ? '<a class="ev-detalle-pill-sm ev-detalle-pill-sm-maps" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">near_me</span>Cómo llegar</a>' : '') +
+    '</div>' +
     (desc ? '<p class="ev-detalle-desc">' + desc + '</p>' : '');
 }
-// Resumen de conteos + lista completa agrupada (contenido de la ex-modal de
-// asistentes, ahora inline) -- separado de _evRenderDetalle() para poder
-// refrescarlo solo (sin tocar info/RSVP) cuando _evMarcarAsistencia() cambia
-// el RSVP propio mientras esta pantalla está abierta.
+/* ── Resumen de asistencia como 4 tarjetas de estadística (grid, ver
+   "Cambios recientes" — reemplaza la línea de texto "Asisten X · No
+   asisten X..." de la tanda anterior) + la lista completa agrupada debajo.
+   Separado de _evRenderDetalle() para poder refrescarse solo (sin tocar
+   info/RSVP) más adelante. `_evDetalleFiltroGrupo` se resetea a null en
+   cada render -- abrir un evento nuevo (o re-abrir el mismo) arranca sin
+   ningún filtro activo. */
+var _evDetalleFiltroGrupo = null;
 function _evRenderDetalleAsistencia(ev) {
+  _evDetalleFiltroGrupo = null;
   var rsvps = ev.rsvps || [];
   var respondieron = {};
   rsvps.forEach(function(p) { respondieron[p.nombre] = true; });
   var sinResponder = _EV_EQUIPO_DEMO.filter(function(n) { return !respondieron[n]; }).map(function(n) { return { nombre: n }; });
-  var resumen = document.getElementById('ev-detalle-asistencia-resumen');
-  if (resumen) resumen.textContent = _evAsistenciaResumenTexto(rsvps, sinResponder.length);
+
+  var grupos = _EV_GRUPOS_ASISTENCIA.map(function(g) {
+    return { key: g.key, label: g.label, clase: g.clase, personas: rsvps.filter(function(p) { return p.estado === g.estado; }) };
+  });
+  grupos.push({ key: _EV_GRUPO_SIN_RESPONDER.key, label: _EV_GRUPO_SIN_RESPONDER.label, clase: _EV_GRUPO_SIN_RESPONDER.clase, personas: sinResponder });
+
+  var stats = document.getElementById('ev-detalle-stats');
+  if (stats) {
+    stats.innerHTML = grupos.map(function(g) {
+      return '<div class="ev-stat-card ' + g.clase + '" data-grupo="' + g.key + '" onclick="_evFiltrarAsistenciaPorGrupo(this,\'' + g.key + '\')">' +
+        '<div class="ev-stat-num">' + g.personas.length + '</div>' +
+        '<div class="ev-stat-label">' + g.label + '</div>' +
+      '</div>';
+    }).join('');
+  }
   var lista = document.getElementById('ev-detalle-asistencia-lista');
   if (lista) {
-    var html = _EV_GRUPOS_ASISTENCIA.map(function(g) {
-      return _evGrupoAsistenciaHtml(g.label, rsvps.filter(function(p) { return p.estado === g.estado; }));
-    }).join('');
-    html += _evGrupoAsistenciaHtml('Sin responder', sinResponder);
-    lista.innerHTML = html;
+    lista.innerHTML = grupos.map(function(g) { return _evGrupoAsistenciaHtml(g.label, g.personas, g.key); }).join('');
     _evHidratarAvatares();
   }
+}
+// Tocar una tarjeta filtra la lista de abajo a solo ese grupo; tocarla de
+// nuevo (ya activa) deselecciona y vuelve a mostrar los 4. Solo una tarjeta
+// activa a la vez -- tocar otra mientras hay una activa cambia el filtro.
+function _evFiltrarAsistenciaPorGrupo(cardEl, grupo) {
+  var yaActiva = _evDetalleFiltroGrupo === grupo;
+  _evDetalleFiltroGrupo = yaActiva ? null : grupo;
+  document.querySelectorAll('#ev-detalle-stats .ev-stat-card').forEach(function(c) {
+    c.classList.toggle('activa', !yaActiva && c === cardEl);
+  });
+  document.querySelectorAll('#ev-detalle-asistencia-lista .ev-asist-grupo').forEach(function(g) {
+    g.style.display = (!_evDetalleFiltroGrupo || g.getAttribute('data-grupo') === _evDetalleFiltroGrupo) ? '' : 'none';
+  });
 }

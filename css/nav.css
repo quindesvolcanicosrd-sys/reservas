@@ -92,6 +92,14 @@
   padding-left: 80px;
   padding-right: 64px;
 }
+/* Variante 2 líneas -- ver MANIFEST.md "Cambios recientes" (detalle de
+   evento de Eventos, título = nombre del lugar, puede ser largo). Toggleada
+   por ir() (js/ui.js) solo para esa pantalla -- .app-nav-title base (arriba)
+   sigue truncando a 1 línea para el resto de los títulos de #top-bar. */
+.app-nav-title-clamp {
+  white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  line-height: 1.25; top: 50%; transform: translateY(-50%);
+}
 
 /* ── Acciones derecha ────────────────────────── */
 .app-nav-actions {
