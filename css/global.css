@@ -233,9 +233,15 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
 .avatar-pill--lg { width: 84px; height: 84px; }
 .avatar-pill--md { width: 76px; height: 76px; }
 .avatar-pill--sm { width: 44px; height: 44px; }
+/* --xs (Eventos, ver MANIFEST.md "Cambios recientes"): fila de avatares
+   superpuestos de asistentes + filas de la modal de asistencia -- --sm
+   (44px) es de más para un avatar chico repetido en fila, necesitaba un
+   escalón menor dentro de la misma escala. */
+.avatar-pill--xs { width: 26px; height: 26px; }
 .avatar-pill--lg .avatar-pill-letter { font-size: 30px; }
 .avatar-pill--md .avatar-pill-letter { font-size: 26px; }
 .avatar-pill--sm .avatar-pill-letter { font-size: 15px; }
+.avatar-pill--xs .avatar-pill-letter { font-size: 11px; }
 
 /* Botón de editar/cámara — badge circular superpuesto en la esquina
    inferior derecha del avatar. Vive como hermano de `.avatar-pill` dentro de

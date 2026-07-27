@@ -27,6 +27,24 @@ var _EV_ICONOS = { 'Entrenamiento': 'directions_run', 'Torneo': 'emoji_events', 
 var _EV_DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 var _EV_DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
+// "Más información" de la card (ver _evMasInfoHtml() más abajo) -- Tanda 2
+// deriva mapsUrl/duración/descripción por lugar/tipo en vez de pedirle a
+// cada evento de prueba sus propios 4 campos repetidos; la Tanda 3 los
+// reemplaza por columnas reales de Venues (mapsUrl/horaFin/duración/
+// descripción por evento, no por lugar/tipo genérico como acá).
+var _EV_MAPS_URL_POR_LUGAR = {
+  'Parque La Carolina': 'https://www.google.com/maps/search/?api=1&query=Parque+La+Carolina+Quito',
+  'Coliseo Rumiñahui': 'https://www.google.com/maps/search/?api=1&query=Coliseo+Rumi%C3%B1ahui+Quito',
+  'Sede Quindes Volcánicos': 'https://www.google.com/maps/search/?api=1&query=Quindes+Volc%C3%A1nicos+Quito',
+  'Pista Bicentenario': 'https://www.google.com/maps/search/?api=1&query=Parque+Bicentenario+Quito'
+};
+var _EV_DURACION_MIN_POR_TIPO = { 'Entrenamiento': 90, 'Torneo': 180, 'Asamblea': 60 };
+var _EV_DESCRIPCION_POR_TIPO = {
+  'Entrenamiento': 'Entrenamiento regular del equipo. Trae tus patines y protecciones completas.',
+  'Torneo': 'Competencia oficial. Revisá el reglamento y llegá con anticipación para el registro.',
+  'Asamblea': 'Reunión general del equipo para tratar temas administrativos y de organización.'
+};
+
 var _EV_RESP_ICONO  = { 'Asistiré': 'check_circle', 'No asistiré': 'cancel', 'No jugador': 'visibility' };
 var _EV_CHIP_BADGE  = { 'A tiempo': 'badge-confirmada', 'Tarde': 'badge-pendiente', 'Ausente': 'badge-cancelada' };
 // Chip de asistencia REAL de la pestaña "Lista" > "Pasados" (ver
@@ -75,11 +93,14 @@ function _evGenerarDemo() {
     { id: 'EVT-2', fecha: _evSumarDias(hoy, -3), horaInicio: '19:00', lugar: 'Coliseo Rumiñahui', tipo: 'Entrenamiento', estado: 'Finalizado', miEstado: null, miAsistenciaReal: 'Tarde',
       asistentes: [{ nombre: 'Diego Ramírez', estado: 'A tiempo' }] },
     { id: 'EVT-3', fecha: _evSumarDias(hoy, -1), horaInicio: '18:30', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Cancelado', miEstado: null, asistentes: [] },
-    { id: 'EVT-4', fecha: hoy, horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: null, asistentes: [] },
-    { id: 'EVT-5', fecha: _evSumarDias(hoy, 1), horaInicio: '19:00', lugar: 'Coliseo Rumiñahui', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: 'No jugador', asistentes: [] },
+    { id: 'EVT-4', fecha: hoy, horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: null, asistentes: [],
+      rsvps: [{ nombre: 'Andrea Vélez', estado: 'Asistiré' }, { nombre: 'Bruno Salazar', estado: 'Asistiré' }, { nombre: 'Camila Torres', estado: 'Asistiré' }, { nombre: 'Diego Ramírez', estado: 'Asistiré' }, { nombre: 'Estefanía Cruz', estado: 'No asistiré' }, { nombre: 'Fernando León', estado: 'No jugador' }] },
+    { id: 'EVT-5', fecha: _evSumarDias(hoy, 1), horaInicio: '19:00', lugar: 'Coliseo Rumiñahui', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: 'No jugador', asistentes: [],
+      rsvps: [{ nombre: 'Gabriela Ponce', estado: 'Asistiré' }, { nombre: 'Hernán Ibarra', estado: 'Asistiré' }, { nombre: 'Isabela Moreno', estado: 'No asistiré' }] },
     { id: 'EVT-6', fecha: _evSumarDias(hoy, 3), horaInicio: '10:00', lugar: 'Sede Quindes Volcánicos', tipo: 'Asamblea', estado: 'Evento Programado', miEstado: null, asistentes: [] },
     { id: 'EVT-7', fecha: _evSumarDias(hoy, 4), horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'No se entrena', miEstado: null, asistentes: [] },
-    { id: 'EVT-8', fecha: _evSumarDias(hoy, 6), horaInicio: '09:00', lugar: 'Pista Bicentenario', tipo: 'Torneo', estado: 'Evento Programado', miEstado: null, asistentes: [] },
+    { id: 'EVT-8', fecha: _evSumarDias(hoy, 6), horaInicio: '09:00', lugar: 'Pista Bicentenario', tipo: 'Torneo', estado: 'Evento Programado', miEstado: null, asistentes: [],
+      rsvps: [{ nombre: 'Joaquín Vega', estado: 'Asistiré' }] },
     { id: 'EVT-9', fecha: _evSumarDias(hoy, 8), horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: null, asistentes: [] },
     { id: 'EVT-10', fecha: _evSumarDias(hoy, 15), horaInicio: '18:00', lugar: 'Coliseo Rumiñahui', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: null, asistentes: [] },
     { id: 'EVT-11', fecha: _evSumarDias(hoy, 22), horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: null, asistentes: [] },
@@ -268,6 +289,7 @@ function _evRenderLista() {
   });
   cont.innerHTML = html;
   _evUpdateRsvpSliders(false);
+  _evHidratarAvatares();
   // Confetti contenido dentro de la card, SOLO para el cumpleaños de HOY
   // (fecha === hoy -- ni pasados como "Ayer cumplió..." ni próximos, celebrar
   // los 7 días del rango visible no suma), una sola vez por cumpleaños/sesión
@@ -300,7 +322,7 @@ function _evCardEventoHtml(e, sufijo) {
   var estadoNota = '';
   if (e.estado === 'Cancelado') estadoNota = '<div class="ev-card-estado-nota">Cancelado</div>';
   else if (e.estado === 'No se entrena') estadoNota = '<div class="ev-card-estado-nota">No se entrena</div>';
-  var accion = _esAdminDemo ? _evAccionAdminHtml(e) : _evRsvpBarraHtml(e, false);
+  var accion = _esAdminDemo ? _evAccionAdminHtml(e) : _evRsvpBarraHtml(e);
   return '<div class="ev-card" id="ev-card-' + e.id + sufijo + '">' +
     '<div class="ev-card-icon"><span class="material-symbols-outlined">' + icono + '</span></div>' +
     '<div class="ev-card-body">' +
@@ -308,30 +330,155 @@ function _evCardEventoHtml(e, sufijo) {
       '<div class="ev-card-sub"><span class="material-symbols-outlined">schedule</span>' + e.horaInicio + ' · ' + e.tipo + '</div>' +
       estadoNota +
       accion +
+      _evAvataresRowHtml(e) +
+      _evMasInfoHtml(e, sufijo) +
     '</div>' +
   '</div>';
+}
+
+/* ── Fila de avatares de quienes marcaron "Asistiré" (e.rsvps, ver
+   _evGenerarDemo()) -- hasta 3 superpuestos + "+N más", toda la fila
+   tocable (abre la modal de asistencia, ver más abajo). Mismo gate que la
+   barra de RSVP: no aplica a eventos cancelados/sin entrenar. Los
+   `.avatar-pill--xs` se insertan vacíos (con `data-nombre`) y se hidratan
+   después de insertar el HTML en el DOM -- ver _evHidratarAvatares(),
+   mismo motivo que _evUpdateRsvpSliders() (offsetWidth/medir necesita que
+   el nodo ya exista). */
+function _evAvataresRowHtml(e) {
+  if (e.estado === 'Cancelado' || e.estado === 'No se entrena') return '';
+  var asisten = (e.rsvps || []).filter(function(p) { return p.estado === 'Asistiré'; });
+  if (!asisten.length) return '';
+  var avatares = asisten.slice(0, 3).map(function(p) {
+    return '<div class="avatar-pill avatar-pill--xs ev-avatar-stack-item" data-nombre="' + p.nombre.replace(/"/g, '&quot;') + '"></div>';
+  }).join('');
+  var resto = asisten.length - 3;
+  var masTxt = resto > 0 ? '<span class="ev-avatares-mas">+' + resto + ' más</span>' : '';
+  return '<div class="ev-avatares-row" onclick="_evAbrirModalAsistentes(\'' + e.id + '\')">' +
+    '<div class="ev-avatares-stack">' + avatares + '</div>' + masTxt +
+  '</div>';
+}
+// Hidrata TODOS los avatares-placeholder visibles a la vez (mismo criterio
+// que _evUpdateRsvpSliders()) -- sin foto real todavía en esta tanda (demo),
+// siempre cae al fallback de inicial; la Tanda 3 pasa la foto real de cada
+// persona si `_EV_EQUIPO_DEMO` la trae.
+function _evHidratarAvatares() {
+  document.querySelectorAll('.ev-avatar-stack-item[data-nombre]').forEach(function(el) {
+    _avatarSetFotoOInicial(el, null, el.getAttribute('data-nombre'));
+  });
+}
+
+/* ── Modal de asistentes (centrada, no bottom sheet -- mismo componente
+   .modal-info/.modal-info-card que ya usan las modales "primera vez"
+   (modal-info-reserva/modal-info-home, css/global.css), con contenido y
+   apertura/cierre propios en vez del mecanismo _yaVioModal()/modalInfoOk()
+   de esas -- acá el contenido es dinámico por evento, no un texto fijo que
+   se ve "una sola vez". 4 grupos en orden fijo: Asisten/No asisten/No
+   jugador/Sin responder -- "Sin responder" son miembros de _EV_EQUIPO_DEMO
+   (fuente de nombres del equipo ya usada por "+ Agregar persona", ver
+   _evAbrirAgregarPersona() más abajo) sin ninguna entrada en e.rsvps para
+   este evento en particular. */
+var _EV_GRUPOS_ASISTENCIA = [
+  { estado: 'Asistiré', label: 'Asisten' },
+  { estado: 'No asistiré', label: 'No asisten' },
+  { estado: 'No jugador', label: 'No jugador' }
+];
+function _evAbrirModalAsistentes(id) {
+  var ev = _EV_EVENTOS.filter(function(e) { return e.id === id; })[0];
+  if (!ev) return;
+  var rsvps = ev.rsvps || [];
+  var titulo = document.getElementById('ev-modal-asistentes-titulo');
+  if (titulo) titulo.textContent = 'Asistencia — ' + ev.lugar;
+  var html = _EV_GRUPOS_ASISTENCIA.map(function(g) {
+    return _evGrupoAsistenciaHtml(g.label, rsvps.filter(function(p) { return p.estado === g.estado; }));
+  }).join('');
+  var respondieron = {};
+  rsvps.forEach(function(p) { respondieron[p.nombre] = true; });
+  var sinResponder = _EV_EQUIPO_DEMO.filter(function(n) { return !respondieron[n]; }).map(function(n) { return { nombre: n }; });
+  html += _evGrupoAsistenciaHtml('Sin responder', sinResponder);
+  var body = document.getElementById('ev-modal-asistentes-body');
+  if (body) body.innerHTML = html;
+  _evHidratarAvatares();
+  var modal = document.getElementById('ev-modal-asistentes');
+  if (modal) modal.style.display = 'flex';
+  _registrarOverlayAbierto(_evCerrarModalAsistentes);
+}
+function _evGrupoAsistenciaHtml(label, personas) {
+  if (!personas.length) return '';
+  var filas = personas.map(function(p) {
+    return '<div class="ev-asist-persona"><div class="avatar-pill avatar-pill--xs ev-avatar-stack-item" data-nombre="' + p.nombre.replace(/"/g, '&quot;') + '"></div><span>' + p.nombre + '</span></div>';
+  }).join('');
+  return '<div class="ev-asist-grupo"><div class="ev-asist-grupo-titulo">' + label + ' (' + personas.length + ')</div>' + filas + '</div>';
+}
+function _evCerrarModalAsistentes(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var modal = document.getElementById('ev-modal-asistentes');
+  if (modal) modal.style.display = 'none';
+}
+
+/* ── "Más información" (colapsable) -- mismo mecanismo de expandir/
+   contraer que ya usa Reservas (.fi-footer/.fi-body, css/reservas.css,
+   toggleFechaExpand()/js/reservas.js: max-height 0→N vía una clase en el
+   ancestro), con clases propias acá (`.ev-mas-info-*`) en vez de reusar las
+   de Reservas tal cual -- .fi-header/.fi-circle/.fecha-item de esa pantalla
+   traen supuestos de layout (fila de fecha con checkbox circular) que no
+   aplican a una card de evento. Contenido: "Cómo llegar" (mapsUrl por
+   lugar), pill de hora de fin + duración (derivadas de horaInicio + tipo,
+   ver _EV_DURACION_MIN_POR_TIPO) y la descripción (por tipo, ver
+   _EV_DESCRIPCION_POR_TIPO) -- Tanda 3 reemplaza estos 2 mapas genéricos
+   por columnas reales por evento. */
+function _evHoraFin(e) {
+  var min = _EV_DURACION_MIN_POR_TIPO[e.tipo] || 90;
+  var p = e.horaInicio.split(':');
+  var d = new Date(2000, 0, 1, +p[0], +p[1] + min);
+  return _evPad(d.getHours()) + ':' + _evPad(d.getMinutes());
+}
+function _evDuracionTexto(e) {
+  var min = _EV_DURACION_MIN_POR_TIPO[e.tipo] || 90;
+  var h = Math.floor(min / 60), m = min % 60;
+  return (h ? h + 'h ' : '') + (m ? m + 'min' : '') || '0min';
+}
+function _evMasInfoHtml(e, sufijo) {
+  var mapsUrl = _EV_MAPS_URL_POR_LUGAR[e.lugar];
+  var desc = _EV_DESCRIPCION_POR_TIPO[e.tipo];
+  var id = 'ev-mas-info-' + e.id + sufijo;
+  return '<div class="ev-mas-info" id="' + id + '">' +
+    '<div class="ev-mas-info-footer" onclick="_evToggleMasInfo(\'' + id + '\', event)">' +
+      '<span class="ev-mas-info-label">Más información</span>' +
+      '<span class="material-symbols-outlined ev-mas-info-chevron">expand_more</span>' +
+    '</div>' +
+    '<div class="ev-mas-info-body"><div class="ev-mas-info-body-inner">' +
+      (desc ? '<p class="ev-mas-info-desc">' + desc + '</p>' : '') +
+      '<div class="ev-mas-info-pills">' +
+        (mapsUrl ? '<a class="ev-mas-info-pill ev-mas-info-pill-maps" href="' + mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-symbols-outlined">near_me</span>Cómo llegar</a>' : '') +
+        '<span class="ev-mas-info-pill"><span class="material-symbols-outlined">schedule</span>Fin ' + _evHoraFin(e) + '</span>' +
+        '<span class="ev-mas-info-pill"><span class="material-symbols-outlined">timer</span>' + _evDuracionTexto(e) + '</span>' +
+      '</div>' +
+    '</div></div>' +
+  '</div>';
+}
+function _evToggleMasInfo(id, event) {
+  if (event) event.stopPropagation();
+  var el = document.getElementById(id);
+  if (el) el.classList.toggle('abierto');
 }
 
 /* ── Variante usuario: "¿Asistiré?" → barra segmentada única, las 3
    opciones siempre visibles, la que coincide con e.miEstado queda resaltada
    (.activa, indicador sólido de color fijo -- ver _EV_RSVP_COLOR). Tocar
    cualquiera marca directo, sin estado colapsado ni paso intermedio (antes:
-   chip + "Cambiar" abría estas mismas 3 opciones aparte). `compacta` (bool)
-   pide la variante chica usada en las filas de "Ver todos" -- mismo HTML/JS,
-   solo el modificador CSS `.ev-rsvp-seg-compacta` cambia. ──────────────── */
+   chip + "Cambiar" abría estas mismas 3 opciones aparte). Un único tamaño --
+   la variante `compacta` (pensada para una fila resumida de "Ver todos") se
+   sacó al rediseñar la card: ver "Cambios recientes", ahora TODAS las vistas
+   (Semana/Calendario/Lista) reusan la card completa (_evCardEventoHtml()),
+   sin una fila resumida aparte que necesitara su propio tamaño chico. ──── */
 var _EV_RESP_OPCIONES = ['Asistiré', 'No asistiré', 'No jugador'];
-function _evRsvpBarraHtml(e, compacta) {
+function _evRsvpBarraHtml(e) {
   if (e.estado === 'Cancelado' || e.estado === 'No se entrena' || e.estado === 'Finalizado') return '';
   var botones = _EV_RESP_OPCIONES.map(function(estado) {
     var act = e.miEstado === estado ? ' activa' : '';
     return '<div class="ev-rsvp-opt' + act + '" data-estado="' + estado + '" onclick="_evMarcarAsistencia(\'' + e.id + '\',\'' + estado + '\')"><span class="material-symbols-outlined">' + _EV_RESP_ICONO[estado] + '</span>' + estado + '</div>';
   }).join('');
-  // stopPropagation: en las filas de "Lista" esta barra vive dentro de un
-  // contenedor con su propio onclick (abre el detalle) -- sin esto, tocar
-  // cualquier opción también dispararía ese click y abriría el detalle
-  // encima de marcar la asistencia. No-op inofensivo en las cards de
-  // Semana/Calendario, que no tienen ese onclick ancestro.
-  return '<div class="ev-asistire-wrap" onclick="event.stopPropagation()"><div class="ev-rsvp-seg' + (compacta ? ' ev-rsvp-seg-compacta' : '') + '" data-evid="' + e.id + '"><div class="ev-rsvp-slider"></div>' + botones + '</div></div>';
+  return '<div class="ev-asistire-wrap"><div class="ev-rsvp-seg" data-evid="' + e.id + '"><div class="ev-rsvp-slider"></div>' + botones + '</div></div>';
 }
 // Posiciona el indicador de UNA barra (offsetLeft/offsetWidth de la opción
 // .activa, mismo mecanismo que _evUpdateVistaSlider()/.tp-slider) -- `seg` es
@@ -568,31 +715,37 @@ function _evListaTabRenderLista() {
   }
   cont.innerHTML = lista.map(_evListaTabFilaHtml).join('');
   _evUpdateRsvpSliders(false);
+  _evHidratarAvatares();
 }
-// Una fila: futuro (no cancelado/no-se-entrena) suma la barra de RSVP
-// compacta debajo; pasado Y Finalizado reemplaza el chevron por el chip de
-// asistencia real (`miAsistenciaReal`, "Sin registrar" si falta el dato) --
-// pasado pero Cancelado/No se entrena conserva el chevron simple, no hay
-// "asistencia" que mostrar ahí. TODO (pendiente de confirmar con Victor,
-// ver brief): qué mostrar para eventos pasados que el usuario nunca
-// respondió con RSVP -- ¿un control de solo lectura con lo marcado, o
-// directamente se omite? No implementado todavía, esta fila hoy solo
-// muestra el chip de asistencia real, nunca el RSVP viejo del usuario.
+// Una fila: futuro reusa la card COMPLETA (_evCardEventoHtml(), mismo
+// componente que Semana/Calendario -- pedido explícito, un solo componente
+// de card en las 3 vistas, no una fila resumida aparte); pasado usa una fila
+// compacta propia (esta vista sí necesita ver muchos eventos pasados de
+// un vistazo, y ni la barra de RSVP ni "quién asiste" tienen sentido para
+// algo que ya ocurrió) -- Finalizado reemplaza el chevron por el chip de
+// asistencia real (`miAsistenciaReal`, "Sin registrar" si falta el dato,
+// ver _EV_ASISTENCIA_REAL_BADGE); Cancelado/No se entrena conserva el
+// chevron simple, no hay "asistencia" que mostrar ahí. `sufijo='-lt'` en la
+// card completa evita colisión de ids con la misma card ya renderizada en
+// `#ev-lista` (Semana/Calendario, sufijo '') si el usuario ya visitó ambas
+// vistas. TODO (pendiente de confirmar con Victor, ver brief): qué mostrar
+// para eventos pasados que el usuario nunca respondió con RSVP -- ¿un
+// control de solo lectura con lo marcado, o se omite? No implementado
+// todavía, esta fila hoy solo muestra el chip de asistencia real.
 function _evListaTabFilaHtml(e) {
   var hoy = _evHoyISO();
-  var esFuturo = e.fecha >= hoy;
+  if (e.fecha >= hoy) return _evCardEventoHtml(e, '-lt');
   var icono = _EV_ICONOS[e.tipo] || 'event';
   var d = _evParseISO(e.fecha);
   var fechaTxt = d.getDate() + ' ' + NOMBRES_MESES[d.getMonth()].slice(0, 3).toLowerCase();
   var trailing;
-  if (!esFuturo && e.estado === 'Finalizado') {
+  if (e.estado === 'Finalizado') {
     var estadoReal = e.miAsistenciaReal || 'Sin registrar';
     var clase = _EV_ASISTENCIA_REAL_BADGE[estadoReal];
     trailing = '<span class="badge' + (clase ? ' ' + clase : '') + '">' + estadoReal + '</span>';
   } else {
     trailing = '<span class="material-symbols-outlined ev-chevron-ver">chevron_right</span>';
   }
-  var rsvp = esFuturo ? _evRsvpBarraHtml(e, true) : '';
   return '<div class="ev-card-compacta-wrap">' +
     '<div class="ev-card-compacta" onclick="abrirEvDetalle(\'' + e.id + '\')">' +
       '<div class="ev-card-icon"><span class="material-symbols-outlined">' + icono + '</span></div>' +
@@ -602,7 +755,6 @@ function _evListaTabFilaHtml(e) {
       '</div>' +
       trailing +
     '</div>' +
-    rsvp +
   '</div>';
 }
 
@@ -614,6 +766,7 @@ function abrirEvDetalle(id) {
   if (!ev) return;
   var body = document.getElementById('ev-detalle-body');
   if (body) body.innerHTML = _evCardEventoHtml(ev, '-detalle');
+  _evHidratarAvatares();
   var ov = document.getElementById('ev-detalle-overlay');
   var sh = document.getElementById('ev-detalle-sheet');
   if (ov) ov.style.display = 'block';
