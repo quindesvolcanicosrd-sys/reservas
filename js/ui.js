@@ -110,11 +110,6 @@ var TOP_BAR_CONFIG = {
   's-pago': { titulo: 'Pago', volver: 's4' },
   's-gestionar': { titulo: 'Re-agendar fecha', volver: 's-home' },
   's-misreservas': { titulo: 'Historial de reservas', volver: 's-home' },
-  // Mismo mecanismo que s-misreservas (pantalla principal reachable por
-  // botón, con flecha atrás fija hacia su origen) -- ver js/eventos.js,
-  // irEventosTodos(), y MANIFEST.md "Cambios recientes" para por qué no es
-  // un overlay/shared-axis nuevo.
-  's-eventos-todos': { titulo: 'Todos los entrenamientos', volver: 's-eventos' },
   // Sin volver (ver "Cambios recientes" — nav inferior): Ajustes es ahora
   // una pantalla raíz de APP_BOTTOM_NAV_ITEMS, alcanzable siempre desde la
   // nav inferior -- no necesita ni debe tener un botón que la redirija hacia

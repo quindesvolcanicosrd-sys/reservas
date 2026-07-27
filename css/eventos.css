@@ -3,8 +3,9 @@
    Header/segmented control/bottom sheets reusan las clases ya existentes
    de nav.css/reservas.css/global.css (.app-nav*, .tp-seg/.tp-slider/.tp-opt,
    .bsheet*, .badge*) -- este archivo solo cubre lo que no existe todavía:
-   franja semanal, grilla mensual, cards de evento/cumpleaños y la pantalla
-   "Ver todos los entrenamientos".
+   franja semanal, grilla mensual, cards de evento/cumpleaños y la vista
+   "Lista" (Próximos/Pasados/Todos + filtros, fusionada dentro de #s-eventos
+   -- ver "Cambios recientes", ya no es una pantalla separada).
    ═══════════════════════════════════════════════════════ */
 
 /* ── Selector Semana/Calendario ──────────────────────────
@@ -167,30 +168,61 @@
 .ev-card-cumple .ev-card-icon { background: var(--cumple-border); color: var(--cumple-text); }
 .ev-card-cumple .ev-card-titulo { color: var(--cumple-text); }
 
-/* ── Botón "Ver todos los entrenamientos" ────────────── */
-.ev-btn-ver-todos {
-  width: 100%; margin-top: 6px; padding: 13px; border-radius: 12px; border: none;
-  background: var(--brand-light); color: var(--brand); font-size: 0.84rem; font-weight: 700;
-  cursor: pointer; font-family: inherit; display: flex; align-items: center; justify-content: center;
-  gap: 6px; transition: background 0.15s;
-}
-.ev-btn-ver-todos:hover { background: var(--brand-20); }
+/* ── Vista "Lista" (ver "Cambios recientes" — reemplaza la pantalla
+   separada "Ver todos los eventos"/s-eventos-todos, ahora una 3ra opción
+   del selector Semana/Calendario/Lista, todo dentro de #s-eventos). ────── */
 
-/* ── Pantalla "Ver todos los entrenamientos" ─────────── */
-.ev-todos-filtros { display: flex; gap: 8px; margin: 16px 0; flex-wrap: wrap; }
-.ev-todos-filtros select { flex: 1; min-width: 90px; font-size: 0.8rem; padding-left: 10px; padding-right: 28px; }
-.ev-card-compacta {
-  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px;
-  margin-bottom: 8px; background: var(--surface-2); border: 1.5px solid var(--border-light);
-  cursor: pointer; transition: border-color 0.15s;
+/* Sub-tabs Próximos/Pasados/Todos: A PROPÓSITO un componente nuevo, no
+   .tp-seg/.tp-slider (el pill sólido que se desliza) -- pedido explícito de
+   Victor: texto simple con línea inferior de 2px, sin fondo ni indicador que
+   se mueva por JS (el navegador ya anima `border-color`/`color` solo via
+   `transition`, no hace falta medir `offsetWidth`/`offsetLeft` de nada). */
+.ev-subtabs { display: flex; gap: 22px; border-bottom: 1.5px solid var(--border-light); margin-bottom: 16px; }
+.ev-subtab {
+  padding: 4px 1px 10px; font-size: 0.82rem; font-weight: 700; color: var(--muted); cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1.5px; transition: color 0.2s, border-color 0.2s;
+  user-select: none;
 }
-.ev-card-compacta:hover { border-color: var(--brand); }
+.ev-subtab.activo { color: var(--brand); border-color: var(--brand); }
+
+/* Filtros Mes/Lugar/Tipo -- 3 botones "trigger" (mismo look/idea que
+   .admin-destino-trigger de css/admin.css: parecen un <select>, abren un
+   bottom sheet) en vez de los <select> nativos de antes -- ver
+   _evAbrirSheetFiltro()/#ev-sheet-filtro en js/eventos.js/index.html. */
+.ev-filtros-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.ev-filtro-trigger {
+  flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 4px;
+  padding: 10px 6px 10px 12px; border-radius: 10px; border: 1.5px solid var(--border-light);
+  background: var(--surface-light); color: var(--text-2); font-size: 0.78rem; font-weight: 700;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.ev-filtro-trigger-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-filtro-trigger .material-symbols-outlined { font-size: 18px; color: var(--muted); flex-shrink: 0; }
+.ev-filtro-trigger.ev-filtro-activo { border-color: var(--brand); color: var(--brand); background: var(--brand-lightest); }
+.ev-filtro-trigger.ev-filtro-activo .material-symbols-outlined { color: var(--brand); }
+
+/* Card compacta de una fila de la lista -- `.ev-card-compacta-wrap` es el
+   contenedor real (fondo/borde/margen); `.ev-card-compacta` adentro es solo
+   la fila clickeable (ícono+info+chevron o chip de asistencia), separada de
+   la barra de RSVP compacta opcional debajo (eventos futuros, ver
+   _evListaTabFilaHtml()) -- necesitaba separarse así porque el RSVP tiene
+   sus propios onclick por opción y no debe disparar también el onclick de
+   la fila (evita el bug obvio de "tocar Asistiré abre el detalle" -- ver
+   event.stopPropagation() en _evRsvpBarraHtml()). */
+.ev-card-compacta-wrap {
+  margin-bottom: 8px; background: var(--surface-2); border: 1.5px solid var(--border-light);
+  border-radius: 12px; transition: border-color 0.15s; overflow: hidden;
+}
+.ev-card-compacta-wrap:hover { border-color: var(--brand); }
+.ev-card-compacta { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; }
 .ev-card-compacta .ev-card-icon { width: 36px; height: 36px; min-width: 36px; border-radius: 10px; }
 .ev-card-compacta .ev-card-icon .material-symbols-outlined { font-size: 1.1rem; }
 .ev-card-compacta-info { flex: 1; min-width: 0; }
 .ev-card-compacta-titulo { font-size: 0.83rem; font-weight: 700; color: var(--text); }
 .ev-card-compacta-sub { font-size: 0.73rem; color: var(--muted); margin-top: 2px; }
 .ev-card-compacta .material-symbols-outlined.ev-chevron-ver { font-size: 18px; color: var(--muted); flex-shrink: 0; }
+.ev-card-compacta .badge { flex-shrink: 0; }
+.ev-card-compacta-wrap .ev-asistire-wrap { margin: 0 14px 12px; }
 
 @media (prefers-color-scheme: dark) {
   .ev-lista-vacia { background: var(--surface-2); border-color: var(--border-light); }

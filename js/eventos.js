@@ -29,6 +29,15 @@ var _EV_DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Vi
 
 var _EV_RESP_ICONO  = { 'Asistiré': 'check_circle', 'No asistiré': 'cancel', 'No jugador': 'visibility' };
 var _EV_CHIP_BADGE  = { 'A tiempo': 'badge-confirmada', 'Tarde': 'badge-pendiente', 'Ausente': 'badge-cancelada' };
+// Chip de asistencia REAL de la pestaña "Lista" > "Pasados" (ver
+// _evListaTabFilaHtml() más abajo) -- a diferencia de _EV_CHIP_BADGE (arriba,
+// asistentes de OTRAS personas en la variante admin), este es el dato de LA
+// PROPIA persona logueada para un evento ya Finalizado: viene de si su
+// nombre aparece en la hoja "Asistencias" (columnas "A horario"/"Tarde" del
+// backend, Tanda 3) -- no del RSVP que marcó antes del evento (`miEstado`).
+// `miAsistenciaReal: null` (o el campo ausente) = "Sin registrar", sin chip
+// de color propio.
+var _EV_ASISTENCIA_REAL_BADGE = { 'A horario': 'badge-confirmada', 'Tarde': 'badge-pendiente', 'Ausente': 'badge-cancelada' };
 // Color sólido del indicador de la barra segmentada de RSVP (ver
 // _evRsvpBarraHtml() más abajo) por opción -- fijos, independientes del
 // color de énfasis (mismo criterio que el resto de esta pantalla: "Asistiré"
@@ -61,9 +70,9 @@ function _evLunesDeSemana(d) {
 function _evGenerarDemo() {
   var hoy = _evHoyISO();
   _EV_EVENTOS = [
-    { id: 'EVT-1', fecha: _evSumarDias(hoy, -10), horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Finalizado', miEstado: 'Asistiré',
+    { id: 'EVT-1', fecha: _evSumarDias(hoy, -10), horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Finalizado', miEstado: 'Asistiré', miAsistenciaReal: 'A horario',
       asistentes: [{ nombre: 'Andrea Vélez', estado: 'A tiempo' }, { nombre: 'Bruno Salazar', estado: 'Tarde' }, { nombre: 'Camila Torres', estado: 'Ausente' }] },
-    { id: 'EVT-2', fecha: _evSumarDias(hoy, -3), horaInicio: '19:00', lugar: 'Coliseo Rumiñahui', tipo: 'Entrenamiento', estado: 'Finalizado', miEstado: null,
+    { id: 'EVT-2', fecha: _evSumarDias(hoy, -3), horaInicio: '19:00', lugar: 'Coliseo Rumiñahui', tipo: 'Entrenamiento', estado: 'Finalizado', miEstado: null, miAsistenciaReal: 'Tarde',
       asistentes: [{ nombre: 'Diego Ramírez', estado: 'A tiempo' }] },
     { id: 'EVT-3', fecha: _evSumarDias(hoy, -1), horaInicio: '18:30', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Cancelado', miEstado: null, asistentes: [] },
     { id: 'EVT-4', fecha: hoy, horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: null, asistentes: [] },
@@ -90,8 +99,11 @@ function irEventos() {
   _evVista = 'semana'; _evSemanaOffset = 0; _evMesOffset = 0;
   document.getElementById('ev-vista-semana').classList.add('active');
   document.getElementById('ev-vista-calendario').classList.remove('active');
+  document.getElementById('ev-vista-lista').classList.remove('active');
   document.getElementById('ev-vista-semana-wrap').style.display = 'block';
   document.getElementById('ev-vista-calendario-wrap').style.display = 'none';
+  document.getElementById('ev-vista-lista-wrap').style.display = 'none';
+  document.getElementById('ev-lista').style.display = 'block';
   var addBtn = document.getElementById('eventos-btn-add');
   if (addBtn) addBtn.style.display = _esAdminDemo ? 'flex' : 'none';
   _evRenderVistaActual();
@@ -102,19 +114,27 @@ function irEventos() {
   setTimeout(function() { _evUpdateVistaSlider(false); _evUpdateRsvpSliders(false); }, 50);
 }
 
-/* ── Selector Semana/Calendario (reusa .tp-seg/.tp-slider/.tp-opt) ────── */
+/* ── Selector Semana/Calendario/Lista (reusa .tp-seg/.tp-slider/.tp-opt) ──
+   "Lista" fusiona lo que antes era la pantalla separada "Ver todos los
+   eventos" (ver "Cambios recientes") -- #ev-lista (el combinado evento+
+   cumpleaños de Semana/Calendario) se oculta mientras "Lista" está activa,
+   ninguna de las 2 vistas usa el contenedor de la otra. */
 function _evCambiarVista(v) {
   _evVista = v;
   document.getElementById('ev-vista-semana').classList.toggle('active', v === 'semana');
   document.getElementById('ev-vista-calendario').classList.toggle('active', v === 'calendario');
+  document.getElementById('ev-vista-lista').classList.toggle('active', v === 'lista');
   document.getElementById('ev-vista-semana-wrap').style.display = v === 'semana' ? 'block' : 'none';
   document.getElementById('ev-vista-calendario-wrap').style.display = v === 'calendario' ? 'block' : 'none';
+  document.getElementById('ev-vista-lista-wrap').style.display = v === 'lista' ? 'block' : 'none';
+  document.getElementById('ev-lista').style.display = v === 'lista' ? 'none' : 'block';
   _evUpdateVistaSlider(true);
-  _evRenderVistaActual();
+  if (v === 'lista') { _evListaTabPoblarFiltros(); _evActualizarBotonesFiltro(); _evListaTabRenderLista(); }
+  else _evRenderVistaActual();
 }
 function _evUpdateVistaSlider(animate) {
   var slider = document.getElementById('ev-vista-slider');
-  var activeOpt = document.getElementById(_evVista === 'semana' ? 'ev-vista-semana' : 'ev-vista-calendario');
+  var activeOpt = document.getElementById('ev-vista-' + _evVista);
   if (!slider || !activeOpt) return;
   slider.classList.toggle('animado', !!animate);
   slider.style.width = activeOpt.offsetWidth + 'px';
@@ -273,7 +293,7 @@ function _evScrollAFecha(iso) {
 /* ── Card de evento (usuario o admin según _esAdminDemo) ──────────────
    `sufijo` namespacea los ids internos cuando la misma card se re-renderiza
    en más de un contenedor a la vez (lista de Eventos vs. sheet de detalle
-   de "Ver todos", ver abrirEvDetalle()) -- evita ids duplicados en el DOM. */
+   de la pestaña "Lista", ver abrirEvDetalle()) -- evita ids duplicados en el DOM. */
 function _evCardEventoHtml(e, sufijo) {
   sufijo = sufijo || '';
   var icono = _EV_ICONOS[e.tipo] || 'event';
@@ -306,7 +326,12 @@ function _evRsvpBarraHtml(e, compacta) {
     var act = e.miEstado === estado ? ' activa' : '';
     return '<div class="ev-rsvp-opt' + act + '" data-estado="' + estado + '" onclick="_evMarcarAsistencia(\'' + e.id + '\',\'' + estado + '\')"><span class="material-symbols-outlined">' + _EV_RESP_ICONO[estado] + '</span>' + estado + '</div>';
   }).join('');
-  return '<div class="ev-asistire-wrap"><div class="ev-rsvp-seg' + (compacta ? ' ev-rsvp-seg-compacta' : '') + '" data-evid="' + e.id + '"><div class="ev-rsvp-slider"></div>' + botones + '</div></div>';
+  // stopPropagation: en las filas de "Lista" esta barra vive dentro de un
+  // contenedor con su propio onclick (abre el detalle) -- sin esto, tocar
+  // cualquier opción también dispararía ese click y abriría el detalle
+  // encima de marcar la asistencia. No-op inofensivo en las cards de
+  // Semana/Calendario, que no tienen ese onclick ancestro.
+  return '<div class="ev-asistire-wrap" onclick="event.stopPropagation()"><div class="ev-rsvp-seg' + (compacta ? ' ev-rsvp-seg-compacta' : '') + '" data-evid="' + e.id + '"><div class="ev-rsvp-slider"></div>' + botones + '</div></div>';
 }
 // Posiciona el indicador de UNA barra (offsetLeft/offsetWidth de la opción
 // .activa, mismo mecanismo que _evUpdateVistaSlider()/.tp-slider) -- `seg` es
@@ -424,106 +449,165 @@ function _evCardCumpleHtml(c) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   PANTALLA "VER TODOS LOS ENTRENAMIENTOS" (s-eventos-todos)
-   Pantalla principal más (ir()/volver(), TOP_BAR_CONFIG con volver:'s-eventos'
-   -- mismo mecanismo que "Historial de reservas"/s-misreservas, no un
-   overlay nuevo: incluso reachable solo desde Eventos, se comporta como
-   cualquier otra pantalla → pantalla de la app, con back nativo ya
-   cubierto por el listener de popstate genérico, sin necesitar registrar
-   nada en _overlayStack para la pantalla en sí (el detalle que abre sí es
-   un bottom sheet real, ver abrirEvDetalle() más abajo). ═══════════════ */
-var _evTodosTab = 'proximos';
+   VISTA "LISTA" (dentro de #s-eventos -- ver "Cambios recientes": fusiona
+   lo que antes era la pantalla separada "Ver todos los eventos"/
+   s-eventos-todos como una 3ra opción del selector de arriba, en vez de
+   navegar aparte). Sub-tabs Próximos/Pasados/Todos (subrayado, sin slider
+   propio) + 3 filtros (bottom sheet compartido, pills multi-select) + lista
+   de cards compactas -- Próximos suma la barra de RSVP compacta por fila
+   (mismo componente que las cards de Semana/Calendario), Pasados reemplaza
+   el chevron por un chip con la asistencia REAL ya registrada. ═══════════ */
+var _evListaTabSubtab = 'proximos';
+// Selección multi-valor por filtro -- arrays de {val,label} (no solo el
+// valor: "mes" filtra por índice numérico pero el botón/pill muestra el
+// nombre del mes, hace falta guardar ambos). Vacío = sin filtro (todos).
+var _evListaTabFiltro = { mes: [], lugar: [], tipo: [] };
 
-function irEventosTodos() {
-  if (_EV_EVENTOS.length === 0) _evGenerarDemo();
-  _evTodosTab = 'proximos';
-  _evTodosPoblarFiltros();
+function _evListaTabPoblarFiltros() {
+  // No-op hoy (las opciones se recalculan al abrir cada sheet, ver
+  // _evOpcionesFiltro()) -- se mantiene como punto de entrada separado de
+  // _evCambiarVista() por si la Tanda 3 necesita precargar algo async acá.
+}
+function _evListaTabCambiarSubtab(tab) {
+  _evListaTabSubtab = tab;
   ['proximos', 'pasados', 'todos'].forEach(function(t) {
-    document.getElementById('ev-todos-tab-' + t).classList.toggle('active', t === 'proximos');
+    document.getElementById('ev-lista-tab-subtab-' + t).classList.toggle('activo', t === tab);
   });
-  ir('s-eventos-todos');
-  setTimeout(function() { _evTodosUpdateTabSlider(false); _evTodosRenderLista(); }, 50);
+  _evListaTabRenderLista();
 }
-function _evTodosPoblarFiltros() {
-  var meses = {}, lugares = {}, tipos = {};
+// Opciones candidatas de un filtro, como {val,label} únicos -- "mes" usa el
+// índice (0-11) como val (coincide con getMonth()) y el nombre como label;
+// "lugar"/"tipo" usan el mismo string para las 2 cosas.
+function _evOpcionesFiltro(campo) {
+  var vistos = {}, out = [];
   _EV_EVENTOS.forEach(function(e) {
-    meses[_evParseISO(e.fecha).getMonth()] = true;
-    lugares[e.lugar] = true;
-    tipos[e.tipo] = true;
+    var val, label;
+    if (campo === 'mes') { val = String(_evParseISO(e.fecha).getMonth()); label = NOMBRES_MESES[+val]; }
+    else if (campo === 'lugar') { val = e.lugar; label = e.lugar; }
+    else { val = e.tipo; label = e.tipo; }
+    if (!vistos[val]) { vistos[val] = true; out.push({ val: val, label: label }); }
   });
-  // Etiqueta default corta ("Mes" en vez de "Todos los meses") -- 3 selects
-  // uno junto a otro en 390px de ancho no tienen espacio para la versión
-  // larga sin truncarse (confirmado con Playwright); el significado de cada
-  // select ya es obvio por su posición/las opciones que contiene.
-  var selMes = document.getElementById('ev-todos-filtro-mes');
-  var htmlM = '<option value="">Mes</option>';
-  Object.keys(meses).sort(function(a, b) { return a - b; }).forEach(function(m) { htmlM += '<option value="' + m + '">' + NOMBRES_MESES[m] + '</option>'; });
-  if (selMes) selMes.innerHTML = htmlM;
-
-  var selLugar = document.getElementById('ev-todos-filtro-lugar');
-  var htmlL = '<option value="">Lugar</option>';
-  Object.keys(lugares).sort().forEach(function(l) { htmlL += '<option value="' + l + '">' + l + '</option>'; });
-  if (selLugar) selLugar.innerHTML = htmlL;
-
-  var selTipo = document.getElementById('ev-todos-filtro-tipo');
-  var htmlT = '<option value="">Tipo</option>';
-  Object.keys(tipos).sort().forEach(function(t) { htmlT += '<option value="' + t + '">' + t + '</option>'; });
-  if (selTipo) selTipo.innerHTML = htmlT;
+  if (campo === 'mes') out.sort(function(a, b) { return (+a.val) - (+b.val); });
+  else out.sort(function(a, b) { return a.label < b.label ? -1 : a.label > b.label ? 1 : 0; });
+  return out;
 }
-function _evTodosCambiarTab(tab) {
-  _evTodosTab = tab;
-  ['proximos', 'pasados', 'todos'].forEach(function(t) { document.getElementById('ev-todos-tab-' + t).classList.toggle('active', t === tab); });
-  _evTodosUpdateTabSlider(true);
-  _evTodosRenderLista();
+/* ── Bottom sheet de filtro (Mes/Lugar/Tipo) -- un solo sheet genérico
+   reusado para los 3 (repuebla título+pills según _evFiltroSheetCampo, mismo
+   criterio que ev-sheet-agregar/admin-sheet-destino más arriba) con pills
+   togleadas multi-select (ajTogglePill(), js/perfil.js -- toggle simple de
+   `.activa`, sin exclusividad) en vez de una lista de selección única. ── */
+var _evFiltroSheetCampo = null;
+var _EV_FILTRO_TITULOS = { mes: 'Mes', lugar: 'Lugar', tipo: 'Tipo' };
+function _evAbrirSheetFiltro(campo) {
+  _evFiltroSheetCampo = campo;
+  var opciones = _evOpcionesFiltro(campo);
+  var seleccion = _evListaTabFiltro[campo];
+  document.getElementById('ev-sheet-filtro-title').textContent = _EV_FILTRO_TITULOS[campo];
+  document.getElementById('ev-sheet-filtro-pills').innerHTML = opciones.map(function(o) {
+    var sel = seleccion.some(function(s) { return s.val === o.val; });
+    return '<span class="aj-pill' + (sel ? ' activa' : '') + '" data-val="' + o.val.replace(/"/g, '&quot;') + '" data-label="' + o.label.replace(/"/g, '&quot;') + '" onclick="ajTogglePill(this)">' + o.label + '</span>';
+  }).join('') || '<div style="padding:8px 4px;color:var(--muted);font-size:0.82rem;">Sin opciones todavía.</div>';
+  var ov = document.getElementById('ev-sheet-filtro-overlay');
+  var sh = document.getElementById('ev-sheet-filtro');
+  if (ov) ov.style.display = 'block';
+  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); }); }
+  _registrarOverlayAbierto(_evCerrarSheetFiltro);
 }
-function _evTodosUpdateTabSlider(animate) {
-  var slider = document.getElementById('ev-todos-tab-slider');
-  var activeOpt = document.getElementById('ev-todos-tab-' + _evTodosTab);
-  if (!slider || !activeOpt) return;
-  slider.classList.toggle('animado', !!animate);
-  slider.style.width = activeOpt.offsetWidth + 'px';
-  slider.style.transform = 'translateX(' + activeOpt.offsetLeft + 'px)';
+function _evCerrarSheetFiltro(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  // La selección se aplica acá (al cerrar, sea por "Listo", tocar el overlay
+  // o gesto de volver) -- no en cada toque de pill, para no re-renderizar la
+  // lista completa en cada toggle mientras el sheet sigue abierto.
+  if (_evFiltroSheetCampo) {
+    var vals = [];
+    document.querySelectorAll('#ev-sheet-filtro-pills .aj-pill.activa').forEach(function(p) {
+      vals.push({ val: p.getAttribute('data-val'), label: p.getAttribute('data-label') });
+    });
+    _evListaTabFiltro[_evFiltroSheetCampo] = vals;
+    _evActualizarBotonesFiltro();
+    _evListaTabRenderLista();
+  }
+  var sh = document.getElementById('ev-sheet-filtro');
+  var ov = document.getElementById('ev-sheet-filtro-overlay');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+// Texto de cada botón trigger: label default sin selección, el nombre único
+// si hay exactamente 1, o "Label (N)" si hay más de 1 -- pedido explícito.
+function _evActualizarBotonesFiltro() {
+  ['mes', 'lugar', 'tipo'].forEach(function(campo) {
+    var btn = document.getElementById('ev-lista-tab-filtro-btn-' + campo);
+    if (!btn) return;
+    var label = btn.getAttribute('data-label');
+    var sel = _evListaTabFiltro[campo];
+    var txt = sel.length === 0 ? label : sel.length === 1 ? sel[0].label : label + ' (' + sel.length + ')';
+    btn.querySelector('.ev-filtro-trigger-label').textContent = txt;
+    btn.classList.toggle('ev-filtro-activo', sel.length > 0);
+  });
 }
 // Filtrado 100% en cliente sobre los datos de prueba (Tanda 2) -- la Tanda 3
-// reemplaza esto por getEventosFiltrados(estado, mes, lugar, tipo), que ya
-// acepta estos mismos 4 parámetros (ver brief).
-function _evTodosRenderLista() {
+// reemplaza esto por getEventosFiltrados(estado, meses[], lugares[], tipos[]),
+// mismos 3 filtros pero ya con selección múltiple (antes 1 solo valor c/u).
+function _evListaTabRenderLista() {
   var hoy = _evHoyISO();
-  var mes = document.getElementById('ev-todos-filtro-mes').value;
-  var lugar = document.getElementById('ev-todos-filtro-lugar').value;
-  var tipo = document.getElementById('ev-todos-filtro-tipo').value;
+  var fm = _evListaTabFiltro;
   var lista = _EV_EVENTOS.filter(function(e) {
-    if (_evTodosTab === 'proximos' && e.fecha < hoy) return false;
-    if (_evTodosTab === 'pasados' && e.fecha >= hoy) return false;
-    if (mes !== '' && _evParseISO(e.fecha).getMonth() !== +mes) return false;
-    if (lugar !== '' && e.lugar !== lugar) return false;
-    if (tipo !== '' && e.tipo !== tipo) return false;
+    if (_evListaTabSubtab === 'proximos' && e.fecha < hoy) return false;
+    if (_evListaTabSubtab === 'pasados' && e.fecha >= hoy) return false;
+    if (fm.mes.length && !fm.mes.some(function(o) { return +o.val === _evParseISO(e.fecha).getMonth(); })) return false;
+    if (fm.lugar.length && !fm.lugar.some(function(o) { return o.val === e.lugar; })) return false;
+    if (fm.tipo.length && !fm.tipo.some(function(o) { return o.val === e.tipo; })) return false;
     return true;
   }).sort(function(a, b) { var ka = a.fecha + a.horaInicio, kb = b.fecha + b.horaInicio; return ka < kb ? -1 : ka > kb ? 1 : 0; });
 
-  var cont = document.getElementById('ev-todos-lista');
+  var cont = document.getElementById('ev-lista-tab-filas');
   if (!cont) return;
   if (lista.length === 0) {
-    cont.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">event_busy</span>No hay entrenamientos con estos filtros.</div>';
+    cont.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">event_busy</span>No hay eventos con estos filtros.</div>';
     return;
   }
-  cont.innerHTML = lista.map(function(e) {
-    var icono = _EV_ICONOS[e.tipo] || 'event';
-    var d = _evParseISO(e.fecha);
-    var fechaTxt = d.getDate() + ' ' + NOMBRES_MESES[d.getMonth()].slice(0, 3).toLowerCase();
-    return '<div class="ev-card-compacta" onclick="abrirEvDetalle(\'' + e.id + '\')">' +
+  cont.innerHTML = lista.map(_evListaTabFilaHtml).join('');
+  _evUpdateRsvpSliders(false);
+}
+// Una fila: futuro (no cancelado/no-se-entrena) suma la barra de RSVP
+// compacta debajo; pasado Y Finalizado reemplaza el chevron por el chip de
+// asistencia real (`miAsistenciaReal`, "Sin registrar" si falta el dato) --
+// pasado pero Cancelado/No se entrena conserva el chevron simple, no hay
+// "asistencia" que mostrar ahí. TODO (pendiente de confirmar con Victor,
+// ver brief): qué mostrar para eventos pasados que el usuario nunca
+// respondió con RSVP -- ¿un control de solo lectura con lo marcado, o
+// directamente se omite? No implementado todavía, esta fila hoy solo
+// muestra el chip de asistencia real, nunca el RSVP viejo del usuario.
+function _evListaTabFilaHtml(e) {
+  var hoy = _evHoyISO();
+  var esFuturo = e.fecha >= hoy;
+  var icono = _EV_ICONOS[e.tipo] || 'event';
+  var d = _evParseISO(e.fecha);
+  var fechaTxt = d.getDate() + ' ' + NOMBRES_MESES[d.getMonth()].slice(0, 3).toLowerCase();
+  var trailing;
+  if (!esFuturo && e.estado === 'Finalizado') {
+    var estadoReal = e.miAsistenciaReal || 'Sin registrar';
+    var clase = _EV_ASISTENCIA_REAL_BADGE[estadoReal];
+    trailing = '<span class="badge' + (clase ? ' ' + clase : '') + '">' + estadoReal + '</span>';
+  } else {
+    trailing = '<span class="material-symbols-outlined ev-chevron-ver">chevron_right</span>';
+  }
+  var rsvp = esFuturo ? _evRsvpBarraHtml(e, true) : '';
+  return '<div class="ev-card-compacta-wrap">' +
+    '<div class="ev-card-compacta" onclick="abrirEvDetalle(\'' + e.id + '\')">' +
       '<div class="ev-card-icon"><span class="material-symbols-outlined">' + icono + '</span></div>' +
       '<div class="ev-card-compacta-info">' +
         '<div class="ev-card-compacta-titulo">' + e.lugar + '</div>' +
         '<div class="ev-card-compacta-sub">' + fechaTxt + ' · ' + e.horaInicio + '</div>' +
       '</div>' +
-      '<span class="material-symbols-outlined ev-chevron-ver">chevron_right</span>' +
-    '</div>';
-  }).join('');
+      trailing +
+    '</div>' +
+    rsvp +
+  '</div>';
 }
 
-/* ── Detalle de un evento, desde "Ver todos" (bottom sheet real -- acá sí
-   aplica el patrón _overlayStack/porGesto, ver convención "Cierre de
+/* ── Detalle de un evento, desde la pestaña "Lista" (bottom sheet real --
+   acá sí aplica el patrón _overlayStack/porGesto, ver convención "Cierre de
    overlays vía historial" en MANIFEST.md) ────────────────────────────── */
 function abrirEvDetalle(id) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === id; })[0];

@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css">
 <link rel="stylesheet" href="css/nav.css">
-<link rel="stylesheet" href="css/eventos.css?v=3d49c991">
+<link rel="stylesheet" href="css/eventos.css?v=f800d0df">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -275,6 +275,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <div class="tp-opt" id="ev-vista-calendario" onclick="_evCambiarVista('calendario')">
             <span class="material-symbols-outlined" style="font-size:1rem;">calendar_view_month</span>Calendario
           </div>
+          <div class="tp-opt" id="ev-vista-lista" onclick="_evCambiarVista('lista')">
+            <span class="material-symbols-outlined" style="font-size:1rem;">list</span>Lista
+          </div>
         </div>
       </div>
 
@@ -297,29 +300,34 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
       <div class="ev-lista" id="ev-lista"></div>
 
-      <button class="ev-btn-ver-todos" onclick="irEventosTodos()">
-        <span class="material-symbols-outlined">calendar_month</span>Ver todos los entrenamientos
-      </button>
+      <!-- Vista "Lista" -- fusiona lo que antes era la pantalla separada
+           "Ver todos los eventos" (s-eventos-todos, ver MANIFEST.md "Cambios
+           recientes") como una 3ra opción del selector de arriba en vez de
+           navegar aparte: sub-tabs subrayados (texto + línea inferior, sin
+           fondo -- NO reusa .tp-seg/.tp-slider a propósito, ver
+           .ev-subtabs en css/eventos.css) + filtros (bottom sheets de
+           selección múltiple) + lista completa. -->
+      <div id="ev-vista-lista-wrap" style="display:none;">
+        <div class="ev-subtabs">
+          <div class="ev-subtab activo" id="ev-lista-tab-subtab-proximos" onclick="_evListaTabCambiarSubtab('proximos')">Próximos</div>
+          <div class="ev-subtab" id="ev-lista-tab-subtab-pasados" onclick="_evListaTabCambiarSubtab('pasados')">Pasados</div>
+          <div class="ev-subtab" id="ev-lista-tab-subtab-todos" onclick="_evListaTabCambiarSubtab('todos')">Todos</div>
+        </div>
+        <div class="ev-filtros-row">
+          <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-mes" data-label="Mes" onclick="_evAbrirSheetFiltro('mes')">
+            <span class="ev-filtro-trigger-label">Mes</span><span class="material-symbols-outlined">expand_more</span>
+          </button>
+          <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-lugar" data-label="Lugar" onclick="_evAbrirSheetFiltro('lugar')">
+            <span class="ev-filtro-trigger-label">Lugar</span><span class="material-symbols-outlined">expand_more</span>
+          </button>
+          <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-tipo" data-label="Tipo" onclick="_evAbrirSheetFiltro('tipo')">
+            <span class="ev-filtro-trigger-label">Tipo</span><span class="material-symbols-outlined">expand_more</span>
+          </button>
+        </div>
+        <div id="ev-lista-tab-filas"></div>
+      </div>
 
       <div style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
-    </div>
-  </div>
-
-<div class="pantalla" id="s-eventos-todos">
-    <div class="card">
-      <div class="tp-seg" id="ev-todos-tab-seg" style="margin-bottom:16px;">
-        <div class="tp-slider" id="ev-todos-tab-slider"></div>
-        <div class="tp-opt active" id="ev-todos-tab-proximos" onclick="_evTodosCambiarTab('proximos')">Próximos</div>
-        <div class="tp-opt" id="ev-todos-tab-pasados" onclick="_evTodosCambiarTab('pasados')">Pasados</div>
-        <div class="tp-opt" id="ev-todos-tab-todos" onclick="_evTodosCambiarTab('todos')">Todos</div>
-      </div>
-      <div class="ev-todos-filtros">
-        <select id="ev-todos-filtro-mes" onchange="_evTodosRenderLista()"></select>
-        <select id="ev-todos-filtro-lugar" onchange="_evTodosRenderLista()"></select>
-        <select id="ev-todos-filtro-tipo" onchange="_evTodosRenderLista()"></select>
-      </div>
-      <div id="ev-todos-lista"></div>
-      <div class="cta-footer-spacer" style="height:24px;"></div>
     </div>
   </div>
 
@@ -705,7 +713,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js"></script>
-<script src="js/eventos.js?v=41bb06f7"></script>
+<script src="js/eventos.js?v=bd3e58f5"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js"></script>
 <script src="js/perfil.js"></script>
@@ -2054,13 +2062,27 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div id="ev-agregar-lista" style="overflow-y:auto;flex:1;"></div>
 </div>
 
-<!-- BOTTOM SHEET: Detalle de evento, desde "Ver todos los entrenamientos"
-     (Eventos) -- ver abrirEvDetalle()/cerrarEvDetalle() en js/eventos.js. -->
+<!-- BOTTOM SHEET: Detalle de evento, desde la pestaña "Lista" de Eventos --
+     ver abrirEvDetalle()/cerrarEvDetalle() en js/eventos.js. -->
 <div id="ev-detalle-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="cerrarEvDetalle()"></div>
 <div id="ev-detalle-sheet" class="bsheet" style="z-index:9701;">
   <div class="bsheet-handle"></div>
-  <div class="bsheet-title">Detalle del entrenamiento</div>
+  <div class="bsheet-title">Detalle del evento</div>
   <div class="bsheet-body" id="ev-detalle-body"></div>
+</div>
+
+<!-- BOTTOM SHEET: Filtro de la pestaña "Lista" (Mes/Lugar/Tipo, ver
+     MANIFEST.md "Cambios recientes") -- un solo sheet genérico reusado para
+     los 3 (mismo criterio que ev-sheet-agregar/admin-sheet-destino: repuebla
+     título+opciones según _evFiltroSheetCampo en vez de 3 sheets separados),
+     con pills togleables multi-select (mismo patrón que ajTogglePill() del
+     wizard de Salud, js/perfil.js) en vez de una lista de selección única. -->
+<div id="ev-sheet-filtro-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="_evCerrarSheetFiltro()"></div>
+<div id="ev-sheet-filtro" class="bsheet bsheet-scroll" style="z-index:9601;max-height:75vh;">
+  <div class="bsheet-handle" style="flex-shrink:0;"></div>
+  <div class="bsheet-title" id="ev-sheet-filtro-title" style="flex-shrink:0;">Filtro</div>
+  <div id="ev-sheet-filtro-pills" class="aj-pills-row" style="padding:4px 16px 12px;overflow-y:auto;flex:1;"></div>
+  <button class="btn btn-primary" style="margin:4px 16px 16px;" onclick="_evCerrarSheetFiltro()">Listo</button>
 </div>
 
 <!-- BOTTOM SHEET: Texto genérico -->
