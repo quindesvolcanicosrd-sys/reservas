@@ -162,11 +162,15 @@
 .ev-mas-info.abierto .ev-mas-info-body { max-height: 400px; }
 .ev-mas-info-body-inner { padding: 8px 2px 2px; }
 .ev-mas-info-desc { font-size: 0.8rem; color: var(--text-2); line-height: 1.6; margin-bottom: 10px; }
+/* flex:1 en cada pill (no solo flex-wrap en el contenedor) -- sin esto, una
+   pill sola en su propia fila (ej. "Cómo llegar") queda angosta pegada a la
+   izquierda con todo el resto de la fila vacío a la derecha; con flex:1 las
+   pills de una misma fila reparten el espacio sobrante entre ellas. */
 .ev-mas-info-pills { display: flex; gap: 7px; flex-wrap: wrap; }
 .ev-mas-info-pill {
-  display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 99px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 10px; border-radius: 99px;
   font-size: 0.72rem; font-weight: 600; background: var(--surface-light); color: var(--muted);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--border-light); flex: 1 1 auto; white-space: nowrap;
 }
 .ev-mas-info-pill .material-symbols-outlined { font-size: 0.85rem; }
 .ev-mas-info-pill-maps { background: var(--brand-warm); color: var(--brand); border-color: var(--brand-warm-border); text-decoration: none; }
