@@ -95,13 +95,20 @@
 
 /* ── "¿Asistiré?" (usuario) ──────────────────────────── */
 .ev-asistire-wrap { margin-top: 10px; }
-.ev-opciones-asistencia { display: flex; gap: 6px; flex-wrap: wrap; }
+/* 3 botones SIEMPRE en una sola fila (nunca 2+1 apilados) -- nowrap +
+   flex:1 en vez de wrap: el ancho disponible real dentro de la card en
+   ~390-400px es angosto (~228px, ver MANIFEST.md), así que en vez de
+   dejar que el texto empuje a una 2da fila, cada botón se reparte el
+   espacio por igual y su contenido se achica (padding/gap/font) para
+   entrar los 3 sin recortar texto. */
+.ev-opciones-asistencia { display: flex; gap: 4px; flex-wrap: nowrap; }
 .ev-opcion-asistencia {
-  padding: 7px 12px; border-radius: 20px; border: 1.5px solid var(--border-light); background: var(--surface-light);
-  color: var(--text-2); font-size: 0.74rem; font-weight: 700; cursor: pointer; font-family: inherit;
-  transition: all 0.15s; display: inline-flex; align-items: center; gap: 4px;
+  flex: 1; min-width: 0; padding: 7px 2px; border-radius: 14px; border: 1.5px solid var(--border-light); background: var(--surface-light);
+  color: var(--text-2); font-size: 0.635rem; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: all 0.15s; display: inline-flex; align-items: center; justify-content: center; gap: 3px;
+  white-space: nowrap;
 }
-.ev-opcion-asistencia .material-symbols-outlined { font-size: 14px; }
+.ev-opcion-asistencia .material-symbols-outlined { font-size: 13px; flex-shrink: 0; }
 .ev-opcion-asistencia.ev-op-si:hover { border-color: var(--success); color: var(--success-dark); background: var(--success-bg); }
 .ev-opcion-asistencia.ev-op-no:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); }
 .ev-opcion-asistencia.ev-op-no-jugador:hover { border-color: var(--warning); color: var(--amber-dark); background: var(--warning-bg); }

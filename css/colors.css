@@ -249,23 +249,22 @@
   --gray-divider:        rgba(128,128,128,0.12);
 
   /* ── Cumpleaños (Eventos) ──────────────────────────────
-     Tono propio e independiente, NO alias de --amber-* (versión anterior) ni
-     de --brand -- a pedido explícito: la card/dot de cumpleaños debe seguir
-     distinguiéndose del resto de la UI pase lo que pase con el color de
-     énfasis que el admin elige desde "Mi Liga" (js/color-enfasis.js). Ese
-     motor ya excluye --amber de su derivación (nunca cambia con el color de
-     énfasis, ver comentario de cabecera de ese archivo) así que el problema
-     real no era que --amber-* "pudiera" verse afectado -- es que quedaba
-     acoplado al mismo sistema de color que badges de estado/#banner-cupon
-     (`--warning`/`.badge-pendiente` reusan --amber), sin margen para subirle
-     saturación a cumpleaños en particular sin afectar también esos otros usos.
-     Con su propio token, --cumple-bg puede ser más notorio que --surface-2
-     (bug real: con --amber-lighter, casi idéntico a --surface-2 en luminosidad,
-     la card se veía apagada) sin tocar ningún otro consumidor de --amber-*. */
-  --cumple-bg:      #fef3c7;
-  --cumple-border:  #fcd34d;
-  --cumple-dot:     #ca8a04;
-  --cumple-text:    #78350f;
+     Vuelve a derivar de --brand (revertido a pedido explícito de Victor --
+     el tono fijo propio de la versión anterior, pensado para no depender del
+     color de énfasis, se sentía "grita" en vez de suave: fondo amarillo
+     sólido brillante). Ahora es una mezcla tenue de --brand con el fondo
+     (color-mix, no rgba plano) para que se lea suave y quede coherente con
+     cualquier color de énfasis que el admin elija -- --cumple-dot/-text usan
+     el propio --brand/--brand-dk sin mezclar porque son elementos chicos
+     (dot de 6px, texto de un renglón) donde sí hace falta contraste sólido.
+     Trade-off conocido (señalado a Victor, no resuelto acá): si el color de
+     énfasis elegido es dorado/amarillo, esta card vuelve a acercarse
+     visualmente a botones/elementos de marca -- exactamente lo que el token
+     fijo anterior evitaba a propósito. */
+  --cumple-bg:      color-mix(in srgb, var(--brand) 12%, var(--surface-2));
+  --cumple-border:  color-mix(in srgb, var(--brand) 35%, var(--border-light));
+  --cumple-dot:     var(--brand);
+  --cumple-text:    var(--brand-dk);
 
   /* Dark mode tokens — "(runtime)" solo --dk-skeleton-base/--dk-pin-press/
      --dk-modal-btn-bg (mismo tinte café-marca, aunque no viven dentro de la
@@ -414,13 +413,9 @@
     /* Amber dark */
     --amber-border:        rgba(245,158,11,0.3);
 
-    /* Cumpleaños dark -- mismo criterio de independencia que en claro (ver
-       comentario de cabecera junto a la definición clara, arriba): tono
-       propio, no --amber-*/--brand ni derivado por js/color-enfasis.js. */
-    --cumple-bg:           rgba(217,119,6,0.16);
-    --cumple-border:       rgba(217,119,6,0.4);
-    --cumple-dot:          #fbbf24;
-    --cumple-text:         #fde68a;
+    /* Cumpleaños: sin override dark -- la definición única en :root (arriba)
+       ya deriva de --brand/--surface-2/--border-light, que sí tienen su
+       propio valor dark, así que se recalcula sola sin duplicar acá. */
 
     /* Success dark */
     --success-lightest:    rgba(34,197,94,0.1);
