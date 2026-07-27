@@ -242,8 +242,19 @@ function ir(id, desdeHistorial, sinTrampa) {
   // muestra con reservas activas), Eventos siempre muestra su nav fija
   // mientras esa pantalla está activa (ver css/eventos.css/js/eventos.js,
   // MANIFEST.md "Cambios recientes" -- sección Eventos, Tanda 2).
+  // #eventos-nav-spacer se mide acá mismo (igual que #home-nav-spacer en
+  // _initHomeNav()/_sincronizarNavHome(), js/home.js) en vez de dejar un
+  // valor fijo en el HTML -- así el contenido de abajo (selector Semana/
+  // Calendario) siempre compensa la altura real de la nav, no un número
+  // fijo que puede desalinearse si esa altura cambia (ej. #eventos-btn-add
+  // visible para admin no cambia la altura hoy, pero el spacer no debe
+  // depender de que eso siga siendo cierto).
   var eventosNav = document.getElementById('eventos-nav');
-  if (eventosNav) eventosNav.style.display = (id === 's-eventos') ? 'flex' : 'none';
+  var eventosNavSpacer = document.getElementById('eventos-nav-spacer');
+  if (eventosNav) {
+    eventosNav.style.display = (id === 's-eventos') ? 'flex' : 'none';
+    if (id === 's-eventos' && eventosNavSpacer) eventosNavSpacer.style.height = (eventosNav.offsetHeight + 8) + 'px';
+  }
 
   _actualizarBottomNav(id);
 
