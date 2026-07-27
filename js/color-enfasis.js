@@ -101,6 +101,16 @@ var _ceColorActual = null;
 
 function aplicarColorEnfasis(hex) {
   _ceColorActual = hex;
+  // Cachea el último color real aplicado (ver bottom de este archivo) -- sin
+  // esto, cada carga de página arranca con el naranja default hasta que
+  // js/auth.js resuelve su fetch async a adminGetColorEnfasis (Apps Script,
+  // con cold starts de cientos de ms a varios segundos, ver MANIFEST.md) y
+  // reaplica el color real -- visible como un recoloreo brusco de cualquier
+  // UI de marca que ya esté en pantalla en ese momento (bug real encontrado
+  // en la card de cumpleaños de Eventos, ver "Cambios recientes": al
+  // derivar --cumple-bg/-border de --brand quedó expuesta a este salto
+  // default→real que antes, con su tono fijo, no la afectaba).
+  try { localStorage.setItem('ce_color_cache', hex); } catch (ex) {}
   var brand = hexToHsl(hex);
   var rgb = hexToRgb(hex);
   var oscuro = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -268,4 +278,14 @@ if (window.matchMedia) {
   });
 }
 
-aplicarColorEnfasis('#F97316');
+// Arranca con el último color REAL conocido (cache de localStorage, ver
+// comentario de cabecera de aplicarColorEnfasis) en vez del naranja
+// hardcodeado siempre -- así, salvo la primerísima visita de un navegador
+// (sin cache todavía, inevitable: nadie conoce el color real hasta que
+// js/auth.js lo pida al backend por primera vez), el primer paint YA es el
+// color correcto y auth.js reaplicar el mismo valor al resolver su fetch es
+// un no-op visual, no un recoloreo. Cache inválido (no hex de 6 dígitos,
+// ej. corrupción manual) cae de vuelta al default sin romper nada.
+var _ceCache = null;
+try { _ceCache = localStorage.getItem('ce_color_cache'); } catch (ex) {}
+aplicarColorEnfasis(/^#[0-9a-fA-F]{6}$/.test(_ceCache || '') ? _ceCache : '#F97316');
