@@ -115,7 +115,7 @@
 .ev-opcion-asistencia .material-symbols-outlined { font-size: 14px; }
 .ev-opcion-asistencia.ev-op-si:hover { border-color: var(--success); color: var(--success-dark); background: var(--success-bg); }
 .ev-opcion-asistencia.ev-op-no:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); }
-.ev-opcion-asistencia.ev-op-tal-vez:hover { border-color: var(--warning); color: var(--amber-dark); background: var(--warning-bg); }
+.ev-opcion-asistencia.ev-op-no-jugador:hover { border-color: var(--warning); color: var(--amber-dark); background: var(--warning-bg); }
 .ev-mi-respuesta { display: flex; align-items: center; gap: 8px; animation: fadeIn 0.25s ease; }
 .ev-mi-respuesta-pill { font-size: 0.74rem; font-weight: 700; }
 .ev-cambiar-respuesta { background: none; border: none; color: var(--muted); font-size: 0.72rem; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; font-family: inherit; }

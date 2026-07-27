@@ -27,8 +27,8 @@ var _EV_ICONOS = { 'Entrenamiento': 'directions_run', 'Torneo': 'emoji_events', 
 var _EV_DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 var _EV_DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-var _EV_RESP_BADGE  = { 'Asistiré': 'badge-confirmada', 'No asistiré': 'badge-cancelada', 'Tal vez': 'badge-pendiente' };
-var _EV_RESP_ICONO  = { 'Asistiré': 'check_circle', 'No asistiré': 'cancel', 'Tal vez': 'help' };
+var _EV_RESP_BADGE  = { 'Asistiré': 'badge-confirmada', 'No asistiré': 'badge-cancelada', 'No jugador': 'badge-pendiente' };
+var _EV_RESP_ICONO  = { 'Asistiré': 'check_circle', 'No asistiré': 'cancel', 'No jugador': 'visibility' };
 var _EV_CHIP_BADGE  = { 'A tiempo': 'badge-confirmada', 'Tarde': 'badge-pendiente', 'Ausente': 'badge-cancelada' };
 
 var _evVista = 'semana';
@@ -61,7 +61,7 @@ function _evGenerarDemo() {
       asistentes: [{ nombre: 'Diego Ramírez', estado: 'A tiempo' }] },
     { id: 'EVT-3', fecha: _evSumarDias(hoy, -1), horaInicio: '18:30', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Cancelado', miEstado: null, asistentes: [] },
     { id: 'EVT-4', fecha: hoy, horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: null, asistentes: [] },
-    { id: 'EVT-5', fecha: _evSumarDias(hoy, 1), horaInicio: '19:00', lugar: 'Coliseo Rumiñahui', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: 'Tal vez', asistentes: [] },
+    { id: 'EVT-5', fecha: _evSumarDias(hoy, 1), horaInicio: '19:00', lugar: 'Coliseo Rumiñahui', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: 'No jugador', asistentes: [] },
     { id: 'EVT-6', fecha: _evSumarDias(hoy, 3), horaInicio: '10:00', lugar: 'Sede Quindes Volcánicos', tipo: 'Asamblea', estado: 'Evento Programado', miEstado: null, asistentes: [] },
     { id: 'EVT-7', fecha: _evSumarDias(hoy, 4), horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'No se entrena', miEstado: null, asistentes: [] },
     { id: 'EVT-8', fecha: _evSumarDias(hoy, 6), horaInicio: '09:00', lugar: 'Pista Bicentenario', tipo: 'Torneo', estado: 'Evento Programado', miEstado: null, asistentes: [] },
@@ -308,7 +308,7 @@ function _evToggleOpciones(id, sufijo) {
   wrap.innerHTML = '<div class="ev-opciones-asistencia">' +
     '<button class="ev-opcion-asistencia ev-op-si" onclick="_evMarcarAsistencia(\'' + id + '\',\'Asistiré\',\'' + sufijo + '\')"><span class="material-symbols-outlined">check_circle</span>Asistiré</button>' +
     '<button class="ev-opcion-asistencia ev-op-no" onclick="_evMarcarAsistencia(\'' + id + '\',\'No asistiré\',\'' + sufijo + '\')"><span class="material-symbols-outlined">cancel</span>No asistiré</button>' +
-    '<button class="ev-opcion-asistencia ev-op-tal-vez" onclick="_evMarcarAsistencia(\'' + id + '\',\'Tal vez\',\'' + sufijo + '\')"><span class="material-symbols-outlined">help</span>Tal vez</button>' +
+    '<button class="ev-opcion-asistencia ev-op-no-jugador" onclick="_evMarcarAsistencia(\'' + id + '\',\'No jugador\',\'' + sufijo + '\')"><span class="material-symbols-outlined">visibility</span>No jugador</button>' +
   '</div>';
   wrap.style.display = 'block';
   if (btn) btn.style.display = 'none';
