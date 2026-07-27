@@ -100,13 +100,7 @@
 
 /* ── "¿Asistiré?" (usuario) ──────────────────────────── */
 .ev-asistire-wrap { margin-top: 10px; }
-.ev-btn-asistire {
-  padding: 8px 14px; border-radius: 20px; border: 1.5px solid var(--brand); background: var(--brand-lightest);
-  color: var(--brand); font-size: 0.78rem; font-weight: 700; cursor: pointer; font-family: inherit;
-  transition: background 0.15s;
-}
-.ev-btn-asistire:hover { background: var(--brand-20); }
-.ev-opciones-asistencia { display: flex; gap: 6px; flex-wrap: wrap; animation: fadeIn 0.25s ease; }
+.ev-opciones-asistencia { display: flex; gap: 6px; flex-wrap: wrap; }
 .ev-opcion-asistencia {
   padding: 7px 12px; border-radius: 20px; border: 1.5px solid var(--border-light); background: var(--surface-light);
   color: var(--text-2); font-size: 0.74rem; font-weight: 700; cursor: pointer; font-family: inherit;
@@ -116,9 +110,18 @@
 .ev-opcion-asistencia.ev-op-si:hover { border-color: var(--success); color: var(--success-dark); background: var(--success-bg); }
 .ev-opcion-asistencia.ev-op-no:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); }
 .ev-opcion-asistencia.ev-op-no-jugador:hover { border-color: var(--warning); color: var(--amber-dark); background: var(--warning-bg); }
-.ev-mi-respuesta { display: flex; align-items: center; gap: 8px; animation: fadeIn 0.25s ease; }
-.ev-mi-respuesta-pill { font-size: 0.74rem; font-weight: 700; }
-.ev-cambiar-respuesta { background: none; border: none; color: var(--muted); font-size: 0.72rem; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; font-family: inherit; }
+/* Estado seleccionado -- persiste el mismo look que ya tiene el :hover de
+   cada opción (mismos 3 tokens --success/--danger/--warning+--amber-dark de
+   arriba), en vez de un highlight de marca: son los mismos colores que ya
+   usa el resto de la app para "reserva confirmada"/"cancelada" (.badge-
+   confirmada/.badge-cancelada/.badge-pendiente, css/home.css) -- fijos,
+   independientes del color de énfasis (js/color-enfasis.js excluye
+   --success/--danger/--warning/--amber de su derivación a propósito, ver
+   comentario de cabecera de ese archivo), así "Asistiré" sigue siendo verde
+   aunque el admin elija un color de énfasis distinto (incluido uno verde). */
+.ev-opcion-asistencia.ev-op-si.ev-op-seleccionada { border-color: var(--success); color: var(--success-dark); background: var(--success-bg); }
+.ev-opcion-asistencia.ev-op-no.ev-op-seleccionada { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); }
+.ev-opcion-asistencia.ev-op-no-jugador.ev-op-seleccionada { border-color: var(--warning); color: var(--amber-dark); background: var(--warning-bg); }
 
 /* ── Variante admin: lista de asistentes + agregar persona ──────────── */
 .ev-asistentes-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }

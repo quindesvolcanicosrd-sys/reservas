@@ -27,7 +27,6 @@ var _EV_ICONOS = { 'Entrenamiento': 'directions_run', 'Torneo': 'emoji_events', 
 var _EV_DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 var _EV_DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-var _EV_RESP_BADGE  = { 'Asistiré': 'badge-confirmada', 'No asistiré': 'badge-cancelada', 'No jugador': 'badge-pendiente' };
 var _EV_RESP_ICONO  = { 'Asistiré': 'check_circle', 'No asistiré': 'cancel', 'No jugador': 'visibility' };
 var _EV_CHIP_BADGE  = { 'A tiempo': 'badge-confirmada', 'Tarde': 'badge-pendiente', 'Ausente': 'badge-cancelada' };
 
@@ -281,37 +280,25 @@ function _evCardEventoHtml(e, sufijo) {
   '</div>';
 }
 
-/* ── Variante usuario: "¿Asistiré?" → 3 opciones inline (fade) ───────── */
+/* ── Variante usuario: "¿Asistiré?" → 3 opciones siempre visibles, la que
+   coincide con e.miEstado queda resaltada (.ev-op-seleccionada, mismo
+   tratamiento visual de "seleccionado" que ya usa .aj-pill.activa en
+   css/perfil.css -- fondo sólido var(--brand)/texto blanco, no uno nuevo).
+   Tocar cualquiera marca directo, sin estado colapsado ni paso intermedio
+   (antes: chip + "Cambiar" abría estas mismas 3 opciones aparte). ────── */
+var _EV_RESP_OPCIONES = [
+  { estado: 'Asistiré', clase: 'ev-op-si' },
+  { estado: 'No asistiré', clase: 'ev-op-no' },
+  { estado: 'No jugador', clase: 'ev-op-no-jugador' }
+];
 function _evAccionUsuarioHtml(e, sufijo) {
   sufijo = sufijo || '';
-  var key = e.id + sufijo;
   if (e.estado === 'Cancelado' || e.estado === 'No se entrena' || e.estado === 'Finalizado') return '';
-  if (e.miEstado) {
-    return '<div class="ev-asistire-wrap"><div class="ev-mi-respuesta" id="ev-mi-respuesta-' + key + '">' +
-      '<span class="badge ' + _EV_RESP_BADGE[e.miEstado] + ' ev-mi-respuesta-pill"><span class="material-symbols-outlined" style="font-size:13px;">' + _EV_RESP_ICONO[e.miEstado] + '</span>' + e.miEstado + '</span>' +
-      '<button class="ev-cambiar-respuesta" onclick="_evToggleOpciones(\'' + e.id + '\',\'' + sufijo + '\')">Cambiar</button>' +
-    '</div><div id="ev-opciones-' + key + '" style="display:none;"></div></div>';
-  }
-  return '<div class="ev-asistire-wrap">' +
-    '<button class="ev-btn-asistire" id="ev-btn-asistire-' + key + '" onclick="_evToggleOpciones(\'' + e.id + '\',\'' + sufijo + '\')">¿Asistiré?</button>' +
-    '<div id="ev-opciones-' + key + '" style="display:none;"></div>' +
-  '</div>';
-}
-function _evToggleOpciones(id, sufijo) {
-  sufijo = sufijo || '';
-  var key = id + sufijo;
-  var wrap = document.getElementById('ev-opciones-' + key);
-  if (!wrap) return;
-  var abierto = wrap.style.display !== 'none' && wrap.innerHTML !== '';
-  var btn = document.getElementById('ev-btn-asistire-' + key);
-  if (abierto) { wrap.style.display = 'none'; wrap.innerHTML = ''; if (btn) btn.style.display = ''; return; }
-  wrap.innerHTML = '<div class="ev-opciones-asistencia">' +
-    '<button class="ev-opcion-asistencia ev-op-si" onclick="_evMarcarAsistencia(\'' + id + '\',\'Asistiré\',\'' + sufijo + '\')"><span class="material-symbols-outlined">check_circle</span>Asistiré</button>' +
-    '<button class="ev-opcion-asistencia ev-op-no" onclick="_evMarcarAsistencia(\'' + id + '\',\'No asistiré\',\'' + sufijo + '\')"><span class="material-symbols-outlined">cancel</span>No asistiré</button>' +
-    '<button class="ev-opcion-asistencia ev-op-no-jugador" onclick="_evMarcarAsistencia(\'' + id + '\',\'No jugador\',\'' + sufijo + '\')"><span class="material-symbols-outlined">visibility</span>No jugador</button>' +
-  '</div>';
-  wrap.style.display = 'block';
-  if (btn) btn.style.display = 'none';
+  var botones = _EV_RESP_OPCIONES.map(function(op) {
+    var sel = e.miEstado === op.estado ? ' ev-op-seleccionada' : '';
+    return '<button class="ev-opcion-asistencia ' + op.clase + sel + '" onclick="_evMarcarAsistencia(\'' + e.id + '\',\'' + op.estado + '\',\'' + sufijo + '\')"><span class="material-symbols-outlined">' + _EV_RESP_ICONO[op.estado] + '</span>' + op.estado + '</button>';
+  }).join('');
+  return '<div class="ev-asistire-wrap"><div class="ev-opciones-asistencia">' + botones + '</div></div>';
 }
 // Tanda 2 (demo, sin backend): solo actualiza el array local. La Tanda 3
 // reemplaza el cuerpo por marcarAsistenciaUsuario(nombre, idEvento, estado)
