@@ -120,6 +120,12 @@
 .app-nav-icon-btn:hover { background: var(--brand-lightest); }
 .app-nav-icon-btn .material-symbols-outlined { font-size: 18px; }
 
+/* ── Variante circular roja (acción destacada de creación, ej. "+" de
+   Eventos, solo admin) -- mismo componente (.app-nav-icon-btn), no una
+   clase de nav paralela: solo cambia forma/color. */
+.app-nav-icon-btn-danger { background: var(--danger); color: var(--white); border-radius: 50%; }
+.app-nav-icon-btn-danger:hover { background: var(--danger-dark); }
+
 /* ── Botón CTA nav (Nueva reserva) ──────────── */
 .app-nav-cta {
   display: flex;
@@ -168,7 +174,8 @@
   .app-nav-cta { padding: 14px 12px; }
 }
 
-#home-nav .app-nav-section {
+#home-nav .app-nav-section,
+#eventos-nav .app-nav-section {
   opacity: 1 !important;
   max-width: none !important;
   overflow: visible !important;

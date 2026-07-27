@@ -32,6 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css">
 <link rel="stylesheet" href="css/nav.css">
+<link rel="stylesheet" href="css/eventos.css">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -87,6 +88,23 @@
     <button class="app-nav-cta" id="home-nav-cta" onclick="irNuevaReserva()" title="Nueva reserva">
       <span class="material-symbols-outlined">calendar_add_on</span>
       <span class="app-nav-cta-label" id="home-nav-cta-label">Nueva reserva</span>
+    </button>
+  </div>
+</div>
+
+<!-- Nav fija de #s-eventos (Tanda 2 -- ver MANIFEST.md "Cambios recientes",
+     sección Eventos), mismo patrón que #home-nav: display:none por default,
+     togglea a 'flex' en ir() cuando id==='s-eventos' (js/ui.js). El botón
+     "+" es circular rojo (.app-nav-icon-btn-danger, css/nav.css) y solo se
+     muestra para admin -- js/eventos.js (irEventos()) lo togglea según
+     _esAdminDemo, la variable de simulación de esta tanda (sin sesión real
+     todavía, ver brief). -->
+<div id="eventos-nav" class="app-nav app-nav-fixed" style="display:none;">
+  <div class="app-nav-back app-nav-back--decorativo" aria-hidden="true"><span class="material-symbols-outlined">event</span></div>
+  <div class="app-nav-section">EVENTOS</div>
+  <div class="app-nav-actions">
+    <button class="app-nav-icon-btn app-nav-icon-btn-danger" id="eventos-btn-add" style="display:none;" onclick="mostrarToast('Próximamente','ok')" title="Nuevo evento">
+      <span class="material-symbols-outlined">add</span>
     </button>
   </div>
 </div>
@@ -237,6 +255,71 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="card">
       <div id="historial-pills-anio" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;scrollbar-width:none;-ms-overflow-style:none;"></div>
       <div id="historial-meses"></div>
+    </div>
+  </div>
+
+<!-- ═══ SECCIÓN EVENTOS (Tanda 2 -- estructura estática, datos de prueba
+     hardcodeados en js/eventos.js, ver MANIFEST.md "Cambios recientes").
+     Pantalla raíz de la nav inferior (APP_BOTTOM_NAV_ITEMS, js/ui.js), usa
+     #eventos-nav propia en vez de #top-bar (mismo criterio que s-home). ═══ -->
+<div class="pantalla" id="s-eventos">
+    <div class="card" style="text-align:left;padding-bottom:32px;">
+      <div style="height:64px;"></div>
+
+      <div class="ev-seg-wrap">
+        <div class="tp-seg" id="ev-vista-seg">
+          <div class="tp-slider" id="ev-vista-slider"></div>
+          <div class="tp-opt active" id="ev-vista-semana" onclick="_evCambiarVista('semana')">
+            <span class="material-symbols-outlined" style="font-size:1rem;">view_week</span>Semana
+          </div>
+          <div class="tp-opt" id="ev-vista-calendario" onclick="_evCambiarVista('calendario')">
+            <span class="material-symbols-outlined" style="font-size:1rem;">calendar_view_month</span>Calendario
+          </div>
+        </div>
+      </div>
+
+      <div id="ev-vista-semana-wrap">
+        <div class="ev-semana-row">
+          <button class="ev-semana-chevron" onclick="_evSemanaAnterior()" title="Semana anterior"><span class="material-symbols-outlined">chevron_left</span></button>
+          <div class="ev-semana-dias" id="ev-semana-dias"></div>
+          <button class="ev-semana-chevron" onclick="_evSemanaSiguiente()" title="Semana siguiente"><span class="material-symbols-outlined">chevron_right</span></button>
+        </div>
+      </div>
+
+      <div id="ev-vista-calendario-wrap" style="display:none;">
+        <div class="ev-cal-header">
+          <button class="ev-semana-chevron" onclick="_evMesAnterior()" title="Mes anterior"><span class="material-symbols-outlined">chevron_left</span></button>
+          <div class="ev-cal-mes-label" id="ev-cal-mes-label"></div>
+          <button class="ev-semana-chevron" onclick="_evMesSiguiente()" title="Mes siguiente"><span class="material-symbols-outlined">chevron_right</span></button>
+        </div>
+        <div class="ev-cal-grid" id="ev-cal-grid"></div>
+      </div>
+
+      <div class="ev-lista" id="ev-lista"></div>
+
+      <button class="ev-btn-ver-todos" onclick="irEventosTodos()">
+        <span class="material-symbols-outlined">calendar_month</span>Ver todos los entrenamientos
+      </button>
+
+      <div style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+
+<div class="pantalla" id="s-eventos-todos">
+    <div class="card">
+      <div class="tp-seg" id="ev-todos-tab-seg" style="margin-bottom:16px;">
+        <div class="tp-slider" id="ev-todos-tab-slider"></div>
+        <div class="tp-opt active" id="ev-todos-tab-proximos" onclick="_evTodosCambiarTab('proximos')">Próximos</div>
+        <div class="tp-opt" id="ev-todos-tab-pasados" onclick="_evTodosCambiarTab('pasados')">Pasados</div>
+        <div class="tp-opt" id="ev-todos-tab-todos" onclick="_evTodosCambiarTab('todos')">Todos</div>
+      </div>
+      <div class="ev-todos-filtros">
+        <select id="ev-todos-filtro-mes" onchange="_evTodosRenderLista()"></select>
+        <select id="ev-todos-filtro-lugar" onchange="_evTodosRenderLista()"></select>
+        <select id="ev-todos-filtro-tipo" onchange="_evTodosRenderLista()"></select>
+      </div>
+      <div id="ev-todos-lista"></div>
+      <div class="cta-footer-spacer" style="height:24px;"></div>
     </div>
   </div>
 
@@ -622,6 +705,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/eventos.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js"></script>
 <script src="js/perfil.js"></script>
@@ -1956,6 +2040,27 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div class="bsheet-title" style="flex-shrink:0;">Destinatarix</div>
   <input type="text" id="admin-destino-search" placeholder="Buscar por nombre..." style="margin:12px 16px;padding:10px 14px;background:var(--surface-2);border:1.5px solid var(--border-light);border-radius:10px;font-size:0.85rem;font-family:inherit;width:calc(100% - 32px);flex-shrink:0;" oninput="_adminFiltrarDestino(this.value)">
   <div id="admin-destino-lista" style="overflow-y:auto;flex:1;"></div>
+</div>
+
+<!-- BOTTOM SHEET: Agregar persona a un evento (Eventos, vista admin --
+     Tanda 2, demo sobre _EV_EQUIPO_DEMO; Tanda 3 la conecta a
+     adminBuscarPersonasParaEvento(idEvento)). Mismo componente
+     buscador+lista que admin-sheet-agregar/admin-sheet-destino. -->
+<div id="ev-sheet-agregar-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="_evCerrarSheetAgregar()"></div>
+<div id="ev-sheet-agregar" class="bsheet bsheet-scroll" style="z-index:9601;max-height:80vh;">
+  <div class="bsheet-handle" style="flex-shrink:0;"></div>
+  <div class="bsheet-title" style="flex-shrink:0;">Agregar persona</div>
+  <input type="text" id="ev-agregar-search" placeholder="Buscar por nombre..." style="margin:12px 16px;padding:10px 14px;background:var(--surface-2);border:1.5px solid var(--border-light);border-radius:10px;font-size:0.85rem;font-family:inherit;width:calc(100% - 32px);flex-shrink:0;" oninput="_evFiltrarAgregarPersona(this.value)">
+  <div id="ev-agregar-lista" style="overflow-y:auto;flex:1;"></div>
+</div>
+
+<!-- BOTTOM SHEET: Detalle de evento, desde "Ver todos los entrenamientos"
+     (Eventos) -- ver abrirEvDetalle()/cerrarEvDetalle() en js/eventos.js. -->
+<div id="ev-detalle-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="cerrarEvDetalle()"></div>
+<div id="ev-detalle-sheet" class="bsheet" style="z-index:9701;">
+  <div class="bsheet-handle"></div>
+  <div class="bsheet-title">Detalle del entrenamiento</div>
+  <div class="bsheet-body" id="ev-detalle-body"></div>
 </div>
 
 <!-- BOTTOM SHEET: Texto genérico -->

@@ -1,0 +1,177 @@
+/* ═══════════════════════════════════════════════════════
+   EVENTOS.CSS — Sección Eventos (Tanda 2: estructura estática)
+   Header/segmented control/bottom sheets reusan las clases ya existentes
+   de nav.css/reservas.css/global.css (.app-nav*, .tp-seg/.tp-slider/.tp-opt,
+   .bsheet*, .badge*) -- este archivo solo cubre lo que no existe todavía:
+   franja semanal, grilla mensual, cards de evento/cumpleaños y la pantalla
+   "Ver todos los entrenamientos".
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Selector Semana/Calendario ──────────────────────────
+   Reusa .tp-seg/.tp-slider/.tp-opt (mismo componente que "tipo de pago" en
+   s4 y el filtro de Reservas del panel admin) -- sin estilos propios acá,
+   solo el wrapper de espaciado. */
+.ev-seg-wrap { display: flex; justify-content: center; margin-bottom: 18px; }
+
+/* ── Franja semanal ───────────────────────────────────── */
+.ev-semana-row { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
+.ev-semana-chevron {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; min-width: 36px; border-radius: 10px;
+  background: var(--brand-light); border: none; cursor: pointer; color: var(--brand);
+  transition: background 0.15s; -webkit-tap-highlight-color: transparent;
+}
+.ev-semana-chevron:hover { background: var(--brand-20); }
+.ev-semana-chevron:active { transform: scale(0.94); }
+.ev-semana-chevron .material-symbols-outlined { font-size: 1.2rem; display: block; }
+.ev-semana-dias { flex: 1; display: flex; justify-content: space-between; gap: 3px; }
+.ev-dia {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 8px 2px; border-radius: 12px; cursor: default; user-select: none;
+}
+.ev-dia-nombre { font-size: 0.62rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+.ev-dia-num {
+  width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-size: 0.85rem; font-weight: 700; color: var(--text);
+  transition: background 0.15s, color 0.15s;
+}
+.ev-dia.ev-dia-hoy .ev-dia-num { background: var(--brand); color: var(--white); }
+.ev-dia-dots { display: flex; gap: 3px; height: 6px; align-items: center; }
+.ev-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--brand); flex-shrink: 0;
+  cursor: pointer;
+}
+.ev-dot-cumple {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--cumple-dot); flex-shrink: 0;
+  cursor: pointer; animation: pulseDot 1.4s ease-in-out infinite;
+}
+@keyframes pulseDot {
+  0%   { transform: scale(1);   opacity: 1; }
+  50%  { transform: scale(1.6); opacity: 0.55; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+/* ── Calendario mensual ──────────────────────────────── */
+.ev-cal-header { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 14px; }
+.ev-cal-mes-label { font-size: 0.95rem; font-weight: 800; color: var(--text); text-transform: capitalize; min-width: 160px; text-align: center; }
+.ev-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.ev-cal-dow { text-align: center; font-size: 0.62rem; font-weight: 700; color: var(--muted); text-transform: uppercase; padding-bottom: 6px; }
+.ev-cal-celda {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  gap: 4px; padding: 6px 0 8px; border-radius: 10px; min-height: 46px; cursor: default;
+}
+.ev-cal-celda.ev-ajeno { opacity: 0.32; }
+.ev-cal-num {
+  width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-size: 0.78rem; font-weight: 700; color: var(--text);
+}
+.ev-cal-celda.ev-dia-hoy .ev-cal-num { background: var(--brand); color: var(--white); }
+.ev-cal-dots { display: flex; gap: 3px; height: 6px; align-items: center; }
+
+/* ── Lista de eventos (debajo de cualquiera de las 2 vistas) ─────────── */
+.ev-lista { margin-top: 20px; text-align: left; scroll-margin-top: 90px; }
+.ev-fecha-grupo { margin-bottom: 18px; scroll-margin-top: 90px; }
+.ev-fecha-label {
+  font-size: 0.72rem; font-weight: 800; color: var(--brand); text-transform: uppercase;
+  letter-spacing: 0.8px; margin-bottom: 8px; padding-left: 2px;
+}
+.ev-lista-vacia {
+  text-align: center; padding: 40px 16px; color: var(--muted); font-size: 0.85rem;
+  background: var(--surface-2); border: 1.5px solid var(--border-light); border-radius: 14px;
+}
+.ev-lista-vacia .material-symbols-outlined { font-size: 2.2rem; display: block; margin-bottom: 8px; color: var(--brand); }
+
+/* ── Card de evento ───────────────────────────────────── */
+.ev-card {
+  display: flex; gap: 12px; padding: 14px; border-radius: 14px; margin-bottom: 10px;
+  background: var(--surface-2); border: 1.5px solid var(--border-light);
+  animation: smoothSlideUp 0.35s var(--ease-sheet) both;
+}
+.ev-card-icon {
+  width: 42px; height: 42px; min-width: 42px; border-radius: 12px; background: var(--brand-light);
+  display: flex; align-items: center; justify-content: center; color: var(--brand);
+}
+.ev-card-icon .material-symbols-outlined { font-size: 1.3rem; }
+.ev-card-body { flex: 1; min-width: 0; }
+.ev-card-titulo { font-size: 0.9rem; font-weight: 800; color: var(--text); margin-bottom: 2px; }
+.ev-card-sub { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.ev-card-sub .material-symbols-outlined { font-size: 14px; }
+.ev-card-estado-nota { font-size: 0.74rem; font-weight: 700; color: var(--danger); margin-top: 4px; }
+
+/* ── "¿Asistiré?" (usuario) ──────────────────────────── */
+.ev-asistire-wrap { margin-top: 10px; }
+.ev-btn-asistire {
+  padding: 8px 14px; border-radius: 20px; border: 1.5px solid var(--brand); background: var(--brand-lightest);
+  color: var(--brand); font-size: 0.78rem; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: background 0.15s;
+}
+.ev-btn-asistire:hover { background: var(--brand-20); }
+.ev-opciones-asistencia { display: flex; gap: 6px; flex-wrap: wrap; animation: fadeIn 0.25s ease; }
+.ev-opcion-asistencia {
+  padding: 7px 12px; border-radius: 20px; border: 1.5px solid var(--border-light); background: var(--surface-light);
+  color: var(--text-2); font-size: 0.74rem; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: all 0.15s; display: inline-flex; align-items: center; gap: 4px;
+}
+.ev-opcion-asistencia .material-symbols-outlined { font-size: 14px; }
+.ev-opcion-asistencia.ev-op-si:hover { border-color: var(--success); color: var(--success-dark); background: var(--success-bg); }
+.ev-opcion-asistencia.ev-op-no:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); }
+.ev-opcion-asistencia.ev-op-tal-vez:hover { border-color: var(--warning); color: var(--amber-dark); background: var(--warning-bg); }
+.ev-mi-respuesta { display: flex; align-items: center; gap: 8px; animation: fadeIn 0.25s ease; }
+.ev-mi-respuesta-pill { font-size: 0.74rem; font-weight: 700; }
+.ev-cambiar-respuesta { background: none; border: none; color: var(--muted); font-size: 0.72rem; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; font-family: inherit; }
+
+/* ── Variante admin: lista de asistentes + agregar persona ──────────── */
+.ev-asistentes-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.ev-asistente-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-light); }
+.ev-asistente-row:last-child { border-bottom: none; }
+.ev-asistente-nombre { font-size: 0.8rem; font-weight: 600; color: var(--text); }
+.ev-btn-agregar-persona {
+  margin-top: 10px; width: 100%; padding: 9px; border-radius: 10px; border: 1.5px dashed var(--border-mid);
+  background: transparent; color: var(--muted); font-size: 0.76rem; font-weight: 700; cursor: pointer;
+  font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all 0.15s;
+}
+.ev-btn-agregar-persona:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-lightest); }
+.ev-btn-agregar-persona .material-symbols-outlined { font-size: 16px; }
+.ev-persona-row {
+  display: flex; align-items: center; gap: 10px; padding: 11px 16px; cursor: pointer;
+  font-size: 0.85rem; font-weight: 600; color: var(--text); transition: background 0.12s;
+}
+.ev-persona-row:hover { background: var(--surface-2); }
+.ev-persona-row .material-symbols-outlined { font-size: 18px; color: var(--brand); }
+
+/* ── Card de cumpleaños ───────────────────────────────── */
+.ev-card-cumple {
+  position: relative; overflow: hidden;
+  background: var(--cumple-bg); border-color: var(--cumple-border);
+}
+.ev-card-cumple .ev-card-icon { background: var(--cumple-border); color: var(--cumple-text); }
+.ev-card-cumple .ev-card-titulo { color: var(--cumple-text); }
+
+/* ── Botón "Ver todos los entrenamientos" ────────────── */
+.ev-btn-ver-todos {
+  width: 100%; margin-top: 6px; padding: 13px; border-radius: 12px; border: none;
+  background: var(--brand-light); color: var(--brand); font-size: 0.84rem; font-weight: 700;
+  cursor: pointer; font-family: inherit; display: flex; align-items: center; justify-content: center;
+  gap: 6px; transition: background 0.15s;
+}
+.ev-btn-ver-todos:hover { background: var(--brand-20); }
+
+/* ── Pantalla "Ver todos los entrenamientos" ─────────── */
+.ev-todos-filtros { display: flex; gap: 8px; margin: 16px 0; flex-wrap: wrap; }
+.ev-todos-filtros select { flex: 1; min-width: 90px; font-size: 0.8rem; padding-left: 10px; padding-right: 28px; }
+.ev-card-compacta {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px;
+  margin-bottom: 8px; background: var(--surface-2); border: 1.5px solid var(--border-light);
+  cursor: pointer; transition: border-color 0.15s;
+}
+.ev-card-compacta:hover { border-color: var(--brand); }
+.ev-card-compacta .ev-card-icon { width: 36px; height: 36px; min-width: 36px; border-radius: 10px; }
+.ev-card-compacta .ev-card-icon .material-symbols-outlined { font-size: 1.1rem; }
+.ev-card-compacta-info { flex: 1; min-width: 0; }
+.ev-card-compacta-titulo { font-size: 0.83rem; font-weight: 700; color: var(--text); }
+.ev-card-compacta-sub { font-size: 0.73rem; color: var(--muted); margin-top: 2px; }
+.ev-card-compacta .material-symbols-outlined.ev-chevron-ver { font-size: 18px; color: var(--muted); flex-shrink: 0; }
+
+@media (prefers-color-scheme: dark) {
+  .ev-lista-vacia { background: var(--surface-2); border-color: var(--border-light); }
+}

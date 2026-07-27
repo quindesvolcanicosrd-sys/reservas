@@ -110,6 +110,11 @@ var TOP_BAR_CONFIG = {
   's-pago': { titulo: 'Pago', volver: 's4' },
   's-gestionar': { titulo: 'Re-agendar fecha', volver: 's-home' },
   's-misreservas': { titulo: 'Historial de reservas', volver: 's-home' },
+  // Mismo mecanismo que s-misreservas (pantalla principal reachable por
+  // botón, con flecha atrás fija hacia su origen) -- ver js/eventos.js,
+  // irEventosTodos(), y MANIFEST.md "Cambios recientes" para por qué no es
+  // un overlay/shared-axis nuevo.
+  's-eventos-todos': { titulo: 'Todos los entrenamientos', volver: 's-eventos' },
   // Sin volver (ver "Cambios recientes" — nav inferior): Ajustes es ahora
   // una pantalla raíz de APP_BOTTOM_NAV_ITEMS, alcanzable siempre desde la
   // nav inferior -- no necesita ni debe tener un botón que la redirija hacia
@@ -232,6 +237,14 @@ function ir(id, desdeHistorial, sinTrampa) {
     }
   }
 
+  // #eventos-nav (s-eventos) -- mismo criterio que #home-nav arriba, pero
+  // sin condición extra: a diferencia de "Nueva reserva" (que solo se
+  // muestra con reservas activas), Eventos siempre muestra su nav fija
+  // mientras esa pantalla está activa (ver css/eventos.css/js/eventos.js,
+  // MANIFEST.md "Cambios recientes" -- sección Eventos, Tanda 2).
+  var eventosNav = document.getElementById('eventos-nav');
+  if (eventosNav) eventosNav.style.display = (id === 's-eventos') ? 'flex' : 'none';
+
   _actualizarBottomNav(id);
 
   var sinPasos = ['s1','s-home','s-misreservas','s-carga','s6','s-datos','s-gestionar'].concat(ADMIN_PANTALLAS);
@@ -281,6 +294,18 @@ var APP_BOTTOM_NAV_ITEMS = [
   // la regla.
   { id: 'reservas', icono: 'calendar_month', texto: 'Reservas', pantalla: 's-home',
     visible: function() { return !_dashboardAdminLimitado; } },
+  // 'eventos' -- Tanda 2 (ver MANIFEST.md "Cambios recientes" -- sección
+  // Eventos, estructura estática): calendario de entrenamientos/torneos/
+  // asambleas + cumpleaños del equipo, separado de "Reservas" (que sigue
+  // siendo el flujo de equipamiento/pago). Visible para todo tipo de
+  // cuenta -- a diferencia de 'reservas', no depende de _dashboardAdminLimitado,
+  // ambos perfiles (usuarix normal y admin) necesitan ver el calendario.
+  // `entrar` (no volver(pantalla) a secas) porque #s-eventos necesita
+  // poblarse por JS (semana/mes actual + cards) antes de mostrarse, mismo
+  // motivo que 'ajustes'/irEditarDatos().
+  { id: 'eventos', icono: 'event', texto: 'Eventos', pantalla: 's-eventos',
+    entrar: function() { irEventos(); },
+    visible: function() { return true; } },
   { id: 'ajustes', icono: 'settings', texto: 'Ajustes', pantalla: 's-datos',
     entrar: function() { irEditarDatos(); },
     visible: function() { return true; } }
@@ -449,33 +474,54 @@ function togglePagoMetodo(header) {
 }
 
 
-function lanzarConfetti() {
-  var canvas = document.getElementById('confetti-canvas');
-  if (!canvas) {
-    canvas = document.createElement('canvas');
-    canvas.id = 'confetti-canvas';
+// `contenedorEl` (opcional, ver MANIFEST.md "Cambios recientes" -- cards de
+// cumpleaños de Eventos): sin argumento, mismo comportamiento de siempre
+// (canvas fixed a pantalla completa, usado por s6 tras confirmarReserva()).
+// Con un elemento, el confetti queda contenido dentro de ese elemento en vez
+// de cubrir la pantalla -- mismo motor (piezas/física/fade), reusado tal
+// cual en vez de reimplementarlo: el canvas pasa a position:absolute dentro
+// de `contenedorEl` (que necesita position:relative/overflow:hidden propio,
+// ver .ev-card-cumple en css/eventos.css) y usa clientWidth/clientHeight en
+// vez de innerWidth/innerHeight, con menos piezas (más chico = menos
+// densidad, si no se ve saturado) y velocidades más cortas para que el
+// ciclo entero quede visible en un área acotada.
+function lanzarConfetti(contenedorEl) {
+  var acotado = !!contenedorEl;
+  var canvas = document.createElement('canvas');
+  var ancho, alto;
+  if (acotado) {
+    ancho = contenedorEl.clientWidth;
+    alto = contenedorEl.clientHeight;
+    canvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5;';
+    contenedorEl.appendChild(canvas);
+  } else {
+    ancho = window.innerWidth;
+    alto = window.innerHeight;
     canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
     document.body.appendChild(canvas);
   }
   var ctx = canvas.getContext('2d');
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  canvas.width = ancho;
+  canvas.height = alto;
   var piezas = [];
   var colores = ['#F97316','#fb923c','#fbbf24','#22c55e','#60a5fa','#c084fc','#f472b6'];
-  for (var i = 0; i < 120; i++) {
+  var nPiezas = acotado ? 45 : 120;
+  for (var i = 0; i < nPiezas; i++) {
     piezas.push({
       x: Math.random() * canvas.width,
       y: Math.random() * -canvas.height,
-      w: Math.random() * 10 + 6,
-      h: Math.random() * 6 + 3,
+      w: Math.random() * (acotado ? 6 : 10) + (acotado ? 4 : 6),
+      h: Math.random() * (acotado ? 4 : 6) + (acotado ? 2 : 3),
       color: colores[Math.floor(Math.random() * colores.length)],
       rot: Math.random() * Math.PI * 2,
-      vx: (Math.random() - 0.5) * 3,
-      vy: Math.random() * 4 + 2,
+      vx: (Math.random() - 0.5) * (acotado ? 2 : 3),
+      vy: Math.random() * (acotado ? 3 : 4) + 2,
       vr: (Math.random() - 0.5) * 0.15
     });
   }
   var frames = 0;
+  var maxFrames = acotado ? 110 : 200;
+  var fadeDesde = acotado ? 90 : 180;
   function animar() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     piezas.forEach(function(p) {
@@ -483,13 +529,13 @@ function lanzarConfetti() {
       ctx.translate(p.x, p.y);
       ctx.rotate(p.rot);
       ctx.fillStyle = p.color;
-      ctx.globalAlpha = Math.max(0, 1 - frames / 180);
+      ctx.globalAlpha = Math.max(0, 1 - frames / fadeDesde);
       ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
       ctx.restore();
       p.x += p.vx; p.y += p.vy; p.rot += p.vr;
     });
     frames++;
-    if (frames < 200) requestAnimationFrame(animar);
+    if (frames < maxFrames) requestAnimationFrame(animar);
     else { canvas.remove(); }
   }
   animar();

@@ -248,6 +248,19 @@
   /* Divisores */
   --gray-divider:        rgba(128,128,128,0.12);
 
+  /* ── Cumpleaños (Eventos) ──────────────────────────────
+     Alias semánticos sobre las variables amber ya existentes (--amber-*,
+     usadas también por #banner-cupon) -- no son un tono nuevo, son nombre
+     propio para el mismo sistema de color, así la card/dot de cumpleaños no
+     hardcodea el hex ni queda acoplada al nombre "amber" en el HTML/JS de
+     Eventos. Ambas heredan la sustitución a dark mode que ya tienen sus
+     variables base (ver @media (prefers-color-scheme:dark) más abajo), sin
+     necesitar su propio override. */
+  --cumple-bg:      var(--amber-lighter);
+  --cumple-border:  var(--amber-border);
+  --cumple-dot:     var(--amber);
+  --cumple-text:    var(--amber-darker);
+
   /* Dark mode tokens — "(runtime)" solo --dk-skeleton-base/--dk-pin-press/
      --dk-modal-btn-bg (mismo tinte café-marca, aunque no viven dentro de la
      media query dark — se definen una sola vez porque solo se usan desde
