@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css">
 <link rel="stylesheet" href="css/nav.css">
-<link rel="stylesheet" href="css/eventos.css?v=814895b8">
+<link rel="stylesheet" href="css/eventos.css?v=21684df9">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -328,6 +328,30 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
 
       <div style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+
+<!-- ═══ Detalle de un evento (Eventos, ver MANIFEST.md "Cambios recientes")
+     -- pantalla de pantalla completa nueva (mismo patrón ir()/TOP_BAR_CONFIG
+     que s-misreservas/s4: flecha atrás + título dinámico, volver:'s-eventos'),
+     reemplaza el bottom sheet + la modal de asistentes de la tanda anterior.
+     Poblada por abrirEvDetalle()/_evRenderDetalle() (js/eventos.js).
+     Estructura en `.ev-detalle-section` (cada una su propio contenedor #id)
+     a propósito -- deja espacio para sumar secciones futuras (editar evento
+     admin, tareas, mensajes) como nuevos `.ev-detalle-section` hermanos, sin
+     rehacer lo que ya existe. ═══ -->
+<div class="pantalla" id="s-eventos-detalle">
+    <div class="card" style="text-align:left;">
+      <div class="ev-detalle-section" id="ev-detalle-info"></div>
+      <div class="ev-detalle-section" id="ev-detalle-rsvp"></div>
+      <div class="ev-detalle-section" id="ev-detalle-asistencia">
+        <div class="ev-detalle-titulo-seccion">Asistencia</div>
+        <div class="ev-detalle-resumen" id="ev-detalle-asistencia-resumen"></div>
+        <div id="ev-detalle-asistencia-lista"></div>
+      </div>
+      <!-- Futuras secciones (editar evento admin, tareas, mensajes) van acá
+           como nuevos .ev-detalle-section -- ver MANIFEST.md "Cambios recientes". -->
+      <div class="cta-footer-spacer" style="height:24px;"></div>
     </div>
   </div>
 
@@ -712,8 +736,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/bsheet.js"></script>
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=0d381279"></script>
-<script src="js/eventos.js?v=5561979f"></script>
+<script src="js/ui.js?v=7706162b"></script>
+<script src="js/eventos.js?v=fd509cb2"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js"></script>
 <script src="js/perfil.js"></script>
@@ -2062,15 +2086,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div id="ev-agregar-lista" style="overflow-y:auto;flex:1;"></div>
 </div>
 
-<!-- BOTTOM SHEET: Detalle de evento, desde la pestaña "Lista" de Eventos --
-     ver abrirEvDetalle()/cerrarEvDetalle() en js/eventos.js. -->
-<div id="ev-detalle-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="cerrarEvDetalle()"></div>
-<div id="ev-detalle-sheet" class="bsheet" style="z-index:9701;">
-  <div class="bsheet-handle"></div>
-  <div class="bsheet-title">Detalle del evento</div>
-  <div class="bsheet-body" id="ev-detalle-body"></div>
-</div>
-
 <!-- BOTTOM SHEET: Filtro de la pestaña "Lista" (Mes/Lugar/Tipo, ver
      MANIFEST.md "Cambios recientes") -- un solo sheet genérico reusado para
      los 3 (mismo criterio que ev-sheet-agregar/admin-sheet-destino: repuebla
@@ -2083,22 +2098,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div class="bsheet-title" id="ev-sheet-filtro-title" style="flex-shrink:0;">Filtro</div>
   <div id="ev-sheet-filtro-pills" class="aj-pills-row" style="padding:4px 16px 12px;overflow-y:auto;flex:1;"></div>
   <button class="btn btn-outline" style="margin:4px 16px 16px;" onclick="_evCerrarSheetFiltro()">Listo</button>
-</div>
-
-<!-- MODAL: Asistentes de un evento (Eventos, ver MANIFEST.md "Cambios
-     recientes") -- centrada, NO bottom sheet (a diferencia del resto de
-     overlays de esta pantalla): reusa .modal-info/.modal-info-card tal cual
-     (mismo componente que modal-info-reserva/modal-info-home más abajo),
-     con apertura/cierre propios (_evAbrirModalAsistentes()/
-     _evCerrarModalAsistentes(), js/eventos.js) en vez del mecanismo
-     _yaVioModal()/modalInfoOk() de esas -- acá el contenido es dinámico por
-     evento, no un texto fijo que se muestra "una sola vez". -->
-<div id="ev-modal-asistentes" class="modal-info" style="display:none;z-index:9800;">
-  <div class="modal-info-card">
-    <div class="modal-info-titulo" id="ev-modal-asistentes-titulo">Asistencia</div>
-    <div id="ev-modal-asistentes-body" style="margin-top:6px;"></div>
-    <button class="btn btn-outline" style="width:100%;margin-top:4px;" onclick="_evCerrarModalAsistentes()">Cerrar</button>
-  </div>
 </div>
 
 <!-- BOTTOM SHEET: Texto genérico -->

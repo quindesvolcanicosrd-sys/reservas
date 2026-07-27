@@ -110,6 +110,11 @@ var TOP_BAR_CONFIG = {
   's-pago': { titulo: 'Pago', volver: 's4' },
   's-gestionar': { titulo: 'Re-agendar fecha', volver: 's-home' },
   's-misreservas': { titulo: 'Historial de reservas', volver: 's-home' },
+  // Detalle de un evento (Eventos, ver MANIFEST.md "Cambios recientes") --
+  // título dinámico (mismo patrón que 's4'), lee `_evDetalleActual`
+  // (js/eventos.js, seteado por abrirEvDetalle() antes de este ir()).
+  // Alcanzable solo desde s-eventos (Semana/Calendario/Lista) -- volver fijo.
+  's-eventos-detalle': { titulo: function() { return (typeof _evDetalleActual !== 'undefined' && _evDetalleActual) ? _evDetalleActual.lugar : 'Detalle del evento'; }, volver: 's-eventos' },
   // Sin volver (ver "Cambios recientes" — nav inferior): Ajustes es ahora
   // una pantalla raíz de APP_BOTTOM_NAV_ITEMS, alcanzable siempre desde la
   // nav inferior -- no necesita ni debe tener un botón que la redirija hacia

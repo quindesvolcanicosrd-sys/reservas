@@ -127,53 +127,20 @@
 }
 .ev-rsvp-opt {
   position: relative; z-index: 1; flex: 1; min-width: 0; display: flex; align-items: center;
-  justify-content: center; gap: 5px; padding: 12px 4px; font-size: 0.76rem; font-weight: 700;
+  justify-content: center; gap: 4px; padding: 12px 2px; font-size: 0.7rem; font-weight: 700;
   color: var(--text-2); cursor: pointer; font-family: inherit; white-space: nowrap; transition: color 0.25s;
 }
-.ev-rsvp-opt .material-symbols-outlined { font-size: 16px; flex-shrink: 0; }
+.ev-rsvp-opt .material-symbols-outlined { font-size: 15px; flex-shrink: 0; }
 .ev-rsvp-opt.activa { color: var(--white); }
 
-/* ── Fila de avatares de asistentes (ver "Cambios recientes") ─────────
-   Hasta 3 .avatar-pill--xs superpuestos (margin-left negativo + borde del
-   color de fondo de la card, mismo truco visual "recorte" que cualquier
-   stack de avatares) + "+N más"; toda la fila es tocable (abre la modal de
-   asistencia, _evAbrirModalAsistentes()). */
-.ev-avatares-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; cursor: pointer; }
-.ev-avatares-stack { display: flex; }
-.ev-avatares-stack .avatar-pill { margin-left: -10px; border: 2px solid var(--surface-2); }
-.ev-avatares-stack .avatar-pill:first-child { margin-left: 0; }
-.ev-avatares-mas { font-size: 0.74rem; font-weight: 700; color: var(--muted); }
-
-/* ── "Más información" colapsable (ver "Cambios recientes") -- mismo
-   mecanismo de expandir/contraer que ya usa Reservas (.fi-footer/.fi-body,
-   css/reservas.css: max-height 0→N vía una clase en un ancestro), clases
-   propias acá porque .fi-header/.fi-circle/.fecha-item de Reservas traen
-   supuestos de layout (fila de fecha con checkbox circular) que no aplican
-   a una card de evento. */
-.ev-mas-info { margin-top: 10px; }
-.ev-mas-info-footer {
-  display: flex; align-items: center; gap: 6px; padding: 8px 2px; cursor: pointer;
-  border-top: 1px solid var(--border-light);
-}
-.ev-mas-info-label { font-size: 0.74rem; font-weight: 700; color: var(--muted); }
-.ev-mas-info-chevron { font-size: 1rem; color: var(--brand); transition: transform 0.3s; margin-left: auto; }
-.ev-mas-info.abierto .ev-mas-info-chevron { transform: rotate(180deg); }
-.ev-mas-info-body { max-height: 0; overflow: hidden; transition: max-height 0.4s var(--ease-sheet); }
-.ev-mas-info.abierto .ev-mas-info-body { max-height: 400px; }
-.ev-mas-info-body-inner { padding: 8px 2px 2px; }
-.ev-mas-info-desc { font-size: 0.8rem; color: var(--text-2); line-height: 1.6; margin-bottom: 10px; }
-/* flex:1 en cada pill (no solo flex-wrap en el contenedor) -- sin esto, una
-   pill sola en su propia fila (ej. "Cómo llegar") queda angosta pegada a la
-   izquierda con todo el resto de la fila vacío a la derecha; con flex:1 las
-   pills de una misma fila reparten el espacio sobrante entre ellas. */
-.ev-mas-info-pills { display: flex; gap: 7px; flex-wrap: wrap; }
-.ev-mas-info-pill {
-  display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 10px; border-radius: 99px;
-  font-size: 0.72rem; font-weight: 600; background: var(--surface-light); color: var(--muted);
-  border: 1px solid var(--border-light); flex: 1 1 auto; white-space: nowrap;
-}
-.ev-mas-info-pill .material-symbols-outlined { font-size: 0.85rem; }
-.ev-mas-info-pill-maps { background: var(--brand-warm); color: var(--brand); border-color: var(--brand-warm-border); text-decoration: none; }
+/* ── Card de evento — chevron de navegación (ver "Cambios recientes":
+   la card entera es tocable, navega a la pantalla de detalle -- la fila de
+   avatares y "Más información" que vivían acá se mudaron ahí). Excluye
+   .ev-card-cumple a propósito: la card de cumpleaños no lleva onclick ni
+   chevron, cursor:pointer ahí sería una afordancia falsa. */
+.ev-card { align-items: center; }
+.ev-card:not(.ev-card-cumple) { cursor: pointer; }
+.ev-card-chevron { font-size: 20px; color: var(--muted); flex-shrink: 0; align-self: center; }
 
 /* ── Variante admin: lista de asistentes + agregar persona ──────────── */
 .ev-asistentes-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
@@ -202,10 +169,28 @@
 .ev-card-cumple .ev-card-icon { background: var(--cumple-border); color: var(--cumple-text); }
 .ev-card-cumple .ev-card-titulo { color: var(--cumple-text); }
 
-/* ── Modal de asistentes (ver "Cambios recientes") — contenido de
-   #ev-modal-asistentes, que reusa .modal-info/.modal-info-card tal cual
-   (css/global.css, mismo componente que modal-info-reserva/modal-info-home)
-   para el shell centrado; estas clases son solo el contenido interno. */
+/* ── Pantalla de detalle de evento (#s-eventos-detalle, ver "Cambios
+   recientes" — reemplaza el bottom sheet + la modal de asistentes de la
+   tanda anterior por una pantalla de pantalla completa). ──────────────── */
+.ev-detalle-section { margin-bottom: 22px; }
+.ev-detalle-section:last-child { margin-bottom: 0; }
+.ev-detalle-tipo {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 0.74rem; font-weight: 800;
+  color: var(--brand); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 12px;
+}
+.ev-detalle-tipo .material-symbols-outlined { font-size: 1rem; }
+.ev-detalle-dato { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; color: var(--text); margin-bottom: 8px; }
+.ev-detalle-dato .material-symbols-outlined { font-size: 1.1rem; color: var(--muted); flex-shrink: 0; }
+.ev-detalle-pill {
+  display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; border-radius: 99px;
+  font-size: 0.78rem; font-weight: 700; margin: 4px 0 12px; text-decoration: none;
+}
+.ev-detalle-pill-maps { background: var(--brand-warm); color: var(--brand); border: 1px solid var(--brand-warm-border); }
+.ev-detalle-desc { font-size: 0.85rem; color: var(--text-2); line-height: 1.65; margin: 0; }
+.ev-detalle-titulo-seccion { font-size: 1rem; font-weight: 800; color: var(--text); margin-bottom: 10px; }
+.ev-detalle-resumen { font-size: 0.8rem; font-weight: 600; color: var(--muted); margin-bottom: 16px; }
+/* Desglose agrupado (Asisten/No asisten/No jugador/Sin responder) --
+   reusado tal cual de la ex-modal de asistentes, ahora inline acá. */
 .ev-asist-grupo { margin-bottom: 18px; }
 .ev-asist-grupo:last-child { margin-bottom: 0; }
 .ev-asist-grupo-titulo { font-size: 0.74rem; font-weight: 800; color: var(--brand); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }

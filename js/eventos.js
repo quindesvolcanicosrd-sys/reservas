@@ -27,10 +27,10 @@ var _EV_ICONOS = { 'Entrenamiento': 'directions_run', 'Torneo': 'emoji_events', 
 var _EV_DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 var _EV_DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
-// "Más información" de la card (ver _evMasInfoHtml() más abajo) -- Tanda 2
-// deriva mapsUrl/duración/descripción por lugar/tipo en vez de pedirle a
-// cada evento de prueba sus propios 4 campos repetidos; la Tanda 3 los
-// reemplaza por columnas reales de Venues (mapsUrl/horaFin/duración/
+// Info de la pantalla de detalle (ver _evDetalleInfoHtml() más abajo) --
+// Tanda 2 deriva mapsUrl/duración/descripción por lugar/tipo en vez de
+// pedirle a cada evento de prueba sus propios 4 campos repetidos; la Tanda 3
+// los reemplaza por columnas reales de Venues (mapsUrl/horaFin/duración/
 // descripción por evento, no por lugar/tipo genérico como acá).
 var _EV_MAPS_URL_POR_LUGAR = {
   'Parque La Carolina': 'https://www.google.com/maps/search/?api=1&query=Parque+La+Carolina+Quito',
@@ -312,10 +312,13 @@ function _evScrollAFecha(iso) {
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-/* ── Card de evento (usuario o admin según _esAdminDemo) ──────────────
-   `sufijo` namespacea los ids internos cuando la misma card se re-renderiza
-   en más de un contenedor a la vez (lista de Eventos vs. sheet de detalle
-   de la pestaña "Lista", ver abrirEvDetalle()) -- evita ids duplicados en el DOM. */
+/* ── Card de evento — vista previa simplificada (Semana/Calendario/Lista,
+   ver "Cambios recientes": se saca la fila de avatares y "Más información"
+   de acá, ahora viven en la pantalla de detalle de pantalla completa,
+   abrirEvDetalle()). Ícono+lugar+hora+barra de RSVP+chevron; TODA la card
+   es tocable y navega al detalle -- `sufijo` namespacea el id cuando la
+   misma card se re-renderiza en más de un contenedor a la vez (lista de
+   Eventos vs. fila de la pestaña "Lista"), evita ids duplicados en el DOM. */
 function _evCardEventoHtml(e, sufijo) {
   sufijo = sufijo || '';
   var icono = _EV_ICONOS[e.tipo] || 'event';
@@ -323,109 +326,33 @@ function _evCardEventoHtml(e, sufijo) {
   if (e.estado === 'Cancelado') estadoNota = '<div class="ev-card-estado-nota">Cancelado</div>';
   else if (e.estado === 'No se entrena') estadoNota = '<div class="ev-card-estado-nota">No se entrena</div>';
   var accion = _esAdminDemo ? _evAccionAdminHtml(e) : _evRsvpBarraHtml(e);
-  return '<div class="ev-card" id="ev-card-' + e.id + sufijo + '">' +
+  return '<div class="ev-card" id="ev-card-' + e.id + sufijo + '" onclick="abrirEvDetalle(\'' + e.id + '\')">' +
     '<div class="ev-card-icon"><span class="material-symbols-outlined">' + icono + '</span></div>' +
     '<div class="ev-card-body">' +
       '<div class="ev-card-titulo">' + e.lugar + '</div>' +
       '<div class="ev-card-sub"><span class="material-symbols-outlined">schedule</span>' + e.horaInicio + ' · ' + e.tipo + '</div>' +
       estadoNota +
       accion +
-      _evAvataresRowHtml(e) +
-      _evMasInfoHtml(e, sufijo) +
     '</div>' +
+    '<span class="material-symbols-outlined ev-card-chevron">chevron_right</span>' +
   '</div>';
 }
 
-/* ── Fila de avatares de quienes marcaron "Asistiré" (e.rsvps, ver
-   _evGenerarDemo()) -- hasta 3 superpuestos + "+N más", toda la fila
-   tocable (abre la modal de asistencia, ver más abajo). Mismo gate que la
-   barra de RSVP: no aplica a eventos cancelados/sin entrenar. Los
-   `.avatar-pill--xs` se insertan vacíos (con `data-nombre`) y se hidratan
-   después de insertar el HTML en el DOM -- ver _evHidratarAvatares(),
-   mismo motivo que _evUpdateRsvpSliders() (offsetWidth/medir necesita que
-   el nodo ya exista). */
-function _evAvataresRowHtml(e) {
-  if (e.estado === 'Cancelado' || e.estado === 'No se entrena') return '';
-  var asisten = (e.rsvps || []).filter(function(p) { return p.estado === 'Asistiré'; });
-  if (!asisten.length) return '';
-  var avatares = asisten.slice(0, 3).map(function(p) {
-    return '<div class="avatar-pill avatar-pill--xs ev-avatar-stack-item" data-nombre="' + p.nombre.replace(/"/g, '&quot;') + '"></div>';
-  }).join('');
-  var resto = asisten.length - 3;
-  var masTxt = resto > 0 ? '<span class="ev-avatares-mas">+' + resto + ' más</span>' : '';
-  return '<div class="ev-avatares-row" onclick="_evAbrirModalAsistentes(\'' + e.id + '\')">' +
-    '<div class="ev-avatares-stack">' + avatares + '</div>' + masTxt +
-  '</div>';
-}
-// Hidrata TODOS los avatares-placeholder visibles a la vez (mismo criterio
-// que _evUpdateRsvpSliders()) -- sin foto real todavía en esta tanda (demo),
-// siempre cae al fallback de inicial; la Tanda 3 pasa la foto real de cada
-// persona si `_EV_EQUIPO_DEMO` la trae.
+// Hidrata TODOS los avatares-placeholder visibles a la vez (`.avatar-pill`
+// con `data-nombre`, insertados vacíos por _evAsistenciaGruposHtml() de la
+// pantalla de detalle) -- sin foto real todavía en esta tanda (demo),
+// siempre cae al fallback de inicial (_avatarSetFotoOInicial(), js/ui.js);
+// la Tanda 3 pasa la foto real de cada persona si `_EV_EQUIPO_DEMO` la trae.
 function _evHidratarAvatares() {
   document.querySelectorAll('.ev-avatar-stack-item[data-nombre]').forEach(function(el) {
     _avatarSetFotoOInicial(el, null, el.getAttribute('data-nombre'));
   });
 }
 
-/* ── Modal de asistentes (centrada, no bottom sheet -- mismo componente
-   .modal-info/.modal-info-card que ya usan las modales "primera vez"
-   (modal-info-reserva/modal-info-home, css/global.css), con contenido y
-   apertura/cierre propios en vez del mecanismo _yaVioModal()/modalInfoOk()
-   de esas -- acá el contenido es dinámico por evento, no un texto fijo que
-   se ve "una sola vez". 4 grupos en orden fijo: Asisten/No asisten/No
-   jugador/Sin responder -- "Sin responder" son miembros de _EV_EQUIPO_DEMO
-   (fuente de nombres del equipo ya usada por "+ Agregar persona", ver
-   _evAbrirAgregarPersona() más abajo) sin ninguna entrada en e.rsvps para
-   este evento en particular. */
-var _EV_GRUPOS_ASISTENCIA = [
-  { estado: 'Asistiré', label: 'Asisten' },
-  { estado: 'No asistiré', label: 'No asisten' },
-  { estado: 'No jugador', label: 'No jugador' }
-];
-function _evAbrirModalAsistentes(id) {
-  var ev = _EV_EVENTOS.filter(function(e) { return e.id === id; })[0];
-  if (!ev) return;
-  var rsvps = ev.rsvps || [];
-  var titulo = document.getElementById('ev-modal-asistentes-titulo');
-  if (titulo) titulo.textContent = 'Asistencia — ' + ev.lugar;
-  var html = _EV_GRUPOS_ASISTENCIA.map(function(g) {
-    return _evGrupoAsistenciaHtml(g.label, rsvps.filter(function(p) { return p.estado === g.estado; }));
-  }).join('');
-  var respondieron = {};
-  rsvps.forEach(function(p) { respondieron[p.nombre] = true; });
-  var sinResponder = _EV_EQUIPO_DEMO.filter(function(n) { return !respondieron[n]; }).map(function(n) { return { nombre: n }; });
-  html += _evGrupoAsistenciaHtml('Sin responder', sinResponder);
-  var body = document.getElementById('ev-modal-asistentes-body');
-  if (body) body.innerHTML = html;
-  _evHidratarAvatares();
-  var modal = document.getElementById('ev-modal-asistentes');
-  if (modal) modal.style.display = 'flex';
-  _registrarOverlayAbierto(_evCerrarModalAsistentes);
-}
-function _evGrupoAsistenciaHtml(label, personas) {
-  if (!personas.length) return '';
-  var filas = personas.map(function(p) {
-    return '<div class="ev-asist-persona"><div class="avatar-pill avatar-pill--xs ev-avatar-stack-item" data-nombre="' + p.nombre.replace(/"/g, '&quot;') + '"></div><span>' + p.nombre + '</span></div>';
-  }).join('');
-  return '<div class="ev-asist-grupo"><div class="ev-asist-grupo-titulo">' + label + ' (' + personas.length + ')</div>' + filas + '</div>';
-}
-function _evCerrarModalAsistentes(porGesto) {
-  if (!porGesto) { history.back(); return; }
-  var modal = document.getElementById('ev-modal-asistentes');
-  if (modal) modal.style.display = 'none';
-}
-
-/* ── "Más información" (colapsable) -- mismo mecanismo de expandir/
-   contraer que ya usa Reservas (.fi-footer/.fi-body, css/reservas.css,
-   toggleFechaExpand()/js/reservas.js: max-height 0→N vía una clase en el
-   ancestro), con clases propias acá (`.ev-mas-info-*`) en vez de reusar las
-   de Reservas tal cual -- .fi-header/.fi-circle/.fecha-item de esa pantalla
-   traen supuestos de layout (fila de fecha con checkbox circular) que no
-   aplican a una card de evento. Contenido: "Cómo llegar" (mapsUrl por
-   lugar), pill de hora de fin + duración (derivadas de horaInicio + tipo,
-   ver _EV_DURACION_MIN_POR_TIPO) y la descripción (por tipo, ver
-   _EV_DESCRIPCION_POR_TIPO) -- Tanda 3 reemplaza estos 2 mapas genéricos
-   por columnas reales por evento. */
+/* ── Datos derivados para la pantalla de detalle (ver "Cambios recientes")
+   -- Tanda 2 deriva mapsUrl/duración/descripción por lugar/tipo genérico en
+   vez de pedirle 4 campos propios a cada evento de prueba; la Tanda 3 los
+   reemplaza por columnas reales de Venues por evento. */
 function _evHoraFin(e) {
   var min = _EV_DURACION_MIN_POR_TIPO[e.tipo] || 90;
   var p = e.horaInicio.split(':');
@@ -437,29 +364,34 @@ function _evDuracionTexto(e) {
   var h = Math.floor(min / 60), m = min % 60;
   return (h ? h + 'h ' : '') + (m ? m + 'min' : '') || '0min';
 }
-function _evMasInfoHtml(e, sufijo) {
-  var mapsUrl = _EV_MAPS_URL_POR_LUGAR[e.lugar];
-  var desc = _EV_DESCRIPCION_POR_TIPO[e.tipo];
-  var id = 'ev-mas-info-' + e.id + sufijo;
-  return '<div class="ev-mas-info" id="' + id + '">' +
-    '<div class="ev-mas-info-footer" onclick="_evToggleMasInfo(\'' + id + '\', event)">' +
-      '<span class="ev-mas-info-label">Más información</span>' +
-      '<span class="material-symbols-outlined ev-mas-info-chevron">expand_more</span>' +
-    '</div>' +
-    '<div class="ev-mas-info-body"><div class="ev-mas-info-body-inner">' +
-      (desc ? '<p class="ev-mas-info-desc">' + desc + '</p>' : '') +
-      '<div class="ev-mas-info-pills">' +
-        (mapsUrl ? '<a class="ev-mas-info-pill ev-mas-info-pill-maps" href="' + mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-symbols-outlined">near_me</span>Cómo llegar</a>' : '') +
-        '<span class="ev-mas-info-pill"><span class="material-symbols-outlined">schedule</span>Fin ' + _evHoraFin(e) + '</span>' +
-        '<span class="ev-mas-info-pill"><span class="material-symbols-outlined">timer</span>' + _evDuracionTexto(e) + '</span>' +
-      '</div>' +
-    '</div></div>' +
-  '</div>';
+// Fecha completa (a diferencia de _evFechaLabel(), sin los atajos
+// Hoy/Mañana/Ayer -- el detalle siempre muestra la fecha real completa).
+function _evFechaCompleta(iso) {
+  var d = _evParseISO(iso);
+  return _EV_DIAS_LARGOS[d.getDay()] + ' ' + d.getDate() + ' de ' + NOMBRES_MESES[d.getMonth()].toLowerCase();
 }
-function _evToggleMasInfo(id, event) {
-  if (event) event.stopPropagation();
-  var el = document.getElementById(id);
-  if (el) el.classList.toggle('abierto');
+
+/* ── Desglose de asistencia (4 grupos, ver "Cambios recientes" -- antes
+   modal, ahora una sección más de la pantalla de detalle). Orden fijo:
+   Asisten/No asisten/No jugador/Sin responder -- "Sin responder" son
+   miembros de _EV_EQUIPO_DEMO (fuente de nombres del equipo ya usada por
+   "+ Agregar persona", ver _evAbrirAgregarPersona() más abajo) sin ninguna
+   entrada en e.rsvps para este evento en particular. */
+var _EV_GRUPOS_ASISTENCIA = [
+  { estado: 'Asistiré', label: 'Asisten' },
+  { estado: 'No asistiré', label: 'No asisten' },
+  { estado: 'No jugador', label: 'No jugador' }
+];
+function _evAsistenciaResumenTexto(rsvps, sinResponderCount) {
+  var n = function(estado) { return rsvps.filter(function(p) { return p.estado === estado; }).length; };
+  return 'Asisten ' + n('Asistiré') + ' · No asisten ' + n('No asistiré') + ' · No jugador ' + n('No jugador') + ' · Sin responder ' + sinResponderCount;
+}
+function _evGrupoAsistenciaHtml(label, personas) {
+  if (!personas.length) return '';
+  var filas = personas.map(function(p) {
+    return '<div class="ev-asist-persona"><div class="avatar-pill avatar-pill--xs ev-avatar-stack-item" data-nombre="' + p.nombre.replace(/"/g, '&quot;') + '"></div><span>' + p.nombre + '</span></div>';
+  }).join('');
+  return '<div class="ev-asist-grupo"><div class="ev-asist-grupo-titulo">' + label + ' (' + personas.length + ')</div>' + filas + '</div>';
 }
 
 /* ── Variante usuario: "¿Asistiré?" → barra segmentada única, las 3
@@ -478,7 +410,11 @@ function _evRsvpBarraHtml(e) {
     var act = e.miEstado === estado ? ' activa' : '';
     return '<div class="ev-rsvp-opt' + act + '" data-estado="' + estado + '" onclick="_evMarcarAsistencia(\'' + e.id + '\',\'' + estado + '\')"><span class="material-symbols-outlined">' + _EV_RESP_ICONO[estado] + '</span>' + estado + '</div>';
   }).join('');
-  return '<div class="ev-asistire-wrap"><div class="ev-rsvp-seg" data-evid="' + e.id + '"><div class="ev-rsvp-slider"></div>' + botones + '</div></div>';
+  // stopPropagation: la card entera ahora es clickeable (abre el detalle,
+  // ver _evCardEventoHtml()) -- sin esto, tocar cualquier opción de RSVP
+  // también dispararía ese click y abriría el detalle encima de marcar la
+  // asistencia.
+  return '<div class="ev-asistire-wrap" onclick="event.stopPropagation()"><div class="ev-rsvp-seg" data-evid="' + e.id + '"><div class="ev-rsvp-slider"></div>' + botones + '</div></div>';
 }
 // Posiciona el indicador de UNA barra (offsetLeft/offsetWidth de la opción
 // .activa, mismo mecanismo que _evUpdateVistaSlider()/.tp-slider) -- `seg` es
@@ -515,7 +451,9 @@ function _evMarcarAsistencia(id, estado) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === id; })[0];
   if (!ev) return;
   ev.miEstado = estado;
-  mostrarToast('Marcaste "' + estado + '" para ' + ev.lugar, 'ok', true);
+  // Sin toast a propósito (ver "Cambios recientes") -- el resaltado
+  // animado de la opción tocada ya es feedback suficiente, mismo criterio
+  // que el resto de la app: toasts silenciados salvo error real.
   document.querySelectorAll('.ev-rsvp-seg').forEach(function(seg) {
     if (seg.getAttribute('data-evid') !== id) return;
     seg.querySelectorAll('.ev-rsvp-opt').forEach(function(opt) {
@@ -532,7 +470,10 @@ function _evAccionAdminHtml(e) {
     return '<div class="ev-asistente-row"><span class="ev-asistente-nombre">' + a.nombre + '</span>' +
       '<span class="badge ' + (_EV_CHIP_BADGE[a.estado] || 'badge-pendiente') + '">' + a.estado + '</span></div>';
   }).join('');
-  return '<div class="ev-asistentes-list">' +
+  // stopPropagation: mismo motivo que _evRsvpBarraHtml() -- la card entera
+  // ahora es clickeable (abre el detalle), esto evita que tocar una fila o
+  // "Agregar persona" también dispare ese click.
+  return '<div class="ev-asistentes-list" onclick="event.stopPropagation()">' +
     (filas || '<div style="font-size:0.76rem;color:var(--muted);">Nadie ha marcado todavía.</div>') +
     '<button class="ev-btn-agregar-persona" onclick="_evAbrirAgregarPersona(\'' + e.id + '\')"><span class="material-symbols-outlined">person_add</span>Agregar persona</button>' +
   '</div>';
@@ -761,22 +702,63 @@ function _evListaTabFilaHtml(e) {
 /* ── Detalle de un evento, desde la pestaña "Lista" (bottom sheet real --
    acá sí aplica el patrón _overlayStack/porGesto, ver convención "Cierre de
    overlays vía historial" en MANIFEST.md) ────────────────────────────── */
+/* ── Detalle de un evento (ver "Cambios recientes" — reemplaza el bottom
+   sheet ev-detalle-sheet/cerrarEvDetalle() por una pantalla de PANTALLA
+   COMPLETA nueva, s-eventos-detalle, con el mismo mecanismo ir()/
+   TOP_BAR_CONFIG que ya usa el resto de la app (flecha atrás + título,
+   volver:'s-eventos') — no un modal ni bottom sheet. La modal de asistentes
+   de la tanda anterior se elimina del todo: su contenido (desglose de 4
+   grupos) pasa a vivir inline en esta pantalla, ver _evRenderDetalle().
+   `_evDetalleActual` guarda el evento que se está mostrando -- lo lee el
+   `titulo` de TOP_BAR_CONFIG (dinámico, mismo patrón que 's4') y
+   _evMarcarAsistencia() para refrescar el resumen de conteos in-place si la
+   barra de RSVP de esta misma pantalla cambia de opción. */
+var _evDetalleActual = null;
 function abrirEvDetalle(id) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === id; })[0];
   if (!ev) return;
-  var body = document.getElementById('ev-detalle-body');
-  if (body) body.innerHTML = _evCardEventoHtml(ev, '-detalle');
-  _evHidratarAvatares();
-  var ov = document.getElementById('ev-detalle-overlay');
-  var sh = document.getElementById('ev-detalle-sheet');
-  if (ov) ov.style.display = 'block';
-  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; _evUpdateRsvpSliders(false); }); }); }
-  _registrarOverlayAbierto(cerrarEvDetalle);
+  _evDetalleActual = ev;
+  _evRenderDetalle(ev);
+  ir('s-eventos-detalle');
 }
-function cerrarEvDetalle(porGesto) {
-  if (!porGesto) { history.back(); return; }
-  var sh = document.getElementById('ev-detalle-sheet');
-  var ov = document.getElementById('ev-detalle-overlay');
-  if (sh) sh.style.transform = 'translateY(100%)';
-  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+// Estructura en secciones (`.ev-detalle-section`, cada una su propio
+// contenedor #id) a propósito -- pedido explícito: dejar espacio para sumar
+// secciones futuras (editar evento admin, tareas, mensajes) como nuevos
+// `.ev-detalle-section` hermanos, sin reordenar/rehacer lo que ya existe.
+function _evRenderDetalle(ev) {
+  var info = document.getElementById('ev-detalle-info');
+  if (info) info.innerHTML = _evDetalleInfoHtml(ev);
+  var rsvpCont = document.getElementById('ev-detalle-rsvp');
+  if (rsvpCont) { rsvpCont.innerHTML = _evRsvpBarraHtml(ev); _evUpdateRsvpSliders(false); }
+  _evRenderDetalleAsistencia(ev);
+}
+function _evDetalleInfoHtml(ev) {
+  var mapsUrl = _EV_MAPS_URL_POR_LUGAR[ev.lugar];
+  var desc = _EV_DESCRIPCION_POR_TIPO[ev.tipo];
+  return '<div class="ev-detalle-tipo"><span class="material-symbols-outlined">' + (_EV_ICONOS[ev.tipo] || 'event') + '</span>' + ev.tipo + '</div>' +
+    '<div class="ev-detalle-dato"><span class="material-symbols-outlined">calendar_month</span>' + _evFechaCompleta(ev.fecha) + '</div>' +
+    '<div class="ev-detalle-dato"><span class="material-symbols-outlined">schedule</span>' + ev.horaInicio + ' a ' + _evHoraFin(ev) + ' (' + _evDuracionTexto(ev) + ')</div>' +
+    (mapsUrl ? '<a class="ev-detalle-pill ev-detalle-pill-maps" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">near_me</span>Cómo llegar</a>' : '') +
+    (desc ? '<p class="ev-detalle-desc">' + desc + '</p>' : '');
+}
+// Resumen de conteos + lista completa agrupada (contenido de la ex-modal de
+// asistentes, ahora inline) -- separado de _evRenderDetalle() para poder
+// refrescarlo solo (sin tocar info/RSVP) cuando _evMarcarAsistencia() cambia
+// el RSVP propio mientras esta pantalla está abierta.
+function _evRenderDetalleAsistencia(ev) {
+  var rsvps = ev.rsvps || [];
+  var respondieron = {};
+  rsvps.forEach(function(p) { respondieron[p.nombre] = true; });
+  var sinResponder = _EV_EQUIPO_DEMO.filter(function(n) { return !respondieron[n]; }).map(function(n) { return { nombre: n }; });
+  var resumen = document.getElementById('ev-detalle-asistencia-resumen');
+  if (resumen) resumen.textContent = _evAsistenciaResumenTexto(rsvps, sinResponder.length);
+  var lista = document.getElementById('ev-detalle-asistencia-lista');
+  if (lista) {
+    var html = _EV_GRUPOS_ASISTENCIA.map(function(g) {
+      return _evGrupoAsistenciaHtml(g.label, rsvps.filter(function(p) { return p.estado === g.estado; }));
+    }).join('');
+    html += _evGrupoAsistenciaHtml('Sin responder', sinResponder);
+    lista.innerHTML = html;
+    _evHidratarAvatares();
+  }
 }
