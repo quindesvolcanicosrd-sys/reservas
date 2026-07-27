@@ -29,6 +29,13 @@ var _EV_DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Vi
 
 var _EV_RESP_ICONO  = { 'Asistiré': 'check_circle', 'No asistiré': 'cancel', 'No jugador': 'visibility' };
 var _EV_CHIP_BADGE  = { 'A tiempo': 'badge-confirmada', 'Tarde': 'badge-pendiente', 'Ausente': 'badge-cancelada' };
+// Color sólido del indicador de la barra segmentada de RSVP (ver
+// _evRsvpBarraHtml() más abajo) por opción -- fijos, independientes del
+// color de énfasis (mismo criterio que el resto de esta pantalla: "Asistiré"
+// tiene que seguir leyéndose verde pase lo que pase con --brand). Variantes
+// "dark" (no el token base --success/--warning) para que el texto blanco de
+// encima tenga contraste suficiente sobre el indicador sólido.
+var _EV_RSVP_COLOR = { 'Asistiré': 'var(--success-dark)', 'No asistiré': 'var(--danger)', 'No jugador': 'var(--amber-dark)' };
 
 var _evVista = 'semana';
 var _evSemanaOffset = 0;
@@ -92,7 +99,7 @@ function irEventos() {
   // Igual criterio que _updateTpSlider()/_adminUpdateFiltroSlider() (js/reservas.js,
   // js/admin.js): offsetWidth/offsetLeft del tp-opt activo solo son reales una
   // vez que la pantalla es visible -- se recalcula sin animar apenas lo es.
-  setTimeout(function() { _evUpdateVistaSlider(false); }, 50);
+  setTimeout(function() { _evUpdateVistaSlider(false); _evUpdateRsvpSliders(false); }, 50);
 }
 
 /* ── Selector Semana/Calendario (reusa .tp-seg/.tp-slider/.tp-opt) ────── */
@@ -240,6 +247,7 @@ function _evRenderLista() {
     html += '</div>';
   });
   cont.innerHTML = html;
+  _evUpdateRsvpSliders(false);
   // Confetti contenido dentro de la card, SOLO para el cumpleaños de HOY
   // (fecha === hoy -- ni pasados como "Ayer cumplió..." ni próximos, celebrar
   // los 7 días del rango visible no suma), una sola vez por cumpleaños/sesión
@@ -272,7 +280,7 @@ function _evCardEventoHtml(e, sufijo) {
   var estadoNota = '';
   if (e.estado === 'Cancelado') estadoNota = '<div class="ev-card-estado-nota">Cancelado</div>';
   else if (e.estado === 'No se entrena') estadoNota = '<div class="ev-card-estado-nota">No se entrena</div>';
-  var accion = _esAdminDemo ? _evAccionAdminHtml(e) : _evAccionUsuarioHtml(e, sufijo);
+  var accion = _esAdminDemo ? _evAccionAdminHtml(e) : _evRsvpBarraHtml(e, false);
   return '<div class="ev-card" id="ev-card-' + e.id + sufijo + '">' +
     '<div class="ev-card-icon"><span class="material-symbols-outlined">' + icono + '</span></div>' +
     '<div class="ev-card-body">' +
@@ -284,40 +292,65 @@ function _evCardEventoHtml(e, sufijo) {
   '</div>';
 }
 
-/* ── Variante usuario: "¿Asistiré?" → 3 opciones siempre visibles, la que
-   coincide con e.miEstado queda resaltada (.ev-op-seleccionada, mismo
-   tratamiento visual de "seleccionado" que ya usa .aj-pill.activa en
-   css/perfil.css -- fondo sólido var(--brand)/texto blanco, no uno nuevo).
-   Tocar cualquiera marca directo, sin estado colapsado ni paso intermedio
-   (antes: chip + "Cambiar" abría estas mismas 3 opciones aparte). ────── */
-var _EV_RESP_OPCIONES = [
-  { estado: 'Asistiré', clase: 'ev-op-si' },
-  { estado: 'No asistiré', clase: 'ev-op-no' },
-  { estado: 'No jugador', clase: 'ev-op-no-jugador' }
-];
-function _evAccionUsuarioHtml(e, sufijo) {
-  sufijo = sufijo || '';
+/* ── Variante usuario: "¿Asistiré?" → barra segmentada única, las 3
+   opciones siempre visibles, la que coincide con e.miEstado queda resaltada
+   (.activa, indicador sólido de color fijo -- ver _EV_RSVP_COLOR). Tocar
+   cualquiera marca directo, sin estado colapsado ni paso intermedio (antes:
+   chip + "Cambiar" abría estas mismas 3 opciones aparte). `compacta` (bool)
+   pide la variante chica usada en las filas de "Ver todos" -- mismo HTML/JS,
+   solo el modificador CSS `.ev-rsvp-seg-compacta` cambia. ──────────────── */
+var _EV_RESP_OPCIONES = ['Asistiré', 'No asistiré', 'No jugador'];
+function _evRsvpBarraHtml(e, compacta) {
   if (e.estado === 'Cancelado' || e.estado === 'No se entrena' || e.estado === 'Finalizado') return '';
-  var botones = _EV_RESP_OPCIONES.map(function(op) {
-    var sel = e.miEstado === op.estado ? ' ev-op-seleccionada' : '';
-    return '<button class="ev-opcion-asistencia ' + op.clase + sel + '" onclick="_evMarcarAsistencia(\'' + e.id + '\',\'' + op.estado + '\',\'' + sufijo + '\')"><span class="material-symbols-outlined">' + _EV_RESP_ICONO[op.estado] + '</span>' + op.estado + '</button>';
+  var botones = _EV_RESP_OPCIONES.map(function(estado) {
+    var act = e.miEstado === estado ? ' activa' : '';
+    return '<div class="ev-rsvp-opt' + act + '" data-estado="' + estado + '" onclick="_evMarcarAsistencia(\'' + e.id + '\',\'' + estado + '\')"><span class="material-symbols-outlined">' + _EV_RESP_ICONO[estado] + '</span>' + estado + '</div>';
   }).join('');
-  return '<div class="ev-asistire-wrap"><div class="ev-opciones-asistencia">' + botones + '</div></div>';
+  return '<div class="ev-asistire-wrap"><div class="ev-rsvp-seg' + (compacta ? ' ev-rsvp-seg-compacta' : '') + '" data-evid="' + e.id + '"><div class="ev-rsvp-slider"></div>' + botones + '</div></div>';
+}
+// Posiciona el indicador de UNA barra (offsetLeft/offsetWidth de la opción
+// .activa, mismo mecanismo que _evUpdateVistaSlider()/.tp-slider) -- `seg` es
+// el .ev-rsvp-seg, no el wrapper. Sin opción activa (miEstado null, evento
+// recién creado) el indicador queda con opacity:0 (ver CSS), no en (0,0).
+function _evPosicionarRsvpSlider(seg, animate) {
+  var slider = seg.querySelector('.ev-rsvp-slider');
+  if (!slider) return;
+  slider.classList.toggle('animado', !!animate);
+  var activo = seg.querySelector('.ev-rsvp-opt.activa');
+  if (!activo) { slider.style.opacity = '0'; slider.style.width = '0'; return; }
+  slider.style.opacity = '1';
+  slider.style.width = activo.offsetWidth + 'px';
+  slider.style.transform = 'translateX(' + activo.offsetLeft + 'px)';
+  slider.style.background = _EV_RSVP_COLOR[activo.getAttribute('data-estado')] || 'var(--brand)';
+}
+// Reposiciona TODAS las barras visibles -- llamado tras cualquier re-render
+// de lista (chevrones, cambio de vista/tab, filtros) y, con setTimeout(50),
+// la primera vez que la pantalla se vuelve visible (mismo problema que
+// _evUpdateVistaSlider: offsetWidth/offsetLeft de un elemento display:none
+// da 0, necesita medirse recién cuando ya es visible).
+function _evUpdateRsvpSliders(animate) {
+  document.querySelectorAll('.ev-rsvp-seg').forEach(function(seg) { _evPosicionarRsvpSlider(seg, animate); });
 }
 // Tanda 2 (demo, sin backend): solo actualiza el array local. La Tanda 3
 // reemplaza el cuerpo por marcarAsistenciaUsuario(nombre, idEvento, estado)
 // (apiPost) + las reglas de negocio de perfil (Mirlxs/Quindes, ver brief).
-function _evMarcarAsistencia(id, estado, sufijo) {
+// Actualiza TODAS las instancias visibles de la barra de este evento en el
+// DOM existente (data-evid) en vez de reconstruir HTML -- un mismo evento
+// puede estar renderizado en más de un lugar a la vez (lista + detalle de
+// "Ver todos"), y reconstruir el nodo mataría la animación del indicador
+// (un nodo recién creado no tiene "posición anterior" desde la cual animar).
+function _evMarcarAsistencia(id, estado) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === id; })[0];
   if (!ev) return;
   ev.miEstado = estado;
   mostrarToast('Marcaste "' + estado + '" para ' + ev.lugar, 'ok', true);
-  _evRenderLista();
-  if (document.getElementById('ev-todos-lista')) _evTodosRenderLista();
-  var detalleBody = document.getElementById('ev-detalle-body');
-  if (detalleBody && detalleBody.innerHTML.indexOf('ev-card-' + ev.id + '-detalle') !== -1) {
-    detalleBody.innerHTML = _evCardEventoHtml(ev, '-detalle');
-  }
+  document.querySelectorAll('.ev-rsvp-seg').forEach(function(seg) {
+    if (seg.getAttribute('data-evid') !== id) return;
+    seg.querySelectorAll('.ev-rsvp-opt').forEach(function(opt) {
+      opt.classList.toggle('activa', opt.getAttribute('data-estado') === estado);
+    });
+    _evPosicionarRsvpSlider(seg, true);
+  });
 }
 
 /* ── Variante admin: lista de asistentes con chip + agregar persona ──── */
@@ -500,7 +533,7 @@ function abrirEvDetalle(id) {
   var ov = document.getElementById('ev-detalle-overlay');
   var sh = document.getElementById('ev-detalle-sheet');
   if (ov) ov.style.display = 'block';
-  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); }); }
+  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; _evUpdateRsvpSliders(false); }); }); }
   _registrarOverlayAbierto(cerrarEvDetalle);
 }
 function cerrarEvDetalle(porGesto) {

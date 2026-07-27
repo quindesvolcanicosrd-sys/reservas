@@ -93,37 +93,52 @@
 .ev-card-sub .material-symbols-outlined { font-size: 14px; }
 .ev-card-estado-nota { font-size: 0.74rem; font-weight: 700; color: var(--danger); margin-top: 4px; }
 
-/* ── "¿Asistiré?" (usuario) ──────────────────────────── */
-.ev-asistire-wrap { margin-top: 10px; }
-/* 3 botones SIEMPRE en una sola fila (nunca 2+1 apilados) -- nowrap +
-   flex:1 en vez de wrap: el ancho disponible real dentro de la card en
-   ~390-400px es angosto (~228px, ver MANIFEST.md), así que en vez de
-   dejar que el texto empuje a una 2da fila, cada botón se reparte el
-   espacio por igual y su contenido se achica (padding/gap/font) para
-   entrar los 3 sin recortar texto. */
-.ev-opciones-asistencia { display: flex; gap: 4px; flex-wrap: nowrap; }
-.ev-opcion-asistencia {
-  flex: 1; min-width: 0; padding: 7px 2px; border-radius: 14px; border: 1.5px solid var(--border-light); background: var(--surface-light);
-  color: var(--text-2); font-size: 0.635rem; font-weight: 700; cursor: pointer; font-family: inherit;
-  transition: all 0.15s; display: inline-flex; align-items: center; justify-content: center; gap: 3px;
-  white-space: nowrap;
+/* ── "¿Asistiré?" (usuario) — barra segmentada única ──────────────────
+   Reemplaza los 3 botones-pill independientes (con borde propio cada uno,
+   ver "Cambios recientes") por un solo control: un contenedor (.ev-rsvp-seg)
+   con un indicador que se desliza (.ev-rsvp-slider, transform:translateX,
+   mismo mecanismo que .tp-slider/.tp-seg de css/reservas.css) en vez de 3
+   botones separados. Un único componente (_evRsvpBarraHtml()/
+   _evPosicionarRsvpSlider(), js/eventos.js) reusado tal cual en las cards de
+   Semana/Calendario y (versión .ev-rsvp-seg-compacta) en las filas de "Ver
+   todos" -- no 3 implementaciones distintas. Tamaño grande a propósito
+   (pedido explícito: "debe sentirse como el elemento más relevante de la
+   card") -- la variante compacta achica todo vía el modificador de abajo,
+   sin duplicar la estructura. */
+.ev-asistire-wrap { margin-top: 12px; }
+.ev-rsvp-seg {
+  position: relative; display: flex; background: var(--surface-light);
+  border: 1.5px solid var(--border-light); border-radius: 16px; overflow: hidden;
 }
-.ev-opcion-asistencia .material-symbols-outlined { font-size: 13px; flex-shrink: 0; }
-.ev-opcion-asistencia.ev-op-si:hover { border-color: var(--success); color: var(--success-dark); background: var(--success-bg); }
-.ev-opcion-asistencia.ev-op-no:hover { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); }
-.ev-opcion-asistencia.ev-op-no-jugador:hover { border-color: var(--warning); color: var(--amber-dark); background: var(--warning-bg); }
-/* Estado seleccionado -- persiste el mismo look que ya tiene el :hover de
-   cada opción (mismos 3 tokens --success/--danger/--warning+--amber-dark de
-   arriba), en vez de un highlight de marca: son los mismos colores que ya
-   usa el resto de la app para "reserva confirmada"/"cancelada" (.badge-
-   confirmada/.badge-cancelada/.badge-pendiente, css/home.css) -- fijos,
-   independientes del color de énfasis (js/color-enfasis.js excluye
-   --success/--danger/--warning/--amber de su derivación a propósito, ver
-   comentario de cabecera de ese archivo), así "Asistiré" sigue siendo verde
-   aunque el admin elija un color de énfasis distinto (incluido uno verde). */
-.ev-opcion-asistencia.ev-op-si.ev-op-seleccionada { border-color: var(--success); color: var(--success-dark); background: var(--success-bg); }
-.ev-opcion-asistencia.ev-op-no.ev-op-seleccionada { border-color: var(--danger); color: var(--danger); background: var(--danger-bg); }
-.ev-opcion-asistencia.ev-op-no-jugador.ev-op-seleccionada { border-color: var(--warning); color: var(--amber-dark); background: var(--warning-bg); }
+/* El color del indicador (verde/rojo/ámbar según la opción activa) se fija
+   por JS (_EV_RSVP_COLOR, js/eventos.js) -- son los mismos 3 tokens fijos de
+   siempre (--success-dark/--danger/--amber-dark), independientes del color
+   de énfasis (mismo criterio documentado en "Cambios recientes": "Asistiré"
+   sigue siendo verde pase lo que pase con --brand). `opacity:0` inicial
+   evita un indicador en (0,0) visible antes de la primera medición real. */
+.ev-rsvp-slider {
+  position: absolute; top: 3px; bottom: 3px; left: 0; width: 0; border-radius: 13px;
+  z-index: 0; opacity: 0;
+}
+.ev-rsvp-slider.animado {
+  transition: transform 0.32s cubic-bezier(.16,1,.3,1), width 0.32s cubic-bezier(.16,1,.3,1),
+    background-color 0.25s ease, opacity 0.2s ease;
+}
+.ev-rsvp-opt {
+  position: relative; z-index: 1; flex: 1; min-width: 0; display: flex; align-items: center;
+  justify-content: center; gap: 5px; padding: 12px 4px; font-size: 0.76rem; font-weight: 700;
+  color: var(--text-2); cursor: pointer; font-family: inherit; white-space: nowrap; transition: color 0.25s;
+}
+.ev-rsvp-opt .material-symbols-outlined { font-size: 16px; flex-shrink: 0; }
+.ev-rsvp-opt.activa { color: var(--white); }
+
+/* Compacta -- misma estructura/JS de arriba, solo más chica (filas de lista
+   de "Ver todos", ver .ev-card-compacta-rsvp más abajo): sin esto una fila
+   de lista no tiene alto para el control de tamaño completo. */
+.ev-rsvp-seg-compacta { border-radius: 12px; }
+.ev-rsvp-seg-compacta .ev-rsvp-slider { top: 2px; bottom: 2px; border-radius: 10px; }
+.ev-rsvp-seg-compacta .ev-rsvp-opt { padding: 7px 2px; font-size: 0.64rem; gap: 3px; }
+.ev-rsvp-seg-compacta .ev-rsvp-opt .material-symbols-outlined { font-size: 13px; }
 
 /* ── Variante admin: lista de asistentes + agregar persona ──────────── */
 .ev-asistentes-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
