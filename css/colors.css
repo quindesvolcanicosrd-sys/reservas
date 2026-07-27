@@ -249,17 +249,23 @@
   --gray-divider:        rgba(128,128,128,0.12);
 
   /* ── Cumpleaños (Eventos) ──────────────────────────────
-     Alias semánticos sobre las variables amber ya existentes (--amber-*,
-     usadas también por #banner-cupon) -- no son un tono nuevo, son nombre
-     propio para el mismo sistema de color, así la card/dot de cumpleaños no
-     hardcodea el hex ni queda acoplada al nombre "amber" en el HTML/JS de
-     Eventos. Ambas heredan la sustitución a dark mode que ya tienen sus
-     variables base (ver @media (prefers-color-scheme:dark) más abajo), sin
-     necesitar su propio override. */
-  --cumple-bg:      var(--amber-lighter);
-  --cumple-border:  var(--amber-border);
-  --cumple-dot:     var(--amber);
-  --cumple-text:    var(--amber-darker);
+     Tono propio e independiente, NO alias de --amber-* (versión anterior) ni
+     de --brand -- a pedido explícito: la card/dot de cumpleaños debe seguir
+     distinguiéndose del resto de la UI pase lo que pase con el color de
+     énfasis que el admin elige desde "Mi Liga" (js/color-enfasis.js). Ese
+     motor ya excluye --amber de su derivación (nunca cambia con el color de
+     énfasis, ver comentario de cabecera de ese archivo) así que el problema
+     real no era que --amber-* "pudiera" verse afectado -- es que quedaba
+     acoplado al mismo sistema de color que badges de estado/#banner-cupon
+     (`--warning`/`.badge-pendiente` reusan --amber), sin margen para subirle
+     saturación a cumpleaños en particular sin afectar también esos otros usos.
+     Con su propio token, --cumple-bg puede ser más notorio que --surface-2
+     (bug real: con --amber-lighter, casi idéntico a --surface-2 en luminosidad,
+     la card se veía apagada) sin tocar ningún otro consumidor de --amber-*. */
+  --cumple-bg:      #fef3c7;
+  --cumple-border:  #fcd34d;
+  --cumple-dot:     #ca8a04;
+  --cumple-text:    #78350f;
 
   /* Dark mode tokens — "(runtime)" solo --dk-skeleton-base/--dk-pin-press/
      --dk-modal-btn-bg (mismo tinte café-marca, aunque no viven dentro de la
@@ -407,6 +413,14 @@
 
     /* Amber dark */
     --amber-border:        rgba(245,158,11,0.3);
+
+    /* Cumpleaños dark -- mismo criterio de independencia que en claro (ver
+       comentario de cabecera junto a la definición clara, arriba): tono
+       propio, no --amber-*/--brand ni derivado por js/color-enfasis.js. */
+    --cumple-bg:           rgba(217,119,6,0.16);
+    --cumple-border:       rgba(217,119,6,0.4);
+    --cumple-dot:          #fbbf24;
+    --cumple-text:         #fde68a;
 
     /* Success dark */
     --success-lightest:    rgba(34,197,94,0.1);

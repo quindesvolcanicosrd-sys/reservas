@@ -240,11 +240,15 @@ function _evRenderLista() {
     html += '</div>';
   });
   cont.innerHTML = html;
-  // Confetti contenido dentro de la card, una sola vez por cumpleaños/sesión
+  // Confetti contenido dentro de la card, SOLO para el cumpleaños de HOY
+  // (fecha === hoy -- ni pasados como "Ayer cumplió..." ni próximos, celebrar
+  // los 7 días del rango visible no suma), una sola vez por cumpleaños/sesión
   // (ver _EV_CONFETTI_MOSTRADO) -- si no, re-renders sin relación (navegar
   // semanas, marcar asistencia en otro evento del mismo rango) lo re-disparían
   // en cada innerHTML nuevo, no solo "al aparecer" la primera vez.
+  var hoyConfetti = _evHoyISO();
   ordenFechas.forEach(function(fecha) {
+    if (fecha !== hoyConfetti) return;
     porFecha[fecha].forEach(function(it) {
       if (it.tipo !== 'cumple' || _evConfettiMostrado[it.data.id]) return;
       _evConfettiMostrado[it.data.id] = true;
