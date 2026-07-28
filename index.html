@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=78d2c687">
 <link rel="stylesheet" href="css/nav.css?v=e89c04e6">
-<link rel="stylesheet" href="css/eventos.css?v=0c224c52">
+<link rel="stylesheet" href="css/eventos.css?v=a0bf0dac">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -279,7 +279,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
      hardcodeados en js/eventos.js, ver MANIFEST.md "Cambios recientes").
      Pantalla raíz de la nav inferior (APP_BOTTOM_NAV_ITEMS, js/ui.js). Ya no
      usa una #eventos-nav fija propia (ver "Cambios recientes" -- se elimina
-     el header "EVENTOS": el selector Semana/Calendario/Lista pasa a ser el
+     el header "EVENTOS": la cabecera de 3 elementos -- ícono ojo/pill
+     contextual/ícono filtros, ver #ev-header-row más abajo -- pasa a ser el
      elemento fijo de arriba, dentro de #ev-sticky-header, sticky en vez de
      fixed+spacer para convivir con el scroll normal de la pantalla). ═══ -->
 <div class="pantalla" id="s-eventos">
@@ -293,29 +294,90 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            lista de resultados de cada vista vive AFUERA de este contenedor,
            scrollea libre. */ -->
       <div class="ev-sticky-header" id="ev-sticky-header">
-        <div class="ev-seg-wrap">
-          <div class="tp-seg" id="ev-vista-seg">
-            <div class="tp-slider" id="ev-vista-slider"></div>
-            <div class="tp-opt active" id="ev-vista-semana" onclick="_evCambiarVista('semana')">
-              <span class="material-symbols-outlined" style="font-size:1rem;">view_week</span>Semana
+        <!-- Cabecera de 3 elementos (ver "Cambios recientes" -- rediseño):
+             ícono ojo (selector de vista, burbuja de 2 opciones) + pill
+             contextual (Hoy/Esta semana/Este mes en Calendario, Próximos/
+             Pasados/Todos en Lista, una sola visible a la vez) + ícono
+             filtros (universal, Lugar/Tipo en las 2 vistas, +Mes en Lista).
+             Reemplaza TANTO el pill grande Semana/Calendario/Lista COMO el
+             renglón .ev-subtabs-wrap que antes vivían separados. -->
+        <div class="ev-header-row">
+          <button type="button" class="ev-header-icon-btn" id="ev-vista-toggle-btn" onclick="_evToggleVistaBurbuja()" title="Vista">
+            <span class="material-symbols-outlined">visibility</span>
+          </button>
+
+          <div class="ev-header-pill-wrap">
+            <div class="tp-seg" id="ev-cal-sub-seg">
+              <div class="tp-slider" id="ev-cal-sub-slider"></div>
+              <div class="tp-opt active" id="ev-cal-sub-hoy" onclick="_evCambiarCalSubvista('hoy')">Hoy</div>
+              <div class="tp-opt" id="ev-cal-sub-semana" onclick="_evCambiarCalSubvista('semana')">Esta semana</div>
+              <div class="tp-opt" id="ev-cal-sub-mes" onclick="_evCambiarCalSubvista('mes')">Este mes</div>
             </div>
-            <div class="tp-opt" id="ev-vista-calendario" onclick="_evCambiarVista('calendario')">
-              <span class="material-symbols-outlined" style="font-size:1rem;">calendar_view_month</span>Calendario
-            </div>
-            <div class="tp-opt" id="ev-vista-lista" onclick="_evCambiarVista('lista')">
-              <span class="material-symbols-outlined" style="font-size:1rem;">list</span>Lista
+            <div class="ev-subtabs-wrap" id="ev-lista-subtabs-wrap" style="display:none;">
+              <div class="ev-subtabs">
+                <div class="ev-subtab activo" id="ev-lista-tab-subtab-proximos" onclick="_evListaTabCambiarSubtab('proximos')">Próximos</div>
+                <div class="ev-subtab" id="ev-lista-tab-subtab-pasados" onclick="_evListaTabCambiarSubtab('pasados')">Pasados</div>
+                <div class="ev-subtab" id="ev-lista-tab-subtab-todos" onclick="_evListaTabCambiarSubtab('todos')">Todos</div>
+              </div>
+              <div class="ev-subtabs-indicator" id="ev-subtabs-indicator"></div>
             </div>
           </div>
-          <!-- "+ Nuevo evento" -- antes vivía en la #eventos-nav fija ya
-               eliminada (ver arriba); mismo id/clases/comportamiento
-               (_esAdminDemo la togglea en irEventos(), js/eventos.js), solo
-               reubicado acá para no perder la función. -->
+
+          <!-- Botón embudo -- togglea #ev-filtros-colapsable, badge numérico
+               solo si hay algún filtro con selección. -->
+          <button type="button" class="ev-header-icon-btn ev-filtro-toggle-btn" id="ev-filtro-toggle-btn" onclick="_evToggleFiltrosPanel()" title="Filtros">
+            <span class="material-symbols-outlined">tune</span>
+            <span class="ev-filtro-badge" id="ev-filtro-badge" style="display:none;">0</span>
+          </button>
+
+          <!-- "+ Nuevo evento" (solo admin, _esAdminDemo la togglea en
+               irEventos(), js/eventos.js) -- accesorio 4to, no cuenta como
+               parte de los 3 elementos fijos de la fila (oculta para la
+               enorme mayoría de usuarios). -->
           <button class="app-nav-icon-btn app-nav-icon-btn-danger ev-btn-add" id="eventos-btn-add" style="display:none;" onclick="mostrarToast('Próximamente','ok')" title="Nuevo evento">
             <span class="material-symbols-outlined">add</span>
           </button>
         </div>
 
-        <div id="ev-vista-semana-wrap">
+        <!-- Burbuja del selector de vista -- "tratamiento de burbuja de
+             diálogo" (marco + colita apuntando al ícono ojo, ver
+             css/eventos.css) alrededor del mismo mecanismo max-height que ya
+             usan las burbujas de filtro. -->
+        <div class="ev-header-burbuja ev-header-burbuja-izq" id="ev-vista-burbuja">
+          <div class="ev-header-burbuja-panel">
+            <div class="ev-vista-opcion" id="ev-vista-opcion-calendario" onclick="_evCambiarVista('calendario')">
+              <span class="material-symbols-outlined">calendar_month</span>Vista calendario
+            </div>
+            <div class="ev-vista-opcion" id="ev-vista-opcion-lista" onclick="_evCambiarVista('lista')">
+              <span class="material-symbols-outlined">list</span>Lista de eventos
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel de filtros -- universal (ver "Cambios recientes"), ya no
+             vive adentro de un wrap exclusivo de "Lista". Mismo tratamiento
+             de burbuja de diálogo que la de arriba, colita apuntando al
+             ícono de filtros (derecha). -->
+        <div class="ev-header-burbuja ev-header-burbuja-der ev-filtros-colapsable" id="ev-filtros-colapsable">
+          <div class="ev-header-burbuja-panel">
+            <div class="ev-filtros-row">
+              <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-mes" data-label="Mes" onclick="_evToggleFiltroBurbuja('mes')">
+                <span class="ev-filtro-trigger-label">Mes</span><span class="material-symbols-outlined">expand_more</span>
+              </button>
+              <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-lugar" data-label="Lugar" onclick="_evToggleFiltroBurbuja('lugar')">
+                <span class="ev-filtro-trigger-label">Lugar</span><span class="material-symbols-outlined">expand_more</span>
+              </button>
+              <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-tipo" data-label="Tipo" onclick="_evToggleFiltroBurbuja('tipo')">
+                <span class="ev-filtro-trigger-label">Tipo</span><span class="material-symbols-outlined">expand_more</span>
+              </button>
+            </div>
+            <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-mes"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-mes"></div></div>
+            <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-lugar"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-lugar"></div></div>
+            <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-tipo"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-tipo"></div></div>
+          </div>
+        </div>
+
+        <div id="ev-vista-semana-wrap" style="display:none;">
           <div class="ev-semana-row">
             <button class="ev-semana-chevron" onclick="_evSemanaAnterior()" title="Semana anterior"><span class="material-symbols-outlined">chevron_left</span></button>
             <div class="ev-semana-dias" id="ev-semana-dias"></div>
@@ -333,46 +395,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <div class="ev-cal-grid" id="ev-cal-grid"></div>
           </div>
         </div>
-
-        <!-- Vista "Lista" -- solo la parte fija (subtabs + filtros + sus
-             burbujas); la lista de filas en sí (#ev-lista-tab-filas) vive
-             afuera del sticky, ver más abajo. -->
-        <div id="ev-lista-tab-header-wrap" style="display:none;">
-          <div class="ev-subtabs-wrap">
-            <div class="ev-subtabs">
-              <div class="ev-subtab activo" id="ev-lista-tab-subtab-proximos" onclick="_evListaTabCambiarSubtab('proximos')">Próximos</div>
-              <div class="ev-subtab" id="ev-lista-tab-subtab-pasados" onclick="_evListaTabCambiarSubtab('pasados')">Pasados</div>
-              <div class="ev-subtab" id="ev-lista-tab-subtab-todos" onclick="_evListaTabCambiarSubtab('todos')">Todos</div>
-            </div>
-            <div class="ev-subtabs-indicator" id="ev-subtabs-indicator"></div>
-            <!-- Botón embudo -- reemplaza la fila de filtros siempre visible
-                 (ver "Cambios recientes"): togglea #ev-filtros-colapsable,
-                 badge numérico solo si hay algún filtro con selección. -->
-            <button type="button" class="ev-filtro-toggle-btn" id="ev-filtro-toggle-btn" onclick="_evToggleFiltrosPanel()" title="Filtros">
-              <span class="material-symbols-outlined">tune</span>
-              <span class="ev-filtro-badge" id="ev-filtro-badge" style="display:none;">0</span>
-            </button>
-          </div>
-          <div class="ev-filtros-colapsable" id="ev-filtros-colapsable">
-            <div class="ev-filtros-row">
-              <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-mes" data-label="Mes" onclick="_evToggleFiltroBurbuja('mes')">
-                <span class="ev-filtro-trigger-label">Mes</span><span class="material-symbols-outlined">expand_more</span>
-              </button>
-              <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-lugar" data-label="Lugar" onclick="_evToggleFiltroBurbuja('lugar')">
-                <span class="ev-filtro-trigger-label">Lugar</span><span class="material-symbols-outlined">expand_more</span>
-              </button>
-              <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-tipo" data-label="Tipo" onclick="_evToggleFiltroBurbuja('tipo')">
-                <span class="ev-filtro-trigger-label">Tipo</span><span class="material-symbols-outlined">expand_more</span>
-              </button>
-            </div>
-            <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-mes"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-mes"></div></div>
-            <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-lugar"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-lugar"></div></div>
-            <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-tipo"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-tipo"></div></div>
-          </div>
-        </div>
       </div>
 
-      <div class="ev-lista" id="ev-lista"></div>
+      <div id="ev-lista-wrap">
+        <div class="ev-lista" id="ev-lista"></div>
+      </div>
 
       <div id="ev-vista-lista-wrap" style="display:none;">
         <div id="ev-lista-tab-filas"></div>
@@ -779,7 +806,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=7f7578be"></script>
-<script src="js/eventos.js?v=6fd27e57"></script>
+<script src="js/eventos.js?v=7fb6624f"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=92b4612f"></script>
 <script src="js/perfil.js?v=54df12b2"></script>

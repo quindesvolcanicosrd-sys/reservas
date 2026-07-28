@@ -20,8 +20,9 @@
    `env(safe-area-inset-top)` (+ 12px fijos) para que no quede pegado al notch/
    borde superior del dispositivo al pinnearse; padding-bottom para separarlo
    del contenido scrolleable de abajo (`.ev-lista`/`#ev-vista-lista-wrap`) --
-   mismo criterio para las 3 vistas (Semana/Calendario/Lista) porque comparten
-   este único contenedor sticky. */
+   mismo criterio para las 2 vistas (Calendario/Lista, ver "Cambios
+   recientes" -- rediseño de cabecera) porque comparten este único
+   contenedor sticky. */
 .ev-sticky-header {
   position: sticky; top: 0; z-index: 20; background: var(--card-bg);
   padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
@@ -31,14 +32,33 @@
   .ev-sticky-header { background: var(--bg); }
 }
 
-/* ── Selector Semana/Calendario ──────────────────────────
-   Reusa .tp-seg/.tp-slider/.tp-opt (mismo componente que "tipo de pago" en
-   s4 y el filtro de Reservas del panel admin) -- sin estilos propios acá,
-   solo el wrapper de espaciado. `position:relative` para poder anclar
-   `.ev-btn-add` ("+ Nuevo evento", admin) al borde derecho sin descentrar el
-   selector (antes vivía en la #eventos-nav fija ya eliminada). */
-.ev-seg-wrap { position: relative; display: flex; justify-content: center; margin-bottom: 18px; }
-.ev-btn-add { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; }
+/* ── Cabecera de 3 elementos (ver "Cambios recientes" -- rediseño: ícono
+   ojo/pill contextual/ícono filtros, reemplaza el pill grande Semana/
+   Calendario/Lista + el renglón .ev-subtabs-wrap que antes vivían
+   separados). `.ev-header-icon-btn` es la base compartida de los 2 íconos
+   (ojo/filtros) -- mismo tamaño/forma que `.ev-semana-chevron`, pero
+   `position:relative` (ancla `.ev-filtro-badge`) en vez de absolute (ahora
+   fluyen como cualquier hijo flex de la fila, ya no hace falta anclarlos al
+   borde de un wrapper). */
+.ev-header-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.ev-header-icon-btn {
+  position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 34px; height: 34px; min-width: 34px; border-radius: 10px;
+  background: var(--brand-light); border: none; cursor: pointer; color: var(--brand);
+  transition: background 0.15s; -webkit-tap-highlight-color: transparent;
+}
+.ev-header-icon-btn:hover { background: var(--brand-20); }
+.ev-header-icon-btn:active { transform: scale(0.94); }
+.ev-header-icon-btn .material-symbols-outlined { font-size: 1.15rem; display: block; }
+/* Reusa el mismo modificador "activo" que ya usaba el botón embudo (togglea
+   con la burbuja propia abierta -- ver _evAbrirFiltrosPanel()/
+   _evAbrirVistaBurbuja(), js/eventos.js) para los 2 íconos por igual. */
+.ev-header-icon-btn.ev-filtro-toggle-activo { background: var(--brand); color: var(--white); }
+/* Pill contextual -- Hoy/Esta semana/Este mes (Calendario) o Próximos/
+   Pasados/Todos (Lista), una sola visible a la vez (togglada por JS, ver
+   _evCambiarVista()) -- centrada en el espacio restante de la fila. */
+.ev-header-pill-wrap { flex: 1; min-width: 0; display: flex; justify-content: center; }
+.ev-btn-add { width: 36px; height: 36px; flex-shrink: 0; }
 
 /* ── Franja semanal ───────────────────────────────────── */
 .ev-semana-row { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
@@ -113,7 +133,18 @@
 .ev-cal-celda.ev-cal-sel .ev-cal-num { background: var(--brand); color: var(--white); }
 .ev-cal-dots { display: flex; gap: 3px; height: 6px; align-items: center; }
 
-/* ── Lista de eventos (debajo de cualquiera de las 2 vistas) ─────────── */
+/* ── Lista de eventos (debajo de Calendario) ──────────────────────────
+   `#ev-lista-wrap` (ver "Cambios recientes" -- nuevo, agregado al sumar el
+   swipe de Hoy/Esta semana/Este mes): `#ev-lista` es el `cont` que anima
+   `_evAnimarCambioHorizontal()`/js/eventos.js -- necesita un padre
+   `position:relative` para que la ENTRANTE (`.ev-swipe-entrando`,
+   position:absolute) se posicione contra ÉL y no contra el ancestro
+   posicionado más cercano página arriba (`.card`, que no tiene
+   `position:relative` -- reusarlo tal cual hubiera hecho flotar el
+   contenido a cualquier lado). Mismo criterio exacto que
+   `#ev-vista-lista-wrap` más abajo (Lista), `overflow-x:hidden` contiene el
+   recorrido horizontal de la animación sin generar scroll de página. */
+.ev-lista-wrap { position: relative; overflow-x: hidden; }
 .ev-lista { margin-top: 20px; text-align: left; scroll-margin-top: 90px; }
 .ev-fecha-grupo { margin-bottom: 18px; scroll-margin-top: 90px; }
 .ev-fecha-label {
@@ -379,16 +410,26 @@
 .ev-asist-persona-sin-respuesta { background: color-mix(in srgb, var(--muted) 14%, transparent); }
 
 /* ── Vista "Lista" (ver "Cambios recientes" — reemplaza la pantalla
-   separada "Ver todos los eventos"/s-eventos-todos, ahora una 3ra opción
-   del selector Semana/Calendario/Lista, todo dentro de #s-eventos). ────── */
+   separada "Ver todos los eventos"/s-eventos-todos, ahora una de las 2
+   opciones del selector de vista -- ícono ojo, burbuja -- todo dentro de
+   #s-eventos). ────── */
 
-/* `position:relative` ancla el "ghost" (clon del contenido saliente,
-   position:absolute) de la transición direccional de subtabs
-   (`_evListaTabAnimarCambio()`, js/eventos.js); `overflow-x:hidden` contiene
-   el recorrido horizontal de esa animación (translateX hasta 100%) sin que
-   genere scroll de página -- el contenido real (`#ev-lista-tab-filas`) sigue
-   en flujo normal, con su alto/scroll vertical real sin cambios. */
+/* `position:relative` ancla la ENTRANTE (`.ev-swipe-entrando`,
+   position:absolute) de la transición direccional reusable de subtabs
+   (`_evAnimarCambioHorizontal()`, js/eventos.js -- mismo mecanismo que usa el
+   swipe de Hoy/Esta semana/Este mes de Calendario, ver css más abajo);
+   `overflow-x:hidden` contiene el recorrido horizontal de esa animación
+   (translateX hasta 100%) sin que genere scroll de página -- la SALIENTE
+   (clon congelado del contenido anterior) es la que queda en flujo normal
+   mientras dura la transición, con su alto/scroll vertical real sin cambios
+   (ver comentario de `_evAnimarCambioHorizontal()` -- roles calcados de
+   axisTransicion(), shared/axis-transicion.js). */
 #ev-vista-lista-wrap { position: relative; overflow-x: hidden; }
+/* Entrante superpuesta -- sin `bottom:0` (a diferencia de `.axis-enter`,
+   css/global.css): acá el alto tiene que seguir siendo el intrínseco del
+   contenido pintado, nunca estirarse a ocupar el alto del wrapper (que
+   mientras dura la transición lo determina la saliente, en flujo normal). */
+.ev-swipe-entrando { position: absolute; top: 0; left: 0; right: 0; }
 
 /* Sub-tabs Próximos/Pasados/Todos: texto simple, sin fondo -- el navegador ya
    anima `color` solo vía `transition`, no hace falta medir nada para eso.
@@ -399,13 +440,13 @@
    patrón que `.tp-slider`/`_updateTpSlider()` (css/reservas.css,
    js/reservas.js): un solo elemento que se mueve con `transform:translateX`
    + `width`, en vez de un estado CSS por tab. */
-/* Wrapper del renglón de subtabs + botón de filtro (ver "Cambios recientes"
-   -- antes .ev-subtabs sola, centrada). `position:relative` para anclar
-   `.ev-filtro-toggle-btn` al borde derecho sin descentrar los subtabs --
-   mismo patrón que `.ev-seg-wrap`/`.ev-btn-add` más arriba en este archivo --
-   Y para anclar `.ev-subtabs-indicator` (`position:absolute;bottom:0`) contra
-   el renglón de subtabs, no la fila entera con el botón embudo. */
-.ev-subtabs-wrap { position: relative; margin-bottom: 16px; padding-right: 40px; }
+/* Wrapper del renglón de subtabs (ver "Cambios recientes" -- rediseño de
+   cabecera: vive adentro de `.ev-header-pill-wrap`, ya no tiene un botón de
+   filtro propio que anclar -- ese ícono se mudó a la fila `.ev-header-row`,
+   fuera de este wrapper). `position:relative` se conserva solo para anclar
+   `.ev-subtabs-indicator` (`position:absolute;bottom:0`) contra el renglón
+   de subtabs. */
+.ev-subtabs-wrap { position: relative; }
 .ev-subtabs { display: flex; justify-content: center; gap: 22px; }
 .ev-subtab {
   padding: 4px 1px 10px; font-size: 0.82rem; font-weight: 700; color: var(--muted); cursor: pointer;
@@ -425,28 +466,15 @@
   transition: transform 0.32s var(--ease-sheet), width 0.32s var(--ease-sheet);
 }
 
-/* Botón embudo -- reemplaza la fila de filtros Mes/Lugar/Tipo siempre
-   visible (ver "Cambios recientes"): expande/colapsa `.ev-filtros-colapsable`
-   de abajo. Mismo tamaño/forma que `.ev-semana-chevron`, posicionado como
-   `.ev-btn-add` (absolute right, dentro de un wrapper `position:relative`),
-   pero MÁS arriba (`top` fijo, no 50%) porque `.ev-subtabs-wrap` tiene más
-   alto que un solo renglón centrado (el `border-bottom` de `.ev-subtabs`
-   queda más abajo que el centro vertical del botón si se centrara con la
-   fila entera). */
-.ev-filtro-toggle-btn {
-  position: absolute; right: 0; top: 0; display: flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px; min-width: 32px; border-radius: 10px;
-  background: var(--brand-light); border: none; cursor: pointer; color: var(--brand);
-  transition: background 0.15s; -webkit-tap-highlight-color: transparent;
-}
-.ev-filtro-toggle-btn:hover { background: var(--brand-20); }
-.ev-filtro-toggle-btn:active { transform: scale(0.94); }
-.ev-filtro-toggle-btn .material-symbols-outlined { font-size: 1.05rem; display: block; }
-.ev-filtro-toggle-btn.ev-filtro-toggle-activo { background: var(--brand); color: var(--white); }
+/* Botón embudo -- ícono universal de filtros (ver "Cambios recientes":
+   antes anclado absolute al borde de `.ev-subtabs-wrap`, ahora un ítem más
+   de `.ev-header-row`, tamaño/forma/estados los aporta `.ev-header-icon-btn`
+   -- acá solo queda lo que le es propio). */
 /* Badge numérico -- cuenta de los 3 filtros (mes/lugar/tipo) CON al menos
    una opción seleccionada (no el total de opciones marcadas, ver
    `_evActualizarBadgeFiltros()`/js/eventos.js) -- oculto (`display:none`,
-   togleado por JS) si ninguno tiene selección. */
+   togleado por JS) si ninguno tiene selección. Ancla contra
+   `.ev-header-icon-btn` (`position:relative`, ver más arriba). */
 .ev-filtro-badge {
   position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 3px;
   border-radius: 999px; background: var(--danger); color: var(--white);
@@ -454,21 +482,61 @@
   line-height: 1; box-shadow: 0 0 0 2px var(--card-bg);
 }
 
-/* Panel colapsable de filtros (fila de triggers + sus 3 burbujas, ver
-   "Cambios recientes") -- colapsado por default (`max-height:0`), togleado
-   por `.ev-filtro-toggle-btn` (`_evToggleFiltrosPanel()`, js/eventos.js).
-   Mismo mecanismo que `.ev-filtro-burbuja`/`.ev-cal-grid-colapsable`
-   (`max-height`+`--ease-sheet`), pero SIN un `max-height` fijo en la clase
-   `.abierta` (bug real encontrado y corregido -- ver "Cambios recientes":
-   un valor fijo grande, ej. 460px, contra un contenido real de ~50px (solo
-   la fila de triggers, sin ninguna burbuja abierta todavía) hace que el
-   alto VISIBLE de la caja llegue a su tope mucho antes de que termine la
-   transición de 0.28s -- se percibe como "aparece de golpe" aunque
-   técnicamente sí está animando `max-height`, solo que la mayor parte del
-   recorrido queda fuera de lo que se alcanza a ver). `_evToggleFiltrosPanel()`
-   fija el `max-height` inline por JS, medido con `scrollHeight` real (mismo
-   criterio que `_evDetalleActualizarSticky()`) en vez de un número inventado. */
-.ev-filtros-colapsable { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
+/* ── Burbujas de cabecera (selector de vista + panel de filtros, ver
+   "Cambios recientes" -- rediseño): `.ev-header-burbuja` es el wrapper
+   MECÁNICO (max-height/overflow, igual criterio que `.ev-filtro-burbuja`/
+   `.ev-cal-grid-colapsable` -- SIN un `max-height` fijo en `.abierta`, bug
+   real ya corregido antes acá: un techo mucho más alto que el contenido real
+   hace que la transición se vea instantánea en vez de animada. Se fija por
+   JS con `scrollHeight` real, ver `_evAbrirFiltrosPanel()`/
+   `_evAbrirVistaBurbuja()`, js/eventos.js). `.ev-header-burbuja-panel`
+   adentro es la capa VISUAL -- tratamiento "burbuja de diálogo": marco
+   propio + colita triangular apuntando al ícono que la abrió, superpuesta al
+   mecanismo de expansión, no lo reemplaza (separar mecanismo de look es lo
+   que permite que el `overflow:hidden` del wrapper no recorte la colita, que
+   sobresale por encima del panel -- ver `margin-top`/colita más abajo). */
+.ev-header-burbuja { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
+.ev-header-burbuja-panel {
+  position: relative; margin-top: 16px; padding: 14px;
+  border: 1.5px solid var(--border-light); border-radius: 14px; background: var(--surface-2);
+}
+/* Colita -- cuadrado de 12px rotado 45°, mismo fondo/borde que el panel,
+   solo con borde en 2 de sus 4 lados (los que quedan "afuera" tras la
+   rotación) para que no se vea un cuadrado doble por encima del propio
+   borde del panel. `top:-7px` la deja centrada sobre el `margin-top:16px`
+   reservado arriba -- ni pegada al panel ni cortada por el wrapper. */
+.ev-header-burbuja-panel::before {
+  content: ''; position: absolute; top: -7px; width: 12px; height: 12px;
+  background: var(--surface-2); border-left: 1.5px solid var(--border-light); border-top: 1.5px solid var(--border-light);
+  transform: rotate(45deg); border-radius: 2px 0 0 0;
+}
+/* Posición horizontal de la colita -- apunta al ícono que abrió cada
+   burbuja: `.ev-header-burbuja-izq` (selector de vista) contra el ícono ojo,
+   a la izquierda de la fila; `.ev-header-burbuja-der` (filtros) contra el
+   ícono embudo, a la derecha. Mismo offset (18px) que el centro aproximado
+   de cada ícono de 34px sobre el padding del panel (14px). */
+.ev-header-burbuja-izq .ev-header-burbuja-panel::before { left: 18px; }
+.ev-header-burbuja-der .ev-header-burbuja-panel::before { right: 18px; }
+
+/* Burbuja del selector de vista -- 2 opciones (ver "Cambios recientes"),
+   mismo look que una fila de menú simple. `.ev-vista-opcion-activa` marca la
+   vista actualmente activa (actualizado por `_evActualizarVistaOpciones()`,
+   js/eventos.js). */
+.ev-vista-opcion {
+  display: flex; align-items: center; gap: 10px; padding: 11px 8px; border-radius: 10px;
+  font-size: 0.85rem; font-weight: 700; color: var(--text-2); cursor: pointer; transition: background 0.15s, color 0.15s;
+}
+.ev-vista-opcion:hover { background: var(--surface-light); }
+.ev-vista-opcion .material-symbols-outlined { font-size: 1.1rem; color: var(--muted); flex-shrink: 0; transition: color 0.15s; }
+.ev-vista-opcion.ev-vista-opcion-activa { color: var(--brand); }
+.ev-vista-opcion.ev-vista-opcion-activa .material-symbols-outlined { color: var(--brand); }
+
+/* `.ev-filtros-colapsable` (panel de filtros -- universal, ver "Cambios
+   recientes": antes exclusivo de "Lista", ahora disponible en las 2 vistas,
+   togleado por el ícono embudo de `.ev-header-row`,
+   `_evToggleFiltrosPanel()`/js/eventos.js) reusa el mecanismo de
+   `.ev-header-burbuja` de arriba tal cual -- convive como clase adicional en
+   el mismo elemento (ver index.html), sin ningún estilo propio extra. */
 
 /* Filtros Mes/Lugar/Tipo -- 3 botones "trigger" (mismo look/idea que
    .admin-destino-trigger de css/admin.css: parecen un <select>) que

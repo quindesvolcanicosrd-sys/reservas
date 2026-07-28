@@ -77,7 +77,20 @@ var _EV_ASISTENCIA_REAL_LABEL = { 'A horario': 'Llegué a horario', 'Tarde': 'Ll
 // encima tenga contraste suficiente sobre el indicador sólido.
 var _EV_RSVP_COLOR = { 'Asistiré': 'var(--success-dark)', 'No asistiré': 'var(--danger)', 'No jugador': 'var(--amber-dark)' };
 
-var _evVista = 'semana';
+// `_evVista` ('calendario'|'lista', ver "Cambios recientes" -- rediseño de
+// cabecera): antes tenía un 3er valor 'semana' (pill grande Semana/
+// Calendario/Lista) -- esa opción se funde como una de las 3 sub-opciones de
+// `_evCalSubvista` de acá abajo, seleccionable con el ícono ojo (burbuja de
+// 2 opciones, `_evToggleVistaBurbuja()`) en vez de un segmentado de 3.
+var _evVista = 'calendario';
+// Sub-opciones de la vista Calendario (Hoy/Esta semana/Este mes, ver
+// "Cambios recientes") -- único lugar que declara el orden, reusado por el
+// indicador del pill (`_evUpdateCalSubSlider()`) y el swipe con
+// `_evAnimarCambioHorizontal()` (misma idea que `_EV_SUBTABS` de la pestaña
+// "Lista" más abajo, sin loop en los extremos a propósito: "Hoy" -> "Esta
+// semana" -> "Este mes" se lee como una progresión de zoom, no como un ciclo).
+var _EV_CAL_SUBVISTAS = ['hoy', 'semana', 'mes'];
+var _evCalSubvista = 'hoy';
 var _evSemanaOffset = 0;
 var _evMesOffset = 0;
 var _evConfettiMostrado = {};
@@ -153,15 +166,18 @@ function _evGenerarDemo() {
 /* ── Punto de entrada (ver 'entrar' de APP_BOTTOM_NAV_ITEMS en js/ui.js) ── */
 function irEventos() {
   if (_EV_EVENTOS.length === 0) _evGenerarDemo();
-  _evVista = 'semana'; _evSemanaOffset = 0; _evMesOffset = 0;
+  _evVista = 'calendario'; _evCalSubvista = 'hoy';
+  _evSemanaOffset = 0; _evMesOffset = 0;
   _evCalModo = 'dia'; _evCalFechaSel = null; // vuelve a "hoy seleccionado" cada vez que se entra a Eventos de nuevo
-  document.getElementById('ev-vista-semana').classList.add('active');
-  document.getElementById('ev-vista-calendario').classList.remove('active');
-  document.getElementById('ev-vista-lista').classList.remove('active');
-  document.getElementById('ev-vista-semana-wrap').style.display = 'block';
+  _EV_CAL_SUBVISTAS.forEach(function(s) { document.getElementById('ev-cal-sub-' + s).classList.toggle('active', s === 'hoy'); });
+  document.getElementById('ev-cal-sub-seg').style.display = 'inline-flex';
+  document.getElementById('ev-lista-subtabs-wrap').style.display = 'none';
+  document.getElementById('ev-vista-semana-wrap').style.display = 'none';
   document.getElementById('ev-vista-calendario-wrap').style.display = 'none';
   document.getElementById('ev-vista-lista-wrap').style.display = 'none';
   document.getElementById('ev-lista').style.display = 'block';
+  _evActualizarVistaOpciones();
+  _evActualizarFiltrosRow();
   var addBtn = document.getElementById('eventos-btn-add');
   if (addBtn) addBtn.style.display = _esAdminDemo ? 'flex' : 'none';
   _evRenderVistaActual();
@@ -169,69 +185,156 @@ function irEventos() {
   // Igual criterio que _updateTpSlider()/_adminUpdateFiltroSlider() (js/reservas.js,
   // js/admin.js): offsetWidth/offsetLeft del tp-opt activo solo son reales una
   // vez que la pantalla es visible -- se recalcula sin animar apenas lo es.
-  setTimeout(function() { _evUpdateVistaSlider(false); _evUpdateRsvpSliders(false); }, 50);
+  setTimeout(function() { _evUpdateCalSubSlider(false); _evUpdateRsvpSliders(false); }, 50);
 }
 
-/* ── Selector Semana/Calendario/Lista (reusa .tp-seg/.tp-slider/.tp-opt) ──
-   "Lista" fusiona lo que antes era la pantalla separada "Ver todos los
-   eventos" (ver "Cambios recientes") -- #ev-lista (el combinado evento+
-   cumpleaños de Semana/Calendario) se oculta mientras "Lista" está activa,
-   ninguna de las 2 vistas usa el contenedor de la otra. */
+/* ── Selector de vista (ícono ojo, ver "Cambios recientes" -- rediseño de
+   cabecera): reemplaza el pill grande Semana/Calendario/Lista por una
+   burbuja de 2 opciones (Vista calendario/Lista de eventos,
+   `_evToggleVistaBurbuja()` más abajo) -- "Lista" sigue fusionando lo que
+   antes era la pantalla separada "Ver todos los eventos": #ev-lista (el
+   combinado evento+cumpleaños de Calendario) se oculta mientras "Lista" está
+   activa, ninguna de las 2 vistas usa el contenedor de la otra. */
 function _evCambiarVista(v) {
   _evVista = v;
-  document.getElementById('ev-vista-semana').classList.toggle('active', v === 'semana');
-  document.getElementById('ev-vista-calendario').classList.toggle('active', v === 'calendario');
-  document.getElementById('ev-vista-lista').classList.toggle('active', v === 'lista');
-  document.getElementById('ev-vista-semana-wrap').style.display = v === 'semana' ? 'block' : 'none';
-  document.getElementById('ev-vista-calendario-wrap').style.display = v === 'calendario' ? 'block' : 'none';
-  // #ev-lista-tab-header-wrap (subtabs+filtros, dentro de la cabecera
-  // sticky) y #ev-vista-lista-wrap (solo #ev-lista-tab-filas, afuera del
-  // sticky, scrollea libre) togglean juntos -- son las 2 mitades de la
-  // misma vista "Lista", separadas para el sticky header (ver "Cambios
-  // recientes"/index.html).
-  document.getElementById('ev-lista-tab-header-wrap').style.display = v === 'lista' ? 'block' : 'none';
+  document.getElementById('ev-cal-sub-seg').style.display = v === 'calendario' ? 'inline-flex' : 'none';
+  document.getElementById('ev-lista-subtabs-wrap').style.display = v === 'lista' ? 'block' : 'none';
+  document.getElementById('ev-vista-semana-wrap').style.display = (v === 'calendario' && _evCalSubvista === 'semana') ? 'block' : 'none';
+  document.getElementById('ev-vista-calendario-wrap').style.display = (v === 'calendario' && _evCalSubvista === 'mes') ? 'block' : 'none';
+  // #ev-vista-lista-wrap (#ev-lista-tab-filas, afuera del sticky, scrollea
+  // libre) -- la mitad "fija" de Lista (subtabs) ya se resolvió arriba
+  // togglando #ev-lista-subtabs-wrap, dentro del pill contextual compartido.
   document.getElementById('ev-vista-lista-wrap').style.display = v === 'lista' ? 'block' : 'none';
   document.getElementById('ev-lista').style.display = v === 'lista' ? 'none' : 'block';
-  _evUpdateVistaSlider(true);
-  if (v !== 'lista' && _evFiltroBurbujaAbierta) {
-    // Sale de "Lista" con una burbuja de filtro abierta -- la colapsa sin
-    // animar (ya está oculta, display:none en el wrap) para que al volver no
-    // aparezca ya expandida de golpe.
-    _evColapsarFiltroBurbuja(_evFiltroBurbujaAbierta);
+  _evActualizarVistaOpciones();
+  // Filtros universales (ver "Cambios recientes"): el panel entero
+  // (Lugar/Tipo, +Mes en Lista) ya no se fuerza a cerrar al cambiar de vista
+  // -- solo el trigger/burbuja de "Mes" desaparece en Calendario (no aplica
+  // ahí), así que si esa burbuja puntual estaba abierta se cierra sola.
+  _evActualizarFiltrosRow();
+  if (v === 'calendario' && _evFiltroBurbujaAbierta === 'mes') {
+    _evColapsarFiltroBurbuja('mes');
     _evFiltroBurbujaAbierta = null;
-  }
-  if (v !== 'lista' && _evFiltrosPanelAbierto) {
-    // Mismo criterio que arriba, un nivel más afuera: el panel de filtros
-    // completo (embudo) tampoco debe reaparecer ya expandido al volver.
-    _evFiltrosPanelAbierto = false;
-    var _panelEl = document.getElementById('ev-filtros-colapsable');
-    if (_panelEl) { _panelEl.classList.remove('abierta'); _panelEl.style.maxHeight = '0px'; }
-    var _btnEl = document.getElementById('ev-filtro-toggle-btn');
-    if (_btnEl) _btnEl.classList.remove('ev-filtro-toggle-activo');
+    _evActualizarBotonesFiltro();
   }
   if (v === 'lista') {
     _evListaTabPoblarFiltros(); _evActualizarBotonesFiltro(); _evListaTabRenderLista();
     // Primera vez que "Lista" se hace visible en esta entrada a Eventos --
     // mismo problema ya conocido de offsetWidth/offsetLeft en 0 mientras el
     // wrap todavía está terminando de aplicar `display:block` (mismo criterio
-    // que el setTimeout(50) de _evUpdateVistaSlider()/_evUpdateRsvpSliders()
+    // que el setTimeout(50) de _evUpdateCalSubSlider()/_evUpdateRsvpSliders()
     // en irEventos()) -- sin animar, el indicador ya arranca en su posición
     // real de "Próximos" en vez de deslizarse desde 0 la primera vez.
     setTimeout(function() { _evUpdateSubtabIndicator(false); }, 50);
   }
-  else _evRenderVistaActual();
-  if (v === 'calendario') _evCalActualizarColapso();
+  else {
+    _evRenderVistaActual();
+    if (_evCalSubvista === 'mes') _evCalActualizarColapso();
+  }
+  _evColapsarVistaBurbuja();
 }
-function _evUpdateVistaSlider(animate) {
-  var slider = document.getElementById('ev-vista-slider');
-  var activeOpt = document.getElementById('ev-vista-' + _evVista);
+// Marca cuál de las 2 opciones de la burbuja de vista corresponde a la vista
+// activa (check visual, ver css/eventos.css) -- se actualiza al cambiar de
+// vista y también al abrir la burbuja (por si `_evVista` cambió por otro
+// camino mientras estuvo cerrada, aunque hoy no hay otro camino que
+// _evCambiarVista()).
+function _evActualizarVistaOpciones() {
+  var elCal = document.getElementById('ev-vista-opcion-calendario');
+  var elLista = document.getElementById('ev-vista-opcion-lista');
+  if (elCal) elCal.classList.toggle('ev-vista-opcion-activa', _evVista === 'calendario');
+  if (elLista) elLista.classList.toggle('ev-vista-opcion-activa', _evVista === 'lista');
+}
+// Chip "Mes" (ver "Cambios recientes" -- filtros universales): solo tiene
+// sentido en Lista (Calendario ya navega por mes/semana/día directamente) --
+// se saca por completo del panel en vez de mostrarse deshabilitado, sin
+// toast al tocarlo (no hay nada que tocar, no está).
+function _evActualizarFiltrosRow() {
+  var mesBtn = document.getElementById('ev-lista-tab-filtro-btn-mes');
+  if (mesBtn) mesBtn.style.display = _evVista === 'calendario' ? 'none' : '';
+}
+/* ── Sub-opciones de Calendario: Hoy/Esta semana/Este mes (ver "Cambios
+   recientes" -- fusiona la vieja vista "Semana" acá adentro) -- mismo pill
+   .tp-seg/.tp-slider/.tp-opt de siempre, `direccion` opcional (swipe) igual
+   criterio que `_evListaTabCambiarSubtab()`: sin ella (tap directo) se
+   calcula comparando índices en `_EV_CAL_SUBVISTAS`. El contenido (franja
+   semanal/grilla mensual, arriba, instantáneo) y la lista de resultados
+   (#ev-lista, abajo, animada con `_evAnimarCambioHorizontal()` -- mismo
+   mecanismo ya corregido para la pestaña Lista) cambian juntos en una sola
+   llamada. */
+function _evCambiarCalSubvista(sv, direccion) {
+  if (sv === _evCalSubvista) return;
+  if (!direccion) {
+    direccion = _EV_CAL_SUBVISTAS.indexOf(sv) > _EV_CAL_SUBVISTAS.indexOf(_evCalSubvista) ? 'izquierda' : 'derecha';
+  }
+  _evCalSubvista = sv;
+  _EV_CAL_SUBVISTAS.forEach(function(s) {
+    document.getElementById('ev-cal-sub-' + s).classList.toggle('active', s === sv);
+  });
+  _evUpdateCalSubSlider(true);
+  document.getElementById('ev-vista-semana-wrap').style.display = sv === 'semana' ? 'block' : 'none';
+  document.getElementById('ev-vista-calendario-wrap').style.display = sv === 'mes' ? 'block' : 'none';
+  var cont = document.getElementById('ev-lista');
+  _evAnimarCambioHorizontal(cont, function() {
+    if (sv === 'semana') _evRenderSemana();
+    else if (sv === 'mes') _evRenderCalendario();
+    _evRenderLista();
+  }, direccion);
+  if (sv === 'mes') _evCalActualizarColapso();
+}
+function _evUpdateCalSubSlider(animate) {
+  var slider = document.getElementById('ev-cal-sub-slider');
+  var activeOpt = document.getElementById('ev-cal-sub-' + _evCalSubvista);
   if (!slider || !activeOpt) return;
   slider.classList.toggle('animado', !!animate);
   slider.style.width = activeOpt.offsetWidth + 'px';
   slider.style.transform = 'translateX(' + activeOpt.offsetLeft + 'px)';
 }
+// Siguiente/anterior SIN loop (a diferencia de la pestaña Lista, ver
+// declaración de `_EV_CAL_SUBVISTAS` -- pedido explícito: Hoy/Semana/Mes es
+// una progresión, no un ciclo) -- usadas por el swipe, ver
+// `_evInicializarSwipeCalendario()` más abajo.
+function _evCalSubvistaSiguiente() {
+  var idx = _EV_CAL_SUBVISTAS.indexOf(_evCalSubvista);
+  if (idx >= _EV_CAL_SUBVISTAS.length - 1) return;
+  _evCambiarCalSubvista(_EV_CAL_SUBVISTAS[idx + 1], 'izquierda');
+}
+function _evCalSubvistaAnterior() {
+  var idx = _EV_CAL_SUBVISTAS.indexOf(_evCalSubvista);
+  if (idx <= 0) return;
+  _evCambiarCalSubvista(_EV_CAL_SUBVISTAS[idx - 1], 'derecha');
+}
+// Swipe horizontal sobre la lista de resultados de Calendario (#ev-lista) --
+// mismo criterio que `_evInicializarSwipeLista()` más abajo (touchstart/
+// touchend simple, eje horizontal predominante, mismo umbral). Solo activo
+// con la vista Calendario al frente -- guard barata, aunque `#ev-lista` ya
+// está `display:none` mientras "Lista" está activa (sin eventos táctiles
+// reales sobre un elemento oculto de todos modos).
+var _EV_CAL_SWIPE_UMBRAL = 45;
+var _evCalSwipeStartX = 0, _evCalSwipeStartY = 0, _evCalSwipeActivo = false;
+function _evInicializarSwipeCalendario() {
+  var cont = document.getElementById('ev-lista');
+  if (!cont) return;
+  cont.addEventListener('touchstart', function(e) {
+    if (_evVista !== 'calendario' || e.touches.length !== 1) return;
+    _evCalSwipeStartX = e.touches[0].clientX;
+    _evCalSwipeStartY = e.touches[0].clientY;
+    _evCalSwipeActivo = true;
+  }, { passive: true });
+  cont.addEventListener('touchend', function(e) {
+    if (!_evCalSwipeActivo) return;
+    _evCalSwipeActivo = false;
+    if (_evVista !== 'calendario') return;
+    var t = e.changedTouches[0];
+    var dx = t.clientX - _evCalSwipeStartX;
+    var dy = t.clientY - _evCalSwipeStartY;
+    if (Math.abs(dx) < _EV_CAL_SWIPE_UMBRAL || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx < 0) _evCalSubvistaSiguiente(); else _evCalSubvistaAnterior();
+  }, { passive: true });
+}
+_evInicializarSwipeCalendario();
 function _evRenderVistaActual() {
-  if (_evVista === 'semana') _evRenderSemana(); else _evRenderCalendario();
+  if (_evCalSubvista === 'semana') _evRenderSemana();
+  else if (_evCalSubvista === 'mes') _evRenderCalendario();
   _evRenderLista();
 }
 function _evSemanaAnterior() { _evSemanaOffset--; _evRenderVistaActual(); }
@@ -244,7 +347,20 @@ function _evMesSiguiente() { _evMesOffset++; _evCalModo = 'mes'; _evCalFechaSel 
 
 /* ── Consultas sobre los datos de prueba (idénticas a como se filtrarían
    los datos reales de getEventosRango()/getCumpleañosRango()) ──────────── */
-function _evEventosDeFecha(iso) { return _EV_EVENTOS.filter(function(e) { return _evFechaCmp(e.fecha, iso) === 0; }); }
+// Filtros universales Lugar/Tipo (ver "Cambios recientes" -- antes solo
+// aplicaban en la pestaña "Lista", `_evListaTabRenderLista()`) -- comparten
+// el mismo estado `_evListaTabFiltro` (declarado más abajo, junto al resto
+// del panel de filtros): un solo helper reusado tanto acá (puntitos del mes/
+// semana) como en `_evRenderLista()` más abajo (cards de Calendario). Los
+// cumpleaños NUNCA pasan por acá -- no tienen lugar/tipo, y ya no se
+// muestran en la pestaña "Lista" tampoco, mismo criterio en los 2 lugares.
+function _evPasaFiltroLugarTipo(lugar, tipo) {
+  var fl = _evListaTabFiltro.lugar, ft = _evListaTabFiltro.tipo;
+  if (fl.length && !fl.some(function(o) { return o.val === lugar; })) return false;
+  if (ft.length && !ft.some(function(o) { return o.val === tipo; })) return false;
+  return true;
+}
+function _evEventosDeFecha(iso) { return _EV_EVENTOS.filter(function(e) { return _evFechaCmp(e.fecha, iso) === 0 && _evPasaFiltroLugarTipo(e.lugar, e.tipo); }); }
 function _evCumpleDeFecha(iso) { return _EV_CUMPLEANOS.filter(function(c) { return _evFechaCmp(c.fecha, iso) === 0; }); }
 
 /* ── Vista Semana ─────────────────────────────────────────────────────
@@ -413,7 +529,7 @@ if (!_evPageCargada) {
 // scroll real (no el de la retroalimentación) cambió mientras tanto.
 var _evCalTransicionando = false;
 function _evCalActualizarColapso() {
-  if (_evVista !== 'calendario') return;
+  if (_evVista !== 'calendario' || _evCalSubvista !== 'mes') return;
   if (!_evPageCargada) return;
   if (_evCalTransicionando) return;
   var el = document.getElementById('ev-cal-grid-colapsable');
@@ -447,16 +563,24 @@ window.addEventListener('scroll', function() {
    completo, no solo el día tocado) — tocar un dot solo hace scroll-anchor
    hasta el grupo de esa fecha dentro de esta misma lista. */
 function _evRangoActual() {
-  if (_evVista === 'semana') {
+  // "Hoy" (ver "Cambios recientes" -- nueva sub-opción de Calendario): un
+  // solo día, siempre el actual (a diferencia del "modo día" de "Este mes"
+  // más abajo, que puede ser cualquier día tocado en la grilla) -- no hay
+  // selector propio, no tiene sentido navegarlo.
+  if (_evCalSubvista === 'hoy') {
+    var hoyRango = _evHoyISO();
+    return { desde: hoyRango, hasta: hoyRango };
+  }
+  if (_evCalSubvista === 'semana') {
     var dias = _evDiasDeSemana(_evSemanaOffset);
     return { desde: _evToISO(dias[0]), hasta: _evToISO(dias[6]) };
   }
-  // Calendario "modo día" (ver _evCalModo/_evCalSeleccionarDia() más abajo):
+  // "Este mes", "modo día" (ver _evCalModo/_evCalSeleccionarDia() más abajo):
   // un solo día seleccionado en vez del mes completo -- mismo _evRenderLista()
   // de siempre, ya agrupa/ordena/reusa la card completa sin ningún cambio,
   // un rango de un solo día simplemente produce un único grupo (o el estado
   // vacío ya existente si ese día no tiene nada).
-  if (_evVista === 'calendario' && _evCalModo === 'dia' && _evCalFechaSel) {
+  if (_evCalModo === 'dia' && _evCalFechaSel) {
     return { desde: _evCalFechaSel, hasta: _evCalFechaSel };
   }
   var base = new Date(); base.setDate(1); base.setMonth(base.getMonth() + _evMesOffset);
@@ -497,7 +621,7 @@ function _evLanzarConfettiCuandoVisible(el, intentosRestantes) {
 function _evRenderLista() {
   var rango = _evRangoActual();
   var items = [];
-  _EV_EVENTOS.filter(function(e) { return _evFechaCmp(e.fecha, rango.desde) >= 0 && _evFechaCmp(e.fecha, rango.hasta) <= 0; })
+  _EV_EVENTOS.filter(function(e) { return _evFechaCmp(e.fecha, rango.desde) >= 0 && _evFechaCmp(e.fecha, rango.hasta) <= 0 && _evPasaFiltroLugarTipo(e.lugar, e.tipo); })
     .forEach(function(e) { items.push({ fecha: e.fecha, orden: e.horaInicio || '00:00', tipo: 'evento', data: e }); });
   _EV_CUMPLEANOS.filter(function(c) { return _evFechaCmp(c.fecha, rango.desde) >= 0 && _evFechaCmp(c.fecha, rango.hasta) <= 0; })
     .forEach(function(c) { items.push({ fecha: c.fecha, orden: '00:00', tipo: 'cumple', data: c }); });
@@ -713,7 +837,7 @@ function _evRsvpBarraHtml(e) {
   return '<div class="ev-asistire-wrap" onclick="event.stopPropagation()"><div class="ev-rsvp-seg" data-evid="' + e.id + '"><div class="ev-rsvp-slider"></div>' + botones + '</div></div>';
 }
 // Posiciona el indicador de UNA barra (offsetLeft/offsetWidth de la opción
-// .activa, mismo mecanismo que _evUpdateVistaSlider()/.tp-slider) -- `seg` es
+// .activa, mismo mecanismo que _evUpdateCalSubSlider()/.tp-slider) -- `seg` es
 // el .ev-rsvp-seg, no el wrapper. Sin opción activa (miEstado null, evento
 // recién creado) el indicador queda con opacity:0 (ver CSS), no en (0,0).
 function _evPosicionarRsvpSlider(seg, animate) {
@@ -735,7 +859,7 @@ function _evPosicionarRsvpSlider(seg, animate) {
 // Reposiciona TODAS las barras visibles -- llamado tras cualquier re-render
 // de lista (chevrones, cambio de vista/tab, filtros) y, con setTimeout(50),
 // la primera vez que la pantalla se vuelve visible (mismo problema que
-// _evUpdateVistaSlider: offsetWidth/offsetLeft de un elemento display:none
+// _evUpdateCalSubSlider: offsetWidth/offsetLeft de un elemento display:none
 // da 0, necesita medirse recién cuando ya es visible).
 function _evUpdateRsvpSliders(animate) {
   document.querySelectorAll('.ev-rsvp-seg').forEach(function(seg) { _evPosicionarRsvpSlider(seg, animate); });
@@ -906,7 +1030,7 @@ function _evListaTabCambiarSubtab(tab, direccion) {
 // .animado paralela para un solo uso.
 function _evUpdateSubtabIndicator(animate) {
   var ind = document.getElementById('ev-subtabs-indicator');
-  var activo = document.querySelector('#ev-lista-tab-header-wrap .ev-subtab.activo');
+  var activo = document.querySelector('#ev-lista-subtabs-wrap .ev-subtab.activo');
   if (!ind || !activo) return;
   ind.style.transition = animate ? '' : 'none';
   ind.style.width = activo.offsetWidth + 'px';
@@ -1027,7 +1151,10 @@ function _evToggleFiltroChip(pillEl, campo) {
   });
   _evListaTabFiltro[campo] = vals;
   _evActualizarBotonesFiltro();
-  _evListaTabRenderLista();
+  // Filtros universales (ver "Cambios recientes"): re-renderiza lo que esté
+  // al frente -- Lugar/Tipo ahora también afectan Calendario (puntitos +
+  // lista de resultados, ver _evPasaFiltroLugarTipo()/_evRenderVistaActual()).
+  if (_evVista === 'lista') _evListaTabRenderLista(); else _evRenderVistaActual();
 }
 // Texto de cada botón trigger: label default sin selección, el nombre único
 // si hay exactamente 1, o "Label (N)" si hay más de 1 -- pedido explícito.
@@ -1049,48 +1176,100 @@ function _evActualizarBotonesFiltro() {
   });
   _evActualizarBadgeFiltros();
 }
-// Botón embudo -- expande/colapsa la fila de filtros Mes/Lugar/Tipo + sus
-// burbujas (ver "Cambios recientes"), colapsada por default. Al colapsar
-// (tocar de nuevo o cambiar de vista/subtab desde afuera) también cierra
-// cualquier burbuja individual que hubiera quedado abierta adentro -- mismo
-// criterio que `_evCambiarVista()` ya aplica al salir de "Lista` por completo.
-// `max-height` se fija por JS con `scrollHeight` real, NO con un número fijo
-// en CSS (bug real corregido, ver comentario de `.ev-filtros-colapsable` en
-// css/eventos.css: un techo mucho más alto que el contenido real hacía que
-// la transición se viera instantánea en vez de animada).
+// Botón embudo -- expande/colapsa la fila de filtros Lugar/Tipo (+Mes en
+// Lista, ver _evActualizarFiltrosRow()) + sus burbujas (ver "Cambios
+// recientes" -- ahora universal, disponible en las 2 vistas). Al colapsar
+// (tocar de nuevo, o desde afuera) también cierra cualquier burbuja
+// individual que hubiera quedado abierta adentro. `max-height` se fija por
+// JS con `scrollHeight` real, NO con un número fijo en CSS (bug real
+// corregido, ver comentario de `.ev-filtros-colapsable` en css/eventos.css:
+// un techo mucho más alto que el contenido real hacía que la transición se
+// viera instantánea en vez de animada).
+// Abrir/colapsar separadas en 2 funciones (antes un solo toggle, ver
+// "Cambios recientes") -- mismo criterio ya usado para las burbujas
+// individuales de campo (`_evToggleFiltroBurbuja()`/`_evColapsarFiltroBurbuja()`
+// más arriba): hace falta poder colapsar este panel DESDE AFUERA (la nueva
+// burbuja de selector de vista, `_evAbrirVistaBurbuja()` más abajo, la cierra
+// si estaba abierta -- solo una burbuja de cabecera a la vez) sin pasar por
+// el toggle, que solo sabe invertir el estado actual.
 var _evFiltrosPanelAbierto = false;
 function _evToggleFiltrosPanel() {
-  _evFiltrosPanelAbierto = !_evFiltrosPanelAbierto;
+  if (_evFiltrosPanelAbierto) _evColapsarFiltrosPanel(); else _evAbrirFiltrosPanel();
+}
+function _evAbrirFiltrosPanel() {
+  _evFiltrosPanelAbierto = true;
+  // Una sola burbuja de cabecera a la vez (ver "Cambios recientes") -- mismo
+  // criterio ya usado entre las 3 burbujas de filtro individuales.
+  if (_evVistaBurbujaAbierta) _evColapsarVistaBurbuja();
+  var panel = document.getElementById('ev-filtros-colapsable');
+  var btn = document.getElementById('ev-filtro-toggle-btn');
+  if (panel) { panel.classList.add('abierta'); panel.style.maxHeight = panel.scrollHeight + 'px'; }
+  if (btn) btn.classList.add('ev-filtro-toggle-activo');
+}
+function _evColapsarFiltrosPanel() {
+  if (!_evFiltrosPanelAbierto) return;
+  _evFiltrosPanelAbierto = false;
   var panel = document.getElementById('ev-filtros-colapsable');
   var btn = document.getElementById('ev-filtro-toggle-btn');
   if (panel) {
-    if (_evFiltrosPanelAbierto) {
-      panel.classList.add('abierta');
-      panel.style.maxHeight = panel.scrollHeight + 'px';
-    } else {
-      // Congela el alto actualmente visible (pudo haber quedado relajado a
-      // 460px por `_evToggleFiltroBurbuja()` si se abrió alguna burbuja)
-      // ANTES de animar a 0 -- si no, arrancaría desde ese techo holgado en
-      // vez del alto real, con el mismo bug de "golpe" pero al revés. Doble
-      // requestAnimationFrame para asegurar que el browser pinte ese valor
-      // congelado en un frame propio antes de cambiarlo a 0 -- un solo rAF
-      // a veces cae en el mismo frame que el cambio anterior en algunos
-      // navegadores, y sin el frame intermedio no hay desde-dónde animar.
-      panel.style.maxHeight = panel.scrollHeight + 'px';
+    // Congela el alto actualmente visible (pudo haber quedado relajado a
+    // 460px por `_evToggleFiltroBurbuja()` si se abrió alguna burbuja) ANTES
+    // de animar a 0 -- si no, arrancaría desde ese techo holgado en vez del
+    // alto real, con el mismo bug de "golpe" pero al revés. Doble
+    // requestAnimationFrame para asegurar que el browser pinte ese valor
+    // congelado en un frame propio antes de cambiarlo a 0 -- un solo rAF a
+    // veces cae en el mismo frame que el cambio anterior en algunos
+    // navegadores, y sin el frame intermedio no hay desde-dónde animar.
+    panel.style.maxHeight = panel.scrollHeight + 'px';
+    requestAnimationFrame(function() {
       requestAnimationFrame(function() {
-        requestAnimationFrame(function() {
-          panel.classList.remove('abierta');
-          panel.style.maxHeight = '0px';
-        });
+        panel.classList.remove('abierta');
+        panel.style.maxHeight = '0px';
       });
-    }
+    });
   }
-  if (btn) btn.classList.toggle('ev-filtro-toggle-activo', _evFiltrosPanelAbierto);
-  if (!_evFiltrosPanelAbierto && _evFiltroBurbujaAbierta) {
+  if (btn) btn.classList.remove('ev-filtro-toggle-activo');
+  if (_evFiltroBurbujaAbierta) {
     _evColapsarFiltroBurbuja(_evFiltroBurbujaAbierta);
     _evFiltroBurbujaAbierta = null;
     _evActualizarBotonesFiltro();
   }
+}
+/* ── Burbuja del selector de vista (ícono ojo, ver "Cambios recientes" --
+   rediseño de cabecera): mismo mecanismo exacto que el panel de filtros de
+   arriba (max-height por JS con scrollHeight real, --ease-sheet, abrir/
+   colapsar separadas) -- 2 opciones (Vista calendario/Lista de eventos,
+   `_evCambiarVista()`) en vez de una fila de triggers + burbujas propias.
+   Solo una burbuja de cabecera a la vez entre esta y el panel de filtros
+   (`_evAbrirFiltrosPanel()` la cierra si esta estaba abierta, y viceversa). */
+var _evVistaBurbujaAbierta = false;
+function _evToggleVistaBurbuja() {
+  if (_evVistaBurbujaAbierta) _evColapsarVistaBurbuja(); else _evAbrirVistaBurbuja();
+}
+function _evAbrirVistaBurbuja() {
+  _evVistaBurbujaAbierta = true;
+  if (_evFiltrosPanelAbierto) _evColapsarFiltrosPanel();
+  _evActualizarVistaOpciones();
+  var panel = document.getElementById('ev-vista-burbuja');
+  var btn = document.getElementById('ev-vista-toggle-btn');
+  if (panel) { panel.classList.add('abierta'); panel.style.maxHeight = panel.scrollHeight + 'px'; }
+  if (btn) btn.classList.add('ev-filtro-toggle-activo');
+}
+function _evColapsarVistaBurbuja() {
+  if (!_evVistaBurbujaAbierta) return;
+  _evVistaBurbujaAbierta = false;
+  var panel = document.getElementById('ev-vista-burbuja');
+  var btn = document.getElementById('ev-vista-toggle-btn');
+  if (panel) {
+    panel.style.maxHeight = panel.scrollHeight + 'px';
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        panel.classList.remove('abierta');
+        panel.style.maxHeight = '0px';
+      });
+    });
+  }
+  if (btn) btn.classList.remove('ev-filtro-toggle-activo');
 }
 // Cuenta de los 3 filtros (mes/lugar/tipo) CON al menos una opción
 // seleccionada -- a propósito NO la cantidad total de opciones marcadas
@@ -1201,49 +1380,75 @@ function _evListaTabRenderLista(direccion) {
     _evHidratarAvatares();
   }
 
-  _evListaTabAnimarCambio(cont, pintar, direccion);
+  _evAnimarCambioHorizontal(cont, pintar, direccion);
 }
-// Transición direccional shared-axis X (ver "Cambios recientes") -- mismos
-// valores que el shared axis X REALMENTE activo hoy en la app (irAjSub()/
-// cerrarAjSub(), js/perfil.js + .aj-sub/#s-datos-card, css/perfil.css):
-// translateX 100%<->0 entra / 0<->-25% recede, opacity 0.85<->1, 320ms,
-// var(--ease-axis). (shared/axis-transicion.js/axisTransicion() tiene los
-// mismos números pero NO tiene ningún caller activo hoy -- ver nota en
-// css/global.css sobre .pantalla/.axis-enter -- no es la referencia real).
-// Acá no hay un par de pantallas ya montadas esperando su turno como en
-// irAjSub(), sino un solo contenedor real (#ev-lista-tab-filas) cuyo
-// innerHTML se reemplaza en cada render -- mismo truco de "ghost" que
-// axisBarraTitulo() (barra superior singleton, mismo shared/axis-transicion.js,
-// tampoco con caller activo pero la técnica sigue siendo válida): clonar el
-// estado SALIENTE antes de pisar el contenido real (ghost, position:absolute,
-// calcado sobre la posición/ancho real actual), pintar el contenido ENTRANTE
-// en el contenedor real (que sigue en flujo normal -- así el resto de la
-// pantalla ya ve su alto/scroll reales de inmediato, sin esperar los 320ms) y
-// animar ambos en simultáneo: el ghost hacia afuera, el real hacia adentro.
-// `#ev-vista-lista-wrap` (el padre, css/eventos.css) aporta
-// `position:relative;overflow-x:hidden` para contener el recorrido horizontal
-// sin generar scroll de página. Guard de epoch (mismo criterio que
-// axisTransicion()/_axisEpoch, ver su comentario en shared/axis-transicion.js)
-// contra 2 cambios de tab disparados dentro de la ventana de 320ms del
-// anterior.
-var _evListaTabEpoch = 0;
-function _evListaTabAnimarCambio(cont, pintar, direccion) {
+// Transición direccional shared-axis X, REUSABLE (ver "Cambios recientes" --
+// corrige un bug real de solapamiento, ver más abajo) -- mismos valores que
+// el shared axis X ya usado en el resto de la app (axisTransicion(),
+// shared/axis-transicion.js: translateX 100%<->0 entra / 0<->-25% recede,
+// opacity 0.85<->1, 320ms, var(--ease-axis)), adaptado al caso de un solo
+// contenedor real reciclado (`cont`, cuyo innerHTML se reemplaza en cada
+// cambio -- Lista: #ev-lista-tab-filas, Calendario: mismo mecanismo para
+// Hoy/Esta semana/Este mes) en vez de 2 pantallas ya montadas como
+// axisTransicion(). Nombre genérico a propósito, sin prefijo `_evListaTab` --
+// pensada para reusarse tal cual desde cualquier otro swipe de 3 sub-vistas
+// de Eventos, no solo el de Lista (ver "Cambios recientes").
+//
+// Roles EXACTOS de axisTransicion(), calcados (ver su comentario en
+// shared/axis-transicion.js): la SALIENTE (clon congelado del contenido
+// actual, creado ANTES de pisar `cont`) se queda en FLUJO NORMAL -- determina
+// el alto/scroll real del wrapper mientras dura la transición, igual que
+// `saliente` allá. La ENTRANTE es el propio `cont`, ya con el contenido
+// nuevo pintado, que pasa a SUPERPONERSE (`.ev-swipe-entrando`,
+// position:absolute;top:0;left:0;right:0 -- mismo criterio que `.axis-enter`,
+// pero sin `bottom:0`: acá el alto tiene que seguir siendo el intrínseco del
+// contenido, no estirarse a ocupar el alto del wrapper) encima de la
+// saliente. `wrap` (el padre inmediato de `cont`) necesita
+// `position:relative` -- ya lo tienen `#ev-vista-lista-wrap`/el wrap
+// equivalente de Calendario (ver css/eventos.css).
+//
+// Bug real corregido (ver "Cambios recientes" -- reportado como solapamiento
+// visual en swipe rápido ida-vuelta entre subtabs, antes de que cada
+// transición anterior llegara a sus 320ms): la implementación previa tenía
+// los roles AL REVÉS de axisTransicion() -- clonaba la SALIENTE como overlay
+// `position:absolute` y dejaba la ENTRANTE (`cont` real) en flujo normal. Con
+// swipes más rápidos que 320ms, cada llamada agregaba su propio clon
+// fantasma sin sacar los de llamadas previas todavía en vuelo (cada uno con
+// su propio setTimeout de limpieza independiente) -- se acumulaban 2+ clones
+// superpuestos a la vez con el contenido real, visible como solapamiento.
+// Fix, 2 partes: (1) roles invertidos, calcando el patrón ya probado; (2)
+// `cont` guarda una referencia a SU PROPIA saliente en vuelo
+// (`cont._swipeSalienteActual`, propiedad del elemento -- no una variable
+// global -- así 2 contenedores distintos, ej. Lista y Calendario, no compiten
+// por el mismo estado): una llamada nueva la saca del DOM DE INMEDIATO en vez
+// de esperar a que su propio timeout de 320ms lo haga -- esa ventana de
+// espera es exactamente donde convivían 2 salientes con la entrante real.
+// Guard de epoch (mismo mecanismo que axisTransicion()/_axisEpoch, también
+// como propiedad de `cont` -- no global, mismo motivo) contra que el cleanup
+// tardío de una llamada vieja pise algo que una más nueva ya reclamó.
+function _evAnimarCambioHorizontal(cont, pintar, direccion) {
   if (!direccion) { pintar(); return; }
-  var epoch = ++_evListaTabEpoch;
-  cont._evListaTabEpoch = epoch;
   var wrap = cont.parentElement;
-  var ghost = cont.cloneNode(true);
-  ghost.removeAttribute('id');
-  ghost.querySelectorAll('[id]').forEach(function(el) { el.removeAttribute('id'); });
-  ghost.style.position = 'absolute';
-  ghost.style.top = cont.offsetTop + 'px';
-  ghost.style.left = cont.offsetLeft + 'px';
-  ghost.style.width = cont.offsetWidth + 'px';
-  ghost.style.margin = '0';
-  ghost.style.pointerEvents = 'none';
-  wrap.appendChild(ghost);
+  cont._swipeEpoch = (cont._swipeEpoch || 0) + 1;
+  var epoch = cont._swipeEpoch;
 
-  pintar(); // pisa el contenido real -- ya determina el alto/scroll reales de acá en más
+  if (cont._swipeSalienteActual) { cont._swipeSalienteActual.remove(); cont._swipeSalienteActual = null; }
+
+  // Saliente: snapshot del contenido ACTUAL de `cont` -- puede venir de una
+  // entrante todavía en vuelo (position:absolute/`.ev-swipe-entrando`
+  // heredados del clon), se limpia explícitamente para que quede en flujo
+  // normal como cualquier saliente nueva.
+  var saliente = cont.cloneNode(true);
+  saliente.removeAttribute('id');
+  saliente.querySelectorAll('[id]').forEach(function(el) { el.removeAttribute('id'); });
+  saliente.classList.remove('ev-swipe-entrando');
+  saliente.style.position = ''; saliente.style.top = ''; saliente.style.left = ''; saliente.style.right = '';
+  saliente.style.pointerEvents = 'none';
+  wrap.insertBefore(saliente, cont);
+  cont._swipeSalienteActual = saliente;
+
+  pintar(); // pisa el contenido real -- la entrante ya tiene su contenido final antes de animar
+  cont.classList.add('ev-swipe-entrando');
 
   var entraDesde = direccion === 'izquierda' ? '100%' : '-25%';
   var saleHacia  = direccion === 'izquierda' ? '-25%' : '100%';
@@ -1251,28 +1456,31 @@ function _evListaTabAnimarCambio(cont, pintar, direccion) {
   cont.style.transition = 'none';
   cont.style.transform = 'translateX(' + entraDesde + ')';
   cont.style.opacity = '0.85';
-  ghost.style.transition = 'none';
-  ghost.style.transform = 'translateX(0)';
-  ghost.style.opacity = '1';
+  saliente.style.transition = 'none';
+  saliente.style.transform = 'translateX(0)';
+  saliente.style.opacity = '1';
 
   // Doble rAF, mismo motivo que axisTransicion()/axisBarraVertical(): deja
   // que el navegador pinte el "desde" antes de moverlo al destino.
   requestAnimationFrame(function() {
     requestAnimationFrame(function() {
-      if (cont._evListaTabEpoch !== epoch) return; // una llamada más nueva ya tomó la posta
+      if (cont._swipeEpoch !== epoch) return; // una llamada más nueva ya tomó la posta
       var t = 'transform 0.32s var(--ease-axis), opacity 0.32s var(--ease-axis)';
       cont.style.transition = t;
       cont.style.transform = 'translateX(0)';
       cont.style.opacity = '1';
-      ghost.style.transition = t;
-      ghost.style.transform = 'translateX(' + saleHacia + ')';
-      ghost.style.opacity = '0.85';
+      saliente.style.transition = t;
+      saliente.style.transform = 'translateX(' + saleHacia + ')';
+      saliente.style.opacity = '0.85';
     });
   });
 
   setTimeout(function() {
-    ghost.remove();
-    if (cont._evListaTabEpoch === epoch) { cont.style.transition = ''; cont.style.transform = ''; cont.style.opacity = ''; }
+    if (cont._swipeSalienteActual === saliente) { saliente.remove(); cont._swipeSalienteActual = null; }
+    if (cont._swipeEpoch === epoch) {
+      cont.classList.remove('ev-swipe-entrando');
+      cont.style.transition = ''; cont.style.transform = ''; cont.style.opacity = '';
+    }
   }, 320);
 }
 // Una fila: futuro reusa la card COMPLETA (_evCardEventoHtml(), mismo
@@ -1339,7 +1547,7 @@ function abrirEvDetalle(id) {
   _evRenderDetalle(ev);
   ir('s-eventos-detalle');
   // offsetHeight de una pantalla display:none da 0 -- mismo problema que
-  // _evUpdateVistaSlider()/_evUpdateRsvpSliders() (ver esas notas más
+  // _evUpdateCalSubSlider()/_evUpdateRsvpSliders() (ver esas notas más
   // arriba), se mide recién una vez que ir() ya volvió visible la pantalla.
   setTimeout(_evDetalleActualizarSticky, 50);
 }
