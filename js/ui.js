@@ -515,15 +515,17 @@ function togglePagoMetodo(header) {
 
 // `contenedorEl` (opcional, ver MANIFEST.md "Cambios recientes" -- cards de
 // cumpleaños de Eventos): sin argumento, mismo comportamiento de siempre
-// (canvas fixed a pantalla completa, usado por s6 tras confirmarReserva()).
-// Con un elemento, el confetti queda contenido dentro de ese elemento en vez
-// de cubrir la pantalla -- mismo motor (piezas/física/fade), reusado tal
-// cual en vez de reimplementarlo: el canvas pasa a position:absolute dentro
-// de `contenedorEl` (que necesita position:relative/overflow:hidden propio,
-// ver .ev-card-cumple en css/eventos.css) y usa clientWidth/clientHeight en
-// vez de innerWidth/innerHeight, con menos piezas (más chico = menos
-// densidad, si no se ve saturado) y velocidades más cortas para que el
-// ciclo entero quede visible en un área acotada.
+// (canvas fixed a pantalla completa, burst único con fade, usado por s6 tras
+// confirmarReserva()). Con un elemento, el confetti queda contenido dentro de
+// ese elemento en vez de cubrir la pantalla: el canvas pasa a
+// position:absolute dentro de `contenedorEl` (que necesita
+// position:relative/overflow:hidden propio, ver .ev-card-cumple en
+// css/eventos.css) y usa clientWidth/clientHeight en vez de
+// innerWidth/innerHeight, con muchas menos piezas (14 vs 120). A diferencia
+// del burst de pantalla completa, acá es un loop continuo sin fade: cada
+// pieza se recicla (nuevo x/color, y arriba del canvas) al salir por abajo
+// en vez de fadear y tirar el canvas entero. El loop corta solo cuando
+// contenedorEl.isConnected da false (la card salió del DOM).
 function lanzarConfetti(contenedorEl) {
   var acotado = !!contenedorEl;
   var canvas = document.createElement('canvas');
@@ -544,23 +546,33 @@ function lanzarConfetti(contenedorEl) {
   canvas.height = alto;
   var piezas = [];
   var colores = ['#F97316','#fb923c','#fbbf24','#22c55e','#60a5fa','#c084fc','#f472b6'];
-  var nPiezas = acotado ? 45 : 120;
+  var nPiezas = acotado ? 14 : 120;
+  function reciclar(p) {
+    p.x = Math.random() * canvas.width;
+    p.y = Math.random() * -canvas.height;
+    p.color = colores[Math.floor(Math.random() * colores.length)];
+  }
   for (var i = 0; i < nPiezas; i++) {
-    piezas.push({
-      x: Math.random() * canvas.width,
-      y: Math.random() * -canvas.height,
+    var p = {
       w: Math.random() * (acotado ? 6 : 10) + (acotado ? 4 : 6),
       h: Math.random() * (acotado ? 4 : 6) + (acotado ? 2 : 3),
-      color: colores[Math.floor(Math.random() * colores.length)],
       rot: Math.random() * Math.PI * 2,
       vx: (Math.random() - 0.5) * (acotado ? 2 : 3),
       vy: Math.random() * (acotado ? 3 : 4) + 2,
       vr: (Math.random() - 0.5) * 0.15
-    });
+    };
+    reciclar(p);
+    piezas.push(p);
   }
   var frames = 0;
-  var maxFrames = acotado ? 110 : 200;
-  var fadeDesde = acotado ? 90 : 180;
+  var maxFrames = 200;
+  var fadeDesde = 180;
+  // Rama acotada (card de cumpleaños): loop continuo sin fade, cada pieza
+  // se recicla al salir del área en vez de fadear+desaparecer. El corte real
+  // es contenedorEl.isConnected, no un contador de frames (#ev-lista se
+  // re-renderiza con innerHTML al navegar de semana/mes en Eventos: sin este
+  // chequeo el rAF de una card vieja seguiría corriendo sobre un canvas ya
+  // desconectado, acumulándose en cada navegación).
   function animar() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     piezas.forEach(function(p) {
@@ -568,14 +580,21 @@ function lanzarConfetti(contenedorEl) {
       ctx.translate(p.x, p.y);
       ctx.rotate(p.rot);
       ctx.fillStyle = p.color;
-      ctx.globalAlpha = Math.max(0, 1 - frames / fadeDesde);
+      ctx.globalAlpha = acotado ? 1 : Math.max(0, 1 - frames / fadeDesde);
       ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
       ctx.restore();
       p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      if (acotado && p.y - p.h > canvas.height) reciclar(p);
     });
     frames++;
-    if (frames < maxFrames) requestAnimationFrame(animar);
-    else { canvas.remove(); }
+    if (acotado) {
+      if (contenedorEl.isConnected) requestAnimationFrame(animar);
+      else canvas.remove();
+    } else if (frames < maxFrames) {
+      requestAnimationFrame(animar);
+    } else {
+      canvas.remove();
+    }
   }
   animar();
 }
