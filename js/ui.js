@@ -184,8 +184,24 @@ function ir(id, desdeHistorial, sinTrampa) {
 
   var topBar = document.getElementById('top-bar'); var topBtn = document.getElementById('top-bar-btn'); var topTitulo = document.getElementById('top-bar-titulo');
   var cfg = TOP_BAR_CONFIG[id];
+  // Buscador de Ajustes (ver "Cambios recientes") -- reemplaza el título
+  // "AJUSTES" solo en `s-datos`, togglea con #top-bar-titulo. Se resetea
+  // (input vacío, todas las filas visibles) cada vez que se entra de nuevo,
+  // para no arrastrar un filtro viejo entre visitas.
+  var ajSearchWrap = document.getElementById('aj-search-wrap');
+  if (ajSearchWrap) {
+    var esAjustes = id === 's-datos';
+    ajSearchWrap.style.display = esAjustes ? 'flex' : 'none';
+    if (esAjustes) {
+      var ajInput = document.getElementById('aj-search-input');
+      if (ajInput) ajInput.value = '';
+      if (typeof ajFiltrarSettings === 'function') ajFiltrarSettings('');
+    }
+  }
   if (cfg) {
-    topBar.style.display = 'flex'; topTitulo.textContent = typeof cfg.titulo === 'function' ? cfg.titulo() : cfg.titulo;
+    topBar.style.display = 'flex';
+    topTitulo.textContent = typeof cfg.titulo === 'function' ? cfg.titulo() : cfg.titulo;
+    topTitulo.style.display = (id === 's-datos') ? 'none' : '';
     var _volverTarget = typeof cfg.volver === 'function' ? cfg.volver() : cfg.volver;
     var topBtnIcono = topBtn.querySelector('.material-symbols-outlined');
     if (_volverTarget) {
@@ -285,7 +301,7 @@ var APP_BOTTOM_NAV_ITEMS = [
   // cuenta dashboardAdmin:true con equipamiento propio cargado, violando
   // la regla.
   { id: 'reservas', icono: 'calendar_month', texto: 'Reservas', pantalla: 's-home',
-    visible: function() { return !_dashboardAdminLimitado; } },
+    visible: function() { return !_dashboardAdminLimitado; }, entrar: function() { irReservas(); } },
   // 'eventos' -- Tanda 2 (ver MANIFEST.md "Cambios recientes" -- sección
   // Eventos, estructura estática): calendario de entrenamientos/torneos/
   // asambleas + cumpleaños del equipo, separado de "Reservas" (que sigue
@@ -303,6 +319,14 @@ var APP_BOTTOM_NAV_ITEMS = [
     visible: function() { return true; } }
 ];
 var _BOTTOM_NAV_PANTALLAS = APP_BOTTOM_NAV_ITEMS.map(function(item) { return item.pantalla; });
+// s4 ("Nueva Reserva") no es la `pantalla` raíz de ningún ítem -- se llega
+// ahí desde 'reservas' (irReservas()/irNuevaReserva()), no es un tab en sí
+// -- pero también muestra la nav inferior (ver "Cambios recientes": pedido
+// explícito, "igual que el resto de las pantallas autenticadas de la
+// app"), con 'reservas' resaltado como si estuviera en su pantalla raíz
+// (s-home). Mapa chico a propósito -- un solo caso hoy, no un mecanismo
+// genérico para evitar sobre-construir sin necesidad real.
+var _BOTTOM_NAV_EXTRA = { 's4': 'reservas' };
 
 // Reusa el `icono` ya definido por ítem para el slot de la flecha atrás de
 // #top-bar cuando una pantalla de TOP_BAR_CONFIG no tiene `volver` (ver
@@ -334,11 +358,18 @@ function _bottomNavClick(id) {
 function _actualizarBottomNav(id) {
   var nav = document.getElementById('app-bottom-nav');
   if (!nav) return;
-  if (_BOTTOM_NAV_PANTALLAS.indexOf(id) === -1) { nav.style.display = 'none'; return; }
+  var idExtra = _BOTTOM_NAV_EXTRA[id]; // ej. 's4' -> 'reservas'
+  if (_BOTTOM_NAV_PANTALLAS.indexOf(id) === -1 && !idExtra) { nav.style.display = 'none'; return; }
+  var pantallaAResaltar = id;
+  if (idExtra) {
+    for (var j = 0; j < APP_BOTTOM_NAV_ITEMS.length; j++) {
+      if (APP_BOTTOM_NAV_ITEMS[j].id === idExtra) { pantallaAResaltar = APP_BOTTOM_NAV_ITEMS[j].pantalla; break; }
+    }
+  }
   var html = '';
   APP_BOTTOM_NAV_ITEMS.forEach(function(item) {
     if (!item.visible()) return;
-    html += '<button type="button" class="app-bottom-nav-item' + (item.pantalla === id ? ' activo' : '') + '" onclick="_bottomNavClick(\'' + item.id + '\')">' +
+    html += '<button type="button" class="app-bottom-nav-item' + (item.pantalla === pantallaAResaltar ? ' activo' : '') + '" onclick="_bottomNavClick(\'' + item.id + '\')">' +
       '<span class="material-symbols-outlined">' + item.icono + '</span>' +
       '<span class="app-bottom-nav-label">' + item.texto + '</span>' +
       '</button>';

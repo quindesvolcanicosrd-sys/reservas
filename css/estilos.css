@@ -170,10 +170,10 @@
   background: var(--bg);
   z-index: 100;
 }
-/* #cta-footer-s-home es el único .cta-footer-fixed que convive con
-   .app-bottom-nav (css/nav.css) en la misma pantalla -- 's-home' es una de
-   las 2 raíces de la nav inferior (ver APP_BOTTOM_NAV_ITEMS, js/ui.js). Se
-   levanta por encima de la nav en vez de superponerse (mismo espíritu que
-   el z-index propio de #cta-footer-salud, más abajo en index.html, para su
-   propio caso de convivencia con otro elemento fijo). */
-#cta-footer-s-home { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
+/* #cta-footer-s-home / #cta-footer-s4 conviven con .app-bottom-nav
+   (css/nav.css, ver "Cambios recientes" -- s4 suma la nav visible igual que
+   el resto de las pantallas autenticadas, `_BOTTOM_NAV_PANTALLAS`/js/ui.js).
+   Se levantan por encima de la nav en vez de superponerse (mismo espíritu
+   que el z-index propio de #cta-footer-salud, más abajo en index.html, para
+   su propio caso de convivencia con otro elemento fijo). */
+#cta-footer-s-home, #cta-footer-s4 { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }

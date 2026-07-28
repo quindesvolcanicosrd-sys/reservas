@@ -232,6 +232,22 @@ function irNuevaReserva(skipEquip) {
   document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
   cargarFechas();
 }
+// Punto de entrada del tab "Reservas" de la nav inferior (ver "Cambios
+// recientes" -- `entrar` de APP_BOTTOM_NAV_ITEMS, js/ui.js): sin ninguna
+// reserva activa, salta directo a "Nueva Reserva" en vez de mostrar el
+// estado vacío de #s-home ("¿Deseas hacer una reserva?" + 3 links
+// secundarios) -- esa pantalla intermedia no aporta nada si de todos modos
+// no hay nada que consultar. Con reservas activas, comportamiento de
+// siempre (`ir('s-home')`, historial visible). Reusa `_clasificarReservas()`
+// (la misma función que ya calcula "activas" para `_renderHomeReservas()`)
+// sobre `_todasReservas` ya cargado en memoria -- sin pedir nada al backend
+// de nuevo, este tab no hace un fetch propio al tocarlo.
+function irReservas() {
+  var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  var activas = _clasificarReservas(_todasReservas || [], hoy).activas;
+  if (activas.length === 0) { irNuevaReserva(); return; }
+  ir('s-home');
+}
 
 function irMisReservas() {
   _poblarPillsAnio();

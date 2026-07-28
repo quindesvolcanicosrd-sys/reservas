@@ -176,11 +176,19 @@
 .ev-rsvp-opt {
   position: relative; z-index: 1; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 2px; padding: 8px 4px; font-size: 0.625rem; font-weight: 700;
-  color: var(--text-2); cursor: pointer; font-family: inherit; white-space: nowrap;
+  cursor: pointer; font-family: inherit; white-space: nowrap;
   transition: color 0.18s ease, background-color 0.18s ease;
 }
-.ev-rsvp-opt .material-symbols-outlined { font-size: 15px; flex-shrink: 0; }
-.ev-rsvp-opt.activa { color: var(--white); }
+/* Gris apagado fijo (ver "Cambios recientes" -- bug real: `var(--text-2)`
+   es suficientemente claro en dark mode (`#C9A090`) que se leía casi blanco
+   contra el fondo oscuro de `.ev-rsvp-seg`, no lo esperado. Mismo criterio
+   que `_EV_RSVP_COLOR` (verde/rojo/dorado, js/eventos.js): color FIJO,
+   independiente del tema/color de énfasis -- solo la opción que coincide
+   con `e.miEstado` lleva color (`.activa`, ícono+texto blancos sobre el
+   indicador sólido), las otras 2 siempre en este gris, nunca blanco. */
+.ev-rsvp-opt { color: #c98a8a; }
+.ev-rsvp-opt .material-symbols-outlined { font-size: 15px; flex-shrink: 0; color: #8a6a6a; }
+.ev-rsvp-opt.activa, .ev-rsvp-opt.activa .material-symbols-outlined { color: var(--white); }
 
 /* ── Reemplazo de solo lectura de la barra de RSVP para eventos pasados
    (fecha < hoy o Estado = Finalizado, ver _evRsvpBarraHtml()) -- mismo
@@ -248,6 +256,25 @@
    arriba con `position:sticky` + sombra sutil hacia abajo para separarse del
    contenido que pasa por detrás al scrollear. */
 .ev-detalle-sticky { position: sticky; top: 0; z-index: 20; background: var(--bg); padding: 16px 0 14px; box-shadow: 0 4px 10px -4px var(--black-sm); }
+/* Niveles 2 y 3 del sticky apilado (ver "Cambios recientes" -- barra de RSVP
+   y grid de estadísticas, cada uno fijo justo debajo del anterior). A
+   diferencia de `.ev-detalle-sticky` (afuera de `.card`, fondo `--bg`
+   constante), estos 2 SÍ viven dentro de `.card` -- mismo criterio de
+   breakpoint que `.ev-sticky-header` (sección Eventos, arriba en este mismo
+   archivo): `--card-bg` por default, `--bg` en mobile real (≤600px, donde
+   `.card` pierde su propio fondo). `top` se fija por JS
+   (`_evDetalleActualizarSticky()`, js/eventos.js) a partir de la altura
+   real renderizada del nivel anterior -- nunca un valor fijo acá. `padding-
+   bottom` (no `margin-bottom`) para que el espaciado quede DENTRO de la caja
+   pintada (con fondo), evitando un hueco transparente al quedar pegado. */
+.ev-detalle-rsvp-sticky, .ev-detalle-stats-sticky {
+  position: sticky; background: var(--card-bg); margin-bottom: 0; padding-bottom: 12px;
+}
+.ev-detalle-rsvp-sticky { z-index: 15; }
+.ev-detalle-stats-sticky { z-index: 10; }
+@media (max-width: 600px) {
+  .ev-detalle-rsvp-sticky, .ev-detalle-stats-sticky { background: var(--bg); }
+}
 .ev-detalle-nav-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 /* Ícono de tipo SUELTO (pedido explícito, ver "Cambios recientes"): sin el
    cuadrado de fondo que tenía antes (`.ev-detalle-icon-grande`, eliminada) --

@@ -902,7 +902,34 @@ function abrirEvDetalle(id) {
   _evDetalleActual = ev;
   _evRenderDetalle(ev);
   ir('s-eventos-detalle');
+  // offsetHeight de una pantalla display:none da 0 -- mismo problema que
+  // _evUpdateVistaSlider()/_evUpdateRsvpSliders() (ver esas notas más
+  // arriba), se mide recién una vez que ir() ya volvió visible la pantalla.
+  setTimeout(_evDetalleActualizarSticky, 50);
 }
+// Sticky de 3 niveles apilados (ver "Cambios recientes"): nav+pills (ya
+// sticky por CSS, top:0) -> barra de RSVP -> grid de 4 tarjetas de
+// estadística, cada uno pegado justo debajo del anterior. El `top` de los
+// niveles 2 y 3 se calcula acá a partir de `offsetHeight` REAL del nivel
+// anterior (nunca un valor fijo) -- así un contenido más alto de lo normal
+// en cualquier nivel (ej. el nombre del lugar de la pill "Lugar" envolviendo
+// a 2 líneas, dentro del nivel 1) empuja correctamente a los niveles
+// siguientes sin superponerse ni dejar hueco. Se re-llama después de
+// cualquier render que pueda cambiar la altura de los niveles 1/2 (abrir un
+// evento nuevo, o el viewport cambiando de tamaño/orientación).
+function _evDetalleActualizarSticky() {
+  var pantalla = document.getElementById('s-eventos-detalle');
+  if (!pantalla || !pantalla.classList.contains('activa')) return;
+  var nivel1 = document.getElementById('ev-detalle-sticky');
+  var nivel2 = document.getElementById('ev-detalle-rsvp');
+  var nivel3 = document.getElementById('ev-detalle-stats');
+  if (!nivel1 || !nivel2 || !nivel3) return;
+  var h1 = nivel1.offsetHeight;
+  nivel2.style.top = h1 + 'px';
+  var h2 = nivel2.offsetHeight;
+  nivel3.style.top = (h1 + h2) + 'px';
+}
+window.addEventListener('resize', function() { _evDetalleActualizarSticky(); });
 // Estructura en secciones (`.ev-detalle-section`, cada una su propio
 // contenedor #id) a propósito -- pedido explícito: dejar espacio para sumar
 // secciones futuras (editar evento admin, tareas, mensajes) como nuevos
@@ -932,7 +959,7 @@ function _evDetalleStickyHtml(ev) {
       '<span class="material-symbols-outlined ev-detalle-nav-icono">' + (_EV_ICONOS[ev.tipo] || 'event') + '</span>' +
       '<div class="ev-detalle-nav-texto">' +
         '<div class="ev-detalle-tipo">' + ev.tipo + '</div>' +
-        '<div class="ev-detalle-fechahora">' + _evFechaCompleta(ev.fecha) + ' · ' + ev.horaInicio + '</div>' +
+        '<div class="ev-detalle-fechahora">' + _evFechaCompleta(ev.fecha) + '</div>' +
       '</div>' +
     '</div>' +
     '<div class="ev-detalle-pills-row-sticky">' +

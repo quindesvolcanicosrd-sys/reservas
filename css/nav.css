@@ -9,8 +9,14 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 0 16px;
-  height: 76px;
+  /* Aire vertical real (ver "Cambios recientes" -- antes `height:76px` fijo
+     con el contenido centrado por flex, sin padding propio: ~16px de
+     "aire" implícito arriba/abajo, se sentía pegado). `padding` reemplaza
+     al `height` fijo -- el alto real ahora sigue al contenido + este
+     padding, no un número mágico; los spacers que compensan cada nav fija
+     ya se miden en JS con `offsetHeight` (`_initHomeNav()`, `_evCambiarVista()`
+     no aplica acá, ver otros `*-nav-spacer`), así que se adaptan solos. */
+  padding: 22px 16px;
   min-height: 56px;
   background: var(--bg);
   width: 100%;
@@ -92,6 +98,21 @@
   padding-left: 80px;
   padding-right: 64px;
 }
+
+/* ── Buscador de Ajustes (ver "Cambios recientes") ───────
+   Estilo "buscador de Ajustes de Android": lupa + input, sin botón de
+   búsqueda aparte. Hijo flex real (no absolute como .app-nav-title) --
+   `flex:1` ocupa exactamente el espacio entre la flecha atrás y el spacer
+   derecho de 40px, mismo criterio de `gap:10px` ya heredado de `.app-nav`. */
+.app-nav-search {
+  display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; color: var(--muted);
+}
+.app-nav-search .material-symbols-outlined { font-size: 1.2rem; flex-shrink: 0; }
+.app-nav-search input {
+  flex: 1; min-width: 0; border: none; background: transparent; outline: none;
+  font-family: inherit; font-size: 0.9rem; font-weight: 600; color: var(--text); padding: 0;
+}
+.app-nav-search input::placeholder { color: var(--muted); font-weight: 500; }
 
 /* ── Acciones derecha ────────────────────────── */
 .app-nav-actions {

@@ -422,6 +422,33 @@ function _ddpRenderMeses() {
   });
 })();
 
+/* ── Ajustes: buscador de la nav (ver "Cambios recientes",
+   #aj-search-input/index.html, togglea con #top-bar-titulo en ir()) ────
+   Filtra .aj-row/.aj-app-row por texto de .aj-title/.aj-value (case-
+   insensitive), ocultando las que no matchean; el contenedor entero
+   (.aj-group/.aj-app-rows, ambos con su propio fondo/border-radius de
+   "card") se oculta si TODAS sus filas quedan filtradas -- si no, un grupo
+   vacío se vería como una tarjeta en blanco. */
+function ajFiltrarSettings(query) {
+  var q = (query || '').trim().toLowerCase();
+  document.querySelectorAll('#s-datos-card .aj-row, #s-datos-card .aj-app-row').forEach(function(row) {
+    var titulo = row.querySelector('.aj-title');
+    var valor = row.querySelector('.aj-value');
+    var texto = ((titulo ? titulo.textContent : '') + ' ' + (valor ? valor.textContent : '')).toLowerCase();
+    row.style.display = (!q || texto.indexOf(q) !== -1) ? '' : 'none';
+  });
+  document.querySelectorAll('#s-datos-card .aj-group, #s-datos-card .aj-app-rows').forEach(function(grupo) {
+    // #aj-group-miliga tiene su propia visibilidad independiente (solo
+    // admin, ver irEditarDatos()) -- el buscador nunca debe revelarlo ni
+    // ocultarlo, solo actúa sobre grupos visibles por default.
+    if (grupo.id === 'aj-group-miliga') return;
+    var filas = grupo.querySelectorAll('.aj-row, .aj-app-row');
+    if (!filas.length) return;
+    var algunaVisible = Array.prototype.some.call(filas, function(f) { return f.style.display !== 'none'; });
+    grupo.style.display = algunaVisible ? '' : 'none';
+  });
+}
+
 /* ── Ajustes: navegación de sub-pantallas ─────────────── */
 var _ajSubAbierto = null; // id del aj-sub-* actualmente abierto, o null
 

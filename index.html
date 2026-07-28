@@ -31,8 +31,8 @@
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css">
-<link rel="stylesheet" href="css/nav.css?v=2050ebac">
-<link rel="stylesheet" href="css/eventos.css?v=32830420">
+<link rel="stylesheet" href="css/nav.css?v=62d1fa0c">
+<link rel="stylesheet" href="css/eventos.css?v=09e2812d">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -113,6 +113,15 @@
     <span class="material-symbols-outlined">arrow_back</span>
   </button>
   <span class="app-nav-title" id="top-bar-titulo"></span>
+  <!-- Buscador de Ajustes (ver "Cambios recientes") -- reemplaza el título
+       "AJUSTES" solo en esa pantalla (togglea con #top-bar-titulo en ir(),
+       js/ui.js). A diferencia de #top-bar-titulo (position:absolute,
+       pointer-events:none -- un overlay de solo texto), este es un hijo flex
+       real (flex:1) para poder ser interactivo. -->
+  <div class="app-nav-search" id="aj-search-wrap" style="display:none;">
+    <span class="material-symbols-outlined">search</span>
+    <input type="text" id="aj-search-input" placeholder="Buscar en Ajustes" oninput="ajFiltrarSettings(this.value)">
+  </div>
   <div style="width:40px;flex-shrink:0;"></div>
 </div>
 
@@ -351,10 +360,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="ev-detalle-sticky" id="ev-detalle-sticky"></div>
     <div class="card" style="text-align:left;">
       <div class="ev-detalle-section" id="ev-detalle-info"></div>
-      <div class="ev-detalle-section" id="ev-detalle-rsvp"></div>
+      <div class="ev-detalle-section ev-detalle-rsvp-sticky" id="ev-detalle-rsvp"></div>
       <div class="ev-detalle-section" id="ev-detalle-asistencia">
         <div class="ev-detalle-titulo-seccion">Asistencia</div>
-        <div class="ev-stats-grid" id="ev-detalle-stats"></div>
+        <div class="ev-stats-grid ev-detalle-stats-sticky" id="ev-detalle-stats"></div>
         <div id="ev-detalle-asistencia-lista"></div>
       </div>
       <!-- Futuras secciones (editar evento admin, tareas, mensajes) van acá
@@ -514,7 +523,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
 
       <div class="error-msg" id="err-s4"></div>
-      <div class="cta-footer-spacer" style="height:220px;"></div>
+      <div class="cta-footer-spacer" style="height:calc(220px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
     </div>
   </div>
 
@@ -744,8 +753,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/bsheet.js"></script>
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=2d611e03"></script>
-<script src="js/eventos.js?v=1eb4a452"></script>
+<script src="js/ui.js?v=2b9acd88"></script>
+<script src="js/eventos.js?v=733b8b7c"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js"></script>
 <script src="js/perfil.js"></script>
