@@ -26,13 +26,13 @@
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=479995f3"></script>
 <link rel="stylesheet" href="css/global.css?v=27a5bbaf">
-<link rel="stylesheet" href="css/estilos.css?v=b3ff7254">
+<link rel="stylesheet" href="css/estilos.css?v=fd18ecfe">
 <link rel="stylesheet" href="css/ui.css?v=5d0e5923">
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=78d2c687">
 <link rel="stylesheet" href="css/nav.css?v=e89c04e6">
-<link rel="stylesheet" href="css/eventos.css?v=1dc89a61">
+<link rel="stylesheet" href="css/eventos.css?v=a0fb118a">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -272,6 +272,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="card">
       <div id="historial-pills-anio" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px;scrollbar-width:none;-ms-overflow-style:none;"></div>
       <div id="historial-meses"></div>
+      <!-- Espaciador contra la nav inferior (ver "Cambios recientes" --
+           s-misreservas ahora suma nav vía _BOTTOM_NAV_EXTRA/js/ui.js, antes
+           no lo necesitaba). Mismo criterio que el resto de la app. -->
+      <div style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
     </div>
   </div>
 
@@ -302,7 +306,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
              Reemplaza TANTO el pill grande Semana/Calendario/Lista COMO el
              renglón .ev-subtabs-wrap que antes vivían separados. -->
         <div class="ev-header-row">
-          <button type="button" class="ev-header-icon-btn" id="ev-vista-toggle-btn" onclick="_evToggleVistaBurbuja()" title="Vista">
+          <button type="button" class="app-nav-icon-btn ev-header-icon-btn" id="ev-vista-toggle-btn" onclick="_evToggleVistaBurbuja()" title="Vista">
             <span class="material-symbols-outlined">visibility</span>
           </button>
 
@@ -331,7 +335,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
           <!-- Botón embudo -- togglea #ev-filtros-colapsable, badge numérico
                solo si hay algún filtro con selección. -->
-          <button type="button" class="ev-header-icon-btn ev-filtro-toggle-btn" id="ev-filtro-toggle-btn" onclick="_evToggleFiltrosPanel()" title="Filtros">
+          <button type="button" class="app-nav-icon-btn ev-header-icon-btn ev-filtro-toggle-btn" id="ev-filtro-toggle-btn" onclick="_evToggleFiltrosPanel()" title="Filtros">
             <span class="material-symbols-outlined">tune</span>
             <span class="ev-filtro-badge" id="ev-filtro-badge" style="display:none;">0</span>
           </button>
@@ -384,9 +388,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
         <div id="ev-vista-semana-wrap" style="display:none;">
           <div class="ev-semana-row">
-            <button class="ev-semana-chevron" onclick="_evSemanaAnterior()" title="Semana anterior"><span class="material-symbols-outlined">chevron_left</span></button>
+            <button class="app-nav-icon-btn ev-semana-chevron" onclick="_evSemanaAnterior()" title="Semana anterior"><span class="material-symbols-outlined">chevron_left</span></button>
             <div class="ev-semana-dias" id="ev-semana-dias"></div>
-            <button class="ev-semana-chevron" onclick="_evSemanaSiguiente()" title="Semana siguiente"><span class="material-symbols-outlined">chevron_right</span></button>
+            <button class="app-nav-icon-btn ev-semana-chevron" onclick="_evSemanaSiguiente()" title="Semana siguiente"><span class="material-symbols-outlined">chevron_right</span></button>
           </div>
         </div>
 
@@ -398,9 +402,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
                (.ev-cal-header-compacto, togleada por _evCalActualizarColapso(),
                js/eventos.js -- ver "Cambios recientes"). -->
           <div class="ev-cal-header" id="ev-cal-header">
-            <button class="ev-semana-chevron" onclick="_evMesAnterior()" title="Mes anterior"><span class="material-symbols-outlined">chevron_left</span></button>
+            <button class="app-nav-icon-btn ev-semana-chevron" onclick="_evMesAnterior()" title="Mes anterior"><span class="material-symbols-outlined">chevron_left</span></button>
             <div class="ev-cal-mes-label" id="ev-cal-mes-label" onclick="_evCalVerMesCompleto()"></div>
-            <button class="ev-semana-chevron" onclick="_evMesSiguiente()" title="Mes siguiente"><span class="material-symbols-outlined">chevron_right</span></button>
+            <button class="app-nav-icon-btn ev-semana-chevron" onclick="_evMesSiguiente()" title="Mes siguiente"><span class="material-symbols-outlined">chevron_right</span></button>
           </div>
           <div class="ev-cal-grid-colapsable" id="ev-cal-grid-colapsable">
             <!-- Chevrones sutiles a los costados de la grilla (ver "Cambios
@@ -450,7 +454,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
       <!-- Futuras secciones (editar evento admin, tareas, mensajes) van acá
            como nuevos .ev-detalle-section -- ver MANIFEST.md "Cambios recientes". -->
-      <div class="cta-footer-spacer" style="height:24px;"></div>
+      <!-- +var(--bottom-nav-h) (ver "Cambios recientes" -- s-eventos-detalle
+           ahora suma nav vía _BOTTOM_NAV_EXTRA/js/ui.js, antes no lo
+           necesitaba). -->
+      <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
     </div>
   </div>
 
@@ -550,6 +557,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px;">
       <button class="btn btn-outline" id="sg-btn-confirmar-fecha" onclick="confirmarCambioFecha()" style="display:none;">Confirmar nueva fecha</button>
     </div>
+    <!-- Espaciador contra la nav inferior (ver "Cambios recientes" --
+         s-gestionar ahora suma nav vía _BOTTOM_NAV_EXTRA/js/ui.js, antes no
+         lo necesitaba). El botón de arriba vive en flujo normal (no un
+         .cta-footer-fixed propio), mismo criterio simple que s-misreservas. -->
+    <div style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
   </div>
 </div>
 
@@ -627,7 +639,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <span id="chk-pago-texto" style="flex:1;"></span>
         <div class="fi-circle" id="chk-pago-circle"><span class="material-symbols-outlined">check</span></div>
       </label>
-      <div class="cta-footer-spacer" style="height:100px;"></div>
+      <!-- +var(--bottom-nav-h) (ver "Cambios recientes" -- s-pago ahora suma
+           nav vía _BOTTOM_NAV_EXTRA/js/ui.js, antes no lo necesitaba). -->
+      <div class="cta-footer-spacer" style="height:calc(100px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
     </div>
   </div>
 
@@ -644,7 +658,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <p id="s6-aviso-pago" style="display:none;">Al confirmar nos avisas que ya realizaste el pago. <strong>Revisaremos tu transferencia y tu reserva quedará pendiente</strong>. Recibirás confirmación por correo o <strong>cuando esté aprobada.</strong> <button onclick="abrirModalInfoEstado()" style="background:none;border:none;cursor:pointer;font-size:inherit;font-weight:700;color:var(--brand);padding:0;font-family:inherit;text-decoration:underline;">¿Qué significa esto?</button></p>
       <p id="s6-liberar-cupo" style="display:none;margin-top:12px;">Si no puedes venir, <strong>avisa lo antes posible</strong> para liberar tu cupo o para evitar que movilicemos tus pertenencias. <button onclick="abrirModalInfoPolitica()" style="background:none;border:none;cursor:pointer;font-size:inherit;font-weight:700;color:var(--brand);padding:0;font-family:inherit;text-decoration:underline;">¿Qué significa esto?</button></p>
       <div class="exito-texto" id="s6-texto" style="margin-top:12px;">Puedes revisar el estado de tu reserva en cualquier momento desde <strong>"Ver mis reservas"</strong>.</div>
-      <div class="cta-footer-spacer" style="height:140px;"></div>
+      <!-- +var(--bottom-nav-h) (ver "Cambios recientes" -- s6 ahora suma nav
+           vía _BOTTOM_NAV_EXTRA/js/ui.js, antes no lo necesitaba). -->
+      <div class="cta-footer-spacer" style="height:calc(140px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
     </div>
   </div>
 
@@ -824,7 +840,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/bsheet.js"></script>
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=7f7578be"></script>
+<script src="js/ui.js?v=e9bfc42f"></script>
 <script src="js/eventos.js?v=27fa608a"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=92b4612f"></script>

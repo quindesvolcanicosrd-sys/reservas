@@ -120,7 +120,17 @@
    ver esa regla más abajo) — mismo idiom que ya usan los bottom sheets de la
    app (estado inicial inline, doble rAF, transition CSS, setTimeout de
    limpieza), no animation/keyframes por class-toggle. */
-.aj-sub { display:none; position:fixed; inset:0; background:var(--bg); z-index:950; flex-direction:column; overflow:hidden; transform:translateX(100%); opacity:0.85; transition:transform 0.32s var(--ease-axis), opacity 0.32s var(--ease-axis); }
+/* `bottom` propio (ver "Cambios recientes" -- antes `inset:0`, hasta el
+   borde real de la pantalla) en vez del acceso directo: `.aj-sub` es un
+   overlay `position:fixed` montado ENCIMA de `#s-datos` (ver comentario de
+   arriba) mientras la nav inferior sigue de fondo, ya visible con 'ajustes'
+   resaltado (la pantalla activa real nunca deja de ser 's-datos', ver
+   `irAjSub()`/js/perfil.js) -- con `inset:0` completo, el panel se pintaba
+   por encima de esa franja entera (`z-index:950` > `.app-bottom-nav:900`)
+   y la tapaba del todo, aunque siguiera técnicamente visible en el DOM.
+   Mismo cálculo que usan los `.cta-footer-fixed` que sí conviven con la nav
+   (`#cta-footer-s-home`/`#cta-footer-s4`, css/estilos.css). */
+.aj-sub { display:none; position:fixed; top:0; right:0; left:0; bottom:calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); background:var(--bg); z-index:950; flex-direction:column; overflow:hidden; transform:translateX(100%); opacity:0.85; transition:transform 0.32s var(--ease-axis), opacity 0.32s var(--ease-axis); }
 .aj-sub.activa { display:flex; }
 /* Fondo que "retrocede" mientras un aj-sub-* entra/sale por encima — dedicado
    a propósito (no .card genérico ni .pantalla#s-datos, que ya tiene su propia

@@ -187,3 +187,20 @@
    en las 4 esquinas por `.btn` base, nunca fue full-bleed de ancho, lo que
    faltaba era la separación/elevación. */
 #cta-footer-s4 { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 14px); }
+/* #cta-footer-salud -- mismo motivo que #cta-footer-s-home de arriba (ver
+   "Cambios recientes" -- aj-sub-salud ahora convive con la nav inferior,
+   igual que el resto de aj-sub-*, css/perfil.css/.aj-sub): antes tocaba
+   directo el borde inferior real (sin este override, hereda `bottom:0` de
+   `.cta-footer-fixed`) porque la nav nunca se veía detrás de `.aj-sub`
+   (`inset:0` completo) mientras el wizard de salud estaba abierto. */
+#cta-footer-salud { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
+/* #cta-footer-s6 -- mismo motivo que #cta-footer-s-home de arriba (ver
+   "Cambios recientes" -- s6 ahora convive con la nav inferior,
+   `_BOTTOM_NAV_EXTRA`/js/ui.js): antes tocaba directo el borde inferior
+   real (hereda `bottom:0` de `.cta-footer-fixed`) porque la nav nunca se
+   mostraba en esta pantalla. */
+#cta-footer-s6 { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
+/* #cta-footer-s-pago -- mismo motivo que #cta-footer-s6 de arriba (ver
+   "Cambios recientes" -- s-pago ahora convive con la nav inferior,
+   `_BOTTOM_NAV_EXTRA`/js/ui.js). */
+#cta-footer-s-pago { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }

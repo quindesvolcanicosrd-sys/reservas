@@ -35,21 +35,20 @@
 /* ── Cabecera de 3 elementos (ver "Cambios recientes" -- rediseño: ícono
    ojo/pill contextual/ícono filtros, reemplaza el pill grande Semana/
    Calendario/Lista + el renglón .ev-subtabs-wrap que antes vivían
-   separados). `.ev-header-icon-btn` es la base compartida de los 2 íconos
-   (ojo/filtros) -- mismo tamaño/forma que `.ev-semana-chevron`, pero
-   `position:relative` (ancla `.ev-filtro-badge`) en vez de absolute (ahora
-   fluyen como cualquier hijo flex de la fila, ya no hace falta anclarlos al
-   borde de un wrapper). */
+   separados). Íconos ojo/filtros: migrados a `.app-nav-icon-btn`
+   (css/nav.css, ver "Cambios recientes" -- auditoría de consistencia de
+   nav: antes 34×34px/radius:10px/ícono 1.15rem propios, un tamaño más entre
+   varios en toda la app, sin relación con el estándar de 44×44px/radius:12px/
+   ícono 18px que ya comparten flecha atrás/íconos de home/Ajustes) -- HTML
+   ahora suma la clase compartida (`class="app-nav-icon-btn ev-header-icon-btn"`,
+   ver index.html), `.ev-header-icon-btn` queda como modificador MÍNIMO (solo
+   lo que `.app-nav-icon-btn` no aporta), no una regla paralela duplicando
+   tamaño/color/fondo. */
 .ev-header-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-.ev-header-icon-btn {
-  position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-  width: 34px; height: 34px; min-width: 34px; border-radius: 10px;
-  background: var(--brand-light); border: none; cursor: pointer; color: var(--brand);
-  transition: background 0.15s; -webkit-tap-highlight-color: transparent;
-}
-.ev-header-icon-btn:hover { background: var(--brand-20); }
-.ev-header-icon-btn:active { transform: scale(0.94); }
-.ev-header-icon-btn .material-symbols-outlined { font-size: 1.15rem; display: block; }
+/* `position:relative` ancla `.ev-filtro-badge` (el número rojo del ícono de
+   filtros) -- único aporte propio, todo lo demás (tamaño/fondo/color/hover)
+   viene de `.app-nav-icon-btn`. */
+.ev-header-icon-btn { position: relative; }
 /* Reusa el mismo modificador "activo" que ya usaba el botón embudo (togglea
    con la burbuja propia abierta -- ver _evAbrirFiltrosPanel()/
    _evAbrirVistaBurbuja(), js/eventos.js) para los 2 íconos por igual. */
@@ -58,19 +57,26 @@
    Pasados/Todos (Lista), una sola visible a la vez (togglada por JS, ver
    _evCambiarVista()) -- centrada en el espacio restante de la fila. */
 .ev-header-pill-wrap { flex: 1; min-width: 0; display: flex; justify-content: center; }
-.ev-btn-add { width: 36px; height: 36px; flex-shrink: 0; }
+/* `.ev-btn-add` ("+" Nuevo evento, admin) -- ver "Cambios recientes":
+   ANTES sobreescribía 36×36px acá, el único uso real de
+   `.app-nav-icon-btn-danger` en toda la app terminaba sin verse nunca a su
+   tamaño base documentado (44×44px). Sin override propio ahora -- hereda
+   44×44px/radius:50% de sus clases base tal cual (`app-nav-icon-btn
+   app-nav-icon-btn-danger`, ver index.html). */
 
 /* ── Franja semanal ───────────────────────────────────── */
 .ev-semana-row { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
-.ev-semana-chevron {
-  display: flex; align-items: center; justify-content: center;
-  width: 36px; height: 36px; min-width: 36px; border-radius: 10px;
-  background: var(--brand-light); border: none; cursor: pointer; color: var(--brand);
-  transition: background 0.15s; -webkit-tap-highlight-color: transparent;
-}
-.ev-semana-chevron:hover { background: var(--brand-20); }
+/* `.ev-semana-chevron` (‹/› de semana Y de mes, `.ev-cal-header` más abajo)
+   -- migrado a `.app-nav-icon-btn` (ver "Cambios recientes", mismo criterio
+   que `.ev-header-icon-btn` de arriba: antes 36×36px/radius:10px/ícono
+   1.2rem propios). Queda como modificador mínimo -- solo el `:active` que
+   `.app-nav-icon-btn` no tiene (los botones circulares SÍ tienen su propio
+   `:active`, pero con otro valor -- `.app-nav-back` usa scale(0.95), acá se
+   mantiene el 0.94 ya usado antes en Eventos, diferencia menor sin impacto
+   visual real). Nota: NO se tocó `.ev-cal-grid-chevron` (los chevrones
+   sutiles a los costados de la grilla mensual) -- son un caso distinto a
+   propósito, ver su propia regla más abajo. */
 .ev-semana-chevron:active { transform: scale(0.94); }
-.ev-semana-chevron .material-symbols-outlined { font-size: 1.2rem; display: block; }
 .ev-semana-dias { flex: 1; display: flex; justify-content: space-between; gap: 3px; }
 .ev-dia {
   flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
@@ -137,7 +143,15 @@
 /* Sutiles a propósito (pedido explícito) -- sin fondo/borde propios,
    `opacity` baja por default, solo se destacan al tocarlos/pasar el mouse.
    `align-self:stretch` los centra contra el alto real de la grilla (el
-   hermano `flex` más alto de la fila) sin necesitar medirlo por JS. */
+   hermano `flex` más alto de la fila) sin necesitar medirlo por JS.
+   Excluidos A PROPÓSITO de la auditoría de consistencia de nav (ver
+   "Cambios recientes" -- no se migran a `.app-nav-icon-btn`/44px como el
+   resto de los botones de ícono de esta pantalla): no son un botón de nav
+   -- viven pegados al contenido de la grilla, no a una fila `.app-nav*`, y
+   "sutil/angosto/sin fondo" fue un pedido explícito de la sesión anterior
+   (ver "Cambios recientes" -- chevrones sutiles de la grilla), justo lo
+   opuesto de un ícono de nav de 44px con fondo. Forzar el tamaño estándar acá
+   hubiera revertido ese pedido sin que nadie lo pidiera. */
 .ev-cal-grid-chevron {
   flex-shrink: 0; align-self: stretch; display: flex; align-items: center; justify-content: center;
   width: 20px; padding: 0; border: none; background: transparent; color: var(--muted);
@@ -374,8 +388,16 @@
    compite menos con el botón circular de la flecha atrás al lado. */
 .ev-detalle-nav-icono { color: var(--brand); font-size: 22px; flex-shrink: 0; }
 .ev-detalle-nav-texto { min-width: 0; }
+/* `font-size`/`letter-spacing` igualados a `.app-nav-title` (css/nav.css,
+   ver "Cambios recientes" -- auditoría de consistencia de nav: antes
+   0.74rem/0.6px, más chico que el estándar 0.86rem/1.2px que ya comparten
+   el resto de los títulos de nav de la app -- `font-weight`/`color`/
+   `text-transform` ya coincidían). No se reusa la clase `.app-nav-title`
+   tal cual (posicionamiento `absolute` + padding pensados para la fila
+   `.app-nav` genérica, layout distinto al de `#ev-detalle-sticky`) -- se
+   iguala el tamaño real, no la mecánica de posicionamiento. */
 .ev-detalle-tipo {
-  font-size: 0.74rem; font-weight: 800; color: var(--brand); text-transform: uppercase; letter-spacing: 0.6px;
+  font-size: 0.86rem; font-weight: 800; color: var(--brand); text-transform: uppercase; letter-spacing: 1.2px;
 }
 .ev-detalle-fechahora { font-size: 0.85rem; color: var(--text-2); font-weight: 600; margin-top: 2px; }
 /* Pills chicas -- lado a lado como el resto de pills informativas de la app
@@ -463,8 +485,22 @@
    de subtabs. */
 .ev-subtabs-wrap { position: relative; }
 .ev-subtabs { display: flex; justify-content: center; gap: 22px; }
+/* `padding` vertical/`font-size` igualados a `.tp-opt` (css/reservas.css,
+   ver "Cambios recientes" -- auditoría de consistencia de nav: antes
+   `4px 1px 10px`/`0.82rem`, ~11px más bajo que el pill `.tp-seg` de s4/Mi
+   Liga admin -- confirmado con Victor: unificar altura/font-size mantenendo
+   CADA look propio (texto+línea acá, pill con fondo allá -- son roles
+   visuales distintos a propósito, no se tocan `background`/`border-radius`).
+   `8px 1px 14px` = 22px de padding vertical total, igual que `.tp-opt`
+   (`11px 22px`, 22px vertical) -- se mantiene la asimetría (más espacio
+   abajo que arriba) porque `.ev-subtabs-indicator` necesita ese hueco
+   debajo del texto, ahora simplemente más grande en las 2 direcciones.
+   Horizontal (`1px`) sin cambios -- folder de posts distinto: acá el
+   espaciado entre tabs lo da `.ev-subtabs{gap:22px}`, no el padding de cada
+   uno (a diferencia de `.tp-opt`, un pill individual que sí necesita
+   padding horizontal propio para su propio fondo/border-radius). */
 .ev-subtab {
-  padding: 4px 1px 10px; font-size: 0.82rem; font-weight: 700; color: var(--muted); cursor: pointer;
+  padding: 8px 1px 14px; font-size: 0.88rem; font-weight: 700; color: var(--muted); cursor: pointer;
   transition: color 0.2s;
   user-select: none;
 }

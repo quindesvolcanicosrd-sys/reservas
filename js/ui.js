@@ -342,7 +342,35 @@ var _BOTTOM_NAV_PANTALLAS = APP_BOTTOM_NAV_ITEMS.map(function(item) { return ite
 // app"), con 'reservas' resaltado como si estuviera en su pantalla raíz
 // (s-home). Mapa chico a propósito -- un solo caso hoy, no un mecanismo
 // genérico para evitar sobre-construir sin necesidad real.
-var _BOTTOM_NAV_EXTRA = { 's4': 'reservas' };
+//
+// Los 9 aj-sub-* (Perfil/Contacto/Privacidad/Legal/Dirección/Emergencia/Mi
+// liga/Equipamiento/Salud) NO pasan por acá -- descartado a propósito, ver
+// "Cambios recientes": son overlays `position:fixed` propios (`.aj-sub`,
+// css/perfil.css), montados/desmontados por `irAjSub()`/`cerrarAjSub()`
+// (js/perfil.js), un mecanismo COMPLETAMENTE separado de `ir()` -- nunca
+// tocan `.pantalla`/`_actualizarBottomNav()`, la pantalla activa real sigue
+// siendo 's-datos' todo el tiempo que un aj-sub-* está abierto (por eso
+// `_actualizarBottomNav('s-datos')` ya dejó la nav visible con 'ajustes'
+// resaltado desde antes de abrir cualquier sub-panel -- nunca hizo falta
+// sumarlas acá). El bug real (ver "Cambios recientes") era puramente
+// visual: `.aj-sub` (z-index:950) se pintaba ENCIMA de `.app-bottom-nav`
+// (z-index:900) Y ocupaba el mismo espacio (`inset:0`, hasta el borde
+// inferior real) -- la tapaba por completo aunque siguiera técnicamente
+// visible en el DOM. Fix en css/perfil.css (`.aj-sub` ahora reserva
+// `bottom:calc(var(--bottom-nav-h) + safe-area)`, no llega a taparla), no acá.
+//
+// s-misreservas (historial completo, drill-down de 'reservas') / s6 (éxito/
+// confirmación, cierre del flujo de "Nueva Reserva") / s-pago (pago en
+// curso) / s-gestionar (reagendar una reserva) / s-eventos-detalle (detalle
+// de un evento, drill-down de 'eventos') SÍ suman acá (ver "Cambios
+// recientes" -- confirmado con Victor: mismo principio permanente, seguir
+// viendo la nav en cualquier sub-pantalla de una sección autenticada,
+// incluidas s-pago/s-gestionar pese a tener una confirmación en curso).
+var _BOTTOM_NAV_EXTRA = {
+  's4': 'reservas', 's-misreservas': 'reservas', 's6': 'reservas',
+  's-pago': 'reservas', 's-gestionar': 'reservas',
+  's-eventos-detalle': 'eventos'
+};
 
 // Reusa el `icono` ya definido por ítem para el slot de la flecha atrás de
 // #top-bar cuando una pantalla de TOP_BAR_CONFIG no tiene `volver` (ver
