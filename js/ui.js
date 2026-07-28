@@ -110,11 +110,11 @@ var TOP_BAR_CONFIG = {
   's-pago': { titulo: 'Pago', volver: 's4' },
   's-gestionar': { titulo: 'Re-agendar fecha', volver: 's-home' },
   's-misreservas': { titulo: 'Historial de reservas', volver: 's-home' },
-  // Detalle de un evento (Eventos, ver MANIFEST.md "Cambios recientes") --
-  // título dinámico (mismo patrón que 's4'), lee `_evDetalleActual`
-  // (js/eventos.js, seteado por abrirEvDetalle() antes de este ir()).
-  // Alcanzable solo desde s-eventos (Semana/Calendario/Lista) -- volver fijo.
-  's-eventos-detalle': { titulo: function() { return (typeof _evDetalleActual !== 'undefined' && _evDetalleActual) ? _evDetalleActual.lugar : 'Detalle del evento'; }, volver: 's-eventos' },
+  // Detalle de un evento (Eventos) -- ya NO usa el #top-bar genérico (ver
+  // "Cambios recientes": nav compacta propia y sticky, #ev-detalle-sticky,
+  // poblada por _evRenderDetalle()/js/eventos.js con flecha atrás + ícono +
+  // tipo/fecha-hora + pills de Inicio/Lugar, todo en un solo bloque). Sin
+  // entrada acá, `ir()` oculta el #top-bar entero para esta pantalla.
   // Sin volver (ver "Cambios recientes" — nav inferior): Ajustes es ahora
   // una pantalla raíz de APP_BOTTOM_NAV_ITEMS, alcanzable siempre desde la
   // nav inferior -- no necesita ni debe tener un botón que la redirija hacia
@@ -186,12 +186,6 @@ function ir(id, desdeHistorial, sinTrampa) {
   var cfg = TOP_BAR_CONFIG[id];
   if (cfg) {
     topBar.style.display = 'flex'; topTitulo.textContent = typeof cfg.titulo === 'function' ? cfg.titulo() : cfg.titulo;
-    // Detalle de evento (Eventos, ver MANIFEST.md "Cambios recientes"): el
-    // título es el nombre del lugar, puede ser largo -- 2 líneas con
-    // ellipsis en vez del truncado a 1 línea que usa el resto de los
-    // títulos de #top-bar (.app-nav-title base, sin tocar para no afectar
-    // ninguna otra pantalla).
-    topTitulo.classList.toggle('app-nav-title-clamp', id === 's-eventos-detalle');
     var _volverTarget = typeof cfg.volver === 'function' ? cfg.volver() : cfg.volver;
     var topBtnIcono = topBtn.querySelector('.material-symbols-outlined');
     if (_volverTarget) {
@@ -241,25 +235,6 @@ function ir(id, desdeHistorial, sinTrampa) {
       }));
       homeNav.style.display = _tieneActivas ? 'flex' : 'none';
     }
-  }
-
-  // #eventos-nav (s-eventos) -- mismo criterio que #home-nav arriba, pero
-  // sin condición extra: a diferencia de "Nueva reserva" (que solo se
-  // muestra con reservas activas), Eventos siempre muestra su nav fija
-  // mientras esa pantalla está activa (ver css/eventos.css/js/eventos.js,
-  // MANIFEST.md "Cambios recientes" -- sección Eventos, Tanda 2).
-  // #eventos-nav-spacer se mide acá mismo (igual que #home-nav-spacer en
-  // _initHomeNav()/_sincronizarNavHome(), js/home.js) en vez de dejar un
-  // valor fijo en el HTML -- así el contenido de abajo (selector Semana/
-  // Calendario) siempre compensa la altura real de la nav, no un número
-  // fijo que puede desalinearse si esa altura cambia (ej. #eventos-btn-add
-  // visible para admin no cambia la altura hoy, pero el spacer no debe
-  // depender de que eso siga siendo cierto).
-  var eventosNav = document.getElementById('eventos-nav');
-  var eventosNavSpacer = document.getElementById('eventos-nav-spacer');
-  if (eventosNav) {
-    eventosNav.style.display = (id === 's-eventos') ? 'flex' : 'none';
-    if (id === 's-eventos' && eventosNavSpacer) eventosNavSpacer.style.height = (eventosNav.offsetHeight + 8) + 'px';
   }
 
   _actualizarBottomNav(id);

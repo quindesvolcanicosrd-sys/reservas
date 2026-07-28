@@ -23,7 +23,7 @@ var _EV_EQUIPO_DEMO = [
   'Isabela Moreno', 'Joaquín Vega', 'Karen Zambrano', 'Luis Ortiz'
 ];
 
-var _EV_ICONOS = { 'Entrenamiento': 'directions_run', 'Torneo': 'emoji_events', 'Asamblea': 'groups' };
+var _EV_ICONOS = { 'Entrenamiento': 'directions_run', 'Torneo': 'emoji_events', 'Asamblea': 'groups', 'Ciclopaseo': 'pedal_bike' };
 var _EV_DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 var _EV_DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
@@ -38,14 +38,15 @@ var _EV_MAPS_URL_POR_LUGAR = {
   'Sede Quindes Volcánicos': 'https://www.google.com/maps/search/?api=1&query=Quindes+Volc%C3%A1nicos+Quito',
   'Pista Bicentenario': 'https://www.google.com/maps/search/?api=1&query=Parque+Bicentenario+Quito'
 };
-var _EV_DURACION_MIN_POR_TIPO = { 'Entrenamiento': 90, 'Torneo': 180, 'Asamblea': 60 };
+var _EV_DURACION_MIN_POR_TIPO = { 'Entrenamiento': 90, 'Torneo': 180, 'Asamblea': 60, 'Ciclopaseo': 120 };
 var _EV_DESCRIPCION_POR_TIPO = {
   'Entrenamiento': 'Entrenamiento regular del equipo. Trae tus patines y protecciones completas.',
   'Torneo': 'Competencia oficial. Revisá el reglamento y llegá con anticipación para el registro.',
-  'Asamblea': 'Reunión general del equipo para tratar temas administrativos y de organización.'
+  'Asamblea': 'Reunión general del equipo para tratar temas administrativos y de organización.',
+  'Ciclopaseo': 'Paseo recreativo abierto a todo el equipo. No requiere reserva previa.'
 };
 
-var _EV_RESP_ICONO  = { 'Asistiré': 'check_circle', 'No asistiré': 'cancel', 'No jugador': 'visibility' };
+var _EV_RESP_ICONO  = { 'Asistiré': 'check_circle', 'No asistiré': 'cancel', 'No jugador': 'radio_button_checked' };
 var _EV_CHIP_BADGE  = { 'A tiempo': 'badge-confirmada', 'Tarde': 'badge-pendiente', 'Ausente': 'badge-cancelada' };
 // Chip de asistencia REAL de la pestaña "Lista" > "Pasados" (ver
 // _evListaTabFilaHtml() más abajo) -- a diferencia de _EV_CHIP_BADGE (arriba,
@@ -68,6 +69,15 @@ var _evVista = 'semana';
 var _evSemanaOffset = 0;
 var _evMesOffset = 0;
 var _evConfettiMostrado = {};
+// Vista Calendario -- 2 modos (ver "Cambios recientes"): 'dia' filtra la
+// lista de abajo a un solo día tocado (_evCalFechaSel), 'mes' la muestra
+// completa (agenda del mes, comportamiento de siempre de _evRangoActual()).
+// `_evCalFechaSel` arranca en null -- se inicializa a "hoy" recién la
+// primera vez que se renderiza la grilla (_evRenderCalendario(), init
+// perezosa) para que, una vez que el usuario elige otro día, ese elegido
+// sobreviva a cambiar de vista y volver a Calendario en vez de resetearse.
+var _evCalModo = 'dia';
+var _evCalFechaSel = null;
 
 /* ── Utilidades de fecha (sin dependencias externas) ─────────────────── */
 function _evPad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -75,6 +85,13 @@ function _evToISO(d) { return d.getFullYear() + '-' + _evPad(d.getMonth() + 1) +
 function _evParseISO(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
 function _evSumarDias(iso, n) { var d = _evParseISO(iso); d.setDate(d.getDate() + n); return _evToISO(d); }
 function _evHoyISO() { return _evToISO(new Date()); }
+// Compara 2 fechas ISO por su valor real (Date), no como strings -- ver
+// "Cambios recientes": comparar "fecha1 >= fecha2" como texto plano solo da
+// el resultado cronológico correcto si AMBAS llegan con el mismo ancho
+// (cero-padding); un backend real (Tanda 3, ej. Apps Script formateando una
+// celda de fecha con mes/día de un solo dígito) puede no garantizarlo. Toda
+// comparación de fechas de este archivo pasa por acá.
+function _evFechaCmp(a, b) { return _evParseISO(a).getTime() - _evParseISO(b).getTime(); }
 function _evLunesDeSemana(d) {
   var dia = d.getDay();
   var diff = (dia === 0 ? -6 : 1 - dia);
@@ -104,7 +121,14 @@ function _evGenerarDemo() {
     { id: 'EVT-9', fecha: _evSumarDias(hoy, 8), horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: null, asistentes: [] },
     { id: 'EVT-10', fecha: _evSumarDias(hoy, 15), horaInicio: '18:00', lugar: 'Coliseo Rumiñahui', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: null, asistentes: [] },
     { id: 'EVT-11', fecha: _evSumarDias(hoy, 22), horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: null, asistentes: [] },
-    { id: 'EVT-12', fecha: _evSumarDias(hoy, -24), horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Finalizado', miEstado: null, asistentes: [] }
+    { id: 'EVT-12', fecha: _evSumarDias(hoy, -24), horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Finalizado', miEstado: null, asistentes: [] },
+    // requiereReserva:false (ver "Cambios recientes") -- viene de Venues!
+    // "Requiere reserva"='NO' en el backend real (getEventosRango()/
+    // getEventosFiltrados(), MANIFEST.md); el resto de los eventos de este
+    // array NO tienen el campo a propósito (undefined), mismo default
+    // `true` que ya aplica el backend cuando la columna viene vacía.
+    { id: 'EVT-13', fecha: _evSumarDias(hoy, 5), horaInicio: '09:00', lugar: 'Ciclopaseo', tipo: 'Ciclopaseo', estado: 'Evento Programado', miEstado: null, asistentes: [], requiereReserva: false,
+      rsvps: [{ nombre: 'Karen Zambrano', estado: 'Asistiré' }] }
   ];
   _EV_CUMPLEANOS = [
     { id: 'CUMP-1', nombre: 'Isabela Moreno', fecha: _evSumarDias(hoy, -1), edad: 24, edadPublica: true },
@@ -118,6 +142,7 @@ function _evGenerarDemo() {
 function irEventos() {
   if (_EV_EVENTOS.length === 0) _evGenerarDemo();
   _evVista = 'semana'; _evSemanaOffset = 0; _evMesOffset = 0;
+  _evCalModo = 'dia'; _evCalFechaSel = null; // vuelve a "hoy seleccionado" cada vez que se entra a Eventos de nuevo
   document.getElementById('ev-vista-semana').classList.add('active');
   document.getElementById('ev-vista-calendario').classList.remove('active');
   document.getElementById('ev-vista-lista').classList.remove('active');
@@ -147,11 +172,25 @@ function _evCambiarVista(v) {
   document.getElementById('ev-vista-lista').classList.toggle('active', v === 'lista');
   document.getElementById('ev-vista-semana-wrap').style.display = v === 'semana' ? 'block' : 'none';
   document.getElementById('ev-vista-calendario-wrap').style.display = v === 'calendario' ? 'block' : 'none';
+  // #ev-lista-tab-header-wrap (subtabs+filtros, dentro de la cabecera
+  // sticky) y #ev-vista-lista-wrap (solo #ev-lista-tab-filas, afuera del
+  // sticky, scrollea libre) togglean juntos -- son las 2 mitades de la
+  // misma vista "Lista", separadas para el sticky header (ver "Cambios
+  // recientes"/index.html).
+  document.getElementById('ev-lista-tab-header-wrap').style.display = v === 'lista' ? 'block' : 'none';
   document.getElementById('ev-vista-lista-wrap').style.display = v === 'lista' ? 'block' : 'none';
   document.getElementById('ev-lista').style.display = v === 'lista' ? 'none' : 'block';
   _evUpdateVistaSlider(true);
+  if (v !== 'lista' && _evFiltroBurbujaAbierta) {
+    // Sale de "Lista" con una burbuja de filtro abierta -- la colapsa sin
+    // animar (ya está oculta, display:none en el wrap) para que al volver no
+    // aparezca ya expandida de golpe.
+    _evColapsarFiltroBurbuja(_evFiltroBurbujaAbierta);
+    _evFiltroBurbujaAbierta = null;
+  }
   if (v === 'lista') { _evListaTabPoblarFiltros(); _evActualizarBotonesFiltro(); _evListaTabRenderLista(); }
   else _evRenderVistaActual();
+  if (v === 'calendario') _evCalActualizarColapso();
 }
 function _evUpdateVistaSlider(animate) {
   var slider = document.getElementById('ev-vista-slider');
@@ -167,13 +206,16 @@ function _evRenderVistaActual() {
 }
 function _evSemanaAnterior() { _evSemanaOffset--; _evRenderVistaActual(); }
 function _evSemanaSiguiente() { _evSemanaOffset++; _evRenderVistaActual(); }
-function _evMesAnterior() { _evMesOffset--; _evRenderVistaActual(); }
-function _evMesSiguiente() { _evMesOffset++; _evRenderVistaActual(); }
+// Cambiar de mes deja atrás cualquier día puntual seleccionado del mes
+// anterior (no tendría sentido arrastrarlo a otro mes) -- vuelve a "modo
+// mes" (agenda completa) del mes recién mostrado, ver _evCalModo más abajo.
+function _evMesAnterior() { _evMesOffset--; _evCalModo = 'mes'; _evCalFechaSel = null; _evRenderVistaActual(); }
+function _evMesSiguiente() { _evMesOffset++; _evCalModo = 'mes'; _evCalFechaSel = null; _evRenderVistaActual(); }
 
 /* ── Consultas sobre los datos de prueba (idénticas a como se filtrarían
    los datos reales de getEventosRango()/getCumpleañosRango()) ──────────── */
-function _evEventosDeFecha(iso) { return _EV_EVENTOS.filter(function(e) { return e.fecha === iso; }); }
-function _evCumpleDeFecha(iso) { return _EV_CUMPLEANOS.filter(function(c) { return c.fecha === iso; }); }
+function _evEventosDeFecha(iso) { return _EV_EVENTOS.filter(function(e) { return _evFechaCmp(e.fecha, iso) === 0; }); }
+function _evCumpleDeFecha(iso) { return _EV_CUMPLEANOS.filter(function(c) { return _evFechaCmp(c.fecha, iso) === 0; }); }
 
 /* ── Vista Semana ─────────────────────────────────────────────────────
    Franja de 7 días (L a D) de la semana actual + _evSemanaOffset semanas. */
@@ -195,7 +237,7 @@ function _evRenderSemana() {
     var tieneCumple = _evCumpleDeFecha(iso).length > 0;
     html += '<div class="ev-dia' + (esHoy ? ' ev-dia-hoy' : '') + '">' +
       '<div class="ev-dia-nombre">' + _EV_DIAS_CORTOS[(d.getDay() + 6) % 7] + '</div>' +
-      '<div class="ev-dia-num">' + d.getDate() + '</div>' +
+      '<div class="ev-dia-num" onclick="_evScrollAFecha(\'' + iso + '\')">' + d.getDate() + '</div>' +
       '<div class="ev-dia-dots">' +
         (tieneEv ? '<span class="ev-dot" onclick="_evScrollAFecha(\'' + iso + '\')"></span>' : '') +
         (tieneCumple ? '<span class="ev-dot-cumple" onclick="_evScrollAFecha(\'' + iso + '\')"></span>' : '') +
@@ -206,7 +248,13 @@ function _evRenderSemana() {
   if (cont) cont.innerHTML = html;
 }
 
-/* ── Vista Calendario (grilla mensual tipo Google Calendar) ──────────── */
+/* ── Vista Calendario (grilla mensual tipo Google Calendar) -- "hoy" y
+   "seleccionado" son 2 estados visuales independientes (ver "Cambios
+   recientes"): "hoy" es siempre un anillo (`.ev-dia-hoy`, sin importar qué
+   otro día esté elegido), "seleccionado" es el relleno de color de marca
+   (`.ev-cal-sel`, el día tocado -- arranca en "hoy" al entrar). Si coinciden
+   en el mismo día, ambas clases conviven en la misma celda (CSS combina
+   relleno + anillo, ver css/eventos.css). ─────────────────────────────── */
 function _evRenderCalendario() {
   var base = new Date(); base.setDate(1); base.setMonth(base.getMonth() + _evMesOffset);
   var year = base.getFullYear(), month = base.getMonth();
@@ -215,19 +263,22 @@ function _evRenderCalendario() {
   var finGrid = _evLunesDeSemana(finMes);
   finGrid.setDate(finGrid.getDate() + 6);
   var hoy = _evHoyISO();
+  if (_evCalFechaSel === null) _evCalFechaSel = hoy; // init perezosa, ver declaración de la variable
   var html = _EV_DIAS_CORTOS.map(function(d) { return '<div class="ev-cal-dow">' + d + '</div>'; }).join('');
   var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
   while (cur <= finGrid) {
     var iso = _evToISO(cur);
     var ajeno = cur.getMonth() !== month;
     var esHoy = iso === hoy;
+    var esSel = _evCalModo === 'dia' && iso === _evCalFechaSel;
     var tieneEv = _evEventosDeFecha(iso).length > 0;
     var tieneCumple = _evCumpleDeFecha(iso).length > 0;
-    html += '<div class="ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (esHoy ? ' ev-dia-hoy' : '') + '">' +
+    html += '<div class="ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (esHoy ? ' ev-dia-hoy' : '') + (esSel ? ' ev-cal-sel' : '') +
+      '" onclick="_evCalSeleccionarDia(\'' + iso + '\')">' +
       '<div class="ev-cal-num">' + cur.getDate() + '</div>' +
       '<div class="ev-cal-dots">' +
-        (tieneEv ? '<span class="ev-dot" onclick="_evScrollAFecha(\'' + iso + '\')"></span>' : '') +
-        (tieneCumple ? '<span class="ev-dot-cumple" onclick="_evScrollAFecha(\'' + iso + '\')"></span>' : '') +
+        (tieneEv ? '<span class="ev-dot"></span>' : '') +
+        (tieneCumple ? '<span class="ev-dot-cumple"></span>' : '') +
       '</div>' +
     '</div>';
     cur.setDate(cur.getDate() + 1);
@@ -235,8 +286,61 @@ function _evRenderCalendario() {
   var grid = document.getElementById('ev-cal-grid');
   if (grid) grid.innerHTML = html;
   var label = document.getElementById('ev-cal-mes-label');
-  if (label) label.textContent = NOMBRES_MESES[month] + ' ' + year;
+  if (label) { label.textContent = NOMBRES_MESES[month] + ' ' + year; label.classList.toggle('ev-cal-mes-activo', _evCalModo === 'mes'); }
 }
+// Tocar un día de la grilla -- selecciona ese día (relleno) y filtra la
+// lista de abajo a solo sus eventos/cumpleaños (_evRangoActual(), un solo
+// re-render de grilla+lista, sin reconstruir toda la vista). Reusa la misma
+// card completa de siempre (_evCardEventoHtml(), con su barra de RSVP
+// compacta) -- _evRenderLista() no cambia, solo el rango que le llega.
+function _evCalSeleccionarDia(iso) {
+  _evCalModo = 'dia';
+  _evCalFechaSel = iso;
+  _evRenderCalendario();
+  _evRenderLista();
+}
+// Tocar el título del mes -- pasa a "modo mes" (agenda completa, ver
+// _evRangoActual()), deseleccionando el punto de día (ningún `.ev-cal-sel`
+// en la grilla mientras este modo esté activo -- el propio label agarra
+// `.ev-cal-mes-activo` como indicador del modo activo, ver
+// _evRenderCalendario()).
+function _evCalVerMesCompleto() {
+  _evCalModo = 'mes';
+  _evRenderCalendario();
+  _evRenderLista();
+}
+// Colapso de 2 estados de la grilla mensual al scrollear (ver "Cambios
+// recientes" -- pedido explícito: umbral simple, no interpolado con el
+// scroll). `_evCalActualizarColapso()` se llama tanto desde el scroll
+// listener (registrado una sola vez a nivel de módulo, con guardas baratas
+// -- vista activa + pantalla activa -- para no hacer nada el resto del
+// tiempo) como al entrar a la vista Calendario (_evCambiarVista()) -- sin
+// esto, si el usuario ya estaba scrolleado en otra vista (Semana/Lista) al
+// tocar "Calendario", ningún evento de scroll nuevo dispara todavía y la
+// grilla quedaría expandida de más hasta el próximo scroll, inconsistente
+// con la posición real de la página.
+var _evCalGridColapsada = false;
+function _evCalActualizarColapso() {
+  if (_evVista !== 'calendario') return;
+  var el = document.getElementById('ev-cal-grid-colapsable');
+  if (!el) return;
+  // Guarda contra un loop real con poco contenido (mes con pocos eventos):
+  // colapsar la grilla (hasta 340px, ver css/eventos.css) puede dejar la
+  // página más corta que el viewport -- el navegador clampea el scroll de
+  // vuelta a 0 solo, lo que dispara des-colapsar de nuevo, ida y vuelta.
+  // Si no sobra al menos ese margen de contenido real para scrollear, ni
+  // siquiera se intenta colapsar (tampoco hay nada que "revelar" haciéndolo).
+  var hayContenidoDeSobra = document.documentElement.scrollHeight > window.innerHeight + 380;
+  var deberiaColapsar = hayContenidoDeSobra && window.scrollY > 40;
+  if (deberiaColapsar === _evCalGridColapsada) return;
+  _evCalGridColapsada = deberiaColapsar;
+  el.classList.toggle('colapsada', deberiaColapsar);
+}
+window.addEventListener('scroll', function() {
+  var pantalla = document.getElementById('s-eventos');
+  if (!pantalla || !pantalla.classList.contains('activa')) return;
+  _evCalActualizarColapso();
+}, { passive: true });
 
 /* ── Lista de cards (debajo de cualquiera de las 2 vistas) ────────────
    Siempre TODOS los eventos + cumpleaños del rango visible (semana o mes
@@ -247,26 +351,38 @@ function _evRangoActual() {
     var dias = _evDiasDeSemana(_evSemanaOffset);
     return { desde: _evToISO(dias[0]), hasta: _evToISO(dias[6]) };
   }
+  // Calendario "modo día" (ver _evCalModo/_evCalSeleccionarDia() más abajo):
+  // un solo día seleccionado en vez del mes completo -- mismo _evRenderLista()
+  // de siempre, ya agrupa/ordena/reusa la card completa sin ningún cambio,
+  // un rango de un solo día simplemente produce un único grupo (o el estado
+  // vacío ya existente si ese día no tiene nada).
+  if (_evVista === 'calendario' && _evCalModo === 'dia' && _evCalFechaSel) {
+    return { desde: _evCalFechaSel, hasta: _evCalFechaSel };
+  }
   var base = new Date(); base.setDate(1); base.setMonth(base.getMonth() + _evMesOffset);
   var ultimo = new Date(base.getFullYear(), base.getMonth() + 1, 0);
   return { desde: _evToISO(new Date(base.getFullYear(), base.getMonth(), 1)), hasta: _evToISO(ultimo) };
 }
 function _evFechaLabel(iso) {
   var hoy = _evHoyISO();
-  if (iso === hoy) return 'Hoy';
-  if (iso === _evSumarDias(hoy, 1)) return 'Mañana';
-  if (iso === _evSumarDias(hoy, -1)) return 'Ayer';
+  if (_evFechaCmp(iso, hoy) === 0) return 'Hoy';
+  if (_evFechaCmp(iso, _evSumarDias(hoy, 1)) === 0) return 'Mañana';
+  if (_evFechaCmp(iso, _evSumarDias(hoy, -1)) === 0) return 'Ayer';
   var d = _evParseISO(iso);
   return _EV_DIAS_LARGOS[d.getDay()] + ' ' + d.getDate() + ' de ' + NOMBRES_MESES[d.getMonth()].toLowerCase();
 }
 function _evRenderLista() {
   var rango = _evRangoActual();
   var items = [];
-  _EV_EVENTOS.filter(function(e) { return e.fecha >= rango.desde && e.fecha <= rango.hasta; })
+  _EV_EVENTOS.filter(function(e) { return _evFechaCmp(e.fecha, rango.desde) >= 0 && _evFechaCmp(e.fecha, rango.hasta) <= 0; })
     .forEach(function(e) { items.push({ fecha: e.fecha, orden: e.horaInicio || '00:00', tipo: 'evento', data: e }); });
-  _EV_CUMPLEANOS.filter(function(c) { return c.fecha >= rango.desde && c.fecha <= rango.hasta; })
+  _EV_CUMPLEANOS.filter(function(c) { return _evFechaCmp(c.fecha, rango.desde) >= 0 && _evFechaCmp(c.fecha, rango.hasta) <= 0; })
     .forEach(function(c) { items.push({ fecha: c.fecha, orden: '00:00', tipo: 'cumple', data: c }); });
-  items.sort(function(a, b) { var ka = a.fecha + a.orden, kb = b.fecha + b.orden; return ka < kb ? -1 : ka > kb ? 1 : 0; });
+  // Orden cronológico en una sola pasada, por fecha real -- ver _evFechaCmp().
+  items.sort(function(a, b) {
+    var c = _evFechaCmp(a.fecha, b.fecha);
+    return c !== 0 ? c : (a.orden < b.orden ? -1 : a.orden > b.orden ? 1 : 0);
+  });
 
   var cont = document.getElementById('ev-lista');
   if (!cont) return;
@@ -307,9 +423,24 @@ function _evRenderLista() {
     });
   });
 }
+// Tocar un día (número en la franja semanal, o cualquiera de los 2 puntos
+// debajo -- evento/cumpleaños) hace scroll-anchor hasta su grupo en la lista
+// de abajo, PERO solo si no está ya completamente visible (ver "Cambios
+// recientes" -- pedido explícito: nada de saltos si ya se ve todo). Márgenes
+// del chequeo iguales a los que ya usa el scroll real: 90px arriba (mismo
+// valor que `scroll-margin-top` de `.ev-fecha-grupo`, css/eventos.css) y
+// `--bottom-nav-h` abajo (css/colors.css). Sin evento ese día -> no existe
+// `#ev-fecha-<iso>` -> no-op, ya cubierto por el `if (!el) return`.
 function _evScrollAFecha(iso) {
   var el = document.getElementById('ev-fecha-' + iso);
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (!el) return;
+  var r = el.getBoundingClientRect();
+  var margenSup = 90;
+  var margenInf = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-h')) || 60;
+  var vh = window.innerHeight || document.documentElement.clientHeight;
+  var yaVisible = r.top >= margenSup && r.bottom <= (vh - margenInf);
+  if (yaVisible) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 /* ── Card de evento — vista previa simplificada (Semana/Calendario/Lista,
@@ -358,6 +489,17 @@ function _evDuracionTexto(e) {
   var h = Math.floor(min / 60), m = min % 60;
   return (h ? h + 'h ' : '') + (m ? m + 'min' : '') || '0min';
 }
+// Hora de fin -- derivada de horaInicio + duración por tipo (mismo criterio
+// ya documentado para _evDuracionTexto()/_EV_DURACION_MIN_POR_TIPO: Tanda 2
+// deriva por tipo genérico, la Tanda 3 la reemplaza por una columna real de
+// Venues por evento). Usada en la pill "Fin" de la pantalla de detalle.
+function _evHoraFin(e) {
+  var min = _EV_DURACION_MIN_POR_TIPO[e.tipo] || 90;
+  var p = (e.horaInicio || '00:00').split(':');
+  var d = new Date(2000, 0, 1, +p[0], +p[1]);
+  d.setMinutes(d.getMinutes() + min);
+  return _evPad(d.getHours()) + ':' + _evPad(d.getMinutes());
+}
 // Fecha completa (a diferencia de _evFechaLabel(), sin los atajos
 // Hoy/Mañana/Ayer -- el detalle siempre muestra la fecha real completa).
 function _evFechaCompleta(iso) {
@@ -367,7 +509,7 @@ function _evFechaCompleta(iso) {
 
 /* ── Desglose de asistencia (4 grupos, ver "Cambios recientes" -- antes
    modal, ahora una sección más de la pantalla de detalle). Orden fijo:
-   Asisten/No asisten/No jugador/Sin responder -- "Sin responder" son
+   Asisten/No asisten/No jugador/Sin respuesta -- "Sin respuesta" son
    miembros de _EV_EQUIPO_DEMO (fuente de nombres del equipo ya usada por
    "+ Agregar persona", ver _evAbrirAgregarPersona() más abajo) sin ninguna
    entrada en e.rsvps para este evento en particular. */
@@ -376,13 +518,19 @@ var _EV_GRUPOS_ASISTENCIA = [
   { estado: 'No asistiré', key: 'No asistiré', label: 'No asisten', clase: 'ev-stat-no-asisten' },
   { estado: 'No jugador', key: 'No jugador', label: 'No jugador', clase: 'ev-stat-no-jugador' }
 ];
-var _EV_GRUPO_SIN_RESPONDER = { key: 'SinResponder', label: 'Sin responder', clase: 'ev-stat-sin-responder' };
+var _EV_GRUPO_SIN_RESPONDER = { key: 'SinRespuesta', label: 'Sin respuesta', clase: 'ev-stat-sin-respuesta' };
 // `grupoKey` marca el grupo (`data-grupo`) para que _evFiltrarAsistenciaPorGrupo()
-// pueda mostrar/ocultar este bloque sin reconstruir toda la lista.
-function _evGrupoAsistenciaHtml(label, personas, grupoKey) {
+// pueda mostrar/ocultar este bloque sin reconstruir toda la lista. Cada fila
+// lleva además un modificador de color por estado (ver "Cambios recientes"
+// -- rediseño de filas: avatar más grande, tinte sólido sutil de fondo según
+// el grupo, mismos 4 colores fijos que ya usan las tarjetas de estadística
+// -- `g.clase` ya es `ev-stat-<estado>`, se reusa el sufijo tal cual para
+// `ev-asist-persona-<estado>`, ver css/eventos.css).
+function _evGrupoAsistenciaHtml(label, personas, grupoKey, clase) {
   if (!personas.length) return '';
+  var claseFila = 'ev-asist-persona-' + clase.replace('ev-stat-', '');
   var filas = personas.map(function(p) {
-    return '<div class="ev-asist-persona"><div class="avatar-pill avatar-pill--xs ev-avatar-stack-item" data-nombre="' + p.nombre.replace(/"/g, '&quot;') + '"></div><span>' + p.nombre + '</span></div>';
+    return '<div class="ev-asist-persona ' + claseFila + '"><div class="avatar-pill avatar-pill--sm ev-avatar-stack-item" data-nombre="' + p.nombre.replace(/"/g, '&quot;') + '"></div><span>' + p.nombre + '</span></div>';
   }).join('');
   return '<div class="ev-asist-grupo" data-grupo="' + grupoKey + '"><div class="ev-asist-grupo-titulo">' + label + ' (' + personas.length + ')</div>' + filas + '</div>';
 }
@@ -397,8 +545,22 @@ function _evGrupoAsistenciaHtml(label, personas, grupoKey) {
    (Semana/Calendario/Lista) reusan la card completa (_evCardEventoHtml()),
    sin una fila resumida aparte que necesitara su propio tamaño chico. ──── */
 var _EV_RESP_OPCIONES = ['Asistiré', 'No asistiré', 'No jugador'];
+// Evento pasado (fecha < hoy, o Estado = Finalizado aunque la fecha por algún
+// motivo no lo refleje todavía) -- ver "Cambios recientes": ya no tiene
+// sentido un RSVP editable para algo que ya ocurrió, se reemplaza por la
+// asistencia REAL tomada por el admin (`miAsistenciaReal`, viene de si el
+// nombre de la persona logueada aparece en Asistencias!A horario/Tarde del
+// backend, origen:'Admin' -- Tanda 3). Cancelado/No se entrena no muestran
+// nada acá en ningún caso (nunca hubo/habrá asistencia que registrar).
+function _evEsPasado(e) { return _evFechaCmp(e.fecha, _evHoyISO()) < 0 || e.estado === 'Finalizado'; }
+function _evAsistenciaRealHtml(e) {
+  var estadoReal = e.miAsistenciaReal || 'Sin registrar';
+  var clase = _EV_ASISTENCIA_REAL_BADGE[estadoReal] || 'badge-sin-registrar';
+  return '<div class="ev-asistire-wrap"><span class="badge ev-rsvp-readonly ' + clase + '">' + estadoReal + '</span></div>';
+}
 function _evRsvpBarraHtml(e) {
-  if (e.estado === 'Cancelado' || e.estado === 'No se entrena' || e.estado === 'Finalizado') return '';
+  if (e.estado === 'Cancelado' || e.estado === 'No se entrena') return '';
+  if (_evEsPasado(e)) return _evAsistenciaRealHtml(e);
   var botones = _EV_RESP_OPCIONES.map(function(estado) {
     var act = e.miEstado === estado ? ' activa' : '';
     return '<div class="ev-rsvp-opt' + act + '" data-estado="' + estado + '" onclick="_evMarcarAsistencia(\'' + e.id + '\',\'' + estado + '\')"><span class="material-symbols-outlined">' + _EV_RESP_ICONO[estado] + '</span>' + estado + '</div>';
@@ -443,6 +605,18 @@ function _evUpdateRsvpSliders(animate) {
 function _evMarcarAsistencia(id, estado) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === id; })[0];
   if (!ev) return;
+  // PUNTO DE EXTENSIÓN (Tanda 3, todavía no construida -- ver "Cambios
+  // recientes"): acá es donde va la lógica de negocio por perfil (Mirlxs
+  // con equipamiento/paga-clase → redirige a Reservas; validación de cuota
+  // al día para Mirlxs-mensual/Quindes) ANTES de escribir el RSVP -- pero
+  // SOLO si `ev.requiereReserva !== false` (ya viene en el payload real de
+  // getEventosRango()/getEventosFiltrados(), ver backend en MANIFEST.md).
+  // Eventos como "Ciclopaseo" (`requiereReserva:false`, `Venues!Requiere
+  // reserva`='NO') deben saltear esa lógica entera y dejar marcar Asistiré/
+  // No asistiré/No jugador directo, para cualquier perfil -- mismo
+  // comportamiento que ya tiene Quindes hoy en un entrenamiento regular.
+  // Hoy (demo, sin esa lógica todavía) esta función no tiene nada que
+  // saltear: `ev.miEstado = estado` de abajo corre siempre, sin excepción.
   ev.miEstado = estado;
   // Sin toast a propósito (ver "Cambios recientes") -- el resaltado
   // animado de la opción tocada ya es feedback suficiente, mismo criterio
@@ -534,10 +708,10 @@ function _evCardCumpleHtml(c) {
    lo que antes era la pantalla separada "Ver todos los eventos"/
    s-eventos-todos como una 3ra opción del selector de arriba, en vez de
    navegar aparte). Sub-tabs Próximos/Pasados/Todos (subrayado, sin slider
-   propio) + 3 filtros (bottom sheet compartido, pills multi-select) + lista
-   de cards compactas -- Próximos suma la barra de RSVP compacta por fila
-   (mismo componente que las cards de Semana/Calendario), Pasados reemplaza
-   el chevron por un chip con la asistencia REAL ya registrada. ═══════════ */
+   propio) + 3 filtros (burbujas inline desplegables, pills multi-select) +
+   lista de cards compactas -- Próximos suma la barra de RSVP compacta por
+   fila (mismo componente que las cards de Semana/Calendario), Pasados
+   reemplaza el chevron por un chip con la asistencia REAL ya registrada. ═ */
 var _evListaTabSubtab = 'proximos';
 // Selección multi-valor por filtro -- arrays de {val,label} (no solo el
 // valor: "mes" filtra por índice numérico pero el botón/pill muestra el
@@ -572,58 +746,71 @@ function _evOpcionesFiltro(campo) {
   else out.sort(function(a, b) { return a.label < b.label ? -1 : a.label > b.label ? 1 : 0; });
   return out;
 }
-/* ── Bottom sheet de filtro (Mes/Lugar/Tipo) -- un solo sheet genérico
-   reusado para los 3 (repuebla título+pills según _evFiltroSheetCampo, mismo
-   criterio que ev-sheet-agregar/admin-sheet-destino más arriba) con pills
-   togleadas multi-select (ajTogglePill(), js/perfil.js -- toggle simple de
-   `.activa`, sin exclusividad) en vez de una lista de selección única. ── */
-var _evFiltroSheetCampo = null;
-var _EV_FILTRO_TITULOS = { mes: 'Mes', lugar: 'Lugar', tipo: 'Tipo' };
-function _evAbrirSheetFiltro(campo) {
-  _evFiltroSheetCampo = campo;
+/* ── Burbuja inline de filtro (Mes/Lugar/Tipo, ver "Cambios recientes" --
+   reemplaza el bottom sheet compartido de antes) -- 3 contenedores propios
+   (uno por campo, `#ev-filtro-burbuja-<campo>`) que se expanden/colapsan con
+   `max-height` (mismo mecanismo que .admin-mes-acordeon-body/.fi-body,
+   `--ease-sheet`) empujando naturalmente la lista de abajo, sin overlay ni
+   pantalla completa. Solo uno abierto a la vez (_evToggleFiltroBurbuja()
+   colapsa cualquier otro antes de expandir el tocado). Pills togleadas
+   multi-select (ajTogglePill(), js/perfil.js) que aplican la selección al
+   instante en cada toque -- sin paso "Listo" aparte. ─────────────────── */
+var _evFiltroBurbujaAbierta = null; // 'mes' | 'lugar' | 'tipo' | null
+function _evToggleFiltroBurbuja(campo) {
+  if (_evFiltroBurbujaAbierta === campo) { _evColapsarFiltroBurbuja(campo); _evFiltroBurbujaAbierta = null; }
+  else {
+    if (_evFiltroBurbujaAbierta) _evColapsarFiltroBurbuja(_evFiltroBurbujaAbierta);
+    _evFiltroBurbujaAbierta = campo;
+    _evRenderFiltroBurbujaPills(campo);
+    var el = document.getElementById('ev-filtro-burbuja-' + campo);
+    if (el) el.classList.add('abierta');
+  }
+  _evActualizarBotonesFiltro();
+}
+function _evColapsarFiltroBurbuja(campo) {
+  var el = document.getElementById('ev-filtro-burbuja-' + campo);
+  if (el) el.classList.remove('abierta');
+}
+function _evRenderFiltroBurbujaPills(campo) {
   var opciones = _evOpcionesFiltro(campo);
   var seleccion = _evListaTabFiltro[campo];
-  document.getElementById('ev-sheet-filtro-title').textContent = _EV_FILTRO_TITULOS[campo];
-  document.getElementById('ev-sheet-filtro-pills').innerHTML = opciones.map(function(o) {
+  var cont = document.getElementById('ev-filtro-burbuja-pills-' + campo);
+  if (!cont) return;
+  cont.innerHTML = opciones.map(function(o) {
     var sel = seleccion.some(function(s) { return s.val === o.val; });
-    return '<span class="aj-pill' + (sel ? ' activa' : '') + '" data-val="' + o.val.replace(/"/g, '&quot;') + '" data-label="' + o.label.replace(/"/g, '&quot;') + '" onclick="ajTogglePill(this)">' + o.label + '</span>';
-  }).join('') || '<div style="padding:8px 4px;color:var(--muted);font-size:0.82rem;">Sin opciones todavía.</div>';
-  var ov = document.getElementById('ev-sheet-filtro-overlay');
-  var sh = document.getElementById('ev-sheet-filtro');
-  if (ov) ov.style.display = 'block';
-  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); }); }
-  _registrarOverlayAbierto(_evCerrarSheetFiltro);
+    return '<span class="aj-pill' + (sel ? ' activa' : '') + '" data-val="' + o.val.replace(/"/g, '&quot;') + '" data-label="' + o.label.replace(/"/g, '&quot;') + '" onclick="_evToggleFiltroChip(this,\'' + campo + '\')">' + o.label + '</span>';
+  }).join('') || '<div style="padding:2px 4px 10px;color:var(--muted);font-size:0.82rem;">Sin opciones todavía.</div>';
 }
-function _evCerrarSheetFiltro(porGesto) {
-  if (!porGesto) { history.back(); return; }
-  // La selección se aplica acá (al cerrar, sea por "Listo", tocar el overlay
-  // o gesto de volver) -- no en cada toque de pill, para no re-renderizar la
-  // lista completa en cada toggle mientras el sheet sigue abierto.
-  if (_evFiltroSheetCampo) {
-    var vals = [];
-    document.querySelectorAll('#ev-sheet-filtro-pills .aj-pill.activa').forEach(function(p) {
-      vals.push({ val: p.getAttribute('data-val'), label: p.getAttribute('data-label') });
-    });
-    _evListaTabFiltro[_evFiltroSheetCampo] = vals;
-    _evActualizarBotonesFiltro();
-    _evListaTabRenderLista();
-  }
-  var sh = document.getElementById('ev-sheet-filtro');
-  var ov = document.getElementById('ev-sheet-filtro-overlay');
-  if (sh) sh.style.transform = 'translateY(100%)';
-  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+// Toca una pill dentro de una burbuja abierta -- aplica la selección
+// completa del campo de inmediato (re-render de la lista incluido), no hace
+// falta cerrar la burbuja ni tocar un botón de confirmación aparte.
+function _evToggleFiltroChip(pillEl, campo) {
+  ajTogglePill(pillEl);
+  var vals = [];
+  document.querySelectorAll('#ev-filtro-burbuja-pills-' + campo + ' .aj-pill.activa').forEach(function(p) {
+    vals.push({ val: p.getAttribute('data-val'), label: p.getAttribute('data-label') });
+  });
+  _evListaTabFiltro[campo] = vals;
+  _evActualizarBotonesFiltro();
+  _evListaTabRenderLista();
 }
 // Texto de cada botón trigger: label default sin selección, el nombre único
 // si hay exactamente 1, o "Label (N)" si hay más de 1 -- pedido explícito.
+// `.ev-filtro-activo` (mismo relleno de color ya existente) marca tanto
+// selección aplicada como burbuja abierta sin selección todavía; el chevron
+// se invierte mientras la burbuja de ese campo está abierta.
 function _evActualizarBotonesFiltro() {
   ['mes', 'lugar', 'tipo'].forEach(function(campo) {
     var btn = document.getElementById('ev-lista-tab-filtro-btn-' + campo);
     if (!btn) return;
     var label = btn.getAttribute('data-label');
     var sel = _evListaTabFiltro[campo];
+    var abierta = _evFiltroBurbujaAbierta === campo;
     var txt = sel.length === 0 ? label : sel.length === 1 ? sel[0].label : label + ' (' + sel.length + ')';
     btn.querySelector('.ev-filtro-trigger-label').textContent = txt;
-    btn.classList.toggle('ev-filtro-activo', sel.length > 0);
+    btn.classList.toggle('ev-filtro-activo', sel.length > 0 || abierta);
+    var chevron = btn.querySelector('.material-symbols-outlined');
+    if (chevron) chevron.textContent = abierta ? 'expand_less' : 'expand_more';
   });
 }
 // Filtrado 100% en cliente sobre los datos de prueba (Tanda 2) -- la Tanda 3
@@ -633,13 +820,16 @@ function _evListaTabRenderLista() {
   var hoy = _evHoyISO();
   var fm = _evListaTabFiltro;
   var lista = _EV_EVENTOS.filter(function(e) {
-    if (_evListaTabSubtab === 'proximos' && e.fecha < hoy) return false;
-    if (_evListaTabSubtab === 'pasados' && e.fecha >= hoy) return false;
+    if (_evListaTabSubtab === 'proximos' && _evFechaCmp(e.fecha, hoy) < 0) return false;
+    if (_evListaTabSubtab === 'pasados' && _evFechaCmp(e.fecha, hoy) >= 0) return false;
     if (fm.mes.length && !fm.mes.some(function(o) { return +o.val === _evParseISO(e.fecha).getMonth(); })) return false;
     if (fm.lugar.length && !fm.lugar.some(function(o) { return o.val === e.lugar; })) return false;
     if (fm.tipo.length && !fm.tipo.some(function(o) { return o.val === e.tipo; })) return false;
     return true;
-  }).sort(function(a, b) { var ka = a.fecha + a.horaInicio, kb = b.fecha + b.horaInicio; return ka < kb ? -1 : ka > kb ? 1 : 0; });
+  }).sort(function(a, b) {
+    var c = _evFechaCmp(a.fecha, b.fecha);
+    return c !== 0 ? c : (a.horaInicio < b.horaInicio ? -1 : a.horaInicio > b.horaInicio ? 1 : 0);
+  });
 
   var cont = document.getElementById('ev-lista-tab-filas');
   if (!cont) return;
@@ -658,25 +848,24 @@ function _evListaTabRenderLista() {
 // un vistazo, y ni la barra de RSVP ni "quién asiste" tienen sentido para
 // algo que ya ocurrió) -- Finalizado reemplaza el chevron por el chip de
 // asistencia real (`miAsistenciaReal`, "Sin registrar" si falta el dato,
-// ver _EV_ASISTENCIA_REAL_BADGE); Cancelado/No se entrena conserva el
-// chevron simple, no hay "asistencia" que mostrar ahí. `sufijo='-lt'` en la
-// card completa evita colisión de ids con la misma card ya renderizada en
-// `#ev-lista` (Semana/Calendario, sufijo '') si el usuario ya visitó ambas
-// vistas. TODO (pendiente de confirmar con Victor, ver brief): qué mostrar
-// para eventos pasados que el usuario nunca respondió con RSVP -- ¿un
-// control de solo lectura con lo marcado, o se omite? No implementado
-// todavía, esta fila hoy solo muestra el chip de asistencia real.
+// ver _EV_ASISTENCIA_REAL_BADGE) para cualquier evento pasado (fecha < hoy,
+// aunque el backend todavía no lo haya marcado Finalizado -- mismo criterio
+// que _evEsPasado()/_evRsvpBarraHtml() más arriba, ya resuelve el TODO de
+// abajo); Cancelado/No se entrena conserva el chevron simple, no hay
+// "asistencia" que mostrar ahí. `sufijo='-lt'` en la card completa evita
+// colisión de ids con la misma card ya renderizada en `#ev-lista` (Semana/
+// Calendario, sufijo '') si el usuario ya visitó ambas vistas.
 function _evListaTabFilaHtml(e) {
   var hoy = _evHoyISO();
-  if (e.fecha >= hoy) return _evCardEventoHtml(e, '-lt');
+  if (_evFechaCmp(e.fecha, hoy) >= 0) return _evCardEventoHtml(e, '-lt');
   var icono = _EV_ICONOS[e.tipo] || 'event';
   var d = _evParseISO(e.fecha);
   var fechaTxt = d.getDate() + ' ' + NOMBRES_MESES[d.getMonth()].slice(0, 3).toLowerCase();
   var trailing;
-  if (e.estado === 'Finalizado') {
+  if (e.estado !== 'Cancelado' && e.estado !== 'No se entrena') {
     var estadoReal = e.miAsistenciaReal || 'Sin registrar';
-    var clase = _EV_ASISTENCIA_REAL_BADGE[estadoReal];
-    trailing = '<span class="badge' + (clase ? ' ' + clase : '') + '">' + estadoReal + '</span>';
+    var clase = _EV_ASISTENCIA_REAL_BADGE[estadoReal] || 'badge-sin-registrar';
+    trailing = '<span class="badge ' + clase + '">' + estadoReal + '</span>';
   } else {
     trailing = '<span class="material-symbols-outlined ev-chevron-ver">chevron_right</span>';
   }
@@ -719,25 +908,45 @@ function abrirEvDetalle(id) {
 // secciones futuras (editar evento admin, tareas, mensajes) como nuevos
 // `.ev-detalle-section` hermanos, sin reordenar/rehacer lo que ya existe.
 function _evRenderDetalle(ev) {
+  var sticky = document.getElementById('ev-detalle-sticky');
+  if (sticky) sticky.innerHTML = _evDetalleStickyHtml(ev);
   var info = document.getElementById('ev-detalle-info');
   if (info) info.innerHTML = _evDetalleInfoHtml(ev);
   var rsvpCont = document.getElementById('ev-detalle-rsvp');
   if (rsvpCont) { rsvpCont.innerHTML = _evRsvpBarraHtml(ev); _evUpdateRsvpSliders(false); }
   _evRenderDetalleAsistencia(ev);
 }
-function _evDetalleInfoHtml(ev) {
+// Nav compacta sticky (ver "Cambios recientes" -- reemplaza el #top-bar
+// genérico para esta pantalla, ver TOP_BAR_CONFIG/js/ui.js): flecha atrás
+// (mismo `.app-nav-back` reusado, con su propio onclick acá ya que no hay
+// #top-bar detrás que se lo dé) + ícono de tipo SUELTO (sin el cuadrado de
+// fondo de `.ev-detalle-icon-grande` -- pedido explícito: no competir
+// visualmente con el botón circular de la flecha) + tipo/fecha-hora, más la
+// fila de pills Inicio (violeta)/Lugar (roja, clickeable → Maps). El resto
+// (Fin/Duración, descripción, RSVP, stats, lista) queda en _evDetalleInfoHtml(),
+// afuera de este bloque, scrollea libre.
+function _evDetalleStickyHtml(ev) {
   var mapsUrl = _EV_MAPS_URL_POR_LUGAR[ev.lugar];
-  var desc = _EV_DESCRIPCION_POR_TIPO[ev.tipo];
-  return '<div class="ev-detalle-header-block">' +
-      '<div class="ev-detalle-icon-grande"><span class="material-symbols-outlined">' + (_EV_ICONOS[ev.tipo] || 'event') + '</span></div>' +
-      '<div>' +
+  return '<div class="ev-detalle-nav-row">' +
+      '<button class="app-nav-back" onclick="volver(\'s-eventos\')" title="Volver"><span class="material-symbols-outlined">arrow_back</span></button>' +
+      '<span class="material-symbols-outlined ev-detalle-nav-icono">' + (_EV_ICONOS[ev.tipo] || 'event') + '</span>' +
+      '<div class="ev-detalle-nav-texto">' +
         '<div class="ev-detalle-tipo">' + ev.tipo + '</div>' +
         '<div class="ev-detalle-fechahora">' + _evFechaCompleta(ev.fecha) + ' · ' + ev.horaInicio + '</div>' +
       '</div>' +
     '</div>' +
-    '<div class="ev-detalle-pills-row">' +
+    '<div class="ev-detalle-pills-row-sticky">' +
+      '<span class="ev-detalle-pill-sm ev-detalle-pill-inicio"><span class="material-symbols-outlined">schedule</span>' + ev.horaInicio + 'hs</span>' +
+      (mapsUrl
+        ? '<a class="ev-detalle-pill-sm ev-detalle-pill-lugar" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</a>'
+        : '<span class="ev-detalle-pill-sm ev-detalle-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</span>') +
+    '</div>';
+}
+function _evDetalleInfoHtml(ev) {
+  var desc = _EV_DESCRIPCION_POR_TIPO[ev.tipo];
+  return '<div class="ev-detalle-pills-row">' +
+      '<span class="ev-detalle-pill-sm"><span class="material-symbols-outlined">flag</span>Fin ' + _evHoraFin(ev) + 'hs</span>' +
       '<span class="ev-detalle-pill-sm"><span class="material-symbols-outlined">timer</span>' + _evDuracionTexto(ev) + '</span>' +
-      (mapsUrl ? '<a class="ev-detalle-pill-sm ev-detalle-pill-sm-maps" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">near_me</span>Cómo llegar</a>' : '') +
     '</div>' +
     (desc ? '<p class="ev-detalle-desc">' + desc + '</p>' : '');
 }
@@ -772,7 +981,7 @@ function _evRenderDetalleAsistencia(ev) {
   }
   var lista = document.getElementById('ev-detalle-asistencia-lista');
   if (lista) {
-    lista.innerHTML = grupos.map(function(g) { return _evGrupoAsistenciaHtml(g.label, g.personas, g.key); }).join('');
+    lista.innerHTML = grupos.map(function(g) { return _evGrupoAsistenciaHtml(g.label, g.personas, g.key, g.clase); }).join('');
     _evHidratarAvatares();
   }
 }

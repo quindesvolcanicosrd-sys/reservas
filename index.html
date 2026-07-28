@@ -27,12 +27,12 @@
 <script src="js/color-enfasis.js?v=479995f3"></script>
 <link rel="stylesheet" href="css/global.css?v=27a5bbaf">
 <link rel="stylesheet" href="css/estilos.css">
-<link rel="stylesheet" href="css/ui.css">
+<link rel="stylesheet" href="css/ui.css?v=5d0e5923">
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css">
-<link rel="stylesheet" href="css/nav.css?v=e2fae88a">
-<link rel="stylesheet" href="css/eventos.css?v=45afd0fb">
+<link rel="stylesheet" href="css/nav.css?v=2050ebac">
+<link rel="stylesheet" href="css/eventos.css?v=32830420">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -92,22 +92,6 @@
   </div>
 </div>
 
-<!-- Nav fija de #s-eventos (Tanda 2 -- ver MANIFEST.md "Cambios recientes",
-     sección Eventos), mismo patrón que #home-nav: display:none por default,
-     togglea a 'flex' en ir() cuando id==='s-eventos' (js/ui.js). El botón
-     "+" es circular rojo (.app-nav-icon-btn-danger, css/nav.css) y solo se
-     muestra para admin -- js/eventos.js (irEventos()) lo togglea según
-     _esAdminDemo, la variable de simulación de esta tanda (sin sesión real
-     todavía, ver brief). -->
-<div id="eventos-nav" class="app-nav app-nav-fixed" style="display:none;">
-  <div class="app-nav-back app-nav-back--decorativo" aria-hidden="true"><span class="material-symbols-outlined">event</span></div>
-  <div class="app-nav-section">EVENTOS</div>
-  <div class="app-nav-actions">
-    <button class="app-nav-icon-btn app-nav-icon-btn-danger" id="eventos-btn-add" style="display:none;" onclick="mostrarToast('Próximamente','ok')" title="Nuevo evento">
-      <span class="material-symbols-outlined">add</span>
-    </button>
-  </div>
-</div>
 
 <!-- Nav inferior (bottom tab bar), persistente en toda pantalla raíz de la
      app autenticada (hoy s-home/s-datos) -- ver APP_BOTTOM_NAV_ITEMS y
@@ -260,70 +244,92 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <!-- ═══ SECCIÓN EVENTOS (Tanda 2 -- estructura estática, datos de prueba
      hardcodeados en js/eventos.js, ver MANIFEST.md "Cambios recientes").
-     Pantalla raíz de la nav inferior (APP_BOTTOM_NAV_ITEMS, js/ui.js), usa
-     #eventos-nav propia en vez de #top-bar (mismo criterio que s-home). ═══ -->
+     Pantalla raíz de la nav inferior (APP_BOTTOM_NAV_ITEMS, js/ui.js). Ya no
+     usa una #eventos-nav fija propia (ver "Cambios recientes" -- se elimina
+     el header "EVENTOS": el selector Semana/Calendario/Lista pasa a ser el
+     elemento fijo de arriba, dentro de #ev-sticky-header, sticky en vez de
+     fixed+spacer para convivir con el scroll normal de la pantalla). ═══ -->
 <div class="pantalla" id="s-eventos">
     <div class="card" style="text-align:left;padding-bottom:32px;">
-      <div id="eventos-nav-spacer" style="height:64px;"></div>
+      <!-- Cabecera sticky (position:sticky;top:0, fondo sólido, por encima
+           del contenido que scrollea debajo) -- SIEMPRE el selector de
+           vistas, más la parte "fija" de la vista activa: franja de Semana
+           completa, nav de mes de Calendario (la grilla de días es la única
+           parte que colapsa con el scroll, #ev-cal-grid-colapsable más abajo,
+           ver css/eventos.css), o subtabs+filtros de Lista -- la propia
+           lista de resultados de cada vista vive AFUERA de este contenedor,
+           scrollea libre. */ -->
+      <div class="ev-sticky-header" id="ev-sticky-header">
+        <div class="ev-seg-wrap">
+          <div class="tp-seg" id="ev-vista-seg">
+            <div class="tp-slider" id="ev-vista-slider"></div>
+            <div class="tp-opt active" id="ev-vista-semana" onclick="_evCambiarVista('semana')">
+              <span class="material-symbols-outlined" style="font-size:1rem;">view_week</span>Semana
+            </div>
+            <div class="tp-opt" id="ev-vista-calendario" onclick="_evCambiarVista('calendario')">
+              <span class="material-symbols-outlined" style="font-size:1rem;">calendar_view_month</span>Calendario
+            </div>
+            <div class="tp-opt" id="ev-vista-lista" onclick="_evCambiarVista('lista')">
+              <span class="material-symbols-outlined" style="font-size:1rem;">list</span>Lista
+            </div>
+          </div>
+          <!-- "+ Nuevo evento" -- antes vivía en la #eventos-nav fija ya
+               eliminada (ver arriba); mismo id/clases/comportamiento
+               (_esAdminDemo la togglea en irEventos(), js/eventos.js), solo
+               reubicado acá para no perder la función. -->
+          <button class="app-nav-icon-btn app-nav-icon-btn-danger ev-btn-add" id="eventos-btn-add" style="display:none;" onclick="mostrarToast('Próximamente','ok')" title="Nuevo evento">
+            <span class="material-symbols-outlined">add</span>
+          </button>
+        </div>
 
-      <div class="ev-seg-wrap">
-        <div class="tp-seg" id="ev-vista-seg">
-          <div class="tp-slider" id="ev-vista-slider"></div>
-          <div class="tp-opt active" id="ev-vista-semana" onclick="_evCambiarVista('semana')">
-            <span class="material-symbols-outlined" style="font-size:1rem;">view_week</span>Semana
-          </div>
-          <div class="tp-opt" id="ev-vista-calendario" onclick="_evCambiarVista('calendario')">
-            <span class="material-symbols-outlined" style="font-size:1rem;">calendar_view_month</span>Calendario
-          </div>
-          <div class="tp-opt" id="ev-vista-lista" onclick="_evCambiarVista('lista')">
-            <span class="material-symbols-outlined" style="font-size:1rem;">list</span>Lista
+        <div id="ev-vista-semana-wrap">
+          <div class="ev-semana-row">
+            <button class="ev-semana-chevron" onclick="_evSemanaAnterior()" title="Semana anterior"><span class="material-symbols-outlined">chevron_left</span></button>
+            <div class="ev-semana-dias" id="ev-semana-dias"></div>
+            <button class="ev-semana-chevron" onclick="_evSemanaSiguiente()" title="Semana siguiente"><span class="material-symbols-outlined">chevron_right</span></button>
           </div>
         </div>
-      </div>
 
-      <div id="ev-vista-semana-wrap">
-        <div class="ev-semana-row">
-          <button class="ev-semana-chevron" onclick="_evSemanaAnterior()" title="Semana anterior"><span class="material-symbols-outlined">chevron_left</span></button>
-          <div class="ev-semana-dias" id="ev-semana-dias"></div>
-          <button class="ev-semana-chevron" onclick="_evSemanaSiguiente()" title="Semana siguiente"><span class="material-symbols-outlined">chevron_right</span></button>
+        <div id="ev-vista-calendario-wrap" style="display:none;">
+          <div class="ev-cal-header">
+            <button class="ev-semana-chevron" onclick="_evMesAnterior()" title="Mes anterior"><span class="material-symbols-outlined">chevron_left</span></button>
+            <div class="ev-cal-mes-label" id="ev-cal-mes-label" onclick="_evCalVerMesCompleto()"></div>
+            <button class="ev-semana-chevron" onclick="_evMesSiguiente()" title="Mes siguiente"><span class="material-symbols-outlined">chevron_right</span></button>
+          </div>
+          <div class="ev-cal-grid-colapsable" id="ev-cal-grid-colapsable">
+            <div class="ev-cal-grid" id="ev-cal-grid"></div>
+          </div>
         </div>
-      </div>
 
-      <div id="ev-vista-calendario-wrap" style="display:none;">
-        <div class="ev-cal-header">
-          <button class="ev-semana-chevron" onclick="_evMesAnterior()" title="Mes anterior"><span class="material-symbols-outlined">chevron_left</span></button>
-          <div class="ev-cal-mes-label" id="ev-cal-mes-label"></div>
-          <button class="ev-semana-chevron" onclick="_evMesSiguiente()" title="Mes siguiente"><span class="material-symbols-outlined">chevron_right</span></button>
+        <!-- Vista "Lista" -- solo la parte fija (subtabs + filtros + sus
+             burbujas); la lista de filas en sí (#ev-lista-tab-filas) vive
+             afuera del sticky, ver más abajo. -->
+        <div id="ev-lista-tab-header-wrap" style="display:none;">
+          <div class="ev-subtabs">
+            <div class="ev-subtab activo" id="ev-lista-tab-subtab-proximos" onclick="_evListaTabCambiarSubtab('proximos')">Próximos</div>
+            <div class="ev-subtab" id="ev-lista-tab-subtab-pasados" onclick="_evListaTabCambiarSubtab('pasados')">Pasados</div>
+            <div class="ev-subtab" id="ev-lista-tab-subtab-todos" onclick="_evListaTabCambiarSubtab('todos')">Todos</div>
+          </div>
+          <div class="ev-filtros-row">
+            <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-mes" data-label="Mes" onclick="_evToggleFiltroBurbuja('mes')">
+              <span class="ev-filtro-trigger-label">Mes</span><span class="material-symbols-outlined">expand_more</span>
+            </button>
+            <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-lugar" data-label="Lugar" onclick="_evToggleFiltroBurbuja('lugar')">
+              <span class="ev-filtro-trigger-label">Lugar</span><span class="material-symbols-outlined">expand_more</span>
+            </button>
+            <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-tipo" data-label="Tipo" onclick="_evToggleFiltroBurbuja('tipo')">
+              <span class="ev-filtro-trigger-label">Tipo</span><span class="material-symbols-outlined">expand_more</span>
+            </button>
+          </div>
+          <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-mes"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-mes"></div></div>
+          <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-lugar"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-lugar"></div></div>
+          <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-tipo"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-tipo"></div></div>
         </div>
-        <div class="ev-cal-grid" id="ev-cal-grid"></div>
       </div>
 
       <div class="ev-lista" id="ev-lista"></div>
 
-      <!-- Vista "Lista" -- fusiona lo que antes era la pantalla separada
-           "Ver todos los eventos" (s-eventos-todos, ver MANIFEST.md "Cambios
-           recientes") como una 3ra opción del selector de arriba en vez de
-           navegar aparte: sub-tabs subrayados (texto + línea inferior, sin
-           fondo -- NO reusa .tp-seg/.tp-slider a propósito, ver
-           .ev-subtabs en css/eventos.css) + filtros (bottom sheets de
-           selección múltiple) + lista completa. -->
       <div id="ev-vista-lista-wrap" style="display:none;">
-        <div class="ev-subtabs">
-          <div class="ev-subtab activo" id="ev-lista-tab-subtab-proximos" onclick="_evListaTabCambiarSubtab('proximos')">Próximos</div>
-          <div class="ev-subtab" id="ev-lista-tab-subtab-pasados" onclick="_evListaTabCambiarSubtab('pasados')">Pasados</div>
-          <div class="ev-subtab" id="ev-lista-tab-subtab-todos" onclick="_evListaTabCambiarSubtab('todos')">Todos</div>
-        </div>
-        <div class="ev-filtros-row">
-          <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-mes" data-label="Mes" onclick="_evAbrirSheetFiltro('mes')">
-            <span class="ev-filtro-trigger-label">Mes</span><span class="material-symbols-outlined">expand_more</span>
-          </button>
-          <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-lugar" data-label="Lugar" onclick="_evAbrirSheetFiltro('lugar')">
-            <span class="ev-filtro-trigger-label">Lugar</span><span class="material-symbols-outlined">expand_more</span>
-          </button>
-          <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-tipo" data-label="Tipo" onclick="_evAbrirSheetFiltro('tipo')">
-            <span class="ev-filtro-trigger-label">Tipo</span><span class="material-symbols-outlined">expand_more</span>
-          </button>
-        </div>
         <div id="ev-lista-tab-filas"></div>
       </div>
 
@@ -332,15 +338,17 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 
 <!-- ═══ Detalle de un evento (Eventos, ver MANIFEST.md "Cambios recientes")
-     -- pantalla de pantalla completa nueva (mismo patrón ir()/TOP_BAR_CONFIG
-     que s-misreservas/s4: flecha atrás + título dinámico, volver:'s-eventos'),
-     reemplaza el bottom sheet + la modal de asistentes de la tanda anterior.
-     Poblada por abrirEvDetalle()/_evRenderDetalle() (js/eventos.js).
-     Estructura en `.ev-detalle-section` (cada una su propio contenedor #id)
-     a propósito -- deja espacio para sumar secciones futuras (editar evento
-     admin, tareas, mensajes) como nuevos `.ev-detalle-section` hermanos, sin
-     rehacer lo que ya existe. ═══ -->
+     -- pantalla de pantalla completa, ya NO usa el #top-bar genérico (ver
+     comentario en TOP_BAR_CONFIG, js/ui.js) -- nav compacta propia sticky
+     (#ev-detalle-sticky: flecha atrás + ícono suelto sin fondo + tipo/fecha-
+     hora + pills de Inicio/Lugar, todo poblado por _evRenderDetalle()/
+     js/eventos.js). Reemplaza el bottom sheet + la modal de asistentes de la
+     tanda anterior. Estructura en `.ev-detalle-section` (cada una su propio
+     contenedor #id) a propósito -- deja espacio para sumar secciones futuras
+     (editar evento admin, tareas, mensajes) como nuevos `.ev-detalle-section`
+     hermanos, sin rehacer lo que ya existe. ═══ -->
 <div class="pantalla" id="s-eventos-detalle">
+    <div class="ev-detalle-sticky" id="ev-detalle-sticky"></div>
     <div class="card" style="text-align:left;">
       <div class="ev-detalle-section" id="ev-detalle-info"></div>
       <div class="ev-detalle-section" id="ev-detalle-rsvp"></div>
@@ -736,8 +744,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/bsheet.js"></script>
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=ac0b4a0d"></script>
-<script src="js/eventos.js?v=4369d0d8"></script>
+<script src="js/ui.js?v=2d611e03"></script>
+<script src="js/eventos.js?v=1eb4a452"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js"></script>
 <script src="js/perfil.js"></script>
@@ -2084,20 +2092,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div class="bsheet-title" style="flex-shrink:0;">Agregar persona</div>
   <input type="text" id="ev-agregar-search" placeholder="Buscar por nombre..." style="margin:12px 16px;padding:10px 14px;background:var(--surface-2);border:1.5px solid var(--border-light);border-radius:10px;font-size:0.85rem;font-family:inherit;width:calc(100% - 32px);flex-shrink:0;" oninput="_evFiltrarAgregarPersona(this.value)">
   <div id="ev-agregar-lista" style="overflow-y:auto;flex:1;"></div>
-</div>
-
-<!-- BOTTOM SHEET: Filtro de la pestaña "Lista" (Mes/Lugar/Tipo, ver
-     MANIFEST.md "Cambios recientes") -- un solo sheet genérico reusado para
-     los 3 (mismo criterio que ev-sheet-agregar/admin-sheet-destino: repuebla
-     título+opciones según _evFiltroSheetCampo en vez de 3 sheets separados),
-     con pills togleables multi-select (mismo patrón que ajTogglePill() del
-     wizard de Salud, js/perfil.js) en vez de una lista de selección única. -->
-<div id="ev-sheet-filtro-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="_evCerrarSheetFiltro()"></div>
-<div id="ev-sheet-filtro" class="bsheet bsheet-scroll" style="z-index:9601;max-height:75vh;">
-  <div class="bsheet-handle" style="flex-shrink:0;"></div>
-  <div class="bsheet-title" id="ev-sheet-filtro-title" style="flex-shrink:0;">Filtro</div>
-  <div id="ev-sheet-filtro-pills" class="aj-pills-row" style="padding:4px 16px 12px;overflow-y:auto;flex:1;"></div>
-  <button class="btn btn-outline" style="margin:4px 16px 16px;" onclick="_evCerrarSheetFiltro()">Listo</button>
 </div>
 
 <!-- BOTTOM SHEET: Texto genérico -->

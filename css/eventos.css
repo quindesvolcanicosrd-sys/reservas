@@ -8,11 +8,28 @@
    -- ver "Cambios recientes", ya no es una pantalla separada).
    ═══════════════════════════════════════════════════════ */
 
+/* ── Cabecera sticky (ver "Cambios recientes" -- reemplaza el header fijo
+   "EVENTOS"/#eventos-nav, ver index.html): el selector de vistas + la parte
+   "fija" de cada vista quedan pegados arriba de la pantalla mientras se
+   scrollea, `position:sticky` (no `fixed`+spacer como la #eventos-nav vieja)
+   para convivir con el scroll normal de #s-eventos en vez de superponerse.
+   Fondo sólido -- mismo criterio de breakpoint que `.card` (css/ui.css): en
+   mobile real (≤600px) `.card` pierde su fondo propio, así que acá hay que
+   usar el fondo real de la página (`--bg`) en vez de `--card-bg` para que no
+   se transparente el contenido de abajo al scrollear detrás. */
+.ev-sticky-header { position: sticky; top: 0; z-index: 20; background: var(--card-bg); }
+@media (max-width: 600px) {
+  .ev-sticky-header { background: var(--bg); }
+}
+
 /* ── Selector Semana/Calendario ──────────────────────────
    Reusa .tp-seg/.tp-slider/.tp-opt (mismo componente que "tipo de pago" en
    s4 y el filtro de Reservas del panel admin) -- sin estilos propios acá,
-   solo el wrapper de espaciado. */
-.ev-seg-wrap { display: flex; justify-content: center; margin-bottom: 18px; }
+   solo el wrapper de espaciado. `position:relative` para poder anclar
+   `.ev-btn-add` ("+ Nuevo evento", admin) al borde derecho sin descentrar el
+   selector (antes vivía en la #eventos-nav fija ya eliminada). */
+.ev-seg-wrap { position: relative; display: flex; justify-content: center; margin-bottom: 18px; }
+.ev-btn-add { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; }
 
 /* ── Franja semanal ───────────────────────────────────── */
 .ev-semana-row { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
@@ -34,7 +51,7 @@
 .ev-dia-num {
   width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center;
   justify-content: center; font-size: 0.85rem; font-weight: 700; color: var(--text);
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s; cursor: pointer;
 }
 .ev-dia.ev-dia-hoy .ev-dia-num { background: var(--brand); color: var(--white); }
 .ev-dia-dots { display: flex; gap: 3px; height: 6px; align-items: center; }
@@ -49,19 +66,42 @@
 
 /* ── Calendario mensual ──────────────────────────────── */
 .ev-cal-header { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 14px; }
-.ev-cal-mes-label { font-size: 0.95rem; font-weight: 800; color: var(--text); text-transform: capitalize; min-width: 160px; text-align: center; }
+/* Tocable -- pasa a "modo mes" (agenda completa, _evCalVerMesCompleto()) --
+   `.ev-cal-mes-activo` (ese modo activo) es el 2do indicador visual del modo,
+   junto con que ningún día de la grilla quede con `.ev-cal-sel` (ver
+   "Cambios recientes"). */
+.ev-cal-mes-label { font-size: 0.95rem; font-weight: 800; color: var(--text); text-transform: capitalize; min-width: 160px; text-align: center; cursor: pointer; transition: color 0.15s; }
+.ev-cal-mes-label.ev-cal-mes-activo { color: var(--brand); }
+/* Colapso de 2 estados de la grilla al scrollear (ver "Cambios recientes" --
+   umbral simple en JS, `_evCalGridColapsada`/scroll listener en
+   js/eventos.js, no interpolado de forma continua con el scroll) -- dentro
+   de la cabecera sticky solo quedan visibles el selector + la fila de
+   navegación de mes una vez colapsada. 340px de margen (igual que
+   .admin-mes-acordeon-body, css/admin.css) alcanza para hasta 6 semanas. */
+.ev-cal-grid-colapsable { max-height: 340px; opacity: 1; overflow: hidden; transition: max-height 0.28s var(--ease-sheet), opacity 0.28s var(--ease-sheet); }
+.ev-cal-grid-colapsable.colapsada { max-height: 0; opacity: 0; }
 .ev-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
 .ev-cal-dow { text-align: center; font-size: 0.62rem; font-weight: 700; color: var(--muted); text-transform: uppercase; padding-bottom: 6px; }
 .ev-cal-celda {
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-  gap: 4px; padding: 6px 0 8px; border-radius: 10px; min-height: 46px; cursor: default;
+  gap: 4px; padding: 6px 0 8px; border-radius: 10px; min-height: 46px; cursor: pointer;
 }
 .ev-cal-celda.ev-ajeno { opacity: 0.32; }
 .ev-cal-num {
   width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center;
   justify-content: center; font-size: 0.78rem; font-weight: 700; color: var(--text);
+  transition: background 0.15s, color 0.15s, outline-color 0.15s;
 }
-.ev-cal-celda.ev-dia-hoy .ev-cal-num { background: var(--brand); color: var(--white); }
+/* "Hoy" (anillo, siempre visible) vs "seleccionado" (relleno, el día tocado
+   -- arranca en "hoy") son 2 estados independientes (ver "Cambios
+   recientes"): `.ev-cal-sel` declarada DESPUÉS de `.ev-dia-hoy` a propósito
+   -- en una celda con ambas clases, su `color:white` gana sobre el
+   `color:brand` de `.ev-dia-hoy` (ambos selectores de igual especificidad,
+   1 clase c/u sobre `.ev-cal-num`), pero el `outline` de `.ev-dia-hoy` sigue
+   aplicado (ninguna de las 2 reglas lo toca) -- relleno + anillo combinados
+   sin pisarse, sin necesitar un 3er selector combinado. */
+.ev-cal-celda.ev-dia-hoy .ev-cal-num { outline: 1.5px solid var(--brand); outline-offset: 1.5px; color: var(--brand); font-weight: 800; }
+.ev-cal-celda.ev-cal-sel .ev-cal-num { background: var(--brand); color: var(--white); }
 .ev-cal-dots { display: flex; gap: 3px; height: 6px; align-items: center; }
 
 /* ── Lista de eventos (debajo de cualquiera de las 2 vistas) ─────────── */
@@ -104,8 +144,9 @@
    (_evCardEventoHtml()) reusada tal cual en Semana/Calendario/Lista (ver
    "Cambios recientes" — la variante `.ev-rsvp-seg-compacta` que existió acá
    se sacó al rediseñar la card: ya no hay una fila resumida aparte que la
-   necesitara). Tamaño grande a propósito (pedido explícito: "debe sentirse
-   como el elemento más relevante de la card"). */
+   necesitara). Tamaño compacto (ajuste final, ver "Cambios recientes"):
+   ícono chico arriba + texto chico abajo, mismas medidas exactas en los 3
+   sitios (un solo bloque CSS, sin overrides por vista). */
 .ev-asistire-wrap { margin-top: 12px; }
 .ev-rsvp-seg {
   position: relative; display: flex; background: var(--surface-light);
@@ -123,19 +164,30 @@
 }
 .ev-rsvp-slider.animado {
   transition: transform 0.32s cubic-bezier(.16,1,.3,1), width 0.32s cubic-bezier(.16,1,.3,1),
-    background-color 0.25s ease, opacity 0.2s ease;
+    background-color 0.18s ease, opacity 0.18s ease;
 }
 /* Ícono arriba, texto abajo (ver "Cambios recientes") -- flex-direction:column
    sobre el mismo HTML (ícono antes que texto en el marcado, sin cambios),
-   más alto/generoso a propósito, mismo componente reusado tal cual en la
-   card de vista previa y en la pantalla de detalle. */
+   compacto a propósito, mismo componente reusado tal cual en la card de
+   vista previa y en la pantalla de detalle. La opción activa/inactiva
+   transiciona color (y background-color, por si algún día un botón llega a
+   tener fondo propio en vez de compartir el del slider) en 0.18s -- rango
+   pedido de 150-200ms, en vez de un cambio instantáneo. */
 .ev-rsvp-opt {
   position: relative; z-index: 1; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 5px; padding: 16px 4px; font-size: 0.72rem; font-weight: 700;
-  color: var(--text-2); cursor: pointer; font-family: inherit; white-space: nowrap; transition: color 0.25s;
+  justify-content: center; gap: 2px; padding: 8px 4px; font-size: 0.625rem; font-weight: 700;
+  color: var(--text-2); cursor: pointer; font-family: inherit; white-space: nowrap;
+  transition: color 0.18s ease, background-color 0.18s ease;
 }
-.ev-rsvp-opt .material-symbols-outlined { font-size: 22px; flex-shrink: 0; }
+.ev-rsvp-opt .material-symbols-outlined { font-size: 15px; flex-shrink: 0; }
 .ev-rsvp-opt.activa { color: var(--white); }
+
+/* ── Reemplazo de solo lectura de la barra de RSVP para eventos pasados
+   (fecha < hoy o Estado = Finalizado, ver _evRsvpBarraHtml()) -- mismo
+   `.badge`/variantes de color ya usados en la fila compacta de "Pasados",
+   solo agrandado a ancho completo para ocupar el lugar de la barra
+   editable que reemplaza. Sin interacción (no es un botón). */
+.ev-rsvp-readonly { display: flex; width: 100%; justify-content: center; padding: 10px; border-radius: 16px; font-size: 0.78rem; }
 
 /* ── Card de evento — chevron de navegación (ver "Cambios recientes":
    la card entera es tocable, navega a la pantalla de detalle -- la fila de
@@ -189,29 +241,39 @@
    tanda anterior por una pantalla de pantalla completa). ──────────────── */
 .ev-detalle-section { margin-bottom: 22px; }
 .ev-detalle-section:last-child { margin-bottom: 0; }
-/* Bloque ícono grande + tipo/fecha-hora (ver "Cambios recientes") -- mismo
-   lenguaje visual que .ev-card-icon (cuadrado con esquinas redondeadas,
-   fondo tenue de marca), a mayor tamaño. */
-.ev-detalle-header-block { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
-.ev-detalle-icon-grande {
-  width: 44px; height: 44px; min-width: 44px; border-radius: 12px; background: var(--brand-light);
-  display: flex; align-items: center; justify-content: center; color: var(--brand);
-}
-.ev-detalle-icon-grande .material-symbols-outlined { font-size: 1.4rem; }
+/* Nav compacta sticky (ver "Cambios recientes" -- reemplaza el #top-bar
+   genérico solo para esta pantalla, ver TOP_BAR_CONFIG/js/ui.js): vive
+   afuera de `.card` (hermano directo dentro de `.contenedor`, mismo criterio
+   que #top-bar -- fondo constante de página, no el de una tarjeta), pegada
+   arriba con `position:sticky` + sombra sutil hacia abajo para separarse del
+   contenido que pasa por detrás al scrollear. */
+.ev-detalle-sticky { position: sticky; top: 0; z-index: 20; background: var(--bg); padding: 16px 0 14px; box-shadow: 0 4px 10px -4px var(--black-sm); }
+.ev-detalle-nav-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+/* Ícono de tipo SUELTO (pedido explícito, ver "Cambios recientes"): sin el
+   cuadrado de fondo que tenía antes (`.ev-detalle-icon-grande`, eliminada) --
+   compite menos con el botón circular de la flecha atrás al lado. */
+.ev-detalle-nav-icono { color: var(--brand); font-size: 22px; flex-shrink: 0; }
+.ev-detalle-nav-texto { min-width: 0; }
 .ev-detalle-tipo {
   font-size: 0.74rem; font-weight: 800; color: var(--brand); text-transform: uppercase; letter-spacing: 0.6px;
 }
 .ev-detalle-fechahora { font-size: 0.85rem; color: var(--text-2); font-weight: 600; margin-top: 2px; }
-/* Pills chicas (duración + "Cómo llegar") -- ya no un botón ancho, lado a
-   lado como el resto de pills informativas de la app (.fi-pill). */
-.ev-detalle-pills-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+/* Pills chicas -- lado a lado como el resto de pills informativas de la app
+   (.fi-pill). Fila sticky (Inicio/Lugar, ver "Cambios recientes") vs. fila
+   normal (Fin/Duración, sigue dentro de #ev-detalle-info, scrollea libre). */
+.ev-detalle-pills-row, .ev-detalle-pills-row-sticky { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.ev-detalle-pills-row-sticky { margin-bottom: 0; }
 .ev-detalle-pill-sm {
   display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 99px;
   font-size: 0.74rem; font-weight: 700; background: var(--surface-light); color: var(--muted);
   border: 1px solid var(--border-light); text-decoration: none;
 }
 .ev-detalle-pill-sm .material-symbols-outlined { font-size: 0.9rem; }
-.ev-detalle-pill-sm-maps { background: var(--brand-warm); color: var(--brand); border-color: var(--brand-warm-border); }
+/* Inicio (violeta) / Lugar (roja, clickeable -- abre Maps) -- mismos tokens
+   fijos de --purple/--danger ya usados en el resto de la app (badges,
+   RSVP), no --brand (independiente del color de énfasis). */
+.ev-detalle-pill-inicio { background: var(--purple-bg); color: var(--purple); border-color: var(--purple-border); }
+.ev-detalle-pill-lugar { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-bdr); }
 .ev-detalle-desc { font-size: 0.85rem; color: var(--text-2); line-height: 1.65; margin: 0; }
 .ev-detalle-titulo-seccion { font-size: 1rem; font-weight: 800; color: var(--text); margin-bottom: 12px; }
 /* Grid de 4 tarjetas de estadística (ver "Cambios recientes" -- reemplaza
@@ -230,17 +292,26 @@
 .ev-stat-asisten .ev-stat-num { color: var(--success-dark); }
 .ev-stat-no-asisten .ev-stat-num { color: var(--danger); }
 .ev-stat-no-jugador .ev-stat-num { color: var(--amber-dark); }
-.ev-stat-sin-responder .ev-stat-num { color: var(--muted); }
+.ev-stat-sin-respuesta .ev-stat-num { color: var(--muted); }
 .ev-stat-asisten.activa { border-color: var(--success-dark); background: var(--success-bg); }
 .ev-stat-no-asisten.activa { border-color: var(--danger); background: var(--danger-bg); }
 .ev-stat-no-jugador.activa { border-color: var(--amber-dark); background: var(--warning-bg); }
-.ev-stat-sin-responder.activa { border-color: var(--muted); background: var(--surface-2); }
-/* Desglose agrupado (Asisten/No asisten/No jugador/Sin responder) --
+.ev-stat-sin-respuesta.activa { border-color: var(--muted); background: var(--surface-2); }
+/* Desglose agrupado (Asisten/No asisten/No jugador/Sin respuesta) --
    reusado tal cual de la ex-modal de asistentes, ahora inline acá. */
 .ev-asist-grupo { margin-bottom: 18px; }
 .ev-asist-grupo:last-child { margin-bottom: 0; }
 .ev-asist-grupo-titulo { font-size: 0.74rem; font-weight: 800; color: var(--brand); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
-.ev-asist-persona { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 0.85rem; font-weight: 600; color: var(--text); }
+/* Fila de persona (ver "Cambios recientes" -- rediseño): avatar más grande
+   (avatar-pill--sm, 44px, css/global.css), nombre más grande/pesado, tinte
+   sólido sutil de fondo por estado -- `color-mix` con el mismo color fijo
+   ya usado en las tarjetas de estadística de arriba (14%, sin degradé). */
+.ev-asist-persona { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 10px; font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.ev-asist-persona:last-child { margin-bottom: 0; }
+.ev-asist-persona-asisten { background: color-mix(in srgb, var(--success-dark) 14%, transparent); }
+.ev-asist-persona-no-asisten { background: color-mix(in srgb, var(--danger) 14%, transparent); }
+.ev-asist-persona-no-jugador { background: color-mix(in srgb, var(--amber-dark) 14%, transparent); }
+.ev-asist-persona-sin-respuesta { background: color-mix(in srgb, var(--muted) 14%, transparent); }
 
 /* ── Vista "Lista" (ver "Cambios recientes" — reemplaza la pantalla
    separada "Ver todos los eventos"/s-eventos-todos, ahora una 3ra opción
@@ -251,7 +322,7 @@
    Victor: texto simple con línea inferior de 2px, sin fondo ni indicador que
    se mueva por JS (el navegador ya anima `border-color`/`color` solo via
    `transition`, no hace falta medir `offsetWidth`/`offsetLeft` de nada). */
-.ev-subtabs { display: flex; gap: 22px; border-bottom: 1.5px solid var(--border-light); margin-bottom: 16px; }
+.ev-subtabs { display: flex; justify-content: center; gap: 22px; border-bottom: 1.5px solid var(--border-light); margin-bottom: 16px; }
 .ev-subtab {
   padding: 4px 1px 10px; font-size: 0.82rem; font-weight: 700; color: var(--muted); cursor: pointer;
   border-bottom: 2px solid transparent; margin-bottom: -1.5px; transition: color 0.2s, border-color 0.2s;
@@ -260,10 +331,11 @@
 .ev-subtab.activo { color: var(--brand); border-color: var(--brand); }
 
 /* Filtros Mes/Lugar/Tipo -- 3 botones "trigger" (mismo look/idea que
-   .admin-destino-trigger de css/admin.css: parecen un <select>, abren un
-   bottom sheet) en vez de los <select> nativos de antes -- ver
-   _evAbrirSheetFiltro()/#ev-sheet-filtro en js/eventos.js/index.html. */
-.ev-filtros-row { display: flex; gap: 8px; margin-bottom: 16px; }
+   .admin-destino-trigger de css/admin.css: parecen un <select>) que
+   despliegan una burbuja inline debajo de la fila en vez de abrir un bottom
+   sheet (ver "Cambios recientes") -- _evToggleFiltroBurbuja()/
+   #ev-filtro-burbuja-<campo> en js/eventos.js/index.html. */
+.ev-filtros-row { display: flex; gap: 8px; margin-bottom: 4px; }
 .ev-filtro-trigger {
   flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 4px;
   padding: 10px 6px 10px 12px; border-radius: 10px; border: 1.5px solid var(--border-light);
@@ -274,6 +346,15 @@
 .ev-filtro-trigger .material-symbols-outlined { font-size: 18px; color: var(--muted); flex-shrink: 0; }
 .ev-filtro-trigger.ev-filtro-activo { border-color: var(--brand); color: var(--brand); background: var(--brand-lightest); }
 .ev-filtro-trigger.ev-filtro-activo .material-symbols-outlined { color: var(--brand); }
+
+/* Burbuja inline de un filtro (Mes/Lugar/Tipo) -- colapsada por default
+   (max-height:0 + overflow:hidden), un solo `.abierta` a la vez entre las 3
+   (_evToggleFiltroBurbuja(), js/eventos.js) empuja naturalmente la lista de
+   abajo al expandirse en vez de superponerse. Mismo mecanismo/curva que
+   .admin-mes-acordeon-body (css/admin.css) y .fi-body (css/reservas.css). */
+.ev-filtro-burbuja { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
+.ev-filtro-burbuja.abierta { max-height: 320px; }
+.ev-filtro-burbuja-pills { padding: 10px 2px 16px; }
 
 /* Card compacta de una fila de la lista -- `.ev-card-compacta-wrap` es el
    contenedor real (fondo/borde/margen); `.ev-card-compacta` adentro es solo

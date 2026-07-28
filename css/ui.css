@@ -139,6 +139,7 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
 .badge-confirmada { background: var(--success-bg); color: var(--success); font-weight:600; }
 .badge-reagendar { background: var(--purple-bg); color: var(--purple); font-weight:600; }
 .badge-cancelada { background: var(--danger-bg); color: var(--danger); }
+.badge-sin-registrar { background: var(--surface-light); color: var(--muted); font-weight:600; }
 
 .datos-campo { margin-bottom: 16px; }
 .datos-campo label {
