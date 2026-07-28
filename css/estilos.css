@@ -176,4 +176,14 @@
    Se levantan por encima de la nav en vez de superponerse (mismo espíritu
    que el z-index propio de #cta-footer-salud, más abajo en index.html, para
    su propio caso de convivencia con otro elemento fijo). */
-#cta-footer-s-home, #cta-footer-s4 { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
+#cta-footer-s-home { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
+/* #cta-footer-s4 -- "Continuar" como card flotante, no una continuación
+   visual de la nav (ver "Cambios recientes", pedido explícito -- Opción B):
+   antes tocaba la nav directo (mismo `bottom` que #cta-footer-s-home,
+   fondo `--bg` de página sin sombra propia, sin separación real). Suma
+   +14px de gap real sobre la nav + `--shadow-lg` (mismo token de elevación
+   ya usado en el resto de la app, no un valor inventado) en el botón mismo
+   (`#btn-s4-continuar`, ver css/reservas.css) -- ya tiene `border-radius:12px`
+   en las 4 esquinas por `.btn` base, nunca fue full-bleed de ancho, lo que
+   faltaba era la separación/elevación. */
+#cta-footer-s4 { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 14px); }

@@ -243,21 +243,26 @@
 .ev-persona-row .material-symbols-outlined { font-size: 18px; color: var(--brand); }
 
 /* ── Card de cumpleaños ───────────────────────────────── */
-/* transition en background/border-color (ver "Cambios recientes" -- fix del
+/* Ver "Cambios recientes" -- pedido explícito de Victor: la card en sí ya no
+   lleva fondo/borde propios (`--cumple-bg`/`--cumple-border`), hereda el
+   mismo `background`/`border` que cualquier `.ev-card` normal -- el ícono
+   (naranja `--cumple-border`/`--cumple-text`, ver `.ev-card-icon` de abajo)
+   + el título siguen siendo la señal visual de "esto es un cumpleaños", ya
+   no hace falta que la card entera se destaque también. `position:relative`
+   + `overflow:hidden` SÍ se conservan tal cual -- el confetti
+   (`#ev-confetti-<id>`, `_evLanzarCumpleConfetti()`) depende de que este sea
+   el containing block de su canvas `position:absolute;inset:0` para quedar
+   contenido dentro de la card en vez de superponerse a toda la pantalla. */
+.ev-card-cumple { position: relative; overflow: hidden; }
+/* transition en background/color (ver "Cambios recientes" -- fix del
    "flash" de color reportado por Victor, diagnosticado con evidencia real de
-   red/timeline, no adivinado): --cumple-bg/-border derivan de --brand, que
-   arranca en el naranja default y recién pasa al color real cuando
-   js/auth.js resuelve `adminGetColorEnfasis` (Apps Script -- confirmado con
-   Playwright contra el sitio real que ese fetch solo tarda ~2.1s de ida y
-   vuelta, causa raíz real, de infraestructura, no de este código). Esta
-   transition no elimina el cambio de color (imposible desde acá sin conocer
-   el color real de antemano) pero lo vuelve un asentamiento suave de ~0.4s
-   en vez de un salto brusco de un color sólido a otro. */
-.ev-card-cumple {
-  position: relative; overflow: hidden;
-  background: var(--cumple-bg); border-color: var(--cumple-border);
-  transition: background-color 0.4s ease, border-color 0.4s ease;
-}
+   red/timeline, no adivinado): `--cumple-border`/`--cumple-text` derivan de
+   `--brand`, que arranca en el naranja default y recién pasa al color real
+   cuando js/auth.js resuelve `adminGetColorEnfasis` (Apps Script --
+   confirmado con Playwright contra el sitio real que ese fetch solo tarda
+   ~2.1s de ida y vuelta, causa raíz real, de infraestructura, no de este
+   código). Ya no aplica a la card en sí (arriba, sin overrides de color),
+   solo al ícono, que sigue siendo brand-dependiente. */
 .ev-card-cumple .ev-card-icon { background: var(--cumple-border); color: var(--cumple-text); transition: background-color 0.4s ease, color 0.4s ease; }
 .ev-card-cumple .ev-card-titulo { color: var(--cumple-text); transition: color 0.4s ease; }
 
@@ -370,7 +375,13 @@
    -- antes .ev-subtabs sola, centrada). `position:relative` para anclar
    `.ev-filtro-toggle-btn` al borde derecho sin descentrar los subtabs --
    mismo patrón que `.ev-seg-wrap`/`.ev-btn-add` más arriba en este archivo. */
-.ev-subtabs-wrap { position: relative; margin-bottom: 16px; }
+/* `padding-right` reserva el ancho del botón embudo (32px + 8px de aire) --
+   sin esto, `.ev-subtabs` (con su `border-bottom` a todo el ancho del wrap)
+   se extendía por detrás del botón, superponiéndose a su borde inferior
+   (ver "Cambios recientes", bug reportado con captura). Con el padding,
+   `.ev-subtabs` (hijo normal, no absolute) ya no invade esa franja -- su
+   `border-bottom` termina antes de llegar al botón. */
+.ev-subtabs-wrap { position: relative; margin-bottom: 16px; padding-right: 40px; }
 .ev-subtabs { display: flex; justify-content: center; gap: 22px; border-bottom: 1.5px solid var(--border-light); }
 .ev-subtab {
   padding: 4px 1px 10px; font-size: 0.82rem; font-weight: 700; color: var(--muted); cursor: pointer;
@@ -411,11 +422,18 @@
 /* Panel colapsable de filtros (fila de triggers + sus 3 burbujas, ver
    "Cambios recientes") -- colapsado por default (`max-height:0`), togleado
    por `.ev-filtro-toggle-btn` (`_evToggleFiltrosPanel()`, js/eventos.js).
-   Mismo mecanismo que `.ev-filtro-burbuja`/`.ev-cal-grid-colapsable` (
-   `max-height`+`--ease-sheet`). 460px alcanza para la fila de triggers +
-   1 burbuja abierta (única a la vez, max-height propio 320px) sin cortarla. */
+   Mismo mecanismo que `.ev-filtro-burbuja`/`.ev-cal-grid-colapsable`
+   (`max-height`+`--ease-sheet`), pero SIN un `max-height` fijo en la clase
+   `.abierta` (bug real encontrado y corregido -- ver "Cambios recientes":
+   un valor fijo grande, ej. 460px, contra un contenido real de ~50px (solo
+   la fila de triggers, sin ninguna burbuja abierta todavía) hace que el
+   alto VISIBLE de la caja llegue a su tope mucho antes de que termine la
+   transición de 0.28s -- se percibe como "aparece de golpe" aunque
+   técnicamente sí está animando `max-height`, solo que la mayor parte del
+   recorrido queda fuera de lo que se alcanza a ver). `_evToggleFiltrosPanel()`
+   fija el `max-height` inline por JS, medido con `scrollHeight` real (mismo
+   criterio que `_evDetalleActualizarSticky()`) en vez de un número inventado. */
 .ev-filtros-colapsable { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
-.ev-filtros-colapsable.abierta { max-height: 460px; }
 
 /* Filtros Mes/Lugar/Tipo -- 3 botones "trigger" (mismo look/idea que
    .admin-destino-trigger de css/admin.css: parecen un <select>) que
@@ -425,7 +443,7 @@
 .ev-filtros-row { display: flex; gap: 8px; margin-bottom: 4px; }
 .ev-filtro-trigger {
   flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 4px;
-  padding: 10px 6px 10px 12px; border-radius: 10px; border: 1.5px solid var(--border-light);
+  padding: 10px 6px 10px 12px; border-radius: 18px; border: 1.5px solid var(--border-light);
   background: var(--surface-light); color: var(--text-2); font-size: 0.78rem; font-weight: 700;
   cursor: pointer; font-family: inherit; transition: all 0.15s;
 }

@@ -26,13 +26,13 @@
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=479995f3"></script>
 <link rel="stylesheet" href="css/global.css?v=27a5bbaf">
-<link rel="stylesheet" href="css/estilos.css">
+<link rel="stylesheet" href="css/estilos.css?v=b3ff7254">
 <link rel="stylesheet" href="css/ui.css?v=5d0e5923">
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
-<link rel="stylesheet" href="css/reservas.css">
-<link rel="stylesheet" href="css/nav.css?v=9f3d5760">
-<link rel="stylesheet" href="css/eventos.css?v=87eda5cb">
+<link rel="stylesheet" href="css/reservas.css?v=78d2c687">
+<link rel="stylesheet" href="css/nav.css?v=e89c04e6">
+<link rel="stylesheet" href="css/eventos.css?v=f3af6bf3">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -89,6 +89,30 @@
       <span class="material-symbols-outlined">calendar_add_on</span>
       <span class="app-nav-cta-label" id="home-nav-cta-label">Nueva reserva</span>
     </button>
+  </div>
+</div>
+
+<!-- Nav fija de s4 (ver "Cambios recientes"/MANIFEST.md) -- reemplaza el
+     #top-bar genérico que usaba esta pantalla (TOP_BAR_CONFIG['s4'],
+     eliminada de js/ui.js). 2 variantes mutuamente excluyentes, togleadas
+     por `_s4ActualizarNav()` (js/reservas.js) según `canPayMonthly() &&
+     !E.reagendando` -- ver css/reservas.css para el detalle completo. -->
+<div id="s4-nav" class="app-nav app-nav-fixed" style="display:none;">
+  <button class="app-nav-back" id="s4-nav-back" onclick="volver('s-home')" style="display:none;">
+    <span class="material-symbols-outlined">arrow_back</span>
+  </button>
+  <div class="app-nav-section" id="s4-titulo" style="display:none;"></div>
+  <div class="s4-nav-seg-wrap" id="s4-nav-seg-wrap" style="display:none;">
+    <div class="tp-seg" id="tp-seg">
+      <div class="tp-slider" id="tp-slider"></div>
+      <div class="tp-opt active" id="opcion-tipo-clase" onclick="selTipoPago('clase')">
+        <span class="material-symbols-outlined tp-cupon-ico" id="tp-cupon-ico" style="display:none;">confirmation_number</span>
+        <span>Por clase</span>
+      </div>
+      <div class="tp-opt" id="opcion-tipo-mensual" onclick="selTipoPago('mensual')">
+        <span>Mensual</span>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -485,18 +509,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div class="pantalla" id="s4">
     <div class="card">
       <div class="seccion-label" id="s4-label"></div>
-      <h2 id="s4-titulo"></h2>
       <div class="tipo-pago-wrapper" id="s4-tipo-pago-wrapper" style="display:none;">
-        <div class="tp-seg" id="tp-seg">
-          <div class="tp-slider" id="tp-slider"></div>
-          <div class="tp-opt active" id="opcion-tipo-clase" onclick="selTipoPago('clase')">
-            <span class="material-symbols-outlined tp-cupon-ico" id="tp-cupon-ico" style="display:none;">confirmation_number</span>
-            <span>Por clase</span>
-          </div>
-          <div class="tp-opt" id="opcion-tipo-mensual" onclick="selTipoPago('mensual')">
-            <span>Mensual</span>
-          </div>
-        </div>
         <div class="tp-hint" id="tp-cupon-hint">
           <span class="material-symbols-outlined" style="font-size:0.85rem;flex-shrink:0;">confirmation_number</span>
           Tienes un cupón disponible — solo aplica en pago por clase
@@ -764,10 +777,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/bsheet.js"></script>
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=7e67df6c"></script>
-<script src="js/eventos.js?v=5368c688"></script>
+<script src="js/ui.js?v=c5fdbd9f"></script>
+<script src="js/eventos.js?v=7e37a8c4"></script>
 <script src="js/home.js"></script>
-<script src="js/reservas.js"></script>
+<script src="js/reservas.js?v=92b4612f"></script>
 <script src="js/perfil.js?v=54df12b2"></script>
 <script src="js/admin.js"></script>
 <script src="js/pwa.js"></script>

@@ -111,13 +111,22 @@
    `--surface-2`) -- antes sin caja propia, quedaba apretado contra los
    bordes de la nav. */
 .app-nav-search {
-  display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; color: var(--muted);
+  display: flex; align-items: center; gap: 8px; flex: 1; width: 100%; min-width: 0; color: var(--muted);
   background: var(--surface-2); border-radius: 12px; padding: 11px 14px;
+  border: 1.5px solid transparent; box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
+/* Foco en TODO el pill (ícono+input), no solo en el `<input>` -- `:focus-within`
+   en el contenedor en vez de `:focus` en el input (que dejaría el outline
+   nativo del navegador ciñendo solo el input, descentrado del ícono de la
+   lupa a su izquierda). `outline:none` en el input de abajo apaga ESE
+   default nativo -- el stroke real vive acá. */
+.app-nav-search:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-light); }
 .app-nav-search .material-symbols-outlined { font-size: 1.2rem; flex-shrink: 0; }
 .app-nav-search input {
-  flex: 1; min-width: 0; border: none; background: transparent; outline: none;
+  flex: 1; width: 100%; min-width: 0; border: none; outline: none; background: transparent;
   font-family: inherit; font-size: 0.9rem; font-weight: 600; color: var(--text); padding: 0;
+  box-sizing: border-box;
 }
 .app-nav-search input::placeholder { color: var(--muted); font-weight: 500; }
 
@@ -203,7 +212,8 @@
 }
 
 #home-nav .app-nav-section,
-#eventos-nav .app-nav-section {
+#eventos-nav .app-nav-section,
+#s4-nav .app-nav-section {
   opacity: 1 !important;
   max-width: none !important;
   overflow: visible !important;

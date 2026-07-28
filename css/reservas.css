@@ -61,6 +61,17 @@
 .total-box .total-detalle { font-size: 0.85rem; font-weight: 600; color: var(--success-bright); margin-top: 6px; }
 .total-box .total-fechas-lista { font-size: 0.78rem; font-weight: 600; color: var(--success-bright); margin-top: 8px; line-height: 1.6; text-align: center; }
 
+/* "Continuar" de s4 como card flotante (ver "Cambios recientes", pedido
+   explícito -- Opción B): `.btn`/`.btn-outline` (css/ui.css) ya le dan
+   `border-radius:12px` en las 4 esquinas (nunca fue full-bleed de ancho,
+   `.cta-footer-fixed` ya lo insetea con `padding: 12px var(--space-screen)`)
+   -- lo que faltaba era que se leyera como una CAPA separada de la nav de
+   abajo en vez de una continuación: `--shadow-lg` (mismo token de elevación
+   ya usado en el resto de la app, no un valor inventado) + el gap real de
+   +14px ya sumado a `#cta-footer-s4` (css/estilos.css) logran el efecto
+   "flotante" combinados -- ninguno de los 2 solos alcanzaba. */
+#btn-s4-continuar { box-shadow: var(--shadow-lg); }
+
 /* Panel de total fijo de s4 (#s4-total-fijo, ver actualizarTotalS4() en
    js/reservas.js) — hijo directo de #cta-footer-s4 (a su vez hijo directo de
    <body>, ver .cta-footer-fixed), anclado justo encima del botón "Continuar",
@@ -98,6 +109,18 @@
 .s4-cupon-aplicado-linea { font-size: 0.78rem; font-weight: 700; color: var(--amber-dark); margin-top: 6px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 
 .tipo-pago-wrapper { border-radius: 12px; margin-bottom: 20px; }
+
+/* ── Nav fija de s4 (ver "Cambios recientes") ──────────
+   `#s4-nav` (`.app-nav.app-nav-fixed`, mismo patrón que `#home-nav`) tiene 2
+   variantes mutuamente excluyentes según `canPayMonthly() && !E.reagendando`
+   (`_s4ActualizarNav()`, js/reservas.js): con selección Por clase/Mensual
+   (`#tp-seg`, reubicado acá desde el body de la card -- antes vivía dentro
+   de `#s4-tipo-pago-wrapper`, que ahora solo envuelve el hint de cupón) sin
+   título ni flecha atrás ni ícono decorativo; o con el título de siempre
+   (`#s4-titulo`) + flecha atrás real, sin el selector. `flex:1` + `justify-
+   content:center` centra `#tp-seg` (`display:inline-flex`, se ajusta a su
+   contenido) dentro del espacio disponible de la nav. */
+.s4-nav-seg-wrap { flex: 1; display: flex; justify-content: center; }
 
 .nota-pago-wrapper { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-top: 20px; }
 .nota-pago-label { display: block; font-size: 0.82rem; font-weight: 800; color: var(--neutral-light); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }

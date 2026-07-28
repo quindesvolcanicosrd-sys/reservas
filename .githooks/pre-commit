@@ -29,7 +29,7 @@
 
 set -e
 
-CACHEBUST_FILES="js/config.js js/eventos.js css/eventos.css js/ui.js js/color-enfasis.js css/global.css css/colors.css css/nav.css css/ui.css js/perfil.js"
+CACHEBUST_FILES="js/config.js js/eventos.js css/eventos.css js/ui.js js/color-enfasis.js css/global.css css/colors.css css/nav.css css/ui.css js/perfil.js js/reservas.js css/reservas.css css/estilos.css"
 
 HTML_FILES="index.html inscripcion/index.html"
 

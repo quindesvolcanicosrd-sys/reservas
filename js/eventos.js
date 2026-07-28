@@ -202,7 +202,7 @@ function _evCambiarVista(v) {
     // completo (embudo) tampoco debe reaparecer ya expandido al volver.
     _evFiltrosPanelAbierto = false;
     var _panelEl = document.getElementById('ev-filtros-colapsable');
-    if (_panelEl) _panelEl.classList.remove('abierta');
+    if (_panelEl) { _panelEl.classList.remove('abierta'); _panelEl.style.maxHeight = '0px'; }
     var _btnEl = document.getElementById('ev-filtro-toggle-btn');
     if (_btnEl) _btnEl.classList.remove('ev-filtro-toggle-activo');
   }
@@ -338,8 +338,72 @@ function _evCalVerMesCompleto() {
 // grilla quedaría expandida de más hasta el próximo scroll, inconsistente
 // con la posición real de la página.
 var _evCalGridColapsada = false;
+// Bug real encontrado y corregido (ver "Cambios recientes" -- reportado como
+// "flicker" del colapso de Calendario específicamente tras un HARD refresh,
+// Ctrl+Shift+R): `document.documentElement.scrollHeight`/`window.innerHeight`
+// no son estables mientras la página todavía está cargando recursos externos
+// (fuente de Material Symbols, Google Fonts, etc, sin caché de por medio en
+// un hard refresh) -- un ícono que todavía muestra su fallback (texto plano
+// o un glifo de otro ancho) puede rendir con una altura de línea distinta a
+// una vez que la fuente real termina de aplicarse, corriendo el layout real
+// varias veces seguidas mientras carga. Si el usuario scrollea en esa
+// ventana, `hayContenidoDeSobra`/`deberiaColapsar` de abajo pueden calcularse
+// con medidas todavía en transición y alternar de resultado en sucesivos
+// scroll events reales (no un bug del debounce ni del umbral en sí) -- eso
+// es el parpadeo. Fix, en 2 partes -- confirmado con Playwright que CUALQUIERA
+// de las 2 solas todavía dejaba una ventana de parpadeo, hace falta juntar
+// ambas: (1) `window.load` (no `DOMContentLoaded`, que no espera recursos)
+// SOLO certifica que la descarga/decode de red terminó, NO que las fuentes ya
+// se aplicaron al layout -- `@font-face` con `font-display:swap` (el que usa
+// Google Fonts acá) puede terminar de intercambiar el glifo real recién
+// DESPUÉS de `load`, sin bloquearlo. (2) `document.fonts.ready` (Font Loading
+// API) sí es la señal correcta y específica para "las fuentes ya están
+// aplicadas", pero por su cuenta puede resolver antes de que otros recursos
+// (imágenes, el resto del boot de la app) terminen. Se espera lo que tarde
+// más de las 2 + un `requestAnimationFrame` extra para asegurar que ese
+// estado final ya se pintó, no solo se resolvió a nivel de promesa/red.
+var _evPageCargada = (document.readyState === 'complete' && (!document.fonts || document.fonts.status === 'loaded'));
+if (!_evPageCargada) {
+  var _evEsperaCarga = new Promise(function(resolve) {
+    if (document.readyState === 'complete') resolve(); else window.addEventListener('load', resolve);
+  });
+  var _evEsperaFuentes = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+  Promise.all([_evEsperaCarga, _evEsperaFuentes]).then(function() {
+    requestAnimationFrame(function() {
+      _evPageCargada = true;
+      // Sincroniza con la posición de scroll YA acumulada mientras cargaba
+      // (el usuario pudo haber scrolleado antes de que terminara de cargar)
+      // -- sin esto, si no llega un scroll event nuevo después, la grilla
+      // queda en el estado inicial (expandida) aunque la página ya esté
+      // scrolleada.
+      _evCalActualizarColapso();
+    });
+  });
+}
+// Segunda causa real del mismo "flicker" reportado, encontrada con
+// Playwright reproduciendo el hard refresh con recursos demorados
+// (además de la inestabilidad de layout durante la carga, ya cubierta por
+// `_evPageCargada` arriba): colapsar/expandir `#ev-cal-grid-colapsable`
+// ANIMA su alto (0.28s) -- mientras esa transición corre, "Scroll Anchoring"
+// del navegador (ajusta `window.scrollY` automáticamente para que el
+// contenido bajo el punto de scroll no "salte" cuando algo ARRIBA cambia de
+// tamaño) puede mover `window.scrollY` en tiempo real para compensar el
+// propio resize de la grilla -- eso dispara scroll events reales nuevos, que
+// recalculan con ese `scrollY` ya desplazado, pueden decidir lo contrario, y
+// retrigger otra transición, que vuelve a mover el scroll, etc.: un loop de
+// retroalimentación real entre la animación CSS y este cálculo, no una sola
+// medición mala. Confirmado con Playwright: `window.scrollY` oscilando entre
+// 0 y 200+ (scrollTo(0,100) constante de por medio) mientras la transición
+// de la grilla estaba en curso, causando varios ciclos de colapso/expansión
+// antes de asentarse. Fix: bloquear cualquier reevaluación mientras una
+// transición propia ya está en curso (`_evCalTransicionando`), liberado
+// recién en `transitionend` -- ahí se re-chequea una vez más por si el
+// scroll real (no el de la retroalimentación) cambió mientras tanto.
+var _evCalTransicionando = false;
 function _evCalActualizarColapso() {
   if (_evVista !== 'calendario') return;
+  if (!_evPageCargada) return;
+  if (_evCalTransicionando) return;
   var el = document.getElementById('ev-cal-grid-colapsable');
   if (!el) return;
   // Guarda contra un loop real con poco contenido (mes con pocos eventos):
@@ -353,6 +417,12 @@ function _evCalActualizarColapso() {
   if (deberiaColapsar === _evCalGridColapsada) return;
   _evCalGridColapsada = deberiaColapsar;
   el.classList.toggle('colapsada', deberiaColapsar);
+  _evCalTransicionando = true;
+  el.addEventListener('transitionend', function _fin() {
+    el.removeEventListener('transitionend', _fin);
+    _evCalTransicionando = false;
+    _evCalActualizarColapso();
+  });
 }
 window.addEventListener('scroll', function() {
   var pantalla = document.getElementById('s-eventos');
@@ -388,6 +458,29 @@ function _evFechaLabel(iso) {
   if (_evFechaCmp(iso, _evSumarDias(hoy, -1)) === 0) return 'Ayer';
   var d = _evParseISO(iso);
   return _EV_DIAS_LARGOS[d.getDay()] + ' ' + d.getDate() + ' de ' + NOMBRES_MESES[d.getMonth()].toLowerCase();
+}
+// Bug real encontrado y corregido (ver "Cambios recientes" -- confirmado con
+// Playwright instrumentando `lanzarConfetti()`, no adivinado leyendo el
+// código: el confetti de cumpleaños nunca se veía, sin ningún error en
+// consola). `irEventos()` llama `_evRenderVistaActual()` (que termina acá,
+// disparando esto) ANTES de `volver('s-eventos')` -- en ese instante
+// `#s-eventos` todavía NO tiene `.activa` (display:none heredado de
+// `.pantalla`), así que `#ev-confetti-<id>` mide `clientWidth`/`clientHeight`
+// = 0. `lanzarConfetti()` (js/ui.js) usa esas medidas UNA SOLA VEZ para fijar
+// `canvas.width`/`canvas.height` al crear el canvas -- un canvas creado a
+// 0×0 se queda en 0×0 para siempre (el atributo `width`/`height` del canvas
+// no se re-mide solo cuando el contenedor se vuelve visible después), así
+// que nunca se veía una sola partícula, sin lanzar ningún error. Fix: no
+// lanzar el confetti hasta confirmar que el contenedor YA tiene medidas
+// reales (`clientWidth`/`clientHeight` > 0) -- reintenta en el próximo frame
+// (`requestAnimationFrame`, no un `setTimeout` con un número inventado) si
+// todavía no las tiene, con un tope de reintentos para no loopear para
+// siempre si el contenedor nunca llega a mostrarse.
+function _evLanzarConfettiCuandoVisible(el, intentosRestantes) {
+  if (intentosRestantes === undefined) intentosRestantes = 10;
+  if (el.clientWidth > 0 && el.clientHeight > 0) { lanzarConfetti(el); return; }
+  if (intentosRestantes <= 0) return;
+  requestAnimationFrame(function() { _evLanzarConfettiCuandoVisible(el, intentosRestantes - 1); });
 }
 function _evRenderLista() {
   var rango = _evRangoActual();
@@ -437,7 +530,7 @@ function _evRenderLista() {
       if (it.tipo !== 'cumple' || _evConfettiMostrado[it.data.id]) return;
       _evConfettiMostrado[it.data.id] = true;
       var el = document.getElementById('ev-confetti-' + it.data.id);
-      if (el) lanzarConfetti(el);
+      if (el) _evLanzarConfettiCuandoVisible(el);
     });
   });
 }
@@ -473,7 +566,10 @@ function _evCardEventoHtml(e, sufijo) {
   var icono = _EV_ICONOS[e.tipo] || 'event';
   var estadoNota = '';
   if (e.estado === 'Cancelado') estadoNota = '<div class="ev-card-estado-nota">Cancelado</div>';
-  else if (e.estado === 'No se entrena') estadoNota = '<div class="ev-card-estado-nota">No se entrena</div>';
+  // Pill roja (ver "Cambios recientes") -- reusa .badge/.badge-cancelada,
+  // mismo patrón ya usado para los estados de asistencia real (
+  // _evAsistenciaRealHtml()) en vez de una clase nueva paralela a esa.
+  else if (e.estado === 'No se entrena') estadoNota = '<div class="ev-card-estado-nota"><span class="badge badge-cancelada">No se entrena</span></div>';
   var accion = _esAdminDemo ? _evAccionAdminHtml(e) : _evRsvpBarraHtml(e);
   // Ícono de tipo INLINE junto al título (ver "Cambios recientes" -- antes
   // `.ev-card-icon`, cuadrado 42px en columna propia a la izquierda). Sin esa
@@ -791,6 +887,15 @@ function _evToggleFiltroBurbuja(campo) {
     if (el) el.classList.add('abierta');
   }
   _evActualizarBotonesFiltro();
+  // El panel exterior (`.ev-filtros-colapsable`, `_evToggleFiltrosPanel()`)
+  // fija su `max-height` a la altura real de SU contenido en el momento de
+  // abrirse (sin ninguna burbuja abierta todavía) -- relajarlo acá a un techo
+  // holgado evita que esa misma altura ajustada recorte una burbuja que se
+  // expande DESPUÉS. Sin transición propia (salto directo, no animado): un
+  // techo más alto no cambia nada visible mientras el contenido real quepa
+  // adentro, así que no hay "golpe" que evitar acá, a diferencia del panel.
+  var panelEl = document.getElementById('ev-filtros-colapsable');
+  if (panelEl && panelEl.classList.contains('abierta')) panelEl.style.maxHeight = '460px';
 }
 function _evColapsarFiltroBurbuja(campo) {
   var el = document.getElementById('ev-filtro-burbuja-' + campo);
@@ -844,12 +949,37 @@ function _evActualizarBotonesFiltro() {
 // (tocar de nuevo o cambiar de vista/subtab desde afuera) también cierra
 // cualquier burbuja individual que hubiera quedado abierta adentro -- mismo
 // criterio que `_evCambiarVista()` ya aplica al salir de "Lista` por completo.
+// `max-height` se fija por JS con `scrollHeight` real, NO con un número fijo
+// en CSS (bug real corregido, ver comentario de `.ev-filtros-colapsable` en
+// css/eventos.css: un techo mucho más alto que el contenido real hacía que
+// la transición se viera instantánea en vez de animada).
 var _evFiltrosPanelAbierto = false;
 function _evToggleFiltrosPanel() {
   _evFiltrosPanelAbierto = !_evFiltrosPanelAbierto;
   var panel = document.getElementById('ev-filtros-colapsable');
   var btn = document.getElementById('ev-filtro-toggle-btn');
-  if (panel) panel.classList.toggle('abierta', _evFiltrosPanelAbierto);
+  if (panel) {
+    if (_evFiltrosPanelAbierto) {
+      panel.classList.add('abierta');
+      panel.style.maxHeight = panel.scrollHeight + 'px';
+    } else {
+      // Congela el alto actualmente visible (pudo haber quedado relajado a
+      // 460px por `_evToggleFiltroBurbuja()` si se abrió alguna burbuja)
+      // ANTES de animar a 0 -- si no, arrancaría desde ese techo holgado en
+      // vez del alto real, con el mismo bug de "golpe" pero al revés. Doble
+      // requestAnimationFrame para asegurar que el browser pinte ese valor
+      // congelado en un frame propio antes de cambiarlo a 0 -- un solo rAF
+      // a veces cae en el mismo frame que el cambio anterior en algunos
+      // navegadores, y sin el frame intermedio no hay desde-dónde animar.
+      panel.style.maxHeight = panel.scrollHeight + 'px';
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          panel.classList.remove('abierta');
+          panel.style.maxHeight = '0px';
+        });
+      });
+    }
+  }
   if (btn) btn.classList.toggle('ev-filtro-toggle-activo', _evFiltrosPanelAbierto);
   if (!_evFiltrosPanelAbierto && _evFiltroBurbujaAbierta) {
     _evColapsarFiltroBurbuja(_evFiltroBurbujaAbierta);
@@ -866,6 +996,34 @@ function _evActualizarBadgeFiltros() {
   var n = ['mes', 'lugar', 'tipo'].filter(function(campo) { return _evListaTabFiltro[campo].length > 0; }).length;
   badge.textContent = String(n);
   badge.style.display = n > 0 ? 'flex' : 'none';
+}
+// Bucket relativo de una fecha futura para los separadores de la pestaña
+// "Todos" (ver "Cambios recientes") -- reusa `_formatarFechaRelativa()`
+// (js/home.js, ya usada por las cards de "Nueva Reserva" para "Mañana"/
+// "Pasado mañana"/"Este Sábado") en vez de reimplementar ese cálculo de
+// días acá: se le arma el mismo formato de entrada que espera ("DD de MES")
+// y se interpreta su resultado. Esa función no sabe de "Próxima semana" --
+// se suma acá como el único bucket nuevo, mismo criterio de semana
+// Lunes-Domingo que ya usa esa función para "Este X" (`diasHastaFinDeSemana`).
+function _evBucketRelativo(iso) {
+  var d = _evParseISO(iso);
+  var label = _formatarFechaRelativa(d.getDate() + ' de ' + NOMBRES_MESES[d.getMonth()]);
+  if (label === 'Mañana') return 'MAÑANA';
+  if (label === 'Pasado mañana') return 'PASADO MAÑANA';
+  if (/^Este /.test(label)) return null; // resto de esta semana -- sin separador propio, pedido explícito
+  return _evEsProximaSemana(iso) ? 'PRÓXIMA SEMANA' : null;
+}
+// "Próxima semana" = bloque Lunes-Domingo siguiente a la semana actual
+// (pedido explícito, semana empieza en lunes) -- la semana actual termina en
+// el domingo que viene inclusive (`diasHastaFinDeSemana`, mismo cálculo que
+// `_formatarFechaRelativa()`/js/home.js: getDay() 0=domingo).
+function _evEsProximaSemana(iso) {
+  var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  var diasHastaFinDeSemana = (7 - hoy.getDay()) % 7;
+  var inicioProxima = new Date(hoy); inicioProxima.setDate(inicioProxima.getDate() + diasHastaFinDeSemana + 1);
+  var finProxima = new Date(inicioProxima); finProxima.setDate(finProxima.getDate() + 6);
+  var d = _evParseISO(iso);
+  return d >= inicioProxima && d <= finProxima;
 }
 // Filtrado 100% en cliente sobre los datos de prueba (Tanda 2) -- la Tanda 3
 // reemplaza esto por getEventosFiltrados(estado, meses[], lugares[], tipos[]),
@@ -901,8 +1059,22 @@ function _evListaTabRenderLista() {
   // contrastar, todo pasado se ve igual de normal que hoy).
   if (_evListaTabSubtab === 'todos') {
     var out = [], insertado = false;
+    // Separadores MAÑANA/PASADO MAÑANA/PRÓXIMA SEMANA (ver "Cambios
+    // recientes", `_evBucketRelativo()` más abajo) -- a diferencia de HOY
+    // (siempre se muestra, marca el punto cronológico exacto aunque no haya
+    // ningún evento justo hoy), estos 3 son condicionales: solo aparecen si
+    // de verdad hay >=1 evento en ese bucket, por eso se registran en
+    // `bucketsMostrados` recién cuando efectivamente se inserta uno.
+    var bucketsMostrados = {};
     lista.forEach(function(e) {
       if (!insertado && _evFechaCmp(e.fecha, hoy) >= 0) { out.push('<div class="ev-hoy-separador"><span>HOY</span></div>'); insertado = true; }
+      if (_evFechaCmp(e.fecha, hoy) > 0) {
+        var bucket = _evBucketRelativo(e.fecha);
+        if (bucket && !bucketsMostrados[bucket]) {
+          bucketsMostrados[bucket] = true;
+          out.push('<div class="ev-hoy-separador"><span>' + bucket + '</span></div>');
+        }
+      }
       out.push(_evListaTabFilaHtml(e));
     });
     if (!insertado) out.push('<div class="ev-hoy-separador"><span>HOY</span></div>');

@@ -106,7 +106,13 @@ var TOP_BAR_CONFIG = {
   's2': { titulo: 'Equipamiento', volver: 's-home' },
   's3a': { titulo: 'Editar equipamiento', volver: function() { return E.editandoDesdeHome ? 's-datos' : 's-home'; } }, 's3b': { titulo: 'Editar equipamiento', volver: 's3a' },
   's3c': { titulo: 'Editar equipamiento', volver: function() { return E.editPat === 'Sí' ? 's3b' : 's3a'; } },
-  's4': { titulo: function() { return E.reagendando ? 'Reagendar clase' : 'Nueva reserva'; }, volver: function() { return 's-home'; } },
+  // 's4' -- ya NO usa el #top-bar genérico (ver "Cambios recientes"): nav
+  // fija propia, #s4-nav (mismo patrón que #home-nav), poblada por
+  // `_s4ActualizarNav()`/js/reservas.js -- 2 variantes según `canPayMonthly()
+  // && !E.reagendando` (con el selector Por clase/Mensual centrado, sin
+  // título ni flecha; o con el título de siempre + flecha atrás real). Sin
+  // entrada acá, `ir()` oculta el #top-bar entero para esta pantalla, mismo
+  // criterio que la pantalla de detalle de Eventos.
   's-pago': { titulo: 'Pago', volver: 's4' },
   's-gestionar': { titulo: 'Re-agendar fecha', volver: 's-home' },
   's-misreservas': { titulo: 'Historial de reservas', volver: 's-home' },
@@ -244,6 +250,12 @@ function ir(id, desdeHistorial, sinTrampa) {
   if (ctaFooter) ctaFooter.style.display = 'block';
 
   if (id === 's4' && typeof actualizarTotalS4 === 'function') actualizarTotalS4();
+
+  var s4Nav = document.getElementById('s4-nav');
+  if (s4Nav) {
+    s4Nav.style.display = id === 's4' ? 'flex' : 'none';
+    if (id === 's4' && typeof _s4ActualizarNav === 'function') _s4ActualizarNav();
+  }
 
   var homeNav = document.getElementById('home-nav');
   if (homeNav) {
