@@ -133,18 +133,7 @@
 .ev-cal-celda.ev-cal-sel .ev-cal-num { background: var(--brand); color: var(--white); }
 .ev-cal-dots { display: flex; gap: 3px; height: 6px; align-items: center; }
 
-/* ── Lista de eventos (debajo de Calendario) ──────────────────────────
-   `#ev-lista-wrap` (ver "Cambios recientes" -- nuevo, agregado al sumar el
-   swipe de Hoy/Esta semana/Este mes): `#ev-lista` es el `cont` que anima
-   `_evAnimarCambioHorizontal()`/js/eventos.js -- necesita un padre
-   `position:relative` para que la ENTRANTE (`.ev-swipe-entrando`,
-   position:absolute) se posicione contra ÉL y no contra el ancestro
-   posicionado más cercano página arriba (`.card`, que no tiene
-   `position:relative` -- reusarlo tal cual hubiera hecho flotar el
-   contenido a cualquier lado). Mismo criterio exacto que
-   `#ev-vista-lista-wrap` más abajo (Lista), `overflow-x:hidden` contiene el
-   recorrido horizontal de la animación sin generar scroll de página. */
-.ev-lista-wrap { position: relative; overflow-x: hidden; }
+/* ── Lista de eventos (debajo de Calendario) ─────────────────────────── */
 .ev-lista { margin-top: 20px; text-align: left; scroll-margin-top: 90px; }
 .ev-fecha-grupo { margin-bottom: 18px; scroll-margin-top: 90px; }
 .ev-fecha-label {
@@ -414,22 +403,13 @@
    opciones del selector de vista -- ícono ojo, burbuja -- todo dentro de
    #s-eventos). ────── */
 
-/* `position:relative` ancla la ENTRANTE (`.ev-swipe-entrando`,
-   position:absolute) de la transición direccional reusable de subtabs
-   (`_evAnimarCambioHorizontal()`, js/eventos.js -- mismo mecanismo que usa el
-   swipe de Hoy/Esta semana/Este mes de Calendario, ver css más abajo);
-   `overflow-x:hidden` contiene el recorrido horizontal de esa animación
-   (translateX hasta 100%) sin que genere scroll de página -- la SALIENTE
-   (clon congelado del contenido anterior) es la que queda en flujo normal
-   mientras dura la transición, con su alto/scroll vertical real sin cambios
-   (ver comentario de `_evAnimarCambioHorizontal()` -- roles calcados de
-   axisTransicion(), shared/axis-transicion.js). */
+/* `position:relative;overflow-x:hidden` -- pre-existente, sin uso funcional
+   hoy (ver "Cambios recientes": el crossfade de `_evAnimarCambioContenido()`,
+   js/eventos.js, no clona ni posiciona nada -- un solo nodo real, sin
+   necesitar ningún ancestro `position:relative`). Se deja tal cual, inocuo,
+   por si algún día vuelve a hacer falta -- no vale la pena tocar una regla
+   preexistente que no rompe nada por sacarle un uso que ya no tiene. */
 #ev-vista-lista-wrap { position: relative; overflow-x: hidden; }
-/* Entrante superpuesta -- sin `bottom:0` (a diferencia de `.axis-enter`,
-   css/global.css): acá el alto tiene que seguir siendo el intrínseco del
-   contenido pintado, nunca estirarse a ocupar el alto del wrapper (que
-   mientras dura la transición lo determina la saliente, en flujo normal). */
-.ev-swipe-entrando { position: absolute; top: 0; left: 0; right: 0; }
 
 /* Sub-tabs Próximos/Pasados/Todos: texto simple, sin fondo -- el navegador ya
    anima `color` solo vía `transition`, no hace falta medir nada para eso.
@@ -496,17 +476,46 @@
    que permite que el `overflow:hidden` del wrapper no recorte la colita, que
    sobresale por encima del panel -- ver `margin-top`/colita más abajo). */
 .ev-header-burbuja { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
+/* Espacio contra el contenido que sigue inmediatamente debajo -- el renglón
+   de mes/flechas de Calendario, o la lista de eventos (ver "Cambios
+   recientes": sin esto, la burbuja abierta quedaba pegada contra ese
+   contenido). El margen vive AFUERA de la caja (`overflow:hidden` de la
+   burbuja colapsada no lo toca) -- por eso tiene que quedar condicionado a
+   `.abierta`, si no dejaría un hueco vacío permanente incluso colapsada.
+   Mismo valor (18px) en las 2 burbujas de cabecera (selector de vista y
+   filtros, ambas comparten esta clase) para consistencia. */
+.ev-header-burbuja.abierta { margin-bottom: 18px; }
+/* `z-index:0` (ver "Cambios recientes" -- fix de costura) junto con
+   `position:relative` establece un stacking context PROPIO para este panel
+   -- necesario para que el `z-index:-1` de la colita (abajo) quede contenido
+   acá y pinte detrás DE ESTE fondo puntual, no de cualquier otra cosa más
+   atrás en la página (sin un stacking context propio, un descendiente con
+   z-index negativo escapa al contexto del ancestro posicionado más cercano,
+   que podría ser la pantalla entera). */
 .ev-header-burbuja-panel {
-  position: relative; margin-top: 16px; padding: 14px;
+  position: relative; z-index: 0; margin-top: 16px; padding: 14px;
   border: 1.5px solid var(--border-light); border-radius: 14px; background: var(--surface-2);
 }
-/* Colita -- cuadrado de 12px rotado 45°, mismo fondo/borde que el panel,
-   solo con borde en 2 de sus 4 lados (los que quedan "afuera" tras la
-   rotación) para que no se vea un cuadrado doble por encima del propio
-   borde del panel. `top:-7px` la deja centrada sobre el `margin-top:16px`
-   reservado arriba -- ni pegada al panel ni cortada por el wrapper. */
+/* Colita -- cuadrado de 12px rotado 45°, mismo `background` EXACTO que el
+   panel (`--surface-2`, ningún tono distinto -- un mismatch ahí generaría
+   costura aunque el solapamiento esté bien) y borde en 2 de sus 4 lados
+   (top+left del cuadrado sin rotar -- tras rotate(45deg) quedan como las 2
+   aristas SUPERIORES, formando la "V" hacia arriba; las otras 2, sin borde,
+   apuntan hacia abajo).
+   Fix de costura (ver "Cambios recientes" -- reportado como línea/hueco
+   visible en la unión colita-panel): la colita tiene que quedar DETRÁS del
+   panel (`z-index:-1`, contenido por el stacking context de arriba) Y el
+   panel tiene que solaparse sobre su base 1-2px -- `top:-6px` para un
+   cuadrado de 12px pone sus 2 vértices laterales (el punto medio real del
+   rombo) justo a la altura del borde superior del panel (`y=0`): todo lo que
+   queda POR DEBAJO de esa línea (la mitad inferior del rombo, sin borde
+   propio) se lo "traga" el fondo sólido + el propio `border-top` del panel,
+   dejando visible solo la mitad superior con sus 2 aristas bordeadas -- sin
+   esto (con la colita pintando ENCIMA, `z-index` default, o sin suficiente
+   solape), la mitad inferior sin borde asomaba por debajo de la línea del
+   panel como una costura/hueco visible. */
 .ev-header-burbuja-panel::before {
-  content: ''; position: absolute; top: -7px; width: 12px; height: 12px;
+  content: ''; position: absolute; z-index: -1; top: -6px; width: 12px; height: 12px;
   background: var(--surface-2); border-left: 1.5px solid var(--border-light); border-top: 1.5px solid var(--border-light);
   transform: rotate(45deg); border-radius: 2px 0 0 0;
 }
@@ -561,7 +570,10 @@
    abajo al expandirse en vez de superponerse. Mismo mecanismo/curva que
    .admin-mes-acordeon-body (css/admin.css) y .fi-body (css/reservas.css). */
 .ev-filtro-burbuja { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
-.ev-filtro-burbuja.abierta { max-height: 320px; }
+/* Mismo criterio/valor (18px) que `.ev-header-burbuja.abierta` de arriba --
+   ver "Cambios recientes" -- para que una burbuja de campo (Mes/Lugar/Tipo)
+   abierta tampoco quede pegada contra el cierre del panel exterior. */
+.ev-filtro-burbuja.abierta { max-height: 320px; margin-bottom: 18px; }
 .ev-filtro-burbuja-pills { padding: 10px 2px 16px; }
 
 /* Card compacta de una fila de la lista -- `.ev-card-compacta-wrap` es el

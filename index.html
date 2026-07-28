@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=78d2c687">
 <link rel="stylesheet" href="css/nav.css?v=e89c04e6">
-<link rel="stylesheet" href="css/eventos.css?v=a0bf0dac">
+<link rel="stylesheet" href="css/eventos.css?v=f8ea532e">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -307,11 +307,17 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           </button>
 
           <div class="ev-header-pill-wrap">
-            <div class="tp-seg" id="ev-cal-sub-seg">
-              <div class="tp-slider" id="ev-cal-sub-slider"></div>
-              <div class="tp-opt active" id="ev-cal-sub-hoy" onclick="_evCambiarCalSubvista('hoy')">Hoy</div>
-              <div class="tp-opt" id="ev-cal-sub-semana" onclick="_evCambiarCalSubvista('semana')">Esta semana</div>
-              <div class="tp-opt" id="ev-cal-sub-mes" onclick="_evCambiarCalSubvista('mes')">Este mes</div>
+            <!-- Mismo componente de tabs EXACTO que el de "Lista" más abajo
+                 (texto simple + .ev-subtabs-indicator deslizante, ver
+                 "Cambios recientes" -- antes un .tp-seg/.tp-slider con fondo
+                 sólido, 2 estilos visuales distintos para el mismo rol). -->
+            <div class="ev-subtabs-wrap" id="ev-cal-sub-wrap">
+              <div class="ev-subtabs">
+                <div class="ev-subtab activo" id="ev-cal-sub-hoy" onclick="_evCambiarCalSubvista('hoy')">Hoy</div>
+                <div class="ev-subtab" id="ev-cal-sub-semana" onclick="_evCambiarCalSubvista('semana')">Esta semana</div>
+                <div class="ev-subtab" id="ev-cal-sub-mes" onclick="_evCambiarCalSubvista('mes')">Este mes</div>
+              </div>
+              <div class="ev-subtabs-indicator" id="ev-cal-sub-indicator"></div>
             </div>
             <div class="ev-subtabs-wrap" id="ev-lista-subtabs-wrap" style="display:none;">
               <div class="ev-subtabs">
@@ -397,9 +403,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
       </div>
 
-      <div id="ev-lista-wrap">
-        <div class="ev-lista" id="ev-lista"></div>
-      </div>
+      <div class="ev-lista" id="ev-lista"></div>
 
       <div id="ev-vista-lista-wrap" style="display:none;">
         <div id="ev-lista-tab-filas"></div>
@@ -806,7 +810,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=7f7578be"></script>
-<script src="js/eventos.js?v=7fb6624f"></script>
+<script src="js/eventos.js?v=db9f928f"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=92b4612f"></script>
 <script src="js/perfil.js?v=54df12b2"></script>

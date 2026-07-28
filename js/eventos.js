@@ -85,10 +85,11 @@ var _EV_RSVP_COLOR = { 'Asistiré': 'var(--success-dark)', 'No asistiré': 'var(
 var _evVista = 'calendario';
 // Sub-opciones de la vista Calendario (Hoy/Esta semana/Este mes, ver
 // "Cambios recientes") -- único lugar que declara el orden, reusado por el
-// indicador del pill (`_evUpdateCalSubSlider()`) y el swipe con
-// `_evAnimarCambioHorizontal()` (misma idea que `_EV_SUBTABS` de la pestaña
-// "Lista" más abajo, sin loop en los extremos a propósito: "Hoy" -> "Esta
-// semana" -> "Este mes" se lee como una progresión de zoom, no como un ciclo).
+// indicador del pill (`_evUpdateSubtabIndicator()`, genérica, compartida con
+// la pestaña "Lista") y el swipe con `_evAnimarCambioContenido()` (misma
+// idea que `_EV_SUBTABS` de la pestaña "Lista" más abajo, sin loop en los
+// extremos a propósito: "Hoy" -> "Esta semana" -> "Este mes" se lee como una
+// progresión de zoom, no como un ciclo).
 var _EV_CAL_SUBVISTAS = ['hoy', 'semana', 'mes'];
 var _evCalSubvista = 'hoy';
 var _evSemanaOffset = 0;
@@ -169,8 +170,8 @@ function irEventos() {
   _evVista = 'calendario'; _evCalSubvista = 'hoy';
   _evSemanaOffset = 0; _evMesOffset = 0;
   _evCalModo = 'dia'; _evCalFechaSel = null; // vuelve a "hoy seleccionado" cada vez que se entra a Eventos de nuevo
-  _EV_CAL_SUBVISTAS.forEach(function(s) { document.getElementById('ev-cal-sub-' + s).classList.toggle('active', s === 'hoy'); });
-  document.getElementById('ev-cal-sub-seg').style.display = 'inline-flex';
+  _EV_CAL_SUBVISTAS.forEach(function(s) { document.getElementById('ev-cal-sub-' + s).classList.toggle('activo', s === 'hoy'); });
+  document.getElementById('ev-cal-sub-wrap').style.display = 'block';
   document.getElementById('ev-lista-subtabs-wrap').style.display = 'none';
   document.getElementById('ev-vista-semana-wrap').style.display = 'none';
   document.getElementById('ev-vista-calendario-wrap').style.display = 'none';
@@ -183,9 +184,9 @@ function irEventos() {
   _evRenderVistaActual();
   volver('s-eventos');
   // Igual criterio que _updateTpSlider()/_adminUpdateFiltroSlider() (js/reservas.js,
-  // js/admin.js): offsetWidth/offsetLeft del tp-opt activo solo son reales una
+  // js/admin.js): offsetWidth/offsetLeft del tab activo solo son reales una
   // vez que la pantalla es visible -- se recalcula sin animar apenas lo es.
-  setTimeout(function() { _evUpdateCalSubSlider(false); _evUpdateRsvpSliders(false); }, 50);
+  setTimeout(function() { _evUpdateSubtabIndicator('#ev-cal-sub-wrap', 'ev-cal-sub-indicator', false); _evUpdateRsvpSliders(false); }, 50);
 }
 
 /* ── Selector de vista (ícono ojo, ver "Cambios recientes" -- rediseño de
@@ -197,7 +198,7 @@ function irEventos() {
    activa, ninguna de las 2 vistas usa el contenedor de la otra. */
 function _evCambiarVista(v) {
   _evVista = v;
-  document.getElementById('ev-cal-sub-seg').style.display = v === 'calendario' ? 'inline-flex' : 'none';
+  document.getElementById('ev-cal-sub-wrap').style.display = v === 'calendario' ? 'block' : 'none';
   document.getElementById('ev-lista-subtabs-wrap').style.display = v === 'lista' ? 'block' : 'none';
   document.getElementById('ev-vista-semana-wrap').style.display = (v === 'calendario' && _evCalSubvista === 'semana') ? 'block' : 'none';
   document.getElementById('ev-vista-calendario-wrap').style.display = (v === 'calendario' && _evCalSubvista === 'mes') ? 'block' : 'none';
@@ -222,10 +223,10 @@ function _evCambiarVista(v) {
     // Primera vez que "Lista" se hace visible en esta entrada a Eventos --
     // mismo problema ya conocido de offsetWidth/offsetLeft en 0 mientras el
     // wrap todavía está terminando de aplicar `display:block` (mismo criterio
-    // que el setTimeout(50) de _evUpdateCalSubSlider()/_evUpdateRsvpSliders()
+    // que el setTimeout(50) de _evUpdateSubtabIndicator()/_evUpdateRsvpSliders()
     // en irEventos()) -- sin animar, el indicador ya arranca en su posición
     // real de "Próximos" en vez de deslizarse desde 0 la primera vez.
-    setTimeout(function() { _evUpdateSubtabIndicator(false); }, 50);
+    setTimeout(function() { _evUpdateSubtabIndicator('#ev-lista-subtabs-wrap', 'ev-subtabs-indicator', false); }, 50);
   }
   else {
     _evRenderVistaActual();
@@ -253,14 +254,17 @@ function _evActualizarFiltrosRow() {
   if (mesBtn) mesBtn.style.display = _evVista === 'calendario' ? 'none' : '';
 }
 /* ── Sub-opciones de Calendario: Hoy/Esta semana/Este mes (ver "Cambios
-   recientes" -- fusiona la vieja vista "Semana" acá adentro) -- mismo pill
-   .tp-seg/.tp-slider/.tp-opt de siempre, `direccion` opcional (swipe) igual
-   criterio que `_evListaTabCambiarSubtab()`: sin ella (tap directo) se
-   calcula comparando índices en `_EV_CAL_SUBVISTAS`. El contenido (franja
-   semanal/grilla mensual, arriba, instantáneo) y la lista de resultados
-   (#ev-lista, abajo, animada con `_evAnimarCambioHorizontal()` -- mismo
-   mecanismo ya corregido para la pestaña Lista) cambian juntos en una sola
-   llamada. */
+   recientes" -- fusiona la vieja vista "Semana" acá adentro) -- MISMO
+   componente visual de tabs que la pestaña "Lista" (texto simple +
+   `.ev-subtabs-indicator` deslizante vía `_evUpdateSubtabIndicator()`
+   genérica, ver "Cambios recientes" -- antes un `.tp-seg`/`.tp-slider` con
+   fondo sólido, 2 estilos paralelos para el mismo rol), `direccion` opcional
+   (swipe) igual criterio que `_evListaTabCambiarSubtab()`: sin ella (tap
+   directo) se calcula comparando índices en `_EV_CAL_SUBVISTAS`. El
+   contenido (franja semanal/grilla mensual, arriba, instantáneo) y la lista
+   de resultados (#ev-lista, abajo, animada con `_evAnimarCambioContenido()`
+   -- mismo mecanismo ya usado por la pestaña Lista) cambian juntos en una
+   sola llamada. */
 function _evCambiarCalSubvista(sv, direccion) {
   if (sv === _evCalSubvista) return;
   if (!direccion) {
@@ -268,26 +272,18 @@ function _evCambiarCalSubvista(sv, direccion) {
   }
   _evCalSubvista = sv;
   _EV_CAL_SUBVISTAS.forEach(function(s) {
-    document.getElementById('ev-cal-sub-' + s).classList.toggle('active', s === sv);
+    document.getElementById('ev-cal-sub-' + s).classList.toggle('activo', s === sv);
   });
-  _evUpdateCalSubSlider(true);
+  _evUpdateSubtabIndicator('#ev-cal-sub-wrap', 'ev-cal-sub-indicator', true);
   document.getElementById('ev-vista-semana-wrap').style.display = sv === 'semana' ? 'block' : 'none';
   document.getElementById('ev-vista-calendario-wrap').style.display = sv === 'mes' ? 'block' : 'none';
   var cont = document.getElementById('ev-lista');
-  _evAnimarCambioHorizontal(cont, function() {
+  _evAnimarCambioContenido(cont, function() {
     if (sv === 'semana') _evRenderSemana();
     else if (sv === 'mes') _evRenderCalendario();
     _evRenderLista();
   }, direccion);
   if (sv === 'mes') _evCalActualizarColapso();
-}
-function _evUpdateCalSubSlider(animate) {
-  var slider = document.getElementById('ev-cal-sub-slider');
-  var activeOpt = document.getElementById('ev-cal-sub-' + _evCalSubvista);
-  if (!slider || !activeOpt) return;
-  slider.classList.toggle('animado', !!animate);
-  slider.style.width = activeOpt.offsetWidth + 'px';
-  slider.style.transform = 'translateX(' + activeOpt.offsetLeft + 'px)';
 }
 // Siguiente/anterior SIN loop (a diferencia de la pestaña Lista, ver
 // declaración de `_EV_CAL_SUBVISTAS` -- pedido explícito: Hoy/Semana/Mes es
@@ -837,7 +833,7 @@ function _evRsvpBarraHtml(e) {
   return '<div class="ev-asistire-wrap" onclick="event.stopPropagation()"><div class="ev-rsvp-seg" data-evid="' + e.id + '"><div class="ev-rsvp-slider"></div>' + botones + '</div></div>';
 }
 // Posiciona el indicador de UNA barra (offsetLeft/offsetWidth de la opción
-// .activa, mismo mecanismo que _evUpdateCalSubSlider()/.tp-slider) -- `seg` es
+// .activa, mismo mecanismo que _evUpdateSubtabIndicator()/.tp-slider) -- `seg` es
 // el .ev-rsvp-seg, no el wrapper. Sin opción activa (miEstado null, evento
 // recién creado) el indicador queda con opacity:0 (ver CSS), no en (0,0).
 function _evPosicionarRsvpSlider(seg, animate) {
@@ -859,7 +855,7 @@ function _evPosicionarRsvpSlider(seg, animate) {
 // Reposiciona TODAS las barras visibles -- llamado tras cualquier re-render
 // de lista (chevrones, cambio de vista/tab, filtros) y, con setTimeout(50),
 // la primera vez que la pantalla se vuelve visible (mismo problema que
-// _evUpdateCalSubSlider: offsetWidth/offsetLeft de un elemento display:none
+// _evUpdateSubtabIndicator: offsetWidth/offsetLeft de un elemento display:none
 // da 0, necesita medirse recién cuando ya es visible).
 function _evUpdateRsvpSliders(animate) {
   document.querySelectorAll('.ev-rsvp-seg').forEach(function(seg) { _evPosicionarRsvpSlider(seg, animate); });
@@ -1017,7 +1013,7 @@ function _evListaTabCambiarSubtab(tab, direccion) {
   _EV_SUBTABS.forEach(function(t) {
     document.getElementById('ev-lista-tab-subtab-' + t).classList.toggle('activo', t === tab);
   });
-  _evUpdateSubtabIndicator(true);
+  _evUpdateSubtabIndicator('#ev-lista-subtabs-wrap', 'ev-subtabs-indicator', true);
   _evListaTabRenderLista(direccion);
 }
 // Indicador medido/animado por JS (ver "Cambios recientes" -- reemplaza la
@@ -1028,9 +1024,15 @@ function _evListaTabCambiarSubtab(tab, direccion) {
 // directo sobre el elemento -- mismo resultado (sin transición en el render
 // inicial, animado en cambios de tab posteriores) sin necesitar una clase
 // .animado paralela para un solo uso.
-function _evUpdateSubtabIndicator(animate) {
-  var ind = document.getElementById('ev-subtabs-indicator');
-  var activo = document.querySelector('#ev-lista-subtabs-wrap .ev-subtab.activo');
+// Genérica -- toma el wrap/indicator como parámetros (ver "Cambios recientes"
+// -- antes hardcodeada a `#ev-lista-subtabs-wrap`/`#ev-subtabs-indicator`,
+// exclusiva de "Lista"): reusada tal cual por el pill de Calendario
+// (Hoy/Esta semana/Este mes, `#ev-cal-sub-wrap`/`#ev-cal-sub-indicator`) --
+// un solo componente visual de tabs para las 2 pills contextuales de la
+// cabecera, no 2 implementaciones paralelas.
+function _evUpdateSubtabIndicator(wrapSelector, indicatorId, animate) {
+  var ind = document.getElementById(indicatorId);
+  var activo = document.querySelector(wrapSelector + ' .ev-subtab.activo');
   if (!ind || !activo) return;
   ind.style.transition = animate ? '' : 'none';
   ind.style.width = activo.offsetWidth + 'px';
@@ -1380,108 +1382,61 @@ function _evListaTabRenderLista(direccion) {
     _evHidratarAvatares();
   }
 
-  _evAnimarCambioHorizontal(cont, pintar, direccion);
+  _evAnimarCambioContenido(cont, pintar, direccion);
 }
-// Transición direccional shared-axis X, REUSABLE (ver "Cambios recientes" --
-// corrige un bug real de solapamiento, ver más abajo) -- mismos valores que
-// el shared axis X ya usado en el resto de la app (axisTransicion(),
-// shared/axis-transicion.js: translateX 100%<->0 entra / 0<->-25% recede,
-// opacity 0.85<->1, 320ms, var(--ease-axis)), adaptado al caso de un solo
-// contenedor real reciclado (`cont`, cuyo innerHTML se reemplaza en cada
-// cambio -- Lista: #ev-lista-tab-filas, Calendario: mismo mecanismo para
-// Hoy/Esta semana/Este mes) en vez de 2 pantallas ya montadas como
-// axisTransicion(). Nombre genérico a propósito, sin prefijo `_evListaTab` --
-// pensada para reusarse tal cual desde cualquier otro swipe de 3 sub-vistas
-// de Eventos, no solo el de Lista (ver "Cambios recientes").
-//
-// Roles EXACTOS de axisTransicion(), calcados (ver su comentario en
-// shared/axis-transicion.js): la SALIENTE (clon congelado del contenido
-// actual, creado ANTES de pisar `cont`) se queda en FLUJO NORMAL -- determina
-// el alto/scroll real del wrapper mientras dura la transición, igual que
-// `saliente` allá. La ENTRANTE es el propio `cont`, ya con el contenido
-// nuevo pintado, que pasa a SUPERPONERSE (`.ev-swipe-entrando`,
-// position:absolute;top:0;left:0;right:0 -- mismo criterio que `.axis-enter`,
-// pero sin `bottom:0`: acá el alto tiene que seguir siendo el intrínseco del
-// contenido, no estirarse a ocupar el alto del wrapper) encima de la
-// saliente. `wrap` (el padre inmediato de `cont`) necesita
-// `position:relative` -- ya lo tienen `#ev-vista-lista-wrap`/el wrap
-// equivalente de Calendario (ver css/eventos.css).
-//
-// Bug real corregido (ver "Cambios recientes" -- reportado como solapamiento
-// visual en swipe rápido ida-vuelta entre subtabs, antes de que cada
-// transición anterior llegara a sus 320ms): la implementación previa tenía
-// los roles AL REVÉS de axisTransicion() -- clonaba la SALIENTE como overlay
-// `position:absolute` y dejaba la ENTRANTE (`cont` real) en flujo normal. Con
-// swipes más rápidos que 320ms, cada llamada agregaba su propio clon
-// fantasma sin sacar los de llamadas previas todavía en vuelo (cada uno con
-// su propio setTimeout de limpieza independiente) -- se acumulaban 2+ clones
-// superpuestos a la vez con el contenido real, visible como solapamiento.
-// Fix, 2 partes: (1) roles invertidos, calcando el patrón ya probado; (2)
-// `cont` guarda una referencia a SU PROPIA saliente en vuelo
-// (`cont._swipeSalienteActual`, propiedad del elemento -- no una variable
-// global -- así 2 contenedores distintos, ej. Lista y Calendario, no compiten
-// por el mismo estado): una llamada nueva la saca del DOM DE INMEDIATO en vez
-// de esperar a que su propio timeout de 320ms lo haga -- esa ventana de
-// espera es exactamente donde convivían 2 salientes con la entrante real.
-// Guard de epoch (mismo mecanismo que axisTransicion()/_axisEpoch, también
-// como propiedad de `cont` -- no global, mismo motivo) contra que el cleanup
-// tardío de una llamada vieja pise algo que una más nueva ya reclamó.
-function _evAnimarCambioHorizontal(cont, pintar, direccion) {
+/* ── Transición de contenido REUSABLE para "3 sub-tabs dentro de un único
+   contenedor cuyo innerHTML se reemplaza en cada cambio" (Lista: Próximos/
+   Pasados/Todos, Calendario: Hoy/Esta semana/Este mes) -- CROSSFADE simple
+   (ver "Cambios recientes"), no el slide horizontal shared-axis X de un
+   intento anterior. `direccion` ya no afecta la animación en sí (un
+   crossfade no tiene "izquierda"/"derecha") -- se conserva el parámetro
+   solo como flag de "esto vino de un cambio de tab explícito, animar" vs.
+   "vino de un filtro/carga inicial, no animar" (mismo uso que ya tenía),
+   para no tener que tocar ningún caller. Nombre genérico a propósito, sin
+   prefijo `_evListaTab` -- reusada tal cual por el swipe de Calendario, no
+   una implementación aparte.
+
+   Fallback deliberado sobre un intento anterior con slide horizontal (roles
+   saliente/entrante calcados de axisTransicion(), ver "Cambios recientes"
+   para el diagnóstico completo del bug de solapamiento que esa versión
+   corrigió): sin Playwright disponible en este entorno para confirmar
+   visualmente que había quedado 100% libre de cualquier rastro de
+   solapamiento/parpadeo, se optó por el fallback explícitamente provisto
+   para este escenario. Este mecanismo es OTRA cosa, no una versión más del
+   fix -- un SWAP SECUENCIAL (fade-out completo -> `pintar()` reemplaza el
+   innerHTML -> fade-in) nunca tiene 2 contenidos reales montados/visibles a
+   la vez, sin clonar nada ni necesitar un ancestro `position:relative`:
+   imposible que se superpongan por construcción, no por la corrección de un
+   bug puntual. El indicador de arriba (`.tp-slider`/`.ev-subtabs-indicator`)
+   sigue con su propio slide de siempre, sin cambios -- esto aplica solo al
+   contenido de abajo. Guard de epoch (propiedad de `cont`, mismo criterio
+   que el resto de este archivo) contra que un `pintar()` tardío de una
+   llamada vieja pise el contenido que una más nueva ya haya pintado. */
+var _EV_CROSSFADE_MS = 130;
+function _evAnimarCambioContenido(cont, pintar, direccion) {
   if (!direccion) { pintar(); return; }
-  var wrap = cont.parentElement;
-  cont._swipeEpoch = (cont._swipeEpoch || 0) + 1;
-  var epoch = cont._swipeEpoch;
+  cont._crossfadeEpoch = (cont._crossfadeEpoch || 0) + 1;
+  var epoch = cont._crossfadeEpoch;
 
-  if (cont._swipeSalienteActual) { cont._swipeSalienteActual.remove(); cont._swipeSalienteActual = null; }
-
-  // Saliente: snapshot del contenido ACTUAL de `cont` -- puede venir de una
-  // entrante todavía en vuelo (position:absolute/`.ev-swipe-entrando`
-  // heredados del clon), se limpia explícitamente para que quede en flujo
-  // normal como cualquier saliente nueva.
-  var saliente = cont.cloneNode(true);
-  saliente.removeAttribute('id');
-  saliente.querySelectorAll('[id]').forEach(function(el) { el.removeAttribute('id'); });
-  saliente.classList.remove('ev-swipe-entrando');
-  saliente.style.position = ''; saliente.style.top = ''; saliente.style.left = ''; saliente.style.right = '';
-  saliente.style.pointerEvents = 'none';
-  wrap.insertBefore(saliente, cont);
-  cont._swipeSalienteActual = saliente;
-
-  pintar(); // pisa el contenido real -- la entrante ya tiene su contenido final antes de animar
-  cont.classList.add('ev-swipe-entrando');
-
-  var entraDesde = direccion === 'izquierda' ? '100%' : '-25%';
-  var saleHacia  = direccion === 'izquierda' ? '-25%' : '100%';
-
-  cont.style.transition = 'none';
-  cont.style.transform = 'translateX(' + entraDesde + ')';
-  cont.style.opacity = '0.85';
-  saliente.style.transition = 'none';
-  saliente.style.transform = 'translateX(0)';
-  saliente.style.opacity = '1';
-
-  // Doble rAF, mismo motivo que axisTransicion()/axisBarraVertical(): deja
-  // que el navegador pinte el "desde" antes de moverlo al destino.
-  requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-      if (cont._swipeEpoch !== epoch) return; // una llamada más nueva ya tomó la posta
-      var t = 'transform 0.32s var(--ease-axis), opacity 0.32s var(--ease-axis)';
-      cont.style.transition = t;
-      cont.style.transform = 'translateX(0)';
-      cont.style.opacity = '1';
-      saliente.style.transition = t;
-      saliente.style.transform = 'translateX(' + saleHacia + ')';
-      saliente.style.opacity = '0.85';
-    });
-  });
+  cont.style.transition = 'opacity ' + _EV_CROSSFADE_MS + 'ms ease';
+  cont.style.opacity = '0';
 
   setTimeout(function() {
-    if (cont._swipeSalienteActual === saliente) { saliente.remove(); cont._swipeSalienteActual = null; }
-    if (cont._swipeEpoch === epoch) {
-      cont.classList.remove('ev-swipe-entrando');
-      cont.style.transition = ''; cont.style.transform = ''; cont.style.opacity = '';
-    }
-  }, 320);
+    if (cont._crossfadeEpoch !== epoch) return; // una llamada más nueva ya tomó la posta
+    pintar(); // recién ACÁ, con el contenido viejo ya invisible del todo
+    cont.style.transition = 'none';
+    cont.style.opacity = '0';
+    // Doble rAF, mismo motivo que en el resto de este archivo: deja que el
+    // navegador pinte el "desde" (contenido nuevo a opacity:0) antes de
+    // animarlo a 1 -- si no, no hay transición real que ver.
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        if (cont._crossfadeEpoch !== epoch) return;
+        cont.style.transition = 'opacity ' + _EV_CROSSFADE_MS + 'ms ease';
+        cont.style.opacity = '1';
+      });
+    });
+  }, _EV_CROSSFADE_MS);
 }
 // Una fila: futuro reusa la card COMPLETA (_evCardEventoHtml(), mismo
 // componente que Semana/Calendario -- pedido explícito, un solo componente
@@ -1547,7 +1502,7 @@ function abrirEvDetalle(id) {
   _evRenderDetalle(ev);
   ir('s-eventos-detalle');
   // offsetHeight de una pantalla display:none da 0 -- mismo problema que
-  // _evUpdateCalSubSlider()/_evUpdateRsvpSliders() (ver esas notas más
+  // _evUpdateSubtabIndicator()/_evUpdateRsvpSliders() (ver esas notas más
   // arriba), se mide recién una vez que ir() ya volvió visible la pantalla.
   setTimeout(_evDetalleActualizarSticky, 50);
 }
