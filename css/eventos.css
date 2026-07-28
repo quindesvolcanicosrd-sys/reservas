@@ -94,7 +94,25 @@
 }
 
 /* ── Calendario mensual ──────────────────────────────── */
-.ev-cal-header { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 14px; }
+.ev-cal-header { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 14px; transition: margin-top 0.2s ease; }
+/* Botones ‹/› -- ocultos por default (grilla expandida, ver "Cambios
+   recientes": favorece el swipe/los chevrones sutiles de la grilla como
+   forma principal de cambiar de mes en ese estado) -- `opacity`, no
+   `display:none` (necesita poder animar el fade-in) + `pointer-events:none`
+   (invisible Y no clickeable a la vez, nunca un botón fime pero inerte).
+   Siguen RESERVANDO su espacio en el `flex` (sin `display:none`) a
+   propósito -- así el label del mes no se re-centra/salta de posición al
+   aparecer/desaparecer, queda siempre en el mismo lugar horizontal. */
+.ev-cal-header .ev-semana-chevron { opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+/* `.ev-cal-header-compacto` -- togleada por `_evCalActualizarColapso()`
+   (js/eventos.js) en el mismo momento que `.ev-cal-grid-colapsable.colapsada`
+   (grilla oculta al scrollear, título+botones quedan como cabecera
+   compacta/sticky de siempre): reaparecen los botones ‹/› (fade-in, no
+   corte seco) + un margin-top chico para que este renglón no quede pegado
+   contra las tabs Hoy/Esta semana/Este mes de arriba (ver "Cambios
+   recientes" -- pedido explícito, antes sin margen propio). */
+.ev-cal-header.ev-cal-header-compacto { margin-top: 8px; }
+.ev-cal-header.ev-cal-header-compacto .ev-semana-chevron { opacity: 1; pointer-events: auto; }
 /* Tocable -- pasa a "modo mes" (agenda completa, _evCalVerMesCompleto()) --
    `.ev-cal-mes-activo` (ese modo activo) es el 2do indicador visual del modo,
    junto con que ningún día de la grilla quede con `.ev-cal-sel` (ver
@@ -109,7 +127,24 @@
    .admin-mes-acordeon-body, css/admin.css) alcanza para hasta 6 semanas. */
 .ev-cal-grid-colapsable { max-height: 340px; opacity: 1; overflow: hidden; transition: max-height 0.28s var(--ease-sheet), opacity 0.28s var(--ease-sheet); }
 .ev-cal-grid-colapsable.colapsada { max-height: 0; opacity: 0; }
-.ev-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+/* `.ev-cal-grid-nav` -- fila flex con los 2 chevrones sutiles a los costados
+   de la grilla (ver "Cambios recientes") + la grilla en sí (`flex:1`, ocupa
+   el resto del ancho) -- viven DENTRO de `.ev-cal-grid-colapsable`, se
+   ocultan solos junto con el resto del contenido al colapsar (mismo
+   mecanismo max-height/overflow, sin JS propio para su visibilidad). */
+.ev-cal-grid-nav { display: flex; align-items: center; gap: 2px; }
+.ev-cal-grid { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+/* Sutiles a propósito (pedido explícito) -- sin fondo/borde propios,
+   `opacity` baja por default, solo se destacan al tocarlos/pasar el mouse.
+   `align-self:stretch` los centra contra el alto real de la grilla (el
+   hermano `flex` más alto de la fila) sin necesitar medirlo por JS. */
+.ev-cal-grid-chevron {
+  flex-shrink: 0; align-self: stretch; display: flex; align-items: center; justify-content: center;
+  width: 20px; padding: 0; border: none; background: transparent; color: var(--muted);
+  opacity: 0.5; cursor: pointer; transition: opacity 0.15s, color 0.15s; -webkit-tap-highlight-color: transparent;
+}
+.ev-cal-grid-chevron:hover, .ev-cal-grid-chevron:active { opacity: 1; color: var(--brand); }
+.ev-cal-grid-chevron .material-symbols-outlined { font-size: 1.05rem; display: block; }
 .ev-cal-dow { text-align: center; font-size: 0.62rem; font-weight: 700; color: var(--muted); text-transform: uppercase; padding-bottom: 6px; }
 .ev-cal-celda {
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
@@ -470,11 +505,10 @@
    hace que la transición se vea instantánea en vez de animada. Se fija por
    JS con `scrollHeight` real, ver `_evAbrirFiltrosPanel()`/
    `_evAbrirVistaBurbuja()`, js/eventos.js). `.ev-header-burbuja-panel`
-   adentro es la capa VISUAL -- tratamiento "burbuja de diálogo": marco
-   propio + colita triangular apuntando al ícono que la abrió, superpuesta al
-   mecanismo de expansión, no lo reemplaza (separar mecanismo de look es lo
-   que permite que el `overflow:hidden` del wrapper no recorte la colita, que
-   sobresale por encima del panel -- ver `margin-top`/colita más abajo). */
+   adentro es la capa VISUAL -- panel simple (marco redondeado + fondo), sin
+   ningún conector hacia el ícono que lo abrió (ver "Cambios recientes" — se
+   había probado con una colita triangular, la costura visual en la unión no
+   quedó bien y se sacó del todo en vez de seguir ajustándola). */
 .ev-header-burbuja { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
 /* Espacio contra el contenido que sigue inmediatamente debajo -- el renglón
    de mes/flechas de Calendario, o la lista de eventos (ver "Cambios
@@ -485,47 +519,14 @@
    Mismo valor (18px) en las 2 burbujas de cabecera (selector de vista y
    filtros, ambas comparten esta clase) para consistencia. */
 .ev-header-burbuja.abierta { margin-bottom: 18px; }
-/* `z-index:0` (ver "Cambios recientes" -- fix de costura) junto con
-   `position:relative` establece un stacking context PROPIO para este panel
-   -- necesario para que el `z-index:-1` de la colita (abajo) quede contenido
-   acá y pinte detrás DE ESTE fondo puntual, no de cualquier otra cosa más
-   atrás en la página (sin un stacking context propio, un descendiente con
-   z-index negativo escapa al contexto del ancestro posicionado más cercano,
-   que podría ser la pantalla entera). */
+/* Panel simple, sin colita (ver "Cambios recientes" -- el intento de
+   arreglar la costura visual del triángulo, con z-index + solape, no quedó
+   bien -- se sacó del todo en vez de seguir ajustándola: rectángulo
+   redondeado sin ningún conector hacia el ícono que lo abrió). */
 .ev-header-burbuja-panel {
-  position: relative; z-index: 0; margin-top: 16px; padding: 14px;
+  margin-top: 16px; padding: 14px;
   border: 1.5px solid var(--border-light); border-radius: 14px; background: var(--surface-2);
 }
-/* Colita -- cuadrado de 12px rotado 45°, mismo `background` EXACTO que el
-   panel (`--surface-2`, ningún tono distinto -- un mismatch ahí generaría
-   costura aunque el solapamiento esté bien) y borde en 2 de sus 4 lados
-   (top+left del cuadrado sin rotar -- tras rotate(45deg) quedan como las 2
-   aristas SUPERIORES, formando la "V" hacia arriba; las otras 2, sin borde,
-   apuntan hacia abajo).
-   Fix de costura (ver "Cambios recientes" -- reportado como línea/hueco
-   visible en la unión colita-panel): la colita tiene que quedar DETRÁS del
-   panel (`z-index:-1`, contenido por el stacking context de arriba) Y el
-   panel tiene que solaparse sobre su base 1-2px -- `top:-6px` para un
-   cuadrado de 12px pone sus 2 vértices laterales (el punto medio real del
-   rombo) justo a la altura del borde superior del panel (`y=0`): todo lo que
-   queda POR DEBAJO de esa línea (la mitad inferior del rombo, sin borde
-   propio) se lo "traga" el fondo sólido + el propio `border-top` del panel,
-   dejando visible solo la mitad superior con sus 2 aristas bordeadas -- sin
-   esto (con la colita pintando ENCIMA, `z-index` default, o sin suficiente
-   solape), la mitad inferior sin borde asomaba por debajo de la línea del
-   panel como una costura/hueco visible. */
-.ev-header-burbuja-panel::before {
-  content: ''; position: absolute; z-index: -1; top: -6px; width: 12px; height: 12px;
-  background: var(--surface-2); border-left: 1.5px solid var(--border-light); border-top: 1.5px solid var(--border-light);
-  transform: rotate(45deg); border-radius: 2px 0 0 0;
-}
-/* Posición horizontal de la colita -- apunta al ícono que abrió cada
-   burbuja: `.ev-header-burbuja-izq` (selector de vista) contra el ícono ojo,
-   a la izquierda de la fila; `.ev-header-burbuja-der` (filtros) contra el
-   ícono embudo, a la derecha. Mismo offset (18px) que el centro aproximado
-   de cada ícono de 34px sobre el padding del panel (14px). */
-.ev-header-burbuja-izq .ev-header-burbuja-panel::before { left: 18px; }
-.ev-header-burbuja-der .ev-header-burbuja-panel::before { right: 18px; }
 
 /* Burbuja del selector de vista -- 2 opciones (ver "Cambios recientes"),
    mismo look que una fila de menú simple. `.ev-vista-opcion-activa` marca la

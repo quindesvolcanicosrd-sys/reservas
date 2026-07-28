@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=78d2c687">
 <link rel="stylesheet" href="css/nav.css?v=e89c04e6">
-<link rel="stylesheet" href="css/eventos.css?v=f8ea532e">
+<link rel="stylesheet" href="css/eventos.css?v=1dc89a61">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -345,11 +345,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           </button>
         </div>
 
-        <!-- Burbuja del selector de vista -- "tratamiento de burbuja de
-             diálogo" (marco + colita apuntando al ícono ojo, ver
-             css/eventos.css) alrededor del mismo mecanismo max-height que ya
-             usan las burbujas de filtro. -->
-        <div class="ev-header-burbuja ev-header-burbuja-izq" id="ev-vista-burbuja">
+        <!-- Burbuja del selector de vista -- panel simple (marco redondeado,
+             sin colita, ver "Cambios recientes"/css/eventos.css) alrededor
+             del mismo mecanismo max-height que ya usan las burbujas de
+             filtro. -->
+        <div class="ev-header-burbuja" id="ev-vista-burbuja">
           <div class="ev-header-burbuja-panel">
             <div class="ev-vista-opcion" id="ev-vista-opcion-calendario" onclick="_evCambiarVista('calendario')">
               <span class="material-symbols-outlined">calendar_month</span>Vista calendario
@@ -361,10 +361,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
 
         <!-- Panel de filtros -- universal (ver "Cambios recientes"), ya no
-             vive adentro de un wrap exclusivo de "Lista". Mismo tratamiento
-             de burbuja de diálogo que la de arriba, colita apuntando al
-             ícono de filtros (derecha). -->
-        <div class="ev-header-burbuja ev-header-burbuja-der ev-filtros-colapsable" id="ev-filtros-colapsable">
+             vive adentro de un wrap exclusivo de "Lista". Mismo panel simple
+             que la burbuja de arriba, sin colita. -->
+        <div class="ev-header-burbuja ev-filtros-colapsable" id="ev-filtros-colapsable">
           <div class="ev-header-burbuja-panel">
             <div class="ev-filtros-row">
               <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-mes" data-label="Mes" onclick="_evToggleFiltroBurbuja('mes')">
@@ -392,13 +391,29 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
 
         <div id="ev-vista-calendario-wrap" style="display:none;">
-          <div class="ev-cal-header">
+          <!-- Botones ‹/› de siempre -- ocultos (fade) mientras la grilla
+               está expandida (favorece el swipe/los chevrones sutiles de
+               abajo como forma principal de cambiar de mes en ese estado),
+               reaparecen recién cuando la grilla colapsa al scrollear
+               (.ev-cal-header-compacto, togleada por _evCalActualizarColapso(),
+               js/eventos.js -- ver "Cambios recientes"). -->
+          <div class="ev-cal-header" id="ev-cal-header">
             <button class="ev-semana-chevron" onclick="_evMesAnterior()" title="Mes anterior"><span class="material-symbols-outlined">chevron_left</span></button>
             <div class="ev-cal-mes-label" id="ev-cal-mes-label" onclick="_evCalVerMesCompleto()"></div>
             <button class="ev-semana-chevron" onclick="_evMesSiguiente()" title="Mes siguiente"><span class="material-symbols-outlined">chevron_right</span></button>
           </div>
           <div class="ev-cal-grid-colapsable" id="ev-cal-grid-colapsable">
-            <div class="ev-cal-grid" id="ev-cal-grid"></div>
+            <!-- Chevrones sutiles a los costados de la grilla (ver "Cambios
+                 recientes") -- alternativa de los botones ‹/› de arriba
+                 mientras la grilla está expandida: se ocultan solos junto
+                 con el resto del contenido al colapsar (mismo mecanismo
+                 max-height/overflow de .ev-cal-grid-colapsable, sin JS
+                 propio). -->
+            <div class="ev-cal-grid-nav">
+              <button class="ev-cal-grid-chevron" onclick="_evMesAnterior()" title="Mes anterior"><span class="material-symbols-outlined">chevron_left</span></button>
+              <div class="ev-cal-grid" id="ev-cal-grid"></div>
+              <button class="ev-cal-grid-chevron" onclick="_evMesSiguiente()" title="Mes siguiente"><span class="material-symbols-outlined">chevron_right</span></button>
+            </div>
           </div>
         </div>
       </div>
@@ -810,7 +825,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=7f7578be"></script>
-<script src="js/eventos.js?v=db9f928f"></script>
+<script src="js/eventos.js?v=27fa608a"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=92b4612f"></script>
 <script src="js/perfil.js?v=54df12b2"></script>

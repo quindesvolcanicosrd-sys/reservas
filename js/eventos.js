@@ -333,13 +333,82 @@ function _evRenderVistaActual() {
   else if (_evCalSubvista === 'mes') _evRenderCalendario();
   _evRenderLista();
 }
-function _evSemanaAnterior() { _evSemanaOffset--; _evRenderVistaActual(); }
-function _evSemanaSiguiente() { _evSemanaOffset++; _evRenderVistaActual(); }
+/* Navegación de semana/mes (chevrones ‹/› de siempre, ver "Cambios
+   recientes" -- ahora también alcanzables por swipe, `_evInicializarSwipe*()`
+   más abajo) -- crossfade en el strip/grilla Y en la lista de resultados,
+   una llamada independiente por contenedor (mismo `_evAnimarCambioContenido()`
+   ya usado por el swipe de subtabs/sub-vistas, ambas arrancan su fade-out en
+   el mismo tick así se ven coordinadas). 'izquierda'/'derecha' fijas acá
+   (no calculadas por índice como en los sub-tabs, no hay lista de opciones
+   -- "siguiente" siempre entra desde la derecha, "anterior" desde la
+   izquierda, mismo criterio que el resto del archivo). */
+function _evSemanaAnterior() { _evSemanaOffset--; _evAnimarCambioSemana('derecha'); }
+function _evSemanaSiguiente() { _evSemanaOffset++; _evAnimarCambioSemana('izquierda'); }
+function _evAnimarCambioSemana(direccion) {
+  _evAnimarCambioContenido(document.getElementById('ev-semana-dias'), _evRenderSemana, direccion);
+  _evAnimarCambioContenido(document.getElementById('ev-lista'), _evRenderLista, direccion);
+}
+// Swipe horizontal sobre el strip de días (ver "Cambios recientes") -- mismo
+// criterio/umbral que el resto de los swipes de este archivo, reusa
+// _evSemanaAnterior()/_evSemanaSiguiente() tal cual (tap en los chevrones y
+// swipe terminan en el mismo lugar, mismo criterio ya usado para Calendario/
+// Lista: sin duplicar la navegación en 2 caminos separados).
+var _EV_SEMANA_SWIPE_UMBRAL = 45;
+var _evSemanaSwipeStartX = 0, _evSemanaSwipeStartY = 0, _evSemanaSwipeActivo = false;
+function _evInicializarSwipeSemana() {
+  var cont = document.getElementById('ev-semana-dias');
+  if (!cont) return;
+  cont.addEventListener('touchstart', function(e) {
+    if (e.touches.length !== 1) return;
+    _evSemanaSwipeStartX = e.touches[0].clientX;
+    _evSemanaSwipeStartY = e.touches[0].clientY;
+    _evSemanaSwipeActivo = true;
+  }, { passive: true });
+  cont.addEventListener('touchend', function(e) {
+    if (!_evSemanaSwipeActivo) return;
+    _evSemanaSwipeActivo = false;
+    var t = e.changedTouches[0];
+    var dx = t.clientX - _evSemanaSwipeStartX;
+    var dy = t.clientY - _evSemanaSwipeStartY;
+    if (Math.abs(dx) < _EV_SEMANA_SWIPE_UMBRAL || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx < 0) _evSemanaSiguiente(); else _evSemanaAnterior();
+  }, { passive: true });
+}
+_evInicializarSwipeSemana();
 // Cambiar de mes deja atrás cualquier día puntual seleccionado del mes
 // anterior (no tendría sentido arrastrarlo a otro mes) -- vuelve a "modo
 // mes" (agenda completa) del mes recién mostrado, ver _evCalModo más abajo.
-function _evMesAnterior() { _evMesOffset--; _evCalModo = 'mes'; _evCalFechaSel = null; _evRenderVistaActual(); }
-function _evMesSiguiente() { _evMesOffset++; _evCalModo = 'mes'; _evCalFechaSel = null; _evRenderVistaActual(); }
+function _evMesAnterior() { _evMesOffset--; _evCalModo = 'mes'; _evCalFechaSel = null; _evAnimarCambioMes('derecha'); }
+function _evMesSiguiente() { _evMesOffset++; _evCalModo = 'mes'; _evCalFechaSel = null; _evAnimarCambioMes('izquierda'); }
+function _evAnimarCambioMes(direccion) {
+  _evAnimarCambioContenido(document.getElementById('ev-cal-grid'), _evRenderCalendario, direccion);
+  _evAnimarCambioContenido(document.getElementById('ev-lista'), _evRenderLista, direccion);
+}
+// Swipe horizontal sobre la grilla mensual (ver "Cambios recientes") --
+// mismo criterio que el swipe de semana de arriba, reusa
+// _evMesAnterior()/_evMesSiguiente() tal cual.
+var _EV_MES_SWIPE_UMBRAL = 45;
+var _evMesSwipeStartX = 0, _evMesSwipeStartY = 0, _evMesSwipeActivo = false;
+function _evInicializarSwipeMes() {
+  var cont = document.getElementById('ev-cal-grid');
+  if (!cont) return;
+  cont.addEventListener('touchstart', function(e) {
+    if (e.touches.length !== 1) return;
+    _evMesSwipeStartX = e.touches[0].clientX;
+    _evMesSwipeStartY = e.touches[0].clientY;
+    _evMesSwipeActivo = true;
+  }, { passive: true });
+  cont.addEventListener('touchend', function(e) {
+    if (!_evMesSwipeActivo) return;
+    _evMesSwipeActivo = false;
+    var t = e.changedTouches[0];
+    var dx = t.clientX - _evMesSwipeStartX;
+    var dy = t.clientY - _evMesSwipeStartY;
+    if (Math.abs(dx) < _EV_MES_SWIPE_UMBRAL || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx < 0) _evMesSiguiente(); else _evMesAnterior();
+  }, { passive: true });
+}
+_evInicializarSwipeMes();
 
 /* ── Consultas sobre los datos de prueba (idénticas a como se filtrarían
    los datos reales de getEventosRango()/getCumpleañosRango()) ──────────── */
@@ -541,6 +610,13 @@ function _evCalActualizarColapso() {
   if (deberiaColapsar === _evCalGridColapsada) return;
   _evCalGridColapsada = deberiaColapsar;
   el.classList.toggle('colapsada', deberiaColapsar);
+  // Botones ‹/› de siempre -- reaparecen (fade-in) justo cuando la grilla se
+  // oculta, mismo instante que .colapsada de arriba (ver "Cambios recientes"
+  // -- favorecen el swipe/chevrones sutiles de la grilla mientras esta está
+  // expandida, vuelven a ser la forma principal de navegar una vez que la
+  // cabecera queda compacta/sticky).
+  var header = document.getElementById('ev-cal-header');
+  if (header) header.classList.toggle('ev-cal-header-compacto', deberiaColapsar);
   _evCalTransicionando = true;
   el.addEventListener('transitionend', function _fin() {
     el.removeEventListener('transitionend', _fin);
