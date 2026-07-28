@@ -557,9 +557,14 @@ function lanzarConfetti(contenedorEl) {
       w: Math.random() * (acotado ? 6 : 10) + (acotado ? 4 : 6),
       h: Math.random() * (acotado ? 4 : 6) + (acotado ? 2 : 3),
       rot: Math.random() * Math.PI * 2,
-      vx: (Math.random() - 0.5) * (acotado ? 2 : 3),
-      vy: Math.random() * (acotado ? 3 : 4) + 2,
-      vr: (Math.random() - 0.5) * 0.15
+      // Rama acotada a ~mitad de velocidad (ver "Cambios recientes" -- goteo
+      // suave en vez de lluvia rápida, la card de cumpleaños queda fija en
+      // pantalla así que no hace falta que caiga rápido): vx/vy/vr son la
+      // mitad de sus rangos de antes, la rama de pantalla completa (s6) no se
+      // toca.
+      vx: (Math.random() - 0.5) * (acotado ? 1 : 3),
+      vy: Math.random() * (acotado ? 1.5 : 4) + (acotado ? 1 : 2),
+      vr: (Math.random() - 0.5) * (acotado ? 0.075 : 0.15)
     };
     reciclar(p);
     piezas.push(p);

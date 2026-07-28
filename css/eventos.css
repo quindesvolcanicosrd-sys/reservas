@@ -149,7 +149,17 @@
 .ev-card-icono-inline { font-size: 16px; color: var(--brand); flex-shrink: 0; }
 .ev-card-sub { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .ev-card-sub .material-symbols-outlined { font-size: 14px; }
-.ev-card-estado-nota { font-size: 0.74rem; font-weight: 700; color: var(--danger); margin-top: 4px; }
+/* Nota de estado (Cancelado/No se entrena, ver "Cambios recientes") -- antes
+   adentro de `.ev-card-body`, apilado debajo de `.ev-card-sub` con
+   `margin-top:4px`; se muda a hermano de `.ev-card-body`, `_evCardEventoHtml()`
+   -- sin `margin-top` (ya no apila contra nada arriba) y `flex-shrink:0` para
+   no comprimirse contra el ancho flexible de `.ev-card-body`. */
+.ev-card-estado-nota { font-size: 0.74rem; font-weight: 700; color: var(--danger); flex-shrink: 0; }
+/* `.badge` base es uppercase (css/ui.css) -- acá se lee en sentence case
+   ("No se entrena", pedido explícito), scoped a `.ev-card` para no tocar el
+   resto de usos de `.badge-cancelada` en otras pantallas (ver
+   "Cambios recientes"). */
+.ev-card .badge-cancelada { text-transform: none; flex-shrink: 0; }
 
 /* ── "¿Asistiré?" (usuario) — barra segmentada única ──────────────────
    Reemplaza los 3 botones-pill independientes (con borde propio cada uno,
@@ -212,16 +222,22 @@
    `.badge`/variantes de color ya usados en la fila compacta de "Pasados",
    solo agrandado a ancho completo para ocupar el lugar de la barra
    editable que reemplaza. Sin interacción (no es un botón). */
-.ev-rsvp-readonly { display: flex; width: 100%; justify-content: center; padding: 10px; border-radius: 16px; font-size: 0.78rem; }
+/* `text-transform:none` (ver "Cambios recientes") -- `.badge` base es
+   uppercase (css/ui.css), acá se lee en sentence case ("Llegué a horario",
+   pedido explícito) -- scoped a esta clase, no toca `.badge` en sí (otras
+   pantallas sí quieren mayúsculas). */
+.ev-rsvp-readonly { display: flex; width: 100%; justify-content: center; padding: 10px; border-radius: 16px; font-size: 0.78rem; text-transform: none; }
 
-/* ── Card de evento — chevron de navegación (ver "Cambios recientes":
-   la card entera es tocable, navega a la pantalla de detalle -- la fila de
-   avatares y "Más información" que vivían acá se mudaron ahí). Excluye
-   .ev-card-cumple a propósito: la card de cumpleaños no lleva onclick ni
-   chevron, cursor:pointer ahí sería una afordancia falsa. */
+/* ── Card de evento (ver "Cambios recientes": la card entera es tocable,
+   navega a la pantalla de detalle -- la fila de avatares y "Más información"
+   que vivían acá se mudaron ahí). Sin chevron propio (ver "Cambios
+   recientes" -- eliminado de las 3 vistas, `.ev-card-chevron` sin más
+   consumidores): la afordancia de "esto navega" es solo `cursor:pointer` +
+   el estilo de card clickeable ya establecido en el resto de la app. Excluye
+   .ev-card-cumple a propósito: la card de cumpleaños no lleva onclick,
+   cursor:pointer ahí sería una afordancia falsa. */
 .ev-card { align-items: center; }
 .ev-card:not(.ev-card-cumple) { cursor: pointer; }
-.ev-card-chevron { font-size: 20px; color: var(--muted); flex-shrink: 0; align-self: center; }
 
 /* ── Variante admin: lista de asistentes + agregar persona ──────────── */
 .ev-asistentes-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
@@ -366,29 +382,48 @@
    separada "Ver todos los eventos"/s-eventos-todos, ahora una 3ra opción
    del selector Semana/Calendario/Lista, todo dentro de #s-eventos). ────── */
 
-/* Sub-tabs Próximos/Pasados/Todos: A PROPÓSITO un componente nuevo, no
-   .tp-seg/.tp-slider (el pill sólido que se desliza) -- pedido explícito de
-   Victor: texto simple con línea inferior de 2px, sin fondo ni indicador que
-   se mueva por JS (el navegador ya anima `border-color`/`color` solo via
-   `transition`, no hace falta medir `offsetWidth`/`offsetLeft` de nada). */
+/* `position:relative` ancla el "ghost" (clon del contenido saliente,
+   position:absolute) de la transición direccional de subtabs
+   (`_evListaTabAnimarCambio()`, js/eventos.js); `overflow-x:hidden` contiene
+   el recorrido horizontal de esa animación (translateX hasta 100%) sin que
+   genere scroll de página -- el contenido real (`#ev-lista-tab-filas`) sigue
+   en flujo normal, con su alto/scroll vertical real sin cambios. */
+#ev-vista-lista-wrap { position: relative; overflow-x: hidden; }
+
+/* Sub-tabs Próximos/Pasados/Todos: texto simple, sin fondo -- el navegador ya
+   anima `color` solo vía `transition`, no hace falta medir nada para eso.
+   **Indicador (ver "Cambios recientes" -- reemplaza la línea estática por
+   tab, un `border-bottom`/`margin-bottom` fijo en `.ev-subtab.activo` sin
+   ninguna transición de posición real):** `.ev-subtabs-indicator`, medido/
+   animado por JS (`_evUpdateSubtabIndicator()`, `js/eventos.js`) -- mismo
+   patrón que `.tp-slider`/`_updateTpSlider()` (css/reservas.css,
+   js/reservas.js): un solo elemento que se mueve con `transform:translateX`
+   + `width`, en vez de un estado CSS por tab. */
 /* Wrapper del renglón de subtabs + botón de filtro (ver "Cambios recientes"
    -- antes .ev-subtabs sola, centrada). `position:relative` para anclar
    `.ev-filtro-toggle-btn` al borde derecho sin descentrar los subtabs --
-   mismo patrón que `.ev-seg-wrap`/`.ev-btn-add` más arriba en este archivo. */
-/* `padding-right` reserva el ancho del botón embudo (32px + 8px de aire) --
-   sin esto, `.ev-subtabs` (con su `border-bottom` a todo el ancho del wrap)
-   se extendía por detrás del botón, superponiéndose a su borde inferior
-   (ver "Cambios recientes", bug reportado con captura). Con el padding,
-   `.ev-subtabs` (hijo normal, no absolute) ya no invade esa franja -- su
-   `border-bottom` termina antes de llegar al botón. */
+   mismo patrón que `.ev-seg-wrap`/`.ev-btn-add` más arriba en este archivo --
+   Y para anclar `.ev-subtabs-indicator` (`position:absolute;bottom:0`) contra
+   el renglón de subtabs, no la fila entera con el botón embudo. */
 .ev-subtabs-wrap { position: relative; margin-bottom: 16px; padding-right: 40px; }
-.ev-subtabs { display: flex; justify-content: center; gap: 22px; border-bottom: 1.5px solid var(--border-light); }
+.ev-subtabs { display: flex; justify-content: center; gap: 22px; }
 .ev-subtab {
   padding: 4px 1px 10px; font-size: 0.82rem; font-weight: 700; color: var(--muted); cursor: pointer;
-  border-bottom: 2px solid transparent; margin-bottom: -1.5px; transition: color 0.2s, border-color 0.2s;
+  transition: color 0.2s;
   user-select: none;
 }
-.ev-subtab.activo { color: var(--brand); border-color: var(--brand); }
+.ev-subtab.activo { color: var(--brand); }
+/* Ancho/posición los fija `_evUpdateSubtabIndicator()` inline (`style.width`/
+   `style.transform`) -- acá solo el look + el timing de la transición (misma
+   curva `--ease-sheet` que el resto de paneles colapsables de esta pantalla).
+   Sin `.animado` propia (a diferencia de `.tp-slider`): la función togglea
+   `transition:none` inline en el render inicial en vez de una clase, ver su
+   comentario en js/eventos.js. */
+.ev-subtabs-indicator {
+  position: absolute; bottom: 0; left: 0; height: 2px; width: 0;
+  background: var(--brand); border-radius: 2px;
+  transition: transform 0.32s var(--ease-sheet), width 0.32s var(--ease-sheet);
+}
 
 /* Botón embudo -- reemplaza la fila de filtros Mes/Lugar/Tipo siempre
    visible (ver "Cambios recientes"): expande/colapsa `.ev-filtros-colapsable`
@@ -480,8 +515,13 @@
 .ev-card-compacta-info { flex: 1; min-width: 0; }
 .ev-card-compacta-titulo { font-size: 0.83rem; font-weight: 700; color: var(--text); }
 .ev-card-compacta-sub { font-size: 0.73rem; color: var(--muted); margin-top: 2px; }
-.ev-card-compacta .material-symbols-outlined.ev-chevron-ver { font-size: 18px; color: var(--muted); flex-shrink: 0; }
-.ev-card-compacta .badge { flex-shrink: 0; }
+/* Sin chevron propio para Cancelado/No se entrena (ver "Cambios recientes"
+   -- eliminado, `.ev-chevron-ver` sin más consumidores): `.ev-card-compacta`
+   entera ya es tocable, no hace falta la afordancia. */
+/* `text-transform:none` (ver "Cambios recientes") -- mismo motivo que
+   `.ev-rsvp-readonly` arriba: único `.badge` que vive dentro de
+   `.ev-card-compacta` es el chip de asistencia real, sentence case acá. */
+.ev-card-compacta .badge { flex-shrink: 0; text-transform: none; }
 .ev-card-compacta-wrap .ev-asistire-wrap { margin: 0 14px 12px; }
 /* Jerarquía visual pasados/futuros -- solo subtab "Todos" (ver "Cambios
    recientes", `_evListaTabFilaHtml()`/js/eventos.js): opacidad reducida en

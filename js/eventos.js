@@ -64,8 +64,11 @@ var _EV_ASISTENCIA_REAL_BADGE = { 'A horario': 'badge-confirmada', 'Tarde': 'bad
 // el resto del archivo (interno vs. texto de cara al usuario). "Ausente"
 // (marcado explícito por el admin) y "Sin registrar" (nunca se marcó nada)
 // son 2 casos internos distintos pero deben leerse igual para elle: ambos
-// caen en "No asististe".
-var _EV_ASISTENCIA_REAL_LABEL = { 'A horario': 'Llegaste a horario', 'Tarde': 'Llegaste tarde', 'Ausente': 'No asististe', 'Sin registrar': 'No asististe' };
+// caen en "No asistí". Primera persona (ver "Cambios recientes" -- antes
+// segunda persona, "Llegaste"/"No asististe"), sentence case (el uppercase
+// heredado de `.badge` se saca puntualmente para estos 2 usos, ver
+// `.ev-rsvp-readonly`/`.ev-card-compacta .badge` en css/eventos.css).
+var _EV_ASISTENCIA_REAL_LABEL = { 'A horario': 'Llegué a horario', 'Tarde': 'Llegué tarde', 'Ausente': 'No asistí', 'Sin registrar': 'No asistí' };
 // Color sólido del indicador de la barra segmentada de RSVP (ver
 // _evRsvpBarraHtml() más abajo) por opción -- fijos, independientes del
 // color de énfasis (mismo criterio que el resto de esta pantalla: "Asistiré"
@@ -206,7 +209,16 @@ function _evCambiarVista(v) {
     var _btnEl = document.getElementById('ev-filtro-toggle-btn');
     if (_btnEl) _btnEl.classList.remove('ev-filtro-toggle-activo');
   }
-  if (v === 'lista') { _evListaTabPoblarFiltros(); _evActualizarBotonesFiltro(); _evListaTabRenderLista(); }
+  if (v === 'lista') {
+    _evListaTabPoblarFiltros(); _evActualizarBotonesFiltro(); _evListaTabRenderLista();
+    // Primera vez que "Lista" se hace visible en esta entrada a Eventos --
+    // mismo problema ya conocido de offsetWidth/offsetLeft en 0 mientras el
+    // wrap todavía está terminando de aplicar `display:block` (mismo criterio
+    // que el setTimeout(50) de _evUpdateVistaSlider()/_evUpdateRsvpSliders()
+    // en irEventos()) -- sin animar, el indicador ya arranca en su posición
+    // real de "Próximos" en vez de deslizarse desde 0 la primera vez.
+    setTimeout(function() { _evUpdateSubtabIndicator(false); }, 50);
+  }
   else _evRenderVistaActual();
   if (v === 'calendario') _evCalActualizarColapso();
 }
@@ -569,7 +581,10 @@ function _evCardEventoHtml(e, sufijo) {
   // Pill roja (ver "Cambios recientes") -- reusa .badge/.badge-cancelada,
   // mismo patrón ya usado para los estados de asistencia real (
   // _evAsistenciaRealHtml()) en vez de una clase nueva paralela a esa.
-  else if (e.estado === 'No se entrena') estadoNota = '<div class="ev-card-estado-nota"><span class="badge badge-cancelada">No se entrena</span></div>';
+  // `text-transform:none` scoped a `.ev-card` (css/eventos.css) -- se lee
+  // "No se entrena", no "NO SE ENTRENA" (`.badge` base sí es uppercase, la
+  // usan otras pantallas que si quieren mayúsculas).
+  else if (e.estado === 'No se entrena') estadoNota = '<span class="badge badge-cancelada">No se entrena</span>';
   var accion = _esAdminDemo ? _evAccionAdminHtml(e) : _evRsvpBarraHtml(e);
   // Ícono de tipo INLINE junto al título (ver "Cambios recientes" -- antes
   // `.ev-card-icon`, cuadrado 42px en columna propia a la izquierda). Sin esa
@@ -578,14 +593,19 @@ function _evCardEventoHtml(e, sufijo) {
   // completo sin más cambios. `.ev-card-icon` sigue existiendo tal cual para
   // `_evCardCumpleHtml()`/la fila compacta de "Pasados" (`.ev-card-compacta`),
   // ninguna de las 2 entra en este rediseño.
+  // `estadoNota` (Cancelado/No se entrena) vive fuera de `.ev-card-body` (ver
+  // "Cambios recientes") -- `.ev-card{align-items:center}` (ya existente) la
+  // centra contra el alto completo de la card. Sin chevron (ver "Cambios
+  // recientes" -- eliminado de las 3 vistas, la card entera ya es tocable):
+  // `estadoNota` ya no ocupa "el lugar" de nada, simplemente se suma si
+  // corresponde.
   return '<div class="ev-card" id="ev-card-' + e.id + sufijo + '" onclick="abrirEvDetalle(\'' + e.id + '\')">' +
     '<div class="ev-card-body">' +
       '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline">' + icono + '</span><div class="ev-card-titulo">' + e.lugar + '</div></div>' +
       '<div class="ev-card-sub"><span class="material-symbols-outlined">schedule</span>' + e.horaInicio + ' · ' + e.tipo + '</div>' +
-      estadoNota +
       accion +
     '</div>' +
-    '<span class="material-symbols-outlined ev-card-chevron">chevron_right</span>' +
+    estadoNota +
   '</div>';
 }
 
@@ -703,8 +723,13 @@ function _evPosicionarRsvpSlider(seg, animate) {
   var activo = seg.querySelector('.ev-rsvp-opt.activa');
   if (!activo) { slider.style.opacity = '0'; slider.style.width = '0'; return; }
   slider.style.opacity = '1';
-  slider.style.width = activo.offsetWidth + 'px';
-  slider.style.transform = 'translateX(' + activo.offsetLeft + 'px)';
+  // Inset horizontal de 3px (ver "Cambios recientes") -- mismo valor que el
+  // inset vertical ya existente en CSS (.ev-rsvp-slider, top/bottom:3px), para
+  // que el indicador tenga el mismo aire en las 4 direcciones -- antes solo
+  // tenía aire arriba/abajo, quedaba pegado al borde del contenedor en los 2
+  // extremos (Asistiré/No jugador).
+  slider.style.width = (activo.offsetWidth - 6) + 'px';
+  slider.style.transform = 'translateX(' + (activo.offsetLeft + 3) + 'px)';
   slider.style.background = _EV_RSVP_COLOR[activo.getAttribute('data-estado')] || 'var(--brand)';
 }
 // Reposiciona TODAS las barras visibles -- llamado tras cualquier re-render
@@ -828,12 +853,18 @@ function _evCardCumpleHtml(c) {
    VISTA "LISTA" (dentro de #s-eventos -- ver "Cambios recientes": fusiona
    lo que antes era la pantalla separada "Ver todos los eventos"/
    s-eventos-todos como una 3ra opción del selector de arriba, en vez de
-   navegar aparte). Sub-tabs Próximos/Pasados/Todos (subrayado, sin slider
-   propio) + 3 filtros (burbujas inline desplegables, pills multi-select) +
-   lista de cards compactas -- Próximos suma la barra de RSVP compacta por
-   fila (mismo componente que las cards de Semana/Calendario), Pasados
-   reemplaza el chevron por un chip con la asistencia REAL ya registrada. ═ */
+   navegar aparte). Sub-tabs Próximos/Pasados/Todos (indicador medido/
+   animado por JS, ver `_evUpdateSubtabIndicator()`, + swipe horizontal con
+   loop, ver `_evInicializarSwipeLista()`) + 3 filtros (burbujas inline
+   desplegables, pills multi-select) + lista de cards compactas -- Próximos
+   suma la barra de RSVP compacta por fila (mismo componente que las cards
+   de Semana/Calendario), Pasados reemplaza el chevron por un chip con la
+   asistencia REAL ya registrada. ═ */
 var _evListaTabSubtab = 'proximos';
+// Orden real de los sub-tabs -- único lugar que lo declara, reusado por el
+// indicador, el cambio de tab por tap (dirección = comparar índices) y el
+// swipe (siguiente/anterior con loop, ver "Cambios recientes").
+var _EV_SUBTABS = ['proximos', 'pasados', 'todos'];
 // Selección multi-valor por filtro -- arrays de {val,label} (no solo el
 // valor: "mes" filtra por índice numérico pero el botón/pill muestra el
 // nombre del mes, hace falta guardar ambos). Vacío = sin filtro (todos).
@@ -844,13 +875,87 @@ function _evListaTabPoblarFiltros() {
   // _evOpcionesFiltro()) -- se mantiene como punto de entrada separado de
   // _evCambiarVista() por si la Tanda 3 necesita precargar algo async acá.
 }
-function _evListaTabCambiarSubtab(tab) {
+// `direccion` ('izquierda'/'derecha') es opcional -- viene del swipe
+// (_evInicializarSwipeLista(), siempre explícita: la dirección real del dedo,
+// incluso en el loop de los extremos, donde el índice salta al otro extremo
+// en el sentido contrario). Sin `direccion` (tap directo en un tab) se
+// calcula comparando índices en `_EV_SUBTABS` -- tab más a la derecha que el
+// actual = 'izquierda' (entra deslizando desde la derecha), mismo criterio de
+// "adelante entra desde la derecha, atrás desde la izquierda" que irAjSub()/
+// cerrarAjSub() (js/perfil.js), aplicado al orden visual de los tabs en vez
+// de abrir/cerrar un sub-panel.
+function _evListaTabCambiarSubtab(tab, direccion) {
+  if (tab === _evListaTabSubtab) return;
+  if (!direccion) {
+    direccion = _EV_SUBTABS.indexOf(tab) > _EV_SUBTABS.indexOf(_evListaTabSubtab) ? 'izquierda' : 'derecha';
+  }
   _evListaTabSubtab = tab;
-  ['proximos', 'pasados', 'todos'].forEach(function(t) {
+  _EV_SUBTABS.forEach(function(t) {
     document.getElementById('ev-lista-tab-subtab-' + t).classList.toggle('activo', t === tab);
   });
-  _evListaTabRenderLista();
+  _evUpdateSubtabIndicator(true);
+  _evListaTabRenderLista(direccion);
 }
+// Indicador medido/animado por JS (ver "Cambios recientes" -- reemplaza la
+// línea estática por tab) -- mismo patrón que _updateTpSlider() (js/reservas.js):
+// mide offsetWidth/offsetLeft del .ev-subtab.activo y posiciona el indicador
+// con width/transform:translateX. A diferencia de _updateTpSlider() (que
+// togglea la clase .animado), acá se togglea `transition:none` inline
+// directo sobre el elemento -- mismo resultado (sin transición en el render
+// inicial, animado en cambios de tab posteriores) sin necesitar una clase
+// .animado paralela para un solo uso.
+function _evUpdateSubtabIndicator(animate) {
+  var ind = document.getElementById('ev-subtabs-indicator');
+  var activo = document.querySelector('#ev-lista-tab-header-wrap .ev-subtab.activo');
+  if (!ind || !activo) return;
+  ind.style.transition = animate ? '' : 'none';
+  ind.style.width = activo.offsetWidth + 'px';
+  ind.style.transform = 'translateX(' + activo.offsetLeft + 'px)';
+}
+// Siguiente/anterior con loop en los extremos (Todos -> Próximos y viceversa,
+// pedido explícito) -- usadas por el swipe, no por el tap directo de un tab
+// puntual (_evListaTabCambiarSubtab() ya cubre eso con su propio cálculo de
+// dirección por índice).
+function _evListaTabSiguiente() {
+  var idx = _EV_SUBTABS.indexOf(_evListaTabSubtab);
+  _evListaTabCambiarSubtab(_EV_SUBTABS[(idx + 1) % _EV_SUBTABS.length], 'izquierda');
+}
+function _evListaTabAnterior() {
+  var idx = _EV_SUBTABS.indexOf(_evListaTabSubtab);
+  _evListaTabCambiarSubtab(_EV_SUBTABS[(idx - 1 + _EV_SUBTABS.length) % _EV_SUBTABS.length], 'derecha');
+}
+// Swipe horizontal sobre el contenido de la lista (ver "Cambios recientes")
+// -- touchstart/touchend simple (sin seguimiento 1:1 del dedo como el
+// pull-to-refresh de js/home.js, acá no hace falta arrastre visual del gesto
+// en sí, solo detectar intención al soltar) sobre #ev-lista-tab-filas, que
+// vive fijo en el DOM (solo se le reemplaza el innerHTML en cada render, ver
+// _evListaTabRenderLista()) -- los listeners se registran una sola vez acá
+// abajo, a nivel de módulo, mismo criterio que el listener de scroll de
+// Calendario más arriba en este archivo. Izquierda = siguiente tab, derecha
+// = anterior; eje predominante horizontal (dx > dy) para no competir con el
+// scroll vertical normal de la lista.
+var _EV_SWIPE_UMBRAL = 45; // mismo criterio de umbral que el pull-to-refresh (_PTR_RANGO, js/home.js)
+var _evSwipeStartX = 0, _evSwipeStartY = 0, _evSwipeActivo = false;
+function _evInicializarSwipeLista() {
+  var cont = document.getElementById('ev-lista-tab-filas');
+  if (!cont) return;
+  cont.addEventListener('touchstart', function(e) {
+    if (e.touches.length !== 1) return;
+    _evSwipeStartX = e.touches[0].clientX;
+    _evSwipeStartY = e.touches[0].clientY;
+    _evSwipeActivo = true;
+  }, { passive: true });
+  cont.addEventListener('touchend', function(e) {
+    if (!_evSwipeActivo) return;
+    _evSwipeActivo = false;
+    var t = e.changedTouches[0];
+    var dx = t.clientX - _evSwipeStartX;
+    var dy = t.clientY - _evSwipeStartY;
+    if (Math.abs(dx) < _EV_SWIPE_UMBRAL || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx < 0) _evListaTabSiguiente(); else _evListaTabAnterior();
+  }, { passive: true });
+}
+_evInicializarSwipeLista();
 // Opciones candidatas de un filtro, como {val,label} únicos -- "mes" usa el
 // índice (0-11) como val (coincide con getMonth()) y el nombre como label;
 // "lugar"/"tipo" usan el mismo string para las 2 cosas.
@@ -1028,7 +1133,11 @@ function _evEsProximaSemana(iso) {
 // Filtrado 100% en cliente sobre los datos de prueba (Tanda 2) -- la Tanda 3
 // reemplaza esto por getEventosFiltrados(estado, meses[], lugares[], tipos[]),
 // mismos 3 filtros pero ya con selección múltiple (antes 1 solo valor c/u).
-function _evListaTabRenderLista() {
+// `direccion` ('izquierda'/'derecha', opcional) -- presente SOLO al venir de
+// un cambio real de sub-tab (_evListaTabCambiarSubtab()); ausente en un
+// filtro nuevo o la primera carga de la vista, que pintan directo sin
+// animar (ver _evListaTabAnimarCambio() más abajo).
+function _evListaTabRenderLista(direccion) {
   var hoy = _evHoyISO();
   var fm = _evListaTabFiltro;
   var lista = _EV_EVENTOS.filter(function(e) {
@@ -1045,74 +1154,155 @@ function _evListaTabRenderLista() {
 
   var cont = document.getElementById('ev-lista-tab-filas');
   if (!cont) return;
-  if (lista.length === 0) {
-    cont.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">event_busy</span>No hay eventos con estos filtros.</div>';
-    return;
-  }
-  // Subtab "Todos" -- única que mezcla pasados+futuros en una sola lista
-  // (ver "Cambios recientes"): suma el separador "HOY" exactamente en el
-  // punto cronológico donde termina el bloque de pasados y arranca el de
-  // futuros (`lista` ya viene ordenada por fecha/hora, ver el `.sort()` de
-  // arriba) -- al principio si TODOS son futuros, al final si TODOS son
-  // pasados. `_evListaTabFilaHtml()` atenúa cada fila pasada solo en este
-  // subtab (mismo criterio -- en "Pasados" a secas no hay nada con qué
-  // contrastar, todo pasado se ve igual de normal que hoy).
-  if (_evListaTabSubtab === 'todos') {
-    var out = [], insertado = false;
-    // Separadores MAÑANA/PASADO MAÑANA/PRÓXIMA SEMANA (ver "Cambios
-    // recientes", `_evBucketRelativo()` más abajo) -- a diferencia de HOY
-    // (siempre se muestra, marca el punto cronológico exacto aunque no haya
-    // ningún evento justo hoy), estos 3 son condicionales: solo aparecen si
-    // de verdad hay >=1 evento en ese bucket, por eso se registran en
-    // `bucketsMostrados` recién cuando efectivamente se inserta uno.
-    var bucketsMostrados = {};
-    lista.forEach(function(e) {
-      if (!insertado && _evFechaCmp(e.fecha, hoy) >= 0) { out.push('<div class="ev-hoy-separador"><span>HOY</span></div>'); insertado = true; }
-      if (_evFechaCmp(e.fecha, hoy) > 0) {
-        var bucket = _evBucketRelativo(e.fecha);
-        if (bucket && !bucketsMostrados[bucket]) {
-          bucketsMostrados[bucket] = true;
-          out.push('<div class="ev-hoy-separador"><span>' + bucket + '</span></div>');
+
+  // Sigue pintando UN subtab a la vez (nada de pre-renderizar los 3 en un
+  // track de columnas) -- `pintar()` es exactamente lo que hacía antes esta
+  // función completa, ahora aislado para poder envolverlo con la transición
+  // direccional cuando corresponde (ver _evListaTabAnimarCambio()).
+  function pintar() {
+    if (lista.length === 0) {
+      cont.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">event_busy</span>No hay eventos con estos filtros.</div>';
+      return;
+    }
+    // Subtab "Todos" -- única que mezcla pasados+futuros en una sola lista
+    // (ver "Cambios recientes"): suma el separador "HOY" exactamente en el
+    // punto cronológico donde termina el bloque de pasados y arranca el de
+    // futuros (`lista` ya viene ordenada por fecha/hora, ver el `.sort()` de
+    // arriba) -- al principio si TODOS son futuros, al final si TODOS son
+    // pasados. `_evListaTabFilaHtml()` atenúa cada fila pasada solo en este
+    // subtab (mismo criterio -- en "Pasados" a secas no hay nada con qué
+    // contrastar, todo pasado se ve igual de normal que hoy).
+    if (_evListaTabSubtab === 'todos') {
+      var out = [], insertado = false;
+      // Separadores MAÑANA/PASADO MAÑANA/PRÓXIMA SEMANA (ver "Cambios
+      // recientes", `_evBucketRelativo()` más abajo) -- a diferencia de HOY
+      // (siempre se muestra, marca el punto cronológico exacto aunque no haya
+      // ningún evento justo hoy), estos 3 son condicionales: solo aparecen si
+      // de verdad hay >=1 evento en ese bucket, por eso se registran en
+      // `bucketsMostrados` recién cuando efectivamente se inserta uno.
+      var bucketsMostrados = {};
+      lista.forEach(function(e) {
+        if (!insertado && _evFechaCmp(e.fecha, hoy) >= 0) { out.push('<div class="ev-hoy-separador"><span>HOY</span></div>'); insertado = true; }
+        if (_evFechaCmp(e.fecha, hoy) > 0) {
+          var bucket = _evBucketRelativo(e.fecha);
+          if (bucket && !bucketsMostrados[bucket]) {
+            bucketsMostrados[bucket] = true;
+            out.push('<div class="ev-hoy-separador"><span>' + bucket + '</span></div>');
+          }
         }
-      }
-      out.push(_evListaTabFilaHtml(e));
-    });
-    if (!insertado) out.push('<div class="ev-hoy-separador"><span>HOY</span></div>');
-    cont.innerHTML = out.join('');
-  } else {
-    cont.innerHTML = lista.map(_evListaTabFilaHtml).join('');
+        out.push(_evListaTabFilaHtml(e));
+      });
+      if (!insertado) out.push('<div class="ev-hoy-separador"><span>HOY</span></div>');
+      cont.innerHTML = out.join('');
+    } else {
+      cont.innerHTML = lista.map(_evListaTabFilaHtml).join('');
+    }
+    _evUpdateRsvpSliders(false);
+    _evHidratarAvatares();
   }
-  _evUpdateRsvpSliders(false);
-  _evHidratarAvatares();
+
+  _evListaTabAnimarCambio(cont, pintar, direccion);
+}
+// Transición direccional shared-axis X (ver "Cambios recientes") -- mismos
+// valores que el shared axis X REALMENTE activo hoy en la app (irAjSub()/
+// cerrarAjSub(), js/perfil.js + .aj-sub/#s-datos-card, css/perfil.css):
+// translateX 100%<->0 entra / 0<->-25% recede, opacity 0.85<->1, 320ms,
+// var(--ease-axis). (shared/axis-transicion.js/axisTransicion() tiene los
+// mismos números pero NO tiene ningún caller activo hoy -- ver nota en
+// css/global.css sobre .pantalla/.axis-enter -- no es la referencia real).
+// Acá no hay un par de pantallas ya montadas esperando su turno como en
+// irAjSub(), sino un solo contenedor real (#ev-lista-tab-filas) cuyo
+// innerHTML se reemplaza en cada render -- mismo truco de "ghost" que
+// axisBarraTitulo() (barra superior singleton, mismo shared/axis-transicion.js,
+// tampoco con caller activo pero la técnica sigue siendo válida): clonar el
+// estado SALIENTE antes de pisar el contenido real (ghost, position:absolute,
+// calcado sobre la posición/ancho real actual), pintar el contenido ENTRANTE
+// en el contenedor real (que sigue en flujo normal -- así el resto de la
+// pantalla ya ve su alto/scroll reales de inmediato, sin esperar los 320ms) y
+// animar ambos en simultáneo: el ghost hacia afuera, el real hacia adentro.
+// `#ev-vista-lista-wrap` (el padre, css/eventos.css) aporta
+// `position:relative;overflow-x:hidden` para contener el recorrido horizontal
+// sin generar scroll de página. Guard de epoch (mismo criterio que
+// axisTransicion()/_axisEpoch, ver su comentario en shared/axis-transicion.js)
+// contra 2 cambios de tab disparados dentro de la ventana de 320ms del
+// anterior.
+var _evListaTabEpoch = 0;
+function _evListaTabAnimarCambio(cont, pintar, direccion) {
+  if (!direccion) { pintar(); return; }
+  var epoch = ++_evListaTabEpoch;
+  cont._evListaTabEpoch = epoch;
+  var wrap = cont.parentElement;
+  var ghost = cont.cloneNode(true);
+  ghost.removeAttribute('id');
+  ghost.querySelectorAll('[id]').forEach(function(el) { el.removeAttribute('id'); });
+  ghost.style.position = 'absolute';
+  ghost.style.top = cont.offsetTop + 'px';
+  ghost.style.left = cont.offsetLeft + 'px';
+  ghost.style.width = cont.offsetWidth + 'px';
+  ghost.style.margin = '0';
+  ghost.style.pointerEvents = 'none';
+  wrap.appendChild(ghost);
+
+  pintar(); // pisa el contenido real -- ya determina el alto/scroll reales de acá en más
+
+  var entraDesde = direccion === 'izquierda' ? '100%' : '-25%';
+  var saleHacia  = direccion === 'izquierda' ? '-25%' : '100%';
+
+  cont.style.transition = 'none';
+  cont.style.transform = 'translateX(' + entraDesde + ')';
+  cont.style.opacity = '0.85';
+  ghost.style.transition = 'none';
+  ghost.style.transform = 'translateX(0)';
+  ghost.style.opacity = '1';
+
+  // Doble rAF, mismo motivo que axisTransicion()/axisBarraVertical(): deja
+  // que el navegador pinte el "desde" antes de moverlo al destino.
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      if (cont._evListaTabEpoch !== epoch) return; // una llamada más nueva ya tomó la posta
+      var t = 'transform 0.32s var(--ease-axis), opacity 0.32s var(--ease-axis)';
+      cont.style.transition = t;
+      cont.style.transform = 'translateX(0)';
+      cont.style.opacity = '1';
+      ghost.style.transition = t;
+      ghost.style.transform = 'translateX(' + saleHacia + ')';
+      ghost.style.opacity = '0.85';
+    });
+  });
+
+  setTimeout(function() {
+    ghost.remove();
+    if (cont._evListaTabEpoch === epoch) { cont.style.transition = ''; cont.style.transform = ''; cont.style.opacity = ''; }
+  }, 320);
 }
 // Una fila: futuro reusa la card COMPLETA (_evCardEventoHtml(), mismo
 // componente que Semana/Calendario -- pedido explícito, un solo componente
 // de card en las 3 vistas, no una fila resumida aparte); pasado usa una fila
 // compacta propia (esta vista sí necesita ver muchos eventos pasados de
 // un vistazo, y ni la barra de RSVP ni "quién asiste" tienen sentido para
-// algo que ya ocurrió) -- Finalizado reemplaza el chevron por el chip de
-// asistencia real (`miAsistenciaReal`, "Sin registrar" si falta el dato,
-// ver _EV_ASISTENCIA_REAL_BADGE) para cualquier evento pasado (fecha < hoy,
+// algo que ya ocurrió) -- Finalizado suma el chip de asistencia real
+// (`miAsistenciaReal`, "Sin registrar" si falta el dato, ver
+// _EV_ASISTENCIA_REAL_BADGE) para cualquier evento pasado (fecha < hoy,
 // aunque el backend todavía no lo haya marcado Finalizado -- mismo criterio
 // que _evEsPasado()/_evRsvpBarraHtml() más arriba, ya resuelve el TODO de
-// abajo); Cancelado/No se entrena conserva el chevron simple, no hay
-// "asistencia" que mostrar ahí. `sufijo='-lt'` en la card completa evita
-// colisión de ids con la misma card ya renderizada en `#ev-lista` (Semana/
-// Calendario, sufijo '') si el usuario ya visitó ambas vistas.
+// abajo); Cancelado/No se entrena no tiene "asistencia" que mostrar ahí, y
+// ya no suma un chevron tampoco (ver "Cambios recientes" -- eliminado de las
+// 3 vistas, `.ev-card-compacta` entera ya es tocable). `sufijo='-lt'` en la
+// card completa evita colisión de ids con la misma card ya renderizada en
+// `#ev-lista` (Semana/Calendario, sufijo '') si el usuario ya visitó ambas
+// vistas.
 function _evListaTabFilaHtml(e) {
   var hoy = _evHoyISO();
   if (_evFechaCmp(e.fecha, hoy) >= 0) return _evCardEventoHtml(e, '-lt');
   var icono = _EV_ICONOS[e.tipo] || 'event';
   var d = _evParseISO(e.fecha);
   var fechaTxt = d.getDate() + ' ' + NOMBRES_MESES[d.getMonth()].slice(0, 3).toLowerCase();
-  var trailing;
+  var trailing = '';
   if (e.estado !== 'Cancelado' && e.estado !== 'No se entrena') {
     var estadoReal = e.miAsistenciaReal || 'Sin registrar';
     var clase = _EV_ASISTENCIA_REAL_BADGE[estadoReal] || 'badge-sin-registrar';
     var label = _EV_ASISTENCIA_REAL_LABEL[estadoReal] || estadoReal;
     trailing = '<span class="badge ' + clase + '">' + label + '</span>';
-  } else {
-    trailing = '<span class="material-symbols-outlined ev-chevron-ver">chevron_right</span>';
   }
   var atenuado = _evListaTabSubtab === 'todos' ? ' ev-pasado-atenuado' : '';
   return '<div class="ev-card-compacta-wrap' + atenuado + '">' +
