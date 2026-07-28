@@ -216,8 +216,12 @@ function ir(id, desdeHistorial, sinTrampa) {
       // _iconoRaizDeNav()), el slot de la flecha se reusa para un ícono
       // decorativo (mismo ícono que su tab en .app-bottom-nav, sin onclick
       // ni feedback de hover/active) en vez de quedar vacío -- si no,
-      // se oculta entero como antes.
-      var _iconoRaiz = _iconoRaizDeNav(id);
+      // se oculta entero como antes. Excepción: `s-datos` (Ajustes) -- ahí
+      // el slot lo ocupa el buscador (#aj-search-wrap, ver arriba), que ya
+      // cumple el rol de "marca de sección"; el ícono de tuerca ahí no
+      // aportaba nada y solo restaba espacio al buscador (ver "Cambios
+      // recientes").
+      var _iconoRaiz = (id === 's-datos') ? null : _iconoRaizDeNav(id);
       if (_iconoRaiz) {
         topBtn.style.display = '';
         topBtn.onclick = null;

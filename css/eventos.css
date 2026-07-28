@@ -16,8 +16,17 @@
    Fondo sólido -- mismo criterio de breakpoint que `.card` (css/ui.css): en
    mobile real (≤600px) `.card` pierde su fondo propio, así que acá hay que
    usar el fondo real de la página (`--bg`) en vez de `--card-bg` para que no
-   se transparente el contenido de abajo al scrollear detrás. */
-.ev-sticky-header { position: sticky; top: 0; z-index: 20; background: var(--card-bg); }
+   se transparente el contenido de abajo al scrollear detrás. Padding-top con
+   `env(safe-area-inset-top)` (+ 12px fijos) para que no quede pegado al notch/
+   borde superior del dispositivo al pinnearse; padding-bottom para separarlo
+   del contenido scrolleable de abajo (`.ev-lista`/`#ev-vista-lista-wrap`) --
+   mismo criterio para las 3 vistas (Semana/Calendario/Lista) porque comparten
+   este único contenedor sticky. */
+.ev-sticky-header {
+  position: sticky; top: 0; z-index: 20; background: var(--card-bg);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
+  padding-bottom: 14px;
+}
 @media (max-width: 600px) {
   .ev-sticky-header { background: var(--bg); }
 }
@@ -130,6 +139,14 @@
 .ev-card-icon .material-symbols-outlined { font-size: 1.3rem; }
 .ev-card-body { flex: 1; min-width: 0; }
 .ev-card-titulo { font-size: 0.9rem; font-weight: 800; color: var(--text); margin-bottom: 2px; }
+/* Ícono de tipo INLINE junto al título (ver "Cambios recientes" -- reemplaza
+   `.ev-card-icon`, cuadrado 42px en columna propia, solo en `_evCardEventoHtml()`;
+   `.ev-card-icon` sigue igual para cumpleaños/fila compacta de "Pasados").
+   `margin-bottom` se muda de `.ev-card-titulo` a esta fila -- adentro, el
+   título no lleva margen propio para no descentrarse del ícono. */
+.ev-card-titulo-row { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
+.ev-card-titulo-row .ev-card-titulo { margin-bottom: 0; }
+.ev-card-icono-inline { font-size: 16px; color: var(--brand); flex-shrink: 0; }
 .ev-card-sub { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .ev-card-sub .material-symbols-outlined { font-size: 14px; }
 .ev-card-estado-nota { font-size: 0.74rem; font-weight: 700; color: var(--danger); margin-top: 4px; }
@@ -175,7 +192,7 @@
    pedido de 150-200ms, en vez de un cambio instantáneo. */
 .ev-rsvp-opt {
   position: relative; z-index: 1; flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 2px; padding: 8px 4px; font-size: 0.625rem; font-weight: 700;
+  justify-content: center; gap: 2px; padding: 12px 4px; font-size: 0.625rem; font-weight: 700;
   cursor: pointer; font-family: inherit; white-space: nowrap;
   transition: color 0.18s ease, background-color 0.18s ease;
 }
@@ -187,7 +204,7 @@
    con `e.miEstado` lleva color (`.activa`, ícono+texto blancos sobre el
    indicador sólido), las otras 2 siempre en este gris, nunca blanco. */
 .ev-rsvp-opt { color: #c98a8a; }
-.ev-rsvp-opt .material-symbols-outlined { font-size: 15px; flex-shrink: 0; color: #8a6a6a; }
+.ev-rsvp-opt .material-symbols-outlined { font-size: 18px; flex-shrink: 0; color: #8a6a6a; }
 .ev-rsvp-opt.activa, .ev-rsvp-opt.activa .material-symbols-outlined { color: var(--white); }
 
 /* ── Reemplazo de solo lectura de la barra de RSVP para eventos pasados
@@ -349,13 +366,56 @@
    Victor: texto simple con línea inferior de 2px, sin fondo ni indicador que
    se mueva por JS (el navegador ya anima `border-color`/`color` solo via
    `transition`, no hace falta medir `offsetWidth`/`offsetLeft` de nada). */
-.ev-subtabs { display: flex; justify-content: center; gap: 22px; border-bottom: 1.5px solid var(--border-light); margin-bottom: 16px; }
+/* Wrapper del renglón de subtabs + botón de filtro (ver "Cambios recientes"
+   -- antes .ev-subtabs sola, centrada). `position:relative` para anclar
+   `.ev-filtro-toggle-btn` al borde derecho sin descentrar los subtabs --
+   mismo patrón que `.ev-seg-wrap`/`.ev-btn-add` más arriba en este archivo. */
+.ev-subtabs-wrap { position: relative; margin-bottom: 16px; }
+.ev-subtabs { display: flex; justify-content: center; gap: 22px; border-bottom: 1.5px solid var(--border-light); }
 .ev-subtab {
   padding: 4px 1px 10px; font-size: 0.82rem; font-weight: 700; color: var(--muted); cursor: pointer;
   border-bottom: 2px solid transparent; margin-bottom: -1.5px; transition: color 0.2s, border-color 0.2s;
   user-select: none;
 }
 .ev-subtab.activo { color: var(--brand); border-color: var(--brand); }
+
+/* Botón embudo -- reemplaza la fila de filtros Mes/Lugar/Tipo siempre
+   visible (ver "Cambios recientes"): expande/colapsa `.ev-filtros-colapsable`
+   de abajo. Mismo tamaño/forma que `.ev-semana-chevron`, posicionado como
+   `.ev-btn-add` (absolute right, dentro de un wrapper `position:relative`),
+   pero MÁS arriba (`top` fijo, no 50%) porque `.ev-subtabs-wrap` tiene más
+   alto que un solo renglón centrado (el `border-bottom` de `.ev-subtabs`
+   queda más abajo que el centro vertical del botón si se centrara con la
+   fila entera). */
+.ev-filtro-toggle-btn {
+  position: absolute; right: 0; top: 0; display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; min-width: 32px; border-radius: 10px;
+  background: var(--brand-light); border: none; cursor: pointer; color: var(--brand);
+  transition: background 0.15s; -webkit-tap-highlight-color: transparent;
+}
+.ev-filtro-toggle-btn:hover { background: var(--brand-20); }
+.ev-filtro-toggle-btn:active { transform: scale(0.94); }
+.ev-filtro-toggle-btn .material-symbols-outlined { font-size: 1.05rem; display: block; }
+.ev-filtro-toggle-btn.ev-filtro-toggle-activo { background: var(--brand); color: var(--white); }
+/* Badge numérico -- cuenta de los 3 filtros (mes/lugar/tipo) CON al menos
+   una opción seleccionada (no el total de opciones marcadas, ver
+   `_evActualizarBadgeFiltros()`/js/eventos.js) -- oculto (`display:none`,
+   togleado por JS) si ninguno tiene selección. */
+.ev-filtro-badge {
+  position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 3px;
+  border-radius: 999px; background: var(--danger); color: var(--white);
+  font-size: 0.62rem; font-weight: 800; display: flex; align-items: center; justify-content: center;
+  line-height: 1; box-shadow: 0 0 0 2px var(--card-bg);
+}
+
+/* Panel colapsable de filtros (fila de triggers + sus 3 burbujas, ver
+   "Cambios recientes") -- colapsado por default (`max-height:0`), togleado
+   por `.ev-filtro-toggle-btn` (`_evToggleFiltrosPanel()`, js/eventos.js).
+   Mismo mecanismo que `.ev-filtro-burbuja`/`.ev-cal-grid-colapsable` (
+   `max-height`+`--ease-sheet`). 460px alcanza para la fila de triggers +
+   1 burbuja abierta (única a la vez, max-height propio 320px) sin cortarla. */
+.ev-filtros-colapsable { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
+.ev-filtros-colapsable.abierta { max-height: 460px; }
 
 /* Filtros Mes/Lugar/Tipo -- 3 botones "trigger" (mismo look/idea que
    .admin-destino-trigger de css/admin.css: parecen un <select>) que
@@ -405,6 +465,21 @@
 .ev-card-compacta .material-symbols-outlined.ev-chevron-ver { font-size: 18px; color: var(--muted); flex-shrink: 0; }
 .ev-card-compacta .badge { flex-shrink: 0; }
 .ev-card-compacta-wrap .ev-asistire-wrap { margin: 0 14px 12px; }
+/* Jerarquía visual pasados/futuros -- solo subtab "Todos" (ver "Cambios
+   recientes", `_evListaTabFilaHtml()`/js/eventos.js): opacidad reducida en
+   TODA la card compacta (pasados) + ícono forzado a gris apagado en vez de
+   heredar el color de marca a través de la opacidad (2 efectos distintos,
+   pedido explícito -- la opacidad sola dejaría un ícono brand tenue, no
+   "apagado"). Futuros (`.ev-card`, la card completa) sin cambios. */
+.ev-card-compacta-wrap.ev-pasado-atenuado { opacity: 0.55; }
+.ev-card-compacta-wrap.ev-pasado-atenuado .ev-card-icon { background: var(--surface-2); color: var(--muted); }
+/* Separador "HOY" -- línea fina a cada lado (mismo `--border-light` que el
+   resto de separadores de esta pantalla) + texto centrado en color de marca,
+   ubicado en el punto cronológico exacto entre el bloque de pasados y el de
+   futuros dentro de la lista ya ordenada (ver `_evListaTabRenderLista()`). */
+.ev-hoy-separador { display: flex; align-items: center; gap: 10px; margin: 4px 0 14px; }
+.ev-hoy-separador::before, .ev-hoy-separador::after { content: ''; flex: 1; height: 1.5px; background: var(--border-light); }
+.ev-hoy-separador span { font-size: 0.72rem; font-weight: 800; color: var(--brand); text-transform: uppercase; letter-spacing: 1px; }
 
 @media (prefers-color-scheme: dark) {
   .ev-lista-vacia { background: var(--surface-2); border-color: var(--border-light); }

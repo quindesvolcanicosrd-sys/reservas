@@ -422,20 +422,56 @@ function _ddpRenderMeses() {
   });
 })();
 
+/* ── Ajustes: keywords internas por fila (ver "Cambios recientes") ──────
+   Cada fila de nivel superior de Ajustes (.aj-row/.aj-app-row, ver
+   `data-aj-key` en index.html) es solo la "puerta" a una sub-pantalla --
+   el título/valor visible ("Identidad legal", "Salud") no menciona el
+   contenido real de adentro (cédula, alergias, seguro...), así que ese
+   contenido nunca matcheaba en `ajFiltrarSettings`. Este mapa junta, por
+   fila, las palabras clave relevantes según lo que esa sub-pantalla
+   realmente contiene (revisado campo por campo en index.html -- #aj-sub-*
+   -- no adivinado), para que buscar "cédula" encuentre "Identidad legal"
+   aunque esa palabra no esté en su título. */
+var AJ_SEARCH_KEYWORDS = {
+  perfil: ['nombre de usuario', 'username', 'apodo', 'nombre derby', 'número derby', 'numero derby', 'pronombres', 'foto de perfil'],
+  miliga: ['administradorx', 'administrador', 'admin', 'panel'],
+  equip: ['patines', 'protecciones', 'talla', 'casco', 'rodilleras', 'coderas', 'muñequeras', 'munequeras'],
+  contacto: ['teléfono', 'telefono', 'número', 'numero', 'email', 'correo', 'prefijo'],
+  privacidad: ['fecha de nacimiento', 'cumpleaños', 'cumpleanos', 'edad', 'compartir'],
+  legal: ['cédula', 'cedula', 'dni', 'pasaporte', 'documento', 'nombre legal', 'tipo de documento'],
+  direccion: ['calle', 'calle principal', 'calle secundaria', 'numeración', 'numeracion', 'sector', 'cantón', 'canton', 'mapa', 'ubicación', 'ubicacion'],
+  emerg: ['contacto de emergencia', 'relación', 'relacion', 'nombre del contacto'],
+  salud: [
+    'ficha de salud', 'enfermedad', 'asma', 'diabetes', 'hipertensión', 'hipertension', 'cardiopatía', 'cardiopatia', 'epilepsia', 'trastornos de coagulación', 'trastornos de coagulacion',
+    'dieta', 'vegetariano', 'vegano', 'pescetariano',
+    'antecedentes médicos', 'antecedentes medicos', 'cirugías', 'cirugias', 'hospitalización', 'hospitalizacion', 'lesiones deportivas',
+    'alergias', 'alergia',
+    'medicamentos', 'medicamento', 'suplemento',
+    'atención médica', 'atencion medica', 'msp', 'iess',
+    'seguro privado', 'seguro', 'saludsa', 'ecuasanitas', 'humana', 'confiamed'
+  ],
+  notif: ['notificaciones', 'avisos'],
+  pwa: ['instalar', 'pwa', 'inicio'],
+  contactanos: ['whatsapp', 'instagram', 'contáctanos']
+};
+
 /* ── Ajustes: buscador de la nav (ver "Cambios recientes",
    #aj-search-input/index.html, togglea con #top-bar-titulo en ir()) ────
    Filtra .aj-row/.aj-app-row por texto de .aj-title/.aj-value (case-
-   insensitive), ocultando las que no matchean; el contenedor entero
-   (.aj-group/.aj-app-rows, ambos con su propio fondo/border-radius de
-   "card") se oculta si TODAS sus filas quedan filtradas -- si no, un grupo
-   vacío se vería como una tarjeta en blanco. */
+   insensitive) + las keywords internas de AJ_SEARCH_KEYWORDS (arriba, por
+   `data-aj-key`), ocultando las que no matchean ninguna de las dos; el
+   contenedor entero (.aj-group/.aj-app-rows, ambos con su propio fondo/
+   border-radius de "card") se oculta si TODAS sus filas quedan filtradas --
+   si no, un grupo vacío se vería como una tarjeta en blanco. */
 function ajFiltrarSettings(query) {
   var q = (query || '').trim().toLowerCase();
   document.querySelectorAll('#s-datos-card .aj-row, #s-datos-card .aj-app-row').forEach(function(row) {
     var titulo = row.querySelector('.aj-title');
     var valor = row.querySelector('.aj-value');
     var texto = ((titulo ? titulo.textContent : '') + ' ' + (valor ? valor.textContent : '')).toLowerCase();
-    row.style.display = (!q || texto.indexOf(q) !== -1) ? '' : 'none';
+    var keywords = AJ_SEARCH_KEYWORDS[row.dataset.ajKey] || [];
+    var matchKeyword = keywords.some(function(k) { return k.indexOf(q) !== -1; });
+    row.style.display = (!q || texto.indexOf(q) !== -1 || matchKeyword) ? '' : 'none';
   });
   document.querySelectorAll('#s-datos-card .aj-group, #s-datos-card .aj-app-rows').forEach(function(grupo) {
     // #aj-group-miliga tiene su propia visibilidad independiente (solo

@@ -31,8 +31,8 @@
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css">
-<link rel="stylesheet" href="css/nav.css?v=62d1fa0c">
-<link rel="stylesheet" href="css/eventos.css?v=09e2812d">
+<link rel="stylesheet" href="css/nav.css?v=9f3d5760">
+<link rel="stylesheet" href="css/eventos.css?v=87eda5cb">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -314,25 +314,36 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
              burbujas); la lista de filas en sí (#ev-lista-tab-filas) vive
              afuera del sticky, ver más abajo. -->
         <div id="ev-lista-tab-header-wrap" style="display:none;">
-          <div class="ev-subtabs">
-            <div class="ev-subtab activo" id="ev-lista-tab-subtab-proximos" onclick="_evListaTabCambiarSubtab('proximos')">Próximos</div>
-            <div class="ev-subtab" id="ev-lista-tab-subtab-pasados" onclick="_evListaTabCambiarSubtab('pasados')">Pasados</div>
-            <div class="ev-subtab" id="ev-lista-tab-subtab-todos" onclick="_evListaTabCambiarSubtab('todos')">Todos</div>
-          </div>
-          <div class="ev-filtros-row">
-            <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-mes" data-label="Mes" onclick="_evToggleFiltroBurbuja('mes')">
-              <span class="ev-filtro-trigger-label">Mes</span><span class="material-symbols-outlined">expand_more</span>
-            </button>
-            <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-lugar" data-label="Lugar" onclick="_evToggleFiltroBurbuja('lugar')">
-              <span class="ev-filtro-trigger-label">Lugar</span><span class="material-symbols-outlined">expand_more</span>
-            </button>
-            <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-tipo" data-label="Tipo" onclick="_evToggleFiltroBurbuja('tipo')">
-              <span class="ev-filtro-trigger-label">Tipo</span><span class="material-symbols-outlined">expand_more</span>
+          <div class="ev-subtabs-wrap">
+            <div class="ev-subtabs">
+              <div class="ev-subtab activo" id="ev-lista-tab-subtab-proximos" onclick="_evListaTabCambiarSubtab('proximos')">Próximos</div>
+              <div class="ev-subtab" id="ev-lista-tab-subtab-pasados" onclick="_evListaTabCambiarSubtab('pasados')">Pasados</div>
+              <div class="ev-subtab" id="ev-lista-tab-subtab-todos" onclick="_evListaTabCambiarSubtab('todos')">Todos</div>
+            </div>
+            <!-- Botón embudo -- reemplaza la fila de filtros siempre visible
+                 (ver "Cambios recientes"): togglea #ev-filtros-colapsable,
+                 badge numérico solo si hay algún filtro con selección. -->
+            <button type="button" class="ev-filtro-toggle-btn" id="ev-filtro-toggle-btn" onclick="_evToggleFiltrosPanel()" title="Filtros">
+              <span class="material-symbols-outlined">tune</span>
+              <span class="ev-filtro-badge" id="ev-filtro-badge" style="display:none;">0</span>
             </button>
           </div>
-          <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-mes"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-mes"></div></div>
-          <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-lugar"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-lugar"></div></div>
-          <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-tipo"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-tipo"></div></div>
+          <div class="ev-filtros-colapsable" id="ev-filtros-colapsable">
+            <div class="ev-filtros-row">
+              <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-mes" data-label="Mes" onclick="_evToggleFiltroBurbuja('mes')">
+                <span class="ev-filtro-trigger-label">Mes</span><span class="material-symbols-outlined">expand_more</span>
+              </button>
+              <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-lugar" data-label="Lugar" onclick="_evToggleFiltroBurbuja('lugar')">
+                <span class="ev-filtro-trigger-label">Lugar</span><span class="material-symbols-outlined">expand_more</span>
+              </button>
+              <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-tipo" data-label="Tipo" onclick="_evToggleFiltroBurbuja('tipo')">
+                <span class="ev-filtro-trigger-label">Tipo</span><span class="material-symbols-outlined">expand_more</span>
+              </button>
+            </div>
+            <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-mes"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-mes"></div></div>
+            <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-lugar"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-lugar"></div></div>
+            <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-tipo"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-tipo"></div></div>
+          </div>
         </div>
       </div>
 
@@ -582,7 +593,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
     <!-- Foto de perfil -->
     <div class="aj-group">
-      <div class="aj-row" onclick="irEditarPerfil()">
+      <div class="aj-row" data-aj-key="perfil" onclick="irEditarPerfil()">
         <div class="avatar-pill aj-avatar-row" id="aj-avatar"></div>
         <div class="aj-content">
           <div class="aj-title" id="aj-derby-nombre">—</div>
@@ -596,7 +607,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
          sea dashboardAdmin true o false), ver irEditarDatos() (js/perfil.js)
          y MANIFEST.md "Cambios recientes", Tanda 3. -->
     <div class="aj-group" id="aj-group-miliga" style="display:none;">
-      <div class="aj-row" onclick="irMiLiga()">
+      <div class="aj-row" data-aj-key="miliga" onclick="irMiLiga()">
         <div class="aj-icon aj-icon-orange"><span class="material-symbols-outlined">admin_panel_settings</span></div>
         <div class="aj-content">
           <div class="aj-title">Mi Liga</div>
@@ -608,7 +619,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
     <!-- Equipamiento -->
     <div class="aj-group">
-      <div class="aj-row" onclick="irAjSub('aj-sub-equip')">
+      <div class="aj-row" data-aj-key="equip" onclick="irAjSub('aj-sub-equip')">
         <div class="aj-icon aj-icon-orange"><span class="material-symbols-outlined">roller_skating</span></div>
         <div class="aj-content">
           <div class="aj-title">Mis patines y protecciones</div>
@@ -620,7 +631,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
     <!-- Contacto y privacidad -->
     <div class="aj-group">
-      <div class="aj-row" onclick="irAjSub('aj-sub-contacto')">
+      <div class="aj-row" data-aj-key="contacto" onclick="irAjSub('aj-sub-contacto')">
         <div class="aj-icon aj-icon-blue"><span class="material-symbols-outlined">phone</span></div>
         <div class="aj-content">
           <div class="aj-title">Teléfono</div>
@@ -628,7 +639,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
         <span class="material-symbols-outlined aj-chevron">chevron_right</span>
       </div>
-      <div class="aj-row" onclick="irAjSub('aj-sub-privacidad')">
+      <div class="aj-row" data-aj-key="privacidad" onclick="irAjSub('aj-sub-privacidad')">
         <div class="aj-icon aj-icon-purple"><span class="material-symbols-outlined">lock</span></div>
         <div class="aj-content">
           <div class="aj-title">Privacidad</div>
@@ -640,7 +651,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
     <!-- Seguridad y emergencias -->
     <div class="aj-group">
-      <div class="aj-row" onclick="irAjSub('aj-sub-legal')">
+      <div class="aj-row" data-aj-key="legal" onclick="irAjSub('aj-sub-legal')">
         <div class="aj-icon aj-icon-amber"><span class="material-symbols-outlined">badge</span></div>
         <div class="aj-content">
           <div class="aj-title">Identidad legal</div>
@@ -648,7 +659,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
         <span class="material-symbols-outlined aj-chevron">chevron_right</span>
       </div>
-      <div class="aj-row" onclick="irAjSub('aj-sub-direccion')">
+      <div class="aj-row" data-aj-key="direccion" onclick="irAjSub('aj-sub-direccion')">
         <div class="aj-icon aj-icon-green"><span class="material-symbols-outlined">home_pin</span></div>
         <div class="aj-content">
           <div class="aj-title">Dirección</div>
@@ -656,7 +667,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
         <span class="material-symbols-outlined aj-chevron">chevron_right</span>
       </div>
-      <div class="aj-row" onclick="irAjSub('aj-sub-emerg')">
+      <div class="aj-row" data-aj-key="emerg" onclick="irAjSub('aj-sub-emerg')">
         <div class="aj-icon aj-icon-red"><span class="material-symbols-outlined">emergency</span></div>
         <div class="aj-content">
           <div class="aj-title">Contactos de emergencia</div>
@@ -668,7 +679,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
     <!-- Salud -->
     <div class="aj-group">
-      <div class="aj-row" onclick="irAjSub('aj-sub-salud')">
+      <div class="aj-row" data-aj-key="salud" onclick="irAjSub('aj-sub-salud')">
         <div class="aj-icon aj-icon-orange"><span class="material-symbols-outlined">medical_services</span></div>
         <div class="aj-content">
           <div class="aj-title">Salud</div>
@@ -680,7 +691,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
     <!-- Aplicación -->
     <div class="aj-app-rows">
-      <div class="aj-app-row" id="row-notif-home" onclick="toggleNotifHome(document.getElementById('toggle-notif'))">
+      <div class="aj-app-row" id="row-notif-home" data-aj-key="notif" onclick="toggleNotifHome(document.getElementById('toggle-notif'))">
         <div class="aj-icon aj-icon-orange"><span class="material-symbols-outlined">notifications</span></div>
         <div class="aj-content">
           <div class="aj-title">Notificaciones</div>
@@ -688,7 +699,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
         <div class="toggle-wrap"><button type="button" id="toggle-notif" class="toggle-btn toggle-off" aria-pressed="false"><span class="toggle-thumb"></span></button></div>
       </div>
-      <div class="aj-app-row" id="row-instalar-app" onclick="pwaInstalar()">
+      <div class="aj-app-row" id="row-instalar-app" data-aj-key="pwa" onclick="pwaInstalar()">
         <div class="aj-icon aj-icon-muted"><span class="material-symbols-outlined">install_mobile</span></div>
         <div class="aj-content">
           <div class="aj-title">Instalar la app</div>
@@ -696,7 +707,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
         <button class="aj-app-btn"><span class="material-symbols-outlined">download</span></button>
       </div>
-      <div class="aj-app-row" onclick="abrirContacto()">
+      <div class="aj-app-row" data-aj-key="contactanos" onclick="abrirContacto()">
         <div class="aj-icon aj-icon-muted"><span class="material-symbols-outlined">share</span></div>
         <div class="aj-content">
           <div class="aj-title">Contáctanos</div>
@@ -753,11 +764,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/bsheet.js"></script>
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=2b9acd88"></script>
-<script src="js/eventos.js?v=733b8b7c"></script>
+<script src="js/ui.js?v=7e67df6c"></script>
+<script src="js/eventos.js?v=5368c688"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js"></script>
-<script src="js/perfil.js"></script>
+<script src="js/perfil.js?v=54df12b2"></script>
 <script src="js/admin.js"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js"></script>

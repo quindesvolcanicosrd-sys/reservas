@@ -102,10 +102,17 @@
 /* ── Buscador de Ajustes (ver "Cambios recientes") ───────
    Estilo "buscador de Ajustes de Android": lupa + input, sin botón de
    búsqueda aparte. Hijo flex real (no absolute como .app-nav-title) --
-   `flex:1` ocupa exactamente el espacio entre la flecha atrás y el spacer
-   derecho de 40px, mismo criterio de `gap:10px` ya heredado de `.app-nav`. */
+   `flex:1` ocupa exactamente el espacio entre el borde izquierdo (el slot
+   de la flecha/tuerca decorativa se quita del todo en `s-datos`, ver
+   `ir()`/js/ui.js) y el spacer derecho de 40px, mismo criterio de
+   `gap:10px` ya heredado de `.app-nav`. Fondo propio + padding (mismo
+   criterio que los demás buscadores de bottom sheet de la app --
+   `#aj-prefijo-search`/`#aj-pais-search`, `padding:10px 14px` sobre
+   `--surface-2`) -- antes sin caja propia, quedaba apretado contra los
+   bordes de la nav. */
 .app-nav-search {
   display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; color: var(--muted);
+  background: var(--surface-2); border-radius: 12px; padding: 11px 14px;
 }
 .app-nav-search .material-symbols-outlined { font-size: 1.2rem; flex-shrink: 0; }
 .app-nav-search input {

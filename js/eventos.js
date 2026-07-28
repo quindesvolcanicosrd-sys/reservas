@@ -57,6 +57,15 @@ var _EV_CHIP_BADGE  = { 'A tiempo': 'badge-confirmada', 'Tarde': 'badge-pendient
 // `miAsistenciaReal: null` (o el campo ausente) = "Sin registrar", sin chip
 // de color propio.
 var _EV_ASISTENCIA_REAL_BADGE = { 'A horario': 'badge-confirmada', 'Tarde': 'badge-pendiente', 'Ausente': 'badge-cancelada' };
+// Texto mostrado al usuario para cada estado de asistencia real (ver
+// "Cambios recientes" -- antes se mostraba la clave interna tal cual). Las
+// claves de arriba (`_EV_ASISTENCIA_REAL_BADGE`) siguen siendo las que llegan
+// del backend/`miAsistenciaReal` -- separado a propósito, mismo criterio que
+// el resto del archivo (interno vs. texto de cara al usuario). "Ausente"
+// (marcado explícito por el admin) y "Sin registrar" (nunca se marcó nada)
+// son 2 casos internos distintos pero deben leerse igual para elle: ambos
+// caen en "No asististe".
+var _EV_ASISTENCIA_REAL_LABEL = { 'A horario': 'Llegaste a horario', 'Tarde': 'Llegaste tarde', 'Ausente': 'No asististe', 'Sin registrar': 'No asististe' };
 // Color sólido del indicador de la barra segmentada de RSVP (ver
 // _evRsvpBarraHtml() más abajo) por opción -- fijos, independientes del
 // color de énfasis (mismo criterio que el resto de esta pantalla: "Asistiré"
@@ -187,6 +196,15 @@ function _evCambiarVista(v) {
     // aparezca ya expandida de golpe.
     _evColapsarFiltroBurbuja(_evFiltroBurbujaAbierta);
     _evFiltroBurbujaAbierta = null;
+  }
+  if (v !== 'lista' && _evFiltrosPanelAbierto) {
+    // Mismo criterio que arriba, un nivel más afuera: el panel de filtros
+    // completo (embudo) tampoco debe reaparecer ya expandido al volver.
+    _evFiltrosPanelAbierto = false;
+    var _panelEl = document.getElementById('ev-filtros-colapsable');
+    if (_panelEl) _panelEl.classList.remove('abierta');
+    var _btnEl = document.getElementById('ev-filtro-toggle-btn');
+    if (_btnEl) _btnEl.classList.remove('ev-filtro-toggle-activo');
   }
   if (v === 'lista') { _evListaTabPoblarFiltros(); _evActualizarBotonesFiltro(); _evListaTabRenderLista(); }
   else _evRenderVistaActual();
@@ -457,10 +475,16 @@ function _evCardEventoHtml(e, sufijo) {
   if (e.estado === 'Cancelado') estadoNota = '<div class="ev-card-estado-nota">Cancelado</div>';
   else if (e.estado === 'No se entrena') estadoNota = '<div class="ev-card-estado-nota">No se entrena</div>';
   var accion = _esAdminDemo ? _evAccionAdminHtml(e) : _evRsvpBarraHtml(e);
+  // Ícono de tipo INLINE junto al título (ver "Cambios recientes" -- antes
+  // `.ev-card-icon`, cuadrado 42px en columna propia a la izquierda). Sin esa
+  // columna, `.ev-card-body` pasa a ocupar todo el ancho de la card -- la
+  // barra de RSVP (`accion`, adentro de `.ev-card-body`) queda a ancho
+  // completo sin más cambios. `.ev-card-icon` sigue existiendo tal cual para
+  // `_evCardCumpleHtml()`/la fila compacta de "Pasados" (`.ev-card-compacta`),
+  // ninguna de las 2 entra en este rediseño.
   return '<div class="ev-card" id="ev-card-' + e.id + sufijo + '" onclick="abrirEvDetalle(\'' + e.id + '\')">' +
-    '<div class="ev-card-icon"><span class="material-symbols-outlined">' + icono + '</span></div>' +
     '<div class="ev-card-body">' +
-      '<div class="ev-card-titulo">' + e.lugar + '</div>' +
+      '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline">' + icono + '</span><div class="ev-card-titulo">' + e.lugar + '</div></div>' +
       '<div class="ev-card-sub"><span class="material-symbols-outlined">schedule</span>' + e.horaInicio + ' · ' + e.tipo + '</div>' +
       estadoNota +
       accion +
@@ -556,7 +580,8 @@ function _evEsPasado(e) { return _evFechaCmp(e.fecha, _evHoyISO()) < 0 || e.esta
 function _evAsistenciaRealHtml(e) {
   var estadoReal = e.miAsistenciaReal || 'Sin registrar';
   var clase = _EV_ASISTENCIA_REAL_BADGE[estadoReal] || 'badge-sin-registrar';
-  return '<div class="ev-asistire-wrap"><span class="badge ev-rsvp-readonly ' + clase + '">' + estadoReal + '</span></div>';
+  var label = _EV_ASISTENCIA_REAL_LABEL[estadoReal] || estadoReal;
+  return '<div class="ev-asistire-wrap"><span class="badge ev-rsvp-readonly ' + clase + '">' + label + '</span></div>';
 }
 function _evRsvpBarraHtml(e) {
   if (e.estado === 'Cancelado' || e.estado === 'No se entrena') return '';
@@ -812,6 +837,35 @@ function _evActualizarBotonesFiltro() {
     var chevron = btn.querySelector('.material-symbols-outlined');
     if (chevron) chevron.textContent = abierta ? 'expand_less' : 'expand_more';
   });
+  _evActualizarBadgeFiltros();
+}
+// Botón embudo -- expande/colapsa la fila de filtros Mes/Lugar/Tipo + sus
+// burbujas (ver "Cambios recientes"), colapsada por default. Al colapsar
+// (tocar de nuevo o cambiar de vista/subtab desde afuera) también cierra
+// cualquier burbuja individual que hubiera quedado abierta adentro -- mismo
+// criterio que `_evCambiarVista()` ya aplica al salir de "Lista` por completo.
+var _evFiltrosPanelAbierto = false;
+function _evToggleFiltrosPanel() {
+  _evFiltrosPanelAbierto = !_evFiltrosPanelAbierto;
+  var panel = document.getElementById('ev-filtros-colapsable');
+  var btn = document.getElementById('ev-filtro-toggle-btn');
+  if (panel) panel.classList.toggle('abierta', _evFiltrosPanelAbierto);
+  if (btn) btn.classList.toggle('ev-filtro-toggle-activo', _evFiltrosPanelAbierto);
+  if (!_evFiltrosPanelAbierto && _evFiltroBurbujaAbierta) {
+    _evColapsarFiltroBurbuja(_evFiltroBurbujaAbierta);
+    _evFiltroBurbujaAbierta = null;
+    _evActualizarBotonesFiltro();
+  }
+}
+// Cuenta de los 3 filtros (mes/lugar/tipo) CON al menos una opción
+// seleccionada -- a propósito NO la cantidad total de opciones marcadas
+// entre los 3 (pedido explícito). Badge oculto del todo si el resultado es 0.
+function _evActualizarBadgeFiltros() {
+  var badge = document.getElementById('ev-filtro-badge');
+  if (!badge) return;
+  var n = ['mes', 'lugar', 'tipo'].filter(function(campo) { return _evListaTabFiltro[campo].length > 0; }).length;
+  badge.textContent = String(n);
+  badge.style.display = n > 0 ? 'flex' : 'none';
 }
 // Filtrado 100% en cliente sobre los datos de prueba (Tanda 2) -- la Tanda 3
 // reemplaza esto por getEventosFiltrados(estado, meses[], lugares[], tipos[]),
@@ -837,7 +891,25 @@ function _evListaTabRenderLista() {
     cont.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">event_busy</span>No hay eventos con estos filtros.</div>';
     return;
   }
-  cont.innerHTML = lista.map(_evListaTabFilaHtml).join('');
+  // Subtab "Todos" -- única que mezcla pasados+futuros en una sola lista
+  // (ver "Cambios recientes"): suma el separador "HOY" exactamente en el
+  // punto cronológico donde termina el bloque de pasados y arranca el de
+  // futuros (`lista` ya viene ordenada por fecha/hora, ver el `.sort()` de
+  // arriba) -- al principio si TODOS son futuros, al final si TODOS son
+  // pasados. `_evListaTabFilaHtml()` atenúa cada fila pasada solo en este
+  // subtab (mismo criterio -- en "Pasados" a secas no hay nada con qué
+  // contrastar, todo pasado se ve igual de normal que hoy).
+  if (_evListaTabSubtab === 'todos') {
+    var out = [], insertado = false;
+    lista.forEach(function(e) {
+      if (!insertado && _evFechaCmp(e.fecha, hoy) >= 0) { out.push('<div class="ev-hoy-separador"><span>HOY</span></div>'); insertado = true; }
+      out.push(_evListaTabFilaHtml(e));
+    });
+    if (!insertado) out.push('<div class="ev-hoy-separador"><span>HOY</span></div>');
+    cont.innerHTML = out.join('');
+  } else {
+    cont.innerHTML = lista.map(_evListaTabFilaHtml).join('');
+  }
   _evUpdateRsvpSliders(false);
   _evHidratarAvatares();
 }
@@ -865,11 +937,13 @@ function _evListaTabFilaHtml(e) {
   if (e.estado !== 'Cancelado' && e.estado !== 'No se entrena') {
     var estadoReal = e.miAsistenciaReal || 'Sin registrar';
     var clase = _EV_ASISTENCIA_REAL_BADGE[estadoReal] || 'badge-sin-registrar';
-    trailing = '<span class="badge ' + clase + '">' + estadoReal + '</span>';
+    var label = _EV_ASISTENCIA_REAL_LABEL[estadoReal] || estadoReal;
+    trailing = '<span class="badge ' + clase + '">' + label + '</span>';
   } else {
     trailing = '<span class="material-symbols-outlined ev-chevron-ver">chevron_right</span>';
   }
-  return '<div class="ev-card-compacta-wrap">' +
+  var atenuado = _evListaTabSubtab === 'todos' ? ' ev-pasado-atenuado' : '';
+  return '<div class="ev-card-compacta-wrap' + atenuado + '">' +
     '<div class="ev-card-compacta" onclick="abrirEvDetalle(\'' + e.id + '\')">' +
       '<div class="ev-card-icon"><span class="material-symbols-outlined">' + icono + '</span></div>' +
       '<div class="ev-card-compacta-info">' +
