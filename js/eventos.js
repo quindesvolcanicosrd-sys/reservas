@@ -806,28 +806,42 @@ function _evCardEventoHtml(e, sufijo) {
   // "No se entrena", no "NO SE ENTRENA" (`.badge` base sí es uppercase, la
   // usan otras pantallas que si quieren mayúsculas).
   else if (e.estado === 'No se entrena') estadoNota = '<span class="badge badge-cancelada">No se entrena</span>';
-  var accion = _esAdminDemo ? _evAccionAdminHtml(e) : _evRsvpBotonHtml(e);
+  // 3 casos, mutuamente excluyentes (ver "Cambios recientes" -- corrección
+  // de alineación): admin/pasado quedan DENTRO de `.ev-card-body` (ancho
+  // completo, apilados debajo de título/hora, sin cambios de esos 2 casos)
+  // -- el botón único de RSVP editable SALE de `.ev-card-body`, hermano
+  // directo dentro de `.ev-card-top-row`, para que `align-items:center`
+  // (heredado de esa fila) lo centre verticalmente contra el bloque
+  // ícono+título+hora en vez de apilarse abajo. El panel de alternativas
+  // (`accionExpand`) es OTRO hermano más, a ancho completo, hermano de
+  // `.ev-card-top-row` (no anidado en el botón) -- ver `_evRsvpExpandHtml()`.
+  var cancelado = (e.estado === 'Cancelado' || e.estado === 'No se entrena');
+  var pasado = !cancelado && _evEsPasado(e);
+  var accionBody = '', accionMini = '', accionExpand = '';
+  if (_esAdminDemo) accionBody = _evAccionAdminHtml(e);
+  else if (pasado) accionBody = _evAsistenciaRealHtml(e);
+  else if (!cancelado) { accionMini = _evRsvpMiniHtml(e); accionExpand = _evRsvpExpandHtml(e); }
   // Ícono de tipo INLINE junto al título (ver "Cambios recientes" -- antes
   // `.ev-card-icon`, cuadrado 42px en columna propia a la izquierda). Sin esa
-  // columna, `.ev-card-body` pasa a ocupar todo el ancho de la card -- la
-  // barra de RSVP (`accion`, adentro de `.ev-card-body`) queda a ancho
-  // completo sin más cambios. `.ev-card-icon` sigue existiendo tal cual solo
-  // para la fila compacta de "Pasados" (`.ev-card-compacta`) -- `_evCardCumpleHtml()`
-  // migró a este mismo patrón inline más tarde (ver "Cambios recientes" --
-  // reemplazó también su avatar cuadrado por uno circular).
-  // `estadoNota` (Cancelado/No se entrena) vive fuera de `.ev-card-body` (ver
-  // "Cambios recientes") -- `.ev-card{align-items:center}` (ya existente) la
-  // centra contra el alto completo de la card. Sin chevron (ver "Cambios
-  // recientes" -- eliminado de las 3 vistas, la card entera ya es tocable):
-  // `estadoNota` ya no ocupa "el lugar" de nada, simplemente se suma si
-  // corresponde.
+  // columna, `.ev-card-body` pasa a ocupar todo el ancho disponible de
+  // `.ev-card-top-row` (flex:1). `.ev-card-icon` sigue existiendo tal cual
+  // solo para la fila compacta de "Pasados" (`.ev-card-compacta`) --
+  // `_evCardCumpleHtml()` migró a este mismo patrón inline más tarde (ver
+  // "Cambios recientes" -- reemplazó también su avatar cuadrado por uno
+  // circular). Sin chevron (ver "Cambios recientes" -- eliminado de las 3
+  // vistas, la card entera ya es tocable): `estadoNota` no ocupa "el lugar"
+  // de nada, simplemente se suma si corresponde.
   return '<div class="ev-card" id="ev-card-' + e.id + sufijo + '" onclick="abrirEvDetalle(\'' + e.id + '\')">' +
-    '<div class="ev-card-body">' +
-      '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline">' + icono + '</span><div class="ev-card-titulo">' + e.lugar + '</div></div>' +
-      '<div class="ev-card-sub"><span class="material-symbols-outlined">schedule</span>' + e.horaInicio + ' · ' + e.tipo + '</div>' +
-      accion +
+    '<div class="ev-card-top-row">' +
+      '<div class="ev-card-body">' +
+        '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline">' + icono + '</span><div class="ev-card-titulo">' + e.lugar + '</div></div>' +
+        '<div class="ev-card-sub"><span class="material-symbols-outlined">schedule</span>' + e.horaInicio + ' · ' + e.tipo + '</div>' +
+        accionBody +
+      '</div>' +
+      accionMini +
+      estadoNota +
     '</div>' +
-    estadoNota +
+    accionExpand +
   '</div>';
 }
 
@@ -855,15 +869,12 @@ function _evHidratarAvatares() {
    -- Tanda 2 deriva mapsUrl/duración/descripción por lugar/tipo genérico en
    vez de pedirle 4 campos propios a cada evento de prueba; la Tanda 3 los
    reemplaza por columnas reales de Venues por evento. */
-function _evDuracionTexto(e) {
-  var min = _EV_DURACION_MIN_POR_TIPO[e.tipo] || 90;
-  var h = Math.floor(min / 60), m = min % 60;
-  return (h ? h + 'h ' : '') + (m ? m + 'min' : '') || '0min';
-}
-// Hora de fin -- derivada de horaInicio + duración por tipo (mismo criterio
-// ya documentado para _evDuracionTexto()/_EV_DURACION_MIN_POR_TIPO: Tanda 2
-// deriva por tipo genérico, la Tanda 3 la reemplaza por una columna real de
-// Venues por evento). Usada en la pill "Fin" de la pantalla de detalle.
+// Hora de fin -- derivada de horaInicio + duración por tipo (Tanda 2 deriva
+// por tipo genérico vía `_EV_DURACION_MIN_POR_TIPO`, la Tanda 3 la reemplaza
+// por una columna real de Venues por evento). Usada en la pill "Fin" de la
+// pantalla de detalle. `_evDuracionTexto()` (texto "Xh Ymin" independiente,
+// ver "Cambios recientes") se eliminó al sacar la pill de Duración del
+// detalle -- código muerto sin más consumidores, no quedó nada que la usara.
 function _evHoraFin(e) {
   var min = _EV_DURACION_MIN_POR_TIPO[e.tipo] || 90;
   var p = (e.horaInicio || '00:00').split(':');
@@ -972,52 +983,60 @@ function _evRsvpOpcionesHtml(e) {
     return '<button type="button" class="ev-rsvp-opcion ev-rsvp-opcion-' + _EV_RSVP_CLASE[o] + '" onclick="_evElegirRsvp(this,\'' + e.id + '\',\'' + o + '\')"><span class="material-symbols-outlined">' + _EV_RESP_ICONO[o] + '</span>' + o + '</button>';
   }).join('');
 }
-function _evRsvpBotonHtml(e) {
-  if (e.estado === 'Cancelado' || e.estado === 'No se entrena') return '';
-  if (_evEsPasado(e)) return _evAsistenciaRealHtml(e);
+// `_evRsvpMiniHtml()` (botón+hint, vive en `.ev-card-top-row`, centrado
+// verticalmente contra ícono+título+hora vía `align-items:center` heredado
+// de esa fila) + `_evRsvpExpandHtml()` (el panel de alternativas, a ANCHO
+// COMPLETO, hermano de `.ev-card-top-row` dentro de `.ev-card` -- no un
+// hijo anidado del botón, ver "Cambios recientes" -- corrección de
+// alineación) -- separadas a propósito, `_evCardEventoHtml()` decide cuándo
+// llamar a cada una (nunca para Cancelado/No se entrena/pasado, ver ahí).
+function _evRsvpMiniHtml(e) {
   var estado = e.miEstado;
   var icono = estado ? _EV_RESP_ICONO[estado] : 'help';
   var label = estado || 'Sin respuesta';
   return '<div class="ev-rsvp-mini" data-evid="' + e.id + '" onclick="event.stopPropagation()">' +
-      '<div class="ev-rsvp-mini-row">' +
-        '<button type="button" class="ev-rsvp-boton ' + _evRsvpBotonClase(estado) + '" onclick="_evToggleRsvpExpand(this)"><span class="material-symbols-outlined">' + icono + '</span>' + label + '</button>' +
-      '</div>' +
+      '<button type="button" class="ev-rsvp-boton ' + _evRsvpBotonClase(estado) + '" onclick="_evToggleRsvpExpand(this)"><span class="material-symbols-outlined">' + icono + '</span>' + label + '</button>' +
       '<div class="ev-rsvp-mini-hint">Toca para cambiar</div>' +
-      '<div class="ev-rsvp-expand"><div class="ev-rsvp-expand-inner">' + _evRsvpOpcionesHtml(e) + '</div></div>' +
     '</div>';
+}
+function _evRsvpExpandHtml(e) {
+  return '<div class="ev-rsvp-expand" data-evid="' + e.id + '" onclick="event.stopPropagation()"><div class="ev-rsvp-expand-inner">' + _evRsvpOpcionesHtml(e) + '</div></div>';
 }
 // Acordeón (ver "Cambios recientes"): a lo sumo 1 card con el panel abierto
 // a la vez, mismo criterio ya usado en burbujas de filtro/vista de esta
-// pantalla y en los aj-sub-* de Ajustes -- `_evRsvpExpandidoEl` guarda el
-// `.ev-rsvp-mini` (no solo el id) porque un mismo evento puede tener más de
-// una instancia simultánea en el DOM (Lista tab reusa la card completa con
-// otro sufijo, ver `_evCardEventoHtml(e, sufijo)`) y el toggle debe operar
-// sobre la instancia tocada, no sobre todas.
-var _evRsvpExpandidoEl = null;
+// pantalla y en los aj-sub-* de Ajustes -- `_evRsvpExpandidoCard` guarda el
+// `.ev-card` (no el `.ev-rsvp-mini`, desde que el panel se separó del botón
+// -- ver más arriba -- ni solo el id: un mismo evento puede tener más de
+// una instancia simultánea en el DOM, Lista tab reusa la card completa con
+// otro sufijo) y el toggle debe operar sobre la instancia tocada, no sobre
+// todas.
+var _evRsvpExpandidoCard = null;
 function _evToggleRsvpExpand(btnEl) {
-  var mini = btnEl.closest('.ev-rsvp-mini');
-  if (!mini) return;
-  if (_evRsvpExpandidoEl === mini) { _evColapsarRsvpExpand(mini); return; }
-  if (_evRsvpExpandidoEl) _evColapsarRsvpExpand(_evRsvpExpandidoEl);
-  _evRsvpExpandidoEl = mini;
-  var expand = mini.querySelector('.ev-rsvp-expand');
+  var card = btnEl.closest('.ev-card');
+  if (!card) return;
+  if (_evRsvpExpandidoCard === card) { _evColapsarRsvpExpand(card); return; }
+  if (_evRsvpExpandidoCard) _evColapsarRsvpExpand(_evRsvpExpandidoCard);
+  _evRsvpExpandidoCard = card;
+  var expand = card.querySelector('.ev-rsvp-expand');
   if (expand) expand.classList.add('abierta');
   // "Toca para cambiar" (`.ev-rsvp-mini-hint`, ver "Cambios recientes") solo
   // tiene sentido con el botón colapsado -- se oculta mientras el panel de
-  // alternativas está a la vista, mismo criterio (clase en el wrapper) que
-  // el resto del acordeón.
-  mini.classList.add('ev-rsvp-mini-expandida');
+  // alternativas está a la vista, mismo criterio (clase en `.ev-rsvp-mini`)
+  // que el resto del acordeón.
+  var mini = card.querySelector('.ev-rsvp-mini');
+  if (mini) mini.classList.add('ev-rsvp-mini-expandida');
 }
-function _evColapsarRsvpExpand(mini) {
-  var expand = mini.querySelector('.ev-rsvp-expand');
+function _evColapsarRsvpExpand(card) {
+  var expand = card.querySelector('.ev-rsvp-expand');
   if (expand) expand.classList.remove('abierta');
-  mini.classList.remove('ev-rsvp-mini-expandida');
-  if (_evRsvpExpandidoEl === mini) _evRsvpExpandidoEl = null;
+  var mini = card.querySelector('.ev-rsvp-mini');
+  if (mini) mini.classList.remove('ev-rsvp-mini-expandida');
+  if (_evRsvpExpandidoCard === card) _evRsvpExpandidoCard = null;
 }
 function _evElegirRsvp(btnEl, id, estado) {
-  var mini = btnEl.closest('.ev-rsvp-mini');
+  var card = btnEl.closest('.ev-card');
   _evMarcarAsistencia(id, estado);
-  if (mini) _evColapsarRsvpExpand(mini);
+  if (card) _evColapsarRsvpExpand(card);
 }
 // Posiciona el indicador de UNA barra (offsetLeft/offsetWidth de la opción
 // .activa, mismo mecanismo que _evUpdateSubtabIndicator()/.tp-slider) -- `seg` es
@@ -1081,21 +1100,25 @@ function _evMarcarAsistencia(id, estado) {
     });
     _evPosicionarRsvpSlider(seg, true);
   });
-  // Botón único + panel de las cards (ver "Cambios recientes") -- misma
-  // lógica de "actualizar in-place, no reconstruir" que la barra de arriba,
-  // por el mismo motivo (más de una instancia simultánea del mismo evento
-  // en el DOM, ver `_evRsvpBotonHtml()`). El panel de alternativas se
-  // reconstruye siempre (cambia según el nuevo estado), esté o no expandido
-  // en este momento -- invisible mientras `.ev-rsvp-expand` no tenga
-  // `.abierta`, ver css/eventos.css.
+  // Botón único de las cards (ver "Cambios recientes") -- misma lógica de
+  // "actualizar in-place, no reconstruir" que la barra de arriba, por el
+  // mismo motivo (más de una instancia simultánea del mismo evento en el
+  // DOM, ver `_evRsvpMiniHtml()`).
   document.querySelectorAll('.ev-rsvp-mini[data-evid="' + id + '"]').forEach(function(mini) {
     var boton = mini.querySelector('.ev-rsvp-boton');
     if (boton) {
       boton.className = 'ev-rsvp-boton ' + _evRsvpBotonClase(estado);
       boton.innerHTML = '<span class="material-symbols-outlined">' + _EV_RESP_ICONO[estado] + '</span>' + estado;
     }
-    var inner = mini.querySelector('.ev-rsvp-expand-inner');
-    if (inner) inner.innerHTML = _evRsvpOpcionesHtml(ev);
+  });
+  // Panel de alternativas -- ya NO vive anidado dentro de `.ev-rsvp-mini`
+  // (ver "Cambios recientes" -- corrección de alineación, ahora es hermano
+  // de `.ev-card-top-row`, a ancho completo), así que se busca/actualiza
+  // por su propio `data-evid`. Se reconstruye siempre (cambia según el
+  // nuevo estado), esté o no expandido en este momento -- invisible
+  // mientras `.ev-rsvp-expand` no tenga `.abierta`, ver css/eventos.css.
+  document.querySelectorAll('.ev-rsvp-expand[data-evid="' + id + '"] .ev-rsvp-expand-inner').forEach(function(inner) {
+    inner.innerHTML = _evRsvpOpcionesHtml(ev);
   });
 }
 
@@ -1173,11 +1196,19 @@ function _evCardCumpleHtml(c) {
   var texto = (c.edadPublica && c.edad) ? ('cumple ' + c.edad + ' años') : 'Hoy cumple';
   var nombreAttr = c.nombre.replace(/"/g, '&quot;');
   var fotoAttr = (c.fotoPerfil || '').replace(/"/g, '&quot;');
+  // `.ev-card-top-row` (ver "Cambios recientes" -- corrección de alineación
+  // del RSVP de eventos, reusada tal cual acá): antes esta fila (avatar+
+  // body) era `.ev-card` mismo (`display:flex`); sin RSVP ni panel
+  // expandido, el cambio es puramente estructural, sin efecto visual --
+  // `.ev-confetti-host` (`position:absolute`) sigue como hijo directo de
+  // `.ev-card` (necesita `.ev-card-cumple{position:relative}`, sin tocar).
   return '<div class="ev-card ev-card-cumple">' +
-    '<div class="avatar-pill ev-card-cumple-avatar" data-nombre="' + nombreAttr + '" data-foto="' + fotoAttr + '"></div>' +
-    '<div class="ev-card-body">' +
-      '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline">cake</span><div class="ev-card-titulo">Cumpleaños de ' + c.nombre + '</div></div>' +
-      '<div class="ev-card-sub">' + texto + '</div>' +
+    '<div class="ev-card-top-row">' +
+      '<div class="avatar-pill ev-card-cumple-avatar" data-nombre="' + nombreAttr + '" data-foto="' + fotoAttr + '"></div>' +
+      '<div class="ev-card-body">' +
+        '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline">cake</span><div class="ev-card-titulo">Cumpleaños de ' + c.nombre + '</div></div>' +
+        '<div class="ev-card-sub">' + texto + '</div>' +
+      '</div>' +
     '</div>' +
     '<div class="ev-confetti-host" id="ev-confetti-' + c.id + '" style="position:absolute;inset:0;pointer-events:none;"></div>' +
   '</div>';
@@ -1754,8 +1785,28 @@ function _evRenderDetalle(ev) {
   var info = document.getElementById('ev-detalle-info');
   if (info) info.innerHTML = _evDetalleInfoHtml(ev);
   var rsvpCont = document.getElementById('ev-detalle-rsvp');
-  if (rsvpCont) { rsvpCont.innerHTML = _evRsvpBarraHtml(ev); _evUpdateRsvpSliders(false); }
+  // `_evRsvpBarraHtml(ev)` devuelve '' (falsy) para Cancelado/No se entrena
+  // (mismo guard que `_evRsvpBotonHtml()`, ver ese comentario) -- antes esta
+  // pantalla se quedaba con la sección de RSVP vacía en esos 2 casos, sin
+  // ningún indicador de por qué. `_evDetalleEstadoNotaHtml()` (ver "Cambios
+  // recientes") llena ese hueco reusando el mismo texto/color que ya
+  // muestra la card (`.ev-card-estado-nota`/`.badge-cancelada`) -- para un
+  // evento normal, `_evRsvpBarraHtml(ev)` siempre gana (truthy), el fallback
+  // nunca se evalúa.
+  if (rsvpCont) { rsvpCont.innerHTML = _evRsvpBarraHtml(ev) || _evDetalleEstadoNotaHtml(ev); _evUpdateRsvpSliders(false); }
   _evRenderDetalleAsistencia(ev);
+}
+// Mismo texto/clase que `.ev-card-estado-nota`/`.badge.badge-cancelada` ya
+// usa `_evCardEventoHtml()` para el mismo estado -- reuso literal, no una
+// paleta nueva (ver "Cambios recientes"). `.ev-detalle-estado-nota-wrap`
+// (css/eventos.css) es el único agregado propio, solo centra el contenido
+// dentro de `#ev-detalle-rsvp` (contexto de sección a ancho completo,
+// distinto del layout en fila de la card -- las clases reusadas en sí no
+// se tocan).
+function _evDetalleEstadoNotaHtml(e) {
+  if (e.estado === 'Cancelado') return '<div class="ev-detalle-estado-nota-wrap"><div class="ev-card-estado-nota">Cancelado</div></div>';
+  if (e.estado === 'No se entrena') return '<div class="ev-detalle-estado-nota-wrap"><span class="badge badge-cancelada">No se entrena</span></div>';
+  return '';
 }
 // Nav compacta sticky (ver "Cambios recientes" -- reemplaza el #top-bar
 // genérico para esta pantalla, ver TOP_BAR_CONFIG/js/ui.js): flecha atrás
@@ -1776,16 +1827,17 @@ function _evDetalleStickyHtml(ev) {
       '</div>' +
     '</div>';
 }
-// Las 4 pills juntas -- Ubicación/Inicio/Fin/Duración, ver "Cambios
-// recientes" -- corrección de orden + fusión: antes Inicio/Lugar/"Cómo
-// llegar"/Fin/Duración, 5 pills con el link a Maps viviendo aparte de
-// Lugar. Ahora Ubicación (`.fi-pill-lugar`) ES el link clickeable (mismo
+// Las 3 pills juntas -- Ubicación/Inicio/Fin, ver "Cambios recientes" --
+// corrección de orden + fusión + recorte: antes Inicio/Lugar/"Cómo
+// llegar"/Fin/Duración (5 pills, con el link a Maps viviendo aparte de
+// Lugar). Ahora Ubicación (`.fi-pill-lugar`) ES el link clickeable (mismo
 // patrón `<a href="mapsUrl">` que antes usaba solo "Cómo llegar", fusionado
 // acá en vez de vivir aparte -- sin mapsUrl, cae a `<span>` no clickeable,
-// mismo criterio de siempre) -- CERO clases `.ev-detalle-pill*` propias
-// (reuso LITERAL de `.fi-pill*`/`.fi-pills`, css/reservas.css, mismas
-// clases que usa el panel "Más información" de Reservas). Todas acá, afuera
-// del sticky, scrollean con el resto del contenido.
+// mismo criterio de siempre), y la pill de Duración se saca del todo
+// (redundante con Inicio+Fin, ya visibles) -- CERO clases `.ev-detalle-pill*`
+// propias (reuso LITERAL de `.fi-pill*`/`.fi-pills`, css/reservas.css,
+// mismas clases que usa el panel "Más información" de Reservas). Todas acá,
+// afuera del sticky, scrollean con el resto del contenido.
 function _evDetalleInfoHtml(ev) {
   var desc = _EV_DESCRIPCION_POR_TIPO[ev.tipo];
   var mapsUrl = _EV_MAPS_URL_POR_LUGAR[ev.lugar];
@@ -1795,7 +1847,6 @@ function _evDetalleInfoHtml(ev) {
         : '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</span>') +
       '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + ev.horaInicio + 'hs</span>' +
       '<span class="fi-pill fi-pill-fin"><span class="material-symbols-outlined">schedule</span>Fin ' + _evHoraFin(ev) + 'hs</span>' +
-      '<span class="fi-pill fi-pill-dur"><span class="material-symbols-outlined">timer</span>' + _evDuracionTexto(ev) + '</span>' +
     '</div>' +
     (desc ? '<p class="ev-detalle-desc">' + desc + '</p>' : '');
 }
