@@ -72,10 +72,12 @@
 
 /* ── Panel de calendario -- swipe-first, sin chevrones/borde/título repetido
    (ver "Cambios recientes" -- rediseño completo de la navegación de
-   Calendario). `#ev-cal-contenido` alterna entre grilla mensual y franja
-   semanal (`_evCalExpandido`, js/eventos.js) vía fade + snap de contenido
-   (nunca animación de alto -- el techo del `.ev-header-burbuja` exterior se
-   re-mide en cada cambio, ver `_evCalActualizarMaxHeightExterior()`).
+   Calendario). `#ev-cal-contenido` SIEMPRE muestra la grilla mensual
+   completa (ver "Cambios recientes" -- se elimina el estado intermedio de
+   franja semanal compacta que existía antes; solo expandido/cerrado, ver
+   `_evCalVisible` en js/eventos.js) vía fade + snap de contenido al cambiar
+   de mes (nunca animación de alto -- el techo del `.ev-header-burbuja`
+   exterior se re-mide en cada cambio, ver `_evCalActualizarMaxHeightExterior()`).
    `padding-top` separa el contenido del renglón de íconos de arriba, sin el
    marco/borde que tenía antes (`.ev-header-burbuja-panel` ya NO se usa acá,
    ver index.html). ────────────────────────────────────────────────────── */
@@ -98,22 +100,6 @@
    mes en mes). */
 .ev-cal-celda.ev-dia-hoy .ev-cal-num { outline: 1.5px solid var(--brand); outline-offset: 1.5px; color: var(--brand); font-weight: 800; }
 .ev-cal-dots { display: flex; gap: 3px; height: 6px; align-items: center; }
-/* Franja semanal compacta (ver "Cambios recientes" -- mismo componente que
-   existía antes de unificar las vistas, ahora es el estado COLAPSADO del
-   panel de calendario en vez de una vista aparte). */
-.ev-cal-semana-row { display: flex; justify-content: space-between; gap: 3px; }
-.ev-dia {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
-  padding: 4px 2px 8px; border-radius: 12px; cursor: pointer; user-select: none;
-}
-.ev-dia-nombre { font-size: 0.62rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
-.ev-dia-num {
-  width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center;
-  justify-content: center; font-size: 0.85rem; font-weight: 700; color: var(--text);
-  transition: background 0.15s, color 0.15s;
-}
-.ev-dia.ev-dia-hoy .ev-dia-num { background: var(--brand); color: var(--white); }
-.ev-dia-dots { display: flex; gap: 3px; height: 6px; align-items: center; }
 /* Selector horizontal de mes/año en pills (ver "Cambios recientes" -- ahora
    TODOS los 12 meses de una ventana de 2 años alrededor de hoy, no solo los
    que tienen eventos, reusa literal `.historial-pill` de css/home.css,
@@ -159,6 +145,11 @@
   background: var(--surface-2); border: 1.5px solid var(--border-light); border-radius: 14px;
 }
 .ev-lista-vacia .material-symbols-outlined { font-size: 2.2rem; display: block; margin-bottom: 8px; color: var(--brand); }
+/* Separador HOY/MAÑANA/PRÓXIMA SEMANA (ver "Cambios recientes" -- restaurado,
+   mismo componente que existía antes de unificar las vistas del timeline). */
+.ev-hoy-separador { display: flex; align-items: center; gap: 10px; margin: 4px 0 14px; }
+.ev-hoy-separador::before, .ev-hoy-separador::after { content: ''; flex: 1; height: 1.5px; background: var(--border-light); }
+.ev-hoy-separador span { font-size: 0.72rem; font-weight: 800; color: var(--brand); text-transform: uppercase; letter-spacing: 1px; }
 
 /* ── Card de evento ───────────────────────────────────── */
 .ev-card {

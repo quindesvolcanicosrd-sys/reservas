@@ -93,24 +93,38 @@ var _EV_RSVP_CLASE = { 'Asistiré': 'asistire', 'No asistiré': 'no-asistire', '
 
 // Estado de la cabecera fija. `_evPanelAbierto` ('filtros'|'busqueda'|null)
 // -- filtros/búsqueda comparten el mecanismo genérico de burbuja (una sola a
-// la vez, ver `_evTogglePanel()`); el calendario (`_evCalVisible`/
-// `_evCalExpandido`) es un mecanismo aparte (ver "Cambios recientes" --
-// rediseño de navegación de Calendario, swipe-first): `_evCalVisible` es si
-// el panel de calendario se muestra del todo (SOLO lo togglea el chevron/
-// label de la nav, `_evToggleMesPanel()`); `_evCalExpandido` es, mientras
-// está visible, si muestra la grilla del mes completo o la franja semanal
-// compacta -- gobernado por el scroll del timeline (`_evActualizarNavMesPorScroll()`,
-// empuja el timeline al cambiar, nunca overlay) y forzado a `false` al tocar
-// un día puntual. `_evCalFechaMostrada` (iso) es la única fuente de verdad de
-// qué mes/semana se ve -- swipe/tap la cambian directo y re-renderizan
-// sincrónico (no dependen de un scroll-listener async, ver "Cambios
-// recientes" -- necesario para que swipes rápidos sucesivos, sin esperar la
-// animación, terminen en un estado consistente). `_evNavMesActual` es el mes
-// que el LABEL de la nav muestra, sincronizado por el mismo scroll-tracker.
+// la vez, ver `_evTogglePanel()`); el calendario (`_evCalVisible`) es un
+// mecanismo aparte (ver "Cambios recientes" -- rediseño de navegación de
+// Calendario, swipe-first). SOLO 2 estados, no 3 (ver "Cambios recientes" --
+// se elimina la franja semanal compacta que existía antes como estado
+// intermedio): `_evCalVisible` es si el panel de calendario se muestra del
+// todo, SIEMPRE con la grilla del mes completo -- lo togglea el chevron/
+// label de la nav (`_evToggleMesPanel()`), un swipe hacia abajo sobre el
+// panel, o tocar una pill/swipe horizontal de mes (que además lo fuerza a
+// visible). Sin estado intermedio ya no hace falta resolver el conflicto
+// swipe-horizontal-de-mes vs. scroll-vertical-de-página con 3 estados
+// distintos -- tocar un día NUNCA cambia el calendario, solo scrollea el
+// timeline. `_evCalFechaMostrada` (iso) es la única fuente de verdad de qué
+// mes se ve -- swipe/tap la cambian directo y re-renderizan sincrónico (no
+// dependen de un scroll-listener async, ver "Cambios recientes" -- necesario
+// para que swipes rápidos sucesivos, sin esperar la animación, terminen en
+// un estado consistente). `_evNavMesActual` es el mes que el LABEL de la nav
+// muestra, normalmente sincronizado por el scroll del timeline
+// (`_evActualizarNavMesPorScroll()`) pero fijado DIRECTO por cualquier
+// acción explícita del calendario (pill/swipe/abrir) vía
+// `_evSincronizarNavMesDesde()`. `_evCalUltimaAccionTs` (ver "Cambios
+// recientes" -- bug real de Playwright: la pill de mes no actualizaba el
+// label) evita que el scroll-listener pise ese valor recién fijado: al
+// saltar a un mes lejano sin contenido propio, `_evScrollAFecha()` cae al
+// grupo real más cercano (otro mes), y el evento de scroll que dispara
+// dejaba a `_evActualizarNavMesPorScroll()` "corrigiendo" el label de
+// vuelta a ese mes ajeno una fracción de segundo después -- por eso la
+// resincronización por scroll se salta entera (no solo el toggle de
+// expandido/colapsado que existía antes) durante los 500ms siguientes a
+// cualquier acción explícita.
 var _evPanelAbierto = null;
 var _evNavMesActual = null;
 var _evCalVisible = false;
-var _evCalExpandido = true;
 var _evCalFechaMostrada = null;
 var _evCalUltimaAccionTs = 0;
 
@@ -187,8 +201,8 @@ function irEventos() {
   _evPanelAbierto = null;
   _evNavMesActual = null;
   _evCalVisible = false;
-  _evCalExpandido = true;
   _evCalFechaMostrada = null;
+  _evCalUltimaAccionTs = 0;
   var mesPanel = document.getElementById('ev-mes-panel');
   if (mesPanel) { mesPanel.classList.remove('abierta'); mesPanel.style.maxHeight = '0px'; }
   var navMesLabel = document.getElementById('ev-nav-mes-label');
@@ -339,14 +353,13 @@ function _evFadeSwap(el, pintar, instant) {
 
 /* ── Panel de calendario -- swipe-first (ver "Cambios recientes": rediseño
    completo de la navegación de Calendario). `_evCalFechaMostrada` (iso) es
-   la única fuente de verdad de qué mes/semana se ve -- mes mostrado =
-   mes de esa fecha; semana mostrada = semana (lun-dom) que la contiene.
-   Swipe/tap la cambian directo y re-renderizan sincrónico, SIN esperar a
-   que el scroll del timeline "confirme" nada (evita inconsistencias con
-   swipes rápidos sucesivos). El scroll del timeline sigue siendo la fuente
-   de verdad para decidir expandido/colapsado y para RESINCRONIZAR
-   `_evCalFechaMostrada` cuando el usuario scrollea manualmente (no cuando el
-   propio swipe/tap ya la fijó), ver `_evActualizarNavMesPorScroll()`. */
+   la única fuente de verdad de qué mes se ve -- mes mostrado = mes de esa
+   fecha. Swipe/tap la cambian directo y re-renderizan sincrónico, SIN
+   esperar a que el scroll del timeline "confirme" nada (evita
+   inconsistencias con swipes rápidos sucesivos). Sin estado de semana (ver
+   "Cambios recientes" -- eliminado), el scroll del timeline YA NO gobierna
+   nada del calendario en sí -- solo sigue sincronizando el label de mes de
+   la nav de forma pasiva, ver `_evActualizarNavMesPorScroll()`. */
 // Sincroniza el label de mes de la nav DIRECTO desde una fecha del
 // calendario (swipe/tap/pill) -- ver "Cambios recientes", bug real
 // encontrado con Playwright: depender solo del scroll-listener pasivo
@@ -364,7 +377,6 @@ function _evSincronizarNavMesDesde(iso, instant) {
 }
 function _evAbrirCalendario() {
   _evCalVisible = true;
-  _evCalExpandido = true;
   _evCalUltimaAccionTs = Date.now();
   var base = _evNavMesActual ? _evToISO(new Date(_evNavMesActual.year, _evNavMesActual.month, 1)) : _evHoyISO();
   _evCalFechaMostrada = base;
@@ -400,7 +412,7 @@ function _evActualizarNavMesChevron() {
 }
 function _evCalMesDe(iso) { var d = _evParseISO(iso); return { year: d.getFullYear(), month: d.getMonth() }; }
 // Techo del panel exterior -- se recalcula tras CUALQUIER cambio de
-// contenido (mes↔semana, u otro mes con 5 vs. 6 semanas) para que nunca
+// contenido (ej. otro mes con 5 vs. 6 semanas en la grilla) para que nunca
 // recorte contenido más alto que el que tenía la última vez que se fijó
 // (ver "Cambios recientes" -- mismo criterio que `_evToggleFiltroBurbuja()`
 // relajando el panel padre). `instant` (sin transición + reflow forzado,
@@ -427,8 +439,7 @@ function _evCalRenderContenido(instant) {
   var cont = document.getElementById('ev-cal-contenido');
   if (!cont) return;
   _evFadeSwap(cont, function() {
-    if (_evCalExpandido) _evCalRenderMes(cont, _evCalFechaMostrada);
-    else _evCalRenderSemana(cont, _evCalFechaMostrada);
+    _evCalRenderMes(cont, _evCalFechaMostrada);
     _evCalActualizarMaxHeightExterior(true);
   }, instant);
 }
@@ -463,67 +474,38 @@ function _evCalRenderMes(cont, iso) {
   }
   cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>';
 }
-// Franja semanal compacta -- mismo componente que existía antes de unificar
-// las vistas (ver "Cambios recientes", punto 5/6 del rediseño), ahora es el
-// estado COLAPSADO del mismo panel de calendario (no una vista aparte).
-function _evCalRenderSemana(cont, iso) {
-  var lunes = _evLunesDeSemana(_evParseISO(iso));
-  var hoy = _evHoyISO();
-  var html = '';
-  for (var i = 0; i < 7; i++) {
-    var d = new Date(lunes.getFullYear(), lunes.getMonth(), lunes.getDate() + i);
-    var diaIso = _evToISO(d);
-    var esHoy = diaIso === hoy;
-    var tieneEv = _evEventosDeFecha(diaIso).length > 0;
-    var tieneCumple = _evCumpleDeFecha(diaIso).length > 0;
-    html += '<div class="ev-dia' + (esHoy ? ' ev-dia-hoy' : '') + '" onclick="_evCalTocarDia(\'' + diaIso + '\')">' +
-      '<div class="ev-dia-nombre">' + _EV_DIAS_CORTOS[i] + '</div>' +
-      '<div class="ev-dia-num">' + d.getDate() + '</div>' +
-      '<div class="ev-dia-dots">' +
-        (tieneEv ? '<span class="ev-dot"></span>' : '') +
-        (tieneCumple ? '<span class="ev-dot-cumple"></span>' : '') +
-      '</div>' +
-    '</div>';
-  }
-  cont.innerHTML = '<div class="ev-cal-semana-row">' + html + '</div>';
-}
-// Tocar un día puntual -- SIEMPRE colapsa a semana (nunca cierra el
-// calendario, ver "Cambios recientes", punto 5 del rediseño) + scrollea el
-// timeline hasta esa fecha exacta. Tocarlo estando ya en semana simplemente
-// re-centra en la semana de ese día (no-op si ya era la misma).
+// Tocar un día puntual -- el calendario NUNCA cambia por esto (ver "Cambios
+// recientes": se elimina el colapso a franja semanal que existía antes),
+// solo scrollea el timeline hasta esa fecha exacta y lo deja tal cual
+// estaba (mes completo, sin re-render ni recalcular el label de la nav --
+// eso lo termina sincronizando el scroll mismo, `_evActualizarNavMesPorScroll()`,
+// como cualquier scroll manual del timeline).
 function _evCalTocarDia(iso) {
-  _evCalUltimaAccionTs = Date.now();
-  _evCalFechaMostrada = iso;
-  _evCalExpandido = false;
-  _evSincronizarNavMesDesde(iso);
-  _evCalRenderContenido();
-  _evCalRenderPills();
-  _evScrollAFecha(iso, true);
+  _evScrollAFecha(iso);
 }
-// Swipe horizontal sobre el panel (grilla o franja, mismo contenedor
-// `#ev-cal-contenido` -- listeners únicos, no hace falta re-adjuntar por
-// render) -- único mecanismo de navegación de mes/semana (ver "Cambios
-// recientes", punto 2 del rediseño: sin botones ‹/› en ningún estado).
-// Expandido: ±1 mes, salta al día 1 (punto 4). Colapsado: ±7 días desde la
-// fecha mostrada -- si eso cruza a otro mes, el label de la nav se actualiza
-// igual (mismo mecanismo único de abajo), sin necesitar un caso especial.
+// Swipe horizontal sobre la grilla -- único mecanismo de navegación de mes
+// (ver "Cambios recientes", punto 2 del rediseño original: sin botones ‹/›)
+// -- ±1 mes, siempre salta al día 1. Ya no hay branch de semana (ver
+// "Cambios recientes" -- eliminada).
 function _evCalMoverSwipe(dir) {
   _evCalUltimaAccionTs = Date.now();
-  var nuevaFecha;
-  if (_evCalExpandido) {
-    var m = _evCalMesDe(_evCalFechaMostrada);
-    var year = m.year, month = m.month + dir;
-    if (month < 0) { month = 11; year--; } else if (month > 11) { month = 0; year++; }
-    nuevaFecha = _evToISO(new Date(year, month, 1));
-  } else {
-    nuevaFecha = _evSumarDias(_evCalFechaMostrada, dir * 7);
-  }
+  var m = _evCalMesDe(_evCalFechaMostrada);
+  var year = m.year, month = m.month + dir;
+  if (month < 0) { month = 11; year--; } else if (month > 11) { month = 0; year++; }
+  var nuevaFecha = _evToISO(new Date(year, month, 1));
   _evCalFechaMostrada = nuevaFecha;
   _evSincronizarNavMesDesde(nuevaFecha);
   _evCalRenderContenido();
   _evCalRenderPills();
-  _evScrollAFecha(nuevaFecha, true);
+  _evCalIrAFechaEnTimeline(nuevaFecha, true);
 }
+// Swipe sobre el panel (`#ev-cal-contenido` -- listeners únicos, no hace
+// falta re-adjuntar por render): horizontal cambia de mes, vertical hacia
+// ABAJO cierra el calendario del todo (ver "Cambios recientes", reemplaza el
+// colapso a franja semanal que tenía antes esta misma dirección de swipe --
+// con solo 2 estados ya no hace falta un 3er gesto). Sin `touchmove` (mismo
+// criterio liviano de siempre en este archivo: solo delta inicio/fin, sin
+// drag en vivo ni velocidad).
 var _EV_CAL_SWIPE_UMBRAL = 45;
 var _evCalSwipeStartX = 0, _evCalSwipeStartY = 0, _evCalSwipeActivo = false;
 function _evInicializarSwipeCalendario() {
@@ -541,8 +523,11 @@ function _evInicializarSwipeCalendario() {
     var t = e.changedTouches[0];
     var dx = t.clientX - _evCalSwipeStartX;
     var dy = t.clientY - _evCalSwipeStartY;
-    if (Math.abs(dx) < _EV_CAL_SWIPE_UMBRAL || Math.abs(dx) < Math.abs(dy)) return;
-    _evCalMoverSwipe(dx < 0 ? 1 : -1);
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (Math.abs(dx) >= _EV_CAL_SWIPE_UMBRAL) _evCalMoverSwipe(dx < 0 ? 1 : -1);
+    } else if (dy >= _EV_CAL_SWIPE_UMBRAL) {
+      _evCerrarCalendario();
+    }
   }, { passive: true });
 }
 _evInicializarSwipeCalendario();
@@ -552,8 +537,13 @@ _evInicializarSwipeCalendario();
    solo los que tienen eventos -- con un corte visual de año en vez de
    repetir el año en cada pill, mismo criterio que Google Calendar). Reusa
    literal `.historial-pill` (mismo componente que el selector de año de Mis
-   Reservas, `js/home.js`). Tocar una pill fuerza modo mes (expandido) y
-   salta al día 1 de ese mes -- mismo comportamiento que un swipe de mes. */
+   Reservas, `js/home.js`). Tocar una pill salta al día 1 de ese mes -- mismo
+   comportamiento que un swipe de mes, mismo llamado a
+   `_evSincronizarNavMesDesde()` para que el label de la nav quede
+   consistente sin importar el camino (ver "Cambios recientes" -- bug real
+   de Playwright: el label no se actualizaba al tocar una pill de un mes
+   lejano sin contenido propio, corregido en `_evActualizarNavMesPorScroll()`,
+   no acá -- este handler siempre lo hizo bien). */
 var _EV_MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 function _evGenerarOpcionesMesPill() {
   var hoy = new Date();
@@ -585,32 +575,24 @@ function _evCalRenderPills() {
 function _evCalTocarPillMes(year, month) {
   _evCalUltimaAccionTs = Date.now();
   _evCalFechaMostrada = _evToISO(new Date(year, month, 1));
-  _evCalExpandido = true;
   _evSincronizarNavMesDesde(_evCalFechaMostrada);
   _evCalRenderContenido();
   _evCalRenderPills();
-  _evScrollAFecha(_evCalFechaMostrada, true);
+  _evCalIrAFechaEnTimeline(_evCalFechaMostrada, true);
 }
 
-/* ── Label de mes de la nav + expand/collapse del calendario -- ambos
-   gobernados por el MISMO scroll del timeline (ver "Cambios recientes",
-   rediseño de navegación de Calendario -- punto 6: "expand/collapse es por
-   scroll", y el label de mes ya se sincronizaba así desde el rediseño
-   anterior). Sin `IntersectionObserver` -- mismo patrón ya usado en el
-   resto de este archivo: listener de scroll a nivel de módulo +
-   `getBoundingClientRect()`. `_evCalUltimaAccionTs` (ver arriba) evita que
-   el eco de scroll de un swipe/tap recién hecho (el `scrollIntoView`
-   instantáneo de `_evScrollAFecha()`) pelee con una decisión de
-   expand/collapse ya forzada explícitamente (ej. tocar un día SIEMPRE
-   colapsa a semana, aunque el resultado quede con poco scroll). */
-function _evFechaVisibleActual() {
-  var grupos = document.querySelectorAll('.ev-fecha-grupo');
-  if (!grupos.length) return null;
-  var margenSup = 90;
-  var actual = grupos[0];
-  grupos.forEach(function(g) { if (g.getBoundingClientRect().top <= margenSup) actual = g; });
-  return actual.getAttribute('data-iso');
-}
+/* ── Label de mes de la nav, sincronizado por el scroll del timeline (ver
+   "Cambios recientes" -- desde el rediseño de navegación de Calendario). Sin
+   `IntersectionObserver` -- mismo patrón ya usado en el resto de este
+   archivo: listener de scroll a nivel de módulo + `getBoundingClientRect()`.
+   `_evCalUltimaAccionTs` (ver arriba) evita que el eco de scroll de un
+   swipe/tap/pill recién hecho (el `scrollIntoView` instantáneo de
+   `_evScrollAFecha()`) pise el label que esa misma acción ya fijó
+   directo vía `_evSincronizarNavMesDesde()` -- bug real encontrado con
+   Playwright: al saltar a un mes sin contenido propio, `_evScrollAFecha()`
+   cae al grupo real más cercano (de OTRO mes), y sin este guard el evento de
+   scroll que dispara terminaba corrigiendo el label de vuelta a ese mes
+   ajeno una fracción de segundo después. */
 function _evActualizarNavMesLabel(instant) {
   var span = document.getElementById('ev-nav-mes-texto');
   if (!span || !_evNavMesActual) return;
@@ -621,30 +603,18 @@ function _evActualizarNavMesLabel(instant) {
 function _evActualizarNavMesPorScroll() {
   var pantalla = document.getElementById('s-eventos');
   if (!pantalla || !pantalla.classList.contains('activa')) return;
-  var headers = document.querySelectorAll('.ev-mes-header');
-  if (headers.length) {
-    var margenSup = 90;
-    var actual = headers[0];
-    headers.forEach(function(h) { if (h.getBoundingClientRect().top <= margenSup) actual = h; });
-    var year = +actual.getAttribute('data-anio'), month = +actual.getAttribute('data-mes');
-    if (!_evNavMesActual || _evNavMesActual.year !== year || _evNavMesActual.month !== month) {
-      var esPrimera = !_evNavMesActual;
-      _evNavMesActual = { year: year, month: month };
-      _evActualizarNavMesLabel(esPrimera);
-    }
-  }
-
-  if (!_evCalVisible) return;
   if (Date.now() - _evCalUltimaAccionTs < 500) return;
-
-  var hayContenidoDeSobra = document.documentElement.scrollHeight > window.innerHeight + 380;
-  var deberiaExpandir = !hayContenidoDeSobra || window.scrollY <= 40;
-  var visible = _evFechaVisibleActual();
-  var cambioExpand = deberiaExpandir !== _evCalExpandido;
-  var cambioFecha = visible && visible !== _evCalFechaMostrada;
-  if (cambioExpand) _evCalExpandido = deberiaExpandir;
-  if (cambioFecha) _evCalFechaMostrada = visible;
-  if (cambioExpand || cambioFecha) { _evCalRenderContenido(); _evCalRenderPills(); }
+  var headers = document.querySelectorAll('.ev-mes-header');
+  if (!headers.length) return;
+  var margenSup = 90;
+  var actual = headers[0];
+  headers.forEach(function(h) { if (h.getBoundingClientRect().top <= margenSup) actual = h; });
+  var year = +actual.getAttribute('data-anio'), month = +actual.getAttribute('data-mes');
+  if (!_evNavMesActual || _evNavMesActual.year !== year || _evNavMesActual.month !== month) {
+    var esPrimera = !_evNavMesActual;
+    _evNavMesActual = { year: year, month: month };
+    _evActualizarNavMesLabel(esPrimera);
+  }
 }
 window.addEventListener('scroll', _evActualizarNavMesPorScroll, { passive: true });
 // Ícono "hoy" -- scrollea el timeline hasta la fecha actual (o la fecha más
@@ -720,6 +690,30 @@ function _evFechaGrupoMasCercano(iso) {
     if (diff < mejorDiff) { mejorDiff = diff; mejor = g; }
   });
   return mejor;
+}
+// Puente entre "el calendario saltó a este mes" (swipe/pill) y el timeline
+// -- si el mes de `iso` no tiene NINGÚN evento/cumpleaños propio (ver
+// "Cambios recientes" -- pedido explícito), `_evScrollAFecha()` caería al
+// grupo real más cercano en OTRO mes sin ninguna explicación visible, así
+// que acá se corta antes: se reemplaza el timeline por el mismo aviso vacío
+// que ya usa el resto de la app (`.ev-lista-vacia`) en vez de scrollear a
+// contenido ajeno. Si el mes SÍ tiene contenido pero el timeline está
+// mostrando ese aviso de una navegación previa, se re-pinta completo antes
+// de scrollear (chequeo barato: 0 `.ev-fecha-grupo` en el DOM = timeline no
+// está en su estado normal).
+function _evCalIrAFechaEnTimeline(iso, instant) {
+  var m = _evCalMesDe(iso);
+  var hayContenido = _evTimelineItems().some(function(it) {
+    var d = _evParseISO(it.fecha);
+    return d.getFullYear() === m.year && d.getMonth() === m.month;
+  });
+  var cont = document.getElementById('ev-timeline');
+  if (!hayContenido) {
+    if (cont) cont.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">event_busy</span>No hay eventos este mes.</div>';
+    return;
+  }
+  if (cont && !cont.querySelector('.ev-fecha-grupo')) _evRenderTimeline();
+  _evScrollAFecha(iso, instant);
 }
 
 // Pill de estado (Cancelado/No se entrena, ver "Cambios recientes") -- ancho
@@ -1325,7 +1319,39 @@ function _evTimelineFilaHtml(e) {
 // vieja "Todos", acá NO se fuerza un renglón para "hoy" si no tiene eventos
 // propios (decisión confirmada: si hoy está vacío, el timeline simplemente
 // sigue hasta la fecha real más próxima con contenido).
-function _evRenderTimeline() {
+// Bucket relativo de una fecha futura para los separadores del timeline (ver
+// "Cambios recientes" -- restaurados, existían antes de unificar las vistas
+// en un único timeline). Reusa `_formatarFechaRelativa()` (js/home.js, ya
+// usada por las cards de "Nueva Reserva" para "Mañana"/"Este Sábado") en vez
+// de reimplementar ese cálculo de días acá: se le arma el mismo formato de
+// entrada que espera ("DD de MES") y se interpreta su resultado. Solo 2
+// buckets a propósito -- MAÑANA y PRÓXIMA SEMANA (pedido explícito, ver
+// "Cambios recientes"; la versión vieja pre-unificación también tenía
+// "PASADO MAÑANA", no restaurado acá) -- el resto de días de esta semana no
+// llevan separador propio.
+function _evBucketRelativo(iso) {
+  var d = _evParseISO(iso);
+  var label = _formatarFechaRelativa(d.getDate() + ' de ' + NOMBRES_MESES[d.getMonth()]);
+  if (label === 'Mañana') return 'MAÑANA';
+  return _evEsProximaSemana(iso) ? 'PRÓXIMA SEMANA' : null;
+}
+// "Próxima semana" = bloque Lunes-Domingo siguiente a la semana actual
+// (pedido explícito, semana empieza en lunes) -- la semana actual termina en
+// el domingo que viene inclusive, mismo cálculo que `_formatarFechaRelativa()`
+// (js/home.js: getDay() 0=domingo).
+function _evEsProximaSemana(iso) {
+  var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  var diasHastaFinDeSemana = (7 - hoy.getDay()) % 7;
+  var inicioProxima = new Date(hoy); inicioProxima.setDate(inicioProxima.getDate() + diasHastaFinDeSemana + 1);
+  var finProxima = new Date(inicioProxima); finProxima.setDate(finProxima.getDate() + 6);
+  var d = _evParseISO(iso);
+  return d >= inicioProxima && d <= finProxima;
+}
+// Filtrado + orden compartido por el render real (`_evRenderTimeline()`) y
+// por el chequeo de "¿el mes X tiene contenido?" (`_evCalIrAFechaEnTimeline()`)
+// -- un solo lugar con la lógica de filtros/búsqueda, no 2 implementaciones
+// paralelas que puedan desincronizarse.
+function _evTimelineItems() {
   var items = [];
   _EV_EVENTOS.filter(function(e) { return _evPasaFiltroLugarTipo(e.lugar, e.tipo) && _evPasaBusqueda(e.lugar + ' ' + e.tipo); })
     .forEach(function(e) { items.push({ fecha: e.fecha, orden: e.horaInicio || '00:00', tipo: 'evento', data: e }); });
@@ -1335,6 +1361,10 @@ function _evRenderTimeline() {
     var c = _evFechaCmp(a.fecha, b.fecha);
     return c !== 0 ? c : (a.orden < b.orden ? -1 : a.orden > b.orden ? 1 : 0);
   });
+  return items;
+}
+function _evRenderTimeline() {
+  var items = _evTimelineItems();
 
   var cont = document.getElementById('ev-timeline');
   if (!cont) return;
@@ -1349,6 +1379,15 @@ function _evRenderTimeline() {
   });
   var hoy = _evHoyISO();
   var mesAnterior = null, html = '';
+  // Separadores HOY/MAÑANA/PRÓXIMA SEMANA (ver "Cambios recientes" --
+  // restaurados) -- HOY siempre se muestra, marca el punto cronológico exacto
+  // donde el timeline cruza de pasado a futuro (aunque nada caiga justo hoy,
+  // por eso NO es un `else if` del chequeo de bucket de abajo: una fecha
+  // puede disparar los 2 separadores a la vez, ej. si el primer grupo futuro
+  // es directamente mañana). MAÑANA/PRÓXIMA SEMANA son condicionales -- solo
+  // aparecen si ese bucket realmente tiene contenido, por eso se registran en
+  // `bucketsMostrados` recién cuando efectivamente se inserta uno.
+  var insertadoHoy = false, bucketsMostrados = {};
   ordenFechas.forEach(function(fecha) {
     var d = _evParseISO(fecha);
     var mesKey = d.getFullYear() + '-' + d.getMonth();
@@ -1360,6 +1399,17 @@ function _evRenderTimeline() {
     if (mesKey !== mesAnterior) {
       mesAnterior = mesKey;
       html += '<div class="ev-mes-header" data-anio="' + d.getFullYear() + '" data-mes="' + d.getMonth() + '">' + NOMBRES_MESES[d.getMonth()].toUpperCase() + ' ' + d.getFullYear() + '</div>';
+    }
+    if (!insertadoHoy && _evFechaCmp(fecha, hoy) >= 0) {
+      html += '<div class="ev-hoy-separador"><span>HOY</span></div>';
+      insertadoHoy = true;
+    }
+    if (_evFechaCmp(fecha, hoy) > 0) {
+      var bucket = _evBucketRelativo(fecha);
+      if (bucket && !bucketsMostrados[bucket]) {
+        bucketsMostrados[bucket] = true;
+        html += '<div class="ev-hoy-separador"><span>' + bucket + '</span></div>';
+      }
     }
     // Badge de fecha estilo Google Calendar: abreviatura de día (3 letras) +
     // número en círculo, relleno de marca solo si es hoy. `data-iso` lo usa
@@ -1375,6 +1425,7 @@ function _evRenderTimeline() {
       '</div>' +
     '</div>';
   });
+  if (!insertadoHoy) html += '<div class="ev-hoy-separador"><span>HOY</span></div>';
   cont.innerHTML = html;
   _evUpdateRsvpSliders(false);
   _evHidratarAvatares();
