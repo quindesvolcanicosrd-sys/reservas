@@ -1,12 +1,31 @@
 @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+/* `touch-action:manipulation` (ver "Cambios recientes") -- deshabilita el
+   pinch-to-zoom y el double-tap-to-zoom nativos del navegador (algunos
+   navegadores móviles ignoran parcialmente `user-scalable=no` del
+   `<meta viewport>` solo, hace falta el equivalente en CSS también) sin
+   bloquear el panning/scroll normal, que sigue funcionando igual.
+   `overscroll-behavior:contain` UNIVERSAL (ver "Cambios recientes" -- antes
+   solo `html,body` con `-y` nada más): el rebote elástico aparecía en
+   CUALQUIER contenedor de scroll interno de la app al llegar a alguno de
+   sus extremos con un gesto brusco, no solo en `html`/`body` -- un grep de
+   todo `overflow-y:auto`/`scroll` del proyecto encontró ~10 contenedores
+   reales (`.aj-sub-inner` -- el panel completo de cada sub-sección de
+   Ajustes, incl. "Mi Liga", `.time-wheel`, `.dp-year-grid`/`.ddp-year-grid`,
+   las listas de bottom sheets con buscador -- prefijo/país/agregar persona/
+   destino -- y varios modales con `max-height:90vh`), todos con el mismo
+   problema porque ninguno tenía su propio `overscroll-behavior`. En vez de
+   repetir la propiedad contenedor por contenedor (y arriesgarse a que un
+   contenedor nuevo a futuro se sume a la app sin la regla, mismo tipo de
+   bug), una regla universal la cubre de una sola vez para cualquier
+   elemento con scroll propio, presente o futuro -- no hay ningún lugar de
+   la app que dependa del rebote nativo en ningún eje. */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; overscroll-behavior: contain; }
 body {
-  font-family: 'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); overscroll-behavior-y: contain;
+  font-family: 'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text);
   -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
   -webkit-touch-callout: none;
 }
-html { overscroll-behavior-y: contain; }
 button, input, select, textarea { font-family: inherit; }
 
 /* Selección de texto deshabilitada globalmente (arriba, en body) para que la

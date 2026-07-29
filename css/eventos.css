@@ -42,26 +42,25 @@
    (filtros/búsqueda) -- togglea con la burbuja abierta, ver _evAbrirPanel()/
    js/eventos.js. */
 .ev-header-icon-btn.ev-filtro-toggle-activo { background: var(--brand); color: var(--white); }
-/* Label de mes -- tocable, abre el panel de mes (grilla+selector). Ocupa el
-   espacio restante de la fila, alineado a la izquierda (a diferencia del
-   viejo pill contextual centrado). */
+/* Label de mes -- tocable, abre/cierra el panel de calendario. Ocupa el
+   espacio restante de la fila, alineado a la izquierda. Es una fila flex
+   propia (texto + chevron, ver "Cambios recientes" -- rediseño de
+   navegación de Calendario, punto 1: el chevron indica "tocable para
+   expandir/contraer", reemplaza toda navegación por botones). */
 .ev-nav-mes-label {
-  flex: 1; min-width: 0; text-align: left; padding: 10px 4px; margin: 0; border: none; background: transparent;
-  font-size: 1rem; font-weight: 800; color: var(--text); text-transform: capitalize; cursor: pointer;
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px;
+  padding: 10px 4px; margin: 0; border: none; background: transparent;
+  font-size: 1rem; font-weight: 800; color: var(--text); cursor: pointer;
   font-family: inherit; transition: color 0.15s;
 }
+.ev-nav-mes-label span:first-child { text-transform: capitalize; }
+.ev-nav-mes-chevron { font-size: 20px; color: var(--muted); transition: color 0.15s; }
 .ev-nav-mes-label.ev-nav-mes-label-activo { color: var(--brand); }
+.ev-nav-mes-label.ev-nav-mes-label-activo .ev-nav-mes-chevron { color: var(--brand); }
 /* `.ev-btn-add` ("+" Nuevo evento, admin) -- hereda 44×44px/radius:50% de
    sus clases base tal cual (`app-nav-icon-btn app-nav-icon-btn-danger`, ver
    index.html), sin override propio. */
 
-/* `.ev-semana-chevron` -- botones ‹/› del panel de mes (`.ev-cal-header` más
-   abajo), migrado a `.app-nav-icon-btn`. Queda como modificador mínimo --
-   solo el `:active` que `.app-nav-icon-btn` no tiene (los botones
-   circulares SÍ tienen su propio `:active`, pero con otro valor --
-   `.app-nav-back` usa scale(0.95), acá se mantiene el 0.94 ya usado antes en
-   Eventos, diferencia menor sin impacto visual real). */
-.ev-semana-chevron:active { transform: scale(0.94); }
 .ev-dot {
   width: 6px; height: 6px; border-radius: 50%; background: var(--brand); flex-shrink: 0;
   cursor: pointer;
@@ -71,13 +70,16 @@
   cursor: pointer;
 }
 
-/* ── Panel de mes: grilla completa + selector de mes/año en pills (ver
-   "Cambios recientes" -- reemplaza la grilla sticky-colapsable que vivía en
-   la cabecera fija: ahora es contenido de una burbuja togleable más, mismo
-   mecanismo que el resto -- `.ev-header-burbuja` ya resuelve mostrar/ocultar
-   con `max-height`, sin necesitar un colapso propio por scroll). ────────── */
-.ev-cal-header { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 14px; }
-.ev-cal-mes-label { font-size: 0.95rem; font-weight: 800; color: var(--text); text-transform: capitalize; min-width: 160px; text-align: center; }
+/* ── Panel de calendario -- swipe-first, sin chevrones/borde/título repetido
+   (ver "Cambios recientes" -- rediseño completo de la navegación de
+   Calendario). `#ev-cal-contenido` alterna entre grilla mensual y franja
+   semanal (`_evCalExpandido`, js/eventos.js) vía fade + snap de contenido
+   (nunca animación de alto -- el techo del `.ev-header-burbuja` exterior se
+   re-mide en cada cambio, ver `_evCalActualizarMaxHeightExterior()`).
+   `padding-top` separa el contenido del renglón de íconos de arriba, sin el
+   marco/borde que tenía antes (`.ev-header-burbuja-panel` ya NO se usa acá,
+   ver index.html). ────────────────────────────────────────────────────── */
+.ev-cal-contenido { padding-top: 8px; }
 .ev-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
 .ev-cal-dow { text-align: center; font-size: 0.62rem; font-weight: 700; color: var(--muted); text-transform: uppercase; padding-bottom: 6px; }
 .ev-cal-celda {
@@ -90,17 +92,41 @@
   justify-content: center; font-size: 0.78rem; font-weight: 700; color: var(--text);
   transition: background 0.15s, color 0.15s, outline-color 0.15s;
 }
-/* "Hoy" -- anillo, único estado de destaque de la grilla (ver "Cambios
-   recientes" -- ya no existe un "día seleccionado" con relleno propio: la
-   grilla solo sirve para elegir un día y scrollear el timeline, no para
-   marcar una selección persistente). */
+/* "Hoy" -- anillo, único estado de destaque de la grilla (no hay un "día
+   seleccionado" con relleno persistente: la grilla solo sirve para elegir
+   un día -- colapsa a semana y scrollea el timeline -- o para swipear de
+   mes en mes). */
 .ev-cal-celda.ev-dia-hoy .ev-cal-num { outline: 1.5px solid var(--brand); outline-offset: 1.5px; color: var(--brand); font-weight: 800; }
 .ev-cal-dots { display: flex; gap: 3px; height: 6px; align-items: center; }
-/* Selector horizontal de mes/año en pills (ver "Cambios recientes" -- nuevo,
-   reusa literal `.historial-pill` de css/home.css, mismo patrón de scroll
-   horizontal sin barra visible que `#historial-pills-anio`). */
-.ev-mes-pills-row { display: flex; gap: 8px; overflow-x: auto; padding: 14px 2px 2px; scrollbar-width: none; -ms-overflow-style: none; }
+/* Franja semanal compacta (ver "Cambios recientes" -- mismo componente que
+   existía antes de unificar las vistas, ahora es el estado COLAPSADO del
+   panel de calendario en vez de una vista aparte). */
+.ev-cal-semana-row { display: flex; justify-content: space-between; gap: 3px; }
+.ev-dia {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 4px 2px 8px; border-radius: 12px; cursor: pointer; user-select: none;
+}
+.ev-dia-nombre { font-size: 0.62rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+.ev-dia-num {
+  width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-size: 0.85rem; font-weight: 700; color: var(--text);
+  transition: background 0.15s, color 0.15s;
+}
+.ev-dia.ev-dia-hoy .ev-dia-num { background: var(--brand); color: var(--white); }
+.ev-dia-dots { display: flex; gap: 3px; height: 6px; align-items: center; }
+/* Selector horizontal de mes/año en pills (ver "Cambios recientes" -- ahora
+   TODOS los 12 meses de una ventana de 2 años alrededor de hoy, no solo los
+   que tienen eventos, reusa literal `.historial-pill` de css/home.css,
+   mismo patrón de scroll horizontal sin barra visible que
+   `#historial-pills-anio`). `.ev-mes-pill-corte` -- corte visual de año
+   (línea vertical + año chico), en vez de repetir el año en cada pill. */
+.ev-mes-pills-row { display: flex; align-items: center; gap: 8px; overflow-x: auto; padding: 14px 2px 2px; scrollbar-width: none; -ms-overflow-style: none; }
 .ev-mes-pills-row::-webkit-scrollbar { display: none; }
+.ev-mes-pill-corte {
+  flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 0 4px; align-self: stretch; justify-content: center; border-left: 1.5px solid var(--border-light);
+}
+.ev-mes-pill-corte span { font-size: 0.62rem; font-weight: 700; color: var(--muted); }
 
 /* ── Timeline único (ver "Cambios recientes" -- reemplaza `.ev-lista` +
    `.ev-fecha-label` por texto: cada fecha lleva un badge lateral tipo Google

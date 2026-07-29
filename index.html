@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
 <title>Reserva Equipamiento - Mirlxs RD</title>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
@@ -25,14 +25,14 @@
      del primer paint real (ambos coinciden hoy, el valor de entrada es el
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=580dd587"></script>
-<link rel="stylesheet" href="css/global.css?v=27a5bbaf">
+<link rel="stylesheet" href="css/global.css?v=905510de">
 <link rel="stylesheet" href="css/estilos.css?v=45ba71d5">
 <link rel="stylesheet" href="css/ui.css?v=5d0e5923">
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=56739f3b">
 <link rel="stylesheet" href="css/nav.css?v=3e0b2561">
-<link rel="stylesheet" href="css/eventos.css?v=491efe82">
+<link rel="stylesheet" href="css/eventos.css?v=c3616bec">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -298,7 +298,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            -- una sola abierta a la vez, ver _evTogglePanel(). -->
       <div class="ev-sticky-header" id="ev-sticky-header">
         <div class="ev-header-row">
-          <button type="button" class="ev-nav-mes-label" id="ev-nav-mes-label" onclick="_evToggleMesPanel()" title="Ir a un mes"></button>
+          <button type="button" class="ev-nav-mes-label" id="ev-nav-mes-label" onclick="_evToggleMesPanel()" title="Ir a un mes">
+            <span id="ev-nav-mes-texto"></span>
+            <span class="material-symbols-outlined ev-nav-mes-chevron" id="ev-nav-mes-chevron">expand_more</span>
+          </button>
           <button type="button" class="app-nav-icon-btn ev-header-icon-btn" id="ev-busqueda-toggle-btn" onclick="_evToggleBusqueda()" title="Buscar">
             <span class="material-symbols-outlined">search</span>
           </button>
@@ -319,24 +322,20 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           </button>
         </div>
 
-        <!-- Panel de mes -- grilla del mes completo (mismos puntos de evento/
-             cumpleaños que ya usaba la grilla mensual anterior) + selector
-             horizontal de mes/año en pills debajo (nuevo -- inspirado en el
-             selector de año de Mis Reservas, #historial-pills-anio/
-             js/home.js, pero por mes: solo entran meses con contenido real +
-             siempre el mes actual). Tocar un día scrollea el timeline y
-             cierra el panel (_evPanelSeleccionarDia()); tocar otro mes en las
-             pills solo recarga la grilla, sin tocar el timeline. -->
+        <!-- Panel de calendario -- swipe-first, sin chevrones/borde/título
+             repetido (ver "Cambios recientes" -- rediseño de navegación de
+             Calendario). `#ev-cal-contenido` alterna entre grilla mensual
+             completa y franja semanal compacta (`_evCalExpandido`, ver
+             js/eventos.js) -- el cambio de contenido/tamaño empuja el
+             timeline (flujo normal, sin position:fixed/overlay). Cambiar de
+             mes/semana es 100% por swipe horizontal sobre este contenedor
+             (listeners únicos, sin re-adjuntar por render). Selector de
+             mes/año en pills debajo -- TODOS los meses (no solo los que
+             tienen eventos), con un corte visual de año en vez de repetir
+             el año en cada pill. -->
         <div class="ev-header-burbuja" id="ev-mes-panel">
-          <div class="ev-header-burbuja-panel">
-            <div class="ev-cal-header">
-              <button class="app-nav-icon-btn ev-semana-chevron" onclick="_evPanelMesAnterior()" title="Mes anterior"><span class="material-symbols-outlined">chevron_left</span></button>
-              <div class="ev-cal-mes-label" id="ev-panel-mes-label"></div>
-              <button class="app-nav-icon-btn ev-semana-chevron" onclick="_evPanelMesSiguiente()" title="Mes siguiente"><span class="material-symbols-outlined">chevron_right</span></button>
-            </div>
-            <div class="ev-cal-grid" id="ev-panel-cal-grid"></div>
-            <div class="ev-mes-pills-row" id="ev-mes-pills-row"></div>
-          </div>
+          <div class="ev-cal-contenido" id="ev-cal-contenido"></div>
+          <div class="ev-mes-pills-row" id="ev-mes-pills-row"></div>
         </div>
 
         <!-- Panel de filtros -- Lugar/Tipo (ver "Cambios recientes": se saca
@@ -795,8 +794,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/bsheet.js"></script>
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=67dae108"></script>
-<script src="js/eventos.js?v=eca797c0"></script>
+<script src="js/ui.js?v=c209ac88"></script>
+<script src="js/eventos.js?v=a36fa374"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=343fe44f"></script>
 <script src="js/perfil.js?v=07bd90e8"></script>

@@ -420,6 +420,40 @@ function _iconoRaizDeNav(id) {
   return null;
 }
 
+// Bug real corregido (ver "Cambios recientes" -- gesto de "atrás" saltaba a
+// login en vez de al tab anterior): el listener de `popstate` de abajo tenía
+// su PROPIO allowlist manual de pantallas válidas para una cuenta
+// `_dashboardAdminLimitado` (`esAdminPantalla`/`esAdminEnDatos`), separado
+// del que ya usa la navegación hacia adelante (`item.visible()` de
+// APP_BOTTOM_NAV_ITEMS, consultado por `_actualizarBottomNav()`/
+// `_bottomNavClick()`) -- cuando el tab "Eventos" se sumó como visible para
+// TODOS los tipos de cuenta (`visible: function(){return true;}`), ese
+// allowlist manual del popstate nunca se actualizó: `_bottomNavClick()`
+// dejaba entrar a `s-eventos` sin problema, pero un popstate apuntando ahí
+// (gesto nativo de "atrás") no encontraba `s-eventos` en `ADMIN_PANTALLAS`
+// ni cumplía `esAdminEnDatos`, así que caía al `id='s1'` de emergencia --
+// aterrizaba en login pese a que la sesión seguía activa y esa pantalla es
+// perfectamente alcanzable para esa cuenta. Fix: en vez de mantener 2
+// allowlists en paralelo (con el riesgo real de que una quede desincronizada
+// de la otra, como pasó acá), el popstate ahora consulta la MISMA fuente de
+// verdad que la navegación hacia adelante -- `_esPantallaAlcanzable(id)`
+// resuelve `id` a su ítem de `APP_BOTTOM_NAV_ITEMS` (directo, o vía
+// `_BOTTOM_NAV_EXTRA` para drill-downs como `s-eventos-detalle`) y devuelve
+// su `visible()` actual.
+function _esPantallaAlcanzable(id) {
+  var itemId = _BOTTOM_NAV_EXTRA[id];
+  if (!itemId) {
+    for (var i = 0; i < APP_BOTTOM_NAV_ITEMS.length; i++) {
+      if (APP_BOTTOM_NAV_ITEMS[i].pantalla === id) { itemId = APP_BOTTOM_NAV_ITEMS[i].id; break; }
+    }
+  }
+  if (!itemId) return false;
+  for (var j = 0; j < APP_BOTTOM_NAV_ITEMS.length; j++) {
+    if (APP_BOTTOM_NAV_ITEMS[j].id === itemId) return APP_BOTTOM_NAV_ITEMS[j].visible();
+  }
+  return false;
+}
+
 function _bottomNavClick(id) {
   for (var i = 0; i < APP_BOTTOM_NAV_ITEMS.length; i++) {
     if (APP_BOTTOM_NAV_ITEMS[i].id !== id) continue;
@@ -480,7 +514,7 @@ if (id === 's2') id = _tieneHomeNormal ? 's-home' : 's1';
   // un popstate apuntando a 's-datos' la mandaría de vuelta a 's1' por no
   // tener E.datos, aunque sí tenga _adminToken.
   var esAdminEnDatos = id === 's-datos' && _adminToken;
-  if (!_tieneHomeNormal && !esAdminPantalla && !esAdminEnDatos && id !== 's1') id = 's1';
+  if (!_tieneHomeNormal && !esAdminPantalla && !esAdminEnDatos && !_esPantallaAlcanzable(id) && id !== 's1') id = 's1';
   if (esAdminPantalla && id !== 's-admin-login' && !_adminToken) id = 's1';
   ir(id, true);
 });
