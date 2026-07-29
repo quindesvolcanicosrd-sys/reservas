@@ -108,8 +108,10 @@ function aplicarColorEnfasis(hex) {
   // reaplica el color real -- visible como un recoloreo brusco de cualquier
   // UI de marca que ya esté en pantalla en ese momento (bug real encontrado
   // en la card de cumpleaños de Eventos, ver "Cambios recientes": al
-  // derivar --cumple-bg/-border de --brand quedó expuesta a este salto
-  // default→real que antes, con su tono fijo, no la afectaba).
+  // derivar --cumple-bg de --brand quedó expuesta a este salto default→real
+  // que antes, con su tono fijo, no la afectaba -- --cumple-bg hoy tampoco
+  // se usa ya en la card, ver css/colors.css, pero el mecanismo de cache
+  // sigue aplicando igual a cualquier otro token --brand* de la app).
   try { localStorage.setItem('ce_color_cache', hex); } catch (ex) {}
   var brand = hexToHsl(hex);
   var rgb = hexToRgb(hex);

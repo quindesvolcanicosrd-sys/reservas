@@ -156,11 +156,16 @@ function _evGenerarDemo() {
     { id: 'EVT-13', fecha: _evSumarDias(hoy, 5), horaInicio: '09:00', lugar: 'Ciclopaseo', tipo: 'Ciclopaseo', estado: 'Evento Programado', miEstado: null, asistentes: [], requiereReserva: false,
       rsvps: [{ nombre: 'Karen Zambrano', estado: 'Asistiré' }] }
   ];
+  // `fotoPerfil` (ver _evCardCumpleHtml()/_evHidratarAvatares()) -- mismo
+  // campo que ya trae E.datos desde la columna de Equipo real (js/perfil.js/
+  // js/home.js), acá vacío a propósito: sin fuente real todavía en esta
+  // demo (mismo motivo que _EV_EQUIPO_DEMO, solo nombres, ver comentario de
+  // _evHidratarAvatares()) -- cae sola al fallback de inicial.
   _EV_CUMPLEANOS = [
-    { id: 'CUMP-1', nombre: 'Isabela Moreno', fecha: _evSumarDias(hoy, -1), edad: 24, edadPublica: true },
-    { id: 'CUMP-2', nombre: 'Joaquín Vega', fecha: hoy, edad: null, edadPublica: false },
-    { id: 'CUMP-3', nombre: 'Karen Zambrano', fecha: _evSumarDias(hoy, 2), edad: 29, edadPublica: true },
-    { id: 'CUMP-4', nombre: 'Luis Ortiz', fecha: _evSumarDias(hoy, 9), edad: null, edadPublica: false }
+    { id: 'CUMP-1', nombre: 'Isabela Moreno', fecha: _evSumarDias(hoy, -1), edad: 24, edadPublica: true, fotoPerfil: '' },
+    { id: 'CUMP-2', nombre: 'Joaquín Vega', fecha: hoy, edad: null, edadPublica: false, fotoPerfil: '' },
+    { id: 'CUMP-3', nombre: 'Karen Zambrano', fecha: _evSumarDias(hoy, 2), edad: 29, edadPublica: true, fotoPerfil: '' },
+    { id: 'CUMP-4', nombre: 'Luis Ortiz', fecha: _evSumarDias(hoy, 9), edad: null, edadPublica: false, fotoPerfil: '' }
   ];
 }
 
@@ -786,9 +791,10 @@ function _evCardEventoHtml(e, sufijo) {
   // `.ev-card-icon`, cuadrado 42px en columna propia a la izquierda). Sin esa
   // columna, `.ev-card-body` pasa a ocupar todo el ancho de la card -- la
   // barra de RSVP (`accion`, adentro de `.ev-card-body`) queda a ancho
-  // completo sin más cambios. `.ev-card-icon` sigue existiendo tal cual para
-  // `_evCardCumpleHtml()`/la fila compacta de "Pasados" (`.ev-card-compacta`),
-  // ninguna de las 2 entra en este rediseño.
+  // completo sin más cambios. `.ev-card-icon` sigue existiendo tal cual solo
+  // para la fila compacta de "Pasados" (`.ev-card-compacta`) -- `_evCardCumpleHtml()`
+  // migró a este mismo patrón inline más tarde (ver "Cambios recientes" --
+  // reemplazó también su avatar cuadrado por uno circular).
   // `estadoNota` (Cancelado/No se entrena) vive fuera de `.ev-card-body` (ver
   // "Cambios recientes") -- `.ev-card{align-items:center}` (ya existente) la
   // centra contra el alto completo de la card. Sin chevron (ver "Cambios
@@ -813,6 +819,15 @@ function _evCardEventoHtml(e, sufijo) {
 function _evHidratarAvatares() {
   document.querySelectorAll('.ev-avatar-stack-item[data-nombre]').forEach(function(el) {
     _avatarSetFotoOInicial(el, null, el.getAttribute('data-nombre'));
+  });
+  // Avatar de la card de cumpleaños (ver _evCardCumpleHtml() más abajo) --
+  // a diferencia de la fila de arriba (demo, siempre `null`), acá SÍ hay una
+  // fuente real: `data-foto` viene de `c.fotoPerfil`, la misma columna de
+  // Equipo que ya consume el resto de la app (E.datos.fotoPerfil, ver
+  // js/perfil.js/js/home.js) -- `_avatarSetFotoOInicial()` cae solo a la
+  // inicial si viene vacía.
+  document.querySelectorAll('.ev-card-cumple-avatar[data-nombre]').forEach(function(el) {
+    _avatarSetFotoOInicial(el, el.getAttribute('data-foto') || '', el.getAttribute('data-nombre'));
   });
 }
 
@@ -1032,13 +1047,24 @@ function _evAgregarPersonaAEvento(nombre) {
 /* ── Card de cumpleaños ────────────────────────────────────────────────
    Solo entran a _EV_CUMPLEANOS_DEMO personas con Fecha pública=Sí (mismo
    criterio que "Próximos cumpleaños" existente) -- la edad se muestra
-   solo si edadPublica también es Sí, si no "Hoy cumple" sin número. */
+   solo si edadPublica también es Sí, si no "Hoy cumple" sin número.
+   Mismo tratamiento visual que _evCardEventoHtml() (ver "Cambios recientes"
+   -- antes tenía un `.ev-card-icon` cuadrado propio + título en color fijo
+   `--cumple-text`, ambos eliminados): avatar circular real (`.avatar-pill`,
+   hidratado por _evHidratarAvatares() -- ver ahí) en vez del cuadrado, e
+   ícono `cake` INLINE junto al título (`.ev-card-titulo-row`/
+   `.ev-card-icono-inline`, mismas clases que cualquier card de evento) en
+   vez de vivir en ese cuadrado. Sin color propio: `.ev-card-titulo` queda en
+   `var(--text)`, como cualquier otra card -- ya no hace falta que el título
+   se destaque, el avatar + "Cumpleaños de <nombre>" ya son señal suficiente. */
 function _evCardCumpleHtml(c) {
   var texto = (c.edadPublica && c.edad) ? ('cumple ' + c.edad + ' años') : 'Hoy cumple';
+  var nombreAttr = c.nombre.replace(/"/g, '&quot;');
+  var fotoAttr = (c.fotoPerfil || '').replace(/"/g, '&quot;');
   return '<div class="ev-card ev-card-cumple">' +
-    '<div class="ev-card-icon"><span class="material-symbols-outlined">cake</span></div>' +
+    '<div class="avatar-pill ev-card-cumple-avatar" data-nombre="' + nombreAttr + '" data-foto="' + fotoAttr + '"></div>' +
     '<div class="ev-card-body">' +
-      '<div class="ev-card-titulo">Cumpleaños de ' + c.nombre + '</div>' +
+      '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline">cake</span><div class="ev-card-titulo">Cumpleaños de ' + c.nombre + '</div></div>' +
       '<div class="ev-card-sub">' + texto + '</div>' +
     '</div>' +
     '<div class="ev-confetti-host" id="ev-confetti-' + c.id + '" style="position:absolute;inset:0;pointer-events:none;"></div>' +

@@ -249,22 +249,22 @@
   --gray-divider:        rgba(128,128,128,0.12);
 
   /* ── Cumpleaños (Eventos) ──────────────────────────────
-     Vuelve a derivar de --brand (revertido a pedido explícito de Victor --
-     el tono fijo propio de la versión anterior, pensado para no depender del
-     color de énfasis, se sentía "grita" en vez de suave: fondo amarillo
-     sólido brillante). Ahora es una mezcla tenue de --brand con el fondo
-     (color-mix, no rgba plano) para que se lea suave y quede coherente con
-     cualquier color de énfasis que el admin elija -- --cumple-dot/-text usan
-     el propio --brand/--brand-dk sin mezclar porque son elementos chicos
-     (dot de 6px, texto de un renglón) donde sí hace falta contraste sólido.
-     Trade-off conocido (señalado a Victor, no resuelto acá): si el color de
-     énfasis elegido es dorado/amarillo, esta card vuelve a acercarse
-     visualmente a botones/elementos de marca -- exactamente lo que el token
-     fijo anterior evitaba a propósito. */
+     --cumple-dot (puntito de 6px que marca un cumpleaños en la grilla
+     mensual/franja semanal del calendario, css/eventos.css): deriva de
+     --brand sin mezclar -- elemento chico, necesita contraste sólido --
+     coherente con cualquier color de énfasis que el admin elija.
+     --cumple-bg (mezcla tenue de --brand con el fondo, color-mix, no rgba
+     plano) quedó sin consumidor desde que la card de cumpleaños dejó de
+     llevar fondo propio (ver "Cambios recientes" en css/eventos.css --
+     hereda el mismo `background` que cualquier `.ev-card` normal); se
+     conserva la variable por si se reactiva a futuro. --cumple-border/
+     --cumple-text (mismo criterio de mezcla/contraste, para el `.ev-card-icon`
+     cuadrado + el título en color fijo que tenía la card antes) se
+     eliminaron del todo -- ver "Cambios recientes", avatar circular + ícono
+     inline reusando el mismo tratamiento que cualquier otra card de evento,
+     sin color propio. */
   --cumple-bg:      color-mix(in srgb, var(--brand) 12%, var(--surface-2));
-  --cumple-border:  color-mix(in srgb, var(--brand) 35%, var(--border-light));
   --cumple-dot:     var(--brand);
-  --cumple-text:    var(--brand-dk);
 
   /* Dark mode tokens — "(runtime)" solo --dk-skeleton-base/--dk-pin-press/
      --dk-modal-btn-bg (mismo tinte café-marca, aunque no viven dentro de la

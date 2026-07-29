@@ -329,27 +329,23 @@
 
 /* ── Card de cumpleaños ───────────────────────────────── */
 /* Ver "Cambios recientes" -- pedido explícito de Victor: la card en sí ya no
-   lleva fondo/borde propios (`--cumple-bg`/`--cumple-border`), hereda el
-   mismo `background`/`border` que cualquier `.ev-card` normal -- el ícono
-   (naranja `--cumple-border`/`--cumple-text`, ver `.ev-card-icon` de abajo)
-   + el título siguen siendo la señal visual de "esto es un cumpleaños", ya
-   no hace falta que la card entera se destaque también. `position:relative`
-   + `overflow:hidden` SÍ se conservan tal cual -- el confetti
+   lleva fondo/borde propios (`--cumple-bg`), hereda el mismo `background`/
+   `border` que cualquier `.ev-card` normal. `position:relative` +
+   `overflow:hidden` SÍ se conservan tal cual -- el confetti
    (`#ev-confetti-<id>`, `_evLanzarCumpleConfetti()`) depende de que este sea
    el containing block de su canvas `position:absolute;inset:0` para quedar
    contenido dentro de la card en vez de superponerse a toda la pantalla. */
 .ev-card-cumple { position: relative; overflow: hidden; }
-/* transition en background/color (ver "Cambios recientes" -- fix del
-   "flash" de color reportado por Victor, diagnosticado con evidencia real de
-   red/timeline, no adivinado): `--cumple-border`/`--cumple-text` derivan de
-   `--brand`, que arranca en el naranja default y recién pasa al color real
-   cuando js/auth.js resuelve `adminGetColorEnfasis` (Apps Script --
-   confirmado con Playwright contra el sitio real que ese fetch solo tarda
-   ~2.1s de ida y vuelta, causa raíz real, de infraestructura, no de este
-   código). Ya no aplica a la card en sí (arriba, sin overrides de color),
-   solo al ícono, que sigue siendo brand-dependiente. */
-.ev-card-cumple .ev-card-icon { background: var(--cumple-border); color: var(--cumple-text); transition: background-color 0.4s ease, color 0.4s ease; }
-.ev-card-cumple .ev-card-titulo { color: var(--cumple-text); transition: color 0.4s ease; }
+/* Avatar circular + ícono `cake` inline junto al título (ver "Cambios
+   recientes" -- reemplaza el `.ev-card-icon` cuadrado propio + el título en
+   color fijo `--cumple-border`/`--cumple-text` que tenía antes): mismo
+   tratamiento exacto que cualquier `.ev-card` de evento normal
+   (`.ev-card-titulo-row`/`.ev-card-icono-inline`/`.ev-card-titulo` en
+   `var(--text)`, sin clase de color propia para cumpleaños) -- `46×46`,
+   mismo tamaño que ya usa `.aj-avatar-row` en Ajustes (`css/perfil.css`)
+   para el mismo componente (`.avatar-pill`, `css/global.css`). Hidratado por
+   `_evHidratarAvatares()` (`js/eventos.js`), no por CSS. */
+.ev-card-cumple-avatar { width: 46px; height: 46px; }
 
 /* ── Pantalla de detalle de evento (#s-eventos-detalle, ver "Cambios
    recientes" — reemplaza el bottom sheet + la modal de asistentes de la
