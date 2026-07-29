@@ -151,6 +151,36 @@ var TOP_BAR_CONFIG = {
 // paso-indicator) aplicado de inmediato, sin animar dos pantallas a la vez
 // ni diferir nada a un setTimeout.
 function ir(id, desdeHistorial, sinTrampa) {
+  // Cierre forzoso de cualquier overlay fijo (aj-sub-*/_overlayStack) al
+  // navegar -- ver "Cambios recientes": ambos viven fuera de .pantalla
+  // (position:fixed, hermanos de .pantalla en el DOM), así que cambiar de
+  // pantalla NO los oculta solo -- sin este guard quedan flotando encima de
+  // la pantalla nueva. Vive acá (no duplicado en cada caller) porque ir() es
+  // el único punto real de "cambio de pantalla", se llegue desde la nav
+  // inferior (_bottomNavClick()), popstate o cualquier otra navegación
+  // directa. Instantáneo y sin animación de salida -- ya estamos abandonando
+  // la sección entera, no tiene sentido animar algo que el usuario no va a
+  // alcanzar a ver. `_ajSubAbierto` (js/perfil.js) se resetea directo acá en
+  // vez de pasar por el flujo animado de cerrarAjSub() (setTimeout de 320ms);
+  // `_overlayStack` se vacía llamando ya a cada función de cierre registrada
+  // con el mismo `true` que usa popstate más abajo para saltarse su propio
+  // history.back(), pero todas juntas en el momento en vez de una por evento
+  // de historial. Ninguno de los dos toca `_ajUltimoSubAbierto` (ver
+  // _bottomNavClick()) -- ese solo se limpia en un cierre manual real
+  // (cerrarAjSub()), acá se abandona la sección con el sub técnicamente
+  // "todavía abierto" a los efectos de restaurarlo si se vuelve.
+  if (_ajSubAbierto) {
+    var _subForzado = document.getElementById(_ajSubAbierto);
+    if (_subForzado) {
+      _subForzado.classList.remove('activa');
+      _subForzado.style.transform = ''; _subForzado.style.opacity = '';
+    }
+    var _fondoForzado = document.getElementById('s-datos-card');
+    if (_fondoForzado) { _fondoForzado.style.transform = ''; _fondoForzado.style.opacity = ''; }
+    if (_ajSubAbierto === 'aj-sub-salud' && typeof _saludOcultarFooter === 'function') _saludOcultarFooter();
+    _ajSubAbierto = null;
+  }
+  while (_overlayStack.length > 0) { _overlayStack.pop()(true); }
   if (id === 's1b' || !document.getElementById(id)) { ir('s1', true); return; }
   // #s4-total-fijo (panel de total fijo de s4, js/reservas.js): su propia
   // salida (fade-out + slide-down del panel hijo, independiente de este
@@ -388,6 +418,12 @@ function _bottomNavClick(id) {
     if (APP_BOTTOM_NAV_ITEMS[i].id !== id) continue;
     var item = APP_BOTTOM_NAV_ITEMS[i];
     if (item.entrar) item.entrar(); else volver(item.pantalla);
+    // Ajustes: si la sección se abandonó con un aj-sub-* abierto (el guard de
+    // ir() lo cerró de golpe, sin animación, pero dejó `_ajUltimoSubAbierto`
+    // con su id -- ver js/perfil.js), restaurarlo acá en vez de aterrizar en
+    // el home de Ajustes a secas -- pedido explícito: volver al tab debe
+    // dejar al usuario donde había quedado, no resetear su navegación interna.
+    if (id === 'ajustes' && _ajUltimoSubAbierto) _reabrirAjSubInstantaneo(_ajUltimoSubAbierto);
     return;
   }
 }

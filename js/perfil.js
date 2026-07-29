@@ -487,6 +487,15 @@ function ajFiltrarSettings(query) {
 
 /* ── Ajustes: navegación de sub-pantallas ─────────────── */
 var _ajSubAbierto = null; // id del aj-sub-* actualmente abierto, o null
+// id del último aj-sub-* que quedó abierto al abandonar la sección Ajustes
+// (nav inferior -- ver ir()/js/ui.js), o null. A diferencia de _ajSubAbierto
+// (que el guard de ir() resetea de inmediato al salir), este sobrevive el
+// cambio de tab a propósito -- _bottomNavClick() lo usa para reabrir el
+// mismo sub-panel al volver a Ajustes en vez de aterrizar en su home. Solo
+// se limpia en un cierre manual real (cerrarAjSub(), flecha atrás/gesto) --
+// si el usuario ya lo cerró él mismo antes de cambiar de tab, no hay nada
+// que restaurar.
+var _ajUltimoSubAbierto = null;
 
 function irAjSub(id, desdeHistorial) {
   var sub = document.getElementById(id);
@@ -521,9 +530,31 @@ function irAjSub(id, desdeHistorial) {
     });
   });
   _ajSubAbierto = id;
+  _ajUltimoSubAbierto = id;
   if (!desdeHistorial) {
     history.pushState({ pantalla: 's-datos', ajSub: id }, '', '#' + id);
   }
+}
+
+// Reapertura instantánea de un aj-sub-* al volver a Ajustes desde otro tab de
+// la nav inferior (ver _bottomNavClick(), js/ui.js) -- restaura el estado tal
+// cual quedó, no es una apertura nueva: mismo resultado final que irAjSub()
+// (contenido recargado, panel visible, fondo #s-datos-card retrocedido, mismo
+// registro de historial para que la flecha atrás/gesto lo cierre como
+// siempre) pero sin el doble rAF ni la transition de entrada -- se pintan los
+// valores finales de una, sin nada que animar.
+function _reabrirAjSubInstantaneo(id) {
+  var sub = document.getElementById(id);
+  if (!sub) { _ajUltimoSubAbierto = null; return; }
+  if (id !== 'aj-sub-salud' && typeof _saludOcultarFooter === 'function') _saludOcultarFooter();
+  _ajCargarSub(id);
+  sub.style.transform = 'translateX(0)';
+  sub.style.opacity = '1';
+  sub.classList.add('activa');
+  var fondo = document.getElementById('s-datos-card');
+  if (fondo) { fondo.style.transform = 'translateX(-25%)'; fondo.style.opacity = '0.85'; }
+  _ajSubAbierto = id;
+  history.pushState({ pantalla: 's-datos', ajSub: id }, '', '#' + id);
 }
 
 function cerrarAjSub(id, desdeHistorial) {
@@ -543,6 +574,11 @@ function cerrarAjSub(id, desdeHistorial) {
   // valor inline sin necesitar forzar un "desde" nuevo.
   if (sub) {
     _ajSubAbierto = null; // adentro del if (sub): ver nota de _ajGuardar(payload) sin subId más abajo
+    // Cierre real (manual, no el force-close de ir()/js/ui.js -- ese bypassea
+    // esta función entera, ver su comentario): el usuario ya volvió al home
+    // de Ajustes por su cuenta, así que no hay nada que restaurar si cambia
+    // de tab y vuelve -- ver _ajUltimoSubAbierto más arriba.
+    _ajUltimoSubAbierto = null;
     if (sub.classList.contains('activa')) {
       var fondo = document.getElementById('s-datos-card');
       sub.style.transform = 'translateX(100%)';

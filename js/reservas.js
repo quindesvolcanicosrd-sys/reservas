@@ -220,6 +220,13 @@ function _s4ActualizarNav() {
   back.style.display = puedeElegir ? 'none' : '';
   titulo.style.display = puedeElegir ? 'none' : '';
   segWrap.style.display = puedeElegir ? 'flex' : 'none';
+  // #s4-nav-spacer (ver index.html): re-medir siempre acá, no solo al entrar
+  // a s4 -- las 2 variantes de #s4-nav (arriba) pueden tener alto distinto y
+  // esta función es la única fuente que las togglea, mismo criterio que
+  // _sincronizarNavHome()/#home-nav-spacer (js/home.js).
+  var nav = document.getElementById('s4-nav');
+  var spacer = document.getElementById('s4-nav-spacer');
+  if (nav && spacer) spacer.style.height = (nav.offsetHeight + 8) + 'px';
 }
 
 function selTipoPago(tipo) {

@@ -26,7 +26,7 @@
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=479995f3"></script>
 <link rel="stylesheet" href="css/global.css?v=27a5bbaf">
-<link rel="stylesheet" href="css/estilos.css?v=fd18ecfe">
+<link rel="stylesheet" href="css/estilos.css?v=45ba71d5">
 <link rel="stylesheet" href="css/ui.css?v=5d0e5923">
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
@@ -567,6 +567,13 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
   <div class="pantalla" id="s4">
     <div class="card">
+      <!-- Espaciador contra #s4-nav (position:fixed, ver arriba) -- mismo
+           patrón que #home-nav-spacer/_initHomeNav() (js/home.js): altura
+           real medida en JS (_s4ActualizarNav(), js/reservas.js) vía
+           offsetHeight de la nav, no un número mágico -- #s4-nav cambia de
+           alto según la variante (selector Por clase/Mensual vs título+
+           flecha atrás), así que un valor fijo se hubiera desincronizado. -->
+      <div id="s4-nav-spacer" style="height:64px;"></div>
       <div class="seccion-label" id="s4-label"></div>
       <div class="tipo-pago-wrapper" id="s4-tipo-pago-wrapper" style="display:none;">
         <div class="tp-hint" id="tp-cupon-hint">
@@ -840,11 +847,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/bsheet.js"></script>
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=e9bfc42f"></script>
+<script src="js/ui.js?v=44ac2633"></script>
 <script src="js/eventos.js?v=27fa608a"></script>
 <script src="js/home.js"></script>
-<script src="js/reservas.js?v=92b4612f"></script>
-<script src="js/perfil.js?v=54df12b2"></script>
+<script src="js/reservas.js?v=343fe44f"></script>
+<script src="js/perfil.js?v=07bd90e8"></script>
 <script src="js/admin.js"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js"></script>

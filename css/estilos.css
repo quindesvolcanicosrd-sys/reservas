@@ -179,14 +179,21 @@
 #cta-footer-s-home { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
 /* #cta-footer-s4 -- "Continuar" como card flotante, no una continuación
    visual de la nav (ver "Cambios recientes", pedido explícito -- Opción B):
-   antes tocaba la nav directo (mismo `bottom` que #cta-footer-s-home,
-   fondo `--bg` de página sin sombra propia, sin separación real). Suma
-   +14px de gap real sobre la nav + `--shadow-lg` (mismo token de elevación
-   ya usado en el resto de la app, no un valor inventado) en el botón mismo
-   (`#btn-s4-continuar`, ver css/reservas.css) -- ya tiene `border-radius:12px`
-   en las 4 esquinas por `.btn` base, nunca fue full-bleed de ancho, lo que
-   faltaba era la separación/elevación. */
-#cta-footer-s4 { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 14px); }
+   `--shadow-lg` (mismo token de elevación ya usado en el resto de la app, no
+   un valor inventado) en el botón mismo (`#btn-s4-continuar`, ver
+   css/reservas.css) -- ya tiene `border-radius:12px` en las 4 esquinas por
+   `.btn` base, nunca fue full-bleed de ancho, lo que faltaba era la
+   elevación. El gap de +14px sobre el botón NO es un `bottom` externo a la
+   caja (eso dejaba ver contenido scrolleado entre el fondo `--bg` de la caja
+   y la nav, "isla flotante" -- bug real corregido, ver "Cambios recientes")
+   -- es `padding-bottom` interno: la caja sigue tocando el borde superior de
+   la nav sin gap (mismo `bottom` que #cta-footer-s-home), y es su fondo
+   sólido el que llega hasta ahí; el botón queda "asentado" 14px arriba de
+   ese borde, elevado por su propia sombra sobre una superficie continua. */
+#cta-footer-s4 {
+  bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px + 14px);
+}
 /* #cta-footer-salud -- mismo motivo que #cta-footer-s-home de arriba (ver
    "Cambios recientes" -- aj-sub-salud ahora convive con la nav inferior,
    igual que el resto de aj-sub-*, css/perfil.css/.aj-sub): antes tocaba
