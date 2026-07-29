@@ -31,8 +31,8 @@
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=56739f3b">
-<link rel="stylesheet" href="css/nav.css?v=0cfb0f2b">
-<link rel="stylesheet" href="css/eventos.css?v=fec1e2cc">
+<link rel="stylesheet" href="css/nav.css?v=3e0b2561">
+<link rel="stylesheet" href="css/eventos.css?v=491efe82">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -279,154 +279,102 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
 
-<!-- ═══ SECCIÓN EVENTOS (Tanda 2 -- estructura estática, datos de prueba
-     hardcodeados en js/eventos.js, ver MANIFEST.md "Cambios recientes").
-     Pantalla raíz de la nav inferior (APP_BOTTOM_NAV_ITEMS, js/ui.js). Ya no
-     usa una #eventos-nav fija propia (ver "Cambios recientes" -- se elimina
-     el header "EVENTOS": la cabecera de 3 elementos -- ícono ojo/pill
-     contextual/ícono filtros, ver #ev-header-row más abajo -- pasa a ser el
-     elemento fijo de arriba, dentro de #ev-sticky-header, sticky en vez de
-     fixed+spacer para convivir con el scroll normal de la pantalla). ═══ -->
+<!-- ═══ SECCIÓN EVENTOS -- timeline único (ver MANIFEST.md "Cambios
+     recientes": reemplaza por completo el sistema de tabs/vistas anterior --
+     ícono ojo + burbuja Calendario/Lista, pill Hoy/Semanal/Mensual y pill
+     Próximos/Pasados/Todos, cada una con su propia sub-vista -- por una sola
+     agenda continua que fusiona pasados+hoy+próximos en un único scroll
+     (antes solo lo hacía la sub-vista "Todos"). Motivo: 6 combinaciones de
+     vista distintas para llegar al mismo calendario, reducidas a 1. Pantalla
+     raíz de la nav inferior (APP_BOTTOM_NAV_ITEMS, js/ui.js). ═══ -->
 <div class="pantalla" id="s-eventos">
     <div class="card" style="text-align:left;padding-bottom:32px;">
       <!-- Cabecera sticky (position:sticky;top:0, fondo sólido, por encima
-           del contenido que scrollea debajo) -- SIEMPRE el selector de
-           vistas, más la parte "fija" de la vista activa: franja de Semana
-           completa, nav de mes de Calendario (la grilla de días es la única
-           parte que colapsa con el scroll, #ev-cal-grid-colapsable más abajo,
-           ver css/eventos.css), o subtabs+filtros de Lista -- la propia
-           lista de resultados de cada vista vive AFUERA de este contenedor,
-           scrollea libre. */ -->
+           del timeline que scrollea debajo) -- label del mes actual (tocable,
+           actualizado solo según qué encabezado de mes está más arriba
+           visible mientras se scrollea, ver _evActualizarNavMesPorScroll()/
+           js/eventos.js) + 3 íconos fijos (lupa/filtros/hoy). 3 burbujas
+           colapsables debajo (mes/filtros/búsqueda), mutuamente excluyentes
+           -- una sola abierta a la vez, ver _evTogglePanel(). -->
       <div class="ev-sticky-header" id="ev-sticky-header">
-        <!-- Cabecera de 3 elementos (ver "Cambios recientes" -- rediseño):
-             ícono ojo (selector de vista, burbuja de 2 opciones) + pill
-             contextual (Hoy/Esta semana/Este mes en Calendario, Próximos/
-             Pasados/Todos en Lista, una sola visible a la vez) + ícono
-             filtros (universal, Lugar/Tipo en las 2 vistas, +Mes en Lista).
-             Reemplaza TANTO el pill grande Semana/Calendario/Lista COMO el
-             renglón .ev-subtabs-wrap que antes vivían separados. -->
         <div class="ev-header-row">
-          <button type="button" class="app-nav-icon-btn ev-header-icon-btn" id="ev-vista-toggle-btn" onclick="_evToggleVistaBurbuja()" title="Vista">
-            <span class="material-symbols-outlined">visibility</span>
+          <button type="button" class="ev-nav-mes-label" id="ev-nav-mes-label" onclick="_evToggleMesPanel()" title="Ir a un mes"></button>
+          <button type="button" class="app-nav-icon-btn ev-header-icon-btn" id="ev-busqueda-toggle-btn" onclick="_evToggleBusqueda()" title="Buscar">
+            <span class="material-symbols-outlined">search</span>
           </button>
-
-          <div class="ev-header-pill-wrap">
-            <!-- Mismo componente de tabs EXACTO que el de "Lista" más abajo
-                 (texto simple + .ev-subtabs-indicator deslizante, ver
-                 "Cambios recientes" -- antes un .tp-seg/.tp-slider con fondo
-                 sólido, 2 estilos visuales distintos para el mismo rol). -->
-            <div class="ev-subtabs-wrap" id="ev-cal-sub-wrap">
-              <div class="ev-subtabs">
-                <div class="ev-subtab activo" id="ev-cal-sub-hoy" onclick="_evCambiarCalSubvista('hoy')">Hoy</div>
-                <div class="ev-subtab" id="ev-cal-sub-semana" onclick="_evCambiarCalSubvista('semana')">Semanal</div>
-                <div class="ev-subtab" id="ev-cal-sub-mes" onclick="_evCambiarCalSubvista('mes')">Mensual</div>
-              </div>
-              <div class="ev-subtabs-indicator" id="ev-cal-sub-indicator"></div>
-            </div>
-            <div class="ev-subtabs-wrap" id="ev-lista-subtabs-wrap" style="display:none;">
-              <div class="ev-subtabs">
-                <div class="ev-subtab activo" id="ev-lista-tab-subtab-proximos" onclick="_evListaTabCambiarSubtab('proximos')">Próximos</div>
-                <div class="ev-subtab" id="ev-lista-tab-subtab-pasados" onclick="_evListaTabCambiarSubtab('pasados')">Pasados</div>
-                <div class="ev-subtab" id="ev-lista-tab-subtab-todos" onclick="_evListaTabCambiarSubtab('todos')">Todos</div>
-              </div>
-              <div class="ev-subtabs-indicator" id="ev-subtabs-indicator"></div>
-            </div>
-          </div>
-
-          <!-- Botón embudo -- togglea #ev-filtros-colapsable, badge numérico
-               solo si hay algún filtro con selección. -->
           <button type="button" class="app-nav-icon-btn ev-header-icon-btn ev-filtro-toggle-btn" id="ev-filtro-toggle-btn" onclick="_evToggleFiltrosPanel()" title="Filtros">
             <span class="material-symbols-outlined">tune</span>
             <span class="ev-filtro-badge" id="ev-filtro-badge" style="display:none;">0</span>
           </button>
+          <button type="button" class="app-nav-icon-btn ev-header-icon-btn" onclick="_evIrAHoy()" title="Ir a hoy">
+            <span class="material-symbols-outlined">today</span>
+          </button>
 
           <!-- "+ Nuevo evento" (solo admin, _esAdminDemo la togglea en
-               irEventos(), js/eventos.js) -- accesorio 4to, no cuenta como
-               parte de los 3 elementos fijos de la fila (oculta para la
-               enorme mayoría de usuarios). -->
+               irEventos(), js/eventos.js) -- accesorio, no cuenta como parte
+               de los 3 íconos fijos de la fila (oculto para la enorme
+               mayoría de usuarios). -->
           <button class="app-nav-icon-btn app-nav-icon-btn-danger ev-btn-add" id="eventos-btn-add" style="display:none;" onclick="mostrarToast('Próximamente','ok')" title="Nuevo evento">
             <span class="material-symbols-outlined">add</span>
           </button>
         </div>
 
-        <!-- Burbuja del selector de vista -- panel simple (marco redondeado,
-             sin colita, ver "Cambios recientes"/css/eventos.css) alrededor
-             del mismo mecanismo max-height que ya usan las burbujas de
-             filtro. -->
-        <div class="ev-header-burbuja" id="ev-vista-burbuja">
+        <!-- Panel de mes -- grilla del mes completo (mismos puntos de evento/
+             cumpleaños que ya usaba la grilla mensual anterior) + selector
+             horizontal de mes/año en pills debajo (nuevo -- inspirado en el
+             selector de año de Mis Reservas, #historial-pills-anio/
+             js/home.js, pero por mes: solo entran meses con contenido real +
+             siempre el mes actual). Tocar un día scrollea el timeline y
+             cierra el panel (_evPanelSeleccionarDia()); tocar otro mes en las
+             pills solo recarga la grilla, sin tocar el timeline. -->
+        <div class="ev-header-burbuja" id="ev-mes-panel">
           <div class="ev-header-burbuja-panel">
-            <div class="ev-vista-opcion" id="ev-vista-opcion-calendario" onclick="_evCambiarVista('calendario')">
-              <span class="material-symbols-outlined">calendar_month</span>Vista calendario
+            <div class="ev-cal-header">
+              <button class="app-nav-icon-btn ev-semana-chevron" onclick="_evPanelMesAnterior()" title="Mes anterior"><span class="material-symbols-outlined">chevron_left</span></button>
+              <div class="ev-cal-mes-label" id="ev-panel-mes-label"></div>
+              <button class="app-nav-icon-btn ev-semana-chevron" onclick="_evPanelMesSiguiente()" title="Mes siguiente"><span class="material-symbols-outlined">chevron_right</span></button>
             </div>
-            <div class="ev-vista-opcion" id="ev-vista-opcion-lista" onclick="_evCambiarVista('lista')">
-              <span class="material-symbols-outlined">list</span>Lista de eventos
-            </div>
+            <div class="ev-cal-grid" id="ev-panel-cal-grid"></div>
+            <div class="ev-mes-pills-row" id="ev-mes-pills-row"></div>
           </div>
         </div>
 
-        <!-- Panel de filtros -- universal (ver "Cambios recientes"), ya no
-             vive adentro de un wrap exclusivo de "Lista". Mismo panel simple
-             que la burbuja de arriba, sin colita. -->
-        <div class="ev-header-burbuja ev-filtros-colapsable" id="ev-filtros-colapsable">
+        <!-- Panel de filtros -- Lugar/Tipo (ver "Cambios recientes": se saca
+             el filtro "Mes" que tenía antes, ahora el mes se maneja desde el
+             panel de arriba). Mismo mecanismo `_evToggleFiltrosPanel()` de
+             siempre. -->
+        <div class="ev-header-burbuja" id="ev-filtros-colapsable">
           <div class="ev-header-burbuja-panel">
             <div class="ev-filtros-row">
-              <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-mes" data-label="Mes" onclick="_evToggleFiltroBurbuja('mes')">
-                <span class="ev-filtro-trigger-label">Mes</span><span class="material-symbols-outlined">expand_more</span>
-              </button>
-              <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-lugar" data-label="Lugar" onclick="_evToggleFiltroBurbuja('lugar')">
+              <button type="button" class="ev-filtro-trigger" id="ev-filtro-btn-lugar" data-label="Lugar" onclick="_evToggleFiltroBurbuja('lugar')">
                 <span class="ev-filtro-trigger-label">Lugar</span><span class="material-symbols-outlined">expand_more</span>
               </button>
-              <button type="button" class="ev-filtro-trigger" id="ev-lista-tab-filtro-btn-tipo" data-label="Tipo" onclick="_evToggleFiltroBurbuja('tipo')">
+              <button type="button" class="ev-filtro-trigger" id="ev-filtro-btn-tipo" data-label="Tipo" onclick="_evToggleFiltroBurbuja('tipo')">
                 <span class="ev-filtro-trigger-label">Tipo</span><span class="material-symbols-outlined">expand_more</span>
               </button>
             </div>
-            <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-mes"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-mes"></div></div>
             <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-lugar"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-lugar"></div></div>
             <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-tipo"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-tipo"></div></div>
           </div>
         </div>
 
-        <div id="ev-vista-semana-wrap" style="display:none;">
-          <div class="ev-semana-row">
-            <button class="app-nav-icon-btn ev-semana-chevron" onclick="_evSemanaAnterior()" title="Semana anterior"><span class="material-symbols-outlined">chevron_left</span></button>
-            <div class="ev-semana-dias" id="ev-semana-dias"></div>
-            <button class="app-nav-icon-btn ev-semana-chevron" onclick="_evSemanaSiguiente()" title="Semana siguiente"><span class="material-symbols-outlined">chevron_right</span></button>
-          </div>
-        </div>
-
-        <div id="ev-vista-calendario-wrap" style="display:none;">
-          <!-- Botones ‹/› de siempre -- ocultos (fade) mientras la grilla
-               está expandida (favorece el swipe/los chevrones sutiles de
-               abajo como forma principal de cambiar de mes en ese estado),
-               reaparecen recién cuando la grilla colapsa al scrollear
-               (.ev-cal-header-compacto, togleada por _evCalActualizarColapso(),
-               js/eventos.js -- ver "Cambios recientes"). -->
-          <div class="ev-cal-header" id="ev-cal-header">
-            <button class="app-nav-icon-btn ev-semana-chevron" onclick="_evMesAnterior()" title="Mes anterior"><span class="material-symbols-outlined">chevron_left</span></button>
-            <div class="ev-cal-mes-label" id="ev-cal-mes-label" onclick="_evCalVerMesCompleto()"></div>
-            <button class="app-nav-icon-btn ev-semana-chevron" onclick="_evMesSiguiente()" title="Mes siguiente"><span class="material-symbols-outlined">chevron_right</span></button>
-          </div>
-          <div class="ev-cal-grid-colapsable" id="ev-cal-grid-colapsable">
-            <!-- Chevrones sutiles a los costados de la grilla (ver "Cambios
-                 recientes") -- alternativa de los botones ‹/› de arriba
-                 mientras la grilla está expandida: se ocultan solos junto
-                 con el resto del contenido al colapsar (mismo mecanismo
-                 max-height/overflow de .ev-cal-grid-colapsable, sin JS
-                 propio). -->
-            <div class="ev-cal-grid-nav">
-              <button class="ev-cal-grid-chevron" onclick="_evMesAnterior()" title="Mes anterior"><span class="material-symbols-outlined">chevron_left</span></button>
-              <div class="ev-cal-grid" id="ev-cal-grid"></div>
-              <button class="ev-cal-grid-chevron" onclick="_evMesSiguiente()" title="Mes siguiente"><span class="material-symbols-outlined">chevron_right</span></button>
+        <!-- Panel de búsqueda -- reusa el mismo componente visual del
+             buscador de Ajustes (.app-nav-search, css/nav.css: pill 100%
+             redondeado, foco en todo el pill, placeholder con fade, sin
+             caret) en vez de crear uno nuevo desde cero. Convive con los
+             filtros de arriba -- mismo criterio AND que Lugar/Tipo, ver
+             _evPasaBusqueda(). -->
+        <div class="ev-header-burbuja" id="ev-busqueda-panel">
+          <div class="ev-header-burbuja-panel">
+            <div class="app-nav-search">
+              <span class="material-symbols-outlined">search</span>
+              <input type="text" id="ev-search-input" placeholder="Buscar eventos, cumpleaños o lugares" oninput="_evBuscar(this.value)">
             </div>
           </div>
         </div>
       </div>
 
-      <div class="ev-lista" id="ev-lista"></div>
-
-      <div id="ev-vista-lista-wrap" style="display:none;">
-        <div id="ev-lista-tab-filas"></div>
-      </div>
+      <div class="ev-timeline" id="ev-timeline"></div>
 
       <div style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
     </div>
@@ -848,7 +796,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=67dae108"></script>
-<script src="js/eventos.js?v=cb299775"></script>
+<script src="js/eventos.js?v=eca797c0"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=343fe44f"></script>
 <script src="js/perfil.js?v=07bd90e8"></script>

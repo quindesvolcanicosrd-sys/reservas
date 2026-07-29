@@ -14,8 +14,8 @@
      "aire" implícito arriba/abajo, se sentía pegado). `padding` reemplaza
      al `height` fijo -- el alto real ahora sigue al contenido + este
      padding, no un número mágico; los spacers que compensan cada nav fija
-     ya se miden en JS con `offsetHeight` (`_initHomeNav()`, `_evCambiarVista()`
-     no aplica acá, ver otros `*-nav-spacer`), así que se adaptan solos. */
+     ya se miden en JS con `offsetHeight` (`_initHomeNav()`, ver otros
+     `*-nav-spacer`), así que se adaptan solos. */
   padding: 22px 16px;
   min-height: 56px;
   background: var(--bg);

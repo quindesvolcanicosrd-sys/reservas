@@ -1,28 +1,23 @@
 /* ═══════════════════════════════════════════════════════
-   EVENTOS.CSS — Sección Eventos (Tanda 2: estructura estática)
-   Header/segmented control/bottom sheets reusan las clases ya existentes
-   de nav.css/reservas.css/global.css (.app-nav*, .tp-seg/.tp-slider/.tp-opt,
-   .bsheet*, .badge*) -- este archivo solo cubre lo que no existe todavía:
-   franja semanal, grilla mensual, cards de evento/cumpleaños y la vista
-   "Lista" (Próximos/Pasados/Todos + filtros, fusionada dentro de #s-eventos
-   -- ver "Cambios recientes", ya no es una pantalla separada).
+   EVENTOS.CSS — Sección Eventos
+   Header/bottom sheets reusan las clases ya existentes de
+   nav.css/reservas.css/global.css (.app-nav*, .bsheet*, .badge*) -- este
+   archivo cubre lo que no existe todavía: nav fija + panel de mes, cards de
+   evento/cumpleaños y el timeline único (ver "Cambios recientes" -- este
+   rediseño reemplaza por completo el sistema de tabs/vistas anterior:
+   ícono ojo + burbuja Calendario/Lista, pill Hoy/Semanal/Mensual y pill
+   Próximos/Pasados/Todos).
    ═══════════════════════════════════════════════════════ */
 
-/* ── Cabecera sticky (ver "Cambios recientes" -- reemplaza el header fijo
-   "EVENTOS"/#eventos-nav, ver index.html): el selector de vistas + la parte
-   "fija" de cada vista quedan pegados arriba de la pantalla mientras se
-   scrollea, `position:sticky` (no `fixed`+spacer como la #eventos-nav vieja)
-   para convivir con el scroll normal de #s-eventos en vez de superponerse.
-   Fondo sólido -- mismo criterio de breakpoint que `.card` (css/ui.css): en
-   mobile real (≤600px) `.card` pierde su fondo propio, así que acá hay que
-   usar el fondo real de la página (`--bg`) en vez de `--card-bg` para que no
-   se transparente el contenido de abajo al scrollear detrás. Padding-top con
-   `env(safe-area-inset-top)` (+ 12px fijos) para que no quede pegado al notch/
-   borde superior del dispositivo al pinnearse; padding-bottom para separarlo
-   del contenido scrolleable de abajo (`.ev-lista`/`#ev-vista-lista-wrap`) --
-   mismo criterio para las 2 vistas (Calendario/Lista, ver "Cambios
-   recientes" -- rediseño de cabecera) porque comparten este único
-   contenedor sticky. */
+/* ── Cabecera sticky (position:sticky, no fixed+spacer, para convivir con el
+   scroll normal de #s-eventos en vez de superponerse). Fondo sólido --
+   mismo criterio de breakpoint que `.card` (css/ui.css): en mobile real
+   (≤600px) `.card` pierde su fondo propio, así que acá hay que usar el
+   fondo real de la página (`--bg`) en vez de `--card-bg` para que no se
+   transparente el contenido de abajo al scrollear detrás. Padding-top con
+   `env(safe-area-inset-top)` (+ 12px fijos) para que no quede pegado al
+   notch/borde superior del dispositivo al pinnearse; padding-bottom para
+   separarlo del timeline que scrollea debajo. */
 .ev-sticky-header {
   position: sticky; top: 0; z-index: 20; background: var(--card-bg);
   padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
@@ -32,64 +27,41 @@
   .ev-sticky-header { background: var(--bg); }
 }
 
-/* ── Cabecera de 3 elementos (ver "Cambios recientes" -- rediseño: ícono
-   ojo/pill contextual/ícono filtros, reemplaza el pill grande Semana/
-   Calendario/Lista + el renglón .ev-subtabs-wrap que antes vivían
-   separados). Íconos ojo/filtros: migrados a `.app-nav-icon-btn`
-   (css/nav.css, ver "Cambios recientes" -- auditoría de consistencia de
-   nav: antes 34×34px/radius:10px/ícono 1.15rem propios, un tamaño más entre
-   varios en toda la app, sin relación con el estándar de 44×44px/radius:12px/
-   ícono 18px que ya comparten flecha atrás/íconos de home/Ajustes) -- HTML
-   ahora suma la clase compartida (`class="app-nav-icon-btn ev-header-icon-btn"`,
-   ver index.html), `.ev-header-icon-btn` queda como modificador MÍNIMO (solo
-   lo que `.app-nav-icon-btn` no aporta), no una regla paralela duplicando
-   tamaño/color/fondo. */
+/* ── Cabecera de 4 elementos (ver "Cambios recientes" -- rediseño: label de
+   mes tocable + 3 íconos fijos lupa/filtros/hoy, reemplaza el ícono ojo +
+   pill contextual + ícono filtros del sistema de tabs anterior). Íconos:
+   `.app-nav-icon-btn` (css/nav.css, mismo estándar 44×44px/radius:12px/
+   ícono 18px que el resto de la app) -- `.ev-header-icon-btn` queda como
+   modificador MÍNIMO (solo lo que `.app-nav-icon-btn` no aporta). */
 .ev-header-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 /* `position:relative` ancla `.ev-filtro-badge` (el número rojo del ícono de
    filtros) -- único aporte propio, todo lo demás (tamaño/fondo/color/hover)
    viene de `.app-nav-icon-btn`. */
 .ev-header-icon-btn { position: relative; }
-/* Reusa el mismo modificador "activo" que ya usaba el botón embudo (togglea
-   con la burbuja propia abierta -- ver _evAbrirFiltrosPanel()/
-   _evAbrirVistaBurbuja(), js/eventos.js) para los 2 íconos por igual. */
+/* Reusa el mismo modificador "activo" para los 2 íconos con burbuja propia
+   (filtros/búsqueda) -- togglea con la burbuja abierta, ver _evAbrirPanel()/
+   js/eventos.js. */
 .ev-header-icon-btn.ev-filtro-toggle-activo { background: var(--brand); color: var(--white); }
-/* Pill contextual -- Hoy/Esta semana/Este mes (Calendario) o Próximos/
-   Pasados/Todos (Lista), una sola visible a la vez (togglada por JS, ver
-   _evCambiarVista()) -- centrada en el espacio restante de la fila. */
-.ev-header-pill-wrap { flex: 1; min-width: 0; display: flex; justify-content: center; }
-/* `.ev-btn-add` ("+" Nuevo evento, admin) -- ver "Cambios recientes":
-   ANTES sobreescribía 36×36px acá, el único uso real de
-   `.app-nav-icon-btn-danger` en toda la app terminaba sin verse nunca a su
-   tamaño base documentado (44×44px). Sin override propio ahora -- hereda
-   44×44px/radius:50% de sus clases base tal cual (`app-nav-icon-btn
-   app-nav-icon-btn-danger`, ver index.html). */
+/* Label de mes -- tocable, abre el panel de mes (grilla+selector). Ocupa el
+   espacio restante de la fila, alineado a la izquierda (a diferencia del
+   viejo pill contextual centrado). */
+.ev-nav-mes-label {
+  flex: 1; min-width: 0; text-align: left; padding: 10px 4px; margin: 0; border: none; background: transparent;
+  font-size: 1rem; font-weight: 800; color: var(--text); text-transform: capitalize; cursor: pointer;
+  font-family: inherit; transition: color 0.15s;
+}
+.ev-nav-mes-label.ev-nav-mes-label-activo { color: var(--brand); }
+/* `.ev-btn-add` ("+" Nuevo evento, admin) -- hereda 44×44px/radius:50% de
+   sus clases base tal cual (`app-nav-icon-btn app-nav-icon-btn-danger`, ver
+   index.html), sin override propio. */
 
-/* ── Franja semanal ───────────────────────────────────── */
-.ev-semana-row { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
-/* `.ev-semana-chevron` (‹/› de semana Y de mes, `.ev-cal-header` más abajo)
-   -- migrado a `.app-nav-icon-btn` (ver "Cambios recientes", mismo criterio
-   que `.ev-header-icon-btn` de arriba: antes 36×36px/radius:10px/ícono
-   1.2rem propios). Queda como modificador mínimo -- solo el `:active` que
-   `.app-nav-icon-btn` no tiene (los botones circulares SÍ tienen su propio
-   `:active`, pero con otro valor -- `.app-nav-back` usa scale(0.95), acá se
-   mantiene el 0.94 ya usado antes en Eventos, diferencia menor sin impacto
-   visual real). Nota: NO se tocó `.ev-cal-grid-chevron` (los chevrones
-   sutiles a los costados de la grilla mensual) -- son un caso distinto a
-   propósito, ver su propia regla más abajo. */
+/* `.ev-semana-chevron` -- botones ‹/› del panel de mes (`.ev-cal-header` más
+   abajo), migrado a `.app-nav-icon-btn`. Queda como modificador mínimo --
+   solo el `:active` que `.app-nav-icon-btn` no tiene (los botones
+   circulares SÍ tienen su propio `:active`, pero con otro valor --
+   `.app-nav-back` usa scale(0.95), acá se mantiene el 0.94 ya usado antes en
+   Eventos, diferencia menor sin impacto visual real). */
 .ev-semana-chevron:active { transform: scale(0.94); }
-.ev-semana-dias { flex: 1; display: flex; justify-content: space-between; gap: 3px; }
-.ev-dia {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
-  padding: 8px 2px; border-radius: 12px; cursor: default; user-select: none;
-}
-.ev-dia-nombre { font-size: 0.62rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
-.ev-dia-num {
-  width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center;
-  justify-content: center; font-size: 0.85rem; font-weight: 700; color: var(--text);
-  transition: background 0.15s, color 0.15s; cursor: pointer;
-}
-.ev-dia.ev-dia-hoy .ev-dia-num { background: var(--brand); color: var(--white); }
-.ev-dia-dots { display: flex; gap: 3px; height: 6px; align-items: center; }
 .ev-dot {
   width: 6px; height: 6px; border-radius: 50%; background: var(--brand); flex-shrink: 0;
   cursor: pointer;
@@ -99,66 +71,14 @@
   cursor: pointer;
 }
 
-/* ── Calendario mensual ──────────────────────────────── */
-.ev-cal-header { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 14px; transition: margin-top 0.2s ease; }
-/* Botones ‹/› -- ocultos por default (grilla expandida, ver "Cambios
-   recientes": favorece el swipe/los chevrones sutiles de la grilla como
-   forma principal de cambiar de mes en ese estado) -- `opacity`, no
-   `display:none` (necesita poder animar el fade-in) + `pointer-events:none`
-   (invisible Y no clickeable a la vez, nunca un botón fime pero inerte).
-   Siguen RESERVANDO su espacio en el `flex` (sin `display:none`) a
-   propósito -- así el label del mes no se re-centra/salta de posición al
-   aparecer/desaparecer, queda siempre en el mismo lugar horizontal. */
-.ev-cal-header .ev-semana-chevron { opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
-/* `.ev-cal-header-compacto` -- togleada por `_evCalActualizarColapso()`
-   (js/eventos.js) en el mismo momento que `.ev-cal-grid-colapsable.colapsada`
-   (grilla oculta al scrollear, título+botones quedan como cabecera
-   compacta/sticky de siempre): reaparecen los botones ‹/› (fade-in, no
-   corte seco) + un margin-top chico para que este renglón no quede pegado
-   contra las tabs Hoy/Esta semana/Este mes de arriba (ver "Cambios
-   recientes" -- pedido explícito, antes sin margen propio). */
-.ev-cal-header.ev-cal-header-compacto { margin-top: 8px; }
-.ev-cal-header.ev-cal-header-compacto .ev-semana-chevron { opacity: 1; pointer-events: auto; }
-/* Tocable -- pasa a "modo mes" (agenda completa, _evCalVerMesCompleto()) --
-   `.ev-cal-mes-activo` (ese modo activo) es el 2do indicador visual del modo,
-   junto con que ningún día de la grilla quede con `.ev-cal-sel` (ver
-   "Cambios recientes"). */
-.ev-cal-mes-label { font-size: 0.95rem; font-weight: 800; color: var(--text); text-transform: capitalize; min-width: 160px; text-align: center; cursor: pointer; transition: color 0.15s; }
-.ev-cal-mes-label.ev-cal-mes-activo { color: var(--brand); }
-/* Colapso de 2 estados de la grilla al scrollear (ver "Cambios recientes" --
-   umbral simple en JS, `_evCalGridColapsada`/scroll listener en
-   js/eventos.js, no interpolado de forma continua con el scroll) -- dentro
-   de la cabecera sticky solo quedan visibles el selector + la fila de
-   navegación de mes una vez colapsada. 340px de margen (igual que
-   .admin-mes-acordeon-body, css/admin.css) alcanza para hasta 6 semanas. */
-.ev-cal-grid-colapsable { max-height: 340px; opacity: 1; overflow: hidden; transition: max-height 0.28s var(--ease-sheet), opacity 0.28s var(--ease-sheet); }
-.ev-cal-grid-colapsable.colapsada { max-height: 0; opacity: 0; }
-/* `.ev-cal-grid-nav` -- fila flex con los 2 chevrones sutiles a los costados
-   de la grilla (ver "Cambios recientes") + la grilla en sí (`flex:1`, ocupa
-   el resto del ancho) -- viven DENTRO de `.ev-cal-grid-colapsable`, se
-   ocultan solos junto con el resto del contenido al colapsar (mismo
-   mecanismo max-height/overflow, sin JS propio para su visibilidad). */
-.ev-cal-grid-nav { display: flex; align-items: center; gap: 2px; }
-.ev-cal-grid { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-/* Sutiles a propósito (pedido explícito) -- sin fondo/borde propios,
-   `opacity` baja por default, solo se destacan al tocarlos/pasar el mouse.
-   `align-self:stretch` los centra contra el alto real de la grilla (el
-   hermano `flex` más alto de la fila) sin necesitar medirlo por JS.
-   Excluidos A PROPÓSITO de la auditoría de consistencia de nav (ver
-   "Cambios recientes" -- no se migran a `.app-nav-icon-btn`/44px como el
-   resto de los botones de ícono de esta pantalla): no son un botón de nav
-   -- viven pegados al contenido de la grilla, no a una fila `.app-nav*`, y
-   "sutil/angosto/sin fondo" fue un pedido explícito de la sesión anterior
-   (ver "Cambios recientes" -- chevrones sutiles de la grilla), justo lo
-   opuesto de un ícono de nav de 44px con fondo. Forzar el tamaño estándar acá
-   hubiera revertido ese pedido sin que nadie lo pidiera. */
-.ev-cal-grid-chevron {
-  flex-shrink: 0; align-self: stretch; display: flex; align-items: center; justify-content: center;
-  width: 20px; padding: 0; border: none; background: transparent; color: var(--muted);
-  opacity: 0.5; cursor: pointer; transition: opacity 0.15s, color 0.15s; -webkit-tap-highlight-color: transparent;
-}
-.ev-cal-grid-chevron:hover, .ev-cal-grid-chevron:active { opacity: 1; color: var(--brand); }
-.ev-cal-grid-chevron .material-symbols-outlined { font-size: 1.05rem; display: block; }
+/* ── Panel de mes: grilla completa + selector de mes/año en pills (ver
+   "Cambios recientes" -- reemplaza la grilla sticky-colapsable que vivía en
+   la cabecera fija: ahora es contenido de una burbuja togleable más, mismo
+   mecanismo que el resto -- `.ev-header-burbuja` ya resuelve mostrar/ocultar
+   con `max-height`, sin necesitar un colapso propio por scroll). ────────── */
+.ev-cal-header { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: 14px; }
+.ev-cal-mes-label { font-size: 0.95rem; font-weight: 800; color: var(--text); text-transform: capitalize; min-width: 160px; text-align: center; }
+.ev-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
 .ev-cal-dow { text-align: center; font-size: 0.62rem; font-weight: 700; color: var(--muted); text-transform: uppercase; padding-bottom: 6px; }
 .ev-cal-celda {
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
@@ -170,25 +90,44 @@
   justify-content: center; font-size: 0.78rem; font-weight: 700; color: var(--text);
   transition: background 0.15s, color 0.15s, outline-color 0.15s;
 }
-/* "Hoy" (anillo, siempre visible) vs "seleccionado" (relleno, el día tocado
-   -- arranca en "hoy") son 2 estados independientes (ver "Cambios
-   recientes"): `.ev-cal-sel` declarada DESPUÉS de `.ev-dia-hoy` a propósito
-   -- en una celda con ambas clases, su `color:white` gana sobre el
-   `color:brand` de `.ev-dia-hoy` (ambos selectores de igual especificidad,
-   1 clase c/u sobre `.ev-cal-num`), pero el `outline` de `.ev-dia-hoy` sigue
-   aplicado (ninguna de las 2 reglas lo toca) -- relleno + anillo combinados
-   sin pisarse, sin necesitar un 3er selector combinado. */
+/* "Hoy" -- anillo, único estado de destaque de la grilla (ver "Cambios
+   recientes" -- ya no existe un "día seleccionado" con relleno propio: la
+   grilla solo sirve para elegir un día y scrollear el timeline, no para
+   marcar una selección persistente). */
 .ev-cal-celda.ev-dia-hoy .ev-cal-num { outline: 1.5px solid var(--brand); outline-offset: 1.5px; color: var(--brand); font-weight: 800; }
-.ev-cal-celda.ev-cal-sel .ev-cal-num { background: var(--brand); color: var(--white); }
 .ev-cal-dots { display: flex; gap: 3px; height: 6px; align-items: center; }
+/* Selector horizontal de mes/año en pills (ver "Cambios recientes" -- nuevo,
+   reusa literal `.historial-pill` de css/home.css, mismo patrón de scroll
+   horizontal sin barra visible que `#historial-pills-anio`). */
+.ev-mes-pills-row { display: flex; gap: 8px; overflow-x: auto; padding: 14px 2px 2px; scrollbar-width: none; -ms-overflow-style: none; }
+.ev-mes-pills-row::-webkit-scrollbar { display: none; }
 
-/* ── Lista de eventos (debajo de Calendario) ─────────────────────────── */
-.ev-lista { margin-top: 20px; text-align: left; scroll-margin-top: 90px; }
-.ev-fecha-grupo { margin-bottom: 18px; scroll-margin-top: 90px; }
-.ev-fecha-label {
-  font-size: 0.72rem; font-weight: 800; color: var(--brand); text-transform: uppercase;
-  letter-spacing: 0.8px; margin-bottom: 8px; padding-left: 2px;
+/* ── Timeline único (ver "Cambios recientes" -- reemplaza `.ev-lista` +
+   `.ev-fecha-label` por texto: cada fecha lleva un badge lateral tipo Google
+   Calendar en vez de un rótulo de texto arriba). ─────────────────────── */
+.ev-timeline { margin-top: 20px; text-align: left; }
+/* Encabezado de mes ("AGOSTO 2026") -- separador de sección dentro del
+   scroll, más peso visual que el badge de fecha (marca un cambio de mes,
+   no de día) -- leído por `_evActualizarNavMesPorScroll()` (js/eventos.js,
+   `data-anio`/`data-mes`) para mantener el label de la nav fija sincronizado
+   con la sección que se está scrolleando. */
+.ev-mes-header {
+  font-size: 0.8rem; font-weight: 800; color: var(--brand); text-transform: uppercase;
+  letter-spacing: 1px; margin: 22px 0 14px; padding-left: 2px;
 }
+.ev-mes-header:first-child { margin-top: 0; }
+/* Fila fecha: badge fijo a la izquierda (día+número, ver
+   `.ev-fecha-badge*` más abajo) + columna de cards a la derecha. */
+.ev-fecha-grupo { display: flex; gap: 12px; margin-bottom: 18px; scroll-margin-top: 90px; }
+.ev-fecha-badge { flex-shrink: 0; width: 38px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 2px; }
+.ev-fecha-badge-dia { font-size: 0.62rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+.ev-fecha-badge-num {
+  width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; font-weight: 700; color: var(--text); border: 1.5px solid transparent;
+}
+.ev-fecha-badge-num.ev-fecha-badge-hoy { background: var(--brand); color: var(--white); }
+.ev-fecha-items { flex: 1; min-width: 0; }
+.ev-fecha-items > *:last-child { margin-bottom: 0; }
 .ev-lista-vacia {
   text-align: center; padding: 40px 16px; color: var(--muted); font-size: 0.85rem;
   background: var(--surface-2); border: 1.5px solid var(--border-light); border-radius: 14px;
@@ -550,74 +489,8 @@
 .ev-asist-persona-no-jugador { background: color-mix(in srgb, var(--amber-dark) 14%, transparent); }
 .ev-asist-persona-sin-respuesta { background: color-mix(in srgb, var(--muted) 14%, transparent); }
 
-/* ── Vista "Lista" (ver "Cambios recientes" — reemplaza la pantalla
-   separada "Ver todos los eventos"/s-eventos-todos, ahora una de las 2
-   opciones del selector de vista -- ícono ojo, burbuja -- todo dentro de
-   #s-eventos). ────── */
-
-/* `position:relative;overflow-x:hidden` -- pre-existente, sin uso funcional
-   hoy (ver "Cambios recientes": el crossfade de `_evAnimarCambioContenido()`,
-   js/eventos.js, no clona ni posiciona nada -- un solo nodo real, sin
-   necesitar ningún ancestro `position:relative`). Se deja tal cual, inocuo,
-   por si algún día vuelve a hacer falta -- no vale la pena tocar una regla
-   preexistente que no rompe nada por sacarle un uso que ya no tiene. */
-#ev-vista-lista-wrap { position: relative; overflow-x: hidden; }
-
-/* Sub-tabs Próximos/Pasados/Todos: texto simple, sin fondo -- el navegador ya
-   anima `color` solo vía `transition`, no hace falta medir nada para eso.
-   **Indicador (ver "Cambios recientes" -- reemplaza la línea estática por
-   tab, un `border-bottom`/`margin-bottom` fijo en `.ev-subtab.activo` sin
-   ninguna transición de posición real):** `.ev-subtabs-indicator`, medido/
-   animado por JS (`_evUpdateSubtabIndicator()`, `js/eventos.js`) -- mismo
-   patrón que `.tp-slider`/`_updateTpSlider()` (css/reservas.css,
-   js/reservas.js): un solo elemento que se mueve con `transform:translateX`
-   + `width`, en vez de un estado CSS por tab. */
-/* Wrapper del renglón de subtabs (ver "Cambios recientes" -- rediseño de
-   cabecera: vive adentro de `.ev-header-pill-wrap`, ya no tiene un botón de
-   filtro propio que anclar -- ese ícono se mudó a la fila `.ev-header-row`,
-   fuera de este wrapper). `position:relative` se conserva solo para anclar
-   `.ev-subtabs-indicator` (`position:absolute;bottom:0`) contra el renglón
-   de subtabs. */
-.ev-subtabs-wrap { position: relative; }
-.ev-subtabs { display: flex; justify-content: center; gap: 22px; }
-/* `padding` vertical/`font-size` igualados a `.tp-opt` (css/reservas.css,
-   ver "Cambios recientes" -- auditoría de consistencia de nav: antes
-   `4px 1px 10px`/`0.82rem`, ~11px más bajo que el pill `.tp-seg` de s4/Mi
-   Liga admin -- confirmado con Victor: unificar altura/font-size mantenendo
-   CADA look propio (texto+línea acá, pill con fondo allá -- son roles
-   visuales distintos a propósito, no se tocan `background`/`border-radius`).
-   `8px 1px 14px` = 22px de padding vertical total, igual que `.tp-opt`
-   (`11px 22px`, 22px vertical) -- se mantiene la asimetría (más espacio
-   abajo que arriba) porque `.ev-subtabs-indicator` necesita ese hueco
-   debajo del texto, ahora simplemente más grande en las 2 direcciones.
-   Horizontal (`1px`) sin cambios -- folder de posts distinto: acá el
-   espaciado entre tabs lo da `.ev-subtabs{gap:22px}`, no el padding de cada
-   uno (a diferencia de `.tp-opt`, un pill individual que sí necesita
-   padding horizontal propio para su propio fondo/border-radius). */
-.ev-subtab {
-  padding: 8px 1px 14px; font-size: 0.88rem; font-weight: 700; color: var(--muted); cursor: pointer;
-  transition: color 0.2s;
-  user-select: none;
-}
-.ev-subtab.activo { color: var(--brand); }
-/* Ancho/posición los fija `_evUpdateSubtabIndicator()` inline (`style.width`/
-   `style.transform`) -- acá solo el look + el timing de la transición (misma
-   curva `--ease-sheet` que el resto de paneles colapsables de esta pantalla).
-   Sin `.animado` propia (a diferencia de `.tp-slider`): la función togglea
-   `transition:none` inline en el render inicial en vez de una clase, ver su
-   comentario en js/eventos.js. */
-.ev-subtabs-indicator {
-  position: absolute; bottom: 0; left: 0; height: 2px; width: 0;
-  background: var(--brand); border-radius: 2px;
-  transition: transform 0.32s var(--ease-sheet), width 0.32s var(--ease-sheet);
-}
-
-/* Botón embudo -- ícono universal de filtros (ver "Cambios recientes":
-   antes anclado absolute al borde de `.ev-subtabs-wrap`, ahora un ítem más
-   de `.ev-header-row`, tamaño/forma/estados los aporta `.ev-header-icon-btn`
-   -- acá solo queda lo que le es propio). */
-/* Badge numérico -- cuenta de los 3 filtros (mes/lugar/tipo) CON al menos
-   una opción seleccionada (no el total de opciones marcadas, ver
+/* Badge numérico -- cuenta de los 2 filtros (lugar/tipo) CON al menos una
+   opción seleccionada (no el total de opciones marcadas, ver
    `_evActualizarBadgeFiltros()`/js/eventos.js) -- oculto (`display:none`,
    togleado por JS) si ninguno tiene selección. Ancla contra
    `.ev-header-icon-btn` (`position:relative`, ver más arriba). */
@@ -628,61 +501,35 @@
   line-height: 1; box-shadow: 0 0 0 2px var(--card-bg);
 }
 
-/* ── Burbujas de cabecera (selector de vista + panel de filtros, ver
-   "Cambios recientes" -- rediseño): `.ev-header-burbuja` es el wrapper
-   MECÁNICO (max-height/overflow, igual criterio que `.ev-filtro-burbuja`/
-   `.ev-cal-grid-colapsable` -- SIN un `max-height` fijo en `.abierta`, bug
-   real ya corregido antes acá: un techo mucho más alto que el contenido real
-   hace que la transición se vea instantánea en vez de animada. Se fija por
-   JS con `scrollHeight` real, ver `_evAbrirFiltrosPanel()`/
-   `_evAbrirVistaBurbuja()`, js/eventos.js). `.ev-header-burbuja-panel`
-   adentro es la capa VISUAL -- panel simple (marco redondeado + fondo), sin
-   ningún conector hacia el ícono que lo abrió (ver "Cambios recientes" — se
-   había probado con una colita triangular, la costura visual en la unión no
-   quedó bien y se sacó del todo en vez de seguir ajustándola). */
+/* ── Burbujas de cabecera (mes/filtros/búsqueda, ver "Cambios recientes" --
+   rediseño): `.ev-header-burbuja` es el wrapper MECÁNICO (max-height/
+   overflow -- SIN un `max-height` fijo en `.abierta`, bug real ya corregido
+   antes acá: un techo mucho más alto que el contenido real hace que la
+   transición se vea instantánea en vez de animada. Se fija por JS con
+   `scrollHeight` real, ver `_evAbrirPanel()`, js/eventos.js).
+   `.ev-header-burbuja-panel` adentro es la capa VISUAL -- panel simple
+   (marco redondeado + fondo), sin ningún conector hacia el ícono que lo
+   abrió. Las 3 burbujas (mes/filtros/búsqueda) comparten este mismo
+   mecanismo -- solo una abierta a la vez, ver `_evTogglePanel()`. */
 .ev-header-burbuja { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
-/* Espacio contra el contenido que sigue inmediatamente debajo -- el renglón
-   de mes/flechas de Calendario, o la lista de eventos (ver "Cambios
-   recientes": sin esto, la burbuja abierta quedaba pegada contra ese
-   contenido). El margen vive AFUERA de la caja (`overflow:hidden` de la
-   burbuja colapsada no lo toca) -- por eso tiene que quedar condicionado a
-   `.abierta`, si no dejaría un hueco vacío permanente incluso colapsada.
-   Mismo valor (18px) en las 2 burbujas de cabecera (selector de vista y
-   filtros, ambas comparten esta clase) para consistencia. */
+/* Espacio contra el contenido que sigue inmediatamente debajo (el timeline)
+   -- sin esto, la burbuja abierta quedaba pegada contra ese contenido. El
+   margen vive AFUERA de la caja (`overflow:hidden` de la burbuja colapsada
+   no lo toca) -- por eso tiene que quedar condicionado a `.abierta`, si no
+   dejaría un hueco vacío permanente incluso colapsada. */
 .ev-header-burbuja.abierta { margin-bottom: 18px; }
-/* Panel simple, sin colita (ver "Cambios recientes" -- el intento de
-   arreglar la costura visual del triángulo, con z-index + solape, no quedó
-   bien -- se sacó del todo en vez de seguir ajustándola: rectángulo
-   redondeado sin ningún conector hacia el ícono que lo abrió). */
+/* Panel simple, sin colita -- rectángulo redondeado sin ningún conector
+   hacia el ícono que lo abrió. */
 .ev-header-burbuja-panel {
   margin-top: 16px; padding: 14px;
   border: 1.5px solid var(--border-light); border-radius: 14px; background: var(--surface-2);
 }
 
-/* Burbuja del selector de vista -- 2 opciones (ver "Cambios recientes"),
-   mismo look que una fila de menú simple. `.ev-vista-opcion-activa` marca la
-   vista actualmente activa (actualizado por `_evActualizarVistaOpciones()`,
-   js/eventos.js). */
-.ev-vista-opcion {
-  display: flex; align-items: center; gap: 10px; padding: 11px 8px; border-radius: 10px;
-  font-size: 0.85rem; font-weight: 700; color: var(--text-2); cursor: pointer; transition: background 0.15s, color 0.15s;
-}
-.ev-vista-opcion:hover { background: var(--surface-light); }
-.ev-vista-opcion .material-symbols-outlined { font-size: 1.1rem; color: var(--muted); flex-shrink: 0; transition: color 0.15s; }
-.ev-vista-opcion.ev-vista-opcion-activa { color: var(--brand); }
-.ev-vista-opcion.ev-vista-opcion-activa .material-symbols-outlined { color: var(--brand); }
-
-/* `.ev-filtros-colapsable` (panel de filtros -- universal, ver "Cambios
-   recientes": antes exclusivo de "Lista", ahora disponible en las 2 vistas,
-   togleado por el ícono embudo de `.ev-header-row`,
-   `_evToggleFiltrosPanel()`/js/eventos.js) reusa el mecanismo de
-   `.ev-header-burbuja` de arriba tal cual -- convive como clase adicional en
-   el mismo elemento (ver index.html), sin ningún estilo propio extra. */
-
-/* Filtros Mes/Lugar/Tipo -- 3 botones "trigger" (mismo look/idea que
-   .admin-destino-trigger de css/admin.css: parecen un <select>) que
-   despliegan una burbuja inline debajo de la fila en vez de abrir un bottom
-   sheet (ver "Cambios recientes") -- _evToggleFiltroBurbuja()/
+/* Filtros Lugar/Tipo (ver "Cambios recientes" -- se saca el filtro "Mes" que
+   tenía antes, ahora el mes se maneja desde el panel de mes) -- botones
+   "trigger" (mismo look/idea que .admin-destino-trigger de css/admin.css:
+   parecen un <select>) que despliegan una burbuja inline debajo de la fila
+   en vez de abrir un bottom sheet -- _evToggleFiltroBurbuja()/
    #ev-filtro-burbuja-<campo> en js/eventos.js/index.html. */
 .ev-filtros-row { display: flex; gap: 8px; margin-bottom: 4px; }
 .ev-filtro-trigger {
@@ -696,26 +543,22 @@
 .ev-filtro-trigger.ev-filtro-activo { border-color: var(--brand); color: var(--brand); background: var(--brand-lightest); }
 .ev-filtro-trigger.ev-filtro-activo .material-symbols-outlined { color: var(--brand); }
 
-/* Burbuja inline de un filtro (Mes/Lugar/Tipo) -- colapsada por default
-   (max-height:0 + overflow:hidden), un solo `.abierta` a la vez entre las 3
-   (_evToggleFiltroBurbuja(), js/eventos.js) empuja naturalmente la lista de
-   abajo al expandirse en vez de superponerse. Mismo mecanismo/curva que
+/* Burbuja inline de un filtro (Lugar/Tipo) -- colapsada por default
+   (max-height:0 + overflow:hidden), un solo `.abierta` a la vez entre las 2
+   (_evToggleFiltroBurbuja(), js/eventos.js) empuja naturalmente el timeline
+   de abajo al expandirse en vez de superponerse. Mismo mecanismo/curva que
    .admin-mes-acordeon-body (css/admin.css) y .fi-body (css/reservas.css). */
 .ev-filtro-burbuja { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
 /* Mismo criterio/valor (18px) que `.ev-header-burbuja.abierta` de arriba --
-   ver "Cambios recientes" -- para que una burbuja de campo (Mes/Lugar/Tipo)
-   abierta tampoco quede pegada contra el cierre del panel exterior. */
+   para que una burbuja de campo (Lugar/Tipo) abierta tampoco quede pegada
+   contra el cierre del panel exterior. */
 .ev-filtro-burbuja.abierta { max-height: 320px; margin-bottom: 18px; }
 .ev-filtro-burbuja-pills { padding: 10px 2px 16px; }
 
-/* Card compacta de una fila de la lista -- `.ev-card-compacta-wrap` es el
-   contenedor real (fondo/borde/margen); `.ev-card-compacta` adentro es solo
-   la fila clickeable (ícono+info+chevron o chip de asistencia), separada de
-   la barra de RSVP compacta opcional debajo (eventos futuros, ver
-   _evListaTabFilaHtml()) -- necesitaba separarse así porque el RSVP tiene
-   sus propios onclick por opción y no debe disparar también el onclick de
-   la fila (evita el bug obvio de "tocar Asistiré abre el detalle" -- ver
-   event.stopPropagation() en _evRsvpBarraHtml()). */
+/* Card compacta de una fila del timeline (eventos pasados) --
+   `.ev-card-compacta-wrap` es el contenedor real (fondo/borde/margen);
+   `.ev-card-compacta` adentro es solo la fila clickeable (ícono+info+chip de
+   asistencia real, ver _evTimelineFilaHtml()). */
 .ev-card-compacta-wrap {
   margin-bottom: 8px; background: var(--surface-2); border: 1.5px solid var(--border-light);
   border-radius: 12px; transition: border-color 0.15s; overflow: hidden;
@@ -735,21 +578,19 @@
    `.ev-card-compacta` es el chip de asistencia real, sentence case acá. */
 .ev-card-compacta .badge { flex-shrink: 0; text-transform: none; }
 .ev-card-compacta-wrap .ev-asistire-wrap { margin: 0 14px 12px; }
-/* Jerarquía visual pasados/futuros -- solo subtab "Todos" (ver "Cambios
-   recientes", `_evListaTabFilaHtml()`/js/eventos.js): opacidad reducida en
-   TODA la card compacta (pasados) + ícono forzado a gris apagado en vez de
-   heredar el color de marca a través de la opacidad (2 efectos distintos,
-   pedido explícito -- la opacidad sola dejaría un ícono brand tenue, no
-   "apagado"). Futuros (`.ev-card`, la card completa) sin cambios. */
+/* Jerarquía visual pasados/futuros (ver "Cambios recientes",
+   `_evTimelineFilaHtml()`/js/eventos.js): opacidad reducida en TODA la card
+   compacta (pasados) + ícono forzado a gris apagado en vez de heredar el
+   color de marca a través de la opacidad (2 efectos distintos, pedido
+   explícito -- la opacidad sola dejaría un ícono brand tenue, no "apagado").
+   Futuros (`.ev-card`, la card completa) sin cambios. */
 .ev-card-compacta-wrap.ev-pasado-atenuado { opacity: 0.55; }
 .ev-card-compacta-wrap.ev-pasado-atenuado .ev-card-icon { background: var(--surface-2); color: var(--muted); }
-/* Separador "HOY" -- línea fina a cada lado (mismo `--border-light` que el
-   resto de separadores de esta pantalla) + texto centrado en color de marca,
-   ubicado en el punto cronológico exacto entre el bloque de pasados y el de
-   futuros dentro de la lista ya ordenada (ver `_evListaTabRenderLista()`). */
-.ev-hoy-separador { display: flex; align-items: center; gap: 10px; margin: 4px 0 14px; }
-.ev-hoy-separador::before, .ev-hoy-separador::after { content: ''; flex: 1; height: 1.5px; background: var(--border-light); }
-.ev-hoy-separador span { font-size: 0.72rem; font-weight: 800; color: var(--brand); text-transform: uppercase; letter-spacing: 1px; }
+
+/* Buscador -- reusa `.app-nav-search` literal (css/nav.css, mismo pill que
+   Ajustes). Sin cursor parpadeante visible, mismo criterio que
+   `#aj-search-input`. */
+#ev-search-input { caret-color: transparent; }
 
 @media (prefers-color-scheme: dark) {
   .ev-lista-vacia { background: var(--surface-2); border-color: var(--border-light); }
