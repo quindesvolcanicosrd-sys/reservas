@@ -39,8 +39,23 @@
    contenedor nuevo a futuro se sume a la app sin la regla, mismo tipo de
    bug), una regla universal la cubre de una sola vez para cualquier
    elemento con scroll propio, presente o futuro -- no hay ningún lugar de
-   la app que dependa del rebote nativo en ningún eje. */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; overscroll-behavior: contain; overflow-anchor: none; }
+   la app que dependa del rebote nativo en ningún eje.
+   `scrollbar-width:none` / `*::-webkit-scrollbar{display:none}` UNIVERSAL
+   (ver "Cambios recientes" -- bug real recurrente: la scrollbar nativa
+   seguía apareciendo en contenedores nuevos pese a haberse "resuelto" antes;
+   auditado con Playwright -- computed style, no adivinado -- el problema
+   real es que el ocultamiento de scrollbar NUNCA fue universal como el
+   `overscroll-behavior` de arriba: se agregó a mano en 3 lugares puntuales
+   (`.time-wheel`, `.ev-mes-pills-row`, `#historial-pills-anio`) y quedó ahí,
+   así que cualquier OTRO contenedor con scroll propio -- confirmado en
+   `.ddp-year-grid`/`.dp-year-grid`, `scrollbar-width:auto` de fábrica -- se
+   quedaba sin la regla, sin que nadie tuviera que "olvidarse" de nada: el
+   mecanismo en sí nunca cubría contenedores nuevos. Mismo criterio que
+   `overscroll-behavior`: una regla universal en vez de una lista para
+   mantener a mano; las 3 declaraciones puntuales de arriba quedan
+   redundantes y se sacan. */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; overscroll-behavior: contain; overflow-anchor: none; scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; }
 body {
   font-family: 'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text);
   -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;

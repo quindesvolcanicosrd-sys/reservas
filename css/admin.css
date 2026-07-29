@@ -126,8 +126,9 @@
    <input type="date"> nativo (ese ya se ve bien). 2 columnas con scroll-snap,
    ítem centrado = seleccionado. */
 .time-wheel-wrap { position: relative; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 10px; height: 160px; background: var(--surface-2); border-radius: 12px; overflow: hidden; }
-.time-wheel { height: 160px; width: 64px; overflow-y: scroll; scroll-snap-type: y mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-.time-wheel::-webkit-scrollbar { display: none; }
+/* Ocultamiento de scrollbar ya no hace falta acá -- universal (`*`,
+   css/global.css, ver "Cambios recientes"). */
+.time-wheel { height: 160px; width: 64px; overflow-y: scroll; scroll-snap-type: y mandatory; -webkit-overflow-scrolling: touch; }
 .time-wheel-item { height: 40px; display: flex; align-items: center; justify-content: center; scroll-snap-align: center; font-size: 1.05rem; font-weight: 600; color: var(--muted); transition: color 0.15s; user-select: none; cursor: pointer; }
 .time-wheel-item.time-wheel-sel { color: var(--brand); font-size: 1.3rem; font-weight: 800; }
 .time-wheel-sep { font-size: 1.3rem; font-weight: 800; color: var(--brand); flex-shrink: 0; }

@@ -106,8 +106,10 @@
    mismo patrón de scroll horizontal sin barra visible que
    `#historial-pills-anio`). `.ev-mes-pill-corte` -- corte visual de año
    (línea vertical + año chico), en vez de repetir el año en cada pill. */
-.ev-mes-pills-row { display: flex; align-items: center; gap: 8px; overflow-x: auto; padding: 14px 2px 2px; scrollbar-width: none; -ms-overflow-style: none; }
-.ev-mes-pills-row::-webkit-scrollbar { display: none; }
+/* Ocultamiento de scrollbar ya no hace falta acá -- universal (`*`,
+   css/global.css, ver "Cambios recientes"); `-ms-overflow-style` queda (no
+   tiene equivalente en la regla universal, target distinto -- IE/Edge viejo). */
+.ev-mes-pills-row { display: flex; align-items: center; gap: 8px; overflow-x: auto; padding: 14px 2px 2px; -ms-overflow-style: none; }
 .ev-mes-pill-corte {
   flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
   padding: 0 4px; align-self: stretch; justify-content: center; border-left: 1.5px solid var(--border-light);
