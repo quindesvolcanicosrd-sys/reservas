@@ -297,6 +297,19 @@ function _evCerrarPanel(tag, instant) {
     _evBuscar('');
   }
 }
+// Chequeo compartido de "¿este toque fue AFUERA de la burbuja abierta y de su
+// propio ícono trigger?" -- usado por los 2 listeners de abajo (click Y
+// pointerdown) para no tener 2 copias de la misma condición de contención
+// que puedan desincronizarse.
+function _evCerrarBurbujaSiFueraDe(target) {
+  if (!_evPanelAbierto) return;
+  var cfg = _EV_PANELES[_evPanelAbierto];
+  if (!cfg) return;
+  var panelEl = document.getElementById(cfg.el);
+  var btnEl = document.getElementById(cfg.btn);
+  if ((panelEl && panelEl.contains(target)) || (btnEl && btnEl.contains(target))) return;
+  _evCerrarPanel(_evPanelAbierto);
+}
 // Cualquier click fuera de la burbuja de filtros/búsqueda ABIERTA (y fuera de
 // su propio ícono trigger) la cierra -- sin bloquear la acción tocada (ver
 // "Cambios recientes": "hoy" cierra la burbuja Y navega en el mismo toque,
@@ -307,14 +320,28 @@ function _evCerrarPanel(tag, instant) {
 // NO pasa por acá -- solo el chevron/label de la nav lo cierra (ver
 // "Cambios recientes" -- rediseño de Calendario, es la única acción que lo
 // cierra del todo, a propósito, para no pelear con el scroll/swipe).
-document.addEventListener('click', function(e) {
-  if (!_evPanelAbierto) return;
-  var cfg = _EV_PANELES[_evPanelAbierto];
-  if (!cfg) return;
-  var panelEl = document.getElementById(cfg.el);
-  var btnEl = document.getElementById(cfg.btn);
-  if ((panelEl && panelEl.contains(e.target)) || (btnEl && btnEl.contains(e.target))) return;
-  _evCerrarPanel(_evPanelAbierto);
+document.addEventListener('click', function(e) { _evCerrarBurbujaSiFueraDe(e.target); });
+// Cierre por el INICIO de cualquier gesto, no solo un tap completo (ver
+// "Cambios recientes" -- pedido explícito: scrollear el timeline con la
+// burbuja abierta debía cerrarla apenas arranca el gesto, sin esperar a que
+// termine). El listener de arriba (`click`) NO alcanza para esto: un
+// scroll/drag real nunca dispara `click` -- solo un tap sin arrastre lo hace
+// -- así que la burbuja se quedaba abierta/flotando mientras el usuario
+// scrolleaba por abajo. 2 eventos, mismo handler (no alcanza con uno solo):
+// `pointerdown` es lo que dispara un toque real en un dispositivo (mouse/pen/
+// touch unificados, llega ANTES que cualquier `touchstart`) pero un
+// `TouchEvent` armado a mano (`new TouchEvent(...)` + `dispatchEvent()`, como
+// hace este mismo archivo para el swipe del calendario, y como usa la
+// verificación de Playwright de este punto) NO pasa por la traducción nativa
+// touch→pointer del navegador y nunca dispara `pointerdown` -- por eso
+// también se escucha `touchstart` directo, para cubrir ambos casos sin
+// depender de cuál pipeline de eventos generó el toque. Fase de CAPTURA (3er
+// argumento `true`) a propósito, aunque hoy ningún handler de esta pantalla
+// usa `stopPropagation()`: corre ANTES que cualquier handler propio del
+// elemento tocado, así un gesto interno futuro (ej. el swipe del calendario)
+// no puede interponerse por accidente si algún día suma uno.
+['pointerdown', 'touchstart'].forEach(function(tipo) {
+  document.addEventListener(tipo, function(e) { _evCerrarBurbujaSiFueraDe(e.target); }, true);
 });
 function _evToggleMesPanel() { _evTogglePanel('mes'); }
 function _evToggleFiltrosPanel() { _evTogglePanel('filtros'); }
@@ -600,13 +627,28 @@ function _evActualizarNavMesLabel(instant) {
     span.textContent = NOMBRES_MESES[_evNavMesActual.month] + ' ' + _evNavMesActual.year;
   }, instant);
 }
+// Alto REAL de la cabecera sticky en este instante (incluye el panel de
+// calendario si está expandido, o cualquier otra burbuja abierta) -- ver
+// "Cambios recientes": reemplaza el `90` fijo que usaban `_evScrollAFecha()`/
+// este mismo listener, correcto solo con la cabecera colapsada. Bug real
+// encontrado con Playwright: al swipear de mes con el calendario expandido
+// (cabecera bastante más alta que 90px), el destino del `scrollIntoView()`
+// quedaba tapado por la cabecera igual que el bug original de esta sesión --
+// mismo síntoma, causa distinta (acá no es scroll-anchoring, es un margen
+// desactualizado). Se lee en vivo en vez de cachear: no vale la pena
+// trackear cada cambio de alto (abrir/cerrar calendario, otro mes con 5 vs.
+// 6 semanas, abrir/cerrar filtros/búsqueda) por separado.
+function _evAlturaStickyHeader() {
+  var h = document.getElementById('ev-sticky-header');
+  return h ? h.getBoundingClientRect().height : 90;
+}
 function _evActualizarNavMesPorScroll() {
   var pantalla = document.getElementById('s-eventos');
   if (!pantalla || !pantalla.classList.contains('activa')) return;
   if (Date.now() - _evCalUltimaAccionTs < 500) return;
   var headers = document.querySelectorAll('.ev-mes-header');
   if (!headers.length) return;
-  var margenSup = 90;
+  var margenSup = _evAlturaStickyHeader();
   var actual = headers[0];
   headers.forEach(function(h) { if (h.getBoundingClientRect().top <= margenSup) actual = h; });
   var year = +actual.getAttribute('data-anio'), month = +actual.getAttribute('data-mes');
@@ -617,9 +659,27 @@ function _evActualizarNavMesPorScroll() {
   }
 }
 window.addEventListener('scroll', _evActualizarNavMesPorScroll, { passive: true });
-// Ícono "hoy" -- scrollea el timeline hasta la fecha actual (o la fecha más
-// cercana con contenido, si hoy no tiene nada propio, ver _evScrollAFecha()).
-function _evIrAHoy() { _evScrollAFecha(_evHoyISO()); }
+// Ícono "hoy" -- si el calendario está abierto, lo vuelve al mes actual
+// también (no solo scrollea el timeline) -- mismo helper que pill/swipe
+// (_evCalIrAFechaEnTimeline()) por el mismo bug real de Playwright: si el
+// calendario había navegado a un mes sin eventos, el timeline había quedado
+// reemplazado por el aviso "No hay eventos este mes" -- SIN ningún anchor de
+// fecha en el DOM, ni el de hoy (que siempre tiene contenido real en la
+// demo), dejando este botón sin nada a lo que saltar. El helper ya sabe
+// reponer el timeline completo cuando el destino sí tiene contenido (que
+// "hoy" siempre tiene), así que alcanza con pasar por él en vez de llamar a
+// `_evScrollAFecha()` directo como antes.
+function _evIrAHoy() {
+  var hoy = _evHoyISO();
+  if (_evCalVisible) {
+    _evCalUltimaAccionTs = Date.now();
+    _evCalFechaMostrada = hoy;
+    _evSincronizarNavMesDesde(hoy);
+    _evCalRenderContenido();
+    _evCalRenderPills();
+  }
+  _evCalIrAFechaEnTimeline(hoy);
+}
 
 /* ── Consultas sobre los datos de prueba (idénticas a como se filtrarían
    los datos reales de getEventosRango()/getCumpleañosRango()) ──────────── */
@@ -663,19 +723,26 @@ function _evLanzarConfettiCuandoVisible(el, intentosRestantes) {
 // Tocar un día (grilla del panel de mes, o el ícono "hoy") hace scroll hasta
 // su grupo en el timeline, PERO solo si no está ya completamente visible
 // (ver "Cambios recientes" -- pedido explícito: nada de saltos si ya se ve
-// todo). Márgenes del chequeo iguales a los que ya usa el scroll real: 90px
-// arriba (mismo valor que `scroll-margin-top` de `.ev-fecha-grupo`,
-// css/eventos.css) y `--bottom-nav-h` abajo (css/colors.css). `instant`
-// (opcional, ver irEventos()) fuerza `behavior:'auto'` en vez de `'smooth'`
-// -- posición inicial de entrada, no un scroll disparado por el usuario. Sin
-// grupo exacto para `iso` (ej. "hoy" sin eventos propios, ver "Cambios
-// recientes" -- decisión confirmada: no se fuerza un renglón vacío para hoy)
-// cae al grupo real más cercano en el tiempo (_evFechaGrupoMasCercano()).
+// todo). Márgenes del chequeo iguales a los que usa el scroll real: alto
+// REAL de la cabecera sticky arriba (`_evAlturaStickyHeader()`, ver
+// "Cambios recientes" -- ya NO es un 90px fijo, variaba con el calendario
+// expandido/colapsado) y `--bottom-nav-h` abajo (css/colors.css). Antes de
+// scrollear, publica ese mismo alto en `--ev-sticky-h` (CSS var que lee
+// `scroll-margin-top` de `.ev-fecha-grupo`, css/eventos.css) -- el
+// `scrollIntoView()` nativo de más abajo usa esa property para no alinear el
+// destino justo debajo del borde de la cabecera, sino con el margen real que
+// tiene en este instante. `instant` (opcional, ver irEventos()) fuerza
+// `behavior:'auto'` en vez de `'smooth'` -- posición inicial de entrada, no
+// un scroll disparado por el usuario. Sin grupo exacto para `iso` (ej. "hoy"
+// sin eventos propios, ver "Cambios recientes" -- decisión confirmada: no se
+// fuerza un renglón vacío para hoy) cae al grupo real más cercano en el
+// tiempo (_evFechaGrupoMasCercano()).
 function _evScrollAFecha(iso, instant) {
   var el = document.getElementById('ev-fecha-' + iso) || _evFechaGrupoMasCercano(iso);
   if (!el) return;
+  var margenSup = _evAlturaStickyHeader();
+  document.documentElement.style.setProperty('--ev-sticky-h', margenSup + 'px');
   var r = el.getBoundingClientRect();
-  var margenSup = 90;
   var margenInf = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-h')) || 60;
   var vh = window.innerHeight || document.documentElement.clientHeight;
   var yaVisible = r.top >= margenSup && r.bottom <= (vh - margenInf);

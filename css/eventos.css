@@ -130,7 +130,11 @@
 .ev-mes-header:first-child { margin-top: 0; }
 /* Fila fecha: badge fijo a la izquierda (día+número, ver
    `.ev-fecha-badge*` más abajo) + columna de cards a la derecha. */
-.ev-fecha-grupo { display: flex; gap: 12px; margin-bottom: 18px; scroll-margin-top: 90px; }
+/* `scroll-margin-top` via CSS var (ver "Cambios recientes" -- antes 90px
+   fijo, roto con el calendario expandido: `_evScrollAFecha()`, js/eventos.js,
+   la actualiza al alto REAL de la cabecera sticky justo antes de cada
+   scroll; 90px es solo el default antes de la primera actualización). */
+.ev-fecha-grupo { display: flex; gap: 12px; margin-bottom: 18px; scroll-margin-top: var(--ev-sticky-h, 90px); }
 .ev-fecha-badge { flex-shrink: 0; width: 38px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 2px; }
 .ev-fecha-badge-dia { font-size: 0.62rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
 .ev-fecha-badge-num {

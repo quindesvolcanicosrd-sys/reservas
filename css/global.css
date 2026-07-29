@@ -5,6 +5,26 @@
    navegadores móviles ignoran parcialmente `user-scalable=no` del
    `<meta viewport>` solo, hace falta el equivalente en CSS también) sin
    bloquear el panning/scroll normal, que sigue funcionando igual.
+   `overflow-anchor:none` UNIVERSAL (ver "Cambios recientes" -- bug real de
+   Eventos: al expandir el calendario, las cards de "hoy"/días cercanos
+   parecían desaparecer del timeline; no era un filtro de contenido -- el
+   DOM/timeline es idéntico antes y después de expandir, confirmado con
+   Playwright -- sino "scroll anchoring" nativo del navegador: al crecer el
+   alto del acordeón de arriba, Chrome reajusta `scrollY` solo, tratando de
+   mantener algún elemento fijo en su posición de pantalla, pero el elemento
+   que termina "anclado" queda por detrás del header ahora más alto
+   (`position:sticky`, encima de todo) -- las cards no faltan, están tapadas.
+   Con esta propiedad en 0, el navegador deja de tocar `scrollY` por su
+   cuenta y el layout normal hace su trabajo solo: el contenido de abajo se
+   desplaza hacia abajo al crecer el acordeón, como se espera, sin que
+   ninguna card quede escondida detrás de un header que creció. Universal
+   (no solo el panel de Calendario) por el mismo criterio que
+   `overscroll-behavior` de abajo: cualquier acordeón/burbuja de la app que
+   cambie de alto cerca del tope de la pantalla puede disparar el mismo
+   comportamiento, presente o futuro -- esta app ya maneja el scroll de
+   forma explícita en varios lugares (`_evScrollAFecha()` y afines,
+   js/eventos.js), así que dejar que el navegador reajuste `scrollY` por su
+   cuenta nunca es deseable acá.
    `overscroll-behavior:contain` UNIVERSAL (ver "Cambios recientes" -- antes
    solo `html,body` con `-y` nada más): el rebote elástico aparecía en
    CUALQUIER contenedor de scroll interno de la app al llegar a alguno de
@@ -20,7 +40,7 @@
    bug), una regla universal la cubre de una sola vez para cualquier
    elemento con scroll propio, presente o futuro -- no hay ningún lugar de
    la app que dependa del rebote nativo en ningún eje. */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; overscroll-behavior: contain; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; overscroll-behavior: contain; overflow-anchor: none; }
 body {
   font-family: 'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text);
   -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
