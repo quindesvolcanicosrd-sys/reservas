@@ -357,7 +357,7 @@ var APP_BOTTOM_NAV_ITEMS = [
   // `entrar` (no volver(pantalla) a secas) porque #s-eventos necesita
   // poblarse por JS (semana/mes actual + cards) antes de mostrarse, mismo
   // motivo que 'ajustes'/irEditarDatos().
-  { id: 'eventos', icono: 'event', texto: 'Eventos', pantalla: 's-eventos',
+  { id: 'eventos', icono: 'campaign', texto: 'Eventos', pantalla: 's-eventos',
     entrar: function() { irEventos(); },
     visible: function() { return true; } },
   { id: 'ajustes', icono: 'settings', texto: 'Ajustes', pantalla: 's-datos',
