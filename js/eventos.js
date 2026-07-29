@@ -783,15 +783,19 @@ function _evCalIrAFechaEnTimeline(iso, instant) {
   _evScrollAFecha(iso, instant);
 }
 
-// Pill de estado (Cancelado/No se entrena, ver "Cambios recientes") -- ancho
-// completo, ícono de warning (Material Symbols) a la izquierda del texto,
-// mismo tono rojo de advertencia que el resto de la app (--danger/--danger-bg/
+// Pill de estado (Cancelado/No se entrena, ver "Cambios recientes") --
+// ícono de warning (Material Symbols) a la izquierda del texto, mismo tono
+// rojo de advertencia que el resto de la app (--danger/--danger-bg/
 // --danger-bdr, ver .ev-estado-pill en css/eventos.css). UN SOLO componente
 // reusado tal cual en la card (_evCardEventoHtml(), de abajo) y en el detalle
 // (_evDetalleEstadoNotaHtml(), más abajo en este archivo) -- no 2
-// implementaciones paralelas.
-function _evEstadoNotaPillHtml(estado) {
-  return '<div class="ev-estado-pill"><span class="material-symbols-outlined">warning</span>' + estado + '</div>';
+// implementaciones paralelas. `compacta` (ver "Cambios recientes" -- la
+// card ahora la ubica al costado, mismo tamaño que el botón de RSVP, en vez
+// de ancho completo debajo del horario) agrega el modificador que la achica
+// -- el detalle sigue llamando esta función SIN el 2do argumento, ancho
+// completo, sin cambios.
+function _evEstadoNotaPillHtml(estado, compacta) {
+  return '<div class="ev-estado-pill' + (compacta ? ' ev-estado-pill-mini' : '') + '"><span class="material-symbols-outlined">warning</span>' + estado + '</div>';
 }
 /* ── Card de evento — vista previa simplificada (Semana/Calendario/Lista,
    ver "Cambios recientes": se saca la fila de avatares y "Más información"
@@ -801,52 +805,54 @@ function _evEstadoNotaPillHtml(estado) {
    que sigue viva tal cual solo en el detalle); TODA la card es tocable y
    navega al detalle -- `sufijo` namespacea el id cuando la misma card se
    re-renderiza en más de un contenedor a la vez (lista de Eventos vs. fila
-   de la pestaña "Lista"), evita ids duplicados en el DOM. */
+   de la pestaña "Lista"). Layout de 3 columnas en `.ev-card-top-row` (ver
+   "Cambios recientes" -- ícono de tipo + pill de estado reubicados): ícono de
+   tipo (`.ev-card-tipo-mini`, columna angosta) | título/hora (`.ev-card-body`,
+   flex:1) | acción lateral (`accionLateral`, RSVP o pill de estado según el
+   caso, columna angosta) -- las 3 centradas verticalmente entre sí vía
+   `align-items:center` (heredado de `.ev-card-top-row`). */
 function _evCardEventoHtml(e, sufijo) {
   sufijo = sufijo || '';
   var icono = _EV_ICONOS[e.tipo] || 'event';
-  // 3 casos, mutuamente excluyentes (ver "Cambios recientes" -- corrección
-  // de alineación): admin/pasado quedan DENTRO de `.ev-card-body` (ancho
-  // completo, apilados debajo de título/hora, sin cambios de esos 2 casos)
-  // -- el botón único de RSVP editable SALE de `.ev-card-body`, hermano
-  // directo dentro de `.ev-card-top-row`, para que `align-items:center`
-  // (heredado de esa fila) lo centre verticalmente contra el bloque
-  // ícono+título+hora en vez de apilarse abajo. El panel de alternativas
-  // (`accionExpand`) es OTRO hermano más, a ancho completo, hermano de
-  // `.ev-card-top-row` (no anidado en el botón) -- ver `_evRsvpExpandHtml()`.
   var cancelado = (e.estado === 'Cancelado' || e.estado === 'No se entrena');
   var pasado = !cancelado && _evEsPasado(e);
-  var accionBody = '', accionMini = '', accionExpand = '';
+  // admin/pasado quedan DENTRO de `.ev-card-body` (ancho completo, apilados
+  // debajo de título/hora, sin cambios de esos 2 casos); el resto -- RSVP
+  // editable o, si está cancelado/no se entrena, la pill de estado -- va en
+  // `accionLateral`, columna angosta hermana de `.ev-card-body` dentro de
+  // `.ev-card-top-row` (mismo lugar exacto para ambos casos, ver "Cambios
+  // recientes" -- pedido explícito: misma estructura de layout, solo cambia
+  // qué ocupa esa posición). El panel de alternativas (`accionExpand`) es
+  // OTRO hermano más, a ancho completo, hermano de `.ev-card-top-row` (no
+  // anidado en el botón) -- ver `_evRsvpExpandHtml()`; no aplica a un evento
+  // cancelado (nada que elegir).
+  var accionBody = '', accionLateral = '', accionExpand = '';
   if (_esAdminDemo) accionBody = _evAccionAdminHtml(e);
   else if (pasado) accionBody = _evAsistenciaRealHtml(e);
-  else if (!cancelado) { accionMini = _evRsvpMiniHtml(e); accionExpand = _evRsvpExpandHtml(e); }
-  // Pill de estado (`_evEstadoNotaPillHtml()`, ver "Cambios recientes") --
-  // ancho completo de la card, hermana de `.ev-card-top-row` (mismo nivel
-  // que `accionExpand`) en vez de vivir adentro de la fila superior: antes
-  // era texto/pill chico a la derecha del título, ahora ocupa todo el ancho
-  // para pesar más visualmente. Mismo componente reusado tal cual en el
-  // detalle (`_evDetalleEstadoNotaHtml()`).
-  var estadoNota = cancelado ? _evEstadoNotaPillHtml(e.estado) : '';
-  // Ícono de tipo INLINE junto al título (ver "Cambios recientes" -- antes
-  // `.ev-card-icon`, cuadrado 42px en columna propia a la izquierda). Sin esa
-  // columna, `.ev-card-body` pasa a ocupar todo el ancho disponible de
-  // `.ev-card-top-row` (flex:1). `.ev-card-icon` sigue existiendo tal cual
-  // solo para la fila compacta de "Pasados" (`.ev-card-compacta`) --
-  // `_evCardCumpleHtml()` migró a este mismo patrón inline más tarde (ver
-  // "Cambios recientes" -- reemplazó también su avatar cuadrado por uno
-  // circular). Sin chevron (ver "Cambios recientes" -- eliminado de las 3
-  // vistas, la card entera ya es tocable).
+  else if (!cancelado) { accionLateral = _evRsvpMiniHtml(e); accionExpand = _evRsvpExpandHtml(e); }
+  if (cancelado) accionLateral = _evEstadoNotaPillHtml(e.estado, true);
+  // Ícono de tipo -- columna angosta a la izquierda (ver "Cambios recientes"
+  // -- reemplaza el ícono INLINE que vivía junto al título: ahora un círculo
+  // chico con stroke de marca, sin relleno, mismo ancho que `.ev-fecha-badge`
+  // del timeline pero por CARD, no una sola vez por fecha -- una fecha puede
+  // tener varios items de tipos distintos (ej. "hoy" en el dataset de demo:
+  // 1 evento + 1 cumpleaños), así que un solo ícono compartido en el badge
+  // del grupo no alcanzaría para representarlos a todos). El título queda
+  // sin ícono al lado, a secas -- `.ev-card-titulo-row`/`.ev-card-icono-inline`
+  // siguen existiendo tal cual, pero ya no los usa esta función (sigue
+  // viva en `_evCardCumpleHtml()`, sin cambios ahí).
+  var tipoMini = '<div class="ev-card-tipo-mini"><span class="material-symbols-outlined ev-card-tipo-circulo">' + icono + '</span></div>';
   return '<div class="ev-card" id="ev-card-' + e.id + sufijo + '" onclick="abrirEvDetalle(\'' + e.id + '\')">' +
     '<div class="ev-card-top-row">' +
+      tipoMini +
       '<div class="ev-card-body">' +
-        '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline">' + icono + '</span><div class="ev-card-titulo">' + e.lugar + '</div></div>' +
+        '<div class="ev-card-titulo">' + e.lugar + '</div>' +
         '<div class="ev-card-sub"><span class="material-symbols-outlined">schedule</span>' + e.horaInicio + ' · ' + e.tipo + '</div>' +
         accionBody +
       '</div>' +
-      accionMini +
+      accionLateral +
     '</div>' +
     accionExpand +
-    estadoNota +
   '</div>';
 }
 

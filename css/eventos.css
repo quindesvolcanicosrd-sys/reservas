@@ -180,24 +180,40 @@
 .ev-card-icon .material-symbols-outlined { font-size: 1.3rem; }
 .ev-card-body { flex: 1; min-width: 0; }
 .ev-card-titulo { font-size: 0.9rem; font-weight: 800; color: var(--text); margin-bottom: 2px; }
-/* Ícono de tipo INLINE junto al título (ver "Cambios recientes" -- reemplaza
-   `.ev-card-icon`, cuadrado 42px en columna propia, solo en `_evCardEventoHtml()`;
-   `.ev-card-icon` sigue igual para cumpleaños/fila compacta de "Pasados").
-   `margin-bottom` se muda de `.ev-card-titulo` a esta fila -- adentro, el
-   título no lleva margen propio para no descentrarse del ícono. */
+/* Ícono de tipo INLINE junto al título -- ver "Cambios recientes": ya NO lo
+   usa `_evCardEventoHtml()` (migró a `.ev-card-tipo-mini`/`.ev-card-tipo-circulo`
+   más abajo, columna propia a la izquierda de la card); sigue en pie tal
+   cual solo para `_evCardCumpleHtml()` (ícono `cake`) y la fila compacta de
+   "Pasados" sigue usando `.ev-card-icon` aparte, sin relación con esto. */
 .ev-card-titulo-row { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
 .ev-card-titulo-row .ev-card-titulo { margin-bottom: 0; }
 .ev-card-icono-inline { font-size: 16px; color: var(--brand); flex-shrink: 0; }
+/* Ícono de tipo -- columna angosta a la izquierda de `.ev-card-top-row` (ver
+   "Cambios recientes" -- reemplaza `.ev-card-icono-inline` en
+   `_evCardEventoHtml()`, mismo ancho, 38px, que `.ev-fecha-badge` del
+   timeline -- mismo lenguaje visual de "columna de fecha", pero por CARD:
+   una fecha puede traer varios items de tipos distintos (ver comentario de
+   `_evCardEventoHtml()`, js/eventos.js), así que no alcanza con un ícono
+   único compartido a nivel de grupo). Círculo MÁS CHICO que
+   `.ev-fecha-badge-num` (30px) a propósito -- 24px, con stroke de marca y
+   SIN relleno/background (pedido explícito: que se lea como indicador
+   secundario de tipo, no protagonista visual como el número de día). */
+.ev-card-tipo-mini { flex-shrink: 0; width: 38px; display: flex; justify-content: center; }
+.ev-card-tipo-circulo {
+  width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--brand); color: var(--brand); font-size: 13px;
+}
 .ev-card-sub { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .ev-card-sub .material-symbols-outlined { font-size: 14px; }
 /* Pill de estado (Cancelado/No se entrena, ver "Cambios recientes") --
    `_evEstadoNotaPillHtml()` (js/eventos.js), UN SOLO componente reusado tal
-   cual en la card (`_evCardEventoHtml()`, hermana de `.ev-card-top-row`,
-   ancho completo de la card) y en el detalle (`_evDetalleEstadoNotaHtml()`,
-   dentro de `#ev-detalle-rsvp`, mismo ancho completo de esa sección) --
-   antes texto plano/pill chica a la derecha del título; ahora pesa más
-   visualmente, ancho completo pero SIN agrandar la altura (mismo criterio
-   que el resto de pills de la app). Mismo tono rojo de advertencia que
+   cual en la card y en el detalle. Base = ancho completo (usada tal cual por
+   el detalle, `#ev-detalle-rsvp`); `.ev-estado-pill-mini` (ver "Cambios
+   recientes" -- la card ahora la ubica al costado, mismo lugar/tamaño que el
+   botón de RSVP, en vez de ancho completo debajo del horario) la achica al
+   tamaño de `.ev-rsvp-boton` -- mismos padding/radio/tamaños de fuente para
+   que ambos elementos, intercambiables en esa posición, se vean como el
+   mismo tipo de control. Mismo tono rojo de advertencia que
    `.ev-rsvp-boton-no-asistire`/`.badge-cancelada` (--danger/--danger-bg/
    --danger-bdr). */
 .ev-estado-pill {
@@ -208,6 +224,8 @@
 }
 .ev-estado-pill .material-symbols-outlined { font-size: 18px; }
 #ev-detalle-rsvp .ev-estado-pill { margin-top: 0; }
+.ev-estado-pill.ev-estado-pill-mini { width: auto; flex-shrink: 0; margin-top: 0; padding: 12px 18px; border-radius: 14px; }
+.ev-estado-pill.ev-estado-pill-mini .material-symbols-outlined { font-size: 20px; }
 
 /* ── "¿Asistiré?" (usuario) — barra segmentada única ──────────────────
    Reemplaza los 3 botones-pill independientes (con borde propio cada uno,
