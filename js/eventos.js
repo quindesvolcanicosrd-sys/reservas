@@ -94,7 +94,6 @@ var _EV_CAL_SUBVISTAS = ['hoy', 'semana', 'mes'];
 var _evCalSubvista = 'hoy';
 var _evSemanaOffset = 0;
 var _evMesOffset = 0;
-var _evConfettiMostrado = {};
 // Vista Calendario -- 2 modos (ver "Cambios recientes"): 'dia' filtra la
 // lista de abajo a un solo día tocado (_evCalFechaSel), 'mes' la muestra
 // completa (agenda del mes, comportamiento de siempre de _evRangoActual()).
@@ -732,16 +731,21 @@ function _evRenderLista() {
   _evHidratarAvatares();
   // Confetti contenido dentro de la card, SOLO para el cumpleaños de HOY
   // (fecha === hoy -- ni pasados como "Ayer cumplió..." ni próximos, celebrar
-  // los 7 días del rango visible no suma), una sola vez por cumpleaños/sesión
-  // (ver _EV_CONFETTI_MOSTRADO) -- si no, re-renders sin relación (navegar
-  // semanas, marcar asistencia en otro evento del mismo rango) lo re-disparían
-  // en cada innerHTML nuevo, no solo "al aparecer" la primera vez.
+  // los 7 días del rango visible no suma). Sin guard de "ya se mostró" (ver
+  // "Cambios recientes" -- rediseño, se sacó _evConfettiMostrado por
+  // completo): `cont.innerHTML = html` de arriba siempre crea un nodo DOM
+  // nuevo para la card, así que disparar acá es exactamente "un nodo nuevo
+  // = un confetti nuevo", sin estado que mantener sincronizado entre
+  // renders. El corte de loops huérfanos sigue siendo el mismo de siempre
+  // (`contenedorEl.isConnected` en `lanzarConfetti()`, js/ui.js) -- si este
+  // mismo render vuelve a incluir el cumpleaños de hoy (ej. togglear un
+  // filtro sin sacarlo del rango), el contenedor viejo se desconecta con el
+  // innerHTML nuevo y ese loop corta solo, sin acumularse.
   var hoyConfetti = _evHoyISO();
   ordenFechas.forEach(function(fecha) {
     if (fecha !== hoyConfetti) return;
     porFecha[fecha].forEach(function(it) {
-      if (it.tipo !== 'cumple' || _evConfettiMostrado[it.data.id]) return;
-      _evConfettiMostrado[it.data.id] = true;
+      if (it.tipo !== 'cumple') return;
       var el = document.getElementById('ev-confetti-' + it.data.id);
       if (el) _evLanzarConfettiCuandoVisible(el);
     });
