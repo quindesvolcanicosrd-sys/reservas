@@ -69,13 +69,24 @@ var _EV_ASISTENCIA_REAL_BADGE = { 'A horario': 'badge-confirmada', 'Tarde': 'bad
 // heredado de `.badge` se saca puntualmente para estos 2 usos, ver
 // `.ev-rsvp-readonly`/`.ev-card-compacta .badge` en css/eventos.css).
 var _EV_ASISTENCIA_REAL_LABEL = { 'A horario': 'Llegué a horario', 'Tarde': 'Llegué tarde', 'Ausente': 'No asistí', 'Sin registrar': 'No asistí' };
-// Color sólido del indicador de la barra segmentada de RSVP (ver
-// _evRsvpBarraHtml() más abajo) por opción -- fijos, independientes del
-// color de énfasis (mismo criterio que el resto de esta pantalla: "Asistiré"
+// Color sólido del indicador de la barra segmentada de RSVP -- SOLO usado
+// hoy por la pantalla de detalle (`_evRsvpBarraHtml()`/`_evPosicionarRsvpSlider()`
+// más abajo, mecánica sin cambios, ver "Cambios recientes"); las cards de
+// vista previa migraron al botón único + panel (`_evRsvpBotonHtml()`, ver
+// `_EV_RSVP_CLASE` acá abajo -- paleta de pill distinta, no esta). Fijos,
+// independientes del color de énfasis (mismo criterio de siempre: "Asistiré"
 // tiene que seguir leyéndose verde pase lo que pase con --brand). Variantes
 // "dark" (no el token base --success/--warning) para que el texto blanco de
-// encima tenga contraste suficiente sobre el indicador sólido.
-var _EV_RSVP_COLOR = { 'Asistiré': 'var(--success-dark)', 'No asistiré': 'var(--danger)', 'No jugador': 'var(--amber-dark)' };
+// encima tenga contraste suficiente sobre el indicador sólido. "No jugador"
+// pasa de ámbar a `--purple` (ver "Cambios recientes" -- mismo violeta que
+// `.fi-pill-hora`/el botón único de las cards, antes inconsistente entre
+// las 2 pantallas).
+var _EV_RSVP_COLOR = { 'Asistiré': 'var(--success-dark)', 'No asistiré': 'var(--danger)', 'No jugador': 'var(--purple)' };
+// Sufijo de clase CSS por estado -- botón único + opciones grandes de las
+// cards (`.ev-rsvp-boton-<clase>`/`.ev-rsvp-opcion-<clase>`, css/eventos.css)
+// reusan los mismos tokens que sus pills equivalentes en otras pantallas
+// (`.fi-pill-dur`/verde, `.fi-pill-hora`/violeta), no colores inventados.
+var _EV_RSVP_CLASE = { 'Asistiré': 'asistire', 'No asistiré': 'no-asistire', 'No jugador': 'no-jugador' };
 
 // `_evVista` ('calendario'|'lista', ver "Cambios recientes" -- rediseño de
 // cabecera): antes tenía un 3er valor 'semana' (pill grande Semana/
@@ -774,10 +785,12 @@ function _evScrollAFecha(iso) {
 /* ── Card de evento — vista previa simplificada (Semana/Calendario/Lista,
    ver "Cambios recientes": se saca la fila de avatares y "Más información"
    de acá, ahora viven en la pantalla de detalle de pantalla completa,
-   abrirEvDetalle()). Ícono+lugar+hora+barra de RSVP+chevron; TODA la card
-   es tocable y navega al detalle -- `sufijo` namespacea el id cuando la
-   misma card se re-renderiza en más de un contenedor a la vez (lista de
-   Eventos vs. fila de la pestaña "Lista"), evita ids duplicados en el DOM. */
+   abrirEvDetalle()). Ícono+lugar+hora+botón único de RSVP (`_evRsvpBotonHtml()`,
+   ver "Cambios recientes" -- reemplaza la barra segmentada de 3 opciones,
+   que sigue viva tal cual solo en el detalle); TODA la card es tocable y
+   navega al detalle -- `sufijo` namespacea el id cuando la misma card se
+   re-renderiza en más de un contenedor a la vez (lista de Eventos vs. fila
+   de la pestaña "Lista"), evita ids duplicados en el DOM. */
 function _evCardEventoHtml(e, sufijo) {
   sufijo = sufijo || '';
   var icono = _EV_ICONOS[e.tipo] || 'event';
@@ -790,7 +803,7 @@ function _evCardEventoHtml(e, sufijo) {
   // "No se entrena", no "NO SE ENTRENA" (`.badge` base sí es uppercase, la
   // usan otras pantallas que si quieren mayúsculas).
   else if (e.estado === 'No se entrena') estadoNota = '<span class="badge badge-cancelada">No se entrena</span>';
-  var accion = _esAdminDemo ? _evAccionAdminHtml(e) : _evRsvpBarraHtml(e);
+  var accion = _esAdminDemo ? _evAccionAdminHtml(e) : _evRsvpBotonHtml(e);
   // Ícono de tipo INLINE junto al título (ver "Cambios recientes" -- antes
   // `.ev-card-icon`, cuadrado 42px en columna propia a la izquierda). Sin esa
   // columna, `.ev-card-body` pasa a ocupar todo el ancho de la card -- la
@@ -927,6 +940,73 @@ function _evRsvpBarraHtml(e) {
   // asistencia.
   return '<div class="ev-asistire-wrap" onclick="event.stopPropagation()"><div class="ev-rsvp-seg" data-evid="' + e.id + '"><div class="ev-rsvp-slider"></div>' + botones + '</div></div>';
 }
+
+/* ── Variante usuario en las CARDS de vista previa (Semana/Calendario/Lista,
+   ver "Cambios recientes" -- reemplaza la barra segmentada de arriba SOLO
+   acá, el detalle sigue con `_evRsvpBarraHtml()` sin cambios de mecánica):
+   un botón único mostrando el estado actual, angosto y alineado a la
+   derecha (mismo lugar dentro de `.ev-card-body` donde vivía la barra
+   completa) -- tocarlo expande un panel debajo con las alternativas en
+   botones grandes lado a lado. Elegir una aplica el cambio y colapsa de
+   vuelta al botón único. Sin colita conectando botón↔panel a propósito
+   (ver "Cambios recientes" -- ya se probó 2 veces en otro lugar de esta
+   pantalla, `.ev-header-burbuja-panel`, y las 2 se descartaron por costura/
+   desalineación; acá el botón cambia de ancho según el estado ("Asistiré"
+   vs. "Sin respuesta" vs. "No jugador"), lo que hace que una colita fija
+   quede desalineada la mitad de las veces -- se decidió no repetir el
+   mismo problema una 3ra vez, el mecanismo de expansión funciona igual sin
+   ella). */
+function _evRsvpBotonClase(estado) { return 'ev-rsvp-boton-' + (estado ? _EV_RSVP_CLASE[estado] : 'sin-respuesta'); }
+// Alternativas reales para el panel expandido: nunca "Sin respuesta" como
+// opción (no se puede "desresponder", ver "Cambios recientes") -- si el
+// estado actual es una respuesta real, se excluye a sí misma (quedan 2); si
+// todavía no hay respuesta, se muestran las 3.
+function _evRsvpOpcionesHtml(e) {
+  var alternativas = e.miEstado ? _EV_RESP_OPCIONES.filter(function(o) { return o !== e.miEstado; }) : _EV_RESP_OPCIONES;
+  return alternativas.map(function(o) {
+    return '<button type="button" class="ev-rsvp-opcion ev-rsvp-opcion-' + _EV_RSVP_CLASE[o] + '" onclick="_evElegirRsvp(this,\'' + e.id + '\',\'' + o + '\')"><span class="material-symbols-outlined">' + _EV_RESP_ICONO[o] + '</span>' + o + '</button>';
+  }).join('');
+}
+function _evRsvpBotonHtml(e) {
+  if (e.estado === 'Cancelado' || e.estado === 'No se entrena') return '';
+  if (_evEsPasado(e)) return _evAsistenciaRealHtml(e);
+  var estado = e.miEstado;
+  var icono = estado ? _EV_RESP_ICONO[estado] : 'help';
+  var label = estado || 'Sin respuesta';
+  return '<div class="ev-rsvp-mini" data-evid="' + e.id + '" onclick="event.stopPropagation()">' +
+      '<div class="ev-rsvp-mini-row">' +
+        '<button type="button" class="ev-rsvp-boton ' + _evRsvpBotonClase(estado) + '" onclick="_evToggleRsvpExpand(this)"><span class="material-symbols-outlined">' + icono + '</span>' + label + '</button>' +
+      '</div>' +
+      '<div class="ev-rsvp-expand"><div class="ev-rsvp-expand-inner">' + _evRsvpOpcionesHtml(e) + '</div></div>' +
+    '</div>';
+}
+// Acordeón (ver "Cambios recientes"): a lo sumo 1 card con el panel abierto
+// a la vez, mismo criterio ya usado en burbujas de filtro/vista de esta
+// pantalla y en los aj-sub-* de Ajustes -- `_evRsvpExpandidoEl` guarda el
+// `.ev-rsvp-mini` (no solo el id) porque un mismo evento puede tener más de
+// una instancia simultánea en el DOM (Lista tab reusa la card completa con
+// otro sufijo, ver `_evCardEventoHtml(e, sufijo)`) y el toggle debe operar
+// sobre la instancia tocada, no sobre todas.
+var _evRsvpExpandidoEl = null;
+function _evToggleRsvpExpand(btnEl) {
+  var mini = btnEl.closest('.ev-rsvp-mini');
+  if (!mini) return;
+  if (_evRsvpExpandidoEl === mini) { _evColapsarRsvpExpand(mini); return; }
+  if (_evRsvpExpandidoEl) _evColapsarRsvpExpand(_evRsvpExpandidoEl);
+  _evRsvpExpandidoEl = mini;
+  var expand = mini.querySelector('.ev-rsvp-expand');
+  if (expand) expand.classList.add('abierta');
+}
+function _evColapsarRsvpExpand(mini) {
+  var expand = mini.querySelector('.ev-rsvp-expand');
+  if (expand) expand.classList.remove('abierta');
+  if (_evRsvpExpandidoEl === mini) _evRsvpExpandidoEl = null;
+}
+function _evElegirRsvp(btnEl, id, estado) {
+  var mini = btnEl.closest('.ev-rsvp-mini');
+  _evMarcarAsistencia(id, estado);
+  if (mini) _evColapsarRsvpExpand(mini);
+}
 // Posiciona el indicador de UNA barra (offsetLeft/offsetWidth de la opción
 // .activa, mismo mecanismo que _evUpdateSubtabIndicator()/.tp-slider) -- `seg` es
 // el .ev-rsvp-seg, no el wrapper. Sin opción activa (miEstado null, evento
@@ -988,6 +1068,22 @@ function _evMarcarAsistencia(id, estado) {
       opt.classList.toggle('activa', opt.getAttribute('data-estado') === estado);
     });
     _evPosicionarRsvpSlider(seg, true);
+  });
+  // Botón único + panel de las cards (ver "Cambios recientes") -- misma
+  // lógica de "actualizar in-place, no reconstruir" que la barra de arriba,
+  // por el mismo motivo (más de una instancia simultánea del mismo evento
+  // en el DOM, ver `_evRsvpBotonHtml()`). El panel de alternativas se
+  // reconstruye siempre (cambia según el nuevo estado), esté o no expandido
+  // en este momento -- invisible mientras `.ev-rsvp-expand` no tenga
+  // `.abierta`, ver css/eventos.css.
+  document.querySelectorAll('.ev-rsvp-mini[data-evid="' + id + '"]').forEach(function(mini) {
+    var boton = mini.querySelector('.ev-rsvp-boton');
+    if (boton) {
+      boton.className = 'ev-rsvp-boton ' + _evRsvpBotonClase(estado);
+      boton.innerHTML = '<span class="material-symbols-outlined">' + _EV_RESP_ICONO[estado] + '</span>' + estado;
+    }
+    var inner = mini.querySelector('.ev-rsvp-expand-inner');
+    if (inner) inner.innerHTML = _evRsvpOpcionesHtml(ev);
   });
 }
 

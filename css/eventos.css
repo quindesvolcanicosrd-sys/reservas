@@ -248,12 +248,13 @@
   position: relative; display: flex; background: var(--surface-light);
   border: 1.5px solid var(--border-light); border-radius: 16px; overflow: hidden;
 }
-/* El color del indicador (verde/rojo/ámbar según la opción activa) se fija
+/* El color del indicador (verde/rojo/violeta según la opción activa) se fija
    por JS (_EV_RSVP_COLOR, js/eventos.js) -- son los mismos 3 tokens fijos de
-   siempre (--success-dark/--danger/--amber-dark), independientes del color
-   de énfasis (mismo criterio documentado en "Cambios recientes": "Asistiré"
-   sigue siendo verde pase lo que pase con --brand). `opacity:0` inicial
-   evita un indicador en (0,0) visible antes de la primera medición real. */
+   siempre (--success-dark/--danger/--purple, "No jugador" ex-ámbar, ver
+   "Cambios recientes"), independientes del color de énfasis (mismo criterio
+   documentado en "Cambios recientes": "Asistiré" sigue siendo verde pase lo
+   que pase con --brand). `opacity:0` inicial evita un indicador en (0,0)
+   visible antes de la primera medición real. */
 .ev-rsvp-slider {
   position: absolute; top: 3px; bottom: 3px; left: 0; width: 0; border-radius: 13px;
   z-index: 0; opacity: 0;
@@ -285,6 +286,49 @@
 .ev-rsvp-opt { color: #c98a8a; }
 .ev-rsvp-opt .material-symbols-outlined { font-size: 18px; flex-shrink: 0; color: #8a6a6a; }
 .ev-rsvp-opt.activa, .ev-rsvp-opt.activa .material-symbols-outlined { color: var(--white); }
+
+/* ── Botón único + panel expandible -- SOLO en las cards de vista previa
+   (ver "Cambios recientes", `_evRsvpBotonHtml()`/js/eventos.js; el detalle
+   sigue con `.ev-rsvp-seg` de arriba, sin cambios de mecánica). Mismo lugar
+   que ocupaba `.ev-asistire-wrap` dentro de `.ev-card-body` -- ahora angosto
+   y alineado a la derecha en vez de una barra a ancho completo. Sin colita
+   conectando botón↔panel a propósito (ver el comentario de
+   `_evRsvpBotonHtml()`, js/eventos.js, para el motivo). */
+.ev-rsvp-mini { margin-top: 10px; }
+.ev-rsvp-mini-row { display: flex; justify-content: flex-end; }
+.ev-rsvp-boton {
+  display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; border-radius: 99px;
+  font-size: 0.74rem; font-weight: 700; border: 1px solid transparent; cursor: pointer;
+  font-family: inherit; transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+.ev-rsvp-boton .material-symbols-outlined { font-size: 16px; }
+/* Mismos 4 tokens que las pills equivalentes de otras pantallas (ver
+   "Cambios recientes"): Asistiré = verde de `.fi-pill-dur`, No jugador =
+   violeta de `.fi-pill-hora`, No asistiré = `--danger` (mismo rojo de
+   siempre), Sin respuesta = gris neutro (mismo tratamiento que el resto de
+   estados "sin dato" de la app, ej. `.ev-rsvp-opt` inactiva/`.badge-sin-registrar`). */
+.ev-rsvp-boton-sin-respuesta { background: var(--surface-light); color: var(--muted); border-color: var(--border-light); }
+.ev-rsvp-boton-asistire { background: var(--success-bg); color: var(--success); border-color: var(--success-bdr); }
+.ev-rsvp-boton-no-asistire { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-bdr); }
+.ev-rsvp-boton-no-jugador { background: var(--purple-bg); color: var(--purple); border-color: var(--purple-border); }
+/* Panel expandible -- mismo mecanismo `max-height`/`overflow:hidden` que
+   `.ev-filtro-burbuja`/`.ev-header-burbuja` (misma pantalla, ver más abajo
+   en este archivo), techo fijo (no medido por JS) porque el contenido es
+   siempre 2 o 3 botones de una sola fila, tamaño predecible. */
+.ev-rsvp-expand { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
+.ev-rsvp-expand.abierta { max-height: 90px; margin-top: 8px; }
+.ev-rsvp-expand-inner { display: flex; gap: 8px; }
+.ev-rsvp-opcion {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; padding: 12px 4px; border-radius: 14px; font-size: 0.68rem; font-weight: 700;
+  border: 1px solid transparent; cursor: pointer; font-family: inherit; white-space: nowrap;
+  transition: transform 0.15s ease;
+}
+.ev-rsvp-opcion:active { transform: scale(0.96); }
+.ev-rsvp-opcion .material-symbols-outlined { font-size: 18px; }
+.ev-rsvp-opcion-asistire { background: var(--success-bg); color: var(--success); border-color: var(--success-bdr); }
+.ev-rsvp-opcion-no-asistire { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-bdr); }
+.ev-rsvp-opcion-no-jugador { background: var(--purple-bg); color: var(--purple); border-color: var(--purple-border); }
 
 /* ── Reemplazo de solo lectura de la barra de RSVP para eventos pasados
    (fecha < hoy o Estado = Finalizado, ver _evRsvpBarraHtml()) -- mismo
