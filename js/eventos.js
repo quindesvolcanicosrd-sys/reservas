@@ -443,11 +443,17 @@ function _evCalMesDe(iso) { var d = _evParseISO(iso); return { year: d.getFullYe
 // recorte contenido más alto que el que tenía la última vez que se fijó
 // (ver "Cambios recientes" -- mismo criterio que `_evToggleFiltroBurbuja()`
 // relajando el panel padre). `instant` (sin transición + reflow forzado,
-// mismo truco que `_evCerrarPanel(tag, true)`) se usa SIEMPRE que el cambio
-// de contenido ya sucedió invisible (opacity:0, dentro de `_evFadeSwap()`)
-// -- el techo debe quedar ya en su valor final antes de que el fade-in lo
-// revele, si no la animación de `max-height` (0.28s, CSS) se vería crecer/
-// encoger de más por separado del fade de opacidad.
+// mismo truco que `_evCerrarPanel(tag, true)`) SOLO se usa para la primera
+// pintada al abrir el calendario (`_evAbrirCalendario()`, sin nada que
+// animar todavía -- el panel pasa de `max-height:0` a su alto real vía la
+// transición normal de `.abierta` inmediatamente después, este set previo es
+// solo para no arrancar en 0 durante ese primer instante) y para el resize
+// de ventana (sin gesto de por medio que justifique animar). En cambio-de-mes
+// real (swipe/pill, ver "Cambios recientes" -- pedido explícito: el cambio
+// de alto entre un mes de 5 y uno de 6 semanas se sentía como un salto en
+// vez de una transición) NO es instant -- el techo crece/encoge con la
+// misma transición CSS de `max-height` (0.28s, `.ev-header-burbuja`) que ya
+// usa abrir/cerrar el panel entero, en vez de saltar de golpe.
 function _evCalActualizarMaxHeightExterior(instant) {
   if (!_evCalVisible) return;
   var el = document.getElementById('ev-mes-panel');
@@ -467,7 +473,7 @@ function _evCalRenderContenido(instant) {
   if (!cont) return;
   _evFadeSwap(cont, function() {
     _evCalRenderMes(cont, _evCalFechaMostrada);
-    _evCalActualizarMaxHeightExterior(true);
+    _evCalActualizarMaxHeightExterior(instant);
   }, instant);
 }
 // Grilla mensual completa -- sin chevrones/borde/título repetido (ver
@@ -558,6 +564,42 @@ function _evInicializarSwipeCalendario() {
   }, { passive: true });
 }
 _evInicializarSwipeCalendario();
+// Colapsa el calendario apenas arranca un scroll hacia ABAJO en el timeline
+// (ver "Cambios recientes" -- funcionalidad NUEVA, pedido explícito: no
+// existía ningún auto-colapso por scroll desde que esta misma sesión
+// simplificó el calendario a 2 estados -- a propósito, para no reintroducir
+// el conflicto swipe-horizontal-de-mes vs. scroll-vertical que esa
+// simplificación evitó. Por eso este listener escucha SOLO `#ev-timeline`,
+// nunca el panel del calendario en sí (que sigue cerrándose únicamente por
+// acción directa sobre él: chevron/label o su propio swipe hacia abajo,
+// arriba). Mismo umbral que el resto de gestos de esta pantalla
+// (`_EV_CAL_SWIPE_UMBRAL`) pero medido en CADA `touchmove` -- a diferencia
+// del swipe del calendario (que solo mide al soltar), acá hace falta
+// reaccionar apenas se cruza el umbral, no recién al terminar el gesto
+// (pedido explícito: "no después de que el scroll ya avanzó un rato"). El
+// dedo moviéndose hacia ARRIBA (`dy` negativo) es lo que hace que el
+// contenido scrollee hacia ABAJO -- convención estándar de touch-scroll.
+var _evTimelineScrollCloseY = 0, _evTimelineScrollCloseActivo = false, _evTimelineScrollCloseDisparado = false;
+function _evInicializarCierreCalendarioPorScroll() {
+  var cont = document.getElementById('ev-timeline');
+  if (!cont) return;
+  cont.addEventListener('touchstart', function(e) {
+    if (e.touches.length !== 1) return;
+    _evTimelineScrollCloseY = e.touches[0].clientY;
+    _evTimelineScrollCloseActivo = true;
+    _evTimelineScrollCloseDisparado = false;
+  }, { passive: true });
+  cont.addEventListener('touchmove', function(e) {
+    if (!_evTimelineScrollCloseActivo || _evTimelineScrollCloseDisparado || !_evCalVisible) return;
+    var dy = e.touches[0].clientY - _evTimelineScrollCloseY;
+    if (dy <= -_EV_CAL_SWIPE_UMBRAL) {
+      _evTimelineScrollCloseDisparado = true;
+      _evCerrarCalendario();
+    }
+  }, { passive: true });
+  cont.addEventListener('touchend', function() { _evTimelineScrollCloseActivo = false; }, { passive: true });
+}
+_evInicializarCierreCalendarioPorScroll();
 
 /* ── Selector de mes/año en pills (ver "Cambios recientes" -- rediseño,
    punto 3: TODOS los 12 meses de una ventana de 2 años alrededor de hoy, no
@@ -783,74 +825,51 @@ function _evCalIrAFechaEnTimeline(iso, instant) {
   _evScrollAFecha(iso, instant);
 }
 
-// Pill de estado (Cancelado/No se entrena, ver "Cambios recientes") --
-// ícono de warning (Material Symbols) a la izquierda del texto, mismo tono
-// rojo de advertencia que el resto de la app (--danger/--danger-bg/
+// Pill de estado (Cancelado/No se entrena, ver "Cambios recientes") -- ancho
+// completo, ícono de warning (Material Symbols) a la izquierda del texto,
+// mismo tono rojo de advertencia que el resto de la app (--danger/--danger-bg/
 // --danger-bdr, ver .ev-estado-pill en css/eventos.css). UN SOLO componente
 // reusado tal cual en la card (_evCardEventoHtml(), de abajo) y en el detalle
 // (_evDetalleEstadoNotaHtml(), más abajo en este archivo) -- no 2
-// implementaciones paralelas. `compacta` (ver "Cambios recientes" -- la
-// card ahora la ubica al costado, mismo tamaño que el botón de RSVP, en vez
-// de ancho completo debajo del horario) agrega el modificador que la achica
-// -- el detalle sigue llamando esta función SIN el 2do argumento, ancho
-// completo, sin cambios.
-function _evEstadoNotaPillHtml(estado, compacta) {
-  return '<div class="ev-estado-pill' + (compacta ? ' ev-estado-pill-mini' : '') + '"><span class="material-symbols-outlined">warning</span>' + estado + '</div>';
+// implementaciones paralelas.
+function _evEstadoNotaPillHtml(estado) {
+  return '<div class="ev-estado-pill"><span class="material-symbols-outlined">warning</span>' + estado + '</div>';
 }
 /* ── Card de evento — vista previa simplificada (Semana/Calendario/Lista,
    ver "Cambios recientes": se saca la fila de avatares y "Más información"
    de acá, ahora viven en la pantalla de detalle de pantalla completa,
-   abrirEvDetalle()). Ícono+lugar+hora+botón único de RSVP (`_evRsvpBotonHtml()`,
-   ver "Cambios recientes" -- reemplaza la barra segmentada de 3 opciones,
-   que sigue viva tal cual solo en el detalle); TODA la card es tocable y
-   navega al detalle -- `sufijo` namespacea el id cuando la misma card se
-   re-renderiza en más de un contenedor a la vez (lista de Eventos vs. fila
-   de la pestaña "Lista"). Layout de 3 columnas en `.ev-card-top-row` (ver
-   "Cambios recientes" -- ícono de tipo + pill de estado reubicados): ícono de
-   tipo (`.ev-card-tipo-mini`, columna angosta) | título/hora (`.ev-card-body`,
-   flex:1) | acción lateral (`accionLateral`, RSVP o pill de estado según el
-   caso, columna angosta) -- las 3 centradas verticalmente entre sí vía
-   `align-items:center` (heredado de `.ev-card-top-row`). */
+   abrirEvDetalle()). Lugar+hora+acción; TODA la card es tocable y navega al
+   detalle -- `sufijo` namespacea el id cuando la misma card se re-renderiza
+   en más de un contenedor a la vez (lista de Eventos vs. fila de la pestaña
+   "Lista"). Sin ícono propio (ver "Cambios recientes" -- se sacó de la card
+   del todo: ahora vive una sola vez por fecha, en el badge compartido del
+   timeline, `_evRenderTimeline()`, ya que una fecha puede traer varios items
+   de tipos distintos). 4 casos de acción, mutuamente excluyentes, TODOS
+   dentro de `.ev-card-body`, a ancho completo, apilados debajo de
+   título/hora (ver "Cambios recientes" -- antes el RSVP/pill de estado
+   vivían en una columna lateral compitiendo por ancho con el título; ahora
+   título/hora tienen el ancho completo de la card para respirar, mismo
+   tratamiento que ya tenían admin/pasado): admin, pasado (asistencia real),
+   cancelado/no-se-entrena (pill de estado) o RSVP editable. El panel de
+   alternativas (`accionExpand`) sigue siendo OTRO hermano más, a ancho
+   completo, hermano de `.ev-card-top-row` (no anidado en el botón) -- ver
+   `_evRsvpExpandHtml()`; no aplica a un evento cancelado (nada que elegir). */
 function _evCardEventoHtml(e, sufijo) {
   sufijo = sufijo || '';
-  var icono = _EV_ICONOS[e.tipo] || 'event';
   var cancelado = (e.estado === 'Cancelado' || e.estado === 'No se entrena');
   var pasado = !cancelado && _evEsPasado(e);
-  // admin/pasado quedan DENTRO de `.ev-card-body` (ancho completo, apilados
-  // debajo de título/hora, sin cambios de esos 2 casos); el resto -- RSVP
-  // editable o, si está cancelado/no se entrena, la pill de estado -- va en
-  // `accionLateral`, columna angosta hermana de `.ev-card-body` dentro de
-  // `.ev-card-top-row` (mismo lugar exacto para ambos casos, ver "Cambios
-  // recientes" -- pedido explícito: misma estructura de layout, solo cambia
-  // qué ocupa esa posición). El panel de alternativas (`accionExpand`) es
-  // OTRO hermano más, a ancho completo, hermano de `.ev-card-top-row` (no
-  // anidado en el botón) -- ver `_evRsvpExpandHtml()`; no aplica a un evento
-  // cancelado (nada que elegir).
-  var accionBody = '', accionLateral = '', accionExpand = '';
+  var accionBody = '', accionExpand = '';
   if (_esAdminDemo) accionBody = _evAccionAdminHtml(e);
   else if (pasado) accionBody = _evAsistenciaRealHtml(e);
-  else if (!cancelado) { accionLateral = _evRsvpMiniHtml(e); accionExpand = _evRsvpExpandHtml(e); }
-  if (cancelado) accionLateral = _evEstadoNotaPillHtml(e.estado, true);
-  // Ícono de tipo -- columna angosta a la izquierda (ver "Cambios recientes"
-  // -- reemplaza el ícono INLINE que vivía junto al título: ahora un círculo
-  // chico con stroke de marca, sin relleno, mismo ancho que `.ev-fecha-badge`
-  // del timeline pero por CARD, no una sola vez por fecha -- una fecha puede
-  // tener varios items de tipos distintos (ej. "hoy" en el dataset de demo:
-  // 1 evento + 1 cumpleaños), así que un solo ícono compartido en el badge
-  // del grupo no alcanzaría para representarlos a todos). El título queda
-  // sin ícono al lado, a secas -- `.ev-card-titulo-row`/`.ev-card-icono-inline`
-  // siguen existiendo tal cual, pero ya no los usa esta función (sigue
-  // viva en `_evCardCumpleHtml()`, sin cambios ahí).
-  var tipoMini = '<div class="ev-card-tipo-mini"><span class="material-symbols-outlined ev-card-tipo-circulo">' + icono + '</span></div>';
+  else if (cancelado) accionBody = _evEstadoNotaPillHtml(e.estado);
+  else { accionBody = _evRsvpMiniHtml(e); accionExpand = _evRsvpExpandHtml(e); }
   return '<div class="ev-card" id="ev-card-' + e.id + sufijo + '" onclick="abrirEvDetalle(\'' + e.id + '\')">' +
     '<div class="ev-card-top-row">' +
-      tipoMini +
       '<div class="ev-card-body">' +
         '<div class="ev-card-titulo">' + e.lugar + '</div>' +
         '<div class="ev-card-sub"><span class="material-symbols-outlined">schedule</span>' + e.horaInicio + ' · ' + e.tipo + '</div>' +
         accionBody +
       '</div>' +
-      accionLateral +
     '</div>' +
     accionExpand +
   '</div>';
@@ -994,13 +1013,16 @@ function _evRsvpOpcionesHtml(e) {
     return '<button type="button" class="ev-rsvp-opcion ev-rsvp-opcion-' + _EV_RSVP_CLASE[o] + '" onclick="_evElegirRsvp(this,\'' + e.id + '\',\'' + o + '\')"><span class="material-symbols-outlined">' + _EV_RESP_ICONO[o] + '</span>' + o + '</button>';
   }).join('');
 }
-// `_evRsvpMiniHtml()` (botón+hint, vive en `.ev-card-top-row`, centrado
-// verticalmente contra ícono+título+hora vía `align-items:center` heredado
-// de esa fila) + `_evRsvpExpandHtml()` (el panel de alternativas, a ANCHO
-// COMPLETO, hermano de `.ev-card-top-row` dentro de `.ev-card` -- no un
-// hijo anidado del botón, ver "Cambios recientes" -- corrección de
-// alineación) -- separadas a propósito, `_evCardEventoHtml()` decide cuándo
-// llamar a cada una (nunca para Cancelado/No se entrena/pasado, ver ahí).
+// `_evRsvpMiniHtml()` (botón+hint, vive DENTRO de `.ev-card-body`, ancho
+// completo, debajo de título/hora -- ver "Cambios recientes": antes columna
+// lateral aparte, ahora mismo tratamiento que admin/pasado/pill de estado,
+// el botón en sí no cambia de tamaño, solo de posición, centrado dentro de
+// ese ancho completo) + `_evRsvpExpandHtml()` (el panel de alternativas, a
+// ANCHO COMPLETO, hermano de `.ev-card-top-row` dentro de `.ev-card` -- no
+// un hijo anidado del botón, ver "Cambios recientes" -- corrección de
+// alineación de una tanda anterior) -- separadas a propósito,
+// `_evCardEventoHtml()` decide cuándo llamar a cada una (nunca para
+// Cancelado/No se entrena/pasado, ver ahí).
 function _evRsvpMiniHtml(e) {
   var estado = e.miEstado;
   var icono = estado ? _EV_RESP_ICONO[estado] : 'help';
@@ -1196,12 +1218,13 @@ function _evAgregarPersonaAEvento(nombre) {
    Mismo tratamiento visual que _evCardEventoHtml() (ver "Cambios recientes"
    -- antes tenía un `.ev-card-icon` cuadrado propio + título en color fijo
    `--cumple-text`, ambos eliminados): avatar circular real (`.avatar-pill`,
-   hidratado por _evHidratarAvatares() -- ver ahí) en vez del cuadrado, e
-   ícono `cake` INLINE junto al título (`.ev-card-titulo-row`/
-   `.ev-card-icono-inline`, mismas clases que cualquier card de evento) en
-   vez de vivir en ese cuadrado. Sin color propio: `.ev-card-titulo` queda en
-   `var(--text)`, como cualquier otra card -- ya no hace falta que el título
-   se destaque, el avatar + "Cumpleaños de <nombre>" ya son señal suficiente. */
+   hidratado por _evHidratarAvatares() -- ver ahí) en vez del cuadrado. Sin
+   ícono `cake` propio en el título (ver "Cambios recientes" -- sacado junto
+   con el ícono de tipo de las cards de evento: vive únicamente una vez en el
+   badge de fecha compartido del timeline, `.ev-fecha-badge-tipos`). Sin
+   color propio: `.ev-card-titulo` queda en `var(--text)`, como cualquier
+   otra card -- ya no hace falta que el título se destaque, el avatar +
+   "Cumpleaños de <nombre>" ya son señal suficiente. */
 function _evCardCumpleHtml(c) {
   var texto = (c.edadPublica && c.edad) ? ('cumple ' + c.edad + ' años') : 'Hoy cumple';
   var nombreAttr = c.nombre.replace(/"/g, '&quot;');
@@ -1216,7 +1239,7 @@ function _evCardCumpleHtml(c) {
     '<div class="ev-card-top-row">' +
       '<div class="avatar-pill ev-card-cumple-avatar" data-nombre="' + nombreAttr + '" data-foto="' + fotoAttr + '"></div>' +
       '<div class="ev-card-body">' +
-        '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline">cake</span><div class="ev-card-titulo">Cumpleaños de ' + c.nombre + '</div></div>' +
+        '<div class="ev-card-titulo">Cumpleaños de ' + c.nombre + '</div>' +
         '<div class="ev-card-sub">' + texto + '</div>' +
       '</div>' +
     '</div>' +
@@ -1488,10 +1511,22 @@ function _evRenderTimeline() {
     // número en círculo, relleno de marca solo si es hoy. `data-iso` lo usa
     // `_evFechaGrupoMasCercano()` (_evScrollAFecha()) para caer al grupo real
     // más cercano cuando la fecha exacta pedida no tiene contenido propio.
+    // Íconos de tipo debajo del número (ver "Cambios recientes" -- movidos
+    // acá desde la card individual: esta fecha es COMPARTIDA por todos los
+    // items de ese día, así que el ícono también -- uno por item, mismo
+    // orden que las cards de abajo (`.map()` de `.ev-fecha-items`, mismo
+    // array `porFecha[fecha]`) para que la correspondencia ícono→card se lea
+    // por posición, sin ambigüedad. `cake` fijo para cumpleaños (no tienen
+    // `tipo` propio como los eventos).
+    var iconosTipos = porFecha[fecha].map(function(it) {
+      var ic = it.tipo === 'cumple' ? 'cake' : (_EV_ICONOS[it.data.tipo] || 'event');
+      return '<span class="material-symbols-outlined ev-fecha-badge-tipo">' + ic + '</span>';
+    }).join('');
     html += '<div class="ev-fecha-grupo" id="ev-fecha-' + fecha + '" data-iso="' + fecha + '">' +
       '<div class="ev-fecha-badge">' +
         '<div class="ev-fecha-badge-dia">' + _EV_DIAS_CORTOS[(d.getDay() + 6) % 7] + '</div>' +
         '<div class="ev-fecha-badge-num' + (fecha === hoy ? ' ev-fecha-badge-hoy' : '') + '">' + d.getDate() + '</div>' +
+        '<div class="ev-fecha-badge-tipos">' + iconosTipos + '</div>' +
       '</div>' +
       '<div class="ev-fecha-items">' +
         porFecha[fecha].map(function(it) { return it.tipo === 'cumple' ? _evCardCumpleHtml(it.data) : _evTimelineFilaHtml(it.data); }).join('') +

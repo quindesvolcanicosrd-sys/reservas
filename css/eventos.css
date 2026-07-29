@@ -75,9 +75,12 @@
    Calendario). `#ev-cal-contenido` SIEMPRE muestra la grilla mensual
    completa (ver "Cambios recientes" -- se elimina el estado intermedio de
    franja semanal compacta que existía antes; solo expandido/cerrado, ver
-   `_evCalVisible` en js/eventos.js) vía fade + snap de contenido al cambiar
-   de mes (nunca animación de alto -- el techo del `.ev-header-burbuja`
-   exterior se re-mide en cada cambio, ver `_evCalActualizarMaxHeightExterior()`).
+   `_evCalVisible` en js/eventos.js) vía fade de contenido al cambiar de mes;
+   el techo del `.ev-header-burbuja` exterior se re-mide en cada cambio
+   (ver `_evCalActualizarMaxHeightExterior()`) CON la misma transición de
+   `max-height` que abre/cierra el panel entero (ver "Cambios recientes" --
+   pedido explícito: un mes de 5 semanas vs. uno de 6 debe animarse, no
+   saltar de golpe).
    `padding-top` separa el contenido del renglón de íconos de arriba, sin el
    marco/borde que tenía antes (`.ev-header-burbuja-panel` ya NO se usa acá,
    ver index.html). ────────────────────────────────────────────────────── */
@@ -108,8 +111,17 @@
    (línea vertical + año chico), en vez de repetir el año en cada pill. */
 /* Ocultamiento de scrollbar ya no hace falta acá -- universal (`*`,
    css/global.css, ver "Cambios recientes"); `-ms-overflow-style` queda (no
-   tiene equivalente en la regla universal, target distinto -- IE/Edge viejo). */
-.ev-mes-pills-row { display: flex; align-items: center; gap: 8px; overflow-x: auto; padding: 14px 2px 2px; -ms-overflow-style: none; }
+   tiene equivalente en la regla universal, target distinto -- IE/Edge viejo).
+   Máscara de degradado en ambos bordes (ver "Cambios recientes" -- pedido
+   explícito) -- la pill que queda parcialmente cortada por el borde del
+   contenedor se desvanece en vez de cortarse en seco; 20px de fade en cada
+   punta, resto 100% opaco. `-webkit-mask-image` primero (Safari todavía
+   necesita el prefijo para esta propiedad). */
+.ev-mes-pills-row {
+  display: flex; align-items: center; gap: 8px; overflow-x: auto; padding: 14px 2px 2px; -ms-overflow-style: none;
+  -webkit-mask-image: linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent);
+  mask-image: linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent);
+}
 .ev-mes-pill-corte {
   flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
   padding: 0 4px; align-self: stretch; justify-content: center; border-left: 1.5px solid var(--border-light);
@@ -144,6 +156,20 @@
   font-size: 0.85rem; font-weight: 700; color: var(--text); border: 1.5px solid transparent;
 }
 .ev-fecha-badge-num.ev-fecha-badge-hoy { background: var(--brand); color: var(--white); }
+/* Íconos de tipo debajo del número de día (ver "Cambios recientes" --
+   movidos acá desde la card individual: la fecha es compartida por todos
+   los items de ese día -- ej. un evento + un cumpleaños el mismo día en el
+   dataset de demo -- así que el ícono también, uno por item en vez de uno
+   solo). `flex-wrap` dentro del mismo ancho de 38px que el resto del badge
+   -- con 2+ items pasan a 2 filas en vez de desbordar. Círculos MÁS CHICOS
+   que `.ev-fecha-badge-num` (30px) a propósito -- 16px, con stroke de marca
+   y SIN relleno/background (mismo criterio: indicador secundario, no
+   protagonista visual como el número de día). */
+.ev-fecha-badge-tipos { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; margin-top: 2px; }
+.ev-fecha-badge-tipo {
+  width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  border: 1.3px solid var(--brand); color: var(--brand); font-size: 10px;
+}
 .ev-fecha-items { flex: 1; min-width: 0; }
 .ev-fecha-items > *:last-child { margin-bottom: 0; }
 .ev-lista-vacia {
@@ -163,15 +189,16 @@
   background: var(--surface-2); border: 1.5px solid var(--border-light);
   animation: smoothSlideUp 0.35s var(--ease-sheet) both;
 }
-/* Fila superior (ícono+título+hora a la izquierda, botón de RSVP/nota de
-   estado a la derecha, ver "Cambios recientes" -- corrección de alineación).
-   Antes esto era `.ev-card` mismo (`display:flex`); se separa en un hijo
-   propio para que el panel expandido del RSVP (`.ev-rsvp-expand`, más abajo)
-   pueda vivir como OTRO hijo de `.ev-card`, a ancho completo debajo de esta
-   fila, en vez de forzar a `.ev-card` entero a acomodar 2 layouts distintos
-   (fila arriba, bloque ancho completo abajo) con una sola regla. Reusada
-   tal cual por `_evCardCumpleHtml()` (avatar+body) -- mismo rol, ningún
-   cambio visual para esa card. */
+/* Fila superior (ver "Cambios recientes" -- hoy solo contiene `.ev-card-body`
+   para las cards de evento, sin ícono ni acción lateral: ambos se sacaron de
+   acá, el ícono al badge de fecha compartido del timeline y la acción a
+   ancho completo dentro de `.ev-card-body`, ver ahí; `_evCardCumpleHtml()`
+   sigue usando esta fila para avatar+body, sin cambios). Antes esto era
+   `.ev-card` mismo (`display:flex`); se separa en un hijo propio para que el
+   panel expandido del RSVP (`.ev-rsvp-expand`, más abajo) pueda vivir como
+   OTRO hijo de `.ev-card`, a ancho completo debajo de esta fila, en vez de
+   forzar a `.ev-card` entero a acomodar 2 layouts distintos con una sola
+   regla. */
 .ev-card-top-row { display: flex; gap: 12px; align-items: center; }
 .ev-card-icon {
   width: 42px; height: 42px; min-width: 42px; border-radius: 12px; background: var(--brand-light);
@@ -180,42 +207,15 @@
 .ev-card-icon .material-symbols-outlined { font-size: 1.3rem; }
 .ev-card-body { flex: 1; min-width: 0; }
 .ev-card-titulo { font-size: 0.9rem; font-weight: 800; color: var(--text); margin-bottom: 2px; }
-/* Ícono de tipo INLINE junto al título -- ver "Cambios recientes": ya NO lo
-   usa `_evCardEventoHtml()` (migró a `.ev-card-tipo-mini`/`.ev-card-tipo-circulo`
-   más abajo, columna propia a la izquierda de la card); sigue en pie tal
-   cual solo para `_evCardCumpleHtml()` (ícono `cake`) y la fila compacta de
-   "Pasados" sigue usando `.ev-card-icon` aparte, sin relación con esto. */
-.ev-card-titulo-row { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
-.ev-card-titulo-row .ev-card-titulo { margin-bottom: 0; }
-.ev-card-icono-inline { font-size: 16px; color: var(--brand); flex-shrink: 0; }
-/* Ícono de tipo -- columna angosta a la izquierda de `.ev-card-top-row` (ver
-   "Cambios recientes" -- reemplaza `.ev-card-icono-inline` en
-   `_evCardEventoHtml()`, mismo ancho, 38px, que `.ev-fecha-badge` del
-   timeline -- mismo lenguaje visual de "columna de fecha", pero por CARD:
-   una fecha puede traer varios items de tipos distintos (ver comentario de
-   `_evCardEventoHtml()`, js/eventos.js), así que no alcanza con un ícono
-   único compartido a nivel de grupo). Círculo MÁS CHICO que
-   `.ev-fecha-badge-num` (30px) a propósito -- 24px, con stroke de marca y
-   SIN relleno/background (pedido explícito: que se lea como indicador
-   secundario de tipo, no protagonista visual como el número de día). */
-.ev-card-tipo-mini { flex-shrink: 0; width: 38px; display: flex; justify-content: center; }
-.ev-card-tipo-circulo {
-  width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  border: 1.5px solid var(--brand); color: var(--brand); font-size: 13px;
-}
 .ev-card-sub { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .ev-card-sub .material-symbols-outlined { font-size: 14px; }
 /* Pill de estado (Cancelado/No se entrena, ver "Cambios recientes") --
    `_evEstadoNotaPillHtml()` (js/eventos.js), UN SOLO componente reusado tal
-   cual en la card y en el detalle. Base = ancho completo (usada tal cual por
-   el detalle, `#ev-detalle-rsvp`); `.ev-estado-pill-mini` (ver "Cambios
-   recientes" -- la card ahora la ubica al costado, mismo lugar/tamaño que el
-   botón de RSVP, en vez de ancho completo debajo del horario) la achica al
-   tamaño de `.ev-rsvp-boton` -- mismos padding/radio/tamaños de fuente para
-   que ambos elementos, intercambiables en esa posición, se vean como el
-   mismo tipo de control. Mismo tono rojo de advertencia que
-   `.ev-rsvp-boton-no-asistire`/`.badge-cancelada` (--danger/--danger-bg/
-   --danger-bdr). */
+   cual en la card (`_evCardEventoHtml()`, dentro de `.ev-card-body`, ancho
+   completo, debajo de título/hora -- mismo tratamiento que admin/pasado) y
+   en el detalle (`#ev-detalle-rsvp`, mismo ancho completo de esa sección).
+   Mismo tono rojo de advertencia que `.ev-rsvp-boton-no-asistire`/
+   `.badge-cancelada` (--danger/--danger-bg/--danger-bdr). */
 .ev-estado-pill {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   width: 100%; margin-top: 10px; padding: 9px 14px; border-radius: 12px;
@@ -224,8 +224,6 @@
 }
 .ev-estado-pill .material-symbols-outlined { font-size: 18px; }
 #ev-detalle-rsvp .ev-estado-pill { margin-top: 0; }
-.ev-estado-pill.ev-estado-pill-mini { width: auto; flex-shrink: 0; margin-top: 0; padding: 12px 18px; border-radius: 14px; }
-.ev-estado-pill.ev-estado-pill-mini .material-symbols-outlined { font-size: 20px; }
 
 /* ── "¿Asistiré?" (usuario) — barra segmentada única ──────────────────
    Reemplaza los 3 botones-pill independientes (con borde propio cada uno,
@@ -296,19 +294,18 @@
 /* ── Botón único + panel expandible -- SOLO en las cards de vista previa
    (ver "Cambios recientes", `_evRsvpMiniHtml()`/`_evRsvpExpandHtml()`,
    js/eventos.js; el detalle sigue con `.ev-rsvp-seg` de arriba, sin cambios
-   de mecánica). `.ev-rsvp-mini` (botón+hint) vive DENTRO de
-   `.ev-card-top-row`, hermano de `.ev-card-body` -- columna angosta,
-   centrada verticalmente contra el bloque ícono+título+hora vía
-   `align-items:center` (heredado de `.ev-card-top-row`, ver "Cambios
-   recientes" -- corrección de alineación: antes vivía apilada DENTRO de
-   `.ev-card-body`, empujada hacia abajo por el texto de arriba en vez de
-   centrada contra él). `flex-shrink:0` para no comprimirse contra el ancho
-   flexible de `.ev-card-body`; `flex-direction:column;align-items:center`
-   centra el botón Y el hint horizontalmente entre sí, ambos del mismo ancho
-   natural (el del botón, el elemento más ancho de los 2). Sin colita
+   de mecánica). `.ev-rsvp-mini` (botón+hint) vive DENTRO de `.ev-card-body`,
+   debajo de título/hora, a ancho completo (ver "Cambios recientes" -- antes
+   columna lateral aparte, mismo lugar/tamaño que la pill de estado; se
+   revierte a este mismo tratamiento full-width que ya tenían admin/pasado,
+   para que título/hora tengan todo el ancho de la card sin competir por
+   espacio con el botón). `margin-top:12px` separa del texto de arriba
+   (mismo valor que `.ev-asistire-wrap`, la barra completa del detalle, para
+   consistencia); `flex-direction:column;align-items:center` centra el botón
+   Y el hint horizontalmente dentro del ancho completo disponible. Sin colita
    conectando botón↔panel a propósito (ver el comentario de
    `_evRsvpMiniHtml()`, js/eventos.js, para el motivo). */
-.ev-rsvp-mini { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+.ev-rsvp-mini { display: flex; flex-direction: column; align-items: center; margin-top: 12px; }
 /* Hint informativo, no tocable (ver "Cambios recientes") -- mismo tono
    apagado que el resto de textos secundarios de la app, visible SOLO con
    el botón colapsado (`.ev-rsvp-mini-expandida`, clase en `.ev-rsvp-mini`,
