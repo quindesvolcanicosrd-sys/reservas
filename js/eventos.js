@@ -785,6 +785,16 @@ function _evScrollAFecha(iso) {
   el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+// Pill de estado (Cancelado/No se entrena, ver "Cambios recientes") -- ancho
+// completo, ícono de warning (Material Symbols) a la izquierda del texto,
+// mismo tono rojo de advertencia que el resto de la app (--danger/--danger-bg/
+// --danger-bdr, ver .ev-estado-pill en css/eventos.css). UN SOLO componente
+// reusado tal cual en la card (_evCardEventoHtml(), de abajo) y en el detalle
+// (_evDetalleEstadoNotaHtml(), más abajo en este archivo) -- no 2
+// implementaciones paralelas.
+function _evEstadoNotaPillHtml(estado) {
+  return '<div class="ev-estado-pill"><span class="material-symbols-outlined">warning</span>' + estado + '</div>';
+}
 /* ── Card de evento — vista previa simplificada (Semana/Calendario/Lista,
    ver "Cambios recientes": se saca la fila de avatares y "Más información"
    de acá, ahora viven en la pantalla de detalle de pantalla completa,
@@ -797,15 +807,6 @@ function _evScrollAFecha(iso) {
 function _evCardEventoHtml(e, sufijo) {
   sufijo = sufijo || '';
   var icono = _EV_ICONOS[e.tipo] || 'event';
-  var estadoNota = '';
-  if (e.estado === 'Cancelado') estadoNota = '<div class="ev-card-estado-nota">Cancelado</div>';
-  // Pill roja (ver "Cambios recientes") -- reusa .badge/.badge-cancelada,
-  // mismo patrón ya usado para los estados de asistencia real (
-  // _evAsistenciaRealHtml()) en vez de una clase nueva paralela a esa.
-  // `text-transform:none` scoped a `.ev-card` (css/eventos.css) -- se lee
-  // "No se entrena", no "NO SE ENTRENA" (`.badge` base sí es uppercase, la
-  // usan otras pantallas que si quieren mayúsculas).
-  else if (e.estado === 'No se entrena') estadoNota = '<span class="badge badge-cancelada">No se entrena</span>';
   // 3 casos, mutuamente excluyentes (ver "Cambios recientes" -- corrección
   // de alineación): admin/pasado quedan DENTRO de `.ev-card-body` (ancho
   // completo, apilados debajo de título/hora, sin cambios de esos 2 casos)
@@ -821,6 +822,13 @@ function _evCardEventoHtml(e, sufijo) {
   if (_esAdminDemo) accionBody = _evAccionAdminHtml(e);
   else if (pasado) accionBody = _evAsistenciaRealHtml(e);
   else if (!cancelado) { accionMini = _evRsvpMiniHtml(e); accionExpand = _evRsvpExpandHtml(e); }
+  // Pill de estado (`_evEstadoNotaPillHtml()`, ver "Cambios recientes") --
+  // ancho completo de la card, hermana de `.ev-card-top-row` (mismo nivel
+  // que `accionExpand`) en vez de vivir adentro de la fila superior: antes
+  // era texto/pill chico a la derecha del título, ahora ocupa todo el ancho
+  // para pesar más visualmente. Mismo componente reusado tal cual en el
+  // detalle (`_evDetalleEstadoNotaHtml()`).
+  var estadoNota = cancelado ? _evEstadoNotaPillHtml(e.estado) : '';
   // Ícono de tipo INLINE junto al título (ver "Cambios recientes" -- antes
   // `.ev-card-icon`, cuadrado 42px en columna propia a la izquierda). Sin esa
   // columna, `.ev-card-body` pasa a ocupar todo el ancho disponible de
@@ -829,8 +837,7 @@ function _evCardEventoHtml(e, sufijo) {
   // `_evCardCumpleHtml()` migró a este mismo patrón inline más tarde (ver
   // "Cambios recientes" -- reemplazó también su avatar cuadrado por uno
   // circular). Sin chevron (ver "Cambios recientes" -- eliminado de las 3
-  // vistas, la card entera ya es tocable): `estadoNota` no ocupa "el lugar"
-  // de nada, simplemente se suma si corresponde.
+  // vistas, la card entera ya es tocable).
   return '<div class="ev-card" id="ev-card-' + e.id + sufijo + '" onclick="abrirEvDetalle(\'' + e.id + '\')">' +
     '<div class="ev-card-top-row">' +
       '<div class="ev-card-body">' +
@@ -839,9 +846,9 @@ function _evCardEventoHtml(e, sufijo) {
         accionBody +
       '</div>' +
       accionMini +
-      estadoNota +
     '</div>' +
     accionExpand +
+    estadoNota +
   '</div>';
 }
 
@@ -1746,10 +1753,14 @@ function abrirEvDetalle(id) {
   _evDetalleActual = ev;
   _evRenderDetalle(ev);
   ir('s-eventos-detalle');
-  // offsetHeight de una pantalla display:none da 0 -- mismo problema que
-  // _evUpdateSubtabIndicator()/_evUpdateRsvpSliders() (ver esas notas más
-  // arriba), se mide recién una vez que ir() ya volvió visible la pantalla.
-  setTimeout(_evDetalleActualizarSticky, 50);
+  // offsetHeight/offsetWidth de una pantalla display:none da 0 -- mismo
+  // problema que _evUpdateSubtabIndicator() más arriba, se mide recién una
+  // vez que ir() ya volvió visible la pantalla. `_evUpdateRsvpSliders()` se
+  // llama ACÁ (no en _evRenderDetalle(), donde la pantalla todavía está
+  // display:none) por el mismo motivo -- bug reportado: entrar al detalle
+  // con un estado ya elegido desde la card dejaba el indicador sin su fondo
+  // sólido (offsetWidth/offsetLeft de la opción activa medidos en 0).
+  setTimeout(function() { _evDetalleActualizarSticky(); _evUpdateRsvpSliders(false); }, 50);
 }
 // Sticky de 3 niveles apilados (ver "Cambios recientes"): nav (ya sticky por
 // CSS, top:0, sin pills desde el rediseño -- ver _evDetalleStickyHtml())
@@ -1789,23 +1800,22 @@ function _evRenderDetalle(ev) {
   // (mismo guard que `_evRsvpBotonHtml()`, ver ese comentario) -- antes esta
   // pantalla se quedaba con la sección de RSVP vacía en esos 2 casos, sin
   // ningún indicador de por qué. `_evDetalleEstadoNotaHtml()` (ver "Cambios
-  // recientes") llena ese hueco reusando el mismo texto/color que ya
-  // muestra la card (`.ev-card-estado-nota`/`.badge-cancelada`) -- para un
-  // evento normal, `_evRsvpBarraHtml(ev)` siempre gana (truthy), el fallback
-  // nunca se evalúa.
-  if (rsvpCont) { rsvpCont.innerHTML = _evRsvpBarraHtml(ev) || _evDetalleEstadoNotaHtml(ev); _evUpdateRsvpSliders(false); }
+  // recientes") llena ese hueco reusando la misma pill que ya muestra la
+  // card (`_evEstadoNotaPillHtml()`) -- para un evento normal,
+  // `_evRsvpBarraHtml(ev)` siempre gana (truthy), el fallback
+  // nunca se evalúa. `_evUpdateRsvpSliders()` NO se llama acá -- la pantalla
+  // todavía está display:none en este punto (ver abrirEvDetalle(), que la
+  // llama recién después de ir()); medir offsetWidth/offsetLeft acá daría 0
+  // y dejaría el indicador sin su fondo sólido pintado.
+  if (rsvpCont) rsvpCont.innerHTML = _evRsvpBarraHtml(ev) || _evDetalleEstadoNotaHtml(ev);
   _evRenderDetalleAsistencia(ev);
 }
-// Mismo texto/clase que `.ev-card-estado-nota`/`.badge.badge-cancelada` ya
-// usa `_evCardEventoHtml()` para el mismo estado -- reuso literal, no una
-// paleta nueva (ver "Cambios recientes"). `.ev-detalle-estado-nota-wrap`
-// (css/eventos.css) es el único agregado propio, solo centra el contenido
-// dentro de `#ev-detalle-rsvp` (contexto de sección a ancho completo,
-// distinto del layout en fila de la card -- las clases reusadas en sí no
-// se tocan).
+// Mismo componente que la card (`_evEstadoNotaPillHtml()`, más arriba en
+// este archivo) para Cancelado/No se entrena -- reuso literal, no una
+// implementación paralela (ver "Cambios recientes"). Llena la sección de
+// RSVP, que si no quedaría vacía sin ningún indicador de por qué.
 function _evDetalleEstadoNotaHtml(e) {
-  if (e.estado === 'Cancelado') return '<div class="ev-detalle-estado-nota-wrap"><div class="ev-card-estado-nota">Cancelado</div></div>';
-  if (e.estado === 'No se entrena') return '<div class="ev-detalle-estado-nota-wrap"><span class="badge badge-cancelada">No se entrena</span></div>';
+  if (e.estado === 'Cancelado' || e.estado === 'No se entrena') return _evEstadoNotaPillHtml(e.estado);
   return '';
 }
 // Nav compacta sticky (ver "Cambios recientes" -- reemplaza el #top-bar

@@ -12,7 +12,7 @@
 .fi-pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 99px; font-size: 0.72rem; font-weight: 600; }
 .fi-pill .material-symbols-outlined { font-size: 0.85rem; }
 .fi-pill-hora { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border-soft); }
-.fi-pill-lugar { background: var(--brand-warm); color: var(--brand); border: 1px solid var(--brand-warm-border); }
+.fi-pill-lugar { background: var(--brand-warm); color: var(--brand); border: 1px solid var(--brand-warm-border); text-decoration: none; }
 .fi-pill-maps { background: var(--brand-warm); color: var(--brand); border: 1px solid var(--brand-warm-border); text-decoration: none; }
 .fi-pill-fin { background: var(--info-btn-bg); color: var(--info); border: 1px solid var(--info-btn-hover); }
 .fi-pill-dur { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-bdr); }

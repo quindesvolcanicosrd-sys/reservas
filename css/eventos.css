@@ -228,28 +228,24 @@
 .ev-card-icono-inline { font-size: 16px; color: var(--brand); flex-shrink: 0; }
 .ev-card-sub { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .ev-card-sub .material-symbols-outlined { font-size: 14px; }
-/* Nota de estado (Cancelado/No se entrena, ver "Cambios recientes") -- antes
-   adentro de `.ev-card-body`, apilado debajo de `.ev-card-sub` con
-   `margin-top:4px`; se muda a hermano de `.ev-card-body`, `_evCardEventoHtml()`
-   -- sin `margin-top` (ya no apila contra nada arriba) y `flex-shrink:0` para
-   no comprimirse contra el ancho flexible de `.ev-card-body`. */
-.ev-card-estado-nota { font-size: 0.74rem; font-weight: 700; color: var(--danger); flex-shrink: 0; }
-/* `.badge` base es uppercase (css/ui.css) -- acá se lee en sentence case
-   ("No se entrena", pedido explícito), scoped a `.ev-card` para no tocar el
-   resto de usos de `.badge-cancelada` en otras pantallas (ver
-   "Cambios recientes"). */
-.ev-card .badge-cancelada { text-transform: none; flex-shrink: 0; }
-/* Mismo indicador de estado que la card (`.ev-card-estado-nota`/
-   `.badge-cancelada`, reusadas TAL CUAL arriba -- ver "Cambios recientes"),
-   ahora también en `#ev-detalle-rsvp` para Cancelado/No se entrena (antes
-   esa sección quedaba vacía en la pantalla de detalle). Solo centrado --
-   la card lo posiciona vía `.ev-card{align-items:center}` (layout en fila),
-   acá es una sección a ancho completo, sin ese contexto. Mismo
-   `text-transform:none` que `.ev-card .badge-cancelada` de arriba, scoped
-   a este wrapper por el mismo motivo (no tocar `.badge-cancelada` en el
-   resto de la app). */
-.ev-detalle-estado-nota-wrap { display: flex; justify-content: center; padding: 10px 0; }
-.ev-detalle-estado-nota-wrap .badge-cancelada { text-transform: none; }
+/* Pill de estado (Cancelado/No se entrena, ver "Cambios recientes") --
+   `_evEstadoNotaPillHtml()` (js/eventos.js), UN SOLO componente reusado tal
+   cual en la card (`_evCardEventoHtml()`, hermana de `.ev-card-top-row`,
+   ancho completo de la card) y en el detalle (`_evDetalleEstadoNotaHtml()`,
+   dentro de `#ev-detalle-rsvp`, mismo ancho completo de esa sección) --
+   antes texto plano/pill chica a la derecha del título; ahora pesa más
+   visualmente, ancho completo pero SIN agrandar la altura (mismo criterio
+   que el resto de pills de la app). Mismo tono rojo de advertencia que
+   `.ev-rsvp-boton-no-asistire`/`.badge-cancelada` (--danger/--danger-bg/
+   --danger-bdr). */
+.ev-estado-pill {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; margin-top: 10px; padding: 9px 14px; border-radius: 12px;
+  background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-bdr);
+  font-size: 0.82rem; font-weight: 700;
+}
+.ev-estado-pill .material-symbols-outlined { font-size: 18px; }
+#ev-detalle-rsvp .ev-estado-pill { margin-top: 0; }
 
 /* ── "¿Asistiré?" (usuario) — barra segmentada única ──────────────────
    Reemplaza los 3 botones-pill independientes (con borde propio cada uno,
