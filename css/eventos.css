@@ -396,27 +396,17 @@
   font-size: 0.86rem; font-weight: 800; color: var(--brand); text-transform: uppercase; letter-spacing: 1.2px;
 }
 .ev-detalle-fechahora { font-size: 0.85rem; color: var(--text-2); font-weight: 600; margin-top: 2px; }
-/* Pills chicas -- lado a lado como el resto de pills informativas de la app
-   (.fi-pill). Una sola fila con las 4 (Inicio/Lugar/Fin/Duración, ver
-   "Cambios recientes" -- rediseño, antes Inicio/Lugar vivían en una fila
-   aparte dentro del sticky), toda dentro de #ev-detalle-info, scrollea
-   libre -- ya no queda ninguna pill dentro de #ev-detalle-sticky. */
-.ev-detalle-pills-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-.ev-detalle-pill-sm {
-  display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 99px;
-  font-size: 0.74rem; font-weight: 700; background: var(--surface-light); color: var(--muted);
-  border: 1px solid var(--border-light); text-decoration: none;
-}
-.ev-detalle-pill-sm .material-symbols-outlined { font-size: 0.9rem; }
-/* Inicio (violeta) / Lugar (roja, clickeable -- abre Maps) / Fin (azul) /
-   Duración (verde) -- mismos tokens fijos ya usados por las pills
-   equivalentes de Reservas (.fi-pill-hora/.fi-pill-lugar/.fi-pill-fin/
-   .fi-pill-dur, css/reservas.css), no --brand (independiente del color de
-   énfasis) -- reusados tal cual, no tokens nuevos (ver "Cambios recientes"). */
-.ev-detalle-pill-inicio { background: var(--purple-bg); color: var(--purple); border-color: var(--purple-border); }
-.ev-detalle-pill-lugar { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-bdr); }
-.ev-detalle-pill-fin { background: var(--info-btn-bg); color: var(--info); border-color: var(--info-btn-hover); }
-.ev-detalle-pill-duracion { background: var(--success-bg); color: var(--success); border-color: var(--success-bdr); }
+/* Pills -- ver "Cambios recientes" -- rediseño, corrección sobre un intento
+   anterior: reuso LITERAL de `.fi-pill`/`.fi-pills`/`.fi-pill-hora`/
+   `.fi-pill-lugar`/`.fi-pill-maps`/`.fi-pill-fin`/`.fi-pill-dur`
+   (css/reservas.css, panel "Más información" de Reservas) -- cero clases
+   `.ev-detalle-pill*` propias, para que las 2 pantallas queden
+   pixel-idénticas (tamaño/padding/color/radio de borde) en vez de
+   "parecidas" con valores aproximados a mano. Solo el espaciado contra la
+   descripción que sigue (`.fi-pills` en Reservas no lo necesita -- ahí
+   siempre es el último elemento de `.fi-content`) se resuelve acá, scoped
+   al contenedor real de esta pantalla, sin tocar `.fi-pills` en sí. */
+#ev-detalle-info .fi-pills { margin-bottom: 14px; }
 .ev-detalle-desc { font-size: 0.85rem; color: var(--text-2); line-height: 1.65; margin: 0; }
 .ev-detalle-titulo-seccion { font-size: 1rem; font-weight: 800; color: var(--text); margin-bottom: 12px; }
 /* Grid de 4 tarjetas de estadística (ver "Cambios recientes" -- reemplaza

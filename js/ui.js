@@ -234,6 +234,13 @@ function ir(id, desdeHistorial, sinTrampa) {
       if (typeof ajFiltrarSettings === 'function') ajFiltrarSettings('');
     }
   }
+  // Spacer de 40px que balancea la flecha atrás en otras pantallas de
+  // TOP_BAR_CONFIG (ver "Cambios recientes") -- en `s-datos` no hay flecha
+  // que balancear (`topBtn` se oculta más abajo) y el buscador es `flex:1`,
+  // así que este spacer solo le resta ancho real al pill sin cumplir
+  // ningún rol visual acá -- se oculta junto con el buscador.
+  var topBarSpacer = document.getElementById('top-bar-spacer');
+  if (topBarSpacer) topBarSpacer.style.display = (id === 's-datos') ? 'none' : '';
   if (cfg) {
     topBar.style.display = 'flex';
     topTitulo.textContent = typeof cfg.titulo === 'function' ? cfg.titulo() : cfg.titulo;

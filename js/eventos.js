@@ -1668,19 +1668,22 @@ function _evDetalleStickyHtml(ev) {
       '</div>' +
     '</div>';
 }
-// Las 4 pills juntas (ver "Cambios recientes" -- antes Inicio/Lugar vivían
-// separadas en el sticky, ver _evDetalleStickyHtml()) -- todas acá, afuera
-// del sticky, scrollean con el resto del contenido.
+// Las 5 pills juntas (Inicio/Lugar/Cómo llegar/Fin/Duración, ver "Cambios
+// recientes" -- rediseño: reuso LITERAL de `.fi-pill*`/`.fi-pills`
+// (css/reservas.css), las mismas clases que usa el panel "Más información"
+// de Reservas para este mismo concepto -- CERO clases `.ev-detalle-pill*`
+// propias, para que las 2 pantallas queden pixel-idénticas en vez de
+// "parecidas" con colores aproximados a mano) -- todas acá, afuera del
+// sticky, scrollean con el resto del contenido.
 function _evDetalleInfoHtml(ev) {
   var desc = _EV_DESCRIPCION_POR_TIPO[ev.tipo];
   var mapsUrl = _EV_MAPS_URL_POR_LUGAR[ev.lugar];
-  return '<div class="ev-detalle-pills-row">' +
-      '<span class="ev-detalle-pill-sm ev-detalle-pill-inicio"><span class="material-symbols-outlined">schedule</span>' + ev.horaInicio + 'hs</span>' +
-      (mapsUrl
-        ? '<a class="ev-detalle-pill-sm ev-detalle-pill-lugar" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</a>'
-        : '<span class="ev-detalle-pill-sm ev-detalle-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</span>') +
-      '<span class="ev-detalle-pill-sm ev-detalle-pill-fin"><span class="material-symbols-outlined">flag</span>Fin ' + _evHoraFin(ev) + 'hs</span>' +
-      '<span class="ev-detalle-pill-sm ev-detalle-pill-duracion"><span class="material-symbols-outlined">timer</span>' + _evDuracionTexto(ev) + '</span>' +
+  return '<div class="fi-pills">' +
+      '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + ev.horaInicio + 'hs</span>' +
+      '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</span>' +
+      (mapsUrl ? '<a class="fi-pill fi-pill-maps" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">near_me</span>Cómo llegar</a>' : '') +
+      '<span class="fi-pill fi-pill-fin"><span class="material-symbols-outlined">schedule</span>Fin ' + _evHoraFin(ev) + 'hs</span>' +
+      '<span class="fi-pill fi-pill-dur"><span class="material-symbols-outlined">timer</span>' + _evDuracionTexto(ev) + '</span>' +
     '</div>' +
     (desc ? '<p class="ev-detalle-desc">' + desc + '</p>' : '');
 }

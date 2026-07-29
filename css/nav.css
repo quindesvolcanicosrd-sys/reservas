@@ -102,17 +102,19 @@
 /* ── Buscador de Ajustes (ver "Cambios recientes") ───────
    Estilo "buscador de Ajustes de Android": lupa + input, sin botón de
    búsqueda aparte. Hijo flex real (no absolute como .app-nav-title) --
-   `flex:1` ocupa exactamente el espacio entre el borde izquierdo (el slot
-   de la flecha/tuerca decorativa se quita del todo en `s-datos`, ver
-   `ir()`/js/ui.js) y el spacer derecho de 40px, mismo criterio de
-   `gap:10px` ya heredado de `.app-nav`. Fondo propio + padding (mismo
-   criterio que los demás buscadores de bottom sheet de la app --
-   `#aj-prefijo-search`/`#aj-pais-search`, `padding:10px 14px` sobre
-   `--surface-2`) -- antes sin caja propia, quedaba apretado contra los
-   bordes de la nav. */
+   `flex:1`/`width:100%` ocupan TODO el espacio disponible del nav (el slot
+   de la flecha/tuerca decorativa se quita del todo en `s-datos`, y el
+   spacer derecho de 40px que balanceaba esa flecha en otras pantallas
+   también se oculta acá -- ver `ir()`/js/ui.js, `#top-bar-spacer` -- sin
+   ese spacer compitiendo por ancho, el pill llega hasta el padding real de
+   `.app-nav`, mismo margen lateral que el resto de la nav). Fondo propio +
+   padding alto (ver "Cambios recientes" -- pill notablemente más alto que
+   el resto de buscadores de bottom sheet de la app, a propósito, pedido
+   explícito calcado del mockup) sobre `--surface-2` -- antes sin caja
+   propia, quedaba apretado contra los bordes de la nav. */
 .app-nav-search {
   display: flex; align-items: center; gap: 8px; flex: 1; width: 100%; min-width: 0; color: var(--muted);
-  background: var(--surface-2); border-radius: 12px; padding: 11px 14px;
+  background: var(--surface-2); border-radius: 14px; padding: 16px 16px;
   border: 1.5px solid transparent; box-sizing: border-box;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -120,7 +122,8 @@
    en el contenedor en vez de `:focus` en el input (que dejaría el outline
    nativo del navegador ciñendo solo el input, descentrado del ícono de la
    lupa a su izquierda). `outline:none` en el input de abajo apaga ESE
-   default nativo -- el stroke real vive acá. */
+   default nativo -- el stroke real vive acá, NUNCA visible en reposo
+   (`border`/`box-shadow` arriba quedan en transparente/none por default). */
 .app-nav-search:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-light); }
 .app-nav-search .material-symbols-outlined { font-size: 1.2rem; flex-shrink: 0; }
 .app-nav-search input {
@@ -128,7 +131,13 @@
   font-family: inherit; font-size: 0.9rem; font-weight: 600; color: var(--text); padding: 0;
   box-sizing: border-box;
 }
-.app-nav-search input::placeholder { color: var(--muted); font-weight: 500; }
+/* Placeholder invisible en reposo (`color:transparent`, ver "Cambios
+   recientes" -- calcado del mockup: sin foco, el pill queda "vacío" salvo
+   la lupa, sin ningún texto de ayuda superpuesto) -- solo se revela, en
+   `--brand`/negrita, al tener foco (mismo `:focus-within` de arriba, no un
+   mecanismo nuevo). */
+.app-nav-search input::placeholder { color: transparent; transition: color 0.15s; }
+.app-nav-search:focus-within input::placeholder { color: var(--brand); font-weight: 800; }
 
 /* ── Acciones derecha ────────────────────────── */
 .app-nav-actions {
