@@ -69,19 +69,22 @@ var _EV_ASISTENCIA_REAL_BADGE = { 'A horario': 'badge-confirmada', 'Tarde': 'bad
 // heredado de `.badge` se saca puntualmente para estos 2 usos, ver
 // `.ev-rsvp-readonly`/`.ev-card-compacta .badge` en css/eventos.css).
 var _EV_ASISTENCIA_REAL_LABEL = { 'A horario': 'Llegué a horario', 'Tarde': 'Llegué tarde', 'Ausente': 'No asistí', 'Sin registrar': 'No asistí' };
-// Color sólido del indicador de la barra segmentada de RSVP -- SOLO usado
-// hoy por la pantalla de detalle (`_evRsvpBarraHtml()`/`_evPosicionarRsvpSlider()`
-// más abajo, mecánica sin cambios, ver "Cambios recientes"); las cards de
-// vista previa migraron al botón único + panel (`_evRsvpBotonHtml()`, ver
-// `_EV_RSVP_CLASE` acá abajo -- paleta de pill distinta, no esta). Fijos,
-// independientes del color de énfasis (mismo criterio de siempre: "Asistiré"
-// tiene que seguir leyéndose verde pase lo que pase con --brand). Variantes
-// "dark" (no el token base --success/--warning) para que el texto blanco de
-// encima tenga contraste suficiente sobre el indicador sólido. "No jugador"
-// pasa de ámbar a `--purple` (ver "Cambios recientes" -- mismo violeta que
-// `.fi-pill-hora`/el botón único de las cards, antes inconsistente entre
-// las 2 pantallas).
-var _EV_RSVP_COLOR = { 'Asistiré': 'var(--success-dark)', 'No asistiré': 'var(--danger)', 'No jugador': 'var(--purple)' };
+// Fondo ATENUADO del indicador de la barra segmentada de RSVP (pantalla de
+// detalle, `_evRsvpBarraHtml()`/`_evPosicionarRsvpSlider()` más abajo) --
+// ver "Cambios recientes": antes un fill SÓLIDO de color puro + texto
+// blanco encima (mismo lenguaje que un botón de acción, no el de un
+// badge/chip), corregido a propósito para usar el mismo lenguaje que el
+// resto de badges/chips de la app (fondo tenue del color + texto/ícono en
+// el tono saturado de ESE color, ver `.badge-confirmada`/`.fi-pill-dur`,
+// nunca texto blanco sobre un fill plano) -- mismos 3 tokens `-bg` que ya
+// usan esas pills, independientes del color de énfasis (mismo criterio de
+// siempre: "Asistiré" tiene que seguir leyéndose verde pase lo que pase con
+// --brand). El texto/ícono saturado de la opción activa no se fija acá --
+// va por CSS, `.ev-rsvp-opt.activa[data-estado=...]` (mismo criterio: color
+// fijo por estado, no depende de --brand). "No jugador" pasa de ámbar a
+// `--purple-bg` (mismo violeta que `.fi-pill-hora`/el botón único de las
+// cards, antes inconsistente entre las 2 pantallas).
+var _EV_RSVP_BG = { 'Asistiré': 'var(--success-bg)', 'No asistiré': 'var(--danger-bg)', 'No jugador': 'var(--purple-bg)' };
 // Sufijo de clase CSS por estado -- botón único + opciones grandes de las
 // cards (`.ev-rsvp-boton-<clase>`/`.ev-rsvp-opcion-<clase>`, css/eventos.css)
 // reusan los mismos tokens que sus pills equivalentes en otras pantallas
@@ -905,7 +908,9 @@ function _evGrupoAsistenciaHtml(label, personas, grupoKey, clase) {
 
 /* ── Variante usuario: "¿Asistiré?" → barra segmentada única, las 3
    opciones siempre visibles, la que coincide con e.miEstado queda resaltada
-   (.activa, indicador sólido de color fijo -- ver _EV_RSVP_COLOR). Tocar
+   (.activa, indicador de fondo ATENUADO + texto/ícono saturado, ver
+   "Cambios recientes" -- _EV_RSVP_BG/.ev-rsvp-opt.activa[data-estado]).
+   Tocar
    cualquiera marca directo, sin estado colapsado ni paso intermedio (antes:
    chip + "Cambiar" abría estas mismas 3 opciones aparte). Un único tamaño --
    la variante `compacta` (pensada para una fila resumida de "Ver todos") se
@@ -977,6 +982,7 @@ function _evRsvpBotonHtml(e) {
       '<div class="ev-rsvp-mini-row">' +
         '<button type="button" class="ev-rsvp-boton ' + _evRsvpBotonClase(estado) + '" onclick="_evToggleRsvpExpand(this)"><span class="material-symbols-outlined">' + icono + '</span>' + label + '</button>' +
       '</div>' +
+      '<div class="ev-rsvp-mini-hint">Toca para cambiar</div>' +
       '<div class="ev-rsvp-expand"><div class="ev-rsvp-expand-inner">' + _evRsvpOpcionesHtml(e) + '</div></div>' +
     '</div>';
 }
@@ -996,10 +1002,16 @@ function _evToggleRsvpExpand(btnEl) {
   _evRsvpExpandidoEl = mini;
   var expand = mini.querySelector('.ev-rsvp-expand');
   if (expand) expand.classList.add('abierta');
+  // "Toca para cambiar" (`.ev-rsvp-mini-hint`, ver "Cambios recientes") solo
+  // tiene sentido con el botón colapsado -- se oculta mientras el panel de
+  // alternativas está a la vista, mismo criterio (clase en el wrapper) que
+  // el resto del acordeón.
+  mini.classList.add('ev-rsvp-mini-expandida');
 }
 function _evColapsarRsvpExpand(mini) {
   var expand = mini.querySelector('.ev-rsvp-expand');
   if (expand) expand.classList.remove('abierta');
+  mini.classList.remove('ev-rsvp-mini-expandida');
   if (_evRsvpExpandidoEl === mini) _evRsvpExpandidoEl = null;
 }
 function _evElegirRsvp(btnEl, id, estado) {
@@ -1025,7 +1037,7 @@ function _evPosicionarRsvpSlider(seg, animate) {
   // extremos (Asistiré/No jugador).
   slider.style.width = (activo.offsetWidth - 6) + 'px';
   slider.style.transform = 'translateX(' + (activo.offsetLeft + 3) + 'px)';
-  slider.style.background = _EV_RSVP_COLOR[activo.getAttribute('data-estado')] || 'var(--brand)';
+  slider.style.background = _EV_RSVP_BG[activo.getAttribute('data-estado')] || 'var(--brand-light)';
 }
 // Reposiciona TODAS las barras visibles -- llamado tras cualquier re-render
 // de lista (chevrones, cambio de vista/tab, filtros) y, con setTimeout(50),
@@ -1764,20 +1776,24 @@ function _evDetalleStickyHtml(ev) {
       '</div>' +
     '</div>';
 }
-// Las 5 pills juntas (Inicio/Lugar/Cómo llegar/Fin/Duración, ver "Cambios
-// recientes" -- rediseño: reuso LITERAL de `.fi-pill*`/`.fi-pills`
-// (css/reservas.css), las mismas clases que usa el panel "Más información"
-// de Reservas para este mismo concepto -- CERO clases `.ev-detalle-pill*`
-// propias, para que las 2 pantallas queden pixel-idénticas en vez de
-// "parecidas" con colores aproximados a mano) -- todas acá, afuera del
-// sticky, scrollean con el resto del contenido.
+// Las 4 pills juntas -- Ubicación/Inicio/Fin/Duración, ver "Cambios
+// recientes" -- corrección de orden + fusión: antes Inicio/Lugar/"Cómo
+// llegar"/Fin/Duración, 5 pills con el link a Maps viviendo aparte de
+// Lugar. Ahora Ubicación (`.fi-pill-lugar`) ES el link clickeable (mismo
+// patrón `<a href="mapsUrl">` que antes usaba solo "Cómo llegar", fusionado
+// acá en vez de vivir aparte -- sin mapsUrl, cae a `<span>` no clickeable,
+// mismo criterio de siempre) -- CERO clases `.ev-detalle-pill*` propias
+// (reuso LITERAL de `.fi-pill*`/`.fi-pills`, css/reservas.css, mismas
+// clases que usa el panel "Más información" de Reservas). Todas acá, afuera
+// del sticky, scrollean con el resto del contenido.
 function _evDetalleInfoHtml(ev) {
   var desc = _EV_DESCRIPCION_POR_TIPO[ev.tipo];
   var mapsUrl = _EV_MAPS_URL_POR_LUGAR[ev.lugar];
   return '<div class="fi-pills">' +
+      (mapsUrl
+        ? '<a class="fi-pill fi-pill-lugar" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</a>'
+        : '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</span>') +
       '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + ev.horaInicio + 'hs</span>' +
-      '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</span>' +
-      (mapsUrl ? '<a class="fi-pill fi-pill-maps" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">near_me</span>Cómo llegar</a>' : '') +
       '<span class="fi-pill fi-pill-fin"><span class="material-symbols-outlined">schedule</span>Fin ' + _evHoraFin(ev) + 'hs</span>' +
       '<span class="fi-pill fi-pill-dur"><span class="material-symbols-outlined">timer</span>' + _evDuracionTexto(ev) + '</span>' +
     '</div>' +

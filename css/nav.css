@@ -114,7 +114,7 @@
    propia, quedaba apretado contra los bordes de la nav. */
 .app-nav-search {
   display: flex; align-items: center; gap: 8px; flex: 1; width: 100%; min-width: 0; color: var(--muted);
-  background: var(--surface-2); border-radius: 14px; padding: 16px 16px;
+  background: var(--surface-2); border-radius: 999px; padding: 16px 16px;
   border: 1.5px solid transparent; box-sizing: border-box;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -131,13 +131,14 @@
   font-family: inherit; font-size: 0.9rem; font-weight: 600; color: var(--text); padding: 0;
   box-sizing: border-box;
 }
-/* Placeholder invisible en reposo (`color:transparent`, ver "Cambios
-   recientes" -- calcado del mockup: sin foco, el pill queda "vacío" salvo
-   la lupa, sin ningún texto de ayuda superpuesto) -- solo se revela, en
-   `--brand`/negrita, al tener foco (mismo `:focus-within` de arriba, no un
-   mecanismo nuevo). */
-.app-nav-search input::placeholder { color: transparent; transition: color 0.15s; }
-.app-nav-search:focus-within input::placeholder { color: var(--brand); font-weight: 800; }
+/* Placeholder en tono apagado FIJO (ver "Cambios recientes" -- corrección:
+   una instrucción anterior lo había puesto invisible en reposo + rojo/negrita
+   recién al enfocar, mal leído del mockup -- el mockup real (Page 8/Page 9)
+   muestra el mismo tono apagado en los 2 estados, SOLO el borde del pill
+   cambia con el foco, ver la regla `:focus-within` de arriba). Sin regla
+   `:focus-within` acá a propósito -- el placeholder no debe cambiar de color
+   al enfocar, ni de peso. */
+.app-nav-search input::placeholder { color: var(--muted); font-weight: 500; }
 
 /* ── Acciones derecha ────────────────────────── */
 .app-nav-actions {
