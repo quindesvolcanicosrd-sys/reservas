@@ -1612,16 +1612,17 @@ function abrirEvDetalle(id) {
   // arriba), se mide recién una vez que ir() ya volvió visible la pantalla.
   setTimeout(_evDetalleActualizarSticky, 50);
 }
-// Sticky de 3 niveles apilados (ver "Cambios recientes"): nav+pills (ya
-// sticky por CSS, top:0) -> barra de RSVP -> grid de 4 tarjetas de
-// estadística, cada uno pegado justo debajo del anterior. El `top` de los
-// niveles 2 y 3 se calcula acá a partir de `offsetHeight` REAL del nivel
-// anterior (nunca un valor fijo) -- así un contenido más alto de lo normal
-// en cualquier nivel (ej. el nombre del lugar de la pill "Lugar" envolviendo
-// a 2 líneas, dentro del nivel 1) empuja correctamente a los niveles
-// siguientes sin superponerse ni dejar hueco. Se re-llama después de
-// cualquier render que pueda cambiar la altura de los niveles 1/2 (abrir un
-// evento nuevo, o el viewport cambiando de tamaño/orientación).
+// Sticky de 3 niveles apilados (ver "Cambios recientes"): nav (ya sticky por
+// CSS, top:0, sin pills desde el rediseño -- ver _evDetalleStickyHtml())
+// -> barra de RSVP -> grid de 4 tarjetas de estadística, cada uno pegado
+// justo debajo del anterior. El `top` de los niveles 2 y 3 se calcula acá a
+// partir de `offsetHeight` REAL del nivel anterior (nunca un valor fijo) --
+// así un contenido más alto de lo normal en cualquier nivel (ej. el tipo/
+// fecha-hora del nivel 1 envolviendo a 2 líneas en una pantalla angosta)
+// empuja correctamente a los niveles siguientes sin superponerse ni dejar
+// hueco. Se re-llama después de cualquier render que pueda cambiar la
+// altura de los niveles 1/2 (abrir un evento nuevo, o el viewport
+// cambiando de tamaño/orientación).
 function _evDetalleActualizarSticky() {
   var pantalla = document.getElementById('s-eventos-detalle');
   if (!pantalla || !pantalla.classList.contains('activa')) return;
@@ -1653,12 +1654,11 @@ function _evRenderDetalle(ev) {
 // (mismo `.app-nav-back` reusado, con su propio onclick acá ya que no hay
 // #top-bar detrás que se lo dé) + ícono de tipo SUELTO (sin el cuadrado de
 // fondo de `.ev-detalle-icon-grande` -- pedido explícito: no competir
-// visualmente con el botón circular de la flecha) + tipo/fecha-hora, más la
-// fila de pills Inicio (violeta)/Lugar (roja, clickeable → Maps). El resto
-// (Fin/Duración, descripción, RSVP, stats, lista) queda en _evDetalleInfoHtml(),
-// afuera de este bloque, scrollea libre.
+// visualmente con el botón circular de la flecha) + tipo/fecha-hora. Sin
+// pills (ver "Cambios recientes" -- rediseño, las 4 se unificaron en
+// _evDetalleInfoHtml(), afuera del sticky) -- este nivel 1 queda liviano a
+// propósito, mide menos alto que antes.
 function _evDetalleStickyHtml(ev) {
-  var mapsUrl = _EV_MAPS_URL_POR_LUGAR[ev.lugar];
   return '<div class="ev-detalle-nav-row">' +
       '<button class="app-nav-back" onclick="volver(\'s-eventos\')" title="Volver"><span class="material-symbols-outlined">arrow_back</span></button>' +
       '<span class="material-symbols-outlined ev-detalle-nav-icono">' + (_EV_ICONOS[ev.tipo] || 'event') + '</span>' +
@@ -1666,19 +1666,21 @@ function _evDetalleStickyHtml(ev) {
         '<div class="ev-detalle-tipo">' + ev.tipo + '</div>' +
         '<div class="ev-detalle-fechahora">' + _evFechaCompleta(ev.fecha) + '</div>' +
       '</div>' +
-    '</div>' +
-    '<div class="ev-detalle-pills-row-sticky">' +
+    '</div>';
+}
+// Las 4 pills juntas (ver "Cambios recientes" -- antes Inicio/Lugar vivían
+// separadas en el sticky, ver _evDetalleStickyHtml()) -- todas acá, afuera
+// del sticky, scrollean con el resto del contenido.
+function _evDetalleInfoHtml(ev) {
+  var desc = _EV_DESCRIPCION_POR_TIPO[ev.tipo];
+  var mapsUrl = _EV_MAPS_URL_POR_LUGAR[ev.lugar];
+  return '<div class="ev-detalle-pills-row">' +
       '<span class="ev-detalle-pill-sm ev-detalle-pill-inicio"><span class="material-symbols-outlined">schedule</span>' + ev.horaInicio + 'hs</span>' +
       (mapsUrl
         ? '<a class="ev-detalle-pill-sm ev-detalle-pill-lugar" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</a>'
         : '<span class="ev-detalle-pill-sm ev-detalle-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</span>') +
-    '</div>';
-}
-function _evDetalleInfoHtml(ev) {
-  var desc = _EV_DESCRIPCION_POR_TIPO[ev.tipo];
-  return '<div class="ev-detalle-pills-row">' +
-      '<span class="ev-detalle-pill-sm"><span class="material-symbols-outlined">flag</span>Fin ' + _evHoraFin(ev) + 'hs</span>' +
-      '<span class="ev-detalle-pill-sm"><span class="material-symbols-outlined">timer</span>' + _evDuracionTexto(ev) + '</span>' +
+      '<span class="ev-detalle-pill-sm ev-detalle-pill-fin"><span class="material-symbols-outlined">flag</span>Fin ' + _evHoraFin(ev) + 'hs</span>' +
+      '<span class="ev-detalle-pill-sm ev-detalle-pill-duracion"><span class="material-symbols-outlined">timer</span>' + _evDuracionTexto(ev) + '</span>' +
     '</div>' +
     (desc ? '<p class="ev-detalle-desc">' + desc + '</p>' : '');
 }
