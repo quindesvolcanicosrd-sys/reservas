@@ -386,9 +386,10 @@
    genérico solo para esta pantalla, ver TOP_BAR_CONFIG/js/ui.js): vive
    afuera de `.card` (hermano directo dentro de `.contenedor`, mismo criterio
    que #top-bar -- fondo constante de página, no el de una tarjeta), pegada
-   arriba con `position:sticky` + sombra sutil hacia abajo para separarse del
-   contenido que pasa por detrás al scrollear. */
-.ev-detalle-sticky { position: sticky; top: 0; z-index: 20; background: var(--bg); padding: 16px 0 14px; box-shadow: 0 4px 10px -4px var(--black-sm); }
+   arriba con `position:sticky`. Sin `box-shadow` (ver "Cambios recientes" --
+   sacado a pedido explícito, la sombra hacia abajo que separaba del
+   contenido que pasa por detrás al scrollear no se quería más). */
+.ev-detalle-sticky { position: sticky; top: 0; z-index: 20; background: var(--bg); padding: 16px 0 14px; }
 /* Niveles 2 y 3 del sticky apilado (ver "Cambios recientes" -- barra de RSVP
    y grid de estadísticas, cada uno fijo justo debajo del anterior). A
    diferencia de `.ev-detalle-sticky` (afuera de `.card`, fondo `--bg`
