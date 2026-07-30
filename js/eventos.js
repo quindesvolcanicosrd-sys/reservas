@@ -347,13 +347,22 @@ document.addEventListener('click', function(e) { _evCerrarBurbujaSiFueraDe(e.tar
 // verificación de Playwright de este punto) NO pasa por la traducción nativa
 // touch→pointer del navegador y nunca dispara `pointerdown` -- por eso
 // también se escucha `touchstart` directo, para cubrir ambos casos sin
-// depender de cuál pipeline de eventos generó el toque. Fase de CAPTURA (3er
-// argumento `true`) a propósito, aunque hoy ningún handler de esta pantalla
+// depender de cuál pipeline de eventos generó el toque. Fase de CAPTURA
+// (`capture:true`) a propósito, aunque hoy ningún handler de esta pantalla
 // usa `stopPropagation()`: corre ANTES que cualquier handler propio del
 // elemento tocado, así un gesto interno futuro (ej. el swipe del calendario)
-// no puede interponerse por accidente si algún día suma uno.
+// no puede interponerse por accidente si algún día suma uno. `passive:true`
+// (ver "Cambios recientes" -- bug real de corrección, encontrado auditando
+// el propio listener durante la investigación de scroll poco fluido: la
+// versión anterior pasaba `true` como 3er argumento posicional -- solo
+// `capture`, SIN `passive` -- un listener de `touchstart` no-pasivo en
+// `document` puede forzar al navegador a esperar a que el handler termine
+// antes de comprometerse con el gesto de scroll nativo, en TODA la app, no
+// solo donde hay una burbuja para cerrar. El handler nunca llama
+// `preventDefault()` -- marcarlo pasivo es 100% seguro y solo puede ayudar,
+// sin cambiar nada de su comportamiento).
 ['pointerdown', 'touchstart'].forEach(function(tipo) {
-  document.addEventListener(tipo, function(e) { _evCerrarBurbujaSiFueraDe(e.target); }, true);
+  document.addEventListener(tipo, function(e) { _evCerrarBurbujaSiFueraDe(e.target); }, { capture: true, passive: true });
 });
 function _evToggleMesPanel() { _evTogglePanel('mes'); }
 function _evToggleBusqueda() { _evTogglePanel('busqueda'); }
@@ -770,7 +779,33 @@ function _evActualizarNavMesPorScroll() {
     _evActualizarNavMesLabel(esPrimera);
   }
 }
-window.addEventListener('scroll', _evActualizarNavMesPorScroll, { passive: true });
+// Throttle real con rAF (ver "Cambios recientes" -- 3ra ronda de
+// investigación de scroll poco fluido: perfilado con Playwright -- frame
+// timing real vía rAF + `PerformanceObserver` de `longtask`, no solo
+// "se siente mejor" -- en 5 pantallas distintas (Eventos, Ajustes, Mi Liga,
+// detalle de evento, Home) antes de tocar nada; NINGUNA mostró long tasks ni
+// un patrón de jank atribuible a este listener o a los otros 2 sospechosos
+// nombrados (`overscroll-behavior` universal, el listener de cierre de
+// burbujas en fase de captura -- aislados por separado, resultados
+// estadísticamente iguales con o sin cada uno). Sin una causa medible que
+// perseguir, este throttle se agrega de todos modos como buena práctica
+// defensiva de bajo costo (no una respuesta a un problema confirmado): un
+// evento `scroll` puede dispararse más de una vez por frame en algunos
+// navegadores/dispositivos (trackpad de alta frecuencia, etc.) -- sin esto,
+// `_evActualizarNavMesPorScroll()` (que fuerza layout con
+// `getBoundingClientRect()`) podría correr más de una vez por frame sin
+// necesidad. `_evNavMesScrollRafPendiente` evita encolar un 2do rAF si ya
+// hay uno esperando -- como máximo 1 llamada real por frame, sin importar
+// cuántos eventos `scroll` lleguen mientras tanto.
+var _evNavMesScrollRafPendiente = false;
+window.addEventListener('scroll', function() {
+  if (_evNavMesScrollRafPendiente) return;
+  _evNavMesScrollRafPendiente = true;
+  requestAnimationFrame(function() {
+    _evNavMesScrollRafPendiente = false;
+    _evActualizarNavMesPorScroll();
+  });
+}, { passive: true });
 // Ícono "hoy" -- si el calendario está abierto, lo vuelve al mes actual
 // también (no solo scrollea el timeline) -- mismo helper que pill/swipe
 // (_evCalIrAFechaEnTimeline()) por el mismo bug real de Playwright: si el
