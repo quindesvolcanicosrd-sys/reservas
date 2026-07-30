@@ -581,6 +581,13 @@
    `.ev-card-compacta` es el chip de asistencia real, sentence case acá. */
 .ev-card-compacta .badge { flex-shrink: 0; text-transform: none; }
 .ev-card-compacta-wrap .ev-asistire-wrap { margin: 0 14px 12px; }
+/* Mismo respiro lateral/inferior que `.ev-asistire-wrap` de arriba, para
+   `.ev-estado-pill` cuando la fila compacta lo usa como nota de asistencia
+   real (ver "Cambios recientes" -- reusa `_evAsistenciaRealHtml()`, ya no
+   arma su propio `.badge` al costado) -- sin esto quedaría pegado a los
+   bordes del wrapper (el `margin-top` propio de `.ev-estado-pill` no cubre
+   los laterales/abajo que sí necesita acá, fuera de `.ev-card-compacta`). */
+.ev-card-compacta-wrap .ev-estado-pill { margin: 0 14px 12px; }
 /* Jerarquía visual pasados/futuros (ver "Cambios recientes",
    `_evTimelineFilaHtml()`/js/eventos.js): opacidad reducida en TODA la card
    compacta (pasados) + ícono forzado a gris apagado en vez de heredar el

@@ -69,17 +69,21 @@ var _EV_ASISTENCIA_REAL_BADGE = { 'A horario': 'badge-confirmada', 'Tarde': 'bad
 // heredado de `.badge` se saca puntualmente para estos 2 usos, ver
 // `.ev-rsvp-readonly`/`.ev-card-compacta .badge` en css/eventos.css).
 var _EV_ASISTENCIA_REAL_LABEL = { 'A horario': 'Llegué a horario', 'Tarde': 'Llegué tarde', 'Ausente': 'No asistí', 'Sin registrar': 'No asistí' };
-// Pill grande para "A horario"/"Tarde" (ver "Cambios recientes" -- pedido
-// explícito: mismo componente visual que `.ev-estado-pill` de
-// Cancelado/No se entrena -- mismo padding/ancho/tamaño de fuente, ícono a
-// la izquierda -- en vez del badge chico con solo borde que tenían antes).
-// SOLO estos 2 estados -- "Ausente"/"Sin registrar" ("No asistí") quedan
-// tal cual con el badge chico de siempre, no se tocan (no pedido). Colores:
-// mismos tokens `--success`/`--warning` que ya usa el resto de la app
-// (`.ev-estado-pill-danger`, `.ev-estado-pill-success`, `.ev-estado-pill-warning`,
-// css/eventos.css).
-var _EV_ASISTENCIA_REAL_PILL_CLASE = { 'A horario': 'ev-estado-pill-success', 'Tarde': 'ev-estado-pill-warning' };
-var _EV_ASISTENCIA_REAL_PILL_ICONO = { 'A horario': 'check_circle', 'Tarde': 'schedule' };
+// Pill grande para los 4 estados de asistencia real (ver "Cambios
+// recientes" -- rediseño completado: "Ausente"/"Sin registrar" ("No
+// asistí") sumados acá, antes quedaban afuera a propósito y caían al badge
+// chico viejo -- ahora los 3 estados comparten el mismo componente visual
+// que `.ev-estado-pill` de Cancelado/No se entrena -- mismo padding/ancho/
+// tamaño de fuente, ícono a la izquierda, sin ninguna excepción). Colores:
+// mismos tokens `--success`/`--warning`/`--danger` que ya usa el resto de la
+// app (`.ev-estado-pill-danger`, `.ev-estado-pill-success`,
+// `.ev-estado-pill-warning`, css/eventos.css) -- "Ausente"/"Sin registrar"
+// reusan el mismo tono rojo que ya usa `.ev-estado-pill-danger` para
+// Cancelado. Ícono `cancel` -- ya usado en `_EV_RESP_ICONO['No asistiré']`
+// más arriba para el mismo concepto ("no asistió"), sin introducir uno
+// nuevo.
+var _EV_ASISTENCIA_REAL_PILL_CLASE = { 'A horario': 'ev-estado-pill-success', 'Tarde': 'ev-estado-pill-warning', 'Ausente': 'ev-estado-pill-danger', 'Sin registrar': 'ev-estado-pill-danger' };
+var _EV_ASISTENCIA_REAL_PILL_ICONO = { 'A horario': 'check_circle', 'Tarde': 'schedule', 'Ausente': 'cancel', 'Sin registrar': 'cancel' };
 // Fondo ATENUADO del indicador de la barra segmentada de RSVP (pantalla de
 // detalle, `_evRsvpBarraHtml()`/`_evPosicionarRsvpSlider()` más abajo) --
 // ver "Cambios recientes": antes un fill SÓLIDO de color puro + texto
@@ -1595,21 +1599,26 @@ function _evBuscar(q) { _evBusqueda = q; _evRenderTimeline(true); }
 // (_evCardEventoHtml(), con su botón de RSVP); pasado usa una fila compacta
 // propia, atenuada (`.ev-pasado-atenuado`, ver "Cambios recientes" -- antes
 // solo se atenuaba en el subtab "Todos", ahora el timeline ES ese caso
-// siempre) con el chip de asistencia real ya registrada en vez de RSVP/
-// "quién asiste" (no tiene sentido para algo que ya ocurrió). La fecha ya la
-// muestra el badge lateral del grupo (_evRenderTimeline()), así que acá solo
-// queda hora+tipo.
+// siempre) con la asistencia real ya registrada en vez de RSVP/"quién
+// asiste" (no tiene sentido para algo que ya ocurrió). Reusa
+// `_evAsistenciaRealHtml()` (ver "Cambios recientes" -- antes armaba su
+// propio `<span class="badge">` a mano, puesto AL COSTADO dentro de la fila
+// flex `.ev-card-compacta`: 2da implementación paralela del mismo concepto,
+// con un look distinto -- badge chico con borde -- al de la card completa
+// -- `.ev-estado-pill`, rectángulo con ícono. Ahora un solo componente en
+// los 2 contextos) como bloque HERMANO de `.ev-card-compacta` (no adentro,
+// no al costado) dentro de `.ev-card-compacta-wrap` -- mismo patrón que
+// `.ev-asistire-wrap` en la card completa (ver `.ev-card-compacta-wrap
+// .ev-estado-pill`/`.ev-card-compacta-wrap .ev-asistire-wrap`,
+// css/eventos.css, mismo margen lateral/inferior para las 2). Cancelado/No
+// se entrena siguen sin nota acá (nunca hubo/habrá asistencia que
+// registrar). La fecha ya la muestra el badge lateral del grupo
+// (_evRenderTimeline()), así que la fila en sí solo necesita hora+tipo.
 function _evTimelineFilaHtml(e) {
   var hoy = _evHoyISO();
   if (_evFechaCmp(e.fecha, hoy) >= 0) return _evCardEventoHtml(e, '');
   var icono = _EV_ICONOS[e.tipo] || 'event';
-  var trailing = '';
-  if (e.estado !== 'Cancelado' && e.estado !== 'No se entrena') {
-    var estadoReal = e.miAsistenciaReal || 'Sin registrar';
-    var clase = _EV_ASISTENCIA_REAL_BADGE[estadoReal] || 'badge-sin-registrar';
-    var label = _EV_ASISTENCIA_REAL_LABEL[estadoReal] || estadoReal;
-    trailing = '<span class="badge ' + clase + '">' + label + '</span>';
-  }
+  var nota = (e.estado !== 'Cancelado' && e.estado !== 'No se entrena') ? _evAsistenciaRealHtml(e) : '';
   return '<div class="ev-card-compacta-wrap ev-pasado-atenuado">' +
     '<div class="ev-card-compacta" onclick="abrirEvDetalle(\'' + e.id + '\')">' +
       '<div class="ev-card-icon"><span class="material-symbols-outlined">' + icono + '</span></div>' +
@@ -1617,8 +1626,8 @@ function _evTimelineFilaHtml(e) {
         '<div class="ev-card-compacta-titulo">' + e.lugar + '</div>' +
         '<div class="ev-card-compacta-sub">' + e.horaInicio + ' · ' + e.tipo + '</div>' +
       '</div>' +
-      trailing +
     '</div>' +
+    nota +
   '</div>';
 }
 // Filtrado 100% en cliente sobre los datos de prueba (Tanda 2) -- la Tanda 3
