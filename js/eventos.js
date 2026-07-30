@@ -209,6 +209,7 @@ function irEventos() {
   _evCalVisible = false;
   _evCalFechaMostrada = null;
   _evCalUltimaAccionTs = 0;
+  _evVolviendoDeDetalle = false;
   var mesPanel = document.getElementById('ev-mes-panel');
   if (mesPanel) { mesPanel.classList.remove('abierta'); mesPanel.style.maxHeight = '0px'; }
   var navMesLabel = document.getElementById('ev-nav-mes-label');
@@ -1487,19 +1488,42 @@ function _evRenderTimeline() {
    _evMarcarAsistencia() para refrescar el resumen de conteos in-place si la
    barra de RSVP de esta misma pantalla cambia de opción. */
 var _evDetalleActual = null;
+// Scroll del timeline al entrar a un detalle (ver "Cambios recientes" --
+// pedido explícito: volver debe restaurar la posición exacta, no saltar
+// arriba de todo). `_evVolviendoDeDetalle` se arma ACÁ (al entrar, no al
+// salir) para cubrir cualquier camino de vuelta a `s-eventos` por igual --
+// botón "atrás" explícito o gesto nativo/popstate -- el consumidor único es
+// el hook centralizado en `ir()` (js/ui.js, mismo lugar que ya usa el fix
+// del indicador de RSVP) que lo lee y apaga una sola vez. `irEventos()` lo
+// apaga también al entrar fresco (nav inferior) para que un bottom-nav
+// después de haber estado en un detalle nunca restaure una posición vieja.
+var _evTimelineScrollY = 0;
+var _evVolviendoDeDetalle = false;
 function abrirEvDetalle(id) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === id; })[0];
   if (!ev) return;
+  _evTimelineScrollY = window.scrollY;
+  _evVolviendoDeDetalle = true;
   _evDetalleActual = ev;
   _evRenderDetalle(ev);
   ir('s-eventos-detalle');
-  // offsetHeight/offsetWidth de una pantalla display:none da 0 -- se mide
-  // recién una vez que ir() ya volvió visible la pantalla. `_evUpdateRsvpSliders()` se
-  // llama ACÁ (no en _evRenderDetalle(), donde la pantalla todavía está
-  // display:none) por el mismo motivo -- bug reportado: entrar al detalle
-  // con un estado ya elegido desde la card dejaba el indicador sin su fondo
-  // sólido (offsetWidth/offsetLeft de la opción activa medidos en 0).
-  setTimeout(function() { _evDetalleActualizarSticky(); _evUpdateRsvpSliders(false); }, 50);
+  // Bug real (ver "Cambios recientes"): `_evDetalleActualizarSticky()` vivía
+  // en el mismo `setTimeout(50)` que `_evUpdateRsvpSliders()` de abajo,
+  // "por si acaso" -- de más, y con costo real: durante esos ~50ms el RSVP y
+  // el grid de estadísticas (niveles 2/3 del sticky) se veían saltados a un
+  // `top` muy fuera de lugar (confirmado con Playwright, `getBoundingClientRect()`
+  // -300px+ antes del fix) porque nunca habían tenido un `top` propio
+  // asignado, y recién LUEGO saltaban de golpe a su posición real. Leer
+  // `offsetHeight` FUERZA un reflow síncrono -- `ir()`, unas líneas arriba,
+  // ya sacó la pantalla de `display:none`, así que llamar esto ACÁ MISMO
+  // (sin ningún `setTimeout`) ya mide valores reales, sin ventana de tiempo
+  // en la que se vea la posición vieja/rota.
+  _evDetalleActualizarSticky();
+  // `_evUpdateRsvpSliders()` SÍ sigue necesitando el setTimeout -- motivo
+  // distinto (bug real aparte, ya documentado): entrar al detalle con un
+  // estado ya elegido desde la card dejaba el indicador sin su fondo sólido
+  // (offsetWidth/offsetLeft de la opción activa medidos en 0).
+  setTimeout(function() { _evUpdateRsvpSliders(false); }, 50);
 }
 // Sticky de 3 niveles apilados (ver "Cambios recientes"): nav (ya sticky por
 // CSS, top:0, sin pills desde el rediseño -- ver _evDetalleStickyHtml())

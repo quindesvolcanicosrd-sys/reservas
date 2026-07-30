@@ -230,8 +230,25 @@ function ir(id, desdeHistorial, sinTrampa) {
   // en `ir()` en vez de solo en el botón "atrás" del detalle porque cubre
   // TODOS los caminos de vuelta a `s-eventos` (botón, gesto nativo/popstate),
   // no solo uno.
+  // Restaurar el scroll del timeline al volver de un detalle (ver "Cambios
+  // recientes", js/eventos.js -- pedido explícito: no debe saltar arriba de
+  // todo). `_evVolviendoDeDetalle` se arma en `abrirEvDetalle()` -- ya sea
+  // que se vuelva por el botón "atrás" o por gesto nativo/popstate, ambos
+  // caminos pasan por acá. `ir()` ya disparó su propio `scrollTo(top:0,
+  // smooth)` unas líneas arriba -- este `setTimeout(50)` (mismo delay que ya
+  // usa el fix del indicador de RSVP, agrupados en el mismo callback) lo
+  // reemplaza DESPUÉS por la posición real, mismo criterio que ya usa
+  // `irEventos()` para pararse en "hoy" en una entrada fresca -- un
+  // `scrollTo` síncrono en el mismo tick no alcanza a pisar la animación
+  // smooth ya iniciada.
   if (id === 's-eventos' && typeof _evUpdateRsvpSliders === 'function') {
-    setTimeout(function() { _evUpdateRsvpSliders(false); }, 50);
+    setTimeout(function() {
+      _evUpdateRsvpSliders(false);
+      if (typeof _evVolviendoDeDetalle !== 'undefined' && _evVolviendoDeDetalle) {
+        _evVolviendoDeDetalle = false;
+        window.scrollTo(0, _evTimelineScrollY);
+      }
+    }, 50);
   }
 
   var topBar = document.getElementById('top-bar'); var topBtn = document.getElementById('top-bar-btn'); var topTitulo = document.getElementById('top-bar-titulo');
