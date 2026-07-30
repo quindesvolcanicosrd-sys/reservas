@@ -722,8 +722,45 @@ function _evCalRenderPills() {
     html += '<button type="button" class="historial-pill' + (activa ? ' activa' : '') + '" onclick="_evCalTocarPillMes(' + o.year + ',' + o.month + ')">' + _EV_MESES_CORTOS[o.month] + '</button>';
   });
   cont.innerHTML = html;
-  var pillActiva = cont.querySelector('.historial-pill.activa');
+  _evCalCentrarPillActivaCuandoAsiente();
+}
+function _evCalCentrarPillActiva() {
+  var cont = document.getElementById('ev-mes-pills-row');
+  var pillActiva = cont && cont.querySelector('.historial-pill.activa');
   if (pillActiva) pillActiva.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+}
+// Centrado de la pill activa DIFERIDO hasta que el panel exterior (`#ev-mes-
+// panel`) termine de verdad su transición de `max-height` -- no antes, ni en
+// paralelo (ver "Cambios recientes" -- bug real, confirmado con Playwright
+// midiendo el alto real cuadro a cuadro: el panel SÍ anima su alto al abrir
+// y al cambiar de mes, ~180-280ms; centrar la pill de inmediato, como antes,
+// corría contra un layout todavía inestable -- la pill terminaba cortada
+// contra el borde). Disparado por el `transitionend` REAL de esa propiedad
+// (única que anima ahí), no por un timeout adivinado. Red de seguridad para
+// el caso en que la transición nunca dispara el evento porque el alto
+// pedido es IGUAL al que ya tenía (ej. 2 meses con la misma cantidad de
+// semanas -- sin cambio de valor no hay transición que correr): el plazo de
+// esa red no es un número inventado, se lee directo de la duración real
+// declarada en CSS (`transition-duration` de `.ev-header-burbuja`) más un
+// margen chico, así que sigue automáticamente si ese valor cambia en el CSS.
+var _EV_CAL_PILL_CENTRAR_EPOCH = 0;
+function _evCalCentrarPillActivaCuandoAsiente() {
+  var panel = document.getElementById('ev-mes-panel');
+  if (!panel) { _evCalCentrarPillActiva(); return; }
+  var epoch = ++_EV_CAL_PILL_CENTRAR_EPOCH;
+  var redDeSeguridad;
+  function onEnd(e) {
+    if (e.target !== panel || e.propertyName !== 'max-height') return;
+    panel.removeEventListener('transitionend', onEnd);
+    clearTimeout(redDeSeguridad);
+    if (epoch === _EV_CAL_PILL_CENTRAR_EPOCH) _evCalCentrarPillActiva();
+  }
+  panel.addEventListener('transitionend', onEnd);
+  var duracionMs = (parseFloat(getComputedStyle(panel).transitionDuration) || 0) * 1000;
+  redDeSeguridad = setTimeout(function() {
+    panel.removeEventListener('transitionend', onEnd);
+    if (epoch === _EV_CAL_PILL_CENTRAR_EPOCH) _evCalCentrarPillActiva();
+  }, duracionMs + 50);
 }
 function _evCalTocarPillMes(year, month) {
   _evCalUltimaAccionTs = Date.now();
