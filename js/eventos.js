@@ -920,11 +920,18 @@ window.addEventListener('scroll', function() {
 // (_evCalIrAFechaEnTimeline()) por el mismo bug real de Playwright: si el
 // calendario había navegado a un mes sin eventos, el timeline había quedado
 // reemplazado por el aviso "No hay eventos este mes" -- SIN ningún anchor de
-// fecha en el DOM, ni el de hoy (que siempre tiene contenido real en la
-// demo), dejando este botón sin nada a lo que saltar. El helper ya sabe
-// reponer el timeline completo cuando el destino sí tiene contenido (que
-// "hoy" siempre tiene), así que alcanza con pasar por él en vez de llamar a
-// `_evScrollAFecha()` directo como antes.
+// fecha en el DOM, dejando este botón sin nada a lo que saltar. El helper ya
+// sabe reponer el timeline completo cuando el destino sí tiene contenido,
+// así que alcanza con pasar por él en vez de llamar a `_evScrollAFecha()`
+// directo como antes -- PERO con `forzarHayContenido=true` (ver "Cambios
+// recientes" -- bug real distinto, confirmado con Playwright: si el MES
+// REAL de hoy no tiene ningún evento/cumpleaños propio -- aunque otros
+// meses sí -- el chequeo normal de `_evCalIrAFechaEnTimeline()` reemplazaba
+// TODO el timeline por el aviso vacío en vez de caer al día más cercano con
+// contenido real, algo que "ir a hoy" nunca debería poder hacer). Sigue
+// pasando por el helper (no `_evScrollAFecha()` suelto) para no perder el
+// fade ni el re-pintado de recuperación si el timeline ya estaba mostrando
+// ese aviso de una navegación previa.
 function _evIrAHoy() {
   var hoy = _evHoyISO();
   // Tocar "hoy" es una acción explícita de ir a un día puntual -- también
@@ -940,7 +947,7 @@ function _evIrAHoy() {
     _evCalRenderContenido();
     _evCalRenderPills();
   }
-  _evCalIrAFechaEnTimeline(hoy);
+  _evCalIrAFechaEnTimeline(hoy, false, true);
   // Parpadeo sutil de referencia en las cards de hoy (ver "Cambios
   // recientes" -- pedido explícito, 2 ciclos de ~380ms cada uno -- subido
   // desde ~200ms/ciclo, resultaba muy rápido -- para identificarlas fácil
@@ -970,11 +977,27 @@ function _evIrAHoy() {
 // (declarado más abajo, junto al resto del panel de filtros): un solo helper
 // reusado tanto por los puntitos de la grilla del panel de mes
 // (_evEventosDeFecha()) como por el timeline (_evRenderTimeline()). Los
-// cumpleaños NUNCA pasan por acá -- no tienen lugar/tipo propios.
+// cumpleaños NUNCA pasan por ACÁ -- no tienen lugar/tipo propios, tienen su
+// propio criterio (`_evPasaFiltroLugarTipoCumple()`, justo abajo).
 function _evPasaFiltroLugarTipo(lugar, tipo) {
   var fl = _evTimelineFiltro.lugar, ft = _evTimelineFiltro.tipo;
   if (fl.length && !fl.some(function(o) { return o.val === lugar; })) return false;
   if (ft.length && !ft.some(function(o) { return o.val === tipo; })) return false;
+  return true;
+}
+// Criterio de Lugar/Tipo para CUMPLEAÑOS (ver "Cambios recientes" -- antes
+// inmunes a estos 2 filtros del todo, solo respetaban la búsqueda de texto).
+// Lugar: los cumpleaños no tienen lugar propio -- cualquier selección de
+// Lugar los excluye siempre (si el usuario filtró por un lugar puntual, no
+// tiene sentido mostrarle cumpleaños ahí). Tipo: pasan solo si "Cumpleaños"
+// (la opción fija agregada en `_evOpcionesFiltro()`) está entre los tipos
+// seleccionados -- mismo criterio OR-dentro-del-campo que ya tienen
+// Lugar/Tipo entre sí (ej. "Cumpleaños" + "Entrenamiento" seleccionados a la
+// vez muestra ambos). Sin ningún filtro activo, pasan siempre (default).
+function _evPasaFiltroLugarTipoCumple() {
+  var fl = _evTimelineFiltro.lugar, ft = _evTimelineFiltro.tipo;
+  if (fl.length) return false;
+  if (ft.length && !ft.some(function(o) { return o.val === 'Cumpleaños'; })) return false;
   return true;
 }
 function _evEventosDeFecha(iso) { return _EV_EVENTOS.filter(function(e) { return _evFechaCmp(e.fecha, iso) === 0 && _evPasaFiltroLugarTipo(e.lugar, e.tipo); }); }
@@ -1068,9 +1091,20 @@ function _evFechaGrupoMasCercano(iso) {
 // corre agazapado dentro de la ventana de opacidad-0 del fade exterior, un
 // segundo fade anidado ahí adentro solo duplicaría el delay sin ningún
 // beneficio visual.
-function _evCalIrAFechaEnTimeline(iso, instant) {
+// `forzarHayContenido` (ver "Cambios recientes" -- bug real, `_evIrAHoy()`):
+// el chequeo de "mes sin contenido propio -> reemplazar timeline por aviso
+// vacío" tiene sentido para saltos explícitos de MES (swipe/pill, donde
+// perderse en un mes ajeno sin avisar sería peor), pero "ir a hoy" NUNCA
+// debería poder vaciar el timeline -- "hoy" puede caer en un mes sin ningún
+// evento/cumpleaños propio mientras otros meses sí tienen contenido, y aun
+// así el usuario espera caer en el día real más cercano con contenido
+// (`_evFechaGrupoMasCercano()`, lo que ya hace `_evScrollAFecha()` en
+// cualquier otro caso), no en un cartel de "no hay eventos". `_evIrAHoy()`
+// pasa `true` acá para saltear el chequeo sin duplicar el resto de esta
+// función (fade + re-pintado de recuperación si hace falta).
+function _evCalIrAFechaEnTimeline(iso, instant, forzarHayContenido) {
   var m = _evCalMesDe(iso);
-  var hayContenido = _evTimelineItems().some(function(it) {
+  var hayContenido = forzarHayContenido || _evTimelineItems().some(function(it) {
     var d = _evParseISO(it.fecha);
     return d.getFullYear() === m.year && d.getMonth() === m.month;
   });
