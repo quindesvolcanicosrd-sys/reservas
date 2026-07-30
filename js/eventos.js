@@ -350,13 +350,24 @@ function _evToggleBusqueda() { _evTogglePanel('busqueda'); }
    salta la animación. Guard de epoch (propiedad del propio `el`) contra que
    un `pintar()` tardío de una llamada vieja pise el contenido que una más
    nueva ya haya pintado -- necesario para swipes rápidos sucesivos sin
-   esperar la animación (ver "Cambios recientes", punto de verificación). */
+   esperar la animación (ver "Cambios recientes", punto de verificación).
+   `ms` (opcional, ver "Cambios recientes" -- bug real encontrado con
+   Playwright grabando frame a frame: al swipear entre un mes de 5 y uno de
+   6 semanas, este fade -- fijo en 130ms -- terminaba mucho ANTES que la
+   transición de `max-height` del panel exterior (280ms, CSS), así que el
+   contenido nuevo quedaba 100% opaco pero todavía "recortándose" contra un
+   panel que seguía creciendo/encogiendo por otros ~150ms -- se veía como un
+   salto/superposición en vez de una transición prolija) permite que el
+   panel de calendario pase el mismo largo que su propia transición de alto,
+   para que ambas terminen exactamente juntas; los demás usos (label de mes)
+   no lo pasan y siguen en el valor rápido de siempre. */
 var _EV_FADE_MS = 130;
-function _evFadeSwap(el, pintar, instant) {
+function _evFadeSwap(el, pintar, instant, ms) {
   if (instant) { pintar(); return; }
+  ms = ms || _EV_FADE_MS;
   el._fadeEpoch = (el._fadeEpoch || 0) + 1;
   var epoch = el._fadeEpoch;
-  el.style.transition = 'opacity ' + _EV_FADE_MS + 'ms ease';
+  el.style.transition = 'opacity ' + ms + 'ms ease';
   el.style.opacity = '0';
   setTimeout(function() {
     if (el._fadeEpoch !== epoch) return;
@@ -366,11 +377,11 @@ function _evFadeSwap(el, pintar, instant) {
     requestAnimationFrame(function() {
       requestAnimationFrame(function() {
         if (el._fadeEpoch !== epoch) return;
-        el.style.transition = 'opacity ' + _EV_FADE_MS + 'ms ease';
+        el.style.transition = 'opacity ' + ms + 'ms ease';
         el.style.opacity = '1';
       });
     });
-  }, _EV_FADE_MS);
+  }, ms);
 }
 
 /* ── Panel de calendario -- swipe-first (ver "Cambios recientes": rediseño
@@ -463,13 +474,18 @@ function _evCalActualizarMaxHeightExterior(instant) {
   }
 }
 window.addEventListener('resize', function() { if (_evCalVisible) _evCalActualizarMaxHeightExterior(true); });
+// Mismo largo que la transición `max-height` de `.ev-header-burbuja`
+// (0.28s, CSS) -- ver el comentario de `_evFadeSwap()` de más arriba: acá
+// se le pasa este valor en vez del rápido `_EV_FADE_MS` de siempre, para que
+// el fade de contenido y el crecimiento/achique del panel terminen juntos.
+var _EV_CAL_PANEL_MS = 280;
 function _evCalRenderContenido(instant) {
   var cont = document.getElementById('ev-cal-contenido');
   if (!cont) return;
   _evFadeSwap(cont, function() {
     _evCalRenderMes(cont, _evCalFechaMostrada);
     _evCalActualizarMaxHeightExterior(instant);
-  }, instant);
+  }, instant, _EV_CAL_PANEL_MS);
 }
 // Grilla mensual completa -- sin chevrones/borde/título repetido (ver
 // "Cambios recientes", punto 1 del rediseño: el título ya está arriba, en
