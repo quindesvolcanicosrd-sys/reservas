@@ -206,21 +206,30 @@
 .ev-card-icono-inline { font-size: 16px; color: var(--brand); flex-shrink: 0; }
 .ev-card-sub { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .ev-card-sub .material-symbols-outlined { font-size: 14px; }
-/* Pill de estado (Cancelado/No se entrena, ver "Cambios recientes") --
-   `_evEstadoNotaPillHtml()` (js/eventos.js), UN SOLO componente reusado tal
-   cual en la card (`_evCardEventoHtml()`, dentro de `.ev-card-body`, ancho
-   completo, debajo de título/hora -- mismo tratamiento que admin/pasado) y
-   en el detalle (`#ev-detalle-rsvp`, mismo ancho completo de esa sección).
-   Mismo tono rojo de advertencia que el resto de la app
-   (--danger/--danger-bg/--danger-bdr). */
+/* Pill grande de estado -- geometría COMPARTIDA (ver "Cambios recientes":
+   antes solo Cancelado/No se entrena, `_evEstadoNotaPillHtml()`; ahora
+   también "Llegué a horario"/"Llegué tarde", `_evAsistenciaRealHtml()`,
+   mismas 2 funciones en js/eventos.js -- pedido explícito: mismo tamaño/
+   forma entre los 4 estados posibles, solo cambia color+ícono+texto). UN
+   SOLO componente de geometría reusado tal cual en la card
+   (`_evCardEventoHtml()`, dentro de `.ev-card-body`, ancho completo, debajo
+   de título/hora -- mismo tratamiento que admin/pasado) y en el detalle
+   (`#ev-detalle-rsvp`, mismo ancho completo de esa sección) -- el color va
+   en un modificador aparte (`.ev-estado-pill-danger`/`-success`/`-warning`,
+   justo abajo), nunca hardcodeado acá. */
 .ev-estado-pill {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   width: 100%; margin-top: 10px; padding: 9px 14px; border-radius: 12px;
-  background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-bdr);
-  font-size: 0.82rem; font-weight: 700;
+  border: 1px solid transparent; font-size: 0.82rem; font-weight: 700;
 }
 .ev-estado-pill .material-symbols-outlined { font-size: 18px; }
 #ev-detalle-rsvp .ev-estado-pill { margin-top: 0; }
+/* Cancelado/No se entrena -- mismo tono rojo de advertencia de siempre. */
+.ev-estado-pill-danger { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-bdr); }
+/* Llegué a horario -- mismo verde que `--success` usa en el resto de la app. */
+.ev-estado-pill-success { background: var(--success-bg); color: var(--success); border-color: var(--success-bdr); }
+/* Llegué tarde -- mismo ámbar/naranja que `--warning` usa en el resto de la app. */
+.ev-estado-pill-warning { background: var(--warning-bg); color: var(--warning); border-color: var(--warning-bdr); }
 
 /* ── "¿Asistiré?" (usuario) — barra segmentada única ──────────────────
    Reemplaza los 3 botones-pill independientes (con borde propio cada uno,

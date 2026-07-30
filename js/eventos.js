@@ -69,6 +69,17 @@ var _EV_ASISTENCIA_REAL_BADGE = { 'A horario': 'badge-confirmada', 'Tarde': 'bad
 // heredado de `.badge` se saca puntualmente para estos 2 usos, ver
 // `.ev-rsvp-readonly`/`.ev-card-compacta .badge` en css/eventos.css).
 var _EV_ASISTENCIA_REAL_LABEL = { 'A horario': 'Llegué a horario', 'Tarde': 'Llegué tarde', 'Ausente': 'No asistí', 'Sin registrar': 'No asistí' };
+// Pill grande para "A horario"/"Tarde" (ver "Cambios recientes" -- pedido
+// explícito: mismo componente visual que `.ev-estado-pill` de
+// Cancelado/No se entrena -- mismo padding/ancho/tamaño de fuente, ícono a
+// la izquierda -- en vez del badge chico con solo borde que tenían antes).
+// SOLO estos 2 estados -- "Ausente"/"Sin registrar" ("No asistí") quedan
+// tal cual con el badge chico de siempre, no se tocan (no pedido). Colores:
+// mismos tokens `--success`/`--warning` que ya usa el resto de la app
+// (`.ev-estado-pill-danger`, `.ev-estado-pill-success`, `.ev-estado-pill-warning`,
+// css/eventos.css).
+var _EV_ASISTENCIA_REAL_PILL_CLASE = { 'A horario': 'ev-estado-pill-success', 'Tarde': 'ev-estado-pill-warning' };
+var _EV_ASISTENCIA_REAL_PILL_ICONO = { 'A horario': 'check_circle', 'Tarde': 'schedule' };
 // Fondo ATENUADO del indicador de la barra segmentada de RSVP (pantalla de
 // detalle, `_evRsvpBarraHtml()`/`_evPosicionarRsvpSlider()` más abajo) --
 // ver "Cambios recientes": antes un fill SÓLIDO de color puro + texto
@@ -839,12 +850,16 @@ function _evCalIrAFechaEnTimeline(iso, instant) {
 // Pill de estado (Cancelado/No se entrena, ver "Cambios recientes") -- ancho
 // completo, ícono de warning (Material Symbols) a la izquierda del texto,
 // mismo tono rojo de advertencia que el resto de la app (--danger/--danger-bg/
-// --danger-bdr, ver .ev-estado-pill en css/eventos.css). UN SOLO componente
-// reusado tal cual en la card (_evCardEventoHtml(), de abajo) y en el detalle
-// (_evDetalleEstadoNotaHtml(), más abajo en este archivo) -- no 2
+// --danger-bdr, `.ev-estado-pill-danger` en css/eventos.css -- ver "Cambios
+// recientes": `.ev-estado-pill` pasó a ser solo la geometría COMPARTIDA
+// -tamaño/padding/layout- con `_evAsistenciaRealHtml()` de más abajo, que
+// reusa esta misma base con sus propios modificadores de color/ícono para
+// "Llegué a horario"/"Llegué tarde"). UN SOLO componente de geometría
+// reusado tal cual en la card (_evCardEventoHtml(), de abajo) y en el
+// detalle (_evDetalleEstadoNotaHtml(), más abajo en este archivo) -- no 2
 // implementaciones paralelas.
 function _evEstadoNotaPillHtml(estado) {
-  return '<div class="ev-estado-pill"><span class="material-symbols-outlined">warning</span>' + estado + '</div>';
+  return '<div class="ev-estado-pill ev-estado-pill-danger"><span class="material-symbols-outlined">warning</span>' + estado + '</div>';
 }
 /* ── Card de evento — vista previa simplificada (Semana/Calendario/Lista,
    ver "Cambios recientes": se saca la fila de avatares y "Más información"
@@ -979,8 +994,12 @@ var _EV_RESP_OPCIONES = ['Asistiré', 'No asistiré', 'No jugador'];
 function _evEsPasado(e) { return _evFechaCmp(e.fecha, _evHoyISO()) < 0 || e.estado === 'Finalizado'; }
 function _evAsistenciaRealHtml(e) {
   var estadoReal = e.miAsistenciaReal || 'Sin registrar';
-  var clase = _EV_ASISTENCIA_REAL_BADGE[estadoReal] || 'badge-sin-registrar';
   var label = _EV_ASISTENCIA_REAL_LABEL[estadoReal] || estadoReal;
+  var pillClase = _EV_ASISTENCIA_REAL_PILL_CLASE[estadoReal];
+  if (pillClase) {
+    return '<div class="ev-estado-pill ' + pillClase + '"><span class="material-symbols-outlined">' + _EV_ASISTENCIA_REAL_PILL_ICONO[estadoReal] + '</span>' + label + '</div>';
+  }
+  var clase = _EV_ASISTENCIA_REAL_BADGE[estadoReal] || 'badge-sin-registrar';
   return '<div class="ev-asistire-wrap"><span class="badge ev-rsvp-readonly ' + clase + '">' + label + '</span></div>';
 }
 function _evRsvpBarraHtml(e) {
