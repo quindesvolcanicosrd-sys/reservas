@@ -537,55 +537,17 @@ window.addEventListener('resize', function() { if (_evCalVisible) _evCalActualiz
 // revele/oculte prolijo mientras el alto crece/encoge, sin necesitar ningún
 // fade -- confirmado con Playwright (ver el punto de "transición de alto
 // rota", tanda anterior): 0 de 20 frames mostraron contenido sangrando por
-// fuera del recorte del panel.
+// fuera del recorte del panel. Única excepción, acotada: la fila de pills
+// (`#ev-mes-pills-row`) SÍ tiene su propio fade LOCAL al cambiar de mes con
+// el calendario abierto (`_evCalCambiarMesConPillsFade()`, más abajo) -- un
+// fix puntual para el corte de esa fila específica, no un cambio de
+// criterio para la grilla/panel en general (se probó un fade de TODO el
+// panel y se revirtió, ver "Cambios recientes").
 function _evCalRenderContenido(instant) {
   var cont = document.getElementById('ev-cal-contenido');
   if (!cont) return;
   _evCalRenderMes(cont, _evCalFechaMostrada);
   _evCalActualizarMaxHeightExterior(instant);
-}
-// Cambio de MES con el calendario YA ABIERTO -- fade de opacidad en vez de
-// dejar que la grilla nueva se revele mientras el panel exterior todavía
-// está en pleno crecimiento/achique de `max-height` (ver "Cambios
-// recientes" -- revierte a propósito, y SOLO para este caso puntual, la
-// decisión de una sesión anterior de sacarle todo fade al calendario a
-// favor del "empuje" animado: tras varios intentos sin poder resolver el
-// corte de contenido contra el propio recorte del acordeón mientras el alto
-// todavía se está asentando, se prioriza que deje de cortarse por sobre esa
-// sensación de empuje. Abrir/cerrar el panel -- incluido el gesto de
-// arrastre -- NO se tocan, siguen animando `max-height` exactamente igual
-// que siempre). Reusa `_evFadeSwap()` -- el mismo helper genérico ya usado
-// para el label de mes y el timeline, no un mecanismo nuevo: fadea el panel
-// a opacidad 0, corre el repintado (grilla + pills, con el centrado
-// instantáneo de pill ya unificado) mientras es invisible, fadea de vuelta
-// a 1. El ajuste de `max-height` DENTRO del callback es explícito, con
-// `transition:none` puntual antes de fijar el valor nuevo -- mismo truco
-// que ya usa `_evCalActualizarMaxHeightExterior(instant)` para el resize de
-// ventana -- así el salto de alto queda garantizado instantáneo mientras el
-// panel es invisible, sin depender de la gestión interna de `_evFadeSwap()`
-// sobre su propio `transition` inline. Al terminar el ciclo completo del
-// fade se restaura `transition` a cadena vacía -- si no, `_evFadeSwap()`
-// deja el inline fijo en `opacity ...ms ease` para siempre, y abrir/cerrar
-// el panel DESPUÉS (que dependen de la transición de `max-height`
-// declarada en CSS, `.ev-header-burbuja`) dejarían de animar esa
-// transición. Guardado con el mismo epoch que ya expone `_evFadeSwap()`
-// (`panel._fadeEpoch`) -- si un swipe/pill/hoy más nuevo arrancó un 2do
-// ciclo antes de que este primero termine de limpiar, este `setTimeout`
-// viejo se queda quieto y deja la limpieza en manos del ciclo más nuevo.
-function _evCalRepintarConFade() {
-  var panel = document.getElementById('ev-mes-panel');
-  if (!panel) { _evCalRenderContenido(); _evCalRenderPills(); return; }
-  _evFadeSwap(panel, function() {
-    _evCalRenderContenido();
-    _evCalRenderPills();
-    panel.style.transition = 'none';
-    panel.style.maxHeight = panel.scrollHeight + 'px';
-    void panel.offsetHeight;
-  }, false);
-  var epoch = panel._fadeEpoch;
-  setTimeout(function() {
-    if (panel._fadeEpoch === epoch) panel.style.transition = '';
-  }, _EV_FADE_MS * 2 + 50);
 }
 // Grilla mensual completa -- sin chevrones/borde/título repetido (ver
 // "Cambios recientes", punto 1 del rediseño: el título ya está arriba, en
@@ -661,7 +623,7 @@ function _evCalMoverSwipe(dir) {
   var nuevaFecha = _evToISO(new Date(year, month, 1));
   _evCalFechaMostrada = nuevaFecha;
   _evSincronizarNavMesDesde(nuevaFecha);
-  _evCalRepintarConFade();
+  _evCalCambiarMesConPillsFade();
   _evCalIrAFechaEnTimeline(nuevaFecha, true);
 }
 // Swipe sobre el panel (`#ev-cal-contenido` -- listeners únicos, no hace
@@ -834,11 +796,58 @@ function _evCalCentrarPillActivaInstant() {
   if (!cont || !pillActiva) return;
   cont.scrollLeft = pillActiva.offsetLeft - (cont.clientWidth - pillActiva.offsetWidth) / 2;
 }
+// Cambio de MES con el calendario YA ABIERTO -- fade LOCAL solo de la fila
+// de pills (`#ev-mes-pills-row`), sincronizado con la animación de alto del
+// panel exterior, que sigue corriendo normal ("empuje" de siempre, sin
+// tocar -- ver "Cambios recientes": un fade de TODO el panel se probó y se
+// revirtió a pedido explícito de Victor, "se siente raro, no hay
+// continuidad" con el resto del cambio de mes). Causa real del corte
+// reportado: las pills viven al FINAL del contenido del panel, después de
+// la grilla -- mientras `max-height` todavía no llegó a su valor final, el
+// borde de recorte del acordeón pasa justo por el medio de esa fila (la
+// grilla de arriba no tiene este problema porque ya está visible desde
+// temprano en la animación). Acá se fadea a 0 SOLO la fila (transición CSS
+// propia, `.ev-mes-pills-row`, css/eventos.css) apenas arranca el cambio;
+// en paralelo, sin esperar nada, se repinta la grilla (`_evCalRenderContenido()`,
+// fija el nuevo techo con su transición normal de `max-height`) y el
+// contenido de las pills + el centrado instantáneo de la activa (ya
+// unificado) -- ambos repintados corren YA MISMO, la fila igual está
+// invisible. Recién cuando la transición de `max-height` del panel TERMINA
+// DE VERDAD (`transitionend` real de esa propiedad, con una red de
+// seguridad leída de la duración declarada en CSS -- mismo patrón que usaba
+// `_evCalCentrarPillActivaCuandoAsiente()`, de una sesión anterior, antes de
+// unificar el centrado de pills a instantáneo -- necesario para el caso en
+// que 2 meses consecutivos tengan la misma cantidad de semanas: sin cambio
+// de valor no hay transición que corra, `transitionend` nunca dispara) se
+// fadea la fila de vuelta a 1.
+var _EV_CAL_PILLS_FADE_EPOCH = 0;
+function _evCalCambiarMesConPillsFade() {
+  var pillsRow = document.getElementById('ev-mes-pills-row');
+  if (pillsRow) pillsRow.style.opacity = '0';
+  _evCalRenderContenido();
+  _evCalRenderPills();
+  var panel = document.getElementById('ev-mes-panel');
+  if (!pillsRow || !panel) { if (pillsRow) pillsRow.style.opacity = '1'; return; }
+  var epoch = ++_EV_CAL_PILLS_FADE_EPOCH;
+  var redDeSeguridad;
+  function onEnd(e) {
+    if (e.target !== panel || e.propertyName !== 'max-height') return;
+    panel.removeEventListener('transitionend', onEnd);
+    clearTimeout(redDeSeguridad);
+    if (epoch === _EV_CAL_PILLS_FADE_EPOCH) pillsRow.style.opacity = '1';
+  }
+  panel.addEventListener('transitionend', onEnd);
+  var duracionMs = (parseFloat(getComputedStyle(panel).transitionDuration) || 0) * 1000;
+  redDeSeguridad = setTimeout(function() {
+    panel.removeEventListener('transitionend', onEnd);
+    if (epoch === _EV_CAL_PILLS_FADE_EPOCH) pillsRow.style.opacity = '1';
+  }, duracionMs + 50);
+}
 function _evCalTocarPillMes(year, month) {
   _evCalUltimaAccionTs = Date.now();
   _evCalFechaMostrada = _evToISO(new Date(year, month, 1));
   _evSincronizarNavMesDesde(_evCalFechaMostrada);
-  _evCalRepintarConFade();
+  _evCalCambiarMesConPillsFade();
   _evCalIrAFechaEnTimeline(_evCalFechaMostrada, true);
 }
 
@@ -948,7 +957,7 @@ function _evIrAHoy() {
     _evCalUltimaAccionTs = Date.now();
     _evCalFechaMostrada = hoy;
     _evSincronizarNavMesDesde(hoy);
-    _evCalRepintarConFade();
+    _evCalCambiarMesConPillsFade();
   }
   _evCalIrAFechaEnTimeline(hoy, false, true);
 }
