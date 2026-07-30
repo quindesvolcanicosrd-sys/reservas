@@ -174,8 +174,10 @@
 .ev-hoy-separador::before, .ev-hoy-separador::after { content: ''; flex: 1; height: 1.5px; background: var(--border-light); }
 .ev-hoy-separador span { font-size: 0.72rem; font-weight: 800; color: var(--brand); text-transform: uppercase; letter-spacing: 1px; }
 /* Parpadeo sutil de referencia en las cards de hoy al tocar el ícono "hoy"
-   (ver "Cambios recientes" -- pedido explícito, 2 ciclos cortos para que sea
-   fácil identificarlas sin parecer un error visual) -- togglea
+   (ver "Cambios recientes" -- pedido explícito, 2 ciclos de ~380ms cada uno
+   -- subido desde ~200ms/ciclo, que resultaba muy rápido para notarlo bien
+   -- para que sea fácil identificarlas sin parecer un error visual) --
+   togglea
    `.ev-parpadeo-referencia` (js/eventos.js), reflow forzado antes de
    reagregarla para que 2 toques seguidos del ícono siempre reinicien la
    animación desde cero. */
@@ -188,7 +190,7 @@
    `.ev-card`'s propia regla (más abajo en este archivo) pisaría el parpadeo
    por completo. Cubre `_evCardCumpleHtml()` también (`.ev-card-cumple` lleva
    `.ev-card` como base). */
-.ev-card.ev-parpadeo-referencia { animation: ev-parpadeo-referencia 400ms ease-in-out; }
+.ev-card.ev-parpadeo-referencia { animation: ev-parpadeo-referencia 760ms ease-in-out; }
 
 /* ── Card de evento ───────────────────────────────────── */
 .ev-card {

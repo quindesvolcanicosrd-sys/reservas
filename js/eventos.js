@@ -869,8 +869,9 @@ function _evIrAHoy() {
   }
   _evCalIrAFechaEnTimeline(hoy);
   // Parpadeo sutil de referencia en las cards de hoy (ver "Cambios
-  // recientes" -- pedido explícito, 2 ciclos cortos, ~150-200ms cada uno,
-  // para identificarlas fácil sin parecer un error visual). Con delay --
+  // recientes" -- pedido explícito, 2 ciclos de ~380ms cada uno -- subido
+  // desde ~200ms/ciclo, resultaba muy rápido -- para identificarlas fácil
+  // sin parecer un error visual). Con delay --
   // el scroll de arriba es animado (`smooth`, no `instant`), así que
   // parpadear ANTES de que termine de asentarse (o mientras el mes/timeline
   // recién se están re-pintando) quedaría fuera de la vista o tapado por el
