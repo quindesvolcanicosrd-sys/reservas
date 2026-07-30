@@ -216,9 +216,26 @@ function _evGenerarDemo() {
   ];
 }
 
+// Flag de sesión (ver "Cambios recientes" -- regla general de "restaurar
+// posición al volver a una sección por nav inferior", ya aplicada primero acá
+// y después generalizada a Ajustes, ver `_ajYaInicializadoEnSesion` en
+// js/perfil.js): `false` al cargar la página (var de módulo, se resetea sola
+// en cada carga real) y explícito en `cerrarSesion()` (js/auth.js) para que
+// un logout/login sin recargar la página tampoco arrastre el estado de la
+// sesión anterior. La PRIMERA vez que se entra a Eventos en la sesión corre
+// el flujo completo de siempre (reset de filtros/búsqueda/calendario + salto
+// a "hoy"); las siguientes veces (nav inferior, sección ya visitada) NO se
+// resetea nada -- el usuario vuelve exactamente donde había dejado el
+// timeline, con los filtros/búsqueda/calendario tal cual estaban.
+var _evYaInicializadoEnSesion = false;
 /* ── Punto de entrada (ver 'entrar' de APP_BOTTOM_NAV_ITEMS en js/ui.js) ── */
 function irEventos() {
   if (_EV_EVENTOS.length === 0) _evGenerarDemo();
+  if (_evYaInicializadoEnSesion) {
+    _evRestaurarScrollTimeline = true;
+    volver('s-eventos');
+    return;
+  }
   _evTimelineFiltro = { lugar: [], tipo: [] };
   _evBusqueda = '';
   var inp = document.getElementById('ev-search-input'); if (inp) inp.value = '';
@@ -228,7 +245,7 @@ function irEventos() {
   _evCalFechaMostrada = null;
   _evCalFechaSeleccionada = null;
   _evCalUltimaAccionTs = 0;
-  _evVolviendoDeDetalle = false;
+  _evRestaurarScrollTimeline = false;
   var mesPanel = document.getElementById('ev-mes-panel');
   if (mesPanel) { mesPanel.classList.remove('abierta'); mesPanel.style.maxHeight = '0px'; }
   var navMesLabel = document.getElementById('ev-nav-mes-label');
@@ -239,19 +256,19 @@ function irEventos() {
   _evActualizarBotonesFiltro();
   _evRenderTimeline(true);
   volver('s-eventos');
-  // `ir()` (js/ui.js) ya dispara su propio `window.scrollTo(top:0, smooth)`
+  // `ir()` (js/ui.js) ya dispara su propio `window.scrollTo(0,0)` instantáneo
   // al cambiar de pantalla -- este setTimeout(50) corre DESPUÉS (mismo
   // criterio que el resto del archivo: offsetHeight/getBoundingClientRect de
   // una pantalla recién visible no son reales hasta el siguiente tick) y lo
-  // reemplaza por un salto instantáneo (sin animar, es la posición inicial de
-  // entrada, no un scroll disparado por el usuario) hasta "hoy" -- mismo
-  // espíritu que la agenda de Google Calendar, que abre parada en el día de
-  // hoy en vez de en el principio de la lista.
+  // reemplaza por un salto instantáneo hasta "hoy" -- mismo espíritu que la
+  // agenda de Google Calendar, que abre parada en el día de hoy en vez de en
+  // el principio de la lista.
   setTimeout(function() {
     _evScrollAFecha(_evHoyISO(), true);
     _evActualizarNavMesPorScroll();
     _evUpdateRsvpSliders(false);
   }, 50);
+  _evYaInicializadoEnSesion = true;
 }
 
 /* ── Burbuja de cabecera: búsqueda + filtros fusionados (ver "Cambios
@@ -1862,22 +1879,29 @@ function _evRenderTimeline(instant, alTerminar) {
    _evMarcarAsistencia() para refrescar el resumen de conteos in-place si la
    barra de RSVP de esta misma pantalla cambia de opción. */
 var _evDetalleActual = null;
-// Scroll del timeline al entrar a un detalle (ver "Cambios recientes" --
-// pedido explícito: volver debe restaurar la posición exacta, no saltar
-// arriba de todo). `_evVolviendoDeDetalle` se arma ACÁ (al entrar, no al
-// salir) para cubrir cualquier camino de vuelta a `s-eventos` por igual --
-// botón "atrás" explícito o gesto nativo/popstate -- el consumidor único es
-// el hook centralizado en `ir()` (js/ui.js, mismo lugar que ya usa el fix
-// del indicador de RSVP) que lo lee y apaga una sola vez. `irEventos()` lo
-// apaga también al entrar fresco (nav inferior) para que un bottom-nav
-// después de haber estado en un detalle nunca restaure una posición vieja.
+// Scroll del timeline (ver "Cambios recientes" -- `_evRestaurarScrollTimeline`
+// nació como "_evVolviendoDeDetalle", solo para volver de un detalle; se
+// generalizó para cubrir TAMBIÉN volver a Eventos por nav inferior en una
+// sesión que ya lo había visitado antes, mismo mecanismo, 2 disparadores
+// distintos). `_evGuardarScrollTimeline()` guarda la posición actual --
+// llamada desde `abrirEvDetalle()` (al entrar a un detalle) y desde el
+// `alSalir()` de Eventos en `APP_BOTTOM_NAV_ITEMS` (js/ui.js, al abandonar
+// la sección por CUALQUIER vía, no solo un detalle). `_evRestaurarScrollTimeline`
+// se arma en cualquiera de esos 2 disparadores -- el consumidor único sigue
+// siendo el hook centralizado en `ir()` (js/ui.js, mismo lugar que ya usa el
+// fix del indicador de RSVP) que lo lee y apaga una sola vez, cubriendo
+// cualquier camino de entrada a `s-eventos` por igual (botón "atrás", gesto
+// nativo/popstate, o nav inferior). `irEventos()` lo apaga en su flujo de
+// PRIMERA vez (reset completo) para que esa entrada fresca no restaure una
+// posición vieja de una sesión anterior.
 var _evTimelineScrollY = 0;
-var _evVolviendoDeDetalle = false;
+var _evRestaurarScrollTimeline = false;
+function _evGuardarScrollTimeline() { _evTimelineScrollY = window.scrollY; }
 function abrirEvDetalle(id) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === id; })[0];
   if (!ev) return;
-  _evTimelineScrollY = window.scrollY;
-  _evVolviendoDeDetalle = true;
+  _evGuardarScrollTimeline();
+  _evRestaurarScrollTimeline = true;
   _evDetalleActual = ev;
   _evRenderDetalle(ev);
   ir('s-eventos-detalle');

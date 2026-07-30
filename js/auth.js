@@ -293,6 +293,15 @@ function cerrarSesion() {
   _token = '';
   E.nombre = ''; E.datos = null; E.datosCompletos = null; _todasReservas = []; E.reagendando = false;
   var sel = document.getElementById('sel-nombre'); if (sel) sel.value = '';
+  // Flags de "ya inicializada esta sesión" (ver "Cambios recientes",
+  // js/eventos.js/js/perfil.js -- regla general de restaurar posición al
+  // volver por nav inferior): un logout no recarga la página, así que estas
+  // vars de módulo no se resetean solas -- sin esto, un login siguiente
+  // dentro de la misma pestaña arrastraría el estado de la sesión anterior
+  // (saltearía el reset/salto a "hoy" de Eventos, restauraría un scroll de
+  // otra cuenta en Ajustes).
+  if (typeof _evYaInicializadoEnSesion !== 'undefined') _evYaInicializadoEnSesion = false;
+  if (typeof _ajYaInicializadoEnSesion !== 'undefined') _ajYaInicializadoEnSesion = false;
   ir('s1');
 }
 

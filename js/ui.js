@@ -190,9 +190,38 @@ function ir(id, desdeHistorial, sinTrampa) {
   if (actual && actual.id === 's4' && typeof _s4TotalOcultarFijo === 'function') {
     _s4TotalOcultarFijo(document.getElementById('s4-total-fijo'));
   }
+  // Guardar el scroll de una sección raíz de la nav inferior AL ABANDONARLA
+  // (ver "Cambios recientes" -- regla general, no solo para Eventos/detalle:
+  // toda sección de APP_BOTTOM_NAV_ITEMS que quiera restaurar su posición al
+  // volver por nav inferior define un `alSalir()` opcional, corrido acá
+  // ANTES de cambiar de `.pantalla` -- mismo criterio que ya usa `entrar()`
+  // para poblar al entrar, ahora con su contraparte simétrica al salir).
+  // `actual` ya está calculado arriba para el caso de s4, se reusa. Ningún
+  // ítem sin `alSalir` definido paga ningún costo acá (`reservas` todavía no
+  // lo necesita).
+  if (actual) {
+    for (var _k = 0; _k < APP_BOTTOM_NAV_ITEMS.length; _k++) {
+      if (APP_BOTTOM_NAV_ITEMS[_k].pantalla === actual.id && APP_BOTTOM_NAV_ITEMS[_k].alSalir) {
+        APP_BOTTOM_NAV_ITEMS[_k].alSalir();
+        break;
+      }
+    }
+  }
   document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
   document.getElementById(id).classList.add('activa');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Instantáneo (ver "Cambios recientes" -- antes `behavior:'smooth'`): ya
+  // estamos abandonando la sección entera (mismo criterio que el resto de
+  // esta función, ver comentario de más arriba sobre `_ajSubAbierto`/
+  // `_overlayStack`) -- no tiene sentido animar un scroll que el usuario no
+  // va a alcanzar a ver. Los 2 casos que dependían de que ESTE scroll fuera
+  // smooth para poder "pisarlo" después con un `setTimeout(50)` (restaurar
+  // scroll del timeline al volver de un detalle, indicador de RSVP) siguen
+  // funcionando igual -- verificado con Playwright -- el `setTimeout(50)` ya
+  // no hace falta para "ganarle" a una animación (no hay ninguna corriendo),
+  // pero se deja tal cual: sigue siendo necesario por su otro motivo real
+  // (offsetWidth/getBoundingClientRect de una pantalla recién visible no son
+  // reales hasta el siguiente tick), así que simplificarlo no aportaría nada.
+  window.scrollTo(0, 0);
 
   var sinHistorial = ['s-carga', 's-carga-fechas', 's-carga-conf'];
   if (!desdeHistorial && sinHistorial.indexOf(id) === -1) {
@@ -230,24 +259,37 @@ function ir(id, desdeHistorial, sinTrampa) {
   // en `ir()` en vez de solo en el botón "atrás" del detalle porque cubre
   // TODOS los caminos de vuelta a `s-eventos` (botón, gesto nativo/popstate),
   // no solo uno.
-  // Restaurar el scroll del timeline al volver de un detalle (ver "Cambios
-  // recientes", js/eventos.js -- pedido explícito: no debe saltar arriba de
-  // todo). `_evVolviendoDeDetalle` se arma en `abrirEvDetalle()` -- ya sea
-  // que se vuelva por el botón "atrás" o por gesto nativo/popstate, ambos
-  // caminos pasan por acá. `ir()` ya disparó su propio `scrollTo(top:0,
-  // smooth)` unas líneas arriba -- este `setTimeout(50)` (mismo delay que ya
-  // usa el fix del indicador de RSVP, agrupados en el mismo callback) lo
-  // reemplaza DESPUÉS por la posición real, mismo criterio que ya usa
-  // `irEventos()` para pararse en "hoy" en una entrada fresca -- un
-  // `scrollTo` síncrono en el mismo tick no alcanza a pisar la animación
-  // smooth ya iniciada.
+  // Restaurar el scroll del timeline (ver "Cambios recientes", js/eventos.js
+  // -- pedido explícito: no debe saltar arriba de todo). `_evRestaurarScrollTimeline`
+  // se arma en 2 disparadores -- `abrirEvDetalle()` (volver de un detalle,
+  // por botón "atrás" o gesto nativo/popstate) e `irEventos()` (nav inferior
+  // a una sección ya visitada esta sesión) -- ambos caminos pasan por acá.
+  // `ir()` ya disparó su propio `scrollTo(0,0)` instantáneo unas líneas
+  // arriba -- este `setTimeout(50)` (mismo delay que ya usa el fix del
+  // indicador de RSVP, agrupados en el mismo callback) sigue haciendo falta
+  // por SU motivo real (offsetWidth/getBoundingClientRect de una pantalla
+  // recién visible no son reales hasta el siguiente tick), no ya para
+  // "pisar" una animación smooth (esa ya no existe, ver más arriba).
   if (id === 's-eventos' && typeof _evUpdateRsvpSliders === 'function') {
     setTimeout(function() {
       _evUpdateRsvpSliders(false);
-      if (typeof _evVolviendoDeDetalle !== 'undefined' && _evVolviendoDeDetalle) {
-        _evVolviendoDeDetalle = false;
+      if (typeof _evRestaurarScrollTimeline !== 'undefined' && _evRestaurarScrollTimeline) {
+        _evRestaurarScrollTimeline = false;
         window.scrollTo(0, _evTimelineScrollY);
       }
+    }, 50);
+  }
+  // Restaurar el scroll del home de Ajustes al volver por nav inferior a una
+  // sesión que ya lo había visitado (ver "Cambios recientes" -- generaliza a
+  // Ajustes el mismo mecanismo de Eventos de arriba; distinto de
+  // `_ajUltimoSubAbierto`/`_reabrirAjSubInstantaneo()`, que restaura la
+  // SUB-sección abierta -- esto es el scroll del propio home, `#s-datos`,
+  // que hasta ahora no se restauraba nunca). `_ajRestaurarScroll` se arma en
+  // `irEditarDatos()` cuando la sección ya estaba inicializada esta sesión.
+  if (id === 's-datos' && typeof _ajRestaurarScroll !== 'undefined' && _ajRestaurarScroll) {
+    setTimeout(function() {
+      _ajRestaurarScroll = false;
+      window.scrollTo(0, _ajHomeScrollY);
     }, 50);
   }
 
@@ -399,9 +441,20 @@ var APP_BOTTOM_NAV_ITEMS = [
   // motivo que 'ajustes'/irEditarDatos().
   { id: 'eventos', icono: 'campaign', texto: 'Eventos', pantalla: 's-eventos',
     entrar: function() { irEventos(); },
+    // `alSalir` (ver "Cambios recientes" -- regla general de restaurar
+    // posición al volver por nav inferior): guarda el scroll del timeline al
+    // ABANDONAR la sección, sin importar hacia dónde -- complementa a
+    // `abrirEvDetalle()` (que guarda lo mismo al entrar a un detalle, un
+    // camino distinto hacia la misma variable, `_evTimelineScrollY`).
+    alSalir: function() { if (typeof _evGuardarScrollTimeline === 'function') _evGuardarScrollTimeline(); },
     visible: function() { return true; } },
   { id: 'ajustes', icono: 'settings', texto: 'Ajustes', pantalla: 's-datos',
     entrar: function() { irEditarDatos(); },
+    // `alSalir` (ver "Cambios recientes") -- guarda el scroll del HOME de
+    // Ajustes (`#s-datos`) al abandonar la sección, distinto de
+    // `_ajUltimoSubAbierto`/js/perfil.js (que guarda qué SUB-sección estaba
+    // abierta, no el scroll del home en sí).
+    alSalir: function() { if (typeof _ajGuardarScrollHome === 'function') _ajGuardarScrollHome(); },
     visible: function() { return true; } }
 ];
 var _BOTTOM_NAV_PANTALLAS = APP_BOTTOM_NAV_ITEMS.map(function(item) { return item.pantalla; });

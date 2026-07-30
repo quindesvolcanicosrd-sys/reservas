@@ -1,3 +1,19 @@
+// Flag de sesión + variables de scroll del home de Ajustes (ver "Cambios
+// recientes" -- generaliza a Ajustes el mismo mecanismo ya aplicado primero
+// a Eventos, `_evYaInicializadoEnSesion`/js/eventos.js): distinto de
+// `_ajUltimoSubAbierto` de más abajo, que restaura la SUB-sección abierta --
+// esto es el scroll del propio `#s-datos` (el home de Ajustes en sí, sin
+// ningún sub-panel abierto). `_ajGuardarScrollHome()` la llama el `alSalir()`
+// de Ajustes en `APP_BOTTOM_NAV_ITEMS` (js/ui.js) al abandonar la sección por
+// cualquier vía; `_ajRestaurarScroll` la consume el hook centralizado en
+// `ir()` (mismo lugar que ya usa Eventos) la próxima vez que se entra a
+// `s-datos`. `cerrarSesion()` (js/auth.js) resetea `_ajYaInicializadoEnSesion`
+// para que un logout/login sin recargar la página no arrastre la sesión
+// anterior.
+var _ajYaInicializadoEnSesion = false;
+var _ajHomeScrollY = 0;
+var _ajRestaurarScroll = false;
+function _ajGuardarScrollHome() { _ajHomeScrollY = window.scrollY; }
 function irEditarDatos() {
   // Cuenta admin "pura" (dashboardAdmin:true, sin fila en Equipo, nunca pisa
   // E.datos): antes esta función bailaba de entrada para cualquier cuenta
@@ -79,6 +95,13 @@ function irEditarDatos() {
   if (miligaRow) miligaRow.style.display = _adminToken ? '' : 'none';
   var zonaCuenta = document.getElementById('aj-zona-cuenta');
   if (zonaCuenta) zonaCuenta.style.display = E.datos ? '' : 'none';
+  // Restaurar scroll del home solo de la 2da visita en adelante (ver
+  // "Cambios recientes" -- mismo criterio que Eventos): los campos de arriba
+  // se repueblan SIEMPRE (a diferencia de Eventos, acá no hay ningún reset
+  // que saltear -- E.datos puede haber cambiado en un sub-panel mientras
+  // tanto), lo único condicional es si se restaura el scroll guardado.
+  if (_ajYaInicializadoEnSesion) _ajRestaurarScroll = true;
+  else _ajYaInicializadoEnSesion = true;
   ir('s-datos');
 }
 
