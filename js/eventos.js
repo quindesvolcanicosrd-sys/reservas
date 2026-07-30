@@ -330,6 +330,14 @@ function _evCerrarPanel(tag, instant) {
 // que puedan desincronizarse.
 function _evCerrarBurbujaSiFueraDe(target) {
   if (!_evPanelAbierto) return;
+  // Excepción explícita (ver "Cambios recientes" -- pedido confirmado): con
+  // texto escrito en el buscador, un scroll/tap AFUERA del panel (ej. entre
+  // las cards de resultado, que viven en #ev-timeline, afuera de
+  // #ev-busqueda-panel) NO debe cerrar la burbuja -- solo el ícono de la
+  // lupa (#ev-busqueda-toggle-btn, `_evToggleBusqueda()`, no pasa por acá)
+  // la cierra en ese estado. Buscador vacío sigue con el comportamiento de
+  // siempre (cierre por cualquier gesto afuera).
+  if (_evPanelAbierto === 'busqueda' && _evBusqueda.trim() !== '') return;
   var cfg = _EV_PANELES[_evPanelAbierto];
   if (!cfg) return;
   var panelEl = document.getElementById(cfg.el);
