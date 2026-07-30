@@ -197,14 +197,30 @@
   flex-shrink: 0;
   -webkit-tap-highlight-color: transparent;
 }
-.app-nav-icon-btn:hover { background: var(--brand-lightest); }
+/* `@media (hover: hover)` (ver "Cambios recientes" -- causa real del
+   "borde/card visible junto al ícono hoy", confirmada con Playwright
+   simulando un tap táctil real: en touch, `:hover` queda PEGADO tras tocar
+   -- `btn.matches(':hover')` da `true` después del tap, sin que el dedo
+   siga encima -- mismo quirk clásico de Safari/WebKit en iOS, reproducible
+   también en Chromium con touch emulado. El ícono recién tocado (ej. "hoy")
+   queda con el fondo de `:hover` (`--brand-lightest`, MÁS tenue que el
+   fondo normal `--brand-light`) pegado hasta el próximo toque en otro
+   lugar -- se ve más desteñido/apagado que sus vecinos, la inconsistencia
+   visual reportada. Sin este media query, el `:hover` aplica en CUALQUIER
+   dispositivo, incluidos los que nunca pueden "hoverear" de verdad
+   (touch-only) -- con él, la regla solo corre en dispositivos con
+   puntero real (mouse/trackpad), donde el hover se limpia solo al mover el
+   puntero afuera, sin quedar pegado. */
+@media (hover: hover) {
+  .app-nav-icon-btn:hover { background: var(--brand-lightest); }
+  .app-nav-icon-btn-danger:hover { background: var(--danger-dark); }
+}
 .app-nav-icon-btn .material-symbols-outlined { font-size: 18px; }
 
 /* ── Variante circular roja (acción destacada de creación, ej. "+" de
    Eventos, solo admin) -- mismo componente (.app-nav-icon-btn), no una
    clase de nav paralela: solo cambia forma/color. */
 .app-nav-icon-btn-danger { background: var(--danger); color: var(--white); border-radius: 50%; }
-.app-nav-icon-btn-danger:hover { background: var(--danger-dark); }
 
 /* ── Botón CTA nav (Nueva reserva) ──────────── */
 .app-nav-cta {
