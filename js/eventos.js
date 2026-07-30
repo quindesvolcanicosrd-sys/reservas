@@ -2124,13 +2124,63 @@ function _evRenderDetalleAsistencia(ev) {
 // Tocar una tarjeta filtra la lista de abajo a solo ese grupo; tocarla de
 // nuevo (ya activa) deselecciona y vuelve a mostrar los 4. Solo una tarjeta
 // activa a la vez -- tocar otra mientras hay una activa cambia el filtro.
+//
+// Bug real (ver "Cambios recientes"), y por qué el fix no es un simple
+// `scrollTo(smooth)` DESPUÉS de togglear `display`: togglear `display:none`
+// en los grupos que no matchean puede achicar el documento de golpe (ej. de
+// "Sin respuesta", el más largo, a "Asisten") -- confirmado con Playwright
+// ANTES de aplicar nada: si el usuario estaba scrolleado bien abajo mirando
+// ese grupo largo, `window.scrollY` YA aparece clampeado al nuevo máximo
+// DENTRO de esta misma función, apenas se togglea `display` -- el propio
+// navegador reflowea y clampea el scroll de forma síncrona (instantánea, sin
+// animación posible) antes de que el código de más abajo llegue a correr, así
+// que animar un `scrollTo` recién DESPUÉS de togglear no tiene nada que
+// corregir: el salto ya pasó. Fix real: reservar el alto viejo de la lista
+// (`min-height` puntual, temporal) ANTES de togglear `display` -- el
+// documento no se achica todavía, así que el navegador no tiene motivo para
+// clampear nada -- calcular ahí, con el layout todavía "grande", a dónde
+// debería ir el scroll (mismo offset que ya usa `_evDetalleActualizarSticky()`,
+// `nivel3.style.top`, reusado) y animar el `scrollTo` con espacio real de
+// sobra para moverse. Recién cuando esa animación termina (timeout, no hay
+// evento de "fin" nativo para `window.scrollTo`) se suelta el `min-height` --
+// para ese entonces el usuario ya está en una posición dentro del alto NUEVO
+// (más chico), así que soltarlo no dispara ningún clamp adicional.
 function _evFiltrarAsistenciaPorGrupo(cardEl, grupo) {
   var yaActiva = _evDetalleFiltroGrupo === grupo;
   _evDetalleFiltroGrupo = yaActiva ? null : grupo;
   document.querySelectorAll('#ev-detalle-stats .ev-stat-card').forEach(function(c) {
     c.classList.toggle('activa', !yaActiva && c === cardEl);
   });
+  var lista = document.getElementById('ev-detalle-asistencia-lista');
+  var statsSticky = document.getElementById('ev-detalle-stats');
+  var alturaViejaLista = lista ? lista.scrollHeight : 0;
+  if (lista) lista.style.minHeight = alturaViejaLista + 'px';
   document.querySelectorAll('#ev-detalle-asistencia-lista .ev-asist-grupo').forEach(function(g) {
     g.style.display = (!_evDetalleFiltroGrupo || g.getAttribute('data-grupo') === _evDetalleFiltroGrupo) ? '' : 'none';
   });
+  var animo = false;
+  if (statsSticky && lista) {
+    // `scrollDestino`: NO se puede leer `statsSticky.getBoundingClientRect().top`
+    // acá -- es `position:sticky` y, si ya está pegada (el usuario scrolleado
+    // más allá del punto donde se fija), su rect SIEMPRE reporta su posición
+    // FIJADA (`offsetSticky`) sin importar cuánto se haya scrolleado de más --
+    // restarle `offsetSticky` a eso da ~0, así que `scrollDestino` terminaba
+    // dando prácticamente el mismo `window.scrollY` actual (confirmado con
+    // Playwright: un bug real de esta implementación, no el de arriba -- la
+    // condición de más abajo nunca se cumplía, el salto seguía intacto).
+    // `lista` en cambio NO es sticky -- su posición ABSOLUTA en el documento
+    // (`rect.top + window.scrollY`) es estable sin importar cuánto se haya
+    // scrolleado, así que sirve como referencia real para calcular a dónde
+    // scrollear.
+    var offsetSticky = parseFloat(statsSticky.style.top) || 0;
+    var listaAbsY = lista.getBoundingClientRect().top + window.scrollY;
+    var scrollDestino = Math.max(0, listaAbsY - offsetSticky - statsSticky.offsetHeight);
+    if (window.scrollY > scrollDestino + 1) {
+      animo = true;
+      window.scrollTo({ top: scrollDestino, behavior: 'smooth' });
+    }
+  }
+  if (lista) {
+    setTimeout(function() { lista.style.minHeight = ''; }, animo ? 400 : 0);
+  }
 }
