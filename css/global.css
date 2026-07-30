@@ -25,21 +25,20 @@
    forma explícita en varios lugares (`_evScrollAFecha()` y afines,
    js/eventos.js), así que dejar que el navegador reajuste `scrollY` por su
    cuenta nunca es deseable acá.
-   `overscroll-behavior:contain` UNIVERSAL (ver "Cambios recientes" -- antes
-   solo `html,body` con `-y` nada más): el rebote elástico aparecía en
-   CUALQUIER contenedor de scroll interno de la app al llegar a alguno de
-   sus extremos con un gesto brusco, no solo en `html`/`body` -- un grep de
-   todo `overflow-y:auto`/`scroll` del proyecto encontró ~10 contenedores
-   reales (`.aj-sub-inner` -- el panel completo de cada sub-sección de
-   Ajustes, incl. "Mi Liga", `.time-wheel`, `.dp-year-grid`/`.ddp-year-grid`,
-   las listas de bottom sheets con buscador -- prefijo/país/agregar persona/
-   destino -- y varios modales con `max-height:90vh`), todos con el mismo
-   problema porque ninguno tenía su propio `overscroll-behavior`. En vez de
-   repetir la propiedad contenedor por contenedor (y arriesgarse a que un
-   contenedor nuevo a futuro se sume a la app sin la regla, mismo tipo de
-   bug), una regla universal la cubre de una sola vez para cualquier
-   elemento con scroll propio, presente o futuro -- no hay ningún lugar de
-   la app que dependa del rebote nativo en ningún eje.
+   `overscroll-behavior:contain` -- REVERTIDO de universal a puntual (ver
+   "Cambios recientes" -- experimento pendiente de confirmar en dispositivo
+   real): la versión universal (`*, *::before, *::after`) lo aplicaba a
+   TODO elemento de la app, no solo a los que scrollean -- incluidos
+   elementos chicos sin scroll propio ninguno, donde la propiedad no debería
+   tener ningún efecto pero sí puede interferir con cómo el compositor
+   táctil de un navegador móvil real decide a quién le da el gesto (3
+   rondas previas de diagnóstico de "scroll trabado" no encontraron
+   evidencia en Chromium headless, pero headless no reproduce fielmente
+   bugs de compositor táctil real -- "sin repro" ahí no es lo mismo que
+   "sin bug"). Ahora puntual, un grep de todo `overflow-y`/`overflow-x`
+   `auto`/`scroll` del proyecto (repetido esta sesión, ya no ~10 sino 6
+   contenedores reales) da la lista completa de abajo (`html,body` +
+   selectores puntuales) -- ningún otro elemento de la app scrollea hoy.
    `scrollbar-width:none` / `*::-webkit-scrollbar{display:none}` UNIVERSAL
    (ver "Cambios recientes" -- bug real recurrente: la scrollbar nativa
    seguía apareciendo en contenedores nuevos pese a haberse "resuelto" antes;
@@ -54,8 +53,9 @@
    `overscroll-behavior`: una regla universal en vez de una lista para
    mantener a mano; las 3 declaraciones puntuales de arriba quedan
    redundantes y se sacan. */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; overscroll-behavior: contain; overflow-anchor: none; scrollbar-width: none; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; overflow-anchor: none; scrollbar-width: none; }
 *::-webkit-scrollbar { display: none; }
+html, body, .time-wheel, .ddp-year-grid, .aj-sub-inner, .modal-info-card, .ev-mes-pills-row, .axis-enter { overscroll-behavior: contain; }
 body {
   font-family: 'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text);
   -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
