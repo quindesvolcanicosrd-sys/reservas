@@ -477,8 +477,9 @@
    `scrollHeight` real, ver `_evAbrirPanel()`, js/eventos.js).
    `.ev-header-burbuja-panel` adentro es la capa VISUAL -- panel simple
    (marco redondeado + fondo), sin ningún conector hacia el ícono que lo
-   abrió. Las 3 burbujas (mes/filtros/búsqueda) comparten este mismo
-   mecanismo -- solo una abierta a la vez, ver `_evTogglePanel()`. */
+   abrió. Las 2 burbujas (mes/búsqueda+filtros fusionados, ver "Cambios
+   recientes") comparten este mismo mecanismo -- solo una abierta a la vez,
+   ver `_evTogglePanel()`. */
 .ev-header-burbuja { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
 /* Espacio contra el contenido que sigue inmediatamente debajo (el timeline)
    -- sin esto, la burbuja abierta quedaba pegada contra ese contenido. El
@@ -499,6 +500,12 @@
    parecen un <select>) que despliegan una burbuja inline debajo de la fila
    en vez de abrir un bottom sheet -- _evToggleFiltroBurbuja()/
    #ev-filtro-burbuja-<campo> en js/eventos.js/index.html. */
+/* Subtítulo "Filtros" arriba de Lugar/Tipo (ver "Cambios recientes" --
+   búsqueda+filtros fusionados en un solo panel) -- reusa `.seccion-label`
+   literal (css/ui.css, mismo componente que ya usan Home/Reservas/Ajustes
+   para subtítulos de sección), solo suma el margen contra el buscador de
+   arriba (`.seccion-label` ya trae su propio `margin-bottom`). */
+.ev-filtros-label { margin-top: 18px; }
 .ev-filtros-row { display: flex; gap: 8px; margin-bottom: 4px; }
 .ev-filtro-trigger {
   flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 4px;

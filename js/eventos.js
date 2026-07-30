@@ -234,15 +234,17 @@ function irEventos() {
   }, 50);
 }
 
-/* ── Burbujas de cabecera: filtros/búsqueda -- una sola abierta a la vez,
-   mecanismo max-height con `scrollHeight` real (evita el "golpe" de un techo
-   fijo mucho más alto que el contenido real). El calendario (`_evCalVisible`)
-   YA NO pasa por acá (ver "Cambios recientes" -- rediseño de navegación de
+/* ── Burbuja de cabecera: búsqueda + filtros fusionados (ver "Cambios
+   recientes" -- antes 2 burbujas separadas, filtros/búsqueda, mismo
+   mecanismo pero 2 entradas en `_EV_PANELES`; ahora 1 sola). Mecanismo
+   max-height con `scrollHeight` real (evita el "golpe" de un techo fijo
+   mucho más alto que el contenido real). El calendario (`_evCalVisible`) YA
+   NO pasa por acá (ver "Cambios recientes" -- rediseño de navegación de
    Calendario): tiene su propio mecanismo (`_evAbrirCalendario()`/
    `_evCerrarCalendario()` más abajo), pero sigue siendo mutuamente excluyente
-   con estas 2 -- abrir cualquiera cierra las otras. */
+   con esta -- abrir cualquiera cierra la otra. Queda como objeto (en vez de
+   variables sueltas) por si a futuro suma otra burbuja hermana. */
 var _EV_PANELES = {
-  filtros: { el: 'ev-filtros-colapsable', btn: 'ev-filtro-toggle-btn', claseActiva: 'ev-filtro-toggle-activo' },
   busqueda: { el: 'ev-busqueda-panel', btn: 'ev-busqueda-toggle-btn', claseActiva: 'ev-filtro-toggle-activo' }
 };
 function _evTogglePanel(tag) {
@@ -292,16 +294,19 @@ function _evCerrarPanel(tag, instant) {
     }
   }
   if (btn) btn.classList.remove(cfg.claseActiva);
-  if (tag === 'filtros' && _evFiltroBurbujaAbierta) {
+  // Limpieza de las 2 secciones fusionadas (ver "Cambios recientes" -- antes
+  // 2 ramas separadas, `tag === 'filtros'`/`tag === 'busqueda'`, ahora un
+  // solo panel las contiene a ambas siempre): colapsa cualquier burbuja
+  // Lugar/Tipo que haya quedado abierta (sin tocar la SELECCIÓN de esos
+  // filtros, que persiste) y vacía el texto de búsqueda.
+  if (_evFiltroBurbujaAbierta) {
     _evColapsarFiltroBurbuja(_evFiltroBurbujaAbierta);
     _evFiltroBurbujaAbierta = null;
     _evActualizarBotonesFiltro();
   }
-  if (tag === 'busqueda') {
-    var inp = document.getElementById('ev-search-input');
-    if (inp) inp.value = '';
-    _evBuscar('');
-  }
+  var inp = document.getElementById('ev-search-input');
+  if (inp) inp.value = '';
+  _evBuscar('');
 }
 // Chequeo compartido de "¿este toque fue AFUERA de la burbuja abierta y de su
 // propio ícono trigger?" -- usado por los 2 listeners de abajo (click Y
@@ -350,7 +355,6 @@ document.addEventListener('click', function(e) { _evCerrarBurbujaSiFueraDe(e.tar
   document.addEventListener(tipo, function(e) { _evCerrarBurbujaSiFueraDe(e.target); }, true);
 });
 function _evToggleMesPanel() { _evTogglePanel('mes'); }
-function _evToggleFiltrosPanel() { _evTogglePanel('filtros'); }
 function _evToggleBusqueda() { _evTogglePanel('busqueda'); }
 
 /* ── Fade genérico (ver "Cambios recientes" -- reemplaza el crossfade
@@ -1220,15 +1224,19 @@ function _evToggleFiltroBurbuja(campo) {
     if (el) el.classList.add('abierta');
   }
   _evActualizarBotonesFiltro();
-  // El panel exterior (`.ev-filtros-colapsable`, `_evToggleFiltrosPanel()`)
-  // fija su `max-height` a la altura real de SU contenido en el momento de
-  // abrirse (sin ninguna burbuja abierta todavía) -- relajarlo acá a un techo
-  // holgado evita que esa misma altura ajustada recorte una burbuja que se
-  // expande DESPUÉS. Sin transición propia (salto directo, no animado): un
-  // techo más alto no cambia nada visible mientras el contenido real quepa
-  // adentro, así que no hay "golpe" que evitar acá, a diferencia del panel.
-  var panelEl = document.getElementById('ev-filtros-colapsable');
-  if (panelEl && panelEl.classList.contains('abierta')) panelEl.style.maxHeight = '460px';
+  // El panel exterior (`#ev-busqueda-panel`, ver "Cambios recientes" --
+  // antes `#ev-filtros-colapsable`, panel propio antes de fusionar
+  // búsqueda+filtros) fija su `max-height` a la altura real de SU contenido
+  // en el momento de abrirse (sin ninguna burbuja Lugar/Tipo abierta
+  // todavía) -- relajarlo acá a un techo holgado evita que esa misma altura
+  // ajustada recorte una burbuja que se expande DESPUÉS. Sin transición
+  // propia (salto directo, no animado): un techo más alto no cambia nada
+  // visible mientras el contenido real quepa adentro, así que no hay
+  // "golpe" que evitar acá, a diferencia del panel. Más alto que antes
+  // (550px, no 460px) porque el panel ahora también contiene el buscador +
+  // el subtítulo "Filtros" arriba de Lugar/Tipo.
+  var panelEl = document.getElementById('ev-busqueda-panel');
+  if (panelEl && panelEl.classList.contains('abierta')) panelEl.style.maxHeight = '550px';
 }
 function _evColapsarFiltroBurbuja(campo) {
   var el = document.getElementById('ev-filtro-burbuja-' + campo);

@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=56739f3b">
 <link rel="stylesheet" href="css/nav.css?v=3e0b2561">
-<link rel="stylesheet" href="css/eventos.css?v=0f576b8f">
+<link rel="stylesheet" href="css/eventos.css?v=e0cab2d6">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -302,11 +302,13 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <span id="ev-nav-mes-texto"></span>
             <span class="material-symbols-outlined ev-nav-mes-chevron" id="ev-nav-mes-chevron">expand_more</span>
           </button>
-          <button type="button" class="app-nav-icon-btn ev-header-icon-btn" id="ev-busqueda-toggle-btn" onclick="_evToggleBusqueda()" title="Buscar">
+          <!-- Búsqueda + filtros fusionados en un solo ícono/panel (ver
+               "Cambios recientes" -- antes 2 íconos separados). El badge de
+               cantidad de filtros aplicados (`_evActualizarBadgeFiltros()`,
+               js/eventos.js) se mueve acá tal cual -- sigue siendo el mismo
+               elemento por id, solo cambia de ícono padre. -->
+          <button type="button" class="app-nav-icon-btn ev-header-icon-btn ev-filtro-toggle-btn" id="ev-busqueda-toggle-btn" onclick="_evToggleBusqueda()" title="Buscar y filtrar">
             <span class="material-symbols-outlined">search</span>
-          </button>
-          <button type="button" class="app-nav-icon-btn ev-header-icon-btn ev-filtro-toggle-btn" id="ev-filtro-toggle-btn" onclick="_evToggleFiltrosPanel()" title="Filtros">
-            <span class="material-symbols-outlined">tune</span>
             <span class="ev-filtro-badge" id="ev-filtro-badge" style="display:none;">0</span>
           </button>
           <button type="button" class="app-nav-icon-btn ev-header-icon-btn" onclick="_evIrAHoy()" title="Ir a hoy">
@@ -340,12 +342,26 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <div class="ev-mes-pills-row" id="ev-mes-pills-row"></div>
         </div>
 
-        <!-- Panel de filtros -- Lugar/Tipo (ver "Cambios recientes": se saca
-             el filtro "Mes" que tenía antes, ahora el mes se maneja desde el
-             panel de arriba). Mismo mecanismo `_evToggleFiltrosPanel()` de
-             siempre. -->
-        <div class="ev-header-burbuja" id="ev-filtros-colapsable">
+        <!-- Panel único de búsqueda + filtros (ver "Cambios recientes" --
+             fusiona los 2 paneles/íconos separados que existían antes en
+             uno solo: búsqueda de texto libre arriba, Lugar/Tipo debajo de
+             un subtítulo "Filtros" -- mismo componente `.seccion-label` que
+             ya usa el resto de la app para subtítulos de sección (Home/
+             Reservas/Ajustes, css/ui.css), no uno nuevo. Búsqueda reusa el
+             mismo componente visual del buscador de Ajustes (.app-nav-search,
+             css/nav.css: pill 100% redondeado, foco en todo el pill,
+             placeholder con fade, sin caret). Búsqueda y Lugar/Tipo se
+             combinan con AND entre los 3, ver _evPasaBusqueda()/
+             _evPasaFiltroLugarTipo(). Mismo mecanismo de burbuja de siempre
+             (_evToggleBusqueda()/_evTogglePanel()) -- un panel a la vez,
+             cierre al tocar afuera o al iniciar un scroll. -->
+        <div class="ev-header-burbuja" id="ev-busqueda-panel">
           <div class="ev-header-burbuja-panel">
+            <div class="app-nav-search">
+              <span class="material-symbols-outlined">search</span>
+              <input type="text" id="ev-search-input" placeholder="Buscar eventos, cumpleaños o lugares" oninput="_evBuscar(this.value)">
+            </div>
+            <div class="seccion-label ev-filtros-label">Filtros</div>
             <div class="ev-filtros-row">
               <button type="button" class="ev-filtro-trigger" id="ev-filtro-btn-lugar" data-label="Lugar" onclick="_evToggleFiltroBurbuja('lugar')">
                 <span class="ev-filtro-trigger-label">Lugar</span><span class="material-symbols-outlined">expand_more</span>
@@ -356,21 +372,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             </div>
             <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-lugar"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-lugar"></div></div>
             <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-tipo"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-tipo"></div></div>
-          </div>
-        </div>
-
-        <!-- Panel de búsqueda -- reusa el mismo componente visual del
-             buscador de Ajustes (.app-nav-search, css/nav.css: pill 100%
-             redondeado, foco en todo el pill, placeholder con fade, sin
-             caret) en vez de crear uno nuevo desde cero. Convive con los
-             filtros de arriba -- mismo criterio AND que Lugar/Tipo, ver
-             _evPasaBusqueda(). -->
-        <div class="ev-header-burbuja" id="ev-busqueda-panel">
-          <div class="ev-header-burbuja-panel">
-            <div class="app-nav-search">
-              <span class="material-symbols-outlined">search</span>
-              <input type="text" id="ev-search-input" placeholder="Buscar eventos, cumpleaños o lugares" oninput="_evBuscar(this.value)">
-            </div>
           </div>
         </div>
       </div>
@@ -797,7 +798,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=5d8627cc"></script>
-<script src="js/eventos.js?v=430912e1"></script>
+<script src="js/eventos.js?v=606e2370"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=343fe44f"></script>
 <script src="js/perfil.js?v=07bd90e8"></script>
