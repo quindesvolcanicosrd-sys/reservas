@@ -156,20 +156,6 @@
   font-size: 0.85rem; font-weight: 700; color: var(--text); border: 1.5px solid transparent;
 }
 .ev-fecha-badge-num.ev-fecha-badge-hoy { background: var(--brand); color: var(--white); }
-/* Íconos de tipo debajo del número de día (ver "Cambios recientes" --
-   movidos acá desde la card individual: la fecha es compartida por todos
-   los items de ese día -- ej. un evento + un cumpleaños el mismo día en el
-   dataset de demo -- así que el ícono también, uno por item en vez de uno
-   solo). `flex-wrap` dentro del mismo ancho de 38px que el resto del badge
-   -- con 2+ items pasan a 2 filas en vez de desbordar. Círculos MÁS CHICOS
-   que `.ev-fecha-badge-num` (30px) a propósito -- 16px, con stroke de marca
-   y SIN relleno/background (mismo criterio: indicador secundario, no
-   protagonista visual como el número de día). */
-.ev-fecha-badge-tipos { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; margin-top: 2px; }
-.ev-fecha-badge-tipo {
-  width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  border: 1.3px solid var(--brand); color: var(--brand); font-size: 10px;
-}
 .ev-fecha-items { flex: 1; min-width: 0; }
 .ev-fecha-items > *:last-child { margin-bottom: 0; }
 .ev-lista-vacia {
@@ -189,16 +175,16 @@
   background: var(--surface-2); border: 1.5px solid var(--border-light);
   animation: smoothSlideUp 0.35s var(--ease-sheet) both;
 }
-/* Fila superior (ver "Cambios recientes" -- hoy solo contiene `.ev-card-body`
-   para las cards de evento, sin ícono ni acción lateral: ambos se sacaron de
-   acá, el ícono al badge de fecha compartido del timeline y la acción a
-   ancho completo dentro de `.ev-card-body`, ver ahí; `_evCardCumpleHtml()`
-   sigue usando esta fila para avatar+body, sin cambios). Antes esto era
-   `.ev-card` mismo (`display:flex`); se separa en un hijo propio para que el
-   panel expandido del RSVP (`.ev-rsvp-expand`, más abajo) pueda vivir como
-   OTRO hijo de `.ev-card`, a ancho completo debajo de esta fila, en vez de
-   forzar a `.ev-card` entero a acomodar 2 layouts distintos con una sola
-   regla. */
+/* Fila superior (ícono+título+hora a la izquierda, ver "Cambios recientes" --
+   revertido a este layout: 2 tandas atrás el ícono había pasado al badge de
+   fecha compartido del timeline y la acción a una columna lateral, ambos
+   cambios revertidos por pedido explícito). Antes esto era `.ev-card` mismo
+   (`display:flex`); se separa en un hijo propio para que otro contenido a
+   ancho completo (ej. el aviso de estado) pueda vivir como OTRO hijo de
+   `.ev-card`, debajo de esta fila, en vez de forzar a `.ev-card` entero a
+   acomodar 2 layouts distintos con una sola regla. Reusada tal cual por
+   `_evCardCumpleHtml()` (avatar+body) -- mismo rol, ningún cambio visual
+   para esa card. */
 .ev-card-top-row { display: flex; gap: 12px; align-items: center; }
 .ev-card-icon {
   width: 42px; height: 42px; min-width: 42px; border-radius: 12px; background: var(--brand-light);
@@ -207,6 +193,17 @@
 .ev-card-icon .material-symbols-outlined { font-size: 1.3rem; }
 .ev-card-body { flex: 1; min-width: 0; }
 .ev-card-titulo { font-size: 0.9rem; font-weight: 800; color: var(--text); margin-bottom: 2px; }
+/* Ícono de tipo INLINE junto al título (ver "Cambios recientes" -- restaurado:
+   reemplaza `.ev-card-icon` cuadrado en columna propia -- sin esa columna,
+   `.ev-card-body` ocupa todo el ancho disponible de `.ev-card-top-row`.
+   `.ev-card-icon` sigue existiendo tal cual solo para la fila compacta de
+   "Pasados"; `_evCardCumpleHtml()` usa este mismo patrón inline (ícono
+   `cake`). `margin-bottom` se muda de `.ev-card-titulo` a esta fila --
+   adentro, el título no lleva margen propio para no descentrarse del
+   ícono. Sin chevron -- la card entera ya es tocable. */
+.ev-card-titulo-row { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
+.ev-card-titulo-row .ev-card-titulo { margin-bottom: 0; }
+.ev-card-icono-inline { font-size: 16px; color: var(--brand); flex-shrink: 0; }
 .ev-card-sub { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .ev-card-sub .material-symbols-outlined { font-size: 14px; }
 /* Pill de estado (Cancelado/No se entrena, ver "Cambios recientes") --
@@ -214,8 +211,8 @@
    cual en la card (`_evCardEventoHtml()`, dentro de `.ev-card-body`, ancho
    completo, debajo de título/hora -- mismo tratamiento que admin/pasado) y
    en el detalle (`#ev-detalle-rsvp`, mismo ancho completo de esa sección).
-   Mismo tono rojo de advertencia que `.ev-rsvp-boton-no-asistire`/
-   `.badge-cancelada` (--danger/--danger-bg/--danger-bdr). */
+   Mismo tono rojo de advertencia que el resto de la app
+   (--danger/--danger-bg/--danger-bdr). */
 .ev-estado-pill {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   width: 100%; margin-top: 10px; padding: 9px 14px; border-radius: 12px;
@@ -291,82 +288,6 @@
 .ev-rsvp-opt.activa[data-estado="No asistiré"], .ev-rsvp-opt.activa[data-estado="No asistiré"] .material-symbols-outlined { color: var(--danger); }
 .ev-rsvp-opt.activa[data-estado="No jugador"], .ev-rsvp-opt.activa[data-estado="No jugador"] .material-symbols-outlined { color: var(--purple); }
 
-/* ── Botón único + panel expandible -- SOLO en las cards de vista previa
-   (ver "Cambios recientes", `_evRsvpMiniHtml()`/`_evRsvpExpandHtml()`,
-   js/eventos.js; el detalle sigue con `.ev-rsvp-seg` de arriba, sin cambios
-   de mecánica). `.ev-rsvp-mini` (botón+hint) vive DENTRO de `.ev-card-body`,
-   debajo de título/hora, a ancho completo (ver "Cambios recientes" -- antes
-   columna lateral aparte, mismo lugar/tamaño que la pill de estado; se
-   revierte a este mismo tratamiento full-width que ya tenían admin/pasado,
-   para que título/hora tengan todo el ancho de la card sin competir por
-   espacio con el botón). `margin-top:12px` separa del texto de arriba
-   (mismo valor que `.ev-asistire-wrap`, la barra completa del detalle, para
-   consistencia); `flex-direction:column;align-items:center` centra el botón
-   Y el hint horizontalmente dentro del ancho completo disponible. Sin colita
-   conectando botón↔panel a propósito (ver el comentario de
-   `_evRsvpMiniHtml()`, js/eventos.js, para el motivo). */
-.ev-rsvp-mini { display: flex; flex-direction: column; align-items: center; margin-top: 12px; }
-/* Hint informativo, no tocable (ver "Cambios recientes") -- mismo tono
-   apagado que el resto de textos secundarios de la app, visible SOLO con
-   el botón colapsado (`.ev-rsvp-mini-expandida`, clase en `.ev-rsvp-mini`,
-   togleada por `_evToggleRsvpExpand()`/`_evColapsarRsvpExpand()` junto con
-   `.ev-rsvp-expand.abierta`) -- no aplica una vez que las alternativas ya
-   están a la vista. Centrado (ver "Cambios recientes" -- corrección,
-   antes `text-align:right`): el `align-items:center` del wrapper de arriba
-   ya lo centra como bloque, `text-align:center` cubre el caso de que el
-   texto propio envuelva a 2 líneas en una pantalla angosta. */
-.ev-rsvp-mini-hint { text-align: center; font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
-.ev-rsvp-mini-expandida .ev-rsvp-mini-hint { display: none; }
-/* Botón real (ver "Cambios recientes" -- corrección: una instrucción
-   anterior lo dejó del tamaño/forma de un `.fi-pill` chico, el mockup pide
-   un botón grande, con la misma proporción que los 2 de `.ev-rsvp-opcion`
-   de abajo) -- `border-radius:14px` (rectangular redondeado, NO pill
-   `99px`) y padding/font-size/ícono a la misma escala que `.ev-rsvp-opcion`. */
-.ev-rsvp-boton {
-  display: inline-flex; align-items: center; gap: 6px; padding: 12px 18px; border-radius: 14px;
-  font-size: 0.82rem; font-weight: 700; border: 1px solid transparent; cursor: pointer;
-  font-family: inherit; transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
-}
-.ev-rsvp-boton .material-symbols-outlined { font-size: 20px; }
-/* Mismos 4 tokens que las pills equivalentes de otras pantallas (ver
-   "Cambios recientes"): Asistiré = verde de `.fi-pill-dur`, No jugador =
-   violeta de `.fi-pill-hora`, No asistiré = `--danger` (mismo rojo de
-   siempre), Sin respuesta = gris neutro (mismo tratamiento que el resto de
-   estados "sin dato" de la app, ej. `.ev-rsvp-opt` inactiva/`.badge-sin-registrar`).
-   Fondo ATENUADO + texto/ícono saturado en los 3 reales (mismo lenguaje que
-   `.badge-confirmada`/`.fi-pill-dur` -- nunca un fill sólido con texto
-   blanco, ver "Cambios recientes"). */
-.ev-rsvp-boton-sin-respuesta { background: var(--surface-light); color: var(--muted); border-color: var(--border-light); }
-.ev-rsvp-boton-asistire { background: var(--success-bg); color: var(--success); border-color: var(--success-bdr); }
-.ev-rsvp-boton-no-asistire { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-bdr); }
-.ev-rsvp-boton-no-jugador { background: var(--purple-bg); color: var(--purple); border-color: var(--purple-border); }
-/* Panel expandible -- ver "Cambios recientes" -- corrección de alineación:
-   antes anidado DENTRO de `.ev-rsvp-mini` (columna angosta, con el
-   problema de sizing circular que eso traía para 2 botones `flex:1`); ahora
-   hermano de `.ev-card-top-row`, a ANCHO COMPLETO de `.ev-card` -- mismo
-   mecanismo `max-height`/`overflow:hidden` que `.ev-filtro-burbuja`/
-   `.ev-header-burbuja` (misma pantalla, ver más abajo en este archivo),
-   techo fijo (no medido por JS) porque el contenido es siempre 2 o 3
-   botones de una sola fila, tamaño predecible. `border-top` (pedido
-   explícito -- línea divisoria real entre el bloque superior y el panel,
-   nunca pegados) SOLO en `.abierta` -- si viviera en la regla base sin
-   condición, un `border-top` con `max-height:0` igual se vería como una
-   línea perdida de 1px aunque el "contenido" mida 0 (el borde es parte de
-   la caja del elemento, no del contenido que `overflow:hidden` recorta). */
-.ev-rsvp-expand { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
-.ev-rsvp-expand.abierta { max-height: 130px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-light); }
-.ev-rsvp-expand-inner { display: flex; gap: 8px; }
-.ev-rsvp-opcion {
-  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 5px; padding: 14px 6px; border-radius: 14px; font-size: 0.72rem; font-weight: 700;
-  border: 1px solid transparent; cursor: pointer; font-family: inherit; white-space: nowrap;
-  transition: transform 0.15s ease;
-}
-.ev-rsvp-opcion:active { transform: scale(0.96); }
-.ev-rsvp-opcion .material-symbols-outlined { font-size: 20px; }
-.ev-rsvp-opcion-asistire { background: var(--success-bg); color: var(--success); border-color: var(--success-bdr); }
-.ev-rsvp-opcion-no-asistire { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-bdr); }
-.ev-rsvp-opcion-no-jugador { background: var(--purple-bg); color: var(--purple); border-color: var(--purple-border); }
 
 /* ── Reemplazo de solo lectura de la barra de RSVP para eventos pasados
    (fecha < hoy o Estado = Finalizado, ver _evRsvpBarraHtml()) -- mismo
