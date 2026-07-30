@@ -499,18 +499,23 @@ function _evCalActualizarMaxHeightExterior(instant) {
   }
 }
 window.addEventListener('resize', function() { if (_evCalVisible) _evCalActualizarMaxHeightExterior(true); });
-// Mismo largo que la transición `max-height` de `.ev-header-burbuja`
-// (0.28s, CSS) -- ver el comentario de `_evFadeSwap()` de más arriba: acá
-// se le pasa este valor en vez del rápido `_EV_FADE_MS` de siempre, para que
-// el fade de contenido y el crecimiento/achique del panel terminen juntos.
-var _EV_CAL_PANEL_MS = 280;
+// Sin fade de opacidad acá a propósito (ver "Cambios recientes" -- revierte
+// el crossfade sincronizado que esta misma sesión le había agregado): la
+// grilla cambia de contenido INSTANTÁNEO, el `max-height` del panel exterior
+// es lo único que anima (`_evCalActualizarMaxHeightExterior()`, su propia
+// transición CSS) -- el cambio de mes se siente como el contenido de abajo
+// desplazándose (empujado por el alto animado), nunca como una opacidad
+// superpuesta. `overflow:hidden` del panel exterior ya alcanza solo para
+// que el contenido nuevo (a su tamaño real desde el primer instante) se
+// revele/oculte prolijo mientras el alto crece/encoge, sin necesitar ningún
+// fade -- confirmado con Playwright (ver el punto de "transición de alto
+// rota", tanda anterior): 0 de 20 frames mostraron contenido sangrando por
+// fuera del recorte del panel.
 function _evCalRenderContenido(instant) {
   var cont = document.getElementById('ev-cal-contenido');
   if (!cont) return;
-  _evFadeSwap(cont, function() {
-    _evCalRenderMes(cont, _evCalFechaMostrada);
-    _evCalActualizarMaxHeightExterior(instant);
-  }, instant, _EV_CAL_PANEL_MS);
+  _evCalRenderMes(cont, _evCalFechaMostrada);
+  _evCalActualizarMaxHeightExterior(instant);
 }
 // Grilla mensual completa -- sin chevrones/borde/título repetido (ver
 // "Cambios recientes", punto 1 del rediseño: el título ya está arriba, en
@@ -932,16 +937,26 @@ function _evFechaGrupoMasCercano(iso) {
   });
   return mejor;
 }
-// Puente entre "el calendario saltó a este mes" (swipe/pill) y el timeline
-// -- si el mes de `iso` no tiene NINGÚN evento/cumpleaños propio (ver
-// "Cambios recientes" -- pedido explícito), `_evScrollAFecha()` caería al
-// grupo real más cercano en OTRO mes sin ninguna explicación visible, así
-// que acá se corta antes: se reemplaza el timeline por el mismo aviso vacío
-// que ya usa el resto de la app (`.ev-lista-vacia`) en vez de scrollear a
-// contenido ajeno. Si el mes SÍ tiene contenido pero el timeline está
-// mostrando ese aviso de una navegación previa, se re-pinta completo antes
-// de scrollear (chequeo barato: 0 `.ev-fecha-grupo` en el DOM = timeline no
-// está en su estado normal).
+// Puente entre "el calendario saltó a este mes" (swipe/pill/hoy) y el
+// timeline -- TODO el cuerpo vive dentro de un único `_evFadeSwap()` (ver
+// "Cambios recientes" -- antes el caso más común, mes ya presente en el DOM
+// sin necesidad de re-pintar nada, no tenía ningún fade: era un salto mudo,
+// más notorio todavía al saltar a un mes con menos contenido que el
+// anterior). El fade es siempre de CONTENIDO -- no depende de si el mes
+// nuevo es más largo/corto que el anterior, ni de si técnicamente hace
+// falta re-pintar algo; se dispara igual aunque el único cambio real sea la
+// posición de scroll. Si el mes de `iso` no tiene NINGÚN evento/cumpleaños
+// propio, `_evScrollAFecha()` caería al grupo real más cercano en OTRO mes
+// sin ninguna explicación visible, así que acá se corta antes: se reemplaza
+// el timeline por el mismo aviso vacío que ya usa el resto de la app
+// (`.ev-lista-vacia`) en vez de scrollear a contenido ajeno. Si el mes SÍ
+// tiene contenido pero el timeline está mostrando ese aviso de una
+// navegación previa, se re-pinta completo antes de scrollear (chequeo
+// barato: 0 `.ev-fecha-grupo` en el DOM = timeline no está en su estado
+// normal) -- ese re-pintado interno va `instant` (`true`) a propósito: ya
+// corre agazapado dentro de la ventana de opacidad-0 del fade exterior, un
+// segundo fade anidado ahí adentro solo duplicaría el delay sin ningún
+// beneficio visual.
 function _evCalIrAFechaEnTimeline(iso, instant) {
   var m = _evCalMesDe(iso);
   var hayContenido = _evTimelineItems().some(function(it) {
@@ -949,26 +964,18 @@ function _evCalIrAFechaEnTimeline(iso, instant) {
     return d.getFullYear() === m.year && d.getMonth() === m.month;
   });
   var cont = document.getElementById('ev-timeline');
-  if (!hayContenido) {
-    if (cont) {
-      _evFadeSwap(cont, function() {
-        cont.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">event_busy</span>No hay eventos este mes.</div>';
-      }, false, _EV_TIMELINE_FADE_MS);
+  if (!cont) return;
+  _evFadeSwap(cont, function() {
+    if (!hayContenido) {
+      cont.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">event_busy</span>No hay eventos este mes.</div>';
+      return;
     }
-    return;
-  }
-  // Si el timeline está mostrando el aviso vacío de una navegación previa
-  // (0 `.ev-fecha-grupo` en el DOM), hace falta re-pintar completo ANTES de
-  // scrollear -- el fade de ese re-pintado (ver "Cambios recientes") es
-  // async, así que el scroll va DENTRO de `alTerminar` (el elemento destino
-  // recién existe una vez que `pintar()` corrió). En el caso normal (el mes
-  // ya tiene contenido real en el DOM, sin re-pintar nada) el scroll sigue
-  // siendo directo, sin esperar nada.
-  if (cont && !cont.querySelector('.ev-fecha-grupo')) {
-    _evRenderTimeline(false, function() { _evScrollAFecha(iso, instant); });
-  } else {
-    _evScrollAFecha(iso, instant);
-  }
+    if (!cont.querySelector('.ev-fecha-grupo')) {
+      _evRenderTimeline(true, function() { _evScrollAFecha(iso, instant); });
+    } else {
+      _evScrollAFecha(iso, instant);
+    }
+  }, false, _EV_TIMELINE_FADE_MS);
 }
 
 // Pill de estado (Cancelado/No se entrena, ver "Cambios recientes") -- ancho
