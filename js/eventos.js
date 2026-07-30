@@ -1602,6 +1602,22 @@ function abrirEvDetalle(id) {
 // hueco. Se re-llama después de cualquier render que pueda cambiar la
 // altura de los niveles 1/2 (abrir un evento nuevo, o el viewport
 // cambiando de tamaño/orientación).
+// `_EV_STICKY_SOLAPE` (ver "Cambios recientes" -- bug real reportado: costura
+// de ~1px visible en la unión entre niveles al scrollear, línea en oscuro/
+// sombra en claro) -- `offsetHeight` redondea a entero, pero el alto
+// REALMENTE renderizado (`getBoundingClientRect().height`, el que la
+// pantalla pinta) puede ser fraccionario -- en un dispositivo con
+// `devicePixelRatio` alto (la mayoría de los celulares reales, no
+// necesariamente el desktop donde se armó/probó originalmente) ese
+// redondeo alcanza a dejar un hueco subpíxel real entre el borde inferior
+// de un nivel y el `top` que se le asignó al siguiente, por el que se
+// filtra el fondo de atrás. Cada nivel se solapa 1px hacia ARRIBA contra el
+// anterior en vez de quedar pegado exacto -- inofensivo (nivel 1 tiene
+// z-index más alto que nivel 2, que a su vez es más alto que nivel 3, así
+// que el de arriba siempre pinta encima del solape, sin recortar contenido
+// real: el solape cae dentro del padding de cada nivel, no sobre texto) y
+// elimina el hueco sin importar el redondeo del navegador.
+var _EV_STICKY_SOLAPE = 1;
 function _evDetalleActualizarSticky() {
   var pantalla = document.getElementById('s-eventos-detalle');
   if (!pantalla || !pantalla.classList.contains('activa')) return;
@@ -1610,9 +1626,9 @@ function _evDetalleActualizarSticky() {
   var nivel3 = document.getElementById('ev-detalle-stats');
   if (!nivel1 || !nivel2 || !nivel3) return;
   var h1 = nivel1.offsetHeight;
-  nivel2.style.top = h1 + 'px';
+  nivel2.style.top = (h1 - _EV_STICKY_SOLAPE) + 'px';
   var h2 = nivel2.offsetHeight;
-  nivel3.style.top = (h1 + h2) + 'px';
+  nivel3.style.top = (h1 + h2 - _EV_STICKY_SOLAPE * 2) + 'px';
 }
 window.addEventListener('resize', function() { _evDetalleActualizarSticky(); });
 // Estructura en secciones (`.ev-detalle-section`, cada una su propio
