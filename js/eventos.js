@@ -1473,6 +1473,13 @@ function _evOpcionesFiltro(campo) {
     var val = campo === 'lugar' ? e.lugar : e.tipo;
     if (!vistos[val]) { vistos[val] = true; out.push({ val: val, label: val }); }
   });
+  // "Cumpleaños" -- opción FIJA del filtro Tipo (ver "Cambios recientes"), no
+  // derivada de `_EV_EVENTOS` -- los cumpleaños viven en `_EV_CUMPLEANOS`,
+  // array aparte sin campo `tipo` propio. Solo para `campo === 'tipo'`; Lugar
+  // no tiene equivalente (los cumpleaños no tienen lugar propio, ver
+  // `_evPasaFiltroLugarTipoConCumple()` más abajo). Chequeo de `vistos` evita
+  // duplicarla si algún evento real ya tuviera `tipo:'Cumpleaños'`.
+  if (campo === 'tipo' && !vistos['Cumpleaños']) out.push({ val: 'Cumpleaños', label: 'Cumpleaños' });
   out.sort(function(a, b) { return a.label < b.label ? -1 : a.label > b.label ? 1 : 0; });
   return out;
 }
@@ -1667,7 +1674,7 @@ function _evTimelineItems() {
   // nombre de la persona, nunca contra la palabra que en realidad aparece en
   // el título de la card. Mismo texto que `_evCardCumpleHtml()` termina
   // mostrando, para que "encuentra lo que se ve" sea literal.
-  _EV_CUMPLEANOS.filter(function(c) { return _evPasaBusqueda('Cumpleaños de ' + c.nombre); })
+  _EV_CUMPLEANOS.filter(function(c) { return _evPasaFiltroLugarTipoCumple() && _evPasaBusqueda('Cumpleaños de ' + c.nombre); })
     .forEach(function(c) { items.push({ fecha: c.fecha, orden: '00:00', tipo: 'cumple', data: c }); });
   items.sort(function(a, b) {
     var c = _evFechaCmp(a.fecha, b.fecha);
