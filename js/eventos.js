@@ -911,27 +911,6 @@ function _evIrAHoy() {
     _evCalRenderPills();
   }
   _evCalIrAFechaEnTimeline(hoy, false, true);
-  // Parpadeo sutil de referencia en las cards de hoy (ver "Cambios
-  // recientes" -- pedido explícito, 2 ciclos de ~380ms cada uno -- subido
-  // desde ~200ms/ciclo, resultaba muy rápido -- para identificarlas fácil
-  // sin parecer un error visual). Con delay --
-  // el scroll de arriba es animado (`smooth`, no `instant`), así que
-  // parpadear ANTES de que termine de asentarse (o mientras el mes/timeline
-  // recién se están re-pintando) quedaría fuera de la vista o tapado por el
-  // fade del propio repintado; ~420ms cubre el peor caso típico (scroll
-  // smooth + fade de `_evCalIrAFechaEnTimeline()`, 180-280ms) sin necesitar
-  // detectar el fin exacto de ninguno de los 2. Reflow forzado (quitar +
-  // `void offsetWidth` + reagregar la clase) para que tocar "hoy" 2 veces
-  // seguidas siempre reinicie la animación desde el principio.
-  setTimeout(function() {
-    var grupo = document.getElementById('ev-fecha-' + hoy);
-    if (!grupo) return;
-    grupo.querySelectorAll('.ev-card').forEach(function(card) {
-      card.classList.remove('ev-parpadeo-referencia');
-      void card.offsetWidth;
-      card.classList.add('ev-parpadeo-referencia');
-    });
-  }, 420);
 }
 
 /* ── Consultas sobre los datos de prueba (idénticas a como se filtrarían

@@ -178,25 +178,6 @@
 .ev-hoy-separador { display: flex; align-items: center; gap: 10px; margin: 4px 0 14px; scroll-margin-top: var(--ev-sticky-h, 90px); }
 .ev-hoy-separador::before, .ev-hoy-separador::after { content: ''; flex: 1; height: 1.5px; background: var(--border-light); }
 .ev-hoy-separador span { font-size: 0.72rem; font-weight: 800; color: var(--brand); text-transform: uppercase; letter-spacing: 1px; }
-/* Parpadeo sutil de referencia en las cards de hoy al tocar el ícono "hoy"
-   (ver "Cambios recientes" -- pedido explícito, 2 ciclos de ~380ms cada uno
-   -- subido desde ~200ms/ciclo, que resultaba muy rápido para notarlo bien
-   -- para que sea fácil identificarlas sin parecer un error visual) --
-   togglea
-   `.ev-parpadeo-referencia` (js/eventos.js), reflow forzado antes de
-   reagregarla para que 2 toques seguidos del ícono siempre reinicien la
-   animación desde cero. */
-@keyframes ev-parpadeo-referencia { 0%, 100% { opacity: 1; } 25%, 75% { opacity: 0.4; } 50% { opacity: 1; } }
-/* `.ev-card.ev-parpadeo-referencia` (2 clases, no solo `.ev-parpadeo-referencia`
-   sola) a propósito -- `.ev-card` ya trae su propia `animation` (entrada
-   `smoothSlideUp`), y `animation` es una propiedad short-hand: 2 reglas con
-   la MISMA especificidad (1 clase cada una) no se combinan, la que aparezca
-   DESPUÉS en la hoja de estilos gana entera -- sin este combo más específico,
-   `.ev-card`'s propia regla (más abajo en este archivo) pisaría el parpadeo
-   por completo. Cubre `_evCardCumpleHtml()` también (`.ev-card-cumple` lleva
-   `.ev-card` como base). */
-.ev-card.ev-parpadeo-referencia { animation: ev-parpadeo-referencia 760ms ease-in-out; }
-
 /* ── Card de evento ───────────────────────────────────── */
 .ev-card {
   padding: 14px; border-radius: 14px; margin-bottom: 10px;
