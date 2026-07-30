@@ -837,17 +837,31 @@ function _evCalCentrarPillActivaInstant() {
 // cantidad de semanas, el panel no se mueve un solo píxel, así que no hace
 // falta esconder nada.
 //
-// Camino A (semanas distintas) -- fade LOCAL solo de la fila de pills
+// Camino A (semanas distintas) -- fade LOCAL de la fila de pills
 // (`#ev-mes-pills-row`), sincronizado con la animación de alto del panel
-// exterior, que sigue corriendo normal ("empuje" de siempre, sin tocar --
-// ver "Cambios recientes": un fade de TODO el panel se probó y se revirtió
-// a pedido explícito de Victor, "se siente raro, no hay continuidad" con
-// el resto del cambio de mes). Causa real del corte reportado: las pills
-// viven al FINAL del contenido del panel, después de la grilla -- mientras
-// `max-height` todavía no llegó a su valor final, el borde de recorte del
-// acordeón pasa justo por el medio de esa fila (la grilla de arriba no
-// tiene este problema porque ya está visible desde temprano en la
-// animación).
+// exterior, que sigue corriendo normal ("empuje" de siempre, sin tocar).
+// Decisión final tras probar 2 alternativas (ver "Cambios recientes"):
+// - Un desplazamiento (`transform:translateY`) se probó y se DESCARTÓ con
+//   evidencia real de Playwright: al ENCOGER (6→5 semanas), el contenido de
+//   la grilla ya shrinkea casi de inmediato (el alto renderizado del panel
+//   sigue el mismo patrón `min(contenido, max-height)` documentado en una
+//   investigación anterior de esta sesión), mientras la fila de pills
+//   todavía tarda los ~0.28s completos en deslizarse a su lugar -- durante
+//   ese tramo, hasta 52px de la fila quedaban por debajo del borde ya
+//   encogido del panel, recortados por su `overflow:hidden` -- el corte
+//   real que se buscaba evitar, reaparecido. Al CRECER (5→6) no pasaba
+//   (0px de corte) -- pero como falla en una de las 2 direcciones, se
+//   descarta el desplazamiento entero.
+// - El fade de opacidad (el que queda acá) no tiene este problema: la fila
+//   está invisible durante TODO el cambio de alto, así que no importa si el
+//   panel ya encogió o todavía no -- no hay nada que recortar porque no hay
+//   nada visible.
+// Causa real del corte original (el que motivó fadear la fila, no
+// desplazarla): las pills viven al FINAL del contenido del panel, después
+// de la grilla -- mientras `max-height` todavía no llegó a su valor final,
+// el borde de recorte del acordeón pasa justo por el medio de esa fila (la
+// grilla de arriba no tiene este problema porque ya está visible desde
+// temprano en la animación).
 //
 // La secuencia real tiene 2 pasos, NO uno solo (ver "Cambios recientes" --
 // bug real de secuencia, distinto del ajuste de velocidad de la misma
@@ -879,9 +893,9 @@ function _evCalCentrarPillActivaInstant() {
 // `color` (css/eventos.css) para que el relleno se sienta como que "se
 // mueve" de una pill a la otra, no un cambio seco. El centrado horizontal
 // va SUAVE acá (`scrollIntoView({behavior:'smooth'})`) -- a diferencia del
-// centrado instantáneo del Camino A, no hay ningún riesgo de corte (el
-// panel no cambia de alto), así que un desplazamiento visible es la señal
-// esperada de "te moviste de pill" en vez de un salto.
+// Camino A, no hay ningún riesgo de corte (el panel no cambia de alto), así
+// que un desplazamiento visible es la señal esperada de "te moviste de
+// pill" en vez de un salto.
 var _EV_CAL_PILLS_FADE_EPOCH = 0;
 function _evCalCambiarMes(nuevaFecha) {
   var semanasViejas = _evCalContarSemanas(_evCalFechaMostrada);
