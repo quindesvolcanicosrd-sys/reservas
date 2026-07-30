@@ -544,6 +544,49 @@ function _evCalRenderContenido(instant) {
   _evCalRenderMes(cont, _evCalFechaMostrada);
   _evCalActualizarMaxHeightExterior(instant);
 }
+// Cambio de MES con el calendario YA ABIERTO -- fade de opacidad en vez de
+// dejar que la grilla nueva se revele mientras el panel exterior todavía
+// está en pleno crecimiento/achique de `max-height` (ver "Cambios
+// recientes" -- revierte a propósito, y SOLO para este caso puntual, la
+// decisión de una sesión anterior de sacarle todo fade al calendario a
+// favor del "empuje" animado: tras varios intentos sin poder resolver el
+// corte de contenido contra el propio recorte del acordeón mientras el alto
+// todavía se está asentando, se prioriza que deje de cortarse por sobre esa
+// sensación de empuje. Abrir/cerrar el panel -- incluido el gesto de
+// arrastre -- NO se tocan, siguen animando `max-height` exactamente igual
+// que siempre). Reusa `_evFadeSwap()` -- el mismo helper genérico ya usado
+// para el label de mes y el timeline, no un mecanismo nuevo: fadea el panel
+// a opacidad 0, corre el repintado (grilla + pills, con el centrado
+// instantáneo de pill ya unificado) mientras es invisible, fadea de vuelta
+// a 1. El ajuste de `max-height` DENTRO del callback es explícito, con
+// `transition:none` puntual antes de fijar el valor nuevo -- mismo truco
+// que ya usa `_evCalActualizarMaxHeightExterior(instant)` para el resize de
+// ventana -- así el salto de alto queda garantizado instantáneo mientras el
+// panel es invisible, sin depender de la gestión interna de `_evFadeSwap()`
+// sobre su propio `transition` inline. Al terminar el ciclo completo del
+// fade se restaura `transition` a cadena vacía -- si no, `_evFadeSwap()`
+// deja el inline fijo en `opacity ...ms ease` para siempre, y abrir/cerrar
+// el panel DESPUÉS (que dependen de la transición de `max-height`
+// declarada en CSS, `.ev-header-burbuja`) dejarían de animar esa
+// transición. Guardado con el mismo epoch que ya expone `_evFadeSwap()`
+// (`panel._fadeEpoch`) -- si un swipe/pill/hoy más nuevo arrancó un 2do
+// ciclo antes de que este primero termine de limpiar, este `setTimeout`
+// viejo se queda quieto y deja la limpieza en manos del ciclo más nuevo.
+function _evCalRepintarConFade() {
+  var panel = document.getElementById('ev-mes-panel');
+  if (!panel) { _evCalRenderContenido(); _evCalRenderPills(); return; }
+  _evFadeSwap(panel, function() {
+    _evCalRenderContenido();
+    _evCalRenderPills();
+    panel.style.transition = 'none';
+    panel.style.maxHeight = panel.scrollHeight + 'px';
+    void panel.offsetHeight;
+  }, false);
+  var epoch = panel._fadeEpoch;
+  setTimeout(function() {
+    if (panel._fadeEpoch === epoch) panel.style.transition = '';
+  }, _EV_FADE_MS * 2 + 50);
+}
 // Grilla mensual completa -- sin chevrones/borde/título repetido (ver
 // "Cambios recientes", punto 1 del rediseño: el título ya está arriba, en
 // el label de la nav). 2 estados de destaque posibles por celda -- "hoy"
@@ -618,8 +661,7 @@ function _evCalMoverSwipe(dir) {
   var nuevaFecha = _evToISO(new Date(year, month, 1));
   _evCalFechaMostrada = nuevaFecha;
   _evSincronizarNavMesDesde(nuevaFecha);
-  _evCalRenderContenido();
-  _evCalRenderPills();
+  _evCalRepintarConFade();
   _evCalIrAFechaEnTimeline(nuevaFecha, true);
 }
 // Swipe sobre el panel (`#ev-cal-contenido` -- listeners únicos, no hace
@@ -796,8 +838,7 @@ function _evCalTocarPillMes(year, month) {
   _evCalUltimaAccionTs = Date.now();
   _evCalFechaMostrada = _evToISO(new Date(year, month, 1));
   _evSincronizarNavMesDesde(_evCalFechaMostrada);
-  _evCalRenderContenido();
-  _evCalRenderPills();
+  _evCalRepintarConFade();
   _evCalIrAFechaEnTimeline(_evCalFechaMostrada, true);
 }
 
@@ -907,8 +948,7 @@ function _evIrAHoy() {
     _evCalUltimaAccionTs = Date.now();
     _evCalFechaMostrada = hoy;
     _evSincronizarNavMesDesde(hoy);
-    _evCalRenderContenido();
-    _evCalRenderPills();
+    _evCalRepintarConFade();
   }
   _evCalIrAFechaEnTimeline(hoy, false, true);
 }
