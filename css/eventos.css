@@ -97,11 +97,16 @@
   justify-content: center; font-size: 0.78rem; font-weight: 700; color: var(--text);
   transition: background 0.15s, color 0.15s, outline-color 0.15s;
 }
-/* "Hoy" -- anillo, único estado de destaque de la grilla (no hay un "día
-   seleccionado" con relleno persistente: la grilla solo sirve para elegir
-   un día -- colapsa a semana y scrollea el timeline -- o para swipear de
-   mes en mes). */
-.ev-cal-celda.ev-dia-hoy .ev-cal-num { outline: 1.5px solid var(--brand); outline-offset: 1.5px; color: var(--brand); font-weight: 800; }
+/* "Hoy" (relleno, fijo -- siempre el mismo día real) vs. "fecha
+   seleccionada" (anillo, dinámico -- el último día al que se saltó
+   explícitamente: tocando una celda de la grilla o el ícono "hoy", nunca por
+   navegar de mes con swipe/pill ni por scrollear el timeline a mano -- ver
+   "Cambios recientes", `_evCalFechaSeleccionada` en js/eventos.js). Si
+   coinciden (fecha seleccionada = hoy) se aplica SOLO el relleno -- `esHoy`
+   pisa a `esSeleccionado` en el JS antes de pintar la celda, así que ambas
+   clases nunca conviven en el mismo elemento. */
+.ev-cal-celda.ev-dia-hoy .ev-cal-num { background: var(--brand); color: var(--white); font-weight: 800; }
+.ev-cal-celda.ev-dia-seleccionado .ev-cal-num { outline: 1.5px solid var(--brand); outline-offset: 1.5px; color: var(--brand); font-weight: 800; }
 .ev-cal-dots { display: flex; gap: 3px; height: 6px; align-items: center; }
 /* Selector horizontal de mes/año en pills (ver "Cambios recientes" -- ahora
    TODOS los 12 meses de una ventana de 2 años alrededor de hoy, no solo los

@@ -133,6 +133,20 @@ var _evNavMesActual = null;
 var _evCalVisible = false;
 var _evCalFechaMostrada = null;
 var _evCalUltimaAccionTs = 0;
+// "Hoy" (fijo) vs "fecha seleccionada" (dinámica, ver "Cambios recientes")
+// -- SOLO cambia por una acción explícita de ir a un día puntual (tocar una
+// celda de la grilla, tocar el ícono "hoy"), nunca por navegar de mes
+// (swipe/pill) ni por scrollear el timeline a mano. Decisión de diseño
+// documentada acá a propósito (pedida explícitamente): el label de la nav
+// YA sigue el scroll en vivo (`_evActualizarNavMesPorScroll()`) y da
+// feedback continuo de "dónde estoy"; que el anillo de la grilla hiciera lo
+// mismo sería redundante con eso Y, a diferencia del label (siempre
+// visible en la cabecera), el anillo solo se ve con el panel abierto --
+// duplicar el trabajo de seguimiento en vivo para un elemento que no
+// siempre está a la vista no pagaba su complejidad. En cambio, la grilla
+// funciona como un "así quedó" -- el último lugar al que se saltó a
+// propósito -- no como un indicador de posición en tiempo real.
+var _evCalFechaSeleccionada = null;
 
 /* ── Utilidades de fecha (sin dependencias externas) ─────────────────── */
 function _evPad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -208,6 +222,7 @@ function irEventos() {
   _evNavMesActual = null;
   _evCalVisible = false;
   _evCalFechaMostrada = null;
+  _evCalFechaSeleccionada = null;
   _evCalUltimaAccionTs = 0;
   _evVolviendoDeDetalle = false;
   var mesPanel = document.getElementById('ev-mes-panel');
@@ -519,8 +534,12 @@ function _evCalRenderContenido(instant) {
 }
 // Grilla mensual completa -- sin chevrones/borde/título repetido (ver
 // "Cambios recientes", punto 1 del rediseño: el título ya está arriba, en
-// el label de la nav). "Hoy" es el único estado de destaque (anillo) -- ya
-// no hay un "día seleccionado" con relleno persistente.
+// el label de la nav). 2 estados de destaque posibles por celda -- "hoy"
+// (relleno, `_evHoyISO()`, fijo) y "seleccionada" (anillo,
+// `_evCalFechaSeleccionada`, dinámica) -- mutuamente excluyentes: si
+// coinciden, gana `esHoy` (nunca las 2 clases en la misma celda, ver
+// css/eventos.css). `data-iso` en cada celda -- lo usa `_evCalTocarDia()`
+// para mover el anillo sin re-pintar la grilla entera.
 function _evCalRenderMes(cont, iso) {
   var m = _evCalMesDe(iso);
   var inicioGrid = _evLunesDeSemana(new Date(m.year, m.month, 1));
@@ -534,10 +553,11 @@ function _evCalRenderMes(cont, iso) {
     var celdaIso = _evToISO(cur);
     var ajeno = cur.getMonth() !== m.month;
     var esHoy = celdaIso === hoy;
+    var esSeleccionada = !esHoy && celdaIso === _evCalFechaSeleccionada;
     var tieneEv = _evEventosDeFecha(celdaIso).length > 0;
     var tieneCumple = _evCumpleDeFecha(celdaIso).length > 0;
-    html += '<div class="ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (esHoy ? ' ev-dia-hoy' : '') +
-      '" onclick="_evCalTocarDia(\'' + celdaIso + '\')">' +
+    html += '<div class="ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (esHoy ? ' ev-dia-hoy' : '') + (esSeleccionada ? ' ev-dia-seleccionado' : '') +
+      '" data-iso="' + celdaIso + '" onclick="_evCalTocarDia(\'' + celdaIso + '\')">' +
       '<div class="ev-cal-num">' + cur.getDate() + '</div>' +
       '<div class="ev-cal-dots">' +
         (tieneEv ? '<span class="ev-dot"></span>' : '') +
@@ -548,13 +568,30 @@ function _evCalRenderMes(cont, iso) {
   }
   cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>';
 }
-// Tocar un día puntual -- el calendario NUNCA cambia por esto (ver "Cambios
-// recientes": se elimina el colapso a franja semanal que existía antes),
-// solo scrollea el timeline hasta esa fecha exacta y lo deja tal cual
-// estaba (mes completo, sin re-render ni recalcular el label de la nav --
+// Tocar un día puntual -- el calendario NUNCA cambia de mes/alto por esto
+// (ver "Cambios recientes": se elimina el colapso a franja semanal que
+// existía antes), solo scrollea el timeline hasta esa fecha exacta y lo
+// deja tal cual estaba (mes completo, sin recalcular el label de la nav --
 // eso lo termina sincronizando el scroll mismo, `_evActualizarNavMesPorScroll()`,
-// como cualquier scroll manual del timeline).
+// como cualquier scroll manual del timeline). SÍ mueve el anillo de "fecha
+// seleccionada" (ver "Cambios recientes", `_evCalFechaSeleccionada` de más
+// arriba) -- pero con cirugía puntual de 2 clases vía `data-iso`, no
+// `_evCalRenderMes()` completo (evita un re-pintado/recalculo de alto
+// innecesario por un cambio que no afecta ni contenido ni tamaño de la
+// grilla).
 function _evCalTocarDia(iso) {
+  if (iso !== _evCalFechaSeleccionada) {
+    var cont = document.getElementById('ev-cal-contenido');
+    if (cont) {
+      var anterior = cont.querySelector('.ev-cal-celda.ev-dia-seleccionado');
+      if (anterior) anterior.classList.remove('ev-dia-seleccionado');
+      if (iso !== _evHoyISO()) {
+        var nueva = cont.querySelector('.ev-cal-celda[data-iso="' + iso + '"]');
+        if (nueva) nueva.classList.add('ev-dia-seleccionado');
+      }
+    }
+    _evCalFechaSeleccionada = iso;
+  }
   _evScrollAFecha(iso);
 }
 // Swipe horizontal sobre la grilla -- único mecanismo de navegación de mes
@@ -860,6 +897,12 @@ window.addEventListener('scroll', function() {
 // `_evScrollAFecha()` directo como antes.
 function _evIrAHoy() {
   var hoy = _evHoyISO();
+  // Tocar "hoy" es una acción explícita de ir a un día puntual -- también
+  // actualiza "fecha seleccionada" (ver "Cambios recientes",
+  // `_evCalFechaSeleccionada`), aunque al coincidir con `esHoy` no se note
+  // ningún anillo extra (gana el relleno) -- resetea cualquier selección
+  // previa de otro día.
+  _evCalFechaSeleccionada = hoy;
   if (_evCalVisible) {
     _evCalUltimaAccionTs = Date.now();
     _evCalFechaMostrada = hoy;
