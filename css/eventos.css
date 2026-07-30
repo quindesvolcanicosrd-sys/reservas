@@ -586,8 +586,17 @@
    real (ver "Cambios recientes" -- reusa `_evAsistenciaRealHtml()`, ya no
    arma su propio `.badge` al costado) -- sin esto quedaría pegado a los
    bordes del wrapper (el `margin-top` propio de `.ev-estado-pill` no cubre
-   los laterales/abajo que sí necesita acá, fuera de `.ev-card-compacta`). */
-.ev-card-compacta-wrap .ev-estado-pill { margin: 0 14px 12px; }
+   los laterales/abajo que sí necesita acá, fuera de `.ev-card-compacta`).
+   `width: auto` (bug real, ver "Cambios recientes" -- corrección del mismo
+   fix): `.ev-estado-pill` base fija `width: 100%`, pensado para sus otros 2
+   contextos (card completa/detalle), donde no lleva margen lateral propio.
+   Acá SÍ lleva margen (14px a cada lado) -- `width: 100%` se calcula sobre
+   el ancho del CONTENEDOR, así que sumarle margen encima desborda la caja
+   14px de cada lado (100% + 28px totales), recortada por el
+   `overflow: hidden` de `.ev-card-compacta-wrap`. `.ev-asistire-wrap` nunca
+   tuvo este problema porque no fuerza ningún `width` propio -- un bloque
+   normal ya resta los márgenes solo. */
+.ev-card-compacta-wrap .ev-estado-pill { margin: 0 14px 12px; width: auto; }
 /* Jerarquía visual pasados/futuros (ver "Cambios recientes",
    `_evTimelineFilaHtml()`/js/eventos.js): opacidad reducida en TODA la card
    compacta (pasados) + ícono forzado a gris apagado en vez de heredar el
