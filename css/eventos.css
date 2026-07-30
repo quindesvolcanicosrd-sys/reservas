@@ -123,14 +123,18 @@
    punta, resto 100% opaco. `-webkit-mask-image` primero (Safari todavía
    necesita el prefijo para esta propiedad). */
 /* `transition: opacity` (ver "Cambios recientes" -- fade LOCAL de esta fila
-   al cambiar de mes con el calendario ya abierto, `_evCalCambiarMesConPillsFade()`
-   en js/eventos.js): las pills viven al FINAL del contenido del panel,
+   al cambiar de mes con el calendario ya abierto, `_evCalCambiarMes()` en
+   js/eventos.js): las pills viven al FINAL del contenido del panel,
    después de la grilla, así que mientras `max-height` del panel exterior
    todavía no llegó a su valor final, el borde de recorte del acordeón pasa
    justo por el medio de esta fila -- fadearla localmente (en vez de todo el
    panel, que se probó y se revirtió, "se sentía raro, sin continuidad" con
    el resto del cambio de mes) tapa ese corte sin tocar el "empuje" animado
-   de la grilla, que sigue igual que siempre. */
+   de la grilla, que sigue igual que siempre. SOLO corre cuando la cantidad
+   de semanas de la grilla realmente cambia (`_evCalContarSemanas()`) -- si
+   el mes viejo y el nuevo tienen la misma, el panel no cambia de alto y no
+   hace falta ningún fade (ver `_evCalMoverFillPill()`, cirugía de clases +
+   la transición de `.historial-pill` de abajo en vez de esto). */
 .ev-mes-pills-row {
   display: flex; align-items: center; gap: 8px; overflow-x: auto; padding: 14px 2px 2px; -ms-overflow-style: none;
   -webkit-mask-image: linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent);
@@ -142,6 +146,17 @@
   padding: 0 4px; align-self: stretch; justify-content: center; border-left: 1.5px solid var(--border-light);
 }
 .ev-mes-pill-corte span { font-size: 0.62rem; font-weight: 700; color: var(--muted); }
+/* `.historial-pill` (css/home.css) ya trae `transition: all 0.2s` -- cubre
+   `background-color`/`color` (los únicos 2 que cambian al togglear
+   `.activa`) de por sí, pero acá se fija explícito y un poco más rápido
+   (0.15s) para el Camino B de `_evCalCambiarMes()` (mismo cantidad de
+   semanas, sin fade de la fila): al mover `.activa` de una pill a la otra
+   con cirugía puntual (`_evCalMoverFillPill()`), el relleno se ve
+   deslizarse/transicionar de una a otra en vez de un cambio seco --
+   pedido explícito. Ningún otro uso de `.historial-pill` (año de Mis
+   Reservas, js/home.js) togglea una 3ra propiedad que dependiera del
+   `all` genérico, así que acotar la lista acá no rompe nada más. */
+.historial-pill { transition: background-color 0.15s ease, color 0.15s ease; }
 
 /* ── Timeline único (ver "Cambios recientes" -- reemplaza `.ev-lista` +
    `.ev-fecha-label` por texto: cada fecha lleva un badge lateral tipo Google

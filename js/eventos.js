@@ -539,10 +539,11 @@ window.addEventListener('resize', function() { if (_evCalVisible) _evCalActualiz
 // rota", tanda anterior): 0 de 20 frames mostraron contenido sangrando por
 // fuera del recorte del panel. Única excepción, acotada: la fila de pills
 // (`#ev-mes-pills-row`) SÍ tiene su propio fade LOCAL al cambiar de mes con
-// el calendario abierto (`_evCalCambiarMesConPillsFade()`, más abajo) -- un
-// fix puntual para el corte de esa fila específica, no un cambio de
-// criterio para la grilla/panel en general (se probó un fade de TODO el
-// panel y se revirtió, ver "Cambios recientes").
+// el calendario abierto, pero SOLO cuando la cantidad de semanas cambia de
+// verdad (`_evCalCambiarMes()`, más abajo) -- un fix puntual para el corte
+// de esa fila específica, no un cambio de criterio para la grilla/panel en
+// general (se probó un fade de TODO el panel y se revirtió, ver "Cambios
+// recientes").
 function _evCalRenderContenido(instant) {
   var cont = document.getElementById('ev-cal-contenido');
   if (!cont) return;
@@ -557,6 +558,21 @@ function _evCalRenderContenido(instant) {
 // coinciden, gana `esHoy` (nunca las 2 clases en la misma celda, ver
 // css/eventos.css). `data-iso` en cada celda -- lo usa `_evCalTocarDia()`
 // para mover el anillo sin re-pintar la grilla entera.
+// Cantidad de FILAS (semanas) que ocupa la grilla de un mes -- mismo cálculo
+// de `inicioGrid`/`finGrid` que ya usa `_evCalRenderMes()` (lunes anterior
+// al día 1 hasta el domingo siguiente al último día del mes), pero sin
+// pintar nada, solo cuenta. Usado por `_evCalCambiarMes()` (ver más abajo)
+// para decidir si el panel realmente necesita cambiar de alto -- y por lo
+// tanto si a las pills les hace falta el fade -- o no.
+function _evCalContarSemanas(iso) {
+  var m = _evCalMesDe(iso);
+  var inicioGrid = _evLunesDeSemana(new Date(m.year, m.month, 1));
+  var finMes = new Date(m.year, m.month + 1, 0);
+  var finGrid = _evLunesDeSemana(finMes);
+  finGrid.setDate(finGrid.getDate() + 6);
+  var dias = Math.round((finGrid - inicioGrid) / 86400000);
+  return Math.round((dias + 1) / 7);
+}
 function _evCalRenderMes(cont, iso) {
   var m = _evCalMesDe(iso);
   var inicioGrid = _evLunesDeSemana(new Date(m.year, m.month, 1));
@@ -621,9 +637,8 @@ function _evCalMoverSwipe(dir) {
   var year = m.year, month = m.month + dir;
   if (month < 0) { month = 11; year--; } else if (month > 11) { month = 0; year++; }
   var nuevaFecha = _evToISO(new Date(year, month, 1));
-  _evCalFechaMostrada = nuevaFecha;
   _evSincronizarNavMesDesde(nuevaFecha);
-  _evCalCambiarMesConPillsFade();
+  _evCalCambiarMes(nuevaFecha);
   _evCalIrAFechaEnTimeline(nuevaFecha, true);
 }
 // Swipe sobre el panel (`#ev-cal-contenido` -- listeners únicos, no hace
@@ -778,7 +793,7 @@ function _evCalRenderPills() {
     }
     anioAnterior = o.year;
     var activa = o.year === actual.year && o.month === actual.month;
-    html += '<button type="button" class="historial-pill' + (activa ? ' activa' : '') + '" onclick="_evCalTocarPillMes(' + o.year + ',' + o.month + ')">' + _EV_MESES_CORTOS[o.month] + '</button>';
+    html += '<button type="button" class="historial-pill' + (activa ? ' activa' : '') + '" data-year="' + o.year + '" data-month="' + o.month + '" onclick="_evCalTocarPillMes(' + o.year + ',' + o.month + ')">' + _EV_MESES_CORTOS[o.month] + '</button>';
   });
   cont.innerHTML = html;
   _evCalCentrarPillActivaInstant();
@@ -796,19 +811,28 @@ function _evCalCentrarPillActivaInstant() {
   if (!cont || !pillActiva) return;
   cont.scrollLeft = pillActiva.offsetLeft - (cont.clientWidth - pillActiva.offsetWidth) / 2;
 }
-// Cambio de MES con el calendario YA ABIERTO -- fade LOCAL solo de la fila
-// de pills (`#ev-mes-pills-row`), sincronizado con la animación de alto del
-// panel exterior, que sigue corriendo normal ("empuje" de siempre, sin
-// tocar -- ver "Cambios recientes": un fade de TODO el panel se probó y se
-// revirtió a pedido explícito de Victor, "se siente raro, no hay
-// continuidad" con el resto del cambio de mes). Causa real del corte
-// reportado: las pills viven al FINAL del contenido del panel, después de
-// la grilla -- mientras `max-height` todavía no llegó a su valor final, el
-// borde de recorte del acordeón pasa justo por el medio de esa fila (la
-// grilla de arriba no tiene este problema porque ya está visible desde
-// temprano en la animación). Acá se fadea a 0 SOLO la fila (transición CSS
-// propia, `.ev-mes-pills-row`, css/eventos.css) apenas arranca el cambio;
-// en paralelo, sin esperar nada, se repinta la grilla (`_evCalRenderContenido()`,
+// Cambio de MES con el calendario YA ABIERTO -- 2 caminos distintos según
+// si la cantidad de SEMANAS de la grilla realmente cambia (ver "Cambios
+// recientes" -- antes fadeaba la fila de pills SIEMPRE, sin distinguir):
+// el corte que motivó el fade de la fila (ver más abajo) solo puede pasar
+// cuando el panel exterior de verdad cambia de `max-height` (grilla de 5
+// semanas -> 6, o viceversa) -- si el mes viejo y el nuevo tienen la MISMA
+// cantidad de semanas, el panel no se mueve un solo píxel, así que no hace
+// falta esconder nada.
+//
+// Camino A (semanas distintas) -- fade LOCAL solo de la fila de pills
+// (`#ev-mes-pills-row`), sincronizado con la animación de alto del panel
+// exterior, que sigue corriendo normal ("empuje" de siempre, sin tocar --
+// ver "Cambios recientes": un fade de TODO el panel se probó y se revirtió
+// a pedido explícito de Victor, "se siente raro, no hay continuidad" con
+// el resto del cambio de mes). Causa real del corte reportado: las pills
+// viven al FINAL del contenido del panel, después de la grilla -- mientras
+// `max-height` todavía no llegó a su valor final, el borde de recorte del
+// acordeón pasa justo por el medio de esa fila (la grilla de arriba no
+// tiene este problema porque ya está visible desde temprano en la
+// animación). Acá se fadea a 0 SOLO la fila (transición CSS propia,
+// `.ev-mes-pills-row`, css/eventos.css) apenas arranca el cambio; en
+// paralelo, sin esperar nada, se repinta la grilla (`_evCalRenderContenido()`,
 // fija el nuevo techo con su transición normal de `max-height`) y el
 // contenido de las pills + el centrado instantáneo de la activa (ya
 // unificado) -- ambos repintados corren YA MISMO, la fila igual está
@@ -820,8 +844,29 @@ function _evCalCentrarPillActivaInstant() {
 // que 2 meses consecutivos tengan la misma cantidad de semanas: sin cambio
 // de valor no hay transición que corra, `transitionend` nunca dispara) se
 // fadea la fila de vuelta a 1.
+//
+// Camino B (misma cantidad de semanas) -- sin fade, cirugía puntual (mismo
+// criterio que ya usa `_evCalTocarDia()` para el anillo de día
+// seleccionado): en vez de regenerar TODO el HTML de las pills, se le saca
+// `.activa` al botón viejo y se le pone al del mes destino (ubicado por
+// `data-year`/`data-month`, sumados al template de `_evCalRenderPills()`
+// para esto). `.historial-pill` suma una transición de `background-color`/
+// `color` (css/eventos.css) para que el relleno se sienta como que "se
+// mueve" de una pill a la otra, no un cambio seco. El centrado horizontal
+// va SUAVE acá (`scrollIntoView({behavior:'smooth'})`) -- a diferencia del
+// centrado instantáneo del Camino A, no hay ningún riesgo de corte (el
+// panel no cambia de alto), así que un desplazamiento visible es la señal
+// esperada de "te moviste de pill" en vez de un salto.
 var _EV_CAL_PILLS_FADE_EPOCH = 0;
-function _evCalCambiarMesConPillsFade() {
+function _evCalCambiarMes(nuevaFecha) {
+  var semanasViejas = _evCalContarSemanas(_evCalFechaMostrada);
+  var semanasNuevas = _evCalContarSemanas(nuevaFecha);
+  _evCalFechaMostrada = nuevaFecha;
+  if (semanasViejas === semanasNuevas) {
+    _evCalRenderContenido();
+    _evCalMoverFillPill(nuevaFecha);
+    return;
+  }
   var pillsRow = document.getElementById('ev-mes-pills-row');
   if (pillsRow) pillsRow.style.opacity = '0';
   _evCalRenderContenido();
@@ -843,12 +888,29 @@ function _evCalCambiarMesConPillsFade() {
     if (epoch === _EV_CAL_PILLS_FADE_EPOCH) pillsRow.style.opacity = '1';
   }, duracionMs + 50);
 }
+// Cirugía puntual del relleno de pill activa (Camino B de arriba) -- sin
+// re-pintar `#ev-mes-pills-row` entero, solo mueve la clase `.activa` del
+// botón viejo al del mes destino (ubicado por `data-year`/`data-month`).
+// Si el destino no está en el DOM (fuera de la ventana de ±12 meses que
+// genera `_evGenerarOpcionesMesPill()`) no hace nada -- mismo criterio de
+// tolerancia que `_evCalTocarDia()` con un `data-iso` no encontrado.
+function _evCalMoverFillPill(iso) {
+  var cont = document.getElementById('ev-mes-pills-row');
+  if (!cont) return;
+  var m = _evCalMesDe(iso);
+  var anterior = cont.querySelector('.historial-pill.activa');
+  if (anterior) anterior.classList.remove('activa');
+  var nueva = cont.querySelector('.historial-pill[data-year="' + m.year + '"][data-month="' + m.month + '"]');
+  if (!nueva) return;
+  nueva.classList.add('activa');
+  nueva.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+}
 function _evCalTocarPillMes(year, month) {
   _evCalUltimaAccionTs = Date.now();
-  _evCalFechaMostrada = _evToISO(new Date(year, month, 1));
-  _evSincronizarNavMesDesde(_evCalFechaMostrada);
-  _evCalCambiarMesConPillsFade();
-  _evCalIrAFechaEnTimeline(_evCalFechaMostrada, true);
+  var nuevaFecha = _evToISO(new Date(year, month, 1));
+  _evSincronizarNavMesDesde(nuevaFecha);
+  _evCalCambiarMes(nuevaFecha);
+  _evCalIrAFechaEnTimeline(nuevaFecha, true);
 }
 
 /* ── Label de mes de la nav, sincronizado por el scroll del timeline (ver
@@ -955,9 +1017,8 @@ function _evIrAHoy() {
   _evCalFechaSeleccionada = hoy;
   if (_evCalVisible) {
     _evCalUltimaAccionTs = Date.now();
-    _evCalFechaMostrada = hoy;
     _evSincronizarNavMesDesde(hoy);
-    _evCalCambiarMesConPillsFade();
+    _evCalCambiarMes(hoy);
   }
   _evCalIrAFechaEnTimeline(hoy, false, true);
 }
