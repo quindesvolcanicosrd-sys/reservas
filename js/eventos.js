@@ -218,7 +218,7 @@ function irEventos() {
   var addBtn = document.getElementById('eventos-btn-add');
   if (addBtn) addBtn.style.display = _esAdminDemo ? 'flex' : 'none';
   _evActualizarBotonesFiltro();
-  _evRenderTimeline();
+  _evRenderTimeline(true);
   volver('s-eventos');
   // `ir()` (js/ui.js) ya dispara su propio `window.scrollTo(top:0, smooth)`
   // al cambiar de pantalla -- este setTimeout(50) corre DESPUÉS (mismo
@@ -845,11 +845,25 @@ function _evCalIrAFechaEnTimeline(iso, instant) {
   });
   var cont = document.getElementById('ev-timeline');
   if (!hayContenido) {
-    if (cont) cont.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">event_busy</span>No hay eventos este mes.</div>';
+    if (cont) {
+      _evFadeSwap(cont, function() {
+        cont.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">event_busy</span>No hay eventos este mes.</div>';
+      }, false, _EV_TIMELINE_FADE_MS);
+    }
     return;
   }
-  if (cont && !cont.querySelector('.ev-fecha-grupo')) _evRenderTimeline();
-  _evScrollAFecha(iso, instant);
+  // Si el timeline está mostrando el aviso vacío de una navegación previa
+  // (0 `.ev-fecha-grupo` en el DOM), hace falta re-pintar completo ANTES de
+  // scrollear -- el fade de ese re-pintado (ver "Cambios recientes") es
+  // async, así que el scroll va DENTRO de `alTerminar` (el elemento destino
+  // recién existe una vez que `pintar()` corrió). En el caso normal (el mes
+  // ya tiene contenido real en el DOM, sin re-pintar nada) el scroll sigue
+  // siendo directo, sin esperar nada.
+  if (cont && !cont.querySelector('.ev-fecha-grupo')) {
+    _evRenderTimeline(false, function() { _evScrollAFecha(iso, instant); });
+  } else {
+    _evScrollAFecha(iso, instant);
+  }
 }
 
 // Pill de estado (Cancelado/No se entrena, ver "Cambios recientes") -- ancho
@@ -1138,7 +1152,7 @@ function _evAgregarPersonaAEvento(nombre) {
   ev.asistentes.push({ nombre: nombre, estado: 'A tiempo' });
   mostrarToast(nombre + ' agregadx', 'ok', true);
   _evCerrarSheetAgregar();
-  _evRenderTimeline();
+  _evRenderTimeline(true);
 }
 
 /* ── Card de cumpleaños ────────────────────────────────────────────────
@@ -1264,7 +1278,7 @@ function _evToggleFiltroChip(pillEl, campo) {
   });
   _evTimelineFiltro[campo] = vals;
   _evActualizarBotonesFiltro();
-  _evRenderTimeline();
+  _evRenderTimeline(true);
 }
 // Texto de cada botón trigger: label default sin selección, el nombre único
 // si hay exactamente 1, o "Label (N)" si hay más de 1 -- pedido explícito.
@@ -1299,12 +1313,19 @@ function _evActualizarBadgeFiltros() {
 }
 // Búsqueda de texto libre (ver "Cambios recientes" -- reusa el componente
 // visual del buscador de Ajustes, index.html/css/nav.css) -- convive con
-// Lugar/Tipo, mismo criterio AND que entre esos 2 filtros entre sí.
+// Lugar/Tipo, mismo criterio AND que entre esos 2 filtros entre sí. Sin
+// tildes (ver "Cambios recientes" -- bug real: "cumpleanos" no encontraba
+// "Cumpleaños") -- mismo patrón de normalización ya usado en el resto de la
+// app (`.normalize('NFD').replace(...)`, js/home.js/js/admin.js) para
+// comparar acentos de forma laxa, aplicado tanto al texto ingresado como al
+// texto contra el que se compara (simétrico: da igual qué lado lleve o no
+// la tilde).
+function _evNormalizarBusqueda(s) { return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
 function _evPasaBusqueda(texto) {
-  var q = _evBusqueda.trim().toLowerCase();
-  return !q || (texto || '').toLowerCase().indexOf(q) !== -1;
+  var q = _evNormalizarBusqueda(_evBusqueda.trim());
+  return !q || _evNormalizarBusqueda(texto).indexOf(q) !== -1;
 }
-function _evBuscar(q) { _evBusqueda = q; _evRenderTimeline(); }
+function _evBuscar(q) { _evBusqueda = q; _evRenderTimeline(true); }
 
 // Una fila del timeline: futuro (incluye hoy) reusa la card COMPLETA
 // (_evCardEventoHtml(), con su botón de RSVP); pasado usa una fila compacta
@@ -1384,7 +1405,12 @@ function _evTimelineItems() {
   var items = [];
   _EV_EVENTOS.filter(function(e) { return _evPasaFiltroLugarTipo(e.lugar, e.tipo) && _evPasaBusqueda(e.lugar + ' ' + e.tipo); })
     .forEach(function(e) { items.push({ fecha: e.fecha, orden: e.horaInicio || '00:00', tipo: 'evento', data: e }); });
-  _EV_CUMPLEANOS.filter(function(c) { return _evPasaBusqueda(c.nombre); })
+  // "Cumpleaños de <nombre>" -- ver "Cambios recientes", bug real: buscar
+  // "cumpleaños" no encontraba ninguno porque solo se comparaba contra el
+  // nombre de la persona, nunca contra la palabra que en realidad aparece en
+  // el título de la card. Mismo texto que `_evCardCumpleHtml()` termina
+  // mostrando, para que "encuentra lo que se ve" sea literal.
+  _EV_CUMPLEANOS.filter(function(c) { return _evPasaBusqueda('Cumpleaños de ' + c.nombre); })
     .forEach(function(c) { items.push({ fecha: c.fecha, orden: '00:00', tipo: 'cumple', data: c }); });
   items.sort(function(a, b) {
     var c = _evFechaCmp(a.fecha, b.fecha);
@@ -1392,13 +1418,30 @@ function _evTimelineItems() {
   });
   return items;
 }
-function _evRenderTimeline() {
+// Fade al repintar (ver "Cambios recientes" -- pedido explícito: al cambiar
+// de mes por swipe/pill, las cards del timeline aparecían de golpe -- mismo
+// criterio de transición que ya usa el resto de la app para contenido que se
+// reemplaza). `instant` (SIEMPRE explícito en cada llamador, nunca un
+// default implícito -- ver cada caso más abajo) solo es `false` en el único
+// camino que en verdad cambia de mes (`_evCalIrAFechaEnTimeline()`); todos
+// los demás (primera carga, búsqueda en vivo tecla por tecla, togglear un
+// chip de filtro, admin agregando una persona) siguen instantáneos como
+// antes -- animar esos con el mismo fade se sentiría tarde/parpadeante,
+// nadie lo pidió. `alTerminar` (opcional) corre DESPUÉS de que el contenido
+// nuevo ya está pintado -- necesario para que quien llame con `instant:
+// false` pueda encadenar un scroll (`_evScrollAFecha()`) al elemento recién
+// creado sin buscarlo antes de que exista.
+var _EV_TIMELINE_FADE_MS = 180;
+function _evRenderTimeline(instant, alTerminar) {
   var items = _evTimelineItems();
 
   var cont = document.getElementById('ev-timeline');
   if (!cont) return;
   if (items.length === 0) {
-    cont.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">event_busy</span>No hay eventos ni cumpleaños con estos filtros.</div>';
+    _evFadeSwap(cont, function() {
+      cont.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">event_busy</span>No hay eventos ni cumpleaños con estos filtros.</div>';
+      if (alTerminar) alTerminar();
+    }, instant, _EV_TIMELINE_FADE_MS);
     return;
   }
   var porFecha = {}, ordenFechas = [];
@@ -1455,25 +1498,28 @@ function _evRenderTimeline() {
     '</div>';
   });
   if (!insertadoHoy) html += '<div class="ev-hoy-separador"><span>HOY</span></div>';
-  cont.innerHTML = html;
-  _evUpdateRsvpSliders(false);
-  _evHidratarAvatares();
-  // Confetti contenido dentro de la card, SOLO para el cumpleaños de HOY --
-  // mismo criterio/mecanismo de siempre (_evLanzarConfettiCuandoVisible()),
-  // sin guard de "ya se mostró": `cont.innerHTML = html` de arriba siempre
-  // crea un nodo DOM nuevo para la card, así que disparar acá es "un nodo
-  // nuevo = un confetti nuevo", sin estado que mantener sincronizado.
-  if (porFecha[hoy]) {
-    porFecha[hoy].forEach(function(it) {
-      if (it.tipo !== 'cumple') return;
-      var el = document.getElementById('ev-confetti-' + it.data.id);
-      if (el) _evLanzarConfettiCuandoVisible(el);
-    });
-  }
-  // Los encabezados de mes recién se insertaron -- resincroniza el label de
-  // la nav fija con el nuevo DOM (ej. un filtro nuevo pudo haber sacado del
-  // timeline el mes que el label estaba mostrando).
-  _evActualizarNavMesPorScroll();
+  _evFadeSwap(cont, function() {
+    cont.innerHTML = html;
+    _evUpdateRsvpSliders(false);
+    _evHidratarAvatares();
+    // Confetti contenido dentro de la card, SOLO para el cumpleaños de HOY --
+    // mismo criterio/mecanismo de siempre (_evLanzarConfettiCuandoVisible()),
+    // sin guard de "ya se mostró": `cont.innerHTML = html` de arriba siempre
+    // crea un nodo DOM nuevo para la card, así que disparar acá es "un nodo
+    // nuevo = un confetti nuevo", sin estado que mantener sincronizado.
+    if (porFecha[hoy]) {
+      porFecha[hoy].forEach(function(it) {
+        if (it.tipo !== 'cumple') return;
+        var el = document.getElementById('ev-confetti-' + it.data.id);
+        if (el) _evLanzarConfettiCuandoVisible(el);
+      });
+    }
+    // Los encabezados de mes recién se insertaron -- resincroniza el label de
+    // la nav fija con el nuevo DOM (ej. un filtro nuevo pudo haber sacado del
+    // timeline el mes que el label estaba mostrando).
+    _evActualizarNavMesPorScroll();
+    if (alTerminar) alTerminar();
+  }, instant, _EV_TIMELINE_FADE_MS);
 }
 
 /* ── Detalle de un evento (ver "Cambios recientes" — reemplaza el bottom
@@ -1507,6 +1553,26 @@ function abrirEvDetalle(id) {
   _evDetalleActual = ev;
   _evRenderDetalle(ev);
   ir('s-eventos-detalle');
+  // Bug real de esta sesión (2do intento -- el 1ro, `_evDetalleActualizarSticky()`
+  // síncrono más abajo, era real pero NO era la causa de este síntoma en
+  // particular): instrumentado con Playwright antes de tocar nada, en los 4
+  // momentos exactos pedidos -- `scrollY` queda IDÉNTICO (900 en la prueba)
+  // en los 2 checkpoints alrededor de `_evRenderDetalleAsistencia()`
+  // (síncrono en este build, sin fetch real todavía -- Tanda 2), confirmando
+  // que la carga de asistentes no toca el scroll para nada. El culpable real:
+  // `ir()` (js/ui.js) dispara SIEMPRE `scrollTo({top:0, behavior:'smooth'})`
+  // sin importar la pantalla -- si el usuario estaba lejos scrolleado en el
+  // timeline, esa animación tarda ~400ms en decaer suavemente hasta 0,
+  // VISIBLE encima de la pantalla de detalle ya mostrada (confirmado
+  // muestreando `scrollY` cada ~12ms: rampa lenta 545→0, no un salto). Se
+  // siente como que el contenido "jala" porque, de hecho, literalmente lo
+  // hace -- unos 400ms de scroll animado que nadie pidió, no relacionado con
+  // ningún crecimiento de contenido. Mismo criterio que ya usa
+  // `irEventos()` para su propia entrada (`_evScrollAFecha(hoy, true)`,
+  // instant a propósito, mismo comentario ahí): entrar a una pantalla nueva
+  // debe pararse en su posición inicial de una, no animar un scroll que el
+  // usuario no disparó.
+  window.scrollTo(0, 0);
   // Bug real (ver "Cambios recientes"): `_evDetalleActualizarSticky()` vivía
   // en el mismo `setTimeout(50)` que `_evUpdateRsvpSliders()` de abajo,
   // "por si acaso" -- de más, y con costo real: durante esos ~50ms el RSVP y
