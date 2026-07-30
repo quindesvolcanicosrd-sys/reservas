@@ -545,22 +545,15 @@ function _evCalActualizarMaxHeightExterior(instant) {
 window.addEventListener('resize', function() { if (_evCalVisible) _evCalActualizarMaxHeightExterior(true); });
 // Sin fade de opacidad acá a propósito (ver "Cambios recientes" -- revierte
 // el crossfade sincronizado que esta misma sesión le había agregado): la
-// grilla cambia de contenido INSTANTÁNEO, el `max-height` del panel exterior
-// es lo único que anima (`_evCalActualizarMaxHeightExterior()`, su propia
-// transición CSS) -- el cambio de mes se siente como el contenido de abajo
-// desplazándose (empujado por el alto animado), nunca como una opacidad
-// superpuesta. `overflow:hidden` del panel exterior ya alcanza solo para
-// que el contenido nuevo (a su tamaño real desde el primer instante) se
-// revele/oculte prolijo mientras el alto crece/encoge, sin necesitar ningún
-// fade -- confirmado con Playwright (ver el punto de "transición de alto
-// rota", tanda anterior): 0 de 20 frames mostraron contenido sangrando por
-// fuera del recorte del panel. Única excepción, acotada: la fila de pills
-// (`#ev-mes-pills-row`) SÍ tiene su propio fade LOCAL al cambiar de mes con
-// el calendario abierto, pero SOLO cuando la cantidad de semanas cambia de
-// verdad (`_evCalCambiarMes()`, más abajo) -- un fix puntual para el corte
-// de esa fila específica, no un cambio de criterio para la grilla/panel en
-// general (se probó un fade de TODO el panel y se revirtió, ver "Cambios
-// recientes").
+// grilla cambia de contenido INSTANTÁNEO siempre. El `max-height` del panel
+// exterior, en cambio, YA NO anima en el cambio de mes con distinta
+// cantidad de semanas (ver "Cambios recientes" -- decisión final de Victor,
+// prioridad explícita sobre el "empuje" de la grilla: cero fade en la fila
+// de pills en cualquier momento, sea cual sea el costo en la animación de
+// alto -- `_evCalCambiarMes()`, más abajo, llama `_evCalRenderContenido(true)`
+// para esos casos). Abrir/cerrar el panel entero (`_evAbrirCalendario()`/
+// `_evCerrarCalendario()`) siguen animando `max-height` con su transición
+// CSS de siempre -- código separado, no tocado por esta decisión.
 function _evCalRenderContenido(instant) {
   var cont = document.getElementById('ev-cal-contenido');
   if (!cont) return;
@@ -837,52 +830,40 @@ function _evCalCentrarPillActivaInstant() {
 // cantidad de semanas, el panel no se mueve un solo píxel, así que no hace
 // falta esconder nada.
 //
-// Camino A (semanas distintas) -- fade LOCAL de la fila de pills
-// (`#ev-mes-pills-row`), sincronizado con la animación de alto del panel
-// exterior, que sigue corriendo normal ("empuje" de siempre, sin tocar).
-// Decisión final tras probar 2 alternativas (ver "Cambios recientes"):
-// - Un desplazamiento (`transform:translateY`) se probó y se DESCARTÓ con
-//   evidencia real de Playwright: al ENCOGER (6→5 semanas), el contenido de
-//   la grilla ya shrinkea casi de inmediato (el alto renderizado del panel
-//   sigue el mismo patrón `min(contenido, max-height)` documentado en una
-//   investigación anterior de esta sesión), mientras la fila de pills
-//   todavía tarda los ~0.28s completos en deslizarse a su lugar -- durante
-//   ese tramo, hasta 52px de la fila quedaban por debajo del borde ya
-//   encogido del panel, recortados por su `overflow:hidden` -- el corte
-//   real que se buscaba evitar, reaparecido. Al CRECER (5→6) no pasaba
-//   (0px de corte) -- pero como falla en una de las 2 direcciones, se
-//   descarta el desplazamiento entero.
-// - El fade de opacidad (el que queda acá) no tiene este problema: la fila
-//   está invisible durante TODO el cambio de alto, así que no importa si el
-//   panel ya encogió o todavía no -- no hay nada que recortar porque no hay
-//   nada visible.
-// Causa real del corte original (el que motivó fadear la fila, no
-// desplazarla): las pills viven al FINAL del contenido del panel, después
-// de la grilla -- mientras `max-height` todavía no llegó a su valor final,
-// el borde de recorte del acordeón pasa justo por el medio de esa fila (la
-// grilla de arriba no tiene este problema porque ya está visible desde
-// temprano en la animación).
+// Camino A (semanas distintas) -- deslizamiento PURO de la fila de pills
+// (`transform:translateY`), SIN fade en ningún momento -- decisión final de
+// Victor, con prioridad explícita sobre el "empuje" animado de la grilla
+// (ver "Cambios recientes" -- 2 alternativas previas descartadas antes de
+// llegar acá):
+// 1. Fade de opacidad -- funcionaba (0 corte confirmado), pero se pidió
+//    sacarlo de la ecuación por completo: cero fade en cualquier momento.
+// 2. Desplazamiento CON el "empuje" de `max-height` corriendo en paralelo --
+//    se probó y se DESCARTÓ con evidencia real de Playwright: al ENCOGER
+//    (6→5 semanas), el contenido de la grilla ya shrinkea casi de
+//    inmediato (el alto renderizado del panel sigue el patrón
+//    `min(contenido, max-height)` de una investigación anterior de esta
+//    sesión), mientras la fila de pills todavía tarda los ~0.28s completos
+//    en deslizarse a su lugar -- durante ese tramo, hasta 52px de la fila
+//    quedaban recortados contra el borde ya encogido del panel.
+// La única forma de tener deslizamiento SIN fade y SIN ese corte: sacarle
+// al panel la posibilidad de estar "a medio camino" -- `_evCalRenderContenido(true)`
+// fija `max-height` de un salto (mismo truco `instant` que ya usa esta
+// función para el resize de ventana) en vez de animarlo. La grilla nueva
+// aparece en su tamaño final desde el primer frame -- ya no hay ningún
+// tramo de alto intermedio contra el que la fila de pills pueda recortarse,
+// así que el deslizamiento (que si necesita su propio tiempo para verse
+// bien) no compite contra nada.
 //
-// La secuencia real tiene 2 pasos, NO uno solo (ver "Cambios recientes" --
-// bug real de secuencia, distinto del ajuste de velocidad de la misma
-// entrada): (1) fadear la fila vieja a opacidad 0 y ESPERAR a que ese fade
-// termine DE VERDAD (`transitionend` de `opacity` en la fila, con una red
-// de seguridad por `setTimeout` leída de su propia duración CSS -- mismo
-// patrón que el paso 2) antes de tocar un solo pixel del contenido. Repintar
-// en el mismo tick en que se dispara el fade (como hacía una versión
-// anterior) no esperaba nada -- el contenido nuevo quedaba en el DOM
-// mientras la opacidad todavía bajaba de 1, así que lo que en realidad se
-// veía desvanecerse era el contenido NUEVO, no el viejo: un "flash" del
-// destino antes de asentarse, no un fade prolijo. (2) Recién cuando la fila
-// está invisible DE VERDAD se repinta la grilla (`_evCalRenderContenido()`,
-// fija el nuevo techo con su transición normal de `max-height`) y el
-// contenido de las pills + el centrado instantáneo de la activa (ya
-// unificado) -- todo el cambio de contenido y de alto ocurre con la fila en
-// opacidad 0 real. Recién cuando la transición de `max-height` del panel
-// TERMINA DE VERDAD (mismo patrón de `transitionend` + red de seguridad,
-// necesario para el caso en que 2 meses consecutivos tengan la misma
-// cantidad de semanas: sin cambio de valor no hay transición que corra,
-// `transitionend` nunca dispara) se fadea la fila de vuelta a 1.
+// Mecánica: `_evCalContarSemanas()` da la diferencia de filas entre el mes
+// viejo y el nuevo; cada fila de diferencia son `filaAltura` píxeles
+// (medidos del `offsetHeight` real de una celda + el `gap` de
+// `.ev-cal-grid`, no un número inventado). ANTES de repintar, se fija
+// `transform:translateY(deltaPx)` SIN transición -- deja la fila
+// VISUALMENTE en su posición VIEJA. Se repinta grilla (`instant`, salta
+// directo a su alto final) + pills, y recién ahí se anima `translateY(0)`
+// con transición propia (`--ease-sheet`) -- la fila "cae"/"sube" a su
+// lugar, sin que el panel se mueva ni un pixel mientras tanto (ya está en
+// su tamaño final desde el repintado).
 //
 // Camino B (misma cantidad de semanas) -- sin fade, cirugía puntual (mismo
 // criterio que ya usa `_evCalTocarDia()` para el anillo de día
@@ -896,7 +877,6 @@ function _evCalCentrarPillActivaInstant() {
 // Camino A, no hay ningún riesgo de corte (el panel no cambia de alto), así
 // que un desplazamiento visible es la señal esperada de "te moviste de
 // pill" en vez de un salto.
-var _EV_CAL_PILLS_FADE_EPOCH = 0;
 function _evCalCambiarMes(nuevaFecha) {
   var semanasViejas = _evCalContarSemanas(_evCalFechaMostrada);
   var semanasNuevas = _evCalContarSemanas(nuevaFecha);
@@ -908,45 +888,42 @@ function _evCalCambiarMes(nuevaFecha) {
   }
   var pillsRow = document.getElementById('ev-mes-pills-row');
   var panel = document.getElementById('ev-mes-panel');
-  if (!pillsRow || !panel) { _evCalRenderContenido(); _evCalRenderPills(); return; }
-  var epoch = ++_EV_CAL_PILLS_FADE_EPOCH;
-  // Paso 2 (repintar + esperar el `max-height` del panel + fadear de
-  // vuelta) -- factorizado en su propia función para poder correrlo tanto
-  // desde el `transitionend` real del fade-out como desde su red de
-  // seguridad (paso 1, más abajo), sin duplicar el cuerpo.
-  function repintarYFadeIn() {
-    if (epoch !== _EV_CAL_PILLS_FADE_EPOCH) return;
-    _evCalRenderContenido();
-    _evCalRenderPills();
-    var redDeSeguridad;
-    function onEnd(e) {
-      if (e.target !== panel || e.propertyName !== 'max-height') return;
-      panel.removeEventListener('transitionend', onEnd);
-      clearTimeout(redDeSeguridad);
-      if (epoch === _EV_CAL_PILLS_FADE_EPOCH) pillsRow.style.opacity = '1';
-    }
-    panel.addEventListener('transitionend', onEnd);
-    var duracionMaxHeightMs = (parseFloat(getComputedStyle(panel).transitionDuration) || 0) * 1000;
-    redDeSeguridad = setTimeout(function() {
-      panel.removeEventListener('transitionend', onEnd);
-      if (epoch === _EV_CAL_PILLS_FADE_EPOCH) pillsRow.style.opacity = '1';
-    }, duracionMaxHeightMs + 50);
-  }
-  // Paso 1: fade-out de la fila vieja -- NO repinta nada todavía.
-  pillsRow.style.opacity = '0';
-  var redDeSeguridadFadeOut;
-  function onFadeOutEnd(e) {
-    if (e.target !== pillsRow || e.propertyName !== 'opacity') return;
-    pillsRow.removeEventListener('transitionend', onFadeOutEnd);
-    clearTimeout(redDeSeguridadFadeOut);
-    repintarYFadeIn();
-  }
-  pillsRow.addEventListener('transitionend', onFadeOutEnd);
-  var duracionFadeMs = (parseFloat(getComputedStyle(pillsRow).transitionDuration) || 0) * 1000;
-  redDeSeguridadFadeOut = setTimeout(function() {
-    pillsRow.removeEventListener('transitionend', onFadeOutEnd);
-    repintarYFadeIn();
-  }, duracionFadeMs + 50);
+  if (!pillsRow) { _evCalRenderContenido(true); _evCalRenderPills(); return; }
+  var celda = document.querySelector('.ev-cal-celda');
+  var filaAltura = celda ? (celda.offsetHeight + 2) : 48; // +2px = gap de .ev-cal-grid
+  var deltaPx = (semanasViejas - semanasNuevas) * filaAltura;
+  // Al ENCOGER (deltaPx > 0 -- la fila arranca desplazada hacia ABAJO, en su
+  // posición vieja): el panel ya salta a su alto final (más chico) en el
+  // mismo instante en que se repinta -- sin margen extra, la fila queda
+  // recortada contra ese borde ya más chico durante CASI TODA la animación
+  // de deslizamiento (confirmado con Playwright antes de este ajuste: hasta
+  // 52px de corte, sostenido ~280ms -- más severo que con el "empuje"
+  // animado de la versión anterior, porque acá el panel no le da ningún
+  // margen progresivo). Se relaja `overflow` del panel puntualmente
+  // mientras dura el deslizamiento -- mismo criterio ya probado en el fix
+  // del scroll al filtrar asistencia (reservar espacio de sobra durante una
+  // transición y liberarlo recién al terminar): el panel en sí sigue sin
+  // animar su alto (fijo, instantáneo, como se pidió), solo se le permite
+  // temporalmente NO recortar contenido que todavía no llegó a su lugar.
+  // Al CRECER no hace falta -- el panel ya es lo bastante alto desde el
+  // primer frame para la fila entera, sin importar en qué punto del
+  // deslizamiento esté.
+  var encogiendo = deltaPx > 0;
+  pillsRow.style.transition = 'none';
+  pillsRow.style.transform = 'translateY(' + deltaPx + 'px)';
+  void pillsRow.offsetHeight; // fuerza reflow -- fija la posición vieja antes de repintar
+  if (encogiendo && panel) panel.style.overflow = 'visible';
+  _evCalRenderContenido(true); // instant: el panel salta directo a su alto final, sin animar
+  _evCalRenderPills();
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      pillsRow.style.transition = 'transform 0.28s var(--ease-sheet)';
+      pillsRow.style.transform = 'translateY(0)';
+      if (encogiendo && panel) {
+        setTimeout(function() { panel.style.overflow = ''; }, 320);
+      }
+    });
+  });
 }
 // Cirugía puntual del relleno de pill activa (Camino B de arriba) -- sin
 // re-pintar `#ev-mes-pills-row` entero, solo mueve la clase `.activa` del
