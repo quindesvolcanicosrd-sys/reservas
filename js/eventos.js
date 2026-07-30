@@ -591,40 +591,83 @@ function _evInicializarSwipeCalendario() {
   }, { passive: true });
 }
 _evInicializarSwipeCalendario();
-// Colapsa el calendario apenas arranca un scroll hacia ABAJO en el timeline
-// (ver "Cambios recientes" -- funcionalidad NUEVA, pedido explícito: no
-// existía ningún auto-colapso por scroll desde que esta misma sesión
-// simplificó el calendario a 2 estados -- a propósito, para no reintroducir
-// el conflicto swipe-horizontal-de-mes vs. scroll-vertical que esa
-// simplificación evitó. Por eso este listener escucha SOLO `#ev-timeline`,
-// nunca el panel del calendario en sí (que sigue cerrándose únicamente por
-// acción directa sobre él: chevron/label o su propio swipe hacia abajo,
-// arriba). Mismo umbral que el resto de gestos de esta pantalla
-// (`_EV_CAL_SWIPE_UMBRAL`) pero medido en CADA `touchmove` -- a diferencia
-// del swipe del calendario (que solo mide al soltar), acá hace falta
-// reaccionar apenas se cruza el umbral, no recién al terminar el gesto
-// (pedido explícito: "no después de que el scroll ya avanzó un rato"). El
-// dedo moviéndose hacia ARRIBA (`dy` negativo) es lo que hace que el
-// contenido scrollee hacia ABAJO -- convención estándar de touch-scroll.
-var _evTimelineScrollCloseY = 0, _evTimelineScrollCloseActivo = false, _evTimelineScrollCloseDisparado = false;
+// Colapso del calendario al scrollear el timeline -- drag-to-dismiss EN
+// VIVO (ver "Cambios recientes" -- reemplaza la versión anterior de esta
+// misma sesión, que cerraba de un salto apenas se cruzaba un umbral fijo:
+// pedido explícito, mismo criterio que Google Calendar -- mientras el dedo
+// sigue abajo, el panel se achica proporcional al arrastre, como un
+// acordeón que sigue el gesto real; recién al soltar se decide terminar de
+// cerrar (si se pasó el umbral) o volver al alto original (si no), ambos
+// animados). Escucha SOLO `#ev-timeline` (nunca el panel del calendario en
+// sí, que sigue cerrándose instantáneo por acción directa: chevron/label o
+// su propio swipe horizontal-hacia-abajo, arriba) -- para no reintroducir el
+// conflicto swipe-horizontal-de-mes vs. scroll-vertical que la
+// simplificación a 2 estados de esta sesión evitó. El dedo moviéndose hacia
+// ARRIBA (`dy` negativo) es lo que hace que el contenido scrollee hacia
+// ABAJO -- convención estándar de touch-scroll -- por eso el panel se achica
+// cuando `dy` se hace más negativo, no al revés. Solo touch (el mismo
+// alcance que ya tenía el resto de los gestos de este panel -- swipe de
+// mes, cierre por umbral -- ninguno soporta mouse-drag tampoco; un
+// click-and-drag sobre el timeline no es un gesto estándar de desktop, ahí
+// se scrollea con la rueda).
+var _evTimelineDragY = 0, _evTimelineDragActivo = false, _evTimelineDragAlturaOriginal = 0;
+// Umbral de "commit" como fracción del alto del panel (no el `_EV_CAL_SWIPE_UMBRAL`
+// fijo de 45px que usan los otros gestos de esta pantalla) -- mismo criterio
+// que un bottom sheet nativo (iOS/Android): con un panel que puede medir
+// 300-450px, un umbral fijo chico se sentiría demasiado fácil de disparar
+// sin querer estando el panel todavía visualmente casi entero abierto.
+var _EV_CAL_DRAG_UMBRAL_FRACCION = 0.3;
 function _evInicializarCierreCalendarioPorScroll() {
   var cont = document.getElementById('ev-timeline');
-  if (!cont) return;
+  var panel = document.getElementById('ev-mes-panel');
+  if (!cont || !panel) return;
   cont.addEventListener('touchstart', function(e) {
-    if (e.touches.length !== 1) return;
-    _evTimelineScrollCloseY = e.touches[0].clientY;
-    _evTimelineScrollCloseActivo = true;
-    _evTimelineScrollCloseDisparado = false;
+    if (e.touches.length !== 1 || !_evCalVisible) return;
+    _evTimelineDragY = e.touches[0].clientY;
+    _evTimelineDragActivo = true;
+    _evTimelineDragAlturaOriginal = panel.getBoundingClientRect().height;
   }, { passive: true });
   cont.addEventListener('touchmove', function(e) {
-    if (!_evTimelineScrollCloseActivo || _evTimelineScrollCloseDisparado || !_evCalVisible) return;
-    var dy = e.touches[0].clientY - _evTimelineScrollCloseY;
-    if (dy <= -_EV_CAL_SWIPE_UMBRAL) {
-      _evTimelineScrollCloseDisparado = true;
-      _evCerrarCalendario();
+    if (!_evTimelineDragActivo || !_evCalVisible) return;
+    var dy = e.touches[0].clientY - _evTimelineDragY;
+    if (dy >= 0) { panel.style.transition = ''; panel.style.maxHeight = _evTimelineDragAlturaOriginal + 'px'; return; }
+    // Sin transición mientras se arrastra -- cada frame de touchmove pisa
+    // el `max-height` directo, 1:1 con el dedo (si hubiera transición
+    // encima, el panel iría "atrasado" respecto al dedo en vez de seguirlo
+    // en vivo).
+    panel.style.transition = 'none';
+    var nuevaAltura = Math.max(0, _evTimelineDragAlturaOriginal + dy);
+    panel.style.maxHeight = nuevaAltura + 'px';
+  }, { passive: true });
+  cont.addEventListener('touchend', function(e) {
+    if (!_evTimelineDragActivo) return;
+    _evTimelineDragActivo = false;
+    if (!_evCalVisible) return;
+    var dy = e.changedTouches[0].clientY - _evTimelineDragY;
+    var arrastrado = Math.max(0, -dy);
+    // Restaura la transición del CSS (`.ev-header-burbuja`, 0.28s) para que
+    // el tramo final -- terminar de cerrar o volver al alto original --
+    // quede animado, no un salto.
+    panel.style.transition = '';
+    if (arrastrado >= _evTimelineDragAlturaOriginal * _EV_CAL_DRAG_UMBRAL_FRACCION) {
+      // Termina de cerrar DESDE el alto parcial actual -- a propósito no
+      // reusa `_evCerrarCalendario()` tal cual: esa función arranca
+      // fijando `max-height` al `scrollHeight` COMPLETO antes de animar a
+      // 0 (pensada para cerrar desde abierto-de-siempre, sin arrastre de
+      // por medio) -- llamarla acá saltaría primero de vuelta al alto
+      // completo y recién ahí cerraría, un "rebote" que el usuario no pidió.
+      _evCalVisible = false;
+      requestAnimationFrame(function() {
+        panel.classList.remove('abierta');
+        panel.style.maxHeight = '0px';
+      });
+      _evActualizarNavMesChevron();
+    } else {
+      // No llegó al umbral -- vuelve animado al alto original, el
+      // calendario se queda abierto tal cual estaba.
+      panel.style.maxHeight = _evTimelineDragAlturaOriginal + 'px';
     }
   }, { passive: true });
-  cont.addEventListener('touchend', function() { _evTimelineScrollCloseActivo = false; }, { passive: true });
 }
 _evInicializarCierreCalendarioPorScroll();
 
