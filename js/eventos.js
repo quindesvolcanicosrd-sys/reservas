@@ -847,20 +847,28 @@ function _evCalCentrarPillActivaInstant() {
 // `max-height` todavía no llegó a su valor final, el borde de recorte del
 // acordeón pasa justo por el medio de esa fila (la grilla de arriba no
 // tiene este problema porque ya está visible desde temprano en la
-// animación). Acá se fadea a 0 SOLO la fila (transición CSS propia,
-// `.ev-mes-pills-row`, css/eventos.css) apenas arranca el cambio; en
-// paralelo, sin esperar nada, se repinta la grilla (`_evCalRenderContenido()`,
+// animación).
+//
+// La secuencia real tiene 2 pasos, NO uno solo (ver "Cambios recientes" --
+// bug real de secuencia, distinto del ajuste de velocidad de la misma
+// entrada): (1) fadear la fila vieja a opacidad 0 y ESPERAR a que ese fade
+// termine DE VERDAD (`transitionend` de `opacity` en la fila, con una red
+// de seguridad por `setTimeout` leída de su propia duración CSS -- mismo
+// patrón que el paso 2) antes de tocar un solo pixel del contenido. Repintar
+// en el mismo tick en que se dispara el fade (como hacía una versión
+// anterior) no esperaba nada -- el contenido nuevo quedaba en el DOM
+// mientras la opacidad todavía bajaba de 1, así que lo que en realidad se
+// veía desvanecerse era el contenido NUEVO, no el viejo: un "flash" del
+// destino antes de asentarse, no un fade prolijo. (2) Recién cuando la fila
+// está invisible DE VERDAD se repinta la grilla (`_evCalRenderContenido()`,
 // fija el nuevo techo con su transición normal de `max-height`) y el
 // contenido de las pills + el centrado instantáneo de la activa (ya
-// unificado) -- ambos repintados corren YA MISMO, la fila igual está
-// invisible. Recién cuando la transición de `max-height` del panel TERMINA
-// DE VERDAD (`transitionend` real de esa propiedad, con una red de
-// seguridad leída de la duración declarada en CSS -- mismo patrón que usaba
-// `_evCalCentrarPillActivaCuandoAsiente()`, de una sesión anterior, antes de
-// unificar el centrado de pills a instantáneo -- necesario para el caso en
-// que 2 meses consecutivos tengan la misma cantidad de semanas: sin cambio
-// de valor no hay transición que corra, `transitionend` nunca dispara) se
-// fadea la fila de vuelta a 1.
+// unificado) -- todo el cambio de contenido y de alto ocurre con la fila en
+// opacidad 0 real. Recién cuando la transición de `max-height` del panel
+// TERMINA DE VERDAD (mismo patrón de `transitionend` + red de seguridad,
+// necesario para el caso en que 2 meses consecutivos tengan la misma
+// cantidad de semanas: sin cambio de valor no hay transición que corra,
+// `transitionend` nunca dispara) se fadea la fila de vuelta a 1.
 //
 // Camino B (misma cantidad de semanas) -- sin fade, cirugía puntual (mismo
 // criterio que ya usa `_evCalTocarDia()` para el anillo de día
@@ -885,25 +893,46 @@ function _evCalCambiarMes(nuevaFecha) {
     return;
   }
   var pillsRow = document.getElementById('ev-mes-pills-row');
-  if (pillsRow) pillsRow.style.opacity = '0';
-  _evCalRenderContenido();
-  _evCalRenderPills();
   var panel = document.getElementById('ev-mes-panel');
-  if (!pillsRow || !panel) { if (pillsRow) pillsRow.style.opacity = '1'; return; }
+  if (!pillsRow || !panel) { _evCalRenderContenido(); _evCalRenderPills(); return; }
   var epoch = ++_EV_CAL_PILLS_FADE_EPOCH;
-  var redDeSeguridad;
-  function onEnd(e) {
-    if (e.target !== panel || e.propertyName !== 'max-height') return;
-    panel.removeEventListener('transitionend', onEnd);
-    clearTimeout(redDeSeguridad);
-    if (epoch === _EV_CAL_PILLS_FADE_EPOCH) pillsRow.style.opacity = '1';
+  // Paso 2 (repintar + esperar el `max-height` del panel + fadear de
+  // vuelta) -- factorizado en su propia función para poder correrlo tanto
+  // desde el `transitionend` real del fade-out como desde su red de
+  // seguridad (paso 1, más abajo), sin duplicar el cuerpo.
+  function repintarYFadeIn() {
+    if (epoch !== _EV_CAL_PILLS_FADE_EPOCH) return;
+    _evCalRenderContenido();
+    _evCalRenderPills();
+    var redDeSeguridad;
+    function onEnd(e) {
+      if (e.target !== panel || e.propertyName !== 'max-height') return;
+      panel.removeEventListener('transitionend', onEnd);
+      clearTimeout(redDeSeguridad);
+      if (epoch === _EV_CAL_PILLS_FADE_EPOCH) pillsRow.style.opacity = '1';
+    }
+    panel.addEventListener('transitionend', onEnd);
+    var duracionMaxHeightMs = (parseFloat(getComputedStyle(panel).transitionDuration) || 0) * 1000;
+    redDeSeguridad = setTimeout(function() {
+      panel.removeEventListener('transitionend', onEnd);
+      if (epoch === _EV_CAL_PILLS_FADE_EPOCH) pillsRow.style.opacity = '1';
+    }, duracionMaxHeightMs + 50);
   }
-  panel.addEventListener('transitionend', onEnd);
-  var duracionMs = (parseFloat(getComputedStyle(panel).transitionDuration) || 0) * 1000;
-  redDeSeguridad = setTimeout(function() {
-    panel.removeEventListener('transitionend', onEnd);
-    if (epoch === _EV_CAL_PILLS_FADE_EPOCH) pillsRow.style.opacity = '1';
-  }, duracionMs + 50);
+  // Paso 1: fade-out de la fila vieja -- NO repinta nada todavía.
+  pillsRow.style.opacity = '0';
+  var redDeSeguridadFadeOut;
+  function onFadeOutEnd(e) {
+    if (e.target !== pillsRow || e.propertyName !== 'opacity') return;
+    pillsRow.removeEventListener('transitionend', onFadeOutEnd);
+    clearTimeout(redDeSeguridadFadeOut);
+    repintarYFadeIn();
+  }
+  pillsRow.addEventListener('transitionend', onFadeOutEnd);
+  var duracionFadeMs = (parseFloat(getComputedStyle(pillsRow).transitionDuration) || 0) * 1000;
+  redDeSeguridadFadeOut = setTimeout(function() {
+    pillsRow.removeEventListener('transitionend', onFadeOutEnd);
+    repintarYFadeIn();
+  }, duracionFadeMs + 50);
 }
 // Cirugía puntual del relleno de pill activa (Camino B de arriba) -- sin
 // re-pintar `#ev-mes-pills-row` entero, solo mueve la clase `.activa` del

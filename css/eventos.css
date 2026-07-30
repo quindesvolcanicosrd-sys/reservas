@@ -134,16 +134,23 @@
    de semanas de la grilla realmente cambia (`_evCalContarSemanas()`) -- si
    el mes viejo y el nuevo tienen la misma, el panel no cambia de alto y no
    hace falta ningún fade (ver `_evCalMoverFillPill()`, cirugía de clases +
-   la transición de `.historial-pill` de abajo en vez de esto). */
+   la transición de `.historial-pill` de abajo en vez de esto). `0.2s` (ver
+   "Cambios recientes" -- subido desde `0.13s`, pedido explícito: a esa
+   velocidad se sentía como un corte/glitch en vez de un fade intencional --
+   mismo valor para afuera y adentro, no hace falta asimetría). `_evCalCambiarMes()`
+   ESPERA a que este fade-out termine de verdad (`transitionend` de
+   `opacity`) antes de repintar contenido -- si se repintara en el mismo
+   tick que se dispara el fade, lo que en realidad se vería desvanecerse
+   sería el contenido NUEVO (ya en el DOM) en vez del viejo. */
 .ev-mes-pills-row {
   display: flex; align-items: center; gap: 8px; overflow-x: auto; padding: 14px 2px 2px; -ms-overflow-style: none;
   -webkit-mask-image: linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent);
   mask-image: linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent);
-  transition: opacity 0.13s ease;
+  transition: opacity 0.2s ease;
 }
 .ev-mes-pill-corte {
   flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
-  padding: 0 4px; align-self: stretch; justify-content: center; border-left: 1.5px solid var(--border-light);
+  padding: 0 4px; align-self: stretch; justify-content: center;
 }
 .ev-mes-pill-corte span { font-size: 0.62rem; font-weight: 700; color: var(--muted); }
 /* `.historial-pill` (css/home.css) ya trae `transition: all 0.2s` -- cubre
