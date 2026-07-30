@@ -218,6 +218,22 @@ function ir(id, desdeHistorial, sinTrampa) {
     _resetChkPago();
   }
 
+  // Bug real (ver "Cambios recientes", js/eventos.js): el indicador de la
+  // barra de RSVP de una card del timeline (`.ev-rsvp-slider`, posicionado
+  // por `offsetWidth`/`offsetLeft` de la opción activa) quedaba mal ubicado
+  // -- pegado cerca del extremo izquierdo, como si "Asistiré" estuviera
+  // resaltado sin importar el estado real -- al volver de la pantalla de
+  // detalle: mientras `#s-eventos` está `display:none` (detrás de
+  // `#s-eventos-detalle`), esas medidas dan 0, y nada las recalculaba al
+  // volver a hacerse visible. Mismo fix ya usado en la dirección contraria
+  // (entrar al detalle, `abrirEvDetalle()`, mismo motivo) -- acá centralizado
+  // en `ir()` en vez de solo en el botón "atrás" del detalle porque cubre
+  // TODOS los caminos de vuelta a `s-eventos` (botón, gesto nativo/popstate),
+  // no solo uno.
+  if (id === 's-eventos' && typeof _evUpdateRsvpSliders === 'function') {
+    setTimeout(function() { _evUpdateRsvpSliders(false); }, 50);
+  }
+
   var topBar = document.getElementById('top-bar'); var topBtn = document.getElementById('top-bar-btn'); var topTitulo = document.getElementById('top-bar-titulo');
   var cfg = TOP_BAR_CONFIG[id];
   // Buscador de Ajustes (ver "Cambios recientes") -- reemplaza el título
