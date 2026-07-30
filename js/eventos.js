@@ -463,7 +463,7 @@ function _evAbrirCalendario() {
   _evCalFechaMostrada = base;
   _evSincronizarNavMesDesde(base, true);
   _evCalRenderContenido(true);
-  _evCalRenderPills();
+  _evCalRenderPills(true);
   var el = document.getElementById('ev-mes-panel');
   if (el) { el.classList.add('abierta'); el.style.maxHeight = el.scrollHeight + 'px'; }
   _evActualizarNavMesChevron();
@@ -752,7 +752,15 @@ function _evGenerarOpcionesMesPill() {
   }
   return out;
 }
-function _evCalRenderPills() {
+// `instant` (ver "Cambios recientes" -- bug real, corte de la pill activa al
+// ABRIR el calendario): `_evAbrirCalendario()` pasa `true` acá para centrar
+// la pill de un salto (`scrollLeft` directo, sin animación) ANTES de que
+// arranque la transición de `max-height` del panel -- así cuando el panel se
+// revela, la fila ya está en su posición final, sin un 2do movimiento
+// después. Pill/swipe/hoy con el calendario YA abierto siguen sin pasar
+// `instant` -- ahí el centrado suave diferido (`_evCalCentrarPillActivaCuandoAsiente()`)
+// sigue siendo la señal esperada de "cambiaste de mes".
+function _evCalRenderPills(instant) {
   var cont = document.getElementById('ev-mes-pills-row');
   if (!cont) return;
   var opciones = _evGenerarOpcionesMesPill();
@@ -767,12 +775,26 @@ function _evCalRenderPills() {
     html += '<button type="button" class="historial-pill' + (activa ? ' activa' : '') + '" onclick="_evCalTocarPillMes(' + o.year + ',' + o.month + ')">' + _EV_MESES_CORTOS[o.month] + '</button>';
   });
   cont.innerHTML = html;
-  _evCalCentrarPillActivaCuandoAsiente();
+  if (instant) _evCalCentrarPillActivaInstant();
+  else _evCalCentrarPillActivaCuandoAsiente();
 }
 function _evCalCentrarPillActiva() {
   var cont = document.getElementById('ev-mes-pills-row');
   var pillActiva = cont && cont.querySelector('.historial-pill.activa');
   if (pillActiva) pillActiva.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+}
+// Centrado INSTANTÁNEO (ver "Cambios recientes" -- bug real, pills cortadas
+// al abrir el calendario): `scrollLeft` fijado a mano en vez de
+// `scrollIntoView({behavior:'smooth'})` -- el ancho de `#ev-mes-pills-row`
+// ya es el real en este instante (`max-height:0` del panel exterior solo
+// recorta VERTICAL, `overflow:hidden`, el ancho horizontal de adentro no se
+// ve afectado), así que el cálculo es válido aunque el panel todavía no
+// haya arrancado su transición de alto.
+function _evCalCentrarPillActivaInstant() {
+  var cont = document.getElementById('ev-mes-pills-row');
+  var pillActiva = cont && cont.querySelector('.historial-pill.activa');
+  if (!cont || !pillActiva) return;
+  cont.scrollLeft = pillActiva.offsetLeft - (cont.clientWidth - pillActiva.offsetWidth) / 2;
 }
 // Centrado de la pill activa DIFERIDO hasta que el panel exterior (`#ev-mes-
 // panel`) termine de verdad su transición de `max-height` -- no antes, ni en
