@@ -748,6 +748,26 @@ function _evIrAHoy() {
     _evCalRenderPills();
   }
   _evCalIrAFechaEnTimeline(hoy);
+  // Parpadeo sutil de referencia en las cards de hoy (ver "Cambios
+  // recientes" -- pedido explícito, 2 ciclos cortos, ~150-200ms cada uno,
+  // para identificarlas fácil sin parecer un error visual). Con delay --
+  // el scroll de arriba es animado (`smooth`, no `instant`), así que
+  // parpadear ANTES de que termine de asentarse (o mientras el mes/timeline
+  // recién se están re-pintando) quedaría fuera de la vista o tapado por el
+  // fade del propio repintado; ~420ms cubre el peor caso típico (scroll
+  // smooth + fade de `_evCalIrAFechaEnTimeline()`, 180-280ms) sin necesitar
+  // detectar el fin exacto de ninguno de los 2. Reflow forzado (quitar +
+  // `void offsetWidth` + reagregar la clase) para que tocar "hoy" 2 veces
+  // seguidas siempre reinicie la animación desde el principio.
+  setTimeout(function() {
+    var grupo = document.getElementById('ev-fecha-' + hoy);
+    if (!grupo) return;
+    grupo.querySelectorAll('.ev-card').forEach(function(card) {
+      card.classList.remove('ev-parpadeo-referencia');
+      void card.offsetWidth;
+      card.classList.add('ev-parpadeo-referencia');
+    });
+  }, 420);
 }
 
 /* ── Consultas sobre los datos de prueba (idénticas a como se filtrarían
@@ -805,9 +825,16 @@ function _evLanzarConfettiCuandoVisible(el, intentosRestantes) {
 // un scroll disparado por el usuario. Sin grupo exacto para `iso` (ej. "hoy"
 // sin eventos propios, ver "Cambios recientes" -- decisión confirmada: no se
 // fuerza un renglón vacío para hoy) cae al grupo real más cercano en el
-// tiempo (_evFechaGrupoMasCercano()).
+// tiempo (_evFechaGrupoMasCercano()). Si `iso` es hoy (ver "Cambios
+// recientes" -- bug real), prioriza el separador -HOY- (`#ev-separador-hoy`)
+// sobre el `.ev-fecha-grupo`: son 2 elementos vecinos con su propio
+// `scroll-margin-top` cada uno, pero apuntar al grupo dejaba el separador
+// (arriba de él en el flujo) tapado a medias por la cabecera -- apuntar al
+// separador directo lo deja pegado arriba del todo, mismo criterio que
+// cualquier otro salto de fecha.
 function _evScrollAFecha(iso, instant) {
-  var el = document.getElementById('ev-fecha-' + iso) || _evFechaGrupoMasCercano(iso);
+  var el = (iso === _evHoyISO() && document.getElementById('ev-separador-hoy')) ||
+    document.getElementById('ev-fecha-' + iso) || _evFechaGrupoMasCercano(iso);
   if (!el) return;
   var margenSup = _evAlturaStickyHeader();
   document.documentElement.style.setProperty('--ev-sticky-h', margenSup + 'px');
@@ -1473,7 +1500,14 @@ function _evRenderTimeline(instant, alTerminar) {
       html += '<div class="ev-mes-header" data-anio="' + d.getFullYear() + '" data-mes="' + d.getMonth() + '">' + NOMBRES_MESES[d.getMonth()].toUpperCase() + ' ' + d.getFullYear() + '</div>';
     }
     if (!insertadoHoy && _evFechaCmp(fecha, hoy) >= 0) {
-      html += '<div class="ev-hoy-separador"><span>HOY</span></div>';
+      // `id` propio (ver "Cambios recientes" -- bug real: el ícono "hoy"
+      // scrolleaba al `.ev-fecha-grupo` de hoy, que SÍ tiene su propio
+      // `scroll-margin-top` -- pero el separador -HOY- que vive JUSTO
+      // ARRIBA en el flujo normal no tenía ninguno propio, así que quedaba
+      // parcialmente tapado por la cabecera sticky en vez de terminar pegado
+      // arriba del todo como el resto de los saltos de fecha). `_evScrollAFecha()`
+      // prioriza este id cuando la fecha pedida es hoy.
+      html += '<div class="ev-hoy-separador" id="ev-separador-hoy"><span>HOY</span></div>';
       insertadoHoy = true;
     }
     if (_evFechaCmp(fecha, hoy) > 0) {
@@ -1497,7 +1531,7 @@ function _evRenderTimeline(instant, alTerminar) {
       '</div>' +
     '</div>';
   });
-  if (!insertadoHoy) html += '<div class="ev-hoy-separador"><span>HOY</span></div>';
+  if (!insertadoHoy) html += '<div class="ev-hoy-separador" id="ev-separador-hoy"><span>HOY</span></div>';
   _evFadeSwap(cont, function() {
     cont.innerHTML = html;
     _evUpdateRsvpSliders(false);
