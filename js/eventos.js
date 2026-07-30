@@ -467,7 +467,7 @@ function _evAbrirCalendario() {
   _evCalFechaMostrada = base;
   _evSincronizarNavMesDesde(base, true);
   _evCalRenderContenido(true);
-  _evCalRenderPills(true);
+  _evCalRenderPills();
   var el = document.getElementById('ev-mes-panel');
   if (el) { el.classList.add('abierta'); el.style.maxHeight = el.scrollHeight + 'px'; }
   _evActualizarNavMesChevron();
@@ -756,15 +756,13 @@ function _evGenerarOpcionesMesPill() {
   }
   return out;
 }
-// `instant` (ver "Cambios recientes" -- bug real, corte de la pill activa al
-// ABRIR el calendario): `_evAbrirCalendario()` pasa `true` acá para centrar
-// la pill de un salto (`scrollLeft` directo, sin animación) ANTES de que
-// arranque la transición de `max-height` del panel -- así cuando el panel se
-// revela, la fila ya está en su posición final, sin un 2do movimiento
-// después. Pill/swipe/hoy con el calendario YA abierto siguen sin pasar
-// `instant` -- ahí el centrado suave diferido (`_evCalCentrarPillActivaCuandoAsiente()`)
-// sigue siendo la señal esperada de "cambiaste de mes".
-function _evCalRenderPills(instant) {
+// Centrado SIEMPRE instantáneo (ver "Cambios recientes" -- unificado, antes
+// solo `_evAbrirCalendario()` centraba así; swipe/pill/hoy con el calendario
+// ya abierto tenían el mismo bug de corte, sin corregir en esa rama): el
+// centrado corre ANTES de que arranque la transición de `max-height` del
+// panel, así la fila de pills ya está en su posición final apenas se
+// revela/reacomoda el panel, sin un 2do movimiento después.
+function _evCalRenderPills() {
   var cont = document.getElementById('ev-mes-pills-row');
   if (!cont) return;
   var opciones = _evGenerarOpcionesMesPill();
@@ -779,59 +777,20 @@ function _evCalRenderPills(instant) {
     html += '<button type="button" class="historial-pill' + (activa ? ' activa' : '') + '" onclick="_evCalTocarPillMes(' + o.year + ',' + o.month + ')">' + _EV_MESES_CORTOS[o.month] + '</button>';
   });
   cont.innerHTML = html;
-  if (instant) _evCalCentrarPillActivaInstant();
-  else _evCalCentrarPillActivaCuandoAsiente();
-}
-function _evCalCentrarPillActiva() {
-  var cont = document.getElementById('ev-mes-pills-row');
-  var pillActiva = cont && cont.querySelector('.historial-pill.activa');
-  if (pillActiva) pillActiva.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  _evCalCentrarPillActivaInstant();
 }
 // Centrado INSTANTÁNEO (ver "Cambios recientes" -- bug real, pills cortadas
-// al abrir el calendario): `scrollLeft` fijado a mano en vez de
-// `scrollIntoView({behavior:'smooth'})` -- el ancho de `#ev-mes-pills-row`
-// ya es el real en este instante (`max-height:0` del panel exterior solo
-// recorta VERTICAL, `overflow:hidden`, el ancho horizontal de adentro no se
-// ve afectado), así que el cálculo es válido aunque el panel todavía no
-// haya arrancado su transición de alto.
+// al cambiar de mes -- abrir, swipe, pill u "hoy"): `scrollLeft` fijado a
+// mano en vez de `scrollIntoView({behavior:'smooth'})` -- el ancho de
+// `#ev-mes-pills-row` ya es el real en este instante (`max-height:0`/en
+// transición del panel exterior solo recorta VERTICAL, `overflow:hidden`,
+// el ancho horizontal de adentro no se ve afectado), así que el cálculo es
+// válido sin esperar a que el panel termine de asentar su alto.
 function _evCalCentrarPillActivaInstant() {
   var cont = document.getElementById('ev-mes-pills-row');
   var pillActiva = cont && cont.querySelector('.historial-pill.activa');
   if (!cont || !pillActiva) return;
   cont.scrollLeft = pillActiva.offsetLeft - (cont.clientWidth - pillActiva.offsetWidth) / 2;
-}
-// Centrado de la pill activa DIFERIDO hasta que el panel exterior (`#ev-mes-
-// panel`) termine de verdad su transición de `max-height` -- no antes, ni en
-// paralelo (ver "Cambios recientes" -- bug real, confirmado con Playwright
-// midiendo el alto real cuadro a cuadro: el panel SÍ anima su alto al abrir
-// y al cambiar de mes, ~180-280ms; centrar la pill de inmediato, como antes,
-// corría contra un layout todavía inestable -- la pill terminaba cortada
-// contra el borde). Disparado por el `transitionend` REAL de esa propiedad
-// (única que anima ahí), no por un timeout adivinado. Red de seguridad para
-// el caso en que la transición nunca dispara el evento porque el alto
-// pedido es IGUAL al que ya tenía (ej. 2 meses con la misma cantidad de
-// semanas -- sin cambio de valor no hay transición que correr): el plazo de
-// esa red no es un número inventado, se lee directo de la duración real
-// declarada en CSS (`transition-duration` de `.ev-header-burbuja`) más un
-// margen chico, así que sigue automáticamente si ese valor cambia en el CSS.
-var _EV_CAL_PILL_CENTRAR_EPOCH = 0;
-function _evCalCentrarPillActivaCuandoAsiente() {
-  var panel = document.getElementById('ev-mes-panel');
-  if (!panel) { _evCalCentrarPillActiva(); return; }
-  var epoch = ++_EV_CAL_PILL_CENTRAR_EPOCH;
-  var redDeSeguridad;
-  function onEnd(e) {
-    if (e.target !== panel || e.propertyName !== 'max-height') return;
-    panel.removeEventListener('transitionend', onEnd);
-    clearTimeout(redDeSeguridad);
-    if (epoch === _EV_CAL_PILL_CENTRAR_EPOCH) _evCalCentrarPillActiva();
-  }
-  panel.addEventListener('transitionend', onEnd);
-  var duracionMs = (parseFloat(getComputedStyle(panel).transitionDuration) || 0) * 1000;
-  redDeSeguridad = setTimeout(function() {
-    panel.removeEventListener('transitionend', onEnd);
-    if (epoch === _EV_CAL_PILL_CENTRAR_EPOCH) _evCalCentrarPillActiva();
-  }, duracionMs + 50);
 }
 function _evCalTocarPillMes(year, month) {
   _evCalUltimaAccionTs = Date.now();
