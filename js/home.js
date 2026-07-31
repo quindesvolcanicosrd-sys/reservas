@@ -610,12 +610,22 @@ function _renderCardHome(r, hoy) {
     '</div>';
 }
 
+// Mismo mecanismo que _evAbrirPanel()/_evCerrarPanel() (js/eventos.js): el
+// techo de la animación es el scrollHeight real del contenido, no un valor
+// fijo -- ver el comentario de `.res-card-nueva .rn-body` (css/home.css)
+// para el detalle completo del bug que esto corrige (apertura "de golpe").
 function _toggleCardBody(uid) {
   var toggle = document.getElementById(uid + '-toggle');
   var body = document.getElementById(uid + '-body');
   if (!toggle || !body) return;
   toggle.classList.toggle('open');
-  body.classList.toggle('open');
+  if (body.classList.contains('open')) {
+    body.classList.remove('open');
+    body.style.maxHeight = '0px';
+  } else {
+    body.classList.add('open');
+    body.style.maxHeight = body.scrollHeight + 'px';
+  }
 }
 
 var _tallaSheetFecha = '', _tallaSheetActual = '', _tallaSheetSel = null, _tallaSheetModo = 'existente', _tallaSheetSlug = '';

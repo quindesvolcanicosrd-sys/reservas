@@ -115,8 +115,22 @@
 .res-card-nueva .rn-mas-info:hover { color:var(--brand); }
 .res-card-nueva .rn-mas-info .rn-chevron { font-size:16px; transition:transform 0.3s; }
 .res-card-nueva .rn-mas-info.open .rn-chevron { transform:rotate(180deg); }
+/* max-height animado -- el techo real lo fija `_toggleCardBody()` (js/home.js)
+   con `scrollHeight` medido, no un valor fijo acá (ver esa función, mismo
+   mecanismo que `_evAbrirPanel()`/`_evCerrarPanel()` en js/eventos.js).
+   **Bug real corregido:** antes `.rn-body.open` fijaba un techo parejo de
+   `600px` sin importar el contenido real (~100-150px). `--ease-sheet` es
+   `cubic-bezier(0.16,1,0.3,1)`, una curva adelantada (sube muy rápido al
+   principio, se aplana después) -- en la APERTURA (0→600) esa subida rápida
+   ya superaba la altura real del contenido dentro de los primeros ~50ms de
+   los 500ms totales, así que la tarjeta se veía "abrirse de golpe" (el resto
+   de la animación seguía corriendo pero por encima del contenido, invisible
+   tras el `overflow:hidden`). En el CIERRE (600→0) el mismo tramo relevante
+   (altura real→0) caía en la cola lenta de la curva, por eso sí se veía
+   suave. Con el techo real medido por JS, ambas direcciones recorren
+   exactamente el rango visible del contenido -- misma curva, ahora simétrica
+   en las 2 direcciones. */
 .res-card-nueva .rn-body { max-height:0; overflow:hidden; transition:max-height 0.5s var(--ease-sheet); background:transparent; }
-.res-card-nueva .rn-body.open { max-height:600px; }
 .res-card-nueva .rn-body-inner { padding:12px 14px 14px; font-size:0.77rem; color:var(--muted); line-height:1.65; }
 .res-card-nueva .rn-body-inner .fi-pills { margin-top:10px; display:flex; flex-wrap:wrap; gap:6px; }
 .res-card-nueva .rn-body-inner .fi-pill { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--surface-2); color:var(--muted); border:1px solid var(--border-light); }
