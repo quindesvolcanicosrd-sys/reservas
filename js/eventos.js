@@ -2270,31 +2270,47 @@ function _evFiltrarAsistenciaPorGrupo(cardEl, grupo) {
    si no coincide 1:1.
    ═══════════════════════════════════════════════════════ */
 
-var _EV_ANT_STEPS = ['ev-ant-paso-0', 'ev-ant-paso-1', 'ev-ant-paso-2', 'ev-ant-paso-3'];
+var _EV_ANT_STEPS = ['ev-ant-paso-0', 'ev-ant-paso-1'];
 var _evAntCurIdx = 0;
 var _evAntData = {};
 var _evAntReglas = [];
 
+// Reemplaza el loader de pantalla completa que tenía antes (ver "Cambios
+// recientes" -- mismo criterio que `cargarFechas()`/`_skeletonFechasHtml()`,
+// js/reservas.js: skeleton CONTENIDO en el lugar real del contenido en vez
+// de un overlay, navegación/entrada a la pantalla sin esperar la respuesta).
 function eventosAbrirAnticipada() {
   ir('s-eventos-anticipada');
-  document.getElementById('ev-ant-resumen').style.display = 'none';
   document.getElementById('ev-ant-wizard').style.display = 'none';
   _evAntOcultarFooter();
-  mostrarCargando('Cargando...');
+  document.getElementById('ev-ant-btn-nueva').style.display = 'none';
+  document.getElementById('ev-ant-lista').innerHTML = _evAntSkeletonHtml();
+  document.getElementById('ev-ant-resumen').style.display = 'block';
   api({ action: 'getReglasAsistenciaAnticipada', nombre: E.nombre }, function(res) {
-    ocultarCargando();
     _evAntReglas = res || [];
     if (_evAntReglas.length > 0) {
       _evAntRenderLista();
-      document.getElementById('ev-ant-resumen').style.display = 'block';
+      document.getElementById('ev-ant-btn-nueva').style.display = 'block';
     } else {
       _evAntIniciarWizard();
     }
   }, function(e) {
-    ocultarCargando();
     mostrarToast(e && e.message ? e.message : 'No se pudieron cargar tus asistencias anticipadas.', 'error');
     ir('s-eventos');
   });
+}
+
+function _evAntSkeletonHtml() {
+  var carta = '<div class="ev-ant-card">' +
+    '<div class="ev-card-top-row">' +
+      '<div class="fi-skel-block ev-ant-skel-icon"></div>' +
+      '<div class="ev-card-body">' +
+        '<div class="fi-skel-block ev-ant-skel-title"></div>' +
+        '<div class="fi-skel-block ev-ant-skel-sub"></div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+  return carta.repeat(3);
 }
 
 // Recarga la lista sin decidir el estado resumen/wizard (a diferencia de
@@ -2306,6 +2322,7 @@ function _evAntRecargarLista(cb) {
   api({ action: 'getReglasAsistenciaAnticipada', nombre: E.nombre }, function(res) {
     _evAntReglas = res || [];
     _evAntRenderLista();
+    document.getElementById('ev-ant-btn-nueva').style.display = 'block';
     if (typeof cb === 'function') cb();
   }, function(e) {
     mostrarToast(e && e.message ? e.message : 'No se pudo actualizar la lista.', 'error');
@@ -2378,7 +2395,13 @@ function _evAntBack() {
 
 // ─── Wizard (mismo motor que _SALUD_STEPS/_saludCurIdx/_saludMostrarPaso(),
 // js/perfil.js -- replicado acá, no reusado directo, porque vive sobre una
-// .pantalla propia en vez de un aj-sub-* montado sobre s-datos) ───────────
+// .pantalla propia en vez de un aj-sub-* montado sobre s-datos). 2 pasos
+// (ver "Cambios recientes" -- reestructurado desde 4, y luego reordenado):
+// paso 0 = Tipos de evento + Estado a aplicar; paso 1 = Frecuencia, con
+// reveal INLINE (no un 3er paso) de meses/fechas según la elección,
+// cerrando con "Aplicar". El footer solo tiene "Continuar"/"Aplicar" -- sin
+// botón "Atrás" propio, redundante con la flecha del header (#ev-ant-header,
+// _evAntBack()), que ya cubre exactamente lo mismo. ─────────────────────
 
 function _evAntIniciarWizard() {
   _evAntData = { tipoRango: null, meses: [], fechaDesde: null, fechaHasta: null, tiposEvento: [], estado: null };
@@ -2392,6 +2415,9 @@ function _evAntIniciarWizard() {
     var el = document.getElementById(id); if (el) { el.textContent = 'Selecciona una fecha'; el.classList.add('fnac-placeholder'); }
   });
   var dInd = document.getElementById('ev-ant-desdeInd-display'); if (dInd) dInd.textContent = 'Hoy';
+  ['ev-ant-paso1-meses', 'ev-ant-paso1-periodo', 'ev-ant-paso1-indefinido'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
   _evAntMostrarPaso(0);
 }
 
@@ -2418,7 +2444,7 @@ function _evAntMostrarPaso(idx) {
   });
   _evAntCurIdx = idx;
   _evAntRenderProg();
-  if (idx === 1) _evAntMostrarSubPaso1();
+  if (idx === 1) _evAntMostrarSubFrecuencia();
   window.scrollTo({ top: 0, behavior: 'smooth' });
   _evAntActualizarFooter(idx);
 }
@@ -2440,9 +2466,7 @@ function _evAntPasoAnterior() {
 
 var _EV_ANT_CONTINUAR_FN = {
   'ev-ant-paso-0': function() { _evAntContinuar0(); },
-  'ev-ant-paso-1': function() { _evAntContinuar1(); },
-  'ev-ant-paso-2': function() { _evAntContinuar2(); },
-  'ev-ant-paso-3': function() { _evAntAplicar(); }
+  'ev-ant-paso-1': function() { _evAntAplicar(); }
 };
 function _evAntActualizarFooter(idx) {
   var paso = _EV_ANT_STEPS[idx];
@@ -2451,13 +2475,11 @@ function _evAntActualizarFooter(idx) {
   var btnContinuar = document.getElementById('ev-ant-footer-continuar');
   if (btnContinuar) {
     btnContinuar.onclick = _EV_ANT_CONTINUAR_FN[paso];
-    var esFinal = (paso === 'ev-ant-paso-3');
+    var esFinal = (paso === 'ev-ant-paso-1');
     btnContinuar.textContent = esFinal ? 'Aplicar' : 'Continuar';
     btnContinuar.classList.toggle('btn-primary', esFinal);
     btnContinuar.classList.toggle('btn-outline', !esFinal);
   }
-  var btnAtras = document.getElementById('ev-ant-footer-atras');
-  if (btnAtras) btnAtras.onclick = _evAntPasoAnterior;
 }
 function _evAntOcultarFooter() {
   var footer = document.getElementById('cta-footer-eventos-anticipada');
@@ -2470,30 +2492,57 @@ function _evAntSelUnica(el) {
   el.classList.add('activa');
 }
 
-// Paso 0 -- tipo de rango
+// "Todo tipo de evento" (data-val="") es excluyente con las 3 específicas:
+// tocarla apaga las otras 3 (y viceversa) -- a diferencia de Entrenamiento/
+// Torneo/Asamblea entre sí, que siguen siendo multi-select libre (mismo
+// mecanismo que ajTogglePill(), reusado tal cual para ese subgrupo). Si
+// "Todo" queda activa, el payload manda tiposEvento vacío -- mismo criterio
+// que ya regía implícitamente cuando no se seleccionaba nada (ver
+// _evAntAplicar()): "Todo" es solo una afordancia explícita del mismo vacío.
+function _evAntToggleTipoEvento(el) {
+  var cont = el.parentElement;
+  var esTodo = el.dataset.val === '';
+  if (esTodo) {
+    var activar = !el.classList.contains('activa');
+    cont.querySelectorAll('.aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+    if (activar) el.classList.add('activa');
+  } else {
+    var todoPill = cont.querySelector('.aj-pill[data-val=""]');
+    if (todoPill) todoPill.classList.remove('activa');
+    el.classList.toggle('activa');
+  }
+}
+
+// Paso 0 -- tipos de evento (opcional) + estado a aplicar (requerido)
 function _evAntContinuar0() {
-  var sel = document.querySelector('#ev-ant-tipo-pills .aj-pill.activa');
-  if (!sel) { err('ev-ant-err-0', 'Selecciona una opción.'); return; }
-  _evAntData.tipoRango = sel.dataset.val;
+  var sel = document.querySelector('#ev-ant-estado-pills .aj-pill.activa');
+  if (!sel) { err('ev-ant-err-0', 'Selecciona un estado.'); return; }
+  _evAntData.estado = sel.dataset.val;
+  var vals = [];
+  document.querySelectorAll('#ev-ant-tipos-evento-pills .aj-pill.activa').forEach(function(p) { if (p.dataset.val) vals.push(p.dataset.val); });
+  _evAntData.tiposEvento = vals;
   _evAntMostrarPaso(1);
 }
 
-// Paso 1 -- meses / período / indefinido, según _evAntData.tipoRango
-function _evAntMostrarSubPaso1() {
-  var titulo = document.getElementById('ev-ant-paso1-titulo');
+// Paso 1 -- frecuencia (pill), con reveal inline de meses/período/indefinido
+// según la elección -- ya no es un paso propio, se actualiza al toque.
+function _evAntSelFrecuencia(el) {
+  _evAntSelUnica(el);
+  _evAntData.tipoRango = el.dataset.val;
+  _evAntMostrarSubFrecuencia();
+}
+
+function _evAntMostrarSubFrecuencia() {
   var bMeses = document.getElementById('ev-ant-paso1-meses');
   var bPeriodo = document.getElementById('ev-ant-paso1-periodo');
   var bIndef = document.getElementById('ev-ant-paso1-indefinido');
   bMeses.style.display = 'none'; bPeriodo.style.display = 'none'; bIndef.style.display = 'none';
   if (_evAntData.tipoRango === 'meses') {
-    if (titulo) titulo.textContent = '¿En qué meses aplica?';
     bMeses.style.display = 'block';
     _evAntRenderMesesGrid();
   } else if (_evAntData.tipoRango === 'periodo') {
-    if (titulo) titulo.textContent = '¿En qué período aplica?';
     bPeriodo.style.display = 'block';
-  } else {
-    if (titulo) titulo.textContent = '¿Desde cuándo aplica?';
+  } else if (_evAntData.tipoRango === 'indefinido') {
     bIndef.style.display = 'block';
     var isoEl = document.getElementById('ev-ant-desdeInd-iso');
     if (isoEl && !isoEl.value) isoEl.value = _evAntHoyISO();
@@ -2534,7 +2583,12 @@ function _evAntAbrirFecha(cual) {
   abrirPickerMisDatos({ hiddenId: 'ev-ant-' + cual + '-iso', displayId: 'ev-ant-' + cual + '-display' });
 }
 
-function _evAntContinuar1() {
+// Paso 1 (final) -- valida frecuencia + su reveal, arma el payload con lo ya
+// guardado del paso 0 (tiposEvento/estado) y envía.
+function _evAntAplicar() {
+  var selFrecuencia = document.querySelector('#ev-ant-tipo-pills .aj-pill.activa');
+  if (!selFrecuencia) { err('ev-ant-err-1', 'Selecciona una opción.'); return; }
+  _evAntData.tipoRango = selFrecuencia.dataset.val;
   if (_evAntData.tipoRango === 'meses') {
     if (!_evAntData.meses.length) { err('ev-ant-err-1', 'Selecciona al menos un mes.'); return; }
   } else if (_evAntData.tipoRango === 'periodo') {
@@ -2547,22 +2601,6 @@ function _evAntContinuar1() {
   } else {
     _evAntData.fechaDesde = document.getElementById('ev-ant-desdeInd-iso').value || _evAntHoyISO();
   }
-  _evAntMostrarPaso(2);
-}
-
-// Paso 2 -- tipos de evento (multi-select, opcional)
-function _evAntContinuar2() {
-  var vals = [];
-  document.querySelectorAll('#ev-ant-tipos-evento-pills .aj-pill.activa').forEach(function(p) { vals.push(p.dataset.val); });
-  _evAntData.tiposEvento = vals;
-  _evAntMostrarPaso(3);
-}
-
-// Paso 3 -- estado a aplicar + envío final
-function _evAntAplicar() {
-  var sel = document.querySelector('#ev-ant-estado-pills .aj-pill.activa');
-  if (!sel) { err('ev-ant-err-3', 'Selecciona una opción.'); return; }
-  _evAntData.estado = sel.dataset.val;
 
   var payload = {
     action: 'aplicarAsistenciaAnticipada',

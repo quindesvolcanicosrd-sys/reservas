@@ -26,13 +26,13 @@
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=580dd587"></script>
 <link rel="stylesheet" href="css/global.css?v=8063ece4">
-<link rel="stylesheet" href="css/estilos.css?v=45ba71d5">
+<link rel="stylesheet" href="css/estilos.css?v=679e2884">
 <link rel="stylesheet" href="css/ui.css?v=5d0e5923">
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=56739f3b">
 <link rel="stylesheet" href="css/nav.css?v=9b27ee2c">
-<link rel="stylesheet" href="css/eventos.css?v=5c285ac6">
+<link rel="stylesheet" href="css/eventos.css?v=47154bec">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -436,35 +436,58 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
     <div class="card" style="text-align:left;">
 
-      <!-- Estado "resumen": al menos 1 asistencia anticipada ya cargada -->
+      <!-- Estado "resumen": lista (o skeleton mientras carga
+           getReglasAsistenciaAnticipada, ver eventosAbrirAnticipada()/
+           _evAntSkeletonHtml(), js/eventos.js -- reemplaza el loader de
+           pantalla completa que tenía antes, mismo criterio que
+           _skeletonFechasHtml()/cargarFechas() de js/reservas.js: skeleton
+           CONTENIDO en el lugar real del contenido, sin overlay). -->
       <div id="ev-ant-resumen" style="display:none;">
         <div id="ev-ant-lista"></div>
-        <button type="button" class="btn btn-outline" style="margin-top:4px;" onclick="_evAntIniciarWizard()">+ Nueva asistencia anticipada</button>
+        <button type="button" id="ev-ant-btn-nueva" class="btn btn-outline" style="margin-top:4px;display:none;" onclick="_evAntIniciarWizard()">+ Nueva asistencia anticipada</button>
       </div>
 
       <!-- Estado "wizard": sin ninguna asistencia anticipada todavía, o
-           llegando acá desde "+ Nueva asistencia anticipada" del resumen. -->
+           llegando acá desde "+ Nueva asistencia anticipada" del resumen.
+           2 pasos (ver "Cambios recientes" -- reestructurado desde 4):
+           paso 0 = Tipos de evento + Estado a aplicar; paso 1 = Frecuencia,
+           con reveal INLINE (no un 3er paso) de meses/fechas según la
+           elección, cerrando con "Aplicar". -->
       <div id="ev-ant-wizard" style="display:none;">
         <div class="salud-prog" id="ev-ant-prog"></div>
 
         <div class="salud-paso" id="ev-ant-paso-0">
-          <h2>¿Con qué frecuencia aplica esta asistencia anticipada?</h2>
-          <div class="aj-pills-row" id="ev-ant-tipo-pills">
-            <span class="aj-pill" data-val="meses" onclick="_evAntSelUnica(this)">Por meses</span>
-            <span class="aj-pill" data-val="periodo" onclick="_evAntSelUnica(this)">Por período</span>
-            <span class="aj-pill" data-val="indefinido" onclick="_evAntSelUnica(this)">Indefinido</span>
+          <h2>Tipos de evento</h2>
+          <p>Si no seleccionás ninguno (o elegís "Todo tipo de evento"), se va a aplicar a todos los tipos de evento.</p>
+          <div class="aj-pills-row" id="ev-ant-tipos-evento-pills">
+            <span class="aj-pill" data-val="Entrenamiento" onclick="_evAntToggleTipoEvento(this)">Entrenamiento</span>
+            <span class="aj-pill" data-val="Torneo" onclick="_evAntToggleTipoEvento(this)">Torneo</span>
+            <span class="aj-pill" data-val="Asamblea" onclick="_evAntToggleTipoEvento(this)">Asamblea</span>
+            <span class="aj-pill" data-val="" onclick="_evAntToggleTipoEvento(this)">Todo tipo de evento</span>
+          </div>
+
+          <h2 style="margin-top:24px;">Estado a aplicar</h2>
+          <div class="aj-pills-row" id="ev-ant-estado-pills">
+            <span class="aj-pill" data-val="Asistiré" onclick="_evAntSelUnica(this)">Asistiré</span>
+            <span class="aj-pill" data-val="No asistiré" onclick="_evAntSelUnica(this)">No asistiré</span>
+            <span class="aj-pill" data-val="No jugador" onclick="_evAntSelUnica(this)">No jugador</span>
           </div>
           <div class="error-msg" id="ev-ant-err-0"></div>
         </div>
 
         <div class="salud-paso" id="ev-ant-paso-1">
-          <h2 id="ev-ant-paso1-titulo"></h2>
+          <h2>¿Con qué frecuencia aplica esta asistencia anticipada?</h2>
+          <div class="aj-pills-row" id="ev-ant-tipo-pills">
+            <span class="aj-pill" data-val="meses" onclick="_evAntSelFrecuencia(this)">Por meses</span>
+            <span class="aj-pill" data-val="periodo" onclick="_evAntSelFrecuencia(this)">Por período</span>
+            <span class="aj-pill" data-val="indefinido" onclick="_evAntSelFrecuencia(this)">Indefinido</span>
+          </div>
 
-          <div id="ev-ant-paso1-meses" style="display:none;">
+          <div id="ev-ant-paso1-meses" style="display:none;margin-top:18px;">
             <div class="ev-ant-mes-grid" id="ev-ant-meses-grid"></div>
           </div>
 
-          <div id="ev-ant-paso1-periodo" style="display:none;">
+          <div id="ev-ant-paso1-periodo" style="display:none;margin-top:18px;">
             <div class="datos-campo">
               <label>Desde</label>
               <button type="button" class="fnac-trigger-btn" id="ev-ant-desde-btn" onclick="_evAntAbrirFecha('desde')">
@@ -483,7 +506,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             </div>
           </div>
 
-          <div id="ev-ant-paso1-indefinido" style="display:none;">
+          <div id="ev-ant-paso1-indefinido" style="display:none;margin-top:18px;">
             <div class="datos-campo">
               <label>Desde</label>
               <button type="button" class="fnac-trigger-btn" id="ev-ant-desdeInd-btn" onclick="_evAntAbrirFecha('desdeInd')">
@@ -496,26 +519,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           </div>
 
           <div class="error-msg" id="ev-ant-err-1"></div>
-        </div>
-
-        <div class="salud-paso" id="ev-ant-paso-2">
-          <h2>Tipos de evento</h2>
-          <p>Si no seleccionás ninguno, se va a aplicar a todos los tipos de evento.</p>
-          <div class="aj-pills-row" id="ev-ant-tipos-evento-pills">
-            <span class="aj-pill" data-val="Entrenamiento" onclick="ajTogglePill(this)">Entrenamiento</span>
-            <span class="aj-pill" data-val="Torneo" onclick="ajTogglePill(this)">Torneo</span>
-            <span class="aj-pill" data-val="Asamblea" onclick="ajTogglePill(this)">Asamblea</span>
-          </div>
-        </div>
-
-        <div class="salud-paso" id="ev-ant-paso-3">
-          <h2>Estado a aplicar</h2>
-          <div class="aj-pills-row" id="ev-ant-estado-pills">
-            <span class="aj-pill" data-val="Asistiré" onclick="_evAntSelUnica(this)">Asistiré</span>
-            <span class="aj-pill" data-val="No asistiré" onclick="_evAntSelUnica(this)">No asistiré</span>
-            <span class="aj-pill" data-val="No jugador" onclick="_evAntSelUnica(this)">No jugador</span>
-          </div>
-          <div class="error-msg" id="ev-ant-err-3"></div>
         </div>
       </div>
 
@@ -934,7 +937,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=75c5b270"></script>
-<script src="js/eventos.js?v=77979220"></script>
+<script src="js/eventos.js?v=3087f01f"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=343fe44f"></script>
 <script src="js/perfil.js?v=ca452084"></script>
@@ -2583,17 +2586,21 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <!-- Footer fijo del wizard de Asistencia anticipada (#ev-ant-wizard,
      s-eventos-anticipada) -- mismo motivo que #cta-footer-salud arriba
      (hijo directo de <body>, ver comentario general más arriba de este
-     bloque): "Atrás" retrocede un paso (o cierra el wizard en el paso 0,
-     ver _evAntPasoAnterior()/js/eventos.js) + "Continuar"/"Aplicar"
-     (dinámico según el paso, ver _evAntActualizarFooter()). No tiene
-     id="cta-footer-s-eventos-anticipada" a propósito -- si lo tuviera, ir()
-     (js/ui.js) lo mostraría también durante el estado "resumen" de la
-     pantalla (que no lo necesita, tiene su propio botón "+ Nueva" en el
-     contenido). Se muestra/oculta a mano desde
+     bloque): un solo botón "Continuar"/"Aplicar" (dinámico según el paso,
+     ver _evAntActualizarFooter()) -- sin botón "Atrás" propio (ver "Cambios
+     recientes": redundante con la flecha atrás del header, #ev-ant-header,
+     que ya cubre lo mismo vía _evAntBack()/_evAntPasoAnterior()). Sin
+     z-index propio a diferencia de #cta-footer-salud (ese 960 era para
+     quedar por encima de `.aj-sub`, z-index:950 -- acá no aplica, esta
+     pantalla es un `.pantalla` normal, así que usa el z-index:100 default
+     de `.cta-footer-fixed`, igual que #cta-footer-s6/#cta-footer-s-pago).
+     No tiene id="cta-footer-s-eventos-anticipada" a propósito -- si lo
+     tuviera, ir() (js/ui.js) lo mostraría también durante el estado
+     "resumen" de la pantalla (que no lo necesita, tiene su propio botón
+     "+ Nueva" en el contenido). Se muestra/oculta a mano desde
      _evAntActualizarFooter()/_evAntOcultarFooter(), mismo criterio que
      _saludActualizarFooter()/_saludOcultarFooter(). -->
-<div class="cta-footer-fixed" id="cta-footer-eventos-anticipada" style="z-index:960;">
-  <button class="btn-text-simple" id="ev-ant-footer-atras" style="margin-bottom:10px;">Atrás</button>
+<div class="cta-footer-fixed" id="cta-footer-eventos-anticipada">
   <button class="btn btn-outline" id="ev-ant-footer-continuar">Continuar</button>
 </div>
 

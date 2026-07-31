@@ -661,3 +661,13 @@
 }
 .ev-ant-mes-cell.activo { background: var(--brand); color: var(--white); border-color: var(--brand); }
 .ev-ant-mes-cell.deshabilitado { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+/* Skeleton del estado "resumen" mientras carga getReglasAsistenciaAnticipada
+   (ver "Cambios recientes" -- reemplaza el loader de pantalla completa que
+   tenía antes). Reusa `.fi-skel-block` (el shimmer genérico, css/reservas.css
+   -- mismo criterio que `_skeletonFechasHtml()`/js/reservas.js, no se
+   inventa un shimmer propio) con el tamaño/forma de `.ev-ant-card` real:
+   ícono 42px (mismo que `.ev-card-icon`) + 2 barras (título/sub). */
+.ev-ant-skel-icon { width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; }
+.ev-ant-skel-title { width: 65%; height: 14px; margin-bottom: 8px; }
+.ev-ant-skel-sub { width: 45%; height: 11px; }

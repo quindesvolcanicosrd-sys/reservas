@@ -211,3 +211,13 @@
    "Cambios recientes" -- s-pago ahora convive con la nav inferior,
    `_BOTTOM_NAV_EXTRA`/js/ui.js). */
 #cta-footer-s-pago { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
+/* #cta-footer-eventos-anticipada -- mismo motivo que #cta-footer-salud/s6/
+   s-pago de arriba. Bug real (ver "Cambios recientes" -- "nav inferior
+   invisible en Asistencia anticipada"): sin este override el footer
+   heredaba `bottom:0` de `.cta-footer-fixed` y, con `z-index:960` (copiado
+   sin pensar de #cta-footer-salud, que lo necesitaba para superar
+   `.aj-sub` -- acá no aplica, este footer vive sobre un `.pantalla` normal,
+   ver el `z-index` ya sacado del HTML), tapaba `.app-bottom-nav`
+   (z-index:900) por completo mientras el wizard estaba abierto -- la nav
+   seguía técnicamente `display:flex` en el DOM, solo visualmente cubierta. */
+#cta-footer-eventos-anticipada { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
