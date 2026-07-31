@@ -236,7 +236,7 @@
   font-weight: 700;
   cursor: pointer;
   font-family: inherit;
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--brand) 40%, transparent);
+  box-shadow: none;
   transition: all 0.2s ease;
   white-space: nowrap;
   -webkit-tap-highlight-color: transparent;

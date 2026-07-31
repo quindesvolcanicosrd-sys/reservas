@@ -474,11 +474,15 @@ function _formatarFechaRelativa(fechaPura) {
   // propio, así que sin esto una fecha de enero del año que viene se vería
   // idéntica a una de este enero).
   var diasHastaFinDeSemana = (7 - hoy.getDay()) % 7;
-  if (diff > diasHastaFinDeSemana) {
-    return fd.getFullYear() !== hoy.getFullYear() ? fechaPura + ' de ' + fd.getFullYear() : fechaPura;
-  }
   var dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-  return 'Este ' + dias[fd.getDay()];
+  if (diff <= diasHastaFinDeSemana) return 'Este ' + dias[fd.getDay()];
+  // "Próximo X" (pedido explícito para la card de reserva de home, ver
+  // "Cambios recientes"): mismo bloque lunes-domingo que ya define
+  // `_evEsProximaSemana()` (js/eventos.js) como "semana siguiente" -- de
+  // `diasHastaFinDeSemana+1` a `diasHastaFinDeSemana+7`. Más allá de esa
+  // ventana (2+ semanas), se vuelve a la fecha completa de siempre.
+  if (diff <= diasHastaFinDeSemana + 7) return 'Próximo ' + dias[fd.getDay()];
+  return fd.getFullYear() !== hoy.getFullYear() ? fechaPura + ' de ' + fd.getFullYear() : fechaPura;
 }
 
 function reagendarDesdeCard(fecha, btn) {
@@ -493,18 +497,26 @@ function reagendarDesdeCard(fecha, btn) {
   }, function(e) { btn.disabled = false; mostrarToast(e.message || 'Error al cancelar.', 'error'); });
 }
 
+// "14:00" -> "14hs", "14:30" -> "14:30hs" -- en punto se lee mejor sin los
+// minutos dentro de la frase "a las 14hs" que arma _renderCardHome(); con
+// minutos reales se conservan (no hay forma linda de redondear sin perder
+// información).
+function _formatearHoraTexto(hora) {
+  var m = hora.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return hora + 'hs';
+  return (m[2] === '00' ? m[1] : m[1] + ':' + m[2]) + 'hs';
+}
+
 function _renderCardHome(r, hoy) {
   var partes = (r.fecha || '').split(' - ');
-  var fechaTexto = (partes[0] || r.fecha).trim();
+  // Fecha+hora fusionadas en un solo renglón de título (ver "Cambios
+  // recientes"): reusa _formatarFechaRelativa() (arriba en este archivo, ya
+  // extendida acá mismo con el bracket "Próximo X") en vez de reimplementar
+  // el cálculo de Hoy/Mañana que antes vivía inline acá.
+  var fechaTexto = _formatarFechaRelativa((partes[0] || r.fecha).trim());
   var hora = partes[1] ? partes[1].trim() : '';
   var lugar = partes[2] ? partes[2].trim() : '';
-
-  var fechaParsed = _parseFechaStr(r.fecha || '');
-  if (fechaParsed) {
-    var manana = new Date(hoy); manana.setDate(manana.getDate() + 1);
-    if (fechaParsed.getTime() === hoy.getTime()) fechaTexto = 'Hoy';
-    else if (fechaParsed.getTime() === manana.getTime()) fechaTexto = 'Mañana';
-  }
+  var fechaHoraTexto = hora ? fechaTexto + ' a las ' + _formatearHoraTexto(hora) : fechaTexto;
 
   var estadoClase = r.estado === 'Confirmada' ? 'confirmada-clase' : r.estado === 'Reagendar' ? 'reagendar-clase' : 'pendiente-clase';
   var estadoColor = r.estado === 'Confirmada' ? 'var(--success-dark)' : r.estado === 'Cancelada' ? 'var(--danger)' : r.estado === 'Reagendar' ? 'var(--dk-purple-mid)' : 'var(--brand)';
@@ -550,17 +562,23 @@ function _renderCardHome(r, hoy) {
 
   var esMensual = _MESES_MAP[(r.fecha || '').toLowerCase().trim()] !== undefined;
 
-  var pillsHtml = '<div class="fi-pills">';
-  if (hora) pillsHtml += '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + hora + '</span>';
+  // Pill de ubicación al lado del título, no en su propia fila (ver "Cambios
+  // recientes"). Hora ya fusionada en fechaHoraTexto; "Llevas tu equipo" (el
+  // único caso que NO trae un pill accionable de talla/protecciones) pasa al
+  // acordeón "Más información" -- ver bodyHtml más abajo.
+  var lugarPillHtml = '';
   if (lugar) {
-  if (r.mapsUrl) {
-    pillsHtml += '<a class="fi-pill fi-pill-lugar" href="' + r.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-symbols-outlined">location_on</span>' + lugar + '</a>';
-  } else {
-    pillsHtml += '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
+    if (r.mapsUrl) {
+      lugarPillHtml = '<a class="fi-pill fi-pill-lugar" href="' + r.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-symbols-outlined">location_on</span>' + lugar + '</a>';
+    } else {
+      lugarPillHtml = '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
+    }
   }
-}
-  if (!esMensual) pillsHtml += equipPillHtml;
-  pillsHtml += '</div>';
+
+  var pillsHtml = '';
+  if (!esMensual && (necesitaPatines || necesitaProtec)) {
+    pillsHtml = '<div class="fi-pills">' + equipPillHtml + '</div>';
+  }
 
   var uid = 'rcard-' + (r.fila || Math.random().toString(36).slice(2));
   var filaEsc = r.fila || '';
@@ -568,16 +586,16 @@ function _renderCardHome(r, hoy) {
   var bodyHtml = '<div class="rn-body" id="' + uid + '-body"><div class="rn-body-inner">';
   if (r.descripcion) bodyHtml += '<p style="margin-bottom:25px;">' + r.descripcion + '</p>';
   bodyHtml += '<div class="fi-pills">';
-
+  if (!esMensual && !necesitaPatines && !necesitaProtec) bodyHtml += equipPillHtml;
   if (r.horaFin) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">schedule</span>Fin ' + r.horaFin + '</span>';
   if (r.duracion) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">timer</span>' + r.duracion + '</span>';
   bodyHtml += '</div></div></div>';
 
-  var rnTopExtra = '';
+  var rnTopRight = lugarPillHtml;
   if (esMensual) {
-    rnTopExtra = '<div class="rn-top-extra fi-pills">' + equipPillHtml;
-    if (r.validezHasta) rnTopExtra += '<span class="fi-pill fi-pill-validez"><span class="material-symbols-outlined">event_available</span>Válido hasta ' + r.validezHasta + '</span>';
-    rnTopExtra += '</div>';
+    rnTopRight = '<div class="rn-top-extra fi-pills">' + equipPillHtml;
+    if (r.validezHasta) rnTopRight += '<span class="fi-pill fi-pill-validez"><span class="material-symbols-outlined">event_available</span>Válido hasta ' + r.validezHasta + '</span>';
+    rnTopRight += '</div>';
   }
 
   // "Re-agendar o cancelar reserva" comparte renglón con "Más información"
@@ -603,7 +621,7 @@ function _renderCardHome(r, hoy) {
   return '<div class="res-card-home res-card-nueva ' + estadoClase + '">' +
     statusBar +
     '<div class="rn-header">' +
-    '<div class="rn-top"><div class="rn-date">' + fechaTexto + '</div>' + rnTopExtra + '</div>' +
+    '<div class="rn-top"><div class="rn-date">' + fechaHoraTexto + '</div>' + rnTopRight + '</div>' +
     pillsHtml +
     '</div>' +
     masInfoHtml +

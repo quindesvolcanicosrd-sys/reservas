@@ -95,9 +95,19 @@
 .res-card-nueva .rn-top { width:100%; }
 .res-card-nueva .rn-header .fi-pills { margin:0; }
 .res-card-nueva .rn-equip-estado { width:100%; margin:0; }
-.res-card-nueva .rn-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:5px; }
-.res-card-nueva .rn-date { font-size:0.9rem; font-weight:800; }
+.res-card-nueva .rn-top { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:6px 8px; margin-bottom:5px; }
+.res-card-nueva .rn-date { font-size:0.9rem; font-weight:800; flex-shrink:0; white-space:nowrap; }
 .res-card-nueva .rn-header .rn-top-extra { margin-top:4px; }
+/* Pill de ubicación al lado del título (ver "Cambios recientes" -- antes en
+   su propia fila de pills debajo). Probado con `text-overflow:ellipsis` +
+   `min-width:0` primero (pill shrinkeable) -- descartado: un `.fi-pill`
+   (ícono + texto en un solo `inline-flex`) no trunca limpio con elipsis, el
+   texto quedaba directamente cortado sin "…" o el pill colapsaba al ícono
+   solo, ilegible (verificado con Playwright, capturas a 320-428px). En vez
+   de eso, ninguno de los 2 se encoge (`flex-shrink:0` en ambos): si no entran
+   juntos en una línea, `flex-wrap:wrap` manda el pill completo a una 2da
+   línea (nunca lo corta a la mitad) -- el título nunca se trunca. */
+.res-card-nueva .rn-top .fi-pill-lugar { flex-shrink:0; }
 .badge-pendiente { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--warning-bg); color:var(--amber-dark); border:1px solid var(--amber); white-space:nowrap; }
 .badge-confirmada { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--green-light); color:var(--green-dark); border:1px solid var(--success); white-space:nowrap; }
 .badge-reagendar { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--purple-lightest); color:var(--dk-purple-mid); border:1px solid var(--purple-border-soft); white-space:nowrap; }
