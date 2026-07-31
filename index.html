@@ -914,16 +914,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
     </div>
 
-    <!-- Zona cuenta -- oculta para cuentas admin "puras" sin E.datos (ver
-         irEditarDatos(), js/perfil.js): "Cerrar sesión"/"Eliminar cuenta" acá
-         son de usuarix, sin sentido sin una cuenta de usuarix real; esas
-         cuentas ya tienen su propio "Cerrar sesión" en el dashboard
-         (adminCerrarSesionLocal(), Tanda 1). -->
-    <div id="aj-zona-cuenta" style="margin-top:20px;display:flex;flex-direction:column;gap:10px;">
-      <button onclick="ajAbrirSheetLogout()" class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:8px;"><span class="material-symbols-outlined" style="font-size:1.1rem;">logout</span>Cerrar sesión</button>
-      <button onclick="eliminarCuenta()" class="aj-btn-delete"><span class="material-symbols-outlined" style="font-size:1.1rem;">delete</span>Eliminar cuenta</button>
-    </div>
-
     <!-- s-datos no tiene ningún .cta-footer-fixed propio -- a diferencia de
          s-home (que ya reservaba espacio para el suyo), acá el único fixed
          nuevo que hay que despejar es .app-bottom-nav en sí. -->
@@ -1706,6 +1696,18 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
         <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
       </div>
+    </div>
+
+    <!-- Zona cuenta (ver "Cambios recientes" -- movida acá desde el fondo de
+         la pantalla principal de Ajustes, debajo de la card de pronombres).
+         Oculta para cuentas admin "puras" sin E.datos (ver irEditarDatos(),
+         js/perfil.js): "Cerrar sesión"/"Eliminar cuenta" acá son de usuarix,
+         sin sentido sin una cuenta de usuarix real; esas cuentas ya tienen su
+         propio "Cerrar sesión" en el dashboard (adminCerrarSesionLocal(),
+         Tanda 1). -->
+    <div id="aj-zona-cuenta" style="margin-top:20px;display:flex;flex-direction:column;gap:10px;">
+      <button onclick="ajAbrirSheetLogout()" class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:8px;"><span class="material-symbols-outlined" style="font-size:1.1rem;">logout</span>Cerrar sesión</button>
+      <button onclick="eliminarCuenta()" class="aj-btn-delete"><span class="material-symbols-outlined" style="font-size:1.1rem;">delete</span>Eliminar cuenta</button>
     </div>
   </div>
 </div>
