@@ -95,7 +95,13 @@
 .res-card-nueva .rn-top { width:100%; }
 .res-card-nueva .rn-header .fi-pills { margin:0; }
 .res-card-nueva .rn-equip-estado { width:100%; margin:0; }
-.res-card-nueva .rn-top { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:6px 8px; margin-bottom:5px; }
+/* justify-content:flex-start (ver "Cambios recientes" -- antes space-between,
+   pill de ubicación pegado al extremo derecho de la fila en vez de agrupado
+   junto al título). Con flex-start el pill queda inmediatamente después del
+   texto, separado solo por el `gap` -- si no entran los 2 en una línea,
+   `flex-wrap:wrap` lo manda entero a una 2da línea (ver nota de
+   `.fi-pill-lugar` más abajo), nunca lo empuja artificialmente a la derecha. */
+.res-card-nueva .rn-top { display:flex; align-items:flex-start; justify-content:flex-start; flex-wrap:wrap; gap:6px 8px; margin-bottom:5px; }
 .res-card-nueva .rn-date { font-size:0.9rem; font-weight:800; flex-shrink:0; white-space:nowrap; }
 .res-card-nueva .rn-header .rn-top-extra { margin-top:4px; }
 /* Pill de ubicación al lado del título (ver "Cambios recientes" -- antes en
@@ -108,6 +114,25 @@
    juntos en una línea, `flex-wrap:wrap` manda el pill completo a una 2da
    línea (nunca lo corta a la mitad) -- el título nunca se trunca. */
 .res-card-nueva .rn-top .fi-pill-lugar { flex-shrink:0; }
+/* Color azul (ver "Cambios recientes" -- antes heredaba `.fi-pill-lugar`
+   base de css/reservas.css, tinte de marca/naranja-rojizo). Override
+   SCOPEADO a este pill específico -- `.fi-pill-lugar` es una clase
+   compartida (reusada tal cual por reservas.js/eventos.js, ver comentario de
+   esa clase en css/eventos.css), así que no se tocó la regla base para no
+   recolorear el pill de lugar en esas otras pantallas, fuera de lo pedido.
+   Reusa `--info`/`--info-bg`/`--info-btn-hover` (css/colors.css) -- ya es el
+   azul real de la app (`.fi-pill-fin` en el acordeón de esta misma card lo
+   usa igual), con tinte de fondo y borde ya theme-aware en dark mode; nunca
+   se creó una variable nueva porque esta ya cubría exactamente lo pedido. */
+.res-card-nueva .rn-top .fi-pill-lugar { background:var(--info-bg); color:var(--info); border-color:var(--info-btn-hover); }
+@media (prefers-color-scheme: dark) {
+  /* Mismo criterio que `.fi-pill-fin` (css/reservas.css, dark mode): el
+     texto se aclara a `--dk-info-text` para más contraste sobre el tinte de
+     fondo oscuro -- `--info` solo no alcanza ahí (nunca tuvo su propio
+     override oscuro, a diferencia de `--info-bg`/`--info-btn-hover`, que sí
+     lo tienen y no necesitan tocarse acá). */
+  .res-card-nueva .rn-top .fi-pill-lugar { color:var(--dk-info-text); }
+}
 .badge-pendiente { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--warning-bg); color:var(--amber-dark); border:1px solid var(--amber); white-space:nowrap; }
 .badge-confirmada { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--green-light); color:var(--green-dark); border:1px solid var(--success); white-space:nowrap; }
 .badge-reagendar { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--purple-lightest); color:var(--dk-purple-mid); border:1px solid var(--purple-border-soft); white-space:nowrap; }
