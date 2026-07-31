@@ -500,10 +500,14 @@ function reagendarDesdeCard(fecha, btn) {
 // "14:00" -> "14hs", "14:30" -> "14:30hs" -- en punto se lee mejor sin los
 // minutos dentro de la frase "a las 14hs" que arma _renderCardHome(); con
 // minutos reales se conservan (no hay forma linda de redondear sin perder
-// información).
+// información). El `hora` de `r.fecha` a veces ya viene con el sufijo "hs"
+// incluido desde el backend (bug real corregido, ver "Cambios recientes" --
+// producía "19:10hshs") -- se saca ese sufijo si ya está antes de
+// reconstruir, así nunca se duplica sin importar si la fuente lo trae o no.
 function _formatearHoraTexto(hora) {
-  var m = hora.match(/^(\d{1,2}):(\d{2})$/);
-  if (!m) return hora + 'hs';
+  var horaBase = hora.replace(/\s*hs\s*$/i, '');
+  var m = horaBase.match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return horaBase + 'hs';
   return (m[2] === '00' ? m[1] : m[1] + ':' + m[2]) + 'hs';
 }
 

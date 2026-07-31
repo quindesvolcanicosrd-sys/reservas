@@ -457,7 +457,22 @@ var APP_BOTTOM_NAV_ITEMS = [
   // cuenta dashboardAdmin:true con equipamiento propio cargado, violando
   // la regla.
   { id: 'reservas', icono: 'calendar_month', texto: 'Reservas', pantalla: 's-home',
-    visible: function() { return !_dashboardAdminLimitado; }, entrar: function() { irReservas(); } },
+    visible: function() { return !_dashboardAdminLimitado; }, entrar: function() { irReservas(); },
+    // `alSalir` (ver "Cambios recientes" -- regla general de más arriba, mismo
+    // mecanismo que ya usan 'eventos'/'ajustes'): si el pull-to-refresh de
+    // #ptr-indicator (js/home.js) sigue "refrescando" (arrastre ya soltado,
+    // `_ptrRefrescando===true`, esperando la respuesta de refrescarMisReservas())
+    // cuando el usuario cambia de tab, el indicador es un elemento fijo GLOBAL
+    // (fuera de `.pantalla`, hermano de todas) -- cambiar de pantalla no lo
+    // oculta solo, quedaba girando encima de la sección nueva hasta que el
+    // fetch viejo resolvía. Solo oculta el indicador (puramente visual,
+    // `_ptrOcultarIndicador()` no toca `_ptrRefrescando` ni el backstop) -- el
+    // fetch en curso sigue y termina en segundo plano, y como `prepararHome()`/
+    // `_renderHomeReservas()` escriben directo sobre `#home-reservas-lista`
+    // sin chequear si `#s-home` está activa (el DOM no se destruye entre
+    // tabs), al volver a Reservas los datos ya están al día sin necesidad de
+    // un segundo gesto.
+    alSalir: function() { if (typeof _ptrOcultarIndicador === 'function') _ptrOcultarIndicador(); } },
   // 'eventos' -- Tanda 2 (ver MANIFEST.md "Cambios recientes" -- sección
   // Eventos, estructura estática): calendario de entrenamientos/torneos/
   // asambleas + cumpleaños del equipo, separado de "Reservas" (que sigue
