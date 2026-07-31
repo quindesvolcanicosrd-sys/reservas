@@ -768,6 +768,25 @@
    "Cambios recientes" -- antes alineada a la izquierda por herencia de
    `text-align:left` general). */
 .ev-ant-rango-linea { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; font-size: 0.92rem; color: var(--text); text-align: center; }
+/* Fila de "Por período" que agrupa la línea de fechas + "Restablecer
+   (fechas)" (ver "Cambios recientes" -- antes el botón iba centrado DEBAJO,
+   en su propia línea; ahora comparten renglón, botón a la derecha).
+   `flex-shrink:0` en AMBOS hijos (ver `.ev-ant-rango-fila .ev-ant-rango-linea`
+   abajo y `.ev-ant-btn-restablecer`) -- probado primero con `min-width:0`/
+   shrink normal en la línea de fechas para que "cediera" espacio: aplastaba
+   las pills por debajo de su `min-width:92px` (fecha recortada, ilegible) en
+   vez de respetarlo, confirmado visualmente con Chrome headless. Con
+   `flex-shrink:0` ninguno de los 2 cede tamaño -- lo único que cede es el
+   TEXTO del botón ("Restablecer fechas" -> "Restablecer"), decidido por
+   `_evAntAjustarBotonRestablecer()` (js/eventos.js) midiendo un desborde
+   forzado a `nowrap` (ver esa función). `flex-wrap:wrap` ACÁ (a diferencia
+   del `nowrap` de la línea de fechas) es la red de seguridad para el caso
+   límite en que ni siquiera "Restablecer" a secas entra junto con un rango
+   completo en pantallas muy angostas -- el botón cae a una 2da línea propia
+   (mismo look que el diseño anterior) en vez de desbordar recortado fuera
+   de la tarjeta. */
+.ev-ant-rango-fila { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.ev-ant-rango-fila .ev-ant-rango-linea { flex-shrink: 0; flex-wrap: nowrap; }
 /* Estado sin fecha elegida de "Por período" (ver "Cambios recientes" -- ya
    no muestra la línea "Desde el ___ hasta el ___" vacía, un texto
    instructivo simple en su lugar). */
@@ -799,9 +818,19 @@
    se scopea a este único botón (mismo criterio que el resto de `.ev-ant-*`
    en este archivo), sumado a `.btn-text-simple` en el HTML (no la
    reemplaza -- sigue siendo texto simple por dentro, solo gana el borde
-   delimitándolo como botón tocable, sin ningún relleno de color). */
+   delimitándolo como botón tocable, sin ningún relleno de color). Ahora vive
+   dentro de `.ev-ant-rango-fila` (ver esa regla, "Cambios recientes") en vez
+   de debajo centrado -- `width:auto` pisa el `width:100%` de `.btn-text-simple`
+   (ese 100% seguía aplicando acá tal cual, un flex item con `width:100%`
+   se queda con TODO el ancho de la fila y manda `.ev-ant-rango-linea` a 0 --
+   confirmado midiendo `offsetWidth` real de ambos en Chrome headless antes
+   de este ajuste), `flex-shrink:0` para que nunca sea el botón el que se
+   angoste en vez del texto de fechas, `white-space:nowrap` para que
+   "Restablecer fechas"/"Restablecer" nunca partan en 2 líneas mientras el
+   texto largo todavía "cabe" técnicamente (el corte lo decide el JS, no un
+   wrap accidental a mitad de palabra). */
 .ev-ant-btn-restablecer {
-  display: block; width: fit-content; margin: 10px auto 0;
+  width: auto; flex-shrink: 0; white-space: nowrap;
   padding: 8px 18px; border: 1.5px solid var(--brand); border-radius: 10px; background: none;
 }
 /* "Hoy" -- SIEMPRE con stroke rojo distintivo, sin importar el resto de la

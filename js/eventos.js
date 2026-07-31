@@ -2768,7 +2768,7 @@ function _evAntToggleMes(mesNum, btn) {
    se toca. "Por período" y "Indefinido" comparten `_evAntData.fechaDesde`/
    `fechaHasta` (mismos campos que ya arma el payload, ver _evAntAplicar())
    -- `_evAntSelFrecuencia()` los resetea al cambiar de modo. */
-var _evAntCal = { periodo: { mostrado: null }, indefinido: { mostrado: null } };
+var _evAntCal = { periodo: { mostrado: null, prevDesde: null, prevHasta: null }, indefinido: { mostrado: null, prevDesde: null, prevHasta: null } };
 
 function _evAntCalMoverMes(cual, dir) {
   var m = _evCalMesDe(_evAntCal[cual].mostrado);
@@ -2827,6 +2827,21 @@ function _evAntFechaCorta(iso) {
   return parseInt(p[2], 10) + '/' + parseInt(p[1], 10) + '/' + p[0];
 }
 
+// Pill de fecha individual del resumen -- fade PROPIO (ver "Cambios
+// recientes" -- antes el fade vivía en el contenedor entero, `cont` en
+// _evAntCalActualizarResumen(), así que CUALQUIER cambio re-fadeaba la línea
+// completa, incluida la pill de Desde ya visible al tocar solo Hasta). Acá
+// el `style="animation:..."` se aplica solo cuando `animar` es true (esta
+// pill puntual cambió de valor respecto al render anterior, ver
+// `_evAntCal[cual].prevDesde`/`prevHasta` más abajo) -- las pills que no
+// cambiaron se recrean igual (innerHTML completo se reconstruye siempre,
+// más simple que un diff de nodos) pero SIN animation inline, así que
+// aparecen ya en su opacity final, sin parpadeo.
+function _evAntFechaPillHtml(iso, cual, animar) {
+  var style = animar ? ' style="animation:fadeIn 0.2s ease"' : '';
+  return '<span class="ev-ant-fecha-pill" onclick="_evAntFocoCalendario(\'' + cual + '\')"' + style + '>' + _evAntFechaCorta(iso) + '</span>';
+}
+
 // Resumen de "Por período" (#ev-ant-periodo-resumen, ver "Cambios recientes"
 // -- reemplaza las 2 pills fijas "Desde el/hasta el", vacías o llenas, por
 // una sola línea que cambia de FORMA según cuánto haya elegido el usuario,
@@ -2837,11 +2852,11 @@ function _evAntFechaCorta(iso) {
 // (mismo chip visual de antes) + `_evAntFocoCalendario('periodo')` al
 // tocarlas -- solo el texto instructivo (sin fecha) no lleva pill ni foco,
 // no hay nada a lo que "volver".
-function _evAntPeriodoResumenHtml() {
+function _evAntPeriodoResumenHtml(desdeNueva, hastaNueva) {
   var desde = _evAntData.fechaDesde, hasta = _evAntData.fechaHasta;
   if (!desde) return '<span class="ev-ant-rango-vacio">Toca una fecha en el calendario para empezar</span>';
-  var html = 'Del <span class="ev-ant-fecha-pill" onclick="_evAntFocoCalendario(\'periodo\')">' + _evAntFechaCorta(desde) + '</span>';
-  if (hasta) html += ' al <span class="ev-ant-fecha-pill" onclick="_evAntFocoCalendario(\'periodo\')">' + _evAntFechaCorta(hasta) + '</span>';
+  var html = 'Del ' + _evAntFechaPillHtml(desde, 'periodo', desdeNueva);
+  if (hasta) html += ' al ' + _evAntFechaPillHtml(hasta, 'periodo', hastaNueva);
   return html;
 }
 
@@ -2853,23 +2868,63 @@ function _evAntPeriodoResumenHtml() {
 // la setea a hoy apenas se entra a esta sub-sección), así que el estado
 // "vacío" no se ve en uso normal -- se cubre igual por si `_evAntCalRestablecer`
 // llegara a aplicarse acá alguna vez.
-function _evAntIndefinidoResumenHtml() {
+function _evAntIndefinidoResumenHtml(desdeNueva) {
   var desde = _evAntData.fechaDesde;
   if (!desde) return '<span class="ev-ant-rango-vacio">Toca una fecha en el calendario para empezar</span>';
-  return 'Del <span class="ev-ant-fecha-pill" onclick="_evAntFocoCalendario(\'indefinido\')">' + _evAntFechaCorta(desde) + '</span>';
+  return 'Del ' + _evAntFechaPillHtml(desde, 'indefinido', desdeNueva);
 }
 
 function _evAntCalActualizarResumen(cual) {
   var cont = document.getElementById(cual === 'periodo' ? 'ev-ant-periodo-resumen' : 'ev-ant-indefinido-resumen');
   if (!cont) return;
-  cont.innerHTML = cual === 'periodo' ? _evAntPeriodoResumenHtml() : _evAntIndefinidoResumenHtml();
-  // Fade breve al cambiar de un estado a otro (instructivo -> "Del X" -> "Del
-  // X al Y") -- mismo mecanismo de reflow + @keyframes fadeIn ya usado en el
-  // resto de este archivo (ver _evAntMostrarSubFrecuencia()), cubre
-  // aparición/cambio/desaparición del texto por igual (nunca corte abrupto).
-  void cont.offsetWidth;
-  cont.style.animation = 'fadeIn 0.2s ease';
+  var st = _evAntCal[cual];
+  var desde = _evAntData.fechaDesde, hasta = _evAntData.fechaHasta;
+  var desdeNueva = !!desde && desde !== st.prevDesde;
+  var hastaNueva = cual === 'periodo' && !!hasta && hasta !== st.prevHasta;
+  cont.innerHTML = cual === 'periodo' ? _evAntPeriodoResumenHtml(desdeNueva, hastaNueva) : _evAntIndefinidoResumenHtml(desdeNueva);
+  if (!desde) {
+    // Único caso que sigue fadeando el CONTENEDOR entero: volver al texto
+    // instructivo (_evAntCalRestablecer()) -- no hay pill involucrada, así
+    // que no hay nada puntual a lo que aplicarle el fade de arriba.
+    void cont.offsetWidth;
+    cont.style.animation = 'fadeIn 0.2s ease';
+  } else {
+    cont.style.animation = '';
+  }
+  st.prevDesde = desde;
+  st.prevHasta = hasta;
+  if (cual === 'periodo') _evAntAjustarBotonRestablecer();
 }
+
+// "Restablecer" en la misma línea que "Del X al Y" (ver "Cambios recientes"
+// -- antes iba centrado DEBAJO, en su propia línea): si "Restablecer fechas"
+// completo no entra junto con el rango en una sola línea, se acorta a
+// "Restablecer". Medido con el ancho REAL de `.ev-ant-rango-fila` en vez de
+// un breakpoint fijo de pantalla -- el largo del texto de fechas varía (ej.
+// "Del 1/8/2026 al 25/12/2026" vs "Del 1/8/2026"), así que lo que realmente
+// decide si entra es el contenido, no el ancho de viewport. La fila usa
+// `flex-wrap:wrap` en el CSS (red de seguridad para el caso límite en que
+// ni "Restablecer" a secas entra, ver ese comentario) -- eso significa que
+// en uso normal el navegador NUNCA deja que la fila desborde de forma
+// medible, el botón bajaría de línea antes de que `scrollWidth` reflejara
+// nada. Por eso se fuerza `nowrap` ACÁ, solo mientras dura la medición
+// síncrona (se lee `scrollWidth` inmediatamente, forzando el reflow), y se
+// revierte enseguida -- decide con el layout de una sola línea (lo que
+// realmente se quiere evaluar: "¿entra en el renglón?"), pero el resultado
+// final (wrap restablecido) sigue teniendo la red de seguridad puesta por
+// si ni el texto ya acortado alcanza.
+function _evAntAjustarBotonRestablecer() {
+  var fila = document.getElementById('ev-ant-periodo-fila');
+  var btn = document.getElementById('ev-ant-btn-restablecer');
+  if (!fila || !btn) return;
+  btn.textContent = 'Restablecer fechas';
+  fila.style.flexWrap = 'nowrap';
+  if (fila.scrollWidth > fila.clientWidth) btn.textContent = 'Restablecer';
+  fila.style.flexWrap = '';
+}
+window.addEventListener('resize', function() {
+  if (_evAntData.tipoRango === 'periodo') _evAntAjustarBotonRestablecer();
+});
 
 // Texto del header colapsado de "Frecuencia" (#ev-ant-acc-frecuencia-resumen)
 // -- vacío mientras no haya nada elegido todavía (el header simplemente no

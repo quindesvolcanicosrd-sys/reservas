@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=56739f3b">
 <link rel="stylesheet" href="css/nav.css?v=9b27ee2c">
-<link rel="stylesheet" href="css/eventos.css?v=7b0d64a5">
+<link rel="stylesheet" href="css/eventos.css?v=bbe5dff6">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -533,8 +533,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
                   <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('periodo',1)"><span class="material-symbols-outlined">chevron_right</span></button>
                 </div>
                 <div id="ev-ant-cal-periodo"></div>
-                <div class="ev-ant-rango-linea" id="ev-ant-periodo-resumen" style="margin-top:10px;"></div>
-                <button type="button" class="btn-text-simple ev-ant-btn-restablecer" onclick="_evAntCalRestablecer('periodo')">Restablecer fechas</button>
+                <div class="ev-ant-rango-fila" id="ev-ant-periodo-fila" style="margin-top:10px;">
+                  <div class="ev-ant-rango-linea" id="ev-ant-periodo-resumen"></div>
+                  <button type="button" class="btn-text-simple ev-ant-btn-restablecer" id="ev-ant-btn-restablecer" onclick="_evAntCalRestablecer('periodo')">Restablecer fechas</button>
+                </div>
               </div>
 
               <div id="ev-ant-paso1-indefinido" style="display:none;margin-top:18px;">
@@ -967,7 +969,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=2f629cc6"></script>
-<script src="js/eventos.js?v=e8c95084"></script>
+<script src="js/eventos.js?v=06a938e0"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=343fe44f"></script>
 <script src="js/perfil.js?v=ca452084"></script>
