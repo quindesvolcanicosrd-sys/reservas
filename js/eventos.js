@@ -2359,6 +2359,20 @@ function _evFiltrarAsistenciaPorGrupo(cardEl, grupo) {
 
 var _evAntData = {};
 var _evAntReglas = [];
+// Guard de condición de carrera (ver "Cambios recientes" -- patrón estándar
+// a reusar en cualquier pantalla con estado preservado + carga async en el
+// punto de entrada): con la preservación de estado por tab, `.pantalla` ya
+// no se destruye al navegar afuera -- si el usuario entra, sale (flecha
+// atrás/otro tab) y vuelve a entrar antes de que la 1ra carga resuelva, esa
+// respuesta vieja llega tarde y su callback sigue vivo, pisando el DOM con
+// el estado por default (wizard/"Aplicar") aunque el usuario ya esté viendo
+// una carga más nueva (o ya ni siquiera esta pantalla). `_evAntCargaId` se
+// incrementa en cada ENTRADA real a la pantalla (`eventosAbrirAnticipada()`,
+// nunca en un refresco interno como `_evAntRecargarLista()`) -- cada
+// callback async captura el valor vigente al momento de disparar el fetch y
+// lo compara contra el valor GLOBAL actual antes de tocar nada; si no
+// coinciden, la carga quedó obsoleta y se descarta en silencio.
+var _evAntCargaId = 0;
 
 // Reemplaza el loader de pantalla completa que tenía antes (ver "Cambios
 // recientes" -- mismo criterio que `cargarFechas()`/`_skeletonFechasHtml()`,
@@ -2371,7 +2385,9 @@ function eventosAbrirAnticipada() {
   document.getElementById('ev-ant-btn-nueva').style.display = 'none';
   document.getElementById('ev-ant-lista').innerHTML = _evAntSkeletonHtml();
   document.getElementById('ev-ant-resumen').style.display = 'block';
+  var miCarga = ++_evAntCargaId;
   api({ action: 'getReglasAsistenciaAnticipada', nombre: E.nombre }, function(res) {
+    if (miCarga !== _evAntCargaId) return; // el usuario ya salió y volvió a entrar -- esta respuesta quedó vieja
     _evAntReglas = res || [];
     if (_evAntReglas.length > 0) {
       _evAntRenderLista();
@@ -2380,6 +2396,7 @@ function eventosAbrirAnticipada() {
       _evAntIniciarWizard();
     }
   }, function(e) {
+    if (miCarga !== _evAntCargaId) return;
     mostrarToast(e && e.message ? e.message : 'No se pudieron cargar tus asistencias anticipadas.', 'error');
     ir('s-eventos');
   });
@@ -2404,12 +2421,19 @@ function _evAntSkeletonHtml() {
 // forzar al wizard (ese salto es solo el comportamiento de ENTRADA a la
 // pantalla, no algo que deba repetirse en cada refresco).
 function _evAntRecargarLista(cb) {
+  // Mismo guard que eventosAbrirAnticipada() (ver esa función) -- NO
+  // incrementa `_evAntCargaId` (esto es un refresco de la carga vigente, no
+  // una entrada nueva), solo verifica que nadie haya vuelto a entrar a la
+  // pantalla mientras este refresco estaba en vuelo.
+  var miCarga = _evAntCargaId;
   api({ action: 'getReglasAsistenciaAnticipada', nombre: E.nombre }, function(res) {
+    if (miCarga !== _evAntCargaId) return;
     _evAntReglas = res || [];
     _evAntRenderLista();
     document.getElementById('ev-ant-btn-nueva').style.display = 'block';
     if (typeof cb === 'function') cb();
   }, function(e) {
+    if (miCarga !== _evAntCargaId) return;
     mostrarToast(e && e.message ? e.message : 'No se pudo actualizar la lista.', 'error');
     if (typeof cb === 'function') cb();
   });
