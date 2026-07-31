@@ -894,6 +894,34 @@
   width: auto; flex-shrink: 0; white-space: nowrap;
   padding: 8px 18px; border: 1.5px solid var(--brand); border-radius: 10px; background: none;
 }
+/* "Restablecer" de "Indefinido" -- ícono solo (`undo`), sin texto (ver
+   "Cambios recientes"): a diferencia de "Por período" ("Del X al Y" ya ocupa
+   bastante lugar, "Restablecer fechas"/"Restablecer" con su propio
+   acortamiento por JS, `_evAntAjustarBotonRestablecer()`), acá la línea
+   "Desde X" es mucho más corta y no había ningún botón restablecer todavía
+   (revisado el código antes de asumir que existía uno iguial al de
+   "Por período" -- no lo había; se agrega acá por primera vez, reusando
+   `_evAntCalRestablecer('indefinido')`, ya genérica sobre `cual` desde
+   siempre). Se dejó "Por período" con su texto tal cual, sin convertirlo
+   también a ícono -- ya entra en una línea con su propio mecanismo de
+   acortamiento (probado y funcionando), así que no había ningún problema
+   real que resolver ahí; homogeneizar los 2 solo por consistencia hubiera
+   sido un cambio no pedido sobre un componente que ya funcionaba. Mismo
+   lenguaje visual que `.ev-ant-btn-restablecer` (borde `--brand`, sin
+   relleno, ícono en `--muted` heredado de `.btn-text-simple`) pero cuadrado
+   de 36x36 -- mismo tamaño que `.ev-ant-cal-nav-btn`, el otro botón-ícono ya
+   existente en esta pantalla. */
+.ev-ant-btn-restablecer-icono {
+  width: 36px; height: 36px; flex-shrink: 0; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--brand); border-radius: 10px; background: none;
+}
+.ev-ant-btn-restablecer-icono .material-symbols-outlined { font-size: 20px; }
+/* "Sin fecha de fin." centrada junto con la línea de fecha de arriba, como
+   un solo bloque (ver "Cambios recientes" -- antes heredaba `text-align:left`
+   general, mientras que `.ev-ant-rango-linea`/`.ev-ant-rango-fila` de arriba
+   ya se centraban solas). */
+.ev-ant-indefinido-nota { font-size: 0.78rem; color: var(--muted); margin-top: 6px; text-align: center; }
 /* "Hoy" -- SIEMPRE con stroke rojo distintivo, sin importar el resto de la
    selección (pedido explícito). `box-shadow` (no `outline`/`background`)
    para poder convivir con `.ev-ant-cal-sel` (fondo `--brand` sólido) o

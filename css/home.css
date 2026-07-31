@@ -133,10 +133,10 @@
      lo tienen y no necesitan tocarse acá). */
   .res-card-nueva .rn-top .fi-pill-lugar { color:var(--dk-info-text); }
 }
-.badge-pendiente { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--warning-bg); color:var(--amber-dark); border:1px solid var(--amber); white-space:nowrap; }
-.badge-confirmada { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--green-light); color:var(--green-dark); border:1px solid var(--success); white-space:nowrap; }
+.badge-pendiente { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--warning-bg); color:var(--amber-dark); white-space:nowrap; }
+.badge-confirmada { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--green-light); color:var(--green-dark); white-space:nowrap; }
 .badge-reagendar { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--purple-lightest); color:var(--dk-purple-mid); border:1px solid var(--purple-border-soft); white-space:nowrap; }
-.badge-cancelada { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--danger-bg); color:var(--danger); border:1px solid var(--danger); white-space:nowrap; }
+.badge-cancelada { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--danger-bg); color:var(--danger); white-space:nowrap; }
 .badge .material-symbols-outlined { font-size:13px; }
 .res-card-nueva .rn-divider { height:1px; background:var(--border-light); }
 /* Fila que agrupa "Más información" (izquierda) + botón "Re-agendar o

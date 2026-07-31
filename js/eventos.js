@@ -2906,18 +2906,20 @@ function _evAntPeriodoResumenHtml(desdeNueva, hastaNueva) {
   return html;
 }
 
-// "Indefinido" -- mismo criterio que _evAntPeriodoResumenHtml() (texto "Del
-// <fecha>", sin "al..." porque no hay Hasta): unificado con esa función en
-// vez de mantener un textContent fijo "Desde el ___" aparte, para que las 2
-// pasen por el mismo mecanismo de fade de _evAntCalActualizarResumen(). En la
-// práctica `fechaDesde` siempre está poblada acá (_evAntMostrarSubFrecuencia()
-// la setea a hoy apenas se entra a esta sub-sección), así que el estado
-// "vacío" no se ve en uso normal -- se cubre igual por si `_evAntCalRestablecer`
-// llegara a aplicarse acá alguna vez.
+// "Indefinido" -- mismo criterio que _evAntPeriodoResumenHtml() ("Desde
+// <fecha>", sin "al..." porque no hay Hasta -- texto "Desde" en vez de "Del",
+// pedido explícito para diferenciarlo de "Por período", que sigue diciendo
+// "Del X al Y" sin cambios): unificado con esa función en vez de mantener un
+// textContent fijo "Desde el ___" aparte, para que las 2 pasen por el mismo
+// mecanismo de fade de _evAntCalActualizarResumen(). En la práctica
+// `fechaDesde` siempre está poblada acá (_evAntMostrarSubFrecuencia() la
+// setea a hoy apenas se entra a esta sub-sección), así que el estado "vacío"
+// no se ve en uso normal -- se cubre igual por el botón restablecer nuevo
+// (ver #ev-ant-btn-restablecer-indefinido, index.html).
 function _evAntIndefinidoResumenHtml(desdeNueva) {
   var desde = _evAntData.fechaDesde;
   if (!desde) return '<span class="ev-ant-rango-vacio">Toca una fecha en el calendario para empezar</span>';
-  return 'Del ' + _evAntFechaPillHtml(desde, 'indefinido', desdeNueva);
+  return 'Desde ' + _evAntFechaPillHtml(desde, 'indefinido', desdeNueva);
 }
 
 function _evAntCalActualizarResumen(cual) {

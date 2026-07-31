@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=6eab0fa9">
 <link rel="stylesheet" href="css/nav.css?v=6d4e12ef">
-<link rel="stylesheet" href="css/eventos.css?v=f1baac71">
+<link rel="stylesheet" href="css/eventos.css?v=636446dd">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -540,8 +540,13 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
                   <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('indefinido',1)"><span class="material-symbols-outlined">chevron_right</span></button>
                 </div>
                 <div id="ev-ant-cal-indefinido"></div>
-                <div class="ev-ant-rango-linea" id="ev-ant-indefinido-resumen" style="margin-top:10px;"></div>
-                <p style="font-size:0.78rem;color:var(--muted);margin-top:6px;">Sin fecha de fin.</p>
+                <div class="ev-ant-rango-fila" id="ev-ant-indefinido-fila" style="margin-top:10px;">
+                  <div class="ev-ant-rango-linea" id="ev-ant-indefinido-resumen"></div>
+                  <button type="button" class="btn-text-simple ev-ant-btn-restablecer-icono" id="ev-ant-btn-restablecer-indefinido" onclick="_evAntCalRestablecer('indefinido')" aria-label="Restablecer fecha" title="Restablecer fecha">
+                    <span class="material-symbols-outlined">undo</span>
+                  </button>
+                </div>
+                <p class="ev-ant-indefinido-nota">Sin fecha de fin.</p>
               </div>
 
               <div class="error-msg" id="ev-ant-err-1"></div>
@@ -952,7 +957,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=df6d2eb1"></script>
-<script src="js/eventos.js?v=fd352bda"></script>
+<script src="js/eventos.js?v=2246bd3e"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=3c3b603a"></script>
 <script src="js/perfil.js?v=ca452084"></script>
