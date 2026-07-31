@@ -787,6 +787,23 @@
 }
 .ev-ant-cal-nav-btn .material-symbols-outlined { font-size: 20px; }
 .ev-ant-cal-nav-label { font-size: 0.88rem; font-weight: 800; color: var(--text); text-transform: capitalize; }
+/* "Restablecer fechas" (Por período) -- outline REAL (borde + sin relleno),
+   a pedido explícito de Victor. Se revisó antes de escribir esto si ya
+   existía una clase de botón outline compartida: `.btn-outline` (css/ui.css)
+   pese al nombre es un fill tenue (`background:var(--brand-20)`) SIN borde,
+   no sirve acá -- y `.btn-text-simple` (css/ui.css), la base que ya trae
+   este botón, es compartida por ~15 botones de toda la app (logout,
+   refresh, omitir PIN, etc.) con `width:100%` a propósito ahí -- agregarle
+   un borde a esa clase de base habría puesto un borde en los otros ~15
+   usos también. Ninguna de las 2 sirve tal cual, así que este modificador
+   se scopea a este único botón (mismo criterio que el resto de `.ev-ant-*`
+   en este archivo), sumado a `.btn-text-simple` en el HTML (no la
+   reemplaza -- sigue siendo texto simple por dentro, solo gana el borde
+   delimitándolo como botón tocable, sin ningún relleno de color). */
+.ev-ant-btn-restablecer {
+  display: block; width: fit-content; margin: 10px auto 0;
+  padding: 8px 18px; border: 1.5px solid var(--brand); border-radius: 10px; background: none;
+}
 /* "Hoy" -- SIEMPRE con stroke rojo distintivo, sin importar el resto de la
    selección (pedido explícito). `box-shadow` (no `outline`/`background`)
    para poder convivir con `.ev-ant-cal-sel` (fondo `--brand` sólido) o
