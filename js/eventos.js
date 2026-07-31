@@ -2434,15 +2434,18 @@ function _evAntBack() {
 // (ver "Cambios recientes" -- reestructurado desde 4, luego a 2, y ahora se
 // suma un paso 0 explicativo, mismo criterio que salud-paso-0 de
 // js/perfil.js: sin campos, footer con solo "Continuar"): paso 0 =
-// explicación de qué es la asistencia anticipada; paso 1 = Tipos de evento +
-// Estado a aplicar; paso 2 = Frecuencia, con reveal INLINE (no un paso
-// propio) de meses/fechas según la elección, cerrando con "Aplicar". El
+// explicación de qué es la asistencia anticipada (botón "Comenzar"); paso 1 =
+// Estado a aplicar (ya no incluye Tipos de evento, ver "Cambios recientes" --
+// la asistencia anticipada aplica únicamente a Entrenamientos, tiposEvento
+// va hardcodeado en _evAntAplicar()); paso 2 = Frecuencia, con reveal INLINE
+// (no un paso propio) de meses/fechas según la elección, cerrando con
+// "Aplicar". El
 // footer solo tiene "Continuar"/"Aplicar" -- sin botón "Atrás" propio,
 // redundante con la flecha del header (#ev-ant-header, _evAntBack()), que ya
 // cubre exactamente lo mismo. ─────────────────────
 
 function _evAntIniciarWizard() {
-  _evAntData = { tipoRango: null, meses: [], fechaDesde: null, fechaHasta: null, tiposEvento: [], estado: null };
+  _evAntData = { tipoRango: null, meses: [], fechaDesde: null, fechaHasta: null, estado: null };
   document.getElementById('ev-ant-resumen').style.display = 'none';
   document.getElementById('ev-ant-wizard').style.display = 'block';
   document.querySelectorAll('#ev-ant-wizard .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
@@ -2483,6 +2486,7 @@ function _evAntMostrarPaso(idx) {
   _evAntCurIdx = idx;
   _evAntRenderProg();
   if (idx === 2) _evAntMostrarSubFrecuencia();
+  else document.body.classList.remove('ev-ant-cal-abierto');
   window.scrollTo({ top: 0, behavior: 'smooth' });
   _evAntActualizarFooter(idx);
 }
@@ -2516,7 +2520,8 @@ function _evAntActualizarFooter(idx) {
   if (btnContinuar) {
     btnContinuar.onclick = _EV_ANT_CONTINUAR_FN[paso];
     var esFinal = (paso === 'ev-ant-paso-2');
-    btnContinuar.textContent = esFinal ? 'Aplicar' : 'Continuar';
+    var esIntro = (paso === 'ev-ant-paso-0');
+    btnContinuar.textContent = esFinal ? 'Aplicar' : (esIntro ? 'Comenzar' : 'Continuar');
     btnContinuar.classList.toggle('btn-primary', esFinal);
     btnContinuar.classList.toggle('btn-outline', !esFinal);
   }
@@ -2529,6 +2534,7 @@ function _evAntOcultarFooter() {
   var footer = document.getElementById('cta-footer-eventos-anticipada');
   if (footer) footer.style.display = 'none';
   document.body.classList.remove('ev-ant-footer-visible');
+  document.body.classList.remove('ev-ant-cal-abierto');
 }
 
 function _evAntSelUnica(el) {
@@ -2552,28 +2558,20 @@ function _evAntSelEstado(el) {
   _evPosicionarRsvpSlider(seg, true);
 }
 
-// Multi-select libre entre Entrenamiento/Torneo/Asamblea (mismo mecanismo
-// que ajTogglePill()) -- ya no existe la pill "Todo tipo de evento" (ver
-// "Cambios recientes"), _evAntContinuar1() exige al menos una de las 3.
-function _evAntToggleTipoEvento(el) {
-  el.classList.toggle('activa');
-}
-
 // Paso 0 -- intro explicativa, sin campos (mismo criterio que saludContinuar0(),
 // js/perfil.js: solo avanza al siguiente paso).
 function _evAntContinuar0() {
   _evAntMostrarPaso(1);
 }
 
-// Paso 1 -- tipos de evento (requerido, al menos 1) + estado a aplicar (requerido)
+// Paso 1 -- estado a aplicar (requerido). Ya no incluye tipos de evento (ver
+// "Cambios recientes" -- regla de negocio nueva: la asistencia anticipada
+// aplica únicamente a Entrenamientos, tiposEvento va hardcodeado en
+// _evAntAplicar()).
 function _evAntContinuar1() {
-  var vals = [];
-  document.querySelectorAll('#ev-ant-tipos-evento-pills .aj-pill.activa').forEach(function(p) { if (p.dataset.val) vals.push(p.dataset.val); });
-  if (!vals.length) { err('ev-ant-err-tipos', 'Selecciona al menos un tipo de evento.'); return; }
   var sel = document.querySelector('#ev-ant-estado-seg .ev-rsvp-opt.activa');
   if (!sel) { err('ev-ant-err-0', 'Selecciona un estado.'); return; }
   _evAntData.estado = sel.getAttribute('data-estado');
-  _evAntData.tiposEvento = vals;
   _evAntMostrarPaso(2);
 }
 
@@ -2597,6 +2595,13 @@ function _evAntMostrarSubFrecuencia() {
   var bPeriodo = document.getElementById('ev-ant-paso1-periodo');
   var bIndef = document.getElementById('ev-ant-paso1-indefinido');
   bMeses.style.display = 'none'; bPeriodo.style.display = 'none'; bIndef.style.display = 'none';
+  // "Por período"/"Indefinido" muestran el calendario inline, que en pantallas
+  // bajas (ej. 667px de alto, iPhone SE) llega a ocupar hasta la franja del
+  // toast subido (ver body.ev-ant-footer-visible #app-toast, css/eventos.css)
+  // -- confirmado con Playwright, la última fila de días quedaba tapada por
+  // un toast de error tras "Aplicar". "Por meses" no lo necesita, su grilla
+  // de 4 filas es más corta y no llega a esa franja en ningún alto probado.
+  document.body.classList.toggle('ev-ant-cal-abierto', _evAntData.tipoRango === 'periodo' || _evAntData.tipoRango === 'indefinido');
   if (_evAntData.tipoRango === 'meses') {
     bMeses.style.display = 'block';
     _evAntRenderMesesGrid();
@@ -2697,16 +2702,36 @@ function _evAntCalRestablecer(cual) {
   _evAntCalActualizarResumen(cual);
 }
 
+// Formato corto d/m/aaaa -- usado dentro de las pills ev-ant-fecha-pill
+// (a diferencia de _evAntFechaLegible(), formato largo, usado en el resumen
+// de #ev-ant-lista).
+function _evAntFechaCorta(iso) {
+  if (!iso) return '';
+  var p = iso.split('-');
+  if (p.length !== 3) return iso;
+  return parseInt(p[2], 10) + '/' + parseInt(p[1], 10) + '/' + p[0];
+}
+
 function _evAntCalActualizarResumen(cual) {
   if (cual === 'periodo') {
     var d = document.getElementById('ev-ant-periodo-desde-txt');
     var h = document.getElementById('ev-ant-periodo-hasta-txt');
-    if (d) d.textContent = _evAntData.fechaDesde ? _evAntFechaLegible(_evAntData.fechaDesde) : 'Selecciona una fecha';
-    if (h) h.textContent = _evAntData.fechaHasta ? _evAntFechaLegible(_evAntData.fechaHasta) : 'Selecciona una fecha';
+    if (d) d.textContent = _evAntData.fechaDesde ? _evAntFechaCorta(_evAntData.fechaDesde) : '';
+    if (h) h.textContent = _evAntData.fechaHasta ? _evAntFechaCorta(_evAntData.fechaHasta) : '';
   } else {
     var el = document.getElementById('ev-ant-indefinido-desde-txt');
-    if (el) el.textContent = _evAntData.fechaDesde ? _evAntFechaLegible(_evAntData.fechaDesde) : 'Hoy';
+    if (el) el.textContent = _evAntData.fechaDesde ? _evAntFechaCorta(_evAntData.fechaDesde) : '';
   }
+}
+
+// Tocar cualquiera de las 2 pills "Desde"/"Hasta" hace foco en el calendario
+// inline de abajo (SIEMPRE visible, nunca un modal/sheet aparte -- ver
+// _evAntCalRender()) -- el mecanismo de selección (primer toque = Desde,
+// segundo = Hasta) ya vive en _evAntCalTocarDia(), esto solo lleva la vista
+// hasta ahí.
+function _evAntFocoCalendario(cual) {
+  var el = document.getElementById(cual === 'periodo' ? 'ev-ant-cal-periodo' : 'ev-ant-cal-indefinido');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // El día de HOY siempre lleva el stroke rojo (`.ev-ant-cal-hoy`, ver
@@ -2746,7 +2771,7 @@ function _evAntCalRender(cual) {
 }
 
 // Paso 2 (final) -- valida frecuencia + su reveal, arma el payload con lo ya
-// guardado del paso 1 (tiposEvento/estado) y envía.
+// guardado del paso 1 (estado) y envía.
 function _evAntAplicar() {
   var selFrecuencia = document.querySelector('#ev-ant-tipo-pills .aj-pill.activa');
   if (!selFrecuencia) { err('ev-ant-err-1', 'Selecciona una opción.'); return; }
@@ -2764,7 +2789,10 @@ function _evAntAplicar() {
     action: 'aplicarAsistenciaAnticipada',
     nombre: E.nombre,
     tipoRango: _evAntData.tipoRango,
-    tiposEvento: JSON.stringify(_evAntData.tiposEvento),
+    // Hardcodeado: la asistencia anticipada aplica únicamente a
+    // Entrenamientos (ver "Cambios recientes" -- Torneos/Asambleas no son
+    // recurrentes, ya no hay selector de tipos de evento en el wizard).
+    tiposEvento: JSON.stringify(['Entrenamiento']),
     estado: _evAntData.estado
   };
   if (_evAntData.tipoRango === 'meses') payload.meses = JSON.stringify(_evAntData.meses);

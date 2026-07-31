@@ -669,7 +669,19 @@
    .ev-cal-celda/.ev-cal-num/.ev-ajeno, arriba en este archivo) sin tocarlo
    -- es un componente nuevo, con su propio mes navegable y sus propios
    estados de selección, sin abrir ningún panel/modal. */
-.ev-ant-cal-valor { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+/* Línea "Desde el [pill] hasta el [pill]" -- reemplaza los 2 .datos-campo
+   verticales de antes (ver "Cambios recientes"), mismo componente reusado
+   tal cual para el "Desde" del paso Indefinido (consistencia visual entre
+   ambos). Pill vacía = mismo min-width/min-height que llena, para que
+   seleccionar una fecha no cambie el layout de la línea. */
+.ev-ant-rango-linea { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.92rem; color: var(--text); }
+.ev-ant-fecha-pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 92px; min-height: 30px; padding: 4px 10px;
+  background: var(--brand-20); border-radius: 8px;
+  font-size: 0.85rem; font-weight: 700; color: var(--text);
+  cursor: pointer; user-select: none;
+}
 .ev-ant-cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .ev-ant-cal-nav-btn {
   width: 36px; height: 36px; border-radius: 10px; border: none; background: var(--brand-light);
@@ -719,4 +731,33 @@
    convivir con `.app-bottom-nav`). */
 body.ev-ant-footer-visible #app-toast {
   bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 86px);
+}
+/* "Por período"/"Indefinido" (ver "Cambios recientes" -- rediseño a pills)
+   revelan el calendario inline debajo, que en pantallas bajas (confirmado
+   con Playwright a 667px de alto, ej. iPhone SE) llega a ocupar la franja
+   del toast subido de arriba -- la última fila de días quedaba tapada por
+   un toast de error tras "Aplicar". `body.ev-ant-cal-abierto` la togglea
+   `_evAntMostrarSubFrecuencia()`/`_evAntMostrarPaso()` (js/eventos.js) solo
+   para esos 2 sub-pasos -- "Por meses" no lo necesita, su grilla de 4 filas
+   no llega a esa franja en ningún alto probado.
+   IMPORTANTE -- por qué `max(..., 100vh - 300px)` y no un extra fijo en px:
+   el contenido de este paso (pills de frecuencia + grilla) cuelga del
+   HEADER (ancla arriba, posición fija sea cual sea el alto de pantalla),
+   mientras que el toast cuelga del `bottom` (ancla abajo, se aleja más del
+   contenido cuanto más alta es la pantalla). Un extra fijo en px calcado de
+   un solo alto de prueba (667px) rompía en pantallas más altas -- a 844px
+   ya sobra tanto que el toast quedaba METIDO adentro de la grilla en vez de
+   arriba (se verificó con Playwright, no fue teórico). `100vh - 300px`
+   escala con el alto real de la pantalla porque `grid.getBoundingClientRect().top`
+   se midió con Playwright en ~316px, estable en los 4 altos probados
+   (667/700/740/844px, mismo ancho 390px) -- 300px = ese valor con ~16px de
+   aire. El `max()` con la regla general de arriba (línea de más arriba) es
+   el piso de seguridad: en pantallas altas, donde `100vh - 300px` da menos
+   que el offset general, se queda con el offset general (nunca empuja el
+   toast más abajo de donde ya estaba). */
+body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
+  bottom: max(
+    calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 86px),
+    calc(100vh - 300px)
+  );
 }

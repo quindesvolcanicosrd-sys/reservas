@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=56739f3b">
 <link rel="stylesheet" href="css/nav.css?v=9b27ee2c">
-<link rel="stylesheet" href="css/eventos.css?v=673da8a2">
+<link rel="stylesheet" href="css/eventos.css?v=7b9076dc">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -475,7 +475,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <div class="modal-info-item">
             <div class="modal-info-icon mi-orange"><span class="material-symbols-outlined">event_repeat</span></div>
             <div>
-              <div class="modal-info-label">Reglas indefinidas</div>
+              <div class="modal-info-label">Asistencias indefinidas</div>
               <div class="modal-info-desc">Marca un estado que se aplica desde hoy en adelante, sin fecha de fin. Por ejemplo, "Asistiré a todo, siempre" o "No juego por tiempo indefinido".</div>
             </div>
           </div>
@@ -483,7 +483,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <div class="modal-info-item">
             <div class="modal-info-icon mi-blue"><span class="material-symbols-outlined">date_range</span></div>
             <div>
-              <div class="modal-info-label">Reglas por período</div>
+              <div class="modal-info-label">Asistencias por período</div>
               <div class="modal-info-desc">Marca una excepción durante fechas puntuales o meses específicos. Por ejemplo, "No voy a poder venir en agosto".</div>
             </div>
           </div>
@@ -492,22 +492,13 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <div class="modal-info-icon mi-purple"><span class="material-symbols-outlined">layers</span></div>
             <div>
               <div class="modal-info-label">Se pueden combinar</div>
-              <div class="modal-info-desc">Una regla por período siempre tiene prioridad sobre una indefinida. Puedes tener "Asistiré siempre" de fondo, y marcar excepciones puntuales sin perder la regla general.</div>
+              <div class="modal-info-desc">Puedes tener "Asistiré siempre" de fondo, y marcar excepciones puntuales sin perder tu asistencia general.</div>
             </div>
           </div>
         </div>
 
         <div class="salud-paso" id="ev-ant-paso-1">
-          <h2>Tipos de evento</h2>
-          <p>Selecciona al menos un tipo de evento al que se va a aplicar esta asistencia anticipada.</p>
-          <div class="aj-pills-row" id="ev-ant-tipos-evento-pills">
-            <span class="aj-pill" data-val="Entrenamiento" onclick="_evAntToggleTipoEvento(this)">Entrenamiento</span>
-            <span class="aj-pill" data-val="Torneo" onclick="_evAntToggleTipoEvento(this)">Torneo</span>
-            <span class="aj-pill" data-val="Asamblea" onclick="_evAntToggleTipoEvento(this)">Asamblea</span>
-          </div>
-          <div class="error-msg" id="ev-ant-err-tipos"></div>
-
-          <h2 style="margin-top:24px;">Estado a aplicar</h2>
+          <h2>Estado a aplicar</h2>
           <div class="ev-asistire-wrap" onclick="event.stopPropagation()">
             <div class="ev-rsvp-seg" id="ev-ant-estado-seg">
               <div class="ev-rsvp-slider"></div>
@@ -532,14 +523,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           </div>
 
           <div id="ev-ant-paso1-periodo" style="display:none;margin-top:18px;">
-            <div class="datos-campo">
-              <label>Desde</label>
-              <div class="ev-ant-cal-valor" id="ev-ant-periodo-desde-txt">Selecciona una fecha</div>
-            </div>
-            <div class="datos-campo">
-              <label>Hasta</label>
-              <div class="ev-ant-cal-valor" id="ev-ant-periodo-hasta-txt">Selecciona una fecha</div>
-            </div>
+            <div class="ev-ant-rango-linea">Desde el <span class="ev-ant-fecha-pill" id="ev-ant-periodo-desde-txt" onclick="_evAntFocoCalendario('periodo')"></span> hasta el <span class="ev-ant-fecha-pill" id="ev-ant-periodo-hasta-txt" onclick="_evAntFocoCalendario('periodo')"></span></div>
             <div class="ev-ant-cal-nav">
               <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('periodo',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
               <span class="ev-ant-cal-nav-label" id="ev-ant-cal-periodo-label"></span>
@@ -550,10 +534,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           </div>
 
           <div id="ev-ant-paso1-indefinido" style="display:none;margin-top:18px;">
-            <div class="datos-campo">
-              <label>Desde</label>
-              <div class="ev-ant-cal-valor" id="ev-ant-indefinido-desde-txt">Hoy</div>
-            </div>
+            <div class="ev-ant-rango-linea">Desde el <span class="ev-ant-fecha-pill" id="ev-ant-indefinido-desde-txt" onclick="_evAntFocoCalendario('indefinido')"></span></div>
             <div class="ev-ant-cal-nav">
               <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('indefinido',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
               <span class="ev-ant-cal-nav-label" id="ev-ant-cal-indefinido-label"></span>
@@ -982,7 +963,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=2f629cc6"></script>
-<script src="js/eventos.js?v=127cee68"></script>
+<script src="js/eventos.js?v=b2cddca1"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=343fe44f"></script>
 <script src="js/perfil.js?v=ca452084"></script>
