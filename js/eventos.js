@@ -2213,3 +2213,359 @@ function _evFiltrarAsistenciaPorGrupo(cardEl, grupo) {
     setTimeout(function() { lista.style.minHeight = ''; }, animo ? 400 : 0);
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   ASISTENCIA ANTICIPADA (ev-ant-*, #s-eventos-anticipada) -- a diferencia
+   del resto de este archivo (todavía sobre datos de prueba, ver cabecera),
+   esta sección SÍ llama al backend real (api()/apiPost(), js/api.js) contra
+   3 funciones de Apps Script -- 2 ya existentes (getReglasAsistenciaAnticipada/
+   aplicarAsistenciaAnticipada) + 1 nueva agregada a pedido en esta misma
+   sesión (eliminarAsistenciaAnticipada, ver MANIFEST.md). El backend no
+   vive en este repo (Apps Script, script.google.com) así que el contrato de
+   parámetros/campos de abajo es una convención razonable (mismo criterio
+   `action` + `nombre: E.nombre` que ya usa el resto de la app, ver
+   js/auth.js/home.js/perfil.js) -- a confirmar/ajustar contra el código real
+   si no coincide 1:1.
+   ═══════════════════════════════════════════════════════ */
+
+var _EV_ANT_STEPS = ['ev-ant-paso-0', 'ev-ant-paso-1', 'ev-ant-paso-2', 'ev-ant-paso-3'];
+var _evAntCurIdx = 0;
+var _evAntData = {};
+var _evAntReglas = [];
+
+function eventosAbrirAnticipada() {
+  ir('s-eventos-anticipada');
+  document.getElementById('ev-ant-resumen').style.display = 'none';
+  document.getElementById('ev-ant-wizard').style.display = 'none';
+  _evAntOcultarFooter();
+  mostrarCargando('Cargando...');
+  api({ action: 'getReglasAsistenciaAnticipada', nombre: E.nombre }, function(res) {
+    ocultarCargando();
+    _evAntReglas = res || [];
+    if (_evAntReglas.length > 0) {
+      _evAntRenderLista();
+      document.getElementById('ev-ant-resumen').style.display = 'block';
+    } else {
+      _evAntIniciarWizard();
+    }
+  }, function(e) {
+    ocultarCargando();
+    mostrarToast(e && e.message ? e.message : 'No se pudieron cargar tus asistencias anticipadas.', 'error');
+    ir('s-eventos');
+  });
+}
+
+// Recarga la lista sin decidir el estado resumen/wizard (a diferencia de
+// eventosAbrirAnticipada()) -- usada después de aplicar/eliminar, para que
+// borrar la última asistencia anticipada deje un resumen vacío en vez de
+// forzar al wizard (ese salto es solo el comportamiento de ENTRADA a la
+// pantalla, no algo que deba repetirse en cada refresco).
+function _evAntRecargarLista(cb) {
+  api({ action: 'getReglasAsistenciaAnticipada', nombre: E.nombre }, function(res) {
+    _evAntReglas = res || [];
+    _evAntRenderLista();
+    if (typeof cb === 'function') cb();
+  }, function(e) {
+    mostrarToast(e && e.message ? e.message : 'No se pudo actualizar la lista.', 'error');
+    if (typeof cb === 'function') cb();
+  });
+}
+
+function _evAntRenderLista() {
+  var cont = document.getElementById('ev-ant-lista'); if (!cont) return;
+  if (!_evAntReglas.length) {
+    cont.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">No tenés asistencias anticipadas todavía.</p>';
+    return;
+  }
+  cont.innerHTML = _evAntReglas.map(function(r) {
+    return '<div class="ev-ant-card">' +
+      '<div class="ev-card-top-row">' +
+        '<div class="ev-card-icon"><span class="material-symbols-outlined">event_available</span></div>' +
+        '<div class="ev-card-body">' +
+          '<div class="ev-card-titulo">' + _evAntResumenRango(r) + '</div>' +
+          '<div class="ev-ant-card-sub">' + _evAntResumenDetalle(r) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<button type="button" class="ev-ant-card-del" onclick="_evAntEliminar(' + r.fila + ')" title="Eliminar">' +
+        '<span class="material-symbols-outlined">delete</span>' +
+      '</button>' +
+    '</div>';
+  }).join('');
+}
+
+function _evAntResumenRango(r) {
+  if (r.tipoRango === 'meses') {
+    var anio = new Date().getFullYear();
+    var nombres = (r.meses || []).map(function(m) { return NOMBRES_MESES[m - 1]; });
+    return 'Meses: ' + nombres.join(', ') + ' ' + anio;
+  }
+  if (r.tipoRango === 'periodo') {
+    return 'Del ' + _evAntFechaLegible(r.fechaDesde) + ' al ' + _evAntFechaLegible(r.fechaHasta);
+  }
+  return 'Desde el ' + _evAntFechaLegible(r.fechaDesde) + ', sin fecha de fin';
+}
+function _evAntFechaLegible(iso) {
+  if (!iso) return '';
+  var p = iso.split('-');
+  if (p.length !== 3) return iso;
+  return parseInt(p[2], 10) + ' de ' + NOMBRES_MESES[parseInt(p[1], 10) - 1] + ' de ' + p[0];
+}
+function _evAntResumenDetalle(r) {
+  var tipos = (r.tiposEvento && r.tiposEvento.length) ? r.tiposEvento.join(', ') : 'Todos los tipos';
+  return 'Tipos: ' + tipos + ' · Estado: ' + r.estado;
+}
+
+function _evAntEliminar(fila) {
+  if (!confirm('¿Eliminar esta asistencia anticipada?')) return;
+  mostrarCargando('Eliminando...');
+  apiPost({ action: 'eliminarAsistenciaAnticipada', nombre: E.nombre, fila: fila }, function(res) {
+    ocultarCargando();
+    if (res && res.exito === false) { mostrarToast(res.error || 'No se pudo eliminar.', 'error'); return; }
+    _evAntRecargarLista();
+  }, function(e) {
+    ocultarCargando();
+    mostrarToast(e && e.message ? e.message : 'No se pudo eliminar la asistencia anticipada.', 'error');
+  });
+}
+
+function _evAntBack() {
+  var wizard = document.getElementById('ev-ant-wizard');
+  if (wizard && wizard.style.display !== 'none') { _evAntPasoAnterior(); }
+  else { ir('s-eventos'); }
+}
+
+// ─── Wizard (mismo motor que _SALUD_STEPS/_saludCurIdx/_saludMostrarPaso(),
+// js/perfil.js -- replicado acá, no reusado directo, porque vive sobre una
+// .pantalla propia en vez de un aj-sub-* montado sobre s-datos) ───────────
+
+function _evAntIniciarWizard() {
+  _evAntData = { tipoRango: null, meses: [], fechaDesde: null, fechaHasta: null, tiposEvento: [], estado: null };
+  document.getElementById('ev-ant-resumen').style.display = 'none';
+  document.getElementById('ev-ant-wizard').style.display = 'block';
+  document.querySelectorAll('#ev-ant-wizard .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  ['ev-ant-desde-iso', 'ev-ant-hasta-iso', 'ev-ant-desdeInd-iso'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  ['ev-ant-desde-display', 'ev-ant-hasta-display'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) { el.textContent = 'Selecciona una fecha'; el.classList.add('fnac-placeholder'); }
+  });
+  var dInd = document.getElementById('ev-ant-desdeInd-display'); if (dInd) dInd.textContent = 'Hoy';
+  _evAntMostrarPaso(0);
+}
+
+function _evAntCerrarWizard() {
+  _evAntOcultarFooter();
+  document.getElementById('ev-ant-wizard').style.display = 'none';
+  if (_evAntReglas.length > 0) {
+    document.getElementById('ev-ant-resumen').style.display = 'block';
+  } else {
+    ir('s-eventos');
+  }
+}
+
+function _evAntCerrarWizardAResumen() {
+  _evAntOcultarFooter();
+  document.getElementById('ev-ant-wizard').style.display = 'none';
+  document.getElementById('ev-ant-resumen').style.display = 'block';
+}
+
+function _evAntMostrarPaso(idx) {
+  _EV_ANT_STEPS.forEach(function(id, i) {
+    var el = document.getElementById(id);
+    if (el) el.classList.toggle('activo', i === idx);
+  });
+  _evAntCurIdx = idx;
+  _evAntRenderProg();
+  if (idx === 1) _evAntMostrarSubPaso1();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  _evAntActualizarFooter(idx);
+}
+
+function _evAntRenderProg() {
+  var cont = document.getElementById('ev-ant-prog'); if (!cont) return;
+  cont.innerHTML = '';
+  for (var i = 0; i < _EV_ANT_STEPS.length; i++) {
+    var d = document.createElement('div');
+    d.className = 'salud-prog-dot' + (i < _evAntCurIdx ? ' done' : i === _evAntCurIdx ? ' active' : '');
+    cont.appendChild(d);
+  }
+}
+
+function _evAntPasoAnterior() {
+  if (_evAntCurIdx === 0) { _evAntCerrarWizard(); return; }
+  _evAntMostrarPaso(_evAntCurIdx - 1);
+}
+
+var _EV_ANT_CONTINUAR_FN = {
+  'ev-ant-paso-0': function() { _evAntContinuar0(); },
+  'ev-ant-paso-1': function() { _evAntContinuar1(); },
+  'ev-ant-paso-2': function() { _evAntContinuar2(); },
+  'ev-ant-paso-3': function() { _evAntAplicar(); }
+};
+function _evAntActualizarFooter(idx) {
+  var paso = _EV_ANT_STEPS[idx];
+  var footer = document.getElementById('cta-footer-eventos-anticipada');
+  if (footer) footer.style.display = 'block';
+  var btnContinuar = document.getElementById('ev-ant-footer-continuar');
+  if (btnContinuar) {
+    btnContinuar.onclick = _EV_ANT_CONTINUAR_FN[paso];
+    var esFinal = (paso === 'ev-ant-paso-3');
+    btnContinuar.textContent = esFinal ? 'Aplicar' : 'Continuar';
+    btnContinuar.classList.toggle('btn-primary', esFinal);
+    btnContinuar.classList.toggle('btn-outline', !esFinal);
+  }
+  var btnAtras = document.getElementById('ev-ant-footer-atras');
+  if (btnAtras) btnAtras.onclick = _evAntPasoAnterior;
+}
+function _evAntOcultarFooter() {
+  var footer = document.getElementById('cta-footer-eventos-anticipada');
+  if (footer) footer.style.display = 'none';
+}
+
+function _evAntSelUnica(el) {
+  var cont = el.parentElement;
+  cont.querySelectorAll('.aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+}
+
+// Paso 0 -- tipo de rango
+function _evAntContinuar0() {
+  var sel = document.querySelector('#ev-ant-tipo-pills .aj-pill.activa');
+  if (!sel) { err('ev-ant-err-0', 'Selecciona una opción.'); return; }
+  _evAntData.tipoRango = sel.dataset.val;
+  _evAntMostrarPaso(1);
+}
+
+// Paso 1 -- meses / período / indefinido, según _evAntData.tipoRango
+function _evAntMostrarSubPaso1() {
+  var titulo = document.getElementById('ev-ant-paso1-titulo');
+  var bMeses = document.getElementById('ev-ant-paso1-meses');
+  var bPeriodo = document.getElementById('ev-ant-paso1-periodo');
+  var bIndef = document.getElementById('ev-ant-paso1-indefinido');
+  bMeses.style.display = 'none'; bPeriodo.style.display = 'none'; bIndef.style.display = 'none';
+  if (_evAntData.tipoRango === 'meses') {
+    if (titulo) titulo.textContent = '¿En qué meses aplica?';
+    bMeses.style.display = 'block';
+    _evAntRenderMesesGrid();
+  } else if (_evAntData.tipoRango === 'periodo') {
+    if (titulo) titulo.textContent = '¿En qué período aplica?';
+    bPeriodo.style.display = 'block';
+  } else {
+    if (titulo) titulo.textContent = '¿Desde cuándo aplica?';
+    bIndef.style.display = 'block';
+    var isoEl = document.getElementById('ev-ant-desdeInd-iso');
+    if (isoEl && !isoEl.value) isoEl.value = _evAntHoyISO();
+  }
+}
+
+function _evAntHoyISO() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function _evAntRenderMesesGrid() {
+  var cont = document.getElementById('ev-ant-meses-grid'); if (!cont) return;
+  cont.innerHTML = '';
+  var mesActual = new Date().getMonth(); // 0-indexado
+  NOMBRES_MESES.forEach(function(nombre, idx) {
+    var mesNum = idx + 1;
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ev-ant-mes-cell' + (_evAntData.meses.indexOf(mesNum) !== -1 ? ' activo' : '');
+    btn.textContent = nombre;
+    if (idx < mesActual) {
+      btn.classList.add('deshabilitado');
+      btn.disabled = true;
+    } else {
+      btn.onclick = function() { _evAntToggleMes(mesNum, btn); };
+    }
+    cont.appendChild(btn);
+  });
+}
+function _evAntToggleMes(mesNum, btn) {
+  var i = _evAntData.meses.indexOf(mesNum);
+  if (i === -1) { _evAntData.meses.push(mesNum); btn.classList.add('activo'); }
+  else { _evAntData.meses.splice(i, 1); btn.classList.remove('activo'); }
+}
+
+function _evAntAbrirFecha(cual) {
+  abrirPickerMisDatos({ hiddenId: 'ev-ant-' + cual + '-iso', displayId: 'ev-ant-' + cual + '-display' });
+}
+
+function _evAntContinuar1() {
+  if (_evAntData.tipoRango === 'meses') {
+    if (!_evAntData.meses.length) { err('ev-ant-err-1', 'Selecciona al menos un mes.'); return; }
+  } else if (_evAntData.tipoRango === 'periodo') {
+    var desde = document.getElementById('ev-ant-desde-iso').value;
+    var hasta = document.getElementById('ev-ant-hasta-iso').value;
+    if (!desde || !hasta) { err('ev-ant-err-1', 'Selecciona ambas fechas.'); return; }
+    if (hasta < desde) { err('ev-ant-err-1', 'La fecha "Hasta" no puede ser anterior a "Desde".'); return; }
+    _evAntData.fechaDesde = desde;
+    _evAntData.fechaHasta = hasta;
+  } else {
+    _evAntData.fechaDesde = document.getElementById('ev-ant-desdeInd-iso').value || _evAntHoyISO();
+  }
+  _evAntMostrarPaso(2);
+}
+
+// Paso 2 -- tipos de evento (multi-select, opcional)
+function _evAntContinuar2() {
+  var vals = [];
+  document.querySelectorAll('#ev-ant-tipos-evento-pills .aj-pill.activa').forEach(function(p) { vals.push(p.dataset.val); });
+  _evAntData.tiposEvento = vals;
+  _evAntMostrarPaso(3);
+}
+
+// Paso 3 -- estado a aplicar + envío final
+function _evAntAplicar() {
+  var sel = document.querySelector('#ev-ant-estado-pills .aj-pill.activa');
+  if (!sel) { err('ev-ant-err-3', 'Selecciona una opción.'); return; }
+  _evAntData.estado = sel.dataset.val;
+
+  var payload = {
+    action: 'aplicarAsistenciaAnticipada',
+    nombre: E.nombre,
+    tipoRango: _evAntData.tipoRango,
+    tiposEvento: JSON.stringify(_evAntData.tiposEvento),
+    estado: _evAntData.estado
+  };
+  if (_evAntData.tipoRango === 'meses') payload.meses = JSON.stringify(_evAntData.meses);
+  else if (_evAntData.tipoRango === 'periodo') { payload.fechaDesde = _evAntData.fechaDesde; payload.fechaHasta = _evAntData.fechaHasta; }
+  else payload.fechaDesde = _evAntData.fechaDesde;
+
+  mostrarCargando('Aplicando...');
+  apiPost(payload, function(res) {
+    if (res && res.exito === false && res.reglaExistente) {
+      ocultarCargando();
+      _evAntMostrarConflicto(res.reglaExistente);
+      return;
+    }
+    _evAntRecargarLista(function() {
+      ocultarCargando();
+      _evAntCerrarWizardAResumen();
+    });
+  }, function(e) {
+    ocultarCargando();
+    mostrarToast(e && e.message ? e.message : 'No se pudo aplicar la asistencia anticipada.', 'error');
+  });
+}
+
+// Modal de conflicto (mismo idioma de animación que abrirModalInfoEstado()/
+// cerrarModalInfoEstado(), js/ui.js -- ver MANIFEST.md "Reglas globales del
+// proyecto", animación de entrada Y salida obligatoria).
+function _evAntMostrarConflicto(regla) {
+  var desc = document.getElementById('ev-ant-conflicto-desc');
+  if (desc) desc.textContent = _evAntResumenRango(regla) + ' — ' + _evAntResumenDetalle(regla);
+  var m = document.getElementById('modal-ant-conflicto');
+  if (!m) return;
+  m.style.display = 'flex';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { m.style.opacity = '1'; }); });
+  _registrarOverlayAbierto(_evAntCerrarConflicto);
+}
+function _evAntCerrarConflicto(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var m = document.getElementById('modal-ant-conflicto');
+  if (!m) return;
+  m.style.opacity = '0';
+  setTimeout(function() { m.style.display = 'none'; }, 300);
+}

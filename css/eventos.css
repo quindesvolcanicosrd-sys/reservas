@@ -628,3 +628,36 @@
 @media (prefers-color-scheme: dark) {
   .ev-lista-vacia { background: var(--surface-2); border-color: var(--border-light); }
 }
+
+/* ── Asistencia anticipada (ev-ant-*, #s-eventos-anticipada) ──────────────
+   Estado "resumen": lista de cards -- reusa .ev-card-top-row/.ev-card-icon/
+   .ev-card-body de la card de evento (arriba) para el ícono+texto, solo
+   agrega el wrapper con borde propio (mismo criterio que
+   .ev-card-compacta-wrap más arriba) y el botón de eliminar (mismo patrón
+   que .adm-talla-quitar, css/admin.css, con el ícono real `delete` en vez
+   del glifo "✕"). */
+.ev-ant-card {
+  display: flex; align-items: center; gap: 10px; padding: 12px 14px; margin-bottom: 8px;
+  background: var(--surface-2); border: 1.5px solid var(--border-light); border-radius: 12px;
+}
+.ev-ant-card .ev-card-top-row { flex: 1; min-width: 0; }
+.ev-ant-card-sub { font-size: 0.76rem; color: var(--muted); margin-top: 2px; }
+.ev-ant-card-del {
+  width: 40px; height: 40px; min-width: 40px; border-radius: 10px; flex-shrink: 0;
+  border: 1.5px solid var(--error-light-border); background: var(--error-lightest); color: var(--error);
+  display: flex; align-items: center; justify-content: center; cursor: pointer; font-family: inherit;
+}
+.ev-ant-card-del .material-symbols-outlined { font-size: 1.15rem; }
+
+/* Paso "Tipo de rango" -> "Por meses": grilla de 3 columnas, año actual,
+   meses pasados deshabilitados (ver _evAntRenderMesesGrid(), js/eventos.js
+   -- no existía ningún componente reusable de grilla de meses en el
+   proyecto, ver MANIFEST.md). */
+.ev-ant-mes-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 4px; }
+.ev-ant-mes-cell {
+  padding: 12px 6px; border-radius: 12px; border: 1.5px solid transparent; background: var(--brand-20);
+  color: var(--muted); font-size: 0.82rem; font-weight: 700; text-align: center; cursor: pointer;
+  font-family: inherit; transition: all 0.15s; user-select: none;
+}
+.ev-ant-mes-cell.activo { background: var(--brand); color: var(--white); border-color: var(--brand); }
+.ev-ant-mes-cell.deshabilitado { opacity: 0.4; cursor: not-allowed; pointer-events: none; }

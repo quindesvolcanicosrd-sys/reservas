@@ -31,8 +31,8 @@
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=56739f3b">
-<link rel="stylesheet" href="css/nav.css?v=d973d7a0">
-<link rel="stylesheet" href="css/eventos.css?v=e8094124">
+<link rel="stylesheet" href="css/nav.css?v=9b27ee2c">
+<link rel="stylesheet" href="css/eventos.css?v=5c285ac6">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -314,6 +314,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <button type="button" class="app-nav-icon-btn ev-header-icon-btn" onclick="_evIrAHoy()" title="Ir a hoy">
             <span class="material-symbols-outlined">today</span>
           </button>
+          <button type="button" class="app-nav-icon-btn app-nav-icon-btn-brand ev-header-icon-btn" onclick="eventosAbrirAnticipada()" title="Asistencia anticipada">
+            <span class="material-symbols-outlined">event_available</span>
+          </button>
 
           <!-- "+ Nuevo evento" (solo admin, _esAdminDemo la togglea en
                irEventos(), js/eventos.js) -- accesorio, no cuenta como parte
@@ -408,6 +411,139 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            ahora suma nav vía _BOTTOM_NAV_EXTRA/js/ui.js, antes no lo
            necesitaba). -->
       <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+
+  <!-- Asistencia anticipada (Eventos) -- pantalla de pantalla completa,
+       mismo criterio que s-eventos-detalle (arriba): NO usa el #top-bar
+       genérico (header propio, sticky, con back manejado por
+       _evAntBack() -- ver js/eventos.js) y NO es un bottom sheet (ver
+       MANIFEST.md, "Reglas globales del proyecto" -- se eligió .pantalla
+       para evitar el bug conocido de containing block de position:fixed
+       durante la animación de entrada). 2 estados alternados por display
+       (nunca los dos visibles a la vez): #ev-ant-resumen (lista de
+       asistencias anticipadas ya cargadas + "+ Nueva") y #ev-ant-wizard
+       (mismo motor de pasos que _SALUD_STEPS/_saludCurIdx/
+       _saludMostrarPaso(), js/perfil.js -- replicado acá como
+       _EV_ANT_STEPS/_evAntCurIdx/_evAntMostrarPaso(), ver js/eventos.js). -->
+  <div class="pantalla" id="s-eventos-anticipada">
+    <div class="app-nav app-nav-sticky" id="ev-ant-header">
+      <button class="app-nav-back" onclick="_evAntBack()">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <span class="app-nav-title">Asistencia anticipada</span>
+      <div style="width:40px;flex-shrink:0;"></div>
+    </div>
+    <div class="card" style="text-align:left;">
+
+      <!-- Estado "resumen": al menos 1 asistencia anticipada ya cargada -->
+      <div id="ev-ant-resumen" style="display:none;">
+        <div id="ev-ant-lista"></div>
+        <button type="button" class="btn btn-outline" style="margin-top:4px;" onclick="_evAntIniciarWizard()">+ Nueva asistencia anticipada</button>
+      </div>
+
+      <!-- Estado "wizard": sin ninguna asistencia anticipada todavía, o
+           llegando acá desde "+ Nueva asistencia anticipada" del resumen. -->
+      <div id="ev-ant-wizard" style="display:none;">
+        <div class="salud-prog" id="ev-ant-prog"></div>
+
+        <div class="salud-paso" id="ev-ant-paso-0">
+          <h2>¿Con qué frecuencia aplica esta asistencia anticipada?</h2>
+          <div class="aj-pills-row" id="ev-ant-tipo-pills">
+            <span class="aj-pill" data-val="meses" onclick="_evAntSelUnica(this)">Por meses</span>
+            <span class="aj-pill" data-val="periodo" onclick="_evAntSelUnica(this)">Por período</span>
+            <span class="aj-pill" data-val="indefinido" onclick="_evAntSelUnica(this)">Indefinido</span>
+          </div>
+          <div class="error-msg" id="ev-ant-err-0"></div>
+        </div>
+
+        <div class="salud-paso" id="ev-ant-paso-1">
+          <h2 id="ev-ant-paso1-titulo"></h2>
+
+          <div id="ev-ant-paso1-meses" style="display:none;">
+            <div class="ev-ant-mes-grid" id="ev-ant-meses-grid"></div>
+          </div>
+
+          <div id="ev-ant-paso1-periodo" style="display:none;">
+            <div class="datos-campo">
+              <label>Desde</label>
+              <button type="button" class="fnac-trigger-btn" id="ev-ant-desde-btn" onclick="_evAntAbrirFecha('desde')">
+                <span class="fnac-placeholder" id="ev-ant-desde-display">Selecciona una fecha</span>
+                <span class="material-symbols-outlined" style="color:var(--brand);font-size:1.1rem;">calendar_month</span>
+              </button>
+              <input type="hidden" id="ev-ant-desde-iso">
+            </div>
+            <div class="datos-campo">
+              <label>Hasta</label>
+              <button type="button" class="fnac-trigger-btn" id="ev-ant-hasta-btn" onclick="_evAntAbrirFecha('hasta')">
+                <span class="fnac-placeholder" id="ev-ant-hasta-display">Selecciona una fecha</span>
+                <span class="material-symbols-outlined" style="color:var(--brand);font-size:1.1rem;">calendar_month</span>
+              </button>
+              <input type="hidden" id="ev-ant-hasta-iso">
+            </div>
+          </div>
+
+          <div id="ev-ant-paso1-indefinido" style="display:none;">
+            <div class="datos-campo">
+              <label>Desde</label>
+              <button type="button" class="fnac-trigger-btn" id="ev-ant-desdeInd-btn" onclick="_evAntAbrirFecha('desdeInd')">
+                <span id="ev-ant-desdeInd-display">Hoy</span>
+                <span class="material-symbols-outlined" style="color:var(--brand);font-size:1.1rem;">calendar_month</span>
+              </button>
+              <input type="hidden" id="ev-ant-desdeInd-iso">
+            </div>
+            <p style="font-size:0.78rem;color:var(--muted);margin-top:6px;">Sin fecha de fin.</p>
+          </div>
+
+          <div class="error-msg" id="ev-ant-err-1"></div>
+        </div>
+
+        <div class="salud-paso" id="ev-ant-paso-2">
+          <h2>Tipos de evento</h2>
+          <p>Si no seleccionás ninguno, se va a aplicar a todos los tipos de evento.</p>
+          <div class="aj-pills-row" id="ev-ant-tipos-evento-pills">
+            <span class="aj-pill" data-val="Entrenamiento" onclick="ajTogglePill(this)">Entrenamiento</span>
+            <span class="aj-pill" data-val="Torneo" onclick="ajTogglePill(this)">Torneo</span>
+            <span class="aj-pill" data-val="Asamblea" onclick="ajTogglePill(this)">Asamblea</span>
+          </div>
+        </div>
+
+        <div class="salud-paso" id="ev-ant-paso-3">
+          <h2>Estado a aplicar</h2>
+          <div class="aj-pills-row" id="ev-ant-estado-pills">
+            <span class="aj-pill" data-val="Asistiré" onclick="_evAntSelUnica(this)">Asistiré</span>
+            <span class="aj-pill" data-val="No asistiré" onclick="_evAntSelUnica(this)">No asistiré</span>
+            <span class="aj-pill" data-val="No jugador" onclick="_evAntSelUnica(this)">No jugador</span>
+          </div>
+          <div class="error-msg" id="ev-ant-err-3"></div>
+        </div>
+      </div>
+
+      <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+
+  <!-- Modal de conflicto (aplicarAsistenciaAnticipada devuelve
+       {exito:false, reglaExistente}) -- reusa el patrón .modal-info ya
+       existente (ver css/global.css), un solo .modal-info-item con el
+       resumen de la asistencia anticipada existente que choca + "Entendido".
+       Animación de entrada/salida por opacity (mismo idioma que
+       abrirModalInfoEstado()/cerrarModalInfoEstado(), js/ui.js) -- ver
+       "Reglas globales del proyecto" en MANIFEST.md. -->
+  <div id="modal-ant-conflicto" class="modal-info" style="display:none; position:fixed; inset:0; z-index:8000; align-items:center; justify-content:center; padding:16px; opacity:0; transition:opacity 0.3s ease;">
+    <div class="modal-info-card" style="background:var(--modal-info-card-bg);border:2px solid var(--brand);border-radius:14px;padding:24px 20px 20px;width:100%;max-width:360px;max-height:90vh;overflow-y:auto;">
+      <div class="modal-info-titulo">Ya existe una asistencia anticipada</div>
+      <div class="modal-info-sub">Se solapa con una que ya tenés cargada</div>
+      <div class="modal-info-item">
+        <div class="modal-info-icon mi-orange"><span class="material-symbols-outlined">event_available</span></div>
+        <div>
+          <div class="modal-info-label">Asistencia anticipada existente</div>
+          <div class="modal-info-desc" id="ev-ant-conflicto-desc"></div>
+        </div>
+      </div>
+      <div class="modal-info-footer">
+        <button class="btn btn-outline" style="flex:1;" onclick="_evAntCerrarConflicto()">Entendido</button>
+      </div>
     </div>
   </div>
 
@@ -797,8 +933,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/bsheet.js"></script>
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=9cb43ed0"></script>
-<script src="js/eventos.js?v=42ebb67a"></script>
+<script src="js/ui.js?v=75c5b270"></script>
+<script src="js/eventos.js?v=2672f8fd"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=343fe44f"></script>
 <script src="js/perfil.js?v=ca452084"></script>
@@ -2442,6 +2578,23 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <div class="cta-footer-fixed" id="cta-footer-salud" style="z-index:960;">
   <button class="btn btn-outline" id="salud-footer-continuar">Continuar</button>
   <button class="btn-text-simple" id="salud-footer-omitir" style="display:none;margin-top:10px;">Omitir</button>
+</div>
+
+<!-- Footer fijo del wizard de Asistencia anticipada (#ev-ant-wizard,
+     s-eventos-anticipada) -- mismo motivo que #cta-footer-salud arriba
+     (hijo directo de <body>, ver comentario general más arriba de este
+     bloque): "Atrás" retrocede un paso (o cierra el wizard en el paso 0,
+     ver _evAntPasoAnterior()/js/eventos.js) + "Continuar"/"Aplicar"
+     (dinámico según el paso, ver _evAntActualizarFooter()). No tiene
+     id="cta-footer-s-eventos-anticipada" a propósito -- si lo tuviera, ir()
+     (js/ui.js) lo mostraría también durante el estado "resumen" de la
+     pantalla (que no lo necesita, tiene su propio botón "+ Nueva" en el
+     contenido). Se muestra/oculta a mano desde
+     _evAntActualizarFooter()/_evAntOcultarFooter(), mismo criterio que
+     _saludActualizarFooter()/_saludOcultarFooter(). -->
+<div class="cta-footer-fixed" id="cta-footer-eventos-anticipada" style="z-index:960;">
+  <button class="btn-text-simple" id="ev-ant-footer-atras" style="margin-bottom:10px;">Atrás</button>
+  <button class="btn btn-outline" id="ev-ant-footer-continuar">Continuar</button>
 </div>
 
 </body>

@@ -214,6 +214,7 @@
 @media (hover: hover) {
   .app-nav-icon-btn:hover { background: var(--brand-lightest); }
   .app-nav-icon-btn-danger:hover { background: var(--danger-dark); }
+  .app-nav-icon-btn-brand:hover { background: var(--brand-dk); }
 }
 .app-nav-icon-btn .material-symbols-outlined { font-size: 18px; }
 
@@ -221,6 +222,10 @@
    Eventos, solo admin) -- mismo componente (.app-nav-icon-btn), no una
    clase de nav paralela: solo cambia forma/color. */
 .app-nav-icon-btn-danger { background: var(--danger); color: var(--white); border-radius: 50%; }
+
+/* ── Variante circular naranja de marca (ej. ícono "Asistencia anticipada"
+   de Eventos) -- mismo criterio que .app-nav-icon-btn-danger de arriba. */
+.app-nav-icon-btn-brand { background: var(--brand); color: var(--white); border-radius: 50%; }
 
 /* ── Botón CTA nav (Nueva reserva) ──────────── */
 .app-nav-cta {

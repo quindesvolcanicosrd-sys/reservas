@@ -492,7 +492,7 @@ var _BOTTOM_NAV_PANTALLAS = APP_BOTTOM_NAV_ITEMS.map(function(item) { return ite
 var _BOTTOM_NAV_EXTRA = {
   's4': 'reservas', 's-misreservas': 'reservas', 's6': 'reservas',
   's-pago': 'reservas', 's-gestionar': 'reservas',
-  's-eventos-detalle': 'eventos'
+  's-eventos-detalle': 'eventos', 's-eventos-anticipada': 'eventos'
 };
 
 // Reusa el `icono` ya definido por ítem para el slot de la flecha atrás de
