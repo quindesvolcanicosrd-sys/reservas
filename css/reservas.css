@@ -116,10 +116,16 @@
    (`_s4ActualizarNav()`, js/reservas.js): con selección Por clase/Mensual
    (`#tp-seg`, reubicado acá desde el body de la card -- antes vivía dentro
    de `#s4-tipo-pago-wrapper`, que ahora solo envuelve el hint de cupón) sin
-   título ni flecha atrás ni ícono decorativo; o con el título de siempre
-   (`#s4-titulo`) + flecha atrás real, sin el selector. `flex:1` + `justify-
-   content:center` centra `#tp-seg` (`display:inline-flex`, se ajusta a su
-   contenido) dentro del espacio disponible de la nav. */
+   título ni ícono decorativo; o con el título de siempre (`#s4-titulo`), sin
+   el selector. `flex:1` + `justify-content:center` centra `#tp-seg`
+   (`display:inline-flex`, se ajusta a su contenido) dentro del espacio
+   disponible de la nav. La flecha atrás (`#s4-nav-back`) ya NO es parte de
+   esta alternancia (ver "Cambios recientes" -- antes vivía forzada a
+   `display:none` en esta variante sin importar el origen): es independiente,
+   así que puede convivir con el selector cuando corresponde mostrarla --
+   en ese caso `#tp-seg` queda centrado en el espacio restante a la derecha
+   de la flecha, no en el ancho total de la barra (corrimiento leve hacia la
+   derecha, aceptado). */
 .s4-nav-seg-wrap { flex: 1; display: flex; justify-content: center; }
 
 .nota-pago-wrapper { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-top: 20px; }

@@ -8,6 +8,13 @@ var E = {
 
 var _conflictosTalla = {};
 var _fechasPosibleProtecRiesgo = {};
+// Flecha atrás de #s4-nav condicional según el origen (ver "Cambios
+// recientes" -- bug real corregido). Seteada por `irNuevaReserva()`/
+// `iniciarReagendamiento()` (js/home.js) ANTES de `cargarFechas()`, leída
+// por `_s4ActualizarNav()` acá abajo -- independiente de `puedeElegir`
+// (esa decide título vs. selector Por clase/Mensual, no si hay o no una
+// pantalla previa real a la que volver).
+var _s4MostrarAtras = false;
 
 function tieneCuponDisponible() {
   if (!E.datos || !E.datos.cuponDisponible) return false;
@@ -205,19 +212,29 @@ function actualizarTextosPago() {
 // mutuamente excluyentes según `canPayMonthly() && !E.reagendando` (misma
 // condición que ya decide `#s4-tipo-pago-wrapper`/el hint de cupón, más
 // abajo en cargarFechas()): con el selector Por clase/Mensual centrado (sin
-// título, sin flecha atrás, sin ícono decorativo -- pedido explícito) o con
-// el título de siempre (`#s4-titulo`, recién poblado arriba) + flecha atrás
-// real, sin cambios de comportamiento respecto al #top-bar genérico que
-// usaba esta pantalla antes. Llamada también desde `ir()` (js/ui.js) al
-// entrar a 's4' -- `actualizarTextosPago()` no corre necesariamente antes de
-// esa primera entrada si `cargarFechas()` (asíncrona) todavía no resolvió.
+// título ni ícono decorativo) o con el título de siempre (`#s4-titulo`,
+// recién poblado arriba), sin cambios de comportamiento respecto al #top-bar
+// genérico que usaba esta pantalla antes. Llamada también desde `ir()`
+// (js/ui.js) al entrar a 's4' -- `actualizarTextosPago()` no corre
+// necesariamente antes de esa primera entrada si `cargarFechas()` (asíncrona)
+// todavía no resolvió.
+// Bug real corregido (ver "Cambios recientes"): la flecha atrás vivía atada
+// a `puedeElegir` (`display:none` fijo en la variante del selector, sin
+// importar el origen) -- con reservas activas, el usuario SÍ tiene una
+// #s-home real a la que volver aunque le toque ver el selector Por clase/
+// Mensual, y sin ellas (redirigido acá sin haber visto #s-home con
+// contenido) no la tiene aunque le toque ver el título. Ahora es
+// independiente de `puedeElegir`: `_s4MostrarAtras` (seteado por
+// `irNuevaReserva()`/`iniciarReagendamiento()`, js/home.js, ANTES de
+// `cargarFechas()`) decide la flecha sola; `puedeElegir` sigue decidiendo
+// únicamente título vs. selector.
 function _s4ActualizarNav() {
   var puedeElegir = canPayMonthly() && !E.reagendando;
   var back = document.getElementById('s4-nav-back');
   var titulo = document.getElementById('s4-titulo');
   var segWrap = document.getElementById('s4-nav-seg-wrap');
   if (!back || !titulo || !segWrap) return;
-  back.style.display = puedeElegir ? 'none' : '';
+  back.style.display = _s4MostrarAtras ? '' : 'none';
   titulo.style.display = puedeElegir ? 'none' : '';
   segWrap.style.display = puedeElegir ? 'flex' : 'none';
   // #s4-nav-spacer (ver index.html): re-medir siempre acá, no solo al entrar

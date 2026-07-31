@@ -230,6 +230,17 @@ function irNuevaReserva(skipEquip) {
   E.conf = ''; E.fechas = []; E.tallasPorFecha = {}; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = ''; E.cuponAplicado = false; E.creditosUsados = 0; E.reagendando = false;
   var chkC = document.getElementById('chk-cupon'); if (chkC) chkC.checked = false;
   document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
+  // Flecha atrás de #s4-nav condicional según el origen (ver "Cambios
+  // recientes" -- bug real: antes dependía únicamente de `puedeElegir`
+  // en `_s4ActualizarNav()`, js/reservas.js, sin importar si había o no una
+  // pantalla previa real a la que volver). Con reservas activas, el usuario
+  // necesariamente vio #s-home con contenido antes de llegar acá (el único
+  // otro camino, `irReservas()`, redirige directo a esta función sin pasar
+  // por #s-home cuando `activas.length===0`) -- mismo cálculo que ya usa
+  // `irReservas()`, reusado acá en vez de pasarlo como parámetro por los 2
+  // callers posibles (CTA de `#home-nav`, `irReservas()`).
+  var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  _s4MostrarAtras = _clasificarReservas(_todasReservas || [], hoy).activas.length > 0;
   cargarFechas();
 }
 // Punto de entrada del tab "Reservas" de la nav inferior (ver "Cambios
@@ -261,6 +272,9 @@ function iniciarReagendamiento() {
   E.notaPago = ''; E.cuponAplicado = false; E.creditosUsados = 0; E.reagendando = true;
   var chkC = document.getElementById('chk-cupon'); if (chkC) chkC.checked = false;
   document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
+  // Reagendar siempre parte de una reserva existente vista en #s-home -- ver
+  // nota de `_s4MostrarAtras` en irNuevaReserva().
+  _s4MostrarAtras = true;
   cargarFechas();
 }
 
