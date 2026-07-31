@@ -185,7 +185,6 @@
    ese borde, elevado por su propia sombra sobre una superficie continua. */
 #cta-footer-s4 {
   bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px + 14px);
 }
 /* #cta-footer-salud -- mismo motivo que #cta-footer-s-home de arriba (ver
    "Cambios recientes" -- aj-sub-salud ahora convive con la nav inferior,
