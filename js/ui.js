@@ -635,6 +635,20 @@ function _bottomNavClick(id) {
     var tabActivo = actual ? _tabIdDePantalla(actual.id) : null;
 
     if (tabActivo === id) {
+      // Bug real corregido (ver "Cambios recientes"): tocar el ícono de la
+      // tab en la que ya se está SIEMPRE disparaba el reset de abajo, incluso
+      // ya parado en la home de esa tab (nada que resetear) -- cada toque
+      // repetido re-ejecutaba `entrar()`/`volver()` de la nada (recarga/
+      // re-render sin ningún cambio real). Si ya se está en la raíz (`actual.id
+      // === item.pantalla`) Y, para 'ajustes' puntualmente, sin ningún
+      // aj-sub-* abierto encima (`_ajSubAbierto` -- la pantalla `s-datos` de
+      // abajo es la misma est'e o no un sub abierto, así que no alcanza con
+      // comparar el id), no hay nada que hacer: no-op real, sin efecto
+      // visual. Solo cuando el usuario está efectivamente en una sub-pantalla
+      // de esta tab (`s4`/`s-eventos-detalle`/un aj-sub-* abierto/etc.) se
+      // sigue de largo al reset real de siempre.
+      var yaEnHome = actual && actual.id === item.pantalla && (id !== 'ajustes' || !_ajSubAbierto);
+      if (yaEnHome) return;
       // Tab ya activo -- "volver a home" real: Ajustes descarta el sub-panel
       // recordado (mismo criterio que un cierre manual, cerrarAjSub()) antes
       // de navegar, así un futuro cambio de tab de ida y vuelta no lo
