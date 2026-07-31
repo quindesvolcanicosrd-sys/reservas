@@ -325,10 +325,22 @@ function _sincronizarNavHome(forzarVisible) {
   // forzarVisible=true salta el chequeo de _todasReservas — usado por irHomeDesdeExito()
   // apenas se navega a s-home, antes de tener datos frescos (ver ahí el porqué).
   var hoy = new Date(); hoy.setHours(0,0,0,0);
-  var activas = _clasificarReservas(_todasReservas || [], hoy).activas;
+  var clasificado = _clasificarReservas(_todasReservas || [], hoy);
+  var activas = clasificado.activas;
   var homeNav = document.getElementById('home-nav');
   var homeNavSpacer = document.getElementById('home-nav-spacer');
   var ptrHelper = document.getElementById('ptr-helper-texto');
+  // Ícono de historial (ver "Cambios recientes"): oculto por completo, no
+  // deshabilitado, cuando no hay ninguna reserva pasada -- reusa el mismo
+  // `_clasificarReservas()`/`_todasReservas` ya cargado para las cards de
+  // home (la misma fuente que alimenta `_poblarPillsAnio()`, la pantalla que
+  // este botón abre), sin ningún fetch dedicado. Re-evaluado acá porque
+  // `_sincronizarNavHome()` ya es la fuente única de qué mostrar en este nav
+  // y corre en cada punto natural de refresco de datos (carga inicial, PTR,
+  // tras crear una reserva) -- el ícono aparece solo, sin recargar la app,
+  // apenas la 1ra reserva pasa a formar parte del historial.
+  var historialBtn = document.getElementById('home-nav-historial');
+  if (historialBtn) historialBtn.style.display = clasificado.historial.length > 0 ? '' : 'none';
 
   if (!forzarVisible && activas.length === 0) {
     if (homeNav) homeNav.style.display = 'none';
