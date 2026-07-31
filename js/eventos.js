@@ -271,6 +271,41 @@ function irEventos() {
   _evYaInicializadoEnSesion = true;
 }
 
+// Punto de entrada usado por `restaurar` del ítem 'eventos' (APP_BOTTOM_NAV_ITEMS,
+// js/ui.js) -- ver "Cambios recientes", preservación de estado por tab: se
+// llama en vez de `irEventos()` cuando se vuelve a Eventos desde OTRO tab de
+// la nav inferior (irEventos() sigue siendo el que corre al tocar el tab
+// Eventos YA activo -- ese SÍ debe resetear a la raíz, ver `_bottomNavClick()`).
+// `pantallaGuardada` es la última `.pantalla` de Eventos que estaba activa
+// (`s-eventos`/`s-eventos-detalle`/`s-eventos-anticipada`, ver
+// `_bottomNavUltimaPantalla`, js/ui.js). Detalle y Asistencia anticipada
+// reaparecen tal cual: ninguno de los dos se destruye al abandonarlos (`ir()`
+// solo togglea `.activa`), así que alcanza con volver a mostrarlos -- lo
+// único que hace falta re-disparar es lo que depende de layout REAL (sticky
+// del detalle, footer/paso del wizard), medido en cero mientras la pantalla
+// estuvo `display:none` detrás de otro tab.
+function _evRestaurarTab(pantallaGuardada) {
+  if (pantallaGuardada === 's-eventos-anticipada' && document.getElementById('s-eventos-anticipada')) {
+    ir('s-eventos-anticipada');
+    var wizard = document.getElementById('ev-ant-wizard');
+    // Wizard visible (a mitad de un paso) -- re-muestra el paso actual sin
+    // tocar `_evAntData`/`_evAntCurIdx`: sólo repinta el footer/progreso
+    // (`_evAntActualizarFooter()`, oculto de golpe por `ir()` al abandonar
+    // la sección -- ver comentario de `#cta-footer-eventos-anticipada` en
+    // ese archivo) y sus dots -- las pills/fechas ya elegidas siguen con su
+    // clase `activa`/valor tal cual quedaron, nunca se resetean.
+    if (wizard && wizard.style.display !== 'none') _evAntMostrarPaso(_evAntCurIdx);
+    return;
+  }
+  if (pantallaGuardada === 's-eventos-detalle' && document.getElementById('s-eventos-detalle')) {
+    ir('s-eventos-detalle');
+    _evDetalleActualizarSticky();
+    setTimeout(function() { _evUpdateRsvpSliders(false); }, 50);
+    return;
+  }
+  irEventos();
+}
+
 /* ── Burbuja de cabecera: búsqueda + filtros fusionados (ver "Cambios
    recientes" -- antes 2 burbujas separadas, filtros/búsqueda, mismo
    mecanismo pero 2 entradas en `_EV_PANELES`; ahora 1 sola). Mecanismo

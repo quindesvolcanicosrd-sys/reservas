@@ -209,6 +209,19 @@ function ir(id, desdeHistorial, sinTrampa) {
   }
   document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
   document.getElementById(id).classList.add('activa');
+  // Preservación de estado por tab (ver "Cambios recientes" -- regla general
+  // de arquitectura, no específica de Eventos/Ajustes): cada vez que `ir()`
+  // deja una pantalla activa que pertenece a algún tab de la nav inferior
+  // (raíz o drill-down, vía `_tabIdDePantalla()` -- misma resolución que ya
+  // usa `_actualizarBottomNav()`/`_esPantallaAlcanzable()`), se recuerda acá
+  // en `_bottomNavUltimaPantalla[tabId]` -- sin importar el disparador
+  // (botón, popstate, nav inferior). `_bottomNavClick()` lo consulta al
+  // cambiar de tab para reaparecer exactamente ahí en vez de resetear a la
+  // raíz -- ver esa función más abajo. Pantallas ajenas a cualquier tab
+  // (login, wizard de Nueva Reserva antes de s4, loaders `sinHistorial`,
+  // etc.) resuelven `null` y no pagan ningún costo acá.
+  var _tabDeEstaPantalla = _tabIdDePantalla(id);
+  if (_tabDeEstaPantalla) _bottomNavUltimaPantalla[_tabDeEstaPantalla] = id;
   // Instantáneo (ver "Cambios recientes" -- antes `behavior:'smooth'`): ya
   // estamos abandonando la sección entera (mismo criterio que el resto de
   // esta función, ver comentario de más arriba sobre `_ajSubAbierto`/
@@ -441,6 +454,16 @@ var APP_BOTTOM_NAV_ITEMS = [
   // motivo que 'ajustes'/irEditarDatos().
   { id: 'eventos', icono: 'campaign', texto: 'Eventos', pantalla: 's-eventos',
     entrar: function() { irEventos(); },
+    // `restaurar` (ver "Cambios recientes" -- preservación de estado por tab,
+    // regla general de _bottomNavClick() de más arriba): al volver a Eventos
+    // desde OTRO tab, reaparece en la sub-pantalla real con la que se había
+    // quedado (detalle de un evento, o el wizard/resumen de Asistencia
+    // anticipada con sus pills/fechas ya tocadas) en vez de resetear a la
+    // raíz -- eso último es lo que sigue haciendo `entrar` (irEventos())
+    // cuando se toca el tab Eventos YA activo. Implementada en js/eventos.js
+    // (_evRestaurarTab()) -- vive ahí junto al resto del estado del wizard,
+    // no acá.
+    restaurar: function(pantallaGuardada) { if (typeof _evRestaurarTab === 'function') _evRestaurarTab(pantallaGuardada); else irEventos(); },
     // `alSalir` (ver "Cambios recientes" -- regla general de restaurar
     // posición al volver por nav inferior): guarda el scroll del timeline al
     // ABANDONAR la sección, sin importar hacia dónde -- complementa a
@@ -506,6 +529,29 @@ function _iconoRaizDeNav(id) {
   return null;
 }
 
+// Resuelve una `.pantalla` (raíz o drill-down) al `id` del ítem de
+// APP_BOTTOM_NAV_ITEMS al que pertenece, o null si no pertenece a ningún tab
+// -- misma resolución que ya usaba `_esPantallaAlcanzable()` inline (raíz
+// directa, o vía `_BOTTOM_NAV_EXTRA` para drill-downs como
+// `s-eventos-detalle`/`s4`), factorizada acá porque ahora también la usa el
+// tracking de `ir()` y `_bottomNavClick()` (ver "Cambios recientes" --
+// preservación de estado por tab). `_esPantallaAlcanzable()` sigue con su
+// propia copia inline sin tocar -- no es el foco de este cambio y ya está
+// validada, duplicar 4 líneas ahí es más seguro que arriesgar su comportamiento.
+function _tabIdDePantalla(id) {
+  var idExtra = _BOTTOM_NAV_EXTRA[id];
+  if (idExtra) return idExtra;
+  for (var i = 0; i < APP_BOTTOM_NAV_ITEMS.length; i++) {
+    if (APP_BOTTOM_NAV_ITEMS[i].pantalla === id) return APP_BOTTOM_NAV_ITEMS[i].id;
+  }
+  return null;
+}
+
+// Última pantalla mostrada de cada tab (id de ítem -> id de `.pantalla`),
+// poblado por `ir()` en cada navegación (ver ahí) -- fuente de verdad de
+// "dónde había quedado" cada sección para `_bottomNavClick()` de abajo.
+var _bottomNavUltimaPantalla = {};
+
 // Bug real corregido (ver "Cambios recientes" -- gesto de "atrás" saltaba a
 // login en vez de al tab anterior): el listener de `popstate` de abajo tenía
 // su PROPIO allowlist manual de pantallas válidas para una cuenta
@@ -540,11 +586,50 @@ function _esPantallaAlcanzable(id) {
   return false;
 }
 
+// Preservación de estado por tab (ver "Cambios recientes" -- regla general de
+// arquitectura, aplica a todo ítem de APP_BOTTOM_NAV_ITEMS, no solo a
+// Eventos/Ajustes): tocar un tab DISTINTO al activo restaura la última
+// sub-pantalla/estado con el que había quedado esa sección (sin resetear
+// nada tocado por el usuario -- pills/fechas de un wizard, sub-panel
+// abierto, etc.); tocar el tab en el que YA se está parado es la única forma
+// de "volver a home" de esa sección -- descarta cualquier estado recordado y
+// navega a su pantalla raíz. Ambos caminos conviven con pushState/popstate
+// sin tocarlo: toda navegación de acá abajo sigue pasando por `ir()`/
+// `volver()`, que son quienes manejan el historial -- este mecanismo solo
+// decide A QUÉ pantalla navegar, nunca cómo se registra en el historial.
 function _bottomNavClick(id) {
   for (var i = 0; i < APP_BOTTOM_NAV_ITEMS.length; i++) {
     if (APP_BOTTOM_NAV_ITEMS[i].id !== id) continue;
     var item = APP_BOTTOM_NAV_ITEMS[i];
-    if (item.entrar) item.entrar(); else volver(item.pantalla);
+    var actual = document.querySelector('.pantalla.activa');
+    var tabActivo = actual ? _tabIdDePantalla(actual.id) : null;
+
+    if (tabActivo === id) {
+      // Tab ya activo -- "volver a home" real: Ajustes descarta el sub-panel
+      // recordado (mismo criterio que un cierre manual, cerrarAjSub()) antes
+      // de navegar, así un futuro cambio de tab de ida y vuelta no lo
+      // reabre solo. Eventos no necesita un reset explícito acá -- su propio
+      // `entrar` (irEventos()) ya aterriza siempre en la raíz `s-eventos` sin
+      // importar la sub-pantalla actual (detalle o Asistencia anticipada).
+      if (id === 'ajustes') _ajUltimoSubAbierto = null;
+      if (item.entrar) item.entrar(); else volver(item.pantalla);
+      return;
+    }
+
+    // Veníamos de otro tab: restaurar tal cual había quedado esta sección.
+    // `item.restaurar` (si lo define, ver 'eventos' más arriba) sabe
+    // reconstruir estado propio más allá de la pantalla en sí (ej. el paso
+    // del wizard de Asistencia anticipada); sin él, alcanza con volver a la
+    // última pantalla recordada -- su contenido sigue intacto en el DOM
+    // (`ir()` solo togglea `.activa`, nunca lo destruye).
+    var pantallaGuardada = _bottomNavUltimaPantalla[id];
+    if (pantallaGuardada && pantallaGuardada !== item.pantalla) {
+      if (item.restaurar) item.restaurar(pantallaGuardada); else ir(pantallaGuardada);
+    } else if (item.entrar) {
+      item.entrar();
+    } else {
+      volver(item.pantalla);
+    }
     // Ajustes: si la sección se abandonó con un aj-sub-* abierto (el guard de
     // ir() lo cerró de golpe, sin animación, pero dejó `_ajUltimoSubAbierto`
     // con su id -- ver js/perfil.js), restaurarlo acá en vez de aterrizar en
