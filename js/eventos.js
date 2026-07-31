@@ -1057,7 +1057,7 @@ function _evIrAHoy() {
     _evSincronizarNavMesDesde(hoy);
     _evCalCambiarMes(hoy);
   }
-  _evCalIrAFechaEnTimeline(hoy, false, true);
+  _evCalIrAFechaEnTimeline(hoy, false, true, true);
 }
 
 /* ── Consultas sobre los datos de prueba (idénticas a como se filtrarían
@@ -1138,17 +1138,19 @@ function _evLanzarConfettiCuandoVisible(el, intentosRestantes) {
 // (arriba de él en el flujo) tapado a medias por la cabecera -- apuntar al
 // separador directo lo deja pegado arriba del todo, mismo criterio que
 // cualquier otro salto de fecha.
-function _evScrollAFecha(iso, instant) {
+function _evScrollAFecha(iso, instant, forzar) {
   var el = (iso === _evHoyISO() && document.getElementById('ev-separador-hoy')) ||
     document.getElementById('ev-fecha-' + iso) || _evFechaGrupoMasCercano(iso);
   if (!el) return;
   var margenSup = _evAlturaStickyHeader();
   document.documentElement.style.setProperty('--ev-sticky-h', margenSup + 'px');
-  var r = el.getBoundingClientRect();
-  var margenInf = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-h')) || 60;
-  var vh = window.innerHeight || document.documentElement.clientHeight;
-  var yaVisible = r.top >= margenSup && r.bottom <= (vh - margenInf);
-  if (yaVisible) return;
+  if (!forzar) {
+    var r = el.getBoundingClientRect();
+    var margenInf = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-h')) || 60;
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    var yaVisible = r.top >= margenSup && r.bottom <= (vh - margenInf);
+    if (yaVisible) return;
+  }
   el.scrollIntoView({ behavior: instant ? 'auto' : 'smooth', block: 'start' });
 }
 function _evFechaGrupoMasCercano(iso) {
@@ -1191,7 +1193,7 @@ function _evFechaGrupoMasCercano(iso) {
 // cualquier otro caso), no en un cartel de "no hay eventos". `_evIrAHoy()`
 // pasa `true` acá para saltear el chequeo sin duplicar el resto de esta
 // función (fade + re-pintado de recuperación si hace falta).
-function _evCalIrAFechaEnTimeline(iso, instant, forzarHayContenido) {
+function _evCalIrAFechaEnTimeline(iso, instant, forzarHayContenido, forzarScroll) {
   var m = _evCalMesDe(iso);
   var hayContenido = forzarHayContenido || _evTimelineItems().some(function(it) {
     var d = _evParseISO(it.fecha);
@@ -1205,9 +1207,9 @@ function _evCalIrAFechaEnTimeline(iso, instant, forzarHayContenido) {
       return;
     }
     if (!cont.querySelector('.ev-fecha-grupo')) {
-      _evRenderTimeline(true, function() { _evScrollAFecha(iso, instant); });
+      _evRenderTimeline(true, function() { _evScrollAFecha(iso, instant, forzarScroll); });
     } else {
-      _evScrollAFecha(iso, instant);
+      _evScrollAFecha(iso, instant, forzarScroll);
     }
   }, false, _EV_TIMELINE_FADE_MS);
 }
@@ -2133,9 +2135,30 @@ function _evRenderDetalleAsistencia(ev) {
 // debería ir el scroll (mismo offset que ya usa `_evDetalleActualizarSticky()`,
 // `nivel3.style.top`, reusado) y animar el `scrollTo` con espacio real de
 // sobra para moverse. Recién cuando esa animación termina (timeout, no hay
-// evento de "fin" nativo para `window.scrollTo`) se suelta el `min-height` --
-// para ese entonces el usuario ya está en una posición dentro del alto NUEVO
-// (más chico), así que soltarlo no dispara ningún clamp adicional.
+// evento de "fin" nativo para `window.scrollTo`) se suelta el `min-height`.
+//
+// 2do bug real, encontrado DESPUÉS de aplicar el fix de arriba (instrumentado
+// con Playwright muestreando `scrollY` cuadro a cuadro, no adivinado): el fix
+// de arriba evita el salto AL TOGGLEAR `display`, pero cuando el destino
+// filtrado es una lista muy corta (ej. "Sin respuesta"(11) → "Asisten"(1)),
+// `scrollDestino` -- calculado con el `min-height` todavía puesto, documento
+// todavía "grande" -- puede ser una posición que YA NO EXISTE una vez que el
+// `min-height` se suelta (el documento real, sin el relleno artificial, es
+// más corto que `scrollDestino`). La animación `smooth` sí llega bien y se
+// asienta en `scrollDestino` (confirmado, ~320ms) -- pero al soltar el
+// `min-height` en el `setTimeout` de más abajo, el documento se encoge más
+// allá de esa posición y el navegador reclampea `scrollY` de golpe, SIN
+// animación posible (mismo mecanismo síncrono del primer bug, esta vez
+// disparado por soltar el relleno en vez de por togglear `display`) --
+// visible como un 2do salto mudo justo cuando la animación ya se veía
+// terminada. Fix: no animar hacia el `scrollDestino` "on-a-tall-document" tal
+// cual -- clampearlo primero contra el alto MÁXIMO real que va a quedar tras
+// soltar el `min-height` (`maxScrollTrasSoltar`, medido soltando el
+// `min-height` un instante para leer `scrollHeight` y devolviéndolo antes de
+// que el navegador llegue a pintar nada -- una sola lectura de layout
+// síncrona, sin cambio visual). Así la animación converge directo al destino
+// FINAL real; soltar el `min-height` después no tiene nada nuevo que
+// clampear.
 function _evFiltrarAsistenciaPorGrupo(cardEl, grupo) {
   var yaActiva = _evDetalleFiltroGrupo === grupo;
   _evDetalleFiltroGrupo = yaActiva ? null : grupo;
@@ -2163,10 +2186,25 @@ function _evFiltrarAsistenciaPorGrupo(cardEl, grupo) {
     // (`rect.top + window.scrollY`) es estable sin importar cuánto se haya
     // scrolleado, así que sirve como referencia real para calcular a dónde
     // scrollear.
+    var scrollYInicio = window.scrollY;
     var offsetSticky = parseFloat(statsSticky.style.top) || 0;
-    var listaAbsY = lista.getBoundingClientRect().top + window.scrollY;
+    var listaAbsY = lista.getBoundingClientRect().top + scrollYInicio;
     var scrollDestino = Math.max(0, listaAbsY - offsetSticky - statsSticky.offsetHeight);
-    if (window.scrollY > scrollDestino + 1) {
+    // Clamp contra el alto real que va a quedar tras soltar `min-height` (ver
+    // comentario de arriba, 2do bug) -- soltar+medir+reponer en el mismo tick
+    // síncrono, sin `requestAnimationFrame` de por medio, así que no hay pintado
+    // intermedio con el documento corto. Soltar el `min-height` acá fuerza el
+    // mismo reflow-y-clamp síncrono del 1er bug (el navegador ve el documento
+    // corto un instante y clampea `scrollY` de verdad, no solo lo que
+    // reportaría un cálculo) -- por eso se restaura `scrollY` a
+    // `scrollYInicio` explícitamente después de reponer el `min-height`, en
+    // vez de asumir que iba a quedar intacto.
+    lista.style.minHeight = '';
+    var maxScrollTrasSoltar = Math.max(0, document.documentElement.scrollHeight - (window.innerHeight || document.documentElement.clientHeight));
+    lista.style.minHeight = alturaViejaLista + 'px';
+    window.scrollTo(0, scrollYInicio);
+    scrollDestino = Math.min(scrollDestino, maxScrollTrasSoltar);
+    if (scrollYInicio > scrollDestino + 1) {
       animo = true;
       window.scrollTo({ top: scrollDestino, behavior: 'smooth' });
     }
