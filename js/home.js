@@ -554,7 +554,7 @@ function _renderCardHome(r, hoy) {
   if (hora) pillsHtml += '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + hora + '</span>';
   if (lugar) {
   if (r.mapsUrl) {
-    pillsHtml += '<a class="fi-pill fi-pill-lugar fi-pill-lugar-fusionado" href="' + r.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-symbols-outlined">location_on</span>' + lugar + '<span class="fi-pill-fusionado-sep"></span><span class="material-symbols-outlined">near_me</span>Cómo llegar</a>';
+    pillsHtml += '<a class="fi-pill fi-pill-lugar" href="' + r.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-symbols-outlined">location_on</span>' + lugar + '</a>';
   } else {
     pillsHtml += '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
   }
@@ -580,21 +580,23 @@ function _renderCardHome(r, hoy) {
     rnTopExtra += '</div>';
   }
 
-  // "Re-agendar o cancelar reserva" siempre visible, justo debajo de la fila
-  // de pills y antes del acordeón "Más información" (ver "Cambios recientes"
-  // -- antes vivía adentro de bodyHtml, oculto mientras el acordeón seguía
-  // colapsado). Reservas mensuales no lo necesitan acá: ya muestran su
+  // "Re-agendar o cancelar reserva" comparte renglón con "Más información"
+  // (ver "Cambios recientes" -- antes vivía en su propia fila, arriba del
+  // acordeón). Reservas mensuales no lo necesitan acá: ya muestran su
   // propio "Cancelar reserva" siempre visible más abajo, sin acordeón.
-  var reagendarHtml = esMensual ? '' :
-    '<div class="rn-divider"></div><div class="rn-cancel-wrap"><button class="btn-cancel-text" onclick="abrirGestionar(\'' + fechaEsc + '\',' + filaEsc + ')">Re-agendar o cancelar reserva</button></div>';
-
   var masInfoHtml;
   if (esMensual) {
     masInfoHtml = '<div class="rn-divider"></div><div class="rn-cancel-wrap"><button class="btn-cancel-text" onclick="abrirGestionar(\'' + fechaEsc + '\',' + filaEsc + ')">Cancelar reserva</button></div>';
   } else {
     masInfoHtml = '<div class="rn-divider"></div>' +
+      '<div class="rn-footer-row">' +
       '<div class="rn-mas-info" id="' + uid + '-toggle" onclick="_toggleCardBody(\'' + uid + '\')">' +
       '<span>Más información</span><span class="material-symbols-outlined rn-chevron">expand_more</span></div>' +
+      '<button class="rn-btn-reagendar" onclick="event.stopPropagation();abrirGestionar(\'' + fechaEsc + '\',' + filaEsc + ')">' +
+      '<span class="rn-btn-reagendar-full">Re-agendar o cancelar reserva</span>' +
+      '<span class="rn-btn-reagendar-corto">Re-agendar/cancelar</span>' +
+      '</button>' +
+      '</div>' +
       bodyHtml;
   }
 
@@ -604,7 +606,6 @@ function _renderCardHome(r, hoy) {
     '<div class="rn-top"><div class="rn-date">' + fechaTexto + '</div>' + rnTopExtra + '</div>' +
     pillsHtml +
     '</div>' +
-    reagendarHtml +
     masInfoHtml +
     '</div>';
 }

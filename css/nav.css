@@ -286,14 +286,15 @@
 }
 
 /* ── CTA de "Nueva reserva" en #home-nav: ocupa el slot izquierdo que dejó
-   libre "MIS RESERVAS" (ver MANIFEST.md "Cambios recientes") -- `flex:1`
-   lo ensancha para llenar ese espacio y el texto queda SIEMPRE visible
-   (nunca ícono-solo, ni en `.compacto` al scrollear ni en pantallas
-   angostas) para que quede claro que ahí se toca para reservar. Doble
-   selector por ID a propósito: gana por especificidad sobre
+   libre "MIS RESERVAS" (ver MANIFEST.md "Cambios recientes") -- ancho
+   automático (solo lo que ocupan ícono+texto), alineado a la izquierda por
+   el `justify-content:space-between` de `.app-nav` (ya no `flex:1`, que lo
+   ensanchaba a todo el espacio disponible y lo centraba). El texto queda
+   SIEMPRE visible (nunca ícono-solo, ni en `.compacto` al scrollear ni en
+   pantallas angostas) para que quede claro que ahí se toca para reservar.
+   Doble selector por ID a propósito: gana por especificidad sobre
    `.app-nav-fixed.compacto .app-nav-cta-label` y el `@media (max-width:360px)`
    de arriba, ambos genéricos para cualquier nav con CTA. */
-#home-nav #home-nav-cta { flex: 1; justify-content: center; }
 #home-nav #home-nav-cta-label { display: inline; }
 
 /* ── Nav inferior (bottom tab bar) ─────────────

@@ -104,7 +104,14 @@
 .badge-cancelada { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--danger-bg); color:var(--danger); border:1px solid var(--danger); white-space:nowrap; }
 .badge .material-symbols-outlined { font-size:13px; }
 .res-card-nueva .rn-divider { height:1px; background:var(--border-light); }
-.res-card-nueva .rn-mas-info { display:flex; align-items:center; justify-content:space-between; padding:9px 14px; cursor:pointer; color:var(--muted); font-size:0.77rem; font-weight:600; user-select:none; transition:color 0.15s; }
+/* Fila que agrupa "Más información" (izquierda) + botón "Re-agendar o
+   cancelar reserva" (derecha), vertical-centrados entre sí (ver "Cambios
+   recientes" -- antes el botón vivía en su propia fila, `.rn-cancel-wrap`,
+   arriba de esta). `.rn-mas-info` deja de usar `justify-content:space-between`
+   a lo ancho de toda la fila (ya no está solo ahí) y pasa a tamaño de
+   contenido (`flex-shrink:0`) con su propio gap chico entre texto y chevron. */
+.res-card-nueva .rn-footer-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; padding:9px 14px; }
+.res-card-nueva .rn-mas-info { display:flex; align-items:center; gap:4px; flex-shrink:0; white-space:nowrap; cursor:pointer; color:var(--muted); font-size:0.77rem; font-weight:600; user-select:none; transition:color 0.15s; }
 .res-card-nueva .rn-mas-info:hover { color:var(--brand); }
 .res-card-nueva .rn-mas-info .rn-chevron { font-size:16px; transition:transform 0.3s; }
 .res-card-nueva .rn-mas-info.open .rn-chevron { transform:rotate(180deg); }
@@ -117,6 +124,38 @@
 .res-card-nueva .rn-cancel-wrap { text-align:center; padding: 8px 14px 8px; }
 .btn-cancel-text { background:none; border:none; color:var(--danger); font-size:0.74rem; font-weight:600; cursor:pointer; font-family:inherit; text-decoration:underline; text-underline-offset:3px; }
 .btn-cancel-text:hover { opacity:0.8; }
+/* "Re-agendar o cancelar reserva" -- outline real (borde, sin relleno),
+   mismo criterio que `.ev-ant-btn-restablecer` (css/eventos.css): `.btn-outline`
+   (css/ui.css) pese al nombre es un fill tenue sin borde, no sirve acá, así
+   que este modificador se scopea al único botón que lo necesita. `flex-shrink:0`
+   + `white-space:nowrap` para que ni el botón ni "Más información" partan su
+   texto en 2 líneas dentro de `.rn-footer-row`.
+   Texto corto por media query (medido con Playwright/harness aislado, no a
+   ojo): el texto completo ("Re-agendar o cancelar reserva") solo entra junto
+   a "Más información" en una sola línea desde ~440px de ancho de contenido
+   real -- por debajo de eso `.rn-btn-reagendar-full` se esconde y
+   `.rn-btn-reagendar-corto` ("Re-agendar/cancelar") toma su lugar, en vez de
+   reducir el tamaño de fuente. Breakpoint elegido en 480px (el `max-width`
+   de `.contenedor`, ya usado en el resto de la app) en vez de un número
+   mágico. **Aun el texto corto queda ~15px corto para entrar junto a "Más
+   información" al ancho mínimo soportado por la app (360px, ver
+   `@media (max-width:360px)` de `nav.css`)** -- "Más información" + ícono ya
+   ocupan 122px fijos, sin margen para acortar más sin tocar esas palabras
+   (fuera de alcance acá). Mismo caso límite que ya tiene `.ev-ant-btn-restablecer`
+   (css/eventos.css): `flex-wrap:wrap` en `.rn-footer-row` es la red de
+   seguridad -- a 360px el botón cae a su propia 2da línea (mismo look que el
+   diseño anterior) en vez de desbordar recortado fuera de la tarjeta.
+   Verificado con Playwright: sin overflow horizontal en 320/360/375/390/
+   412/428px; una sola línea a partir de 375px con el texto corto, ambos
+   elementos vertical-centrados entre sí. */
+.rn-btn-reagendar { background:none; border:1.5px solid var(--danger); color:var(--danger); padding:6px 8px; border-radius:10px; font-size:0.74rem; font-weight:600; font-family:inherit; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+.rn-btn-reagendar:hover { background:var(--danger-bg); }
+.rn-btn-reagendar:active { transform:scale(0.97); }
+.rn-btn-reagendar-corto { display:none; }
+@media (max-width:479px) {
+  .rn-btn-reagendar-full { display:none; }
+  .rn-btn-reagendar-corto { display:inline; }
+}
 
 /* ── Pantalla gestionar ──────────────────────────────── */
 .sg-toggle-row { display:flex; gap:8px; margin-bottom:16px; }
@@ -143,8 +182,6 @@
 .rn-status-confirmada { background:var(--success-dark); color:var(--white); }
 .rn-status-cancelada { background:var(--danger); color:var(--white); }
 .rn-status-reagendar { background:var(--dk-purple-mid,#6d28d9); color:var(--white); }
-.fi-pill-lugar-fusionado { text-decoration:none; }
-.fi-pill-fusionado-sep { width:1px; height:12px; background:currentColor; opacity:0.3; margin:0 4px; flex-shrink:0; }
 
 
 /* ── Empty state home ────────────────────────────────────
