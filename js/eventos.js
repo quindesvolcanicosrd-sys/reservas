@@ -2411,13 +2411,13 @@ function _evAntIniciarWizard() {
   document.getElementById('ev-ant-resumen').style.display = 'none';
   document.getElementById('ev-ant-wizard').style.display = 'block';
   document.querySelectorAll('#ev-ant-wizard .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
-  ['ev-ant-desde-iso', 'ev-ant-hasta-iso', 'ev-ant-desdeInd-iso'].forEach(function(id) {
-    var el = document.getElementById(id); if (el) el.value = '';
-  });
-  ['ev-ant-desde-display', 'ev-ant-hasta-display'].forEach(function(id) {
-    var el = document.getElementById(id); if (el) { el.textContent = 'Selecciona una fecha'; el.classList.add('fnac-placeholder'); }
-  });
-  var dInd = document.getElementById('ev-ant-desdeInd-display'); if (dInd) dInd.textContent = 'Hoy';
+  document.querySelectorAll('#ev-ant-wizard .ev-rsvp-opt').forEach(function(o) { o.classList.remove('activa'); });
+  var estadoSeg = document.getElementById('ev-ant-estado-seg');
+  if (estadoSeg) _evPosicionarRsvpSlider(estadoSeg, false);
+  // El calendario inline (ev-ant-cal-*) no necesita reset propio acá --
+  // se re-arma desde cero (fechaDesde/fechaHasta ya en null arriba) recién
+  // cuando el paso 2 revela "Por período"/"Indefinido", ver
+  // _evAntMostrarSubFrecuencia().
   ['ev-ant-paso1-meses', 'ev-ant-paso1-periodo', 'ev-ant-paso1-indefinido'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.style.display = 'none';
   });
@@ -2476,6 +2476,7 @@ function _evAntActualizarFooter(idx) {
   var paso = _EV_ANT_STEPS[idx];
   var footer = document.getElementById('cta-footer-eventos-anticipada');
   if (footer) footer.style.display = 'block';
+  document.body.classList.add('ev-ant-footer-visible');
   var btnContinuar = document.getElementById('ev-ant-footer-continuar');
   if (btnContinuar) {
     btnContinuar.onclick = _EV_ANT_CONTINUAR_FN[paso];
@@ -2485,9 +2486,14 @@ function _evAntActualizarFooter(idx) {
     btnContinuar.classList.toggle('btn-outline', !esFinal);
   }
 }
+// `body.ev-ant-footer-visible` (ver css/eventos.css) sube el #app-toast
+// global (css/estilos.css, bottom:28px fijo de fábrica) para que quede
+// justo encima de #cta-footer-eventos-anticipada en vez de superpuesto a
+// las pills del wizard -- togglea junto con el propio footer, nunca suelto.
 function _evAntOcultarFooter() {
   var footer = document.getElementById('cta-footer-eventos-anticipada');
   if (footer) footer.style.display = 'none';
+  document.body.classList.remove('ev-ant-footer-visible');
 }
 
 function _evAntSelUnica(el) {
@@ -2496,25 +2502,26 @@ function _evAntSelUnica(el) {
   el.classList.add('activa');
 }
 
-// "Todo tipo de evento" (data-val="") es excluyente con las 3 específicas:
-// tocarla apaga las otras 3 (y viceversa) -- a diferencia de Entrenamiento/
-// Torneo/Asamblea entre sí, que siguen siendo multi-select libre (mismo
-// mecanismo que ajTogglePill(), reusado tal cual para ese subgrupo). Si
-// "Todo" queda activa, el payload manda tiposEvento vacío -- mismo criterio
-// que ya regía implícitamente cuando no se seleccionaba nada (ver
-// _evAntAplicar()): "Todo" es solo una afordancia explícita del mismo vacío.
+// "Estado a aplicar" -- reusa EXACTAMENTE el mismo componente que la barra
+// "¿Asistiré?" de la card de evento (.ev-rsvp-seg/.ev-rsvp-opt/
+// .ev-rsvp-slider, ver css/eventos.css y _evRsvpBarraHtml()/
+// _evPosicionarRsvpSlider() más arriba en este archivo) -- acá es solo la
+// selección PREVIA a "Aplicar" del wizard, no dispara ningún marcado
+// inmediato (a diferencia de _evMarcarAsistencia(), que sí postea al
+// backend al toque). _evPosicionarRsvpSlider() ya es genérica sobre
+// cualquier `.ev-rsvp-seg` real, se reusa tal cual sin tocarla.
+function _evAntSelEstado(el) {
+  var seg = el.parentElement;
+  seg.querySelectorAll('.ev-rsvp-opt').forEach(function(o) { o.classList.remove('activa'); });
+  el.classList.add('activa');
+  _evPosicionarRsvpSlider(seg, true);
+}
+
+// Multi-select libre entre Entrenamiento/Torneo/Asamblea (mismo mecanismo
+// que ajTogglePill()) -- ya no existe la pill "Todo tipo de evento" (ver
+// "Cambios recientes"), _evAntContinuar1() exige al menos una de las 3.
 function _evAntToggleTipoEvento(el) {
-  var cont = el.parentElement;
-  var esTodo = el.dataset.val === '';
-  if (esTodo) {
-    var activar = !el.classList.contains('activa');
-    cont.querySelectorAll('.aj-pill').forEach(function(p) { p.classList.remove('activa'); });
-    if (activar) el.classList.add('activa');
-  } else {
-    var todoPill = cont.querySelector('.aj-pill[data-val=""]');
-    if (todoPill) todoPill.classList.remove('activa');
-    el.classList.toggle('activa');
-  }
+  el.classList.toggle('activa');
 }
 
 // Paso 0 -- intro explicativa, sin campos (mismo criterio que saludContinuar0(),
@@ -2523,13 +2530,14 @@ function _evAntContinuar0() {
   _evAntMostrarPaso(1);
 }
 
-// Paso 1 -- tipos de evento (opcional) + estado a aplicar (requerido)
+// Paso 1 -- tipos de evento (requerido, al menos 1) + estado a aplicar (requerido)
 function _evAntContinuar1() {
-  var sel = document.querySelector('#ev-ant-estado-pills .aj-pill.activa');
-  if (!sel) { err('ev-ant-err-0', 'Selecciona un estado.'); return; }
-  _evAntData.estado = sel.dataset.val;
   var vals = [];
   document.querySelectorAll('#ev-ant-tipos-evento-pills .aj-pill.activa').forEach(function(p) { if (p.dataset.val) vals.push(p.dataset.val); });
+  if (!vals.length) { err('ev-ant-err-tipos', 'Selecciona al menos un tipo de evento.'); return; }
+  var sel = document.querySelector('#ev-ant-estado-seg .ev-rsvp-opt.activa');
+  if (!sel) { err('ev-ant-err-0', 'Selecciona un estado.'); return; }
+  _evAntData.estado = sel.getAttribute('data-estado');
   _evAntData.tiposEvento = vals;
   _evAntMostrarPaso(2);
 }
@@ -2538,7 +2546,14 @@ function _evAntContinuar1() {
 // según la elección -- ya no es un paso propio, se actualiza al toque.
 function _evAntSelFrecuencia(el) {
   _evAntSelUnica(el);
-  _evAntData.tipoRango = el.dataset.val;
+  var nuevo = el.dataset.val;
+  // Cambiar de frecuencia descarta fechaDesde/fechaHasta ya elegidas -- ese
+  // par se comparte entre "Por período"/"Indefinido" (ver _evAntAplicar()),
+  // así que sin este reset una fecha elegida en un modo quedaba viva (y
+  // potencialmente inválida, ej. Hasta anterior a la nueva Desde) al saltar
+  // al otro.
+  if (nuevo !== _evAntData.tipoRango) { _evAntData.fechaDesde = null; _evAntData.fechaHasta = null; }
+  _evAntData.tipoRango = nuevo;
   _evAntMostrarSubFrecuencia();
 }
 
@@ -2552,10 +2567,15 @@ function _evAntMostrarSubFrecuencia() {
     _evAntRenderMesesGrid();
   } else if (_evAntData.tipoRango === 'periodo') {
     bPeriodo.style.display = 'block';
+    _evAntCal.periodo.mostrado = _evAntData.fechaDesde || _evAntHoyISO();
+    _evAntCalRender('periodo');
+    _evAntCalActualizarResumen('periodo');
   } else if (_evAntData.tipoRango === 'indefinido') {
     bIndef.style.display = 'block';
-    var isoEl = document.getElementById('ev-ant-desdeInd-iso');
-    if (isoEl && !isoEl.value) isoEl.value = _evAntHoyISO();
+    if (!_evAntData.fechaDesde) _evAntData.fechaDesde = _evAntHoyISO();
+    _evAntCal.indefinido.mostrado = _evAntData.fechaDesde;
+    _evAntCalRender('indefinido');
+    _evAntCalActualizarResumen('indefinido');
   }
 }
 
@@ -2589,8 +2609,105 @@ function _evAntToggleMes(mesNum, btn) {
   else { _evAntData.meses.splice(i, 1); btn.classList.remove('activo'); }
 }
 
-function _evAntAbrirFecha(cual) {
-  abrirPickerMisDatos({ hiddenId: 'ev-ant-' + cual + '-iso', displayId: 'ev-ant-' + cual + '-display' });
+/* ── Calendario inline de "Por período"/"Indefinido" (ev-ant-cal-*) --
+   reemplaza el modal de calendario genérico (abrirPickerMisDatos(),
+   shared/date-picker.js -- bug real: arranca en 1990) por un panel SIEMPRE
+   inline, sin abrir nada. Reusa el layout real de la grilla del panel de
+   mes de Home Eventos (.ev-cal-grid/.ev-cal-dow/.ev-cal-celda/.ev-cal-num/
+   .ev-ajeno, css/eventos.css, y los helpers de fecha genéricos
+   _evCalMesDe()/_evLunesDeSemana()/_evToISO()/_evParseISO()/_evFechaCmp() de
+   más arriba en este archivo) -- pero es un componente NUEVO scopeado a
+   este wizard (_evAntCal*, con su propio mes mostrado por selector), el
+   panel de mes original de Home (_evCalRenderMes()/_evAbrirCalendario()) no
+   se toca. "Por período" y "Indefinido" comparten `_evAntData.fechaDesde`/
+   `fechaHasta` (mismos campos que ya arma el payload, ver _evAntAplicar())
+   -- `_evAntSelFrecuencia()` los resetea al cambiar de modo. */
+var _evAntCal = { periodo: { mostrado: null }, indefinido: { mostrado: null } };
+
+function _evAntCalMoverMes(cual, dir) {
+  var m = _evCalMesDe(_evAntCal[cual].mostrado);
+  var year = m.year, month = m.month + dir;
+  if (month < 0) { month = 11; year--; } else if (month > 11) { month = 0; year++; }
+  _evAntCal[cual].mostrado = _evToISO(new Date(year, month, 1));
+  _evAntCalRender(cual);
+}
+
+// "Por período": ida y vuelta -- primer toque (o cualquier toque sin
+// "Hasta" pendiente) fija Desde y limpia Hasta; un toque posterior (fecha
+// >= Desde) fija Hasta; un toque anterior a Desde reemplaza Desde (empieza
+// de nuevo, en vez de quedar en un rango invertido). "Indefinido": un solo
+// toque siempre reemplaza la única fecha (Desde), sin Hasta.
+function _evAntCalTocarDia(cual, iso) {
+  if (cual === 'indefinido') {
+    _evAntData.fechaDesde = iso;
+  } else {
+    var desde = _evAntData.fechaDesde, hasta = _evAntData.fechaHasta;
+    if (!desde || hasta) {
+      _evAntData.fechaDesde = iso;
+      _evAntData.fechaHasta = null;
+    } else if (_evFechaCmp(iso, desde) < 0) {
+      _evAntData.fechaDesde = iso;
+    } else {
+      _evAntData.fechaHasta = iso;
+    }
+  }
+  _evAntCalRender(cual);
+  _evAntCalActualizarResumen(cual);
+}
+
+function _evAntCalRestablecer(cual) {
+  _evAntData.fechaDesde = null;
+  _evAntData.fechaHasta = null;
+  _evAntCalRender(cual);
+  _evAntCalActualizarResumen(cual);
+}
+
+function _evAntCalActualizarResumen(cual) {
+  if (cual === 'periodo') {
+    var d = document.getElementById('ev-ant-periodo-desde-txt');
+    var h = document.getElementById('ev-ant-periodo-hasta-txt');
+    if (d) d.textContent = _evAntData.fechaDesde ? _evAntFechaLegible(_evAntData.fechaDesde) : 'Selecciona una fecha';
+    if (h) h.textContent = _evAntData.fechaHasta ? _evAntFechaLegible(_evAntData.fechaHasta) : 'Selecciona una fecha';
+  } else {
+    var el = document.getElementById('ev-ant-indefinido-desde-txt');
+    if (el) el.textContent = _evAntData.fechaDesde ? _evAntFechaLegible(_evAntData.fechaDesde) : 'Hoy';
+  }
+}
+
+// El día de HOY siempre lleva el stroke rojo (`.ev-ant-cal-hoy`, ver
+// css/eventos.css) sin importar la selección -- independiente de
+// `.ev-ant-cal-sel`/`.ev-ant-cal-en-rango`, nunca se pisan entre sí (ver esa
+// misma regla CSS, `box-shadow` en vez de `background`).
+function _evAntCalRender(cual) {
+  var contId = cual === 'periodo' ? 'ev-ant-cal-periodo' : 'ev-ant-cal-indefinido';
+  var cont = document.getElementById(contId); if (!cont) return;
+  var m = _evCalMesDe(_evAntCal[cual].mostrado);
+  var labelEl = document.getElementById('ev-ant-cal-' + cual + '-label');
+  if (labelEl) labelEl.textContent = NOMBRES_MESES[m.month] + ' ' + m.year;
+  var inicioGrid = _evLunesDeSemana(new Date(m.year, m.month, 1));
+  var finMes = new Date(m.year, m.month + 1, 0);
+  var finGrid = _evLunesDeSemana(finMes);
+  finGrid.setDate(finGrid.getDate() + 6);
+  var hoy = _evHoyISO();
+  var desde = _evAntData.fechaDesde, hasta = _evAntData.fechaHasta;
+  var html = _EV_DIAS_CORTOS.map(function(d) { return '<div class="ev-cal-dow">' + d + '</div>'; }).join('');
+  var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
+  while (cur <= finGrid) {
+    var celdaIso = _evToISO(cur);
+    var ajeno = cur.getMonth() !== m.month;
+    var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '');
+    if (desde && celdaIso === desde) clases += ' ev-ant-cal-sel';
+    if (cual === 'periodo') {
+      if (hasta && celdaIso === hasta) clases += ' ev-ant-cal-sel';
+      if (desde && hasta && _evFechaCmp(celdaIso, desde) > 0 && _evFechaCmp(celdaIso, hasta) < 0) clases += ' ev-ant-cal-en-rango';
+    }
+    if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
+    html += '<div class="' + clases + '" data-iso="' + celdaIso + '" onclick="_evAntCalTocarDia(\'' + cual + '\',\'' + celdaIso + '\')">' +
+      '<div class="ev-cal-num">' + cur.getDate() + '</div>' +
+    '</div>';
+    cur.setDate(cur.getDate() + 1);
+  }
+  cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>';
 }
 
 // Paso 2 (final) -- valida frecuencia + su reveal, arma el payload con lo ya
@@ -2602,14 +2719,10 @@ function _evAntAplicar() {
   if (_evAntData.tipoRango === 'meses') {
     if (!_evAntData.meses.length) { err('ev-ant-err-1', 'Selecciona al menos un mes.'); return; }
   } else if (_evAntData.tipoRango === 'periodo') {
-    var desde = document.getElementById('ev-ant-desde-iso').value;
-    var hasta = document.getElementById('ev-ant-hasta-iso').value;
-    if (!desde || !hasta) { err('ev-ant-err-1', 'Selecciona ambas fechas.'); return; }
-    if (hasta < desde) { err('ev-ant-err-1', 'La fecha "Hasta" no puede ser anterior a "Desde".'); return; }
-    _evAntData.fechaDesde = desde;
-    _evAntData.fechaHasta = hasta;
+    if (!_evAntData.fechaDesde || !_evAntData.fechaHasta) { err('ev-ant-err-1', 'Selecciona ambas fechas.'); return; }
+    if (_evAntData.fechaHasta < _evAntData.fechaDesde) { err('ev-ant-err-1', 'La fecha "Hasta" no puede ser anterior a "Desde".'); return; }
   } else {
-    _evAntData.fechaDesde = document.getElementById('ev-ant-desdeInd-iso').value || _evAntHoyISO();
+    _evAntData.fechaDesde = _evAntData.fechaDesde || _evAntHoyISO();
   }
 
   var payload = {

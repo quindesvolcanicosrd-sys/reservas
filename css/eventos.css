@@ -662,6 +662,35 @@
 .ev-ant-mes-cell.activo { background: var(--brand); color: var(--white); border-color: var(--brand); }
 .ev-ant-mes-cell.deshabilitado { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 
+/* Paso "Frecuencia" -> "Por período"/"Indefinido": calendario inline
+   (ev-ant-cal-*, ver _evAntCalRender()/js/eventos.js) -- reemplaza el modal
+   de calendario genérico (bug real: arranca en 1990). Reusa el layout de
+   grilla real del panel de mes de Home Eventos (.ev-cal-grid/.ev-cal-dow/
+   .ev-cal-celda/.ev-cal-num/.ev-ajeno, arriba en este archivo) sin tocarlo
+   -- es un componente nuevo, con su propio mes navegable y sus propios
+   estados de selección, sin abrir ningún panel/modal. */
+.ev-ant-cal-valor { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+.ev-ant-cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.ev-ant-cal-nav-btn {
+  width: 36px; height: 36px; border-radius: 10px; border: none; background: var(--brand-light);
+  color: var(--brand); display: flex; align-items: center; justify-content: center; cursor: pointer;
+  font-family: inherit;
+}
+.ev-ant-cal-nav-btn .material-symbols-outlined { font-size: 20px; }
+.ev-ant-cal-nav-label { font-size: 0.88rem; font-weight: 800; color: var(--text); text-transform: capitalize; }
+/* "Hoy" -- SIEMPRE con stroke rojo distintivo, sin importar el resto de la
+   selección (pedido explícito). `box-shadow` (no `outline`/`background`)
+   para poder convivir con `.ev-ant-cal-sel` (fondo `--brand` sólido) o
+   `.ev-ant-cal-en-rango` (fondo `--brand` tenue) sin que ninguno lo tape. */
+.ev-ant-cal-hoy .ev-cal-num { box-shadow: 0 0 0 2px var(--danger); }
+/* Endpoint seleccionado -- Desde/Hasta de "Por período", o la única fecha
+   de "Indefinido". Días intermedios del rango (solo "Por período") quedan
+   con el mismo fondo tenue de celda completa, sin el relleno sólido del
+   círculo -- mismo lenguaje que un date-range picker tipo "ida y vuelta"
+   de aerolínea. */
+.ev-ant-cal-sel, .ev-ant-cal-en-rango { background: var(--brand-light); border-radius: 10px; }
+.ev-ant-cal-sel .ev-cal-num { background: var(--brand); color: var(--white); font-weight: 800; }
+
 /* Skeleton del estado "resumen" mientras carga getReglasAsistenciaAnticipada
    (ver "Cambios recientes" -- reemplaza el loader de pantalla completa que
    tenía antes). Reusa `.fi-skel-block` (el shimmer genérico, css/reservas.css
@@ -671,3 +700,23 @@
 .ev-ant-skel-icon { width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0; }
 .ev-ant-skel-title { width: 65%; height: 14px; margin-bottom: 8px; }
 .ev-ant-skel-sub { width: 45%; height: 11px; }
+
+/* Toast scopeado a #s-eventos-anticipada mientras el footer del wizard está
+   visible -- `#app-toast` (css/estilos.css) es un `<div>` creado por JS y
+   agregado directo a `<body>` la primera vez que se llama mostrarToast()
+   (mismo criterio de "position:fixed va directo en <body>, no dentro de
+   .pantalla/.card" que ya rige #cta-footer-fixed, ver MANIFEST.md), así que
+   el override también apunta ahí sin anidarlo dentro de ninguna pantalla.
+   Por defecto el toast queda a `bottom:28px` (fijo, global) -- sobre esta
+   pantalla, con el footer fijo del wizard ocupando esa franja, el toast le
+   tapaba las pills en vez de mostrarse por encima del botón "Continuar"/
+   "Aplicar". `body.ev-ant-footer-visible` la togglea _evAntActualizarFooter()/
+   _evAntOcultarFooter() (js/eventos.js) junto con el propio footer, nunca
+   suelta. El offset suma el alto real del footer (12px padding-top + ~50px
+   del botón `.btn` + 12px padding-bottom, css/estilos.css `.cta-footer-fixed`/
+   `.btn`) más 12px de aire, sobre el mismo `bottom` base que ya usa
+   `#cta-footer-eventos-anticipada` (`var(--bottom-nav-h)` + safe area, para
+   convivir con `.app-bottom-nav`). */
+body.ev-ant-footer-visible #app-toast {
+  bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 86px);
+}

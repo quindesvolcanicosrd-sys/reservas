@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=56739f3b">
 <link rel="stylesheet" href="css/nav.css?v=9b27ee2c">
-<link rel="stylesheet" href="css/eventos.css?v=47154bec">
+<link rel="stylesheet" href="css/eventos.css?v=673da8a2">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -499,19 +499,22 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
         <div class="salud-paso" id="ev-ant-paso-1">
           <h2>Tipos de evento</h2>
-          <p>Si no seleccionás ninguno (o elegís "Todo tipo de evento"), se va a aplicar a todos los tipos de evento.</p>
+          <p>Selecciona al menos un tipo de evento al que se va a aplicar esta asistencia anticipada.</p>
           <div class="aj-pills-row" id="ev-ant-tipos-evento-pills">
             <span class="aj-pill" data-val="Entrenamiento" onclick="_evAntToggleTipoEvento(this)">Entrenamiento</span>
             <span class="aj-pill" data-val="Torneo" onclick="_evAntToggleTipoEvento(this)">Torneo</span>
             <span class="aj-pill" data-val="Asamblea" onclick="_evAntToggleTipoEvento(this)">Asamblea</span>
-            <span class="aj-pill" data-val="" onclick="_evAntToggleTipoEvento(this)">Todo tipo de evento</span>
           </div>
+          <div class="error-msg" id="ev-ant-err-tipos"></div>
 
           <h2 style="margin-top:24px;">Estado a aplicar</h2>
-          <div class="aj-pills-row" id="ev-ant-estado-pills">
-            <span class="aj-pill" data-val="Asistiré" onclick="_evAntSelUnica(this)">Asistiré</span>
-            <span class="aj-pill" data-val="No asistiré" onclick="_evAntSelUnica(this)">No asistiré</span>
-            <span class="aj-pill" data-val="No jugador" onclick="_evAntSelUnica(this)">No jugador</span>
+          <div class="ev-asistire-wrap" onclick="event.stopPropagation()">
+            <div class="ev-rsvp-seg" id="ev-ant-estado-seg">
+              <div class="ev-rsvp-slider"></div>
+              <div class="ev-rsvp-opt" data-estado="Asistiré" onclick="_evAntSelEstado(this)"><span class="material-symbols-outlined">check_circle</span>Asistiré</div>
+              <div class="ev-rsvp-opt" data-estado="No asistiré" onclick="_evAntSelEstado(this)"><span class="material-symbols-outlined">cancel</span>No asistiré</div>
+              <div class="ev-rsvp-opt" data-estado="No jugador" onclick="_evAntSelEstado(this)"><span class="material-symbols-outlined">radio_button_checked</span>No jugador</div>
+            </div>
           </div>
           <div class="error-msg" id="ev-ant-err-0"></div>
         </div>
@@ -531,31 +534,32 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <div id="ev-ant-paso1-periodo" style="display:none;margin-top:18px;">
             <div class="datos-campo">
               <label>Desde</label>
-              <button type="button" class="fnac-trigger-btn" id="ev-ant-desde-btn" onclick="_evAntAbrirFecha('desde')">
-                <span class="fnac-placeholder" id="ev-ant-desde-display">Selecciona una fecha</span>
-                <span class="material-symbols-outlined" style="color:var(--brand);font-size:1.1rem;">calendar_month</span>
-              </button>
-              <input type="hidden" id="ev-ant-desde-iso">
+              <div class="ev-ant-cal-valor" id="ev-ant-periodo-desde-txt">Selecciona una fecha</div>
             </div>
             <div class="datos-campo">
               <label>Hasta</label>
-              <button type="button" class="fnac-trigger-btn" id="ev-ant-hasta-btn" onclick="_evAntAbrirFecha('hasta')">
-                <span class="fnac-placeholder" id="ev-ant-hasta-display">Selecciona una fecha</span>
-                <span class="material-symbols-outlined" style="color:var(--brand);font-size:1.1rem;">calendar_month</span>
-              </button>
-              <input type="hidden" id="ev-ant-hasta-iso">
+              <div class="ev-ant-cal-valor" id="ev-ant-periodo-hasta-txt">Selecciona una fecha</div>
             </div>
+            <div class="ev-ant-cal-nav">
+              <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('periodo',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+              <span class="ev-ant-cal-nav-label" id="ev-ant-cal-periodo-label"></span>
+              <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('periodo',1)"><span class="material-symbols-outlined">chevron_right</span></button>
+            </div>
+            <div id="ev-ant-cal-periodo"></div>
+            <button type="button" class="btn-text-simple" style="margin-top:8px;" onclick="_evAntCalRestablecer('periodo')">Restablecer fechas</button>
           </div>
 
           <div id="ev-ant-paso1-indefinido" style="display:none;margin-top:18px;">
             <div class="datos-campo">
               <label>Desde</label>
-              <button type="button" class="fnac-trigger-btn" id="ev-ant-desdeInd-btn" onclick="_evAntAbrirFecha('desdeInd')">
-                <span id="ev-ant-desdeInd-display">Hoy</span>
-                <span class="material-symbols-outlined" style="color:var(--brand);font-size:1.1rem;">calendar_month</span>
-              </button>
-              <input type="hidden" id="ev-ant-desdeInd-iso">
+              <div class="ev-ant-cal-valor" id="ev-ant-indefinido-desde-txt">Hoy</div>
             </div>
+            <div class="ev-ant-cal-nav">
+              <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('indefinido',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+              <span class="ev-ant-cal-nav-label" id="ev-ant-cal-indefinido-label"></span>
+              <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('indefinido',1)"><span class="material-symbols-outlined">chevron_right</span></button>
+            </div>
+            <div id="ev-ant-cal-indefinido"></div>
             <p style="font-size:0.78rem;color:var(--muted);margin-top:6px;">Sin fecha de fin.</p>
           </div>
 
@@ -978,7 +982,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=75c5b270"></script>
-<script src="js/eventos.js?v=232194cd"></script>
+<script src="js/eventos.js?v=96ddb1f2"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=343fe44f"></script>
 <script src="js/perfil.js?v=ca452084"></script>
