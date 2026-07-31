@@ -527,24 +527,24 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
               </div>
 
               <div id="ev-ant-paso1-periodo" style="display:none;margin-top:18px;">
-                <div class="ev-ant-rango-linea" id="ev-ant-periodo-resumen"></div>
                 <div class="ev-ant-cal-nav">
                   <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('periodo',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
                   <span class="ev-ant-cal-nav-label" id="ev-ant-cal-periodo-label"></span>
                   <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('periodo',1)"><span class="material-symbols-outlined">chevron_right</span></button>
                 </div>
                 <div id="ev-ant-cal-periodo"></div>
+                <div class="ev-ant-rango-linea" id="ev-ant-periodo-resumen" style="margin-top:10px;"></div>
                 <button type="button" class="btn-text-simple" style="margin-top:8px;" onclick="_evAntCalRestablecer('periodo')">Restablecer fechas</button>
               </div>
 
               <div id="ev-ant-paso1-indefinido" style="display:none;margin-top:18px;">
-                <div class="ev-ant-rango-linea">Desde el <span class="ev-ant-fecha-pill" id="ev-ant-indefinido-desde-txt" onclick="_evAntFocoCalendario('indefinido')"></span></div>
                 <div class="ev-ant-cal-nav">
                   <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('indefinido',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
                   <span class="ev-ant-cal-nav-label" id="ev-ant-cal-indefinido-label"></span>
                   <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('indefinido',1)"><span class="material-symbols-outlined">chevron_right</span></button>
                 </div>
                 <div id="ev-ant-cal-indefinido"></div>
+                <div class="ev-ant-rango-linea" id="ev-ant-indefinido-resumen" style="margin-top:10px;"></div>
                 <p style="font-size:0.78rem;color:var(--muted);margin-top:6px;">Sin fecha de fin.</p>
               </div>
 
@@ -967,7 +967,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=2f629cc6"></script>
-<script src="js/eventos.js?v=7b33c6da"></script>
+<script src="js/eventos.js?v=e8c95084"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=343fe44f"></script>
 <script src="js/perfil.js?v=ca452084"></script>

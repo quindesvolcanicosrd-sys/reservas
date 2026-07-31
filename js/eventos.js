@@ -2307,10 +2307,21 @@ function _evFiltrarAsistenciaPorGrupo(cardEl, grupo) {
    aplicarAsistenciaAnticipada) + 1 nueva agregada a pedido en esta misma
    sesión (eliminarAsistenciaAnticipada, ver MANIFEST.md). El backend no
    vive en este repo (Apps Script, script.google.com) así que el contrato de
-   parámetros/campos de abajo es una convención razonable (mismo criterio
-   `action` + `nombre: E.nombre` que ya usa el resto de la app, ver
-   js/auth.js/home.js/perfil.js) -- a confirmar/ajustar contra el código real
-   si no coincide 1:1.
+   parámetros/campos de abajo es una convención razonable -- a confirmar/
+   ajustar contra el código real si no coincide 1:1. **`token: _token`
+   agregado a las 3 llamadas (ver MANIFEST.md "Cambios recientes" -- Victor
+   pidió sacar el `nombre: E.nombre` de prueba como credencial)**, mismo
+   patrón ya real que `subirFotoPerfil` (js/foto.js: `token:
+   (typeof _token !== 'undefined' ? _token : '')`) -- la única otra llamada
+   POST autenticada de toda la app. `nombre: E.nombre` se deja además, sin
+   quitarlo todavía: Code.gs (fuera de este repo) hoy resuelve la persona por
+   ese `nombre` tal como se lo mandan estas 3 funciones ya desplegadas -- si
+   se sacara acá sin tocar el backend a la vez, las 3 llamadas dejarían de
+   funcionar en producción hasta el próximo deploy de Apps Script. Pendiente
+   documentado en MANIFEST.md ("Cambios recientes"): Code.gs debe pasar a
+   derivar la persona de `e.parameter.token` (mismo helper que ya usa
+   `restaurarSesion()`) en vez de confiar en el `nombre` que manda el
+   cliente -- recién ahí `nombre` deja de ser necesario acá.
    ═══════════════════════════════════════════════════════ */
 
 var _evAntData = {};
@@ -2421,7 +2432,7 @@ function _evAntResumenDetalle(r) {
 function _evAntEliminar(fila) {
   if (!confirm('¿Eliminar esta asistencia anticipada?')) return;
   mostrarCargando('Eliminando...');
-  apiPost({ action: 'eliminarAsistenciaAnticipada', nombre: E.nombre, fila: fila }, function(res) {
+  apiPost({ action: 'eliminarAsistenciaAnticipada', token: _token, nombre: E.nombre, fila: fila }, function(res) {
     ocultarCargando();
     if (res && res.exito === false) { mostrarToast(res.error || 'No se pudo eliminar.', 'error'); return; }
     _evAntRecargarLista();
@@ -2834,22 +2845,30 @@ function _evAntPeriodoResumenHtml() {
   return html;
 }
 
+// "Indefinido" -- mismo criterio que _evAntPeriodoResumenHtml() (texto "Del
+// <fecha>", sin "al..." porque no hay Hasta): unificado con esa función en
+// vez de mantener un textContent fijo "Desde el ___" aparte, para que las 2
+// pasen por el mismo mecanismo de fade de _evAntCalActualizarResumen(). En la
+// práctica `fechaDesde` siempre está poblada acá (_evAntMostrarSubFrecuencia()
+// la setea a hoy apenas se entra a esta sub-sección), así que el estado
+// "vacío" no se ve en uso normal -- se cubre igual por si `_evAntCalRestablecer`
+// llegara a aplicarse acá alguna vez.
+function _evAntIndefinidoResumenHtml() {
+  var desde = _evAntData.fechaDesde;
+  if (!desde) return '<span class="ev-ant-rango-vacio">Toca una fecha en el calendario para empezar</span>';
+  return 'Del <span class="ev-ant-fecha-pill" onclick="_evAntFocoCalendario(\'indefinido\')">' + _evAntFechaCorta(desde) + '</span>';
+}
+
 function _evAntCalActualizarResumen(cual) {
-  if (cual === 'periodo') {
-    var cont = document.getElementById('ev-ant-periodo-resumen');
-    if (cont) {
-      cont.innerHTML = _evAntPeriodoResumenHtml();
-      // Fade breve al cambiar de un estado a otro (instructivo -> "Del X" ->
-      // "Del X al Y") -- mismo mecanismo de reflow + @keyframes fadeIn ya
-      // usado en el resto de este archivo (ver _evAntMostrarSubFrecuencia()),
-      // no un mecanismo nuevo.
-      void cont.offsetWidth;
-      cont.style.animation = 'fadeIn 0.2s ease';
-    }
-  } else {
-    var el = document.getElementById('ev-ant-indefinido-desde-txt');
-    if (el) el.textContent = _evAntData.fechaDesde ? _evAntFechaCorta(_evAntData.fechaDesde) : '';
-  }
+  var cont = document.getElementById(cual === 'periodo' ? 'ev-ant-periodo-resumen' : 'ev-ant-indefinido-resumen');
+  if (!cont) return;
+  cont.innerHTML = cual === 'periodo' ? _evAntPeriodoResumenHtml() : _evAntIndefinidoResumenHtml();
+  // Fade breve al cambiar de un estado a otro (instructivo -> "Del X" -> "Del
+  // X al Y") -- mismo mecanismo de reflow + @keyframes fadeIn ya usado en el
+  // resto de este archivo (ver _evAntMostrarSubFrecuencia()), cubre
+  // aparición/cambio/desaparición del texto por igual (nunca corte abrupto).
+  void cont.offsetWidth;
+  cont.style.animation = 'fadeIn 0.2s ease';
 }
 
 // Texto del header colapsado de "Frecuencia" (#ev-ant-acc-frecuencia-resumen)
@@ -2968,6 +2987,7 @@ function _evAntAplicar() {
 
   var payload = {
     action: 'aplicarAsistenciaAnticipada',
+    token: _token,
     nombre: E.nombre,
     tipoRango: _evAntData.tipoRango,
     // Hardcodeado: la asistencia anticipada aplica únicamente a
@@ -3001,7 +3021,7 @@ function _evAntAplicar() {
 
   mostrarCargando(editando ? 'Guardando cambios...' : 'Aplicando...');
   if (editando) {
-    apiPost({ action: 'eliminarAsistenciaAnticipada', nombre: E.nombre, fila: editando }, function(res) {
+    apiPost({ action: 'eliminarAsistenciaAnticipada', token: _token, nombre: E.nombre, fila: editando }, function(res) {
       if (res && res.exito === false) {
         ocultarCargando();
         mostrarToast(res.error || 'No se pudo guardar los cambios.', 'error');
