@@ -2270,7 +2270,7 @@ function _evFiltrarAsistenciaPorGrupo(cardEl, grupo) {
    si no coincide 1:1.
    ═══════════════════════════════════════════════════════ */
 
-var _EV_ANT_STEPS = ['ev-ant-paso-0', 'ev-ant-paso-1'];
+var _EV_ANT_STEPS = ['ev-ant-paso-0', 'ev-ant-paso-1', 'ev-ant-paso-2'];
 var _evAntCurIdx = 0;
 var _evAntData = {};
 var _evAntReglas = [];
@@ -2395,13 +2395,16 @@ function _evAntBack() {
 
 // ─── Wizard (mismo motor que _SALUD_STEPS/_saludCurIdx/_saludMostrarPaso(),
 // js/perfil.js -- replicado acá, no reusado directo, porque vive sobre una
-// .pantalla propia en vez de un aj-sub-* montado sobre s-datos). 2 pasos
-// (ver "Cambios recientes" -- reestructurado desde 4, y luego reordenado):
-// paso 0 = Tipos de evento + Estado a aplicar; paso 1 = Frecuencia, con
-// reveal INLINE (no un 3er paso) de meses/fechas según la elección,
-// cerrando con "Aplicar". El footer solo tiene "Continuar"/"Aplicar" -- sin
-// botón "Atrás" propio, redundante con la flecha del header (#ev-ant-header,
-// _evAntBack()), que ya cubre exactamente lo mismo. ─────────────────────
+// .pantalla propia en vez de un aj-sub-* montado sobre s-datos). 3 pasos
+// (ver "Cambios recientes" -- reestructurado desde 4, luego a 2, y ahora se
+// suma un paso 0 explicativo, mismo criterio que salud-paso-0 de
+// js/perfil.js: sin campos, footer con solo "Continuar"): paso 0 =
+// explicación de qué es la asistencia anticipada; paso 1 = Tipos de evento +
+// Estado a aplicar; paso 2 = Frecuencia, con reveal INLINE (no un paso
+// propio) de meses/fechas según la elección, cerrando con "Aplicar". El
+// footer solo tiene "Continuar"/"Aplicar" -- sin botón "Atrás" propio,
+// redundante con la flecha del header (#ev-ant-header, _evAntBack()), que ya
+// cubre exactamente lo mismo. ─────────────────────
 
 function _evAntIniciarWizard() {
   _evAntData = { tipoRango: null, meses: [], fechaDesde: null, fechaHasta: null, tiposEvento: [], estado: null };
@@ -2444,7 +2447,7 @@ function _evAntMostrarPaso(idx) {
   });
   _evAntCurIdx = idx;
   _evAntRenderProg();
-  if (idx === 1) _evAntMostrarSubFrecuencia();
+  if (idx === 2) _evAntMostrarSubFrecuencia();
   window.scrollTo({ top: 0, behavior: 'smooth' });
   _evAntActualizarFooter(idx);
 }
@@ -2466,7 +2469,8 @@ function _evAntPasoAnterior() {
 
 var _EV_ANT_CONTINUAR_FN = {
   'ev-ant-paso-0': function() { _evAntContinuar0(); },
-  'ev-ant-paso-1': function() { _evAntAplicar(); }
+  'ev-ant-paso-1': function() { _evAntContinuar1(); },
+  'ev-ant-paso-2': function() { _evAntAplicar(); }
 };
 function _evAntActualizarFooter(idx) {
   var paso = _EV_ANT_STEPS[idx];
@@ -2475,7 +2479,7 @@ function _evAntActualizarFooter(idx) {
   var btnContinuar = document.getElementById('ev-ant-footer-continuar');
   if (btnContinuar) {
     btnContinuar.onclick = _EV_ANT_CONTINUAR_FN[paso];
-    var esFinal = (paso === 'ev-ant-paso-1');
+    var esFinal = (paso === 'ev-ant-paso-2');
     btnContinuar.textContent = esFinal ? 'Aplicar' : 'Continuar';
     btnContinuar.classList.toggle('btn-primary', esFinal);
     btnContinuar.classList.toggle('btn-outline', !esFinal);
@@ -2513,18 +2517,24 @@ function _evAntToggleTipoEvento(el) {
   }
 }
 
-// Paso 0 -- tipos de evento (opcional) + estado a aplicar (requerido)
+// Paso 0 -- intro explicativa, sin campos (mismo criterio que saludContinuar0(),
+// js/perfil.js: solo avanza al siguiente paso).
 function _evAntContinuar0() {
+  _evAntMostrarPaso(1);
+}
+
+// Paso 1 -- tipos de evento (opcional) + estado a aplicar (requerido)
+function _evAntContinuar1() {
   var sel = document.querySelector('#ev-ant-estado-pills .aj-pill.activa');
   if (!sel) { err('ev-ant-err-0', 'Selecciona un estado.'); return; }
   _evAntData.estado = sel.dataset.val;
   var vals = [];
   document.querySelectorAll('#ev-ant-tipos-evento-pills .aj-pill.activa').forEach(function(p) { if (p.dataset.val) vals.push(p.dataset.val); });
   _evAntData.tiposEvento = vals;
-  _evAntMostrarPaso(1);
+  _evAntMostrarPaso(2);
 }
 
-// Paso 1 -- frecuencia (pill), con reveal inline de meses/período/indefinido
+// Paso 2 -- frecuencia (pill), con reveal inline de meses/período/indefinido
 // según la elección -- ya no es un paso propio, se actualiza al toque.
 function _evAntSelFrecuencia(el) {
   _evAntSelUnica(el);
@@ -2583,8 +2593,8 @@ function _evAntAbrirFecha(cual) {
   abrirPickerMisDatos({ hiddenId: 'ev-ant-' + cual + '-iso', displayId: 'ev-ant-' + cual + '-display' });
 }
 
-// Paso 1 (final) -- valida frecuencia + su reveal, arma el payload con lo ya
-// guardado del paso 0 (tiposEvento/estado) y envía.
+// Paso 2 (final) -- valida frecuencia + su reveal, arma el payload con lo ya
+// guardado del paso 1 (tiposEvento/estado) y envía.
 function _evAntAplicar() {
   var selFrecuencia = document.querySelector('#ev-ant-tipo-pills .aj-pill.activa');
   if (!selFrecuencia) { err('ev-ant-err-1', 'Selecciona una opción.'); return; }

@@ -425,7 +425,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
        asistencias anticipadas ya cargadas + "+ Nueva") y #ev-ant-wizard
        (mismo motor de pasos que _SALUD_STEPS/_saludCurIdx/
        _saludMostrarPaso(), js/perfil.js -- replicado acá como
-       _EV_ANT_STEPS/_evAntCurIdx/_evAntMostrarPaso(), ver js/eventos.js). -->
+       _EV_ANT_STEPS/_evAntCurIdx/_evAntMostrarPaso(), ver js/eventos.js).
+       Este wizard SIEMPRE arranca en ev-ant-paso-0 (intro explicativa, sin
+       campos -- mismo criterio que salud-paso-0), tanto al entrar sin
+       reglas cargadas como al tocar "+ Nueva asistencia anticipada" desde
+       el resumen (ver _evAntIniciarWizard()). -->
   <div class="pantalla" id="s-eventos-anticipada">
     <div class="app-nav app-nav-sticky" id="ev-ant-header">
       <button class="app-nav-back" onclick="_evAntBack()">
@@ -449,14 +453,51 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
       <!-- Estado "wizard": sin ninguna asistencia anticipada todavía, o
            llegando acá desde "+ Nueva asistencia anticipada" del resumen.
-           2 pasos (ver "Cambios recientes" -- reestructurado desde 4):
-           paso 0 = Tipos de evento + Estado a aplicar; paso 1 = Frecuencia,
-           con reveal INLINE (no un 3er paso) de meses/fechas según la
-           elección, cerrando con "Aplicar". -->
+           3 pasos (ver "Cambios recientes" -- reestructurado desde 4, luego
+           a 2, y ahora se suma un paso 0 explicativo): paso 0 = intro sin
+           campos (mismo formato que salud-paso-0, js/perfil.js -- ver
+           #cta-footer-eventos-anticipada más abajo, que ya solo tiene
+           "Continuar"); paso 1 = Tipos de evento + Estado a aplicar; paso 2
+           = Frecuencia, con reveal INLINE (no un paso propio) de
+           meses/fechas según la elección, cerrando con "Aplicar". -->
       <div id="ev-ant-wizard" style="display:none;">
         <div class="salud-prog" id="ev-ant-prog"></div>
 
+        <!-- Paso 0 -- intro explicativa, sin campos. 3 bloques ícono +
+             título + texto reusando .modal-info-item/.modal-info-icon/
+             .modal-info-label/.modal-info-desc (css/global.css) -- mismo
+             componente ya usado en #modal-info-reserva/#modal-info-home más
+             abajo, colores siempre vía las clases .mi-* (variables de
+             colors.css). -->
         <div class="salud-paso" id="ev-ant-paso-0">
+          <h2 style="margin-bottom:20px;">¿Qué es la asistencia anticipada?</h2>
+
+          <div class="modal-info-item">
+            <div class="modal-info-icon mi-orange"><span class="material-symbols-outlined">event_repeat</span></div>
+            <div>
+              <div class="modal-info-label">Reglas indefinidas</div>
+              <div class="modal-info-desc">Marca un estado que se aplica desde hoy en adelante, sin fecha de fin. Por ejemplo, "Asistiré a todo, siempre" o "No juego por tiempo indefinido".</div>
+            </div>
+          </div>
+
+          <div class="modal-info-item">
+            <div class="modal-info-icon mi-blue"><span class="material-symbols-outlined">date_range</span></div>
+            <div>
+              <div class="modal-info-label">Reglas por período</div>
+              <div class="modal-info-desc">Marca una excepción durante fechas puntuales o meses específicos. Por ejemplo, "No voy a poder venir en agosto".</div>
+            </div>
+          </div>
+
+          <div class="modal-info-item">
+            <div class="modal-info-icon mi-purple"><span class="material-symbols-outlined">layers</span></div>
+            <div>
+              <div class="modal-info-label">Se pueden combinar</div>
+              <div class="modal-info-desc">Una regla por período siempre tiene prioridad sobre una indefinida. Puedes tener "Asistiré siempre" de fondo, y marcar excepciones puntuales sin perder la regla general.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="salud-paso" id="ev-ant-paso-1">
           <h2>Tipos de evento</h2>
           <p>Si no seleccionás ninguno (o elegís "Todo tipo de evento"), se va a aplicar a todos los tipos de evento.</p>
           <div class="aj-pills-row" id="ev-ant-tipos-evento-pills">
@@ -475,7 +516,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <div class="error-msg" id="ev-ant-err-0"></div>
         </div>
 
-        <div class="salud-paso" id="ev-ant-paso-1">
+        <div class="salud-paso" id="ev-ant-paso-2">
           <h2>¿Con qué frecuencia aplica esta asistencia anticipada?</h2>
           <div class="aj-pills-row" id="ev-ant-tipo-pills">
             <span class="aj-pill" data-val="meses" onclick="_evAntSelFrecuencia(this)">Por meses</span>
@@ -937,7 +978,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=75c5b270"></script>
-<script src="js/eventos.js?v=3087f01f"></script>
+<script src="js/eventos.js?v=232194cd"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=343fe44f"></script>
 <script src="js/perfil.js?v=ca452084"></script>
