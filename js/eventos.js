@@ -2374,6 +2374,20 @@ var _evAntReglas = [];
 // coinciden, la carga quedó obsoleta y se descarta en silencio.
 var _evAntCargaId = 0;
 
+// Fortalecido (ver "Cambios recientes" -- el chequeo de `miCarga` solo no
+// alcanzaba): cubre re-entrar a la pantalla (`_evAntCargaId` cambió, caso
+// original) PERO NO cubre salir sin volver a entrar nunca -- en ese caso
+// `_evAntCargaId` no cambia (nadie disparó una carga nueva), así que la
+// única carga en vuelo seguía "vigente" según ese chequeo solo, aunque el
+// usuario ya esté en otra pantalla. Se suma acá el chequeo real de que
+// `#s-eventos-anticipada` siga siendo la pantalla activa -- entre los 2,
+// cualquier forma de "ya no estoy viendo esto" queda cubierta.
+function _evAntCargaVigente(miCarga) {
+  if (miCarga !== _evAntCargaId) return false;
+  var p = document.getElementById('s-eventos-anticipada');
+  return !!(p && p.classList.contains('activa'));
+}
+
 // Reemplaza el loader de pantalla completa que tenía antes (ver "Cambios
 // recientes" -- mismo criterio que `cargarFechas()`/`_skeletonFechasHtml()`,
 // js/reservas.js: skeleton CONTENIDO en el lugar real del contenido en vez
@@ -2387,7 +2401,7 @@ function eventosAbrirAnticipada() {
   document.getElementById('ev-ant-resumen').style.display = 'block';
   var miCarga = ++_evAntCargaId;
   api({ action: 'getReglasAsistenciaAnticipada', nombre: E.nombre }, function(res) {
-    if (miCarga !== _evAntCargaId) return; // el usuario ya salió y volvió a entrar -- esta respuesta quedó vieja
+    if (!_evAntCargaVigente(miCarga)) return; // el usuario ya salió (con o sin volver a entrar) -- esta respuesta quedó vieja
     _evAntReglas = res || [];
     if (_evAntReglas.length > 0) {
       _evAntRenderLista();
@@ -2396,7 +2410,7 @@ function eventosAbrirAnticipada() {
       _evAntIniciarWizard();
     }
   }, function(e) {
-    if (miCarga !== _evAntCargaId) return;
+    if (!_evAntCargaVigente(miCarga)) return;
     mostrarToast(e && e.message ? e.message : 'No se pudieron cargar tus asistencias anticipadas.', 'error');
     ir('s-eventos');
   });
@@ -2421,19 +2435,20 @@ function _evAntSkeletonHtml() {
 // forzar al wizard (ese salto es solo el comportamiento de ENTRADA a la
 // pantalla, no algo que deba repetirse en cada refresco).
 function _evAntRecargarLista(cb) {
-  // Mismo guard que eventosAbrirAnticipada() (ver esa función) -- NO
-  // incrementa `_evAntCargaId` (esto es un refresco de la carga vigente, no
-  // una entrada nueva), solo verifica que nadie haya vuelto a entrar a la
-  // pantalla mientras este refresco estaba en vuelo.
+  // Mismo guard reforzado que eventosAbrirAnticipada() (ver
+  // _evAntCargaVigente()) -- NO incrementa `_evAntCargaId` (esto es un
+  // refresco de la carga vigente, no una entrada nueva), solo verifica que
+  // nadie haya vuelto a entrar (o simplemente salido sin volver) mientras
+  // este refresco estaba en vuelo.
   var miCarga = _evAntCargaId;
   api({ action: 'getReglasAsistenciaAnticipada', nombre: E.nombre }, function(res) {
-    if (miCarga !== _evAntCargaId) return;
+    if (!_evAntCargaVigente(miCarga)) return;
     _evAntReglas = res || [];
     _evAntRenderLista();
     document.getElementById('ev-ant-btn-nueva').style.display = 'block';
     if (typeof cb === 'function') cb();
   }, function(e) {
-    if (miCarga !== _evAntCargaId) return;
+    if (!_evAntCargaVigente(miCarga)) return;
     mostrarToast(e && e.message ? e.message : 'No se pudo actualizar la lista.', 'error');
     if (typeof cb === 'function') cb();
   });
