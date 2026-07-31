@@ -1138,20 +1138,62 @@ function _evLanzarConfettiCuandoVisible(el, intentosRestantes) {
 // (arriba de él en el flujo) tapado a medias por la cabecera -- apuntar al
 // separador directo lo deja pegado arriba del todo, mismo criterio que
 // cualquier otro salto de fecha.
+//
+// **Bug real encontrado y corregido con Playwright (ver "Cambios
+// recientes" -- separador -HOY- tapado a medias por la cabecera SOLO en el
+// salto automático al abrir Eventos, nunca en un salto manual posterior).**
+// Causa raíz: `irEventos()` llama a esta función a los 50ms de activar
+// `#s-eventos` (`ir()`), pero `.pantalla.activa` anima
+// `transform:translateY(20px)->none` durante sus primeros 600ms
+// (`smoothSlideUp`, css/estilos.css) -- a los 50ms ese transform sigue
+// activo casi por completo. `getBoundingClientRect()` (usado antes acá,
+// tanto en el chequeo `yaVisible` como implícitamente dentro de
+// `scrollIntoView()`) devuelve la posición YA RENDERIZADA, con el
+// desplazamiento del transform incluido -- `#ev-sticky-header`
+// (`position:sticky`) se re-ancla solo en cada frame contra el viewport y
+// queda inmune, pero `#ev-separador-hoy`/`.ev-fecha-grupo` (elementos
+// normales) SÍ heredan el desplazamiento. `scrollIntoView()` alineaba el
+// destino contra esa posición TRANSFORMADA del instante -- al terminar de
+// asentarse la animación (transform ya en `none`, sin ningún re-scroll)
+// el separador quedaba hasta 20px más arriba de lo calculado, parcialmente
+// tapado por la cabecera. Confirmado con Playwright instrumentando
+// `_evScrollAFecha()`: `offsetTop`/`offsetParent` (posición de LAYOUT,
+// ajena a cualquier `transform` de pintado) dan el MISMO valor absoluto
+// tanto a los 50ms (transform activo) como 2s después (ya asentado) --
+// `getBoundingClientRect()` en cambio difiere exactamente en los 20px del
+// transform. Fix: `_evOffsetAbsoluto()` calcula el destino con la cadena
+// `offsetTop`/`offsetParent` en vez de `getBoundingClientRect()`, y el
+// scroll se dispara a mano con `window.scrollTo()` en vez de
+// `scrollIntoView()` (que solo sabe alinear contra la posición renderizada
+// actual). Mismo criterio ya aplicado en otros bugs de este archivo con
+// `.pantalla.activa`: no confiar en medidas tomadas mientras esa animación
+// sigue corriendo. Verificado con Playwright: separador -HOY- alineado
+// exactamente contra el borde inferior de la cabecera (0px de solape) tanto
+// en el salto automático de `irEventos()` como en un salto manual
+// posterior (`_evIrAHoy()`), con historial real de varios meses antes y
+// después de hoy (con poco contenido a los lados no hay margen para que el
+// bug se note, por eso pasaba desapercibido con los datos de prueba
+// originales, muy acotados).
+function _evOffsetAbsoluto(el) {
+  var top = 0;
+  while (el) { top += el.offsetTop; el = el.offsetParent; }
+  return top;
+}
 function _evScrollAFecha(iso, instant, forzar) {
   var el = (iso === _evHoyISO() && document.getElementById('ev-separador-hoy')) ||
     document.getElementById('ev-fecha-' + iso) || _evFechaGrupoMasCercano(iso);
   if (!el) return;
   var margenSup = _evAlturaStickyHeader();
   document.documentElement.style.setProperty('--ev-sticky-h', margenSup + 'px');
+  var absTop = _evOffsetAbsoluto(el);
+  var destino = Math.max(0, absTop - margenSup);
   if (!forzar) {
-    var r = el.getBoundingClientRect();
     var margenInf = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-h')) || 60;
     var vh = window.innerHeight || document.documentElement.clientHeight;
-    var yaVisible = r.top >= margenSup && r.bottom <= (vh - margenInf);
+    var yaVisible = window.scrollY <= destino && window.scrollY >= (absTop + el.offsetHeight - vh + margenInf);
     if (yaVisible) return;
   }
-  el.scrollIntoView({ behavior: instant ? 'auto' : 'smooth', block: 'start' });
+  window.scrollTo({ top: destino, behavior: instant ? 'auto' : 'smooth' });
 }
 function _evFechaGrupoMasCercano(iso) {
   var grupos = document.querySelectorAll('.ev-fecha-grupo');
