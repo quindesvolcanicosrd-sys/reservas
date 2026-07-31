@@ -530,16 +530,21 @@ function _renderCardHome(r, hoy) {
 
   var necesitaPatines = r.talla && r.talla !== '' && r.talla.toLowerCase() !== 'no';
   var necesitaProtec = r.protecciones && r.protecciones !== '' && r.protecciones.toLowerCase() !== 'no' && r.protecciones.toLowerCase().indexOf('no,') !== 0;
-  var equipPillHtml = '';
+  // Pill de talla separado del de protecciones (antes un solo `equipPillHtml`
+  // acumulado) -- ver "Cambios recientes": el de talla pasa al acordeón
+  // "Más información" mientras que el de protecciones (pedido explícito, no
+  // tocado) se queda visible en su fila de siempre.
+  var patinesPillHtml = '';
   if (necesitaPatines) {
     var puedeEditarTalla = (r.estado === 'Pendiente' || r.estado === 'Confirmada');
     if (puedeEditarTalla) {
       var tallaEsc = (r.talla || '').replace(/'/g, "\\'");
-      equipPillHtml += '<span class="fi-pill fi-pill-patines" style="cursor:pointer;" onclick="abrirSheetTalla(\'' + fechaEsc + '\',\'' + tallaEsc + '\')"><span class="material-symbols-outlined">roller_skating</span>' + (r.talla || '') + '<span class="material-symbols-outlined">edit</span></span>';
+      patinesPillHtml = '<span class="fi-pill fi-pill-patines" style="cursor:pointer;" onclick="abrirSheetTalla(\'' + fechaEsc + '\',\'' + tallaEsc + '\')"><span class="material-symbols-outlined">roller_skating</span>' + (r.talla || '') + '<span class="material-symbols-outlined">edit</span></span>';
     } else {
-      equipPillHtml += '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">roller_skating</span>' + (r.talla || '') + '</span>';
+      patinesPillHtml = '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">roller_skating</span>' + (r.talla || '') + '</span>';
     }
   }
+  var protecPillHtml = '';
   if (necesitaProtec) {
     var protecLower = r.protecciones.toLowerCase();
     var protecTexto = (protecLower === 'no' || protecLower === 'no, tengo las mías' || protecLower === 'no, tengo las mias') ? '' :
@@ -548,13 +553,14 @@ function _renderCardHome(r, hoy) {
     var puedeEditarProtec = (r.estado === 'Pendiente' || r.estado === 'Confirmada');
     if (puedeEditarProtec) {
       var protecEsc = (r.protecciones || '').replace(/'/g, "\\'");
-      equipPillHtml += '<span class="fi-pill fi-pill-patines" style="cursor:pointer;" onclick="abrirSheetProtecReserva(\'' + fechaEsc + '\',\'' + protecEsc + '\')"><span class="material-symbols-outlined">shield</span>' + protecTexto + '<span class="material-symbols-outlined">edit</span></span>';
+      protecPillHtml = '<span class="fi-pill fi-pill-patines" style="cursor:pointer;" onclick="abrirSheetProtecReserva(\'' + fechaEsc + '\',\'' + protecEsc + '\')"><span class="material-symbols-outlined">shield</span>' + protecTexto + '<span class="material-symbols-outlined">edit</span></span>';
     } else {
-      equipPillHtml += '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">shield</span>' + protecTexto + '</span>';
+      protecPillHtml = '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">shield</span>' + protecTexto + '</span>';
     }
   }
+  var equipoNotaHtml = '';
   if (!necesitaPatines && !necesitaProtec) {
-    equipPillHtml = '<span class="fi-pill fi-pill-equip"><span class="material-symbols-outlined">check_circle</span>Llevas tu equipo</span>';
+    equipoNotaHtml = '<span class="fi-pill fi-pill-equip"><span class="material-symbols-outlined">check_circle</span>Llevas tu equipo</span>';
   }
   var estadoLabel = r.estado === 'Confirmada' ? 'Reserva confirmada' : r.estado === 'Cancelada' ? 'Reserva cancelada' : r.estado === 'Reagendar' ? 'Clase a favor' : 'Reserva pendiente';
   var statusBarClase = 'rn-status-' + (r.estado === 'Confirmada' ? 'confirmada' : r.estado === 'Cancelada' ? 'cancelada' : r.estado === 'Reagendar' ? 'reagendar' : 'pendiente');
@@ -579,9 +585,11 @@ function _renderCardHome(r, hoy) {
     }
   }
 
+  // Solo protecciones se queda visible en la fila de siempre -- talla pasó
+  // al acordeón (ver bodyHtml más abajo).
   var pillsHtml = '';
-  if (!esMensual && (necesitaPatines || necesitaProtec)) {
-    pillsHtml = '<div class="fi-pills">' + equipPillHtml + '</div>';
+  if (!esMensual && necesitaProtec) {
+    pillsHtml = '<div class="fi-pills">' + protecPillHtml + '</div>';
   }
 
   var uid = 'rcard-' + (r.fila || Math.random().toString(36).slice(2));
@@ -590,14 +598,14 @@ function _renderCardHome(r, hoy) {
   var bodyHtml = '<div class="rn-body" id="' + uid + '-body"><div class="rn-body-inner">';
   if (r.descripcion) bodyHtml += '<p style="margin-bottom:25px;">' + r.descripcion + '</p>';
   bodyHtml += '<div class="fi-pills">';
-  if (!esMensual && !necesitaPatines && !necesitaProtec) bodyHtml += equipPillHtml;
+  if (!esMensual) bodyHtml += patinesPillHtml + equipoNotaHtml;
   if (r.horaFin) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">schedule</span>Fin ' + r.horaFin + '</span>';
   if (r.duracion) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">timer</span>' + r.duracion + '</span>';
   bodyHtml += '</div></div></div>';
 
   var rnTopRight = lugarPillHtml;
   if (esMensual) {
-    rnTopRight = '<div class="rn-top-extra fi-pills">' + equipPillHtml;
+    rnTopRight = '<div class="rn-top-extra fi-pills">' + patinesPillHtml + protecPillHtml + equipoNotaHtml;
     if (r.validezHasta) rnTopRight += '<span class="fi-pill fi-pill-validez"><span class="material-symbols-outlined">event_available</span>Válido hasta ' + r.validezHasta + '</span>';
     rnTopRight += '</div>';
   }
