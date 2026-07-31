@@ -228,6 +228,39 @@ function _evGenerarDemo() {
 // resetea nada -- el usuario vuelve exactamente donde había dejado el
 // timeline, con los filtros/búsqueda/calendario tal cual estaban.
 var _evYaInicializadoEnSesion = false;
+
+/* ── FAB de #s-eventos (solo admin, ver #ev-fab-menu en index.html) ──────
+   Menú "speed dial" de 2 opciones (Crear evento/Editar lugares). La
+   visibilidad del FAB en sí (admin + pantalla activa) la resuelve ir()/
+   js/ui.js en cada cambio de pantalla, mismo criterio que #home-nav/
+   #s4-nav -- acá solo vive el abrir/cerrar del menú una vez que el FAB ya
+   está visible. */
+var _evFabAbierto = false;
+function _evFabToggle() {
+  _evFabAbierto = !_evFabAbierto;
+  var menu = document.getElementById('ev-fab-menu');
+  if (menu) menu.classList.toggle('ev-fab-abierto', _evFabAbierto);
+  var btn = document.getElementById('ev-fab-btn');
+  if (btn) btn.setAttribute('aria-expanded', String(_evFabAbierto));
+}
+function _evFabCerrar() {
+  if (!_evFabAbierto) return;
+  _evFabAbierto = false;
+  var menu = document.getElementById('ev-fab-menu');
+  if (menu) menu.classList.remove('ev-fab-abierto');
+  var btn = document.getElementById('ev-fab-btn');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+// Tocar afuera del menú (y del propio botón, que ya vive adentro de
+// #ev-fab-menu) lo cierra -- un solo listener delegado en document, mismo
+// patrón que ya usan las burbujas de mes/búsqueda/filtros de esta misma
+// pantalla (_evTogglePanel()) para su cierre "al tocar afuera".
+document.addEventListener('click', function(e) {
+  if (!_evFabAbierto) return;
+  var menu = document.getElementById('ev-fab-menu');
+  if (menu && !menu.contains(e.target)) _evFabCerrar();
+});
+
 /* ── Punto de entrada (ver 'entrar' de APP_BOTTOM_NAV_ITEMS en js/ui.js) ── */
 function irEventos() {
   if (_EV_EVENTOS.length === 0) _evGenerarDemo();
@@ -251,8 +284,9 @@ function irEventos() {
   var navMesLabel = document.getElementById('ev-nav-mes-label');
   if (navMesLabel) navMesLabel.classList.remove('ev-nav-mes-label-activo');
   _evActualizarNavMesChevron();
-  var addBtn = document.getElementById('eventos-btn-add');
-  if (addBtn) addBtn.style.display = _esAdminDemo ? 'flex' : 'none';
+  // Visibilidad del FAB (#ev-fab-menu, index.html) según _esAdminDemo se
+  // resuelve en ir()/js/ui.js (mismo criterio que #home-nav/#s4-nav ahí),
+  // no acá -- irEventos() ya no necesita tocar ningún botón "+" propio.
   _evActualizarBotonesFiltro();
   _evRenderTimeline(true);
   volver('s-eventos');

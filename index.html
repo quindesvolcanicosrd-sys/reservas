@@ -18,7 +18,7 @@
 <meta name="apple-mobile-web-app-title" content="Mirlxs">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/colors.css?v=da3ddad6">
+<link rel="stylesheet" href="css/colors.css?v=faa77ac7">
 <!-- Motor de color de énfasis (Tanda 1/2, ver MANIFEST.md) — recalcula en
      runtime las variables de colors.css derivadas de la marca. Va apenas
      después del <link> de colors.css para pisar el fallback estático antes
@@ -31,8 +31,8 @@
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=56739f3b">
-<link rel="stylesheet" href="css/nav.css?v=9b27ee2c">
-<link rel="stylesheet" href="css/eventos.css?v=ff5b784f">
+<link rel="stylesheet" href="css/nav.css?v=04304e30">
+<link rel="stylesheet" href="css/eventos.css?v=f1baac71">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -316,14 +316,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           </button>
           <button type="button" class="app-nav-icon-btn app-nav-icon-btn-brand ev-header-icon-btn" onclick="eventosAbrirAnticipada()" title="Asistencia anticipada">
             <span class="material-symbols-outlined">event_available</span>
-          </button>
-
-          <!-- "+ Nuevo evento" (solo admin, _esAdminDemo la togglea en
-               irEventos(), js/eventos.js) -- accesorio, no cuenta como parte
-               de los 3 íconos fijos de la fila (oculto para la enorme
-               mayoría de usuarios). -->
-          <button class="app-nav-icon-btn app-nav-icon-btn-danger ev-btn-add" id="eventos-btn-add" style="display:none;" onclick="mostrarToast('Próximamente','ok')" title="Nuevo evento">
-            <span class="material-symbols-outlined">add</span>
           </button>
         </div>
 
@@ -967,8 +959,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/bsheet.js"></script>
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=2f629cc6"></script>
-<script src="js/eventos.js?v=0c2acb70"></script>
+<script src="js/ui.js?v=ee357b2c"></script>
+<script src="js/eventos.js?v=924f991e"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=343fe44f"></script>
 <script src="js/perfil.js?v=ca452084"></script>
@@ -2636,6 +2628,30 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
      _saludActualizarFooter()/_saludOcultarFooter(). -->
 <div class="cta-footer-fixed" id="cta-footer-eventos-anticipada">
   <button class="btn btn-primary" id="ev-ant-footer-aplicar" disabled>Aplicar</button>
+</div>
+
+<!-- FAB de #s-eventos (solo admin, reemplaza el "+" que vivía en
+     .ev-header-row -- ver comentario que quedó ahí). Hijo directo de <body>,
+     fuera de .pantalla/.card, mismo motivo que .cta-footer-fixed de arriba
+     (position:fixed atrapado por el containing block de .pantalla.activa
+     mientras corre su animación de entrada). display:none por default --
+     ir()/js/ui.js lo muestra solo con 's-eventos' activa Y _esAdminDemo,
+     mismo criterio que #home-nav/#s4-nav ahí. "Speed dial" de 2 opciones
+     que aparecen arriba del botón principal con fade+slide -- abrir/cerrar
+     vía _evFabToggle()/_evFabCerrar() (js/eventos.js), togglea la clase
+     .ev-fab-abierto en este mismo contenedor. -->
+<div class="ev-fab-menu" id="ev-fab-menu" style="display:none;">
+  <button type="button" class="ev-fab-opcion" id="ev-fab-crear-evento" onclick="_evFabCerrar(); mostrarToast('Próximamente','ok'); /* TODO Tanda futura: abrir formulario de creación de evento */">
+    <span class="material-symbols-outlined">event</span>
+    <span>Crear evento</span>
+  </button>
+  <button type="button" class="ev-fab-opcion" id="ev-fab-editar-lugares" onclick="_evFabCerrar(); mostrarToast('Próximamente','ok'); /* TODO Tanda futura: abrir editor de lugares */">
+    <span class="material-symbols-outlined">place</span>
+    <span>Editar lugares</span>
+  </button>
+  <button type="button" class="ev-fab-btn" id="ev-fab-btn" onclick="_evFabToggle()" title="Nuevo" aria-expanded="false">
+    <span class="material-symbols-outlined">add</span>
+  </button>
 </div>
 
 </body>

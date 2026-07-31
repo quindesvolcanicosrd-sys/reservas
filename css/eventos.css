@@ -57,9 +57,78 @@
 .ev-nav-mes-chevron { font-size: 20px; color: var(--muted); transition: color 0.15s; }
 .ev-nav-mes-label.ev-nav-mes-label-activo { color: var(--brand); }
 .ev-nav-mes-label.ev-nav-mes-label-activo .ev-nav-mes-chevron { color: var(--brand); }
-/* `.ev-btn-add` ("+" Nuevo evento, admin) -- hereda 44×44px/radius:50% de
-   sus clases base tal cual (`app-nav-icon-btn app-nav-icon-btn-danger`, ver
-   index.html), sin override propio. */
+
+/* ── FAB de #s-eventos (solo admin) ─────────────────────
+   Ver comentario HTML (index.html, hijo directo de <body>) -- reemplaza el
+   "+" que vivía en .ev-header-row. `.ev-fab-menu` es el contenedor fixed
+   completo (centrado igual que .app-bottom-nav/.cta-footer-fixed --
+   left:50%+translateX(-50%)+max-width:523px -- para que el botón quede
+   pegado a la esquina inferior derecha de la COLUMNA de la app, no del
+   viewport entero en desktop ancho); `pointer-events:none` en el
+   contenedor + `auto` solo en los botones reales para no robarle taps al
+   contenido de abajo por el hueco vacío que deja `align-items:flex-end`. */
+.ev-fab-menu {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 523px;
+  bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 16px);
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  padding-right: var(--space-screen);
+  pointer-events: none;
+}
+.ev-fab-btn {
+  pointer-events: auto;
+  width: 56px; height: 56px; flex-shrink: 0;
+  border: none; border-radius: 50%;
+  background: var(--fab-admin-bg);
+  color: var(--fab-admin-icon);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+@media (hover: hover) { .ev-fab-btn:hover { background: var(--fab-admin-bg-hover); } }
+.ev-fab-btn:active { transform: scale(0.94); }
+.ev-fab-btn .material-symbols-outlined { font-size: 1.6rem; display: block; transition: transform 0.25s ease; }
+/* Ícono "+" rota a "×" visual mientras el menú está abierto -- togglea
+   junto con .ev-fab-abierto (_evFabToggle()/_evFabCerrar(), js/eventos.js). */
+.ev-fab-menu.ev-fab-abierto .ev-fab-btn .material-symbols-outlined { transform: rotate(45deg); }
+/* Opciones del speed dial -- SIEMPRE en el DOM (no display:none), ocultas
+   con opacity+transform+visibility para poder animar la entrada/salida
+   (fade+slide) apenas se suma/saca .ev-fab-abierto del contenedor padre. */
+.ev-fab-opcion {
+  pointer-events: none;
+  visibility: hidden;
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px;
+  border: none; border-radius: var(--radius-full);
+  background: var(--fab-admin-bg);
+  color: var(--fab-admin-icon);
+  font-size: 0.9rem; font-weight: 700; font-family: inherit; white-space: nowrap;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+}
+@media (hover: hover) { .ev-fab-opcion:hover { background: var(--fab-admin-bg-hover); } }
+.ev-fab-opcion .material-symbols-outlined { font-size: 1.2rem; }
+.ev-fab-menu.ev-fab-abierto .ev-fab-opcion {
+  pointer-events: auto;
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
+/* Pequeño stagger -- la opción más lejana del botón principal (primera en
+   el DOM, ver index.html) entra/sale con un toque más de delay, cascada
+   sutil en vez de las 2 apareciendo en el mismo instante exacto. */
+.ev-fab-menu.ev-fab-abierto .ev-fab-opcion:first-child { transition-delay: 0.04s; }
 
 .ev-dot {
   width: 6px; height: 6px; border-radius: 50%; background: var(--brand); flex-shrink: 0;

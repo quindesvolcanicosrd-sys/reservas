@@ -394,6 +394,21 @@ function ir(id, desdeHistorial, sinTrampa) {
     }
   }
 
+  // FAB de #s-eventos (#ev-fab-menu, index.html) -- solo cuenta admin
+  // (_esAdminDemo, js/eventos.js) Y con 's-eventos' como pantalla activa
+  // (no en s-eventos-detalle/s-eventos-anticipada, aunque compartan tab de
+  // la nav inferior). Mismo criterio que #home-nav/#s4-nav de arriba:
+  // togglea acá, único punto real de "cambio de pantalla" (ver comentario
+  // de arriba de esta función). Si se abandona 's-eventos' con el menú
+  // "speed dial" abierto, se fuerza su cierre -- no debe quedar abierto e
+  // invisible esperando la próxima vez que se muestre el FAB.
+  var eventosFab = document.getElementById('ev-fab-menu');
+  if (eventosFab) {
+    var _mostrarFab = id === 's-eventos' && typeof _esAdminDemo !== 'undefined' && _esAdminDemo;
+    eventosFab.style.display = _mostrarFab ? 'flex' : 'none';
+    if (!_mostrarFab && typeof _evFabCerrar === 'function') _evFabCerrar();
+  }
+
   _actualizarBottomNav(id);
 
   var sinPasos = ['s1','s-home','s-misreservas','s-carga','s6','s-datos','s-gestionar'].concat(ADMIN_PANTALLAS);
