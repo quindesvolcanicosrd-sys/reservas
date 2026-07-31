@@ -198,14 +198,23 @@
 .sg-no-fechas .material-symbols-outlined { font-size:2rem; display:block; margin-bottom:8px; color:var(--brand); }
 .rn-equip-estado { display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
 .rn-estado-txt { font-size:0.71rem; font-weight:600; display:inline-flex; align-items:center; gap:3px; }
-/* ── Status bar ──────────────────────────────────────── */
-.rn-status-bar { display:flex; align-items:center; gap:8px; padding:16px 14px; font-size:0.78rem; font-weight:700; cursor:pointer; margin-top: -8px; }
-.rn-status-bar .material-symbols-outlined { font-size:15px; flex-shrink:0; }
-.rn-status-link { margin-left:auto; font-size:0.7rem; font-weight:600; text-decoration:underline; text-underline-offset:2px; opacity:0.85; white-space:nowrap; }
-.rn-status-pendiente { background:var(--amber-dark); color:var(--white); }
-.rn-status-confirmada { background:var(--success-dark); color:var(--white); }
-.rn-status-cancelada { background:var(--danger); color:var(--white); }
-.rn-status-reagendar { background:var(--dk-purple-mid,#6d28d9); color:var(--white); }
+/* ── Status row (ver "Cambios recientes" -- reemplaza la barra de fondo
+   sólido a todo el ancho, `.rn-status-bar`/`.rn-status-*`, quitada de acá).
+   Nuevo pill de ancho automático reusando el componente `.badge`/`.badge-*`
+   (`css/home.css`, más arriba -- tinte+borde por estado, ya usado en
+   admin.js/eventos.js) en vez de un sistema de color paralelo: se buscó
+   explícitamente antes de escribir CSS nueva y esas 4 clases YA cubrían los
+   4 estados reales de una reserva (pendiente/confirmada/cancelada/reagendar
+   -- "Reagendar"/"Clase a favor" es un 4to estado real que el pedido
+   original no mencionaba, confirmado leyendo el código antes de asumir que
+   eran 3; se le aplicó el mismo tratamiento con su color morado ya
+   existente, `.badge-reagendar`, para no dejar un estado con un estilo
+   viejo mientras los otros 3 se actualizan). "¿Qué significa esto?" pasa de
+   link destacado (subrayado, fondo de color) a texto tenue al lado del pill,
+   en la misma fila -- ya no ocupa su propio ancho completo. */
+.rn-status-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:14px 14px 0; }
+.rn-status-info { font-size:0.72rem; color:var(--muted); cursor:pointer; white-space:nowrap; }
+.rn-status-info:hover { color:var(--brand); }
 
 
 /* ── Empty state home ────────────────────────────────────

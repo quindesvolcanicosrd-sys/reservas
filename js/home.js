@@ -589,11 +589,14 @@ function _renderCardHome(r, hoy) {
     equipoNotaHtml = '<span class="fi-pill fi-pill-equip"><span class="material-symbols-outlined">check_circle</span>Llevas tu equipo</span>';
   }
   var estadoLabel = r.estado === 'Confirmada' ? 'Reserva confirmada' : r.estado === 'Cancelada' ? 'Reserva cancelada' : r.estado === 'Reagendar' ? 'Clase a favor' : 'Reserva pendiente';
-  var statusBarClase = 'rn-status-' + (r.estado === 'Confirmada' ? 'confirmada' : r.estado === 'Cancelada' ? 'cancelada' : r.estado === 'Reagendar' ? 'reagendar' : 'pendiente');
-  var statusBar = '<div class="rn-status-bar ' + statusBarClase + '" onclick="abrirModalEstados()">' +
-    '<span class="material-symbols-outlined">' + estadoIcono + '</span>' +
-    '<span>' + estadoLabel + '</span>' +
-    '<span class="rn-status-link">¿Qué significa esto?</span>' +
+  // Pill de ancho automático con tinte+borde (ver "Cambios recientes" --
+  // reusa `.badge`/`.badge-*`, mismo componente ya usado en admin.js/
+  // eventos.js, en vez de la barra de fondo sólido a todo el ancho de
+  // antes) + "¿Qué significa esto?" como texto tenue al lado, misma fila.
+  var badgeClase = 'badge-' + (r.estado === 'Confirmada' ? 'confirmada' : r.estado === 'Cancelada' ? 'cancelada' : r.estado === 'Reagendar' ? 'reagendar' : 'pendiente');
+  var statusBar = '<div class="rn-status-row">' +
+    '<span class="badge ' + badgeClase + '"><span class="material-symbols-outlined">' + estadoIcono + '</span>' + estadoLabel + '</span>' +
+    '<span class="rn-status-info" onclick="abrirModalEstados()">¿Qué significa esto?</span>' +
     '</div>';
 
   var esMensual = _MESES_MAP[(r.fecha || '').toLowerCase().trim()] !== undefined;
