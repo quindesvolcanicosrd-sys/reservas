@@ -717,6 +717,10 @@
    "Cambios recientes" -- antes alineada a la izquierda por herencia de
    `text-align:left` general). */
 .ev-ant-rango-linea { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; font-size: 0.92rem; color: var(--text); text-align: center; }
+/* Estado sin fecha elegida de "Por período" (ver "Cambios recientes" -- ya
+   no muestra la línea "Desde el ___ hasta el ___" vacía, un texto
+   instructivo simple en su lugar). */
+.ev-ant-rango-vacio { color: var(--muted); }
 .ev-ant-fecha-pill {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 92px; min-height: 30px; padding: 4px 10px;

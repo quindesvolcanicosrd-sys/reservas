@@ -2759,12 +2759,36 @@ function _evAntFechaCorta(iso) {
   return parseInt(p[2], 10) + '/' + parseInt(p[1], 10) + '/' + p[0];
 }
 
+// Resumen de "Por período" (#ev-ant-periodo-resumen, ver "Cambios recientes"
+// -- reemplaza las 2 pills fijas "Desde el/hasta el", vacías o llenas, por
+// una sola línea que cambia de FORMA según cuánto haya elegido el usuario,
+// no solo de contenido): sin nada elegido, texto instructivo (nunca
+// "Desde el ___ hasta el ___" vacío); con solo Desde, "Del <fecha>" sin
+// mención de "al..." (no queda pendiente algo que no aplica todavía); con
+// las 2, "Del <fecha> al <fecha>". Las fechas siguen usando `.ev-ant-fecha-pill`
+// (mismo chip visual de antes) + `_evAntFocoCalendario('periodo')` al
+// tocarlas -- solo el texto instructivo (sin fecha) no lleva pill ni foco,
+// no hay nada a lo que "volver".
+function _evAntPeriodoResumenHtml() {
+  var desde = _evAntData.fechaDesde, hasta = _evAntData.fechaHasta;
+  if (!desde) return '<span class="ev-ant-rango-vacio">Toca una fecha en el calendario para empezar</span>';
+  var html = 'Del <span class="ev-ant-fecha-pill" onclick="_evAntFocoCalendario(\'periodo\')">' + _evAntFechaCorta(desde) + '</span>';
+  if (hasta) html += ' al <span class="ev-ant-fecha-pill" onclick="_evAntFocoCalendario(\'periodo\')">' + _evAntFechaCorta(hasta) + '</span>';
+  return html;
+}
+
 function _evAntCalActualizarResumen(cual) {
   if (cual === 'periodo') {
-    var d = document.getElementById('ev-ant-periodo-desde-txt');
-    var h = document.getElementById('ev-ant-periodo-hasta-txt');
-    if (d) d.textContent = _evAntData.fechaDesde ? _evAntFechaCorta(_evAntData.fechaDesde) : '';
-    if (h) h.textContent = _evAntData.fechaHasta ? _evAntFechaCorta(_evAntData.fechaHasta) : '';
+    var cont = document.getElementById('ev-ant-periodo-resumen');
+    if (cont) {
+      cont.innerHTML = _evAntPeriodoResumenHtml();
+      // Fade breve al cambiar de un estado a otro (instructivo -> "Del X" ->
+      // "Del X al Y") -- mismo mecanismo de reflow + @keyframes fadeIn ya
+      // usado en el resto de este archivo (ver _evAntMostrarSubFrecuencia()),
+      // no un mecanismo nuevo.
+      void cont.offsetWidth;
+      cont.style.animation = 'fadeIn 0.2s ease';
+    }
   } else {
     var el = document.getElementById('ev-ant-indefinido-desde-txt');
     if (el) el.textContent = _evAntData.fechaDesde ? _evAntFechaCorta(_evAntData.fechaDesde) : '';
