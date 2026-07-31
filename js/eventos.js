@@ -288,13 +288,17 @@ function _evRestaurarTab(pantallaGuardada) {
   if (pantallaGuardada === 's-eventos-anticipada' && document.getElementById('s-eventos-anticipada')) {
     ir('s-eventos-anticipada');
     var wizard = document.getElementById('ev-ant-wizard');
-    // Wizard visible (a mitad de un paso) -- re-muestra el paso actual sin
-    // tocar `_evAntData`/`_evAntCurIdx`: sólo repinta el footer/progreso
-    // (`_evAntActualizarFooter()`, oculto de golpe por `ir()` al abandonar
-    // la sección -- ver comentario de `#cta-footer-eventos-anticipada` en
-    // ese archivo) y sus dots -- las pills/fechas ya elegidas siguen con su
-    // clase `activa`/valor tal cual quedaron, nunca se resetean.
-    if (wizard && wizard.style.display !== 'none') _evAntMostrarPaso(_evAntCurIdx);
+    // Wizard visible -- re-muestra el footer (oculto de golpe por `ir()` al
+    // abandonar la sección -- ver comentario de `#cta-footer-eventos-anticipada`
+    // en ese archivo) y reposiciona el slider de "Estado a aplicar" (mide
+    // layout real, cero mientras la pantalla estuvo `display:none` detrás de
+    // otro tab) -- las pills/fechas/secciones abiertas del acordeón siguen
+    // tal cual quedaron, nunca se resetean.
+    if (wizard && wizard.style.display !== 'none') {
+      _evAntActualizarFooter();
+      var estadoSeg = document.getElementById('ev-ant-estado-seg');
+      if (estadoSeg) _evPosicionarRsvpSlider(estadoSeg, false);
+    }
     return;
   }
   if (pantallaGuardada === 's-eventos-detalle' && document.getElementById('s-eventos-detalle')) {
@@ -2305,8 +2309,6 @@ function _evFiltrarAsistenciaPorGrupo(cardEl, grupo) {
    si no coincide 1:1.
    ═══════════════════════════════════════════════════════ */
 
-var _EV_ANT_STEPS = ['ev-ant-paso-0', 'ev-ant-paso-1', 'ev-ant-paso-2'];
-var _evAntCurIdx = 0;
 var _evAntData = {};
 var _evAntReglas = [];
 
@@ -2380,6 +2382,9 @@ function _evAntRenderLista() {
           '<div class="ev-ant-card-sub">' + _evAntResumenDetalle(r) + '</div>' +
         '</div>' +
       '</div>' +
+      '<button type="button" class="ev-ant-card-edit" onclick="_evAntEditar(' + r.fila + ')" title="Editar">' +
+        '<span class="material-symbols-outlined">edit</span>' +
+      '</button>' +
       '<button type="button" class="ev-ant-card-del" onclick="_evAntEliminar(' + r.fila + ')" title="Eliminar">' +
         '<span class="material-symbols-outlined">delete</span>' +
       '</button>' +
@@ -2422,44 +2427,78 @@ function _evAntEliminar(fila) {
   });
 }
 
+// Ícono "editar" de cada card del resumen (ver "Cambios recientes", junto al
+// de eliminar) -- abre el mismo wizard de "Nueva asistencia anticipada"
+// pre-cargado con los datos de esa regla, ver _evAntIniciarWizard(regla).
+function _evAntEditar(fila) {
+  var regla = _evAntReglas.filter(function(r) { return r.fila === fila; })[0];
+  if (!regla) return;
+  _evAntIniciarWizard(regla);
+}
+
 function _evAntBack() {
   var wizard = document.getElementById('ev-ant-wizard');
-  if (wizard && wizard.style.display !== 'none') { _evAntPasoAnterior(); }
+  if (wizard && wizard.style.display !== 'none') { _evAntCerrarWizard(); }
   else { ir('s-eventos'); }
 }
 
-// ─── Wizard (mismo motor que _SALUD_STEPS/_saludCurIdx/_saludMostrarPaso(),
-// js/perfil.js -- replicado acá, no reusado directo, porque vive sobre una
-// .pantalla propia en vez de un aj-sub-* montado sobre s-datos). 3 pasos
-// (ver "Cambios recientes" -- reestructurado desde 4, luego a 2, y ahora se
-// suma un paso 0 explicativo, mismo criterio que salud-paso-0 de
-// js/perfil.js: sin campos, footer con solo "Continuar"): paso 0 =
-// explicación de qué es la asistencia anticipada (botón "Comenzar"); paso 1 =
-// Estado a aplicar (ya no incluye Tipos de evento, ver "Cambios recientes" --
-// la asistencia anticipada aplica únicamente a Entrenamientos, tiposEvento
-// va hardcodeado en _evAntAplicar()); paso 2 = Frecuencia, con reveal INLINE
-// (no un paso propio) de meses/fechas según la elección, cerrando con
-// "Aplicar". El
-// footer solo tiene "Continuar"/"Aplicar" -- sin botón "Atrás" propio,
-// redundante con la flecha del header (#ev-ant-header, _evAntBack()), que ya
-// cubre exactamente lo mismo. ─────────────────────
+// ─── Wizard (ver "Cambios recientes" -- ya NO es una secuencia de pasos:
+// una sola pantalla con 2 secciones en acordeón, "Estado a aplicar" y
+// "Frecuencia" (_evAntToggleAcordeon(), más abajo), un solo botón "Aplicar"
+// habilitado solo cuando ambas están completas (_evAntActualizarBotonAplicar()).
+// Sin botón "Atrás" propio, redundante con la flecha del header
+// (#ev-ant-header, _evAntBack()). ─────────────────────
 
-function _evAntIniciarWizard() {
-  _evAntData = { tipoRango: null, meses: [], fechaDesde: null, fechaHasta: null, estado: null };
+// Sin argumento: wizard "en blanco" ("+ Nueva asistencia anticipada", arranca
+// con "Estado a aplicar" abierto y "Frecuencia" cerrado). Con `regla` (desde
+// _evAntEditar()): pre-carga ambas secciones con los valores existentes y
+// arrancan las 2 COLAPSADAS (ya resueltas, listas para tocar y cambiar) --
+// `_evAntData.editando` guarda el número de fila vieja para el flujo
+// eliminar+crear de _evAntAplicar().
+function _evAntIniciarWizard(regla) {
+  _evAntData = {
+    tipoRango: regla ? regla.tipoRango : null,
+    meses: (regla && regla.meses) ? regla.meses.slice() : [],
+    fechaDesde: regla ? (regla.fechaDesde || null) : null,
+    fechaHasta: regla ? (regla.fechaHasta || null) : null,
+    estado: regla ? regla.estado : null,
+    editando: regla ? regla.fila : null
+  };
   document.getElementById('ev-ant-resumen').style.display = 'none';
   document.getElementById('ev-ant-wizard').style.display = 'block';
+  window.scrollTo(0, 0);
+
   document.querySelectorAll('#ev-ant-wizard .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   document.querySelectorAll('#ev-ant-wizard .ev-rsvp-opt').forEach(function(o) { o.classList.remove('activa'); });
+
   var estadoSeg = document.getElementById('ev-ant-estado-seg');
+  if (_evAntData.estado && estadoSeg) {
+    var opt = estadoSeg.querySelector('.ev-rsvp-opt[data-estado="' + _evAntData.estado + '"]');
+    if (opt) opt.classList.add('activa');
+  }
   if (estadoSeg) _evPosicionarRsvpSlider(estadoSeg, false);
-  // El calendario inline (ev-ant-cal-*) no necesita reset propio acá --
-  // se re-arma desde cero (fechaDesde/fechaHasta ya en null arriba) recién
-  // cuando el paso 2 revela "Por período"/"Indefinido", ver
-  // _evAntMostrarSubFrecuencia().
+
   ['ev-ant-paso1-meses', 'ev-ant-paso1-periodo', 'ev-ant-paso1-indefinido'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.style.display = 'none';
   });
-  _evAntMostrarPaso(0);
+
+  if (_evAntData.tipoRango) {
+    var pill = document.querySelector('#ev-ant-tipo-pills .aj-pill[data-val="' + _evAntData.tipoRango + '"]');
+    if (pill) pill.classList.add('activa');
+    _evAntMostrarSubFrecuencia();
+  } else {
+    document.body.classList.remove('ev-ant-cal-abierto');
+  }
+
+  _evAntActualizarResumenEstado();
+  _evAntActualizarResumenFrecuencia();
+
+  // Nuevo: arranca con "Estado a aplicar" abierto. Edición: ambas secciones
+  // ya tienen valor, arrancan colapsadas (ver _evAntEditar() más arriba).
+  _evAntSetAcordeon('estado', !regla);
+  _evAntSetAcordeon('frecuencia', false);
+
+  _evAntActualizarFooter();
 }
 
 function _evAntCerrarWizard() {
@@ -2478,53 +2517,13 @@ function _evAntCerrarWizardAResumen() {
   document.getElementById('ev-ant-resumen').style.display = 'block';
 }
 
-function _evAntMostrarPaso(idx) {
-  _EV_ANT_STEPS.forEach(function(id, i) {
-    var el = document.getElementById(id);
-    if (el) el.classList.toggle('activo', i === idx);
-  });
-  _evAntCurIdx = idx;
-  _evAntRenderProg();
-  if (idx === 2) _evAntMostrarSubFrecuencia();
-  else document.body.classList.remove('ev-ant-cal-abierto');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  _evAntActualizarFooter(idx);
-}
-
-function _evAntRenderProg() {
-  var cont = document.getElementById('ev-ant-prog'); if (!cont) return;
-  cont.innerHTML = '';
-  for (var i = 0; i < _EV_ANT_STEPS.length; i++) {
-    var d = document.createElement('div');
-    d.className = 'salud-prog-dot' + (i < _evAntCurIdx ? ' done' : i === _evAntCurIdx ? ' active' : '');
-    cont.appendChild(d);
-  }
-}
-
-function _evAntPasoAnterior() {
-  if (_evAntCurIdx === 0) { _evAntCerrarWizard(); return; }
-  _evAntMostrarPaso(_evAntCurIdx - 1);
-}
-
-var _EV_ANT_CONTINUAR_FN = {
-  'ev-ant-paso-0': function() { _evAntContinuar0(); },
-  'ev-ant-paso-1': function() { _evAntContinuar1(); },
-  'ev-ant-paso-2': function() { _evAntAplicar(); }
-};
-function _evAntActualizarFooter(idx) {
-  var paso = _EV_ANT_STEPS[idx];
+function _evAntActualizarFooter() {
   var footer = document.getElementById('cta-footer-eventos-anticipada');
   if (footer) footer.style.display = 'block';
   document.body.classList.add('ev-ant-footer-visible');
-  var btnContinuar = document.getElementById('ev-ant-footer-continuar');
-  if (btnContinuar) {
-    btnContinuar.onclick = _EV_ANT_CONTINUAR_FN[paso];
-    var esFinal = (paso === 'ev-ant-paso-2');
-    var esIntro = (paso === 'ev-ant-paso-0');
-    btnContinuar.textContent = esFinal ? 'Aplicar' : (esIntro ? 'Comenzar' : 'Continuar');
-    btnContinuar.classList.toggle('btn-primary', esFinal);
-    btnContinuar.classList.toggle('btn-outline', !esFinal);
-  }
+  var btn = document.getElementById('ev-ant-footer-aplicar');
+  if (btn) btn.onclick = _evAntAplicar;
+  _evAntActualizarBotonAplicar();
 }
 // `body.ev-ant-footer-visible` (ver css/eventos.css) sube el #app-toast
 // global (css/estilos.css, bottom:28px fijo de fábrica) para que quede
@@ -2535,6 +2534,34 @@ function _evAntOcultarFooter() {
   if (footer) footer.style.display = 'none';
   document.body.classList.remove('ev-ant-footer-visible');
   document.body.classList.remove('ev-ant-cal-abierto');
+}
+
+// ── Acordeón de 2 secciones (ver "Cambios recientes" -- reemplaza la
+// secuencia de pasos anterior). Mismo TIPO de transición que ya usa el
+// acordeón de banners de Mi Liga (.admin-dash-banner-*, adminToggleBanner()/
+// js/admin.js -- .datos-seccion* de css/perfil.css, la otra referencia
+// nombrada en el pedido ("Ajustes"), resultó ser CSS muerto de un rediseño
+// anterior, sin ningún consumidor real hoy, así que se siguió Mi Liga en su
+// lugar). A diferencia de Mi Liga (max-height medido con `scrollHeight` en
+// cada toggle), acá alcanza con un techo fijo generoso vía clase `.abierto`
+// (mismo criterio que `.datos-seccion-body.abierta{max-height:2500px}`,
+// css/perfil.css) -- el contenido de "Frecuencia" cambia de alto según la
+// sub-elección (grilla de meses vs. calendario), un techo fijo ya cubre
+// cualquier combinación sin necesitar re-medir en cada cambio. */
+function _evAntSetAcordeon(cual, abrir) {
+  var wrap = document.getElementById('ev-ant-acc-' + cual);
+  if (wrap) wrap.classList.toggle('abierto', abrir);
+}
+// Header tocado -- solo 1 sección abierta a la vez (mismo criterio que
+// _adminCerrarTodoAbierto()/adminToggleBanner(), js/admin.js): abrir una
+// cierra la otra. Tocar el header de la que ya está abierta la colapsa sin
+// abrir ninguna otra.
+function _evAntToggleAcordeon(cual) {
+  var wrap = document.getElementById('ev-ant-acc-' + cual);
+  var estabaAbierto = wrap && wrap.classList.contains('abierto');
+  _evAntSetAcordeon('estado', false);
+  _evAntSetAcordeon('frecuencia', false);
+  if (!estabaAbierto) _evAntSetAcordeon(cual, true);
 }
 
 function _evAntSelUnica(el) {
@@ -2550,33 +2577,29 @@ function _evAntSelUnica(el) {
 // selección PREVIA a "Aplicar" del wizard, no dispara ningún marcado
 // inmediato (a diferencia de _evMarcarAsistencia(), que sí postea al
 // backend al toque). _evPosicionarRsvpSlider() ya es genérica sobre
-// cualquier `.ev-rsvp-seg` real, se reusa tal cual sin tocarla.
+// cualquier `.ev-rsvp-seg` real, se reusa tal cual sin tocarla. Al elegir
+// (ver "Cambios recientes"): colapsa esta sección y expande "Frecuencia"
+// automáticamente -- el usuario puede volver a tocar este header para
+// reabrirlo y cambiar su elección (_evAntToggleAcordeon()).
 function _evAntSelEstado(el) {
   var seg = el.parentElement;
   seg.querySelectorAll('.ev-rsvp-opt').forEach(function(o) { o.classList.remove('activa'); });
   el.classList.add('activa');
   _evPosicionarRsvpSlider(seg, true);
+  _evAntData.estado = el.getAttribute('data-estado');
+  _evAntActualizarResumenEstado();
+  _evAntSetAcordeon('estado', false);
+  _evAntSetAcordeon('frecuencia', true);
+  _evAntActualizarBotonAplicar();
 }
 
-// Paso 0 -- intro explicativa, sin campos (mismo criterio que saludContinuar0(),
-// js/perfil.js: solo avanza al siguiente paso).
-function _evAntContinuar0() {
-  _evAntMostrarPaso(1);
+function _evAntActualizarResumenEstado() {
+  var el = document.getElementById('ev-ant-acc-estado-resumen');
+  if (el) el.textContent = _evAntData.estado || '';
 }
 
-// Paso 1 -- estado a aplicar (requerido). Ya no incluye tipos de evento (ver
-// "Cambios recientes" -- regla de negocio nueva: la asistencia anticipada
-// aplica únicamente a Entrenamientos, tiposEvento va hardcodeado en
-// _evAntAplicar()).
-function _evAntContinuar1() {
-  var sel = document.querySelector('#ev-ant-estado-seg .ev-rsvp-opt.activa');
-  if (!sel) { err('ev-ant-err-0', 'Selecciona un estado.'); return; }
-  _evAntData.estado = sel.getAttribute('data-estado');
-  _evAntMostrarPaso(2);
-}
-
-// Paso 2 -- frecuencia (pill), con reveal inline de meses/período/indefinido
-// según la elección -- ya no es un paso propio, se actualiza al toque.
+// Frecuencia (pill), con reveal inline de meses/período/indefinido según la
+// elección.
 function _evAntSelFrecuencia(el) {
   _evAntSelUnica(el);
   var nuevo = el.dataset.val;
@@ -2588,8 +2611,16 @@ function _evAntSelFrecuencia(el) {
   if (nuevo !== _evAntData.tipoRango) { _evAntData.fechaDesde = null; _evAntData.fechaHasta = null; }
   _evAntData.tipoRango = nuevo;
   _evAntMostrarSubFrecuencia();
+  _evAntActualizarResumenFrecuencia();
+  _evAntActualizarBotonAplicar();
 }
 
+// Muestra el sub-bloque (meses/período/indefinido) que corresponde a
+// `_evAntData.tipoRango`, con un fade en vez de un corte abrupto (ver
+// "Cambios recientes" -- reusa @keyframes fadeIn de css/estilos.css, mismo
+// mecanismo ya usado en el resto de la app -- ej. toggleMesHistorial(),
+// js/home.js -- reflow forzado con `void el.offsetWidth` para poder
+// re-disparar la animation en cada cambio de pill, no solo la primera vez).
 function _evAntMostrarSubFrecuencia() {
   var bMeses = document.getElementById('ev-ant-paso1-meses');
   var bPeriodo = document.getElementById('ev-ant-paso1-periodo');
@@ -2602,20 +2633,25 @@ function _evAntMostrarSubFrecuencia() {
   // un toast de error tras "Aplicar". "Por meses" no lo necesita, su grilla
   // de 4 filas es más corta y no llega a esa franja en ningún alto probado.
   document.body.classList.toggle('ev-ant-cal-abierto', _evAntData.tipoRango === 'periodo' || _evAntData.tipoRango === 'indefinido');
+  var activo = null;
   if (_evAntData.tipoRango === 'meses') {
-    bMeses.style.display = 'block';
+    activo = bMeses; activo.style.display = 'block';
     _evAntRenderMesesGrid();
   } else if (_evAntData.tipoRango === 'periodo') {
-    bPeriodo.style.display = 'block';
+    activo = bPeriodo; activo.style.display = 'block';
     _evAntCal.periodo.mostrado = _evAntData.fechaDesde || _evAntHoyISO();
     _evAntCalRender('periodo');
     _evAntCalActualizarResumen('periodo');
   } else if (_evAntData.tipoRango === 'indefinido') {
-    bIndef.style.display = 'block';
+    activo = bIndef; activo.style.display = 'block';
     if (!_evAntData.fechaDesde) _evAntData.fechaDesde = _evAntHoyISO();
     _evAntCal.indefinido.mostrado = _evAntData.fechaDesde;
     _evAntCalRender('indefinido');
     _evAntCalActualizarResumen('indefinido');
+  }
+  if (activo) {
+    void activo.offsetWidth;
+    activo.style.animation = 'fadeIn 0.25s ease';
   }
 }
 
@@ -2647,6 +2683,8 @@ function _evAntToggleMes(mesNum, btn) {
   var i = _evAntData.meses.indexOf(mesNum);
   if (i === -1) { _evAntData.meses.push(mesNum); btn.classList.add('activo'); }
   else { _evAntData.meses.splice(i, 1); btn.classList.remove('activo'); }
+  _evAntActualizarResumenFrecuencia();
+  _evAntActualizarBotonAplicar();
 }
 
 /* ── Calendario inline de "Por período"/"Indefinido" (ev-ant-cal-*) --
@@ -2676,8 +2714,13 @@ function _evAntCalMoverMes(cual, dir) {
 // "Hasta" pendiente) fija Desde y limpia Hasta; un toque posterior (fecha
 // >= Desde) fija Hasta; un toque anterior a Desde reemplaza Desde (empieza
 // de nuevo, en vez de quedar en un rango invertido). "Indefinido": un solo
-// toque siempre reemplaza la única fecha (Desde), sin Hasta.
+// toque siempre reemplaza la única fecha (Desde), sin Hasta. Guard de fecha
+// pasada (ver "Cambios recientes" -- una asistencia anticipada nunca debería
+// poder aplicarse retroactivamente): defensivo además del `onclick` que
+// _evAntCalRender() ya omite en las celdas pasadas, por si algo más
+// disparara esta función con una fecha inválida.
 function _evAntCalTocarDia(cual, iso) {
+  if (_evFechaCmp(iso, _evHoyISO()) < 0) return;
   if (cual === 'indefinido') {
     _evAntData.fechaDesde = iso;
   } else {
@@ -2693,6 +2736,8 @@ function _evAntCalTocarDia(cual, iso) {
   }
   _evAntCalRender(cual);
   _evAntCalActualizarResumen(cual);
+  _evAntActualizarResumenFrecuencia();
+  _evAntActualizarBotonAplicar();
 }
 
 function _evAntCalRestablecer(cual) {
@@ -2700,6 +2745,8 @@ function _evAntCalRestablecer(cual) {
   _evAntData.fechaHasta = null;
   _evAntCalRender(cual);
   _evAntCalActualizarResumen(cual);
+  _evAntActualizarResumenFrecuencia();
+  _evAntActualizarBotonAplicar();
 }
 
 // Formato corto d/m/aaaa -- usado dentro de las pills ev-ant-fecha-pill
@@ -2724,6 +2771,51 @@ function _evAntCalActualizarResumen(cual) {
   }
 }
 
+// Texto del header colapsado de "Frecuencia" (#ev-ant-acc-frecuencia-resumen)
+// -- vacío mientras no haya nada elegido todavía (el header simplemente no
+// muestra nada extra, ver .ev-ant-acc-resumen:empty en css/eventos.css).
+function _evAntResumenFrecuenciaTexto() {
+  if (_evAntData.tipoRango === 'meses') {
+    if (!_evAntData.meses.length) return '';
+    var nombres = _evAntData.meses.slice().sort(function(a, b) { return a - b; }).map(function(m) { return NOMBRES_MESES[m - 1]; });
+    return nombres.join(', ');
+  }
+  if (_evAntData.tipoRango === 'periodo') {
+    if (!_evAntData.fechaDesde || !_evAntData.fechaHasta) return '';
+    return _evAntFechaCorta(_evAntData.fechaDesde) + ' - ' + _evAntFechaCorta(_evAntData.fechaHasta);
+  }
+  if (_evAntData.tipoRango === 'indefinido') {
+    if (!_evAntData.fechaDesde) return '';
+    return 'Desde ' + _evAntFechaCorta(_evAntData.fechaDesde);
+  }
+  return '';
+}
+function _evAntActualizarResumenFrecuencia() {
+  var el = document.getElementById('ev-ant-acc-frecuencia-resumen');
+  if (el) el.textContent = _evAntResumenFrecuenciaTexto();
+}
+
+// Completa un tipoRango = tiene todo lo que _evAntAplicar() necesita para
+// ese modo (mismas 3 reglas que antes validaba _evAntAplicar() al tocar
+// "Aplicar" -- ahora se evalúan en cada cambio para habilitar/deshabilitar
+// el botón, ver _evAntActualizarBotonAplicar()).
+function _evAntFrecuenciaValida() {
+  if (_evAntData.tipoRango === 'meses') return _evAntData.meses.length > 0;
+  if (_evAntData.tipoRango === 'periodo') return !!(_evAntData.fechaDesde && _evAntData.fechaHasta && _evAntData.fechaHasta >= _evAntData.fechaDesde);
+  if (_evAntData.tipoRango === 'indefinido') return !!_evAntData.fechaDesde;
+  return false;
+}
+function _evAntCompleto() {
+  return !!_evAntData.estado && _evAntFrecuenciaValida();
+}
+// Botón "Aplicar" del footer -- habilitado solo con Estado Y Frecuencia
+// completos (ver "Cambios recientes"), sin importar qué sección del
+// acordeón esté abierta/cerrada en ese momento.
+function _evAntActualizarBotonAplicar() {
+  var btn = document.getElementById('ev-ant-footer-aplicar');
+  if (btn) btn.disabled = !_evAntCompleto();
+}
+
 // Tocar cualquiera de las 2 pills "Desde"/"Hasta" hace foco en el calendario
 // inline de abajo (SIEMPRE visible, nunca un modal/sheet aparte -- ver
 // _evAntCalRender()) -- el mecanismo de selección (primer toque = Desde,
@@ -2737,7 +2829,12 @@ function _evAntFocoCalendario(cual) {
 // El día de HOY siempre lleva el stroke rojo (`.ev-ant-cal-hoy`, ver
 // css/eventos.css) sin importar la selección -- independiente de
 // `.ev-ant-cal-sel`/`.ev-ant-cal-en-rango`, nunca se pisan entre sí (ver esa
-// misma regla CSS, `box-shadow` en vez de `background`).
+// misma regla CSS, `box-shadow` en vez de `background`). Fechas pasadas (ver
+// "Cambios recientes" -- una asistencia anticipada nunca debería poder
+// aplicarse retroactivamente): `.ev-ant-cal-pasado` (gris, sin interacción,
+// ver css/eventos.css) + SIN el `onclick` (no solo deshabilitado
+// visualmente) -- aplica igual navegando a meses anteriores con `_evAntCalMoverMes()`,
+// esta misma función se re-ejecuta en cada cambio de mes.
 function _evAntCalRender(cual) {
   var contId = cual === 'periodo' ? 'ev-ant-cal-periodo' : 'ev-ant-cal-indefinido';
   var cont = document.getElementById(contId); if (!cont) return;
@@ -2755,14 +2852,16 @@ function _evAntCalRender(cual) {
   while (cur <= finGrid) {
     var celdaIso = _evToISO(cur);
     var ajeno = cur.getMonth() !== m.month;
-    var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '');
+    var pasado = _evFechaCmp(celdaIso, hoy) < 0;
+    var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (pasado ? ' ev-ant-cal-pasado' : '');
     if (desde && celdaIso === desde) clases += ' ev-ant-cal-sel';
     if (cual === 'periodo') {
       if (hasta && celdaIso === hasta) clases += ' ev-ant-cal-sel';
       if (desde && hasta && _evFechaCmp(celdaIso, desde) > 0 && _evFechaCmp(celdaIso, hasta) < 0) clases += ' ev-ant-cal-en-rango';
     }
     if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
-    html += '<div class="' + clases + '" data-iso="' + celdaIso + '" onclick="_evAntCalTocarDia(\'' + cual + '\',\'' + celdaIso + '\')">' +
+    var onclickAttr = pasado ? '' : ' onclick="_evAntCalTocarDia(\'' + cual + '\',\'' + celdaIso + '\')"';
+    html += '<div class="' + clases + '" data-iso="' + celdaIso + '"' + onclickAttr + '>' +
       '<div class="ev-cal-num">' + cur.getDate() + '</div>' +
     '</div>';
     cur.setDate(cur.getDate() + 1);
@@ -2770,20 +2869,21 @@ function _evAntCalRender(cual) {
   cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>';
 }
 
-// Paso 2 (final) -- valida frecuencia + su reveal, arma el payload con lo ya
-// guardado del paso 1 (estado) y envía.
+// Botón final -- Estado y Frecuencia ya están validados en tiempo real (ver
+// _evAntCompleto(), el botón queda disabled hasta que ambos estén completos)
+// así que acá solo queda un guard defensivo, arma el payload y envía.
+// Edición (ver "Cambios recientes", _evAntData.editando -- número de fila de
+// la regla vieja, seteado por _evAntIniciarWizard(regla)/_evAntEditar()): no
+// existe una función de backend para actualizar en el lugar, así que el
+// frontend hace eliminarAsistenciaAnticipada(fila vieja) seguido de
+// aplicarAsistenciaAnticipada(datos nuevos) EN SECUENCIA, con un solo
+// mostrarCargando()/ocultarCargando() para las 2 llamadas -- el usuario no
+// debe percibir que son 2 requests. Si el usuario no cambió nada, el flujo
+// es idéntico (elimina y vuelve a crear con los mismos datos), sin caso
+// especial.
 function _evAntAplicar() {
-  var selFrecuencia = document.querySelector('#ev-ant-tipo-pills .aj-pill.activa');
-  if (!selFrecuencia) { err('ev-ant-err-1', 'Selecciona una opción.'); return; }
-  _evAntData.tipoRango = selFrecuencia.dataset.val;
-  if (_evAntData.tipoRango === 'meses') {
-    if (!_evAntData.meses.length) { err('ev-ant-err-1', 'Selecciona al menos un mes.'); return; }
-  } else if (_evAntData.tipoRango === 'periodo') {
-    if (!_evAntData.fechaDesde || !_evAntData.fechaHasta) { err('ev-ant-err-1', 'Selecciona ambas fechas.'); return; }
-    if (_evAntData.fechaHasta < _evAntData.fechaDesde) { err('ev-ant-err-1', 'La fecha "Hasta" no puede ser anterior a "Desde".'); return; }
-  } else {
-    _evAntData.fechaDesde = _evAntData.fechaDesde || _evAntHoyISO();
-  }
+  if (!_evAntCompleto()) return;
+  if (_evAntData.tipoRango === 'indefinido') _evAntData.fechaDesde = _evAntData.fechaDesde || _evAntHoyISO();
 
   var payload = {
     action: 'aplicarAsistenciaAnticipada',
@@ -2799,21 +2899,41 @@ function _evAntAplicar() {
   else if (_evAntData.tipoRango === 'periodo') { payload.fechaDesde = _evAntData.fechaDesde; payload.fechaHasta = _evAntData.fechaHasta; }
   else payload.fechaDesde = _evAntData.fechaDesde;
 
-  mostrarCargando('Aplicando...');
-  apiPost(payload, function(res) {
-    if (res && res.exito === false && res.reglaExistente) {
+  var editando = _evAntData.editando;
+
+  function crear() {
+    apiPost(payload, function(res) {
+      if (res && res.exito === false && res.reglaExistente) {
+        ocultarCargando();
+        _evAntMostrarConflicto(res.reglaExistente);
+        return;
+      }
+      _evAntRecargarLista(function() {
+        ocultarCargando();
+        _evAntCerrarWizardAResumen();
+      });
+    }, function(e) {
       ocultarCargando();
-      _evAntMostrarConflicto(res.reglaExistente);
-      return;
-    }
-    _evAntRecargarLista(function() {
-      ocultarCargando();
-      _evAntCerrarWizardAResumen();
+      mostrarToast(e && e.message ? e.message : 'No se pudo aplicar la asistencia anticipada.', 'error');
     });
-  }, function(e) {
-    ocultarCargando();
-    mostrarToast(e && e.message ? e.message : 'No se pudo aplicar la asistencia anticipada.', 'error');
-  });
+  }
+
+  mostrarCargando(editando ? 'Guardando cambios...' : 'Aplicando...');
+  if (editando) {
+    apiPost({ action: 'eliminarAsistenciaAnticipada', nombre: E.nombre, fila: editando }, function(res) {
+      if (res && res.exito === false) {
+        ocultarCargando();
+        mostrarToast(res.error || 'No se pudo guardar los cambios.', 'error');
+        return;
+      }
+      crear();
+    }, function(e) {
+      ocultarCargando();
+      mostrarToast(e && e.message ? e.message : 'No se pudo guardar los cambios.', 'error');
+    });
+  } else {
+    crear();
+  }
 }
 
 // Modal de conflicto (mismo idioma de animación que abrirModalInfoEstado()/

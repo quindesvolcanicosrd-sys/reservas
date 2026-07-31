@@ -642,12 +642,52 @@
 }
 .ev-ant-card .ev-card-top-row { flex: 1; min-width: 0; }
 .ev-ant-card-sub { font-size: 0.76rem; color: var(--muted); margin-top: 2px; }
-.ev-ant-card-del {
+.ev-ant-card-del, .ev-ant-card-edit {
   width: 40px; height: 40px; min-width: 40px; border-radius: 10px; flex-shrink: 0;
-  border: 1.5px solid var(--error-light-border); background: var(--error-lightest); color: var(--error);
   display: flex; align-items: center; justify-content: center; cursor: pointer; font-family: inherit;
 }
-.ev-ant-card-del .material-symbols-outlined { font-size: 1.15rem; }
+.ev-ant-card-del { border: 1.5px solid var(--error-light-border); background: var(--error-lightest); color: var(--error); }
+/* Ícono editar (ver "Cambios recientes") -- mismo patrón/tamaño que el de
+   eliminar, colores neutros de marca en vez de danger (no es una acción
+   destructiva) -- mismo par brand-light/brand que ya usa .ev-ant-cal-nav-btn
+   más abajo en este archivo. Va ANTES del botón de eliminar en el DOM
+   (orden editar -> eliminar). */
+.ev-ant-card-edit { border: 1.5px solid transparent; background: var(--brand-light); color: var(--brand); }
+.ev-ant-card-del .material-symbols-outlined, .ev-ant-card-edit .material-symbols-outlined { font-size: 1.15rem; }
+
+/* Estado "wizard" -- acordeón de 2 secciones, "Estado a aplicar" y
+   "Frecuencia" (ver "Cambios recientes" -- reemplaza la secuencia de pasos
+   anterior por completo, incluyendo el paso 0 introductorio y los dots de
+   progreso `.salud-prog`, que ya no se usan en esta pantalla).
+   _evAntToggleAcordeon()/js/eventos.js togglea la clase `.abierto` en el
+   wrapper `.ev-ant-acc` -- de ahí cuelgan el chevron (rota), el resumen
+   colapsado (se muestra SOLO si la sección está cerrada) y el body
+   (max-height+opacity). Mismo TIPO de transición que ya usa el acordeón de
+   banners de Mi Liga (.admin-dash-banner-*, css/admin.css/adminToggleBanner()) --
+   se revisó también .datos-seccion* (css/perfil.css, la otra referencia
+   nombrada en el pedido, "Ajustes") pero resultó ser CSS sin ningún
+   consumidor real en el HTML actual (rediseño anterior de Ajustes que dejó
+   de usarlo), así que la referencia vigente que se siguió es Mi Liga. A
+   diferencia de Mi Liga (max-height medido con `scrollHeight` en cada
+   toggle), acá se usa un techo fijo generoso (900px, mismo criterio que
+   `.datos-seccion-body.abierta{max-height:2500px}` de perfil.css) -- el
+   contenido de "Frecuencia" cambia de alto según la sub-elección (grilla de
+   meses vs. calendario, con 5 o 6 semanas), un techo fijo ya cubre
+   cualquier combinación sin necesitar re-medir en cada cambio. */
+.ev-ant-acc { border: 1.5px solid var(--border-light); border-radius: 12px; overflow: hidden; background: var(--surface-2); margin-bottom: 10px; }
+.ev-ant-acc-header { display: flex; align-items: center; gap: 8px; padding: 14px 16px; cursor: pointer; }
+.ev-ant-acc-titulo { font-weight: 800; font-size: 0.88rem; color: var(--text); flex-shrink: 0; }
+/* Resumen compacto de lo elegido (ej. "Asistiré", "5/7/2026 - 20/7/2026")
+   -- visible SOLO con la sección colapsada, mismo lugar donde antes estaba
+   el chevron solo (pedido explícito: "header colapsado con la pill
+   seleccionada visible"). Vacío (nada elegido todavía) no ocupa espacio. */
+.ev-ant-acc-resumen { flex: 1; min-width: 0; font-size: 0.8rem; font-weight: 700; color: var(--brand); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.ev-ant-acc.abierto .ev-ant-acc-resumen { display: none; }
+.ev-ant-acc-chevron { color: var(--muted); font-size: 1.2rem; transition: transform 0.3s; flex-shrink: 0; }
+.ev-ant-acc.abierto .ev-ant-acc-chevron { transform: rotate(180deg); color: var(--brand); }
+.ev-ant-acc-body { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.45s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease; }
+.ev-ant-acc.abierto .ev-ant-acc-body { max-height: 900px; opacity: 1; }
+.ev-ant-acc-body-inner { padding: 2px 16px 16px; }
 
 /* Paso "Tipo de rango" -> "Por meses": grilla de 3 columnas, año actual,
    meses pasados deshabilitados (ver _evAntRenderMesesGrid(), js/eventos.js
@@ -673,8 +713,10 @@
    verticales de antes (ver "Cambios recientes"), mismo componente reusado
    tal cual para el "Desde" del paso Indefinido (consistencia visual entre
    ambos). Pill vacía = mismo min-width/min-height que llena, para que
-   seleccionar una fecha no cambie el layout de la línea. */
-.ev-ant-rango-linea { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 0.92rem; color: var(--text); }
+   seleccionar una fecha no cambie el layout de la línea. Centrada (ver
+   "Cambios recientes" -- antes alineada a la izquierda por herencia de
+   `text-align:left` general). */
+.ev-ant-rango-linea { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; font-size: 0.92rem; color: var(--text); text-align: center; }
 .ev-ant-fecha-pill {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 92px; min-height: 30px; padding: 4px 10px;
@@ -702,6 +744,13 @@
    de aerolínea. */
 .ev-ant-cal-sel, .ev-ant-cal-en-rango { background: var(--brand-light); border-radius: 10px; }
 .ev-ant-cal-sel .ev-cal-num { background: var(--brand); color: var(--white); font-weight: 800; }
+/* Fechas pasadas (ver "Cambios recientes" -- una asistencia anticipada nunca
+   debería poder aplicarse retroactivamente): gris, sin interacción -- el
+   `onclick` ya viene omitido desde _evAntCalRender() (js/eventos.js), acá
+   solo el tratamiento visual. `pointer-events:none` además del `onclick`
+   ausente, doble seguro contra cualquier listener delegado futuro. */
+.ev-ant-cal-pasado { opacity: 0.32; pointer-events: none; cursor: not-allowed; }
+.ev-ant-cal-pasado .ev-cal-num { color: var(--muted); }
 
 /* Skeleton del estado "resumen" mientras carga getReglasAsistenciaAnticipada
    (ver "Cambios recientes" -- reemplaza el loader de pantalla completa que
@@ -737,9 +786,9 @@ body.ev-ant-footer-visible #app-toast {
    con Playwright a 667px de alto, ej. iPhone SE) llega a ocupar la franja
    del toast subido de arriba -- la última fila de días quedaba tapada por
    un toast de error tras "Aplicar". `body.ev-ant-cal-abierto` la togglea
-   `_evAntMostrarSubFrecuencia()`/`_evAntMostrarPaso()` (js/eventos.js) solo
-   para esos 2 sub-pasos -- "Por meses" no lo necesita, su grilla de 4 filas
-   no llega a esa franja en ningún alto probado.
+   `_evAntMostrarSubFrecuencia()` (js/eventos.js) solo para esos 2
+   sub-pasos -- "Por meses" no lo necesita, su grilla de 4 filas no llega a
+   esa franja en ningún alto probado.
    IMPORTANTE -- por qué `max(..., 100vh - 300px)` y no un extra fijo en px:
    el contenido de este paso (pills de frecuencia + grilla) cuelga del
    HEADER (ancla arriba, posición fija sea cual sea el alto de pantalla),

@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=56739f3b">
 <link rel="stylesheet" href="css/nav.css?v=9b27ee2c">
-<link rel="stylesheet" href="css/eventos.css?v=7b9076dc">
+<link rel="stylesheet" href="css/eventos.css?v=e90469c0">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -422,14 +422,16 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
        para evitar el bug conocido de containing block de position:fixed
        durante la animación de entrada). 2 estados alternados por display
        (nunca los dos visibles a la vez): #ev-ant-resumen (lista de
-       asistencias anticipadas ya cargadas + "+ Nueva") y #ev-ant-wizard
-       (mismo motor de pasos que _SALUD_STEPS/_saludCurIdx/
-       _saludMostrarPaso(), js/perfil.js -- replicado acá como
-       _EV_ANT_STEPS/_evAntCurIdx/_evAntMostrarPaso(), ver js/eventos.js).
-       Este wizard SIEMPRE arranca en ev-ant-paso-0 (intro explicativa, sin
-       campos -- mismo criterio que salud-paso-0), tanto al entrar sin
-       reglas cargadas como al tocar "+ Nueva asistencia anticipada" desde
-       el resumen (ver _evAntIniciarWizard()). -->
+       asistencias anticipadas ya cargadas + "+ Nueva") y #ev-ant-wizard.
+       Wizard rediseñado (ver "Cambios recientes" -- ya NO es una secuencia
+       de pasos, sin paso 0 intro ni dots de progreso): una sola pantalla
+       con 2 secciones en acordeón (#ev-ant-acc-estado/#ev-ant-acc-frecuencia,
+       _evAntToggleAcordeon(), js/eventos.js) + un solo botón "Aplicar"
+       (habilitado solo con ambas secciones completas, ver
+       _evAntActualizarBotonAplicar()). _evAntIniciarWizard(regla) arranca
+       "en blanco" (sin argumento, desde "+ Nueva...") o pre-cargada para
+       editar (con el objeto regla, desde el ícono de editar de cada card
+       del resumen, ver _evAntEditar()). -->
   <div class="pantalla" id="s-eventos-anticipada">
     <div class="app-nav app-nav-sticky" id="ev-ant-header">
       <button class="app-nav-back" onclick="_evAntBack()">
@@ -451,100 +453,91 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <button type="button" id="ev-ant-btn-nueva" class="btn btn-outline" style="margin-top:4px;display:none;" onclick="_evAntIniciarWizard()">+ Nueva asistencia anticipada</button>
       </div>
 
-      <!-- Estado "wizard": sin ninguna asistencia anticipada todavía, o
-           llegando acá desde "+ Nueva asistencia anticipada" del resumen.
-           3 pasos (ver "Cambios recientes" -- reestructurado desde 4, luego
-           a 2, y ahora se suma un paso 0 explicativo): paso 0 = intro sin
-           campos (mismo formato que salud-paso-0, js/perfil.js -- ver
-           #cta-footer-eventos-anticipada más abajo, que ya solo tiene
-           "Continuar"); paso 1 = Tipos de evento + Estado a aplicar; paso 2
-           = Frecuencia, con reveal INLINE (no un paso propio) de
-           meses/fechas según la elección, cerrando con "Aplicar". -->
+      <!-- Estado "wizard": sin ninguna asistencia anticipada todavía,
+           llegando acá desde "+ Nueva asistencia anticipada", o editando una
+           existente (_evAntEditar(), ver "Cambios recientes"). Acordeón de 2
+           secciones -- mismo TIPO de transición (max-height+opacity,
+           chevron que rota) que ya usa el acordeón de banners condicionales
+           de Mi Liga (.admin-dash-banner-header/-body/-chevron,
+           adminToggleBanner()/js/admin.js -- se revisó también
+           .datos-seccion* de css/perfil.css, la referencia "Ajustes"
+           nombrada en el pedido, pero quedó SIN ningún consumidor en el
+           HTML actual, css muerto de un rediseño anterior de Ajustes; Mi
+           Liga es el acordeón realmente vigente hoy, así que es la
+           referencia que se siguió). A diferencia de Mi Liga (max-height
+           medido con `scrollHeight` en cada toggle), acá se usa un techo
+           fijo generoso vía clase `.abierto` (mismo criterio que
+           `.datos-seccion-body.abierta{max-height:2500px}`, css/perfil.css)
+           -- evita tener que re-medir manualmente cada vez que el contenido
+           de "Frecuencia" cambia de alto (grilla de meses vs. calendario),
+           un techo fijo generoso ya cubre cualquier combinación sin
+           necesidad de recalcular. -->
       <div id="ev-ant-wizard" style="display:none;">
-        <div class="salud-prog" id="ev-ant-prog"></div>
 
-        <!-- Paso 0 -- intro explicativa, sin campos. 3 bloques ícono +
-             título + texto reusando .modal-info-item/.modal-info-icon/
-             .modal-info-label/.modal-info-desc (css/global.css) -- mismo
-             componente ya usado en #modal-info-reserva/#modal-info-home más
-             abajo, colores siempre vía las clases .mi-* (variables de
-             colors.css). -->
-        <div class="salud-paso" id="ev-ant-paso-0">
-          <h2 style="margin-bottom:20px;">¿Qué es la asistencia anticipada?</h2>
-
-          <div class="modal-info-item">
-            <div class="modal-info-icon mi-orange"><span class="material-symbols-outlined">event_repeat</span></div>
-            <div>
-              <div class="modal-info-label">Asistencias indefinidas</div>
-              <div class="modal-info-desc">Marca un estado que se aplica desde hoy en adelante, sin fecha de fin. Por ejemplo, "Asistiré a todo, siempre" o "No juego por tiempo indefinido".</div>
-            </div>
+        <div class="ev-ant-acc abierto" id="ev-ant-acc-estado">
+          <div class="ev-ant-acc-header" onclick="_evAntToggleAcordeon('estado')">
+            <span class="ev-ant-acc-titulo">Estado a aplicar</span>
+            <span class="ev-ant-acc-resumen" id="ev-ant-acc-estado-resumen"></span>
+            <span class="material-symbols-outlined ev-ant-acc-chevron">expand_more</span>
           </div>
-
-          <div class="modal-info-item">
-            <div class="modal-info-icon mi-blue"><span class="material-symbols-outlined">date_range</span></div>
-            <div>
-              <div class="modal-info-label">Asistencias por período</div>
-              <div class="modal-info-desc">Marca una excepción durante fechas puntuales o meses específicos. Por ejemplo, "No voy a poder venir en agosto".</div>
-            </div>
-          </div>
-
-          <div class="modal-info-item">
-            <div class="modal-info-icon mi-purple"><span class="material-symbols-outlined">layers</span></div>
-            <div>
-              <div class="modal-info-label">Se pueden combinar</div>
-              <div class="modal-info-desc">Puedes tener "Asistiré siempre" de fondo, y marcar excepciones puntuales sin perder tu asistencia general.</div>
+          <div class="ev-ant-acc-body">
+            <div class="ev-ant-acc-body-inner">
+              <div class="ev-asistire-wrap" onclick="event.stopPropagation()">
+                <div class="ev-rsvp-seg" id="ev-ant-estado-seg">
+                  <div class="ev-rsvp-slider"></div>
+                  <div class="ev-rsvp-opt" data-estado="Asistiré" onclick="_evAntSelEstado(this)"><span class="material-symbols-outlined">check_circle</span>Asistiré</div>
+                  <div class="ev-rsvp-opt" data-estado="No asistiré" onclick="_evAntSelEstado(this)"><span class="material-symbols-outlined">cancel</span>No asistiré</div>
+                  <div class="ev-rsvp-opt" data-estado="No jugador" onclick="_evAntSelEstado(this)"><span class="material-symbols-outlined">radio_button_checked</span>No jugador</div>
+                </div>
+              </div>
+              <div class="error-msg" id="ev-ant-err-0"></div>
             </div>
           </div>
         </div>
 
-        <div class="salud-paso" id="ev-ant-paso-1">
-          <h2>Estado a aplicar</h2>
-          <div class="ev-asistire-wrap" onclick="event.stopPropagation()">
-            <div class="ev-rsvp-seg" id="ev-ant-estado-seg">
-              <div class="ev-rsvp-slider"></div>
-              <div class="ev-rsvp-opt" data-estado="Asistiré" onclick="_evAntSelEstado(this)"><span class="material-symbols-outlined">check_circle</span>Asistiré</div>
-              <div class="ev-rsvp-opt" data-estado="No asistiré" onclick="_evAntSelEstado(this)"><span class="material-symbols-outlined">cancel</span>No asistiré</div>
-              <div class="ev-rsvp-opt" data-estado="No jugador" onclick="_evAntSelEstado(this)"><span class="material-symbols-outlined">radio_button_checked</span>No jugador</div>
+        <div class="ev-ant-acc" id="ev-ant-acc-frecuencia">
+          <div class="ev-ant-acc-header" onclick="_evAntToggleAcordeon('frecuencia')">
+            <span class="ev-ant-acc-titulo">Frecuencia</span>
+            <span class="ev-ant-acc-resumen" id="ev-ant-acc-frecuencia-resumen"></span>
+            <span class="material-symbols-outlined ev-ant-acc-chevron">expand_more</span>
+          </div>
+          <div class="ev-ant-acc-body">
+            <div class="ev-ant-acc-body-inner">
+              <div class="aj-pills-row" id="ev-ant-tipo-pills">
+                <span class="aj-pill" data-val="meses" onclick="_evAntSelFrecuencia(this)">Por meses</span>
+                <span class="aj-pill" data-val="periodo" onclick="_evAntSelFrecuencia(this)">Por período</span>
+                <span class="aj-pill" data-val="indefinido" onclick="_evAntSelFrecuencia(this)">Indefinido</span>
+              </div>
+
+              <div id="ev-ant-paso1-meses" style="display:none;margin-top:18px;">
+                <div class="ev-ant-mes-grid" id="ev-ant-meses-grid"></div>
+              </div>
+
+              <div id="ev-ant-paso1-periodo" style="display:none;margin-top:18px;">
+                <div class="ev-ant-rango-linea">Desde el <span class="ev-ant-fecha-pill" id="ev-ant-periodo-desde-txt" onclick="_evAntFocoCalendario('periodo')"></span> hasta el <span class="ev-ant-fecha-pill" id="ev-ant-periodo-hasta-txt" onclick="_evAntFocoCalendario('periodo')"></span></div>
+                <div class="ev-ant-cal-nav">
+                  <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('periodo',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+                  <span class="ev-ant-cal-nav-label" id="ev-ant-cal-periodo-label"></span>
+                  <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('periodo',1)"><span class="material-symbols-outlined">chevron_right</span></button>
+                </div>
+                <div id="ev-ant-cal-periodo"></div>
+                <button type="button" class="btn-text-simple" style="margin-top:8px;" onclick="_evAntCalRestablecer('periodo')">Restablecer fechas</button>
+              </div>
+
+              <div id="ev-ant-paso1-indefinido" style="display:none;margin-top:18px;">
+                <div class="ev-ant-rango-linea">Desde el <span class="ev-ant-fecha-pill" id="ev-ant-indefinido-desde-txt" onclick="_evAntFocoCalendario('indefinido')"></span></div>
+                <div class="ev-ant-cal-nav">
+                  <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('indefinido',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+                  <span class="ev-ant-cal-nav-label" id="ev-ant-cal-indefinido-label"></span>
+                  <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('indefinido',1)"><span class="material-symbols-outlined">chevron_right</span></button>
+                </div>
+                <div id="ev-ant-cal-indefinido"></div>
+                <p style="font-size:0.78rem;color:var(--muted);margin-top:6px;">Sin fecha de fin.</p>
+              </div>
+
+              <div class="error-msg" id="ev-ant-err-1"></div>
             </div>
           </div>
-          <div class="error-msg" id="ev-ant-err-0"></div>
-        </div>
-
-        <div class="salud-paso" id="ev-ant-paso-2">
-          <h2>¿Con qué frecuencia aplica esta asistencia anticipada?</h2>
-          <div class="aj-pills-row" id="ev-ant-tipo-pills">
-            <span class="aj-pill" data-val="meses" onclick="_evAntSelFrecuencia(this)">Por meses</span>
-            <span class="aj-pill" data-val="periodo" onclick="_evAntSelFrecuencia(this)">Por período</span>
-            <span class="aj-pill" data-val="indefinido" onclick="_evAntSelFrecuencia(this)">Indefinido</span>
-          </div>
-
-          <div id="ev-ant-paso1-meses" style="display:none;margin-top:18px;">
-            <div class="ev-ant-mes-grid" id="ev-ant-meses-grid"></div>
-          </div>
-
-          <div id="ev-ant-paso1-periodo" style="display:none;margin-top:18px;">
-            <div class="ev-ant-rango-linea">Desde el <span class="ev-ant-fecha-pill" id="ev-ant-periodo-desde-txt" onclick="_evAntFocoCalendario('periodo')"></span> hasta el <span class="ev-ant-fecha-pill" id="ev-ant-periodo-hasta-txt" onclick="_evAntFocoCalendario('periodo')"></span></div>
-            <div class="ev-ant-cal-nav">
-              <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('periodo',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
-              <span class="ev-ant-cal-nav-label" id="ev-ant-cal-periodo-label"></span>
-              <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('periodo',1)"><span class="material-symbols-outlined">chevron_right</span></button>
-            </div>
-            <div id="ev-ant-cal-periodo"></div>
-            <button type="button" class="btn-text-simple" style="margin-top:8px;" onclick="_evAntCalRestablecer('periodo')">Restablecer fechas</button>
-          </div>
-
-          <div id="ev-ant-paso1-indefinido" style="display:none;margin-top:18px;">
-            <div class="ev-ant-rango-linea">Desde el <span class="ev-ant-fecha-pill" id="ev-ant-indefinido-desde-txt" onclick="_evAntFocoCalendario('indefinido')"></span></div>
-            <div class="ev-ant-cal-nav">
-              <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('indefinido',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
-              <span class="ev-ant-cal-nav-label" id="ev-ant-cal-indefinido-label"></span>
-              <button type="button" class="ev-ant-cal-nav-btn" onclick="_evAntCalMoverMes('indefinido',1)"><span class="material-symbols-outlined">chevron_right</span></button>
-            </div>
-            <div id="ev-ant-cal-indefinido"></div>
-            <p style="font-size:0.78rem;color:var(--muted);margin-top:6px;">Sin fecha de fin.</p>
-          </div>
-
-          <div class="error-msg" id="ev-ant-err-1"></div>
         </div>
       </div>
 
@@ -963,7 +956,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=2f629cc6"></script>
-<script src="js/eventos.js?v=b2cddca1"></script>
+<script src="js/eventos.js?v=a2e484c8"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=343fe44f"></script>
 <script src="js/perfil.js?v=ca452084"></script>
@@ -2612,14 +2605,17 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <!-- Footer fijo del wizard de Asistencia anticipada (#ev-ant-wizard,
      s-eventos-anticipada) -- mismo motivo que #cta-footer-salud arriba
      (hijo directo de <body>, ver comentario general más arriba de este
-     bloque): un solo botón "Continuar"/"Aplicar" (dinámico según el paso,
-     ver _evAntActualizarFooter()) -- sin botón "Atrás" propio (ver "Cambios
-     recientes": redundante con la flecha atrás del header, #ev-ant-header,
-     que ya cubre lo mismo vía _evAntBack()/_evAntPasoAnterior()). Sin
-     z-index propio a diferencia de #cta-footer-salud (ese 960 era para
-     quedar por encima de `.aj-sub`, z-index:950 -- acá no aplica, esta
-     pantalla es un `.pantalla` normal, así que usa el z-index:100 default
-     de `.cta-footer-fixed`, igual que #cta-footer-s6/#cta-footer-s-pago).
+     bloque). Un solo botón "Aplicar" SIEMPRE (ver "Cambios recientes" --
+     ya no hay pasos, así que ya no alterna "Continuar"/"Aplicar"),
+     deshabilitado (atributo `disabled` nativo, `.btn-primary:disabled` ya
+     definido en css/ui.css) hasta que ambas secciones del acordeón estén
+     completas -- ver _evAntActualizarBotonAplicar()/js/eventos.js. Sin
+     botón "Atrás" propio, redundante con la flecha atrás del header,
+     #ev-ant-header, que ya cubre lo mismo vía _evAntBack()). Sin z-index
+     propio a diferencia de #cta-footer-salud (ese 960 era para quedar por
+     encima de `.aj-sub`, z-index:950 -- acá no aplica, esta pantalla es un
+     `.pantalla` normal, así que usa el z-index:100 default de
+     `.cta-footer-fixed`, igual que #cta-footer-s6/#cta-footer-s-pago).
      No tiene id="cta-footer-s-eventos-anticipada" a propósito -- si lo
      tuviera, ir() (js/ui.js) lo mostraría también durante el estado
      "resumen" de la pantalla (que no lo necesita, tiene su propio botón
@@ -2627,7 +2623,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
      _evAntActualizarFooter()/_evAntOcultarFooter(), mismo criterio que
      _saludActualizarFooter()/_saludOcultarFooter(). -->
 <div class="cta-footer-fixed" id="cta-footer-eventos-anticipada">
-  <button class="btn btn-outline" id="ev-ant-footer-continuar">Continuar</button>
+  <button class="btn btn-primary" id="ev-ant-footer-aplicar" disabled>Aplicar</button>
 </div>
 
 </body>
