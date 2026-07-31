@@ -655,38 +655,89 @@
 .ev-ant-card-edit { border: 1.5px solid transparent; background: var(--brand-light); color: var(--brand); }
 .ev-ant-card-del .material-symbols-outlined, .ev-ant-card-edit .material-symbols-outlined { font-size: 1.15rem; }
 
+/* Párrafo intro de #ev-ant-wizard (ver "Cambios recientes") -- colapsable al
+   scrollear, mismo mecanismo que `.app-nav-fixed.compacto`/`_initHomeNav()`
+   (css/nav.css + js/home.js): fade + reducción de alto vía transición CSS,
+   togglea con `.colapsado` desde un listener de scroll (`_evAntActualizarScrollWizard()`,
+   js/eventos.js). `max-height` con valor generoso (80px, alcanza sobrado
+   para 2-3 líneas) en vez de medir `scrollHeight` -- incluso en desktop
+   angosto entra en 1-2 líneas, sin necesidad de recalcular por JS. */
+.ev-ant-intro {
+  font-size: 0.85rem; color: var(--muted); text-align: center; line-height: 1.5;
+  max-height: 80px; opacity: 1; overflow: hidden; margin: 0 0 14px;
+  transition: max-height 0.3s ease, opacity 0.25s ease, margin 0.3s ease;
+}
+.ev-ant-intro.colapsado { max-height: 0; opacity: 0; margin-bottom: 0; }
+
 /* Estado "wizard" -- acordeón de 2 secciones, "Estado a aplicar" y
    "Frecuencia" (ver "Cambios recientes" -- reemplaza la secuencia de pasos
    anterior por completo, incluyendo el paso 0 introductorio y los dots de
    progreso `.salud-prog`, que ya no se usan en esta pantalla).
-   _evAntToggleAcordeon()/js/eventos.js togglea la clase `.abierto` en el
-   wrapper `.ev-ant-acc` -- de ahí cuelgan el chevron (rota), el resumen
-   colapsado (se muestra SOLO si la sección está cerrada) y el body
-   (max-height+opacity). Mismo TIPO de transición que ya usa el acordeón de
+   `.ev-ant-acc-header`/`.ev-ant-acc-body` son hermanos sueltos (ver
+   "Cambios recientes" -- antes anidados en un `.ev-ant-acc` común, separados
+   para que el header pueda ser `position:sticky` en TODO el alto del
+   wizard, no solo el de su propia sección colapsada) -- `_evAntSetAcordeon()`
+   togglea `.abierto` en los 2 por separado, mismo resultado visual de
+   siempre (chevron rota, resumen colapsado visible solo cerrado, body con
+   max-height+opacity). Mismo TIPO de transición que ya usa el acordeón de
    banners de Mi Liga (.admin-dash-banner-*, css/admin.css/adminToggleBanner()) --
    se revisó también .datos-seccion* (css/perfil.css, la otra referencia
    nombrada en el pedido, "Ajustes") pero resultó ser CSS sin ningún
    consumidor real en el HTML actual (rediseño anterior de Ajustes que dejó
    de usarlo), así que la referencia vigente que se siguió es Mi Liga. A
    diferencia de Mi Liga (max-height medido con `scrollHeight` en cada
-   toggle), acá se usa un techo fijo generoso (900px, mismo criterio que
-   `.datos-seccion-body.abierta{max-height:2500px}` de perfil.css) -- el
+   toggle), el BODY acá usa un techo fijo generoso (900px, mismo criterio
+   que `.datos-seccion-body.abierta{max-height:2500px}` de perfil.css) -- el
    contenido de "Frecuencia" cambia de alto según la sub-elección (grilla de
    meses vs. calendario, con 5 o 6 semanas), un techo fijo ya cubre
-   cualquier combinación sin necesitar re-medir en cada cambio. */
-.ev-ant-acc { border: 1.5px solid var(--border-light); border-radius: 12px; overflow: hidden; background: var(--surface-2); margin-bottom: 10px; }
-.ev-ant-acc-header { display: flex; align-items: center; gap: 8px; padding: 14px 16px; cursor: pointer; }
+   cualquier combinación sin necesitar re-medir en cada cambio.
+   Sticky apilado (ver "Cambios recientes"): mismo mecanismo que
+   `.ev-detalle-sticky`/`-rsvp-sticky`/`-stats-sticky` (niveles de
+   #s-eventos-detalle, más arriba en este archivo) -- `top` de cada header
+   lo fija `_evAntActualizarStickyAcordeon()` (js/eventos.js) a partir del
+   alto real renderizado de los niveles de arriba (nunca un valor fijo acá).
+   z-index escalonado (20/19, mismo rango que `.ev-sticky-header`/
+   `.ev-detalle-sticky`, z-index:20) para que "Estado a aplicar" (el de
+   arriba) pinte encima de "Frecuencia" si sus bordes llegaran a solaparse. */
+.ev-ant-acc-header {
+  display: flex; align-items: center; gap: 8px; padding: 14px 16px; cursor: pointer;
+  background: var(--surface-2); border: 1.5px solid var(--border-light); border-radius: 12px;
+  margin-bottom: 10px; position: sticky;
+}
+#ev-ant-acc-estado-header { z-index: 20; }
+#ev-ant-acc-frecuencia-header { z-index: 19; }
+/* Fondo sólido en mobile real -- bug real encontrado con Playwright: `--surface-2`
+   tiene alpha (`rgba(255,245,235,0.95)`, colors.css), suficientemente
+   transparente para que el contenido de más abajo (pills/calendario)
+   se transparentara detrás de los headers pineados al scrollear. Mismo
+   criterio/breakpoint que `.ev-sticky-header` (arriba en este archivo,
+   comentario completo ahí): en mobile real (≤600px) usar `--bg` (opaco,
+   hex sin alpha) en vez de `--card-bg`/`--surface-2`. Solo el HEADER lo
+   necesita -- el body nunca queda pineado sobre nada, su propio
+   `--surface-2` translúcido no genera este problema. */
+@media (max-width: 600px) {
+  .ev-ant-acc-header { background: var(--bg); }
+}
+.ev-ant-acc-header.abierto { border-radius: 12px 12px 0 0; border-bottom-color: transparent; margin-bottom: 0; }
 .ev-ant-acc-titulo { font-weight: 800; font-size: 0.88rem; color: var(--text); flex-shrink: 0; }
 /* Resumen compacto de lo elegido (ej. "Asistiré", "5/7/2026 - 20/7/2026")
    -- visible SOLO con la sección colapsada, mismo lugar donde antes estaba
    el chevron solo (pedido explícito: "header colapsado con la pill
    seleccionada visible"). Vacío (nada elegido todavía) no ocupa espacio. */
 .ev-ant-acc-resumen { flex: 1; min-width: 0; font-size: 0.8rem; font-weight: 700; color: var(--brand); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-.ev-ant-acc.abierto .ev-ant-acc-resumen { display: none; }
+.ev-ant-acc-header.abierto .ev-ant-acc-resumen { display: none; }
 .ev-ant-acc-chevron { color: var(--muted); font-size: 1.2rem; transition: transform 0.3s; flex-shrink: 0; }
-.ev-ant-acc.abierto .ev-ant-acc-chevron { transform: rotate(180deg); color: var(--brand); }
-.ev-ant-acc-body { max-height: 0; overflow: hidden; opacity: 0; transition: max-height 0.45s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease; }
-.ev-ant-acc.abierto .ev-ant-acc-body { max-height: 900px; opacity: 1; }
+.ev-ant-acc-header.abierto .ev-ant-acc-chevron { transform: rotate(180deg); color: var(--brand); }
+.ev-ant-acc-body {
+  max-height: 0; overflow: hidden; opacity: 0; background: var(--surface-2);
+  border: 0 solid var(--border-light); border-radius: 0 0 12px 12px;
+  transition: max-height 0.45s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease, margin 0.3s ease;
+}
+/* `border-width` (no `border`) solo en los 3 lados que corresponde -- ver
+   comentario de arriba, arrancar en `0` evita una línea de 1.5px visible
+   con la sección cerrada (max-height:0 no evita que un borde >0 siga
+   pintando su propio grosor). */
+.ev-ant-acc-body.abierto { max-height: 900px; opacity: 1; margin-bottom: 10px; border-width: 0 1.5px 1.5px; }
 .ev-ant-acc-body-inner { padding: 2px 16px 16px; }
 
 /* Paso "Tipo de rango" -> "Por meses": grilla de 3 columnas, año actual,

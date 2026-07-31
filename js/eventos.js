@@ -290,14 +290,18 @@ function _evRestaurarTab(pantallaGuardada) {
     var wizard = document.getElementById('ev-ant-wizard');
     // Wizard visible -- re-muestra el footer (oculto de golpe por `ir()` al
     // abandonar la sección -- ver comentario de `#cta-footer-eventos-anticipada`
-    // en ese archivo) y reposiciona el slider de "Estado a aplicar" (mide
-    // layout real, cero mientras la pantalla estuvo `display:none` detrás de
-    // otro tab) -- las pills/fechas/secciones abiertas del acordeón siguen
-    // tal cual quedaron, nunca se resetean.
+    // en ese archivo), reposiciona el slider de "Estado a aplicar" y el `top`
+    // de los headers sticky del acordeón (mide layout real, cero mientras la
+    // pantalla estuvo `display:none` detrás de otro tab, mismo motivo que
+    // `_evDetalleActualizarSticky()` en `abrirEvDetalle()`) -- las
+    // pills/fechas/secciones abiertas del acordeón siguen tal cual quedaron,
+    // nunca se resetean.
     if (wizard && wizard.style.display !== 'none') {
       _evAntActualizarFooter();
       var estadoSeg = document.getElementById('ev-ant-estado-seg');
       if (estadoSeg) _evPosicionarRsvpSlider(estadoSeg, false);
+      _evAntActualizarStickyAcordeon();
+      _evAntActualizarScrollWizard();
     }
     return;
   }
@@ -2497,6 +2501,7 @@ function _evAntIniciarWizard(regla) {
   // ya tienen valor, arrancan colapsadas (ver _evAntEditar() más arriba).
   _evAntSetAcordeon('estado', !regla);
   _evAntSetAcordeon('frecuencia', false);
+  _evAntActualizarScrollWizard();
 
   _evAntActualizarFooter();
 }
@@ -2547,22 +2552,74 @@ function _evAntOcultarFooter() {
 // (mismo criterio que `.datos-seccion-body.abierta{max-height:2500px}`,
 // css/perfil.css) -- el contenido de "Frecuencia" cambia de alto según la
 // sub-elección (grilla de meses vs. calendario), un techo fijo ya cubre
-// cualquier combinación sin necesitar re-medir en cada cambio. */
+// cualquier combinación sin necesitar re-medir en cada cambio.
+// Header y body YA NO viven anidados en un `.ev-ant-acc` común (ver
+// "Cambios recientes" -- headers sticky): `_evAntSetAcordeon()` togglea
+// `.abierto` en los 2 elementos por separado (`#ev-ant-acc-<cual>-header`/
+// `-body`), mismo resultado visual de antes vía selectores CSS propios en
+// vez de un solo padre con `.abierto`. */
 function _evAntSetAcordeon(cual, abrir) {
-  var wrap = document.getElementById('ev-ant-acc-' + cual);
-  if (wrap) wrap.classList.toggle('abierto', abrir);
+  var header = document.getElementById('ev-ant-acc-' + cual + '-header');
+  var body = document.getElementById('ev-ant-acc-' + cual + '-body');
+  if (header) header.classList.toggle('abierto', abrir);
+  if (body) body.classList.toggle('abierto', abrir);
+  _evAntActualizarStickyAcordeon();
 }
 // Header tocado -- solo 1 sección abierta a la vez (mismo criterio que
 // _adminCerrarTodoAbierto()/adminToggleBanner(), js/admin.js): abrir una
 // cierra la otra. Tocar el header de la que ya está abierta la colapsa sin
 // abrir ninguna otra.
 function _evAntToggleAcordeon(cual) {
-  var wrap = document.getElementById('ev-ant-acc-' + cual);
-  var estabaAbierto = wrap && wrap.classList.contains('abierto');
+  var header = document.getElementById('ev-ant-acc-' + cual + '-header');
+  var estabaAbierto = header && header.classList.contains('abierto');
   _evAntSetAcordeon('estado', false);
   _evAntSetAcordeon('frecuencia', false);
   if (!estabaAbierto) _evAntSetAcordeon(cual, true);
 }
+
+// Headers sticky apilados (ver "Cambios recientes") -- mismo mecanismo que
+// `_evDetalleActualizarSticky()` (niveles de #s-eventos-detalle, más abajo
+// en este archivo): el `top` de cada nivel se mide con `offsetHeight` REAL
+// del/de los nivel(es) de arriba, nunca un valor fijo (un alto fijo se
+// rompería apenas el resumen colapsado de "Estado a aplicar" ocupe más de 1
+// línea en una pantalla angosta). "Nivel 0" acá es `#ev-ant-header` (nav
+// propia de la pantalla, ya `.app-nav-sticky`) -- "Estado a aplicar" pega
+// justo debajo, "Frecuencia" pega debajo de ese.
+function _evAntActualizarStickyAcordeon() {
+  var header0 = document.getElementById('ev-ant-header');
+  var h1 = document.getElementById('ev-ant-acc-estado-header');
+  var h2 = document.getElementById('ev-ant-acc-frecuencia-header');
+  if (!header0 || !h1 || !h2) return;
+  var offset0 = header0.offsetHeight;
+  h1.style.top = offset0 + 'px';
+  h2.style.top = (offset0 + h1.offsetHeight) + 'px';
+}
+window.addEventListener('resize', function() { _evAntActualizarStickyAcordeon(); });
+
+// Párrafo intro colapsable al scrollear (ver "Cambios recientes" -- mismo
+// mecanismo de `_initHomeNav()`/`.compacto` de js/home.js: listener de
+// scroll con un umbral que togglea una clase, la transición fade+alto vive
+// en CSS -- no un mecanismo nuevo). Registrado UNA sola vez a nivel de
+// módulo (no en `_evAntIniciarWizard()`, que puede correr muchas veces por
+// sesión) con guard de pantalla activa, mismo criterio que
+// `_evActualizarNavMesPorScroll()` (más arriba en este archivo) y el mismo
+// throttle real con rAF que ese listener.
+var _evAntScrollRafPendiente = false;
+function _evAntActualizarScrollWizard() {
+  var pantalla = document.getElementById('s-eventos-anticipada');
+  var wizard = document.getElementById('ev-ant-wizard');
+  if (!pantalla || !pantalla.classList.contains('activa') || !wizard || wizard.style.display === 'none') return;
+  var intro = document.getElementById('ev-ant-intro');
+  if (intro) intro.classList.toggle('colapsado', window.scrollY > 24);
+}
+window.addEventListener('scroll', function() {
+  if (_evAntScrollRafPendiente) return;
+  _evAntScrollRafPendiente = true;
+  requestAnimationFrame(function() {
+    _evAntScrollRafPendiente = false;
+    _evAntActualizarScrollWizard();
+  });
+}, { passive: true });
 
 function _evAntSelUnica(el) {
   var cont = el.parentElement;
