@@ -26,12 +26,12 @@
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=580dd587"></script>
 <link rel="stylesheet" href="css/global.css?v=8063ece4">
-<link rel="stylesheet" href="css/estilos.css?v=679e2884">
+<link rel="stylesheet" href="css/estilos.css?v=b4a9e503">
 <link rel="stylesheet" href="css/ui.css?v=5d0e5923">
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=56739f3b">
-<link rel="stylesheet" href="css/nav.css?v=04304e30">
+<link rel="stylesheet" href="css/nav.css?v=af5670ee">
 <link rel="stylesheet" href="css/eventos.css?v=f1baac71">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
@@ -72,12 +72,14 @@
 </div>
 
 <div id="home-nav" class="app-nav app-nav-fixed" style="display:none;">
-  <!-- Ícono decorativo, no clickeable (sin onclick) -- mismo ícono que el tab
-       "Reservas" de .app-bottom-nav (calendar_month), en el mismo lugar/tamaño
-       que ocupaba el avatar clickeable a Ajustes antes de sacarlo (ver
-       MANIFEST.md "Cambios recientes"). -->
-  <div class="app-nav-back app-nav-back--decorativo" aria-hidden="true"><span class="material-symbols-outlined">calendar_month</span></div>
-  <div class="app-nav-section" id="home-nav-seccion">MIS RESERVAS</div>
+  <!-- CTA "Nueva reserva" ocupa el slot izquierdo (antes ícono decorativo +
+       texto "MIS RESERVAS", ver MANIFEST.md "Cambios recientes") -- mismo
+       botón que antes vivía a la derecha como ícono-solo, ensanchado
+       (flex:1, css/nav.css) para que quede claro que ahí se reserva. -->
+  <button class="app-nav-cta" id="home-nav-cta" onclick="irNuevaReserva()" title="Nueva reserva">
+    <span class="material-symbols-outlined">calendar_add_on</span>
+    <span class="app-nav-cta-label" id="home-nav-cta-label">Nueva reserva</span>
+  </button>
   <div class="app-nav-actions">
     <button class="app-nav-icon-btn" id="btn-refrescar-home" onclick="refrescarMisReservas(null, this)" title="Actualizar" style="display:none;">
       <span class="material-symbols-outlined">refresh</span>
@@ -85,9 +87,11 @@
     <button class="app-nav-icon-btn" onclick="irMisReservas()" title="Historial">
       <span class="material-symbols-outlined">history</span>
     </button>
-    <button class="app-nav-cta" id="home-nav-cta" onclick="irNuevaReserva()" title="Nueva reserva">
-      <span class="material-symbols-outlined">calendar_add_on</span>
-      <span class="app-nav-cta-label" id="home-nav-cta-label">Nueva reserva</span>
+    <!-- Ocupa el lugar que dejó libre el CTA al mudarse a la izquierda --
+         reusa abrirSheetEquipHome() (js/home.js), el mismo sheet que abría
+         "Cambiar mi equipamiento" del footer fijo ya eliminado. -->
+    <button class="app-nav-icon-btn" onclick="abrirSheetEquipHome()" title="Cambiar mi equipamiento">
+      <span class="material-symbols-outlined">roller_skating</span>
     </button>
   </div>
 </div>
@@ -257,12 +261,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <button class="empty-state-contacto" onclick="abrirContacto()"><span class="material-symbols-outlined">forum</span>¿Dudas? Contáctanos</button>
         </div>
         <div id="home-reservas-lista"></div>
-<!-- +var(--bottom-nav-h) sobre el spacer base de siempre (80px, ya pensado
-     para #cta-footer-s-home) -- pura suma: #cta-footer-s-home se levanta
-     exactamente esa misma cantidad (css/estilos.css) para no superponerse
-     con .app-bottom-nav, así que el espacio total que hay que reservar en
-     el scroll crece igual de lo que crece abajo, sin dejar hueco de más. -->
-<div class="cta-footer-spacer" style="height:calc(80px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+<!-- Espaciador contra la nav inferior (ver "Cambios recientes" -- ya no
+     suma los 80px que reservaba el footer fijo #cta-footer-s-home,
+     eliminado: sus 2 acciones se mudaron a #home-nav). Mismo criterio que
+     el resto de pantallas raíz sin footer propio (ver s-misreservas). -->
+<div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
       </div>
       
     </div>
@@ -2549,14 +2552,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
      (shared axis X, ver .axis-enter en css/global.css) y "atrape" al footer
      fuera del viewport real. js/ui.js (ir()) muestra solo el que corresponde
      a la pantalla activa. -->
-<div class="cta-footer-fixed" id="cta-footer-s-home">
-  <button class="btn btn-outline btn-equip-home" onclick="abrirSheetEquipHome()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;margin-right:4px;">roller_skating</span>Cambiar mi equipamiento</button>
-  <button class="btn btn-primary" onclick="irNuevaReserva()">
-    Hacer una reserva
-    <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span>
-  </button>
-</div>
-
 <div class="cta-footer-fixed" id="cta-footer-s2">
   <button class="btn btn-outline" onclick="continuar_s2()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
 </div>

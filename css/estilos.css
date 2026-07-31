@@ -170,13 +170,6 @@
   background: var(--bg);
   z-index: 100;
 }
-/* #cta-footer-s-home / #cta-footer-s4 conviven con .app-bottom-nav
-   (css/nav.css, ver "Cambios recientes" -- s4 suma la nav visible igual que
-   el resto de las pantallas autenticadas, `_BOTTOM_NAV_PANTALLAS`/js/ui.js).
-   Se levantan por encima de la nav en vez de superponerse (mismo espíritu
-   que el z-index propio de #cta-footer-salud, más abajo en index.html, para
-   su propio caso de convivencia con otro elemento fijo). */
-#cta-footer-s-home { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
 /* #cta-footer-s4 -- "Continuar" como card flotante, no una continuación
    visual de la nav (ver "Cambios recientes", pedido explícito -- Opción B):
    `--shadow-lg` (mismo token de elevación ya usado en el resto de la app, no

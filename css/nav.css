@@ -270,7 +270,6 @@
   .app-nav-cta { padding: 14px 12px; }
 }
 
-#home-nav .app-nav-section,
 #eventos-nav .app-nav-section,
 #s4-nav .app-nav-section {
   opacity: 1 !important;
@@ -286,9 +285,16 @@
   white-space: nowrap;
 }
 
-/* ── CTA de "Nueva reserva" en #home-nav: ícono-solo salvo en el estado vacío ── */
-#home-nav-cta-label { display: none; }
-#home-nav.mostrar-cta-label:not(.compacto) #home-nav-cta-label { display: inline; }
+/* ── CTA de "Nueva reserva" en #home-nav: ocupa el slot izquierdo que dejó
+   libre "MIS RESERVAS" (ver MANIFEST.md "Cambios recientes") -- `flex:1`
+   lo ensancha para llenar ese espacio y el texto queda SIEMPRE visible
+   (nunca ícono-solo, ni en `.compacto` al scrollear ni en pantallas
+   angostas) para que quede claro que ahí se toca para reservar. Doble
+   selector por ID a propósito: gana por especificidad sobre
+   `.app-nav-fixed.compacto .app-nav-cta-label` y el `@media (max-width:360px)`
+   de arriba, ambos genéricos para cualquier nav con CTA. */
+#home-nav #home-nav-cta { flex: 1; justify-content: center; }
+#home-nav #home-nav-cta-label { display: inline; }
 
 /* ── Nav inferior (bottom tab bar) ─────────────
    Persistente en toda pantalla raíz de la app autenticada (hoy 's-home' y

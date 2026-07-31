@@ -317,7 +317,7 @@ function irHomeDesdeExito() {
 }
 
 function _sincronizarNavHome(forzarVisible) {
-  // Fuente única de si #home-nav/#home-nav-spacer/label/"Ver historial" deben estar
+  // Fuente única de si #home-nav/#home-nav-spacer/"Ver historial" deben estar
   // visibles — separado de _renderHomeReservas() para poder llamarlo apenas se conoce
   // _todasReservas (irHomeDesdeExito()), sin esperar a pintar las cards. El spacer se
   // mide acá mismo (no en _initHomeNav()) para que nunca quede calculado a partir de
@@ -329,8 +329,6 @@ function _sincronizarNavHome(forzarVisible) {
   var homeNav = document.getElementById('home-nav');
   var homeNavSpacer = document.getElementById('home-nav-spacer');
   var ptrHelper = document.getElementById('ptr-helper-texto');
-
-  if (homeNav) homeNav.classList.toggle('mostrar-cta-label', !forzarVisible && activas.length === 0);
 
   if (!forzarVisible && activas.length === 0) {
     if (homeNav) homeNav.style.display = 'none';
@@ -373,15 +371,6 @@ function _renderHomeReservas() {
   // (loader genérico, re-render) se la lleve puesta (ver "Cambios recientes").
   var emptyTopbar = document.getElementById('home-empty-topbar');
   if (emptyTopbar) emptyTopbar.style.display = activas.length === 0 ? 'flex' : 'none';
-
-  // "Cambiar mi equipamiento" del footer fijo (#cta-footer-s-home, index.html,
-  // compartido con el estado "con reservas" — no hay un footer distinto por
-  // estado) se oculta solo en el empty-state, ya que ahora vive también como
-  // pill dentro de .empty-state-links (ver "Cambios recientes" — rediseño del
-  // empty-state). Con reservas activas se restaura tal cual estaba (sin
-  // cambios en ese estado).
-  var btnEquipFooter = document.querySelector('#cta-footer-s-home .btn-equip-home');
-  if (btnEquipFooter) btnEquipFooter.style.display = activas.length === 0 ? 'none' : '';
 
   var html = activas.length === 0
     ? '<div class="empty-state-body">' +
@@ -582,7 +571,7 @@ function _renderCardHome(r, hoy) {
 
   if (r.horaFin) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">schedule</span>Fin ' + r.horaFin + '</span>';
   if (r.duracion) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">timer</span>' + r.duracion + '</span>';
-  bodyHtml += '</div><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border-light);text-align:center;"><button class="btn-cancel-text" onclick="abrirGestionar(\'' + fechaEsc + '\',' + filaEsc + ')">Re-agendar o cancelar reserva</button></div></div></div>';
+  bodyHtml += '</div></div></div>';
 
   var rnTopExtra = '';
   if (esMensual) {
@@ -590,6 +579,14 @@ function _renderCardHome(r, hoy) {
     if (r.validezHasta) rnTopExtra += '<span class="fi-pill fi-pill-validez"><span class="material-symbols-outlined">event_available</span>Válido hasta ' + r.validezHasta + '</span>';
     rnTopExtra += '</div>';
   }
+
+  // "Re-agendar o cancelar reserva" siempre visible, justo debajo de la fila
+  // de pills y antes del acordeón "Más información" (ver "Cambios recientes"
+  // -- antes vivía adentro de bodyHtml, oculto mientras el acordeón seguía
+  // colapsado). Reservas mensuales no lo necesitan acá: ya muestran su
+  // propio "Cancelar reserva" siempre visible más abajo, sin acordeón.
+  var reagendarHtml = esMensual ? '' :
+    '<div class="rn-divider"></div><div class="rn-cancel-wrap"><button class="btn-cancel-text" onclick="abrirGestionar(\'' + fechaEsc + '\',' + filaEsc + ')">Re-agendar o cancelar reserva</button></div>';
 
   var masInfoHtml;
   if (esMensual) {
@@ -607,6 +604,7 @@ function _renderCardHome(r, hoy) {
     '<div class="rn-top"><div class="rn-date">' + fechaTexto + '</div>' + rnTopExtra + '</div>' +
     pillsHtml +
     '</div>' +
+    reagendarHtml +
     masInfoHtml +
     '</div>';
 }
