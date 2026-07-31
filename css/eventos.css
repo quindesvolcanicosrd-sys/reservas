@@ -655,19 +655,11 @@
 .ev-ant-card-edit { border: 1.5px solid transparent; background: var(--brand-light); color: var(--brand); }
 .ev-ant-card-del .material-symbols-outlined, .ev-ant-card-edit .material-symbols-outlined { font-size: 1.15rem; }
 
-/* Párrafo intro de #ev-ant-wizard (ver "Cambios recientes") -- colapsable al
-   scrollear, mismo mecanismo que `.app-nav-fixed.compacto`/`_initHomeNav()`
-   (css/nav.css + js/home.js): fade + reducción de alto vía transición CSS,
-   togglea con `.colapsado` desde un listener de scroll (`_evAntActualizarScrollWizard()`,
-   js/eventos.js). `max-height` con valor generoso (80px, alcanza sobrado
-   para 2-3 líneas) en vez de medir `scrollHeight` -- incluso en desktop
-   angosto entra en 1-2 líneas, sin necesidad de recalcular por JS. */
-.ev-ant-intro {
-  font-size: 0.85rem; color: var(--muted); text-align: center; line-height: 1.5;
-  max-height: 80px; opacity: 1; overflow: hidden; margin: 0 0 14px;
-  transition: max-height 0.3s ease, opacity 0.25s ease, margin 0.3s ease;
-}
-.ev-ant-intro.colapsado { max-height: 0; opacity: 0; margin-bottom: 0; }
+/* Párrafo intro de "Estado a aplicar" (ver "Cambios recientes" -- antes vivía
+   AFUERA del acordeón, con su propio colapso al scrollear; ahora es
+   contenido normal dentro de `.ev-ant-acc-body-inner` de esa sección --
+   colapsa/aparece junto con el resto del acordeón, sin transición propia). */
+.ev-ant-intro { font-size: 0.85rem; color: var(--muted); text-align: center; line-height: 1.5; margin: 0 0 14px; }
 
 /* Estado "wizard" -- acordeón de 2 secciones, "Estado a aplicar" y
    "Frecuencia" (ver "Cambios recientes" -- reemplaza la secuencia de pasos

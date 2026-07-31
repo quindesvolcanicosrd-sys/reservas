@@ -301,7 +301,6 @@ function _evRestaurarTab(pantallaGuardada) {
       var estadoSeg = document.getElementById('ev-ant-estado-seg');
       if (estadoSeg) _evPosicionarRsvpSlider(estadoSeg, false);
       _evAntActualizarStickyAcordeon();
-      _evAntActualizarScrollWizard();
     }
     return;
   }
@@ -2512,7 +2511,6 @@ function _evAntIniciarWizard(regla) {
   // ya tienen valor, arrancan colapsadas (ver _evAntEditar() más arriba).
   _evAntSetAcordeon('estado', !regla);
   _evAntSetAcordeon('frecuencia', false);
-  _evAntActualizarScrollWizard();
 
   _evAntActualizarFooter();
 }
@@ -2606,31 +2604,6 @@ function _evAntActualizarStickyAcordeon() {
   h2.style.top = (offset0 + h1.offsetHeight) + 'px';
 }
 window.addEventListener('resize', function() { _evAntActualizarStickyAcordeon(); });
-
-// Párrafo intro colapsable al scrollear (ver "Cambios recientes" -- mismo
-// mecanismo de `_initHomeNav()`/`.compacto` de js/home.js: listener de
-// scroll con un umbral que togglea una clase, la transición fade+alto vive
-// en CSS -- no un mecanismo nuevo). Registrado UNA sola vez a nivel de
-// módulo (no en `_evAntIniciarWizard()`, que puede correr muchas veces por
-// sesión) con guard de pantalla activa, mismo criterio que
-// `_evActualizarNavMesPorScroll()` (más arriba en este archivo) y el mismo
-// throttle real con rAF que ese listener.
-var _evAntScrollRafPendiente = false;
-function _evAntActualizarScrollWizard() {
-  var pantalla = document.getElementById('s-eventos-anticipada');
-  var wizard = document.getElementById('ev-ant-wizard');
-  if (!pantalla || !pantalla.classList.contains('activa') || !wizard || wizard.style.display === 'none') return;
-  var intro = document.getElementById('ev-ant-intro');
-  if (intro) intro.classList.toggle('colapsado', window.scrollY > 24);
-}
-window.addEventListener('scroll', function() {
-  if (_evAntScrollRafPendiente) return;
-  _evAntScrollRafPendiente = true;
-  requestAnimationFrame(function() {
-    _evAntScrollRafPendiente = false;
-    _evAntActualizarScrollWizard();
-  });
-}, { passive: true });
 
 function _evAntSelUnica(el) {
   var cont = el.parentElement;

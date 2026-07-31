@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=56739f3b">
 <link rel="stylesheet" href="css/nav.css?v=9b27ee2c">
-<link rel="stylesheet" href="css/eventos.css?v=bbe5dff6">
+<link rel="stylesheet" href="css/eventos.css?v=ff5b784f">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -472,7 +472,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            de "Frecuencia" cambia de alto (grilla de meses vs. calendario),
            un techo fijo generoso ya cubre cualquier combinación sin
            necesidad de recalcular.
-           Headers sticky + intro colapsable (ver "Cambios recientes"):
+           Headers sticky (ver "Cambios recientes"):
            `.ev-ant-acc-header` y `.ev-ant-acc-body` YA NO viven anidados
            dentro de un `.ev-ant-acc` común -- son hermanos sueltos, directo
            adentro de `#ev-ant-wizard`. Necesario para que `position:sticky`
@@ -488,8 +488,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            pega justo debajo, "Frecuencia" pega debajo de ese. -->
       <div id="ev-ant-wizard" style="display:none;">
 
-        <p class="ev-ant-intro" id="ev-ant-intro">Define un estado que se aplicará automáticamente a tus eventos futuros, sin necesidad de marcarlo uno por uno.</p>
-
         <div class="ev-ant-acc-header abierto" id="ev-ant-acc-estado-header" onclick="_evAntToggleAcordeon('estado')">
           <span class="ev-ant-acc-titulo">Estado a aplicar</span>
           <span class="ev-ant-acc-resumen" id="ev-ant-acc-estado-resumen"></span>
@@ -497,6 +495,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
         <div class="ev-ant-acc-body abierto" id="ev-ant-acc-estado-body">
           <div class="ev-ant-acc-body-inner">
+            <p class="ev-ant-intro" id="ev-ant-intro">Define un estado que se aplicará automáticamente a tus eventos futuros, sin necesidad de marcarlo uno por uno.</p>
             <div class="ev-asistire-wrap" onclick="event.stopPropagation()">
               <div class="ev-rsvp-seg" id="ev-ant-estado-seg">
                 <div class="ev-rsvp-slider"></div>
@@ -969,7 +968,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=2f629cc6"></script>
-<script src="js/eventos.js?v=06a938e0"></script>
+<script src="js/eventos.js?v=0c2acb70"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=343fe44f"></script>
 <script src="js/perfil.js?v=ca452084"></script>
