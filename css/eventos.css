@@ -424,7 +424,7 @@
    bottom` (no `margin-bottom`) para que el espaciado quede DENTRO de la caja
    pintada (con fondo), evitando un hueco transparente al quedar pegado. */
 .ev-detalle-rsvp-sticky, .ev-detalle-stats-sticky {
-  position: sticky; background: var(--card-bg); margin-bottom: 0; padding-bottom: 12px;
+  position: sticky; background: var(--card-bg); margin-bottom: 0; padding-bottom: 12px; padding-top: 1px;
 }
 .ev-detalle-rsvp-sticky { z-index: 15; }
 .ev-detalle-stats-sticky { z-index: 10; }
@@ -467,7 +467,7 @@
    filtrar la lista de abajo (_evFiltrarAsistenciaPorGrupo(), js/eventos.js).
    `.activa` marca cuál está filtrando -- borde + fondo del mismo color que
    ya tiene el número, mayor contraste que el resto. */
-.ev-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
+.ev-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; padding-top: 3px; }
 .ev-stat-card {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   padding: 12px 4px; border-radius: 12px; cursor: pointer; border: 1.5px solid transparent;
