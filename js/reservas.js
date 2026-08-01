@@ -264,26 +264,65 @@ function _s4ActualizarNav() {
   if (nav && spacer) spacer.style.height = (nav.offsetHeight + 8) + 'px';
 }
 
+// Bug real corregido (ver "Cambios recientes"): el contenido de abajo
+// (lista de fechas vs. bloques de meses) cambiaba de golpe al alternar
+// pills -- `display:none/block` instantáneo, sin transición de salida ni
+// entrada. Mismo patrón ya estandarizado en la app para este tipo de swap
+// de contenido -- reusado, no inventado de cero: fadeOut del contenido
+// saliente → swap real (mismo criterio que `_evAntCalRestablecer()`,
+// js/eventos.js, "Cambios recientes") + fadeIn del entrante, mismo
+// mecanismo (`fadeIn`/`fadeOut`, css/estilos.css) y duración (0.2s) que ya
+// usa esa función. El sub-bloque de "Por meses"/"Por período"/"Indefinido"
+// en Asistencia anticipada (`_evAntMostrarSubFrecuencia()`, js/eventos.js)
+// solo fadea IN el entrante (los otros se ocultan de una, sin fade out
+// propio) -- acá se pidió explícito que ambas direcciones animen, así que
+// se sigue el criterio más completo, no el más simple de los 2 ya
+// existentes.
 function selTipoPago(tipo) {
   E.tipoPago = tipo;
   document.getElementById('opcion-tipo-clase').classList.toggle('active', tipo === 'clase');
   document.getElementById('opcion-tipo-mensual').classList.toggle('active', tipo === 'mensual');
-  var listaFechas = document.getElementById('lista-fechas');
-  var subtitulo = document.getElementById('s4-fechas-subtitulo');
-  var wrapperMeses = document.getElementById('s4-meses-wrapper');
-  if (tipo === 'mensual') {
-    if (listaFechas) listaFechas.style.display = 'none';
-    if (subtitulo) subtitulo.style.display = 'none';
-    if (wrapperMeses) wrapperMeses.style.display = 'block';
-    generarMeses();
-  } else {
-    if (listaFechas) listaFechas.style.display = 'block';
-    if (subtitulo) { subtitulo.textContent = _s4SubtituloFechasTexto(); subtitulo.style.display = 'block'; }
-    if (wrapperMeses) wrapperMeses.style.display = 'none';
-  }
+  // Feedback inmediato del selector en sí (pill activa + slider deslizante,
+  // su propia transition de 0.35s) -- separado a propósito del fade del
+  // CONTENIDO de abajo (más abajo): retrasar esto junto con el contenido
+  // dejaría el slider bailando 200ms detrás de la pill ya marcada `.active`,
+  // un desacople nuevo que no existía antes.
   _updateTpSlider(true);
-  actualizarTextosPago();
-  actualizarTotalS4(); // ya llama a _s4SincronizarCuponWrapper() internamente
+  var listaFechas = document.getElementById('lista-fechas');
+  var wrapperMeses = document.getElementById('s4-meses-wrapper');
+  var saliente = (listaFechas && listaFechas.style.display !== 'none') ? listaFechas :
+    ((wrapperMeses && wrapperMeses.style.display !== 'none') ? wrapperMeses : null);
+
+  function aplicarSwap() {
+    var subtitulo = document.getElementById('s4-fechas-subtitulo');
+    if (tipo === 'mensual') {
+      if (listaFechas) listaFechas.style.display = 'none';
+      if (subtitulo) subtitulo.style.display = 'none';
+      if (wrapperMeses) {
+        wrapperMeses.style.display = 'block';
+        void wrapperMeses.offsetWidth;
+        wrapperMeses.style.animation = 'fadeIn 0.2s ease';
+      }
+      generarMeses();
+    } else {
+      if (wrapperMeses) wrapperMeses.style.display = 'none';
+      if (listaFechas) {
+        listaFechas.style.display = 'block';
+        void listaFechas.offsetWidth;
+        listaFechas.style.animation = 'fadeIn 0.2s ease';
+      }
+      if (subtitulo) { subtitulo.textContent = _s4SubtituloFechasTexto(); subtitulo.style.display = 'block'; }
+    }
+    actualizarTextosPago();
+    actualizarTotalS4(); // ya llama a _s4SincronizarCuponWrapper() internamente
+  }
+
+  if (saliente) {
+    saliente.style.animation = 'fadeOut 0.2s ease forwards';
+    setTimeout(aplicarSwap, 200);
+  } else {
+    aplicarSwap();
+  }
 }
 
 function _updateTpSlider(animate) {
