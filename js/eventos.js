@@ -1487,9 +1487,28 @@ function _evAsistenciaRealHtml(e) {
   var clase = _EV_ASISTENCIA_REAL_BADGE[estadoReal] || 'badge-sin-registrar';
   return '<div class="ev-asistire-wrap"><span class="badge ev-rsvp-readonly ' + clase + '">' + label + '</span></div>';
 }
+// Un usuario que necesita equipamiento del club (patines o protecciones)
+// marca su asistencia a un Entrenamiento INDIRECTAMENTE al hacer una reserva
+// (que le asigna el equipo) -- no debe poder marcarla a mano acá, quedaría
+// una segunda fuente de verdad desincronizada de la reserva real. Con
+// equipo PROPIO, su asistencia no depende de ninguna reserva -- selector
+// normal, sin cambios. Cualquier otro tipo de evento (Torneo/Asamblea/etc.)
+// tampoco depende de una reserva -- selector normal para todos, sin
+// importar equipamiento. Comparación exacta a 'Sí' (no la variante
+// case-insensitive/más laxa de `canPayMonthly()`, js/reservas.js) -- mismo
+// criterio que `_irTabAterrizajeInicial()` (js/auth.js) cuando el pedido
+// especifica la comparación exacta, como acá. Un solo punto de verdad,
+// reusado en `_evRsvpBarraHtml()` (card) y `_evRenderDetalle()` (detalle) --
+// ver el comentario de esta última para por qué no alcanza con que
+// `_evRsvpBarraHtml()` sola devuelva `''`.
+function _evOcultarRsvpPorEquipoClub(e) {
+  return e.tipo === 'Entrenamiento' && !!E.datos &&
+    (E.datos.necesitaPatines === 'Sí' || E.datos.necesitaProtecciones === 'Sí');
+}
 function _evRsvpBarraHtml(e) {
   if (e.estado === 'Cancelado' || e.estado === 'No se entrena') return '';
   if (_evEsPasado(e)) return _evAsistenciaRealHtml(e);
+  if (_evOcultarRsvpPorEquipoClub(e)) return '';
   var botones = _EV_RESP_OPCIONES.map(function(estado) {
     var act = e.miEstado === estado ? ' activa' : '';
     return '<div class="ev-rsvp-opt' + act + '" data-estado="' + estado + '" onclick="_evMarcarAsistencia(\'' + e.id + '\',\'' + estado + '\')"><span class="material-symbols-outlined">' + _EV_RESP_ICONO[estado] + '</span>' + estado + '</div>';
@@ -1540,17 +1559,18 @@ function _evMarcarAsistencia(id, estado) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === id; })[0];
   if (!ev) return;
   // PUNTO DE EXTENSIÓN (Tanda 3, todavía no construida -- ver "Cambios
-  // recientes"): acá es donde va la lógica de negocio por perfil (Mirlxs
-  // con equipamiento/paga-clase → redirige a Reservas; validación de cuota
-  // al día para Mirlxs-mensual/Quindes) ANTES de escribir el RSVP -- pero
-  // SOLO si `ev.requiereReserva !== false` (ya viene en el payload real de
-  // getEventosRango()/getEventosFiltrados(), ver backend en MANIFEST.md).
-  // Eventos como "Ciclopaseo" (`requiereReserva:false`, `Venues!Requiere
-  // reserva`='NO') deben saltear esa lógica entera y dejar marcar Asistiré/
-  // No asistiré/No jugador directo, para cualquier perfil -- mismo
-  // comportamiento que ya tiene Quindes hoy en un entrenamiento regular.
-  // Hoy (demo, sin esa lógica todavía) esta función no tiene nada que
-  // saltear: `ev.miEstado = estado` de abajo corre siempre, sin excepción.
+  // recientes"): validación de cuota al día para Mirlxs-mensual/Quindes
+  // ANTES de escribir el RSVP, pendiente. La otra mitad de este comentario
+  // (equipamiento del club → asistencia vía reserva, no manual) YA NO está
+  // pendiente -- implementada, pero como gate de RENDER, no acá: con
+  // equipamiento del club en un Entrenamiento, `_evRsvpBarraHtml()` ni
+  // siquiera dibuja el botón que llamaría a esta función (ver
+  // `_evOcultarRsvpPorEquipoClub()`, más arriba en este archivo, y su
+  // entrada en MANIFEST.md) -- `_evMarcarAsistencia()` queda inalcanzable
+  // desde la UI para ese caso, no hace falta un guard defensivo acá también.
+  // Hoy (demo, sin la validación de cuota todavía) esta función no tiene
+  // nada más que saltear: `ev.miEstado = estado` de abajo corre siempre,
+  // sin excepción.
   ev.miEstado = estado;
   // Sin toast a propósito (ver "Cambios recientes") -- el resaltado
   // animado de la opción tocada ya es feedback suficiente, mismo criterio
@@ -2140,11 +2160,21 @@ function _evRenderDetalle(ev) {
   // recientes") llena ese hueco reusando la misma pill que ya muestra la
   // card (`_evEstadoNotaPillHtml()`) -- para un evento normal,
   // `_evRsvpBarraHtml(ev)` siempre gana (truthy), el fallback
-  // nunca se evalúa. `_evUpdateRsvpSliders()` NO se llama acá -- la pantalla
+  // nunca se evalúa.
+  // Excepción real (ver "Cambios recientes", `_evOcultarRsvpPorEquipoClub()`
+  // más arriba): acá SÍ hace falta chequearla aparte antes del `||` -- ese
+  // caso también deja `_evRsvpBarraHtml(ev)` en `''` (mismo motivo: no hay
+  // selector que mostrar), pero caer a `_evDetalleEstadoNotaHtml()` sería
+  // incorrecto -- esa función arma una pill de ESTADO del evento (Cancelado/
+  // No se entrena), no tiene ningún caso para "ocultado por equipamiento
+  // propio del club" y mostraría la nota equivocada (o vacía sin sentido);
+  // acá directamente no debe quedar NADA, ni selector ni nota, mismo pedido
+  // que para la card.
+  // `_evUpdateRsvpSliders()` NO se llama acá -- la pantalla
   // todavía está display:none en este punto (ver abrirEvDetalle(), que la
   // llama recién después de ir()); medir offsetWidth/offsetLeft acá daría 0
   // y dejaría el indicador sin su fondo sólido pintado.
-  if (rsvpCont) rsvpCont.innerHTML = _evRsvpBarraHtml(ev) || _evDetalleEstadoNotaHtml(ev);
+  if (rsvpCont) rsvpCont.innerHTML = _evOcultarRsvpPorEquipoClub(ev) ? '' : (_evRsvpBarraHtml(ev) || _evDetalleEstadoNotaHtml(ev));
   _evRenderDetalleAsistencia(ev);
 }
 // Mismo componente que la card (`_evEstadoNotaPillHtml()`, más arriba en
