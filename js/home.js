@@ -567,9 +567,8 @@ function _renderCardHome(r, hoy) {
   var necesitaPatines = r.talla && r.talla !== '' && r.talla.toLowerCase() !== 'no';
   var necesitaProtec = r.protecciones && r.protecciones !== '' && r.protecciones.toLowerCase() !== 'no' && r.protecciones.toLowerCase().indexOf('no,') !== 0;
   // Pill de talla separado del de protecciones (antes un solo `equipPillHtml`
-  // acumulado) -- ver "Cambios recientes": el de talla pasa al acordeón
-  // "Más información" mientras que el de protecciones (pedido explícito, no
-  // tocado) se queda visible en su fila de siempre.
+  // acumulado) -- ambos pasan al acordeón "Más información", uno junto al
+  // otro (ver "Cambios recientes").
   var patinesPillHtml = '';
   if (necesitaPatines) {
     var puedeEditarTalla = (r.estado === 'Pendiente' || r.estado === 'Confirmada');
@@ -613,8 +612,8 @@ function _renderCardHome(r, hoy) {
 
   // Pill de ubicación al lado del título, no en su propia fila (ver "Cambios
   // recientes"). Hora ya fusionada en fechaHoraTexto; "Llevas tu equipo" (el
-  // único caso que NO trae un pill accionable de talla/protecciones) pasa al
-  // acordeón "Más información" -- ver bodyHtml más abajo.
+  // único caso que NO trae un pill accionable de talla/protecciones) también
+  // pasa al acordeón "Más información" -- ver bodyHtml más abajo.
   var lugarPillHtml = '';
   if (lugar) {
     if (r.mapsUrl) {
@@ -624,12 +623,9 @@ function _renderCardHome(r, hoy) {
     }
   }
 
-  // Solo protecciones se queda visible en la fila de siempre -- talla pasó
-  // al acordeón (ver bodyHtml más abajo).
+  // Talla y protecciones pasaron al acordeón "Más información" -- ver
+  // bodyHtml más abajo. Ya no queda ningún pill de equipo visible fuera.
   var pillsHtml = '';
-  if (!esMensual && necesitaProtec) {
-    pillsHtml = '<div class="fi-pills">' + protecPillHtml + '</div>';
-  }
 
   var uid = 'rcard-' + (r.fila || Math.random().toString(36).slice(2));
   var filaEsc = r.fila || '';
@@ -637,7 +633,7 @@ function _renderCardHome(r, hoy) {
   var bodyHtml = '<div class="rn-body" id="' + uid + '-body"><div class="rn-body-inner">';
   if (r.descripcion) bodyHtml += '<p style="margin-bottom:25px;">' + r.descripcion + '</p>';
   bodyHtml += '<div class="fi-pills">';
-  if (!esMensual) bodyHtml += patinesPillHtml + equipoNotaHtml;
+  if (!esMensual) bodyHtml += patinesPillHtml + protecPillHtml + equipoNotaHtml;
   if (r.horaFin) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">schedule</span>Fin ' + r.horaFin + '</span>';
   if (r.duracion) bodyHtml += '<span class="fi-pill"><span class="material-symbols-outlined">timer</span>' + r.duracion + '</span>';
   bodyHtml += '</div></div></div>';
