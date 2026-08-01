@@ -829,23 +829,10 @@
    "Cambios recientes" -- antes alineada a la izquierda por herencia de
    `text-align:left` general). */
 .ev-ant-rango-linea { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; font-size: 0.92rem; color: var(--text); text-align: center; }
-/* Fila de "Por período" que agrupa la línea de fechas + "Restablecer
-   (fechas)" (ver "Cambios recientes" -- antes el botón iba centrado DEBAJO,
-   en su propia línea; ahora comparten renglón, botón a la derecha).
-   `flex-shrink:0` en AMBOS hijos (ver `.ev-ant-rango-fila .ev-ant-rango-linea`
-   abajo y `.ev-ant-btn-restablecer`) -- probado primero con `min-width:0`/
-   shrink normal en la línea de fechas para que "cediera" espacio: aplastaba
-   las pills por debajo de su `min-width:92px` (fecha recortada, ilegible) en
-   vez de respetarlo, confirmado visualmente con Chrome headless. Con
-   `flex-shrink:0` ninguno de los 2 cede tamaño -- lo único que cede es el
-   TEXTO del botón ("Restablecer fechas" -> "Restablecer"), decidido por
-   `_evAntAjustarBotonRestablecer()` (js/eventos.js) midiendo un desborde
-   forzado a `nowrap` (ver esa función). `flex-wrap:wrap` ACÁ (a diferencia
-   del `nowrap` de la línea de fechas) es la red de seguridad para el caso
-   límite en que ni siquiera "Restablecer" a secas entra junto con un rango
-   completo en pantallas muy angostas -- el botón cae a una 2da línea propia
-   (mismo look que el diseño anterior) en vez de desbordar recortado fuera
-   de la tarjeta. */
+/* Fila de "Por período"/"Indefinido" que agrupa la línea de fechas + el
+   botón ícono "Restablecer". `flex-shrink:0` en la línea de fechas (ver
+   `.ev-ant-rango-fila .ev-ant-rango-linea` abajo) para que nunca sea la que
+   ceda espacio y aplaste las pills por debajo de su `min-width:92px`. */
 .ev-ant-rango-fila { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
 .ev-ant-rango-fila .ev-ant-rango-linea { flex-shrink: 0; flex-wrap: nowrap; }
 /* Estado sin fecha elegida de "Por período" (ver "Cambios recientes" -- ya
@@ -867,56 +854,22 @@
 }
 .ev-ant-cal-nav-btn .material-symbols-outlined { font-size: 20px; }
 .ev-ant-cal-nav-label { font-size: 0.88rem; font-weight: 800; color: var(--text); text-transform: capitalize; }
-/* "Restablecer fechas" (Por período) -- outline REAL (borde + sin relleno),
-   a pedido explícito de Victor. Se revisó antes de escribir esto si ya
-   existía una clase de botón outline compartida: `.btn-outline` (css/ui.css)
-   pese al nombre es un fill tenue (`background:var(--brand-20)`) SIN borde,
-   no sirve acá -- y `.btn-text-simple` (css/ui.css), la base que ya trae
-   este botón, es compartida por ~15 botones de toda la app (logout,
-   refresh, omitir PIN, etc.) con `width:100%` a propósito ahí -- agregarle
-   un borde a esa clase de base habría puesto un borde en los otros ~15
-   usos también. Ninguna de las 2 sirve tal cual, así que este modificador
-   se scopea a este único botón (mismo criterio que el resto de `.ev-ant-*`
-   en este archivo), sumado a `.btn-text-simple` en el HTML (no la
-   reemplaza -- sigue siendo texto simple por dentro, solo gana el borde
-   delimitándolo como botón tocable, sin ningún relleno de color). Ahora vive
-   dentro de `.ev-ant-rango-fila` (ver esa regla, "Cambios recientes") en vez
-   de debajo centrado -- `width:auto` pisa el `width:100%` de `.btn-text-simple`
-   (ese 100% seguía aplicando acá tal cual, un flex item con `width:100%`
-   se queda con TODO el ancho de la fila y manda `.ev-ant-rango-linea` a 0 --
-   confirmado midiendo `offsetWidth` real de ambos en Chrome headless antes
-   de este ajuste), `flex-shrink:0` para que nunca sea el botón el que se
-   angoste en vez del texto de fechas, `white-space:nowrap` para que
-   "Restablecer fechas"/"Restablecer" nunca partan en 2 líneas mientras el
-   texto largo todavía "cabe" técnicamente (el corte lo decide el JS, no un
-   wrap accidental a mitad de palabra). */
-.ev-ant-btn-restablecer {
-  width: auto; flex-shrink: 0; white-space: nowrap;
-  padding: 8px 18px; border: 1.5px solid var(--brand); border-radius: 10px; background: none;
-}
-/* "Restablecer" de "Indefinido" -- ícono solo (`undo`), sin texto (ver
-   "Cambios recientes"): a diferencia de "Por período" ("Del X al Y" ya ocupa
-   bastante lugar, "Restablecer fechas"/"Restablecer" con su propio
-   acortamiento por JS, `_evAntAjustarBotonRestablecer()`), acá la línea
-   "Desde X" es mucho más corta y no había ningún botón restablecer todavía
-   (revisado el código antes de asumir que existía uno iguial al de
-   "Por período" -- no lo había; se agrega acá por primera vez, reusando
-   `_evAntCalRestablecer('indefinido')`, ya genérica sobre `cual` desde
-   siempre). Se dejó "Por período" con su texto tal cual, sin convertirlo
-   también a ícono -- ya entra en una línea con su propio mecanismo de
-   acortamiento (probado y funcionando), así que no había ningún problema
-   real que resolver ahí; homogeneizar los 2 solo por consistencia hubiera
-   sido un cambio no pedido sobre un componente que ya funcionaba. Mismo
-   lenguaje visual que `.ev-ant-btn-restablecer` (borde `--brand`, sin
-   relleno, ícono en `--muted` heredado de `.btn-text-simple`) pero cuadrado
-   de 36x36 -- mismo tamaño que `.ev-ant-cal-nav-btn`, el otro botón-ícono ya
-   existente en esta pantalla. */
+/* Botón "Restablecer" (ícono `undo`, sin texto) -- compartido por "Por
+   período" e "Indefinido" (antes "Por período" tenía un botón de texto
+   propio, unificado a este mismo componente por consistencia). Alto/ancho
+   30px para calzar EXACTO con la altura real de `.ev-ant-fecha-pill` (su
+   `min-height:30px` en box-sizing:border-box, css/global.css, es la altura
+   final ya que el contenido nunca la supera) -- antes era 36x36 (tamaño de
+   `.ev-ant-cal-nav-btn`) y se veía visiblemente más alto que la pill de
+   fecha al lado. Oculto por default (`display:none` en `index.html`) --
+   `_evAntSetBotonRestablecerVisible()` (js/eventos.js) lo revela con fade
+   recién cuando el usuario tocó al menos una fecha. */
 .ev-ant-btn-restablecer-icono {
-  width: 36px; height: 36px; flex-shrink: 0; padding: 0;
+  width: 30px; height: 30px; flex-shrink: 0; padding: 0;
   display: flex; align-items: center; justify-content: center;
   border: 1.5px solid var(--brand); border-radius: 10px; background: none;
 }
-.ev-ant-btn-restablecer-icono .material-symbols-outlined { font-size: 20px; }
+.ev-ant-btn-restablecer-icono .material-symbols-outlined { font-size: 18px; }
 /* "Sin fecha de fin." centrada junto con la línea de fecha de arriba, como
    un solo bloque (ver "Cambios recientes" -- antes heredaba `text-align:left`
    general, mientras que `.ev-ant-rango-linea`/`.ev-ant-rango-fila` de arriba

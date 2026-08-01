@@ -2551,6 +2551,11 @@ function _evAntIniciarWizard(regla) {
     estado: regla ? regla.estado : null,
     editando: regla ? regla.fila : null
   };
+  // Editar una regla existente ya trae fecha(s) resueltas -- el botón
+  // restablecer debe estar visible desde el arranque, no recién tras un
+  // toque nuevo del usuario. Wizard "en blanco": arranca sin tocar, oculto.
+  _evAntCal.periodo.touched = !!(regla && regla.fechaDesde);
+  _evAntCal.indefinido.touched = !!(regla && regla.fechaDesde);
   document.getElementById('ev-ant-resumen').style.display = 'none';
   document.getElementById('ev-ant-wizard').style.display = 'block';
   window.scrollTo(0, 0);
@@ -2722,7 +2727,10 @@ function _evAntSelFrecuencia(el) {
   // así que sin este reset una fecha elegida en un modo quedaba viva (y
   // potencialmente inválida, ej. Hasta anterior a la nueva Desde) al saltar
   // al otro.
-  if (nuevo !== _evAntData.tipoRango) { _evAntData.fechaDesde = null; _evAntData.fechaHasta = null; }
+  if (nuevo !== _evAntData.tipoRango) {
+    _evAntData.fechaDesde = null; _evAntData.fechaHasta = null;
+    _evAntCal.periodo.touched = false; _evAntCal.indefinido.touched = false;
+  }
   _evAntData.tipoRango = nuevo;
   _evAntMostrarSubFrecuencia();
   _evAntActualizarResumenFrecuencia();
@@ -2814,7 +2822,7 @@ function _evAntToggleMes(mesNum, btn) {
    se toca. "Por período" y "Indefinido" comparten `_evAntData.fechaDesde`/
    `fechaHasta` (mismos campos que ya arma el payload, ver _evAntAplicar())
    -- `_evAntSelFrecuencia()` los resetea al cambiar de modo. */
-var _evAntCal = { periodo: { mostrado: null, prevDesde: null, prevHasta: null }, indefinido: { mostrado: null, prevDesde: null, prevHasta: null } };
+var _evAntCal = { periodo: { mostrado: null, prevDesde: null, prevHasta: null, touched: false }, indefinido: { mostrado: null, prevDesde: null, prevHasta: null, touched: false } };
 
 function _evAntCalMoverMes(cual, dir) {
   var m = _evCalMesDe(_evAntCal[cual].mostrado);
@@ -2848,6 +2856,7 @@ function _evAntCalTocarDia(cual, iso) {
       _evAntData.fechaHasta = iso;
     }
   }
+  _evAntCal[cual].touched = true;
   _evAntCalRender(cual);
   _evAntCalActualizarResumen(cual);
   _evAntActualizarResumenFrecuencia();
@@ -2857,6 +2866,7 @@ function _evAntCalTocarDia(cual, iso) {
 function _evAntCalRestablecer(cual) {
   _evAntData.fechaDesde = null;
   _evAntData.fechaHasta = null;
+  _evAntCal[cual].touched = false;
   _evAntCalRender(cual);
   _evAntCalActualizarResumen(cual);
   _evAntActualizarResumenFrecuencia();
@@ -2941,38 +2951,36 @@ function _evAntCalActualizarResumen(cual) {
   }
   st.prevDesde = desde;
   st.prevHasta = hasta;
-  if (cual === 'periodo') _evAntAjustarBotonRestablecer();
+  _evAntSetBotonRestablecerVisible(cual, st.touched);
 }
 
-// "Restablecer" en la misma línea que "Del X al Y" (ver "Cambios recientes"
-// -- antes iba centrado DEBAJO, en su propia línea): si "Restablecer fechas"
-// completo no entra junto con el rango en una sola línea, se acorta a
-// "Restablecer". Medido con el ancho REAL de `.ev-ant-rango-fila` en vez de
-// un breakpoint fijo de pantalla -- el largo del texto de fechas varía (ej.
-// "Del 1/8/2026 al 25/12/2026" vs "Del 1/8/2026"), así que lo que realmente
-// decide si entra es el contenido, no el ancho de viewport. La fila usa
-// `flex-wrap:wrap` en el CSS (red de seguridad para el caso límite en que
-// ni "Restablecer" a secas entra, ver ese comentario) -- eso significa que
-// en uso normal el navegador NUNCA deja que la fila desborde de forma
-// medible, el botón bajaría de línea antes de que `scrollWidth` reflejara
-// nada. Por eso se fuerza `nowrap` ACÁ, solo mientras dura la medición
-// síncrona (se lee `scrollWidth` inmediatamente, forzando el reflow), y se
-// revierte enseguida -- decide con el layout de una sola línea (lo que
-// realmente se quiere evaluar: "¿entra en el renglón?"), pero el resultado
-// final (wrap restablecido) sigue teniendo la red de seguridad puesta por
-// si ni el texto ya acortado alcanza.
-function _evAntAjustarBotonRestablecer() {
-  var fila = document.getElementById('ev-ant-periodo-fila');
-  var btn = document.getElementById('ev-ant-btn-restablecer');
-  if (!fila || !btn) return;
-  btn.textContent = 'Restablecer fechas';
-  fila.style.flexWrap = 'nowrap';
-  if (fila.scrollWidth > fila.clientWidth) btn.textContent = 'Restablecer';
-  fila.style.flexWrap = '';
+// Botón "Restablecer" (ícono) -- oculto hasta que el usuario tocó al menos
+// una fecha (`_evAntCal[cual].touched`, ver _evAntCalTocarDia()/
+// _evAntCalRestablecer()/_evAntSelFrecuencia()/_evAntIniciarWizard()): no
+// tiene sentido "restablecer" algo que nunca se tocó -- incluye el "Desde
+// hoy" que "Indefinido" precarga solo, que no cuenta como un toque real.
+// Aparece/desaparece con el mismo fadeIn/fadeOut (@keyframes, css/estilos.css)
+// que el resto de estados de esta pantalla. `dataset.visible` guarda el
+// estado ya aplicado para no re-disparar la animación en cada actualización
+// del resumen (ej. tocar Hasta después de Desde no debe volver a fadear un
+// botón que ya estaba visible).
+function _evAntSetBotonRestablecerVisible(cual, mostrar) {
+  var btn = document.getElementById(cual === 'periodo' ? 'ev-ant-btn-restablecer' : 'ev-ant-btn-restablecer-indefinido');
+  if (!btn) return;
+  var yaVisible = btn.dataset.visible === '1';
+  if (!!mostrar === yaVisible) return;
+  btn.dataset.visible = mostrar ? '1' : '0';
+  if (mostrar) {
+    btn.style.display = 'flex';
+    void btn.offsetWidth;
+    btn.style.animation = 'fadeIn 0.2s ease';
+  } else {
+    btn.style.animation = 'fadeOut 0.2s ease forwards';
+    setTimeout(function() {
+      if (btn.dataset.visible !== '1') btn.style.display = 'none';
+    }, 200);
+  }
 }
-window.addEventListener('resize', function() {
-  if (_evAntData.tipoRango === 'periodo') _evAntAjustarBotonRestablecer();
-});
 
 // Texto del header colapsado de "Frecuencia" (#ev-ant-acc-frecuencia-resumen)
 // -- vacío mientras no haya nada elegido todavía (el header simplemente no
