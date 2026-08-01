@@ -1,3 +1,20 @@
+// Tab de aterrizaje tras login fresco o restaurarSesion() exitosa, según si
+// la cuenta tiene equipamiento propio -- mismo criterio (necesitaPatines/
+// necesitaProtecciones === 'No') ya usado en el resto de la app para esta
+// pregunta (ej. canPayMonthly(), js/reservas.js). Con equipamiento propio,
+// no depende del club para nada -- aterriza en Eventos. Sin equipamiento
+// propio (necesita patines y/o protecciones prestadas), aterriza en
+// Reservas -- irReservas() ya decide por su cuenta si hay que saltar
+// directo a "Nueva reserva" cuando no tiene ninguna reserva activa (fix de
+// esta misma sesión). NO aplica a cuentas dashboardAdmin:true -- esas ya
+// retornan antes de llegar a ningún call site de esta función, directo a
+// Ajustes vía adminEntrar() (regla más específica, con prioridad).
+function _irTabAterrizajeInicial() {
+  var tieneEquipoPropio = !!E.datos && E.datos.necesitaPatines === 'No' && E.datos.necesitaProtecciones === 'No';
+  if (tieneEquipoPropio) irEventos();
+  else irReservas();
+}
+
 var _gisUsuarioInicializado = false;
 
 function iniciarGoogleSignInUsuario() {
@@ -67,11 +84,17 @@ function iniciarGoogleSignInUsuario() {
 // configuró — llamada tanto desde login fresco de Google (onGoogleCredentialUsuario)
 // como desde restaurarSesion() exitosa (window.onload), antes solo el primero
 // disparaba este modal: una cuenta que solo mantiene la sesión guardada podía
-// no verlo nunca. Coordinada con modal-info-home (que ir('s-home') puede
-// mostrar 600ms después, si el usuario no lo vio todavía) para que no compitan
-// por pantalla al mismo tiempo — mismo patrón de callback ya usado por
-// mostrarModalInfoReserva()/modalInfoOk()/modalInfoLater() (js/ui.js) para
-// encadenar una acción a que el usuario cierre un modal-info primero.
+// no verlo nunca. Coordinada con modal-info-home (que `ir()` muestra 600ms
+// después SOLO si el aterrizaje termina en 's-home', ver ese id dentro de
+// `ir()`, js/ui.js) para que no compitan por pantalla al mismo tiempo —
+// mismo patrón de callback ya usado por mostrarModalInfoReserva()/
+// modalInfoOk()/modalInfoLater() (js/ui.js) para encadenar una acción a que
+// el usuario cierre un modal-info primero. Desde que el aterrizaje pasa por
+// `_irTabAterrizajeInicial()` (más arriba en este archivo) el destino real
+// puede ser Eventos o "Nueva reserva" en vez de 's-home' -- en esos 2 casos
+// modal-info-home simplemente no se dispara esta vez (no es un bug, ver esa
+// función), este modal de permisos sigue mostrándose igual sin depender de
+// cuál haya sido.
 function _mostrarPermisosSiHaceFalta(fotoFallback) {
   if (!(E.datos && !E.datos.permisosConfigurados)) return;
   var mostrarPermisos = function() { mostrarModalPermisos(E.nombre, E.datos.fotoPerfil || fotoFallback || ''); };
@@ -167,10 +190,10 @@ function onGoogleCredentialUsuario(resp) {
         }
         setTimeout(function() { irNuevaReserva(true); }, 300);
       } else {
-        ir('s-home');
+        _irTabAterrizajeInicial();
         _mostrarPermisosSiHaceFalta(_fotoGoogleLogin);
       }
-    }, function() { prepararHome(); ir('s-home'); });
+    }, function() { prepararHome(); _irTabAterrizajeInicial(); });
   }, function(e) {
     ocultarCargando();
     var errEl = document.getElementById('err-google-login');
@@ -261,8 +284,8 @@ function continuar_pin() {
       api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
         _todasReservas = reservas;
         prepararHome();
-        ir('s-home');
-      }, function(e2) { prepararHome(); ir('s-home'); mostrarToast(e2.message || 'Error al cargar reservas.', 'error'); });
+        _irTabAterrizajeInicial();
+      }, function(e2) { prepararHome(); _irTabAterrizajeInicial(); mostrarToast(e2.message || 'Error al cargar reservas.', 'error'); });
 
     }, function(e1) { _validandoPin = false; ocultarCargando(); ir('s1b'); err('err-pin', 'Error: ' + e1.message); });
   });
@@ -427,8 +450,8 @@ window.onload = function() {
               var _pnx = window._pendingNuevx; window._pendingNuevx = null;
               if (E.datos) { E.datos.necesitaPatines = _pnx.patines === 'si' ? 'Sí' : 'No'; E.datos.necesitaProtecciones = _pnx.protec ? _pnx.protec : 'No'; if (_pnx.talla) E.datos.talla = _pnx.talla; }
               setTimeout(function() { irNuevaReserva(true); }, 300);
-            } else { ir('s-home'); _mostrarPermisosSiHaceFalta(); }
-          }, function() { prepararHome(); ir('s-home'); window._restaurandoSesion = false; });
+            } else { _irTabAterrizajeInicial(); _mostrarPermisosSiHaceFalta(); }
+          }, function() { prepararHome(); _irTabAterrizajeInicial(); window._restaurandoSesion = false; });
         }, function() { window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true); });
       } else { localStorage.removeItem('session'); }
     } catch (ex) { localStorage.removeItem('session'); }
