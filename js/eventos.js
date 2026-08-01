@@ -2892,6 +2892,21 @@ function _evAntCalRestablecer(cual) {
   var btn = document.getElementById(cual === 'periodo' ? 'ev-ant-btn-restablecer' : 'ev-ant-btn-restablecer-indefinido');
   if (cont) cont.style.animation = 'fadeOut 0.2s ease forwards';
   if (btn) btn.style.animation = 'fadeOut 0.2s ease forwards';
+  // Celdas del calendario marcadas como seleccionadas (.ev-ant-cal-sel/
+  // .ev-ant-cal-en-rango, css/eventos.css) -- mismo fade coordinado, mismos
+  // 200ms. A diferencia de cont/btn (animation inline), acá se quitan las
+  // clases DIRECTO sobre las celdas YA renderizadas (no se espera al
+  // re-render de aplicar()) para que el `transition` de `.ev-cal-celda`
+  // tenga un estado real "antes" del que animar -- _evAntCalRender() destruye
+  // y recrea toda la grilla (innerHTML) en cada toque, así que si se
+  // esperara a ese re-render el cambio ya llegaría con las clases afuera de
+  // entrada, sin nada que transicionar (nodos nuevos, sin fade posible).
+  var calCont = document.getElementById(cual === 'periodo' ? 'ev-ant-cal-periodo' : 'ev-ant-cal-indefinido');
+  if (calCont) {
+    calCont.querySelectorAll('.ev-ant-cal-sel, .ev-ant-cal-en-rango').forEach(function(celda) {
+      celda.classList.remove('ev-ant-cal-sel', 'ev-ant-cal-en-rango');
+    });
+  }
   setTimeout(function() {
     if (btn) { btn.style.display = 'none'; btn.dataset.visible = '0'; }
     aplicar();

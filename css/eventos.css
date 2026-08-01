@@ -159,6 +159,17 @@
 .ev-cal-celda {
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
   gap: 4px; padding: 6px 0 8px; border-radius: 10px; min-height: 46px; cursor: pointer;
+  /* Fade del resaltado de selección (.ev-ant-cal-sel/.ev-ant-cal-en-rango,
+     más abajo en este archivo) -- en la base, no en esas clases, para que
+     aplique sin importar cuál se agregue/quite. Mismos 0.2s que ya usa el
+     fade coordinado de pills+botón "Restablecer" (_evAntCalRestablecer(),
+     js/eventos.js) -- ver ese comentario para el porqué: _evAntCalRender()
+     reconstruye la grilla entera (innerHTML) en cada toque, así que un
+     transition acá NO alcanza por sí solo con ese flujo normal (nodos
+     nuevos, sin estado "antes" real de qué animar) -- alcanza porque
+     _evAntCalRestablecer() ahora quita las clases de las celdas YA
+     renderizadas primero, y recién re-renderiza 200ms después. */
+  transition: background-color 0.2s ease;
 }
 .ev-cal-celda.ev-ajeno { opacity: 0.32; }
 .ev-cal-num {
