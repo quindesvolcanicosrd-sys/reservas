@@ -272,15 +272,29 @@ function ir(id, desdeHistorial, sinTrampa) {
   // estamos abandonando la sección entera (mismo criterio que el resto de
   // esta función, ver comentario de más arriba sobre `_ajSubAbierto`/
   // `_overlayStack`) -- no tiene sentido animar un scroll que el usuario no
-  // va a alcanzar a ver. Los 2 casos que dependían de que ESTE scroll fuera
-  // smooth para poder "pisarlo" después con un `setTimeout(50)` (restaurar
-  // scroll del timeline al volver de un detalle, indicador de RSVP) siguen
-  // funcionando igual -- verificado con Playwright -- el `setTimeout(50)` ya
-  // no hace falta para "ganarle" a una animación (no hay ninguna corriendo),
-  // pero se deja tal cual: sigue siendo necesario por su otro motivo real
-  // (offsetWidth/getBoundingClientRect de una pantalla recién visible no son
-  // reales hasta el siguiente tick), así que simplificarlo no aportaría nada.
-  window.scrollTo(0, 0);
+  // va a alcanzar a ver.
+  // Bug real corregido (ver "Cambios recientes" -- flash de scroll 0 al
+  // restaurar una tab con posición guardada): este `scrollTo` corría siempre
+  // a `(0,0)`, incondicional, sin importar si más abajo (`setTimeout(50)`)
+  // había una posición guardada pendiente de restaurar -- la pantalla ya
+  // quedaba pintada en scroll 0 (contenido de arriba visible, ej. la foto de
+  // perfil de Ajustes) antes de que el `setTimeout` corrigiera el salto,
+  // 50ms después. Acá mismo, ANTES de que `.pantalla.activa` (ya aplicada
+  // arriba) llegue a pintarse, se consulta si hay un restore pendiente para
+  // `id` y se salta directo a esa posición -- nunca se pinta el 0 intermedio.
+  // El contenido de ambas pantallas (`irEditarDatos()`/`_evRenderTimeline()`)
+  // ya se pobló de forma síncrona ANTES de llegar a `ir()`, así que el alto
+  // real ya está disponible acá -- no hace falta esperar al mismo tick
+  // "asentado" que sí necesitan `offsetWidth`/`getBoundingClientRect` de
+  // elementos puntuales (ver `_evUpdateRsvpSliders()`/el resto del
+  // `setTimeout(50)` que sigue más abajo, con SU motivo real intacto). Los
+  // `scrollTo` que quedaban DENTRO de esos 2 `setTimeout` se sacaron -- ya no
+  // hace falta repetirlos, quedarían pisando este valor con el mismo destino.
+  var _scrollRestorePendiente =
+    (id === 's-datos' && typeof _ajRestaurarScroll !== 'undefined' && _ajRestaurarScroll) ? _ajHomeScrollY :
+    (id === 's-eventos' && typeof _evRestaurarScrollTimeline !== 'undefined' && _evRestaurarScrollTimeline) ? _evTimelineScrollY :
+    null;
+  window.scrollTo(0, _scrollRestorePendiente !== null ? _scrollRestorePendiente : 0);
 
   var sinHistorial = ['s-carga', 's-carga-fechas', 's-carga-conf'];
   if (!desdeHistorial && sinHistorial.indexOf(id) === -1) {
@@ -323,19 +337,16 @@ function ir(id, desdeHistorial, sinTrampa) {
   // se arma en 2 disparadores -- `abrirEvDetalle()` (volver de un detalle,
   // por botón "atrás" o gesto nativo/popstate) e `irEventos()` (nav inferior
   // a una sección ya visitada esta sesión) -- ambos caminos pasan por acá.
-  // `ir()` ya disparó su propio `scrollTo(0,0)` instantáneo unas líneas
-  // arriba -- este `setTimeout(50)` (mismo delay que ya usa el fix del
-  // indicador de RSVP, agrupados en el mismo callback) sigue haciendo falta
-  // por SU motivo real (offsetWidth/getBoundingClientRect de una pantalla
-  // recién visible no son reales hasta el siguiente tick), no ya para
-  // "pisar" una animación smooth (esa ya no existe, ver más arriba).
+  // El `scrollTo` real ya corrió arriba, ANTES de pintar la pantalla (ver
+  // "Cambios recientes" -- fix del flash de scroll 0) -- este `setTimeout(50)`
+  // (mismo delay que ya usa el fix del indicador de RSVP, agrupados en el
+  // mismo callback) solo limpia el flag; sigue haciendo falta por SU motivo
+  // real, `_evUpdateRsvpSliders()` (offsetWidth/getBoundingClientRect de una
+  // pantalla recién visible no son reales hasta el siguiente tick).
   if (id === 's-eventos' && typeof _evUpdateRsvpSliders === 'function') {
     setTimeout(function() {
       _evUpdateRsvpSliders(false);
-      if (typeof _evRestaurarScrollTimeline !== 'undefined' && _evRestaurarScrollTimeline) {
-        _evRestaurarScrollTimeline = false;
-        window.scrollTo(0, _evTimelineScrollY);
-      }
+      _evRestaurarScrollTimeline = false;
     }, 50);
   }
   // Restaurar el scroll del home de Ajustes al volver por nav inferior a una
@@ -346,11 +357,11 @@ function ir(id, desdeHistorial, sinTrampa) {
   // directo para eso) -- esto es el scroll del propio home, `#s-datos`,
   // que hasta ahora no se restauraba nunca). `_ajRestaurarScroll` se arma en
   // `irEditarDatos()` cuando la sección ya estaba inicializada esta sesión.
-  if (id === 's-datos' && typeof _ajRestaurarScroll !== 'undefined' && _ajRestaurarScroll) {
-    setTimeout(function() {
-      _ajRestaurarScroll = false;
-      window.scrollTo(0, _ajHomeScrollY);
-    }, 50);
+  // El `scrollTo` real ya corrió arriba (mismo fix del flash que Eventos) --
+  // acá solo queda limpiar el flag, sin `setTimeout` (nada más en esta
+  // pantalla depende de medidas "asentadas" al siguiente tick).
+  if (typeof _ajRestaurarScroll !== 'undefined' && _ajRestaurarScroll && id === 's-datos') {
+    _ajRestaurarScroll = false;
   }
 
   var topBar = document.getElementById('top-bar'); var topBtn = document.getElementById('top-bar-btn'); var topTitulo = document.getElementById('top-bar-titulo');
