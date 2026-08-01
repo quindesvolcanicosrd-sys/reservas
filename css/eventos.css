@@ -844,7 +844,15 @@
    botón ícono "Restablecer". `flex-shrink:0` en la línea de fechas (ver
    `.ev-ant-rango-fila .ev-ant-rango-linea` abajo) para que nunca sea la que
    ceda espacio y aplaste las pills por debajo de su `min-width:92px`. */
-.ev-ant-rango-fila { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+/* `max-height` animado (ver "Cambios recientes" -- antes el alto de esta
+   fila cambiaba de golpe al aparecer/ocultarse el botón "Restablecer" --
+   30px vs. el alto de una sola línea de texto -- empujando el layout sin
+   transición). Alto real medido por JS en cada cambio, no un valor fijo
+   (mismo criterio que `_evAbrirPanel()`/`_evCerrarPanel()`, más arriba en
+   este archivo) -- `overflow:hidden` recorta durante la animación, sin
+   afectar el layout final una vez asentado (el `max-height` inline queda
+   igualado al `scrollHeight` real). */
+.ev-ant-rango-fila { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; overflow: hidden; transition: max-height 0.2s ease; }
 .ev-ant-rango-fila .ev-ant-rango-linea { flex-shrink: 0; flex-wrap: nowrap; }
 /* Estado sin fecha elegida de "Por período" (ver "Cambios recientes" -- ya
    no muestra la línea "Desde el ___ hasta el ___" vacía, un texto

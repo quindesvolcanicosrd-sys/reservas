@@ -2858,7 +2858,24 @@ function _evAntCalTocarDia(cual, iso) {
   }
   _evAntCal[cual].touched = true;
   _evAntCalRender(cual);
+  // Alto animado de #ev-ant-periodo-fila/#ev-ant-indefinido-fila (contenedor
+  // de la línea de fecha(s) + botón "Restablecer", ver "Cambios recientes"):
+  // antes _evAntCalActualizarResumen() mutaba el contenido (texto + botón)
+  // de una, así que el alto de la fila -- mayor con el botón visible que sin
+  // él -- cambiaba de golpe en el mismo instante, empujando el layout sin
+  // transición. Técnica FLIP estándar ya usada en este archivo
+  // (_evAbrirPanel()/_evCerrarPanel(), mismo `void el.offsetHeight` para
+  // forzar el reflow síncrono que "congela" el alto viejo antes de dejar que
+  // el nuevo se anime): se mide el alto ANTES de mutar (fuerza reflow para
+  // que quede como estado real del que partir), se muta, y se vuelve a medir
+  // DESPUÉS -- con `.ev-ant-rango-fila { transition: max-height }` (css/eventos.css)
+  // ya declarado, el cambio de un valor numérico a otro anima solo. Mismo
+  // instante que el fadeIn propio del botón (_evAntSetBotonRestablecerVisible()),
+  // así que ambos leen como un solo movimiento, no 2 pasos separados.
+  var fila = document.getElementById(cual === 'periodo' ? 'ev-ant-periodo-fila' : 'ev-ant-indefinido-fila');
+  if (fila) { fila.style.maxHeight = fila.scrollHeight + 'px'; void fila.offsetHeight; }
   _evAntCalActualizarResumen(cual);
+  if (fila) fila.style.maxHeight = fila.scrollHeight + 'px';
   _evAntActualizarResumenFrecuencia();
   _evAntActualizarBotonAplicar();
 }
@@ -2906,6 +2923,30 @@ function _evAntCalRestablecer(cual) {
     calCont.querySelectorAll('.ev-ant-cal-sel, .ev-ant-cal-en-rango').forEach(function(celda) {
       celda.classList.remove('ev-ant-cal-sel', 'ev-ant-cal-en-rango');
     });
+  }
+  // Alto animado de la fila (ver "Cambios recientes" -- misma técnica FLIP
+  // que _evAntCalTocarDia(), pero acá el swap real de contenido recién pasa
+  // DENTRO de aplicar(), a los 200ms -- si se esperara a ese momento para
+  // recién ahí medir/animar, el colapso arrancaría DESPUÉS del fade en vez
+  // de junto con él (2 movimientos en fila, no 1 solo). Se mide el alto
+  // FINAL de antemano con una mutación temporal (texto instructivo sin
+  // pills + botón oculto) que se revierte en el mismo tick, antes de que el
+  // navegador llegue a pintarla -- invisible para el usuario, pero da un
+  // valor real del que animar `max-height` en paralelo con el fadeOut de
+  // arriba, mismos 200ms.
+  var fila = document.getElementById(cual === 'periodo' ? 'ev-ant-periodo-fila' : 'ev-ant-indefinido-fila');
+  if (fila) {
+    var altoActual = fila.scrollHeight;
+    var contHtmlOriginal = cont ? cont.innerHTML : null;
+    var btnDisplayOriginal = btn ? btn.style.display : null;
+    if (cont) cont.innerHTML = '<span class="ev-ant-rango-vacio">Toca una fecha en el calendario para empezar</span>';
+    if (btn) btn.style.display = 'none';
+    var altoFinal = fila.scrollHeight;
+    if (cont) cont.innerHTML = contHtmlOriginal;
+    if (btn) btn.style.display = btnDisplayOriginal;
+    fila.style.maxHeight = altoActual + 'px';
+    void fila.offsetHeight;
+    fila.style.maxHeight = altoFinal + 'px';
   }
   setTimeout(function() {
     if (btn) { btn.style.display = 'none'; btn.dataset.visible = '0'; }
