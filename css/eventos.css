@@ -27,6 +27,28 @@
   .ev-sticky-header { background: var(--bg); }
 }
 
+/* Bug real corregido (ver "Cambios recientes" -- gap sobre el header sticky
+   al entrar/volver a #s-eventos): `.pantalla.activa` (css/global.css) anima
+   `transform:translateY(20px)->none` en CADA entrada (ir() saca y vuelve a
+   poner la clase `.activa` en todo cambio de pantalla) -- ese transform del
+   ancestro también se pinta sobre `.ev-sticky-header`, un hijo directo,
+   aunque sea `position:sticky` y ya esté "pegado" al top real del viewport;
+   durante los ~600ms de la animación el header queda pintado hasta 20px por
+   debajo de su posición real, dejando ver una porción del timeline
+   scrolleable que debería estar tapada detrás. Fix: contra-animación con el
+   translateY exactamente invertido (misma curva/duración que
+   `smoothSlideUp`, css/estilos.css) SOLO en el header -- ambos transforms se
+   cancelan en cada instante (mismo % de la curva a la vez, mismo ancestro
+   que dispara los dos), así que el header queda pintado en su posición real
+   desde el primer frame, sin tocar el slide-up del resto de la pantalla. */
+@keyframes evStickyHeaderCounter {
+  from { transform: translateY(-20px); }
+  to { transform: none; }
+}
+.pantalla.activa .ev-sticky-header {
+  animation: evStickyHeaderCounter 0.6s var(--ease-sheet);
+}
+
 /* ── Cabecera de 4 elementos (ver "Cambios recientes" -- rediseño: label de
    mes tocable + 3 íconos fijos lupa/filtros/hoy, reemplaza el ícono ojo +
    pill contextual + ícono filtros del sistema de tabs anterior). Íconos:
