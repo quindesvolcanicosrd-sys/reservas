@@ -2863,14 +2863,39 @@ function _evAntCalTocarDia(cual, iso) {
   _evAntActualizarBotonAplicar();
 }
 
+// Con `touched` (ya había fecha(s) elegida(s) en pantalla): las pills y el
+// botón "Restablecer" fadean juntos ANTES de tocar nada de estado -- si se
+// reseteara `_evAntData` de una y se llamara a _evAntCalActualizarResumen()
+// de inmediato (como antes), el texto instructivo largo ("Toca una fecha en
+// el calendario para empezar") reemplaza a las pills en el mismo instante en
+// que el botón recién empieza su propio fadeOut de 200ms (ver
+// _evAntSetBotonRestablecerVisible()) -- 2 timings independientes que
+// generan una ventana donde el texto ya creció pero el botón todavía ocupa
+// su lugar, empujando el layout (salto visible antes de que el botón
+// desaparezca). Acá los 2 elementos fadean a la vez con la misma duración
+// (200ms) y el swap real de contenido (texto instructivo + reset de estado)
+// recién pasa cuando ambos ya están invisibles -- ningún reflow queda a la
+// vista.
 function _evAntCalRestablecer(cual) {
-  _evAntData.fechaDesde = null;
-  _evAntData.fechaHasta = null;
-  _evAntCal[cual].touched = false;
-  _evAntCalRender(cual);
-  _evAntCalActualizarResumen(cual);
-  _evAntActualizarResumenFrecuencia();
-  _evAntActualizarBotonAplicar();
+  var st = _evAntCal[cual];
+  function aplicar() {
+    _evAntData.fechaDesde = null;
+    _evAntData.fechaHasta = null;
+    st.touched = false;
+    _evAntCalRender(cual);
+    _evAntCalActualizarResumen(cual);
+    _evAntActualizarResumenFrecuencia();
+    _evAntActualizarBotonAplicar();
+  }
+  if (!st.touched) { aplicar(); return; }
+  var cont = document.getElementById(cual === 'periodo' ? 'ev-ant-periodo-resumen' : 'ev-ant-indefinido-resumen');
+  var btn = document.getElementById(cual === 'periodo' ? 'ev-ant-btn-restablecer' : 'ev-ant-btn-restablecer-indefinido');
+  if (cont) cont.style.animation = 'fadeOut 0.2s ease forwards';
+  if (btn) btn.style.animation = 'fadeOut 0.2s ease forwards';
+  setTimeout(function() {
+    if (btn) { btn.style.display = 'none'; btn.dataset.visible = '0'; }
+    aplicar();
+  }, 200);
 }
 
 // Formato corto d/m/aaaa -- usado dentro de las pills ev-ant-fecha-pill
