@@ -196,6 +196,20 @@
 .tp-opt { position: relative; z-index: 1; padding: 11px 22px; font-size: 0.88rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; color: var(--muted); transition: color .25s; user-select: none; white-space: nowrap; border-radius: 99px; }
 .tp-opt.active { color: var(--white); }
 .tp-cupon-ico { font-size: 1rem; }
+/* Skeleton del selector Por clase/Mensual (#tp-seg, ver "Cambios recientes")
+   mientras cargarFechas() (js/reservas.js) espera la respuesta real -- antes
+   este selector se armaba completo (texto real, estado activo real) apenas
+   se entraba a #s4, mientras el resto de la pantalla (#lista-fechas, mismo
+   archivo) seguía mostrando su propio skeleton -- el selector "aparecía de
+   golpe" contra el resto todavía shimmerizando. Reusa el `.tp-opt` REAL (no
+   un bloque `.fi-skel-block` aparte superpuesto) -- mismo tamaño/padding
+   exactos, cero riesgo de desajuste de layout entre el estado skeleton y el
+   real -- solo pisa `color`/`background` con el mismo gradiente+animación
+   que ya usa `.fi-skel-block` (mismo shimmer, sin duplicar el keyframe).
+   `color:transparent` en el `<span>` de texto Y en el ícono de material
+   symbols (pinta con `currentColor`, se oculta solo, sin regla aparte). */
+.tp-seg-cargando .tp-slider { display: none; }
+.tp-seg-cargando .tp-opt { color: transparent; background: linear-gradient(90deg, var(--skeleton-base) 25%, var(--skeleton-shine) 50%, var(--skeleton-base) 75%); background-size: 200% 100%; animation: skeletonShimmer 1.2s ease-in-out infinite; }
 .tp-hint { display: none; align-items: flex-start; gap: 7px; font-size: 0.78rem; color: var(--purple); background: var(--purple-bg); border: 1px solid var(--purple-border-soft); border-radius: 10px; padding: 9px 12px; margin-top: 10px; line-height: 1.5; }
 .tp-hint.visible { display: flex; }
 

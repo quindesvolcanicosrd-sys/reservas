@@ -509,6 +509,14 @@ function cargarFechas() {
   if (wrapperMensualInicial) wrapperMensualInicial.style.display = 'none';
   if (mesesWrapperInicial) mesesWrapperInicial.style.display = 'none';
   if (listaFechasSkelEl) { listaFechasSkelEl.style.display = 'block'; listaFechasSkelEl.innerHTML = _skeletonFechasHtml(); }
+  // Selector Por clase/Mensual (#tp-seg) -- mismo criterio que el skeleton de
+  // arriba: se marca "cargando" ANTES de ir('s4') (que ya lo arma completo,
+  // real, vía _s4ActualizarNav()) para que no aparezca de golpe contra el
+  // resto de la pantalla, todavía shimmerizando. Sin condicionar a
+  // canPayMonthly() acá -- si el selector termina oculto (variante título),
+  // la clase queda sin efecto visible, no vale la pena duplicar ese cálculo.
+  var tpSegSkelEl = document.getElementById('tp-seg');
+  if (tpSegSkelEl) tpSegSkelEl.classList.add('tp-seg-cargando');
   ir('s4');
 
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : '';
@@ -580,6 +588,15 @@ function cargarFechas() {
     listaFechasEl.innerHTML = html; E.fechas = []; E.tallasPorFecha = {}; _conflictosTalla = {}; _fechasPosibleProtecRiesgo = {};
     void listaFechasEl.offsetWidth;
     listaFechasEl.style.animation = 'fadeIn 0.3s ease';
+    // Selector Por clase/Mensual: sale del estado "cargando" en el mismo
+    // instante que el resto del contenido de acá arriba, con el mismo fade
+    // (0.3s) -- coordinado, ninguno de los 2 aparece antes que el otro.
+    var tpSegListoEl = document.getElementById('tp-seg');
+    if (tpSegListoEl && tpSegListoEl.classList.contains('tp-seg-cargando')) {
+      tpSegListoEl.classList.remove('tp-seg-cargando');
+      void tpSegListoEl.offsetWidth;
+      tpSegListoEl.style.animation = 'fadeIn 0.3s ease';
+    }
     fechasTallaAgotadaSync.forEach(function(item) {
       _conflictosTalla[item.fecha] = true;
       if (item.riesgoProtec) _fechasPosibleProtecRiesgo[item.fecha] = true;
@@ -631,7 +648,12 @@ function cargarFechas() {
         mostrarModalInfoReserva(function(){});
       }
     }, 400);
-  }, function(e) { window._cargandoFechasReserva = false; ir('s-home'); mostrarToast(e.message || 'No se pudieron cargar las fechas disponibles.', 'error'); });
+  }, function(e) {
+    window._cargandoFechasReserva = false;
+    var tpSegErrEl = document.getElementById('tp-seg');
+    if (tpSegErrEl) tpSegErrEl.classList.remove('tp-seg-cargando');
+    ir('s-home'); mostrarToast(e.message || 'No se pudieron cargar las fechas disponibles.', 'error');
+  });
 }
 
 function toggleFecha(el, fecha) {
