@@ -86,12 +86,13 @@
   pointer-events: auto;
   width: 56px; height: 56px; flex-shrink: 0;
   /* Bug real corregido (ver "Cambios recientes"): usaba `--fab-admin-bg`
-     (ámbar, la misma variable que las 2 opciones del menú desplegable) en
-     vez del color de énfasis de la app -- el botón principal pasa a
-     `var(--brand)` (mismo criterio que `.app-nav-icon-btn-brand`, el
-     ícono de "Asistencia anticipada" del mismo header), las 2 opciones del
-     menú (`.ev-fab-opcion`, más abajo) se quedan en ámbar a propósito, esa
-     sí fue una decisión explícita ya documentada. Forma cuadrada con
+     (ámbar, la variable `--fab-admin-*` -- eliminada de `css/colors.css`,
+     sin otro consumidor tras este fix) en vez del color de énfasis de la
+     app -- pasa a `var(--brand)` (mismo criterio que `.app-nav-icon-btn-brand`,
+     el ícono de "Asistencia anticipada" del mismo header). Las 2 opciones
+     del menú (`.ev-fab-opcion`, más abajo) TAMBIÉN pasan a `--brand` --
+     quedaron un tiempo en ámbar como decisión explícita intermedia, revertida
+     después a pedido de unificar el conjunto entero. Forma cuadrada con
      esquinas redondeadas (antes `50%`, circular) -- mismo `border-radius`
      que ya usan `.app-nav-icon-btn`/`.ev-header-icon-btn` (css/nav.css),
      los otros 2 botones de esa fila. */
@@ -118,8 +119,11 @@
   display: flex; align-items: center; gap: 8px;
   padding: 10px 16px;
   border: none; border-radius: var(--radius-full);
-  background: var(--fab-admin-bg);
-  color: var(--fab-admin-icon);
+  /* Antes --fab-admin-bg (ámbar, ver "Cambios recientes" -- decisión
+     revertida: pedido explícito de unificar TODO el conjunto del FAB al
+     mismo color de énfasis, ya usado en el botón principal). */
+  background: var(--brand);
+  color: var(--white);
   font-size: 0.9rem; font-weight: 700; font-family: inherit; white-space: nowrap;
   box-shadow: var(--shadow);
   cursor: pointer;
@@ -127,7 +131,7 @@
   transform: translateY(8px);
   transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
 }
-@media (hover: hover) { .ev-fab-opcion:hover { background: var(--fab-admin-bg-hover); } }
+@media (hover: hover) { .ev-fab-opcion:hover { background: var(--brand-dk); } }
 .ev-fab-opcion .material-symbols-outlined { font-size: 1.2rem; }
 .ev-fab-menu.ev-fab-abierto .ev-fab-opcion {
   pointer-events: auto;

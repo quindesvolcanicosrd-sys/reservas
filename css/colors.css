@@ -234,14 +234,6 @@
   --amber-border:   #fde68a;
   --amber-30:       rgba(251,191,36,0.4);
 
-  /* FAB de #s-eventos (solo admin, index.html/css/eventos.css) -- fondo
-     sólido ámbar + ícono claro, distinto del resto de usos de --amber-*
-     de arriba (todos fondo tenue + texto oscuro, estilo badge). Deriva de
-     los mismos tonos ya existentes en vez de un hex nuevo. */
-  --fab-admin-bg:       var(--amber-accent);
-  --fab-admin-bg-hover: var(--amber-darker);
-  --fab-admin-icon:     var(--white);
-
   /* Green / Error extendidos */
   --green-dark:     #166534;
   --green-light:    #f0fdf4;
