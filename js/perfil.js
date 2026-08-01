@@ -73,7 +73,12 @@ function irEditarDatos() {
     if (d.enfermedad) saludPartes.push(d.enfermedad);
     if (d.alergias === 'Sí') saludPartes.push('Alergias');
     if (d.medicamentos === 'Sí') saludPartes.push('Medicamentos');
-    saludVal.textContent = saludPartes.join(' · ') || 'Completa los datos de salud';
+    // Ficha completada (mismo criterio que el auto-lanzado del wizard, ver
+    // `!d.atencionMedica` más abajo en este archivo) pero sin nada que
+    // resaltar (sin enfermedad/alergias/medicamentos, ej. todo 'No') caía en
+    // el mismo fallback que una ficha nunca tocada -- bug real, no distinguía
+    // los 2 casos. "Completa..." solo para la ficha realmente sin completar.
+    saludVal.textContent = saludPartes.join(' · ') || (d.atencionMedica ? 'Actualiza tus datos de salud' : 'Completa los datos de salud');
   }
   // Notif toggle
   _poblarResumenEquipPerfil();
