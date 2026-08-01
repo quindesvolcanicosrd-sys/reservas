@@ -15,6 +15,18 @@ var _fechasPosibleProtecRiesgo = {};
 // (esa decide título vs. selector Por clase/Mensual, no si hay o no una
 // pantalla previa real a la que volver).
 var _s4MostrarAtras = false;
+// Título "Realiza una reserva" (#s4-titulo-vacio, junto al selector Por
+// clase/Mensual) -- visible SOLO cuando se llega a #s4 por el auto-redirect
+// de "sin reservas" (`irReservas()`, js/home.js, cuando `activas.length===0`
+// llama directo a `irNuevaReserva()` sin pasar por #s-home), no cuando se
+// entra manualmente con reservas ya existentes. Mismo punto/mismo cálculo
+// que ya usa `_s4MostrarAtras` de arriba (`activas.length`, ver
+// `irNuevaReserva()`/`iniciarReagendamiento()`, js/home.js) pero flag propio
+// -- se mantienen separados a propósito, aunque hoy resulten equivalentes en
+// la práctica (la única forma de llegar acá con `activas.length===0` es este
+// auto-redirect): `_s4MostrarAtras` es sobre la flecha atrás, un concepto
+// distinto que no debería acoplarse a esto solo porque hoy coincida.
+var _s4VacioAutoRedirect = false;
 
 function tieneCuponDisponible() {
   if (!E.datos || !E.datos.cuponDisponible) return false;
@@ -233,10 +245,16 @@ function _s4ActualizarNav() {
   var back = document.getElementById('s4-nav-back');
   var titulo = document.getElementById('s4-titulo');
   var segWrap = document.getElementById('s4-nav-seg-wrap');
+  var tituloVacio = document.getElementById('s4-titulo-vacio');
   if (!back || !titulo || !segWrap) return;
   back.style.display = _s4MostrarAtras ? '' : 'none';
   titulo.style.display = puedeElegir ? 'none' : '';
   segWrap.style.display = puedeElegir ? 'flex' : 'none';
+  // "Realiza una reserva" (#s4-titulo-vacio): junto al selector, no en su
+  // lugar (a diferencia de #s4-titulo, que sí es mutuamente excluyente con
+  // el selector) -- solo cuando además se llegó por el auto-redirect de
+  // "sin reservas" (ver _s4VacioAutoRedirect, arriba de este archivo).
+  if (tituloVacio) tituloVacio.style.display = (puedeElegir && _s4VacioAutoRedirect) ? '' : 'none';
   // #s4-nav-spacer (ver index.html): re-medir siempre acá, no solo al entrar
   // a s4 -- las 2 variantes de #s4-nav (arriba) pueden tener alto distinto y
   // esta función es la única fuente que las togglea, mismo criterio que
@@ -518,6 +536,17 @@ function cargarFechas() {
   var tpSegSkelEl = document.getElementById('tp-seg');
   if (tpSegSkelEl) tpSegSkelEl.classList.add('tp-seg-cargando');
   ir('s4');
+  // "Realiza una reserva" (#s4-titulo-vacio, junto al selector): ir('s4') ya
+  // corrió _s4ActualizarNav() internamente y lo pudo haber mostrado de
+  // entrada (su condición no depende de datos async, ver _s4VacioAutoRedirect
+  // más arriba) -- se fuerza oculto DESPUÉS, para que no aparezca de golpe
+  // junto al selector todavía shimmerizando. actualizarTextosPago() (más
+  // abajo, en el callback de éxito, mismo punto donde el selector sale de su
+  // propio estado de carga) vuelve a llamar _s4ActualizarNav() y lo revela
+  // ahí si corresponde -- sin necesitar su propio fade, ya queda en el mismo
+  // frame que el resto.
+  var tituloVacioSkelEl = document.getElementById('s4-titulo-vacio');
+  if (tituloVacioSkelEl) tituloVacioSkelEl.style.display = 'none';
 
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : '';
   var necesitaProtec = d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no';

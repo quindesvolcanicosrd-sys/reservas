@@ -240,7 +240,11 @@ function irNuevaReserva(skipEquip) {
   // `irReservas()`, reusado acá en vez de pasarlo como parámetro por los 2
   // callers posibles (CTA de `#home-nav`, `irReservas()`).
   var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-  _s4MostrarAtras = _clasificarReservas(_todasReservas || [], hoy).activas.length > 0;
+  var hayActivas = _clasificarReservas(_todasReservas || [], hoy).activas.length > 0;
+  _s4MostrarAtras = hayActivas;
+  // Título "Realiza una reserva" (ver _s4VacioAutoRedirect, js/reservas.js):
+  // mismo cálculo que la flecha atrás de arriba, flag propio a propósito.
+  _s4VacioAutoRedirect = !hayActivas;
   cargarFechas();
 }
 // Punto de entrada del tab "Reservas" de la nav inferior (ver "Cambios
@@ -273,8 +277,13 @@ function iniciarReagendamiento() {
   var chkC = document.getElementById('chk-cupon'); if (chkC) chkC.checked = false;
   document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
   // Reagendar siempre parte de una reserva existente vista en #s-home -- ver
-  // nota de `_s4MostrarAtras` en irNuevaReserva().
+  // nota de `_s4MostrarAtras` en irNuevaReserva(). Mismo criterio para
+  // `_s4VacioAutoRedirect` -- aunque nunca se lee en este flujo (`E.reagendando`
+  // ya fuerza la variante título en `_s4ActualizarNav()`, el título nuevo
+  // solo aparece junto al selector), se resetea igual para no dejar un
+  // valor stale de una `irNuevaReserva()` anterior en la misma sesión.
   _s4MostrarAtras = true;
+  _s4VacioAutoRedirect = false;
   cargarFechas();
 }
 

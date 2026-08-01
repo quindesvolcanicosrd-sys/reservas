@@ -106,6 +106,11 @@
     <span class="material-symbols-outlined">arrow_back</span>
   </button>
   <div class="app-nav-section" id="s4-titulo" style="display:none;"></div>
+  <!-- "Realiza una reserva" -- a diferencia de #s4-titulo (arriba, mutuamente
+       excluyente con el selector), este SÍ convive con #s4-nav-seg-wrap: solo
+       aparece cuando además se llegó por el auto-redirect de "sin reservas"
+       (_s4ActualizarNav(), js/reservas.js -- ver _s4VacioAutoRedirect). -->
+  <div class="app-nav-section" id="s4-titulo-vacio" style="display:none;">Realiza una reserva</div>
   <div class="s4-nav-seg-wrap" id="s4-nav-seg-wrap" style="display:none;">
     <div class="tp-seg" id="tp-seg">
       <div class="tp-slider" id="tp-slider"></div>
@@ -961,7 +966,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/ui.js?v=766de2a4"></script>
 <script src="js/eventos.js?v=41b759dc"></script>
 <script src="js/home.js"></script>
-<script src="js/reservas.js?v=d491bb79"></script>
+<script src="js/reservas.js?v=6219c57d"></script>
 <script src="js/perfil.js?v=408617f0"></script>
 <script src="js/admin.js"></script>
 <script src="js/pwa.js"></script>
