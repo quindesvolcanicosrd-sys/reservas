@@ -1271,9 +1271,18 @@ function saludBack() {
   else { cerrarAjSub('aj-sub-salud'); }
 }
 
-function saludFilaBloqueada() {
-  mostrarToast('Para editar esta información deberás completar el formulario nuevamente.', 'error');
-}
+// Filas de solo lectura de la ficha de salud ya completada (`.aj-dato-row.no-tap`,
+// index.html) -- antes mostraba un toast explicando por qué no son editables
+// directo; quitado a pedido (el ícono de candado ya comunica visualmente
+// que son de solo lectura, el toast era redundante). Sin acción al tocar --
+// `.aj-dato-row.no-tap:active { background:none; }` (css/perfil.css) ya
+// suprime el resaltado de "presionado" que sí tienen las filas tocables,
+// así que no queda ningún feedback visual tampoco, consistente con que la
+// fila realmente no hace nada. Función vacía (no se borraron los 10
+// `onclick="saludFilaBloqueada()"` de index.html) a propósito -- sigue
+// siendo un solo punto de verdad si en el futuro se necesita reintroducir
+// algún comportamiento acá.
+function saludFilaBloqueada() {}
 
 function saludIniciarWizard() {
   _saludData = {

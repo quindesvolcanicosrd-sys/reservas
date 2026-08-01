@@ -88,14 +88,17 @@
 .app-toast.app-toast-error { border-color:var(--danger); color:var(--danger-dark); background:var(--danger-bg); }
 /* Salud (aj-sub-salud, ver body.aj-sub-salud-activo/js/perfil.js) -- mismo
    criterio ya usado para #app-toast en Asistencia anticipada
-   (body.ev-ant-footer-visible, css/eventos.css): con `bottom:28px` fijo, el
-   toast de saludFilaBloqueada() ("Para editar esta información...") quedaba
-   solapado con `.app-bottom-nav` (60px+ de alto), que sigue visible detrás
-   de `.aj-sub-salud` -- confirmado con Playwright, el borde inferior del
-   toast invadía la franja de la nav. A diferencia de Asistencia anticipada,
-   acá no hay un footer fijo propio que compensar (`_saludMostrarEstado()`
-   ya oculta `#cta-footer-salud` en este estado) -- alcanza con despejar la
-   nav sola. */
+   (body.ev-ant-footer-visible, css/eventos.css): con `bottom:28px` fijo, un
+   toast en esta pantalla quedaba solapado con `.app-bottom-nav` (60px+ de
+   alto), que sigue visible detrás de `.aj-sub-salud` -- confirmado con
+   Playwright, el borde inferior del toast invadía la franja de la nav. A
+   diferencia de Asistencia anticipada, acá no hay un footer fijo propio que
+   compensar (`_saludMostrarEstado()` ya oculta `#cta-footer-salud` en este
+   estado) -- alcanza con despejar la nav sola. El caso que motivó este fix
+   (`saludFilaBloqueada()`, toast al tocar una fila bloqueada) se eliminó
+   después (ver "Cambios recientes" -- el toast en sí se quitó, no solo su
+   posición) -- la regla se deja igual, sigue vigente para cualquier OTRO
+   toast que aparezca en esta pantalla (ej. errores de guardado del wizard). */
 body.aj-sub-salud-activo #app-toast {
   bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 12px);
 }
