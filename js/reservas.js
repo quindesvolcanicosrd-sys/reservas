@@ -978,6 +978,18 @@ function confirmarReserva(btn) {
     var fechasExitosas = E.fechas.filter(function(f) { return itemsFallidos.indexOf(f) === -1; });
     var mesesExitosos = E.meses.filter(function(m) { return itemsFallidos.indexOf(m) === -1; });
 
+    // Todo lo de acá para abajo hasta "E.reagendando = false" es trabajo
+    // POSTERIOR al guardado (ya confirmado exitoso arriba): llamadas
+    // secundarias no críticas y armado del resumen de s6. Va envuelto en
+    // try/catch porque, si algo de esto tira una excepción (ej. un elemento
+    // del DOM que no existe), el throw ocurre dentro del mismo .then() del
+    // último guardarReserva() que llamó a finalizar() — sin este try/catch,
+    // ese error lo agarra el .catch() de esa misma llamada fetch (js/api.js)
+    // y la marca como fallida, pisando el guardado que en realidad SÍ se
+    // hizo (bug real: toast de error tras una reserva guardada con éxito).
+    // El botón y la navegación a s6 quedan fuera del try para que corran
+    // siempre, incluso si algo de acá adentro falla.
+    try {
     var secundariosTotal = 2 + (E.creditosUsados > 0 ? 1 : 0) + (E.cuponAplicado ? 1 : 0);
     var secundariosListos = 0;
     function secundarioTerminado() {
@@ -1076,6 +1088,9 @@ function confirmarReserva(btn) {
       avisoEl.style.display = 'none';
       if (avisoPagoEl) avisoPagoEl.style.display = 'block';
       if (btnWpExito && E.wpUrl) { btnWpExito.href = E.wpUrl; btnWpExito.style.display = 'flex'; }
+    }
+    } catch (eUiPosGuardado) {
+      console.error('Reserva guardada, pero falló algo posterior al guardado (UI/resumen de s6):', eUiPosGuardado);
     }
     E.reagendando = false;
     // Restaurar el botón acá (no solo en el camino de fallo total de arriba)
