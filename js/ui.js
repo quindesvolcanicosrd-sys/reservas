@@ -341,8 +341,9 @@ function ir(id, desdeHistorial, sinTrampa) {
   // Restaurar el scroll del home de Ajustes al volver por nav inferior a una
   // sesión que ya lo había visitado (ver "Cambios recientes" -- generaliza a
   // Ajustes el mismo mecanismo de Eventos de arriba; distinto de
-  // `_ajUltimoSubAbierto`/`_reabrirAjSubInstantaneo()`, que restaura la
-  // SUB-sección abierta -- esto es el scroll del propio home, `#s-datos`,
+  // `_ajUltimoSubAbierto`, que restaura la SUB-sección abierta (ver
+  // `_bottomNavClick()`, más abajo en este archivo, llama a `irAjSub()`
+  // directo para eso) -- esto es el scroll del propio home, `#s-datos`,
   // que hasta ahora no se restauraba nunca). `_ajRestaurarScroll` se arma en
   // `irEditarDatos()` cuando la sección ya estaba inicializada esta sesión.
   if (id === 's-datos' && typeof _ajRestaurarScroll !== 'undefined' && _ajRestaurarScroll) {
@@ -737,7 +738,11 @@ function _bottomNavClick(id) {
     // con su id -- ver js/perfil.js), restaurarlo acá en vez de aterrizar en
     // el home de Ajustes a secas -- pedido explícito: volver al tab debe
     // dejar al usuario donde había quedado, no resetear su navegación interna.
-    if (id === 'ajustes' && _ajUltimoSubAbierto) _reabrirAjSubInstantaneo(_ajUltimoSubAbierto);
+    // `irAjSub()` directo (antes `_reabrirAjSubInstantaneo()`, una
+    // implementación paralela sin animación -- ver "Cambios recientes",
+    // eliminada) -- mismo mecanismo de entrada (shared axis X) que abrir el
+    // sub-panel por primera vez, sin excepciones entre los 2 caminos.
+    if (id === 'ajustes' && _ajUltimoSubAbierto) irAjSub(_ajUltimoSubAbierto);
     return;
   }
 }

@@ -575,27 +575,18 @@ function irAjSub(id, desdeHistorial) {
   }
 }
 
-// Reapertura instantánea de un aj-sub-* al volver a Ajustes desde otro tab de
-// la nav inferior (ver _bottomNavClick(), js/ui.js) -- restaura el estado tal
-// cual quedó, no es una apertura nueva: mismo resultado final que irAjSub()
-// (contenido recargado, panel visible, fondo #s-datos-card retrocedido, mismo
-// registro de historial para que la flecha atrás/gesto lo cierre como
-// siempre) pero sin el doble rAF ni la transition de entrada -- se pintan los
-// valores finales de una, sin nada que animar.
-function _reabrirAjSubInstantaneo(id) {
-  var sub = document.getElementById(id);
-  if (!sub) { _ajUltimoSubAbierto = null; return; }
-  if (id !== 'aj-sub-salud' && typeof _saludOcultarFooter === 'function') _saludOcultarFooter();
-  _ajCargarSub(id);
-  sub.style.transform = 'translateX(0)';
-  sub.style.opacity = '1';
-  sub.classList.add('activa');
-  var fondo = document.getElementById('s-datos-card');
-  if (fondo) { fondo.style.transform = 'translateX(-25%)'; fondo.style.opacity = '0.85'; }
-  _ajSubAbierto = id;
-  _ajSincronizarClaseSalud();
-  history.pushState({ pantalla: 's-datos', ajSub: id }, '', '#' + id);
-}
+// _reabrirAjSubInstantaneo() (reapertura de un aj-sub-* al volver a Ajustes
+// desde otro tab, ver _bottomNavClick()/js/ui.js) se eliminó -- bug real
+// corregido (ver "Cambios recientes"): tenía su propia implementación
+// duplicada de irAjSub(), deliberadamente SIN el doble rAF ni la transition
+// de entrada -- "no es una apertura nueva", pintaba los valores finales de
+// una, sin nada que animar. Eso hacía que volver a un tab que había quedado
+// en una sub-pantalla de Ajustes (ej. "Identidad legal") no animara, a
+// diferencia de volver a la home de cualquier tab (sí animada, vía ir()/
+// .pantalla.activa) -- inconsistencia reportada, no un caso legítimamente
+// distinto. `_bottomNavClick()` llama a `irAjSub()` directo ahora -- el
+// mismo mecanismo de animación (shared axis X) para los 2 caminos hacia un
+// aj-sub-*, sin una segunda implementación a mantener sincronizada.
 
 function cerrarAjSub(id, desdeHistorial) {
   var sub = document.getElementById(id);
