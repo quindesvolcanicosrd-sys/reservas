@@ -281,6 +281,12 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
   font-weight: 600;
   color: var(--brand);
 }
+/* Placeholder mientras la foto real carga desde su URL (_avatarSetFotoOInicial(),
+   js/ui.js) -- reusa el shimmer de .fi-skel-block (css/reservas.css) tal
+   cual, solo reposicionado para llenar el círculo (el propio .avatar-pill ya
+   recorta a círculo via overflow:hidden; border-radius acá es explícito por
+   las dudas). */
+.avatar-pill .avatar-pill-skel { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; }
 /* Tamaños — cuadrados (ancho = alto), tomando el lado más chico de la
    variante pill horizontal que estuvo activa antes de este revert, para no
    agrandar el avatar de golpe. */

@@ -1,22 +1,51 @@
-// Helper compartido (js/home.js + js/perfil.js) para poblar cualquier
-// .avatar-pill con foto o inicial — antes cada uno de los 4 call sites hacía
-// su propio innerHTML directo (foto ? '<img>' : '<span>inicial</span>'),
-// swap instantáneo sin transición aunque el avatar realmente cambiara (ej.
-// tras subir una foto nueva). No-op si el HTML resultante es idéntico al
-// actual (se llama en cada re-render de home/ajustes, no solo cuando la
-// foto cambia — animar un contenido que no cambió sería ruido, mismo
-// criterio ya usado por axisFooterFijo() para no animar swaps idénticos).
+// Helper compartido (js/home.js + js/perfil.js + js/eventos.js) para poblar
+// cualquier .avatar-pill con foto o inicial — antes cada call site hacía su
+// propio innerHTML directo (foto ? '<img>' : '<span>inicial</span>'), swap
+// instantáneo sin transición aunque el avatar realmente cambiara (ej. tras
+// subir una foto nueva) NI espera real a que la imagen termine de bajar de
+// su URL (aparecía de golpe apenas el navegador terminaba, sin ningún
+// estado intermedio). No-op si nada cambió respecto al último llamado
+// (`el.dataset.avatarClave`, se llama en cada re-render de home/ajustes, no
+// solo cuando la foto cambia — animar un contenido que no cambió sería
+// ruido, mismo criterio ya usado por axisFooterFijo() para no animar swaps
+// idénticos).
 function _avatarSetFotoOInicial(el, foto, nombre) {
   if (!el) return;
-  var htmlNuevo = foto
-    ? '<img src="' + foto + '" alt="">'
-    : '<span class="avatar-pill-letter">' + (nombre || '?').charAt(0).toUpperCase() + '</span>';
-  if (el.innerHTML === htmlNuevo) return;
-  if (!el.firstChild) { el.innerHTML = htmlNuevo; return; } // primera vez, nada que crossfadear
+  var clave = (foto || '') + '|' + (nombre || '');
+  if (el.dataset.avatarClave === clave) return;
+  el.dataset.avatarClave = clave;
+  var miCarga = (el._avatarCargaId = (el._avatarCargaId || 0) + 1);
+
+  if (!foto) {
+    _avatarAplicarHtml(el, '<span class="avatar-pill-letter">' + (nombre || '?').charAt(0).toUpperCase() + '</span>');
+    return;
+  }
+  // Con foto: se precarga con Image() antes de mostrarla, así nunca hay un
+  // <img> roto/vacío mientras el navegador todavía la está bajando. Primera
+  // vez que se puebla este avatar (vacío, nada que crossfadear todavía):
+  // skeleton circular (mismo shimmer que .fi-skel-block, css/reservas.css)
+  // mientras dura la carga. Si ya tenía contenido (ej. subir una foto
+  // nueva), ese contenido se queda visible hasta que la nueva esté lista —
+  // sin flash de skeleton sobre un avatar que ya se veía bien.
+  if (!el.firstChild) el.innerHTML = '<div class="fi-skel-block avatar-pill-skel"></div>';
+  var img = new Image();
+  img.alt = '';
+  img.onload = function() {
+    if (el._avatarCargaId !== miCarga) return; // el avatar pidió otra foto/inicial mientras esta cargaba
+    _avatarAplicarHtml(el, img.outerHTML);
+  };
+  img.onerror = function() {
+    if (el._avatarCargaId !== miCarga) return;
+    _avatarAplicarHtml(el, '<span class="avatar-pill-letter">' + (nombre || '?').charAt(0).toUpperCase() + '</span>');
+  };
+  img.src = foto;
+}
+function _avatarAplicarHtml(el, html) {
+  if (!el.firstChild) { el.innerHTML = html; return; }
   el.style.transition = 'opacity 0.2s ease';
   el.style.opacity = '0';
   setTimeout(function() {
-    el.innerHTML = htmlNuevo;
+    el.innerHTML = html;
     void el.offsetWidth;
     el.style.opacity = '1';
   }, 200);
