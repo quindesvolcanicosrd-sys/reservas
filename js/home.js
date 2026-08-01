@@ -364,6 +364,7 @@ function _sincronizarNavHome(forzarVisible) {
   // apenas la 1ra reserva pasa a formar parte del historial.
   var historialBtn = document.getElementById('home-nav-historial');
   if (historialBtn) historialBtn.style.display = clasificado.historial.length > 0 ? '' : 'none';
+  _renderHomeEquipBtn();
 
   if (!forzarVisible && activas.length === 0) {
     if (homeNav) homeNav.style.display = 'none';
@@ -1086,6 +1087,34 @@ function toggleBannerCupon() {
 }
 
 /* ── Cambiar mi equipamiento (desde home) ────────────── */
+// Puebla el botón de #home-nav con el estado real de equipamiento de la
+// cuenta -- 4 estados según necesita patines/protecciones (mismo criterio
+// laxo ya usado en el resto de este archivo para esta pregunta, ej.
+// `_sincronizarNavHome()`/`prepararHome()`: truthy y distinto de 'no', no la
+// comparación exacta `==='No'` que usa `_irTabAterrizajeInicial()`,
+// js/auth.js, para una pregunta distinta -- "tiene equipo propio" a nivel de
+// tab de aterrizaje, no esto). Un solo array de "pares" (ícono+texto, o
+// ícono solo) unido con el divisor SOLO cuando hay 2 -- cubre los 4 estados
+// sin duplicar lógica: 1 par → sin divisor (solo patines/solo protecciones),
+// 2 pares → con divisor (ambos, o ninguno con los 2 íconos solos).
+function _renderHomeEquipBtn() {
+  var btn = document.getElementById('home-equip-btn');
+  if (!btn) return;
+  var d = E.datos || {};
+  var necesitaPatines = !!(d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no');
+  var necesitaProtec = !!(d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no');
+  var pares = [];
+  if (necesitaPatines) {
+    pares.push('<span class="material-symbols-outlined">roller_skating</span>' + (d.talla ? '<span class="home-equip-btn-txt">' + d.talla + '</span>' : ''));
+  }
+  if (necesitaProtec) {
+    pares.push('<span class="material-symbols-outlined">shield</span><span class="home-equip-btn-txt">' + (d.necesitaProtecciones || 'Sí') + '</span>');
+  }
+  if (!necesitaPatines && !necesitaProtec) {
+    pares = ['<span class="material-symbols-outlined">roller_skating</span>', '<span class="material-symbols-outlined">shield</span>'];
+  }
+  btn.innerHTML = pares.join('<span class="home-equip-btn-divider"></span>');
+}
 function abrirSheetEquipHome() {
   var d = E.datos || {};
   var patVal = document.getElementById('home-equip-pat-val');

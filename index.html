@@ -31,7 +31,7 @@
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=6a719532">
-<link rel="stylesheet" href="css/nav.css?v=1513fc04">
+<link rel="stylesheet" href="css/nav.css?v=0e195d68">
 <link rel="stylesheet" href="css/eventos.css?v=e170faf5">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
@@ -89,10 +89,10 @@
     </button>
     <!-- Ocupa el lugar que dejó libre el CTA al mudarse a la izquierda --
          reusa abrirSheetEquipHome() (js/home.js), el mismo sheet que abría
-         "Cambiar mi equipamiento" del footer fijo ya eliminado. -->
-    <button class="app-nav-icon-btn" onclick="abrirSheetEquipHome()" title="Cambiar mi equipamiento">
-      <span class="material-symbols-outlined">roller_skating</span>
-    </button>
+         "Cambiar mi equipamiento" del footer fijo ya eliminado. Contenido
+         interno (ícono(s) + talla/"Sí") poblado por _renderHomeEquipBtn()
+         (js/home.js) según E.datos -- ver esa función para los 4 estados. -->
+    <button class="home-equip-btn" id="home-equip-btn" onclick="abrirSheetEquipHome()" title="Cambiar mi equipamiento"></button>
   </div>
 </div>
 
@@ -966,7 +966,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/eventos.js?v=f3414116"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=c84aec13"></script>
-<script src="js/perfil.js?v=cb6672a6"></script>
+<script src="js/perfil.js?v=6c7e6264"></script>
 <script src="js/admin.js"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js"></script>

@@ -1811,6 +1811,7 @@ function ajGuardarTallaAjustes(btn) {
     if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
     document.getElementById('aj-equip-pat-val').textContent = talla ? 'Talla ' + talla : 'No necesitas patines';
     _actualizarResumenEquipAjustes();
+    if (typeof _renderHomeEquipBtn === 'function') _renderHomeEquipBtn();
     ajCerrarSheetTallaAjustes();
     mostrarToast('Equipamiento actualizado', 'ok');
   }, function(e) {
@@ -1884,6 +1885,7 @@ function ajGuardarProtecAjustes(btn) {
     if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
     document.getElementById('aj-equip-protec-val').textContent = protecFinal;
     _actualizarResumenEquipAjustes();
+    if (typeof _renderHomeEquipBtn === 'function') _renderHomeEquipBtn();
     ajCerrarSheetProtecAjustes();
     mostrarToast('Equipamiento actualizado', 'ok');
   }, function(e) {

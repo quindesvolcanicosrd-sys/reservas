@@ -226,6 +226,39 @@
    ya usaban el radius cuadrado de base). */
 .app-nav-icon-btn-brand { background: var(--brand); color: var(--white); }
 
+/* ── Botón "Cambiar mi equipamiento" (nav home) ──────────────────
+   Variante de ancho variable de `.app-nav-icon-btn` (mismo alto/radio/tinte
+   -- fondo `--brand-light`, ícono `--brand`) en vez de un cuadrado fijo de
+   44px: muestra inline qué necesita la cuenta (patín+talla y/o
+   protección+"Sí"), no solo un ícono genérico -- contenido poblado por
+   _renderHomeEquipBtn() (js/home.js) según los 4 estados posibles
+   (ambos/solo patines/solo protecciones/ninguno). */
+.home-equip-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: var(--brand-light);
+  border: none;
+  cursor: pointer;
+  color: var(--brand);
+  transition: background 0.15s;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
+}
+@media (hover: hover) {
+  .home-equip-btn:hover { background: var(--brand-lightest); }
+}
+.home-equip-btn .material-symbols-outlined { font-size: 18px; }
+.home-equip-btn-txt { font-size: 0.78rem; font-weight: 700; }
+/* Divisor vertical fino entre el par patín y el par protección -- solo
+   presente cuando los 2 pares conviven (estado "ambos"), `currentColor`
+   para heredar el mismo `--brand` sin variable propia. */
+.home-equip-btn-divider { width: 1.5px; height: 18px; background: currentColor; opacity: 0.4; }
+
 /* ── Botón CTA nav (Nueva reserva) ──────────── */
 .app-nav-cta {
   display: flex;
