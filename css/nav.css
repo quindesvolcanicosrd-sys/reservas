@@ -217,10 +217,14 @@
 }
 .app-nav-icon-btn .material-symbols-outlined { font-size: 18px; }
 
-/* ── Variante circular naranja de marca (ej. ícono "Asistencia anticipada"
-   de Eventos) -- mismo componente (.app-nav-icon-btn), no una clase de nav
-   paralela: solo cambia forma/color. */
-.app-nav-icon-btn-brand { background: var(--brand); color: var(--white); border-radius: 50%; }
+/* ── Variante naranja de marca (ej. ícono "Asistencia anticipada" de
+   Eventos) -- mismo componente (.app-nav-icon-btn), no una clase de nav
+   paralela: solo cambia color. Forma cuadrada con esquinas redondeadas,
+   heredada de `.app-nav-icon-btn` (border-radius:12px) sin override propio
+   -- antes esta variante SÍ lo pisaba a `50%` (circular), inconsistente con
+   los otros 2 botones de la misma fila (búsqueda/hoy, sin esta clase, que
+   ya usaban el radius cuadrado de base). */
+.app-nav-icon-btn-brand { background: var(--brand); color: var(--white); }
 
 /* ── Botón CTA nav (Nueva reserva) ──────────── */
 .app-nav-cta {

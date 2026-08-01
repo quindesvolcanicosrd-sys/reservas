@@ -31,8 +31,8 @@
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=6a719532">
-<link rel="stylesheet" href="css/nav.css?v=daa56733">
-<link rel="stylesheet" href="css/eventos.css?v=9c0d1053">
+<link rel="stylesheet" href="css/nav.css?v=1513fc04">
+<link rel="stylesheet" href="css/eventos.css?v=226bbbec">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2648,8 +2648,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
      fuera de .pantalla/.card, mismo motivo que .cta-footer-fixed de arriba
      (position:fixed atrapado por el containing block de .pantalla.activa
      mientras corre su animación de entrada). display:none por default --
-     ir()/js/ui.js lo muestra solo con 's-eventos' activa Y _esAdminDemo,
-     mismo criterio que #home-nav/#s4-nav ahí. "Speed dial" de 2 opciones
+     ir()/js/ui.js lo muestra solo con 's-eventos' activa Y _adminToken (ver
+     "Cambios recientes" -- antes _esAdminDemo, un flag de demo que nunca
+     reflejaba una sesión admin real), mismo criterio que #home-nav/#s4-nav
+     ahí. "Speed dial" de 2 opciones
      que aparecen arriba del botón principal con fade+slide -- abrir/cerrar
      vía _evFabToggle()/_evFabCerrar() (js/eventos.js), togglea la clase
      .ev-fab-abierto en este mismo contenedor. -->

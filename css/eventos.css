@@ -85,15 +85,25 @@
 .ev-fab-btn {
   pointer-events: auto;
   width: 56px; height: 56px; flex-shrink: 0;
-  border: none; border-radius: 50%;
-  background: var(--fab-admin-bg);
-  color: var(--fab-admin-icon);
+  /* Bug real corregido (ver "Cambios recientes"): usaba `--fab-admin-bg`
+     (ámbar, la misma variable que las 2 opciones del menú desplegable) en
+     vez del color de énfasis de la app -- el botón principal pasa a
+     `var(--brand)` (mismo criterio que `.app-nav-icon-btn-brand`, el
+     ícono de "Asistencia anticipada" del mismo header), las 2 opciones del
+     menú (`.ev-fab-opcion`, más abajo) se quedan en ámbar a propósito, esa
+     sí fue una decisión explícita ya documentada. Forma cuadrada con
+     esquinas redondeadas (antes `50%`, circular) -- mismo `border-radius`
+     que ya usan `.app-nav-icon-btn`/`.ev-header-icon-btn` (css/nav.css),
+     los otros 2 botones de esa fila. */
+  border: none; border-radius: 12px;
+  background: var(--brand);
+  color: var(--white);
   display: flex; align-items: center; justify-content: center;
   box-shadow: var(--shadow-lg);
   cursor: pointer;
   transition: background 0.2s ease, transform 0.2s ease;
 }
-@media (hover: hover) { .ev-fab-btn:hover { background: var(--fab-admin-bg-hover); } }
+@media (hover: hover) { .ev-fab-btn:hover { background: var(--brand-dk); } }
 .ev-fab-btn:active { transform: scale(0.94); }
 .ev-fab-btn .material-symbols-outlined { font-size: 1.6rem; display: block; transition: transform 0.25s ease; }
 /* Ícono "+" rota a "×" visual mientras el menú está abierto -- togglea
