@@ -12,8 +12,12 @@
 .fi-pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 99px; font-size: 0.72rem; font-weight: 600; }
 .fi-pill .material-symbols-outlined { font-size: 0.85rem; }
 .fi-pill-hora { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border-soft); }
-.fi-pill-lugar { background: var(--brand-warm); color: var(--brand); border: 1px solid var(--brand-warm-border); text-decoration: none; }
-.fi-pill-maps { background: var(--brand-warm); color: var(--brand); border: 1px solid var(--brand-warm-border); text-decoration: none; }
+/* Cyan -- "información de ubicación" (--cyan/-20/-border, css/colors.css),
+   unificado con el pill fusionado de la card de "Mis reservas" (ver
+   .res-card-nueva .rn-top .fi-pill-lugar, css/home.css) -- antes tinte de
+   marca/naranja-rojizo, un 3er color distinto para el mismo concepto. */
+.fi-pill-lugar { background: var(--cyan-20); color: var(--cyan); border: 1px solid var(--cyan-border); text-decoration: none; }
+.fi-pill-maps { background: var(--cyan-20); color: var(--cyan); border: 1px solid var(--cyan-border); text-decoration: none; }
 .fi-pill-fin { background: var(--info-btn-bg); color: var(--info); border: 1px solid var(--info-btn-hover); }
 .fi-pill-dur { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-bdr); }
 .fi-pill-patines { background: var(--warning-bg); color: var(--amber); border: 1px solid var(--amber); }

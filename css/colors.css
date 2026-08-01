@@ -131,6 +131,15 @@
   --info-light:     #7dd3fc;
   --info-dark:      #0369a1;
 
+  /* Cyan — "información de ubicación" (pills de lugar/venue + "Cómo llegar"),
+     unificado en toda la app para no repetir 3 colores distintos para el
+     mismo concepto (antes marca/naranja-rojizo en unos lugares, --info/azul
+     en otros). Distinto de --info (azul cielo) a propósito -- pedido
+     explícito de un cyan propio, no reusar el azul existente. */
+  --cyan:           #06b6d4;
+  --cyan-20:        rgba(6,182,212,0.2);
+  --cyan-border:    rgba(6,182,212,0.35);
+
   /* ── Botones ─────────────────────────────────────────── */
   /* --btn-primary-* y --btn-secondary-color son var() de otras variables
      "(runtime)" de arriba — derivan solas, en cascada, sin que
@@ -376,6 +385,14 @@
     --warning-bg:     rgba(245,158,11,0.08);
     --danger-bg:      rgba(220,38,38,0.08);
     --info-bg:        rgba(14,165,233,0.08);
+
+    /* Cyan dark -- más claro que el de modo claro (mismo criterio que
+       --dk-info-text para .fi-pill-fin, css/reservas.css) para más contraste
+       sobre el tinte de fondo oscuro; -20/-border bajan de intensidad como
+       el resto de los "-bg"/"-bdr" de este bloque. */
+    --cyan:           #22d3ee;
+    --cyan-20:        rgba(34,211,238,0.15);
+    --cyan-border:    rgba(34,211,238,0.3);
 
     /* Superficies neutras → versiones oscuras */
     --surface-light:       rgba(249,115,22,0.05);

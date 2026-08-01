@@ -114,25 +114,22 @@
    juntos en una línea, `flex-wrap:wrap` manda el pill completo a una 2da
    línea (nunca lo corta a la mitad) -- el título nunca se trunca. */
 .res-card-nueva .rn-top .fi-pill-lugar { flex-shrink:0; }
-/* Color azul (ver "Cambios recientes" -- antes heredaba `.fi-pill-lugar`
-   base de css/reservas.css, tinte de marca/naranja-rojizo). Override
-   SCOPEADO a este pill específico -- `.fi-pill-lugar` es una clase
-   compartida (reusada tal cual por reservas.js/eventos.js, ver comentario de
-   esa clase en css/eventos.css), así que no se tocó la regla base para no
-   recolorear el pill de lugar en esas otras pantallas, fuera de lo pedido.
-   Reusa `--info`/`--info-bg`/`--info-btn-hover` (css/colors.css) -- ya es el
-   azul real de la app (`.fi-pill-fin` en el acordeón de esta misma card lo
-   usa igual), con tinte de fondo y borde ya theme-aware en dark mode; nunca
-   se creó una variable nueva porque esta ya cubría exactamente lo pedido. */
-.res-card-nueva .rn-top .fi-pill-lugar { background:var(--info-bg); color:var(--info); border-color:var(--info-btn-hover); }
-@media (prefers-color-scheme: dark) {
-  /* Mismo criterio que `.fi-pill-fin` (css/reservas.css, dark mode): el
-     texto se aclara a `--dk-info-text` para más contraste sobre el tinte de
-     fondo oscuro -- `--info` solo no alcanza ahí (nunca tuvo su propio
-     override oscuro, a diferencia de `--info-bg`/`--info-btn-hover`, que sí
-     lo tienen y no necesitan tocarse acá). */
-  .res-card-nueva .rn-top .fi-pill-lugar { color:var(--dk-info-text); }
-}
+/* Color cyan (ver "Cambios recientes" -- antes azul/--info por una
+   instrucción previa, y antes de eso heredaba `.fi-pill-lugar` base de
+   css/reservas.css, tinte de marca/naranja-rojizo). Unificado con la base
+   compartida en la misma tanda: `.fi-pill-lugar`/`.fi-pill-maps`
+   (css/reservas.css) pasan a este mismo `--cyan`/`--cyan-20`/`--cyan-border`
+   (css/colors.css) -- mismas variables en los 2 lugares, "información de
+   ubicación" queda con un solo color en toda la app. Override SCOPEADO
+   igual que antes (no se eliminó ni se dejó de depender de la base) --
+   `.fi-pill-lugar` sigue siendo una clase compartida (reservas.js/eventos.js,
+   ver comentario de esa clase en css/eventos.css) y esta card sigue siendo
+   un pill fusionado (lugar+link a Maps en uno solo), a diferencia de esas
+   otras pantallas. A diferencia de `--info` (nunca tuvo override oscuro
+   propio, necesitaba `--dk-info-text` aparte para el texto), `--cyan` SÍ
+   tiene su propio valor en el bloque dark de colors.css -- sin necesidad de
+   ningún override de color acá. */
+.res-card-nueva .rn-top .fi-pill-lugar { background:var(--cyan-20); color:var(--cyan); border-color:var(--cyan-border); }
 .badge-pendiente { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--warning-bg); color:var(--amber-dark); white-space:nowrap; }
 .badge-confirmada { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--green-light); color:var(--green-dark); white-space:nowrap; }
 .badge-reagendar { font-size:0.71rem; font-weight:600; padding:4px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; background:var(--purple-lightest); color:var(--dk-purple-mid); border:1px solid var(--purple-border-soft); white-space:nowrap; }
