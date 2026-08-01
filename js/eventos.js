@@ -23,7 +23,11 @@ var _EV_EQUIPO_DEMO = [
   'Isabela Moreno', 'Joaquín Vega', 'Karen Zambrano', 'Luis Ortiz'
 ];
 
-var _EV_ICONOS = { 'Entrenamiento': 'directions_run', 'Torneo': 'emoji_events', 'Asamblea': 'groups', 'Ciclopaseo': 'pedal_bike' };
+// 'Partido'/'Evento social'/'Otro' sumados para el formulario de Venues (ver
+// MANIFEST.md) -- mismo mapa ya usado por las cards de evento reales
+// (Venues!Tipo de ícono), ahora también alimentado por el selector de pills
+// del formulario en vez de solo por datos de prueba/backend.
+var _EV_ICONOS = { 'Entrenamiento': 'directions_run', 'Torneo': 'emoji_events', 'Partido': 'sports', 'Asamblea': 'groups', 'Evento social': 'celebration', 'Otro': 'category', 'Ciclopaseo': 'pedal_bike' };
 var _EV_DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 var _EV_DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
@@ -3277,4 +3281,436 @@ function _evAntCerrarConflicto(porGesto) {
   if (!m) return;
   m.style.opacity = '0';
   setTimeout(function() { m.style.display = 'none'; }, 300);
+}
+
+/* ═══════════════════════════════════════════════════════
+   VENUES -- "Editar lugares" (lista + formulario, #s-eventos-lugares/
+   #s-eventos-lugar-form) y "Crear evento" (FAB, mismo formulario vacío) --
+   ver MANIFEST.md, sección "Backend — Venues", para las firmas exactas de
+   crearVenue/editarVenue/getVenues documentadas para Victor (Apps Script no
+   vive en este repo, mismo criterio de honestidad ya establecido para
+   Asistencia Anticipada más arriba: el contrato de parámetros es una
+   convención razonable a confirmar contra Code.gs real).
+
+   Un solo estado de formulario (_evLugarData) alimenta las 2 pantallas: la
+   lista solo lo puebla para editar (_evLugarAbrirEditar), "Crear evento"
+   arranca en blanco (irEvLugarFormNuevo). _evLugarOrigen decide a qué
+   pantalla vuelve la flecha atrás/el guardado exitoso (_evLugarFormVolver())
+   -- 's-eventos' si se entró directo desde el FAB, 's-eventos-lugares' si se
+   entró desde esa lista (card existente o "+ Nuevo lugar"). _evLugarViaCrearEvento
+   solo afecta textos (título/botón "Crear evento" vs. "Guardar") -- las 2
+   rutas llaman al mismo backend (crearVenue si no hay _evLugarData.fila,
+   editarVenue si la hay), no hay una acción de backend distinta para
+   "eventos" vs. "lugares" -- son la misma entidad (una fila de Venues).
+   ═══════════════════════════════════════════════════════ */
+
+var _evLugares = [];
+var _evLugaresCargaId = 0;
+// Fallback si Maps no puede geolocalizar -- constante propia (no
+// _AJ_QUITO_LATLNG, js/perfil.js: ese archivo carga DESPUÉS de este, ver
+// MANIFEST.md "Carga de scripts", así que depender de esa variable acá
+// sería frágil/orden-dependiente).
+var _EV_LUGAR_QUITO_LATLNG = { lat: -0.1807, lng: -78.4678 };
+var _EV_LUGAR_UNIDAD_LABEL = { 'dias': 'días', 'semanas': 'semanas', 'meses': 'meses' };
+
+function irEvLugares() {
+  ir('s-eventos-lugares');
+  document.getElementById('ev-lugares-lista').innerHTML = _evLugaresSkeletonHtml();
+  var miCarga = ++_evLugaresCargaId;
+  api({ action: 'getVenues', adminToken: _adminToken }, function(res) {
+    if (miCarga !== _evLugaresCargaId) return;
+    _evLugares = res || [];
+    _evLugaresRenderLista();
+  }, function(e) {
+    if (miCarga !== _evLugaresCargaId) return;
+    mostrarToast(e && e.message ? e.message : 'No se pudieron cargar los lugares.', 'error');
+    var cont = document.getElementById('ev-lugares-lista');
+    if (cont) cont.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">No se pudieron cargar los lugares.</p>';
+  });
+}
+
+// Mismo shimmer que _evAntSkeletonHtml() (ver arriba) -- 3 cards del mismo
+// tamaño real que .ev-ant-card, reusado tal cual en vez de un skeleton propio.
+function _evLugaresSkeletonHtml() {
+  var carta = '<div class="ev-ant-card">' +
+    '<div class="ev-card-top-row">' +
+      '<div class="fi-skel-block ev-ant-skel-icon"></div>' +
+      '<div class="ev-card-body">' +
+        '<div class="fi-skel-block ev-ant-skel-title"></div>' +
+        '<div class="fi-skel-block ev-ant-skel-sub"></div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+  return carta.repeat(3);
+}
+
+// Cards con el mismo look que el resumen de Asistencia Anticipada
+// (.ev-ant-card/.ev-card-top-row/.ev-card-icon/.ev-card-body, ver
+// css/eventos.css) -- sin botones de editar/eliminar propios, la card
+// entera es tocable (abre el formulario precargado, ver "Tocar una card
+// abre el formulario pre-cargado" del pedido). Sin acción de eliminar --
+// no pedida para esta tanda.
+function _evLugaresRenderLista() {
+  var cont = document.getElementById('ev-lugares-lista'); if (!cont) return;
+  if (!_evLugares.length) {
+    cont.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">Todavía no hay lugares creados.</p>';
+    return;
+  }
+  cont.innerHTML = _evLugares.map(function(v) {
+    var icono = _EV_ICONOS[v.tipoIcono] || 'place';
+    return '<div class="ev-ant-card" onclick="_evLugarAbrirEditar(' + v.fila + ')">' +
+      '<div class="ev-card-top-row">' +
+        '<div class="ev-card-icon"><span class="material-symbols-outlined">' + icono + '</span></div>' +
+        '<div class="ev-card-body">' +
+          '<div class="ev-card-titulo">' + v.nombre + '</div>' +
+          '<div class="ev-ant-card-sub">' + _evLugarResumenSub(v) + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function _evLugarResumenSub(v) {
+  return _evLugarResumenRecurrencia(v) + ' · ' + (v.requiereReserva === false ? 'Sin reserva' : 'Con reserva');
+}
+function _evLugarResumenRecurrencia(v) {
+  if (v.tipoRecurrencia === 'dias_semana') {
+    var dias = (v.diasSemana || []).slice().sort(function(a, b) { return a - b; }).map(function(d) { return _EV_DIAS_CORTOS[d - 1]; });
+    return dias.length ? dias.join(', ') : 'Días de la semana';
+  }
+  if (v.tipoRecurrencia === 'cada_tantos') {
+    return 'Cada ' + (v.frecuenciaNumero || '?') + ' ' + (_EV_LUGAR_UNIDAD_LABEL[v.frecuenciaUnidad] || v.frecuenciaUnidad || '');
+  }
+  if (v.tipoRecurrencia === 'unico') return 'Evento único';
+  return v.tipoIcono || '';
+}
+
+/* ─── Formulario compartido ("Crear evento"/"Editar lugares") ─────────── */
+
+var _evLugarData = {};
+var _evLugarOrigen = 's-eventos';
+var _evLugarViaCrearEvento = false;
+// mismo criterio que _evAntCal (arriba): .mostrado guarda un ISO string, no
+// un Date -- _evCalMesDe()/_evToISO() (helpers genéricos de este archivo,
+// ver el timeline principal) trabajan así, no con objetos Date.
+var _evLugarCal = { referencia: { mostrado: null }, unico: { mostrado: null } };
+var _evLugarMapa = null;
+var _evLugarAutocomp = null;
+
+function _evLugarFormVolver() { return _evLugarOrigen; }
+
+function irEvLugarFormNuevo(origen, viaCrearEvento) {
+  _evLugarData = {
+    fila: null, nombre: '', mapsUrl: null, lat: null, lng: null,
+    tipoIcono: null, requiereReserva: 'si', tipoRecurrencia: null,
+    diasSemana: [], frecuenciaNumero: null, frecuenciaUnidad: null,
+    fecha: null, hora: ''
+  };
+  _evLugarOrigen = origen || 's-eventos';
+  _evLugarViaCrearEvento = !!viaCrearEvento;
+  ir('s-eventos-lugar-form');
+  _evLugarFormPintar();
+  _evLugarInicializarMapa();
+}
+
+// Card de la lista tocada -- precarga _evLugarData completo desde la fila ya
+// cargada en memoria (_evLugares, sin pedirla de nuevo al backend, mismo
+// criterio que _evAntEditar()).
+function _evLugarAbrirEditar(fila) {
+  var v = _evLugares.filter(function(x) { return x.fila === fila; })[0];
+  if (!v) return;
+  _evLugarData = {
+    fila: v.fila, nombre: v.nombre || '', mapsUrl: v.mapsUrl || null,
+    lat: (typeof v.lat === 'number') ? v.lat : null, lng: (typeof v.lng === 'number') ? v.lng : null,
+    tipoIcono: v.tipoIcono || null, requiereReserva: v.requiereReserva === false ? 'no' : 'si',
+    tipoRecurrencia: v.tipoRecurrencia || null,
+    diasSemana: (v.diasSemana || []).slice(),
+    frecuenciaNumero: v.frecuenciaNumero || null, frecuenciaUnidad: v.frecuenciaUnidad || null,
+    fecha: v.fechaReferencia || null, hora: v.hora || ''
+  };
+  _evLugarOrigen = 's-eventos-lugares';
+  _evLugarViaCrearEvento = false;
+  ir('s-eventos-lugar-form');
+  _evLugarFormPintar();
+  _evLugarInicializarMapa();
+}
+
+// Pinta TODO el formulario desde _evLugarData -- un solo punto, llamado
+// tanto al arrancar en blanco como al precargar una edición (mismo criterio
+// que _evAntIniciarWizard()).
+function _evLugarFormPintar() {
+  var titulo = document.getElementById('ev-lugar-form-titulo');
+  if (titulo) titulo.textContent = _evLugarData.fila ? 'Editar lugar' : (_evLugarViaCrearEvento ? 'Crear evento' : 'Nuevo lugar');
+  var btnGuardar = document.getElementById('ev-lugar-btn-guardar');
+  if (btnGuardar) btnGuardar.textContent = (!_evLugarData.fila && _evLugarViaCrearEvento) ? 'Crear evento' : 'Guardar';
+
+  var nombreInp = document.getElementById('ev-lugar-nombre');
+  if (nombreInp) nombreInp.value = _evLugarData.nombre || '';
+
+  document.querySelectorAll('#ev-lugar-icono-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.tipoIcono); });
+  document.querySelectorAll('#ev-lugar-reserva-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.requiereReserva); });
+  document.querySelectorAll('#ev-lugar-recurrencia-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.tipoRecurrencia); });
+  document.querySelectorAll('#ev-lugar-dias-row .ev-dia-circulo').forEach(function(c) { c.classList.toggle('activa', _evLugarData.diasSemana.indexOf(parseInt(c.dataset.dia, 10)) !== -1); });
+  var frecNumInp = document.getElementById('ev-lugar-frec-num');
+  if (frecNumInp) frecNumInp.value = _evLugarData.frecuenciaNumero || '';
+  document.querySelectorAll('#ev-lugar-frec-unidad-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.frecuenciaUnidad); });
+  var horaInp = document.getElementById('ev-lugar-hora');
+  if (horaInp) horaInp.value = _evLugarData.hora || '';
+
+  var mesInicial = _evLugarData.fecha || _evHoyISO();
+  _evLugarCal.referencia.mostrado = mesInicial;
+  _evLugarCal.unico.mostrado = mesInicial;
+
+  _evLugarMostrarSubRecurrencia();
+  _evLugarCalRender('referencia');
+  _evLugarCalRender('unico');
+  _evLugarActualizarCalResumen('referencia');
+  _evLugarActualizarCalResumen('unico');
+  _evLugarActualizarBotonGuardar();
+}
+
+function _evLugarSetNombre(v) { _evLugarData.nombre = v; _evLugarActualizarBotonGuardar(); }
+
+function _evLugarSelIcono(el) {
+  document.querySelectorAll('#ev-lugar-icono-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  _evLugarData.tipoIcono = el.dataset.val;
+  _evLugarActualizarBotonGuardar();
+}
+function _evLugarSelReserva(el) {
+  document.querySelectorAll('#ev-lugar-reserva-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  _evLugarData.requiereReserva = el.dataset.val;
+  _evLugarActualizarBotonGuardar();
+}
+function _evLugarSelRecurrencia(el) {
+  document.querySelectorAll('#ev-lugar-recurrencia-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  _evLugarData.tipoRecurrencia = el.dataset.val;
+  _evLugarMostrarSubRecurrencia();
+  _evLugarActualizarBotonGuardar();
+}
+// Reveal inline según la elección -- mismo patrón ya usado por
+// _evAntMostrarSubFrecuencia() (ver arriba): oculta los 3 sub-bloques,
+// muestra solo el que corresponde con un fade. "Hora" es compartida por los
+// 3 (pedido explícito: aparece en los 3 casos), un solo campo en vez de 3
+// inputs duplicados.
+function _evLugarMostrarSubRecurrencia() {
+  ['ev-lugar-rec-dias', 'ev-lugar-rec-cada', 'ev-lugar-rec-unico'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  var horaWrap = document.getElementById('ev-lugar-hora-wrap');
+  var t = _evLugarData.tipoRecurrencia;
+  if (!t) { if (horaWrap) horaWrap.style.display = 'none'; return; }
+  var mapaId = { dias_semana: 'ev-lugar-rec-dias', cada_tantos: 'ev-lugar-rec-cada', unico: 'ev-lugar-rec-unico' };
+  var activo = document.getElementById(mapaId[t]);
+  if (activo) {
+    activo.style.display = 'block';
+    void activo.offsetWidth;
+    activo.style.animation = 'fadeIn 0.2s ease';
+  }
+  if (horaWrap) horaWrap.style.display = 'block';
+}
+
+function _evLugarToggleDia(el) {
+  var dia = parseInt(el.dataset.dia, 10);
+  el.classList.toggle('activa');
+  var idx = _evLugarData.diasSemana.indexOf(dia);
+  if (el.classList.contains('activa')) { if (idx === -1) _evLugarData.diasSemana.push(dia); }
+  else if (idx !== -1) { _evLugarData.diasSemana.splice(idx, 1); }
+  _evLugarActualizarBotonGuardar();
+}
+function _evLugarSetFrecNum(v) { _evLugarData.frecuenciaNumero = v ? parseInt(v, 10) : null; _evLugarActualizarBotonGuardar(); }
+function _evLugarSelUnidad(el) {
+  document.querySelectorAll('#ev-lugar-frec-unidad-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  _evLugarData.frecuenciaUnidad = el.dataset.val;
+  _evLugarActualizarBotonGuardar();
+}
+function _evLugarSetHora(v) { _evLugarData.hora = v; _evLugarActualizarBotonGuardar(); }
+
+/* ── Calendario inline de fecha única -- "fecha de referencia" (recurrencia
+   "cada tantos") y "fecha única" (evento único) comparten el mismo campo de
+   datos (_evLugarData.fecha, solo uno de los 2 calendarios está visible por
+   vez según _evLugarData.tipoRecurrencia) pero cada uno tiene su propio
+   contenedor/mes navegable (mismo motivo que "Por período"/"Indefinido" en
+   Asistencia Anticipada tienen 2 calendarios separados: distinto contexto
+   visual, aunque comparten mecánica). Reusa tal cual los helpers genéricos
+   de fecha del timeline principal (_evCalMesDe/_evLunesDeSemana/_evToISO/
+   _evHoyISO/_evFechaCmp) y las clases CSS del calendario de Asistencia
+   Anticipada (.ev-cal-grid/.ev-ant-cal-hoy/.ev-ant-cal-sel/.ev-ant-cal-pasado)
+   -- selección de un solo toque, sin rango. ── */
+function _evLugarCalRender(cual) {
+  var cont = document.getElementById('ev-lugar-cal-' + cual); if (!cont) return;
+  var m = _evCalMesDe(_evLugarCal[cual].mostrado);
+  var labelEl = document.getElementById('ev-lugar-cal-' + cual + '-label');
+  if (labelEl) labelEl.textContent = NOMBRES_MESES[m.month] + ' ' + m.year;
+  var inicioGrid = _evLunesDeSemana(new Date(m.year, m.month, 1));
+  var finMes = new Date(m.year, m.month + 1, 0);
+  var finGrid = _evLunesDeSemana(finMes); finGrid.setDate(finGrid.getDate() + 6);
+  var hoy = _evHoyISO();
+  var seleccionada = _evLugarData.fecha;
+  // "Evento único" no debería poder crearse en el pasado; la fecha de
+  // referencia de "cada tantos" SÍ puede ser pasada (ancla histórica del
+  // patrón, ej. "cada 2 semanas desde el 1 de marzo") -- solo 'unico'
+  // bloquea días pasados.
+  var bloquearPasado = cual === 'unico';
+  var html = _EV_DIAS_CORTOS.map(function(d) { return '<div class="ev-cal-dow">' + d + '</div>'; }).join('');
+  var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
+  while (cur <= finGrid) {
+    var celdaIso = _evToISO(cur);
+    var ajeno = cur.getMonth() !== m.month;
+    var pasado = bloquearPasado && _evFechaCmp(celdaIso, hoy) < 0;
+    var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (pasado ? ' ev-ant-cal-pasado' : '');
+    if (seleccionada && celdaIso === seleccionada) clases += ' ev-ant-cal-sel';
+    if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
+    var onclickAttr = pasado ? '' : ' onclick="_evLugarCalTocarDia(\'' + cual + '\',\'' + celdaIso + '\')"';
+    html += '<div class="' + clases + '" data-iso="' + celdaIso + '"' + onclickAttr + '><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
+    cur.setDate(cur.getDate() + 1);
+  }
+  cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>';
+}
+function _evLugarCalMoverMes(cual, dir) {
+  var m = _evCalMesDe(_evLugarCal[cual].mostrado);
+  var year = m.year, month = m.month + dir;
+  if (month < 0) { month = 11; year--; } else if (month > 11) { month = 0; year++; }
+  _evLugarCal[cual].mostrado = _evToISO(new Date(year, month, 1));
+  _evLugarCalRender(cual);
+}
+function _evLugarCalTocarDia(cual, iso) {
+  _evLugarData.fecha = iso;
+  _evLugarCalRender(cual);
+  _evLugarActualizarCalResumen(cual);
+  _evLugarActualizarBotonGuardar();
+}
+function _evLugarActualizarCalResumen(cual) {
+  var el = document.getElementById('ev-lugar-cal-' + cual + '-resumen');
+  if (el) el.textContent = _evLugarData.fecha ? _evAntFechaLegible(_evLugarData.fecha) : '';
+}
+
+/* ── Ubicación: buscador (Places Autocomplete) + mapa interactivo con pin
+   fijo -- mismo mecanismo ya cargado en la app para Ajustes → Dirección
+   (window._mapsLoaded/MAPS_API_KEY vía el script de index.html,
+   google.maps.places.Autocomplete tal como usa ajAbrirSheetPlaces()), mapa
+   creado/recentrado con crearOCentrarMapaPin() (shared/mapa-interactivo.js,
+   extraído de _ajInicializarMapaDireccion() para no duplicarlo, ver
+   MANIFEST.md). A diferencia de Dirección (que geocodifica campos de texto
+   ya guardados), acá el buscador alimenta el mapa directo y cualquiera de
+   los 2 caminos (buscar o arrastrar) termina en el mismo lugar: guardar
+   lat/lng + un link de Maps usable (el de Google si vino de una búsqueda
+   real, o uno armado a partir de las coordenadas si el usuario solo
+   arrastró el pin). ── */
+function _evLugarInicializarMapa() {
+  var canvas = document.getElementById('ev-lugar-mapa-canvas');
+  if (!canvas) return;
+  _evLugarInicializarBuscador();
+  if (typeof google === 'undefined' || !google.maps || !window._mapsLoaded) {
+    canvas.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:0.78rem;text-align:center;padding:16px;">No se pudo cargar el mapa. Intenta más tarde.</div>';
+    return;
+  }
+  var centro = (_evLugarData.lat != null && _evLugarData.lng != null) ? { lat: _evLugarData.lat, lng: _evLugarData.lng } : _EV_LUGAR_QUITO_LATLNG;
+  _evLugarCentrarMapa(centro);
+}
+function _evLugarCentrarMapa(pos) {
+  var canvas = document.getElementById('ev-lugar-mapa-canvas');
+  if (!canvas) return;
+  _evLugarMapa = crearOCentrarMapaPin(_evLugarMapa, canvas, pos, _evLugarOnDragEnd);
+}
+function _evLugarOnDragEnd(centro) {
+  _evLugarActualizarUbicacion(centro.lat(), centro.lng(), null);
+}
+function _evLugarActualizarUbicacion(lat, lng, mapsUrlDirecto) {
+  _evLugarData.lat = lat; _evLugarData.lng = lng;
+  _evLugarData.mapsUrl = mapsUrlDirecto || ('https://www.google.com/maps?q=' + lat + ',' + lng);
+  _evLugarActualizarBotonGuardar();
+}
+function _evLugarInicializarBuscador() {
+  var inp = document.getElementById('ev-lugar-buscador-input');
+  if (!inp) return;
+  inp.value = '';
+  if (_evLugarAutocomp) { google.maps.event.clearInstanceListeners(inp); _evLugarAutocomp = null; }
+  if (!window._mapsLoaded || typeof google === 'undefined') return; // sin Places -- el mapa sigue usable arrastrando el pin
+  _evLugarAutocomp = new google.maps.places.Autocomplete(inp, { fields: ['geometry', 'name', 'url'] });
+  _evLugarAutocomp.addListener('place_changed', function() {
+    var place = _evLugarAutocomp.getPlace();
+    if (!place || !place.geometry || !place.geometry.location) return;
+    var loc = place.geometry.location;
+    _evLugarCentrarMapa({ lat: loc.lat(), lng: loc.lng() });
+    _evLugarActualizarUbicacion(loc.lat(), loc.lng(), place.url || null);
+    // Sugerencia de nombre solo si el campo sigue vacío -- nunca pisa un
+    // nombre que el usuario ya haya escrito a mano.
+    if (!_evLugarData.nombre && place.name) {
+      _evLugarData.nombre = place.name;
+      var nombreInp = document.getElementById('ev-lugar-nombre');
+      if (nombreInp) nombreInp.value = place.name;
+      _evLugarActualizarBotonGuardar();
+    }
+  });
+}
+
+/* ── Validación + guardado (crearVenue/editarVenue) ─────────────────── */
+function _evLugarRecurrenciaValida() {
+  var t = _evLugarData.tipoRecurrencia;
+  if (t === 'dias_semana') return _evLugarData.diasSemana.length > 0 && !!_evLugarData.hora;
+  if (t === 'cada_tantos') return !!(_evLugarData.frecuenciaNumero > 0 && _evLugarData.frecuenciaUnidad && _evLugarData.fecha && _evLugarData.hora);
+  if (t === 'unico') return !!(_evLugarData.fecha && _evLugarData.hora);
+  return false;
+}
+function _evLugarValido() {
+  return !!(_evLugarData.nombre && _evLugarData.nombre.trim() && _evLugarData.mapsUrl &&
+    _evLugarData.tipoIcono && _evLugarData.requiereReserva && _evLugarData.tipoRecurrencia &&
+    _evLugarRecurrenciaValida());
+}
+function _evLugarActualizarBotonGuardar() {
+  var btn = document.getElementById('ev-lugar-btn-guardar');
+  if (btn) btn.disabled = !_evLugarValido();
+}
+
+// Guardado real -- crearVenue (sin _evLugarData.fila) o editarVenue (con
+// fila) según corresponda, mismas 2 firmas documentadas en MANIFEST.md para
+// que Victor las aplique en Code.gs. Ambas ejecutan la reconciliación
+// (ver "Backend — Venues" en MANIFEST) en la misma llamada -- no hace falta
+// ningún refresco adicional del lado del frontend para que los próximos
+// eventos ya existan, la Tanda de "Eventos al backend real" (pendiente, ver
+// "Cambios recientes" de Asistencia Anticipada) es la que eventualmente los
+// mostrará en el timeline.
+function _evLugarGuardar() {
+  if (!_evLugarValido()) return;
+  var payload = {
+    action: _evLugarData.fila ? 'editarVenue' : 'crearVenue',
+    adminToken: _adminToken,
+    nombre: _evLugarData.nombre.trim(),
+    mapsUrl: _evLugarData.mapsUrl,
+    lat: _evLugarData.lat,
+    lng: _evLugarData.lng,
+    tipoIcono: _evLugarData.tipoIcono,
+    requiereReserva: _evLugarData.requiereReserva === 'si' ? 'SI' : 'NO',
+    tipoRecurrencia: _evLugarData.tipoRecurrencia,
+    hora: _evLugarData.hora
+  };
+  if (_evLugarData.fila) payload.idRegla = _evLugarData.fila;
+  if (_evLugarData.tipoRecurrencia === 'dias_semana') {
+    payload.diasSemana = JSON.stringify(_evLugarData.diasSemana.slice().sort(function(a, b) { return a - b; }));
+  } else if (_evLugarData.tipoRecurrencia === 'cada_tantos') {
+    payload.frecuencia = _evLugarData.frecuenciaNumero;
+    payload.unidad = _evLugarData.frecuenciaUnidad;
+    payload.fechaReferencia = _evLugarData.fecha;
+  } else {
+    payload.fechaReferencia = _evLugarData.fecha;
+  }
+
+  mostrarCargando(_evLugarData.fila ? 'Guardando cambios...' : 'Creando lugar...');
+  apiPost(payload, function(res) {
+    ocultarCargando();
+    if (res && res.exito === false) {
+      mostrarToast(res.error || 'No se pudo guardar el lugar.', 'error');
+      return;
+    }
+    mostrarToast(_evLugarData.fila ? 'Lugar actualizado.' : 'Lugar creado.', 'ok');
+    var volver = _evLugarFormVolver();
+    if (volver === 's-eventos-lugares') irEvLugares(); else ir(volver);
+  }, function(e) {
+    ocultarCargando();
+    mostrarToast(e && e.message ? e.message : 'No se pudo guardar el lugar.', 'error');
+  });
 }

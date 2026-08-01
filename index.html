@@ -26,13 +26,13 @@
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=580dd587"></script>
 <link rel="stylesheet" href="css/global.css?v=64804fa9">
-<link rel="stylesheet" href="css/estilos.css?v=96c0bbdd">
+<link rel="stylesheet" href="css/estilos.css?v=3d36cc86">
 <link rel="stylesheet" href="css/ui.css?v=5d0e5923">
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=6a719532">
 <link rel="stylesheet" href="css/nav.css?v=0e195d68">
-<link rel="stylesheet" href="css/eventos.css?v=9149e350">
+<link rel="stylesheet" href="css/eventos.css?v=80f76d17">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -563,6 +563,145 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
 
+  <!-- "Editar lugares" -- lista de Venues (getVenues(), admin) + "+ Nuevo
+       lugar". Mismo mecanismo de pantalla completa que #s-eventos-anticipada
+       (nav propia, sin TOP_BAR_CONFIG) -- alcanzada desde el FAB de
+       #s-eventos, back siempre vuelve ahí (ver irEvLugares()/js/eventos.js). -->
+  <div class="pantalla" id="s-eventos-lugares">
+    <div class="app-nav app-nav-sticky" id="ev-lugares-header">
+      <button class="app-nav-back" onclick="ir('s-eventos')">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <span class="app-nav-title">Editar lugares</span>
+      <div style="width:40px;flex-shrink:0;"></div>
+    </div>
+    <div class="card" style="text-align:left;">
+      <div id="ev-lugares-lista"></div>
+      <button type="button" class="btn btn-outline" style="margin-top:4px;" onclick="irEvLugarFormNuevo('s-eventos-lugares')">+ Nuevo lugar</button>
+      <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+
+  <!-- Formulario de Venues -- compartido por "Crear evento" (FAB directo,
+       vacío, vuelve a #s-eventos) y "Editar lugares" (card existente
+       precargada, o "+ Nuevo lugar" vacío, ambos vuelven a
+       #s-eventos-lugares) -- ver irEvLugarFormNuevo()/_evLugarAbrirEditar()/
+       _evLugarFormVolver(), js/eventos.js. Mismos campos siempre, un solo
+       botón final "Guardar"/"Crear evento" (footer real vía
+       cta-footer-s-eventos-lugar-form -- a diferencia de
+       #cta-footer-eventos-anticipada, este SÍ sigue la convención genérica
+       "cta-footer-<id-de-pantalla>" que ir()/js/ui.js muestra/oculta solo,
+       no hace falta togglearlo a mano). -->
+  <div class="pantalla" id="s-eventos-lugar-form">
+    <div class="app-nav app-nav-sticky" id="ev-lugar-form-header">
+      <button class="app-nav-back" onclick="ir(_evLugarFormVolver())">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <span class="app-nav-title" id="ev-lugar-form-titulo">Nuevo lugar</span>
+      <div style="width:40px;flex-shrink:0;"></div>
+    </div>
+    <div class="card" style="text-align:left;">
+
+      <div class="ev-lugar-campo">
+        <p class="ev-lugar-campo-label">Ubicación</p>
+        <div class="app-nav-search" style="margin-bottom:10px;">
+          <span class="material-symbols-outlined">search</span>
+          <input type="text" id="ev-lugar-buscador-input" placeholder="Buscar dirección o lugar..." autocomplete="off">
+        </div>
+        <div class="ev-lugar-mapa-wrap" id="ev-lugar-mapa-wrap">
+          <div id="ev-lugar-mapa-canvas" style="width:100%;height:100%;"></div>
+          <div class="aj-mapa-pin"><span class="material-symbols-outlined">location_on</span></div>
+        </div>
+        <p class="ev-lugar-mapa-nota">Busca un lugar o arrastra el mapa para ajustar la posición exacta.</p>
+      </div>
+
+      <div class="ev-lugar-campo">
+        <p class="ev-lugar-campo-label">Nombre del lugar</p>
+        <input type="text" class="ev-lugar-input" id="ev-lugar-nombre" placeholder="Ej: Parque La Carolina" oninput="_evLugarSetNombre(this.value)">
+      </div>
+
+      <div class="ev-lugar-campo">
+        <p class="ev-lugar-campo-label">Tipo de ícono</p>
+        <div class="aj-pills-row" id="ev-lugar-icono-pills">
+          <span class="aj-pill" data-val="Entrenamiento" onclick="_evLugarSelIcono(this)">Entrenamiento</span>
+          <span class="aj-pill" data-val="Torneo" onclick="_evLugarSelIcono(this)">Torneo</span>
+          <span class="aj-pill" data-val="Partido" onclick="_evLugarSelIcono(this)">Partido</span>
+          <span class="aj-pill" data-val="Asamblea" onclick="_evLugarSelIcono(this)">Asamblea</span>
+          <span class="aj-pill" data-val="Evento social" onclick="_evLugarSelIcono(this)">Evento social</span>
+          <span class="aj-pill" data-val="Otro" onclick="_evLugarSelIcono(this)">Otro</span>
+        </div>
+      </div>
+
+      <div class="ev-lugar-campo">
+        <p class="ev-lugar-campo-label">¿Requiere reserva?</p>
+        <div class="aj-pills-row" id="ev-lugar-reserva-pills">
+          <span class="aj-pill" data-val="si" onclick="_evLugarSelReserva(this)">Sí</span>
+          <span class="aj-pill" data-val="no" onclick="_evLugarSelReserva(this)">No</span>
+        </div>
+      </div>
+
+      <div class="ev-lugar-campo">
+        <p class="ev-lugar-campo-label">Tipo de recurrencia</p>
+        <div class="aj-pills-row" id="ev-lugar-recurrencia-pills">
+          <span class="aj-pill" data-val="dias_semana" onclick="_evLugarSelRecurrencia(this)">Días de la semana</span>
+          <span class="aj-pill" data-val="cada_tantos" onclick="_evLugarSelRecurrencia(this)">Cada tantos días/semanas/meses</span>
+          <span class="aj-pill" data-val="unico" onclick="_evLugarSelRecurrencia(this)">Evento único</span>
+        </div>
+
+        <div id="ev-lugar-rec-dias" style="display:none;margin-top:18px;">
+          <div class="ev-dias-row" id="ev-lugar-dias-row">
+            <span class="ev-dia-circulo" data-dia="1" onclick="_evLugarToggleDia(this)">L</span>
+            <span class="ev-dia-circulo" data-dia="2" onclick="_evLugarToggleDia(this)">M</span>
+            <span class="ev-dia-circulo" data-dia="3" onclick="_evLugarToggleDia(this)">X</span>
+            <span class="ev-dia-circulo" data-dia="4" onclick="_evLugarToggleDia(this)">J</span>
+            <span class="ev-dia-circulo" data-dia="5" onclick="_evLugarToggleDia(this)">V</span>
+            <span class="ev-dia-circulo" data-dia="6" onclick="_evLugarToggleDia(this)">S</span>
+            <span class="ev-dia-circulo" data-dia="7" onclick="_evLugarToggleDia(this)">D</span>
+          </div>
+        </div>
+
+        <div id="ev-lugar-rec-cada" style="display:none;margin-top:18px;">
+          <div class="ev-lugar-cada-row">
+            <input type="number" min="1" class="ev-lugar-input ev-lugar-input-num" id="ev-lugar-frec-num" placeholder="Ej: 2" oninput="_evLugarSetFrecNum(this.value)">
+            <div class="aj-pills-row" id="ev-lugar-frec-unidad-pills">
+              <span class="aj-pill" data-val="dias" onclick="_evLugarSelUnidad(this)">Días</span>
+              <span class="aj-pill" data-val="semanas" onclick="_evLugarSelUnidad(this)">Semanas</span>
+              <span class="aj-pill" data-val="meses" onclick="_evLugarSelUnidad(this)">Meses</span>
+            </div>
+          </div>
+          <p class="ev-lugar-campo-label" style="margin-top:16px;">Fecha de referencia</p>
+          <div class="ev-ant-cal-nav">
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evLugarCalMoverMes('referencia',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+            <span class="ev-ant-cal-nav-label" id="ev-lugar-cal-referencia-label"></span>
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evLugarCalMoverMes('referencia',1)"><span class="material-symbols-outlined">chevron_right</span></button>
+          </div>
+          <div id="ev-lugar-cal-referencia"></div>
+          <div class="ev-lugar-cal-resumen" id="ev-lugar-cal-referencia-resumen"></div>
+        </div>
+
+        <div id="ev-lugar-rec-unico" style="display:none;margin-top:18px;">
+          <div class="ev-ant-cal-nav">
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evLugarCalMoverMes('unico',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+            <span class="ev-ant-cal-nav-label" id="ev-lugar-cal-unico-label"></span>
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evLugarCalMoverMes('unico',1)"><span class="material-symbols-outlined">chevron_right</span></button>
+          </div>
+          <div id="ev-lugar-cal-unico"></div>
+          <div class="ev-lugar-cal-resumen" id="ev-lugar-cal-unico-resumen"></div>
+        </div>
+
+        <div class="ev-lugar-campo" id="ev-lugar-hora-wrap" style="display:none;">
+          <p class="ev-lugar-campo-label">Hora</p>
+          <input type="time" class="ev-lugar-input" id="ev-lugar-hora" oninput="_evLugarSetHora(this.value)">
+        </div>
+      </div>
+
+      <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+  <div class="cta-footer-fixed" id="cta-footer-s-eventos-lugar-form">
+    <button class="btn btn-primary" id="ev-lugar-btn-guardar" disabled onclick="_evLugarGuardar()">Guardar</button>
+  </div>
+
   <!-- Modal de conflicto (aplicarAsistenciaAnticipada devuelve
        {exito:false, reglaExistente}) -- reusa el patrón .modal-info ya
        existente (ver css/global.css), un solo .modal-info-item con el
@@ -962,12 +1101,13 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/config.js?v=75e6f836"></script>
 <script src="shared/bsheet.js"></script>
 <script src="shared/axis-transicion.js"></script>
+<script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=fe08d353"></script>
-<script src="js/eventos.js?v=f3414116"></script>
+<script src="js/ui.js?v=075daa2c"></script>
+<script src="js/eventos.js?v=e4609e3e"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=f4bed643"></script>
-<script src="js/perfil.js?v=6c7e6264"></script>
+<script src="js/perfil.js?v=7768af03"></script>
 <script src="js/admin.js"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js"></script>
@@ -2656,11 +2796,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
      vía _evFabToggle()/_evFabCerrar() (js/eventos.js), togglea la clase
      .ev-fab-abierto en este mismo contenedor. -->
 <div class="ev-fab-menu" id="ev-fab-menu" style="display:none;">
-  <button type="button" class="ev-fab-opcion" id="ev-fab-crear-evento" onclick="_evFabCerrar(); mostrarToast('Próximamente','ok'); /* TODO Tanda futura: abrir formulario de creación de evento */">
+  <button type="button" class="ev-fab-opcion" id="ev-fab-crear-evento" onclick="_evFabCerrar(); irEvLugarFormNuevo('s-eventos', true);">
     <span class="material-symbols-outlined">event</span>
     <span>Crear evento</span>
   </button>
-  <button type="button" class="ev-fab-opcion" id="ev-fab-editar-lugares" onclick="_evFabCerrar(); mostrarToast('Próximamente','ok'); /* TODO Tanda futura: abrir editor de lugares */">
+  <button type="button" class="ev-fab-opcion" id="ev-fab-editar-lugares" onclick="_evFabCerrar(); irEvLugares();">
     <span class="material-symbols-outlined">place</span>
     <span>Editar lugares</span>
   </button>

@@ -2007,15 +2007,14 @@ function _ajInicializarMapaDireccion() {
     canvas.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:0.78rem;text-align:center;padding:16px;">No se pudo cargar el mapa. Intenta más tarde.</div>';
     return;
   }
+  // Creación/recentrado factorizados en crearOCentrarMapaPin() (ver
+  // shared/mapa-interactivo.js) -- mismo mecanismo reusado por el formulario
+  // de Venues (js/eventos.js, _evLugarInicializarMapa). _ajOnMapaDireccionDragEnd()
+  // no toma el centro como argumento (lee _ajDireccionMap.getCenter() por su
+  // cuenta) -- se mantiene así a propósito, sin cambios, el callback de acá
+  // solo lo invoca.
   function centrarEn(pos) {
-    if (_ajDireccionMap) {
-      _ajDireccionMap.setCenter(pos);
-    } else {
-      _ajDireccionMap = new google.maps.Map(canvas, {
-        center: pos, zoom: 16, disableDefaultUI: true, zoomControl: true, gestureHandling: 'greedy'
-      });
-      _ajDireccionMap.addListener('dragend', _ajOnMapaDireccionDragEnd);
-    }
+    _ajDireccionMap = crearOCentrarMapaPin(_ajDireccionMap, canvas, pos, function() { _ajOnMapaDireccionDragEnd(); });
   }
   function centrarPorGeolocalizacionOFallback() {
     if (navigator.geolocation) {

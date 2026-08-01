@@ -1008,3 +1008,67 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
     calc(100vh - 300px)
   );
 }
+
+/* ═══════════════════════════════════════════════════════
+   VENUES -- "Editar lugares" (#s-eventos-lugares) y formulario compartido
+   con "Crear evento" (#s-eventos-lugar-form, ver js/eventos.js). La lista
+   de lugares reusa .ev-ant-card/.ev-card-top-row/.ev-card-icon/.ev-card-body/
+   .ev-ant-card-sub tal cual (mismo look que el resumen de Asistencia
+   anticipada, arriba en este archivo) -- sin clases nuevas para eso. Pills
+   de ícono/reserva/recurrencia/unidad reusan .aj-pills-row/.aj-pill
+   (css/perfil.css). El calendario de fecha única (_evLugarCalRender(),
+   js/eventos.js) reusa .ev-cal-grid/.ev-cal-dow/.ev-cal-celda/.ev-cal-num/
+   .ev-ajeno/.ev-ant-cal-hoy/.ev-ant-cal-sel/.ev-ant-cal-pasado y el nav de
+   mes .ev-ant-cal-nav* (todos ya definidos arriba). Lo único genuinamente
+   nuevo son el selector de días de la semana (sin precedente en la app) y
+   los wrappers de layout del formulario (campo/label/inputs/mapa).
+   ═══════════════════════════════════════════════════════ */
+
+.ev-lugar-campo { margin-top: 20px; }
+.ev-lugar-campo:first-child { margin-top: 0; }
+.ev-lugar-campo-label { font-size: 0.8rem; font-weight: 700; color: var(--text); margin: 0 0 8px; }
+
+/* Input genérico de texto/número -- mismo idioma visual que
+   #aj-sheet-texto-input (css/perfil.css, borde de marca + fondo -2). */
+.ev-lugar-input {
+  width: 100%; padding: 13px 16px; background: var(--surface-2); border: 1.5px solid var(--brand);
+  border-radius: 12px; font-size: 0.88rem; font-family: inherit; color: var(--text); box-sizing: border-box;
+}
+.ev-lugar-input::placeholder { color: var(--muted); }
+
+.ev-lugar-cada-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.ev-lugar-input-num { max-width: 96px; flex-shrink: 0; text-align: center; }
+.ev-lugar-cada-row .aj-pills-row { flex: 1; min-width: 180px; }
+
+/* Buscador de lugares (Places Autocomplete) -- reusa .app-nav-search literal
+   (css/nav.css, mismo pill que Ajustes/#ev-search-input), sin cursor
+   parpadeante visible, mismo criterio que esos 2. */
+#ev-lugar-buscador-input { caret-color: transparent; }
+
+.ev-lugar-mapa-wrap {
+  position: relative; height: 220px; border-radius: 12px; overflow: hidden;
+  background: var(--surface-2); margin-bottom: 8px;
+}
+.ev-lugar-mapa-nota { font-size: 0.72rem; color: var(--muted); text-align: center; margin: 0; }
+
+/* Selector de días de la semana (L-M-X-J-V-S-D), multi-select -- sin
+   precedente en el resto de la app (Asistencia anticipada elige MESES, no
+   días de la semana), primer componente nuevo real de esta sección. Mismo
+   par de colores brand-light/brand que .aj-pill (reposo/activa), en un
+   círculo en vez de una pill -- 7 letras sueltas se leen mejor como círculos
+   chicos en fila que como pills anchas con texto de 1 char. */
+.ev-dias-row { display: flex; gap: 8px; justify-content: space-between; }
+.ev-dia-circulo {
+  width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 0.82rem; font-weight: 700; color: var(--muted); background: var(--brand-light);
+  border: 1.5px solid transparent; cursor: pointer; user-select: none; transition: all 0.15s;
+  flex-shrink: 0;
+}
+.ev-dia-circulo.activa { background: var(--brand); color: var(--white); border-color: var(--brand); }
+
+.ev-lugar-cal-resumen { text-align: center; font-size: 0.85rem; font-weight: 700; color: var(--text); margin-top: 10px; }
+.ev-lugar-cal-resumen:empty::before { content: 'Toca una fecha en el calendario'; color: var(--muted); font-weight: 500; font-size: 0.8rem; }
+
+@media (prefers-color-scheme: dark) {
+  .ev-lugar-input { background: var(--surface-2); }
+}

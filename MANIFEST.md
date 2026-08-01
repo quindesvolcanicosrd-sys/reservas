@@ -3247,3 +3247,203 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
 - **index.html + js/reservas.js — Bug real: en el paso de pago de "Nueva reserva" (`#s-pago`), tocar "Continuar" mostraba el toast "No se pudo guardar tu reserva. Intenta de nuevo." aunque la reserva SÍ se guardaba (confirmable volviendo a `#s-home`) -- la persona quedaba atascada en `#s-pago` con el botón pegado en "Guardando..." sin llegar nunca a la pantalla de éxito.** **Causa raíz, encontrada leyendo `git log -S"s6-texto"`, no adivinada:** `#s6-texto` (el párrafo "Puedes revisar el estado de tu reserva/pago..." de la pantalla de éxito `#s6`) había desaparecido de `index.html` -- una edición sin commitear de otra sesión se coló por accidente vía el pre-commit hook de cache-busting (que reescribe `index.html` en cada commit que toca JS/CSS listado) en `1c74f8b`, se revirtió sin querer en `052d2a1`, y una sesión posterior (`1a91b0e`) volvió a sacarlo creyendo que así coincidía con `origin/main` -- pero `js/reservas.js` (`finalizar()`, dentro de `confirmarReserva()`) seguía referenciando `document.getElementById('s6-texto')` en sus 3 ramas (reagendando/necesita equipo/pago simple), nunca se limpió del lado JS. Con el elemento ausente, `document.getElementById('s6-texto').innerHTML = ...`/`.style.display = ...` tiraba `TypeError: Cannot set properties of null`. Esa excepción ocurre DENTRO del `.then(data => onSuccess(data))` de `js/api.js`, en la llamada a `guardarReserva()` de la ÚLTIMA fecha/mes del lote (`finalizar()` se llama de forma síncrona ahí cuando ya no quedan pendientes) -- sin nada que la capture ahí, el `.catch(function(e) { onError(e); })` de esa misma promesa la agarra y la trata como si esa llamada a `guardarReserva()` hubiera fallado, pese a que el guardado real en el backend ya había terminado con éxito. `onError` empuja esa fecha a `itemsFallidos` y reintenta `guardarSiguiente()`, que vuelve a llamar a `finalizar()` -- esta segunda vez, `itemsFallidos.length === totalIntentos` (con una sola fecha/mes en el lote, 1 de 1) da como resultado el toast de "fallo total" y un `return` temprano que nunca restaura el botón ni navega a `s6`. **2 fixes, uno por capa:** **(1)** se restituye `<div class="exito-texto" id="s6-texto">` en `index.html` (mismo texto/clase que tenía antes de `1a91b0e` -- la clase `.exito-texto` seguía viva en `css/reservas.css`, sin otro consumidor, confirmando que la desaparición del `<div>` fue el desajuste real, no un retiro intencional acompañado de su limpieza en JS). **(2)** en `finalizar()` (`js/reservas.js`), TODO el trabajo posterior al guardado ya confirmado exitoso (llamadas secundarias `guardarNotaPago`/`enviarResumenReservas`, marcado de créditos/cupón, armado del resumen de `s6`) queda envuelto en `try/catch` -- si algo de ahí tira una excepción (esta o cualquier otra futura, ej. un id de DOM que vuelva a faltar), se loguea con `console.error()` sin bloquear la navegación: el restore del botón y `ir('s6')` quedan FUERA del `try`, así que corren siempre que el guardado real no haya fallado del todo. Este segundo fix es el que blinda contra que la misma clase de bug (una excepción de UI ajena al guardado, capturada por el `.catch()` equivocado) vuelva a producir el mismo síntoma con cualquier otro elemento que falte en el futuro. **Verificado con Playwright** (`chromium`, servido localmente, interceptando las requests a `script.google.com` vía `page.route()` -- a propósito NO se reemplazó `window.api()` por un stub, porque eso saltea exactamente la cadena `fetch().then().catch()` de `js/api.js` donde vive el bug; hacerlo así reproducía un falso negativo la primera vez): contra el código commiteado (sin ninguno de los 2 fixes, confirmado con `git stash`), el flujo de pago con 1 sola clase reproduce el bug tal cual lo reportó Victor -- aparece el toast "No se pudo guardar tu reserva...", `.pantalla.activa` se queda en `s-pago`, el botón queda con el spinner pegado. Con los 2 fixes aplicados: mismo flujo, sin ningún toast de error, `.pantalla.activa` termina en `s6`, botón restaurado a "Continuar". Confirmado también con el fix (2) solo (revirtiendo (1) pero dejando el `try/catch`): el `TypeError` se loguea por consola pero el flujo igual llega a `s6` sin toast -- confirma que ambas capas actúan de forma independiente. Casos adicionales verificados con los 2 fixes: reagendamiento (`E.reagendando:true`) llega a `s6` con `#s6-texto` visible y el texto de reagendada; reserva con equipo (`necesitaPatines:'Sí'`) llega a `s6` con `#s6-texto` oculto (rama que lo esconde a propósito, ver commit `4b17ced`, sigue intacta); pago mensual (`E.tipoPago:'mensual'`) llega a `s6` sin toast de error -- ningún caso muestra el toast de guardado fallido ni se queda trabado en `s-pago`.
 
 - **css/eventos.css — Bug real corregido con Playwright: al entrar/volver a `#s-eventos` (login directo o cambiando de tab) se veía un gap sobre `.ev-sticky-header`, dejando asomar una porción del timeline scrolleable por encima de la cabecera un instante antes de que se posicionara bien.** **Causa raíz (medida cuadro a cuadro con `requestAnimationFrame`, no adivinada):** `.pantalla.activa` (`css/global.css`) anima `transform:translateY(20px)->none` en CADA entrada a la pantalla (`ir()` saca `.activa` de todas las `.pantalla` y la vuelve a poner en la que entra, así que la animación se re-dispara siempre, no solo la primera vez) -- ese `transform` del ancestro se pinta también sobre `.ev-sticky-header`, un hijo directo, AUNQUE sea `position:sticky` y esté correctamente "pegado" (`top:0`) según el layout: `position:sticky` decide DÓNDE queda el elemento en el flujo/scroll, pero el `transform` de un ancestro sigue aplicando un offset de PINTADO por encima de esa posición, sin excepción para sticky. Instrumentando `#ev-sticky-header`/`#ev-timeline` con muestreo por frame durante los ~600ms de la animación (dataset sintético de ~180 eventos para que hubiera contenido real scrolleado detrás, mismo criterio que el fix anterior de `_evScrollAFecha()`): con una posición de scroll profunda ya restaurada (caso más nítido, cambio de tab con `_bottomNavClick()`), el header arrancaba pintado **20px por debajo** de su posición real (`getBoundingClientRect().top:20` en vez de `0`) y decaía gradualmente a `0` recién pasados varios cientos de ms -- esos 20px son EXACTAMENTE el timeline (ya scrolleado a la posición real) asomando por encima, tal cual lo reportó Victor. **Nota: esto es un bug distinto del ya corregido en `_evScrollAFecha()`** (ver entrada anterior de "Cambios recientes", el separador -HOY- tapado) -- ese fix corrigió que el DESTINO calculado del salto de scroll fuera el correcto (usando `offsetTop`/`offsetParent` en vez de `getBoundingClientRect()`, inmune al transform); este bug persiste con el destino YA CORRECTO -- es el propio HEADER STICKY el que queda mal pintado durante la animación, sin relación con el cálculo del scroll. **Fix:** contra-animación en el header, misma curva/duración que `smoothSlideUp` (`--ease-sheet`, `css/estilos.css`) pero con el `translateY` exactamente invertido -- `@keyframes evStickyHeaderCounter { from{transform:translateY(-20px)} to{transform:none} }`, aplicada vía `.pantalla.activa .ev-sticky-header { animation: evStickyHeaderCounter 0.6s var(--ease-sheet); }`. Al compartir el mismo disparador (la clase `.activa` del ancestro) y la misma curva/duración que `smoothSlideUp`, los 2 transforms (padre `+20→0`, hijo `-20→0`) se cancelan en CADA instante de la interpolación, no solo al principio/final -- el header queda pintado en su posición real (natural o "stuck", según corresponda) desde el primer frame, sin tocar el slide-up del resto de la pantalla (timeline, panel de mes, etc., que conservan la animación de siempre). No se tocó el timing de `_evScrollAFecha()`/`irEventos()` -- el bug no era de timing de JS sino de pintado CSS, y el fix vive enteramente en la capa de estilos. **Verificado con Playwright** (`chromium`, 390×844, servido localmente, dataset sintético de ~180 eventos, sin sesión real): **entrada directa** (`irEventos()` desde cero, como login): antes del fix, `headerTop` iba `26→9→3→2→1→0` a lo largo de ~450ms tras el salto automático a "hoy"; con el fix, `headerTop` es `0` en TODOS los frames muestreados desde el instante del salto en adelante, pese a que el `transform` del ancestro seguía decayendo de `11.4` a `0` de fondo (confirma que la cancelación funciona con el ancestro todavía animando, no por casualidad de timing). **Cambio de tab** (`_bottomNavClick('ajustes')` → `_bottomNavClick('eventos')`, con una posición de scroll profunda ya restaurada de entrada -- el caso más nítido): contra el código sin el fix (confirmado con `git stash`), `headerTop` arrancaba en `20` (gap completo) y decaía gradualmente por ~170ms+; con el fix, `headerTop` es `0` en los 30 frames muestreados de principio a fin, sin excepción. Screenshot de la pantalla ya asentada confirma que el header sigue viéndose y comportándose igual (mismos íconos, mismo fondo, mismo layout) -- el cambio es puramente de timing de pintado durante la animación, sin efecto visual en el estado final.
+
+- **Backend — Venues: 3 funciones nuevas de Apps Script (`crearVenue`/`editarVenue`/`getVenues`), documentadas para pegar en `Code.gs` (sin acceso desde este repo, nada aplicado desde acá) + 8 columnas nuevas en la hoja `Venues` para Victor.** Construido junto con el frontend de "Editar lugares"/"Crear evento" (ver la entrada siguiente) -- mismo criterio de honestidad ya establecido para la Tanda 1 de Eventos (más arriba en este archivo): no hay acceso a `Code.gs` ni a la estructura real de `Venues` desde este repo, todo el código de abajo está escrito contra la estructura de columnas tal como la describió Victor en el brief + lo que el frontend nuevo necesita, con nombres de encabezado resueltos por `_colIdx` (ya existente, Tanda 1), nunca índices fijos -- pero **los nombres de encabezado en sí, y los 2 helpers marcados `// TODO ajustar`, deben confirmarse/ajustarse contra el `Code.gs` real antes de pegar esto.**
+
+  **Paso manual para Victor, antes de pegar el código de abajo -- 8 columnas nuevas en `Venues`** (además de `Lugar`/`Tipo de ícono`/`Requiere reserva`, ya existentes de la Tanda 1, y de `Maps`, que se asume ya existente para el link -- **confirmar el encabezado real de esa última, el código de abajo asume literal `Maps`**):
+  - `Lat` / `Lng` -- numéricas, coordenadas del pin del mapa interactivo (el link de `Maps` solo no alcanza para recentrar el mapa al editar un lugar ya guardado).
+  - `Tipo de recurrencia` -- lista desplegable con 3 valores EXACTOS: `Días de la semana`, `Cada tantos días/semanas/meses`, `Evento único`.
+  - `Días de la semana` -- texto libre, string separado por comas con nombres de día en español (ej. `Lunes,Miércoles,Viernes`) -- solo poblada si `Tipo de recurrencia = Días de la semana`, vacía si no.
+  - `Frecuencia` -- numérica -- solo poblada si `Tipo de recurrencia = Cada tantos días/semanas/meses`.
+  - `Unidad` -- lista desplegable `dias`/`semanas`/`meses` (minúsculas, sin tilde -- mismo criterio que `Requiere reserva` usa `SI`/`NO` en vez de `Sí`/`No`, para no depender de acentos en comparaciones de texto) -- solo poblada junto con `Frecuencia`.
+  - `Fecha de referencia` -- fecha -- ancla del patrón en `Cada tantos...` (ej. "cada 2 semanas contadas desde esta fecha"), o la fecha del evento en `Evento único`.
+  - `Hora` -- hora del evento/entrenamiento (aplica a los 3 tipos de recurrencia por igual).
+
+  **Diseño, decisiones no explícitas en el pedido que hubo que resolver:**
+  1. **`getVenues()` es una función nueva, no pedida explícitamente en el mensaje original (que solo pide `crearVenue`/`editarVenue`) pero imprescindible para el frontend** -- "Editar lugares" necesita listar TODOS los lugares existentes con TODAS sus columnas (no solo `Lugar`→`Tipo de ícono`, que es lo único que ya lee `_mapaTipoIconoPorLugar()`, Tanda 1) para poder precargar el formulario de edición. Devuelve un array plano, un objeto por fila, con `fila` = número de fila REAL de la hoja (mismo campo/convención que ya usa `_evAntReglas`/`r.fila` para Asistencia Anticipada) -- ese es el `idRegla` que el frontend manda de vuelta a `editarVenue()`.
+  2. **La reconciliación corre DENTRO de `crearVenue`/`editarVenue`, llamando directo a `_mantenerVentanaAsistenciasInterno()` (nombre asumido tal como lo pidió Victor) en vez de depender de `manejarEdicionVenues`** -- ese trigger (`onEdit` de Sheets) solo se dispara con una edición MANUAL en la hoja desde la UI de Sheets, nunca con una escritura hecha por código desde Apps Script (`appendRow()`/`setValues()`), así que una fila creada/editada por estas 2 funciones nuevas quedaría sin reconciliar hasta el próximo trigger diario si no se llama a mano. **`// TODO ajustar` marcado en el código:** se asume que esa función interna no toma argumentos (regenera toda la ventana de todos los Venues) -- si la real de tu `Code.gs` toma el lugar/fila recién tocado como argumento, ajustar esa llamada.
+  3. **Validación de sesión -- mismo patrón ya usado por el resto de acciones admin-only** (`adminMarcarAsistencia`/`adminBuscarPersonasParaEvento`, Tanda 1): se asume un helper `_esAdminValido(adminToken)` ya existente en tu `Code.gs` -- **`// TODO ajustar` el nombre real** si es distinto (ej. si el patrón real es leer `adminToken` contra una hoja de sesiones admin inline en cada función, en vez de un helper compartido).
+
+  ```js
+  // ============================================================
+  // VENUES -- crearVenue/editarVenue/getVenues. Pegar en Code.gs.
+  // Asume la hoja Venues con estas columnas (existentes + NUEVAS, ver el
+  // paso manual de arriba -- AJUSTAR encabezados si no coinciden 1:1 con
+  // los reales, en particular `Maps`, no confirmada contra Code.gs):
+  //   Lugar                 (existente)
+  //   Maps                  (existente -- TODO ajustar si el encabezado real
+  //                          del link de Maps es otro)
+  //   Lat / Lng             (NUEVAS -- numéricas, coordenadas del pin)
+  //   Tipo de ícono         (existente, Tanda 1)
+  //   Requiere reserva      (existente, Tanda 1 -- 'SI'/'NO')
+  //   Tipo de recurrencia   (NUEVA -- 'Días de la semana'/'Cada tantos
+  //                          días/semanas/meses'/'Evento único')
+  //   Días de la semana     (NUEVA -- "Lunes,Miércoles,Viernes", solo si
+  //                          Tipo de recurrencia = 'Días de la semana')
+  //   Frecuencia            (NUEVA -- número, solo si 'Cada tantos...')
+  //   Unidad                (NUEVA -- 'dias'/'semanas'/'meses', solo si
+  //                          'Cada tantos...')
+  //   Fecha de referencia   (NUEVA -- fecha; ancla en 'Cada tantos...' o la
+  //                          fecha del evento en 'Evento único')
+  //   Hora                  (NUEVA)
+  // ============================================================
+
+  // Índice 0 = día 1 (Lunes) del payload del frontend (js/eventos.js,
+  // _evLugarToggleDia() -- 1=Lunes...7=Domingo, mismo orden que _EV_DIAS_CORTOS).
+  var _EV_LUGAR_DIA_NOMBRE = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+  // Arma el array de valores en el orden REAL de columnas de Venues,
+  // resolviendo cada índice por encabezado (_colIdx, ya existente desde la
+  // Tanda 1) -- tolera columnas reordenadas, compartido por crearVenue/editarVenue.
+  function _venueFilaDesdeDatos(datos) {
+    var hoja = SpreadsheetApp.getActive().getSheetByName('Venues');
+    var headers = hoja.getDataRange().getValues()[0];
+    var fila = new Array(headers.length).fill('');
+    function set(nombreCol, valor) { fila[_colIdx(headers, nombreCol)] = valor; }
+
+    set('Lugar', datos.nombre);
+    set('Maps', datos.mapsUrl || '');
+    set('Lat', datos.lat !== undefined && datos.lat !== '' ? Number(datos.lat) : '');
+    set('Lng', datos.lng !== undefined && datos.lng !== '' ? Number(datos.lng) : '');
+    set('Tipo de ícono', datos.tipoIcono);
+    set('Requiere reserva', datos.requiereReserva === 'NO' ? 'NO' : 'SI');
+
+    var TIPO_RECURRENCIA_LABEL = {
+      dias_semana: 'Días de la semana',
+      cada_tantos: 'Cada tantos días/semanas/meses',
+      unico: 'Evento único'
+    };
+    set('Tipo de recurrencia', TIPO_RECURRENCIA_LABEL[datos.tipoRecurrencia] || '');
+
+    if (datos.tipoRecurrencia === 'dias_semana') {
+      var dias = JSON.parse(datos.diasSemana || '[]'); // [1..7], 1=Lunes
+      set('Días de la semana', dias.map(function(d) { return _EV_LUGAR_DIA_NOMBRE[d - 1]; }).join(','));
+      set('Frecuencia', ''); set('Unidad', ''); set('Fecha de referencia', '');
+    } else if (datos.tipoRecurrencia === 'cada_tantos') {
+      set('Días de la semana', '');
+      set('Frecuencia', Number(datos.frecuencia));
+      set('Unidad', datos.unidad); // 'dias'/'semanas'/'meses' tal como lo manda el frontend
+      set('Fecha de referencia', datos.fechaReferencia);
+    } else { // 'unico'
+      set('Días de la semana', ''); set('Frecuencia', ''); set('Unidad', '');
+      set('Fecha de referencia', datos.fechaReferencia);
+    }
+    set('Hora', datos.hora || '');
+    return fila;
+  }
+
+  function crearVenue(datos) {
+    try {
+      // TODO ajustar: nombre real del helper de validación admin (mismo
+      // patrón que adminMarcarAsistencia/adminBuscarPersonasParaEvento, Tanda 1).
+      if (!_esAdminValido(datos.adminToken)) return { exito: false, error: 'No autorizado' };
+      var hoja = SpreadsheetApp.getActive().getSheetByName('Venues');
+      hoja.appendRow(_venueFilaDesdeDatos(datos));
+      // Reconciliación en la MISMA llamada -- ver punto de diseño 2 más
+      // arriba, TODO ajustar si la función real toma argumentos.
+      _mantenerVentanaAsistenciasInterno();
+      return { exito: true };
+    } catch (e) {
+      return { exito: false, error: e.message };
+    }
+  }
+
+  function editarVenue(idRegla, datos) {
+    try {
+      if (!_esAdminValido(datos.adminToken)) return { exito: false, error: 'No autorizado' };
+      var hoja = SpreadsheetApp.getActive().getSheetByName('Venues');
+      var fila = _venueFilaDesdeDatos(datos);
+      hoja.getRange(idRegla, 1, 1, fila.length).setValues([fila]);
+      _mantenerVentanaAsistenciasInterno();
+      return { exito: true };
+    } catch (e) {
+      return { exito: false, error: e.message };
+    }
+  }
+
+  // NUEVA (ver punto de diseño 1 más arriba) -- admin-only, devuelve TODAS
+  // las columnas de cada Venue para la lista de "Editar lugares" +
+  // precargado del formulario de edición.
+  function getVenues(adminToken) {
+    if (!_esAdminValido(adminToken)) return { exito: false, error: 'No autorizado' };
+    var hoja = SpreadsheetApp.getActive().getSheetByName('Venues');
+    var datos = hoja.getDataRange().getValues();
+    var headers = datos[0];
+    var cLugar = _colIdx(headers, 'Lugar'), cMaps = _colIdx(headers, 'Maps'),
+        cLat = _colIdx(headers, 'Lat'), cLng = _colIdx(headers, 'Lng'),
+        cTipo = _colIdx(headers, 'Tipo de ícono'), cReq = _colIdx(headers, 'Requiere reserva'),
+        cRecu = _colIdx(headers, 'Tipo de recurrencia'), cDias = _colIdx(headers, 'Días de la semana'),
+        cFrec = _colIdx(headers, 'Frecuencia'), cUnidad = _colIdx(headers, 'Unidad'),
+        cFecha = _colIdx(headers, 'Fecha de referencia'), cHora = _colIdx(headers, 'Hora');
+    var TIPO_RECURRENCIA_VAL = {
+      'Días de la semana': 'dias_semana',
+      'Cada tantos días/semanas/meses': 'cada_tantos',
+      'Evento único': 'unico'
+    };
+    var out = [];
+    for (var i = 1; i < datos.length; i++) {
+      var f = datos[i];
+      if (!f[cLugar]) continue; // fila vacía
+      var diasStr = String(f[cDias] || '');
+      out.push({
+        fila: i + 1,
+        nombre: f[cLugar],
+        mapsUrl: f[cMaps] || '',
+        lat: f[cLat] !== '' ? Number(f[cLat]) : null,
+        lng: f[cLng] !== '' ? Number(f[cLng]) : null,
+        tipoIcono: f[cTipo] || 'Entrenamiento',
+        requiereReserva: String(f[cReq] || '').toUpperCase().trim() !== 'NO',
+        tipoRecurrencia: TIPO_RECURRENCIA_VAL[f[cRecu]] || null,
+        diasSemana: diasStr ? diasStr.split(',').map(function(n) { return _EV_LUGAR_DIA_NOMBRE.indexOf(n.trim()) + 1; }) : [],
+        frecuenciaNumero: f[cFrec] || null,
+        frecuenciaUnidad: f[cUnidad] ? String(f[cUnidad]).toLowerCase() : null,
+        fechaReferencia: f[cFecha] ? Utilities.formatDate(new Date(f[cFecha]), Session.getScriptTimeZone(), 'yyyy-MM-dd') : null,
+        hora: f[cHora] || ''
+      });
+    }
+    return out;
+  }
+  ```
+
+  **Router -- agregar a `doGet`/`doPost` (mismo patrón de validación de sesión ya usado por el resto de acciones admin, `// TODO ajustar` el nombre real de tu helper de respuesta JSON si `_json()` no es el que usa tu `Code.gs`):**
+  ```js
+  // doGet:
+  case 'getVenues':
+    return _json(getVenues(e.parameter.adminToken));
+
+  // doPost:
+  case 'crearVenue':
+    return _json(crearVenue(e.parameter));
+  case 'editarVenue':
+    return _json(editarVenue(Number(e.parameter.idRegla), e.parameter));
+  ```
+
+- **shared/mapa-interactivo.js (nuevo) + css/eventos.css + index.html + js/eventos.js + js/ui.js + js/perfil.js — Frontend de Venues: 2 pantallas nuevas en Eventos ("Editar lugares" + formulario compartido con "Crear evento", disparadas desde el FAB de `#s-eventos` que ya existía como placeholder) + extracción de un mapa interactivo reusable.** Ver la entrada anterior para las firmas de backend documentadas (`crearVenue`/`editarVenue`/`getVenues`) que este frontend consume.
+
+  1. **`irEvLugares()`/`#s-eventos-lugares` -- lista de Venues.** Pantalla completa con nav propia (mismo patrón que `#s-eventos-anticipada`, sin pasar por `TOP_BAR_CONFIG` -- ninguna pantalla de Eventos lo usa desde el rediseño de esa sección), back fijo a `s-eventos`. `getVenues()` puebla `_evLugares` con el mismo guard de "carga vigente" simplificado que el resto de este archivo (contador `_evLugaresCargaId`, sin el refuerzo de `_evAntCargaVigente()` -- esta lista no tiene un footer fijo separado que pueda quedar flotando si el usuario sale antes de que resuelva, el único riesgo real que motivó esa versión reforzada). Cards con el mismo look que el resumen de Asistencia Anticipada (`.ev-ant-card`/`.ev-card-top-row`/`.ev-card-icon`/`.ev-card-body`, reusadas TAL CUAL, sin CSS nuevo para la lista) -- toda la card es tocable (abre el formulario precargado), sin botones de editar/eliminar propios como sí tiene esa otra lista (eliminar Venues no se pidió en esta tanda). "+ Nuevo lugar" al final abre el mismo formulario vacío.
+
+  2. **`#s-eventos-lugar-form` -- formulario ÚNICO compartido por "Crear evento" (FAB, directo, vacío) y "Editar lugares" (card existente precargada, o "+ Nuevo lugar" vacío) -- mismos campos siempre, porque son la MISMA entidad de backend (una fila de Venues), solo cambian los textos según cómo se entró.** `_evLugarOrigen` (`'s-eventos'` o `'s-eventos-lugares'`) decide a dónde vuelve la flecha atrás (`_evLugarFormVolver()`, pasada a `ir()` desde el `onclick` del botón atrás -- mismo mecanismo dinámico que ya usa `TOP_BAR_CONFIG['s3a'].volver` como función, aunque acá no pasa por `TOP_BAR_CONFIG` al no usar el top-bar genérico) y a dónde vuelve tras guardar con éxito (recargando la lista con `irEvLugares()` si el origen fue esa pantalla, en vez de un `ir()` a secas que la dejaría con datos viejos). `_evLugarViaCrearEvento` (booleano aparte, no se deduce del origen) decide SOLO los textos -- título "Crear evento" y botón final "Crear evento" en vez de "Guardar" -- únicamente cuando se entró por el FAB directo; "+ Nuevo lugar" desde la lista crea exactamente el mismo tipo de fila pero con los textos genéricos de "lugar".
+     - **Ubicación:** buscador con ícono de lupa (`.app-nav-search`, reusada tal cual de `#ev-search-input`/Ajustes -- no una clase nueva) + `google.maps.places.Autocomplete` (mismo mecanismo ya cargado en `index.html` vía `_initMapsCallback()`/`window._mapsLoaded`, el mismo patrón de `ajAbrirSheetPlaces()`) seguido del mapa interactivo con pin fijo al centro. **Extracción pedida explícitamente ("no duplicar el mapa de Dirección, extraer a función reusable"):** `crearOCentrarMapaPin(instanciaPrevia, canvasEl, centro, onDragEnd)` (nuevo, `shared/mapa-interactivo.js`, cargado temprano junto a `shared/bsheet.js`/`shared/axis-transicion.js` -- sin dependencias, solo Maps en tiempo de ejecución) factoriza la creación del `google.maps.Map` (`disableDefaultUI`, `zoomControl`, `gestureHandling:'greedy'`) + el listener de `dragend`, mecanismo que antes solo vivía adentro de `_ajInicializarMapaDireccion()` (`js/perfil.js`, Ajustes → Dirección). Se refactorizó ESE código existente para usar la función nueva (mínimo, 2 líneas -- `centrarEn()` pasa a llamar `crearOCentrarMapaPin()` en vez de instanciar el `Map` a mano) en vez de dejarlo duplicado en 2 archivos; `_ajOnMapaDireccionDragEnd()` (la lógica de reverse-geocode a los campos de Dirección) NO se tocó, sigue leyendo `_ajDireccionMap.getCenter()` por su cuenta, el callback nuevo solo la invoca. El pin visual reusa `.aj-mapa-pin` (`css/perfil.css`) tal cual -- es CSS genérico (no scoped a Ajustes pese al archivo donde vive), no se duplicó. **A diferencia de Dirección** (que geocodifica campos de texto ya guardados, sin buscador propio -- Places quedó huérfano ahí desde su propio rediseño anterior, ver "Cambios recientes"), el formulario de Venues SÍ tiene el buscador real: buscar centra el mapa vía `place.geometry.location` y guarda `place.url` (el link de Maps real de ese lugar) si vino de una búsqueda, o arma `https://www.google.com/maps?q=lat,lng` si el usuario solo arrastró el pin sin buscar nada -- cualquiera de los 2 caminos dispara `_evLugarActualizarUbicacion(lat,lng,mapsUrl)`, un solo punto que guarda lat/lng + el link, habilitando el botón "Guardar" recién ahí (sin ubicación elegida, no hay nada que guardar). Constante propia `_EV_LUGAR_QUITO_LATLNG` (mismo valor que `_AJ_QUITO_LATLNG`, `js/perfil.js`) en vez de reusar esa variable -- `js/eventos.js` carga ANTES que `js/perfil.js` (ver "Carga de scripts"), depender de ella sería frágil/orden-dependiente.
+     - **Nombre del lugar:** texto simple, con una sugerencia automática (si el campo sigue vacío) del `place.name` de una búsqueda de Places -- nunca pisa un nombre ya escrito a mano.
+     - **Tipo de ícono:** 6 pills de selección única (Entrenamiento/Torneo/Partido/Asamblea/Evento social/Otro) -- `_EV_ICONOS` (`js/eventos.js`, ya existente desde la Tanda 1/2 de Eventos) suma 3 entradas nuevas (`Partido:'sports'`, `'Evento social':'celebration'`, `Otro:'category'`), las cards reales de eventos que ya leen ese mapa (`_evCardEventoHtml()`/detalle/lista) quedan cubiertas gratis para estos 3 tipos nuevos sin ningún cambio ahí.
+     - **¿Requiere reserva?:** 2 pills Sí/No, mismo componente `.aj-pill` de selección única.
+     - **Tipo de recurrencia:** 3 pills (Días de la semana/Cada tantos días-semanas-meses/Evento único) con reveal inline -- mismo patrón EXACTO ya usado por `_evAntMostrarSubFrecuencia()` (Asistencia Anticipada, más arriba en este archivo): ocultar los 3 sub-bloques, mostrar el que corresponde con un `fadeIn`. "Hora" es un único campo compartido por los 3 (aparece en los 3 casos según el pedido), no 3 inputs duplicados.
+       - **Días de la semana:** selector de 7 círculos L-M-X-J-V-S-D (`.ev-dia-circulo`, nuevo -- primer componente genuinamente nuevo de esta tanda, sin precedente en el resto de la app: Asistencia Anticipada elige MESES, no días de la semana), multi-select libre (toggle independiente, sin exclusividad entre círculos -- un entrenamiento recurrente puede caer varios días de la semana).
+       - **Cada tantos días/semanas/meses:** número + pills de unidad (Días/Semanas/Meses, `.aj-pill` de selección única) + fecha de referencia (calendario inline).
+       - **Evento único:** fecha única (mismo calendario inline).
+     - **Calendario inline de fecha única (`_evLugarCalRender()`):** reusa TAL CUAL los helpers genéricos de fecha ya existentes en este archivo (`_evCalMesDe()`/`_evLunesDeSemana()`/`_evToISO()`/`_evHoyISO()`/`_evFechaCmp()`, los mismos que usa el timeline principal y `_evAntCalRender()`) y las clases CSS del calendario de Asistencia Anticipada (`.ev-cal-grid`/`.ev-ant-cal-hoy`/`.ev-ant-cal-sel`/`.ev-ant-cal-pasado`, `.ev-ant-cal-nav*`) -- sin duplicar CSS, mismo criterio que el resto de esta tanda. Selección de un solo toque (sin rango, a diferencia de "Por período" en Asistencia Anticipada). **Decisión de diseño no explícita en el pedido:** solo el calendario de "Evento único" bloquea fechas pasadas (mismo criterio que Asistencia Anticipada -- no debería poder crearse un evento puntual retroactivo); el de "fecha de referencia" (Cada tantos...) NO bloquea pasado, porque esa fecha es el ANCLA de un patrón recurrente (ej. "cada 2 semanas contadas desde el 1 de marzo", una fecha ya pasada es perfectamente válida como punto de partida del cálculo).
+     - **Botón final "Guardar"/"Crear evento":** sigue la convención genérica `cta-footer-<id-de-pantalla>` (`cta-footer-s-eventos-lugar-form`) que `ir()`/`js/ui.js` ya muestra/oculta solo -- a diferencia de `#cta-footer-eventos-anticipada` (que necesitó togglearse a mano por convivir con el estado "resumen" de esa misma pantalla), acá no hace falta ningún código extra para mostrarlo/ocultarlo. Deshabilitado (`disabled` nativo) hasta que TODO esté completo (`_evLugarValido()`, evaluado en cada cambio vía `_evLugarActualizarBotonGuardar()` -- mismo criterio ya establecido por `_evAntActualizarBotonAplicar()`): nombre + ubicación elegida + tipo de ícono + requiere-reserva + tipo de recurrencia + los campos específicos de esa recurrencia (días+hora / número+unidad+fecha+hora / fecha+hora).
+     - **Guardado (`_evLugarGuardar()`):** arma el payload y llama `crearVenue` (sin `_evLugarData.fila`) o `editarVenue` (con fila, sumando `idRegla`) -- misma acción de backend sin importar si se entró por "Crear evento" o por "Editar lugares", son la misma entidad. `adminToken: _adminToken` (mismo global ya usado por `js/admin.js`) en vez de un `nombre`/`token` de usuario normal -- estas 2 acciones son admin-only, consistente con que el FAB entero ya solo se muestra con `_adminToken` presente (ver comentario de `ir()`, `js/ui.js`).
+
+  3. **`js/ui.js` -- `_BOTTOM_NAV_EXTRA` suma `'s-eventos-lugares'`/`'s-eventos-lugar-form'` → `'eventos'`**, mismo criterio que `'s-eventos-detalle'`/`'s-eventos-anticipada'` (drill-downs de esa tab, alcanzables solo desde el FAB) -- cubre nav inferior/gesto nativo de "atrás" gratis, sin código adicional (`_esPantallaAlcanzable()`/`ir()` ya resuelven contra ese mismo mapa). El FAB se sigue ocultando en las 2 pantallas nuevas sin cambios (`_mostrarFab` ya exigía `id==='s-eventos'` exacto, no solo la tab).
+
+  4. **2 bugs reales encontrados y corregidos automatizando la verificación con Playwright (no simples fallas de test, ambos confirmados antes de tocar nada):**
+     - **El botón fijo "Guardar"/"Crear evento" (`#cta-footer-s-eventos-lugar-form`) tapaba `.app-bottom-nav` y bloqueaba sus taps.** Causa exacta ya documentada en este mismo MANIFEST para `#cta-footer-eventos-anticipada` (ver "Cambios recientes" de esa pantalla): `.cta-footer-fixed` hereda `bottom:0` por defecto, que se superpone a la nav inferior en cualquier pantalla que la muestre a la vez (`_BOTTOM_NAV_EXTRA`, punto 3 de arriba) -- necesita el mismo override puntual que ya tienen `#cta-footer-s6`/`#cta-footer-s-pago`/`#cta-footer-eventos-anticipada`. Fix: `#cta-footer-s-eventos-lugar-form { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }` (`css/estilos.css`, junto a esos 3 -- ya está en `CACHEBUST_FILES`, sin agregado nuevo). Encontrado en el primer intento de automatizar el flujo (el click real quedaba interceptado por `.app-bottom-nav`, no una falla del test).
+     - **El botón "Crear evento" del FAB (`index.html`) no pasaba el 2do argumento de `irEvLugarFormNuevo(origen, viaCrearEvento)`** -- llamaba `irEvLugarFormNuevo('s-eventos')` a secas, así que `_evLugarViaCrearEvento` quedaba en `false` siempre y el formulario mostraba título/botón genéricos ("Nuevo lugar"/"Guardar") incluso entrando por el FAB. Fix de una línea: `irEvLugarFormNuevo('s-eventos', true)`. Encontrado en la primera corrida de la verificación de abajo (el título esperado no coincidía con el real) -- no hipotetizado de antemano.
+
+  **Verificado con Playwright** (`chromium`, 390×844, servido localmente con `python -m http.server`, sesión admin falseada con `_adminToken` a mano -- sin login real, mismo criterio que el resto de este archivo; `google.maps`/`google.maps.places.Autocomplete` reemplazados por un stub mínimo propio vía `page.addInitScript()` + bloqueo de `maps.googleapis.com`/`accounts.google.com` con `page.route()`, y **todas** las llamadas a `script.google.com` interceptadas y respondidas con datos de prueba -- nunca se dejó llegar una sola escritura real a la hoja de producción):
+  - **"Crear evento" de punta a punta:** FAB visible solo con `_adminToken` presente → "Crear evento" abre `#s-eventos-lugar-form` vacío con título Y botón "Crear evento" (confirmado tras el 2do fix de arriba) → completar nombre, simular una búsqueda real de Places (`__simularBusqueda()` dispara `place_changed` con `geometry`/`name`/`url` de prueba) centra el mapa fake exactamente en las coordenadas del lugar buscado → arrastrar el pin (`__triggerDragEnd()`) sin buscar de nuevo actualiza `_evLugarData.mapsUrl` a un link armado a partir de lat/lng (`https://www.google.com/maps?q=-0.16,-78.49`, confirmando el fallback cuando no hay `place.url` disponible) → elegir pill de ícono/reserva/recurrencia ("Evento único") revela el calendario + el campo Hora compartido, con fade → tocar un día + escribir hora habilita "Guardar" (antes deshabilitado) → guardar dispara **exactamente 1** llamada al backend (`crearVenue`, POST) con el payload completo esperado (`adminToken`, `nombre`, `mapsUrl`, `lat`, `lng`, `tipoIcono:'Torneo'`, `requiereReserva:'SI'`, `tipoRecurrencia:'unico'`, `hora`, `fechaReferencia`) y navega de vuelta a `s-eventos` (origen real del FAB) -- **ninguna llamada adicional de "reconciliar" por separado**, confirmando que el frontend depende enteramente de que el backend la ejecute dentro de la misma respuesta (tal como está documentado en la entrada anterior), sin compensar del lado del cliente.
+  - **Editar un lugar existente, precarga confirmada campo por campo:** `getVenues()` mockeada devuelve 1 venue (`Torneo`, `requiereReserva:false`, `tipoRecurrencia:'cada_tantos'`, frecuencia 2 semanas, fecha de referencia 2026-03-01, hora 18:30) → "Editar lugares" muestra 1 card con ese nombre → tocarla precarga el formulario con **los 8 campos verificados exactos**: título "Editar lugar"/botón "Guardar" (no "Crear evento", aunque `_evLugarViaCrearEvento` nunca se setea en este camino), nombre, pill de ícono activa en "Torneo", pill de reserva activa en "no" (`requiereReserva:false` → `'no'`, mapeo confirmado), pill de recurrencia activa en "cada_tantos" con su sub-bloque ya revelado (sin necesidad de tocar la pill de nuevo), número de frecuencia "2", pill de unidad activa en "semanas", hora "18:30", resumen del calendario "1 de Marzo de 2026" (fecha ISO parseada correctamente) y botón "Guardar" ya habilitado de entrada (todos los campos ya completos) -- editar la frecuencia a 3 y guardar dispara **exactamente 1** llamada `editarVenue` con `idRegla:7` (el número de fila real) y el resto de los campos intactos salvo `frecuencia:3`, navegando de vuelta a `s-eventos-lugares` **con la lista recargada** (no un `ir()` a secas que la hubiera dejado con datos viejos).
+  - **Smoke test del refactor de mapa compartido:** tras todo el flujo de arriba, abrir Ajustes → Dirección (`irAjSub('aj-sub-direccion')`) sigue inicializando el mapa correctamente (`_ajInicializarMapaDireccion()` → `crearOCentrarMapaPin()` → instancia real del stub, `_ajDireccionMap` poblada) -- confirma que el refactor de esa función para usar el helper nuevo no rompió la pantalla existente.
+  - **Sin errores de consola atribuibles a este código** -- los únicos 3 capturados son el bloqueo intencional de `maps.googleapis.com`/`accounts.google.com` (`page.route().abort()`, 2 `net::ERR_FAILED` esperados) y el rechazo estándar de Google Sign-In por origen no autorizado en `localhost` (`pageerror`, ya documentado en entradas anteriores de este archivo).
+  - **Limitación reconocida, no verificable desde este repo:** no hay forma de confirmar contra un backend REAL que `_mantenerVentanaAsistenciasInterno()` efectivamente exista con ese nombre/firma, ni que genere eventos futuros de verdad -- eso queda pendiente de que Victor aplique el código documentado en la entrada anterior y lo pruebe contra la hoja real.

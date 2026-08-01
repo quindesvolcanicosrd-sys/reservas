@@ -229,3 +229,10 @@ body.aj-sub-salud-activo #app-toast {
    (z-index:900) por completo mientras el wizard estaba abierto -- la nav
    seguía técnicamente `display:flex` en el DOM, solo visualmente cubierta. */
 #cta-footer-eventos-anticipada { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
+/* #cta-footer-s-eventos-lugar-form -- mismo motivo que #cta-footer-eventos-anticipada
+   de arriba (mismo tab de la nav inferior, `_BOTTOM_NAV_EXTRA`/js/ui.js):
+   sin este override el botón "Guardar"/"Crear evento" heredaba `bottom:0` y
+   quedaba superpuesto a `.app-bottom-nav`, bloqueando sus taps -- encontrado
+   con Playwright durante la verificación de esta pantalla (el click al botón
+   real quedaba interceptado por `.app-bottom-nav`, no por casualidad de test). */
+#cta-footer-s-eventos-lugar-form { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }

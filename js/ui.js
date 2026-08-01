@@ -636,7 +636,11 @@ var _BOTTOM_NAV_PANTALLAS = APP_BOTTOM_NAV_ITEMS.map(function(item) { return ite
 var _BOTTOM_NAV_EXTRA = {
   's4': 'reservas', 's-misreservas': 'reservas', 's6': 'reservas',
   's-pago': 'reservas', 's-gestionar': 'reservas',
-  's-eventos-detalle': 'eventos', 's-eventos-anticipada': 'eventos'
+  's-eventos-detalle': 'eventos', 's-eventos-anticipada': 'eventos',
+  // Venues ("Editar lugares"/form compartido con "Crear evento", ver
+  // MANIFEST.md) -- mismo criterio que las 2 entradas de arriba: drill-down
+  // de la tab 'eventos', alcanzables solo desde el FAB de #s-eventos.
+  's-eventos-lugares': 'eventos', 's-eventos-lugar-form': 'eventos'
 };
 
 // Reusa el `icono` ya definido por ítem para el slot de la flecha atrás de
