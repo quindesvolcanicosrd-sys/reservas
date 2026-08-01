@@ -525,6 +525,16 @@ var _ajSubAbierto = null; // id del aj-sub-* actualmente abierto, o null
 // que restaurar.
 var _ajUltimoSubAbierto = null;
 
+// Clase en <body> mientras "Salud" (aj-sub-salud) es el sub-panel activo --
+// scopea el override de posición de #app-toast (css/estilos.css) que lo
+// sube por encima de `.app-bottom-nav` en esta pantalla (mismo criterio ya
+// usado para #app-toast en Asistencia anticipada, `body.ev-ant-footer-visible`,
+// css/eventos.css) sin afectar el toast en el resto de la app. Llamada en
+// los 4 puntos donde `_ajSubAbierto` cambia -- ver ese var más arriba.
+function _ajSincronizarClaseSalud() {
+  document.body.classList.toggle('aj-sub-salud-activo', _ajSubAbierto === 'aj-sub-salud');
+}
+
 function irAjSub(id, desdeHistorial) {
   var sub = document.getElementById(id);
   if (!sub) return;
@@ -558,6 +568,7 @@ function irAjSub(id, desdeHistorial) {
     });
   });
   _ajSubAbierto = id;
+  _ajSincronizarClaseSalud();
   _ajUltimoSubAbierto = id;
   if (!desdeHistorial) {
     history.pushState({ pantalla: 's-datos', ajSub: id }, '', '#' + id);
@@ -582,6 +593,7 @@ function _reabrirAjSubInstantaneo(id) {
   var fondo = document.getElementById('s-datos-card');
   if (fondo) { fondo.style.transform = 'translateX(-25%)'; fondo.style.opacity = '0.85'; }
   _ajSubAbierto = id;
+  _ajSincronizarClaseSalud();
   history.pushState({ pantalla: 's-datos', ajSub: id }, '', '#' + id);
 }
 
@@ -602,6 +614,7 @@ function cerrarAjSub(id, desdeHistorial) {
   // valor inline sin necesitar forzar un "desde" nuevo.
   if (sub) {
     _ajSubAbierto = null; // adentro del if (sub): ver nota de _ajGuardar(payload) sin subId más abajo
+    _ajSincronizarClaseSalud();
     // Cierre real (manual, no el force-close de ir()/js/ui.js -- ese bypassea
     // esta función entera, ver su comentario): el usuario ya volvió al home
     // de Ajustes por su cuenta, así que no hay nada que restaurar si cambia

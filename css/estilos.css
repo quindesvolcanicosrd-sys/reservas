@@ -86,6 +86,19 @@
 .app-toast.visible { opacity:1; transform:translateX(-50%) translateY(0); }
 .app-toast.app-toast-ok { border-color:var(--success); color:var(--success-dark); background:var(--green-light); }
 .app-toast.app-toast-error { border-color:var(--danger); color:var(--danger-dark); background:var(--danger-bg); }
+/* Salud (aj-sub-salud, ver body.aj-sub-salud-activo/js/perfil.js) -- mismo
+   criterio ya usado para #app-toast en Asistencia anticipada
+   (body.ev-ant-footer-visible, css/eventos.css): con `bottom:28px` fijo, el
+   toast de saludFilaBloqueada() ("Para editar esta información...") quedaba
+   solapado con `.app-bottom-nav` (60px+ de alto), que sigue visible detrás
+   de `.aj-sub-salud` -- confirmado con Playwright, el borde inferior del
+   toast invadía la franja de la nav. A diferencia de Asistencia anticipada,
+   acá no hay un footer fijo propio que compensar (`_saludMostrarEstado()`
+   ya oculta `#cta-footer-salud` en este estado) -- alcanza con despejar la
+   nav sola. */
+body.aj-sub-salud-activo #app-toast {
+  bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 12px);
+}
 
 /* ── Pull-to-refresh (Mis reservas) ──────────────────────
    Antes 100% inline en index.html — extraído a clases para

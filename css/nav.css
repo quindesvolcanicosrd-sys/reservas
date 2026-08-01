@@ -314,7 +314,21 @@
   transform: translateX(-50%);
   width: 100%;
   max-width: 523px;
-  z-index: 900;
+  /* Bug real corregido (ver "Cambios recientes"): en `900`, `.aj-sub`
+     (css/perfil.css, z-index:950, el overlay de las sub-pantallas de
+     Ajustes -- Salud/Perfil/Contacto/etc.) queda por ENCIMA de esta nav en
+     el stacking -- ambas comparten el mismo `background:var(--bg)` y
+     `.aj-sub` termina justo en el borde superior real de la nav
+     (`bottom:calc(var(--bottom-nav-h) + safe-area)`, sin overlap de
+     posición) pero el `box-shadow` de más abajo se pinta HACIA ARRIBA desde
+     ese borde -- dentro del área que le pertenece a `.aj-sub`, con mayor
+     z-index, así que su fondo opaco lo tapa por completo (confirmado con
+     Playwright: gap real de 0px entre ambos rects, mismo color de fondo en
+     los 2). `960` -- mismo valor ya usado por `#cta-footer-salud`
+     (index.html) para superar este mismo `.aj-sub`, no un número nuevo --
+     supera cualquier aj-sub-* por igual, no solo Salud, así que corrige el
+     mismo problema en el resto de las sub-pantallas de Ajustes de una. */
+  z-index: 960;
   background: var(--bg);
   /* box-shadow en vez de border-top: mismo hairline visual (0.5px, var(--border-light))
      pero sin sumar al alto real de la caja -- un border sí lo hace (incluso con

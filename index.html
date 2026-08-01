@@ -26,12 +26,12 @@
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=580dd587"></script>
 <link rel="stylesheet" href="css/global.css?v=64804fa9">
-<link rel="stylesheet" href="css/estilos.css?v=bcba5afc">
+<link rel="stylesheet" href="css/estilos.css?v=7b5203f3">
 <link rel="stylesheet" href="css/ui.css?v=5d0e5923">
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=6a719532">
-<link rel="stylesheet" href="css/nav.css?v=6d4e12ef">
+<link rel="stylesheet" href="css/nav.css?v=daa56733">
 <link rel="stylesheet" href="css/eventos.css?v=9c0d1053">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
@@ -963,11 +963,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/bsheet.js"></script>
 <script src="shared/axis-transicion.js"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=81aeb161"></script>
+<script src="js/ui.js?v=20a96dd4"></script>
 <script src="js/eventos.js?v=3d11c313"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=6219c57d"></script>
-<script src="js/perfil.js?v=408617f0"></script>
+<script src="js/perfil.js?v=ea94e181"></script>
 <script src="js/admin.js"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js"></script>
@@ -2033,7 +2033,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
     <!-- Estado: completada (filas de lectura, editables individualmente) -->
     <div id="salud-resumen" style="display:none">
-      <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:14px;" onclick="saludIniciarWizard()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span>Completa nuevamente tus datos de salud</button>
+      <!-- Estilo de botón tocable (borde --brand, sin relleno) -- mismo criterio
+           que .ev-ant-btn-restablecer-icono (css/eventos.css): antes era texto
+           suelto sin ningún indicio visual de que fuera tocable (mismo look que
+           .btn-text-simple da por defecto, pensado para acciones secundarias
+           discretas, no para la acción principal de esta pantalla). -->
+      <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:14px;padding:10px 16px;border:1.5px solid var(--brand);border-radius:12px;color:var(--brand);" onclick="saludIniciarWizard()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span>Completa nuevamente tus datos de salud para actualizar</button>
 
       <div class="aj-group">
         <div class="aj-dato-row no-tap" onclick="saludFilaBloqueada()">

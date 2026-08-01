@@ -208,6 +208,7 @@ function ir(id, desdeHistorial, sinTrampa) {
     if (_fondoForzado) { _fondoForzado.style.transform = ''; _fondoForzado.style.opacity = ''; }
     if (_ajSubAbierto === 'aj-sub-salud' && typeof _saludOcultarFooter === 'function') _saludOcultarFooter();
     _ajSubAbierto = null;
+    if (typeof _ajSincronizarClaseSalud === 'function') _ajSincronizarClaseSalud();
   }
   while (_overlayStack.length > 0) { _overlayStack.pop()(true); }
   if (id === 's1b' || !document.getElementById(id)) { ir('s1', true); return; }
