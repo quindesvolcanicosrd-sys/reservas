@@ -439,17 +439,29 @@ function ir(id, desdeHistorial, sinTrampa) {
     }
   }
 
-  // FAB de #s-eventos (#ev-fab-menu, index.html) -- solo cuenta admin
-  // (_esAdminDemo, js/eventos.js) Y con 's-eventos' como pantalla activa
-  // (no en s-eventos-detalle/s-eventos-anticipada, aunque compartan tab de
-  // la nav inferior). Mismo criterio que #home-nav/#s4-nav de arriba:
-  // togglea acá, único punto real de "cambio de pantalla" (ver comentario
-  // de arriba de esta función). Si se abandona 's-eventos' con el menú
-  // "speed dial" abierto, se fuerza su cierre -- no debe quedar abierto e
-  // invisible esperando la próxima vez que se muestre el FAB.
+  // FAB de #s-eventos (#ev-fab-menu, index.html) -- solo cuenta admin Y con
+  // 's-eventos' como pantalla activa (no en s-eventos-detalle/
+  // s-eventos-anticipada, aunque compartan tab de la nav inferior). Mismo
+  // criterio que #home-nav/#s4-nav de arriba: togglea acá, único punto real
+  // de "cambio de pantalla" (ver comentario de arriba de esta función). Si
+  // se abandona 's-eventos' con el menú "speed dial" abierto, se fuerza su
+  // cierre -- no debe quedar abierto e invisible esperando la próxima vez
+  // que se muestre el FAB.
+  // Bug real corregido (ver "Cambios recientes"): gateaba con `_esAdminDemo`
+  // (js/eventos.js) -- un flag de demo para probar la variante admin de la
+  // card SIN sesión real (`var _esAdminDemo = false;`, nunca lo pisa ningún
+  // flujo de login/restauración real), no la señal real de sesión admin --
+  // con eso, el FAB quedaba invisible para CUALQUIER cuenta admin real,
+  // siempre. `_adminToken` (js/admin.js) es la señal real ya usada por el
+  // resto de la UI admin fuera de Eventos (ej. `#aj-group-miliga` en
+  // `js/perfil.js`, mismo criterio: truthy con cualquier sesión admin,
+  // "pura" o con cuota) -- no `E.datos`/`_dashboardAdminLimitado` (esa
+  // distingue admin "puro" de admin+usuarix, un eje distinto, no "es
+  // admin"). Recalculado en cada `ir()` -- cubre login directo, restaurar
+  // sesión y cambio de tab por igual, sin caso especial en ninguno.
   var eventosFab = document.getElementById('ev-fab-menu');
   if (eventosFab) {
-    var _mostrarFab = id === 's-eventos' && typeof _esAdminDemo !== 'undefined' && _esAdminDemo;
+    var _mostrarFab = id === 's-eventos' && !!_adminToken;
     eventosFab.style.display = _mostrarFab ? 'flex' : 'none';
     if (!_mostrarFab && typeof _evFabCerrar === 'function') _evFabCerrar();
   }
