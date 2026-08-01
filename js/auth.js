@@ -41,14 +41,32 @@ function iniciarGoogleSignInUsuario() {
     var skMain = document.getElementById('gsignin-skeleton-main');
     if (skMain) { skMain.style.opacity = '0'; setTimeout(function(){ skMain.style.display = 'none'; }, 400); }
     if (!window._restaurandoSesion && !window._loginAutoEnCurso) {
+      // Bug real corregido (ver "Cambios recientes" -- parpadeo loader→s1→loader
+      // en login con Google): estos 2 `ocultarCargando()` son del loader de BOOT
+      // (revelar #s1 recién cuando el botón de Google ya está listo), sin
+      // relación con el loader del login en sí -- pero antes se llamaban sin
+      // condición, así que si el usuario completaba el login (click + elección
+      // de cuenta de Google) ANTES de que venzan estos 350ms/6000ms, el timer
+      // de boot igual disparaba y ocultaba el overlay A MITAD de
+      // onGoogleCredentialUsuario() (mientras seguía mostrando "Verificando tu
+      // cuenta..."), revelando #s1 (todavía la pantalla de fondo) por un
+      // instante -- recién el propio mostrarCargando('Cargando tus
+      // reservas...') de más abajo lo volvía a tapar. `window._loginEnProceso`
+      // (seteada al toque en onGoogleCredentialUsuario(), más abajo en este
+      // archivo) es la señal de "ya hay un login real en curso, este timer de
+      // boot quedó obsoleto" -- no hace falta resetearla a `false` en ningún
+      // lado: esta rama corre una sola vez por carga de página (guardada por
+      // `_gisUsuarioInicializado`), así que una vez que un login arrancó, la
+      // única tarea que le quedaba a este timer (revelar #s1 la primera vez)
+      // ya la cumplió el propio flujo de login, sea que termine en éxito o error.
       var _gObs = new MutationObserver(function() {
         var iframe = document.querySelector('#g-signin-btn-usuario iframe');
         if (!iframe) return;
         _gObs.disconnect();
-        setTimeout(ocultarCargando, 350);
+        setTimeout(function() { if (!window._loginEnProceso) ocultarCargando(); }, 350);
       });
       _gObs.observe(document.getElementById('g-signin-btn-usuario'), { childList: true, subtree: true });
-      setTimeout(function() { _gObs.disconnect(); ocultarCargando(); }, 6000);
+      setTimeout(function() { _gObs.disconnect(); if (!window._loginEnProceso) ocultarCargando(); }, 6000);
     }
   }
 
@@ -106,6 +124,7 @@ function _mostrarPermisosSiHaceFalta(fotoFallback) {
 }
 
 function onGoogleCredentialUsuario(resp) {
+  window._loginEnProceso = true;
   mostrarCargando('Verificando tu cuenta...');
   apiPost({ action: 'loginGoogle', idToken: resp.credential }, function(res) {
     if (res.esAdmin) {
@@ -313,8 +332,20 @@ function togglePinVisibility() {
 function cerrarSesion() {
   api({ action: 'cerrarSesion' }, function(){}, function(){});
   localStorage.removeItem('session');
+  localStorage.removeItem('adminSession');
   _token = '';
   E.nombre = ''; E.datos = null; E.datosCompletos = null; _todasReservas = []; E.reagendando = false;
+  // Estado admin (js/admin.js) -- ver "Cambios recientes": sin este reset,
+  // una cuenta admin (dashboardAdmin true o false) que cierra sesión deja
+  // _adminToken/_dashboardAdminLimitado con su último valor real, y la
+  // siguiente cuenta que loguea en la misma pestaña (si NO es admin, el único
+  // camino que asigna estas vars -- `if (res.esAdmin)` en loginGoogle/PIN --
+  // ni se ejecuta) hereda ese estado stale: nav inferior mostrando "Mi Liga"
+  // en vez de "Reservas", `!_dashboardAdminLimitado` evaluando falso para una
+  // cuenta que sí paga cuota. `_actualizarBottomNav()` (js/ui.js) reevalúa
+  // `item.visible()` en cada `ir()`, así que este reset solo (sin recargar la
+  // página) ya alcanza para que la cuenta siguiente arranque limpia.
+  _adminToken = ''; _adminEmail = ''; _adminNombre = ''; _dashboardAdminLimitado = false;
   var sel = document.getElementById('sel-nombre'); if (sel) sel.value = '';
   // Flags de "ya inicializada esta sesión" (ver "Cambios recientes",
   // js/eventos.js/js/perfil.js -- regla general de restaurar posición al

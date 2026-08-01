@@ -234,7 +234,7 @@
    viejo mientras los otros 3 se actualizan). "¿Qué significa esto?" pasa de
    link destacado (subrayado, fondo de color) a texto tenue al lado del pill,
    en la misma fila -- ya no ocupa su propio ancho completo. */
-.rn-status-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:14px 14px 0; }
+.rn-status-row { display:flex; align-items:center; gap:5px; flex-wrap:wrap; padding:8px 14px 5px; }
 .rn-status-info { font-size:0.72rem; color:var(--muted); cursor:pointer; white-space:nowrap; }
 .rn-status-info:hover { color:var(--brand); }
 

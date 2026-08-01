@@ -51,9 +51,28 @@ function _avatarAplicarHtml(el, html) {
   }, 200);
 }
 
+// Bug real corregido (ver "Cambios recientes" -- parpadeo loader→s1→loader en
+// login con Google): `ocultarCargando()` programaba su `display:none` diferido
+// (400ms, para dejar correr la transición de opacidad antes de sacar el
+// overlay del flujo) con un `setTimeout` suelto, sin guardar su id -- si
+// `mostrarCargando()` volvía a mostrar el overlay ANTES de que pasen esos
+// 400ms (ej. el `ocultarCargando()` de arranque de `window.onload`, que
+// corre apenas carga la página, mientras el usuario ya venía completando un
+// login real), el timer viejo igual disparaba más tarde y forzaba
+// `display:none` sobre un overlay que `mostrarCargando()` ya había vuelto a
+// mostrar para una razón completamente distinta -- ocultándolo a mitad de
+// camino sin que ningún `ocultarCargando()` nuevo lo haya pedido.
+// `_ocultarCargandoTimer` es la única instancia pendiente en cualquier
+// momento: `mostrarCargando()` la cancela al re-mostrar (ese display:none
+// diferido ya no aplica, se está mostrando de nuevo) y `ocultarCargando()`
+// cancela cualquier timer previo antes de programar el suyo, para no apilar
+// 2 en paralelo si se llama 2 veces seguidas.
+var _ocultarCargandoTimer = null;
+
 function mostrarCargando(msg) {
   var el = document.getElementById('loading-overlay');
   var msgEl = document.getElementById('loading-msg');
+  if (_ocultarCargandoTimer) { clearTimeout(_ocultarCargandoTimer); _ocultarCargandoTimer = null; }
   var estaOculto = el.style.display === 'none' || el.style.display === '';
   el.classList.remove('fade-out');
   el.classList.remove('fade-in');
@@ -71,9 +90,11 @@ function ocultarCargando() {
   var el = document.getElementById('loading-overlay');
   el.classList.remove('fade-in');
   el.classList.add('fade-out');
-  setTimeout(function() {
+  if (_ocultarCargandoTimer) clearTimeout(_ocultarCargandoTimer);
+  _ocultarCargandoTimer = setTimeout(function() {
     el.style.display = 'none';
     el.classList.remove('fade-out');
+    _ocultarCargandoTimer = null;
   }, 400);
 }
 
