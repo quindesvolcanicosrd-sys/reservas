@@ -726,10 +726,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
       <!-- Paso 1: Lugar -- buscador local sobre _evLugares (ya cargado por
            getVenues(), sin llamar a Google Places acá) + lista seleccionable
-           + "+ Crear nuevo lugar", que revela inline el mini-formulario de
-           venue nuevo (buscador de Places real + mapa + nombre + tipo de
-           ícono -- mismos campos/clases que el formulario de "Editar
-           lugares" arriba, ver _evCrearMostrarNuevoLugar()/js/eventos.js).
+           + "+ Este lugar no está en la lista", que revela inline el
+           mini-formulario de venue nuevo (buscador de Places real + mapa +
+           nombre + tipo de ícono -- mismos campos/clases que el formulario
+           de "Editar lugares" arriba, ver
+           _evCrearMostrarNuevoLugar()/js/eventos.js).
            Sin pill de "¿Requiere reserva?" acá a propósito (no pedida para
            este wizard) -- crearVenue() la recibe con el default 'SI', editable
            después desde "Editar lugares" si hace falta. -->
@@ -742,7 +743,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div id="ev-crear-lista-lugares"></div>
         <button type="button" class="ev-crear-venue-nuevo-btn" id="ev-crear-btn-nuevo-lugar" onclick="_evCrearMostrarNuevoLugar()">
           <span class="material-symbols-outlined">add_location_alt</span>
-          <span>Crear nuevo lugar</span>
+          <span>Este lugar no está en la lista</span>
         </button>
 
         <div id="ev-crear-nuevo-lugar" style="display:none;margin-top:20px;">
@@ -1272,7 +1273,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=21b1d486"></script>
-<script src="js/eventos.js?v=63089d32"></script>
+<script src="js/eventos.js?v=0d86fba2"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=f4bed643"></script>
 <script src="js/perfil.js?v=7768af03"></script>

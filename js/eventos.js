@@ -3502,7 +3502,11 @@ function _evLugarMostrarSubRecurrencia() {
     void activo.offsetWidth;
     activo.style.animation = 'fadeIn 0.2s ease';
   }
-  if (horaWrap) horaWrap.style.display = 'block';
+  if (horaWrap) {
+    var horaPrimeraVez = horaWrap.style.display === 'none' || !horaWrap.style.display;
+    horaWrap.style.display = 'block';
+    if (horaPrimeraVez) { void horaWrap.offsetWidth; horaWrap.style.animation = 'fadeIn 0.2s ease'; }
+  }
 }
 
 function _evLugarToggleDia(el) {
@@ -3741,12 +3745,26 @@ function _evHoraStepperA24h(prefix) {
   var h24 = e.hora % 12; if (e.meridiano === 'PM') h24 += 12;
   return ('0' + h24).slice(-2) + ':' + ('0' + e.minuto).slice(-2);
 }
-function _evHoraStepperRender(prefix) {
+// campoAnimar (opcional): 'hora'/'minuto' -- solo el dígito que efectivamente
+// cambió por un tap de flecha se anima, no el otro ni al render inicial
+// (_evHoraStepperInit no pasa este argumento, ese primer pintado ya viaja
+// dentro del fadeIn del reveal contenedor -- animarlo también sería doble
+// fade). Fade rápido (0.09s, no el fadeIn estándar de 0.2s/0.3s de esta
+// sección) -- mismo criterio ya documentado en _ajRenderPrefijos()
+// (js/perfil.js) de "frecuente = rápido": este valor se re-renderiza en
+// cada tap de flecha, igual que ese buscador en cada tecla.
+function _evHoraStepperRender(prefix, campoAnimar) {
   var e = _EV_HORA_STEPPER[prefix]; if (!e) return;
   var horaEl = document.getElementById(prefix + '-hora');
   var minEl = document.getElementById(prefix + '-minuto');
-  if (horaEl) horaEl.textContent = ('0' + e.hora).slice(-2);
-  if (minEl) minEl.textContent = ('0' + e.minuto).slice(-2);
+  if (horaEl) {
+    horaEl.textContent = ('0' + e.hora).slice(-2);
+    if (campoAnimar === 'hora') { horaEl.style.animation = 'none'; void horaEl.offsetWidth; horaEl.style.animation = 'fadeIn 0.09s ease'; }
+  }
+  if (minEl) {
+    minEl.textContent = ('0' + e.minuto).slice(-2);
+    if (campoAnimar === 'minuto') { minEl.style.animation = 'none'; void minEl.offsetWidth; minEl.style.animation = 'fadeIn 0.09s ease'; }
+  }
   document.querySelectorAll('#' + prefix + '-meridiano .aj-pill').forEach(function(p) {
     p.classList.toggle('activa', p.dataset.val === e.meridiano);
   });
@@ -3760,7 +3778,7 @@ function _evHoraStepperCambiar(prefix, campo, delta) {
     e.minuto += delta * 5;
     if (e.minuto >= 60) e.minuto = 0; else if (e.minuto < 0) e.minuto = 55;
   }
-  _evHoraStepperRender(prefix);
+  _evHoraStepperRender(prefix, campo);
   if (e.onChange) e.onChange(_evHoraStepperA24h(prefix));
 }
 function _evHoraStepperSetMeridiano(prefix, el) {
@@ -3890,7 +3908,8 @@ function _evCrearActualizarFooter() {
 
 /* ── Paso 1: Lugar -- buscador local sobre _evLugares (reusa la misma
    variable/carga que "Editar lugares", getVenues() no depende de qué
-   pantalla la pidió) + lista seleccionable + "+ Crear nuevo lugar". ──── */
+   pantalla la pidió) + lista seleccionable + "+ Este lugar no está en la
+   lista". ──── */
 function _evCrearCargarLugares() {
   var cont = document.getElementById('ev-crear-lista-lugares');
   if (cont) cont.innerHTML = _evLugaresSkeletonHtml();
@@ -4047,6 +4066,8 @@ function _evCrearMostrarSubRecurrencia() {
     var primeraVez = horaWrap.style.display === 'none';
     horaWrap.style.display = 'block';
     if (primeraVez) {
+      void horaWrap.offsetWidth;
+      horaWrap.style.animation = 'fadeIn 0.2s ease';
       _evHoraStepperInit('ev-crear-hora', _evCrearData.hora, function(v) { _evCrearData.hora = v; _evCrearActualizarFooter(); });
     }
   }
