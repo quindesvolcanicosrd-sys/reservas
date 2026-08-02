@@ -558,13 +558,24 @@ function _evSincronizarNavMesDesde(iso, instant) {
   _evActualizarNavMesLabel(instant);
 }
 function _evAbrirCalendario() {
-  _evCalVisible = true;
   _evCalUltimaAccionTs = Date.now();
   var base = _evNavMesActual ? _evToISO(new Date(_evNavMesActual.year, _evNavMesActual.month, 1)) : _evHoyISO();
   _evCalFechaMostrada = base;
   _evSincronizarNavMesDesde(base, true);
+  // `_evCalVisible` recién pasa a true DESPUÉS de pintar contenido/pills (ver
+  // "Cambios recientes" -- bug real: si se seteaba arriba, el guard de
+  // `_evCalActualizarMaxHeightExterior()` (llamado por `_evCalRenderContenido()`
+  // con `instant=true` acá abajo) dejaba de cortar por `if (!_evCalVisible)
+  // return`, así que esa llamada YA fijaba `el.style.maxHeight` al alto real
+  // con `transition:none` -- el panel quedaba "commiteado" a su alto final
+  // ANTES de que el `classList.add('abierta')` + `maxHeight` de abajo (el que
+  // debía animar) corriera, así que ese 2do set no cambiaba nada (mismo
+  // valor) y no había transición que reproducir -- se abría de golpe. El
+  // cierre (`_evCerrarCalendario()`) no compartía este bug: ahí no hay
+  // ningún set instantáneo previo que pise el punto de partida.
   _evCalRenderContenido(true);
   _evCalRenderPills();
+  _evCalVisible = true;
   var el = document.getElementById('ev-mes-panel');
   if (el) { el.classList.add('abierta'); el.style.maxHeight = el.scrollHeight + 'px'; }
   _evActualizarNavMesChevron();
