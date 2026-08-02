@@ -236,3 +236,9 @@ body.aj-sub-salud-activo #app-toast {
    con Playwright durante la verificación de esta pantalla (el click al botón
    real quedaba interceptado por `.app-bottom-nav`, no por casualidad de test). */
 #cta-footer-s-eventos-lugar-form { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
+/* #cta-footer-s-eventos-crear -- mismo motivo que #cta-footer-s-eventos-lugar-form
+   de arriba, mismo tab de la nav inferior ('s-eventos-crear' en
+   _BOTTOM_NAV_EXTRA) -- encontrado con Playwright en la primera corrida de
+   la verificación del wizard "Crear evento" (el click al botón "Continuar"
+   quedaba interceptado por `.app-bottom-nav`). */
+#cta-footer-s-eventos-crear { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }

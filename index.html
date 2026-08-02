@@ -26,13 +26,13 @@
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=580dd587"></script>
 <link rel="stylesheet" href="css/global.css?v=64804fa9">
-<link rel="stylesheet" href="css/estilos.css?v=3d36cc86">
+<link rel="stylesheet" href="css/estilos.css?v=73260ea0">
 <link rel="stylesheet" href="css/ui.css?v=5d0e5923">
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=6a719532">
 <link rel="stylesheet" href="css/nav.css?v=0e195d68">
-<link rel="stylesheet" href="css/eventos.css?v=80f76d17">
+<link rel="stylesheet" href="css/eventos.css?v=972183a8">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -582,16 +582,16 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
 
-  <!-- Formulario de Venues -- compartido por "Crear evento" (FAB directo,
-       vacío, vuelve a #s-eventos) y "Editar lugares" (card existente
-       precargada, o "+ Nuevo lugar" vacío, ambos vuelven a
-       #s-eventos-lugares) -- ver irEvLugarFormNuevo()/_evLugarAbrirEditar()/
+  <!-- Formulario de Venues -- únicamente "Editar lugares" desde esta tanda
+       (card existente precargada, o "+ Nuevo lugar" vacío, ambos vuelven a
+       #s-eventos-lugares) -- ver MANIFEST.md: "Crear evento" (FAB) pasó a
+       tener su propio wizard de 2 pasos, #s-eventos-crear más abajo, ya no
+       comparte esta pantalla. ver irEvLugarFormNuevo()/_evLugarAbrirEditar()/
        _evLugarFormVolver(), js/eventos.js. Mismos campos siempre, un solo
-       botón final "Guardar"/"Crear evento" (footer real vía
-       cta-footer-s-eventos-lugar-form -- a diferencia de
-       #cta-footer-eventos-anticipada, este SÍ sigue la convención genérica
-       "cta-footer-<id-de-pantalla>" que ir()/js/ui.js muestra/oculta solo,
-       no hace falta togglearlo a mano). -->
+       botón final "Guardar" (footer real vía cta-footer-s-eventos-lugar-form
+       -- a diferencia de #cta-footer-eventos-anticipada, este SÍ sigue la
+       convención genérica "cta-footer-<id-de-pantalla>" que ir()/js/ui.js
+       muestra/oculta solo, no hace falta togglearlo a mano). -->
   <div class="pantalla" id="s-eventos-lugar-form">
     <div class="app-nav app-nav-sticky" id="ev-lugar-form-header">
       <button class="app-nav-back" onclick="ir(_evLugarFormVolver())">
@@ -700,6 +700,174 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
   <div class="cta-footer-fixed" id="cta-footer-s-eventos-lugar-form">
     <button class="btn btn-primary" id="ev-lugar-btn-guardar" disabled onclick="_evLugarGuardar()">Guardar</button>
+  </div>
+
+  <!-- "Crear evento" -- wizard propio de 2 pasos (Lugar / Recurrencia y
+       horario), separado del formulario de "Editar lugares" de arriba (ver
+       MANIFEST.md, "Cambios recientes" -- reemplaza el formulario
+       compartido que tenía antes esta acción del FAB). Mismo mecanismo de
+       pantalla completa que #s-eventos-anticipada/#s-eventos-lugares (nav
+       propia, sin TOP_BAR_CONFIG). El motor de pasos+progreso reusa
+       .salud-paso/.salud-prog/.salud-prog-dot (css/perfil.css) TAL CUAL --
+       ver js/eventos.js (_evCrear*) para el detalle de por qué ese es el
+       precedente real (no "Asistencia anticipada", que ya no usa ese
+       motor). Back (_evCrearBack()) retrocede un paso, o vuelve a
+       #s-eventos si ya está en el paso 0. -->
+  <div class="pantalla" id="s-eventos-crear">
+    <div class="app-nav app-nav-sticky" id="ev-crear-header">
+      <button class="app-nav-back" onclick="_evCrearBack()">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <span class="app-nav-title">Crear evento</span>
+      <div style="width:40px;flex-shrink:0;"></div>
+    </div>
+    <div class="card" style="text-align:left;">
+      <div class="salud-prog" id="ev-crear-prog"></div>
+
+      <!-- Paso 1: Lugar -- buscador local sobre _evLugares (ya cargado por
+           getVenues(), sin llamar a Google Places acá) + lista seleccionable
+           + "+ Crear nuevo lugar", que revela inline el mini-formulario de
+           venue nuevo (buscador de Places real + mapa + nombre + tipo de
+           ícono -- mismos campos/clases que el formulario de "Editar
+           lugares" arriba, ver _evCrearMostrarNuevoLugar()/js/eventos.js).
+           Sin pill de "¿Requiere reserva?" acá a propósito (no pedida para
+           este wizard) -- crearVenue() la recibe con el default 'SI', editable
+           después desde "Editar lugares" si hace falta. -->
+      <div class="salud-paso activo" id="ev-crear-paso-0">
+        <p class="ev-lugar-campo-label" style="margin-top:0;">Lugar</p>
+        <div class="app-nav-search" style="margin-bottom:12px;">
+          <span class="material-symbols-outlined">search</span>
+          <input type="text" id="ev-crear-buscador-lugar" placeholder="Buscar un lugar..." autocomplete="off" oninput="_evCrearFiltrarLugares(this.value)">
+        </div>
+        <div id="ev-crear-lista-lugares"></div>
+        <button type="button" class="ev-crear-venue-nuevo-btn" id="ev-crear-btn-nuevo-lugar" onclick="_evCrearMostrarNuevoLugar()">
+          <span class="material-symbols-outlined">add_location_alt</span>
+          <span>Crear nuevo lugar</span>
+        </button>
+
+        <div id="ev-crear-nuevo-lugar" style="display:none;margin-top:20px;">
+          <div class="ev-lugar-campo" style="margin-top:0;">
+            <p class="ev-lugar-campo-label">Ubicación</p>
+            <div class="app-nav-search" style="margin-bottom:10px;">
+              <span class="material-symbols-outlined">search</span>
+              <input type="text" id="ev-crear-lugar-buscador-input" placeholder="Buscar dirección o lugar..." autocomplete="off">
+            </div>
+            <div class="ev-lugar-mapa-wrap" id="ev-crear-lugar-mapa-wrap">
+              <div id="ev-crear-lugar-mapa-canvas" style="width:100%;height:100%;"></div>
+              <div class="aj-mapa-pin"><span class="material-symbols-outlined">location_on</span></div>
+            </div>
+            <p class="ev-lugar-mapa-nota">Busca un lugar o arrastra el mapa para ajustar la posición exacta.</p>
+          </div>
+          <div class="ev-lugar-campo">
+            <p class="ev-lugar-campo-label">Nombre del lugar</p>
+            <input type="text" class="ev-lugar-input" id="ev-crear-lugar-nombre" placeholder="Ej: Parque La Carolina" oninput="_evCrearSetNombreNuevoLugar(this.value)">
+          </div>
+          <div class="ev-lugar-campo">
+            <p class="ev-lugar-campo-label">Tipo de ícono</p>
+            <div class="aj-pills-row" id="ev-crear-lugar-icono-pills">
+              <span class="aj-pill" data-val="Entrenamiento" onclick="_evCrearSelIconoNuevoLugar(this)">Entrenamiento</span>
+              <span class="aj-pill" data-val="Torneo" onclick="_evCrearSelIconoNuevoLugar(this)">Torneo</span>
+              <span class="aj-pill" data-val="Partido" onclick="_evCrearSelIconoNuevoLugar(this)">Partido</span>
+              <span class="aj-pill" data-val="Asamblea" onclick="_evCrearSelIconoNuevoLugar(this)">Asamblea</span>
+              <span class="aj-pill" data-val="Evento social" onclick="_evCrearSelIconoNuevoLugar(this)">Evento social</span>
+              <span class="aj-pill" data-val="Otro" onclick="_evCrearSelIconoNuevoLugar(this)">Otro</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 2: Recurrencia y horario -- mismas pills/reveal inline que el
+           formulario de "Editar lugares" (_evLugarMostrarSubRecurrencia()),
+           adaptado a _evCrearData. "Hora" pasa a ser el stepper nuevo
+           (_evHoraStepper*) en vez del <input type="time"> nativo -- único
+           campo compartido por los 3 tipos de recurrencia, igual que antes. -->
+      <div class="salud-paso" id="ev-crear-paso-1">
+        <p class="ev-lugar-campo-label" style="margin-top:0;">Tipo de recurrencia</p>
+        <div class="aj-pills-row" id="ev-crear-recurrencia-pills">
+          <span class="aj-pill" data-val="dias_semana" onclick="_evCrearSelRecurrencia(this)">Días de la semana</span>
+          <span class="aj-pill" data-val="cada_tantos" onclick="_evCrearSelRecurrencia(this)">Cada tantos días/semanas/meses</span>
+          <span class="aj-pill" data-val="unico" onclick="_evCrearSelRecurrencia(this)">Evento único</span>
+        </div>
+
+        <div id="ev-crear-rec-dias" style="display:none;margin-top:18px;">
+          <div class="ev-dias-row" id="ev-crear-dias-row">
+            <span class="ev-dia-circulo" data-dia="1" onclick="_evCrearToggleDia(this)">L</span>
+            <span class="ev-dia-circulo" data-dia="2" onclick="_evCrearToggleDia(this)">M</span>
+            <span class="ev-dia-circulo" data-dia="3" onclick="_evCrearToggleDia(this)">X</span>
+            <span class="ev-dia-circulo" data-dia="4" onclick="_evCrearToggleDia(this)">J</span>
+            <span class="ev-dia-circulo" data-dia="5" onclick="_evCrearToggleDia(this)">V</span>
+            <span class="ev-dia-circulo" data-dia="6" onclick="_evCrearToggleDia(this)">S</span>
+            <span class="ev-dia-circulo" data-dia="7" onclick="_evCrearToggleDia(this)">D</span>
+          </div>
+        </div>
+
+        <div id="ev-crear-rec-cada" style="display:none;margin-top:18px;">
+          <div class="ev-lugar-cada-row">
+            <input type="number" min="1" class="ev-lugar-input ev-lugar-input-num" id="ev-crear-frec-num" placeholder="Ej: 2" oninput="_evCrearSetFrecNum(this.value)">
+            <div class="aj-pills-row" id="ev-crear-frec-unidad-pills">
+              <span class="aj-pill" data-val="dias" onclick="_evCrearSelUnidad(this)">Días</span>
+              <span class="aj-pill" data-val="semanas" onclick="_evCrearSelUnidad(this)">Semanas</span>
+              <span class="aj-pill" data-val="meses" onclick="_evCrearSelUnidad(this)">Meses</span>
+            </div>
+          </div>
+          <p class="ev-lugar-campo-label" style="margin-top:16px;">Fecha de referencia</p>
+          <div class="ev-ant-cal-nav">
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearCalMoverMes('referencia',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+            <span class="ev-ant-cal-nav-label" id="ev-crear-cal-referencia-label"></span>
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearCalMoverMes('referencia',1)"><span class="material-symbols-outlined">chevron_right</span></button>
+          </div>
+          <div id="ev-crear-cal-referencia"></div>
+          <div class="ev-lugar-cal-resumen" id="ev-crear-cal-referencia-resumen"></div>
+        </div>
+
+        <div id="ev-crear-rec-unico" style="display:none;margin-top:18px;">
+          <div class="ev-ant-cal-nav">
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearCalMoverMes('unico',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+            <span class="ev-ant-cal-nav-label" id="ev-crear-cal-unico-label"></span>
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearCalMoverMes('unico',1)"><span class="material-symbols-outlined">chevron_right</span></button>
+          </div>
+          <div id="ev-crear-cal-unico"></div>
+          <div class="ev-lugar-cal-resumen" id="ev-crear-cal-unico-resumen"></div>
+        </div>
+
+        <div class="ev-lugar-campo" id="ev-crear-hora-wrap" style="display:none;">
+          <p class="ev-lugar-campo-label">Hora</p>
+          <div class="ev-hora-stepper" id="ev-crear-hora-stepper">
+            <div class="ev-hora-stepper-cols">
+              <div class="ev-hora-stepper-col">
+                <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-crear-hora','hora',1)"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
+                <span class="ev-hora-stepper-valor" id="ev-crear-hora-hora"></span>
+                <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-crear-hora','hora',-1)"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
+              </div>
+              <span class="ev-hora-stepper-sep">:</span>
+              <div class="ev-hora-stepper-col">
+                <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-crear-hora','minuto',1)"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
+                <span class="ev-hora-stepper-valor" id="ev-crear-hora-minuto"></span>
+                <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-crear-hora','minuto',-1)"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
+              </div>
+            </div>
+            <div class="ev-hora-stepper-meridiano" id="ev-crear-hora-meridiano">
+              <span class="aj-pill" data-val="AM" onclick="_evHoraStepperSetMeridiano('ev-crear-hora',this)">AM</span>
+              <span class="aj-pill" data-val="PM" onclick="_evHoraStepperSetMeridiano('ev-crear-hora',this)">PM</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 100px, no los 24px que usa #s-eventos-lugar-form: medido con
+           Playwright (getBoundingClientRect) -- el footer fijo de 1 botón
+           real mide 74px de alto, + 60px de la nav inferior = 134px de zona
+           tapada; 24px de margen (84px totales) no alcanzaba a despejarla
+           del todo y el stepper de hora, el campo más pegado al fondo de
+           este paso, quedaba parcialmente atrapado detrás incluso con el
+           scroll al máximo -- encontrado durante la verificación de este
+           wizard (clicks reales sobre las pills AM/PM interceptados por
+           `.cta-footer-fixed`/`.app-bottom-nav`, no una falla de test). -->
+      <div class="cta-footer-spacer" style="height:calc(100px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+  <div class="cta-footer-fixed" id="cta-footer-s-eventos-crear">
+    <button class="btn btn-primary" id="ev-crear-btn-footer" disabled>Continuar</button>
   </div>
 
   <!-- Modal de conflicto (aplicarAsistenciaAnticipada devuelve
@@ -1103,8 +1271,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=075daa2c"></script>
-<script src="js/eventos.js?v=e4609e3e"></script>
+<script src="js/ui.js?v=21b1d486"></script>
+<script src="js/eventos.js?v=63089d32"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=f4bed643"></script>
 <script src="js/perfil.js?v=7768af03"></script>
@@ -2796,7 +2964,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
      vía _evFabToggle()/_evFabCerrar() (js/eventos.js), togglea la clase
      .ev-fab-abierto en este mismo contenedor. -->
 <div class="ev-fab-menu" id="ev-fab-menu" style="display:none;">
-  <button type="button" class="ev-fab-opcion" id="ev-fab-crear-evento" onclick="_evFabCerrar(); irEvLugarFormNuevo('s-eventos', true);">
+  <button type="button" class="ev-fab-opcion" id="ev-fab-crear-evento" onclick="_evFabCerrar(); irEvCrear();">
     <span class="material-symbols-outlined">event</span>
     <span>Crear evento</span>
   </button>

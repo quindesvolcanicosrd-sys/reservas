@@ -3285,23 +3285,21 @@ function _evAntCerrarConflicto(porGesto) {
 
 /* ═══════════════════════════════════════════════════════
    VENUES -- "Editar lugares" (lista + formulario, #s-eventos-lugares/
-   #s-eventos-lugar-form) y "Crear evento" (FAB, mismo formulario vacío) --
-   ver MANIFEST.md, sección "Backend — Venues", para las firmas exactas de
-   crearVenue/editarVenue/getVenues documentadas para Victor (Apps Script no
-   vive en este repo, mismo criterio de honestidad ya establecido para
-   Asistencia Anticipada más arriba: el contrato de parámetros es una
-   convención razonable a confirmar contra Code.gs real).
+   #s-eventos-lugar-form). Desde esta tanda, "Crear evento" (FAB) YA NO usa
+   este formulario -- tiene su propio wizard de 2 pasos, ver "Crear evento"
+   más abajo (_evCrear*, #s-eventos-crear). Ver MANIFEST.md, sección
+   "Backend — Venues", para las firmas exactas de crearVenue/editarVenue/
+   getVenues documentadas para Victor (Apps Script no vive en este repo,
+   mismo criterio de honestidad ya establecido para Asistencia Anticipada
+   más arriba: el contrato de parámetros es una convención razonable a
+   confirmar contra Code.gs real).
 
-   Un solo estado de formulario (_evLugarData) alimenta las 2 pantallas: la
-   lista solo lo puebla para editar (_evLugarAbrirEditar), "Crear evento"
-   arranca en blanco (irEvLugarFormNuevo). _evLugarOrigen decide a qué
-   pantalla vuelve la flecha atrás/el guardado exitoso (_evLugarFormVolver())
-   -- 's-eventos' si se entró directo desde el FAB, 's-eventos-lugares' si se
-   entró desde esa lista (card existente o "+ Nuevo lugar"). _evLugarViaCrearEvento
-   solo afecta textos (título/botón "Crear evento" vs. "Guardar") -- las 2
-   rutas llaman al mismo backend (crearVenue si no hay _evLugarData.fila,
-   editarVenue si la hay), no hay una acción de backend distinta para
-   "eventos" vs. "lugares" -- son la misma entidad (una fila de Venues).
+   _evLugarData alimenta esta única pantalla: la lista la puebla para editar
+   (_evLugarAbrirEditar), "+ Nuevo lugar" arranca en blanco
+   (irEvLugarFormNuevo). _evLugarOrigen siempre vuelve a 's-eventos-lugares'
+   (ambos caminos entran desde esa lista). Guarda con crearVenue (sin
+   _evLugarData.fila) o editarVenue (con fila) -- misma entidad de backend,
+   una fila de Venues.
    ═══════════════════════════════════════════════════════ */
 
 var _evLugares = [];
@@ -3388,8 +3386,7 @@ function _evLugarResumenRecurrencia(v) {
 /* ─── Formulario compartido ("Crear evento"/"Editar lugares") ─────────── */
 
 var _evLugarData = {};
-var _evLugarOrigen = 's-eventos';
-var _evLugarViaCrearEvento = false;
+var _evLugarOrigen = 's-eventos-lugares';
 // mismo criterio que _evAntCal (arriba): .mostrado guarda un ISO string, no
 // un Date -- _evCalMesDe()/_evToISO() (helpers genéricos de este archivo,
 // ver el timeline principal) trabajan así, no con objetos Date.
@@ -3399,15 +3396,14 @@ var _evLugarAutocomp = null;
 
 function _evLugarFormVolver() { return _evLugarOrigen; }
 
-function irEvLugarFormNuevo(origen, viaCrearEvento) {
+function irEvLugarFormNuevo(origen) {
   _evLugarData = {
     fila: null, nombre: '', mapsUrl: null, lat: null, lng: null,
     tipoIcono: null, requiereReserva: 'si', tipoRecurrencia: null,
     diasSemana: [], frecuenciaNumero: null, frecuenciaUnidad: null,
     fecha: null, hora: ''
   };
-  _evLugarOrigen = origen || 's-eventos';
-  _evLugarViaCrearEvento = !!viaCrearEvento;
+  _evLugarOrigen = origen || 's-eventos-lugares';
   ir('s-eventos-lugar-form');
   _evLugarFormPintar();
   _evLugarInicializarMapa();
@@ -3429,7 +3425,6 @@ function _evLugarAbrirEditar(fila) {
     fecha: v.fechaReferencia || null, hora: v.hora || ''
   };
   _evLugarOrigen = 's-eventos-lugares';
-  _evLugarViaCrearEvento = false;
   ir('s-eventos-lugar-form');
   _evLugarFormPintar();
   _evLugarInicializarMapa();
@@ -3440,9 +3435,7 @@ function _evLugarAbrirEditar(fila) {
 // que _evAntIniciarWizard()).
 function _evLugarFormPintar() {
   var titulo = document.getElementById('ev-lugar-form-titulo');
-  if (titulo) titulo.textContent = _evLugarData.fila ? 'Editar lugar' : (_evLugarViaCrearEvento ? 'Crear evento' : 'Nuevo lugar');
-  var btnGuardar = document.getElementById('ev-lugar-btn-guardar');
-  if (btnGuardar) btnGuardar.textContent = (!_evLugarData.fila && _evLugarViaCrearEvento) ? 'Crear evento' : 'Guardar';
+  if (titulo) titulo.textContent = _evLugarData.fila ? 'Editar lugar' : 'Nuevo lugar';
 
   var nombreInp = document.getElementById('ev-lugar-nombre');
   if (nombreInp) nombreInp.value = _evLugarData.nombre || '';
@@ -3712,5 +3705,467 @@ function _evLugarGuardar() {
   }, function(e) {
     ocultarCargando();
     mostrarToast(e && e.message ? e.message : 'No se pudo guardar el lugar.', 'error');
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   Selector de hora tipo stepper (_evHoraStepper*) -- 2 columnas (hora/
+   minutos) con flechas arriba/abajo + pills AM/PM, sin rueda de scroll
+   infinito. Primer selector de hora de la app (los horarios de Venues se
+   cargaron siempre a mano en Sheets hasta esta tanda) -- componente
+   genérico por prefijo de id (_EV_HORA_STEPPER[prefix]), no atado a "Crear
+   evento" pese a vivir en este archivo, para poder montarse más de una vez
+   si hiciera falta más adelante. Minutos en pasos de 5 -- un horario de
+   evento rara vez necesita el minuto exacto, y son muchos menos toques que
+   1 en 1. Siempre representa un valor válido (arranca en 09:00 AM si no se
+   pasa uno) -- a diferencia de un <input type="time">, un stepper no tiene
+   forma natural de estar "vacío". ═══════════════════════════════════════ */
+var _EV_HORA_STEPPER = {};
+
+function _evHoraStepperInit(prefix, valor24h, onChange) {
+  var hora = 9, minuto = 0, meridiano = 'AM';
+  if (valor24h) {
+    var partes = valor24h.split(':');
+    var h24 = parseInt(partes[0], 10), min = parseInt(partes[1], 10);
+    if (!isNaN(h24) && !isNaN(min)) {
+      meridiano = h24 >= 12 ? 'PM' : 'AM';
+      hora = h24 % 12; if (hora === 0) hora = 12;
+      minuto = Math.round(min / 5) * 5; if (minuto === 60) minuto = 0;
+    }
+  }
+  _EV_HORA_STEPPER[prefix] = { hora: hora, minuto: minuto, meridiano: meridiano, onChange: onChange };
+  _evHoraStepperRender(prefix);
+}
+function _evHoraStepperA24h(prefix) {
+  var e = _EV_HORA_STEPPER[prefix]; if (!e) return '';
+  var h24 = e.hora % 12; if (e.meridiano === 'PM') h24 += 12;
+  return ('0' + h24).slice(-2) + ':' + ('0' + e.minuto).slice(-2);
+}
+function _evHoraStepperRender(prefix) {
+  var e = _EV_HORA_STEPPER[prefix]; if (!e) return;
+  var horaEl = document.getElementById(prefix + '-hora');
+  var minEl = document.getElementById(prefix + '-minuto');
+  if (horaEl) horaEl.textContent = ('0' + e.hora).slice(-2);
+  if (minEl) minEl.textContent = ('0' + e.minuto).slice(-2);
+  document.querySelectorAll('#' + prefix + '-meridiano .aj-pill').forEach(function(p) {
+    p.classList.toggle('activa', p.dataset.val === e.meridiano);
+  });
+}
+function _evHoraStepperCambiar(prefix, campo, delta) {
+  var e = _EV_HORA_STEPPER[prefix]; if (!e) return;
+  if (campo === 'hora') {
+    e.hora += delta;
+    if (e.hora > 12) e.hora = 1; else if (e.hora < 1) e.hora = 12;
+  } else {
+    e.minuto += delta * 5;
+    if (e.minuto >= 60) e.minuto = 0; else if (e.minuto < 0) e.minuto = 55;
+  }
+  _evHoraStepperRender(prefix);
+  if (e.onChange) e.onChange(_evHoraStepperA24h(prefix));
+}
+function _evHoraStepperSetMeridiano(prefix, el) {
+  var e = _EV_HORA_STEPPER[prefix]; if (!e) return;
+  e.meridiano = el.dataset.val;
+  _evHoraStepperRender(prefix);
+  if (e.onChange) e.onChange(_evHoraStepperA24h(prefix));
+}
+
+/* ═══════════════════════════════════════════════════════
+   "Crear evento" (#s-eventos-crear, FAB) -- wizard propio de 2 pasos
+   (Lugar / Recurrencia y horario), YA NO comparte pantalla con "Editar
+   lugares" (ver bloque de arriba). Motor de pasos+progreso: array de ids +
+   índice actual + dots (_EV_CREAR_STEPS/_evCrearCurIdx), reusando
+   .salud-paso/.salud-prog/.salud-prog-dot (css/perfil.css) tal cual --
+   mismo mecanismo que el wizard de "Ficha de salud" (js/perfil.js,
+   _SALUD_STEPS/_saludCurIdx). Nota: NO es el motor que usa hoy "Asistencia
+   anticipada" -- esa pantalla tuvo ese mismo motor en su momento pero
+   migró a un acordeón de una sola pantalla (ver el comentario en
+   css/eventos.css sobre ".salud-prog, que ya no se usan en esta
+   pantalla"), Salud quedó como el único precedente vivo.
+
+   Paso 1: elegir un lugar existente (_evCrearData.venueExistente) O crear
+   uno nuevo inline (_evCrearData.nuevoLugarActivo + .nuevoLugar, mismos
+   campos/clases que el formulario de "Editar lugares": buscador Places +
+   mapa vía crearOCentrarMapaPin() + nombre + tipo de ícono, sin pill de
+   "¿Requiere reserva?" -- no pedida para este wizard, crearVenue() la
+   recibe en 'SI' por default). Paso 2: recurrencia + hora (stepper).
+
+   Guardado: SIEMPRE crearVenue, incluso con un venue existente elegido --
+   el backend documentado (ver MANIFEST.md "Backend — Venues") no tiene una
+   operación de "agregar otra regla de recurrencia a un venue ya
+   existente", el id de cada regla es la fila de Venues 1 a 1. Elegir un
+   venue existente en el paso 1 arma el payload con su nombre/ubicación/
+   ícono/reserva COPIADOS + la recurrencia nueva del paso 2, lo que crea una
+   fila NUEVA (incluida en el llamado normal a crearVenue) con la misma
+   identidad de lugar pero un horario distinto -- consistente con el modelo
+   real de datos ya documentado ("1 fila = 1 regla"), no un caso especial.
+   Si más adelante Victor quiere que un mismo lugar comparta una sola fila
+   "maestra" entre varias reglas, hace falta repensar `Venues` (separarla en
+   una hoja de lugares + una hoja de reglas, o una función de backend nueva
+   tipo `agregarReglaAVenue(nombreLugar, datosRecurrencia)`) -- fuera de
+   alcance de esta tanda, dejado señalado acá en vez de resuelto en silencio.
+   ═══════════════════════════════════════════════════════ */
+
+var _EV_CREAR_STEPS = ['ev-crear-paso-0', 'ev-crear-paso-1'];
+var _evCrearCurIdx = 0;
+var _evCrearData = {};
+var _evCrearMapa = null;
+var _evCrearAutocomp = null;
+var _evCrearCal = { referencia: { mostrado: null }, unico: { mostrado: null } };
+
+function irEvCrear() {
+  _evCrearData = {
+    venueExistente: null, nuevoLugarActivo: false,
+    nuevoLugar: { nombre: '', mapsUrl: null, lat: null, lng: null, tipoIcono: null },
+    tipoRecurrencia: null, diasSemana: [], frecuenciaNumero: null, frecuenciaUnidad: null,
+    fecha: null, hora: '09:00'
+  };
+  var mesInicial = _evHoyISO();
+  _evCrearCal.referencia.mostrado = mesInicial;
+  _evCrearCal.unico.mostrado = mesInicial;
+  ir('s-eventos-crear');
+  _evCrearResetUI();
+  _evCrearMostrarPaso(0);
+  _evCrearCargarLugares();
+  _evCrearCalRender('referencia');
+  _evCrearCalRender('unico');
+  _evCrearActualizarCalResumen('referencia');
+  _evCrearActualizarCalResumen('unico');
+}
+
+function _evCrearResetUI() {
+  document.querySelectorAll('#ev-crear-recurrencia-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  document.querySelectorAll('#ev-crear-dias-row .ev-dia-circulo').forEach(function(c) { c.classList.remove('activa'); });
+  document.querySelectorAll('#ev-crear-frec-unidad-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  document.querySelectorAll('#ev-crear-lugar-icono-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  var frecNum = document.getElementById('ev-crear-frec-num'); if (frecNum) frecNum.value = '';
+  var nombreInp = document.getElementById('ev-crear-lugar-nombre'); if (nombreInp) nombreInp.value = '';
+  var buscadorLugar = document.getElementById('ev-crear-buscador-lugar'); if (buscadorLugar) buscadorLugar.value = '';
+  var nuevoLugarWrap = document.getElementById('ev-crear-nuevo-lugar'); if (nuevoLugarWrap) nuevoLugarWrap.style.display = 'none';
+  ['ev-crear-rec-dias', 'ev-crear-rec-cada', 'ev-crear-rec-unico', 'ev-crear-hora-wrap'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+}
+
+/* ── Navegación entre los 2 pasos ─────────────────────────────────────── */
+function _evCrearMostrarPaso(idx) {
+  _EV_CREAR_STEPS.forEach(function(s, i) {
+    var el = document.getElementById(s);
+    if (el) el.classList.toggle('activo', i === idx);
+  });
+  _evCrearCurIdx = idx;
+  _evCrearRenderProg();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  _evCrearActualizarFooter();
+}
+function _evCrearRenderProg() {
+  var cont = document.getElementById('ev-crear-prog'); if (!cont) return;
+  cont.innerHTML = '';
+  for (var i = 0; i < _EV_CREAR_STEPS.length; i++) {
+    var d = document.createElement('div');
+    d.className = 'salud-prog-dot' + (i < _evCrearCurIdx ? ' done' : (i === _evCrearCurIdx ? ' active' : ''));
+    cont.appendChild(d);
+  }
+}
+function _evCrearBack() {
+  if (_evCrearCurIdx === 0) { ir('s-eventos'); return; }
+  _evCrearMostrarPaso(0);
+}
+function _evCrearIrPaso1() {
+  if (!_evCrearLugarValido()) return;
+  _evCrearMostrarPaso(1);
+}
+function _evCrearActualizarFooter() {
+  var btn = document.getElementById('ev-crear-btn-footer'); if (!btn) return;
+  if (_evCrearCurIdx === 0) {
+    btn.textContent = 'Continuar';
+    btn.onclick = _evCrearIrPaso1;
+    btn.disabled = !_evCrearLugarValido();
+  } else {
+    btn.textContent = 'Crear evento';
+    btn.onclick = _evCrearGuardar;
+    btn.disabled = !_evCrearRecurrenciaValidaWizard();
+  }
+}
+
+/* ── Paso 1: Lugar -- buscador local sobre _evLugares (reusa la misma
+   variable/carga que "Editar lugares", getVenues() no depende de qué
+   pantalla la pidió) + lista seleccionable + "+ Crear nuevo lugar". ──── */
+function _evCrearCargarLugares() {
+  var cont = document.getElementById('ev-crear-lista-lugares');
+  if (cont) cont.innerHTML = _evLugaresSkeletonHtml();
+  var miCarga = ++_evLugaresCargaId;
+  api({ action: 'getVenues', adminToken: _adminToken }, function(res) {
+    if (miCarga !== _evLugaresCargaId) return;
+    _evLugares = res || [];
+    _evCrearRenderLugares(_evLugares);
+  }, function(e) {
+    if (miCarga !== _evLugaresCargaId) return;
+    if (cont) cont.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">No se pudieron cargar los lugares.</p>';
+  });
+}
+function _evCrearRenderLugares(lista) {
+  var cont = document.getElementById('ev-crear-lista-lugares'); if (!cont) return;
+  if (!lista.length) {
+    cont.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">' +
+      (_evLugares.length ? 'Ningún lugar coincide con la búsqueda.' : 'Todavía no hay lugares creados.') + '</p>';
+    return;
+  }
+  cont.innerHTML = lista.map(function(v) {
+    var activa = _evCrearData.venueExistente && _evCrearData.venueExistente.fila === v.fila;
+    return '<div class="ev-ant-card ev-crear-venue-card' + (activa ? ' activa' : '') + '" onclick="_evCrearSeleccionarLugar(' + v.fila + ')">' +
+      '<div class="ev-card-top-row">' +
+        '<div class="ev-card-icon"><span class="material-symbols-outlined">place</span></div>' +
+        '<div class="ev-card-body">' +
+          '<div class="ev-card-titulo">' + v.nombre + '</div>' +
+          '<div class="ev-ant-card-sub">' + _evLugarResumenRecurrencia(v) + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+function _evCrearFiltrarLugares(texto) {
+  var q = (texto || '').trim().toLowerCase();
+  var lista = !q ? _evLugares : _evLugares.filter(function(v) { return (v.nombre || '').toLowerCase().indexOf(q) !== -1; });
+  _evCrearRenderLugares(lista);
+}
+function _evCrearSeleccionarLugar(fila) {
+  var v = _evLugares.filter(function(x) { return x.fila === fila; })[0];
+  if (!v) return;
+  _evCrearData.venueExistente = v;
+  _evCrearData.nuevoLugarActivo = false;
+  var wrap = document.getElementById('ev-crear-nuevo-lugar'); if (wrap) wrap.style.display = 'none';
+  var buscador = document.getElementById('ev-crear-buscador-lugar');
+  _evCrearFiltrarLugares(buscador ? buscador.value : '');
+  _evCrearActualizarFooter();
+}
+function _evCrearMostrarNuevoLugar() {
+  _evCrearData.venueExistente = null;
+  _evCrearData.nuevoLugarActivo = true;
+  var buscador = document.getElementById('ev-crear-buscador-lugar');
+  _evCrearFiltrarLugares(buscador ? buscador.value : ''); // deselecciona cualquier card ya elegida
+  var wrap = document.getElementById('ev-crear-nuevo-lugar');
+  if (wrap) {
+    wrap.style.display = 'block';
+    void wrap.offsetWidth;
+    wrap.style.animation = 'fadeIn 0.2s ease';
+  }
+  _evCrearLugarInicializarMapa();
+  _evCrearActualizarFooter();
+}
+function _evCrearSetNombreNuevoLugar(v) { _evCrearData.nuevoLugar.nombre = v; _evCrearActualizarFooter(); }
+function _evCrearSelIconoNuevoLugar(el) {
+  document.querySelectorAll('#ev-crear-lugar-icono-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  _evCrearData.nuevoLugar.tipoIcono = el.dataset.val;
+  _evCrearActualizarFooter();
+}
+
+/* Mapa/buscador del mini-form de lugar nuevo -- mismo mecanismo que
+   _evLugarInicializarMapa()/_evLugarInicializarBuscador() de arriba
+   (crearOCentrarMapaPin() + google.maps.places.Autocomplete), con su propia
+   instancia/ids: no puede compartir el canvas/input de "Editar lugares",
+   las 2 pantallas conviven en el mismo DOM. */
+function _evCrearLugarInicializarMapa() {
+  var canvas = document.getElementById('ev-crear-lugar-mapa-canvas');
+  if (!canvas) return;
+  _evCrearLugarInicializarBuscador();
+  if (typeof google === 'undefined' || !google.maps || !window._mapsLoaded) {
+    canvas.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:0.78rem;text-align:center;padding:16px;">No se pudo cargar el mapa. Intenta más tarde.</div>';
+    return;
+  }
+  var n = _evCrearData.nuevoLugar;
+  var centro = (n.lat != null && n.lng != null) ? { lat: n.lat, lng: n.lng } : _EV_LUGAR_QUITO_LATLNG;
+  _evCrearLugarCentrarMapa(centro);
+}
+function _evCrearLugarCentrarMapa(pos) {
+  var canvas = document.getElementById('ev-crear-lugar-mapa-canvas');
+  if (!canvas) return;
+  _evCrearMapa = crearOCentrarMapaPin(_evCrearMapa, canvas, pos, _evCrearLugarOnDragEnd);
+}
+function _evCrearLugarOnDragEnd(centro) {
+  _evCrearLugarActualizarUbicacion(centro.lat(), centro.lng(), null);
+}
+function _evCrearLugarActualizarUbicacion(lat, lng, mapsUrlDirecto) {
+  _evCrearData.nuevoLugar.lat = lat; _evCrearData.nuevoLugar.lng = lng;
+  _evCrearData.nuevoLugar.mapsUrl = mapsUrlDirecto || ('https://www.google.com/maps?q=' + lat + ',' + lng);
+  _evCrearActualizarFooter();
+}
+function _evCrearLugarInicializarBuscador() {
+  var inp = document.getElementById('ev-crear-lugar-buscador-input');
+  if (!inp) return;
+  inp.value = '';
+  if (_evCrearAutocomp) { google.maps.event.clearInstanceListeners(inp); _evCrearAutocomp = null; }
+  if (!window._mapsLoaded || typeof google === 'undefined') return;
+  _evCrearAutocomp = new google.maps.places.Autocomplete(inp, { fields: ['geometry', 'name', 'url'] });
+  _evCrearAutocomp.addListener('place_changed', function() {
+    var place = _evCrearAutocomp.getPlace();
+    if (!place || !place.geometry || !place.geometry.location) return;
+    var loc = place.geometry.location;
+    _evCrearLugarCentrarMapa({ lat: loc.lat(), lng: loc.lng() });
+    _evCrearLugarActualizarUbicacion(loc.lat(), loc.lng(), place.url || null);
+    if (!_evCrearData.nuevoLugar.nombre && place.name) {
+      _evCrearData.nuevoLugar.nombre = place.name;
+      var nombreInp = document.getElementById('ev-crear-lugar-nombre');
+      if (nombreInp) nombreInp.value = place.name;
+      _evCrearActualizarFooter();
+    }
+  });
+}
+function _evCrearLugarValido() {
+  if (_evCrearData.venueExistente) return true;
+  var n = _evCrearData.nuevoLugar;
+  return !!(n.nombre && n.nombre.trim() && n.mapsUrl && n.tipoIcono);
+}
+
+/* ── Paso 2: Recurrencia y horario -- mismas pills/reveal inline que el
+   formulario de "Editar lugares" (_evLugarMostrarSubRecurrencia()),
+   adaptado a _evCrearData/ids propios. "Hora" es el stepper nuevo, inicia
+   la primera vez que se revela (una sola vez por visita al wizard). ──── */
+function _evCrearSelRecurrencia(el) {
+  document.querySelectorAll('#ev-crear-recurrencia-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  _evCrearData.tipoRecurrencia = el.dataset.val;
+  _evCrearMostrarSubRecurrencia();
+  _evCrearActualizarFooter();
+}
+function _evCrearMostrarSubRecurrencia() {
+  ['ev-crear-rec-dias', 'ev-crear-rec-cada', 'ev-crear-rec-unico'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  var horaWrap = document.getElementById('ev-crear-hora-wrap');
+  var t = _evCrearData.tipoRecurrencia;
+  if (!t) { if (horaWrap) horaWrap.style.display = 'none'; return; }
+  var mapaId = { dias_semana: 'ev-crear-rec-dias', cada_tantos: 'ev-crear-rec-cada', unico: 'ev-crear-rec-unico' };
+  var activo = document.getElementById(mapaId[t]);
+  if (activo) {
+    activo.style.display = 'block';
+    void activo.offsetWidth;
+    activo.style.animation = 'fadeIn 0.2s ease';
+  }
+  if (horaWrap) {
+    var primeraVez = horaWrap.style.display === 'none';
+    horaWrap.style.display = 'block';
+    if (primeraVez) {
+      _evHoraStepperInit('ev-crear-hora', _evCrearData.hora, function(v) { _evCrearData.hora = v; _evCrearActualizarFooter(); });
+    }
+  }
+}
+function _evCrearToggleDia(el) {
+  var dia = parseInt(el.dataset.dia, 10);
+  el.classList.toggle('activa');
+  var idx = _evCrearData.diasSemana.indexOf(dia);
+  if (el.classList.contains('activa')) { if (idx === -1) _evCrearData.diasSemana.push(dia); }
+  else if (idx !== -1) { _evCrearData.diasSemana.splice(idx, 1); }
+  _evCrearActualizarFooter();
+}
+function _evCrearSetFrecNum(v) { _evCrearData.frecuenciaNumero = v ? parseInt(v, 10) : null; _evCrearActualizarFooter(); }
+function _evCrearSelUnidad(el) {
+  document.querySelectorAll('#ev-crear-frec-unidad-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  _evCrearData.frecuenciaUnidad = el.dataset.val;
+  _evCrearActualizarFooter();
+}
+
+/* Calendario inline de fecha (referencia/único) -- reusa tal cual los
+   helpers genéricos de fecha del timeline principal, mismo mecanismo que
+   _evLugarCalRender() de arriba. */
+function _evCrearCalRender(cual) {
+  var cont = document.getElementById('ev-crear-cal-' + cual); if (!cont) return;
+  var m = _evCalMesDe(_evCrearCal[cual].mostrado);
+  var labelEl = document.getElementById('ev-crear-cal-' + cual + '-label');
+  if (labelEl) labelEl.textContent = NOMBRES_MESES[m.month] + ' ' + m.year;
+  var inicioGrid = _evLunesDeSemana(new Date(m.year, m.month, 1));
+  var finMes = new Date(m.year, m.month + 1, 0);
+  var finGrid = _evLunesDeSemana(finMes); finGrid.setDate(finGrid.getDate() + 6);
+  var hoy = _evHoyISO();
+  var seleccionada = _evCrearData.fecha;
+  var bloquearPasado = cual === 'unico';
+  var html = _EV_DIAS_CORTOS.map(function(d) { return '<div class="ev-cal-dow">' + d + '</div>'; }).join('');
+  var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
+  while (cur <= finGrid) {
+    var celdaIso = _evToISO(cur);
+    var ajeno = cur.getMonth() !== m.month;
+    var pasado = bloquearPasado && _evFechaCmp(celdaIso, hoy) < 0;
+    var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (pasado ? ' ev-ant-cal-pasado' : '');
+    if (seleccionada && celdaIso === seleccionada) clases += ' ev-ant-cal-sel';
+    if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
+    var onclickAttr = pasado ? '' : ' onclick="_evCrearCalTocarDia(\'' + cual + '\',\'' + celdaIso + '\')"';
+    html += '<div class="' + clases + '" data-iso="' + celdaIso + '"' + onclickAttr + '><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
+    cur.setDate(cur.getDate() + 1);
+  }
+  cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>';
+}
+function _evCrearCalMoverMes(cual, dir) {
+  var m = _evCalMesDe(_evCrearCal[cual].mostrado);
+  var year = m.year, month = m.month + dir;
+  if (month < 0) { month = 11; year--; } else if (month > 11) { month = 0; year++; }
+  _evCrearCal[cual].mostrado = _evToISO(new Date(year, month, 1));
+  _evCrearCalRender(cual);
+}
+function _evCrearCalTocarDia(cual, iso) {
+  _evCrearData.fecha = iso;
+  _evCrearCalRender(cual);
+  _evCrearActualizarCalResumen(cual);
+  _evCrearActualizarFooter();
+}
+function _evCrearActualizarCalResumen(cual) {
+  var el = document.getElementById('ev-crear-cal-' + cual + '-resumen');
+  if (el) el.textContent = _evCrearData.fecha ? _evAntFechaLegible(_evCrearData.fecha) : '';
+}
+function _evCrearRecurrenciaValidaWizard() {
+  var t = _evCrearData.tipoRecurrencia;
+  if (t === 'dias_semana') return _evCrearData.diasSemana.length > 0 && !!_evCrearData.hora;
+  if (t === 'cada_tantos') return !!(_evCrearData.frecuenciaNumero > 0 && _evCrearData.frecuenciaUnidad && _evCrearData.fecha && _evCrearData.hora);
+  if (t === 'unico') return !!(_evCrearData.fecha && _evCrearData.hora);
+  return false;
+}
+
+/* ── Guardado final -- SIEMPRE crearVenue, ver nota de diseño arriba sobre
+   por qué un venue existente también crea una fila nueva. ────────────── */
+function _evCrearGuardar() {
+  if (!_evCrearLugarValido() || !_evCrearRecurrenciaValidaWizard()) return;
+  var payload = { action: 'crearVenue', adminToken: _adminToken };
+  if (_evCrearData.venueExistente) {
+    var v = _evCrearData.venueExistente;
+    payload.nombre = v.nombre;
+    payload.mapsUrl = v.mapsUrl;
+    payload.lat = v.lat;
+    payload.lng = v.lng;
+    payload.tipoIcono = v.tipoIcono;
+    payload.requiereReserva = v.requiereReserva === false ? 'NO' : 'SI';
+  } else {
+    var n = _evCrearData.nuevoLugar;
+    payload.nombre = n.nombre.trim();
+    payload.mapsUrl = n.mapsUrl;
+    payload.lat = n.lat;
+    payload.lng = n.lng;
+    payload.tipoIcono = n.tipoIcono;
+    payload.requiereReserva = 'SI'; // sin pill propia en este wizard, ver nota de diseño
+  }
+  payload.tipoRecurrencia = _evCrearData.tipoRecurrencia;
+  payload.hora = _evCrearData.hora;
+  if (_evCrearData.tipoRecurrencia === 'dias_semana') {
+    payload.diasSemana = JSON.stringify(_evCrearData.diasSemana.slice().sort(function(a, b) { return a - b; }));
+  } else if (_evCrearData.tipoRecurrencia === 'cada_tantos') {
+    payload.frecuencia = _evCrearData.frecuenciaNumero;
+    payload.unidad = _evCrearData.frecuenciaUnidad;
+    payload.fechaReferencia = _evCrearData.fecha;
+  } else {
+    payload.fechaReferencia = _evCrearData.fecha;
+  }
+
+  mostrarCargando('Creando evento...');
+  apiPost(payload, function(res) {
+    ocultarCargando();
+    if (res && res.exito === false) {
+      mostrarToast(res.error || 'No se pudo crear el evento.', 'error');
+      return;
+    }
+    mostrarToast('Evento creado.', 'ok');
+    ir('s-eventos');
+  }, function(e) {
+    ocultarCargando();
+    mostrarToast(e && e.message ? e.message : 'No se pudo crear el evento.', 'error');
   });
 }

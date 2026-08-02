@@ -637,10 +637,10 @@ var _BOTTOM_NAV_EXTRA = {
   's4': 'reservas', 's-misreservas': 'reservas', 's6': 'reservas',
   's-pago': 'reservas', 's-gestionar': 'reservas',
   's-eventos-detalle': 'eventos', 's-eventos-anticipada': 'eventos',
-  // Venues ("Editar lugares"/form compartido con "Crear evento", ver
+  // Venues ("Editar lugares" + wizard propio de "Crear evento", ver
   // MANIFEST.md) -- mismo criterio que las 2 entradas de arriba: drill-down
   // de la tab 'eventos', alcanzables solo desde el FAB de #s-eventos.
-  's-eventos-lugares': 'eventos', 's-eventos-lugar-form': 'eventos'
+  's-eventos-lugares': 'eventos', 's-eventos-lugar-form': 'eventos', 's-eventos-crear': 'eventos'
 };
 
 // Reusa el `icono` ya definido por ítem para el slot de la flecha atrás de

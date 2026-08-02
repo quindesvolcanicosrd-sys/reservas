@@ -1072,3 +1072,55 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 @media (prefers-color-scheme: dark) {
   .ev-lugar-input { background: var(--surface-2); }
 }
+
+/* ═══════════════════════════════════════════════════════
+   "Crear evento" (#s-eventos-crear, js/eventos.js _evCrear*) -- wizard
+   propio de 2 pasos (Lugar / Recurrencia y horario), separado del
+   formulario de "Editar lugares" (arriba en este archivo, sin cambios). El
+   motor de pasos+progreso reusa .salud-paso/.salud-prog/.salud-prog-dot
+   TAL CUAL (css/perfil.css, cargado siempre) -- ver MANIFEST.md para la
+   aclaración de por qué el precedente real es el wizard de "Ficha de
+   salud" y no "Asistencia anticipada" (esa pantalla migró de ese mismo
+   motor a un acordeón de una sola pantalla en una tanda anterior). El resto
+   del paso 2 (pills de recurrencia, días de la semana, calendario) reusa
+   los mismos selectores ya definidos arriba para el formulario de Venues
+   (.aj-pills-row/.aj-pill/.ev-dia-circulo/.ev-cal-grid/.ev-ant-cal-nav*) --
+   solo 2 componentes son genuinamente nuevos acá: la card seleccionable de
+   lugar existente, y el stepper de hora. ═══════════════════════════════ */
+
+/* Paso 1 -- card de venue existente, seleccionable (a diferencia de
+   .ev-ant-card en "Editar lugares", que abre el formulario al tocar, acá
+   togglea selección con un borde de marca -- misma base visual, estado
+   distinto). */
+.ev-crear-venue-card { cursor: pointer; border-color: var(--border-light); transition: border-color 0.15s, background 0.15s; }
+.ev-crear-venue-card.activa { border-color: var(--brand); background: var(--brand-light); }
+.ev-crear-venue-nuevo-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%;
+  padding: 12px 14px; margin-top: 4px; background: none; border: 1.5px dashed var(--brand);
+  border-radius: 12px; color: var(--brand); font-size: 0.85rem; font-weight: 700;
+  font-family: inherit; cursor: pointer;
+}
+.ev-crear-venue-nuevo-btn .material-symbols-outlined { font-size: 1.1rem; }
+
+/* Stepper de hora -- 2 columnas (Horas/Minutos) con flechas arriba/abajo
+   (mismo botón circular que .ev-ant-cal-nav-btn, reusado tal cual, solo
+   rotado a vertical) + pills AM/PM debajo. Sin rueda de scroll infinito
+   (pedido explícito) -- valor grande y quieto, solo cambia por tap en las
+   flechas, primer selector de hora de la app (los horarios de Venues se
+   cargaban siempre a mano en Sheets hasta esta tanda). Componente genérico,
+   reusable con cualquier prefijo de id (ver _evHoraStepper* en
+   js/eventos.js), no atado a "Crear evento" pese a vivir en esta sección. */
+.ev-hora-stepper { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.ev-hora-stepper-cols { display: flex; align-items: center; gap: 10px; }
+.ev-hora-stepper-col { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.ev-hora-stepper-col .ev-ant-cal-nav-btn { width: 40px; height: 40px; }
+.ev-hora-stepper-valor {
+  min-width: 56px; text-align: center; font-size: 1.6rem; font-weight: 800; color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.ev-hora-stepper-sep { font-size: 1.6rem; font-weight: 800; color: var(--text); padding-bottom: 8px; }
+.ev-hora-stepper-meridiano { display: flex; gap: 8px; }
+
+@media (prefers-color-scheme: dark) {
+  .ev-crear-venue-card.activa { background: var(--brand-20); }
+}
