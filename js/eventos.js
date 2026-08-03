@@ -348,13 +348,12 @@ function _evCargarDatosReales(onListo) {
 // que pedía adminBuscarPersonasParaEvento(idEvento) DE NUEVO cada vez que
 // se abría la sheet para CUALQUIER evento). `null` = todavía no llegó (o
 // nunca se pidió, cuenta no-admin) -- distinto de `[]` ("pedido y sin
-// gente"), mismo criterio ya usado en el archivo para "cargando" vs. "vacío"
-// (ver `_evAgregarCandidatos`, más abajo). Independiente de
-// `_evCargarDatosReales()` a propósito -- no bloquea el render del timeline,
-// que no depende de este dato; solo hace falta cuando alguien abre el
-// detalle de un evento y `_evPintarGestionAdminDetalle()` arma el roster
-// (ver esa función más abajo -- NO la card/home, ver "Cambios recientes":
-// una tanda previa lo había puesto ahí, corregido). `adminGetRosterEquipo`
+// gente"), mismo criterio ya usado en el archivo para "cargando" vs. "vacío".
+// Independiente de `_evCargarDatosReales()` a propósito -- no bloquea el
+// render del timeline, que no depende de este dato; solo hace falta cuando
+// alguien abre la subpantalla dedicada "Marcar asistencia", que arma el
+// roster con esto (ver _evRosterAdminFilasHtml()/_evRenderMarcarAsistLista(),
+// más abajo -- NO la card/home, ver "Cambios recientes"). `adminGetRosterEquipo`
 // (nueva acción, MANIFEST.md) es más liviana que `adminBuscarPersonasParaEvento`
 // -- no recibe `idEvento` ni recalcula `estadoActual` (dato que ningún
 // consumidor de este roster precargado necesita: el estado por evento ya
@@ -366,22 +365,11 @@ function _evPrecargarRoster() {
   if (!_adminToken) return;
   api({ action: 'adminGetRosterEquipo', adminToken: _adminToken }, function(res) {
     _evRosterEquipo = res.personas || [];
-    _evRepintarRosterDetalleSiHaceFalta();
+    _evRepintarMarcarAsistSiHaceFalta();
   }, function() {
     _evRosterEquipo = []; // degrada a "sin resultados" -- nunca un loader infinito
-    _evRepintarRosterDetalleSiHaceFalta();
+    _evRepintarMarcarAsistSiHaceFalta();
   });
-}
-// Si el detalle de un evento ya estaba abierto (con el roster admin
-// visible) cuando esta respuesta llegó -- roster más lento que
-// getEventosRango, caso raro pero posible -- repinta ese roster puntual
-// ahora que el dato ya está, en vez de dejarlo colgado en "Cargando
-// equipo...". Mismo criterio de gate que `_evRenderDetalleAsistencia()`
-// para decidir si ESE evento muestra gestión admin.
-function _evRepintarRosterDetalleSiHaceFalta() {
-  if (!_evDetalleActual || !_adminToken || !_evYaEmpezo(_evDetalleActual)) return;
-  var inp = document.getElementById('ev-roster-search-' + _evDetalleActual.id);
-  _evRenderRosterAdmin(_evDetalleActual.id, inp ? inp.value : '');
 }
 
 // Flag de sesión (ver "Cambios recientes" -- regla general de "restaurar
@@ -1678,13 +1666,15 @@ var _EV_GRUPO_SIN_RESPONDER = { key: 'SinRespuesta', label: 'Sin respuesta', cla
 // vez de `_EV_GRUPOS_ASISTENCIA` (RSVP) desde que el evento arranca para
 // admin (ver _evRenderDetalleAsistencia() más abajo, "regla de tiempo, no
 // solo de rol/fecha calendario", mismo criterio ya usado por
-// `_evCardEventoHtml()`/`_evYaEmpezo()`). Reusa los mismos 3 tokens de color
-// que ya usa `_EV_ASISTENCIA_REAL_PILL_CLASE` (success/warning/danger) vía
-// las clases `ev-stat-*` ya existentes -- ninguna clase CSS nueva.
+// `_evCardEventoHtml()`/`_evYaEmpezo()`). Reusa los mismos tokens de color
+// que ya usa `_EV_ASISTENCIA_REAL_PILL_CLASE` (success/warning) vía las
+// clases `ev-stat-*` ya existentes -- ninguna clase CSS nueva. Ya NO incluye
+// "Ausente" (ver "Cambios recientes" -- ese grupo se dejó de calcular/
+// mostrar del todo: el 3er lugar de la fila de 3 estadísticas ahora es el
+// botón "Marcar asistencia", ver _evStatCardMarcarAsistenciaHtml()).
 var _EV_GRUPOS_ASISTENCIA_REAL = [
   { estado: 'A tiempo', key: 'A tiempo', label: 'A horario', clase: 'ev-stat-asisten' },
-  { estado: 'Tarde', key: 'Tarde', label: 'Tarde', clase: 'ev-stat-no-jugador' },
-  { estado: 'Ausente', key: 'Ausente', label: 'Ausentes', clase: 'ev-stat-no-asisten' }
+  { estado: 'Tarde', key: 'Tarde', label: 'Tarde', clase: 'ev-stat-no-jugador' }
 ];
 // `grupoKey` marca el grupo (`data-grupo`) para que _evFiltrarAsistenciaPorGrupo()
 // pueda mostrar/ocultar este bloque sin reconstruir toda la lista. Cada fila
@@ -1700,12 +1690,32 @@ var _EV_GRUPOS_ASISTENCIA_REAL = [
 // `data-foto` (`p.fotoPerfil`, ver `_mapaEquipoPorNombre()`/MANIFEST.md)
 // la hidrata esa misma función en vez de caer siempre al inicial. El texto
 // visible sí prioriza `p.nombreDerby` sobre `p.nombre` cuando existe.
-function _evGrupoAsistenciaHtml(label, personas, grupoKey, clase) {
+// `conToggle`/`idEvento` (ver "Cambios recientes" -- punto 3 del pedido de
+// Victor): solo lo pasa `_evActualizarStatsAsistenciaReal()` (asistencia
+// REAL, admin) -- las listas de RSVP (`_evRenderDetalleAsistencia()`, arriba
+// en el archivo) nunca los pasan, quedan de solo lectura como siempre (no
+// tiene sentido "marcar asistencia" antes de que el evento arranque). Cada
+// fila con toggle reusa LITERAL el mismo componente `.ev-rsvp-seg-roster`
+// que ya usa el roster completo de la subpantalla "Marcar asistencia" --
+// `p.estado` ya viene resuelto por el grupo al que pertenece esta persona
+// (A horario/Tarde), así que la opción activa sale directo de ahí, sin
+// recalcular nada. Toca `_evMarcarAsistenciaAdmin()`, la MISMA función ya
+// usada por el roster de la subpantalla -- sin ninguna acción nueva.
+function _evGrupoAsistenciaHtml(label, personas, grupoKey, clase, conToggle, idEvento) {
   if (!personas.length) return '';
   var claseFila = 'ev-asist-persona-' + clase.replace('ev-stat-', '');
   var filas = personas.map(function(p) {
     var fotoAttr = (p.fotoPerfil || '').replace(/"/g, '&quot;');
-    return '<div class="ev-asist-persona ' + claseFila + '"><div class="avatar-pill avatar-pill--sm ev-avatar-stack-item" data-nombre="' + p.nombre.replace(/"/g, '&quot;') + '" data-foto="' + fotoAttr + '"></div><span>' + (p.nombreDerby || p.nombre) + (p.sufijoRol || '') + '</span></div>';
+    var toggleHtml = '';
+    if (conToggle) {
+      var nombreAttr = String(p.nombre).replace(/'/g, "\\'");
+      var opts = ['A tiempo', 'Tarde'].map(function(estado) {
+        var act = p.estado === estado ? ' activa' : '';
+        return '<div class="ev-rsvp-opt' + act + '" data-estado="' + estado + '" onclick="event.stopPropagation();_evMarcarAsistenciaAdmin(\'' + idEvento + '\',\'' + nombreAttr + '\',\'' + estado + '\',this)"><span class="material-symbols-outlined">' + _EV_ASISTENCIA_REAL_PILL_ICONO[estado] + '</span>' + _EV_ROLLCALL_LABEL_CORTO[estado] + '</div>';
+      }).join('');
+      toggleHtml = '<div class="ev-rsvp-seg ev-rsvp-seg-roster" onclick="event.stopPropagation()"><div class="ev-rsvp-slider"></div>' + opts + '</div>';
+    }
+    return '<div class="ev-asist-persona ' + claseFila + '"><div class="avatar-pill avatar-pill--sm ev-avatar-stack-item" data-nombre="' + p.nombre.replace(/"/g, '&quot;') + '" data-foto="' + fotoAttr + '"></div><span class="ev-asist-persona-nombre">' + (p.nombreDerby || p.nombre) + (p.sufijoRol || '') + '</span>' + toggleHtml + '</div>';
   }).join('');
   return '<div class="ev-asist-grupo" data-grupo="' + grupoKey + '"><div class="ev-asist-grupo-titulo">' + label + ' (' + personas.length + ')</div>' + filas + '</div>';
 }
@@ -1890,7 +1900,7 @@ function _evMarcarAsistencia(id, estado) {
   });
 }
 
-/* ── Variante admin: lista de asistentes con chip + agregar persona ────
+/* ── Variante admin: lista de asistentes con chip + botón de gestión ───
    Lista colapsada por default (ver "Cambios recientes"), mismo mecanismo
    que `_evAntSetAcordeon()`/`adminToggleBanner()` (js/admin.js): techo fijo
    generoso vía clase `.abierto` en vez de medir `scrollHeight` en cada
@@ -1901,16 +1911,13 @@ function _evMarcarAsistencia(id, estado) {
    render (`abierto` calculado contra `_evAsistAdminAbierto` al armar el
    HTML) para sobrevivir a un re-render completo del timeline.
 
-   REVERTIDO a esta forma (ver "Cambios recientes" -- corrección sobre una
-   sesión anterior): una tanda previa había reemplazado este contenido por
-   el roster completo + buscador + sliders de 2 estados -- Victor aclaró que
-   ese rediseño no correspondía acá (la CARD/home), sino específicamente a
-   la pantalla de DETALLE de un evento. El roster precargado
-   (`_evRosterEquipo`/`_evPrecargarRoster()`, más arriba) y las funciones que
-   arman esas filas (`_evRenderRosterAdmin()`/`_evRosterAdminFilasHtml()`/
-   `_evMarcarAsistenciaAdmin()`, más abajo) NO se eliminaron -- se reusan tal
-   cual desde `_evPintarGestionAdminDetalle()` (pantalla de detalle, ver esa
-   entrada más abajo), solo se sacaron de ACÁ. */
+   El botón "Agregar persona" de esta lista navega a la subpantalla
+   dedicada "Marcar asistencia" (`_evAbrirMarcarAsistencia()`, ver más abajo
+   -- consolidación final, ver MANIFEST.md) -- MISMO componente que el botón
+   equivalente del detalle de un evento (reemplaza a la card "Ausentes" ahí),
+   ambos puntos de entrada reusan el roster precargado (`_evRosterEquipo`/
+   `_evPrecargarRoster()`, más arriba) y las filas que arma
+   `_evRosterAdminFilasHtml()`. */
 var _evAsistAdminAbierto = null;
 function _evAsistAdminSetAbierto(id, abrir) {
   var header = document.getElementById('ev-asist-admin-header-' + id);
@@ -1949,26 +1956,55 @@ function _evAccionAdminHtml(e) {
         (filas || '<div style="font-size:0.76rem;color:var(--muted);">Nadie ha marcado todavía.</div>') +
       '</div>' +
     '</div>' +
-    '<button class="ev-btn-agregar-persona" onclick="_evAbrirAgregarPersona(\'' + e.id + '\')"><span class="material-symbols-outlined">person_add</span>Agregar persona</button>' +
+    '<button class="ev-btn-agregar-persona" onclick="_evAbrirMarcarAsistencia(\'' + e.id + '\',\'s-eventos\')"><span class="material-symbols-outlined">person_add</span>Agregar persona</button>' +
   '</div>';
 }
-// Buscador local (ver "Cambios recientes") -- mismo criterio que otros
-// buscadores instantáneos de la app (`_evFiltrarAgregarPersona()`/
-// `_adminFiltrarDestino()`): filtra en cliente sobre el array YA cargado en
-// memoria, sin ningún request nuevo por tecla.
-function _evFiltrarRosterAdmin(idEvento, q) { _evRenderRosterAdmin(idEvento, q); }
-// Repinta SOLO la lista de filas (`#ev-roster-lista-<id>`), nunca el
-// `<input>` de búsqueda -- evita perder el foco/cursor del usuario mientras
-// tipea (mismo criterio que `_evRenderListaAgregar()`, que tampoco toca su
-// propio input). `_evRosterEquipo === null` (todavía no llegó la respuesta
-// de `_evPrecargarRoster()`) muestra un mensaje corto en vez de nada -- caso
-// raro en la práctica (el roster se pide en paralelo con los eventos apenas
-// se entra a Eventos, normalmente ya está listo para cuando alguien llega a
-// abrir el detalle de un evento), pero sin esto la lista quedaría en blanco
-// sin explicación si alguien lo abre en el primer instante.
-function _evRenderRosterAdmin(idEvento, q) {
+// Subpantalla dedicada "Marcar asistencia" (ver "Cambios recientes" --
+// consolidación final: reemplaza el roster que había vivido inline en el
+// acordeón del detalle -- `_evPintarGestionAdminDetalle()`, eliminada -- Y
+// el bottom sheet remoto "+ Agregar persona" -- `_evAbrirAgregarPersona()`/
+// `#ev-sheet-agregar`, eliminados -- 2 diseños intermedios probados antes de
+// este). Único punto real de gestión de asistencia admin, con 2 puntos de
+// entrada que reusan el MISMO componente: la card del home/timeline
+// (`_evAccionAdminHtml()`, más arriba) y el botón que reemplaza a la card
+// "Ausentes" en el detalle (`_evStatCardMarcarAsistenciaHtml()`, más abajo)
+// -- cada uno pasa su propio `origen` para que la flecha atrás vuelva a
+// donde corresponde (mismo patrón que `_evLugarOrigen`/`_evLugarFormVolver()`
+// más abajo en este archivo).
+var _evMarcarAsistIdEvento = null;
+var _evMarcarAsistOrigen = 's-eventos';
+function _evMarcarAsistVolver() { return _evMarcarAsistOrigen; }
+function _evAbrirMarcarAsistencia(idEvento, origen) {
+  // Guard explícito (ver "Cambios recientes", punto 6 del pedido de Victor):
+  // los 2 botones que llaman a esta función ya están ocultos del todo para
+  // no-admin, pero queda explícito acá también, mismo criterio que el resto
+  // de la app -- ninguna cuenta no-admin debería poder marcar nada aunque
+  // llegara acá por otro medio (ej. tocando "atrás" del navegador).
+  if (!_adminToken) return;
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
-  var cont = document.getElementById('ev-roster-lista-' + idEvento);
+  if (!ev) return;
+  _evMarcarAsistIdEvento = idEvento;
+  _evMarcarAsistOrigen = origen || 's-eventos';
+  var s = document.getElementById('ev-marcar-search'); if (s) s.value = '';
+  ir('s-eventos-marcar-asistencia');
+  _evRenderMarcarAsistLista('');
+}
+// Buscador local (ver "Cambios recientes") -- mismo criterio que otros
+// buscadores instantáneos de la app (`_adminFiltrarDestino()`/etc.): filtra
+// en cliente sobre el roster YA cargado en memoria (`_evRosterEquipo`), sin
+// ningún request nuevo por tecla.
+function _evMarcarAsistFiltrar(q) { _evRenderMarcarAsistLista(q); }
+// Repinta SOLO la lista de filas (`#ev-marcar-lista`), nunca el `<input>` de
+// búsqueda -- evita perder el foco/cursor del usuario mientras tipea.
+// `_evRosterEquipo === null` (todavía no llegó la respuesta de
+// `_evPrecargarRoster()`) muestra un mensaje corto en vez de nada -- caso
+// raro en la práctica (el roster se pide en paralelo con los eventos apenas
+// se entra a Eventos, normalmente ya está listo para cuando alguien abre
+// esta subpantalla), pero sin esto la lista quedaría en blanco sin
+// explicación si alguien llega acá en el primer instante.
+function _evRenderMarcarAsistLista(q) {
+  var ev = _EV_EVENTOS.filter(function(e) { return e.id === _evMarcarAsistIdEvento; })[0];
+  var cont = document.getElementById('ev-marcar-lista');
   if (!ev || !cont) return;
   if (_evRosterEquipo === null) { cont.innerHTML = '<div class="ev-roster-vacio">Cargando equipo...</div>'; return; }
   cont.innerHTML = _evRosterAdminFilasHtml(ev, q);
@@ -1976,6 +2012,16 @@ function _evRenderRosterAdmin(idEvento, q) {
   // a un toque (mismo criterio que `_evUpdateRsvpSliders(false)` tras
   // `_evRenderTimeline()`, más abajo en este archivo).
   cont.querySelectorAll('.ev-rsvp-seg').forEach(function(seg) { _evPosicionarRsvpSlider(seg, false); });
+}
+// Si el roster tardó más que `getEventosRango()` en llegar y esta
+// subpantalla ya estaba abierta esperándolo -- caso raro pero posible --
+// repinta ahora que el dato ya está, en vez de dejarla colgada en "Cargando
+// equipo...". Mismo criterio de gate que el resto del archivo.
+function _evRepintarMarcarAsistSiHaceFalta() {
+  var pantalla = document.getElementById('s-eventos-marcar-asistencia');
+  if (!pantalla || !pantalla.classList.contains('activa') || !_evMarcarAsistIdEvento) return;
+  var inp = document.getElementById('ev-marcar-search');
+  _evRenderMarcarAsistLista(inp ? inp.value : '');
 }
 // Arma las filas del roster completo (`_evRosterEquipo`, precargado) contra
 // EL estado real de este evento puntual (`e.asistentes`) -- cada persona
@@ -2012,24 +2058,26 @@ function _evRosterAdminFilasHtml(e, q) {
     '</div>';
   }).join('');
 }
-// Marca A tiempo/Tarde para UNA persona puntual del roster (llamada desde
-// el roster de gestión del DETALLE de un evento, `_evPintarGestionAdminDetalle()`
-// más abajo -- ver "Cambios recientes") -- mismo endpoint ya usado
-// (`adminMarcarAsistencia`, sin acción nueva), mismo criterio optimista +
-// revert que `_evMarcarAsistencia()` (RSVP propio, más arriba): resalta la
-// opción y reposiciona SOLO el slider de esa fila (`btnEl.closest('.ev-rsvp-seg')`,
-// nunca un sweep de `_evUpdateRsvpSliders()` sobre todo el roster) y
-// actualiza `ev.asistentes`/el contador del header de la card (si esa card
-// sigue en el timeline detrás del detalle -- consistencia gratis, sin
-// costo) en memoria antes de que la escritura real resuelva. Repinta SOLO
-// las tarjetas de estadística de arriba (`_evActualizarStatsAsistenciaReal()`,
-// no `_evRenderDetalleAsistenciaReal()` completa) -- esta última también
-// reconstruye el roster+buscador (`_evPintarGestionAdminDetalle()`), lo que
-// resetearía el texto tipeado y todas las filas en cada toque, exactamente
-// el refetch/rebuild costoso que el pedido de Victor (punto 4) pidió evitar.
-// Sin toast en el éxito, a propósito (mismo criterio que `_evMarcarAsistencia()`)
-// -- el resaltado ya es feedback suficiente. Ni `_evPrecargarRoster()` ni
-// `_evRenderTimeline()` se llaman acá en ningún momento.
+// Marca A tiempo/Tarde para UNA persona puntual -- 3 llamadores posibles
+// (ver "Cambios recientes", consolidación final): el roster completo de la
+// subpantalla "Marcar asistencia" (`_evRosterAdminFilasHtml()`, arriba), el
+// toggle inline de las listas "A horario"/"Tarde" del detalle
+// (`_evGrupoAsistenciaHtml()`, más abajo), y -- indirectamente -- ninguno
+// más. Mismo endpoint ya usado (`adminMarcarAsistencia`, sin acción nueva),
+// mismo criterio optimista + revert que `_evMarcarAsistencia()` (RSVP
+// propio, más arriba): resalta la opción y reposiciona SOLO el slider de
+// esa fila (`btnEl.closest('.ev-rsvp-seg')`, nunca un sweep de
+// `_evUpdateRsvpSliders()` sobre todo el roster) y actualiza
+// `ev.asistentes`/el contador del header de la card (si esa card sigue en
+// el timeline detrás del detalle -- consistencia gratis, sin costo) en
+// memoria antes de que la escritura real resuelva. Repinta también las
+// tarjetas de estadística + lista del detalle (`_evActualizarStatsAsistenciaReal()`)
+// si ese evento está abierto ahí -- sin reconstruir la subpantalla "Marcar
+// asistencia" en sí (que vive aparte, con su propio buscador con texto
+// tipeado que no debe perderse). Sin toast en el éxito, a propósito (mismo
+// criterio que `_evMarcarAsistencia()`) -- el resaltado ya es feedback
+// suficiente. Ni `_evPrecargarRoster()` ni `_evRenderTimeline()` se llaman
+// acá en ningún momento.
 function _evMarcarAsistenciaAdmin(idEvento, nombre, estado, btnEl) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
   if (!ev) return;
@@ -2058,77 +2106,6 @@ function _evActualizarContadorAsistAdmin(idEvento) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
   var titulo = document.querySelector('#ev-asist-admin-header-' + idEvento + ' .ev-asist-admin-header-titulo');
   if (ev && titulo) titulo.textContent = 'Asistencia (' + (ev.asistentes || []).length + ')';
-}
-
-/* ── Bottom sheet "+ Agregar persona" -- conectada a
-   adminBuscarPersonasParaEvento(idEvento) (confirmada desplegada en esta
-   sesión). El roster completo se pide UNA VEZ al abrir la sheet (no en cada
-   tecla del buscador) y se filtra en cliente -- `_evAgregarCandidatos: null`
-   marca "todavía cargando" (distinto de `[]`, "cargó y no hay nadie"), así
-   `_evFiltrarAgregarPersona()` no pisa el mensaje de carga con "Sin
-   resultados" mientras el pedido sigue en vuelo. ───────────────────────── */
-var _evAgregarEventoId = null;
-var _evAgregarCandidatos = null;
-function _evAbrirAgregarPersona(idEvento) {
-  _evAgregarEventoId = idEvento;
-  var s = document.getElementById('ev-agregar-search'); if (s) s.value = '';
-  _evAgregarCandidatos = null;
-  var lista = document.getElementById('ev-agregar-lista');
-  if (lista) lista.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:0.82rem;text-align:center;">Cargando equipo...</div>';
-  var ov = document.getElementById('ev-sheet-agregar-overlay');
-  var sh = document.getElementById('ev-sheet-agregar');
-  if (ov) ov.style.display = 'block';
-  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); }); }
-  _registrarOverlayAbierto(_evCerrarSheetAgregar);
-  api({ action: 'adminBuscarPersonasParaEvento', adminToken: _adminToken, idEvento: idEvento }, function(res) {
-    if (_evAgregarEventoId !== idEvento) return; // sheet ya cerrada/otro evento mientras tanto
-    _evAgregarCandidatos = (res.personas || []).map(function(p) { return p.nombre; });
-    _evRenderListaAgregar(s ? s.value : '');
-  }, function() {
-    if (_evAgregarEventoId !== idEvento) return;
-    _evAgregarCandidatos = [];
-    var listaErr = document.getElementById('ev-agregar-lista');
-    if (listaErr) listaErr.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:0.82rem;text-align:center;">No se pudo cargar el equipo.</div>';
-  });
-}
-function _evCerrarSheetAgregar(porGesto) {
-  if (!porGesto) { history.back(); return; }
-  var sh = document.getElementById('ev-sheet-agregar');
-  var ov = document.getElementById('ev-sheet-agregar-overlay');
-  if (sh) sh.style.transform = 'translateY(100%)';
-  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
-}
-function _evFiltrarAgregarPersona(q) { if (_evAgregarCandidatos) _evRenderListaAgregar(q); }
-function _evRenderListaAgregar(q) {
-  var lista = document.getElementById('ev-agregar-lista');
-  if (!lista) return;
-  var qn = (q || '').toLowerCase().trim();
-  var candidatos = (_evAgregarCandidatos || []).filter(function(n) { return n.toLowerCase().indexOf(qn) !== -1; });
-  lista.innerHTML = candidatos.map(function(n) {
-    return '<div class="ev-persona-row" onclick="_evAgregarPersonaAEvento(\'' + n.replace(/'/g, "\\'") + '\')"><span class="material-symbols-outlined">person</span>' + n + '</div>';
-  }).join('') || '<div style="padding:16px;color:var(--muted);font-size:0.82rem;text-align:center;">Sin resultados.</div>';
-}
-function _evAgregarPersonaAEvento(nombre) {
-  var ev = _EV_EVENTOS.filter(function(e) { return e.id === _evAgregarEventoId; })[0];
-  if (!ev) return;
-  if (!ev.asistentes) ev.asistentes = [];
-  if (ev.asistentes.some(function(a) { return a.nombre === nombre; })) { mostrarToast(nombre + ' ya está en la lista', 'error'); return; }
-  var idEvento = _evAgregarEventoId;
-  apiPost({ action: 'adminMarcarAsistencia', adminToken: _adminToken, idEvento: idEvento, nombre: nombre, estado: 'A tiempo' }, function() {
-    ev.asistentes.push({ nombre: nombre, estado: 'A tiempo' });
-    mostrarToast(nombre + ' agregadx', 'ok', true);
-    _evCerrarSheetAgregar();
-    _evRenderTimeline(true);
-    // Gestión de asistencia también en el detalle (ver "Cambios recientes")
-    // -- si este mismo evento está abierto ahí (misma referencia que
-    // `_EV_EVENTOS`, ya mutada arriba), refresca sus tarjetas/lista también,
-    // no solo el timeline. Nunca toca al resto de personas ya confirmadas:
-    // el push de arriba solo agrega la fila nueva, `_evRenderDetalleAsistenciaReal()`
-    // solo vuelve a LEER `ev.asistentes` ya actualizado, no reescribe nada.
-    if (_evDetalleActual && _evDetalleActual.id === idEvento) _evRenderDetalleAsistencia(_evDetalleActual);
-  }, function(e) {
-    mostrarToast(e && e.message ? e.message : 'No se pudo agregar a ' + nombre + '.', 'error');
-  });
 }
 
 /* ── Card de cumpleaños ────────────────────────────────────────────────
@@ -2760,7 +2737,16 @@ function _evDetalleInfoHtml(ev) {
    cada render -- abrir un evento nuevo (o re-abrir el mismo) arranca sin
    ningún filtro activo. */
 var _evDetalleFiltroGrupo = null;
-function _evPintarStatsAsistencia(grupos) {
+// `conToggle`/`idEvento` (ver "Cambios recientes"): solo los manda
+// `_evActualizarStatsAsistenciaReal()` (asistencia REAL, admin) -- el camino
+// de RSVP (`_evRenderDetalleAsistencia()`) sigue llamando esta función con 1
+// solo argumento, sin tocar nada de lo de acá. Con `conToggle`, suma la
+// tarjeta "Marcar asistencia" (`_evStatCardMarcarAsistenciaHtml()`) al final
+// del grid de estadísticas -- ocupa el lugar donde antes vivía la card
+// "Ausentes" (ver "Cambios recientes", punto 1/2 del pedido de Victor) -- y
+// propaga el toggle inline a cada fila de personas de la lista de abajo
+// (`_evGrupoAsistenciaHtml()`, punto 3).
+function _evPintarStatsAsistencia(grupos, conToggle, idEvento) {
   var stats = document.getElementById('ev-detalle-stats');
   if (stats) {
     stats.innerHTML = grupos.map(function(g) {
@@ -2768,13 +2754,29 @@ function _evPintarStatsAsistencia(grupos) {
         '<div class="ev-stat-num">' + g.personas.length + '</div>' +
         '<div class="ev-stat-label">' + g.label + '</div>' +
       '</div>';
-    }).join('');
+    }).join('') + (conToggle ? _evStatCardMarcarAsistenciaHtml(idEvento) : '');
   }
   var lista = document.getElementById('ev-detalle-asistencia-lista');
   if (lista) {
-    lista.innerHTML = grupos.map(function(g) { return _evGrupoAsistenciaHtml(g.label, g.personas, g.key, g.clase); }).join('');
+    lista.innerHTML = grupos.map(function(g) { return _evGrupoAsistenciaHtml(g.label, g.personas, g.key, g.clase, conToggle, idEvento); }).join('');
     _evHidratarAvatares();
+    // Mismo criterio que _evRenderMarcarAsistLista()/js/eventos.js -- sin animar
+    // (`false`), primer pintado de estas filas, no una respuesta a un toque.
+    lista.querySelectorAll('.ev-rsvp-seg').forEach(function(seg) { _evPosicionarRsvpSlider(seg, false); });
   }
+}
+// Reemplaza el lugar donde antes vivía la card "Ausentes" (ver "Cambios
+// recientes", punto 2 del pedido de Victor) -- visible únicamente para
+// admin (`_evPintarStatsAsistencia()` solo la agrega con `conToggle`
+// truthy, que a su vez solo llega en `true` desde `_evActualizarStatsAsistenciaReal()`
+// cuando `_adminToken` es real). `stopPropagation()` -- mismo motivo que el
+// resto de los controles de esta pantalla, evita que el toque también
+// dispare cualquier click de fondo de la card.
+function _evStatCardMarcarAsistenciaHtml(idEvento) {
+  return '<button type="button" class="ev-stat-card ev-stat-marcar" onclick="event.stopPropagation();_evAbrirMarcarAsistencia(\'' + idEvento + '\',\'s-eventos-detalle\')">' +
+    '<span class="material-symbols-outlined">edit_calendar</span>' +
+    '<div class="ev-stat-label">Marcar asistencia</div>' +
+  '</button>';
 }
 // Asisten/No asisten/No jugador salen directo de `ev.rsvps` (ya cargado con
 // el evento, ver _evMapEventoBackend() -- sin fetch extra). "Sin responder"
@@ -2789,8 +2791,6 @@ function _evPintarStatsAsistencia(grupos) {
 // persona que ya filtró un grupo mientras el pedido todavía viajaba.
 function _evRenderDetalleAsistencia(ev) {
   _evDetalleFiltroGrupo = null;
-  var gestion = document.getElementById('ev-detalle-gestion-admin');
-  if (gestion) gestion.innerHTML = '';
   // Regla de tiempo, no solo de rol/fecha calendario -- mismo criterio ya
   // usado por _evCardEventoHtml()/_evYaEmpezo() para la card: desde que el
   // evento arranca, admin ve la asistencia REAL (rollcall E/F) + gestión acá
@@ -2819,23 +2819,28 @@ function _evRenderDetalleAsistencia(ev) {
     _evPintarStatsAsistencia(grupos.concat([{ key: _EV_GRUPO_SIN_RESPONDER.key, label: _EV_GRUPO_SIN_RESPONDER.label, clase: _EV_GRUPO_SIN_RESPONDER.clase, personas: sinResponder }]));
   }, function() { /* silencioso -- el resto de la pantalla ya funciona sin este grupo */ });
 }
-// Asistencia REAL (rollcall E/F, `ev.asistentes`) agrupada en 3 tarjetas de
-// estadística (A horario/Tarde/Ausentes) + la lista completa debajo,
-// reusando el MISMO `_evPintarStatsAsistencia()` que ya usa el camino RSVP
-// de arriba -- 0 duplicación de la UI de stats/lista, solo cambia qué array
-// alimenta los grupos y qué combinación de estado se muestra por persona
-// (puntualidad + rol, ver _evLabelPuntualidadRol()/`p.sufijoRol`). Bug real
-// corregido acá (el "0 asistentes" reportado en el detalle de eventos
-// pasados): antes `_evRenderDetalleAsistencia()` SIEMPRE leía `ev.rsvps`
-// (intención pre-evento) sin importar si el evento ya había arrancado -- un
-// evento ya jugado con RSVPs vacíos (o gente que nunca respondió pero sí
-// vino, admin mediante) mostraba 0 en las 4 tarjetas pese a tener
-// asistencia real registrada en `ev.asistentes`.
+// Asistencia REAL (rollcall E/F, `ev.asistentes`) agrupada en 2 tarjetas de
+// estadística (A horario/Tarde, ver "Cambios recientes" -- ya no incluye
+// "Ausentes") + la lista completa debajo, reusando el MISMO
+// `_evPintarStatsAsistencia()` que ya usa el camino RSVP de arriba -- 0
+// duplicación de la UI de stats/lista, solo cambia qué array alimenta los
+// grupos y qué combinación de estado se muestra por persona (puntualidad +
+// rol, ver _evLabelPuntualidadRol()/`p.sufijoRol`). `estado` se suma a cada
+// persona (a diferencia del resto de los campos, no viene de un mapeo --
+// ES el `g.estado` del grupo al que pertenece) para que
+// `_evGrupoAsistenciaHtml()` sepa qué opción del toggle marcar activa sin
+// tener que recalcularlo. Bug real corregido acá (el "0 asistentes"
+// reportado en el detalle de eventos pasados): antes
+// `_evRenderDetalleAsistencia()` SIEMPRE leía `ev.rsvps` (intención
+// pre-evento) sin importar si el evento ya había arrancado -- un evento ya
+// jugado con RSVPs vacíos (o gente que nunca respondió pero sí vino, admin
+// mediante) mostraba 0 en las tarjetas pese a tener asistencia real
+// registrada en `ev.asistentes`.
 // Separada de `_evRenderDetalleAsistenciaReal()` (ver esa función, abajo)
 // -- ver "Cambios recientes": `_evMarcarAsistenciaAdmin()` necesita poder
 // refrescar SOLO las tarjetas/lista de arriba tras marcar a alguien desde
-// el roster de gestión, sin volver a reconstruir ese roster entero (que
-// perdería el texto ya tipeado en el buscador local en cada toque).
+// la subpantalla "Marcar asistencia" o desde el toggle inline de estas
+// mismas listas, sin volver a reconstruir ninguna otra pantalla.
 function _evActualizarStatsAsistenciaReal(ev) {
   var asistentes = ev.asistentes || [];
   var grupos = _EV_GRUPOS_ASISTENCIA_REAL.map(function(g) {
@@ -2843,39 +2848,20 @@ function _evActualizarStatsAsistenciaReal(ev) {
       key: g.key, label: g.label, clase: g.clase,
       personas: asistentes.filter(function(a) { return a.estado === g.estado; }).map(function(a) {
         var rol = _evRolDePersona(ev, a.nombre);
-        return { nombre: a.nombre, nombreDerby: a.nombreDerby || '', fotoPerfil: a.fotoPerfil || '', sufijoRol: (rol === 'No jugador') ? ' · No jugador' : '' };
+        return { nombre: a.nombre, nombreDerby: a.nombreDerby || '', fotoPerfil: a.fotoPerfil || '', estado: a.estado, sufijoRol: (rol === 'No jugador') ? ' · No jugador' : '' };
       })
     };
   });
-  _evPintarStatsAsistencia(grupos);
+  // `_adminToken` explícito (ver "Cambios recientes", punto 6 del pedido de
+  // Victor -- guard confirmado en cada punto de entrada): en la práctica
+  // esta función solo se llama ya desde caminos admin-only
+  // (`_evRenderDetalleAsistenciaReal()`/`_evMarcarAsistenciaAdmin()`), pero
+  // queda explícito acá también en vez de asumirlo implícito, mismo
+  // criterio que el resto del archivo.
+  _evPintarStatsAsistencia(grupos, !!_adminToken, ev.id);
 }
 function _evRenderDetalleAsistenciaReal(ev) {
   _evActualizarStatsAsistenciaReal(ev);
-  _evPintarGestionAdminDetalle(ev);
-}
-// Gestión de asistencia del detalle (ver "Cambios recientes" -- reemplaza
-// el botón "Agregar o corregir asistencia" + su bottom sheet remoto por el
-// MISMO roster completo + buscador local + slider de 2 estados que ya
-// arman `_evRenderRosterAdmin()`/`_evRosterAdminFilasHtml()` (más arriba en
-// este archivo, originalmente escritas para la card -- una sesión anterior
-// las había puesto ahí, Victor aclaró que el lugar correcto era el
-// DETALLE; las funciones en sí no cambiaron, solo quién las llama).
-// `_evAbrirAgregarPersona()`/`_evAgregarPersonaAEvento()` (bottom sheet)
-// NO se tocaron -- siguen intactas, sin ningún cambio de comportamiento;
-// simplemente ya no las llama el DETALLE (esta función). La card SÍ las
-// sigue usando (`_evAccionAdminHtml()`, botón "Agregar persona", más
-// arriba en este archivo) -- ese flujo nunca se movió ni se duplicó, solo
-// coexiste con este roster nuevo del detalle. Reusa LITERAL el mismo
-// esquema de ids `ev-roster-search-<id>`/`ev-roster-lista-<id>` que la
-// card usó brevemente en la sesión anterior (revertido ahí) -- sin
-// colisión posible, la card ya no arma ninguno de los 2.
-function _evPintarGestionAdminDetalle(ev) {
-  var cont = document.getElementById('ev-detalle-gestion-admin');
-  if (!cont) return;
-  cont.innerHTML = '<div class="ev-asist-grupo-titulo">Marcar asistencia</div>' +
-    '<input type="text" class="ev-roster-search" id="ev-roster-search-' + ev.id + '" placeholder="Buscar por nombre..." oninput="_evFiltrarRosterAdmin(\'' + ev.id + '\', this.value)">' +
-    '<div class="ev-roster-lista" id="ev-roster-lista-' + ev.id + '"></div>';
-  _evRenderRosterAdmin(ev.id, '');
 }
 // Tocar una tarjeta filtra la lista de abajo a solo ese grupo; tocarla de
 // nuevo (ya activa) deselecciona y vuelve a mostrar los 4. Solo una tarjeta

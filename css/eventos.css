@@ -507,25 +507,15 @@
 .ev-asistente-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-light); }
 .ev-asistente-row:last-child { border-bottom: none; }
 .ev-asistente-nombre { font-size: 0.8rem; font-weight: 600; color: var(--text); }
-/* Roster completo con buscador del DETALLE de un evento (ver "Cambios
-   recientes" -- reemplaza el botón "Agregar o corregir asistencia" +
-   bottom sheet remoto que vivía en `#ev-detalle-gestion-admin`; NO es
-   contenido de la card, esa sigue con la lista de chips de arriba).
-   `.ev-roster-search` mismo look que otros buscadores instantáneos chicos
-   de la app (ej. `#admin-destino-search`, css/admin.css) -- inline por ese
-   componente puntual, acá con clase propia por ser HTML generado desde JS.
-   `.ev-roster-lista` con techo propio + scroll interno para que un equipo
-   grande no estire la pantalla de detalle hasta el infinito. */
-/* Sin `.ev-detalle-section` propia (comparte la de "Asistencia" con las
-   tarjetas/lista de arriba, ver index.html) -- margen propio contra
-   `#ev-detalle-asistencia-lista`, que no lo trae (último elemento visual
-   antes de esto en cualquier otro contexto donde se use ese componente). */
-#ev-detalle-gestion-admin { margin-top: 18px; }
-.ev-roster-search {
-  width: 100%; padding: 9px 12px; margin-bottom: 10px; border-radius: 10px; border: 1.5px solid var(--border-light);
-  background: var(--surface-light); color: var(--text); font-size: 0.8rem; font-family: inherit;
-}
-.ev-roster-lista { display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; }
+/* Roster completo de la subpantalla dedicada "Marcar asistencia" (ver
+   "Cambios recientes" -- diseño final, #s-eventos-marcar-asistencia,
+   index.html): buscador (`.app-nav-search`, reusado tal cual del resto de
+   la app -- ver css/nav.css, sin clase propia acá) + `.ev-marcar-lista` con
+   cada fila (`.ev-roster-fila`/`.ev-roster-nombre`, reusadas del roster
+   original) de todo el equipo. Sin techo/scroll propio -- a diferencia del
+   diseño intermedio que vivió en el acordeón del detalle, esta es una
+   pantalla de página completa, scrollea con el resto del contenido. */
+.ev-marcar-lista { display: flex; flex-direction: column; }
 .ev-roster-fila { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border-light); }
 .ev-roster-fila:last-child { border-bottom: none; }
 .ev-roster-nombre { font-size: 0.8rem; font-weight: 600; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -656,6 +646,17 @@
 .ev-stat-no-asisten.activa { border-color: var(--danger); background: var(--danger-bg); }
 .ev-stat-no-jugador.activa { border-color: var(--amber-dark); background: var(--warning-bg); }
 .ev-stat-sin-respuesta.activa { border-color: var(--muted); background: var(--surface-2); }
+/* Botón "Marcar asistencia" (ver "Cambios recientes", diseño final -- ocupa
+   el lugar donde antes vivía la card "Ausentes" en la fila de estadísticas
+   de un evento pasado, admin-only, ver _evStatCardMarcarAsistenciaHtml()/
+   js/eventos.js). `<button>` real en vez de `<div>` -- reusa `.ev-stat-card`
+   tal cual (mismo tamaño/padding/radio que el resto de la fila) más este
+   modificador, que solo pisa lo que hace falta para que se vea como acción
+   (ícono/color de marca) en vez de como una estadística clickeable-para-filtrar. */
+.ev-stat-marcar { font: inherit; color: var(--brand); }
+.ev-stat-marcar .material-symbols-outlined { font-size: 20px; }
+.ev-stat-marcar .ev-stat-label { color: var(--brand); }
+.ev-stat-marcar:hover { border-color: var(--brand); background: var(--brand-lightest); }
 /* Desglose agrupado (Asisten/No asisten/No jugador/Sin respuesta) --
    reusado tal cual de la ex-modal de asistentes, ahora inline acá. */
 .ev-asist-grupo { margin-bottom: 18px; }
@@ -671,6 +672,14 @@
 .ev-asist-persona-no-asisten { background: color-mix(in srgb, var(--danger) 14%, transparent); }
 .ev-asist-persona-no-jugador { background: color-mix(in srgb, var(--amber-dark) 14%, transparent); }
 .ev-asist-persona-sin-respuesta { background: color-mix(in srgb, var(--muted) 14%, transparent); }
+/* Nombre de la fila -- `flex:1` con truncado (ver "Cambios recientes",
+   punto 3 del pedido de Victor) para que el toggle inline admin-only
+   (`.ev-rsvp-seg-roster`, agregado como hermano de este span solo cuando
+   `_evGrupoAsistenciaHtml()` recibe `conToggle`) tenga un ancho fijo propio
+   a la derecha sin que un nombre largo lo empuje fuera de la card. Sin
+   toggle (RSVP/no-admin), el único efecto visible es que el nombre puede
+   crecer un poco más -- inofensivo. */
+.ev-asist-persona-nombre { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Badge numérico -- cuenta de los 2 filtros (lugar/tipo) CON al menos una
    opción seleccionada (no el total de opciones marcadas, ver

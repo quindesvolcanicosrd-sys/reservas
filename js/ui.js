@@ -640,7 +640,12 @@ var _BOTTOM_NAV_EXTRA = {
   // Venues ("Editar lugares" + wizard propio de "Crear evento", ver
   // MANIFEST.md) -- mismo criterio que las 2 entradas de arriba: drill-down
   // de la tab 'eventos', alcanzables solo desde el FAB de #s-eventos.
-  's-eventos-lugares': 'eventos', 's-eventos-lugar-form': 'eventos', 's-eventos-crear': 'eventos'
+  's-eventos-lugares': 'eventos', 's-eventos-lugar-form': 'eventos', 's-eventos-crear': 'eventos',
+  // "Marcar asistencia" (ver MANIFEST.md, diseño final consolidado) --
+  // mismo criterio que el resto de los drill-down de 'eventos' de arriba:
+  // alcanzable desde la card del home/timeline o desde el detalle de un
+  // evento, admin-only en los 2 puntos de entrada.
+  's-eventos-marcar-asistencia': 'eventos'
 };
 
 // Reusa el `icono` ya definido por ítem para el slot de la flecha atrás de
