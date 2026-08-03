@@ -1,27 +1,24 @@
 /* ═══════════════════════════════════════════════════════
-   EVENTOS.JS — Sección Eventos (Tanda 2: estructura estática)
-   Datos de prueba hardcodeados acá abajo simulan la forma que van a
-   devolver getEventosRango()/getCumpleañosRango() (Apps Script, Tanda 1,
-   ya construidas) y getEventosFiltrados() -- la Tanda 3 reemplaza
-   _evGenerarDemo()/_EV_EVENTOS_DEMO/_EV_CUMPLEANOS_DEMO por las llamadas
-   reales (api()/apiPost(), js/api.js) sin tocar el resto de este archivo:
-   toda la lógica de render/navegación de vistas ya trabaja sobre los
-   arrays _EV_EVENTOS/_EV_CUMPLEANOS, no sobre la fuente de los datos.
+   EVENTOS.JS — Sección Eventos, conectada al backend real (ver "Cambios
+   recientes" -- reemplaza la última demo hardcodeada que quedaba en esta
+   pantalla: _evGenerarDemo()/_EV_EVENTOS_DEMO/_EV_CUMPLEANOS_DEMO/
+   _EV_EQUIPO_DEMO). getEventosRango()/getCumpleañosRango()/
+   marcarAsistenciaUsuario()/adminMarcarAsistencia()/
+   adminBuscarPersonasParaEvento() (Apps Script, documentadas en
+   MANIFEST.md) ya están desplegadas y confirmadas en vivo -- ver
+   _evCargarDatosReales()/_evMapEventoBackend() más abajo para el adaptador
+   entre la forma real del backend y la que espera el resto de este
+   archivo (toda la lógica de render/navegación sigue trabajando sobre los
+   arrays _EV_EVENTOS/_EV_CUMPLEANOS, no sobre la fuente de los datos).
+   getVenues()/crearVenue()/editarVenue() (Paso 1 del wizard "Crear
+   evento" + "Editar lugares") ya estaban conectadas desde una sesión
+   anterior, pero el backend real todavía no las tiene desplegadas --
+   devuelven "Acción no válida" hoy, pendiente de que Victor pegue el
+   código ya documentado en MANIFEST.md.
    ═══════════════════════════════════════════════════════ */
 
 var _EV_EVENTOS = [];
 var _EV_CUMPLEANOS = [];
-
-// Alterna la variante de card usuario/admin sin necesitar sesión real
-// todavía (ver brief de la Tanda 2) -- flip desde la consola del navegador:
-// `_esAdminDemo = true; _evRenderTimeline();`
-var _esAdminDemo = false;
-
-var _EV_EQUIPO_DEMO = [
-  'Andrea Vélez', 'Bruno Salazar', 'Camila Torres', 'Diego Ramírez',
-  'Estefanía Cruz', 'Fernando León', 'Gabriela Ponce', 'Hernán Ibarra',
-  'Isabela Moreno', 'Joaquín Vega', 'Karen Zambrano', 'Luis Ortiz'
-];
 
 // 'Partido'/'Evento social'/'Otro' sumados para el formulario de Venues (ver
 // MANIFEST.md) -- mismo mapa ya usado por las cards de evento reales
@@ -175,49 +172,116 @@ function _evLunesDeSemana(d) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff);
 }
 
-/* ── Datos de prueba ──────────────────────────────────────────────────
-   Generados en relación a "hoy" (no fechas fijas) para que la semana y el
-   mes actuales siempre tengan contenido sin importar cuándo se revise esta
-   pantalla. */
-function _evGenerarDemo() {
-  var hoy = _evHoyISO();
-  _EV_EVENTOS = [
-    { id: 'EVT-1', fecha: _evSumarDias(hoy, -10), horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Finalizado', miEstado: 'Asistiré', miAsistenciaReal: 'A horario',
-      asistentes: [{ nombre: 'Andrea Vélez', estado: 'A tiempo' }, { nombre: 'Bruno Salazar', estado: 'Tarde' }, { nombre: 'Camila Torres', estado: 'Ausente' }] },
-    { id: 'EVT-2', fecha: _evSumarDias(hoy, -3), horaInicio: '19:00', lugar: 'Coliseo Rumiñahui', tipo: 'Entrenamiento', estado: 'Finalizado', miEstado: null, miAsistenciaReal: 'Tarde',
-      asistentes: [{ nombre: 'Diego Ramírez', estado: 'A tiempo' }] },
-    { id: 'EVT-3', fecha: _evSumarDias(hoy, -1), horaInicio: '18:30', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Cancelado', miEstado: null, asistentes: [] },
-    { id: 'EVT-4', fecha: hoy, horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: null, asistentes: [],
-      rsvps: [{ nombre: 'Andrea Vélez', estado: 'Asistiré' }, { nombre: 'Bruno Salazar', estado: 'Asistiré' }, { nombre: 'Camila Torres', estado: 'Asistiré' }, { nombre: 'Diego Ramírez', estado: 'Asistiré' }, { nombre: 'Estefanía Cruz', estado: 'No asistiré' }, { nombre: 'Fernando León', estado: 'No jugador' }] },
-    { id: 'EVT-5', fecha: _evSumarDias(hoy, 1), horaInicio: '19:00', lugar: 'Coliseo Rumiñahui', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: 'No jugador', asistentes: [],
-      rsvps: [{ nombre: 'Gabriela Ponce', estado: 'Asistiré' }, { nombre: 'Hernán Ibarra', estado: 'Asistiré' }, { nombre: 'Isabela Moreno', estado: 'No asistiré' }] },
-    { id: 'EVT-6', fecha: _evSumarDias(hoy, 3), horaInicio: '10:00', lugar: 'Sede Quindes Volcánicos', tipo: 'Asamblea', estado: 'Evento Programado', miEstado: null, asistentes: [] },
-    { id: 'EVT-7', fecha: _evSumarDias(hoy, 4), horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'No se entrena', miEstado: null, asistentes: [] },
-    { id: 'EVT-8', fecha: _evSumarDias(hoy, 6), horaInicio: '09:00', lugar: 'Pista Bicentenario', tipo: 'Torneo', estado: 'Evento Programado', miEstado: null, asistentes: [],
-      rsvps: [{ nombre: 'Joaquín Vega', estado: 'Asistiré' }] },
-    { id: 'EVT-9', fecha: _evSumarDias(hoy, 8), horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: null, asistentes: [] },
-    { id: 'EVT-10', fecha: _evSumarDias(hoy, 15), horaInicio: '18:00', lugar: 'Coliseo Rumiñahui', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: null, asistentes: [] },
-    { id: 'EVT-11', fecha: _evSumarDias(hoy, 22), horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Evento Programado', miEstado: null, asistentes: [] },
-    { id: 'EVT-12', fecha: _evSumarDias(hoy, -24), horaInicio: '18:00', lugar: 'Parque La Carolina', tipo: 'Entrenamiento', estado: 'Finalizado', miEstado: null, asistentes: [] },
-    // requiereReserva:false (ver "Cambios recientes") -- viene de Venues!
-    // "Requiere reserva"='NO' en el backend real (getEventosRango()/
-    // getEventosFiltrados(), MANIFEST.md); el resto de los eventos de este
-    // array NO tienen el campo a propósito (undefined), mismo default
-    // `true` que ya aplica el backend cuando la columna viene vacía.
-    { id: 'EVT-13', fecha: _evSumarDias(hoy, 5), horaInicio: '09:00', lugar: 'Ciclopaseo', tipo: 'Ciclopaseo', estado: 'Evento Programado', miEstado: null, asistentes: [], requiereReserva: false,
-      rsvps: [{ nombre: 'Karen Zambrano', estado: 'Asistiré' }] }
-  ];
-  // `fotoPerfil` (ver _evCardCumpleHtml()/_evHidratarAvatares()) -- mismo
-  // campo que ya trae E.datos desde la columna de Equipo real (js/perfil.js/
-  // js/home.js), acá vacío a propósito: sin fuente real todavía en esta
-  // demo (mismo motivo que _EV_EQUIPO_DEMO, solo nombres, ver comentario de
-  // _evHidratarAvatares()) -- cae sola al fallback de inicial.
-  _EV_CUMPLEANOS = [
-    { id: 'CUMP-1', nombre: 'Isabela Moreno', fecha: _evSumarDias(hoy, -1), edad: 24, edadPublica: true, fotoPerfil: '' },
-    { id: 'CUMP-2', nombre: 'Joaquín Vega', fecha: hoy, edad: null, edadPublica: false, fotoPerfil: '' },
-    { id: 'CUMP-3', nombre: 'Karen Zambrano', fecha: _evSumarDias(hoy, 2), edad: 29, edadPublica: true, fotoPerfil: '' },
-    { id: 'CUMP-4', nombre: 'Luis Ortiz', fecha: _evSumarDias(hoy, 9), edad: null, edadPublica: false, fotoPerfil: '' }
-  ];
+/* ── Carga real desde el backend ──────────────────────────────────────
+   Rango fijo: mes actual ±12 meses -- exactamente la misma ventana que ya
+   permite navegar el selector de mes del calendario (`_evGenerarOpcionesMesPill()`,
+   más abajo, mismo -12..+12). Un solo fetch de punta a punta en vez de
+   paginar por mes: esta pantalla nunca tuvo scroll infinito/carga
+   incremental (ver _evRenderTimeline() -- arma el timeline entero de una
+   sobre el array ya cargado), así que cargar de más lejos de lo que se ve
+   "hoy" es lo que hace que swipear/tocar una pill de mes lejano en el
+   calendario encuentre contenido real en vez de una ventana vacía. */
+function _evRangoCargaCompleto() {
+  var hoy = new Date();
+  var desde = new Date(hoy.getFullYear(), hoy.getMonth() - 12, 1);
+  var hasta = new Date(hoy.getFullYear(), hoy.getMonth() + 13, 0);
+  return { desde: _evToISO(desde), hasta: _evToISO(hasta) };
+}
+// Estado (columna "Estado" de Asistencias, backend real) llega con un
+// prefijo "Evento " en 2 de los 4 valores posibles ("Evento Cancelado"/
+// "Evento Finalizado") que el resto de este archivo NO espera -- toda
+// comparación existente (_evEsPasado()/_evRsvpBarraHtml()/etc.) chequea
+// 'Cancelado'/'Finalizado' a secas (mismo criterio que la demo vieja, nunca
+// actualizado). "No se entrena"/"Evento Programado" SÍ coinciden tal cual
+// (el 2do nunca se compara por igualdad literal en ningún lado, ver
+// _evCardEventoHtml() -- cualquier estado que no sea Cancelado/Finalizado/No
+// se entrena cae al camino "normal"), quedan afuera del mapa a propósito.
+var _EV_ESTADO_MAP = { 'Evento Cancelado': 'Cancelado', 'Evento Finalizado': 'Finalizado' };
+function _evNormalizarEstadoEvento(estado) { return _EV_ESTADO_MAP[estado] || estado; }
+var _EV_ESTADOS_RSVP = ['Asistiré', 'No asistiré', 'No jugador'];
+var _EV_ESTADOS_ROLLCALL = ['A tiempo', 'Tarde', 'Ausente'];
+// "1899-12-30T19:00:00.000Z" -- un valor de solo-hora de Sheets, serializado
+// por Apps Script como Date completo (ver getEventosRango(), MANIFEST.md).
+// `getHours()`/`getMinutes()` LOCALES (no UTC) -- el mismo criterio que ya
+// usa el resto de la app para horarios de negocio (ej. `ahora.getHours()`,
+// js/admin.js) asumiendo que el dispositivo real de unx usuarix del equipo
+// está en su misma zona horaria; confirmado con datos reales de la hoja
+// (un evento nocturno real cae en la madrugada UTC del día siguiente, no en
+// UTC "tal cual", así que el offset de por medio es real, no solo cero).
+function _evHoraDeISO(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return _evPad(d.getHours()) + ':' + _evPad(d.getMinutes());
+}
+// Adapta UN evento crudo de getEventosRango() (idEvento/tipoIcono/
+// horaInicio-horaFin ISO/asistencias[]) a la forma que ya espera el resto de
+// este archivo (id/tipo/horaInicio "HH:MM"/miEstado/miAsistenciaReal/
+// asistentes/rsvps) -- toda la lógica de render sigue intacta, sin enterarse
+// del cambio de fuente. `asistencias` (un registro por persona, el más
+// reciente si cambió de opinión más de una vez, ver
+// `_ultimaAsistenciaPorPersonaTodas()` en MANIFEST.md) mezcla 2 conceptos
+// bajo un mismo `estado` -- un RSVP propio (ESTADOS_RSVP, antes del evento) o
+// una asistencia real tomada por el admin (ESTADOS_ROLLCALL, después) -- acá
+// se separan en 2 arrays distintos (rsvps/asistentes) según cuál de las 2
+// listas contenga ese valor exacto, y la propia fila de `E.nombre` alimenta
+// miEstado/miAsistenciaReal según corresponda.
+function _evMapEventoBackend(raw) {
+  var miEstado = null, miAsistenciaReal = null;
+  var asistentes = [], rsvps = [];
+  (raw.asistencias || []).forEach(function(a) {
+    if (_EV_ESTADOS_ROLLCALL.indexOf(a.estado) !== -1) {
+      asistentes.push({ nombre: a.nombre, estado: a.estado });
+      if (a.nombre === E.nombre) miAsistenciaReal = a.estado;
+    } else if (_EV_ESTADOS_RSVP.indexOf(a.estado) !== -1) {
+      rsvps.push({ nombre: a.nombre, estado: a.estado });
+      if (a.nombre === E.nombre) miEstado = a.estado;
+    }
+  });
+  return {
+    id: String(raw.idEvento), fecha: raw.fecha, lugar: raw.lugar, tipo: raw.tipoIcono,
+    horaInicio: _evHoraDeISO(raw.horaInicio), horaFinReal: _evHoraDeISO(raw.horaFin),
+    estado: _evNormalizarEstadoEvento(raw.estado), requiereReserva: raw.requiereReserva !== false,
+    miEstado: miEstado, miAsistenciaReal: miAsistenciaReal, asistentes: asistentes, rsvps: rsvps
+  };
+}
+// getCumpleañosRango() no manda `fotoPerfil` (no está en el contrato
+// documentado en MANIFEST.md) -- cae sola al fallback de inicial de
+// _evHidratarAvatares(), igual que un E.datos.fotoPerfil vacío en cualquier
+// otro lado de la app. `id` es solo para el `id` del host de confetti
+// (_evCardCumpleHtml()) -- por índice alcanza, se regenera en cada carga.
+function _evMapCumpleBackend(raw, idx) {
+  var conEdad = typeof raw.edad === 'number';
+  return { id: 'cumple-' + idx, nombre: raw.nombre, fecha: raw.fecha, edad: conEdad ? raw.edad : null, edadPublica: conEdad, fotoPerfil: '' };
+}
+// Único punto de carga real de esta pantalla -- 2 pedidos en paralelo,
+// `onListo()` corre cuando ambos terminaron (éxito o error). getEventosRango
+// es la data crítica: un error ahí avisa con un toast y deja el timeline
+// vacío. getCumpleañosRango tiene un bug real CONOCIDO en el backend
+// desplegado hoy ("Columna no encontrada: Nombre" -- el encabezado real de
+// la hoja Equipo no coincide con el que espera el script, ver MANIFEST.md)
+// -- degrada en silencio a "sin cumpleaños" en vez de mostrarle un error a
+// cada persona que entra a Eventos por un problema ajeno al frontend.
+function _evCargarDatosReales(onListo) {
+  var rango = _evRangoCargaCompleto();
+  var pendientes = 2;
+  function unoListo() { pendientes--; if (pendientes === 0) onListo(); }
+  api({ action: 'getEventosRango', desde: rango.desde, hasta: rango.hasta }, function(res) {
+    _EV_EVENTOS = (res.eventos || []).map(_evMapEventoBackend);
+    unoListo();
+  }, function(e) {
+    _EV_EVENTOS = [];
+    mostrarToast(e && e.message ? e.message : 'No se pudieron cargar los eventos.', 'error');
+    unoListo();
+  });
+  api({ action: 'getCumpleañosRango', desde: rango.desde, hasta: rango.hasta }, function(res) {
+    _EV_CUMPLEANOS = (res.cumpleanos || []).map(_evMapCumpleBackend);
+    unoListo();
+  }, function(e) {
+    _EV_CUMPLEANOS = [];
+    if (window.console) console.warn('getCumpleañosRango: ' + (e && e.message || 'error'));
+    unoListo();
+  });
 }
 
 // Flag de sesión (ver "Cambios recientes" -- regla general de "restaurar
@@ -267,7 +331,6 @@ document.addEventListener('click', function(e) {
 
 /* ── Punto de entrada (ver 'entrar' de APP_BOTTOM_NAV_ITEMS en js/ui.js) ── */
 function irEventos() {
-  if (_EV_EVENTOS.length === 0) _evGenerarDemo();
   if (_evYaInicializadoEnSesion) {
     _evRestaurarScrollTimeline = true;
     volver('s-eventos');
@@ -288,24 +351,35 @@ function irEventos() {
   var navMesLabel = document.getElementById('ev-nav-mes-label');
   if (navMesLabel) navMesLabel.classList.remove('ev-nav-mes-label-activo');
   _evActualizarNavMesChevron();
-  // Visibilidad del FAB (#ev-fab-menu, index.html) según _esAdminDemo se
+  // Visibilidad del FAB (#ev-fab-menu, index.html) según _adminToken se
   // resuelve en ir()/js/ui.js (mismo criterio que #home-nav/#s4-nav ahí),
   // no acá -- irEventos() ya no necesita tocar ningún botón "+" propio.
   _evActualizarBotonesFiltro();
-  _evRenderTimeline(true);
-  volver('s-eventos');
-  // `ir()` (js/ui.js) ya dispara su propio `window.scrollTo(0,0)` instantáneo
-  // al cambiar de pantalla -- este setTimeout(50) corre DESPUÉS (mismo
-  // criterio que el resto del archivo: offsetHeight/getBoundingClientRect de
-  // una pantalla recién visible no son reales hasta el siguiente tick) y lo
-  // reemplaza por un salto instantáneo hasta "hoy" -- mismo espíritu que la
-  // agenda de Google Calendar, que abre parada en el día de hoy en vez de en
-  // el principio de la lista.
-  setTimeout(function() {
-    _evScrollAFecha(_evHoyISO(), true);
-    _evActualizarNavMesPorScroll();
-    _evUpdateRsvpSliders(false);
-  }, 50);
+  // Carga real (ver _evCargarDatosReales() más arriba) ANTES de mostrar la
+  // pantalla -- mismo patrón que el resto de la app para "entrar a una
+  // sección que depende de un fetch" (ej. `mostrarCargando('Cargando tus
+  // reservas...')` en restaurarSesion(), js/auth.js): overlay de carga,
+  // pedido, y recién con los datos ya en _EV_EVENTOS/_EV_CUMPLEANOS se
+  // pinta el timeline y se revela la pantalla -- sin esto se vería un
+  // timeline vacío por una fracción de segundo en cada entrada.
+  mostrarCargando('Cargando eventos...');
+  _evCargarDatosReales(function() {
+    ocultarCargando();
+    _evRenderTimeline(true);
+    volver('s-eventos');
+    // `ir()` (js/ui.js) ya dispara su propio `window.scrollTo(0,0)`
+    // instantáneo al cambiar de pantalla -- este setTimeout(50) corre
+    // DESPUÉS (mismo criterio que el resto del archivo: offsetHeight/
+    // getBoundingClientRect de una pantalla recién visible no son reales
+    // hasta el siguiente tick) y lo reemplaza por un salto instantáneo
+    // hasta "hoy" -- mismo espíritu que la agenda de Google Calendar, que
+    // abre parada en el día de hoy en vez de en el principio de la lista.
+    setTimeout(function() {
+      _evScrollAFecha(_evHoyISO(), true);
+      _evActualizarNavMesPorScroll();
+      _evUpdateRsvpSliders(false);
+    }, 50);
+  });
   _evYaInicializadoEnSesion = true;
 }
 
@@ -1385,7 +1459,7 @@ function _evCardEventoHtml(e, sufijo) {
   var cancelado = (e.estado === 'Cancelado' || e.estado === 'No se entrena');
   var pasado = !cancelado && _evEsPasado(e);
   var accionBody = '';
-  if (_esAdminDemo) accionBody = _evAccionAdminHtml(e);
+  if (_adminToken) accionBody = _evAccionAdminHtml(e);
   else if (pasado) accionBody = _evAsistenciaRealHtml(e);
   else if (cancelado) accionBody = _evEstadoNotaPillHtml(e.estado);
   else accionBody = _evRsvpBarraHtml(e);
@@ -1402,35 +1476,45 @@ function _evCardEventoHtml(e, sufijo) {
 
 // Hidrata TODOS los avatares-placeholder visibles a la vez (`.avatar-pill`
 // con `data-nombre`, insertados vacíos por _evAsistenciaGruposHtml() de la
-// pantalla de detalle) -- sin foto real todavía en esta tanda (demo),
-// siempre cae al fallback de inicial (_avatarSetFotoOInicial(), js/ui.js);
-// la Tanda 3 pasa la foto real de cada persona si `_EV_EQUIPO_DEMO` la trae.
+// pantalla de detalle) -- adminBuscarPersonasParaEvento()/getEventosRango()
+// no mandan foto por persona (solo nombre+estado, ver MANIFEST.md), así que
+// esta fila siempre cae al fallback de inicial (_avatarSetFotoOInicial(),
+// js/ui.js) -- no hay pendiente acá, es el comportamiento final esperado.
 function _evHidratarAvatares() {
   document.querySelectorAll('.ev-avatar-stack-item[data-nombre]').forEach(function(el) {
     _avatarSetFotoOInicial(el, null, el.getAttribute('data-nombre'));
   });
   // Avatar de la card de cumpleaños (ver _evCardCumpleHtml() más abajo) --
-  // a diferencia de la fila de arriba (demo, siempre `null`), acá SÍ hay una
-  // fuente real: `data-foto` viene de `c.fotoPerfil`, la misma columna de
-  // Equipo que ya consume el resto de la app (E.datos.fotoPerfil, ver
-  // js/perfil.js/js/home.js) -- `_avatarSetFotoOInicial()` cae solo a la
-  // inicial si viene vacía.
+  // `data-foto` viene de `c.fotoPerfil`, siempre '' hoy: getCumpleañosRango()
+  // no manda esa columna (contrato documentado en MANIFEST.md, solo
+  // nombre/fecha/edad) -- cae al mismo fallback de inicial que la fila de
+  // arriba. Si Victor suma esa columna al backend real más adelante,
+  // alcanza con que _evMapCumpleBackend() la pase -- esta función ya sabe
+  // usarla tal cual (mismo criterio que E.datos.fotoPerfil en el resto de
+  // la app, js/perfil.js/js/home.js).
   document.querySelectorAll('.ev-card-cumple-avatar[data-nombre]').forEach(function(el) {
     _avatarSetFotoOInicial(el, el.getAttribute('data-foto') || '', el.getAttribute('data-nombre'));
   });
 }
 
 /* ── Datos derivados para la pantalla de detalle (ver "Cambios recientes")
-   -- Tanda 2 deriva mapsUrl/duración/descripción por lugar/tipo genérico en
-   vez de pedirle 4 campos propios a cada evento de prueba; la Tanda 3 los
-   reemplaza por columnas reales de Venues por evento. */
-// Hora de fin -- derivada de horaInicio + duración por tipo (Tanda 2 deriva
-// por tipo genérico vía `_EV_DURACION_MIN_POR_TIPO`, la Tanda 3 la reemplaza
-// por una columna real de Venues por evento). Usada en la pill "Fin" de la
-// pantalla de detalle. `_evDuracionTexto()` (texto "Xh Ymin" independiente,
-// ver "Cambios recientes") se eliminó al sacar la pill de Duración del
-// detalle -- código muerto sin más consumidores, no quedó nada que la usara.
+   -- mapsUrl/descripción siguen derivados por lugar/tipo genérico
+   (`_EV_MAPS_URL_POR_LUGAR`/`_EV_DESCRIPCION_POR_TIPO`, más arriba): Venues
+   (getVenues(), MANIFEST.md) traería mapsUrl real por lugar, pero esa acción
+   todavía no está desplegada en el backend real (confirmado en esta sesión)
+   y es admin-only para colmo (adminToken) -- sin una acción pública de
+   Venues, un usuario normal no tiene de dónde traer esos 2 datos por evento
+   todavía. Sin cambios acá, queda pendiente. */
+// Hora de fin -- getEventosRango() SÍ manda un horaFin real por evento
+// (`e.horaFinReal`, ya adaptado por _evMapEventoBackend()) -- se usa tal
+// cual cuando está presente. El cálculo derivado por tipo
+// (`_EV_DURACION_MIN_POR_TIPO`) queda como fallback para cuando no venga
+// (valor vacío en la hoja) en vez de mostrar un vacío en la pill "Fin".
+// `_evDuracionTexto()` (texto "Xh Ymin" independiente, ver "Cambios
+// recientes") se eliminó al sacar la pill de Duración del detalle -- código
+// muerto sin más consumidores, no quedó nada que la usara.
 function _evHoraFin(e) {
+  if (e.horaFinReal) return e.horaFinReal;
   var min = _EV_DURACION_MIN_POR_TIPO[e.tipo] || 90;
   var p = (e.horaInicio || '00:00').split(':');
   var d = new Date(2000, 0, 1, +p[0], +p[1]);
@@ -1446,10 +1530,10 @@ function _evFechaCompleta(iso) {
 
 /* ── Desglose de asistencia (4 grupos, ver "Cambios recientes" -- antes
    modal, ahora una sección más de la pantalla de detalle). Orden fijo:
-   Asisten/No asisten/No jugador/Sin respuesta -- "Sin respuesta" son
-   miembros de _EV_EQUIPO_DEMO (fuente de nombres del equipo ya usada por
-   "+ Agregar persona", ver _evAbrirAgregarPersona() más abajo) sin ninguna
-   entrada en e.rsvps para este evento en particular. */
+   Asisten/No asisten/No jugador/Sin respuesta -- "Sin respuesta" (solo
+   admin, ver _evRenderDetalleAsistencia() más abajo) son miembros del
+   roster real (adminBuscarPersonasParaEvento()) sin ninguna entrada en
+   e.rsvps para este evento en particular. */
 var _EV_GRUPOS_ASISTENCIA = [
   { estado: 'Asistiré', key: 'Asistiré', label: 'Asisten', clase: 'ev-stat-asisten' },
   { estado: 'No asistiré', key: 'No asistiré', label: 'No asisten', clase: 'ev-stat-no-asisten' },
@@ -1562,20 +1646,32 @@ function _evPosicionarRsvpSlider(seg, animate) {
 function _evUpdateRsvpSliders(animate) {
   document.querySelectorAll('.ev-rsvp-seg').forEach(function(seg) { _evPosicionarRsvpSlider(seg, animate); });
 }
-// Tanda 2 (demo, sin backend): solo actualiza el array local. La Tanda 3
-// reemplaza el cuerpo por marcarAsistenciaUsuario(nombre, idEvento, estado)
-// (apiPost) + las reglas de negocio de perfil (Mirlxs/Quindes, ver brief).
+// Conectada a marcarAsistenciaUsuario() real (apiPost, confirmada
+// desplegada en esta sesión) -- optimista: actualiza el array local y el DOM
+// de una (mismo criterio "se siente instantáneo" que el resto de esta
+// pantalla), y recién DESPUÉS dispara la escritura real; si falla, revierte
+// las 2 cosas y avisa con un toast -- nunca deja la UI mostrando un estado
+// que en realidad no se guardó. `token: _token` (no `_token: _token`) --
+// mismo nombre de parámetro que usa CUALQUIER otra escritura real ya
+// confirmada de esta app (ej. `eliminarAsistenciaAnticipada()`, más abajo en
+// este archivo); el snippet de MANIFEST.md documenta `e.parameter._token`
+// para esta acción puntual, pero como el backend real ya desplegado difiere
+// del snippet documentado en otros campos (ver _evMapEventoBackend()) no hay
+// forma de confirmar cuál de los 2 nombres usa de verdad sin una escritura
+// real -- si el backend espera `_token`, esto va a fallar limpio (toast +
+// revert, nunca corrompe el estado local) hasta que Victor confirme/ajuste.
 // Actualiza TODAS las instancias visibles de la barra de este evento en el
 // DOM existente (data-evid) en vez de reconstruir HTML -- un mismo evento
-// puede estar renderizado en más de un lugar a la vez (lista + detalle de
-// "Ver todos"), y reconstruir el nodo mataría la animación del indicador
-// (un nodo recién creado no tiene "posición anterior" desde la cual animar).
+// puede estar renderizado en más de un lugar a la vez (lista + detalle), y
+// reconstruir el nodo mataría la animación del indicador (un nodo recién
+// creado no tiene "posición anterior" desde la cual animar).
 function _evMarcarAsistencia(id, estado) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === id; })[0];
   if (!ev) return;
-  // PUNTO DE EXTENSIÓN (Tanda 3, todavía no construida -- ver "Cambios
-  // recientes"): validación de cuota al día para Mirlxs-mensual/Quindes
-  // ANTES de escribir el RSVP, pendiente. La otra mitad de este comentario
+  // PUNTO DE EXTENSIÓN, todavía no construido: validación de cuota al día
+  // para Mirlxs-mensual/Quindes ANTES de escribir el RSVP, pendiente (fuera
+  // de alcance de esta tanda -- solo se pidió conectar los llamados reales,
+  // no las reglas de negocio de cuota). La otra mitad de este comentario
   // (equipamiento del club → asistencia vía reserva, no manual) YA NO está
   // pendiente -- implementada, pero como gate de RENDER, no acá: con
   // equipamiento del club en un Entrenamiento, `_evRsvpBarraHtml()` ni
@@ -1583,19 +1679,25 @@ function _evMarcarAsistencia(id, estado) {
   // `_evOcultarRsvpPorEquipoClub()`, más arriba en este archivo, y su
   // entrada en MANIFEST.md) -- `_evMarcarAsistencia()` queda inalcanzable
   // desde la UI para ese caso, no hace falta un guard defensivo acá también.
-  // Hoy (demo, sin la validación de cuota todavía) esta función no tiene
-  // nada más que saltear: `ev.miEstado = estado` de abajo corre siempre,
-  // sin excepción.
+  var estadoAnterior = ev.miEstado;
   ev.miEstado = estado;
-  // Sin toast a propósito (ver "Cambios recientes") -- el resaltado
-  // animado de la opción tocada ya es feedback suficiente, mismo criterio
-  // que el resto de la app: toasts silenciados salvo error real.
-  document.querySelectorAll('.ev-rsvp-seg').forEach(function(seg) {
-    if (seg.getAttribute('data-evid') !== id) return;
-    seg.querySelectorAll('.ev-rsvp-opt').forEach(function(opt) {
-      opt.classList.toggle('activa', opt.getAttribute('data-estado') === estado);
+  var actualizarDom = function(est) {
+    document.querySelectorAll('.ev-rsvp-seg').forEach(function(seg) {
+      if (seg.getAttribute('data-evid') !== id) return;
+      seg.querySelectorAll('.ev-rsvp-opt').forEach(function(opt) {
+        opt.classList.toggle('activa', opt.getAttribute('data-estado') === est);
+      });
+      _evPosicionarRsvpSlider(seg, true);
     });
-    _evPosicionarRsvpSlider(seg, true);
+  };
+  // Sin toast en el éxito, a propósito (ver "Cambios recientes") -- el
+  // resaltado animado de la opción tocada ya es feedback suficiente, mismo
+  // criterio que el resto de la app: toasts silenciados salvo error real.
+  actualizarDom(estado);
+  apiPost({ action: 'marcarAsistenciaUsuario', token: _token, idEvento: id, estado: estado }, function() {}, function(e) {
+    ev.miEstado = estadoAnterior;
+    actualizarDom(estadoAnterior);
+    mostrarToast(e && e.message ? e.message : 'No se pudo guardar tu asistencia.', 'error');
   });
 }
 
@@ -1615,18 +1717,36 @@ function _evAccionAdminHtml(e) {
   '</div>';
 }
 
-/* ── Bottom sheet "+ Agregar persona" (demo -- Tanda 3 la conecta a
-   adminBuscarPersonasParaEvento(idEvento)) ───────────────────────────── */
+/* ── Bottom sheet "+ Agregar persona" -- conectada a
+   adminBuscarPersonasParaEvento(idEvento) (confirmada desplegada en esta
+   sesión). El roster completo se pide UNA VEZ al abrir la sheet (no en cada
+   tecla del buscador) y se filtra en cliente -- `_evAgregarCandidatos: null`
+   marca "todavía cargando" (distinto de `[]`, "cargó y no hay nadie"), así
+   `_evFiltrarAgregarPersona()` no pisa el mensaje de carga con "Sin
+   resultados" mientras el pedido sigue en vuelo. ───────────────────────── */
 var _evAgregarEventoId = null;
+var _evAgregarCandidatos = null;
 function _evAbrirAgregarPersona(idEvento) {
   _evAgregarEventoId = idEvento;
   var s = document.getElementById('ev-agregar-search'); if (s) s.value = '';
-  _evRenderListaAgregar('');
+  _evAgregarCandidatos = null;
+  var lista = document.getElementById('ev-agregar-lista');
+  if (lista) lista.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:0.82rem;text-align:center;">Cargando equipo...</div>';
   var ov = document.getElementById('ev-sheet-agregar-overlay');
   var sh = document.getElementById('ev-sheet-agregar');
   if (ov) ov.style.display = 'block';
   if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); }); }
   _registrarOverlayAbierto(_evCerrarSheetAgregar);
+  api({ action: 'adminBuscarPersonasParaEvento', adminToken: _adminToken, idEvento: idEvento }, function(res) {
+    if (_evAgregarEventoId !== idEvento) return; // sheet ya cerrada/otro evento mientras tanto
+    _evAgregarCandidatos = (res.personas || []).map(function(p) { return p.nombre; });
+    _evRenderListaAgregar(s ? s.value : '');
+  }, function() {
+    if (_evAgregarEventoId !== idEvento) return;
+    _evAgregarCandidatos = [];
+    var listaErr = document.getElementById('ev-agregar-lista');
+    if (listaErr) listaErr.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:0.82rem;text-align:center;">No se pudo cargar el equipo.</div>';
+  });
 }
 function _evCerrarSheetAgregar(porGesto) {
   if (!porGesto) { history.back(); return; }
@@ -1635,12 +1755,12 @@ function _evCerrarSheetAgregar(porGesto) {
   if (sh) sh.style.transform = 'translateY(100%)';
   setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
 }
-function _evFiltrarAgregarPersona(q) { _evRenderListaAgregar(q); }
+function _evFiltrarAgregarPersona(q) { if (_evAgregarCandidatos) _evRenderListaAgregar(q); }
 function _evRenderListaAgregar(q) {
   var lista = document.getElementById('ev-agregar-lista');
   if (!lista) return;
   var qn = (q || '').toLowerCase().trim();
-  var candidatos = _EV_EQUIPO_DEMO.filter(function(n) { return n.toLowerCase().indexOf(qn) !== -1; });
+  var candidatos = (_evAgregarCandidatos || []).filter(function(n) { return n.toLowerCase().indexOf(qn) !== -1; });
   lista.innerHTML = candidatos.map(function(n) {
     return '<div class="ev-persona-row" onclick="_evAgregarPersonaAEvento(\'' + n.replace(/'/g, "\\'") + '\')"><span class="material-symbols-outlined">person</span>' + n + '</div>';
   }).join('') || '<div style="padding:16px;color:var(--muted);font-size:0.82rem;text-align:center;">Sin resultados.</div>';
@@ -1650,10 +1770,15 @@ function _evAgregarPersonaAEvento(nombre) {
   if (!ev) return;
   if (!ev.asistentes) ev.asistentes = [];
   if (ev.asistentes.some(function(a) { return a.nombre === nombre; })) { mostrarToast(nombre + ' ya está en la lista', 'error'); return; }
-  ev.asistentes.push({ nombre: nombre, estado: 'A tiempo' });
-  mostrarToast(nombre + ' agregadx', 'ok', true);
-  _evCerrarSheetAgregar();
-  _evRenderTimeline(true);
+  var idEvento = _evAgregarEventoId;
+  apiPost({ action: 'adminMarcarAsistencia', adminToken: _adminToken, idEvento: idEvento, nombre: nombre, estado: 'A tiempo' }, function() {
+    ev.asistentes.push({ nombre: nombre, estado: 'A tiempo' });
+    mostrarToast(nombre + ' agregadx', 'ok', true);
+    _evCerrarSheetAgregar();
+    _evRenderTimeline(true);
+  }, function(e) {
+    mostrarToast(e && e.message ? e.message : 'No se pudo agregar a ' + nombre + '.', 'error');
+  });
 }
 
 /* ── Card de cumpleaños ────────────────────────────────────────────────
@@ -2250,18 +2375,7 @@ function _evDetalleInfoHtml(ev) {
    cada render -- abrir un evento nuevo (o re-abrir el mismo) arranca sin
    ningún filtro activo. */
 var _evDetalleFiltroGrupo = null;
-function _evRenderDetalleAsistencia(ev) {
-  _evDetalleFiltroGrupo = null;
-  var rsvps = ev.rsvps || [];
-  var respondieron = {};
-  rsvps.forEach(function(p) { respondieron[p.nombre] = true; });
-  var sinResponder = _EV_EQUIPO_DEMO.filter(function(n) { return !respondieron[n]; }).map(function(n) { return { nombre: n }; });
-
-  var grupos = _EV_GRUPOS_ASISTENCIA.map(function(g) {
-    return { key: g.key, label: g.label, clase: g.clase, personas: rsvps.filter(function(p) { return p.estado === g.estado; }) };
-  });
-  grupos.push({ key: _EV_GRUPO_SIN_RESPONDER.key, label: _EV_GRUPO_SIN_RESPONDER.label, clase: _EV_GRUPO_SIN_RESPONDER.clase, personas: sinResponder });
-
+function _evPintarStatsAsistencia(grupos) {
   var stats = document.getElementById('ev-detalle-stats');
   if (stats) {
     stats.innerHTML = grupos.map(function(g) {
@@ -2276,6 +2390,34 @@ function _evRenderDetalleAsistencia(ev) {
     lista.innerHTML = grupos.map(function(g) { return _evGrupoAsistenciaHtml(g.label, g.personas, g.key, g.clase); }).join('');
     _evHidratarAvatares();
   }
+}
+// Asisten/No asisten/No jugador salen directo de `ev.rsvps` (ya cargado con
+// el evento, ver _evMapEventoBackend() -- sin fetch extra). "Sin responder"
+// es distinto: necesita el roster COMPLETO del equipo para poder restarle
+// quién ya respondió, y la única acción real que lo trae
+// (adminBuscarPersonasParaEvento) es admin-only (adminToken) -- no existe
+// ninguna acción pública de roster (decisión de Victor, esta sesión): en vez
+// de listar a todo el equipo a cualquier cuenta logueada, este grupo queda
+// oculto del todo para no-admin. Para admin, se pide aparte (no bloquea el
+// resto de la pantalla) y se repinta solo si nadie tocó ya un filtro
+// mientras tanto (`_evDetalleFiltroGrupo`) -- no le pisa la selección a la
+// persona que ya filtró un grupo mientras el pedido todavía viajaba.
+function _evRenderDetalleAsistencia(ev) {
+  _evDetalleFiltroGrupo = null;
+  var rsvps = ev.rsvps || [];
+  var grupos = _EV_GRUPOS_ASISTENCIA.map(function(g) {
+    return { key: g.key, label: g.label, clase: g.clase, personas: rsvps.filter(function(p) { return p.estado === g.estado; }) };
+  });
+  _evPintarStatsAsistencia(grupos);
+  if (!_adminToken) return;
+  var idEvento = ev.id;
+  api({ action: 'adminBuscarPersonasParaEvento', adminToken: _adminToken, idEvento: idEvento }, function(res) {
+    if (!_evDetalleActual || _evDetalleActual.id !== idEvento || _evDetalleFiltroGrupo) return;
+    var respondieron = {};
+    rsvps.forEach(function(p) { respondieron[p.nombre] = true; });
+    var sinResponder = (res.personas || []).filter(function(p) { return !respondieron[p.nombre]; }).map(function(p) { return { nombre: p.nombre }; });
+    _evPintarStatsAsistencia(grupos.concat([{ key: _EV_GRUPO_SIN_RESPONDER.key, label: _EV_GRUPO_SIN_RESPONDER.label, clase: _EV_GRUPO_SIN_RESPONDER.clase, personas: sinResponder }]));
+  }, function() { /* silencioso -- el resto de la pantalla ya funciona sin este grupo */ });
 }
 // Tocar una tarjeta filtra la lista de abajo a solo ese grupo; tocarla de
 // nuevo (ya activa) deselecciona y vuelve a mostrar los 4. Solo una tarjeta
