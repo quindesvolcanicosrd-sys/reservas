@@ -453,6 +453,13 @@
 .ev-rsvp-opt.activa[data-estado="Asistiré"], .ev-rsvp-opt.activa[data-estado="Asistiré"] .material-symbols-outlined { color: var(--success); }
 .ev-rsvp-opt.activa[data-estado="No asistiré"], .ev-rsvp-opt.activa[data-estado="No asistiré"] .material-symbols-outlined { color: var(--danger); }
 .ev-rsvp-opt.activa[data-estado="No jugador"], .ev-rsvp-opt.activa[data-estado="No jugador"] .material-symbols-outlined { color: var(--purple); }
+/* Slider de 2 estados del roster admin (`.ev-rsvp-seg-roster`, ver esa
+   clase más abajo) -- mismos 2 colores que ya usa el resto del archivo para
+   este mismo par de estados (`.ev-stat-asisten`/`.ev-stat-no-jugador` en las
+   tarjetas de estadística, `.ev-estado-pill-success`/`-warning` en la pill
+   de la propia persona). */
+.ev-rsvp-opt.activa[data-estado="A tiempo"], .ev-rsvp-opt.activa[data-estado="A tiempo"] .material-symbols-outlined { color: var(--success); }
+.ev-rsvp-opt.activa[data-estado="Tarde"], .ev-rsvp-opt.activa[data-estado="Tarde"] .material-symbols-outlined { color: var(--amber-dark); }
 
 
 /* ── Reemplazo de solo lectura de la barra de RSVP para eventos pasados
@@ -476,7 +483,10 @@
    cursor:pointer ahí sería una afordancia falsa. */
 .ev-card:not(.ev-card-cumple) { cursor: pointer; }
 
-/* ── Variante admin: lista de asistentes + agregar persona ──────────── */
+/* ── Variante admin: roster de asistencia en la card (ver "Cambios
+   recientes" -- rediseño) + "Agregar/corregir asistencia" del DETALLE
+   (`.ev-btn-agregar-persona`/`.ev-persona-row`, más abajo -- ese flujo de
+   sheet remota sigue existiendo, solo se sacó de las CARDS). ──────────── */
 .ev-asistentes-list { margin-top: 10px; }
 /* Acordeón de la lista de nombres (ver "Cambios recientes" -- colapsada por
    default): mismo TIPO de mecanismo que `.admin-dash-banner-*`
@@ -489,10 +499,34 @@
 .ev-asist-admin-header.abierto .ev-asist-admin-chevron { transform: rotate(180deg); }
 .ev-asist-admin-body { max-height: 0; overflow: hidden; transition: max-height 0.35s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease; opacity: 0; }
 .ev-asist-admin-body.abierto { max-height: 2000px; opacity: 1; }
-.ev-asist-admin-body-inner { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; }
-.ev-asistente-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-light); }
-.ev-asistente-row:last-child { border-bottom: none; }
-.ev-asistente-nombre { font-size: 0.8rem; font-weight: 600; color: var(--text); }
+.ev-asist-admin-body-inner { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; }
+/* Roster completo con buscador (ver "Cambios recientes" -- reemplaza la
+   lista corta de chips + "Agregar persona" que vivía acá antes, ver
+   ~~.ev-asistente-row~~/~~.ev-asistente-nombre~~ eliminadas, sin más
+   consumidores). `.ev-roster-search` mismo look que otros buscadores
+   instantáneos chicos de la app (ej. `#admin-destino-search`,
+   css/admin.css) -- inline por ese componente puntual, acá con clase
+   propia por ser HTML generado desde JS. `.ev-roster-lista` con techo
+   propio + scroll interno (independiente del techo del acordeón entero,
+   `.ev-asist-admin-body.abierto`) para que un equipo grande no estire la
+   card hasta el infinito. */
+.ev-roster-search {
+  width: 100%; padding: 9px 12px; border-radius: 10px; border: 1.5px solid var(--border-light);
+  background: var(--surface-light); color: var(--text); font-size: 0.8rem; font-family: inherit;
+}
+.ev-roster-lista { display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; }
+.ev-roster-fila { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border-light); }
+.ev-roster-fila:last-child { border-bottom: none; }
+.ev-roster-nombre { font-size: 0.8rem; font-weight: 600; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-roster-vacio { padding: 14px 4px; color: var(--muted); font-size: 0.78rem; text-align: center; }
+/* Slider de 2 estados por persona -- reusa LITERAL `.ev-rsvp-seg`/
+   `.ev-rsvp-opt`/`.ev-rsvp-slider` (mismo componente que la barra "¿Asistiré?"
+   de 3 opciones, más arriba), esta clase es solo el modificador de tamaño
+   para que quepa angosto al lado del nombre en vez de ocupar el ancho de la
+   card entera. */
+.ev-rsvp-seg-roster { width: 148px; flex-shrink: 0; }
+.ev-rsvp-seg-roster .ev-rsvp-opt { padding: 7px 4px; font-size: 0.6rem; }
+.ev-rsvp-seg-roster .ev-rsvp-opt .material-symbols-outlined { font-size: 15px; }
 .ev-btn-agregar-persona {
   margin-top: 10px; width: 100%; padding: 9px; border-radius: 10px; border: 1.5px dashed var(--border-mid);
   background: transparent; color: var(--muted); font-size: 0.76rem; font-weight: 700; cursor: pointer;
