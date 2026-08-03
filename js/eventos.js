@@ -1488,11 +1488,23 @@ function _evCardEventoHtml(e, sufijo) {
   sufijo = sufijo || '';
   var icono = _EV_ICONOS[e.tipo] || 'event';
   var cancelado = (e.estado === 'Cancelado' || e.estado === 'No se entrena');
-  var pasado = !cancelado && _evEsPasado(e);
   var accionBody = '';
-  if (_adminToken) accionBody = _evAccionAdminHtml(e);
-  else if (pasado) accionBody = _evAsistenciaRealHtml(e);
-  else if (cancelado) accionBody = _evEstadoNotaPillHtml(e.estado);
+  // Bug real corregido (ver "Cambios recientes", confirmado por Victor):
+  // antes, `_adminToken` solo con ser truthy ya reemplazaba el RSVP propio
+  // por la gestión de asistentes en TODAS las cards de una cuenta admin,
+  // sin importar si el evento ya había arrancado -- una cuenta admin nunca
+  // podía marcar su PROPIA asistencia. Regla nueva: antes de que el evento
+  // arranque (`_evYaEmpezo()`), toda cuenta (admin incluida) ve solo su
+  // RSVP, igual que cualquier usuarix; desde que arranca en adelante
+  // (evento en curso o ya pasado, sin importar cuánto), admin ve las 2
+  // cosas apiladas -- su RSVP/asistencia real (`_evRsvpBarraHtml()`, mismo
+  // componente de siempre, ya sabe alternar entre botones y chip real
+  // según `_evEsPasado()`) arriba, gestión de asistentes abajo. Cuentas
+  // no-admin: sin cambios, `_evRsvpBarraHtml()` sola cubre los 2 casos
+  // (RSVP futuro / chip de asistencia real pasado) que antes duplicaba a
+  // mano acá.
+  if (cancelado) accionBody = _evEstadoNotaPillHtml(e.estado);
+  else if (_adminToken && _evYaEmpezo(e)) accionBody = _evRsvpBarraHtml(e) + _evAccionAdminHtml(e);
   else accionBody = _evRsvpBarraHtml(e);
   return '<div class="ev-card" id="ev-card-' + e.id + sufijo + '" onclick="abrirEvDetalle(\'' + e.id + '\')">' +
     '<div class="ev-card-top-row">' +
@@ -1607,6 +1619,20 @@ var _EV_RESP_OPCIONES = ['Asistiré', 'No asistiré', 'No jugador'];
 // backend, origen:'Admin' -- Tanda 3). Cancelado/No se entrena no muestran
 // nada acá en ningún caso (nunca hubo/habrá asistencia que registrar).
 function _evEsPasado(e) { return _evFechaCmp(e.fecha, _evHoyISO()) < 0 || e.estado === 'Finalizado'; }
+// Distinto de _evEsPasado() (que es por FECHA, día completo) -- esta
+// compara fecha+horaInicio real contra el instante actual, para saber si
+// el evento YA ARRANCÓ (aunque siga siendo "hoy", no pasado por fecha
+// todavía). Usada solo por la variante admin de la card (ver
+// _evCardEventoHtml() -- "Cambios recientes", fix del bug real "Agregar
+// personas en vez de selector RSVP") para decidir cuándo sumar la gestión
+// de asistentes ADEMÁS del RSVP propio, no para reemplazar ninguna otra
+// comparación de fecha ya existente en el archivo.
+function _evYaEmpezo(e) {
+  var p = (e.horaInicio || '00:00').split(':');
+  var inicio = _evParseISO(e.fecha);
+  inicio.setHours(+p[0], +p[1], 0, 0);
+  return new Date() >= inicio;
+}
 function _evAsistenciaRealHtml(e) {
   var estadoReal = e.miAsistenciaReal || 'Sin registrar';
   var label = _EV_ASISTENCIA_REAL_LABEL[estadoReal] || estadoReal;
