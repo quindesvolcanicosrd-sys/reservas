@@ -1737,7 +1737,21 @@ function _evMarcarAsistencia(id, estado) {
   // entrada en MANIFEST.md) -- `_evMarcarAsistencia()` queda inalcanzable
   // desde la UI para ese caso, no hace falta un guard defensivo acá también.
   var estadoAnterior = ev.miEstado;
+  var rsvpsAnterior = ev.rsvps || [];
   ev.miEstado = estado;
+  // Bug real corregido (ver "Cambios recientes"): antes esta función solo
+  // tocaba `ev.miEstado` (para resaltar la barra de RSVP propia) -- nunca
+  // `ev.rsvps`, que es de donde sale el conteo/lista "Asisten"/"No
+  // asisten"/"No jugador" de la pantalla de detalle
+  // (`_evRenderDetalleAsistencia()`). Resultado: marcar "Asistiré" y entrar
+  // al detalle del mismo evento SIN recargar la página entera mostraba "0"
+  // y no listaba a quien acababa de responder, pese a que la escritura ya
+  // había quedado guardada en Log de asistencias -- `ev.rsvps` seguía
+  // siendo el array de la última carga de `getEventosRango()`, de antes de
+  // este marcado. Mismo criterio de normalización que ya usa el resto del
+  // archivo para cruzar nombres de 2 hojas distintas (`_evNombresCoinciden()`).
+  ev.rsvps = rsvpsAnterior.filter(function(p) { return !_evNombresCoinciden(p.nombre, E.nombre); })
+    .concat([{ nombre: E.nombre, estado: estado, origen: 'Usuario' }]);
   var actualizarDom = function(est) {
     document.querySelectorAll('.ev-rsvp-seg').forEach(function(seg) {
       if (seg.getAttribute('data-evid') !== id) return;
@@ -1746,6 +1760,10 @@ function _evMarcarAsistencia(id, estado) {
       });
       _evPosicionarRsvpSlider(seg, true);
     });
+    // Repinta el desglose de asistencia si el detalle de ESTE evento está
+    // abierto en este momento -- si no, no hace falta (se arma fresco desde
+    // `ev.rsvps`, ya actualizado, la próxima vez que se abra).
+    if (_evDetalleActual && _evDetalleActual.id === id) _evRenderDetalleAsistencia(ev);
   };
   // Sin toast en el éxito, a propósito (ver "Cambios recientes") -- el
   // resaltado animado de la opción tocada ya es feedback suficiente, mismo
@@ -1753,6 +1771,7 @@ function _evMarcarAsistencia(id, estado) {
   actualizarDom(estado);
   apiPost({ action: 'marcarAsistenciaUsuario', token: _token, idEvento: id, estado: estado }, function() {}, function(e) {
     ev.miEstado = estadoAnterior;
+    ev.rsvps = rsvpsAnterior;
     actualizarDom(estadoAnterior);
     mostrarToast(e && e.message ? e.message : 'No se pudo guardar tu asistencia.', 'error');
   });
