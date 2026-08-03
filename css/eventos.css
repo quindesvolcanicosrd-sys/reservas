@@ -477,7 +477,19 @@
 .ev-card:not(.ev-card-cumple) { cursor: pointer; }
 
 /* ── Variante admin: lista de asistentes + agregar persona ──────────── */
-.ev-asistentes-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.ev-asistentes-list { margin-top: 10px; }
+/* Acordeón de la lista de nombres (ver "Cambios recientes" -- colapsada por
+   default): mismo TIPO de mecanismo que `.admin-dash-banner-*`
+   (css/admin.css, `adminToggleBanner()`) y `.ev-ant-acc-*` (más abajo en
+   este archivo) -- techo fijo generoso en vez de medir `scrollHeight` en
+   cada toggle, ver `_evAsistAdminToggle()`/js/eventos.js. */
+.ev-asist-admin-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 2px; cursor: pointer; }
+.ev-asist-admin-header-titulo { font-size: 0.78rem; font-weight: 700; color: var(--text-2); }
+.ev-asist-admin-chevron { color: var(--muted); font-size: 1.1rem; transition: transform 0.3s; flex-shrink: 0; }
+.ev-asist-admin-header.abierto .ev-asist-admin-chevron { transform: rotate(180deg); }
+.ev-asist-admin-body { max-height: 0; overflow: hidden; transition: max-height 0.35s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease; opacity: 0; }
+.ev-asist-admin-body.abierto { max-height: 2000px; opacity: 1; }
+.ev-asist-admin-body-inner { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; }
 .ev-asistente-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-light); }
 .ev-asistente-row:last-child { border-bottom: none; }
 .ev-asistente-nombre { font-size: 0.8rem; font-weight: 600; color: var(--text); }
@@ -735,12 +747,16 @@
    no el de `.ev-estado-pill`), un bloque normal ya resta los márgenes solo. */
 .ev-card-compacta-wrap .ev-asistentes-list { margin: 0 14px 12px; }
 /* Jerarquía visual pasados/futuros (ver "Cambios recientes",
-   `_evTimelineFilaHtml()`/js/eventos.js): opacidad reducida en TODA la card
-   compacta (pasados) + ícono forzado a gris apagado en vez de heredar el
-   color de marca a través de la opacidad (2 efectos distintos, pedido
-   explícito -- la opacidad sola dejaría un ícono brand tenue, no "apagado").
-   Futuros (`.ev-card`, la card completa) sin cambios. */
-.ev-card-compacta-wrap.ev-pasado-atenuado { opacity: 0.55; }
+   `_evTimelineFilaHtml()`/js/eventos.js). Antes: opacidad reducida (0.55) en
+   TODA la card compacta -- comprometía la legibilidad del contenido
+   (nombre/hora/lista de asistentes), pedido explícito de Victor de sacarla.
+   Reemplazada por 2 indicadores sutiles que no tocan el texto: ícono
+   forzado a gris apagado (ya existía, sin cambios) + borde algo más
+   marcado (`--border-mid` en vez de `--border-light`, el tono por default
+   de `.ev-card-compacta-wrap`) -- alcanza para diferenciar "esto ya pasó"
+   sin afectar el contraste de ningún texto. Futuros (`.ev-card`, la card
+   completa) sin cambios. */
+.ev-card-compacta-wrap.ev-pasado-atenuado { border-color: var(--border-mid); }
 .ev-card-compacta-wrap.ev-pasado-atenuado .ev-card-icon { background: var(--surface-2); color: var(--muted); }
 
 /* Buscador -- reusa `.app-nav-search` literal (css/nav.css, mismo pill que

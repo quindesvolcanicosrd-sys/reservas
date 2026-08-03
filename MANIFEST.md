@@ -352,6 +352,23 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
 | `body.ev-ant-footer-visible #app-toast` | **Nuevo (ver "Cambios recientes")** — sube el toast global (`#app-toast`, css/estilos.css, `bottom:28px` fijo de fábrica) para que en `#s-eventos-anticipada` quede justo encima de `#cta-footer-eventos-anticipada` en vez de tapar las pills del wizard. `#app-toast` es un `<div>` creado por JS y agregado directo a `<body>` la primera vez que corre `mostrarToast()` (mismo criterio de "`position:fixed` va directo en `<body>`, no dentro de `.pantalla`/`.card`" que ya rige `.cta-footer-fixed`) — el override también apunta ahí sin anidarlo dentro de ninguna pantalla. `body.ev-ant-footer-visible` la togglean `_evAntActualizarFooter()`/`_evAntOcultarFooter()` (js/eventos.js) junto con el propio footer |
 
 ### Cambios recientes
+- **js/eventos.js + css/eventos.css — Acordeón para la lista de asistentes admin en cards de eventos pasados (colapsada por default, exclusiva entre cards) + legibilidad de cards pasadas + diagnóstico del bug real "Agregar personas no carga la lista".**
+
+  **1) Acordeón de la lista "a horario"/"tarde" (`_evAccionAdminHtml()`).** La lista de nombres+chip que ya arma esa función (usada tanto en la fila compacta de eventos pasados, `_evTimelineFilaHtml()`, como en la card completa de hoy ya arrancado, `_evCardEventoHtml()`) ahora vive colapsada detrás de un header tocable ("Asistencia (N)" + chevron) — mismo mecanismo `.abierto` + techo fijo generoso (2000px, sin medir `scrollHeight`) que ya usa el acordeón de banners de Mi Liga (`adminToggleBanner()`, css/admin.css) y el de 2 secciones del wizard de asistencia anticipada (`_evAntSetAcordeon()`, más arriba en este archivo) — ningún mecanismo nuevo, se reusó el ya estandarizado. **"Solo uno abierto a la vez" (nuevo, `_evAsistAdminAbierto`/`_evAsistAdminToggle()`):** a diferencia del acordeón del wizard (2 secciones dentro de la MISMA pantalla) o el de Mi Liga (banners+burbujas dentro del MISMO panel), acá el estado es GLOBAL sobre TODO el timeline — abrir el acordeón de una card cierra el de cualquier otra que hubiera quedado abierta, sin importar en qué fecha esté. El botón "Agregar persona" queda FUERA del acordeón (siempre visible, no hace falta expandir la lista para agregar a alguien) — a propósito, la única parte que el pedido pidió colapsar es "la lista de nombres". El estado abierto/cerrado se recalcula en cada render (`abierto = _evAsistAdminAbierto === e.id`) para sobrevivir intacto a un re-render completo del timeline (ej. `_evRenderTimeline(true)` tras `_evAgregarPersonaAEvento()`).
+
+  **2) Opacidad reducida de cards pasadas (`.ev-card-compacta-wrap.ev-pasado-atenuado`) quitada — comprometía la legibilidad del nombre/hora/lista de asistentes, pedido explícito de Victor.** Antes: `opacity: 0.55` sobre TODO el contenido de la card. Reemplazada por 2 indicadores sutiles que no tocan ningún texto: el ícono ya forzado a gris apagado (sin cambios, ya existía) + el borde de la card pasa de `--border-light` (el default de `.ev-card-compacta-wrap`) a `--border-mid`, un tono más marcado — alcanza para diferenciar "esto ya pasó" a simple vista sin bajarle el contraste a nada.
+
+  **3) Diagnóstico del bug real reportado ("Agregar personas" nunca carga la lista) — no reproducible como bug de frontend, causa real ya documentada en este MANIFEST y confirmada TODAVÍA VIGENTE en producción hoy (2026-08-03), pendiente de que Victor pegue el fix en su `Code.gs` real.** Auditado el flujo completo (`_evAbrirAgregarPersona()`→`api({action:'adminBuscarPersonasParaEvento',...})`→`_evRenderListaAgregar()`) sin encontrar ningún bug de frontend: la sheet abre, arma la URL/params correctos, y tanto el camino de éxito como el de error ya actualizan el DOM correctamente (verificado con Playwright, mockeando las 2 respuestas — ver abajo). **Confirmado con `curl` de solo lectura contra el backend real de producción** (mismo criterio ya usado en sesiones anteriores de este MANIFEST — sin escribir nada): `getCumpleañosRango` (acción pública, sin necesidad de sesión admin) **sigue devolviendo `{"error":"Columna no encontrada: Nombre"}` HOY**, el mismo bug ya diagnosticado y documentado más abajo en este MANIFEST ("✅ RESUELTO... el header real de la columna de nombre en `Equipo` es `'Nombre de usuario'`, no `'Nombre'`") — que esa entrada ya señalaba explícitamente que `adminBuscarPersonasParaEvento()` "nunca se había notado que tenía el mismo bug latente porque nunca llegó a probarse en la práctica, falla antes en `validarAdminToken()`". `adminBuscarPersonasParaEvento` con un `adminToken` inválido sigue devolviendo "Sesión admin inválida" (falla antes de llegar a leer la columna, por eso ese chequeo puntual no lo reproduce) — pero dado que **ambas funciones leen la misma hoja `Equipo` con el mismo literal `'Nombre'` en el pseudocódigo original**, y una de las 2 sigue confirmadamente rota en producción hoy, es la causa más probable, con mucha diferencia, de por qué con una sesión admin real la lista nunca carga: el request sale, el backend responde con error de columna (no con la lista), y el frontend cae al mensaje "No se pudo cargar el equipo." (que quizás se perciba como "nunca aparece" si no se lee el texto chico). **No aplicable/verificable desde este repo** (Code.gs fuera del repo) — el fix ya está documentado (pseudocódigo de `adminBuscarPersonasParaEvento()`, Tanda 1 de este MANIFEST, ya usa `'Nombre de usuario'`), pendiente únicamente de que Victor lo pegue en su script real.
+
+  **Verificado con Playwright** (`index.html` real vía `http.server` local, timezone `America/Guayaquil`, `window.api`/`window.apiPost` mockeados in-page, sin backend real disponible desde este repo — el chequeo del punto 3 de arriba sí fue contra producción real, solo lectura): 2 cards de eventos pasados con acordeón cerrado por default; abrir el de la 1ra (3 filas visibles, chevron rotado, `max-height` pasa a `2000px`) cierra automáticamente el de la 2da si estuviera abierta y viceversa (exclusividad confirmada en ambas direcciones); tocar el header ya abierto lo colapsa sin abrir ningún otro; el estado abierto sobrevive un `_evRenderTimeline(true)` completo (mismo re-render que dispara agregar una persona). Legibilidad: `getComputedStyle(...).opacity` de la card pasada da `"1"` (antes `"0.55"`), texto del título 100% legible, captura de pantalla confirma contraste normal en toda la card. "Agregar persona": mockeando una respuesta de éxito con 3 personas reales, la lista carga y renderiza las 3 filas correctamente; mockeando el error EXACTO confirmado hoy contra producción (`Columna no encontrada: Nombre`), el frontend no se cuelga ni queda en "Cargando equipo..." para siempre — cae correctamente al mensaje "No se pudo cargar el equipo.", confirmando que el problema no está en este archivo.
+
+- **MANIFEST.md (Code.gs, pseudocódigo) + js/eventos.js — 2 fixes puntuales sobre Cumpleaños: nombres de columna de "público"/"edad pública" corregidos (confirmados por Victor) + ícono de "Evento social".**
+
+  **1) `getCumpleañosRango()` (pseudocódigo de este MANIFEST, Tanda 1 backend) — columnas L/M de `Equipo` confirmadas por Victor: `cFPub`/`cEPub` leían `'Fecha nacimiento pública'`/`'Edad pública'`, los headers reales son `'Fecha pública'`/`'Edad Pública'`** (con mayúscula en "Pública" para esta última) — mismo patrón de bug ya documentado más abajo en este MANIFEST para `cNombre` (`'Nombre'` vs. el real `'Nombre de usuario'`), nunca reproducible desde este repo sin acceso a la hoja real. Corregidos los 2 literales + el comentario de encabezados de hoja (arriba, Tanda 1) que los listaba mal. **La lógica de negocio en sí (a qué se le muestra card, con o sin edad) ya estaba bien construida antes de este fix, sin cambios de código** — confirmado leyendo el pseudocódigo existente: `if (!(fnac instanceof Date) || !fila[cFPub]) continue` ya excluye del todo (sin importar `cEPub`) a quien tenga `Fecha pública` en No/vacío; `if (fila[cEPub]) entrada.edad = ...` ya agrega la edad solo si `Edad Pública` es Sí, dejando la card sin edad en caso contrario — el frontend (`_evMapCumpleBackend()`/`_evCardCumpleHtml()`, js/eventos.js, sin cambios) ya interpreta `edad` ausente como `"Hoy cumple"` en vez de forzar un texto con edad.
+  **2) Ícono de "Evento social" (`_EV_ICONOS`, js/eventos.js) — `celebration` → `groups`** (mismo ícono que ya usa "Asamblea", pedido explícito de Victor).
+
+  **Verificado con Playwright** (`index.html` real vía `http.server` local, `getEventosRango`/`getCumpleañosRango` mockeados in-page con la forma exacta que devolverían con el fix de columnas ya aplicado — sin acceso a `Code.gs` real desde este repo para probar contra datos reales): persona con `edad:30` en la respuesta → card "cumple 30 años"; persona sin `edad` (simula `Edad Pública=No`) → card "Hoy cumple", sin ningún número; una persona con `Fecha pública=No` simplemente no viaja en la respuesta (tal como hace el `continue` del pseudocódigo) → confirmado que no aparece ninguna card para ella. Evento de tipo "Evento social" → `<span class="material-symbols-outlined ev-card-icono-inline">groups</span>` en el HTML real, no `celebration`.
+
 - **Code.gs (fuera de este repo, pseudocódigo actualizado en este MANIFEST) — `getEventosRango()`: excluir del todo (no solo deduplicar) a quien tenga RSVP en Log pero ningún respaldo en columnas E/F, SOLO para eventos ya pasados; ajuste necesario en `_ultimaAsistenciaPorPersonaTodas()` para que la regla de "puntualidad + rol combinados" (entrada de abajo) tenga datos reales con los que trabajar.**
 
   **Pedido 1 (Victor):** para eventos pasados, E/F es la única fuente autoritativa de "quién asistió" — alguien con una fila en "Log de asistencias" (RSVP, `origen:'Usuario'`) pero SIN ningún respaldo en E/F no debe aparecer en `asistencias[]` en absoluto (no solo "no duplicarlo"): no estar en E/F significa que no asistió. Para eventos futuros/en curso, sin cambios — el RSVP sigue siendo la única señal disponible antes de que alguien tome lista.
@@ -1113,7 +1130,7 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
   //   Asistencias:        ID Evento | Fecha | Lugar | Hora | Estado | A horario | Tarde
   //   Log de asistencias: ID Evento | Fecha del entrenamiento | Nombre | Origen | Estado | Marca temporal
   //   Venues:              Lugar | ...columnas de recurrencia... | Tipo de ícono | Requiere reserva (NUEVA, ver "Cambios recientes" -- valores 'SI'/'NO' en mayúsculas sin tilde, NO 'Sí'/'No')
-  //   Equipo:               Nombre | ... | Fecha de nacimiento | Fecha nacimiento pública | Edad pública | ...
+  //   Equipo:               Nombre de usuario | ... | Fecha de nacimiento | Fecha pública | Edad Pública | ...
   // ============================================================
 
   function _colIdx(headers, nombre) {
@@ -1374,19 +1391,24 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
   // case 'getCumpleañosRango':
   //   return getCumpleañosRango(e.parameter.desde, e.parameter.hasta);
   // Mismo criterio de "público"/"edad pública" que ya usa "Próximos
-  // cumpleaños" — cFNac/cFPub/cEPub a confirmar si esa feature ya
-  // existente usa otros nombres. cNombre CONFIRMADO por Victor esta
-  // sesión (ver "Cambios recientes" — el bug real "Columna no encontrada:
-  // Nombre" era justamente que este literal no coincidía con el header
-  // real de Equipo): el header real es 'Nombre de usuario', no 'Nombre'.
+  // cumpleaños". cNombre CONFIRMADO por Victor esta sesión (ver "Cambios
+  // recientes" — el bug real "Columna no encontrada: Nombre" era
+  // justamente que este literal no coincidía con el header real de
+  // Equipo): el header real es 'Nombre de usuario', no 'Nombre'. cFPub/
+  // cEPub CONFIRMADOS por Victor en una sesión posterior (columnas L/M de
+  // Equipo): 'Fecha pública'/'Edad Pública' (con mayúscula en "Pública"
+  // para esta última), no 'Fecha nacimiento pública'/'Edad pública' —
+  // mismo bug real "Columna no encontrada", nunca reproducido desde este
+  // repo (sin acceso a la hoja real), corregido ahora que Victor confirmó
+  // los 2 headers exactos.
   function getCumpleañosRango(desde, hasta) {
     var hoja = SpreadsheetApp.getActive().getSheetByName('Equipo');
     var datos = hoja.getDataRange().getValues();
     var headers = datos[0];
     var cNombre = _colIdx(headers, 'Nombre de usuario');
     var cFNac = _colIdx(headers, 'Fecha de nacimiento');
-    var cFPub = _colIdx(headers, 'Fecha nacimiento pública');
-    var cEPub = _colIdx(headers, 'Edad pública');
+    var cFPub = _colIdx(headers, 'Fecha pública');
+    var cEPub = _colIdx(headers, 'Edad Pública');
 
     var d0 = new Date(desde), d1 = new Date(hasta);
     var resultado = [];

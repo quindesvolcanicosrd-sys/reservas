@@ -24,7 +24,7 @@ var _EV_CUMPLEANOS = [];
 // MANIFEST.md) -- mismo mapa ya usado por las cards de evento reales
 // (Venues!Tipo de ícono), ahora también alimentado por el selector de pills
 // del formulario en vez de solo por datos de prueba/backend.
-var _EV_ICONOS = { 'Entrenamiento': 'directions_run', 'Torneo': 'emoji_events', 'Partido': 'sports', 'Asamblea': 'groups', 'Evento social': 'celebration', 'Otro': 'category', 'Ciclopaseo': 'pedal_bike' };
+var _EV_ICONOS = { 'Entrenamiento': 'directions_run', 'Torneo': 'emoji_events', 'Partido': 'sports', 'Asamblea': 'groups', 'Evento social': 'groups', 'Otro': 'category', 'Ciclopaseo': 'pedal_bike' };
 var _EV_DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 var _EV_DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 
@@ -1826,7 +1826,30 @@ function _evMarcarAsistencia(id, estado) {
   });
 }
 
-/* ── Variante admin: lista de asistentes con chip + agregar persona ──── */
+/* ── Variante admin: lista de asistentes con chip + agregar persona ────
+   Lista colapsada por default (nuevo, ver "Cambios recientes"), mismo
+   mecanismo que `_evAntSetAcordeon()`/`adminToggleBanner()` (js/admin.js):
+   techo fijo generoso vía clase `.abierto` en vez de medir `scrollHeight`
+   en cada toggle. `_evAsistAdminAbierto` (id de evento o null) es GLOBAL a
+   todo el timeline, no por-card -- abrir el acordeón de una card cierra el
+   de cualquier otra que hubiera quedado abierta, mismo criterio "solo uno
+   a la vez" que `_adminCerrarTodoAbierto()`. El estado se re-aplica en cada
+   render (`abierto` calculado contra `_evAsistAdminAbierto` al armar el
+   HTML) para sobrevivir a un re-render completo del timeline (ej. tras
+   agregar una persona, `_evRenderTimeline(true)`). */
+var _evAsistAdminAbierto = null;
+function _evAsistAdminSetAbierto(id, abrir) {
+  var header = document.getElementById('ev-asist-admin-header-' + id);
+  var body = document.getElementById('ev-asist-admin-body-' + id);
+  if (header) header.classList.toggle('abierto', abrir);
+  if (body) body.classList.toggle('abierto', abrir);
+}
+function _evAsistAdminToggle(id) {
+  var estabaAbierto = _evAsistAdminAbierto === id;
+  if (_evAsistAdminAbierto) _evAsistAdminSetAbierto(_evAsistAdminAbierto, false);
+  _evAsistAdminAbierto = estabaAbierto ? null : id;
+  if (_evAsistAdminAbierto) _evAsistAdminSetAbierto(_evAsistAdminAbierto, true);
+}
 function _evAccionAdminHtml(e) {
   var asistentes = e.asistentes || [];
   var filas = asistentes.map(function(a) {
@@ -1838,11 +1861,20 @@ function _evAccionAdminHtml(e) {
     return '<div class="ev-asistente-row"><span class="ev-asistente-nombre">' + a.nombre + '</span>' +
       '<span class="badge ' + (_EV_CHIP_BADGE[a.estado] || 'badge-pendiente') + '">' + label + '</span></div>';
   }).join('');
+  var abierto = _evAsistAdminAbierto === e.id;
   // stopPropagation: mismo motivo que _evRsvpBarraHtml() -- la card entera
-  // ahora es clickeable (abre el detalle), esto evita que tocar una fila o
-  // "Agregar persona" también dispare ese click.
+  // ahora es clickeable (abre el detalle), esto evita que tocar el header,
+  // una fila o "Agregar persona" también dispare ese click.
   return '<div class="ev-asistentes-list" onclick="event.stopPropagation()">' +
-    (filas || '<div style="font-size:0.76rem;color:var(--muted);">Nadie ha marcado todavía.</div>') +
+    '<div class="ev-asist-admin-header' + (abierto ? ' abierto' : '') + '" id="ev-asist-admin-header-' + e.id + '" onclick="_evAsistAdminToggle(\'' + e.id + '\')">' +
+      '<span class="ev-asist-admin-header-titulo">Asistencia (' + asistentes.length + ')</span>' +
+      '<span class="material-symbols-outlined ev-asist-admin-chevron">expand_more</span>' +
+    '</div>' +
+    '<div class="ev-asist-admin-body' + (abierto ? ' abierto' : '') + '" id="ev-asist-admin-body-' + e.id + '">' +
+      '<div class="ev-asist-admin-body-inner">' +
+        (filas || '<div style="font-size:0.76rem;color:var(--muted);">Nadie ha marcado todavía.</div>') +
+      '</div>' +
+    '</div>' +
     '<button class="ev-btn-agregar-persona" onclick="_evAbrirAgregarPersona(\'' + e.id + '\')"><span class="material-symbols-outlined">person_add</span>Agregar persona</button>' +
   '</div>';
 }
