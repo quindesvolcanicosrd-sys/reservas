@@ -1,10 +1,10 @@
-var BACKEND = 'https://script.google.com/macros/s/AKfycbzkPpiKRowvnHqOFssfEba0RLQexHhMux_P9HZ14TLqgvNMW8YnNU3nw02sEgtggBD4/exec';
+var BACKEND = 'https://script.google.com/macros/s/AKfycbylbBmoWdcKSNFVwdyquUFeVWZKQJsnx71j_-RQehLTvT_TLsGhDYfqZN3Fn8Qd5obf/exec';
 var GOOGLE_CLIENT_ID = '632992894668-gnbb5cclsmfdcnve0g34kmue1c72h73q.apps.googleusercontent.com';
 var MAPS_API_KEY = 'AIzaSyDSGkh2AyuM_-6ngo5-XMPi0NYrXZHEBl8';
 
 function sha256Hex(str) {
   var data = new TextEncoder().encode(str);
-  return crypto.subtle.digest('SHA-256', data).then(function(buf) {zzzzzzzzzzzzzzzzz
+  return crypto.subtle.digest('SHA-256', data).then(function(buf) {
     return Array.prototype.map.call(new Uint8Array(buf), function(b) {
       return b.toString(16).padStart(2, '0');
     }).join('');
