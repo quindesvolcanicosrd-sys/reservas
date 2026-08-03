@@ -1261,17 +1261,22 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
   // ---- 3) marcarAsistenciaUsuario — escritura de usuario ----
   // case 'marcarAsistenciaUsuario':
   //   return marcarAsistenciaUsuario(e);
-  // Vía apiPost() (form-urlencoded, _token automático) — mismo patrón que
-  // el resto de escrituras de usuario, NO GET plano como adminSetColorEnfasis
-  // (esa sí viaja por GET porque es de admin, ver más abajo).
+  // Vía apiPost() (form-urlencoded) — mismo patrón que el resto de
+  // escrituras de usuario, NO GET plano como adminSetColorEnfasis (esa sí
+  // viaja por GET porque es de admin, ver más abajo).
+  // Parámetro CONFIRMADO por Victor esta sesión, leyendo el código fuente
+  // real de js/eventos.js (_evMarcarAsistencia(), apiPost({..., token:
+  // _token, ...})): el frontend manda `token`, SIN guión bajo — ya no es
+  // una incertidumbre (ver "Cambios recientes" para el historial de esta
+  // duda). e.parameter.token, no e.parameter._token.
   // TODO ajustar: _resolverPersonaPorToken es un STUB — reemplazar por el
   // mecanismo real que ya usa restaurarSesion()/guardarReserva() para
-  // resolver la cuenta a partir de e.parameter._token. A propósito NO se
+  // resolver la cuenta a partir de e.parameter.token. A propósito NO se
   // confía en un "nombre" mandado por el cliente para esta función (a
   // diferencia de adminMarcarAsistencia, donde el admin sí elige a quién).
   var ESTADOS_RSVP = ['Asistiré', 'No asistiré', 'No jugador'];
   function marcarAsistenciaUsuario(e) {
-    var persona = _resolverPersonaPorToken(e.parameter._token); // TODO ajustar
+    var persona = _resolverPersonaPorToken(e.parameter.token); // TODO ajustar
     if (!persona) return { exito: false, error: 'Sesión inválida.' };
     var idEvento = String(e.parameter.idEvento || '').trim();
     var estado = String(e.parameter.estado || '').trim();
@@ -1284,9 +1289,12 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
   // ---- 4) adminMarcarAsistencia — escritura de admin (RSVP u toma de lista) ----
   // case 'adminMarcarAsistencia':
   //   return adminMarcarAsistencia(e);
-  // GET con adminToken (mismo patrón que adminSetColorEnfasis). Acepta las
-  // 2 familias de Estado — ver nota de diseño arriba sobre por qué no está
-  // separada en 2 acciones.
+  // CORREGIDO (ver "Cambios recientes" — bug real de router): va en
+  // doPost(e), NO doGet(e) pese a lo que decía originalmente este
+  // comentario ("GET con adminToken, mismo patrón que adminSetColorEnfasis")
+  // — confirmado que js/eventos.js ya la llama con apiPost(), no api().
+  // Acepta las 2 familias de Estado — ver nota de diseño arriba sobre por
+  // qué no está separada en 2 acciones.
   var ESTADOS_ROLLCALL = ['A tiempo', 'Tarde', 'Ausente'];
   function adminMarcarAsistencia(e) {
     var admin = validarAdminToken(e.parameter.adminToken); // TODO ajustar al helper real
@@ -3529,7 +3537,7 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
 
   **Carga:** `irEventos()` pide `getEventosRango`/`getCumpleañosRango` en paralelo por TODO el rango que el selector de mes del calendario ya permite navegar (mes actual ±12 meses, `_evGenerarOpcionesMesPill()`) en un solo pedido de punta a punta — esta pantalla nunca tuvo scroll infinito/paginación (arma el timeline entero de una sobre el array ya cargado), así que cargar más allá de "hoy" es lo que hace que swipear/tocar una pill de mes lejano encuentre contenido real. `mostrarCargando('Cargando eventos...')`/`ocultarCargando()` bracket el pedido (mismo patrón que `restaurarSesion()`, js/auth.js) — la pantalla se revela recién con los datos ya adentro, sin un timeline vacío parpadeando.
 
-  **RSVP (`_evMarcarAsistencia`) y "+ Agregar persona" (`_evAgregarPersonaAEvento`)** — ambas optimistas: actualizan el array local + el DOM de una (se sigue sintiendo instantáneo, mismo criterio que ya tenía la demo) y disparan la escritura real recién después; si el POST falla, revierten las 2 cosas y avisan con un toast con el mensaje real del backend — nunca queda la UI mostrando un estado que en realidad no se guardó. **Incertidumbre real señalada, no escondida:** `marcarAsistenciaUsuario` manda el parámetro `token` (no `_token`) — el snippet documentado en este MANIFEST usa `e.parameter._token`, pero como el backend real ya desplegado difiere del snippet en otros campos (`horaInicio`/`horaFin` en vez de `hora`), no hay forma de confirmar cuál de los 2 nombres usa de verdad sin una escritura real con sesión real; se eligió `token` por ser el nombre que usa CUALQUIER OTRA escritura real ya confirmada de esta app (ej. `eliminarAsistenciaAnticipada`). Si el backend real espera `_token`, esta escritura puntual va a fallar limpio (toast + revert automático, confirmado con Playwright) hasta que Victor lo confirme/ajuste — no corrompe nada mientras tanto.
+  **RSVP (`_evMarcarAsistencia`) y "+ Agregar persona" (`_evAgregarPersonaAEvento`)** — ambas optimistas: actualizan el array local + el DOM de una (se sigue sintiendo instantáneo, mismo criterio que ya tenía la demo) y disparan la escritura real recién después; si el POST falla, revierten las 2 cosas y avisan con un toast con el mensaje real del backend — nunca queda la UI mostrando un estado que en realidad no se guardó. **Incertidumbre ya resuelta (ver "Cambios recientes" para el diagnóstico completo del bug de router que la hizo relevante):** `marcarAsistenciaUsuario` manda el parámetro `token` (no `_token`) — confirmado por Victor releyendo el código fuente real de `js/eventos.js`. El pseudocódigo de `Code.gs` de este MANIFEST (Tanda 1, más arriba) ya quedó actualizado a `e.parameter.token`.
 
   **Sin tocar (fuera de alcance de esta tanda, señalado en vez de resuelto en silencio):** `_EV_MAPS_URL_POR_LUGAR`/`_EV_DESCRIPCION_POR_TIPO` (pantalla de detalle) siguen siendo derivados genéricos por lugar/tipo, no columnas reales de Venues por evento — depende de que `getVenues()` esté desplegada (no lo está) y sea accesible sin `adminToken` para usuarixs normales (no lo es hoy); la validación de cuota al día para Mirlxs-mensual/Quindes antes de escribir un RSVP tampoco se construyó (no fue parte de lo pedido esta vez).
 
@@ -3590,7 +3598,7 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
        return adminMarcarAsistencia(e);
      ```
      Las funciones `marcarAsistenciaUsuario(e)`/`adminMarcarAsistencia(e)` en sí ya están documentadas más arriba en este MANIFEST (Tanda 1, backend) — si ya las pegaste, con sumar estos 2 `case` a `doPost(e)` alcanza; si todavía no pegaste el cuerpo de las funciones, hace falta las 2 cosas.
-     **Aviso de una duda ya documentada que puede volver a aparecer una vez resuelto esto:** `marcarAsistenciaUsuario(e)` (pseudocódigo de este MANIFEST) lee `e.parameter._token`, pero `js/eventos.js` manda el parámetro como `token` (sin guión bajo) — ver "Cambios recientes" de la sesión de conexión al backend real para el detalle de por qué se eligió ese nombre. Con el `case` ya registrado, si el próximo error pasa de "Acción POST no válida" a **"Sesión inválida."** con un token real válido, es exactamente este mismatch de nombre de parámetro — no un bug nuevo, ajustar `e.parameter._token` → `e.parameter.token` en `Code.gs` (o el frontend a `_token`, lo que sea más consistente con el resto de escrituras reales ya confirmadas de la app).
+     **✅ Duda ya resuelta:** `marcarAsistenciaUsuario(e)` leía `e.parameter._token` en el pseudocódigo de este MANIFEST — Victor confirmó releyendo `js/eventos.js` que el frontend real manda el parámetro como `token` (sin guión bajo, `_evMarcarAsistencia()` → `apiPost({ action: 'marcarAsistenciaUsuario', token: _token, ... })`). El pseudocódigo (Tanda 1, más arriba) ya quedó corregido a `e.parameter.token` — con el `case` de `doPost(e)` de este mismo punto ya registrado, no debería hacer falta ningún otro ajuste para que esta escritura funcione de punta a punta.
      `adminBuscarPersonasParaEvento` (GET, vía `api()`) sí está bien registrada — confirmado con el mismo método (Playwright, tráfico real): devuelve `"Sesión admin inválida. Vuelve a iniciar sesión."`, el error de sesión esperado, no "Acción no válida" — sin cambios necesarios ahí.
 
   2. **✅ RESUELTO (con el dato real que pasó Victor) — `getCumpleañosRango: Columna no encontrada: Nombre`.** No había forma de leer los headers reales de la hoja `Equipo` desde este repo (mismo motivo que el punto 1: sin acceso a Sheets/`Code.gs`) — se le preguntó a Victor en vez de adivinar un nombre alternativo (mismo tipo de fix especulativo que esta sesión entera vino evitando). **Confirmado por Victor: el header real de la columna de nombre en `Equipo` es `'Nombre de usuario'`, no `'Nombre'`.** Corregido en el pseudocódigo de este MANIFEST (Tanda 1, backend, más arriba) en los 2 lugares que leen esa columna de esa hoja específica: `getCumpleañosRango()` (`cNombre = _colIdx(headers, 'Nombre de usuario')`) y `adminBuscarPersonasParaEvento()` (mismo cambio, mismo motivo — ambas leen `Equipo`, nunca se había notado que la 2da tenía el mismo bug latente porque nunca llegó a probarse en la práctica, falla antes en `validarAdminToken()`). **Sin tocar** `_ultimaAsistenciaPorPersonaTodas()` (`Code.gs`, más arriba) — esa función lee `_colIdx(headers, 'Nombre')` de la hoja **`Log de asistencias`**, una hoja distinta con su propio header, que Victor no confirmó en esta sesión — puede o no tener el mismo problema, señalado pero no asumido.
