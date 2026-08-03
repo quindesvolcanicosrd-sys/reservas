@@ -232,6 +232,33 @@ function _evHoraDeISO(iso) {
 function _evNombresCoinciden(a, b) {
   return !!a && !!b && String(a).trim().toUpperCase() === String(b).trim().toUpperCase();
 }
+// Puntualidad (E/F, confirmada por el admin -- `_EV_ESTADOS_ROLLCALL`) y rol
+// (RSVP original de la persona en "Log de asistencias" -- jugador de
+// siempre, o `'No jugador'` si avisó que venía de espectadora) son 2
+// dimensiones INDEPENDIENTES: una persona puede llegar a horario Y haber
+// avisado que venía como espectadora. Regla de negocio (pedido explícito de
+// Victor, bug real corregido: antes una pisaba a la otra según qué mapa se
+// leyera primero, o directamente no se cruzaban nunca) -- se combinan en un
+// solo texto, nunca una reemplaza a la otra: "Llegó a horario · No jugador"
+// en vez de solo una de las 2. Sin dato de rol (nunca respondió el RSVP para
+// este evento, o el evento no lo pedía) se muestra la puntualidad sola, sin
+// sufijo. Un solo punto de combinación, reusado por _evAsistenciaRealHtml()
+// (la propia persona logueada) y _evAccionAdminHtml()/
+// _evRenderDetalleAsistenciaReal() (cualquier otra persona, admin) -- mismo
+// criterio en los 2 contextos.
+function _evLabelPuntualidadRol(labelPuntualidad, estadoRol) {
+  return (estadoRol === 'No jugador') ? (labelPuntualidad + ' · No jugador') : labelPuntualidad;
+}
+// Busca el RSVP ORIGINAL de una persona puntual dentro de `e.rsvps` (ya
+// separado del rollcall por _evMapEventoBackend()) -- mismo criterio de
+// nombres normalizados que el resto del archivo (`_evNombresCoinciden()`),
+// las 2 listas salen de la misma hoja "Log de asistencias" pero en filas
+// distintas (una por respuesta), sin garantía de mayúsculas/espacios
+// idénticos entre sí tampoco.
+function _evRolDePersona(e, nombre) {
+  var match = (e.rsvps || []).filter(function(r) { return _evNombresCoinciden(r.nombre, nombre); })[0];
+  return match ? match.estado : null;
+}
 // Adapta UN evento crudo de getEventosRango() (idEvento/tipoIcono/
 // horaInicio-horaFin ISO/asistencias[]) a la forma que ya espera el resto de
 // este archivo (id/tipo/horaInicio "HH:MM"/miEstado/miAsistenciaReal/
@@ -1588,18 +1615,33 @@ var _EV_GRUPOS_ASISTENCIA = [
   { estado: 'No jugador', key: 'No jugador', label: 'No jugador', clase: 'ev-stat-no-jugador' }
 ];
 var _EV_GRUPO_SIN_RESPONDER = { key: 'SinRespuesta', label: 'Sin respuesta', clase: 'ev-stat-sin-respuesta' };
+// Grupos de la asistencia REAL (rollcall, E/F) -- usados en el detalle en
+// vez de `_EV_GRUPOS_ASISTENCIA` (RSVP) desde que el evento arranca para
+// admin (ver _evRenderDetalleAsistencia() más abajo, "regla de tiempo, no
+// solo de rol/fecha calendario", mismo criterio ya usado por
+// `_evCardEventoHtml()`/`_evYaEmpezo()`). Reusa los mismos 3 tokens de color
+// que ya usa `_EV_ASISTENCIA_REAL_PILL_CLASE` (success/warning/danger) vía
+// las clases `ev-stat-*` ya existentes -- ninguna clase CSS nueva.
+var _EV_GRUPOS_ASISTENCIA_REAL = [
+  { estado: 'A tiempo', key: 'A tiempo', label: 'A horario', clase: 'ev-stat-asisten' },
+  { estado: 'Tarde', key: 'Tarde', label: 'Tarde', clase: 'ev-stat-no-jugador' },
+  { estado: 'Ausente', key: 'Ausente', label: 'Ausentes', clase: 'ev-stat-no-asisten' }
+];
 // `grupoKey` marca el grupo (`data-grupo`) para que _evFiltrarAsistenciaPorGrupo()
 // pueda mostrar/ocultar este bloque sin reconstruir toda la lista. Cada fila
 // lleva además un modificador de color por estado (ver "Cambios recientes"
 // -- rediseño de filas: avatar más grande, tinte sólido sutil de fondo según
 // el grupo, mismos 4 colores fijos que ya usan las tarjetas de estadística
 // -- `g.clase` ya es `ev-stat-<estado>`, se reusa el sufijo tal cual para
-// `ev-asist-persona-<estado>`, ver css/eventos.css).
+// `ev-asist-persona-<estado>`, ver css/eventos.css). `p.sufijoRol` (opcional,
+// ver `_evRenderDetalleAsistenciaReal()`) agrega el rol combinado (" · No
+// jugador") SOLO al texto visible -- `data-nombre` del avatar se arma con
+// `p.nombre` a secas, para no romper el matcheo de `_evHidratarAvatares()`.
 function _evGrupoAsistenciaHtml(label, personas, grupoKey, clase) {
   if (!personas.length) return '';
   var claseFila = 'ev-asist-persona-' + clase.replace('ev-stat-', '');
   var filas = personas.map(function(p) {
-    return '<div class="ev-asist-persona ' + claseFila + '"><div class="avatar-pill avatar-pill--sm ev-avatar-stack-item" data-nombre="' + p.nombre.replace(/"/g, '&quot;') + '"></div><span>' + p.nombre + '</span></div>';
+    return '<div class="ev-asist-persona ' + claseFila + '"><div class="avatar-pill avatar-pill--sm ev-avatar-stack-item" data-nombre="' + p.nombre.replace(/"/g, '&quot;') + '"></div><span>' + p.nombre + (p.sufijoRol || '') + '</span></div>';
   }).join('');
   return '<div class="ev-asist-grupo" data-grupo="' + grupoKey + '"><div class="ev-asist-grupo-titulo">' + label + ' (' + personas.length + ')</div>' + filas + '</div>';
 }
@@ -1640,7 +1682,9 @@ function _evYaEmpezo(e) {
 }
 function _evAsistenciaRealHtml(e) {
   var estadoReal = e.miAsistenciaReal || 'Sin registrar';
-  var label = _EV_ASISTENCIA_REAL_LABEL[estadoReal] || estadoReal;
+  // Puntualidad (miAsistenciaReal, E/F) + rol (miEstado, el RSVP propio ya
+  // cargado con el evento) combinados -- ver _evLabelPuntualidadRol().
+  var label = _evLabelPuntualidadRol(_EV_ASISTENCIA_REAL_LABEL[estadoReal] || estadoReal, e.miEstado);
   var pillClase = _EV_ASISTENCIA_REAL_PILL_CLASE[estadoReal];
   if (pillClase) {
     return '<div class="ev-estado-pill ' + pillClase + '"><span class="material-symbols-outlined">' + _EV_ASISTENCIA_REAL_PILL_ICONO[estadoReal] + '</span>' + label + '</div>';
@@ -1786,8 +1830,13 @@ function _evMarcarAsistencia(id, estado) {
 function _evAccionAdminHtml(e) {
   var asistentes = e.asistentes || [];
   var filas = asistentes.map(function(a) {
+    // Puntualidad (a.estado) + rol (RSVP original de esa persona, si lo
+    // hay) combinados -- ver _evLabelPuntualidadRol(). El badge de color
+    // sigue leyendo a.estado a secas (A tiempo/Tarde/Ausente): el rol nunca
+    // cambia el color, solo agrega texto.
+    var label = _evLabelPuntualidadRol(a.estado, _evRolDePersona(e, a.nombre));
     return '<div class="ev-asistente-row"><span class="ev-asistente-nombre">' + a.nombre + '</span>' +
-      '<span class="badge ' + (_EV_CHIP_BADGE[a.estado] || 'badge-pendiente') + '">' + a.estado + '</span></div>';
+      '<span class="badge ' + (_EV_CHIP_BADGE[a.estado] || 'badge-pendiente') + '">' + label + '</span></div>';
   }).join('');
   // stopPropagation: mismo motivo que _evRsvpBarraHtml() -- la card entera
   // ahora es clickeable (abre el detalle), esto evita que tocar una fila o
@@ -1857,6 +1906,13 @@ function _evAgregarPersonaAEvento(nombre) {
     mostrarToast(nombre + ' agregadx', 'ok', true);
     _evCerrarSheetAgregar();
     _evRenderTimeline(true);
+    // Gestión de asistencia también en el detalle (ver "Cambios recientes")
+    // -- si este mismo evento está abierto ahí (misma referencia que
+    // `_EV_EVENTOS`, ya mutada arriba), refresca sus tarjetas/lista también,
+    // no solo el timeline. Nunca toca al resto de personas ya confirmadas:
+    // el push de arriba solo agrega la fila nueva, `_evRenderDetalleAsistenciaReal()`
+    // solo vuelve a LEER `ev.asistentes` ya actualizado, no reescribe nada.
+    if (_evDetalleActual && _evDetalleActual.id === idEvento) _evRenderDetalleAsistencia(_evDetalleActual);
   }, function(e) {
     mostrarToast(e && e.message ? e.message : 'No se pudo agregar a ' + nombre + '.', 'error');
   });
@@ -2057,14 +2113,32 @@ function _evBuscar(q) { _evBusqueda = q; _evRenderTimeline(true); }
 // `.ev-asistire-wrap` en la card completa (ver `.ev-card-compacta-wrap
 // .ev-estado-pill`/`.ev-card-compacta-wrap .ev-asistire-wrap`,
 // css/eventos.css, mismo margen lateral/inferior para las 2). Cancelado/No
-// se entrena siguen sin nota acá (nunca hubo/habrá asistencia que
-// registrar). La fecha ya la muestra el badge lateral del grupo
+// se entrena muestran la MISMA pill de estado que ya usa la card completa/el
+// detalle (`_evEstadoNotaPillHtml()`, bug real corregido: se había perdido el
+// indicador acá -- un entrenamiento cancelado en el pasado quedaba sin
+// ninguna marca visual, indistinguible de uno normal sin asistencia
+// registrada) en vez de la asistencia real (nunca hubo/habrá una que
+// mostrar). La fecha ya la muestra el badge lateral del grupo
 // (_evRenderTimeline()), así que la fila en sí solo necesita hora+tipo.
 function _evTimelineFilaHtml(e) {
   var hoy = _evHoyISO();
   if (_evFechaCmp(e.fecha, hoy) >= 0) return _evCardEventoHtml(e, '');
   var icono = _EV_ICONOS[e.tipo] || 'event';
-  var nota = (e.estado !== 'Cancelado' && e.estado !== 'No se entrena') ? _evAsistenciaRealHtml(e) : '';
+  var cancelado = (e.estado === 'Cancelado' || e.estado === 'No se entrena');
+  var nota = cancelado ? _evEstadoNotaPillHtml(e.estado) : _evAsistenciaRealHtml(e);
+  // Bug real corregido (gestión de asistencia admin "desaparecida" en
+  // eventos pasados, reportado por Victor): esta fila compacta solo
+  // mostraba la propia asistencia (`nota`, arriba) -- a diferencia de
+  // `_evCardEventoHtml()` (usada para hoy/futuro), nunca sumaba
+  // `_evAccionAdminHtml()` para cuentas admin. La regla de tiempo ya vigente
+  // ("disponible desde la hora de inicio en adelante, incluso mucho después
+  // de terminado el evento", `_evYaEmpezo()`) siempre da `true` acá (esta
+  // fila es exclusiva de fechas YA pasadas, que por definición ya arrancaron)
+  // -- se chequea explícito de todos modos, mismo criterio que el resto del
+  // archivo, en vez de asumirlo implícito. Cancelado/No se entrena quedan
+  // afuera (mismo motivo que en la card completa: nunca hubo/habrá
+  // asistencia que gestionar).
+  var gestionAdmin = (_adminToken && !cancelado && _evYaEmpezo(e)) ? _evAccionAdminHtml(e) : '';
   return '<div class="ev-card-compacta-wrap ev-pasado-atenuado">' +
     '<div class="ev-card-compacta" onclick="abrirEvDetalle(\'' + e.id + '\')">' +
       '<div class="ev-card-icon"><span class="material-symbols-outlined">' + icono + '</span></div>' +
@@ -2074,6 +2148,7 @@ function _evTimelineFilaHtml(e) {
       '</div>' +
     '</div>' +
     nota +
+    gestionAdmin +
   '</div>';
 }
 // Filtrado 100% en cliente sobre los datos de prueba (Tanda 2) -- la Tanda 3
@@ -2170,14 +2245,20 @@ function _evRenderTimeline(instant, alTerminar) {
   });
   var hoy = _evHoyISO();
   var mesAnterior = null, html = '';
-  // Separadores HOY/MAÑANA/PRÓXIMA SEMANA (ver "Cambios recientes" --
-  // restaurados) -- HOY siempre se muestra, marca el punto cronológico exacto
-  // donde el timeline cruza de pasado a futuro (aunque nada caiga justo hoy,
-  // por eso NO es un `else if` del chequeo de bucket de abajo: una fecha
-  // puede disparar los 2 separadores a la vez, ej. si el primer grupo futuro
-  // es directamente mañana). MAÑANA/PRÓXIMA SEMANA son condicionales -- solo
-  // aparecen si ese bucket realmente tiene contenido, por eso se registran en
-  // `bucketsMostrados` recién cuando efectivamente se inserta uno.
+  // Separadores HOY/MAÑANA/PRÓXIMA SEMANA -- bug real corregido: HOY se
+  // insertaba con solo `_evFechaCmp(fecha, hoy) >= 0` (el PRIMER grupo
+  // futuro-o-presente, sin importar si esa fecha era hoy realmente),
+  // mostrando una sección "HOY" vacía seguida directo del próximo evento con
+  // contenido cuando no había nada exactamente hoy (ej. solo un evento en 3
+  // semanas). Ahora exige coincidencia exacta (`_evFechaCmp(fecha, hoy) === 0`)
+  // -- mismo criterio que ya pide el resto del archivo para separadores
+  // condicionales: sin match exacto, sin separador. Sigue sin ser `else if`
+  // del chequeo de bucket de abajo -- una fecha puede disparar los 2
+  // separadores a la vez si HOY tiene contenido Y el primer grupo futuro es
+  // directamente mañana. MAÑANA/PRÓXIMA SEMANA ya eran condicionales -- solo
+  // aparecen si ese bucket realmente tiene contenido (se registran en
+  // `bucketsMostrados` recién cuando efectivamente se inserta uno), sin
+  // cambios ahí.
   var insertadoHoy = false, bucketsMostrados = {};
   ordenFechas.forEach(function(fecha) {
     var d = _evParseISO(fecha);
@@ -2191,7 +2272,7 @@ function _evRenderTimeline(instant, alTerminar) {
       mesAnterior = mesKey;
       html += '<div class="ev-mes-header" data-anio="' + d.getFullYear() + '" data-mes="' + d.getMonth() + '">' + NOMBRES_MESES[d.getMonth()].toUpperCase() + ' ' + d.getFullYear() + '</div>';
     }
-    if (!insertadoHoy && _evFechaCmp(fecha, hoy) >= 0) {
+    if (!insertadoHoy && _evFechaCmp(fecha, hoy) === 0) {
       // `id` propio (ver "Cambios recientes" -- bug real: el ícono "hoy"
       // scrolleaba al `.ev-fecha-grupo` de hoy, que SÍ tiene su propio
       // `scroll-margin-top` -- pero el separador -HOY- que vive JUSTO
@@ -2223,7 +2304,17 @@ function _evRenderTimeline(instant, alTerminar) {
       '</div>' +
     '</div>';
   });
-  if (!insertadoHoy) html += '<div class="ev-hoy-separador" id="ev-separador-hoy"><span>HOY</span></div>';
+  // Bug real corregido (mismo fix que la condición de arriba): este
+  // fallback agregaba un "HOY" vacío al FINAL de toda la lista cuando
+  // ninguna fecha coincidía exacto con hoy -- pensado originalmente para el
+  // caso "todo pasado, nada hoy/futuro" (ahí sí tenía sentido un ancla al
+  // final), pero disparaba igual con contenido futuro real más abajo (ej. un
+  // solo evento a 3 semanas): la sección "HOY" aparecía sin nada debajo,
+  // después de todo el resto del timeline. Se elimina sin reemplazo -- sin
+  // match exacto, sin separador, en cualquier posición (mismo criterio ya
+  // aplicado arriba). `_evScrollAFecha()` ya reemplaza sola el "HOY"
+  // faltante por el grupo real más cercano vía `_evFechaGrupoMasCercano()`
+  // cuando no hay contenido exacto de hoy, sin depender de este marcador.
   _evFadeSwap(cont, function() {
     cont.innerHTML = html;
     _evUpdateRsvpSliders(false);
@@ -2485,6 +2576,16 @@ function _evPintarStatsAsistencia(grupos) {
 // persona que ya filtró un grupo mientras el pedido todavía viajaba.
 function _evRenderDetalleAsistencia(ev) {
   _evDetalleFiltroGrupo = null;
+  var gestion = document.getElementById('ev-detalle-gestion-admin');
+  if (gestion) gestion.innerHTML = '';
+  // Regla de tiempo, no solo de rol/fecha calendario -- mismo criterio ya
+  // usado por _evCardEventoHtml()/_evYaEmpezo() para la card: desde que el
+  // evento arranca, admin ve la asistencia REAL (rollcall E/F) + gestión acá
+  // también (ver _evRenderDetalleAsistenciaReal(), más abajo), no el RSVP de
+  // intención pre-evento. Antes de arrancar (cualquier cuenta) o para
+  // cuentas no-admin en cualquier momento, sigue el resumen de RSVP de
+  // siempre, sin cambios.
+  if (_adminToken && _evYaEmpezo(ev)) { _evRenderDetalleAsistenciaReal(ev); return; }
   var rsvps = ev.rsvps || [];
   var grupos = _EV_GRUPOS_ASISTENCIA.map(function(g) {
     return { key: g.key, label: g.label, clase: g.clase, personas: rsvps.filter(function(p) { return p.estado === g.estado; }) };
@@ -2504,6 +2605,44 @@ function _evRenderDetalleAsistencia(ev) {
     var sinResponder = (res.personas || []).filter(function(p) { return !respondieron[String(p.nombre).trim().toUpperCase()]; }).map(function(p) { return { nombre: p.nombre }; });
     _evPintarStatsAsistencia(grupos.concat([{ key: _EV_GRUPO_SIN_RESPONDER.key, label: _EV_GRUPO_SIN_RESPONDER.label, clase: _EV_GRUPO_SIN_RESPONDER.clase, personas: sinResponder }]));
   }, function() { /* silencioso -- el resto de la pantalla ya funciona sin este grupo */ });
+}
+// Asistencia REAL (rollcall E/F, `ev.asistentes` -- mismo dato que ya usa
+// _evAccionAdminHtml() en la card) agrupada en 3 tarjetas de estadística (A
+// horario/Tarde/Ausentes) + la lista completa debajo, reusando el MISMO
+// `_evPintarStatsAsistencia()` que ya usa el camino RSVP de arriba -- 0
+// duplicación de la UI de stats/lista, solo cambia qué array alimenta los
+// grupos y qué combinación de estado se muestra por persona (puntualidad +
+// rol, ver _evLabelPuntualidadRol()/`p.sufijoRol`). Bug real corregido acá
+// (el "0 asistentes" reportado en el detalle de eventos pasados): antes
+// `_evRenderDetalleAsistencia()` SIEMPRE leía `ev.rsvps` (intención
+// pre-evento) sin importar si el evento ya había arrancado -- un evento ya
+// jugado con RSVPs vacíos (o gente que nunca respondió pero sí vino, admin
+// mediante) mostraba 0 en las 4 tarjetas pese a tener asistencia real
+// registrada en `ev.asistentes`.
+function _evRenderDetalleAsistenciaReal(ev) {
+  var asistentes = ev.asistentes || [];
+  var grupos = _EV_GRUPOS_ASISTENCIA_REAL.map(function(g) {
+    return {
+      key: g.key, label: g.label, clase: g.clase,
+      personas: asistentes.filter(function(a) { return a.estado === g.estado; }).map(function(a) {
+        var rol = _evRolDePersona(ev, a.nombre);
+        return { nombre: a.nombre, sufijoRol: (rol === 'No jugador') ? ' · No jugador' : '' };
+      })
+    };
+  });
+  _evPintarStatsAsistencia(grupos);
+  _evPintarGestionAdminDetalle(ev);
+}
+// Gestión de asistencia también en el detalle, no solo en la card del
+// timeline -- misma sheet ("+ Agregar persona", `_evAbrirAgregarPersona()`/
+// `adminBuscarPersonasParaEvento()`/`adminMarcarAsistencia()`) que ya usa la
+// card, sin ninguna acción/endpoint nueva ni una 2da lista de asistentes
+// duplicada -- la de arriba (`_evPintarStatsAsistencia()`, con puntualidad+
+// rol ya combinados) ya cubre esa parte, acá solo va el botón.
+function _evPintarGestionAdminDetalle(ev) {
+  var cont = document.getElementById('ev-detalle-gestion-admin');
+  if (!cont) return;
+  cont.innerHTML = '<button class="ev-btn-agregar-persona" onclick="_evAbrirAgregarPersona(\'' + ev.id + '\')"><span class="material-symbols-outlined">person_add</span>Agregar o corregir asistencia</button>';
 }
 // Tocar una tarjeta filtra la lista de abajo a solo ese grupo; tocarla de
 // nuevo (ya activa) deselecciona y vuelve a mostrar los 4. Solo una tarjeta

@@ -727,6 +727,13 @@
    tuvo este problema porque no fuerza ningún `width` propio -- un bloque
    normal ya resta los márgenes solo. */
 .ev-card-compacta-wrap .ev-estado-pill { margin: 0 14px 12px; width: auto; }
+/* Mismo respiro lateral/inferior que `.ev-asistire-wrap`/`.ev-estado-pill` de
+   arriba -- gestión de asistencia admin restaurada en la fila compacta
+   (`_evAccionAdminHtml()`, ver "Cambios recientes", bug real corregido:
+   antes solo vivía en la card completa de hoy/futuro, nunca en esta fila de
+   eventos pasados). Sin `width` propio (mismo caso que `.ev-asistire-wrap`,
+   no el de `.ev-estado-pill`), un bloque normal ya resta los márgenes solo. */
+.ev-card-compacta-wrap .ev-asistentes-list { margin: 0 14px 12px; }
 /* Jerarquía visual pasados/futuros (ver "Cambios recientes",
    `_evTimelineFilaHtml()`/js/eventos.js): opacidad reducida en TODA la card
    compacta (pasados) + ícono forzado a gris apagado en vez de heredar el

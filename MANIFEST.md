@@ -352,6 +352,42 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
 | `body.ev-ant-footer-visible #app-toast` | **Nuevo (ver "Cambios recientes")** — sube el toast global (`#app-toast`, css/estilos.css, `bottom:28px` fijo de fábrica) para que en `#s-eventos-anticipada` quede justo encima de `#cta-footer-eventos-anticipada` en vez de tapar las pills del wizard. `#app-toast` es un `<div>` creado por JS y agregado directo a `<body>` la primera vez que corre `mostrarToast()` (mismo criterio de "`position:fixed` va directo en `<body>`, no dentro de `.pantalla`/`.card`" que ya rige `.cta-footer-fixed`) — el override también apunta ahí sin anidarlo dentro de ninguna pantalla. `body.ev-ant-footer-visible` la togglean `_evAntActualizarFooter()`/`_evAntOcultarFooter()` (js/eventos.js) junto con el propio footer |
 
 ### Cambios recientes
+- **Code.gs (fuera de este repo, pseudocódigo actualizado en este MANIFEST) — `getEventosRango()`: excluir del todo (no solo deduplicar) a quien tenga RSVP en Log pero ningún respaldo en columnas E/F, SOLO para eventos ya pasados; ajuste necesario en `_ultimaAsistenciaPorPersonaTodas()` para que la regla de "puntualidad + rol combinados" (entrada de abajo) tenga datos reales con los que trabajar.**
+
+  **Pedido 1 (Victor):** para eventos pasados, E/F es la única fuente autoritativa de "quién asistió" — alguien con una fila en "Log de asistencias" (RSVP, `origen:'Usuario'`) pero SIN ningún respaldo en E/F no debe aparecer en `asistencias[]` en absoluto (no solo "no duplicarlo"): no estar en E/F significa que no asistió. Para eventos futuros/en curso, sin cambios — el RSVP sigue siendo la única señal disponible antes de que alguien tome lista.
+
+  **Causa real encontrada al implementar el Pedido 1 (no la sospechada — diagnosticada ANTES de tocar nada, siguiendo el pedido explícito de "no aplicar fixes especulativos"):** el filtro existente (`nombresEnEF`) ya descartaba cualquier entrada de Log de una persona presente en E/F, sin importar si esa entrada era un RSVP (rol) o una toma de lista (puntualidad) — funcionaba "por casualidad" porque, hasta ahora, nunca hacía falta que las 2 convivieran. Al escarbar más hondo para el Pedido 2 de abajo (combinar puntualidad+rol) se encontró el problema real, más arriba en la cadena: `_ultimaAsistenciaPorPersonaTodas()` colapsaba TODAS las filas de Log de una misma persona+evento a "solo la más reciente", **sin importar la familia del estado** — si alguien marcó RSVP "No jugador" y DESPUÉS un admin lo confirmó "A tiempo" (2 filas de Log, timestamps distintos), la función devolvía SOLO la fila del admin; el RSVP original quedaba irrecuperable (ni en Log-deduplicado ni en E/F, que nunca tiene rol). Sin este ajuste, ninguna persona real con puntualidad Y rol iba a poder combinarse nunca — el dato simplemente no llegaba al frontend, pese a que `js/eventos.js` ya sabe combinarlos.
+
+  **Fix (2 funciones, mismo bloque de `getEventosRango()`):**
+  1. `_ultimaAsistenciaPorPersonaTodas()`: la clave de dedupe pasa de `idEvento|nombre` a `idEvento|nombre|familia` (`familia` = `'rollcall'` si el estado está en `ESTADOS_ROLLCALL`, si no `'rsvp'`) — un RSVP y una toma de lista de la misma persona para el mismo evento ahora sobreviven como 2 filas separadas; sigue evitando duplicados de alguien cambiando de opinión varias veces DENTRO de la misma familia (el caso original que la función ya cubría).
+  2. `getEventosRango()`: el filtro de Log pasa de "toda entrada de esa persona si está en E/F" a evaluar cada fila por separado — se descarta SOLO si (a) es rollcall Y esa persona ya está en E/F (dedupe de siempre, sin cambios de criterio) o (b) es RSVP, el evento ya pasó, Y esa persona nunca apareció en E/F (Pedido 1, nuevo). Una entrada RSVP de alguien que SÍ está en E/F ya NO se descarta (antes sí, por error de la versión vieja del filtro) — esa persona tiene rol Y puntualidad, y las 2 deben sobrevivir para combinarse.
+
+  **No verificado de ninguna forma** (Apps Script fuera de este repo, sin mock local ejecutable de las hojas reales) — pendiente que Victor pegue el código actualizado (sección "Pseudocódigo de Code.gs" de este MANIFEST) y confirme con datos reales: (a) un evento pasado con alguien que RSVP'd pero nunca fue confirmado en E/F ya no aparece en su `asistencias[]`; (b) alguien confirmado en E/F que también había RSVP'd "No jugador" aparece con las 2 filas (rollcall + RSVP) en `asistencias[]`, no solo una.
+
+- **js/eventos.js + index.html + css/eventos.css — Regla de negocio nueva: puntualidad (E/F, confirmada por el admin) + rol (RSVP "No jugador"/jugador) se combinan en un solo texto ("Llegó a horario · No jugador") en vez de que una pise a la otra; gestión de asistencia admin restaurada en 2 lugares donde había desaparecido (card de eventos pasados en el timeline, pantalla de detalle); "0 asistentes" del detalle corregido.**
+
+  **1) Combinación puntualidad + rol (`_evLabelPuntualidadRol()`, nuevo helper, + `_evRolDePersona()`):** un solo punto de combinación, reusado en los 3 lugares que muestran el estado de alguien por evento — `_evAsistenciaRealHtml()` (la propia persona logueada, combina `miAsistenciaReal`+`miEstado`, ya poblados aparte por `_evMapEventoBackend()`), `_evAccionAdminHtml()` (lista de asistentes de la card admin, busca el rol de cada persona en `e.rsvps` por nombre normalizado) y `_evRenderDetalleAsistenciaReal()` (nuevo, ver punto 3). Sin dato de rol (nunca respondió el RSVP, o el evento no lo pedía) se muestra la puntualidad sola, sin sufijo — solo se agrega " · No jugador" cuando el RSVP de esa persona para ESE evento fue exactamente `'No jugador'`.
+
+  **2) Bug real corregido — banner de estado (Cancelado/No se entrena) desaparecido de eventos PASADOS en el timeline:** `_evTimelineFilaHtml()` (fila compacta de eventos pasados) ponía `nota = ''` a propósito para Cancelado/No se entrena ("nunca hubo/habrá asistencia que registrar") — correcto para la asistencia real, pero de paso se llevó puesto el indicador de que el evento estaba cancelado, que SÍ debía seguir viéndose (mismo componente `_evEstadoNotaPillHtml()` que ya usan la card completa de hoy/futuro y el detalle). Fix: `nota` ahora es la pill de estado para Cancelado/No se entrena, o la asistencia real en cualquier otro caso — nunca vacío sin motivo.
+
+  **3) Bug real corregido — gestión de asistencia admin (`_evAccionAdminHtml()`, "Agregar/corregir asistencia") ausente en eventos de días YA PASADOS, tanto en el timeline como en el detalle (reportado por Victor: "ya no aparece en eventos de hoy/pasados"):**
+  - **Diagnóstico primero, sin fixes especulativos:** para eventos de HOY ya arrancados, la gestión SÍ aparecía (confirmado con Playwright, mock realista de fecha/hora/estado) — la condición de tiempo (`_evYaEmpezo()`) evalúa perfecto, `horaInicio` sigue en formato `"HH:MM"` en ambos lados de la comparación (el fix de timezone de la entrada anterior de este MANIFEST no la tocó). La causa real era otra, más simple: `_evTimelineFilaHtml()` (la fila COMPACTA, usada para cualquier fecha estrictamente ANTERIOR a hoy) nunca había sumado `_evAccionAdminHtml()` en ningún momento de su historia — esa función solo vivía en `_evCardEventoHtml()` (la card COMPLETA, usada para hoy/futuro). Un evento de ayer o de hace 2 semanas, con `_adminToken` seteado, jamás pasaba por `_evCardEventoHtml()` — no era una regresión de un fix reciente, era un camino que nunca existió para "pasado" en el timeline, inconsistente con la regla de tiempo ya vigente ("disponible desde la hora de inicio en adelante, incluso mucho después de terminado el evento").
+  - **Fix:** `_evTimelineFilaHtml()` suma `_evAccionAdminHtml(e)` después de la nota cuando `_adminToken && !cancelado && _evYaEmpezo(e)` (siempre `true` para esta fila, ya que solo se usa para fechas pasadas — chequeado explícito de todos modos, mismo criterio que el resto del archivo). CSS nuevo, mismo patrón que `.ev-estado-pill`/`.ev-asistire-wrap` ya tenían: `.ev-card-compacta-wrap .ev-asistentes-list { margin: 0 14px 12px; }` (`css/eventos.css`) — sin esto quedaba pegado a los bordes del wrapper.
+  - **Pantalla de detalle (`_evRenderDetalleAsistencia()`):** antes SIEMPRE mostraba el resumen de RSVP (`ev.rsvps`, intención pre-evento), sin importar si el evento ya había arrancado — sin ninguna gestión admin propia ahí, había que volver al timeline para gestionar. Ahora, si `_adminToken && _evYaEmpezo(ev)`, delega a `_evRenderDetalleAsistenciaReal()` (nuevo): arma las mismas 4 tarjetas de estadística + lista (`_evPintarStatsAsistencia()`, reusada tal cual, cero UI duplicada) pero desde `ev.asistentes` (rollcall real) agrupado en `_EV_GRUPOS_ASISTENCIA_REAL` (A horario/Tarde/Ausentes, reusa los mismos 3 colores `ev-stat-asisten`/`ev-stat-no-jugador`/`ev-stat-no-asisten` — cero CSS nuevo) en vez de `ev.rsvps`, con el rol combinado por persona (`p.sufijoRol`, nuevo parámetro opcional de `_evGrupoAsistenciaHtml()` — se agrega SOLO al texto visible, nunca al `data-nombre` del avatar, para no romper `_evHidratarAvatares()`). Suma también `_evPintarGestionAdminDetalle()`: un botón "Agregar o corregir asistencia" en el nuevo contenedor `#ev-detalle-gestion-admin` (`index.html`, dentro de `.ev-detalle-section#ev-detalle-asistencia`), misma sheet/acción que ya usa la card (`_evAbrirAgregarPersona()`/`adminMarcarAsistencia()`, sin endpoint nuevo) — `_evAgregarPersonaAEvento()` ahora también refresca el detalle (`_evRenderDetalleAsistencia(_evDetalleActual)`) si el evento agregado es el que está abierto ahí, además del timeline de siempre. Antes de que el evento arranque, o para cuentas no-admin en cualquier momento, sigue el resumen de RSVP de siempre, sin ningún cambio de comportamiento.
+  - **Bug real corregido de paso — "0 asistentes" en el detalle de eventos pasados:** consecuencia directa de que `_evRenderDetalleAsistencia()` nunca leyera `ev.asistentes` — un evento ya jugado con RSVPs vacíos (o gente que nunca respondió pero sí vino, admin mediante) mostraba 0 en las 4 tarjetas pese a tener asistencia real registrada. Se resuelve solo, como efecto del punto anterior (leer `ev.asistentes` en vez de `ev.rsvps` una vez que el evento arrancó).
+
+  **Confirmado explícito (clarificaciones de Victor) — nada de esto necesitó cambios, ya funcionaba:** la lista de asistentes de la card admin (`_evAccionAdminHtml()`) ya mostraba el estado real de cada persona al abrir el evento (nunca en blanco) — confirmado con Playwright, mock de un evento con 2 personas ya marcadas de antes; agregar una persona nueva (`_evAgregarPersonaAEvento()`, solo hace `push()`, nunca reescribe el array) nunca altera el estado de las demás ya confirmadas — confirmado agregando una 4ta persona a un evento con 3 ya marcadas, las 3 originales sin cambios antes/después; una cuenta NO-admin nunca ve el botón/panel de gestión (ni la card ni el detalle), en ningún momento (antes o después de la hora de inicio) — confirmado con el mismo evento, sin `_adminToken`.
+
+  **Verificado con Playwright** (`index.html` real vía `file://`, timezone forzado a `America/Guayaquil`, `window.api`/`window.apiPost` mockeados in-page, sin backend real disponible desde este repo): evento pasado con 3 personas (una con RSVP "No jugador" + confirmada "A tiempo" por E/F, una jugadora normal marcada "Tarde", una sin RSVP marcada "Ausente") — la card del timeline muestra las 3 filas con el texto exacto esperado, incluida "Bruno Salazar — A tiempo · No jugador" combinado; el detalle muestra las mismas 3 tarjetas de estadística con conteos reales (1/1/1, no "0") y la misma combinación en la lista; agregar una 4ta persona nueva desde el botón del detalle actualiza detalle Y card sin alterar las 3 anteriores; cuenta no-admin en el mismo evento: sin botón de gestión, resumen de RSVP visible sin cambios. Evento cancelado en el pasado: pill "Cancelado" visible en la fila compacta (antes ausente). Regresión de los 2 fixes de la entrada de abajo (banner de equipamiento/separadores) confirmada sin cambios de comportamiento.
+
+- **js/eventos.js + css/eventos.css — 2 bugs reales en el timeline de `#s-eventos`, ambos efectos secundarios de la conexión al backend real: banner de estado desaparecido de las cards, y separadores de sección (HOY/MAÑANA/PRÓXIMA SEMANA) mostrándose vacíos.**
+
+  **1) Banner de estado (Cancelado/No se entrena) ausente en eventos PASADOS del timeline.** Diagnóstico con Playwright: para eventos de hoy/futuro, `_evCardEventoHtml()` ya mostraba la pill correctamente (`_evEstadoNotaPillHtml()`, sin tocar); el problema estaba en la fila COMPACTA de eventos pasados (`_evTimelineFilaHtml()`), que ponía `nota = ''` a propósito para Cancelado/No se entrena en vez de mostrar la misma pill — la lógica de negocio nunca se perdió (`e.estado` seguía llegando y normalizándose bien), pero esta fila puntual decidía activamente no mostrar nada para ese caso. Fix: `nota` usa `_evEstadoNotaPillHtml(e.estado)` para Cancelado/No se entrena (mismo componente que ya reusan la card completa y el detalle), `_evAsistenciaRealHtml(e)` en cualquier otro caso — sin componente nuevo.
+
+  **2) Separadores HOY/MAÑANA/PRÓXIMA SEMANA visibles sin ningún evento debajo.** MAÑANA/PRÓXIMA SEMANA nunca tuvieron este bug en la práctica (se arman por fecha real con contenido, `_evBucketRelativo()` solo corre sobre fechas que ya están en `ordenFechas`, que por construcción siempre tienen ≥1 ítem). El real era el separador HOY, en 2 lugares del mismo `_evRenderTimeline()`: (a) se insertaba con `_evFechaCmp(fecha, hoy) >= 0` — el PRIMER grupo futuro-o-presente, sin exigir que esa fecha fuera hoy realmente (ej. un solo evento a 3 semanas mostraba "HOY" seguido directo de ese grupo, sin nada de hoy en el medio); (b) un fallback al FINAL de toda la función agregaba igual un "HOY" vacío si el loop nunca lo había insertado — pensado para el caso "todo pasado, nada futuro" pero disparando también con contenido futuro real ya renderizado arriba (mismo síntoma, al final de la lista en vez de en el medio). Fix: la condición del loop exige coincidencia exacta (`_evFechaCmp(fecha, hoy) === 0`); el fallback del final se elimina sin reemplazo. `_evScrollAFecha()` ya tenía su propio fallback (`_evFechaGrupoMasCercano()`) para cuando no hay contenido exacto de hoy — el salto automático a "hoy" al entrar a Eventos sigue funcionando sin cambios, ahora cae ahí en vez de a un separador vacío.
+
+  **Verificado con Playwright** (mismo harness, timezone `America/Guayaquil`): evento cancelado HOY → pill "Cancelado" visible en su card completa (sin cambios, ya funcionaba); único evento a +21 días (nada hoy/mañana/próxima semana) → ANTES: separador "HOY" vacío seguido del grupo de +21 días; DESPUÉS: sin separador, va directo al grupo; eventos hoy Y mañana → HOY y MAÑANA aparecen ambos, cada uno con su grupo real debajo (sin regresión); sin eventos → estado vacío de siempre, sin separadores sueltos. Evento cancelado 3 días atrás (fila compacta) → pill "Cancelado" visible (antes ausente, ver punto 1).
+
 - **js/eventos.js — Investigado bug reportado ("día de la semana corrido un día hacia atrás" en `#s-eventos`, ej. un entrenamiento de sábado en Asistencias mostrándose como viernes): NO reproduce en el frontend actual, ya está protegido por el mismo criterio documentado más abajo para `_adminVentanaFecha()` (ver "banner de equipamiento del dashboard admin" en esta misma sección).**
 
   **Sospecha inicial (la del pedido):** que algún lugar de `js/eventos.js` calculara el día de la semana con `new Date(fechaString)` sobre el `yyyy-MM-dd` que manda `getEventosRango()` — ese parseo interpreta el string como medianoche UTC, y con el navegador en Ecuador (GMT-5, sin horario de verano) el instante local resultante cae en las 19:00 del día ANTERIOR, corriendo `.getDay()` un día hacia atrás. Exactamente el mismo mecanismo que causó el bug ya documentado de `_adminVentanaFecha()`.
@@ -1130,7 +1166,29 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
 
   // Recorre TODA "Log de asistencias" una sola vez y devuelve, por ID Evento,
   // solo la fila más reciente (Marca temporal) por Nombre — evita duplicados
-  // cuando alguien cambió de opinión (ej. Asistiré -> No jugador) más de una vez.
+  // cuando alguien cambió de opinión (ej. Asistiré -> No jugador) más de una
+  // vez DENTRO DE LA MISMA FAMILIA de estado.
+  //
+  // AJUSTE (ver "Cambios recientes" -- necesario para la regla de negocio
+  // "puntualidad + rol combinados" pedida por Victor, NO funcionaba con
+  // datos reales sin esto): la clave de dedupe ERA solo `idEvento|nombre` --
+  // colapsaba a "la fila más reciente, sin importar de qué familia" incluso
+  // entre un RSVP (`Log`, origen 'Usuario', ej. "No jugador") y una toma de
+  // lista posterior de la MISMA persona para el MISMO evento (`Log`, origen
+  // 'Admin', ej. "A tiempo", ver `adminMarcarAsistencia()` más abajo) — el
+  // RSVP original quedaba pisado y se perdía para siempre, ya que
+  // `_asistenciaEFPorEvento()` (columnas E/F) tampoco lo tiene (E/F es
+  // rollcall puro, nunca rol). Sin esto, ninguna persona confirmada por
+  // rollcall podía mostrar su rol combinado en el frontend, pese a que
+  // `js/eventos.js` ya sabe combinarlos (`_evLabelPuntualidadRol()`) -- el
+  // dato nunca llegaba. Fix: la clave de dedupe suma la FAMILIA del estado
+  // (`ESTADOS_ROLLCALL`, declarado más abajo junto a `adminMarcarAsistencia`
+  // -- mismo array, sin duplicar la lista) — así un RSVP y una toma de lista
+  // de la misma persona para el mismo evento sobreviven como 2 filas
+  // separadas, cada una con su propio "más reciente" dentro de su familia
+  // (sigue evitando duplicados de alguien cambiando de opinión VARIAS veces
+  // dentro de la MISMA familia, que es el caso original que esta función ya
+  // cubría).
   function _ultimaAsistenciaPorPersonaTodas() {
     var hoja = SpreadsheetApp.getActive().getSheetByName('Log de asistencias');
     var datos = hoja.getDataRange().getValues();
@@ -1141,10 +1199,11 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
     var cEstado = _colIdx(headers, 'Estado');
     var cMarca = _colIdx(headers, 'Marca temporal');
 
-    var ultimaPorClave = {}; // 'idEvento|nombre' -> fila ganadora
+    var ultimaPorClave = {}; // 'idEvento|nombre|familia' -> fila ganadora
     for (var i = 1; i < datos.length; i++) {
       var fila = datos[i];
-      var clave = fila[cId] + '|' + fila[cNombre];
+      var familia = ESTADOS_ROLLCALL.indexOf(fila[cEstado]) !== -1 ? 'rollcall' : 'rsvp';
+      var clave = fila[cId] + '|' + fila[cNombre] + '|' + familia;
       var marca = fila[cMarca];
       if (!ultimaPorClave[clave] || marca > ultimaPorClave[clave].marca) {
         ultimaPorClave[clave] = {
@@ -1244,6 +1303,7 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
     var cEstado = _colIdx(headers, 'Estado');
 
     var d0 = new Date(desde), d1 = new Date(hasta);
+    var hoy = new Date(); hoy.setHours(0, 0, 0, 0); // NUEVO -- ver regla de exclusión de abajo
     var tipoIconoPorLugar = _mapaTipoIconoPorLugar();
     var requiereReservaPorLugar = _mapaRequiereReservaPorLugar();
     var asistPorEvento = _ultimaAsistenciaPorPersonaTodas();
@@ -1255,24 +1315,46 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
       var fecha = fila[cFecha];
       if (!(fecha instanceof Date) || fecha < d0 || fecha > d1) continue;
       var idEvento = fila[cId];
-      // NUEVO: mezcla RSVP (Log de asistencias) + E/F (Asistencias),
-      // DEDUPLICANDO por persona — el bridge `actualizarAsistenciasDesdeLog`
-      // (corre cada 15 min, confirmado por Victor) copia entradas de
-      // origen Admin de Log de asistencias hacia las columnas E/F, así que
-      // la MISMA persona puede terminar existiendo en las 2 fuentes para
-      // el mismo evento — un `.concat()` liso la duplicaría en
-      // `asistencias[]` en vez de elegir una sola. Si aparece en las 2, se
-      // descarta la entrada de Log (`asistPorEvento`) para esa persona
-      // puntual y se conserva SOLO la de E/F (`asistEFPorEvento`, la
-      // autoritativa, ver comentario de `_asistenciaEFPorEvento()` arriba)
-      // — comparación normalizada (`trim().toUpperCase()`), mismo criterio
-      // que ya usa `_mapaRequiereReservaPorLugar()`/`_evNombresCoinciden()`
-      // (frontend) para el mismo tipo de cruce entre 2 fuentes distintas.
+      // Mezcla RSVP (Log de asistencias) + E/F (Asistencias), por persona —
+      // el bridge `actualizarAsistenciasDesdeLog` (corre cada 15 min,
+      // confirmado por Victor) copia entradas de origen Admin de Log de
+      // asistencias hacia las columnas E/F, así que la MISMA persona puede
+      // terminar existiendo en las 2 fuentes para el mismo evento con el
+      // MISMO estado (rollcall) — un `.concat()` liso lo duplicaría en
+      // `asistencias[]`. `logDeEvento` ahora puede traer HASTA 2 filas por
+      // persona (una RSVP + una rollcall, ver el ajuste de familia en
+      // `_ultimaAsistenciaPorPersonaTodas()` arriba) — el filtro de abajo
+      // trata cada una según corresponda, no descarta "toda entrada de esa
+      // persona" a ciegas como antes.
       var logDeEvento = asistPorEvento[idEvento] || [];
       var efDeEvento = asistEFPorEvento[idEvento] || [];
+      var esPasado = fecha < hoy;
       var nombresEnEF = {};
       efDeEvento.forEach(function (a) { nombresEnEF[String(a.nombre).trim().toUpperCase()] = true; });
-      var logSinDuplicados = logDeEvento.filter(function (a) { return !nombresEnEF[String(a.nombre).trim().toUpperCase()]; });
+      var logFiltrado = logDeEvento.filter(function (a) {
+        var enEF = nombresEnEF[String(a.nombre).trim().toUpperCase()];
+        var esRollcall = ESTADOS_ROLLCALL.indexOf(a.estado) !== -1;
+        // Dedupe existente (sin cambios de criterio): la entrada de Log ES
+        // rollcall Y esa persona YA está en E/F — mismo dato, 2 fuentes, se
+        // descarta el duplicado de Log (E/F manda, autoritativa — ver
+        // comentario de `_asistenciaEFPorEvento()` arriba). Una entrada RSVP
+        // nunca es duplicado de E/F (vocabularios distintos: E/F es
+        // rollcall puro) — nunca se descarta por esta razón.
+        if (esRollcall && enEF) return false;
+        // NUEVO (pedido explícito de Victor, ver "Cambios recientes"): para
+        // eventos YA PASADOS, E/F es la ÚNICA fuente autoritativa de "quién
+        // asistió realmente" — una entrada RSVP (alguien que avisó que
+        // vendría) sin NINGÚN respaldo en E/F significa que esa persona NO
+        // fue confirmada, es decir, no asistió. Se excluye del array por
+        // completo (no solo "se evita duplicar"), a diferencia de una
+        // entrada rollcall sin match en E/F todavía (bridge no corrió,
+        // sigue esperando su turno arriba — SÍ se mantiene). Eventos
+        // futuros/en curso: sin cambios, el RSVP sigue siendo la única
+        // señal disponible y se muestra tal cual, aunque no matchee nada de
+        // E/F (nadie tomó lista todavía).
+        if (esPasado && !esRollcall && !enEF) return false;
+        return true;
+      });
       eventos.push({
         idEvento: idEvento,
         fecha: Utilities.formatDate(fecha, Session.getScriptTimeZone(), 'yyyy-MM-dd'),
@@ -1281,7 +1363,7 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
         estado: fila[cEstado],
         tipoIcono: tipoIconoPorLugar[fila[cLugar]] || 'Entrenamiento',
         requiereReserva: requiereReservaPorLugar[fila[cLugar]] !== false,
-        asistencias: logSinDuplicados.concat(efDeEvento)
+        asistencias: logFiltrado.concat(efDeEvento)
       });
     }
     eventos.sort(function (a, b) { return a.fecha < b.fecha ? -1 : (a.fecha > b.fecha ? 1 : 0); });
