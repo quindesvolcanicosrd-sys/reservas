@@ -277,10 +277,10 @@ function _evMapEventoBackend(raw) {
   var asistentes = [], rsvps = [];
   (raw.asistencias || []).forEach(function(a) {
     if (_EV_ESTADOS_ROLLCALL.indexOf(a.estado) !== -1) {
-      asistentes.push({ nombre: a.nombre, estado: a.estado });
+      asistentes.push({ nombre: a.nombre, estado: a.estado, nombreDerby: a.nombreDerby || '', fotoPerfil: a.fotoPerfil || '' });
       if (_evNombresCoinciden(a.nombre, E.nombre)) miAsistenciaReal = a.estado;
     } else if (_EV_ESTADOS_RSVP.indexOf(a.estado) !== -1) {
-      rsvps.push({ nombre: a.nombre, estado: a.estado });
+      rsvps.push({ nombre: a.nombre, estado: a.estado, nombreDerby: a.nombreDerby || '', fotoPerfil: a.fotoPerfil || '' });
       if (_evNombresCoinciden(a.nombre, E.nombre)) miEstado = a.estado;
     }
   });
@@ -1552,12 +1552,14 @@ function _evCardEventoHtml(e, sufijo) {
 // Hidrata TODOS los avatares-placeholder visibles a la vez (`.avatar-pill`
 // con `data-nombre`, insertados vacíos por _evAsistenciaGruposHtml() de la
 // pantalla de detalle) -- adminBuscarPersonasParaEvento()/getEventosRango()
-// no mandan foto por persona (solo nombre+estado, ver MANIFEST.md), así que
-// esta fila siempre cae al fallback de inicial (_avatarSetFotoOInicial(),
-// js/ui.js) -- no hay pendiente acá, es el comportamiento final esperado.
+// SÍ mandan foto por persona ahora (`fotoPerfil`, columna `Equipo` vía
+// `_mapaEquipoPorNombre()`, ver MANIFEST.md), así que esta fila usa el
+// `data-foto` real que _evGrupoAsistenciaHtml() ya deja en cada avatar --
+// solo cae al fallback de inicial (_avatarSetFotoOInicial(), js/ui.js)
+// cuando esa persona no tiene foto cargada en `Equipo`.
 function _evHidratarAvatares() {
   document.querySelectorAll('.ev-avatar-stack-item[data-nombre]').forEach(function(el) {
-    _avatarSetFotoOInicial(el, null, el.getAttribute('data-nombre'));
+    _avatarSetFotoOInicial(el, el.getAttribute('data-foto') || '', el.getAttribute('data-nombre'));
   });
   // Avatar de la card de cumpleaños (ver _evCardCumpleHtml() más abajo) --
   // `data-foto` viene de `c.fotoPerfil`, siempre '' hoy: getCumpleañosRango()
@@ -1636,12 +1638,17 @@ var _EV_GRUPOS_ASISTENCIA_REAL = [
 // `ev-asist-persona-<estado>`, ver css/eventos.css). `p.sufijoRol` (opcional,
 // ver `_evRenderDetalleAsistenciaReal()`) agrega el rol combinado (" · No
 // jugador") SOLO al texto visible -- `data-nombre` del avatar se arma con
-// `p.nombre` a secas, para no romper el matcheo de `_evHidratarAvatares()`.
+// `p.nombre` a secas (nunca `nombreDerby`, para no romper el fallback de
+// inicial de `_evHidratarAvatares()` con un nombre distinto al real);
+// `data-foto` (`p.fotoPerfil`, ver `_mapaEquipoPorNombre()`/MANIFEST.md)
+// la hidrata esa misma función en vez de caer siempre al inicial. El texto
+// visible sí prioriza `p.nombreDerby` sobre `p.nombre` cuando existe.
 function _evGrupoAsistenciaHtml(label, personas, grupoKey, clase) {
   if (!personas.length) return '';
   var claseFila = 'ev-asist-persona-' + clase.replace('ev-stat-', '');
   var filas = personas.map(function(p) {
-    return '<div class="ev-asist-persona ' + claseFila + '"><div class="avatar-pill avatar-pill--sm ev-avatar-stack-item" data-nombre="' + p.nombre.replace(/"/g, '&quot;') + '"></div><span>' + p.nombre + (p.sufijoRol || '') + '</span></div>';
+    var fotoAttr = (p.fotoPerfil || '').replace(/"/g, '&quot;');
+    return '<div class="ev-asist-persona ' + claseFila + '"><div class="avatar-pill avatar-pill--sm ev-avatar-stack-item" data-nombre="' + p.nombre.replace(/"/g, '&quot;') + '" data-foto="' + fotoAttr + '"></div><span>' + (p.nombreDerby || p.nombre) + (p.sufijoRol || '') + '</span></div>';
   }).join('');
   return '<div class="ev-asist-grupo" data-grupo="' + grupoKey + '"><div class="ev-asist-grupo-titulo">' + label + ' (' + personas.length + ')</div>' + filas + '</div>';
 }
@@ -1858,7 +1865,7 @@ function _evAccionAdminHtml(e) {
     // sigue leyendo a.estado a secas (A tiempo/Tarde/Ausente): el rol nunca
     // cambia el color, solo agrega texto.
     var label = _evLabelPuntualidadRol(a.estado, _evRolDePersona(e, a.nombre));
-    return '<div class="ev-asistente-row"><span class="ev-asistente-nombre">' + a.nombre + '</span>' +
+    return '<div class="ev-asistente-row"><span class="ev-asistente-nombre">' + (a.nombreDerby || a.nombre) + '</span>' +
       '<span class="badge ' + (_EV_CHIP_BADGE[a.estado] || 'badge-pendiente') + '">' + label + '</span></div>';
   }).join('');
   var abierto = _evAsistAdminAbierto === e.id;
@@ -2634,7 +2641,7 @@ function _evRenderDetalleAsistencia(ev) {
     // cruce con el roster completo en vez de con E.nombre solo).
     var respondieron = {};
     rsvps.forEach(function(p) { respondieron[String(p.nombre).trim().toUpperCase()] = true; });
-    var sinResponder = (res.personas || []).filter(function(p) { return !respondieron[String(p.nombre).trim().toUpperCase()]; }).map(function(p) { return { nombre: p.nombre }; });
+    var sinResponder = (res.personas || []).filter(function(p) { return !respondieron[String(p.nombre).trim().toUpperCase()]; }).map(function(p) { return { nombre: p.nombre, nombreDerby: p.nombreDerby || '', fotoPerfil: p.fotoPerfil || '' }; });
     _evPintarStatsAsistencia(grupos.concat([{ key: _EV_GRUPO_SIN_RESPONDER.key, label: _EV_GRUPO_SIN_RESPONDER.label, clase: _EV_GRUPO_SIN_RESPONDER.clase, personas: sinResponder }]));
   }, function() { /* silencioso -- el resto de la pantalla ya funciona sin este grupo */ });
 }
@@ -2658,7 +2665,7 @@ function _evRenderDetalleAsistenciaReal(ev) {
       key: g.key, label: g.label, clase: g.clase,
       personas: asistentes.filter(function(a) { return a.estado === g.estado; }).map(function(a) {
         var rol = _evRolDePersona(ev, a.nombre);
-        return { nombre: a.nombre, sufijoRol: (rol === 'No jugador') ? ' · No jugador' : '' };
+        return { nombre: a.nombre, nombreDerby: a.nombreDerby || '', fotoPerfil: a.fotoPerfil || '', sufijoRol: (rol === 'No jugador') ? ' · No jugador' : '' };
       })
     };
   });

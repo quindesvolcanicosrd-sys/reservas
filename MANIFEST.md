@@ -352,6 +352,15 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
 | `body.ev-ant-footer-visible #app-toast` | **Nuevo (ver "Cambios recientes")** — sube el toast global (`#app-toast`, css/estilos.css, `bottom:28px` fijo de fábrica) para que en `#s-eventos-anticipada` quede justo encima de `#cta-footer-eventos-anticipada` en vez de tapar las pills del wizard. `#app-toast` es un `<div>` creado por JS y agregado directo a `<body>` la primera vez que corre `mostrarToast()` (mismo criterio de "`position:fixed` va directo en `<body>`, no dentro de `.pantalla`/`.card`" que ya rige `.cta-footer-fixed`) — el override también apunta ahí sin anidarlo dentro de ninguna pantalla. `body.ev-ant-footer-visible` la togglean `_evAntActualizarFooter()`/`_evAntOcultarFooter()` (js/eventos.js) junto con el propio footer |
 
 ### Cambios recientes
+- **MANIFEST.md (Code.gs, pseudocódigo) + js/eventos.js — Enriquecimiento de asistentes/RSVP/roster con Nombre Derby y Foto de perfil, leídos de la hoja `Equipo`.**
+
+  **1) Backend (pseudocódigo, Tanda 1) — nueva `_mapaEquipoPorNombre()`, junto a `_mapaTipoIconoPorLugar()`/`_mapaRequiereReservaPorLugar()`.** Lee `Nombre de usuario`/`Nombre Derby`/`Foto de perfil` de `Equipo` (columnas A/B/BB, confirmadas por Victor) y arma un mapa por nombre normalizado (`.trim().toUpperCase()`, mismo criterio que `_evNombresCoinciden()`).
+  **2) `getEventosRango()` — el array `asistencias[]` de cada evento ahora lleva `nombreDerby`/`fotoPerfil` por persona**, mapeado una sola vez (`equipoPorNombre = _mapaEquipoPorNombre()`, afuera del loop principal, mismo criterio de eficiencia que el resto de los mapas de esta función) después del merge/dedupe Log+E/F ya existente — el orden importa: primero se resuelve QUÉ entradas sobreviven (dedupe), después se enriquece cada una, así el enriquecimiento nunca se calcula de más sobre una entrada que después se iba a descartar.
+  **3) `adminBuscarPersonasParaEvento()` — mismo enriquecimiento sobre el roster completo** (para que el buscador de "+ Agregar persona" también muestre nombre derby/foto), con una salvedad de performance a propósito: acá `_mapaEquipoPorNombre()` se llama DENTRO del loop (una vez por persona de `Equipo`, releyendo la hoja entera cada vez) en vez de una sola vez afuera — señalado con un comentario `NOTA de performance` en el pseudocódigo en vez de optimizarlo de una, ya que Victor pidió explícitamente dejarlo así y moverlo después solo si nota lentitud real.
+  **4) Frontend (`js/eventos.js`).** `_evMapEventoBackend()` ahora pasa `nombreDerby`/`fotoPerfil` a cada entrada de `asistentes[]`/`rsvps[]` (con `|| ''` de resguardo, nunca `undefined` suelto). Nombre visible: `_evAccionAdminHtml()` (lista de la card admin) y `_evGrupoAsistenciaHtml()` (grupos del detalle) muestran `nombreDerby || nombre` — `_evRenderDetalleAsistenciaReal()` (mapea `ev.asistentes` a `{nombre, sufijoRol}` para agregar el rol combinado) y el grupo "Sin respuesta" de `_evRenderDetalleAsistencia()` (que arma sus propias entradas a mano desde `res.personas`) ahora pasan `nombreDerby`/`fotoPerfil` también, para no perderlos al remapear — sin este ajuste, esos 2 grupos habrían quedado mostrando el nombre de usuario a secas pese a que el resto sí mostraba el derby. `data-nombre` del avatar se sigue armando con el nombre de usuario real (nunca el derby) — es lo que usa el fallback de inicial, no tiene sentido derivar una inicial del nombre derby de alguien más difícil de reconocer a simple vista. Fotos: `_evGrupoAsistenciaHtml()` ahora suma `data-foto` a cada avatar (mismo patrón que ya usaba `_evCardCumpleHtml()` para cumpleaños) y `_evHidratarAvatares()` lo lee y se lo pasa a `_avatarSetFotoOInicial()` en vez de mandar `null` a ciegas — el comentario que documentaba "el backend nunca manda foto por persona" se actualizó, ya no es cierto.
+
+  **Verificado con Playwright** (`index.html` real vía `http.server` local, `getEventosRango` mockeado in-page con la forma exacta que backend enriquecido devolvería): persona con `nombreDerby`+`fotoPerfil` reales → aparece como "Ana Destroyer" tanto en la lista de la card admin como en el detalle, con el avatar mostrando la foto real (`<img>`, no la inicial) y `data-nombre` conservando el nombre de usuario real (`ana.torres`) para el fallback; persona sin ninguno de los 2 → cae a `bruno.salazar` (nombre de usuario) + avatar con inicial "B", sin nada roto. Sintaxis del pseudocódigo actualizado de `Code.gs` verificada con `node --check` (467 líneas, el bloque completo de la Tanda 1) — 0 errores.
+
 - **js/eventos.js + css/eventos.css — Acordeón para la lista de asistentes admin en cards de eventos pasados (colapsada por default, exclusiva entre cards) + legibilidad de cards pasadas + diagnóstico del bug real "Agregar personas no carga la lista".**
 
   **1) Acordeón de la lista "a horario"/"tarde" (`_evAccionAdminHtml()`).** La lista de nombres+chip que ya arma esa función (usada tanto en la fila compacta de eventos pasados, `_evTimelineFilaHtml()`, como en la card completa de hoy ya arrancado, `_evCardEventoHtml()`) ahora vive colapsada detrás de un header tocable ("Asistencia (N)" + chevron) — mismo mecanismo `.abierto` + techo fijo generoso (2000px, sin medir `scrollHeight`) que ya usa el acordeón de banners de Mi Liga (`adminToggleBanner()`, css/admin.css) y el de 2 secciones del wizard de asistencia anticipada (`_evAntSetAcordeon()`, más arriba en este archivo) — ningún mecanismo nuevo, se reusó el ya estandarizado. **"Solo uno abierto a la vez" (nuevo, `_evAsistAdminAbierto`/`_evAsistAdminToggle()`):** a diferencia del acordeón del wizard (2 secciones dentro de la MISMA pantalla) o el de Mi Liga (banners+burbujas dentro del MISMO panel), acá el estado es GLOBAL sobre TODO el timeline — abrir el acordeón de una card cierra el de cualquier otra que hubiera quedado abierta, sin importar en qué fecha esté. El botón "Agregar persona" queda FUERA del acordeón (siempre visible, no hace falta expandir la lista para agregar a alguien) — a propósito, la única parte que el pedido pidió colapsar es "la lista de nombres". El estado abierto/cerrado se recalcula en cada render (`abierto = _evAsistAdminAbierto === e.id`) para sobrevivir intacto a un re-render completo del timeline (ej. `_evRenderTimeline(true)` tras `_evAgregarPersonaAEvento()`).
@@ -1130,7 +1139,7 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
   //   Asistencias:        ID Evento | Fecha | Lugar | Hora | Estado | A horario | Tarde
   //   Log de asistencias: ID Evento | Fecha del entrenamiento | Nombre | Origen | Estado | Marca temporal
   //   Venues:              Lugar | ...columnas de recurrencia... | Tipo de ícono | Requiere reserva (NUEVA, ver "Cambios recientes" -- valores 'SI'/'NO' en mayúsculas sin tilde, NO 'Sí'/'No')
-  //   Equipo:               Nombre de usuario | ... | Fecha de nacimiento | Fecha pública | Edad Pública | ...
+  //   Equipo:               Nombre de usuario (A) | Nombre Derby (B) | ... | Fecha de nacimiento | Fecha pública | Edad Pública | ... | Foto de perfil (BB)
   // ============================================================
 
   function _colIdx(headers, nombre) {
@@ -1177,6 +1186,30 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
     for (var i = 1; i < datos.length; i++) {
       var valor = String(datos[i][cRequiere] || '').toUpperCase().trim();
       mapa[datos[i][cLugar]] = valor !== 'NO'; // default true -- solo 'NO' explícito lo apaga
+    }
+    return mapa;
+  }
+
+  // Enriquece asistentes/RSVP con Nombre Derby y Foto de perfil de "Equipo"
+  // (columnas B y BB respectivamente, confirmadas por Victor) -- clave por
+  // "Nombre de usuario" (columna A, mismo identificador ya usado en todo el
+  // sistema de asistencia), normalizado igual que _evNombresCoinciden().
+  function _mapaEquipoPorNombre() {
+    var hoja = SpreadsheetApp.getActive().getSheetByName('Equipo');
+    var datos = hoja.getDataRange().getValues();
+    var headers = datos[0];
+    var cNombre = _colIdx(headers, 'Nombre de usuario');
+    var cDerby = _colIdx(headers, 'Nombre Derby');
+    var cFoto = _colIdx(headers, 'Foto de perfil');
+    var mapa = {};
+    for (var i = 1; i < datos.length; i++) {
+      var fila = datos[i];
+      var nombre = fila[cNombre];
+      if (!nombre) continue;
+      mapa[String(nombre).trim().toUpperCase()] = {
+        nombreDerby: fila[cDerby] || '',
+        fotoPerfil: fila[cFoto] || ''
+      };
     }
     return mapa;
   }
@@ -1325,6 +1358,7 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
     var requiereReservaPorLugar = _mapaRequiereReservaPorLugar();
     var asistPorEvento = _ultimaAsistenciaPorPersonaTodas();
     var asistEFPorEvento = _asistenciaEFPorEvento(); // NUEVO — ver comentario arriba
+    var equipoPorNombre = _mapaEquipoPorNombre(); // NUEVO
 
     var eventos = [];
     for (var i = 1; i < datos.length; i++) {
@@ -1380,7 +1414,16 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
         estado: fila[cEstado],
         tipoIcono: tipoIconoPorLugar[fila[cLugar]] || 'Entrenamiento',
         requiereReserva: requiereReservaPorLugar[fila[cLugar]] !== false,
-        asistencias: logFiltrado.concat(efDeEvento)
+        asistencias: logFiltrado.concat(efDeEvento).map(function (a) {
+          var datosEquipo = equipoPorNombre[String(a.nombre).trim().toUpperCase()] || {};
+          return {
+            nombre: a.nombre,
+            estado: a.estado,
+            origen: a.origen,
+            nombreDerby: datosEquipo.nombreDerby || '',
+            fotoPerfil: datosEquipo.fotoPerfil || ''
+          };
+        })
       });
     }
     eventos.sort(function (a, b) { return a.fecha < b.fecha ? -1 : (a.fecha > b.fecha ? 1 : 0); });
@@ -1501,10 +1544,17 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
     var yaMarcadas = {};
     (_ultimaAsistenciaPorPersonaTodas()[idEvento] || []).forEach(function (a) { yaMarcadas[a.nombre] = a.estado; });
     var personas = [];
+    // NOTA de performance: `_mapaEquipoPorNombre()` se llama DENTRO del loop,
+    // una vez por fila de `Equipo` -- releyendo la hoja entera cada vez, no
+    // lo más eficiente (a diferencia de `getEventosRango()`, arriba, que la
+    // llama UNA sola vez afuera del loop). Se deja así a propósito por ahora;
+    // si Victor nota lentitud acá, mover la llamada afuera del loop (una sola
+    // vez) es el mismo cambio de 1 línea que ya tiene `getEventosRango()`.
     for (var i = 1; i < datos.length; i++) {
       var nombre = datos[i][cNombre];
       if (!nombre) continue;
-      personas.push({ nombre: nombre, estadoActual: yaMarcadas[nombre] || null });
+      var datosEquipo = _mapaEquipoPorNombre()[String(nombre).trim().toUpperCase()] || {};
+      personas.push({ nombre: nombre, estadoActual: yaMarcadas[nombre] || null, nombreDerby: datosEquipo.nombreDerby || '', fotoPerfil: datosEquipo.fotoPerfil || '' });
     }
     return { personas: personas };
   }
