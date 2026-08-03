@@ -1223,13 +1223,16 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
   // case 'getCumpleañosRango':
   //   return getCumpleañosRango(e.parameter.desde, e.parameter.hasta);
   // Mismo criterio de "público"/"edad pública" que ya usa "Próximos
-  // cumpleaños" — AJUSTAR cNombre/cFNac/cFPub/cEPub a los encabezados
-  // reales de Equipo si esa feature ya existente usa otros nombres.
+  // cumpleaños" — cFNac/cFPub/cEPub a confirmar si esa feature ya
+  // existente usa otros nombres. cNombre CONFIRMADO por Victor esta
+  // sesión (ver "Cambios recientes" — el bug real "Columna no encontrada:
+  // Nombre" era justamente que este literal no coincidía con el header
+  // real de Equipo): el header real es 'Nombre de usuario', no 'Nombre'.
   function getCumpleañosRango(desde, hasta) {
     var hoja = SpreadsheetApp.getActive().getSheetByName('Equipo');
     var datos = hoja.getDataRange().getValues();
     var headers = datos[0];
-    var cNombre = _colIdx(headers, 'Nombre');
+    var cNombre = _colIdx(headers, 'Nombre de usuario');
     var cFNac = _colIdx(headers, 'Fecha de nacimiento');
     var cFPub = _colIdx(headers, 'Fecha nacimiento pública');
     var cEPub = _colIdx(headers, 'Edad pública');
@@ -1310,7 +1313,10 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
     var hojaEquipo = SpreadsheetApp.getActive().getSheetByName('Equipo');
     var datos = hojaEquipo.getDataRange().getValues();
     var headers = datos[0];
-    var cNombre = _colIdx(headers, 'Nombre');
+    // Mismo header real confirmado por Victor que getCumpleañosRango
+    // (arriba, ver "Cambios recientes") -- misma hoja Equipo, misma
+    // columna, no 'Nombre'.
+    var cNombre = _colIdx(headers, 'Nombre de usuario');
     var yaMarcadas = {};
     (_ultimaAsistenciaPorPersonaTodas()[idEvento] || []).forEach(function (a) { yaMarcadas[a.nombre] = a.estado; });
     var personas = [];
@@ -3571,3 +3577,21 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
 
   3. **⚠️ RE-CONFIRMADO, NO ES BUG DE FRONTEND — Cumpleaños ausentes del timeline.** Re-verificado hoy con `curl` directo a producción (no solo releído de la entrada anterior): `getCumpleañosRango` sigue devolviendo `{"error":"Columna no encontrada: Nombre"}` — sin cambios desde la sesión pasada, sigue siendo la hoja `Equipo` real con un encabezado que no coincide con lo que el script busca. **Gotcha encontrado de paso, para no repetirlo:** pedir esta acción por `curl` SIN url-encodear la "ñ" (`action=getCumpleañosRango` tal cual, sin `%C3%B1`) devuelve un error completamente distinto y engañoso — `{"error":"Acción no válida o no especificada."}`, como si la acción no existiera — porque Apps Script no reconoce el parámetro `action` mal codificado; con `%C3%B1` correcto sale el error real de columna. `js/eventos.js` arma la URL con `encodeURIComponent()` (`js/api.js`) así que esto NUNCA afecta a la app real, solo a pruebas manuales por terminal. Sin cambios necesarios en este repo — sigue pendiente que Victor ajuste el nombre de columna en `Equipo` o en `Code.gs`.
   4. **⚠️ RE-CONFIRMADO, NO ES BUG DE FRONTEND — Ícono de "Evento social" con apariencia de cumpleaños.** Re-verificado hoy con datos frescos de producción: `getEventosRango` devuelve `tipoIcono:"Evento social"` (string exacto) para los eventos de `Ciclopaseo`; `_EV_ICONOS['Evento social'] === 'celebration'` (`js/eventos.js`), mapeo exacto, sin caer a ningún default. El ícono `cake` sigue viviendo solo hardcodeado dentro de `_evCardCumpleHtml()`, mecanismo de render totalmente separado (elegido por `it.tipo === 'cumple'`). Mismo resultado que la sesión anterior — no reproducido, nada que corregir en el código actual.
+
+- **Backend — 2 bugs reportados por Victor tras la sesión anterior ("Acción POST no válida" al marcar asistencia; `getCumpleañosRango` rota por columna), diagnosticados con tráfico real contra producción — NINGUNO corregible DESDE ESTE REPO (`Code.gs` sigue sin vivir acá, confirmado buscando `.clasp.json`/credenciales de `clasp`/cualquier `.gs` en toda la máquina, no solo en este repo: nada), pero los 2 quedan con el fix exacto documentado — el de la columna, con el dato real que confirmó Victor; el del router, pendiente de que Victor lo pegue a mano en su `Code.gs`.**
+
+  1. **Confirmado: `marcarAsistenciaUsuario`/`adminMarcarAsistencia` no están registradas en el router `doPost(e)`.** Verificado con Playwright, no `curl` (`curl -X POST -L` sigue redirects de Apps Script de forma distinta a `fetch()` de un browser real y da falsos negativos/positivos — usado `apiPost()` real de `js/api.js`, mismo código que corre en producción, contra el backend real): las 2 acciones devuelven **`"Acción POST no válida."`** — coincide exactamente con lo reportado. Esto confirma que el `case` correspondiente no existe en el `doPost(e)` real (o no en el bloque que lee esa acción) — mismo patrón que el bug ya conocido de Asistencia anticipada.
+     **Corrección a lo ya documentado en este MANIFEST (Tanda 1, más arriba):** el pseudocódigo de `adminMarcarAsistencia` decía *"GET con adminToken (mismo patrón que `adminSetColorEnfasis`)"* — pero el frontend real (`js/eventos.js`, ya construido en la Tanda 3, después de escribirse ese pseudocódigo) la llama con `apiPost()`, no `api()` — confirmado leyendo `_evAgregarPersonaAEvento()`, línea con `apiPost({ action: 'adminMarcarAsistencia', ... })`. Pegar el `case` original en `doGet(e)` NO alcanza — el frontend nunca manda esa acción por GET. `marcarAsistenciaUsuario` sí estaba bien documentada como POST desde el principio (coincide con `_evMarcarAsistencia()`, `apiPost()`) — su problema es simplemente que el `case` nunca se agregó a `doPost(e)`.
+     **Para Victor, agregar a `doPost(e)` (junto al resto de escrituras que validan sesión, mismo grupo que `guardarReserva`):**
+     ```js
+     case 'marcarAsistenciaUsuario':
+       return marcarAsistenciaUsuario(e);
+     case 'adminMarcarAsistencia':
+       return adminMarcarAsistencia(e);
+     ```
+     Las funciones `marcarAsistenciaUsuario(e)`/`adminMarcarAsistencia(e)` en sí ya están documentadas más arriba en este MANIFEST (Tanda 1, backend) — si ya las pegaste, con sumar estos 2 `case` a `doPost(e)` alcanza; si todavía no pegaste el cuerpo de las funciones, hace falta las 2 cosas.
+     **Aviso de una duda ya documentada que puede volver a aparecer una vez resuelto esto:** `marcarAsistenciaUsuario(e)` (pseudocódigo de este MANIFEST) lee `e.parameter._token`, pero `js/eventos.js` manda el parámetro como `token` (sin guión bajo) — ver "Cambios recientes" de la sesión de conexión al backend real para el detalle de por qué se eligió ese nombre. Con el `case` ya registrado, si el próximo error pasa de "Acción POST no válida" a **"Sesión inválida."** con un token real válido, es exactamente este mismatch de nombre de parámetro — no un bug nuevo, ajustar `e.parameter._token` → `e.parameter.token` en `Code.gs` (o el frontend a `_token`, lo que sea más consistente con el resto de escrituras reales ya confirmadas de la app).
+     `adminBuscarPersonasParaEvento` (GET, vía `api()`) sí está bien registrada — confirmado con el mismo método (Playwright, tráfico real): devuelve `"Sesión admin inválida. Vuelve a iniciar sesión."`, el error de sesión esperado, no "Acción no válida" — sin cambios necesarios ahí.
+
+  2. **✅ RESUELTO (con el dato real que pasó Victor) — `getCumpleañosRango: Columna no encontrada: Nombre`.** No había forma de leer los headers reales de la hoja `Equipo` desde este repo (mismo motivo que el punto 1: sin acceso a Sheets/`Code.gs`) — se le preguntó a Victor en vez de adivinar un nombre alternativo (mismo tipo de fix especulativo que esta sesión entera vino evitando). **Confirmado por Victor: el header real de la columna de nombre en `Equipo` es `'Nombre de usuario'`, no `'Nombre'`.** Corregido en el pseudocódigo de este MANIFEST (Tanda 1, backend, más arriba) en los 2 lugares que leen esa columna de esa hoja específica: `getCumpleañosRango()` (`cNombre = _colIdx(headers, 'Nombre de usuario')`) y `adminBuscarPersonasParaEvento()` (mismo cambio, mismo motivo — ambas leen `Equipo`, nunca se había notado que la 2da tenía el mismo bug latente porque nunca llegó a probarse en la práctica, falla antes en `validarAdminToken()`). **Sin tocar** `_ultimaAsistenciaPorPersonaTodas()` (`Code.gs`, más arriba) — esa función lee `_colIdx(headers, 'Nombre')` de la hoja **`Log de asistencias`**, una hoja distinta con su propio header, que Victor no confirmó en esta sesión — puede o no tener el mismo problema, señalado pero no asumido.
+     **Para Victor:** en tu `Code.gs` real, cambiar el literal `'Nombre'` por `'Nombre de usuario'` en las 2 funciones que leen la hoja `Equipo` (`getCumpleañosRango`/`adminBuscarPersonasParaEvento`) — el pseudocódigo actualizado de este MANIFEST ya refleja el string correcto, usalo como referencia exacta.
