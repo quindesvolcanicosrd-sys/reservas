@@ -53,11 +53,16 @@ var _EV_CHIP_BADGE  = { 'A tiempo': 'badge-confirmada', 'Tarde': 'badge-pendient
 // _evTimelineFilaHtml() más abajo) -- a diferencia de _EV_CHIP_BADGE (arriba,
 // asistentes de OTRAS personas en la variante admin), este es el dato de LA
 // PROPIA persona logueada para un evento ya Finalizado: viene de si su
-// nombre aparece en la hoja "Asistencias" (columnas "A horario"/"Tarde" del
-// backend, Tanda 3) -- no del RSVP que marcó antes del evento (`miEstado`).
-// `miAsistenciaReal: null` (o el campo ausente) = "Sin registrar", sin chip
-// de color propio.
-var _EV_ASISTENCIA_REAL_BADGE = { 'A horario': 'badge-confirmada', 'Tarde': 'badge-pendiente', 'Ausente': 'badge-cancelada' };
+// nombre aparece en las columnas E/F de la hoja "Asistencias" (ver
+// "Cambios recientes" -- el backend las mezcla en `asistencias[]` con
+// `estado: 'A tiempo'`/`'Tarde'`, mismo vocabulario que ya usa
+// `_EV_CHIP_BADGE`/`_EV_ESTADOS_ROLLCALL` arriba -- bug real corregido acá:
+// estos 3 mapas tenían la clave `'A horario'`, que nunca coincidía con
+// `'A tiempo'`, el valor real; nunca se notó porque `asistencias[]` venía
+// vacío del backend hasta esta sesión) -- no del RSVP que marcó antes del
+// evento (`miEstado`). `miAsistenciaReal: null` (o el campo ausente) =
+// "Sin registrar", sin chip de color propio.
+var _EV_ASISTENCIA_REAL_BADGE = { 'A tiempo': 'badge-confirmada', 'Tarde': 'badge-pendiente', 'Ausente': 'badge-cancelada' };
 // Texto mostrado al usuario para cada estado de asistencia real (ver
 // "Cambios recientes" -- antes se mostraba la clave interna tal cual). Las
 // claves de arriba (`_EV_ASISTENCIA_REAL_BADGE`) siguen siendo las que llegan
@@ -69,7 +74,7 @@ var _EV_ASISTENCIA_REAL_BADGE = { 'A horario': 'badge-confirmada', 'Tarde': 'bad
 // segunda persona, "Llegaste"/"No asististe"), sentence case (el uppercase
 // heredado de `.badge` se saca puntualmente para estos 2 usos, ver
 // `.ev-rsvp-readonly`/`.ev-card-compacta .badge` en css/eventos.css).
-var _EV_ASISTENCIA_REAL_LABEL = { 'A horario': 'Llegué a horario', 'Tarde': 'Llegué tarde', 'Ausente': 'No asistí', 'Sin registrar': 'No asistí' };
+var _EV_ASISTENCIA_REAL_LABEL = { 'A tiempo': 'Llegué a horario', 'Tarde': 'Llegué tarde', 'Ausente': 'No asistí', 'Sin registrar': 'No asistí' };
 // Pill grande para los 4 estados de asistencia real (ver "Cambios
 // recientes" -- rediseño completado: "Ausente"/"Sin registrar" ("No
 // asistí") sumados acá, antes quedaban afuera a propósito y caían al badge
@@ -83,8 +88,8 @@ var _EV_ASISTENCIA_REAL_LABEL = { 'A horario': 'Llegué a horario', 'Tarde': 'Ll
 // Cancelado. Ícono `cancel` -- ya usado en `_EV_RESP_ICONO['No asistiré']`
 // más arriba para el mismo concepto ("no asistió"), sin introducir uno
 // nuevo.
-var _EV_ASISTENCIA_REAL_PILL_CLASE = { 'A horario': 'ev-estado-pill-success', 'Tarde': 'ev-estado-pill-warning', 'Ausente': 'ev-estado-pill-danger', 'Sin registrar': 'ev-estado-pill-danger' };
-var _EV_ASISTENCIA_REAL_PILL_ICONO = { 'A horario': 'check_circle', 'Tarde': 'schedule', 'Ausente': 'cancel', 'Sin registrar': 'cancel' };
+var _EV_ASISTENCIA_REAL_PILL_CLASE = { 'A tiempo': 'ev-estado-pill-success', 'Tarde': 'ev-estado-pill-warning', 'Ausente': 'ev-estado-pill-danger', 'Sin registrar': 'ev-estado-pill-danger' };
+var _EV_ASISTENCIA_REAL_PILL_ICONO = { 'A tiempo': 'check_circle', 'Tarde': 'schedule', 'Ausente': 'cancel', 'Sin registrar': 'cancel' };
 // Fondo ATENUADO del indicador de la barra segmentada de RSVP (pantalla de
 // detalle, `_evRsvpBarraHtml()`/`_evPosicionarRsvpSlider()` más abajo) --
 // ver "Cambios recientes": antes un fill SÓLIDO de color puro + texto

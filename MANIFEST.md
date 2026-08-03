@@ -1177,6 +1177,44 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
     hoja.appendRow(fila);
   }
 
+  // ---- Asistencia real por columnas E/F de "Asistencias" (NUEVA, ver
+  // "Cambios recientes" — regla de negocio confirmada por Victor) ----
+  // Para eventos YA PASADOS, el resultado final confirmado por quien tomó
+  // lista (columnas E/F de "Asistencias", una fila por evento) es la
+  // fuente autoritativa — por sobre cualquier intención previa marcada en
+  // "Log de asistencias" (RSVP antes del evento). CONFIRMADO por Victor,
+  // no adivinado: columna E = llegó a horario, columna F = llegó tarde,
+  // varios nombres por celda SEPARADOS POR COMA (ej. "Juan Pérez, Ana
+  // Gómez"). Leídas por POSICIÓN, no por header — Victor las nombró por
+  // letra de columna ("columna E"/"columna F"), no dio un texto de
+  // encabezado que buscar, así que a diferencia del resto de este archivo
+  // (que siempre usa `_colIdx(headers, 'nombre real')` para tolerar
+  // columnas reordenadas) acá no hay alternativa: si Victor reordena
+  // columnas en `Asistencias`, esto se rompe silenciosamente — ajustar
+  // `COL_E`/`COL_F` si eso pasa. `estado: 'A tiempo'/'Tarde'` — MISMO
+  // vocabulario que ya usa el resto de la app (`ESTADOS_ROLLCALL` de este
+  // Code.gs, `_EV_ESTADOS_ROLLCALL`/`_EV_CHIP_BADGE` de `js/eventos.js`) —
+  // no inventar un 3er nombre para el mismo concepto.
+  function _asistenciaEFPorEvento() {
+    var hoja = SpreadsheetApp.getActive().getSheetByName('Asistencias');
+    var datos = hoja.getDataRange().getValues();
+    var headers = datos[0];
+    var cId = _colIdx(headers, 'ID Evento');
+    var COL_E = 4, COL_F = 5; // E=5ta columna (índice 4), F=6ta (índice 5), 0-based
+    function nombresDeCelda(valor) {
+      return String(valor || '').split(',').map(function (n) { return n.trim(); }).filter(function (n) { return n; });
+    }
+    var porEvento = {};
+    for (var i = 1; i < datos.length; i++) {
+      var fila = datos[i];
+      var idEvento = fila[cId];
+      var lista = nombresDeCelda(fila[COL_E]).map(function (n) { return { nombre: n, estado: 'A tiempo', origen: 'Admin' }; })
+        .concat(nombresDeCelda(fila[COL_F]).map(function (n) { return { nombre: n, estado: 'Tarde', origen: 'Admin' }; }));
+      if (lista.length) porEvento[idEvento] = lista;
+    }
+    return porEvento;
+  }
+
   // ---- 1) getEventosRango(desde, hasta) — GET pública, sin adminToken ----
   // case 'getEventosRango':
   //   return getEventosRango(e.parameter.desde, e.parameter.hasta);
@@ -1197,6 +1235,7 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
     var tipoIconoPorLugar = _mapaTipoIconoPorLugar();
     var requiereReservaPorLugar = _mapaRequiereReservaPorLugar();
     var asistPorEvento = _ultimaAsistenciaPorPersonaTodas();
+    var asistEFPorEvento = _asistenciaEFPorEvento(); // NUEVO — ver comentario arriba
 
     var eventos = [];
     for (var i = 1; i < datos.length; i++) {
@@ -1212,7 +1251,18 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
         estado: fila[cEstado],
         tipoIcono: tipoIconoPorLugar[fila[cLugar]] || 'Entrenamiento',
         requiereReserva: requiereReservaPorLugar[fila[cLugar]] !== false,
-        asistencias: asistPorEvento[idEvento] || []
+        // NUEVO: se concatenan las 2 fuentes en el mismo array — RSVP (Log
+        // de asistencias, "intención") + E/F (Asistencias, "resultado real
+        // confirmado"). E/F va SEGUNDO a propósito — el frontend
+        // (`_evMapEventoBackend()`, js/eventos.js) sobrescribe con el
+        // ÚLTIMO match de cada tipo al armar `miEstado`/`miAsistenciaReal`,
+        // así que si alguna vez existieran las 2 fuentes para la misma
+        // persona+evento, E/F gana, tal como pidió Victor. El FRONTEND ya
+        // decide solo si mostrar `miEstado` (RSVP, futuro/en curso) o
+        // `miAsistenciaReal` (E/F, pasado) según `_evEsPasado()` — no hace
+        // falta que el backend también resuelva esa rama, evita 2 lugares
+        // con la misma lógica de tiempo que podrían desincronizarse.
+        asistencias: (asistPorEvento[idEvento] || []).concat(asistEFPorEvento[idEvento] || [])
       });
     }
     eventos.sort(function (a, b) { return a.fecha < b.fecha ? -1 : (a.fecha > b.fecha ? 1 : 0); });
@@ -3610,3 +3660,11 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
   **Causa real, confirmada con Playwright (`ev.rsvps` inspeccionado directamente en cada paso, contra datos reales de producción, no mockeados):** `_evMarcarAsistencia()` (la función que corre al tocar una opción de RSVP) actualizaba `ev.miEstado` (para resaltar la barra propia) pero **nunca tocaba `ev.rsvps`** — ese array queda congelado con el contenido de la última carga de `getEventosRango()` (una sola vez, al entrar a Eventos) hasta la próxima recarga completa de la pantalla. Reproducido tal cual: sobre un evento real con `rsvps.length === 1`, llamar `_evMarcarAsistencia(id, 'Asistiré')` y releer `ev.rsvps` de inmediato daba el mismo array, mismo `length === 1`, sin la persona recién marcada — mientras que `ev.miEstado` sí cambiaba a `'Asistiré'` correctamente. Como `abrirEvDetalle()` lee el evento del mismo array en memoria `_EV_EVENTOS` (sin refetch), el detalle abierto justo después de marcar heredaba ese `rsvps` viejo — de ahí el "0"/persona faltante, sin que el backend tuviera ninguna culpa (la escritura real en `Log de asistencias` sí había quedado bien, confirmado por Victor).
   **Fix:** `_evMarcarAsistencia()` ahora también actualiza `ev.rsvps` de forma optimista — saca cualquier entrada previa de la misma persona (`_evNombresCoinciden()`, mismo criterio de normalización ya usado en el resto del archivo) y agrega la nueva `{nombre: E.nombre, estado, origen:'Usuario'}` — y, si la pantalla de detalle de ESE evento está abierta en ese momento (`_evDetalleActual.id === id`), repinta el desglose (`_evRenderDetalleAsistencia(ev)`) para reflejarlo sin esperar a reabrir la pantalla. Si el POST real falla, el revert ahora también restaura `ev.rsvps` (no solo `ev.miEstado`) antes de repintar — nunca queda el detalle mostrando a alguien que en realidad no se guardó.
   **Verificado con Playwright, ambos caminos, contra producción real:** (a) éxito optimista — marcar RSVP y abrir el detalle DE INMEDIATO (sin recargar) sobre un evento real: `rsvps` pasa de 1 a 2, la tarjeta de stat "Asisten" pasa de mostrar lo viejo a `"2"`, y el nombre marcado aparece en la lista, todo antes de que el POST real (con token de prueba) siquiera resuelva; (b) revert — mismo flujo pero con un token inválido a propósito (falla real contra producción, `"Sesión inválida."`): tras el error, `rsvps` vuelve a su longitud original, `miEstado` vuelve a `null`, y el stat "Asisten" vuelve a mostrar el valor de antes — sin ningún rastro del marcado fallido.
+
+- **Regla de negocio confirmada por Victor — 2 fuentes de verdad para "mi estado de asistencia" según si el evento es pasado o futuro/en curso.** Futuro/en curso (todavía no llegó `fecha`+`horaInicio`, o está en curso): el estado mostrado es el RSVP propio de `Log de asistencias` (`Asistiré`/`No asistiré`/`No jugador`, `miEstado`) — sin cambios, ya funcionaba. Pasado (ya terminó): el estado autoritativo pasa a ser el resultado confirmado por quien tomó lista en las **columnas E/F de la hoja `Asistencias`** (`miAsistenciaReal`) — **por sobre cualquier RSVP previo**, incluso si la persona había dicho que iba a ir. Sin ninguna de las 2 columnas → "No asistí".
+
+  1. **✅ Diagnóstico: NO hacía falta ningún cambio de lógica en `js/eventos.js` para esta regla — ya estaba bien construida, solo le faltaba el dato.** `_evMapEventoBackend()` (Tanda de conexión al backend real, sesión anterior) YA separa `asistencias[]` en 2 campos independientes — `miEstado` (RSVP, si el `estado` de la entrada es una de `_EV_ESTADOS_RSVP`) y `miAsistenciaReal` (resultado real, si es una de `_EV_ESTADOS_ROLLCALL`) — y `_evRsvpBarraHtml()`/`_evAsistenciaRealHtml()` (tanto en la card como en el detalle) ya eligen cuál mostrar según `_evEsPasado(e)`, ignorando por completo `miEstado` para un evento pasado. Es decir: la prioridad "E/F gana sobre la intención previa, sin importar qué haya en Log de asistencias" YA es el comportamiento del código actual, siempre que `asistencias[]` traiga AMBOS tipos de entrada — nunca se había podido observar en la práctica porque el backend real nunca devolvió ninguna entrada de tipo E/F hasta ahora (bug de las 2 sesiones anteriores, ya resuelto/documentado).
+     **Verificado con Playwright mockeando `getEventosRango`** (3 escenarios sobre la MISMA persona, simulando el shape exacto que el backend va a devolver una vez pegado el fix de abajo — no se pudo probar contra producción real porque el backend todavía no lee E/F): evento futuro con RSVP `Asistiré` + una entrada `A tiempo` a propósito (caso que no debería darse en la práctica, para estresar la prioridad) → muestra el selector RSVP, ignora la entrada de asistencia real, como corresponde; evento pasado con RSVP `Asistiré` + entrada real `A tiempo` → muestra el chip "Llegué a horario", **no** "Asistiré" ni "No asistí" — la intención previa queda tapada, tal como pidió Victor; evento pasado con RSVP `Asistiré` pero SIN ninguna entrada real → muestra "No asistí" — confirma la regla 3.
+  2. **🐛 Bug real encontrado DURANTE esta misma verificación (no relacionado con E/F en sí, pero bloqueaba que se viera bien apenas el backend empezara a mandar datos reales) — corregido en `js/eventos.js`.** `_EV_ASISTENCIA_REAL_LABEL`/`_EV_ASISTENCIA_REAL_PILL_CLASE`/`_EV_ASISTENCIA_REAL_PILL_ICONO`/`_EV_ASISTENCIA_REAL_BADGE` (los 4 mapas que traducen `miAsistenciaReal` a texto/color/ícono) usaban la clave `'A horario'` — pero el valor real que circula en TODO el resto del sistema para ese mismo concepto es `'A tiempo'` (`_EV_ESTADOS_ROLLCALL`/`_EV_CHIP_BADGE`, más arriba en este mismo archivo; `ESTADOS_ROLLCALL` del backend, este MANIFEST; el `estado: 'A tiempo'` hardcodeado que ya escribe `_evAgregarPersonaAEvento()`). Con la clave equivocada, `_evAsistenciaRealHtml()` no encontraba ningún match para `'A tiempo'`, caía a los 2 fallbacks (`label = estadoReal` sin traducir, `clase = 'badge-sin-registrar'`) y mostraba un badge gris genérico con el texto crudo **"A tiempo"** en vez de la pill verde "Llegué a horario" — nunca se había notado porque `asistencias[]` venía vacío del backend hasta esta sesión, así que `miAsistenciaReal` nunca había valido `'A tiempo'` en la práctica. **Fix:** las 4 claves pasan de `'A horario'` a `'A tiempo'`. Verificado con el mismo mock de arriba: antes del fix, el evento "pasado con E/F" mostraba `<span class="badge ev-rsvp-readonly badge-sin-registrar">A tiempo</span>`; después, `<div class="ev-estado-pill ev-estado-pill-success"><span class="material-symbols-outlined">check_circle</span>Llegué a horario</div>`.
+  3. **Backend (`Code.gs`, fuera de este repo, no aplicable desde acá) — nueva `_asistenciaEFPorEvento()` + `getEventosRango()` actualizada, documentadas más arriba en este MANIFEST (Tanda 1, backend).** Lee las columnas E/F de `Asistencias` **por POSICIÓN** (Victor las identificó por letra de columna, no por header — a diferencia del resto de este archivo, acá no hay un nombre de encabezado que buscar con `_colIdx`), separa cada celda por coma (**confirmado por Victor**: varios nombres por celda, ej. `"Juan Pérez, Ana Gómez"`, no un nombre por fila) y arma entradas `{nombre, estado:'A tiempo'|'Tarde', origen:'Admin'}` — mismo vocabulario que ya usa el resto del sistema, sin inventar un 3er nombre para el mismo concepto. `getEventosRango()` concatena esto DESPUÉS de lo que ya trae `_ultimaAsistenciaPorPersonaTodas()` (Log de asistencias) en el mismo campo `asistencias[]` — el orden importa: el frontend se queda con el ÚLTIMO match de cada tipo, así que si alguna vez coexistieran las 2 fuentes para la misma persona+evento, E/F gana, tal como pidió Victor. **A propósito, el backend NO decide por sí solo si el evento es pasado o futuro** — esa rama ya la resuelve el frontend (`_evEsPasado()`, punto 1 de arriba) con los datos ya combinados; duplicar esa lógica de tiempo en 2 lugares (backend Y frontend) sería más código con más riesgo de desincronizarse, sin ninguna ventaja real.
+     **Para Victor:** pegar `_asistenciaEFPorEvento()` (nueva) y la versión actualizada de `getEventosRango()` (agrega la línea `var asistEFPorEvento = ...` y cambia `asistencias: asistPorEvento[idEvento] || []` por el `.concat(...)`) desde el pseudocódigo de este MANIFEST, más arriba (Tanda 1, backend) — sin acceso a `Code.gs` desde este repo, no se pudo aplicar ni desplegar desde acá.
