@@ -214,6 +214,19 @@ function _evHoraDeISO(iso) {
   if (isNaN(d.getTime())) return '';
   return _evPad(d.getHours()) + ':' + _evPad(d.getMinutes());
 }
+// Compara 2 nombres tolerando mayúsculas/espacios de más -- el nombre que
+// llega en `asistencias[]` sale de "Log de asistencias" (tipeado a mano por
+// quien pasa lista), mientras que `E.nombre` sale de la fila de "Equipo" vía
+// login -- son 2 hojas distintas escritas en momentos distintos, sin ninguna
+// garantía real de que coincidan carácter a carácter aunque refieran a la
+// misma persona (bug real encontrado: la comparación exacta `===` dejaba a
+// alguien con asistencia real registrada cayendo en "No asistí"/"Sin
+// responder" por una diferencia de mayúsculas o un espacio de más). Mismo
+// criterio de normalización que ya usa `_mapaRequiereReservaPorLugar()` en el
+// backend documentado (MANIFEST.md) para el mismo tipo de problema.
+function _evNombresCoinciden(a, b) {
+  return !!a && !!b && String(a).trim().toUpperCase() === String(b).trim().toUpperCase();
+}
 // Adapta UN evento crudo de getEventosRango() (idEvento/tipoIcono/
 // horaInicio-horaFin ISO/asistencias[]) a la forma que ya espera el resto de
 // este archivo (id/tipo/horaInicio "HH:MM"/miEstado/miAsistenciaReal/
@@ -225,17 +238,18 @@ function _evHoraDeISO(iso) {
 // una asistencia real tomada por el admin (ESTADOS_ROLLCALL, después) -- acá
 // se separan en 2 arrays distintos (rsvps/asistentes) según cuál de las 2
 // listas contenga ese valor exacto, y la propia fila de `E.nombre` alimenta
-// miEstado/miAsistenciaReal según corresponda.
+// miEstado/miAsistenciaReal según corresponda (comparación normalizada, ver
+// `_evNombresCoinciden()` arriba).
 function _evMapEventoBackend(raw) {
   var miEstado = null, miAsistenciaReal = null;
   var asistentes = [], rsvps = [];
   (raw.asistencias || []).forEach(function(a) {
     if (_EV_ESTADOS_ROLLCALL.indexOf(a.estado) !== -1) {
       asistentes.push({ nombre: a.nombre, estado: a.estado });
-      if (a.nombre === E.nombre) miAsistenciaReal = a.estado;
+      if (_evNombresCoinciden(a.nombre, E.nombre)) miAsistenciaReal = a.estado;
     } else if (_EV_ESTADOS_RSVP.indexOf(a.estado) !== -1) {
       rsvps.push({ nombre: a.nombre, estado: a.estado });
-      if (a.nombre === E.nombre) miEstado = a.estado;
+      if (_evNombresCoinciden(a.nombre, E.nombre)) miEstado = a.estado;
     }
   });
   return {
@@ -329,6 +343,27 @@ document.addEventListener('click', function(e) {
   if (menu && !menu.contains(e.target)) _evFabCerrar();
 });
 
+// Skeleton de #ev-timeline mientras _evCargarDatosReales() espera la
+// respuesta real -- reemplaza el loader de pantalla completa que tenía antes
+// (ver "Cambios recientes"), mismo criterio ya establecido en este mismo
+// archivo (`_evAntSkeletonHtml()`, `eventosAbrirAnticipada()`) y en
+// `_skeletonFechasHtml()`/`cargarFechas()` (js/reservas.js): navegar a la
+// pantalla de una, con un skeleton CONTENIDO en el lugar real del contenido,
+// en vez de bloquear la navegación detrás de un overlay. Reusa `.ev-card`
+// real (para que el ancho/padding/radio coincidan con las cards reales que
+// lo van a reemplazar) + el shimmer ya existente `.fi-skel-block` con las
+// mismas 3 formas que `_evAntSkeletonHtml()` (ícono 42px + 2 barras).
+function _evTimelineSkeletonHtml() {
+  var carta = '<div class="ev-card"><div class="ev-card-top-row">' +
+    '<div class="fi-skel-block ev-ant-skel-icon"></div>' +
+    '<div class="ev-card-body">' +
+      '<div class="fi-skel-block ev-ant-skel-title"></div>' +
+      '<div class="fi-skel-block ev-ant-skel-sub"></div>' +
+    '</div>' +
+  '</div></div>';
+  return carta.repeat(5);
+}
+
 /* ── Punto de entrada (ver 'entrar' de APP_BOTTOM_NAV_ITEMS en js/ui.js) ── */
 function irEventos() {
   if (_evYaInicializadoEnSesion) {
@@ -355,20 +390,16 @@ function irEventos() {
   // resuelve en ir()/js/ui.js (mismo criterio que #home-nav/#s4-nav ahí),
   // no acá -- irEventos() ya no necesita tocar ningún botón "+" propio.
   _evActualizarBotonesFiltro();
-  // Carga real (ver _evCargarDatosReales() más arriba) ANTES de mostrar la
-  // pantalla -- mismo patrón que el resto de la app para "entrar a una
-  // sección que depende de un fetch" (ej. `mostrarCargando('Cargando tus
-  // reservas...')` en restaurarSesion(), js/auth.js): overlay de carga,
-  // pedido, y recién con los datos ya en _EV_EVENTOS/_EV_CUMPLEANOS se
-  // pinta el timeline y se revela la pantalla -- sin esto se vería un
-  // timeline vacío por una fracción de segundo en cada entrada.
-  mostrarCargando('Cargando eventos...');
+  // Skeleton en vez de loader de pantalla completa (ver _evTimelineSkeletonHtml()
+  // arriba) -- se navega a la pantalla de inmediato, ANTES de que la carga
+  // real resuelva, mismo criterio que cargarFechas()/eventosAbrirAnticipada().
+  var cont = document.getElementById('ev-timeline');
+  if (cont) cont.innerHTML = _evTimelineSkeletonHtml();
+  volver('s-eventos');
   _evCargarDatosReales(function() {
-    ocultarCargando();
     _evRenderTimeline(true);
-    volver('s-eventos');
-    // `ir()` (js/ui.js) ya dispara su propio `window.scrollTo(0,0)`
-    // instantáneo al cambiar de pantalla -- este setTimeout(50) corre
+    // `ir()` (js/ui.js) ya disparó su propio `window.scrollTo(0,0)`
+    // instantáneo al cambiar de pantalla, arriba -- este setTimeout(50) corre
     // DESPUÉS (mismo criterio que el resto del archivo: offsetHeight/
     // getBoundingClientRect de una pantalla recién visible no son reales
     // hasta el siguiente tick) y lo reemplaza por un salto instantáneo
@@ -2413,9 +2444,14 @@ function _evRenderDetalleAsistencia(ev) {
   var idEvento = ev.id;
   api({ action: 'adminBuscarPersonasParaEvento', adminToken: _adminToken, idEvento: idEvento }, function(res) {
     if (!_evDetalleActual || _evDetalleActual.id !== idEvento || _evDetalleFiltroGrupo) return;
+    // Claves normalizadas (ver _evNombresCoinciden()) -- rsvps[].nombre sale
+    // de "Log de asistencias" y res.personas[].nombre de "Equipo", 2 hojas
+    // distintas sin garantía de coincidir carácter a carácter para la misma
+    // persona (mismo bug real que _evMapEventoBackend(), acá aplicado al
+    // cruce con el roster completo en vez de con E.nombre solo).
     var respondieron = {};
-    rsvps.forEach(function(p) { respondieron[p.nombre] = true; });
-    var sinResponder = (res.personas || []).filter(function(p) { return !respondieron[p.nombre]; }).map(function(p) { return { nombre: p.nombre }; });
+    rsvps.forEach(function(p) { respondieron[String(p.nombre).trim().toUpperCase()] = true; });
+    var sinResponder = (res.personas || []).filter(function(p) { return !respondieron[String(p.nombre).trim().toUpperCase()]; }).map(function(p) { return { nombre: p.nombre }; });
     _evPintarStatsAsistencia(grupos.concat([{ key: _EV_GRUPO_SIN_RESPONDER.key, label: _EV_GRUPO_SIN_RESPONDER.label, clase: _EV_GRUPO_SIN_RESPONDER.clase, personas: sinResponder }]));
   }, function() { /* silencioso -- el resto de la pantalla ya funciona sin este grupo */ });
 }
