@@ -360,14 +360,33 @@ function _evCargarDatosReales(onListo) {
 // viaja en `e.asistentes`, cargado con `getEventosRango()`), evitando
 // releer "Log de asistencias" para nada.
 var _evRosterEquipo = null;
+// Diagnóstico (ver "Cambios recientes" -- bug real reportado: "Marcar
+// asistencia" mostraba "No se pudo cargar el equipo" después de unos
+// segundos, sin ningún request nuevo visible en Network AL ABRIR LA
+// SUBPANTALLA). Instrumentado con console.log/warn en vez de arreglar a
+// ciegas, según pedido explícito de Victor -- confirma en la consola real
+// (no solo acá) los 3 puntos de la cadena: (1) si esta función se llama de
+// verdad al entrar a Eventos, (2) si el request a `adminGetRosterEquipo`
+// sale de verdad en ESE momento (no al abrir la subpantalla -- por diseño,
+// la subpantalla NUNCA pide nada nuevo, reusa lo que esto ya cargó), (3) si
+// el resultado (éxito o error) llega y se guarda. El `console.warn` del
+// error (antes silencioso, `_evRosterEquipo = []` sin dejar rastro) usa el
+// mismo criterio ya establecido en este archivo para errores degradados sin
+// toast (ver `getCumpleañosRango`, más arriba) -- expone el mensaje real del
+// backend en vez de esconderlo detrás de un roster vacío indistinguible de
+// "el equipo no tiene nadie cargado".
 function _evPrecargarRoster() {
   _evRosterEquipo = null;
+  if (window.console) console.log('Eventos: _evPrecargarRoster() llamada -- _adminToken=' + (_adminToken ? 'presente' : 'AUSENTE'));
   if (!_adminToken) return;
+  if (window.console) console.log('Eventos: pidiendo adminGetRosterEquipo...');
   api({ action: 'adminGetRosterEquipo', adminToken: _adminToken }, function(res) {
     _evRosterEquipo = res.personas || [];
+    if (window.console) console.log('Eventos: adminGetRosterEquipo OK -- ' + _evRosterEquipo.length + ' personas');
     _evRepintarMarcarAsistSiHaceFalta();
-  }, function() {
+  }, function(e) {
     _evRosterEquipo = []; // degrada a "sin resultados" -- nunca un loader infinito
+    if (window.console) console.warn('Eventos: adminGetRosterEquipo falló -- ' + (e && e.message || 'error') + ' (revisar si adminGetRosterEquipo está desplegada en Code.gs, ver MANIFEST.md)');
     _evRepintarMarcarAsistSiHaceFalta();
   });
 }
@@ -442,6 +461,26 @@ function _evTimelineSkeletonHtml() {
 function irEventos() {
   if (_evYaInicializadoEnSesion) {
     _evRestaurarScrollTimeline = true;
+    // Bug real (ver "Cambios recientes"): `_evPrecargarRoster()` -- más
+    // abajo, "precarga UNA sola vez por sesión" -- solo se llamaba en la
+    // rama de INICIALIZACIÓN completa (la de abajo, primera visita real a
+    // Eventos), nunca acá. Si esa primera visita ocurrió ANTES de que
+    // `_adminToken` estuviera listo (carrera con la restauración de sesión
+    // admin async, `window.onload`/`restaurarSesion()`, js/auth.js -- caso
+    // real posible: alguien navega a Eventos apenas carga la página, antes
+    // de que el token admin termine de restaurarse), `_evPrecargarRoster()`
+    // se ejecutaba, veía `_adminToken` todavía vacío y retornaba sin pedir
+    // nada -- `_evRosterEquipo` quedaba en `null` PARA SIEMPRE, porque
+    // ninguna visita siguiente a Eventos esta sesión iba a volver a llamar
+    // esa función (esta rama de acá, la de "ya inicializado", nunca la
+    // tocaba). Reintento barato acá: si el roster nunca llegó a cargarse
+    // (`null`, no `[]` -- distinto de "cargó y no hay nadie"), reintentar es
+    // gratis -- la propia función ya es un no-op si `_adminToken` sigue sin
+    // estar, y si ya está, dispara el único request real que faltaba.
+    if (_evRosterEquipo === null) {
+      if (window.console) console.log('Eventos: irEventos() ya inicializado esta sesión, pero _evRosterEquipo sigue null -- reintentando _evPrecargarRoster()');
+      _evPrecargarRoster();
+    }
     volver('s-eventos');
     return;
   }
@@ -2006,6 +2045,16 @@ function _evRenderMarcarAsistLista(q) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === _evMarcarAsistIdEvento; })[0];
   var cont = document.getElementById('ev-marcar-lista');
   if (!ev || !cont) return;
+  // Diagnóstico (ver "Cambios recientes", punto 3 del pedido de Victor --
+  // confirmar si esta pantalla accede al resultado ya cacheado, o si se
+  // pierde en algún punto): loguea el estado de `_evRosterEquipo` en el
+  // momento exacto en que la subpantalla intenta pintarse -- si acá dice
+  // "null" mucho después de haber entrado a Eventos, la precarga nunca
+  // resolvió (ver _evPrecargarRoster()); si dice un array (aunque sea
+  // `[]`), la variable de módulo SÍ es accesible desde acá -- el problema,
+  // si lo hay, está en cómo/si `_evPrecargarRoster()` la llenó, no en el
+  // scoping.
+  if (window.console) console.log('Eventos: _evRenderMarcarAsistLista() -- _evRosterEquipo=' + (_evRosterEquipo === null ? 'null (todavía sin cargar)' : '[' + _evRosterEquipo.length + ' personas]'));
   if (_evRosterEquipo === null) { cont.innerHTML = '<div class="ev-roster-vacio">Cargando equipo...</div>'; return; }
   cont.innerHTML = _evRosterAdminFilasHtml(ev, q);
   // Sin animar (`false`) -- primer pintado de estas filas, no una respuesta
