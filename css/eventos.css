@@ -483,35 +483,46 @@
    cursor:pointer ahí sería una afordancia falsa. */
 .ev-card:not(.ev-card-cumple) { cursor: pointer; }
 
-/* ── Variante admin: roster de asistencia en la card (ver "Cambios
-   recientes" -- rediseño) + "Agregar/corregir asistencia" del DETALLE
-   (`.ev-btn-agregar-persona`/`.ev-persona-row`, más abajo -- ese flujo de
-   sheet remota sigue existiendo, solo se sacó de las CARDS). ──────────── */
+/* ── Variante admin: lista de asistentes de la CARD (chips, acordeón
+   colapsable) + roster de gestión del DETALLE (buscador + sliders, más
+   abajo) + "Agregar persona" (bottom sheet remoto, usado por la card).
+   ──────────────────────────────────────────────────────────────────── */
 .ev-asistentes-list { margin-top: 10px; }
-/* Acordeón de la lista de nombres (ver "Cambios recientes" -- colapsada por
-   default): mismo TIPO de mecanismo que `.admin-dash-banner-*`
+/* Acordeón de la lista de nombres de la CARD (ver "Cambios recientes" --
+   colapsada por default): mismo TIPO de mecanismo que `.admin-dash-banner-*`
    (css/admin.css, `adminToggleBanner()`) y `.ev-ant-acc-*` (más abajo en
    este archivo) -- techo fijo generoso en vez de medir `scrollHeight` en
-   cada toggle, ver `_evAsistAdminToggle()`/js/eventos.js. */
+   cada toggle, ver `_evAsistAdminToggle()`/js/eventos.js. **Sin cambios**
+   en esta sesión -- una tanda anterior había reemplazado el CONTENIDO de
+   este acordeón por el roster+buscador (ver más abajo), revertido acá: el
+   contenido vuelve a ser la lista de chips (`.ev-asistente-row`, más abajo)
+   + "Agregar persona" (`.ev-btn-agregar-persona`, más abajo). */
 .ev-asist-admin-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 2px; cursor: pointer; }
 .ev-asist-admin-header-titulo { font-size: 0.78rem; font-weight: 700; color: var(--text-2); }
 .ev-asist-admin-chevron { color: var(--muted); font-size: 1.1rem; transition: transform 0.3s; flex-shrink: 0; }
 .ev-asist-admin-header.abierto .ev-asist-admin-chevron { transform: rotate(180deg); }
 .ev-asist-admin-body { max-height: 0; overflow: hidden; transition: max-height 0.35s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease; opacity: 0; }
 .ev-asist-admin-body.abierto { max-height: 2000px; opacity: 1; }
-.ev-asist-admin-body-inner { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; }
-/* Roster completo con buscador (ver "Cambios recientes" -- reemplaza la
-   lista corta de chips + "Agregar persona" que vivía acá antes, ver
-   ~~.ev-asistente-row~~/~~.ev-asistente-nombre~~ eliminadas, sin más
-   consumidores). `.ev-roster-search` mismo look que otros buscadores
-   instantáneos chicos de la app (ej. `#admin-destino-search`,
-   css/admin.css) -- inline por ese componente puntual, acá con clase
-   propia por ser HTML generado desde JS. `.ev-roster-lista` con techo
-   propio + scroll interno (independiente del techo del acordeón entero,
-   `.ev-asist-admin-body.abierto`) para que un equipo grande no estire la
-   card hasta el infinito. */
+.ev-asist-admin-body-inner { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; }
+.ev-asistente-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-light); }
+.ev-asistente-row:last-child { border-bottom: none; }
+.ev-asistente-nombre { font-size: 0.8rem; font-weight: 600; color: var(--text); }
+/* Roster completo con buscador del DETALLE de un evento (ver "Cambios
+   recientes" -- reemplaza el botón "Agregar o corregir asistencia" +
+   bottom sheet remoto que vivía en `#ev-detalle-gestion-admin`; NO es
+   contenido de la card, esa sigue con la lista de chips de arriba).
+   `.ev-roster-search` mismo look que otros buscadores instantáneos chicos
+   de la app (ej. `#admin-destino-search`, css/admin.css) -- inline por ese
+   componente puntual, acá con clase propia por ser HTML generado desde JS.
+   `.ev-roster-lista` con techo propio + scroll interno para que un equipo
+   grande no estire la pantalla de detalle hasta el infinito. */
+/* Sin `.ev-detalle-section` propia (comparte la de "Asistencia" con las
+   tarjetas/lista de arriba, ver index.html) -- margen propio contra
+   `#ev-detalle-asistencia-lista`, que no lo trae (último elemento visual
+   antes de esto en cualquier otro contexto donde se use ese componente). */
+#ev-detalle-gestion-admin { margin-top: 18px; }
 .ev-roster-search {
-  width: 100%; padding: 9px 12px; border-radius: 10px; border: 1.5px solid var(--border-light);
+  width: 100%; padding: 9px 12px; margin-bottom: 10px; border-radius: 10px; border: 1.5px solid var(--border-light);
   background: var(--surface-light); color: var(--text); font-size: 0.8rem; font-family: inherit;
 }
 .ev-roster-lista { display: flex; flex-direction: column; max-height: 320px; overflow-y: auto; }
