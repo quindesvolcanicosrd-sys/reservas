@@ -3938,7 +3938,14 @@ function _evAntAplicar() {
     // Hardcodeado: la asistencia anticipada aplica únicamente a
     // Entrenamientos (ver "Cambios recientes" -- Torneos/Asambleas no son
     // recurrentes, ya no hay selector de tipos de evento en el wizard).
-    tiposEvento: JSON.stringify(['Entrenamiento']),
+    // Bug real corregido (ver "Cambios recientes" -- reportado por Victor):
+    // iba con `JSON.stringify(['Entrenamiento'])` -> `'["Entrenamiento"]'`,
+    // con corchetes y comillas -- el backend (`_resolverAsistenciaAnticipada`,
+    // Code.gs) NO parsea JSON acá, hace `split(',')` sobre un string simple.
+    // `.join(',')` da el formato real que espera ("Entrenamiento", o
+    // "Entrenamiento,Torneo" si este array hardcodeado alguna vez suma un
+    // 2do valor).
+    tiposEvento: ['Entrenamiento'].join(','),
     estado: _evAntData.estado
   };
   if (_evAntData.tipoRango === 'meses') payload.meses = JSON.stringify(_evAntData.meses);
