@@ -529,7 +529,11 @@
 .ev-rsvp-seg-roster .ev-rsvp-opt { padding: 7px 4px; font-size: 0.6rem; }
 .ev-rsvp-seg-roster .ev-rsvp-opt .material-symbols-outlined { font-size: 15px; }
 .ev-btn-agregar-persona {
-  margin-top: 10px; width: 100%; padding: 9px; border-radius: 10px; border: 1.5px dashed var(--border-mid);
+  /* margin-bottom, no margin-top (ver "Cambios recientes" -- reposicionado
+     arriba de "Asistencia (N)"): ahora es el primer hijo de
+     .ev-asistentes-list, el espacio de arriba ya lo da el margin-top del
+     contenedor; acá hace falta el espacio de ABAJO, antes del header. */
+  margin-bottom: 10px; width: 100%; padding: 9px; border-radius: 10px; border: 1.5px dashed var(--border-mid);
   background: transparent; color: var(--muted); font-size: 0.76rem; font-weight: 700; cursor: pointer;
   font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all 0.15s;
 }
@@ -646,14 +650,21 @@
 .ev-stat-no-asisten.activa { border-color: var(--danger); background: var(--danger-bg); }
 .ev-stat-no-jugador.activa { border-color: var(--amber-dark); background: var(--warning-bg); }
 .ev-stat-sin-respuesta.activa { border-color: var(--muted); background: var(--surface-2); }
-/* Botón "Marcar asistencia" (ver "Cambios recientes", diseño final -- ocupa
+/* Botón "Tomar asistencia" (ver "Cambios recientes", diseño final -- ocupa
    el lugar donde antes vivía la card "Ausentes" en la fila de estadísticas
    de un evento pasado, admin-only, ver _evStatCardMarcarAsistenciaHtml()/
    js/eventos.js). `<button>` real en vez de `<div>` -- reusa `.ev-stat-card`
    tal cual (mismo tamaño/padding/radio que el resto de la fila) más este
    modificador, que solo pisa lo que hace falta para que se vea como acción
-   (ícono/color de marca) en vez de como una estadística clickeable-para-filtrar. */
-.ev-stat-marcar { font: inherit; color: var(--brand); }
+   (ícono/color de marca) en vez de como una estadística clickeable-para-filtrar.
+   `grid-column: span 2` (ver "Cambios recientes" -- pedido explícito:
+   ensanchar aprovechando el espacio libre) -- `_EV_GRUPOS_ASISTENCIA_REAL`
+   solo tiene 2 entradas, así que este botón es el 3er ítem de `.ev-stats-grid`
+   (4 columnas) -- sin el span, la 4ta columna quedaba vacía a la derecha.
+   Borde dashed (antes sólido transparente, heredado de `.ev-stat-card`) --
+   mismo estilo que `.ev-btn-agregar-persona` (la card de home), para
+   diferenciarlo visualmente de las tarjetas de borde continuo. */
+.ev-stat-marcar { font: inherit; color: var(--brand); grid-column: span 2; border-style: dashed; border-color: var(--border-mid); }
 .ev-stat-marcar .material-symbols-outlined { font-size: 20px; }
 .ev-stat-marcar .ev-stat-label { color: var(--brand); }
 .ev-stat-marcar:hover { border-color: var(--brand); background: var(--brand-lightest); }

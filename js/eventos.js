@@ -569,6 +569,20 @@ function _evRestaurarTab(pantallaGuardada) {
     setTimeout(function() { _evUpdateRsvpSliders(false); }, 50);
     return;
   }
+  // Bug real corregido (ver "Cambios recientes"): esta rama faltaba --
+  // `s-eventos-marcar-asistencia` sí está en `_BOTTOM_NAV_EXTRA` (js/ui.js,
+  // así que `_bottomNavUltimaPantalla['eventos']` SÍ queda con este id), pero
+  // sin una rama acá caía al fallback `irEventos()` de más abajo, que resetea
+  // a la raíz -- volver a Eventos desde otro tab mientras esta subpantalla
+  // estaba abierta perdía la subpantalla en vez de reaparecer en ella (mismo
+  // síntoma general que ya se había corregido para detalle/anticipada, esta
+  // quedó afuera por ser nueva). `_evMarcarAsistIdEvento` sigue en memoria
+  // (nunca se limpia al salir) -- alcanza con reusarlo para repintar la lista.
+  if (pantallaGuardada === 's-eventos-marcar-asistencia' && document.getElementById('s-eventos-marcar-asistencia') && _evMarcarAsistIdEvento) {
+    ir('s-eventos-marcar-asistencia');
+    _evRenderMarcarAsistLista('');
+    return;
+  }
   irEventos();
 }
 
@@ -1950,12 +1964,13 @@ function _evMarcarAsistencia(id, estado) {
    render (`abierto` calculado contra `_evAsistAdminAbierto` al armar el
    HTML) para sobrevivir a un re-render completo del timeline.
 
-   El botón "Agregar persona" de esta lista navega a la subpantalla
-   dedicada "Marcar asistencia" (`_evAbrirMarcarAsistencia()`, ver más abajo
-   -- consolidación final, ver MANIFEST.md) -- MISMO componente que el botón
-   equivalente del detalle de un evento (reemplaza a la card "Ausentes" ahí),
-   ambos puntos de entrada reusan el roster precargado (`_evRosterEquipo`/
-   `_evPrecargarRoster()`, más arriba) y las filas que arma
+   El botón "Tomar asistencia" (ver "Cambios recientes" -- texto y posición:
+   antes decía "Agregar persona" y vivía debajo de "Asistencia (N)", ahora
+   arriba del todo) navega a la subpantalla dedicada (`_evAbrirMarcarAsistencia()`,
+   ver más abajo -- consolidación final, ver MANIFEST.md) -- MISMO componente
+   que el botón equivalente del detalle de un evento (reemplaza a la card
+   "Ausentes" ahí), ambos puntos de entrada reusan el roster precargado
+   (`_evRosterEquipo`/`_evPrecargarRoster()`, más arriba) y las filas que arma
    `_evRosterAdminFilasHtml()`. */
 var _evAsistAdminAbierto = null;
 function _evAsistAdminSetAbierto(id, abrir) {
@@ -1984,8 +1999,11 @@ function _evAccionAdminHtml(e) {
   var abierto = _evAsistAdminAbierto === e.id;
   // stopPropagation: mismo motivo que _evRsvpBarraHtml() -- la card entera
   // ahora es clickeable (abre el detalle), esto evita que tocar el header,
-  // una fila o "Agregar persona" también dispare ese click.
+  // una fila o "Tomar asistencia" también dispare ese click.
+  // Orden (ver "Cambios recientes" -- pedido explícito de Victor): el botón
+  // va PRIMERO, arriba de "Asistencia (N)" -- antes vivía debajo del todo.
   return '<div class="ev-asistentes-list" onclick="event.stopPropagation()">' +
+    '<button class="ev-btn-agregar-persona" onclick="_evAbrirMarcarAsistencia(\'' + e.id + '\',\'s-eventos\')"><span class="material-symbols-outlined">person_add</span>Tomar asistencia</button>' +
     '<div class="ev-asist-admin-header' + (abierto ? ' abierto' : '') + '" id="ev-asist-admin-header-' + e.id + '" onclick="_evAsistAdminToggle(\'' + e.id + '\')">' +
       '<span class="ev-asist-admin-header-titulo">Asistencia (' + asistentes.length + ')</span>' +
       '<span class="material-symbols-outlined ev-asist-admin-chevron">expand_more</span>' +
@@ -1995,7 +2013,6 @@ function _evAccionAdminHtml(e) {
         (filas || '<div style="font-size:0.76rem;color:var(--muted);">Nadie ha marcado todavía.</div>') +
       '</div>' +
     '</div>' +
-    '<button class="ev-btn-agregar-persona" onclick="_evAbrirMarcarAsistencia(\'' + e.id + '\',\'s-eventos\')"><span class="material-symbols-outlined">person_add</span>Agregar persona</button>' +
   '</div>';
 }
 // Subpantalla dedicada "Marcar asistencia" (ver "Cambios recientes" --
@@ -2022,8 +2039,18 @@ function _evAbrirMarcarAsistencia(idEvento, origen) {
   if (!_adminToken) return;
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
   if (!ev) return;
+  var origenFinal = origen || 's-eventos';
+  // Bug real corregido (ver "Cambios recientes" -- scroll del timeline
+  // perdido al volver de esta subpantalla): a diferencia de `abrirEvDetalle()`,
+  // esta función nunca guardaba `_evTimelineScrollY` antes de navegar afuera
+  // de `s-eventos` -- quedó afuera del mecanismo de preservación de scroll
+  // por ser nueva. Solo cuando SE ABANDONA el timeline en sí (origen
+  // 's-eventos'): si se entra desde el detalle (origen 's-eventos-detalle'),
+  // no hay que tocar nada acá -- ya quedó guardado por `abrirEvDetalle()` al
+  // entrar ahí, y pisarlo con `window.scrollY` del DETALLE lo rompería.
+  if (origenFinal === 's-eventos') { _evGuardarScrollTimeline(); _evRestaurarScrollTimeline = true; }
   _evMarcarAsistIdEvento = idEvento;
-  _evMarcarAsistOrigen = origen || 's-eventos';
+  _evMarcarAsistOrigen = origenFinal;
   var s = document.getElementById('ev-marcar-search'); if (s) s.value = '';
   ir('s-eventos-marcar-asistencia');
   _evRenderMarcarAsistLista('');
@@ -2407,16 +2434,24 @@ function _evTimelineFilaHtml(e) {
 // en un único timeline). Reusa `_formatarFechaRelativa()` (js/home.js, ya
 // usada por las cards de "Nueva Reserva" para "Mañana"/"Este Sábado") en vez
 // de reimplementar ese cálculo de días acá: se le arma el mismo formato de
-// entrada que espera ("DD de MES") y se interpreta su resultado. Solo 2
-// buckets a propósito -- MAÑANA y PRÓXIMA SEMANA (pedido explícito, ver
-// "Cambios recientes"; la versión vieja pre-unificación también tenía
-// "PASADO MAÑANA", no restaurado acá) -- el resto de días de esta semana no
-// llevan separador propio.
+// entrada que espera ("DD de MES") y se interpreta su resultado. 3 buckets --
+// MAÑANA, ESTA SEMANA (ver "Cambios recientes" -- nuevo, pedido explícito de
+// Victor: sin esto, un evento a mitad de semana sin nada mañana quedaba sin
+// separador propio, dando la sensación de que todo lo que sigue después de
+// "Hoy" ya es la semana próxima) y PRÓXIMA SEMANA (la versión vieja
+// pre-unificación también tenía "PASADO MAÑANA", no restaurado acá). "ESTA
+// SEMANA" es un bucket CANDIDATO acá -- devuelto siempre que la fecha caiga
+// en el resto de la semana actual, sin importar si mañana tiene contenido o
+// no; el gating real ("solo si NO hubo nada mañana") vive en el loop de
+// `_evRenderTimeline()` (consulta `bucketsMostrados['MAÑANA']`, que a esa
+// altura del recorrido ascendente ya sabe si mañana se mostró o no) -- esta
+// función no tiene esa información, solo conoce la fecha que le pasan.
 function _evBucketRelativo(iso) {
   var d = _evParseISO(iso);
   var label = _formatarFechaRelativa(d.getDate() + ' de ' + NOMBRES_MESES[d.getMonth()]);
   if (label === 'Mañana') return 'MAÑANA';
-  return _evEsProximaSemana(iso) ? 'PRÓXIMA SEMANA' : null;
+  if (_evEsProximaSemana(iso)) return 'PRÓXIMA SEMANA';
+  return _evEsRestoDeSemana(iso) ? 'ESTA SEMANA' : null;
 }
 // "Próxima semana" = bloque Lunes-Domingo siguiente a la semana actual
 // (pedido explícito, semana empieza en lunes) -- la semana actual termina en
@@ -2429,6 +2464,21 @@ function _evEsProximaSemana(iso) {
   var finProxima = new Date(inicioProxima); finProxima.setDate(finProxima.getDate() + 6);
   var d = _evParseISO(iso);
   return d >= inicioProxima && d <= finProxima;
+}
+// "Esta semana" = de pasado-mañana hasta el domingo que viene inclusive
+// (ver "Cambios recientes", nuevo) -- rango justo ANTERIOR y adyacente a
+// `_evEsProximaSemana()` (nunca se solapan: éste termina el domingo, aquél
+// empieza el lunes siguiente). Si hoy es domingo, `finSemana` cae en hoy
+// mismo y "mañana" ya es el lunes siguiente (fuera de este rango) -- no hay
+// "resto de semana" que mostrar, correcto: no queda ningún día de esta
+// semana después de mañana.
+function _evEsRestoDeSemana(iso) {
+  var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  var manana = new Date(hoy); manana.setDate(manana.getDate() + 1);
+  var diasHastaFinDeSemana = (7 - hoy.getDay()) % 7;
+  var finSemana = new Date(hoy); finSemana.setDate(finSemana.getDate() + diasHastaFinDeSemana);
+  var d = _evParseISO(iso);
+  return d > manana && d <= finSemana;
 }
 // Filtrado + orden compartido por el render real (`_evRenderTimeline()`) y
 // por el chequeo de "¿el mes X tiene contenido?" (`_evCalIrAFechaEnTimeline()`)
@@ -2524,6 +2574,12 @@ function _evRenderTimeline(instant, alTerminar) {
     }
     if (_evFechaCmp(fecha, hoy) > 0) {
       var bucket = _evBucketRelativo(fecha);
+      // "ESTA SEMANA" (ver "Cambios recientes", nuevo) solo se muestra si NO
+      // hubo nada mañana -- `ordenFechas` ya viene ordenado ascendente, así
+      // que si mañana tuvo contenido, `bucketsMostrados['MAÑANA']` ya está en
+      // `true` para cuando el recorrido llega acá (pedido explícito: con
+      // "Mañana" ya mostrado, no hace falta este separador extra).
+      if (bucket === 'ESTA SEMANA' && bucketsMostrados['MAÑANA']) bucket = null;
       if (bucket && !bucketsMostrados[bucket]) {
         bucketsMostrados[bucket] = true;
         html += '<div class="ev-hoy-separador"><span>' + bucket + '</span></div>';
@@ -2821,10 +2877,17 @@ function _evPintarStatsAsistencia(grupos, conToggle, idEvento) {
 // cuando `_adminToken` es real). `stopPropagation()` -- mismo motivo que el
 // resto de los controles de esta pantalla, evita que el toque también
 // dispare cualquier click de fondo de la card.
+// Texto/ícono/ancho/borde (ver "Cambios recientes" -- pedido explícito de
+// Victor): "Tomar asistencia" (antes "Marcar asistencia", mismo texto que
+// `.ev-btn-agregar-persona` de la card de home) + mismo ícono `person_add`
+// (antes `edit_calendar`) -- el ensanchado (`grid-column:span 2`) y el
+// borde dashed viven en `.ev-stat-marcar`, css/eventos.css: `_EV_GRUPOS_ASISTENCIA_REAL`
+// solo tiene 2 entradas (A horario/Tarde), así que este botón es el 3er
+// ítem de una grilla de 4 columnas -- sin el span, la 4ta quedaba vacía.
 function _evStatCardMarcarAsistenciaHtml(idEvento) {
   return '<button type="button" class="ev-stat-card ev-stat-marcar" onclick="event.stopPropagation();_evAbrirMarcarAsistencia(\'' + idEvento + '\',\'s-eventos-detalle\')">' +
-    '<span class="material-symbols-outlined">edit_calendar</span>' +
-    '<div class="ev-stat-label">Marcar asistencia</div>' +
+    '<span class="material-symbols-outlined">person_add</span>' +
+    '<div class="ev-stat-label">Tomar asistencia</div>' +
   '</button>';
 }
 // Asisten/No asisten/No jugador salen directo de `ev.rsvps` (ya cargado con
