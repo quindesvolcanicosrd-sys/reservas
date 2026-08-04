@@ -3135,7 +3135,17 @@ function _evAntCargaVigente(miCarga) {
 // recientes" -- mismo criterio que `cargarFechas()`/`_skeletonFechasHtml()`,
 // js/reservas.js: skeleton CONTENIDO en el lugar real del contenido en vez
 // de un overlay, navegación/entrada a la pantalla sin esperar la respuesta).
+// Bug real corregido (ver "Cambios recientes" -- scroll del timeline perdido
+// al volver de Asistencia anticipada): esta función nunca guardaba
+// `_evTimelineScrollY` antes de navegar afuera de `s-eventos` -- mismo bug
+// que ya se había corregido para `_evAbrirMarcarAsistencia()`, esta pantalla
+// más vieja quedó afuera del mecanismo. A diferencia de esa otra, acá no
+// hace falta chequear el origen -- el único punto de entrada real es el
+// ícono del header de `#s-eventos` (`index.html`), siempre se abandona el
+// timeline en sí.
 function eventosAbrirAnticipada() {
+  _evGuardarScrollTimeline();
+  _evRestaurarScrollTimeline = true;
   ir('s-eventos-anticipada');
   document.getElementById('ev-ant-wizard').style.display = 'none';
   _evAntOcultarFooter();
