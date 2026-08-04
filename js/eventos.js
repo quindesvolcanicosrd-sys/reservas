@@ -3195,13 +3195,13 @@ function _evAntRecargarLista(cb) {
   // este refresco estaba en vuelo.
   var miCarga = _evAntCargaId;
   api({ action: 'getReglasAsistenciaAnticipada', nombre: E.nombre }, function(res) {
-    if (!_evAntCargaVigente(miCarga)) return;
+    if (!_evAntCargaVigente(miCarga)) { if (typeof cb === 'function') cb(); return; }
     _evAntReglas = res || [];
     _evAntRenderLista();
     document.getElementById('ev-ant-btn-nueva').style.display = 'block';
     if (typeof cb === 'function') cb();
   }, function(e) {
-    if (!_evAntCargaVigente(miCarga)) return;
+    if (!_evAntCargaVigente(miCarga)) { if (typeof cb === 'function') cb(); return; }
     mostrarToast(e && e.message ? e.message : 'No se pudo actualizar la lista.', 'error');
     if (typeof cb === 'function') cb();
   });
