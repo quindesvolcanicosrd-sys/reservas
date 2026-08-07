@@ -4090,7 +4090,7 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
 
   **Lo que queda fuera del circuito:** la hoja `Log de asistencias` de Sheets ya no se escribe ni se lee en ningún flujo activo — está deprecada. `_agregarFilaLogAsistencia()`, `_ultimaAsistenciaPorPersonaTodas()` y `actualizarAsistenciasDesdeLog()` hablan exclusivamente con Supabase.
 
-- **🔄 Migración de "Asistencias" a Supabase — EN CURSO (Etapas 1 y 2 completas, Etapa 3 pendiente). Tercera migración GAS/Sheets → Supabase, después de Venues y Log de asistencias. Es el módulo central del sistema de entrenamientos.**
+- **✅ Migración de "Asistencias" a Supabase — Etapas 1, 2 y 3 COMPLETAS. Tercera migración GAS/Sheets → Supabase, después de Venues y Log de asistencias. Es el módulo central del sistema de entrenamientos.**
 
   **Tabla Supabase:** `asistencias` — esquema completo:
 
@@ -4134,19 +4134,26 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
   1. `mantenerVentanaAsistencias()` corrida manualmente desde el editor de Apps Script — 156 filas actualizadas en Sheets, el conteo en la tabla `asistencias` de Supabase coincide exactamente.
   2. RSVP real de usuario procesado con la escritura doble activa — la entrada apareció correctamente en `log_asistencias` de Supabase y quedó reflejada en `asistencias` al pasar por el bridge.
 
-  **Etapa 3 — Migrar lecturas a Supabase y apagar escritura duplicada (pendiente)**
-  - Migrar las 10 funciones de lectura que leen la hoja `Asistencias` directamente a leer desde Supabase:
-    1. `getEventosRango()` — leer `asistencias` de Supabase en lugar de la hoja (incluye los datos de `a_horario`/`tarde` para el merge con `log_asistencias`).
-    2. `getEventosFiltrados()` — ídem (misma hoja, mismo criterio).
-    3. `getEventoDetalle()` — leer un evento puntual por `id_evento`.
-    4. `_asistenciaRealEF()` — leer columnas E/F de un evento puntual (hoy lee la hoja directamente).
-    5. `_getAsistenciasDatosCacheado()` — el wrapper de cacheo por ejecución que usa `_resolverAsistenciaAnticipada()`; su fuente interna es la hoja `Asistencias`.
-    6. `_resolverAsistenciaAnticipada()` — llama al cacheado anterior; no lee la hoja directamente pero depende de él.
-    7. `adminGetEventos()` — leer eventos para el panel admin.
-    8. `adminBuscarPersonasParaEvento()` — lee la hoja `Asistencias` para resolver el roster del evento.
-    9. `_mantenerVentanaAsistenciasInterno()` — además de escribir (Etapa 2), también lee la hoja para detectar qué filas de la ventana ya existen antes de escribir nuevas.
-    10. `actualizarAsistenciasDesdeLog()` — además de escribir E/F (Etapa 2), también lee la hoja para encontrar la fila del evento por `id_evento`.
-  - Una vez que todas las lecturas apunten a Supabase y se verifique end-to-end, se elimina la escritura duplicada hacia Sheets y la hoja `Asistencias` queda deprecada.
+  **Etapa 3 — Migrar lecturas a Supabase ✅ COMPLETA**
+  - Las siguientes funciones ahora leen exclusivamente desde la tabla `asistencias` de Supabase — la hoja `Asistencias` de Sheets dejó de ser la fuente de verdad para las lecturas:
+    - `getEventosRango()` — lee `asistencias` de Supabase (incluye `a_horario`/`tarde` para el merge con `log_asistencias`).
+    - `getEventosFiltrados()` — ídem.
+    - `_asistenciaEFPorEvento()` — lee las columnas E/F de un evento puntual desde Supabase.
+    - `_leerAsistenciasParaCalculo()` — lee el bloque de asistencias que alimenta el cálculo de puntos.
+    - `_leerAsistenciasParaEquipo()` — ídem, para el contexto de equipo.
+    - `_calcularPuntosMesesPorPersona()` — depende de las anteriores; ya no toca Sheets.
+    - `_fechaDeEvento()` — resuelve la fecha de un evento puntual desde Supabase.
+    - `aplicarAsistenciaAnticipada()` — lee asistencias desde Supabase para resolver RSVP anticipados.
+    - `_getAsistenciasDatosCacheado()` — el wrapper de cacheo por ejecución que usa `_resolverAsistenciaAnticipada()`; su fuente interna ya es Supabase.
+    - Lectura interna de `_mantenerVentanaAsistenciasInterno()` — la detección de filas existentes (para no recrear eventos) ahora consulta Supabase; la escritura a Sheets sigue activa (Etapa 2).
+    - Lectura interna de `actualizarAsistenciasDesdeLog()` — la búsqueda de la fila por `id_evento` ahora consulta Supabase; la escritura E/F a Sheets sigue activa (Etapa 2).
+  - **`_actualizarEFDirecto()` queda leyendo Sheets a propósito** — está atado a su propia escritura allí (cuando un admin marca asistencia escribe directamente en Sheets), no es parte del flujo de lectura de la app. Se migrará junto con el apagado de la escritura duplicada.
+
+  **Verificación end-to-end (Etapa 3):** confirmada por Victor:
+  1. App vista en producción — se ve idéntica a la versión que leía Sheets, y responde notablemente más rápido.
+  2. `mantenerVentanaAsistencias()` corrida manualmente desde el editor de Apps Script — reconoció correctamente 156 eventos existentes (actualizadas, no creadas), confirmando que la lectura nueva desde Supabase devuelve exactamente los datos que la lógica de deduplicación espera.
+
+  **Hallazgo de paso (no corregido, código muerto):** `getReglasAsistenciaAnticipada` aparece duplicada en `Code.gs` (aprox. líneas 4276 y 4325). La segunda definición pisa a la primera en JS — la primera nunca se ejecuta. No se corrigió porque es código muerto irrelevante dado el plan de eventualmente abandonar Apps Script por completo.
 
   **Funciones fuera del alcance de esta migración (utilidades manuales sin uso automático):**
   Las siguientes 4 funciones tocan la hoja `Asistencias` pero se ejecutan solo de forma puntual/manual desde el editor de Apps Script, no como parte de ningún flujo automático. Quedan fuera del scope de las 3 etapas:
@@ -4155,4 +4162,6 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
   - `migrarIdReglaFilasExistentes()` — función de migración one-shot de IDs de regla.
   - `generarIdsEventosAsistencias()` — función de migración one-shot de IDs de evento.
 
-  **Lo que queda sin migrar (próxima etapa):** Etapa 3 — migrar las 10 funciones de lectura a Supabase y recién ahí apagar la escritura duplicada hacia Sheets. La hoja `Puntos` queda fuera de scope de esta migración.
+  **Estado actual de Asistencias:** datos migrados (Etapa 1 ✅), escritura doble activa Sheets+Supabase (Etapa 2 ✅), lectura 100% desde Supabase (Etapa 3 ✅). La hoja `Asistencias` de Sheets ya no es fuente de verdad para ninguna lectura del flujo activo.
+
+  **Pendiente (no urgente):** apagar la escritura duplicada hacia Sheets cuando Victor esté cómodo — con eso `_mantenerVentanaAsistenciasInterno()`, `actualizarAsistenciasDesdeLog()` y `_actualizarEFDirecto()` dejarían de escribir en Sheets y Supabase quedaría como única fuente de verdad. La hoja `Puntos` queda fuera de scope de esta migración.
