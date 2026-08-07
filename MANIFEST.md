@@ -4066,3 +4066,9 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
   **Datos reales ya migrados:** la tabla `venues` de Supabase ya tiene cargados los 6 lugares reales del equipo — CCI, Diego de Topia, Cumandá, Ortega y Gasset, La Carolina, Casa de Vic y Sant.
 
   **Lo que queda deprecado pero todavía sin migrar, para una futura sesión:** con Etapas A y B completas, la hoja `Venues` de Sheets deja de ser la fuente de verdad para la generación de eventos, pero `_mapaTipoIconoPorLugar()`/`_mapaRequiereReservaPorLugar()` (`Code.gs`, pseudocódigo más arriba en este MANIFEST) todavía la leen directamente — pendiente migrar esas 2 funciones también a Supabase para terminar de sacar a Sheets de la ecuación de Venues por completo.
+
+- **✅ Actualización final — Backend (`Code.gs`, fuera de este repo): cierre total de la migración de Venues a Supabase. `_mapaTipoIconoPorLugar()`/`_mapaRequiereReservaPorLugar()` ahora leen desde la tabla `venues` de Supabase, no desde la hoja `Venues` de Sheets — cierra el único gap que quedaba señalado en la entrada anterior (Etapa B).**
+
+  Con esto, ninguna función del backend vuelve a leer la hoja `Venues` de Sheets: las 4 operaciones de CRUD (Etapa A), `_mantenerVentanaAsistenciasInterno()` (Etapa B) y ahora estas 2 últimas funciones de lectura quedan las 7 hablando exclusivamente con Supabase. La hoja `Venues` de Sheets queda completamente fuera del circuito — no es que haya perdido prioridad frente a Supabase, sino que ninguna función la vuelve a tocar.
+
+  **Migración de Venues a Supabase: 100% completa y verificada de punta a punta por Victor**, incluyendo el flujo de reservas de equipamiento probado contra producción real (no simulado). Migración piloto GAS/Sheets → Supabase cerrada.
