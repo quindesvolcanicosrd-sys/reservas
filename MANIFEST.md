@@ -4090,7 +4090,7 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
 
   **Lo que queda fuera del circuito:** la hoja `Log de asistencias` de Sheets ya no se escribe ni se lee en ningún flujo activo — está deprecada. `_agregarFilaLogAsistencia()`, `_ultimaAsistenciaPorPersonaTodas()` y `actualizarAsistenciasDesdeLog()` hablan exclusivamente con Supabase.
 
-- **🔄 Migración de "Asistencias" a Supabase — EN CURSO. Tercera migración GAS/Sheets → Supabase, después de Venues y Log de asistencias. Es el módulo central del sistema de entrenamientos.**
+- **🔄 Migración de "Asistencias" a Supabase — EN CURSO (Etapas 1 y 2 completas, Etapa 3 pendiente). Tercera migración GAS/Sheets → Supabase, después de Venues y Log de asistencias. Es el módulo central del sistema de entrenamientos.**
 
   **Tabla Supabase:** `asistencias` — esquema completo:
 
@@ -4123,12 +4123,16 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
   - 254 filas de la hoja `Asistencias` de Sheets migradas one-shot via función de migración puntual, corrida una sola vez desde el editor de Apps Script.
   - Verificación por conteo confirmada.
 
-  **Etapa 2 — Escritura doble (pendiente)**
-  - Modificar las 3 funciones que escriben en la hoja `Asistencias` para que escriban simultáneamente en Sheets Y en Supabase, sin cambiar todavía ninguna lectura:
+  **Etapa 2 — Escritura doble ✅ COMPLETA**
+  - Las 3 funciones que escriben en la hoja `Asistencias` ahora escriben simultáneamente en Sheets Y en la tabla `asistencias` de Supabase, sin haber cambiado ninguna lectura:
     - `_mantenerVentanaAsistenciasInterno()` — genera y escribe los eventos futuros de la ventana de asistencias (corre cada 15 min y por trigger diario).
     - `actualizarAsistenciasDesdeLog()` — bridge que sincroniza entradas de origen Admin desde `log_asistencias` hacia las columnas E/F de `Asistencias` (corre cada 15 min).
     - `_actualizarEFDirecto()` — escribe directamente en las columnas E/F de una fila puntual de `Asistencias` cuando un admin marca asistencia con `adminMarcarAsistencia`.
   - Durante esta etapa Sheets sigue siendo la fuente de verdad para las lecturas — Supabase recibe los datos en paralelo pero no se lee todavía.
+
+  **Verificación end-to-end (Etapa 2):** confirmada por Victor con dos pruebas reales:
+  1. `mantenerVentanaAsistencias()` corrida manualmente desde el editor de Apps Script — 156 filas actualizadas en Sheets, el conteo en la tabla `asistencias` de Supabase coincide exactamente.
+  2. RSVP real de usuario procesado con la escritura doble activa — la entrada apareció correctamente en `log_asistencias` de Supabase y quedó reflejada en `asistencias` al pasar por el bridge.
 
   **Etapa 3 — Migrar lecturas a Supabase y apagar escritura duplicada (pendiente)**
   - Migrar las 10 funciones de lectura que leen la hoja `Asistencias` directamente a leer desde Supabase:
@@ -4151,4 +4155,4 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
   - `migrarIdReglaFilasExistentes()` — función de migración one-shot de IDs de regla.
   - `generarIdsEventosAsistencias()` — función de migración one-shot de IDs de evento.
 
-  **Lo que queda sin migrar (próximas etapas):** la hoja `Asistencias` (columnas E/F, donde `actualizarAsistenciasDesdeLog()` sigue escribiendo) y la hoja `Puntos` no se tocaron — quedan para sesiones posteriores.
+  **Lo que queda sin migrar (próxima etapa):** Etapa 3 — migrar las 10 funciones de lectura a Supabase y recién ahí apagar la escritura duplicada hacia Sheets. La hoja `Puntos` queda fuera de scope de esta migración.
