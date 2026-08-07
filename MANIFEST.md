@@ -4072,3 +4072,22 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
   Con esto, ninguna función del backend vuelve a leer la hoja `Venues` de Sheets: las 4 operaciones de CRUD (Etapa A), `_mantenerVentanaAsistenciasInterno()` (Etapa B) y ahora estas 2 últimas funciones de lectura quedan las 7 hablando exclusivamente con Supabase. La hoja `Venues` de Sheets queda completamente fuera del circuito — no es que haya perdido prioridad frente a Supabase, sino que ninguna función la vuelve a tocar.
 
   **Migración de Venues a Supabase: 100% completa y verificada de punta a punta por Victor**, incluyendo el flujo de reservas de equipamiento probado contra producción real (no simulado). Migración piloto GAS/Sheets → Supabase cerrada.
+
+- **✅ Migración de "Log de asistencias" a Supabase — completada y verificada de punta a punta por Victor. Segunda migración GAS/Sheets → Supabase, después del piloto de Venues.**
+
+  **Tabla Supabase:** `log_asistencias` — misma estructura que la hoja de Sheets que reemplaza (`ID Evento`, `Fecha del entrenamiento`, `Nombre de usuario`, `Origen`, `Estado`, `Marca temporal`).
+
+  **Funciones migradas en `Code.gs`:**
+  - `_agregarFilaLogAsistencia()` — antes hacía `sheet.appendRow()`; ahora hace POST a la REST API de Supabase (`UrlFetchApp`, autenticada con la publishable key, misma mecánica que Venues). Es el único punto de escritura del log — todo RSVP de usuario (`marcarAsistenciaUsuario`) y toda marcación de admin (`adminMarcarAsistencia`) pasan por acá.
+  - `_ultimaAsistenciaPorPersonaTodas()` — antes hacía `sheet.getDataRange().getValues()`; ahora hace GET a Supabase (`select=*&order=marca_temporal.asc`) y mapea las columnas snake_case de Postgres a los nombres que el resto del backend ya esperaba. La lógica de agrupación por `idEvento|nombre|familia` (para la deduplicación por familia RSVP/rollcall) no cambió.
+  - `actualizarAsistenciasDesdeLog()` — el bridge que sincroniza entradas de origen Admin de `Log de asistencias` hacia las columnas E/F de la hoja `Asistencias` (corre cada 15 min); ahora lee el log desde Supabase en lugar de la hoja de Sheets. La escritura hacia `Asistencias` (hoja) no cambió — esa hoja todavía no está migrada.
+
+  **Datos históricos migrados:** 848 filas reales cargadas desde la hoja `Log de asistencias` de Sheets hacia `log_asistencias` de Supabase vía `_migrarLogAsistenciasASupabase()` (función de migración one-shot, corrida una sola vez desde el editor de Apps Script).
+
+  **Verificación end-to-end:** confirmada por Victor con un RSVP real de usuario — la fila apareció correctamente en Supabase y `getEventosRango()` la devolvió en `asistencias[]` al recargar la pantalla de Eventos.
+
+  **Lección operacional registrada — el Table Editor de Supabase no sirve para verificar filas puntuales en tablas grandes:** la interfaz de tabla del dashboard de Supabase es virtualizada (renderiza solo las filas visibles), por lo que `Ctrl+F` del navegador no encuentra filas que estén fuera del viewport. En tablas con cientos o miles de filas, buscar una entrada puntual por el Table Editor da falsos negativos. **Siempre verificar con queries SQL directas** (pestaña "SQL Editor" del dashboard, o `select * from log_asistencias where ... limit 1`).
+
+  **Lo que queda fuera del circuito:** la hoja `Log de asistencias` de Sheets ya no se escribe ni se lee en ningún flujo activo — está deprecada. `_agregarFilaLogAsistencia()`, `_ultimaAsistenciaPorPersonaTodas()` y `actualizarAsistenciasDesdeLog()` hablan exclusivamente con Supabase.
+
+  **Lo que queda sin migrar (próximas etapas):** la hoja `Asistencias` (columnas E/F, donde `actualizarAsistenciasDesdeLog()` sigue escribiendo) y la hoja `Puntos` no se tocaron — quedan para sesiones posteriores.
