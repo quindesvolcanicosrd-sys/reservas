@@ -242,3 +242,12 @@ body.aj-sub-salud-activo #app-toast {
    la verificación del wizard "Crear evento" (el click al botón "Continuar"
    quedaba interceptado por `.app-bottom-nav`). */
 #cta-footer-s-eventos-crear { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
+/* #cta-footer-s-tareas-crear -- mismo motivo que #cta-footer-s-eventos-crear
+   de arriba, mismo patrón exacto (drill-down con tab propio en
+   _BOTTOM_NAV_EXTRA: 's-tareas-crear' -> 'tareas', js/ui.js): sin este
+   override el footer heredaba `bottom:0` de `.cta-footer-fixed` y, con
+   z-index:100 (el default de la clase) contra z-index:900 de
+   `.app-bottom-nav`, el botón "Continuar" quedaba tapado por la nav
+   inferior en los 3 pasos del wizard "Nueva tarea" -- la nav seguía
+   técnicamente `display:flex` en el DOM, solo visualmente cubierta. */
+#cta-footer-s-tareas-crear { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
