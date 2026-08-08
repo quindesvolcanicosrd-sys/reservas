@@ -1,0 +1,47 @@
+/* ═══════════════════════════════════════════════════════
+   TAREAS.CSS — Sección Tareas
+   Reusa tal cual (sin redefinir) las clases ya existentes de otras
+   secciones: .ev-sticky-header/.ev-header-row/.ev-header-icon-btn/
+   .ev-filtro-badge/.ev-fab-menu/.ev-fab-btn/.ev-card*/.ev-estado-pill*/
+   .ev-lista-vacia/.ev-ant-cal-*/.ev-cal-* (css/eventos.css), .tp-seg/
+   .tp-slider/.tp-opt (css/reservas.css), .aj-pill/.aj-pills-row
+   (css/perfil.css), .qty-stepper/.qty-btn/.qty-value/.admin-dash-banner*
+   (css/admin.css), .salud-paso/.salud-prog (css/perfil.css), .avatar-pill
+   (css/global.css), .btn/.btn-outline/.btn-text-simple/.badge (css/ui.css).
+   Este archivo cubre únicamente lo que ninguna sección tenía todavía: la
+   fila de avatares superpuestos con conteo de cupos, el layout de ícono+
+   texto de los botones de acción de una card, y la nota de estado
+   bloqueado (límite de tareas activas alcanzado).
+   ═══════════════════════════════════════════════════════ */
+
+/* Fila de avatares superpuestos + conteo de cupos, debajo de la fecha
+   límite en una card de tarea (Disponibles/Baúl). `.avatar-pill--xs`
+   (26px, css/global.css) ya existe para este mismo rol ("fila de avatares
+   superpuestos") pero sin ningún consumidor real todavía -- primer uso. */
+.tar-avatares-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.tar-avatar-stack { display: flex; }
+.tar-avatar-stack .avatar-pill { border: 2px solid var(--surface-2); margin-left: -8px; }
+.tar-avatar-stack .avatar-pill:first-child { margin-left: 0; }
+.tar-cupos-label { font-size: 0.76rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
+
+/* Botón de acción de card con ícono al principio -- mismo criterio que
+   `.btn-wp-grupo` (css/global.css): un modificador MÍNIMO que solo agrega
+   el layout flex ícono+texto encima de `.btn`/`.btn-outline`/
+   `.btn-text-simple` ya existentes, sin duplicar su chrome (fondo/borde/
+   tipografía). */
+.tar-card-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; }
+.tar-card-btn .material-symbols-outlined { font-size: 18px; }
+.tar-acciones-col { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.tar-acciones-col .tar-card-btn { margin-top: 0; }
+
+/* Nota de estado bloqueado (límite de tareas activas alcanzado) -- mismo
+   estilo ya usado por `.ev-lugar-mapa-nota`/`.ev-ant-indefinido-nota`
+   (css/eventos.css) para texto secundario centrado bajo un control. */
+.tar-limite-nota { font-size: 0.78rem; color: var(--muted); text-align: center; margin-top: 8px; line-height: 1.4; }
+
+/* Pill de área sobre una card de tarea (`.aj-pill.activa` reusado tal cual
+   como badge estático, sin onclick) -- versión chica para convivir en la
+   misma línea que los puntos. Se repite en 3 templates de js/tareas.js
+   (disponible/baúl/mis tareas), así que va a clase en vez de repetir el
+   estilo inline (ver MANIFEST.md, "Reglas globales del proyecto"). */
+.tar-area-pill { padding: 2px 10px; font-size: 0.66rem; }

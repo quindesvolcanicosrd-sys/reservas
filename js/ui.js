@@ -500,6 +500,13 @@ function ir(id, desdeHistorial, sinTrampa) {
     if (!_mostrarFab && typeof _evFabCerrar === 'function') _evFabCerrar();
   }
 
+  // FAB "+ Nueva tarea" de #s-tareas -- mismo criterio que el de Eventos de
+  // arriba (admin real, `_adminToken`, y solo en la pantalla raíz, no en el
+  // wizard). Un solo botón (no speed-dial, Tareas no tiene una segunda
+  // acción admin como "Editar lugares" en Eventos).
+  var tareasFab = document.getElementById('tar-fab-menu');
+  if (tareasFab) tareasFab.style.display = (id === 's-tareas' && !!_adminToken) ? 'flex' : 'none';
+
   _actualizarBottomNav(id);
 
   var sinPasos = ['s1','s-home','s-misreservas','s-carga','s6','s-datos','s-gestionar'].concat(ADMIN_PANTALLAS);
@@ -599,6 +606,15 @@ var APP_BOTTOM_NAV_ITEMS = [
     // `_ajUltimoSubAbierto`/js/perfil.js (que guarda qué SUB-sección estaba
     // abierta, no el scroll del home en sí).
     alSalir: function() { if (typeof _ajGuardarScrollHome === 'function') _ajGuardarScrollHome(); },
+    visible: function() { return true; } },
+  // 'tareas' -- sección Tareas (backend Apps Script ya desplegado): tablero
+  // de tareas con cupos + "Mis tareas" + wizard de creación/validación
+  // admin. Mismo criterio que 'eventos': visible para todo tipo de cuenta
+  // (admin y usuarix normal pueden tomar/gestionar tareas por igual), con
+  // `entrar` propio porque #s-tareas necesita poblarse por JS antes de
+  // mostrarse (mismo motivo que 'eventos'/'ajustes').
+  { id: 'tareas', icono: 'task_alt', texto: 'Tareas', pantalla: 's-tareas',
+    entrar: function() { irTareas(); },
     visible: function() { return true; } }
 ];
 var _BOTTOM_NAV_PANTALLAS = APP_BOTTOM_NAV_ITEMS.map(function(item) { return item.pantalla; });
@@ -645,7 +661,11 @@ var _BOTTOM_NAV_EXTRA = {
   // mismo criterio que el resto de los drill-down de 'eventos' de arriba:
   // alcanzable desde la card del home/timeline o desde el detalle de un
   // evento, admin-only en los 2 puntos de entrada.
-  's-eventos-marcar-asistencia': 'eventos'
+  's-eventos-marcar-asistencia': 'eventos',
+  // Wizard "Nueva tarea" (admin) -- drill-down de la tab 'tareas', mismo
+  // criterio que 's-eventos-crear' arriba: alcanzable solo desde el FAB de
+  // #s-tareas.
+  's-tareas-crear': 'tareas'
 };
 
 // Reusa el `icono` ya definido por ítem para el slot de la flecha atrás de

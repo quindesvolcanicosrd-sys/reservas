@@ -33,6 +33,7 @@
 <link rel="stylesheet" href="css/reservas.css?v=6a719532">
 <link rel="stylesheet" href="css/nav.css?v=0e195d68">
 <link rel="stylesheet" href="css/eventos.css?v=0a6b6e9f">
+<link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -925,6 +926,146 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
 
+  <!-- ═══════════════════════════════════════════════════════
+       SECCIÓN TAREAS — backend Apps Script ya desplegado
+       (getTareasDisponibles/getMisTareas/getConfigTareas/tomarTarea/
+       soltarTarea/rescatarTarea/enviarRevisionTarea/adminCrearTarea/
+       adminGetTareasPendientesValidacion/adminValidarTarea).
+       Header sticky reusa .ev-sticky-header (css/eventos.css) tal cual --
+       en vez de un título fijo, un pill-toggle de 2 opciones (mismo
+       componente .tp-seg/.tp-slider/.tp-opt que "Por clase/Mensual" en
+       Reservas, css/reservas.css) que cambia la lista de abajo sin navegar.
+       Ícono de validación (admin, con badge de pendientes -- mismo criterio
+       que el badge de reservas pendientes de Mi Liga) + FAB "+ Nueva tarea"
+       (admin, un solo botón -- no speed-dial, reusa .ev-fab-menu/.ev-fab-btn
+       de Eventos tal cual). Ver js/tareas.js / css/tareas.css. -->
+  <div class="pantalla" id="s-tareas">
+    <div class="ev-sticky-header" id="tar-sticky-header">
+      <div class="ev-header-row">
+        <div class="tp-seg" id="tar-seg" style="flex:1;">
+          <div class="tp-slider" id="tar-slider"></div>
+          <div class="tp-opt active" id="tar-opt-disponibles" onclick="_tarCambiarTab('disponibles')">
+            <span class="material-symbols-outlined" style="font-size:1rem;">inventory_2</span><span>Disponibles</span>
+          </div>
+          <div class="tp-opt" id="tar-opt-mis" onclick="_tarCambiarTab('mis')">
+            <span class="material-symbols-outlined" style="font-size:1rem;">assignment_ind</span><span>Mis tareas</span>
+          </div>
+        </div>
+        <button type="button" class="app-nav-icon-btn ev-header-icon-btn" id="tar-btn-validar" style="display:none;margin-left:8px;flex-shrink:0;" onclick="_tarAbrirValidacion()" aria-label="Tareas por validar">
+          <span class="material-symbols-outlined">fact_check</span>
+          <span class="ev-filtro-badge" id="tar-validar-badge" style="display:none;"></span>
+        </button>
+      </div>
+    </div>
+    <div class="card" style="text-align:left;">
+      <div id="tar-tab-disponibles">
+        <div id="tar-lista-disponibles"></div>
+        <!-- Acordeón "El Baúl de tareas (N)" -- mismo componente visual que
+             los acordeones de Mi Liga (.admin-dash-banner*, css/admin.css). -->
+        <div id="tar-baul-wrap" style="display:none;margin-top:14px;">
+          <div class="admin-dash-banner">
+            <div class="admin-dash-banner-header" onclick="_tarToggleBaul()">
+              <span class="material-symbols-outlined admin-dash-banner-icon">inventory</span>
+              <span class="admin-dash-banner-texto" id="tar-baul-titulo">El Baúl de tareas</span>
+              <span class="material-symbols-outlined admin-dash-banner-chevron" id="tar-baul-chevron">expand_more</span>
+            </div>
+            <div class="admin-dash-banner-body" id="tar-baul-body">
+              <div class="admin-dash-banner-body-inner" id="tar-lista-baul"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="tar-tab-mis" style="display:none;">
+        <div id="tar-lista-mis"></div>
+      </div>
+      <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+
+  <!-- Wizard "Nueva tarea" (admin) -- mismo mecanismo de pasos progresivos
+       (.salud-paso/.salud-prog) que #s-eventos-crear, reusado tal cual. -->
+  <div class="pantalla" id="s-tareas-crear">
+    <div class="app-nav app-nav-sticky" id="tar-crear-header">
+      <button class="app-nav-back" onclick="_tarCrearBack()">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <span class="app-nav-title">Nueva tarea</span>
+      <div style="width:40px;flex-shrink:0;"></div>
+    </div>
+    <div class="card" style="text-align:left;">
+      <div class="salud-prog" id="tar-crear-prog"></div>
+
+      <!-- Paso 1: Título + Área -->
+      <div class="salud-paso activo" id="tar-crear-paso-0">
+        <p class="ev-lugar-campo-label" style="margin-top:0;">Título</p>
+        <input type="text" class="ev-lugar-input" id="tar-crear-titulo" placeholder="Ej: Armar el itinerario del torneo" oninput="_tarCrearSetTitulo(this.value)">
+        <p class="ev-lugar-campo-label" style="margin-top:20px;">Área</p>
+        <div class="aj-pills-row" id="tar-crear-area-pills">
+          <span class="aj-pill" data-val="Logística" onclick="_tarCrearSelArea(this)">Logística</span>
+          <span class="aj-pill" data-val="Entrenamientos" onclick="_tarCrearSelArea(this)">Entrenamientos</span>
+          <span class="aj-pill" data-val="Eventos" onclick="_tarCrearSelArea(this)">Eventos</span>
+          <span class="aj-pill" data-val="Finanzas" onclick="_tarCrearSelArea(this)">Finanzas</span>
+          <span class="aj-pill" data-val="Mantenimiento" onclick="_tarCrearSelArea(this)">Mantenimiento</span>
+          <span class="aj-pill" data-val="Redes Sociales y Comunicación" onclick="_tarCrearSelArea(this)">Redes Sociales y Comunicación</span>
+          <span class="aj-pill" data-val="Reclutamiento" onclick="_tarCrearSelArea(this)">Reclutamiento</span>
+        </div>
+        <div class="error-msg" id="tar-crear-err-0"></div>
+      </div>
+
+      <!-- Paso 2: Puntos + Cupos -- steppers .qty-stepper reusados tal cual
+           (adminStepperChange(), js/admin.js). -->
+      <div class="salud-paso" id="tar-crear-paso-1">
+        <p class="ev-lugar-campo-label" style="margin-top:0;">Puntos</p>
+        <div class="qty-stepper" data-step="1" data-min="0">
+          <button type="button" class="qty-btn" onclick="adminStepperChange(this,-1);_tarCrearActualizarFooter();">−</button>
+          <span class="qty-value">0</span>
+          <button type="button" class="qty-btn" onclick="adminStepperChange(this,1);_tarCrearActualizarFooter();">+</button>
+          <input type="hidden" id="tar-crear-puntos" value="0">
+        </div>
+        <p class="ev-lugar-campo-label" style="margin-top:20px;">Cupos / máx. asignados</p>
+        <div class="qty-stepper" data-step="1" data-min="1">
+          <button type="button" class="qty-btn" onclick="adminStepperChange(this,-1);_tarCrearActualizarFooter();">−</button>
+          <span class="qty-value">1</span>
+          <button type="button" class="qty-btn" onclick="adminStepperChange(this,1);_tarCrearActualizarFooter();">+</button>
+          <input type="hidden" id="tar-crear-cupos" value="1">
+        </div>
+      </div>
+
+      <!-- Paso 3: Fecha límite (calendario inline, mismo componente que
+           Asistencia anticipada/Crear evento -- .ev-ant-cal-nav / .ev-cal-grid,
+           css/eventos.css) + Notas opcionales. -->
+      <div class="salud-paso" id="tar-crear-paso-2">
+        <p class="ev-lugar-campo-label" style="margin-top:0;">Fecha límite</p>
+        <div class="ev-ant-cal-nav">
+          <button type="button" class="ev-ant-cal-nav-btn" onclick="_tarCrearCalMoverMes(-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+          <span class="ev-ant-cal-nav-label" id="tar-crear-cal-label"></span>
+          <button type="button" class="ev-ant-cal-nav-btn" onclick="_tarCrearCalMoverMes(1)"><span class="material-symbols-outlined">chevron_right</span></button>
+        </div>
+        <div id="tar-crear-cal"></div>
+        <div class="ev-lugar-cal-resumen" id="tar-crear-cal-resumen"></div>
+        <div class="error-msg" id="tar-crear-err-2"></div>
+        <p class="ev-lugar-campo-label" style="margin-top:20px;">Notas (opcional)</p>
+        <textarea id="tar-crear-notas" placeholder="Detalles adicionales para quien tome la tarea..." style="min-height:90px;resize:none;" oninput="_tarCrearSetNotas(this.value)"></textarea>
+      </div>
+
+      <div class="cta-footer-spacer" style="height:calc(100px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+  <div class="cta-footer-fixed" id="cta-footer-s-tareas-crear">
+    <button class="btn btn-primary" id="tar-crear-btn-footer" disabled>Continuar</button>
+  </div>
+
+  <!-- BOTTOM SHEET: Tareas por validar (admin) -- filas .admin-banner-res-row
+       reusadas tal cual del banner de reservas pendientes de Mi Liga
+       (css/admin.css), con Aprobar/Rechazar; Rechazar revela un textarea
+       corto inline antes de confirmar. -->
+  <div id="tar-sheet-validar-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="_tarCerrarValidacion()"></div>
+  <div id="tar-sheet-validar" class="bsheet bsheet-scroll" style="z-index:9601;max-height:80vh;">
+    <div class="bsheet-handle" style="flex-shrink:0;"></div>
+    <div class="bsheet-title" style="flex-shrink:0;">Tareas por validar</div>
+    <div id="tar-validar-lista" class="bsheet-body" style="overflow-y:auto;flex:1;"></div>
+  </div>
+
   <div class="pantalla" id="s2">
     <div class="card">
       <div class="seccion-label">Paso 1 de 4</div>
@@ -1304,6 +1445,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=f73a9a11"></script>
 <script src="js/eventos.js?v=160fabdf"></script>
+<script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=f4bed643"></script>
 <script src="js/perfil.js?v=7768af03"></script>
@@ -2992,6 +3134,17 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <span>Editar lugares</span>
   </button>
   <button type="button" class="ev-fab-btn" id="ev-fab-btn" onclick="_evFabToggle()" title="Nuevo" aria-expanded="false">
+    <span class="material-symbols-outlined">add</span>
+  </button>
+</div>
+
+<!-- FAB "+ Nueva tarea" de #s-tareas (admin) -- un solo botón, no speed-dial
+     (a diferencia de #ev-fab-menu, Tareas no tiene una segunda acción admin
+     acá). Mismo contenedor .ev-fab-menu (fixed, centrado, hijo directo de
+     <body>) reusado tal cual -- display:none por default, ir()/js/ui.js lo
+     muestra solo con 's-tareas' activa Y _adminToken. -->
+<div class="ev-fab-menu" id="tar-fab-menu" style="display:none;">
+  <button type="button" class="ev-fab-btn" onclick="irTarCrear()" title="Nueva tarea" aria-label="Nueva tarea">
     <span class="material-symbols-outlined">add</span>
   </button>
 </div>
