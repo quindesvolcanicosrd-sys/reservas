@@ -53,6 +53,13 @@
    selección para un target táctil más grande. */
 .tar-persona-fila { cursor: pointer; }
 
+/* Fila deshabilitada del picker de personas al llegar al "Máximo de
+   personas" del paso de cupos (bug real corregido, ver MANIFEST.md
+   "Cambios recientes" -- antes no había ningún tope) -- atenuada, sin
+   cursor de click (el `onclick` en sí ya se saca en el HTML generado por
+   `_tarCrearRenderPersonas()`, js/tareas.js, esto es solo la señal visual). */
+.tar-persona-fila-disabled { opacity: 0.4; cursor: default; }
+
 /* Checkmark de selección del picker de personas -- bug real encontrado en
    la propia verificación con Playwright (no al aplicar el fix a ciegas):
    `.fi-circle` (css/reservas.css) por sí sola es solo el círculo vacío; su
@@ -72,7 +79,7 @@
    límite en una card de tarea (Disponibles/Baúl). `.avatar-pill--xs`
    (26px, css/global.css) ya existe para este mismo rol ("fila de avatares
    superpuestos") pero sin ningún consumidor real todavía -- primer uso. */
-.tar-avatares-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.tar-avatares-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
 .tar-avatar-stack { display: flex; }
 .tar-avatar-stack .avatar-pill { border: 2px solid var(--surface-2); margin-left: -8px; }
 .tar-avatar-stack .avatar-pill:first-child { margin-left: 0; }
@@ -83,10 +90,25 @@
    el layout flex ícono+texto encima de `.btn`/`.btn-outline`/
    `.btn-text-simple` ya existentes, sin duplicar su chrome (fondo/borde/
    tipografía). */
-.tar-card-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; }
+.tar-card-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; }
 .tar-card-btn .material-symbols-outlined { font-size: 18px; }
-.tar-acciones-col { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.tar-acciones-col { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
 .tar-acciones-col .tar-card-btn { margin-top: 0; }
+
+/* Bug real de espaciado corregido (confirmado por captura de pantalla): las
+   cards de Eventos (`_evCardEventoHtml()`, css/eventos.css) nunca apilan más
+   de un `.ev-card-sub` a la vez, así que esa clase no trae separación
+   vertical propia entre hermanas -- acá sí se apilan 2 (área+puntos, fecha
+   límite), y sin margen quedaban pegadas una a la otra, más comprimidas que
+   cualquier card de Eventos. Scoped a los 3 contenedores de listas de
+   Tareas (no a `.ev-card-sub` en `css/eventos.css`) para no tocar el
+   espaciado de ninguna card de Eventos existente, que hoy nunca necesita
+   este caso. */
+#tar-lista-disponibles .ev-card-sub + .ev-card-sub,
+#tar-lista-baul .ev-card-sub + .ev-card-sub,
+#tar-lista-mis .ev-card-sub + .ev-card-sub {
+  margin-top: 6px;
+}
 
 /* Nota de estado bloqueado (límite de tareas activas alcanzado) -- mismo
    estilo ya usado por `.ev-lugar-mapa-nota`/`.ev-ant-indefinido-nota`
@@ -99,3 +121,28 @@
    (disponible/baúl/mis tareas), así que va a clase en vez de repetir el
    estilo inline (ver MANIFEST.md, "Reglas globales del proyecto"). */
 .tar-area-pill { padding: 2px 10px; font-size: 0.66rem; }
+
+/* Lista de personas de una tarjeta de "Tareas archivadas" -- a diferencia
+   de `.tar-avatares-row` (avatares superpuestos, anónimos, solo un conteo
+   de cupos), acá cada fila necesita ser identificable por nombre CON su
+   estado final (aprobada/rechazada, `_tarArchivadaEstadoBadge()`,
+   js/tareas.js) -- no alcanza con una pila superpuesta. */
+.tar-archivada-personas { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.tar-archivada-persona-fila { display: flex; align-items: center; gap: 10px; }
+.tar-archivada-persona-nombre { flex: 1; min-width: 0; font-size: 0.82rem; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Buscador + filtros compartidos (Disponibles/Mis tareas/Baúl/Archivadas)
+   -- reusa tal cual `.ev-header-burbuja`/`.ev-header-burbuja-panel`/
+   `.ev-filtro-trigger`/`.ev-filtro-burbuja`/`.ev-filtros-row`/
+   `.ev-filtros-label` (css/eventos.css, mismo mecanismo de burbuja de
+   Eventos) y `.meses-grid-pills`/`.mes-item` (css/reservas.css, selector de
+   mes de "reagendar mensual"). Este bloque cubre solo lo que ninguna de las
+   2 tenía todavía: 4/5 triggers en vez de 2 (necesitan envolver en la fila,
+   `.ev-filtros-row` de Eventos nunca lo necesitó con solo Lugar/Tipo) y el
+   filtro de rango de puntos (sin precedente en el resto de la app). */
+#tar-filtros-row, #tarch-filtros-row { flex-wrap: wrap; }
+#tar-filtros-row .ev-filtro-trigger, #tarch-filtros-row .ev-filtro-trigger { flex: 1 1 45%; }
+.tar-filtro-puntos-row { display: flex; align-items: flex-end; gap: 10px; padding: 10px 2px 4px; }
+.tar-filtro-puntos-campo { flex: 1; min-width: 0; }
+.tar-filtro-puntos-campo label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+.tar-filtro-puntos-sep { padding-bottom: 14px; color: var(--muted); font-weight: 700; }

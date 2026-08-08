@@ -667,8 +667,10 @@ var _BOTTOM_NAV_EXTRA = {
   // #s-tareas. "Tareas por validar" (admin) -- mismo criterio, ex bottom
   // sheet convertido a subsección de página completa (ver MANIFEST.md
   // "Cambios recientes"), alcanzable desde el ícono con badge del header de
-  // #s-tareas.
-  's-tareas-crear': 'tareas', 's-tareas-validar': 'tareas'
+  // #s-tareas. "Tareas archivadas" (nueva, visible para cualquiera, ver
+  // MANIFEST.md) -- mismo criterio, alcanzable desde el ícono `archive` del
+  // mismo header.
+  's-tareas-crear': 'tareas', 's-tareas-validar': 'tareas', 's-tareas-archivadas': 'tareas'
 };
 
 // Reusa el `icono` ya definido por ítem para el slot de la flecha atrás de

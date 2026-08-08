@@ -958,6 +958,93 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
     </div>
     <div class="card" style="text-align:left;">
+      <!-- "Archivadas" -- 3er acceso de Tareas, visible para cualquiera (no
+           gateado por _adminToken como el ícono de validar del header). NO
+           va como 3er ícono ahí al lado (bug real encontrado en la propia
+           verificación con Playwright, no al aplicar el diseño a ciegas):
+           con `#tar-btn-validar` también visible (cuenta admin) el header
+           mide 413px de contenido contra 358px reales de ancho en un
+           viewport de 390px -- el ícono de validar terminaba parcialmente
+           fuera de pantalla. `#tar-seg` (flex:1) no puede achicarse más
+           allá del ancho natural de sus 2 pills de texto (min-width:auto
+           por default en flex items), así que agregar un 2do ícono de
+           44px ahí no tiene margen real en un teléfono angosto. Reusa
+           `.aj-pill.aj-pill-link` tal cual (css/perfil.css -- variante de
+           NAVEGACIÓN, no de selección, mismo componente que "Ver historial
+           de reservas"/"Editar mi perfil" del empty-state de home) en su
+           propia fila, con todo el ancho de la card disponible en vez de
+           competir por espacio con la nav superior. El buscador+filtros
+           (nuevo, ver MANIFEST.md "Cambios recientes") se agrega en la
+           misma fila por el mismo motivo de espacio -- mismo trigger chico
+           `.aj-pill.aj-pill-link` (no un ícono de 44px en el header), con
+           el badge de cantidad de filtros activos (`.ev-filtro-badge`,
+           css/eventos.css) anclado con `position:relative` inline sobre el
+           propio pill. -->
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;">
+        <span class="aj-pill aj-pill-link" id="tar-busqueda-toggle-btn" onclick="_tarToggleBusqueda()" style="display:inline-flex;align-items:center;gap:6px;position:relative;">
+          <span class="material-symbols-outlined" style="font-size:16px;">search</span>Buscar y filtrar
+          <span class="ev-filtro-badge" id="tar-filtro-badge" style="display:none;">0</span>
+        </span>
+        <span class="aj-pill aj-pill-link" onclick="irTarArchivadas()" style="display:inline-flex;align-items:center;gap:6px;">
+          <span class="material-symbols-outlined" style="font-size:16px;">archive</span>Archivadas
+        </span>
+      </div>
+
+      <!-- Panel de búsqueda + filtros de Disponibles/Mis tareas/Baúl (las 3
+           conviven en #s-tareas, mismo estado de filtro para las 3, ver
+           _tarFiltro/_tarFiltroObj()/js/tareas.js) -- mismo mecanismo de
+           burbuja que Eventos (.ev-header-burbuja/.ev-header-burbuja-panel/
+           .ev-filtro-trigger/.ev-filtro-burbuja, css/eventos.css,
+           _evTogglePanel()/_evToggleFiltroBurbuja(), js/eventos.js),
+           reimplementado acá con estado propio (_tarTogglePanel()/
+           _tarToggleFiltroBurbuja(), js/tareas.js) -- mismos ids/clases
+           compartidas, sin tocar el mecanismo de Eventos. 4 campos: Área
+           (pills), Personas (buscador+checkmarks), Puntos (rango mín/máx),
+           Mes (selector de 1 mes, filtra por fechaVencimiento). Filtrado
+           100% client-side sobre `_tarDisponibles`/`_tarBaul`/
+           `_tarMisTareas` ya cargados, sin ninguna llamada nueva al
+           backend -- ver `_tarPasaFiltro()`. -->
+      <div class="ev-header-burbuja" id="tar-busqueda-panel">
+        <div class="ev-header-burbuja-panel">
+          <div class="app-nav-search">
+            <span class="material-symbols-outlined">search</span>
+            <input type="text" id="tar-search-input" placeholder="Buscar por título o área..." oninput="_tarBuscar('principal', this.value)">
+          </div>
+          <div class="seccion-label ev-filtros-label">Filtros</div>
+          <div class="ev-filtros-row" id="tar-filtros-row">
+            <button type="button" class="ev-filtro-trigger" id="tar-filtro-btn-area" data-label="Área" onclick="_tarToggleFiltroBurbuja('principal','area')">
+              <span class="ev-filtro-trigger-label">Área</span><span class="material-symbols-outlined">expand_more</span>
+            </button>
+            <button type="button" class="ev-filtro-trigger" id="tar-filtro-btn-personas" data-label="Personas" onclick="_tarToggleFiltroBurbuja('principal','personas')">
+              <span class="ev-filtro-trigger-label">Personas</span><span class="material-symbols-outlined">expand_more</span>
+            </button>
+            <button type="button" class="ev-filtro-trigger" id="tar-filtro-btn-puntos" data-label="Puntos" onclick="_tarToggleFiltroBurbuja('principal','puntos')">
+              <span class="ev-filtro-trigger-label">Puntos</span><span class="material-symbols-outlined">expand_more</span>
+            </button>
+            <button type="button" class="ev-filtro-trigger" id="tar-filtro-btn-mes" data-label="Mes" onclick="_tarToggleFiltroBurbuja('principal','mes')">
+              <span class="ev-filtro-trigger-label">Mes</span><span class="material-symbols-outlined">expand_more</span>
+            </button>
+          </div>
+          <div class="ev-filtro-burbuja" id="tar-filtro-burbuja-area"><div class="aj-pills-row ev-filtro-burbuja-pills" id="tar-filtro-area-pills"></div></div>
+          <div class="ev-filtro-burbuja" id="tar-filtro-burbuja-personas">
+            <div class="app-nav-search" style="margin:6px 2px 10px;">
+              <span class="material-symbols-outlined">search</span>
+              <input type="text" id="tar-filtro-personas-search" placeholder="Buscar por nombre..." autocomplete="off" oninput="_tarRenderFiltroPersonasLista('principal', this.value)">
+            </div>
+            <div id="tar-filtro-personas-lista" class="ev-marcar-lista"></div>
+          </div>
+          <div class="ev-filtro-burbuja" id="tar-filtro-burbuja-puntos">
+            <div class="tar-filtro-puntos-row">
+              <div class="tar-filtro-puntos-campo"><label>Mínimo</label><input type="number" inputmode="numeric" id="tar-filtro-puntos-min" placeholder="0" oninput="_tarSetFiltroPuntos('principal','min',this.value)"></div>
+              <span class="tar-filtro-puntos-sep">–</span>
+              <div class="tar-filtro-puntos-campo"><label>Máximo</label><input type="number" inputmode="numeric" id="tar-filtro-puntos-max" placeholder="Sin límite" oninput="_tarSetFiltroPuntos('principal','max',this.value)"></div>
+            </div>
+          </div>
+          <div class="ev-filtro-burbuja" id="tar-filtro-burbuja-mes"><div class="meses-grid-pills" id="tar-filtro-mes-grid"></div></div>
+        </div>
+      </div>
+
+      <div id="tar-tabs-wrap">
       <div id="tar-tab-disponibles">
         <div id="tar-lista-disponibles"></div>
         <!-- Acordeón "El Baúl de tareas (N)" -- mismo componente visual que
@@ -977,6 +1064,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
       <div id="tar-tab-mis" style="display:none;">
         <div id="tar-lista-mis"></div>
+      </div>
       </div>
       <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
     </div>
@@ -1014,7 +1102,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
 
       <!-- Paso 2: Puntos + Máximo de personas -- steppers .qty-stepper
-           reusados tal cual (adminStepperChange(), js/admin.js). -->
+           reusados tal cual (adminStepperChange(), js/admin.js). Textos/
+           labels alineados a la izquierda (antes la nota bajo "Puntos"
+           quedaba centrada -- `.ev-lugar-mapa-nota` (css/eventos.css) trae
+           `text-align:center` de fábrica, pensada para el texto bajo un
+           mapa en Eventos; acá se pisa puntual con `text-align:left`
+           inline, sin tocar la clase compartida). -->
       <div class="salud-paso" id="tar-crear-paso-1">
         <p class="ev-lugar-campo-label" style="margin-top:0;">Puntos</p>
         <div class="qty-stepper" data-step="1" data-min="0">
@@ -1023,7 +1116,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <button type="button" class="qty-btn" onclick="adminStepperChange(this,1);_tarCrearActualizarFooter();">+</button>
           <input type="hidden" id="tar-crear-puntos" value="0">
         </div>
-        <p class="ev-lugar-mapa-nota" style="margin-top:6px;">Puntos finales que recibirá la persona a cargo si finaliza la tarea a tiempo.</p>
+        <p class="ev-lugar-mapa-nota" style="margin-top:6px;text-align:left;">Puntos finales que recibirá la persona a cargo si finaliza la tarea a tiempo.</p>
         <p class="ev-lugar-campo-label" style="margin-top:20px;">Máximo de personas que pueden trabajar en esta tarea</p>
         <div class="qty-stepper" data-step="1" data-min="1">
           <button type="button" class="qty-btn" onclick="adminStepperChange(this,-1);_tarCrearActualizarFooter();">−</button>
@@ -1033,10 +1126,58 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
       </div>
 
-      <!-- Paso 3: Fecha límite (calendario inline, mismo componente que
-           Asistencia anticipada/Crear evento -- .ev-ant-cal-nav / .ev-cal-grid,
-           css/eventos.css) + Notas opcionales. -->
-      <div class="salud-paso" id="tar-crear-paso-2">
+      <!-- Paso 3 (nuevo): ¿Cómo se asigna esta tarea? -- 2 opciones
+           excluyentes: "libre" (self-service, salta directo al paso de
+           fecha/notas sin mostrar el picker) o "elegir" (muestra el paso
+           siguiente, el picker de personas, tal cual ya existía). Reusa
+           `.opciones`/`.opcion`/`.opcion.sel` tal cual (css/ui.css, ya usado
+           en "¿Es correcta esta información?") en vez de un componente
+           nuevo -- solo cambia el contenido interno (ícono+título+sub en
+           vez de radio+texto) y el toggle de selección lo maneja
+           `_tarCrearSelModo()` a mano, sin `<input type="radio">` real
+           (no hace falta el semántico de formulario acá). -->
+      <div class="salud-paso" id="tar-crear-paso-modo">
+        <p class="ev-lugar-campo-label" style="margin-top:0;">¿Cómo se asigna esta tarea?</p>
+        <div class="opciones" id="tar-crear-modo-opciones" style="margin-bottom:0;">
+          <div class="opcion" data-val="libre" onclick="_tarCrearSelModo(this,'libre')">
+            <span class="material-symbols-outlined">groups</span>
+            <div>
+              <div style="font-weight:700;">Que la tome quien quiera</div>
+              <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Queda disponible en el tablero para que cualquier persona del equipo la tome.</div>
+            </div>
+          </div>
+          <div class="opcion" data-val="elegir" onclick="_tarCrearSelModo(this,'elegir')">
+            <span class="material-symbols-outlined">person_check</span>
+            <div>
+              <div style="font-weight:700;">Yo elijo quién la hace</div>
+              <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Elige ahora a las personas a las que se les va a asignar la tarea.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 4: Asignar a personas específicas (solo si el paso anterior
+           quedó en "elegir") -- mismo patrón de búsqueda + lista que "Marcar
+           asistencia" de Eventos (.app-nav-search/.ev-marcar-lista/
+           .ev-roster-fila/.ev-roster-nombre, css/eventos.css), pero con
+           checkmarks de selección MÚLTIPLE (.fi-circle, css/reservas.css)
+           en vez del toggle exclusivo A horario/Tarde de esa pantalla --
+           ver _tarCrear*Personas()/js/tareas.js. Capeado al "Máximo de
+           personas" del paso 2 (bug real corregido -- antes no había tope). -->
+      <div class="salud-paso" id="tar-crear-paso-personas">
+        <p class="ev-lugar-campo-label" style="margin-top:0;">Asignar a personas</p>
+        <p class="ev-lugar-mapa-nota" style="margin:0 0 14px;text-align:left;">Elige a una o más personas que quisieras que se le asigne la tarea de forma automática al crearla sin que tengan que asignarse la tarea.</p>
+        <div class="app-nav-search" style="margin-bottom:12px;">
+          <span class="material-symbols-outlined">search</span>
+          <input type="text" id="tar-crear-personas-search" placeholder="Buscar por nombre..." autocomplete="off" oninput="_tarCrearFiltrarPersonas(this.value)">
+        </div>
+        <div id="tar-crear-personas-lista" class="ev-marcar-lista"></div>
+      </div>
+
+      <!-- Paso 5 (último): Fecha límite (calendario inline, mismo componente
+           que Asistencia anticipada/Crear evento -- .ev-ant-cal-nav /
+           .ev-cal-grid, css/eventos.css) + Notas opcionales. -->
+      <div class="salud-paso" id="tar-crear-paso-fecha">
         <p class="ev-lugar-campo-label" style="margin-top:0;">Fecha límite</p>
         <div class="ev-ant-cal-nav">
           <button type="button" class="ev-ant-cal-nav-btn" onclick="_tarCrearCalMoverMes(-1)"><span class="material-symbols-outlined">chevron_left</span></button>
@@ -1048,22 +1189,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="error-msg" id="tar-crear-err-2"></div>
         <p class="ev-lugar-campo-label" style="margin-top:20px;">Notas (opcional)</p>
         <textarea id="tar-crear-notas" placeholder="Detalles adicionales para quien tome la tarea..." style="min-height:90px;resize:none;" oninput="_tarCrearSetNotas(this.value)"></textarea>
-      </div>
-
-      <!-- Paso 4: Asignar a personas específicas (nuevo, opcional) -- mismo
-           patrón de búsqueda + lista que "Marcar asistencia" de Eventos
-           (.app-nav-search/.ev-marcar-lista/.ev-roster-fila/.ev-roster-nombre,
-           css/eventos.css), pero con checkmarks de selección MÚLTIPLE
-           (.fi-circle, css/reservas.css) en vez del toggle exclusivo A
-           horario/Tarde de esa pantalla -- ver _tarCrear*Personas()/js/tareas.js. -->
-      <div class="salud-paso" id="tar-crear-paso-3">
-        <p class="ev-lugar-campo-label" style="margin-top:0;">Asignar a personas (opcional)</p>
-        <p class="ev-lugar-mapa-nota" style="margin:0 0 14px;">Si elegís gente acá, la tarea queda asignada directamente y pasa a "en progreso" -- sin esperar a que alguien la tome del tablero.</p>
-        <div class="app-nav-search" style="margin-bottom:12px;">
-          <span class="material-symbols-outlined">search</span>
-          <input type="text" id="tar-crear-personas-search" placeholder="Buscar por nombre..." autocomplete="off" oninput="_tarCrearFiltrarPersonas(this.value)">
-        </div>
-        <div id="tar-crear-personas-lista" class="ev-marcar-lista"></div>
       </div>
 
       <div class="cta-footer-spacer" style="height:calc(100px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
@@ -1092,6 +1217,102 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="card" style="text-align:left;">
       <div id="tar-validar-lista"></div>
       <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+
+  <!-- "Tareas archivadas" -- subsección de página completa, visible para
+       cualquiera (a diferencia del wizard/validación de arriba, sin gating
+       de _adminToken): lista de solo lectura de getTareasArchivadas (sin
+       params). Mismo patrón .pantalla+ir() que las 2 subsecciones de
+       arriba. El botón "Eliminar" por tarjeta (admin-only) abre el modal
+       de impacto de más abajo, #modal-tar-eliminar-archivada. -->
+  <div class="pantalla" id="s-tareas-archivadas">
+    <div class="app-nav app-nav-sticky" id="tar-archivadas-header">
+      <button class="app-nav-back" onclick="_tarCerrarArchivadas()">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <span class="app-nav-title">Tareas archivadas</span>
+      <div style="width:40px;flex-shrink:0;"></div>
+    </div>
+    <div class="card" style="text-align:left;">
+      <!-- Buscador + filtros de Archivadas -- mismo componente/mecanismo que
+           el de #s-tareas (ver ese bloque para el comentario completo),
+           estado propio (`_tarFiltroArch`, js/tareas.js) porque acá Mes
+           filtra por `fechaArchivado` (no `fechaVencimiento`) y suma un 5to
+           campo, "Estado final" (Aprobada/Rechazada/Sin asignados -- no
+           aplica a las otras 3 vistas, ahí las tareas siguen en curso, sin
+           estado final todavía). -->
+      <div style="margin-bottom:12px;">
+        <span class="aj-pill aj-pill-link" id="tarch-busqueda-toggle-btn" onclick="_tarToggleBusquedaArch()" style="display:inline-flex;align-items:center;gap:6px;position:relative;">
+          <span class="material-symbols-outlined" style="font-size:16px;">search</span>Buscar y filtrar
+          <span class="ev-filtro-badge" id="tarch-filtro-badge" style="display:none;">0</span>
+        </span>
+      </div>
+      <div class="ev-header-burbuja" id="tarch-busqueda-panel">
+        <div class="ev-header-burbuja-panel">
+          <div class="app-nav-search">
+            <span class="material-symbols-outlined">search</span>
+            <input type="text" id="tarch-search-input" placeholder="Buscar por título o área..." oninput="_tarBuscar('archivadas', this.value)">
+          </div>
+          <div class="seccion-label ev-filtros-label">Filtros</div>
+          <div class="ev-filtros-row" id="tarch-filtros-row">
+            <button type="button" class="ev-filtro-trigger" id="tarch-filtro-btn-area" data-label="Área" onclick="_tarToggleFiltroBurbuja('archivadas','area')">
+              <span class="ev-filtro-trigger-label">Área</span><span class="material-symbols-outlined">expand_more</span>
+            </button>
+            <button type="button" class="ev-filtro-trigger" id="tarch-filtro-btn-personas" data-label="Personas" onclick="_tarToggleFiltroBurbuja('archivadas','personas')">
+              <span class="ev-filtro-trigger-label">Personas</span><span class="material-symbols-outlined">expand_more</span>
+            </button>
+            <button type="button" class="ev-filtro-trigger" id="tarch-filtro-btn-puntos" data-label="Puntos" onclick="_tarToggleFiltroBurbuja('archivadas','puntos')">
+              <span class="ev-filtro-trigger-label">Puntos</span><span class="material-symbols-outlined">expand_more</span>
+            </button>
+            <button type="button" class="ev-filtro-trigger" id="tarch-filtro-btn-mes" data-label="Mes" onclick="_tarToggleFiltroBurbuja('archivadas','mes')">
+              <span class="ev-filtro-trigger-label">Mes</span><span class="material-symbols-outlined">expand_more</span>
+            </button>
+            <button type="button" class="ev-filtro-trigger" id="tarch-filtro-btn-estado" data-label="Estado final" onclick="_tarToggleFiltroBurbuja('archivadas','estado')">
+              <span class="ev-filtro-trigger-label">Estado final</span><span class="material-symbols-outlined">expand_more</span>
+            </button>
+          </div>
+          <div class="ev-filtro-burbuja" id="tarch-filtro-burbuja-area"><div class="aj-pills-row ev-filtro-burbuja-pills" id="tarch-filtro-area-pills"></div></div>
+          <div class="ev-filtro-burbuja" id="tarch-filtro-burbuja-personas">
+            <div class="app-nav-search" style="margin:6px 2px 10px;">
+              <span class="material-symbols-outlined">search</span>
+              <input type="text" id="tarch-filtro-personas-search" placeholder="Buscar por nombre..." autocomplete="off" oninput="_tarRenderFiltroPersonasLista('archivadas', this.value)">
+            </div>
+            <div id="tarch-filtro-personas-lista" class="ev-marcar-lista"></div>
+          </div>
+          <div class="ev-filtro-burbuja" id="tarch-filtro-burbuja-puntos">
+            <div class="tar-filtro-puntos-row">
+              <div class="tar-filtro-puntos-campo"><label>Mínimo</label><input type="number" inputmode="numeric" id="tarch-filtro-puntos-min" placeholder="0" oninput="_tarSetFiltroPuntos('archivadas','min',this.value)"></div>
+              <span class="tar-filtro-puntos-sep">–</span>
+              <div class="tar-filtro-puntos-campo"><label>Máximo</label><input type="number" inputmode="numeric" id="tarch-filtro-puntos-max" placeholder="Sin límite" oninput="_tarSetFiltroPuntos('archivadas','max',this.value)"></div>
+            </div>
+          </div>
+          <div class="ev-filtro-burbuja" id="tarch-filtro-burbuja-mes"><div class="meses-grid-pills" id="tarch-filtro-mes-grid"></div></div>
+          <div class="ev-filtro-burbuja" id="tarch-filtro-burbuja-estado"><div class="aj-pills-row ev-filtro-burbuja-pills" id="tarch-filtro-estado-pills"></div></div>
+        </div>
+      </div>
+
+      <div id="tar-archivadas-lista"></div>
+      <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+
+  <!-- Modal de confirmación al eliminar una tarea archivada (admin) -- mismo
+       "idioma" que abrirModalInfoEstado()/cerrarModalInfoEstado() (js/ui.js,
+       ver "Reglas globales del proyecto" en MANIFEST.md): overlay fijo +
+       .modal-info-card, fade de opacity con doble requestAnimationFrame.
+       Contenido dinámico (el impacto real: quién pierde cuántos puntos),
+       poblado por _tarEliminarArchivadaAbrir() antes de abrir -- mismo nivel
+       de fricción que cualquier otra eliminación permanente de la app:
+       nada se borra sin que la persona vea antes, explícito, lo que va a
+       perder. -->
+  <div id="modal-tar-eliminar-archivada" class="modal-info" style="display:none;opacity:0;position:fixed;inset:0;z-index:9500;background:var(--overlay-dark);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;transition:opacity 0.3s ease;" onclick="if(event.target===this)_tarEliminarArchivadaCerrar()">
+    <div class="modal-info-card">
+      <h3 style="margin:0 0 8px;font-size:1.05rem;color:var(--text);">¿Eliminar esta tarea archivada?</h3>
+      <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 16px;">Esta acción es permanente y no se puede deshacer. Esto es lo que va a pasar:</p>
+      <div id="tar-eliminar-archivada-impacto" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;"></div>
+      <button class="btn btn-danger" id="tar-eliminar-archivada-btn-confirmar" onclick="_tarEliminarArchivadaConfirmar()" style="margin-bottom:10px;">Eliminar definitivamente</button>
+      <button class="btn btn-outline" onclick="_tarEliminarArchivadaCerrar()">Cancelar</button>
     </div>
   </div>
 
