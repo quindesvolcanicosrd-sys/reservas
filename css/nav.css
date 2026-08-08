@@ -167,11 +167,10 @@
    navegadores modernos, no hace falta un `<span>` propio superpuesto). */
 .app-nav-search input::placeholder { color: var(--muted); font-weight: 500; opacity: 1; transition: opacity 0.2s ease; }
 .app-nav-search:focus-within input::placeholder { opacity: 0; }
-/* Sin cursor parpadeante visible (ver "Cambios recientes" -- pedido
-   explícito: apenas se notaba, mejor sacarlo del todo que intentar
-   resaltarlo). Scoped al input de Ajustes -- el resto de inputs de la app
-   no se tocan. */
-#aj-search-input { caret-color: transparent; }
+/* `caret-color:transparent` de este input -- antes fijado acá mismo, scoped
+   solo a #aj-search-input -- ahora lo cubre la regla global por atributo
+   `input[placeholder*="uscar" i]` (css/ui.css), que alcanza a TODO buscador
+   de la app, no solo a este. Ver MANIFEST.md "Cambios recientes". */
 
 /* ── Acciones derecha ────────────────────────── */
 .app-nav-actions {

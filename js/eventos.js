@@ -1463,13 +1463,19 @@ function _evLanzarConfettiCuandoVisible(el, intentosRestantes) {
 // un scroll disparado por el usuario. Sin grupo exacto para `iso` (ej. "hoy"
 // sin eventos propios, ver "Cambios recientes" -- decisión confirmada: no se
 // fuerza un renglón vacío para hoy) cae al grupo real más cercano en el
-// tiempo (_evFechaGrupoMasCercano()). Si `iso` es hoy (ver "Cambios
-// recientes" -- bug real), prioriza el separador -HOY- (`#ev-separador-hoy`)
-// sobre el `.ev-fecha-grupo`: son 2 elementos vecinos con su propio
-// `scroll-margin-top` cada uno, pero apuntar al grupo dejaba el separador
-// (arriba de él en el flujo) tapado a medias por la cabecera -- apuntar al
-// separador directo lo deja pegado arriba del todo, mismo criterio que
-// cualquier otro salto de fecha.
+// tiempo (_evFechaGrupoMasCercano()). Prioriza el separador de sección
+// (`.ev-hoy-separador` -- HOY/MAÑANA/ESTA SEMANA/PRÓXIMA SEMANA,
+// `_evRenderTimeline()`) sobre el `.ev-fecha-grupo` cuando ese grupo tiene
+// uno pegado justo arriba en el flujo (ver "Cambios recientes" -- antes solo
+// cubría el caso -HOY-, generalizado acá a los 3 restantes): son elementos
+// vecinos con su propio `scroll-margin-top` cada uno, pero apuntar al grupo
+// deja el separador (arriba de él en el flujo) fuera de vista -- SIN
+// contexto de si lo que sigue es mañana, esta semana o la próxima. Bug real
+// (ver MANIFEST.md "Cambios recientes"): con "Hoy" sin eventos propios pero
+// sí mañana/la semana que viene, el botón llevaba directo al primer grupo
+// futuro sin que el separador correspondiente quedara visible arriba,
+// perdiendo ese contexto -- el mismo bug que ya se había corregido puntual
+// para -HOY-, sin generalizar en su momento a los otros 3 separadores.
 //
 // **Bug real encontrado y corregido con Playwright (ver "Cambios
 // recientes" -- separador -HOY- tapado a medias por la cabecera SOLO en el
@@ -1512,9 +1518,17 @@ function _evOffsetAbsoluto(el) {
   return top;
 }
 function _evScrollAFecha(iso, instant, forzar) {
-  var el = (iso === _evHoyISO() && document.getElementById('ev-separador-hoy')) ||
-    document.getElementById('ev-fecha-' + iso) || _evFechaGrupoMasCercano(iso);
+  var el = document.getElementById('ev-fecha-' + iso) || _evFechaGrupoMasCercano(iso);
   if (!el) return;
+  // Generaliza el separador -HOY- a los 3 restantes (MAÑANA/ESTA SEMANA/
+  // PRÓXIMA SEMANA) -- ver el comentario largo más arriba. `previousElementSibling`
+  // (no texto/whitespace) es el propio `.ev-hoy-separador` cuando `el` lo
+  // tiene pegado justo arriba en el HTML generado por `_evRenderTimeline()`;
+  // para cualquier grupo sin separador propio (ej. un día más de la misma
+  // semana ya cubierta por uno anterior) cae en `null`/otro elemento y no
+  // matchea `.ev-hoy-separador`, sin cambiar nada.
+  var separador = el.previousElementSibling;
+  if (separador && separador.classList.contains('ev-hoy-separador')) el = separador;
   var margenSup = _evAlturaStickyHeader();
   document.documentElement.style.setProperty('--ev-sticky-h', margenSup + 'px');
   var absTop = _evOffsetAbsoluto(el);
@@ -1599,8 +1613,17 @@ function _evCalIrAFechaEnTimeline(iso, instant, forzarHayContenido, forzarScroll
 // reusado tal cual en la card (_evCardEventoHtml(), de abajo) y en el
 // detalle (_evDetalleEstadoNotaHtml(), más abajo en este archivo) -- no 2
 // implementaciones paralelas.
+// "Evento Cancelado" (en vez del `estado` corto "Cancelado" que ya usa
+// `_evNormalizarEstadoEvento()` para comparar internamente, ver más arriba)
+// -- ver MANIFEST.md "Cambios recientes": pedido explícito para el botón no
+// clickeable que reemplaza las acciones de RSVP/asistencia una vez que un
+// admin cancela el evento (`_evCancelarEvento()`) -- debe quedar claro que
+// nadie debe ir ni marcar asistencia, "Cancelado" a secas es ambiguo fuera
+// de contexto (¿cancelé yo mi asistencia, o canceló el evento?). "No se
+// entrena" no tiene esa ambigüedad, queda sin cambios.
 function _evEstadoNotaPillHtml(estado) {
-  return '<div class="ev-estado-pill ev-estado-pill-danger"><span class="material-symbols-outlined">warning</span>' + estado + '</div>';
+  var texto = estado === 'Cancelado' ? 'Evento Cancelado' : estado;
+  return '<div class="ev-estado-pill ev-estado-pill-danger"><span class="material-symbols-outlined">warning</span>' + texto + '</div>';
 }
 /* ── Card de evento — vista previa simplificada (Semana/Calendario/Lista,
    ver "Cambios recientes": se saca la fila de avatares y "Más información"
@@ -2789,6 +2812,8 @@ function _evRenderDetalle(ev) {
   // y dejaría el indicador sin su fondo sólido pintado.
   if (rsvpCont) rsvpCont.innerHTML = _evOcultarRsvpPorEquipoClub(ev) ? '' : (_evRsvpBarraHtml(ev) || _evDetalleEstadoNotaHtml(ev));
   _evRenderDetalleAsistencia(ev);
+  var cancelarCont = document.getElementById('ev-detalle-admin-cancelar');
+  if (cancelarCont) cancelarCont.innerHTML = _evDetalleAdminCancelarHtml(ev);
 }
 // Mismo componente que la card (`_evEstadoNotaPillHtml()`, más arriba en
 // este archivo) para Cancelado/No se entrena -- reuso literal, no una
@@ -2797,6 +2822,63 @@ function _evRenderDetalle(ev) {
 function _evDetalleEstadoNotaHtml(e) {
   if (e.estado === 'Cancelado' || e.estado === 'No se entrena') return _evEstadoNotaPillHtml(e.estado);
   return '';
+}
+/* ── Cancelar evento (admin, ver MANIFEST.md "Cambios recientes") ───────
+   Sección admin nueva del detalle (`#ev-detalle-admin-cancelar`,
+   `.ev-detalle-section` hermana de las que ya existían -- este slot estaba
+   reservado a propósito para "secciones futuras (editar evento admin...)",
+   ver el comentario de arriba de `_evRenderDetalle()`). Un solo botón
+   destructivo (`.btn-danger`, mismo componente que "Eliminar" en Tareas
+   archivadas) mientras el evento sigue activo -- una vez cancelado
+   (`e.estado==='Cancelado'`) esta sección queda vacía: el estado ya se ve
+   arriba, en la sección de RSVP, vía `_evDetalleEstadoNotaHtml()`/
+   `_evEstadoNotaPillHtml()` (el mismo botón no-clickeable "Evento
+   Cancelado" en rojo con ícono que ya usan Cancelado/No se entrena en
+   cualquier card de Eventos) -- no un 2do indicador redundante acá abajo. */
+function _evDetalleAdminCancelarHtml(e) {
+  if (!_adminToken || e.estado === 'Cancelado') return '';
+  return '<button type="button" class="btn btn-danger" onclick="_evCancelarEvento(\'' + e.id + '\', this)">' +
+    '<span class="material-symbols-outlined" style="vertical-align:middle;margin-right:6px;">cancel</span>Cancelar evento</button>';
+}
+// `adminCancelarEvento` -- acción nueva, mismo criterio GET/POST ya
+// verificado para el resto de acciones admin de ESCRITURA de esta sección
+// (`adminMarcarAsistencia`, más arriba en este archivo): `apiPost()` con
+// `adminToken` como param del body, no `api()`/GET (a diferencia de
+// Tareas, donde TODAS las acciones admin -- lectura y escritura -- viven en
+// el router de GET -- confirmado que esta sección sigue el patrón opuesto
+// para escrituras, ver "Cambios recientes" de esta misma sesión). Backend
+// (Code.gs, fuera de este repo) -- si `adminCancelarEvento` todavía no
+// existe en `doPost(e)`, sumar un `case` ahí, mismo grupo que
+// `adminMarcarAsistencia` (valida `adminToken`, ubica el evento por
+// `idEvento` y pisa su columna "Estado" a `'Evento Cancelado'` -- el valor
+// crudo con el prefijo, ver `_EV_ESTADO_MAP`/`_evNormalizarEstadoEvento()`
+// más arriba, para que quede consistente con cómo ya llegan los eventos
+// cancelados a mano desde la hoja). Optimista + revert (mismo criterio que
+// `_evMarcarAsistenciaAdmin()`, arriba en este archivo) -- `ev` es el MISMO
+// objeto referenciado por `_evDetalleActual` (ver `abrirEvDetalle()`), así
+// que mutarlo acá alcanza para que `_evRenderDetalle()` refleje el cambio
+// en las 2 secciones (RSVP y esta) sin tener que sincronizar 2 variables.
+function _evCancelarEvento(idEvento, btn) {
+  var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
+  if (!ev) return;
+  if (!confirm('¿Cancelar este evento? El equipo va a ver que está cancelado y no va a poder marcar asistencia.')) return;
+  if (btn) btn.disabled = true;
+  var estadoAnterior = ev.estado;
+  ev.estado = 'Cancelado';
+  if (_evDetalleActual && _evDetalleActual.id === idEvento) _evRenderDetalle(ev);
+  apiPost({ action: 'adminCancelarEvento', adminToken: _adminToken, idEvento: idEvento }, function(res) {
+    if (res && res.exito === false) {
+      ev.estado = estadoAnterior;
+      if (btn) btn.disabled = false;
+      if (_evDetalleActual && _evDetalleActual.id === idEvento) _evRenderDetalle(ev);
+      mostrarToast(res.error || 'No se pudo cancelar el evento.', 'error');
+    }
+  }, function(e) {
+    ev.estado = estadoAnterior;
+    if (btn) btn.disabled = false;
+    if (_evDetalleActual && _evDetalleActual.id === idEvento) _evRenderDetalle(ev);
+    mostrarToast((e && e.message) || 'No se pudo cancelar el evento.', 'error');
+  });
 }
 // Nav compacta sticky (ver "Cambios recientes" -- reemplaza el #top-bar
 // genérico para esta pantalla, ver TOP_BAR_CONFIG/js/ui.js): flecha atrás

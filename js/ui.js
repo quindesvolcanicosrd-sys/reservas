@@ -843,6 +843,25 @@ function _actualizarBottomNav(id) {
   nav.style.display = 'flex';
 }
 
+// Bug real corregido (ver MANIFEST.md "Cambios recientes" -- scroll perdido
+// al volver de "Tomar asistencia" con el gesto/botón NATIVO de atrás, nunca
+// con la flecha propia de la app): el navegador trae su PROPIA restauración
+// automática de scroll ligada al historial (`history.scrollRestoration`,
+// default `'auto'`) -- en cualquier popstate real (gesto nativo, botón
+// físico/Android, swipe-back de iOS) el navegador intenta restaurar POR SU
+// CUENTA la posición que recuerda de esa entrada del historial, en paralelo
+// al `window.scrollTo()` manual que ya hace `ir()` más abajo (ver el bloque
+// de `_evRestaurarScrollTimeline`/`_ajRestaurarScroll`) -- ambos mecanismos
+// pisándose sin coordinación, y el del navegador corriendo DESPUÉS gana,
+// dejando el scroll en un valor ajeno al que la app acababa de calcular.
+// Confirmado con Playwright: tocar la flecha "atrás" en pantalla (sin
+// popstate real) preservaba el scroll perfecto; el mismo flujo con
+// `page.goBack()` (popstate real) lo perdía -- y agregar esta única línea
+// (sin tocar nada más) lo corrige. `'manual'` dejamos control 100% en manos
+// de `ir()`, consistente en TODA la app (no solo Eventos) para cualquier
+// pantalla con su propio mecanismo de restauración de scroll -- una sola
+// vez, al cargar, antes del primer listener de popstate.
+history.scrollRestoration = 'manual';
 window.addEventListener('popstate', function(ev) {
   if (_overlayStack.length > 0) { var _fn = _overlayStack.pop(); _fn(true); return; }
   if (_ajSubAbierto) { cerrarAjSub(_ajSubAbierto, true); return; }

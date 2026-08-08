@@ -19,6 +19,18 @@ var _tarPendientesValidacion = [];
 var _tarArchivadas = [];
 var _tarEliminarArchivadaIdPendiente = null;
 
+// Marca qué card debe entrar con `.tar-card-entrando` en el próximo render
+// de Disponibles/Mis tareas -- consumida y limpiada por
+// `_tarAplicarEntradaPendiente()`, ver bloque de actualización optimista
+// más abajo (tomar/soltar/enviar a revisión).
+var _tarEntradaPendiente = null; // { lista: 'disponibles'|'mis', id: idTarea|idAsignacion }
+function _tarAplicarEntradaPendiente(lista, prefijoDom) {
+  if (!_tarEntradaPendiente || _tarEntradaPendiente.lista !== lista) return;
+  var el = document.getElementById(prefijoDom + _tarEntradaPendiente.id);
+  if (el) el.classList.add('tar-card-entrando');
+  _tarEntradaPendiente = null;
+}
+
 var _TAR_ICONOS_AREA = {
   'Logística': 'inventory_2',
   'Entrenamientos': 'sports_gymnastics',
@@ -443,11 +455,21 @@ function _tarUpdateSlider(animate) {
 
 /* ── Carga de datos ────────────────────────────────────────────────────
    3 llamadas independientes en paralelo (disponibles+baúl, config, mis
-   tareas) -- cada una re-renderiza lo suyo apenas resuelve, sin esperarse
-   entre sí; `_tarRenderDisponibles()` se vuelve a llamar tras `getMisTareas`
-   y `getConfigTareas` (además de tras `getTareasDisponibles`) porque el
-   gating de "límite alcanzado" de sus botones depende de las 3 a la vez, sin
-   importar el orden real de llegada. */
+   tareas). Bug real corregido (ver MANIFEST.md "Cambios recientes" --
+   parpadeo doble al abrir Tareas): antes cada una de las 3 disparaba su
+   PROPIO `_tarRenderDisponibles()` apenas resolvía -- como `_tarEnLimite()`
+   depende de `_tarConfig` Y `_tarMisTareas` (no solo de `_tarDisponibles`),
+   el primer render (con las otras 2 todavía sin resolver) mostraba un
+   gating de "límite alcanzado" parcial/potencialmente incorrecto, que el o
+   los renders siguientes reemplazaban de golpe -- un `innerHTML=` completo
+   cada vez, con la re-hidratación de TODOS los avatares
+   (`_tarHidratarAvatares()`) incluida, visible como parpadeo doble/triple
+   cuando 2+ de las 3 respuestas llegaban cerca en el tiempo (el caso
+   típico). Fix de raíz: banderas `listo.*` -- Disponibles/Baúl se pintan
+   una sola vez, recién cuando las 3 respuestas ya están adentro (éxito o
+   error, lo que sea que haya resuelto primero para cada una). `getMisTareas`
+   sigue pintando "Mis tareas" en cuanto resuelve (una sola llamada real la
+   alimenta, no hay nada que coalescer ahí). */
 function _tarCargarTodo() {
   var miCarga = ++_tarCargaId;
   var contDisp = document.getElementById('tar-lista-disponibles');
@@ -455,31 +477,48 @@ function _tarCargarTodo() {
   if (contDisp) contDisp.innerHTML = _tarSkeletonHtml(2);
   if (contMis) contMis.innerHTML = _tarSkeletonHtml(2);
 
+  var listo = { disponibles: false, config: false, misTareas: false };
+  var disponiblesOk = false;
+  function _tarPintarDisponiblesSiListo() {
+    if (listo.disponibles && listo.config && listo.misTareas && disponiblesOk) _tarRenderDisponibles();
+  }
+
   api({ action: 'getTareasDisponibles' }, function(res) {
     if (miCarga !== _tarCargaId) return;
     _tarDisponibles = (res && res.disponibles) || [];
     _tarBaul = (res && res.baul) || [];
-    _tarRenderDisponibles();
+    disponiblesOk = true;
+    listo.disponibles = true;
+    _tarPintarDisponiblesSiListo();
   }, function(e) {
     if (miCarga !== _tarCargaId) return;
+    listo.disponibles = true;
     if (contDisp) contDisp.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">error_outline</span>No se pudieron cargar las tareas.</div>';
   });
 
   api({ action: 'getConfigTareas' }, function(res) {
     if (miCarga !== _tarCargaId) return;
     _tarConfig = res || { limiteTareasActivas: null };
-    _tarRenderDisponibles();
-  }, function() {});
+    listo.config = true;
+    _tarPintarDisponiblesSiListo();
+  }, function() {
+    if (miCarga !== _tarCargaId) return;
+    listo.config = true;
+    _tarPintarDisponiblesSiListo();
+  });
 
   api({ action: 'getMisTareas', nombre: E.nombre }, function(res) {
     if (miCarga !== _tarCargaId) return;
     _tarMisTareas = res || [];
+    listo.misTareas = true;
     _tarRenderMisTareas();
-    _tarRenderDisponibles();
+    _tarPintarDisponiblesSiListo();
   }, function(e) {
     if (miCarga !== _tarCargaId) return;
     _tarMisTareas = [];
+    listo.misTareas = true;
     if (contMis) contMis.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">error_outline</span>No se pudieron cargar tus tareas.</div>';
+    _tarPintarDisponiblesSiListo();
   });
 
   _tarCargarPendientesValidacion();
@@ -533,6 +572,7 @@ function _tarRenderDisponibles() {
   var listaBaul = document.getElementById('tar-lista-baul');
   if (listaBaul) listaBaul.innerHTML = baul.map(function(t) { return _tarCardHtml(t, 'baul'); }).join('');
   _tarHidratarAvatares();
+  _tarAplicarEntradaPendiente('disponibles', 'tar-card-disponible-');
 }
 
 function _tarToggleBaul() {
@@ -569,13 +609,15 @@ function _tarCardHtml(t, contexto) {
   } else {
     accionHtml = '<button type="button" class="btn btn-outline tar-card-btn" onclick="_tarTomar(\'' + t.idTarea + '\', this)"><span class="material-symbols-outlined">add_task</span>Tomar tarea</button>';
   }
-  // "Archivar tarea" (admin, solo Baúl) -- independiente del límite de
-  // arriba a propósito: ese límite solo gatea Tomar/Rescatar (acciones de
+  // "Archivar tarea" (admin, Disponibles Y Baúl -- antes solo Baúl, ver
+  // MANIFEST.md "Cambios recientes") -- independiente del límite de arriba
+  // a propósito: ese límite solo gatea Tomar/Rescatar (acciones de
   // autoservicio del propio admin como usuarix), Archivar es una acción
   // administrativa sin relación con ningún cupo personal. Sin límite de
   // días ni automatismo -- el admin archiva cuando quiere, tarea por
-  // tarea (pedido explícito).
-  if (contexto === 'baul' && _adminToken) {
+  // tarea (pedido explícito). Mismo backend (`adminArchivarTarea`) sin
+  // ningún cambio -- la acción ya no depende de en qué lista viva la tarea.
+  if ((contexto === 'baul' || contexto === 'disponible') && _adminToken) {
     accionHtml += '<button type="button" class="btn btn-text-simple tar-card-btn" onclick="_tarArchivar(\'' + t.idTarea + '\', this)"><span class="material-symbols-outlined">archive</span>Archivar tarea</button>';
   }
   return '<div class="ev-card" id="tar-card-' + contexto + '-' + t.idTarea + '">' +
@@ -583,7 +625,7 @@ function _tarCardHtml(t, contexto) {
       '<div class="ev-card-icon"><span class="material-symbols-outlined">' + icono + '</span></div>' +
       '<div class="ev-card-body">' +
         '<div class="ev-card-titulo">' + (t.titulo || '') + '</div>' +
-        '<div class="ev-card-sub"><span class="aj-pill activa tar-area-pill">' + (t.area || '') + '</span><span>' + (t.puntos != null ? t.puntos : 0) + ' pts</span></div>' +
+        '<div class="ev-card-sub"><span class="fi-pill fi-pill-fin tar-area-pill">' + (t.area || '') + '</span><span>' + (t.puntos != null ? t.puntos : 0) + ' pts</span></div>' +
         '<div class="ev-card-sub"><span class="material-symbols-outlined">event</span>Vence: ' + _tarFechaLegible(t.fechaVencimiento) + '</div>' +
         _tarAvataresHtml(t.asignados, t.cuposTotales, cuposLibres) +
         accionHtml +
@@ -632,15 +674,18 @@ function _tarRenderMisTareas() {
     cont.innerHTML = (_tarMisTareas.length && _tarFiltroActivo('principal')) ?
       '<div class="ev-lista-vacia"><span class="material-symbols-outlined">filter_alt_off</span>No hay tareas que coincidan con estos filtros.</div>' :
       '<div class="ev-lista-vacia"><span class="material-symbols-outlined">assignment_turned_in</span>Todavía no tomaste ninguna tarea.</div>';
+    _tarEntradaPendiente = null;
     return;
   }
   cont.innerHTML = filtradas.map(_tarCardMisHtml).join('');
+  _tarAplicarEntradaPendiente('mis', 'tar-mis-card-');
 }
-function _tarCardMisHtml(a) {
+// Bloque de acción de una card de "Mis tareas" -- factorizado aparte de
+// `_tarCardMisHtml()` (antes inline ahí) para que `_tarEnviarRevision()`
+// pueda repintar SOLO este bloque (con fade, ver más abajo) en vez de la
+// card entera cuando el estado cambia de forma optimista.
+function _tarAccionMisHtml(a) {
   var t = a.tarea || {};
-  var icono = _TAR_ICONOS_AREA[t.area] || 'task_alt';
-  var fechaTope = a.fechaVencimientoPersonal || t.fechaVencimiento;
-  var accionHtml;
   // `estado==='iniciada'` es la única rama con acciones -- cualquier otro
   // valor (`pendiente_revision` por contrato, `en_revision` según el nombre
   // de columna real documentado en la migración a Supabase, MANIFEST.md)
@@ -649,21 +694,25 @@ function _tarCardMisHtml(a) {
   // falta listar el nombre exacto del segundo estado acá para que la UI se
   // comporte bien ante ese desfasaje de nomenclatura.
   if (a.estado === 'iniciada') {
-    accionHtml = '<div class="tar-acciones-col">' +
+    return '<div class="tar-acciones-col">' +
       '<button type="button" class="btn btn-outline tar-card-btn" onclick="_tarEnviarRevision(\'' + a.idAsignacion + '\', this)"><span class="material-symbols-outlined">send</span>Enviar a revisión</button>' +
       '<button type="button" class="btn btn-text-simple tar-card-btn" onclick="_tarSoltar(\'' + a.idAsignacion + '\', \'' + t.idTarea + '\', this)"><span class="material-symbols-outlined">remove_circle</span>Soltar tarea</button>' +
     '</div>';
-  } else {
-    accionHtml = '<div class="ev-estado-pill ev-estado-pill-warning"><span class="material-symbols-outlined">hourglass_top</span>Esperando validación</div>';
   }
+  return '<div class="ev-estado-pill ev-estado-pill-warning"><span class="material-symbols-outlined">hourglass_top</span>Esperando validación</div>';
+}
+function _tarCardMisHtml(a) {
+  var t = a.tarea || {};
+  var icono = _TAR_ICONOS_AREA[t.area] || 'task_alt';
+  var fechaTope = a.fechaVencimientoPersonal || t.fechaVencimiento;
   return '<div class="ev-card" id="tar-mis-card-' + a.idAsignacion + '">' +
     '<div class="ev-card-top-row">' +
       '<div class="ev-card-icon"><span class="material-symbols-outlined">' + icono + '</span></div>' +
       '<div class="ev-card-body">' +
         '<div class="ev-card-titulo">' + (t.titulo || '') + (a.esRescate ? ' <span style="font-size:0.68rem;color:var(--muted);font-weight:600;">(rescatada)</span>' : '') + '</div>' +
-        '<div class="ev-card-sub"><span class="aj-pill activa tar-area-pill">' + (t.area || '') + '</span><span>' + (t.puntos != null ? t.puntos : 0) + ' pts</span></div>' +
+        '<div class="ev-card-sub"><span class="fi-pill fi-pill-fin tar-area-pill">' + (t.area || '') + '</span><span>' + (t.puntos != null ? t.puntos : 0) + ' pts</span></div>' +
         '<div class="ev-card-sub"><span class="material-symbols-outlined">event</span>Vence: ' + _tarFechaLegible(fechaTope) + '</div>' +
-        accionHtml +
+        '<div class="tar-accion-wrap" id="tar-accion-wrap-' + a.idAsignacion + '">' + _tarAccionMisHtml(a) + '</div>' +
       '</div>' +
     '</div>' +
   '</div>';
@@ -671,27 +720,69 @@ function _tarCardMisHtml(a) {
 
 /* ── Acciones de usuarix ───────────────────────────────────────────────
    `mostrarToast(msg,'error')` sin `forzar` en éxito -- silencio en éxito es
-   el default intencional de la app (ver MANIFEST.md, "Reglas globales"), el
-   re-render de las listas ya refleja el cambio.
+   el default intencional de la app (ver MANIFEST.md, "Reglas globales").
    Bug sistémico corregido (ver MANIFEST.md "Cambios recientes"): las 4
    acciones de abajo (tomarTarea/rescatarTarea/soltarTarea/
    enviarRevisionTarea), igual que adminCrearTarea más abajo, viven en el
    router de GET (doGet) del backend, no en doPost -- llamarlas con
    apiPost() (POST) devolvía "Acción POST no válida". Fix: usan api() (GET),
-   mismo mecanismo que getTareasDisponibles/getMisTareas/getConfigTareas. */
+   mismo mecanismo que getTareasDisponibles/getMisTareas/getConfigTareas.
+
+   Tomar/soltar/enviar a revisión -- actualización OPTIMISTA (ver
+   MANIFEST.md "Cambios recientes"): la card reacciona en el DOM apenas se
+   toca el botón, sin esperar la respuesta del servidor -- recién si el
+   request falla se revierte el cambio (la tarea vuelve a su lista/estado
+   anterior, con su propia animación de "entrada") y se muestra el toast de
+   error. Cada una de las 3 tiene su propia transición (no una genérica):
+   "tomar" sale con un lift + glow verde (semántica de logro), "soltar" sale
+   con un drop sutil hacia abajo (semántica de soltar/entregar), "enviar a
+   revisión" no cambia de lista -- solo cruza (fade) el bloque de botones
+   por la píldora "Esperando validación" y pulsa el borde de la card en
+   verde (`.tar-card-confirmando`, css/tareas.css). `_tarRescatar()`
+   (Baúl) queda fuera del pedido -- sigue recargando todo como antes. */
 function _tarTomar(idTarea, btn) {
   if (btn) btn.disabled = true;
+  var idx = -1;
+  for (var i = 0; i < _tarDisponibles.length; i++) { if (String(_tarDisponibles[i].idTarea) === String(idTarea)) { idx = i; break; } }
+  var snapshot = idx !== -1 ? _tarDisponibles[idx] : null;
+  var card = document.getElementById('tar-card-disponible-' + idTarea);
+  _tarAnimarSalida(card, 'tar-card-saliendo-tomada', function() {
+    if (snapshot) {
+      var real = _tarDisponibles.indexOf(snapshot);
+      if (real !== -1) _tarDisponibles.splice(real, 1);
+    }
+    _tarRenderDisponibles();
+  });
   api({ action: 'tomarTarea', nombre: E.nombre, token: _token, idTarea: idTarea }, function(res) {
     if (res && res.exito === false) {
-      if (btn) btn.disabled = false;
-      mostrarToast(res.error || 'No se pudo tomar la tarea.', 'error');
+      _tarRevertirDisponible(snapshot, res.error || 'No se pudo tomar la tarea.');
       return;
     }
-    _tarCargarTodo();
+    _tarSincronizarTrasTomar();
   }, function(e) {
-    if (btn) btn.disabled = false;
-    mostrarToast((e && e.message) || 'No se pudo tomar la tarea.', 'error');
+    _tarRevertirDisponible(snapshot, (e && e.message) || 'No se pudo tomar la tarea.');
   });
+}
+function _tarRevertirDisponible(snapshot, mensaje) {
+  if (snapshot && _tarDisponibles.indexOf(snapshot) === -1) {
+    _tarDisponibles.unshift(snapshot);
+    _tarEntradaPendiente = { lista: 'disponibles', id: snapshot.idTarea };
+  }
+  _tarRenderDisponibles();
+  mostrarToast(mensaje, 'error');
+}
+// Tras un "Tomar" optimista confirmado por el servidor: la lista de
+// Disponibles ya quedó correcta con la resta local de arriba (no se vuelve
+// a repintar acá -- evitaría el parpadeo que corrige el punto de "doble
+// parpadeo", ver `_tarCargarTodo()`). Solo sincroniza "Mis tareas"/el
+// gating de límite en segundo plano -- ese panel está OCULTO en este
+// momento (el toque fue desde la tab Disponibles), repintarlo no se nota.
+function _tarSincronizarTrasTomar() {
+  api({ action: 'getConfigTareas' }, function(res) { _tarConfig = res || _tarConfig; }, function() {});
+  api({ action: 'getMisTareas', nombre: E.nombre }, function(res) {
+    _tarMisTareas = res || _tarMisTareas;
+    _tarRenderMisTareas();
+  }, function() {});
 }
 function _tarRescatar(idTarea, btn) {
   if (btn) btn.disabled = true;
@@ -709,26 +800,107 @@ function _tarRescatar(idTarea, btn) {
 }
 function _tarSoltar(idAsignacion, idTarea, btn) {
   if (btn) btn.disabled = true;
+  var idx = -1;
+  for (var i = 0; i < _tarMisTareas.length; i++) { if (String(_tarMisTareas[i].idAsignacion) === String(idAsignacion)) { idx = i; break; } }
+  var snapshot = idx !== -1 ? _tarMisTareas[idx] : null;
+  var card = document.getElementById('tar-mis-card-' + idAsignacion);
+  _tarAnimarSalida(card, 'tar-card-saliendo-soltada', function() {
+    if (snapshot) {
+      var real = _tarMisTareas.indexOf(snapshot);
+      if (real !== -1) _tarMisTareas.splice(real, 1);
+    }
+    _tarRenderMisTareas();
+  });
   api({ action: 'soltarTarea', nombre: E.nombre, token: _token, idTarea: idTarea }, function(res) {
-    _tarCargarTodo();
+    if (res && res.exito === false) {
+      _tarRevertirMisTareas(snapshot, res.error || 'No se pudo soltar la tarea.');
+      return;
+    }
+    _tarSincronizarTrasSoltar();
   }, function(e) {
-    if (btn) btn.disabled = false;
-    mostrarToast((e && e.message) || 'No se pudo soltar la tarea.', 'error');
+    _tarRevertirMisTareas(snapshot, (e && e.message) || 'No se pudo soltar la tarea.');
   });
 }
+function _tarRevertirMisTareas(snapshot, mensaje) {
+  if (snapshot && _tarMisTareas.indexOf(snapshot) === -1) {
+    _tarMisTareas.unshift(snapshot);
+    _tarEntradaPendiente = { lista: 'mis', id: snapshot.idAsignacion };
+  }
+  _tarRenderMisTareas();
+  mostrarToast(mensaje, 'error');
+}
+// Simétrico a `_tarSincronizarTrasTomar()`: Disponibles está oculta en este
+// momento (el toque fue desde la tab Mis tareas), sincronizarla en segundo
+// plano no se nota.
+function _tarSincronizarTrasSoltar() {
+  api({ action: 'getConfigTareas' }, function(res) { _tarConfig = res || _tarConfig; }, function() {});
+  api({ action: 'getTareasDisponibles' }, function(res) {
+    _tarDisponibles = (res && res.disponibles) || _tarDisponibles;
+    _tarBaul = (res && res.baul) || _tarBaul;
+    _tarRenderDisponibles();
+  }, function() {});
+}
 function _tarEnviarRevision(idAsignacion, btn) {
+  // El botón real desaparece con el fade de `_tarSwapAccionMis()` de abajo,
+  // pero se deshabilita también acá de una (mismo criterio anti-doble-toque
+  // que el resto de las acciones) por si un segundo toque llega mientras el
+  // fade todavía está en curso y el botón viejo sigue técnicamente en el DOM.
   if (btn) btn.disabled = true;
+  var idx = -1;
+  for (var i = 0; i < _tarMisTareas.length; i++) { if (String(_tarMisTareas[i].idAsignacion) === String(idAsignacion)) { idx = i; break; } }
+  var a = idx !== -1 ? _tarMisTareas[idx] : null;
+  if (!a) return;
+  var estadoAnterior = a.estado;
+  a.estado = 'pendiente_revision';
+  _tarSwapAccionMis(a);
   api({ action: 'enviarRevisionTarea', nombre: E.nombre, token: _token, idAsignacion: idAsignacion }, function(res) {
     if (res && res.exito === false) {
-      if (btn) btn.disabled = false;
+      a.estado = estadoAnterior;
+      _tarSwapAccionMis(a);
       mostrarToast(res.error || 'No se pudo enviar a revisión.', 'error');
       return;
     }
-    _tarCargarTodo();
+    // Ya quedó en su estado final vía la actualización optimista de arriba
+    // -- a diferencia de tomar/soltar, esta acción no cambia de lista, así
+    // que no hay nada más que sincronizar en segundo plano.
   }, function(e) {
-    if (btn) btn.disabled = false;
+    a.estado = estadoAnterior;
+    _tarSwapAccionMis(a);
     mostrarToast((e && e.message) || 'No se pudo enviar a revisión.', 'error');
   });
+}
+// Repinta con fade SOLO el bloque de acción de una card de "Mis tareas"
+// (`.tar-accion-wrap`, ver `_tarCardMisHtml()`) en vez de la card entera, y
+// pulsa el borde de la card en verde -- mismo `_evFadeSwap()` genérico ya
+// usado para el cambio de tab Disponibles/Mis tareas (js/eventos.js),
+// sumándole acá la firma visual propia de esta transición puntual.
+function _tarSwapAccionMis(a) {
+  var wrap = document.getElementById('tar-accion-wrap-' + a.idAsignacion);
+  if (!wrap) { _tarRenderMisTareas(); return; }
+  var card = document.getElementById('tar-mis-card-' + a.idAsignacion);
+  if (card) {
+    card.classList.remove('tar-card-confirmando');
+    void card.offsetWidth; // fuerza reflow para poder re-disparar la animación si se llama 2 veces seguidas (revert)
+    card.classList.add('tar-card-confirmando');
+  }
+  _evFadeSwap(wrap, function() { wrap.innerHTML = _tarAccionMisHtml(a); });
+}
+// Anima la salida de una card (tomar/soltar) y recién DESPUÉS ejecuta
+// `alTerminar` (la resta real del array + el re-render de la lista) --
+// `animationend` con un fallback por `setTimeout` (tab en background,
+// card ya ausente del DOM, etc. pueden no disparar el evento).
+function _tarAnimarSalida(card, claseAnim, alTerminar) {
+  if (!card) { alTerminar(); return; }
+  var terminado = false;
+  var fin = function() {
+    if (terminado) return;
+    terminado = true;
+    card.removeEventListener('animationend', fin);
+    alTerminar();
+  };
+  card.addEventListener('animationend', fin);
+  card.classList.add(claseAnim);
+  setTimeout(fin, 500);
 }
 // "Archivar tarea" (admin, Baúl) -- adminArchivarTarea, mismo mecanismo GET+
 // adminToken que el resto de las acciones admin* de Tareas (adminApi()).
@@ -1079,20 +1251,12 @@ function _tarCrearGuardar() {
    pantalla completa) con las filas .admin-banner-res-row ya existentes
    (css/admin.css) -- Aprobar/Rechazar, Rechazar revela un textarea corto
    antes de confirmar. */
+// "Tareas por validar" -- antes un ícono propio en `.ev-header-row` (visible
+// siempre, con su propio gating por `_adminToken`), ahora una opción del FAB
+// de admin (`#tar-fab-menu`, ver MANIFEST.md "Cambios recientes") -- el FAB
+// entero ya solo se muestra con `_adminToken` (`ir()`/js/ui.js), así que acá
+// no hace falta repetir ese chequeo por separado: solo el número del badge.
 function _tarCargarPendientesValidacion() {
-  // Bug real corregido (ver MANIFEST.md "Cambios recientes"): el botón
-  // "Tareas por validar" solo se mostraba/ocultaba dentro del callback
-  // async de `adminGetTareasPendientesValidacion`, así que tardaba el
-  // round-trip de red en aparecer para un admin -- y como `#tar-seg` usa
-  // `flex:1` dentro de `.ev-header-row`, ese pop-in tardío empujaba/
-  // desalineaba el ancho de las pills "Disponibles"/"Mis tareas". `_adminToken`
-  // ya se conoce de forma síncrona en este punto (restaurado desde
-  // localStorage al cargar la app, antes de que el usuario pueda navegar a
-  // Tareas) -- se decide la visibilidad del botón acá mismo, síncrono, y el
-  // fetch de abajo solo actualiza el número del badge (que ya está anclado
-  // con `position:absolute`, no afecta el layout).
-  var btn = document.getElementById('tar-btn-validar');
-  if (btn) btn.style.display = _adminToken ? 'flex' : 'none';
   if (!_adminToken) { _tarPendientesValidacion = []; _tarActualizarBadgeValidacion(); return; }
   adminApi({ action: 'adminGetTareasPendientesValidacion' }, function(res) {
     _tarPendientesValidacion = res || [];
@@ -1100,14 +1264,36 @@ function _tarCargarPendientesValidacion() {
   }, function() { _tarPendientesValidacion = []; _tarActualizarBadgeValidacion(); });
 }
 function _tarActualizarBadgeValidacion() {
-  var btn = document.getElementById('tar-btn-validar');
   var badge = document.getElementById('tar-validar-badge');
-  if (!btn || !badge) return;
-  btn.style.display = _adminToken ? 'flex' : 'none';
+  if (!badge) return;
   var n = _tarPendientesValidacion.length;
   badge.style.display = n > 0 ? 'flex' : 'none';
   badge.textContent = n > 9 ? '9+' : String(n);
 }
+// Speed-dial del FAB de #s-tareas -- mismo mecanismo que
+// `_evFabToggle()`/`_evFabCerrar()` (js/eventos.js), estado propio
+// (`_tarFabAbierto`, no comparte `_evFabAbierto`).
+var _tarFabAbierto = false;
+function _tarFabToggle() {
+  _tarFabAbierto = !_tarFabAbierto;
+  var menu = document.getElementById('tar-fab-menu');
+  if (menu) menu.classList.toggle('ev-fab-abierto', _tarFabAbierto);
+  var btn = document.getElementById('tar-fab-btn');
+  if (btn) btn.setAttribute('aria-expanded', String(_tarFabAbierto));
+}
+function _tarFabCerrar() {
+  if (!_tarFabAbierto) return;
+  _tarFabAbierto = false;
+  var menu = document.getElementById('tar-fab-menu');
+  if (menu) menu.classList.remove('ev-fab-abierto');
+  var btn = document.getElementById('tar-fab-btn');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+document.addEventListener('click', function(e) {
+  if (!_tarFabAbierto) return;
+  var menu = document.getElementById('tar-fab-menu');
+  if (menu && !menu.contains(e.target)) _tarFabCerrar();
+});
 function _tarAbrirValidacion() {
   _tarRenderValidacion();
   ir('s-tareas-validar');
@@ -1190,15 +1376,28 @@ function irTarArchivadas() {
 function _tarCerrarArchivadas() {
   ir('s-tareas');
 }
+// `_tarArchCargaId` -- mismo guard anti-carrera que `_tarCargaId` en
+// `_tarCargarTodo()`: si el usuario entra/sale de Archivadas rápido (2
+// llamadas en vuelo), solo la respuesta de la carga más reciente pinta.
+var _tarArchCargaId = 0;
 function _tarCargarArchivadas() {
+  var miCarga = ++_tarArchCargaId;
   var cont = document.getElementById('tar-archivadas-lista');
   if (cont) cont.innerHTML = _tarSkeletonHtml(3);
   api({ action: 'getTareasArchivadas' }, function(res) {
+    if (miCarga !== _tarArchCargaId) return;
     _tarArchivadas = res || [];
     _tarRenderArchivadas();
   }, function(e) {
+    if (miCarga !== _tarArchCargaId) return;
+    // Loguea el error real (antes se descartaba del todo) -- clave para
+    // poder diagnosticar la próxima vez que esto falle en vivo, en vez de
+    // quedar solo con el mensaje genérico de la UI.
+    if (typeof console !== 'undefined' && console.error) console.error('getTareasArchivadas falló:', e);
     var c = document.getElementById('tar-archivadas-lista');
-    if (c) c.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">error_outline</span>No se pudieron cargar las tareas archivadas.</div>';
+    if (c) c.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">error_outline</span>No se pudieron cargar las tareas archivadas.' +
+      '<button type="button" class="btn-text-simple tar-reintentar-btn" onclick="_tarCargarArchivadas()"><span class="material-symbols-outlined">refresh</span>Reintentar</button>' +
+      '</div>';
   });
 }
 function _tarRenderArchivadas() {
@@ -1249,7 +1448,7 @@ function _tarCardArchivadaHtml(t) {
       '<div class="ev-card-icon"><span class="material-symbols-outlined">' + icono + '</span></div>' +
       '<div class="ev-card-body">' +
         '<div class="ev-card-titulo">' + (t.titulo || '') + '</div>' +
-        '<div class="ev-card-sub"><span class="aj-pill activa tar-area-pill">' + (t.area || '') + '</span><span>' + (t.puntos != null ? t.puntos : 0) + ' pts</span></div>' +
+        '<div class="ev-card-sub"><span class="fi-pill fi-pill-fin tar-area-pill">' + (t.area || '') + '</span><span>' + (t.puntos != null ? t.puntos : 0) + ' pts</span></div>' +
         '<div class="ev-card-sub"><span class="material-symbols-outlined">event</span>Venció: ' + _tarFechaLegible(t.fechaVencimiento) + '</div>' +
         personasHtml +
         accionAdmin +

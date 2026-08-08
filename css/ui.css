@@ -32,6 +32,22 @@ select, input[type="text"], input[type="tel"], input[type="email"], input[type="
   -moz-appearance: none; outline: none; transition: all 0.3s ease; font-family: inherit; caret-color: var(--brand);
 }
 select { padding-right: 40px; cursor: pointer; }
+/* Sin cursor parpadeante en NINGÚN input de búsqueda de la app (ver
+   MANIFEST.md "Cambios recientes") -- antes se venía apagando el
+   `caret-color` de la regla base de arriba a mano, input por input, con un
+   selector por ID (`#aj-search-input`/`#ev-search-input`/
+   `#ev-lugar-buscador-input`, ahora eliminados de nav.css/eventos.css por
+   quedar redundantes) -- Tareas (`#tar-search-input`/`#tarch-search-input`/
+   `#tar-filtro-personas-search`/etc.) y varios otros buscadores de la app
+   (roster de "Marcar asistencia", pickers de lugar, país/prefijo,
+   agregar/quitar admin...) se habían quedado afuera de esa lista y seguían
+   mostrando el cursor. Fix de raíz acá, una sola vez para TODA la app:
+   cualquier input cuyo placeholder contenga "buscar" (sin importar
+   mayúsculas -- selector de atributo case-insensitive, `i` al final) es por
+   definición un campo de búsqueda, no de escritura de datos -- cubre todo
+   buscador existente Y cualquiera nuevo que seguía esta misma convención de
+   placeholder, sin tener que acordarse de sumarlo acá caso por caso. */
+input[placeholder*="uscar" i] { caret-color: transparent; }
 /* input[type=number]: appearance:none de la regla de arriba no basta para
    sacar las flechitas nativas en todos los motores (confirmado Chromium
    real necesita además esto) — mismo criterio "sin apariencia default de

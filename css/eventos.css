@@ -825,9 +825,9 @@
 .ev-card-compacta-wrap.ev-pasado-atenuado .ev-card-icon { background: var(--surface-2); color: var(--muted); }
 
 /* Buscador -- reusa `.app-nav-search` literal (css/nav.css, mismo pill que
-   Ajustes). Sin cursor parpadeante visible, mismo criterio que
-   `#aj-search-input`. */
-#ev-search-input { caret-color: transparent; }
+   Ajustes). `caret-color:transparent` ya lo cubre la regla global por
+   atributo `input[placeholder*="uscar" i]` (css/ui.css) -- ver
+   MANIFEST.md "Cambios recientes". */
 
 @media (prefers-color-scheme: dark) {
   .ev-lista-vacia { background: var(--surface-2); border-color: var(--border-light); }
@@ -1129,9 +1129,9 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 .ev-lugar-cada-row .aj-pills-row { flex: 1; min-width: 180px; }
 
 /* Buscador de lugares (Places Autocomplete) -- reusa .app-nav-search literal
-   (css/nav.css, mismo pill que Ajustes/#ev-search-input), sin cursor
-   parpadeante visible, mismo criterio que esos 2. */
-#ev-lugar-buscador-input { caret-color: transparent; }
+   (css/nav.css, mismo pill que Ajustes/#ev-search-input).
+   `caret-color:transparent` ya lo cubre la regla global por atributo
+   `input[placeholder*="uscar" i]` (css/ui.css). */
 
 .ev-lugar-mapa-wrap {
   position: relative; height: 220px; border-radius: 12px; overflow: hidden;

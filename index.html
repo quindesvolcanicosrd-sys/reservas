@@ -27,12 +27,12 @@
 <script src="js/color-enfasis.js?v=580dd587"></script>
 <link rel="stylesheet" href="css/global.css?v=64804fa9">
 <link rel="stylesheet" href="css/estilos.css?v=73260ea0">
-<link rel="stylesheet" href="css/ui.css?v=5d0e5923">
+<link rel="stylesheet" href="css/ui.css?v=626a894b">
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=6a719532">
-<link rel="stylesheet" href="css/nav.css?v=0e195d68">
-<link rel="stylesheet" href="css/eventos.css?v=0a6b6e9f">
+<link rel="stylesheet" href="css/nav.css?v=adb1e8c0">
+<link rel="stylesheet" href="css/eventos.css?v=21213d47">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
@@ -405,8 +405,14 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="ev-stats-grid ev-detalle-stats-sticky" id="ev-detalle-stats"></div>
         <div id="ev-detalle-asistencia-lista"></div>
       </div>
-      <!-- Futuras secciones (editar evento admin, tareas, mensajes) van acá
-           como nuevos .ev-detalle-section -- ver MANIFEST.md "Cambios recientes". -->
+      <!-- "Cancelar evento" (admin, ver MANIFEST.md "Cambios recientes") --
+           primera sección real de las anticipadas en el comentario de
+           arriba. Poblada por `_evDetalleAdminCancelarHtml()`/js/eventos.js
+           -- vacía para cuentas no-admin o si el evento ya está cancelado
+           (en ese caso el estado ya se ve arriba, en #ev-detalle-rsvp). -->
+      <div class="ev-detalle-section" id="ev-detalle-admin-cancelar"></div>
+      <!-- Futuras secciones (tareas, mensajes) van acá como nuevos
+           .ev-detalle-section -- ver MANIFEST.md "Cambios recientes". -->
       <!-- +var(--bottom-nav-h) (ver "Cambios recientes" -- s-eventos-detalle
            ahora suma nav vía _BOTTOM_NAV_EXTRA/js/ui.js, antes no lo
            necesitaba). -->
@@ -940,54 +946,34 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
        (admin, un solo botón -- no speed-dial, reusa .ev-fab-menu/.ev-fab-btn
        de Eventos tal cual). Ver js/tareas.js / css/tareas.css. -->
   <div class="pantalla" id="s-tareas">
+    <!-- Header (ver MANIFEST.md "Cambios recientes" -- rediseño: mismo
+         patrón que el header de Eventos, control central + íconos de acción
+         a la derecha). El pill-toggle Disponibles/Mis tareas queda solo con
+         2 íconos al lado -- búsqueda/filtros y Archivadas (`.app-nav-icon-btn
+         .ev-header-icon-btn`, mismos 2 primeros íconos que usa
+         `#ev-header-row` en Eventos) -- "Nueva tarea" y "Tareas por validar"
+         (antes acá, `#tar-btn-validar`) se mudan al FAB flotante de admin
+         (`#tar-fab-menu`, más abajo en este archivo), mismo mecanismo de
+         speed-dial que ya usa Eventos para sus 2 acciones de admin
+         (`#ev-fab-menu`/`_evFabToggle()`). -->
     <div class="ev-sticky-header" id="tar-sticky-header">
       <div class="ev-header-row">
         <div class="tp-seg" id="tar-seg" style="flex:1;">
           <div class="tp-slider" id="tar-slider"></div>
           <div class="tp-opt active" id="tar-opt-disponibles" onclick="_tarCambiarTab('disponibles')">
-            <span class="material-symbols-outlined" style="font-size:1rem;">inventory_2</span><span>Disponibles</span>
+            <span class="material-symbols-outlined">inventory_2</span><span>Disponibles</span>
           </div>
           <div class="tp-opt" id="tar-opt-mis" onclick="_tarCambiarTab('mis')">
-            <span class="material-symbols-outlined" style="font-size:1rem;">assignment_ind</span><span>Mis tareas</span>
+            <span class="material-symbols-outlined">assignment_ind</span><span>Mis tareas</span>
           </div>
         </div>
-        <button type="button" class="app-nav-icon-btn ev-header-icon-btn" id="tar-btn-validar" style="display:none;margin-left:8px;flex-shrink:0;" onclick="_tarAbrirValidacion()" aria-label="Tareas por validar">
-          <span class="material-symbols-outlined">fact_check</span>
-          <span class="ev-filtro-badge" id="tar-validar-badge" style="display:none;"></span>
-        </button>
-      </div>
-    </div>
-    <div class="card" style="text-align:left;">
-      <!-- "Archivadas" -- 3er acceso de Tareas, visible para cualquiera (no
-           gateado por _adminToken como el ícono de validar del header). NO
-           va como 3er ícono ahí al lado (bug real encontrado en la propia
-           verificación con Playwright, no al aplicar el diseño a ciegas):
-           con `#tar-btn-validar` también visible (cuenta admin) el header
-           mide 413px de contenido contra 358px reales de ancho en un
-           viewport de 390px -- el ícono de validar terminaba parcialmente
-           fuera de pantalla. `#tar-seg` (flex:1) no puede achicarse más
-           allá del ancho natural de sus 2 pills de texto (min-width:auto
-           por default en flex items), así que agregar un 2do ícono de
-           44px ahí no tiene margen real en un teléfono angosto. Reusa
-           `.aj-pill.aj-pill-link` tal cual (css/perfil.css -- variante de
-           NAVEGACIÓN, no de selección, mismo componente que "Ver historial
-           de reservas"/"Editar mi perfil" del empty-state de home) en su
-           propia fila, con todo el ancho de la card disponible en vez de
-           competir por espacio con la nav superior. El buscador+filtros
-           (nuevo, ver MANIFEST.md "Cambios recientes") se agrega en la
-           misma fila por el mismo motivo de espacio -- mismo trigger chico
-           `.aj-pill.aj-pill-link` (no un ícono de 44px en el header), con
-           el badge de cantidad de filtros activos (`.ev-filtro-badge`,
-           css/eventos.css) anclado con `position:relative` inline sobre el
-           propio pill. -->
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;">
-        <span class="aj-pill aj-pill-link" id="tar-busqueda-toggle-btn" onclick="_tarToggleBusqueda()" style="display:inline-flex;align-items:center;gap:6px;position:relative;">
-          <span class="material-symbols-outlined" style="font-size:16px;">search</span>Buscar y filtrar
+        <button type="button" class="app-nav-icon-btn ev-header-icon-btn ev-filtro-toggle-btn" id="tar-busqueda-toggle-btn" onclick="_tarToggleBusqueda()" title="Buscar y filtrar" style="margin-left:8px;flex-shrink:0;">
+          <span class="material-symbols-outlined">search</span>
           <span class="ev-filtro-badge" id="tar-filtro-badge" style="display:none;">0</span>
-        </span>
-        <span class="aj-pill aj-pill-link" onclick="irTarArchivadas()" style="display:inline-flex;align-items:center;gap:6px;">
-          <span class="material-symbols-outlined" style="font-size:16px;">archive</span>Archivadas
-        </span>
+        </button>
+        <button type="button" class="app-nav-icon-btn ev-header-icon-btn" onclick="irTarArchivadas()" title="Archivadas" aria-label="Archivadas" style="flex-shrink:0;">
+          <span class="material-symbols-outlined">archive</span>
+        </button>
       </div>
 
       <!-- Panel de búsqueda + filtros de Disponibles/Mis tareas/Baúl (las 3
@@ -1003,7 +989,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            Mes (selector de 1 mes, filtra por fechaVencimiento). Filtrado
            100% client-side sobre `_tarDisponibles`/`_tarBaul`/
            `_tarMisTareas` ya cargados, sin ninguna llamada nueva al
-           backend -- ver `_tarPasaFiltro()`. -->
+           backend -- ver `_tarPasaFiltro()`. Vive DENTRO de
+           `#tar-sticky-header` (antes dentro de `.card`, hermana de
+           `.ev-header-row` -- mismo lugar exacto que `#ev-busqueda-panel` en
+           Eventos), ya que ahora es el ícono del header el que la abre. -->
       <div class="ev-header-burbuja" id="tar-busqueda-panel">
         <div class="ev-header-burbuja-panel">
           <div class="app-nav-search">
@@ -1011,6 +1000,23 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <input type="text" id="tar-search-input" placeholder="Buscar por título o área..." oninput="_tarBuscar('principal', this.value)">
           </div>
           <div class="seccion-label ev-filtros-label">Filtros</div>
+          <!-- Bug real corregido (ver MANIFEST.md "Cambios recientes"): con
+               4-5 triggers envolviendo en 2+ filas (`flex-wrap:wrap`,
+               `#tar-filtros-row .ev-filtro-trigger` más abajo -- Eventos
+               nunca lo necesitó con solo 2 triggers, una fila siempre),
+               las burbujas vivían TODAS como hermanas después de cerrar
+               `.ev-filtros-row`, así que la que se abriera aparecía siempre
+               debajo de TODAS las filas de pills, no debajo de la fila que
+               contenía el pill tocado. Fix: cada burbuja pasa a ser hija
+               del propio `.ev-filtros-row` (un flex container), intercalada
+               en el DOM justo después de su trigger -- con
+               `.ev-filtro-burbuja-inline` (flex-basis:100%, css/tareas.css)
+               fuerza su propio salto de línea en el punto exacto donde ya
+               envolvía el trigger que la abre, así que la burbuja abierta
+               siempre cae pegada debajo de esa fila en particular. Cuando
+               está cerrada (max-height:0) sigue forzando el mismo punto de
+               corte que ya existía de forma natural por el ancho de los
+               botones -- sin cambio visual con todo cerrado. -->
           <div class="ev-filtros-row" id="tar-filtros-row">
             <button type="button" class="ev-filtro-trigger" id="tar-filtro-btn-area" data-label="Área" onclick="_tarToggleFiltroBurbuja('principal','area')">
               <span class="ev-filtro-trigger-label">Área</span><span class="material-symbols-outlined">expand_more</span>
@@ -1018,32 +1024,33 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <button type="button" class="ev-filtro-trigger" id="tar-filtro-btn-personas" data-label="Personas" onclick="_tarToggleFiltroBurbuja('principal','personas')">
               <span class="ev-filtro-trigger-label">Personas</span><span class="material-symbols-outlined">expand_more</span>
             </button>
+            <div class="ev-filtro-burbuja ev-filtro-burbuja-inline" id="tar-filtro-burbuja-area"><div class="aj-pills-row ev-filtro-burbuja-pills" id="tar-filtro-area-pills"></div></div>
+            <div class="ev-filtro-burbuja ev-filtro-burbuja-inline" id="tar-filtro-burbuja-personas">
+              <div class="app-nav-search" style="margin:6px 2px 10px;">
+                <span class="material-symbols-outlined">search</span>
+                <input type="text" id="tar-filtro-personas-search" placeholder="Buscar por nombre..." autocomplete="off" oninput="_tarRenderFiltroPersonasLista('principal', this.value)">
+              </div>
+              <div id="tar-filtro-personas-lista" class="ev-marcar-lista"></div>
+            </div>
             <button type="button" class="ev-filtro-trigger" id="tar-filtro-btn-puntos" data-label="Puntos" onclick="_tarToggleFiltroBurbuja('principal','puntos')">
               <span class="ev-filtro-trigger-label">Puntos</span><span class="material-symbols-outlined">expand_more</span>
             </button>
             <button type="button" class="ev-filtro-trigger" id="tar-filtro-btn-mes" data-label="Mes" onclick="_tarToggleFiltroBurbuja('principal','mes')">
               <span class="ev-filtro-trigger-label">Mes</span><span class="material-symbols-outlined">expand_more</span>
             </button>
-          </div>
-          <div class="ev-filtro-burbuja" id="tar-filtro-burbuja-area"><div class="aj-pills-row ev-filtro-burbuja-pills" id="tar-filtro-area-pills"></div></div>
-          <div class="ev-filtro-burbuja" id="tar-filtro-burbuja-personas">
-            <div class="app-nav-search" style="margin:6px 2px 10px;">
-              <span class="material-symbols-outlined">search</span>
-              <input type="text" id="tar-filtro-personas-search" placeholder="Buscar por nombre..." autocomplete="off" oninput="_tarRenderFiltroPersonasLista('principal', this.value)">
+            <div class="ev-filtro-burbuja ev-filtro-burbuja-inline" id="tar-filtro-burbuja-puntos">
+              <div class="tar-filtro-puntos-row">
+                <div class="tar-filtro-puntos-campo"><label>Mínimo</label><input type="number" inputmode="numeric" id="tar-filtro-puntos-min" placeholder="0" oninput="_tarSetFiltroPuntos('principal','min',this.value)"></div>
+                <span class="tar-filtro-puntos-sep">–</span>
+                <div class="tar-filtro-puntos-campo"><label>Máximo</label><input type="number" inputmode="numeric" id="tar-filtro-puntos-max" placeholder="Sin límite" oninput="_tarSetFiltroPuntos('principal','max',this.value)"></div>
+              </div>
             </div>
-            <div id="tar-filtro-personas-lista" class="ev-marcar-lista"></div>
+            <div class="ev-filtro-burbuja ev-filtro-burbuja-inline" id="tar-filtro-burbuja-mes"><div class="meses-grid-pills ev-filtro-burbuja-pills" id="tar-filtro-mes-grid"></div></div>
           </div>
-          <div class="ev-filtro-burbuja" id="tar-filtro-burbuja-puntos">
-            <div class="tar-filtro-puntos-row">
-              <div class="tar-filtro-puntos-campo"><label>Mínimo</label><input type="number" inputmode="numeric" id="tar-filtro-puntos-min" placeholder="0" oninput="_tarSetFiltroPuntos('principal','min',this.value)"></div>
-              <span class="tar-filtro-puntos-sep">–</span>
-              <div class="tar-filtro-puntos-campo"><label>Máximo</label><input type="number" inputmode="numeric" id="tar-filtro-puntos-max" placeholder="Sin límite" oninput="_tarSetFiltroPuntos('principal','max',this.value)"></div>
-            </div>
-          </div>
-          <div class="ev-filtro-burbuja" id="tar-filtro-burbuja-mes"><div class="meses-grid-pills" id="tar-filtro-mes-grid"></div></div>
         </div>
       </div>
-
+    </div>
+    <div class="card" style="text-align:left;">
       <div id="tar-tabs-wrap">
       <div id="tar-tab-disponibles">
         <div id="tar-lista-disponibles"></div>
@@ -1255,6 +1262,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <input type="text" id="tarch-search-input" placeholder="Buscar por título o área..." oninput="_tarBuscar('archivadas', this.value)">
           </div>
           <div class="seccion-label ev-filtros-label">Filtros</div>
+          <!-- Mismo fix de raíz que #tar-filtros-row más arriba -- ver ese
+               comentario para el detalle completo. -->
           <div class="ev-filtros-row" id="tarch-filtros-row">
             <button type="button" class="ev-filtro-trigger" id="tarch-filtro-btn-area" data-label="Área" onclick="_tarToggleFiltroBurbuja('archivadas','area')">
               <span class="ev-filtro-trigger-label">Área</span><span class="material-symbols-outlined">expand_more</span>
@@ -1262,33 +1271,33 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <button type="button" class="ev-filtro-trigger" id="tarch-filtro-btn-personas" data-label="Personas" onclick="_tarToggleFiltroBurbuja('archivadas','personas')">
               <span class="ev-filtro-trigger-label">Personas</span><span class="material-symbols-outlined">expand_more</span>
             </button>
+            <div class="ev-filtro-burbuja ev-filtro-burbuja-inline" id="tarch-filtro-burbuja-area"><div class="aj-pills-row ev-filtro-burbuja-pills" id="tarch-filtro-area-pills"></div></div>
+            <div class="ev-filtro-burbuja ev-filtro-burbuja-inline" id="tarch-filtro-burbuja-personas">
+              <div class="app-nav-search" style="margin:6px 2px 10px;">
+                <span class="material-symbols-outlined">search</span>
+                <input type="text" id="tarch-filtro-personas-search" placeholder="Buscar por nombre..." autocomplete="off" oninput="_tarRenderFiltroPersonasLista('archivadas', this.value)">
+              </div>
+              <div id="tarch-filtro-personas-lista" class="ev-marcar-lista"></div>
+            </div>
             <button type="button" class="ev-filtro-trigger" id="tarch-filtro-btn-puntos" data-label="Puntos" onclick="_tarToggleFiltroBurbuja('archivadas','puntos')">
               <span class="ev-filtro-trigger-label">Puntos</span><span class="material-symbols-outlined">expand_more</span>
             </button>
             <button type="button" class="ev-filtro-trigger" id="tarch-filtro-btn-mes" data-label="Mes" onclick="_tarToggleFiltroBurbuja('archivadas','mes')">
               <span class="ev-filtro-trigger-label">Mes</span><span class="material-symbols-outlined">expand_more</span>
             </button>
+            <div class="ev-filtro-burbuja ev-filtro-burbuja-inline" id="tarch-filtro-burbuja-puntos">
+              <div class="tar-filtro-puntos-row">
+                <div class="tar-filtro-puntos-campo"><label>Mínimo</label><input type="number" inputmode="numeric" id="tarch-filtro-puntos-min" placeholder="0" oninput="_tarSetFiltroPuntos('archivadas','min',this.value)"></div>
+                <span class="tar-filtro-puntos-sep">–</span>
+                <div class="tar-filtro-puntos-campo"><label>Máximo</label><input type="number" inputmode="numeric" id="tarch-filtro-puntos-max" placeholder="Sin límite" oninput="_tarSetFiltroPuntos('archivadas','max',this.value)"></div>
+              </div>
+            </div>
+            <div class="ev-filtro-burbuja ev-filtro-burbuja-inline" id="tarch-filtro-burbuja-mes"><div class="meses-grid-pills ev-filtro-burbuja-pills" id="tarch-filtro-mes-grid"></div></div>
             <button type="button" class="ev-filtro-trigger" id="tarch-filtro-btn-estado" data-label="Estado final" onclick="_tarToggleFiltroBurbuja('archivadas','estado')">
               <span class="ev-filtro-trigger-label">Estado final</span><span class="material-symbols-outlined">expand_more</span>
             </button>
+            <div class="ev-filtro-burbuja ev-filtro-burbuja-inline" id="tarch-filtro-burbuja-estado"><div class="aj-pills-row ev-filtro-burbuja-pills" id="tarch-filtro-estado-pills"></div></div>
           </div>
-          <div class="ev-filtro-burbuja" id="tarch-filtro-burbuja-area"><div class="aj-pills-row ev-filtro-burbuja-pills" id="tarch-filtro-area-pills"></div></div>
-          <div class="ev-filtro-burbuja" id="tarch-filtro-burbuja-personas">
-            <div class="app-nav-search" style="margin:6px 2px 10px;">
-              <span class="material-symbols-outlined">search</span>
-              <input type="text" id="tarch-filtro-personas-search" placeholder="Buscar por nombre..." autocomplete="off" oninput="_tarRenderFiltroPersonasLista('archivadas', this.value)">
-            </div>
-            <div id="tarch-filtro-personas-lista" class="ev-marcar-lista"></div>
-          </div>
-          <div class="ev-filtro-burbuja" id="tarch-filtro-burbuja-puntos">
-            <div class="tar-filtro-puntos-row">
-              <div class="tar-filtro-puntos-campo"><label>Mínimo</label><input type="number" inputmode="numeric" id="tarch-filtro-puntos-min" placeholder="0" oninput="_tarSetFiltroPuntos('archivadas','min',this.value)"></div>
-              <span class="tar-filtro-puntos-sep">–</span>
-              <div class="tar-filtro-puntos-campo"><label>Máximo</label><input type="number" inputmode="numeric" id="tarch-filtro-puntos-max" placeholder="Sin límite" oninput="_tarSetFiltroPuntos('archivadas','max',this.value)"></div>
-            </div>
-          </div>
-          <div class="ev-filtro-burbuja" id="tarch-filtro-burbuja-mes"><div class="meses-grid-pills" id="tarch-filtro-mes-grid"></div></div>
-          <div class="ev-filtro-burbuja" id="tarch-filtro-burbuja-estado"><div class="aj-pills-row ev-filtro-burbuja-pills" id="tarch-filtro-estado-pills"></div></div>
         </div>
       </div>
 
@@ -1693,8 +1702,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=f73a9a11"></script>
-<script src="js/eventos.js?v=160fabdf"></script>
+<script src="js/ui.js?v=2ad89c10"></script>
+<script src="js/eventos.js?v=2ce746f0"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=f4bed643"></script>
@@ -3388,13 +3397,30 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </button>
 </div>
 
-<!-- FAB "+ Nueva tarea" de #s-tareas (admin) -- un solo botón, no speed-dial
-     (a diferencia de #ev-fab-menu, Tareas no tiene una segunda acción admin
-     acá). Mismo contenedor .ev-fab-menu (fixed, centrado, hijo directo de
-     <body>) reusado tal cual -- display:none por default, ir()/js/ui.js lo
-     muestra solo con 's-tareas' activa Y _adminToken. -->
+<!-- FAB de #s-tareas (admin) -- ver MANIFEST.md "Cambios recientes":
+     rediseño de header, "Nueva tarea" y "Tareas por validar" (antes un
+     ícono aparte en `.ev-header-row`, `#tar-btn-validar`) se mudan acá.
+     Mismo speed-dial de 2 opciones que `#ev-fab-menu` (Eventos) --
+     `.ev-fab-menu`/`.ev-fab-opcion`/`.ev-fab-btn` reusados tal cual, togglea
+     `.ev-fab-abierto` vía `_tarFabToggle()`/`_tarFabCerrar()` (js/tareas.js,
+     mismo mecanismo que `_evFabToggle()`/`_evFabCerrar()`, con su propio
+     estado -- no comparte `_evFabAbierto`). Mismo contenedor `.ev-fab-menu`
+     (fixed, centrado, hijo directo de <body>) -- display:none por default,
+     ir()/js/ui.js lo muestra solo con 's-tareas' activa Y _adminToken. El
+     badge de pendientes (`#tar-validar-badge`, `_tarActualizarBadgeValidacion()`)
+     se mueve con el botón -- mismo elemento por id, solo cambia de
+     contenedor padre. -->
 <div class="ev-fab-menu" id="tar-fab-menu" style="display:none;">
-  <button type="button" class="ev-fab-btn" onclick="irTarCrear()" title="Nueva tarea" aria-label="Nueva tarea">
+  <button type="button" class="ev-fab-opcion" id="tar-fab-validar" style="position:relative;" onclick="_tarFabCerrar(); _tarAbrirValidacion();">
+    <span class="material-symbols-outlined">fact_check</span>
+    <span>Tareas por validar</span>
+    <span class="ev-filtro-badge" id="tar-validar-badge" style="display:none;"></span>
+  </button>
+  <button type="button" class="ev-fab-opcion" onclick="_tarFabCerrar(); irTarCrear();">
+    <span class="material-symbols-outlined">add_task</span>
+    <span>Nueva tarea</span>
+  </button>
+  <button type="button" class="ev-fab-btn" id="tar-fab-btn" onclick="_tarFabToggle()" title="Nuevo" aria-expanded="false">
     <span class="material-symbols-outlined">add</span>
   </button>
 </div>

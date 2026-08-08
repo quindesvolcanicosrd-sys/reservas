@@ -45,6 +45,35 @@
    ancho, centradas) SOLO dentro de `#tar-seg` -- las otras 2 instancias
    siguen a ancho de contenido natural, sin cambios. */
 #tar-seg .tp-opt { flex: 1; justify-content: center; }
+/* Bug real corregido (ver MANIFEST.md "Cambios recientes" -- rediseño de
+   header, 2 íconos de acción en vez de 1): `.tp-opt` es `white-space:nowrap`
+   con `min-width:auto` (default de flex item) -- por más que `#tar-seg`
+   tenga `flex:1`, sus 2 pills nunca se achican por debajo de su ancho de
+   contenido natural (`padding:11px 22px` + ícono + texto, `.tp-opt` base,
+   css/reservas.css). Con 1 solo ícono de 44px al lado ya casi no sobraba
+   margen (293px de pills + 44px + gap, 358px reales de columna en 390px de
+   viewport); con 2 íconos (búsqueda+filtros y Archivadas, ver esa sección
+   en index.html) el header no entraba más -- confirmado con Playwright,
+   `scrollWidth` 405px contra 358px reales, el 2do ícono quedaba
+   parcialmente fuera de pantalla. Padding/ícono/gap más chicos SOLO acá
+   (las otras 2 instancias de `.tp-seg` de la app -- "Por clase/Mensual",
+   filtro admin -- siguen con los valores base, sin cambios) recuperan el
+   espacio necesario sin sacar ni el ícono ni el texto de cada pill. */
+#tar-seg .tp-opt { padding: 11px 10px; gap: 5px; font-size: 0.84rem; }
+#tar-seg .tp-opt .material-symbols-outlined { font-size: 0.92rem; }
+#tar-sticky-header .ev-header-row { gap: 6px; }
+/* Mismo breakpoint que ya usa `.app-nav-cta-label` (css/nav.css) para
+   ocultar contenido decorativo en pantallas angostas -- confirmado con
+   Playwright que a 360px el ajuste de arriba solo (sin este) todavía se
+   queda corto (~11px de overflow real, `#tar-btn-validar` de una sola
+   instancia ya iba justo en este ancho antes de este rediseño). El ícono
+   de cada pill es puramente decorativo (el texto "Disponibles"/"Mis
+   tareas" ya es autoexplicativo) -- se saca solo en este breakpoint, no en
+   general. */
+@media (max-width: 360px) {
+  #tar-seg .tp-opt { padding: 11px 6px; gap: 0; font-size: 0.8rem; }
+  #tar-seg .tp-opt .material-symbols-outlined { display: none; }
+}
 
 /* Fila clickeable del picker de "Asignar a personas" del wizard (paso
    nuevo) -- `.ev-roster-fila` (css/eventos.css) reusada tal cual, esta
@@ -95,6 +124,40 @@
 .tar-acciones-col { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
 .tar-acciones-col .tar-card-btn { margin-top: 0; }
 
+/* Actualización optimista de tomar/soltar/enviar a revisión (ver
+   MANIFEST.md "Cambios recientes") -- transición propia por acción, no
+   genérica: "tomar" sale con un lift + resplandor verde (semántica de
+   logro/éxito), "soltar" sale con un drop sutil hacia abajo (semántica de
+   soltar/entregar), la entrada de revert es la misma para las 2 (la tarea
+   "vuelve" a su lugar). `forwards` en las de salida -- la card debe quedar
+   invisible/colapsada hasta que `_tarAnimarSalida()` (js/tareas.js) la saca
+   del array y repinta la lista sin ella, no volver a su estado original a
+   mitad de la animación. */
+@keyframes tarSalidaTomada {
+  0% { transform: scale(1) translateY(0); opacity: 1; box-shadow: 0 0 0 0 var(--success-bg); }
+  35% { transform: scale(1.02) translateY(-3px); opacity: 1; box-shadow: 0 0 0 7px var(--success-bg); }
+  100% { transform: scale(0.92) translateY(-20px); opacity: 0; box-shadow: 0 0 0 0 transparent; }
+}
+@keyframes tarSalidaSoltada {
+  0% { transform: scale(1) translateY(0); opacity: 1; }
+  100% { transform: scale(0.94) translateY(16px); opacity: 0; }
+}
+@keyframes tarEntrada {
+  0% { transform: scale(0.95) translateY(-12px); opacity: 0; }
+  60% { transform: scale(1.01) translateY(0); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes tarPulseExito {
+  0% { box-shadow: 0 0 0 0 var(--success-bg); }
+  40% { box-shadow: 0 0 0 8px var(--success-bg); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.tar-card-saliendo-tomada { animation: tarSalidaTomada 0.38s var(--ease-sheet) forwards; pointer-events: none; border-radius: 14px; }
+.tar-card-saliendo-soltada { animation: tarSalidaSoltada 0.34s var(--ease-sheet) forwards; pointer-events: none; }
+.tar-card-entrando { animation: tarEntrada 0.4s var(--ease-sheet); }
+.tar-card-confirmando { animation: tarPulseExito 0.6s ease-out; border-radius: 14px; }
+.tar-accion-wrap { display: block; }
+
 /* Bug real de espaciado corregido (confirmado por captura de pantalla): las
    cards de Eventos (`_evCardEventoHtml()`, css/eventos.css) nunca apilan más
    de un `.ev-card-sub` a la vez, así que esa clase no trae separación
@@ -115,12 +178,14 @@
    (css/eventos.css) para texto secundario centrado bajo un control. */
 .tar-limite-nota { font-size: 0.78rem; color: var(--muted); text-align: center; margin-top: 8px; line-height: 1.4; }
 
-/* Pill de área sobre una card de tarea (`.aj-pill.activa` reusado tal cual
-   como badge estático, sin onclick) -- versión chica para convivir en la
-   misma línea que los puntos. Se repite en 3 templates de js/tareas.js
-   (disponible/baúl/mis tareas), así que va a clase en vez de repetir el
-   estilo inline (ver MANIFEST.md, "Reglas globales del proyecto"). */
-.tar-area-pill { padding: 2px 10px; font-size: 0.66rem; }
+/* Pill de área sobre una card de tarea -- antes `.aj-pill.activa` (naranja,
+   pensada para selección de filtros), reemplazada por `.fi-pill.fi-pill-fin`
+   (css/reservas.css): la pill sutil azul ya usada en Reservas/Eventos para
+   badges informativos no interactivos (ej. "Fin" de una reserva) -- mismo
+   componente reusado tal cual, sin redefinir tamaño/color. `.tar-area-pill`
+   (sin reglas propias) queda solo como hook de identificación en el markup
+   -- se repite en 3 templates de js/tareas.js (disponible/baúl/mis tareas/
+   archivadas). */
 
 /* Lista de personas de una tarjeta de "Tareas archivadas" -- a diferencia
    de `.tar-avatares-row` (avatares superpuestos, anónimos, solo un conteo
@@ -142,7 +207,24 @@
    filtro de rango de puntos (sin precedente en el resto de la app). */
 #tar-filtros-row, #tarch-filtros-row { flex-wrap: wrap; }
 #tar-filtros-row .ev-filtro-trigger, #tarch-filtros-row .ev-filtro-trigger { flex: 1 1 45%; }
+/* Bug real corregido (ver MANIFEST.md "Cambios recientes" -- panel de
+   filtro pegado al pill tocado): cada `.ev-filtro-burbuja` pasó a vivir
+   DENTRO de `.ev-filtros-row` (antes hermana, después de cerrar la fila),
+   intercalada en el HTML justo después de su trigger (ver index.html). Acá
+   solo se agrega el `flex-basis` que la hace ocupar toda la fila SIGUIENTE
+   -- eso fuerza el salto de línea justo donde ya envolvía el trigger que la
+   abre, así la burbuja abierta cae pegada debajo de ESA fila en particular,
+   no debajo de todas. Con la burbuja cerrada (`max-height:0`) el salto de
+   línea ya ocurría ahí de forma natural por el ancho de los botones -- sin
+   cambio visual con todo cerrado. */
+.ev-filtro-burbuja-inline { flex: 1 1 100%; width: 100%; }
 .tar-filtro-puntos-row { display: flex; align-items: flex-end; gap: 10px; padding: 10px 2px 4px; }
 .tar-filtro-puntos-campo { flex: 1; min-width: 0; }
 .tar-filtro-puntos-campo label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
 .tar-filtro-puntos-sep { padding-bottom: 14px; color: var(--muted); font-weight: 700; }
+
+/* Botón "Reintentar" del estado de error de Archivadas -- mismo criterio
+   visual que `_inscReintentarTallas()` (inscripcion.js): ícono refresh +
+   texto, centrado, dentro del propio bloque `.ev-lista-vacia`. */
+.tar-reintentar-btn { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 10px auto 0; }
+.tar-reintentar-btn .material-symbols-outlined { font-size: 1rem; margin: 0; }
