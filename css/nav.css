@@ -113,7 +113,11 @@
    explícito calcado del mockup) sobre `--surface-2` -- antes sin caja
    propia, quedaba apretado contra los bordes de la nav. */
 .app-nav-search {
-  display: flex; align-items: center; gap: 8px; flex: 1; width: 100%; min-width: 0; color: var(--muted);
+  /* `width:99%` (antes 100%, ver MANIFEST.md "Cambios recientes") -- clase
+     global, el pill se cortaba levemente contra el borde de su contenedor
+     en algunos anchos; 1% de margen de sobra lo resuelve en toda la app
+     sin tocar `box-sizing`/padding. */
+  display: flex; align-items: center; gap: 8px; flex: 1; width: 99%; min-width: 0; color: var(--muted);
   background: var(--surface-2); border-radius: 999px; padding: 16px 16px;
   border: 1.5px solid transparent; box-sizing: border-box;
   transition: border-color 0.15s, box-shadow 0.15s;

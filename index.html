@@ -31,7 +31,7 @@
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=6a719532">
-<link rel="stylesheet" href="css/nav.css?v=adb1e8c0">
+<link rel="stylesheet" href="css/nav.css?v=26a3b789">
 <link rel="stylesheet" href="css/eventos.css?v=21213d47">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/perfil.css">
@@ -1172,7 +1172,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            ver _tarCrear*Personas()/js/tareas.js. Capeado al "Máximo de
            personas" del paso 2 (bug real corregido -- antes no había tope). -->
       <div class="salud-paso" id="tar-crear-paso-personas">
-        <p class="ev-lugar-campo-label" style="margin-top:0;">Asignar a personas</p>
+        <p class="ev-lugar-campo-label" style="margin-top:0;">Elige ahora a la o las personas</p>
         <p class="ev-lugar-mapa-nota" style="margin:0 0 14px;text-align:left;">Elige a una o más personas que quisieras que se le asigne la tarea de forma automática al crearla sin que tengan que asignarse la tarea.</p>
         <div class="app-nav-search" style="margin-bottom:12px;">
           <span class="material-symbols-outlined">search</span>
@@ -1181,11 +1181,21 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div id="tar-crear-personas-lista" class="ev-marcar-lista"></div>
       </div>
 
-      <!-- Paso 5 (último): Fecha límite (calendario inline, mismo componente
-           que Asistencia anticipada/Crear evento -- .ev-ant-cal-nav /
-           .ev-cal-grid, css/eventos.css) + Notas opcionales. -->
+      <!-- Paso 5: Fecha límite (calendario inline, mismo componente que
+           Asistencia anticipada/Crear evento -- .ev-ant-cal-nav /
+           .ev-cal-grid, css/eventos.css). "X días para realizar la tarea"
+           (nuevo, ver MANIFEST.md "Cambios recientes") -- texto rojo al
+           lado del título, con fade in/out manejado por JS al cambiar la
+           fecha (`_tarActualizarDiasParaCompletar()`, js/tareas.js): fade
+           del texto completo (`#tar-crear-dias-wrap`) si cambia el "texto"
+           (aparece por primera vez, o pasa de singular "1 día" a plural
+           "N días" o viceversa), fade solo del número (`#tar-crear-dias-num`)
+           si el resto de la frase se mantiene igual. -->
       <div class="salud-paso" id="tar-crear-paso-fecha">
-        <p class="ev-lugar-campo-label" style="margin-top:0;">Fecha límite</p>
+        <p class="ev-lugar-campo-label" style="margin-top:0;display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+          <span>Fecha límite</span>
+          <span id="tar-crear-dias-wrap" style="display:none;"><span id="tar-crear-dias-num">0</span><span id="tar-crear-dias-resto"> días para realizar la tarea</span></span>
+        </p>
         <div class="ev-ant-cal-nav">
           <button type="button" class="ev-ant-cal-nav-btn" onclick="_tarCrearCalMoverMes(-1)"><span class="material-symbols-outlined">chevron_left</span></button>
           <span class="ev-ant-cal-nav-label" id="tar-crear-cal-label"></span>
@@ -1194,7 +1204,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div id="tar-crear-cal"></div>
         <div class="ev-lugar-cal-resumen" id="tar-crear-cal-resumen"></div>
         <div class="error-msg" id="tar-crear-err-2"></div>
-        <p class="ev-lugar-campo-label" style="margin-top:20px;">Notas (opcional)</p>
+      </div>
+
+      <!-- Paso 6 (último, nuevo -- ver MANIFEST.md "Cambios recientes"):
+           Notas, antes compartiendo paso con Fecha límite. -->
+      <div class="salud-paso" id="tar-crear-paso-notas">
+        <p class="ev-lugar-campo-label" style="margin-top:0;">Notas (opcional)</p>
         <textarea id="tar-crear-notas" placeholder="Detalles adicionales para quien tome la tarea..." style="min-height:90px;resize:none;" oninput="_tarCrearSetNotas(this.value)"></textarea>
       </div>
 
@@ -1227,6 +1242,29 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
 
+  <!-- "Gestionar tareas activas" (admin, nueva -- ver MANIFEST.md "Cambios
+       recientes"): a diferencia de "Disponibles" (solo tareas con cupos
+       libres) y "Tareas por validar" (solo pendiente_revision), acá se
+       listan TODAS las tareas activas con TODAS sus asignaciones
+       (adminGetTareasActivas, sin params) -- cada asignación con botones
+       Aprobar/Rechazar sin importar si está en iniciada o
+       pendiente_revision, el admin puede validar directo sin esperar a que
+       la persona la envíe a revisión. Mismo patrón .pantalla+ir() que
+       Validar/Archivadas -- ver _tarRenderGestionar()/js/tareas.js. -->
+  <div class="pantalla" id="s-tareas-gestionar">
+    <div class="app-nav app-nav-sticky" id="tar-gestionar-header">
+      <button class="app-nav-back" onclick="_tarCerrarGestionar()">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <span class="app-nav-title">Gestionar tareas activas</span>
+      <div style="width:40px;flex-shrink:0;"></div>
+    </div>
+    <div class="card" style="text-align:left;">
+      <div id="tar-gestionar-lista"></div>
+      <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+
   <!-- "Tareas archivadas" -- subsección de página completa, visible para
        cualquiera (a diferencia del wizard/validación de arriba, sin gating
        de _adminToken): lista de solo lectura de getTareasArchivadas (sin
@@ -1234,28 +1272,32 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
        arriba. El botón "Eliminar" por tarjeta (admin-only) abre el modal
        de impacto de más abajo, #modal-tar-eliminar-archivada. -->
   <div class="pantalla" id="s-tareas-archivadas">
+    <!-- Buscador + filtros -- ícono en la nav (ver MANIFEST.md "Cambios
+         recientes" -- antes un `.aj-pill.aj-pill-link` de texto suelto
+         dentro de la card, "Buscar y filtrar"), mismo criterio que
+         `#s-tareas` (ícono en `.app-nav-actions`, junto al resto de
+         acciones de la nav) para que las 2 pantallas se sientan
+         consistentes. La burbuja (`#tarch-busqueda-panel`) queda como
+         sibling de la nav, antes de `.card` -- mismo componente/mecanismo
+         que la de `#s-tareas` (ver ese bloque para el detalle completo),
+         estado propio (`_tarFiltroArch`, js/tareas.js) porque acá Mes
+         filtra por `fechaArchivado` (no `fechaVencimiento`) y suma un 5to
+         campo, "Estado final" (Aprobada/Rechazada/Sin asignados -- no
+         aplica a las otras 3 vistas, ahí las tareas siguen en curso, sin
+         estado final todavía). -->
     <div class="app-nav app-nav-sticky" id="tar-archivadas-header">
       <button class="app-nav-back" onclick="_tarCerrarArchivadas()">
         <span class="material-symbols-outlined">arrow_back</span>
       </button>
       <span class="app-nav-title">Tareas archivadas</span>
-      <div style="width:40px;flex-shrink:0;"></div>
-    </div>
-    <div class="card" style="text-align:left;">
-      <!-- Buscador + filtros de Archivadas -- mismo componente/mecanismo que
-           el de #s-tareas (ver ese bloque para el comentario completo),
-           estado propio (`_tarFiltroArch`, js/tareas.js) porque acá Mes
-           filtra por `fechaArchivado` (no `fechaVencimiento`) y suma un 5to
-           campo, "Estado final" (Aprobada/Rechazada/Sin asignados -- no
-           aplica a las otras 3 vistas, ahí las tareas siguen en curso, sin
-           estado final todavía). -->
-      <div style="margin-bottom:12px;">
-        <span class="aj-pill aj-pill-link" id="tarch-busqueda-toggle-btn" onclick="_tarToggleBusquedaArch()" style="display:inline-flex;align-items:center;gap:6px;position:relative;">
-          <span class="material-symbols-outlined" style="font-size:16px;">search</span>Buscar y filtrar
+      <div class="app-nav-actions">
+        <button type="button" class="app-nav-icon-btn ev-header-icon-btn ev-filtro-toggle-btn" id="tarch-busqueda-toggle-btn" onclick="_tarToggleBusquedaArch()" title="Buscar y filtrar" aria-label="Buscar y filtrar">
+          <span class="material-symbols-outlined">search</span>
           <span class="ev-filtro-badge" id="tarch-filtro-badge" style="display:none;">0</span>
-        </span>
+        </button>
       </div>
-      <div class="ev-header-burbuja" id="tarch-busqueda-panel">
+    </div>
+    <div class="ev-header-burbuja" id="tarch-busqueda-panel" style="margin:0 16px;">
         <div class="ev-header-burbuja-panel">
           <div class="app-nav-search">
             <span class="material-symbols-outlined">search</span>
@@ -1299,8 +1341,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <div class="ev-filtro-burbuja ev-filtro-burbuja-inline" id="tarch-filtro-burbuja-estado"><div class="aj-pills-row ev-filtro-burbuja-pills" id="tarch-filtro-estado-pills"></div></div>
           </div>
         </div>
-      </div>
-
+    </div>
+    <div class="card" style="text-align:left;">
       <div id="tar-archivadas-lista"></div>
       <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
     </div>
@@ -1702,7 +1744,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=2ad89c10"></script>
+<script src="js/ui.js?v=526c6cd8"></script>
 <script src="js/eventos.js?v=2ce746f0"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
@@ -3399,8 +3441,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <!-- FAB de #s-tareas (admin) -- ver MANIFEST.md "Cambios recientes":
      rediseño de header, "Nueva tarea" y "Tareas por validar" (antes un
-     ícono aparte en `.ev-header-row`, `#tar-btn-validar`) se mudan acá.
-     Mismo speed-dial de 2 opciones que `#ev-fab-menu` (Eventos) --
+     ícono aparte en `.ev-header-row`, `#tar-btn-validar`) se mudan acá. 3ra
+     opción "Gestionar tareas activas" (nueva, ver MANIFEST.md) -- lista
+     TODAS las tareas activas con TODAS sus asignaciones, sin filtrar por
+     cupos libres (a diferencia de "Disponibles") -- resuelve el caso de
+     una tarea asignada directo al crear que hoy queda invisible para el
+     admin. Mismo speed-dial que `#ev-fab-menu` (Eventos) --
      `.ev-fab-menu`/`.ev-fab-opcion`/`.ev-fab-btn` reusados tal cual, togglea
      `.ev-fab-abierto` vía `_tarFabToggle()`/`_tarFabCerrar()` (js/tareas.js,
      mismo mecanismo que `_evFabToggle()`/`_evFabCerrar()`, con su propio
@@ -3415,6 +3461,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <span class="material-symbols-outlined">fact_check</span>
     <span>Tareas por validar</span>
     <span class="ev-filtro-badge" id="tar-validar-badge" style="display:none;"></span>
+  </button>
+  <button type="button" class="ev-fab-opcion" onclick="_tarFabCerrar(); irTarGestionar();">
+    <span class="material-symbols-outlined">checklist</span>
+    <span>Gestionar tareas activas</span>
   </button>
   <button type="button" class="ev-fab-opcion" onclick="_tarFabCerrar(); irTarCrear();">
     <span class="material-symbols-outlined">add_task</span>

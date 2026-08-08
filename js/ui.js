@@ -669,8 +669,10 @@ var _BOTTOM_NAV_EXTRA = {
   // "Cambios recientes"), alcanzable desde el ícono con badge del header de
   // #s-tareas. "Tareas archivadas" (nueva, visible para cualquiera, ver
   // MANIFEST.md) -- mismo criterio, alcanzable desde el ícono `archive` del
-  // mismo header.
-  's-tareas-crear': 'tareas', 's-tareas-validar': 'tareas', 's-tareas-archivadas': 'tareas'
+  // mismo header. "Gestionar tareas activas" (nueva, admin, ver
+  // MANIFEST.md "Cambios recientes") -- mismo criterio, alcanzable desde
+  // la 3ra opción del FAB de #s-tareas.
+  's-tareas-crear': 'tareas', 's-tareas-validar': 'tareas', 's-tareas-archivadas': 'tareas', 's-tareas-gestionar': 'tareas'
 };
 
 // Reusa el `icono` ya definido por ítem para el slot de la flecha atrás de

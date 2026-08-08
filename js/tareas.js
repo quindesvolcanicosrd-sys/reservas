@@ -41,6 +41,49 @@ var _TAR_ICONOS_AREA = {
   'Reclutamiento': 'group_add'
 };
 
+/* ── Ícono de card + pills compartidas (Disponibles/Baúl/Mis tareas/
+   Archivadas/Gestionar) -- ver MANIFEST.md "Cambios recientes": el ícono
+   se mudó de una columna a la izquierda (`.ev-card-icon`, restaba ancho a
+   todo el contenido) a un recuadro en la esquina superior junto al título
+   (`.tar-card-header`/`.tar-card-icono-box`, css/tareas.css), y las pills
+   de Área/Cupos/Puntos/Fecha se unificaron en una sola fila `.fi-pills`
+   (mismo componente pill sutil ya usado en el resto de la app,
+   css/reservas.css) en vez de 2 filas de texto plano. Un solo par de
+   helpers reusado por los 5 templates de card en vez de repetir el mismo
+   HTML 5 veces. */
+// `personas` = el array crudo de asignados/personas de la tarea, en
+// cualquiera de sus 2 formas según la vista (`t.asignados` en Disponibles/
+// Baúl/Mis tareas, `t.personas` en Archivadas/Gestionar) -- ambas formas
+// comparten el mismo campo `estado` por persona cuando existe. Defensivo a
+// propósito: en Disponibles/Baúl/Mis tareas ese campo hoy no viene
+// (siempre `iniciada`, la tarea todavía sigue en el tablero), así que acá
+// simplemente nunca da `true` -- sin romper nada si el backend lo suma a
+// futuro.
+function _tarTieneAprobada(personas) {
+  return (personas || []).some(function(p) { return p.estado === 'aprobada'; });
+}
+function _tarIconoBoxHtml(area, aprobada) {
+  var icono = _TAR_ICONOS_AREA[area] || 'task_alt';
+  return '<div class="tar-card-icono-box' + (aprobada ? ' tar-card-icono-aprobada' : '') + '">' +
+    '<span class="material-symbols-outlined">' + icono + '</span>' +
+    (aprobada ? '<span class="tar-card-icono-aprobada-txt">Aprobada</span>' : '') +
+  '</div>';
+}
+// `cupos` (opcional) = { tomados, total } -- solo Disponibles/Baúl/Gestionar
+// muestran el cupo restante; Mis tareas/Archivadas no traían ese pill antes
+// de este cambio y no lo suman ahora (fuera del pedido, ver "Reglas
+// globales del proyecto" -- no agregar más de lo pedido).
+function _tarPillsRowHtml(area, puntos, fechaRaw, cupos) {
+  var fi = _tarFechaInfo(fechaRaw);
+  var cuposHtml = cupos ? '<span class="fi-pill fi-pill-hora tar-cupos-pill">' + cupos.tomados + '/' + cupos.total + ' cupos</span>' : '';
+  return '<div class="fi-pills" style="margin-top:8px;">' +
+    '<span class="fi-pill fi-pill-fin tar-area-pill">' + (area || '') + '</span>' +
+    cuposHtml +
+    '<span class="fi-pill fi-pill-dur">' + (puntos != null ? puntos : 0) + ' pts</span>' +
+    '<span class="fi-pill ' + fi.clase + '"><span class="material-symbols-outlined">event</span>' + fi.texto + '</span>' +
+  '</div>';
+}
+
 /* ── Buscador + filtros compartidos (Disponibles/Mis tareas/Baúl -- las 3
    conviven en #s-tareas, un solo estado de filtro -- y Archivadas, su
    propia pantalla con el suyo) -- mismo mecanismo de burbuja que Eventos
@@ -591,13 +634,14 @@ function _tarToggleBaul() {
   }
 }
 
-/* Tarjeta de tarea (Disponibles/Baúl) -- ícono por área, título, área+puntos,
-   fecha límite, fila de avatares de quienes ya la tomaron + cupos, y el
-   botón de acción que corresponda (o la nota de límite alcanzado en su
-   lugar). Mismo esqueleto que `_evCardEventoHtml()` (.ev-card/-top-row/
-   -icon/-body/-titulo/-sub, css/eventos.css), reusado tal cual. */
+/* Tarjeta de tarea (Disponibles/Baúl) -- título+ícono por área (esquina
+   superior, ver `_tarIconoBoxHtml()`), pills de Área/Cupos/Puntos/Fecha
+   límite (`_tarPillsRowHtml()`), fila de avatares de quienes ya la
+   tomaron, y el botón de acción que corresponda (o la nota de límite
+   alcanzado en su lugar). Ya NO usa `.ev-card-top-row`/`.ev-card-icon`
+   (css/eventos.css, columna de ícono a la izquierda) -- ver MANIFEST.md
+   "Cambios recientes". */
 function _tarCardHtml(t, contexto) {
-  var icono = _TAR_ICONOS_AREA[t.area] || 'task_alt';
   var cuposLibres = (t.cuposLibres != null) ? t.cuposLibres : Math.max(0, (t.cuposTotales || 0) - (t.cuposTomados || 0));
   var accionHtml;
   if (_tarEnLimite()) {
@@ -620,35 +664,34 @@ function _tarCardHtml(t, contexto) {
   if ((contexto === 'baul' || contexto === 'disponible') && _adminToken) {
     accionHtml += '<button type="button" class="btn btn-text-simple tar-card-btn" onclick="_tarArchivar(\'' + t.idTarea + '\', this)"><span class="material-symbols-outlined">archive</span>Archivar tarea</button>';
   }
+  var asignados = t.asignados || [];
+  var tomados = asignados.length;
+  var total = t.cuposTotales != null ? t.cuposTotales : (tomados + cuposLibres);
   return '<div class="ev-card" id="tar-card-' + contexto + '-' + t.idTarea + '">' +
-    '<div class="ev-card-top-row">' +
-      '<div class="ev-card-icon"><span class="material-symbols-outlined">' + icono + '</span></div>' +
-      '<div class="ev-card-body">' +
+    '<div class="ev-card-body">' +
+      '<div class="tar-card-header">' +
         '<div class="ev-card-titulo">' + (t.titulo || '') + '</div>' +
-        '<div class="ev-card-sub"><span class="fi-pill fi-pill-fin tar-area-pill">' + (t.area || '') + '</span><span>' + (t.puntos != null ? t.puntos : 0) + ' pts</span></div>' +
-        '<div class="ev-card-sub"><span class="material-symbols-outlined">event</span>Vence: ' + _tarFechaLegible(t.fechaVencimiento) + '</div>' +
-        _tarAvataresHtml(t.asignados, t.cuposTotales, cuposLibres) +
-        accionHtml +
+        _tarIconoBoxHtml(t.area, _tarTieneAprobada(asignados)) +
       '</div>' +
+      _tarPillsRowHtml(t.area, t.puntos, t.fechaVencimiento, { tomados: tomados, total: total }) +
+      _tarAvataresHtml(asignados) +
+      accionHtml +
     '</div>' +
   '</div>';
 }
 
 /* Fila de avatares superpuestos (primer uso real de .avatar-pill--xs,
-   css/global.css) + conteo "N/total cupos". */
-function _tarAvataresHtml(asignados, cuposTotales, cuposLibres) {
+   css/global.css) -- el conteo "N/total cupos" que vivía acá se mudó a una
+   pill dentro de `.fi-pills` (ver `_tarPillsRowHtml()` más arriba). */
+function _tarAvataresHtml(asignados) {
   asignados = asignados || [];
   var avatares = asignados.map(function(p) {
     var foto = (p.fotoPerfil || '').replace(/"/g, '&quot;');
     var nombre = (p.nombreDerby || p.nombre || '').replace(/"/g, '&quot;');
     return '<div class="avatar-pill avatar-pill--xs" data-nombre="' + nombre + '" data-foto="' + foto + '"></div>';
   }).join('');
-  var tomados = asignados.length;
-  var total = cuposTotales != null ? cuposTotales : (tomados + (cuposLibres || 0));
-  return '<div class="tar-avatares-row">' +
-    (avatares ? '<div class="tar-avatar-stack">' + avatares + '</div>' : '') +
-    '<span class="tar-cupos-label">' + tomados + '/' + total + ' cupos</span>' +
-  '</div>';
+  if (!avatares) return '';
+  return '<div class="tar-avatares-row"><div class="tar-avatar-stack">' + avatares + '</div></div>';
 }
 function _tarHidratarAvatares() {
   document.querySelectorAll('.tar-avatares-row [data-nombre]').forEach(function(el) {
@@ -663,6 +706,41 @@ function _tarFechaLegible(raw) {
   var d = new Date(s);
   if (!isNaN(d.getTime())) return d.getDate() + ' de ' + NOMBRES_MESES[d.getMonth()] + ' de ' + d.getFullYear();
   return s;
+}
+
+/* Info de la pill de fecha límite (color + texto relativo en español) --
+   ver MANIFEST.md "Cambios recientes". Color: rojo si ya venció o vence
+   hoy, naranja si vence dentro de los próximos 3 días, amarillo si falta
+   más (corte ajustable, sin más criterio explícito en el pedido). Texto:
+   "Vence hoy"/"Vence mañana"/"Vence el [día]" (si cae el resto de esta
+   semana)/"Vence el [día] que viene" (si cae la semana próxima)/"Vence el
+   [día] [núm] de [mes]" para fechas más lejanas -- mismo criterio de
+   "semana actual"/"semana próxima" que `_evEsRestoDeSemana()`/
+   `_evEsProximaSemana()` (js/eventos.js), reusadas tal cual acá en vez de
+   reimplementar ese cálculo (mismo semana-empieza-en-lunes que el resto de
+   la app). */
+function _tarFechaInfo(fechaRaw) {
+  if (!fechaRaw) return { texto: 'Sin fecha límite', clase: 'tar-fecha-amarillo' };
+  var s = fechaRaw.toString();
+  var esIso = /^\d{4}-\d{2}-\d{2}/.test(s);
+  var d = esIso ? _evParseISO(s.slice(0, 10)) : new Date(s);
+  if (isNaN(d.getTime())) return { texto: 'Vence: ' + _tarFechaLegible(fechaRaw), clase: 'tar-fecha-amarillo' };
+  d.setHours(0, 0, 0, 0);
+  var hoy = _evParseISO(_evHoyISO());
+  var diff = Math.round((d - hoy) / 86400000);
+  var diaSemana = _EV_DIAS_LARGOS[d.getDay()].toLowerCase();
+  var fechaCompleta = 'el ' + diaSemana + ' ' + d.getDate() + ' de ' + NOMBRES_MESES[d.getMonth()].toLowerCase() +
+    (d.getFullYear() !== hoy.getFullYear() ? ' de ' + d.getFullYear() : '');
+  var clase = diff <= 0 ? 'tar-fecha-rojo' : (diff <= 3 ? 'tar-fecha-naranja' : 'tar-fecha-amarillo');
+  var isoCorta = esIso ? s.slice(0, 10) : _evToISO(d);
+  var texto;
+  if (diff < 0) texto = 'Venció ' + fechaCompleta;
+  else if (diff === 0) texto = 'Vence hoy';
+  else if (diff === 1) texto = 'Vence mañana';
+  else if (_evEsRestoDeSemana(isoCorta)) texto = 'Vence el ' + diaSemana;
+  else if (_evEsProximaSemana(isoCorta)) texto = 'Vence el ' + diaSemana + ' que viene';
+  else texto = 'Vence ' + fechaCompleta;
+  return { texto: texto, clase: clase };
 }
 
 /* ── Render "Mis tareas" (asignaciones activas: iniciada/pendiente_revision) ── */
@@ -703,17 +781,15 @@ function _tarAccionMisHtml(a) {
 }
 function _tarCardMisHtml(a) {
   var t = a.tarea || {};
-  var icono = _TAR_ICONOS_AREA[t.area] || 'task_alt';
   var fechaTope = a.fechaVencimientoPersonal || t.fechaVencimiento;
   return '<div class="ev-card" id="tar-mis-card-' + a.idAsignacion + '">' +
-    '<div class="ev-card-top-row">' +
-      '<div class="ev-card-icon"><span class="material-symbols-outlined">' + icono + '</span></div>' +
-      '<div class="ev-card-body">' +
+    '<div class="ev-card-body">' +
+      '<div class="tar-card-header">' +
         '<div class="ev-card-titulo">' + (t.titulo || '') + (a.esRescate ? ' <span style="font-size:0.68rem;color:var(--muted);font-weight:600;">(rescatada)</span>' : '') + '</div>' +
-        '<div class="ev-card-sub"><span class="fi-pill fi-pill-fin tar-area-pill">' + (t.area || '') + '</span><span>' + (t.puntos != null ? t.puntos : 0) + ' pts</span></div>' +
-        '<div class="ev-card-sub"><span class="material-symbols-outlined">event</span>Vence: ' + _tarFechaLegible(fechaTope) + '</div>' +
-        '<div class="tar-accion-wrap" id="tar-accion-wrap-' + a.idAsignacion + '">' + _tarAccionMisHtml(a) + '</div>' +
+        _tarIconoBoxHtml(t.area, a.estado === 'aprobada') +
       '</div>' +
+      _tarPillsRowHtml(t.area, t.puntos, fechaTope) +
+      '<div class="tar-accion-wrap" id="tar-accion-wrap-' + a.idAsignacion + '">' + _tarAccionMisHtml(a) + '</div>' +
     '</div>' +
   '</div>';
 }
@@ -927,17 +1003,23 @@ function _tarArchivar(idTarea, btn) {
    pantalla->paso de un wizard, ver MANIFEST.md "Estándar de navegación")
    que `_evCrear*()` (js/eventos.js, #s-eventos-crear), replicado acá con su
    propio estado. ─────────────────────────────────────────────────────── */
-// Orden nuevo (ver MANIFEST.md "Cambios recientes" -- se sumó el paso
-// "¿Cómo se asigna esta tarea?" después de puntos/cupos, y el picker de
-// personas se corrió antes de la fecha límite, no después como antes): 0
-// Nombre+Área / 1 Puntos+Máximo de personas / 2 Modo de asignación (nuevo)
-// / 3 Asignar a personas (SOLO si modoAsignacion==='elegir', ver
-// `_tarCrearIrSiguiente()`/`_tarCrearBack()`) / 4 Fecha límite+Notas
-// (último paso siempre, sin importar el modo -- "Crear tarea").
-var _TAR_CREAR_STEPS = ['tar-crear-paso-0', 'tar-crear-paso-1', 'tar-crear-paso-modo', 'tar-crear-paso-personas', 'tar-crear-paso-fecha'];
+// Orden (ver MANIFEST.md "Cambios recientes" -- se sumó el paso "¿Cómo se
+// asigna esta tarea?" después de puntos/cupos, el picker de personas se
+// corrió antes de la fecha límite, y Notas se separó en su propio paso al
+// final, antes compartido con Fecha límite): 0 Nombre+Área / 1 Puntos+
+// Máximo de personas / 2 Modo de asignación / 3 Asignar a personas (SOLO
+// si modoAsignacion==='elegir', ver `_tarCrearIrSiguiente()`/
+// `_tarCrearBack()`) / 4 Fecha límite / 5 Notas (último paso siempre, sin
+// importar el modo -- "Crear tarea").
+var _TAR_CREAR_STEPS = ['tar-crear-paso-0', 'tar-crear-paso-1', 'tar-crear-paso-modo', 'tar-crear-paso-personas', 'tar-crear-paso-fecha', 'tar-crear-paso-notas'];
 var _tarCrearCurIdx = 0;
 var _tarCrearData = { titulo: '', area: null, fecha: null, notas: '', asignarA: [], modoAsignacion: null };
 var _tarCrearCal = { mostrado: null };
+// Último valor de "días para completar" mostrado (ver
+// `_tarActualizarDiasParaCompletar()` más abajo) -- `null` = todavía no se
+// mostró nada esta apertura del wizard, distingue "primera vez que
+// aparece" (fade del texto completo) de "ya estaba visible" (fade normal).
+var _tarCrearDiasAnterior = null;
 
 function irTarCrear() {
   _tarCrearData = { titulo: '', area: null, fecha: null, notas: '', asignarA: [], modoAsignacion: null };
@@ -967,6 +1049,8 @@ function _tarCrearResetUI() {
   var n = document.getElementById('tar-crear-notas'); if (n) n.value = '';
   var resumen = document.getElementById('tar-crear-cal-resumen'); if (resumen) resumen.textContent = '';
   var s = document.getElementById('tar-crear-personas-search'); if (s) s.value = '';
+  _tarCrearDiasAnterior = null;
+  var diasWrap = document.getElementById('tar-crear-dias-wrap'); if (diasWrap) diasWrap.style.display = 'none';
 }
 function _tarCrearMostrarPaso(idx) {
   _TAR_CREAR_STEPS.forEach(function(s, i) {
@@ -1028,10 +1112,12 @@ function _tarCrearPaso0Valido() { return !!(_tarCrearData.titulo && _tarCrearDat
 function _tarCrearPasoFechaValido() { return !!_tarCrearData.fecha; }
 function _tarCrearActualizarFooter() {
   var btn = document.getElementById('tar-crear-btn-footer'); if (!btn) return;
-  // Último paso: "Fecha límite+Notas" -- siempre el último sin importar el
-  // modo elegido (el picker de personas, si se muestra, va antes), el
-  // botón final se calcula contra el largo real de _TAR_CREAR_STEPS para no
-  // tener que tocar este número cada vez que se suma/saca un paso.
+  // Último paso: "Notas" -- siempre el último sin importar el modo elegido
+  // (el picker de personas, si se muestra, va antes), el botón final se
+  // calcula contra el largo real de _TAR_CREAR_STEPS para no tener que
+  // tocar este número cada vez que se suma/saca un paso. La fecha sigue
+  // siendo obligatoria para poder crear (se exige un paso antes, al salir
+  // de "Fecha límite", pero se revalida acá también por las dudas).
   if (_tarCrearCurIdx === _TAR_CREAR_STEPS.length - 1) {
     btn.textContent = 'Crear tarea';
     btn.onclick = _tarCrearGuardar;
@@ -1041,7 +1127,8 @@ function _tarCrearActualizarFooter() {
     btn.onclick = _tarCrearIrSiguiente;
     var pasoId = _TAR_CREAR_STEPS[_tarCrearCurIdx];
     btn.disabled = pasoId === 'tar-crear-paso-0' ? !_tarCrearPaso0Valido() :
-      (pasoId === 'tar-crear-paso-modo' ? !_tarCrearData.modoAsignacion : false);
+      (pasoId === 'tar-crear-paso-modo' ? !_tarCrearData.modoAsignacion :
+      (pasoId === 'tar-crear-paso-fecha' ? !_tarCrearPasoFechaValido() : false));
   }
 }
 function _tarCrearSetTitulo(v) { _tarCrearData.titulo = v; _tarCrearActualizarFooter(); }
@@ -1126,6 +1213,36 @@ function _tarCrearCalTocarDia(iso) {
   var resumen = document.getElementById('tar-crear-cal-resumen');
   if (resumen) resumen.textContent = _evAntFechaLegible(iso);
   _tarCrearActualizarFooter();
+  _tarActualizarDiasParaCompletar();
+}
+
+/* "X días para realizar la tarea" (ver MANIFEST.md "Cambios recientes") --
+   texto rojo al lado de "Fecha límite", con fade in/out al cambiar la
+   fecha en vez de un salto seco: si el TEXTO cambia (primera vez que
+   aparece, o cruza el límite singular/plural "1 día" <-> "N días") fadea
+   `#tar-crear-dias-wrap` completo (`_evFadeSwap()`, js/eventos.js); si el
+   número cambia pero la frase de al lado se mantiene igual (ej. 5 días ->
+   8 días), fadea solo `#tar-crear-dias-num`. */
+function _tarActualizarDiasParaCompletar() {
+  var wrap = document.getElementById('tar-crear-dias-wrap');
+  var numEl = document.getElementById('tar-crear-dias-num');
+  var restoEl = document.getElementById('tar-crear-dias-resto');
+  if (!wrap || !numEl || !restoEl) return;
+  var fecha = _tarCrearData.fecha;
+  if (!fecha) { wrap.style.display = 'none'; _tarCrearDiasAnterior = null; return; }
+  var hoy = _evParseISO(_evHoyISO());
+  var d = _evParseISO(fecha);
+  var dias = Math.max(0, Math.round((d - hoy) / 86400000));
+  var restoTexto = dias === 1 ? ' día para realizar la tarea' : ' días para realizar la tarea';
+  var yaVisible = wrap.style.display !== 'none';
+  var cambioSingularPlural = _tarCrearDiasAnterior == null || (_tarCrearDiasAnterior === 1) !== (dias === 1);
+  wrap.style.display = 'inline-flex';
+  if (!yaVisible || cambioSingularPlural) {
+    _evFadeSwap(wrap, function() { numEl.textContent = dias; restoEl.textContent = restoTexto; }, false, 180);
+  } else {
+    _evFadeSwap(numEl, function() { numEl.textContent = dias; }, false, 180);
+  }
+  _tarCrearDiasAnterior = dias;
 }
 
 /* ── Paso "Asignar personas" (nuevo, opcional) -- mismo patrón de búsqueda +
@@ -1156,7 +1273,8 @@ function _tarCrearRenderPersonas(q) {
   var qn = (q || '').toLowerCase().trim();
   var filtrado = qn ? roster.filter(function(p) { return (p.nombreDerby || '').toLowerCase().indexOf(qn) !== -1 || String(p.nombre).toLowerCase().indexOf(qn) !== -1; }) : roster;
   if (!filtrado.length) {
-    cont.innerHTML = '<div class="ev-roster-vacio">' + (roster.length ? 'Sin resultados.' : 'No se pudo cargar el equipo.') + '</div>';
+    var vacioHtml = '<div class="ev-roster-vacio">' + (roster.length ? 'Sin resultados.' : 'No se pudo cargar el equipo.') + '</div>';
+    _evFadeSwap(cont, function() { cont.innerHTML = vacioHtml; });
     return;
   }
   // Bug real corregido (ver MANIFEST.md "Cambios recientes"): el picker no
@@ -1167,7 +1285,7 @@ function _tarCrearRenderPersonas(q) {
   var max = _tarCrearMaxPersonas();
   var enLimite = _tarCrearData.asignarA.length >= max;
   var avisoHtml = enLimite ? '<p class="tar-limite-nota" style="margin:0 0 10px;text-align:left;">Ya elegiste el máximo de personas para esta tarea (' + max + ').</p>' : '';
-  cont.innerHTML = avisoHtml + filtrado.map(function(p) {
+  var listaHtml = avisoHtml + filtrado.map(function(p) {
     var nombreAttr = String(p.nombre).replace(/'/g, "\\'");
     var sel = _tarCrearData.asignarA.indexOf(p.nombre) !== -1;
     var deshabilitada = enLimite && !sel;
@@ -1177,6 +1295,11 @@ function _tarCrearRenderPersonas(q) {
       '<div class="fi-circle' + (sel ? ' sel' : '') + '"><span class="material-symbols-outlined">check</span></div>' +
     '</div>';
   }).join('');
+  // Fade in/out (ver MANIFEST.md "Cambios recientes") en vez de un
+  // `innerHTML=` seco -- cubre tanto la aparición/desaparición del aviso de
+  // "máximo alcanzado" como el reordenamiento de la lista debajo (ambos
+  // viven dentro del mismo repintado de `cont`, un solo fade para los 2).
+  _evFadeSwap(cont, function() { cont.innerHTML = listaHtml; });
 }
 // Si el roster tardó más que la carga del wizard en llegar (mismo caso raro
 // que _evRepintarMarcarAsistSiHaceFalta(), ver esa función) -- repinta solo
@@ -1362,6 +1485,145 @@ function _tarValidarEnviar(idAsignacion, accion, nota) {
   });
 }
 
+/* ── "Gestionar tareas activas" (admin) -- Nuevo, ver MANIFEST.md "Cambios
+   recientes". A diferencia de "Disponibles" (solo tareas con cupos
+   libres, sin mostrar las ya tomadas) y de "Tareas por validar" (solo
+   asignaciones `pendiente_revision`), esta vista trae TODAS las tareas
+   activas con TODAS sus asignaciones -- `adminGetTareasActivas`, sin
+   params -- resuelve el caso de una tarea asignada directo al crearla
+   (queda en `en_progreso` con gente en estado `iniciada`) que hoy no
+   aparece en ningún lado hasta que la propia persona la manda a revisión.
+   Aprobar/Rechazar quedan disponibles para CUALQUIER asignación activa
+   (`iniciada` O `pendiente_revision`), no solo `pendiente_revision` -- el
+   admin puede validar directo sin esperar. Mismo patrón .pantalla+ir() que
+   Validar/Archivadas; cada tarea es una card (mismo esqueleto que el resto
+   de la sección, ícono+pills+`_tarIconoBoxHtml()`/`_tarPillsRowHtml()`)
+   con sus asignaciones anidadas debajo como filas `.admin-banner-res-row`
+   (mismo componente que "Tareas por validar", ver esa sección arriba) --
+   acá se necesita agrupar por tarea (a diferencia de la lista plana de
+   "Tareas por validar") para no repetir el ícono/pills de la tarea una vez
+   por persona asignada.
+   Asunción marcada a propósito (sin contrato explícito del shape de
+   `adminGetTareasActivas`, endpoint nuevo): cada tarea trae su lista de
+   asignaciones en `t.asignaciones`, con fallback a `t.asignados` (mismo
+   nombre de campo que ya usan getTareasDisponibles/getMisTareas, por si el
+   backend lo reusa) -- cada asignación con `idAsignacion`/`estado` +
+   nombre en `nombreDerby`/`nombreUsuario`/`nombre` (mismos alias que el
+   resto de la sección ya contempla). Si el backend real difiere, este es
+   el punto exacto a ajustar. */
+var _tarActivas = [];
+var _tarActivasCargaId = 0;
+function irTarGestionar() {
+  ir('s-tareas-gestionar');
+  _tarCargarGestionar();
+}
+function _tarCerrarGestionar() { ir('s-tareas'); }
+function _tarAsignacionesDe(t) { return t.asignaciones || t.asignados || []; }
+function _tarNombreAsignacion(a) { return a.nombreDerby || a.nombreUsuario || a.nombre || ''; }
+function _tarCargarGestionar() {
+  var miCarga = ++_tarActivasCargaId;
+  var cont = document.getElementById('tar-gestionar-lista');
+  if (cont) cont.innerHTML = _tarSkeletonHtml(3);
+  adminApi({ action: 'adminGetTareasActivas' }, function(res) {
+    if (miCarga !== _tarActivasCargaId) return;
+    _tarActivas = res || [];
+    _tarRenderGestionar();
+  }, function(e) {
+    if (miCarga !== _tarActivasCargaId) return;
+    if (typeof console !== 'undefined' && console.error) console.error('adminGetTareasActivas falló:', e);
+    var c = document.getElementById('tar-gestionar-lista');
+    if (c) c.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">error_outline</span>No se pudieron cargar las tareas activas.' +
+      '<button type="button" class="btn-text-simple tar-reintentar-btn" onclick="_tarCargarGestionar()"><span class="material-symbols-outlined">refresh</span>Reintentar</button>' +
+      '</div>';
+  });
+}
+function _tarRenderGestionar() {
+  var cont = document.getElementById('tar-gestionar-lista');
+  if (!cont) return;
+  if (!_tarActivas.length) {
+    cont.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">task_alt</span>No hay tareas activas por ahora.</div>';
+    return;
+  }
+  cont.innerHTML = _tarActivas.map(_tarGestionarCardHtml).join('');
+}
+// Fila de una asignación individual dentro de la card de su tarea --
+// Aprobar/Rechazar visibles para `iniciada`/`pendiente_revision` (pedido
+// explícito: el admin no necesita esperar a que la persona la mande a
+// revisión), badge de estado final (mismo `_tarArchivadaEstadoBadge()` ya
+// usado en Archivadas) para asignaciones ya resueltas.
+function _tarGestionarFilaHtml(a) {
+  var estado = a.estado;
+  var nombre = _tarNombreAsignacion(a);
+  var pendiente = estado === 'iniciada' || estado === 'pendiente_revision';
+  var accionesHtml = pendiente ?
+    '<div class="admin-banner-res-actions">' +
+      '<button class="admin-banner-btn admin-banner-btn-ok" onclick="_tarGestionarAprobar(\'' + a.idAsignacion + '\')" aria-label="Aprobar"><span class="material-symbols-outlined">check</span></button>' +
+      '<button class="admin-banner-btn admin-banner-btn-no" onclick="_tarGestionarMostrarRechazo(\'' + a.idAsignacion + '\')" aria-label="Rechazar"><span class="material-symbols-outlined">close</span></button>' +
+    '</div>' :
+    _tarArchivadaEstadoBadge(estado);
+  return '<div class="admin-banner-res-row" id="tar-gest-row-' + a.idAsignacion + '" style="flex-wrap:wrap;">' +
+    '<div class="admin-banner-res-info">' +
+      '<div class="admin-banner-res-nombre">' + nombre + '</div>' +
+      '<div class="admin-banner-res-fecha">' + (estado === 'pendiente_revision' ? 'Esperando validación' : (estado === 'iniciada' ? 'En curso' : '')) + '</div>' +
+    '</div>' +
+    accionesHtml +
+    (pendiente ? '<div id="tar-gest-rechazo-' + a.idAsignacion + '" style="display:none;width:100%;margin-top:8px;">' +
+      '<textarea id="tar-gest-nota-' + a.idAsignacion + '" placeholder="Motivo del rechazo (opcional)..." style="min-height:60px;resize:none;width:100%;font-size:0.8rem;"></textarea>' +
+      '<button class="btn btn-danger tar-card-btn" style="padding:10px;margin-top:6px;" onclick="_tarGestionarConfirmarRechazo(\'' + a.idAsignacion + '\')"><span class="material-symbols-outlined">close</span>Confirmar rechazo</button>' +
+    '</div>' : '') +
+  '</div>';
+}
+function _tarGestionarCardHtml(t) {
+  var asignaciones = _tarAsignacionesDe(t);
+  var cupos = { tomados: asignaciones.length, total: t.cuposTotales != null ? t.cuposTotales : asignaciones.length };
+  var personasHtml = asignaciones.length ?
+    '<div class="tar-gestionar-personas">' + asignaciones.map(_tarGestionarFilaHtml).join('') + '</div>' :
+    '<p style="font-size:0.78rem;color:var(--muted);margin:12px 0 0;">Todavía nadie tomó esta tarea.</p>';
+  return '<div class="ev-card" id="tar-gest-card-' + t.idTarea + '">' +
+    '<div class="ev-card-body">' +
+      '<div class="tar-card-header">' +
+        '<div class="ev-card-titulo">' + (t.titulo || '') + '</div>' +
+        _tarIconoBoxHtml(t.area, _tarTieneAprobada(asignaciones)) +
+      '</div>' +
+      _tarPillsRowHtml(t.area, t.puntos, t.fechaVencimiento, cupos) +
+      personasHtml +
+    '</div>' +
+  '</div>';
+}
+function _tarGestionarAprobar(idAsignacion) { _tarGestionarEnviar(idAsignacion, 'aprobar', ''); }
+function _tarGestionarMostrarRechazo(idAsignacion) {
+  var wrap = document.getElementById('tar-gest-rechazo-' + idAsignacion);
+  if (!wrap) return;
+  wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+}
+function _tarGestionarConfirmarRechazo(idAsignacion) {
+  var nota = document.getElementById('tar-gest-nota-' + idAsignacion);
+  _tarGestionarEnviar(idAsignacion, 'rechazar', nota ? nota.value : '');
+}
+// Mismo endpoint/contrato que `_tarValidarEnviar()` (`adminValidarTarea`,
+// GET+adminToken) -- reimplementado acá en vez de compartir función porque
+// esta vista recarga/repinta agrupado por tarea (`_tarCargarGestionar()`),
+// no la lista plana de `_tarPendientesValidacion`. Sincroniza de paso el
+// badge de "Tareas por validar" (`_tarCargarPendientesValidacion()`) --
+// aprobar/rechazar acá también puede sacar asignaciones de esa lista si
+// estaban en `pendiente_revision`.
+function _tarGestionarEnviar(idAsignacion, accion, nota) {
+  var row = document.getElementById('tar-gest-row-' + idAsignacion);
+  if (row) row.querySelectorAll('button').forEach(function(b) { b.disabled = true; });
+  adminApi({ action: 'adminValidarTarea', idAsignacion: idAsignacion, accion: accion, notaRechazo: nota || '' }, function(res) {
+    if (res && res.exito === false) {
+      if (row) row.querySelectorAll('button').forEach(function(b) { b.disabled = false; });
+      mostrarToast(res.error || 'No se pudo procesar la validación.', 'error');
+      return;
+    }
+    _tarCargarGestionar();
+    _tarCargarPendientesValidacion();
+  }, function(e) {
+    if (row) row.querySelectorAll('button').forEach(function(b) { b.disabled = false; });
+    mostrarToast((e && e.message) || 'No se pudo procesar la validación.', 'error');
+  });
+}
+
 /* ── "Tareas archivadas" -- subsección de página completa, visible para
    cualquiera (sin gating de _adminToken, a diferencia del wizard/panel de
    validación de arriba): lista de solo consulta de `getTareasArchivadas`
@@ -1426,7 +1688,6 @@ function _tarArchivadaEstadoBadge(estado) {
   return '<span style="font-size:0.66rem;font-weight:800;padding:2px 9px;border-radius:20px;background:' + bg + ';color:' + color + ';white-space:nowrap;flex-shrink:0;">' + texto + '</span>';
 }
 function _tarCardArchivadaHtml(t) {
-  var icono = _TAR_ICONOS_AREA[t.area] || 'task_alt';
   var personas = t.personas || [];
   var personasHtml = personas.length ?
     '<div class="tar-archivada-personas">' + personas.map(function(p) {
@@ -1443,16 +1704,16 @@ function _tarCardArchivadaHtml(t) {
   // admin* de una card (ej. `_evAccionAdminHtml()`, js/eventos.js): togglea
   // por `_adminToken` en el propio render, no por CSS.
   var accionAdmin = _adminToken ? '<button type="button" class="btn btn-danger tar-card-btn" onclick="_tarEliminarArchivadaAbrir(\'' + t.idTarea + '\')"><span class="material-symbols-outlined">delete</span>Eliminar</button>' : '';
+  var cupos = t.cuposTotales != null ? { tomados: personas.length, total: t.cuposTotales } : null;
   return '<div class="ev-card" id="tar-archivada-card-' + t.idTarea + '">' +
-    '<div class="ev-card-top-row">' +
-      '<div class="ev-card-icon"><span class="material-symbols-outlined">' + icono + '</span></div>' +
-      '<div class="ev-card-body">' +
+    '<div class="ev-card-body">' +
+      '<div class="tar-card-header">' +
         '<div class="ev-card-titulo">' + (t.titulo || '') + '</div>' +
-        '<div class="ev-card-sub"><span class="fi-pill fi-pill-fin tar-area-pill">' + (t.area || '') + '</span><span>' + (t.puntos != null ? t.puntos : 0) + ' pts</span></div>' +
-        '<div class="ev-card-sub"><span class="material-symbols-outlined">event</span>Venció: ' + _tarFechaLegible(t.fechaVencimiento) + '</div>' +
-        personasHtml +
-        accionAdmin +
+        _tarIconoBoxHtml(t.area, _tarTieneAprobada(personas)) +
       '</div>' +
+      _tarPillsRowHtml(t.area, t.puntos, t.fechaVencimiento, cupos) +
+      personasHtml +
+      accionAdmin +
     '</div>' +
   '</div>';
 }

@@ -104,15 +104,67 @@
 .tar-persona-fila .fi-circle.sel { background: var(--brand); border-color: var(--brand); }
 .tar-persona-fila .fi-circle.sel .material-symbols-outlined { color: var(--white); }
 
-/* Fila de avatares superpuestos + conteo de cupos, debajo de la fecha
-   límite en una card de tarea (Disponibles/Baúl). `.avatar-pill--xs`
-   (26px, css/global.css) ya existe para este mismo rol ("fila de avatares
-   superpuestos") pero sin ningún consumidor real todavía -- primer uso. */
-.tar-avatares-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+/* Fila de avatares superpuestos, debajo de las pills de una card de tarea
+   (Disponibles/Baúl). `.avatar-pill--xs` (26px, css/global.css) ya existe
+   para este mismo rol ("fila de avatares superpuestos") pero sin ningún
+   consumidor real todavía -- primer uso. El conteo "N/total cupos" que
+   vivía acá como texto plano se mudó a una pill dentro de `.fi-pills`
+   (ver `_tarPillsRowHtml()`, js/tareas.js, y el bloque de pills más abajo
+   en este archivo) -- esta fila ya solo contiene el stack de avatares. */
+.tar-avatares-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 .tar-avatar-stack { display: flex; }
 .tar-avatar-stack .avatar-pill { border: 2px solid var(--surface-2); margin-left: -8px; }
 .tar-avatar-stack .avatar-pill:first-child { margin-left: 0; }
-.tar-cupos-label { font-size: 0.76rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
+
+/* ── Ícono de card -- reposicionado a la esquina superior junto al título
+   (ver MANIFEST.md "Cambios recientes") -- antes `.ev-card-icon` (42px,
+   css/eventos.css) en su propia columna a la izquierda de
+   `.ev-card-top-row`, restando ancho a TODO el contenido de la card. Ahora
+   vive DENTRO de `.ev-card-body`, en la misma fila que el título
+   (`.tar-card-header`, ver `_tarIconoBoxHtml()`/js/tareas.js) -- el resto
+   del contenido (pills, avatares, botones) queda a ancho completo, sin
+   ninguna columna lateral. Mismo espíritu que `.ev-card-icono-inline`
+   (ícono de tipo INLINE junto al título de una card de evento,
+   css/eventos.css) pero como recuadro (no ícono desnudo): acá necesita
+   poder mostrar un texto chico debajo ("Aprobada", ver más abajo) sin
+   desbordar, así que es una caja con padding en vez de un glyph suelto. */
+.tar-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.tar-card-header .ev-card-titulo { flex: 1; min-width: 0; margin-bottom: 0; }
+.tar-card-icono-box {
+  flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; min-width: 38px; min-height: 38px; padding: 6px 8px; border-radius: 10px;
+  background: var(--brand-light); color: var(--brand);
+}
+.tar-card-icono-box .material-symbols-outlined { font-size: 1.05rem; }
+/* Estado "aprobada" -- cuando ALGUNA asignación de la tarea está en estado
+   `aprobada` (ver `_tarTieneAprobada()`, js/tareas.js), el recuadro pasa a
+   verde (en vez del color de énfasis default) y suma un texto chico
+   "Aprobada" debajo del ícono -- CONTENIDO dentro del propio recuadro (el
+   texto es lo que define el ancho de la caja, `min-width` de arriba es
+   apenas un piso para el ícono solo, no un techo -- nunca desborda). */
+.tar-card-icono-box.tar-card-icono-aprobada { background: var(--success-bg); color: var(--success); }
+.tar-card-icono-aprobada-txt { font-size: 0.56rem; font-weight: 800; line-height: 1; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.2px; }
+
+/* ── Pills de card (Área/Cupos/Puntos/Fecha límite) -- reemplaza los
+   estilos previos (texto plano / `.tar-area-pill` suelta) por el mismo
+   componente pill sutil ya usado en el resto de la app (`.fi-pill`,
+   css/reservas.css) dentro de `.fi-pills` (fila con wrap), ver
+   `_tarPillsRowHtml()`/js/tareas.js. Área reusa `.fi-pill-fin` (azul, ya
+   así desde antes) y Puntos `.fi-pill-dur` (verde) TAL CUAL -- ya existían
+   con esos colores para otro rol (Reservas) y calzan exacto con lo pedido,
+   sin necesitar variantes nuevas. Cupos SÍ es nuevo (no había una variante
+   violeta reusable con ese nombre) -- mismos tokens que `.fi-pill-hora`
+   (violeta), variante propia acá para no acoplar el nombre de la clase de
+   Tareas a un rol de Reservas que no tiene relación semántica. */
+.tar-cupos-pill { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border-soft); }
+/* Fecha de vencimiento -- color dinámico según cercanía (`_tarFechaInfo()`,
+   js/tareas.js): rojo si vence hoy o ya venció, naranja si vence dentro de
+   los próximos 3 días, amarillo si falta más -- mismos tokens de estado
+   que ya usa el resto de la app (`--danger`/`--warning`/`--amber`,
+   css/colors.css), sin inventar ningún color nuevo. */
+.tar-fecha-rojo { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-bdr); }
+.tar-fecha-naranja { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-bdr); }
+.tar-fecha-amarillo { background: var(--amber-light); color: var(--amber-darker); border: 1px solid var(--amber-border); }
 
 /* Botón de acción de card con ícono al principio -- mismo criterio que
    `.btn-wp-grupo` (css/global.css): un modificador MÍNIMO que solo agrega
@@ -158,34 +210,21 @@
 .tar-card-confirmando { animation: tarPulseExito 0.6s ease-out; border-radius: 14px; }
 .tar-accion-wrap { display: block; }
 
-/* Bug real de espaciado corregido (confirmado por captura de pantalla): las
-   cards de Eventos (`_evCardEventoHtml()`, css/eventos.css) nunca apilan más
-   de un `.ev-card-sub` a la vez, así que esa clase no trae separación
-   vertical propia entre hermanas -- acá sí se apilan 2 (área+puntos, fecha
-   límite), y sin margen quedaban pegadas una a la otra, más comprimidas que
-   cualquier card de Eventos. Scoped a los 3 contenedores de listas de
-   Tareas (no a `.ev-card-sub` en `css/eventos.css`) para no tocar el
-   espaciado de ninguna card de Eventos existente, que hoy nunca necesita
-   este caso. */
-#tar-lista-disponibles .ev-card-sub + .ev-card-sub,
-#tar-lista-baul .ev-card-sub + .ev-card-sub,
-#tar-lista-mis .ev-card-sub + .ev-card-sub {
-  margin-top: 6px;
-}
-
 /* Nota de estado bloqueado (límite de tareas activas alcanzado) -- mismo
    estilo ya usado por `.ev-lugar-mapa-nota`/`.ev-ant-indefinido-nota`
    (css/eventos.css) para texto secundario centrado bajo un control. */
 .tar-limite-nota { font-size: 0.78rem; color: var(--muted); text-align: center; margin-top: 8px; line-height: 1.4; }
 
-/* Pill de área sobre una card de tarea -- antes `.aj-pill.activa` (naranja,
-   pensada para selección de filtros), reemplazada por `.fi-pill.fi-pill-fin`
+/* Pill de área sobre una card de tarea -- `.fi-pill.fi-pill-fin`
    (css/reservas.css): la pill sutil azul ya usada en Reservas/Eventos para
    badges informativos no interactivos (ej. "Fin" de una reserva) -- mismo
    componente reusado tal cual, sin redefinir tamaño/color. `.tar-area-pill`
    (sin reglas propias) queda solo como hook de identificación en el markup
-   -- se repite en 3 templates de js/tareas.js (disponible/baúl/mis tareas/
-   archivadas). */
+   -- se repite en los templates de js/tareas.js (disponible/baúl/mis
+   tareas/archivadas/gestionar). Vive junto a Cupos/Puntos/Fecha dentro de
+   `.fi-pills` (ver `_tarPillsRowHtml()`, js/tareas.js) -- ya NO dentro de
+   `.ev-card-sub` (las 2 filas de texto plano que había antes se
+   consolidaron en esta única fila de pills). */
 
 /* Lista de personas de una tarjeta de "Tareas archivadas" -- a diferencia
    de `.tar-avatares-row` (avatares superpuestos, anónimos, solo un conteo
@@ -228,3 +267,40 @@
    texto, centrado, dentro del propio bloque `.ev-lista-vacia`. */
 .tar-reintentar-btn { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 10px auto 0; }
 .tar-reintentar-btn .material-symbols-outlined { font-size: 1rem; margin: 0; }
+
+/* Filtro de Mes -- margen superior propio entre el trigger y la grilla de
+   pills (pedido explícito: quedaba más pegado que el filtro de Área, pese
+   a compartir el mismo `padding-top` de `.ev-filtro-burbuja-pills`,
+   css/eventos.css -- las pills de mes, `.mes-item`, css/reservas.css, son
+   visualmente más altas/pesadas que `.aj-pill`, lo que hacía sentir menos
+   aire arriba con el mismo valor numérico). Scoped a los 2 ids reales (no a
+   `.meses-grid-pills` en general) para no tocar la instancia de "reagendar
+   mensual" en Reservas, que no vive dentro de una burbuja de filtro y ya
+   se ve bien como está. */
+#tar-filtro-mes-grid, #tarch-filtro-mes-grid { margin-top: 8px; }
+
+/* ── "Gestionar tareas activas" (admin, ver MANIFEST.md "Cambios
+   recientes") -- lista de asignaciones (`.admin-banner-res-row`,
+   css/admin.css, mismo componente que "Tareas por validar") anidada DENTRO
+   de cada card de tarea, ver `_tarGestionarCardHtml()`/js/tareas.js. Sin
+   `border-top` en la primera fila (a diferencia del uso original de esa
+   clase dentro de un acordeón, acá la primera fila ya tiene separación
+   propia contra las pills de arriba vía este `margin-top`). */
+.tar-gestionar-personas { margin-top: 12px; }
+.tar-gestionar-personas .admin-banner-res-row:first-child { border-top: none; padding-top: 0; }
+
+/* Texto rojo "X días para realizar la tarea" del paso "Fecha límite" del
+   wizard (ver MANIFEST.md "Cambios recientes") -- fade in/out al cambiar
+   la fecha en el calendario manejado por JS (`_evFadeSwap()`,
+   js/eventos.js, sobre `#tar-crear-dias-wrap` completo o solo
+   `#tar-crear-dias-num` según corresponda, ver
+   `_tarActualizarDiasParaCompletar()`/js/tareas.js) -- acá solo el look
+   estático. */
+#tar-crear-dias-wrap { color: var(--danger); font-size: 0.76rem; font-weight: 700; white-space: nowrap; }
+
+/* Archivadas -- más aire entre cards (pedido explícito: se veían más
+   compactadas que el resto de las cards de la app). `.ev-card` ya trae
+   `margin-bottom:10px` de fábrica (css/eventos.css) -- acá se suma un
+   margen propio, scoped a esta lista, sin tocar ninguna otra card de
+   Eventos/Tareas que hoy ya se ve bien con el valor base. */
+#tar-archivadas-lista .ev-card { margin-bottom: 14px; padding: 16px; }
