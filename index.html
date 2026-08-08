@@ -995,9 +995,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="card" style="text-align:left;">
       <div class="salud-prog" id="tar-crear-prog"></div>
 
-      <!-- Paso 1: Título + Área -->
+      <!-- Paso 1: Nombre + Área -->
       <div class="salud-paso activo" id="tar-crear-paso-0">
-        <p class="ev-lugar-campo-label" style="margin-top:0;">Título</p>
+        <p class="ev-lugar-campo-label" style="margin-top:0;">Nombre de la tarea</p>
         <input type="text" class="ev-lugar-input" id="tar-crear-titulo" placeholder="Ej: Armar el itinerario del torneo" oninput="_tarCrearSetTitulo(this.value)">
         <p class="ev-lugar-campo-label" style="margin-top:20px;">Área</p>
         <div class="aj-pills-row" id="tar-crear-area-pills">
@@ -1008,12 +1008,13 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <span class="aj-pill" data-val="Mantenimiento" onclick="_tarCrearSelArea(this)">Mantenimiento</span>
           <span class="aj-pill" data-val="Redes Sociales y Comunicación" onclick="_tarCrearSelArea(this)">Redes Sociales y Comunicación</span>
           <span class="aj-pill" data-val="Reclutamiento" onclick="_tarCrearSelArea(this)">Reclutamiento</span>
+          <span class="aj-pill" data-val="Otro" onclick="_tarCrearSelArea(this)">Otro</span>
         </div>
         <div class="error-msg" id="tar-crear-err-0"></div>
       </div>
 
-      <!-- Paso 2: Puntos + Cupos -- steppers .qty-stepper reusados tal cual
-           (adminStepperChange(), js/admin.js). -->
+      <!-- Paso 2: Puntos + Máximo de personas -- steppers .qty-stepper
+           reusados tal cual (adminStepperChange(), js/admin.js). -->
       <div class="salud-paso" id="tar-crear-paso-1">
         <p class="ev-lugar-campo-label" style="margin-top:0;">Puntos</p>
         <div class="qty-stepper" data-step="1" data-min="0">
@@ -1022,7 +1023,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <button type="button" class="qty-btn" onclick="adminStepperChange(this,1);_tarCrearActualizarFooter();">+</button>
           <input type="hidden" id="tar-crear-puntos" value="0">
         </div>
-        <p class="ev-lugar-campo-label" style="margin-top:20px;">Cupos / máx. asignados</p>
+        <p class="ev-lugar-mapa-nota" style="margin-top:6px;">Puntos finales que recibirá la persona a cargo si finaliza la tarea a tiempo.</p>
+        <p class="ev-lugar-campo-label" style="margin-top:20px;">Máximo de personas que pueden trabajar en esta tarea</p>
         <div class="qty-stepper" data-step="1" data-min="1">
           <button type="button" class="qty-btn" onclick="adminStepperChange(this,-1);_tarCrearActualizarFooter();">−</button>
           <span class="qty-value">1</span>
@@ -1048,6 +1050,22 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <textarea id="tar-crear-notas" placeholder="Detalles adicionales para quien tome la tarea..." style="min-height:90px;resize:none;" oninput="_tarCrearSetNotas(this.value)"></textarea>
       </div>
 
+      <!-- Paso 4: Asignar a personas específicas (nuevo, opcional) -- mismo
+           patrón de búsqueda + lista que "Marcar asistencia" de Eventos
+           (.app-nav-search/.ev-marcar-lista/.ev-roster-fila/.ev-roster-nombre,
+           css/eventos.css), pero con checkmarks de selección MÚLTIPLE
+           (.fi-circle, css/reservas.css) en vez del toggle exclusivo A
+           horario/Tarde de esa pantalla -- ver _tarCrear*Personas()/js/tareas.js. -->
+      <div class="salud-paso" id="tar-crear-paso-3">
+        <p class="ev-lugar-campo-label" style="margin-top:0;">Asignar a personas (opcional)</p>
+        <p class="ev-lugar-mapa-nota" style="margin:0 0 14px;">Si elegís gente acá, la tarea queda asignada directamente y pasa a "en progreso" -- sin esperar a que alguien la tome del tablero.</p>
+        <div class="app-nav-search" style="margin-bottom:12px;">
+          <span class="material-symbols-outlined">search</span>
+          <input type="text" id="tar-crear-personas-search" placeholder="Buscar por nombre..." autocomplete="off" oninput="_tarCrearFiltrarPersonas(this.value)">
+        </div>
+        <div id="tar-crear-personas-lista" class="ev-marcar-lista"></div>
+      </div>
+
       <div class="cta-footer-spacer" style="height:calc(100px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
     </div>
   </div>
@@ -1055,15 +1073,26 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <button class="btn btn-primary" id="tar-crear-btn-footer" disabled>Continuar</button>
   </div>
 
-  <!-- BOTTOM SHEET: Tareas por validar (admin) -- filas .admin-banner-res-row
-       reusadas tal cual del banner de reservas pendientes de Mi Liga
-       (css/admin.css), con Aprobar/Rechazar; Rechazar revela un textarea
-       corto inline antes de confirmar. -->
-  <div id="tar-sheet-validar-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="_tarCerrarValidacion()"></div>
-  <div id="tar-sheet-validar" class="bsheet bsheet-scroll" style="z-index:9601;max-height:80vh;">
-    <div class="bsheet-handle" style="flex-shrink:0;"></div>
-    <div class="bsheet-title" style="flex-shrink:0;">Tareas por validar</div>
-    <div id="tar-validar-lista" class="bsheet-body" style="overflow-y:auto;flex:1;"></div>
+  <!-- "Tareas por validar" (admin) -- subsección de página completa, mismo
+       mecanismo que el wizard de arriba (.pantalla + ir(), nav propia
+       .app-nav.app-nav-sticky) en vez de bottom sheet (ver MANIFEST.md
+       "Cambios recientes" -- un bottom sheet no escala bien con muchas
+       tareas pendientes a la vez). Filas .admin-banner-res-row reusadas tal
+       cual del banner de reservas pendientes de Mi Liga (css/admin.css), con
+       Aprobar/Rechazar; Rechazar revela un textarea corto inline antes de
+       confirmar. -->
+  <div class="pantalla" id="s-tareas-validar">
+    <div class="app-nav app-nav-sticky" id="tar-validar-header">
+      <button class="app-nav-back" onclick="_tarCerrarValidacion()">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <span class="app-nav-title">Tareas por validar</span>
+      <div style="width:40px;flex-shrink:0;"></div>
+    </div>
+    <div class="card" style="text-align:left;">
+      <div id="tar-validar-lista"></div>
+      <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
   </div>
 
   <div class="pantalla" id="s2">

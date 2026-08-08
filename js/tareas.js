@@ -335,18 +335,29 @@ function _tarEnviarRevision(idAsignacion, btn) {
    pantalla->paso de un wizard, ver MANIFEST.md "Estándar de navegación")
    que `_evCrear*()` (js/eventos.js, #s-eventos-crear), replicado acá con su
    propio estado. ─────────────────────────────────────────────────────── */
-var _TAR_CREAR_STEPS = ['tar-crear-paso-0', 'tar-crear-paso-1', 'tar-crear-paso-2'];
+var _TAR_CREAR_STEPS = ['tar-crear-paso-0', 'tar-crear-paso-1', 'tar-crear-paso-2', 'tar-crear-paso-3'];
 var _tarCrearCurIdx = 0;
-var _tarCrearData = { titulo: '', area: null, fecha: null, notas: '' };
+var _tarCrearData = { titulo: '', area: null, fecha: null, notas: '', asignarA: [] };
 var _tarCrearCal = { mostrado: null };
 
 function irTarCrear() {
-  _tarCrearData = { titulo: '', area: null, fecha: null, notas: '' };
+  _tarCrearData = { titulo: '', area: null, fecha: null, notas: '', asignarA: [] };
   _tarCrearCal.mostrado = _evHoyISO();
   ir('s-tareas-crear');
   _tarCrearResetUI();
   _tarCrearMostrarPaso(0);
   _tarCrearCalRender();
+  // Paso "Asignar personas" -- mismo roster precargado que ya usa "Marcar
+  // asistencia" (js/eventos.js, _evRosterEquipo/_evPrecargarRoster()), sin
+  // pedirlo de nuevo si ya está en memoria (ej. se visitó Eventos antes en
+  // esta sesión). Si todavía no llegó (o nunca se llamó porque esta sesión
+  // no pasó por Eventos), se dispara acá -- el repintado real de la lista
+  // pasa por `_tarCrearMostrarPaso()` cada vez que este paso se vuelve el
+  // activo (ver esa función), así que llegue el roster antes o después no
+  // importa; esta llamada solo limpia el contenedor de entrada, para no
+  // arrastrar la lista de una apertura anterior del wizard.
+  if (_adminToken && typeof _evRosterEquipo !== 'undefined' && _evRosterEquipo === null && typeof _evPrecargarRoster === 'function') _evPrecargarRoster();
+  _tarCrearRenderPersonas('');
 }
 function _tarCrearResetUI() {
   var t = document.getElementById('tar-crear-titulo'); if (t) t.value = '';
@@ -355,6 +366,7 @@ function _tarCrearResetUI() {
   _adminSetStepperValue('tar-crear-cupos', 1);
   var n = document.getElementById('tar-crear-notas'); if (n) n.value = '';
   var resumen = document.getElementById('tar-crear-cal-resumen'); if (resumen) resumen.textContent = '';
+  var s = document.getElementById('tar-crear-personas-search'); if (s) s.value = '';
 }
 function _tarCrearMostrarPaso(idx) {
   _TAR_CREAR_STEPS.forEach(function(s, i) {
@@ -365,6 +377,21 @@ function _tarCrearMostrarPaso(idx) {
   _tarCrearRenderProg();
   window.scrollTo({ top: 0, behavior: 'smooth' });
   _tarCrearActualizarFooter();
+  // Bug real corregido (encontrado en la propia verificación con
+  // Playwright, no al aplicar el fix a ciegas): el picker de personas solo
+  // se pintaba UNA vez, al abrir el wizard (`irTarCrear()`) -- si el
+  // roster (`_evPrecargarRoster()`) resolvía ANTES de que el usuario
+  // llegara a este paso (el caso típico, la respuesta suele volver rápido),
+  // `_tarCrearRepintarPersonasSiHaceFalta()` no hacía nada (el guard de esa
+  // función descarta el repintado si el paso todavía no está `.activo`) y
+  // la lista quedaba congelada en "Cargando equipo..." para siempre, sin
+  // importar que el roster ya estuviera en memoria. Fix: repintar siempre
+  // que este paso puntual se vuelve el activo (yendo hacia adelante O
+  // hacia atrás), con el texto de búsqueda que hubiera quedado tipeado.
+  if (_TAR_CREAR_STEPS[idx] === 'tar-crear-paso-3') {
+    var inp = document.getElementById('tar-crear-personas-search');
+    _tarCrearRenderPersonas(inp ? inp.value : '');
+  }
 }
 function _tarCrearRenderProg() {
   var cont = document.getElementById('tar-crear-prog'); if (!cont) return;
@@ -387,7 +414,11 @@ function _tarCrearPaso0Valido() { return !!(_tarCrearData.titulo && _tarCrearDat
 function _tarCrearPaso2Valido() { return !!_tarCrearData.fecha; }
 function _tarCrearActualizarFooter() {
   var btn = document.getElementById('tar-crear-btn-footer'); if (!btn) return;
-  if (_tarCrearCurIdx === 2) {
+  // Último paso: "Asignar personas" (nuevo, opcional) -- el botón final ya
+  // no vive fijo en el índice 2 (fecha límite), se calcula contra el largo
+  // real de _TAR_CREAR_STEPS para no tener que tocar este número cada vez
+  // que se suma/saca un paso.
+  if (_tarCrearCurIdx === _TAR_CREAR_STEPS.length - 1) {
     btn.textContent = 'Crear tarea';
     btn.onclick = _tarCrearGuardar;
     btn.disabled = !_tarCrearPaso2Valido();
@@ -434,7 +465,12 @@ function _tarCrearCalRender() {
     html += '<div class="' + clases + '" data-iso="' + celdaIso + '"' + onclickAttr + '><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
     cur.setDate(cur.getDate() + 1);
   }
-  cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>';
+  // Fade al repintar (ver MANIFEST.md "Cambios recientes" -- pedido
+  // explícito, aplicado también a las otras 3 instancias de este mismo
+  // componente en js/eventos.js para que quede consistente en toda la app,
+  // no solo acá): `_evFadeSwap()` (js/eventos.js, global) dispara tanto al
+  // cambiar de mes como al tocar un día, ambos re-llaman a esta función.
+  _evFadeSwap(cont, function() { cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>'; }, false);
 }
 function _tarCrearCalMoverMes(dir) {
   var m = _evCalMesDe(_tarCrearCal.mostrado);
@@ -451,6 +487,65 @@ function _tarCrearCalTocarDia(iso) {
   _tarCrearActualizarFooter();
 }
 
+/* ── Paso "Asignar personas" (nuevo, opcional) -- mismo patrón de búsqueda +
+   lista que "Marcar asistencia" de Eventos (.app-nav-search/.ev-marcar-lista/
+   .ev-roster-fila/.ev-roster-nombre/.ev-roster-vacio, css/eventos.css) y el
+   mismo roster precargado (_evRosterEquipo/_evPrecargarRoster(), js/eventos.js
+   -- sin pedirlo de nuevo), pero con selección MÚLTIPLE vía checkmarks
+   (.fi-circle, css/reservas.css -- círculo con check, ya usado como
+   indicador de selección en Reservas) en vez del toggle exclusivo de 2
+   estados que usa esa pantalla (A horario/Tarde no aplica acá: elegir a
+   alguien acá no marca asistencia, solo la deja pre-asignada). ────────── */
+function _tarCrearFiltrarPersonas(q) { _tarCrearRenderPersonas(q); }
+function _tarCrearRenderPersonas(q) {
+  var cont = document.getElementById('tar-crear-personas-lista');
+  if (!cont) return;
+  if (typeof _evRosterEquipo === 'undefined' || _evRosterEquipo === null) {
+    cont.innerHTML = '<div class="ev-roster-vacio">Cargando equipo...</div>';
+    return;
+  }
+  var roster = _evRosterEquipo || [];
+  var qn = (q || '').toLowerCase().trim();
+  var filtrado = qn ? roster.filter(function(p) { return (p.nombreDerby || '').toLowerCase().indexOf(qn) !== -1 || String(p.nombre).toLowerCase().indexOf(qn) !== -1; }) : roster;
+  if (!filtrado.length) {
+    cont.innerHTML = '<div class="ev-roster-vacio">' + (roster.length ? 'Sin resultados.' : 'No se pudo cargar el equipo.') + '</div>';
+    return;
+  }
+  cont.innerHTML = filtrado.map(function(p) {
+    var nombreAttr = String(p.nombre).replace(/'/g, "\\'");
+    var sel = _tarCrearData.asignarA.indexOf(p.nombre) !== -1;
+    return '<div class="ev-roster-fila tar-persona-fila" onclick="_tarCrearTogglePersona(this,\'' + nombreAttr + '\')">' +
+      '<span class="ev-roster-nombre">' + (p.nombreDerby || p.nombre) + '</span>' +
+      '<div class="fi-circle' + (sel ? ' sel' : '') + '"><span class="material-symbols-outlined">check</span></div>' +
+    '</div>';
+  }).join('');
+}
+// Si el roster tardó más que la carga del wizard en llegar (mismo caso raro
+// que _evRepintarMarcarAsistSiHaceFalta(), ver esa función) -- repinta solo
+// si el usuario sigue parado en este paso puntual.
+function _tarCrearRepintarPersonasSiHaceFalta() {
+  var paso = document.getElementById('tar-crear-paso-3');
+  if (!paso || !paso.classList.contains('activo')) return;
+  var inp = document.getElementById('tar-crear-personas-search');
+  _tarCrearRenderPersonas(inp ? inp.value : '');
+}
+function _tarCrearTogglePersona(el, nombre) {
+  var idx = _tarCrearData.asignarA.indexOf(nombre);
+  var seleccionado;
+  if (idx === -1) { _tarCrearData.asignarA.push(nombre); seleccionado = true; }
+  else { _tarCrearData.asignarA.splice(idx, 1); seleccionado = false; }
+  var circle = el.querySelector('.fi-circle');
+  if (circle) circle.classList.toggle('sel', seleccionado);
+}
+
+// `adminCrearTarea` -- Bug real corregido (ver MANIFEST.md "Cambios
+// recientes"): esta acción vive en el router de GET (doGet) del backend, no
+// en doPost -- llamarla con apiPost() (POST) devolvía "Acción POST no
+// válida". Fix: usa adminApi() (api() GET + adminToken inyectado), mismo
+// mecanismo que ya usan el resto de las acciones admin* de Venues/Tareas
+// (adminGetTareasPendientesValidacion, adminGuardarEquipamiento, etc.) --
+// nunca se agregó adminCrearTarea al router de POST, el fix es 100%
+// frontend.
 function _tarCrearGuardar() {
   if (!_tarCrearPaso0Valido() || !_tarCrearPaso2Valido()) return;
   var puntosEl = document.getElementById('tar-crear-puntos');
@@ -462,10 +557,13 @@ function _tarCrearGuardar() {
     puntos: puntosEl ? (parseFloat(puntosEl.value) || 0) : 0,
     maxAsignados: cuposEl ? (parseInt(cuposEl.value, 10) || 1) : 1,
     fechaVencimiento: _tarCrearData.fecha,
-    creadoPor: E.nombre
+    creadoPor: E.nombre,
+    // Opcional -- si viene con gente, el backend crea la asignación directo
+    // (estado 'iniciada') para cada unx y la tarea pasa a 'en_progreso'.
+    asignarA: _tarCrearData.asignarA
   };
   mostrarCargando('Creando tarea...');
-  apiPost({ action: 'adminCrearTarea', adminToken: _adminToken, datos: JSON.stringify(datos) }, function(res) {
+  adminApi({ action: 'adminCrearTarea', datos: JSON.stringify(datos) }, function(res) {
     ocultarCargando();
     if (res && res.exito === false) {
       mostrarToast(res.error || 'No se pudo crear la tarea.', 'error');
@@ -482,11 +580,13 @@ function _tarCrearGuardar() {
 /* ── Panel de validación (admin) ───────────────────────────────────────
    Ícono con badge en el header de Tareas (mismo criterio que el badge de
    reservas pendientes de Mi Liga, `_adminRenderBannerPendientes()`,
-   js/admin.js) que abre un bottom sheet con las filas .admin-banner-res-row
-   ya existentes (css/admin.css) -- Aprobar/Rechazar, Rechazar revela un
-   textarea corto antes de confirmar. Sigue el mecanismo estándar de
-   apertura/cierre de bottom sheets (doble RAF / _registrarOverlayAbierto /
-   porGesto, ver MANIFEST.md). */
+   js/admin.js) que abre una SUBSECCIÓN de página completa (`#s-tareas-validar`,
+   mismo patrón `.pantalla`+`ir()` que el wizard "Nueva tarea" -- ver
+   MANIFEST.md "Cambios recientes": un bottom sheet no escala bien con
+   muchas tareas pendientes a la vez, más difícil de scrollear/leer que una
+   pantalla completa) con las filas .admin-banner-res-row ya existentes
+   (css/admin.css) -- Aprobar/Rechazar, Rechazar revela un textarea corto
+   antes de confirmar. */
 function _tarCargarPendientesValidacion() {
   if (!_adminToken) { _tarPendientesValidacion = []; _tarActualizarBadgeValidacion(); return; }
   adminApi({ action: 'adminGetTareasPendientesValidacion' }, function(res) {
@@ -505,18 +605,10 @@ function _tarActualizarBadgeValidacion() {
 }
 function _tarAbrirValidacion() {
   _tarRenderValidacion();
-  var ov = document.getElementById('tar-sheet-validar-overlay');
-  var sh = document.getElementById('tar-sheet-validar');
-  if (ov) ov.style.display = 'block';
-  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); }); }
-  _registrarOverlayAbierto(_tarCerrarValidacion);
+  ir('s-tareas-validar');
 }
-function _tarCerrarValidacion(porGesto) {
-  if (!porGesto) { history.back(); return; }
-  var sh = document.getElementById('tar-sheet-validar');
-  var ov = document.getElementById('tar-sheet-validar-overlay');
-  if (sh) sh.style.transform = 'translateY(100%)';
-  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+function _tarCerrarValidacion() {
+  ir('s-tareas');
 }
 function _tarRenderValidacion() {
   var cont = document.getElementById('tar-validar-lista');

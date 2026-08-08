@@ -384,10 +384,16 @@ function _evPrecargarRoster() {
     _evRosterEquipo = res.personas || [];
     if (window.console) console.log('Eventos: adminGetRosterEquipo OK -- ' + _evRosterEquipo.length + ' personas');
     _evRepintarMarcarAsistSiHaceFalta();
+    // Picker "Asignar a personas" del wizard de Tareas (js/tareas.js) --
+    // mismo roster, otro consumidor: repinta si el usuario ya está parado
+    // en ese paso esperando esta misma respuesta (guard `typeof`, cruza de
+    // módulo -- mismo criterio defensivo que el resto de la app).
+    if (typeof _tarCrearRepintarPersonasSiHaceFalta === 'function') _tarCrearRepintarPersonasSiHaceFalta();
   }, function(e) {
     _evRosterEquipo = []; // degrada a "sin resultados" -- nunca un loader infinito
     if (window.console) console.warn('Eventos: adminGetRosterEquipo falló -- ' + (e && e.message || 'error') + ' (revisar si adminGetRosterEquipo está desplegada en Code.gs, ver MANIFEST.md)');
     _evRepintarMarcarAsistSiHaceFalta();
+    if (typeof _tarCrearRepintarPersonasSiHaceFalta === 'function') _tarCrearRepintarPersonasSiHaceFalta();
   });
 }
 
@@ -3911,7 +3917,15 @@ function _evAntCalRender(cual) {
     '</div>';
     cur.setDate(cur.getDate() + 1);
   }
-  cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>';
+  // Fade al repintar la grilla (ver MANIFEST.md "Cambios recientes" --
+  // pedido explícito sobre el calendario de Tareas, aplicado acá también
+  // por ser el MISMO componente: cambiar de mes o tocar un día antes
+  // reemplazaba `innerHTML` de golpe, sin ninguna señal visual del cambio).
+  // `_evFadeSwap()` -- ya usado por el panel de mes del timeline principal,
+  // reusado tal cual -- dispara tanto en `_evAntCalMoverMes()` (cambio de
+  // mes) como en `_evAntCalTocarDia()` (selección de fecha), ambos re-llaman
+  // a esta función.
+  _evFadeSwap(cont, function() { cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>'; }, false);
 }
 
 // Botón final -- Estado y Frecuencia ya están validados en tiempo real (ver
@@ -4291,7 +4305,10 @@ function _evLugarCalRender(cual) {
     html += '<div class="' + clases + '" data-iso="' + celdaIso + '"' + onclickAttr + '><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
     cur.setDate(cur.getDate() + 1);
   }
-  cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>';
+  // Fade al repintar -- mismo fix aplicado a las otras 3 instancias de este
+  // componente (_evAntCalRender/_evCrearCalRender/_tarCrearCalRender, ver
+  // comentario completo en _evAntCalRender()).
+  _evFadeSwap(cont, function() { cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>'; }, false);
 }
 function _evLugarCalMoverMes(cual, dir) {
   var m = _evCalMesDe(_evLugarCal[cual].mostrado);
@@ -4841,7 +4858,10 @@ function _evCrearCalRender(cual) {
     html += '<div class="' + clases + '" data-iso="' + celdaIso + '"' + onclickAttr + '><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
     cur.setDate(cur.getDate() + 1);
   }
-  cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>';
+  // Fade al repintar -- mismo fix aplicado a las otras 3 instancias de este
+  // componente (_evAntCalRender/_evLugarCalRender/_tarCrearCalRender, ver
+  // comentario completo en _evAntCalRender()).
+  _evFadeSwap(cont, function() { cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>'; }, false);
 }
 function _evCrearCalMoverMes(cual, dir) {
   var m = _evCalMesDe(_evCrearCal[cual].mostrado);

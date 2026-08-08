@@ -1,18 +1,72 @@
 /* ═══════════════════════════════════════════════════════
    TAREAS.CSS — Sección Tareas
    Reusa tal cual (sin redefinir) las clases ya existentes de otras
-   secciones: .ev-sticky-header/.ev-header-row/.ev-header-icon-btn/
-   .ev-filtro-badge/.ev-fab-menu/.ev-fab-btn/.ev-card*/.ev-estado-pill*/
-   .ev-lista-vacia/.ev-ant-cal-*/.ev-cal-* (css/eventos.css), .tp-seg/
-   .tp-slider/.tp-opt (css/reservas.css), .aj-pill/.aj-pills-row
-   (css/perfil.css), .qty-stepper/.qty-btn/.qty-value/.admin-dash-banner*
-   (css/admin.css), .salud-paso/.salud-prog (css/perfil.css), .avatar-pill
-   (css/global.css), .btn/.btn-outline/.btn-text-simple/.badge (css/ui.css).
+   secciones: .ev-sticky-header, .ev-header-row, .ev-header-icon-btn,
+   .ev-filtro-badge, .ev-fab-menu, .ev-fab-btn, .ev-card (y variantes),
+   .ev-estado-pill (y variantes), .ev-lista-vacia, .ev-ant-cal- (y
+   variantes), .ev-cal- (y variantes), .app-nav-search, .ev-marcar-lista,
+   .ev-roster-fila, .ev-roster-nombre, .ev-roster-vacio (css/eventos.css),
+   .tp-seg, .tp-slider, .tp-opt, .fi-circle (css/reservas.css), .aj-pill,
+   .aj-pills-row (css/perfil.css), .qty-stepper, .qty-btn, .qty-value,
+   .admin-dash-banner (y variantes, css/admin.css), .salud-paso, .salud-prog
+   (css/perfil.css), .avatar-pill (css/global.css), .btn, .btn-outline,
+   .btn-text-simple, .badge (css/ui.css).
    Este archivo cubre únicamente lo que ninguna sección tenía todavía: la
    fila de avatares superpuestos con conteo de cupos, el layout de ícono+
-   texto de los botones de acción de una card, y la nota de estado
-   bloqueado (límite de tareas activas alcanzado).
+   texto de los botones de acción de una card, la nota de estado bloqueado
+   (límite de tareas activas alcanzado), el centrado del pill-toggle
+   ensanchado de esta pantalla y el cursor de la fila clickeable del picker
+   de personas del wizard.
+   Bug real corregido acá de paso (ver MANIFEST.md "Cambios recientes"):
+   este mismo comentario, en su redacción anterior, escribía varias
+   referencias con comodín pegadas a la barra separadora siguiente (ej.
+   un nombre de clase terminado en asterisco, tipo ".ev-card", seguido sin
+   espacio de la barra que separaba el próximo nombre de la lista) -- esa
+   secuencia de 2 caracteres (asterisco + barra, sin espacio) es EXACTAMENTE
+   el cierre de un comentario CSS, sin importar la intención de quien lo
+   escribió; el navegador interpretaba el comentario como cerrado ahí
+   mismo, seguía "parseando" el resto del comentario como CSS real
+   (selectores/texto basura), y la primera regla real después de ese
+   basural (la de `.tp-opt` de más abajo) quedaba descartada entera junto
+   con ese basural -- confirmado reproduciendo el parseo real del archivo
+   (no solo leyendo el texto: `sheet.cssRules` la omitía por completo pese
+   a que el archivo servido contenía el texto correcto). Nunca terminar una
+   línea o palabra de comentario con asterisco justo antes de una barra.
    ═══════════════════════════════════════════════════════ */
+
+/* Pill-toggle "Disponibles/Mis tareas" -- bug real corregido (ver
+   MANIFEST.md "Cambios recientes"): a diferencia de las otras 2 instancias
+   de `.tp-seg` de la app (#tp-seg de "Por clase/Mensual", #admin-filtro-seg),
+   #tar-seg lleva `style="flex:1"` inline para ocupar el resto de
+   `.ev-header-row` junto al ícono de validación -- pero `.tp-opt` (ancho de
+   contenido, `display:inline-flex`) no crecía con el contenedor, así que el
+   espacio de sobra quedaba en blanco a la derecha de la opción más angosta
+   en vez de repartirse entre las 2. Cada opción pasa a `flex:1` (mismo
+   ancho, centradas) SOLO dentro de `#tar-seg` -- las otras 2 instancias
+   siguen a ancho de contenido natural, sin cambios. */
+#tar-seg .tp-opt { flex: 1; justify-content: center; }
+
+/* Fila clickeable del picker de "Asignar a personas" del wizard (paso
+   nuevo) -- `.ev-roster-fila` (css/eventos.css) reusada tal cual, esta
+   clase solo agrega el cursor: a diferencia de "Marcar asistencia" (donde
+   solo el toggle interno es clickeable), acá toda la fila dispara la
+   selección para un target táctil más grande. */
+.tar-persona-fila { cursor: pointer; }
+
+/* Checkmark de selección del picker de personas -- bug real encontrado en
+   la propia verificación con Playwright (no al aplicar el fix a ciegas):
+   `.fi-circle` (css/reservas.css) por sí sola es solo el círculo vacío; su
+   estado "marcado" está definido como `.fecha-item.sel .fi-circle` (la
+   clase `.sel` vive en un ANCESTRO tipo `.fecha-item`, no en el propio
+   círculo) -- acá `.sel` se togglea directo sobre el `.fi-circle`
+   (`_tarCrearTogglePersona()`, js/tareas.js), una estructura distinta que
+   ese selector nunca matchea, así que tocar una fila no pintaba nada pese
+   a que la clase sí se aplicaba (confirmado con `querySelectorAll` antes de
+   mirar la pantalla). Mismo patrón que ya usa `#s4-cupon-wrapper .fi-circle.sel-cupon`
+   (css/reservas.css) para el mismo caso -- el propio `.fi-circle` lleva el
+   modificador, scoped al contenedor de este picker. */
+.tar-persona-fila .fi-circle.sel { background: var(--brand); border-color: var(--brand); }
+.tar-persona-fila .fi-circle.sel .material-symbols-outlined { color: var(--white); }
 
 /* Fila de avatares superpuestos + conteo de cupos, debajo de la fecha
    límite en una card de tarea (Disponibles/Baúl). `.avatar-pill--xs`

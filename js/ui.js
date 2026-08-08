@@ -664,8 +664,11 @@ var _BOTTOM_NAV_EXTRA = {
   's-eventos-marcar-asistencia': 'eventos',
   // Wizard "Nueva tarea" (admin) -- drill-down de la tab 'tareas', mismo
   // criterio que 's-eventos-crear' arriba: alcanzable solo desde el FAB de
+  // #s-tareas. "Tareas por validar" (admin) -- mismo criterio, ex bottom
+  // sheet convertido a subsección de página completa (ver MANIFEST.md
+  // "Cambios recientes"), alcanzable desde el ícono con badge del header de
   // #s-tareas.
-  's-tareas-crear': 'tareas'
+  's-tareas-crear': 'tareas', 's-tareas-validar': 'tareas'
 };
 
 // Reusa el `icono` ya definido por ítem para el slot de la flecha atrás de
