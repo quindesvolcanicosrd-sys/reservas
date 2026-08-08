@@ -2187,6 +2187,18 @@ function _evMarcarAsistenciaAdmin(idEvento, nombre, estado, btnEl) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
   if (!ev) return;
   var seg = btnEl.closest('.ev-rsvp-seg');
+  // Toggle-off (ver "Cambios recientes"): tocar la opción que YA está
+  // activa para esta persona la deselecciona, en vez de re-aplicar el
+  // mismo estado (antes un no-op visual que igual disparaba un POST
+  // idéntico). Se lee `btnEl.classList` ANTES de que `aplicarEnDom()` la
+  // toque más abajo -- el estado real tocado en pantalla, no un cálculo
+  // aparte contra `ev.asistentes` (que podría haber quedado desincronizado
+  // por un revert previo todavía en vuelo). 'Ninguno' viaja tal cual al
+  // backend (pedido explícito) -- no es un valor "borrar la fila", es un
+  // 3er estado real que `adminMarcarAsistencia` entiende, mismo mecanismo
+  // que 'A tiempo'/'Tarde'.
+  var yaActiva = btnEl.classList.contains('activa');
+  var estadoAEnviar = yaActiva ? 'Ninguno' : estado;
   var asistentesAnterior = ev.asistentes || [];
   var anteriorDeEstaPersona = asistentesAnterior.filter(function(a) { return _evNombresCoinciden(a.nombre, nombre); })[0] || null;
   var aplicarEnDom = function(estadoAMostrar) {
@@ -2194,12 +2206,17 @@ function _evMarcarAsistenciaAdmin(idEvento, nombre, estado, btnEl) {
     _evPosicionarRsvpSlider(seg, true);
   };
   var datosRoster = (_evRosterEquipo || []).filter(function(p) { return _evNombresCoinciden(p.nombre, nombre); })[0] || {};
-  ev.asistentes = asistentesAnterior.filter(function(a) { return !_evNombresCoinciden(a.nombre, nombre); })
-    .concat([{ nombre: nombre, estado: estado, origen: 'Admin', nombreDerby: datosRoster.nombreDerby || '', fotoPerfil: datosRoster.fotoPerfil || '' }]);
-  aplicarEnDom(estado);
+  var sinPersona = asistentesAnterior.filter(function(a) { return !_evNombresCoinciden(a.nombre, nombre); });
+  // 'Ninguno' -- sin fila en `ev.asistentes` para esta persona (mismo
+  // criterio ya documentado: "no marcar nada equivale a sin marca"), así
+  // que el contador (`.length`) y las estadísticas de A horario/Tarde la
+  // excluyen solas, sin necesitar ningún caso especial en esas 2 funciones.
+  ev.asistentes = estadoAEnviar === 'Ninguno' ? sinPersona :
+    sinPersona.concat([{ nombre: nombre, estado: estadoAEnviar, origen: 'Admin', nombreDerby: datosRoster.nombreDerby || '', fotoPerfil: datosRoster.fotoPerfil || '' }]);
+  aplicarEnDom(estadoAEnviar === 'Ninguno' ? null : estadoAEnviar);
   _evActualizarContadorAsistAdmin(idEvento);
   if (_evDetalleActual && _evDetalleActual.id === idEvento) _evActualizarStatsAsistenciaReal(ev);
-  apiPost({ action: 'adminMarcarAsistencia', adminToken: _adminToken, idEvento: idEvento, nombre: nombre, estado: estado }, function() {}, function(e) {
+  apiPost({ action: 'adminMarcarAsistencia', adminToken: _adminToken, idEvento: idEvento, nombre: nombre, estado: estadoAEnviar }, function() {}, function(e) {
     ev.asistentes = asistentesAnterior;
     aplicarEnDom(anteriorDeEstaPersona ? anteriorDeEstaPersona.estado : null);
     _evActualizarContadorAsistAdmin(idEvento);
