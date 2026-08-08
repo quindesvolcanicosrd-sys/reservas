@@ -6,7 +6,8 @@
    .ev-estado-pill (y variantes), .ev-lista-vacia, .ev-ant-cal- (y
    variantes), .ev-cal- (y variantes), .app-nav-search, .ev-marcar-lista,
    .ev-roster-fila, .ev-roster-nombre, .ev-roster-vacio (css/eventos.css),
-   .tp-seg, .tp-slider, .tp-opt, .fi-circle (css/reservas.css), .aj-pill,
+   .tp-seg, .tp-slider, .tp-opt, .fi-circle, .fi-pill (y variantes),
+   .fi-footer (y variantes), .fi-body, .fi-desc (css/reservas.css), .aj-pill,
    .aj-pills-row (css/perfil.css), .qty-stepper, .qty-btn, .qty-value,
    .admin-dash-banner (y variantes, css/admin.css), .salud-paso, .salud-prog
    (css/perfil.css), .avatar-pill (css/global.css), .btn, .btn-outline,
@@ -165,6 +166,22 @@
 .tar-fecha-rojo { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-bdr); }
 .tar-fecha-naranja { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-bdr); }
 .tar-fecha-amarillo { background: var(--amber-light); color: var(--amber-darker); border: 1px solid var(--amber-border); }
+
+/* Descripción de la tarea -- acordeón colapsado por defecto, mismo patrón
+   "Más información" que ya usan las cards de fecha del flujo de reserva
+   (`.fi-footer`/`.fi-footer-label`/`.fi-footer-chevron`/`.fi-body`/
+   `.fi-body-inner`/`.fi-desc`, css/reservas.css), reusado tal cual desde
+   `_tarDescHtml()` (js/tareas.js) -- solo 2 ajustes puntuales acá: sin el
+   padding horizontal propio de esas clases (acá ya viven dentro de
+   `.ev-card-body`, que ya trae su propio inset vía `.ev-card`), y el
+   toggle `.open` scoped a `.tar-desc` en vez de `.fecha-item` (ese wrapper
+   trae su propio fondo/borde de card que acá no corresponde -- el rol de
+   "scope del acordeón" es lo único que se redeclara, el resto de las
+   clases no se toca). */
+.tar-desc { margin-top: 10px; }
+.tar-desc .fi-footer, .tar-desc .fi-body-inner { padding-left: 0; padding-right: 0; }
+.tar-desc.open .fi-footer-chevron { transform: rotate(180deg); }
+.tar-desc.open .fi-body { max-height: 400px; }
 
 /* Botón de acción de card con ícono al principio -- mismo criterio que
    `.btn-wp-grupo` (css/global.css): un modificador MÍNIMO que solo agrega

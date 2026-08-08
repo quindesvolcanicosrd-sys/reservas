@@ -1090,7 +1090,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="card" style="text-align:left;">
       <div class="salud-prog" id="tar-crear-prog"></div>
 
-      <!-- Paso 1: Nombre + Área -->
+      <!-- Paso 1: Nombre + Área + Descripción (campo `notas` del backend,
+           ver MANIFEST.md "Cambios recientes" -- el paso separado "Notas"
+           se eliminó, el mismo campo se reubicó acá abajo con otra
+           etiqueta). -->
       <div class="salud-paso activo" id="tar-crear-paso-0">
         <p class="ev-lugar-campo-label" style="margin-top:0;">Nombre de la tarea</p>
         <input type="text" class="ev-lugar-input" id="tar-crear-titulo" placeholder="Ej: Armar el itinerario del torneo" oninput="_tarCrearSetTitulo(this.value)">
@@ -1106,6 +1109,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <span class="aj-pill" data-val="Otro" onclick="_tarCrearSelArea(this)">Otro</span>
         </div>
         <div class="error-msg" id="tar-crear-err-0"></div>
+        <p class="ev-lugar-campo-label" style="margin-top:20px;">Descripción de la tarea (opcional)</p>
+        <textarea id="tar-crear-notas" placeholder="Detalles adicionales para quien tome la tarea..." style="min-height:90px;resize:none;" oninput="_tarCrearSetNotas(this.value)"></textarea>
       </div>
 
       <!-- Paso 2: Puntos + Máximo de personas -- steppers .qty-stepper
@@ -1181,9 +1186,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div id="tar-crear-personas-lista" class="ev-marcar-lista"></div>
       </div>
 
-      <!-- Paso 5: Fecha límite (calendario inline, mismo componente que
+      <!-- Paso 5 (último, ver MANIFEST.md "Cambios recientes" -- el paso
+           "Notas" que cerraba el wizard se eliminó, ahora Fecha límite es
+           el paso final): calendario inline, mismo componente que
            Asistencia anticipada/Crear evento -- .ev-ant-cal-nav /
-           .ev-cal-grid, css/eventos.css). "X días para realizar la tarea"
+           .ev-cal-grid, css/eventos.css. "X días para realizar la tarea"
            (nuevo, ver MANIFEST.md "Cambios recientes") -- texto rojo al
            lado del título, con fade in/out manejado por JS al cambiar la
            fecha (`_tarActualizarDiasParaCompletar()`, js/tareas.js): fade
@@ -1204,13 +1211,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div id="tar-crear-cal"></div>
         <div class="ev-lugar-cal-resumen" id="tar-crear-cal-resumen"></div>
         <div class="error-msg" id="tar-crear-err-2"></div>
-      </div>
-
-      <!-- Paso 6 (último, nuevo -- ver MANIFEST.md "Cambios recientes"):
-           Notas, antes compartiendo paso con Fecha límite. -->
-      <div class="salud-paso" id="tar-crear-paso-notas">
-        <p class="ev-lugar-campo-label" style="margin-top:0;">Notas (opcional)</p>
-        <textarea id="tar-crear-notas" placeholder="Detalles adicionales para quien tome la tarea..." style="min-height:90px;resize:none;" oninput="_tarCrearSetNotas(this.value)"></textarea>
       </div>
 
       <div class="cta-footer-spacer" style="height:calc(100px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>

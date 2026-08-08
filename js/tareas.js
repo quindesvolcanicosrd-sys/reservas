@@ -83,6 +83,31 @@ function _tarPillsRowHtml(area, puntos, fechaRaw, cupos) {
     '<span class="fi-pill ' + fi.clase + '"><span class="material-symbols-outlined">event</span>' + fi.texto + '</span>' +
   '</div>';
 }
+// Descripción de la tarea (campo `notas`, ver MANIFEST.md "Cambios
+// recientes") como acordeón colapsado por defecto -- mismo patrón visual
+// "Más información" que ya usan las cards de fecha del flujo de reserva
+// (`.fi-footer`/`.fi-body`/`.fi-desc`, css/reservas.css), reusado tal cual
+// salvo el padding horizontal (ver css/tareas.css -- acá ya vive dentro de
+// `.ev-card-body`, que ya trae su propio inset vía `.ev-card`). El wrapper
+// es `.tar-desc` (no `.fecha-item`, que trae de fábrica su propio borde/
+// fondo de card que acá no corresponde) -- mismo rol de scope para
+// `.abierto`/`.open` que `.fecha-item` cumple ahí, redeclarado puntual en
+// css/tareas.css. Usado por las 4 vistas con card de tarea (Disponibles/
+// Baúl/Mis tareas/Archivadas) -- nunca por Gestionar, fuera del pedido.
+function _tarDescHtml(notas) {
+  if (!notas) return '';
+  return '<div class="tar-desc">' +
+    '<div class="fi-footer" onclick="_tarToggleDesc(this,event)">' +
+      '<span class="fi-footer-label">Descripción de la tarea</span>' +
+      '<span class="material-symbols-outlined fi-footer-chevron">expand_more</span>' +
+    '</div>' +
+    '<div class="fi-body"><div class="fi-body-inner"><p class="fi-desc" style="margin-bottom:0;">' + notas + '</p></div></div>' +
+  '</div>';
+}
+function _tarToggleDesc(footer, event) {
+  event.stopPropagation();
+  footer.closest('.tar-desc').classList.toggle('open');
+}
 
 /* ── Buscador + filtros compartidos (Disponibles/Mis tareas/Baúl -- las 3
    conviven en #s-tareas, un solo estado de filtro -- y Archivadas, su
@@ -674,6 +699,7 @@ function _tarCardHtml(t, contexto) {
         _tarIconoBoxHtml(t.area, _tarTieneAprobada(asignados)) +
       '</div>' +
       _tarPillsRowHtml(t.area, t.puntos, t.fechaVencimiento, { tomados: tomados, total: total }) +
+      _tarDescHtml(t.notas) +
       _tarAvataresHtml(asignados) +
       accionHtml +
     '</div>' +
@@ -711,14 +737,20 @@ function _tarFechaLegible(raw) {
 /* Info de la pill de fecha límite (color + texto relativo en español) --
    ver MANIFEST.md "Cambios recientes". Color: rojo si ya venció o vence
    hoy, naranja si vence dentro de los próximos 3 días, amarillo si falta
-   más (corte ajustable, sin más criterio explícito en el pedido). Texto:
-   "Vence hoy"/"Vence mañana"/"Vence el [día]" (si cae el resto de esta
-   semana)/"Vence el [día] que viene" (si cae la semana próxima)/"Vence el
-   [día] [núm] de [mes]" para fechas más lejanas -- mismo criterio de
-   "semana actual"/"semana próxima" que `_evEsRestoDeSemana()`/
-   `_evEsProximaSemana()` (js/eventos.js), reusadas tal cual acá en vez de
-   reimplementar ese cálculo (mismo semana-empieza-en-lunes que el resto de
-   la app). */
+   más (corte ajustable, sin más criterio explícito en el pedido). Texto
+   para fechas futuras (sin cambios): "Vence hoy"/"Vence mañana"/"Vence el
+   [día]" (si cae el resto de esta semana)/"Vence el [día] que viene" (si
+   cae la semana próxima)/"Vence el [día] [núm] de [mes]" para fechas más
+   lejanas -- mismo criterio de "semana actual"/"semana próxima" que
+   `_evEsRestoDeSemana()`/`_evEsProximaSemana()` (js/eventos.js), reusadas
+   tal cual acá en vez de reimplementar ese cálculo (mismo semana-empieza-
+   en-lunes que el resto de la app). Texto para fechas YA VENCIDAS (ver
+   MANIFEST.md "Cambios recientes" -- pedido explícito, típicamente las del
+   Baúl): "Venció el DD/MM/AAAA" -- numérico y siempre con año (a
+   diferencia del texto relativo de arriba, que solo suma el año si es
+   distinto al actual), para que quede claro de qué año es sin alargarse
+   con el formato largo "el [día de semana] [núm] de [mes] de [año]" que
+   sigue usando la rama "Vence"/no vencida de abajo. */
 function _tarFechaInfo(fechaRaw) {
   if (!fechaRaw) return { texto: 'Sin fecha límite', clase: 'tar-fecha-amarillo' };
   var s = fechaRaw.toString();
@@ -734,7 +766,11 @@ function _tarFechaInfo(fechaRaw) {
   var clase = diff <= 0 ? 'tar-fecha-rojo' : (diff <= 3 ? 'tar-fecha-naranja' : 'tar-fecha-amarillo');
   var isoCorta = esIso ? s.slice(0, 10) : _evToISO(d);
   var texto;
-  if (diff < 0) texto = 'Venció ' + fechaCompleta;
+  if (diff < 0) {
+    var dd = String(d.getDate()).padStart(2, '0');
+    var mm = String(d.getMonth() + 1).padStart(2, '0');
+    texto = 'Venció el ' + dd + '/' + mm + '/' + d.getFullYear();
+  }
   else if (diff === 0) texto = 'Vence hoy';
   else if (diff === 1) texto = 'Vence mañana';
   else if (_evEsRestoDeSemana(isoCorta)) texto = 'Vence el ' + diaSemana;
@@ -789,6 +825,7 @@ function _tarCardMisHtml(a) {
         _tarIconoBoxHtml(t.area, a.estado === 'aprobada') +
       '</div>' +
       _tarPillsRowHtml(t.area, t.puntos, fechaTope) +
+      _tarDescHtml(t.notas) +
       '<div class="tar-accion-wrap" id="tar-accion-wrap-' + a.idAsignacion + '">' + _tarAccionMisHtml(a) + '</div>' +
     '</div>' +
   '</div>';
@@ -1005,13 +1042,15 @@ function _tarArchivar(idTarea, btn) {
    propio estado. ─────────────────────────────────────────────────────── */
 // Orden (ver MANIFEST.md "Cambios recientes" -- se sumó el paso "¿Cómo se
 // asigna esta tarea?" después de puntos/cupos, el picker de personas se
-// corrió antes de la fecha límite, y Notas se separó en su propio paso al
-// final, antes compartido con Fecha límite): 0 Nombre+Área / 1 Puntos+
+// corrió antes de la fecha límite, y el paso separado "Notas" se eliminó
+// del todo: el mismo campo `notas` ahora vive como "Descripción de la
+// tarea" dentro del paso 0, debajo de Área -- ver `_tarCrearSetNotas()`,
+// sin cambios de nombre/shape): 0 Nombre+Área+Descripción / 1 Puntos+
 // Máximo de personas / 2 Modo de asignación / 3 Asignar a personas (SOLO
 // si modoAsignacion==='elegir', ver `_tarCrearIrSiguiente()`/
-// `_tarCrearBack()`) / 4 Fecha límite / 5 Notas (último paso siempre, sin
-// importar el modo -- "Crear tarea").
-var _TAR_CREAR_STEPS = ['tar-crear-paso-0', 'tar-crear-paso-1', 'tar-crear-paso-modo', 'tar-crear-paso-personas', 'tar-crear-paso-fecha', 'tar-crear-paso-notas'];
+// `_tarCrearBack()`) / 4 Fecha límite (último paso siempre, sin importar
+// el modo -- "Crear tarea").
+var _TAR_CREAR_STEPS = ['tar-crear-paso-0', 'tar-crear-paso-1', 'tar-crear-paso-modo', 'tar-crear-paso-personas', 'tar-crear-paso-fecha'];
 var _tarCrearCurIdx = 0;
 var _tarCrearData = { titulo: '', area: null, fecha: null, notas: '', asignarA: [], modoAsignacion: null };
 var _tarCrearCal = { mostrado: null };
@@ -1680,12 +1719,15 @@ function _tarRenderArchivadas() {
 // tomar uno prestado acá por el color nada más sería confuso a futuro) con
 // los mismos tokens de color que ya usa el resto de la app para
 // éxito/error (`--success`/`--danger` + sus `-bg`, css/colors.css).
+// Ya NO pinta nada para 'aprobada' (ver MANIFEST.md "Cambios recientes" --
+// pedido explícito: quitar la pill "Aprobada" de las cards, redundante con
+// el ícono verde + el texto "Aprobada" que `_tarIconoBoxHtml()` ya suma al
+// recuadro de la card cuando ALGUNA asignación está aprobada). "Rechazada"
+// sigue mostrándose -- ese estado no tiene ninguna otra señal visual en la
+// card.
 function _tarArchivadaEstadoBadge(estado) {
-  var aprobada = estado === 'aprobada';
-  var color = aprobada ? 'var(--success)' : 'var(--danger)';
-  var bg = aprobada ? 'var(--success-bg)' : 'var(--danger-bg)';
-  var texto = aprobada ? 'Aprobada' : 'Rechazada';
-  return '<span style="font-size:0.66rem;font-weight:800;padding:2px 9px;border-radius:20px;background:' + bg + ';color:' + color + ';white-space:nowrap;flex-shrink:0;">' + texto + '</span>';
+  if (estado !== 'rechazada') return '';
+  return '<span style="font-size:0.66rem;font-weight:800;padding:2px 9px;border-radius:20px;background:var(--danger-bg);color:var(--danger);white-space:nowrap;flex-shrink:0;">Rechazada</span>';
 }
 function _tarCardArchivadaHtml(t) {
   var personas = t.personas || [];
@@ -1712,6 +1754,7 @@ function _tarCardArchivadaHtml(t) {
         _tarIconoBoxHtml(t.area, _tarTieneAprobada(personas)) +
       '</div>' +
       _tarPillsRowHtml(t.area, t.puntos, t.fechaVencimiento, cupos) +
+      _tarDescHtml(t.notas) +
       personasHtml +
       accionAdmin +
     '</div>' +
