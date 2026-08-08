@@ -4165,3 +4165,64 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
   **Estado actual de Asistencias:** datos migrados (Etapa 1 ✅), escritura doble activa Sheets+Supabase (Etapa 2 ✅), lectura 100% desde Supabase (Etapa 3 ✅). La hoja `Asistencias` de Sheets ya no es fuente de verdad para ninguna lectura del flujo activo.
 
   **Pendiente (no urgente):** apagar la escritura duplicada hacia Sheets cuando Victor esté cómodo — con eso `_mantenerVentanaAsistenciasInterno()`, `actualizarAsistenciasDesdeLog()` y `_actualizarEFDirecto()` dejarían de escribir en Sheets y Supabase quedaría como única fuente de verdad. La hoja `Puntos` queda fuera de scope de esta migración.
+
+- **✅ Migración de Puntos y Tareas a Supabase — backend completado y verificado end-to-end por Victor. Cuarta migración GAS/Sheets → Supabase, después de Venues, Log de asistencias y Asistencias. Incluye el sistema "Baúl de Tareas" completo.**
+
+  **Tablas nuevas en Supabase (4):**
+
+  | Tabla | Descripción |
+  |---|---|
+  | `tareas` | Catálogo de tareas disponibles y archivadas — nombre, descripción, puntos, cupos (`max_asignados`), estado, fechas |
+  | `asignaciones_tareas` | Una fila por persona que toma/tomó una tarea — estado del ciclo (iniciada/en_revision/completada/expirada/liberada), fecha de vencimiento, evidencia, timestamps de cada transición |
+  | `config_tareas` | Tabla de configuración global de una sola fila — límite de tareas activas simultáneas por persona (`max_activas_por_persona`), días de plazo por defecto (`dias_plazo_default`), días de extensión al rescatar (`dias_extension_rescate`) |
+  | `puntos_mensuales` | Histórico de puntos por persona — una fila por `(nombre_usuario, año, mes)`, con columnas separadas para `puntos_tareas`, `puntos_asistencias`, `puntos_bonificaciones` y `puntos_total` calculado |
+
+  **`puntos_mensuales` resuelve la limitación estructural de la hoja `Puntos` vieja:** la hoja original tenía una columna por mes del año calendario (`Ene`…`Dic`) con el total global de puntos — rígida a 12 meses fijos, imposible de extender sin reestructurar la hoja, y requería un proceso manual de "cierre de año" para resetear o archivar el acumulado. El nuevo modelo de fila por `(persona, año, mes)` elimina esa restricción: los registros crecen hacia adelante sin límite, el año nuevo arranca automáticamente con una fila nueva sin ninguna acción manual, y las 3 fuentes de puntos (tareas, asistencias, bonificaciones) quedan separadas y auditables en vez de sumar a un único total opaco.
+
+  **Datos históricos migrados (one-shot, al crear las tablas):**
+  - **44 tareas** archivadas desde la hoja `Tareas` de Sheets → tabla `tareas`.
+  - **38 asignaciones** históricas desde la hoja `Asignaciones Tareas` de Sheets → tabla `asignaciones_tareas`.
+  - **80 filas de puntos:** histórico de puntos por tareas + filas de Asistencias y Bonificaciones del año en curso → tabla `puntos_mensuales`.
+
+  **Sistema "Baúl de Tareas" — diseño:**
+
+  Replica el diseño de cupos/flujo de Pivot (el sistema de tareas del proyecto anterior), con las siguientes mecánicas:
+
+  - **Cupos vía `max_asignados`:** cada tarea tiene un número máximo de personas que pueden tomarla simultáneamente — el campo `asignados_activos` en `tareas` se incrementa al tomar y se decrementa al liberar/completar/expirar.
+  - **Anti-acaparamiento:** `_limiteTareasActivas()` verifica que la persona no supere `max_activas_por_persona` (leído de `config_tareas`) antes de permitir `tomarTarea`. Devuelve error descriptivo si el límite está alcanzado.
+  - **Rescate de tareas vencidas:** `rescatarTarea()` permite que alguien tome una tarea en estado `expirada` — le asigna un nuevo plazo (`dias_extension_rescate` días desde hoy) y la reactiva como `iniciada`.
+  - **Flujo de validación admin:** el ciclo completo es `iniciada → en_revision` (usuario envía evidencia con `enviarRevisionTarea`) → `completada` o rechazo (admin decide con `adminValidarTarea`). Los puntos no se acreditan al tomar la tarea sino al aprobarla — flujo de puntos diferidos hasta aprobación admin.
+
+  **Diferencia clave respecto a Pivot:** Pivot tenía la mecánica de cupos/flujo pero no un motor de puntos conectado — la aprobación admin era un estado sin consecuencias automáticas. En Mirlxs, `adminValidarTarea` llama a `_acreditarPuntosTarea()` al aprobar, que escribe directamente en `puntos_mensuales` (fila del mes corriente de la persona) — los puntos se acreditan en el momento de la aprobación, sin intervención manual adicional.
+
+  **Funciones nuevas en `Code.gs`:**
+
+  | Función | Tipo | Descripción |
+  |---|---|---|
+  | `adminCrearTarea` | Admin | Crea una tarea nueva en `tareas` (nombre, descripción, puntos, max_asignados, días de plazo) |
+  | `getTareasDisponibles` | Usuario | Devuelve las tareas con cupos disponibles (`asignados_activos < max_asignados`) y estado activo |
+  | `getMisTareas` | Usuario | Devuelve las asignaciones activas del usuario (iniciadas + en revisión) |
+  | `tomarTarea` | Usuario | Asigna una tarea al usuario — verifica cupos y límite de activas, incrementa `asignados_activos`, crea fila en `asignaciones_tareas` con estado `iniciada` y fecha de vencimiento |
+  | `soltarTarea` | Usuario | Libera una tarea antes del vencimiento — estado `liberada`, decrementa `asignados_activos` |
+  | `rescatarTarea` | Usuario | Toma una tarea expirada — reactiva como `iniciada` con nuevo plazo de `dias_extension_rescate` días |
+  | `enviarRevisionTarea` | Usuario | Pasa la asignación de `iniciada` a `en_revision` con la evidencia del usuario |
+  | `adminValidarTarea` | Admin | Aprueba o rechaza una tarea en revisión — si aprueba: estado `completada` + `_acreditarPuntosTarea()` en `puntos_mensuales`; si rechaza: vuelve a `iniciada` |
+  | `marcarTareasExpiradas` | Trigger | Recorre `asignaciones_tareas` buscando filas `iniciada` con `fecha_vencimiento < hoy` y las marca `expirada`, decrementando `asignados_activos` en `tareas` — corre diariamente a las 00:00 vía trigger de tiempo (reemplaza la lógica equivalente de Pivot) |
+  | `_acreditarPuntosTarea` | Helper interno | Upsert en `puntos_mensuales` para la fila `(persona, año_actual, mes_actual)` — suma los puntos de la tarea a `puntos_tareas` y recalcula `puntos_total` |
+  | `_limiteTareasActivas` | Helper interno | Consulta `asignaciones_tareas` para contar cuántas tareas tiene la persona en estado `iniciada` o `en_revision`, y compara contra `max_activas_por_persona` de `config_tareas` |
+  | `_contarIniciadasDe` | Helper interno | Cuenta asignaciones activas (iniciadas + en_revision) de una persona — usado por `_limiteTareasActivas` |
+
+  **Trigger diario `marcarTareasExpiradas`:** registrado a las 00:00 en el editor de Apps Script (trigger de tiempo — "Day timer", medianoche). Reemplaza la lógica de expiración que Pivot manejaba on-demand al cargar la lista de tareas — aquí corre siempre en background sin depender de ninguna acción de usuario.
+
+  **Verificación end-to-end:** confirmada por Victor con el ciclo completo:
+  1. Admin crea tarea con `adminCrearTarea` — aparece en `getTareasDisponibles`.
+  2. Usuario toma la tarea con `tomarTarea` — cupo decrementado, asignación en estado `iniciada`.
+  3. Usuario envía evidencia con `enviarRevisionTarea` — estado pasa a `en_revision`.
+  4. Admin aprueba con `adminValidarTarea` — estado `completada`, puntos acreditados en `puntos_mensuales` del mes corriente. Verificado con `select` SQL directo en Supabase.
+
+  **Pendiente — frontend (no empezado):** pantalla nueva de Tareas en la app, con:
+  - Tabs "Disponibles" / "Mis tareas".
+  - Tarjetas de tarea con cupos restantes (`max_asignados - asignados_activos`), puntos, plazo y botón de acción contextual (Tomar / Ver estado / Rescatar).
+  - Formulario de crear tarea (admin).
+  - Panel de validación admin (lista de tareas en revisión con evidencia + botones Aprobar/Rechazar).
+  - El "Baúl" (tareas expiradas rescatables) integrado en la tab Disponibles o como sección separada — diseño a definir.
