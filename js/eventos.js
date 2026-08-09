@@ -24,7 +24,7 @@ var _EV_CUMPLEANOS = [];
 // MANIFEST.md) -- mismo mapa ya usado por las cards de evento reales
 // (Venues!Tipo de ícono), ahora también alimentado por el selector de pills
 // del formulario en vez de solo por datos de prueba/backend.
-var _EV_ICONOS = { 'Entrenamiento': 'directions_run', 'Torneo': 'emoji_events', 'Partido': 'sports', 'Asamblea': 'groups', 'Evento social': 'groups', 'Otro': 'category', 'Ciclopaseo': 'pedal_bike' };
+var _EV_ICONOS = { 'Entrenamiento': 'sports', 'Torneo': 'emoji_events', 'Partido': 'sports', 'Asamblea': 'groups', 'Evento social': 'groups', 'Otro': 'category', 'Ciclopaseo': 'pedal_bike' };
 var _EV_DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 var _EV_DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 

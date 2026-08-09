@@ -137,6 +137,20 @@
   background: var(--brand-light); color: var(--brand);
 }
 .tar-card-icono-box .material-symbols-outlined { font-size: 1.05rem; }
+/* Ícono de "Archivar tarea" en Disponibles (admin) -- ver MANIFEST.md
+   "Cambios recientes": antes vivía como botón de texto debajo de "Tomar
+   tarea" (Baúl lo sigue teniendo así, sin cambios); en Disponibles pasa a
+   vivir en la esquina superior, junto a `.tar-card-icono-box`. Mismo
+   tamaño/radio que esa caja (38px/10px) pero neutro (no verde/rojo, no es
+   un estado de la tarea) -- mismo criterio de color apagado que ya usaba
+   el botón de texto que reemplaza (`.btn-text-simple`, `var(--muted)`). */
+.tar-card-archivar-btn {
+  flex-shrink: 0; width: 38px; height: 38px; min-width: 38px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: var(--surface-2); color: var(--muted); cursor: pointer; font-family: inherit;
+}
+.tar-card-archivar-btn:disabled { opacity: 0.5; cursor: default; }
+.tar-card-archivar-btn .material-symbols-outlined { font-size: 1.05rem; }
 /* Estado "aprobada" -- cuando ALGUNA asignación de la tarea está en estado
    `aprobada` (ver `_tarTieneAprobada()`, js/tareas.js), el recuadro pasa a
    verde (en vez del color de énfasis default) y suma un texto chico
@@ -145,6 +159,14 @@
    apenas un piso para el ícono solo, no un techo -- nunca desborda). */
 .tar-card-icono-box.tar-card-icono-aprobada { background: var(--success-bg); color: var(--success); }
 .tar-card-icono-aprobada-txt { font-size: 0.56rem; font-weight: 800; line-height: 1; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.2px; }
+/* Estado "vencida" -- Archivadas, cuando NINGUNA asignación quedó
+   `aprobada` (ver `_tarCardArchivadaHtml()`, js/tareas.js): mismo patrón
+   visual que "aprobada" arriba (recuadro de color + texto chico debajo del
+   ícono) pero en rojo (`--danger`/`--danger-bg`, mismos tokens que
+   `.tar-fecha-rojo`) para distinguir tareas archivadas sin completar de las
+   completadas. */
+.tar-card-icono-box.tar-card-icono-vencida { background: var(--danger-bg); color: var(--danger); }
+.tar-card-icono-vencida-txt { font-size: 0.56rem; font-weight: 800; line-height: 1; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.2px; }
 
 /* ── Pills de card (Área/Cupos/Puntos/Fecha límite) -- reemplaza los
    estilos previos (texto plano / `.tar-area-pill` suelta) por el mismo
@@ -166,6 +188,12 @@
 .tar-fecha-rojo { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-bdr); }
 .tar-fecha-naranja { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-bdr); }
 .tar-fecha-amarillo { background: var(--amber-light); color: var(--amber-darker); border: 1px solid var(--amber-border); }
+/* Fecha "Finalizada el DD/MM/AAAA" -- Archivadas, cuando la tarea SÍ tiene
+   alguna asignación aprobada (ver `_tarCardArchivadaHtml()`): mismos
+   tokens de éxito que `.tar-card-icono-aprobada`, variante propia porque
+   `.tar-fecha-*` son las únicas clases que colorean `.fi-pill-fin`/pill de
+   fecha (nunca hubo un caso "verde" antes de este cambio). */
+.tar-fecha-verde { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-bdr); }
 
 /* Descripción de la tarea -- acordeón colapsado por defecto, mismo patrón
    "Más información" que ya usan las cards de fecha del flujo de reserva

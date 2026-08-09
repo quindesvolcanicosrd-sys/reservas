@@ -32,13 +32,14 @@ function _tarAplicarEntradaPendiente(lista, prefijoDom) {
 }
 
 var _TAR_ICONOS_AREA = {
-  'Logística': 'inventory_2',
-  'Entrenamientos': 'sports_gymnastics',
+  'Logística': 'inventory',
+  'Entrenamientos': 'sports',
   'Eventos': 'event',
-  'Finanzas': 'payments',
+  'Finanzas': 'savings',
   'Mantenimiento': 'build',
-  'Redes Sociales y Comunicación': 'campaign',
-  'Reclutamiento': 'group_add'
+  'Redes Sociales y Comunicación': 'thumbs_up_down',
+  'Reclutamiento': 'group_add',
+  'Otro': 'help'
 };
 
 /* ── Ícono de card + pills compartidas (Disponibles/Baúl/Mis tareas/
@@ -62,19 +63,38 @@ var _TAR_ICONOS_AREA = {
 function _tarTieneAprobada(personas) {
   return (personas || []).some(function(p) { return p.estado === 'aprobada'; });
 }
-function _tarIconoBoxHtml(area, aprobada) {
+// `estado` = true/'aprobada' -> recuadro verde "Aprobada" (comportamiento
+// de siempre, todas las vistas salvo Archivadas pasan un boolean acá);
+// 'vencida' -> recuadro rojo "Vencida" (solo Archivadas, ver
+// `_tarCardArchivadaHtml()` -- tarea archivada sin ninguna asignación
+// aprobada); falsy -> sin marcar.
+function _tarIconoBoxHtml(area, estado) {
   var icono = _TAR_ICONOS_AREA[area] || 'task_alt';
-  return '<div class="tar-card-icono-box' + (aprobada ? ' tar-card-icono-aprobada' : '') + '">' +
+  var clase = '', txt = '';
+  if (estado === 'vencida') {
+    clase = ' tar-card-icono-vencida';
+    txt = '<span class="tar-card-icono-vencida-txt">Vencida</span>';
+  } else if (estado) {
+    clase = ' tar-card-icono-aprobada';
+    txt = '<span class="tar-card-icono-aprobada-txt">Aprobada</span>';
+  }
+  return '<div class="tar-card-icono-box' + clase + '">' +
     '<span class="material-symbols-outlined">' + icono + '</span>' +
-    (aprobada ? '<span class="tar-card-icono-aprobada-txt">Aprobada</span>' : '') +
+    txt +
   '</div>';
 }
 // `cupos` (opcional) = { tomados, total } -- solo Disponibles/Baúl/Gestionar
 // muestran el cupo restante; Mis tareas/Archivadas no traían ese pill antes
 // de este cambio y no lo suman ahora (fuera del pedido, ver "Reglas
 // globales del proyecto" -- no agregar más de lo pedido).
-function _tarPillsRowHtml(area, puntos, fechaRaw, cupos) {
-  var fi = _tarFechaInfo(fechaRaw);
+// `fechaOverride` (opcional) = { texto, clase } -- salta el cálculo relativo
+// de `_tarFechaInfo()` y usa este texto/clase tal cual. Solo lo pasa
+// `_tarCardArchivadaHtml()`: Archivadas no muestra "vence en X días" como el
+// resto de las vistas, siempre uno de 2 estados fijos según si la tarea
+// tiene alguna asignación aprobada ("Finalizada el..."/verde) o no
+// ("Venció el..."/rojo), ver esa función.
+function _tarPillsRowHtml(area, puntos, fechaRaw, cupos, fechaOverride) {
+  var fi = fechaOverride || _tarFechaInfo(fechaRaw);
   var cuposHtml = cupos ? '<span class="fi-pill fi-pill-hora tar-cupos-pill">' + cupos.tomados + '/' + cupos.total + ' cupos</span>' : '';
   return '<div class="fi-pills" style="margin-top:8px;">' +
     '<span class="fi-pill fi-pill-fin tar-area-pill">' + (area || '') + '</span>' +
@@ -273,14 +293,14 @@ function _tarFiltroActivo(ctx) {
 }
 
 /* Campo Área -- mismas opciones que el paso "Nombre + Área" del wizard
-   (`_TAR_ICONOS_AREA` + "Otro", index.html `#tar-crear-area-pills`), pills
-   `.aj-pill` multi-select tal cual (mismo mecanismo que Lugar/Tipo de
+   (`_TAR_ICONOS_AREA`, ya incluye "Otro", index.html `#tar-crear-area-pills`),
+   pills `.aj-pill` multi-select tal cual (mismo mecanismo que Lugar/Tipo de
    Eventos, `ajTogglePill()`-equivalente a mano acá). */
 function _tarRenderFiltroAreaPills(ctx) {
   var cont = document.getElementById(_tarPrefijo(ctx) + '-filtro-area-pills');
   if (!cont) return;
   var f = _tarFiltroObj(ctx);
-  var areas = Object.keys(_TAR_ICONOS_AREA).concat(['Otro']);
+  var areas = Object.keys(_TAR_ICONOS_AREA);
   cont.innerHTML = areas.map(function(a) {
     var sel = f.area.indexOf(a) !== -1;
     return '<span class="aj-pill' + (sel ? ' activa' : '') + '" data-val="' + a + '" onclick="_tarToggleFiltroAreaChip(this,\'' + ctx + '\')">' + a + '</span>';
@@ -678,16 +698,24 @@ function _tarCardHtml(t, contexto) {
   } else {
     accionHtml = '<button type="button" class="btn btn-outline tar-card-btn" onclick="_tarTomar(\'' + t.idTarea + '\', this)"><span class="material-symbols-outlined">add_task</span>Tomar tarea</button>';
   }
-  // "Archivar tarea" (admin, Disponibles Y Baúl -- antes solo Baúl, ver
-  // MANIFEST.md "Cambios recientes") -- independiente del límite de arriba
-  // a propósito: ese límite solo gatea Tomar/Rescatar (acciones de
-  // autoservicio del propio admin como usuarix), Archivar es una acción
-  // administrativa sin relación con ningún cupo personal. Sin límite de
-  // días ni automatismo -- el admin archiva cuando quiere, tarea por
-  // tarea (pedido explícito). Mismo backend (`adminArchivarTarea`) sin
-  // ningún cambio -- la acción ya no depende de en qué lista viva la tarea.
-  if ((contexto === 'baul' || contexto === 'disponible') && _adminToken) {
+  // "Archivar tarea" (admin, Disponibles Y Baúl) -- independiente del
+  // límite de arriba a propósito: ese límite solo gatea Tomar/Rescatar
+  // (acciones de autoservicio del propio admin como usuarix), Archivar es
+  // una acción administrativa sin relación con ningún cupo personal. Sin
+  // límite de días ni automatismo -- el admin archiva cuando quiere, tarea
+  // por tarea (pedido explícito). Mismo backend (`adminArchivarTarea`) sin
+  // ningún cambio en ningún caso.
+  // Baúl: sigue como botón de texto debajo de "Rescatar tarea" (sin
+  // cambios, ver MANIFEST.md "Cambios recientes" anterior). Disponibles
+  // (ver "Cambios recientes" -- pedido explícito): en vez de vivir como
+  // botón debajo de "Tomar tarea", pasa a ser un ícono en la esquina
+  // superior, junto a `_tarIconoBoxHtml()` (mismo lugar que el ícono de
+  // tipo/área) -- `archivarBtnHtml`, sumado a `tar-card-header` más abajo.
+  var archivarBtnHtml = '';
+  if (contexto === 'baul' && _adminToken) {
     accionHtml += '<button type="button" class="btn btn-text-simple tar-card-btn" onclick="_tarArchivar(\'' + t.idTarea + '\', this)"><span class="material-symbols-outlined">archive</span>Archivar tarea</button>';
+  } else if (contexto === 'disponible' && _adminToken) {
+    archivarBtnHtml = '<button type="button" class="tar-card-archivar-btn" onclick="_tarArchivar(\'' + t.idTarea + '\', this)" aria-label="Archivar tarea"><span class="material-symbols-outlined">archive</span></button>';
   }
   var asignados = t.asignados || [];
   var tomados = asignados.length;
@@ -696,6 +724,7 @@ function _tarCardHtml(t, contexto) {
     '<div class="ev-card-body">' +
       '<div class="tar-card-header">' +
         '<div class="ev-card-titulo">' + (t.titulo || '') + '</div>' +
+        archivarBtnHtml +
         _tarIconoBoxHtml(t.area, _tarTieneAprobada(asignados)) +
       '</div>' +
       _tarPillsRowHtml(t.area, t.puntos, t.fechaVencimiento, { tomados: tomados, total: total }) +
@@ -751,6 +780,21 @@ function _tarFechaLegible(raw) {
    distinto al actual), para que quede claro de qué año es sin alargarse
    con el formato largo "el [día de semana] [núm] de [mes] de [año]" que
    sigue usando la rama "Vence"/no vencida de abajo. */
+// Formato numérico "DD/MM/AAAA", siempre con año -- misma rama de parseo
+// que `_tarFechaInfo()` de abajo (reusada acá para no duplicarla), factor
+// común de "Venció el ..." (Baúl/Archivadas vencidas) y "Finalizada el ..."
+// (Archivadas completadas, `_tarCardArchivadaHtml()`). Devuelve '' si
+// `fechaRaw` falta o no parsea.
+function _tarFechaDDMMAAAA(fechaRaw) {
+  if (!fechaRaw) return '';
+  var s = fechaRaw.toString();
+  var esIso = /^\d{4}-\d{2}-\d{2}/.test(s);
+  var d = esIso ? _evParseISO(s.slice(0, 10)) : new Date(s);
+  if (isNaN(d.getTime())) return '';
+  var dd = String(d.getDate()).padStart(2, '0');
+  var mm = String(d.getMonth() + 1).padStart(2, '0');
+  return dd + '/' + mm + '/' + d.getFullYear();
+}
 function _tarFechaInfo(fechaRaw) {
   if (!fechaRaw) return { texto: 'Sin fecha límite', clase: 'tar-fecha-amarillo' };
   var s = fechaRaw.toString();
@@ -766,11 +810,7 @@ function _tarFechaInfo(fechaRaw) {
   var clase = diff <= 0 ? 'tar-fecha-rojo' : (diff <= 3 ? 'tar-fecha-naranja' : 'tar-fecha-amarillo');
   var isoCorta = esIso ? s.slice(0, 10) : _evToISO(d);
   var texto;
-  if (diff < 0) {
-    var dd = String(d.getDate()).padStart(2, '0');
-    var mm = String(d.getMonth() + 1).padStart(2, '0');
-    texto = 'Venció el ' + dd + '/' + mm + '/' + d.getFullYear();
-  }
+  if (diff < 0) texto = 'Venció el ' + _tarFechaDDMMAAAA(fechaRaw);
   else if (diff === 0) texto = 'Vence hoy';
   else if (diff === 1) texto = 'Vence mañana';
   else if (_evEsRestoDeSemana(isoCorta)) texto = 'Vence el ' + diaSemana;
@@ -1747,13 +1787,22 @@ function _tarCardArchivadaHtml(t) {
   // por `_adminToken` en el propio render, no por CSS.
   var accionAdmin = _adminToken ? '<button type="button" class="btn btn-danger tar-card-btn" onclick="_tarEliminarArchivadaAbrir(\'' + t.idTarea + '\')"><span class="material-symbols-outlined">delete</span>Eliminar</button>' : '';
   var cupos = t.cuposTotales != null ? { tomados: personas.length, total: t.cuposTotales } : null;
+  // "Vencida" (roja, se archivó sin ninguna aprobación) vs "Aprobada"
+  // (verde, ya existía) -- mismo criterio para la pill de fecha: "Venció
+  // el..."/fechaVencimiento en el primer caso, "Finalizada el..."/
+  // fechaArchivado (fecha real de archivado, no la de vencimiento) en el
+  // segundo. Ver MANIFEST.md "Cambios recientes".
+  var tieneAprobada = _tarTieneAprobada(personas);
+  var fechaOverride = tieneAprobada ?
+    { texto: 'Finalizada el ' + _tarFechaDDMMAAAA(t.fechaArchivado), clase: 'tar-fecha-verde' } :
+    { texto: 'Venció el ' + _tarFechaDDMMAAAA(t.fechaVencimiento), clase: 'tar-fecha-rojo' };
   return '<div class="ev-card" id="tar-archivada-card-' + t.idTarea + '">' +
     '<div class="ev-card-body">' +
       '<div class="tar-card-header">' +
         '<div class="ev-card-titulo">' + (t.titulo || '') + '</div>' +
-        _tarIconoBoxHtml(t.area, _tarTieneAprobada(personas)) +
+        _tarIconoBoxHtml(t.area, tieneAprobada ? true : 'vencida') +
       '</div>' +
-      _tarPillsRowHtml(t.area, t.puntos, t.fechaVencimiento, cupos) +
+      _tarPillsRowHtml(t.area, t.puntos, t.fechaVencimiento, cupos, fechaOverride) +
       _tarDescHtml(t.notas) +
       personasHtml +
       accionAdmin +
