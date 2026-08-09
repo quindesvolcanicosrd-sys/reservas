@@ -13,11 +13,18 @@ var _tarBaul = [];
 var _tarMisTareas = [];
 var _tarConfig = { limiteTareasActivas: null };
 var _tarCargaId = 0;
-var _tarTabActual = 'disponibles';
 var _tarBaulAbierto = false;
 var _tarPendientesValidacion = [];
 var _tarArchivadas = [];
 var _tarEliminarArchivadaIdPendiente = null;
+// Sección "por defecto" del selector de salto rápido del header (`null` ->
+// pantalla fusionada de una sola vista con scroll, ver "Cambios recientes")
+// -- `'mis'`/`'disponibles'`/`'baul'`, calculada por
+// `_tarActualizarLayoutTablero()` en cada re-render. `_tarSelectorNecesario`
+// (boolean) refleja si el contenido de las 3 secciones combinadas excede el
+// viewport visible -- ver `_tarActualizarSelectorHeader()`.
+var _tarSeccionDefault = null;
+var _tarSelectorNecesario = false;
 
 // Marca qué card debe entrar con `.tar-card-entrando` en el próximo render
 // de Disponibles/Mis tareas -- consumida y limpiada por
@@ -146,14 +153,24 @@ var _tarBusquedaArch = '';
 function _tarFiltroObj(ctx) { return ctx === 'archivadas' ? _tarFiltroArch : _tarFiltro; }
 function _tarPrefijo(ctx) { return ctx === 'archivadas' ? 'tarch' : 'tar'; }
 
+// `esBusqueda: true` (busqueda/busquedaArch) -- las únicas 2 con input de
+// texto propio que hay que enfocar al abrir y limpiar al cerrar (ver
+// `_tarAbrirPanel()`/`_tarCerrarPanel()` más abajo). `secciones`/
+// `administrar` (nuevos, ver "Cambios recientes" -- fusión de Tareas en una
+// sola pantalla con scroll) son simples listas de opciones, sin ese
+// costado -- comparten el mismo slot único/mecanismo de burbuja inline
+// (`.ev-header-burbuja`) sin necesitar su propio open/close a mano.
 var _TAR_PANELES = {
-  busqueda: { el: 'tar-busqueda-panel', btn: 'tar-busqueda-toggle-btn' },
-  busquedaArch: { el: 'tarch-busqueda-panel', btn: 'tarch-busqueda-toggle-btn' }
+  busqueda: { el: 'tar-busqueda-panel', btn: 'tar-busqueda-toggle-btn', esBusqueda: true },
+  busquedaArch: { el: 'tarch-busqueda-panel', btn: 'tarch-busqueda-toggle-btn', esBusqueda: true },
+  secciones: { el: 'tar-secciones-panel', btn: 'tar-secciones-toggle-btn' },
+  administrar: { el: 'tar-administrar-panel', btn: 'tar-btn-administrar' }
 };
-// Un solo slot alcanza para las 2 pantallas -- #s-tareas y
-// #s-tareas-archivadas nunca están visibles a la vez (son `.pantalla`
-// distintas), así que nunca hay 2 burbujas de búsqueda abiertas juntas.
-var _tarPanelAbierto = null; // 'busqueda' | 'busquedaArch'
+// Un solo slot alcanza para las 4 (2 pantallas -- #s-tareas y
+// #s-tareas-archivadas -- nunca están visibles a la vez, y dentro de
+// #s-tareas las 3 burbujas propias -- búsqueda/secciones/administrar --
+// nunca tienen sentido abiertas juntas), así que nunca hay 2 a la vez.
+var _tarPanelAbierto = null; // 'busqueda' | 'busquedaArch' | 'secciones' | 'administrar'
 var _tarFiltroBurbujaAbierta = null; // 'area' | 'personas' | 'puntos' | 'mes' | 'estado'
 
 function _tarCtxDePanel(tag) { return tag === 'busquedaArch' ? 'archivadas' : 'principal'; }
@@ -167,9 +184,11 @@ function _tarAbrirPanel(tag) {
   var el = document.getElementById(cfg.el);
   var btn = document.getElementById(cfg.btn);
   if (el) { el.classList.add('abierta'); el.style.maxHeight = el.scrollHeight + 'px'; }
-  if (btn) btn.classList.add('ev-filtro-toggle-activo');
-  var ctx = _tarCtxDePanel(tag);
-  setTimeout(function() { var inp = document.getElementById(_tarPrefijo(ctx) + '-search-input'); if (inp) inp.focus(); }, 50);
+  if (btn) btn.classList.add('ev-filtro-toggle-activo', 'ev-nav-mes-label-activo');
+  if (cfg.esBusqueda) {
+    var ctx = _tarCtxDePanel(tag);
+    setTimeout(function() { var inp = document.getElementById(_tarPrefijo(ctx) + '-search-input'); if (inp) inp.focus(); }, 50);
+  }
 }
 function _tarCerrarPanel(tag, instant) {
   if (_tarPanelAbierto === tag) _tarPanelAbierto = null;
@@ -187,12 +206,14 @@ function _tarCerrarPanel(tag, instant) {
       });
     }
   }
-  if (btn) btn.classList.remove('ev-filtro-toggle-activo');
-  var ctx = _tarCtxDePanel(tag);
-  if (_tarFiltroBurbujaAbierta) { _tarColapsarFiltroBurbuja(ctx, _tarFiltroBurbujaAbierta); _tarFiltroBurbujaAbierta = null; _tarActualizarBotonesFiltro(ctx); }
-  var inp = document.getElementById(_tarPrefijo(ctx) + '-search-input');
-  if (inp) inp.value = '';
-  _tarBuscar(ctx, '');
+  if (btn) btn.classList.remove('ev-filtro-toggle-activo', 'ev-nav-mes-label-activo');
+  if (cfg.esBusqueda) {
+    var ctx = _tarCtxDePanel(tag);
+    if (_tarFiltroBurbujaAbierta) { _tarColapsarFiltroBurbuja(ctx, _tarFiltroBurbujaAbierta); _tarFiltroBurbujaAbierta = null; _tarActualizarBotonesFiltro(ctx); }
+    var inp = document.getElementById(_tarPrefijo(ctx) + '-search-input');
+    if (inp) inp.value = '';
+    _tarBuscar(ctx, '');
+  }
 }
 // Mismo chequeo compartido que `_evCerrarBurbujaSiFueraDe()` (js/eventos.js):
 // cualquier toque afuera de la burbuja abierta (y de su propio ícono
@@ -212,6 +233,14 @@ document.addEventListener('click', function(e) { _tarCerrarBurbujaSiFueraDe(e.ta
 });
 function _tarToggleBusqueda() { _tarTogglePanel('busqueda'); }
 function _tarToggleBusquedaArch() { _tarTogglePanel('busquedaArch'); }
+// Selector de salto rápido -- sin sentido si no hay ninguna sección extra
+// para saltar (ver `_tarActualizarSelectorHeader()`, que oculta el chevron
+// y deja el botón inerte en ese caso, sin sacarlo del DOM).
+function _tarToggleSecciones() {
+  if (!_tarSelectorNecesario) return;
+  _tarTogglePanel('secciones');
+}
+function _tarToggleAdministrar() { _tarTogglePanel('administrar'); }
 
 // Mismo criterio que `_evNormalizarBusqueda()` (js/eventos.js) -- minúsculas
 // + sin acentos, para que "Diaz"/"díaz" o "logistica"/"Logística" matcheen.
@@ -492,53 +521,13 @@ function _tarNormalizarArchivada(t) {
 
 /* ── Entrada de la sección (APP_BOTTOM_NAV_ITEMS, js/ui.js) ───────────── */
 function irTareas() {
-  _tarTabActual = 'disponibles';
-  var optD = document.getElementById('tar-opt-disponibles');
-  var optM = document.getElementById('tar-opt-mis');
-  if (optD) optD.classList.add('active');
-  if (optM) optM.classList.remove('active');
-  var panelD = document.getElementById('tar-tab-disponibles');
-  var panelM = document.getElementById('tar-tab-mis');
-  if (panelD) panelD.style.display = 'block';
-  if (panelM) panelM.style.display = 'none';
   ir('s-tareas');
-  setTimeout(function() { _tarUpdateSlider(false); }, 50);
   // Refleja el estado de filtros persistido de una visita anterior a esta
   // sesión (los filtros NO se resetean al re-entrar, mismo criterio que
   // `_evTimelineFiltro` en Eventos) -- labels/badge de los triggers, no la
   // data en sí (eso lo cubre `_tarCargarTodo()` de abajo).
   _tarActualizarBotonesFiltro('principal');
   _tarCargarTodo();
-}
-
-/* ── Pill-toggle "Disponibles / Mis tareas" -- mismo componente .tp-seg/
-   .tp-slider/.tp-opt que "Por clase/Mensual" (css/reservas.css). ──────── */
-function _tarCambiarTab(tab) {
-  if (_tarTabActual === tab) return;
-  _tarTabActual = tab;
-  var optD = document.getElementById('tar-opt-disponibles');
-  var optM = document.getElementById('tar-opt-mis');
-  if (optD) optD.classList.toggle('active', tab === 'disponibles');
-  if (optM) optM.classList.toggle('active', tab === 'mis');
-  _tarUpdateSlider(true);
-  // Fade al cambiar de tab (cards Y estados vacíos, ambos viven dentro de
-  // #tar-tabs-wrap) -- mismo mecanismo (`_evFadeSwap()`, js/eventos.js) que
-  // ya usa el calendario del wizard, en vez de un toggle de display seco.
-  var wrap = document.getElementById('tar-tabs-wrap');
-  _evFadeSwap(wrap, function() {
-    var panelD = document.getElementById('tar-tab-disponibles');
-    var panelM = document.getElementById('tar-tab-mis');
-    if (panelD) panelD.style.display = tab === 'disponibles' ? 'block' : 'none';
-    if (panelM) panelM.style.display = tab === 'mis' ? 'block' : 'none';
-  }, !wrap);
-}
-function _tarUpdateSlider(animate) {
-  var slider = document.getElementById('tar-slider');
-  var activeOpt = document.getElementById(_tarTabActual === 'disponibles' ? 'tar-opt-disponibles' : 'tar-opt-mis');
-  if (!slider || !activeOpt) return;
-  slider.classList.toggle('animado', !!animate);
-  slider.style.width = activeOpt.offsetWidth + 'px';
-  slider.style.transform = 'translateX(' + activeOpt.offsetLeft + 'px)';
 }
 
 /* ── Carga de datos ────────────────────────────────────────────────────
@@ -562,6 +551,16 @@ function _tarCargarTodo() {
   var miCarga = ++_tarCargaId;
   var contDisp = document.getElementById('tar-lista-disponibles');
   var contMis = document.getElementById('tar-lista-mis');
+  // Los 2 encabezados de sección se muestran optimistamente mientras carga
+  // (evita el hueco visual de cards-esqueleto sin ningún título arriba) --
+  // `_tarRenderDisponibles()`/`_tarRenderMisTareas()` los corrigen (ocultan
+  // si la sección terminó realmente vacía) apenas resuelve cada llamada.
+  var misHeader = document.getElementById('tar-mis-header');
+  var dispHeader = document.getElementById('tar-disp-header');
+  var vacio = document.getElementById('tar-tablero-vacio');
+  if (misHeader) misHeader.style.display = '';
+  if (dispHeader) dispHeader.style.display = '';
+  if (vacio) { vacio.style.display = 'none'; vacio.innerHTML = ''; }
   if (contDisp) contDisp.innerHTML = _tarSkeletonHtml(2);
   if (contMis) contMis.innerHTML = _tarSkeletonHtml(2);
 
@@ -636,21 +635,22 @@ function _tarEnLimite() {
 }
 
 /* ── Render "Disponibles" + "El Baúl de tareas" ───────────────────────── */
+// Ya NO pinta un mensaje de "sin resultados"/"no hay tareas" propio -- ver
+// MANIFEST.md "Cambios recientes" (fusión de Tareas en una sola pantalla
+// con scroll): mismo criterio que el timeline fusionado de Eventos
+// (`_evRenderTimeline()`), una sección sin contenido se oculta ENTERA
+// (header `#tar-disp-header` + lista) en vez de mostrar un aviso propio --
+// el único mensaje de vacío que puede verse es el global de
+// `#tar-tablero-vacio`, cuando las 3 secciones combinadas quedan sin nada
+// (ver `_tarActualizarLayoutTablero()`, llamada al final de esta función).
 function _tarRenderDisponibles() {
   var cont = document.getElementById('tar-lista-disponibles');
   if (!cont) return;
-  // Filtrado client-side (`_tarFiltro`/buscador de #s-tareas) -- ver
-  // `_tarPasaFiltro()` más arriba. Mensaje de vacío distinto según la
-  // causa: "no hay tareas" (dato real vacío) vs. "sin resultados" (los
-  // filtros descartaron todo), mismo criterio que Eventos.
   var disponibles = _tarDisponibles.filter(function(t) { return _tarPasaFiltro('principal', _tarNormalizarTarea(t)); });
-  if (!disponibles.length) {
-    cont.innerHTML = (_tarDisponibles.length && _tarFiltroActivo('principal')) ?
-      '<div class="ev-lista-vacia"><span class="material-symbols-outlined">filter_alt_off</span>No hay tareas que coincidan con estos filtros.</div>' :
-      '<div class="ev-lista-vacia"><span class="material-symbols-outlined">task_alt</span>No hay tareas disponibles por ahora.</div>';
-  } else {
-    cont.innerHTML = disponibles.map(function(t) { return _tarCardHtml(t, 'disponible'); }).join('');
-  }
+  cont.innerHTML = disponibles.map(function(t) { return _tarCardHtml(t, 'disponible'); }).join('');
+  var dispHeader = document.getElementById('tar-disp-header');
+  if (dispHeader) dispHeader.style.display = disponibles.length ? '' : 'none';
+
   var baul = _tarBaul.filter(function(t) { return _tarPasaFiltro('principal', _tarNormalizarTarea(t)); });
   var n = baul.length;
   var baulWrap = document.getElementById('tar-baul-wrap');
@@ -661,6 +661,7 @@ function _tarRenderDisponibles() {
   if (listaBaul) listaBaul.innerHTML = baul.map(function(t) { return _tarCardHtml(t, 'baul'); }).join('');
   _tarHidratarAvatares();
   _tarAplicarEntradaPendiente('disponibles', 'tar-card-disponible-');
+  _tarActualizarLayoutTablero();
 }
 
 function _tarToggleBaul() {
@@ -820,20 +821,142 @@ function _tarFechaInfo(fechaRaw) {
 }
 
 /* ── Render "Mis tareas" (asignaciones activas: iniciada/pendiente_revision) ── */
+// Ver el comentario de `_tarRenderDisponibles()` -- mismo criterio, ya NO
+// pinta un mensaje de vacío propio, solo oculta `#tar-mis-header` entero.
 function _tarRenderMisTareas() {
   var cont = document.getElementById('tar-lista-mis');
   if (!cont) return;
   var filtradas = _tarMisTareas.filter(function(a) { return _tarPasaFiltro('principal', _tarNormalizarAsignacion(a)); });
+  var misHeader = document.getElementById('tar-mis-header');
   if (!filtradas.length) {
-    cont.innerHTML = (_tarMisTareas.length && _tarFiltroActivo('principal')) ?
-      '<div class="ev-lista-vacia"><span class="material-symbols-outlined">filter_alt_off</span>No hay tareas que coincidan con estos filtros.</div>' :
-      '<div class="ev-lista-vacia"><span class="material-symbols-outlined">assignment_turned_in</span>Todavía no tomaste ninguna tarea.</div>';
+    cont.innerHTML = '';
+    if (misHeader) misHeader.style.display = 'none';
     _tarEntradaPendiente = null;
+    _tarActualizarLayoutTablero();
     return;
   }
+  if (misHeader) misHeader.style.display = '';
   cont.innerHTML = filtradas.map(_tarCardMisHtml).join('');
   _tarAplicarEntradaPendiente('mis', 'tar-mis-card-');
+  _tarActualizarLayoutTablero();
 }
+
+/* ── Reconciliador de layout de la pantalla fusionada (ver MANIFEST.md
+   "Cambios recientes" -- fusión de Tareas en una sola pantalla con scroll)
+   -- se llama al final de `_tarRenderDisponibles()`/`_tarRenderMisTareas()`
+   (cada una ya pintó su propia sección +, la primera, el Baúl). No repinta
+   ningún card -- solo reconcilia lo que rodea a las 3 secciones a partir
+   del DOM ya pintado: el mensaje de vacío global, la sección "por
+   defecto"/lista del selector de salto rápido del header, y si ese
+   selector hace falta en absoluto. Contar `.ev-card` reales en el DOM (en
+   vez de repetir el filtrado de cada render acá) refleja siempre lo que
+   está efectivamente pintado en ESTE instante, sin importar cuál de las 2
+   funciones disparó la reconciliación ni el orden en que resolvieron las
+   3 llamadas de `_tarCargarTodo()`. ────────────────────────────────────── */
+function _tarActualizarLayoutTablero() {
+  var misN = document.querySelectorAll('#tar-lista-mis > .ev-card').length;
+  var dispN = document.querySelectorAll('#tar-lista-disponibles > .ev-card').length;
+  var baulWrap = document.getElementById('tar-baul-wrap');
+  var baulN = (baulWrap && baulWrap.style.display !== 'none') ? document.querySelectorAll('#tar-lista-baul > .ev-card').length : 0;
+
+  // Mensaje de vacío único (mismo criterio que el timeline fusionado de
+  // Eventos, `_evRenderTimeline()`: una sola lista continua, un solo
+  // mensaje) -- solo si las 3 secciones combinadas quedaron sin nada.
+  var vacio = document.getElementById('tar-tablero-vacio');
+  if (vacio) {
+    if (misN + dispN + baulN === 0) {
+      var hayDatosReales = !!(_tarMisTareas.length || _tarDisponibles.length || _tarBaul.length);
+      vacio.style.display = 'block';
+      vacio.innerHTML = (hayDatosReales && _tarFiltroActivo('principal')) ?
+        '<div class="ev-lista-vacia"><span class="material-symbols-outlined">filter_alt_off</span>No hay tareas que coincidan con estos filtros.</div>' :
+        '<div class="ev-lista-vacia"><span class="material-symbols-outlined">task_alt</span>No hay tareas por ahora.</div>';
+    } else {
+      vacio.style.display = 'none';
+      vacio.innerHTML = '';
+    }
+  }
+
+  var secciones = [
+    { key: 'mis', label: 'Mis tareas', icono: 'assignment_ind', n: misN },
+    { key: 'disponibles', label: 'Tareas disponibles', icono: 'inventory_2', n: dispN },
+    { key: 'baul', label: 'El Baúl de tareas', icono: 'inventory', n: baulN }
+  ];
+  var conContenido = secciones.filter(function(s) { return s.n > 0; });
+  _tarSeccionDefault = conContenido.length ? conContenido[0].key : null;
+
+  // Mide ANTES de decidir el label -- si no hace falta selector, el label
+  // pasa a "Tareas" estático sin importar que sí exista una sección
+  // "por defecto" con contenido real (pedido explícito).
+  _tarActualizarSelectorHeader();
+
+  var label = document.getElementById('tar-secciones-label');
+  if (label) label.textContent = (_tarSelectorNecesario && conContenido.length) ? conContenido[0].label : 'Tareas';
+
+  var lista = document.getElementById('tar-secciones-lista');
+  if (lista) {
+    var resto = _tarSelectorNecesario ? conContenido.slice(1) : [];
+    lista.innerHTML = resto.map(function(s) {
+      return '<button type="button" class="tar-menu-row" onclick="_tarScrollASeccion(\'' + s.key + '\')"><span class="material-symbols-outlined">' + s.icono + '</span><span>' + s.label + '</span></button>';
+    }).join('');
+  }
+}
+
+// Alto real de la cabecera sticky de Tareas -- mismo criterio que
+// `_evAlturaStickyHeader()` (js/eventos.js), id propio (`#tar-sticky-header`
+// no `#ev-sticky-header`).
+function _tarAlturaStickyHeader() {
+  var h = document.getElementById('tar-sticky-header');
+  return h ? h.getBoundingClientRect().height : 90;
+}
+// Tolerancia antes de considerar que hace falta scroll "real" (pedido
+// explícito: "o con muy poco" margen no amerita el selector) -- ~el alto de
+// una fila de pills, no un valor arbitrario grande.
+var _TAR_SELECTOR_TOLERANCIA = 56;
+// Mide el alto REAL renderizado de `#tar-tablero` contra el alto visible
+// disponible (viewport menos cabecera sticky y nav inferior) -- NO un
+// conteo fijo de cards, para que se adapte solo a cualquier tamaño de
+// pantalla o densidad de contenido (pedido explícito, más confiable que un
+// número fijo). Togglea el chevron del selector y, si el panel de
+// secciones estaba abierto y deja de hacer falta, lo cierra.
+function _tarActualizarSelectorHeader() {
+  var pantalla = document.getElementById('s-tareas');
+  if (!pantalla || !pantalla.classList.contains('activa')) return;
+  var cont = document.getElementById('tar-tablero');
+  var chevron = document.getElementById('tar-secciones-chevron');
+  if (!cont || !chevron) return;
+  var bottomNav = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-h')) || 60;
+  var disponible = window.innerHeight - _tarAlturaStickyHeader() - bottomNav;
+  var necesario = !!_tarSeccionDefault && cont.scrollHeight > (disponible + _TAR_SELECTOR_TOLERANCIA);
+  _tarSelectorNecesario = necesario;
+  chevron.style.display = necesario ? '' : 'none';
+  if (!necesario && _tarPanelAbierto === 'secciones') _tarCerrarPanel('secciones');
+}
+// Recalcula en cada resize (rotación, ventana redimensionada en desktop) --
+// mismo criterio que otros recálculos de layout de la app disparados por
+// resize (ej. `_evCalActualizarMaxHeightExterior()`, js/eventos.js), solo
+// mientras `#s-tareas` es la pantalla activa. Debounced -- no hace falta
+// recalcular en cada frame de un resize continuo.
+var _tarResizeTimeout = null;
+window.addEventListener('resize', function() {
+  clearTimeout(_tarResizeTimeout);
+  _tarResizeTimeout = setTimeout(_tarActualizarLayoutTablero, 150);
+});
+// Salto suave a una sección desde el desplegable del selector -- mismo
+// criterio de offset que `_evScrollAFecha()` (js/eventos.js): cadena
+// `offsetTop`/`offsetParent` en vez de `getBoundingClientRect()` (inmune a
+// cualquier `transform` de animación de entrada de `.pantalla.activa`
+// todavía en curso), destino alineado contra el borde inferior de la
+// cabecera sticky.
+function _tarScrollASeccion(key) {
+  _tarCerrarPanel('secciones');
+  var id = key === 'mis' ? 'tar-mis-header' : key === 'disponibles' ? 'tar-disp-header' : 'tar-baul-wrap';
+  var el = document.getElementById(id);
+  if (!el) return;
+  var top = 0, node = el;
+  while (node) { top += node.offsetTop; node = node.offsetParent; }
+  window.scrollTo({ top: Math.max(0, top - _tarAlturaStickyHeader() - 8), behavior: 'smooth' });
+}
+
 // Bloque de acción de una card de "Mis tareas" -- factorizado aparte de
 // `_tarCardMisHtml()` (antes inline ahí) para que `_tarEnviarRevision()`
 // pueda repintar SOLO este bloque (con fade, ver más abajo) en vez de la
@@ -1465,6 +1588,12 @@ function _tarCargarPendientesValidacion() {
     _tarActualizarBadgeValidacion();
   }, function() { _tarPendientesValidacion = []; _tarActualizarBadgeValidacion(); });
 }
+// Badge de pendientes -- ver MANIFEST.md "Cambios recientes": vivía en la
+// opción "Tareas por validar" del FAB speed-dial, ahora en el ícono
+// "Administrar" del header (`#tar-btn-administrar`, admin-only, agrupa esa
+// opción + "Gestionar tareas activas") -- mismo id `#tar-validar-badge`,
+// solo cambió de contenedor padre en index.html, esta función no necesitó
+// ningún cambio.
 function _tarActualizarBadgeValidacion() {
   var badge = document.getElementById('tar-validar-badge');
   if (!badge) return;
@@ -1472,30 +1601,6 @@ function _tarActualizarBadgeValidacion() {
   badge.style.display = n > 0 ? 'flex' : 'none';
   badge.textContent = n > 9 ? '9+' : String(n);
 }
-// Speed-dial del FAB de #s-tareas -- mismo mecanismo que
-// `_evFabToggle()`/`_evFabCerrar()` (js/eventos.js), estado propio
-// (`_tarFabAbierto`, no comparte `_evFabAbierto`).
-var _tarFabAbierto = false;
-function _tarFabToggle() {
-  _tarFabAbierto = !_tarFabAbierto;
-  var menu = document.getElementById('tar-fab-menu');
-  if (menu) menu.classList.toggle('ev-fab-abierto', _tarFabAbierto);
-  var btn = document.getElementById('tar-fab-btn');
-  if (btn) btn.setAttribute('aria-expanded', String(_tarFabAbierto));
-}
-function _tarFabCerrar() {
-  if (!_tarFabAbierto) return;
-  _tarFabAbierto = false;
-  var menu = document.getElementById('tar-fab-menu');
-  if (menu) menu.classList.remove('ev-fab-abierto');
-  var btn = document.getElementById('tar-fab-btn');
-  if (btn) btn.setAttribute('aria-expanded', 'false');
-}
-document.addEventListener('click', function(e) {
-  if (!_tarFabAbierto) return;
-  var menu = document.getElementById('tar-fab-menu');
-  if (menu && !menu.contains(e.target)) _tarFabCerrar();
-});
 function _tarAbrirValidacion() {
   _tarRenderValidacion();
   ir('s-tareas-validar');

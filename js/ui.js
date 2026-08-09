@@ -502,10 +502,22 @@ function ir(id, desdeHistorial, sinTrampa) {
 
   // FAB "+ Nueva tarea" de #s-tareas -- mismo criterio que el de Eventos de
   // arriba (admin real, `_adminToken`, y solo en la pantalla raíz, no en el
-  // wizard). Un solo botón (no speed-dial, Tareas no tiene una segunda
-  // acción admin como "Editar lugares" en Eventos).
+  // wizard). Un solo botón (no speed-dial, ver "Cambios recientes" -- las
+  // otras 2 acciones admin, "Tareas por validar"/"Gestionar tareas
+  // activas", se mudaron al ícono "Administrar" del header).
   var tareasFab = document.getElementById('tar-fab-menu');
   if (tareasFab) tareasFab.style.display = (id === 's-tareas' && !!_adminToken) ? 'flex' : 'none';
+
+  // Ícono "Administrar" del header de #s-tareas (admin-only, ver "Cambios
+  // recientes") -- mismo criterio que el FAB de arriba. Si se abandona
+  // 's-tareas' con su desplegable abierto, se fuerza el cierre -- no debe
+  // quedar abierto e invisible esperando la próxima vez que se muestre.
+  var tareasAdminBtn = document.getElementById('tar-btn-administrar');
+  if (tareasAdminBtn) {
+    var _mostrarAdminBtn = id === 's-tareas' && !!_adminToken;
+    tareasAdminBtn.style.display = _mostrarAdminBtn ? '' : 'none';
+    if (!_mostrarAdminBtn && typeof _tarCerrarPanel === 'function' && _tarPanelAbierto === 'administrar') _tarCerrarPanel('administrar');
+  }
 
   _actualizarBottomNav(id);
 

@@ -3,10 +3,13 @@
    Reusa tal cual (sin redefinir) las clases ya existentes de otras
    secciones: .ev-sticky-header, .ev-header-row, .ev-header-icon-btn,
    .ev-filtro-badge, .ev-fab-menu, .ev-fab-btn, .ev-card (y variantes),
-   .ev-estado-pill (y variantes), .ev-lista-vacia, .ev-ant-cal- (y
-   variantes), .ev-cal- (y variantes), .app-nav-search, .ev-marcar-lista,
-   .ev-roster-fila, .ev-roster-nombre, .ev-roster-vacio (css/eventos.css),
-   .tp-seg, .tp-slider, .tp-opt, .fi-circle, .fi-pill (y variantes),
+   .ev-estado-pill (y variantes), .ev-lista-vacia, .ev-hoy-separador (los
+   separadores de sección de la pantalla fusionada, ver "Cambios
+   recientes"), .ev-nav-mes-label, .ev-nav-mes-chevron (selector de salto
+   rápido del header, mismo componente que el selector de mes del panel de
+   Eventos), .ev-ant-cal- (y variantes), .ev-cal- (y variantes),
+   .app-nav-search, .ev-marcar-lista, .ev-roster-fila, .ev-roster-nombre,
+   .ev-roster-vacio (css/eventos.css), .fi-circle, .fi-pill (y variantes),
    .fi-footer (y variantes), .fi-body, .fi-desc (css/reservas.css), .aj-pill,
    .aj-pills-row (css/perfil.css), .qty-stepper, .qty-btn, .qty-value,
    .admin-dash-banner (y variantes, css/admin.css), .salud-paso, .salud-prog
@@ -15,9 +18,9 @@
    Este archivo cubre únicamente lo que ninguna sección tenía todavía: la
    fila de avatares superpuestos con conteo de cupos, el layout de ícono+
    texto de los botones de acción de una card, la nota de estado bloqueado
-   (límite de tareas activas alcanzado), el centrado del pill-toggle
-   ensanchado de esta pantalla y el cursor de la fila clickeable del picker
-   de personas del wizard.
+   (límite de tareas activas alcanzado), la fila de menú de los 2
+   desplegables del header (`.tar-menu-row`, ver "Cambios recientes") y el
+   cursor de la fila clickeable del picker de personas del wizard.
    Bug real corregido acá de paso (ver MANIFEST.md "Cambios recientes"):
    este mismo comentario, en su redacción anterior, escribía varias
    referencias con comodín pegadas a la barra separadora siguiente (ej.
@@ -35,46 +38,47 @@
    línea o palabra de comentario con asterisco justo antes de una barra.
    ═══════════════════════════════════════════════════════ */
 
-/* Pill-toggle "Disponibles/Mis tareas" -- bug real corregido (ver
-   MANIFEST.md "Cambios recientes"): a diferencia de las otras 2 instancias
-   de `.tp-seg` de la app (#tp-seg de "Por clase/Mensual", #admin-filtro-seg),
-   #tar-seg lleva `style="flex:1"` inline para ocupar el resto de
-   `.ev-header-row` junto al ícono de validación -- pero `.tp-opt` (ancho de
-   contenido, `display:inline-flex`) no crecía con el contenedor, así que el
-   espacio de sobra quedaba en blanco a la derecha de la opción más angosta
-   en vez de repartirse entre las 2. Cada opción pasa a `flex:1` (mismo
-   ancho, centradas) SOLO dentro de `#tar-seg` -- las otras 2 instancias
-   siguen a ancho de contenido natural, sin cambios. */
-#tar-seg .tp-opt { flex: 1; justify-content: center; }
-/* Bug real corregido (ver MANIFEST.md "Cambios recientes" -- rediseño de
-   header, 2 íconos de acción en vez de 1): `.tp-opt` es `white-space:nowrap`
-   con `min-width:auto` (default de flex item) -- por más que `#tar-seg`
-   tenga `flex:1`, sus 2 pills nunca se achican por debajo de su ancho de
-   contenido natural (`padding:11px 22px` + ícono + texto, `.tp-opt` base,
-   css/reservas.css). Con 1 solo ícono de 44px al lado ya casi no sobraba
-   margen (293px de pills + 44px + gap, 358px reales de columna en 390px de
-   viewport); con 2 íconos (búsqueda+filtros y Archivadas, ver esa sección
-   en index.html) el header no entraba más -- confirmado con Playwright,
-   `scrollWidth` 405px contra 358px reales, el 2do ícono quedaba
-   parcialmente fuera de pantalla. Padding/ícono/gap más chicos SOLO acá
-   (las otras 2 instancias de `.tp-seg` de la app -- "Por clase/Mensual",
-   filtro admin -- siguen con los valores base, sin cambios) recuperan el
-   espacio necesario sin sacar ni el ícono ni el texto de cada pill. */
-#tar-seg .tp-opt { padding: 11px 10px; gap: 5px; font-size: 0.84rem; }
-#tar-seg .tp-opt .material-symbols-outlined { font-size: 0.92rem; }
+/* ── Header: selector de salto rápido (reemplaza el pill-toggle
+   "Disponibles/Mis tareas", ver MANIFEST.md "Cambios recientes" -- fusión
+   de Tareas en una sola pantalla con scroll). `#tar-secciones-toggle-btn`
+   reusa LITERAL `.ev-nav-mes-label`/`.ev-nav-mes-chevron` (css/eventos.css,
+   el selector "‹ Mes Año ›" del panel de mes de Eventos) -- mismo rol
+   exacto (label + chevron a la izquierda del header, togglea un panel
+   inline debajo), sin ninguna clase propia acá. Cuando el contenido de las
+   3 secciones combinadas entra en pantalla sin scroll real
+   (`_tarActualizarSelectorHeader()`, js/tareas.js), el chevron se oculta
+   (`display:none` inline por JS) y el botón queda inerte -- el label pasa
+   a "Tareas" estático, sin necesitar ninguna clase CSS nueva para ese
+   estado (menos interactividad, no un look distinto). */
 #tar-sticky-header .ev-header-row { gap: 6px; }
-/* Mismo breakpoint que ya usa `.app-nav-cta-label` (css/nav.css) para
-   ocultar contenido decorativo en pantallas angostas -- confirmado con
-   Playwright que a 360px el ajuste de arriba solo (sin este) todavía se
-   queda corto (~11px de overflow real, `#tar-btn-validar` de una sola
-   instancia ya iba justo en este ancho antes de este rediseño). El ícono
-   de cada pill es puramente decorativo (el texto "Disponibles"/"Mis
-   tareas" ya es autoexplicativo) -- se saca solo en este breakpoint, no en
-   general. */
-@media (max-width: 360px) {
-  #tar-seg .tp-opt { padding: 11px 6px; gap: 0; font-size: 0.8rem; }
-  #tar-seg .tp-opt .material-symbols-outlined { display: none; }
+/* `.ev-nav-mes-label span:first-child` trae `text-transform:capitalize`
+   (css/eventos.css, pensada para "agosto 2026" -> "Agosto 2026", un solo
+   nombre propio) -- acá el label son frases de varias palabras ("El Baúl
+   de tareas"), capitalizar cada palabra dejaría "El Baúl De Tareas"
+   (la conjunción "de" en mayúscula lee mal en español). Override puntual:
+   el texto se muestra tal cual lo arma `_tarActualizarLayoutTablero()`
+   (js/tareas.js), ya con la casing correcta. */
+#tar-secciones-label { text-transform: none; }
+
+/* Filas de los 2 menús desplegables del header -- "salto rápido" a
+   secciones (`#tar-secciones-panel`) y "Administrar" (`#tar-administrar-panel`,
+   admin-only: agrupa "Tareas por validar"/"Gestionar tareas activas" bajo
+   un solo ícono para no saturar el header de botones sueltos). Viven
+   dentro de `.ev-header-burbuja-panel` (mismo mecanismo de burbuja inline
+   que el panel de búsqueda+filtros, css/eventos.css) -- esta clase es lo
+   único que ninguna de las 2 tenía: una fila de menú simple (ícono+texto,
+   opcionalmente un badge al final), mismo criterio visual/tamaño de target
+   táctil que `.ev-roster-fila` (css/eventos.css) pero como `<button>` real
+   en vez de una fila de datos. */
+.tar-menu-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 4px;
+  border: none; border-bottom: 1px solid var(--border-light); background: transparent;
+  font-family: inherit; font-size: 0.85rem; font-weight: 700; color: var(--text);
+  text-align: left; cursor: pointer;
 }
+.tar-menu-row:last-child { border-bottom: none; }
+.tar-menu-row .material-symbols-outlined { font-size: 1.15rem; color: var(--brand); flex-shrink: 0; }
+.tar-menu-row-badge { margin-left: auto; }
 
 /* Fila clickeable del picker de "Asignar a personas" del wizard (paso
    nuevo) -- `.ev-roster-fila` (css/eventos.css) reusada tal cual, esta
