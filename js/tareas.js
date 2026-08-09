@@ -1222,6 +1222,14 @@ var _tarCrearCal = { mostrado: null };
 // mostró nada esta apertura del wizard, distingue "primera vez que
 // aparece" (fade del texto completo) de "ya estaba visible" (fade normal).
 var _tarCrearDiasAnterior = null;
+// Último valor de "límite de personas alcanzado" ya pintado en el picker
+// (ver `_tarCrearRenderPersonas()` más abajo) -- mismo criterio que
+// `_tarCrearDiasAnterior`: `null` = todavía no se pintó nada esta apertura
+// del wizard (sin fade en el primer paint), distingue de "ya estaba en tal
+// o cual estado" para animar el aviso "Ya elegiste el máximo..." SOLO en
+// la transición real (false->true / true->false), no en cada click que no
+// cambia el estado.
+var _tarCrearEnLimiteAnterior = null;
 
 function irTarCrear() {
   _tarCrearData = { titulo: '', area: null, fecha: null, notas: '', asignarA: [], modoAsignacion: null };
@@ -1252,6 +1260,7 @@ function _tarCrearResetUI() {
   var resumen = document.getElementById('tar-crear-cal-resumen'); if (resumen) resumen.textContent = '';
   var s = document.getElementById('tar-crear-personas-search'); if (s) s.value = '';
   _tarCrearDiasAnterior = null;
+  _tarCrearEnLimiteAnterior = null;
   var diasWrap = document.getElementById('tar-crear-dias-wrap'); if (diasWrap) diasWrap.style.display = 'none';
 }
 function _tarCrearMostrarPaso(idx) {
@@ -1497,11 +1506,16 @@ function _tarCrearRenderPersonas(q) {
       '<div class="fi-circle' + (sel ? ' sel' : '') + '"><span class="material-symbols-outlined">check</span></div>' +
     '</div>';
   }).join('');
-  // Fade in/out (ver MANIFEST.md "Cambios recientes") en vez de un
-  // `innerHTML=` seco -- cubre tanto la aparición/desaparición del aviso de
-  // "máximo alcanzado" como el reordenamiento de la lista debajo (ambos
-  // viven dentro del mismo repintado de `cont`, un solo fade para los 2).
-  _evFadeSwap(cont, function() { cont.innerHTML = listaHtml; });
+  // Fade in/out (ver MANIFEST.md "Cambios recientes") SOLO en la transición
+  // real de `enLimite` -- antes fadeaba en CADA click/búsqueda (cada
+  // llamada a esta función), incluso mientras el estado se mantenía igual
+  // (ya en el máximo, o todavía lejos de él), lo que hacía re-animar el
+  // aviso "Ya elegiste el máximo..." de más. `null` = todavía no se pintó
+  // nada esta apertura del wizard (primer paint, sin fade -- mismo criterio
+  // que `_tarCrearDiasAnterior`).
+  var cambioEstadoLimite = _tarCrearEnLimiteAnterior !== null && _tarCrearEnLimiteAnterior !== enLimite;
+  _evFadeSwap(cont, function() { cont.innerHTML = listaHtml; }, !cambioEstadoLimite);
+  _tarCrearEnLimiteAnterior = enLimite;
 }
 // Si el roster tardó más que la carga del wizard en llegar (mismo caso raro
 // que _evRepintarMarcarAsistSiHaceFalta(), ver esa función) -- repinta solo
