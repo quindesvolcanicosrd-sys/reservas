@@ -293,6 +293,25 @@
    2 tenía todavía: 4/5 triggers en vez de 2 (necesitan envolver en la fila,
    `.ev-filtros-row` de Eventos nunca lo necesitó con solo Lugar/Tipo) y el
    filtro de rango de puntos (sin precedente en el resto de la app). */
+/* `#tarch-busqueda-panel` (Archivadas) es el único `.ev-header-burbuja` de
+   toda la app que vive FUERA de un `.ev-sticky-header`/`#tar-sticky-header`
+   -- el resto (mes/búsqueda de Eventos, secciones/administrar/búsqueda de
+   Tareas) hereda gratis el `padding-bottom:14px` de ese wrapper como aire
+   fijo hacia el contenido de abajo, cerrada o abierta. Bug real corregido
+   (ver MANIFEST.md "Cambios recientes"): sin ese wrapper acá, la burbuja
+   quedaba pegada (0px) contra `.card` con el panel cerrado -- mismo 14px
+   fijo agregado a mano para igualar el espaciado real de `#s-tareas`
+   (14px cerrada, 14+18=32px abierta, sumado al `margin-bottom:18px` de
+   `.ev-header-burbuja.abierta`, css/eventos.css). El ancho salió de un bug
+   aparte en el mismo elemento -- un `margin:0 16px` inline en index.html
+   lo angostaba 32px contra `.card` (que solo hereda el padding de
+   `.contenedor`), eliminado sin reemplazo. Regla `.abierta` propia (no solo
+   sumar 14px sueltos): un selector por ID pesa más que `.ev-header-burbuja.abierta`
+   (2 clases), así que sin este segundo selector el `margin-bottom:14px` de
+   abajo pisaría los 18px de esa regla en vez de sumarse -- acá se fija el
+   total ya sumado (14+18=32px) para que gane por especificidad real. */
+#tarch-busqueda-panel { margin-bottom: 14px; }
+#tarch-busqueda-panel.abierta { margin-bottom: 32px; }
 #tar-filtros-row, #tarch-filtros-row { flex-wrap: wrap; }
 #tar-filtros-row .ev-filtro-trigger, #tarch-filtros-row .ev-filtro-trigger { flex: 1 1 45%; }
 /* Bug real corregido (ver MANIFEST.md "Cambios recientes" -- panel de
