@@ -155,22 +155,20 @@ function _tarPrefijo(ctx) { return ctx === 'archivadas' ? 'tarch' : 'tar'; }
 
 // `esBusqueda: true` (busqueda/busquedaArch) -- las únicas 2 con input de
 // texto propio que hay que enfocar al abrir y limpiar al cerrar (ver
-// `_tarAbrirPanel()`/`_tarCerrarPanel()` más abajo). `secciones`/
-// `administrar` (nuevos, ver "Cambios recientes" -- fusión de Tareas en una
-// sola pantalla con scroll) son simples listas de opciones, sin ese
-// costado -- comparten el mismo slot único/mecanismo de burbuja inline
+// `_tarAbrirPanel()`/`_tarCerrarPanel()` más abajo). `secciones` (selector
+// de salto rápido) es una simple lista de opciones, sin ese costado --
+// comparte el mismo slot único/mecanismo de burbuja inline
 // (`.ev-header-burbuja`) sin necesitar su propio open/close a mano.
 var _TAR_PANELES = {
   busqueda: { el: 'tar-busqueda-panel', btn: 'tar-busqueda-toggle-btn', esBusqueda: true },
   busquedaArch: { el: 'tarch-busqueda-panel', btn: 'tarch-busqueda-toggle-btn', esBusqueda: true },
-  secciones: { el: 'tar-secciones-panel', btn: 'tar-secciones-toggle-btn' },
-  administrar: { el: 'tar-administrar-panel', btn: 'tar-btn-administrar' }
+  secciones: { el: 'tar-secciones-panel', btn: 'tar-secciones-toggle-btn' }
 };
-// Un solo slot alcanza para las 4 (2 pantallas -- #s-tareas y
+// Un solo slot alcanza para las 3 (2 pantallas -- #s-tareas y
 // #s-tareas-archivadas -- nunca están visibles a la vez, y dentro de
-// #s-tareas las 3 burbujas propias -- búsqueda/secciones/administrar --
-// nunca tienen sentido abiertas juntas), así que nunca hay 2 a la vez.
-var _tarPanelAbierto = null; // 'busqueda' | 'busquedaArch' | 'secciones' | 'administrar'
+// #s-tareas las 2 burbujas propias -- búsqueda/secciones -- nunca tienen
+// sentido abiertas juntas), así que nunca hay 2 a la vez.
+var _tarPanelAbierto = null; // 'busqueda' | 'busquedaArch' | 'secciones'
 var _tarFiltroBurbujaAbierta = null; // 'area' | 'personas' | 'puntos' | 'mes' | 'estado'
 
 function _tarCtxDePanel(tag) { return tag === 'busquedaArch' ? 'archivadas' : 'principal'; }
@@ -240,7 +238,6 @@ function _tarToggleSecciones() {
   if (!_tarSelectorNecesario) return;
   _tarTogglePanel('secciones');
 }
-function _tarToggleAdministrar() { _tarTogglePanel('administrar'); }
 
 // Mismo criterio que `_evNormalizarBusqueda()` (js/eventos.js) -- minúsculas
 // + sin acentos, para que "Diaz"/"díaz" o "logistica"/"Logística" matcheen.
@@ -551,18 +548,38 @@ function _tarCargarTodo() {
   var miCarga = ++_tarCargaId;
   var contDisp = document.getElementById('tar-lista-disponibles');
   var contMis = document.getElementById('tar-lista-mis');
-  // Los 2 encabezados de sección se muestran optimistamente mientras carga
+  // Los encabezados de sección se muestran optimistamente mientras carga
   // (evita el hueco visual de cards-esqueleto sin ningún título arriba) --
-  // `_tarRenderDisponibles()`/`_tarRenderMisTareas()` los corrigen (ocultan
-  // si la sección terminó realmente vacía) apenas resuelve cada llamada.
+  // `_tarRenderDisponibles()`/`_tarRenderMisTareas()`/`_tarRenderValidacion()`/
+  // `_tarRenderGestionar()` los corrigen (ocultan si la sección terminó
+  // realmente vacía) apenas resuelve cada llamada. Las 2 admin (Validar/
+  // Gestión) solo se muestran optimistas si la cuenta YA es admin
+  // (`_adminToken`, conocido sin red -- restaurado desde localStorage al
+  // cargar la app) -- para una cuenta normal quedan ocultas de entrada, sin
+  // parpadeo de skeleton-que-nunca-se-llena.
   var misHeader = document.getElementById('tar-mis-header');
   var dispHeader = document.getElementById('tar-disp-header');
+  var validarHeader = document.getElementById('tar-validar-header');
+  var gestionarHeader = document.getElementById('tar-gestionar-header');
+  var contValidar = document.getElementById('tar-lista-validar');
+  var contGestionar = document.getElementById('tar-lista-gestionar');
   var vacio = document.getElementById('tar-tablero-vacio');
   if (misHeader) misHeader.style.display = '';
   if (dispHeader) dispHeader.style.display = '';
   if (vacio) { vacio.style.display = 'none'; vacio.innerHTML = ''; }
   if (contDisp) contDisp.innerHTML = _tarSkeletonHtml(2);
   if (contMis) contMis.innerHTML = _tarSkeletonHtml(2);
+  if (_adminToken) {
+    if (validarHeader) validarHeader.style.display = '';
+    if (gestionarHeader) gestionarHeader.style.display = '';
+    if (contValidar) contValidar.innerHTML = _tarSkeletonHtml(1);
+    if (contGestionar) contGestionar.innerHTML = _tarSkeletonHtml(1);
+  } else {
+    if (validarHeader) validarHeader.style.display = 'none';
+    if (gestionarHeader) gestionarHeader.style.display = 'none';
+    if (contValidar) contValidar.innerHTML = '';
+    if (contGestionar) contGestionar.innerHTML = '';
+  }
 
   var listo = { disponibles: false, config: false, misTareas: false };
   var disponiblesOk = false;
@@ -609,6 +626,7 @@ function _tarCargarTodo() {
   });
 
   _tarCargarPendientesValidacion();
+  _tarCargarGestionar();
 }
 
 function _tarSkeletonHtml(n) {
@@ -853,19 +871,31 @@ function _tarRenderMisTareas() {
    está efectivamente pintado en ESTE instante, sin importar cuál de las 2
    funciones disparó la reconciliación ni el orden en que resolvieron las
    3 llamadas de `_tarCargarTodo()`. ────────────────────────────────────── */
+// Reconciliador de layout de la pantalla fusionada -- ver MANIFEST.md
+// "Cambios recientes". Llamado al final de `_tarRenderDisponibles()`/
+// `_tarRenderMisTareas()`/`_tarRenderValidacion()`/`_tarRenderGestionar()`
+// (las 4 funciones que pueden cambiar el contenido de alguna de las 5
+// secciones) -- no repinta ningún card, solo cuenta lo YA pintado en el DOM
+// para reflejar siempre el estado actual sin importar cuál de las 4
+// disparó la reconciliación ni el orden de resolución de las llamadas
+// paralelas de `_tarCargarTodo()`.
 function _tarActualizarLayoutTablero() {
   var misN = document.querySelectorAll('#tar-lista-mis > .ev-card').length;
   var dispN = document.querySelectorAll('#tar-lista-disponibles > .ev-card').length;
   var baulWrap = document.getElementById('tar-baul-wrap');
   var baulN = (baulWrap && baulWrap.style.display !== 'none') ? document.querySelectorAll('#tar-lista-baul > .ev-card').length : 0;
+  var validarN = document.querySelectorAll('#tar-lista-validar > .admin-banner-res-row').length;
+  var gestN = document.querySelectorAll('#tar-lista-gestionar > .ev-card').length;
 
   // Mensaje de vacío único (mismo criterio que el timeline fusionado de
   // Eventos, `_evRenderTimeline()`: una sola lista continua, un solo
-  // mensaje) -- solo si las 3 secciones combinadas quedaron sin nada.
+  // mensaje) -- solo si las 5 secciones combinadas quedaron sin nada (las 2
+  // admin siempre cuentan 0 para un usuario normal, así que esto no cambia
+  // nada para esa cuenta -- ver `_tarRenderValidacion()`/`_tarRenderGestionar()`).
   var vacio = document.getElementById('tar-tablero-vacio');
   if (vacio) {
-    if (misN + dispN + baulN === 0) {
-      var hayDatosReales = !!(_tarMisTareas.length || _tarDisponibles.length || _tarBaul.length);
+    if (misN + dispN + baulN + validarN + gestN === 0) {
+      var hayDatosReales = !!(_tarMisTareas.length || _tarDisponibles.length || _tarBaul.length || _tarPendientesValidacion.length || _tarActivas.length);
       vacio.style.display = 'block';
       vacio.innerHTML = (hayDatosReales && _tarFiltroActivo('principal')) ?
         '<div class="ev-lista-vacia"><span class="material-symbols-outlined">filter_alt_off</span>No hay tareas que coincidan con estos filtros.</div>' :
@@ -876,25 +906,40 @@ function _tarActualizarLayoutTablero() {
     }
   }
 
+  // Orden fijo de las 5 -- las 2 últimas (admin) quedan naturalmente al
+  // final de `conContenido` sin ningún caso especial, por venir últimas acá.
   var secciones = [
     { key: 'mis', label: 'Mis tareas', icono: 'assignment_ind', n: misN },
     { key: 'disponibles', label: 'Tareas disponibles', icono: 'inventory_2', n: dispN },
-    { key: 'baul', label: 'El Baúl de tareas', icono: 'inventory', n: baulN }
+    { key: 'baul', label: 'El Baúl de tareas', icono: 'inventory', n: baulN },
+    { key: 'validar', label: 'Tareas por validar' + (validarN ? ' (' + validarN + ')' : ''), icono: 'fact_check', n: validarN },
+    { key: 'gestionar', label: 'Gestión de tareas activas', icono: 'checklist', n: gestN }
   ];
   var conContenido = secciones.filter(function(s) { return s.n > 0; });
-  _tarSeccionDefault = conContenido.length ? conContenido[0].key : null;
+  // El label por defecto SIEMPRE sale de las primeras 3 (Mis tareas/
+  // Disponibles/Baúl) -- NUNCA una sección admin, pedido explícito. Si
+  // ninguna de esas 3 tiene contenido (caso raro: admin sin nada propio
+  // pero con validaciones/gestión pendientes), no hay "default" -- el label
+  // cae al estático "Tareas" más abajo, aunque eso deje el selector inerte
+  // incluso si las secciones admin necesitarían scroll (esas 2 quedan
+  // igual visibles/alcanzables scrolleando a mano, arrancan cerca del tope
+  // en ese escenario).
+  var primerasTresConContenido = secciones.slice(0, 3).filter(function(s) { return s.n > 0; });
+  _tarSeccionDefault = primerasTresConContenido.length ? primerasTresConContenido[0].key : null;
 
   // Mide ANTES de decidir el label -- si no hace falta selector, el label
   // pasa a "Tareas" estático sin importar que sí exista una sección
   // "por defecto" con contenido real (pedido explícito).
   _tarActualizarSelectorHeader();
 
+  var seccionDefaultObj = null;
+  for (var i = 0; i < secciones.length; i++) { if (secciones[i].key === _tarSeccionDefault) { seccionDefaultObj = secciones[i]; break; } }
   var label = document.getElementById('tar-secciones-label');
-  if (label) label.textContent = (_tarSelectorNecesario && conContenido.length) ? conContenido[0].label : 'Tareas';
+  if (label) label.textContent = (_tarSelectorNecesario && seccionDefaultObj) ? seccionDefaultObj.label : 'Tareas';
 
   var lista = document.getElementById('tar-secciones-lista');
   if (lista) {
-    var resto = _tarSelectorNecesario ? conContenido.slice(1) : [];
+    var resto = _tarSelectorNecesario ? conContenido.filter(function(s) { return s.key !== _tarSeccionDefault; }) : [];
     lista.innerHTML = resto.map(function(s) {
       return '<button type="button" class="tar-menu-row" onclick="_tarScrollASeccion(\'' + s.key + '\')"><span class="material-symbols-outlined">' + s.icono + '</span><span>' + s.label + '</span></button>';
     }).join('');
@@ -947,10 +992,10 @@ window.addEventListener('resize', function() {
 // cualquier `transform` de animación de entrada de `.pantalla.activa`
 // todavía en curso), destino alineado contra el borde inferior de la
 // cabecera sticky.
+var _TAR_SECCION_ID = { mis: 'tar-mis-header', disponibles: 'tar-disp-header', baul: 'tar-baul-wrap', validar: 'tar-validar-header', gestionar: 'tar-gestionar-header' };
 function _tarScrollASeccion(key) {
   _tarCerrarPanel('secciones');
-  var id = key === 'mis' ? 'tar-mis-header' : key === 'disponibles' ? 'tar-disp-header' : 'tar-baul-wrap';
-  var el = document.getElementById(id);
+  var el = document.getElementById(_TAR_SECCION_ID[key]);
   if (!el) return;
   var top = 0, node = el;
   while (node) { top += node.offsetTop; node = node.offsetParent; }
@@ -1580,56 +1625,34 @@ function _tarCrearGuardar() {
   });
 }
 
-/* ── Panel de validación (admin) ───────────────────────────────────────
-   Ícono con badge en el header de Tareas (mismo criterio que el badge de
-   reservas pendientes de Mi Liga, `_adminRenderBannerPendientes()`,
-   js/admin.js) que abre una SUBSECCIÓN de página completa (`#s-tareas-validar`,
-   mismo patrón `.pantalla`+`ir()` que el wizard "Nueva tarea" -- ver
-   MANIFEST.md "Cambios recientes": un bottom sheet no escala bien con
-   muchas tareas pendientes a la vez, más difícil de scrollear/leer que una
-   pantalla completa) con las filas .admin-banner-res-row ya existentes
-   (css/admin.css) -- Aprobar/Rechazar, Rechazar revela un textarea corto
-   antes de confirmar. */
-// "Tareas por validar" -- antes un ícono propio en `.ev-header-row` (visible
-// siempre, con su propio gating por `_adminToken`), ahora una opción del FAB
-// de admin (`#tar-fab-menu`, ver MANIFEST.md "Cambios recientes") -- el FAB
-// entero ya solo se muestra con `_adminToken` (`ir()`/js/ui.js), así que acá
-// no hace falta repetir ese chequeo por separado: solo el número del badge.
+/* ── "Tareas por validar" (admin) -- sección del tablero fusionado ───────
+   Antes ícono con badge propio + subpantalla de página completa
+   (`#s-tareas-validar`); ahora una sección MÁS de `#tar-tablero` (ver
+   MANIFEST.md "Cambios recientes" -- fusión de las 2 secciones admin), con
+   el mismo encabezado+divisor (`.ev-hoy-separador`) que "Mis tareas"/
+   "Tareas disponibles" y el mismo criterio "se oculta entera si no tiene
+   contenido". Filas `.admin-banner-res-row` ya existentes (css/admin.css)
+   -- Aprobar/Rechazar, Rechazar revela un textarea corto antes de
+   confirmar. */
 function _tarCargarPendientesValidacion() {
-  if (!_adminToken) { _tarPendientesValidacion = []; _tarActualizarBadgeValidacion(); return; }
+  if (!_adminToken) { _tarPendientesValidacion = []; _tarRenderValidacion(); return; }
   adminApi({ action: 'adminGetTareasPendientesValidacion' }, function(res) {
     _tarPendientesValidacion = res || [];
-    _tarActualizarBadgeValidacion();
-  }, function() { _tarPendientesValidacion = []; _tarActualizarBadgeValidacion(); });
+    _tarRenderValidacion();
+  }, function() { _tarPendientesValidacion = []; _tarRenderValidacion(); });
 }
-// Badge de pendientes -- ver MANIFEST.md "Cambios recientes": vivía en la
-// opción "Tareas por validar" del FAB speed-dial, ahora en el ícono
-// "Administrar" del header (`#tar-btn-administrar`, admin-only, agrupa esa
-// opción + "Gestionar tareas activas") -- mismo id `#tar-validar-badge`,
-// solo cambió de contenedor padre en index.html, esta función no necesitó
-// ningún cambio.
-function _tarActualizarBadgeValidacion() {
-  var badge = document.getElementById('tar-validar-badge');
-  if (!badge) return;
-  var n = _tarPendientesValidacion.length;
-  badge.style.display = n > 0 ? 'flex' : 'none';
-  badge.textContent = n > 9 ? '9+' : String(n);
-}
-function _tarAbrirValidacion() {
-  _tarRenderValidacion();
-  ir('s-tareas-validar');
-}
-function _tarCerrarValidacion() {
-  ir('s-tareas');
-}
+// Ya NO pinta ningún mensaje de "sin tareas por validar" propio -- mismo
+// criterio que `_tarRenderDisponibles()`/`_tarRenderMisTareas()`: solo
+// oculta `#tar-validar-header` entero (header + lista) si quedó vacía o si
+// la cuenta no es admin. Termina llamando a `_tarActualizarLayoutTablero()`
+// -- mismo reconciliador que las otras secciones.
 function _tarRenderValidacion() {
-  var cont = document.getElementById('tar-validar-lista');
+  var cont = document.getElementById('tar-lista-validar');
+  var header = document.getElementById('tar-validar-header');
   if (!cont) return;
-  if (!_tarPendientesValidacion.length) {
-    cont.innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--muted);font-size:0.85rem;">No hay tareas por validar.</div>';
-    return;
-  }
-  cont.innerHTML = _tarPendientesValidacion.map(function(p) {
+  var lista = _adminToken ? _tarPendientesValidacion : [];
+  if (header) header.style.display = lista.length ? '' : 'none';
+  cont.innerHTML = lista.map(function(p) {
     var t = p.tarea || {};
     return '<div class="admin-banner-res-row" id="tar-val-row-' + p.idAsignacion + '" style="flex-wrap:wrap;">' +
       '<div class="admin-banner-res-info">' +
@@ -1646,6 +1669,7 @@ function _tarRenderValidacion() {
       '</div>' +
     '</div>';
   }).join('');
+  _tarActualizarLayoutTablero();
 }
 function _tarValidarMostrarRechazo(idAsignacion) {
   var wrap = document.getElementById('tar-val-rechazo-' + idAsignacion);
@@ -1674,8 +1698,6 @@ function _tarValidarEnviar(idAsignacion, accion, nota) {
     }
     _tarPendientesValidacion = _tarPendientesValidacion.filter(function(p) { return String(p.idAsignacion) !== String(idAsignacion); });
     _tarRenderValidacion();
-    _tarActualizarBadgeValidacion();
-    if (!_tarPendientesValidacion.length) _tarCerrarValidacion();
     _tarCargarTodo();
   }, function(e) {
     if (row) row.querySelectorAll('button').forEach(function(b) { b.disabled = false; });
@@ -1683,24 +1705,26 @@ function _tarValidarEnviar(idAsignacion, accion, nota) {
   });
 }
 
-/* ── "Gestionar tareas activas" (admin) -- Nuevo, ver MANIFEST.md "Cambios
-   recientes". A diferencia de "Disponibles" (solo tareas con cupos
-   libres, sin mostrar las ya tomadas) y de "Tareas por validar" (solo
-   asignaciones `pendiente_revision`), esta vista trae TODAS las tareas
-   activas con TODAS sus asignaciones -- `adminGetTareasActivas`, sin
-   params -- resuelve el caso de una tarea asignada directo al crearla
-   (queda en `en_progreso` con gente en estado `iniciada`) que hoy no
-   aparece en ningún lado hasta que la propia persona la manda a revisión.
-   Aprobar/Rechazar quedan disponibles para CUALQUIER asignación activa
-   (`iniciada` O `pendiente_revision`), no solo `pendiente_revision` -- el
-   admin puede validar directo sin esperar. Mismo patrón .pantalla+ir() que
-   Validar/Archivadas; cada tarea es una card (mismo esqueleto que el resto
-   de la sección, ícono+pills+`_tarIconoBoxHtml()`/`_tarPillsRowHtml()`)
-   con sus asignaciones anidadas debajo como filas `.admin-banner-res-row`
-   (mismo componente que "Tareas por validar", ver esa sección arriba) --
-   acá se necesita agrupar por tarea (a diferencia de la lista plana de
-   "Tareas por validar") para no repetir el ícono/pills de la tarea una vez
-   por persona asignada.
+/* ── "Gestión de tareas activas" (admin) -- sección del tablero fusionado
+   (ver MANIFEST.md "Cambios recientes" -- antes subpantalla propia,
+   `#s-tareas-gestionar`, ahora la última sección de `#tar-tablero`, mismo
+   criterio "se oculta entera si no tiene contenido" que el resto). A
+   diferencia de "Disponibles" (solo tareas con cupos libres, sin mostrar
+   las ya tomadas) y de "Tareas por validar" (solo asignaciones
+   `pendiente_revision`), esta vista trae TODAS las tareas activas con
+   TODAS sus asignaciones -- `adminGetTareasActivas`, sin params -- resuelve
+   el caso de una tarea asignada directo al crearla (queda en `en_progreso`
+   con gente en estado `iniciada`) que hoy no aparece en ningún lado hasta
+   que la propia persona la manda a revisión. Aprobar/Rechazar quedan
+   disponibles para CUALQUIER asignación activa (`iniciada` O
+   `pendiente_revision`), no solo `pendiente_revision` -- el admin puede
+   validar directo sin esperar. Cada tarea es una card (mismo esqueleto que
+   el resto de la sección, ícono+pills+`_tarIconoBoxHtml()`/
+   `_tarPillsRowHtml()`) con sus asignaciones anidadas debajo como filas
+   `.admin-banner-res-row` (mismo componente que "Tareas por validar", ver
+   esa sección arriba) -- acá se necesita agrupar por tarea (a diferencia
+   de la lista plana de "Tareas por validar") para no repetir el
+   ícono/pills de la tarea una vez por persona asignada.
    Asunción marcada a propósito (sin contrato explícito del shape de
    `adminGetTareasActivas`, endpoint nuevo): cada tarea trae su lista de
    asignaciones en `t.asignaciones`, con fallback a `t.asignados` (mismo
@@ -1711,17 +1735,16 @@ function _tarValidarEnviar(idAsignacion, accion, nota) {
    el punto exacto a ajustar. */
 var _tarActivas = [];
 var _tarActivasCargaId = 0;
-function irTarGestionar() {
-  ir('s-tareas-gestionar');
-  _tarCargarGestionar();
-}
-function _tarCerrarGestionar() { ir('s-tareas'); }
 function _tarAsignacionesDe(t) { return t.asignaciones || t.asignados || []; }
 function _tarNombreAsignacion(a) { return a.nombreDerby || a.nombreUsuario || a.nombre || ''; }
+// Cargada automáticamente por `_tarCargarTodo()` en cada visita a la
+// sección (mismo criterio que `_tarCargarPendientesValidacion()`), no solo
+// bajo demanda como cuando era una subpantalla propia -- gateada acá
+// (`!_adminToken` -> lista vacía sin red) por el mismo motivo que esa
+// función.
 function _tarCargarGestionar() {
+  if (!_adminToken) { _tarActivas = []; _tarRenderGestionar(); return; }
   var miCarga = ++_tarActivasCargaId;
-  var cont = document.getElementById('tar-gestionar-lista');
-  if (cont) cont.innerHTML = _tarSkeletonHtml(3);
   adminApi({ action: 'adminGetTareasActivas' }, function(res) {
     if (miCarga !== _tarActivasCargaId) return;
     _tarActivas = res || [];
@@ -1729,20 +1752,26 @@ function _tarCargarGestionar() {
   }, function(e) {
     if (miCarga !== _tarActivasCargaId) return;
     if (typeof console !== 'undefined' && console.error) console.error('adminGetTareasActivas falló:', e);
-    var c = document.getElementById('tar-gestionar-lista');
+    var c = document.getElementById('tar-lista-gestionar');
+    var header = document.getElementById('tar-gestionar-header');
+    if (header) header.style.display = '';
     if (c) c.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">error_outline</span>No se pudieron cargar las tareas activas.' +
       '<button type="button" class="btn-text-simple tar-reintentar-btn" onclick="_tarCargarGestionar()"><span class="material-symbols-outlined">refresh</span>Reintentar</button>' +
       '</div>';
   });
 }
+// Ya NO pinta ningún mensaje de "sin tareas activas" propio -- mismo
+// criterio que el resto de las secciones: solo oculta `#tar-gestionar-header`
+// entero si quedó vacía o si la cuenta no es admin. Termina llamando a
+// `_tarActualizarLayoutTablero()`.
 function _tarRenderGestionar() {
-  var cont = document.getElementById('tar-gestionar-lista');
+  var cont = document.getElementById('tar-lista-gestionar');
+  var header = document.getElementById('tar-gestionar-header');
   if (!cont) return;
-  if (!_tarActivas.length) {
-    cont.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">task_alt</span>No hay tareas activas por ahora.</div>';
-    return;
-  }
-  cont.innerHTML = _tarActivas.map(_tarGestionarCardHtml).join('');
+  var activas = _adminToken ? _tarActivas : [];
+  if (header) header.style.display = activas.length ? '' : 'none';
+  cont.innerHTML = activas.map(_tarGestionarCardHtml).join('');
+  _tarActualizarLayoutTablero();
 }
 // Fila de una asignación individual dentro de la card de su tarea --
 // Aprobar/Rechazar visibles para `iniciada`/`pendiente_revision` (pedido
@@ -1801,10 +1830,10 @@ function _tarGestionarConfirmarRechazo(idAsignacion) {
 // Mismo endpoint/contrato que `_tarValidarEnviar()` (`adminValidarTarea`,
 // GET+adminToken) -- reimplementado acá en vez de compartir función porque
 // esta vista recarga/repinta agrupado por tarea (`_tarCargarGestionar()`),
-// no la lista plana de `_tarPendientesValidacion`. Sincroniza de paso el
-// badge de "Tareas por validar" (`_tarCargarPendientesValidacion()`) --
-// aprobar/rechazar acá también puede sacar asignaciones de esa lista si
-// estaban en `pendiente_revision`.
+// no la lista plana de `_tarPendientesValidacion`. Sincroniza de paso esa
+// otra sección (`_tarCargarPendientesValidacion()`) -- aprobar/rechazar acá
+// también puede sacar asignaciones de esa lista si estaban en
+// `pendiente_revision`.
 function _tarGestionarEnviar(idAsignacion, accion, nota) {
   var row = document.getElementById('tar-gest-row-' + idAsignacion);
   if (row) row.querySelectorAll('button').forEach(function(b) { b.disabled = true; });

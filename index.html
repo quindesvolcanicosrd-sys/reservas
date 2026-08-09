@@ -107,11 +107,11 @@
     <span class="material-symbols-outlined">arrow_back</span>
   </button>
   <div class="app-nav-section" id="s4-titulo" style="display:none;"></div>
-  <!-- "Realiza una reserva" -- a diferencia de #s4-titulo (arriba, mutuamente
+  <!-- "Nueva reserva" -- a diferencia de #s4-titulo (arriba, mutuamente
        excluyente con el selector), este SÍ convive con #s4-nav-seg-wrap: solo
        aparece cuando además se llegó por el auto-redirect de "sin reservas"
        (_s4ActualizarNav(), js/reservas.js -- ver _s4VacioAutoRedirect). -->
-  <div class="app-nav-section" id="s4-titulo-vacio" style="display:none;">Realiza una reserva</div>
+  <div class="app-nav-section" id="s4-titulo-vacio" style="display:none;">Nueva reserva</div>
   <div class="s4-nav-seg-wrap" id="s4-nav-seg-wrap" style="display:none;">
     <div class="tp-seg" id="tp-seg">
       <div class="tp-slider" id="tp-slider"></div>
@@ -953,12 +953,13 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
          `.ev-nav-mes-label`/`.ev-nav-mes-chevron` de Eventos -- mismo rol
          exacto: label + chevron que despliega un panel inline, ver
          `_tarToggleSecciones()`/js/tareas.js). Búsqueda/filtros y Archivadas
-         siguen en el header tal cual estaban. "Tareas por validar" (con
-         badge) y "Gestionar tareas activas" (antes en el FAB, ver más abajo)
-         se mudan acá agrupadas bajo un solo ícono "Administrar"
-         (`#tar-btn-administrar`, admin-only) para no saturar el header de
-         íconos sueltos -- el FAB queda solo con "Nueva tarea", ya no
-         necesita ser un speed-dial. -->
+         siguen en el header tal cual estaban. "Tareas por validar"/
+         "Gestionar tareas activas" (ver "Cambios recientes" -- antes
+         agrupadas bajo un ícono "Administrar" propio, admin-only) pasan a
+         ser 2 secciones MÁS del tablero fusionado de abajo, al final --
+         `#tar-btn-administrar`/`#tar-administrar-panel` eliminados, el
+         selector de salto rápido ya cubre saltar a ellas igual que a las
+         otras 3. -->
     <div class="ev-sticky-header" id="tar-sticky-header">
       <div class="ev-header-row">
         <button type="button" class="ev-nav-mes-label" id="tar-secciones-toggle-btn" onclick="_tarToggleSecciones()">
@@ -972,38 +973,20 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <button type="button" class="app-nav-icon-btn ev-header-icon-btn" onclick="irTarArchivadas()" title="Archivadas" aria-label="Archivadas" style="flex-shrink:0;">
           <span class="material-symbols-outlined">archive</span>
         </button>
-        <button type="button" class="app-nav-icon-btn ev-header-icon-btn" id="tar-btn-administrar" onclick="_tarToggleAdministrar()" title="Administrar" aria-label="Administrar" style="flex-shrink:0;display:none;position:relative;">
-          <span class="material-symbols-outlined">admin_panel_settings</span>
-          <span class="ev-filtro-badge" id="tar-validar-badge" style="display:none;"></span>
-        </button>
       </div>
 
-      <!-- Selector de salto rápido -- lista de las OTRAS secciones (de las 3
-           -- Mis tareas/Tareas disponibles/El Baúl de tareas) que tienen
-           contenido, excluida la que ya se muestra como label por defecto.
-           Repintado por `_tarActualizarLayoutTablero()` cada vez que cambia
-           el contenido (`.tar-menu-row`, ver css/tareas.css). Oculto por
-           completo (junto con el chevron del botón, ver arriba) cuando el
-           contenido de las 3 secciones combinadas ya entra en pantalla sin
-           scroll real -- ver `_tarActualizarSelectorHeader()`/js/tareas.js. -->
+      <!-- Selector de salto rápido -- lista las OTRAS secciones (de las 5 --
+           Mis tareas/Tareas disponibles/El Baúl de tareas/Tareas por validar/
+           Gestión de tareas activas, las últimas 2 admin-only) que tienen
+           contenido, excluida la que ya se muestra como label por defecto
+           (SIEMPRE de las primeras 3, nunca una admin -- ver "Cambios
+           recientes"). Repintado por `_tarActualizarLayoutTablero()` cada
+           vez que cambia el contenido (`.tar-menu-row`, ver css/tareas.css).
+           Oculto por completo (junto con el chevron del botón, ver arriba)
+           cuando el contenido combinado ya entra en pantalla sin scroll
+           real -- ver `_tarActualizarSelectorHeader()`/js/tareas.js. -->
       <div class="ev-header-burbuja" id="tar-secciones-panel">
         <div class="ev-header-burbuja-panel" id="tar-secciones-lista"></div>
-      </div>
-
-      <!-- "Administrar" (admin-only) -- agrupa "Tareas por validar" (con
-           badge de pendientes, `_tarActualizarBadgeValidacion()`) y
-           "Gestionar tareas activas", antes 2 opciones del FAB speed-dial. -->
-      <div class="ev-header-burbuja" id="tar-administrar-panel">
-        <div class="ev-header-burbuja-panel">
-          <button type="button" class="tar-menu-row" onclick="_tarCerrarPanel('administrar'); _tarAbrirValidacion();">
-            <span class="material-symbols-outlined">fact_check</span>
-            <span>Tareas por validar</span>
-          </button>
-          <button type="button" class="tar-menu-row" onclick="_tarCerrarPanel('administrar'); irTarGestionar();">
-            <span class="material-symbols-outlined">checklist</span>
-            <span>Gestionar tareas activas</span>
-          </button>
-        </div>
       </div>
 
       <!-- Panel de búsqueda + filtros de Disponibles/Mis tareas/Baúl (las 3
@@ -1082,13 +1065,16 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
     <div class="card" style="text-align:left;">
       <!-- Pantalla fusionada de una sola vista con scroll (ver MANIFEST.md
-           "Cambios recientes") -- 3 secciones apiladas en orden fijo (Mis
-           tareas / Tareas disponibles / El Baúl de tareas), cada una con su
-           propio encabezado+divisor (`.ev-hoy-separador`, mismo patrón
-           visual que los separadores de fecha del timeline de Eventos) --
-           salvo el Baúl, que conserva su propio acordeón colapsable tal
-           cual estaba. Una sección sin contenido se oculta ENTERA (header +
-           lista), mismo criterio que ya usaba el Baúl -- ver
+           "Cambios recientes") -- 5 secciones apiladas en orden fijo (Mis
+           tareas / Tareas disponibles / El Baúl de tareas / Tareas por
+           validar / Gestión de tareas activas -- las últimas 2 admin-only,
+           ver "Cambios recientes": antes vivían en subpantallas propias
+           detrás de un ícono "Administrar"), cada una con su propio
+           encabezado+divisor (`.ev-hoy-separador`, mismo patrón visual que
+           los separadores de fecha del timeline de Eventos) -- salvo el
+           Baúl, que conserva su propio acordeón colapsable tal cual estaba.
+           Una sección sin contenido se oculta ENTERA (header + lista),
+           mismo criterio que ya usaba el Baúl -- ver
            `_tarActualizarLayoutTablero()`/js/tareas.js. -->
       <div id="tar-tablero">
         <div class="ev-hoy-separador" id="tar-mis-header" style="display:none;"><span>MIS TAREAS</span></div>
@@ -1099,8 +1085,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
         <!-- Acordeón "El Baúl de tareas (N)" -- mismo componente visual que
              los acordeones de Mi Liga (.admin-dash-banner*, css/admin.css),
-             sin cambios -- siempre al final, con o sin las otras 2
-             secciones presentes. -->
+             sin cambios -- siempre al final de las 3 primeras secciones,
+             antes de las 2 admin de abajo. -->
         <div id="tar-baul-wrap" style="display:none;margin-top:14px;">
           <div class="admin-dash-banner">
             <div class="admin-dash-banner-header" onclick="_tarToggleBaul()">
@@ -1114,10 +1100,26 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           </div>
         </div>
 
+        <!-- "Tareas por validar" (admin-only, ver "Cambios recientes") --
+             antes subpantalla propia (`#s-tareas-validar`), mismo contenido/
+             acciones (filas `.admin-banner-res-row`, Aprobar/Rechazar vía
+             `adminValidarTarea`) ahora inline acá -- ver
+             `_tarRenderValidacion()`/js/tareas.js. -->
+        <div class="ev-hoy-separador" id="tar-validar-header" style="display:none;"><span>TAREAS POR VALIDAR</span></div>
+        <div id="tar-lista-validar"></div>
+
+        <!-- "Gestión de tareas activas" (admin-only, ver "Cambios
+             recientes") -- antes subpantalla propia (`#s-tareas-gestionar`),
+             mismo contenido/acciones (cards agrupadas por tarea con sus
+             asignaciones anidadas) ahora inline acá, siempre al final -- ver
+             `_tarRenderGestionar()`/js/tareas.js. -->
+        <div class="ev-hoy-separador" id="tar-gestionar-header" style="display:none;"><span>GESTIÓN DE TAREAS ACTIVAS</span></div>
+        <div id="tar-lista-gestionar"></div>
+
         <!-- Estado vacío ÚNICO (mismo criterio que el timeline fusionado de
              Eventos, `_evRenderTimeline()`: una sola lista continua, un
              solo mensaje de vacío -- no un mensaje repetido por sección) --
-             solo visible cuando las 3 secciones combinadas quedan sin
+             solo visible cuando las 5 secciones combinadas quedan sin
              contenido. -->
         <div id="tar-tablero-vacio" style="display:none;"></div>
       </div>
@@ -1268,57 +1270,15 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <button class="btn btn-primary" id="tar-crear-btn-footer" disabled>Continuar</button>
   </div>
 
-  <!-- "Tareas por validar" (admin) -- subsección de página completa, mismo
-       mecanismo que el wizard de arriba (.pantalla + ir(), nav propia
-       .app-nav.app-nav-sticky) en vez de bottom sheet (ver MANIFEST.md
-       "Cambios recientes" -- un bottom sheet no escala bien con muchas
-       tareas pendientes a la vez). Filas .admin-banner-res-row reusadas tal
-       cual del banner de reservas pendientes de Mi Liga (css/admin.css), con
-       Aprobar/Rechazar; Rechazar revela un textarea corto inline antes de
-       confirmar. -->
-  <div class="pantalla" id="s-tareas-validar">
-    <div class="app-nav app-nav-sticky" id="tar-validar-header">
-      <button class="app-nav-back" onclick="_tarCerrarValidacion()">
-        <span class="material-symbols-outlined">arrow_back</span>
-      </button>
-      <span class="app-nav-title">Tareas por validar</span>
-      <div style="width:40px;flex-shrink:0;"></div>
-    </div>
-    <div class="card" style="text-align:left;">
-      <div id="tar-validar-lista"></div>
-      <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
-    </div>
-  </div>
-
-  <!-- "Gestionar tareas activas" (admin, nueva -- ver MANIFEST.md "Cambios
-       recientes"): a diferencia de "Disponibles" (solo tareas con cupos
-       libres) y "Tareas por validar" (solo pendiente_revision), acá se
-       listan TODAS las tareas activas con TODAS sus asignaciones
-       (adminGetTareasActivas, sin params) -- cada asignación con botones
-       Aprobar/Rechazar sin importar si está en iniciada o
-       pendiente_revision, el admin puede validar directo sin esperar a que
-       la persona la envíe a revisión. Mismo patrón .pantalla+ir() que
-       Validar/Archivadas -- ver _tarRenderGestionar()/js/tareas.js. -->
-  <div class="pantalla" id="s-tareas-gestionar">
-    <div class="app-nav app-nav-sticky" id="tar-gestionar-header">
-      <button class="app-nav-back" onclick="_tarCerrarGestionar()">
-        <span class="material-symbols-outlined">arrow_back</span>
-      </button>
-      <span class="app-nav-title">Gestionar tareas activas</span>
-      <div style="width:40px;flex-shrink:0;"></div>
-    </div>
-    <div class="card" style="text-align:left;">
-      <div id="tar-gestionar-lista"></div>
-      <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
-    </div>
-  </div>
-
   <!-- "Tareas archivadas" -- subsección de página completa, visible para
-       cualquiera (a diferencia del wizard/validación de arriba, sin gating
-       de _adminToken): lista de solo lectura de getTareasArchivadas (sin
-       params). Mismo patrón .pantalla+ir() que las 2 subsecciones de
-       arriba. El botón "Eliminar" por tarjeta (admin-only) abre el modal
-       de impacto de más abajo, #modal-tar-eliminar-archivada. -->
+       cualquiera (sin gating de _adminToken): lista de solo lectura de
+       getTareasArchivadas (sin params). Mismo patrón .pantalla+ir() que el
+       wizard de arriba. El botón "Eliminar" por tarjeta (admin-only) abre
+       el modal de impacto de más abajo, #modal-tar-eliminar-archivada.
+       "Tareas por validar"/"Gestionar tareas activas" (que antes vivían acá
+       al lado, como subpantallas propias) pasaron a ser 2 secciones más del
+       tablero fusionado de #s-tareas -- ver MANIFEST.md "Cambios
+       recientes". -->
   <div class="pantalla" id="s-tareas-archivadas">
     <!-- Buscador + filtros -- ícono en la nav (ver MANIFEST.md "Cambios
          recientes" -- antes un `.aj-pill.aj-pill-link` de texto suelto
@@ -1792,7 +1752,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=9ddbd1bb"></script>
+<script src="js/ui.js?v=ce0c160c"></script>
 <script src="js/eventos.js?v=5792064d"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>

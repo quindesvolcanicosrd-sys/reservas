@@ -60,16 +60,20 @@
    (js/tareas.js), ya con la casing correcta. */
 #tar-secciones-label { text-transform: none; }
 
-/* Filas de los 2 menús desplegables del header -- "salto rápido" a
-   secciones (`#tar-secciones-panel`) y "Administrar" (`#tar-administrar-panel`,
-   admin-only: agrupa "Tareas por validar"/"Gestionar tareas activas" bajo
-   un solo ícono para no saturar el header de botones sueltos). Viven
-   dentro de `.ev-header-burbuja-panel` (mismo mecanismo de burbuja inline
-   que el panel de búsqueda+filtros, css/eventos.css) -- esta clase es lo
-   único que ninguna de las 2 tenía: una fila de menú simple (ícono+texto,
-   opcionalmente un badge al final), mismo criterio visual/tamaño de target
-   táctil que `.ev-roster-fila` (css/eventos.css) pero como `<button>` real
-   en vez de una fila de datos. */
+/* Filas del menú desplegable del selector de salto rápido
+   (`#tar-secciones-panel`) -- lista las secciones del tablero fusionado
+   con contenido, incluidas las 2 admin-only al final (ver MANIFEST.md
+   "Cambios recientes" -- "Tareas por validar"/"Gestión de tareas activas"
+   ya NO viven agrupadas bajo un ícono "Administrar" propio, son 2
+   secciones más). "Tareas por validar" suma su conteo directo al texto del
+   label ("Tareas por validar (N)", `_tarActualizarLayoutTablero()`,
+   js/tareas.js) -- mismo criterio que "El Baúl de tareas (N)", sin usar
+   `.tar-menu-row-badge` (badge aparte, sin consumidor real). Vive dentro de
+   `.ev-header-burbuja-panel` (mismo mecanismo de burbuja inline que el
+   panel de búsqueda+filtros, css/eventos.css) -- esta clase es lo único que
+   no tenía: una fila de menú simple (ícono+texto), mismo criterio visual/
+   tamaño de target táctil que `.ev-roster-fila` (css/eventos.css) pero como
+   `<button>` real en vez de una fila de datos. */
 .tar-menu-row {
   display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 4px;
   border: none; border-bottom: 1px solid var(--border-light); background: transparent;

@@ -502,22 +502,12 @@ function ir(id, desdeHistorial, sinTrampa) {
 
   // FAB "+ Nueva tarea" de #s-tareas -- mismo criterio que el de Eventos de
   // arriba (admin real, `_adminToken`, y solo en la pantalla raíz, no en el
-  // wizard). Un solo botón (no speed-dial, ver "Cambios recientes" -- las
-  // otras 2 acciones admin, "Tareas por validar"/"Gestionar tareas
-  // activas", se mudaron al ícono "Administrar" del header).
+  // wizard). Un solo botón (no speed-dial) -- las otras 2 acciones admin,
+  // "Tareas por validar"/"Gestionar tareas activas", son 2 secciones más
+  // del tablero fusionado de #s-tareas (ver "Cambios recientes"), no viven
+  // en el FAB ni en ningún ícono propio del header.
   var tareasFab = document.getElementById('tar-fab-menu');
   if (tareasFab) tareasFab.style.display = (id === 's-tareas' && !!_adminToken) ? 'flex' : 'none';
-
-  // Ícono "Administrar" del header de #s-tareas (admin-only, ver "Cambios
-  // recientes") -- mismo criterio que el FAB de arriba. Si se abandona
-  // 's-tareas' con su desplegable abierto, se fuerza el cierre -- no debe
-  // quedar abierto e invisible esperando la próxima vez que se muestre.
-  var tareasAdminBtn = document.getElementById('tar-btn-administrar');
-  if (tareasAdminBtn) {
-    var _mostrarAdminBtn = id === 's-tareas' && !!_adminToken;
-    tareasAdminBtn.style.display = _mostrarAdminBtn ? '' : 'none';
-    if (!_mostrarAdminBtn && typeof _tarCerrarPanel === 'function' && _tarPanelAbierto === 'administrar') _tarCerrarPanel('administrar');
-  }
 
   _actualizarBottomNav(id);
 
@@ -676,15 +666,12 @@ var _BOTTOM_NAV_EXTRA = {
   's-eventos-marcar-asistencia': 'eventos',
   // Wizard "Nueva tarea" (admin) -- drill-down de la tab 'tareas', mismo
   // criterio que 's-eventos-crear' arriba: alcanzable solo desde el FAB de
-  // #s-tareas. "Tareas por validar" (admin) -- mismo criterio, ex bottom
-  // sheet convertido a subsección de página completa (ver MANIFEST.md
-  // "Cambios recientes"), alcanzable desde el ícono con badge del header de
-  // #s-tareas. "Tareas archivadas" (nueva, visible para cualquiera, ver
-  // MANIFEST.md) -- mismo criterio, alcanzable desde el ícono `archive` del
-  // mismo header. "Gestionar tareas activas" (nueva, admin, ver
-  // MANIFEST.md "Cambios recientes") -- mismo criterio, alcanzable desde
-  // la 3ra opción del FAB de #s-tareas.
-  's-tareas-crear': 'tareas', 's-tareas-validar': 'tareas', 's-tareas-archivadas': 'tareas', 's-tareas-gestionar': 'tareas'
+  // #s-tareas. "Tareas archivadas" -- mismo criterio, visible para
+  // cualquiera, alcanzable desde el ícono `archive` del header de
+  // #s-tareas. "Tareas por validar"/"Gestionar tareas activas" (admin) YA
+  // NO son pantallas propias (ver MANIFEST.md "Cambios recientes") -- son 2
+  // secciones más del tablero fusionado de #s-tareas, sin entrada acá.
+  's-tareas-crear': 'tareas', 's-tareas-archivadas': 'tareas'
 };
 
 // Reusa el `icono` ya definido por ítem para el slot de la flecha atrás de
