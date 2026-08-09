@@ -75,6 +75,13 @@ function _tarTieneAprobada(personas) {
 // 'vencida' -> recuadro rojo "Vencida" (solo Archivadas, ver
 // `_tarCardArchivadaHtml()` -- tarea archivada sin ninguna asignación
 // aprobada); falsy -> sin marcar.
+// **Versión "extendida" (ver MANIFEST.md "Cambios recientes" -- pedido
+// explícito): el nombre del área ya NO vive como pill suelta en
+// `.fi-pills` (ver `_tarPillsRowHtml()` más abajo), se integra ACÁ, junto
+// al ícono de tipo -- `.tar-card-icono-box-top` (fila ícono+texto) queda
+// como primera línea del recuadro, con el texto de estado (si hay) debajo
+// tal cual antes.** Un solo punto de armado para las 5 vistas con card de
+// tarea (Disponibles/Baúl/Mis tareas/Gestionar/Archivadas).
 function _tarIconoBoxHtml(area, estado) {
   var icono = _TAR_ICONOS_AREA[area] || 'task_alt';
   var clase = '', txt = '';
@@ -86,7 +93,10 @@ function _tarIconoBoxHtml(area, estado) {
     txt = '<span class="tar-card-icono-aprobada-txt">Aprobada</span>';
   }
   return '<div class="tar-card-icono-box' + clase + '">' +
-    '<span class="material-symbols-outlined">' + icono + '</span>' +
+    '<div class="tar-card-icono-box-top">' +
+      '<span class="material-symbols-outlined">' + icono + '</span>' +
+      '<span class="tar-card-icono-area-txt">' + (area || '') + '</span>' +
+    '</div>' +
     txt +
   '</div>';
 }
@@ -100,11 +110,13 @@ function _tarIconoBoxHtml(area, estado) {
 // resto de las vistas, siempre uno de 2 estados fijos según si la tarea
 // tiene alguna asignación aprobada ("Finalizada el..."/verde) o no
 // ("Venció el..."/rojo), ver esa función.
-function _tarPillsRowHtml(area, puntos, fechaRaw, cupos, fechaOverride) {
+// **Ya NO recibe `area`** (ver MANIFEST.md "Cambios recientes") -- esa pill
+// se sacó de la fila, el área se integró a `_tarIconoBoxHtml()` (ver
+// arriba).
+function _tarPillsRowHtml(puntos, fechaRaw, cupos, fechaOverride) {
   var fi = fechaOverride || _tarFechaInfo(fechaRaw);
   var cuposHtml = cupos ? '<span class="fi-pill fi-pill-hora tar-cupos-pill">' + cupos.tomados + '/' + cupos.total + ' cupos</span>' : '';
   return '<div class="fi-pills" style="margin-top:8px;">' +
-    '<span class="fi-pill fi-pill-fin tar-area-pill">' + (area || '') + '</span>' +
     cuposHtml +
     '<span class="fi-pill fi-pill-dur">' + (puntos != null ? puntos : 0) + ' pts</span>' +
     '<span class="fi-pill ' + fi.clase + '"><span class="material-symbols-outlined">event</span>' + fi.texto + '</span>' +
@@ -746,7 +758,7 @@ function _tarCardHtml(t, contexto) {
         archivarBtnHtml +
         _tarIconoBoxHtml(t.area, _tarTieneAprobada(asignados)) +
       '</div>' +
-      _tarPillsRowHtml(t.area, t.puntos, t.fechaVencimiento, { tomados: tomados, total: total }) +
+      _tarPillsRowHtml(t.puntos, t.fechaVencimiento, { tomados: tomados, total: total }) +
       _tarDescHtml(t.notas) +
       _tarAvataresHtml(asignados) +
       accionHtml +
@@ -1032,7 +1044,7 @@ function _tarCardMisHtml(a) {
         '<div class="ev-card-titulo">' + (t.titulo || '') + (a.esRescate ? ' <span style="font-size:0.68rem;color:var(--muted);font-weight:600;">(rescatada)</span>' : '') + '</div>' +
         _tarIconoBoxHtml(t.area, a.estado === 'aprobada') +
       '</div>' +
-      _tarPillsRowHtml(t.area, t.puntos, fechaTope) +
+      _tarPillsRowHtml(t.puntos, fechaTope) +
       _tarDescHtml(t.notas) +
       '<div class="tar-accion-wrap" id="tar-accion-wrap-' + a.idAsignacion + '">' + _tarAccionMisHtml(a) + '</div>' +
     '</div>' +
@@ -1735,7 +1747,29 @@ function _tarValidarEnviar(idAsignacion, accion, nota) {
    el punto exacto a ajustar. */
 var _tarActivas = [];
 var _tarActivasCargaId = 0;
-function _tarAsignacionesDe(t) { return t.asignaciones || t.asignados || []; }
+// **Dedupe defensivo (ver MANIFEST.md "Cambios recientes" -- bug real
+// reportado: una persona aparecía repetida varias veces dentro de la misma
+// card).** Revisado el resto de la cadena (`_tarRenderGestionar()` hace un
+// `innerHTML=` que REEMPLAZA el contenedor entero, nunca acumula; `_tarCargarGestionar()`
+// se llama una sola vez por `_tarCargarTodo()`, con guard `_tarActivasCargaId`
+// contra respuestas tardías de una carga vieja; `_tarGestionarCardHtml()`
+// arma UNA card por tarea, nunca una por persona) -- sin causa real
+// encontrada del lado cliente, así que la duplicación más probable viene
+// del propio array `t.asignaciones`/`t.asignados` que trae `adminGetTareasActivas`
+// (ej. un join del backend sin `DISTINCT`). Filtra por `idAsignacion`
+// (clave real de la fila, la misma que ya usa `adminValidarTarea`) -- si 2+
+// filas comparten el mismo `idAsignacion`, es literalmente la misma
+// asignación repetida, se queda con la primera.
+function _tarAsignacionesDe(t) {
+  var asignaciones = t.asignaciones || t.asignados || [];
+  var vistos = {}, out = [];
+  asignaciones.forEach(function(a) {
+    var clave = a.idAsignacion != null ? String(a.idAsignacion) : null;
+    if (clave != null) { if (vistos[clave]) return; vistos[clave] = true; }
+    out.push(a);
+  });
+  return out;
+}
 function _tarNombreAsignacion(a) { return a.nombreDerby || a.nombreUsuario || a.nombre || ''; }
 // Cargada automáticamente por `_tarCargarTodo()` en cada visita a la
 // sección (mismo criterio que `_tarCargarPendientesValidacion()`), no solo
@@ -1771,33 +1805,39 @@ function _tarRenderGestionar() {
   var activas = _adminToken ? _tarActivas : [];
   if (header) header.style.display = activas.length ? '' : 'none';
   cont.innerHTML = activas.map(_tarGestionarCardHtml).join('');
+  _tarGestActualizarSliders();
   _tarActualizarLayoutTablero();
 }
 // Fila de una asignación individual dentro de la card de su tarea --
-// Aprobar/Rechazar visibles para `iniciada`/`pendiente_revision` (pedido
-// explícito: el admin no necesita esperar a que la persona la mande a
-// revisión), badge de estado final (mismo `_tarArchivadaEstadoBadge()` ya
-// usado en Archivadas) para asignaciones ya resueltas.
+// **Toggle "Completada"/"No completada" (ver MANIFEST.md "Cambios
+// recientes" -- reemplaza los 2 botones sueltos check/X + reveal de
+// rechazo): mismo componente/mecanismo que "A horario"/"Tarde" del roster
+// admin de Marcar asistencia (`.ev-rsvp-seg`/`.ev-rsvp-opt`/`.ev-rsvp-slider`,
+// `_evRosterAdminFilasHtml()`/`_evPosicionarRsvpSlider()`, js/eventos.js) --
+// clases reusadas LITERAL (visual/mecánica), reimplementado acá con mapa de
+// color propio (`_tarGestPosicionarSlider()`/`_TAR_GEST_BG`, más abajo) en
+// vez de tocar `_EV_RSVP_BG` de Eventos, mismo criterio que el resto de
+// esta sección al reusar componentes de Eventos.** Visible para CUALQUIER
+// asignación (`iniciada`/`pendiente_revision`/`aprobada`/`rechazada`) --
+// pedido explícito: el backend ya devuelve las 4, así que la persona
+// aprobada/rechazada NO desaparece de la lista, se queda con la opción
+// correspondiente ya resaltada (`.activa`) en vez de mostrar un badge de
+// solo lectura. Tocar la opción activa la deselecciona (llama
+// `adminDesvalidarTarea`, ver `_tarGestionarToggle()`).
 function _tarGestionarFilaHtml(a) {
   var estado = a.estado;
   var nombre = _tarNombreAsignacion(a);
-  var pendiente = estado === 'iniciada' || estado === 'pendiente_revision';
-  var accionesHtml = pendiente ?
-    '<div class="admin-banner-res-actions">' +
-      '<button class="admin-banner-btn admin-banner-btn-ok" onclick="_tarGestionarAprobar(\'' + a.idAsignacion + '\')" aria-label="Aprobar"><span class="material-symbols-outlined">check</span></button>' +
-      '<button class="admin-banner-btn admin-banner-btn-no" onclick="_tarGestionarMostrarRechazo(\'' + a.idAsignacion + '\')" aria-label="Rechazar"><span class="material-symbols-outlined">close</span></button>' +
-    '</div>' :
-    _tarArchivadaEstadoBadge(estado);
-  return '<div class="admin-banner-res-row" id="tar-gest-row-' + a.idAsignacion + '" style="flex-wrap:wrap;">' +
+  var subtexto = estado === 'pendiente_revision' ? 'Esperando validación' : (estado === 'iniciada' ? 'En curso' : (estado === 'aprobada' ? 'Completada' : (estado === 'rechazada' ? 'No completada' : '')));
+  var opts = [{ estado: 'aprobada', icono: 'check', label: 'Completada' }, { estado: 'rechazada', icono: 'close', label: 'No completada' }].map(function(o) {
+    var act = estado === o.estado ? ' activa' : '';
+    return '<div class="ev-rsvp-opt' + act + '" data-estado="' + o.estado + '" onclick="_tarGestionarToggle(\'' + a.idAsignacion + '\',\'' + o.estado + '\',this)"><span class="material-symbols-outlined">' + o.icono + '</span>' + o.label + '</div>';
+  }).join('');
+  return '<div class="admin-banner-res-row" id="tar-gest-row-' + a.idAsignacion + '">' +
     '<div class="admin-banner-res-info">' +
       '<div class="admin-banner-res-nombre">' + nombre + '</div>' +
-      '<div class="admin-banner-res-fecha">' + (estado === 'pendiente_revision' ? 'Esperando validación' : (estado === 'iniciada' ? 'En curso' : '')) + '</div>' +
+      '<div class="admin-banner-res-fecha">' + subtexto + '</div>' +
     '</div>' +
-    accionesHtml +
-    (pendiente ? '<div id="tar-gest-rechazo-' + a.idAsignacion + '" style="display:none;width:100%;margin-top:8px;">' +
-      '<textarea id="tar-gest-nota-' + a.idAsignacion + '" placeholder="Motivo del rechazo (opcional)..." style="min-height:60px;resize:none;width:100%;font-size:0.8rem;"></textarea>' +
-      '<button class="btn btn-danger tar-card-btn" style="padding:10px;margin-top:6px;" onclick="_tarGestionarConfirmarRechazo(\'' + a.idAsignacion + '\')"><span class="material-symbols-outlined">close</span>Confirmar rechazo</button>' +
-    '</div>' : '') +
+    '<div class="ev-rsvp-seg ev-rsvp-seg-roster tar-gest-toggle" id="tar-gest-seg-' + a.idAsignacion + '"><div class="ev-rsvp-slider"></div>' + opts + '</div>' +
   '</div>';
 }
 function _tarGestionarCardHtml(t) {
@@ -1812,43 +1852,72 @@ function _tarGestionarCardHtml(t) {
         '<div class="ev-card-titulo">' + (t.titulo || '') + '</div>' +
         _tarIconoBoxHtml(t.area, _tarTieneAprobada(asignaciones)) +
       '</div>' +
-      _tarPillsRowHtml(t.area, t.puntos, t.fechaVencimiento, cupos) +
+      _tarPillsRowHtml(t.puntos, t.fechaVencimiento, cupos) +
       personasHtml +
     '</div>' +
   '</div>';
 }
-function _tarGestionarAprobar(idAsignacion) { _tarGestionarEnviar(idAsignacion, 'aprobar', ''); }
-function _tarGestionarMostrarRechazo(idAsignacion) {
-  var wrap = document.getElementById('tar-gest-rechazo-' + idAsignacion);
-  if (!wrap) return;
-  wrap.style.display = wrap.style.display === 'none' ? 'block' : 'none';
+// Color del slider por estado -- reimplementado acá (no `_EV_RSVP_BG` de
+// js/eventos.js) para no acoplar vocabulario de Tareas a ese archivo, mismo
+// criterio ya seguido por el resto de esta sección al reusar componentes
+// de Eventos sin tocar su archivo fuente.
+var _TAR_GEST_BG = { aprobada: 'var(--success-bg)', rechazada: 'var(--danger-bg)' };
+// Copia paramétrica de `_evPosicionarRsvpSlider()` (js/eventos.js) --
+// mismo mecanismo exacto (mide `.ev-rsvp-opt.activa` real, posiciona
+// `.ev-rsvp-slider` con `transform:translateX`), leyendo del mapa de color
+// propio de arriba en vez de `_EV_RSVP_BG`.
+function _tarGestPosicionarSlider(seg, animate) {
+  var slider = seg.querySelector('.ev-rsvp-slider');
+  if (!slider) return;
+  slider.classList.toggle('animado', !!animate);
+  var activo = seg.querySelector('.ev-rsvp-opt.activa');
+  if (!activo) { slider.style.opacity = '0'; slider.style.width = '0'; return; }
+  slider.style.opacity = '1';
+  slider.style.width = (activo.offsetWidth - 6) + 'px';
+  slider.style.transform = 'translateX(' + (activo.offsetLeft + 3) + 'px)';
+  slider.style.background = _TAR_GEST_BG[activo.getAttribute('data-estado')] || 'var(--brand-light)';
 }
-function _tarGestionarConfirmarRechazo(idAsignacion) {
-  var nota = document.getElementById('tar-gest-nota-' + idAsignacion);
-  _tarGestionarEnviar(idAsignacion, 'rechazar', nota ? nota.value : '');
+function _tarGestActualizarSliders() {
+  document.querySelectorAll('#tar-lista-gestionar .ev-rsvp-seg').forEach(function(seg) { _tarGestPosicionarSlider(seg, false); });
 }
-// Mismo endpoint/contrato que `_tarValidarEnviar()` (`adminValidarTarea`,
-// GET+adminToken) -- reimplementado acá en vez de compartir función porque
-// esta vista recarga/repinta agrupado por tarea (`_tarCargarGestionar()`),
-// no la lista plana de `_tarPendientesValidacion`. Sincroniza de paso esa
-// otra sección (`_tarCargarPendientesValidacion()`) -- aprobar/rechazar acá
-// también puede sacar asignaciones de esa lista si estaban en
-// `pendiente_revision`.
-function _tarGestionarEnviar(idAsignacion, accion, nota) {
-  var row = document.getElementById('tar-gest-row-' + idAsignacion);
-  if (row) row.querySelectorAll('button').forEach(function(b) { b.disabled = true; });
-  adminApi({ action: 'adminValidarTarea', idAsignacion: idAsignacion, accion: accion, notaRechazo: nota || '' }, function(res) {
-    if (res && res.exito === false) {
-      if (row) row.querySelectorAll('button').forEach(function(b) { b.disabled = false; });
-      mostrarToast(res.error || 'No se pudo procesar la validación.', 'error');
-      return;
-    }
-    _tarCargarGestionar();
-    _tarCargarPendientesValidacion();
-  }, function(e) {
-    if (row) row.querySelectorAll('button').forEach(function(b) { b.disabled = false; });
-    mostrarToast((e && e.message) || 'No se pudo procesar la validación.', 'error');
-  });
+// Tocar la tarjeta YA activa la deselecciona -- llama `adminDesvalidarTarea`
+// (nueva, ver MANIFEST.md "Cambios recientes" -- asunción marcada a
+// propósito, sin contrato explícito verificado: `idAsignacion`+`adminToken`
+// vía `adminApi()`, mismo mecanismo que el resto de las acciones admin* de
+// esta sección) y el toggle vuelve a quedar neutro (ninguna opción
+// resaltada). Tocar la otra aplica ese estado -- `adminValidarTarea`, mismo
+// endpoint/contrato que `_tarValidarEnviar()`. Optimista (mismo criterio
+// que `_evMarcarAsistenciaAdmin()`, js/eventos.js): aplica el cambio en el
+// DOM YA, con la animación real del slider, antes de que la escritura
+// resuelva -- revierte al estado anterior si falla. Sin recargar toda la
+// sección al terminar (a diferencia de `_tarValidarEnviar()`) -- eso
+// perdería la animación y, más importante, es justo el patrón que dejaba a
+// una persona "desaparecer y reaparecer" de la lista en cada validación;
+// solo sincroniza "Tareas por validar" (`_tarCargarPendientesValidacion()`),
+// que si tenía esta asignación en `pendiente_revision` necesita reflejar
+// que ya se resolvió.
+function _tarGestionarToggle(idAsignacion, estado, btnEl) {
+  var seg = btnEl.closest('.ev-rsvp-seg');
+  var yaActiva = btnEl.classList.contains('activa');
+  var estadoAnterior = null;
+  seg.querySelectorAll('.ev-rsvp-opt').forEach(function(o) { if (o.classList.contains('activa')) estadoAnterior = o.getAttribute('data-estado'); });
+  var aplicar = function(estadoAMostrar) {
+    seg.querySelectorAll('.ev-rsvp-opt').forEach(function(o) { o.classList.toggle('activa', o.getAttribute('data-estado') === estadoAMostrar); });
+    _tarGestPosicionarSlider(seg, true);
+  };
+  var revertir = function() { aplicar(estadoAnterior); mostrarToast('No se pudo procesar la acción.', 'error'); };
+  aplicar(yaActiva ? null : estado);
+  if (yaActiva) {
+    adminApi({ action: 'adminDesvalidarTarea', idAsignacion: idAsignacion }, function(res) {
+      if (res && res.exito === false) { aplicar(estadoAnterior); mostrarToast(res.error || 'No se pudo procesar la acción.', 'error'); return; }
+      _tarCargarPendientesValidacion();
+    }, revertir);
+  } else {
+    adminApi({ action: 'adminValidarTarea', idAsignacion: idAsignacion, accion: estado === 'aprobada' ? 'aprobar' : 'rechazar', notaRechazo: '' }, function(res) {
+      if (res && res.exito === false) { aplicar(estadoAnterior); mostrarToast(res.error || 'No se pudo procesar la validación.', 'error'); return; }
+      _tarCargarPendientesValidacion();
+    }, revertir);
+  }
 }
 
 /* ── "Tareas archivadas" -- subsección de página completa, visible para
@@ -1950,7 +2019,7 @@ function _tarCardArchivadaHtml(t) {
         '<div class="ev-card-titulo">' + (t.titulo || '') + '</div>' +
         _tarIconoBoxHtml(t.area, tieneAprobada ? true : 'vencida') +
       '</div>' +
-      _tarPillsRowHtml(t.area, t.puntos, t.fechaVencimiento, cupos, fechaOverride) +
+      _tarPillsRowHtml(t.puntos, t.fechaVencimiento, cupos, fechaOverride) +
       _tarDescHtml(t.notas) +
       personasHtml +
       accionAdmin +

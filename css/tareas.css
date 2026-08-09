@@ -135,16 +135,30 @@
    ninguna columna lateral. Mismo espíritu que `.ev-card-icono-inline`
    (ícono de tipo INLINE junto al título de una card de evento,
    css/eventos.css) pero como recuadro (no ícono desnudo): acá necesita
-   poder mostrar un texto chico debajo ("Aprobada", ver más abajo) sin
-   desbordar, así que es una caja con padding en vez de un glyph suelto. */
+   poder mostrar el nombre del área (ver `.tar-card-icono-box-top` más
+   abajo) y, cuando corresponde, un texto chico de estado debajo
+   ("Aprobada"/"Vencida", ver más abajo), así que es una caja con padding
+   en vez de un glyph suelto. */
 .tar-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .tar-card-header .ev-card-titulo { flex: 1; min-width: 0; margin-bottom: 0; }
 .tar-card-icono-box {
   flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 2px; min-width: 38px; min-height: 38px; padding: 6px 8px; border-radius: 10px;
+  gap: 2px; min-width: 38px; min-height: 38px; padding: 6px 10px; border-radius: 10px;
   background: var(--brand-light); color: var(--brand);
 }
 .tar-card-icono-box .material-symbols-outlined { font-size: 1.05rem; }
+/* Versión "extendida" del recuadro (ver MANIFEST.md "Cambios recientes" --
+   pedido explícito): antes solo un ícono, ahora ícono+nombre del área en
+   una fila -- reemplaza a la pill de Área suelta que vivía en `.fi-pills`
+   (ver el bloque de pills más abajo, ahora solo Cupos/Puntos/Fecha). Fila
+   horizontal (ícono a la izquierda, texto a la derecha) como PRIMERA línea
+   del recuadro -- el texto de estado ("Aprobada"/"Vencida", si corresponde)
+   sigue como línea aparte debajo, sin cambios en esa parte. */
+.tar-card-icono-box-top { display: flex; align-items: center; gap: 5px; }
+.tar-card-icono-area-txt {
+  font-size: 0.72rem; font-weight: 700; line-height: 1.15; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; max-width: 110px;
+}
 /* Ícono de "Archivar tarea" en Disponibles (admin) -- ver MANIFEST.md
    "Cambios recientes": antes vivía como botón de texto debajo de "Tomar
    tarea" (Baúl lo sigue teniendo así, sin cambios); en Disponibles pasa a
@@ -176,17 +190,17 @@
 .tar-card-icono-box.tar-card-icono-vencida { background: var(--danger-bg); color: var(--danger); }
 .tar-card-icono-vencida-txt { font-size: 0.56rem; font-weight: 800; line-height: 1; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.2px; }
 
-/* ── Pills de card (Área/Cupos/Puntos/Fecha límite) -- reemplaza los
-   estilos previos (texto plano / `.tar-area-pill` suelta) por el mismo
-   componente pill sutil ya usado en el resto de la app (`.fi-pill`,
-   css/reservas.css) dentro de `.fi-pills` (fila con wrap), ver
-   `_tarPillsRowHtml()`/js/tareas.js. Área reusa `.fi-pill-fin` (azul, ya
-   así desde antes) y Puntos `.fi-pill-dur` (verde) TAL CUAL -- ya existían
-   con esos colores para otro rol (Reservas) y calzan exacto con lo pedido,
-   sin necesitar variantes nuevas. Cupos SÍ es nuevo (no había una variante
-   violeta reusable con ese nombre) -- mismos tokens que `.fi-pill-hora`
-   (violeta), variante propia acá para no acoplar el nombre de la clase de
-   Tareas a un rol de Reservas que no tiene relación semántica. */
+/* ── Pills de card (Cupos/Puntos/Fecha límite -- ver MANIFEST.md "Cambios
+   recientes": Área SALIÓ de acá, se integró a `.tar-card-icono-box-top`
+   arriba) -- mismo componente pill sutil ya usado en el resto de la app
+   (`.fi-pill`, css/reservas.css) dentro de `.fi-pills` (fila con wrap), ver
+   `_tarPillsRowHtml()`/js/tareas.js. Puntos reusa `.fi-pill-dur` (verde)
+   TAL CUAL -- ya existía con ese color para otro rol (Reservas) y calza
+   exacto con lo pedido, sin necesitar variante nueva. Cupos SÍ es nuevo (no
+   había una variante violeta reusable con ese nombre) -- mismos tokens que
+   `.fi-pill-hora` (violeta), variante propia acá para no acoplar el nombre
+   de la clase de Tareas a un rol de Reservas que no tiene relación
+   semántica. */
 .tar-cupos-pill { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border-soft); }
 /* Fecha de vencimiento -- color dinámico según cercanía (`_tarFechaInfo()`,
    js/tareas.js): rojo si vence hoy o ya venció, naranja si vence dentro de
@@ -267,17 +281,6 @@
    estilo ya usado por `.ev-lugar-mapa-nota`/`.ev-ant-indefinido-nota`
    (css/eventos.css) para texto secundario centrado bajo un control. */
 .tar-limite-nota { font-size: 0.78rem; color: var(--muted); text-align: center; margin-top: 8px; line-height: 1.4; }
-
-/* Pill de área sobre una card de tarea -- `.fi-pill.fi-pill-fin`
-   (css/reservas.css): la pill sutil azul ya usada en Reservas/Eventos para
-   badges informativos no interactivos (ej. "Fin" de una reserva) -- mismo
-   componente reusado tal cual, sin redefinir tamaño/color. `.tar-area-pill`
-   (sin reglas propias) queda solo como hook de identificación en el markup
-   -- se repite en los templates de js/tareas.js (disponible/baúl/mis
-   tareas/archivadas/gestionar). Vive junto a Cupos/Puntos/Fecha dentro de
-   `.fi-pills` (ver `_tarPillsRowHtml()`, js/tareas.js) -- ya NO dentro de
-   `.ev-card-sub` (las 2 filas de texto plano que había antes se
-   consolidaron en esta única fila de pills). */
 
 /* Lista de personas de una tarjeta de "Tareas archivadas" -- a diferencia
    de `.tar-avatares-row` (avatares superpuestos, anónimos, solo un conteo
@@ -360,6 +363,24 @@
    propia contra las pills de arriba vía este `margin-top`). */
 .tar-gestionar-personas { margin-top: 12px; }
 .tar-gestionar-personas .admin-banner-res-row:first-child { border-top: none; padding-top: 0; }
+
+/* Toggle "Completada"/"No completada" por persona (ver MANIFEST.md
+   "Cambios recientes" -- reemplaza los 2 botones sueltos check/X) -- reusa
+   LITERAL `.ev-rsvp-seg`/`.ev-rsvp-opt`/`.ev-rsvp-slider`/`.ev-rsvp-seg-roster`
+   (css/eventos.css, mismo componente que "A horario"/"Tarde" del roster
+   admin de Marcar asistencia). `.ev-rsvp-seg-roster` por sí sola mide 148px
+   -- pensada para las 2 palabras cortas de Eventos ("A horario"/"Tarde");
+   acá "Completada"/"No completada" son más largas, así que este modificador
+   ensancha el control y ajusta tipografía/ícono para que las 2 etiquetas
+   entren en una sola línea sin recortarse. Colores de estado activo por
+   `data-estado` (mismo criterio que las reglas equivalentes de Eventos,
+   scoped acá para no tocar ese archivo -- ver `_TAR_GEST_BG`/js/tareas.js
+   para el color del propio indicador deslizante). */
+.tar-gest-toggle.ev-rsvp-seg-roster { width: 196px; }
+.tar-gest-toggle .ev-rsvp-opt { padding: 7px 3px; font-size: 0.62rem; gap: 3px; }
+.tar-gest-toggle .ev-rsvp-opt .material-symbols-outlined { font-size: 14px; }
+.tar-gest-toggle .ev-rsvp-opt.activa[data-estado="aprobada"], .tar-gest-toggle .ev-rsvp-opt.activa[data-estado="aprobada"] .material-symbols-outlined { color: var(--success); }
+.tar-gest-toggle .ev-rsvp-opt.activa[data-estado="rechazada"], .tar-gest-toggle .ev-rsvp-opt.activa[data-estado="rechazada"] .material-symbols-outlined { color: var(--danger); }
 
 /* Texto rojo "X días para realizar la tarea" del paso "Fecha límite" del
    wizard (ver MANIFEST.md "Cambios recientes") -- fade in/out al cambiar
