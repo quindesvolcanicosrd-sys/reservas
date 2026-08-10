@@ -125,47 +125,40 @@
 .tar-avatar-stack .avatar-pill { border: 2px solid var(--surface-2); margin-left: -8px; }
 .tar-avatar-stack .avatar-pill:first-child { margin-left: 0; }
 
-/* ── Ícono de card -- reposicionado a la esquina superior junto al título
-   (ver MANIFEST.md "Cambios recientes") -- antes `.ev-card-icon` (42px,
-   css/eventos.css) en su propia columna a la izquierda de
-   `.ev-card-top-row`, restando ancho a TODO el contenido de la card. Ahora
-   vive DENTRO de `.ev-card-body`, en la misma fila que el título
-   (`.tar-card-header`, ver `_tarIconoBoxHtml()`/js/tareas.js) -- el resto
-   del contenido (pills, avatares, botones) queda a ancho completo, sin
-   ninguna columna lateral. Mismo espíritu que `.ev-card-icono-inline`
-   (ícono de tipo INLINE junto al título de una card de evento,
-   css/eventos.css) pero como recuadro (no ícono desnudo): acá necesita
-   poder mostrar el nombre del área (ver `.tar-card-icono-box-top` más
-   abajo) y, cuando corresponde, un texto chico de estado debajo
-   ("Aprobada"/"Vencida", ver más abajo), así que es una caja con padding
-   en vez de un glyph suelto. */
+/* ── Header de card -- título + pill de área en la esquina superior (ver
+   MANIFEST.md "Cambios recientes") -- vive DENTRO de `.ev-card-body`, en la
+   misma fila que el título (`.tar-card-header`), el resto del contenido
+   (pills, avatares, botones) queda a ancho completo, sin ninguna columna
+   lateral. */
 .tar-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .tar-card-header .ev-card-titulo { flex: 1; min-width: 0; margin-bottom: 0; }
-.tar-card-icono-box {
-  flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 2px; min-width: 38px; min-height: 38px; padding: 6px 10px; border-radius: 10px;
-  background: var(--brand-light); color: var(--brand);
-}
-.tar-card-icono-box .material-symbols-outlined { font-size: 1.05rem; }
-/* Versión "extendida" del recuadro (ver MANIFEST.md "Cambios recientes" --
-   pedido explícito): antes solo un ícono, ahora ícono+nombre del área en
-   una fila -- reemplaza a la pill de Área suelta que vivía en `.fi-pills`
-   (ver el bloque de pills más abajo, ahora solo Cupos/Puntos/Fecha). Fila
-   horizontal (ícono a la izquierda, texto a la derecha) como PRIMERA línea
-   del recuadro -- el texto de estado ("Aprobada"/"Vencida", si corresponde)
-   sigue como línea aparte debajo, sin cambios en esa parte. */
-.tar-card-icono-box-top { display: flex; align-items: center; gap: 5px; }
-.tar-card-icono-area-txt {
-  font-size: 0.72rem; font-weight: 700; line-height: 1.15; white-space: nowrap;
-  overflow: hidden; text-overflow: ellipsis; max-width: 110px;
-}
+/* Pill de área (`_tarAreaPillHtml()`, js/tareas.js) -- ver MANIFEST.md
+   "Cambios recientes": reemplaza el recuadro de 2 líneas que tenía antes
+   (`.tar-card-icono-box`, ícono+área arriba, "Aprobada"/"Vencida" debajo) --
+   ahora un único `.fi-pill` (mismo componente pill sutil que el resto de la
+   app, css/reservas.css) con ícono+nombre del área en una sola línea; el
+   sufijo de estado ("· Aprobada"/"· Vencida"), cuando corresponde, viaja
+   DENTRO del mismo texto, y el color de la pill ENTERA (no solo un texto
+   chico) es lo que comunica ese estado -- mismos tokens que
+   `.tar-fecha-verde`/`.tar-fecha-rojo` más abajo. También la usa el header
+   de "Quiénes están a cargo" del detalle de tarea (`_tarDetallePillsHtml()`),
+   ahí siempre en su color neutro (sin sufijo de estado, la tarea entera no
+   tiene un aprobada/vencida único cuando puede haber varias personas con
+   estados distintos). `white-space:nowrap` -- una pill de 1 línea, a
+   diferencia del recuadro viejo no trunca (el texto de área+sufijo es corto
+   en la práctica, los 8 valores de `_TAR_ICONOS_AREA` son cortos salvo
+   "Redes Sociales y Comunicación", tolerado sin truncar para no perder
+   info). */
+.tar-area-pill { background: var(--brand-light); color: var(--brand); white-space: nowrap; flex-shrink: 0; }
+.tar-area-pill-aprobada { background: var(--success-bg); color: var(--success); }
+.tar-area-pill-vencida { background: var(--danger-bg); color: var(--danger); }
 /* Ícono de "Archivar tarea" en Disponibles (admin) -- ver MANIFEST.md
    "Cambios recientes": antes vivía como botón de texto debajo de "Tomar
    tarea" (Baúl lo sigue teniendo así, sin cambios); en Disponibles pasa a
-   vivir en la esquina superior, junto a `.tar-card-icono-box`. Mismo
-   tamaño/radio que esa caja (38px/10px) pero neutro (no verde/rojo, no es
-   un estado de la tarea) -- mismo criterio de color apagado que ya usaba
-   el botón de texto que reemplaza (`.btn-text-simple`, `var(--muted)`). */
+   vivir en la esquina superior, junto a la pill de área. Neutro (no verde/
+   rojo, no es un estado de la tarea) -- mismo criterio de color apagado que
+   ya usaba el botón de texto que reemplaza (`.btn-text-simple`,
+   `var(--muted)`). */
 .tar-card-archivar-btn {
   flex-shrink: 0; width: 38px; height: 38px; min-width: 38px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
@@ -173,34 +166,18 @@
 }
 .tar-card-archivar-btn:disabled { opacity: 0.5; cursor: default; }
 .tar-card-archivar-btn .material-symbols-outlined { font-size: 1.05rem; }
-/* Estado "aprobada" -- cuando ALGUNA asignación de la tarea está en estado
-   `aprobada` (ver `_tarTieneAprobada()`, js/tareas.js), el recuadro pasa a
-   verde (en vez del color de énfasis default) y suma un texto chico
-   "Aprobada" debajo del ícono -- CONTENIDO dentro del propio recuadro (el
-   texto es lo que define el ancho de la caja, `min-width` de arriba es
-   apenas un piso para el ícono solo, no un techo -- nunca desborda). */
-.tar-card-icono-box.tar-card-icono-aprobada { background: var(--success-bg); color: var(--success); }
-.tar-card-icono-aprobada-txt { font-size: 0.56rem; font-weight: 800; line-height: 1; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.2px; }
-/* Estado "vencida" -- Archivadas, cuando NINGUNA asignación quedó
-   `aprobada` (ver `_tarCardArchivadaHtml()`, js/tareas.js): mismo patrón
-   visual que "aprobada" arriba (recuadro de color + texto chico debajo del
-   ícono) pero en rojo (`--danger`/`--danger-bg`, mismos tokens que
-   `.tar-fecha-rojo`) para distinguir tareas archivadas sin completar de las
-   completadas. */
-.tar-card-icono-box.tar-card-icono-vencida { background: var(--danger-bg); color: var(--danger); }
-.tar-card-icono-vencida-txt { font-size: 0.56rem; font-weight: 800; line-height: 1; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.2px; }
 
-/* ── Pills de card (Cupos/Puntos/Fecha límite -- ver MANIFEST.md "Cambios
-   recientes": Área SALIÓ de acá, se integró a `.tar-card-icono-box-top`
-   arriba) -- mismo componente pill sutil ya usado en el resto de la app
-   (`.fi-pill`, css/reservas.css) dentro de `.fi-pills` (fila con wrap), ver
+/* ── Pills de card (Puntos/Fecha límite en la lista -- ver MANIFEST.md
+   "Cambios recientes": Área salió de acá, es la pill de arriba; Cupos SOLO
+   se ve en el detalle, `_tarDetallePillsHtml()` más abajo) -- mismo
+   componente pill sutil ya usado en el resto de la app (`.fi-pill`,
+   css/reservas.css) dentro de `.fi-pills` (fila con wrap), ver
    `_tarPillsRowHtml()`/js/tareas.js. Puntos reusa `.fi-pill-dur` (verde)
    TAL CUAL -- ya existía con ese color para otro rol (Reservas) y calza
-   exacto con lo pedido, sin necesitar variante nueva. Cupos SÍ es nuevo (no
-   había una variante violeta reusable con ese nombre) -- mismos tokens que
-   `.fi-pill-hora` (violeta), variante propia acá para no acoplar el nombre
-   de la clase de Tareas a un rol de Reservas que no tiene relación
-   semántica. */
+   exacto con lo pedido, sin necesitar variante nueva. */
+/* Cupos (detalle únicamente) -- mismos tokens que `.fi-pill-hora`
+   (violeta), variante propia acá para no acoplar el nombre de la clase de
+   Tareas a un rol de Reservas que no tiene relación semántica. */
 .tar-cupos-pill { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border-soft); }
 /* Fecha de vencimiento -- color dinámico según cercanía (`_tarFechaInfo()`,
    js/tareas.js): rojo si vence hoy o ya venció, naranja si vence dentro de
@@ -212,10 +189,19 @@
 .tar-fecha-amarillo { background: var(--amber-light); color: var(--amber-darker); border: 1px solid var(--amber-border); }
 /* Fecha "Finalizada el DD/MM/AAAA" -- Archivadas, cuando la tarea SÍ tiene
    alguna asignación aprobada (ver `_tarCardArchivadaHtml()`): mismos
-   tokens de éxito que `.tar-card-icono-aprobada`, variante propia porque
+   tokens de éxito que `.tar-area-pill-aprobada`, variante propia porque
    `.tar-fecha-*` son las únicas clases que colorean `.fi-pill-fin`/pill de
    fecha (nunca hubo un caso "verde" antes de este cambio). */
 .tar-fecha-verde { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-bdr); }
+
+/* ── Card clickeable entera (Disponibles/Baúl/Mis tareas/Gestionar/
+   Archivadas, ver MANIFEST.md "Cambios recientes") -- abre el detalle de la
+   tarea (`_tarAbrirDetalle()`, js/tareas.js). Sin regla propia acá (`.ev-card`
+   ya no tiene `cursor:default` que pisar) -- solo el cursor, para que se
+   sienta clickeable como el resto de las cards tocables de la app (ej.
+   `.ev-card` de Eventos, que ya es clickeable de fábrica). */
+#tar-lista-disponibles .ev-card, #tar-lista-baul .ev-card, #tar-lista-mis .ev-card,
+#tar-lista-gestionar .ev-card, #tar-archivadas-lista .ev-card { cursor: pointer; }
 
 /* Descripción de la tarea -- acordeón colapsado por defecto, mismo patrón
    "Más información" que ya usan las cards de fecha del flujo de reserva

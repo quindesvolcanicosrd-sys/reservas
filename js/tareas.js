@@ -70,55 +70,57 @@ var _TAR_ICONOS_AREA = {
 function _tarTieneAprobada(personas) {
   return (personas || []).some(function(p) { return p.estado === 'aprobada'; });
 }
-// `estado` = true/'aprobada' -> recuadro verde "Aprobada" (comportamiento
-// de siempre, todas las vistas salvo Archivadas pasan un boolean acá);
-// 'vencida' -> recuadro rojo "Vencida" (solo Archivadas, ver
+// `estado` = true/'aprobada' -> pill verde ("· Aprobada" sumado al texto,
+// comportamiento de siempre, todas las vistas salvo Archivadas pasan un
+// boolean acá); 'vencida' -> pill roja ("· Vencida", solo Archivadas, ver
 // `_tarCardArchivadaHtml()` -- tarea archivada sin ninguna asignación
-// aprobada); falsy -> sin marcar.
-// **Versión "extendida" (ver MANIFEST.md "Cambios recientes" -- pedido
-// explícito): el nombre del área ya NO vive como pill suelta en
-// `.fi-pills` (ver `_tarPillsRowHtml()` más abajo), se integra ACÁ, junto
-// al ícono de tipo -- `.tar-card-icono-box-top` (fila ícono+texto) queda
-// como primera línea del recuadro, con el texto de estado (si hay) debajo
-// tal cual antes.** Un solo punto de armado para las 5 vistas con card de
-// tarea (Disponibles/Baúl/Mis tareas/Gestionar/Archivadas).
-function _tarIconoBoxHtml(area, estado) {
+// aprobada); falsy -> pill neutra, sin sufijo.
+// **Ícono suelto en la esquina -> pill (ver MANIFEST.md "Cambios
+// recientes" -- pedido explícito): antes un recuadro de 2 líneas
+// (`.tar-card-icono-box`, ícono+área arriba, estado debajo); ahora un único
+// `.fi-pill` (mismo componente que el resto de la app) con ícono+nombre del
+// área en una sola línea -- el sufijo de estado, si corresponde, viaja
+// DENTRO del mismo texto en vez de una 2da línea, y el color de la pill
+// entera (no solo un texto chico) es lo que comunica aprobada/vencida.**
+// Sigue siendo el punto único de armado para las 5 vistas con card de tarea
+// (Disponibles/Baúl/Mis tareas/Gestionar/Archivadas) + el header del
+// detalle (`_tarDetalleStickyHtml()`, más abajo).
+function _tarAreaPillHtml(area, estado) {
   var icono = _TAR_ICONOS_AREA[area] || 'task_alt';
-  var clase = '', txt = '';
-  if (estado === 'vencida') {
-    clase = ' tar-card-icono-vencida';
-    txt = '<span class="tar-card-icono-vencida-txt">Vencida</span>';
-  } else if (estado) {
-    clase = ' tar-card-icono-aprobada';
-    txt = '<span class="tar-card-icono-aprobada-txt">Aprobada</span>';
-  }
-  return '<div class="tar-card-icono-box' + clase + '">' +
-    '<div class="tar-card-icono-box-top">' +
-      '<span class="material-symbols-outlined">' + icono + '</span>' +
-      '<span class="tar-card-icono-area-txt">' + (area || '') + '</span>' +
-    '</div>' +
-    txt +
-  '</div>';
+  var clase = '', sufijo = '';
+  if (estado === 'vencida') { clase = ' tar-area-pill-vencida'; sufijo = ' · Vencida'; }
+  else if (estado) { clase = ' tar-area-pill-aprobada'; sufijo = ' · Aprobada'; }
+  return '<span class="fi-pill tar-area-pill' + clase + '"><span class="material-symbols-outlined">' + icono + '</span>' + (area || '') + sufijo + '</span>';
 }
-// `cupos` (opcional) = { tomados, total } -- solo Disponibles/Baúl/Gestionar
-// muestran el cupo restante; Mis tareas/Archivadas no traían ese pill antes
-// de este cambio y no lo suman ahora (fuera del pedido, ver "Reglas
-// globales del proyecto" -- no agregar más de lo pedido).
 // `fechaOverride` (opcional) = { texto, clase } -- salta el cálculo relativo
 // de `_tarFechaInfo()` y usa este texto/clase tal cual. Solo lo pasa
 // `_tarCardArchivadaHtml()`: Archivadas no muestra "vence en X días" como el
 // resto de las vistas, siempre uno de 2 estados fijos según si la tarea
 // tiene alguna asignación aprobada ("Finalizada el..."/verde) o no
 // ("Venció el..."/rojo), ver esa función.
-// **Ya NO recibe `area`** (ver MANIFEST.md "Cambios recientes") -- esa pill
-// se sacó de la fila, el área se integró a `_tarIconoBoxHtml()` (ver
-// arriba).
-function _tarPillsRowHtml(puntos, fechaRaw, cupos, fechaOverride) {
+// **Ya NO recibe `area` ni `cupos`** (ver MANIFEST.md "Cambios recientes"
+// -- pedido explícito: la vista de lista deja SOLO puntos+fecha en la fila
+// de pills; área pasó a `_tarAreaPillHtml()` arriba, cupos se ve nada más
+// en el detalle vía `_tarDetallePillsHtml()`, más abajo).
+function _tarPillsRowHtml(puntos, fechaRaw, fechaOverride) {
   var fi = fechaOverride || _tarFechaInfo(fechaRaw);
-  var cuposHtml = cupos ? '<span class="fi-pill fi-pill-hora tar-cupos-pill">' + cupos.tomados + '/' + cupos.total + ' cupos</span>' : '';
   return '<div class="fi-pills" style="margin-top:8px;">' +
-    cuposHtml +
     '<span class="fi-pill fi-pill-dur">' + (puntos != null ? puntos : 0) + ' pts</span>' +
+    '<span class="fi-pill ' + fi.clase + '"><span class="material-symbols-outlined">event</span>' + fi.texto + '</span>' +
+  '</div>';
+}
+// Fila de 4 pills del detalle de tarea (área/cupos/puntos/fecha, ver
+// MANIFEST.md "Cambios recientes" -- pedido explícito de las 4 juntas acá,
+// a diferencia de la vista de lista de arriba). `cupos` = { tomados, total }
+// siempre presente en el detalle (a diferencia de `_tarPillsRowHtml()`,
+// nunca opcional acá).
+function _tarDetallePillsHtml(t, cupos) {
+  var fi = _tarFechaInfo(t.fechaVencimiento);
+  var icono = _TAR_ICONOS_AREA[t.area] || 'task_alt';
+  return '<div class="fi-pills" style="margin-top:10px;">' +
+    '<span class="fi-pill tar-area-pill"><span class="material-symbols-outlined">' + icono + '</span>' + (t.area || '') + '</span>' +
+    '<span class="fi-pill fi-pill-hora tar-cupos-pill">' + cupos.tomados + '/' + cupos.total + ' cupos</span>' +
+    '<span class="fi-pill fi-pill-dur">' + (t.puntos != null ? t.puntos : 0) + ' pts</span>' +
     '<span class="fi-pill ' + fi.clase + '"><span class="material-symbols-outlined">event</span>' + fi.texto + '</span>' +
   '</div>';
 }
@@ -710,24 +712,28 @@ function _tarToggleBaul() {
   }
 }
 
-/* Tarjeta de tarea (Disponibles/Baúl) -- título+ícono por área (esquina
-   superior, ver `_tarIconoBoxHtml()`), pills de Área/Cupos/Puntos/Fecha
-   límite (`_tarPillsRowHtml()`), fila de avatares de quienes ya la
+/* Tarjeta de tarea (Disponibles/Baúl) -- título+pill de área (esquina
+   superior, ver `_tarAreaPillHtml()`), pills de Puntos/Fecha límite
+   (`_tarPillsRowHtml()`, ver MANIFEST.md "Cambios recientes" -- Cupos ya
+   NO se ve en la lista, solo en el detalle), fila de avatares de quienes ya la
    tomaron, y el botón de acción que corresponda (o la nota de límite
    alcanzado en su lugar). Ya NO usa `.ev-card-top-row`/`.ev-card-icon`
    (css/eventos.css, columna de ícono a la izquierda) -- ver MANIFEST.md
    "Cambios recientes". */
+// Card ahora clickeable entera (abre el detalle, `_tarAbrirDetalle()`, ver
+// MANIFEST.md "Cambios recientes") -- cada botón/control interactivo de
+// abajo suma `event.stopPropagation()` a su onclick para no disparar
+// también la apertura del detalle al tocarlo.
 function _tarCardHtml(t, contexto) {
-  var cuposLibres = (t.cuposLibres != null) ? t.cuposLibres : Math.max(0, (t.cuposTotales || 0) - (t.cuposTomados || 0));
   var accionHtml;
   if (_tarEnLimite()) {
     accionHtml = '<p class="tar-limite-nota">Alcanzaste el límite de tareas activas' +
       (_tarConfig.limiteTareasActivas != null ? ' (' + _tarConfig.limiteTareasActivas + ')' : '') +
       '. Suelta o envía a revisión una tarea para tomar otra.</p>';
   } else if (contexto === 'baul') {
-    accionHtml = '<button type="button" class="btn btn-outline tar-card-btn" onclick="_tarRescatar(\'' + t.idTarea + '\', this)"><span class="material-symbols-outlined">restore_from_trash</span>Rescatar tarea</button>';
+    accionHtml = '<button type="button" class="btn btn-outline tar-card-btn" onclick="event.stopPropagation();_tarRescatar(\'' + t.idTarea + '\', this)"><span class="material-symbols-outlined">restore_from_trash</span>Rescatar tarea</button>';
   } else {
-    accionHtml = '<button type="button" class="btn btn-outline tar-card-btn" onclick="_tarTomar(\'' + t.idTarea + '\', this)"><span class="material-symbols-outlined">add_task</span>Tomar tarea</button>';
+    accionHtml = '<button type="button" class="btn btn-outline tar-card-btn" onclick="event.stopPropagation();_tarTomar(\'' + t.idTarea + '\', this)"><span class="material-symbols-outlined">add_task</span>Tomar tarea</button>';
   }
   // "Archivar tarea" (admin, Disponibles Y Baúl) -- independiente del
   // límite de arriba a propósito: ese límite solo gatea Tomar/Rescatar
@@ -740,25 +746,23 @@ function _tarCardHtml(t, contexto) {
   // cambios, ver MANIFEST.md "Cambios recientes" anterior). Disponibles
   // (ver "Cambios recientes" -- pedido explícito): en vez de vivir como
   // botón debajo de "Tomar tarea", pasa a ser un ícono en la esquina
-  // superior, junto a `_tarIconoBoxHtml()` (mismo lugar que el ícono de
-  // tipo/área) -- `archivarBtnHtml`, sumado a `tar-card-header` más abajo.
+  // superior, junto a `_tarAreaPillHtml()` (mismo lugar que la pill de
+  // área) -- `archivarBtnHtml`, sumado a `tar-card-header` más abajo.
   var archivarBtnHtml = '';
   if (contexto === 'baul' && _adminToken) {
-    accionHtml += '<button type="button" class="btn btn-text-simple tar-card-btn" onclick="_tarArchivar(\'' + t.idTarea + '\', this)"><span class="material-symbols-outlined">archive</span>Archivar tarea</button>';
+    accionHtml += '<button type="button" class="btn btn-text-simple tar-card-btn" onclick="event.stopPropagation();_tarArchivar(\'' + t.idTarea + '\', this)"><span class="material-symbols-outlined">archive</span>Archivar tarea</button>';
   } else if (contexto === 'disponible' && _adminToken) {
-    archivarBtnHtml = '<button type="button" class="tar-card-archivar-btn" onclick="_tarArchivar(\'' + t.idTarea + '\', this)" aria-label="Archivar tarea"><span class="material-symbols-outlined">archive</span></button>';
+    archivarBtnHtml = '<button type="button" class="tar-card-archivar-btn" onclick="event.stopPropagation();_tarArchivar(\'' + t.idTarea + '\', this)" aria-label="Archivar tarea"><span class="material-symbols-outlined">archive</span></button>';
   }
   var asignados = t.asignados || [];
-  var tomados = asignados.length;
-  var total = t.cuposTotales != null ? t.cuposTotales : (tomados + cuposLibres);
-  return '<div class="ev-card" id="tar-card-' + contexto + '-' + t.idTarea + '">' +
+  return '<div class="ev-card" id="tar-card-' + contexto + '-' + t.idTarea + '" onclick="_tarAbrirDetalle(\'' + t.idTarea + '\')">' +
     '<div class="ev-card-body">' +
       '<div class="tar-card-header">' +
         '<div class="ev-card-titulo">' + (t.titulo || '') + '</div>' +
         archivarBtnHtml +
-        _tarIconoBoxHtml(t.area, _tarTieneAprobada(asignados)) +
+        _tarAreaPillHtml(t.area, _tarTieneAprobada(asignados)) +
       '</div>' +
-      _tarPillsRowHtml(t.puntos, t.fechaVencimiento, { tomados: tomados, total: total }) +
+      _tarPillsRowHtml(t.puntos, t.fechaVencimiento) +
       _tarDescHtml(t.notas) +
       _tarAvataresHtml(asignados) +
       accionHtml +
@@ -1029,8 +1033,8 @@ function _tarAccionMisHtml(a) {
   // comporte bien ante ese desfasaje de nomenclatura.
   if (a.estado === 'iniciada') {
     return '<div class="tar-acciones-col">' +
-      '<button type="button" class="btn btn-outline tar-card-btn" onclick="_tarEnviarRevision(\'' + a.idAsignacion + '\', this)"><span class="material-symbols-outlined">send</span>Enviar a revisión</button>' +
-      '<button type="button" class="btn btn-text-simple tar-card-btn" onclick="_tarSoltar(\'' + a.idAsignacion + '\', \'' + t.idTarea + '\', this)"><span class="material-symbols-outlined">remove_circle</span>Soltar tarea</button>' +
+      '<button type="button" class="btn btn-outline tar-card-btn" onclick="event.stopPropagation();_tarEnviarRevision(\'' + a.idAsignacion + '\', this)"><span class="material-symbols-outlined">send</span>Enviar a revisión</button>' +
+      '<button type="button" class="btn btn-text-simple tar-card-btn" onclick="event.stopPropagation();_tarSoltar(\'' + a.idAsignacion + '\', \'' + t.idTarea + '\', this)"><span class="material-symbols-outlined">remove_circle</span>Soltar tarea</button>' +
     '</div>';
   }
   return '<div class="ev-estado-pill ev-estado-pill-warning"><span class="material-symbols-outlined">hourglass_top</span>Esperando validación</div>';
@@ -1038,11 +1042,11 @@ function _tarAccionMisHtml(a) {
 function _tarCardMisHtml(a) {
   var t = a.tarea || {};
   var fechaTope = a.fechaVencimientoPersonal || t.fechaVencimiento;
-  return '<div class="ev-card" id="tar-mis-card-' + a.idAsignacion + '">' +
+  return '<div class="ev-card" id="tar-mis-card-' + a.idAsignacion + '" onclick="_tarAbrirDetalle(\'' + t.idTarea + '\')">' +
     '<div class="ev-card-body">' +
       '<div class="tar-card-header">' +
         '<div class="ev-card-titulo">' + (t.titulo || '') + (a.esRescate ? ' <span style="font-size:0.68rem;color:var(--muted);font-weight:600;">(rescatada)</span>' : '') + '</div>' +
-        _tarIconoBoxHtml(t.area, a.estado === 'aprobada') +
+        _tarAreaPillHtml(t.area, a.estado === 'aprobada') +
       '</div>' +
       _tarPillsRowHtml(t.puntos, fechaTope) +
       _tarDescHtml(t.notas) +
@@ -1731,7 +1735,7 @@ function _tarValidarEnviar(idAsignacion, accion, nota) {
    disponibles para CUALQUIER asignación activa (`iniciada` O
    `pendiente_revision`), no solo `pendiente_revision` -- el admin puede
    validar directo sin esperar. Cada tarea es una card (mismo esqueleto que
-   el resto de la sección, ícono+pills+`_tarIconoBoxHtml()`/
+   el resto de la sección, pill de área+pills+`_tarAreaPillHtml()`/
    `_tarPillsRowHtml()`) con sus asignaciones anidadas debajo como filas
    `.admin-banner-res-row` (mismo componente que "Tareas por validar", ver
    esa sección arriba) -- acá se necesita agrupar por tarea (a diferencia
@@ -1824,35 +1828,56 @@ function _tarRenderGestionar() {
 // correspondiente ya resaltada (`.activa`) en vez de mostrar un badge de
 // solo lectura. Tocar la opción activa la deselecciona (llama
 // `adminDesvalidarTarea`, ver `_tarGestionarToggle()`).
+// Toggle "Completada"/"No completada" -- extraído aparte (ver MANIFEST.md
+// "Cambios recientes") para poder reusarlo LITERAL desde 2 lugares: las
+// filas de "Gestión de tareas activas" (acá abajo) y las cards de persona
+// del nuevo detalle de tarea (`_tarPersonaCardHtml()`, más abajo) -- mismo
+// pedido explícito ("reusar el componente tal cual, no duplicarlo").
+// `event.stopPropagation()` en el wrapper entero (antes solo hacía falta
+// implícitamente acá -- esta fila nunca vivió dentro de nada clickeable; el
+// nuevo consumidor sí, la card de persona del detalle).
+// `prefijoId` (opcional, ver MANIFEST.md "Cambios recientes" -- bug real de
+// IDs duplicados encontrado en la propia verificación con Playwright, no al
+// aplicar el fix a ciegas): default `'tar-gest-seg-'` (comportamiento de
+// siempre, Gestión de tareas activas). El detalle de tarea reusa esta misma
+// asignación con un `idAsignacion` idéntico mientras la sección Gestionar
+// sigue pintada (oculta, no destruida) detrás -- sin un prefijo propio para
+// el segundo consumidor, 2 elementos con el MISMO id conviven en el DOM a
+// la vez (HTML inválido, y `querySelector('#id')` se vuelve ambiguo:
+// Playwright lo detectó como "resolved to 2 elements" al clickear desde el
+// detalle). `_tarRenderDetalle()` pasa `'tar-detalle-seg-'` acá.
+function _tarPersonaToggleHtml(a, prefijoId) {
+  var estado = a.estado;
+  var opts = [{ estado: 'aprobada', icono: 'check', label: 'Completada' }, { estado: 'rechazada', icono: 'close', label: 'No completada' }].map(function(o) {
+    var act = estado === o.estado ? ' activa' : '';
+    return '<div class="ev-rsvp-opt' + act + '" data-estado="' + o.estado + '" onclick="event.stopPropagation();_tarGestionarToggle(\'' + a.idAsignacion + '\',\'' + o.estado + '\',this)"><span class="material-symbols-outlined">' + o.icono + '</span>' + o.label + '</div>';
+  }).join('');
+  return '<div class="ev-rsvp-seg ev-rsvp-seg-roster tar-gest-toggle" id="' + (prefijoId || 'tar-gest-seg-') + a.idAsignacion + '" onclick="event.stopPropagation()"><div class="ev-rsvp-slider"></div>' + opts + '</div>';
+}
 function _tarGestionarFilaHtml(a) {
   var estado = a.estado;
   var nombre = _tarNombreAsignacion(a);
   var subtexto = estado === 'pendiente_revision' ? 'Esperando validación' : (estado === 'iniciada' ? 'En curso' : (estado === 'aprobada' ? 'Completada' : (estado === 'rechazada' ? 'No completada' : '')));
-  var opts = [{ estado: 'aprobada', icono: 'check', label: 'Completada' }, { estado: 'rechazada', icono: 'close', label: 'No completada' }].map(function(o) {
-    var act = estado === o.estado ? ' activa' : '';
-    return '<div class="ev-rsvp-opt' + act + '" data-estado="' + o.estado + '" onclick="_tarGestionarToggle(\'' + a.idAsignacion + '\',\'' + o.estado + '\',this)"><span class="material-symbols-outlined">' + o.icono + '</span>' + o.label + '</div>';
-  }).join('');
   return '<div class="admin-banner-res-row" id="tar-gest-row-' + a.idAsignacion + '">' +
     '<div class="admin-banner-res-info">' +
       '<div class="admin-banner-res-nombre">' + nombre + '</div>' +
       '<div class="admin-banner-res-fecha">' + subtexto + '</div>' +
     '</div>' +
-    '<div class="ev-rsvp-seg ev-rsvp-seg-roster tar-gest-toggle" id="tar-gest-seg-' + a.idAsignacion + '"><div class="ev-rsvp-slider"></div>' + opts + '</div>' +
+    _tarPersonaToggleHtml(a) +
   '</div>';
 }
 function _tarGestionarCardHtml(t) {
   var asignaciones = _tarAsignacionesDe(t);
-  var cupos = { tomados: asignaciones.length, total: t.cuposTotales != null ? t.cuposTotales : asignaciones.length };
   var personasHtml = asignaciones.length ?
     '<div class="tar-gestionar-personas">' + asignaciones.map(_tarGestionarFilaHtml).join('') + '</div>' :
     '<p style="font-size:0.78rem;color:var(--muted);margin:12px 0 0;">Todavía nadie tomó esta tarea.</p>';
-  return '<div class="ev-card" id="tar-gest-card-' + t.idTarea + '">' +
+  return '<div class="ev-card" id="tar-gest-card-' + t.idTarea + '" onclick="_tarAbrirDetalle(\'' + t.idTarea + '\')">' +
     '<div class="ev-card-body">' +
       '<div class="tar-card-header">' +
         '<div class="ev-card-titulo">' + (t.titulo || '') + '</div>' +
-        _tarIconoBoxHtml(t.area, _tarTieneAprobada(asignaciones)) +
+        _tarAreaPillHtml(t.area, _tarTieneAprobada(asignaciones)) +
       '</div>' +
-      _tarPillsRowHtml(t.puntos, t.fechaVencimiento, cupos) +
+      _tarPillsRowHtml(t.puntos, t.fechaVencimiento) +
       personasHtml +
     '</div>' +
   '</div>';
@@ -1877,8 +1902,13 @@ function _tarGestPosicionarSlider(seg, animate) {
   slider.style.transform = 'translateX(' + (activo.offsetLeft + 3) + 'px)';
   slider.style.background = _TAR_GEST_BG[activo.getAttribute('data-estado')] || 'var(--brand-light)';
 }
-function _tarGestActualizarSliders() {
-  document.querySelectorAll('#tar-lista-gestionar .ev-rsvp-seg').forEach(function(seg) { _tarGestPosicionarSlider(seg, false); });
+// `contId` (opcional, ver MANIFEST.md "Cambios recientes") -- default
+// `#tar-lista-gestionar` (comportamiento de siempre); el detalle de tarea
+// (`_tarRenderDetalle()`, más abajo) pasa `#tar-detalle-personas` para
+// posicionar el mismo slider ahí, reusando esta función tal cual en vez de
+// una copia paramétrica.
+function _tarGestActualizarSliders(contId) {
+  document.querySelectorAll('#' + (contId || 'tar-lista-gestionar') + ' .ev-rsvp-seg').forEach(function(seg) { _tarGestPosicionarSlider(seg, false); });
 }
 // Tocar la tarjeta YA activa la deselecciona -- llama `adminDesvalidarTarea`
 // (nueva, ver MANIFEST.md "Cambios recientes" -- asunción marcada a
@@ -1978,7 +2008,7 @@ function _tarRenderArchivadas() {
 // éxito/error (`--success`/`--danger` + sus `-bg`, css/colors.css).
 // Ya NO pinta nada para 'aprobada' (ver MANIFEST.md "Cambios recientes" --
 // pedido explícito: quitar la pill "Aprobada" de las cards, redundante con
-// el ícono verde + el texto "Aprobada" que `_tarIconoBoxHtml()` ya suma al
+// el sufijo "· Aprobada" que `_tarAreaPillHtml()` ya suma al
 // recuadro de la card cuando ALGUNA asignación está aprobada). "Rechazada"
 // sigue mostrándose -- ese estado no tiene ninguna otra señal visual en la
 // card.
@@ -2002,8 +2032,7 @@ function _tarCardArchivadaHtml(t) {
   // Botón "Eliminar" -- admin-only, mismo criterio que cualquier otro botón
   // admin* de una card (ej. `_evAccionAdminHtml()`, js/eventos.js): togglea
   // por `_adminToken` en el propio render, no por CSS.
-  var accionAdmin = _adminToken ? '<button type="button" class="btn btn-danger tar-card-btn" onclick="_tarEliminarArchivadaAbrir(\'' + t.idTarea + '\')"><span class="material-symbols-outlined">delete</span>Eliminar</button>' : '';
-  var cupos = t.cuposTotales != null ? { tomados: personas.length, total: t.cuposTotales } : null;
+  var accionAdmin = _adminToken ? '<button type="button" class="btn btn-danger tar-card-btn" onclick="event.stopPropagation();_tarEliminarArchivadaAbrir(\'' + t.idTarea + '\')"><span class="material-symbols-outlined">delete</span>Eliminar</button>' : '';
   // "Vencida" (roja, se archivó sin ninguna aprobación) vs "Aprobada"
   // (verde, ya existía) -- mismo criterio para la pill de fecha: "Venció
   // el..."/fechaVencimiento en el primer caso, "Finalizada el..."/
@@ -2013,13 +2042,13 @@ function _tarCardArchivadaHtml(t) {
   var fechaOverride = tieneAprobada ?
     { texto: 'Finalizada el ' + _tarFechaDDMMAAAA(t.fechaArchivado), clase: 'tar-fecha-verde' } :
     { texto: 'Venció el ' + _tarFechaDDMMAAAA(t.fechaVencimiento), clase: 'tar-fecha-rojo' };
-  return '<div class="ev-card" id="tar-archivada-card-' + t.idTarea + '">' +
+  return '<div class="ev-card" id="tar-archivada-card-' + t.idTarea + '" onclick="_tarAbrirDetalle(\'' + t.idTarea + '\')">' +
     '<div class="ev-card-body">' +
       '<div class="tar-card-header">' +
         '<div class="ev-card-titulo">' + (t.titulo || '') + '</div>' +
-        _tarIconoBoxHtml(t.area, tieneAprobada ? true : 'vencida') +
+        _tarAreaPillHtml(t.area, tieneAprobada ? true : 'vencida') +
       '</div>' +
-      _tarPillsRowHtml(t.puntos, t.fechaVencimiento, cupos, fechaOverride) +
+      _tarPillsRowHtml(t.puntos, t.fechaVencimiento, fechaOverride) +
       _tarDescHtml(t.notas) +
       personasHtml +
       accionAdmin +
@@ -2116,4 +2145,479 @@ function _tarArchivadaMesAnio(fechaVencimiento) {
   if (m) d = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, 1);
   else { d = new Date(s); if (isNaN(d.getTime())) return ''; }
   return NOMBRES_MESES[d.getMonth()].toLowerCase() + ' ' + d.getFullYear();
+}
+
+/* ── Detalle de tarea (nuevo, `#s-tareas-detalle`) -- mismo esqueleto
+   visual que el detalle de evento (`#s-eventos-detalle`, js/eventos.js):
+   header sticky (acá ícono+nombre de área, en el lugar de ícono+tipo) +
+   secciones de contenido con scroll (`.ev-detalle-section`, reusadas tal
+   cual) + footer fijo contextual (`.cta-footer-fixed`, mismo mecanismo
+   genérico que ya usan los wizards -- `ir()`, js/ui.js, muestra
+   automáticamente `#cta-footer-<pantalla-activa>`). Se abre desde
+   CUALQUIERA de las 5 cards de lista (Disponibles/Baúl/Mis tareas/
+   Archivadas/Gestión de tareas activas) -- cada una con su propio shape de
+   datos, normalizado acá antes de pintar. ─────────────────────────────── */
+var _tarDetalleIdActual = null;
+var _tarDetalleEditando = false;
+
+// Busca la tarea por id en TODAS las listas ya cargadas -- prioriza
+// `_tarActivas` (Gestionar) porque es la única con el shape más completo
+// (asignaciones con `idAsignacion`+`estado` real), pero cualquiera de las 5
+// alcanza para los campos comunes (`titulo`/`notas`/`area`/`puntos`/
+// `fechaVencimiento`/`cuposTotales` son la MISMA tarea en cualquier vista).
+function _tarBuscarTareaBase(idTarea) {
+  idTarea = String(idTarea);
+  var t = _tarActivas.filter(function(x) { return String(x.idTarea) === idTarea; })[0]
+    || _tarDisponibles.filter(function(x) { return String(x.idTarea) === idTarea; })[0]
+    || _tarBaul.filter(function(x) { return String(x.idTarea) === idTarea; })[0]
+    || _tarArchivadas.filter(function(x) { return String(x.idTarea) === idTarea; })[0];
+  if (!t) {
+    var asign = _tarMiAsignacionEn(idTarea);
+    if (asign) t = asign.tarea;
+  }
+  return t || null;
+}
+function _tarMiAsignacionEn(idTarea) {
+  return _tarMisTareas.filter(function(a) { return String((a.tarea || {}).idTarea) === String(idTarea); })[0] || null;
+}
+// `conToggle:true` SOLO cuando la fuente es `adminGetTareasActivas`
+// (`_tarActivas`) -- asunción marcada a propósito (sin contrato explícito
+// verificado): es la única de las 4 fuentes que trae `idAsignacion`+`estado`
+// real por persona (ver el comentario de `_tarAsignacionesDe()` más arriba
+// -- Disponibles/Baúl/Mis tareas no traen ese campo hoy, siempre
+// `'iniciada'` implícito). Archivadas trae `estado` (aprobada/rechazada)
+// pero sin `idAsignacion` -- sin toggle tampoco ahí, una tarea archivada no
+// se "desmarca" desde acá (para eso está "Borrar tarea", más abajo).
+function _tarPersonasParaDetalle(idTarea) {
+  idTarea = String(idTarea);
+  var activa = _tarActivas.filter(function(x) { return String(x.idTarea) === idTarea; })[0];
+  if (activa) return { personas: _tarAsignacionesDe(activa), conToggle: true };
+  var archivada = _tarArchivadas.filter(function(x) { return String(x.idTarea) === idTarea; })[0];
+  if (archivada) return { personas: archivada.personas || [], conToggle: false };
+  var base = _tarDisponibles.concat(_tarBaul).filter(function(x) { return String(x.idTarea) === idTarea; })[0];
+  if (base) return { personas: base.asignados || [], conToggle: false };
+  var asign = _tarMiAsignacionEn(idTarea);
+  if (asign) return { personas: (asign.tarea && asign.tarea.asignados) || [], conToggle: false };
+  return { personas: [], conToggle: false };
+}
+function _tarAbrirDetalle(idTarea) {
+  var t = _tarBuscarTareaBase(idTarea);
+  if (!t) return;
+  _tarDetalleIdActual = String(idTarea);
+  _tarDetalleEditando = false;
+  ir('s-tareas-detalle');
+  window.scrollTo(0, 0);
+  _tarRenderDetalle();
+}
+// Header sticky -- mismo componente/clases que `_evDetalleStickyHtml()`
+// (js/eventos.js): `.ev-detalle-nav-row`/`.ev-detalle-nav-icono`/
+// `.ev-detalle-nav-texto`/`.ev-detalle-tipo`, reusadas tal cual. A
+// diferencia de Eventos (ícono+tipo, 2da línea con fecha/hora), acá una
+// sola línea (ícono+nombre del área) -- una tarea no tiene el equivalente a
+// "fecha/hora de inicio" propio del header, esa info ya vive en la pill de
+// fecha límite, más abajo en el cuerpo.
+function _tarDetalleStickyHtml(t) {
+  var icono = _TAR_ICONOS_AREA[t.area] || 'task_alt';
+  return '<div class="ev-detalle-nav-row">' +
+      '<button class="app-nav-back" onclick="volver(\'s-tareas\')" title="Volver"><span class="material-symbols-outlined">arrow_back</span></button>' +
+      '<span class="material-symbols-outlined ev-detalle-nav-icono">' + icono + '</span>' +
+      '<div class="ev-detalle-nav-texto"><div class="ev-detalle-tipo">' + (t.area || '') + '</div></div>' +
+    '</div>';
+}
+// Card de persona ("Quiénes están a cargo") -- mismo componente visual que
+// las cards de asistentes del detalle de evento (`.ev-asist-persona`/
+// `.avatar-pill--sm`/`.ev-asist-persona-nombre`, css/eventos.css, ver
+// `_evGrupoAsistenciaHtml()`), reusadas tal cual. El toggle "Completada"/
+// "No completada" (admin, `conToggle`) es el MISMO componente que ya usa
+// "Gestión de tareas activas" (`_tarPersonaToggleHtml()`, factorizada
+// aparte más arriba en este archivo justo para este reuso) -- nunca una
+// copia paralela.
+function _tarPersonaCardHtml(p, conToggle) {
+  var fotoAttr = (p.fotoPerfil || '').replace(/"/g, '&quot;');
+  var nombre = p.nombreDerby || _tarNombreAsignacion(p) || p.nombre || '';
+  var nombreAttr = (p.nombre || nombre).replace(/"/g, '&quot;');
+  var estadoTxt = p.estado === 'pendiente_revision' ? 'Esperando validación' : (p.estado === 'iniciada' ? 'En curso' : (p.estado === 'aprobada' ? 'Completada' : (p.estado === 'rechazada' ? 'No completada' : '')));
+  return '<div class="ev-asist-persona"><div class="avatar-pill avatar-pill--sm" data-nombre="' + nombreAttr + '" data-foto="' + fotoAttr + '"></div>' +
+    '<span class="ev-asist-persona-nombre">' + nombre + (estadoTxt ? ' <span style="color:var(--muted);font-weight:600;">· ' + estadoTxt + '</span>' : '') + '</span>' +
+    (conToggle && _adminToken && p.idAsignacion != null ? _tarPersonaToggleHtml(p, 'tar-detalle-seg-') : '') +
+  '</div>';
+}
+// Botón fijo de acción principal (footer) -- contextual según el estado del
+// usuario actual respecto a esta tarea (pedido explícito, los 5 casos):
+// asignado 'iniciada' -> Enviar a revisión + Soltar; asignado
+// 'pendiente_revision' -> aviso info; no asignado pero en el Baúl ->
+// Rescatar; no asignado, hay cupos libres -> Tomar; si no, ningún botón
+// (ej. tarea llena y no soy parte). Los 4 wrappers de abajo (`_tarDetalle*`)
+// llaman a la MISMA acción de backend que ya usan las cards de lista
+// (`tomarTarea`/`soltarTarea`/`enviarRevisionTarea`/`rescatarTarea`, todas
+// GET) -- sin la coreografía de animación optimista de esas cards (acá no
+// hay una lista de la que "salir"), solo disabled+toast+refresco real al
+// terminar.
+function _tarDetalleFooterHtml(t) {
+  var idTarea = t.idTarea;
+  var mia = _tarMiAsignacionEn(idTarea);
+  if (mia) {
+    if (mia.estado === 'iniciada') {
+      return '<button type="button" class="btn btn-outline" style="margin-bottom:8px;" onclick="_tarDetalleEnviarRevision(\'' + mia.idAsignacion + '\', this)">Enviar a revisión</button>' +
+        '<button type="button" class="btn btn-text-simple" onclick="_tarDetalleSoltar(\'' + mia.idAsignacion + '\',\'' + idTarea + '\', this)">Soltar tarea</button>';
+    }
+    return '<div class="ev-estado-pill ev-estado-pill-warning" style="width:100%;justify-content:center;"><span class="material-symbols-outlined">hourglass_top</span>Esperando validación</div>';
+  }
+  var enBaul = _tarBaul.some(function(x) { return String(x.idTarea) === String(idTarea); });
+  if (enBaul) return '<button type="button" class="btn btn-outline" onclick="_tarDetalleRescatar(\'' + idTarea + '\', this)">Rescatar tarea</button>';
+  if (t.fechaArchivado) return ''; // tarea archivada -- sin acción de autoservicio
+  var personas = _tarPersonasParaDetalle(idTarea).personas;
+  var total = t.cuposTotales != null ? t.cuposTotales : personas.length;
+  var cuposLibres = t.cuposLibres != null ? t.cuposLibres : Math.max(0, total - personas.length);
+  if (cuposLibres > 0) return '<button type="button" class="btn btn-primary" onclick="_tarDetalleTomar(\'' + idTarea + '\', this)">Tomar tarea</button>';
+  return '';
+}
+function _tarRenderDetalle() {
+  var t = _tarBuscarTareaBase(_tarDetalleIdActual);
+  if (!t) { volver('s-tareas'); return; }
+  var sticky = document.getElementById('tar-detalle-sticky');
+  if (sticky) sticky.innerHTML = _tarDetalleStickyHtml(t);
+  var titulo = document.getElementById('tar-detalle-titulo');
+  if (titulo) titulo.textContent = t.titulo || '';
+  var desc = document.getElementById('tar-detalle-desc');
+  if (desc) { desc.textContent = t.notas || ''; desc.style.display = t.notas ? '' : 'none'; }
+  var pInfo = _tarPersonasParaDetalle(_tarDetalleIdActual);
+  var total = t.cuposTotales != null ? t.cuposTotales : pInfo.personas.length;
+  var pills = document.getElementById('tar-detalle-pills');
+  if (pills) pills.innerHTML = _tarDetallePillsHtml(t, { tomados: pInfo.personas.length, total: total });
+  var cargoTitulo = document.getElementById('tar-detalle-cargo-titulo');
+  if (cargoTitulo) cargoTitulo.textContent = 'Quiénes están a cargo (' + pInfo.personas.length + ')';
+  var cargoLista = document.getElementById('tar-detalle-cargo-lista');
+  if (cargoLista) {
+    cargoLista.innerHTML = pInfo.personas.length ?
+      pInfo.personas.map(function(p) { return _tarPersonaCardHtml(p, pInfo.conToggle); }).join('') :
+      '<p style="font-size:0.82rem;color:var(--muted);margin:0;">Todavía nadie está a cargo de esta tarea.</p>';
+    _tarHidratarAvatares();
+    _tarGestActualizarSliders('tar-detalle-cargo-lista');
+  }
+  var adminSec = document.getElementById('tar-detalle-admin');
+  if (adminSec) adminSec.style.display = _adminToken ? '' : 'none';
+  var footer = document.getElementById('tar-detalle-footer-cont');
+  if (footer) footer.innerHTML = _tarDetalleFooterHtml(t);
+  if (_tarDetalleEditando) _tarDetalleRenderEditar(t); else _tarDetalleCerrarEditar(true);
+}
+
+/* ── Acciones de usuarix desde el footer del detalle -- misma acción de
+   backend que las cards de lista, sin la animación optimista (ver
+   comentario de `_tarDetalleFooterHtml()` más arriba). Siempre terminan
+   recargando TODO (`_tarCargarTodo()`, sincroniza las 5 listas) +
+   re-pintando el detalle con los datos ya frescos. ────────────────────── */
+function _tarDetalleTomar(idTarea, btn) {
+  if (btn) btn.disabled = true;
+  api({ action: 'tomarTarea', nombre: E.nombre, token: _token, idTarea: idTarea }, function(res) {
+    if (res && res.exito === false) { if (btn) btn.disabled = false; mostrarToast(res.error || 'No se pudo tomar la tarea.', 'error'); return; }
+    _tarCargarTodo();
+    _tarRenderDetalle();
+  }, function(e) {
+    if (btn) btn.disabled = false;
+    mostrarToast((e && e.message) || 'No se pudo tomar la tarea.', 'error');
+  });
+}
+function _tarDetalleSoltar(idAsignacion, idTarea, btn) {
+  if (btn) btn.disabled = true;
+  api({ action: 'soltarTarea', nombre: E.nombre, token: _token, idTarea: idTarea }, function(res) {
+    if (res && res.exito === false) { if (btn) btn.disabled = false; mostrarToast(res.error || 'No se pudo soltar la tarea.', 'error'); return; }
+    _tarCargarTodo();
+    _tarRenderDetalle();
+  }, function(e) {
+    if (btn) btn.disabled = false;
+    mostrarToast((e && e.message) || 'No se pudo soltar la tarea.', 'error');
+  });
+}
+function _tarDetalleEnviarRevision(idAsignacion, btn) {
+  if (btn) btn.disabled = true;
+  api({ action: 'enviarRevisionTarea', nombre: E.nombre, token: _token, idAsignacion: idAsignacion }, function(res) {
+    if (res && res.exito === false) { if (btn) btn.disabled = false; mostrarToast(res.error || 'No se pudo enviar a revisión.', 'error'); return; }
+    _tarCargarTodo();
+    _tarRenderDetalle();
+  }, function(e) {
+    if (btn) btn.disabled = false;
+    mostrarToast((e && e.message) || 'No se pudo enviar a revisión.', 'error');
+  });
+}
+function _tarDetalleRescatar(idTarea, btn) {
+  if (btn) btn.disabled = true;
+  api({ action: 'rescatarTarea', nombre: E.nombre, token: _token, idTarea: idTarea }, function(res) {
+    if (res && res.exito === false) { if (btn) btn.disabled = false; mostrarToast(res.error || 'No se pudo rescatar la tarea.', 'error'); return; }
+    _tarCargarTodo();
+    _tarRenderDetalle();
+  }, function(e) {
+    if (btn) btn.disabled = false;
+    mostrarToast((e && e.message) || 'No se pudo rescatar la tarea.', 'error');
+  });
+}
+
+/* ── "Editar tarea" (admin) -- edición inline en la misma pantalla (ver
+   MANIFEST.md "Cambios recientes"): reemplaza el bloque estático de
+   título/descripción/pills por un formulario (`#tar-detalle-editar`),
+   mismos componentes que el wizard "Nueva tarea" (`.aj-pill` de área,
+   `.qty-stepper` de puntos/cupos, calendario inline `.ev-ant-cal-*` de
+   fecha) -- estado propio (`_tarDetEdit*`), reimplementado acá en vez de
+   reusar el estado del wizard (mismo criterio que ya sigue el resto de esta
+   sección al reusar COMPONENTES de otras pantallas sin acoplar su estado). */
+var _tarDetEditData = { titulo: '', notas: '', area: null, puntos: 0, cupos: 1, fecha: null };
+var _tarDetEditCal = { mostrado: null };
+function _tarDetalleAbrirEditar() {
+  var t = _tarBuscarTareaBase(_tarDetalleIdActual);
+  if (!t) return;
+  _tarDetEditData = {
+    titulo: t.titulo || '', notas: t.notas || '', area: t.area || null,
+    puntos: t.puntos != null ? t.puntos : 0, cupos: t.cuposTotales != null ? t.cuposTotales : 1,
+    fecha: (t.fechaVencimiento || '').toString().slice(0, 10) || null
+  };
+  _tarDetEditCal.mostrado = _tarDetEditData.fecha || _evHoyISO();
+  _tarDetalleEditando = true;
+  _tarDetalleRenderEditar(t);
+}
+function _tarDetalleCerrarEditar(silencioso) {
+  _tarDetalleEditando = false;
+  var ed = document.getElementById('tar-detalle-editar');
+  var vista = document.getElementById('tar-detalle-vista');
+  if (ed) ed.style.display = 'none';
+  if (vista) vista.style.display = '';
+  if (!silencioso) _tarRenderDetalle();
+}
+function _tarDetEditSetTitulo(v) { _tarDetEditData.titulo = v; }
+function _tarDetEditSetNotas(v) { _tarDetEditData.notas = v; }
+function _tarDetEditSelArea(el) {
+  el.parentNode.querySelectorAll('.aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  _tarDetEditData.area = el.dataset.val;
+}
+function _tarDetEditCalRender() {
+  var cont = document.getElementById('tar-detedit-cal'); if (!cont) return;
+  var m = _evCalMesDe(_tarDetEditCal.mostrado);
+  var labelEl = document.getElementById('tar-detedit-cal-label');
+  if (labelEl) labelEl.textContent = NOMBRES_MESES[m.month] + ' ' + m.year;
+  var inicioGrid = _evLunesDeSemana(new Date(m.year, m.month, 1));
+  var finMes = new Date(m.year, m.month + 1, 0);
+  var finGrid = _evLunesDeSemana(finMes); finGrid.setDate(finGrid.getDate() + 6);
+  var hoy = _evHoyISO();
+  var seleccionada = _tarDetEditData.fecha;
+  var html = _EV_DIAS_CORTOS.map(function(d) { return '<div class="ev-cal-dow">' + d + '</div>'; }).join('');
+  var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
+  while (cur <= finGrid) {
+    var celdaIso = _evToISO(cur);
+    var ajeno = cur.getMonth() !== m.month;
+    var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '');
+    if (seleccionada && celdaIso === seleccionada) clases += ' ev-ant-cal-sel';
+    if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
+    html += '<div class="' + clases + '" data-iso="' + celdaIso + '" onclick="_tarDetEditCalTocarDia(\'' + celdaIso + '\')"><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
+    cur.setDate(cur.getDate() + 1);
+  }
+  cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>';
+}
+function _tarDetEditCalMoverMes(dir) {
+  var m = _evCalMesDe(_tarDetEditCal.mostrado);
+  var year = m.year, month = m.month + dir;
+  if (month < 0) { month = 11; year--; } else if (month > 11) { month = 0; year++; }
+  _tarDetEditCal.mostrado = _evToISO(new Date(year, month, 1));
+  _tarDetEditCalRender();
+}
+function _tarDetEditCalTocarDia(iso) { _tarDetEditData.fecha = iso; _tarDetEditCalRender(); }
+function _tarDetalleRenderEditar(t) {
+  var vista = document.getElementById('tar-detalle-vista');
+  var ed = document.getElementById('tar-detalle-editar');
+  if (!ed) return;
+  if (vista) vista.style.display = 'none';
+  ed.style.display = '';
+  var tit = document.getElementById('tar-detedit-titulo'); if (tit) tit.value = _tarDetEditData.titulo;
+  var not = document.getElementById('tar-detedit-notas'); if (not) not.value = _tarDetEditData.notas;
+  var areaCont = document.getElementById('tar-detedit-area-pills');
+  if (areaCont) {
+    areaCont.innerHTML = Object.keys(_TAR_ICONOS_AREA).map(function(a) {
+      return '<span class="aj-pill' + (a === _tarDetEditData.area ? ' activa' : '') + '" data-val="' + a + '" onclick="_tarDetEditSelArea(this)">' + a + '</span>';
+    }).join('');
+  }
+  _adminSetStepperValue('tar-detedit-puntos', _tarDetEditData.puntos);
+  _adminSetStepperValue('tar-detedit-cupos', _tarDetEditData.cupos);
+  _tarDetEditCalRender();
+}
+function _tarDetalleGuardarEditar(btn) {
+  var puntosEl = document.getElementById('tar-detedit-puntos');
+  var cuposEl = document.getElementById('tar-detedit-cupos');
+  var datos = {
+    titulo: (_tarDetEditData.titulo || '').trim(),
+    notas: _tarDetEditData.notas || '',
+    area: _tarDetEditData.area,
+    puntos: puntosEl ? (parseFloat(puntosEl.value) || 0) : 0,
+    maxAsignados: cuposEl ? (parseInt(cuposEl.value, 10) || 1) : 1,
+    fechaVencimiento: _tarDetEditData.fecha
+  };
+  if (!datos.titulo || !datos.area || !datos.fechaVencimiento) { mostrarToast('Completa título, área y fecha límite antes de guardar.', 'error'); return; }
+  if (btn) btn.disabled = true;
+  adminApi({ action: 'adminEditarTarea', idTarea: _tarDetalleIdActual, datos: JSON.stringify(datos) }, function(res) {
+    if (btn) btn.disabled = false;
+    if (res && res.exito === false) { mostrarToast(res.error || 'No se pudo guardar los cambios.', 'error'); return; }
+    _tarDetalleCerrarEditar(true);
+    _tarCargarTodo();
+    _tarRenderDetalle();
+  }, function(e) {
+    if (btn) btn.disabled = false;
+    mostrarToast((e && e.message) || 'No se pudo guardar los cambios.', 'error');
+  });
+}
+
+/* ── "Editar personas" (admin) -- subpantalla `#s-tareas-detalle-personas`,
+   mismo picker de búsqueda+checkmarks del wizard "Nueva tarea"
+   (`.ev-roster-fila`/`.fi-circle`/`_evRosterEquipo`, ver
+   `_tarCrearRenderPersonas()` más arriba) reusado tal cual (mismo roster
+   precargado, sin pedirlo de nuevo). Diferencia real: cada persona con
+   asignación YA `aprobada` aparece bloqueada (checkbox marcado, sin
+   `onclick`, atenuada) -- ya completó la tarea, sacarla de acá le revertiría
+   el trabajo hecho sin pasar por "Borrar tarea" (la única acción pensada
+   para ese impacto, con su propia confirmación explícita). */
+var _tarPersonasSeleccion = []; // nombres (string) actualmente marcados
+var _tarPersonasBloqueadas = []; // nombres con asignación 'aprobada' -- no se pueden destildar
+// Nombre canónico de una persona ya asignada -- bug real encontrado en la
+// propia verificación con Playwright (no al aplicar el fix a ciegas): las
+// asignaciones de `adminGetTareasActivas`/Archivadas no siempre traen
+// `nombre` (mismo desfasaje ya documentado en `_tarNombreAsignacion()`, más
+// arriba -- "Tareas por validar"/Gestión muestran `nombreUsuario`, no
+// `nombre`), pero el roster del picker (`_evRosterEquipo`) SÍ usa `nombre`
+// como clave canónica -- sin este fallback, `_tarPersonasSeleccion`/
+// `_tarPersonasBloqueadas` quedaban filtrando `undefined` (nadie
+// preseleccionado, nadie bloqueado) para cualquier persona sin el campo
+// `nombre` exacto.
+function _tarPersonaNombreCanonico(p) { return p.nombre || p.nombreUsuario || ''; }
+function _tarPersonasAbrir() {
+  var idTarea = _tarDetalleIdActual;
+  var info = _tarPersonasParaDetalle(idTarea);
+  _tarPersonasSeleccion = info.personas.map(_tarPersonaNombreCanonico).filter(Boolean);
+  _tarPersonasBloqueadas = info.personas.filter(function(p) { return p.estado === 'aprobada'; }).map(_tarPersonaNombreCanonico).filter(Boolean);
+  ir('s-tareas-detalle-personas');
+  var s = document.getElementById('tar-detpersonas-search'); if (s) s.value = '';
+  if (_adminToken && typeof _evRosterEquipo !== 'undefined' && _evRosterEquipo === null && typeof _evPrecargarRoster === 'function') _evPrecargarRoster();
+  _tarPersonasRenderPicker('');
+}
+function _tarPersonasFiltrar(q) { _tarPersonasRenderPicker(q); }
+// Mismo bug de raza ya corregido para el picker del wizard
+// (`_tarCrearRepintarPersonasSiHaceFalta()`, más arriba) -- si el roster
+// resuelve DESPUÉS de que `_tarPersonasAbrir()` ya mostró "Cargando
+// equipo...", nada volvía a repintar la lista sin esto. Llamada desde
+// `_evPrecargarRoster()` (js/eventos.js) junto al mismo hook del wizard.
+function _tarPersonasRepintarSiHaceFalta() {
+  var pantalla = document.getElementById('s-tareas-detalle-personas');
+  if (!pantalla || !pantalla.classList.contains('activa')) return;
+  var inp = document.getElementById('tar-detpersonas-search');
+  _tarPersonasRenderPicker(inp ? inp.value : '');
+}
+function _tarPersonasRenderPicker(q) {
+  var cont = document.getElementById('tar-detpersonas-lista');
+  if (!cont) return;
+  if (typeof _evRosterEquipo === 'undefined' || _evRosterEquipo === null) {
+    cont.innerHTML = '<div class="ev-roster-vacio">Cargando equipo...</div>';
+    return;
+  }
+  var roster = _evRosterEquipo || [];
+  var qn = (q || '').toLowerCase().trim();
+  var filtrado = qn ? roster.filter(function(p) { return (p.nombreDerby || '').toLowerCase().indexOf(qn) !== -1 || String(p.nombre).toLowerCase().indexOf(qn) !== -1; }) : roster;
+  if (!filtrado.length) { cont.innerHTML = '<div class="ev-roster-vacio">' + (roster.length ? 'Sin resultados.' : 'No se pudo cargar el equipo.') + '</div>'; return; }
+  cont.innerHTML = filtrado.map(function(p) {
+    var nombreAttr = String(p.nombre).replace(/'/g, "\\'");
+    var sel = _tarPersonasSeleccion.indexOf(p.nombre) !== -1;
+    var bloqueada = _tarPersonasBloqueadas.indexOf(p.nombre) !== -1;
+    return '<div class="ev-roster-fila tar-persona-fila' + (bloqueada ? ' tar-persona-fila-disabled' : '') + '"' +
+      (bloqueada ? '' : ' onclick="_tarPersonasToggle(\'' + nombreAttr + '\')"') + '>' +
+      '<span class="ev-roster-nombre">' + (p.nombreDerby || p.nombre) + (bloqueada ? ' <span style="font-size:0.68rem;color:var(--success);font-weight:700;">· Completada</span>' : '') + '</span>' +
+      '<div class="fi-circle' + (sel ? ' sel' : '') + '"><span class="material-symbols-outlined">check</span></div>' +
+    '</div>';
+  }).join('');
+}
+function _tarPersonasToggle(nombre) {
+  var idx = _tarPersonasSeleccion.indexOf(nombre);
+  if (idx === -1) _tarPersonasSeleccion.push(nombre); else _tarPersonasSeleccion.splice(idx, 1);
+  var inp = document.getElementById('tar-detpersonas-search');
+  _tarPersonasRenderPicker(inp ? inp.value : '');
+}
+function _tarPersonasGuardar(btn) {
+  if (btn) btn.disabled = true;
+  adminApi({ action: 'adminEditarAsignacionesTarea', idTarea: _tarDetalleIdActual, nombres: JSON.stringify(_tarPersonasSeleccion) }, function(res) {
+    if (btn) btn.disabled = false;
+    if (res && res.exito === false) { mostrarToast(res.error || 'No se pudo guardar los cambios.', 'error'); return; }
+    volver('s-tareas-detalle');
+    _tarCargarTodo();
+    _tarRenderDetalle();
+  }, function(e) {
+    if (btn) btn.disabled = false;
+    mostrarToast((e && e.message) || 'No se pudo guardar los cambios.', 'error');
+  });
+}
+
+/* ── "Borrar tarea" (admin, destructivo e irreversible) -- generaliza
+   `_tarEliminarArchivadaAbrir()`/`adminEliminarTareaArchivada()` (más
+   arriba en este archivo, solo para tareas YA archivadas) a CUALQUIER tarea
+   desde su detalle, activa o archivada -- mismo nivel de fricción/mismo
+   modal de impacto (quién pierde cuántos puntos) antes de confirmar,
+   `adminEliminarTarea` en vez de `adminEliminarTareaArchivada` (acción
+   nueva, asunción marcada a propósito: mismo contrato `idTarea`+`adminToken`
+   vía `adminApi()` que el resto de las acciones admin* de esta sección). */
+var _tarEliminarTareaIdPendiente = null;
+function _tarEliminarTareaAbrir() {
+  var t = _tarBuscarTareaBase(_tarDetalleIdActual);
+  if (!t) return;
+  _tarEliminarTareaIdPendiente = _tarDetalleIdActual;
+  var personas = _tarPersonasParaDetalle(_tarDetalleIdActual).personas.filter(function(p) { return p.estado === 'aprobada'; });
+  var cont = document.getElementById('tar-eliminar-tarea-impacto');
+  if (cont) {
+    if (!personas.length) {
+      cont.innerHTML = '<p style="font-size:0.85rem;color:var(--muted);margin:0;">Nadie tiene puntos aprobados en esta tarea -- no hay impacto de puntos.</p>';
+    } else {
+      cont.innerHTML = personas.map(function(p) {
+        var nombre = p.nombreDerby || _tarNombreAsignacion(p) || p.nombre || '';
+        return '<div style="display:flex;gap:10px;align-items:center;padding:10px 12px;background:var(--danger-bg);border:1px solid var(--danger-bdr);border-radius:10px;">' +
+          '<span class="material-symbols-outlined" style="color:var(--danger);font-size:1.1rem;flex-shrink:0;">remove_circle</span>' +
+          '<span style="font-size:0.85rem;color:var(--text);">' + nombre + ' perderá ' + (t.puntos != null ? t.puntos : 0) + ' puntos.</span>' +
+        '</div>';
+      }).join('');
+    }
+  }
+  var btn = document.getElementById('tar-eliminar-tarea-btn-confirmar');
+  if (btn) { btn.disabled = false; btn.textContent = 'Eliminar definitivamente'; }
+  var m = document.getElementById('modal-tar-eliminar-tarea');
+  if (!m) return;
+  m.style.display = 'flex';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { m.style.opacity = '1'; }); });
+  _registrarOverlayAbierto(_tarEliminarTareaCerrar);
+}
+function _tarEliminarTareaCerrar(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var m = document.getElementById('modal-tar-eliminar-tarea');
+  if (!m) return;
+  m.style.opacity = '0';
+  setTimeout(function() { m.style.display = 'none'; }, 300);
+  _tarEliminarTareaIdPendiente = null;
+}
+function _tarEliminarTareaConfirmar() {
+  if (!_tarEliminarTareaIdPendiente) return;
+  var idTarea = _tarEliminarTareaIdPendiente;
+  var btn = document.getElementById('tar-eliminar-tarea-btn-confirmar');
+  if (btn) { btn.disabled = true; btn.textContent = 'Eliminando...'; }
+  adminApi({ action: 'adminEliminarTarea', idTarea: idTarea }, function(res) {
+    if (res && res.exito === false) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Eliminar definitivamente'; }
+      mostrarToast(res.error || 'No se pudo eliminar la tarea.', 'error');
+      return;
+    }
+    // Bug real encontrado en la propia verificación con Playwright (no al
+    // aplicar el fix a ciegas): llamar `_tarEliminarTareaCerrar()` (sin
+    // `porGesto`, dispara `history.back()` ASÍNCRONO) y de inmediato
+    // `volver('s-tareas')` (navegación SÍNCRONA) corría en el orden
+    // incorrecto -- el popstate del `history.back()` llegaba DESPUÉS de que
+    // `ir('s-tareas')` ya había cambiado de pantalla, pisándola de vuelta a
+    // `s-tareas-detalle`. `ir()` (js/ui.js) ya vacía `_overlayStack` sola en
+    // cada navegación (`while (_overlayStack.length > 0)
+    // _overlayStack.pop()(true)`) -- alcanza con `volver('s-tareas')` a
+    // secas, sin cerrar el modal a mano primero.
+    volver('s-tareas');
+    _tarCargarTodo();
+  }, function(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Eliminar definitivamente'; }
+    mostrarToast((e && e.message) || 'No se pudo eliminar la tarea.', 'error');
+  });
 }

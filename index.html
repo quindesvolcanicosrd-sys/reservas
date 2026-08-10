@@ -1127,6 +1127,125 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
 
+  <!-- Detalle de tarea (nuevo, ver MANIFEST.md "Cambios recientes") --
+       mismo esqueleto visual que #s-eventos-detalle: header sticky (ícono+
+       nombre de área) + secciones de contenido (.ev-detalle-section,
+       reusadas tal cual) + footer fijo contextual (#cta-footer-s-tareas-detalle,
+       mismo mecanismo genérico de ir()/js/ui.js que ya usan los wizards).
+       Poblada por _tarRenderDetalle()/js/tareas.js. -->
+  <div class="pantalla" id="s-tareas-detalle">
+    <div class="ev-detalle-sticky" id="tar-detalle-sticky"></div>
+    <div class="card" style="text-align:left;">
+      <div id="tar-detalle-vista">
+        <div class="ev-detalle-section">
+          <div class="ev-detalle-titulo-seccion" id="tar-detalle-titulo" style="margin-bottom:8px;"></div>
+          <p class="ev-detalle-desc" id="tar-detalle-desc" style="margin-bottom:14px;"></p>
+          <div id="tar-detalle-pills"></div>
+        </div>
+        <div class="ev-detalle-section">
+          <div class="ev-detalle-titulo-seccion" id="tar-detalle-cargo-titulo">Quiénes están a cargo</div>
+          <div id="tar-detalle-cargo-lista"></div>
+        </div>
+        <!-- Acciones admin -- Editar tarea / Editar personas / Borrar tarea,
+             ocultas por completo para cuentas no-admin (_tarRenderDetalle()
+             togglea el display). -->
+        <div class="ev-detalle-section" id="tar-detalle-admin" style="display:none;">
+          <div class="ev-detalle-titulo-seccion">Administrar</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <button type="button" class="btn btn-outline tar-card-btn" onclick="_tarDetalleAbrirEditar()"><span class="material-symbols-outlined">edit</span>Editar tarea</button>
+            <button type="button" class="btn btn-outline tar-card-btn" onclick="_tarPersonasAbrir()"><span class="material-symbols-outlined">group</span>Editar personas</button>
+            <button type="button" class="btn btn-danger tar-card-btn" onclick="_tarEliminarTareaAbrir()"><span class="material-symbols-outlined">delete_forever</span>Borrar tarea</button>
+          </div>
+        </div>
+      </div>
+      <!-- "Editar tarea" inline (admin) -- reemplaza #tar-detalle-vista
+           mientras _tarDetalleEditando es true, mismos componentes que el
+           wizard "Nueva tarea" (.aj-pill de área, .qty-stepper de puntos/
+           cupos, calendario inline .ev-ant-cal-*/.ev-cal-*), estado propio
+           (_tarDetEdit*, js/tareas.js). -->
+      <div id="tar-detalle-editar" style="display:none;">
+        <div class="ev-detalle-section">
+          <p class="ev-lugar-campo-label" style="margin-top:0;">Nombre de la tarea</p>
+          <input type="text" class="ev-lugar-input" id="tar-detedit-titulo" oninput="_tarDetEditSetTitulo(this.value)">
+          <p class="ev-lugar-campo-label" style="margin-top:20px;">Área</p>
+          <div class="aj-pills-row" id="tar-detedit-area-pills"></div>
+          <p class="ev-lugar-campo-label" style="margin-top:20px;">Descripción de la tarea</p>
+          <textarea id="tar-detedit-notas" style="min-height:90px;resize:none;" oninput="_tarDetEditSetNotas(this.value)"></textarea>
+          <p class="ev-lugar-campo-label" style="margin-top:20px;">Puntos</p>
+          <div class="qty-stepper" data-step="1" data-min="0">
+            <button type="button" class="qty-btn" onclick="adminStepperChange(this,-1);">−</button>
+            <span class="qty-value">0</span>
+            <button type="button" class="qty-btn" onclick="adminStepperChange(this,1);">+</button>
+            <input type="hidden" id="tar-detedit-puntos" value="0">
+          </div>
+          <p class="ev-lugar-campo-label" style="margin-top:20px;">Máximo de personas</p>
+          <div class="qty-stepper" data-step="1" data-min="1">
+            <button type="button" class="qty-btn" onclick="adminStepperChange(this,-1);">−</button>
+            <span class="qty-value">1</span>
+            <button type="button" class="qty-btn" onclick="adminStepperChange(this,1);">+</button>
+            <input type="hidden" id="tar-detedit-cupos" value="1">
+          </div>
+          <p class="ev-lugar-campo-label" style="margin-top:20px;">Fecha límite</p>
+          <div class="ev-ant-cal-nav">
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_tarDetEditCalMoverMes(-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+            <span class="ev-ant-cal-nav-label" id="tar-detedit-cal-label"></span>
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_tarDetEditCalMoverMes(1)"><span class="material-symbols-outlined">chevron_right</span></button>
+          </div>
+          <div id="tar-detedit-cal"></div>
+          <div style="display:flex;gap:10px;margin-top:20px;">
+            <button type="button" class="btn btn-outline" style="flex:1;" onclick="_tarDetalleCerrarEditar()">Cancelar</button>
+            <button type="button" class="btn btn-primary" style="flex:1;" onclick="_tarDetalleGuardarEditar(this)">Guardar cambios</button>
+          </div>
+        </div>
+      </div>
+      <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+  <div class="cta-footer-fixed" id="cta-footer-s-tareas-detalle">
+    <div id="tar-detalle-footer-cont" style="display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
+
+  <!-- "Editar personas" (admin) -- subpantalla propia, drill-down del
+       detalle de tarea, mismo picker de búsqueda+checkmarks del wizard
+       "Nueva tarea" (#tar-crear-paso-personas) -- ver
+       _tarPersonasAbrir()/js/tareas.js. -->
+  <div class="pantalla" id="s-tareas-detalle-personas">
+    <div class="app-nav app-nav-sticky" id="tar-detpersonas-header">
+      <button class="app-nav-back" onclick="volver('s-tareas-detalle')">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <span class="app-nav-title">Editar personas</span>
+      <div style="width:40px;flex-shrink:0;"></div>
+    </div>
+    <div class="card" style="text-align:left;">
+      <div class="app-nav-search" style="margin-bottom:14px;">
+        <span class="material-symbols-outlined">search</span>
+        <input type="text" id="tar-detpersonas-search" placeholder="Buscar por nombre..." autocomplete="off" oninput="_tarPersonasFiltrar(this.value)">
+      </div>
+      <div id="tar-detpersonas-lista" class="ev-marcar-lista"></div>
+      <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+  <div class="cta-footer-fixed" id="cta-footer-s-tareas-detalle-personas">
+    <button class="btn btn-primary" onclick="_tarPersonasGuardar(this)">Guardar cambios</button>
+  </div>
+
+  <!-- Modal de confirmación al borrar una tarea (admin, cualquier estado --
+       activa o archivada) desde su detalle -- mismo "idioma"/mismo nivel de
+       fricción que #modal-tar-eliminar-archivada (ver ese bloque, más
+       abajo, para el detalle del mecanismo): overlay fijo + .modal-info-card,
+       impacto real (quién pierde cuántos puntos) poblado por
+       _tarEliminarTareaAbrir() antes de abrir. -->
+  <div id="modal-tar-eliminar-tarea" class="modal-info" style="display:none;opacity:0;position:fixed;inset:0;z-index:9500;background:var(--overlay-dark);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;transition:opacity 0.3s ease;" onclick="if(event.target===this)_tarEliminarTareaCerrar()">
+    <div class="modal-info-card">
+      <h3 style="margin:0 0 8px;font-size:1.05rem;color:var(--text);">¿Borrar esta tarea?</h3>
+      <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 16px;">Esta acción es permanente y no se puede deshacer. Esto es lo que va a pasar:</p>
+      <div id="tar-eliminar-tarea-impacto" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;"></div>
+      <button class="btn btn-danger" id="tar-eliminar-tarea-btn-confirmar" onclick="_tarEliminarTareaConfirmar()" style="margin-bottom:10px;">Eliminar definitivamente</button>
+      <button class="btn btn-outline" onclick="_tarEliminarTareaCerrar()">Cancelar</button>
+    </div>
+  </div>
+
   <!-- Wizard "Nueva tarea" (admin) -- mismo mecanismo de pasos progresivos
        (.salud-paso/.salud-prog) que #s-eventos-crear, reusado tal cual. -->
   <div class="pantalla" id="s-tareas-crear">

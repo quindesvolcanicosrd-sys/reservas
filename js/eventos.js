@@ -389,11 +389,13 @@ function _evPrecargarRoster() {
     // en ese paso esperando esta misma respuesta (guard `typeof`, cruza de
     // módulo -- mismo criterio defensivo que el resto de la app).
     if (typeof _tarCrearRepintarPersonasSiHaceFalta === 'function') _tarCrearRepintarPersonasSiHaceFalta();
+    if (typeof _tarPersonasRepintarSiHaceFalta === 'function') _tarPersonasRepintarSiHaceFalta();
   }, function(e) {
     _evRosterEquipo = []; // degrada a "sin resultados" -- nunca un loader infinito
     if (window.console) console.warn('Eventos: adminGetRosterEquipo falló -- ' + (e && e.message || 'error') + ' (revisar si adminGetRosterEquipo está desplegada en Code.gs, ver MANIFEST.md)');
     _evRepintarMarcarAsistSiHaceFalta();
     if (typeof _tarCrearRepintarPersonasSiHaceFalta === 'function') _tarCrearRepintarPersonasSiHaceFalta();
+    if (typeof _tarPersonasRepintarSiHaceFalta === 'function') _tarPersonasRepintarSiHaceFalta();
   });
 }
 

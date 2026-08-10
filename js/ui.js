@@ -671,7 +671,14 @@ var _BOTTOM_NAV_EXTRA = {
   // #s-tareas. "Tareas por validar"/"Gestionar tareas activas" (admin) YA
   // NO son pantallas propias (ver MANIFEST.md "Cambios recientes") -- son 2
   // secciones más del tablero fusionado de #s-tareas, sin entrada acá.
-  's-tareas-crear': 'tareas', 's-tareas-archivadas': 'tareas'
+  's-tareas-crear': 'tareas', 's-tareas-archivadas': 'tareas',
+  // Detalle de tarea (ver MANIFEST.md "Cambios recientes") -- mismo
+  // criterio que 's-eventos-detalle': drill-down de la tab 'tareas',
+  // alcanzable desde cualquier card de #s-tareas/#s-tareas-archivadas.
+  // "Editar personas" es a su vez un drill-down DEL detalle (2 niveles),
+  // sigue sumando acá con el mismo criterio -- _esPantallaAlcanzable() no
+  // distingue profundidad, solo "pertenece a esta tab sí/no".
+  's-tareas-detalle': 'tareas', 's-tareas-detalle-personas': 'tareas'
 };
 
 // Reusa el `icono` ya definido por ítem para el slot de la flecha atrás de
