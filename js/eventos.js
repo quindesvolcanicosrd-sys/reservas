@@ -2857,20 +2857,17 @@ function _evDetalleAdminCancelarHtml(e) {
   return '<button type="button" class="btn btn-danger" onclick="_evCancelarEvento(\'' + e.id + '\', this)">' +
     '<span class="material-symbols-outlined" style="vertical-align:middle;margin-right:6px;">cancel</span>Cancelar evento</button>';
 }
-// `adminCancelarEvento` -- acción nueva, mismo criterio GET/POST ya
-// verificado para el resto de acciones admin de ESCRITURA de esta sección
-// (`adminMarcarAsistencia`, más arriba en este archivo): `apiPost()` con
-// `adminToken` como param del body, no `api()`/GET (a diferencia de
-// Tareas, donde TODAS las acciones admin -- lectura y escritura -- viven en
-// el router de GET -- confirmado que esta sección sigue el patrón opuesto
-// para escrituras, ver "Cambios recientes" de esta misma sesión). Backend
-// (Code.gs, fuera de este repo) -- si `adminCancelarEvento` todavía no
-// existe en `doPost(e)`, sumar un `case` ahí, mismo grupo que
-// `adminMarcarAsistencia` (valida `adminToken`, ubica el evento por
-// `idEvento` y pisa su columna "Estado" a `'Evento Cancelado'` -- el valor
-// crudo con el prefijo, ver `_EV_ESTADO_MAP`/`_evNormalizarEstadoEvento()`
-// más arriba, para que quede consistente con cómo ya llegan los eventos
-// cancelados a mano desde la hoja). Optimista + revert (mismo criterio que
+// `adminCancelarEvento` -- el criterio "escrituras de Eventos van por
+// apiPost()/POST" que este comentario daba por verificado (apoyado en
+// `adminMarcarAsistencia`, más arriba en este archivo) resultó FALSO para
+// esta acción puntual: el backend (Code.gs, fuera de este repo) sólo tiene
+// `adminCancelarEvento` en el router de `doGet(e)`, no en `doPost(e)` --
+// por eso el toast "Acción POST no válida" y el evento nunca se
+// cancelaba. Mismo patrón ya visto varias veces con acciones de Tareas
+// (TODAS -- lectura y escritura -- viven en el router de GET). Arreglo:
+// `api()`/GET, igual que `adminGetRosterEquipo`/`adminBuscarPersonasParaEvento`
+// más arriba en este archivo -- `adminToken` viaja como param de la query,
+// no del body. Optimista + revert (mismo criterio que
 // `_evMarcarAsistenciaAdmin()`, arriba en este archivo) -- `ev` es el MISMO
 // objeto referenciado por `_evDetalleActual` (ver `abrirEvDetalle()`), así
 // que mutarlo acá alcanza para que `_evRenderDetalle()` refleje el cambio
@@ -2883,7 +2880,7 @@ function _evCancelarEvento(idEvento, btn) {
   var estadoAnterior = ev.estado;
   ev.estado = 'Cancelado';
   if (_evDetalleActual && _evDetalleActual.id === idEvento) _evRenderDetalle(ev);
-  apiPost({ action: 'adminCancelarEvento', adminToken: _adminToken, idEvento: idEvento }, function(res) {
+  api({ action: 'adminCancelarEvento', adminToken: _adminToken, idEvento: idEvento }, function(res) {
     if (res && res.exito === false) {
       ev.estado = estadoAnterior;
       if (btn) btn.disabled = false;
