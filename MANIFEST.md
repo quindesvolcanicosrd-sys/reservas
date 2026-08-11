@@ -4619,3 +4619,21 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
   **Fix:** `_evCancelarEvento()` llama a `_evRenderTimeline(true)` (instant, sin fade) inmediatamente después de mutar `ev.estado` — tanto en el camino optimista (antes de que la escritura resuelva) como en los 2 caminos de revert (`exito:false` / error de red) — repintando `#ev-timeline` con los datos ya actualizados mientras la pantalla puede estar oculta (`#s-eventos` no necesita estar activa; `_evTimelineItems()` lee directo de `_EV_EVENTOS`, y `_evFadeSwap()` con `instant:true` pinta síncrono sin animación ni medición de layout que dependa de visibilidad) — mismo criterio que `_tarCargarTodo()` ya usa en Tareas: mantener el DOM en segundo plano sincronizado, no solo lo que se ve en este instante. Para cuando el usuario efectivamente vuelve al timeline, la card ya está correcta, sin esperar a la próxima carga real de la sección.
 
   **Verificado con Playwright** (`chromium`, 390×844, `index.html` real vía `python -m http.server` local, sesión admin falseada por consola, backend interceptado con `page.route()`, un evento de prueba inyectado directo en `_EV_EVENTOS`): estado inicial del timeline sin "Cancelado"; `_evCancelarEvento()` con el `confirm()` nativo auto-aceptado (`page.once('dialog', ...)`) — el detalle muestra la pill "Evento Cancelado" de inmediato (sin cambios, ya funcionaba); **`volver('s-eventos')` SIN recargar la página** — el timeline ya muestra "Evento Cancelado" en la card, confirmado por texto real del DOM (`#ev-timeline` contiene "Cancha Norte" + "Evento Cancelado", sin RSVP). Sin errores de consola propios de la app (mismo ruido de siempre: origen no autorizado de Google Sign-In, 403 de un recurso de terceros). `node --check` limpio en `js/eventos.js`.
+
+---
+
+- **Backend (`Code.gs`, fuera de este repo) — Migración de Reservas a Supabase, Etapas 1-3. Quinta migración GAS/Sheets → Supabase, después de Venues, Log de asistencias, Asistencias y Puntos/Tareas.**
+
+  **Etapa 1 — Disponibilidad calculada desde Asistencias: ✅ completa y verificada.** La disponibilidad de cupos por evento/mensualidad pasa a calcularse contra la tabla `asistencias` de Supabase (ya migrada, ver entrada de "Migración de Asistencias" más arriba en este MANIFEST) en vez de contra la hoja `Asistencias` de Sheets.
+
+  **Etapa 2 — Cupón/crédito conectado al cancelar evento vía `_procesarReservasEventoCancelado`: código aplicado y desplegado, pendiente de verificar con una cancelación real.** El código ya vive en producción, pero Victor prefiere esperar a que toque cancelar un evento real (en vez de forzar una cancelación de prueba solo para verificar el flujo) antes de darla por confirmada end-to-end.
+
+  **Etapa 3 — Tabla `reservas` en Supabase, escritura doble activa: ✅ completa y verificada.** 54 filas históricas migradas. Escritura doble (Sheets + Supabase) aplicada en las 8 funciones que escriben reservas: `guardarReserva`, `cancelarReserva`, `reagendarReserva`, `actualizarTallaReserva`, `actualizarProtecReserva`, `adminSetEstadoReserva`, `_confirmarReservaFila` y `_procesarReservasEventoCancelado` (Etapa 2, de arriba).
+
+  **Esquema de la tabla `reservas`:** `nombre_usuario`, `id_evento` (null para reservas mensuales), `tipo` (`'clase'`|`'mensual'`), `mes_texto`, `talla`, `protecciones`, `estado`, `monto`, `fecha_pago`, `validez_hasta`, `email`.
+
+  **Bug real corregido de paso: `actualizarProtecReserva` tenía código sin terminar** — `getRange(i+2, /* COLUMNA_PROTECCIONES */)`, un comentario de placeholder nunca reemplazado por el número de columna real, que rompía en producción. Reescrita completa; ahora funciona y escribe en ambos lados (Sheets + Supabase).
+
+  **Código muerto identificado, sin tocar a propósito: `notificarCancelacionEntrenamiento`.** Atada a editar a mano la hoja "Próximos entrenamientos", quedó obsoleta desde la Etapa 1 — nadie lee más esa hoja. Si se edita a mano, solo actualiza Sheets, nunca Supabase, generando desincronización entre las 2 fuentes. El camino correcto de ahora en adelante es cancelar siempre desde el botón de Eventos (`adminCancelarEvento`), nunca editando esa hoja a mano.
+
+  **Pendiente:** Etapa 4 (Equipamiento + Qué llevar).
