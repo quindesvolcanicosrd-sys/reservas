@@ -625,7 +625,14 @@ function _renderCardHome(r, hoy) {
   var pillsHtml = '';
 
   var uid = 'rcard-' + (r.fila || Math.random().toString(36).slice(2));
-  var filaEsc = r.fila || '';
+  // Bug real corregido: insertado sin comillas en el onclick de abrirGestionar()
+  // más abajo (fila viaja como número/`null`, no como string) -- con
+  // `r.fila` vacío, el fallback `''` de antes producía una coma doble
+  // inválida (`abrirGestionar('id',,'texto'...)`) apenas se sumaron más
+  // argumentos después de `fila` (ver "Cambios recientes"). `'null'` es
+  // sintaxis JS válida en esa posición; `r.fila` no se usa en ningún otro
+  // lugar del archivo salvo para poblar `_sgFilaActual`, que tampoco se lee.
+  var filaEsc = (r.fila === undefined || r.fila === null || r.fila === '') ? 'null' : r.fila;
 
   var bodyHtml = '<div class="rn-body" id="' + uid + '-body"><div class="rn-body-inner">';
   if (r.descripcion) bodyHtml += '<p style="margin-bottom:25px;">' + r.descripcion + '</p>';
