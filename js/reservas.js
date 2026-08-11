@@ -8,6 +8,16 @@ var E = {
 
 var _conflictosTalla = {};
 var _fechasPosibleProtecRiesgo = {};
+// id_evento (f.fecha, ver getFechasDisponibles) -> texto legible para mostrar
+// en pantalla ("Sábado 15 de Agosto - 13:00hs - Cumandá"). El backend cambió
+// `fecha` de texto legible a id_evento (UUID/slug interno) -- ese id sigue
+// viajando igual en toggleFecha()/E.fechas/guardarReserva() etc. (así lo
+// espera el backend), pero nunca debe mostrarse tal cual en pantalla; este
+// mapa (poblado en cargarFechas(), reseteado en cada carga) es la única
+// fuente para traducir un id a texto en los pocos lugares que necesitan
+// mostrarlo fuera de la card ya renderizada (abrirSheetTallaNuevaReserva(),
+// continuar_s4(), confirmarReserva()).
+var _fechaInfoDisponible = {};
 // Flecha atrás de #s4-nav condicional según el origen (ver "Cambios
 // recientes" -- bug real corregido). Seteada por `irNuevaReserva()`/
 // `iniciarReagendamiento()` (js/home.js) ANTES de `cargarFechas()`, leída
@@ -27,6 +37,18 @@ var _s4MostrarAtras = false;
 // auto-redirect): `_s4MostrarAtras` es sobre la flecha atrás, un concepto
 // distinto que no debería acoplarse a esto solo porque hoy coincida.
 var _s4VacioAutoRedirect = false;
+
+// "2026-08-15" -> "Sábado 15 de Agosto". Reusa _EV_DIAS_LARGOS/NOMBRES_MESES
+// (js/eventos.js, js/ui.js -- ya cargados antes que este archivo, ver orden
+// de scripts en MANIFEST) en vez de duplicar los arrays de días/meses; misma
+// capitalización de mes que ya usaba el texto legible que mandaba el backend
+// antes de pasar `fecha` a id_evento, para que el resultado se vea igual.
+function _fechaCalendarioATexto(fechaCalendario) {
+  if (!fechaCalendario) return '';
+  var p = fechaCalendario.split('-');
+  var d = new Date(+p[0], +p[1] - 1, +p[2]);
+  return _EV_DIAS_LARGOS[d.getDay()] + ' ' + d.getDate() + ' de ' + NOMBRES_MESES[d.getMonth()];
+}
 
 function tieneCuponDisponible() {
   if (!E.datos || !E.datos.cuponDisponible) return false;
@@ -598,14 +620,22 @@ function cargarFechas() {
     var html = '';
     var fechasAChequearTalla = [];
     var fechasTallaAgotadaSync = [];
+    var fechaInfoNueva = {};
     if (fechas.length === 0) { html = '<p style="color:var(--muted);text-align:center;">No hay fechas disponibles.</p>'; } else {
       fechas.forEach(function(f) {
-        var partes = f.fecha.split(' - ');
-        var fechaTexto = _formatarFechaRelativa((partes[0] || f.fecha).trim());
-        var hora = f.hora || (partes[1] ? partes[1].trim() : '');
-        var lugar = f.lugar || (partes[2] ? partes[2].trim() : '');
+        // `f.fecha` es el id_evento (antes era el texto legible completo) --
+        // el texto para mostrar se arma ahora a partir de fechaCalendario
+        // (yyyy-MM-dd) + donde + horaInicio, campos nuevos que vienen en la
+        // misma respuesta (ver MANIFEST, "Cambios recientes"). `f.fecha` en sí
+        // sigue viajando igual en el checkbox/E.fechas/toggleFecha/etc. -- acá
+        // solo se usa para escapar el onclick y como key del mapa de texto.
+        var fechaLegible = _fechaCalendarioATexto(f.fechaCalendario) || f.fecha;
+        var fechaTexto = _formatarFechaRelativa(fechaLegible);
+        var hora = f.horaInicio || '';
+        var lugar = f.donde || '';
         var hasInfo = !!(f.descripcion || f.mapsUrl || f.horaFin || f.duracion);
         var fechaEsc = f.fecha.replace(/'/g, "\\'");
+        fechaInfoNueva[f.fecha] = fechaLegible + (hora ? ' - ' + hora + 'hs' : '') + (lugar ? ' - ' + lugar : '');
 
         var pillsHtml = '<div class="fi-pills">';
         if (hora) pillsHtml += '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + hora + '</span>';
@@ -653,7 +683,7 @@ function cargarFechas() {
       });
     }
     var listaFechasEl = document.getElementById('lista-fechas');
-    listaFechasEl.innerHTML = html; E.fechas = []; E.tallasPorFecha = {}; _conflictosTalla = {}; _fechasPosibleProtecRiesgo = {};
+    listaFechasEl.innerHTML = html; E.fechas = []; E.tallasPorFecha = {}; _conflictosTalla = {}; _fechasPosibleProtecRiesgo = {}; _fechaInfoDisponible = fechaInfoNueva;
     void listaFechasEl.offsetWidth;
     listaFechasEl.style.animation = 'fadeIn 0.3s ease';
     // Selector Por clase/Mensual: sale del estado "cargando" en el mismo
@@ -770,7 +800,7 @@ function abrirSheetTallaNuevaReserva(fecha, tallaActual, slug) {
   _tallaSheetModo = 'nueva-reserva';
   _tallaSheetSlug = slug;
   var titulo = document.getElementById('sheet-talla-titulo');
-  if (titulo) titulo.textContent = 'Elegir talla para el ' + fecha;
+  if (titulo) titulo.textContent = 'Elegir talla para el ' + (_fechaInfoDisponible[fecha] || fecha);
   var btn = document.getElementById('btn-confirmar-talla');
   if (btn) btn.textContent = 'Usar esta talla para este día';
   _abrirSheetTallaBase(fecha, tallaActual);
@@ -911,10 +941,10 @@ function continuar_s4() {
   } else {
     detalleTexto = E.meses.join(', ');
   }
-  var fechasHtml = esClase ? E.fechas.map(function(f) { return '• ' + f; }).join('<br>') : '';
+  var fechasHtml = esClase ? E.fechas.map(function(f) { return '• ' + (_fechaInfoDisponible[f] || f); }).join('<br>') : '';
   _pagoTotalActualizar('Total: $' + (E.totalPago || 0).toFixed(2), detalleTexto, fechasHtml, esClase);
   _resetChkPago();
-  var lineasFechas = E.tipoPago === 'mensual' ? 'Meses pagados:\n- ' + E.meses.join('\n- ') + '\n\nTotal: $' + (E.totalPago || 0).toFixed(2) : E.fechas.map(function(f) { return '- ' + f; }).join('\n');
+  var lineasFechas = E.tipoPago === 'mensual' ? 'Meses pagados:\n- ' + E.meses.join('\n- ') + '\n\nTotal: $' + (E.totalPago || 0).toFixed(2) : E.fechas.map(function(f) { return '- ' + (_fechaInfoDisponible[f] || f); }).join('\n');
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : ''; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : '';
   var equipLinea = (talla && protec && protec.toLowerCase() !== 'no') ? 'Necesitare patines talla ' + talla + ' y protecciones.' : (talla) ? 'Necesitare patines talla ' + talla + '.' : (protec && protec.toLowerCase() !== 'no') ? 'Necesitare protecciones (' + protec + ').' : 'Llevare mi propio equipamiento.';
   var msgWp = '¡Hola! Soy *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '*.\n\n*Clases reservadas:*\n' + lineasFechas + '\n\n' + equipLinea + '\n\nTe envío el comprobante adjunto. Si no lo ves, por favor solicítamelo. ¡Gracias!';
@@ -1052,7 +1082,7 @@ function confirmarReserva(btn) {
     if (E.tipoPago === 'clase') {
       var fechasConTalla = fechasExitosas.map(function(f) {
         var tFecha = (E.tallasPorFecha && E.tallasPorFecha[f]) ? E.tallasPorFecha[f] : tallaLocal;
-        return '• ' + f + (necesitaPatinesLocal && tFecha ? ' — Talla ' + tFecha : '');
+        return '• ' + (_fechaInfoDisponible[f] || f) + (necesitaPatinesLocal && tFecha ? ' — Talla ' + tFecha : '');
       }).join('<br>');
       h += '<div style="padding: 10px 0; border-bottom: 1px solid var(--border-softest); font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Fecha/s:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + fechasConTalla + '</div></div>';
     } else if (mesesExitosos && mesesExitosos.length > 0) {

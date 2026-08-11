@@ -1148,6 +1148,23 @@ var _sgFechaActual = '';
 var _sgFilaActual = null;
 var _sgFechaSeleccionada = '';
 var _sgEsMensual = false;
+// id_evento (f.fecha de getFechasDisponibles, ver cargarFechasGestionar()) ->
+// texto legible, mismo criterio que _fechaInfoDisponible en js/reservas.js
+// (`fecha` pasó de texto legible a id_evento; el id sigue viajando igual a
+// reagendarReserva(), solo no debe mostrarse tal cual en pantalla).
+var _sgFechaInfoDisponible = {};
+
+// "2026-08-15" -> "Sábado 15 de Agosto" -- misma lógica que
+// _fechaCalendarioATexto() (js/reservas.js), duplicada a propósito acá en vez
+// de depender de que reservas.js ya haya cargado (carga DESPUÉS de home.js,
+// ver orden de scripts en MANIFEST) -- reusa _EV_DIAS_LARGOS/NOMBRES_MESES
+// (js/eventos.js, js/ui.js), que sí cargan antes que home.js.
+function _sgFechaCalendarioATexto(fechaCalendario) {
+  if (!fechaCalendario) return '';
+  var p = fechaCalendario.split('-');
+  var d = new Date(+p[0], +p[1] - 1, +p[2]);
+  return _EV_DIAS_LARGOS[d.getDay()] + ' ' + d.getDate() + ' de ' + NOMBRES_MESES[d.getMonth()];
+}
 
 function abrirGestionar(fecha, fila) {
   _sgFechaActual = fecha; _sgFilaActual = fila; _sgFechaSeleccionada = '';
@@ -1257,6 +1274,7 @@ function cargarFechasGestionar() {
   var d = E.datos;
   var talla = d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
   api({ action: 'getFechasDisponibles', nombre: E.nombre, talla: talla, necesitaProtecciones: d.necesitaProtecciones }, function(fechas) {
+    _sgFechaInfoDisponible = {};
     var disponibles = fechas.filter(function(f) { return f.disponible && f.fecha !== _sgFechaActual; });
     if (disponibles.length === 0) {
       var sinEquip = talla || (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no');
@@ -1269,12 +1287,20 @@ function cargarFechasGestionar() {
       _fadeInLista();
       return;
     }
+    // `f.fecha` es el id_evento (antes era el texto legible completo, ver
+    // MANIFEST) -- el texto se arma ahora desde fechaCalendario/donde/
+    // horaInicio; `f.fecha` en sí sigue siendo lo que se manda como
+    // `fechaNueva` a reagendarReserva() (ver ejecutarReagendamiento()), solo
+    // no debe mostrarse tal cual. _sgFechaInfoDisponible traduce ese id a
+    // texto en confirmarCambioFecha(), que recibe solo el id vía
+    // _sgFechaSeleccionada.
+    var sgFechaInfoNueva = {};
     lista.innerHTML = disponibles.map(function(f) {
-      var partes = f.fecha.split(' - ');
-      var texto = (partes[0] || f.fecha).trim();
-      var hora = f.hora || (partes[1] ? partes[1].trim() : '');
-      var lugar = f.lugar || (partes[2] ? partes[2].trim() : '');
+      var texto = _sgFechaCalendarioATexto(f.fechaCalendario) || f.fecha;
+      var hora = f.horaInicio || '';
+      var lugar = f.donde || '';
       var fechaEsc = f.fecha.replace(/'/g, "\\'");
+      sgFechaInfoNueva[f.fecha] = { texto: texto, hora: hora, lugar: lugar };
       return '<div class="sg-fecha-item" onclick="selFechaGestionar(this,\'' + fechaEsc + '\')">' +
         '<div class="sfi-header">' +
         '<div><div class="sfi-title">' + texto + '</div>' +
@@ -1285,6 +1311,7 @@ function cargarFechasGestionar() {
         '<div class="sfi-circle"><span class="material-symbols-outlined">check</span></div>' +
         '</div></div>';
     }).join('');
+    _sgFechaInfoDisponible = sgFechaInfoNueva;
     _fadeInLista();
   }, function() {
     lista.innerHTML = '<p style="color:var(--danger);font-size:0.82rem;">Error al cargar fechas. Intenta de nuevo.</p>';
@@ -1332,10 +1359,13 @@ function selMesGestionar(mes) {
 
 function confirmarCambioFecha() {
   if (!_sgFechaSeleccionada) return;
-  var partes = (_sgFechaSeleccionada || '').split(' - ');
-  var fechaTexto = (partes[0] || _sgFechaSeleccionada).trim();
-  var hora = partes[1] ? partes[1].trim() : '';
-  var lugar = partes[2] ? partes[2].trim() : '';
+  // `_sgFechaSeleccionada` es el id_evento elegido en cargarFechasGestionar()
+  // (flujo mensual: sigue siendo el nombre del mes, sin cambios -- no tiene
+  // entrada en el mapa y usa el fallback tal cual, igual que antes).
+  var infoSel = _sgFechaInfoDisponible[_sgFechaSeleccionada];
+  var fechaTexto = infoSel ? infoSel.texto : _sgFechaSeleccionada;
+  var hora = infoSel ? infoSel.hora : '';
+  var lugar = infoSel ? infoSel.lugar : '';
   var d = E.datos;
   var equipMsg = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no')
     ? 'Patines talla ' + (d.talla || '?')
