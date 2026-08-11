@@ -2874,6 +2874,26 @@ function _evDetalleAdminCancelarHtml(e) {
 // objeto referenciado por `_evDetalleActual` (ver `abrirEvDetalle()`), así
 // que mutarlo acá alcanza para que `_evRenderDetalle()` refleje el cambio
 // en las 2 secciones (RSVP y esta) sin tener que sincronizar 2 variables.
+// Bug real corregido (ver MANIFEST.md "Cambios recientes" -- reportado como
+// "cancelar un evento y volver al timeline lo sigue mostrando como si no
+// estuviera cancelado, hasta un refresh completo"): investigado ANTES de
+// asumir el fix -- `ev` acá es el MISMO objeto referenciado por `_EV_EVENTOS`
+// (mismo criterio que el resto de esta función, ver comentario original de
+// más abajo), así que `ev.estado = 'Cancelado'` YA deja el array local
+// correcto de inmediato -- ese no era el problema. La causa real es que
+// `volver('s-eventos')` (el botón atrás del detalle) es un simple `ir()`
+// (js/ui.js): togglea qué `.pantalla` está visible, pero NUNCA vuelve a
+// pintar el timeline -- el DOM de `#ev-timeline` seguía siendo el HTML
+// generado ANTES de cancelar (con RSVP habilitado, sin la pill de estado),
+// aunque los DATOS ya estuvieran al día. Un refresh completo "arregla" esto
+// solo porque re-arma todo desde cero. Fix: `_evRenderTimeline(true)`
+// (instant, sin fade) acá mismo, ANTES de volver -- repinta `#ev-timeline`
+// con los datos ya actualizados mientras la pantalla puede estar oculta
+// (`#s-eventos` no necesita estar activa para esto, mismo criterio que
+// `_tarCargarTodo()` ya usa en Tareas: mantener el DOM en segundo plano
+// sincronizado, no solo lo que se ve en este instante) -- para cuando el
+// usuario efectivamente vuelve, la card ya está correcta, sin esperar a la
+// próxima carga real de la sección.
 function _evCancelarEvento(idEvento, btn) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
   if (!ev) return;
@@ -2882,17 +2902,20 @@ function _evCancelarEvento(idEvento, btn) {
   var estadoAnterior = ev.estado;
   ev.estado = 'Cancelado';
   if (_evDetalleActual && _evDetalleActual.id === idEvento) _evRenderDetalle(ev);
+  _evRenderTimeline(true);
   api({ action: 'adminCancelarEvento', adminToken: _adminToken, idEvento: idEvento }, function(res) {
     if (res && res.exito === false) {
       ev.estado = estadoAnterior;
       if (btn) btn.disabled = false;
       if (_evDetalleActual && _evDetalleActual.id === idEvento) _evRenderDetalle(ev);
+      _evRenderTimeline(true);
       mostrarToast(res.error || 'No se pudo cancelar el evento.', 'error');
     }
   }, function(e) {
     ev.estado = estadoAnterior;
     if (btn) btn.disabled = false;
     if (_evDetalleActual && _evDetalleActual.id === idEvento) _evRenderDetalle(ev);
+    _evRenderTimeline(true);
     mostrarToast((e && e.message) || 'No se pudo cancelar el evento.', 'error');
   });
 }

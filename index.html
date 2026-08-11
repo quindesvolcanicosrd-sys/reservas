@@ -1127,42 +1127,44 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
 
-  <!-- Detalle de tarea (nuevo, ver MANIFEST.md "Cambios recientes") --
-       mismo esqueleto visual que #s-eventos-detalle: header sticky (ícono+
-       nombre de área) + secciones de contenido (.ev-detalle-section,
-       reusadas tal cual) + footer fijo contextual (#cta-footer-s-tareas-detalle,
-       mismo mecanismo genérico de ir()/js/ui.js que ya usan los wizards).
-       Poblada por _tarRenderDetalle()/js/tareas.js. -->
+  <!-- Detalle de tarea (rediseñado, ver MANIFEST.md "Cambios recientes") --
+       mismo esqueleto visual que #s-eventos-detalle en todo lo demás:
+       header sticky (ícono+nombre de área+fecha, mismo formato que el
+       detalle de evento) + secciones de contenido apiladas en orden fijo
+       (.ev-detalle-section, reusadas tal cual) -- pills de puntos+
+       vencimiento, descripción completa (texto plano), acciones (una al
+       lado de la otra) inmediatamente debajo de la descripción, "A CARGO
+       (N)" al final. Ya NO tiene footer fijo (#cta-footer-s-tareas-detalle,
+       eliminado -- las acciones pasaron al flujo normal de la pantalla,
+       mismo criterio que #s-eventos-detalle, que tampoco tiene uno) ni la
+       sección `#tar-detalle-admin` (3 botones apilados, eliminada -- "Editar
+       tarea" pasó a ser el FAB de abajo, "Editar personas"/"Borrar tarea" se
+       mudaron DENTRO del formulario de edición, ver más abajo). Poblada por
+       _tarRenderDetalle()/js/tareas.js. -->
   <div class="pantalla" id="s-tareas-detalle">
     <div class="ev-detalle-sticky" id="tar-detalle-sticky"></div>
     <div class="card" style="text-align:left;">
       <div id="tar-detalle-vista">
         <div class="ev-detalle-section">
-          <div class="ev-detalle-titulo-seccion" id="tar-detalle-titulo" style="margin-bottom:8px;"></div>
-          <p class="ev-detalle-desc" id="tar-detalle-desc" style="margin-bottom:14px;"></p>
+          <div class="ev-detalle-titulo-seccion" id="tar-detalle-titulo" style="margin-bottom:10px;"></div>
           <div id="tar-detalle-pills"></div>
+          <p class="ev-detalle-desc" id="tar-detalle-desc" style="margin-top:14px;"></p>
+          <div id="tar-detalle-acciones" style="margin-top:16px;"></div>
         </div>
         <div class="ev-detalle-section">
-          <div class="ev-detalle-titulo-seccion" id="tar-detalle-cargo-titulo">Quiénes están a cargo</div>
+          <div class="ev-detalle-titulo-seccion" id="tar-detalle-cargo-titulo">A CARGO (0)</div>
           <div id="tar-detalle-cargo-lista"></div>
-        </div>
-        <!-- Acciones admin -- Editar tarea / Editar personas / Borrar tarea,
-             ocultas por completo para cuentas no-admin (_tarRenderDetalle()
-             togglea el display). -->
-        <div class="ev-detalle-section" id="tar-detalle-admin" style="display:none;">
-          <div class="ev-detalle-titulo-seccion">Administrar</div>
-          <div style="display:flex;flex-direction:column;gap:10px;">
-            <button type="button" class="btn btn-outline tar-card-btn" onclick="_tarDetalleAbrirEditar()"><span class="material-symbols-outlined">edit</span>Editar tarea</button>
-            <button type="button" class="btn btn-outline tar-card-btn" onclick="_tarPersonasAbrir()"><span class="material-symbols-outlined">group</span>Editar personas</button>
-            <button type="button" class="btn btn-danger tar-card-btn" onclick="_tarEliminarTareaAbrir()"><span class="material-symbols-outlined">delete_forever</span>Borrar tarea</button>
-          </div>
         </div>
       </div>
       <!-- "Editar tarea" inline (admin) -- reemplaza #tar-detalle-vista
            mientras _tarDetalleEditando es true, mismos componentes que el
            wizard "Nueva tarea" (.aj-pill de área, .qty-stepper de puntos/
            cupos, calendario inline .ev-ant-cal-*/.ev-cal-*), estado propio
-           (_tarDetEdit*, js/tareas.js). -->
+           (_tarDetEdit*, js/tareas.js). "Editar personas"/"Borrar tarea"
+           (ver MANIFEST.md "Cambios recientes" -- se mudaron acá desde la
+           vieja sección `#tar-detalle-admin`: "Editar tarea" pasó a ser el
+           FAB de la vista, así que este formulario -- lo que el FAB abre --
+           es ahora el único lugar de la pantalla con acciones admin). -->
       <div id="tar-detalle-editar" style="display:none;">
         <div class="ev-detalle-section">
           <p class="ev-lugar-campo-label" style="margin-top:0;">Nombre de la tarea</p>
@@ -1196,13 +1198,26 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <button type="button" class="btn btn-outline" style="flex:1;" onclick="_tarDetalleCerrarEditar()">Cancelar</button>
             <button type="button" class="btn btn-primary" style="flex:1;" onclick="_tarDetalleGuardarEditar(this)">Guardar cambios</button>
           </div>
+          <button type="button" class="btn btn-outline tar-card-btn" style="margin-top:10px;" onclick="_tarPersonasAbrir()"><span class="material-symbols-outlined">group</span>Editar personas</button>
+          <button type="button" class="btn btn-danger tar-card-btn" style="margin-top:10px;" onclick="_tarEliminarTareaAbrir()"><span class="material-symbols-outlined">delete_forever</span>Borrar tarea</button>
         </div>
       </div>
       <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
     </div>
   </div>
-  <div class="cta-footer-fixed" id="cta-footer-s-tareas-detalle">
-    <div id="tar-detalle-footer-cont" style="display:flex;flex-direction:column;gap:8px;"></div>
+
+  <!-- FAB "Editar tarea" de #s-tareas-detalle (admin, ver MANIFEST.md
+       "Cambios recientes") -- reemplaza la sección `#tar-detalle-admin` que
+       vivía apilada al final del contenido; un solo botón (no speed-dial),
+       mismo mecanismo/posicionamiento que `#tar-fab-menu`/`#ev-fab-menu`
+       (fixed, centrado, hijo directo de <body>). display:none por default --
+       ir()/js/ui.js lo muestra solo con 's-tareas-detalle' activa Y
+       _adminToken; `_tarRenderDetalle()`/js/tareas.js lo oculta además
+       mientras el modo edición (lo que este botón abre) ya está abierto. -->
+  <div class="ev-fab-menu" id="tar-detalle-fab-menu" style="display:none;">
+    <button type="button" class="ev-fab-btn" id="tar-detalle-fab-btn" onclick="_tarDetalleAbrirEditar()" title="Editar tarea" aria-label="Editar tarea">
+      <span class="material-symbols-outlined">edit</span>
+    </button>
   </div>
 
   <!-- "Editar personas" (admin) -- subpantalla propia, drill-down del
@@ -1265,7 +1280,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            etiqueta). -->
       <div class="salud-paso activo" id="tar-crear-paso-0">
         <p class="ev-lugar-campo-label" style="margin-top:0;">Nombre de la tarea</p>
-        <input type="text" class="ev-lugar-input" id="tar-crear-titulo" placeholder="Ej: Armar el itinerario del torneo" oninput="_tarCrearSetTitulo(this.value)">
+        <input type="text" class="ev-lugar-input" id="tar-crear-titulo" maxlength="70" placeholder="Ej: Armar el itinerario del torneo" oninput="_tarCrearSetTitulo(this.value)">
+        <div class="tar-char-contador" id="tar-crear-titulo-contador">70 caracteres restantes</div>
         <p class="ev-lugar-campo-label" style="margin-top:20px;">Área</p>
         <div class="aj-pills-row" id="tar-crear-area-pills">
           <span class="aj-pill" data-val="Logística" onclick="_tarCrearSelArea(this)">Logística</span>
@@ -1279,7 +1295,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
         <div class="error-msg" id="tar-crear-err-0"></div>
         <p class="ev-lugar-campo-label" style="margin-top:20px;">Descripción de la tarea (opcional)</p>
-        <textarea id="tar-crear-notas" placeholder="Detalles adicionales para quien tome la tarea..." style="min-height:90px;resize:none;" oninput="_tarCrearSetNotas(this.value)"></textarea>
+        <textarea id="tar-crear-notas" maxlength="400" placeholder="Detalles adicionales para quien tome la tarea..." style="min-height:90px;resize:none;" oninput="_tarCrearSetNotas(this.value)"></textarea>
+        <div class="tar-char-contador" id="tar-crear-notas-contador">400 caracteres restantes</div>
       </div>
 
       <!-- Paso 2: Puntos + Máximo de personas -- steppers .qty-stepper

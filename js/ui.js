@@ -509,6 +509,15 @@ function ir(id, desdeHistorial, sinTrampa) {
   var tareasFab = document.getElementById('tar-fab-menu');
   if (tareasFab) tareasFab.style.display = (id === 's-tareas' && !!_adminToken) ? 'flex' : 'none';
 
+  // FAB "Editar tarea" de #s-tareas-detalle -- ver MANIFEST.md "Cambios
+  // recientes" (rediseño del detalle de tarea): mismo criterio que los 2
+  // FAB de arriba (admin real + pantalla raíz de la propia pantalla, acá
+  // 's-tareas-detalle'). `_tarRenderDetalle()`/js/tareas.js lo oculta
+  // además mientras el modo edición (lo que este botón abre) ya está
+  // abierto -- acá solo se cubre el caso base de "entrar a la pantalla".
+  var tareasDetalleFab = document.getElementById('tar-detalle-fab-menu');
+  if (tareasDetalleFab) tareasDetalleFab.style.display = (id === 's-tareas-detalle' && !!_adminToken) ? 'flex' : 'none';
+
   _actualizarBottomNav(id);
 
   var sinPasos = ['s1','s-home','s-misreservas','s-carga','s6','s-datos','s-gestionar'].concat(ADMIN_PANTALLAS);

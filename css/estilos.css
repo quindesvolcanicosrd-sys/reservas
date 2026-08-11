@@ -251,10 +251,13 @@ body.aj-sub-salud-activo #app-toast {
    inferior en los 3 pasos del wizard "Nueva tarea" -- la nav seguía
    técnicamente `display:flex` en el DOM, solo visualmente cubierta. */
 #cta-footer-s-tareas-crear { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
-/* #cta-footer-s-tareas-detalle / #cta-footer-s-tareas-detalle-personas --
-   mismo motivo que #cta-footer-s-tareas-crear de arriba, mismo tab de la
-   nav inferior (ambas suman a 'tareas' en `_BOTTOM_NAV_EXTRA`, js/ui.js) --
-   encontrado con Playwright en la propia verificación de estas 2 pantallas
-   nuevas (el click al botón real quedaba interceptado por `.app-bottom-nav`,
-   no por casualidad de test). */
-#cta-footer-s-tareas-detalle, #cta-footer-s-tareas-detalle-personas { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
+/* #cta-footer-s-tareas-detalle-personas -- mismo motivo que
+   #cta-footer-s-tareas-crear de arriba, mismo tab de la nav inferior (suma
+   a 'tareas' en `_BOTTOM_NAV_EXTRA`, js/ui.js) -- encontrado con Playwright
+   en la propia verificación de esta pantalla (el click al botón real
+   quedaba interceptado por `.app-bottom-nav`, no por casualidad de test).
+   `#cta-footer-s-tareas-detalle` (la otra mitad de este selector) se
+   eliminó de acá -- ver MANIFEST.md "Cambios recientes", rediseño del
+   detalle de tarea: esa pantalla ya no tiene footer fijo, sus acciones
+   pasaron al flujo normal de contenido. */
+#cta-footer-s-tareas-detalle-personas { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }

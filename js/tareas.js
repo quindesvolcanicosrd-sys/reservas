@@ -50,15 +50,15 @@ var _TAR_ICONOS_AREA = {
 };
 
 /* ── Ícono de card + pills compartidas (Disponibles/Baúl/Mis tareas/
-   Archivadas/Gestionar) -- ver MANIFEST.md "Cambios recientes": el ícono
-   se mudó de una columna a la izquierda (`.ev-card-icon`, restaba ancho a
-   todo el contenido) a un recuadro en la esquina superior junto al título
-   (`.tar-card-header`/`.tar-card-icono-box`, css/tareas.css), y las pills
-   de Área/Cupos/Puntos/Fecha se unificaron en una sola fila `.fi-pills`
-   (mismo componente pill sutil ya usado en el resto de la app,
-   css/reservas.css) en vez de 2 filas de texto plano. Un solo par de
-   helpers reusado por los 5 templates de card en vez de repetir el mismo
-   HTML 5 veces. */
+   Archivadas/Gestionar) -- ver MANIFEST.md "Cambios recientes" (rediseño de
+   card, mockup de lista): el ícono de área se fusiona con el título en una
+   sola fila (`_tarCardHeaderHtml()`, más abajo -- reemplaza la pill de área
+   suelta que vivía en la esquina, `_tarAreaPillHtml()`, eliminada: el área
+   ya solo se comunica vía el ícono), y las pills de Puntos/Vencimiento se
+   unifican en una sola fila `.fi-pills` (mismo componente pill sutil ya
+   usado en el resto de la app, css/reservas.css). Un solo par de helpers
+   reusado por los 5 templates de card en vez de repetir el mismo HTML 5
+   veces. */
 // `personas` = el array crudo de asignados/personas de la tarea, en
 // cualquiera de sus 2 formas según la vista (`t.asignados` en Disponibles/
 // Baúl/Mis tareas, `t.personas` en Archivadas/Gestionar) -- ambas formas
@@ -70,84 +70,36 @@ var _TAR_ICONOS_AREA = {
 function _tarTieneAprobada(personas) {
   return (personas || []).some(function(p) { return p.estado === 'aprobada'; });
 }
-// `estado` = true/'aprobada' -> pill verde ("· Aprobada" sumado al texto,
-// comportamiento de siempre, todas las vistas salvo Archivadas pasan un
-// boolean acá); 'vencida' -> pill roja ("· Vencida", solo Archivadas, ver
-// `_tarCardArchivadaHtml()` -- tarea archivada sin ninguna asignación
-// aprobada); falsy -> pill neutra, sin sufijo.
-// **Ícono suelto en la esquina -> pill (ver MANIFEST.md "Cambios
-// recientes" -- pedido explícito): antes un recuadro de 2 líneas
-// (`.tar-card-icono-box`, ícono+área arriba, estado debajo); ahora un único
-// `.fi-pill` (mismo componente que el resto de la app) con ícono+nombre del
-// área en una sola línea -- el sufijo de estado, si corresponde, viaja
-// DENTRO del mismo texto en vez de una 2da línea, y el color de la pill
-// entera (no solo un texto chico) es lo que comunica aprobada/vencida.**
-// Sigue siendo el punto único de armado para las 5 vistas con card de tarea
-// (Disponibles/Baúl/Mis tareas/Gestionar/Archivadas) + el header del
-// detalle (`_tarDetalleStickyHtml()`, más abajo).
-function _tarAreaPillHtml(area, estado) {
-  var icono = _TAR_ICONOS_AREA[area] || 'task_alt';
-  var clase = '', sufijo = '';
-  if (estado === 'vencida') { clase = ' tar-area-pill-vencida'; sufijo = ' · Vencida'; }
-  else if (estado) { clase = ' tar-area-pill-aprobada'; sufijo = ' · Aprobada'; }
-  return '<span class="fi-pill tar-area-pill' + clase + '"><span class="material-symbols-outlined">' + icono + '</span>' + (area || '') + sufijo + '</span>';
-}
-// `fechaOverride` (opcional) = { texto, clase } -- salta el cálculo relativo
-// de `_tarFechaInfo()` y usa este texto/clase tal cual. Solo lo pasa
-// `_tarCardArchivadaHtml()`: Archivadas no muestra "vence en X días" como el
-// resto de las vistas, siempre uno de 2 estados fijos según si la tarea
-// tiene alguna asignación aprobada ("Finalizada el..."/verde) o no
-// ("Venció el..."/rojo), ver esa función.
-// **Ya NO recibe `area` ni `cupos`** (ver MANIFEST.md "Cambios recientes"
-// -- pedido explícito: la vista de lista deja SOLO puntos+fecha en la fila
-// de pills; área pasó a `_tarAreaPillHtml()` arriba, cupos se ve nada más
-// en el detalle vía `_tarDetallePillsHtml()`, más abajo).
+// Puntos ("Vale por N puntos", antes "N pts") + Vencimiento ("Vence el
+// [día]", ver MANIFEST.md "Cambios recientes" -- rediseño de card: antes
+// esta fila podía leerse como un texto de puntos duplicado por lo parecido
+// de las 2 pills a simple vista -- ahora cada una lleva su propio ícono e
+// texto sin ambigüedad, y NUNCA hay una segunda pill de puntos acá). El
+// ícono de la pill de vencimiento sale de `_tarFechaInfo()` (dinámico según
+// color/urgencia, ver esa función) en vez de quedar fijo -- `event` para
+// rojo/naranja (sin cambios), `hourglass_top` para el estado "verde" (falta
+// bastante para vencer, pedido explícito). `fechaOverride` (opcional) =
+// `{ texto, clase, icono }` -- salta el cálculo relativo de `_tarFechaInfo()`
+// y usa estos valores tal cual, solo lo pasa `_tarCardArchivadaHtml()`
+// (Archivadas no muestra "vence en X días", siempre "Finalizada el..."/
+// "Venció el..." fijos).
 function _tarPillsRowHtml(puntos, fechaRaw, fechaOverride) {
   var fi = fechaOverride || _tarFechaInfo(fechaRaw);
   return '<div class="fi-pills" style="margin-top:8px;">' +
-    '<span class="fi-pill fi-pill-dur">' + (puntos != null ? puntos : 0) + ' pts</span>' +
-    '<span class="fi-pill ' + fi.clase + '"><span class="material-symbols-outlined">event</span>' + fi.texto + '</span>' +
+    '<span class="fi-pill fi-pill-dur"><span class="material-symbols-outlined">stars</span>Vale por ' + (puntos != null ? puntos : 0) + ' puntos</span>' +
+    '<span class="fi-pill ' + fi.clase + '"><span class="material-symbols-outlined">' + (fi.icono || 'event') + '</span>' + fi.texto + '</span>' +
   '</div>';
 }
-// Fila de 4 pills del detalle de tarea (área/cupos/puntos/fecha, ver
-// MANIFEST.md "Cambios recientes" -- pedido explícito de las 4 juntas acá,
-// a diferencia de la vista de lista de arriba). `cupos` = { tomados, total }
-// siempre presente en el detalle (a diferencia de `_tarPillsRowHtml()`,
-// nunca opcional acá).
-function _tarDetallePillsHtml(t, cupos) {
-  var fi = _tarFechaInfo(t.fechaVencimiento);
-  var icono = _TAR_ICONOS_AREA[t.area] || 'task_alt';
-  return '<div class="fi-pills" style="margin-top:10px;">' +
-    '<span class="fi-pill tar-area-pill"><span class="material-symbols-outlined">' + icono + '</span>' + (t.area || '') + '</span>' +
-    '<span class="fi-pill fi-pill-hora tar-cupos-pill">' + cupos.tomados + '/' + cupos.total + ' cupos</span>' +
-    '<span class="fi-pill fi-pill-dur">' + (t.puntos != null ? t.puntos : 0) + ' pts</span>' +
-    '<span class="fi-pill ' + fi.clase + '"><span class="material-symbols-outlined">event</span>' + fi.texto + '</span>' +
-  '</div>';
-}
-// Descripción de la tarea (campo `notas`, ver MANIFEST.md "Cambios
-// recientes") como acordeón colapsado por defecto -- mismo patrón visual
-// "Más información" que ya usan las cards de fecha del flujo de reserva
-// (`.fi-footer`/`.fi-body`/`.fi-desc`, css/reservas.css), reusado tal cual
-// salvo el padding horizontal (ver css/tareas.css -- acá ya vive dentro de
-// `.ev-card-body`, que ya trae su propio inset vía `.ev-card`). El wrapper
-// es `.tar-desc` (no `.fecha-item`, que trae de fábrica su propio borde/
-// fondo de card que acá no corresponde) -- mismo rol de scope para
-// `.abierto`/`.open` que `.fecha-item` cumple ahí, redeclarado puntual en
-// css/tareas.css. Usado por las 4 vistas con card de tarea (Disponibles/
-// Baúl/Mis tareas/Archivadas) -- nunca por Gestionar, fuera del pedido.
+// Descripción de la tarea (campo `notas`) -- SIEMPRE visible como texto
+// plano debajo del título (ver MANIFEST.md "Cambios recientes" -- rediseño
+// de card: reemplaza el acordeón colapsado "Descripción de la tarea ⌄" que
+// tenía antes, `.fi-footer`/`.fi-body`, pedido explícito ya una vez antes
+// de esta sesión y confirmado de nuevo acá -- sin ningún toggle/estado
+// `.open` que mantener). Mismo `.fi-desc` (css/reservas.css) para el
+// tipografía/color de texto secundario, sin el wrapper de acordeón.
 function _tarDescHtml(notas) {
   if (!notas) return '';
-  return '<div class="tar-desc">' +
-    '<div class="fi-footer" onclick="_tarToggleDesc(this,event)">' +
-      '<span class="fi-footer-label">Descripción de la tarea</span>' +
-      '<span class="material-symbols-outlined fi-footer-chevron">expand_more</span>' +
-    '</div>' +
-    '<div class="fi-body"><div class="fi-body-inner"><p class="fi-desc" style="margin-bottom:0;">' + notas + '</p></div></div>' +
-  '</div>';
-}
-function _tarToggleDesc(footer, event) {
-  event.stopPropagation();
-  footer.closest('.tar-desc').classList.toggle('open');
+  return '<p class="fi-desc tar-desc" style="margin:8px 0 0;">' + notas + '</p>';
 }
 
 /* ── Buscador + filtros compartidos (Disponibles/Mis tareas/Baúl -- las 3
@@ -712,14 +664,14 @@ function _tarToggleBaul() {
   }
 }
 
-/* Tarjeta de tarea (Disponibles/Baúl) -- título+pill de área (esquina
-   superior, ver `_tarAreaPillHtml()`), pills de Puntos/Fecha límite
+/* Tarjeta de tarea (Disponibles/Baúl) -- ícono de área fusionado con el
+   título (esquina superior, ver `_tarCardHeaderHtml()`), avatares de
+   asignados en la esquina opuesta, pills de Puntos/Vencimiento
    (`_tarPillsRowHtml()`, ver MANIFEST.md "Cambios recientes" -- Cupos ya
-   NO se ve en la lista, solo en el detalle), fila de avatares de quienes ya la
-   tomaron, y el botón de acción que corresponda (o la nota de límite
-   alcanzado en su lugar). Ya NO usa `.ev-card-top-row`/`.ev-card-icon`
-   (css/eventos.css, columna de ícono a la izquierda) -- ver MANIFEST.md
-   "Cambios recientes". */
+   NO se ve en la lista, solo en el detalle), descripción siempre visible, y
+   el botón de acción que corresponda (o la nota de límite alcanzado en su
+   lugar). Ya NO usa `.ev-card-top-row`/`.ev-card-icon` (css/eventos.css,
+   columna de ícono a la izquierda) -- ver MANIFEST.md "Cambios recientes". */
 // Card ahora clickeable entera (abre el detalle, `_tarAbrirDetalle()`, ver
 // MANIFEST.md "Cambios recientes") -- cada botón/control interactivo de
 // abajo suma `event.stopPropagation()` a su onclick para no disparar
@@ -746,8 +698,8 @@ function _tarCardHtml(t, contexto) {
   // cambios, ver MANIFEST.md "Cambios recientes" anterior). Disponibles
   // (ver "Cambios recientes" -- pedido explícito): en vez de vivir como
   // botón debajo de "Tomar tarea", pasa a ser un ícono en la esquina
-  // superior, junto a `_tarAreaPillHtml()` (mismo lugar que la pill de
-  // área) -- `archivarBtnHtml`, sumado a `tar-card-header` más abajo.
+  // superior derecha del header, junto a los avatares --
+  // `archivarBtnHtml`, pasado a `_tarCardHeaderHtml()` más abajo.
   var archivarBtnHtml = '';
   if (contexto === 'baul' && _adminToken) {
     accionHtml += '<button type="button" class="btn btn-text-simple tar-card-btn" onclick="event.stopPropagation();_tarArchivar(\'' + t.idTarea + '\', this)"><span class="material-symbols-outlined">archive</span>Archivar tarea</button>';
@@ -757,34 +709,80 @@ function _tarCardHtml(t, contexto) {
   var asignados = t.asignados || [];
   return '<div class="ev-card" id="tar-card-' + contexto + '-' + t.idTarea + '" onclick="_tarAbrirDetalle(\'' + t.idTarea + '\')">' +
     '<div class="ev-card-body">' +
-      '<div class="tar-card-header">' +
-        '<div class="ev-card-titulo">' + (t.titulo || '') + '</div>' +
-        archivarBtnHtml +
-        _tarAreaPillHtml(t.area, _tarTieneAprobada(asignados)) +
-      '</div>' +
+      _tarCardHeaderHtml(t, _tarTieneAprobada(asignados), _tarAvataresHtml(asignados), archivarBtnHtml) +
       _tarPillsRowHtml(t.puntos, t.fechaVencimiento) +
       _tarDescHtml(t.notas) +
-      _tarAvataresHtml(asignados) +
       accionHtml +
     '</div>' +
   '</div>';
 }
 
-/* Fila de avatares superpuestos (primer uso real de .avatar-pill--xs,
-   css/global.css) -- el conteo "N/total cupos" que vivía acá se mudó a una
-   pill dentro de `.fi-pills` (ver `_tarPillsRowHtml()` más arriba). */
+/* Pila de avatares superpuestos (.avatar-pill--xs, css/global.css) -- ver
+   MANIFEST.md "Cambios recientes" (rediseño de card, mockup de lista): se
+   mudó de una fila propia debajo de las pills a la esquina superior derecha
+   del header de la card (`.tar-card-header-right`, ver `_tarCardHeaderHtml()`
+   más abajo), reemplazando ahí a la pill de área -- el área ya solo se
+   comunica vía el ícono fusionado con el título. Sin el wrapper
+   `.tar-avatares-row` que tenía antes (ese margen ya no aplica en la nueva
+   posición) -- devuelve solo `.tar-avatar-stack`, o '' si no hay nadie.
+   `_tarNombreAsignacion(p)` cubre el alias `nombreUsuario` que usan las
+   asignaciones de `adminGetTareasActivas`/Archivadas -- antes esta función
+   solo miraba `nombreDerby`/`nombre`, dejando esas 2 fuentes sin nombre para
+   la inicial de fallback. */
 function _tarAvataresHtml(asignados) {
   asignados = asignados || [];
   var avatares = asignados.map(function(p) {
     var foto = (p.fotoPerfil || '').replace(/"/g, '&quot;');
-    var nombre = (p.nombreDerby || p.nombre || '').replace(/"/g, '&quot;');
+    var nombre = (p.nombreDerby || _tarNombreAsignacion(p) || p.nombre || '').replace(/"/g, '&quot;');
     return '<div class="avatar-pill avatar-pill--xs" data-nombre="' + nombre + '" data-foto="' + foto + '"></div>';
   }).join('');
   if (!avatares) return '';
-  return '<div class="tar-avatares-row"><div class="tar-avatar-stack">' + avatares + '</div></div>';
+  return '<div class="tar-avatar-stack">' + avatares + '</div>';
 }
+/* Header de card -- ícono de área fusionado con el título (mismo componente
+   `.ev-card-titulo-row`/`.ev-card-icono-inline` que ya usan las cards de
+   Eventos, css/eventos.css, reusado tal cual -- ver MANIFEST.md "Cambios
+   recientes": reemplaza el recuadro/pill de área que vivía suelto en la
+   esquina, `_tarAreaPillHtml()`, eliminada -- el área ya solo se comunica
+   acá) + avatares de asignados en la esquina superior derecha (reemplaza
+   ahí mismo a esa pill). `estado` -- mismo contrato que tenía
+   `_tarAreaPillHtml(area, estado)`: `'vencida'` (SOLO Archivadas, sin
+   ninguna aprobación) tiñe el ícono de rojo + suma "Vencida" debajo del
+   título; cualquier otro valor truthy (Archivadas aprobada, o el resto de
+   las vistas cuando `_tarTieneAprobada()` da `true`) tiñe de verde + suma
+   "Aprobada" -- solo tinte de color + texto, sin ningún ícono de check
+   aparte (ver MANIFEST.md "Cambios recientes" -- pedido explícito, no debe
+   quedar mezclado ningún mecanismo viejo tipo check). `extraDerechaHtml`
+   (opcional) -- el ícono de "Archivar tarea" (Disponibles, admin), que ya
+   vivía en esta esquina antes del rediseño, va ANTES de los avatares. */
+function _tarCardHeaderHtml(t, estado, avataresHtml, extraDerechaHtml, tituloSufijoHtml) {
+  var icono = _TAR_ICONOS_AREA[t.area] || 'task_alt';
+  var esVencida = estado === 'vencida';
+  var claseEstado = esVencida ? ' tar-titulo-vencida' : (estado ? ' tar-titulo-aprobada' : '');
+  var textoEstado = esVencida ? 'Vencida' : (estado ? 'Aprobada' : '');
+  return '<div class="tar-card-header">' +
+    '<div class="tar-card-header-left">' +
+      '<div class="ev-card-titulo-row' + claseEstado + '">' +
+        '<span class="material-symbols-outlined ev-card-icono-inline">' + icono + '</span>' +
+        '<div class="ev-card-titulo">' + (t.titulo || '') + (tituloSufijoHtml || '') + '</div>' +
+      '</div>' +
+      (textoEstado ? '<div class="tar-aprobada-txt' + (esVencida ? ' tar-vencida-txt' : '') + '">' + textoEstado + '</div>' : '') +
+    '</div>' +
+    '<div class="tar-card-header-right">' + (extraDerechaHtml || '') + (avataresHtml || '') + '</div>' +
+  '</div>';
+}
+// Bug real corregido de paso (encontrado en la propia investigación del bug
+// de "A cargo", no al aplicar el fix a ciegas): el selector de acá solo
+// cubría `.tar-avatares-row` (la fila de avatares de las cards de lista) --
+// los avatares de la sección "A cargo" del detalle (`.ev-asist-persona`,
+// `_tarPersonaCardHtml()`) NUNCA vivieron dentro de esa fila, así que pese a
+// que `_tarRenderDetalle()` ya llamaba a esta función después de pintarlos,
+// ninguno se hidrataba (quedaban en su estado inicial sin foto/inicial).
+// `.tar-avatar-stack` (la esquina superior de cada card, ver MANIFEST.md
+// "Cambios recientes" -- reemplaza a `.tar-avatares-row`) + el contenedor
+// del detalle, ambos explícitos.
 function _tarHidratarAvatares() {
-  document.querySelectorAll('.tar-avatares-row [data-nombre]').forEach(function(el) {
+  document.querySelectorAll('.tar-avatar-stack [data-nombre], #tar-detalle-cargo-lista [data-nombre]').forEach(function(el) {
     _avatarSetFotoOInicial(el, el.getAttribute('data-foto') || '', el.getAttribute('data-nombre'));
   });
 }
@@ -798,10 +796,19 @@ function _tarFechaLegible(raw) {
   return s;
 }
 
-/* Info de la pill de fecha límite (color + texto relativo en español) --
-   ver MANIFEST.md "Cambios recientes". Color: rojo si ya venció o vence
-   hoy, naranja si vence dentro de los próximos 3 días, amarillo si falta
-   más (corte ajustable, sin más criterio explícito en el pedido). Texto
+/* Info de la pill de fecha límite (color + ícono + texto relativo en
+   español) -- ver MANIFEST.md "Cambios recientes". Color: rojo si ya venció
+   o vence hoy, naranja si vence dentro de los próximos 3 días, verde si
+   falta bastante (antes amarillo -- pedido explícito del rediseño de card:
+   "falta bastante para vencer" pasa a leerse como un semáforo en verde, no
+   como una advertencia amarilla; corte de días sin cambios, sin más
+   criterio explícito en el pedido). Ícono: `event` para rojo/naranja (sin
+   cambios, "su ícono actual"), `hourglass_top` para el estado verde --
+   pedido explícito, el reloj de arena comunica "todavía queda tiempo" mejor
+   que el ícono de calendario genérico. `tar-fecha-amarillo` (CSS) se
+   conserva sin uso en esta rama -- sigue siendo el color neutro del caso
+   "sin fecha límite"/fecha sin parsear, más abajo, un estado distinto a
+   "falta bastante" (no hay plazo que mostrar en absoluto). Texto
    para fechas futuras (sin cambios): "Vence hoy"/"Vence mañana"/"Vence el
    [día]" (si cae el resto de esta semana)/"Vence el [día] que viene" (si
    cae la semana próxima)/"Vence el [día] [núm] de [mes]" para fechas más
@@ -831,18 +838,19 @@ function _tarFechaDDMMAAAA(fechaRaw) {
   return dd + '/' + mm + '/' + d.getFullYear();
 }
 function _tarFechaInfo(fechaRaw) {
-  if (!fechaRaw) return { texto: 'Sin fecha límite', clase: 'tar-fecha-amarillo' };
+  if (!fechaRaw) return { texto: 'Sin fecha límite', clase: 'tar-fecha-amarillo', icono: 'event' };
   var s = fechaRaw.toString();
   var esIso = /^\d{4}-\d{2}-\d{2}/.test(s);
   var d = esIso ? _evParseISO(s.slice(0, 10)) : new Date(s);
-  if (isNaN(d.getTime())) return { texto: 'Vence: ' + _tarFechaLegible(fechaRaw), clase: 'tar-fecha-amarillo' };
+  if (isNaN(d.getTime())) return { texto: 'Vence: ' + _tarFechaLegible(fechaRaw), clase: 'tar-fecha-amarillo', icono: 'event' };
   d.setHours(0, 0, 0, 0);
   var hoy = _evParseISO(_evHoyISO());
   var diff = Math.round((d - hoy) / 86400000);
   var diaSemana = _EV_DIAS_LARGOS[d.getDay()].toLowerCase();
   var fechaCompleta = 'el ' + diaSemana + ' ' + d.getDate() + ' de ' + NOMBRES_MESES[d.getMonth()].toLowerCase() +
     (d.getFullYear() !== hoy.getFullYear() ? ' de ' + d.getFullYear() : '');
-  var clase = diff <= 0 ? 'tar-fecha-rojo' : (diff <= 3 ? 'tar-fecha-naranja' : 'tar-fecha-amarillo');
+  var clase = diff <= 0 ? 'tar-fecha-rojo' : (diff <= 3 ? 'tar-fecha-naranja' : 'tar-fecha-verde');
+  var icono = clase === 'tar-fecha-verde' ? 'hourglass_top' : 'event';
   var isoCorta = esIso ? s.slice(0, 10) : _evToISO(d);
   var texto;
   if (diff < 0) texto = 'Venció el ' + _tarFechaDDMMAAAA(fechaRaw);
@@ -851,7 +859,7 @@ function _tarFechaInfo(fechaRaw) {
   else if (_evEsRestoDeSemana(isoCorta)) texto = 'Vence el ' + diaSemana;
   else if (_evEsProximaSemana(isoCorta)) texto = 'Vence el ' + diaSemana + ' que viene';
   else texto = 'Vence ' + fechaCompleta;
-  return { texto: texto, clase: clase };
+  return { texto: texto, clase: clase, icono: icono };
 }
 
 /* ── Render "Mis tareas" (asignaciones activas: iniciada/pendiente_revision) ── */
@@ -1031,8 +1039,12 @@ function _tarAccionMisHtml(a) {
   // devuelve asignaciones activas (iniciada/en revisión), así que no hace
   // falta listar el nombre exacto del segundo estado acá para que la UI se
   // comporte bien ante ese desfasaje de nomenclatura.
+  // Lado a lado, no una debajo de la otra (ver MANIFEST.md "Cambios
+  // recientes" -- pedido explícito, mismo layout que el detalle,
+  // `_tarDetalleAccionesHtml()` más abajo: `.tar-acciones-row`, no
+  // `.tar-acciones-col`).
   if (a.estado === 'iniciada') {
-    return '<div class="tar-acciones-col">' +
+    return '<div class="tar-acciones-row">' +
       '<button type="button" class="btn btn-outline tar-card-btn" onclick="event.stopPropagation();_tarEnviarRevision(\'' + a.idAsignacion + '\', this)"><span class="material-symbols-outlined">send</span>Enviar a revisión</button>' +
       '<button type="button" class="btn btn-text-simple tar-card-btn" onclick="event.stopPropagation();_tarSoltar(\'' + a.idAsignacion + '\', \'' + t.idTarea + '\', this)"><span class="material-symbols-outlined">remove_circle</span>Soltar tarea</button>' +
     '</div>';
@@ -1042,12 +1054,16 @@ function _tarAccionMisHtml(a) {
 function _tarCardMisHtml(a) {
   var t = a.tarea || {};
   var fechaTope = a.fechaVencimientoPersonal || t.fechaVencimiento;
+  var sufijo = a.esRescate ? ' <span style="font-size:0.68rem;color:var(--muted);font-weight:600;">(rescatada)</span>' : '';
+  // `t.asignados` (ver MANIFEST.md "Cambios recientes" -- mismo bug de
+  // contrato que el de "A cargo" en el detalle, corregido en la misma
+  // sesión): `getMisTareas()` no siempre trae la lista completa de
+  // asignados dentro de `tarea`, así que sin `_tarConMiAsignacion()` la
+  // propia card de "Mis tareas" podía quedar sin ningún avatar en la
+  // esquina pese a que la tarea es, por definición, propia.
   return '<div class="ev-card" id="tar-mis-card-' + a.idAsignacion + '" onclick="_tarAbrirDetalle(\'' + t.idTarea + '\')">' +
     '<div class="ev-card-body">' +
-      '<div class="tar-card-header">' +
-        '<div class="ev-card-titulo">' + (t.titulo || '') + (a.esRescate ? ' <span style="font-size:0.68rem;color:var(--muted);font-weight:600;">(rescatada)</span>' : '') + '</div>' +
-        _tarAreaPillHtml(t.area, a.estado === 'aprobada') +
-      '</div>' +
+      _tarCardHeaderHtml(t, a.estado === 'aprobada', _tarAvataresHtml(_tarConMiAsignacion(t.asignados || [], t.idTarea)), '', sufijo) +
       _tarPillsRowHtml(t.puntos, fechaTope) +
       _tarDescHtml(t.notas) +
       '<div class="tar-accion-wrap" id="tar-accion-wrap-' + a.idAsignacion + '">' + _tarAccionMisHtml(a) + '</div>' +
@@ -1318,6 +1334,8 @@ function _tarCrearResetUI() {
   _adminSetStepperValue('tar-crear-cupos', 1);
   document.querySelectorAll('#tar-crear-modo-opciones .opcion').forEach(function(o) { o.classList.remove('sel'); });
   var n = document.getElementById('tar-crear-notas'); if (n) n.value = '';
+  _tarActualizarContador('tar-crear-titulo-contador', '', _TAR_TITULO_MAXLEN);
+  _tarActualizarContador('tar-crear-notas-contador', '', _TAR_NOTAS_MAXLEN);
   var resumen = document.getElementById('tar-crear-cal-resumen'); if (resumen) resumen.textContent = '';
   var s = document.getElementById('tar-crear-personas-search'); if (s) s.value = '';
   _tarCrearDiasAnterior = null;
@@ -1403,14 +1421,29 @@ function _tarCrearActualizarFooter() {
       (pasoId === 'tar-crear-paso-fecha' ? !_tarCrearPasoFechaValido() : false));
   }
 }
-function _tarCrearSetTitulo(v) { _tarCrearData.titulo = v; _tarCrearActualizarFooter(); }
+// Límites de caracteres del wizard "Nueva tarea" (ver MANIFEST.md "Cambios
+// recientes" -- pedido explícito, título 70/descripción 400): `maxlength`
+// en los inputs (index.html, `#tar-crear-titulo`/`#tar-crear-notas`) ya
+// impide escribir de más -- el contador acá solo hace visible cuánto queda,
+// mismo criterio de "no confiar solo en un límite invisible" que ya usan
+// otros campos de la app con feedback en vivo. `_tarActualizarContador()`
+// es genérica (id del contador + valor actual + máximo) para poder
+// reusarla en los 2 campos sin duplicar la cuenta.
+var _TAR_TITULO_MAXLEN = 70;
+var _TAR_NOTAS_MAXLEN = 400;
+function _tarActualizarContador(id, valor, max) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = Math.max(0, max - (valor || '').length) + ' caracteres restantes';
+}
+function _tarCrearSetTitulo(v) { _tarCrearData.titulo = v; _tarActualizarContador('tar-crear-titulo-contador', v, _TAR_TITULO_MAXLEN); _tarCrearActualizarFooter(); }
 function _tarCrearSelArea(el) {
   document.querySelectorAll('#tar-crear-area-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   el.classList.add('activa');
   _tarCrearData.area = el.dataset.val;
   _tarCrearActualizarFooter();
 }
-function _tarCrearSetNotas(v) { _tarCrearData.notas = v; }
+function _tarCrearSetNotas(v) { _tarCrearData.notas = v; _tarActualizarContador('tar-crear-notas-contador', v, _TAR_NOTAS_MAXLEN); }
 /* Paso nuevo "¿Cómo se asigna esta tarea?" -- reusa `.opcion`/`.opcion.sel`
    tal cual (css/ui.css), toggle de selección exclusiva a mano (sin
    `<input type="radio">` real, ver comentario en index.html). */
@@ -1735,8 +1768,8 @@ function _tarValidarEnviar(idAsignacion, accion, nota) {
    disponibles para CUALQUIER asignación activa (`iniciada` O
    `pendiente_revision`), no solo `pendiente_revision` -- el admin puede
    validar directo sin esperar. Cada tarea es una card (mismo esqueleto que
-   el resto de la sección, pill de área+pills+`_tarAreaPillHtml()`/
-   `_tarPillsRowHtml()`) con sus asignaciones anidadas debajo como filas
+   el resto de la sección, ícono+título+pills fusionados vía
+   `_tarCardHeaderHtml()`/`_tarPillsRowHtml()`) con sus asignaciones anidadas debajo como filas
    `.admin-banner-res-row` (mismo componente que "Tareas por validar", ver
    esa sección arriba) -- acá se necesita agrupar por tarea (a diferencia
    de la lista plana de "Tareas por validar") para no repetir el
@@ -1873,11 +1906,9 @@ function _tarGestionarCardHtml(t) {
     '<p style="font-size:0.78rem;color:var(--muted);margin:12px 0 0;">Todavía nadie tomó esta tarea.</p>';
   return '<div class="ev-card" id="tar-gest-card-' + t.idTarea + '" onclick="_tarAbrirDetalle(\'' + t.idTarea + '\')">' +
     '<div class="ev-card-body">' +
-      '<div class="tar-card-header">' +
-        '<div class="ev-card-titulo">' + (t.titulo || '') + '</div>' +
-        _tarAreaPillHtml(t.area, _tarTieneAprobada(asignaciones)) +
-      '</div>' +
+      _tarCardHeaderHtml(t, _tarTieneAprobada(asignaciones), _tarAvataresHtml(asignaciones)) +
       _tarPillsRowHtml(t.puntos, t.fechaVencimiento) +
+      _tarDescHtml(t.notas) +
       personasHtml +
     '</div>' +
   '</div>';
@@ -2008,8 +2039,8 @@ function _tarRenderArchivadas() {
 // éxito/error (`--success`/`--danger` + sus `-bg`, css/colors.css).
 // Ya NO pinta nada para 'aprobada' (ver MANIFEST.md "Cambios recientes" --
 // pedido explícito: quitar la pill "Aprobada" de las cards, redundante con
-// el sufijo "· Aprobada" que `_tarAreaPillHtml()` ya suma al
-// recuadro de la card cuando ALGUNA asignación está aprobada). "Rechazada"
+// el texto "Aprobada" que `_tarCardHeaderHtml()` ya suma bajo el título
+// cuando ALGUNA asignación está aprobada). "Rechazada"
 // sigue mostrándose -- ese estado no tiene ninguna otra señal visual en la
 // card.
 function _tarArchivadaEstadoBadge(estado) {
@@ -2044,10 +2075,7 @@ function _tarCardArchivadaHtml(t) {
     { texto: 'Venció el ' + _tarFechaDDMMAAAA(t.fechaVencimiento), clase: 'tar-fecha-rojo' };
   return '<div class="ev-card" id="tar-archivada-card-' + t.idTarea + '" onclick="_tarAbrirDetalle(\'' + t.idTarea + '\')">' +
     '<div class="ev-card-body">' +
-      '<div class="tar-card-header">' +
-        '<div class="ev-card-titulo">' + (t.titulo || '') + '</div>' +
-        _tarAreaPillHtml(t.area, tieneAprobada ? true : 'vencida') +
-      '</div>' +
+      _tarCardHeaderHtml(t, tieneAprobada ? true : 'vencida', _tarAvataresHtml(personas)) +
       _tarPillsRowHtml(t.puntos, t.fechaVencimiento, fechaOverride) +
       _tarDescHtml(t.notas) +
       personasHtml +
@@ -2188,16 +2216,52 @@ function _tarMiAsignacionEn(idTarea) {
 // `'iniciada'` implícito). Archivadas trae `estado` (aprobada/rechazada)
 // pero sin `idAsignacion` -- sin toggle tampoco ahí, una tarea archivada no
 // se "desmarca" desde acá (para eso está "Borrar tarea", más abajo).
+// Bug real corregido (ver MANIFEST.md "Cambios recientes" -- reportado como
+// "el detalle de mi propia tarea no me muestra en 'A cargo'"): investigado
+// ANTES de asumir un fix -- instrumentado a mano contra las 4 fuentes
+// posibles. La causa real es de contrato de datos, no de lógica: para una
+// cuenta NO admin, `_tarActivas` siempre está vacío (`_tarCargarGestionar()`
+// la gatea con `_adminToken`), así que esta función cae a la rama
+// `_tarDisponibles.concat(_tarBaul)` -- y si la tarea tiene 1 solo cupo
+// (`maxAsignados===1`) YA tomado por el usuario, `getTareasDisponibles` deja
+// de devolverla del todo (0 cupos libres), así que tampoco aparece ahí.
+// Termina cayendo al fallback `_tarMiAsignacionEn(idTarea)`, que lee
+// `asign.tarea.asignados` -- pero `getMisTareas()` arma ese sub-objeto
+// `tarea` como el catálogo de LA TAREA (título/notas/puntos/cupos), sin la
+// lista de personas asignadas (no la necesita para "mis propias tareas");
+// `t.asignados` ahí sale `undefined`, y el `|| []` lo deja vacío --
+// "A cargo" quedaba realmente sin nadie pese a que `_tarMisTareas` SÍ tiene
+// la asignación activa del usuario (la fuente de la verdad de "estoy
+// asignado a esto"). Fix: `_tarConMiAsignacion()` (abajo) agrega una
+// entrada sintética con los datos de la sesión (`E`/`E.datos`) + el
+// `estado`/`idAsignacion` reales de la propia asignación cuando el usuario
+// actual está asignado y no aparece ya en la lista que trajo la fuente --
+// aplicado a las 4 ramas por igual (no solo el fallback) para cubrir
+// también el caso, menos común pero real, de que `getTareasDisponibles`/
+// `adminGetTareasActivas` omitan al propio usuario por el mismo motivo.
+function _tarConMiAsignacion(personas, idTarea) {
+  var mia = _tarMiAsignacionEn(idTarea);
+  if (!mia) return personas;
+  var yaEsta = personas.some(function(p) { return _tarNombreAsignacion(p) === E.nombre || p.nombre === E.nombre; });
+  if (yaEsta) return personas;
+  return personas.concat([{
+    nombre: E.nombre,
+    nombreDerby: (E.datos && E.datos.nombreDerby) || '',
+    fotoPerfil: (E.datos && E.datos.fotoPerfil) || '',
+    estado: mia.estado,
+    idAsignacion: mia.idAsignacion
+  }]);
+}
 function _tarPersonasParaDetalle(idTarea) {
   idTarea = String(idTarea);
   var activa = _tarActivas.filter(function(x) { return String(x.idTarea) === idTarea; })[0];
-  if (activa) return { personas: _tarAsignacionesDe(activa), conToggle: true };
+  if (activa) return { personas: _tarConMiAsignacion(_tarAsignacionesDe(activa), idTarea), conToggle: true };
   var archivada = _tarArchivadas.filter(function(x) { return String(x.idTarea) === idTarea; })[0];
   if (archivada) return { personas: archivada.personas || [], conToggle: false };
   var base = _tarDisponibles.concat(_tarBaul).filter(function(x) { return String(x.idTarea) === idTarea; })[0];
-  if (base) return { personas: base.asignados || [], conToggle: false };
+  if (base) return { personas: _tarConMiAsignacion(base.asignados || [], idTarea), conToggle: false };
   var asign = _tarMiAsignacionEn(idTarea);
-  if (asign) return { personas: (asign.tarea && asign.tarea.asignados) || [], conToggle: false };
+  if (asign) return { personas: _tarConMiAsignacion((asign.tarea && asign.tarea.asignados) || [], idTarea), conToggle: false };
   return { personas: [], conToggle: false };
 }
 function _tarAbrirDetalle(idTarea) {
@@ -2209,19 +2273,28 @@ function _tarAbrirDetalle(idTarea) {
   window.scrollTo(0, 0);
   _tarRenderDetalle();
 }
-// Header sticky -- mismo componente/clases que `_evDetalleStickyHtml()`
-// (js/eventos.js): `.ev-detalle-nav-row`/`.ev-detalle-nav-icono`/
-// `.ev-detalle-nav-texto`/`.ev-detalle-tipo`, reusadas tal cual. A
-// diferencia de Eventos (ícono+tipo, 2da línea con fecha/hora), acá una
-// sola línea (ícono+nombre del área) -- una tarea no tiene el equivalente a
-// "fecha/hora de inicio" propio del header, esa info ya vive en la pill de
-// fecha límite, más abajo en el cuerpo.
+// Header sticky -- mismo componente/clases Y mismo formato que
+// `_evDetalleStickyHtml()` (js/eventos.js): `.ev-detalle-nav-row`/
+// `.ev-detalle-nav-icono`/`.ev-detalle-nav-texto`/`.ev-detalle-tipo`/
+// `.ev-detalle-fechahora`, reusadas tal cual (ver MANIFEST.md "Cambios
+// recientes" -- pedido explícito: flecha+ícono+nombre del área+fecha, "mismo
+// formato que ícono+tipo+fecha del detalle de evento"). Antes solo mostraba
+// ícono+nombre del área en una línea -- suma la fecha de vencimiento como
+// 2da línea, mismo `_evFechaCompleta()` que arma "lunes 12 de agosto" para
+// Eventos (reusado tal cual, sin duplicar el formateo).
 function _tarDetalleStickyHtml(t) {
   var icono = _TAR_ICONOS_AREA[t.area] || 'task_alt';
+  var fechaHtml = '';
+  if (t.fechaVencimiento) {
+    var s = t.fechaVencimiento.toString();
+    var esIso = /^\d{4}-\d{2}-\d{2}/.test(s);
+    var d = esIso ? _evParseISO(s.slice(0, 10)) : new Date(s);
+    if (!isNaN(d.getTime())) fechaHtml = '<div class="ev-detalle-fechahora">' + _evFechaCompleta(esIso ? s.slice(0, 10) : _evToISO(d)) + '</div>';
+  }
   return '<div class="ev-detalle-nav-row">' +
       '<button class="app-nav-back" onclick="volver(\'s-tareas\')" title="Volver"><span class="material-symbols-outlined">arrow_back</span></button>' +
       '<span class="material-symbols-outlined ev-detalle-nav-icono">' + icono + '</span>' +
-      '<div class="ev-detalle-nav-texto"><div class="ev-detalle-tipo">' + (t.area || '') + '</div></div>' +
+      '<div class="ev-detalle-nav-texto"><div class="ev-detalle-tipo">' + (t.area || '') + '</div>' + fechaHtml + '</div>' +
     '</div>';
 }
 // Card de persona ("Quiénes están a cargo") -- mismo componente visual que
@@ -2242,51 +2315,64 @@ function _tarPersonaCardHtml(p, conToggle) {
     (conToggle && _adminToken && p.idAsignacion != null ? _tarPersonaToggleHtml(p, 'tar-detalle-seg-') : '') +
   '</div>';
 }
-// Botón fijo de acción principal (footer) -- contextual según el estado del
-// usuario actual respecto a esta tarea (pedido explícito, los 5 casos):
-// asignado 'iniciada' -> Enviar a revisión + Soltar; asignado
-// 'pendiente_revision' -> aviso info; no asignado pero en el Baúl ->
-// Rescatar; no asignado, hay cupos libres -> Tomar; si no, ningún botón
-// (ej. tarea llena y no soy parte). Los 4 wrappers de abajo (`_tarDetalle*`)
-// llaman a la MISMA acción de backend que ya usan las cards de lista
-// (`tomarTarea`/`soltarTarea`/`enviarRevisionTarea`/`rescatarTarea`, todas
-// GET) -- sin la coreografía de animación optimista de esas cards (acá no
-// hay una lista de la que "salir"), solo disabled+toast+refresco real al
-// terminar.
-function _tarDetalleFooterHtml(t) {
+// Botones de acción principal -- contextual según el estado del usuario
+// actual respecto a esta tarea (pedido explícito, los 5 casos): asignado
+// 'iniciada' -> Enviar a revisión + Soltar, uno al lado del otro (ver
+// MANIFEST.md "Cambios recientes" -- pedido explícito: mismo layout que la
+// card de "Mis tareas", `.tar-acciones-row`, no uno debajo del otro);
+// asignado 'pendiente_revision' -> aviso info; no asignado pero en el Baúl
+// -> Rescatar; no asignado, hay cupos libres -> Tomar; si no, ningún botón
+// (ej. tarea llena y no soy parte). Ya NO vive en el footer fijo de abajo de
+// la pantalla (`#cta-footer-s-tareas-detalle`, eliminado) -- ahora es una
+// sección más del flujo normal, inmediatamente debajo de la descripción
+// (ver `_tarRenderDetalle()` más abajo). Los 4 wrappers de abajo
+// (`_tarDetalle*`) llaman a la MISMA acción de backend que ya usan las
+// cards de lista (`tomarTarea`/`soltarTarea`/`enviarRevisionTarea`/
+// `rescatarTarea`, todas GET) -- sin la coreografía de animación optimista
+// de esas cards (acá no hay una lista de la que "salir"), solo
+// disabled+toast+refresco real al terminar.
+function _tarDetalleAccionesHtml(t) {
   var idTarea = t.idTarea;
   var mia = _tarMiAsignacionEn(idTarea);
   if (mia) {
     if (mia.estado === 'iniciada') {
-      return '<button type="button" class="btn btn-outline" style="margin-bottom:8px;" onclick="_tarDetalleEnviarRevision(\'' + mia.idAsignacion + '\', this)">Enviar a revisión</button>' +
-        '<button type="button" class="btn btn-text-simple" onclick="_tarDetalleSoltar(\'' + mia.idAsignacion + '\',\'' + idTarea + '\', this)">Soltar tarea</button>';
+      return '<div class="tar-acciones-row">' +
+        '<button type="button" class="btn btn-outline tar-card-btn" onclick="_tarDetalleEnviarRevision(\'' + mia.idAsignacion + '\', this)"><span class="material-symbols-outlined">send</span>Enviar a revisión</button>' +
+        '<button type="button" class="btn btn-text-simple tar-card-btn" onclick="_tarDetalleSoltar(\'' + mia.idAsignacion + '\',\'' + idTarea + '\', this)"><span class="material-symbols-outlined">remove_circle</span>Soltar tarea</button>' +
+      '</div>';
     }
     return '<div class="ev-estado-pill ev-estado-pill-warning" style="width:100%;justify-content:center;"><span class="material-symbols-outlined">hourglass_top</span>Esperando validación</div>';
   }
   var enBaul = _tarBaul.some(function(x) { return String(x.idTarea) === String(idTarea); });
-  if (enBaul) return '<button type="button" class="btn btn-outline" onclick="_tarDetalleRescatar(\'' + idTarea + '\', this)">Rescatar tarea</button>';
+  if (enBaul) return '<button type="button" class="btn btn-outline tar-card-btn" onclick="_tarDetalleRescatar(\'' + idTarea + '\', this)"><span class="material-symbols-outlined">restore_from_trash</span>Rescatar tarea</button>';
   if (t.fechaArchivado) return ''; // tarea archivada -- sin acción de autoservicio
   var personas = _tarPersonasParaDetalle(idTarea).personas;
   var total = t.cuposTotales != null ? t.cuposTotales : personas.length;
   var cuposLibres = t.cuposLibres != null ? t.cuposLibres : Math.max(0, total - personas.length);
-  if (cuposLibres > 0) return '<button type="button" class="btn btn-primary" onclick="_tarDetalleTomar(\'' + idTarea + '\', this)">Tomar tarea</button>';
+  if (cuposLibres > 0) return '<button type="button" class="btn btn-primary tar-card-btn" onclick="_tarDetalleTomar(\'' + idTarea + '\', this)"><span class="material-symbols-outlined">add_task</span>Tomar tarea</button>';
   return '';
 }
+// Orden del detalle (ver MANIFEST.md "Cambios recientes" -- reordenado,
+// mismo esqueleto visual que el detalle de evento en todo lo demás): header
+// fijo (`_tarDetalleStickyHtml()`) -> pills de puntos+vencimiento ->
+// descripción completa (texto plano, siempre visible) -> acciones -> "A
+// CARGO (N)" -- el orden real es el orden de `.ev-detalle-section` en
+// index.html (`#s-tareas-detalle`), esta función solo puebla cada slot ya
+// posicionado ahí.
 function _tarRenderDetalle() {
   var t = _tarBuscarTareaBase(_tarDetalleIdActual);
   if (!t) { volver('s-tareas'); return; }
   var sticky = document.getElementById('tar-detalle-sticky');
   if (sticky) sticky.innerHTML = _tarDetalleStickyHtml(t);
-  var titulo = document.getElementById('tar-detalle-titulo');
-  if (titulo) titulo.textContent = t.titulo || '';
+  var pills = document.getElementById('tar-detalle-pills');
+  if (pills) pills.innerHTML = _tarPillsRowHtml(t.puntos, t.fechaVencimiento);
   var desc = document.getElementById('tar-detalle-desc');
   if (desc) { desc.textContent = t.notas || ''; desc.style.display = t.notas ? '' : 'none'; }
+  var acciones = document.getElementById('tar-detalle-acciones');
+  if (acciones) acciones.innerHTML = _tarDetalleAccionesHtml(t);
   var pInfo = _tarPersonasParaDetalle(_tarDetalleIdActual);
-  var total = t.cuposTotales != null ? t.cuposTotales : pInfo.personas.length;
-  var pills = document.getElementById('tar-detalle-pills');
-  if (pills) pills.innerHTML = _tarDetallePillsHtml(t, { tomados: pInfo.personas.length, total: total });
   var cargoTitulo = document.getElementById('tar-detalle-cargo-titulo');
-  if (cargoTitulo) cargoTitulo.textContent = 'Quiénes están a cargo (' + pInfo.personas.length + ')';
+  if (cargoTitulo) cargoTitulo.textContent = 'A CARGO (' + pInfo.personas.length + ')';
   var cargoLista = document.getElementById('tar-detalle-cargo-lista');
   if (cargoLista) {
     cargoLista.innerHTML = pInfo.personas.length ?
@@ -2295,16 +2381,19 @@ function _tarRenderDetalle() {
     _tarHidratarAvatares();
     _tarGestActualizarSliders('tar-detalle-cargo-lista');
   }
-  var adminSec = document.getElementById('tar-detalle-admin');
-  if (adminSec) adminSec.style.display = _adminToken ? '' : 'none';
-  var footer = document.getElementById('tar-detalle-footer-cont');
-  if (footer) footer.innerHTML = _tarDetalleFooterHtml(t);
+  // FAB "Editar tarea" (admin, ver MANIFEST.md "Cambios recientes" --
+  // reemplaza la sección `#tar-detalle-admin`/3 botones apilados que tenía
+  // antes) -- oculto mientras el modo edición ya está abierto (ese mismo
+  // formulario trae sus propios botones Cancelar/Guardar, más "Editar
+  // personas"/"Borrar tarea" -- ver `_tarDetalleRenderEditar()` más abajo).
+  var fab = document.getElementById('tar-detalle-fab-menu');
+  if (fab) fab.style.display = (_adminToken && !_tarDetalleEditando) ? 'flex' : 'none';
   if (_tarDetalleEditando) _tarDetalleRenderEditar(t); else _tarDetalleCerrarEditar(true);
 }
 
-/* ── Acciones de usuarix desde el footer del detalle -- misma acción de
+/* ── Acciones de usuarix desde el detalle -- misma acción de
    backend que las cards de lista, sin la animación optimista (ver
-   comentario de `_tarDetalleFooterHtml()` más arriba). Siempre terminan
+   comentario de `_tarDetalleAccionesHtml()` más arriba). Siempre terminan
    recargando TODO (`_tarCargarTodo()`, sincroniza las 5 listas) +
    re-pintando el detalle con los datos ya frescos. ────────────────────── */
 function _tarDetalleTomar(idTarea, btn) {
@@ -2372,6 +2461,8 @@ function _tarDetalleAbrirEditar() {
   };
   _tarDetEditCal.mostrado = _tarDetEditData.fecha || _evHoyISO();
   _tarDetalleEditando = true;
+  var fab = document.getElementById('tar-detalle-fab-menu');
+  if (fab) fab.style.display = 'none';
   _tarDetalleRenderEditar(t);
 }
 function _tarDetalleCerrarEditar(silencioso) {
