@@ -4,6 +4,20 @@ var _MESES_MAP = {enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agost
 var _MESES_DISPLAY = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 var _homeExpandido = false;
 
+// "2026-08-15" -> "Sábado 15 de Agosto" -- misma lógica que
+// _fechaCalendarioATexto() (js/reservas.js), duplicada a propósito acá en vez
+// de depender de que reservas.js ya haya cargado (carga DESPUÉS de home.js,
+// ver orden de scripts en MANIFEST) -- reusa _EV_DIAS_LARGOS/NOMBRES_MESES
+// (js/eventos.js, js/ui.js), que sí cargan antes que home.js. Usada tanto por
+// _renderCardHome() (reservas ya guardadas) como por cargarFechasGestionar()
+// (reagendar) -- ver "Cambios recientes".
+function _fechaCalendarioATexto(fechaCalendario) {
+  if (!fechaCalendario) return '';
+  var p = fechaCalendario.split('-');
+  var d = new Date(+p[0], +p[1] - 1, +p[2]);
+  return _EV_DIAS_LARGOS[d.getDay()] + ' ' + d.getDate() + ' de ' + NOMBRES_MESES[d.getMonth()];
+}
+
 function prepararHome(saltarFadeInicial, onListo) {
   if (!E.datos) {
     // Backstop: si llegamos acá sin datos de persona (token válido pero sin
@@ -17,49 +31,23 @@ function prepararHome(saltarFadeInicial, onListo) {
   var saludoEl = document.getElementById('home-saludo');
   if (saludoEl) saludoEl.textContent = E.nombre + '!';
   var homeContent = document.getElementById('home-reservas-lista');
-  var homeContenidoFinalListo = false;
-  if (!saltarFadeInicial) {
-    // saltarFadeInicial=true significa que el caller (ej. irHomeDesdeExito()) ya está
-    // mostrando su propio fade-out/spinner sobre este mismo contenedor — evita que se
-    // repita acá el ciclo completo (contenido real pintado y tapado por un segundo spinner).
-    if (homeContent) { homeContent.style.opacity = '0'; homeContent.style.transition = 'opacity 0.3s ease'; }
-    _renderHomeReservas();
-    if (homeContent) {
-      setTimeout(function() {
-        if (homeContenidoFinalListo) return; // el fetch ya resolvió y pintó el contenido real; no lo pisamos con el loader
-        // min-height + flex centra el spinner dentro del área del contenedor dinámico
-        // en vez de quedar pegado arriba (antes solo tenía padding:24px 0, sin alto
-        // propio) — ver "Cambios recientes", mismo alto aproximado que .empty-state-body
-        // para minimizar el salto de layout cuando el contenido real lo reemplace.
-        homeContent.innerHTML = '<div class="loader" style="min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;"><div class="spinner"></div></div>';
-        homeContent.style.opacity = '1';
-      }, 50);
-    }
-  }
-  var d = E.datos;
-  var talla = d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
-  api({ action: 'getFechasDisponibles', nombre: E.nombre, talla: talla, necesitaProtecciones: d.necesitaProtecciones }, function(fechas) {
-    var infoMap = {};
-    fechas.forEach(function(f) { infoMap[f.fecha] = f; });
-    _todasReservas = (_todasReservas || []).map(function(r) {
-      var info = infoMap[r.fecha];
-      if (info) {
-        r.mapsUrl = info.mapsUrl || ''; r.horaFin = info.horaFin || ''; r.duracion = info.duracion || ''; r.descripcion = info.descripcion || '';
-      }
-      return r;
-    });
-    homeContenidoFinalListo = true;
-    _renderHomeReservas();
-    if (homeContent) { homeContent.style.opacity = '1'; void homeContent.offsetWidth; homeContent.style.animation = 'fadeIn 0.3s ease'; }
-    if (!window._cargandoFechasReserva) ocultarCargando();
-    if (onListo) onListo(); // ver refrescarMisReservas(): dispara justo cuando arranca el fadeIn real del contenido
-  }, function() {
-    homeContenidoFinalListo = true;
-    _renderHomeReservas();
-    if (homeContent) { homeContent.style.opacity = '1'; void homeContent.offsetWidth; homeContent.style.animation = 'fadeIn 0.3s ease'; }
-    if (!window._cargandoFechasReserva) ocultarCargando();
-    if (onListo) onListo();
-  });
+  // El cruce con getFechasDisponibles (enriquecer mapsUrl/horaFin/duracion/
+  // descripcion) ya no hace falta acá (ver "Cambios recientes"): esos campos
+  // vienen ahora directo en cada objeto de getReservasPersona (llamada antes
+  // de prepararHome(), ver js/auth.js/refrescarMisReservas()/
+  // _recargarYRenderReservas() — pobla `_todasReservas`) para las reservas
+  // con id_evento real. Cruzar por igualdad de `fecha` contra
+  // getFechasDisponibles dejó de matchear cuando `fecha` pasó a id_evento
+  // (una reserva vieja, con texto legible, nunca iba a matchear contra un id;
+  // y ahora ni hace falta para las nuevas, que ya traen sus propios campos).
+  // Sin ningún fetch que esperar, el render es síncrono -- se retiró el
+  // spinner de respaldo a los 50ms (`saltarFadeInicial=false`) que existía
+  // para el caso de que ese fetch tardara, ahora inalcanzable siempre.
+  if (!saltarFadeInicial && homeContent) { homeContent.style.opacity = '0'; homeContent.style.transition = 'opacity 0.3s ease'; }
+  _renderHomeReservas();
+  if (homeContent) { homeContent.style.opacity = '1'; void homeContent.offsetWidth; homeContent.style.animation = 'fadeIn 0.3s ease'; }
+  if (!window._cargandoFechasReserva) ocultarCargando();
+  if (onListo) onListo(); // ver refrescarMisReservas(): dispara justo cuando arranca el fadeIn real del contenido
   var bannerCupon = document.getElementById('banner-cupon');
   if (bannerCupon) {
     api({ action: 'getCuponDisponible', nombre: E.nombre }, function(res) {
@@ -109,16 +97,13 @@ function refrescarMisReservas(callback, btn) {
   api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
     _todasReservas = reservas;
     // prepararHome(true, onListo): saltarFadeInicial=true evita que repita su propio
-    // ciclo de fade/loader (ya hicimos el fade-out arriba, sin loader) — solo re-pide
-    // getFechasDisponibles (enriquece mapsUrl/horaFin/duración/descripción, que
-    // getReservasPersona no trae). `callback` (que en el touchend de #ptr-indicator
-    // dispara _ptrOcultarIndicador(), y el ícono girando del botón desktop) se
-    // dispara recién en `onListo`, en el mismo instante exacto en que prepararHome()
-    // arranca el fadeIn real del contenido — no apenas resuelve este primer fetch.
-    // Antes se llamaba acá mismo, mientras el segundo fetch (getFechasDisponibles,
-    // dentro de prepararHome) todavía podía tardar 1-2s+ más — el indicador/ícono se
-    // ocultaba/paraba con el contenedor todavía en opacity:0, una ventana sin ningún
-    // loader visible (ver "Cambios recientes").
+    // ciclo de fade/loader (ya hicimos el fade-out arriba, sin loader) — renderiza
+    // directo con los datos ya completos de `reservas` (mapsUrl/horaFin/duración/
+    // descripción vienen directo en cada reserva con id_evento real, ver "Cambios
+    // recientes" — ya no hay un segundo fetch que esperar). `callback` (que en el
+    // touchend de #ptr-indicator dispara _ptrOcultarIndicador(), y el ícono girando
+    // del botón desktop) se dispara vía `onListo`, en el mismo instante exacto en
+    // que prepararHome() arranca el fadeIn real del contenido.
     prepararHome(true, function() {
       if (icon) icon.style.animation = '';
       if (callback) callback();
@@ -325,11 +310,9 @@ function irHomeDesdeExito() {
     // getReservasPersona falló — no hay datos nuevos para confirmar nada, así que se
     // mantiene forzado en vez de re-sincronizar con _todasReservas (todavía desactualizado,
     // podría no incluir la reserva recién creada y esconder el nav de nuevo sin motivo).
-    // Pendiente conocido, no resuelto acá: si además getFechasDisponibles (dentro de
-    // prepararHome(true), más abajo) también falla o resuelve con datos que dejan
-    // activas.length en 0, su propio _renderHomeReservas() vuelve a llamar a
-    // _sincronizarNavHome() sin forzar y podría ocultar el nav de nuevo — falla compuesta
-    // de dos fetches fallando en la misma navegación, poco probable, señalada para otra pasada.
+    // prepararHome(true) ya no hace ningún fetch propio (ver "Cambios recientes" — dejó de
+    // necesitar getFechasDisponibles), así que el riesgo de una segunda falla componiéndose
+    // acá quedó resuelto solo.
     _sincronizarNavHome(true);
     // aunque falle, dejamos que prepararHome(true) haga el render final (con lo que haya
     // en _todasReservas) para que el contenedor vuelva a opacity:1 con fadeIn — si solo se
@@ -548,14 +531,22 @@ function _formatearHoraTexto(hora) {
 }
 
 function _renderCardHome(r, hoy) {
+  // `r.fecha` es id_evento para una reserva nueva (con `fechaCalendario`/
+  // `donde`/`horaInicio` propios, ya vienen directo en `r` desde
+  // getReservasPersona) y sigue siendo texto legible completo para una
+  // reserva vieja (sin esos campos extra) -- ver "Cambios recientes".
+  // `fechaCalTexto` es la fecha SIN el ajuste relativo (Hoy/Mañana/etc, eso
+  // lo aplica _formatarFechaRelativa() más abajo); abrirGestionar() la
+  // necesita tal cual para el subtítulo del sheet de "Gestionar reserva".
   var partes = (r.fecha || '').split(' - ');
+  var fechaCalTexto = r.fechaCalendario ? _fechaCalendarioATexto(r.fechaCalendario) : (partes[0] || r.fecha || '').trim();
+  var hora = r.horaInicio || (partes[1] ? partes[1].trim() : '');
+  var lugar = r.donde || (partes[2] ? partes[2].trim() : '');
   // Fecha+hora fusionadas en un solo renglón de título (ver "Cambios
   // recientes"): reusa _formatarFechaRelativa() (arriba en este archivo, ya
   // extendida acá mismo con el bracket "Próximo X") en vez de reimplementar
   // el cálculo de Hoy/Mañana que antes vivía inline acá.
-  var fechaTexto = _formatarFechaRelativa((partes[0] || r.fecha).trim());
-  var hora = partes[1] ? partes[1].trim() : '';
-  var lugar = partes[2] ? partes[2].trim() : '';
+  var fechaTexto = _formatarFechaRelativa(fechaCalTexto);
   var fechaHoraTexto = hora ? fechaTexto + ' a las ' + _formatearHoraTexto(hora) : fechaTexto;
 
   var estadoClase = r.estado === 'Confirmada' ? 'confirmada-clase' : r.estado === 'Reagendar' ? 'reagendar-clase' : 'pendiente-clase';
@@ -563,6 +554,12 @@ function _renderCardHome(r, hoy) {
   var estadoIcono = r.estado === 'Confirmada' ? 'check_circle' : r.estado === 'Cancelada' ? 'cancel' : r.estado === 'Reagendar' ? 'swap_horiz' : 'hourglass_empty';
   var estadoTexto = r.estado || 'Pendiente';
   var fechaEsc = (r.fecha || '').replace(/'/g, "\\'");
+  // Pasados a abrirGestionar() (ver esa función) para que arme el subtítulo
+  // del sheet sin tener que volver a splitear `r.fecha` (ya id_evento para
+  // reservas nuevas, sin texto legible propio).
+  var fechaCalTextoEsc = fechaCalTexto.replace(/'/g, "\\'");
+  var horaEsc = hora.replace(/'/g, "\\'");
+  var lugarEsc = lugar.replace(/'/g, "\\'");
 
   var necesitaPatines = r.talla && r.talla !== '' && r.talla.toLowerCase() !== 'no';
   var necesitaProtec = r.protecciones && r.protecciones !== '' && r.protecciones.toLowerCase() !== 'no' && r.protecciones.toLowerCase().indexOf('no,') !== 0;
@@ -651,13 +648,13 @@ function _renderCardHome(r, hoy) {
   // propio "Cancelar reserva" siempre visible más abajo, sin acordeón.
   var masInfoHtml;
   if (esMensual) {
-    masInfoHtml = '<div class="rn-divider"></div><div class="rn-cancel-wrap"><button class="btn-cancel-text" onclick="abrirGestionar(\'' + fechaEsc + '\',' + filaEsc + ')">Cancelar reserva</button></div>';
+    masInfoHtml = '<div class="rn-divider"></div><div class="rn-cancel-wrap"><button class="btn-cancel-text" onclick="abrirGestionar(\'' + fechaEsc + '\',' + filaEsc + ',\'' + fechaCalTextoEsc + '\',\'' + horaEsc + '\',\'' + lugarEsc + '\')">Cancelar reserva</button></div>';
   } else {
     masInfoHtml = '<div class="rn-divider"></div>' +
       '<div class="rn-footer-row">' +
       '<div class="rn-mas-info" id="' + uid + '-toggle" onclick="_toggleCardBody(\'' + uid + '\')">' +
       '<span>Más información</span><span class="material-symbols-outlined rn-chevron">expand_more</span></div>' +
-      '<button class="rn-btn-reagendar" onclick="event.stopPropagation();abrirGestionar(\'' + fechaEsc + '\',' + filaEsc + ')">' +
+      '<button class="rn-btn-reagendar" onclick="event.stopPropagation();abrirGestionar(\'' + fechaEsc + '\',' + filaEsc + ',\'' + fechaCalTextoEsc + '\',\'' + horaEsc + '\',\'' + lugarEsc + '\')">' +
       '<span class="rn-btn-reagendar-full">Re-agendar o cancelar reserva</span>' +
       '<span class="rn-btn-reagendar-corto">Re-agendar/cancelar</span>' +
       '</button>' +
@@ -901,7 +898,12 @@ function _clasificarReservas(todas, hoy) {
       if (exp) { (!tieneActivaMensual && !expMostr) ? (activas.push(r), expMostr = true) : historial.push(r); }
       else activas.push(r);
     } else {
-      var fd = _parseFechaStr(r.fecha);
+      // `r.fecha` es id_evento para una reserva nueva -- `_parseFechaStr()`
+      // (regex sobre texto legible) no matchea nada ahí, así que se usa
+      // `r.fechaCalendario` (yyyy-MM-dd, viene directo en `r`) cuando existe;
+      // solo cae a `_parseFechaStr(r.fecha)` para reservas viejas sin ese
+      // campo (ver "Cambios recientes").
+      var fd = r.fechaCalendario ? _evParseISO(r.fechaCalendario) : _parseFechaStr(r.fecha);
       if (!fd) { historial.push(r); return; }
       fd >= hoy ? activas.push(r) : historial.push(r);
     }
@@ -950,6 +952,10 @@ function seleccionarPillAnio(pill, anio) {
 }
 
 function _getMesReserva(r) {
+  // Reserva nueva (id_evento en r.fecha, ver "Cambios recientes"): el mes
+  // sale de r.fechaCalendario (yyyy-MM-dd) en vez de parsear texto que ya
+  // no existe en r.fecha.
+  if (r.fechaCalendario) { var mesCal = parseInt(r.fechaCalendario.split('-')[1], 10) - 1; if (!isNaN(mesCal)) return mesCal; }
   var f = r.fecha.toLowerCase().trim();
   if (_MESES_MAP[f] !== undefined) return _MESES_MAP[f];
   var m = f.match(/\d{1,2}\s+de\s+([a-záéíóúñ]+)/i);
@@ -1025,15 +1031,29 @@ function _renderCardHistorial(r) {
   if (esMensual) {
     mesAbr = _MESES_ABREV[_MESES_MAP[r.fecha.toLowerCase().trim()]];
   } else {
-    var partes = (r.fecha || '').split(' - ');
-    var fechaPura = (partes[0] || '').trim();
-    hora = partes[1] ? partes[1].trim() : '';
-    lugar = partes[2] ? partes[2].trim() : '';
-    var m = fechaPura.match(/(\d{1,2})\s+de\s+([a-záéíóúñ]+)/i);
-    if (m) {
-      diaNum = m[1];
-      var mn = m[2].toLowerCase().normalize ? m[2].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'') : m[2].toLowerCase();
-      if (_MESES_MAP[mn] !== undefined) mesAbr = _MESES_ABREV[_MESES_MAP[mn]];
+    // `r.fecha` es id_evento para una reserva nueva -- sin `' - '` que
+    // splitear ni "X de Y" que matchear por regex, así que se usa
+    // `r.fechaCalendario`/`r.donde`/`r.horaInicio` (vienen directo en `r`)
+    // cuando existen; solo cae al split/regex de siempre para reservas
+    // viejas sin esos campos (ver "Cambios recientes").
+    hora = r.horaInicio || '';
+    lugar = r.donde || '';
+    var fechaPura;
+    if (r.fechaCalendario) {
+      var pCal = r.fechaCalendario.split('-');
+      diaNum = String(parseInt(pCal[2], 10));
+      mesAbr = _MESES_ABREV[parseInt(pCal[1], 10) - 1];
+    } else {
+      var partes = (r.fecha || '').split(' - ');
+      fechaPura = (partes[0] || '').trim();
+      if (!hora) hora = partes[1] ? partes[1].trim() : '';
+      if (!lugar) lugar = partes[2] ? partes[2].trim() : '';
+      var m = fechaPura.match(/(\d{1,2})\s+de\s+([a-záéíóúñ]+)/i);
+      if (m) {
+        diaNum = m[1];
+        var mn = m[2].toLowerCase().normalize ? m[2].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'') : m[2].toLowerCase();
+        if (_MESES_MAP[mn] !== undefined) mesAbr = _MESES_ABREV[_MESES_MAP[mn]];
+      }
     }
   }
   var h = '<div style="display:flex;gap:12px;align-items:flex-start;background:var(--surface-2);border:1px solid var(--border-light);border-radius:14px;padding:12px;margin-bottom:8px;">';
@@ -1148,32 +1168,35 @@ var _sgFechaActual = '';
 var _sgFilaActual = null;
 var _sgFechaSeleccionada = '';
 var _sgEsMensual = false;
+// Texto/hora/lugar de _sgFechaActual ya resueltos, pasados por _renderCardHome()
+// a abrirGestionar() (ver esa función y "Cambios recientes" -- `fecha` puede
+// ser id_evento para una reserva nueva, y `getReservasPersona` no trae un
+// texto legible propio para traducirlo de vuelta acá). Usados por
+// sheetIrReagendar() y confirmarCambioFecha() (fecha "anterior" del modal)
+// en vez de volver a splitear `_sgFechaActual`.
+var _sgFechaActualTexto = '', _sgFechaActualHora = '', _sgFechaActualLugar = '';
 // id_evento (f.fecha de getFechasDisponibles, ver cargarFechasGestionar()) ->
 // texto legible, mismo criterio que _fechaInfoDisponible en js/reservas.js
 // (`fecha` pasó de texto legible a id_evento; el id sigue viajando igual a
 // reagendarReserva(), solo no debe mostrarse tal cual en pantalla).
 var _sgFechaInfoDisponible = {};
 
-// "2026-08-15" -> "Sábado 15 de Agosto" -- misma lógica que
-// _fechaCalendarioATexto() (js/reservas.js), duplicada a propósito acá en vez
-// de depender de que reservas.js ya haya cargado (carga DESPUÉS de home.js,
-// ver orden de scripts en MANIFEST) -- reusa _EV_DIAS_LARGOS/NOMBRES_MESES
-// (js/eventos.js, js/ui.js), que sí cargan antes que home.js.
-function _sgFechaCalendarioATexto(fechaCalendario) {
-  if (!fechaCalendario) return '';
-  var p = fechaCalendario.split('-');
-  var d = new Date(+p[0], +p[1] - 1, +p[2]);
-  return _EV_DIAS_LARGOS[d.getDay()] + ' ' + d.getDate() + ' de ' + NOMBRES_MESES[d.getMonth()];
-}
-
-function abrirGestionar(fecha, fila) {
+function abrirGestionar(fecha, fila, fechaTexto, hora, lugar) {
   _sgFechaActual = fecha; _sgFilaActual = fila; _sgFechaSeleccionada = '';
   _sgEsMensual = _MESES_MAP[(fecha || '').toLowerCase().trim()] !== undefined;
-  var partes = (fecha || '').split(' - ');
-  var fechaTexto = (partes[0] || fecha).trim();
-  var hora = partes[1] ? partes[1].trim() : '';
+  // fechaTexto/hora/lugar (nuevos, opcionales) vienen ya resueltos desde
+  // _renderCardHome() -- ver esa función y "Cambios recientes": `fecha`
+  // puede ser id_evento para una reserva nueva, sin texto legible propio
+  // para volver a splitear acá. Si no vienen (call site sin actualizar),
+  // se cae al split de siempre.
+  if (fechaTexto === undefined) {
+    var partes = (fecha || '').split(' - ');
+    fechaTexto = (partes[0] || fecha).trim();
+    hora = partes[1] ? partes[1].trim() : '';
+    lugar = partes[2] ? partes[2].trim() : '';
+  }
+  _sgFechaActualTexto = fechaTexto; _sgFechaActualHora = hora; _sgFechaActualLugar = lugar;
   var subtitulo = fechaTexto + (hora ? ' · ' + hora : '');
-  var lugar = partes[2] ? partes[2].trim() : '';
   if (lugar) subtitulo += ' · ' + lugar;
   document.getElementById('sg-sheet-subtitulo').textContent = subtitulo;
   sheetVolverOpciones();
@@ -1245,10 +1268,10 @@ function sheetIrCancelar() {
 
 function sheetIrReagendar() {
   cerrarSheetGestionar();
-  var partes = (_sgFechaActual || '').split(' - ');
-  var fechaTexto = (partes[0] || _sgFechaActual).trim();
-  var hora = partes[1] ? partes[1].trim() : '';
-  var lugar = partes[2] ? partes[2].trim() : '';
+  // fechaTexto/hora/lugar ya resueltos por abrirGestionar() (ver esa función
+  // y "Cambios recientes") -- `_sgFechaActual` puede ser id_evento para una
+  // reserva nueva, ya no se splitea acá.
+  var fechaTexto = _sgFechaActualTexto, hora = _sgFechaActualHora, lugar = _sgFechaActualLugar;
   document.getElementById('sg-fecha-texto').textContent = fechaTexto;
   var pillsEl = document.getElementById('sg-fecha-pills');
   pillsEl.innerHTML = '';
@@ -1275,6 +1298,11 @@ function cargarFechasGestionar() {
   var talla = d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
   api({ action: 'getFechasDisponibles', nombre: E.nombre, talla: talla, necesitaProtecciones: d.necesitaProtecciones }, function(fechas) {
     _sgFechaInfoDisponible = {};
+    // `f.fecha !== _sgFechaActual` excluye la fecha ya reservada de las opciones
+    // para reagendar -- funciona para reservas nuevas (ambos lados id_evento,
+    // ver "Cambios recientes") y para viejas (ambos lados texto legible); solo
+    // no excluiría nada si se mezclaran los dos formatos, caso que no se da
+    // (una reserva puntual siempre trae el mismo tipo de `fecha` en los 2 lados).
     var disponibles = fechas.filter(function(f) { return f.disponible && f.fecha !== _sgFechaActual; });
     if (disponibles.length === 0) {
       var sinEquip = talla || (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no');
@@ -1296,7 +1324,7 @@ function cargarFechasGestionar() {
     // _sgFechaSeleccionada.
     var sgFechaInfoNueva = {};
     lista.innerHTML = disponibles.map(function(f) {
-      var texto = _sgFechaCalendarioATexto(f.fechaCalendario) || f.fecha;
+      var texto = _fechaCalendarioATexto(f.fechaCalendario) || f.fecha;
       var hora = f.horaInicio || '';
       var lugar = f.donde || '';
       var fechaEsc = f.fecha.replace(/'/g, "\\'");
@@ -1373,8 +1401,10 @@ function confirmarCambioFecha() {
 
   var modal = document.getElementById('modal-confirm-reagendar');
   if (!modal) return;
-  var fechaAnteriorPartes = (_sgFechaActual || '').split(' - ');
-  var fechaAnteriorTexto = (fechaAnteriorPartes[0] || _sgFechaActual).trim();
+  // `_sgFechaActualTexto` (resuelto por abrirGestionar(), ver esa función)
+  // en vez de re-splitear `_sgFechaActual` -- puede ser id_evento para una
+  // reserva nueva.
+  var fechaAnteriorTexto = _sgFechaActualTexto || _sgFechaActual;
   var elFechaAnt = document.getElementById('mcr-fecha-anterior');
   if (elFechaAnt) elFechaAnt.textContent = fechaAnteriorTexto;
   document.getElementById('mcr-fecha').textContent = fechaTexto;
@@ -1480,20 +1510,14 @@ function _recargarYRenderReservas(callback) {
     setTimeout(_initScrollReservas, 50);
     if (callback) callback();
   }
+  // El segundo fetch (getFechasDisponibles, para enriquecer mapsUrl/horaFin/
+  // duracion/descripcion) ya no hace falta (ver "Cambios recientes"): esos
+  // campos vienen directo en cada objeto de getReservasPersona para las
+  // reservas con id_evento real -- el cruce por igualdad de `fecha` dejó de
+  // matchear cuando `fecha` pasó a id_evento.
   api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
     _todasReservas = reservas || [];
-    var d = E.datos;
-    var talla = d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no' ? d.talla : '';
-    api({ action: 'getFechasDisponibles', nombre: E.nombre, talla: talla, necesitaProtecciones: d.necesitaProtecciones }, function(fechas) {
-      var infoMap = {};
-      fechas.forEach(function(f) { infoMap[f.fecha] = f; });
-      _todasReservas = _todasReservas.map(function(r) {
-        var info = infoMap[r.fecha];
-        if (info) { r.mapsUrl = info.mapsUrl || ''; r.horaFin = info.horaFin || ''; r.duracion = info.duracion || ''; r.descripcion = info.descripcion || ''; }
-        return r;
-      });
-      _terminar();
-    }, _terminar);
+    _terminar();
   }, _terminar);
 }
 
