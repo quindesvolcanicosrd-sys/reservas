@@ -2747,7 +2747,7 @@ Deliberadamente chico: reusa tal cual (sin redefinir) `.ev-sticky-header`/`.ev-h
 ### js/config.js
 | Función / variable | Descripción |
 |---|---|
-| `BACKEND` | URL del Google Apps Script backend — pendiente de migrar a `supabase/functions/api` (ver esa entrada más abajo y "Cambios recientes"); queda un `// TODO: cambiar a Edge Function URL cuando esté deployada` con la URL real (`https://uusbnreitoobqssizbfq.supabase.co/functions/v1/api`) inmediatamente arriba de esta línea, todavía sin activar a propósito hasta verificar el deploy |
+| `BACKEND` | URL de la Supabase Edge Function (`https://uusbnreitoobqssizbfq.supabase.co/functions/v1/api`) — reemplaza al Google Apps Script backend anterior (ver `supabase/functions/api/index.ts` más abajo y "Cambios recientes") |
 | `GOOGLE_CLIENT_ID` | Client ID de Google OAuth para usuarios |
 | `MAPS_API_KEY` | **Nueva** — key de Google Maps/Places (mismo Google Cloud project que ya usa "Pivot", con Places API habilitada). Es una constante de **referencia/documentación** más que un valor realmente leído por JS: el `<script src="...">` que carga la Maps JavaScript API (`index.html`, antes de `</body>`) necesita la key hardcodeada en el propio atributo `src` (un `<script>` estático no puede interpolar una variable JS al armar su URL) — así que el mismo valor literal vive duplicado en dos archivos. Igual que `GOOGLE_CLIENT_ID`/`BACKEND`, es una key pensada para exponerse en cliente (Maps JS API, no un secreto de servidor) — su seguridad depende de las restricciones de HTTP referrer configuradas en Google Cloud Console, no de mantenerla oculta; no se pudo verificar esa configuración desde acá (fuera del alcance de un cambio de código), señalado como recordatorio |
 | `sha256Hex(str)` | Hash SHA-256 en hex usando crypto.subtle (async, devuelve Promise) |
@@ -3377,7 +3377,7 @@ Verificado con Playwright (`hasTouch:true`, `Touch`/`TouchEvent` sintéticos des
 
 | Variable | Definida en | Usada en | Descripción |
 |---|---|---|---|
-| `BACKEND` | config.js | api.js, auth.js, reservas.js, perfil.js, admin.js, home.js | URL del Apps Script backend |
+| `BACKEND` | config.js | api.js, auth.js, reservas.js, perfil.js, admin.js, home.js | URL de la Supabase Edge Function (antes Apps Script) |
 | `GOOGLE_CLIENT_ID` | config.js | auth.js | Client ID OAuth para GIS usuario |
 | `sha256Hex` | config.js | auth.js, reservas.js | Hash PIN antes de enviar al backend |
 | `_token` | api.js | api.js (auto), auth.js (asigna) | Token de sesión del usuario; inyectado en cada request |
@@ -4668,7 +4668,7 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
 
   **Verificado en producción** (Victor, no Playwright — flujo real contra el backend desplegado): selector de tallas al reservar (`#sheet-talla`, vía `getTallasDisponiblesParaFecha`), guardado de equipamiento desde "Mi Liga" (`aj-sub-equip`, vía `adminGuardarEquipamiento`) y la lista de "Qué llevar" del panel admin reconstruida correctamente desde `reservas`+`asistencias`.
 
-- **`supabase/functions/api/index.ts` — nuevo, primera tanda de reemplazo del backend `Code.gs` (Apps Script) por una Supabase Edge Function. Sexta migración GAS/Sheets/Supabase-vía-GAS → Edge Function nativa, después de Venues, Log de asistencias, Asistencias, Puntos/Tareas y Reservas (esas 5 quedan como estaban: siguen siendo Code.gs hablando con Supabase por REST, no Edge Function). Todavía no deployada ni activada — `js/config.js` sigue apuntando a la URL de GAS, con un `// TODO: cambiar a Edge Function URL cuando esté deployada` señalando `https://uusbnreitoobqssizbfq.supabase.co/functions/v1/api`.**
+- **`supabase/functions/api/index.ts` — primera tanda de reemplazo del backend `Code.gs` (Apps Script) por una Supabase Edge Function. Sexta migración GAS/Sheets/Supabase-vía-GAS → Edge Function nativa, después de Venues, Log de asistencias, Asistencias, Puntos/Tareas y Reservas (esas 5 quedan como estaban: siguen siendo Code.gs hablando con Supabase por REST, no Edge Function). Activada en `js/config.js`: `BACKEND` apunta a `https://uusbnreitoobqssizbfq.supabase.co/functions/v1/api` (el `TODO` que señalaba esta URL ya no está).**
 
   **Qué cubre esta tanda:** todo el flujo de autenticación/sesión y el perfil (`equipo`) — login con Google (usuario y admin), PIN con rate limiting, restaurar/cerrar sesión, resolver nombre por email, lectura/escritura de datos de persona, PIN, cupón, equipamiento, disponibilidad de nombre/email, y la config global (`color_enfasis`/precios de clases). Cualquier otra `action` (reservas, eventos, tareas, venues, log de asistencias — todo lo que hoy vive en `Code.gs` hablando con Supabase) retorna `{error:'Acción no implementada en Edge Function.'}` a propósito, para irse agregando en tandas siguientes sin bloquear esta.
 
@@ -4681,5 +4681,7 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
   **`pinNeedsReset`:** si `equipo.pin_needs_reset` es `true` (PIN antiguo incompatible, pensado para la migración de hashes de GAS a Postgres), `validarPin` corta temprano con `{valido:false, pinNeedsReset:true}` antes de tocar `pin_attempts` — `js/auth.js` (`continuar_pin()`) ya maneja esta rama con un mensaje dedicado pidiendo reingresar con Google (ver esa entrada en la sección de JS).
 
   **Pendiente antes de activar (`js/config.js`):** crear el esquema SQL real en Supabase (tablas + columnas de arriba), cargar `admins`/`config_app` con los valores actuales, y verificar cada acción contra producción antes de mover `BACKEND` — mismo criterio cauteloso que ya se usó en las migraciones anteriores (Venues, Log de asistencias, etc.), ninguna se activó sin verificación manual de Victor primero.
+
+- **`js/config.js` — `BACKEND` activado: apunta a la Supabase Edge Function (`https://uusbnreitoobqssizbfq.supabase.co/functions/v1/api`) en vez del Apps Script. Se quitó el `// TODO: cambiar a Edge Function URL cuando esté deployada` que marcaba este paso.** Cubre el flujo de auth/sesión y perfil (ver entrada de `supabase/functions/api/index.ts` más arriba); cualquier `action` no implementada todavía en la Edge Function devuelve `{error:'Acción no implementada en Edge Function.'}` en vez de fallar silenciosamente.
 
   **Migración de Reservas: 100% completa.** Las 4 etapas cerradas: Etapa 1 (disponibilidad calculada desde `asistencias`), Etapa 2 (cupón/crédito conectado al cancelar evento), Etapa 3 (tabla `reservas` con escritura doble) y Etapa 4 (equipamiento + qué llevar, de acá arriba). Quinta migración GAS/Sheets → Supabase cerrada, después de Venues, Log de asistencias, Asistencias y Puntos/Tareas.

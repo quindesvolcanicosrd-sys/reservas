@@ -1,5 +1,4 @@
-// TODO: cambiar a Edge Function URL cuando esté deployada -- https://uusbnreitoobqssizbfq.supabase.co/functions/v1/api
-var BACKEND = 'https://script.google.com/macros/s/AKfycbzvB93ZxyMeQeBA96sv5uqCHdzKI19ZhOQdXDyp2ryYn9almJCzOcHeMWT0u4raVSpC/exec';
+var BACKEND = 'https://uusbnreitoobqssizbfq.supabase.co/functions/v1/api';
 var GOOGLE_CLIENT_ID = '632992894668-gnbb5cclsmfdcnve0g34kmue1c72h73q.apps.googleusercontent.com';
 var MAPS_API_KEY = 'AIzaSyDSGkh2AyuM_-6ngo5-XMPi0NYrXZHEBl8';
 
