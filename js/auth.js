@@ -270,6 +270,11 @@ function continuar_pin() {
     api({ action: 'validarPin', nombre: E.nombre, pinHash: hash }, function(res) {
       _validandoPin = false;
       if (!res.valido) {
+        if (res.pinNeedsReset) {
+          ocultarCargando();
+          err('err-pin', 'Tu PIN anterior no es compatible. Ingresá con Google para configurar uno nuevo.');
+          return;
+        }
         ocultarCargando(); resetPinPad();
         err('err-pin', res.bloqueado
           ? 'Demasiados intentos fallidos. Espera 15 minutos e intenta de nuevo.'

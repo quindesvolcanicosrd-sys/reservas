@@ -50,10 +50,15 @@ reservas/
 │   ├── axis-transicion.js      Mecánica JS de la transición "shared axis X" (axisTransicion()) — usada por ir() e inscMostrarPaso(), cargado en index.html e inscripcion/index.html
 │   └── date-picker.js          Date picker dp-* reutilizable (usado solo en inscripcion)
 │
-└── inscripcion/
-    ├── index.html              Shell del formulario de inscripción
-    ├── inscripcion.css         Todos los estilos de inscripcion (tokens CSS, layout, form, dp-*)
-    └── inscripcion.js          Lógica del formulario: Google Sign-In, validación, envío
+├── inscripcion/
+│   ├── index.html              Shell del formulario de inscripción
+│   ├── inscripcion.css         Todos los estilos de inscripcion (tokens CSS, layout, form, dp-*)
+│   └── inscripcion.js          Lógica del formulario: Google Sign-In, validación, envío
+│
+└── supabase/
+    └── functions/
+        └── api/
+            └── index.ts         Edge Function que reemplaza el backend Code.gs de Apps Script (ver "Cambios recientes" — todavía sin activar en js/config.js, `BACKEND` sigue apuntando a GAS con un TODO). Deno + supabase-js con la service role key (bypasea RLS); enruta por `action` (query string en GET, body form-encoded o JSON en POST, mismo contrato que js/api.js) sobre la tabla `equipo` y sus tablas satélite (`sessions`/`admin_sessions`/`pin_attempts`/`admins`/`config_app`). Acciones implementadas: `loginGoogle`/`adminLogin`/`validarPin`/`restaurarSesion`/`cerrarSesion`/`resolverNombre`/`getDatosCompletos`/`getDatosPersona`/`actualizarDatosPersona`/`actualizarEquipamientoPersona`/`actualizarPin`/`getCuponDisponible`/`marcarCuponUsado`/`getNombres`/`verificarEmailDisponible`/`verificarNombreDisponible`/`adminGetColorEnfasis`/`adminSetColorEnfasis`/`getPreciosClases`/`adminSetPreciosClases` — cualquier otra `action` (el resto del contrato de Code.gs: reservas, eventos, tareas, venues, log de asistencias) todavía retorna `{error:'Acción no implementada en Edge Function.'}`, se van agregando en tandas siguientes
 ```
 
 ---
@@ -2742,7 +2747,7 @@ Deliberadamente chico: reusa tal cual (sin redefinir) `.ev-sticky-header`/`.ev-h
 ### js/config.js
 | Función / variable | Descripción |
 |---|---|
-| `BACKEND` | URL del Google Apps Script backend |
+| `BACKEND` | URL del Google Apps Script backend — pendiente de migrar a `supabase/functions/api` (ver esa entrada más abajo y "Cambios recientes"); queda un `// TODO: cambiar a Edge Function URL cuando esté deployada` con la URL real (`https://uusbnreitoobqssizbfq.supabase.co/functions/v1/api`) inmediatamente arriba de esta línea, todavía sin activar a propósito hasta verificar el deploy |
 | `GOOGLE_CLIENT_ID` | Client ID de Google OAuth para usuarios |
 | `MAPS_API_KEY` | **Nueva** — key de Google Maps/Places (mismo Google Cloud project que ya usa "Pivot", con Places API habilitada). Es una constante de **referencia/documentación** más que un valor realmente leído por JS: el `<script src="...">` que carga la Maps JavaScript API (`index.html`, antes de `</body>`) necesita la key hardcodeada en el propio atributo `src` (un `<script>` estático no puede interpolar una variable JS al armar su URL) — así que el mismo valor literal vive duplicado en dos archivos. Igual que `GOOGLE_CLIENT_ID`/`BACKEND`, es una key pensada para exponerse en cliente (Maps JS API, no un secreto de servidor) — su seguridad depende de las restricciones de HTTP referrer configuradas en Google Cloud Console, no de mantenerla oculta; no se pudo verificar esa configuración desde acá (fuera del alcance de un cambio de código), señalado como recordatorio |
 | `sha256Hex(str)` | Hash SHA-256 en hex usando crypto.subtle (async, devuelve Promise) |
@@ -3255,7 +3260,7 @@ Reusa deliberadamente componentes/helpers ya existentes de otras secciones en ve
 | `continuar_pin_desde_s1()` | Resuelve nombre/email y llama continuar_pin() |
 | `continuar_s1()` | (legacy) Toma nombre del select y navega a s1b |
 | `_validandoPin` | Flag anti-doble-submit durante validación de PIN |
-| `continuar_pin()` | Hashea el PIN, lo valida en backend, restaura sesión si es válido |
+| `continuar_pin()` | Hashea el PIN, lo valida en backend, restaura sesión si es válido. **`res.pinNeedsReset` (ver "Cambios recientes" — Edge Function)**: chequeado antes que `res.bloqueado` en la rama `!res.valido` — si el backend marca `pin_needs_reset` en `equipo` (PIN antiguo incompatible, ej. tras la migración GAS→Edge Function), corta temprano con `err('err-pin', 'Tu PIN anterior no es compatible. Ingresá con Google para configurar uno nuevo.')` sin pasar por `resetPinPad()`, indicando a la persona que use Google Sign-In para reconfigurar el PIN en vez de reintentar |
 | `syncPinDots()` | Limpia el input PIN a solo dígitos y auto-envía al llegar a 4 |
 | `resetPinPad()` | Limpia el input PIN y resetea el icono de visibilidad |
 | `togglePinVisibility()` | Alterna type password/tel en el input PIN |
@@ -4662,5 +4667,19 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
   **`adminGetQueLlevar` — reescrita por completo, ya no depende de ninguna hoja de Sheets.** Antes leía una hoja llamada "Que llevar" que no tenía ningún escritor conocido en todo el código (probablemente alimentada por una fórmula nativa de Sheets, fuera del alcance de `Code.gs`) — una fuente de verdad opaca, sin forma de auditar cómo se generaba el contenido. Ahora se calcula 100% en tiempo real, sin tabla ni hoja propia: consulta la tabla `reservas` de Supabase por reservas en estado Confirmada/Pendiente agrupadas por clase que hayan pedido patines o protecciones, cruzadas con `asistencias` para resolver fecha/lugar de cada clase. Elimina de raíz la desincronización estructural que tenía el mecanismo viejo (la hoja "Que llevar" no podía reflejar cancelaciones ni cambios de talla/protecciones posteriores a como sea que se generara).
 
   **Verificado en producción** (Victor, no Playwright — flujo real contra el backend desplegado): selector de tallas al reservar (`#sheet-talla`, vía `getTallasDisponiblesParaFecha`), guardado de equipamiento desde "Mi Liga" (`aj-sub-equip`, vía `adminGuardarEquipamiento`) y la lista de "Qué llevar" del panel admin reconstruida correctamente desde `reservas`+`asistencias`.
+
+- **`supabase/functions/api/index.ts` — nuevo, primera tanda de reemplazo del backend `Code.gs` (Apps Script) por una Supabase Edge Function. Sexta migración GAS/Sheets/Supabase-vía-GAS → Edge Function nativa, después de Venues, Log de asistencias, Asistencias, Puntos/Tareas y Reservas (esas 5 quedan como estaban: siguen siendo Code.gs hablando con Supabase por REST, no Edge Function). Todavía no deployada ni activada — `js/config.js` sigue apuntando a la URL de GAS, con un `// TODO: cambiar a Edge Function URL cuando esté deployada` señalando `https://uusbnreitoobqssizbfq.supabase.co/functions/v1/api`.**
+
+  **Qué cubre esta tanda:** todo el flujo de autenticación/sesión y el perfil (`equipo`) — login con Google (usuario y admin), PIN con rate limiting, restaurar/cerrar sesión, resolver nombre por email, lectura/escritura de datos de persona, PIN, cupón, equipamiento, disponibilidad de nombre/email, y la config global (`color_enfasis`/precios de clases). Cualquier otra `action` (reservas, eventos, tareas, venues, log de asistencias — todo lo que hoy vive en `Code.gs` hablando con Supabase) retorna `{error:'Acción no implementada en Edge Function.'}` a propósito, para irse agregando en tandas siguientes sin bloquear esta.
+
+  **Arquitectura:** un único router por `switch(action)` (mismo contrato que `Code.gs`: `action` en query string para GET, body form-urlencoded o JSON para POST — `js/api.js` no necesita ningún cambio). Usa `createClient` de `@supabase/supabase-js@2` (vía esm.sh) con `SUPABASE_SERVICE_ROLE_KEY` — bypasea RLS, así que la Edge Function es el único punto de acceso a las tablas, igual que `Code.gs` lo es hoy con la publishable key. CORS abierto (`Access-Control-Allow-Origin: *`) con preflight `OPTIONS` manejado aparte.
+
+  **Tablas nuevas asumidas (sin migración SQL en este repo, señalado a propósito — Code.gs vive fuera del repo, así que tampoco había un esquema versionado acá para `equipo` hasta ahora):** `equipo` (todas las columnas de persona en snake_case, ej. `necesita_patines`/`pin_hash`/`pin_needs_reset`/`cupon_disponible`/`paga_cuota` — esta última determina `dashboardAdmin` para cuentas admin con fila propia, `!row.paga_cuota`), `sessions` (`token`/`username`/`expires_at`, TTL 30 días), `admin_sessions` (`token`/`email`/`expires_at`, TTL 12h), `pin_attempts` (`username`/`count`/`blocked_until`, rate limiting: bloqueo 15 min a partir del 5º intento fallido), `admins` (`email`), `config_app` (`key`/`value`, filas `color_enfasis`/`precio_por_clase`/`precio_mensual`).
+
+  **Mapeo camelCase↔snake_case centralizado en `CAMPO_MAP`** (un solo objeto, reusado en los 2 sentidos: `getDatosCompletos(row)` arma el objeto que consume el frontend, `actualizarDatosPersona` arma el `update` inverso) — evita mantener 2 listas de campos por separado.
+
+  **`pinNeedsReset`:** si `equipo.pin_needs_reset` es `true` (PIN antiguo incompatible, pensado para la migración de hashes de GAS a Postgres), `validarPin` corta temprano con `{valido:false, pinNeedsReset:true}` antes de tocar `pin_attempts` — `js/auth.js` (`continuar_pin()`) ya maneja esta rama con un mensaje dedicado pidiendo reingresar con Google (ver esa entrada en la sección de JS).
+
+  **Pendiente antes de activar (`js/config.js`):** crear el esquema SQL real en Supabase (tablas + columnas de arriba), cargar `admins`/`config_app` con los valores actuales, y verificar cada acción contra producción antes de mover `BACKEND` — mismo criterio cauteloso que ya se usó en las migraciones anteriores (Venues, Log de asistencias, etc.), ninguna se activó sin verificación manual de Victor primero.
 
   **Migración de Reservas: 100% completa.** Las 4 etapas cerradas: Etapa 1 (disponibilidad calculada desde `asistencias`), Etapa 2 (cupón/crédito conectado al cancelar evento), Etapa 3 (tabla `reservas` con escritura doble) y Etapa 4 (equipamiento + qué llevar, de acá arriba). Quinta migración GAS/Sheets → Supabase cerrada, después de Venues, Log de asistencias, Asistencias y Puntos/Tareas.
