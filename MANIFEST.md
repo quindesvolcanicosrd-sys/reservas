@@ -4622,7 +4622,7 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
 
 ---
 
-- **Backend (`Code.gs`, fuera de este repo) — Migración de Reservas a Supabase, Etapas 1-3. Quinta migración GAS/Sheets → Supabase, después de Venues, Log de asistencias, Asistencias y Puntos/Tareas.**
+- **Backend (`Code.gs`, fuera de este repo) — Migración de Reservas a Supabase, Etapas 1-4: ✅ COMPLETA. Quinta migración GAS/Sheets → Supabase, después de Venues, Log de asistencias, Asistencias y Puntos/Tareas.**
 
   **Etapa 1 — Disponibilidad calculada desde Asistencias: ✅ completa y verificada.** La disponibilidad de cupos por evento/mensualidad pasa a calcularse contra la tabla `asistencias` de Supabase (ya migrada, ver entrada de "Migración de Asistencias" más arriba en este MANIFEST) en vez de contra la hoja `Asistencias` de Sheets.
 
@@ -4636,4 +4636,12 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
 
   **Código muerto identificado, sin tocar a propósito: `notificarCancelacionEntrenamiento`.** Atada a editar a mano la hoja "Próximos entrenamientos", quedó obsoleta desde la Etapa 1 — nadie lee más esa hoja. Si se edita a mano, solo actualiza Sheets, nunca Supabase, generando desincronización entre las 2 fuentes. El camino correcto de ahora en adelante es cancelar siempre desde el botón de Eventos (`adminCancelarEvento`), nunca editando esa hoja a mano.
 
-  **Pendiente:** Etapa 4 (Equipamiento + Qué llevar).
+  **Etapa 4 — Equipamiento + Qué llevar: ✅ completa y verificada en producción.** Última etapa de la migración de Reservas.
+
+  **Equipamiento — tablas `equipamiento_tallas` y `config_equipamiento` en Supabase, escritura doble activa.** `getTallasDisponibles` (pool general de tallas, usado por `#aj-sheet-talla-aj` en "Mi Liga" — ver `aj-sub-equip` en este MANIFEST) y `getFechasDisponibles`/`getTallasDisponiblesParaFecha` (disponibilidad por fecha/clase puntual, usado por `#sheet-talla` del flujo de reserva/gestión) migradas a lectura desde Supabase. `adminGetEquipamiento` (panel admin) y `adminGuardarEquipamiento` (guardado de talla/protecciones de un usuario, invocada tanto desde el panel admin como desde `aj-sub-equip` en "Mi Liga") reescritas con escritura doble Sheets+Supabase — mismo criterio que la escritura doble de la tabla `reservas` (Etapa 3, arriba).
+
+  **`adminGetQueLlevar` — reescrita por completo, ya no depende de ninguna hoja de Sheets.** Antes leía una hoja llamada "Que llevar" que no tenía ningún escritor conocido en todo el código (probablemente alimentada por una fórmula nativa de Sheets, fuera del alcance de `Code.gs`) — una fuente de verdad opaca, sin forma de auditar cómo se generaba el contenido. Ahora se calcula 100% en tiempo real, sin tabla ni hoja propia: consulta la tabla `reservas` de Supabase por reservas en estado Confirmada/Pendiente agrupadas por clase que hayan pedido patines o protecciones, cruzadas con `asistencias` para resolver fecha/lugar de cada clase. Elimina de raíz la desincronización estructural que tenía el mecanismo viejo (la hoja "Que llevar" no podía reflejar cancelaciones ni cambios de talla/protecciones posteriores a como sea que se generara).
+
+  **Verificado en producción** (Victor, no Playwright — flujo real contra el backend desplegado): selector de tallas al reservar (`#sheet-talla`, vía `getTallasDisponiblesParaFecha`), guardado de equipamiento desde "Mi Liga" (`aj-sub-equip`, vía `adminGuardarEquipamiento`) y la lista de "Qué llevar" del panel admin reconstruida correctamente desde `reservas`+`asistencias`.
+
+  **Migración de Reservas: 100% completa.** Las 4 etapas cerradas: Etapa 1 (disponibilidad calculada desde `asistencias`), Etapa 2 (cupón/crédito conectado al cancelar evento), Etapa 3 (tabla `reservas` con escritura doble) y Etapa 4 (equipamiento + qué llevar, de acá arriba). Quinta migración GAS/Sheets → Supabase cerrada, después de Venues, Log de asistencias, Asistencias y Puntos/Tareas.
