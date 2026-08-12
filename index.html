@@ -1736,20 +1736,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
     </div>
 
-    <!-- Mi Liga -- visible solo para cuentas admin (_adminToken guardado,
-         sea dashboardAdmin true o false), ver irEditarDatos() (js/perfil.js)
-         y MANIFEST.md "Cambios recientes", Tanda 3. -->
-    <div class="aj-group" id="aj-group-miliga" style="display:none;">
-      <div class="aj-row" data-aj-key="miliga" onclick="irMiLiga()">
-        <div class="aj-icon aj-icon-orange"><span class="material-symbols-outlined">admin_panel_settings</span></div>
-        <div class="aj-content">
-          <div class="aj-title">Mi Liga</div>
-          <div class="aj-value">Panel de administradorx</div>
-        </div>
-        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
-      </div>
-    </div>
-
     <!-- Equipamiento -->
     <div class="aj-group">
       <div class="aj-row" data-aj-key="equip" onclick="irAjSub('aj-sub-equip')">
@@ -1859,6 +1845,220 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 </div>
 
+<!-- Mi Liga -- tab propio de la nav inferior, solo admin (_adminToken
+     guardado, sea dashboardAdmin true o false), ver APP_BOTTOM_NAV_ITEMS
+     (js/ui.js) e irMiLiga() (js/admin.js). Contenido trasladado tal cual
+     desde Ajustes (antes aj-sub-miliga, overlay sobre s-datos). -->
+<div class="pantalla" id="s-miliga">
+  <div class="card" id="s-miliga-card">
+    <div class="admin-dash-banners">
+      <div id="admin-banner-pendientes-slot-ml"></div>
+      <div id="admin-banner-equip-slot-ml"></div>
+    </div>
+
+    <!-- Fila 1: Qué llevar + Reservas. -->
+    <div class="admin-dash-row">
+      <div class="admin-dash-tile" data-tile="s-admin-quellevar" onclick="adminToggleBurbuja('s-admin-quellevar', this)">
+        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">backpack</span></div>
+        <div class="admin-dash-tile-label">Qué llevar</div>
+      </div>
+      <div class="admin-dash-tile" data-tile="s-admin-reservas" onclick="adminToggleBurbuja('s-admin-reservas', this)">
+        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">fact_check</span></div>
+        <div class="admin-dash-tile-label">Reservas</div>
+      </div>
+    </div>
+
+    <!-- Burbuja "Qué llevar" (contenido largo). -->
+    <div id="admin-burbuja-quellevar" class="admin-tile-bubble" style="display:none;">
+      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">backpack</span> Qué llevar</div>
+      <div id="admin-quellevar-lista"></div>
+      <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px;" onclick="adminRefreshQueLlevar()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span> Actualizar lista</button>
+    </div>
+
+    <!-- Burbuja "Reservas" (contenido largo) -- mismo componente
+         .admin-tile-bubble que las demás, ver adminToggleBurbuja()
+         (js/admin.js). Nunca pantalla completa. -->
+    <div id="admin-burbuja-reservas" class="admin-tile-bubble" style="display:none;">
+      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">fact_check</span> Reservas</div>
+      <div class="tp-seg" id="admin-filtro-seg">
+        <div class="tp-slider" id="admin-filtro-slider"></div>
+        <div class="tp-opt active" id="admin-filtro-pendientes" onclick="adminFiltroReservas('pendientes')">
+          <span class="material-symbols-outlined" style="font-size:1rem;">hourglass_top</span><span>Pendientes</span>
+        </div>
+        <div class="tp-opt" id="admin-filtro-todas" onclick="adminFiltroReservas('todas')">
+          <span class="material-symbols-outlined" style="font-size:1rem;">list_alt</span><span>Todas</span>
+        </div>
+      </div>
+      <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin:14px 0 8px;" onclick="adminRefreshReservas()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span> Actualizar</button>
+      <!-- Acordeón inline de mes (reemplaza el <select> nativo, roto en
+           mobile): #filtro-mes-reservas es un <input type="hidden">, mismo
+           id/semántica de .value que ya leía adminRenderReservas(). Pills
+           .mes-item/.meses-grid-pills, mismo componente que ya usa el flujo
+           de pago mensual (js/ui.js generarMeses()). -->
+      <div id="filtro-fecha-wrapper" style="display:none;margin-bottom:12px;">
+        <div class="admin-mes-acordeon">
+          <div class="admin-mes-trigger" onclick="adminToggleMesAcordeon()">
+            <span id="admin-mes-trigger-label">Selecciona un mes</span>
+            <span class="material-symbols-outlined admin-mes-chevron" id="admin-mes-chevron">expand_more</span>
+          </div>
+          <div class="admin-mes-acordeon-body" id="admin-mes-acordeon-body">
+            <div class="meses-grid-pills" id="admin-mes-pills"></div>
+          </div>
+        </div>
+        <input type="hidden" id="filtro-mes-reservas">
+      </div>
+      <div id="admin-reservas-lista"></div>
+    </div>
+
+    <!-- Fila 2: Equipamiento + Notificación. -->
+    <div class="admin-dash-row">
+      <div class="admin-dash-tile" data-tile="s-admin-equip" onclick="adminToggleBurbuja('s-admin-equip', this)">
+        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">roller_skating</span></div>
+        <div class="admin-dash-tile-label">Equipamiento</div>
+      </div>
+      <div class="admin-dash-tile" data-tile="notif" onclick="adminToggleBurbuja('notif', this)">
+        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">campaign</span></div>
+        <div class="admin-dash-tile-label">Notificación</div>
+      </div>
+    </div>
+
+    <!-- Burbuja "Equipamiento" (contenido largo) -- guardado automático
+         (adminGuardarEquipAuto(), debounce corto) en cada tap de stepper/
+         pill/quitar, sin botón "Guardar cambios". -->
+    <div id="admin-burbuja-equip" class="admin-tile-bubble" style="display:none;">
+      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">roller_skating</span> Equipamiento</div>
+      <div id="admin-equip-lista"></div>
+      <div id="admin-tallas-pills-wrap" style="display:none;margin:10px 0 4px;">
+        <div class="aj-pills-row" id="admin-tallas-pills"></div>
+      </div>
+      <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px;" onclick="adminToggleTallasPanel()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">add</span> Agregar talla</button>
+      <div class="datos-campo" style="margin-top:18px;">
+        <label>Sets de protecciones completas</label>
+        <div class="qty-stepper" data-step="1" data-min="0">
+          <button type="button" class="qty-btn" onclick="adminStepperChange(this,-1);adminGuardarEquipAuto();">−</button>
+          <span class="qty-value">0</span>
+          <button type="button" class="qty-btn" onclick="adminStepperChange(this,1);adminGuardarEquipAuto();">+</button>
+          <input type="hidden" id="adm-equip-protec" value="0">
+        </div>
+      </div>
+    </div>
+
+    <!-- Burbuja "Enviar notificación" (contenido corto) -- mismos ids/
+         campos/función adminEnviarNotif() de siempre. -->
+    <div id="admin-notif-bubble" class="admin-tile-bubble" style="display:none;">
+      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">campaign</span> Enviar notificación</div>
+      <div class="datos-campo">
+        <label>Título</label>
+        <input type="text" id="adm-notif-titulo" placeholder="Ej: ¡Entrenamiento especial este sábado!">
+      </div>
+      <div class="datos-campo">
+        <label>Mensaje</label>
+        <textarea id="adm-notif-msg" style="min-height:90px;resize:none;" placeholder="Texto de la notificación..."></textarea>
+      </div>
+      <div class="datos-campo">
+        <label>Destinatarix</label>
+        <button type="button" class="admin-destino-trigger" onclick="adminAbrirSheetDestino()">
+          <span id="admin-destino-trigger-label">Todes (suscritxs)</span>
+          <span class="material-symbols-outlined">expand_more</span>
+        </button>
+        <input type="hidden" id="adm-notif-destino" value="todos">
+      </div>
+      <div class="datos-campo">
+        <label>Programar envío (opcional)</label>
+        <input type="date" id="adm-notif-fecha">
+        <div class="time-wheel-wrap">
+          <div class="time-wheel" id="adm-notif-hora-wheel"></div>
+          <span class="time-wheel-sep">:</span>
+          <div class="time-wheel" id="adm-notif-min-wheel"></div>
+          <div class="time-wheel-highlight"></div>
+        </div>
+        <p class="datos-hint">Déjalo vacío para enviar de inmediato. La hora es la de tu dispositivo.</p>
+      </div>
+      <div class="error-msg" id="err-admin-notif"></div>
+      <button class="btn btn-outline" id="btn-adm-notif" onclick="adminEnviarNotif()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">send</span> Enviar notificación</button>
+    </div>
+
+    <!-- Pills "Color"/"Precios de clases" -- mismo mecanismo que las 4 tiles
+         grandes de arriba, .admin-dash-pill solo achica tamaño/forma (mismo
+         look que .aj-pill, css/perfil.css). "Color" reemplaza a la vieja
+         sección "Personalización" siempre-visible; "Precios de clases" es
+         nueva acá (antes solo existía en el dashboard viejo). -->
+    <div class="admin-dash-pills-row">
+      <div class="admin-dash-tile admin-dash-pill" data-tile="admin-color" onclick="adminToggleBurbuja('admin-color', this)">
+        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">palette</span></div>
+        <div class="admin-dash-tile-label">Color</div>
+      </div>
+      <div class="admin-dash-tile admin-dash-pill" data-tile="admin-precios" onclick="adminToggleBurbuja('admin-precios', this)">
+        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">payments</span></div>
+        <div class="admin-dash-tile-label">Precios de clases</div>
+      </div>
+    </div>
+
+    <!-- Burbuja "Color". -->
+    <div id="admin-burbuja-color" class="admin-tile-bubble" style="display:none;">
+      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">palette</span> Color</div>
+      <div class="admin-color-swatches"></div>
+    </div>
+
+    <!-- Burbuja "Precios de clases". -->
+    <div id="admin-burbuja-precios" class="admin-tile-bubble" style="display:none;">
+      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">payments</span> Precios de clases</div>
+      <div class="datos-campo">
+        <label>Precio por clase</label>
+        <div class="admin-precio-row">
+          <div class="qty-stepper admin-precio-stepper" data-step="0.5" data-min="0" data-decimals="2">
+            <button type="button" class="qty-btn" onclick="adminStepperChange(this,-1);adminGuardarPreciosAuto();">−</button>
+            <span class="qty-value">0.00</span>
+            <button type="button" class="qty-btn" onclick="adminStepperChange(this,1);adminGuardarPreciosAuto();">+</button>
+            <input type="hidden" id="adm-precio-clase" value="0">
+          </div>
+          <div class="select-wrapper" style="width:auto;flex-shrink:0;margin-bottom:0;">
+            <select class="admin-moneda-select" onchange="adminCambiarMoneda(this.value)">
+              <option value="USD">USD</option>
+              <option value="DOP">DOP</option>
+              <option value="EUR">EUR</option>
+              <option value="COP">COP</option>
+              <option value="MXN">MXN</option>
+              <option value="PEN">PEN</option>
+              <option value="ARS">ARS</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="datos-campo">
+        <label>Precio mensual</label>
+        <div class="admin-precio-row">
+          <div class="qty-stepper admin-precio-stepper" data-step="0.5" data-min="0" data-decimals="2">
+            <button type="button" class="qty-btn" onclick="adminStepperChange(this,-1);adminGuardarPreciosAuto();">−</button>
+            <span class="qty-value">0.00</span>
+            <button type="button" class="qty-btn" onclick="adminStepperChange(this,1);adminGuardarPreciosAuto();">+</button>
+            <input type="hidden" id="adm-precio-mensual" value="0">
+          </div>
+          <div class="select-wrapper" style="width:auto;flex-shrink:0;margin-bottom:0;">
+            <select class="admin-moneda-select" onchange="adminCambiarMoneda(this.value)">
+              <option value="USD">USD</option>
+              <option value="DOP">DOP</option>
+              <option value="EUR">EUR</option>
+              <option value="COP">COP</option>
+              <option value="MXN">MXN</option>
+              <option value="PEN">PEN</option>
+              <option value="ARS">ARS</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Administradorxs -- al final, como pidió Victor. -->
+    <div class="seccion-label" style="margin-top:8px;">Administradorxs</div>
+    <div id="miliga-admins-lista"></div>
+    <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin:8px 0 4px;" onclick="adminAbrirSheetAgregarAdmin()">
+      <span class="material-symbols-outlined" style="font-size:1.1rem;">person_add</span> Agregar administradorx
+    </button>
+
+    <div class="cta-footer-spacer" style="height:calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 12px);"></div>
+  </div>
+</div>
 
     <div class="pantalla" id="s-admin-login">
     <div class="card" style="text-align:center;">
@@ -2315,233 +2515,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div style="font-size:0.78rem;color:var(--danger);line-height:1.5;">Tu reserva fue cancelada y no asistirás a esta fecha. Si fue un error, puedes hacer una nueva reserva.</div></div>
     </div>
     <button class="btn btn-outline" onclick="cerrarModalEstados()">¡Entendido!</button>
-  </div>
-</div>
-
-<!-- SUB: Mi Liga (panel admin embebido en Ajustes, Tanda 3 — ver MANIFEST.md
-     "Cambios recientes") -->
-<div class="aj-sub" id="aj-sub-miliga">
-  <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
-    <button class="app-nav-back" onclick="cerrarAjSub('aj-sub-miliga')">
-      <span class="material-symbols-outlined">arrow_back</span>
-    </button>
-    <span class="app-nav-title">Mi Liga</span>
-    <div style="width:40px;flex-shrink:0;"></div>
-  </div>
-  <div class="aj-sub-inner">
-    <!-- Simplificación grande (Tanda 7 -- ver MANIFEST.md "Cambios
-         recientes"): s-admin-home se elimina por completo, "Mi Liga" pasa a
-         ser el ÚNICO lugar administrativo de la app. Todo lo que vivía en el
-         dashboard viejo (2 filas de tiles operativas + pills de Color/
-         Precios) se muda para acá tal cual -- mismos ids/mecanismo
-         ADMIN_TILE_INFO/adminToggleBurbuja(), ahora con banners +
-         Administradorxs en el mismo grupo de "solo una sección abierta a la
-         vez". Orden: banners (arriba, sin cambios) → 2 filas de tiles
-         operativas → pills de Color/Precios → Administradorxs (al final). -->
-    <div class="admin-dash-banners">
-      <div id="admin-banner-pendientes-slot-ml"></div>
-      <div id="admin-banner-equip-slot-ml"></div>
-    </div>
-
-    <!-- Fila 1: Qué llevar + Reservas. -->
-    <div class="admin-dash-row">
-      <div class="admin-dash-tile" data-tile="s-admin-quellevar" onclick="adminToggleBurbuja('s-admin-quellevar', this)">
-        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">backpack</span></div>
-        <div class="admin-dash-tile-label">Qué llevar</div>
-      </div>
-      <div class="admin-dash-tile" data-tile="s-admin-reservas" onclick="adminToggleBurbuja('s-admin-reservas', this)">
-        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">fact_check</span></div>
-        <div class="admin-dash-tile-label">Reservas</div>
-      </div>
-    </div>
-
-    <!-- Burbuja "Qué llevar" (contenido largo). -->
-    <div id="admin-burbuja-quellevar" class="admin-tile-bubble" style="display:none;">
-      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">backpack</span> Qué llevar</div>
-      <div id="admin-quellevar-lista"></div>
-      <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px;" onclick="adminRefreshQueLlevar()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span> Actualizar lista</button>
-    </div>
-
-    <!-- Burbuja "Reservas" (contenido largo) -- mismo componente
-         .admin-tile-bubble que las demás, ver adminToggleBurbuja()
-         (js/admin.js). Nunca pantalla completa. -->
-    <div id="admin-burbuja-reservas" class="admin-tile-bubble" style="display:none;">
-      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">fact_check</span> Reservas</div>
-      <div class="tp-seg" id="admin-filtro-seg">
-        <div class="tp-slider" id="admin-filtro-slider"></div>
-        <div class="tp-opt active" id="admin-filtro-pendientes" onclick="adminFiltroReservas('pendientes')">
-          <span class="material-symbols-outlined" style="font-size:1rem;">hourglass_top</span><span>Pendientes</span>
-        </div>
-        <div class="tp-opt" id="admin-filtro-todas" onclick="adminFiltroReservas('todas')">
-          <span class="material-symbols-outlined" style="font-size:1rem;">list_alt</span><span>Todas</span>
-        </div>
-      </div>
-      <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin:14px 0 8px;" onclick="adminRefreshReservas()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">refresh</span> Actualizar</button>
-      <!-- Acordeón inline de mes (reemplaza el <select> nativo, roto en
-           mobile): #filtro-mes-reservas es un <input type="hidden">, mismo
-           id/semántica de .value que ya leía adminRenderReservas(). Pills
-           .mes-item/.meses-grid-pills, mismo componente que ya usa el flujo
-           de pago mensual (js/ui.js generarMeses()). -->
-      <div id="filtro-fecha-wrapper" style="display:none;margin-bottom:12px;">
-        <div class="admin-mes-acordeon">
-          <div class="admin-mes-trigger" onclick="adminToggleMesAcordeon()">
-            <span id="admin-mes-trigger-label">Selecciona un mes</span>
-            <span class="material-symbols-outlined admin-mes-chevron" id="admin-mes-chevron">expand_more</span>
-          </div>
-          <div class="admin-mes-acordeon-body" id="admin-mes-acordeon-body">
-            <div class="meses-grid-pills" id="admin-mes-pills"></div>
-          </div>
-        </div>
-        <input type="hidden" id="filtro-mes-reservas">
-      </div>
-      <div id="admin-reservas-lista"></div>
-    </div>
-
-    <!-- Fila 2: Equipamiento + Notificación. -->
-    <div class="admin-dash-row">
-      <div class="admin-dash-tile" data-tile="s-admin-equip" onclick="adminToggleBurbuja('s-admin-equip', this)">
-        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">roller_skating</span></div>
-        <div class="admin-dash-tile-label">Equipamiento</div>
-      </div>
-      <div class="admin-dash-tile" data-tile="notif" onclick="adminToggleBurbuja('notif', this)">
-        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">campaign</span></div>
-        <div class="admin-dash-tile-label">Notificación</div>
-      </div>
-    </div>
-
-    <!-- Burbuja "Equipamiento" (contenido largo) -- guardado automático
-         (adminGuardarEquipAuto(), debounce corto) en cada tap de stepper/
-         pill/quitar, sin botón "Guardar cambios". -->
-    <div id="admin-burbuja-equip" class="admin-tile-bubble" style="display:none;">
-      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">roller_skating</span> Equipamiento</div>
-      <div id="admin-equip-lista"></div>
-      <div id="admin-tallas-pills-wrap" style="display:none;margin:10px 0 4px;">
-        <div class="aj-pills-row" id="admin-tallas-pills"></div>
-      </div>
-      <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:4px;" onclick="adminToggleTallasPanel()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">add</span> Agregar talla</button>
-      <div class="datos-campo" style="margin-top:18px;">
-        <label>Sets de protecciones completas</label>
-        <div class="qty-stepper" data-step="1" data-min="0">
-          <button type="button" class="qty-btn" onclick="adminStepperChange(this,-1);adminGuardarEquipAuto();">−</button>
-          <span class="qty-value">0</span>
-          <button type="button" class="qty-btn" onclick="adminStepperChange(this,1);adminGuardarEquipAuto();">+</button>
-          <input type="hidden" id="adm-equip-protec" value="0">
-        </div>
-      </div>
-    </div>
-
-    <!-- Burbuja "Enviar notificación" (contenido corto) -- mismos ids/
-         campos/función adminEnviarNotif() de siempre. -->
-    <div id="admin-notif-bubble" class="admin-tile-bubble" style="display:none;">
-      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">campaign</span> Enviar notificación</div>
-      <div class="datos-campo">
-        <label>Título</label>
-        <input type="text" id="adm-notif-titulo" placeholder="Ej: ¡Entrenamiento especial este sábado!">
-      </div>
-      <div class="datos-campo">
-        <label>Mensaje</label>
-        <textarea id="adm-notif-msg" style="min-height:90px;resize:none;" placeholder="Texto de la notificación..."></textarea>
-      </div>
-      <div class="datos-campo">
-        <label>Destinatarix</label>
-        <button type="button" class="admin-destino-trigger" onclick="adminAbrirSheetDestino()">
-          <span id="admin-destino-trigger-label">Todes (suscritxs)</span>
-          <span class="material-symbols-outlined">expand_more</span>
-        </button>
-        <input type="hidden" id="adm-notif-destino" value="todos">
-      </div>
-      <div class="datos-campo">
-        <label>Programar envío (opcional)</label>
-        <input type="date" id="adm-notif-fecha">
-        <div class="time-wheel-wrap">
-          <div class="time-wheel" id="adm-notif-hora-wheel"></div>
-          <span class="time-wheel-sep">:</span>
-          <div class="time-wheel" id="adm-notif-min-wheel"></div>
-          <div class="time-wheel-highlight"></div>
-        </div>
-        <p class="datos-hint">Déjalo vacío para enviar de inmediato. La hora es la de tu dispositivo.</p>
-      </div>
-      <div class="error-msg" id="err-admin-notif"></div>
-      <button class="btn btn-outline" id="btn-adm-notif" onclick="adminEnviarNotif()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">send</span> Enviar notificación</button>
-    </div>
-
-    <!-- Pills "Color"/"Precios de clases" -- mismo mecanismo que las 4 tiles
-         grandes de arriba, .admin-dash-pill solo achica tamaño/forma (mismo
-         look que .aj-pill, css/perfil.css). "Color" reemplaza a la vieja
-         sección "Personalización" siempre-visible; "Precios de clases" es
-         nueva acá (antes solo existía en el dashboard viejo). -->
-    <div class="admin-dash-pills-row">
-      <div class="admin-dash-tile admin-dash-pill" data-tile="admin-color" onclick="adminToggleBurbuja('admin-color', this)">
-        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">palette</span></div>
-        <div class="admin-dash-tile-label">Color</div>
-      </div>
-      <div class="admin-dash-tile admin-dash-pill" data-tile="admin-precios" onclick="adminToggleBurbuja('admin-precios', this)">
-        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">payments</span></div>
-        <div class="admin-dash-tile-label">Precios de clases</div>
-      </div>
-    </div>
-
-    <!-- Burbuja "Color". -->
-    <div id="admin-burbuja-color" class="admin-tile-bubble" style="display:none;">
-      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">palette</span> Color</div>
-      <div class="admin-color-swatches"></div>
-    </div>
-
-    <!-- Burbuja "Precios de clases". -->
-    <div id="admin-burbuja-precios" class="admin-tile-bubble" style="display:none;">
-      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">payments</span> Precios de clases</div>
-      <div class="datos-campo">
-        <label>Precio por clase</label>
-        <div class="admin-precio-row">
-          <div class="qty-stepper admin-precio-stepper" data-step="0.5" data-min="0" data-decimals="2">
-            <button type="button" class="qty-btn" onclick="adminStepperChange(this,-1);adminGuardarPreciosAuto();">−</button>
-            <span class="qty-value">0.00</span>
-            <button type="button" class="qty-btn" onclick="adminStepperChange(this,1);adminGuardarPreciosAuto();">+</button>
-            <input type="hidden" id="adm-precio-clase" value="0">
-          </div>
-          <div class="select-wrapper" style="width:auto;flex-shrink:0;margin-bottom:0;">
-            <select class="admin-moneda-select" onchange="adminCambiarMoneda(this.value)">
-              <option value="USD">USD</option>
-              <option value="DOP">DOP</option>
-              <option value="EUR">EUR</option>
-              <option value="COP">COP</option>
-              <option value="MXN">MXN</option>
-              <option value="PEN">PEN</option>
-              <option value="ARS">ARS</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      <div class="datos-campo">
-        <label>Precio mensual</label>
-        <div class="admin-precio-row">
-          <div class="qty-stepper admin-precio-stepper" data-step="0.5" data-min="0" data-decimals="2">
-            <button type="button" class="qty-btn" onclick="adminStepperChange(this,-1);adminGuardarPreciosAuto();">−</button>
-            <span class="qty-value">0.00</span>
-            <button type="button" class="qty-btn" onclick="adminStepperChange(this,1);adminGuardarPreciosAuto();">+</button>
-            <input type="hidden" id="adm-precio-mensual" value="0">
-          </div>
-          <div class="select-wrapper" style="width:auto;flex-shrink:0;margin-bottom:0;">
-            <select class="admin-moneda-select" onchange="adminCambiarMoneda(this.value)">
-              <option value="USD">USD</option>
-              <option value="DOP">DOP</option>
-              <option value="EUR">EUR</option>
-              <option value="COP">COP</option>
-              <option value="MXN">MXN</option>
-              <option value="PEN">PEN</option>
-              <option value="ARS">ARS</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Administradorxs -- al final, como pidió Victor. -->
-    <div class="seccion-label" style="margin-top:8px;">Administradorxs</div>
-    <div id="miliga-admins-lista"></div>
-    <button class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin:8px 0 4px;" onclick="adminAbrirSheetAgregarAdmin()">
-      <span class="material-symbols-outlined" style="font-size:1.1rem;">person_add</span> Agregar administradorx
-    </button>
   </div>
 </div>
 

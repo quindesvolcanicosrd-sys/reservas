@@ -18,9 +18,10 @@ function irEditarDatos() {
   // Cuenta admin "pura" (dashboardAdmin:true, sin fila en Equipo, nunca pisa
   // E.datos): antes esta función bailaba de entrada para cualquier cuenta
   // sin E.datos -- ahora, si hay _adminToken, sigue igual (con `d = {}`, todo
-  // lo de abajo ya cae a sus fallbacks "—"/vacío existentes) para que llegue
-  // a ver "Mi Liga" (ver más abajo, Tanda 3, MANIFEST.md "Cambios
-  // recientes"). Sin _adminToken NI E.datos, sigue bailando como antes.
+  // lo de abajo ya cae a sus fallbacks "—"/vacío existentes) para que pueda
+  // entrar igual al tab Ajustes (perfil/cuenta) si lo toca manualmente --
+  // aterriza directo en "Mi Liga" al loguear, ver adminEntrar()/js/admin.js.
+  // Sin _adminToken NI E.datos, sigue bailando como antes.
   if (!E.datos && !_adminToken) return;
   var d = E.datos || {};
   // Foto de perfil
@@ -82,22 +83,18 @@ function irEditarDatos() {
   }
   // Notif toggle
   _poblarResumenEquipPerfil();
-  // Mi Liga (Tanda 3, ver MANIFEST.md "Cambios recientes") -- visible para
-  // cualquier cuenta con _adminToken guardado, sea dashboardAdmin true o
-  // false (admin "pura" o admin que también paga cuota). "Zona cuenta"
-  // (Cerrar sesión/Eliminar cuenta de USUARIX) es lo inverso: solo tiene
+  // "Zona cuenta" (Cerrar sesión/Eliminar cuenta de USUARIX) solo tiene
   // sentido con un E.datos real -- una cuenta admin pura SIN fila en Equipo
-  // (sin E.datos) ya tiene su propio "Cerrar sesión" en el dashboard
-  // (adminCerrarSesionLocal(), Tanda 1), y no hay ninguna cuenta de usuarix
-  // real de la que cerrar sesión o que eliminar. Gate en `E.datos` a secas
-  // (no `E.datos && !_dashboardAdminLimitado`, bug real corregido -- ver
-  // MANIFEST.md "Cambios recientes"): una cuenta dashboardAdmin:true CON fila
-  // en Equipo (Paga cuota=No, pero SÍ tiene patines/protecciones propios,
-  // posible desde el fix que le carga E.datos real, ver "Cambios recientes")
-  // es una cuenta de usuarix real igual -- ocultarle Zona cuenta la dejaba
-  // sin forma de cerrar sesión de usuarix ni eliminar su cuenta desde acá.
-  var miligaRow = document.getElementById('aj-group-miliga');
-  if (miligaRow) miligaRow.style.display = _adminToken ? '' : 'none';
+  // (sin E.datos) ya tiene su propio "Cerrar sesión" en Mi Liga
+  // (adminCerrarSesionLocal(), js/admin.js), y no hay ninguna cuenta de
+  // usuarix real de la que cerrar sesión o que eliminar. Gate en `E.datos` a
+  // secas (no `E.datos && !_dashboardAdminLimitado`, bug real corregido --
+  // ver MANIFEST.md "Cambios recientes"): una cuenta dashboardAdmin:true CON
+  // fila en Equipo (Paga cuota=No, pero SÍ tiene patines/protecciones
+  // propios, posible desde el fix que le carga E.datos real, ver "Cambios
+  // recientes") es una cuenta de usuarix real igual -- ocultarle Zona cuenta
+  // la dejaba sin forma de cerrar sesión de usuarix ni eliminar su cuenta
+  // desde acá.
   var zonaCuenta = document.getElementById('aj-zona-cuenta');
   if (zonaCuenta) zonaCuenta.style.display = E.datos ? '' : 'none';
   // Restaurar scroll del home solo de la 2da visita en adelante (ver
@@ -111,11 +108,6 @@ function irEditarDatos() {
 }
 
 function irEditarPerfil() { irAjSub('aj-sub-perfil'); }
-
-// Mi Liga (Tanda 3): panel admin embebido en Ajustes, mostrando todo de
-// entrada sin subsecciones propias -- ver _adminCargarMiLiga() (js/admin.js)
-// para la carga de datos (banners/administradorxs/color de énfasis).
-function irMiLiga() { irAjSub('aj-sub-miliga'); }
 
 function limpiarTelefono(input) { input.value = input.value.replace(/[^0-9]/g, ''); }
 
@@ -462,7 +454,6 @@ function _ddpRenderMeses() {
    aunque esa palabra no esté en su título. */
 var AJ_SEARCH_KEYWORDS = {
   perfil: ['nombre de usuario', 'username', 'apodo', 'nombre derby', 'número derby', 'numero derby', 'pronombres', 'foto de perfil'],
-  miliga: ['administradorx', 'administrador', 'admin', 'panel'],
   equip: ['patines', 'protecciones', 'talla', 'casco', 'rodilleras', 'coderas', 'muñequeras', 'munequeras'],
   contacto: ['teléfono', 'telefono', 'número', 'numero', 'email', 'correo', 'prefijo'],
   privacidad: ['fecha de nacimiento', 'cumpleaños', 'cumpleanos', 'edad', 'compartir'],
@@ -502,10 +493,6 @@ function ajFiltrarSettings(query) {
     row.style.display = (!q || texto.indexOf(q) !== -1 || matchKeyword) ? '' : 'none';
   });
   document.querySelectorAll('#s-datos-card .aj-group, #s-datos-card .aj-app-rows').forEach(function(grupo) {
-    // #aj-group-miliga tiene su propia visibilidad independiente (solo
-    // admin, ver irEditarDatos()) -- el buscador nunca debe revelarlo ni
-    // ocultarlo, solo actúa sobre grupos visibles por default.
-    if (grupo.id === 'aj-group-miliga') return;
     var filas = grupo.querySelectorAll('.aj-row, .aj-app-row');
     if (!filas.length) return;
     var algunaVisible = Array.prototype.some.call(filas, function(f) { return f.style.display !== 'none'; });
@@ -663,11 +650,6 @@ function _ajAjustarFilasOpcionales(filas) {
 }
 
 function _ajCargarSub(id) {
-  // Mi Liga no depende de E.datos (accesible también por cuentas admin
-  // "puras" sin fila en Equipo, ver irEditarDatos()/Tanda 3) -- tiene que
-  // resolverse ANTES del guard de abajo, que bailaría de entrada para esas
-  // cuentas.
-  if (id === 'aj-sub-miliga') { _adminCargarMiLiga(); return; }
   var d = E.datos; if (!d) return;
   if (id === 'aj-sub-equip') {
     var d = E.datos || {};

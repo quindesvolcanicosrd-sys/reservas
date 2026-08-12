@@ -11,7 +11,8 @@ var _admTodasReservas = [];
 var _admFiltro = 'pendientes';
 var _gisInicializado = false;
 
-// "Mi Liga" (aj-sub-miliga, overlay sobre Ajustes/s-datos): banners
+// "Mi Liga" (s-miliga, tab propio de la nav inferior -- antes aj-sub-miliga,
+// overlay embebido en Ajustes/s-datos): banners
 // condicionales + burbujas embebidas de las 4 tiles grandes (Reservas /
 // Notificación / Equipamiento / Qué llevar) + 2 pills chicas (Color /
 // Precios de clases) + Administradorxs — ver MANIFEST.md "Cambios
@@ -25,7 +26,7 @@ var _gisInicializado = false;
 // 'admin-banner-equip-body-ml') o una de las 6 burbujas (clave de
 // ADMIN_TILE_INFO: 'notif'/'s-admin-reservas'/'s-admin-equip'/
 // 's-admin-quellevar'/'admin-color'/'admin-precios') — todo vive siempre en
-// el mismo `aj-sub-miliga`, así que sí necesitan exclusión mutua entre sí.
+// el mismo `s-miliga`, así que sí necesitan exclusión mutua entre sí.
 var _admDashAbierto = null;
 var _admBannerPendientes = null; // null = todavía no llegó la respuesta
 var _admBannerQueLlevar = null;
@@ -119,22 +120,22 @@ function onGoogleCredential(resp) {
   }, function(e) { ocultarCargando(); err('err-admin-login', 'Error al verificar acceso. Intenta de nuevo.'); });
 }
 
-// Tanda 7 (ver MANIFEST.md "Cambios recientes" — elimina s-admin-home del
-// todo): esta función ya no navega a ningún dashboard propio -- una cuenta
-// admin "pura" (dashboardAdmin:true) llega directo a Ajustes (irEditarDatos()
-// -> s-datos, con su fallback `d = {}` ya preparado para esto), y desde ahí
-// ve la fila "Mi Liga" como cualquier otra cuenta admin, entrando manualmente
-// cuando quiera. adminRenderColorEnfasis()/_adminCargarPrecios() siguen
-// precargando el color/los precios (Fase 2: contenido listo apenas se abra
-// la burbuja correspondiente dentro de Mi Liga, sin esperar un fetch) --
-// los banners YA NO se precargan acá (antes con scope='', para el dashboard
-// que ya no existe): _adminCargarMiLiga() los carga fresco recién cuando la
-// persona abre "Mi Liga" de verdad.
+// Cuenta admin "pura" (dashboardAdmin:true) o restauración de sesión admin
+// (irAdminLogin()): llega directo a "Mi Liga" -- ya no hay ningún dashboard
+// separado (s-admin-home, eliminado Tanda 7) ni Ajustes (Mi Liga salió de
+// ahí) al que aterrizar de entrada.
 function adminEntrar() {
-  adminRenderColorEnfasis();
-  _adminCargarPrecios();
   _admDashAbierto = null;
-  irEditarDatos();
+  irMiLiga();
+}
+
+// "Mi Liga" -- tab propio de la nav inferior (antes aj-sub-miliga, overlay
+// embebido en Ajustes), mostrando todo de entrada sin subsecciones propias.
+// `_adminCargarMiLiga()` ya cubre banners/administradorxs/color/precios --
+// única carga de datos necesaria antes de mostrar la pantalla.
+function irMiLiga() {
+  _adminCargarMiLiga();
+  ir('s-miliga');
 }
 
 // ── Mi Liga: banners condicionales + burbujas embebidas ─────────────────────────

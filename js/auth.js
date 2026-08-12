@@ -8,7 +8,7 @@
 // directo a "Nueva reserva" cuando no tiene ninguna reserva activa (fix de
 // esta misma sesión). NO aplica a cuentas dashboardAdmin:true -- esas ya
 // retornan antes de llegar a ningún call site de esta función, directo a
-// Ajustes vía adminEntrar() (regla más específica, con prioridad).
+// Mi Liga vía adminEntrar() (regla más específica, con prioridad).
 function _irTabAterrizajeInicial() {
   var tieneEquipoPropio = !!E.datos && E.datos.necesitaPatines === 'No' && E.datos.necesitaProtecciones === 'No';
   if (tieneEquipoPropio) irEventos();
@@ -143,15 +143,13 @@ function onGoogleCredentialUsuario(resp) {
       OneSignalDeferred.push(function(OneSignal) { OneSignal.login('admin_' + _adminEmail).catch(function(){}); });
       // dashboardAdmin:true (o ausente, retrocompatibilidad con cuentas admin
       // sin fila en Equipo) -- cuenta admin "pura" que no paga cuota: entra
-      // directo a Ajustes (adminEntrar() -> irEditarDatos() -> s-datos, Tanda
-      // 7 -- ver MANIFEST.md "Cambios recientes", elimina s-admin-home del
-      // todo). Desde ahí ve la fila "Mi Liga" como cualquier otra cuenta
-      // admin y entra manualmente cuando quiera -- ya no hay ningún
-      // dashboard separado al que aterrizar de entrada. dashboardAdmin:false
+      // directo a Mi Liga (adminEntrar() -> irMiLiga() -> s-miliga, ver
+      // MANIFEST.md "Cambios recientes") -- ya no hay ningún dashboard
+      // separado ni Ajustes al que aterrizar de entrada. dashboardAdmin:false
       // -- cuenta admin que además paga cuota: sigue el flujo normal de
       // usuarix más abajo (home de reservas), conservando igual
-      // _adminToken/_adminEmail ya guardados arriba para poder acceder a
-      // "Mi Liga" desde Ajustes.
+      // _adminToken/_adminEmail ya guardados arriba para poder acceder al tab
+      // "Mi Liga" cuando quiera.
       if (res.dashboardAdmin !== false) {
         ocultarCargando();
         if (res.valido && res.datos) {

@@ -181,10 +181,15 @@ var TOP_BAR_CONFIG = {
   // (topBtn.style.display='none') sin ocultar el resto del top-bar -- el
   // título "AJUSTES" se sigue mostrando, solo desaparece la flecha.
   's-datos': { titulo: 'Ajustes', volver: null },
+  // "Mi Liga" -- mismo criterio que 's-datos' (pantalla raíz de
+  // APP_BOTTOM_NAV_ITEMS, sin flecha atrás real): `volver: null` reusa acá
+  // el ícono decorativo de la tab (_iconoRaizDeNav()) en el slot de la
+  // flecha, igual que cualquier otra raíz de nav con TOP_BAR_CONFIG.
+  's-miliga': { titulo: 'Mi Liga', volver: null },
   's-admin-login': { titulo: 'Administradorx', volver: 's1' },
   // 's-admin-reservas'/'s-admin-quellevar'/'s-admin-equip'/'notif'/
   // 'admin-color'/'admin-precios' NUNCA son pantallas propias -- viven como
-  // burbujas embebidas dentro de "Mi Liga" (aj-sub-miliga), nunca pantalla
+  // burbujas embebidas dentro de "Mi Liga" (s-miliga), nunca pantalla
   // completa/navegación, así que no necesitan entrada acá.
   's-admin-usuarios': { titulo: 'Usuarios', volver: 's-datos' }
 };
@@ -487,8 +492,8 @@ function ir(id, desdeHistorial, sinTrampa) {
   // flujo de login/restauración real), no la señal real de sesión admin --
   // con eso, el FAB quedaba invisible para CUALQUIER cuenta admin real,
   // siempre. `_adminToken` (js/admin.js) es la señal real ya usada por el
-  // resto de la UI admin fuera de Eventos (ej. `#aj-group-miliga` en
-  // `js/perfil.js`, mismo criterio: truthy con cualquier sesión admin,
+  // resto de la UI admin fuera de Eventos (ej. el tab "Mi Liga" en
+  // `APP_BOTTOM_NAV_ITEMS`, mismo criterio: truthy con cualquier sesión admin,
   // "pura" o con cuota) -- no `E.datos`/`_dashboardAdminLimitado` (esa
   // distingue admin "puro" de admin+usuarix, un eje distinto, no "es
   // admin"). Recalculado en cada `ir()` -- cubre login directo, restaurar
@@ -626,7 +631,16 @@ var APP_BOTTOM_NAV_ITEMS = [
   // mostrarse (mismo motivo que 'eventos'/'ajustes').
   { id: 'tareas', icono: 'task_alt', texto: 'Tareas', pantalla: 's-tareas',
     entrar: function() { irTareas(); },
-    visible: function() { return true; } }
+    visible: function() { return true; } },
+  // 'miliga' -- panel administrativo (banners condicionales + Qué llevar/
+  // Reservas/Equipamiento/Notificación + Color/Precios + Administradorxs),
+  // trasladado tal cual desde Ajustes a su propio tab. `_adminToken` es el
+  // mismo criterio ya usado para gatear contenido admin en el resto de la
+  // app (FAB de Eventos/Tareas, ver más abajo) -- visible para cualquier
+  // cuenta admin, sea dashboardAdmin true o false.
+  { id: 'miliga', icono: 'admin_panel_settings', texto: 'Mi Liga', pantalla: 's-miliga',
+    entrar: function() { irMiLiga(); },
+    visible: function() { return !!_adminToken; } }
 ];
 var _BOTTOM_NAV_PANTALLAS = APP_BOTTOM_NAV_ITEMS.map(function(item) { return item.pantalla; });
 // s4 ("Nueva Reserva") no es la `pantalla` raíz de ningún ítem -- se llega
