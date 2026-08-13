@@ -368,6 +368,65 @@ async function verificarNombreDisponible(params: Record<string, any>): Promise<R
   return { disponible: !data };
 }
 
+async function verificarGoogle(params: Record<string, any>): Promise<Record<string, any>> {
+  const info = await _verificarGoogleToken(params.idToken);
+  if (!info) return { error: 'Token de Google inválido o expirado.' };
+  const email = (info.email ?? '').toLowerCase();
+  const esAdmin = await _esAdmin(email);
+  if (esAdmin) return { error: 'Esta cuenta es de administradorx — iniciá sesión desde el panel admin.' };
+  const { data } = await supabase.from('equipo').select('username').ilike('email', email).maybeSingle();
+  return { yaRegistrado: !!data, email, foto: info.picture ?? '', nombre: info.given_name ?? info.name ?? '' };
+}
+
+async function inscribirPersona(params: Record<string, any>): Promise<Record<string, any>> {
+  const nombre = (params.nombre ?? '').toString().trim();
+  const email  = (params.email  ?? '').toString().trim().toLowerCase();
+  if (!nombre) return { exito: false, error: 'El nombre es obligatorio.' };
+  if (!email || !email.includes('@')) return { exito: false, error: 'Email inválido.' };
+  if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]+$/.test(nombre)) return { exito: false, error: 'El nombre solo puede contener letras y espacios.' };
+
+  if (params.idToken) {
+    const info = await _verificarGoogleToken(params.idToken);
+    if (!info) return { exito: false, error: 'Token de Google inválido. Volvé a iniciar sesión.' };
+    if ((info.email ?? '').toLowerCase() !== email) return { exito: false, error: 'El email no coincide con el token de Google.' };
+  }
+
+  const { data: existeEmail } = await supabase.from('equipo').select('username').ilike('email', email).maybeSingle();
+  if (existeEmail) return { exito: false, error: 'Este correo ya está registrado.' };
+  const { data: existeNombre } = await supabase.from('equipo').select('username').ilike('username', nombre).maybeSingle();
+  if (existeNombre) return { exito: false, error: 'Este nombre de usuario ya está en uso.' };
+
+  const pinHash = params.pinHash && params.pinHash.length === 64 ? params.pinHash : null;
+  const foto = (params.foto ?? '').toString().startsWith('http') ? params.foto : '';
+
+  const row: Record<string, any> = {
+    username: nombre,
+    pronombres: params.pronombres ?? '',
+    necesita_patines: params.necesitaPatines ?? '',
+    talla: params.talla ?? '',
+    necesita_protecciones: params.necesitaProtecciones ?? '',
+    prefijo: params.prefijo ?? '',
+    telefono: params.telefono ?? '',
+    email,
+    pin_hash: pinHash,
+    cupon_disponible: true,
+    permisos_configurados: true,
+    fecha_registro: new Date().toISOString(),
+    foto_perfil: foto,
+  };
+
+  if (params.guardarFecha === 'si' && params.fechaNac) {
+    row.fecha_nacimiento = params.fechaNac;
+    row.fecha_publica   = params.fechaPublica === 'Sí' ? 'Sí' : 'No';
+    row.edad_publica    = params.edadPublica  === 'Sí' ? 'Sí' : 'No';
+  }
+
+  const { error } = await supabase.from('equipo').insert(row);
+  if (error) return { exito: false, error: error.message };
+
+  return { exito: true };
+}
+
 async function adminGetColorEnfasis(): Promise<Record<string, any>> {
   const { data } = await supabase.from('config_app').select('value').eq('key', 'color_enfasis').maybeSingle();
   return { colorEnfasis: data?.value ?? null };
@@ -439,6 +498,8 @@ Deno.serve(async (req: Request) => {
       case 'getNombres':                 return json(await getNombres());
       case 'verificarEmailDisponible':   return json(await verificarEmailDisponible(params));
       case 'verificarNombreDisponible':  return json(await verificarNombreDisponible(params));
+      case 'verificarGoogle':            return json(await verificarGoogle(params));
+      case 'inscribirPersona':           return json(await inscribirPersona(params));
       case 'adminGetColorEnfasis':       return json(await adminGetColorEnfasis());
       case 'adminSetColorEnfasis':       return json(await adminSetColorEnfasis(params));
       case 'getPreciosClases':           return json(await getPreciosClases());
