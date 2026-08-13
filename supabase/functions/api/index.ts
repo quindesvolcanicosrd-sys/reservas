@@ -505,7 +505,7 @@ Deno.serve(async (req: Request) => {
       case 'getPreciosClases':           return json(await getPreciosClases());
       case 'adminSetPreciosClases':      return json(await adminSetPreciosClases(params));
       default: {
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzvB93ZxyMeQeBA96sv5uqCHdzKI19ZhOQdXDyp2ryYn9almJCzOcHeMWT0u4raVSpC/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbw40qNuCKh7_wDusEGRHmZttBKAt41__OcPTHYWCUk1f6e5ifvAUMznw6Xr_O5qQ5RJ/exec';
         const gasParams = new URLSearchParams(params as Record<string, string>).toString();
         const gasResp = await fetch(GAS_URL + '?' + gasParams);
         const gasData = await gasResp.json();
