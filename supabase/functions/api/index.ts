@@ -1391,6 +1391,23 @@ async function adminEnviarPush(params: Record<string, any>): Promise<Record<stri
   return { exito: true, id: body.id ?? '' };
 }
 
+// ─── Acciones: reservas admin ─────────────────────────────────────────────────
+
+async function adminGetReservas(params: Record<string, any>): Promise<any[]> {
+  const { data: reservas } = await supabase.from('reservas').select('*').order('fecha_pago', { ascending: false });
+  if (!reservas?.length) return [];
+  const ids = reservas.filter((r: any) => r.id_evento).map((r: any) => r.id_evento);
+  const { data: eventos } = ids.length
+    ? await supabase.from('asistencias').select('id_evento, fecha, donde, inicia').in('id_evento', ids)
+    : { data: [] };
+  const evPorId: Record<string, any> = {};
+  (eventos ?? []).forEach((e: any) => { evPorId[e.id_evento] = e; });
+  return reservas.map((r: any) => {
+    const ev = evPorId[r.id_evento];
+    return { ...r, fechaEvento: ev?.fecha ?? null, donde: ev?.donde ?? null, horaInicio: ev?.inicia?.substring(0, 5) ?? null };
+  });
+}
+
 // ─── Parser de parámetros ─────────────────────────────────────────────────────
 
 async function parseParams(req: Request): Promise<Record<string, any>> {
@@ -1516,6 +1533,9 @@ Deno.serve(async (req: Request) => {
       case 'adminGetQueLlevar':              return json(await adminGetQueLlevar());
       // Push
       case 'adminEnviarPush':               return json(await adminEnviarPush(params));
+      // Reservas admin / sesión admin
+      case 'adminGetReservas':              return json(await adminGetReservas(params));
+      case 'adminCerrarSesion':             { if (params.adminToken) await supabase.from('admin_sessions').delete().eq('token', params.adminToken); return json({ exito: true }); }
       // Aún en GAS: AsistenciaAnticipada, subirFoto*, enviarResumenReservas, adminRegenerarVentanaAsistencias, adminCancelarEvento, guardarNotaPago
       default:
         return forwardToGAS(params);
