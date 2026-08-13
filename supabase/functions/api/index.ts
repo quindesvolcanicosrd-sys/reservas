@@ -1494,7 +1494,8 @@ Deno.serve(async (req: Request) => {
       case 'adminEditarTarea':                return json(await adminEditarTarea(params));
       case 'adminEditarAsignacionesTarea':    return json(await adminEditarAsignacionesTarea(params));
       case 'adminEliminarTarea':              return json(await adminEliminarTarea(params));
-      case 'getTareasPendientesValidacion':   return json(await getTareasPendientesValidacion());
+      case 'getTareasPendientesValidacion':        return json(await getTareasPendientesValidacion());
+      case 'adminGetTareasPendientesValidacion':   return json(await getTareasPendientesValidacion());
       // Eventos / asistencias
       case 'getEventosRango':                 return json(await getEventosRango(params));
       case 'getCumpleañosRango':              return json(await getCumpleañosRango(params));
