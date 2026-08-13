@@ -443,8 +443,13 @@ Deno.serve(async (req: Request) => {
       case 'adminSetColorEnfasis':       return json(await adminSetColorEnfasis(params));
       case 'getPreciosClases':           return json(await getPreciosClases());
       case 'adminSetPreciosClases':      return json(await adminSetPreciosClases(params));
-      default:
-        return json({ error: 'Acción no implementada en Edge Function.' });
+      default: {
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzvB93ZxyMeQeBA96sv5uqCHdzKI19ZhOQdXDyp2ryYn9almJCzOcHeMWT0u4raVSpC/exec';
+        const gasParams = new URLSearchParams(params as Record<string, string>).toString();
+        const gasResp = await fetch(GAS_URL + '?' + gasParams);
+        const gasData = await gasResp.json();
+        return json(gasData);
+      }
     }
   } catch (e) {
     return json({ error: (e as Error).message ?? 'Error interno.' }, 500);
