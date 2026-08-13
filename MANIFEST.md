@@ -2747,7 +2747,7 @@ Deliberadamente chico: reusa tal cual (sin redefinir) `.ev-sticky-header`/`.ev-h
 ### js/config.js
 | Función / variable | Descripción |
 |---|---|
-| `BACKEND` | URL del backend Google Apps Script (`https://script.google.com/macros/s/AKfycbzvB93ZxyMeQeBA96sv5uqCHdzKI19ZhOQdXDyp2ryYn9almJCzOcHeMWT0u4raVSpC/exec`) — revertido desde la Supabase Edge Function (ver `supabase/functions/api/index.ts` más abajo y "Cambios recientes") |
+| `BACKEND` | URL de la Supabase Edge Function (`https://uusbnreitoobqssizbfq.supabase.co/functions/v1/api`) — reemplaza al Google Apps Script backend anterior (ver `supabase/functions/api/index.ts` más abajo y "Cambios recientes") |
 | `GOOGLE_CLIENT_ID` | Client ID de Google OAuth para usuarios |
 | `MAPS_API_KEY` | **Nueva** — key de Google Maps/Places (mismo Google Cloud project que ya usa "Pivot", con Places API habilitada). Es una constante de **referencia/documentación** más que un valor realmente leído por JS: el `<script src="...">` que carga la Maps JavaScript API (`index.html`, antes de `</body>`) necesita la key hardcodeada en el propio atributo `src` (un `<script>` estático no puede interpolar una variable JS al armar su URL) — así que el mismo valor literal vive duplicado en dos archivos. Igual que `GOOGLE_CLIENT_ID`/`BACKEND`, es una key pensada para exponerse en cliente (Maps JS API, no un secreto de servidor) — su seguridad depende de las restricciones de HTTP referrer configuradas en Google Cloud Console, no de mantenerla oculta; no se pudo verificar esa configuración desde acá (fuera del alcance de un cambio de código), señalado como recordatorio |
 | `sha256Hex(str)` | Hash SHA-256 en hex usando crypto.subtle (async, devuelve Promise) |
@@ -3377,7 +3377,7 @@ Verificado con Playwright (`hasTouch:true`, `Touch`/`TouchEvent` sintéticos des
 
 | Variable | Definida en | Usada en | Descripción |
 |---|---|---|---|
-| `BACKEND` | config.js | api.js, auth.js, reservas.js, perfil.js, admin.js, home.js | URL del backend Apps Script (revertido desde la Supabase Edge Function) |
+| `BACKEND` | config.js | api.js, auth.js, reservas.js, perfil.js, admin.js, home.js | URL de la Supabase Edge Function (antes Apps Script) |
 | `GOOGLE_CLIENT_ID` | config.js | auth.js | Client ID OAuth para GIS usuario |
 | `sha256Hex` | config.js | auth.js, reservas.js | Hash PIN antes de enviar al backend |
 | `_token` | api.js | api.js (auto), auth.js (asigna) | Token de sesión del usuario; inyectado en cada request |
@@ -4687,3 +4687,5 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
   **Migración de Reservas: 100% completa.** Las 4 etapas cerradas: Etapa 1 (disponibilidad calculada desde `asistencias`), Etapa 2 (cupón/crédito conectado al cancelar evento), Etapa 3 (tabla `reservas` con escritura doble) y Etapa 4 (equipamiento + qué llevar, de acá arriba). Quinta migración GAS/Sheets → Supabase cerrada, después de Venues, Log de asistencias, Asistencias y Puntos/Tareas.
 
 - **`js/config.js` — `BACKEND` revertido a Apps Script: vuelve a apuntar a `https://script.google.com/macros/s/AKfycbzvB93ZxyMeQeBA96sv5uqCHdzKI19ZhOQdXDyp2ryYn9almJCzOcHeMWT0u4raVSpC/exec`, en vez de la Supabase Edge Function (`https://uusbnreitoobqssizbfq.supabase.co/functions/v1/api`) activada en la entrada anterior.** La Edge Function (`supabase/functions/api/index.ts`, ver más arriba) sigue en el repo tal cual quedó, sin desplegar/activar de nuevo por ahora.
+
+- **`js/config.js` — `BACKEND` reactivado: vuelve a apuntar a la Supabase Edge Function (`https://uusbnreitoobqssizbfq.supabase.co/functions/v1/api`), en vez del Apps Script al que se había revertido en la entrada anterior.** Coincide con la reescritura de `supabase/functions/api/index.ts` (ver "Cambios recientes" más arriba) y con el cambio de esa función a usar `SUPABASE_ANON_KEY` en vez de `SUPABASE_SERVICE_ROLE_KEY` — las queries de la Edge Function quedan sujetas a RLS a partir de ahora.
