@@ -878,6 +878,7 @@ function _parseFechaSimple(str) {
 }
 
 function _parseFechaStr(fechaStr) {
+  if (!fechaStr) return null;
   var m = fechaStr.match(/(\d{1,2})\s+de\s+([a-záéíóúñ]+)/i);
   if (!m) return null;
   var mesRaw = m[2].toLowerCase();

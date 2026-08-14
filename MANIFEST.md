@@ -363,6 +363,8 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
 | `body.ev-ant-footer-visible #app-toast` | **Nuevo (ver "Cambios recientes")** — sube el toast global (`#app-toast`, css/estilos.css, `bottom:28px` fijo de fábrica) para que en `#s-eventos-anticipada` quede justo encima de `#cta-footer-eventos-anticipada` en vez de tapar las pills del wizard. `#app-toast` es un `<div>` creado por JS y agregado directo a `<body>` la primera vez que corre `mostrarToast()` (mismo criterio de "`position:fixed` va directo en `<body>`, no dentro de `.pantalla`/`.card`" que ya rige `.cta-footer-fixed`) — el override también apunta ahí sin anidarlo dentro de ninguna pantalla. `body.ev-ant-footer-visible` la togglean `_evAntActualizarFooter()`/`_evAntOcultarFooter()` (js/eventos.js) junto con el propio footer |
 
 ### Cambios recientes
+- **Fix `_parseFechaStr` (`js/home.js`): se agregó null guard al inicio para evitar crash (`TypeError` en `.match()`) con reservas sin campo `fecha`.**
+
 - **Fix Edge Function: se agregó handler propio `adminSetEstadoReserva` en Supabase (`supabase/functions/api/index.ts`) que actualiza `reservas.estado` por UUID. Antes caía al `default` del router que reenviaba a GAS y rechazaba el UUID como "Fila inválida".**
 
 - **Fix `adminGetCandidatosAdmin` (`supabase/functions/api/index.ts`): se eliminó el filtro incorrecto de `necesita_patines`/`necesita_protecciones` — ahora devuelve todos los miembros de la liga (excluyendo solo admins ya existentes).**
