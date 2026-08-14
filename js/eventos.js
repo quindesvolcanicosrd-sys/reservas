@@ -19,6 +19,12 @@
 
 var _EV_EVENTOS = [];
 var _EV_CUMPLEANOS = [];
+// Temporadas de descanso (Tanda B, ver MANIFEST.md "Cambios recientes") --
+// poblado por _evCargarDatosReales() desde `res.offseason` (getEventosRango,
+// arreglo nuevo, opcional -- ausente o vacío en un backend viejo, degrada
+// solo: timeline/calendario quedan exactamente como antes). Cada item:
+// {id, nombre, fechaInicio, fechaFin} (fechas 'yyyy-mm-dd').
+var _EV_OFFSEASON = [];
 
 // 'Partido'/'Evento social'/'Otro' sumados para el formulario de Venues (ver
 // MANIFEST.md) -- mismo mapa ya usado por las cards de evento reales
@@ -329,9 +335,16 @@ function _evCargarDatosReales(onListo) {
   function unoListo() { pendientes--; if (pendientes === 0) onListo(); }
   api({ action: 'getEventosRango', desde: rango.desde, hasta: rango.hasta }, function(res) {
     _EV_EVENTOS = (res.eventos || []).map(_evMapEventoBackend);
+    // Temporadas de descanso (Tanda B) -- arreglo nuevo y opcional del mismo
+    // endpoint, `res.offseason || []` cubre tanto un backend viejo que
+    // todavía no lo manda (undefined) como uno nuevo sin ninguna temporada
+    // cargada (arreglo vacío real) -- mismo resultado en los 2 casos, sin
+    // distinguirlos: degradación elegante, el timeline queda igual que antes.
+    _EV_OFFSEASON = res.offseason || [];
     unoListo();
   }, function(e) {
     _EV_EVENTOS = [];
+    _EV_OFFSEASON = [];
     mostrarToast(e && e.message ? e.message : 'No se pudieron cargar los eventos.', 'error');
     unoListo();
   });
@@ -935,12 +948,14 @@ function _evCalRenderMes(cont, iso) {
     var esSeleccionada = !esHoy && celdaIso === _evCalFechaSeleccionada;
     var tieneEv = _evEventosDeFecha(celdaIso).length > 0;
     var tieneCumple = _evCumpleDeFecha(celdaIso).length > 0;
+    var tieneOffseason = _evOffseasonDeFecha(celdaIso);
     html += '<div class="ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (esHoy ? ' ev-dia-hoy' : '') + (esSeleccionada ? ' ev-dia-seleccionado' : '') +
       '" data-iso="' + celdaIso + '" onclick="_evCalTocarDia(\'' + celdaIso + '\')">' +
       '<div class="ev-cal-num">' + cur.getDate() + '</div>' +
       '<div class="ev-cal-dots">' +
         (tieneEv ? '<span class="ev-dot"></span>' : '') +
         (tieneCumple ? '<span class="ev-dot-cumple"></span>' : '') +
+        (tieneOffseason ? '<span class="ev-dot-offseason"></span>' : '') +
       '</div>' +
     '</div>';
     cur.setDate(cur.getDate() + 1);
@@ -1427,6 +1442,12 @@ function _evPasaFiltroLugarTipoCumple() {
 }
 function _evEventosDeFecha(iso) { return _EV_EVENTOS.filter(function(e) { return _evFechaCmp(e.fecha, iso) === 0 && _evPasaFiltroLugarTipo(e.lugar, e.tipo); }); }
 function _evCumpleDeFecha(iso) { return _EV_CUMPLEANOS.filter(function(c) { return _evFechaCmp(c.fecha, iso) === 0; }); }
+// Temporadas de descanso (Tanda B, ver MANIFEST.md "Cambios recientes") --
+// `iso` cae "dentro" de una temporada con `fechaInicio <= iso <= fechaFin`
+// (inclusive en ambos extremos), no solo coincidencia exacta como
+// _evCumpleDeFecha() -- una temporada dura varios días, cada uno de ellos
+// debe marcarse en la grilla, no solo el primero.
+function _evOffseasonDeFecha(iso) { return _EV_OFFSEASON.some(function(o) { return _evFechaCmp(iso, o.fechaInicio) >= 0 && _evFechaCmp(iso, o.fechaFin) <= 0; }); }
 
 // Bug real encontrado y corregido (ver "Cambios recientes" -- confirmado con
 // Playwright instrumentando `lanzarConfetti()`, no adivinado leyendo el
@@ -2268,6 +2289,32 @@ function _evCardCumpleHtml(c) {
     '<div class="ev-confetti-host" id="ev-confetti-' + c.id + '" style="position:absolute;inset:0;pointer-events:none;"></div>' +
   '</div>';
 }
+// Temporada de descanso (Tanda B, ver MANIFEST.md "Cambios recientes") --
+// UNA sola card por temporada, sin importar cuántos días dure (posicionada
+// en el timeline por `fechaInicio`, ver _evTimelineItems()). No interactiva
+// a propósito: sin `onclick`, sin RSVP, sin botón de reserva -- una
+// temporada de descanso no es un evento con el que se pueda interactuar,
+// solo informa un rango. Mismo esqueleto `.ev-card`/`.ev-card-top-row`/
+// `.ev-card-body`/`.ev-card-titulo-row`/`.ev-card-icono-inline` que
+// cualquier otra card de este timeline (reuso literal, cero estructura
+// propia) -- `.ev-card-offseason` (css/eventos.css) es el único agregado:
+// fondo/borde con las variables nuevas `--offseason-bg`/`--offseason-border`
+// (colors.css) y el ícono en `--muted` en vez de `--brand`, para que se lea
+// "apagada" frente a una card de evento normal. Subtítulo con
+// `_evAntFechaLegible()` (ya existente, usada para el mismo formato
+// "Del X al Y" en los resúmenes de Asistencia anticipada, más abajo en este
+// archivo) -- ninguna función de fecha nueva.
+function _evCardOffseasonHtml(o) {
+  var rango = 'Del ' + _evAntFechaLegible(o.fechaInicio) + ' al ' + _evAntFechaLegible(o.fechaFin);
+  return '<div class="ev-card ev-card-offseason">' +
+    '<div class="ev-card-top-row">' +
+      '<div class="ev-card-body">' +
+        '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline">bedtime</span><div class="ev-card-titulo">' + o.nombre + '</div></div>' +
+        '<div class="ev-card-sub">' + rango + '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
 
 /* ═══════════════════════════════════════════════════════
    TIMELINE ÚNICO (ver "Cambios recientes" -- rediseño: reemplaza la vieja
@@ -2545,6 +2592,15 @@ function _evTimelineItems() {
   // mostrando, para que "encuentra lo que se ve" sea literal.
   _EV_CUMPLEANOS.filter(function(c) { return _evPasaFiltroLugarTipoCumple() && _evPasaBusqueda('Cumpleaños de ' + c.nombre); })
     .forEach(function(c) { items.push({ fecha: c.fecha, orden: '00:00', tipo: 'cumple', data: c }); });
+  // Temporadas de descanso (Tanda B, ver MANIFEST.md "Cambios recientes") --
+  // una sola card por temporada, posicionada en el timeline por su
+  // `fechaInicio` (sin importar cuántos días dure). Sin lugar/tipo propios
+  // -- no pasan por _evPasaFiltroLugarTipo() (ningún filtro de Lugar/Tipo
+  // les aplica, siempre visibles ante esos 2), solo respetan la búsqueda de
+  // texto (por nombre), mismo criterio que ya usa cualquier otro item de
+  // este timeline.
+  _EV_OFFSEASON.filter(function(o) { return _evPasaBusqueda(o.nombre); })
+    .forEach(function(o) { items.push({ fecha: o.fechaInicio, orden: '00:00', tipo: 'offseason', data: o }); });
   items.sort(function(a, b) {
     var c = _evFechaCmp(a.fecha, b.fecha);
     return c !== 0 ? c : (a.orden < b.orden ? -1 : a.orden > b.orden ? 1 : 0);
@@ -2645,7 +2701,9 @@ function _evRenderTimeline(instant, alTerminar) {
         '<div class="ev-fecha-badge-num' + (fecha === hoy ? ' ev-fecha-badge-hoy' : '') + '">' + d.getDate() + '</div>' +
       '</div>' +
       '<div class="ev-fecha-items">' +
-        porFecha[fecha].map(function(it) { return it.tipo === 'cumple' ? _evCardCumpleHtml(it.data) : _evTimelineFilaHtml(it.data); }).join('') +
+        porFecha[fecha].map(function(it) {
+          return it.tipo === 'cumple' ? _evCardCumpleHtml(it.data) : it.tipo === 'offseason' ? _evCardOffseasonHtml(it.data) : _evTimelineFilaHtml(it.data);
+        }).join('') +
       '</div>' +
     '</div>';
   });

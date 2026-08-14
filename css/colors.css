@@ -279,6 +279,23 @@
   --cumple-bg:      color-mix(in srgb, var(--brand) 12%, var(--surface-2));
   --cumple-dot:     var(--brand);
 
+  /* ── Temporadas de descanso / offseason (Eventos, Tanda B) ─────────────
+     Mismo mecanismo de mezcla que --cumple-bg de arriba (color-mix contra
+     --surface-2, nunca un hex/rgba plano) pero tiñendo con --amber en vez de
+     --brand -- a propósito: --brand es el color de énfasis, deriva en
+     runtime por color de la liga (js/color-enfasis.js) y ya lo usan las
+     cards de evento normales; un descanso NO es un evento, necesita un tinte
+     que se distinga incluso si el admin elige un color de énfasis parecido
+     al ámbar. --amber es un "acento propio" fijo (ver el alcance documentado
+     de color-enfasis.js, más abajo en este archivo) -- nunca cambia con el
+     color de énfasis, mismo criterio ya usado para --success/--danger/etc.
+     --offseason-border reusa --amber-border tal cual (ya tiene su propia
+     variante dark-mode-aware, ver el bloque `@media` más abajo) -- sin
+     redefinir nada ahí, ambas variables quedan correctas en claro/oscuro sin
+     necesitar su propio override dentro de esa media query. */
+  --offseason-bg:     color-mix(in srgb, var(--amber) 10%, var(--surface-2));
+  --offseason-border: var(--amber-border);
+
   /* Dark mode tokens — "(runtime)" solo --dk-skeleton-base/--dk-pin-press/
      --dk-modal-btn-bg (mismo tinte café-marca, aunque no viven dentro de la
      media query dark — se definen una sola vez porque solo se usan desde

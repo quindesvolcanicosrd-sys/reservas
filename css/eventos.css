@@ -174,6 +174,18 @@
   width: 6px; height: 6px; border-radius: 50%; background: var(--cumple-dot); flex-shrink: 0;
   cursor: pointer;
 }
+/* Temporada de descanso (Tanda B, ver MANIFEST.md "Cambios recientes") --
+   mismo tamaño/forma que `.ev-dot`/`.ev-dot-cumple`, coexiste con cualquiera
+   de los 2 en la misma celda (`.ev-cal-dots` ya es `display:flex`, sin
+   límite de hijos) -- un día puede tener evento Y caer dentro de un período
+   de descanso a la vez. `--offseason-border` (colors.css) en vez de
+   `--offseason-bg` -- acá hace falta un tono con más cuerpo que el fondo
+   tenue de la card, mismo criterio que `--cumple-dot` (deriva de `--brand`
+   sólido, no de `--cumple-bg`, la mezcla tenue). */
+.ev-dot-offseason {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--offseason-border); flex-shrink: 0;
+  cursor: pointer;
+}
 
 /* ── Panel de calendario -- swipe-first, sin chevrones/borde/título repetido
    (ver "Cambios recientes" -- rediseño completo de la navegación de
@@ -363,6 +375,18 @@
 .ev-card-icono-inline { font-size: 16px; color: var(--brand); flex-shrink: 0; }
 .ev-card-sub { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .ev-card-sub .material-symbols-outlined { font-size: 14px; }
+/* Card de temporada de descanso (Tanda B, ver MANIFEST.md "Cambios
+   recientes") -- mismo `.ev-card` base (ancho completo, radio, animación de
+   entrada), solo cambia fondo/borde (`--offseason-bg`/`--offseason-border`,
+   colors.css) para distinguirse de una card de evento normal sin competir
+   con ella. `.ev-card-icono-inline` hereda `color:var(--brand)` por default
+   (regla de arriba) -- acá se pisa a `--muted` para que se lea "apagada"
+   (pedido explícito, junto con la opacidad levemente reducida de la card
+   entera). No interactiva -- `_evCardOffseasonHtml()`/js/eventos.js no le
+   agrega `onclick` ni ningún botón, a diferencia de cualquier otra card de
+   este timeline. */
+.ev-card-offseason { background: var(--offseason-bg); border-color: var(--offseason-border); opacity: 0.92; }
+.ev-card-offseason .ev-card-icono-inline { color: var(--muted); }
 /* Pill grande de estado -- geometría COMPARTIDA (ver "Cambios recientes":
    antes solo Cancelado/No se entrena, `_evEstadoNotaPillHtml()`; ahora
    también "Llegué a horario"/"Llegué tarde", `_evAsistenciaRealHtml()`,
