@@ -382,9 +382,11 @@
    con ella. `.ev-card-icono-inline` hereda `color:var(--brand)` por default
    (regla de arriba) -- acá se pisa a `--muted` para que se lea "apagada"
    (pedido explícito, junto con la opacidad levemente reducida de la card
-   entera). No interactiva -- `_evCardOffseasonHtml()`/js/eventos.js no le
-   agrega `onclick` ni ningún botón, a diferencia de cualquier otra card de
-   este timeline. */
+   entera). No interactiva para usuarios normales -- sin `onclick` propio, a
+   diferencia de cualquier otra card de este timeline. Con `_adminToken`
+   presente sí suma 2 botones de acción (editar/borrar, ver "Cambios
+   recientes") reusando literal `.ev-ant-card-edit`/`.ev-ant-card-del` de
+   Asistencia anticipada -- ningún CSS nuevo para esto. */
 .ev-card-offseason { background: var(--offseason-bg); border-color: var(--offseason-border); opacity: 0.92; }
 .ev-card-offseason .ev-card-icono-inline { color: var(--muted); }
 /* Pill grande de estado -- geometría COMPARTIDA (ver "Cambios recientes":

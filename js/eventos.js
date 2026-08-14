@@ -2318,8 +2318,8 @@ function _evCardCumpleHtml(c) {
 // Temporada de descanso (Tanda B, ver MANIFEST.md "Cambios recientes") --
 // UNA sola card por temporada, sin importar cuántos días dure (posicionada
 // en el timeline por `fechaInicio`, ver _evTimelineItems()). No interactiva
-// a propósito: sin `onclick`, sin RSVP, sin botón de reserva -- una
-// temporada de descanso no es un evento con el que se pueda interactuar,
+// para usuarios normales -- sin `onclick`, sin RSVP, sin botón de reserva --
+// una temporada de descanso no es un evento con el que se pueda interactuar,
 // solo informa un rango. Mismo esqueleto `.ev-card`/`.ev-card-top-row`/
 // `.ev-card-body`/`.ev-card-titulo-row`/`.ev-card-icono-inline` que
 // cualquier otra card de este timeline (reuso literal, cero estructura
@@ -2330,14 +2330,30 @@ function _evCardCumpleHtml(c) {
 // `_evAntFechaLegible()` (ya existente, usada para el mismo formato
 // "Del X al Y" en los resúmenes de Asistencia anticipada, más abajo en este
 // archivo) -- ninguna función de fecha nueva.
+// Acciones admin (ver "Cambios recientes" -- editar/borrar temporadas de
+// descanso): solo con `_adminToken` presente, 2 botones al final de la card
+// reusando LITERAL `.ev-ant-card-edit`/`.ev-ant-card-del` (mismo par de
+// clases que usa el resumen de Asistencia anticipada, css/eventos.css) --
+// cero CSS nuevo. Van dentro de `.ev-card-top-row` (ya `display:flex`),
+// después de `.ev-card-body`, que absorbe el ancho sobrante con `flex:1` --
+// mismo resultado visual que en `.ev-ant-card` sin necesitar su propio
+// contenedor flex. Usuarios normales ven la card exactamente igual que antes.
 function _evCardOffseasonHtml(o) {
   var rango = 'Del ' + _evAntFechaLegible(o.fechaInicio) + ' al ' + _evAntFechaLegible(o.fechaFin);
+  var acciones = _adminToken ?
+    '<button type="button" class="ev-ant-card-edit" onclick="_evOffseasonEditar(' + o.id + ')" title="Editar">' +
+      '<span class="material-symbols-outlined">edit</span>' +
+    '</button>' +
+    '<button type="button" class="ev-ant-card-del" onclick="_evOffseasonEliminar(' + o.id + ')" title="Eliminar">' +
+      '<span class="material-symbols-outlined">delete</span>' +
+    '</button>' : '';
   return '<div class="ev-card ev-card-offseason">' +
     '<div class="ev-card-top-row">' +
       '<div class="ev-card-body">' +
         '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline">bedtime</span><div class="ev-card-titulo">' + o.nombre + '</div></div>' +
         '<div class="ev-card-sub">' + rango + '</div>' +
       '</div>' +
+      acciones +
     '</div>' +
   '</div>';
 }
@@ -5574,18 +5590,65 @@ function irEvCrearUnico() { mostrarToast('Próximamente', null, true); }
    look del calendario, no su estado. ──── */
 var _evCrearDescansoData = { nombre: '', fechaDesde: null, fechaHasta: null };
 var _evCrearDescansoCal = { mostrado: null, touched: false, prevDesde: null, prevHasta: null };
+// `id` de la temporada en edición (ver "Cambios recientes" -- editar/borrar
+// temporadas de descanso desde el timeline), `null` en modo creación.
+// `_evCrearDescansoGuardar()` decide POST vs PATCH según este valor -- se
+// setea al entrar en modo edición (`_evOffseasonEditar()`) y se limpia al
+// entrar en modo creación (`irEvCrearDescanso()`) y al volver atrás
+// (`_evCrearDescansoVolver()`), así nunca queda pisado entre una edición y la
+// siguiente apertura de la pantalla, sea cual sea el camino de salida.
+var _evDescansoEditandoId = null;
 
 function irEvCrearDescanso() {
+  _evDescansoEditandoId = null;
   _evCrearDescansoData = { nombre: '', fechaDesde: null, fechaHasta: null };
   _evCrearDescansoCal = { mostrado: _evHoyISO(), touched: false, prevDesde: null, prevHasta: null };
   var inp = document.getElementById('ev-crear-descanso-nombre');
   if (inp) inp.value = '';
   var btn = document.getElementById('ev-crear-descanso-btn-restablecer');
   if (btn) btn.style.display = 'none';
+  _evCrearDescansoActualizarChrome();
   ir('s-eventos-crear-descanso');
   _evCrearDescansoCalRender();
   _evCrearDescansoCalActualizarResumen();
   _evCrearDescansoActualizarBoton();
+}
+
+// Modo edición (ver "Cambios recientes" -- ícono editar de la card de
+// offseason en el timeline, `_evCardOffseasonHtml()`) -- misma pantalla que
+// "Nueva temporada de descanso", pre-cargada con los datos de `o`
+// (`_EV_OFFSEASON`, ya en camelCase). Mismo criterio que `_evAntEditar()`:
+// arranca "touched" (el botón restablecer visible desde el arranque, no
+// recién tras un toque nuevo) porque ya trae fechas resueltas.
+function _evOffseasonEditar(id) {
+  var o = _EV_OFFSEASON.filter(function(x) { return x.id === id; })[0];
+  if (!o) return;
+  _evDescansoEditandoId = id;
+  _evCrearDescansoData = { nombre: o.nombre, fechaDesde: o.fechaInicio, fechaHasta: o.fechaFin };
+  _evCrearDescansoCal = { mostrado: o.fechaInicio, touched: true, prevDesde: null, prevHasta: null };
+  var inp = document.getElementById('ev-crear-descanso-nombre');
+  if (inp) inp.value = o.nombre;
+  _evCrearDescansoActualizarChrome();
+  ir('s-eventos-crear-descanso');
+  _evCrearDescansoCalRender();
+  _evCrearDescansoCalActualizarResumen();
+  _evCrearDescansoActualizarBoton();
+}
+
+// Título del header + label del botón del footer, según modo creación/edición.
+function _evCrearDescansoActualizarChrome() {
+  var titulo = document.getElementById('ev-crear-descanso-titulo');
+  if (titulo) titulo.textContent = _evDescansoEditandoId ? 'Editar temporada' : 'Nueva temporada de descanso';
+  var btn = document.getElementById('ev-crear-descanso-btn-footer');
+  if (btn) btn.textContent = _evDescansoEditandoId ? 'Guardar cambios' : 'Crear temporada';
+}
+
+// Flecha atrás del header -- limpia el modo edición antes de volver, para
+// que una entrada futura por `irEvCrearDescanso()` nunca herede un id viejo
+// (defensivo, `irEvCrearDescanso()` ya lo limpia igual apenas arranca).
+function _evCrearDescansoVolver() {
+  _evDescansoEditandoId = null;
+  volver('s-eventos');
 }
 function _evCrearDescansoInput() {
   var inp = document.getElementById('ev-crear-descanso-nombre');
@@ -5709,32 +5772,60 @@ function _evCrearDescansoActualizarBoton() {
 // Guardado -- fetch directo del navegador a la REST API de Supabase (mismo
 // mecanismo que la lectura de temporadas_descanso en _evCargarDatosReales(),
 // ver MANIFEST.md "Cambios recientes"), no `apiPost()`/BACKEND. `Prefer:
-// return=minimal` -- no hace falta el registro insertado de vuelta, solo
-// confirmar el 201. En error, intenta leer el mensaje real de PostgREST
-// (`{message,...}`, formato estándar de error de PostgREST/Supabase) antes
-// de caer a un texto genérico -- sigue funcionando igual si el body de
-// error no es JSON válido (`.catch(() => null)`).
+// return=minimal` -- no hace falta el registro de vuelta, solo confirmar
+// éxito (`r.ok`, cubre el 201 de un POST y el 204 de un PATCH por igual). En
+// error, intenta leer el mensaje real de PostgREST (`{message,...}`, formato
+// estándar de error de PostgREST/Supabase) antes de caer a un texto genérico
+// -- sigue funcionando igual si el body de error no es JSON válido
+// (`.catch(() => null)`). Modo edición (`_evDescansoEditandoId`, ver
+// "Cambios recientes" -- editar/borrar temporadas de descanso): mismo body,
+// PATCH a `?id=eq.<id>` en vez de POST a la colección entera.
 function _evCrearDescansoGuardar() {
   if (!_evCrearDescansoValido()) return;
   var d = _evCrearDescansoData;
-  mostrarCargando('Creando temporada...');
-  fetch(SUPABASE_URL + '/rest/v1/temporadas_descanso', {
-    method: 'POST',
+  var editando = _evDescansoEditandoId;
+  var url = SUPABASE_URL + '/rest/v1/temporadas_descanso' + (editando ? ('?id=eq.' + editando) : '');
+  mostrarCargando(editando ? 'Guardando cambios...' : 'Creando temporada...');
+  fetch(url, {
+    method: editando ? 'PATCH' : 'POST',
     headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
     body: JSON.stringify({ nombre: d.nombre.trim(), fecha_inicio: d.fechaDesde, fecha_fin: d.fechaHasta })
   }).then(function(r) {
-    if (r.status === 201) {
+    if (r.ok) {
       ocultarCargando();
-      mostrarToast('Temporada creada', 'ok', true);
+      mostrarToast(editando ? 'Temporada actualizada' : 'Temporada creada', 'ok', true);
+      _evDescansoEditandoId = null;
       ir('s-eventos');
       _evCargarDatosReales(function() { _evRenderTimeline(true); });
       return;
     }
     return r.json().catch(function() { return null; }).then(function(body) {
-      throw new Error((body && body.message) || ('No se pudo crear la temporada (HTTP ' + r.status + ').'));
+      throw new Error((body && body.message) || ('No se pudo guardar la temporada (HTTP ' + r.status + ').'));
     });
   }).catch(function(e) {
     ocultarCargando();
-    mostrarToast((e && e.message) || 'No se pudo crear la temporada.', 'error');
+    mostrarToast((e && e.message) || 'No se pudo guardar la temporada.', 'error');
+  });
+}
+
+// Eliminar (ver "Cambios recientes" -- ícono borrar de la card de offseason
+// en el timeline, `_evCardOffseasonHtml()`) -- mismo `confirm()` nativo que
+// `_evAntEliminar()`, DELETE directo a Supabase (mismo mecanismo que el
+// guardado de arriba, sin `Prefer` -- no hace falta el registro borrado de
+// vuelta, PostgREST responde 204 por default).
+function _evOffseasonEliminar(id) {
+  if (!confirm('¿Eliminar esta temporada de descanso? Esta acción no se puede deshacer.')) return;
+  mostrarCargando('Eliminando...');
+  fetch(SUPABASE_URL + '/rest/v1/temporadas_descanso?id=eq.' + id, {
+    method: 'DELETE',
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }
+  }).then(function(r) {
+    ocultarCargando();
+    if (!r.ok) { mostrarToast('No se pudo eliminar la temporada.', 'error'); return; }
+    mostrarToast('Temporada eliminada', 'ok', true);
+    _evCargarDatosReales(function() { _evRenderTimeline(true); });
+  }).catch(function() {
+    ocultarCargando();
+    mostrarToast('No se pudo eliminar la temporada.', 'error');
   });
 }
