@@ -5573,9 +5573,231 @@ function _evCrearGuardar() {
 /* ═══════════════════════════════════════════════════════
    Tanda C1 -- FAB de 4 opciones (Recurrente/Único/Descanso/Venues, ver
    MANIFEST.md "Cambios recientes") + "Nueva temporada de descanso"
-   (#s-eventos-crear-descanso). "Único" es un placeholder hasta la Tanda C2.
+   (#s-eventos-crear-descanso). "Único" pasa de placeholder a implementación
+   real en la Tanda C2, ver el bloque de abajo.
    ═══════════════════════════════════════════════════════ */
-function irEvCrearUnico() { mostrarToast('Próximamente', null, true); }
+
+/* ── Tanda C2 -- "Nuevo evento único" (#s-eventos-crear-unico, admin). Un
+   evento único es UNA fila directa de la tabla `asistencias` de Supabase
+   (POST, ver _evCrearUnicoGuardar() más abajo) -- a diferencia del wizard
+   "Crear evento" (#s-eventos-crear, arriba en este archivo), que siempre
+   crea una REGLA de recurrencia en `venues` (una fila de Venues, con
+   `_mantenerVentanaAsistenciasInterno()` generando los eventos concretos a
+   partir de ella). Sin pasos -- todos los campos siempre visibles en una
+   sola pantalla scrolleable, mismo criterio que "Nueva temporada de
+   descanso" (Tanda C1.5) -- acá tampoco hay nada que revelar/ocultar según
+   una elección previa. Estado 100% propio (`_evCrearUnicoData`/
+   `_evCrearUnicoCal`), nunca comparte estado con `_evCrearData`/`_evCrearCal`
+   del wizard de arriba pese a reusar varios de sus mismos componentes
+   visuales (calendario de fecha única, stepper de hora). ──── */
+var _evCrearUnicoData = { tipo: null, lugarId: null, lugarNombre: '', lugarMapsUrl: null, fecha: null, hora: null, horaTocada: false, descripcion: '' };
+var _evCrearUnicoCal = { mostrado: null };
+
+function irEvCrearUnico() {
+  _evCrearUnicoData = { tipo: null, lugarId: null, lugarNombre: '', lugarMapsUrl: null, fecha: null, hora: null, horaTocada: false, descripcion: '' };
+  _evCrearUnicoCal = { mostrado: _evHoyISO() };
+  document.querySelectorAll('#ev-crear-unico-tipo-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  var descInp = document.getElementById('ev-crear-unico-descripcion-input');
+  if (descInp) { descInp.value = ''; descInp.style.height = 'auto'; }
+  var descCont = document.getElementById('ev-crear-unico-desc-contador');
+  if (descCont) { descCont.textContent = '0/150'; descCont.classList.remove('ev-editar-desc-contador-limite'); }
+  var calResumen = document.getElementById('ev-crear-unico-cal-resumen');
+  if (calResumen) calResumen.textContent = '';
+  ir('s-eventos-crear-unico');
+  _evCrearUnicoCargarVenues();
+  _evCrearUnicoCalRender();
+  _evHoraStepperInit('ev-crear-unico-hora', null, function(v) { _evCrearUnicoData.hora = v; _evCrearUnicoData.horaTocada = true; });
+  _evCrearUnicoActualizarBoton();
+}
+
+/* Tipo de evento -- 4 pills de selección única (subconjunto de _EV_ICONOS,
+   arriba en este archivo -- ya cubre "Entrenamiento"/"Partido"/"Asamblea"/
+   "Otro" sin agregar ninguna clave nueva al mapa). Determina el ícono que
+   se va a ver en el timeline el día que este evento aparezca ahí, gratis --
+   _evCardEventoHtml()/el resto del render de eventos ya resuelven el ícono
+   a partir de `tipo` para cualquier evento real, sin importar si vino de
+   una regla de venue o de este flujo. */
+function _evCrearUnicoSelTipo(el) {
+  document.querySelectorAll('#ev-crear-unico-tipo-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  _evCrearUnicoData.tipo = el.dataset.val;
+  _evCrearUnicoActualizarBoton();
+}
+
+/* Lugar -- lista de venues existentes como pills, mismo `.aj-pill` de
+   siempre y misma acción de backend (`adminGetVenues`) que el campo
+   "Lugar" de #s-eventos-editar (_evEditarCargarVenues()/_evEditarRenderVenues()/
+   _evEditarSelVenue(), más arriba en este archivo) -- reusa el mismo cache
+   de módulo `_EV_VENUES` (poblado una sola vez por sesión, sin importar cuál
+   de las 2 pantallas lo pidió primero) en vez de duplicar el fetch. Sin
+   pill de "requiere reserva" ni mini-formulario de lugar nuevo acá -- un
+   evento único siempre elige un lugar YA existente, a diferencia del Paso 1
+   de #s-eventos-crear (que sí permite crear uno). */
+function _evCrearUnicoCargarVenues() {
+  var cont = document.getElementById('ev-crear-unico-lugar-pills');
+  if (_EV_VENUES) { _evCrearUnicoRenderVenues(); return; }
+  if (cont) cont.innerHTML = '<p style="color:var(--muted);font-size:0.78rem;margin:0;">Cargando lugares...</p>';
+  api({ action: 'adminGetVenues', adminToken: _adminToken }, function(res) {
+    _EV_VENUES = res || [];
+    _evCrearUnicoRenderVenues();
+  }, function(e) {
+    if (cont) cont.innerHTML = '<p style="color:var(--muted);font-size:0.78rem;margin:0;">No se pudieron cargar los lugares.</p>';
+  });
+}
+function _evCrearUnicoRenderVenues() {
+  var cont = document.getElementById('ev-crear-unico-lugar-pills'); if (!cont) return;
+  if (!_EV_VENUES.length) { cont.innerHTML = '<p style="color:var(--muted);font-size:0.78rem;margin:0;">Todavía no hay lugares creados.</p>'; return; }
+  cont.innerHTML = _EV_VENUES.map(function(v) {
+    var activa = _evCrearUnicoData.lugarId === v.id;
+    return '<span class="aj-pill' + (activa ? ' activa' : '') + '" data-id="' + v.id + '" onclick="_evCrearUnicoSelVenue(' + v.id + ')">' + v.lugar + '</span>';
+  }).join('');
+}
+// google_maps: el nombre real de la columna de link de Maps en la tabla
+// `venues` no está confirmado (adminGetVenues() hace select('*') sin lista
+// explícita de columnas, y `venues` -- a diferencia de `asistencias`, ver
+// MANIFEST.md -- nunca quedó documentada campo por campo en este archivo).
+// Se prueban las 3 variantes de nombre que este proyecto ya usa en otros
+// lados para el mismo concepto (snake_case real de Supabase, camelCase del
+// contrato viejo de Apps Script) -- si ninguna existe en el objeto, queda
+// `null` sin romper nada (mismo criterio "opcional, si está disponible" que
+// pidió el brief de esta tanda).
+function _evCrearUnicoSelVenue(id) {
+  var v = (_EV_VENUES || []).filter(function(x) { return x.id === id; })[0];
+  if (!v) return;
+  _evCrearUnicoData.lugarId = id;
+  _evCrearUnicoData.lugarNombre = v.lugar;
+  _evCrearUnicoData.lugarMapsUrl = v.google_maps || v.maps_url || v.mapsUrl || null;
+  document.querySelectorAll('#ev-crear-unico-lugar-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.id == id); });
+  _evCrearUnicoActualizarBoton();
+}
+
+/* Fecha -- calendario inline de fecha única, mismo mecanismo/clases que
+   _evCrearCalRender('unico') (arriba en este archivo, Paso 2 del wizard de
+   recurrencia) pero con estado propio (_evCrearUnicoCal, nunca comparte
+   _evCrearCal). Bloquea cualquier fecha anterior a hoy -- un evento único
+   nunca debería poder crearse retroactivamente, mismo criterio ya
+   establecido en el resto de esta sección (Asistencia anticipada, "Nueva
+   temporada de descanso"). */
+function _evCrearUnicoCalRender() {
+  var cont = document.getElementById('ev-crear-unico-cal'); if (!cont) return;
+  var m = _evCalMesDe(_evCrearUnicoCal.mostrado);
+  var labelEl = document.getElementById('ev-crear-unico-cal-label');
+  if (labelEl) labelEl.textContent = NOMBRES_MESES[m.month] + ' ' + m.year;
+  var inicioGrid = _evLunesDeSemana(new Date(m.year, m.month, 1));
+  var finMes = new Date(m.year, m.month + 1, 0);
+  var finGrid = _evLunesDeSemana(finMes); finGrid.setDate(finGrid.getDate() + 6);
+  var hoy = _evHoyISO();
+  var seleccionada = _evCrearUnicoData.fecha;
+  var html = _EV_DIAS_CORTOS.map(function(d) { return '<div class="ev-cal-dow">' + d + '</div>'; }).join('');
+  var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
+  while (cur <= finGrid) {
+    var celdaIso = _evToISO(cur);
+    var ajeno = cur.getMonth() !== m.month;
+    var pasado = _evFechaCmp(celdaIso, hoy) < 0;
+    var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (pasado ? ' ev-ant-cal-pasado' : '');
+    if (seleccionada && celdaIso === seleccionada) clases += ' ev-ant-cal-sel';
+    if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
+    var onclickAttr = pasado ? '' : ' onclick="_evCrearUnicoCalTocarDia(\'' + celdaIso + '\')"';
+    html += '<div class="' + clases + '" data-iso="' + celdaIso + '"' + onclickAttr + '><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
+    cur.setDate(cur.getDate() + 1);
+  }
+  _evFadeSwap(cont, function() { cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>'; }, false);
+}
+function _evCrearUnicoCalMoverMes(dir) {
+  var m = _evCalMesDe(_evCrearUnicoCal.mostrado);
+  var year = m.year, month = m.month + dir;
+  if (month < 0) { month = 11; year--; } else if (month > 11) { month = 0; year++; }
+  _evCrearUnicoCal.mostrado = _evToISO(new Date(year, month, 1));
+  _evCrearUnicoCalRender();
+}
+function _evCrearUnicoCalTocarDia(iso) {
+  _evCrearUnicoData.fecha = iso;
+  _evCrearUnicoCalRender();
+  var resumen = document.getElementById('ev-crear-unico-cal-resumen');
+  if (resumen) resumen.textContent = _evAntFechaLegible(iso);
+  _evCrearUnicoActualizarBoton();
+}
+
+/* Descripción -- mismo patrón de auto-crecimiento + contador "[n]/150" que
+   #s-eventos-editar (_evEditarDescripcionInput()/_evEditarDescActualizarContador(),
+   más arriba en este archivo), con su propio id de textarea (CSS scoped por
+   ID, ver css/eventos.css) -- el contador SÍ reusa las 2 clases genéricas
+   de esa pantalla tal cual, cero CSS nuevo para el contador en sí. */
+function _evCrearUnicoDescripcionInput(el) {
+  _evCrearUnicoData.descripcion = el.value;
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+  var cont = document.getElementById('ev-crear-unico-desc-contador');
+  if (cont) {
+    cont.textContent = el.value.length + '/150';
+    cont.classList.toggle('ev-editar-desc-contador-limite', (150 - el.value.length) <= 20);
+  }
+}
+
+function _evCrearUnicoValido() {
+  var d = _evCrearUnicoData;
+  return !!(d.tipo && d.lugarId && d.fecha);
+}
+function _evCrearUnicoActualizarBoton() {
+  var btn = document.getElementById('ev-crear-unico-btn-footer');
+  if (btn) btn.disabled = !_evCrearUnicoValido();
+}
+
+// Guardado -- POST directo del navegador a la REST API de Supabase (mismo
+// mecanismo `fetch()` ya usado por el resto de esta sección para
+// `temporadas_descanso`, acá contra `asistencias`), no `apiPost()`/BACKEND.
+// `id_evento` se arma client-side (mismo criterio ya usado en otros lados
+// de la app para IDs sin backend de por medio -- prefijo legible + timestamp
+// + sufijo random corto, suficiente para que 2 clicks seguidos nunca
+// choquen). `dia` (día de la semana en texto) sale de `_EV_DIAS_LARGOS`
+// (arriba en este archivo, ya usado por el resto del timeline) indexado por
+// `Date.getDay()` -- mismo array, ningún cálculo nuevo. `inicia` viaja como
+// `null` si el stepper de hora nunca se tocó (`horaTocada`, ver
+// irEvCrearUnico()/_evHoraStepperInit()) -- el stepper en sí SIEMPRE
+// representa un valor visual válido (no tiene forma de estar "vacío"), así
+// que la única forma de saber si el admin realmente eligió una hora es este
+// flag aparte, no el valor de `_evCrearUnicoData.hora`.
+function _evCrearUnicoGuardar() {
+  if (!_evCrearUnicoValido()) return;
+  var d = _evCrearUnicoData;
+  var idEvento = 'EV-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+  var dia = _EV_DIAS_LARGOS[_evParseISO(d.fecha).getDay()];
+  var body = {
+    id_evento: idEvento,
+    t: d.tipo,
+    fecha: d.fecha,
+    mes: d.fecha.slice(0, 7),
+    dia: dia,
+    donde: d.lugarNombre,
+    google_maps: d.lugarMapsUrl || null,
+    inicia: d.horaTocada ? d.hora : null,
+    estado: 'Próximo',
+    info_adicional: d.descripcion || '',
+    bloqueado: false,
+    es_excepcion: false,
+    id_regla: null
+  };
+  mostrarCargando('Creando evento...');
+  fetch(SUPABASE_URL + '/rest/v1/asistencias', {
+    method: 'POST',
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify(body)
+  }).then(function(r) {
+    if (r.status === 201) {
+      ocultarCargando();
+      mostrarToast('Evento creado', 'ok', true);
+      ir('s-eventos');
+      _evCargarDatosReales(function() { _evRenderTimeline(true); });
+      return;
+    }
+    return r.json().catch(function() { return null; }).then(function(errBody) {
+      throw new Error((errBody && errBody.message) || ('No se pudo crear el evento (HTTP ' + r.status + ').'));
+    });
+  }).catch(function(e) {
+    ocultarCargando();
+    mostrarToast((e && e.message) || 'No se pudo crear el evento.', 'error');
+  });
+}
 
 /* ── "Nueva temporada de descanso" -- pantalla de página completa, sin
    pasos: Nombre + calendario de rango, ambos siempre visibles (a diferencia

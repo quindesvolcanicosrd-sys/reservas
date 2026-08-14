@@ -26,13 +26,13 @@
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=580dd587"></script>
 <link rel="stylesheet" href="css/global.css?v=64804fa9">
-<link rel="stylesheet" href="css/estilos.css?v=f93e1e2e">
+<link rel="stylesheet" href="css/estilos.css?v=9c46bad5">
 <link rel="stylesheet" href="css/ui.css?v=626a894b">
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=a340ffb6">
 <link rel="stylesheet" href="css/nav.css?v=26a3b789">
-<link rel="stylesheet" href="css/eventos.css?v=4ce7125c">
+<link rel="stylesheet" href="css/eventos.css?v=558372f8">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
@@ -1086,6 +1086,92 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
   <div class="cta-footer-fixed" id="cta-footer-s-eventos-crear-descanso">
     <button type="button" class="btn btn-primary" id="ev-crear-descanso-btn-footer" disabled onclick="_evCrearDescansoGuardar()">Crear temporada</button>
+  </div>
+
+  <!-- "Nuevo evento único" (Tanda C2, admin, ver MANIFEST.md "Cambios
+       recientes") -- pantalla de página completa, mismo criterio que
+       #s-eventos-crear-descanso: header propio (.app-nav.app-nav-sticky, sin
+       entrada en TOP_BAR_CONFIG) + footer fijo propio, sin pasos -- todos los
+       campos siempre visibles en una sola pantalla scrolleable. Un evento
+       único es una fila directa de la tabla `asistencias` (POST vía
+       _evCrearUnicoGuardar(), js/eventos.js) -- no pasa por una regla de
+       venue ni por recurrencia, a diferencia del wizard "Crear evento"
+       (#s-eventos-crear) de arriba. -->
+  <div class="pantalla" id="s-eventos-crear-unico">
+    <div class="app-nav app-nav-sticky" id="ev-crear-unico-header">
+      <button class="app-nav-back" onclick="volver('s-eventos')">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <span class="app-nav-title">Nuevo evento único</span>
+      <div style="width:40px;flex-shrink:0;"></div>
+    </div>
+    <div class="card" style="text-align:left;">
+
+      <div class="ev-lugar-campo" style="margin-top:0;">
+        <p class="ev-lugar-campo-label">Tipo de evento</p>
+        <div class="aj-pills-row" id="ev-crear-unico-tipo-pills">
+          <span class="aj-pill" data-val="Entrenamiento" onclick="_evCrearUnicoSelTipo(this)">Entrenamiento</span>
+          <span class="aj-pill" data-val="Partido" onclick="_evCrearUnicoSelTipo(this)">Partido</span>
+          <span class="aj-pill" data-val="Asamblea" onclick="_evCrearUnicoSelTipo(this)">Asamblea</span>
+          <span class="aj-pill" data-val="Otro" onclick="_evCrearUnicoSelTipo(this)">Otro</span>
+        </div>
+      </div>
+
+      <div class="ev-lugar-campo">
+        <p class="ev-lugar-campo-label">Lugar</p>
+        <div class="aj-pills-row" id="ev-crear-unico-lugar-pills"></div>
+      </div>
+
+      <div class="ev-lugar-campo">
+        <p class="ev-lugar-campo-label">Fecha</p>
+        <div class="ev-ant-cal-nav">
+          <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearUnicoCalMoverMes(-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+          <span class="ev-ant-cal-nav-label" id="ev-crear-unico-cal-label"></span>
+          <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearUnicoCalMoverMes(1)"><span class="material-symbols-outlined">chevron_right</span></button>
+        </div>
+        <div id="ev-crear-unico-cal"></div>
+        <div class="ev-lugar-cal-resumen" id="ev-crear-unico-cal-resumen"></div>
+      </div>
+
+      <div class="ev-lugar-campo">
+        <p class="ev-lugar-campo-label">Horario (opcional)</p>
+        <div class="ev-hora-stepper" id="ev-crear-unico-hora-stepper">
+          <div class="ev-hora-stepper-cols">
+            <div class="ev-hora-stepper-col">
+              <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-crear-unico-hora','hora',1)"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
+              <span class="ev-hora-stepper-valor" id="ev-crear-unico-hora-hora"></span>
+              <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-crear-unico-hora','hora',-1)"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
+            </div>
+            <span class="ev-hora-stepper-sep">:</span>
+            <div class="ev-hora-stepper-col">
+              <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-crear-unico-hora','minuto',1)"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
+              <span class="ev-hora-stepper-valor" id="ev-crear-unico-hora-minuto"></span>
+              <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-crear-unico-hora','minuto',-1)"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
+            </div>
+          </div>
+          <div class="ev-hora-stepper-meridiano" id="ev-crear-unico-hora-meridiano">
+            <span class="aj-pill" data-val="AM" onclick="_evHoraStepperSetMeridiano('ev-crear-unico-hora',this)">AM</span>
+            <span class="aj-pill" data-val="PM" onclick="_evHoraStepperSetMeridiano('ev-crear-unico-hora',this)">PM</span>
+          </div>
+        </div>
+        <p class="ev-lugar-mapa-nota">Si no lo tocás, el evento se crea sin hora de inicio definida.</p>
+      </div>
+
+      <div class="ev-lugar-campo">
+        <p class="ev-lugar-campo-label">Descripción (opcional)</p>
+        <textarea id="ev-crear-unico-descripcion-input" rows="4" maxlength="150" placeholder="Descripción del evento..." oninput="_evCrearUnicoDescripcionInput(this)"></textarea>
+        <div class="ev-editar-desc-contador" id="ev-crear-unico-desc-contador">0/150</div>
+      </div>
+
+      <!-- Mismo valor de 100px que #s-eventos-crear-descanso -- footer fijo
+           de 1 botón real + nav inferior, ver el comentario ya documentado
+           en css/estilos.css (#cta-footer-s-eventos-crear) para la medición
+           real que motivó este número en vez del genérico de 24px. -->
+      <div class="cta-footer-spacer" style="height:calc(100px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+  <div class="cta-footer-fixed" id="cta-footer-s-eventos-crear-unico">
+    <button type="button" class="btn btn-primary" id="ev-crear-unico-btn-footer" disabled onclick="_evCrearUnicoGuardar()">Crear evento</button>
   </div>
 
   <!-- Modal de conflicto (aplicarAsistenciaAnticipada devuelve
@@ -2282,8 +2368,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=4ae36bcc"></script>
-<script src="js/eventos.js?v=0d1f5e9a"></script>
+<script src="js/ui.js?v=058b5ee4"></script>
+<script src="js/eventos.js?v=9454cc14"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=7a7a6f20"></script>
@@ -3762,10 +3848,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <span class="material-symbols-outlined">repeat</span>
     <span>Recurrente</span>
   </button>
-  <!-- "Único" (Tanda C1) -- placeholder hasta la Tanda C2: irEvCrearUnico()
-       solo muestra un toast "Próximamente" (mostrarToast(msg,null,true),
-       mismo criterio ya usado por _autoencadenarMeses()/js/ui.js para un
-       toast neutro forzado). -->
+  <!-- "Único" -- navega a #s-eventos-crear-unico (Tanda C2, ver MANIFEST.md
+       "Cambios recientes"), irEvCrearUnico()/js/eventos.js. -->
   <button type="button" class="ev-fab-opcion" id="ev-fab-crear-unico" onclick="_evFabCerrar(); irEvCrearUnico();">
     <span class="material-symbols-outlined">event_available</span>
     <span>Evento único</span>

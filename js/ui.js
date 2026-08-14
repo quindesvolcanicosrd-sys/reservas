@@ -691,6 +691,10 @@ var _BOTTOM_NAV_EXTRA = {
   // criterio que 's-eventos-crear': drill-down de 'eventos', alcanzable
   // solo desde el FAB de #s-eventos.
   's-eventos-crear-descanso': 'eventos',
+  // "Nuevo evento único" (Tanda C2, ver MANIFEST.md) -- mismo criterio que
+  // 's-eventos-crear-descanso' de arriba: drill-down de 'eventos',
+  // alcanzable solo desde el FAB de #s-eventos.
+  's-eventos-crear-unico': 'eventos',
   // "Marcar asistencia" (ver MANIFEST.md, diseño final consolidado) --
   // mismo criterio que el resto de los drill-down de 'eventos' de arriba:
   // alcanzable desde la card del home/timeline o desde el detalle de un

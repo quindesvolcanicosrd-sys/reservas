@@ -1292,6 +1292,13 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
    cuando quedan 20 caracteres o menos. */
 .ev-editar-desc-contador { text-align: right; font-size: 0.72rem; font-weight: 600; color: var(--muted); margin-top: 6px; }
 .ev-editar-desc-contador.ev-editar-desc-contador-limite { color: var(--warning); }
+/* 2° consumidor del mismo patrón (Tanda C2, "Nuevo evento único", ver
+   MANIFEST.md "Cambios recientes") -- misma regla de auto-crecimiento, con
+   su propio id porque `#ev-editar-descripcion-input` está scoped por ID (no
+   por clase). El contador SÍ reusa las 2 clases genéricas de arriba tal
+   cual (`.ev-editar-desc-contador`/`.ev-editar-desc-contador-limite`), cero
+   CSS nuevo para eso. */
+#ev-crear-unico-descripcion-input { resize: none; overflow-y: hidden; }
 
 @media (prefers-color-scheme: dark) {
   .ev-crear-venue-card.activa { background: var(--brand-20); }
