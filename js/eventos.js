@@ -5446,18 +5446,27 @@ function _evCrearActualizarFooter() {
 }
 
 /* ── Paso 1: Lugar -- buscador local sobre _evLugares (reusa la misma
-   variable/carga que "Editar lugares", getVenues() no depende de qué
-   pantalla la pidió) + lista seleccionable + "+ Este lugar no está en la
-   lista". ──── */
+   variable/carga que "Editar lugares") + lista seleccionable + "+ Este
+   lugar no está en la lista". Mismo fix real que `irEvLugares()` (ver
+   MANIFEST.md "Cambios recientes" -- fix de "Gestionar venues"): esta
+   función pedía el MISMO `action:'getVenues'` roto (Apps Script, nunca
+   desplegada tras la migración de Venues a Supabase), señalado en esa
+   tanda como "fuera de alcance" y muy probablemente con el mismo síntoma
+   -- confirmado y corregido acá con el mismo patrón. ──── */
 function _evCrearCargarLugares() {
   var cont = document.getElementById('ev-crear-lista-lugares');
   if (cont) cont.innerHTML = _evLugaresSkeletonHtml();
   var miCarga = ++_evLugaresCargaId;
-  api({ action: 'getVenues', adminToken: _adminToken }, function(res) {
+  fetch(SUPABASE_URL + '/rest/v1/venues?select=*&order=lugar.asc', {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }
+  }).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function(rows) {
     if (miCarga !== _evLugaresCargaId) return;
-    _evLugares = res || [];
+    _evLugares = (rows || []).map(_evMapVenueSupabase);
     _evCrearRenderLugares(_evLugares);
-  }, function(e) {
+  }).catch(function(e) {
     if (miCarga !== _evLugaresCargaId) return;
     if (cont) cont.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">No se pudieron cargar los lugares.</p>';
   });
