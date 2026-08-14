@@ -877,6 +877,13 @@ function _parseFechaSimple(str) {
   d.setHours(0,0,0,0); return d;
 }
 
+function _parseFechaEvId(evId) {
+  var m = (evId || '').match(/^ev_(\d{4})(\d{2})(\d{2})_/);
+  if (!m) return null;
+  var d = new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]));
+  d.setHours(0,0,0,0); return d;
+}
+
 function _parseFechaStr(fechaStr) {
   if (!fechaStr) return null;
   var m = fechaStr.match(/(\d{1,2})\s+de\s+([a-záéíóúñ]+)/i);
@@ -911,7 +918,7 @@ function _clasificarReservas(todas, hoy) {
       // `r.fechaCalendario` (yyyy-MM-dd, viene directo en `r`) cuando existe;
       // solo cae a `_parseFechaStr(r.fecha)` para reservas viejas sin ese
       // campo (ver "Cambios recientes").
-      var fd = r.fechaCalendario ? _evParseISO(r.fechaCalendario) : _parseFechaStr(r.fecha);
+      var fd = r.fechaCalendario ? _evParseISO(r.fechaCalendario) : (_parseFechaEvId(r.fecha) || _parseFechaStr(r.fecha));
       if (!fd) { historial.push(r); return; }
       fd >= hoy ? activas.push(r) : historial.push(r);
     }
