@@ -1240,6 +1240,17 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
    el "indicador sutil de modificado" pedido. `_evEditarActualizarResumenCampo()`
    agrega/saca esta clase según `_evEditarCambios` tenga o no esa clave. */
 .ev-ant-acc-resumen.ev-editar-valor-original { color: var(--text-2); font-weight: 600; }
+/* Fix real (ver MANIFEST.md "Cambios recientes"): `.ev-ant-acc-body-inner`
+   (reusada tal cual de Asistencia anticipada, `padding:2px 16px 16px` más
+   abajo en este archivo) trae solo 2px de aire arriba -- alcanza ahí porque
+   su primer hijo real siempre es `.ev-ant-intro`, un párrafo con su propio
+   `margin-bottom`. Acá el primer hijo de cada fila es contenido pegado al
+   borde sin margen propio (pills de lugar, el stepper de hora, el
+   `<textarea>`) -- con solo 2px, el contenido expandido quedaba pegado a la
+   barra de título del acordeón. Scoped a `#ev-editar-paso-campos` (no se
+   toca `.ev-ant-acc-body-inner` en general -- Asistencia anticipada sigue
+   igual). */
+#ev-editar-paso-campos .ev-ant-acc-body-inner { padding-top: 14px; }
 
 @media (prefers-color-scheme: dark) {
   .ev-crear-venue-card.activa { background: var(--brand-20); }

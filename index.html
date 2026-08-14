@@ -562,7 +562,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
       </div>
 
-      <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+      <!-- 100px, no los 24px que usaban screens sin footer real (ver
+           MANIFEST.md "Cambios recientes" -- bug real: el botón "Guardar
+           cambios"/"Confirmar" quedaba tapado): mismo valor medido que
+           #s-eventos-crear (footer de 1 botón real, ~74px de alto + la nav
+           inferior no alcanzaban a despejarse con solo 24px de margen). -->
+      <div class="cta-footer-spacer" style="height:calc(100px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
     </div>
   </div>
 
