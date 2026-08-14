@@ -773,7 +773,7 @@ function manejarClickFecha(el, fecha, slug) {
 function _chequearTallaFecha(fecha, slug) {
   api({ action: 'getTallasDisponiblesParaFecha', fecha: fecha, nombreExcluir: E.nombre }, function(tallas) {
     var t = (tallas || []).find(function(x) { return x.talla === E.datos.talla; });
-    if (t && !t.disponible) { _conflictosTalla[fecha] = true; _mostrarConflictoTalla(slug, E.datos.talla); }
+    if (t && !t.disponibles) { _conflictosTalla[fecha] = true; _mostrarConflictoTalla(slug, E.datos.talla); }
   }, function() { /* falla de red: se trata como sin conflicto detectado, no bloquea la selección */ });
 }
 

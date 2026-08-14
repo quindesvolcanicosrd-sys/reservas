@@ -274,7 +274,7 @@ function iniciarReagendamiento() {
 }
 
 function irHomeDesdeExito() {
-  if (E.wpUrl && !_wpComprobanteEnviado) {
+  if (E.wpUrl && E.totalPago > 0 && !_wpComprobanteEnviado) {
     _mostrarModalWpComprobante();
     return;
   }
@@ -338,6 +338,7 @@ function wpComprobanteDesdeModal() {
   _cerrarModalWpComprobante();
 }
 function wpComprobanteOmitir() {
+  _wpComprobanteEnviado = true;
   _cerrarModalWpComprobante(function() { irHomeDesdeExito(); });
 }
 function _cerrarModalWpComprobante(cb) {
@@ -771,8 +772,8 @@ function _renderGridSheetTalla(tallas) {
   }
   html += tallas.map(function(t) {
     var esActual = t.talla === _tallaSheetActual;
-    var clases = 'aj-pill' + (t.disponible ? '' : ' no-disponible') + (esActual && t.disponible ? ' talla-actual' : '');
-    var onclick = t.disponible ? ' onclick="seleccionarTallaSheet(this,\'' + t.talla + '\')"' : '';
+    var clases = 'aj-pill' + (t.disponibles ? '' : ' no-disponible') + (esActual && t.disponibles ? ' talla-actual' : '');
+    var onclick = t.disponibles ? ' onclick="seleccionarTallaSheet(this,\'' + t.talla + '\')"' : '';
     return '<span class="' + clases + '" style="justify-content:center;"' + onclick + '>' + t.talla + '</span>';
   }).join('');
   grid.innerHTML = html;
@@ -1345,7 +1346,7 @@ function sheetIrReagendar() {
   if (hora) pillsEl.innerHTML += '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + hora + '</span>';
   if (lugar) pillsEl.innerHTML += '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
   _sgFechaSeleccionada = '';
-  document.getElementById('sg-btn-confirmar-fecha').style.display = 'none';
+  _sgOcultarBtnConfirmar();
   cargarFechasGestionar();
   setTimeout(function() { ir('s-gestionar'); }, 360);
 }
@@ -1414,11 +1415,27 @@ function cargarFechasGestionar() {
   });
 }
 
+// Fade opacity (.sg-seccion, css/home.css) en vez del display directo de
+// antes -- el botón "Confirmar nueva/nuevo fecha/mes" aparecía/desaparecía
+// de golpe al elegir/deseleccionar una fecha o mes (ver "Cambios recientes").
+function _sgMostrarBtnConfirmar() {
+  var btn = document.getElementById('sg-btn-confirmar-fecha');
+  if (!btn) return;
+  btn.style.display = 'block';
+  requestAnimationFrame(function() { btn.style.opacity = '1'; });
+}
+function _sgOcultarBtnConfirmar() {
+  var btn = document.getElementById('sg-btn-confirmar-fecha');
+  if (!btn) return;
+  btn.style.opacity = '0';
+  setTimeout(function() { btn.style.display = 'none'; }, 200);
+}
+
 function selFechaGestionar(el, fecha) {
   document.querySelectorAll('.sg-fecha-item').forEach(function(x) { x.classList.remove('sel'); });
   el.classList.add('sel');
   _sgFechaSeleccionada = fecha;
-  document.getElementById('sg-btn-confirmar-fecha').style.display = '';
+  _sgMostrarBtnConfirmar();
 }
 
 function _cargarMesesGestionar() {
@@ -1438,18 +1455,18 @@ function _cargarMesesGestionar() {
   void lista.offsetWidth;
   lista.style.animation = 'fadeIn 0.3s ease';
   _sgFechaSeleccionada = '';
-  document.getElementById('sg-btn-confirmar-fecha').style.display = 'none';
+  _sgOcultarBtnConfirmar();
 }
 
 function selMesGestionar(mes) {
   var actual = (_sgFechaActual || '').toLowerCase().trim();
   if (mes.toLowerCase().trim() === actual) {
     _sgFechaSeleccionada = '';
-    document.getElementById('sg-btn-confirmar-fecha').style.display = 'none';
+    _sgOcultarBtnConfirmar();
     return;
   }
   _sgFechaSeleccionada = mes;
-  document.getElementById('sg-btn-confirmar-fecha').style.display = '';
+  _sgMostrarBtnConfirmar();
 }
 
 function confirmarCambioFecha() {

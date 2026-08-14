@@ -207,6 +207,7 @@
 .sg-toggle-row { display:flex; gap:8px; margin-bottom:16px; }
 .sg-toggle-opt { flex:1; padding:9px; border-radius:10px; border:1.5px solid var(--border-light); background:var(--surface-2); color:var(--muted); font-size:0.77rem; font-weight:700; cursor:pointer; font-family:inherit; text-align:center; transition:all 0.15s; }
 .sg-toggle-opt.active { border-color:var(--brand); color:var(--brand); background:var(--brand-lightest); }
+.sg-seccion { transition: opacity 0.2s ease; }
 .sg-fecha-item { background:var(--surface-2); border:1.5px solid var(--border-light); border-radius:12px; margin-bottom:8px; overflow:hidden; cursor:pointer; transition:border-color 0.15s; }
 .sg-fecha-item:hover { border-color:var(--brand); }
 .sg-fecha-item.sel { border-color:var(--brand); background:var(--brand-lightest); }

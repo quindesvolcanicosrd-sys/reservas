@@ -1154,14 +1154,14 @@ async function reagendarReserva(params: Record<string, any>): Promise<Record<str
   return { exito: true };
 }
 
-async function getTallasDisponiblesParaFecha(params: Record<string, any>): Promise<Record<string, any>> {
+async function getTallasDisponiblesParaFecha(params: Record<string, any>): Promise<any[]> {
   const { fecha: idEvento, nombreExcluir } = params;
   const { data: tallas } = await supabase.from('equipamiento_tallas').select('talla, cantidad');
   const { data: reservas } = await supabase.from('reservas').select('talla, nombre_usuario').eq('id_evento', idEvento).neq('estado', 'Cancelada').not('talla', 'is', null);
   const usadas: Record<string, number> = {};
   (reservas ?? []).forEach((r: any) => { if (r.nombre_usuario === nombreExcluir) return; usadas[r.talla] = (usadas[r.talla] ?? 0) + 1; });
   const result = (tallas ?? []).map((t: any) => ({ talla: t.talla, disponibles: Math.max(0, t.cantidad - (usadas[t.talla] ?? 0)) }));
-  return { tallas: result };
+  return result;
 }
 
 async function actualizarTallaReserva(params: Record<string, any>): Promise<Record<string, any>> {

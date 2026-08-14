@@ -2952,8 +2952,8 @@ function _evDetalleStickyHtml(ev) {
 // mismas clases que usa el panel "Más información" de Reservas). Todas acá,
 // afuera del sticky, scrollean con el resto del contenido.
 function _evDetalleInfoHtml(ev) {
-  var desc = _EV_DESCRIPCION_POR_TIPO[ev.tipo];
-  var mapsUrl = _EV_MAPS_URL_POR_LUGAR[ev.lugar];
+  var desc = ev.descripcion || _EV_DESCRIPCION_POR_TIPO[ev.tipo] || '';
+  var mapsUrl = ev.mapsUrl || _EV_MAPS_URL_POR_LUGAR[ev.lugar] || '';
   return '<div class="fi-pills">' +
       (mapsUrl
         ? '<a class="fi-pill fi-pill-lugar" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</a>'
