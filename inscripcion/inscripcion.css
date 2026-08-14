@@ -389,6 +389,21 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
 }
 .modal-ct-close:hover { background: var(--bg-2); }
 
+/* ─── MODAL WHATSAPP (paso 6, omitir/unirse antes de enviar) ─────────── */
+.modal-wp-overlay {
+  display: none; position: fixed; inset: 0; z-index: 9700;
+  background: var(--overlay); align-items: center; justify-content: center;
+  padding: 16px;
+}
+.modal-wp-card {
+  background: var(--surface); border-radius: 20px;
+  padding: 28px 24px; width: 100%; max-width: 380px; text-align: center;
+}
+.modal-wp-icono { font-size: 44px; margin-bottom: 12px; }
+.modal-wp-card h3 { color: var(--text); margin-bottom: 8px; }
+.modal-wp-card p { color: var(--muted); font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px; }
+.modal-wp-card .btn-primary { display: flex; justify-content: center; margin-bottom: 12px; }
+
 /* ─── FNAC TRIGGER ──────────────────────────────────────────────────── */
 .fnac-trigger-btn {
   width:100%; display:flex; align-items:center; justify-content:space-between;

@@ -15,6 +15,7 @@ var _inscCurIdx = 0;
 var _inscVinoConToken = false;
 var _inscNecesitaPatines = false;
 var _inscWpUnido = false;
+var _inscWpSkipped = false;
 var _inscEnviando = false;
 var _inscProtecOtro = '';
 var _inscTallasListo = false;
@@ -343,7 +344,7 @@ function cerrarModalEdadBloqueo() {
 
 /* ── Paso 3: nombre y pronombres ────────────── */
 function inscValidarNombre(inp) {
-  inp.value = inp.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]/g, '');
+  inp.value = inp.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s'.\-_]/g, '');
 }
 
 function inscTogglePron(el) {
@@ -385,7 +386,7 @@ function _inscGetPronombres() {
 function inscContinuar3() {
   var nombre = (document.getElementById('f-nombre').value || '').trim();
   if (!nombre || nombre.length < 2) { errMsg('err-p3', 'El nombre debe tener al menos 2 caracteres.'); return; }
-  if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]+$/.test(nombre)) { errMsg('err-p3', 'El nombre solo puede contener letras y espacios.'); return; }
+  if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ0-9\s'.\-_]+$/.test(nombre)) { errMsg('err-p3', 'El nombre contiene caracteres no permitidos.'); return; }
   var prons = _inscGetPronombres();
   if (!prons) { errMsg('err-p3', 'Selecciona al menos un pronombre.'); return; }
   mostrarCargando('Verificando disponibilidad...');
@@ -555,6 +556,23 @@ function inscWpUnido() {
   var btn = document.getElementById('btn-wp-grupo-insc');
   if (btn) { btn.className = 'btn-wp-activo'; btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:1.2rem;vertical-align:middle;">check_circle</span> ¡Ya estás en el grupo!'; }
 }
+function _inscMostrarModalWp() {
+  document.getElementById('modal-wp-insc').style.display = 'flex';
+}
+function inscWpDesdeModal() {
+  _inscWpUnido = true;
+  document.getElementById('modal-wp-insc').style.display = 'none';
+  var btn = document.getElementById('btn-wp-grupo-insc');
+  if (btn) {
+    btn.className = 'btn-wp-activo';
+    btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:22px;margin-right:8px;">check_circle</span> ¡Ya estás en el grupo!';
+  }
+}
+function inscWpSkipModal() {
+  _inscWpSkipped = true;
+  document.getElementById('modal-wp-insc').style.display = 'none';
+  inscEnviar();
+}
 function inscTogglePinVis() {
   var inp = document.getElementById('f-pin');
   var ico = document.getElementById('insc-pin-ico');
@@ -565,6 +583,10 @@ function inscTogglePinVis() {
 function inscEnviarSinPin() { document.getElementById('f-pin').value = ''; inscEnviar(); }
 function inscEnviar() {
   if (_inscEnviando) return;
+  if (!_inscWpUnido && !_inscWpSkipped) {
+    _inscMostrarModalWp();
+    return;
+  }
   _inscEnviando = true;
   var nombre = G.nombre;
   var prons = _inscGetPronombres();
