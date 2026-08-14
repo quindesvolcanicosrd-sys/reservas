@@ -19,7 +19,7 @@ var MAPS_API_KEY = 'AIzaSyDSGkh2AyuM_-6ngo5-XMPi0NYrXZHEBl8';
 // console.warn, sin toast), mismo comportamiento ya previsto para cualquier
 // error de ese fetch.
 var SUPABASE_URL = 'https://uusbnreitoobqssizbfq.supabase.co';
-var SUPABASE_ANON_KEY = '';
+var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1c2JucmVpdG9vYnFzc2l6YmZxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYwNDg2NDgsImV4cCI6MjEwMTYyNDY0OH0.1LkHIpmhaA8pY_BKFGMiKK4VHoNzQcVAX05DC1BV4Wk';
 
 function sha256Hex(str) {
   var data = new TextEncoder().encode(str);
