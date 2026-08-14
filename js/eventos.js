@@ -4724,45 +4724,42 @@ function irEvLugares() {
 // de Apps Script (`getVenues()`, ver MANIFEST.md "Backend — Venues"):
 // `{fila,nombre,mapsUrl,lat,lng,tipoIcono,requiereReserva,tipoRecurrencia,
 // diasSemana,frecuenciaNumero,frecuenciaUnidad,fechaReferencia,hora}`.
-// **Columnas CONFIRMADAS** contra `supabase/functions/api/index.ts`
-// (`adminGetVenues()`/`_mapaTipoIconoPorLugar()`/`_mapaRequiereReservaPorLugar()`)
-// y contra `_evAdminEditarEvento()` (PATCH a `venues.hora`, ver "Cambios
-// recientes"): `id`, `lugar`, `tipo_icono`, `requiere_reserva` (boolean
-// real, `!== false` mismo criterio que ya usa el Edge Function 2 veces),
-// `hora`. **Columnas SIN confirmar** (nunca leídas/escritas desde ningún
-// código de este repo hasta ahora, ni por el Edge Function ni por ningún
-// fetch directo -- nombre razonable por la misma convención snake_case que
-// el resto del esquema, ej. `asistencias.google_maps`/`info_adicional`):
-// `google_maps`/`lat`/`lng`/`tipo_recurrencia`/`dias_semana`/`frecuencia`/
-// `unidad`/`fecha_referencia`. Si la lista carga bien (ya no tira el error
-// original) pero un lugar existente precarga mal su ubicación/recurrencia
-// al editarlo, empezar por confirmar estos nombres contra la tabla real
-// (ver "Tareas pendientes manuales" en MANIFEST.md).
+// **Columnas CONFIRMADAS por Victor** contra el esquema real de `venues`
+// (ver MANIFEST.md "Cambios recientes" -- tabla completa): `id`, `lugar`,
+// `tipo_icono`, `requiere_reserva` (boolean real, `!== false`), `inicia`
+// (la hora -- OJO, no `hora`), `google_maps`, `tipo` (no `tipo_recurrencia`),
+// `dias` (no `dias_semana`), `frecuencia`, `unidad`, `fecha_referencia`.
+// **`lat`/`lng` NO EXISTEN en la tabla** -- confirmado por Victor, no un
+// nombre distinto: el pin del mapa no tiene forma de recentrarse a la
+// ubicación real guardada al editar un venue existente (cae al fallback
+// `_EV_LUGAR_QUITO_LATLNG`, ver `_evLugarInicializarMapa()` más abajo) hasta
+// que la tabla sume esas columnas -- señalado, no resuelto acá (fuera de
+// alcance de esta corrección, que es solo de mapeo).
 function _evMapVenueSupabase(v) {
   return {
     fila: v.id,
     nombre: v.lugar || '',
-    mapsUrl: v.google_maps || v.maps_url || v.mapsUrl || null,
-    lat: (typeof v.lat === 'number') ? v.lat : null,
-    lng: (typeof v.lng === 'number') ? v.lng : null,
+    mapsUrl: v.google_maps || null,
+    lat: null,
+    lng: null,
     tipoIcono: v.tipo_icono || null,
     requiereReserva: v.requiere_reserva !== false,
-    tipoRecurrencia: v.tipo_recurrencia || null,
-    diasSemana: _evLugarParseDiasSemana(v.dias_semana),
+    tipoRecurrencia: v.tipo || null,
+    diasSemana: _evLugarParseDiasSemana(v.dias),
     frecuenciaNumero: v.frecuencia || null,
     frecuenciaUnidad: v.unidad || null,
     fechaReferencia: v.fecha_referencia || null,
-    hora: v.hora || ''
+    hora: v.inicia || ''
   };
 }
-// `dias_semana` sin confirmar si Supabase lo devuelve como array real
-// (Postgres `int[]`/`smallint[]`, lo más probable para un esquema nuevo --
-// PostgREST ya lo entrega como array de JS nativo) o como texto -- tolera
-// ambos: array directo (números), string JSON (`"[1,3,5]"`) o CSV numérico
-// (`"1,3,5"`). NO tolera el formato viejo de nombres de día en texto
-// (`"Lunes,Miércoles"`, el que usaba la hoja de Sheets) -- ese formato no
-// debería sobrevivir a una migración a un esquema nuevo de Supabase, pero
-// si Victor confirma que sí, esta función necesita un caso más.
+// `dias` -- nombre de columna confirmado por Victor, pero el FORMATO en el
+// que Supabase lo devuelve no -- tolera array real (Postgres
+// `int[]`/`smallint[]`, lo más probable para un esquema nuevo -- PostgREST
+// ya lo entrega como array de JS nativo), string JSON (`"[1,3,5]"`) o CSV
+// numérico (`"1,3,5"`). NO tolera el formato viejo de nombres de día en
+// texto (`"Lunes,Miércoles"`, el que usaba la hoja de Sheets) -- ese formato
+// no debería sobrevivir a una migración a un esquema nuevo de Supabase,
+// pero si Victor confirma que sí, esta función necesita un caso más.
 function _evLugarParseDiasSemana(raw) {
   if (Array.isArray(raw)) return raw.map(Number).filter(function(n) { return !isNaN(n); });
   if (typeof raw === 'string' && raw.trim()) {
@@ -5198,13 +5195,22 @@ function _evLugarValido() {
 }
 
 // Guardado real -- crearVenue (sin _evLugarData.fila) o editarVenue (con
-// fila) según corresponda, mismas 2 firmas documentadas en MANIFEST.md para
-// que Victor las aplique en Code.gs. Ambas ejecutan la reconciliación
-// (ver "Backend — Venues" en MANIFEST) en la misma llamada -- no hace falta
-// ningún refresco adicional del lado del frontend para que los próximos
-// eventos ya existan, la Tanda de "Eventos al backend real" (pendiente, ver
-// "Cambios recientes" de Asistencia Anticipada) es la que eventualmente los
-// mostrará en el timeline.
+// fila) según corresponda. ⚠️ Esas 2 acciones (sin prefijo `admin`) NO
+// existen en el router de `supabase/functions/api/index.ts` -- solo
+// `adminCrearVenue`/`adminEditarVenue` (que hacen `insert(datos)`/
+// `update(datos)` directo sobre `venues` con el objeto TAL CUAL, sin
+// traducir nombres de campo) están registradas ahí. Este guardado sigue
+// roto/sin desplegar, señalado pero fuera de alcance de esta corrección --
+// que es solo de nombres de columna en el payload, para que el día que se
+// apunte a la acción real (o a un `fetch()` directo, mismo criterio que
+// `irEvLugares()`/`_evCrearCargarLugares()`) las claves ya sean las
+// correctas y no haga falta tocarlas de nuevo.
+// Nombres de columna reales de `venues` (confirmados por Victor, ver
+// MANIFEST.md "Cambios recientes" -- misma tabla que `_evMapVenueSupabase()`
+// usa en sentido inverso): `inicia` (hora), `google_maps` (mapsUrl), `tipo`
+// (tipoRecurrencia), `dias` (diasSemana), `frecuencia`, `unidad`,
+// `fecha_referencia`. `lat`/`lng` NO EXISTEN en la tabla -- sacados del
+// payload por completo, no solo renombrados.
 function _evLugarGuardar() {
   if (!_evLugarValido()) return;
   // "¿Requiere reserva?" ya no es una pregunta propia del form (ver
@@ -5216,23 +5222,21 @@ function _evLugarGuardar() {
     action: _evLugarData.fila ? 'editarVenue' : 'crearVenue',
     adminToken: _adminToken,
     nombre: _evLugarData.nombre.trim(),
-    mapsUrl: _evLugarData.mapsUrl,
-    lat: _evLugarData.lat,
-    lng: _evLugarData.lng,
+    google_maps: _evLugarData.mapsUrl,
     tipoIcono: _evLugarData.tipoIcono,
     requiereReserva: requiereReserva,
-    tipoRecurrencia: _evLugarData.tipoRecurrencia,
-    hora: _evLugarData.hora
+    tipo: _evLugarData.tipoRecurrencia,
+    inicia: _evLugarData.hora
   };
   if (_evLugarData.fila) payload.idRegla = _evLugarData.fila;
   if (_evLugarData.tipoRecurrencia === 'dias_semana') {
-    payload.diasSemana = JSON.stringify(_evLugarData.diasSemana.slice().sort(function(a, b) { return a - b; }));
+    payload.dias = JSON.stringify(_evLugarData.diasSemana.slice().sort(function(a, b) { return a - b; }));
   } else if (_evLugarData.tipoRecurrencia === 'cada_tantos') {
     payload.frecuencia = _evLugarData.frecuenciaNumero;
     payload.unidad = _evLugarData.frecuenciaUnidad;
-    payload.fechaReferencia = _evLugarData.fecha;
+    payload.fecha_referencia = _evLugarData.fecha;
   } else {
-    payload.fechaReferencia = _evLugarData.fecha;
+    payload.fecha_referencia = _evLugarData.fecha;
   }
 
   mostrarCargando(_evLugarData.fila ? 'Guardando cambios...' : 'Creando lugar...');

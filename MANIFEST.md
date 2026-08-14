@@ -41,11 +41,9 @@ Cosas que requieren acción humana en el SQL Editor de Supabase (dashboard del p
   ```
   Si la columna ya existe con otro tipo/nombre, avisar para ajustar el body que arman `_evCrearUnicoGuardar()`/`_evAdminEditarEvento()` (`js/eventos.js`) en vez de la tabla.
 
-- **Confirmar 8 nombres de columna de la tabla `venues`** (ver "Cambios recientes" — fix de "Gestionar venues"). `_evMapVenueSupabase()` (`js/eventos.js`) asume `google_maps`/`lat`/`lng`/`tipo_recurrencia`/`dias_semana`/`frecuencia`/`unidad`/`fecha_referencia` por la misma convención snake_case que el resto del esquema — **ninguna de las 8 está confirmada** contra la tabla real (nunca las leyó/escribió ningún código de este repo hasta ahora). Las 5 columnas que SÍ están confirmadas (`id`/`lugar`/`tipo_icono`/`requiere_reserva`/`hora`, ya usadas por `supabase/functions/api/index.ts` y por `_evAdminEditarEvento()`) no necesitan nada. Para confirmar las 8 restantes de una sola vez, correr en el SQL Editor:
-  ```sql
-  SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'venues' ORDER BY ordinal_position;
-  ```
-  Si algún nombre difiere, avisar para ajustar `_evMapVenueSupabase()` — la lista carga bien de cualquier manera (los campos ausentes caen a `null`/`[]` sin romper nada), pero un lugar existente puede precargar mal su ubicación/recurrencia al editarlo hasta que esto se confirme.
+- **✅ RESUELTO — columnas de `venues` confirmadas por Victor.** La tarea de abajo ("Confirmar 8 nombres de columna") queda resuelta; el mapeo real quedó documentado en "Cambios recientes" (`_evMapVenueSupabase()`/`_evLugarGuardar()`) con la tabla completa columna-por-campo.
+
+- **Corregir `_evAdminEditarEvento()` (modo `'desde_aqui'`) -- PATCHea `venues.hora`, columna que NO existe.** Encontrado al confirmar las columnas reales de `venues` (ver "Cambios recientes" — corrección de nombres de columna): `venues?id=eq.<idRegla>` con `{hora: campos.inicia}` (`js/eventos.js`, línea con `patch(SUPABASE_URL + '/rest/v1/venues?id=eq.' + ...`) debería mandar `{inicia: campos.inicia}` — la columna real de la hora en `venues` es `inicia`, no `hora` (mismo error que tenía `_evMapVenueSupabase()` antes de esta corrección). **No corregido en esta pasada** — `_evAdminEditarEvento()` no fue parte del pedido de la corrección de columnas, señalado acá para una tanda aparte. Hasta que se corrija, editar un evento con `modo:'desde_aqui'` y una hora nueva actualiza bien las filas de `asistencias` pero el PATCH a `venues` probablemente falla en silencio o con un error de PostgREST ("column hora does not exist") sin que el usuario lo note (esa 2ª llamada solo dispara `onOk()`/`onErr()` de la función completa, sin un toast propio distinto) — la regla de recurrencia seguiría generando eventos futuros con la hora VIEJA.
 
 ---
 
@@ -408,6 +406,31 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
 | `body.ev-ant-footer-visible #app-toast` | **Nuevo (ver "Cambios recientes")** — sube el toast global (`#app-toast`, css/estilos.css, `bottom:28px` fijo de fábrica) para que en `#s-eventos-anticipada` quede justo encima de `#cta-footer-eventos-anticipada` en vez de tapar las pills del wizard. `#app-toast` es un `<div>` creado por JS y agregado directo a `<body>` la primera vez que corre `mostrarToast()` (mismo criterio de "`position:fixed` va directo en `<body>`, no dentro de `.pantalla`/`.card`" que ya rige `.cta-footer-fixed`) — el override también apunta ahí sin anidarlo dentro de ninguna pantalla. `body.ev-ant-footer-visible` la togglean `_evAntActualizarFooter()`/`_evAntOcultarFooter()` (js/eventos.js) junto con el propio footer |
 
 ### Cambios recientes
+- **Corrección de nombres de columna de `venues` — Victor confirmó el esquema real, varios de los nombres que `_evMapVenueSupabase()`/`_evLugarGuardar()` habían asumido por convención (sin poder verificarlos, ver la entrada anterior) resultaron incorrectos.**
+
+  **Tabla completa, campo interno (JS) → columna real en Supabase:**
+
+  | Campo JS (`_evLugarData`/objeto mapeado) | Columna real en `venues` |
+  |---|---|
+  | `hora` | `inicia` (¡no `hora`!) |
+  | `mapsUrl` | `google_maps` (esta ya estaba bien) |
+  | `tipoRecurrencia` | `tipo` (no `tipo_recurrencia`) |
+  | `diasSemana` | `dias` (no `dias_semana`) |
+  | `frecuenciaNumero` | `frecuencia` (ya estaba bien) |
+  | `frecuenciaUnidad` | `unidad` (ya estaba bien) |
+  | `fecha` (guardado como `fechaReferencia`) | `fecha_referencia` (ya estaba bien) |
+  | `lat` / `lng` | **no existen en la tabla** — no es un nombre distinto, la columna no está |
+
+  `id`/`lugar`/`tipo_icono`/`requiere_reserva` (ya confirmadas en la entrada anterior) sin cambios.
+
+  **`_evMapVenueSupabase()` (lectura, `js/eventos.js`)** — actualizada con los 4 nombres corregidos (`inicia`/`tipo`/`dias`, más `google_maps` que ya estaba bien); `lat`/`lng` pasan a `null` incondicional (no se leen de `v.lat`/`v.lng`, esas claves ni existen en la fila que devuelve Supabase) — el pin del mapa no tiene forma de recentrarse a la ubicación real guardada al editar un venue existente hasta que la tabla sume esas columnas (cae al fallback `_EV_LUGAR_QUITO_LATLNG`), señalado en el comentario de la función, no resuelto acá (no era parte del pedido).
+
+  **`_evLugarGuardar()` (escritura, `js/eventos.js`)** — el payload que arma para `crearVenue`/`editarVenue` pasa a usar las mismas 4 claves reales (`inicia`/`google_maps`/`tipo`/`dias`) en vez de las camelCase viejas; `lat`/`lng` sacados del payload por completo (ya no se envían). **⚠️ Nota de alcance real, no resuelta:** esas 2 acciones (`crearVenue`/`editarVenue`, sin prefijo `admin`) siguen sin existir en el router de `supabase/functions/api/index.ts` — solo `adminCrearVenue`/`adminEditarVenue` están registradas ahí, y hacen `insert(datos)`/`update(datos)` directo sobre `venues` con el objeto tal cual (sin traducir nombres de campo), razón de más para que el payload ya use las claves reales desde ahora. El guardado en sí sigue roto/sin desplegar — corregir los nombres de columna no lo destraba, solo evita que haga falta retocarlos otra vez el día que se apunte a la acción real (o a un `fetch()` directo, mismo criterio que `irEvLugares()`/`_evCrearCargarLugares()`).
+
+  **Bug relacionado encontrado de paso, señalado en "Tareas pendientes manuales" — `_evAdminEditarEvento()` (modo `'desde_aqui'`) PATCHea `venues.hora`**, la misma columna que ahora se confirmó que no existe (es `inicia`). No corregido en esta pasada (no fue parte del pedido, que fue específicamente `_evMapVenueSupabase()`/`_evLugarGuardar()`).
+
+  **Cache-busting (`index.html`)** — único archivo tocado además de `index.html` mismo, `js/eventos.js`, recalculado a mano.
+
 - **`_evCrearCargarLugares()` (Paso 1 del wizard "Crear evento", `#s-eventos-crear`) migrada a Supabase directo — mismo fix que `irEvLugares()` de la entrada anterior, señalado ahí como "fuera de alcance" y ahora confirmado con el mismo síntoma.**
 
   Esta función arma la lista de venues existentes que el Paso 1 de "Crear evento" ofrece como pill seleccionable (elegir un lugar ya creado para arrancar una regla de recurrencia nueva sobre él, ver esa entrada más abajo en este MANIFEST) — pedía el MISMO `action:'getVenues'` roto (Apps Script, nunca desplegada tras la migración de Venues a Supabase) que `irEvLugares()`. Fix idéntico: `fetch()` directo a `SUPABASE_URL + '/rest/v1/venues?select=*&order=lugar.asc'`, mapeando cada fila con `_evMapVenueSupabase()` (la misma función nueva de la entrada anterior, sin duplicar) antes de asignar a `_evLugares` y repintar (`_evCrearRenderLugares()`, sin cambios — ya trabajaba sobre `_evLugares` sin saber de dónde salía). Ningún otro punto de `irEvCrear()`/el wizard de "Crear evento" se tocó — ni el Paso 0 en sí (buscador local, mini-formulario de lugar nuevo), ni el Paso 2 (recurrencia/hora), ni el guardado (`_evCrearGuardar()`, que sigue en `apiPost({action:'crearVenue',...})`, la acción vieja también sin desplegar — fuera de alcance de esta tanda, no pedido).
