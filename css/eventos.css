@@ -603,7 +603,15 @@
    cuadrado de fondo que tenía antes (`.ev-detalle-icon-grande`, eliminada) --
    compite menos con el botón circular de la flecha atrás al lado. */
 .ev-detalle-nav-icono { color: var(--brand); font-size: 22px; flex-shrink: 0; }
-.ev-detalle-nav-texto { min-width: 0; }
+/* `flex:1` (ver MANIFEST.md "Cambios recientes" -- ícono "Editar evento" del
+   sticky nav): antes solo `min-width:0`, sin crecer -- suficiente cuando
+   `.ev-detalle-nav-row` no tenía nada después. Con el `.app-nav-actions` del
+   ícono `edit` (admin, `_evDetalleStickyHtml()`) como hermano siguiente,
+   este bloque necesita ocupar el resto del ancho disponible para empujarlo
+   al borde derecho de la fila -- mismo criterio que `.app-nav` genérica
+   (`justify-content:space-between`), acá resuelto con `flex:1` porque
+   `.ev-detalle-nav-row` no usa ese layout. */
+.ev-detalle-nav-texto { min-width: 0; flex: 1; }
 /* `font-size`/`letter-spacing` igualados a `.app-nav-title` (css/nav.css,
    ver "Cambios recientes" -- auditoría de consistencia de nav: antes
    0.74rem/0.6px, más chico que el estándar 0.86rem/1.2px que ya comparten
@@ -628,11 +636,6 @@
    al contenedor real de esta pantalla, sin tocar `.fi-pills` en sí. */
 #ev-detalle-info .fi-pills { margin-bottom: 14px; }
 .ev-detalle-desc { font-size: 0.85rem; color: var(--text-2); line-height: 1.65; margin: 0; }
-/* "Editar evento" (admin, ver MANIFEST.md "Cambios recientes" -- Tanda A del
-   rediseño de Eventos) -- vive dentro de _evDetalleInfoHtml()/js/eventos.js,
-   después de la descripción. .btn.btn-outline ya trae el look (ui.css), acá
-   solo se agrega el margen que lo separa del contenido de arriba. */
-.ev-detalle-editar-btn { margin-top: 14px; }
 .ev-detalle-titulo-seccion { font-size: 1rem; font-weight: 800; color: var(--text); margin-bottom: 12px; }
 /* Grid de 4 tarjetas de estadística (ver "Cambios recientes" -- reemplaza
    la línea de texto "Asisten X · No asisten X..."), cada una tocable para
@@ -1214,24 +1217,29 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 .ev-hora-stepper-sep { font-size: 1.6rem; font-weight: 800; color: var(--text); padding-bottom: 8px; }
 .ev-hora-stepper-meridiano { display: flex; gap: 8px; }
 
-/* Footer de #ev-editar-sheet ("Editar evento", admin -- ver MANIFEST.md
-   "Cambios recientes", Tanda A del rediseño de Eventos) -- mismo look que
-   .cta-footer-fixed (padding + safe-area + separador superior, css/
-   estilos.css) pero SIN position:fixed: un descendiente position:fixed
-   anidado dentro de #ev-editar-sheet (.bsheet, que anima su propio
-   `transform` al abrir/cerrar) quedaría atrapado por ese containing block
-   dinámico -- el mismo bug ya documentado para .pantalla.activa/
-   smoothSlideUp que .cta-footer-fixed existe justamente para evitar. Acá
-   alcanza con ser el último hijo flex-shrink:0 de #ev-editar-sheet (ya
-   display:flex;flex-direction:column por .bsheet), debajo del
-   .bsheet-body scrolleable (flex:1;overflow-y:auto, inline en index.html). */
-.ev-editar-footer {
-  flex-shrink: 0;
-  padding: 12px var(--space-screen) calc(env(safe-area-inset-bottom, 0px) + 12px);
-  background: var(--bg);
-  border-top: 0.5px solid var(--border-light);
-}
-.ev-editar-footer .btn { margin: 0; }
+/* #s-eventos-editar ("Editar evento", admin, ver MANIFEST.md "Cambios
+   recientes") -- pantalla de página completa, reemplaza el bottom sheet de
+   la tanda anterior por completo. Las 3 filas del paso 0 (Lugar/Horario/
+   Descripción) reusan `.ev-ant-acc-header`/`-body`/`-titulo`/`-resumen`/
+   `-chevron` TAL CUAL (más abajo en este archivo, acordeón de Asistencia
+   anticipada) -- mismo chrome/mecánica de expandir (max-height+opacity,
+   chevron que rota), la única diferencia real es que acá NUNCA se cierran
+   las otras filas al abrir una (`_evEditarToggleCampo()`, js/eventos.js, no
+   llama a ningún "cerrar las demás" -- pedido explícito: "se pueden
+   expandir y editar varios campos, en cualquier orden"). El calendario de
+   "Por período" del paso 1 reusa igual de literal `.ev-ant-cal-nav*`/
+   `.ev-cal-grid`/`.ev-ant-fecha-pill`/`.ev-ant-rango-linea`/
+   `.ev-ant-rango-fila`/`.ev-ant-btn-restablecer-icono` (todas más abajo en
+   este archivo) -- cero CSS de calendario propio para esta pantalla. */
+.ev-editar-campo-icono { color: var(--brand); font-size: 20px; flex-shrink: 0; }
+/* Color neutro del valor colapsado de una fila SIN cambio pendiente (ver
+   comentario de arriba) -- `.ev-ant-acc-resumen` sola ya es brand por
+   default (pensada para "esto es lo que ya elegiste", siempre un color de
+   marca en Asistencia anticipada); acá el default debe ser neutro (todavía
+   no hay ningún cambio) y pasar a brand recién cuando el campo SÍ cambió --
+   el "indicador sutil de modificado" pedido. `_evEditarActualizarResumenCampo()`
+   agrega/saca esta clase según `_evEditarCambios` tenga o no esa clave. */
+.ev-ant-acc-resumen.ev-editar-valor-original { color: var(--text-2); font-weight: 600; }
 
 @media (prefers-color-scheme: dark) {
   .ev-crear-venue-card.activa { background: var(--brand-20); }

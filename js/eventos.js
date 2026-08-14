@@ -2930,6 +2930,16 @@ function _evCancelarEvento(idEvento, btn) {
 // pills (ver "Cambios recientes" -- rediseño, las 4 se unificaron en
 // _evDetalleInfoHtml(), afuera del sticky) -- este nivel 1 queda liviano a
 // propósito, mide menos alto que antes.
+// Ícono "Editar evento" (admin, ver MANIFEST.md "Cambios recientes" -- flujo
+// de edición para admin, reemplaza el bottom sheet #ev-editar-sheet de la
+// tanda anterior por completo) -- lado derecho, mismo patrón que usan otras
+// pantallas para acciones del top bar (`.app-nav-actions > .app-nav-icon-btn`,
+// css/nav.css, ver TOP_BAR_CONFIG en js/ui.js para el resto de ejemplos)
+// aunque esta pantalla no pase por TOP_BAR_CONFIG (nav propia, ver arriba).
+// `.ev-detalle-nav-texto` suma `flex:1` (css/eventos.css) para empujar este
+// bloque al borde derecho de `.ev-detalle-nav-row`. Navega a
+// `#s-eventos-editar` vía `_evEditarAbrir()` (más abajo en este archivo), que
+// arma el estado inicial del flujo antes de `ir()`.
 function _evDetalleStickyHtml(ev) {
   return '<div class="ev-detalle-nav-row">' +
       '<button class="app-nav-back" onclick="volver(\'s-eventos\')" title="Volver"><span class="material-symbols-outlined">arrow_back</span></button>' +
@@ -2938,6 +2948,9 @@ function _evDetalleStickyHtml(ev) {
         '<div class="ev-detalle-tipo">' + ev.tipo + '</div>' +
         '<div class="ev-detalle-fechahora">' + _evFechaCompleta(ev.fecha) + '</div>' +
       '</div>' +
+      (_adminToken
+        ? '<div class="app-nav-actions"><button type="button" class="app-nav-icon-btn" onclick="_evEditarAbrir()" title="Editar evento" aria-label="Editar evento"><span class="material-symbols-outlined">edit</span></button></div>'
+        : '') +
     '</div>';
 }
 // Las 3 pills juntas -- Ubicación/Inicio/Fin, ver "Cambios recientes" --
@@ -2961,32 +2974,65 @@ function _evDetalleInfoHtml(ev) {
       '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + ev.horaInicio + 'hs</span>' +
       '<span class="fi-pill fi-pill-fin"><span class="material-symbols-outlined">schedule</span>Fin ' + _evHoraFin(ev) + 'hs</span>' +
     '</div>' +
-    (desc ? '<p class="ev-detalle-desc">' + desc + '</p>' : '') +
-    // Botón "Editar evento" (admin, ver MANIFEST.md "Cambios recientes" --
-    // Tanda A del rediseño de Eventos) -- .btn.btn-outline genérico
-    // (ui.css), .ev-detalle-editar-btn solo agrega el margen. Abre
-    // #ev-editar-sheet (_evAbrirEditarEvento(), más abajo en este archivo).
-    (_adminToken
-      ? '<button type="button" class="btn btn-outline ev-detalle-editar-btn" onclick="_evAbrirEditarEvento()"><span class="material-symbols-outlined" style="vertical-align:middle;margin-right:6px;">edit</span>Editar evento</button>'
-      : '');
+    (desc ? '<p class="ev-detalle-desc">' + desc + '</p>' : '');
 }
 
 /* ═══════════════════════════════════════════════════════
-   "Editar evento" (admin, #s-eventos-detalle, ver MANIFEST.md "Cambios
-   recientes" -- Tanda A del rediseño de Eventos) -- bottom sheet propio
-   (#ev-editar-sheet, index.html), NO un wizard de página completa como
-   #s-eventos-crear/#s-eventos-anticipada: contenido revelado en un solo
-   scroll (mismo criterio que _evCrearMostrarSubRecurrencia()/el acordeón de
-   Asistencia anticipada, ningún bottom sheet de esta app navega "pantalla a
-   pantalla" propia) -- elegir qué cambiar (Lugar/Horario/Lugar y horario)
-   revela los campos correspondientes (pills de lugar y/o el stepper de hora
-   genérico, _evHoraStepper* reusado tal cual de #s-eventos-crear) y, debajo,
-   a cuáles eventos aplica (individual/desde acá en adelante/por período,
-   este último revela el date picker "Hasta el"). adminEditarEvento todavía
-   no existe en el backend (pendiente, ver MANIFEST.md) -- el frontend queda
-   listo para llamarla.
+   "Editar evento" (admin, ver MANIFEST.md "Cambios recientes") --
+   #s-eventos-editar, pantalla de página completa (REEMPLAZA por completo el
+   bottom sheet #ev-editar-sheet de la tanda anterior, eliminado de
+   index.html) -- mismo criterio que #s-eventos-crear/#s-eventos-anticipada:
+   un flujo con 2 "pasos" reales (campos a editar -> a cuáles eventos aplica)
+   se siente mejor como pantalla propia que apretado en un sheet. Header
+   propio (#ev-editar-header, .app-nav.app-nav-sticky, sin entrada en
+   TOP_BAR_CONFIG -- mismo motivo que #s-eventos-marcar-asistencia/
+   #s-eventos-anticipada) + footer fijo #cta-footer-s-eventos-editar
+   (.cta-footer-fixed, hijo directo de <body>, mostrado/ocultado solo por
+   `ir()` vía su id -- ver "Reglas globales del proyecto" § CTA footer).
+
+   Paso 0 (#ev-editar-paso-campos, `.salud-paso` -- mismo motor de 2 pasos
+   que #s-eventos-crear, `_EV_EDITAR_PASOS`/`_evEditarMostrarPaso()`, MISMA
+   transición fade/slide `smoothSlideUp` vía la clase reusada, sin CSS
+   nuevo): 3 filas editables (Lugar/Horario/Descripción), cada una un
+   `.ev-ant-acc-header`/`.ev-ant-acc-body` REUSADO tal cual del acordeón de
+   Asistencia anticipada (mismo chrome/mecánica de expandir -- max-height +
+   opacity + chevron que rota) pero SIN el criterio "una sola abierta a la
+   vez": `_evEditarToggleCampo()` nunca cierra las otras, las 3 se expanden y
+   editan en cualquier orden/combinación (pedido explícito). El valor
+   colapsado (`.ev-ant-acc-resumen`, mismo slot) lleva el modificador nuevo
+   `.ev-editar-valor-original` (css/eventos.css) cuando el campo NO tiene un
+   cambio pendiente (color neutro, `--text-2`) -- se saca esa clase apenas
+   hay un cambio real, cayendo al color brand ya default de
+   `.ev-ant-acc-resumen`, el "indicador sutil de modificado" pedido.
+   `_evEditarCambios` guarda SOLO los campos con un valor distinto al
+   original (`_evEditarOriginal`) -- es exactamente el objeto que viaja como
+   `campos` en el POST final (ver `_evEditarConfirmar()`).
+
+   Paso 1 (#ev-editar-paso-scope, mismo `.salud-paso`): "¿A cuáles eventos
+   aplica?" (pills de selección única, mismo `.aj-pill` de siempre) +, solo
+   para "Por un período", el calendario de rango (`_evEditarCal*`) -- MISMO
+   patrón visual que el calendario "Por período" de Asistencia anticipada
+   (`_evAntCal*`, más abajo en este archivo: `.ev-ant-cal-nav*`/
+   `.ev-ant-fecha-pill`/`.ev-ant-rango-linea`/`.ev-ant-rango-fila`/
+   `.ev-ant-btn-restablecer-icono`, todas reusadas TAL CUAL, cero CSS nuevo
+   para el calendario en sí) pero simplificado: acá la fecha de INICIO no se
+   elige -- siempre es `_evDetalleActual.fecha` (fija, se muestra como pill
+   no-clickeable), el calendario solo deja tocar la fecha de FIN. Confirmado
+   con Victor (la redacción original pedía "elegir fecha de inicio y fin",
+   pero el contrato del POST decía "fechaDesde: siempre la fecha del
+   evento" -- ambas cosas juntas solo tienen sentido si el inicio es fijo y
+   nunca se pide, ver el resto de esta tanda en "Cambios recientes").
    ═══════════════════════════════════════════════════════ */
-var _evEditarData = {};
+var _EV_EDITAR_PASOS = ['ev-editar-paso-campos', 'ev-editar-paso-scope'];
+var _evEditarPaso = 0;
+var _evEditarOriginal = { lugar: '', horaInicio: '', horaFin: '', descripcion: '' };
+var _evEditarCambios = {};
+var _EV_EDITAR_CLAVE = { lugar: 'lugar', horario: 'horaInicio', descripcion: 'descripcion' };
+var _evEditarHoraTemp = null;
+var _evEditarDescTemp = '';
+var _evEditarScope = null;
+var _evEditarFechaHasta = null;
+var _evEditarCal = { mostrado: null, touched: false };
 // Cache de venues para el picker de lugar -- null = todavía no pedido en
 // esta sesión, distinto de _evLugares (getVenues, el flujo viejo de "Crear
 // evento"/"Editar lugares", todavía sobre el contrato pre-Supabase, ver
@@ -2996,75 +3042,133 @@ var _evEditarData = {};
 // el shape `{fila,nombre,...}` de _evLugares).
 var _EV_VENUES = null;
 
-function _evAbrirEditarEvento() {
+// Entrada del flujo -- botón `edit` del sticky nav de #s-eventos-detalle
+// (ver _evDetalleStickyHtml()). Arma todo el estado ANTES de navegar (mismo
+// criterio que eventosAbrirAnticipada()/irEvCrear()): valores originales
+// desde `_evDetalleActual` (fuente única de verdad, ya en memoria, sin
+// request nuevo), cambios/scope en blanco, las 3 filas colapsadas.
+function _evEditarAbrir() {
   var ev = _evDetalleActual;
   if (!ev || !_adminToken) return;
-  _evEditarData = { campo: null, valorLugar: ev.lugar, valorHora: null, modo: null, fechaHasta: null };
-  document.querySelectorAll('#ev-editar-campo-pills .aj-pill, #ev-editar-alcance-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
-  ['ev-editar-campo-lugar', 'ev-editar-campo-horario', 'ev-editar-alcance-wrap', 'ev-editar-hasta-wrap'].forEach(function(id) {
-    var el = document.getElementById(id); if (el) el.style.display = 'none';
+  _evEditarOriginal = { lugar: ev.lugar, horaInicio: ev.horaInicio, horaFin: _evHoraFin(ev), descripcion: ev.descripcion || '' };
+  _evEditarCambios = {};
+  _evEditarScope = null;
+  _evEditarFechaHasta = null;
+  _evEditarCal = { mostrado: null, touched: false };
+  ['lugar', 'horario', 'descripcion'].forEach(function(campo) {
+    var header = document.getElementById('ev-editar-campo-' + campo + '-header');
+    var body = document.getElementById('ev-editar-campo-' + campo + '-body');
+    if (header) header.classList.remove('abierto');
+    if (body) body.classList.remove('abierto');
+    _evEditarActualizarResumenCampo(campo);
   });
-  var fechaInp = document.getElementById('ev-editar-fecha-hasta');
-  if (fechaInp) { fechaInp.value = ''; fechaInp.min = ev.fecha; }
-  _evEditarActualizarBoton();
-  var ov = document.getElementById('ev-editar-sheet-overlay');
-  var sh = document.getElementById('ev-editar-sheet');
-  if (ov) ov.style.display = 'block';
-  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); }); }
-  _registrarOverlayAbierto(_evCerrarEditarEvento);
+  document.querySelectorAll('#ev-editar-scope-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  var periodoWrap = document.getElementById('ev-editar-periodo-wrap');
+  if (periodoWrap) periodoWrap.style.display = 'none';
+  var restablecerBtn = document.getElementById('ev-editar-btn-restablecer');
+  if (restablecerBtn) restablecerBtn.style.display = 'none';
+  _evEditarMostrarPaso(0);
+  ir('s-eventos-editar');
 }
-function _evCerrarEditarEvento(porGesto) {
-  if (!porGesto) { history.back(); return; }
-  var sh = document.getElementById('ev-editar-sheet');
-  var ov = document.getElementById('ev-editar-sheet-overlay');
-  if (sh) sh.style.transform = 'translateY(100%)';
-  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+function _evEditarBack() {
+  if (_evEditarPaso === 1) { _evEditarMostrarPaso(0); return; }
+  ir('s-eventos-detalle');
 }
-// Paso 1 -- pills "¿Qué querés cambiar?", revela los campos de Paso 1b
-// (mismo patrón fadeIn "primera vez" que _evCrearMostrarSubRecurrencia()) y,
-// debajo, el Paso 2 ("¿A cuáles eventos aplica?") -- ambos conviven en el
-// mismo scroll, no son pantallas separadas.
-function _evEditarSelCampo(el) {
-  document.querySelectorAll('#ev-editar-campo-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
-  el.classList.add('activa');
-  _evEditarData.campo = el.dataset.val;
-  _evEditarMostrarCampos();
-  _evEditarActualizarBoton();
+// Motor de 2 pasos -- mismo mecanismo que _evCrearMostrarPaso() (más abajo
+// en este archivo): toggle de `.activo` sobre `.salud-paso` (fade/slide
+// `smoothSlideUp`, css/perfil.css, ya usado por Ficha de salud/Crear evento)
+// + footer que cambia texto/acción según el paso activo.
+function _evEditarMostrarPaso(idx) {
+  _EV_EDITAR_PASOS.forEach(function(id, i) {
+    var el = document.getElementById(id);
+    if (el) el.classList.toggle('activo', i === idx);
+  });
+  _evEditarPaso = idx;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  _evEditarActualizarFooter();
 }
-function _evEditarMostrarCampos() {
-  var campo = _evEditarData.campo;
-  var quiereLugar = campo === 'lugar' || campo === 'lugar_horario';
-  var quiereHora = campo === 'horario' || campo === 'lugar_horario';
-  var lugarWrap = document.getElementById('ev-editar-campo-lugar');
-  if (lugarWrap) {
-    var yaLugar = lugarWrap.style.display !== 'none';
-    lugarWrap.style.display = quiereLugar ? 'block' : 'none';
-    if (quiereLugar && !yaLugar) {
-      void lugarWrap.offsetWidth; lugarWrap.style.animation = 'fadeIn 0.2s ease';
-      _evEditarCargarVenues();
-    }
-  }
-  var horaWrap = document.getElementById('ev-editar-campo-horario');
-  if (horaWrap) {
-    var yaHora = horaWrap.style.display !== 'none';
-    horaWrap.style.display = quiereHora ? 'block' : 'none';
-    if (quiereHora && !yaHora) {
-      void horaWrap.offsetWidth; horaWrap.style.animation = 'fadeIn 0.2s ease';
-      _evHoraStepperInit('ev-editar-hora', _evDetalleActual ? _evDetalleActual.horaInicio : null, function(v) { _evEditarData.valorHora = v; _evEditarActualizarBoton(); });
-      _evEditarData.valorHora = _evHoraStepperA24h('ev-editar-hora');
-    }
-  }
-  var alcanceWrap = document.getElementById('ev-editar-alcance-wrap');
-  if (alcanceWrap) {
-    var yaAlcance = alcanceWrap.style.display !== 'none';
-    alcanceWrap.style.display = campo ? 'block' : 'none';
-    if (campo && !yaAlcance) { void alcanceWrap.offsetWidth; alcanceWrap.style.animation = 'fadeIn 0.2s ease'; }
+function _evEditarActualizarFooter() {
+  var btn = document.getElementById('ev-editar-btn-footer');
+  if (!btn) return;
+  if (_evEditarPaso === 0) {
+    btn.textContent = 'Guardar cambios';
+    btn.onclick = _evEditarIrScope;
+    btn.disabled = !_evEditarHayCambios();
+  } else {
+    btn.textContent = 'Confirmar';
+    btn.onclick = _evEditarConfirmar;
+    btn.disabled = !_evEditarScopeValido();
   }
 }
-// Lista de lugares del picker -- _EV_VENUES cacheado por sesión (mismo
-// criterio que _evRosterEquipo, más arriba en este archivo), preseleccionada
-// en el lugar actual del evento (_evEditarData.valorLugar ya arranca en
-// ev.lugar, ver _evAbrirEditarEvento()).
+function _evEditarHayCambios() { return Object.keys(_evEditarCambios).length > 0; }
+function _evEditarIrScope() {
+  if (!_evEditarHayCambios()) return;
+  _evEditarMostrarPaso(1);
+}
+
+/* ── Paso 0: filas editables -- toggle independiente por fila (sin cerrar
+   las demás, pedido explícito), reusa `.ev-ant-acc-header`/`.ev-ant-acc-body`
+   tal cual (ver comentario del bloque de arriba). `forzarAbrir` (opcional):
+   true/false fuerza el estado en vez de alternar -- usado por
+   _evEditarSelVenue() para el "colapsar con Listo automático" al elegir un
+   lugar. ──── */
+function _evEditarToggleCampo(campo, forzarAbrir) {
+  var header = document.getElementById('ev-editar-campo-' + campo + '-header');
+  var body = document.getElementById('ev-editar-campo-' + campo + '-body');
+  if (!header || !body) return;
+  var abrir = forzarAbrir !== undefined ? forzarAbrir : !header.classList.contains('abierto');
+  header.classList.toggle('abierto', abrir);
+  body.classList.toggle('abierto', abrir);
+  if (!abrir) return;
+  // Cada editor arranca desde el valor YA vigente (el cambio pendiente si
+  // existe, si no el original) cada vez que la fila se abre -- si el admin
+  // la cierra sin tocar "Listo" no se pierde nada (nunca se llegó a
+  // confirmar) y, si la vuelve a abrir, ve el último valor confirmado.
+  if (campo === 'lugar') _evEditarCargarVenues();
+  else if (campo === 'horario') {
+    _evHoraStepperInit('ev-editar-hora', _evEditarCambios.horaInicio || _evEditarOriginal.horaInicio, function(v) { _evEditarHoraTemp = v; });
+    _evEditarHoraTemp = _evHoraStepperA24h('ev-editar-hora');
+  } else if (campo === 'descripcion') {
+    var inp = document.getElementById('ev-editar-descripcion-input');
+    var valorVigente = _evEditarCambios.hasOwnProperty('descripcion') ? _evEditarCambios.descripcion : _evEditarOriginal.descripcion;
+    if (inp) inp.value = valorVigente;
+    _evEditarDescTemp = valorVigente;
+  }
+}
+// Texto + color del valor colapsado de cada fila -- ver comentario del
+// bloque de arriba sobre `.ev-editar-valor-original`.
+function _evEditarActualizarResumenCampo(campo) {
+  var el = document.getElementById('ev-editar-resumen-' + campo);
+  if (!el) return;
+  var clave = _EV_EDITAR_CLAVE[campo];
+  var modificado = _evEditarCambios.hasOwnProperty(clave);
+  var texto = '';
+  if (campo === 'lugar') {
+    texto = modificado ? _evEditarCambios.lugar : _evEditarOriginal.lugar;
+  } else if (campo === 'horario') {
+    texto = modificado ? ('Nuevo: ' + _evEditarCambios.horaInicio + 'hs') : (_evEditarOriginal.horaInicio + ' - ' + _evEditarOriginal.horaFin + 'hs');
+  } else if (campo === 'descripcion') {
+    var desc = modificado ? _evEditarCambios.descripcion : _evEditarOriginal.descripcion;
+    texto = desc ? (desc.length > 60 ? desc.substring(0, 60) + '…' : desc) : 'Sin descripción';
+  }
+  el.textContent = texto;
+  el.classList.toggle('ev-editar-valor-original', !modificado);
+}
+function _evEditarConfirmarCampoGenerico(campo, clave, valorNuevo, valorOriginal) {
+  if (valorNuevo === valorOriginal) delete _evEditarCambios[clave];
+  else _evEditarCambios[clave] = valorNuevo;
+  _evEditarActualizarResumenCampo(campo);
+  _evEditarActualizarFooter();
+  _evEditarToggleCampo(campo, false);
+}
+function _evEditarConfirmarHorario() { _evEditarConfirmarCampoGenerico('horario', 'horaInicio', _evEditarHoraTemp, _evEditarOriginal.horaInicio); }
+function _evEditarConfirmarDescripcion() { _evEditarConfirmarCampoGenerico('descripcion', 'descripcion', _evEditarDescTemp, _evEditarOriginal.descripcion); }
+function _evEditarDescripcionInput(v) { _evEditarDescTemp = v; }
+
+/* ── Campo "Lugar" -- lista de venues como pills, mismo `.aj-pill` de
+   siempre. Seleccionar una pill guarda Y colapsa de una (sin botón "Listo"
+   propio, pedido explícito -- a diferencia de Horario/Descripción, que sí
+   necesitan confirmar un valor compuesto/de texto libre antes de aplicar). ──── */
 function _evEditarCargarVenues() {
   var cont = document.getElementById('ev-editar-lugar-pills');
   if (_EV_VENUES) { _evEditarRenderVenues(); return; }
@@ -3079,8 +3183,9 @@ function _evEditarCargarVenues() {
 function _evEditarRenderVenues() {
   var cont = document.getElementById('ev-editar-lugar-pills'); if (!cont) return;
   if (!_EV_VENUES.length) { cont.innerHTML = '<p style="color:var(--muted);font-size:0.78rem;margin:0;">Todavía no hay lugares creados.</p>'; return; }
+  var valorVigente = _evEditarCambios.hasOwnProperty('lugar') ? _evEditarCambios.lugar : _evEditarOriginal.lugar;
   cont.innerHTML = _EV_VENUES.map(function(v) {
-    var activa = _evEditarData.valorLugar === v.lugar;
+    var activa = valorVigente === v.lugar;
     return '<span class="aj-pill' + (activa ? ' activa' : '') + '" data-id="' + v.id + '" onclick="_evEditarSelVenue(' + v.id + ')">' + v.lugar + '</span>';
   }).join('');
 }
@@ -3088,66 +3193,149 @@ function _evEditarSelVenue(id) {
   var v = (_EV_VENUES || []).filter(function(x) { return x.id === id; })[0];
   if (!v) return;
   document.querySelectorAll('#ev-editar-lugar-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.id == id); });
-  _evEditarData.valorLugar = v.lugar;
-  _evEditarActualizarBoton();
+  _evEditarConfirmarCampoGenerico('lugar', 'lugar', v.lugar, _evEditarOriginal.lugar);
 }
-// Paso 2 -- alcance (individual/desde acá en adelante/por período), revela
-// el date picker "Hasta el" solo para "Por un período" (fecha de inicio =
-// _evDetalleActual.fecha, no se pide -- ver _evAbrirEditarEvento(), que ya
-// fija el `min` del input).
-function _evEditarSelModo(el) {
-  document.querySelectorAll('#ev-editar-alcance-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+
+/* ── Paso 1: alcance + calendario de "Por período" (ver comentario del
+   bloque de arriba -- inicio SIEMPRE fijo en _evDetalleActual.fecha, el
+   calendario solo deja elegir el fin). ──── */
+function _evEditarSelScope(el) {
+  document.querySelectorAll('#ev-editar-scope-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   el.classList.add('activa');
-  _evEditarData.modo = el.dataset.val;
-  var haWrap = document.getElementById('ev-editar-hasta-wrap');
-  if (haWrap) {
-    var mostrar = _evEditarData.modo === 'periodo';
-    var yaVisible = haWrap.style.display !== 'none';
-    haWrap.style.display = mostrar ? 'block' : 'none';
-    if (mostrar && !yaVisible) { void haWrap.offsetWidth; haWrap.style.animation = 'fadeIn 0.2s ease'; }
-    if (!mostrar) _evEditarData.fechaHasta = null;
+  _evEditarScope = el.dataset.val;
+  var periodoWrap = document.getElementById('ev-editar-periodo-wrap');
+  if (periodoWrap) {
+    var mostrar = _evEditarScope === 'periodo';
+    var yaVisible = periodoWrap.style.display !== 'none';
+    periodoWrap.style.display = mostrar ? 'block' : 'none';
+    if (mostrar && !yaVisible) {
+      void periodoWrap.offsetWidth; periodoWrap.style.animation = 'fadeIn 0.2s ease';
+      if (!_evEditarCal.mostrado) _evEditarCal.mostrado = _evDetalleActual.fecha;
+      _evEditarCalRender();
+      _evEditarCalActualizarResumen();
+    }
+    if (!mostrar) { _evEditarFechaHasta = null; _evEditarCal.touched = false; }
   }
-  _evEditarActualizarBoton();
+  _evEditarActualizarFooter();
 }
-function _evEditarSetFechaHasta(v) { _evEditarData.fechaHasta = v || null; _evEditarActualizarBoton(); }
-function _evEditarValido() {
-  var d = _evEditarData;
-  if (!d.campo || !d.modo) return false;
-  if ((d.campo === 'lugar' || d.campo === 'lugar_horario') && !d.valorLugar) return false;
-  if ((d.campo === 'horario' || d.campo === 'lugar_horario') && !d.valorHora) return false;
-  if (d.modo === 'periodo' && !d.fechaHasta) return false;
+function _evEditarCalMoverMes(dir) {
+  var m = _evCalMesDe(_evEditarCal.mostrado);
+  var year = m.year, month = m.month + dir;
+  if (month < 0) { month = 11; year--; } else if (month > 11) { month = 0; year++; }
+  _evEditarCal.mostrado = _evToISO(new Date(year, month, 1));
+  _evEditarCalRender();
+}
+function _evEditarCalMinIso() {
+  var ev = _evDetalleActual;
+  var hoy = _evHoyISO();
+  return (ev && _evFechaCmp(hoy, ev.fecha) > 0) ? hoy : (ev ? ev.fecha : hoy);
+}
+function _evEditarCalTocarDia(iso) {
+  if (_evFechaCmp(iso, _evEditarCalMinIso()) < 0) return;
+  _evEditarFechaHasta = iso;
+  _evEditarCal.touched = true;
+  _evEditarCalRender();
+  _evEditarCalActualizarResumen();
+  _evEditarActualizarFooter();
+}
+function _evEditarCalRestablecer() {
+  _evEditarFechaHasta = null;
+  _evEditarCal.touched = false;
+  _evEditarCalRender();
+  _evEditarCalActualizarResumen();
+  _evEditarActualizarFooter();
+}
+// Resumen "Del <fecha del evento, fija> al <fecha elegida>" -- mismo
+// componente visual que _evAntPeriodoResumenHtml()/_evAntFechaPillHtml()
+// (más abajo en este archivo), la pill de inicio no lleva onclick (fija, no
+// hay a dónde "volver").
+function _evEditarCalActualizarResumen() {
+  var cont = document.getElementById('ev-editar-rango-resumen'); if (!cont) return;
+  var ev = _evDetalleActual; if (!ev) return;
+  var html = 'Del <span class="ev-ant-fecha-pill" style="cursor:default;">' + _evAntFechaCorta(ev.fecha) + '</span>';
+  if (_evEditarFechaHasta) html += ' al <span class="ev-ant-fecha-pill" style="animation:fadeIn 0.2s ease">' + _evAntFechaCorta(_evEditarFechaHasta) + '</span>';
+  cont.innerHTML = html;
+  var btn = document.getElementById('ev-editar-btn-restablecer');
+  if (btn) {
+    if (_evEditarFechaHasta) { btn.style.display = 'flex'; void btn.offsetWidth; btn.style.animation = 'fadeIn 0.2s ease'; }
+    else { btn.style.animation = 'fadeOut 0.2s ease forwards'; setTimeout(function() { if (!_evEditarFechaHasta) btn.style.display = 'none'; }, 200); }
+  }
+}
+// Grilla del calendario -- mismo componente/clases que _evAntCalRender('periodo')
+// (más abajo en este archivo), simplificado: `desde` es siempre
+// _evDetalleActual.fecha (fijo, nunca cambia por un tap) y solo `hasta` es
+// tocable; celdas antes de _evEditarCalMinIso() quedan bloqueadas
+// (.ev-ant-cal-pasado, sin onclick) igual que el resto del calendario de
+// Asistencia anticipada.
+function _evEditarCalRender() {
+  var cont = document.getElementById('ev-editar-cal-periodo'); if (!cont) return;
+  var ev = _evDetalleActual; if (!ev) return;
+  var m = _evCalMesDe(_evEditarCal.mostrado);
+  var labelEl = document.getElementById('ev-editar-cal-label');
+  if (labelEl) labelEl.textContent = NOMBRES_MESES[m.month] + ' ' + m.year;
+  var inicioGrid = _evLunesDeSemana(new Date(m.year, m.month, 1));
+  var finMes = new Date(m.year, m.month + 1, 0);
+  var finGrid = _evLunesDeSemana(finMes); finGrid.setDate(finGrid.getDate() + 6);
+  var hoy = _evHoyISO();
+  var minIso = _evEditarCalMinIso();
+  var desde = ev.fecha, hasta = _evEditarFechaHasta;
+  var html = _EV_DIAS_CORTOS.map(function(d) { return '<div class="ev-cal-dow">' + d + '</div>'; }).join('');
+  var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
+  while (cur <= finGrid) {
+    var celdaIso = _evToISO(cur);
+    var ajeno = cur.getMonth() !== m.month;
+    var bloqueada = _evFechaCmp(celdaIso, minIso) < 0;
+    var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (bloqueada ? ' ev-ant-cal-pasado' : '');
+    if (celdaIso === desde) clases += ' ev-ant-cal-sel';
+    if (hasta && celdaIso === hasta) clases += ' ev-ant-cal-sel';
+    if (hasta && _evFechaCmp(celdaIso, desde) > 0 && _evFechaCmp(celdaIso, hasta) < 0) clases += ' ev-ant-cal-en-rango';
+    if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
+    var onclickAttr = bloqueada ? '' : ' onclick="_evEditarCalTocarDia(\'' + celdaIso + '\')"';
+    html += '<div class="' + clases + '" data-iso="' + celdaIso + '"' + onclickAttr + '><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
+    cur.setDate(cur.getDate() + 1);
+  }
+  _evFadeSwap(cont, function() { cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>'; }, false);
+}
+function _evEditarScopeValido() {
+  if (!_evEditarScope) return false;
+  if (_evEditarScope === 'periodo' && !_evEditarFechaHasta) return false;
   return true;
 }
-function _evEditarActualizarBoton() {
-  var btn = document.getElementById('ev-editar-btn-guardar');
-  if (btn) btn.disabled = !_evEditarValido();
-}
+
 // Guardado -- adminEditarEvento todavía sin implementar en el backend (ver
-// MANIFEST.md), el payload solo manda las claves que aplican según `campo`/
-// `modo` (mismo criterio que _evCrearGuardar(), más abajo en este archivo).
+// MANIFEST.md), el frontend queda listo para llamarla. `campos` viaja como
+// JSON.stringify (mismo criterio que `payload.diasSemana` en
+// _evCrearGuardar(), más abajo en este archivo -- apiPost() es
+// form-urlencoded, un objeto/array sin serializar llegaría como
+// "[object Object]") -- el backend debe hacer `JSON.parse(params.campos)`,
+// mismo patrón que `datosJson`/`tallasJson` ya usa `supabase/functions/api/index.ts`
+// para otras acciones. `fechaDesde` viaja SIEMPRE (la fecha del evento que
+// se está editando, nunca elegida por el admin -- ver el comentario del
+// bloque de arriba), `fechaHasta` solo con modo 'periodo'.
 // Refresco tras éxito: _evCargarDatosReales() (refetch real, necesario acá a
 // diferencia de _evCancelarEvento() -- un cambio en modo "desde acá en
 // adelante"/"por período" puede afectar VARIOS eventos a la vez, no alcanza
 // con mutar en memoria el único objeto que ya se tenía) + repintado del
 // timeline en segundo plano (_evRenderTimeline(true), mismo criterio que
 // _evCancelarEvento()) y, si el detalle de ESTE evento sigue abierto, su
-// propio re-render con el dato ya actualizado.
-function _evEditarGuardar() {
-  if (!_evEditarValido()) return;
+// propio re-render con el dato ya actualizado. Error: toast y se queda en
+// #s-eventos-editar (pedido explícito), sin tocar nada más.
+function _evEditarConfirmar() {
+  if (!_evEditarScopeValido()) return;
   var ev = _evDetalleActual;
   if (!ev) return;
-  var d = _evEditarData;
-  var payload = { action: 'adminEditarEvento', adminToken: _adminToken, idEvento: ev.id, campo: d.campo, modo: d.modo };
-  if (d.campo === 'lugar' || d.campo === 'lugar_horario') payload.valorLugar = d.valorLugar;
-  if (d.campo === 'horario' || d.campo === 'lugar_horario') payload.valorHora = d.valorHora;
-  if (d.modo === 'periodo') payload.fechaHasta = d.fechaHasta;
+  var payload = {
+    action: 'adminEditarEvento', adminToken: _adminToken, idEvento: ev.id,
+    campos: JSON.stringify(_evEditarCambios), modo: _evEditarScope, fechaDesde: ev.fecha
+  };
+  if (_evEditarScope === 'periodo') payload.fechaHasta = _evEditarFechaHasta;
 
   mostrarCargando('Guardando cambios...');
   apiPost(payload, function(res) {
     ocultarCargando();
     if (res && res.exito === false) { mostrarToast(res.error || 'No se pudo actualizar el evento.', 'error'); return; }
     mostrarToast('Evento actualizado', 'ok', true);
-    _evCerrarEditarEvento();
+    ir('s-eventos-detalle');
     _evCargarDatosReales(function() {
       _evRenderTimeline(true);
       var actualizado = _EV_EVENTOS.filter(function(e) { return e.id === ev.id; })[0];

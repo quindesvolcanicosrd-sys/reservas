@@ -450,6 +450,122 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
 
+  <!-- "Editar evento" (admin, ver MANIFEST.md "Cambios recientes") --
+       pantalla de página completa, REEMPLAZA por completo el bottom sheet de
+       la tanda anterior. Mismo criterio que #s-eventos-marcar-asistencia/
+       #s-eventos-anticipada: header propio (#ev-editar-header,
+       .app-nav.app-nav-sticky, back vía _evEditarBack() -- sin entrada en
+       TOP_BAR_CONFIG). 2 "pasos" (`.salud-paso`, mismo motor que
+       #s-eventos-crear -- _EV_EDITAR_PASOS/_evEditarMostrarPaso(),
+       js/eventos.js): #ev-editar-paso-campos (3 filas editables, cada una un
+       `.ev-ant-acc-header`/`.ev-ant-acc-body` reusado tal cual del acordeón
+       de Asistencia anticipada pero SIN cerrar las demás al abrir una --
+       toggle independiente, ver _evEditarToggleCampo()) y
+       #ev-editar-paso-scope ("¿A cuáles eventos aplica?", con el calendario
+       de "Por período" -- mismas clases `.ev-ant-cal-*`/`.ev-ant-fecha-pill`/
+       `.ev-ant-rango-*` que el calendario de Asistencia anticipada, ver
+       _evEditarCal*/js/eventos.js). Footer #cta-footer-s-eventos-editar
+       (.cta-footer-fixed real, hijo directo de <body> -- ver ese bloque más
+       abajo en este archivo), su texto/acción cambian según el paso activo
+       (_evEditarActualizarFooter()). -->
+  <div class="pantalla" id="s-eventos-editar">
+    <div class="app-nav app-nav-sticky" id="ev-editar-header">
+      <button class="app-nav-back" onclick="_evEditarBack()">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <span class="app-nav-title">Editar evento</span>
+      <div style="width:40px;flex-shrink:0;"></div>
+    </div>
+    <div class="card" style="text-align:left;">
+
+      <div class="salud-paso activo" id="ev-editar-paso-campos">
+        <div class="ev-ant-acc-header" id="ev-editar-campo-lugar-header" onclick="_evEditarToggleCampo('lugar')">
+          <span class="material-symbols-outlined ev-editar-campo-icono">place</span>
+          <span class="ev-ant-acc-titulo">Lugar</span>
+          <span class="ev-ant-acc-resumen ev-editar-valor-original" id="ev-editar-resumen-lugar"></span>
+          <span class="material-symbols-outlined ev-ant-acc-chevron">expand_more</span>
+        </div>
+        <div class="ev-ant-acc-body" id="ev-editar-campo-lugar-body">
+          <div class="ev-ant-acc-body-inner">
+            <div class="aj-pills-row" id="ev-editar-lugar-pills"></div>
+          </div>
+        </div>
+
+        <div class="ev-ant-acc-header" id="ev-editar-campo-horario-header" onclick="_evEditarToggleCampo('horario')">
+          <span class="material-symbols-outlined ev-editar-campo-icono">schedule</span>
+          <span class="ev-ant-acc-titulo">Horario</span>
+          <span class="ev-ant-acc-resumen ev-editar-valor-original" id="ev-editar-resumen-horario"></span>
+          <span class="material-symbols-outlined ev-ant-acc-chevron">expand_more</span>
+        </div>
+        <div class="ev-ant-acc-body" id="ev-editar-campo-horario-body">
+          <div class="ev-ant-acc-body-inner">
+            <div class="ev-hora-stepper" id="ev-editar-hora-stepper">
+              <div class="ev-hora-stepper-cols">
+                <div class="ev-hora-stepper-col">
+                  <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-editar-hora','hora',1)"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
+                  <span class="ev-hora-stepper-valor" id="ev-editar-hora-hora"></span>
+                  <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-editar-hora','hora',-1)"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
+                </div>
+                <span class="ev-hora-stepper-sep">:</span>
+                <div class="ev-hora-stepper-col">
+                  <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-editar-hora','minuto',1)"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
+                  <span class="ev-hora-stepper-valor" id="ev-editar-hora-minuto"></span>
+                  <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-editar-hora','minuto',-1)"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
+                </div>
+              </div>
+              <div class="ev-hora-stepper-meridiano" id="ev-editar-hora-meridiano">
+                <span class="aj-pill" data-val="AM" onclick="_evHoraStepperSetMeridiano('ev-editar-hora',this)">AM</span>
+                <span class="aj-pill" data-val="PM" onclick="_evHoraStepperSetMeridiano('ev-editar-hora',this)">PM</span>
+              </div>
+            </div>
+            <button type="button" class="btn btn-outline" style="margin-top:16px;width:100%;" onclick="_evEditarConfirmarHorario()">Listo</button>
+          </div>
+        </div>
+
+        <div class="ev-ant-acc-header" id="ev-editar-campo-descripcion-header" onclick="_evEditarToggleCampo('descripcion')">
+          <span class="material-symbols-outlined ev-editar-campo-icono">notes</span>
+          <span class="ev-ant-acc-titulo">Descripción</span>
+          <span class="ev-ant-acc-resumen ev-editar-valor-original" id="ev-editar-resumen-descripcion"></span>
+          <span class="material-symbols-outlined ev-ant-acc-chevron">expand_more</span>
+        </div>
+        <div class="ev-ant-acc-body" id="ev-editar-campo-descripcion-body">
+          <div class="ev-ant-acc-body-inner">
+            <textarea id="ev-editar-descripcion-input" rows="4" placeholder="Descripción del evento..." oninput="_evEditarDescripcionInput(this.value)"></textarea>
+            <button type="button" class="btn btn-outline" style="margin-top:16px;width:100%;" onclick="_evEditarConfirmarDescripcion()">Listo</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="salud-paso" id="ev-editar-paso-scope">
+        <div class="ev-lugar-campo">
+          <p class="ev-lugar-campo-label">¿A cuáles eventos aplica?</p>
+          <div class="aj-pills-row" id="ev-editar-scope-pills">
+            <span class="aj-pill" data-val="individual" onclick="_evEditarSelScope(this)">Solo este evento</span>
+            <span class="aj-pill" data-val="desde_aqui" onclick="_evEditarSelScope(this)">Este y todos los siguientes</span>
+            <span class="aj-pill" data-val="periodo" onclick="_evEditarSelScope(this)">Por un período</span>
+          </div>
+        </div>
+
+        <div id="ev-editar-periodo-wrap" style="display:none;margin-top:18px;">
+          <div class="ev-ant-cal-nav">
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evEditarCalMoverMes(-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+            <span class="ev-ant-cal-nav-label" id="ev-editar-cal-label"></span>
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evEditarCalMoverMes(1)"><span class="material-symbols-outlined">chevron_right</span></button>
+          </div>
+          <div id="ev-editar-cal-periodo"></div>
+          <div class="ev-ant-rango-fila" id="ev-editar-rango-fila" style="margin-top:10px;">
+            <div class="ev-ant-rango-linea" id="ev-editar-rango-resumen"></div>
+            <button type="button" class="btn-text-simple ev-ant-btn-restablecer-icono" id="ev-editar-btn-restablecer" onclick="_evEditarCalRestablecer()" aria-label="Restablecer fechas" title="Restablecer fechas" style="display:none;">
+              <span class="material-symbols-outlined">undo</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+
   <!-- Asistencia anticipada (Eventos) -- pantalla de pantalla completa,
        mismo criterio que s-eventos-detalle (arriba): NO usa el #top-bar
        genérico (header propio, sticky, con back manejado por
@@ -3544,6 +3660,19 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <button class="btn btn-primary" id="ev-ant-footer-aplicar" disabled>Aplicar</button>
 </div>
 
+<!-- "Editar evento" (admin, ver MANIFEST.md "Cambios recientes") -- footer
+     de #s-eventos-editar. A diferencia de #cta-footer-eventos-anticipada,
+     SÍ lleva id="cta-footer-s-eventos-editar" a propósito -- `ir()`
+     (js/ui.js) lo muestra/oculta solo por ese id, sin código a mano
+     (mismo patrón que #cta-footer-s6/#cta-footer-s-pago). Texto/acción del
+     botón cambian según el paso activo (_evEditarActualizarFooter(),
+     js/eventos.js): "Guardar cambios" (paso 0, deshabilitado sin ningún
+     campo modificado) / "Confirmar" (paso 1, deshabilitado sin alcance
+     elegido). -->
+<div class="cta-footer-fixed" id="cta-footer-s-eventos-editar">
+  <button type="button" class="btn btn-primary" id="ev-editar-btn-footer" disabled>Guardar cambios</button>
+</div>
+
 <!-- FAB de #s-eventos (solo admin, reemplaza el "+" que vivía en
      .ev-header-row -- ver comentario que quedó ahí). Hijo directo de <body>,
      fuera de .pantalla/.card, mismo motivo que .cta-footer-fixed de arriba
@@ -3556,82 +3685,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
      que aparecen arriba del botón principal con fade+slide -- abrir/cerrar
      vía _evFabToggle()/_evFabCerrar() (js/eventos.js), togglea la clase
      .ev-fab-abierto en este mismo contenedor. -->
-<!-- BOTTOM SHEET: Editar evento (admin, #s-eventos-detalle, ver MANIFEST.md
-     "Cambios recientes" -- Tanda A del rediseño de Eventos). Hijo directo de
-     <body>, mismo motivo que #ev-fab-menu/.cta-footer-fixed (containing
-     block de position:fixed atrapado por la animación de .pantalla.activa
-     mientras corre smoothSlideUp). Contenido en un solo scroll (ningún
-     bottom sheet de esta app navega "pantalla a pantalla" propia, eso es lo
-     que hacen los wizards de página completa como #s-eventos-crear/
-     #s-eventos-anticipada): "¿Qué querés cambiar?" revela los campos
-     correspondientes (#ev-editar-campo-lugar/-horario, _evHoraStepper*
-     reusado tal cual de #s-eventos-crear) y, debajo, "¿A cuáles eventos
-     aplica?" revela el date picker "Hasta el" solo para "Por un período".
-     Footer #ev-editar-footer -- NO usa .cta-footer-fixed literal
-     (position:fixed anidado dentro de .bsheet, que también anima su propio
-     transform al abrir/cerrar, dispararía el mismo bug de containing block
-     ya documentado para .pantalla.activa) -- mismo look pero como último
-     hijo flex-shrink:0 del sheet, ver css/eventos.css. Lógica completa en
-     js/eventos.js (_evAbrirEditarEvento() y el resto de _evEditar*). -->
-<div id="ev-editar-sheet-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="_evCerrarEditarEvento()"></div>
-<div id="ev-editar-sheet" class="bsheet bsheet-scroll" style="z-index:9601;max-height:85vh;">
-  <div class="bsheet-handle"></div>
-  <div class="bsheet-title">Editar evento</div>
-  <div class="bsheet-body" style="overflow-y:auto;flex:1;">
-    <div class="ev-lugar-campo">
-      <p class="ev-lugar-campo-label">¿Qué querés cambiar?</p>
-      <div class="aj-pills-row" id="ev-editar-campo-pills">
-        <span class="aj-pill" data-val="lugar" onclick="_evEditarSelCampo(this)">Lugar</span>
-        <span class="aj-pill" data-val="horario" onclick="_evEditarSelCampo(this)">Horario</span>
-        <span class="aj-pill" data-val="lugar_horario" onclick="_evEditarSelCampo(this)">Lugar y horario</span>
-      </div>
-    </div>
-
-    <div class="ev-lugar-campo" id="ev-editar-campo-lugar" style="display:none;">
-      <p class="ev-lugar-campo-label">Lugar</p>
-      <div class="aj-pills-row" id="ev-editar-lugar-pills"></div>
-    </div>
-
-    <div class="ev-lugar-campo" id="ev-editar-campo-horario" style="display:none;">
-      <p class="ev-lugar-campo-label">Hora</p>
-      <div class="ev-hora-stepper" id="ev-editar-hora-stepper">
-        <div class="ev-hora-stepper-cols">
-          <div class="ev-hora-stepper-col">
-            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-editar-hora','hora',1)"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
-            <span class="ev-hora-stepper-valor" id="ev-editar-hora-hora"></span>
-            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-editar-hora','hora',-1)"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
-          </div>
-          <span class="ev-hora-stepper-sep">:</span>
-          <div class="ev-hora-stepper-col">
-            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-editar-hora','minuto',1)"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
-            <span class="ev-hora-stepper-valor" id="ev-editar-hora-minuto"></span>
-            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-editar-hora','minuto',-1)"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
-          </div>
-        </div>
-        <div class="ev-hora-stepper-meridiano" id="ev-editar-hora-meridiano">
-          <span class="aj-pill" data-val="AM" onclick="_evHoraStepperSetMeridiano('ev-editar-hora',this)">AM</span>
-          <span class="aj-pill" data-val="PM" onclick="_evHoraStepperSetMeridiano('ev-editar-hora',this)">PM</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="ev-lugar-campo" id="ev-editar-alcance-wrap" style="display:none;">
-      <p class="ev-lugar-campo-label">¿A cuáles eventos aplica?</p>
-      <div class="aj-pills-row" id="ev-editar-alcance-pills">
-        <span class="aj-pill" data-val="individual" onclick="_evEditarSelModo(this)">Solo este evento</span>
-        <span class="aj-pill" data-val="desde_aqui" onclick="_evEditarSelModo(this)">Este y todos los futuros</span>
-        <span class="aj-pill" data-val="periodo" onclick="_evEditarSelModo(this)">Por un período</span>
-      </div>
-      <div id="ev-editar-hasta-wrap" style="display:none;margin-top:12px;">
-        <p class="ev-lugar-campo-label">Hasta el</p>
-        <input type="date" id="ev-editar-fecha-hasta" oninput="_evEditarSetFechaHasta(this.value)">
-      </div>
-    </div>
-  </div>
-  <div class="ev-editar-footer">
-    <button type="button" class="btn btn-primary" id="ev-editar-btn-guardar" disabled onclick="_evEditarGuardar()">Guardar cambios</button>
-  </div>
-</div>
+<!-- "Editar evento" (admin) ya NO es un bottom sheet -- ver #s-eventos-editar,
+     pantalla de página completa, más abajo en este archivo (junto al resto
+     de las pantallas de Eventos). Entrada: ícono `edit` del sticky nav de
+     #s-eventos-detalle (_evDetalleStickyHtml()/js/eventos.js). -->
 
 <div class="ev-fab-menu" id="ev-fab-menu" style="display:none;">
   <button type="button" class="ev-fab-opcion" id="ev-fab-crear-evento" onclick="_evFabCerrar(); irEvCrear();">

@@ -678,6 +678,11 @@ var _BOTTOM_NAV_EXTRA = {
   's4': 'reservas', 's-misreservas': 'reservas', 's6': 'reservas',
   's-pago': 'reservas', 's-gestionar': 'reservas',
   's-eventos-detalle': 'eventos', 's-eventos-anticipada': 'eventos',
+  // "Editar evento" (admin, ver MANIFEST.md "Cambios recientes") -- mismo
+  // criterio que el resto de los drill-down de 'eventos' de esta lista:
+  // alcanzable solo desde el ícono `edit` del sticky nav de
+  // #s-eventos-detalle.
+  's-eventos-editar': 'eventos',
   // Venues ("Editar lugares" + wizard propio de "Crear evento", ver
   // MANIFEST.md) -- mismo criterio que las 2 entradas de arriba: drill-down
   // de la tab 'eventos', alcanzables solo desde el FAB de #s-eventos.
