@@ -3426,52 +3426,50 @@ function _evEditarScopeValido() {
   return true;
 }
 
-// Guardado -- adminEditarEvento todavía sin implementar en el backend (ver
-// MANIFEST.md), el frontend queda listo para llamarla. `campos` viaja como
-// JSON.stringify (mismo criterio que `payload.diasSemana` en
-// _evCrearGuardar(), más abajo en este archivo -- apiPost() es
-// form-urlencoded, un objeto/array sin serializar llegaría como
-// "[object Object]") -- el backend debe hacer `JSON.parse(params.campos)`,
-// mismo patrón que `datosJson`/`tallasJson` ya usa `supabase/functions/api/index.ts`
-// para otras acciones. `fechaDesde` viaja SIEMPRE (la fecha del evento que
-// se está editando, nunca elegida por el admin -- ver el comentario del
-// bloque de arriba), `fechaHasta` solo con modo 'periodo'.
-// Refresco tras éxito: _evCargarDatosReales() (refetch real, necesario acá a
-// diferencia de _evCancelarEvento() -- un cambio en modo "desde acá en
-// adelante"/"por período" puede afectar VARIOS eventos a la vez, no alcanza
-// con mutar en memoria el único objeto que ya se tenía) + repintado del
-// timeline en segundo plano (_evRenderTimeline(true), mismo criterio que
-// _evCancelarEvento()) y, si el detalle de ESTE evento sigue abierto, su
-// propio re-render con el dato ya actualizado. Error: toast y se queda en
+// Guardado -- PATCH directo del navegador a la REST API de Supabase vía
+// _evAdminEditarEvento() (junto a _evOffseasonEliminar()/_evOffseasonEditar(),
+// más abajo en este archivo) -- ya NO pasa por apiPost()/`adminEditarEvento`
+// (la acción nunca llegó a implementarse en el backend, ver el comentario
+// que tenía esta función antes). `campos` sale de `_evEditarCambios` --
+// SOLO trae las claves que el admin efectivamente confirmó con "Listo" en
+// alguna fila (`_evEditarConfirmarCampoGenerico()`, arriba en este archivo),
+// traducidas de las claves internas de esta pantalla a las columnas reales
+// de `asistencias`: `lugar`->`donde`, `horaInicio`->`inicia`,
+// `descripcion`->`info_adicional`. Sin `termina` -- esta pantalla nunca tuvo
+// edición de hora de FIN, solo de inicio (fila "Horario" de arriba, un solo
+// stepper) -- `_evAdminEditarEvento()` ya trata cada campo como opcional
+// (`if (campos.x !== undefined)`), así que omitirlo no rompe nada, esa
+// columna simplemente no se toca. `fechaDesde` viaja SIEMPRE como `ev.fecha`
+// (la fecha del evento que se está editando, nunca elegida por el admin),
+// `fechaHasta` solo con modo `'periodo'`. Error: toast y se queda en
 // #s-eventos-editar (pedido explícito), sin tocar nada más.
 function _evEditarConfirmar() {
   if (!_evEditarScopeValido()) return;
   var ev = _evDetalleActual;
   if (!ev) return;
-  var payload = {
-    action: 'adminEditarEvento', adminToken: _adminToken, idEvento: ev.id,
-    campos: JSON.stringify(_evEditarCambios), modo: _evEditarScope, fechaDesde: ev.fecha
-  };
-  if (_evEditarScope === 'periodo') payload.fechaHasta = _evEditarFechaHasta;
+
+  var campos = {};
+  if (_evEditarCambios.hasOwnProperty('lugar')) campos.donde = _evEditarCambios.lugar;
+  if (_evEditarCambios.hasOwnProperty('horaInicio')) campos.inicia = _evEditarCambios.horaInicio;
+  if (_evEditarCambios.hasOwnProperty('descripcion')) campos.info_adicional = _evEditarCambios.descripcion;
+
+  var modo = _evEditarScope;
+  var fechaHasta = modo === 'periodo' ? _evEditarFechaHasta : null;
 
   mostrarCargando('Guardando cambios...');
-  apiPost(payload, function(res) {
-    ocultarCargando();
-    if (res && res.exito === false) { mostrarToast(res.error || 'No se pudo actualizar el evento.', 'error'); return; }
-    mostrarToast('Evento actualizado', 'ok', true);
-    ir('s-eventos-detalle');
-    _evCargarDatosReales(function() {
-      _evRenderTimeline(true);
-      var actualizado = _EV_EVENTOS.filter(function(e) { return e.id === ev.id; })[0];
-      if (actualizado && _evDetalleActual && _evDetalleActual.id === ev.id) {
-        _evDetalleActual = actualizado;
-        _evRenderDetalle(actualizado);
-      }
-    });
-  }, function(e) {
-    ocultarCargando();
-    mostrarToast((e && e.message) || 'No se pudo actualizar el evento.', 'error');
-  });
+  _evAdminEditarEvento(
+    ev.id, campos, modo, ev.fecha, fechaHasta,
+    function() {
+      ocultarCargando();
+      mostrarToast('Cambios guardados.', 'ok', true);
+      ir('s-eventos');
+      _evCargarDatosReales(function() { _evRenderTimeline(true); });
+    },
+    function(e) {
+      ocultarCargando();
+      mostrarToast((e && e.message) || 'No se pudieron guardar los cambios.', 'error');
+    }
+  );
 }
 /* ── Resumen de asistencia como 4 tarjetas de estadística (grid, ver
    "Cambios recientes" — reemplaza la línea de texto "Asisten X · No
@@ -6050,4 +6048,80 @@ function _evOffseasonEliminar(id) {
     ocultarCargando();
     mostrarToast('No se pudo eliminar la temporada.', 'error');
   });
+}
+
+// Guardado del hub "Editar evento" (#s-eventos-editar, ver
+// _evEditarConfirmar() más abajo en este archivo) -- PATCH directo del
+// navegador a la REST API de Supabase (mismo mecanismo `fetch()` que el
+// resto de esta sección), no `apiPost()`/BACKEND -- reemplaza a
+// `adminEditarEvento`, la acción que `_evEditarConfirmar()` llamaba antes
+// (nunca llegó a implementarse en el backend, ver el comentario que tenía
+// esa función). `campos` (`{donde,inicia,termina,info_adicional}`, todas
+// opcionales -- undefined = "no tocar esa columna") llega ya traducido a
+// nombres reales de columna, arma acá el objeto PATCH real. `modo`
+// (`'individual'`/`'periodo'`/`'desde_aqui'`, mismos 3 valores que las pills
+// de `#ev-editar-scope-pills`) decide el alcance:
+//  - `'individual'` -- solo la fila de ESTE `id_evento`, marcada
+//    `es_excepcion:true` (deja de heredar los valores de su regla).
+//  - `'periodo'`/`'desde_aqui'` -- todas las filas de la misma `id_regla`
+//    (la regla de recurrencia que generó este evento, resuelta con un GET
+//    aparte porque el llamador solo tiene el `id_evento`) desde `fechaDesde`
+//    en adelante, acotado a `fechaHasta` si es `'periodo'`. `'periodo'`
+//    también marca cada fila tocada como excepción (mismo motivo que
+//    individual); `'desde_aqui'` NO -- es un cambio permanente del patrón,
+//    así que además actualiza `venues.hora` (si `campos.inicia` viene) para
+//    que los eventos que la regla genere a futuro también nazcan con el
+//    horario nuevo, no solo los ya existentes.
+function _evAdminEditarEvento(idEvento, campos, modo, fechaDesde, fechaHasta, onOk, onErr) {
+  var H = {
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=minimal'
+  };
+  var upd = {};
+  if (campos.donde !== undefined) upd.donde = campos.donde;
+  if (campos.inicia !== undefined) upd.inicia = campos.inicia;
+  if (campos.termina !== undefined) upd.termina = campos.termina;
+  if (campos.info_adicional !== undefined) upd.info_adicional = campos.info_adicional;
+
+  function patch(url, body, ok, fail) {
+    fetch(url, { method: 'PATCH', headers: H, body: JSON.stringify(body) })
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); ok(); })
+      .catch(fail);
+  }
+
+  if (modo === 'individual') {
+    upd.es_excepcion = true;
+    patch(SUPABASE_URL + '/rest/v1/asistencias?id_evento=eq.' + encodeURIComponent(idEvento), upd, onOk, onErr);
+    return;
+  }
+
+  // periodo / desde_aqui: necesita id_regla del evento
+  fetch(SUPABASE_URL + '/rest/v1/asistencias?id_evento=eq.' + encodeURIComponent(idEvento) + '&select=id_regla&limit=1', {
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(rows) {
+    var idRegla = rows[0] && rows[0].id_regla;
+    if (!idRegla) { onErr(new Error('Este evento no tiene regla de recurrencia')); return; }
+
+    var filtroFecha = modo === 'periodo'
+      ? '&fecha=gte.' + fechaDesde + '&fecha=lte.' + fechaHasta
+      : '&fecha=gte.' + fechaDesde;
+
+    if (modo === 'periodo') upd.es_excepcion = true;
+
+    var urlAsis = SUPABASE_URL + '/rest/v1/asistencias?id_regla=eq.' + encodeURIComponent(idRegla) + filtroFecha;
+
+    if (modo === 'desde_aqui' && campos.inicia !== undefined) {
+      // Actualiza eventos Y la regla del venue (para que los generados después también tengan la nueva hora)
+      patch(urlAsis, upd, function() {
+        patch(SUPABASE_URL + '/rest/v1/venues?id=eq.' + encodeURIComponent(idRegla), { hora: campos.inicia }, onOk, onErr);
+      }, onErr);
+    } else {
+      patch(urlAsis, upd, onOk, onErr);
+    }
+  })
+  .catch(onErr);
 }
