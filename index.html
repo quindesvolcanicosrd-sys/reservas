@@ -26,7 +26,7 @@
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=580dd587"></script>
 <link rel="stylesheet" href="css/global.css?v=64804fa9">
-<link rel="stylesheet" href="css/estilos.css?v=73260ea0">
+<link rel="stylesheet" href="css/estilos.css?v=f93e1e2e">
 <link rel="stylesheet" href="css/ui.css?v=626a894b">
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
@@ -1028,6 +1028,64 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
   <div class="cta-footer-fixed" id="cta-footer-s-eventos-crear">
     <button class="btn btn-primary" id="ev-crear-btn-footer" disabled>Continuar</button>
+  </div>
+
+  <!-- "Nueva temporada de descanso" (Tanda C1, admin, ver MANIFEST.md
+       "Cambios recientes") -- pantalla de página completa, mismo criterio
+       que #s-eventos-crear/#s-eventos-anticipada: header propio
+       (.app-nav.app-nav-sticky, sin entrada en TOP_BAR_CONFIG) + footer fijo
+       propio. Sin pasos -- todo en una sola pantalla scrolleable (Nombre +
+       calendario de rango), a diferencia de #s-eventos-crear (2 pasos) o el
+       wizard de Asistencia anticipada. El calendario reusa LITERAL las
+       clases `.ev-ant-cal-nav*`/`.ev-cal-grid`/`.ev-ant-fecha-pill`/
+       `.ev-ant-rango-linea`/`.ev-ant-rango-fila`/`.ev-ant-btn-restablecer-icono`
+       del calendario "Por período" de Asistencia anticipada -- mismo patrón
+       visual pedido explícito, cero CSS nuevo para el calendario en sí. A
+       diferencia del calendario de #s-eventos-editar (que reusa las mismas
+       clases pero con la fecha de inicio FIJA), acá las 2 fechas son
+       libres -- mismo selector "ida y vuelta" que el `_evAntCal.periodo`
+       original de Asistencia anticipada, pero con su propio estado
+       (`_evCrearDescansoData`/`_evCrearDescansoCal`, js/eventos.js) --
+       nunca comparte estado con `_evAntData`, son 2 pantallas
+       independientes. -->
+  <div class="pantalla" id="s-eventos-crear-descanso">
+    <div class="app-nav app-nav-sticky" id="ev-crear-descanso-header">
+      <button class="app-nav-back" onclick="volver('s-eventos')">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <span class="app-nav-title">Nueva temporada de descanso</span>
+      <div style="width:40px;flex-shrink:0;"></div>
+    </div>
+    <div class="card" style="text-align:left;">
+
+      <div class="ev-lugar-campo">
+        <p class="ev-lugar-campo-label">Nombre</p>
+        <input type="text" id="ev-crear-descanso-nombre" maxlength="80" placeholder="Ej: Receso de diciembre" oninput="_evCrearDescansoInput()">
+      </div>
+
+      <div class="ev-lugar-campo">
+        <p class="ev-lugar-campo-label">Período</p>
+        <div class="ev-ant-cal-nav">
+          <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescansoCalMoverMes(-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+          <span class="ev-ant-cal-nav-label" id="ev-crear-descanso-cal-label"></span>
+          <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescansoCalMoverMes(1)"><span class="material-symbols-outlined">chevron_right</span></button>
+        </div>
+        <div id="ev-crear-descanso-cal"></div>
+        <div class="ev-ant-rango-fila" id="ev-crear-descanso-rango-fila" style="margin-top:10px;">
+          <div class="ev-ant-rango-linea" id="ev-crear-descanso-rango-resumen"></div>
+          <button type="button" class="btn-text-simple ev-ant-btn-restablecer-icono" id="ev-crear-descanso-btn-restablecer" onclick="_evCrearDescansoCalRestablecer()" aria-label="Restablecer fechas" title="Restablecer fechas" style="display:none;">
+            <span class="material-symbols-outlined">undo</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 100px, mismo valor ya medido para el footer de 1 botón real de
+           #s-eventos-crear/#s-eventos-editar (ver esos comentarios). -->
+      <div class="cta-footer-spacer" style="height:calc(100px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+  <div class="cta-footer-fixed" id="cta-footer-s-eventos-crear-descanso">
+    <button type="button" class="btn btn-primary" id="ev-crear-descanso-btn-footer" disabled onclick="_evCrearDescansoGuardar()">Crear temporada</button>
   </div>
 
   <!-- Modal de conflicto (aplicarAsistenciaAnticipada devuelve
@@ -2224,8 +2282,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=ce0c160c"></script>
-<script src="js/eventos.js?v=3bc7e347"></script>
+<script src="js/ui.js?v=4ae36bcc"></script>
+<script src="js/eventos.js?v=a4913ce5"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=7a7a6f20"></script>
@@ -3687,10 +3745,13 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
      ir()/js/ui.js lo muestra solo con 's-eventos' activa Y _adminToken (ver
      "Cambios recientes" -- antes _esAdminDemo, un flag de demo que nunca
      reflejaba una sesión admin real), mismo criterio que #home-nav/#s4-nav
-     ahí. "Speed dial" de 2 opciones
-     que aparecen arriba del botón principal con fade+slide -- abrir/cerrar
-     vía _evFabToggle()/_evFabCerrar() (js/eventos.js), togglea la clase
-     .ev-fab-abierto en este mismo contenedor. -->
+     ahí. "Speed dial" de 4 opciones (Tanda C1, ver "Cambios recientes" --
+     antes 2: "Crear evento"/"Editar lugares") que aparecen arriba del botón
+     principal con fade+slide -- abrir/cerrar vía _evFabToggle()/_evFabCerrar()
+     (js/eventos.js), togglea la clase .ev-fab-abierto en este mismo
+     contenedor. Misma mecánica de animación de siempre (`.ev-fab-opcion`,
+     css/eventos.css) sin ningún cambio -- no asume una cantidad fija de
+     opciones, ver ese CSS. -->
 <!-- "Editar evento" (admin) ya NO es un bottom sheet -- ver #s-eventos-editar,
      pantalla de página completa, más abajo en este archivo (junto al resto
      de las pantallas de Eventos). Entrada: ícono `edit` del sticky nav de
@@ -3698,12 +3759,24 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <div class="ev-fab-menu" id="ev-fab-menu" style="display:none;">
   <button type="button" class="ev-fab-opcion" id="ev-fab-crear-evento" onclick="_evFabCerrar(); irEvCrear();">
-    <span class="material-symbols-outlined">event</span>
-    <span>Crear evento</span>
+    <span class="material-symbols-outlined">repeat</span>
+    <span>Recurrente</span>
+  </button>
+  <!-- "Único" (Tanda C1) -- placeholder hasta la Tanda C2: irEvCrearUnico()
+       solo muestra un toast "Próximamente" (mostrarToast(msg,null,true),
+       mismo criterio ya usado por _autoencadenarMeses()/js/ui.js para un
+       toast neutro forzado). -->
+  <button type="button" class="ev-fab-opcion" id="ev-fab-crear-unico" onclick="_evFabCerrar(); irEvCrearUnico();">
+    <span class="material-symbols-outlined">event_available</span>
+    <span>Evento único</span>
+  </button>
+  <button type="button" class="ev-fab-opcion" id="ev-fab-crear-descanso" onclick="_evFabCerrar(); irEvCrearDescanso();">
+    <span class="material-symbols-outlined">bedtime</span>
+    <span>Temporada de descanso</span>
   </button>
   <button type="button" class="ev-fab-opcion" id="ev-fab-editar-lugares" onclick="_evFabCerrar(); irEvLugares();">
     <span class="material-symbols-outlined">place</span>
-    <span>Editar lugares</span>
+    <span>Gestionar venues</span>
   </button>
   <button type="button" class="ev-fab-btn" id="ev-fab-btn" onclick="_evFabToggle()" title="Nuevo" aria-expanded="false">
     <span class="material-symbols-outlined">add</span>

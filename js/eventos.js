@@ -5553,3 +5553,188 @@ function _evCrearGuardar() {
     mostrarToast(e && e.message ? e.message : 'No se pudo crear el evento.', 'error');
   });
 }
+
+/* ═══════════════════════════════════════════════════════
+   Tanda C1 -- FAB de 4 opciones (Recurrente/Único/Descanso/Venues, ver
+   MANIFEST.md "Cambios recientes") + "Nueva temporada de descanso"
+   (#s-eventos-crear-descanso). "Único" es un placeholder hasta la Tanda C2.
+   ═══════════════════════════════════════════════════════ */
+function irEvCrearUnico() { mostrarToast('Próximamente', null, true); }
+
+/* ── "Nueva temporada de descanso" -- pantalla de página completa, sin
+   pasos: Nombre + calendario de rango, ambos siempre visibles (a diferencia
+   de Asistencia anticipada, acá no hay nada que revelar/ocultar). El
+   calendario reusa LITERAL las clases `.ev-ant-cal-*`/`.ev-ant-fecha-pill`/
+   `.ev-ant-rango-*` (mismo patrón visual pedido explícito) con el selector
+   "ida y vuelta" completo del `_evAntCal.periodo` original (ambas fechas
+   libres, a diferencia del calendario de #s-eventos-editar, donde el inicio
+   queda fijo) -- pero con estado 100% propio (`_evCrearDescansoData`/
+   `_evCrearDescansoCal`), nunca comparte `_evAntData`/`_evAntCal` con
+   Asistencia anticipada: son 2 flujos independientes que solo comparten el
+   look del calendario, no su estado. ──── */
+var _evCrearDescansoData = { nombre: '', fechaDesde: null, fechaHasta: null };
+var _evCrearDescansoCal = { mostrado: null, touched: false, prevDesde: null, prevHasta: null };
+
+function irEvCrearDescanso() {
+  _evCrearDescansoData = { nombre: '', fechaDesde: null, fechaHasta: null };
+  _evCrearDescansoCal = { mostrado: _evHoyISO(), touched: false, prevDesde: null, prevHasta: null };
+  var inp = document.getElementById('ev-crear-descanso-nombre');
+  if (inp) inp.value = '';
+  var btn = document.getElementById('ev-crear-descanso-btn-restablecer');
+  if (btn) btn.style.display = 'none';
+  ir('s-eventos-crear-descanso');
+  _evCrearDescansoCalRender();
+  _evCrearDescansoCalActualizarResumen();
+  _evCrearDescansoActualizarBoton();
+}
+function _evCrearDescansoInput() {
+  var inp = document.getElementById('ev-crear-descanso-nombre');
+  _evCrearDescansoData.nombre = inp ? inp.value : '';
+  _evCrearDescansoActualizarBoton();
+}
+function _evCrearDescansoCalMoverMes(dir) {
+  var m = _evCalMesDe(_evCrearDescansoCal.mostrado);
+  var year = m.year, month = m.month + dir;
+  if (month < 0) { month = 11; year--; } else if (month > 11) { month = 0; year++; }
+  _evCrearDescansoCal.mostrado = _evToISO(new Date(year, month, 1));
+  _evCrearDescansoCalRender();
+}
+// "Ida y vuelta" -- mismo criterio que _evAntCalTocarDia('periodo', iso):
+// sin Desde, o con Desde+Hasta ya completos, el toque fija Desde y limpia
+// Hasta; con solo Desde pendiente, un toque posterior (>=Desde) fija Hasta,
+// uno anterior a Desde lo reemplaza (empieza de nuevo, nunca queda un rango
+// invertido). Ambas fechas libres desde hoy en adelante (pedido explícito) --
+// mismo guard de fecha pasada que el resto de los calendarios de esta
+// sección.
+function _evCrearDescansoCalTocarDia(iso) {
+  if (_evFechaCmp(iso, _evHoyISO()) < 0) return;
+  var desde = _evCrearDescansoData.fechaDesde, hasta = _evCrearDescansoData.fechaHasta;
+  if (!desde || hasta) {
+    _evCrearDescansoData.fechaDesde = iso;
+    _evCrearDescansoData.fechaHasta = null;
+  } else if (_evFechaCmp(iso, desde) < 0) {
+    _evCrearDescansoData.fechaDesde = iso;
+  } else {
+    _evCrearDescansoData.fechaHasta = iso;
+  }
+  _evCrearDescansoCal.touched = true;
+  _evCrearDescansoCalRender();
+  _evCrearDescansoCalActualizarResumen();
+  _evCrearDescansoActualizarBoton();
+}
+function _evCrearDescansoCalRestablecer() {
+  _evCrearDescansoData.fechaDesde = null;
+  _evCrearDescansoData.fechaHasta = null;
+  _evCrearDescansoCal.touched = false;
+  _evCrearDescansoCalRender();
+  _evCrearDescansoCalActualizarResumen();
+  _evCrearDescansoActualizarBoton();
+}
+// Pill de fecha propia -- NO reusa _evAntFechaPillHtml() (su onclick llama
+// _evAntFocoCalendario(), un scroll específico del wizard de Asistencia
+// anticipada) -- sí reusa _evAntFechaCorta() (formato d/m/aaaa puro, sin
+// ningún estado propio, seguro de compartir entre pantallas).
+function _evCrearDescansoFechaPillHtml(iso, animar) {
+  var style = animar ? ' style="animation:fadeIn 0.2s ease"' : '';
+  return '<span class="ev-ant-fecha-pill"' + style + '>' + _evAntFechaCorta(iso) + '</span>';
+}
+function _evCrearDescansoCalActualizarResumen() {
+  var cont = document.getElementById('ev-crear-descanso-rango-resumen');
+  if (!cont) return;
+  var st = _evCrearDescansoCal;
+  var desde = _evCrearDescansoData.fechaDesde, hasta = _evCrearDescansoData.fechaHasta;
+  var desdeNueva = !!desde && desde !== st.prevDesde;
+  var hastaNueva = !!hasta && hasta !== st.prevHasta;
+  if (!desde) {
+    cont.innerHTML = '<span class="ev-ant-rango-vacio">Toca una fecha en el calendario para empezar</span>';
+    void cont.offsetWidth;
+    cont.style.animation = 'fadeIn 0.2s ease';
+  } else {
+    var html = 'Del ' + _evCrearDescansoFechaPillHtml(desde, desdeNueva);
+    if (hasta) html += ' al ' + _evCrearDescansoFechaPillHtml(hasta, hastaNueva);
+    cont.innerHTML = html;
+    cont.style.animation = '';
+  }
+  st.prevDesde = desde;
+  st.prevHasta = hasta;
+  var btn = document.getElementById('ev-crear-descanso-btn-restablecer');
+  if (btn) {
+    if (st.touched) { btn.style.display = 'flex'; void btn.offsetWidth; btn.style.animation = 'fadeIn 0.2s ease'; }
+    else {
+      btn.style.animation = 'fadeOut 0.2s ease forwards';
+      setTimeout(function() { if (!_evCrearDescansoCal.touched) btn.style.display = 'none'; }, 200);
+    }
+  }
+}
+// Grilla del calendario -- mismo componente/clases que _evAntCalRender('periodo')
+// (más arriba en este archivo), con estado propio (ver comentario del
+// bloque de arriba). Bloquea cualquier fecha anterior a hoy (`.ev-ant-cal-pasado`,
+// sin `onclick`), ambos extremos libres desde ahí en adelante.
+function _evCrearDescansoCalRender() {
+  var cont = document.getElementById('ev-crear-descanso-cal');
+  if (!cont) return;
+  var m = _evCalMesDe(_evCrearDescansoCal.mostrado);
+  var labelEl = document.getElementById('ev-crear-descanso-cal-label');
+  if (labelEl) labelEl.textContent = NOMBRES_MESES[m.month] + ' ' + m.year;
+  var inicioGrid = _evLunesDeSemana(new Date(m.year, m.month, 1));
+  var finMes = new Date(m.year, m.month + 1, 0);
+  var finGrid = _evLunesDeSemana(finMes); finGrid.setDate(finGrid.getDate() + 6);
+  var hoy = _evHoyISO();
+  var desde = _evCrearDescansoData.fechaDesde, hasta = _evCrearDescansoData.fechaHasta;
+  var html = _EV_DIAS_CORTOS.map(function(d) { return '<div class="ev-cal-dow">' + d + '</div>'; }).join('');
+  var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
+  while (cur <= finGrid) {
+    var celdaIso = _evToISO(cur);
+    var ajeno = cur.getMonth() !== m.month;
+    var pasado = _evFechaCmp(celdaIso, hoy) < 0;
+    var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (pasado ? ' ev-ant-cal-pasado' : '');
+    if (desde && celdaIso === desde) clases += ' ev-ant-cal-sel';
+    if (hasta && celdaIso === hasta) clases += ' ev-ant-cal-sel';
+    if (desde && hasta && _evFechaCmp(celdaIso, desde) > 0 && _evFechaCmp(celdaIso, hasta) < 0) clases += ' ev-ant-cal-en-rango';
+    if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
+    var onclickAttr = pasado ? '' : ' onclick="_evCrearDescansoCalTocarDia(\'' + celdaIso + '\')"';
+    html += '<div class="' + clases + '" data-iso="' + celdaIso + '"' + onclickAttr + '><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
+    cur.setDate(cur.getDate() + 1);
+  }
+  _evFadeSwap(cont, function() { cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>'; }, false);
+}
+function _evCrearDescansoValido() {
+  var d = _evCrearDescansoData;
+  return !!(d.nombre && d.nombre.trim() && d.fechaDesde && d.fechaHasta);
+}
+function _evCrearDescansoActualizarBoton() {
+  var btn = document.getElementById('ev-crear-descanso-btn-footer');
+  if (btn) btn.disabled = !_evCrearDescansoValido();
+}
+// Guardado -- fetch directo del navegador a la REST API de Supabase (mismo
+// mecanismo que la lectura de temporadas_descanso en _evCargarDatosReales(),
+// ver MANIFEST.md "Cambios recientes"), no `apiPost()`/BACKEND. `Prefer:
+// return=minimal` -- no hace falta el registro insertado de vuelta, solo
+// confirmar el 201. En error, intenta leer el mensaje real de PostgREST
+// (`{message,...}`, formato estándar de error de PostgREST/Supabase) antes
+// de caer a un texto genérico -- sigue funcionando igual si el body de
+// error no es JSON válido (`.catch(() => null)`).
+function _evCrearDescansoGuardar() {
+  if (!_evCrearDescansoValido()) return;
+  var d = _evCrearDescansoData;
+  mostrarCargando('Creando temporada...');
+  fetch(SUPABASE_URL + '/rest/v1/temporadas_descanso', {
+    method: 'POST',
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify({ nombre: d.nombre.trim(), fecha_inicio: d.fechaDesde, fecha_fin: d.fechaHasta })
+  }).then(function(r) {
+    if (r.status === 201) {
+      ocultarCargando();
+      mostrarToast('Temporada creada', 'ok', true);
+      ir('s-eventos');
+      _evCargarDatosReales(function() { _evRenderTimeline(true); });
+      return;
+    }
+    return r.json().catch(function() { return null; }).then(function(body) {
+      throw new Error((body && body.message) || ('No se pudo crear la temporada (HTTP ' + r.status + ').'));
+    });
+  }).catch(function(e) {
+    ocultarCargando();
+    mostrarToast((e && e.message) || 'No se pudo crear la temporada.', 'error');
+  });
+}

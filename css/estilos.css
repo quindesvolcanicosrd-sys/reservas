@@ -249,6 +249,13 @@ body.aj-sub-salud-activo #app-toast {
    tapado detrás de `.app-bottom-nav` -- bug real reportado, ver MANIFEST.md
    "Cambios recientes". */
 #cta-footer-s-eventos-editar { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
+/* #cta-footer-s-eventos-crear-descanso -- mismo motivo que
+   #cta-footer-s-eventos-crear/#cta-footer-s-eventos-editar de arriba, mismo
+   tab de la nav inferior ('s-eventos-crear-descanso' -> 'eventos' en
+   `_BOTTOM_NAV_EXTRA`, js/ui.js). Agregado proactivamente esta vez (Tanda
+   C1) -- el mismo bug ya se había encontrado y corregido para las 2
+   pantallas de arriba. */
+#cta-footer-s-eventos-crear-descanso { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
 /* #cta-footer-s-tareas-crear -- mismo motivo que #cta-footer-s-eventos-crear
    de arriba, mismo patrón exacto (drill-down con tab propio en
    _BOTTOM_NAV_EXTRA: 's-tareas-crear' -> 'tareas', js/ui.js): sin este
