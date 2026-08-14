@@ -396,7 +396,7 @@ input:disabled { opacity: 0.6; cursor: not-allowed; }
   padding: 16px;
 }
 .modal-wp-card {
-  background: var(--surface); border-radius: 20px;
+  background: var(--bg); border-radius: 20px;
   padding: 28px 24px; width: 100%; max-width: 380px; text-align: center;
 }
 .modal-wp-icono { font-size: 44px; margin-bottom: 12px; }
