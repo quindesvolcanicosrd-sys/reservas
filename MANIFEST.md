@@ -4,6 +4,26 @@ Referencia completa del proyecto. Suficiente para entender la arquitectura sin l
 
 ---
 
+## Tareas pendientes manuales
+
+Cosas que requieren acción humana en el SQL Editor de Supabase (dashboard del proyecto) — no ejecutables por el asistente.
+
+- **Deduplicar `equipamiento_tallas`** (ver "Cambios recientes" — Fix 2, tallas duplicadas causadas por el guardado automático de "Mi Liga" → Equipamiento antes de la guardia server-side agregada en `adminGuardarEquipamiento`). Borra las filas repetidas de una misma talla, dejando solo la de `id` más bajo (la más vieja) de cada grupo duplicado:
+  ```sql
+  DELETE FROM equipamiento_tallas a
+  USING equipamiento_tallas b
+  WHERE a.id > b.id AND a.talla = b.talla;
+  ```
+  Si la tabla no tiene columna `id` (poco probable, pero por si acaso), usar `ctid` en su lugar:
+  ```sql
+  DELETE FROM equipamiento_tallas a
+  USING equipamiento_tallas b
+  WHERE a.ctid > b.ctid AND a.talla = b.talla;
+  ```
+  Correr una sola vez — no hace falta repetirlo salvo que vuelvan a aparecer duplicados (la guardia server-side ya agregada debería evitarlo de acá en adelante).
+
+---
+
 ## 1. Estructura del proyecto
 
 ```
@@ -363,6 +383,13 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
 | `body.ev-ant-footer-visible #app-toast` | **Nuevo (ver "Cambios recientes")** — sube el toast global (`#app-toast`, css/estilos.css, `bottom:28px` fijo de fábrica) para que en `#s-eventos-anticipada` quede justo encima de `#cta-footer-eventos-anticipada` en vez de tapar las pills del wizard. `#app-toast` es un `<div>` creado por JS y agregado directo a `<body>` la primera vez que corre `mostrarToast()` (mismo criterio de "`position:fixed` va directo en `<body>`, no dentro de `.pantalla`/`.card`" que ya rige `.cta-footer-fixed`) — el override también apunta ahí sin anidarlo dentro de ninguna pantalla. `body.ev-ant-footer-visible` la togglean `_evAntActualizarFooter()`/`_evAntOcultarFooter()` (js/eventos.js) junto con el propio footer |
 
 ### Cambios recientes
+- **2 fixes más sobre `supabase/functions/api/index.ts` (Edge Function redesplegada de nuevo):**
+  - **Fix 1 (`getEventosRango`):** ahora acepta `params.fechaInicio`/`params.fechaFin` además de `params.desde`/`params.hasta` (`??` con fallback) — **nota:** el único caller real (`js/eventos.js:330`, `cargarEventos()`) ya mandaba `desde`/`hasta` correctamente, así que esto es un fallback defensivo, no un crash activo confirmado en este caller; se agrega igual por si hay otro caller futuro o uno externo (GAS) que use los nombres largos. Se agregó `google_maps, info_adicional` al `.select()` de `asistencias` (antes no se pedían) y `mapsUrl`/`descripcion` al objeto de evento devuelto (antes ausentes del todo) — mismos nombres de columna/alias que ya usa `_proximosEntrenamientos()` para lo mismo. Sin esto, `_evMapEventoBackend()` (`js/eventos.js`) nunca podía encontrar esos campos para los eventos cargados vía `getEventosRango` (el timeline principal de Eventos), aunque el fix anterior de `_evDetalleInfoHtml` (ver más abajo) ya estuviera listo para usarlos.
+  - **Fix 2 — tallas duplicadas en `equipamiento_tallas`, 3 partes:**
+    - **Parte A (`getTallasDisponibles`):** `return [...new Set(...)]` como guardia de lectura — si quedara algún duplicado en la tabla (dato viejo, ver Parte B), no se lo ofrece 2 veces en los selectores de talla (`continuar_s3a()`/`js/reservas.js`, `ajAbrirSheetTallaAjustes()`/`js/perfil.js`).
+    - **Parte B — dato ya duplicado en la tabla:** requiere una limpieza manual de una sola vez en el SQL Editor de Supabase — ver nueva sección **"Tareas pendientes manuales"** al principio de este archivo.
+    - **Parte C (`adminGuardarEquipamiento`):** guardia server-side agregada ANTES del delete-all+re-insert (este action reemplaza el set completo de tallas en cada guardado automático de "Mi Liga" → Equipamiento, no inserta una talla nueva sola — ver `adminGuardarEquipAuto()`/`js/admin.js`) — si el array recibido trae la misma `talla` 2 veces, corta sin tocar la tabla y devuelve `{ exito:false, error:'Esa talla ya está cargada. Usá + para aumentar la cantidad.' }`. El frontend ya mostraba `res.error` en un toast (`adminGuardarEquipAuto()`, sin cambios) — no hizo falta tocar nada ahí. En la práctica el picker de tallas (`_adminRenderTallasPills()`) ya excluye las tallas ya agregadas de las opciones clickeables, así que esta guardia es una red de seguridad para casos raros (2 pestañas admin abiertas a la vez, etc.), no el flujo normal por el que entraron los duplicados existentes.
+
 - **6 fixes de seguimiento sobre la tanda anterior (Edge Function redesplegada de nuevo). Resumen:**
   - **Fix 1 (`js/eventos.js`, `_evDetalleInfoHtml`):** el mapper (`_evMapEventoBackend`) ya traía `mapsUrl`/`descripcion` reales del evento (tanda anterior), pero el renderer los ignoraba y usaba siempre los lookups locales `_EV_DESCRIPCION_POR_TIPO[ev.tipo]`/`_EV_MAPS_URL_POR_LUGAR[ev.lugar]`. Ahora prefiere el dato real del evento y cae a esos lookups solo si viene vacío.
   - **Fix 2 (`js/home.js`, `wpComprobanteOmitir`):** faltaba `_wpComprobanteEnviado = true` antes de cerrar el modal — sin eso, `irHomeDesdeExito()` volvía a mostrar el mismo modal en un loop en vez de ir a home.

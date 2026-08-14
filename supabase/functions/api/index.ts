@@ -622,7 +622,7 @@ async function adminEliminarVenue(params: Record<string, any>): Promise<boolean>
 
 async function getTallasDisponibles(): Promise<string[]> {
   const { data } = await supabase.from('equipamiento_tallas').select('talla');
-  return (data ?? []).map((r: any) => r.talla);
+  return [...new Set((data ?? []).map((r: any) => r.talla))];
 }
 
 async function adminGetEquipamiento(): Promise<Record<string, any>> {
@@ -636,10 +636,22 @@ async function adminGuardarEquipamiento(params: Record<string, any>): Promise<Re
   if (typeof tallas === 'string') tallas = JSON.parse(tallas);
   const protecciones = parseInt(params.protecciones, 10) || 0;
 
+  // Guardia server-side (ver MANIFEST, "Cambios recientes" -- tallas
+  // duplicadas en equipamiento_tallas): este action reemplaza el set entero
+  // (delete all + re-insert) en vez de insertar una talla nueva sola, así
+  // que la única forma de que entre un duplicado a la tabla es que el array
+  // recibido ya traiga la misma talla 2 veces. Se corta ANTES de tocar la
+  // tabla si eso pasa, en vez de dejar que el insert masivo lo cree.
+  const tallasValidas = (tallas ?? []).filter((t: any) => t.talla).map((t: any) => ({ talla: t.talla, cantidad: parseInt(t.cantidad, 10) || 0 }));
+  const nombresVistos = new Set<string>();
+  for (const t of tallasValidas) {
+    if (nombresVistos.has(t.talla)) return { exito: false, error: 'Esa talla ya está cargada. Usá + para aumentar la cantidad.' };
+    nombresVistos.add(t.talla);
+  }
+
   // Delete all + re-insert
   const { data: existentes } = await supabase.from('equipamiento_tallas').select('id');
   for (const f of (existentes ?? [])) await supabase.from('equipamiento_tallas').delete().eq('id', f.id);
-  const tallasValidas = (tallas ?? []).filter((t: any) => t.talla).map((t: any) => ({ talla: t.talla, cantidad: parseInt(t.cantidad, 10) || 0 }));
   if (tallasValidas.length) await supabase.from('equipamiento_tallas').insert(tallasValidas);
 
   const { data: cfg } = await supabase.from('config_equipamiento').select('id').limit(1).maybeSingle();
@@ -931,9 +943,10 @@ async function getTareasPendientesValidacion(): Promise<any[]> {
 // ─── Acciones: eventos / asistencias ─────────────────────────────────────────
 
 async function getEventosRango(params: Record<string, any>): Promise<Record<string, any>> {
-  const desde = params.desde, hasta = params.hasta;
+  const desde = params.fechaInicio ?? params.desde,
+        hasta  = params.fechaFin   ?? params.hasta;
   const d0 = desde.substring(0, 10), d1 = hasta.substring(0, 10);
-  const { data } = await supabase.from('asistencias').select('id_evento, fecha, donde, inicia, termina, estado').gte('fecha', d0).lte('fecha', d1);
+  const { data } = await supabase.from('asistencias').select('id_evento, fecha, donde, inicia, termina, estado, google_maps, info_adicional').gte('fecha', d0).lte('fecha', d1);
   const [tipoIcono, requiereReserva, asistLog, asistEF, equipoPorNombre] = await Promise.all([
     _mapaTipoIconoPorLugar(), _mapaRequiereReservaPorLugar(), _ultimaAsistenciaPorPersonaTodas(), _asistenciaEFPorEvento(), _mapaEquipoPorNombre()
   ]);
@@ -948,7 +961,11 @@ async function getEventosRango(params: Record<string, any>): Promise<Record<stri
       const eq = equipoPorNombre[String(a.nombre).trim().toUpperCase()] ?? {};
       return { nombre: a.nombre, estado: a.estado, origen: a.origen, nombreDerby: eq.nombreDerby ?? '', fotoPerfil: eq.fotoPerfil ?? '' };
     });
-    return { idEvento, fecha: fila.fecha, lugar: fila.donde, horaInicio: fila.inicia?.substring(0, 5) ?? '', horaFin: fila.termina?.substring(0, 5) ?? '', estado: fila.estado, tipoIcono: tipoIcono[fila.donde] ?? 'Entrenamiento', requiereReserva: requiereReserva[fila.donde] !== false, asistencias };
+    return {
+      idEvento, fecha: fila.fecha, lugar: fila.donde, horaInicio: fila.inicia?.substring(0, 5) ?? '', horaFin: fila.termina?.substring(0, 5) ?? '', estado: fila.estado, tipoIcono: tipoIcono[fila.donde] ?? 'Entrenamiento', requiereReserva: requiereReserva[fila.donde] !== false, asistencias,
+      mapsUrl: fila.google_maps ?? fila.mapsUrl ?? '',
+      descripcion: fila.info_adicional ?? fila.descripcion ?? fila.infoAdicional ?? '',
+    };
   });
   eventos.sort((a: any, b: any) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
   return { eventos };
