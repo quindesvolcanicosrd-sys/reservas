@@ -1497,6 +1497,11 @@ Deno.serve(async (req: Request) => {
       case 'getTareasPendientesValidacion':        return json(await getTareasPendientesValidacion());
       case 'adminGetTareasPendientesValidacion':   return json(await getTareasPendientesValidacion());
       // Eventos / asistencias
+      case 'debug': {
+        const { data: d, error: e } = await supabase.from('asistencias').select('id_evento, fecha').limit(3);
+        const { count } = await supabase.from('asistencias').select('*', { count: 'exact', head: true });
+        return json({ rows: d, error: e?.message ?? null, count, urlSet: !!SUPABASE_URL, keySet: !!SUPABASE_SERVICE_KEY, keyLen: SUPABASE_SERVICE_KEY?.length ?? 0 });
+      }
       case 'getEventosRango':                 return json(await getEventosRango(params));
       case 'getCumpleañosRango':              return json(await getCumpleañosRango(params));
       case 'getEventosFiltrados':             return json(await getEventosFiltrados(params));
