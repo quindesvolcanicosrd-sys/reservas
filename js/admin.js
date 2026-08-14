@@ -230,7 +230,7 @@ function _adminCargarBanners(scope) {
   scope = scope || '';
   _admBannerPendientes = null; _admBannerQueLlevar = null;
   adminApi({ action: 'adminGetReservas' }, function(res) {
-    _admBannerPendientes = (res || []).filter(function(r) { return r.estado === 'Pendiente'; });
+    _admBannerPendientes = (res || []).map(_normalizeReserva).filter(function(r) { return r.estado === 'Pendiente'; });
     _adminRenderBannerPendientes(scope);
   }, function() { _admBannerPendientes = []; _adminRenderBannerPendientes(scope); });
   adminApi({ action: 'adminGetQueLlevar' }, function(res) {
@@ -239,6 +239,14 @@ function _adminCargarBanners(scope) {
   }, function() { _admBannerQueLlevar = []; _adminRenderBannerQueLlevar(scope); });
 }
 
+function _normalizeReserva(r) {
+  r.nombre = r.nombre_usuario || r.nombre || '';
+  r.fecha = r.fechaEvento
+    ? (r.fechaEvento + (r.donde ? ' - ' + r.donde : ''))
+    : (r.mes_texto || '-');
+  r.fila = r.id;
+  return r;
+}
 function _adminRenderBannerPendientes(scope) {
   scope = scope || '';
   var slot = document.getElementById('admin-banner-pendientes-slot' + scope);
@@ -248,8 +256,8 @@ function _adminRenderBannerPendientes(scope) {
     return '<div class="admin-banner-res-row">' +
       '<div class="admin-banner-res-info"><div class="admin-banner-res-nombre">' + r.nombre + '</div><div class="admin-banner-res-fecha">' + r.fecha + '</div></div>' +
       '<div class="admin-banner-res-actions">' +
-        '<button class="admin-banner-btn admin-banner-btn-ok" onclick="adminBannerSetEstado(' + r.fila + ',\'Confirmada\',this,\'' + scope + '\')" aria-label="Aprobar"><span class="material-symbols-outlined">check</span></button>' +
-        '<button class="admin-banner-btn admin-banner-btn-no" onclick="adminBannerSetEstado(' + r.fila + ',\'Cancelada\',this,\'' + scope + '\')" aria-label="Rechazar"><span class="material-symbols-outlined">close</span></button>' +
+        '<button class="admin-banner-btn admin-banner-btn-ok" onclick="adminBannerSetEstado(\'' + r.fila + '\',\'Confirmada\',this,\'' + scope + '\')" aria-label="Aprobar"><span class="material-symbols-outlined">check</span></button>' +
+        '<button class="admin-banner-btn admin-banner-btn-no" onclick="adminBannerSetEstado(\'' + r.fila + '\',\'Cancelada\',this,\'' + scope + '\')" aria-label="Rechazar"><span class="material-symbols-outlined">close</span></button>' +
       '</div></div>';
   }).join('');
   var n = _admBannerPendientes.length;
@@ -279,9 +287,9 @@ function adminBannerSetEstado(fila, estado, btn, scope) {
   var row = btn.closest('.admin-banner-res-row');
   var botones = row.querySelectorAll('.admin-banner-btn');
   botones.forEach(function(b) { b.disabled = true; });
-  adminApi({ action: 'adminSetEstadoReserva', fila: fila, estado: estado }, function(res) {
+  adminApi({ action: 'adminSetEstadoReserva', id: fila, estado: estado }, function(res) {
     if (!res.exito) { botones.forEach(function(b) { b.disabled = false; }); mostrarToast(res.error || 'Error al actualizar.', 'error'); return; }
-    _admBannerPendientes = _admBannerPendientes.filter(function(r) { return r.fila !== fila; });
+    _admBannerPendientes = _admBannerPendientes.filter(function(r) { return r.id !== fila; });
     row.style.transition = 'opacity 0.25s ease';
     row.style.opacity = '0';
     setTimeout(function() {
@@ -371,7 +379,7 @@ var ADMIN_TILE_INFO = {
     listaId: 'admin-reservas-lista',
     cargar: function() {
       adminApi({ action: 'adminGetReservas' }, function(res) {
-        _admTodasReservas = res || [];
+        _admTodasReservas = (res || []).map(_normalizeReserva);
         adminRenderReservas();
       }, function(e) { mostrarToast(e.message || 'Error al cargar reservas.', 'error'); });
       _adminUpdateFiltroSlider(false);
@@ -596,7 +604,7 @@ function adminIrReservas(origenEl) {
 // refresca los datos en el lugar.
 function adminRefreshReservas() {
   adminApi({ action: 'adminGetReservas' }, function(res) {
-    _admTodasReservas = res || [];
+    _admTodasReservas = (res || []).map(_normalizeReserva);
     adminRenderReservas();
   }, function(e) { mostrarToast(e.message || 'Error al cargar reservas.', 'error'); });
 }
@@ -760,11 +768,11 @@ function adminRenderReservas() {
           '<div class="reserva-detalle">' + detalleEquip + detalleMonto + '</div>';
         if (r.estado === 'Pendiente') {
           html += '<div style="display:flex;gap:8px;margin-top:10px;">' +
-            '<button class="btn btn-primary" style="padding:11px;font-size:0.82rem;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="adminCambiarEstado(' + r.fila + ',\'Confirmada\',this)"><span class="material-symbols-outlined" style="font-size:1rem;">check</span> Aprobar</button>' +
-            '<button class="btn-cancelar" style="margin-top:0;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="adminCambiarEstado(' + r.fila + ',\'Cancelada\',this)"><span class="material-symbols-outlined" style="font-size:1rem;">close</span> Cancelar</button>' +
+            '<button class="btn btn-primary" style="padding:11px;font-size:0.82rem;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="adminCambiarEstado(\'' + r.fila + '\',\'Confirmada\',this)"><span class="material-symbols-outlined" style="font-size:1rem;">check</span> Aprobar</button>' +
+            '<button class="btn-cancelar" style="margin-top:0;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="adminCambiarEstado(\'' + r.fila + '\',\'Cancelada\',this)"><span class="material-symbols-outlined" style="font-size:1rem;">close</span> Cancelar</button>' +
             '</div>';
         } else if (r.estado === 'Confirmada') {
-          html += '<button class="btn-cancelar" style="display:flex;align-items:center;justify-content:center;gap:6px;" onclick="adminCambiarEstado(' + r.fila + ',\'Cancelada\',this)"><span class="material-symbols-outlined" style="font-size:1rem;">close</span> Cancelar esta reserva</button>';
+          html += '<button class="btn-cancelar" style="display:flex;align-items:center;justify-content:center;gap:6px;" onclick="adminCambiarEstado(\'' + r.fila + '\',\'Cancelada\',this)"><span class="material-symbols-outlined" style="font-size:1rem;">close</span> Cancelar esta reserva</button>';
         }
         html += '</div>';
       });
@@ -795,9 +803,9 @@ function toggleGrupoReserva(id, header) {
 function adminCambiarEstado(fila, estado, btn) {
   if (!confirm('¿Marcar esta reserva como "' + estado + '"? Se notificará a la persona.')) return;
   btn.disabled = true;
-  adminApi({ action: 'adminSetEstadoReserva', fila: fila, estado: estado }, function(res) {
+  adminApi({ action: 'adminSetEstadoReserva', id: fila, estado: estado }, function(res) {
     if (res.exito) {
-      _admTodasReservas.forEach(function(r) { if (r.fila === fila) r.estado = estado; });
+      _admTodasReservas.forEach(function(r) { if (r.id === fila) r.estado = estado; });
       adminRenderReservas();
     } else { btn.disabled = false; mostrarToast(res.error || 'Error al actualizar.', 'error'); }
   }, function(e) { btn.disabled = false; mostrarToast(e.message || 'Error al actualizar.', 'error'); });
