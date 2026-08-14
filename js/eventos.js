@@ -2341,10 +2341,10 @@ function _evCardCumpleHtml(c) {
 function _evCardOffseasonHtml(o) {
   var rango = 'Del ' + _evAntFechaLegible(o.fechaInicio) + ' al ' + _evAntFechaLegible(o.fechaFin);
   var acciones = _adminToken ?
-    '<button type="button" class="ev-ant-card-edit" onclick="_evOffseasonEditar(' + o.id + ')" title="Editar">' +
+    '<button type="button" class="ev-ant-card-edit" onclick="_evOffseasonEditar(\'' + o.id + '\')" title="Editar">' +
       '<span class="material-symbols-outlined">edit</span>' +
     '</button>' +
-    '<button type="button" class="ev-ant-card-del" onclick="_evOffseasonEliminar(' + o.id + ')" title="Eliminar">' +
+    '<button type="button" class="ev-ant-card-del" onclick="_evOffseasonEliminar(\'' + o.id + '\')" title="Eliminar">' +
       '<span class="material-symbols-outlined">delete</span>' +
     '</button>' : '';
   return '<div class="ev-card ev-card-offseason">' +
