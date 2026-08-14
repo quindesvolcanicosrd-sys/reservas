@@ -6295,7 +6295,7 @@ function _evAdminEditarEvento(idEvento, campos, modo, fechaDesde, fechaHasta, on
     if (modo === 'desde_aqui' && campos.inicia !== undefined) {
       // Actualiza eventos Y la regla del venue (para que los generados después también tengan la nueva hora)
       patch(urlAsis, upd, function() {
-        patch(SUPABASE_URL + '/rest/v1/venues?id=eq.' + encodeURIComponent(idRegla), { hora: campos.inicia }, onOk, onErr);
+        patch(SUPABASE_URL + '/rest/v1/venues?id=eq.' + encodeURIComponent(idRegla), { inicia: campos.inicia }, onOk, onErr);
       }, onErr);
     } else {
       patch(urlAsis, upd, onOk, onErr);
