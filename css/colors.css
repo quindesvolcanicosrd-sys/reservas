@@ -46,6 +46,10 @@
   --brand-warm:          #fff8f4;
   --brand-warm-2:        #fffcf9;
   --brand-warm-3:        #fff4ec;
+
+  /* ── Easing / animaciones ───────────────────────────── */
+  --ease-sheet: cubic-bezier(0.16,1,0.3,1);
+
   --error:          var(--danger);
   --error-light:    var(--danger-bg);
   --error-border:   var(--danger-bdr);
