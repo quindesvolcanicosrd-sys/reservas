@@ -1118,7 +1118,14 @@ async function getReservasPersona(params: Record<string, any>): Promise<any[]> {
   (eventos ?? []).forEach((e: any) => { eventosPorId[e.id_evento] = e; });
   return reservas.map((r: any) => {
     const ev = eventosPorId[r.id_evento];
-    return { ...r, fechaEvento: ev?.fecha ?? null, donde: ev?.donde ?? null, horaInicio: ev?.inicia?.substring(0, 5) ?? null };
+    return {
+      ...r,
+      fecha: r.id_evento ?? r.mes_texto ?? null,
+      fechaCalendario: ev?.fecha ?? null,
+      fechaEvento: ev?.fecha ?? null,
+      donde: ev?.donde ?? null,
+      horaInicio: ev?.inicia?.substring(0, 5) ?? null,
+    };
   });
 }
 
