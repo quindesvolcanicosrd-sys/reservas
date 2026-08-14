@@ -321,30 +321,34 @@ function _evMapCumpleBackend(raw, idx) {
   var conEdad = typeof raw.edad === 'number';
   return { id: 'cumple-' + idx, nombre: raw.nombre, fecha: raw.fecha, edad: conEdad ? raw.edad : null, edadPublica: conEdad, fotoPerfil: '' };
 }
-// Único punto de carga real de esta pantalla -- 2 pedidos en paralelo,
-// `onListo()` corre cuando ambos terminaron (éxito o error). getEventosRango
+// Único punto de carga real de esta pantalla -- 3 pedidos en paralelo,
+// `onListo()` corre cuando los 3 terminaron (éxito o error). getEventosRango
 // es la data crítica: un error ahí avisa con un toast y deja el timeline
 // vacío. getCumpleañosRango tiene un bug real CONOCIDO en el backend
 // desplegado hoy ("Columna no encontrada: Nombre" -- el encabezado real de
 // la hoja Equipo no coincide con el que espera el script, ver MANIFEST.md)
 // -- degrada en silencio a "sin cumpleaños" en vez de mostrarle un error a
 // cada persona que entra a Eventos por un problema ajeno al frontend.
+// `temporadas_descanso` (Tanda B, ver MANIFEST.md "Cambios recientes") --
+// a diferencia de los otros 2, NO pasa por `api()`/BACKEND (la Edge
+// Function): es un fetch directo del navegador a la REST API de Supabase
+// (PostgREST, `SUPABASE_URL`/`SUPABASE_ANON_KEY`, `js/config.js`) -- misma
+// mecánica (publishable key + headers de autenticación) que `Code.gs` ya usa
+// server-side vía `UrlFetchApp` para Venues/log_asistencias (ver esas
+// entradas de este MANIFEST), acá replicada del lado del cliente con
+// `fetch()` porque así lo pidió Victor para esta tabla puntual. Degrada
+// igual que getCumpleañosRango (console.warn, sin toast) -- ambos son datos
+// secundarios del timeline, ninguno debería bloquear ni asustar con un error
+// visible por un problema ajeno al resto de la pantalla.
 function _evCargarDatosReales(onListo) {
   var rango = _evRangoCargaCompleto();
-  var pendientes = 2;
+  var pendientes = 3;
   function unoListo() { pendientes--; if (pendientes === 0) onListo(); }
   api({ action: 'getEventosRango', desde: rango.desde, hasta: rango.hasta }, function(res) {
     _EV_EVENTOS = (res.eventos || []).map(_evMapEventoBackend);
-    // Temporadas de descanso (Tanda B) -- arreglo nuevo y opcional del mismo
-    // endpoint, `res.offseason || []` cubre tanto un backend viejo que
-    // todavía no lo manda (undefined) como uno nuevo sin ninguna temporada
-    // cargada (arreglo vacío real) -- mismo resultado en los 2 casos, sin
-    // distinguirlos: degradación elegante, el timeline queda igual que antes.
-    _EV_OFFSEASON = res.offseason || [];
     unoListo();
   }, function(e) {
     _EV_EVENTOS = [];
-    _EV_OFFSEASON = [];
     mostrarToast(e && e.message ? e.message : 'No se pudieron cargar los eventos.', 'error');
     unoListo();
   });
@@ -354,6 +358,28 @@ function _evCargarDatosReales(onListo) {
   }, function(e) {
     _EV_CUMPLEANOS = [];
     if (window.console) console.warn('getCumpleañosRango: ' + (e && e.message || 'error'));
+    unoListo();
+  });
+  // Filtro de solapamiento de rango (sintaxis PostgREST: `?col=operador.valor`,
+  // varios params = AND) -- una temporada "cuenta" para [desde,hasta] si
+  // arrancó antes/durante Y todavía no había terminado al empezar el rango:
+  // fecha_inicio <= hasta AND fecha_fin >= desde. `select=` pide solo las 4
+  // columnas que hacen falta, nunca `*`.
+  fetch(
+    SUPABASE_URL + '/rest/v1/temporadas_descanso?select=id,nombre,fecha_inicio,fecha_fin' +
+      '&fecha_inicio=lte.' + rango.hasta + '&fecha_fin=gte.' + rango.desde,
+    { headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY } }
+  ).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function(rows) {
+    _EV_OFFSEASON = (rows || []).map(function(r) {
+      return { id: r.id, nombre: r.nombre, fechaInicio: r.fecha_inicio, fechaFin: r.fecha_fin };
+    });
+    unoListo();
+  }).catch(function(e) {
+    _EV_OFFSEASON = [];
+    if (window.console) console.warn('temporadas_descanso: ' + (e && e.message || 'error'));
     unoListo();
   });
 }
