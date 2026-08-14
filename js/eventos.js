@@ -4682,20 +4682,97 @@ var _evLugaresCargaId = 0;
 var _EV_LUGAR_QUITO_LATLNG = { lat: -0.1807, lng: -78.4678 };
 var _EV_LUGAR_UNIDAD_LABEL = { 'dias': 'días', 'semanas': 'semanas', 'meses': 'meses' };
 
+// Fix real (ver "Cambios recientes" -- error al entrar a "Gestionar
+// venues"): `action:'getVenues'` es la acción vieja de Apps Script,
+// NUNCA desplegada tras la migración de Venues a Supabase (confirmado por
+// auditoría de backend en una sesión anterior, "Acción no válida o no
+// especificada") -- cada entrada a esta pantalla tiraba ese error. Pasa a
+// `fetch()` directo a la REST API de Supabase, mismo mecanismo ya usado en
+// el resto de esta sección para `temporadas_descanso`/`asistencias`, contra
+// la tabla `venues` real (la misma que ya usa `adminGetVenues` -- Edge
+// Function, `#s-eventos-editar` -- pero esa acción devuelve las filas
+// crudas sin mapear; acá SÍ hace falta traducir a camelCase porque
+// `_evLugares`/`_evLugarData` y el resto de este bloque ya esperan el shape
+// viejo de `getVenues()`, ver `_evMapVenueSupabase()` más abajo).
+// `order=lugar.asc` -- la columna real es `lugar`, no `nombre` (confirmado
+// contra `supabase/functions/api/index.ts`, `adminGetVenues()`/
+// `_mapaTipoIconoPorLugar()`, y contra el uso ya existente de
+// `v.lugar` en `_evEditarRenderVenues()`, más arriba en este archivo).
 function irEvLugares() {
   ir('s-eventos-lugares');
   document.getElementById('ev-lugares-lista').innerHTML = _evLugaresSkeletonHtml();
   var miCarga = ++_evLugaresCargaId;
-  api({ action: 'getVenues', adminToken: _adminToken }, function(res) {
+  fetch(SUPABASE_URL + '/rest/v1/venues?select=*&order=lugar.asc', {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }
+  }).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function(rows) {
     if (miCarga !== _evLugaresCargaId) return;
-    _evLugares = res || [];
+    _evLugares = (rows || []).map(_evMapVenueSupabase);
     _evLugaresRenderLista();
-  }, function(e) {
+  }).catch(function(e) {
     if (miCarga !== _evLugaresCargaId) return;
     mostrarToast(e && e.message ? e.message : 'No se pudieron cargar los lugares.', 'error');
     var cont = document.getElementById('ev-lugares-lista');
     if (cont) cont.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">No se pudieron cargar los lugares.</p>';
   });
+}
+
+// Traduce las columnas reales (snake_case) de `venues` (Supabase) al mismo
+// shape camelCase que ya esperaba TODO este bloque desde el contrato viejo
+// de Apps Script (`getVenues()`, ver MANIFEST.md "Backend — Venues"):
+// `{fila,nombre,mapsUrl,lat,lng,tipoIcono,requiereReserva,tipoRecurrencia,
+// diasSemana,frecuenciaNumero,frecuenciaUnidad,fechaReferencia,hora}`.
+// **Columnas CONFIRMADAS** contra `supabase/functions/api/index.ts`
+// (`adminGetVenues()`/`_mapaTipoIconoPorLugar()`/`_mapaRequiereReservaPorLugar()`)
+// y contra `_evAdminEditarEvento()` (PATCH a `venues.hora`, ver "Cambios
+// recientes"): `id`, `lugar`, `tipo_icono`, `requiere_reserva` (boolean
+// real, `!== false` mismo criterio que ya usa el Edge Function 2 veces),
+// `hora`. **Columnas SIN confirmar** (nunca leídas/escritas desde ningún
+// código de este repo hasta ahora, ni por el Edge Function ni por ningún
+// fetch directo -- nombre razonable por la misma convención snake_case que
+// el resto del esquema, ej. `asistencias.google_maps`/`info_adicional`):
+// `google_maps`/`lat`/`lng`/`tipo_recurrencia`/`dias_semana`/`frecuencia`/
+// `unidad`/`fecha_referencia`. Si la lista carga bien (ya no tira el error
+// original) pero un lugar existente precarga mal su ubicación/recurrencia
+// al editarlo, empezar por confirmar estos nombres contra la tabla real
+// (ver "Tareas pendientes manuales" en MANIFEST.md).
+function _evMapVenueSupabase(v) {
+  return {
+    fila: v.id,
+    nombre: v.lugar || '',
+    mapsUrl: v.google_maps || v.maps_url || v.mapsUrl || null,
+    lat: (typeof v.lat === 'number') ? v.lat : null,
+    lng: (typeof v.lng === 'number') ? v.lng : null,
+    tipoIcono: v.tipo_icono || null,
+    requiereReserva: v.requiere_reserva !== false,
+    tipoRecurrencia: v.tipo_recurrencia || null,
+    diasSemana: _evLugarParseDiasSemana(v.dias_semana),
+    frecuenciaNumero: v.frecuencia || null,
+    frecuenciaUnidad: v.unidad || null,
+    fechaReferencia: v.fecha_referencia || null,
+    hora: v.hora || ''
+  };
+}
+// `dias_semana` sin confirmar si Supabase lo devuelve como array real
+// (Postgres `int[]`/`smallint[]`, lo más probable para un esquema nuevo --
+// PostgREST ya lo entrega como array de JS nativo) o como texto -- tolera
+// ambos: array directo (números), string JSON (`"[1,3,5]"`) o CSV numérico
+// (`"1,3,5"`). NO tolera el formato viejo de nombres de día en texto
+// (`"Lunes,Miércoles"`, el que usaba la hoja de Sheets) -- ese formato no
+// debería sobrevivir a una migración a un esquema nuevo de Supabase, pero
+// si Victor confirma que sí, esta función necesita un caso más.
+function _evLugarParseDiasSemana(raw) {
+  if (Array.isArray(raw)) return raw.map(Number).filter(function(n) { return !isNaN(n); });
+  if (typeof raw === 'string' && raw.trim()) {
+    try {
+      var j = JSON.parse(raw);
+      if (Array.isArray(j)) return j.map(Number).filter(function(n) { return !isNaN(n); });
+    } catch (e) { /* no era JSON, cae al split de abajo */ }
+    return raw.split(',').map(function(s) { return parseInt(s.trim(), 10); }).filter(function(n) { return !isNaN(n); });
+  }
+  return [];
 }
 
 // Mismo shimmer que _evAntSkeletonHtml() (ver arriba) -- 3 cards del mismo
@@ -4754,8 +4831,22 @@ function _evLugarResumenRecurrencia(v) {
   return v.tipoIcono || '';
 }
 
-/* ─── Formulario compartido ("Crear evento"/"Editar lugares") ─────────── */
+/* ─── Formulario compartido ("Crear evento"/"Editar lugares") -- wizard de
+   3 pasos (ver MANIFEST.md "Cambios recientes"), mismo motor que "Crear
+   evento" (_EV_CREAR_STEPS/_evCrearCurIdx, más abajo en este archivo):
+   array de ids de paso + índice actual, reusando .salud-paso/.salud-prog/
+   .salud-prog-dot (css/perfil.css) tal cual. Paso 0 -- Ubicación+Nombre.
+   Paso 1 -- Tipo de evento (ya NO pide "¿Requiere reserva?", ver
+   _evLugarGuardar() más abajo -- se auto-deriva de `tipoIcono` al guardar,
+   nunca se pregunta ni se guarda como elección propia en _evLugarData).
+   Paso 2 -- Horario, con TODOS sus sub-campos de recurrencia (días de
+   semana/frecuencia/fecha de referencia/hora) sin cambios de mecánica --
+   la única diferencia es que este paso YA NO bloquea el guardado (ver
+   _evLugarActualizarFooter(), más abajo, fuerza `disabled=false` sin
+   consultar ninguna validación en ese paso). ─────────────────────────── */
 
+var _EV_LUGAR_STEPS = ['ev-lugar-paso-0', 'ev-lugar-paso-1', 'ev-lugar-paso-2'];
+var _evLugarCurIdx = 0;
 var _evLugarData = {};
 var _evLugarOrigen = 's-eventos-lugares';
 // mismo criterio que _evAntCal (arriba): .mostrado guarda un ISO string, no
@@ -4770,26 +4861,30 @@ function _evLugarFormVolver() { return _evLugarOrigen; }
 function irEvLugarFormNuevo(origen) {
   _evLugarData = {
     fila: null, nombre: '', mapsUrl: null, lat: null, lng: null,
-    tipoIcono: null, requiereReserva: 'si', tipoRecurrencia: null,
+    tipoIcono: null, tipoRecurrencia: null,
     diasSemana: [], frecuenciaNumero: null, frecuenciaUnidad: null,
     fecha: null, hora: ''
   };
   _evLugarOrigen = origen || 's-eventos-lugares';
   ir('s-eventos-lugar-form');
   _evLugarFormPintar();
+  _evLugarMostrarPaso(0);
   _evLugarInicializarMapa();
 }
 
 // Card de la lista tocada -- precarga _evLugarData completo desde la fila ya
 // cargada en memoria (_evLugares, sin pedirla de nuevo al backend, mismo
-// criterio que _evAntEditar()).
+// criterio que _evAntEditar()). Siempre arranca en el paso 0 (pedido
+// explícito -- "editar un venue existente debe abrir el wizard en el paso 0
+// con todos los campos precargados"), navegando por pasos desde ahí como
+// cualquier apertura nueva.
 function _evLugarAbrirEditar(fila) {
   var v = _evLugares.filter(function(x) { return x.fila === fila; })[0];
   if (!v) return;
   _evLugarData = {
     fila: v.fila, nombre: v.nombre || '', mapsUrl: v.mapsUrl || null,
     lat: (typeof v.lat === 'number') ? v.lat : null, lng: (typeof v.lng === 'number') ? v.lng : null,
-    tipoIcono: v.tipoIcono || null, requiereReserva: v.requiereReserva === false ? 'no' : 'si',
+    tipoIcono: v.tipoIcono || null,
     tipoRecurrencia: v.tipoRecurrencia || null,
     diasSemana: (v.diasSemana || []).slice(),
     frecuenciaNumero: v.frecuenciaNumero || null, frecuenciaUnidad: v.frecuenciaUnidad || null,
@@ -4798,12 +4893,17 @@ function _evLugarAbrirEditar(fila) {
   _evLugarOrigen = 's-eventos-lugares';
   ir('s-eventos-lugar-form');
   _evLugarFormPintar();
+  _evLugarMostrarPaso(0);
   _evLugarInicializarMapa();
 }
 
 // Pinta TODO el formulario desde _evLugarData -- un solo punto, llamado
 // tanto al arrancar en blanco como al precargar una edición (mismo criterio
-// que _evAntIniciarWizard()).
+// que _evAntIniciarWizard()). Solo VALORES de campo -- la navegación entre
+// pasos (a qué paso arrancar, los dots de progreso) vive aparte en
+// _evLugarMostrarPaso(), llamada siempre después de esta por cada caller
+// (irEvLugarFormNuevo()/_evLugarAbrirEditar()), mismo criterio que
+// _evCrearResetUI()/_evCrearMostrarPaso() en "Crear evento".
 function _evLugarFormPintar() {
   var titulo = document.getElementById('ev-lugar-form-titulo');
   if (titulo) titulo.textContent = _evLugarData.fila ? 'Editar lugar' : 'Nuevo lugar';
@@ -4812,7 +4912,6 @@ function _evLugarFormPintar() {
   if (nombreInp) nombreInp.value = _evLugarData.nombre || '';
 
   document.querySelectorAll('#ev-lugar-icono-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.tipoIcono); });
-  document.querySelectorAll('#ev-lugar-reserva-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.requiereReserva); });
   document.querySelectorAll('#ev-lugar-recurrencia-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.tipoRecurrencia); });
   document.querySelectorAll('#ev-lugar-dias-row .ev-dia-circulo').forEach(function(c) { c.classList.toggle('activa', _evLugarData.diasSemana.indexOf(parseInt(c.dataset.dia, 10)) !== -1); });
   var frecNumInp = document.getElementById('ev-lugar-frec-num');
@@ -4830,29 +4929,86 @@ function _evLugarFormPintar() {
   _evLugarCalRender('unico');
   _evLugarActualizarCalResumen('referencia');
   _evLugarActualizarCalResumen('unico');
-  _evLugarActualizarBotonGuardar();
+  _evLugarActualizarFooter();
 }
 
-function _evLugarSetNombre(v) { _evLugarData.nombre = v; _evLugarActualizarBotonGuardar(); }
+/* ── Navegación entre los 3 pasos -- mismo mecanismo que
+   _evCrearMostrarPaso()/_evCrearRenderProg()/_evCrearBack() (más abajo en
+   este archivo), con su propio índice/array (nunca comparte estado con
+   "Crear evento", pese a compartir el motor). ──────────────────────── */
+function _evLugarMostrarPaso(idx) {
+  _EV_LUGAR_STEPS.forEach(function(s, i) {
+    var el = document.getElementById(s);
+    if (el) el.classList.toggle('activo', i === idx);
+  });
+  _evLugarCurIdx = idx;
+  _evLugarRenderProg();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  _evLugarActualizarFooter();
+}
+function _evLugarRenderProg() {
+  var cont = document.getElementById('ev-lugar-prog'); if (!cont) return;
+  cont.innerHTML = '';
+  for (var i = 0; i < _EV_LUGAR_STEPS.length; i++) {
+    var d = document.createElement('div');
+    d.className = 'salud-prog-dot' + (i < _evLugarCurIdx ? ' done' : (i === _evLugarCurIdx ? ' active' : ''));
+    cont.appendChild(d);
+  }
+}
+// Flecha del header Y botón "Atrás" del footer -- mismo destino, un paso
+// atrás o (desde el paso 0) de vuelta al origen real (_evLugarFormVolver()).
+function _evLugarBack() {
+  if (_evLugarCurIdx === 0) { ir(_evLugarFormVolver()); return; }
+  _evLugarMostrarPaso(_evLugarCurIdx - 1);
+}
+function _evLugarIrPaso1() {
+  if (!_evLugarPaso0Valido()) return;
+  _evLugarMostrarPaso(1);
+}
+function _evLugarIrPaso2() {
+  if (!_evLugarPaso1Valido()) return;
+  _evLugarMostrarPaso(2);
+}
+// Footer de 2 botones lado a lado ("Atrás"/acción principal, ver el HTML) --
+// "Atrás" oculto en el paso 0 (mismo criterio que "Editar evento": la
+// flecha del header ya cubre esa acción ahí). El botón principal cambia
+// texto/acción/habilitación según el paso -- Paso 2 SIEMPRE habilitado
+// (pedido explícito, "el botón Guardar está siempre habilitado
+// independientemente de si se seleccionó o no un tipo de recurrencia").
+function _evLugarActualizarFooter() {
+  var btnAtras = document.getElementById('ev-lugar-btn-atras');
+  if (btnAtras) btnAtras.style.display = _evLugarCurIdx === 0 ? 'none' : 'flex';
+  var btn = document.getElementById('ev-lugar-btn-guardar');
+  if (!btn) return;
+  if (_evLugarCurIdx === 0) {
+    btn.textContent = 'Siguiente';
+    btn.onclick = _evLugarIrPaso1;
+    btn.disabled = !_evLugarPaso0Valido();
+  } else if (_evLugarCurIdx === 1) {
+    btn.textContent = 'Siguiente';
+    btn.onclick = _evLugarIrPaso2;
+    btn.disabled = !_evLugarPaso1Valido();
+  } else {
+    btn.textContent = 'Guardar';
+    btn.onclick = _evLugarGuardar;
+    btn.disabled = false;
+  }
+}
+
+function _evLugarSetNombre(v) { _evLugarData.nombre = v; _evLugarActualizarFooter(); }
 
 function _evLugarSelIcono(el) {
   document.querySelectorAll('#ev-lugar-icono-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   el.classList.add('activa');
   _evLugarData.tipoIcono = el.dataset.val;
-  _evLugarActualizarBotonGuardar();
-}
-function _evLugarSelReserva(el) {
-  document.querySelectorAll('#ev-lugar-reserva-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
-  el.classList.add('activa');
-  _evLugarData.requiereReserva = el.dataset.val;
-  _evLugarActualizarBotonGuardar();
+  _evLugarActualizarFooter();
 }
 function _evLugarSelRecurrencia(el) {
   document.querySelectorAll('#ev-lugar-recurrencia-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   el.classList.add('activa');
   _evLugarData.tipoRecurrencia = el.dataset.val;
   _evLugarMostrarSubRecurrencia();
-  _evLugarActualizarBotonGuardar();
+  _evLugarActualizarFooter();
 }
 // Reveal inline según la elección -- mismo patrón ya usado por
 // _evAntMostrarSubFrecuencia() (ver arriba): oculta los 3 sub-bloques,
@@ -4886,16 +5042,16 @@ function _evLugarToggleDia(el) {
   var idx = _evLugarData.diasSemana.indexOf(dia);
   if (el.classList.contains('activa')) { if (idx === -1) _evLugarData.diasSemana.push(dia); }
   else if (idx !== -1) { _evLugarData.diasSemana.splice(idx, 1); }
-  _evLugarActualizarBotonGuardar();
+  _evLugarActualizarFooter();
 }
-function _evLugarSetFrecNum(v) { _evLugarData.frecuenciaNumero = v ? parseInt(v, 10) : null; _evLugarActualizarBotonGuardar(); }
+function _evLugarSetFrecNum(v) { _evLugarData.frecuenciaNumero = v ? parseInt(v, 10) : null; _evLugarActualizarFooter(); }
 function _evLugarSelUnidad(el) {
   document.querySelectorAll('#ev-lugar-frec-unidad-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   el.classList.add('activa');
   _evLugarData.frecuenciaUnidad = el.dataset.val;
-  _evLugarActualizarBotonGuardar();
+  _evLugarActualizarFooter();
 }
-function _evLugarSetHora(v) { _evLugarData.hora = v; _evLugarActualizarBotonGuardar(); }
+function _evLugarSetHora(v) { _evLugarData.hora = v; _evLugarActualizarFooter(); }
 
 /* ── Calendario inline de fecha única -- "fecha de referencia" (recurrencia
    "cada tantos") y "fecha única" (evento único) comparten el mismo campo de
@@ -4952,7 +5108,7 @@ function _evLugarCalTocarDia(cual, iso) {
   _evLugarData.fecha = iso;
   _evLugarCalRender(cual);
   _evLugarActualizarCalResumen(cual);
-  _evLugarActualizarBotonGuardar();
+  _evLugarActualizarFooter();
 }
 function _evLugarActualizarCalResumen(cual) {
   var el = document.getElementById('ev-lugar-cal-' + cual + '-resumen');
@@ -4993,7 +5149,7 @@ function _evLugarOnDragEnd(centro) {
 function _evLugarActualizarUbicacion(lat, lng, mapsUrlDirecto) {
   _evLugarData.lat = lat; _evLugarData.lng = lng;
   _evLugarData.mapsUrl = mapsUrlDirecto || ('https://www.google.com/maps?q=' + lat + ',' + lng);
-  _evLugarActualizarBotonGuardar();
+  _evLugarActualizarFooter();
 }
 function _evLugarInicializarBuscador() {
   var inp = document.getElementById('ev-lugar-buscador-input');
@@ -5014,27 +5170,31 @@ function _evLugarInicializarBuscador() {
       _evLugarData.nombre = place.name;
       var nombreInp = document.getElementById('ev-lugar-nombre');
       if (nombreInp) nombreInp.value = place.name;
-      _evLugarActualizarBotonGuardar();
+      _evLugarActualizarFooter();
     }
   });
 }
 
-/* ── Validación + guardado (crearVenue/editarVenue) ─────────────────── */
-function _evLugarRecurrenciaValida() {
-  var t = _evLugarData.tipoRecurrencia;
-  if (t === 'dias_semana') return _evLugarData.diasSemana.length > 0 && !!_evLugarData.hora;
-  if (t === 'cada_tantos') return !!(_evLugarData.frecuenciaNumero > 0 && _evLugarData.frecuenciaUnidad && _evLugarData.fecha && _evLugarData.hora);
-  if (t === 'unico') return !!(_evLugarData.fecha && _evLugarData.hora);
-  return false;
+/* ── Validación por paso (ver MANIFEST.md "Cambios recientes") --
+   `_evLugarRecurrenciaValida()` (el gate viejo del Paso "Horario", que
+   exigía tipoRecurrencia + todos sus sub-campos + hora) se ELIMINÓ del
+   todo, no solo se dejó de llamar -- el pedido es explícito ("tipoRecurrencia
+   y hora ya NO son campos requeridos", "el botón Guardar está siempre
+   habilitado"), no una relajación parcial. Paso 2 nunca bloquea el guardado
+   -- `_evLugarActualizarFooter()` fuerza `disabled=false` ahí sin consultar
+   ninguna validación (ver esa función, arriba en este archivo). ──────── */
+function _evLugarPaso0Valido() {
+  return !!(_evLugarData.nombre && _evLugarData.nombre.trim() && _evLugarData.mapsUrl);
 }
+function _evLugarPaso1Valido() {
+  return !!_evLugarData.tipoIcono;
+}
+// Guard defensivo de _evLugarGuardar() (ver más abajo) -- en el flujo normal
+// nunca debería poder tocarse "Guardar" sin haber pasado por los pasos 0/1
+// ya válidos (el botón de esos pasos ya lo exige para avanzar), pero el
+// paso 2 en sí no vuelve a chequearlos.
 function _evLugarValido() {
-  return !!(_evLugarData.nombre && _evLugarData.nombre.trim() && _evLugarData.mapsUrl &&
-    _evLugarData.tipoIcono && _evLugarData.requiereReserva && _evLugarData.tipoRecurrencia &&
-    _evLugarRecurrenciaValida());
-}
-function _evLugarActualizarBotonGuardar() {
-  var btn = document.getElementById('ev-lugar-btn-guardar');
-  if (btn) btn.disabled = !_evLugarValido();
+  return _evLugarPaso0Valido() && _evLugarPaso1Valido();
 }
 
 // Guardado real -- crearVenue (sin _evLugarData.fila) o editarVenue (con
@@ -5047,6 +5207,11 @@ function _evLugarActualizarBotonGuardar() {
 // mostrará en el timeline.
 function _evLugarGuardar() {
   if (!_evLugarValido()) return;
+  // "¿Requiere reserva?" ya no es una pregunta propia del form (ver
+  // MANIFEST.md "Cambios recientes") -- se auto-deriva acá mismo, al armar
+  // el payload final, a partir del tipo de evento elegido en el Paso 1:
+  // solo "Entrenamiento" habilita reservas de equipamiento para este lugar.
+  var requiereReserva = _evLugarData.tipoIcono === 'Entrenamiento' ? 'SI' : 'NO';
   var payload = {
     action: _evLugarData.fila ? 'editarVenue' : 'crearVenue',
     adminToken: _adminToken,
@@ -5055,7 +5220,7 @@ function _evLugarGuardar() {
     lat: _evLugarData.lat,
     lng: _evLugarData.lng,
     tipoIcono: _evLugarData.tipoIcono,
-    requiereReserva: _evLugarData.requiereReserva === 'si' ? 'SI' : 'NO',
+    requiereReserva: requiereReserva,
     tipoRecurrencia: _evLugarData.tipoRecurrencia,
     hora: _evLugarData.hora
   };
