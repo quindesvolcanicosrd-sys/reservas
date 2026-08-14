@@ -890,14 +890,14 @@ function _parseFechaStr(fechaStr) {
 
 function _clasificarReservas(todas, hoy) {
   var tieneActivaMensual = todas.some(function(r) {
-    if (_MESES_MAP[r.fecha.toLowerCase().trim()] === undefined) return false;
+    if (!r.fecha || _MESES_MAP[r.fecha.toLowerCase().trim()] === undefined) return false;
     if (r.estado === 'Cancelada') return false;
     var vh = _parseFechaSimple(r.validezHasta);
     return !vh || hoy <= vh;
   });
   var activas = [], historial = [], expMostr = false;
   todas.forEach(function(r) {
-    var f = r.fecha.toLowerCase().trim(), estado = r.estado;
+    var f = (r.fecha || '').toLowerCase().trim(), estado = r.estado;
     if (estado === 'Cancelada' || estado === 'Crédito usado') { historial.push(r); return; }
     if (_MESES_MAP[f] !== undefined) {
       var vh = _parseFechaSimple(r.validezHasta);
