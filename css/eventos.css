@@ -1259,7 +1259,7 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
    ese sí trae `resize:vertical` por default en el resto de la app, donde no
    hay auto-crecimiento. */
 #ev-editar-descripcion-input { resize: none; overflow-y: hidden; }
-/* Contador "[n]/200" -- límite real puesto por `maxlength="200"` en el HTML,
+/* Contador "[n]/150" -- límite real puesto por `maxlength="150"` en el HTML,
    este texto solo refleja el estado. `--warning` (colors.css, mismo token
    que el resto de la app usa para "atención, sin ser un error todavía") en
    vez de un color hardcodeado, activado por `_evEditarDescActualizarContador()`

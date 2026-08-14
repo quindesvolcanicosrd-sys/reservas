@@ -3179,14 +3179,14 @@ function _evEditarDescripcionInput(el) {
   el.style.height = el.scrollHeight + 'px';
   _evEditarDescActualizarContador(el.value.length);
 }
-// Límite de 200 caracteres (maxlength en el HTML) -- el contador vive
-// SIEMPRE en "[n]/200" y pasa a `--warning` (sin hardcodear el color, ver
+// Límite de 150 caracteres (maxlength en el HTML) -- el contador vive
+// SIEMPRE en "[n]/150" y pasa a `--warning` (sin hardcodear el color, ver
 // css/eventos.css) cuando quedan 20 caracteres o menos.
 function _evEditarDescActualizarContador(len) {
   var cont = document.getElementById('ev-editar-desc-contador');
   if (!cont) return;
-  cont.textContent = len + '/200';
-  cont.classList.toggle('ev-editar-desc-contador-limite', (200 - len) <= 20);
+  cont.textContent = len + '/150';
+  cont.classList.toggle('ev-editar-desc-contador-limite', (150 - len) <= 20);
 }
 
 /* ── Campo "Lugar" -- lista de venues como pills, mismo `.aj-pill` de
