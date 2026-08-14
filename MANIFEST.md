@@ -363,6 +363,12 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
 | `body.ev-ant-footer-visible #app-toast` | **Nuevo (ver "Cambios recientes")** — sube el toast global (`#app-toast`, css/estilos.css, `bottom:28px` fijo de fábrica) para que en `#s-eventos-anticipada` quede justo encima de `#cta-footer-eventos-anticipada` en vez de tapar las pills del wizard. `#app-toast` es un `<div>` creado por JS y agregado directo a `<body>` la primera vez que corre `mostrarToast()` (mismo criterio de "`position:fixed` va directo en `<body>`, no dentro de `.pantalla`/`.card`" que ya rige `.cta-footer-fixed`) — el override también apunta ahí sin anidarlo dentro de ninguna pantalla. `body.ev-ant-footer-visible` la togglean `_evAntActualizarFooter()`/`_evAntOcultarFooter()` (js/eventos.js) junto con el propio footer |
 
 ### Cambios recientes
+- **Fix Edge Function: se agregó handler propio `adminSetEstadoReserva` en Supabase (`supabase/functions/api/index.ts`) que actualiza `reservas.estado` por UUID. Antes caía al `default` del router que reenviaba a GAS y rechazaba el UUID como "Fila inválida".**
+
+- **Fix `adminGetCandidatosAdmin` (`supabase/functions/api/index.ts`): se eliminó el filtro incorrecto de `necesita_patines`/`necesita_protecciones` — ahora devuelve todos los miembros de la liga (excluyendo solo admins ya existentes).**
+
+- **Fix búsqueda modal admin (`js/admin.js`, `_adminRenderCandidatosAdmin`): el buscador ahora filtra por nombre Y email, no solo por nombre.**
+
 - **Fix post-migración Supabase — admin.js: adminGetReservas devuelve nombre_usuario/fechaEvento/mes_texto/id en vez de nombre/fecha/fila. Se agregó _normalizeReserva() que mapea los campos nuevos a los legacy antes de asignar _admTodasReservas y _admBannerPendientes. Los onclicks de Aprobar/Rechazar ahora quotean el UUID para evitar que los guiones rompan el JS. Las llamadas a adminSetEstadoReserva ahora envían id en vez de fila.**
 
 - **index.html + js/ui.js + js/perfil.js + js/admin.js + js/auth.js — "Mi Liga" sale de Ajustes: pasa a ser su propio tab de la nav inferior (`s-miliga`), visible solo para admins, y una cuenta admin "pura" ahora loguea directo ahí (antes aterrizaba en Ajustes).** Pedido explícito de Victor: el bloque se traslada TAL CUAL (banners condicionales, tiles en acordeón de Qué llevar/Reservas/Equipamiento/Notificación, pills de Personalización/Precios, sección Administradorxs) — sin rediseñarlo de nuevo.

@@ -1319,13 +1319,10 @@ async function adminQuitarAdmin(params: Record<string, any>): Promise<Record<str
 }
 
 async function adminGetCandidatosAdmin(): Promise<any[]> {
-  const { data: equipo } = await supabase.from('equipo').select('username, email, necesita_patines, necesita_protecciones').order('username');
+  const { data: equipo } = await supabase.from('equipo').select('username, email').order('username');
   const { data: admins } = await supabase.from('admins').select('email');
   const adminEmails = new Set([(ADMIN_PRINCIPAL.toLowerCase()), ...(admins ?? []).map((a: any) => a.email.toLowerCase())]);
   return (equipo ?? []).filter((r: any) => {
-    const np = (r.necesita_patines ?? '').toLowerCase();
-    const npc = (r.necesita_protecciones ?? '').toLowerCase();
-    if (np !== 'no' || npc !== 'no') return false;
     if (adminEmails.has((r.email ?? '').toLowerCase())) return false;
     return true;
   }).map((r: any) => ({ nombre: r.username, email: r.email }));
@@ -1406,6 +1403,17 @@ async function adminGetReservas(params: Record<string, any>): Promise<any[]> {
     const ev = evPorId[r.id_evento];
     return { ...r, fechaEvento: ev?.fecha ?? null, donde: ev?.donde ?? null, horaInicio: ev?.inicia?.substring(0, 5) ?? null };
   });
+}
+
+async function adminSetEstadoReserva(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const id = params.id ?? params.fila;
+  const { estado } = params;
+  if (!id || !estado) return { exito: false, error: 'Parámetros inválidos.' };
+  const { error } = await supabase.from('reservas').update({ estado }).eq('id', id);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
 }
 
 // ─── Parser de parámetros ─────────────────────────────────────────────────────
@@ -1541,6 +1549,7 @@ Deno.serve(async (req: Request) => {
       case 'adminEnviarPush':               return json(await adminEnviarPush(params));
       // Reservas admin / sesión admin
       case 'adminGetReservas':              return json(await adminGetReservas(params));
+      case 'adminSetEstadoReserva':         return json(await adminSetEstadoReserva(params));
       case 'adminCerrarSesion':             { if (params.adminToken) await supabase.from('admin_sessions').delete().eq('token', params.adminToken); return json({ exito: true }); }
       // Aún en GAS: AsistenciaAnticipada, subirFoto*, enviarResumenReservas, adminRegenerarVentanaAsistencias, adminCancelarEvento, guardarNotaPago
       default:

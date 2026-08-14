@@ -1187,7 +1187,7 @@ function _adminFiltrarCandidatosAdmin(q) { _adminRenderCandidatosAdmin(q); }
 
 function _adminRenderCandidatosAdmin(busqueda) {
   var q = (busqueda || '').toLowerCase().trim();
-  var lista = q ? _admCandidatosAdmin.filter(function(u) { return (u.nombre || '').toLowerCase().indexOf(q) !== -1; }) : _admCandidatosAdmin;
+  var lista = q ? _admCandidatosAdmin.filter(function(u) { return (u.nombre || '').toLowerCase().indexOf(q) !== -1 || (u.email || '').toLowerCase().indexOf(q) !== -1; }) : _admCandidatosAdmin;
   var list = document.getElementById('admin-agregar-lista');
   if (!list) return;
   if (!lista.length) { list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--muted);font-size:0.82rem;">Sin resultados</div>'; return; }
