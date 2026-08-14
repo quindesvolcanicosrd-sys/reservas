@@ -557,21 +557,37 @@ function inscWpUnido() {
   if (btn) { btn.className = 'btn-wp-activo'; btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:1.2rem;vertical-align:middle;">check_circle</span> ¡Ya estás en el grupo!'; }
 }
 function _inscMostrarModalWp() {
-  document.getElementById('modal-wp-insc').style.display = 'flex';
+  var el = document.getElementById('modal-wp-insc');
+  el.style.display = 'flex';
+  requestAnimationFrame(function() {
+    el.style.opacity = '1';
+    el.classList.add('modal-wp-visible');
+  });
+}
+function _inscOcultarModalWp(cb) {
+  var el = document.getElementById('modal-wp-insc');
+  el.classList.remove('modal-wp-visible');
+  el.style.opacity = '0';
+  setTimeout(function() {
+    el.style.display = 'none';
+    if (cb) cb();
+  }, 280);
 }
 function inscWpDesdeModal() {
   _inscWpUnido = true;
-  document.getElementById('modal-wp-insc').style.display = 'none';
-  var btn = document.getElementById('btn-wp-grupo-insc');
-  if (btn) {
-    btn.className = 'btn-wp-activo';
-    btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:22px;margin-right:8px;">check_circle</span> ¡Ya estás en el grupo!';
-  }
+  _inscOcultarModalWp(function() {
+    var btn = document.getElementById('btn-wp-grupo-insc');
+    if (btn) {
+      btn.className = 'btn-wp-activo';
+      btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:22px;margin-right:8px;">check_circle</span> ¡Ya estás en el grupo!';
+    }
+  });
 }
 function inscWpSkipModal() {
   _inscWpSkipped = true;
-  document.getElementById('modal-wp-insc').style.display = 'none';
-  inscEnviar();
+  _inscOcultarModalWp(function() {
+    inscEnviar();
+  });
 }
 function inscTogglePinVis() {
   var inp = document.getElementById('f-pin');
