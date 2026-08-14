@@ -301,7 +301,9 @@ function _evMapEventoBackend(raw) {
     id: String(raw.idEvento), fecha: raw.fecha, lugar: raw.lugar, tipo: raw.tipoIcono,
     horaInicio: _evHoraDeISO(raw.horaInicio), horaFinReal: _evHoraDeISO(raw.horaFin),
     estado: _evNormalizarEstadoEvento(raw.estado), requiereReserva: raw.requiereReserva !== false,
-    miEstado: miEstado, miAsistenciaReal: miAsistenciaReal, asistentes: asistentes, rsvps: rsvps
+    miEstado: miEstado, miAsistenciaReal: miAsistenciaReal, asistentes: asistentes, rsvps: rsvps,
+    mapsUrl: raw.mapsUrl || raw.google_maps || '',
+    descripcion: raw.descripcion || raw.infoAdicional || raw.info_adicional || '',
   };
 }
 // getCumpleañosRango() no manda `fotoPerfil` (no está en el contrato

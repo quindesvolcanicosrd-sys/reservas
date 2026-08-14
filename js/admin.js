@@ -416,6 +416,17 @@ var ADMIN_TILE_INFO = {
   'admin-precios': {
     bubbleId: 'admin-burbuja-precios',
     cargar: function() { _adminCargarPrecios(); }
+  },
+  'admin-cupones': {
+    bubbleId: 'admin-burbuja-cupones',
+    listaId: 'admin-cupones-lista',
+    cargar: function() {
+      var s = document.getElementById('admin-cupones-search'); if (s) s.value = '';
+      adminApi({ action: 'adminGetUsuarios' }, function(res) {
+        _admUsuariosCupones = res || [];
+        _adminRenderCupones('');
+      }, function(e) { mostrarToast(e.message || 'Error al cargar usuarios.', 'error'); });
+    }
   }
 };
 
@@ -1148,6 +1159,49 @@ function adminQuitarClick(email) {
   adminApi({ action: 'adminQuitarAdmin', email: email, solicitante: _adminEmail }, function(res) {
     if (res.exito) { _adminCargarAdmins(); } else { mostrarToast(res.error || 'Error.', 'error'); }
   }, function(e) { mostrarToast(e.message || 'Error.', 'error'); });
+}
+
+// ── Cupones (Mi Liga) — restaurar/quitar el cupón de clase gratis de una
+// persona (equipo.cupon_disponible). Lista ya cargada + filtro local por
+// nombre (mismo patrón que _adminRenderCandidatosAdmin/_adminFiltrarDestino).
+var _admUsuariosCupones = [];
+
+function adminFiltrarCupones(q) { _adminRenderCupones(q); }
+
+function _adminRenderCupones(q) {
+  var query = (q || '').toLowerCase().trim();
+  var lista = query
+    ? _admUsuariosCupones.filter(function(u) { return (u.nombre || '').toLowerCase().indexOf(query) !== -1; })
+    : _admUsuariosCupones;
+  var html = lista.map(function(u) {
+    var disponible = !!u.cuponDisponible;
+    var nombreEsc = (u.nombre || '').replace(/'/g, "\\'");
+    return '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
+      '<div><div style="font-weight:700;font-size:0.9rem;">' + u.nombre + '</div>' +
+      '<span class="badge ' + (disponible ? 'badge-confirmada' : 'badge-cancelada') + '" style="margin-top:4px;">' + (disponible ? 'Cupón disponible' : 'Cupón usado') + '</span></div>' +
+      '<button onclick="adminToggleCuponClick(\'' + nombreEsc + '\',' + disponible + ')" style="border:2px solid ' + (disponible ? 'var(--error-light-border)' : 'var(--success-border-dark)') + ';background:' + (disponible ? 'var(--error-lightest)' : 'var(--success-lightest)') + ';color:' + (disponible ? 'var(--error)' : 'var(--success-dark)') + ';border-radius:10px;padding:8px 12px;cursor:pointer;font-weight:800;font-size:0.8rem;flex-shrink:0;">' + (disponible ? 'Quitar' : 'Restaurar') + '</button>' +
+      '</div>';
+  }).join('');
+  var el = document.getElementById('admin-cupones-lista');
+  if (!el) return;
+  el.innerHTML = html || '<p style="text-align:center;color:var(--muted);padding:10px 0;">Sin resultados.</p>';
+  void el.offsetWidth; el.style.animation = 'fadeIn 0.3s ease';
+}
+
+function adminToggleCuponClick(nombre, disponibleActual) {
+  var nuevoEstado = !disponibleActual;
+  var msg = nuevoEstado
+    ? '¿Restaurar el cupón de clase gratis de ' + nombre + '?'
+    : '¿Quitar el cupón de clase gratis de ' + nombre + '?';
+  if (!confirm(msg)) return;
+  adminApi({ action: 'adminToggleCupon', nombre: nombre, cuponDisponible: nuevoEstado }, function(res) {
+    if (!res.exito) { mostrarToast(res.error || 'Error al actualizar el cupón.', 'error'); return; }
+    var u = _admUsuariosCupones.find(function(x) { return x.nombre === nombre; });
+    if (u) u.cuponDisponible = nuevoEstado;
+    var s = document.getElementById('admin-cupones-search');
+    _adminRenderCupones(s ? s.value : '');
+    mostrarToast(nuevoEstado ? 'Cupón restaurado.' : 'Cupón quitado.', 'ok');
+  }, function(e) { mostrarToast(e.message || 'Error al actualizar el cupón.', 'error'); });
 }
 
 // "Agregar administradorx" — bottom sheet con buscador (mismo patrón que

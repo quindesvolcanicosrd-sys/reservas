@@ -1,5 +1,6 @@
 var _todasReservas = [];
 var _proximosData = {};
+var _wpComprobanteEnviado = false;
 var _MESES_MAP = {enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11};
 var _MESES_DISPLAY = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 var _homeExpandido = false;
@@ -273,6 +274,10 @@ function iniciarReagendamiento() {
 }
 
 function irHomeDesdeExito() {
+  if (E.wpUrl && !_wpComprobanteEnviado) {
+    _mostrarModalWpComprobante();
+    return;
+  }
   // ir() primero: así el nav forzado más abajo aparece ya sobre #s-home (position:fixed,
   // independiente de qué .pantalla esté activa) en vez de asomar un instante sobre s6.
   ir('s-home');
@@ -320,6 +325,26 @@ function irHomeDesdeExito() {
     // en opacity:0 para siempre.
     prepararHome(true);
   });
+}
+
+function _mostrarModalWpComprobante() {
+  var el = document.getElementById('modal-wp-comprobante');
+  el.style.display = 'flex';
+  requestAnimationFrame(function() { el.style.opacity = '1'; el.classList.add('modal-wp-visible'); });
+}
+function wpComprobanteDesdeModal() {
+  _wpComprobanteEnviado = true;
+  window.open(E.wpUrl, '_blank');
+  _cerrarModalWpComprobante();
+}
+function wpComprobanteOmitir() {
+  _cerrarModalWpComprobante(function() { irHomeDesdeExito(); });
+}
+function _cerrarModalWpComprobante(cb) {
+  var el = document.getElementById('modal-wp-comprobante');
+  el.classList.remove('modal-wp-visible');
+  el.style.opacity = '0';
+  setTimeout(function() { el.style.display = 'none'; if (cb) cb(); }, 280);
 }
 
 function _sincronizarNavHome(forzarVisible) {
@@ -571,7 +596,7 @@ function _renderCardHome(r, hoy) {
     var puedeEditarTalla = (r.estado === 'Pendiente' || r.estado === 'Confirmada');
     if (puedeEditarTalla) {
       var tallaEsc = (r.talla || '').replace(/'/g, "\\'");
-      patinesPillHtml = '<span class="fi-pill fi-pill-patines" style="cursor:pointer;" onclick="abrirSheetTalla(\'' + fechaEsc + '\',\'' + tallaEsc + '\')"><span class="material-symbols-outlined">roller_skating</span>' + (r.talla || '') + '<span class="material-symbols-outlined">edit</span></span>';
+      patinesPillHtml = '<span class="fi-pill fi-pill-patines" style="cursor:pointer;" onclick="abrirSheetTalla(\'' + fechaCalTextoEsc + '\',\'' + fechaEsc + '\',\'' + tallaEsc + '\')"><span class="material-symbols-outlined">roller_skating</span>' + (r.talla || '') + '<span class="material-symbols-outlined">edit</span></span>';
     } else {
       patinesPillHtml = '<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">roller_skating</span>' + (r.talla || '') + '</span>';
     }
@@ -699,15 +724,19 @@ function _toggleCardBody(uid) {
 
 var _tallaSheetFecha = '', _tallaSheetActual = '', _tallaSheetSel = null, _tallaSheetModo = 'existente', _tallaSheetSlug = '';
 
-function abrirSheetTalla(fecha, tallaActual) {
+function abrirSheetTalla(fechaTexto, idEvento, tallaActual) {
   _tallaSheetModo = 'existente';
   var titulo = document.getElementById('sheet-talla-titulo');
-  if (titulo) titulo.textContent = 'Cambiar talla para el entrenamiento del ' + fecha;
+  if (titulo) titulo.textContent = 'Cambiar talla para el entrenamiento del ' + fechaTexto;
   var btn = document.getElementById('btn-confirmar-talla');
   if (btn) btn.textContent = 'Confirmar talla';
-  _abrirSheetTallaBase(fecha, tallaActual);
+  _abrirSheetTallaBase(idEvento, tallaActual);
 }
 
+// `fecha` acá siempre es el id_evento -- usado solo para la llamada a la API
+// (getTallasDisponiblesParaFecha/actualizarTallaReserva), nunca para mostrar
+// texto en pantalla. El título ya lo resuelve cada caller (abrirSheetTalla/
+// abrirSheetTallaNuevaReserva, js/reservas.js) antes de llamar acá.
 function _abrirSheetTallaBase(fecha, tallaActual) {
   _tallaSheetFecha = fecha; _tallaSheetActual = tallaActual; _tallaSheetSel = null;
   var grid = document.getElementById('sheet-talla-grid');
@@ -922,6 +951,14 @@ function _clasificarReservas(todas, hoy) {
       if (!fd) { historial.push(r); return; }
       fd >= hoy ? activas.push(r) : historial.push(r);
     }
+  });
+  activas.sort(function(a, b) {
+    var fa = a.fechaCalendario ? new Date(a.fechaCalendario) : null;
+    var fb = b.fechaCalendario ? new Date(b.fechaCalendario) : null;
+    if (!fa && !fb) return 0;
+    if (!fa) return 1;
+    if (!fb) return -1;
+    return fa - fb;
   });
   return { activas: activas, historial: historial };
 }
@@ -1254,7 +1291,19 @@ function cerrarSheetGestionar(porGesto) {
 function _sgCrossfade(idSaliente, idEntrante) {
   var saliente = document.getElementById(idSaliente);
   var entrante = document.getElementById(idEntrante);
+  var sheet = document.getElementById('sheet-gestionar');
   var trans = 'opacity 0.3s var(--ease-sheet), transform 0.3s var(--ease-sheet)';
+  // Bug real corregido: saliente/entrante son hermanos en flujo normal (no
+  // position:absolute), así que durante los 300ms en que ambos tienen
+  // display distinto de 'none' a la vez, .bsheet se estira a la suma de las
+  // 2 alturas (ver "Cambios recientes"). Fijar la altura actual + recortar
+  // el desborde mientras dura la transición evita el estirón visible; se
+  // libera al terminar, cuando saliente ya está oculto y la altura real
+  // vuelve a ser la de un solo estado.
+  if (sheet) {
+    sheet.style.height = sheet.getBoundingClientRect().height + 'px';
+    sheet.style.overflow = 'hidden';
+  }
   saliente.style.transition = trans;
   saliente.style.opacity = '0';
   saliente.style.transform = 'translateY(8px)';
@@ -1269,7 +1318,10 @@ function _sgCrossfade(idSaliente, idEntrante) {
       entrante.style.transform = 'translateY(0)';
     });
   });
-  setTimeout(function() { saliente.style.display = 'none'; }, 300);
+  setTimeout(function() {
+    saliente.style.display = 'none';
+    if (sheet) { sheet.style.height = ''; sheet.style.overflow = ''; }
+  }, 300);
 }
 
 function sheetVolverOpciones() {
@@ -1458,7 +1510,8 @@ function ejecutarReagendamiento(btn) {
     _sgAccionEnCurso = false;
     if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
     if (btnVolver) btnVolver.disabled = false;
-    cerrarModalReagendar();
+    cerrarModalReagendar(true);
+    cerrarSheetGestionar(true);
     mostrarToast(e.message || 'Error al reagendar. Intenta de nuevo.', 'error');
   });
 }

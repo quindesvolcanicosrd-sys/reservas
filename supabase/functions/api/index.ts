@@ -1130,29 +1130,36 @@ async function getReservasPersona(params: Record<string, any>): Promise<any[]> {
 }
 
 async function cancelarReserva(params: Record<string, any>): Promise<Record<string, any>> {
-  const { id, nombre } = params;
-  const { data: r } = await supabase.from('reservas').select('*').eq('id', id).maybeSingle();
+  const { nombre, fecha } = params;
+  const { data } = await supabase.from('reservas').select('*').eq('nombre_usuario', nombre).eq('id_evento', fecha).neq('estado', 'Cancelada').limit(1);
+  const r = data?.[0];
   if (!r) return { exito: false, error: 'Reserva no encontrada.' };
-  await supabase.from('reservas').update({ estado: 'Cancelada' }).eq('id', id);
+  await supabase.from('reservas').update({ estado: 'Cancelada' }).eq('id', r.id);
   // Restaurar cupón si la reserva estaba Confirmada
+  let cuponRestaurado = false;
   if (r.estado === 'Confirmada' && nombre) {
     await supabase.from('equipo').update({ cupon_disponible: true }).eq('username', nombre);
+    cuponRestaurado = true;
   }
-  return { exito: true };
+  return { exito: true, cuponRestaurado };
 }
 
 async function reagendarReserva(params: Record<string, any>): Promise<Record<string, any>> {
-  const { id, nuevoIdEvento } = params;
-  await supabase.from('reservas').update({ id_evento: nuevoIdEvento, estado: 'Pendiente' }).eq('id', id);
+  const { nombre, fechaAnterior, fechaNueva } = params;
+  const { data } = await supabase.from('reservas').select('id').eq('nombre_usuario', nombre).eq('id_evento', fechaAnterior).neq('estado', 'Cancelada').limit(1);
+  const reserva = data?.[0];
+  if (!reserva) return { exito: false, error: 'Reserva no encontrada.' };
+  const { error } = await supabase.from('reservas').update({ id_evento: fechaNueva, estado: 'Pendiente' }).eq('id', reserva.id);
+  if (error) return { exito: false, error: error.message };
   return { exito: true };
 }
 
 async function getTallasDisponiblesParaFecha(params: Record<string, any>): Promise<Record<string, any>> {
-  const { idEvento } = params;
+  const { fecha: idEvento, nombreExcluir } = params;
   const { data: tallas } = await supabase.from('equipamiento_tallas').select('talla, cantidad');
-  const { data: reservas } = await supabase.from('reservas').select('talla').eq('id_evento', idEvento).neq('estado', 'Cancelada').not('talla', 'is', null);
+  const { data: reservas } = await supabase.from('reservas').select('talla, nombre_usuario').eq('id_evento', idEvento).neq('estado', 'Cancelada').not('talla', 'is', null);
   const usadas: Record<string, number> = {};
-  (reservas ?? []).forEach((r: any) => { usadas[r.talla] = (usadas[r.talla] ?? 0) + 1; });
+  (reservas ?? []).forEach((r: any) => { if (r.nombre_usuario === nombreExcluir) return; usadas[r.talla] = (usadas[r.talla] ?? 0) + 1; });
   const result = (tallas ?? []).map((t: any) => ({ talla: t.talla, disponibles: Math.max(0, t.cantidad - (usadas[t.talla] ?? 0)) }));
   return { tallas: result };
 }
@@ -1286,8 +1293,18 @@ async function adminResolverSolicitudPago(params: Record<string, any>): Promise<
 // ─── Acciones: usuarios / admins ─────────────────────────────────────────────
 
 async function adminGetUsuarios(): Promise<any[]> {
-  const { data } = await supabase.from('equipo').select('username, email').order('username');
-  return (data ?? []).map((r: any) => ({ nombre: r.username, email: r.email }));
+  const { data } = await supabase.from('equipo').select('username, email, cupon_disponible').order('username');
+  return (data ?? []).map((r: any) => ({ nombre: r.username, email: r.email, cuponDisponible: !!r.cupon_disponible }));
+}
+
+async function adminToggleCupon(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const { nombre, cuponDisponible } = params;
+  if (!nombre) return { exito: false, error: 'Parámetros inválidos.' };
+  const { error } = await supabase.from('equipo').update({ cupon_disponible: !!cuponDisponible }).eq('username', nombre);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
 }
 
 async function adminEliminarUsuario(params: Record<string, any>): Promise<Record<string, any>> {
@@ -1545,6 +1562,7 @@ Deno.serve(async (req: Request) => {
       case 'adminResolverSolicitudPago':      return json(await adminResolverSolicitudPago(params));
       // Usuarios / admins
       case 'adminGetUsuarios':               return json(await adminGetUsuarios());
+      case 'adminToggleCupon':               return json(await adminToggleCupon(params));
       case 'adminEliminarUsuario':           return json(await adminEliminarUsuario(params));
       case 'adminGetAdmins':                 return json(await adminGetAdmins());
       case 'adminAgregarAdmin':              return json(await adminAgregarAdmin(params));

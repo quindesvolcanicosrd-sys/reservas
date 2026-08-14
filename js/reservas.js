@@ -1117,7 +1117,12 @@ function confirmarReserva(btn) {
     } else {
       avisoEl.style.display = 'none';
       if (avisoPagoEl) avisoPagoEl.style.display = 'block';
-      if (btnWpExito && E.wpUrl) { btnWpExito.href = E.wpUrl; btnWpExito.style.display = 'flex'; }
+      if (btnWpExito && E.wpUrl) {
+        btnWpExito.href = E.wpUrl;
+        btnWpExito.style.display = 'flex';
+        _wpComprobanteEnviado = false;
+        btnWpExito.addEventListener('click', function() { _wpComprobanteEnviado = true; });
+      }
     }
     } catch (eUiPosGuardado) {
       console.error('Reserva guardada, pero falló algo posterior al guardado (UI/resumen de s6):', eUiPosGuardado);

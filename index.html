@@ -1992,6 +1992,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">payments</span></div>
         <div class="admin-dash-tile-label">Precios de clases</div>
       </div>
+      <div class="admin-dash-tile admin-dash-pill" data-tile="admin-cupones" onclick="adminToggleBurbuja('admin-cupones', this)">
+        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">confirmation_number</span></div>
+        <div class="admin-dash-tile-label">Cupones</div>
+      </div>
     </div>
 
     <!-- Burbuja "Color". -->
@@ -2047,6 +2051,16 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- Burbuja "Cupones" -- restaurar/quitar el cupón de clase gratis de una
+         persona (equipo.cupon_disponible en Supabase). Buscador local (misma
+         lista ya cargada, filtro por nombre) + botón restaurar/quitar por
+         fila, con confirm() antes de aplicar (mismo criterio que adminQuitarClick()). -->
+    <div id="admin-burbuja-cupones" class="admin-tile-bubble" style="display:none;">
+      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">confirmation_number</span> Cupones</div>
+      <input type="text" id="admin-cupones-search" placeholder="Buscar por nombre..." style="margin-bottom:12px;padding:10px 14px;background:var(--surface-2);border:1.5px solid var(--border-light);border-radius:10px;font-size:0.85rem;font-family:inherit;width:100%;" oninput="adminFiltrarCupones(this.value)">
+      <div id="admin-cupones-lista"></div>
     </div>
 
     <!-- Administradorxs -- al final, como pidió Victor. -->
@@ -3569,6 +3583,16 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <button type="button" class="ev-fab-btn" id="tar-fab-btn" onclick="irTarCrear()" title="Nueva tarea" aria-label="Nueva tarea">
     <span class="material-symbols-outlined">add_task</span>
   </button>
+</div>
+
+<div id="modal-wp-comprobante" class="modal-wp-overlay">
+  <div class="modal-wp-card">
+    <div class="modal-wp-icono">💬</div>
+    <h3>¿Olvidaste enviar el comprobante?</h3>
+    <p>El administrador necesita tu comprobante de pago para confirmar la reserva.</p>
+    <button class="btn btn-primary" onclick="wpComprobanteDesdeModal()">Enviar por WhatsApp</button>
+    <button class="btn-text-simple" onclick="wpComprobanteOmitir()">Omitir y volver</button>
+  </div>
 </div>
 
 </body>
