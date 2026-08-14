@@ -3131,8 +3131,7 @@ function _evEditarToggleCampo(campo, forzarAbrir) {
   } else if (campo === 'descripcion') {
     var inp = document.getElementById('ev-editar-descripcion-input');
     var valorVigente = _evEditarCambios.hasOwnProperty('descripcion') ? _evEditarCambios.descripcion : _evEditarOriginal.descripcion;
-    if (inp) inp.value = valorVigente;
-    _evEditarDescTemp = valorVigente;
+    if (inp) { inp.value = valorVigente; _evEditarDescripcionInput(inp); }
   }
 }
 // Texto + color del valor colapsado de cada fila -- ver comentario del
@@ -3163,7 +3162,32 @@ function _evEditarConfirmarCampoGenerico(campo, clave, valorNuevo, valorOriginal
 }
 function _evEditarConfirmarHorario() { _evEditarConfirmarCampoGenerico('horario', 'horaInicio', _evEditarHoraTemp, _evEditarOriginal.horaInicio); }
 function _evEditarConfirmarDescripcion() { _evEditarConfirmarCampoGenerico('descripcion', 'descripcion', _evEditarDescTemp, _evEditarOriginal.descripcion); }
-function _evEditarDescripcionInput(v) { _evEditarDescTemp = v; }
+// Auto-crecimiento + contador de caracteres del textarea de descripción --
+// patrón estándar (height:'auto' seguido de height:scrollHeight+'px', para
+// que el navegador primero "encoja" al mínimo y recién ahí mida el alto real
+// del contenido -- sin el paso a 'auto', scrollHeight quedaría atado al alto
+// ya seteado en el ciclo anterior y nunca encogería si el usuario borra
+// texto). Recibe el propio `<textarea>` (no `this.value`, ver el `oninput`
+// en index.html) porque necesita el elemento para leer/escribir `style.height`,
+// no solo su valor. Mismo llamado desde `_evEditarToggleCampo()` al
+// pre-poblar el campo al abrir el acordeón (arriba en este archivo) -- así
+// el alto ya arranca ajustado al valor vigente, sin esperar a la primera
+// tecla.
+function _evEditarDescripcionInput(el) {
+  _evEditarDescTemp = el.value;
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+  _evEditarDescActualizarContador(el.value.length);
+}
+// Límite de 200 caracteres (maxlength en el HTML) -- el contador vive
+// SIEMPRE en "[n]/200" y pasa a `--warning` (sin hardcodear el color, ver
+// css/eventos.css) cuando quedan 20 caracteres o menos.
+function _evEditarDescActualizarContador(len) {
+  var cont = document.getElementById('ev-editar-desc-contador');
+  if (!cont) return;
+  cont.textContent = len + '/200';
+  cont.classList.toggle('ev-editar-desc-contador-limite', (200 - len) <= 20);
+}
 
 /* ── Campo "Lugar" -- lista de venues como pills, mismo `.aj-pill` de
    siempre. Seleccionar una pill guarda Y colapsa de una (sin botón "Listo"

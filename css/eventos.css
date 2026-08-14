@@ -1251,6 +1251,21 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
    toca `.ev-ant-acc-body-inner` en general -- Asistencia anticipada sigue
    igual). */
 #ev-editar-paso-campos .ev-ant-acc-body-inner { padding-top: 14px; }
+/* Textarea de descripción -- auto-crece con el contenido (JS,
+   _evEditarDescripcionInput(), js/eventos.js), así que no necesita su propio
+   scroll ni la manija de resize nativa (ambos redundantes con el
+   auto-ajuste). `resize:none` + `overflow-y:hidden` son las 2 propiedades
+   que le faltaban al textarea genérico de `css/ui.css` para este patrón --
+   ese sí trae `resize:vertical` por default en el resto de la app, donde no
+   hay auto-crecimiento. */
+#ev-editar-descripcion-input { resize: none; overflow-y: hidden; }
+/* Contador "[n]/200" -- límite real puesto por `maxlength="200"` en el HTML,
+   este texto solo refleja el estado. `--warning` (colors.css, mismo token
+   que el resto de la app usa para "atención, sin ser un error todavía") en
+   vez de un color hardcodeado, activado por `_evEditarDescActualizarContador()`
+   cuando quedan 20 caracteres o menos. */
+.ev-editar-desc-contador { text-align: right; font-size: 0.72rem; font-weight: 600; color: var(--muted); margin-top: 6px; }
+.ev-editar-desc-contador.ev-editar-desc-contador-limite { color: var(--warning); }
 
 @media (prefers-color-scheme: dark) {
   .ev-crear-venue-card.activa { background: var(--brand-20); }
