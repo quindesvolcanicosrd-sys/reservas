@@ -3556,6 +3556,83 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
      que aparecen arriba del botón principal con fade+slide -- abrir/cerrar
      vía _evFabToggle()/_evFabCerrar() (js/eventos.js), togglea la clase
      .ev-fab-abierto en este mismo contenedor. -->
+<!-- BOTTOM SHEET: Editar evento (admin, #s-eventos-detalle, ver MANIFEST.md
+     "Cambios recientes" -- Tanda A del rediseño de Eventos). Hijo directo de
+     <body>, mismo motivo que #ev-fab-menu/.cta-footer-fixed (containing
+     block de position:fixed atrapado por la animación de .pantalla.activa
+     mientras corre smoothSlideUp). Contenido en un solo scroll (ningún
+     bottom sheet de esta app navega "pantalla a pantalla" propia, eso es lo
+     que hacen los wizards de página completa como #s-eventos-crear/
+     #s-eventos-anticipada): "¿Qué querés cambiar?" revela los campos
+     correspondientes (#ev-editar-campo-lugar/-horario, _evHoraStepper*
+     reusado tal cual de #s-eventos-crear) y, debajo, "¿A cuáles eventos
+     aplica?" revela el date picker "Hasta el" solo para "Por un período".
+     Footer #ev-editar-footer -- NO usa .cta-footer-fixed literal
+     (position:fixed anidado dentro de .bsheet, que también anima su propio
+     transform al abrir/cerrar, dispararía el mismo bug de containing block
+     ya documentado para .pantalla.activa) -- mismo look pero como último
+     hijo flex-shrink:0 del sheet, ver css/eventos.css. Lógica completa en
+     js/eventos.js (_evAbrirEditarEvento() y el resto de _evEditar*). -->
+<div id="ev-editar-sheet-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="_evCerrarEditarEvento()"></div>
+<div id="ev-editar-sheet" class="bsheet bsheet-scroll" style="z-index:9601;max-height:85vh;">
+  <div class="bsheet-handle"></div>
+  <div class="bsheet-title">Editar evento</div>
+  <div class="bsheet-body" style="overflow-y:auto;flex:1;">
+    <div class="ev-lugar-campo">
+      <p class="ev-lugar-campo-label">¿Qué querés cambiar?</p>
+      <div class="aj-pills-row" id="ev-editar-campo-pills">
+        <span class="aj-pill" data-val="lugar" onclick="_evEditarSelCampo(this)">Lugar</span>
+        <span class="aj-pill" data-val="horario" onclick="_evEditarSelCampo(this)">Horario</span>
+        <span class="aj-pill" data-val="lugar_horario" onclick="_evEditarSelCampo(this)">Lugar y horario</span>
+      </div>
+    </div>
+
+    <div class="ev-lugar-campo" id="ev-editar-campo-lugar" style="display:none;">
+      <p class="ev-lugar-campo-label">Lugar</p>
+      <div class="aj-pills-row" id="ev-editar-lugar-pills"></div>
+    </div>
+
+    <div class="ev-lugar-campo" id="ev-editar-campo-horario" style="display:none;">
+      <p class="ev-lugar-campo-label">Hora</p>
+      <div class="ev-hora-stepper" id="ev-editar-hora-stepper">
+        <div class="ev-hora-stepper-cols">
+          <div class="ev-hora-stepper-col">
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-editar-hora','hora',1)"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
+            <span class="ev-hora-stepper-valor" id="ev-editar-hora-hora"></span>
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-editar-hora','hora',-1)"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
+          </div>
+          <span class="ev-hora-stepper-sep">:</span>
+          <div class="ev-hora-stepper-col">
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-editar-hora','minuto',1)"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
+            <span class="ev-hora-stepper-valor" id="ev-editar-hora-minuto"></span>
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-editar-hora','minuto',-1)"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
+          </div>
+        </div>
+        <div class="ev-hora-stepper-meridiano" id="ev-editar-hora-meridiano">
+          <span class="aj-pill" data-val="AM" onclick="_evHoraStepperSetMeridiano('ev-editar-hora',this)">AM</span>
+          <span class="aj-pill" data-val="PM" onclick="_evHoraStepperSetMeridiano('ev-editar-hora',this)">PM</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ev-lugar-campo" id="ev-editar-alcance-wrap" style="display:none;">
+      <p class="ev-lugar-campo-label">¿A cuáles eventos aplica?</p>
+      <div class="aj-pills-row" id="ev-editar-alcance-pills">
+        <span class="aj-pill" data-val="individual" onclick="_evEditarSelModo(this)">Solo este evento</span>
+        <span class="aj-pill" data-val="desde_aqui" onclick="_evEditarSelModo(this)">Este y todos los futuros</span>
+        <span class="aj-pill" data-val="periodo" onclick="_evEditarSelModo(this)">Por un período</span>
+      </div>
+      <div id="ev-editar-hasta-wrap" style="display:none;margin-top:12px;">
+        <p class="ev-lugar-campo-label">Hasta el</p>
+        <input type="date" id="ev-editar-fecha-hasta" oninput="_evEditarSetFechaHasta(this.value)">
+      </div>
+    </div>
+  </div>
+  <div class="ev-editar-footer">
+    <button type="button" class="btn btn-primary" id="ev-editar-btn-guardar" disabled onclick="_evEditarGuardar()">Guardar cambios</button>
+  </div>
+</div>
+
 <div class="ev-fab-menu" id="ev-fab-menu" style="display:none;">
   <button type="button" class="ev-fab-opcion" id="ev-fab-crear-evento" onclick="_evFabCerrar(); irEvCrear();">
     <span class="material-symbols-outlined">event</span>

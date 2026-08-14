@@ -2961,7 +2961,205 @@ function _evDetalleInfoHtml(ev) {
       '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + ev.horaInicio + 'hs</span>' +
       '<span class="fi-pill fi-pill-fin"><span class="material-symbols-outlined">schedule</span>Fin ' + _evHoraFin(ev) + 'hs</span>' +
     '</div>' +
-    (desc ? '<p class="ev-detalle-desc">' + desc + '</p>' : '');
+    (desc ? '<p class="ev-detalle-desc">' + desc + '</p>' : '') +
+    // Botón "Editar evento" (admin, ver MANIFEST.md "Cambios recientes" --
+    // Tanda A del rediseño de Eventos) -- .btn.btn-outline genérico
+    // (ui.css), .ev-detalle-editar-btn solo agrega el margen. Abre
+    // #ev-editar-sheet (_evAbrirEditarEvento(), más abajo en este archivo).
+    (_adminToken
+      ? '<button type="button" class="btn btn-outline ev-detalle-editar-btn" onclick="_evAbrirEditarEvento()"><span class="material-symbols-outlined" style="vertical-align:middle;margin-right:6px;">edit</span>Editar evento</button>'
+      : '');
+}
+
+/* ═══════════════════════════════════════════════════════
+   "Editar evento" (admin, #s-eventos-detalle, ver MANIFEST.md "Cambios
+   recientes" -- Tanda A del rediseño de Eventos) -- bottom sheet propio
+   (#ev-editar-sheet, index.html), NO un wizard de página completa como
+   #s-eventos-crear/#s-eventos-anticipada: contenido revelado en un solo
+   scroll (mismo criterio que _evCrearMostrarSubRecurrencia()/el acordeón de
+   Asistencia anticipada, ningún bottom sheet de esta app navega "pantalla a
+   pantalla" propia) -- elegir qué cambiar (Lugar/Horario/Lugar y horario)
+   revela los campos correspondientes (pills de lugar y/o el stepper de hora
+   genérico, _evHoraStepper* reusado tal cual de #s-eventos-crear) y, debajo,
+   a cuáles eventos aplica (individual/desde acá en adelante/por período,
+   este último revela el date picker "Hasta el"). adminEditarEvento todavía
+   no existe en el backend (pendiente, ver MANIFEST.md) -- el frontend queda
+   listo para llamarla.
+   ═══════════════════════════════════════════════════════ */
+var _evEditarData = {};
+// Cache de venues para el picker de lugar -- null = todavía no pedido en
+// esta sesión, distinto de _evLugares (getVenues, el flujo viejo de "Crear
+// evento"/"Editar lugares", todavía sobre el contrato pre-Supabase, ver
+// MANIFEST.md "Cambios recientes" -- Migración de Venues a Supabase). Acá se
+// usa la acción YA migrada, adminGetVenues, que devuelve filas reales de la
+// tabla `venues` (columnas `id`/`lugar`/`tipo_icono`/`requiere_reserva`, no
+// el shape `{fila,nombre,...}` de _evLugares).
+var _EV_VENUES = null;
+
+function _evAbrirEditarEvento() {
+  var ev = _evDetalleActual;
+  if (!ev || !_adminToken) return;
+  _evEditarData = { campo: null, valorLugar: ev.lugar, valorHora: null, modo: null, fechaHasta: null };
+  document.querySelectorAll('#ev-editar-campo-pills .aj-pill, #ev-editar-alcance-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  ['ev-editar-campo-lugar', 'ev-editar-campo-horario', 'ev-editar-alcance-wrap', 'ev-editar-hasta-wrap'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  var fechaInp = document.getElementById('ev-editar-fecha-hasta');
+  if (fechaInp) { fechaInp.value = ''; fechaInp.min = ev.fecha; }
+  _evEditarActualizarBoton();
+  var ov = document.getElementById('ev-editar-sheet-overlay');
+  var sh = document.getElementById('ev-editar-sheet');
+  if (ov) ov.style.display = 'block';
+  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); }); }
+  _registrarOverlayAbierto(_evCerrarEditarEvento);
+}
+function _evCerrarEditarEvento(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var sh = document.getElementById('ev-editar-sheet');
+  var ov = document.getElementById('ev-editar-sheet-overlay');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+// Paso 1 -- pills "¿Qué querés cambiar?", revela los campos de Paso 1b
+// (mismo patrón fadeIn "primera vez" que _evCrearMostrarSubRecurrencia()) y,
+// debajo, el Paso 2 ("¿A cuáles eventos aplica?") -- ambos conviven en el
+// mismo scroll, no son pantallas separadas.
+function _evEditarSelCampo(el) {
+  document.querySelectorAll('#ev-editar-campo-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  _evEditarData.campo = el.dataset.val;
+  _evEditarMostrarCampos();
+  _evEditarActualizarBoton();
+}
+function _evEditarMostrarCampos() {
+  var campo = _evEditarData.campo;
+  var quiereLugar = campo === 'lugar' || campo === 'lugar_horario';
+  var quiereHora = campo === 'horario' || campo === 'lugar_horario';
+  var lugarWrap = document.getElementById('ev-editar-campo-lugar');
+  if (lugarWrap) {
+    var yaLugar = lugarWrap.style.display !== 'none';
+    lugarWrap.style.display = quiereLugar ? 'block' : 'none';
+    if (quiereLugar && !yaLugar) {
+      void lugarWrap.offsetWidth; lugarWrap.style.animation = 'fadeIn 0.2s ease';
+      _evEditarCargarVenues();
+    }
+  }
+  var horaWrap = document.getElementById('ev-editar-campo-horario');
+  if (horaWrap) {
+    var yaHora = horaWrap.style.display !== 'none';
+    horaWrap.style.display = quiereHora ? 'block' : 'none';
+    if (quiereHora && !yaHora) {
+      void horaWrap.offsetWidth; horaWrap.style.animation = 'fadeIn 0.2s ease';
+      _evHoraStepperInit('ev-editar-hora', _evDetalleActual ? _evDetalleActual.horaInicio : null, function(v) { _evEditarData.valorHora = v; _evEditarActualizarBoton(); });
+      _evEditarData.valorHora = _evHoraStepperA24h('ev-editar-hora');
+    }
+  }
+  var alcanceWrap = document.getElementById('ev-editar-alcance-wrap');
+  if (alcanceWrap) {
+    var yaAlcance = alcanceWrap.style.display !== 'none';
+    alcanceWrap.style.display = campo ? 'block' : 'none';
+    if (campo && !yaAlcance) { void alcanceWrap.offsetWidth; alcanceWrap.style.animation = 'fadeIn 0.2s ease'; }
+  }
+}
+// Lista de lugares del picker -- _EV_VENUES cacheado por sesión (mismo
+// criterio que _evRosterEquipo, más arriba en este archivo), preseleccionada
+// en el lugar actual del evento (_evEditarData.valorLugar ya arranca en
+// ev.lugar, ver _evAbrirEditarEvento()).
+function _evEditarCargarVenues() {
+  var cont = document.getElementById('ev-editar-lugar-pills');
+  if (_EV_VENUES) { _evEditarRenderVenues(); return; }
+  if (cont) cont.innerHTML = '<p style="color:var(--muted);font-size:0.78rem;margin:0;">Cargando lugares...</p>';
+  api({ action: 'adminGetVenues', adminToken: _adminToken }, function(res) {
+    _EV_VENUES = res || [];
+    _evEditarRenderVenues();
+  }, function(e) {
+    if (cont) cont.innerHTML = '<p style="color:var(--muted);font-size:0.78rem;margin:0;">No se pudieron cargar los lugares.</p>';
+  });
+}
+function _evEditarRenderVenues() {
+  var cont = document.getElementById('ev-editar-lugar-pills'); if (!cont) return;
+  if (!_EV_VENUES.length) { cont.innerHTML = '<p style="color:var(--muted);font-size:0.78rem;margin:0;">Todavía no hay lugares creados.</p>'; return; }
+  cont.innerHTML = _EV_VENUES.map(function(v) {
+    var activa = _evEditarData.valorLugar === v.lugar;
+    return '<span class="aj-pill' + (activa ? ' activa' : '') + '" data-id="' + v.id + '" onclick="_evEditarSelVenue(' + v.id + ')">' + v.lugar + '</span>';
+  }).join('');
+}
+function _evEditarSelVenue(id) {
+  var v = (_EV_VENUES || []).filter(function(x) { return x.id === id; })[0];
+  if (!v) return;
+  document.querySelectorAll('#ev-editar-lugar-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.id == id); });
+  _evEditarData.valorLugar = v.lugar;
+  _evEditarActualizarBoton();
+}
+// Paso 2 -- alcance (individual/desde acá en adelante/por período), revela
+// el date picker "Hasta el" solo para "Por un período" (fecha de inicio =
+// _evDetalleActual.fecha, no se pide -- ver _evAbrirEditarEvento(), que ya
+// fija el `min` del input).
+function _evEditarSelModo(el) {
+  document.querySelectorAll('#ev-editar-alcance-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  _evEditarData.modo = el.dataset.val;
+  var haWrap = document.getElementById('ev-editar-hasta-wrap');
+  if (haWrap) {
+    var mostrar = _evEditarData.modo === 'periodo';
+    var yaVisible = haWrap.style.display !== 'none';
+    haWrap.style.display = mostrar ? 'block' : 'none';
+    if (mostrar && !yaVisible) { void haWrap.offsetWidth; haWrap.style.animation = 'fadeIn 0.2s ease'; }
+    if (!mostrar) _evEditarData.fechaHasta = null;
+  }
+  _evEditarActualizarBoton();
+}
+function _evEditarSetFechaHasta(v) { _evEditarData.fechaHasta = v || null; _evEditarActualizarBoton(); }
+function _evEditarValido() {
+  var d = _evEditarData;
+  if (!d.campo || !d.modo) return false;
+  if ((d.campo === 'lugar' || d.campo === 'lugar_horario') && !d.valorLugar) return false;
+  if ((d.campo === 'horario' || d.campo === 'lugar_horario') && !d.valorHora) return false;
+  if (d.modo === 'periodo' && !d.fechaHasta) return false;
+  return true;
+}
+function _evEditarActualizarBoton() {
+  var btn = document.getElementById('ev-editar-btn-guardar');
+  if (btn) btn.disabled = !_evEditarValido();
+}
+// Guardado -- adminEditarEvento todavía sin implementar en el backend (ver
+// MANIFEST.md), el payload solo manda las claves que aplican según `campo`/
+// `modo` (mismo criterio que _evCrearGuardar(), más abajo en este archivo).
+// Refresco tras éxito: _evCargarDatosReales() (refetch real, necesario acá a
+// diferencia de _evCancelarEvento() -- un cambio en modo "desde acá en
+// adelante"/"por período" puede afectar VARIOS eventos a la vez, no alcanza
+// con mutar en memoria el único objeto que ya se tenía) + repintado del
+// timeline en segundo plano (_evRenderTimeline(true), mismo criterio que
+// _evCancelarEvento()) y, si el detalle de ESTE evento sigue abierto, su
+// propio re-render con el dato ya actualizado.
+function _evEditarGuardar() {
+  if (!_evEditarValido()) return;
+  var ev = _evDetalleActual;
+  if (!ev) return;
+  var d = _evEditarData;
+  var payload = { action: 'adminEditarEvento', adminToken: _adminToken, idEvento: ev.id, campo: d.campo, modo: d.modo };
+  if (d.campo === 'lugar' || d.campo === 'lugar_horario') payload.valorLugar = d.valorLugar;
+  if (d.campo === 'horario' || d.campo === 'lugar_horario') payload.valorHora = d.valorHora;
+  if (d.modo === 'periodo') payload.fechaHasta = d.fechaHasta;
+
+  mostrarCargando('Guardando cambios...');
+  apiPost(payload, function(res) {
+    ocultarCargando();
+    if (res && res.exito === false) { mostrarToast(res.error || 'No se pudo actualizar el evento.', 'error'); return; }
+    mostrarToast('Evento actualizado', 'ok', true);
+    _evCerrarEditarEvento();
+    _evCargarDatosReales(function() {
+      _evRenderTimeline(true);
+      var actualizado = _EV_EVENTOS.filter(function(e) { return e.id === ev.id; })[0];
+      if (actualizado && _evDetalleActual && _evDetalleActual.id === ev.id) {
+        _evDetalleActual = actualizado;
+        _evRenderDetalle(actualizado);
+      }
+    });
+  }, function(e) {
+    ocultarCargando();
+    mostrarToast((e && e.message) || 'No se pudo actualizar el evento.', 'error');
+  });
 }
 /* ── Resumen de asistencia como 4 tarjetas de estadística (grid, ver
    "Cambios recientes" — reemplaza la línea de texto "Asisten X · No
