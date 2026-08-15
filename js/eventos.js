@@ -4789,10 +4789,14 @@ function _evLugaresSkeletonHtml() {
 
 // Cards con el mismo look que el resumen de Asistencia Anticipada
 // (.ev-ant-card/.ev-card-top-row/.ev-card-icon/.ev-card-body, ver
-// css/eventos.css) -- sin botones de editar/eliminar propios, la card
-// entera es tocable (abre el formulario precargado, ver "Tocar una card
-// abre el formulario pre-cargado" del pedido). Sin acción de eliminar --
-// no pedida para esta tanda.
+// css/eventos.css) -- suma 2 botones de acción (Editar/Borrar, ver
+// MANIFEST.md "Cambios recientes"), reusando LITERAL `.ev-ant-card-edit`/
+// `.ev-ant-card-del` (mismo par de clases que ya usan las cards de
+// Asistencia anticipada y la de offseason en el timeline) -- cero CSS
+// nuevo. La card entera deja de ser tocable (antes abría directo el
+// formulario precargado) -- con un botón "Editar" explícito, el click de
+// fondo quedaba redundante y además complicaba anidar "Borrar" adentro sin
+// `stopPropagation()`.
 function _evLugaresRenderLista() {
   var cont = document.getElementById('ev-lugares-lista'); if (!cont) return;
   if (!_evLugares.length) {
@@ -4801,7 +4805,7 @@ function _evLugaresRenderLista() {
   }
   cont.innerHTML = _evLugares.map(function(v) {
     var icono = _EV_ICONOS[v.tipoIcono] || 'place';
-    return '<div class="ev-ant-card" onclick="_evLugarAbrirEditar(' + v.fila + ')">' +
+    return '<div class="ev-ant-card">' +
       '<div class="ev-card-top-row">' +
         '<div class="ev-card-icon"><span class="material-symbols-outlined">' + icono + '</span></div>' +
         '<div class="ev-card-body">' +
@@ -4809,8 +4813,59 @@ function _evLugaresRenderLista() {
           '<div class="ev-ant-card-sub">' + _evLugarResumenSub(v) + '</div>' +
         '</div>' +
       '</div>' +
+      '<button type="button" class="ev-ant-card-edit" onclick="_evLugarAbrirEditar(' + v.fila + ')" title="Editar">' +
+        '<span class="material-symbols-outlined">edit</span>' +
+      '</button>' +
+      '<button type="button" class="ev-ant-card-del" onclick="_evLugarBorrar(' + v.fila + ')" title="Borrar">' +
+        '<span class="material-symbols-outlined">delete</span>' +
+      '</button>' +
     '</div>';
   }).join('');
+}
+
+// Borrar (ver MANIFEST.md "Cambios recientes") -- primero chequea si el
+// lugar tiene eventos vinculados en `asistencias` (por nombre, columna
+// `donde` -- la relación real entre las 2 tablas es por texto, no por FK:
+// `asistencias.donde` guarda el NOMBRE del lugar tal cual, no un id de
+// `venues`) antes de decidir si hace falta advertir. Con eventos
+// vinculados, `confirm()` nativo (mismo patrón ya usado en el resto de esta
+// sección para "borrar con advertencia", ver `_evOffseasonEliminar()`) con
+// el texto completo pedido -- cancelar corta acá, sin tocar nada. SIN
+// eventos vinculados, borra directo, sin ningún confirm (pedido explícito
+// -- "sin advertencia").
+function _evLugarBorrar(fila) {
+  var v = _evLugares.filter(function(x) { return x.fila === fila; })[0];
+  if (!v) return;
+  mostrarCargando('Verificando...');
+  fetch(SUPABASE_URL + '/rest/v1/asistencias?select=id&donde=eq.' + encodeURIComponent(v.nombre) + '&limit=1', {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }
+  }).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function(rows) {
+    ocultarCargando();
+    var tieneEventos = (rows || []).length > 0;
+    if (tieneEventos && !confirm('Este lugar está vinculado a eventos. Borrarlo eliminará todos los eventos pasados y futuros y sus registros de asistencia. Esta acción no se puede deshacer.')) return;
+    _evLugarBorrarConfirmado(fila);
+  }).catch(function() {
+    ocultarCargando();
+    mostrarToast('No se pudo verificar si el lugar tiene eventos vinculados.', 'error');
+  });
+}
+function _evLugarBorrarConfirmado(fila) {
+  mostrarCargando('Eliminando...');
+  fetch(SUPABASE_URL + '/rest/v1/venues?id=eq.' + encodeURIComponent(fila), {
+    method: 'DELETE',
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }
+  }).then(function(r) {
+    ocultarCargando();
+    if (!r.ok) { mostrarToast('No se pudo eliminar el lugar.', 'error'); return; }
+    mostrarToast('Lugar eliminado.', 'ok');
+    irEvLugares();
+  }).catch(function() {
+    ocultarCargando();
+    mostrarToast('No se pudo eliminar el lugar.', 'error');
+  });
 }
 
 function _evLugarResumenSub(v) {
@@ -4860,7 +4915,7 @@ function irEvLugarFormNuevo(origen) {
     fila: null, nombre: '', mapsUrl: null, lat: null, lng: null,
     tipoIcono: null, tipoRecurrencia: null,
     diasSemana: [], frecuenciaNumero: null, frecuenciaUnidad: null,
-    fecha: null, hora: ''
+    fecha: null, hora: '', horaTocada: false
   };
   _evLugarOrigen = origen || 's-eventos-lugares';
   ir('s-eventos-lugar-form');
@@ -4885,7 +4940,12 @@ function _evLugarAbrirEditar(fila) {
     tipoRecurrencia: v.tipoRecurrencia || null,
     diasSemana: (v.diasSemana || []).slice(),
     frecuenciaNumero: v.frecuenciaNumero || null, frecuenciaUnidad: v.frecuenciaUnidad || null,
-    fecha: v.fechaReferencia || null, hora: v.hora || ''
+    fecha: v.fechaReferencia || null, hora: v.hora || '',
+    // El lugar ya tenía una hora guardada -- arranca "tocada" (mismo criterio
+    // que _evAntIniciarWizard()/_evOffseasonEditar() con datos ya resueltos),
+    // así el valor precargado viaja de vuelta en el guardado aunque el admin
+    // no vuelva a tocar el stepper.
+    horaTocada: !!v.hora
   };
   _evLugarOrigen = 's-eventos-lugares';
   ir('s-eventos-lugar-form');
@@ -4914,8 +4974,10 @@ function _evLugarFormPintar() {
   var frecNumInp = document.getElementById('ev-lugar-frec-num');
   if (frecNumInp) frecNumInp.value = _evLugarData.frecuenciaNumero || '';
   document.querySelectorAll('#ev-lugar-frec-unidad-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.frecuenciaUnidad); });
-  var horaInp = document.getElementById('ev-lugar-hora');
-  if (horaInp) horaInp.value = _evLugarData.hora || '';
+  // "Hora" (stepper) NO se pinta acá -- a diferencia de los campos de
+  // arriba, se inicializa solo cuando `_evLugarMostrarSubRecurrencia()`
+  // (llamada más abajo en esta misma función) revela la sección por primera
+  // vez, ver esa función para el detalle.
 
   var mesInicial = _evLugarData.fecha || _evHoyISO();
   _evLugarCal.referencia.mostrado = mesInicial;
@@ -4972,9 +5034,12 @@ function _evLugarIrPaso2() {
 // texto/acción/habilitación según el paso -- Paso 2 SIEMPRE habilitado
 // (pedido explícito, "el botón Guardar está siempre habilitado
 // independientemente de si se seleccionó o no un tipo de recurrencia").
+// Un solo botón (ver MANIFEST.md "Cambios recientes" -- el footer tenía
+// "Atrás"/acción principal lado a lado, eliminado: el header ya tiene la
+// flecha de volver, `_evLugarBack()`, que cubre exactamente lo mismo --
+// mismo criterio que "Crear evento"/#s-eventos-crear, el único botón de
+// footer cambia texto/acción/habilitación según el paso).
 function _evLugarActualizarFooter() {
-  var btnAtras = document.getElementById('ev-lugar-btn-atras');
-  if (btnAtras) btnAtras.style.display = _evLugarCurIdx === 0 ? 'none' : 'flex';
   var btn = document.getElementById('ev-lugar-btn-guardar');
   if (!btn) return;
   if (_evLugarCurIdx === 0) {
@@ -5000,18 +5065,27 @@ function _evLugarSelIcono(el) {
   _evLugarData.tipoIcono = el.dataset.val;
   _evLugarActualizarFooter();
 }
+// Deseleccionable -- tocar la pill ya activa la apaga en vez de dejarla fija
+// (mismo patrón "yaActiva" ya usado en la app para pills de selección única
+// con esta misma semántica, ver _evFiltrarAsistenciaPorGrupo()/js/eventos.js).
 function _evLugarSelRecurrencia(el) {
-  document.querySelectorAll('#ev-lugar-recurrencia-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
-  el.classList.add('activa');
-  _evLugarData.tipoRecurrencia = el.dataset.val;
+  var yaActiva = el.classList.contains('activa');
+  document.querySelectorAll('#ev-lugar-recurrencia-pills .aj-pill').forEach(function(p) {
+    p.classList.toggle('activa', !yaActiva && p === el);
+  });
+  _evLugarData.tipoRecurrencia = yaActiva ? null : el.dataset.val;
   _evLugarMostrarSubRecurrencia();
   _evLugarActualizarFooter();
 }
 // Reveal inline según la elección -- mismo patrón ya usado por
 // _evAntMostrarSubFrecuencia() (ver arriba): oculta los 3 sub-bloques,
 // muestra solo el que corresponde con un fade. "Hora" es compartida por los
-// 3 (pedido explícito: aparece en los 3 casos), un solo campo en vez de 3
-// inputs duplicados.
+// 3 (aparece en los 3 casos, sección extra condicionada a que haya un tipo
+// de recurrencia elegido -- ver MANIFEST.md "Cambios recientes"), un solo
+// campo en vez de 3 inputs duplicados. Sin recurrencia elegida, "Hora"
+// queda oculta y `_evLugarData.horaTocada` nunca pasa a `true` -- el campo
+// es opcional, nunca bloquea el guardado (ver _evLugarGuardar()/
+// _evLugarPaso1Valido() más abajo).
 function _evLugarMostrarSubRecurrencia() {
   ['ev-lugar-rec-dias', 'ev-lugar-rec-cada', 'ev-lugar-rec-unico'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.style.display = 'none';
@@ -5029,7 +5103,24 @@ function _evLugarMostrarSubRecurrencia() {
   if (horaWrap) {
     var horaPrimeraVez = horaWrap.style.display === 'none' || !horaWrap.style.display;
     horaWrap.style.display = 'block';
-    if (horaPrimeraVez) { void horaWrap.offsetWidth; horaWrap.style.animation = 'fadeIn 0.2s ease'; }
+    if (horaPrimeraVez) {
+      void horaWrap.offsetWidth; horaWrap.style.animation = 'fadeIn 0.2s ease';
+      // Mismo componente que irEvCrear()/#ev-crear-hora-wrap (_evHoraStepper*,
+      // más abajo en este archivo) -- solo se inicializa la PRIMERA vez que
+      // el campo se revela (igual que el criterio ya usado acá para la
+      // animación), nunca al cambiar entre los 3 tipos de recurrencia con
+      // "Hora" ya visible -- el valor elegido es compartido, no se resetea
+      // por cambiar de tipo. `horaTocada` (ver _evLugarAbrirEditar() más
+      // arriba, ya en `true` si el lugar editado ya tenía hora guardada)
+      // solo pasa a `true` acá dentro del propio `onChange`, es decir, con
+      // una interacción real del admin -- el valor visual por default del
+      // stepper (09:00 AM) nunca cuenta como "elegido".
+      _evHoraStepperInit('ev-lugar-hora', _evLugarData.hora || null, function(v) {
+        _evLugarData.hora = v;
+        _evLugarData.horaTocada = true;
+        _evLugarActualizarFooter();
+      });
+    }
   }
 }
 
@@ -5048,8 +5139,6 @@ function _evLugarSelUnidad(el) {
   _evLugarData.frecuenciaUnidad = el.dataset.val;
   _evLugarActualizarFooter();
 }
-function _evLugarSetHora(v) { _evLugarData.hora = v; _evLugarActualizarFooter(); }
-
 /* ── Calendario inline de fecha única -- "fecha de referencia" (recurrencia
    "cada tantos") y "fecha única" (evento único) comparten el mismo campo de
    datos (_evLugarData.fecha, solo uno de los 2 calendarios está visible por
@@ -5194,65 +5283,73 @@ function _evLugarValido() {
   return _evLugarPaso0Valido() && _evLugarPaso1Valido();
 }
 
-// Guardado real -- crearVenue (sin _evLugarData.fila) o editarVenue (con
-// fila) según corresponda. ⚠️ Esas 2 acciones (sin prefijo `admin`) NO
-// existen en el router de `supabase/functions/api/index.ts` -- solo
-// `adminCrearVenue`/`adminEditarVenue` (que hacen `insert(datos)`/
-// `update(datos)` directo sobre `venues` con el objeto TAL CUAL, sin
-// traducir nombres de campo) están registradas ahí. Este guardado sigue
-// roto/sin desplegar, señalado pero fuera de alcance de esta corrección --
-// que es solo de nombres de columna en el payload, para que el día que se
-// apunte a la acción real (o a un `fetch()` directo, mismo criterio que
-// `irEvLugares()`/`_evCrearCargarLugares()`) las claves ya sean las
-// correctas y no haga falta tocarlas de nuevo.
-// Nombres de columna reales de `venues` (confirmados por Victor, ver
-// MANIFEST.md "Cambios recientes" -- misma tabla que `_evMapVenueSupabase()`
-// usa en sentido inverso): `inicia` (hora), `google_maps` (mapsUrl), `tipo`
-// (tipoRecurrencia), `dias` (diasSemana), `frecuencia`, `unidad`,
-// `fecha_referencia`. `lat`/`lng` NO EXISTEN en la tabla -- sacados del
-// payload por completo, no solo renombrados.
+// Guardado real -- fetch() directo a Supabase (mismo mecanismo que el resto
+// de esta sección), ya NO pasa por apiPost()/`crearVenue`/`editarVenue`
+// (esas 2 acciones nunca existieron en el router del Edge Function --
+// "Acción no válida" en cada guardado, ver MANIFEST.md "Cambios recientes").
+// POST a la colección entera sin `_evLugarData.fila` (lugar nuevo), PATCH a
+// `?id=eq.<fila>` con `_evLugarData.fila` (edición) -- mismo criterio
+// "editando = truthy de la fila" que ya usan `_evCrearDescansoGuardar()`/
+// `_evAdminEditarEvento()`. Payload con los nombres reales de columna de
+// `venues` (confirmados por Victor): `lugar`/`google_maps`/`tipo_icono`/
+// `requiere_reserva` (boolean real, no `'SI'`/`'NO'`)/`tipo`/`dias`/
+// `frecuencia`/`unidad`/`fecha_referencia`/`inicia`. `lat`/`lng` -- la tabla
+// no tiene esas columnas, nunca se mandan. `created_at`/`updated_at` --
+// columnas de auditoría típicas de Supabase, si existen las maneja la
+// propia base (default/trigger), el cliente nunca las setea.
 function _evLugarGuardar() {
   if (!_evLugarValido()) return;
   // "¿Requiere reserva?" ya no es una pregunta propia del form (ver
   // MANIFEST.md "Cambios recientes") -- se auto-deriva acá mismo, al armar
   // el payload final, a partir del tipo de evento elegido en el Paso 1:
   // solo "Entrenamiento" habilita reservas de equipamiento para este lugar.
-  var requiereReserva = _evLugarData.tipoIcono === 'Entrenamiento' ? 'SI' : 'NO';
+  // Booleano real -- `requiere_reserva` es `boolean` en Supabase, confirmado
+  // por `!== false` ya usado 2 veces en `supabase/functions/api/index.ts`.
+  var requiereReserva = _evLugarData.tipoIcono === 'Entrenamiento';
   var payload = {
-    action: _evLugarData.fila ? 'editarVenue' : 'crearVenue',
-    adminToken: _adminToken,
-    nombre: _evLugarData.nombre.trim(),
+    lugar: _evLugarData.nombre.trim(),
     google_maps: _evLugarData.mapsUrl,
-    tipoIcono: _evLugarData.tipoIcono,
-    requiereReserva: requiereReserva,
-    tipo: _evLugarData.tipoRecurrencia,
-    inicia: _evLugarData.hora
+    tipo_icono: _evLugarData.tipoIcono,
+    requiere_reserva: requiereReserva,
+    tipo: _evLugarData.tipoRecurrencia
   };
-  if (_evLugarData.fila) payload.idRegla = _evLugarData.fila;
   if (_evLugarData.tipoRecurrencia === 'dias_semana') {
-    payload.dias = JSON.stringify(_evLugarData.diasSemana.slice().sort(function(a, b) { return a - b; }));
+    payload.dias = _evLugarData.diasSemana.slice().sort(function(a, b) { return a - b; });
   } else if (_evLugarData.tipoRecurrencia === 'cada_tantos') {
     payload.frecuencia = _evLugarData.frecuenciaNumero;
     payload.unidad = _evLugarData.frecuenciaUnidad;
     payload.fecha_referencia = _evLugarData.fecha;
-  } else {
+  } else if (_evLugarData.tipoRecurrencia === 'unico') {
     payload.fecha_referencia = _evLugarData.fecha;
   }
+  // "Hora" es opcional (ver MANIFEST.md "Cambios recientes") -- solo viaja
+  // si el admin la tocó de verdad (`horaTocada`, ver
+  // _evLugarMostrarSubRecurrencia()/_evLugarAbrirEditar() más arriba), nunca
+  // el valor visual por default del stepper.
+  if (_evLugarData.horaTocada) payload.inicia = _evLugarData.hora;
 
-  mostrarCargando(_evLugarData.fila ? 'Guardando cambios...' : 'Creando lugar...');
-  apiPost(payload, function(res) {
-    ocultarCargando();
-    if (res && res.exito === false) {
-      mostrarToast(res.error || 'No se pudo guardar el lugar.', 'error');
-      return;
-    }
-    mostrarToast(_evLugarData.fila ? 'Lugar actualizado.' : 'Lugar creado.', 'ok');
-    var volver = _evLugarFormVolver();
-    if (volver === 's-eventos-lugares') irEvLugares(); else ir(volver);
-  }, function(e) {
-    ocultarCargando();
-    mostrarToast(e && e.message ? e.message : 'No se pudo guardar el lugar.', 'error');
-  });
+  var editando = _evLugarData.fila;
+  var url = SUPABASE_URL + '/rest/v1/venues' + (editando ? ('?id=eq.' + encodeURIComponent(editando)) : '');
+  var headers = { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+
+  mostrarCargando(editando ? 'Guardando cambios...' : 'Creando lugar...');
+  fetch(url, { method: editando ? 'PATCH' : 'POST', headers: headers, body: JSON.stringify(payload) })
+    .then(function(r) {
+      if (r.ok) {
+        ocultarCargando();
+        mostrarToast(editando ? 'Lugar actualizado.' : 'Lugar creado.', 'ok');
+        var volver = _evLugarFormVolver();
+        if (volver === 's-eventos-lugares') irEvLugares(); else ir(volver);
+        return;
+      }
+      return r.json().catch(function() { return null; }).then(function(body) {
+        throw new Error((body && body.message) || ('No se pudo guardar el lugar (HTTP ' + r.status + ').'));
+      });
+    })
+    .catch(function(e) {
+      ocultarCargando();
+      mostrarToast((e && e.message) || 'No se pudo guardar el lugar.', 'error');
+    });
 }
 
 /* ═══════════════════════════════════════════════════════

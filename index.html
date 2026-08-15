@@ -752,11 +752,13 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
        .salud-paso/.salud-prog/.salud-prog-dot de css/perfil.css tal cual,
        cero CSS nuevo de transición): Paso 0 Ubicación+Nombre, Paso 1 Tipo de
        evento (ya no pide "¿Requiere reserva?" -- se deriva sola de acá, ver
-       _evLugarGuardar()/js/eventos.js), Paso 2 Horario (opcional, nunca
-       bloquea el guardado). Footer con 2 botones lado a lado desde el Paso
-       1 ("Atrás"/acción principal) -- el Paso 0 esconde "Atrás" (mismo
-       criterio que "Editar evento"/#s-eventos-editar: la flecha del header
-       ya vuelve a la lista ahí). -->
+       _evLugarGuardar()/js/eventos.js), Paso 2 Tipo de recurrencia (con
+       "Hora" como sección extra condicionada a que haya un tipo elegido,
+       stepper existente -- ver _evHoraStepper*/js/eventos.js -- ninguno de
+       los 2 bloquea el guardado). Footer con UN solo botón que cambia
+       texto/acción por paso (sin "Atrás" propio -- el header ya tiene la
+       flecha de volver, _evLugarBack(), que cubre exactamente lo mismo,
+       mismo criterio que #s-eventos-crear). -->
   <div class="pantalla" id="s-eventos-lugar-form">
     <div class="app-nav app-nav-sticky" id="ev-lugar-form-header">
       <button class="app-nav-back" onclick="_evLugarBack()">
@@ -799,14 +801,14 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <span class="aj-pill" data-val="Evento social" onclick="_evLugarSelIcono(this)">Evento social</span>
             <span class="aj-pill" data-val="Otro" onclick="_evLugarSelIcono(this)">Otro</span>
           </div>
-          <p class="ev-ant-intro" style="margin-top:14px;">Si querés que este lugar pueda usarse para hacer reservas de equipamiento, seleccioná Entrenamiento.</p>
+          <p class="ev-ant-intro" style="margin-top:14px;">Si quieres que este lugar pueda usarse para hacer reservas de equipamiento, selecciona Entrenamiento.</p>
         </div>
       </div>
 
       <div class="salud-paso" id="ev-lugar-paso-2">
         <div class="ev-lugar-campo" style="margin-top:0;">
           <p class="ev-lugar-campo-label">Tipo de recurrencia</p>
-          <p class="ev-ant-intro" style="margin:0 0 14px;">Podés guardar sin definir un horario y configurarlo después.</p>
+          <p class="ev-ant-intro" style="margin:0 0 14px;">Puedes guardar sin definir un horario y configurarlo después.</p>
           <div class="aj-pills-row" id="ev-lugar-recurrencia-pills">
             <span class="aj-pill" data-val="dias_semana" onclick="_evLugarSelRecurrencia(this)">Días de la semana</span>
             <span class="aj-pill" data-val="cada_tantos" onclick="_evLugarSelRecurrencia(this)">Cada tantos días/semanas/meses</span>
@@ -856,7 +858,26 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
           <div class="ev-lugar-campo" id="ev-lugar-hora-wrap" style="display:none;">
             <p class="ev-lugar-campo-label">Hora</p>
-            <input type="time" class="ev-lugar-input" id="ev-lugar-hora" oninput="_evLugarSetHora(this.value)">
+            <div class="ev-hora-stepper" id="ev-lugar-hora-stepper">
+              <div class="ev-hora-stepper-cols">
+                <div class="ev-hora-stepper-col">
+                  <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-lugar-hora','hora',1)"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
+                  <span class="ev-hora-stepper-valor" id="ev-lugar-hora-hora"></span>
+                  <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-lugar-hora','hora',-1)"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
+                </div>
+                <span class="ev-hora-stepper-sep">:</span>
+                <div class="ev-hora-stepper-col">
+                  <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-lugar-hora','minuto',1)"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
+                  <span class="ev-hora-stepper-valor" id="ev-lugar-hora-minuto"></span>
+                  <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-lugar-hora','minuto',-1)"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
+                </div>
+              </div>
+              <div class="ev-hora-stepper-meridiano" id="ev-lugar-hora-meridiano">
+                <span class="aj-pill" data-val="AM" onclick="_evHoraStepperSetMeridiano('ev-lugar-hora',this)">AM</span>
+                <span class="aj-pill" data-val="PM" onclick="_evHoraStepperSetMeridiano('ev-lugar-hora',this)">PM</span>
+              </div>
+            </div>
+            <p class="ev-lugar-mapa-nota">Si no la tocas, este lugar se guarda sin hora definida.</p>
           </div>
         </div>
       </div>
@@ -865,10 +886,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
   <div class="cta-footer-fixed" id="cta-footer-s-eventos-lugar-form">
-    <div style="display:flex;gap:10px;">
-      <button type="button" class="btn btn-outline" id="ev-lugar-btn-atras" style="display:none;flex:1;" onclick="_evLugarBack()">Atrás</button>
-      <button type="button" class="btn btn-primary" id="ev-lugar-btn-guardar" style="flex:1;" disabled>Siguiente</button>
-    </div>
+    <button type="button" class="btn btn-primary" id="ev-lugar-btn-guardar" disabled>Siguiente</button>
   </div>
 
   <!-- "Crear evento" -- wizard propio de 2 pasos (Lugar / Recurrencia y
@@ -2379,7 +2397,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=058b5ee4"></script>
-<script src="js/eventos.js?v=b8b84bab"></script>
+<script src="js/eventos.js?v=9ebf6956"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=7a7a6f20"></script>
