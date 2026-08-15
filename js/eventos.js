@@ -470,11 +470,14 @@ function _evPrecargarRoster() {
 var _evYaInicializadoEnSesion = false;
 
 /* ── FAB de #s-eventos (solo admin, ver #ev-fab-menu en index.html) ──────
-   Menú "speed dial" de 2 opciones (Crear evento/Editar lugares). La
-   visibilidad del FAB en sí (admin + pantalla activa) la resuelve ir()/
-   js/ui.js en cada cambio de pantalla, mismo criterio que #home-nav/
-   #s4-nav -- acá solo vive el abrir/cerrar del menú una vez que el FAB ya
-   está visible. */
+   Ex-menú "speed dial" -- ver MANIFEST.md "Cambios recientes" (wizard
+   "Tipo → Lugar → Detalles"): `#ev-fab-btn` ya NO llama `_evFabToggle()`,
+   llama `irEvCrear()` directo. Funciones/listener de abajo quedan
+   definidas sin caller real desde el FAB de Eventos (dejadas tal cual,
+   no eliminadas -- `js/ui.js` sigue invocando `_evFabCerrar()` de forma
+   defensiva al ocultar el FAB, ver ese archivo). La visibilidad del FAB
+   en sí (admin + pantalla activa) la resuelve ir()/js/ui.js en cada
+   cambio de pantalla, mismo criterio que #home-nav/#s4-nav. */
 var _evFabAbierto = false;
 function _evFabToggle() {
   _evFabAbierto = !_evFabAbierto;
@@ -5149,17 +5152,38 @@ var _evLugarOrigen = 's-eventos-lugares';
 var _evLugarCal = { referencia: { mostrado: null }, unico: { mostrado: null } };
 var _evLugarMapa = null;
 var _evLugarAutocomp = null;
+// true cuando el formulario de venue fue abierto desde el paso "Lugar" del
+// wizard "Crear evento" (irEvLugarFormNuevo('desde_crear'), ver
+// MANIFEST.md "Cambios recientes") -- ese wizard ya NO tiene su propio
+// mini-formulario inline, reusa este mismo formulario compartido pero
+// recortado a solo el Paso 0 (Ubicación+Nombre): _evLugarMostrarPaso()
+// guarda directo al llegar al Paso 1 en vez de mostrarlo, y
+// _evLugarGuardar() vuelve al wizard (no a `_evLugarOrigen`) al terminar.
+// `false` en cualquier otro flujo (`irEvLugares()` -> "+ Nuevo lugar"), el
+// wizard de 3 pasos completo sigue disponible tal cual ahí.
+var _evLugarFromWizard = false;
 
 function _evLugarFormVolver() { return _evLugarOrigen; }
 
+// El único parámetro sirve doble uso: nombre de pantalla de origen (para
+// _evLugarFormVolver()/el back del Paso 0) O el string especial
+// 'desde_crear' (ver _evLugarFromWizard arriba) -- no un 2do parámetro
+// aparte, para no tocar el único caller preexistente
+// (irEvLugarFormNuevo('s-eventos-lugares'), #s-eventos-lugares).
 function irEvLugarFormNuevo(origen) {
+  _evLugarFromWizard = (origen === 'desde_crear');
   _evLugarData = {
     fila: null, nombre: '', mapsUrl: null, lat: null, lng: null,
-    tipoIcono: null, tipoRecurrencia: null,
+    // Sin pill de "Tipo de ícono" en el flujo recortado del wizard (ver
+    // _evLugarMostrarPaso() más abajo, salta directo del Paso 0 a guardar)
+    // -- 'Otro' como default neutro, corregible después desde "Editar
+    // lugares" si hace falta uno más específico.
+    tipoIcono: _evLugarFromWizard ? 'Otro' : null,
+    tipoRecurrencia: null,
     diasSemana: [], frecuenciaNumero: null, frecuenciaUnidad: null,
     fecha: null, hora: '', horaTocada: false
   };
-  _evLugarOrigen = origen || 's-eventos-lugares';
+  _evLugarOrigen = _evLugarFromWizard ? 's-eventos-crear' : (origen || 's-eventos-lugares');
   ir('s-eventos-lugar-form');
   _evLugarFormPintar();
   _evLugarMostrarPaso(0);
@@ -5242,6 +5266,12 @@ function _evLugarFormPintar() {
    este archivo), con su propio índice/array (nunca comparte estado con
    "Crear evento", pese a compartir el motor). ──────────────────────── */
 function _evLugarMostrarPaso(idx) {
+  // Flujo recortado desde el wizard "Crear evento" (ver _evLugarFromWizard
+  // más arriba) -- el Paso 0 (Ubicación+Nombre) es el único que se muestra,
+  // "Siguiente" ahí (_evLugarIrPaso1(), pide idx===1) guarda directo en vez
+  // de mostrar los Pasos 1/2 (Tipo de ícono/Horario, no pedidos en este
+  // flujo).
+  if (_evLugarFromWizard && idx === 1) { _evLugarGuardar(); return; }
   _EV_LUGAR_STEPS.forEach(function(s, i) {
     var el = document.getElementById(s);
     if (el) el.classList.toggle('activo', i === idx);
@@ -5594,6 +5624,18 @@ function _evLugarGuardar() {
       if (r.ok) {
         ocultarCargando();
         mostrarToast(editando ? 'Lugar actualizado.' : 'Lugar creado.', 'ok');
+        // Vuelve al wizard "Crear evento" en vez de a `_evLugarFormVolver()`
+        // -- NO usa irEvCrear() (resetea todo el wizard a cero, perdiendo el
+        // tipo ya elegido en el Paso "Tipo") -- solo recarga la lista de
+        // lugares (para que el venue recién creado aparezca) y muestra el
+        // paso "Lugar" directo, ver MANIFEST.md "Cambios recientes".
+        if (_evLugarFromWizard) {
+          _evLugarFromWizard = false;
+          ir('s-eventos-crear');
+          _evCrearMostrarPaso(1);
+          _evCrearCargarLugares();
+          return;
+        }
         var volver = _evLugarFormVolver();
         if (volver === 's-eventos-lugares') irEvLugares(); else ir(volver);
         return;
@@ -5873,54 +5915,61 @@ function _evHoraStepperSetMeridiano(prefix, el) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   "Crear evento" (#s-eventos-crear, FAB) -- wizard propio de 2 pasos
-   (Lugar / Recurrencia y horario), YA NO comparte pantalla con "Editar
-   lugares" (ver bloque de arriba). Motor de pasos+progreso: array de ids +
-   índice actual + dots (_EV_CREAR_STEPS/_evCrearCurIdx), reusando
+   "Crear evento" (#s-eventos-crear, FAB) -- wizard de 3 pasos (Tipo →
+   Lugar → Detalles, ver MANIFEST.md "Cambios recientes" -- antes 2 pasos,
+   Lugar/Recurrencia, sin selector de tipo). Motor de pasos+progreso: array
+   de ids + índice actual + dots (_EV_CREAR_STEPS/_evCrearCurIdx), reusando
    .salud-paso/.salud-prog/.salud-prog-dot (css/perfil.css) tal cual --
    mismo mecanismo que el wizard de "Ficha de salud" (js/perfil.js,
-   _SALUD_STEPS/_saludCurIdx). Nota: NO es el motor que usa hoy "Asistencia
-   anticipada" -- esa pantalla tuvo ese mismo motor en su momento pero
-   migró a un acordeón de una sola pantalla (ver el comentario en
-   css/eventos.css sobre ".salud-prog, que ya no se usan en esta
-   pantalla"), Salud quedó como el único precedente vivo.
+   _SALUD_STEPS/_saludCurIdx).
 
-   Paso 1: elegir un lugar existente (_evCrearData.venueExistente) O crear
-   uno nuevo inline (_evCrearData.nuevoLugarActivo + .nuevoLugar, mismos
-   campos/clases que el formulario de "Editar lugares": buscador Places +
-   mapa vía crearOCentrarMapaPin() + nombre + tipo de ícono, sin pill de
-   "¿Requiere reserva?" -- no pedida para este wizard, crearVenue() la
-   recibe en 'SI' por default). Paso 2: recurrencia + hora (stepper).
+   Paso 0 (Tipo): 3 cards (_evCrearSetTipo()) -- "Recurrente"/"Único" siguen
+   a Paso 1 (Lugar); "Descanso" salta directo a Paso 2 (sin lugar, ver
+   _evCrearIrSiguiente()). Paso 1 (Lugar): elegir un venue existente
+   (_evCrearData.venueExistente) de la lista, o tocar "Agregar lugar" para
+   abrir el formulario de venue COMPARTIDO (#s-eventos-lugar-form,
+   irEvLugarFormNuevo('desde_crear')) y volver acá con la lista recargada --
+   este wizard YA NO tiene su propio mini-formulario de lugar nuevo inline
+   (buscador Places + mapa), ver `_evLugarFromWizard` más abajo en este
+   archivo para el detalle de ese flujo compartido. Paso 2 (Detalles):
+   pills de categoría (Entrenamiento/Partido/Evento, para
+   `asistencias.tipo_evento`) + la sección de recurrencia/hora ya existente
+   (Recurrente/Único, _evCrearActualizarDetalles()) o el rango de fechas de
+   descanso (stub, ver _evCrearGuardar()).
 
-   Guardado: SIEMPRE crearVenue, incluso con un venue existente elegido --
-   el backend documentado (ver MANIFEST.md "Backend — Venues") no tiene una
-   operación de "agregar otra regla de recurrencia a un venue ya
-   existente", el id de cada regla es la fila de Venues 1 a 1. Elegir un
-   venue existente en el paso 1 arma el payload con su nombre/ubicación/
-   ícono/reserva COPIADOS + la recurrencia nueva del paso 2, lo que crea una
-   fila NUEVA (incluida en el llamado normal a crearVenue) con la misma
-   identidad de lugar pero un horario distinto -- consistente con el modelo
-   real de datos ya documentado ("1 fila = 1 regla"), no un caso especial.
-   Si más adelante Victor quiere que un mismo lugar comparta una sola fila
-   "maestra" entre varias reglas, hace falta repensar `Venues` (separarla en
-   una hoja de lugares + una hoja de reglas, o una función de backend nueva
-   tipo `agregarReglaAVenue(nombreLugar, datosRecurrencia)`) -- fuera de
-   alcance de esta tanda, dejado señalado acá en vez de resuelto en silencio.
+   Guardado (Recurrente/Único): SIEMPRE crearVenue, incluso con un venue
+   existente elegido -- el backend documentado (ver MANIFEST.md "Backend —
+   Venues") no tiene una operación de "agregar otra regla de recurrencia a
+   un venue ya existente", el id de cada regla es la fila de Venues 1 a 1.
+   Elegir un venue existente en el paso "Lugar" arma el payload con su
+   nombre/ubicación/ícono/reserva COPIADOS + la recurrencia nueva del paso
+   "Detalles", lo que crea una fila NUEVA (incluida en el llamado normal a
+   crearVenue) con la misma identidad de lugar pero un horario distinto --
+   consistente con el modelo real de datos ya documentado ("1 fila = 1
+   regla"), no un caso especial. Si más adelante Victor quiere que un mismo
+   lugar comparta una sola fila "maestra" entre varias reglas, hace falta
+   repensar `Venues` (separarla en una hoja de lugares + una hoja de reglas,
+   o una función de backend nueva tipo
+   `agregarReglaAVenue(nombreLugar, datosRecurrencia)`) -- fuera de alcance
+   de esta tanda, dejado señalado acá en vez de resuelto en silencio.
    ═══════════════════════════════════════════════════════ */
 
-var _EV_CREAR_STEPS = ['ev-crear-paso-0', 'ev-crear-paso-1'];
+var _EV_CREAR_STEPS = ['ev-crear-paso-tipo', 'ev-crear-paso-lugar', 'ev-crear-paso-detalle'];
+// Título de la nav por paso -- mismo índice que _EV_CREAR_STEPS, actualizado
+// con fade dentro de _evCrearMostrarPaso() (mismo patrón que
+// _EV_LUGAR_STEP_TITULOS/_evLugarMostrarPaso(), más arriba en este archivo).
+var _EV_CREAR_STEP_TITULOS = ['Tipo de evento', 'Seleccionar lugar', 'Detalles del evento'];
 var _evCrearCurIdx = 0;
 var _evCrearData = {};
-var _evCrearMapa = null;
-var _evCrearAutocomp = null;
 var _evCrearCal = { referencia: { mostrado: null }, unico: { mostrado: null } };
 
 function irEvCrear() {
   _evCrearData = {
-    venueExistente: null, nuevoLugarActivo: false,
-    nuevoLugar: { nombre: '', mapsUrl: null, lat: null, lng: null, tipoIcono: null },
+    tipoEvento: null, tipoEventoCategoria: null,
+    venueExistente: null,
     tipoRecurrencia: null, diasSemana: [], frecuenciaNumero: null, frecuenciaUnidad: null,
-    fecha: null, hora: '09:00'
+    fecha: null, hora: '09:00',
+    descansoFechaDesde: null, descansoFechaHasta: null
   };
   var mesInicial = _evHoyISO();
   _evCrearCal.referencia.mostrado = mesInicial;
@@ -5936,21 +5985,20 @@ function irEvCrear() {
 }
 
 function _evCrearResetUI() {
+  document.querySelectorAll('#ev-crear-tipo-cat-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   document.querySelectorAll('#ev-crear-recurrencia-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   document.querySelectorAll('#ev-crear-dias-row .ev-dia-circulo').forEach(function(c) { c.classList.remove('activa'); });
   document.querySelectorAll('#ev-crear-frec-unidad-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
-  document.querySelectorAll('#ev-crear-lugar-icono-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   var frecNum = document.getElementById('ev-crear-frec-num'); if (frecNum) frecNum.value = '';
-  var nombreInp = document.getElementById('ev-crear-lugar-nombre'); if (nombreInp) nombreInp.value = '';
-  _actualizarContadorTexto('', 'ev-crear-lugar-nombre-contador', 15);
   var buscadorLugar = document.getElementById('ev-crear-buscador-lugar'); if (buscadorLugar) buscadorLugar.value = '';
-  var nuevoLugarWrap = document.getElementById('ev-crear-nuevo-lugar'); if (nuevoLugarWrap) nuevoLugarWrap.style.display = 'none';
-  ['ev-crear-rec-dias', 'ev-crear-rec-cada', 'ev-crear-rec-unico', 'ev-crear-hora-wrap'].forEach(function(id) {
+  var descDesde = document.getElementById('ev-crear-descanso-desde'); if (descDesde) descDesde.value = '';
+  var descHasta = document.getElementById('ev-crear-descanso-hasta'); if (descHasta) descHasta.value = '';
+  ['ev-crear-rec-dias', 'ev-crear-rec-cada', 'ev-crear-rec-fecha-wrap', 'ev-crear-hora-wrap', 'ev-crear-rec-semanal-wrap', 'ev-crear-descanso-wrap'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.style.display = 'none';
   });
 }
 
-/* ── Navegación entre los 2 pasos ─────────────────────────────────────── */
+/* ── Navegación entre los 3 pasos ─────────────────────────────────────── */
 function _evCrearMostrarPaso(idx) {
   _EV_CREAR_STEPS.forEach(function(s, i) {
     var el = document.getElementById(s);
@@ -5958,7 +6006,13 @@ function _evCrearMostrarPaso(idx) {
   });
   _evCrearCurIdx = idx;
   _evCrearRenderProg();
+  // Título de la nav = nombre del paso actual, mismo helper de fade que
+  // _evLugarMostrarPaso()/el timeline principal (_evFadeSwap()) -- no un
+  // fade propio a mano.
+  var tituloEl = document.getElementById('ev-crear-form-titulo');
+  if (tituloEl) _evFadeSwap(tituloEl, function() { tituloEl.textContent = _EV_CREAR_STEP_TITULOS[idx]; }, false);
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (idx === 2) _evCrearActualizarDetalles();
   _evCrearActualizarFooter();
 }
 function _evCrearRenderProg() {
@@ -5976,30 +6030,62 @@ function _evCrearRenderProg() {
 // `_evTimelineScrollY` ya queda guardado solo (el hook genérico `alSalir()`
 // de `ir()`, js/ui.js, corre para CUALQUIER salida de `#s-eventos`, no solo
 // por nav inferior), pero sin ese flag el restore de `ir()` nunca se activa.
+// Desde el paso "Detalles" (idx 2), "Descanso" vuelve directo al paso
+// "Tipo" (idx 0) -- nunca pasó por "Lugar" al avanzar (ver
+// _evCrearIrSiguiente()), así que tampoco debe pasar por ahí al volver.
 function _evCrearBack() {
   if (_evCrearCurIdx === 0) { irEventos(); return; }
-  _evCrearMostrarPaso(0);
+  if (_evCrearCurIdx === 1) { _evCrearMostrarPaso(0); return; }
+  _evCrearMostrarPaso(_evCrearData.tipoEvento === 'descanso' ? 0 : 1);
 }
-function _evCrearIrPaso1() {
-  if (!_evCrearLugarValido()) return;
-  _evCrearMostrarPaso(1);
+// Reemplaza a la vieja _evCrearIrPaso1() -- ahora cubre las 2 transiciones
+// hacia adelante del wizard completo (Tipo->Lugar/Detalles, Lugar->Detalles).
+// "Descanso" salta Lugar por completo (no le hace falta un venue).
+function _evCrearIrSiguiente() {
+  if (_evCrearCurIdx === 0) {
+    if (!_evCrearData.tipoEvento) return;
+    _evCrearMostrarPaso(_evCrearData.tipoEvento === 'descanso' ? 2 : 1);
+    return;
+  }
+  if (_evCrearCurIdx === 1) {
+    if (!_evCrearLugarValido()) return;
+    _evCrearMostrarPaso(2);
+  }
 }
 function _evCrearActualizarFooter() {
+  var footer = document.getElementById('cta-footer-s-eventos-crear');
   var btn = document.getElementById('ev-crear-btn-footer'); if (!btn) return;
   if (_evCrearCurIdx === 0) {
+    // Paso "Tipo": sin botón de footer real -- tocar una card ya avanza sola
+    // (_evCrearSetTipo() -> _evCrearIrSiguiente()), ver #ev-crear-paso-tipo
+    // en index.html. El footer fijo queda oculto acá en vez de borrado del
+    // DOM, mismo criterio que el resto de este wizard con elementos que no
+    // aplican a un paso puntual.
+    if (footer) footer.style.display = 'none';
     btn.textContent = 'Continuar';
-    btn.onclick = _evCrearIrPaso1;
+    btn.onclick = _evCrearIrSiguiente;
+    btn.disabled = !_evCrearData.tipoEvento;
+  } else if (_evCrearCurIdx === 1) {
+    if (footer) footer.style.display = '';
+    btn.textContent = 'Continuar';
+    btn.onclick = _evCrearIrSiguiente;
     btn.disabled = !_evCrearLugarValido();
   } else {
-    btn.textContent = 'Crear evento';
+    if (footer) footer.style.display = '';
+    btn.textContent = 'Guardar';
     btn.onclick = _evCrearGuardar;
-    btn.disabled = !_evCrearRecurrenciaValidaWizard();
+    btn.disabled = !_evCrearDetalleValido();
   }
 }
 
-/* ── Paso 1: Lugar -- buscador local sobre _evLugares (reusa la misma
-   variable/carga que "Editar lugares") + lista seleccionable + "+ Este
-   lugar no está en la lista". Mismo fix real que `irEvLugares()` (ver
+/* ── Paso "Lugar" -- buscador local sobre _evLugares (reusa la misma
+   variable/carga que "Editar lugares") + lista seleccionable + un ítem
+   final "Agregar lugar" que abre el formulario de venue COMPARTIDO
+   (#s-eventos-lugar-form, irEvLugarFormNuevo('desde_crear')) -- ver
+   MANIFEST.md "Cambios recientes": este wizard YA NO tiene su propio
+   mini-formulario inline (buscador Places + mapa + nombre + tipo de
+   ícono), esa creación vive en un solo lugar (`_evLugarFromWizard`, más
+   abajo en este archivo). Mismo fix real que `irEvLugares()` (ver
    MANIFEST.md "Cambios recientes" -- fix de "Gestionar venues"): esta
    función pedía el MISMO `action:'getVenues'` roto (Apps Script, nunca
    desplegada tras la migración de Venues a Supabase), señalado en esa
@@ -6023,25 +6109,36 @@ function _evCrearCargarLugares() {
     if (cont) cont.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">No se pudieron cargar los lugares.</p>';
   });
 }
+// "Agregar lugar" (_evCrearAgregarLugarHtml()) va SIEMPRE al final de la
+// lista, con o sin resultados de búsqueda -- mismo criterio que "+ Este
+// lugar no está en la lista" tenía antes, ahora como una card más en vez de
+// un botón aparte bajo la lista.
 function _evCrearRenderLugares(lista) {
   var cont = document.getElementById('ev-crear-lista-lugares'); if (!cont) return;
-  if (!lista.length) {
-    cont.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">' +
-      (_evLugares.length ? 'Ningún lugar coincide con la búsqueda.' : 'Todavía no hay lugares creados.') + '</p>';
-    return;
-  }
-  cont.innerHTML = lista.map(function(v) {
-    var activa = _evCrearData.venueExistente && _evCrearData.venueExistente.fila === v.fila;
-    return '<div class="ev-ant-card ev-crear-venue-card' + (activa ? ' activa' : '') + '" onclick="_evCrearSeleccionarLugar(\'' + v.fila + '\')">' +
-      '<div class="ev-card-top-row">' +
-        '<div class="ev-card-icon"><span class="material-symbols-outlined">place</span></div>' +
-        '<div class="ev-card-body">' +
-          '<div class="ev-card-titulo">' + v.nombre + '</div>' +
-          '<div class="ev-ant-card-sub">' + _evLugarResumenRecurrencia(v) + '</div>' +
-        '</div>' +
-      '</div>' +
-    '</div>';
-  }).join('');
+  var htmlLista = !lista.length
+    ? '<p style="color:var(--muted);font-size:0.85rem;">' +
+        (_evLugares.length ? 'Ningún lugar coincide con la búsqueda.' : 'Todavía no hay lugares creados.') + '</p>'
+    : lista.map(function(v) {
+        var activa = _evCrearData.venueExistente && _evCrearData.venueExistente.fila === v.fila;
+        return '<div class="ev-ant-card ev-crear-venue-card' + (activa ? ' activa' : '') + '" onclick="_evCrearSeleccionarLugar(\'' + v.fila + '\')">' +
+          '<div class="ev-card-top-row">' +
+            '<div class="ev-card-icon"><span class="material-symbols-outlined">place</span></div>' +
+            '<div class="ev-card-body">' +
+              '<div class="ev-card-titulo">' + v.nombre + '</div>' +
+              '<div class="ev-ant-card-sub">' + _evLugarResumenRecurrencia(v) + '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+  cont.innerHTML = htmlLista + _evCrearAgregarLugarHtml();
+}
+function _evCrearAgregarLugarHtml() {
+  return '<div class="ev-ant-card ev-crear-venue-card" onclick="irEvLugarFormNuevo(\'desde_crear\')">' +
+    '<div class="ev-card-top-row">' +
+      '<div class="ev-card-icon"><span class="material-symbols-outlined">add_circle</span></div>' +
+      '<div class="ev-card-body"><div class="ev-card-titulo">Agregar lugar</div></div>' +
+    '</div>' +
+  '</div>';
 }
 function _evCrearFiltrarLugares(texto) {
   var q = (texto || '').trim().toLowerCase();
@@ -6052,94 +6149,73 @@ function _evCrearSeleccionarLugar(fila) {
   var v = _evLugares.filter(function(x) { return x.fila === fila; })[0];
   if (!v) return;
   _evCrearData.venueExistente = v;
-  _evCrearData.nuevoLugarActivo = false;
-  var wrap = document.getElementById('ev-crear-nuevo-lugar'); if (wrap) wrap.style.display = 'none';
   var buscador = document.getElementById('ev-crear-buscador-lugar');
   _evCrearFiltrarLugares(buscador ? buscador.value : '');
   _evCrearActualizarFooter();
 }
-function _evCrearMostrarNuevoLugar() {
-  _evCrearData.venueExistente = null;
-  _evCrearData.nuevoLugarActivo = true;
-  var buscador = document.getElementById('ev-crear-buscador-lugar');
-  _evCrearFiltrarLugares(buscador ? buscador.value : ''); // deselecciona cualquier card ya elegida
-  var wrap = document.getElementById('ev-crear-nuevo-lugar');
-  if (wrap) {
-    wrap.style.display = 'block';
-    void wrap.offsetWidth;
-    wrap.style.animation = 'fadeIn 0.2s ease';
-  }
-  _evCrearLugarInicializarMapa();
-  _evCrearActualizarFooter();
-}
-function _evCrearSetNombreNuevoLugar(v) { _evCrearData.nuevoLugar.nombre = v; _actualizarContadorTexto(v, 'ev-crear-lugar-nombre-contador', 15); _evCrearActualizarFooter(); }
-function _evCrearSelIconoNuevoLugar(el) {
-  document.querySelectorAll('#ev-crear-lugar-icono-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
-  el.classList.add('activa');
-  _evCrearData.nuevoLugar.tipoIcono = el.dataset.val;
-  _evCrearActualizarFooter();
+function _evCrearLugarValido() {
+  return !!_evCrearData.venueExistente;
 }
 
-/* Mapa/buscador del mini-form de lugar nuevo -- mismo mecanismo que
-   _evLugarInicializarMapa()/_evLugarInicializarBuscador() de arriba
-   (crearOCentrarMapaPin() + google.maps.places.Autocomplete), con su propia
-   instancia/ids: no puede compartir el canvas/input de "Editar lugares",
-   las 2 pantallas conviven en el mismo DOM. */
-function _evCrearLugarInicializarMapa() {
-  var canvas = document.getElementById('ev-crear-lugar-mapa-canvas');
-  if (!canvas) return;
-  _evCrearLugarInicializarBuscador();
-  if (typeof google === 'undefined' || !google.maps || !window._mapsLoaded) {
-    canvas.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:0.78rem;text-align:center;padding:16px;">No se pudo cargar el mapa. Intenta más tarde.</div>';
-    return;
-  }
-  var n = _evCrearData.nuevoLugar;
-  var centro = (n.lat != null && n.lng != null) ? { lat: n.lat, lng: n.lng } : _EV_LUGAR_QUITO_LATLNG;
-  _evCrearLugarCentrarMapa(centro);
+/* ── Paso "Tipo" (idx 0) -- 3 cards (_evCrearSetTipo()) que avanzan solas
+   al tocarlas, sin botón de footer (ver _evCrearActualizarFooter()). "Único"
+   ya no se elige con la 3ra pill de #ev-crear-recurrencia-pills (quedaba
+   redundante con este selector de más alto nivel) -- fija
+   `_evCrearData.tipoRecurrencia = 'unico'` a mano y reusa
+   _evCrearMostrarSubRecurrencia() para revelar "Fecha única"+"Hora" directo,
+   sin pasar por las pills (ocultas para este tipo dentro de
+   #ev-crear-rec-semanal-wrap, ver _evCrearActualizarDetalles()). ──── */
+function _evCrearSetTipo(tipo) {
+  _evCrearData.tipoEvento = tipo;
+  // Si cambia el tipo, resetear tipoEventoCategoria (no aplica a "descanso")
+  // y cualquier sub-elección de recurrencia ya hecha -- evita arrastrar un
+  // estado de una elección de tipo anterior (ida y vuelta entre cards).
+  _evCrearData.tipoEventoCategoria = null;
+  document.querySelectorAll('#ev-crear-tipo-cat-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  _evCrearData.tipoRecurrencia = (tipo === 'unico') ? 'unico' : null;
+  document.querySelectorAll('#ev-crear-recurrencia-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  _evCrearActualizarDetalles();
+  _evCrearIrSiguiente();
 }
-function _evCrearLugarCentrarMapa(pos) {
-  var canvas = document.getElementById('ev-crear-lugar-mapa-canvas');
-  if (!canvas) return;
-  _evCrearMapa = crearOCentrarMapaPin(_evCrearMapa, canvas, pos, _evCrearLugarOnDragEnd);
-}
-function _evCrearLugarOnDragEnd(centro) {
-  _evCrearLugarActualizarUbicacion(centro.lat(), centro.lng(), null);
-}
-function _evCrearLugarActualizarUbicacion(lat, lng, mapsUrlDirecto) {
-  _evCrearData.nuevoLugar.lat = lat; _evCrearData.nuevoLugar.lng = lng;
-  _evCrearData.nuevoLugar.mapsUrl = mapsUrlDirecto || ('https://www.google.com/maps?q=' + lat + ',' + lng);
-  _evCrearActualizarFooter();
-}
-function _evCrearLugarInicializarBuscador() {
-  var inp = document.getElementById('ev-crear-lugar-buscador-input');
-  if (!inp) return;
-  inp.value = '';
-  if (_evCrearAutocomp) { google.maps.event.clearInstanceListeners(inp); _evCrearAutocomp = null; }
-  if (!window._mapsLoaded || typeof google === 'undefined') return;
-  _evCrearAutocomp = new google.maps.places.Autocomplete(inp, { fields: ['geometry', 'name', 'url'] });
-  _evCrearAutocomp.addListener('place_changed', function() {
-    var place = _evCrearAutocomp.getPlace();
-    if (!place || !place.geometry || !place.geometry.location) return;
-    var loc = place.geometry.location;
-    _evCrearLugarCentrarMapa({ lat: loc.lat(), lng: loc.lng() });
-    _evCrearLugarActualizarUbicacion(loc.lat(), loc.lng(), place.url || null);
-    if (!_evCrearData.nuevoLugar.nombre && place.name) {
-      _evCrearData.nuevoLugar.nombre = place.name.substring(0, 15);
-      var nombreInp = document.getElementById('ev-crear-lugar-nombre');
-      if (nombreInp) nombreInp.value = _evCrearData.nuevoLugar.nombre;
-      _actualizarContadorTexto(_evCrearData.nuevoLugar.nombre, 'ev-crear-lugar-nombre-contador', 15);
-      _evCrearActualizarFooter();
-    }
+function _evCrearSetTipoCategoria(cat) {
+  _evCrearData.tipoEventoCategoria = cat;
+  document.querySelectorAll('#ev-crear-tipo-cat-pills .aj-pill').forEach(function(p) {
+    p.classList.toggle('activa', p.dataset.val === cat);
   });
 }
-function _evCrearLugarValido() {
-  if (_evCrearData.venueExistente) return true;
-  var n = _evCrearData.nuevoLugar;
-  return !!(n.nombre && n.nombre.trim() && n.mapsUrl && n.tipoIcono);
+function _evCrearSetDescansoFecha(cual, v) {
+  if (cual === 'desde') _evCrearData.descansoFechaDesde = v || null;
+  else _evCrearData.descansoFechaHasta = v || null;
+  _evCrearActualizarFooter();
+}
+/* Muestra/oculta las secciones del paso "Detalles" según
+   _evCrearData.tipoEvento -- llamada al entrar al paso (_evCrearMostrarPaso())
+   y cada vez que _evCrearSetTipo() cambia de tipo. */
+function _evCrearActualizarDetalles() {
+  var t = _evCrearData.tipoEvento;
+  var catWrap = document.getElementById('ev-crear-tipo-cat-pills');
+  if (catWrap) catWrap.style.display = (t === 'descanso') ? 'none' : '';
+  var semanalWrap = document.getElementById('ev-crear-rec-semanal-wrap');
+  if (semanalWrap) semanalWrap.style.display = (t === 'recurrente') ? '' : 'none';
+  var descansoWrap = document.getElementById('ev-crear-descanso-wrap');
+  if (descansoWrap) descansoWrap.style.display = (t === 'descanso') ? '' : 'none';
+  if (t === 'recurrente' || t === 'unico') {
+    _evCrearMostrarSubRecurrencia();
+  } else {
+    ['ev-crear-rec-dias', 'ev-crear-rec-cada', 'ev-crear-rec-fecha-wrap', 'ev-crear-hora-wrap'].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.style.display = 'none';
+    });
+  }
+}
+function _evCrearDetalleValido() {
+  var t = _evCrearData.tipoEvento;
+  if (t === 'recurrente' || t === 'unico') return _evCrearRecurrenciaValidaWizard();
+  if (t === 'descanso') return !!(_evCrearData.descansoFechaDesde && _evCrearData.descansoFechaHasta);
+  return false;
 }
 
-/* ── Paso 2: Recurrencia y horario -- mismas pills/reveal inline que el
-   formulario de "Editar lugares" (_evLugarMostrarSubRecurrencia()),
+/* ── Paso "Detalles" -- recurrencia y horario, mismas pills/reveal inline
+   que el formulario de "Editar lugares" (_evLugarMostrarSubRecurrencia()),
    adaptado a _evCrearData/ids propios. "Hora" es el stepper nuevo, inicia
    la primera vez que se revela (una sola vez por visita al wizard). ──── */
 function _evCrearSelRecurrencia(el) {
@@ -6150,13 +6226,13 @@ function _evCrearSelRecurrencia(el) {
   _evCrearActualizarFooter();
 }
 function _evCrearMostrarSubRecurrencia() {
-  ['ev-crear-rec-dias', 'ev-crear-rec-cada', 'ev-crear-rec-unico'].forEach(function(id) {
+  ['ev-crear-rec-dias', 'ev-crear-rec-cada', 'ev-crear-rec-fecha-wrap'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.style.display = 'none';
   });
   var horaWrap = document.getElementById('ev-crear-hora-wrap');
   var t = _evCrearData.tipoRecurrencia;
   if (!t) { if (horaWrap) horaWrap.style.display = 'none'; return; }
-  var mapaId = { dias_semana: 'ev-crear-rec-dias', cada_tantos: 'ev-crear-rec-cada', unico: 'ev-crear-rec-unico' };
+  var mapaId = { dias_semana: 'ev-crear-rec-dias', cada_tantos: 'ev-crear-rec-cada', unico: 'ev-crear-rec-fecha-wrap' };
   var activo = document.getElementById(mapaId[t]);
   if (activo) {
     activo.style.display = 'block';
@@ -6246,28 +6322,32 @@ function _evCrearRecurrenciaValidaWizard() {
   return false;
 }
 
-/* ── Guardado final -- SIEMPRE crearVenue, ver nota de diseño arriba sobre
-   por qué un venue existente también crea una fila nueva. ────────────── */
+/* ── Guardado final -- SIEMPRE crearVenue para "Recurrente"/"Único", ver
+   nota de diseño arriba (encabezado de esta sección) sobre por qué un
+   venue existente también crea una fila nueva. "Descanso" queda pendiente
+   -- toast informativo, sin guardar nada todavía (la lógica de temporada de
+   descanso -- probablemente sobre `temporadas_descanso`, ver
+   `_evCrearDescansoGuardar()` más abajo en este archivo -- se implementa en
+   una tanda futura). ────────────────────────────────────────────────── */
 function _evCrearGuardar() {
-  if (!_evCrearLugarValido() || !_evCrearRecurrenciaValidaWizard()) return;
-  var payload = { action: 'crearVenue', adminToken: _adminToken };
-  if (_evCrearData.venueExistente) {
-    var v = _evCrearData.venueExistente;
-    payload.nombre = v.nombre;
-    payload.mapsUrl = v.mapsUrl;
-    payload.lat = v.lat;
-    payload.lng = v.lng;
-    payload.tipoIcono = v.tipoIcono;
-    payload.requiereReserva = v.requiereReserva === false ? 'NO' : 'SI';
-  } else {
-    var n = _evCrearData.nuevoLugar;
-    payload.nombre = n.nombre.trim();
-    payload.mapsUrl = n.mapsUrl;
-    payload.lat = n.lat;
-    payload.lng = n.lng;
-    payload.tipoIcono = n.tipoIcono;
-    payload.requiereReserva = 'SI'; // sin pill propia en este wizard, ver nota de diseño
+  if (_evCrearData.tipoEvento === 'descanso') {
+    mostrarToast('Temporada de descanso: disponible próximamente.', 'ok', true);
+    return;
   }
+  if (!_evCrearLugarValido() || !_evCrearRecurrenciaValidaWizard()) return;
+  var v = _evCrearData.venueExistente;
+  var payload = { action: 'crearVenue', adminToken: _adminToken };
+  payload.nombre = v.nombre;
+  payload.mapsUrl = v.mapsUrl;
+  payload.lat = v.lat;
+  payload.lng = v.lng;
+  payload.tipoIcono = v.tipoIcono;
+  payload.requiereReserva = v.requiereReserva === false ? 'NO' : 'SI';
+  // Categoría elegida en este paso ("Entrenamiento"/"Partido"/"Evento") --
+  // termina en `asistencias.tipo_evento` (ver MANIFEST.md "Cambios
+  // recientes"), un campo aparte de `tipoIcono` (que sigue describiendo el
+  // VENUE, no el evento puntual).
+  payload.tipoEvento = _evCrearData.tipoEventoCategoria || 'Entrenamiento';
   payload.tipoRecurrencia = _evCrearData.tipoRecurrencia;
   payload.hora = _evCrearData.hora;
   if (_evCrearData.tipoRecurrencia === 'dias_semana') {
@@ -6300,7 +6380,17 @@ function _evCrearGuardar() {
    MANIFEST.md "Cambios recientes") + "Nueva temporada de descanso"
    (#s-eventos-crear-descanso). "Único" pasa de placeholder a implementación
    real en la Tanda C2, ver el bloque de abajo.
-   ═══════════════════════════════════════════════════════ */
+
+   HUÉRFANO desde el wizard "Tipo → Lugar → Detalles" (ver MANIFEST.md
+   "Cambios recientes", entrada más reciente): `irEvCrearUnico()`/
+   `irEvCrearDescanso()` y las pantallas `#s-eventos-crear-unico`/
+   `#s-eventos-crear-descanso` de acá abajo quedan SIN caller real -- "Único"
+   ahora vive dentro del wizard de arriba (paso "Tipo", ver
+   `_evCrearSetTipo()`), y "Descanso" tiene un paso equivalente en el mismo
+   wizard aunque el guardado real todavía no está implementado ahí (stub,
+   ver `_evCrearGuardar()`). Código dejado intacto, no eliminado -- útil de
+   referencia mientras se termina de decidir/implementar el guardado real de
+   "Descanso" en el wizard nuevo. ═══════════════════════════════════════ */
 
 /* ── Tanda C2 -- "Nuevo evento único" (#s-eventos-crear-unico, admin). Un
    evento único es UNA fila directa de la tabla `asistencias` de Supabase

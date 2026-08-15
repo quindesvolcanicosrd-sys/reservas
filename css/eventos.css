@@ -1202,33 +1202,42 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 }
 
 /* ═══════════════════════════════════════════════════════
-   "Crear evento" (#s-eventos-crear, js/eventos.js _evCrear*) -- wizard
-   propio de 2 pasos (Lugar / Recurrencia y horario), separado del
+   "Crear evento" (#s-eventos-crear, js/eventos.js _evCrear*) -- wizard de
+   3 pasos (Tipo → Lugar → Detalles, ver MANIFEST.md "Cambios recientes" --
+   antes 2 pasos, Lugar/Recurrencia, sin selector de tipo), separado del
    formulario de "Editar lugares" (arriba en este archivo, sin cambios). El
    motor de pasos+progreso reusa .salud-paso/.salud-prog/.salud-prog-dot
    TAL CUAL (css/perfil.css, cargado siempre) -- ver MANIFEST.md para la
    aclaración de por qué el precedente real es el wizard de "Ficha de
    salud" y no "Asistencia anticipada" (esa pantalla migró de ese mismo
    motor a un acordeón de una sola pantalla en una tanda anterior). El resto
-   del paso 2 (pills de recurrencia, días de la semana, calendario) reusa
-   los mismos selectores ya definidos arriba para el formulario de Venues
-   (.aj-pills-row/.aj-pill/.ev-dia-circulo/.ev-cal-grid/.ev-ant-cal-nav*) --
-   solo 2 componentes son genuinamente nuevos acá: la card seleccionable de
-   lugar existente, y el stepper de hora. ═══════════════════════════════ */
+   del paso "Detalles" (pills de recurrencia, días de la semana, calendario)
+   reusa los mismos selectores ya definidos arriba para el formulario de
+   Venues (.aj-pills-row/.aj-pill/.ev-dia-circulo/.ev-cal-grid/
+   .ev-ant-cal-nav*) -- 3 componentes son genuinamente nuevos acá: la card
+   vertical de tipo (paso "Tipo"), la card seleccionable de lugar existente
+   (paso "Lugar"), y el stepper de hora (paso "Detalles"). ═══════════════ */
 
-/* Paso 1 -- card de venue existente, seleccionable (a diferencia de
+/* Paso "Tipo" -- 3 cards verticales (ícono grande + título + descripción),
+   modificador de .ev-ant-card (horizontal por default en el resto de la
+   app) a layout en columna centrada, solo para esta variante. */
+.ev-crear-tipo-card {
+  flex-direction: column; align-items: center; text-align: center; gap: 6px;
+  padding: 22px 16px; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+}
+.ev-crear-tipo-card-icono { font-size: 2.2rem; color: var(--brand); }
+.ev-crear-tipo-card-titulo { font-size: 0.95rem; font-weight: 800; color: var(--text); }
+.ev-crear-tipo-card-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
+@media (hover: hover) { .ev-crear-tipo-card:hover { border-color: var(--brand); } }
+
+/* Paso "Lugar" -- card de venue existente, seleccionable (a diferencia de
    .ev-ant-card en "Editar lugares", que abre el formulario al tocar, acá
    togglea selección con un borde de marca -- misma base visual, estado
-   distinto). */
+   distinto). La card "Agregar lugar" (_evCrearAgregarLugarHtml(),
+   js/eventos.js) reusa esta misma clase, sin `.activa` -- nunca queda
+   seleccionada, solo navega. */
 .ev-crear-venue-card { cursor: pointer; border-color: var(--border-light); transition: border-color 0.15s, background 0.15s; }
 .ev-crear-venue-card.activa { border-color: var(--brand); background: var(--brand-light); }
-.ev-crear-venue-nuevo-btn {
-  display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%;
-  padding: 12px 14px; margin-top: 4px; background: none; border: 1.5px dashed var(--brand);
-  border-radius: 12px; color: var(--brand); font-size: 0.85rem; font-weight: 700;
-  font-family: inherit; cursor: pointer;
-}
-.ev-crear-venue-nuevo-btn .material-symbols-outlined { font-size: 1.1rem; }
 
 /* Stepper de hora -- 2 columnas (Horas/Minutos) con flechas arriba/abajo
    (mismo botón circular que .ev-ant-cal-nav-btn, reusado tal cual, solo
