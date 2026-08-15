@@ -597,6 +597,12 @@
    tanda anterior por una pantalla de pantalla completa). ──────────────── */
 .ev-detalle-section { margin-bottom: 22px; }
 .ev-detalle-section:last-child { margin-bottom: 0; }
+/* Mitad del gap genérico de `.ev-detalle-section` -- pedido puntual para
+   achicar SOLO la separación entre la descripción y la barra de RSVP que
+   sigue, sin tocar el resto de las secciones (que comparten esa misma clase
+   y deben seguir en 22px). Scoped por id, mismo criterio que
+   `#ev-detalle-info .fi-pills` arriba. */
+#ev-detalle-info { margin-bottom: 11px; }
 /* Nav compacta sticky (ver "Cambios recientes" -- reemplaza el #top-bar
    genérico solo para esta pantalla, ver TOP_BAR_CONFIG/js/ui.js): vive
    afuera de `.card` (hermano directo dentro de `.contenedor`, mismo criterio
