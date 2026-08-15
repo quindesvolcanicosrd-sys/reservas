@@ -26,7 +26,7 @@
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=580dd587"></script>
 <link rel="stylesheet" href="css/global.css?v=64804fa9">
-<link rel="stylesheet" href="css/estilos.css?v=9c46bad5">
+<link rel="stylesheet" href="css/estilos.css?v=7e3d0e54">
 <link rel="stylesheet" href="css/ui.css?v=626a894b">
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
@@ -736,9 +736,16 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
     <div class="card" style="text-align:left;">
       <div id="ev-lugares-lista"></div>
-      <button type="button" class="btn btn-outline" style="margin-top:4px;" onclick="irEvLugarFormNuevo('s-eventos-lugares')">+ Nuevo lugar</button>
-      <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+      <!-- Mismo valor de 100px que #s-eventos-crear-descanso/#s-eventos-crear
+           -- footer fijo de 1 botón real + nav inferior, ver el comentario ya
+           documentado en css/estilos.css (#cta-footer-s-eventos-crear) para
+           la medición real que motivó este número en vez del genérico de
+           24px (insuficiente para un footer con contenido real). -->
+      <div class="cta-footer-spacer" style="height:calc(100px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
     </div>
+  </div>
+  <div class="cta-footer-fixed" id="cta-footer-s-eventos-lugares">
+    <button type="button" class="btn btn-outline" onclick="irEvLugarFormNuevo('s-eventos-lugares')">+ Nuevo lugar</button>
   </div>
 
   <!-- Formulario de Venues -- únicamente "Editar lugares" desde esta tanda
@@ -764,7 +771,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <button class="app-nav-back" onclick="_evLugarBack()">
         <span class="material-symbols-outlined">arrow_back</span>
       </button>
-      <span class="app-nav-title" id="ev-lugar-form-titulo">Nuevo lugar</span>
+      <span class="app-nav-title" id="ev-lugar-form-titulo">Ubicación</span>
       <div style="width:40px;flex-shrink:0;"></div>
     </div>
     <div class="card" style="text-align:left;">
@@ -772,7 +779,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
       <div class="salud-paso activo" id="ev-lugar-paso-0">
         <div class="ev-lugar-campo" style="margin-top:0;">
-          <p class="ev-lugar-campo-label">Ubicación</p>
           <div class="app-nav-search" style="margin-bottom:10px;">
             <span class="material-symbols-outlined">search</span>
             <input type="text" id="ev-lugar-buscador-input" placeholder="Buscar dirección o lugar..." autocomplete="off">
@@ -792,7 +798,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
       <div class="salud-paso" id="ev-lugar-paso-1">
         <div class="ev-lugar-campo" style="margin-top:0;">
-          <p class="ev-lugar-campo-label">Tipo de evento</p>
           <div class="aj-pills-row" id="ev-lugar-icono-pills">
             <span class="aj-pill" data-val="Entrenamiento" onclick="_evLugarSelIcono(this)">Entrenamiento</span>
             <span class="aj-pill" data-val="Torneo" onclick="_evLugarSelIcono(this)">Torneo</span>
@@ -887,6 +892,137 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
   <div class="cta-footer-fixed" id="cta-footer-s-eventos-lugar-form">
     <button type="button" class="btn btn-primary" id="ev-lugar-btn-guardar" disabled>Siguiente</button>
+  </div>
+
+  <!-- Hub "Editar lugar" (#s-eventos-lugar-editar, ver MANIFEST.md "Cambios
+       recientes") -- reemplaza al wizard de 3 pasos de arriba para EDITAR
+       (ese wizard queda create-only, ver _evLugarAbrirEditar()/js/eventos.js).
+       Mismo espíritu que #s-eventos-editar (hub de edición de eventos, más
+       arriba): una sola pantalla, todos los campos visibles y editables
+       directo, sin pasos ni acordeón -- a diferencia de ese hub (que sí
+       colapsa cada fila y pide "Listo" por campo), acá los campos son los
+       mismos del wizard de creación (Nombre/Ubicación/Tipo de evento/
+       Recurrencia/Hora), reusando sus mismas clases/estructura con ids
+       propios (`ev-lugar-editar-*`) -- nunca comparte DOM con el wizard,
+       ambas pantallas podrían (en teoría) seguir existiendo a la vez.
+       Guarda con la MISMA `_evLugarGuardar()` del wizard (ya sabe hacer
+       PATCH cuando `_evLugarData.fila` viene poblado, sin importar qué
+       pantalla la llenó) -- botón "Guardar cambios" habilitado solo cuando
+       algo cambió respecto a lo cargado (`_evLugarEditarHayCambios()`,
+       comparación por `JSON.stringify` contra `_evLugarEditarOriginal`). -->
+  <div class="pantalla" id="s-eventos-lugar-editar">
+    <div class="app-nav app-nav-sticky" id="ev-lugar-editar-header">
+      <button class="app-nav-back" onclick="ir('s-eventos-lugares')">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <span class="app-nav-title" id="ev-lugar-editar-titulo">Editar lugar</span>
+      <div style="width:40px;flex-shrink:0;"></div>
+    </div>
+    <div class="card" style="text-align:left;">
+
+      <div class="ev-lugar-campo" style="margin-top:0;">
+        <p class="ev-lugar-campo-label">Nombre</p>
+        <input type="text" class="ev-lugar-input" id="ev-lugar-editar-nombre" placeholder="Ej: Parque La Carolina" oninput="_evLugarEditarSetNombre(this.value)">
+      </div>
+
+      <div class="ev-lugar-campo">
+        <p class="ev-lugar-campo-label">Ubicación (link de Google Maps)</p>
+        <input type="text" class="ev-lugar-input" id="ev-lugar-editar-mapsurl" placeholder="https://maps.google.com/..." oninput="_evLugarEditarSetMapsUrl(this.value)">
+        <p class="ev-lugar-mapa-nota">Pega el link de Google Maps del lugar.</p>
+      </div>
+
+      <div class="ev-lugar-campo">
+        <p class="ev-lugar-campo-label">Tipo de evento</p>
+        <div class="aj-pills-row" id="ev-lugar-editar-icono-pills">
+          <span class="aj-pill" data-val="Entrenamiento" onclick="_evLugarEditarSelIcono(this)">Entrenamiento</span>
+          <span class="aj-pill" data-val="Torneo" onclick="_evLugarEditarSelIcono(this)">Torneo</span>
+          <span class="aj-pill" data-val="Partido" onclick="_evLugarEditarSelIcono(this)">Partido</span>
+          <span class="aj-pill" data-val="Asamblea" onclick="_evLugarEditarSelIcono(this)">Asamblea</span>
+          <span class="aj-pill" data-val="Evento social" onclick="_evLugarEditarSelIcono(this)">Evento social</span>
+          <span class="aj-pill" data-val="Otro" onclick="_evLugarEditarSelIcono(this)">Otro</span>
+        </div>
+        <p class="ev-ant-intro" style="margin-top:14px;">Si quieres que este lugar pueda usarse para hacer reservas de equipamiento, selecciona Entrenamiento.</p>
+      </div>
+
+      <div class="ev-lugar-campo">
+        <p class="ev-lugar-campo-label">Tipo de recurrencia</p>
+        <div class="aj-pills-row" id="ev-lugar-editar-recurrencia-pills">
+          <span class="aj-pill" data-val="dias_semana" onclick="_evLugarEditarSelRecurrencia(this)">Días de la semana</span>
+          <span class="aj-pill" data-val="cada_tantos" onclick="_evLugarEditarSelRecurrencia(this)">Cada tantos días/semanas/meses</span>
+          <span class="aj-pill" data-val="unico" onclick="_evLugarEditarSelRecurrencia(this)">Evento único</span>
+        </div>
+
+        <div id="ev-lugar-editar-rec-dias" style="display:none;margin-top:18px;">
+          <div class="ev-dias-row" id="ev-lugar-editar-dias-row">
+            <span class="ev-dia-circulo" data-dia="1" onclick="_evLugarEditarToggleDia(this)">L</span>
+            <span class="ev-dia-circulo" data-dia="2" onclick="_evLugarEditarToggleDia(this)">M</span>
+            <span class="ev-dia-circulo" data-dia="3" onclick="_evLugarEditarToggleDia(this)">X</span>
+            <span class="ev-dia-circulo" data-dia="4" onclick="_evLugarEditarToggleDia(this)">J</span>
+            <span class="ev-dia-circulo" data-dia="5" onclick="_evLugarEditarToggleDia(this)">V</span>
+            <span class="ev-dia-circulo" data-dia="6" onclick="_evLugarEditarToggleDia(this)">S</span>
+            <span class="ev-dia-circulo" data-dia="7" onclick="_evLugarEditarToggleDia(this)">D</span>
+          </div>
+        </div>
+
+        <div id="ev-lugar-editar-rec-cada" style="display:none;margin-top:18px;">
+          <div class="ev-lugar-cada-row">
+            <input type="number" min="1" class="ev-lugar-input ev-lugar-input-num" id="ev-lugar-editar-frec-num" placeholder="Ej: 2" oninput="_evLugarEditarSetFrecNum(this.value)">
+            <div class="aj-pills-row" id="ev-lugar-editar-frec-unidad-pills">
+              <span class="aj-pill" data-val="dias" onclick="_evLugarEditarSelUnidad(this)">Días</span>
+              <span class="aj-pill" data-val="semanas" onclick="_evLugarEditarSelUnidad(this)">Semanas</span>
+              <span class="aj-pill" data-val="meses" onclick="_evLugarEditarSelUnidad(this)">Meses</span>
+            </div>
+          </div>
+          <p class="ev-lugar-campo-label" style="margin-top:16px;">Fecha de referencia</p>
+          <div class="ev-ant-cal-nav">
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evLugarEditarCalMoverMes('referencia',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+            <span class="ev-ant-cal-nav-label" id="ev-lugar-editar-cal-referencia-label"></span>
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evLugarEditarCalMoverMes('referencia',1)"><span class="material-symbols-outlined">chevron_right</span></button>
+          </div>
+          <div id="ev-lugar-editar-cal-referencia"></div>
+          <div class="ev-lugar-cal-resumen" id="ev-lugar-editar-cal-referencia-resumen"></div>
+        </div>
+
+        <div id="ev-lugar-editar-rec-unico" style="display:none;margin-top:18px;">
+          <div class="ev-ant-cal-nav">
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evLugarEditarCalMoverMes('unico',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+            <span class="ev-ant-cal-nav-label" id="ev-lugar-editar-cal-unico-label"></span>
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evLugarEditarCalMoverMes('unico',1)"><span class="material-symbols-outlined">chevron_right</span></button>
+          </div>
+          <div id="ev-lugar-editar-cal-unico"></div>
+          <div class="ev-lugar-cal-resumen" id="ev-lugar-editar-cal-unico-resumen"></div>
+        </div>
+
+        <div class="ev-lugar-campo" id="ev-lugar-editar-hora-wrap" style="display:none;">
+          <p class="ev-lugar-campo-label">Hora</p>
+          <div class="ev-hora-stepper" id="ev-lugar-editar-hora-stepper">
+            <div class="ev-hora-stepper-cols">
+              <div class="ev-hora-stepper-col">
+                <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-lugar-editar-hora','hora',1)"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
+                <span class="ev-hora-stepper-valor" id="ev-lugar-editar-hora-hora"></span>
+                <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-lugar-editar-hora','hora',-1)"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
+              </div>
+              <span class="ev-hora-stepper-sep">:</span>
+              <div class="ev-hora-stepper-col">
+                <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-lugar-editar-hora','minuto',1)"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
+                <span class="ev-hora-stepper-valor" id="ev-lugar-editar-hora-minuto"></span>
+                <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-lugar-editar-hora','minuto',-1)"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
+              </div>
+            </div>
+            <div class="ev-hora-stepper-meridiano" id="ev-lugar-editar-hora-meridiano">
+              <span class="aj-pill" data-val="AM" onclick="_evHoraStepperSetMeridiano('ev-lugar-editar-hora',this)">AM</span>
+              <span class="aj-pill" data-val="PM" onclick="_evHoraStepperSetMeridiano('ev-lugar-editar-hora',this)">PM</span>
+            </div>
+          </div>
+          <p class="ev-lugar-mapa-nota">Si no la tocas, este lugar se guarda sin hora definida.</p>
+        </div>
+      </div>
+
+      <div class="cta-footer-spacer" style="height:calc(100px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+  <div class="cta-footer-fixed" id="cta-footer-s-eventos-lugar-editar">
+    <button type="button" class="btn btn-primary" id="ev-lugar-editar-btn-guardar" disabled onclick="_evLugarGuardar()">Guardar cambios</button>
   </div>
 
   <!-- "Crear evento" -- wizard propio de 2 pasos (Lugar / Recurrencia y
@@ -2396,8 +2532,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=058b5ee4"></script>
-<script src="js/eventos.js?v=9ebf6956"></script>
+<script src="js/ui.js?v=697dfb90"></script>
+<script src="js/eventos.js?v=91ea536d"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=7a7a6f20"></script>

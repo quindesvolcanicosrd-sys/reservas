@@ -262,6 +262,17 @@ body.aj-sub-salud-activo #app-toast {
    js/ui.js). Agregado proactivamente (Tanda C2) -- el mismo bug ya se
    encontró y corrigió 3 veces en esta sección. */
 #cta-footer-s-eventos-crear-unico { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
+/* #cta-footer-s-eventos-lugares -- mismo motivo que las de arriba, mismo tab
+   de la nav inferior ('s-eventos-lugares' -> 'eventos' en `_BOTTOM_NAV_EXTRA`,
+   js/ui.js). Agregado proactivamente al sacar "+ Nuevo lugar" del .card a un
+   footer fijo propio (ver MANIFEST.md "Cambios recientes") -- el mismo bug
+   ya se encontró y corrigió varias veces en esta sección. */
+#cta-footer-s-eventos-lugares { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
+/* #cta-footer-s-eventos-lugar-editar -- mismo motivo que las de arriba,
+   mismo tab de la nav inferior ('s-eventos-lugar-editar' -> 'eventos' en
+   `_BOTTOM_NAV_EXTRA`, js/ui.js). Agregado proactivamente para el hub nuevo
+   de edición de venues (ver MANIFEST.md "Cambios recientes"). */
+#cta-footer-s-eventos-lugar-editar { bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px)); }
 /* #cta-footer-s-tareas-crear -- mismo motivo que #cta-footer-s-eventos-crear
    de arriba, mismo patrón exacto (drill-down con tab propio en
    _BOTTOM_NAV_EXTRA: 's-tareas-crear' -> 'tareas', js/ui.js): sin este

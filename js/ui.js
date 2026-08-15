@@ -686,7 +686,7 @@ var _BOTTOM_NAV_EXTRA = {
   // Venues ("Editar lugares" + wizard propio de "Crear evento", ver
   // MANIFEST.md) -- mismo criterio que las 2 entradas de arriba: drill-down
   // de la tab 'eventos', alcanzables solo desde el FAB de #s-eventos.
-  's-eventos-lugares': 'eventos', 's-eventos-lugar-form': 'eventos', 's-eventos-crear': 'eventos',
+  's-eventos-lugares': 'eventos', 's-eventos-lugar-form': 'eventos', 's-eventos-lugar-editar': 'eventos', 's-eventos-crear': 'eventos',
   // "Nueva temporada de descanso" (Tanda C1, ver MANIFEST.md) -- mismo
   // criterio que 's-eventos-crear': drill-down de 'eventos', alcanzable
   // solo desde el FAB de #s-eventos.

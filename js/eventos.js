@@ -3310,7 +3310,7 @@ function _evEditarRenderVenues() {
   var valorVigente = _evEditarCambios.hasOwnProperty('lugar') ? _evEditarCambios.lugar : _evEditarOriginal.lugar;
   cont.innerHTML = _EV_VENUES.map(function(v) {
     var activa = valorVigente === v.lugar;
-    return '<span class="aj-pill' + (activa ? ' activa' : '') + '" data-id="' + v.id + '" onclick="_evEditarSelVenue(' + v.id + ')">' + v.lugar + '</span>';
+    return '<span class="aj-pill' + (activa ? ' activa' : '') + '" data-id="' + v.id + '" onclick="_evEditarSelVenue(\'' + v.id + '\')">' + v.lugar + '</span>';
   }).join('');
 }
 function _evEditarSelVenue(id) {
@@ -4813,10 +4813,10 @@ function _evLugaresRenderLista() {
           '<div class="ev-ant-card-sub">' + _evLugarResumenSub(v) + '</div>' +
         '</div>' +
       '</div>' +
-      '<button type="button" class="ev-ant-card-edit" onclick="_evLugarAbrirEditar(' + v.fila + ')" title="Editar">' +
+      '<button type="button" class="ev-ant-card-edit" onclick="_evLugarAbrirEditar(\'' + v.fila + '\')" title="Editar">' +
         '<span class="material-symbols-outlined">edit</span>' +
       '</button>' +
-      '<button type="button" class="ev-ant-card-del" onclick="_evLugarBorrar(' + v.fila + ')" title="Borrar">' +
+      '<button type="button" class="ev-ant-card-del" onclick="_evLugarBorrar(\'' + v.fila + '\')" title="Borrar">' +
         '<span class="material-symbols-outlined">delete</span>' +
       '</button>' +
     '</div>';
@@ -4898,6 +4898,10 @@ function _evLugarResumenRecurrencia(v) {
    consultar ninguna validación en ese paso). ─────────────────────────── */
 
 var _EV_LUGAR_STEPS = ['ev-lugar-paso-0', 'ev-lugar-paso-1', 'ev-lugar-paso-2'];
+// Título de la nav por paso (ver MANIFEST.md "Cambios recientes") -- mismo
+// índice que _EV_LUGAR_STEPS, actualizado con fade dentro de
+// _evLugarMostrarPaso() (única dueña del título, ver esa función más abajo).
+var _EV_LUGAR_STEP_TITULOS = ['Ubicación', 'Tipo de evento', 'Horario'];
 var _evLugarCurIdx = 0;
 var _evLugarData = {};
 var _evLugarOrigen = 's-eventos-lugares';
@@ -4926,10 +4930,11 @@ function irEvLugarFormNuevo(origen) {
 
 // Card de la lista tocada -- precarga _evLugarData completo desde la fila ya
 // cargada en memoria (_evLugares, sin pedirla de nuevo al backend, mismo
-// criterio que _evAntEditar()). Siempre arranca en el paso 0 (pedido
-// explícito -- "editar un venue existente debe abrir el wizard en el paso 0
-// con todos los campos precargados"), navegando por pasos desde ahí como
-// cualquier apertura nueva.
+// criterio que _evAntEditar()). Abre el HUB de edición (#s-eventos-lugar-editar,
+// ver MANIFEST.md "Cambios recientes"), no el wizard -- ese wizard quedó
+// create-only. `_evLugarEditarOriginal` (snapshot JSON de `_evLugarData` tal
+// como se cargó) es lo que compara `_evLugarEditarHayCambios()` para
+// habilitar "Guardar cambios" en el hub, ver ese bloque más abajo.
 function _evLugarAbrirEditar(fila) {
   var v = _evLugares.filter(function(x) { return x.fila === fila; })[0];
   if (!v) return;
@@ -4948,23 +4953,25 @@ function _evLugarAbrirEditar(fila) {
     horaTocada: !!v.hora
   };
   _evLugarOrigen = 's-eventos-lugares';
-  ir('s-eventos-lugar-form');
-  _evLugarFormPintar();
-  _evLugarMostrarPaso(0);
-  _evLugarInicializarMapa();
+  _evLugarEditarOriginal = JSON.stringify(_evLugarData);
+  ir('s-eventos-lugar-editar');
+  _evLugarEditarPintar();
 }
 
-// Pinta TODO el formulario desde _evLugarData -- un solo punto, llamado
-// tanto al arrancar en blanco como al precargar una edición (mismo criterio
-// que _evAntIniciarWizard()). Solo VALORES de campo -- la navegación entre
-// pasos (a qué paso arrancar, los dots de progreso) vive aparte en
-// _evLugarMostrarPaso(), llamada siempre después de esta por cada caller
-// (irEvLugarFormNuevo()/_evLugarAbrirEditar()), mismo criterio que
-// _evCrearResetUI()/_evCrearMostrarPaso() en "Crear evento".
+// Pinta TODO el wizard desde _evLugarData -- este wizard es create-only
+// (ver MANIFEST.md "Cambios recientes" -- "Editar" abre el hub
+// #s-eventos-lugar-editar en su lugar, con su propia _evLugarEditarPintar()
+// más abajo), así que hoy el único caller real es irEvLugarFormNuevo(). Solo
+// VALORES de campo -- la navegación entre pasos (a qué paso arrancar, los
+// dots de progreso) vive aparte en _evLugarMostrarPaso(), llamada siempre
+// después de esta, mismo criterio que _evCrearResetUI()/_evCrearMostrarPaso()
+// en "Crear evento".
 function _evLugarFormPintar() {
-  var titulo = document.getElementById('ev-lugar-form-titulo');
-  if (titulo) titulo.textContent = _evLugarData.fila ? 'Editar lugar' : 'Nuevo lugar';
-
+  // El título de la nav NO se pinta acá -- este wizard es create-only desde
+  // que "Editar" pasó a abrir el hub #s-eventos-lugar-editar (ver MANIFEST.md
+  // "Cambios recientes"), así que el título siempre refleja el paso activo,
+  // no "Nuevo lugar"/"Editar lugar" -- ver _evLugarMostrarPaso() más abajo,
+  // única dueña de `#ev-lugar-form-titulo` en esta pantalla.
   var nombreInp = document.getElementById('ev-lugar-nombre');
   if (nombreInp) nombreInp.value = _evLugarData.nombre || '';
 
@@ -5002,6 +5009,11 @@ function _evLugarMostrarPaso(idx) {
   });
   _evLugarCurIdx = idx;
   _evLugarRenderProg();
+  // Título de la nav = nombre del paso actual, mismo helper de fade que el
+  // timeline principal (_evFadeSwap(), arriba en este archivo) -- no un fade
+  // propio a mano.
+  var tituloEl = document.getElementById('ev-lugar-form-titulo');
+  if (tituloEl) _evFadeSwap(tituloEl, function() { tituloEl.textContent = _EV_LUGAR_STEP_TITULOS[idx]; }, false);
   window.scrollTo({ top: 0, behavior: 'smooth' });
   _evLugarActualizarFooter();
 }
@@ -5353,6 +5365,192 @@ function _evLugarGuardar() {
 }
 
 /* ═══════════════════════════════════════════════════════
+   Hub "Editar lugar" (#s-eventos-lugar-editar, ver MANIFEST.md "Cambios
+   recientes") -- reemplaza al wizard de arriba para EDITAR un venue
+   existente (ese wizard quedó create-only, ver _evLugarAbrirEditar()). Todos
+   los campos visibles y editables directo, sin pasos ni acordeón -- reusa
+   `_evLugarData` (el mismo estado que ya llena `_evLugarAbrirEditar()`) y
+   `_evLugarGuardar()` TAL CUAL para el guardado real (ya sabe hacer PATCH
+   con `_evLugarData.fila` poblado, sin que le importe qué pantalla lo llenó)
+   -- solo la pintura/interacción de los campos vive acá, con su propio set
+   de ids (`ev-lugar-editar-*`) para no chocar con el wizard.
+
+   Diferencia real con el wizard, no solo de layout: "Ubicación" acá es un
+   campo de texto simple para el link de Google Maps (`_evLugarData.mapsUrl`
+   directo), no el mapa interactivo + buscador de Places del wizard -- un
+   venue que ya existe ya tiene su `google_maps` guardado, corregirlo a mano
+   es más simple que rehacer la búsqueda/arrastre del pin cada vez (y
+   `lat`/`lng`, lo único que ese mapa interactivo alimentaba además del link,
+   ni siquiera son columnas reales de `venues`, ver la corrección de nombres
+   de columna más arriba en este archivo).
+
+   "Guardar cambios" habilitado SOLO si algo cambió -- `_evLugarEditarHayCambios()`
+   compara `JSON.stringify(_evLugarData)` contra `_evLugarEditarOriginal` (el
+   snapshot tomado en `_evLugarAbrirEditar()` al cargar) -- sin un tracker de
+   cambios campo por campo (a diferencia de `_evEditarCambios` en el hub de
+   "Editar evento"), suficiente porque acá no hay alcance ni PATCH parcial
+   que armar: se manda el objeto completo siempre, igual que el wizard.
+   ═══════════════════════════════════════════════════════ */
+
+var _evLugarEditarOriginal = null;
+var _evLugarEditarCal = { referencia: { mostrado: null }, unico: { mostrado: null } };
+
+// Pinta TODO el hub desde _evLugarData -- mismo criterio que _evLugarFormPintar()
+// del wizard, sin el paso a paso (todo se pinta de una).
+function _evLugarEditarPintar() {
+  var titulo = document.getElementById('ev-lugar-editar-titulo');
+  if (titulo) titulo.textContent = 'Editar ' + (_evLugarData.nombre || 'lugar');
+
+  var nombreInp = document.getElementById('ev-lugar-editar-nombre');
+  if (nombreInp) nombreInp.value = _evLugarData.nombre || '';
+  var mapsInp = document.getElementById('ev-lugar-editar-mapsurl');
+  if (mapsInp) mapsInp.value = _evLugarData.mapsUrl || '';
+
+  document.querySelectorAll('#ev-lugar-editar-icono-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.tipoIcono); });
+  document.querySelectorAll('#ev-lugar-editar-recurrencia-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.tipoRecurrencia); });
+  document.querySelectorAll('#ev-lugar-editar-dias-row .ev-dia-circulo').forEach(function(c) { c.classList.toggle('activa', _evLugarData.diasSemana.indexOf(parseInt(c.dataset.dia, 10)) !== -1); });
+  var frecNumInp = document.getElementById('ev-lugar-editar-frec-num');
+  if (frecNumInp) frecNumInp.value = _evLugarData.frecuenciaNumero || '';
+  document.querySelectorAll('#ev-lugar-editar-frec-unidad-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.frecuenciaUnidad); });
+
+  var mesInicial = _evLugarData.fecha || _evHoyISO();
+  _evLugarEditarCal.referencia.mostrado = mesInicial;
+  _evLugarEditarCal.unico.mostrado = mesInicial;
+
+  _evLugarEditarMostrarSubRecurrencia();
+  _evLugarEditarCalRender('referencia');
+  _evLugarEditarCalRender('unico');
+  _evLugarEditarActualizarCalResumen('referencia');
+  _evLugarEditarActualizarCalResumen('unico');
+  _evLugarEditarActualizarBoton();
+}
+
+function _evLugarEditarHayCambios() { return JSON.stringify(_evLugarData) !== _evLugarEditarOriginal; }
+function _evLugarEditarActualizarBoton() {
+  var btn = document.getElementById('ev-lugar-editar-btn-guardar');
+  if (btn) btn.disabled = !_evLugarEditarHayCambios();
+}
+
+function _evLugarEditarSetNombre(v) {
+  _evLugarData.nombre = v;
+  var titulo = document.getElementById('ev-lugar-editar-titulo');
+  if (titulo) titulo.textContent = 'Editar ' + (v || 'lugar');
+  _evLugarEditarActualizarBoton();
+}
+function _evLugarEditarSetMapsUrl(v) { _evLugarData.mapsUrl = v.trim() ? v : null; _evLugarEditarActualizarBoton(); }
+function _evLugarEditarSelIcono(el) {
+  document.querySelectorAll('#ev-lugar-editar-icono-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  _evLugarData.tipoIcono = el.dataset.val;
+  _evLugarEditarActualizarBoton();
+}
+// Deseleccionable, mismo patrón "yaActiva" que la pill equivalente del
+// wizard (_evLugarSelRecurrencia(), más arriba en este archivo).
+function _evLugarEditarSelRecurrencia(el) {
+  var yaActiva = el.classList.contains('activa');
+  document.querySelectorAll('#ev-lugar-editar-recurrencia-pills .aj-pill').forEach(function(p) {
+    p.classList.toggle('activa', !yaActiva && p === el);
+  });
+  _evLugarData.tipoRecurrencia = yaActiva ? null : el.dataset.val;
+  _evLugarEditarMostrarSubRecurrencia();
+  _evLugarEditarActualizarBoton();
+}
+// Mismo comportamiento que _evLugarMostrarSubRecurrencia() del wizard (ver
+// esa función, más arriba en este archivo, para el detalle completo del
+// reveal/fade y de `horaTocada`) -- reveal inline según la elección, "Hora"
+// compartida por los 3 tipos, inicializada una sola vez (la primera vez que
+// se revela), nunca bloquea el guardado.
+function _evLugarEditarMostrarSubRecurrencia() {
+  ['ev-lugar-editar-rec-dias', 'ev-lugar-editar-rec-cada', 'ev-lugar-editar-rec-unico'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  var horaWrap = document.getElementById('ev-lugar-editar-hora-wrap');
+  var t = _evLugarData.tipoRecurrencia;
+  if (!t) { if (horaWrap) horaWrap.style.display = 'none'; return; }
+  var mapaId = { dias_semana: 'ev-lugar-editar-rec-dias', cada_tantos: 'ev-lugar-editar-rec-cada', unico: 'ev-lugar-editar-rec-unico' };
+  var activo = document.getElementById(mapaId[t]);
+  if (activo) {
+    activo.style.display = 'block';
+    void activo.offsetWidth;
+    activo.style.animation = 'fadeIn 0.2s ease';
+  }
+  if (horaWrap) {
+    var horaPrimeraVez = horaWrap.style.display === 'none' || !horaWrap.style.display;
+    horaWrap.style.display = 'block';
+    if (horaPrimeraVez) {
+      void horaWrap.offsetWidth; horaWrap.style.animation = 'fadeIn 0.2s ease';
+      _evHoraStepperInit('ev-lugar-editar-hora', _evLugarData.hora || null, function(v) {
+        _evLugarData.hora = v;
+        _evLugarData.horaTocada = true;
+        _evLugarEditarActualizarBoton();
+      });
+    }
+  }
+}
+function _evLugarEditarToggleDia(el) {
+  var dia = parseInt(el.dataset.dia, 10);
+  el.classList.toggle('activa');
+  var idx = _evLugarData.diasSemana.indexOf(dia);
+  if (el.classList.contains('activa')) { if (idx === -1) _evLugarData.diasSemana.push(dia); }
+  else if (idx !== -1) { _evLugarData.diasSemana.splice(idx, 1); }
+  _evLugarEditarActualizarBoton();
+}
+function _evLugarEditarSetFrecNum(v) { _evLugarData.frecuenciaNumero = v ? parseInt(v, 10) : null; _evLugarEditarActualizarBoton(); }
+function _evLugarEditarSelUnidad(el) {
+  document.querySelectorAll('#ev-lugar-editar-frec-unidad-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  _evLugarData.frecuenciaUnidad = el.dataset.val;
+  _evLugarEditarActualizarBoton();
+}
+
+// Calendario inline de fecha única -- mismo mecanismo/clases que
+// _evLugarCalRender() del wizard (ver ese comentario, más arriba en este
+// archivo, para el detalle completo), con contenedores/estado propios.
+function _evLugarEditarCalRender(cual) {
+  var cont = document.getElementById('ev-lugar-editar-cal-' + cual); if (!cont) return;
+  var m = _evCalMesDe(_evLugarEditarCal[cual].mostrado);
+  var labelEl = document.getElementById('ev-lugar-editar-cal-' + cual + '-label');
+  if (labelEl) labelEl.textContent = NOMBRES_MESES[m.month] + ' ' + m.year;
+  var inicioGrid = _evLunesDeSemana(new Date(m.year, m.month, 1));
+  var finMes = new Date(m.year, m.month + 1, 0);
+  var finGrid = _evLunesDeSemana(finMes); finGrid.setDate(finGrid.getDate() + 6);
+  var hoy = _evHoyISO();
+  var seleccionada = _evLugarData.fecha;
+  var bloquearPasado = cual === 'unico';
+  var html = _EV_DIAS_CORTOS.map(function(d) { return '<div class="ev-cal-dow">' + d + '</div>'; }).join('');
+  var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
+  while (cur <= finGrid) {
+    var celdaIso = _evToISO(cur);
+    var ajeno = cur.getMonth() !== m.month;
+    var pasado = bloquearPasado && _evFechaCmp(celdaIso, hoy) < 0;
+    var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (pasado ? ' ev-ant-cal-pasado' : '');
+    if (seleccionada && celdaIso === seleccionada) clases += ' ev-ant-cal-sel';
+    if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
+    var onclickAttr = pasado ? '' : ' onclick="_evLugarEditarCalTocarDia(\'' + cual + '\',\'' + celdaIso + '\')"';
+    html += '<div class="' + clases + '" data-iso="' + celdaIso + '"' + onclickAttr + '><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
+    cur.setDate(cur.getDate() + 1);
+  }
+  _evFadeSwap(cont, function() { cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>'; }, false);
+}
+function _evLugarEditarCalMoverMes(cual, dir) {
+  var m = _evCalMesDe(_evLugarEditarCal[cual].mostrado);
+  var year = m.year, month = m.month + dir;
+  if (month < 0) { month = 11; year--; } else if (month > 11) { month = 0; year++; }
+  _evLugarEditarCal[cual].mostrado = _evToISO(new Date(year, month, 1));
+  _evLugarEditarCalRender(cual);
+}
+function _evLugarEditarCalTocarDia(cual, iso) {
+  _evLugarData.fecha = iso;
+  _evLugarEditarCalRender(cual);
+  _evLugarEditarActualizarCalResumen(cual);
+  _evLugarEditarActualizarBoton();
+}
+function _evLugarEditarActualizarCalResumen(cual) {
+  var el = document.getElementById('ev-lugar-editar-cal-' + cual + '-resumen');
+  if (el) el.textContent = _evLugarData.fecha ? _evAntFechaLegible(_evLugarData.fecha) : '';
+}
+
+/* ═══════════════════════════════════════════════════════
    Selector de hora tipo stepper (_evHoraStepper*) -- 2 columnas (hora/
    minutos) con flechas arriba/abajo + pills AM/PM, sin rueda de scroll
    infinito. Primer selector de hora de la app (los horarios de Venues se
@@ -5581,7 +5779,7 @@ function _evCrearRenderLugares(lista) {
   }
   cont.innerHTML = lista.map(function(v) {
     var activa = _evCrearData.venueExistente && _evCrearData.venueExistente.fila === v.fila;
-    return '<div class="ev-ant-card ev-crear-venue-card' + (activa ? ' activa' : '') + '" onclick="_evCrearSeleccionarLugar(' + v.fila + ')">' +
+    return '<div class="ev-ant-card ev-crear-venue-card' + (activa ? ' activa' : '') + '" onclick="_evCrearSeleccionarLugar(\'' + v.fila + '\')">' +
       '<div class="ev-card-top-row">' +
         '<div class="ev-card-icon"><span class="material-symbols-outlined">place</span></div>' +
         '<div class="ev-card-body">' +
@@ -5922,7 +6120,7 @@ function _evCrearUnicoRenderVenues() {
   if (!_EV_VENUES.length) { cont.innerHTML = '<p style="color:var(--muted);font-size:0.78rem;margin:0;">Todavía no hay lugares creados.</p>'; return; }
   cont.innerHTML = _EV_VENUES.map(function(v) {
     var activa = _evCrearUnicoData.lugarId === v.id;
-    return '<span class="aj-pill' + (activa ? ' activa' : '') + '" data-id="' + v.id + '" onclick="_evCrearUnicoSelVenue(' + v.id + ')">' + v.lugar + '</span>';
+    return '<span class="aj-pill' + (activa ? ' activa' : '') + '" data-id="' + v.id + '" onclick="_evCrearUnicoSelVenue(\'' + v.id + '\')">' + v.lugar + '</span>';
   }).join('');
 }
 // google_maps: el nombre real de la columna de link de Maps en la tabla
