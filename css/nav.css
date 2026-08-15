@@ -229,6 +229,15 @@
    ya usaban el radius cuadrado de base). */
 .app-nav-icon-btn-brand { background: var(--brand); color: var(--white); }
 
+/* ── Variante roja destructiva (ej. ícono "Cancelar evento" del detalle de
+   Eventos) -- mismo componente/criterio que `.app-nav-icon-btn-brand`
+   arriba: solo cambia el color, `.app-nav-icon-btn` sigue aportando
+   tamaño/radio/layout. */
+.app-nav-icon-btn-danger { background: var(--danger-bg); color: var(--danger); }
+@media (hover: hover) {
+  .app-nav-icon-btn-danger:hover { background: var(--danger-bg); filter: brightness(0.95); }
+}
+
 /* ── Botón "Cambiar mi equipamiento" (nav home) ──────────────────
    Variante de ancho variable de `.app-nav-icon-btn` (mismo alto/radio/tinte
    -- fondo `--brand-light`, ícono `--brand`) en vez de un cuadrado fijo de

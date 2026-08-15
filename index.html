@@ -31,8 +31,8 @@
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=a340ffb6">
-<link rel="stylesheet" href="css/nav.css?v=26a3b789">
-<link rel="stylesheet" href="css/eventos.css?v=558372f8">
+<link rel="stylesheet" href="css/nav.css?v=1622604f">
+<link rel="stylesheet" href="css/eventos.css?v=6a0b58bb">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
@@ -405,18 +405,35 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="ev-stats-grid ev-detalle-stats-sticky" id="ev-detalle-stats"></div>
         <div id="ev-detalle-asistencia-lista"></div>
       </div>
-      <!-- "Cancelar evento" (admin, ver MANIFEST.md "Cambios recientes") --
-           primera sección real de las anticipadas en el comentario de
-           arriba. Poblada por `_evDetalleAdminCancelarHtml()`/js/eventos.js
-           -- vacía para cuentas no-admin o si el evento ya está cancelado
-           (en ese caso el estado ya se ve arriba, en #ev-detalle-rsvp). -->
-      <div class="ev-detalle-section" id="ev-detalle-admin-cancelar"></div>
-      <!-- Futuras secciones (tareas, mensajes) van acá como nuevos
-           .ev-detalle-section -- ver MANIFEST.md "Cambios recientes". -->
+      <!-- "Cancelar evento" (admin) ya NO vive acá como botón del contenido
+           scrolleable -- ver MANIFEST.md "Cambios recientes": pasó a ser el
+           ícono `event_busy` del nav (_evDetalleStickyHtml(), js/eventos.js),
+           que abre #ev-sheet-cancelar (más abajo en este archivo) en vez de
+           cancelar directo. Futuras secciones (tareas, mensajes) van acá
+           como nuevos .ev-detalle-section. -->
       <!-- +var(--bottom-nav-h) (ver "Cambios recientes" -- s-eventos-detalle
            ahora suma nav vía _BOTTOM_NAV_EXTRA/js/ui.js, antes no lo
            necesitaba). -->
       <div class="cta-footer-spacer" style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+
+  <!-- "Cancelar evento" (admin) -- bottom sheet de confirmación, reemplaza
+       el confirm() nativo que usaba _evCancelarEvento() antes (ver
+       MANIFEST.md "Cambios recientes") por el mismo patrón `.bsheet` que ya
+       usa el resto de la app. Disparado por el ícono `event_busy` del nav de
+       #s-eventos-detalle (_evAbrirSheetCancelar(), js/eventos.js) -- el id
+       del evento pendiente viaja en `_evCancelarPendienteId` (variable de
+       módulo), no en un data-attribute: el sheet es único, sin instancias
+       paralelas que puedan pisarse. -->
+  <div id="ev-sheet-cancelar-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_evCerrarSheetCancelar()"></div>
+  <div id="ev-sheet-cancelar" class="bsheet" style="z-index:9701;">
+    <div class="bsheet-handle"></div>
+    <div class="bsheet-title" style="color:var(--danger);">Cancelar evento</div>
+    <div class="bsheet-body">
+      <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 20px;">¿Cancelar este evento? El equipo va a ver que está cancelado y no va a poder marcar asistencia.</p>
+      <button type="button" class="btn btn-danger" onclick="_evConfirmarCancelarEvento(this)" style="margin-bottom:10px;">Confirmar cancelación</button>
+      <button type="button" class="btn btn-outline" onclick="_evCerrarSheetCancelar()">Volver</button>
     </div>
   </div>
 
@@ -2564,7 +2581,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=697dfb90"></script>
-<script src="js/eventos.js?v=91ea536d"></script>
+<script src="js/eventos.js?v=868e2a7a"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=7a7a6f20"></script>

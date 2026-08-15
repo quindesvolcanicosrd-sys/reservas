@@ -2929,8 +2929,6 @@ function _evRenderDetalle(ev) {
   // y dejaría el indicador sin su fondo sólido pintado.
   if (rsvpCont) rsvpCont.innerHTML = _evOcultarRsvpPorEquipoClub(ev) ? '' : (_evRsvpBarraHtml(ev) || _evDetalleEstadoNotaHtml(ev));
   _evRenderDetalleAsistencia(ev);
-  var cancelarCont = document.getElementById('ev-detalle-admin-cancelar');
-  if (cancelarCont) cancelarCont.innerHTML = _evDetalleAdminCancelarHtml(ev);
 }
 // Mismo componente que la card (`_evEstadoNotaPillHtml()`, más arriba en
 // este archivo) para Cancelado/No se entrena -- reuso literal, no una
@@ -2939,23 +2937,6 @@ function _evRenderDetalle(ev) {
 function _evDetalleEstadoNotaHtml(e) {
   if (e.estado === 'Cancelado' || e.estado === 'No se entrena') return _evEstadoNotaPillHtml(e.estado);
   return '';
-}
-/* ── Cancelar evento (admin, ver MANIFEST.md "Cambios recientes") ───────
-   Sección admin nueva del detalle (`#ev-detalle-admin-cancelar`,
-   `.ev-detalle-section` hermana de las que ya existían -- este slot estaba
-   reservado a propósito para "secciones futuras (editar evento admin...)",
-   ver el comentario de arriba de `_evRenderDetalle()`). Un solo botón
-   destructivo (`.btn-danger`, mismo componente que "Eliminar" en Tareas
-   archivadas) mientras el evento sigue activo -- una vez cancelado
-   (`e.estado==='Cancelado'`) esta sección queda vacía: el estado ya se ve
-   arriba, en la sección de RSVP, vía `_evDetalleEstadoNotaHtml()`/
-   `_evEstadoNotaPillHtml()` (el mismo botón no-clickeable "Evento
-   Cancelado" en rojo con ícono que ya usan Cancelado/No se entrena en
-   cualquier card de Eventos) -- no un 2do indicador redundante acá abajo. */
-function _evDetalleAdminCancelarHtml(e) {
-  if (!_adminToken || e.estado === 'Cancelado') return '';
-  return '<button type="button" class="btn btn-danger" onclick="_evCancelarEvento(\'' + e.id + '\', this)">' +
-    '<span class="material-symbols-outlined" style="vertical-align:middle;margin-right:6px;">cancel</span>Cancelar evento</button>';
 }
 // `adminCancelarEvento` -- el criterio "escrituras de Eventos van por
 // apiPost()/POST" que este comentario daba por verificado (apoyado en
@@ -2992,10 +2973,15 @@ function _evDetalleAdminCancelarHtml(e) {
 // sincronizado, no solo lo que se ve en este instante) -- para cuando el
 // usuario efectivamente vuelve, la card ya está correcta, sin esperar a la
 // próxima carga real de la sección.
+// Ya NO pide confirmación acá adentro (era un `confirm()` nativo) -- la
+// confirmación vive en `#ev-sheet-cancelar` (index.html)/
+// `_evConfirmarCancelarEvento()` (abajo), disparada por el ícono
+// `event_busy` del nav (`_evDetalleStickyHtml()`, más abajo en este
+// archivo) en vez del botón que vivía al fondo de la pantalla. Para cuando
+// se llega acá, la confirmación ya pasó.
 function _evCancelarEvento(idEvento, btn) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
   if (!ev) return;
-  if (!confirm('¿Cancelar este evento? El equipo va a ver que está cancelado y no va a poder marcar asistencia.')) return;
   if (btn) btn.disabled = true;
   var estadoAnterior = ev.estado;
   ev.estado = 'Cancelado';
@@ -3017,6 +3003,48 @@ function _evCancelarEvento(idEvento, btn) {
     mostrarToast((e && e.message) || 'No se pudo cancelar el evento.', 'error');
   });
 }
+/* ── Sheet de confirmación "Cancelar evento" (#ev-sheet-cancelar,
+   index.html) -- mismo patrón abrir/cerrar que el resto de la app (ver
+   `abrirSheetFotoPerfil()`/`cerrarSheetFotoPerfil()`, js/foto.js, o
+   `ajAbrirSheetLogout()`/`ajCerrarSheetLogout()`, js/perfil.js): display
+   block + transform vía doble rAF al abrir, `_registrarOverlayAbierto()`
+   para que el botón atrás del navegador (o el swipe-to-dismiss de
+   shared/bsheet.js) lo cierre igual que a cualquier otro sheet. El id del
+   evento pendiente viaja en `_evCancelarPendienteId` (variable de módulo,
+   mismo criterio que `_tarEliminarTareaIdPendiente` en js/tareas.js) en vez
+   de un data-attribute -- el sheet es único, no hay 2 instancias abiertas a
+   la vez que puedan pisarse. */
+var _evCancelarPendienteId = null;
+function _evAbrirSheetCancelar(idEvento) {
+  _evCancelarPendienteId = idEvento;
+  var ov = document.getElementById('ev-sheet-cancelar-overlay');
+  var sh = document.getElementById('ev-sheet-cancelar');
+  if (!ov || !sh) return;
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(_evCerrarSheetCancelar);
+}
+function _evCerrarSheetCancelar(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var ov = document.getElementById('ev-sheet-cancelar-overlay');
+  var sh = document.getElementById('ev-sheet-cancelar');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+// Botón "Confirmar cancelación" del sheet -- cierra primero (mismo orden que
+// `ajConfirmarSheetTexto()`, js/perfil.js: acá no hay una navegación
+// síncrona en el medio como la que forzó el orden inverso en
+// `_tarEliminarTareaConfirmar()`, así que alcanza con este orden simple) y
+// recién ahí dispara `_evCancelarEvento()`, la misma lógica optimista de
+// siempre, sin duplicarla.
+function _evConfirmarCancelarEvento(btn) {
+  if (!_evCancelarPendienteId) return;
+  var idEvento = _evCancelarPendienteId;
+  _evCancelarPendienteId = null;
+  _evCerrarSheetCancelar();
+  _evCancelarEvento(idEvento, btn);
+}
 // Nav compacta sticky (ver "Cambios recientes" -- reemplaza el #top-bar
 // genérico para esta pantalla, ver TOP_BAR_CONFIG/js/ui.js): flecha atrás
 // (mismo `.app-nav-back` reusado, con su propio onclick acá ya que no hay
@@ -3036,7 +3064,26 @@ function _evCancelarEvento(idEvento, btn) {
 // bloque al borde derecho de `.ev-detalle-nav-row`. Navega a
 // `#s-eventos-editar` vía `_evEditarAbrir()` (más abajo en este archivo), que
 // arma el estado inicial del flujo antes de `ir()`.
+// Ícono "Cancelar evento" (admin, ver "Cambios recientes" -- reemplaza al
+// botón `.btn-danger` que vivía al fondo del contenido scrolleable,
+// `_evDetalleAdminCancelarHtml()`, eliminada) -- mismo `.app-nav-icon-btn`
+// que "Editar evento", con el modificador `-danger` (css/nav.css, mismo
+// criterio que `-brand`: solo cambia el color, nunca la forma/tamaño) para
+// distinguirlo como acción destructiva a simple vista. `event_busy` en vez
+// de `cancel` -- se reserva ese ícono para el estado YA cancelado
+// (`_evEstadoNotaPillHtml()`), evitar el mismo glifo acá habría sido
+// ambiguo (¿acción o estado?). Mismo guard que la sección vieja
+// (`e.estado !== 'Cancelado'`) -- un evento ya cancelado no tiene nada más
+// que cancelar. Abre el sheet de confirmación en vez de cancelar directo
+// (`_evAbrirSheetCancelar()`, arriba en este archivo).
 function _evDetalleStickyHtml(ev) {
+  var acciones = '';
+  if (_adminToken) {
+    acciones += '<button type="button" class="app-nav-icon-btn" onclick="_evEditarAbrir()" title="Editar evento" aria-label="Editar evento"><span class="material-symbols-outlined">edit</span></button>';
+    if (ev.estado !== 'Cancelado') {
+      acciones += '<button type="button" class="app-nav-icon-btn app-nav-icon-btn-danger" onclick="_evAbrirSheetCancelar(\'' + ev.id + '\')" title="Cancelar evento" aria-label="Cancelar evento"><span class="material-symbols-outlined">event_busy</span></button>';
+    }
+  }
   return '<div class="ev-detalle-nav-row">' +
       '<button class="app-nav-back" onclick="volver(\'s-eventos\')" title="Volver"><span class="material-symbols-outlined">arrow_back</span></button>' +
       '<span class="material-symbols-outlined ev-detalle-nav-icono">' + (_EV_ICONOS[ev.tipo] || 'event') + '</span>' +
@@ -3044,9 +3091,7 @@ function _evDetalleStickyHtml(ev) {
         '<div class="ev-detalle-tipo">' + ev.tipo + '</div>' +
         '<div class="ev-detalle-fechahora">' + _evFechaCompleta(ev.fecha) + '</div>' +
       '</div>' +
-      (_adminToken
-        ? '<div class="app-nav-actions"><button type="button" class="app-nav-icon-btn" onclick="_evEditarAbrir()" title="Editar evento" aria-label="Editar evento"><span class="material-symbols-outlined">edit</span></button></div>'
-        : '') +
+      (acciones ? '<div class="app-nav-actions">' + acciones + '</div>' : '') +
     '</div>';
 }
 // Las 3 pills juntas -- Ubicación/Inicio/Fin, ver "Cambios recientes" --
