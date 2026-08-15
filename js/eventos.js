@@ -3123,8 +3123,9 @@ var _EV_EDITAR_PASOS = ['ev-editar-paso-campos', 'ev-editar-paso-scope'];
 var _evEditarPaso = 0;
 var _evEditarOriginal = { lugar: '', horaInicio: '', horaFin: '', descripcion: '' };
 var _evEditarCambios = {};
-var _EV_EDITAR_CLAVE = { lugar: 'lugar', horario: 'horaInicio', descripcion: 'descripcion' };
+var _EV_EDITAR_CLAVE = { lugar: 'lugar', horario: 'horaInicio', horaFin: 'horaFin', descripcion: 'descripcion' };
 var _evEditarHoraTemp = null;
+var _evEditarHoraFinTemp = null;
 var _evEditarDescTemp = '';
 var _evEditarScope = null;
 var _evEditarFechaHasta = null;
@@ -3146,12 +3147,12 @@ var _EV_VENUES = null;
 function _evEditarAbrir() {
   var ev = _evDetalleActual;
   if (!ev || !_adminToken) return;
-  _evEditarOriginal = { lugar: ev.lugar, horaInicio: ev.horaInicio, horaFin: _evHoraFin(ev), descripcion: ev.descripcion || '' };
+  _evEditarOriginal = { lugar: ev.lugar, horaInicio: ev.horaInicio, horaFin: ev.horaFinReal, descripcion: ev.descripcion || '' };
   _evEditarCambios = {};
   _evEditarScope = null;
   _evEditarFechaHasta = null;
   _evEditarCal = { mostrado: null, touched: false };
-  ['lugar', 'horario', 'descripcion'].forEach(function(campo) {
+  ['lugar', 'horario', 'horaFin', 'descripcion'].forEach(function(campo) {
     var header = document.getElementById('ev-editar-campo-' + campo + '-header');
     var body = document.getElementById('ev-editar-campo-' + campo + '-body');
     if (header) header.classList.remove('abierto');
@@ -3224,6 +3225,9 @@ function _evEditarToggleCampo(campo, forzarAbrir) {
   else if (campo === 'horario') {
     _evHoraStepperInit('ev-editar-hora', _evEditarCambios.horaInicio || _evEditarOriginal.horaInicio, function(v) { _evEditarHoraTemp = v; });
     _evEditarHoraTemp = _evHoraStepperA24h('ev-editar-hora');
+  } else if (campo === 'horaFin') {
+    _evHoraStepperInit('ev-editar-horaFin', _evEditarCambios.horaFin || _evEditarOriginal.horaFin, function(v) { _evEditarHoraFinTemp = v; });
+    _evEditarHoraFinTemp = _evHoraStepperA24h('ev-editar-horaFin');
   } else if (campo === 'descripcion') {
     var inp = document.getElementById('ev-editar-descripcion-input');
     var valorVigente = _evEditarCambios.hasOwnProperty('descripcion') ? _evEditarCambios.descripcion : _evEditarOriginal.descripcion;
@@ -3241,7 +3245,9 @@ function _evEditarActualizarResumenCampo(campo) {
   if (campo === 'lugar') {
     texto = modificado ? _evEditarCambios.lugar : _evEditarOriginal.lugar;
   } else if (campo === 'horario') {
-    texto = modificado ? ('Nuevo: ' + _evEditarCambios.horaInicio + 'hs') : (_evEditarOriginal.horaInicio + ' - ' + _evEditarOriginal.horaFin + 'hs');
+    texto = modificado ? ('Nuevo: ' + _evEditarCambios.horaInicio + 'hs') : (_evEditarOriginal.horaInicio + 'hs');
+  } else if (campo === 'horaFin') {
+    texto = modificado ? ('Nuevo: ' + _evEditarCambios.horaFin + 'hs') : (_evEditarOriginal.horaFin ? _evEditarOriginal.horaFin + 'hs' : 'Sin definir');
   } else if (campo === 'descripcion') {
     var desc = modificado ? _evEditarCambios.descripcion : _evEditarOriginal.descripcion;
     texto = desc ? (desc.length > 60 ? desc.substring(0, 60) + '…' : desc) : 'Sin descripción';
@@ -3257,6 +3263,7 @@ function _evEditarConfirmarCampoGenerico(campo, clave, valorNuevo, valorOriginal
   _evEditarToggleCampo(campo, false);
 }
 function _evEditarConfirmarHorario() { _evEditarConfirmarCampoGenerico('horario', 'horaInicio', _evEditarHoraTemp, _evEditarOriginal.horaInicio); }
+function _evEditarConfirmarHoraFin() { _evEditarConfirmarCampoGenerico('horaFin', 'horaFin', _evEditarHoraFinTemp, _evEditarOriginal.horaFin); }
 function _evEditarConfirmarDescripcion() { _evEditarConfirmarCampoGenerico('descripcion', 'descripcion', _evEditarDescTemp, _evEditarOriginal.descripcion); }
 // Auto-crecimiento + contador de caracteres del textarea de descripción --
 // patrón estándar (height:'auto' seguido de height:scrollHeight+'px', para
@@ -3431,14 +3438,22 @@ function _evEditarScopeValido() {
 // alguna fila (`_evEditarConfirmarCampoGenerico()`, arriba en este archivo),
 // traducidas de las claves internas de esta pantalla a las columnas reales
 // de `asistencias`: `lugar`->`donde`, `horaInicio`->`inicia`,
-// `descripcion`->`info_adicional`. Sin `termina` -- esta pantalla nunca tuvo
-// edición de hora de FIN, solo de inicio (fila "Horario" de arriba, un solo
-// stepper) -- `_evAdminEditarEvento()` ya trata cada campo como opcional
-// (`if (campos.x !== undefined)`), así que omitirlo no rompe nada, esa
-// columna simplemente no se toca. `fechaDesde` viaja SIEMPRE como `ev.fecha`
-// (la fecha del evento que se está editando, nunca elegida por el admin),
-// `fechaHasta` solo con modo `'periodo'`. Error: toast y se queda en
-// #s-eventos-editar (pedido explícito), sin tocar nada más.
+// `horaFin`->`termina`, `descripcion`->`info_adicional` --
+// `_evAdminEditarEvento()` ya trata cada campo como opcional
+// (`if (campos.x !== undefined)`), así que omitir cualquiera de estas claves
+// no rompe nada, esa columna simplemente no se toca. `fechaDesde` viaja
+// SIEMPRE como `ev.fecha` (la fecha del evento que se está editando, nunca
+// elegida por el admin), `fechaHasta` solo con modo `'periodo'`. Error: toast
+// y se queda en #s-eventos-editar (pedido explícito), sin tocar nada más.
+// Éxito: además del toast, `_evEditarAplicarCambiosLocal()` (abajo) pisa
+// `_evDetalleActual`/`_EV_EVENTOS` en memoria con los mismos valores ANTES
+// de navegar -- bug real corregido en esta sesión: el PATCH ya había
+// guardado en la base, pero el objeto local seguía con el valor viejo hasta
+// que `_evCargarDatosReales()` (asincrónico, corre después) volvía a pisar
+// todo, así que cualquier pantalla que leyera `_evDetalleActual` en el medio
+// (ej. el pill de lugar del sticky) mostraba el dato desactualizado por un
+// instante -- o directamente uno viejo si `ir('s-eventos')` no esperaba ese
+// refetch.
 function _evEditarConfirmar() {
   if (!_evEditarScopeValido()) return;
   var ev = _evDetalleActual;
@@ -3447,6 +3462,7 @@ function _evEditarConfirmar() {
   var campos = {};
   if (_evEditarCambios.hasOwnProperty('lugar')) campos.donde = _evEditarCambios.lugar;
   if (_evEditarCambios.hasOwnProperty('horaInicio')) campos.inicia = _evEditarCambios.horaInicio;
+  if (_evEditarCambios.hasOwnProperty('horaFin')) campos.termina = _evEditarCambios.horaFin;
   if (_evEditarCambios.hasOwnProperty('descripcion')) campos.info_adicional = _evEditarCambios.descripcion;
 
   var modo = _evEditarScope;
@@ -3457,6 +3473,7 @@ function _evEditarConfirmar() {
     ev.id, campos, modo, ev.fecha, fechaHasta,
     function() {
       ocultarCargando();
+      _evEditarAplicarCambiosLocal(ev);
       mostrarToast('Cambios guardados.', 'ok', true);
       ir('s-eventos');
       _evCargarDatosReales(function() { _evRenderTimeline(true); });
@@ -3466,6 +3483,32 @@ function _evEditarConfirmar() {
       mostrarToast((e && e.message) || 'No se pudieron guardar los cambios.', 'error');
     }
   );
+}
+// Pisa en memoria los campos recién guardados -- `abrirEvDetalle()` deja
+// `_evDetalleActual` como la MISMA referencia que su fila en `_EV_EVENTOS`
+// (`.filter()[0]`, nunca una copia), así que mutar `ev` ya alcanza en el
+// camino normal; el `filter` de acá es solo defensivo por si ese invariante
+// cambia el día de mañana. `lugar` además resuelve `mapsUrl` de nuevo contra
+// `_EV_VENUES` (el cache YA cargado por el picker de esta misma pantalla,
+// `_evEditarCargarVenues()` -- no `_evLugares`, que es el cache de la
+// pantalla vieja "Crear evento"/"Editar lugares" y puede no estar poblado en
+// esta sesión) -- sin esto el pill de lugar cambiaría de nombre pero
+// quedaría apuntando al mapsUrl del lugar anterior hasta el próximo refetch.
+function _evEditarAplicarCambiosLocal(ev) {
+  if (!ev) return;
+  var destinos = [ev];
+  var otro = _EV_EVENTOS.filter(function(e) { return e.id === ev.id && e !== ev; })[0];
+  if (otro) destinos.push(otro);
+  destinos.forEach(function(e) {
+    if (_evEditarCambios.hasOwnProperty('lugar')) {
+      e.lugar = _evEditarCambios.lugar;
+      var venue = (_EV_VENUES || []).filter(function(v) { return v.lugar === e.lugar; })[0];
+      if (venue && venue.google_maps) e.mapsUrl = venue.google_maps;
+    }
+    if (_evEditarCambios.hasOwnProperty('horaInicio')) e.horaInicio = _evEditarCambios.horaInicio;
+    if (_evEditarCambios.hasOwnProperty('horaFin')) e.horaFinReal = _evEditarCambios.horaFin;
+    if (_evEditarCambios.hasOwnProperty('descripcion')) e.descripcion = _evEditarCambios.descripcion;
+  });
 }
 /* ── Resumen de asistencia como 4 tarjetas de estadística (grid, ver
    "Cambios recientes" — reemplaza la línea de texto "Asisten X · No

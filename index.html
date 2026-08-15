@@ -493,7 +493,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
         <div class="ev-ant-acc-header" id="ev-editar-campo-horario-header" onclick="_evEditarToggleCampo('horario')">
           <span class="material-symbols-outlined ev-editar-campo-icono">schedule</span>
-          <span class="ev-ant-acc-titulo">Horario</span>
+          <span class="ev-ant-acc-titulo">Hora de inicio</span>
           <span class="ev-ant-acc-resumen ev-editar-valor-original" id="ev-editar-resumen-horario"></span>
           <span class="material-symbols-outlined ev-ant-acc-chevron">expand_more</span>
         </div>
@@ -519,6 +519,37 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
               </div>
             </div>
             <button type="button" class="btn btn-outline" style="margin-top:16px;width:100%;" onclick="_evEditarConfirmarHorario()">Listo</button>
+          </div>
+        </div>
+
+        <div class="ev-ant-acc-header" id="ev-editar-campo-horaFin-header" onclick="_evEditarToggleCampo('horaFin')">
+          <span class="material-symbols-outlined ev-editar-campo-icono">schedule</span>
+          <span class="ev-ant-acc-titulo">Hora de finalización</span>
+          <span class="ev-ant-acc-resumen ev-editar-valor-original" id="ev-editar-resumen-horaFin"></span>
+          <span class="material-symbols-outlined ev-ant-acc-chevron">expand_more</span>
+        </div>
+        <div class="ev-ant-acc-body" id="ev-editar-campo-horaFin-body">
+          <div class="ev-ant-acc-body-inner">
+            <div class="ev-hora-stepper" id="ev-editar-horaFin-stepper">
+              <div class="ev-hora-stepper-cols">
+                <div class="ev-hora-stepper-col">
+                  <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-editar-horaFin','hora',1)"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
+                  <span class="ev-hora-stepper-valor" id="ev-editar-horaFin-hora"></span>
+                  <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-editar-horaFin','hora',-1)"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
+                </div>
+                <span class="ev-hora-stepper-sep">:</span>
+                <div class="ev-hora-stepper-col">
+                  <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-editar-horaFin','minuto',1)"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
+                  <span class="ev-hora-stepper-valor" id="ev-editar-horaFin-minuto"></span>
+                  <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-editar-horaFin','minuto',-1)"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
+                </div>
+              </div>
+              <div class="ev-hora-stepper-meridiano" id="ev-editar-horaFin-meridiano">
+                <span class="aj-pill" data-val="AM" onclick="_evHoraStepperSetMeridiano('ev-editar-horaFin',this)">AM</span>
+                <span class="aj-pill" data-val="PM" onclick="_evHoraStepperSetMeridiano('ev-editar-horaFin',this)">PM</span>
+              </div>
+            </div>
+            <button type="button" class="btn btn-outline" style="margin-top:16px;width:100%;" onclick="_evEditarConfirmarHoraFin()">Listo</button>
           </div>
         </div>
 
