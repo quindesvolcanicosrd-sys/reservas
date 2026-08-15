@@ -224,19 +224,15 @@ var _EV_ESTADO_MAP = { 'Evento Cancelado': 'Cancelado', 'Evento Finalizado': 'Fi
 function _evNormalizarEstadoEvento(estado) { return _EV_ESTADO_MAP[estado] || estado; }
 var _EV_ESTADOS_RSVP = ['Asistiré', 'No asistiré', 'No jugador'];
 var _EV_ESTADOS_ROLLCALL = ['A tiempo', 'Tarde', 'Ausente'];
-// "1899-12-30T19:00:00.000Z" -- un valor de solo-hora de Sheets, serializado
-// por Apps Script como Date completo (ver getEventosRango(), MANIFEST.md).
-// `getHours()`/`getMinutes()` LOCALES (no UTC) -- el mismo criterio que ya
-// usa el resto de la app para horarios de negocio (ej. `ahora.getHours()`,
-// js/admin.js) asumiendo que el dispositivo real de unx usuarix del equipo
-// está en su misma zona horaria; confirmado con datos reales de la hoja
-// (un evento nocturno real cae en la madrugada UTC del día siguiente, no en
-// UTC "tal cual", así que el offset de por medio es real, no solo cero).
-function _evHoraDeISO(iso) {
-  if (!iso) return '';
-  var d = new Date(iso);
-  if (isNaN(d.getTime())) return '';
-  return _evPad(d.getHours()) + ':' + _evPad(d.getMinutes());
+// Ya NO es un ISO datetime -- getEventosRango() (supabase/functions/api/
+// index.ts) manda `horaInicio`/`horaFin` truncados server-side a "HH:MM"
+// (`fila.inicia?.substring(0, 5)`, columnas `time` de Postgres). `new
+// Date("14:30")` da Invalid Date (probado), así que el parseo viejo devolvía
+// '' siempre -- bug real, no cosmético. Nada de conversión de huso: son 5
+// caracteres, se extraen tal cual.
+function _evHoraDeISO(hhmm) {
+  if (!hhmm) return '';
+  return hhmm.substring(0, 5);
 }
 // Compara 2 nombres tolerando mayúsculas/espacios de más -- el nombre que
 // llega en `asistencias[]` sale de "Log de asistencias" (tipeado a mano por
