@@ -338,14 +338,34 @@ function _evMapCumpleBackend(raw, idx) {
 // visible por un problema ajeno al resto de la pantalla.
 function _evCargarDatosReales(onListo) {
   var rango = _evRangoCargaCompleto();
-  var pendientes = 3;
-  function unoListo() { pendientes--; if (pendientes === 0) onListo(); }
+  var pendientes = 4;
+  // Reglas de asistencia anticipada del usuario actual, cargadas en
+  // paralelo con el resto (mismo criterio degradado que
+  // getCumpleañosRango/temporadas_descanso, abajo: console.warn sin toast
+  // si falla, dato secundario que no debería bloquear el timeline) --
+  // `_evAntReconciliarConReglas()` (ver ese comentario, sección "ASISTENCIA
+  // ANTICIPADA" más abajo en este archivo) recién corre una vez que TODO
+  // terminó de cargar (pendientes === 0), para no pisar `_EV_EVENTOS` antes
+  // de que `getEventosRango` haya terminado de poblarlo.
+  var reglasAnt = [];
+  function unoListo() {
+    pendientes--;
+    if (pendientes === 0) { _evAntReconciliarConReglas(reglasAnt); onListo(); }
+  }
   api({ action: 'getEventosRango', desde: rango.desde, hasta: rango.hasta }, function(res) {
     _EV_EVENTOS = (res.eventos || []).map(_evMapEventoBackend);
     unoListo();
   }, function(e) {
     _EV_EVENTOS = [];
     mostrarToast(e && e.message ? e.message : 'No se pudieron cargar los eventos.', 'error');
+    unoListo();
+  });
+  _evAntFetchReglas(function(reglas) {
+    reglasAnt = reglas;
+    unoListo();
+  }, function(e) {
+    reglasAnt = [];
+    if (window.console) console.warn('reglas_asistencia (timeline): ' + (e && e.message || 'error'));
     unoListo();
   });
   api({ action: 'getCumpleañosRango', desde: rango.desde, hasta: rango.hasta }, function(res) {
@@ -3857,6 +3877,52 @@ function _evAntFetchReglas(onOk, onErr) {
   }).catch(onErr);
 }
 
+// Reconcilia las reglas de asistencia anticipada (tabla `reglas_asistencia`,
+// vía `_evAntFetchReglas()`) contra el timeline recién cargado -- llamada
+// desde `_evCargarDatosReales()` (ver ese comentario) después de que
+// `_EV_EVENTOS` ya tiene los eventos del rango. Hasta esta función las
+// reglas se guardaban bien pero nunca se leían de vuelta acá: el timeline
+// mostraba `ev.miEstado` tal cual venía del backend (RSVP real, ver
+// `_evMapEventoBackend()`) sin aplicar ninguna regla -- ese era el bug
+// principal. Solo toca eventos FUTUROS (fecha >= hoy, mismo criterio que
+// `_evEsPasado()`/`_evHoyISO()` del resto del archivo) -- una regla nunca
+// debe reescribir la asistencia de un evento que ya pasó. Orden de
+// aplicación intencional para que gane la más específica: 'indefinido'
+// primero (la menos específica, cualquier evento futuro desde su fecha de
+// inicio sin fin), 'meses' después (pisa a 'indefinido' en los meses que
+// aplique -- matchea por número de mes de `ev.fecha`, cualquier año, mismo
+// criterio que la grilla de meses del wizard, ver `_evAntData.meses`),
+// 'periodo' al final (pisa a las 2 anteriores dentro de su rango acotado)
+// -- cada pasada sobreescribe `ev.miEstado` de los eventos que matchea, así
+// que el orden de los 3 `aplicarTipoRango()` ES la prioridad real.
+function _evAntReconciliarConReglas(reglas) {
+  if (!reglas || !reglas.length) return;
+  var hoy = _evHoyISO();
+  var futuros = _EV_EVENTOS.filter(function(e) { return _evFechaCmp(e.fecha, hoy) >= 0; });
+
+  function tipoAplica(r, ev) {
+    return !r.tiposEvento || !r.tiposEvento.length || r.tiposEvento.indexOf(ev.tipo) !== -1;
+  }
+  function aplicarTipoRango(tipoRango, matchFecha) {
+    reglas.filter(function(r) { return r.tipoRango === tipoRango; }).forEach(function(r) {
+      futuros.forEach(function(ev) {
+        if (tipoAplica(r, ev) && matchFecha(r, ev)) ev.miEstado = r.estado;
+      });
+    });
+  }
+
+  aplicarTipoRango('indefinido', function(r, ev) {
+    return !!r.fechaDesde && _evFechaCmp(ev.fecha, r.fechaDesde) >= 0;
+  });
+  aplicarTipoRango('meses', function(r, ev) {
+    var mes = parseInt(ev.fecha.split('-')[1], 10);
+    return (r.meses || []).indexOf(mes) !== -1;
+  });
+  aplicarTipoRango('periodo', function(r, ev) {
+    return !!r.fechaDesde && !!r.fechaHasta && _evFechaCmp(ev.fecha, r.fechaDesde) >= 0 && _evFechaCmp(ev.fecha, r.fechaHasta) <= 0;
+  });
+}
+
 var _evAntData = {};
 var _evAntReglas = [];
 // Guard de condición de carrera (ver "Cambios recientes" -- patrón estándar
@@ -4011,12 +4077,45 @@ function _evAntResumenDetalle(r) {
   return 'Tipos: ' + tipos + ' · Estado: ' + r.estado;
 }
 
-// DELETE directo a Supabase (mismo mecanismo que `_evOffseasonEliminar()`,
-// más abajo en este archivo -- ese comentario ya anticipaba esta migración)
-// -- `confirm()` nativo, sin `Prefer` (no hace falta el registro borrado de
-// vuelta, PostgREST responde 204 por default).
+// Sheet de confirmación "Eliminar asistencia anticipada" (#ev-ant-sheet-eliminar,
+// index.html) -- reemplaza el confirm() nativo que tenía esta función antes,
+// mismo patrón abrir/cerrar que #ev-sheet-cancelar (ver
+// _evAbrirSheetCancelar()/_evCerrarSheetCancelar(), más arriba en este
+// archivo): display block + transform vía doble rAF al abrir,
+// `_registrarOverlayAbierto()` para que el botón atrás del navegador (o el
+// swipe-to-dismiss de shared/bsheet.js) lo cierre igual que a cualquier otro
+// sheet. El id de la regla pendiente viaja en `_evAntEliminarPendienteId`
+// (variable de módulo, mismo criterio que `_evCancelarPendienteId`) en vez
+// de un data-attribute -- el sheet es único, no hay 2 instancias abiertas a
+// la vez que puedan pisarse.
+var _evAntEliminarPendienteId = null;
 function _evAntEliminar(id) {
-  if (!confirm('¿Eliminar esta asistencia anticipada?')) return;
+  _evAntEliminarPendienteId = id;
+  var ov = document.getElementById('ev-ant-sheet-eliminar-overlay');
+  var sh = document.getElementById('ev-ant-sheet-eliminar');
+  if (!ov || !sh) return;
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(_evAntCerrarSheetEliminar);
+}
+function _evAntCerrarSheetEliminar(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var ov = document.getElementById('ev-ant-sheet-eliminar-overlay');
+  var sh = document.getElementById('ev-ant-sheet-eliminar');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+// Botón "Eliminar" del sheet -- cierra primero (mismo orden que
+// `_evConfirmarCancelarEvento()`) y recién ahí dispara el DELETE contra
+// Supabase (mismo mecanismo que `_evOffseasonEliminar()`, más abajo en este
+// archivo), sin `Prefer` (no hace falta el registro borrado de vuelta,
+// PostgREST responde 204 por default).
+function _evAntConfirmarEliminar(btn) {
+  if (!_evAntEliminarPendienteId) return;
+  var id = _evAntEliminarPendienteId;
+  _evAntEliminarPendienteId = null;
+  _evAntCerrarSheetEliminar();
   mostrarCargando('Eliminando...');
   fetch(SUPABASE_URL + '/rest/v1/reglas_asistencia?id=eq.' + id, {
     method: 'DELETE',
@@ -4702,6 +4801,26 @@ function _evAntCalRender(cual) {
 function _evAntAplicar() {
   if (!_evAntCompleto()) return;
   if (_evAntData.tipoRango === 'indefinido') _evAntData.fechaDesde = _evAntData.fechaDesde || _evAntHoyISO();
+
+  // Regla indefinida única: como no hay chequeo de solapamiento (ver el
+  // comentario del bloque de arriba -- se cayó con la migración a
+  // Supabase), esta validación puntual evita el caso más molesto que
+  // dejaba sin cubrir -- 2 reglas 'indefinido' activas a la vez, donde
+  // no hay forma de saber cuál "gana" (a diferencia de 'meses'/'periodo',
+  // que sí tienen un rango acotado). Compara contra `_evAntReglas` (la
+  // lista ya cargada en memoria, misma fuente que pinta el resumen) en vez
+  // de pedirle al backend -- excluye `_evAntData.editando` para no
+  // bloquearse a sí misma al reeditar una regla indefinida existente sin
+  // cambiarle el tipo.
+  if (_evAntData.tipoRango === 'indefinido') {
+    var yaExisteIndefinida = _evAntReglas.some(function(r) {
+      return r.tipoRango === 'indefinido' && r.id !== _evAntData.editando;
+    });
+    if (yaExisteIndefinida) {
+      mostrarToast('Ya tienes una regla indefinida activa. Eliminala antes de crear una nueva.', 'error');
+      return;
+    }
+  }
 
   var body = {
     nombre: E.nombre,
