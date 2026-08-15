@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=a340ffb6">
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
-<link rel="stylesheet" href="css/eventos.css?v=e2861154">
+<link rel="stylesheet" href="css/eventos.css?v=74434a97">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
@@ -1098,17 +1098,20 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <button type="button" class="btn btn-primary" id="ev-lugar-editar-btn-guardar" disabled onclick="_evLugarGuardar()">Guardar cambios</button>
   </div>
 
-  <!-- "Crear evento" -- wizard de 3 pasos (Tipo → Lugar → Detalles, ver
-       MANIFEST.md "Cambios recientes" -- antes 2 pasos, Lugar/Recurrencia,
-       sin selector de tipo), separado del formulario de "Editar lugares" de
-       arriba. Mismo mecanismo de pantalla completa que
-       #s-eventos-anticipada/#s-eventos-lugares (nav propia, sin
-       TOP_BAR_CONFIG). El motor de pasos+progreso reusa
-       .salud-paso/.salud-prog/.salud-prog-dot (css/perfil.css) TAL CUAL --
-       ver js/eventos.js (_evCrear*) para el detalle de por qué ese es el
-       precedente real (no "Asistencia anticipada", que ya no usa ese
-       motor). Back (_evCrearBack()) retrocede un paso, o vuelve a
-       #s-eventos si ya está en el paso "Tipo". Título de la nav
+  <!-- "Crear evento" -- wizard de pasos DINÁMICOS según el tipo elegido (ver
+       MANIFEST.md "Cambios recientes" -- antes 3 pasos fijos Tipo/Lugar/
+       Detalles, con fecha y hora embebidas dentro de "Detalles"). Mismo
+       mecanismo de pantalla completa que #s-eventos-anticipada/
+       #s-eventos-lugares (nav propia, sin TOP_BAR_CONFIG). El motor de
+       pasos+progreso sigue reusando .salud-paso/.salud-prog/.salud-prog-dot
+       (css/perfil.css) TAL CUAL, pero ya NO navega por índice numérico fijo
+       -- `_EV_CREAR_STEPS` (js/eventos.js) se recalcula según
+       `_evCrearData.tipoEvento`/`.tipoRecurrencia` (`_evCrearRecalcularSteps()`)
+       y la navegación real vive en `_evCrearMostrarPaso(pasoId)` (recibe el
+       ID de paso como STRING, no un índice) -- ver ese archivo para el
+       detalle completo de qué secuencia de pasos le toca a cada tipo. Back
+       (`_evCrearBack()`) retrocede un paso según ese mismo criterio, o
+       vuelve a #s-eventos desde "Tipo". Título de la nav
        (#ev-crear-form-titulo) cambia por paso con fade, ver
        _evCrearMostrarPaso()/js/eventos.js -- mismo patrón que
        #ev-lugar-form-titulo en #s-eventos-lugar-form. -->
@@ -1132,7 +1135,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="ev-ant-card ev-crear-tipo-card" onclick="_evCrearSetTipo('recurrente')">
           <span class="material-symbols-outlined ev-crear-tipo-card-icono">repeat</span>
           <div class="ev-crear-tipo-card-titulo">Recurrente</div>
-          <div class="ev-crear-tipo-card-desc">Eventos como entrenamientos que se repiten todas las semanas</div>
+          <div class="ev-crear-tipo-card-desc">Evento que se repetirá</div>
         </div>
         <div class="ev-ant-card ev-crear-tipo-card" onclick="_evCrearSetTipo('unico')">
           <span class="material-symbols-outlined ev-crear-tipo-card-icono">event</span>
@@ -1157,27 +1160,26 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            función; el contenido arranca directo con la lista). Sin pill de
            "¿Requiere reserva?" acá a propósito (no pedida para este
            wizard) -- crearVenue() la recibe con el default 'SI', editable
-           después desde "Editar lugares" si hace falta. -->
+           después desde "Editar lugares" si hace falta. NO aplica a
+           "Descanso" (ese tipo salta directo de "Tipo" a "Inicio del
+           descanso", nunca pasa por acá). -->
       <div class="salud-paso" id="ev-crear-paso-lugar">
         <div id="ev-crear-lista-lugares"></div>
       </div>
 
-      <!-- Paso "Detalles" -- categoría del evento (pills nuevas, viaja como
-           `asistencias.tipo_evento`) + la sección de recurrencia/hora ya
-           existente (Recurrente/Único, mismas pills/reveal inline que el
-           formulario de "Editar lugares",
-           _evLugarMostrarSubRecurrencia()/_evCrearMostrarSubRecurrencia())
-           o el rango de fechas de Descanso -- solo una de las 3 secciones
-           visible por vez según _evCrearData.tipoEvento, ver
-           _evCrearActualizarDetalles()/js/eventos.js. "Hora" es el stepper
-           nuevo (_evHoraStepper*) en vez del <input type="time"> nativo. -->
-      <div class="salud-paso" id="ev-crear-paso-detalle">
-        <!-- Wrapper propio (label + pills juntos) para poder ocultar los 2 de
-             un tirón en "Descanso" (_evCrearActualizarDetalles(),
-             js/eventos.js) -- antes solo se ocultaban las pills
-             (#ev-crear-tipo-cat-pills), el label quedaba huérfano arriba del
-             wrap de descanso. Bug real corregido acá, ver MANIFEST.md
-             "Cambios recientes". -->
+      <!-- Paso "Detalles" (id `ev-crear-paso-config`, ver MANIFEST.md
+           "Cambios recientes" -- antes `ev-crear-paso-detalle`, incluía
+           fecha/hora acá mismo) -- categoría del evento (pills, viaja como
+           `asistencias.tipo_evento`, SIEMPRE visible acá -- este paso ya no
+           lo comparte con "Descanso", que ni siquiera pasa por acá) + tipo
+           de recurrencia para "Recurrente" ("Días de la semana" revela el
+           selector de días inline; "Personalizada" abre un bottom sheet,
+           #ev-crear-bsheet-frecuencia más abajo, en vez de expandir
+           contenido -- ver _evCrearSelRecurrencia()/js/eventos.js). "Único"
+           no muestra nada de recurrencia acá (nada que elegir), solo la
+           categoría. Fecha y hora YA NO viven en este paso -- pasos propios
+           más abajo (#ev-crear-paso-fecha/#ev-crear-paso-hora). -->
+      <div class="salud-paso" id="ev-crear-paso-config">
         <div id="ev-crear-tipo-cat-wrap">
           <p class="ev-lugar-campo-label" style="margin-top:0;">Tipo de evento</p>
           <div class="aj-pills-row" id="ev-crear-tipo-cat-pills">
@@ -1191,7 +1193,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <p class="ev-lugar-campo-label">Tipo de recurrencia</p>
           <div class="aj-pills-row" id="ev-crear-recurrencia-pills">
             <span class="aj-pill" data-val="dias_semana" onclick="_evCrearSelRecurrencia(this)">Días de la semana</span>
-            <span class="aj-pill" data-val="cada_tantos" onclick="_evCrearSelRecurrencia(this)">Cada tantos días/semanas/meses</span>
+            <span class="aj-pill" data-val="cada_tantos" onclick="_evCrearSelRecurrencia(this)">Personalizada</span>
           </div>
 
           <div id="ev-crear-rec-dias" style="display:none;margin-top:18px;">
@@ -1206,32 +1208,36 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             </div>
           </div>
 
-          <div id="ev-crear-rec-cada" style="display:none;margin-top:18px;">
-            <div class="ev-lugar-cada-row">
-              <input type="number" min="1" class="ev-lugar-input ev-lugar-input-num" id="ev-crear-frec-num" placeholder="Ej: 2" oninput="_evCrearSetFrecNum(this.value)">
-              <div class="aj-pills-row" id="ev-crear-frec-unidad-pills">
-                <span class="aj-pill" data-val="dias" onclick="_evCrearSelUnidad(this)">Días</span>
-                <span class="aj-pill" data-val="semanas" onclick="_evCrearSelUnidad(this)">Semanas</span>
-                <span class="aj-pill" data-val="meses" onclick="_evCrearSelUnidad(this)">Meses</span>
-              </div>
-            </div>
-            <p class="ev-lugar-campo-label" style="margin-top:16px;">Fecha de referencia</p>
-            <div class="ev-ant-cal-nav">
-              <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearCalMoverMes('referencia',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
-              <span class="ev-ant-cal-nav-label" id="ev-crear-cal-referencia-label"></span>
-              <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearCalMoverMes('referencia',1)"><span class="material-symbols-outlined">chevron_right</span></button>
-            </div>
-            <div id="ev-crear-cal-referencia"></div>
-            <div class="ev-lugar-cal-resumen" id="ev-crear-cal-referencia-resumen"></div>
-          </div>
+          <!-- Resumen de la frecuencia personalizada ya confirmada en el
+               bsheet (ej. "Cada 2 semanas los sábados") -- ver
+               _evCrearConfirmarBsheetFrecuencia()/js/eventos.js. Tocar el
+               pill "Personalizada" de nuevo reabre el bsheet para editar. -->
+          <p class="ev-lugar-cal-resumen" id="ev-crear-frec-resumen" style="display:none;margin-top:10px;"></p>
         </div>
+      </div>
 
-        <!-- "Fecha única" -- compartida por "Único" (revelada directo, sin
-             pill propia -- _evCrearSetTipo() ya fija tipoRecurrencia='unico')
-             y quedaría disponible para "cada_tantos" si en algún momento
-             ese sub-tipo la necesitara, mismo mecanismo ya usado por
-             _evCrearMostrarSubRecurrencia(). -->
-        <div id="ev-crear-rec-fecha-wrap" style="display:none;margin-top:18px;">
+      <!-- Paso "Fecha del evento" (`ev-crear-paso-fecha`) -- calendario de
+           fecha de referencia (Recurrente + Personalizada) O fecha única
+           (Único), NUNCA los 2 a la vez -- _evCrearActualizarPasoFecha()
+           (js/eventos.js) togglea cuál de los 2 wraps de abajo se muestra
+           según _evCrearData.tipoRecurrencia, cada uno con su propio
+           calendario/mes navegable (ya existían como parte del paso
+           "Detalles" viejo, movidos acá tal cual). No aplica a "Recurrente +
+           Días de la semana" (ese sub-tipo no necesita una fecha de
+           referencia, va directo de "Detalles" a "Hora") ni a "Descanso"
+           (tiene sus 2 propios pasos de fecha, más abajo). -->
+      <div class="salud-paso" id="ev-crear-paso-fecha">
+        <div id="ev-crear-fecha-referencia-wrap" style="display:none;">
+          <p class="ev-lugar-campo-label" style="margin-top:0;">Fecha de referencia</p>
+          <div class="ev-ant-cal-nav">
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearCalMoverMes('referencia',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+            <span class="ev-ant-cal-nav-label" id="ev-crear-cal-referencia-label"></span>
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearCalMoverMes('referencia',1)"><span class="material-symbols-outlined">chevron_right</span></button>
+          </div>
+          <div id="ev-crear-cal-referencia"></div>
+          <div class="ev-lugar-cal-resumen" id="ev-crear-cal-referencia-resumen"></div>
+        </div>
+        <div id="ev-crear-fecha-unico-wrap" style="display:none;">
           <div class="ev-ant-cal-nav">
             <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearCalMoverMes('unico',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
             <span class="ev-ant-cal-nav-label" id="ev-crear-cal-unico-label"></span>
@@ -1240,9 +1246,18 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <div id="ev-crear-cal-unico"></div>
           <div class="ev-lugar-cal-resumen" id="ev-crear-cal-unico-resumen"></div>
         </div>
+      </div>
 
-        <div class="ev-lugar-campo" id="ev-crear-hora-wrap" style="display:none;">
-          <p class="ev-lugar-campo-label">Hora</p>
+      <!-- Paso "Hora de inicio" (`ev-crear-paso-hora`) -- stepper
+           (_evHoraStepper*, ya existente) SOLO, sin nada más -- compartido
+           por "Recurrente" (cualquier sub-tipo) y "Único", último paso real
+           de esos 2 flujos (footer = "Guardar" acá, ver
+           _evCrearActualizarFooter()/js/eventos.js). Se inicializa UNA sola
+           vez por visita al wizard (`_evCrearHoraInicializada`, ya no
+           depende de "primera vez que se revela un wrap" como antes -- este
+           paso entero YA ES ese wrap). No aplica a "Descanso" (sin hora). -->
+      <div class="salud-paso" id="ev-crear-paso-hora">
+        <div class="ev-lugar-campo" style="margin-top:0;">
           <div class="ev-hora-stepper" id="ev-crear-hora-stepper">
             <div class="ev-hora-stepper-cols">
               <div class="ev-hora-stepper-col">
@@ -1263,40 +1278,37 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Descanso -- 2 calendarios inline independientes (Desde/Hasta),
-             mismo motor/clases ya usado por "referencia"/"único" más arriba
-             en este mismo paso (_evCrearCalRender(), ver
-             .ev-ant-cal-nav*/.ev-cal-grid) -- NO la selección de rango "ida
-             y vuelta" de un solo calendario que usa "Por período"
-             (Asistencia Anticipada/#ev-ant-paso1-periodo): acá cada extremo
-             tiene su propio calendario con mes navegable independiente, ver
-             _evCrearDescCal*()/js/eventos.js (prefijo propio, mismo patrón
-             que _evAntCalMoverMes()/_evAntCalRender() pero sin compartir
-             estado con Asistencia Anticipada). Sin botón "restablecer" --
-             a diferencia de un rango de un solo calendario, cada fecha acá
-             ya es independiente y reelegible con solo tocar otro día. El
-             guardado real de este tipo todavía es un stub (toast
-             "próximamente", ver _evCrearGuardar()/js/eventos.js). -->
-        <div id="ev-crear-descanso-wrap" style="display:none;margin-top:18px;">
-          <p class="ev-lugar-campo-label" style="margin-top:0;">Fecha de inicio</p>
-          <div class="ev-ant-cal-nav">
-            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescCalMoverMes('desde',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
-            <span class="ev-ant-cal-nav-label" id="ev-crear-desc-cal-desde-label"></span>
-            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescCalMoverMes('desde',1)"><span class="material-symbols-outlined">chevron_right</span></button>
-          </div>
-          <div id="ev-crear-desc-cal-desde"></div>
-          <div class="ev-lugar-cal-resumen" id="ev-crear-desc-cal-desde-resumen"></div>
-
-          <p class="ev-lugar-campo-label" style="margin-top:20px;">Fecha de fin</p>
-          <div class="ev-ant-cal-nav">
-            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescCalMoverMes('hasta',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
-            <span class="ev-ant-cal-nav-label" id="ev-crear-desc-cal-hasta-label"></span>
-            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescCalMoverMes('hasta',1)"><span class="material-symbols-outlined">chevron_right</span></button>
-          </div>
-          <div id="ev-crear-desc-cal-hasta"></div>
-          <div class="ev-lugar-cal-resumen" id="ev-crear-desc-cal-hasta-resumen"></div>
+      <!-- "Descanso" -- 2 pasos propios en vez de 2 calendarios embebidos en
+           un mismo paso (ver MANIFEST.md "Cambios recientes"), cada uno con
+           su propio calendario/mes navegable (_evCrearDescCal*(),
+           js/eventos.js, sin cambios de mecánica -- mismo motor/clases que
+           "referencia"/"único" arriba, .ev-ant-cal-nav*/.ev-cal-grid, NO la
+           selección de rango "ida y vuelta" de un solo calendario que usa
+           "Por período" en Asistencia Anticipada/#ev-ant-paso1-periodo).
+           Sin botón "restablecer" -- cada fecha es independiente y
+           reelegible con solo tocar otro día. El guardado real de este tipo
+           todavía es un stub (toast "próximamente", ver
+           _evCrearGuardar()/js/eventos.js) -- footer "Guardar" en el paso
+           "Fin del descanso" ya dispara ese stub. -->
+      <div class="salud-paso" id="ev-crear-paso-fecha-inicio">
+        <div class="ev-ant-cal-nav">
+          <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescCalMoverMes('desde',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+          <span class="ev-ant-cal-nav-label" id="ev-crear-desc-cal-desde-label"></span>
+          <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescCalMoverMes('desde',1)"><span class="material-symbols-outlined">chevron_right</span></button>
         </div>
+        <div id="ev-crear-desc-cal-desde"></div>
+        <div class="ev-lugar-cal-resumen" id="ev-crear-desc-cal-desde-resumen"></div>
+      </div>
+      <div class="salud-paso" id="ev-crear-paso-fecha-fin">
+        <div class="ev-ant-cal-nav">
+          <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescCalMoverMes('hasta',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+          <span class="ev-ant-cal-nav-label" id="ev-crear-desc-cal-hasta-label"></span>
+          <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescCalMoverMes('hasta',1)"><span class="material-symbols-outlined">chevron_right</span></button>
+        </div>
+        <div id="ev-crear-desc-cal-hasta"></div>
+        <div class="ev-lugar-cal-resumen" id="ev-crear-desc-cal-hasta-resumen"></div>
       </div>
 
       <!-- 100px, no los 24px que usa #s-eventos-lugar-form: medido con
@@ -1313,6 +1325,62 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
   <div class="cta-footer-fixed" id="cta-footer-s-eventos-crear">
     <button class="btn btn-primary" id="ev-crear-btn-footer" disabled>Continuar</button>
+  </div>
+
+  <!-- Bottom sheet "Frecuencia personalizada" (paso "Detalles" de "Crear
+       evento", ver MANIFEST.md "Cambios recientes") -- reemplaza el bloque
+       inline que tenía antes la pill "Cada tantos días/semanas/meses"
+       (ahora "Personalizada"): unidad de tiempo (pills) + cantidad
+       (.qty-stepper, mismo componente de Tareas/Equipamiento,
+       adminStepperChange()) + días de la semana opcionales (ocultos si la
+       unidad es "Días"). Mismo patrón `.bsheet`/`.bsheet-overlay` que el
+       resto de la app (`#ev-sheet-cancelar`, arriba en este archivo) --
+       abrir/cerrar vía _evCrearAbrirBsheetFrecuencia()/
+       _evCrearCerrarBsheetFrecuencia() (js/eventos.js), mismo mecanismo de
+       `_registrarOverlayAbierto()` + `history.back()` en el cierre normal
+       que ya usa el resto de sheets de la app. "Confirmar" copia el estado
+       del sheet a `_evCrearData.frecConfig` (ya escrito ahí en vivo por cada
+       pill/stepper/día tocado, no hace falta un 2do copiado) y además
+       espeja `frecuenciaNumero`/`frecuenciaUnidad` (mismos campos que ya
+       usaba el sub-tipo "cada_tantos" antes de este cambio) para no tocar
+       la validación/el payload de guardado existentes
+       (_evCrearRecurrenciaValidaWizard()/_evCrearGuardar()). -->
+  <div id="ev-crear-bsheet-frecuencia-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_evCrearCerrarBsheetFrecuencia()"></div>
+  <div id="ev-crear-bsheet-frecuencia" class="bsheet" style="z-index:9701;">
+    <div class="bsheet-handle"></div>
+    <div class="bsheet-title">Frecuencia personalizada</div>
+    <div class="bsheet-body">
+      <p class="ev-lugar-campo-label" style="margin-top:0;">Unidad de tiempo</p>
+      <div class="aj-pills-row" id="ev-crear-frec-unidad-pills">
+        <span class="aj-pill" data-val="semanas" onclick="_evCrearFrecSelUnidad(this)">Semanas</span>
+        <span class="aj-pill" data-val="meses" onclick="_evCrearFrecSelUnidad(this)">Meses</span>
+        <span class="aj-pill" data-val="dias" onclick="_evCrearFrecSelUnidad(this)">Días</span>
+      </div>
+
+      <p class="ev-lugar-campo-label" style="margin-top:20px;">Cantidad</p>
+      <div class="qty-stepper" data-step="1" data-min="1">
+        <button type="button" class="qty-btn" onclick="adminStepperChange(this,-1);_evCrearFrecStepperCambio();">−</button>
+        <span class="qty-value">1</span>
+        <button type="button" class="qty-btn" onclick="adminStepperChange(this,1);_evCrearFrecStepperCambio();">+</button>
+        <input type="hidden" id="ev-crear-frec-cantidad" value="1">
+      </div>
+      <p class="ev-lugar-mapa-nota" id="ev-crear-frec-preview"></p>
+
+      <div id="ev-crear-frec-dias-wrap" style="margin-top:20px;">
+        <p class="ev-lugar-campo-label">Día(s) de la semana</p>
+        <div class="ev-dias-row" id="ev-crear-frec-dias-row">
+          <span class="ev-dia-circulo" data-dia="1" onclick="_evCrearFrecToggleDia(this)">L</span>
+          <span class="ev-dia-circulo" data-dia="2" onclick="_evCrearFrecToggleDia(this)">M</span>
+          <span class="ev-dia-circulo" data-dia="3" onclick="_evCrearFrecToggleDia(this)">X</span>
+          <span class="ev-dia-circulo" data-dia="4" onclick="_evCrearFrecToggleDia(this)">J</span>
+          <span class="ev-dia-circulo" data-dia="5" onclick="_evCrearFrecToggleDia(this)">V</span>
+          <span class="ev-dia-circulo" data-dia="6" onclick="_evCrearFrecToggleDia(this)">S</span>
+          <span class="ev-dia-circulo" data-dia="7" onclick="_evCrearFrecToggleDia(this)">D</span>
+        </div>
+      </div>
+
+      <button type="button" class="btn btn-primary" style="margin-top:24px;" onclick="_evCrearConfirmarBsheetFrecuencia()">Confirmar</button>
+    </div>
   </div>
 
   <!-- "Nueva temporada de descanso" (Tanda C1, admin, ver MANIFEST.md
@@ -2662,7 +2730,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=5f18b1a9"></script>
-<script src="js/eventos.js?v=5538a3b3"></script>
+<script src="js/eventos.js?v=11351a7e"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=7a7a6f20"></script>

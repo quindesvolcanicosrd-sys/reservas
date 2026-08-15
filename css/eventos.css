@@ -1238,6 +1238,12 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
    seleccionada, solo navega. */
 .ev-crear-venue-card { cursor: pointer; border-color: var(--border-light); transition: border-color 0.15s, background 0.15s; }
 .ev-crear-venue-card.activa { border-color: var(--brand); background: var(--brand-light); }
+/* "Agregar lugar" -- borde punteado, sin fondo sólido (la línea ya la
+   distingue de las cards de venues reales, no hace falta relleno). Pedido
+   con `var(--border-color)`, variable que no existe en css/colors.css --
+   `--border-mid` es el tono real más parecido (más marcado que
+   `--border-light`, apropiado para una afordancia de "agregar"). */
+.ev-crear-venue-add { border: 2px dashed var(--border-mid); background: transparent; }
 
 /* Stepper de hora -- 2 columnas (Horas/Minutos) con flechas arriba/abajo
    (mismo botón circular que .ev-ant-cal-nav-btn, reusado tal cual, solo

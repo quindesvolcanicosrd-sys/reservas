@@ -5125,10 +5125,16 @@ function _evLugarResumenRecurrencia(v) {
 }
 
 /* ─── Formulario compartido ("Crear evento"/"Editar lugares") -- wizard de
-   3 pasos (ver MANIFEST.md "Cambios recientes"), mismo motor que "Crear
-   evento" (_EV_CREAR_STEPS/_evCrearCurIdx, más abajo en este archivo):
-   array de ids de paso + índice actual, reusando .salud-paso/.salud-prog/
-   .salud-prog-dot (css/perfil.css) tal cual. Paso 0 -- Ubicación+Nombre.
+   3 pasos (ver MANIFEST.md "Cambios recientes"), array de ids de paso +
+   índice numérico actual, reusando .salud-paso/.salud-prog/.salud-prog-dot
+   (css/perfil.css) tal cual -- MISMA base visual que "Crear evento" más
+   abajo en este archivo, pero ya no el mismo motor de navegación: "Crear
+   evento" pasó a pasos dinámicos por ID de paso (string, ver
+   _EV_CREAR_STEPS/_evCrearPasoActual/_evCrearMostrarPaso(), ver MANIFEST.md
+   "Cambios recientes") porque su secuencia de pasos varía según el tipo de
+   evento elegido; este formulario de venue sigue con la lista fija de
+   siempre (_EV_LUGAR_STEPS/_evLugarCurIdx, índice numérico) porque sus 3
+   pasos son siempre los mismos. Paso 0 -- Ubicación+Nombre.
    Paso 1 -- Tipo de evento (ya NO pide "¿Requiere reserva?", ver
    _evLugarGuardar() más abajo -- se auto-deriva de `tipoIcono` al guardar,
    nunca se pregunta ni se guarda como elección propia en _evLugarData).
@@ -5386,8 +5392,8 @@ function _evLugarMostrarSubRecurrencia() {
     horaWrap.style.display = 'block';
     if (horaPrimeraVez) {
       void horaWrap.offsetWidth; horaWrap.style.animation = 'fadeIn 0.2s ease';
-      // Mismo componente que irEvCrear()/#ev-crear-hora-wrap (_evHoraStepper*,
-      // más abajo en este archivo) -- solo se inicializa la PRIMERA vez que
+      // Mismo componente que usa "Crear evento" (_evHoraStepper*, más abajo
+      // en este archivo) -- solo se inicializa la PRIMERA vez que
       // el campo se revela (igual que el criterio ya usado acá para la
       // animación), nunca al cambiar entre los 3 tipos de recurrencia con
       // "Hora" ya visible -- el valor elegido es compartido, no se resetea
@@ -5915,51 +5921,84 @@ function _evHoraStepperSetMeridiano(prefix, el) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   "Crear evento" (#s-eventos-crear, FAB) -- wizard de 3 pasos (Tipo →
-   Lugar → Detalles, ver MANIFEST.md "Cambios recientes" -- antes 2 pasos,
-   Lugar/Recurrencia, sin selector de tipo). Motor de pasos+progreso: array
-   de ids + índice actual + dots (_EV_CREAR_STEPS/_evCrearCurIdx), reusando
-   .salud-paso/.salud-prog/.salud-prog-dot (css/perfil.css) tal cual --
-   mismo mecanismo que el wizard de "Ficha de salud" (js/perfil.js,
-   _SALUD_STEPS/_saludCurIdx).
+   "Crear evento" (#s-eventos-crear, FAB) -- wizard de pasos DINÁMICOS según
+   el tipo elegido (ver MANIFEST.md "Cambios recientes" -- antes 3 pasos
+   fijos Tipo/Lugar/Detalles, con fecha y hora embebidas dentro de
+   "Detalles"). Motor de pasos+progreso reusa .salud-paso/.salud-prog/
+   .salud-prog-dot (css/perfil.css) tal cual, pero la navegación YA NO es
+   por índice numérico fijo -- `_evCrearMostrarPaso(pasoId)` recibe el ID de
+   paso como STRING (`_evCrearPasoActual` guarda cuál está activo), y
+   `_EV_CREAR_STEPS` (el array usado SOLO para contar/pintar los dots de
+   progreso) se recalcula cada vez que cambia `tipoEvento`/`tipoRecurrencia`
+   (`_evCrearRecalcularSteps()`) -- nunca es la lista fija de "todos los
+   pasos posibles" (esa es `_EV_CREAR_TODOS_LOS_PASOS`, ver abajo, usada
+   solo para togglear `.activo` sin dejar huérfanos de una elección de tipo
+   anterior).
 
-   Paso 0 (Tipo): 3 cards (_evCrearSetTipo()) -- "Recurrente"/"Único" siguen
-   a Paso 1 (Lugar); "Descanso" salta directo a Paso 2 (sin lugar, ver
-   _evCrearIrSiguiente()). Paso 1 (Lugar): elegir un venue existente
-   (_evCrearData.venueExistente) de la lista, o tocar "Agregar lugar" para
-   abrir el formulario de venue COMPARTIDO (#s-eventos-lugar-form,
-   irEvLugarFormNuevo('desde_crear')) y volver acá con la lista recargada --
-   este wizard YA NO tiene su propio mini-formulario de lugar nuevo inline
-   (buscador Places + mapa), ver `_evLugarFromWizard` más abajo en este
-   archivo para el detalle de ese flujo compartido. Paso 2 (Detalles):
-   pills de categoría (Entrenamiento/Partido/Evento, para
-   `asistencias.tipo_evento`) + la sección de recurrencia/hora ya existente
-   (Recurrente/Único, _evCrearActualizarDetalles()) o el rango de fechas de
-   descanso (stub, ver _evCrearGuardar()).
+   Secuencias reales por tipo (después de "Tipo"):
+   - Recurrente + Días de la semana: Lugar → Detalles → Hora.
+   - Recurrente + Personalizada: Lugar → Detalles → Fecha → Hora (la
+     cantidad/unidad/días de "Personalizada" se eligen en un bottom sheet,
+     #ev-crear-bsheet-frecuencia, no expandiendo contenido inline -- ver
+     _evCrearSelRecurrencia() más abajo).
+   - Único: Lugar → Detalles → Fecha → Hora.
+   - Descanso: Fecha de inicio → Fecha de fin (sin Lugar/Detalles/Hora,
+     guarda directo -- stub, ver _evCrearGuardar()).
+
+   Paso "Lugar": elegir un venue existente (_evCrearData.venueExistente) de
+   la lista, o tocar "Agregar lugar" para abrir el formulario de venue
+   COMPARTIDO (#s-eventos-lugar-form, irEvLugarFormNuevo('desde_crear')) y
+   volver acá con la lista recargada -- este wizard YA NO tiene su propio
+   mini-formulario de lugar nuevo inline (buscador Places + mapa), ver
+   `_evLugarFromWizard` más abajo en este archivo. Paso "Detalles" (id
+   `ev-crear-paso-config`): pills de categoría (Entrenamiento/Partido/
+   Evento, para `asistencias.tipo_evento`) + tipo de recurrencia para
+   "Recurrente" (_evCrearActualizarDetalles()).
 
    Guardado (Recurrente/Único): SIEMPRE crearVenue, incluso con un venue
    existente elegido -- el backend documentado (ver MANIFEST.md "Backend —
    Venues") no tiene una operación de "agregar otra regla de recurrencia a
    un venue ya existente", el id de cada regla es la fila de Venues 1 a 1.
    Elegir un venue existente en el paso "Lugar" arma el payload con su
-   nombre/ubicación/ícono/reserva COPIADOS + la recurrencia nueva del paso
-   "Detalles", lo que crea una fila NUEVA (incluida en el llamado normal a
-   crearVenue) con la misma identidad de lugar pero un horario distinto --
-   consistente con el modelo real de datos ya documentado ("1 fila = 1
-   regla"), no un caso especial. Si más adelante Victor quiere que un mismo
-   lugar comparta una sola fila "maestra" entre varias reglas, hace falta
-   repensar `Venues` (separarla en una hoja de lugares + una hoja de reglas,
-   o una función de backend nueva tipo
+   nombre/ubicación/ícono/reserva COPIADOS + la recurrencia nueva de los
+   pasos siguientes, lo que crea una fila NUEVA (incluida en el llamado
+   normal a crearVenue) con la misma identidad de lugar pero un horario
+   distinto -- consistente con el modelo real de datos ya documentado ("1
+   fila = 1 regla"), no un caso especial. Si más adelante Victor quiere que
+   un mismo lugar comparta una sola fila "maestra" entre varias reglas, hace
+   falta repensar `Venues` (separarla en una hoja de lugares + una hoja de
+   reglas, o una función de backend nueva tipo
    `agregarReglaAVenue(nombreLugar, datosRecurrencia)`) -- fuera de alcance
    de esta tanda, dejado señalado acá en vez de resuelto en silencio.
    ═══════════════════════════════════════════════════════ */
 
-var _EV_CREAR_STEPS = ['ev-crear-paso-tipo', 'ev-crear-paso-lugar', 'ev-crear-paso-detalle'];
-// Título de la nav por paso -- mismo índice que _EV_CREAR_STEPS, actualizado
-// con fade dentro de _evCrearMostrarPaso() (mismo patrón que
-// _EV_LUGAR_STEP_TITULOS/_evLugarMostrarPaso(), más arriba en este archivo).
-var _EV_CREAR_STEP_TITULOS = ['Tipo de evento', 'Seleccionar lugar', 'Detalles del evento'];
-var _evCrearCurIdx = 0;
+// Universo COMPLETO de pasos posibles -- usado solo para togglear `.activo`
+// sin dejar ninguno prendido de una elección de tipo anterior (ej.: el
+// admin avanza como "Único" hasta "Lugar", vuelve a "Tipo" y elige
+// "Descanso" -- sin esta lista completa, `#ev-crear-paso-lugar` seguiría
+// `.activo` para siempre). `_EV_CREAR_STEPS` (abajo) es un subconjunto
+// ORDENADO de esta lista, recalculado según la elección real.
+var _EV_CREAR_TODOS_LOS_PASOS = ['ev-crear-paso-tipo', 'ev-crear-paso-lugar', 'ev-crear-paso-config', 'ev-crear-paso-fecha', 'ev-crear-paso-hora', 'ev-crear-paso-fecha-inicio', 'ev-crear-paso-fecha-fin'];
+// Título de la nav por paso -- objeto (no array, los pasos ya no tienen un
+// índice fijo), actualizado con fade dentro de _evCrearMostrarPaso() (mismo
+// patrón que _EV_LUGAR_STEP_TITULOS/_evLugarMostrarPaso(), más arriba en
+// este archivo).
+var _EV_CREAR_PASO_TITULOS = {
+  'ev-crear-paso-tipo': 'Tipo de evento',
+  'ev-crear-paso-lugar': 'Seleccionar lugar',
+  'ev-crear-paso-config': 'Detalles',
+  'ev-crear-paso-fecha': 'Fecha del evento',
+  'ev-crear-paso-hora': 'Hora de inicio',
+  'ev-crear-paso-fecha-inicio': 'Inicio del descanso',
+  'ev-crear-paso-fecha-fin': 'Fin del descanso'
+};
+// Secuencia ORDENADA del flujo actual -- solo para los dots de progreso
+// (_evCrearRenderProg(), indexOf(_evCrearPasoActual) contra este array).
+// Recalculada por _evCrearRecalcularSteps() cada vez que cambia
+// tipoEvento/tipoRecurrencia -- arranca con un solo paso ("Tipo") porque
+// todavía no hay elección de la que derivar el resto del flujo.
+var _EV_CREAR_STEPS = ['ev-crear-paso-tipo'];
+var _evCrearPasoActual = 'ev-crear-paso-tipo';
 var _evCrearData = {};
 var _evCrearCal = { referencia: { mostrado: null }, unico: { mostrado: null } };
 // Calendarios del paso "Descanso" -- 2 instancias independientes (Desde/
@@ -5968,6 +6007,11 @@ var _evCrearCal = { referencia: { mostrado: null }, unico: { mostrado: null } };
 // comparte nada con _evCrearCal (que es de "referencia"/"único", del flujo
 // Recurrente/Único) ni con _evAntCal (Asistencia anticipada).
 var _evCrearDescCal = { desde: { mostrado: null }, hasta: { mostrado: null } };
+// El paso "Hora" (#ev-crear-paso-hora) YA ES el wrap del stepper (ya no hay
+// un <div style="display:none"> interno que revele por primera vez, como
+// tenía el viejo paso "Detalles") -- este flag reemplaza a esa lógica para
+// seguir inicializando el stepper UNA sola vez por visita al wizard.
+var _evCrearHoraInicializada = false;
 
 function irEvCrear() {
   _evCrearData = {
@@ -5975,16 +6019,24 @@ function irEvCrear() {
     venueExistente: null,
     tipoRecurrencia: null, diasSemana: [], frecuenciaNumero: null, frecuenciaUnidad: null,
     fecha: null, hora: '09:00',
-    descansoFechaDesde: null, descansoFechaHasta: null
+    descansoFechaDesde: null, descansoFechaHasta: null,
+    // Estado del bottom sheet "Frecuencia personalizada" (Cambio 2, ver
+    // MANIFEST.md "Cambios recientes") -- se espeja hacia
+    // frecuenciaNumero/frecuenciaUnidad recién al confirmar (ver
+    // _evCrearConfirmarBsheetFrecuencia()), para no duplicar la validación/
+    // el payload de guardado que ya usaban esos 2 campos.
+    frecConfig: { unidad: 'semanas', cantidad: 1, diasSemana: [] }
   };
   var mesInicial = _evHoyISO();
   _evCrearCal.referencia.mostrado = mesInicial;
   _evCrearCal.unico.mostrado = mesInicial;
   _evCrearDescCal.desde.mostrado = mesInicial;
   _evCrearDescCal.hasta.mostrado = mesInicial;
+  _evCrearHoraInicializada = false;
   ir('s-eventos-crear');
   _evCrearResetUI();
-  _evCrearMostrarPaso(0);
+  _evCrearRecalcularSteps();
+  _evCrearMostrarPaso('ev-crear-paso-tipo');
   _evCrearCargarLugares();
   _evCrearCalRender('referencia');
   _evCrearCalRender('unico');
@@ -5996,40 +6048,65 @@ function irEvCrear() {
   _evCrearDescActualizarResumen('hasta');
 }
 
+// Recalcula _EV_CREAR_STEPS según la elección actual -- llamada desde
+// irEvCrear() (estado inicial), _evCrearSetTipo() (cambia tipoEvento) y
+// _evCrearSelRecurrencia() (cambia tipoRecurrencia dentro de "Recurrente").
+// "Único" y "Recurrente + Personalizada" comparten la misma secuencia
+// (Lugar→Detalles→Fecha→Hora) -- ambos necesitan una fecha de referencia/
+// única antes de la hora, a diferencia de "Recurrente + Días de la semana"
+// (esa recurrencia no depende de ninguna fecha puntual).
+function _evCrearRecalcularSteps() {
+  var t = _evCrearData.tipoEvento;
+  if (t === 'descanso') {
+    _EV_CREAR_STEPS = ['ev-crear-paso-tipo', 'ev-crear-paso-fecha-inicio', 'ev-crear-paso-fecha-fin'];
+  } else if (t === 'unico' || (t === 'recurrente' && _evCrearData.tipoRecurrencia === 'cada_tantos')) {
+    _EV_CREAR_STEPS = ['ev-crear-paso-tipo', 'ev-crear-paso-lugar', 'ev-crear-paso-config', 'ev-crear-paso-fecha', 'ev-crear-paso-hora'];
+  } else if (t === 'recurrente') {
+    _EV_CREAR_STEPS = ['ev-crear-paso-tipo', 'ev-crear-paso-lugar', 'ev-crear-paso-config', 'ev-crear-paso-hora'];
+  } else {
+    _EV_CREAR_STEPS = ['ev-crear-paso-tipo'];
+  }
+}
+
 function _evCrearResetUI() {
   document.querySelectorAll('#ev-crear-tipo-cat-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   document.querySelectorAll('#ev-crear-recurrencia-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   document.querySelectorAll('#ev-crear-dias-row .ev-dia-circulo').forEach(function(c) { c.classList.remove('activa'); });
-  document.querySelectorAll('#ev-crear-frec-unidad-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
-  var frecNum = document.getElementById('ev-crear-frec-num'); if (frecNum) frecNum.value = '';
-  ['ev-crear-rec-dias', 'ev-crear-rec-cada', 'ev-crear-rec-fecha-wrap', 'ev-crear-hora-wrap', 'ev-crear-rec-semanal-wrap', 'ev-crear-descanso-wrap'].forEach(function(id) {
+  var frecResumen = document.getElementById('ev-crear-frec-resumen');
+  if (frecResumen) { frecResumen.style.display = 'none'; frecResumen.textContent = ''; }
+  ['ev-crear-rec-dias', 'ev-crear-rec-semanal-wrap', 'ev-crear-fecha-referencia-wrap', 'ev-crear-fecha-unico-wrap'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.style.display = 'none';
   });
 }
 
-/* ── Navegación entre los 3 pasos ─────────────────────────────────────── */
-function _evCrearMostrarPaso(idx) {
-  _EV_CREAR_STEPS.forEach(function(s, i) {
+/* ── Navegación entre pasos -- ver el comentario del encabezado de esta
+   sección para el detalle completo de por qué es por ID de paso (string) y
+   no por índice. ─────────────────────────────────────────────────────── */
+function _evCrearMostrarPaso(pasoId) {
+  _EV_CREAR_TODOS_LOS_PASOS.forEach(function(s) {
     var el = document.getElementById(s);
-    if (el) el.classList.toggle('activo', i === idx);
+    if (el) el.classList.toggle('activo', s === pasoId);
   });
-  _evCrearCurIdx = idx;
+  _evCrearPasoActual = pasoId;
   _evCrearRenderProg();
   // Título de la nav = nombre del paso actual, mismo helper de fade que
   // _evLugarMostrarPaso()/el timeline principal (_evFadeSwap()) -- no un
   // fade propio a mano.
   var tituloEl = document.getElementById('ev-crear-form-titulo');
-  if (tituloEl) _evFadeSwap(tituloEl, function() { tituloEl.textContent = _EV_CREAR_STEP_TITULOS[idx]; }, false);
+  if (tituloEl) _evFadeSwap(tituloEl, function() { tituloEl.textContent = _EV_CREAR_PASO_TITULOS[pasoId] || ''; }, false);
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  if (idx === 2) _evCrearActualizarDetalles();
+  if (pasoId === 'ev-crear-paso-config') _evCrearActualizarDetalles();
+  if (pasoId === 'ev-crear-paso-fecha') _evCrearActualizarPasoFecha();
+  if (pasoId === 'ev-crear-paso-hora') _evCrearActualizarPasoHora();
   _evCrearActualizarFooter();
 }
 function _evCrearRenderProg() {
   var cont = document.getElementById('ev-crear-prog'); if (!cont) return;
+  var idx = _EV_CREAR_STEPS.indexOf(_evCrearPasoActual);
   cont.innerHTML = '';
   for (var i = 0; i < _EV_CREAR_STEPS.length; i++) {
     var d = document.createElement('div');
-    d.className = 'salud-prog-dot' + (i < _evCrearCurIdx ? ' done' : (i === _evCrearCurIdx ? ' active' : ''));
+    d.className = 'salud-prog-dot' + (i < idx ? ' done' : (i === idx ? ' active' : ''));
     cont.appendChild(d);
   }
 }
@@ -6039,32 +6116,86 @@ function _evCrearRenderProg() {
 // `_evTimelineScrollY` ya queda guardado solo (el hook genérico `alSalir()`
 // de `ir()`, js/ui.js, corre para CUALQUIER salida de `#s-eventos`, no solo
 // por nav inferior), pero sin ese flag el restore de `ir()` nunca se activa.
-// Desde el paso "Detalles" (idx 2), "Descanso" vuelve directo al paso
-// "Tipo" (idx 0) -- nunca pasó por "Lugar" al avanzar (ver
-// _evCrearIrSiguiente()), así que tampoco debe pasar por ahí al volver.
 function _evCrearBack() {
-  if (_evCrearCurIdx === 0) { irEventos(); return; }
-  if (_evCrearCurIdx === 1) { _evCrearMostrarPaso(0); return; }
-  _evCrearMostrarPaso(_evCrearData.tipoEvento === 'descanso' ? 0 : 1);
-}
-// Reemplaza a la vieja _evCrearIrPaso1() -- ahora cubre las 2 transiciones
-// hacia adelante del wizard completo (Tipo->Lugar/Detalles, Lugar->Detalles).
-// "Descanso" salta Lugar por completo (no le hace falta un venue).
-function _evCrearIrSiguiente() {
-  if (_evCrearCurIdx === 0) {
-    if (!_evCrearData.tipoEvento) return;
-    _evCrearMostrarPaso(_evCrearData.tipoEvento === 'descanso' ? 2 : 1);
+  var p = _evCrearPasoActual;
+  if (p === 'ev-crear-paso-tipo') { irEventos(); return; }
+  if (p === 'ev-crear-paso-lugar') { _evCrearMostrarPaso('ev-crear-paso-tipo'); return; }
+  if (p === 'ev-crear-paso-config') { _evCrearMostrarPaso('ev-crear-paso-lugar'); return; }
+  if (p === 'ev-crear-paso-fecha') { _evCrearMostrarPaso('ev-crear-paso-config'); return; }
+  if (p === 'ev-crear-paso-hora') {
+    var previo = (_evCrearData.tipoEvento === 'recurrente' && _evCrearData.tipoRecurrencia === 'dias_semana')
+      ? 'ev-crear-paso-config' : 'ev-crear-paso-fecha';
+    _evCrearMostrarPaso(previo);
     return;
   }
-  if (_evCrearCurIdx === 1) {
-    if (!_evCrearLugarValido()) return;
-    _evCrearMostrarPaso(2);
+  if (p === 'ev-crear-paso-fecha-inicio') { _evCrearMostrarPaso('ev-crear-paso-tipo'); return; }
+  if (p === 'ev-crear-paso-fecha-fin') { _evCrearMostrarPaso('ev-crear-paso-fecha-inicio'); return; }
+}
+// Reemplaza a la vieja _evCrearIrPaso1() -- ahora cubre las transiciones
+// hacia adelante de TODOS los flujos (ver el comentario del encabezado de
+// esta sección para la secuencia completa de cada tipo).
+function _evCrearIrSiguiente() {
+  var p = _evCrearPasoActual;
+  if (p === 'ev-crear-paso-tipo') {
+    if (!_evCrearData.tipoEvento) return;
+    _evCrearMostrarPaso(_evCrearData.tipoEvento === 'descanso' ? 'ev-crear-paso-fecha-inicio' : 'ev-crear-paso-lugar');
+    return;
   }
+  if (p === 'ev-crear-paso-lugar') {
+    if (!_evCrearLugarValido()) return;
+    _evCrearMostrarPaso('ev-crear-paso-config');
+    return;
+  }
+  if (p === 'ev-crear-paso-config') {
+    if (!_evCrearPasoValido(p)) return;
+    var siguiente = (_evCrearData.tipoEvento === 'recurrente' && _evCrearData.tipoRecurrencia === 'dias_semana')
+      ? 'ev-crear-paso-hora' : 'ev-crear-paso-fecha';
+    _evCrearMostrarPaso(siguiente);
+    return;
+  }
+  if (p === 'ev-crear-paso-fecha') {
+    if (!_evCrearPasoValido(p)) return;
+    _evCrearMostrarPaso('ev-crear-paso-hora');
+    return;
+  }
+  if (p === 'ev-crear-paso-fecha-inicio') {
+    if (!_evCrearPasoValido(p)) return;
+    _evCrearMostrarPaso('ev-crear-paso-fecha-fin');
+    return;
+  }
+  // 'ev-crear-paso-hora'/'ev-crear-paso-fecha-fin' son los últimos pasos de
+  // sus flujos -- el footer ahí ya muestra "Guardar" (_evCrearGuardar()),
+  // esta función no aplica.
+}
+// Validez de los pasos INTERMEDIOS (habilita "Continuar") -- separada de
+// _evCrearPasoFinalValido() (habilita "Guardar"), que reusa la validación
+// completa ya existente (_evCrearRecurrenciaValidaWizard()) sin importar en
+// qué paso se completó cada campo.
+function _evCrearPasoValido(p) {
+  if (p === 'ev-crear-paso-lugar') return _evCrearLugarValido();
+  if (p === 'ev-crear-paso-config') {
+    if (_evCrearData.tipoEvento === 'unico') return true;
+    if (_evCrearData.tipoEvento === 'recurrente') {
+      var t = _evCrearData.tipoRecurrencia;
+      if (t === 'dias_semana') return _evCrearData.diasSemana.length > 0;
+      if (t === 'cada_tantos') return _evCrearData.frecuenciaNumero != null && !!_evCrearData.frecuenciaUnidad;
+    }
+    return false;
+  }
+  if (p === 'ev-crear-paso-fecha') return !!_evCrearData.fecha;
+  if (p === 'ev-crear-paso-fecha-inicio') return !!_evCrearData.descansoFechaDesde;
+  return false;
+}
+function _evCrearPasoFinalValido() {
+  if (_evCrearPasoActual === 'ev-crear-paso-hora') return _evCrearRecurrenciaValidaWizard();
+  if (_evCrearPasoActual === 'ev-crear-paso-fecha-fin') return !!(_evCrearData.descansoFechaDesde && _evCrearData.descansoFechaHasta);
+  return false;
 }
 function _evCrearActualizarFooter() {
   var footer = document.getElementById('cta-footer-s-eventos-crear');
   var btn = document.getElementById('ev-crear-btn-footer'); if (!btn) return;
-  if (_evCrearCurIdx === 0) {
+  var p = _evCrearPasoActual;
+  if (p === 'ev-crear-paso-tipo') {
     // Paso "Tipo": sin botón de footer real -- tocar una card ya avanza sola
     // (_evCrearSetTipo() -> _evCrearIrSiguiente()), ver #ev-crear-paso-tipo
     // en index.html. El footer fijo queda oculto acá en vez de borrado del
@@ -6074,16 +6205,18 @@ function _evCrearActualizarFooter() {
     btn.textContent = 'Continuar';
     btn.onclick = _evCrearIrSiguiente;
     btn.disabled = !_evCrearData.tipoEvento;
-  } else if (_evCrearCurIdx === 1) {
-    if (footer) footer.style.display = '';
-    btn.textContent = 'Continuar';
-    btn.onclick = _evCrearIrSiguiente;
-    btn.disabled = !_evCrearLugarValido();
-  } else {
-    if (footer) footer.style.display = '';
+    return;
+  }
+  if (footer) footer.style.display = '';
+  var esUltimo = (p === 'ev-crear-paso-hora' || p === 'ev-crear-paso-fecha-fin');
+  if (esUltimo) {
     btn.textContent = 'Guardar';
     btn.onclick = _evCrearGuardar;
-    btn.disabled = !_evCrearDetalleValido();
+    btn.disabled = !_evCrearPasoFinalValido();
+  } else {
+    btn.textContent = 'Continuar';
+    btn.onclick = _evCrearIrSiguiente;
+    btn.disabled = !_evCrearPasoValido(p);
   }
 }
 
@@ -6141,8 +6274,10 @@ function _evCrearRenderLugares(lista) {
       }).join('');
   cont.innerHTML = htmlLista + _evCrearAgregarLugarHtml();
 }
+// `.ev-crear-venue-add` (css/eventos.css) -- borde punteado, sin fondo
+// sólido, para distinguirla visualmente de las cards de venues reales.
 function _evCrearAgregarLugarHtml() {
-  return '<div class="ev-ant-card ev-crear-venue-card" onclick="irEvLugarFormNuevo(\'desde_crear\')">' +
+  return '<div class="ev-ant-card ev-crear-venue-card ev-crear-venue-add" onclick="irEvLugarFormNuevo(\'desde_crear\')">' +
     '<div class="ev-card-top-row">' +
       '<div class="ev-card-icon"><span class="material-symbols-outlined">add_circle</span></div>' +
       '<div class="ev-card-body"><div class="ev-card-titulo">Agregar lugar</div></div>' +
@@ -6166,14 +6301,13 @@ function _evCrearLugarValido() {
   return !!_evCrearData.venueExistente;
 }
 
-/* ── Paso "Tipo" (idx 0) -- 3 cards (_evCrearSetTipo()) que avanzan solas
-   al tocarlas, sin botón de footer (ver _evCrearActualizarFooter()). "Único"
-   ya no se elige con la 3ra pill de #ev-crear-recurrencia-pills (quedaba
-   redundante con este selector de más alto nivel) -- fija
-   `_evCrearData.tipoRecurrencia = 'unico'` a mano y reusa
-   _evCrearMostrarSubRecurrencia() para revelar "Fecha única"+"Hora" directo,
-   sin pasar por las pills (ocultas para este tipo dentro de
-   #ev-crear-rec-semanal-wrap, ver _evCrearActualizarDetalles()). ──── */
+/* ── Paso "Tipo" -- 3 cards (_evCrearSetTipo()) que avanzan solas al
+   tocarlas, sin botón de footer (ver _evCrearActualizarFooter()). "Único"
+   ya no se elige con una pill dentro de "Detalles" (quedaba redundante con
+   este selector de más alto nivel) -- fija `_evCrearData.tipoRecurrencia =
+   'unico'` a mano, que es lo que hace que el paso "Fecha" muestre el
+   calendario de fecha única (ver _evCrearActualizarPasoFecha()) en vez del
+   de fecha de referencia. ──── */
 function _evCrearSetTipo(tipo) {
   _evCrearData.tipoEvento = tipo;
   // Si cambia el tipo, resetear tipoEventoCategoria (no aplica a "descanso")
@@ -6183,7 +6317,7 @@ function _evCrearSetTipo(tipo) {
   document.querySelectorAll('#ev-crear-tipo-cat-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   _evCrearData.tipoRecurrencia = (tipo === 'unico') ? 'unico' : null;
   document.querySelectorAll('#ev-crear-recurrencia-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
-  _evCrearActualizarDetalles();
+  _evCrearRecalcularSteps();
   _evCrearIrSiguiente();
 }
 function _evCrearSetTipoCategoria(cat) {
@@ -6194,9 +6328,9 @@ function _evCrearSetTipoCategoria(cat) {
 }
 // Setter de estado puro (sin tocar el DOM del calendario) -- llamado por
 // _evCrearDescCalTocarDia() después de un tap real. Separado de esa función
-// para que _evCrearDetalleValido()/_evCrearActualizarFooter() tengan un solo
-// punto de entrada al estado, mismo criterio que el resto de setters de
-// _evCrearData en este archivo.
+// para que _evCrearPasoValido()/_evCrearPasoFinalValido()/
+// _evCrearActualizarFooter() tengan un solo punto de entrada al estado,
+// mismo criterio que el resto de setters de _evCrearData en este archivo.
 function _evCrearSetDescansoFecha(cual, v) {
   if (cual === 'desde') _evCrearData.descansoFechaDesde = v || null;
   else _evCrearData.descansoFechaHasta = v || null;
@@ -6259,69 +6393,43 @@ function _evCrearDescActualizarResumen(cual) {
   var valor = cual === 'desde' ? _evCrearData.descansoFechaDesde : _evCrearData.descansoFechaHasta;
   el.textContent = valor ? _evAntFechaLegible(valor) : '';
 }
-/* Muestra/oculta las secciones del paso "Detalles" según
-   _evCrearData.tipoEvento -- llamada al entrar al paso (_evCrearMostrarPaso())
-   y cada vez que _evCrearSetTipo() cambia de tipo. */
+/* ── Paso "Detalles" (id `ev-crear-paso-config`) -- categoría (siempre
+   visible, este paso ya no lo comparte con "Descanso") + tipo de
+   recurrencia para "Recurrente" ("Días de la semana" revela el selector de
+   días inline acá mismo; "Personalizada" abre un bottom sheet en vez de
+   expandir contenido, ver _evCrearSelRecurrencia() más abajo). "Único" no
+   muestra nada de recurrencia acá -- nada que elegir, solo la categoría. ── */
 function _evCrearActualizarDetalles() {
-  var t = _evCrearData.tipoEvento;
-  // Wrapper con el label "Tipo de evento" + las pills juntos (ver
-  // MANIFEST.md "Cambios recientes" -- bug real corregido: antes solo se
-  // ocultaban las pills, el label quedaba huérfano en "Descanso").
-  var tipoCatWrap = document.getElementById('ev-crear-tipo-cat-wrap');
-  if (tipoCatWrap) tipoCatWrap.style.display = (t === 'descanso') ? 'none' : '';
   var semanalWrap = document.getElementById('ev-crear-rec-semanal-wrap');
-  if (semanalWrap) semanalWrap.style.display = (t === 'recurrente') ? '' : 'none';
-  var descansoWrap = document.getElementById('ev-crear-descanso-wrap');
-  if (descansoWrap) descansoWrap.style.display = (t === 'descanso') ? '' : 'none';
-  if (t === 'recurrente' || t === 'unico') {
-    _evCrearMostrarSubRecurrencia();
-  } else {
-    ['ev-crear-rec-dias', 'ev-crear-rec-cada', 'ev-crear-rec-fecha-wrap', 'ev-crear-hora-wrap'].forEach(function(id) {
-      var el = document.getElementById(id); if (el) el.style.display = 'none';
-    });
-  }
+  if (semanalWrap) semanalWrap.style.display = (_evCrearData.tipoEvento === 'recurrente') ? '' : 'none';
+  _evCrearMostrarDiasSiCorresponde();
+  var frecResumen = document.getElementById('ev-crear-frec-resumen');
+  if (frecResumen) frecResumen.style.display = (_evCrearData.tipoRecurrencia === 'cada_tantos' && _evCrearData.frecuenciaNumero != null) ? 'block' : 'none';
 }
-function _evCrearDetalleValido() {
-  var t = _evCrearData.tipoEvento;
-  if (t === 'recurrente' || t === 'unico') return _evCrearRecurrenciaValidaWizard();
-  if (t === 'descanso') return !!(_evCrearData.descansoFechaDesde && _evCrearData.descansoFechaHasta);
-  return false;
-}
-
-/* ── Paso "Detalles" -- recurrencia y horario, mismas pills/reveal inline
-   que el formulario de "Editar lugares" (_evLugarMostrarSubRecurrencia()),
-   adaptado a _evCrearData/ids propios. "Hora" es el stepper nuevo, inicia
-   la primera vez que se revela (una sola vez por visita al wizard). ──── */
 function _evCrearSelRecurrencia(el) {
   document.querySelectorAll('#ev-crear-recurrencia-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   el.classList.add('activa');
   _evCrearData.tipoRecurrencia = el.dataset.val;
-  _evCrearMostrarSubRecurrencia();
+  _evCrearRecalcularSteps();
+  _evCrearActualizarDetalles();
+  // "Personalizada" abre el bottom sheet en vez de expandir contenido
+  // inline (Cambio 2, ver MANIFEST.md "Cambios recientes") -- reemplaza al
+  // viejo bloque #ev-crear-rec-cada (número + pills de unidad + calendario
+  // de fecha de referencia, todo inline).
+  if (el.dataset.val === 'cada_tantos') _evCrearAbrirBsheetFrecuencia();
   _evCrearActualizarFooter();
 }
-function _evCrearMostrarSubRecurrencia() {
-  ['ev-crear-rec-dias', 'ev-crear-rec-cada', 'ev-crear-rec-fecha-wrap'].forEach(function(id) {
-    var el = document.getElementById(id); if (el) el.style.display = 'none';
-  });
-  var horaWrap = document.getElementById('ev-crear-hora-wrap');
-  var t = _evCrearData.tipoRecurrencia;
-  if (!t) { if (horaWrap) horaWrap.style.display = 'none'; return; }
-  var mapaId = { dias_semana: 'ev-crear-rec-dias', cada_tantos: 'ev-crear-rec-cada', unico: 'ev-crear-rec-fecha-wrap' };
-  var activo = document.getElementById(mapaId[t]);
-  if (activo) {
-    activo.style.display = 'block';
-    void activo.offsetWidth;
-    activo.style.animation = 'fadeIn 0.2s ease';
-  }
-  if (horaWrap) {
-    var primeraVez = horaWrap.style.display === 'none';
-    horaWrap.style.display = 'block';
-    if (primeraVez) {
-      void horaWrap.offsetWidth;
-      horaWrap.style.animation = 'fadeIn 0.2s ease';
-      _evHoraStepperInit('ev-crear-hora', _evCrearData.hora, function(v) { _evCrearData.hora = v; _evCrearActualizarFooter(); });
-    }
-  }
+// Reveal del selector de días (#ev-crear-rec-dias) SOLO para "Días de la
+// semana" -- "Personalizada" tiene su propio selector de días adentro del
+// bottom sheet (#ev-crear-frec-dias-row), no comparte este. Separada de
+// _evCrearActualizarDetalles() para poder llamarla también sola desde
+// _evCrearSelRecurrencia() sin repintar el resto del paso.
+function _evCrearMostrarDiasSiCorresponde() {
+  var el = document.getElementById('ev-crear-rec-dias'); if (!el) return;
+  var mostrar = _evCrearData.tipoRecurrencia === 'dias_semana';
+  var yaVisible = el.style.display === 'block';
+  el.style.display = mostrar ? 'block' : 'none';
+  if (mostrar && !yaVisible) { void el.offsetWidth; el.style.animation = 'fadeIn 0.2s ease'; }
 }
 function _evCrearToggleDia(el) {
   var dia = parseInt(el.dataset.dia, 10);
@@ -6331,17 +6439,139 @@ function _evCrearToggleDia(el) {
   else if (idx !== -1) { _evCrearData.diasSemana.splice(idx, 1); }
   _evCrearActualizarFooter();
 }
-function _evCrearSetFrecNum(v) { _evCrearData.frecuenciaNumero = v ? parseInt(v, 10) : null; _evCrearActualizarFooter(); }
-function _evCrearSelUnidad(el) {
+
+/* ── Bottom sheet "Frecuencia personalizada" (#ev-crear-bsheet-frecuencia,
+   index.html) -- Cambio 2, ver MANIFEST.md "Cambios recientes". Mismo
+   patrón `.bsheet`/`.bsheet-overlay` + `_registrarOverlayAbierto()` +
+   `history.back()` en el cierre normal que ya usa el resto de sheets de la
+   app (`_evAbrirSheetCancelar()`/`_evCerrarSheetCancelar()`, más arriba en
+   este archivo). Unidad de tiempo (pills) + cantidad (`.qty-stepper`, mismo
+   componente de Tareas/Equipamiento, `adminStepperChange()`/js/admin.js) +
+   día(s) de la semana (ocultos si la unidad es "Días"). Todo escribe EN
+   VIVO sobre `_evCrearData.frecConfig` (persiste entre aperturas -- volver
+   a abrir el sheet para editar no resetea nada); "Confirmar" solo cierra y
+   espeja `frecuenciaNumero`/`frecuenciaUnidad` (ver
+   _evCrearConfirmarBsheetFrecuencia() más abajo). ──────────────────────── */
+function _evCrearAbrirBsheetFrecuencia() {
+  var f = _evCrearData.frecConfig;
+  document.querySelectorAll('#ev-crear-frec-unidad-pills .aj-pill').forEach(function(p) {
+    p.classList.toggle('activa', p.dataset.val === f.unidad);
+  });
+  _adminSetStepperValue('ev-crear-frec-cantidad', f.cantidad);
+  document.querySelectorAll('#ev-crear-frec-dias-row .ev-dia-circulo').forEach(function(c) {
+    c.classList.toggle('activa', f.diasSemana.indexOf(parseInt(c.dataset.dia, 10)) !== -1);
+  });
+  var diasWrap = document.getElementById('ev-crear-frec-dias-wrap');
+  if (diasWrap) diasWrap.style.display = (f.unidad === 'dias') ? 'none' : 'block';
+  _evCrearFrecActualizarPreview();
+
+  var ov = document.getElementById('ev-crear-bsheet-frecuencia-overlay');
+  var sh = document.getElementById('ev-crear-bsheet-frecuencia');
+  if (!ov || !sh) return;
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(_evCrearCerrarBsheetFrecuencia);
+}
+function _evCrearCerrarBsheetFrecuencia(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var ov = document.getElementById('ev-crear-bsheet-frecuencia-overlay');
+  var sh = document.getElementById('ev-crear-bsheet-frecuencia');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+function _evCrearFrecSelUnidad(el) {
   document.querySelectorAll('#ev-crear-frec-unidad-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   el.classList.add('activa');
-  _evCrearData.frecuenciaUnidad = el.dataset.val;
+  _evCrearData.frecConfig.unidad = el.dataset.val;
+  var diasWrap = document.getElementById('ev-crear-frec-dias-wrap');
+  if (diasWrap) diasWrap.style.display = (el.dataset.val === 'dias') ? 'none' : 'block';
+  _evCrearFrecActualizarPreview();
+}
+// Llamada encadenada después de adminStepperChange() (mismo patrón ya usado
+// por _tarCrearActualizarFooter()/adminGuardarEquipAuto() en index.html) --
+// ese helper genérico ya escribió el valor nuevo en el <input type="hidden">
+// y el <span class="qty-value">, acá solo se refleja en frecConfig + el
+// texto de preview.
+function _evCrearFrecStepperCambio() {
+  var inp = document.getElementById('ev-crear-frec-cantidad');
+  _evCrearData.frecConfig.cantidad = inp ? (parseInt(inp.value, 10) || 1) : 1;
+  _evCrearFrecActualizarPreview();
+}
+function _evCrearFrecToggleDia(el) {
+  var dia = parseInt(el.dataset.dia, 10);
+  el.classList.toggle('activa');
+  var arr = _evCrearData.frecConfig.diasSemana;
+  var idx = arr.indexOf(dia);
+  if (el.classList.contains('activa')) { if (idx === -1) arr.push(dia); }
+  else if (idx !== -1) { arr.splice(idx, 1); }
+  _evCrearFrecActualizarPreview();
+}
+function _evCrearFrecActualizarPreview() {
+  var el = document.getElementById('ev-crear-frec-preview');
+  if (el) el.textContent = _evCrearFrecResumenTexto();
+}
+// Copia frecConfig -> frecuenciaNumero/frecuenciaUnidad (mismos 2 campos
+// que ya usaba "cada_tantos" antes de este cambio, ver
+// _evCrearRecurrenciaValidaWizard()/_evCrearGuardar() más abajo -- sin
+// tocar esas 2 funciones, siguen validando/armando el payload igual).
+// `diasSemana` del bottom sheet NO viaja al payload de guardado -- el
+// backend de `crearVenue` (nunca visto desplegado en `supabase/functions/
+// api/index.ts`, cualquier acción no listada ahí cae a `forwardToGAS()`
+// hacia Apps Script) no tiene manejo conocido de días de semana combinados
+// con "cada_tantos"; se captura solo para el texto de resumen (acá y en el
+// paso "Detalles") hasta que se confirme soporte real del lado backend --
+// señalado por honestidad, no resuelto en silencio.
+function _evCrearConfirmarBsheetFrecuencia() {
+  _evCrearData.frecuenciaNumero = _evCrearData.frecConfig.cantidad;
+  _evCrearData.frecuenciaUnidad = _evCrearData.frecConfig.unidad;
+  _evCrearCerrarBsheetFrecuencia();
+  var resumen = document.getElementById('ev-crear-frec-resumen');
+  if (resumen) {
+    resumen.textContent = _evCrearFrecResumenTexto();
+    resumen.style.display = 'block';
+    void resumen.offsetWidth; resumen.style.animation = 'fadeIn 0.2s ease';
+  }
   _evCrearActualizarFooter();
 }
+// "lunes"/"martes"/"miércoles"/"jueves"/"viernes" ya son iguales en singular
+// y plural en español ("el lunes"/"los lunes") -- solo "sábado"/"domingo"
+// cambian de forma al pluralizar, por eso la lista de abajo va directo en
+// plural (siempre se usa detrás de "los", nunca sueltos).
+var _EV_CREAR_DIAS_PLURAL = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábados', 'domingos'];
+function _evCrearFrecDiasTexto(dias) {
+  var nombres = dias.slice().sort(function(a, b) { return a - b; }).map(function(d) { return _EV_CREAR_DIAS_PLURAL[d - 1]; });
+  if (!nombres.length) return '';
+  if (nombres.length === 1) return nombres[0];
+  return nombres.slice(0, -1).join(', ') + ' y ' + nombres[nombres.length - 1];
+}
+function _evCrearFrecResumenTexto() {
+  var f = _evCrearData.frecConfig;
+  var n = f.cantidad || 1;
+  var diasTxt = _evCrearFrecDiasTexto(f.diasSemana || []);
+  if (f.unidad === 'dias') return 'Cada ' + n + ' día' + (n === 1 ? '' : 's');
+  if (f.unidad === 'semanas') {
+    var base = 'Cada ' + n + ' semana' + (n === 1 ? '' : 's');
+    return diasTxt ? base + ' los ' + diasTxt : base;
+  }
+  var base2 = n + (n === 1 ? ' vez al mes' : ' veces al mes');
+  return diasTxt ? base2 + ' los ' + diasTxt : base2;
+}
 
-/* Calendario inline de fecha (referencia/único) -- reusa tal cual los
-   helpers genéricos de fecha del timeline principal, mismo mecanismo que
-   _evLugarCalRender() de arriba. */
+/* ── Paso "Fecha del evento" (`ev-crear-paso-fecha`) -- 2 calendarios ya
+   existentes (fecha de referencia/fecha única), reasignados de "vivir
+   dentro de Detalles" a un paso propio -- _evCrearActualizarPasoFecha()
+   togglea cuál de los 2 wraps se muestra según tipoRecurrencia, llamada
+   desde _evCrearMostrarPaso() al entrar acá. Calendario inline (reusa tal
+   cual los helpers genéricos de fecha del timeline principal, mismo
+   mecanismo que _evLugarCalRender() de arriba). ──────────────────────── */
+function _evCrearActualizarPasoFecha() {
+  var t = _evCrearData.tipoRecurrencia;
+  var refWrap = document.getElementById('ev-crear-fecha-referencia-wrap');
+  if (refWrap) refWrap.style.display = (t === 'cada_tantos') ? '' : 'none';
+  var unicoWrap = document.getElementById('ev-crear-fecha-unico-wrap');
+  if (unicoWrap) unicoWrap.style.display = (t === 'unico') ? '' : 'none';
+}
 function _evCrearCalRender(cual) {
   var cont = document.getElementById('ev-crear-cal-' + cual); if (!cont) return;
   var m = _evCalMesDe(_evCrearCal[cual].mostrado);
@@ -6387,6 +6617,19 @@ function _evCrearCalTocarDia(cual, iso) {
 function _evCrearActualizarCalResumen(cual) {
   var el = document.getElementById('ev-crear-cal-' + cual + '-resumen');
   if (el) el.textContent = _evCrearData.fecha ? _evAntFechaLegible(_evCrearData.fecha) : '';
+}
+
+/* ── Paso "Hora de inicio" (`ev-crear-paso-hora`) -- el stepper YA existía
+   (_evHoraStepper*, ver ese bloque más arriba en este archivo), lo único
+   nuevo es CUÁNDO se inicializa: antes lo hacía _evCrearMostrarSubRecurrencia()
+   la primera vez que revelaba el wrap `#ev-crear-hora-wrap` dentro del paso
+   "Detalles"; ahora este paso entero ES ese wrap (mostrado/ocultado por
+   `.salud-paso.activo`, sin wrap interno propio), así que la bandera
+   `_evCrearHoraInicializada` reemplaza a ese chequeo de "primera vez". ── */
+function _evCrearActualizarPasoHora() {
+  if (_evCrearHoraInicializada) return;
+  _evCrearHoraInicializada = true;
+  _evHoraStepperInit('ev-crear-hora', _evCrearData.hora, function(v) { _evCrearData.hora = v; _evCrearActualizarFooter(); });
 }
 function _evCrearRecurrenciaValidaWizard() {
   var t = _evCrearData.tipoRecurrencia;
