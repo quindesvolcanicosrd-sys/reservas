@@ -3887,14 +3887,14 @@ function _evAntFetchReglas(onOk, onErr) {
 // principal. Solo toca eventos FUTUROS (fecha >= hoy, mismo criterio que
 // `_evEsPasado()`/`_evHoyISO()` del resto del archivo) -- una regla nunca
 // debe reescribir la asistencia de un evento que ya pasó. Orden de
-// aplicación intencional para que gane la más específica: 'indefinido'
-// primero (la menos específica, cualquier evento futuro desde su fecha de
-// inicio sin fin), 'meses' después (pisa a 'indefinido' en los meses que
-// aplique -- matchea por número de mes de `ev.fecha`, cualquier año, mismo
-// criterio que la grilla de meses del wizard, ver `_evAntData.meses`),
-// 'periodo' al final (pisa a las 2 anteriores dentro de su rango acotado)
-// -- cada pasada sobreescribe `ev.miEstado` de los eventos que matchea, así
-// que el orden de los 3 `aplicarTipoRango()` ES la prioridad real.
+// aplicación intencional para que gane la más específica: `reglas` se
+// ordena primero (`orden`, 'indefinido' < 'meses' < 'periodo') y RECIÉN
+// DESPUÉS se itera evento por evento aplicando cada regla en ese orden --
+// así 'meses' siempre pisa a 'indefinido', y 'periodo' siempre pisa a las
+// 2 anteriores (matchea por número de mes de `ev.fecha`, cualquier año,
+// mismo criterio que la grilla de meses del wizard, ver `_evAntData.meses`)
+// -- cada match sobreescribe `ev.miEstado`, así que el orden del `.sort()`
+// ES la prioridad real.
 function _evAntReconciliarConReglas(reglas) {
   if (!reglas || !reglas.length) return;
   var hoy = _evHoyISO();
@@ -3903,23 +3903,20 @@ function _evAntReconciliarConReglas(reglas) {
   function tipoAplica(r, ev) {
     return !r.tiposEvento || !r.tiposEvento.length || r.tiposEvento.indexOf(ev.tipo) !== -1;
   }
-  function aplicarTipoRango(tipoRango, matchFecha) {
-    reglas.filter(function(r) { return r.tipoRango === tipoRango; }).forEach(function(r) {
-      futuros.forEach(function(ev) {
-        if (tipoAplica(r, ev) && matchFecha(r, ev)) ev.miEstado = r.estado;
-      });
-    });
+  function matchFecha(r, ev) {
+    if (r.tipoRango === 'indefinido') return !!r.fechaDesde && _evFechaCmp(ev.fecha, r.fechaDesde) >= 0;
+    if (r.tipoRango === 'meses') return (r.meses || []).indexOf(parseInt(ev.fecha.split('-')[1], 10)) !== -1;
+    if (r.tipoRango === 'periodo') return !!r.fechaDesde && !!r.fechaHasta && _evFechaCmp(ev.fecha, r.fechaDesde) >= 0 && _evFechaCmp(ev.fecha, r.fechaHasta) <= 0;
+    return false;
   }
 
-  aplicarTipoRango('indefinido', function(r, ev) {
-    return !!r.fechaDesde && _evFechaCmp(ev.fecha, r.fechaDesde) >= 0;
-  });
-  aplicarTipoRango('meses', function(r, ev) {
-    var mes = parseInt(ev.fecha.split('-')[1], 10);
-    return (r.meses || []).indexOf(mes) !== -1;
-  });
-  aplicarTipoRango('periodo', function(r, ev) {
-    return !!r.fechaDesde && !!r.fechaHasta && _evFechaCmp(ev.fecha, r.fechaDesde) >= 0 && _evFechaCmp(ev.fecha, r.fechaHasta) <= 0;
+  var orden = { 'indefinido': 0, 'meses': 1, 'periodo': 2 };
+  reglas.sort(function(a, b) { return orden[a.tipoRango] - orden[b.tipoRango]; });
+
+  reglas.forEach(function(r) {
+    futuros.forEach(function(ev) {
+      if (tipoAplica(r, ev) && matchFecha(r, ev)) ev.miEstado = r.estado;
+    });
   });
 }
 
