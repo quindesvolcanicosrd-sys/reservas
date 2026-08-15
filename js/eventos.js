@@ -6959,9 +6959,12 @@ function _evOffseasonEliminar(id) {
 //    en adelante, acotado a `fechaHasta` si es `'periodo'`. `'periodo'`
 //    también marca cada fila tocada como excepción (mismo motivo que
 //    individual); `'desde_aqui'` NO -- es un cambio permanente del patrón,
-//    así que además actualiza `venues.hora` (si `campos.inicia` viene) para
-//    que los eventos que la regla genere a futuro también nazcan con el
-//    horario nuevo, no solo los ya existentes.
+//    así que además actualiza la REGLA (`venues.inicia`/`venues.lugar`, solo
+//    los campos que de verdad cambiaron) para que los eventos que la regla
+//    genere a futuro también nazcan con el horario/lugar nuevo, no solo los
+//    ya existentes -- bug real corregido en esta tanda: antes solo cubría
+//    `inicia`, dejando `venues.lugar` sin sincronizar cuando el único campo
+//    tocado era el lugar (ver MANIFEST.md "Cambios recientes").
 function _evAdminEditarEvento(idEvento, campos, modo, fechaDesde, fechaHasta, onOk, onErr) {
   var H = {
     'apikey': SUPABASE_ANON_KEY,
@@ -7004,10 +7007,30 @@ function _evAdminEditarEvento(idEvento, campos, modo, fechaDesde, fechaHasta, on
 
     var urlAsis = SUPABASE_URL + '/rest/v1/asistencias?id_regla=eq.' + encodeURIComponent(idRegla) + filtroFecha;
 
-    if (modo === 'desde_aqui' && campos.inicia !== undefined) {
-      // Actualiza eventos Y la regla del venue (para que los generados después también tengan la nueva hora)
+    // 'desde_aqui' además sincroniza la REGLA (`venues`, no solo las filas de
+    // `asistencias` ya generadas) para que los eventos futuros que esa regla
+    // vaya a generar nazcan con el valor nuevo -- `venues.inicia` para la
+    // hora, `venues.lugar` para el lugar (columna con nombre distinto a
+    // `asistencias.donde`, ver `_evLugarGuardar()` más arriba en este
+    // archivo). Bug real corregido acá (ver MANIFEST.md "Cambios
+    // recientes"): antes solo cubría la hora (`campos.inicia`) -- si el
+    // admin cambiaba SOLO el lugar en este modo, las filas de `asistencias`
+    // ya existentes quedaban bien, pero `venues.lugar` nunca se tocaba, así
+    // que la próxima vez que la regla generara eventos nuevos
+    // (`_mantenerVentanaAsistenciasInterno()`) seguían naciendo con el lugar
+    // viejo. Caveat conocido, no resuelto acá (fuera de alcance de este
+    // fix, señalado por honestidad): este PATCH solo manda `lugar`, no
+    // `google_maps`/`tipo_icono`/etc. del venue nuevo -- la regla queda con
+    // el nombre correcto pero el resto de los metadatos del venue anterior,
+    // mismo hueco que ya tenía el PATCH a `asistencias` (que tampoco
+    // sincroniza `asistencias.google_maps` al cambiar `donde`).
+    var patchVenue = {};
+    if (campos.inicia !== undefined) patchVenue.inicia = campos.inicia;
+    if (campos.donde !== undefined) patchVenue.lugar = campos.donde;
+
+    if (modo === 'desde_aqui' && Object.keys(patchVenue).length > 0) {
       patch(urlAsis, upd, function() {
-        patch(SUPABASE_URL + '/rest/v1/venues?id=eq.' + encodeURIComponent(idRegla), { inicia: campos.inicia }, onOk, onErr);
+        patch(SUPABASE_URL + '/rest/v1/venues?id=eq.' + encodeURIComponent(idRegla), patchVenue, onOk, onErr);
       }, onErr);
     } else {
       patch(urlAsis, upd, onOk, onErr);
