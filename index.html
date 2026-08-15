@@ -1132,7 +1132,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="ev-ant-card ev-crear-tipo-card" onclick="_evCrearSetTipo('recurrente')">
           <span class="material-symbols-outlined ev-crear-tipo-card-icono">repeat</span>
           <div class="ev-crear-tipo-card-titulo">Recurrente</div>
-          <div class="ev-crear-tipo-card-desc">Entrena o juega en un horario fijo</div>
+          <div class="ev-crear-tipo-card-desc">Eventos como entrenamientos que se repiten todas las semanas</div>
         </div>
         <div class="ev-ant-card ev-crear-tipo-card" onclick="_evCrearSetTipo('unico')">
           <span class="material-symbols-outlined ev-crear-tipo-card-icono">event</span>
@@ -1146,22 +1146,19 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
       </div>
 
-      <!-- Paso "Lugar" -- buscador local sobre _evLugares (ya cargado por
-           getVenues(), sin llamar a Google Places acá) + lista seleccionable
-           + un ítem final "Agregar lugar" que abre el formulario de venue
-           COMPARTIDO (#s-eventos-lugar-form, irEvLugarFormNuevo('desde_crear'))
-           -- este wizard YA NO tiene su propio mini-formulario de lugar
-           nuevo inline, ver `_evLugarFromWizard`/js/eventos.js. Sin pill de
+      <!-- Paso "Lugar" -- lista seleccionable sobre _evLugares (ya cargado
+           por getVenues(), sin llamar a Google Places acá) + un ítem final
+           "Agregar lugar" que abre el formulario de venue COMPARTIDO
+           (#s-eventos-lugar-form, irEvLugarFormNuevo('desde_crear')) -- este
+           wizard YA NO tiene su propio mini-formulario de lugar nuevo
+           inline, ver `_evLugarFromWizard`/js/eventos.js. Sin buscador ni
+           título/párrafo propios acá (ver MANIFEST.md "Cambios recientes"
+           -- el título de la nav, "Seleccionar lugar", ya cubre esa
+           función; el contenido arranca directo con la lista). Sin pill de
            "¿Requiere reserva?" acá a propósito (no pedida para este
            wizard) -- crearVenue() la recibe con el default 'SI', editable
            después desde "Editar lugares" si hace falta. -->
       <div class="salud-paso" id="ev-crear-paso-lugar">
-        <p class="ev-lugar-campo-label" style="margin-top:0;">Lugar</p>
-        <p class="ev-ant-intro" style="text-align:left;margin:0 0 14px;">Los lugares de tipo Entrenamiento requieren reserva previa de cancha.</p>
-        <div class="app-nav-search" style="margin-bottom:12px;">
-          <span class="material-symbols-outlined">search</span>
-          <input type="text" id="ev-crear-buscador-lugar" placeholder="Buscar un lugar..." autocomplete="off" oninput="_evCrearFiltrarLugares(this.value)">
-        </div>
         <div id="ev-crear-lista-lugares"></div>
       </div>
 
@@ -1259,21 +1256,38 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           </div>
         </div>
 
-        <!-- Descanso -- rango de fechas, 2 date-pickers nativos (no el
-             calendario "ida y vuelta" de #s-eventos-crear-descanso): el
+        <!-- Descanso -- 2 calendarios inline independientes (Desde/Hasta),
+             mismo motor/clases ya usado por "referencia"/"único" más arriba
+             en este mismo paso (_evCrearCalRender(), ver
+             .ev-ant-cal-nav*/.ev-cal-grid) -- NO la selección de rango "ida
+             y vuelta" de un solo calendario que usa "Por período"
+             (Asistencia Anticipada/#ev-ant-paso1-periodo): acá cada extremo
+             tiene su propio calendario con mes navegable independiente, ver
+             _evCrearDescCal*()/js/eventos.js (prefijo propio, mismo patrón
+             que _evAntCalMoverMes()/_evAntCalRender() pero sin compartir
+             estado con Asistencia Anticipada). Sin botón "restablecer" --
+             a diferencia de un rango de un solo calendario, cada fecha acá
+             ya es independiente y reelegible con solo tocar otro día. El
              guardado real de este tipo todavía es un stub (toast
-             "próximamente", ver _evCrearGuardar()/js/eventos.js), un
-             calendario custom completo no se justifica todavía para una
-             sección que no persiste nada. -->
+             "próximamente", ver _evCrearGuardar()/js/eventos.js). -->
         <div id="ev-crear-descanso-wrap" style="display:none;margin-top:18px;">
-          <div class="ev-lugar-campo" style="margin-top:0;">
-            <p class="ev-lugar-campo-label">Desde</p>
-            <input type="date" class="ev-lugar-input" id="ev-crear-descanso-desde" onchange="_evCrearSetDescansoFecha('desde', this.value)">
+          <p class="ev-lugar-campo-label" style="margin-top:0;">Fecha de inicio</p>
+          <div class="ev-ant-cal-nav">
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescCalMoverMes('desde',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+            <span class="ev-ant-cal-nav-label" id="ev-crear-desc-cal-desde-label"></span>
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescCalMoverMes('desde',1)"><span class="material-symbols-outlined">chevron_right</span></button>
           </div>
-          <div class="ev-lugar-campo">
-            <p class="ev-lugar-campo-label">Hasta</p>
-            <input type="date" class="ev-lugar-input" id="ev-crear-descanso-hasta" onchange="_evCrearSetDescansoFecha('hasta', this.value)">
+          <div id="ev-crear-desc-cal-desde"></div>
+          <div class="ev-lugar-cal-resumen" id="ev-crear-desc-cal-desde-resumen"></div>
+
+          <p class="ev-lugar-campo-label" style="margin-top:20px;">Fecha de fin</p>
+          <div class="ev-ant-cal-nav">
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescCalMoverMes('hasta',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+            <span class="ev-ant-cal-nav-label" id="ev-crear-desc-cal-hasta-label"></span>
+            <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescCalMoverMes('hasta',1)"><span class="material-symbols-outlined">chevron_right</span></button>
           </div>
+          <div id="ev-crear-desc-cal-hasta"></div>
+          <div class="ev-lugar-cal-resumen" id="ev-crear-desc-cal-hasta-resumen"></div>
         </div>
       </div>
 
@@ -2640,7 +2654,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=5f18b1a9"></script>
-<script src="js/eventos.js?v=a226d57d"></script>
+<script src="js/eventos.js?v=b8a48f00"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=7a7a6f20"></script>

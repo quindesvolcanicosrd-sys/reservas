@@ -5962,6 +5962,12 @@ var _EV_CREAR_STEP_TITULOS = ['Tipo de evento', 'Seleccionar lugar', 'Detalles d
 var _evCrearCurIdx = 0;
 var _evCrearData = {};
 var _evCrearCal = { referencia: { mostrado: null }, unico: { mostrado: null } };
+// Calendarios del paso "Descanso" -- 2 instancias independientes (Desde/
+// Hasta), mismo criterio de `.mostrado` (ISO string, no Date) que
+// _evCrearCal/_evLugarCal/_evAntCal de este archivo. Estado propio, nunca
+// comparte nada con _evCrearCal (que es de "referencia"/"único", del flujo
+// Recurrente/Único) ni con _evAntCal (Asistencia anticipada).
+var _evCrearDescCal = { desde: { mostrado: null }, hasta: { mostrado: null } };
 
 function irEvCrear() {
   _evCrearData = {
@@ -5974,6 +5980,8 @@ function irEvCrear() {
   var mesInicial = _evHoyISO();
   _evCrearCal.referencia.mostrado = mesInicial;
   _evCrearCal.unico.mostrado = mesInicial;
+  _evCrearDescCal.desde.mostrado = mesInicial;
+  _evCrearDescCal.hasta.mostrado = mesInicial;
   ir('s-eventos-crear');
   _evCrearResetUI();
   _evCrearMostrarPaso(0);
@@ -5982,6 +5990,10 @@ function irEvCrear() {
   _evCrearCalRender('unico');
   _evCrearActualizarCalResumen('referencia');
   _evCrearActualizarCalResumen('unico');
+  _evCrearDescCalRender('desde');
+  _evCrearDescCalRender('hasta');
+  _evCrearDescActualizarResumen('desde');
+  _evCrearDescActualizarResumen('hasta');
 }
 
 function _evCrearResetUI() {
@@ -5990,9 +6002,6 @@ function _evCrearResetUI() {
   document.querySelectorAll('#ev-crear-dias-row .ev-dia-circulo').forEach(function(c) { c.classList.remove('activa'); });
   document.querySelectorAll('#ev-crear-frec-unidad-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   var frecNum = document.getElementById('ev-crear-frec-num'); if (frecNum) frecNum.value = '';
-  var buscadorLugar = document.getElementById('ev-crear-buscador-lugar'); if (buscadorLugar) buscadorLugar.value = '';
-  var descDesde = document.getElementById('ev-crear-descanso-desde'); if (descDesde) descDesde.value = '';
-  var descHasta = document.getElementById('ev-crear-descanso-hasta'); if (descHasta) descHasta.value = '';
   ['ev-crear-rec-dias', 'ev-crear-rec-cada', 'ev-crear-rec-fecha-wrap', 'ev-crear-hora-wrap', 'ev-crear-rec-semanal-wrap', 'ev-crear-descanso-wrap'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.style.display = 'none';
   });
@@ -6183,10 +6192,72 @@ function _evCrearSetTipoCategoria(cat) {
     p.classList.toggle('activa', p.dataset.val === cat);
   });
 }
+// Setter de estado puro (sin tocar el DOM del calendario) -- llamado por
+// _evCrearDescCalTocarDia() después de un tap real. Separado de esa función
+// para que _evCrearDetalleValido()/_evCrearActualizarFooter() tengan un solo
+// punto de entrada al estado, mismo criterio que el resto de setters de
+// _evCrearData en este archivo.
 function _evCrearSetDescansoFecha(cual, v) {
   if (cual === 'desde') _evCrearData.descansoFechaDesde = v || null;
   else _evCrearData.descansoFechaHasta = v || null;
   _evCrearActualizarFooter();
+}
+
+/* ── Calendarios inline "Desde"/"Hasta" del paso "Descanso" -- mismo
+   mecanismo/clases que _evCrearCalRender('referencia'|'unico') más arriba
+   (helpers genéricos de fecha del timeline principal: _evCalMesDe/
+   _evLunesDeSemana/_evToISO/_evHoyISO/_evFechaCmp), 2 instancias
+   independientes en vez de un solo calendario de rango "ida y vuelta" (el
+   patrón que usa "Por período" en Asistencia Anticipada, _evAntCalRender())
+   -- acá cada extremo se elige por separado, con su propio mes navegable.
+   Bloquea fechas pasadas en AMBOS calendarios (una temporada de descanso no
+   debería poder arrancar ni terminar en el pasado). No valida que "Hasta"
+   sea posterior a "Desde" -- el guardado real de este tipo todavía es un
+   stub (ver _evCrearGuardar()), esa validación queda pendiente para cuando
+   se implemente el guardado real. ──────────────────────────────────────── */
+function _evCrearDescCalRender(cual) {
+  var cont = document.getElementById('ev-crear-desc-cal-' + cual); if (!cont) return;
+  var m = _evCalMesDe(_evCrearDescCal[cual].mostrado);
+  var labelEl = document.getElementById('ev-crear-desc-cal-' + cual + '-label');
+  if (labelEl) labelEl.textContent = NOMBRES_MESES[m.month] + ' ' + m.year;
+  var inicioGrid = _evLunesDeSemana(new Date(m.year, m.month, 1));
+  var finMes = new Date(m.year, m.month + 1, 0);
+  var finGrid = _evLunesDeSemana(finMes); finGrid.setDate(finGrid.getDate() + 6);
+  var hoy = _evHoyISO();
+  var seleccionada = cual === 'desde' ? _evCrearData.descansoFechaDesde : _evCrearData.descansoFechaHasta;
+  var html = _EV_DIAS_CORTOS.map(function(d) { return '<div class="ev-cal-dow">' + d + '</div>'; }).join('');
+  var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
+  while (cur <= finGrid) {
+    var celdaIso = _evToISO(cur);
+    var ajeno = cur.getMonth() !== m.month;
+    var pasado = _evFechaCmp(celdaIso, hoy) < 0;
+    var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (pasado ? ' ev-ant-cal-pasado' : '');
+    if (seleccionada && celdaIso === seleccionada) clases += ' ev-ant-cal-sel';
+    if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
+    var onclickAttr = pasado ? '' : ' onclick="_evCrearDescCalTocarDia(\'' + cual + '\',\'' + celdaIso + '\')"';
+    html += '<div class="' + clases + '" data-iso="' + celdaIso + '"' + onclickAttr + '><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
+    cur.setDate(cur.getDate() + 1);
+  }
+  // Fade al repintar -- mismo fix aplicado al resto de instancias de este
+  // componente en este archivo (ver comentario completo en _evAntCalRender()).
+  _evFadeSwap(cont, function() { cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>'; }, false);
+}
+function _evCrearDescCalMoverMes(cual, dir) {
+  var m = _evCalMesDe(_evCrearDescCal[cual].mostrado);
+  var year = m.year, month = m.month + dir;
+  if (month < 0) { month = 11; year--; } else if (month > 11) { month = 0; year++; }
+  _evCrearDescCal[cual].mostrado = _evToISO(new Date(year, month, 1));
+  _evCrearDescCalRender(cual);
+}
+function _evCrearDescCalTocarDia(cual, iso) {
+  _evCrearSetDescansoFecha(cual, iso);
+  _evCrearDescCalRender(cual);
+  _evCrearDescActualizarResumen(cual);
+}
+function _evCrearDescActualizarResumen(cual) {
+  var el = document.getElementById('ev-crear-desc-cal-' + cual + '-resumen'); if (!el) return;
+  var valor = cual === 'desde' ? _evCrearData.descansoFechaDesde : _evCrearData.descansoFechaHasta;
+  el.textContent = valor ? _evAntFechaLegible(valor) : '';
 }
 /* Muestra/oculta las secciones del paso "Detalles" según
    _evCrearData.tipoEvento -- llamada al entrar al paso (_evCrearMostrarPaso())
