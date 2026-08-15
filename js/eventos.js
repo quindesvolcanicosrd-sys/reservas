@@ -6264,8 +6264,11 @@ function _evCrearDescActualizarResumen(cual) {
    y cada vez que _evCrearSetTipo() cambia de tipo. */
 function _evCrearActualizarDetalles() {
   var t = _evCrearData.tipoEvento;
-  var catWrap = document.getElementById('ev-crear-tipo-cat-pills');
-  if (catWrap) catWrap.style.display = (t === 'descanso') ? 'none' : '';
+  // Wrapper con el label "Tipo de evento" + las pills juntos (ver
+  // MANIFEST.md "Cambios recientes" -- bug real corregido: antes solo se
+  // ocultaban las pills, el label quedaba huérfano en "Descanso").
+  var tipoCatWrap = document.getElementById('ev-crear-tipo-cat-wrap');
+  if (tipoCatWrap) tipoCatWrap.style.display = (t === 'descanso') ? 'none' : '';
   var semanalWrap = document.getElementById('ev-crear-rec-semanal-wrap');
   if (semanalWrap) semanalWrap.style.display = (t === 'recurrente') ? '' : 'none';
   var descansoWrap = document.getElementById('ev-crear-descanso-wrap');

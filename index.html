@@ -1172,11 +1172,19 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            _evCrearActualizarDetalles()/js/eventos.js. "Hora" es el stepper
            nuevo (_evHoraStepper*) en vez del <input type="time"> nativo. -->
       <div class="salud-paso" id="ev-crear-paso-detalle">
-        <p class="ev-lugar-campo-label" style="margin-top:0;">Tipo de evento</p>
-        <div class="aj-pills-row" id="ev-crear-tipo-cat-pills">
-          <span class="aj-pill" data-val="Entrenamiento" onclick="_evCrearSetTipoCategoria('Entrenamiento')">Entrenamiento</span>
-          <span class="aj-pill" data-val="Partido" onclick="_evCrearSetTipoCategoria('Partido')">Partido</span>
-          <span class="aj-pill" data-val="Evento" onclick="_evCrearSetTipoCategoria('Evento')">Evento</span>
+        <!-- Wrapper propio (label + pills juntos) para poder ocultar los 2 de
+             un tirón en "Descanso" (_evCrearActualizarDetalles(),
+             js/eventos.js) -- antes solo se ocultaban las pills
+             (#ev-crear-tipo-cat-pills), el label quedaba huérfano arriba del
+             wrap de descanso. Bug real corregido acá, ver MANIFEST.md
+             "Cambios recientes". -->
+        <div id="ev-crear-tipo-cat-wrap">
+          <p class="ev-lugar-campo-label" style="margin-top:0;">Tipo de evento</p>
+          <div class="aj-pills-row" id="ev-crear-tipo-cat-pills">
+            <span class="aj-pill" data-val="Entrenamiento" onclick="_evCrearSetTipoCategoria('Entrenamiento')">Entrenamiento</span>
+            <span class="aj-pill" data-val="Partido" onclick="_evCrearSetTipoCategoria('Partido')">Partido</span>
+            <span class="aj-pill" data-val="Evento" onclick="_evCrearSetTipoCategoria('Evento')">Evento</span>
+          </div>
         </div>
 
         <div id="ev-crear-rec-semanal-wrap" style="display:none;margin-top:18px;">
@@ -2654,7 +2662,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=5f18b1a9"></script>
-<script src="js/eventos.js?v=f4b5121c"></script>
+<script src="js/eventos.js?v=5538a3b3"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=7a7a6f20"></script>
