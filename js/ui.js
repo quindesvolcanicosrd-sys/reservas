@@ -251,11 +251,12 @@ function ir(id, desdeHistorial, sinTrampa) {
   // ("Aplicar", footer fijo hijo directo de `<body>`) es un elemento
   // SEPARADO del contenido de `#s-eventos-anticipada` -- su mostrar/ocultar
   // (`_evAntActualizarFooter()`/`_evAntOcultarFooter()`) no está atado a
-  // `.pantalla.activa` para nada, así que si `getReglasAsistenciaAnticipada`
-  // resolvía tarde con el usuario ya en OTRA pantalla (sin haber vuelto a
-  // entrar -- el caso que el guard de carga vigente no cubre, ver esa
-  // función), el footer podía quedar mostrándose flotando sobre esa otra
-  // pantalla. Doble protección, igual que `_s4TotalOcultarFijo()` arriba:
+  // `.pantalla.activa` para nada, así que si el fetch de reglas
+  // (`_evAntFetchReglas()`, js/eventos.js) resolvía tarde con el usuario ya
+  // en OTRA pantalla (sin haber vuelto a entrar -- el caso que el guard de
+  // carga vigente no cubre, ver esa función), el footer podía quedar
+  // mostrándose flotando sobre esa otra pantalla. Doble protección, igual
+  // que `_s4TotalOcultarFijo()` arriba:
   // ocultarlo de inmediato acá, en cuanto se abandona `s-eventos-anticipada`
   // por CUALQUIER motivo, sin depender únicamente de que la carga tardía
   // nunca lo muestre.

@@ -1078,7 +1078,7 @@
 .ev-ant-cal-pasado { opacity: 0.32; pointer-events: none; cursor: not-allowed; }
 .ev-ant-cal-pasado .ev-cal-num { color: var(--muted); }
 
-/* Skeleton del estado "resumen" mientras carga getReglasAsistenciaAnticipada
+/* Skeleton del estado "resumen" mientras carga _evAntFetchReglas()
    (ver "Cambios recientes" -- reemplaza el loader de pantalla completa que
    tenía antes). Reusa `.fi-skel-block` (el shimmer genérico, css/reservas.css
    -- mismo criterio que `_skeletonFechasHtml()`/js/reservas.js, no se

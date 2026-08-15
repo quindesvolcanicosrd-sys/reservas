@@ -1962,8 +1962,11 @@ function _evUpdateRsvpSliders(animate) {
 // las 2 cosas y avisa con un toast -- nunca deja la UI mostrando un estado
 // que en realidad no se guardó. `token: _token` (no `_token: _token`) --
 // mismo nombre de parámetro que usa CUALQUIER otra escritura real ya
-// confirmada de esta app (ej. `eliminarAsistenciaAnticipada()`, más abajo en
-// este archivo); el snippet de MANIFEST.md documenta `e.parameter._token`
+// confirmada de esta app contra el backend viejo de Apps Script (ej.
+// `subirFotoPerfil`, js/foto.js -- la Asistencia anticipada que citaba este
+// comentario antes ya migró a Supabase directo, ver "Cambios recientes",
+// así que dejó de ser un ejemplo válido de esto); el snippet de MANIFEST.md
+// documenta `e.parameter._token`
 // para esta acción puntual, pero como el backend real ya desplegado difiere
 // del snippet documentado en otros campos (ver _evMapEventoBackend()) no hay
 // forma de confirmar cuál de los 2 nombres usa de verdad sin una escritura
@@ -3797,29 +3800,62 @@ function _evFiltrarAsistenciaPorGrupo(cardEl, grupo) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   ASISTENCIA ANTICIPADA (ev-ant-*, #s-eventos-anticipada) -- a diferencia
-   del resto de este archivo (todavía sobre datos de prueba, ver cabecera),
-   esta sección SÍ llama al backend real (api()/apiPost(), js/api.js) contra
-   3 funciones de Apps Script -- 2 ya existentes (getReglasAsistenciaAnticipada/
-   aplicarAsistenciaAnticipada) + 1 nueva agregada a pedido en esta misma
-   sesión (eliminarAsistenciaAnticipada, ver MANIFEST.md). El backend no
-   vive en este repo (Apps Script, script.google.com) así que el contrato de
-   parámetros/campos de abajo es una convención razonable -- a confirmar/
-   ajustar contra el código real si no coincide 1:1. **`token: _token`
-   agregado a las 3 llamadas (ver MANIFEST.md "Cambios recientes" -- Victor
-   pidió sacar el `nombre: E.nombre` de prueba como credencial)**, mismo
-   patrón ya real que `subirFotoPerfil` (js/foto.js: `token:
-   (typeof _token !== 'undefined' ? _token : '')`) -- la única otra llamada
-   POST autenticada de toda la app. `nombre: E.nombre` se deja además, sin
-   quitarlo todavía: Code.gs (fuera de este repo) hoy resuelve la persona por
-   ese `nombre` tal como se lo mandan estas 3 funciones ya desplegadas -- si
-   se sacara acá sin tocar el backend a la vez, las 3 llamadas dejarían de
-   funcionar en producción hasta el próximo deploy de Apps Script. Pendiente
-   documentado en MANIFEST.md ("Cambios recientes"): Code.gs debe pasar a
-   derivar la persona de `e.parameter.token` (mismo helper que ya usa
-   `restaurarSesion()`) en vez de confiar en el `nombre` que manda el
-   cliente -- recién ahí `nombre` deja de ser necesario acá.
+   ASISTENCIA ANTICIPADA (ev-ant-*, #s-eventos-anticipada) -- MIGRADA de
+   Apps Script a Supabase directo (ver MANIFEST.md "Cambios recientes"),
+   mismo mecanismo que venues/temporadas_descanso: `fetch()` del navegador
+   directo a la REST API de Supabase (PostgREST, `SUPABASE_URL`/
+   `SUPABASE_ANON_KEY`, `js/config.js`), sin pasar por `api()`/`apiPost()`
+   (js/api.js, que hoy pegan contra la Edge Function -- y esta acción, al no
+   tener case propio ahí, terminaba reenviada a Apps Script vía
+   `forwardToGAS()`). Tabla `reglas_asistencia`: `id` (uuid, reemplaza el
+   viejo número de `fila` de Sheets -- `regla.id` en todo el JS de acá en
+   más), `nombre`, `tipo_rango`, `tipos_evento` (texto separado por comas,
+   NO array/JSON -- mismo contrato que ya mandaba el cliente antes de esta
+   migración, `.join(',')`; se separa de vuelta a array al leer,
+   `_evAntMapReglaSupabase()`, porque `_evAntResumenDetalle()` ya asume
+   array), `fecha_desde`, `fecha_hasta`, `estado`, `meses` (array real,
+   columna de tipo array/jsonb -- no se serializa a mano), `created_at`.
+   Sin `token`/`_token` -- ya no hace falta: la identidad viaja en el campo
+   `nombre` de cada fila, mismo criterio que `donde`/`asistencias.nombre` en
+   el resto de Eventos, no una sesión autenticada del lado del backend.
+   **El chequeo de solapamiento del flujo viejo (`{exito:false,
+   reglaExistente}` → `_evAntMostrarConflicto()`) se cae con esta migración**
+   -- era lógica de negocio de Code.gs, nunca confirmada 1:1 contra el
+   código real (ver comentario que tenía este bloque antes) y sin
+   equivalente en un `POST` crudo a PostgREST; decisión explícita de Victor
+   en esta tanda: sacarla sin más vueltas en vez de reimplementarla acá.
+   `_evAntMostrarConflicto()`/`_evAntCerrarConflicto()`/`#modal-ant-conflicto`
+   quedan en el código sin llamador real, por si se retoma más adelante.
    ═══════════════════════════════════════════════════════ */
+// Mapea una fila cruda de `reglas_asistencia` a la forma que ya espera el
+// resto de esta sección (id/tipoRango/tiposEvento/fechaDesde/fechaHasta/
+// estado/meses) -- mismo criterio que `_evMapVenueSupabase()`/
+// `_evMapEventoBackend()`, un solo punto de mapeo reusado por
+// `eventosAbrirAnticipada()` Y `_evAntRecargarLista()` (antes 2 llamadas
+// idénticas a `getReglasAsistenciaAnticipada` con el mismo shape, ahora 1
+// sola función de fetch+mapeo detrás de las 2).
+function _evAntMapReglaSupabase(row) {
+  return {
+    id: row.id,
+    tipoRango: row.tipo_rango,
+    tiposEvento: row.tipos_evento ? row.tipos_evento.split(',') : [],
+    fechaDesde: row.fecha_desde,
+    fechaHasta: row.fecha_hasta,
+    estado: row.estado,
+    meses: row.meses || [],
+  };
+}
+function _evAntFetchReglas(onOk, onErr) {
+  fetch(
+    SUPABASE_URL + '/rest/v1/reglas_asistencia?select=*&nombre=eq.' + encodeURIComponent(E.nombre) + '&order=created_at.desc',
+    { headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY } }
+  ).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function(rows) {
+    onOk((rows || []).map(_evAntMapReglaSupabase));
+  }).catch(onErr);
+}
 
 var _evAntData = {};
 var _evAntReglas = [];
@@ -3874,9 +3910,9 @@ function eventosAbrirAnticipada() {
   document.getElementById('ev-ant-lista').innerHTML = _evAntSkeletonHtml();
   document.getElementById('ev-ant-resumen').style.display = 'block';
   var miCarga = ++_evAntCargaId;
-  api({ action: 'getReglasAsistenciaAnticipada', nombre: E.nombre }, function(res) {
+  _evAntFetchReglas(function(reglas) {
     if (!_evAntCargaVigente(miCarga)) return; // el usuario ya salió (con o sin volver a entrar) -- esta respuesta quedó vieja
-    _evAntReglas = res || [];
+    _evAntReglas = reglas;
     if (_evAntReglas.length > 0) {
       _evAntRenderLista();
       document.getElementById('ev-ant-btn-nueva').style.display = 'block';
@@ -3915,9 +3951,9 @@ function _evAntRecargarLista(cb) {
   // nadie haya vuelto a entrar (o simplemente salido sin volver) mientras
   // este refresco estaba en vuelo.
   var miCarga = _evAntCargaId;
-  api({ action: 'getReglasAsistenciaAnticipada', nombre: E.nombre }, function(res) {
+  _evAntFetchReglas(function(reglas) {
     if (!_evAntCargaVigente(miCarga)) { if (typeof cb === 'function') cb(); return; }
-    _evAntReglas = res || [];
+    _evAntReglas = reglas;
     _evAntRenderLista();
     document.getElementById('ev-ant-btn-nueva').style.display = 'block';
     if (typeof cb === 'function') cb();
@@ -3943,10 +3979,10 @@ function _evAntRenderLista() {
           '<div class="ev-ant-card-sub">' + _evAntResumenDetalle(r) + '</div>' +
         '</div>' +
       '</div>' +
-      '<button type="button" class="ev-ant-card-edit" onclick="_evAntEditar(' + r.fila + ')" title="Editar">' +
+      '<button type="button" class="ev-ant-card-edit" onclick="_evAntEditar(\'' + r.id + '\')" title="Editar">' +
         '<span class="material-symbols-outlined">edit</span>' +
       '</button>' +
-      '<button type="button" class="ev-ant-card-del" onclick="_evAntEliminar(' + r.fila + ')" title="Eliminar">' +
+      '<button type="button" class="ev-ant-card-del" onclick="_evAntEliminar(\'' + r.id + '\')" title="Eliminar">' +
         '<span class="material-symbols-outlined">delete</span>' +
       '</button>' +
     '</div>';
@@ -3975,24 +4011,31 @@ function _evAntResumenDetalle(r) {
   return 'Tipos: ' + tipos + ' · Estado: ' + r.estado;
 }
 
-function _evAntEliminar(fila) {
+// DELETE directo a Supabase (mismo mecanismo que `_evOffseasonEliminar()`,
+// más abajo en este archivo -- ese comentario ya anticipaba esta migración)
+// -- `confirm()` nativo, sin `Prefer` (no hace falta el registro borrado de
+// vuelta, PostgREST responde 204 por default).
+function _evAntEliminar(id) {
   if (!confirm('¿Eliminar esta asistencia anticipada?')) return;
   mostrarCargando('Eliminando...');
-  apiPost({ action: 'eliminarAsistenciaAnticipada', token: _token, nombre: E.nombre, fila: fila }, function(res) {
+  fetch(SUPABASE_URL + '/rest/v1/reglas_asistencia?id=eq.' + id, {
+    method: 'DELETE',
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }
+  }).then(function(r) {
     ocultarCargando();
-    if (res && res.exito === false) { mostrarToast(res.error || 'No se pudo eliminar.', 'error'); return; }
+    if (!r.ok) { mostrarToast('No se pudo eliminar.', 'error'); return; }
     _evAntRecargarLista();
-  }, function(e) {
+  }).catch(function() {
     ocultarCargando();
-    mostrarToast(e && e.message ? e.message : 'No se pudo eliminar la asistencia anticipada.', 'error');
+    mostrarToast('No se pudo eliminar la asistencia anticipada.', 'error');
   });
 }
 
 // Ícono "editar" de cada card del resumen (ver "Cambios recientes", junto al
 // de eliminar) -- abre el mismo wizard de "Nueva asistencia anticipada"
 // pre-cargado con los datos de esa regla, ver _evAntIniciarWizard(regla).
-function _evAntEditar(fila) {
-  var regla = _evAntReglas.filter(function(r) { return r.fila === fila; })[0];
+function _evAntEditar(id) {
+  var regla = _evAntReglas.filter(function(r) { return r.id === id; })[0];
   if (!regla) return;
   _evAntIniciarWizard(regla);
 }
@@ -4014,8 +4057,8 @@ function _evAntBack() {
 // con "Estado a aplicar" abierto y "Frecuencia" cerrado). Con `regla` (desde
 // _evAntEditar()): pre-carga ambas secciones con los valores existentes y
 // arrancan las 2 COLAPSADAS (ya resueltas, listas para tocar y cambiar) --
-// `_evAntData.editando` guarda el número de fila vieja para el flujo
-// eliminar+crear de _evAntAplicar().
+// `_evAntData.editando` guarda el `id` (uuid) de la regla vieja para el
+// flujo eliminar+crear de _evAntAplicar().
 function _evAntIniciarWizard(regla) {
   _evAntData = {
     tipoRango: regla ? regla.tipoRango : null,
@@ -4023,7 +4066,7 @@ function _evAntIniciarWizard(regla) {
     fechaDesde: regla ? (regla.fechaDesde || null) : null,
     fechaHasta: regla ? (regla.fechaHasta || null) : null,
     estado: regla ? regla.estado : null,
-    editando: regla ? regla.fila : null
+    editando: regla ? regla.id : null
   };
   // Editar una regla existente ya trae fecha(s) resueltas -- el botón
   // restablecer debe estar visible desde el arranque, no recién tras un
@@ -4645,73 +4688,68 @@ function _evAntCalRender(cual) {
 
 // Botón final -- Estado y Frecuencia ya están validados en tiempo real (ver
 // _evAntCompleto(), el botón queda disabled hasta que ambos estén completos)
-// así que acá solo queda un guard defensivo, arma el payload y envía.
-// Edición (ver "Cambios recientes", _evAntData.editando -- número de fila de
-// la regla vieja, seteado por _evAntIniciarWizard(regla)/_evAntEditar()): no
-// existe una función de backend para actualizar en el lugar, así que el
-// frontend hace eliminarAsistenciaAnticipada(fila vieja) seguido de
-// aplicarAsistenciaAnticipada(datos nuevos) EN SECUENCIA, con un solo
-// mostrarCargando()/ocultarCargando() para las 2 llamadas -- el usuario no
-// debe percibir que son 2 requests. Si el usuario no cambió nada, el flujo
-// es idéntico (elimina y vuelve a crear con los mismos datos), sin caso
-// especial.
+// así que acá solo queda un guard defensivo, arma el body y envía.
+// Edición (ver "Cambios recientes", _evAntData.editando -- `id` uuid de la
+// regla vieja, seteado por _evAntIniciarWizard(regla)/_evAntEditar()): no
+// existe un UPDATE en el lugar, así que el frontend hace
+// `DELETE ?id=eq.<editando>` seguido de un `POST` con los datos nuevos EN
+// SECUENCIA, con un solo mostrarCargando()/ocultarCargando() para las 2
+// llamadas -- el usuario no debe percibir que son 2 requests. Si el usuario
+// no cambió nada, el flujo es idéntico (borra y vuelve a crear con los
+// mismos datos), sin caso especial. Sin chequeo de solapamiento (ver el
+// comentario del bloque de arriba -- se cayó con la migración a Supabase,
+// decisión explícita de Victor).
 function _evAntAplicar() {
   if (!_evAntCompleto()) return;
   if (_evAntData.tipoRango === 'indefinido') _evAntData.fechaDesde = _evAntData.fechaDesde || _evAntHoyISO();
 
-  var payload = {
-    action: 'aplicarAsistenciaAnticipada',
-    token: _token,
+  var body = {
     nombre: E.nombre,
-    tipoRango: _evAntData.tipoRango,
+    tipo_rango: _evAntData.tipoRango,
     // Hardcodeado: la asistencia anticipada aplica únicamente a
     // Entrenamientos (ver "Cambios recientes" -- Torneos/Asambleas no son
     // recurrentes, ya no hay selector de tipos de evento en el wizard).
-    // Bug real corregido (ver "Cambios recientes" -- reportado por Victor):
-    // iba con `JSON.stringify(['Entrenamiento'])` -> `'["Entrenamiento"]'`,
-    // con corchetes y comillas -- el backend (`_resolverAsistenciaAnticipada`,
-    // Code.gs) NO parsea JSON acá, hace `split(',')` sobre un string simple.
-    // `.join(',')` da el formato real que espera ("Entrenamiento", o
-    // "Entrenamiento,Torneo" si este array hardcodeado alguna vez suma un
-    // 2do valor).
-    tiposEvento: ['Entrenamiento'].join(','),
-    estado: _evAntData.estado
+    // `.join(',')`, no un array real -- `tipos_evento` es una columna de
+    // texto separado por comas (ver el comentario del bloque de arriba),
+    // mismo formato que ya mandaba el cliente antes de esta migración.
+    tipos_evento: ['Entrenamiento'].join(','),
+    estado: _evAntData.estado,
+    meses: null, fecha_desde: null, fecha_hasta: null
   };
-  if (_evAntData.tipoRango === 'meses') payload.meses = JSON.stringify(_evAntData.meses);
-  else if (_evAntData.tipoRango === 'periodo') { payload.fechaDesde = _evAntData.fechaDesde; payload.fechaHasta = _evAntData.fechaHasta; }
-  else payload.fechaDesde = _evAntData.fechaDesde;
+  if (_evAntData.tipoRango === 'meses') body.meses = _evAntData.meses;
+  else if (_evAntData.tipoRango === 'periodo') { body.fecha_desde = _evAntData.fechaDesde; body.fecha_hasta = _evAntData.fechaHasta; }
+  else body.fecha_desde = _evAntData.fechaDesde;
 
   var editando = _evAntData.editando;
 
   function crear() {
-    apiPost(payload, function(res) {
-      if (res && res.exito === false && res.reglaExistente) {
-        ocultarCargando();
-        _evAntMostrarConflicto(res.reglaExistente);
-        return;
-      }
+    fetch(SUPABASE_URL + '/rest/v1/reglas_asistencia', {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify(body)
+    }).then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
       _evAntRecargarLista(function() {
         ocultarCargando();
         _evAntCerrarWizardAResumen();
       });
-    }, function(e) {
+    }).catch(function(e) {
       ocultarCargando();
-      mostrarToast(e && e.message ? e.message : 'No se pudo aplicar la asistencia anticipada.', 'error');
+      mostrarToast((e && e.message) || 'No se pudo aplicar la asistencia anticipada.', 'error');
     });
   }
 
   mostrarCargando(editando ? 'Guardando cambios...' : 'Aplicando...');
   if (editando) {
-    apiPost({ action: 'eliminarAsistenciaAnticipada', token: _token, nombre: E.nombre, fila: editando }, function(res) {
-      if (res && res.exito === false) {
-        ocultarCargando();
-        mostrarToast(res.error || 'No se pudo guardar los cambios.', 'error');
-        return;
-      }
+    fetch(SUPABASE_URL + '/rest/v1/reglas_asistencia?id=eq.' + editando, {
+      method: 'DELETE',
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }
+    }).then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
       crear();
-    }, function(e) {
+    }).catch(function(e) {
       ocultarCargando();
-      mostrarToast(e && e.message ? e.message : 'No se pudo guardar los cambios.', 'error');
+      mostrarToast((e && e.message) || 'No se pudo guardar los cambios.', 'error');
     });
   } else {
     crear();
