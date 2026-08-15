@@ -1202,6 +1202,20 @@ function mostrarToast(msg, tipo, forzar) {
   t._timer = setTimeout(function() { t.classList.remove('visible'); }, 3000);
 }
 
+// Contador "X/max" genérico (`.form-char-counter`, css/global.css) --
+// reusado por varios inputs de texto corto con `maxlength` real (nombre de
+// venue x3 en Eventos, "Nombre Derby" en Ajustes, ver "Cambios recientes"),
+// un solo punto de esta lógica en vez de repetirla por caller. `var(--danger)`
+// desde que quedan 3 caracteres o menos -- mismo umbral para todos los
+// consumidores, pedido explícito, no configurable por ahora.
+function _actualizarContadorTexto(valor, contadorId, max) {
+  var el = document.getElementById(contadorId);
+  if (!el) return;
+  var len = (valor || '').length;
+  el.textContent = len + '/' + max;
+  el.classList.toggle('form-char-counter-limite', (max - len) <= 3);
+}
+
 function abrirModalInfoEstado() {
   var m = document.getElementById('modal-info-estado');
   if (!m) return;

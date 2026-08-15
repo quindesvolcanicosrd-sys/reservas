@@ -5058,6 +5058,7 @@ function _evLugarFormPintar() {
   // única dueña de `#ev-lugar-form-titulo` en esta pantalla.
   var nombreInp = document.getElementById('ev-lugar-nombre');
   if (nombreInp) nombreInp.value = _evLugarData.nombre || '';
+  _actualizarContadorTexto(_evLugarData.nombre, 'ev-lugar-nombre-contador', 15);
 
   document.querySelectorAll('#ev-lugar-icono-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.tipoIcono); });
   document.querySelectorAll('#ev-lugar-recurrencia-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.tipoRecurrencia); });
@@ -5153,7 +5154,7 @@ function _evLugarActualizarFooter() {
   }
 }
 
-function _evLugarSetNombre(v) { _evLugarData.nombre = v; _evLugarActualizarFooter(); }
+function _evLugarSetNombre(v) { _evLugarData.nombre = v; _actualizarContadorTexto(v, 'ev-lugar-nombre-contador', 15); _evLugarActualizarFooter(); }
 
 function _evLugarSelIcono(el) {
   document.querySelectorAll('#ev-lugar-icono-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
@@ -5349,9 +5350,14 @@ function _evLugarInicializarBuscador() {
     // Sugerencia de nombre solo si el campo sigue vacío -- nunca pisa un
     // nombre que el usuario ya haya escrito a mano.
     if (!_evLugarData.nombre && place.name) {
-      _evLugarData.nombre = place.name;
+      // `.substring(0,15)` -- el nombre sugerido por Places puede superar el
+      // límite del input (`maxlength`, que solo frena tipeo/paste real, no
+      // una asignación de `.value` por JS como esta), mismo límite real que
+      // el resto del campo.
+      _evLugarData.nombre = place.name.substring(0, 15);
       var nombreInp = document.getElementById('ev-lugar-nombre');
-      if (nombreInp) nombreInp.value = place.name;
+      if (nombreInp) nombreInp.value = _evLugarData.nombre;
+      _actualizarContadorTexto(_evLugarData.nombre, 'ev-lugar-nombre-contador', 15);
       _evLugarActualizarFooter();
     }
   });
@@ -5487,6 +5493,7 @@ function _evLugarEditarPintar() {
 
   var nombreInp = document.getElementById('ev-lugar-editar-nombre');
   if (nombreInp) nombreInp.value = _evLugarData.nombre || '';
+  _actualizarContadorTexto(_evLugarData.nombre, 'ev-lugar-editar-nombre-contador', 15);
   var mapsInp = document.getElementById('ev-lugar-editar-mapsurl');
   if (mapsInp) mapsInp.value = _evLugarData.mapsUrl || '';
 
@@ -5517,6 +5524,7 @@ function _evLugarEditarActualizarBoton() {
 
 function _evLugarEditarSetNombre(v) {
   _evLugarData.nombre = v;
+  _actualizarContadorTexto(v, 'ev-lugar-editar-nombre-contador', 15);
   var titulo = document.getElementById('ev-lugar-editar-titulo');
   if (titulo) titulo.textContent = 'Editar ' + (v || 'lugar');
   _evLugarEditarActualizarBoton();
@@ -5780,6 +5788,7 @@ function _evCrearResetUI() {
   document.querySelectorAll('#ev-crear-lugar-icono-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   var frecNum = document.getElementById('ev-crear-frec-num'); if (frecNum) frecNum.value = '';
   var nombreInp = document.getElementById('ev-crear-lugar-nombre'); if (nombreInp) nombreInp.value = '';
+  _actualizarContadorTexto('', 'ev-crear-lugar-nombre-contador', 15);
   var buscadorLugar = document.getElementById('ev-crear-buscador-lugar'); if (buscadorLugar) buscadorLugar.value = '';
   var nuevoLugarWrap = document.getElementById('ev-crear-nuevo-lugar'); if (nuevoLugarWrap) nuevoLugarWrap.style.display = 'none';
   ['ev-crear-rec-dias', 'ev-crear-rec-cada', 'ev-crear-rec-unico', 'ev-crear-hora-wrap'].forEach(function(id) {
@@ -5807,8 +5816,14 @@ function _evCrearRenderProg() {
     cont.appendChild(d);
   }
 }
+// `irEventos()`, no `ir('s-eventos')` a secas (ver "Cambios recientes" --
+// bug real: volver del FAB dejaba el timeline saltado a scroll 0). Solo
+// `irEventos()` arma `_evRestaurarScrollTimeline = true` antes de navegar --
+// `_evTimelineScrollY` ya queda guardado solo (el hook genérico `alSalir()`
+// de `ir()`, js/ui.js, corre para CUALQUIER salida de `#s-eventos`, no solo
+// por nav inferior), pero sin ese flag el restore de `ir()` nunca se activa.
 function _evCrearBack() {
-  if (_evCrearCurIdx === 0) { ir('s-eventos'); return; }
+  if (_evCrearCurIdx === 0) { irEventos(); return; }
   _evCrearMostrarPaso(0);
 }
 function _evCrearIrPaso1() {
@@ -5903,7 +5918,7 @@ function _evCrearMostrarNuevoLugar() {
   _evCrearLugarInicializarMapa();
   _evCrearActualizarFooter();
 }
-function _evCrearSetNombreNuevoLugar(v) { _evCrearData.nuevoLugar.nombre = v; _evCrearActualizarFooter(); }
+function _evCrearSetNombreNuevoLugar(v) { _evCrearData.nuevoLugar.nombre = v; _actualizarContadorTexto(v, 'ev-crear-lugar-nombre-contador', 15); _evCrearActualizarFooter(); }
 function _evCrearSelIconoNuevoLugar(el) {
   document.querySelectorAll('#ev-crear-lugar-icono-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   el.classList.add('activa');
@@ -5955,9 +5970,10 @@ function _evCrearLugarInicializarBuscador() {
     _evCrearLugarCentrarMapa({ lat: loc.lat(), lng: loc.lng() });
     _evCrearLugarActualizarUbicacion(loc.lat(), loc.lng(), place.url || null);
     if (!_evCrearData.nuevoLugar.nombre && place.name) {
-      _evCrearData.nuevoLugar.nombre = place.name;
+      _evCrearData.nuevoLugar.nombre = place.name.substring(0, 15);
       var nombreInp = document.getElementById('ev-crear-lugar-nombre');
-      if (nombreInp) nombreInp.value = place.name;
+      if (nombreInp) nombreInp.value = _evCrearData.nuevoLugar.nombre;
+      _actualizarContadorTexto(_evCrearData.nuevoLugar.nombre, 'ev-crear-lugar-nombre-contador', 15);
       _evCrearActualizarFooter();
     }
   });
@@ -6424,8 +6440,10 @@ function _evCrearDescansoActualizarChrome() {
 // que una entrada futura por `irEvCrearDescanso()` nunca herede un id viejo
 // (defensivo, `irEvCrearDescanso()` ya lo limpia igual apenas arranca).
 function _evCrearDescansoVolver() {
+  // irEventos(), no volver('s-eventos') -- mismo fix de scroll que
+  // _evCrearBack(), ver ese comentario.
   _evDescansoEditandoId = null;
-  volver('s-eventos');
+  irEventos();
 }
 function _evCrearDescansoInput() {
   var inp = document.getElementById('ev-crear-descanso-nombre');

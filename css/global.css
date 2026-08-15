@@ -215,6 +215,17 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
 
 .otro-texto { width: 100%; }
 
+/* Contador "X/max" genérico, reusado por varios inputs de texto corto de la
+   app (nombre de venue x3 en Eventos, "Nombre Derby" en Ajustes -- ver
+   "Cambios recientes") -- mismo tamaño/peso que `.ev-editar-desc-contador`
+   (css/eventos.css, el contador de la descripción de eventos), pero
+   `var(--danger)` en vez de `var(--warning)` al acercarse al límite: acá el
+   límite es duro (`maxlength` real en el input, no un soft-cap de
+   textarea), así que el color de alerta es el mismo que ya usa la app para
+   "esto va a fallar/bloquear" en vez del de "atención". */
+.form-char-counter { text-align: right; font-size: 0.72rem; font-weight: 600; color: var(--muted); margin-top: 6px; }
+.form-char-counter-limite { color: var(--danger); }
+
 /* ─── BOTTOM SHEETS (chrome compartido: reservas + inscripcion) ──── */
 .bsheet-overlay { display: none; position: fixed; inset: 0; background: var(--overlay-dark); }
 .bsheet {

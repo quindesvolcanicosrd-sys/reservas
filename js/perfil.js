@@ -778,12 +778,14 @@ function ajAbrirSheetTexto(sheetId, titulo, placeholder, callback) {
   var sub = document.getElementById('aj-sheet-texto-subtitulo');
   var btnConfirmar = document.getElementById('aj-sheet-texto-btn-confirmar');
   var errEl = document.getElementById('aj-sheet-texto-error');
+  var contador = document.getElementById('aj-sheet-texto-contador');
   if (sub) sub.style.display = 'none';
   if (pills) { pills.style.display = 'none'; pills.innerHTML = ''; }
   if (errEl) errEl.style.display = 'none';
+  if (contador) contador.style.display = 'none';
   if (btnConfirmar) btnConfirmar.style.display = '';
   if (tit) tit.textContent = titulo;
-  if (inp) { inp.style.display = ''; inp.value = ''; inp.placeholder = placeholder; inp.oninput = null; }
+  if (inp) { inp.style.display = ''; inp.value = ''; inp.placeholder = placeholder; inp.oninput = null; inp.removeAttribute('maxlength'); }
   var ov = document.getElementById('aj-sheet-texto-overlay');
   var sh = document.getElementById('aj-sheet-texto');
   if (ov) ov.style.display = 'block';
@@ -1003,8 +1005,15 @@ function ajSelPais(pais) {
 }
 
 
-/* ── Filas de dato: bottom sheet de texto genérico ────── */
-function ajAbrirSheetTextoGenerico(titulo, subtitulo, displayId, campo, placeholder, onGuardado) {
+/* ── Filas de dato: bottom sheet de texto genérico ──────
+   `maxLen` (opcional, ver "Cambios recientes" -- "Nombre Derby") -- SOLO
+   los callers que lo pasan quedan con `maxlength` real + contador visible
+   (`.form-char-counter`/`_actualizarContadorTexto()`, js/ui.js); el resto de
+   los ~10 campos que ya reusan este mismo sheet (Nombre legal completo,
+   Calle principal, etc.) no lo pasan y siguen sin límite, `ajAbrirSheetTexto()`
+   ya limpia `maxlength`/oculta el contador de una apertura anterior antes de
+   llegar acá. */
+function ajAbrirSheetTextoGenerico(titulo, subtitulo, displayId, campo, placeholder, onGuardado, maxLen) {
   var valorActual = (E.datos && E.datos[campo]) || '';
   ajAbrirSheetTexto('aj-sheet-texto', titulo, placeholder, function(v) {
     var payload = {}; payload[campo] = v;
@@ -1017,6 +1026,13 @@ function ajAbrirSheetTextoGenerico(titulo, subtitulo, displayId, campo, placehol
   if (sub) { if (subtitulo) { sub.textContent = subtitulo; sub.style.display = 'block'; } else { sub.style.display = 'none'; } }
   var inp = document.getElementById('aj-sheet-texto-input');
   if (inp) inp.value = valorActual;
+  if (maxLen) {
+    if (inp) inp.maxLength = maxLen;
+    var contador = document.getElementById('aj-sheet-texto-contador');
+    if (contador) contador.style.display = 'block';
+    _actualizarContadorTexto(valorActual, 'aj-sheet-texto-contador', maxLen);
+    if (inp) inp.oninput = function() { _actualizarContadorTexto(this.value, 'aj-sheet-texto-contador', maxLen); };
+  }
 }
 
 /* Envuelve el sheet genérico con validación de teléfono: solo dígitos

@@ -25,7 +25,7 @@
      del primer paint real (ambos coinciden hoy, el valor de entrada es el
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=580dd587"></script>
-<link rel="stylesheet" href="css/global.css?v=64804fa9">
+<link rel="stylesheet" href="css/global.css?v=4813023a">
 <link rel="stylesheet" href="css/estilos.css?v=7e3d0e54">
 <link rel="stylesheet" href="css/ui.css?v=626a894b">
 <link rel="stylesheet" href="css/login.css">
@@ -773,10 +773,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <!-- "Editar lugares" -- lista de Venues (getVenues(), admin) + "+ Nuevo
        lugar". Mismo mecanismo de pantalla completa que #s-eventos-anticipada
        (nav propia, sin TOP_BAR_CONFIG) -- alcanzada desde el FAB de
-       #s-eventos, back siempre vuelve ahí (ver irEvLugares()/js/eventos.js). -->
+       #s-eventos, back siempre vuelve ahí (ver irEvLugares()/js/eventos.js).
+       Back = irEventos(), no ir('s-eventos') a secas -- mismo fix de scroll
+       que _evCrearBack()/js/eventos.js, ver ese comentario. -->
   <div class="pantalla" id="s-eventos-lugares">
     <div class="app-nav app-nav-sticky" id="ev-lugares-header">
-      <button class="app-nav-back" onclick="ir('s-eventos')">
+      <button class="app-nav-back" onclick="irEventos()">
         <span class="material-symbols-outlined">arrow_back</span>
       </button>
       <span class="app-nav-title">Editar lugares</span>
@@ -840,7 +842,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
         <div class="ev-lugar-campo">
           <p class="ev-lugar-campo-label">Nombre del lugar</p>
-          <input type="text" class="ev-lugar-input" id="ev-lugar-nombre" placeholder="Ej: Parque La Carolina" oninput="_evLugarSetNombre(this.value)">
+          <input type="text" class="ev-lugar-input" id="ev-lugar-nombre" maxlength="15" placeholder="Ej: Parque La Carolina" oninput="_evLugarSetNombre(this.value)">
+          <div class="form-char-counter" id="ev-lugar-nombre-contador">0/15</div>
         </div>
       </div>
 
@@ -970,7 +973,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
       <div class="ev-lugar-campo" style="margin-top:0;">
         <p class="ev-lugar-campo-label">Nombre</p>
-        <input type="text" class="ev-lugar-input" id="ev-lugar-editar-nombre" placeholder="Ej: Parque La Carolina" oninput="_evLugarEditarSetNombre(this.value)">
+        <input type="text" class="ev-lugar-input" id="ev-lugar-editar-nombre" maxlength="15" placeholder="Ej: Parque La Carolina" oninput="_evLugarEditarSetNombre(this.value)">
+        <div class="form-char-counter" id="ev-lugar-editar-nombre-contador">0/15</div>
       </div>
 
       <div class="ev-lugar-campo">
@@ -1132,7 +1136,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           </div>
           <div class="ev-lugar-campo">
             <p class="ev-lugar-campo-label">Nombre del lugar</p>
-            <input type="text" class="ev-lugar-input" id="ev-crear-lugar-nombre" placeholder="Ej: Parque La Carolina" oninput="_evCrearSetNombreNuevoLugar(this.value)">
+            <input type="text" class="ev-lugar-input" id="ev-crear-lugar-nombre" maxlength="15" placeholder="Ej: Parque La Carolina" oninput="_evCrearSetNombreNuevoLugar(this.value)">
+            <div class="form-char-counter" id="ev-crear-lugar-nombre-contador">0/15</div>
           </div>
           <div class="ev-lugar-campo">
             <p class="ev-lugar-campo-label">Tipo de ícono</p>
@@ -1308,10 +1313,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
        único es una fila directa de la tabla `asistencias` (POST vía
        _evCrearUnicoGuardar(), js/eventos.js) -- no pasa por una regla de
        venue ni por recurrencia, a diferencia del wizard "Crear evento"
-       (#s-eventos-crear) de arriba. -->
+       (#s-eventos-crear) de arriba. Back = irEventos(), no volver('s-eventos')
+       a secas -- mismo fix de scroll que _evCrearBack()/js/eventos.js, ver
+       ese comentario. -->
   <div class="pantalla" id="s-eventos-crear-unico">
     <div class="app-nav app-nav-sticky" id="ev-crear-unico-header">
-      <button class="app-nav-back" onclick="volver('s-eventos')">
+      <button class="app-nav-back" onclick="irEventos()">
         <span class="material-symbols-outlined">arrow_back</span>
       </button>
       <span class="app-nav-title">Nuevo evento único</span>
@@ -2580,12 +2587,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=697dfb90"></script>
-<script src="js/eventos.js?v=868e2a7a"></script>
+<script src="js/ui.js?v=7e906700"></script>
+<script src="js/eventos.js?v=22818332"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=7a7a6f20"></script>
-<script src="js/perfil.js?v=7768af03"></script>
+<script src="js/perfil.js?v=88600e60"></script>
 <script src="js/admin.js"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js"></script>
@@ -3073,7 +3080,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="aj-dato-lock"><span class="material-symbols-outlined">lock</span></div>
       </div>
 
-      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Nombre Derby','¿Cómo te conocen en la pista?','aj-nombreDerby-val','nombreDerby','Ej: Roller Reina')">
+      <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Nombre Derby','¿Cómo te conocen en la pista?','aj-nombreDerby-val','nombreDerby','Ej: Roller Reina', null, 25)">
         <div class="aj-dato-icon"><span class="material-symbols-outlined">star</span></div>
         <div class="aj-dato-texts">
           <div class="aj-dato-label">Nombre Derby</div>
@@ -3717,6 +3724,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div id="aj-sheet-texto-subtitulo" style="display:none;font-size:0.78rem;color:var(--muted);text-align:center;line-height:1.4;padding:12px 16px 0;"></div>
   <div class="bsheet-body">
     <input type="text" id="aj-sheet-texto-input" style="width:100%;padding:13px 16px;background:var(--surface-2);border:1.5px solid var(--brand);border-radius:12px;font-size:0.88rem;font-family:inherit;" placeholder="">
+    <div class="form-char-counter" id="aj-sheet-texto-contador" style="display:none;"></div>
     <div class="aj-pills-row" id="aj-sheet-texto-pills" style="display:none;margin-top:0;"></div>
     <div class="error-msg" id="aj-sheet-texto-error" style="margin-top:10px;"></div>
     <button class="btn btn-outline" id="aj-sheet-texto-btn-confirmar" onclick="ajConfirmarSheetTexto()" style="margin-top:10px;">Guardar</button>
