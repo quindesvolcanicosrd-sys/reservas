@@ -430,7 +430,7 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
 
   **Decisiones tomadas sin confirmación explícita, señaladas por honestidad:** la fila de pills de categoría (`#ev-crear-tipo-cat-pills`) se ocultó por completo para `tipoEvento === 'descanso'` (no pedido en el texto pero consistente con el comentario del propio pedido de que "tipoEventoCategoria = null (no aplica)" a ese tipo); las pills nuevas se armaron con `<span class="aj-pill">` (no `<button>` como sugería el snippet del pedido) para no romper la consistencia visual con el resto del archivo, donde CADA pill existente es un `<span>` sin excepciones -- un `<button>` real hereda estilos default del navegador que esta hoja de estilos nunca neutraliza (`.aj-pill` no resetea `font-family`/`appearance`).
 
-  **Cache-busting (`index.html`)** — `js/eventos.js` (`?v=03f76ed9`) y `css/eventos.css` (`?v=af3aab09`) recalculados a mano (hash md5 truncado a 8 caracteres del contenido nuevo, mismo criterio ya usado en entradas anteriores de esta sección).
+  **Cache-busting (`index.html`)** — `js/eventos.js` (`?v=a226d57d`) y `css/eventos.css` (`?v=e2861154`) actualizados automáticamente por el hook de pre-commit del repo (sobrescribió los valores puestos a mano al confirmar el commit).
 
 - **Asistencia anticipada (`#s-eventos-anticipada`) migrada de Apps Script a Supabase directo -- mismo mecanismo que venues/temporadas_descanso, ya no pasa por `api()`/`apiPost()` (que para esta acción terminaban reenviadas a Apps Script vía `forwardToGAS()` en `supabase/functions/api/index.ts`, al no tener case propio ahí).**
 
