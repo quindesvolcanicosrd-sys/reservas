@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=a340ffb6">
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
-<link rel="stylesheet" href="css/eventos.css?v=74434a97">
+<link rel="stylesheet" href="css/eventos.css?v=8bcc0b5d">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
@@ -1188,6 +1188,13 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <span class="aj-pill" data-val="Evento" onclick="_evCrearSetTipoCategoria('Evento')">Evento</span>
             <span class="aj-pill" data-val="Otro" onclick="_evCrearSetTipoCategoria('Otro')">Otro</span>
           </div>
+          <input type="text" class="ev-lugar-input" id="ev-crear-tipo-otro-input" style="display:none;margin-top:10px;" placeholder="¿Qué tipo de evento es?" oninput="_evCrearData.tipoEventoPersonalizado = this.value;">
+        </div>
+
+        <div class="ev-lugar-campo" style="margin-top:18px;">
+          <p class="ev-lugar-campo-label">Descripción (opcional)</p>
+          <textarea id="ev-crear-descripcion-input" rows="4" maxlength="150" placeholder="Agrega una descripción..." oninput="_evCrearDescripcionInput(this)"></textarea>
+          <div class="ev-editar-desc-contador" id="ev-crear-desc-contador">0/150</div>
         </div>
 
         <div id="ev-crear-rec-semanal-wrap" style="display:none;margin-top:18px;">
@@ -2731,7 +2738,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=5f18b1a9"></script>
-<script src="js/eventos.js?v=ec0be4b1"></script>
+<script src="js/eventos.js?v=f9a94963"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=7a7a6f20"></script>

@@ -1320,6 +1320,10 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
    cual (`.ev-editar-desc-contador`/`.ev-editar-desc-contador-limite`), cero
    CSS nuevo para eso. */
 #ev-crear-unico-descripcion-input { resize: none; overflow-y: hidden; }
+/* 3° consumidor del mismo patrón -- paso "Detalles" del wizard activo
+   (#ev-crear-paso-config, ver MANIFEST.md "Cambios recientes"), mismo
+   criterio de ID-scoping que los 2 anteriores. */
+#ev-crear-descripcion-input { resize: none; overflow-y: hidden; }
 
 @media (prefers-color-scheme: dark) {
   .ev-crear-venue-card.activa { background: var(--brand-20); }

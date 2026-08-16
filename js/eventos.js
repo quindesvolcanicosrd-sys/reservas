@@ -6015,7 +6015,8 @@ var _evCrearHoraInicializada = false;
 
 function irEvCrear() {
   _evCrearData = {
-    tipoEvento: null, tipoEventoCategoria: null,
+    tipoEvento: null, tipoEventoCategoria: null, tipoEventoPersonalizado: '',
+    descripcion: '',
     venueExistente: null,
     tipoRecurrencia: null, diasSemana: [], frecuenciaNumero: null, frecuenciaUnidad: null,
     fecha: null, hora: '09:00',
@@ -6077,6 +6078,12 @@ function _evCrearResetUI() {
   ['ev-crear-rec-dias', 'ev-crear-rec-semanal-wrap', 'ev-crear-fecha-referencia-wrap', 'ev-crear-fecha-unico-wrap'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.style.display = 'none';
   });
+  var otroInput = document.getElementById('ev-crear-tipo-otro-input');
+  if (otroInput) { otroInput.style.display = 'none'; otroInput.value = ''; }
+  var descInput = document.getElementById('ev-crear-descripcion-input');
+  if (descInput) { descInput.value = ''; descInput.style.height = 'auto'; }
+  var descContador = document.getElementById('ev-crear-desc-contador');
+  if (descContador) { descContador.textContent = '0/150'; descContador.classList.remove('ev-editar-desc-contador-limite'); }
 }
 
 /* ── Navegación entre pasos -- ver el comentario del encabezado de esta
@@ -6330,6 +6337,28 @@ function _evCrearSetTipoCategoria(cat) {
   document.querySelectorAll('#ev-crear-tipo-cat-pills .aj-pill').forEach(function(p) {
     p.classList.toggle('activa', p.dataset.val === cat);
   });
+  // Input libre solo para "Otro" -- se oculta y limpia al elegir cualquier
+  // otra pill, mismo criterio que el resto de los "wrap" condicionales de
+  // este paso (ver _evCrearResetUI()/_evCrearActualizarDetalles()).
+  var otroInput = document.getElementById('ev-crear-tipo-otro-input');
+  if (otroInput) {
+    otroInput.style.display = (cat === 'Otro') ? '' : 'none';
+    if (cat !== 'Otro') { otroInput.value = ''; _evCrearData.tipoEventoPersonalizado = ''; }
+  }
+}
+// Textarea "Descripción (opcional)" del paso "Detalles" -- mismo componente
+// (auto-resize + contador `.ev-editar-desc-contador`, límite 150) que ya
+// usaba la pantalla huérfana "Nuevo evento único" (_evCrearUnicoDescripcionInput()),
+// reusado tal cual acá para el wizard activo.
+function _evCrearDescripcionInput(el) {
+  _evCrearData.descripcion = el.value;
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+  var cont = document.getElementById('ev-crear-desc-contador');
+  if (cont) {
+    cont.textContent = el.value.length + '/150';
+    cont.classList.toggle('ev-editar-desc-contador-limite', (150 - el.value.length) <= 20);
+  }
 }
 // Setter de estado puro (sin tocar el DOM del calendario) -- llamado por
 // _evCrearDescCalTocarDia() después de un tap real. Separado de esa función
@@ -6644,13 +6673,34 @@ function _evCrearRecurrenciaValidaWizard() {
   return false;
 }
 
-/* ── Guardado final -- SIEMPRE crearVenue para "Recurrente"/"Único", ver
-   nota de diseño arriba (encabezado de esta sección) sobre por qué un
-   venue existente también crea una fila nueva. "Descanso" queda pendiente
-   -- toast informativo, sin guardar nada todavía (la lógica de temporada de
-   descanso -- probablemente sobre `temporadas_descanso`, ver
-   `_evCrearDescansoGuardar()` más abajo en este archivo -- se implementa en
-   una tanda futura). ────────────────────────────────────────────────── */
+/* ── Guardado final -- Bug real corregido (ver MANIFEST.md "Cambios
+   recientes"): esto seguía usando `apiPost({action:'crearVenue',...})`, la
+   acción vieja de la era Sheets/Apps Script que NUNCA se desplegó
+   ("Acción no válida o no especificada" en cada guardado, señalado como
+   "fuera de alcance" en varias entradas anteriores de este MANIFEST y
+   nunca corregido acá). Fix: mismo mecanismo `fetch()` directo a Supabase
+   que ya usa `_evLugarGuardar()` (arriba en este archivo) para crear
+   venues, con las mismas columnas reales confirmadas por Victor
+   (`lugar`/`google_maps`/`tipo_icono`/`requiere_reserva`/`tipo`/`dias`/
+   `frecuencia`/`unidad`/`fecha_referencia`/`inicia`) -- ninguna acción de
+   por medio. SIEMPRE POST (nunca PATCH), incluso con un venue existente
+   elegido en el paso "Lugar", ver la nota de diseño más arriba en el
+   encabezado de esta sección ("1 fila = 1 regla", sin operación de backend
+   para "agregar otra recurrencia a un venue ya existente").
+
+   `tipoEventoCategoria`/`tipoEventoPersonalizado`/`descripcion` (nuevos,
+   ver MANIFEST.md) quedan capturados en `_evCrearData` y disponibles para
+   cuando haga falta mandarlos, pero NO viajan en este payload a propósito:
+   `venues` no tiene ninguna columna confirmada para categoría de evento ni
+   descripción (la tabla de columnas confirmadas/sin confirmar documentada
+   más arriba en este MANIFEST no incluye ninguna de las 2), y una tabla
+   real de Postgres/PostgREST rechaza el INSERT COMPLETO si un solo campo
+   no existe -- mandar una columna inventada acá rompería de nuevo la
+   creación del evento, el mismo síntoma que se está arreglando. Señalado,
+   no resuelto en silencio -- el punto exacto a ajustar el día que Victor
+   confirme (o cree) las columnas reales. "Descanso" queda pendiente -- toast
+   informativo, sin guardar nada todavía (ver `_evCrearDescansoGuardar()`
+   más abajo en este archivo). ────────────────────────────────────────── */
 function _evCrearGuardar() {
   if (_evCrearData.tipoEvento === 'descanso') {
     mostrarToast('Temporada de descanso: disponible próximamente.', 'ok', true);
@@ -6658,42 +6708,37 @@ function _evCrearGuardar() {
   }
   if (!_evCrearLugarValido() || !_evCrearRecurrenciaValidaWizard()) return;
   var v = _evCrearData.venueExistente;
-  var payload = { action: 'crearVenue', adminToken: _adminToken };
-  payload.nombre = v.nombre;
-  payload.mapsUrl = v.mapsUrl;
-  payload.lat = v.lat;
-  payload.lng = v.lng;
-  payload.tipoIcono = v.tipoIcono;
-  payload.requiereReserva = v.requiereReserva === false ? 'NO' : 'SI';
-  // Categoría elegida en este paso ("Entrenamiento"/"Partido"/"Evento") --
-  // termina en `asistencias.tipo_evento` (ver MANIFEST.md "Cambios
-  // recientes"), un campo aparte de `tipoIcono` (que sigue describiendo el
-  // VENUE, no el evento puntual).
-  payload.tipoEvento = _evCrearData.tipoEventoCategoria || 'Entrenamiento';
-  payload.tipoRecurrencia = _evCrearData.tipoRecurrencia;
-  payload.hora = _evCrearData.hora;
+  var payload = {
+    lugar: v.nombre,
+    google_maps: v.mapsUrl,
+    tipo_icono: v.tipoIcono,
+    requiere_reserva: v.requiereReserva !== false,
+    tipo: _evCrearData.tipoRecurrencia,
+    inicia: _evCrearData.hora
+  };
   if (_evCrearData.tipoRecurrencia === 'dias_semana') {
-    payload.diasSemana = JSON.stringify(_evCrearData.diasSemana.slice().sort(function(a, b) { return a - b; }));
+    payload.dias = _evCrearData.diasSemana.slice().sort(function(a, b) { return a - b; });
   } else if (_evCrearData.tipoRecurrencia === 'cada_tantos') {
     payload.frecuencia = _evCrearData.frecuenciaNumero;
     payload.unidad = _evCrearData.frecuenciaUnidad;
-    payload.fechaReferencia = _evCrearData.fecha;
-  } else {
-    payload.fechaReferencia = _evCrearData.fecha;
+    payload.fecha_referencia = _evCrearData.fecha;
+  } else if (_evCrearData.tipoRecurrencia === 'unico') {
+    payload.fecha_referencia = _evCrearData.fecha;
   }
 
   mostrarCargando('Creando evento...');
-  apiPost(payload, function(res) {
+  fetch(SUPABASE_URL + '/rest/v1/venues', {
+    method: 'POST',
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify(payload)
+  }).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     ocultarCargando();
-    if (res && res.exito === false) {
-      mostrarToast(res.error || 'No se pudo crear el evento.', 'error');
-      return;
-    }
     mostrarToast('Evento creado.', 'ok');
     ir('s-eventos');
-  }, function(e) {
+  }).catch(function(e) {
     ocultarCargando();
-    mostrarToast(e && e.message ? e.message : 'No se pudo crear el evento.', 'error');
+    mostrarToast((e && e.message) || 'No se pudo crear el evento.', 'error');
   });
 }
 
