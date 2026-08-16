@@ -3084,7 +3084,7 @@ function _evConfirmarBorrarEvento(btn) {
   if (btn) { btn.disabled = true; btn.textContent = 'Eliminando...'; }
   fetch(SUPABASE_URL + '/rest/v1/eventos?id=eq.' + encodeURIComponent(id), {
     method: 'DELETE',
-    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + (_adminToken || SUPABASE_ANON_KEY) }
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }
   }).then(function(r) {
     if (!r.ok) { mostrarToast('No se pudo eliminar el evento.', 'error'); return; }
     mostrarToast('Evento eliminado.', 'ok');
