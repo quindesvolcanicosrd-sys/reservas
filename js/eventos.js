@@ -3058,6 +3058,43 @@ function _evCerrarSheetCancelar(porGesto) {
   if (sh) sh.style.transform = 'translateY(100%)';
   setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
 }
+var _evBorrarPendienteId = null;
+function _evAbrirSheetBorrar(idEvento) {
+  _evBorrarPendienteId = idEvento;
+  var ov = document.getElementById('ev-sheet-borrar-overlay');
+  var sh = document.getElementById('ev-sheet-borrar');
+  if (!ov || !sh) return;
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(_evCerrarSheetBorrar);
+}
+function _evCerrarSheetBorrar(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var ov = document.getElementById('ev-sheet-borrar-overlay');
+  var sh = document.getElementById('ev-sheet-borrar');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+function _evConfirmarBorrarEvento(btn) {
+  if (!_evBorrarPendienteId) return;
+  var id = _evBorrarPendienteId;
+  _evBorrarPendienteId = null;
+  _evCerrarSheetBorrar();
+  if (btn) { btn.disabled = true; btn.textContent = 'Eliminando...'; }
+  fetch(SUPABASE_URL + '/rest/v1/eventos?id=eq.' + encodeURIComponent(id), {
+    method: 'DELETE',
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + (_adminToken || SUPABASE_ANON_KEY) }
+  }).then(function(r) {
+    if (!r.ok) { mostrarToast('No se pudo eliminar el evento.', 'error'); return; }
+    mostrarToast('Evento eliminado.', 'ok');
+    _EV_EVENTOS = _EV_EVENTOS.filter(function(e) { return e.id !== id; });
+    _evRenderTimeline(true);
+    volver('s-eventos');
+  }).catch(function() {
+    mostrarToast('No se pudo eliminar el evento.', 'error');
+  });
+}
 // Botón "Confirmar cancelación" del sheet -- cierra primero (mismo orden que
 // `ajConfirmarSheetTexto()`, js/perfil.js: acá no hay una navegación
 // síncrona en el medio como la que forzó el orden inverso en
@@ -3106,6 +3143,7 @@ function _evDetalleStickyHtml(ev) {
   var acciones = '';
   if (_adminToken) {
     acciones += '<button type="button" class="app-nav-icon-btn" onclick="_evEditarAbrir()" title="Editar evento" aria-label="Editar evento"><span class="material-symbols-outlined">edit</span></button>';
+    acciones += '<button type="button" class="app-nav-icon-btn app-nav-icon-btn-danger" onclick="_evAbrirSheetBorrar(\'' + ev.id + '\')" title="Eliminar evento" aria-label="Eliminar evento"><span class="material-symbols-outlined">delete</span></button>';
     if (ev.estado !== 'Cancelado') {
       acciones += '<button type="button" class="app-nav-icon-btn app-nav-icon-btn-danger" onclick="_evAbrirSheetCancelar(\'' + ev.id + '\')" title="Cancelar evento" aria-label="Cancelar evento"><span class="material-symbols-outlined">event_busy</span></button>';
     }
@@ -5157,7 +5195,11 @@ function _evLugarConfirmarEliminar(btn) {
     ocultarCargando();
     if (!r.ok) { mostrarToast('No se pudo eliminar el lugar.', 'error'); return; }
     mostrarToast('Lugar eliminado.', 'ok');
-    irEvLugares();
+    if (_evCrearPasoActual === 'ev-crear-paso-lugar') {
+      _evCrearCargarLugares();
+    } else {
+      irEvLugares();
+    }
   }).catch(function() {
     ocultarCargando();
     mostrarToast('No se pudo eliminar el lugar.', 'error');
@@ -5264,7 +5306,15 @@ function irEvLugarFormNuevo(origen) {
 // create-only. `_evLugarEditarOriginal` (snapshot JSON de `_evLugarData` tal
 // como se cargó) es lo que compara `_evLugarEditarHayCambios()` para
 // habilitar "Guardar cambios" en el hub, ver ese bloque más abajo.
-function _evLugarAbrirEditar(fila) {
+function _evLugarEditarBack() {
+  if (_evLugarOrigen === 's-eventos-crear') {
+    ir('s-eventos-crear');
+  } else {
+    irEvLugares();
+  }
+}
+
+function _evLugarAbrirEditar(fila, desdeWizard) {
   var v = _evLugares.filter(function(x) { return x.fila === fila; })[0];
   if (!v) return;
   _evLugarData = {
@@ -5281,7 +5331,7 @@ function _evLugarAbrirEditar(fila) {
     // no vuelva a tocar el stepper.
     horaTocada: !!v.hora
   };
-  _evLugarOrigen = 's-eventos-lugares';
+  _evLugarOrigen = (typeof desdeWizard !== 'undefined' && desdeWizard) ? 's-eventos-crear' : 's-eventos-lugares';
   _evLugarEditarOriginal = JSON.stringify(_evLugarData);
   ir('s-eventos-lugar-editar');
   _evLugarEditarPintar();
@@ -5699,7 +5749,7 @@ function _evLugarGuardar() {
         if (_evLugarFromWizard) {
           _evLugarFromWizard = false;
           ir('s-eventos-crear');
-          _evCrearMostrarPaso(1);
+          _evCrearMostrarPaso('ev-crear-paso-lugar');
           _evCrearCargarLugares();
           return;
         }
@@ -5753,28 +5803,10 @@ var _evLugarEditarCal = { referencia: { mostrado: null }, unico: { mostrado: nul
 function _evLugarEditarPintar() {
   var titulo = document.getElementById('ev-lugar-editar-titulo');
   if (titulo) titulo.textContent = 'Editar ' + (_evLugarData.nombre || 'lugar');
-
   var nombreInp = document.getElementById('ev-lugar-editar-nombre');
   if (nombreInp) nombreInp.value = _evLugarData.nombre || '';
   _actualizarContadorTexto(_evLugarData.nombre, 'ev-lugar-editar-nombre-contador', 15);
   _evLugarEditarInicializarMapa();
-
-  document.querySelectorAll('#ev-lugar-editar-icono-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.tipoIcono); });
-  document.querySelectorAll('#ev-lugar-editar-recurrencia-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.tipoRecurrencia); });
-  document.querySelectorAll('#ev-lugar-editar-dias-row .ev-dia-circulo').forEach(function(c) { c.classList.toggle('activa', _evLugarData.diasSemana.indexOf(parseInt(c.dataset.dia, 10)) !== -1); });
-  var frecNumInp = document.getElementById('ev-lugar-editar-frec-num');
-  if (frecNumInp) frecNumInp.value = _evLugarData.frecuenciaNumero || '';
-  document.querySelectorAll('#ev-lugar-editar-frec-unidad-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.frecuenciaUnidad); });
-
-  var mesInicial = _evLugarData.fecha || _evHoyISO();
-  _evLugarEditarCal.referencia.mostrado = mesInicial;
-  _evLugarEditarCal.unico.mostrado = mesInicial;
-
-  _evLugarEditarMostrarSubRecurrencia();
-  _evLugarEditarCalRender('referencia');
-  _evLugarEditarCalRender('unico');
-  _evLugarEditarActualizarCalResumen('referencia');
-  _evLugarEditarActualizarCalResumen('unico');
   _evLugarEditarActualizarBoton();
 }
 
@@ -6097,7 +6129,7 @@ function _evHoraStepperSetMeridiano(prefix, el) {
 // "Descanso" -- sin esta lista completa, `#ev-crear-paso-lugar` seguiría
 // `.activo` para siempre). `_EV_CREAR_STEPS` (abajo) es un subconjunto
 // ORDENADO de esta lista, recalculado según la elección real.
-var _EV_CREAR_TODOS_LOS_PASOS = ['ev-crear-paso-tipo', 'ev-crear-paso-lugar', 'ev-crear-paso-config', 'ev-crear-paso-fecha', 'ev-crear-paso-hora', 'ev-crear-paso-descanso-rango'];
+var _EV_CREAR_TODOS_LOS_PASOS = ['ev-crear-paso-tipo', 'ev-crear-paso-lugar', 'ev-crear-paso-cat', 'ev-crear-paso-recurrencia', 'ev-crear-paso-fecha', 'ev-crear-paso-hora', 'ev-crear-paso-descanso-rango'];
 // Título de la nav por paso -- objeto (no array, los pasos ya no tienen un
 // índice fijo), actualizado con fade dentro de _evCrearMostrarPaso() (mismo
 // patrón que _EV_LUGAR_STEP_TITULOS/_evLugarMostrarPaso(), más arriba en
@@ -6105,10 +6137,12 @@ var _EV_CREAR_TODOS_LOS_PASOS = ['ev-crear-paso-tipo', 'ev-crear-paso-lugar', 'e
 var _EV_CREAR_PASO_TITULOS = {
   'ev-crear-paso-tipo': 'Tipo de evento',
   'ev-crear-paso-lugar': 'Seleccionar lugar',
+  'ev-crear-paso-cat': 'Detalles del evento',
+  'ev-crear-paso-recurrencia': 'Frecuencia',
   'ev-crear-paso-config': 'Detalles',
   'ev-crear-paso-fecha': 'Fecha del evento',
   'ev-crear-paso-hora': 'Hora de inicio',
-  'ev-crear-paso-descanso-rango': 'Fechas del descanso'
+  'ev-crear-paso-descanso-rango': 'Período de descanso'
 };
 // Secuencia ORDENADA del flujo actual -- solo para los dots de progreso
 // (_evCrearRenderProg(), indexOf(_evCrearPasoActual) contra este array).
@@ -6151,6 +6185,7 @@ function irEvCrear() {
   _evCrearCal.unico.mostrado = mesInicial;
   _evCrearDescCal = { mostrado: mesInicial, touched: false, prevDesde: null, prevHasta: null };
   _evCrearHoraInicializada = false;
+  _evRestaurarScrollTimeline = true;
   ir('s-eventos-crear');
   _evCrearResetUI();
   _evCrearRecalcularSteps();
@@ -6175,10 +6210,12 @@ function _evCrearRecalcularSteps() {
   var t = _evCrearData.tipoEvento;
   if (t === 'descanso') {
     _EV_CREAR_STEPS = ['ev-crear-paso-tipo', 'ev-crear-paso-descanso-rango'];
-  } else if (t === 'unico' || (t === 'recurrente' && _evCrearData.tipoRecurrencia === 'cada_tantos')) {
-    _EV_CREAR_STEPS = ['ev-crear-paso-tipo', 'ev-crear-paso-lugar', 'ev-crear-paso-config', 'ev-crear-paso-fecha', 'ev-crear-paso-hora'];
+  } else if (t === 'unico') {
+    _EV_CREAR_STEPS = ['ev-crear-paso-tipo', 'ev-crear-paso-lugar', 'ev-crear-paso-cat', 'ev-crear-paso-fecha', 'ev-crear-paso-hora'];
+  } else if (t === 'recurrente' && _evCrearData.tipoRecurrencia === 'cada_tantos') {
+    _EV_CREAR_STEPS = ['ev-crear-paso-tipo', 'ev-crear-paso-lugar', 'ev-crear-paso-cat', 'ev-crear-paso-recurrencia', 'ev-crear-paso-fecha', 'ev-crear-paso-hora'];
   } else if (t === 'recurrente') {
-    _EV_CREAR_STEPS = ['ev-crear-paso-tipo', 'ev-crear-paso-lugar', 'ev-crear-paso-config', 'ev-crear-paso-hora'];
+    _EV_CREAR_STEPS = ['ev-crear-paso-tipo', 'ev-crear-paso-lugar', 'ev-crear-paso-cat', 'ev-crear-paso-recurrencia', 'ev-crear-paso-hora'];
   } else {
     _EV_CREAR_STEPS = ['ev-crear-paso-tipo'];
   }
@@ -6186,11 +6223,7 @@ function _evCrearRecalcularSteps() {
 
 function _evCrearResetUI() {
   document.querySelectorAll('#ev-crear-tipo-cat-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
-  document.querySelectorAll('#ev-crear-recurrencia-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
-  document.querySelectorAll('#ev-crear-dias-row .ev-dia-circulo').forEach(function(c) { c.classList.remove('activa'); });
-  var frecResumen = document.getElementById('ev-crear-frec-resumen');
-  if (frecResumen) { frecResumen.style.display = 'none'; frecResumen.textContent = ''; }
-  ['ev-crear-rec-dias', 'ev-crear-rec-semanal-wrap', 'ev-crear-fecha-referencia-wrap', 'ev-crear-fecha-unico-wrap'].forEach(function(id) {
+  ['ev-crear-fecha-referencia-wrap', 'ev-crear-fecha-unico-wrap'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.style.display = 'none';
   });
   var otroInput = document.getElementById('ev-crear-tipo-otro-input');
@@ -6217,7 +6250,7 @@ function _evCrearMostrarPaso(pasoId) {
   var tituloEl = document.getElementById('ev-crear-form-titulo');
   if (tituloEl) _evFadeSwap(tituloEl, function() { tituloEl.textContent = _EV_CREAR_PASO_TITULOS[pasoId] || ''; }, false);
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  if (pasoId === 'ev-crear-paso-config') _evCrearActualizarDetalles();
+  if (pasoId === 'ev-crear-paso-recurrencia') _evCrearIniciarPasoRecurrencia();
   if (pasoId === 'ev-crear-paso-fecha') _evCrearActualizarPasoFecha();
   if (pasoId === 'ev-crear-paso-hora') _evCrearActualizarPasoHora();
   if (pasoId === 'ev-crear-paso-descanso-rango') { _evCrearDescRangoCalRender(); _evCrearDescRangoActualizarResumen(); }
@@ -6243,11 +6276,15 @@ function _evCrearBack() {
   var p = _evCrearPasoActual;
   if (p === 'ev-crear-paso-tipo') { irEventos(); return; }
   if (p === 'ev-crear-paso-lugar') { _evCrearMostrarPaso('ev-crear-paso-tipo'); return; }
-  if (p === 'ev-crear-paso-config') { _evCrearMostrarPaso('ev-crear-paso-lugar'); return; }
-  if (p === 'ev-crear-paso-fecha') { _evCrearMostrarPaso('ev-crear-paso-config'); return; }
+  if (p === 'ev-crear-paso-cat') { _evCrearMostrarPaso('ev-crear-paso-lugar'); return; }
+  if (p === 'ev-crear-paso-recurrencia') { _evCrearMostrarPaso('ev-crear-paso-cat'); return; }
+  if (p === 'ev-crear-paso-fecha') {
+    var prevFecha = (_evCrearData.tipoEvento === 'unico') ? 'ev-crear-paso-cat' : 'ev-crear-paso-recurrencia';
+    _evCrearMostrarPaso(prevFecha); return;
+  }
   if (p === 'ev-crear-paso-hora') {
-    var previo = (_evCrearData.tipoEvento === 'recurrente' && _evCrearData.tipoRecurrencia === 'dias_semana')
-      ? 'ev-crear-paso-config' : 'ev-crear-paso-fecha';
+    var previo = (_evCrearData.tipoRecurrencia === 'dias_semana')
+      ? 'ev-crear-paso-recurrencia' : 'ev-crear-paso-fecha';
     _evCrearMostrarPaso(previo);
     return;
   }
@@ -6265,14 +6302,23 @@ function _evCrearIrSiguiente() {
   }
   if (p === 'ev-crear-paso-lugar') {
     if (!_evCrearLugarValido()) return;
-    _evCrearMostrarPaso('ev-crear-paso-config');
+    _evCrearMostrarPaso('ev-crear-paso-cat');
     return;
   }
-  if (p === 'ev-crear-paso-config') {
+  if (p === 'ev-crear-paso-cat') {
+    if (_evCrearData.tipoEvento === 'recurrente') {
+      _evCrearMostrarPaso('ev-crear-paso-recurrencia');
+    } else {
+      _evCrearMostrarPaso('ev-crear-paso-fecha');
+    }
+    return;
+  }
+  if (p === 'ev-crear-paso-recurrencia') {
     if (!_evCrearPasoValido(p)) return;
-    var siguiente = (_evCrearData.tipoEvento === 'recurrente' && _evCrearData.tipoRecurrencia === 'dias_semana')
-      ? 'ev-crear-paso-hora' : 'ev-crear-paso-fecha';
-    _evCrearMostrarPaso(siguiente);
+    _evCrearSincronizarRecurrencia();
+    _evCrearRecalcularSteps();
+    var sigRecurrencia = (_evCrearData.tipoRecurrencia === 'dias_semana') ? 'ev-crear-paso-hora' : 'ev-crear-paso-fecha';
+    _evCrearMostrarPaso(sigRecurrencia);
     return;
   }
   if (p === 'ev-crear-paso-fecha') {
@@ -6290,14 +6336,11 @@ function _evCrearIrSiguiente() {
 // qué paso se completó cada campo.
 function _evCrearPasoValido(p) {
   if (p === 'ev-crear-paso-lugar') return _evCrearLugarValido();
-  if (p === 'ev-crear-paso-config') {
-    if (_evCrearData.tipoEvento === 'unico') return true;
-    if (_evCrearData.tipoEvento === 'recurrente') {
-      var t = _evCrearData.tipoRecurrencia;
-      if (t === 'dias_semana') return _evCrearData.diasSemana.length > 0;
-      if (t === 'cada_tantos') return _evCrearData.frecuenciaNumero != null && !!_evCrearData.frecuenciaUnidad;
-    }
-    return false;
+  if (p === 'ev-crear-paso-cat') return true;
+  if (p === 'ev-crear-paso-recurrencia') {
+    var cfg = _evCrearData.frecConfig;
+    if (cfg.unidad === 'semanas') return cfg.diasSemana.length > 0;
+    return true;
   }
   if (p === 'ev-crear-paso-fecha') return !!_evCrearData.fecha;
   return false;
@@ -6385,7 +6428,7 @@ function _evCrearRenderLugares(lista) {
               '<div class="ev-card-titulo">' + v.nombre + '</div>' +
             '</div>' +
           '</div>' +
-          '<button type="button" class="ev-ant-card-edit" onclick="event.stopPropagation();_evLugarAbrirEditar(\'' + v.fila + '\')" title="Editar">' +
+          '<button type="button" class="ev-ant-card-edit" onclick="event.stopPropagation();_evLugarAbrirEditar(\'' + v.fila + '\', true)" title="Editar">' +
             '<span class="material-symbols-outlined">edit</span>' +
           '</button>' +
           '<button type="button" class="ev-ant-card-del" onclick="event.stopPropagation();_evLugarBorrar(\'' + v.fila + '\')" title="Borrar">' +
@@ -6451,8 +6494,19 @@ function _evCrearSetTipoCategoria(cat) {
   // este paso (ver _evCrearResetUI()/_evCrearActualizarDetalles()).
   var otroInput = document.getElementById('ev-crear-tipo-otro-input');
   if (otroInput) {
-    otroInput.style.display = (cat === 'Otro') ? '' : 'none';
-    if (cat !== 'Otro') { otroInput.value = ''; _evCrearData.tipoEventoPersonalizado = ''; }
+    if (cat === 'Otro') {
+      otroInput.style.display = '';
+      otroInput.style.animation = 'none';
+      void otroInput.offsetWidth;
+      otroInput.style.animation = 'fadeIn 0.2s ease';
+    } else {
+      otroInput.value = '';
+      _evCrearData.tipoEventoPersonalizado = '';
+      otroInput.style.animation = 'fadeOut 0.15s ease forwards';
+      setTimeout(function() {
+        if (_evCrearData.tipoEventoCategoria !== 'Otro') otroInput.style.display = 'none';
+      }, 150);
+    }
   }
 }
 // Textarea "Descripción (opcional)" del paso "Detalles" -- mismo componente
@@ -6628,6 +6682,109 @@ function _evCrearToggleDia(el) {
   _evCrearActualizarFooter();
 }
 
+/* ── Paso "Frecuencia" (ev-crear-paso-recurrencia) -- unifica el antiguo
+   selector "Días de la semana" y el bottom sheet "Frecuencia personalizada"
+   en un único paso inline: stepper de cantidad + pills Días/Semanas/Meses +
+   círculos de día (solo visibles cuando unidad=semanas). Maneja todo sobre
+   _evCrearData.frecConfig directamente; _evCrearSincronizarRecurrencia()
+   vuelca hacia tipoRecurrencia/diasSemana/frecuenciaNumero/frecuenciaUnidad
+   al avanzar al siguiente paso. ──────────────────────────────────────────── */
+function _evCrearIniciarPasoRecurrencia() {
+  // Defaults solo la primera vez (frecConfig puede venir pre-llenado si el
+  // usuario volvió atrás desde un paso posterior).
+  if (!_evCrearData.frecConfig.inicializado) {
+    _evCrearData.frecConfig = { unidad: 'semanas', cantidad: 1, diasSemana: [1], inicializado: true };
+  }
+  _evCrearRecRenderUI();
+  _evCrearRecActualizarTexto();
+}
+function _evCrearRecRenderUI() {
+  var cfg = _evCrearData.frecConfig;
+  _adminSetStepperValue('ev-crear-rec-cantidad', cfg.cantidad);
+  document.querySelectorAll('#ev-crear-rec-unidad-pills .aj-pill').forEach(function(p) {
+    p.classList.toggle('activa', p.dataset.val === cfg.unidad);
+  });
+  document.querySelectorAll('#ev-crear-rec-dias-row .ev-dia-circulo').forEach(function(c) {
+    c.classList.toggle('activa', cfg.diasSemana.indexOf(parseInt(c.dataset.dia, 10)) !== -1);
+  });
+  var diasRow = document.getElementById('ev-crear-rec-dias-row');
+  if (diasRow) diasRow.style.display = cfg.unidad === 'semanas' ? 'flex' : 'none';
+}
+function _evCrearRecFrecCambio() {
+  var inp = document.getElementById('ev-crear-rec-cantidad');
+  _evCrearData.frecConfig.cantidad = inp ? (parseInt(inp.value, 10) || 1) : 1;
+  _evCrearRecActualizarTexto();
+  _evCrearActualizarFooter();
+}
+function _evCrearRecSelUnidad(el) {
+  document.querySelectorAll('#ev-crear-rec-unidad-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  _evCrearData.frecConfig.unidad = el.dataset.val;
+  var diasRow = document.getElementById('ev-crear-rec-dias-row');
+  if (diasRow) {
+    if (el.dataset.val === 'semanas') {
+      diasRow.style.display = 'flex';
+      void diasRow.offsetWidth;
+      diasRow.style.animation = 'fadeIn 0.2s ease';
+    } else {
+      diasRow.style.display = 'none';
+    }
+  }
+  _evCrearRecActualizarTexto();
+  _evCrearActualizarFooter();
+}
+function _evCrearRecToggleDia(el) {
+  var dia = parseInt(el.dataset.dia, 10);
+  el.classList.toggle('activa');
+  var arr = _evCrearData.frecConfig.diasSemana;
+  var idx = arr.indexOf(dia);
+  if (el.classList.contains('activa')) { if (idx === -1) arr.push(dia); }
+  else if (idx !== -1) { arr.splice(idx, 1); }
+  _evCrearRecActualizarTexto();
+  _evCrearActualizarFooter();
+}
+var _EV_CREAR_DIAS_NOMBRES_REC = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábados', 'domingos'];
+function _evCrearRecTextoResultado() {
+  var cfg = _evCrearData.frecConfig;
+  var n = cfg.cantidad || 1;
+  if (cfg.unidad === 'semanas') {
+    var dias = (cfg.diasSemana || []).slice().sort(function(a, b) { return a - b; })
+      .map(function(d) { return _EV_CREAR_DIAS_NOMBRES_REC[d - 1]; });
+    if (!dias.length) return 'El evento ocurrirá cada semana.';
+    var diasStr;
+    if (dias.length === 1) diasStr = dias[0];
+    else diasStr = dias.slice(0, -1).join(', ') + ' y ' + dias[dias.length - 1];
+    if (n === 1) return 'El evento será los ' + diasStr + ' de cada semana.';
+    return 'El evento ocurrirá cada ' + n + ' semanas los ' + diasStr + '.';
+  }
+  if (cfg.unidad === 'meses') {
+    return n === 1 ? 'El evento ocurrirá cada mes.' : 'El evento ocurrirá cada ' + n + ' meses.';
+  }
+  return n === 1 ? 'El evento ocurrirá todos los días.' : 'El evento ocurrirá cada ' + n + ' días.';
+}
+function _evCrearRecActualizarTexto() {
+  var el = document.getElementById('ev-crear-rec-texto-resultado');
+  if (el) el.textContent = _evCrearRecTextoResultado();
+}
+// Vuelca frecConfig → los campos que usa _evCrearGuardar() y
+// _evCrearRecurrenciaValidaWizard() -- llamada siempre al avanzar desde
+// ev-crear-paso-recurrencia, nunca antes para no pisar datos mientras el
+// usuario navega.
+function _evCrearSincronizarRecurrencia() {
+  var cfg = _evCrearData.frecConfig;
+  if (cfg.unidad === 'semanas') {
+    _evCrearData.tipoRecurrencia = 'dias_semana';
+    _evCrearData.diasSemana = cfg.diasSemana.slice();
+    _evCrearData.frecuenciaNumero = null;
+    _evCrearData.frecuenciaUnidad = null;
+  } else {
+    _evCrearData.tipoRecurrencia = 'cada_tantos';
+    _evCrearData.diasSemana = [];
+    _evCrearData.frecuenciaNumero = cfg.cantidad;
+    _evCrearData.frecuenciaUnidad = cfg.unidad;
+  }
+}
+
 /* ── Bottom sheet "Frecuencia personalizada" (#ev-crear-bsheet-frecuencia,
    index.html) -- Cambio 2, ver MANIFEST.md "Cambios recientes". Mismo
    patrón `.bsheet`/`.bsheet-overlay` + `_registrarOverlayAbierto()` +
@@ -6798,7 +6955,17 @@ function _evCrearCalMoverMes(cual, dir) {
 }
 function _evCrearCalTocarDia(cual, iso) {
   _evCrearData.fecha = iso;
-  _evCrearCalRender(cual);
+  var cont = document.getElementById('ev-crear-cal-' + cual);
+  if (cont) {
+    cont.querySelectorAll('.ev-ant-cal-sel').forEach(function(c) { c.classList.remove('ev-ant-cal-sel'); });
+    var celda = cont.querySelector('[data-iso="' + iso + '"]');
+    if (celda) {
+      celda.classList.add('ev-ant-cal-sel');
+      celda.style.animation = 'none';
+      void celda.offsetWidth;
+      celda.style.animation = 'evCalCeldaSel 0.25s ease';
+    }
+  }
   _evCrearActualizarCalResumen(cual);
   _evCrearActualizarFooter();
 }

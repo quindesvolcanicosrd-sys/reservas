@@ -1336,3 +1336,14 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 @media (prefers-color-scheme: dark) {
   .ev-crear-venue-card.activa { background: var(--brand-20); }
 }
+
+@keyframes evCalCeldaSel {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+.ev-crear-rec-resultado {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 20px;
+}
