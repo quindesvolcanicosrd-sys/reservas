@@ -6827,6 +6827,34 @@ function _evCrearRecurrenciaValidaWizard() {
   return false;
 }
 
+// Fecha del evento recién creado, para poder saltar el timeline ahí al
+// volver (ver _evCrearGuardar() más abajo) -- 3 casos:
+// - "Único"/"Recurrente + Personalizada" (tipoRecurrencia 'unico'/'cada_tantos'):
+//   ya tienen una fecha puntual real en `_evCrearData.fecha` (paso "Fecha
+//   del evento", _evCrearCalTocarDia() más arriba en este archivo).
+// - "Recurrente + Días de la semana" (sin fecha puntual elegida en el
+//   wizard -- solo `_evCrearData.diasSemana`, array de 1=Lunes..7=Domingo):
+//   se calcula la próxima ocurrencia desde HOY (inclusive) que caiga en
+//   alguno de los días elegidos. `Date.getDay()` nativo es 0=Domingo..6=Sábado
+//   -- se traduce a la convención 1..7 de este archivo antes de comparar
+//   contra `diasSemana`.
+// - "Descanso": `_evCrearData.fechaInicioDescanso` (el guardado real de
+//   este tipo todavía es un stub, ver _evCrearGuardar() -- este caso queda
+//   listo para cuando se implemente, sin caller real todavía).
+function _evCrearFechaEventoCreado() {
+  var d = _evCrearData;
+  if (d.tipoEvento === 'descanso') return d.fechaInicioDescanso;
+  if (d.tipoRecurrencia === 'dias_semana') {
+    var hoy = new Date();
+    for (var i = 0; i < 7; i++) {
+      var candidato = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + i);
+      var diaISO = candidato.getDay() === 0 ? 7 : candidato.getDay();
+      if (d.diasSemana.indexOf(diaISO) !== -1) return _evToISO(candidato);
+    }
+    return null;
+  }
+  return d.fecha || null;
+}
 /* ── Guardado final -- Bug real corregido (ver MANIFEST.md "Cambios
    recientes"): esto seguía usando `apiPost({action:'crearVenue',...})`, la
    acción vieja de la era Sheets/Apps Script que NUNCA se desplegó
@@ -6900,6 +6928,10 @@ function _evCrearGuardar() {
     // caído), NO bloquea el flujo -- "Evento creado" ya es cierto (la regla
     // se guardó) y el timeline igual se refresca por si la regeneración
     // automática ya había corrido antes.
+    // Capturada ANTES de navegar/refrescar -- _evCrearData sigue intacta acá
+    // (nada la resetea hasta la próxima vez que se abra el wizard,
+    // irEvCrear()), pero mejor no depender de eso más adelante en la cadena.
+    var fechaEventoCreado = _evCrearFechaEventoCreado();
     function _evCrearGuardarTerminar() {
       ocultarCargando();
       mostrarToast('Evento creado.', 'ok');
@@ -6912,7 +6944,22 @@ function _evCrearGuardar() {
       // un F5. Mismo patrón que el resto de guardados/borrados de esta
       // sección (`_evCrearDescansoGuardar()`/`_evOffseasonEliminar()`, más
       // abajo en este archivo): refetch explícito + re-render.
-      _evCargarDatosReales(function() { _evRenderTimeline(true); });
+      // Salta el timeline a la fecha del evento recién creado -- mismo
+      // combo re-render+scroll que ya usa _evCalIrAFechaEnTimeline() cuando
+      // el timeline no está en su estado normal (`_evScrollAFecha()`, ver
+      // más arriba en este archivo, encuentra `#ev-fecha-<iso>` o cae al
+      // grupo real más cercano si esa fecha puntual no tiene contenido
+      // propio -- ej. "Recurrente" cuando la próxima ocurrencia calculada
+      // no coincide 1:1 con lo que el backend termine generando). Sin
+      // fecha calculable (caso borde, no debería pasar con la validación ya
+      // exigida en `_evCrearRecurrenciaValidaWizard()`), solo re-renderiza.
+      _evCargarDatosReales(function() {
+        if (fechaEventoCreado) {
+          _evRenderTimeline(true, function() { _evScrollAFecha(fechaEventoCreado, false, true); });
+        } else {
+          _evRenderTimeline(true);
+        }
+      });
     }
     api({ action: 'adminRegenerarVentanaAsistencias', adminToken: _adminToken }, _evCrearGuardarTerminar, _evCrearGuardarTerminar);
   }).catch(function(e) {
