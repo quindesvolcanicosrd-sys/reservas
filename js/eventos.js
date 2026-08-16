@@ -3082,17 +3082,14 @@ function _evConfirmarBorrarEvento(btn) {
   _evBorrarPendienteId = null;
   _evCerrarSheetBorrar();
   if (btn) { btn.disabled = true; btn.textContent = 'Eliminando...'; }
-  fetch(SUPABASE_URL + '/rest/v1/eventos?id=eq.' + encodeURIComponent(id), {
-    method: 'DELETE',
-    headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }
-  }).then(function(r) {
-    if (!r.ok) { mostrarToast('No se pudo eliminar el evento.', 'error'); return; }
-    mostrarToast('Evento eliminado.', 'ok');
+  api({ action: 'adminBorrarEvento', adminToken: _adminToken, idEvento: id }, function() {
     _EV_EVENTOS = _EV_EVENTOS.filter(function(e) { return e.id !== id; });
     _evRenderTimeline(true);
     volver('s-eventos');
-  }).catch(function() {
-    mostrarToast('No se pudo eliminar el evento.', 'error');
+    mostrarToast('Evento eliminado.', 'ok');
+  }, function(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Eliminar definitivamente'; }
+    mostrarToast((e && e.message) || 'Este evento no pudo ser eliminado.', 'error');
   });
 }
 // Botón "Confirmar cancelación" del sheet -- cierra primero (mismo orden que
