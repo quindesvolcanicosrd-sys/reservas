@@ -565,6 +565,14 @@ async function adminGetColorEnfasis(): Promise<Record<string, any>> {
   return { colorEnfasis: data?.value ?? null };
 }
 
+async function adminBorrarEvento(params: Record<string, any>): Promise<Record<string, any>> {
+  const email = await _validarAdminToken(params.adminToken);
+  if (!email) return { exito: false, error: 'Sesión admin inválida.' };
+  const { error } = await supabase.from('asistencias').delete().eq('id_evento', params.idEvento);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
 async function adminSetColorEnfasis(params: Record<string, any>): Promise<Record<string, any>> {
   const email = await _validarAdminToken(params.adminToken);
   if (!email) return { exito: false, error: 'Sesión admin inválida.' };
@@ -1593,6 +1601,7 @@ Deno.serve(async (req: Request) => {
       case 'adminGetReservas':              return json(await adminGetReservas(params));
       case 'adminSetEstadoReserva':         return json(await adminSetEstadoReserva(params));
       case 'adminCerrarSesion':             { if (params.adminToken) await supabase.from('admin_sessions').delete().eq('token', params.adminToken); return json({ exito: true }); }
+      case 'adminBorrarEvento':             return json(await adminBorrarEvento(params));
       // Aún en GAS: AsistenciaAnticipada, subirFoto*, enviarResumenReservas, adminRegenerarVentanaAsistencias, adminCancelarEvento, guardarNotaPago
       default:
         return forwardToGAS(params);
