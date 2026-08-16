@@ -999,9 +999,16 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
 
       <div class="ev-lugar-campo">
-        <p class="ev-lugar-campo-label">Ubicación (link de Google Maps)</p>
-        <input type="text" class="ev-lugar-input" id="ev-lugar-editar-mapsurl" placeholder="https://maps.google.com/..." oninput="_evLugarEditarSetMapsUrl(this.value)">
-        <p class="ev-lugar-mapa-nota">Pega el link de Google Maps del lugar.</p>
+        <p class="ev-lugar-campo-label">Ubicación</p>
+        <div class="app-nav-search" style="margin-bottom:10px;">
+          <span class="material-symbols-outlined">search</span>
+          <input type="text" id="ev-lugar-editar-buscador-input" placeholder="Buscar dirección o lugar..." autocomplete="off">
+        </div>
+        <div class="ev-lugar-mapa-wrap" id="ev-lugar-editar-mapa-wrap">
+          <div id="ev-lugar-editar-mapa-canvas" style="width:100%;height:100%;"></div>
+          <div class="aj-mapa-pin"><span class="material-symbols-outlined">location_on</span></div>
+        </div>
+        <p class="ev-lugar-mapa-nota">Busca un lugar o arrastra el mapa para ajustar la posición exacta.</p>
       </div>
 
       <div class="ev-lugar-campo">
@@ -2734,7 +2741,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=5f18b1a9"></script>
-<script src="js/eventos.js?v=26c5b3f3"></script>
+<script src="js/eventos.js?v=e384ddbc"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=7a7a6f20"></script>

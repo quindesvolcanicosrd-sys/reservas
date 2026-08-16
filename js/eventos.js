@@ -5158,6 +5158,12 @@ var _evLugarOrigen = 's-eventos-lugares';
 var _evLugarCal = { referencia: { mostrado: null }, unico: { mostrado: null } };
 var _evLugarMapa = null;
 var _evLugarAutocomp = null;
+// Instancia de mapa/buscador propia del hub "Editar lugar" (#s-eventos-lugar-editar,
+// ver MANIFEST.md "Cambios recientes") -- mismo mecanismo que _evLugarMapa/
+// _evLugarAutocomp del wizard de arriba, nunca la misma instancia (2 canvas
+// de DOM distintos, `#ev-lugar-mapa-canvas` vs `#ev-lugar-editar-mapa-canvas`).
+var _evLugarEditarMapa = null;
+var _evLugarEditarAutocomp = null;
 // true cuando el formulario de venue fue abierto desde el paso "Lugar" del
 // wizard "Crear evento" (irEvLugarFormNuevo('desde_crear'), ver
 // MANIFEST.md "Cambios recientes") -- ese wizard ya NO tiene su propio
@@ -5696,8 +5702,7 @@ function _evLugarEditarPintar() {
   var nombreInp = document.getElementById('ev-lugar-editar-nombre');
   if (nombreInp) nombreInp.value = _evLugarData.nombre || '';
   _actualizarContadorTexto(_evLugarData.nombre, 'ev-lugar-editar-nombre-contador', 15);
-  var mapsInp = document.getElementById('ev-lugar-editar-mapsurl');
-  if (mapsInp) mapsInp.value = _evLugarData.mapsUrl || '';
+  _evLugarEditarInicializarMapa();
 
   document.querySelectorAll('#ev-lugar-editar-icono-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.tipoIcono); });
   document.querySelectorAll('#ev-lugar-editar-recurrencia-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.tipoRecurrencia); });
@@ -5731,7 +5736,66 @@ function _evLugarEditarSetNombre(v) {
   if (titulo) titulo.textContent = 'Editar ' + (v || 'lugar');
   _evLugarEditarActualizarBoton();
 }
-function _evLugarEditarSetMapsUrl(v) { _evLugarData.mapsUrl = v.trim() ? v : null; _evLugarEditarActualizarBoton(); }
+/* ── Ubicación del hub "Editar lugar" -- mismo mapa interactivo + buscador
+   de Places que el wizard de creación (_evLugarInicializarMapa()/
+   _evLugarInicializarBuscador(), más arriba en este archivo), NUNCA más un
+   `<input>` de texto para pegar un link de Google Maps a mano (ver
+   MANIFEST.md "Cambios recientes" -- ese patrón se eliminó de acá, la única
+   parte de la app que todavía lo tenía). Instancia de mapa/buscador propia
+   (_evLugarEditarMapa/_evLugarEditarAutocomp, arriba en este archivo) sobre
+   su propio canvas (#ev-lugar-editar-mapa-canvas) -- mismo criterio de
+   "estado propio por pantalla" que el resto de calendarios/mapas
+   duplicados de este archivo, nunca comparte la instancia con el wizard.
+   Centra sobre `_evLugarData.lat`/`.lng` si el venue ya los tenía (un venue
+   editado desde acá siempre viene de `_evLugarAbrirEditar()`, que ya carga
+   esos 2 campos si existen), si no cae al centro por defecto de Quito
+   (`_EV_LUGAR_QUITO_LATLNG`), igual que el wizard. */
+function _evLugarEditarInicializarMapa() {
+  var canvas = document.getElementById('ev-lugar-editar-mapa-canvas');
+  if (!canvas) return;
+  _evLugarEditarInicializarBuscador();
+  if (typeof google === 'undefined' || !google.maps || !window._mapsLoaded) {
+    canvas.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:0.78rem;text-align:center;padding:16px;">No se pudo cargar el mapa. Intenta más tarde.</div>';
+    return;
+  }
+  var centro = (_evLugarData.lat != null && _evLugarData.lng != null) ? { lat: _evLugarData.lat, lng: _evLugarData.lng } : _EV_LUGAR_QUITO_LATLNG;
+  _evLugarEditarCentrarMapa(centro);
+}
+function _evLugarEditarCentrarMapa(pos) {
+  var canvas = document.getElementById('ev-lugar-editar-mapa-canvas');
+  if (!canvas) return;
+  _evLugarEditarMapa = crearOCentrarMapaPin(_evLugarEditarMapa, canvas, pos, _evLugarEditarOnDragEnd);
+}
+function _evLugarEditarOnDragEnd(centro) {
+  _evLugarEditarActualizarUbicacion(centro.lat(), centro.lng(), null);
+}
+// Mismo cálculo que _evLugarActualizarUbicacion() del wizard (arriba en
+// este archivo) -- lat/lng + un mapsUrl usable (el de Google si vino de una
+// búsqueda real, o uno armado a partir de las coordenadas si el usuario
+// solo arrastró el pin) -- pero con su propio hook de footer
+// (_evLugarEditarActualizarBoton(), no _evLugarActualizarFooter() del
+// wizard) porque este hub tiene su propio botón "Guardar cambios" con su
+// propia condición de habilitado (_evLugarEditarHayCambios()).
+function _evLugarEditarActualizarUbicacion(lat, lng, mapsUrlDirecto) {
+  _evLugarData.lat = lat; _evLugarData.lng = lng;
+  _evLugarData.mapsUrl = mapsUrlDirecto || ('https://www.google.com/maps?q=' + lat + ',' + lng);
+  _evLugarEditarActualizarBoton();
+}
+function _evLugarEditarInicializarBuscador() {
+  var inp = document.getElementById('ev-lugar-editar-buscador-input');
+  if (!inp) return;
+  inp.value = '';
+  if (_evLugarEditarAutocomp) { google.maps.event.clearInstanceListeners(inp); _evLugarEditarAutocomp = null; }
+  if (!window._mapsLoaded || typeof google === 'undefined') return; // sin Places -- el mapa sigue usable arrastrando el pin
+  _evLugarEditarAutocomp = new google.maps.places.Autocomplete(inp, { fields: ['geometry', 'name', 'url'] });
+  _evLugarEditarAutocomp.addListener('place_changed', function() {
+    var place = _evLugarEditarAutocomp.getPlace();
+    if (!place || !place.geometry || !place.geometry.location) return;
+    var loc = place.geometry.location;
+    _evLugarEditarCentrarMapa({ lat: loc.lat(), lng: loc.lng() });
+    _evLugarEditarActualizarUbicacion(loc.lat(), loc.lng(), place.url || null);
+  });
+}
 function _evLugarEditarSelIcono(el) {
   document.querySelectorAll('#ev-lugar-editar-icono-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   el.classList.add('activa');
