@@ -6267,9 +6267,14 @@ function _evCrearRenderLugares(lista) {
             '<div class="ev-card-icon"><span class="material-symbols-outlined">place</span></div>' +
             '<div class="ev-card-body">' +
               '<div class="ev-card-titulo">' + v.nombre + '</div>' +
-              '<div class="ev-ant-card-sub">' + _evLugarResumenRecurrencia(v) + '</div>' +
             '</div>' +
           '</div>' +
+          '<button type="button" class="ev-ant-card-edit" onclick="event.stopPropagation();_evLugarAbrirEditar(\'' + v.fila + '\')" title="Editar">' +
+            '<span class="material-symbols-outlined">edit</span>' +
+          '</button>' +
+          '<button type="button" class="ev-ant-card-del" onclick="event.stopPropagation();_evLugarBorrar(\'' + v.fila + '\')" title="Borrar">' +
+            '<span class="material-symbols-outlined">delete</span>' +
+          '</button>' +
         '</div>';
       }).join('');
   cont.innerHTML = htmlLista + _evCrearAgregarLugarHtml();
