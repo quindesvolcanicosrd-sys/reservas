@@ -5978,7 +5978,7 @@ function _evHoraStepperSetMeridiano(prefix, el) {
 // "Descanso" -- sin esta lista completa, `#ev-crear-paso-lugar` seguiría
 // `.activo` para siempre). `_EV_CREAR_STEPS` (abajo) es un subconjunto
 // ORDENADO de esta lista, recalculado según la elección real.
-var _EV_CREAR_TODOS_LOS_PASOS = ['ev-crear-paso-tipo', 'ev-crear-paso-lugar', 'ev-crear-paso-config', 'ev-crear-paso-fecha', 'ev-crear-paso-hora', 'ev-crear-paso-fecha-inicio', 'ev-crear-paso-fecha-fin'];
+var _EV_CREAR_TODOS_LOS_PASOS = ['ev-crear-paso-tipo', 'ev-crear-paso-lugar', 'ev-crear-paso-config', 'ev-crear-paso-fecha', 'ev-crear-paso-hora', 'ev-crear-paso-descanso-rango'];
 // Título de la nav por paso -- objeto (no array, los pasos ya no tienen un
 // índice fijo), actualizado con fade dentro de _evCrearMostrarPaso() (mismo
 // patrón que _EV_LUGAR_STEP_TITULOS/_evLugarMostrarPaso(), más arriba en
@@ -5989,8 +5989,7 @@ var _EV_CREAR_PASO_TITULOS = {
   'ev-crear-paso-config': 'Detalles',
   'ev-crear-paso-fecha': 'Fecha del evento',
   'ev-crear-paso-hora': 'Hora de inicio',
-  'ev-crear-paso-fecha-inicio': 'Inicio del descanso',
-  'ev-crear-paso-fecha-fin': 'Fin del descanso'
+  'ev-crear-paso-descanso-rango': 'Fechas del descanso'
 };
 // Secuencia ORDENADA del flujo actual -- solo para los dots de progreso
 // (_evCrearRenderProg(), indexOf(_evCrearPasoActual) contra este array).
@@ -6006,7 +6005,7 @@ var _evCrearCal = { referencia: { mostrado: null }, unico: { mostrado: null } };
 // _evCrearCal/_evLugarCal/_evAntCal de este archivo. Estado propio, nunca
 // comparte nada con _evCrearCal (que es de "referencia"/"único", del flujo
 // Recurrente/Único) ni con _evAntCal (Asistencia anticipada).
-var _evCrearDescCal = { desde: { mostrado: null }, hasta: { mostrado: null } };
+var _evCrearDescCal = { mostrado: null, touched: false, prevDesde: null, prevHasta: null };
 // El paso "Hora" (#ev-crear-paso-hora) YA ES el wrap del stepper (ya no hay
 // un <div style="display:none"> interno que revele por primera vez, como
 // tenía el viejo paso "Detalles") -- este flag reemplaza a esa lógica para
@@ -6020,7 +6019,7 @@ function irEvCrear() {
     venueExistente: null,
     tipoRecurrencia: null, diasSemana: [], frecuenciaNumero: null, frecuenciaUnidad: null,
     fecha: null, hora: '09:00',
-    descansoFechaDesde: null, descansoFechaHasta: null,
+    fechaInicioDescanso: null, fechaFinDescanso: null,
     // Estado del bottom sheet "Frecuencia personalizada" (Cambio 2, ver
     // MANIFEST.md "Cambios recientes") -- se espeja hacia
     // frecuenciaNumero/frecuenciaUnidad recién al confirmar (ver
@@ -6031,8 +6030,7 @@ function irEvCrear() {
   var mesInicial = _evHoyISO();
   _evCrearCal.referencia.mostrado = mesInicial;
   _evCrearCal.unico.mostrado = mesInicial;
-  _evCrearDescCal.desde.mostrado = mesInicial;
-  _evCrearDescCal.hasta.mostrado = mesInicial;
+  _evCrearDescCal = { mostrado: mesInicial, touched: false, prevDesde: null, prevHasta: null };
   _evCrearHoraInicializada = false;
   ir('s-eventos-crear');
   _evCrearResetUI();
@@ -6043,10 +6041,8 @@ function irEvCrear() {
   _evCrearCalRender('unico');
   _evCrearActualizarCalResumen('referencia');
   _evCrearActualizarCalResumen('unico');
-  _evCrearDescCalRender('desde');
-  _evCrearDescCalRender('hasta');
-  _evCrearDescActualizarResumen('desde');
-  _evCrearDescActualizarResumen('hasta');
+  _evCrearDescRangoCalRender();
+  _evCrearDescRangoActualizarResumen();
 }
 
 // Recalcula _EV_CREAR_STEPS según la elección actual -- llamada desde
@@ -6059,7 +6055,7 @@ function irEvCrear() {
 function _evCrearRecalcularSteps() {
   var t = _evCrearData.tipoEvento;
   if (t === 'descanso') {
-    _EV_CREAR_STEPS = ['ev-crear-paso-tipo', 'ev-crear-paso-fecha-inicio', 'ev-crear-paso-fecha-fin'];
+    _EV_CREAR_STEPS = ['ev-crear-paso-tipo', 'ev-crear-paso-descanso-rango'];
   } else if (t === 'unico' || (t === 'recurrente' && _evCrearData.tipoRecurrencia === 'cada_tantos')) {
     _EV_CREAR_STEPS = ['ev-crear-paso-tipo', 'ev-crear-paso-lugar', 'ev-crear-paso-config', 'ev-crear-paso-fecha', 'ev-crear-paso-hora'];
   } else if (t === 'recurrente') {
@@ -6105,6 +6101,7 @@ function _evCrearMostrarPaso(pasoId) {
   if (pasoId === 'ev-crear-paso-config') _evCrearActualizarDetalles();
   if (pasoId === 'ev-crear-paso-fecha') _evCrearActualizarPasoFecha();
   if (pasoId === 'ev-crear-paso-hora') _evCrearActualizarPasoHora();
+  if (pasoId === 'ev-crear-paso-descanso-rango') { _evCrearDescRangoCalRender(); _evCrearDescRangoActualizarResumen(); }
   _evCrearActualizarFooter();
 }
 function _evCrearRenderProg() {
@@ -6135,8 +6132,7 @@ function _evCrearBack() {
     _evCrearMostrarPaso(previo);
     return;
   }
-  if (p === 'ev-crear-paso-fecha-inicio') { _evCrearMostrarPaso('ev-crear-paso-tipo'); return; }
-  if (p === 'ev-crear-paso-fecha-fin') { _evCrearMostrarPaso('ev-crear-paso-fecha-inicio'); return; }
+  if (p === 'ev-crear-paso-descanso-rango') { _evCrearMostrarPaso('ev-crear-paso-tipo'); return; }
 }
 // Reemplaza a la vieja _evCrearIrPaso1() -- ahora cubre las transiciones
 // hacia adelante de TODOS los flujos (ver el comentario del encabezado de
@@ -6145,7 +6141,7 @@ function _evCrearIrSiguiente() {
   var p = _evCrearPasoActual;
   if (p === 'ev-crear-paso-tipo') {
     if (!_evCrearData.tipoEvento) return;
-    _evCrearMostrarPaso(_evCrearData.tipoEvento === 'descanso' ? 'ev-crear-paso-fecha-inicio' : 'ev-crear-paso-lugar');
+    _evCrearMostrarPaso(_evCrearData.tipoEvento === 'descanso' ? 'ev-crear-paso-descanso-rango' : 'ev-crear-paso-lugar');
     return;
   }
   if (p === 'ev-crear-paso-lugar') {
@@ -6165,14 +6161,9 @@ function _evCrearIrSiguiente() {
     _evCrearMostrarPaso('ev-crear-paso-hora');
     return;
   }
-  if (p === 'ev-crear-paso-fecha-inicio') {
-    if (!_evCrearPasoValido(p)) return;
-    _evCrearMostrarPaso('ev-crear-paso-fecha-fin');
-    return;
-  }
-  // 'ev-crear-paso-hora'/'ev-crear-paso-fecha-fin' son los últimos pasos de
-  // sus flujos -- el footer ahí ya muestra "Guardar" (_evCrearGuardar()),
-  // esta función no aplica.
+  // 'ev-crear-paso-hora'/'ev-crear-paso-descanso-rango' son los últimos
+  // pasos de sus flujos -- el footer ahí ya muestra "Guardar"
+  // (_evCrearGuardar()), esta función no aplica.
 }
 // Validez de los pasos INTERMEDIOS (habilita "Continuar") -- separada de
 // _evCrearPasoFinalValido() (habilita "Guardar"), que reusa la validación
@@ -6190,12 +6181,11 @@ function _evCrearPasoValido(p) {
     return false;
   }
   if (p === 'ev-crear-paso-fecha') return !!_evCrearData.fecha;
-  if (p === 'ev-crear-paso-fecha-inicio') return !!_evCrearData.descansoFechaDesde;
   return false;
 }
 function _evCrearPasoFinalValido() {
   if (_evCrearPasoActual === 'ev-crear-paso-hora') return _evCrearRecurrenciaValidaWizard();
-  if (_evCrearPasoActual === 'ev-crear-paso-fecha-fin') return !!(_evCrearData.descansoFechaDesde && _evCrearData.descansoFechaHasta);
+  if (_evCrearPasoActual === 'ev-crear-paso-descanso-rango') return !!(_evCrearData.fechaInicioDescanso && _evCrearData.fechaFinDescanso);
   return false;
 }
 function _evCrearActualizarFooter() {
@@ -6215,7 +6205,7 @@ function _evCrearActualizarFooter() {
     return;
   }
   if (footer) footer.style.display = 'flex';
-  var esUltimo = (p === 'ev-crear-paso-hora' || p === 'ev-crear-paso-fecha-fin');
+  var esUltimo = (p === 'ev-crear-paso-hora' || p === 'ev-crear-paso-descanso-rango');
   if (esUltimo) {
     btn.textContent = 'Guardar';
     btn.onclick = _evCrearGuardar;
@@ -6360,39 +6350,99 @@ function _evCrearDescripcionInput(el) {
     cont.classList.toggle('ev-editar-desc-contador-limite', (150 - el.value.length) <= 20);
   }
 }
-// Setter de estado puro (sin tocar el DOM del calendario) -- llamado por
-// _evCrearDescCalTocarDia() después de un tap real. Separado de esa función
-// para que _evCrearPasoValido()/_evCrearPasoFinalValido()/
-// _evCrearActualizarFooter() tengan un solo punto de entrada al estado,
-// mismo criterio que el resto de setters de _evCrearData en este archivo.
-function _evCrearSetDescansoFecha(cual, v) {
-  if (cual === 'desde') _evCrearData.descansoFechaDesde = v || null;
-  else _evCrearData.descansoFechaHasta = v || null;
+/* ── Calendario de rango "ida y vuelta" del paso "Descanso"
+   (`ev-crear-paso-descanso-rango`, ver MANIFEST.md "Cambios recientes") --
+   reemplaza a los 2 calendarios independientes "Desde"/"Hasta" que tenía
+   este paso antes. Mismo mecanismo/clases que usa "Por período" en
+   Asistencia Anticipada (`_evAntCalRender('periodo')`/
+   `_evAntCalTocarDia('periodo', iso)`) y la pantalla huérfana-para-creación-
+   pero-viva-para-edición "Nueva/Editar temporada de descanso"
+   (`_evCrearDescansoCalRender()`/`_evCrearDescansoCalTocarDia()`, más abajo
+   en este archivo) -- mismo criterio ya documentado ahí: comparte el LOOK
+   del calendario (clases `.ev-ant-cal-*`/`.ev-ant-fecha-pill`/
+   `.ev-ant-rango-*`) entre los 3 flujos, nunca el estado -- este wizard
+   tiene el suyo propio (`_evCrearDescCal` + `_evCrearData.fechaInicioDescanso`/
+   `fechaFinDescanso`). Reusa literal `_evCrearDescansoFechaPillHtml()` (sin
+   estado propio, ya pensada para compartirse entre pantallas). Bloquea
+   fechas pasadas (una temporada de descanso no debería poder arrancar ni
+   terminar en el pasado). ──────────────────────────────────────────────── */
+function _evCrearDescRangoCalMoverMes(dir) {
+  var m = _evCalMesDe(_evCrearDescCal.mostrado);
+  var year = m.year, month = m.month + dir;
+  if (month < 0) { month = 11; year--; } else if (month > 11) { month = 0; year++; }
+  _evCrearDescCal.mostrado = _evToISO(new Date(year, month, 1));
+  _evCrearDescRangoCalRender();
+}
+// "Ida y vuelta" -- mismo criterio que _evAntCalTocarDia('periodo', iso)/
+// _evCrearDescansoCalTocarDia(iso): sin inicio, o con inicio+fin ya
+// completos, el toque fija el inicio y limpia el fin; con solo inicio
+// pendiente, un toque posterior (>= inicio) fija el fin, uno anterior AL
+// inicio lo reemplaza -- empieza el rango de nuevo desde esa fecha, nunca
+// queda un rango invertido (cubre "si la segunda es anterior a la primera,
+// intercambiarlas" sin necesitar un swap real).
+function _evCrearDescRangoCalTocarDia(iso) {
+  if (_evFechaCmp(iso, _evHoyISO()) < 0) return;
+  var inicio = _evCrearData.fechaInicioDescanso, fin = _evCrearData.fechaFinDescanso;
+  if (!inicio || fin) {
+    _evCrearData.fechaInicioDescanso = iso;
+    _evCrearData.fechaFinDescanso = null;
+  } else if (_evFechaCmp(iso, inicio) < 0) {
+    _evCrearData.fechaInicioDescanso = iso;
+  } else {
+    _evCrearData.fechaFinDescanso = iso;
+  }
+  _evCrearDescCal.touched = true;
+  _evCrearDescRangoCalRender();
+  _evCrearDescRangoActualizarResumen();
   _evCrearActualizarFooter();
 }
-
-/* ── Calendarios inline "Desde"/"Hasta" del paso "Descanso" -- mismo
-   mecanismo/clases que _evCrearCalRender('referencia'|'unico') más arriba
-   (helpers genéricos de fecha del timeline principal: _evCalMesDe/
-   _evLunesDeSemana/_evToISO/_evHoyISO/_evFechaCmp), 2 instancias
-   independientes en vez de un solo calendario de rango "ida y vuelta" (el
-   patrón que usa "Por período" en Asistencia Anticipada, _evAntCalRender())
-   -- acá cada extremo se elige por separado, con su propio mes navegable.
-   Bloquea fechas pasadas en AMBOS calendarios (una temporada de descanso no
-   debería poder arrancar ni terminar en el pasado). No valida que "Hasta"
-   sea posterior a "Desde" -- el guardado real de este tipo todavía es un
-   stub (ver _evCrearGuardar()), esa validación queda pendiente para cuando
-   se implemente el guardado real. ──────────────────────────────────────── */
-function _evCrearDescCalRender(cual) {
-  var cont = document.getElementById('ev-crear-desc-cal-' + cual); if (!cont) return;
-  var m = _evCalMesDe(_evCrearDescCal[cual].mostrado);
-  var labelEl = document.getElementById('ev-crear-desc-cal-' + cual + '-label');
+function _evCrearDescRangoCalRestablecer() {
+  _evCrearData.fechaInicioDescanso = null;
+  _evCrearData.fechaFinDescanso = null;
+  _evCrearDescCal.touched = false;
+  _evCrearDescRangoCalRender();
+  _evCrearDescRangoActualizarResumen();
+  _evCrearActualizarFooter();
+}
+function _evCrearDescRangoActualizarResumen() {
+  var cont = document.getElementById('ev-crear-desc-rango-resumen');
+  if (!cont) return;
+  var st = _evCrearDescCal;
+  var inicio = _evCrearData.fechaInicioDescanso, fin = _evCrearData.fechaFinDescanso;
+  var inicioNuevo = !!inicio && inicio !== st.prevDesde;
+  var finNuevo = !!fin && fin !== st.prevHasta;
+  if (!inicio) {
+    cont.innerHTML = '<span class="ev-ant-rango-vacio">Toca una fecha en el calendario para empezar</span>';
+    void cont.offsetWidth;
+    cont.style.animation = 'fadeIn 0.2s ease';
+  } else {
+    var html = 'Del ' + _evCrearDescansoFechaPillHtml(inicio, inicioNuevo);
+    if (fin) html += ' al ' + _evCrearDescansoFechaPillHtml(fin, finNuevo);
+    cont.innerHTML = html;
+    cont.style.animation = '';
+  }
+  st.prevDesde = inicio;
+  st.prevHasta = fin;
+  var btn = document.getElementById('ev-crear-desc-rango-btn-restablecer');
+  if (btn) {
+    if (st.touched) { btn.style.display = 'flex'; void btn.offsetWidth; btn.style.animation = 'fadeIn 0.2s ease'; }
+    else {
+      btn.style.animation = 'fadeOut 0.2s ease forwards';
+      setTimeout(function() { if (!_evCrearDescCal.touched) btn.style.display = 'none'; }, 200);
+    }
+  }
+}
+function _evCrearDescRangoCalRender() {
+  var cont = document.getElementById('ev-crear-desc-rango-cal');
+  if (!cont) return;
+  var m = _evCalMesDe(_evCrearDescCal.mostrado);
+  var labelEl = document.getElementById('ev-crear-desc-rango-cal-label');
   if (labelEl) labelEl.textContent = NOMBRES_MESES[m.month] + ' ' + m.year;
   var inicioGrid = _evLunesDeSemana(new Date(m.year, m.month, 1));
   var finMes = new Date(m.year, m.month + 1, 0);
   var finGrid = _evLunesDeSemana(finMes); finGrid.setDate(finGrid.getDate() + 6);
   var hoy = _evHoyISO();
-  var seleccionada = cual === 'desde' ? _evCrearData.descansoFechaDesde : _evCrearData.descansoFechaHasta;
+  var inicio = _evCrearData.fechaInicioDescanso, fin = _evCrearData.fechaFinDescanso;
   var html = _EV_DIAS_CORTOS.map(function(d) { return '<div class="ev-cal-dow">' + d + '</div>'; }).join('');
   var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
   while (cur <= finGrid) {
@@ -6400,32 +6450,17 @@ function _evCrearDescCalRender(cual) {
     var ajeno = cur.getMonth() !== m.month;
     var pasado = _evFechaCmp(celdaIso, hoy) < 0;
     var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (pasado ? ' ev-ant-cal-pasado' : '');
-    if (seleccionada && celdaIso === seleccionada) clases += ' ev-ant-cal-sel';
+    if (inicio && celdaIso === inicio) clases += ' ev-ant-cal-sel';
+    if (fin && celdaIso === fin) clases += ' ev-ant-cal-sel';
+    if (inicio && fin && _evFechaCmp(celdaIso, inicio) > 0 && _evFechaCmp(celdaIso, fin) < 0) clases += ' ev-ant-cal-en-rango';
     if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
-    var onclickAttr = pasado ? '' : ' onclick="_evCrearDescCalTocarDia(\'' + cual + '\',\'' + celdaIso + '\')"';
+    var onclickAttr = pasado ? '' : ' onclick="_evCrearDescRangoCalTocarDia(\'' + celdaIso + '\')"';
     html += '<div class="' + clases + '" data-iso="' + celdaIso + '"' + onclickAttr + '><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
     cur.setDate(cur.getDate() + 1);
   }
   // Fade al repintar -- mismo fix aplicado al resto de instancias de este
   // componente en este archivo (ver comentario completo en _evAntCalRender()).
   _evFadeSwap(cont, function() { cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>'; }, false);
-}
-function _evCrearDescCalMoverMes(cual, dir) {
-  var m = _evCalMesDe(_evCrearDescCal[cual].mostrado);
-  var year = m.year, month = m.month + dir;
-  if (month < 0) { month = 11; year--; } else if (month > 11) { month = 0; year++; }
-  _evCrearDescCal[cual].mostrado = _evToISO(new Date(year, month, 1));
-  _evCrearDescCalRender(cual);
-}
-function _evCrearDescCalTocarDia(cual, iso) {
-  _evCrearSetDescansoFecha(cual, iso);
-  _evCrearDescCalRender(cual);
-  _evCrearDescActualizarResumen(cual);
-}
-function _evCrearDescActualizarResumen(cual) {
-  var el = document.getElementById('ev-crear-desc-cal-' + cual + '-resumen'); if (!el) return;
-  var valor = cual === 'desde' ? _evCrearData.descansoFechaDesde : _evCrearData.descansoFechaHasta;
-  el.textContent = valor ? _evAntFechaLegible(valor) : '';
 }
 /* ── Paso "Detalles" (id `ev-crear-paso-config`) -- categoría (siempre
    visible, este paso ya no lo comparte con "Descanso") + tipo de

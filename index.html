@@ -1288,35 +1288,31 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
       </div>
 
-      <!-- "Descanso" -- 2 pasos propios en vez de 2 calendarios embebidos en
-           un mismo paso (ver MANIFEST.md "Cambios recientes"), cada uno con
-           su propio calendario/mes navegable (_evCrearDescCal*(),
-           js/eventos.js, sin cambios de mecánica -- mismo motor/clases que
-           "referencia"/"único" arriba, .ev-ant-cal-nav*/.ev-cal-grid, NO la
-           selección de rango "ida y vuelta" de un solo calendario que usa
-           "Por período" en Asistencia Anticipada/#ev-ant-paso1-periodo).
-           Sin botón "restablecer" -- cada fecha es independiente y
-           reelegible con solo tocar otro día. El guardado real de este tipo
+      <!-- "Descanso" -- 1 solo paso con calendario de rango "ida y vuelta"
+           (ver MANIFEST.md "Cambios recientes"), reemplaza a los 2 pasos
+           separados que tenía antes (calendario "Desde" + calendario
+           "Hasta"). Mismo mecanismo/clases que "Por período" en Asistencia
+           Anticipada (_evAntCalRender('periodo')) y la pantalla "Nueva/
+           Editar temporada de descanso" (_evCrearDescansoCalRender(),
+           js/eventos.js) -- primer toque fija el inicio, segundo toque fija
+           el fin (o reinicia el rango si es anterior al inicio), rango
+           resaltado entre ambas fechas. El guardado real de este tipo
            todavía es un stub (toast "próximamente", ver
-           _evCrearGuardar()/js/eventos.js) -- footer "Guardar" en el paso
-           "Fin del descanso" ya dispara ese stub. -->
-      <div class="salud-paso" id="ev-crear-paso-fecha-inicio">
+           _evCrearGuardar()/js/eventos.js) -- footer "Guardar" acá ya
+           dispara ese stub. -->
+      <div class="salud-paso" id="ev-crear-paso-descanso-rango">
         <div class="ev-ant-cal-nav">
-          <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescCalMoverMes('desde',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
-          <span class="ev-ant-cal-nav-label" id="ev-crear-desc-cal-desde-label"></span>
-          <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescCalMoverMes('desde',1)"><span class="material-symbols-outlined">chevron_right</span></button>
+          <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescRangoCalMoverMes(-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+          <span class="ev-ant-cal-nav-label" id="ev-crear-desc-rango-cal-label"></span>
+          <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescRangoCalMoverMes(1)"><span class="material-symbols-outlined">chevron_right</span></button>
         </div>
-        <div id="ev-crear-desc-cal-desde"></div>
-        <div class="ev-lugar-cal-resumen" id="ev-crear-desc-cal-desde-resumen"></div>
-      </div>
-      <div class="salud-paso" id="ev-crear-paso-fecha-fin">
-        <div class="ev-ant-cal-nav">
-          <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescCalMoverMes('hasta',-1)"><span class="material-symbols-outlined">chevron_left</span></button>
-          <span class="ev-ant-cal-nav-label" id="ev-crear-desc-cal-hasta-label"></span>
-          <button type="button" class="ev-ant-cal-nav-btn" onclick="_evCrearDescCalMoverMes('hasta',1)"><span class="material-symbols-outlined">chevron_right</span></button>
+        <div id="ev-crear-desc-rango-cal"></div>
+        <div class="ev-ant-rango-fila" id="ev-crear-desc-rango-fila" style="margin-top:10px;">
+          <div class="ev-ant-rango-linea" id="ev-crear-desc-rango-resumen"></div>
+          <button type="button" class="btn-text-simple ev-ant-btn-restablecer-icono" id="ev-crear-desc-rango-btn-restablecer" onclick="_evCrearDescRangoCalRestablecer()" aria-label="Restablecer fechas" title="Restablecer fechas" style="display:none;">
+            <span class="material-symbols-outlined">undo</span>
+          </button>
         </div>
-        <div id="ev-crear-desc-cal-hasta"></div>
-        <div class="ev-lugar-cal-resumen" id="ev-crear-desc-cal-hasta-resumen"></div>
       </div>
 
       <!-- 100px, no los 24px que usa #s-eventos-lugar-form: medido con
@@ -2738,7 +2734,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=5f18b1a9"></script>
-<script src="js/eventos.js?v=f9a94963"></script>
+<script src="js/eventos.js?v=26c5b3f3"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=7a7a6f20"></script>
