@@ -6207,7 +6207,7 @@ function _evCrearActualizarFooter() {
     btn.disabled = !_evCrearData.tipoEvento;
     return;
   }
-  if (footer) footer.style.display = '';
+  if (footer) footer.style.display = 'flex';
   var esUltimo = (p === 'ev-crear-paso-hora' || p === 'ev-crear-paso-fecha-fin');
   if (esUltimo) {
     btn.textContent = 'Guardar';
