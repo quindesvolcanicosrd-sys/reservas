@@ -5064,36 +5064,91 @@ function _evLugaresRenderLista() {
   }).join('');
 }
 
-// Borrar (ver MANIFEST.md "Cambios recientes") -- primero chequea si el
-// lugar tiene eventos vinculados en `asistencias` (por nombre, columna
-// `donde` -- la relación real entre las 2 tablas es por texto, no por FK:
-// `asistencias.donde` guarda el NOMBRE del lugar tal cual, no un id de
-// `venues`) antes de decidir si hace falta advertir. Con eventos
-// vinculados, `confirm()` nativo (mismo patrón ya usado en el resto de esta
-// sección para "borrar con advertencia", ver `_evOffseasonEliminar()`) con
-// el texto completo pedido -- cancelar corta acá, sin tocar nada. SIN
-// eventos vinculados, borra directo, sin ningún confirm (pedido explícito
-// -- "sin advertencia").
+// Borrar (ver MANIFEST.md "Cambios recientes") -- primero cuenta cuántos
+// eventos vinculados hay en `asistencias` (por nombre, columna `donde` -- la
+// relación real entre las 2 tablas es por texto, no por FK: `asistencias.donde`
+// guarda el NOMBRE del lugar tal cual, no un id de `venues`), separando
+// futuros/pasados contra la fecha de hoy, y recién con ese conteo en mano
+// abre el bsheet de confirmación (#ev-lugar-sheet-eliminar, index.html) --
+// reemplaza al `confirm()` nativo que tenía esta función antes (mismo
+// motivo que ya llevó a `_evAntEliminar()`/#ev-ant-sheet-eliminar a dejar de
+// usar `confirm()`, arriba en este archivo: consistencia visual con el
+// resto de la app). El bsheet se muestra SIEMPRE (a diferencia del
+// `confirm()` viejo, que solo aparecía si había eventos vinculados) -- el
+// pedido de diseño ya cubre el caso "sin eventos" con su propio mensaje
+// ("Esta acción no se puede deshacer.", sin la advertencia extra).
 function _evLugarBorrar(fila) {
   var v = _evLugares.filter(function(x) { return x.fila === fila; })[0];
   if (!v) return;
   mostrarCargando('Verificando...');
-  fetch(SUPABASE_URL + '/rest/v1/asistencias?select=id&donde=eq.' + encodeURIComponent(v.nombre) + '&limit=1', {
+  fetch(SUPABASE_URL + '/rest/v1/asistencias?select=fecha&donde=eq.' + encodeURIComponent(v.nombre), {
     headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }
   }).then(function(r) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.json();
   }).then(function(rows) {
     ocultarCargando();
-    var tieneEventos = (rows || []).length > 0;
-    if (tieneEventos && !confirm('Este lugar está vinculado a eventos. Borrarlo eliminará todos los eventos pasados y futuros y sus registros de asistencia. Esta acción no se puede deshacer.')) return;
-    _evLugarBorrarConfirmado(fila);
+    var hoy = _evHoyISO();
+    var futuros = 0, pasados = 0;
+    (rows || []).forEach(function(f) {
+      if (_evFechaCmp(f.fecha, hoy) > 0) futuros++; else pasados++;
+    });
+    _evLugarAbrirSheetEliminar(fila, futuros, pasados);
   }).catch(function() {
     ocultarCargando();
     mostrarToast('No se pudo verificar si el lugar tiene eventos vinculados.', 'error');
   });
 }
-function _evLugarBorrarConfirmado(fila) {
+// Texto de advertencia -- cubre los 4 casos posibles (0 eventos ya lo
+// maneja _evLugarAbrirSheetEliminar() dejando este bloque oculto): solo
+// futuros, solo pasados, o ambos (el único caso explícito en el pedido
+// original, "N eventos futuros... y M eventos pasados en el historial").
+// Singular/plural real (nunca "1 eventos") para que el texto lea bien
+// también en el caso más común de un solo evento vinculado.
+function _evLugarEliminarTextoWarn(futuros, pasados) {
+  function frase(n, singular, plural) { return n + ' ' + (n === 1 ? singular : plural); }
+  if (futuros > 0 && pasados > 0) {
+    return 'Este lugar tiene ' + frase(futuros, 'evento futuro', 'eventos futuros') + ' que también se ' + (futuros === 1 ? 'eliminará' : 'eliminarán') + ', y ' + frase(pasados, 'evento pasado', 'eventos pasados') + ' en el historial.';
+  }
+  if (futuros > 0) {
+    return 'Este lugar tiene ' + frase(futuros, 'evento futuro', 'eventos futuros') + ' que también se ' + (futuros === 1 ? 'eliminará' : 'eliminarán') + '.';
+  }
+  return 'Este lugar tiene ' + frase(pasados, 'evento pasado', 'eventos pasados') + ' en el historial que también se ' + (pasados === 1 ? 'eliminará' : 'eliminarán') + '.';
+}
+var _evLugarEliminarPendienteFila = null;
+function _evLugarAbrirSheetEliminar(fila, futuros, pasados) {
+  _evLugarEliminarPendienteFila = fila;
+  var warn = document.getElementById('ev-lugar-sheet-eliminar-warn');
+  var warnTexto = document.getElementById('ev-lugar-sheet-eliminar-warn-texto');
+  var hayEventos = (futuros + pasados) > 0;
+  if (warn) warn.style.display = hayEventos ? 'flex' : 'none';
+  if (warnTexto) warnTexto.textContent = hayEventos ? _evLugarEliminarTextoWarn(futuros, pasados) : '';
+  var ov = document.getElementById('ev-lugar-sheet-eliminar-overlay');
+  var sh = document.getElementById('ev-lugar-sheet-eliminar');
+  if (!ov || !sh) return;
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(_evLugarCerrarSheetEliminar);
+}
+// Mismo mecanismo doble-hop por history.back() que _evAntCerrarSheetEliminar()
+// (arriba en este archivo, ver ese comentario) -- el botón "Cancelar"
+// dispara history.back(), que el listener de popstate intercepta y recién
+// ahí llama de vuelta acá con porGesto=true para animar el cierre real.
+function _evLugarCerrarSheetEliminar(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var ov = document.getElementById('ev-lugar-sheet-eliminar-overlay');
+  var sh = document.getElementById('ev-lugar-sheet-eliminar');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+// Botón "Eliminar" del sheet -- cierra primero, recién ahí dispara el
+// DELETE real, mismo orden que _evAntConfirmarEliminar().
+function _evLugarConfirmarEliminar(btn) {
+  if (!_evLugarEliminarPendienteFila) return;
+  var fila = _evLugarEliminarPendienteFila;
+  _evLugarEliminarPendienteFila = null;
+  _evLugarCerrarSheetEliminar();
   mostrarCargando('Eliminando...');
   fetch(SUPABASE_URL + '/rest/v1/venues?id=eq.' + encodeURIComponent(fila), {
     method: 'DELETE',
@@ -6832,9 +6887,34 @@ function _evCrearGuardar() {
     body: JSON.stringify(payload)
   }).then(function(r) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    ocultarCargando();
-    mostrarToast('Evento creado.', 'ok');
-    ir('s-eventos');
+    // El POST de arriba solo guarda la REGLA (fila de `venues`) -- las
+    // filas de `asistencias` que el timeline realmente lee (getEventosRango())
+    // las genera un proceso de backend aparte (_mantenerVentanaAsistenciasInterno(),
+    // GAS, ver MANIFEST.md "Backend — Venues"/"Migración de Venues a
+    // Supabase Etapa B") que por default corre 1 vez al día (cron 3am) --
+    // sin este llamado, el venue queda guardado pero NINGÚN evento nuevo
+    // aparece en el timeline hasta el día siguiente, aunque el guardado
+    // "salió bien". `adminRegenerarVentanaAsistencias` (ya en el router de
+    // GAS desde esa migración, `forwardToGAS()` -- ver MANIFEST.md) dispara
+    // esa regeneración a mano. Best-effort a propósito: si falla (ej. GAS
+    // caído), NO bloquea el flujo -- "Evento creado" ya es cierto (la regla
+    // se guardó) y el timeline igual se refresca por si la regeneración
+    // automática ya había corrido antes.
+    function _evCrearGuardarTerminar() {
+      ocultarCargando();
+      mostrarToast('Evento creado.', 'ok');
+      ir('s-eventos');
+      // Bug real corregido (ver MANIFEST.md "Cambios recientes"): esto le
+      // faltaba a este guardado en particular -- `ir('s-eventos')` sola NO
+      // vuelve a pedir `_EV_EVENTOS` si la sesión ya había visitado Eventos
+      // antes (`irEventos()`/`_evYaInicializadoEnSesion`, más arriba en este
+      // archivo), así que el timeline quedaba mostrando datos viejos hasta
+      // un F5. Mismo patrón que el resto de guardados/borrados de esta
+      // sección (`_evCrearDescansoGuardar()`/`_evOffseasonEliminar()`, más
+      // abajo en este archivo): refetch explícito + re-render.
+      _evCargarDatosReales(function() { _evRenderTimeline(true); });
+    }
+    api({ action: 'adminRegenerarVentanaAsistencias', adminToken: _adminToken }, _evCrearGuardarTerminar, _evCrearGuardarTerminar);
   }).catch(function(e) {
     ocultarCargando();
     mostrarToast((e && e.message) || 'No se pudo crear el evento.', 'error');

@@ -898,6 +898,14 @@
    (orden editar -> eliminar). */
 .ev-ant-card-edit { border: 1.5px solid transparent; background: var(--brand-light); color: var(--brand); }
 .ev-ant-card-del .material-symbols-outlined, .ev-ant-card-edit .material-symbols-outlined { font-size: 1.15rem; }
+/* Advertencia destacada del bsheet "¿Eliminar lugar?" (#ev-lugar-sheet-eliminar,
+   ver MANIFEST.md "Cambios recientes") -- cuenta de eventos futuros/pasados
+   vinculados al venue, tokens de `--warning*` (css/colors.css), mismos que
+   ya usa `.ev-estado-pill-warning` en este archivo -- ningún color
+   hardcodeado. */
+.ev-lugar-eliminar-warn { display: flex; align-items: flex-start; gap: 10px; background: var(--warning-bg); border: 1px solid var(--warning-bdr); border-radius: 12px; padding: 12px 14px; }
+.ev-lugar-eliminar-warn .material-symbols-outlined { color: var(--warning); font-size: 1.2rem; flex-shrink: 0; }
+.ev-lugar-eliminar-warn span:last-child { font-size: 0.82rem; color: var(--text); line-height: 1.4; }
 
 /* Párrafo intro de "Estado a aplicar" (ver "Cambios recientes" -- antes vivía
    AFUERA del acordeón, con su propio colapso al scrollear; ahora es
