@@ -5315,7 +5315,7 @@ function _evLugarAbrirEditar(fila, desdeWizard) {
   var v = _evLugares.filter(function(x) { return x.fila === fila; })[0];
   if (!v) return;
   _evLugarData = {
-    fila: v.fila, nombre: v.nombre || '', mapsUrl: v.mapsUrl || null,
+    fila: v.fila, nombre: v.nombre || '', nombreOriginal: v.nombre || '', mapsUrl: v.mapsUrl || null,
     lat: (typeof v.lat === 'number') ? v.lat : null, lng: (typeof v.lng === 'number') ? v.lng : null,
     tipoIcono: v.tipoIcono || null,
     tipoRecurrencia: v.tipoRecurrencia || null,
@@ -5738,6 +5738,17 @@ function _evLugarGuardar() {
       if (r.ok) {
         ocultarCargando();
         mostrarToast(editando ? 'Lugar actualizado.' : 'Lugar creado.', 'ok');
+        // Si se editó (no creó) un venue y el nombre cambió, las filas de
+        // `asistencias` ya generadas por este venue quedan con `donde`
+        // apuntando al nombre viejo (esa columna no se deriva del venue,
+        // se copió al generarlas -- ver `_mantenerVentanaAsistenciasInterno()`
+        // en GAS) -- fire & forget, no bloquea la navegación ni el toast de
+        // éxito ya mostrado arriba.
+        if (editando && _evLugarData.nombreOriginal && _evLugarData.nombreOriginal !== payload.lugar) {
+          fetch(SUPABASE_URL + '/rest/v1/asistencias?donde=eq.' + encodeURIComponent(_evLugarData.nombreOriginal), {
+            method: 'PATCH', headers: headers, body: JSON.stringify({ donde: payload.lugar })
+          }).catch(function(e) { console.warn('No se pudo sincronizar asistencias.donde tras renombrar el lugar:', e); });
+        }
         // Vuelve al wizard "Crear evento" en vez de a `_evLugarFormVolver()`
         // -- NO usa irEvCrear() (resetea todo el wizard a cero, perdiendo el
         // tipo ya elegido en el Paso "Tipo") -- solo recarga la lista de
@@ -7689,7 +7700,7 @@ function _evAdminEditarEvento(idEvento, campos, modo, fechaDesde, fechaHasta, on
       ? '&fecha=gte.' + fechaDesde + '&fecha=lte.' + fechaHasta
       : '&fecha=gte.' + fechaDesde;
 
-    if (modo === 'periodo') upd.es_excepcion = true;
+    if (modo === 'periodo' || modo === 'desde_aqui') upd.es_excepcion = true;
 
     var urlAsis = SUPABASE_URL + '/rest/v1/asistencias?id_regla=eq.' + encodeURIComponent(idRegla) + filtroFecha;
 
