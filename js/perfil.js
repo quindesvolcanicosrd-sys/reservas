@@ -14,7 +14,7 @@ var _ajYaInicializadoEnSesion = false;
 var _ajHomeScrollY = 0;
 var _ajRestaurarScroll = false;
 function _ajGuardarScrollHome() { _ajHomeScrollY = window.scrollY; }
-function irEditarDatos() {
+function irEditarDatos(sinNavegar) {
   // Cuenta admin "pura" (dashboardAdmin:true, sin fila en Equipo, nunca pisa
   // E.datos): antes esta función bailaba de entrada para cualquier cuenta
   // sin E.datos -- ahora, si hay _adminToken, sigue igual (con `d = {}`, todo
@@ -104,7 +104,7 @@ function irEditarDatos() {
   // tanto), lo único condicional es si se restaura el scroll guardado.
   if (_ajYaInicializadoEnSesion) _ajRestaurarScroll = true;
   else _ajYaInicializadoEnSesion = true;
-  ir('s-datos');
+  if (!sinNavegar) ir('s-datos');
 }
 
 function irEditarPerfil() { irAjSub('aj-sub-perfil'); }
@@ -1727,7 +1727,7 @@ function _ajGuardar(payload, btn, subId, onExito) {
   api({ action: 'actualizarDatosPersona', nombre: E.nombre, datos: JSON.stringify(payload) }, function() {
     Object.assign(E.datos, payload);
     if (btn) { btn.textContent = 'Guardar cambios'; btn.disabled = false; }
-    if (onExito) { onExito(); } else { irEditarDatos(); cerrarAjSub(subId, true); }
+    if (onExito) { onExito(); } else { irEditarDatos(!!_ajSubAbierto && !subId); cerrarAjSub(subId, true); }
     mostrarToast('Datos guardados', 'ok');
   }, function(e) {
     if (btn) { btn.textContent = 'Guardar cambios'; btn.disabled = false; }
