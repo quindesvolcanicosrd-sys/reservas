@@ -1488,6 +1488,25 @@ async function forwardToGAS(params: Record<string, any>): Promise<Response> {
   }
 }
 
+// POST a GAS para acciones con payloads grandes (subirFoto*) — el base64
+// no cabe en una URL de GET; GAS ya tiene doPost() que lee e.parameter igual.
+async function forwardToGASPost(params: Record<string, any>): Promise<Response> {
+  try {
+    const body = Object.entries(params)
+      .map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(String(v ?? '')))
+      .join('&');
+    const resp = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Mirlxs-EdgeFunction/1.0' },
+      body,
+    });
+    const text = await resp.text();
+    return new Response(text, { headers: { ...CORS, 'Content-Type': 'application/json' } });
+  } catch (e) {
+    return json({ error: 'Error al contactar GAS: ' + (e as Error).message }, 502);
+  }
+}
+
 // ─── Entry point ─────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
@@ -1602,7 +1621,10 @@ Deno.serve(async (req: Request) => {
       case 'adminSetEstadoReserva':         return json(await adminSetEstadoReserva(params));
       case 'adminCerrarSesion':             { if (params.adminToken) await supabase.from('admin_sessions').delete().eq('token', params.adminToken); return json({ exito: true }); }
       case 'adminBorrarEvento':             return json(await adminBorrarEvento(params));
-      // Aún en GAS: AsistenciaAnticipada, subirFoto*, enviarResumenReservas, adminRegenerarVentanaAsistencias, adminCancelarEvento, guardarNotaPago
+      case 'subirFotoPerfil':
+      case 'subirFotoInscripcion':
+        return forwardToGASPost(params);
+      // Aún en GAS: AsistenciaAnticipada, enviarResumenReservas, adminRegenerarVentanaAsistencias, adminCancelarEvento, guardarNotaPago
       default:
         return forwardToGAS(params);
     }
