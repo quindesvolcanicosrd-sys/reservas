@@ -3239,8 +3239,8 @@ Deliberadamente chico: reusa tal cual (sin redefinir) `.ev-sticky-header`/`.ev-h
 | Función / variable | Descripción |
 |---|---|
 | `_token` | Token de sesión activo del usuario (mutable, leído por api()) |
-| `api(params, onSuccess, onError)` | GET al backend con _token automático en params |
-| `apiPost(params, onSuccess, onError)` | POST form-urlencoded al backend con _token |
+| `api(params, onSuccess, onError)` | GET al backend con _token automático en params; envía headers `apikey`/`Authorization: Bearer` con `SUPABASE_ANON_KEY` (requeridos por Supabase Edge Functions) |
+| `apiPost(params, onSuccess, onError)` | POST form-urlencoded al backend con _token; envía headers `apikey`/`Authorization: Bearer` con `SUPABASE_ANON_KEY` (requeridos por Supabase Edge Functions) |
 
 ### js/ui.js
 | Función / variable | Descripción |
