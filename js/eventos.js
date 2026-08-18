@@ -3304,7 +3304,7 @@ function _evDetalleInfoHtml(ev) {
   if (_evEsPasado(ev) && ev.miAsistenciaReal && ev.miAsistenciaReal !== 'Sin registrar') {
     html += '<div class="ev-detalle-section" style="padding-top:0">';
     html += _evAsistenciaRealHtml(ev);
-    if (!_adminToken && (ev.miAsistenciaReal === 'A tiempo' || ev.miAsistenciaReal === 'Tarde')) {
+    if (!_adminToken && (ev.miAsistenciaReal === 'A tiempo' || ev.miAsistenciaReal === 'Tarde' || ev.miAsistenciaReal === 'Ausente')) {
       html += '<button type="button" class="ev-stat-marcar" onclick="_evAbrirRectSheet(\'' + ev.id + '\')"><span class="material-symbols-outlined">edit</span>Rectificar asistencia</button>';
     }
     html += '</div>';
