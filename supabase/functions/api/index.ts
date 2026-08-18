@@ -955,17 +955,13 @@ async function getEventosRango(params: Record<string, any>): Promise<Record<stri
         hasta  = params.fechaFin   ?? params.hasta;
   const d0 = desde.substring(0, 10), d1 = hasta.substring(0, 10);
   const { data } = await supabase.from('asistencias').select('id_evento, fecha, donde, inicia, termina, estado, google_maps, info_adicional, tipo_evento').gte('fecha', d0).lte('fecha', d1);
-  const [tipoIcono, requiereReserva, asistLog, asistEF, equipoPorNombre] = await Promise.all([
-    _mapaTipoIconoPorLugar(), _mapaRequiereReservaPorLugar(), _ultimaAsistenciaPorPersonaTodas(), _asistenciaEFPorEvento(), _mapaEquipoPorNombre()
+  const [tipoIcono, requiereReserva, asistLog, equipoPorNombre] = await Promise.all([
+    _mapaTipoIconoPorLugar(), _mapaRequiereReservaPorLugar(), _ultimaAsistenciaPorPersonaTodas(), _mapaEquipoPorNombre()
   ]);
   const eventos = (data ?? []).map((fila: any) => {
     const idEvento = fila.id_evento;
     const logDeEvento = asistLog[idEvento] ?? [];
-    const efDeEvento  = asistEF[idEvento]  ?? [];
-    const nombresEnEF: Record<string, boolean> = {};
-    efDeEvento.forEach((a: any) => { nombresEnEF[String(a.nombre).trim().toUpperCase()] = true; });
-    const logSinDup = logDeEvento.filter((a: any) => !nombresEnEF[String(a.nombre).trim().toUpperCase()]);
-    const asistencias = [...logSinDup, ...efDeEvento].map((a: any) => {
+    const asistencias = logDeEvento.map((a: any) => {
       const eq = equipoPorNombre[String(a.nombre).trim().toUpperCase()] ?? {};
       return { nombre: a.nombre, estado: a.estado, origen: a.origen, nombreDerby: eq.nombreDerby ?? '', fotoPerfil: eq.fotoPerfil ?? '' };
     });
