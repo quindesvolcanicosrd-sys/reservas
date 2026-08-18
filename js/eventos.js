@@ -2953,7 +2953,10 @@ function _evRenderDetalle(ev) {
   // todavía está display:none en este punto (ver abrirEvDetalle(), que la
   // llama recién después de ir()); medir offsetWidth/offsetLeft acá daría 0
   // y dejaría el indicador sin su fondo sólido pintado.
-  if (rsvpCont) rsvpCont.innerHTML = _evOcultarRsvpPorEquipoClub(ev) ? '' : (_evRsvpBarraHtml(ev) || _evDetalleEstadoNotaHtml(ev));
+  var cancelado = (ev.estado === 'Cancelado' || ev.estado === 'No se entrena');
+  if (rsvpCont) rsvpCont.innerHTML = cancelado
+    ? _evDetalleEstadoNotaHtml(ev)
+    : (_evOcultarRsvpPorEquipoClub(ev) ? '' : (_evRsvpBarraHtml(ev) || _evDetalleEstadoNotaHtml(ev)));
   _evRenderDetalleAsistencia(ev);
 }
 // Mismo componente que la card (`_evEstadoNotaPillHtml()`, más arriba en
@@ -3686,15 +3689,14 @@ function _evStatCardMarcarAsistenciaHtml(idEvento) {
 function _evRenderDetalleAsistencia(ev) {
   _evDetalleFiltroGrupo = null;
   // Cancelado/No se entrena: nunca hubo/habrá asistencia que mostrar --
-  // limpia stats/lista en vez de dejar las secciones vacías debajo de la
-  // pill de estado (ver _evEstadoNotaPillHtml()).
-  if (ev.estado === 'Cancelado' || ev.estado === 'No se entrena') {
-    var stats = document.getElementById('ev-detalle-stats');
-    if (stats) stats.innerHTML = '';
-    var lista = document.getElementById('ev-detalle-asistencia-lista');
-    if (lista) lista.innerHTML = '';
-    return;
-  }
+  // oculta la sección entera (heading "Asistencia" del HTML incluido, no
+  // solo stats/lista) en vez de dejarla vacía debajo de la pill de estado
+  // (ver _evEstadoNotaPillHtml()). Se restaura ('') al abrir un evento no
+  // cancelado después -- mismo elemento, no se recrea entre aperturas.
+  var seccion = document.getElementById('ev-detalle-asistencia');
+  var cancelado = (ev.estado === 'Cancelado' || ev.estado === 'No se entrena');
+  if (seccion) seccion.style.display = cancelado ? 'none' : '';
+  if (cancelado) return;
   // Regla de tiempo, no solo de rol/fecha calendario -- mismo criterio ya
   // usado por _evCardEventoHtml()/_evYaEmpezo() para la card: desde que el
   // evento arranca, admin ve la asistencia REAL (rollcall E/F) + gestión acá
