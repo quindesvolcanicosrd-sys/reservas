@@ -1059,6 +1059,78 @@ async function adminBuscarPersonasParaEvento(params: Record<string, any>): Promi
   return { personas };
 }
 
+// ─── Acciones: rectificación de asistencia ────────────────────────────────────
+// Tabla `rectificaciones_asistencia` (creación manual pendiente, ver
+// MANIFEST.md "Tareas pendientes manuales"): id uuid pk, nombre text,
+// id_evento text, fecha_evento text, estado_solicitado text ('A tiempo' |
+// 'Tarde' | 'Sin registrar'), decision text default 'Pendiente', created_at
+// timestamptz default now().
+
+const ESTADOS_RECTIFICACION = ['A tiempo', 'Tarde', 'Sin registrar'];
+
+async function solicitarRectificacionAsistencia(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const idEvento = String(params.idEvento ?? '').trim();
+  const estadoSolicitado = String(params.estadoSolicitado ?? '').trim();
+  if (!idEvento) return { exito: false, error: 'Evento inválido.' };
+  if (!ESTADOS_RECTIFICACION.includes(estadoSolicitado)) return { exito: false, error: 'Estado inválido.' };
+  const { data: ev } = await supabase.from('asistencias').select('fecha').eq('id_evento', idEvento).maybeSingle();
+  await supabase.from('rectificaciones_asistencia').insert({
+    nombre: username,
+    id_evento: idEvento,
+    fecha_evento: ev?.fecha ?? null,
+    estado_solicitado: estadoSolicitado,
+    decision: 'Pendiente',
+  });
+  return { exito: true };
+}
+
+async function adminGetRectificaciones(params: Record<string, any>): Promise<any[]> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return [];
+  const { data } = await supabase.from('rectificaciones_asistencia').select('*').eq('decision', 'Pendiente').order('created_at', { ascending: true });
+  return (data ?? []).map((r: any) => ({ id: r.id, nombre: r.nombre, fechaEvento: r.fecha_evento, estadoSolicitado: r.estado_solicitado }));
+}
+
+// Aplica una rectificación aprobada -- mismo mecanismo que adminMarcarAsistencia()
+// (arriba): fila nueva en log_asistencias (origen 'Admin') + actualiza
+// a_horario/tarde en `asistencias`. 'Sin registrar' es el único caso sin
+// equivalente directo en ESTADOS_ROLLCALL -- en vez de agregar una fila,
+// borra las filas de asistencia REAL (rollcall) previas de esa persona para
+// ese evento, dejándola sin marca (mismo resultado que "nunca se tomó
+// lista"), y no vuelve a agregar el nombre a a_horario/tarde.
+async function _aplicarRectificacion(idEvento: string, nombre: string, estadoSolicitado: string): Promise<void> {
+  if (estadoSolicitado === 'Sin registrar') {
+    await supabase.from('log_asistencias').delete().eq('id_evento', idEvento).eq('nombre_usuario', nombre).in('estado', ESTADOS_ROLLCALL);
+  } else {
+    await _agregarFilaLogAsistencia(idEvento, nombre, 'Admin', estadoSolicitado);
+  }
+  const { data: ev } = await supabase.from('asistencias').select('a_horario, tarde').eq('id_evento', idEvento).maybeSingle();
+  if (ev) {
+    const parseNames = (s: string) => String(s ?? '').split(',').map((n: string) => n.trim()).filter(Boolean);
+    const aHorario = parseNames(ev.a_horario).filter((n: string) => n.toUpperCase() !== nombre.toUpperCase());
+    const tarde = parseNames(ev.tarde).filter((n: string) => n.toUpperCase() !== nombre.toUpperCase());
+    if (estadoSolicitado === 'A tiempo') aHorario.push(nombre);
+    else if (estadoSolicitado === 'Tarde') tarde.push(nombre);
+    await supabase.from('asistencias').update({ a_horario: aHorario.join(', '), tarde: tarde.join(', ') }).eq('id_evento', idEvento);
+  }
+}
+
+async function adminSetEstadoRectificacion(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const id = params.id;
+  const decision = String(params.decision ?? '').trim();
+  if (!id || !['Aprobada', 'Rechazada'].includes(decision)) return { exito: false, error: 'Parámetros inválidos.' };
+  const { data: rect } = await supabase.from('rectificaciones_asistencia').select('*').eq('id', id).maybeSingle();
+  if (!rect) return { exito: false, error: 'Solicitud no encontrada.' };
+  const { error } = await supabase.from('rectificaciones_asistencia').update({ decision }).eq('id', id);
+  if (error) return { exito: false, error: error.message };
+  if (decision === 'Aprobada') await _aplicarRectificacion(rect.id_evento, rect.nombre, rect.estado_solicitado);
+  return { exito: true };
+}
+
 // ─── Acciones: reservas ───────────────────────────────────────────────────────
 
 async function getProximosEntrenamientos(): Promise<any[]> {
@@ -1582,6 +1654,9 @@ Deno.serve(async (req: Request) => {
       case 'marcarAsistenciaUsuario':         return json(await marcarAsistenciaUsuario(params));
       case 'adminMarcarAsistencia':           return json(await adminMarcarAsistencia(params));
       case 'adminBuscarPersonasParaEvento':   return json(await adminBuscarPersonasParaEvento(params));
+      case 'solicitarRectificacionAsistencia': return json(await solicitarRectificacionAsistencia(params));
+      case 'adminGetRectificaciones':          return json(await adminGetRectificaciones(params));
+      case 'adminSetEstadoRectificacion':      return json(await adminSetEstadoRectificacion(params));
       // Reservas
       case 'getProximosEntrenamientos':       return json(await getProximosEntrenamientos());
       case 'getFechasDisponibles':            return json(await getFechasDisponibles(params));

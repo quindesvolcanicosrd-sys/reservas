@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=a340ffb6">
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
-<link rel="stylesheet" href="css/eventos.css?v=3d798e1e">
+<link rel="stylesheet" href="css/eventos.css?v=15e9f002">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
@@ -445,6 +445,27 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 20px;">¿Eliminar este evento? Esta acción no se puede deshacer.</p>
       <button type="button" class="btn btn-danger" onclick="_evConfirmarBorrarEvento(this)" style="margin-bottom:10px;">Eliminar definitivamente</button>
       <button type="button" class="btn btn-outline" onclick="_evCerrarSheetBorrar()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- "Rectificar asistencia" (usuario no-admin) -- bottom sheet para pedirle
+       a un admin que corrija la asistencia real ya marcada, mismo patrón
+       `.bsheet` que "Cancelar evento"/"Eliminar evento" arriba. Disparado
+       desde el botón que agrega _evDetalleInfoHtml() debajo de la
+       descripción del evento (_evAbrirRectSheet(), js/eventos.js) -- el id
+       del evento pendiente viaja en _evRectIdEvento (variable de módulo), no
+       en un data-attribute. -->
+  <div id="ev-rect-sheet-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_evCerrarRectSheet()"></div>
+  <div id="ev-rect-sheet" class="bsheet" style="z-index:9701;">
+    <div class="bsheet-handle"></div>
+    <div class="bsheet-title">Rectificar asistencia</div>
+    <div class="bsheet-body">
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+        <button type="button" class="ev-rect-opt" data-estado="A tiempo" onclick="_evRectElegir(this)"><span class="material-symbols-outlined">check_circle</span>A horario</button>
+        <button type="button" class="ev-rect-opt" data-estado="Tarde" onclick="_evRectElegir(this)"><span class="material-symbols-outlined">schedule</span>Tarde</button>
+        <button type="button" class="ev-rect-opt" data-estado="Sin registrar" onclick="_evRectElegir(this)"><span class="material-symbols-outlined">cancel</span>No asistí</button>
+      </div>
+      <button type="button" class="btn btn-primary" id="ev-rect-btn-enviar" onclick="_evEnviarRectificacion(this)" disabled>Enviar rectificación</button>
     </div>
   </div>
 
@@ -2374,6 +2395,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <div class="pantalla" id="s-miliga">
   <div class="card" id="s-miliga-card">
     <div class="admin-dash-banners">
+      <div id="admin-banner-rectif-slot-ml"></div>
       <div id="admin-banner-pendientes-slot-ml"></div>
       <div id="admin-banner-equip-slot-ml"></div>
     </div>
@@ -2625,7 +2647,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=5f18b1a9"></script>
-<script src="js/eventos.js?v=0c1553dc"></script>
+<script src="js/eventos.js?v=13b065a0"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=7a7a6f20"></script>

@@ -305,6 +305,86 @@ function adminBannerSetEstado(fila, estado, btn, scope) {
   }, function(e) { botones.forEach(function(b) { b.disabled = false; }); mostrarToast(e.message || 'Error al actualizar.', 'error'); });
 }
 
+// ── Rectificaciones de asistencia (solicitudes de usuarios, ver
+// #ev-rect-sheet/js/eventos.js) -- mismo patrón banner+fila
+// aprobar/rechazar que "Reservas pendientes" arriba
+// (_adminRenderBannerPendientes()/adminBannerSetEstado()), con su propio
+// slot (#admin-banner-rectif-slot-ml) para no competir por el mismo
+// contenedor. Solo `scope='-ml'` tiene caller real (Mi Liga), mismo criterio
+// que _adminCargarBanners().
+var _admRectificaciones = [];
+function _adminCargarRectificaciones(scope) {
+  scope = scope || '';
+  adminApi({ action: 'adminGetRectificaciones' }, function(res) {
+    _admRectificaciones = Array.isArray(res) ? res : [];
+    _adminRenderRectificaciones(scope);
+  }, function() { _admRectificaciones = []; _adminRenderRectificaciones(scope); });
+}
+function _adminRenderRectificaciones(scope) {
+  scope = scope || '';
+  var slot = document.getElementById('admin-banner-rectif-slot' + scope);
+  if (!slot) return;
+  if (!_admRectificaciones || _admRectificaciones.length === 0) { slot.innerHTML = ''; return; }
+  var n = _admRectificaciones.length;
+  var filas = _admRectificaciones.map(function(r) {
+    var estadoTexto = r.estadoSolicitado === 'Sin registrar' ? 'No asistí' :
+                      r.estadoSolicitado === 'A tiempo' ? 'A horario' : 'Tarde';
+    return '<div class="admin-banner-res-row" id="ev-rectif-row-' + r.id + '">' +
+      '<div class="admin-banner-res-info">' +
+        '<div class="admin-banner-res-nombre">' + (r.nombre || '') + '</div>' +
+        '<div class="admin-banner-res-fecha">' + (r.fechaEvento || '') + ' · Solicita: ' + estadoTexto + '</div>' +
+      '</div>' +
+      '<div class="admin-banner-res-actions">' +
+        '<button class="admin-banner-btn admin-banner-btn-ok" onclick="_adminRectifSetEstado(\'' + r.id + '\',\'Aprobada\',this,\'' + scope + '\')" aria-label="Aprobar"><span class="material-symbols-outlined">check</span></button>' +
+        '<button class="admin-banner-btn admin-banner-btn-no" onclick="_adminRectifSetEstado(\'' + r.id + '\',\'Rechazada\',this,\'' + scope + '\')" aria-label="Rechazar"><span class="material-symbols-outlined">close</span></button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  slot.innerHTML =
+    '<div class="admin-dash-banner" id="admin-banner-rectif' + scope + '">' +
+      '<div class="admin-dash-banner-header" onclick="adminToggleBanner(\'admin-banner-rectif-body' + scope + '\')">' +
+        '<span class="material-symbols-outlined admin-dash-banner-icon">edit_note</span>' +
+        '<span class="admin-dash-banner-texto" id="admin-banner-rectif-texto' + scope + '">' + n + ' rectificación' + (n !== 1 ? 'es' : '') + ' pendiente' + (n !== 1 ? 's' : '') + '</span>' +
+        '<span class="material-symbols-outlined admin-dash-banner-chevron" id="admin-banner-rectif-body' + scope + '-chevron">expand_more</span>' +
+      '</div>' +
+      '<div class="admin-dash-banner-body" id="admin-banner-rectif-body' + scope + '">' +
+        '<div class="admin-dash-banner-body-inner">' + filas + '</div>' +
+      '</div>' +
+    '</div>';
+}
+function _adminRectifSetEstado(id, decision, btn, scope) {
+  scope = scope || '';
+  var row = btn.closest('.admin-banner-res-row');
+  var botones = row ? row.querySelectorAll('.admin-banner-btn') : [];
+  botones.forEach(function(b) { b.disabled = true; });
+  adminApi({ action: 'adminSetEstadoRectificacion', id: id, decision: decision }, function(res) {
+    if (!res || !res.exito) {
+      botones.forEach(function(b) { b.disabled = false; });
+      mostrarToast((res && res.error) || 'Error al procesar.', 'error');
+      return;
+    }
+    _admRectificaciones = _admRectificaciones.filter(function(r) { return r.id !== id; });
+    if (row) {
+      row.style.transition = 'opacity 0.25s ease';
+      row.style.opacity = '0';
+      setTimeout(function() {
+        row.remove();
+        var n = _admRectificaciones.length;
+        var banner = document.getElementById('admin-banner-rectif' + scope);
+        if (n === 0) { if (banner) banner.remove(); if (_admDashAbierto === 'admin-banner-rectif-body' + scope) _admDashAbierto = null; return; }
+        var texto = document.getElementById('admin-banner-rectif-texto' + scope);
+        if (texto) texto.textContent = n + ' rectificación' + (n !== 1 ? 'es' : '') + ' pendiente' + (n !== 1 ? 's' : '');
+        var body = document.getElementById('admin-banner-rectif-body' + scope);
+        if (body && body.style.maxHeight && body.style.maxHeight !== '0px') body.style.maxHeight = body.scrollHeight + 'px';
+      }, 250);
+    }
+    mostrarToast(decision === 'Aprobada' ? 'Rectificación aprobada.' : 'Rectificación rechazada.');
+  }, function(e) {
+    botones.forEach(function(b) { b.disabled = false; });
+    mostrarToast(e.message || 'Error al procesar.', 'error');
+  });
+}
+
 function _adminRenderBannerQueLlevar(scope) {
   scope = scope || '';
   var slot = document.getElementById('admin-banner-equip-slot' + scope);
@@ -1270,6 +1350,7 @@ function adminElegirCandidatoAdmin(email) {
 // pill "Precios de clases" (nueva en Mi Liga, `_adminCargarPrecios()` suma a
 // la lista de lo que se precarga fresco al abrir).
 function _adminCargarMiLiga() {
+  _adminCargarRectificaciones('-ml');
   _adminCargarBanners('-ml');
   _adminCargarAdmins();
   adminRenderColorEnfasis();

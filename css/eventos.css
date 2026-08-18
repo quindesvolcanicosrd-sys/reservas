@@ -708,6 +708,44 @@
 .ev-stat-marcar .material-symbols-outlined { font-size: 20px; }
 .ev-stat-marcar .ev-stat-label { color: var(--brand); }
 .ev-stat-marcar:hover { border-color: var(--brand); background: var(--brand-lightest); }
+/* "Rectificar asistencia" (usuario no-admin) -- botón único fuera de
+   `.ev-stats-grid` (ver _evDetalleInfoHtml(), js/eventos.js), reusa
+   `.ev-stat-marcar` tal cual salvo el espaciado propio de esa ubicación. */
+.ev-detalle-section .ev-stat-marcar { margin-top: 10px; width: 100%; }
+/* Opciones del sheet de rectificación (#ev-rect-sheet, index.html) --
+   display flex column con gap, mismo criterio de las pills de selección
+   única del wizard de Salud (`.aj-pill`, css/perfil.css) pero como fila
+   ancha en vez de pill chica: acá cada opción necesita su propio texto largo
+   ("A horario"/"Tarde"/"No asistí") legible en una sola línea completa. */
+.ev-rect-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  width: 100%;
+  text-align: left;
+}
+.ev-rect-opt .material-symbols-outlined {
+  font-size: 1.3rem;
+  color: var(--muted);
+  transition: color 0.15s;
+}
+.ev-rect-opt.activa {
+  border-color: var(--brand);
+  background: var(--brand-lightest);
+}
+.ev-rect-opt.activa .material-symbols-outlined {
+  color: var(--brand);
+}
 /* Desglose agrupado (Asisten/No asisten/No jugador/Sin respuesta) --
    reusado tal cual de la ex-modal de asistentes, ahora inline acá. */
 .ev-asist-grupo { margin-bottom: 18px; }

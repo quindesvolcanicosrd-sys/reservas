@@ -3131,6 +3131,62 @@ function _evCerrarSheetBorrar(porGesto) {
   if (sh) sh.style.transform = 'translateY(100%)';
   setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
 }
+/* ── "Rectificar asistencia" (usuario no-admin, #ev-rect-sheet, index.html) --
+   mismo patrón abrir/cerrar que _evAbrirSheetCancelar()/_evAbrirSheetBorrar()
+   arriba: `_evRectIdEvento` viaja como variable de módulo (sheet único, sin
+   instancias paralelas), _registrarOverlayAbierto() para que el botón atrás
+   del navegador o el swipe-to-dismiss lo cierren igual que a cualquier otro
+   sheet. `_evRectEstadoElegido` guarda la opción tocada del sheet
+   (.ev-rect-opt[data-estado]) hasta que se confirma con "Enviar
+   rectificación". */
+var _evRectIdEvento = null;
+var _evRectEstadoElegido = null;
+function _evAbrirRectSheet(idEvento) {
+  _evRectIdEvento = idEvento;
+  _evRectEstadoElegido = null;
+  document.querySelectorAll('.ev-rect-opt').forEach(function(b) { b.classList.remove('activa'); });
+  var btnEnviar = document.getElementById('ev-rect-btn-enviar');
+  if (btnEnviar) btnEnviar.disabled = true;
+  var ov = document.getElementById('ev-rect-sheet-overlay');
+  var sh = document.getElementById('ev-rect-sheet');
+  if (!ov || !sh) return;
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(_evCerrarRectSheet);
+}
+function _evCerrarRectSheet(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var ov = document.getElementById('ev-rect-sheet-overlay');
+  var sh = document.getElementById('ev-rect-sheet');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+function _evRectElegir(btn) {
+  document.querySelectorAll('.ev-rect-opt').forEach(function(b) { b.classList.remove('activa'); });
+  btn.classList.add('activa');
+  _evRectEstadoElegido = btn.getAttribute('data-estado');
+  var btnEnviar = document.getElementById('ev-rect-btn-enviar');
+  if (btnEnviar) btnEnviar.disabled = false;
+}
+function _evEnviarRectificacion(btn) {
+  if (!_evRectIdEvento || !_evRectEstadoElegido) return;
+  var id = _evRectIdEvento;
+  var estado = _evRectEstadoElegido;
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+  apiPost({ action: 'solicitarRectificacionAsistencia', token: _token, idEvento: id, estadoSolicitado: estado }, function(res) {
+    if (res && res.exito) {
+      _evCerrarRectSheet();
+      mostrarToast('Solicitud enviada. Un administrador la revisará pronto.');
+    } else {
+      if (btn) { btn.disabled = false; btn.textContent = 'Enviar rectificación'; }
+      mostrarToast((res && res.error) || 'Error al enviar la solicitud.', 'error');
+    }
+  }, function(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar rectificación'; }
+    mostrarToast((e && e.message) || 'Error al enviar la solicitud.', 'error');
+  });
+}
 function _evConfirmarBorrarEvento(btn) {
   if (!_evBorrarPendienteId) return;
   var id = _evBorrarPendienteId;
@@ -3224,7 +3280,7 @@ function _evDetalleStickyHtml(ev) {
 function _evDetalleInfoHtml(ev) {
   var desc = ev.descripcion || _EV_DESCRIPCION_POR_TIPO[ev.tipo] || '';
   var mapsUrl = ev.mapsUrl || _EV_MAPS_URL_POR_LUGAR[ev.lugar] || '';
-  return '<div class="fi-pills">' +
+  var html = '<div class="fi-pills">' +
       (mapsUrl
         ? '<a class="fi-pill fi-pill-lugar" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</a>'
         : '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</span>') +
@@ -3232,6 +3288,21 @@ function _evDetalleInfoHtml(ev) {
       '<span class="fi-pill fi-pill-fin"><span class="material-symbols-outlined">schedule</span>Fin ' + _evHoraFin(ev) + 'hs</span>' +
     '</div>' +
     (desc ? '<p class="ev-detalle-desc">' + desc + '</p>' : '');
+  // "Rectificar asistencia" (usuario no-admin) -- ver MANIFEST.md, justo
+  // debajo de la descripción del evento. Repite la pill de
+  // `_evAsistenciaRealHtml(ev)` a propósito (la sección #ev-detalle-rsvp más
+  // abajo ya la muestra también vía _evRsvpBarraHtml() para eventos pasados)
+  // porque acá es el ancla visual del botón "Rectificar asistencia" -- pedido
+  // explícito de Victor sobre la ubicación exacta del bloque.
+  if (_evEsPasado(ev) && ev.miAsistenciaReal && ev.miAsistenciaReal !== 'Sin registrar') {
+    html += '<div class="ev-detalle-section" style="padding-top:0">';
+    html += _evAsistenciaRealHtml(ev);
+    if (!_adminToken && (ev.miAsistenciaReal === 'A tiempo' || ev.miAsistenciaReal === 'Tarde')) {
+      html += '<button type="button" class="ev-stat-marcar" onclick="_evAbrirRectSheet(\'' + ev.id + '\')"><span class="material-symbols-outlined">edit</span>Rectificar asistencia</button>';
+    }
+    html += '</div>';
+  }
+  return html;
 }
 
 /* ═══════════════════════════════════════════════════════
