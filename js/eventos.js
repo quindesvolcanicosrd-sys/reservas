@@ -3834,6 +3834,7 @@ function _evRenderDetalleAsistencia(ev) {
   // intención pre-evento. Antes de arrancar (cualquier cuenta) o para
   // cuentas no-admin en cualquier momento, sigue el resumen de RSVP de
   // siempre, sin cambios.
+  console.log('[ev-detalle]', 'pasado:', _evEsPasado(ev), 'asistentes:', JSON.stringify(ev.asistentes), 'asistencias:', JSON.stringify(ev.asistencias));
   if (_adminToken && _evYaEmpezo(ev)) { _evRenderDetalleAsistenciaReal(ev); return; }
   var rsvps = ev.rsvps || [];
   var grupos = _EV_GRUPOS_ASISTENCIA.map(function(g) {
