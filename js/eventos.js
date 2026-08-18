@@ -3006,9 +3006,16 @@ function _evRenderDetalle(ev) {
   var cancelado = (ev.estado === 'Cancelado' || ev.estado === 'No se entrena');
   var _preIngresoDetalle = E.datos && E.datos.fechaIngreso && _evFechaCmp(ev.fecha, E.datos.fechaIngreso) < 0;
   var _noAsistioDetalle = !ev.miAsistenciaReal || ev.miAsistenciaReal === 'Ausente';
+  // "Rectificar asistencia" (ver _evDetalleInfoHtml(), bloque debajo de la
+  // descripción) ya pinta esta misma pill (_evAsistenciaRealHtml()) para este
+  // mismo caso -- mismo guard exacto, para no mostrarla 2 veces en la misma
+  // pantalla. `_evRsvpBarraHtml(ev)` seguiría devolviendo esta pill acá
+  // también si no se saltea (ver su propio `if (_evEsPasado(e)) return
+  // _evAsistenciaRealHtml(e);`, arriba en este archivo).
+  var _yaMostradaEnInfo = _evEsPasado(ev) && ev.miAsistenciaReal && ev.miAsistenciaReal !== 'Sin registrar';
   if (rsvpCont) rsvpCont.innerHTML = cancelado
     ? _evDetalleEstadoNotaHtml(ev)
-    : (_preIngresoDetalle && _noAsistioDetalle ? '' : (_evOcultarRsvpPorEquipoClub(ev) ? '' : (_evRsvpBarraHtml(ev) || _evDetalleEstadoNotaHtml(ev))));
+    : (_yaMostradaEnInfo ? '' : (_preIngresoDetalle && _noAsistioDetalle ? '' : (_evOcultarRsvpPorEquipoClub(ev) ? '' : (_evRsvpBarraHtml(ev) || _evDetalleEstadoNotaHtml(ev)))));
   _evRenderDetalleAsistencia(ev);
 }
 // Mismo componente que la card (`_evEstadoNotaPillHtml()`, más arriba en
