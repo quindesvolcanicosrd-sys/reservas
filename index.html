@@ -2755,7 +2755,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <div id="ddp-modal">
   <div class="ddp-card">
     <div class="ddp-header">
-      <div class="ddp-header-label">Fecha de nacimiento</div>
+      <div class="ddp-header-label" id="ddp-header-label">Fecha de nacimiento</div>
       <div class="ddp-selected-date" id="ddp-sel-label">Sin seleccionar</div>
     </div>
     <div class="ddp-nav">
@@ -3140,6 +3140,15 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="aj-dato-texts">
           <div class="aj-dato-label">Pronombres</div>
           <div class="aj-dato-val" id="aj-pron-val">—</div>
+        </div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
+      </div>
+
+      <div class="aj-dato-row" onclick="ajAbrirSheetIngreso()">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">calendar_month</span></div>
+        <div class="aj-dato-texts">
+          <div class="aj-dato-label">Entraste al equipo</div>
+          <div class="aj-dato-val" id="aj-ingreso-val">—</div>
         </div>
         <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
       </div>

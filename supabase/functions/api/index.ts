@@ -38,6 +38,7 @@ function getDatosCompletos(row: Record<string, any> | null): Record<string, any>
     nombreDerby:          row.nombre_derby          ?? '',
     numeroDerby:          row.numero_derby          ?? '',
     pronombres:           row.pronombres            ?? '',
+    fechaIngreso:         row.fecha_ingreso          ?? null,
     email:                row.email                 ?? '',
     prefijo:              row.prefijo               ?? '',
     telefono:             row.telefono              ?? '',
@@ -422,6 +423,7 @@ async function actualizarDatosPersona(params: Record<string, any>): Promise<Reco
   if (typeof datos === 'string') { try { datos = JSON.parse(datos); } catch { return { exito: false, error: 'datos inválido.' }; } }
   const CAMPO_MAP: Record<string, string> = {
     nombreDerby: 'nombre_derby', numeroDerby: 'numero_derby', pronombres: 'pronombres',
+    fechaIngreso: 'fecha_ingreso',
     dieta: 'dieta', prefijo: 'prefijo', telefono: 'telefono', email: 'email',
     fechaPublica: 'fecha_publica', edadPublica: 'edad_publica', fechaNacimiento: 'fecha_nacimiento',
     tipoDocumento: 'tipo_documento', paisExpedicion: 'pais_expedicion', numeroDocumento: 'numero_documento',

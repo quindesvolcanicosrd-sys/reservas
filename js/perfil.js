@@ -356,12 +356,31 @@ var _ddpTarget = null; // { hiddenId, displayId } o { callback(iso, label) } —
 
 function abrirPickerMisDatos(target) {
   _ddpTarget = target || null;
-  var hiddenId = (_ddpTarget && _ddpTarget.hiddenId) || 'd-fechaNacimiento';
-  var hiddenEl = document.getElementById(hiddenId);
-  var iso = hiddenEl ? hiddenEl.value : '';
+  // Modo callback (ver "Fecha de ingreso al equipo") -- no hay hidden input
+  // real de dónde leer el valor actual, lo manda el llamador directo
+  // (`valorInicial`); el default `hiddenId: 'd-fechaNacimiento'` de abajo
+  // solo aplica al modo hiddenId/displayId original (Mis Datos/Ajustes >
+  // Privacidad), leer ese id acá pisaría el picker con la fecha de
+  // nacimiento de otra pantalla.
+  var esCallback = !!(_ddpTarget && typeof _ddpTarget.callback === 'function');
+  var iso = '';
+  if (esCallback) {
+    iso = _ddpTarget.valorInicial || '';
+  } else {
+    var hiddenId = (_ddpTarget && _ddpTarget.hiddenId) || 'd-fechaNacimiento';
+    var hiddenEl = document.getElementById(hiddenId);
+    iso = hiddenEl ? hiddenEl.value : '';
+  }
   if (iso) { var p=iso.split('-'); if(p.length===3){ _ddpSt.vy=parseInt(p[0]); _ddpSt.vm=parseInt(p[1])-1; _ddpSt.sy=parseInt(p[0]); _ddpSt.sm=parseInt(p[1])-1; _ddpSt.sd=parseInt(p[2]); } }
-  else { _ddpSt.vy=1990; _ddpSt.vm=0; _ddpSt.sy=null; _ddpSt.sm=null; _ddpSt.sd=null; }
+  else { _ddpSt.vy=(_ddpTarget && _ddpTarget.anioDefault) || 1990; _ddpSt.vm=0; _ddpSt.sy=null; _ddpSt.sm=null; _ddpSt.sd=null; }
   _ddpSt.yearMode=false; _ddpSt.monthMode=false;
+  // Título del header -- '#ddp-header-label' vive hardcodeado en index.html
+  // como "Fecha de nacimiento" (único uso histórico); reusos nuevos vía
+  // `target.titulo` lo pisan acá, siempre reseteado en cada apertura (así
+  // un `abrirPickerMisDatos()` sin `titulo` después de uno con `titulo` no
+  // arrastra el texto del reuso anterior).
+  var ddpLbl = document.getElementById('ddp-header-label');
+  if (ddpLbl) ddpLbl.textContent = (_ddpTarget && _ddpTarget.titulo) || 'Fecha de nacimiento';
   _ddpRender();
   document.getElementById('ddp-modal').classList.add('active');
   document.body.style.overflow='hidden';
@@ -453,7 +472,7 @@ function _ddpRenderMeses() {
    -- no adivinado), para que buscar "cédula" encuentre "Identidad legal"
    aunque esa palabra no esté en su título. */
 var AJ_SEARCH_KEYWORDS = {
-  perfil: ['nombre de usuario', 'username', 'apodo', 'nombre derby', 'número derby', 'numero derby', 'pronombres', 'foto de perfil'],
+  perfil: ['nombre de usuario', 'username', 'apodo', 'nombre derby', 'número derby', 'numero derby', 'pronombres', 'foto de perfil', 'entraste al equipo', 'fecha ingreso', 'ingreso'],
   equip: ['patines', 'protecciones', 'talla', 'casco', 'rodilleras', 'coderas', 'muñequeras', 'munequeras'],
   contacto: ['teléfono', 'telefono', 'número', 'numero', 'email', 'correo', 'prefijo'],
   privacidad: ['fecha de nacimiento', 'cumpleaños', 'cumpleanos', 'edad', 'compartir'],
@@ -662,6 +681,7 @@ function _ajCargarSub(id) {
     _ajSetDatoVal('aj-nombreDerby-val', d.nombreDerby, '—', false);
     _ajSetDatoVal('aj-numeroDerby-val', d.numeroDerby, 'Sin número asignado', true);
     _ajSetDatoVal('aj-pron-val', d.pronombres, '—', false);
+    _ajSetDatoVal('aj-ingreso-val', d.fechaIngreso ? _ajFormatearFechaIngreso(d.fechaIngreso) : null, '—', false);
     // #aj-avatar-hero: mismo criterio de foto/inicial que #aj-avatar
     // (irEditarDatos(), más arriba en este archivo). Ahora es la fila
     // "Foto de perfil" completa la que abre el sheet de recorte (onclick en
@@ -1092,6 +1112,32 @@ function ajAbrirSheetPronombres() {
     });
     var disp = document.getElementById('aj-pron-val');
     if (disp) disp.textContent = valorJoin;
+  });
+}
+
+/* ── Fecha de ingreso al equipo ─────────────────────────
+   Reusa el date picker de "Mis Datos" (`abrirPickerMisDatos()`, arriba en
+   este archivo) en su modo `callback` en vez de un sheet propio con
+   `<select>` nativos -- ver MANIFEST.md, `<select>` nativo ya está
+   documentado como roto en mobile en esta app (filtro de mes de Reservas/
+   destinatarix de notificaciones, ambos migrados a componentes propios por
+   ese mismo motivo) y no hay razón para reintroducirlo acá. */
+function _ajFormatearFechaIngreso(iso) {
+  if (!iso) return null;
+  var p = iso.split('-');
+  var meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  return p[2].replace(/^0/, '') + ' de ' + meses[+p[1] - 1] + ' de ' + p[0];
+}
+function ajAbrirSheetIngreso() {
+  abrirPickerMisDatos({
+    titulo: 'Entraste al equipo',
+    valorInicial: (E.datos && E.datos.fechaIngreso) || '',
+    anioDefault: new Date().getFullYear(),
+    callback: function(iso) {
+      _ajGuardar({ fechaIngreso: iso });
+      var disp = document.getElementById('aj-ingreso-val');
+      if (disp) disp.textContent = _ajFormatearFechaIngreso(iso);
+    }
   });
 }
 

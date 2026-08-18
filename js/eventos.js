@@ -19,6 +19,7 @@
 
 var _EV_EVENTOS = [];
 var _EV_CUMPLEANOS = [];
+var _EV_ANIVERSARIO_INGRESO = null;
 // Temporadas de descanso (Tanda B, ver MANIFEST.md "Cambios recientes") --
 // poblado por _evCargarDatosReales() desde `res.offseason` (getEventosRango,
 // arreglo nuevo, opcional -- ausente o vacío en un backend viejo, degrada
@@ -313,6 +314,24 @@ function _evMapEventoBackend(raw) {
 // _evHidratarAvatares(), igual que un E.datos.fotoPerfil vacío en cualquier
 // otro lado de la app. `id` es solo para el `id` del host de confetti
 // (_evCardCumpleHtml()) -- por índice alcanza, se regenera en cada carga.
+function _evComputarAniversariosIngreso() {
+  var fi = E.datos && E.datos.fechaIngreso;
+  if (!fi) return null;
+  var fip = fi.split('-'); // [anio, mes, dia]
+  var rango = _evRangoCargaCompleto();
+  var items = [];
+  var desde = rango.desde, hasta = rango.hasta;
+  var ayDesde = new Date(desde + 'T00:00:00').getFullYear();
+  var ayHasta = new Date(hasta + 'T00:00:00').getFullYear();
+  for (var ay = ayDesde; ay <= ayHasta; ay++) {
+    if ('' + ay === fip[0]) continue; // saltar el año de ingreso real
+    var isoAniv = ay + '-' + fip[1] + '-' + fip[2];
+    if (isoAniv >= desde && isoAniv <= hasta) {
+      items.push({ id: 'aniv-' + ay, fecha: isoAniv, anios: ay - +fip[0] });
+    }
+  }
+  return { items: items, fechaIngreso: fi };
+}
 function _evMapCumpleBackend(raw, idx) {
   var conEdad = typeof raw.edad === 'number';
   return { id: 'cumple-' + idx, nombre: raw.nombre, fecha: raw.fecha, edad: conEdad ? raw.edad : null, edadPublica: conEdad, fotoPerfil: '' };
@@ -370,6 +389,7 @@ function _evCargarDatosReales(onListo) {
   });
   api({ action: 'getCumpleañosRango', desde: rango.desde, hasta: rango.hasta }, function(res) {
     _EV_CUMPLEANOS = (res.cumpleanos || []).map(_evMapCumpleBackend);
+    _EV_ANIVERSARIO_INGRESO = _evComputarAniversariosIngreso();
     unoListo();
   }, function(e) {
     _EV_CUMPLEANOS = [];
@@ -1713,6 +1733,21 @@ function _evEstadoNotaPillHtml(estado) {
    ver "Cambios recientes" -- revertido el botón único + panel expandible
    que existía acá: mismo componente que ya usa el detalle, `.ev-rsvp-seg`,
    en vez de mantener 2 implementaciones de RSVP en paralelo). */
+function _evCardAniversarioHtml(a) {
+  var aniosTexto = a.anios === 1 ? '1 año en el equipo' : a.anios + ' años en el equipo';
+  return '<div class="ev-card ev-card-cumple">' +
+    '<div class="ev-card-top-row">' +
+      '<div class="ev-card-body">' +
+        '<div class="ev-card-titulo-row">' +
+          '<span class="material-symbols-outlined ev-card-icono-inline">celebration</span>' +
+          '<span class="ev-card-titulo">Aniversario de entrada al equipo</span>' +
+        '</div>' +
+        '<div class="ev-card-sub">' + aniosTexto + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="ev-confetti-host" id="ev-confetti-' + a.id + '" style="position:absolute;inset:0;pointer-events:none;"></div>' +
+  '</div>';
+}
 function _evCardEventoHtml(e, sufijo) {
   sufijo = sufijo || '';
   var icono = _EV_ICONOS[e.tipo] || 'event';
@@ -2552,7 +2587,9 @@ function _evTimelineFilaHtml(e) {
   if (_evFechaCmp(e.fecha, hoy) >= 0) return _evCardEventoHtml(e, '');
   var icono = _EV_ICONOS[e.tipo] || 'event';
   var cancelado = (e.estado === 'Cancelado' || e.estado === 'No se entrena');
-  var nota = cancelado ? _evEstadoNotaPillHtml(e.estado) : _evAsistenciaRealHtml(e);
+  var _preIngreso = E.datos && E.datos.fechaIngreso && _evFechaCmp(e.fecha, E.datos.fechaIngreso) < 0;
+  var _noAsistio = !e.miAsistenciaReal || e.miAsistenciaReal === 'Ausente';
+  var nota = cancelado ? _evEstadoNotaPillHtml(e.estado) : (_preIngreso && _noAsistio ? '' : _evAsistenciaRealHtml(e));
   // Bug real corregido (gestión de asistencia admin "desaparecida" en
   // eventos pasados, reportado por Victor): esta fila compacta solo
   // mostraba la propia asistencia (`nota`, arriba) -- a diferencia de
@@ -2656,6 +2693,13 @@ function _evTimelineItems() {
   // mostrando, para que "encuentra lo que se ve" sea literal.
   _EV_CUMPLEANOS.filter(function(c) { return _evPasaFiltroLugarTipoCumple() && _evPasaBusqueda('Cumpleaños de ' + c.nombre); })
     .forEach(function(c) { items.push({ fecha: c.fecha, orden: '00:00', tipo: 'cumple', data: c }); });
+  if (_EV_ANIVERSARIO_INGRESO && _evPasaFiltroLugarTipoCumple()) {
+    _EV_ANIVERSARIO_INGRESO.items.forEach(function(a) {
+      if (_evPasaBusqueda('Aniversario de entrada al equipo')) {
+        items.push({ fecha: a.fecha, orden: '00:01', tipo: 'aniversario', data: a });
+      }
+    });
+  }
   // Temporadas de descanso (Tanda B, ver MANIFEST.md "Cambios recientes") --
   // una sola card por temporada, posicionada en el timeline por su
   // `fechaInicio` (sin importar cuántos días dure). Sin lugar/tipo propios
@@ -2718,7 +2762,9 @@ function _evRenderTimeline(instant, alTerminar) {
   // aparecen si ese bucket realmente tiene contenido (se registran en
   // `bucketsMostrados` recién cuando efectivamente se inserta uno), sin
   // cambios ahí.
-  var insertadoHoy = false, bucketsMostrados = {};
+  var insertadoHoy = false, bucketsMostrados = {}, _ingresoMarcado = false;
+  var _fechaIngreso = (E.datos && E.datos.fechaIngreso) || null;
+  var _mostrarSepIngreso = _fechaIngreso && ordenFechas.length > 0 && _evFechaCmp(_fechaIngreso, ordenFechas[0]) >= 0;
   ordenFechas.forEach(function(fecha) {
     var d = _evParseISO(fecha);
     var mesKey = d.getFullYear() + '-' + d.getMonth();
@@ -2730,6 +2776,10 @@ function _evRenderTimeline(instant, alTerminar) {
     if (mesKey !== mesAnterior) {
       mesAnterior = mesKey;
       html += '<div class="ev-mes-header" data-anio="' + d.getFullYear() + '" data-mes="' + d.getMonth() + '">' + NOMBRES_MESES[d.getMonth()].toUpperCase() + ' ' + d.getFullYear() + '</div>';
+    }
+    if (_mostrarSepIngreso && !_ingresoMarcado && _evFechaCmp(fecha, _fechaIngreso) >= 0) {
+      _ingresoMarcado = true;
+      html += '<div class="ev-hoy-separador ev-ingreso-separador"><span>Te uniste al equipo</span></div>';
     }
     if (!insertadoHoy && _evFechaCmp(fecha, hoy) === 0) {
       // `id` propio (ver "Cambios recientes" -- bug real: el ícono "hoy"
@@ -2766,7 +2816,7 @@ function _evRenderTimeline(instant, alTerminar) {
       '</div>' +
       '<div class="ev-fecha-items">' +
         porFecha[fecha].map(function(it) {
-          return it.tipo === 'cumple' ? _evCardCumpleHtml(it.data) : it.tipo === 'offseason' ? _evCardOffseasonHtml(it.data) : _evTimelineFilaHtml(it.data);
+          return it.tipo === 'cumple' ? _evCardCumpleHtml(it.data) : it.tipo === 'aniversario' ? _evCardAniversarioHtml(it.data) : it.tipo === 'offseason' ? _evCardOffseasonHtml(it.data) : _evTimelineFilaHtml(it.data);
         }).join('') +
       '</div>' +
     '</div>';
@@ -2793,7 +2843,7 @@ function _evRenderTimeline(instant, alTerminar) {
     // nuevo = un confetti nuevo", sin estado que mantener sincronizado.
     if (porFecha[hoy]) {
       porFecha[hoy].forEach(function(it) {
-        if (it.tipo !== 'cumple') return;
+        if (it.tipo !== 'cumple' && it.tipo !== 'aniversario') return;
         var el = document.getElementById('ev-confetti-' + it.data.id);
         if (el) _evLanzarConfettiCuandoVisible(el);
       });
@@ -2954,9 +3004,11 @@ function _evRenderDetalle(ev) {
   // llama recién después de ir()); medir offsetWidth/offsetLeft acá daría 0
   // y dejaría el indicador sin su fondo sólido pintado.
   var cancelado = (ev.estado === 'Cancelado' || ev.estado === 'No se entrena');
+  var _preIngresoDetalle = E.datos && E.datos.fechaIngreso && _evFechaCmp(ev.fecha, E.datos.fechaIngreso) < 0;
+  var _noAsistioDetalle = !ev.miAsistenciaReal || ev.miAsistenciaReal === 'Ausente';
   if (rsvpCont) rsvpCont.innerHTML = cancelado
     ? _evDetalleEstadoNotaHtml(ev)
-    : (_evOcultarRsvpPorEquipoClub(ev) ? '' : (_evRsvpBarraHtml(ev) || _evDetalleEstadoNotaHtml(ev)));
+    : (_preIngresoDetalle && _noAsistioDetalle ? '' : (_evOcultarRsvpPorEquipoClub(ev) ? '' : (_evRsvpBarraHtml(ev) || _evDetalleEstadoNotaHtml(ev))));
   _evRenderDetalleAsistencia(ev);
 }
 // Mismo componente que la card (`_evEstadoNotaPillHtml()`, más arriba en
