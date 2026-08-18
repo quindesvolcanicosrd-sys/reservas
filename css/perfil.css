@@ -153,7 +153,8 @@
 .aj-pill-otro-txt { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .aj-pill-otro-x { display: none; font-size: 14px !important; margin-left: 6px; line-height: 1; }
 .aj-pill-otro-lleno .aj-pill-otro-x { display: inline-flex; }
-.aj-pill.activa { background:var(--brand); color:var(--white); border-color:var(--brand); }
+.aj-pill.activa { background:var(--brand); color:var(--white); border-color:var(--brand); animation: ajPillActivaIn 0.16s ease; }
+@keyframes ajPillActivaIn { from { transform: scale(0.90); opacity: 0.6; } to { transform: scale(1); opacity: 1; } }
 .aj-pill.activa-outline { background:var(--brand-light); color:var(--brand); border-color:var(--brand); }
 /* Variante de navegación, no de selección — a diferencia de .aj-pill normal
    (seleccionable, toggleable con .activa/.activa-outline), esta es para links

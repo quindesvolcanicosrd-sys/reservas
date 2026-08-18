@@ -3685,6 +3685,16 @@ function _evStatCardMarcarAsistenciaHtml(idEvento) {
 // persona que ya filtró un grupo mientras el pedido todavía viajaba.
 function _evRenderDetalleAsistencia(ev) {
   _evDetalleFiltroGrupo = null;
+  // Cancelado/No se entrena: nunca hubo/habrá asistencia que mostrar --
+  // limpia stats/lista en vez de dejar las secciones vacías debajo de la
+  // pill de estado (ver _evEstadoNotaPillHtml()).
+  if (ev.estado === 'Cancelado' || ev.estado === 'No se entrena') {
+    var stats = document.getElementById('ev-detalle-stats');
+    if (stats) stats.innerHTML = '';
+    var lista = document.getElementById('ev-detalle-asistencia-lista');
+    if (lista) lista.innerHTML = '';
+    return;
+  }
   // Regla de tiempo, no solo de rol/fecha calendario -- mismo criterio ya
   // usado por _evCardEventoHtml()/_evYaEmpezo() para la card: desde que el
   // evento arranca, admin ve la asistencia REAL (rollcall E/F) + gestión acá
