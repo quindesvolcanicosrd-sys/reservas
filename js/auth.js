@@ -380,7 +380,7 @@ function cerrarMsgNoRegistrado() {
 
 function irAlRegistro() {
   var token = window._tokenPendienteRegistro || '';
-  window.location.href = 'https://reservas.quindesvolcanicos.com/inscripcion/' + (token ? '?token=' + encodeURIComponent(token) : '');
+  window.location.href = 'https://app.quindesvolcanicos.com/inscripcion/' + (token ? '?token=' + encodeURIComponent(token) : '');
 }
 
 function solicitarNombreUsuario() {

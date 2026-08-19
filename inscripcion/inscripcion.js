@@ -113,7 +113,7 @@ function inscMostrarPaso(idx, desdeHistorial) {
 
 function inscPasoAnterior() {
   if (_inscCurIdx === 0) {
-    if (_inscVinoConToken) { window.location.href = 'https://reservas.quindesvolcanicos.com/#s1'; }
+    if (_inscVinoConToken) { window.location.href = 'https://app.quindesvolcanicos.com/#s1'; }
     return;
   }
   if (_INSC_STEPS[_inscCurIdx] === 'insc-step-5c' && !_inscNecesitaPatines) {
@@ -132,7 +132,7 @@ function inscIrHome() {
   document.body.style.opacity = '0';
   mostrarCargando();
   setTimeout(function() {
-    window.location.href = 'https://reservas.quindesvolcanicos.com/';
+    window.location.href = 'https://app.quindesvolcanicos.com/';
   }, 250);
 }
 
@@ -640,7 +640,7 @@ function inscEnviar() {
         setTimeout(function() {
           _exitoEl.style.opacity = '0';
           setTimeout(function() {
-            window.location.href = 'https://reservas.quindesvolcanicos.com?nuevx=1&nombre=' + encodeURIComponent(nombre) + '&patines=' + (patines==='Sí'?'si':'no') + '&protec=' + encodeURIComponent(protec || 'No') + (talla?'&talla='+encodeURIComponent(talla):'') + '&token=' + encodeURIComponent(G.idToken||'');
+            window.location.href = 'https://app.quindesvolcanicos.com?nuevx=1&nombre=' + encodeURIComponent(nombre) + '&patines=' + (patines==='Sí'?'si':'no') + '&protec=' + encodeURIComponent(protec || 'No') + (talla?'&talla='+encodeURIComponent(talla):'') + '&token=' + encodeURIComponent(G.idToken||'');
           }, 400);
         }, 3600);
       } else {
