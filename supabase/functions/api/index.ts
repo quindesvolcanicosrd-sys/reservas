@@ -1503,7 +1503,7 @@ async function adminEnviarPush(params: Record<string, any>): Promise<Record<stri
   const payload: Record<string, any> = {
     app_id: ONESIGNAL_APP_ID, target_channel: 'push',
     headings: { en: titulo }, contents: { en: mensaje },
-    chrome_web_icon: 'https://reservas.quindesvolcanicos.com/icons/icon-192B.png',
+    chrome_web_icon: 'https://app.quindesvolcanicos.com/icons/icon-192B.png',
   };
   if (destino && destino !== 'todos') payload.include_aliases = { external_id: [destino] };
   else payload.included_segments = ['Total Subscriptions'];
