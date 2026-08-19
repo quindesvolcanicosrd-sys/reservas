@@ -597,6 +597,7 @@ function cargarFechas() {
   var tpSegSkelEl = document.getElementById('tp-seg');
   if (tpSegSkelEl) tpSegSkelEl.classList.add('tp-seg-cargando');
   ir('s4');
+  ocultarCargando();
   // "Realiza una reserva" (#s4-titulo-vacio, junto al selector): ir('s4') ya
   // corrió _s4ActualizarNav() internamente y lo pudo haber mostrado de
   // entrada (su condición no depende de datos async, ver _s4VacioAutoRedirect
