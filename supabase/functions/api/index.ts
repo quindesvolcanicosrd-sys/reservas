@@ -481,6 +481,16 @@ async function verificarNombreDisponible(params: Record<string, any>): Promise<R
   return { disponible: !data };
 }
 
+async function verificarGoogle(params: Record<string, any>): Promise<Record<string, any>> {
+  const info = await _verificarGoogleToken(params.idToken);
+  if (!info) return { error: 'Token de Google inválido o expirado.' };
+  const email = (info.email ?? '').toLowerCase();
+  const esAdmin = await _esAdmin(email);
+  if (esAdmin) return { error: 'Esta cuenta es de administradorx — iniciá sesión desde el panel admin.' };
+  const row = await _getEquipoRowByEmail(email);
+  return { yaRegistrado: !!row, email, foto: info.picture ?? '', nombre: info.given_name ?? info.name ?? '' };
+}
+
 async function inscribirPersona(params: Record<string, any>): Promise<Record<string, any>> {
   const nombre   = (params.nombre   ?? '').toString().trim();
   const email    = (params.email    ?? '').toString().trim().toLowerCase();
@@ -1608,6 +1618,7 @@ Deno.serve(async (req: Request) => {
       case 'getNombres':                      return json(await getNombres());
       case 'verificarEmailDisponible':        return json(await verificarEmailDisponible(params));
       case 'verificarNombreDisponible':       return json(await verificarNombreDisponible(params));
+      case 'verificarGoogle':                 return json(await verificarGoogle(params));
       // Config
       case 'adminGetColorEnfasis':            return json(await adminGetColorEnfasis());
       case 'adminSetColorEnfasis':            return json(await adminSetColorEnfasis(params));

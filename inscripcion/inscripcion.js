@@ -42,9 +42,6 @@ document.addEventListener('DOMContentLoaded', function() {
     _inscCargarTallas();
     iniciarDatePicker();
     _inscRenderPrefijos(_AJ_PREFIJOS);
-    _inscPrefijoSel = _AJ_PREFIJOS[0];
-    var _prefijoDispDefault = document.getElementById('insc-prefijo-display');
-    if (_prefijoDispDefault) _prefijoDispDefault.textContent = _inscPrefijoSel.bandera + ' ' + _inscPrefijoSel.cod + ' ' + _inscPrefijoSel.pais;
     inscMostrarPaso(0, true);
     _inscIniciarGoogleSignIn();
     var _tokenUrl = new URLSearchParams(window.location.search).get('token');
@@ -219,6 +216,9 @@ function _inscPoblarPaso2(res) {
   if (fNombre && res.nombre && !fNombre.value) {
     fNombre.value = res.nombre;
     inscValidarNombre(fNombre);
+    apiGet({ action: 'verificarNombreDisponible', nombre: res.nombre }, function(check) {
+      if (!check.disponible) { errMsg('err-p3', 'El nombre de usuario pre-completado ya está en uso. Cámbialo antes de continuar.'); }
+    });
   }
   if (res.fechaNac) {
     var disp = document.getElementById('fecha-importada-display');
