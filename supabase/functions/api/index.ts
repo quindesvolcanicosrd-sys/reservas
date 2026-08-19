@@ -284,7 +284,8 @@ function _horaTextoADate(horaStr: string | null): Date | null {
 }
 
 async function _proximosEntrenamientos(): Promise<any[]> {
-  const hoyISO = new Date().toISOString().substring(0, 10);
+  const ecuadorNow = new Date(new Date().getTime() - 5 * 60 * 60 * 1000);
+  const hoyISO = ecuadorNow.toISOString().substring(0, 10);
   const { data } = await supabase.from('asistencias')
     .select('id_evento, fecha, donde, inicia, termina, info_adicional, google_maps, dura, estado')
     .neq('estado', 'Evento Cancelado').gte('fecha', hoyISO).order('fecha').order('inicia');
@@ -292,10 +293,10 @@ async function _proximosEntrenamientos(): Promise<any[]> {
   const ahora = new Date();
   const lista = (data ?? []).filter((f: any) => {
     if (requiereReserva[f.donde] === false) return false;
-    const base = new Date(f.fecha + 'T00:00:00');
-    const horaInicio = _horaTextoADate(f.inicia);
-    if (horaInicio) base.setHours(horaInicio.getHours(), horaInicio.getMinutes());
-    const limite = new Date(base.getTime() - 2 * 60 * 60 * 1000);
+    const [yr, mo, dy] = f.fecha.split('-').map(Number);
+    const [h, m] = (f.inicia ?? '00:00').split(':').map(Number);
+    const inicioUTC = new Date(Date.UTC(yr, mo - 1, dy, h + 5, m, 0, 0)); // Ecuador = UTC-5
+    const limite = new Date(inicioUTC.getTime() - 2 * 60 * 60 * 1000);
     return ahora < limite;
   }).map((f: any) => ({
     idEvento: f.id_evento, fecha: f.fecha, donde: f.donde,
