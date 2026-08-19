@@ -760,7 +760,7 @@ function apiPost(params, ok, fail) {
   var body = Object.keys(params).map(function(k){ return encodeURIComponent(k)+'='+encodeURIComponent(params[k]||''); }).join('&');
   fetch(BACKEND, {
     method: 'POST', mode: 'cors',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY },
     body: body
   })
     .then(function(r){ return r.json(); })
