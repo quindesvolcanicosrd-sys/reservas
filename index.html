@@ -323,7 +323,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <span class="material-symbols-outlined">today</span>
           </button>
           <button type="button" id="ev-btn-patin" class="app-nav-icon-btn app-nav-icon-btn-brand ev-header-icon-btn" onclick="evAbrirEquipamiento()" title="Cambiar equipamiento" style="display:none;">
-            <span class="material-symbols-outlined">ice_skating</span>
+            <span class="material-symbols-outlined">roller_skating</span>
           </button>
           <button type="button" id="ev-btn-anticipada" class="app-nav-icon-btn app-nav-icon-btn-brand ev-header-icon-btn" onclick="eventosAbrirAnticipada()" title="Asistencia anticipada">
             <span class="material-symbols-outlined">event_available</span>
@@ -380,15 +380,15 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-tipo"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-tipo"></div></div>
           </div>
         </div>
+        <div id="ev-pill-banner" class="ev-pill-banner" style="display:none;" role="status">
+          <span class="material-symbols-outlined ev-pill-icono">info</span>
+          <span id="ev-pill-texto" class="ev-pill-texto"></span>
+          <button type="button" id="ev-pill-cerrar" class="ev-pill-cerrar" onclick="_evPillsCerrar()" title="Ocultar sugerencias" style="display:none;">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
       </div>
 
-      <div id="ev-pill-banner" class="ev-pill-banner" style="display:none;" role="status">
-        <span class="material-symbols-outlined ev-pill-icono">info</span>
-        <span id="ev-pill-texto" class="ev-pill-texto"></span>
-        <button type="button" id="ev-pill-cerrar" class="ev-pill-cerrar" onclick="_evPillsCerrar()" title="Ocultar sugerencias" style="display:none;">
-          <span class="material-symbols-outlined">close</span>
-        </button>
-      </div>
       <div class="ev-timeline" id="ev-timeline"></div>
 
       <div style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
