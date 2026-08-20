@@ -1385,3 +1385,29 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
   font-weight: 600;
   margin: 0 0 20px;
 }
+
+/* Banner rotativo de sugerencias (#ev-pill-banner, ver MANIFEST.md
+   "Cambios recientes") -- tokens reales del sistema de colores (no los
+   nombres --color-* genéricos del pedido original, que no existen en
+   css/colors.css): mismo patrón que .admin-dash-banner (css/admin.css)
+   -- --surface-2/--border-light para el fondo/borde neutro, --brand para
+   el ícono de acento, --muted para texto secundario, --radius (14px)
+   para el border-radius de card ya estándar en toda la app. */
+.ev-pill-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin: 8px 0 4px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  border: 1px solid var(--border-light);
+  font-size: 0.85rem;
+  color: var(--muted);
+  transition: opacity 0.4s ease;
+}
+.ev-pill-banner.ev-pill-fade { opacity: 0; }
+.ev-pill-icono { font-size: 18px; flex-shrink: 0; color: var(--brand); }
+.ev-pill-texto { flex: 1; }
+.ev-pill-cerrar { background: none; border: none; cursor: pointer; padding: 0; color: var(--muted); display: flex; }
+.ev-pill-cerrar .material-symbols-outlined { font-size: 16px; }

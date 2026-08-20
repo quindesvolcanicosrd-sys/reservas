@@ -570,6 +570,7 @@ function irEventos() {
       _evPrecargarRoster();
     }
     volver('s-eventos');
+    _evActualizarTopBarModo();
     return;
   }
   _evTimelineFiltro = { lugar: [], tipo: [] };
@@ -616,6 +617,7 @@ function irEventos() {
     }, 50);
   });
   _evYaInicializadoEnSesion = true;
+  _evActualizarTopBarModo();
 }
 
 // Punto de entrada usado por `restaurar` del ítem 'eventos' (APP_BOTTOM_NAV_ITEMS,
@@ -1967,6 +1969,10 @@ function _evAsistenciaRealHtml(e) {
 // reusado en `_evRsvpBarraHtml()` (card) y `_evRenderDetalle()` (detalle) --
 // ver el comentario de esta última para por qué no alcanza con que
 // `_evRsvpBarraHtml()` sola devuelva `''`.
+function evAbrirEquipamiento() {
+  // Abre el mismo bottom sheet de equipamiento que usa Reservas
+  if (typeof abrirBottomSheetEquipamiento === 'function') abrirBottomSheetEquipamiento();
+}
 function _evOcultarRsvpPorEquipoClub(e) {
   return e.tipo === 'Entrenamiento' && !!E.datos &&
     (E.datos.necesitaPatines === 'Sí' || E.datos.necesitaProtecciones === 'Sí');
@@ -1978,6 +1984,72 @@ function _modoUsuario() {
   if (!tieneEquipo) return 'equipamiento';
   if (d.categoria === 'Quindes') return 'quindes';
   return 'mirlxs';
+}
+
+function _evActualizarTopBarModo() {
+  var modo = _modoUsuario();
+  var btnPatin = document.getElementById('ev-btn-patin');
+  var btnAnticipada = document.getElementById('ev-btn-anticipada');
+  if (btnPatin) btnPatin.style.display = modo === 'equipamiento' ? '' : 'none';
+  if (btnAnticipada) btnAnticipada.style.display = modo === 'equipamiento' ? 'none' : '';
+  _evPillsInit(modo);
+}
+
+var _evPillsTimer = null;
+function _evPillsInit(modo) {
+  if (localStorage.getItem('ev_pills_ocultos') === '1') return;
+  var listas = {
+    equipamiento: [
+      'Selecciona una fecha para hacer una reserva',
+      'Cambia tu equipamiento desde el ícono de patín',
+      'Re Agenda o cancela cuando quieras entrando a un evento reservado',
+      'Busca fechas y eventos desde el buscador',
+      'Selecciona el mes en la esquina superior para ver la vista calendario'
+    ],
+    mirlxs: [
+      'Para registrar una reserva mensual o por clase selecciona el ícono de +',
+      'Anticipa tu asistencia desde el ícono de asistencia anticipada',
+      'Toca un evento para ver más información',
+      'Busca fechas y eventos desde el buscador',
+      'Selecciona el mes en la esquina superior para ver la vista calendario'
+    ],
+    quindes: [
+      'Para registrar una reserva mensual selecciona el ícono de +',
+      'Anticipa tu asistencia desde el ícono de asistencia anticipada',
+      'Toca un evento para ver más información',
+      'Busca fechas y eventos desde el buscador',
+      'Selecciona el mes en la esquina superior para ver la vista calendario'
+    ]
+  };
+  var msgs = listas[modo] || listas.mirlxs;
+  var idx = 0;
+  var banner = document.getElementById('ev-pill-banner');
+  var texto = document.getElementById('ev-pill-texto');
+  var cerrar = document.getElementById('ev-pill-cerrar');
+  if (!banner || !texto) return;
+  banner.style.display = 'flex';
+  if (cerrar) cerrar.style.display = '';
+  texto.textContent = msgs[0];
+  if (_evPillsTimer) clearInterval(_evPillsTimer);
+  _evPillsTimer = setInterval(function() {
+    banner.classList.add('ev-pill-fade');
+    setTimeout(function() {
+      idx = (idx + 1) % msgs.length;
+      texto.textContent = msgs[idx];
+      banner.classList.remove('ev-pill-fade');
+    }, 400);
+  }, 10000);
+}
+
+function _evPillsCerrar() {
+  var modal = document.getElementById('modal-deshabilitar-pills');
+  if (modal) { modal.style.display = 'flex'; return; }
+  if (confirm('¿Deseas deshabilitar las sugerencias?')) {
+    localStorage.setItem('ev_pills_ocultos', '1');
+    var banner = document.getElementById('ev-pill-banner');
+    if (banner) banner.style.display = 'none';
+    if (_evPillsTimer) { clearInterval(_evPillsTimer); _evPillsTimer = null; }
+  }
 }
 function _evRsvpBarraHtml(e) {
   if (e.estado === 'Cancelado' || e.estado === 'No se entrena') return '';
