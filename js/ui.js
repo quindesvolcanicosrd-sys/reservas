@@ -743,6 +743,16 @@ var _bottomNavUltimaPantalla = {};
 // `_BOTTOM_NAV_EXTRA` para drill-downs como `s-eventos-detalle`) y devuelve
 // su `visible()` actual.
 function _esPantallaAlcanzable(id) {
+  // Guarda explícita (ver MANIFEST.md "Cambios recientes" -- regresión
+  // señalada al remapear _BOTTOM_NAV_EXTRA de 'reservas' a 'eventos'):
+  // 'eventos'.visible() es true para cualquier cuenta, así que sin esto
+  // una cuenta dashboardAdmin:true volvía a poder alcanzar estas 5
+  // pantallas de Reservas vía gesto nativo de "atrás" -- la regla
+  // estricta que lo impedía vivía en el visible() del ítem 'reservas',
+  // ya eliminado de APP_BOTTOM_NAV_ITEMS. Chequeo por id explícito, antes
+  // de consultar _BOTTOM_NAV_EXTRA, para que no dependa de a qué tab
+  // esté mapeado hoy ni de futuros remapeos.
+  if (_dashboardAdminLimitado && ['s4', 's-misreservas', 's6', 's-pago', 's-gestionar'].indexOf(id) !== -1) return false;
   var itemId = _BOTTOM_NAV_EXTRA[id];
   if (!itemId) {
     for (var i = 0; i < APP_BOTTOM_NAV_ITEMS.length; i++) {
