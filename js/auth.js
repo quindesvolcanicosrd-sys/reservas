@@ -1,18 +1,12 @@
-// Tab de aterrizaje tras login fresco o restaurarSesion() exitosa, según si
-// la cuenta tiene equipamiento propio -- mismo criterio (necesitaPatines/
-// necesitaProtecciones === 'No') ya usado en el resto de la app para esta
-// pregunta (ej. canPayMonthly(), js/reservas.js). Con equipamiento propio,
-// no depende del club para nada -- aterriza en Eventos. Sin equipamiento
-// propio (necesita patines y/o protecciones prestadas), aterriza en
-// Reservas -- irReservas() ya decide por su cuenta si hay que saltar
-// directo a "Nueva reserva" cuando no tiene ninguna reserva activa (fix de
-// esta misma sesión). NO aplica a cuentas dashboardAdmin:true -- esas ya
-// retornan antes de llegar a ningún call site de esta función, directo a
-// Mi Liga vía adminEntrar() (regla más específica, con prioridad).
+// Tab de aterrizaje tras login fresco o restaurarSesion() exitosa. Tab
+// "Reservas" eliminado del nav (ver MANIFEST.md "Cambios recientes") --
+// irReservas() ya no es destino de aterrizaje para nadie, todo el mundo
+// aterriza en Eventos ahora, sin distinguir equipamiento propio. NO aplica
+// a cuentas dashboardAdmin:true -- esas ya retornan antes de llegar a
+// ningún call site de esta función, directo a Mi Liga vía adminEntrar()
+// (regla más específica, con prioridad).
 function _irTabAterrizajeInicial() {
-  var tieneEquipoPropio = !!E.datos && E.datos.necesitaPatines === 'No' && E.datos.necesitaProtecciones === 'No';
-  if (tieneEquipoPropio) irEventos();
-  else irReservas();
+  irEventos();
 }
 
 var _gisUsuarioInicializado = false;

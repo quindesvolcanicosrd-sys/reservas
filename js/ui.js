@@ -558,36 +558,6 @@ function volver(id) { ir(id); }
 // MANIFEST.md "Cambios recientes"); un ir('s-datos') a secas dejaría los
 // placeholders "—" la primera vez que se toca este tab.
 var APP_BOTTOM_NAV_ITEMS = [
-  // 'reservas' -- regla de negocio estricta, auditada a propósito (ver
-  // MANIFEST.md "Cambios recientes"): dashboardAdmin:true (admin que no paga
-  // cuota) nunca debe ver este tab, sin excepción -- ni siquiera si esa
-  // cuenta tiene fila en Equipo con necesitaPatines/necesitaProtecciones
-  // cargados (posible desde el fix de E.datos para admins con fila en
-  // Equipo, ver "Cambios recientes"). `!_dashboardAdminLimitado` es la
-  // ÚNICA condición correcta acá -- _dashboardAdminLimitado se deriva
-  // pura y exclusivamente de res.dashboardAdmin (loginGoogle/validarPin/
-  // restaurarSesion, ver js/auth.js), nunca de E.datos ni de ningún campo
-  // de equipamiento. NO agregar un chequeo alternativo tipo "E.datos &&
-  // E.datos.necesitaPatines" ni similar -- eso mostraría el tab a una
-  // cuenta dashboardAdmin:true con equipamiento propio cargado, violando
-  // la regla.
-  { id: 'reservas', icono: 'calendar_month', texto: 'Reservas', pantalla: 's-home',
-    visible: function() { return !_dashboardAdminLimitado; }, entrar: function() { irReservas(); },
-    // `alSalir` (ver "Cambios recientes" -- regla general de más arriba, mismo
-    // mecanismo que ya usan 'eventos'/'ajustes'): si el pull-to-refresh de
-    // #ptr-indicator (js/home.js) sigue "refrescando" (arrastre ya soltado,
-    // `_ptrRefrescando===true`, esperando la respuesta de refrescarMisReservas())
-    // cuando el usuario cambia de tab, el indicador es un elemento fijo GLOBAL
-    // (fuera de `.pantalla`, hermano de todas) -- cambiar de pantalla no lo
-    // oculta solo, quedaba girando encima de la sección nueva hasta que el
-    // fetch viejo resolvía. Solo oculta el indicador (puramente visual,
-    // `_ptrOcultarIndicador()` no toca `_ptrRefrescando` ni el backstop) -- el
-    // fetch en curso sigue y termina en segundo plano, y como `prepararHome()`/
-    // `_renderHomeReservas()` escriben directo sobre `#home-reservas-lista`
-    // sin chequear si `#s-home` está activa (el DOM no se destruye entre
-    // tabs), al volver a Reservas los datos ya están al día sin necesidad de
-    // un segundo gesto.
-    alSalir: function() { if (typeof _ptrOcultarIndicador === 'function') _ptrOcultarIndicador(); } },
   // 'eventos' -- Tanda 2 (ver MANIFEST.md "Cambios recientes" -- sección
   // Eventos, estructura estática): calendario de entrenamientos/torneos/
   // asambleas + cumpleaños del equipo, separado de "Reservas" (que sigue
@@ -676,8 +646,8 @@ var _BOTTOM_NAV_PANTALLAS = APP_BOTTOM_NAV_ITEMS.map(function(item) { return ite
 // viendo la nav en cualquier sub-pantalla de una sección autenticada,
 // incluidas s-pago/s-gestionar pese a tener una confirmación en curso).
 var _BOTTOM_NAV_EXTRA = {
-  's4': 'reservas', 's-misreservas': 'reservas', 's6': 'reservas',
-  's-pago': 'reservas', 's-gestionar': 'reservas',
+  's4': 'eventos', 's-misreservas': 'eventos', 's6': 'eventos',
+  's-pago': 'eventos', 's-gestionar': 'eventos',
   's-eventos-detalle': 'eventos', 's-eventos-anticipada': 'eventos',
   // "Editar evento" (admin, ver MANIFEST.md "Cambios recientes") -- mismo
   // criterio que el resto de los drill-down de 'eventos' de esta lista:
