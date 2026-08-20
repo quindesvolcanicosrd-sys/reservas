@@ -3287,10 +3287,12 @@ function _evDetalleStickyHtml(ev) {
 function _evDetalleInfoHtml(ev) {
   var desc = ev.descripcion || _EV_DESCRIPCION_POR_TIPO[ev.tipo] || '';
   var mapsUrl = ev.mapsUrl || _EV_MAPS_URL_POR_LUGAR[ev.lugar] || '';
+  var videoInstructivo = ev.videoInstructivo || '';
   var html = '<div class="fi-pills">' +
       (mapsUrl
         ? '<a class="fi-pill fi-pill-lugar" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</a>'
         : '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</span>') +
+      (videoInstructivo ? '<a class="fi-pill fi-pill-video" href="' + videoInstructivo + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">play_circle</span>Video instructivo</a>' : '') +
       '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + ev.horaInicio + 'hs</span>' +
       '<span class="fi-pill fi-pill-fin"><span class="material-symbols-outlined">schedule</span>Fin ' + _evHoraFin(ev) + 'hs</span>' +
     '</div>' +
@@ -5162,6 +5164,7 @@ function _evMapVenueSupabase(v) {
     lat: null,
     lng: null,
     tipoIcono: v.tipo_icono || null,
+    videoInstructivo: v.video_instructivo || null,
     requiereReserva: v.requiere_reserva !== false,
     tipoRecurrencia: v.tipo || null,
     diasSemana: _evLugarParseDiasSemana(v.dias),
@@ -5422,7 +5425,7 @@ function _evLugarFormVolver() { return _evLugarOrigen; }
 function irEvLugarFormNuevo(origen) {
   _evLugarFromWizard = (origen === 'desde_crear');
   _evLugarData = {
-    fila: null, nombre: '', mapsUrl: null, lat: null, lng: null,
+    fila: null, nombre: '', mapsUrl: null, lat: null, lng: null, videoInstructivo: null,
     // Sin pill de "Tipo de ícono" en el flujo recortado del wizard (ver
     // _evLugarMostrarPaso() más abajo, salta directo del Paso 0 a guardar)
     // -- 'Otro' como default neutro, corregible después desde "Editar
@@ -5458,7 +5461,7 @@ function _evLugarAbrirEditar(fila, desdeWizard) {
   var v = _evLugares.filter(function(x) { return x.fila === fila; })[0];
   if (!v) return;
   _evLugarData = {
-    fila: v.fila, nombre: v.nombre || '', nombreOriginal: v.nombre || '', mapsUrl: v.mapsUrl || null,
+    fila: v.fila, nombre: v.nombre || '', nombreOriginal: v.nombre || '', mapsUrl: v.mapsUrl || null, videoInstructivo: v.videoInstructivo || null,
     lat: (typeof v.lat === 'number') ? v.lat : null, lng: (typeof v.lng === 'number') ? v.lng : null,
     tipoIcono: v.tipoIcono || null,
     tipoRecurrencia: v.tipoRecurrencia || null,
@@ -5493,6 +5496,8 @@ function _evLugarFormPintar() {
   // única dueña de `#ev-lugar-form-titulo` en esta pantalla.
   var nombreInp = document.getElementById('ev-lugar-nombre');
   if (nombreInp) nombreInp.value = _evLugarData.nombre || '';
+  var videoInp = document.getElementById('ev-lugar-video');
+  if (videoInp) videoInp.value = _evLugarData.videoInstructivo || '';
   _actualizarContadorTexto(_evLugarData.nombre, 'ev-lugar-nombre-contador', 15);
 
   document.querySelectorAll('#ev-lugar-icono-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.tipoIcono); });
@@ -5852,6 +5857,7 @@ function _evLugarGuardar() {
   var payload = {
     lugar: _evLugarData.nombre.trim(),
     google_maps: _evLugarData.mapsUrl,
+    video_instructivo: _evLugarData.videoInstructivo || null,
     tipo_icono: _evLugarData.tipoIcono,
     requiere_reserva: requiereReserva,
     tipo: _evLugarData.tipoRecurrencia
@@ -5957,6 +5963,8 @@ function _evLugarEditarPintar() {
   var nombreInp = document.getElementById('ev-lugar-editar-nombre');
   if (nombreInp) nombreInp.value = _evLugarData.nombre || '';
   _actualizarContadorTexto(_evLugarData.nombre, 'ev-lugar-editar-nombre-contador', 15);
+  var videoEditInp = document.getElementById('ev-lugar-editar-video');
+  if (videoEditInp) videoEditInp.value = _evLugarData.videoInstructivo || '';
   _evLugarEditarInicializarMapa();
   _evLugarEditarActualizarBoton();
 }
@@ -5972,6 +5980,13 @@ function _evLugarEditarSetNombre(v) {
   _actualizarContadorTexto(v, 'ev-lugar-editar-nombre-contador', 15);
   var titulo = document.getElementById('ev-lugar-editar-titulo');
   if (titulo) titulo.textContent = 'Editar ' + (v || 'lugar');
+  _evLugarEditarActualizarBoton();
+}
+function _evLugarSetVideoInstructivo(v) {
+  _evLugarData.videoInstructivo = v.trim() || null;
+}
+function _evLugarEditarSetVideoInstructivo(v) {
+  _evLugarData.videoInstructivo = v.trim() || null;
   _evLugarEditarActualizarBoton();
 }
 /* ── Ubicación del hub "Editar lugar" -- mismo mapa interactivo + buscador

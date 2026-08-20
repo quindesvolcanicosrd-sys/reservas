@@ -18,6 +18,7 @@
    marca/naranja-rojizo, un 3er color distinto para el mismo concepto. */
 .fi-pill-lugar { background: var(--cyan-20); color: var(--cyan); border: 1px solid var(--cyan-border); text-decoration: none; }
 .fi-pill-maps { background: var(--cyan-20); color: var(--cyan); border: 1px solid var(--cyan-border); text-decoration: none; }
+.fi-pill-video { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border); text-decoration: none; }
 .fi-pill-fin { background: var(--info-btn-bg); color: var(--info); border: 1px solid var(--info-btn-hover); }
 .fi-pill-dur { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-bdr); }
 .fi-pill-patines { background: var(--warning-bg); color: var(--amber); border: 1px solid var(--amber); }

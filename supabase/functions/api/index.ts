@@ -177,6 +177,13 @@ async function _mapaRequiereReservaPorLugar(): Promise<Record<string, boolean>> 
   return mapa;
 }
 
+async function _mapaVideoInstructivoPorLugar(): Promise<Record<string, string>> {
+  const { data } = await supabase.from('venues').select('lugar, video_instructivo');
+  const mapa: Record<string, string> = {};
+  (data ?? []).forEach((v: any) => { if (v.video_instructivo) mapa[v.lugar] = v.video_instructivo; });
+  return mapa;
+}
+
 async function _ultimaAsistenciaPorPersonaTodas(): Promise<Record<string, any[]>> {
   const { data } = await supabase.from('log_asistencias').select('id_evento, nombre_usuario, origen, estado, marca_temporal');
   const ultimaPorClave: Record<string, any> = {};
@@ -290,6 +297,7 @@ async function _proximosEntrenamientos(): Promise<any[]> {
     .select('id_evento, fecha, donde, inicia, termina, info_adicional, google_maps, dura, estado')
     .neq('estado', 'Evento Cancelado').gte('fecha', hoyISO).order('fecha').order('inicia');
   const requiereReserva = await _mapaRequiereReservaPorLugar();
+  const videoInstructivo = await _mapaVideoInstructivoPorLugar();
   const ahora = new Date();
   const lista = (data ?? []).filter((f: any) => {
     if (requiereReserva[f.donde] === false) return false;
@@ -302,7 +310,7 @@ async function _proximosEntrenamientos(): Promise<any[]> {
     idEvento: f.id_evento, fecha: f.fecha, donde: f.donde,
     horaInicio: f.inicia ? f.inicia.substring(0, 5) : '',
     horaFin:    f.termina ? f.termina.substring(0, 5) : '',
-    descripcion: f.info_adicional ?? '', mapsUrl: f.google_maps ?? '', duracion: f.dura ?? '',
+    descripcion: f.info_adicional ?? '', mapsUrl: f.google_maps ?? '', duracion: f.dura ?? '', videoInstructivo: videoInstructivo[f.donde] ?? '',
   }));
   return lista.slice(0, 6);
 }
@@ -968,8 +976,8 @@ async function getEventosRango(params: Record<string, any>): Promise<Record<stri
         hasta  = params.fechaFin   ?? params.hasta;
   const d0 = desde.substring(0, 10), d1 = hasta.substring(0, 10);
   const { data } = await supabase.from('asistencias').select('id_evento, fecha, donde, inicia, termina, estado, google_maps, info_adicional, tipo_evento').gte('fecha', d0).lte('fecha', d1);
-  const [tipoIcono, requiereReserva, asistLog, equipoPorNombre] = await Promise.all([
-    _mapaTipoIconoPorLugar(), _mapaRequiereReservaPorLugar(), _ultimaAsistenciaPorPersonaTodas(), _mapaEquipoPorNombre()
+  const [tipoIcono, requiereReserva, asistLog, equipoPorNombre, videoInstructivo] = await Promise.all([
+    _mapaTipoIconoPorLugar(), _mapaRequiereReservaPorLugar(), _ultimaAsistenciaPorPersonaTodas(), _mapaEquipoPorNombre(), _mapaVideoInstructivoPorLugar()
   ]);
   const eventos = (data ?? []).map((fila: any) => {
     const idEvento = fila.id_evento;
@@ -982,6 +990,7 @@ async function getEventosRango(params: Record<string, any>): Promise<Record<stri
       idEvento, fecha: fila.fecha, lugar: fila.donde, horaInicio: fila.inicia?.substring(0, 5) ?? '', horaFin: fila.termina?.substring(0, 5) ?? '', estado: fila.estado, tipoIcono: fila.tipo_evento ?? tipoIcono[fila.donde] ?? 'Entrenamiento', requiereReserva: requiereReserva[fila.donde] !== false, asistencias,
       mapsUrl: fila.google_maps ?? fila.mapsUrl ?? '',
       descripcion: fila.info_adicional ?? fila.descripcion ?? fila.infoAdicional ?? '',
+      videoInstructivo: videoInstructivo[fila.donde] ?? '',
     };
   });
   eventos.sort((a: any, b: any) => a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0);
@@ -1146,7 +1155,7 @@ async function adminSetEstadoRectificacion(params: Record<string, any>): Promise
 
 async function getProximosEntrenamientos(): Promise<any[]> {
   const lista = await _proximosEntrenamientos();
-  return lista.map((ev: any) => ({ fecha: ev.idEvento, estado: 'Evento Programado', mapsUrl: ev.mapsUrl, descripcion: ev.descripcion, horaFin: ev.horaFin, duracion: ev.duracion, donde: ev.donde, horaInicio: ev.horaInicio, fechaCalendario: ev.fecha }));
+  return lista.map((ev: any) => ({ fecha: ev.idEvento, estado: 'Evento Programado', mapsUrl: ev.mapsUrl, descripcion: ev.descripcion, horaFin: ev.horaFin, duracion: ev.duracion, donde: ev.donde, horaInicio: ev.horaInicio, fechaCalendario: ev.fecha, videoInstructivo: ev.videoInstructivo ?? '' }));
 }
 
 async function getFechasDisponibles(params: Record<string, any>): Promise<any[]> {
@@ -1164,7 +1173,7 @@ async function getFechasDisponibles(params: Record<string, any>): Promise<any[]>
 
   return proximos.map((ev: any) => {
     const idEvento = ev.idEvento;
-    const extra = { mapsUrl: ev.mapsUrl, descripcion: ev.descripcion, horaFin: ev.horaFin, duracion: ev.duracion, donde: ev.donde, horaInicio: ev.horaInicio, fechaCalendario: ev.fecha };
+    const extra = { mapsUrl: ev.mapsUrl, descripcion: ev.descripcion, horaFin: ev.horaFin, duracion: ev.duracion, donde: ev.donde, horaInicio: ev.horaInicio, fechaCalendario: ev.fecha, videoInstructivo: ev.videoInstructivo ?? '' };
     const yaReservo = resArr.some((r: any) => r.nombre_usuario === nombre && r.id_evento === idEvento);
     if (yaReservo) return { ...extra, fecha: idEvento, disponible: false, razon: 'Ya tienes una reserva para esta fecha' };
     const reservasEstaFecha = resArr.filter((r: any) => r.id_evento === idEvento);

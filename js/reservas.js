@@ -634,7 +634,7 @@ function cargarFechas() {
         var fechaTexto = _formatarFechaRelativa(fechaLegible);
         var hora = f.horaInicio || '';
         var lugar = f.donde || '';
-        var hasInfo = !!(f.descripcion || f.mapsUrl || f.horaFin || f.duracion);
+        var hasInfo = !!(f.descripcion || f.mapsUrl || f.horaFin || f.duracion || f.videoInstructivo);
         var fechaEsc = f.fecha.replace(/'/g, "\\'");
         fechaInfoNueva[f.fecha] = fechaLegible + (hora ? ' - ' + hora + 'hs' : '') + (lugar ? ' - ' + lugar : '');
 
@@ -667,6 +667,7 @@ function cargarFechas() {
             if (f.descripcion) html += '<p class="fi-desc">' + f.descripcion + '</p>';
             html += '<div class="fi-extra">';
             if (f.mapsUrl) html += '<a class="fi-pill fi-pill-maps" href="' + f.mapsUrl + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-symbols-outlined">near_me</span>Cómo llegar</a>';
+            if (f.videoInstructivo) html += '<a class="fi-pill fi-pill-video" href="' + f.videoInstructivo + '" target="_blank" rel="noopener" onclick="event.stopPropagation()"><span class="material-symbols-outlined">play_circle</span>Video instructivo</a>';
             if (f.horaFin) html += '<span class="fi-pill fi-pill-fin"><span class="material-symbols-outlined">schedule</span>Fin ' + f.horaFin + '</span>';
             if (f.duracion) html += '<span class="fi-pill fi-pill-dur"><span class="material-symbols-outlined">timer</span>' + f.duracion + '</span>';
             html += '</div></div></div>';
