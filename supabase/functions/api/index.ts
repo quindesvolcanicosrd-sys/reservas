@@ -35,6 +35,7 @@ function getDatosCompletos(row: Record<string, any> | null): Record<string, any>
     necesitaPatines:      row.necesita_patines      ?? '',
     talla:                row.talla                 ?? '',
     necesitaProtecciones: row.necesita_protecciones ?? '',
+    categoria:            row.categoria             ?? '',
     nombreDerby:          row.nombre_derby          ?? '',
     numeroDerby:          row.numero_derby          ?? '',
     pronombres:           row.pronombres            ?? '',
@@ -420,9 +421,9 @@ async function getDatosCompletosAction(params: Record<string, any>): Promise<Rec
 }
 
 async function getDatosPersona(params: Record<string, any>): Promise<Record<string, any>> {
-  const { data } = await supabase.from('equipo').select('username, necesita_patines, talla, necesita_protecciones, email').eq('username', params.nombre).maybeSingle();
+  const { data } = await supabase.from('equipo').select('username, necesita_patines, talla, necesita_protecciones, email, categoria').eq('username', params.nombre).maybeSingle();
   if (!data) return {};
-  return { nombre: data.username, necesitaPatines: data.necesita_patines, talla: data.talla, necesitaProtecciones: data.necesita_protecciones, email: data.email };
+  return { nombre: data.username, necesitaPatines: data.necesita_patines, talla: data.talla, necesitaProtecciones: data.necesita_protecciones, email: data.email, categoria: data.categoria ?? '' };
 }
 
 async function actualizarDatosPersona(params: Record<string, any>): Promise<Record<string, any>> {

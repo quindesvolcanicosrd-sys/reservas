@@ -1971,6 +1971,14 @@ function _evOcultarRsvpPorEquipoClub(e) {
   return e.tipo === 'Entrenamiento' && !!E.datos &&
     (E.datos.necesitaPatines === 'Sí' || E.datos.necesitaProtecciones === 'Sí');
 }
+function _modoUsuario() {
+  var d = E.datos;
+  if (!d) return 'equipamiento';
+  var tieneEquipo = d.necesitaPatines === 'No' && d.necesitaProtecciones === 'No';
+  if (!tieneEquipo) return 'equipamiento';
+  if (d.categoria === 'Quindes') return 'quindes';
+  return 'mirlxs';
+}
 function _evRsvpBarraHtml(e) {
   if (e.estado === 'Cancelado' || e.estado === 'No se entrena') return '';
   if (_evEsPasado(e)) return _evAsistenciaRealHtml(e);
