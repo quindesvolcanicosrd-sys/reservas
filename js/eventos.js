@@ -2256,6 +2256,15 @@ function _modoUsuario() {
   if (d && d.categoria === 'Quindes') return 'quindes';
   return 'mirlxs';
 }
+// Equipo del club (no propio) -- mismo campo/criterio guardado (case-
+// insensitive) que ya usa el resto de la app para esta misma distinción
+// (cargarFechas()/confirmarReserva(), js/reservas.js: `d.necesitaPatines &&
+// d.necesitaPatines.toLowerCase() !== 'no'`) en vez de la comparación
+// estricta `!== 'No'` -- evita un falso "necesita equipo" si el dato
+// llegara en otra capitalización.
+function _evNecesitaEquipo() {
+  return !!(E.datos && E.datos.necesitaPatines && E.datos.necesitaPatines.toLowerCase() !== 'no');
+}
 
 function _evActualizarTopBarModo() {
   var modo = _modoUsuario();
@@ -3196,7 +3205,36 @@ function _evEsRestoDeSemana(iso) {
 // paralelas que puedan desincronizarse.
 function _evTimelineItems() {
   var items = [];
-  _EV_EVENTOS.filter(function(e) { return _evPasaFiltroLugarTipo(e.lugar, e.tipo) && _evPasaBusqueda(e.lugar + ' ' + e.tipo); })
+  // Relevancia por equipo prestado (ver "Cambios recientes") -- solo aplica
+  // a Entrenamiento (único tipo con concepto de "Reservar"/asistencia vía
+  // reserva para estas cuentas; Torneo/Asamblea/etc. son RSVP normal, sin
+  // relación con equipamiento, quedan siempre visibles) y nunca para admin
+  // (necesita ver/gestionar TODOS los eventos, sin importar su propio
+  // necesitaPatines -- exclusión no pedida en el pedido original pero
+  // necesaria: sin ella, un evento fuera del filtro desaparecería también
+  // de la vista de gestión admin). `_evProximas6EntrenIds` (mismo cálculo
+  // exacto que ya usa `_evCardEventoHtml()` para `mostrarBtnReservar` --
+  // ver esa función, más arriba -- computado UNA sola vez acá en vez de por
+  // cada evento evaluado) marca qué Entrenamientos futuros tienen botón
+  // "Reservar" real.
+  var _hoyIsoTimeline = _evHoyISO();
+  var _filtroEquipoActivo = _evNecesitaEquipo() && !_adminToken;
+  var _evProximas6EntrenIds = {};
+  if (_filtroEquipoActivo) {
+    (_EV_EVENTOS || []).filter(function(x) {
+      return x.tipo === 'Entrenamiento' && _evFechaCmp(x.fecha, _hoyIsoTimeline) >= 0;
+    }).sort(function(a, b) { return _evFechaCmp(a.fecha, b.fecha); }).slice(0, 6)
+      .forEach(function(x) { _evProximas6EntrenIds[x.id] = true; });
+  }
+  function _evEsRelevantePorEquipo(e) {
+    if (!_filtroEquipoActivo || e.tipo !== 'Entrenamiento') return true;
+    var cmp = _evFechaCmp(e.fecha, _hoyIsoTimeline);
+    if (cmp === 0) return true; // hoy/reciente -- siempre visible
+    if (cmp > 0) return !!_evProximas6EntrenIds[e.id]; // futuro sin botón Reservar -- oculto
+    if (e.miAsistenciaReal) return true; // pasado con asistencia confirmada -- siempre visible
+    return (_todasReservas || []).some(function(r) { return r.fecha === e.id; }); // pasado sin reserva -- oculto
+  }
+  _EV_EVENTOS.filter(function(e) { return _evPasaFiltroLugarTipo(e.lugar, e.tipo) && _evPasaBusqueda(e.lugar + ' ' + e.tipo) && _evEsRelevantePorEquipo(e); })
     .forEach(function(e) { items.push({ fecha: e.fecha, orden: e.horaInicio || '00:00', tipo: 'evento', data: e }); });
   // "Cumpleaños de <nombre>" -- ver "Cambios recientes", bug real: buscar
   // "cumpleaños" no encontraba ninguno porque solo se comparaba contra el
