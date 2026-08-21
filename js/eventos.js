@@ -1825,20 +1825,12 @@ function _evActualizarBotonesReserva() {
 }
 function _evActualizarFooterReserva() {
   if (_evSeleccionados.size === 0) { _evSalirModoReserva(); return; }
+  // Footer compacto (ver "Cambios recientes" -- se saca el detalle/total,
+  // que vivía en #ev-reserva-footer-detalle/-total, ya sin esos elementos en
+  // index.html): solo togglea el footer, el monto real se ve en #s-pago
+  // (continuar_s4()/_pagoTotalActualizar(), ya poblado con el total real).
   var footer = document.getElementById('ev-reserva-footer');
   if (footer) footer.style.display = 'flex';
-  var ids = Array.from(_evSeleccionados);
-  var n = ids.length;
-  var detalle = document.getElementById('ev-reserva-footer-detalle');
-  // Con 1 sola fecha, se muestra su nombre legible real (mismo texto que
-  // _evReservarClase() ya deja en _fechaInfoDisponible[id] -- fecha+hora+
-  // lugar, el mismo formato que usa toda la app) en vez de "1 clase
-  // seleccionada" -- más útil para confirmar CUÁL clase es. Con 2+, el
-  // detalle por fecha no entra cómodo en una sola línea -- se resume a un
-  // conteo, igual que antes.
-  if (detalle) detalle.textContent = n === 1 ? (_fechaInfoDisponible[ids[0]] || 'Total por 1 clase') : ('Total por ' + n + ' clases');
-  var total = document.getElementById('ev-reserva-footer-total');
-  if (total) total.textContent = '$' + ((E.precioPorClase || 0) * n).toFixed(2);
 }
 function _evSalirModoReserva() {
   _evModoReservaActivo = false;
@@ -1868,6 +1860,15 @@ function _evContinuarReserva() {
   // intentara volver ahí. Reseteado a false en irNuevaReserva() (flujo
   // normal S1-S4) para que no quede pegado entre sesiones.
   E.viaEventosInline = true;
+  // Mismo mecanismo que abrirEvDetalle() (más abajo en este archivo) para
+  // no perder la posición de scroll del timeline -- `ir()` (js/ui.js) ya
+  // tiene el hook genérico que restaura `_evTimelineScrollY` en CUALQUIER
+  // entrada a 's-eventos' mientras `_evRestaurarScrollTimeline` esté prendido
+  // (botón atrás de #s-pago vía TOP_BAR_CONFIG, o "Volver a Mis Reservas" vía
+  // irHomeDesdeExito() -- ambos terminan en ir('s-eventos')) -- alcanza con
+  // armar el flag acá una sola vez, antes de navegar lejos de Eventos.
+  _evGuardarScrollTimeline();
+  _evRestaurarScrollTimeline = true;
   continuar_s4();
   _evSalirModoReserva();
 }
