@@ -698,6 +698,23 @@ function cargarFechas() {
       }
       if (_fi) { toggleFecha(_fi, _fp); }
     }
+    // E._fechasPresel (plural, array -- registro-express/, ver MANIFEST.md):
+    // mismo mecanismo que E._fechaPresel de arriba, extendido para marcar
+    // varias fechas de una vez (Registro Express permite elegir más de una
+    // en su Paso 1) en vez de duplicar la lógica de lookup por slug/fallback.
+    if (E._fechasPresel && E._fechasPresel.length) {
+      var _fps = E._fechasPresel;
+      E._fechasPresel = null;
+      _fps.forEach(function(_fp2) {
+        var _slug2 = _fp2.replace(/-/g, '');
+        var _fi2 = document.getElementById('fi-' + _slug2);
+        if (!_fi2) {
+          var _inp2 = document.querySelector('input[name="fecha"][value="' + _fp2 + '"]');
+          if (_inp2) _fi2 = _inp2.closest('.fecha-item');
+        }
+        if (_fi2 && !_fi2.classList.contains('sel')) { toggleFecha(_fi2, _fp2); }
+      });
+    }
     void listaFechasEl.offsetWidth;
     listaFechasEl.style.animation = 'fadeIn 0.3s ease';
     // Selector Por clase/Mensual: sale del estado "cargando" en el mismo

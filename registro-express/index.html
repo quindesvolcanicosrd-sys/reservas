@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+<title>Registro Express — Mirlxs Roller Derby Quito</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
+<!-- theme-color hardcodeado intencionalmente: los meta tags no soportan var() CSS; valores sincronizados a mano con --bg/--bg dark de colors.css (mismo criterio que ../inscripcion/index.html) -->
+<meta name="theme-color" content="#170900" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FDF3EB" media="(prefers-color-scheme: light)">
+<link rel="stylesheet" href="../css/colors.css">
+<!-- Motor de color de énfasis (ver MANIFEST.md) — mismo script que ../index.html/../inscripcion/index.html. -->
+<script src="../js/color-enfasis.js"></script>
+<link rel="stylesheet" href="../css/global.css">
+<link rel="stylesheet" href="../css/estilos.css">
+<link rel="stylesheet" href="../css/nav.css">
+<link rel="stylesheet" href="../css/reservas.css">
+<!-- Necesario para .aj-group/.aj-dato-row (resumen del Paso 3, ver
+     registro-express.js: _rePoblarResumen()) -- ../inscripcion/index.html
+     también lo carga por el mismo motivo. -->
+<link rel="stylesheet" href="../css/perfil.css">
+<!-- Reusa .insc-step/.insc-prog*/.btn* de ../inscripcion/inscripcion.css tal
+     cual (misma clase, no una copia) -- ese archivo define esos componentes
+     porque esta mini-SPA (como inscripcion/) no carga css/ui.css. Sin CSS
+     propio nuevo: todo lo que necesita este flujo ya existe repartido entre
+     css/reservas.css (.equip-pill-bin/.fecha-item/.fi-*/.total-box) y este
+     archivo (.insc-step/.insc-prog*/.insc-scroll/.btn*). -->
+<link rel="stylesheet" href="../inscripcion/inscripcion.css">
+</head>
+
+<body>
+
+<div id="loading-overlay" style="opacity:1;transition:opacity 0.4s ease;">
+  <div class="loading-card">
+    <div class="spinner"></div>
+    <p id="loading-msg">Cargando...</p>
+  </div>
+</div>
+
+<div class="page-wrap">
+
+  <!-- NAV -->
+  <div class="app-nav app-nav-sticky" id="re-nav">
+    <button class="app-nav-back" id="re-back" onclick="rePasoAnterior()">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </button>
+    <span class="app-nav-title">Registro Express</span>
+  </div>
+
+  <!-- PROGRESS DOTS -->
+  <div class="insc-prog" id="re-prog"></div>
+
+  <!-- ── PASO 0: Equipamiento ── -->
+  <div class="insc-step activo" id="re-step-0">
+    <div class="insc-scroll">
+      <h2>¿Traés tu propio equipamiento?</h2>
+      <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;line-height:1.5;">Esto nos ayuda a preparar tu lugar en la clase.</p>
+
+      <p style="font-weight:700;color:var(--text);margin-bottom:10px;">¿Tenés patines propios?</p>
+      <div class="equip-pills-bin" id="re-patines-pills">
+        <div class="equip-pill-bin" data-val="No" onclick="reSelPatines(this)">
+          <span class="material-symbols-outlined equip-pill-ico">roller_skating</span>
+          <span class="equip-pill-label">No, necesito</span>
+        </div>
+        <div class="equip-pill-bin" data-val="Sí" onclick="reSelPatines(this)">
+          <span class="material-symbols-outlined equip-pill-ico">check_circle</span>
+          <span class="equip-pill-label">Sí, tengo los míos</span>
+        </div>
+      </div>
+
+      <p style="font-weight:700;color:var(--text);margin-bottom:10px;">¿Tenés protecciones propias?</p>
+      <div class="equip-pills-bin" id="re-protecciones-pills">
+        <div class="equip-pill-bin" data-val="No" onclick="reSelProtecciones(this)">
+          <span class="material-symbols-outlined equip-pill-ico">shield</span>
+          <span class="equip-pill-label">No, necesito</span>
+        </div>
+        <div class="equip-pill-bin" data-val="Sí" onclick="reSelProtecciones(this)">
+          <span class="material-symbols-outlined equip-pill-ico">check_circle</span>
+          <span class="equip-pill-label">Sí, tengo las mías</span>
+        </div>
+      </div>
+
+      <div class="error-msg" id="err-re-0"></div>
+      <div class="cta-footer-spacer"></div>
+    </div>
+  </div>
+
+  <!-- ── PASO 1: Selección de reserva ── -->
+  <div class="insc-step" id="re-step-1">
+    <div class="insc-scroll">
+      <h2>Elegí tu reserva</h2>
+
+      <div id="re-paso1-clase" style="display:none;">
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.5;">Seleccioná una o más fechas disponibles.</p>
+        <div id="re-lista-fechas"></div>
+      </div>
+
+      <div id="re-paso1-mensual" style="display:none;">
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:14px;line-height:1.5;">Tu reserva cubrirá el mes de <strong id="re-mes-actual">—</strong>.</p>
+        <div class="total-box">
+          <div>Precio mensual</div>
+          <div style="font-size:1.6rem;font-weight:800;" id="re-precio-mensual">—</div>
+        </div>
+      </div>
+
+      <div class="error-msg" id="err-re-1"></div>
+      <div class="cta-footer-spacer"></div>
+    </div>
+  </div>
+
+  <!-- ── PASO 2: Crear cuenta ── -->
+  <div class="insc-step" id="re-step-2">
+    <div class="insc-scroll">
+      <h2>Creá tu cuenta</h2>
+      <div class="campo">
+        <label>Tu nombre en el equipo <span style="color:var(--brand);">*</span></label>
+        <input type="text" id="re-nombre" placeholder="Como te llaman">
+      </div>
+
+      <div class="campo" style="margin-top:14px;">
+        <label>PIN de acceso (4 dígitos) <span style="color:var(--brand);">*</span></label>
+        <div style="position:relative;margin-bottom:6px;">
+          <input type="password" id="re-pin" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+            placeholder="• • • •"
+            style="text-align:center;font-size:1.8rem;letter-spacing:8px;padding-left:50px;padding-right:50px;width:100%;">
+          <button type="button" onclick="reTogglePinVis('re-pin','re-pin-ico')"
+            style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;">
+            <span class="material-symbols-outlined" id="re-pin-ico">visibility</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="campo" style="margin-top:14px;">
+        <label>Confirmá tu PIN <span style="color:var(--brand);">*</span></label>
+        <div style="position:relative;margin-bottom:6px;">
+          <input type="password" id="re-pin-confirm" inputmode="numeric" pattern="[0-9]*" maxlength="4"
+            placeholder="• • • •"
+            style="text-align:center;font-size:1.8rem;letter-spacing:8px;padding-left:50px;padding-right:50px;width:100%;">
+          <button type="button" onclick="reTogglePinVis('re-pin-confirm','re-pin-confirm-ico')"
+            style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;">
+            <span class="material-symbols-outlined" id="re-pin-confirm-ico">visibility</span>
+          </button>
+        </div>
+      </div>
+
+      <p style="font-size:0.78rem;color:var(--muted);margin-top:6px;line-height:1.5;">Sin un correo de Google asociado, este PIN es tu única forma de volver a entrar — no lo olvides.</p>
+
+      <div class="error-msg" id="err-re-2"></div>
+      <div class="cta-footer-spacer"></div>
+    </div>
+  </div>
+
+  <!-- ── PASO 3: Confirmar y registrarse ── -->
+  <div class="insc-step" id="re-step-3">
+    <div class="insc-scroll">
+      <h2>Confirmá tu registro</h2>
+      <div class="aj-group" id="re-resumen"></div>
+      <div class="error-msg" id="err-re-3"></div>
+      <div class="cta-footer-spacer"></div>
+    </div>
+  </div>
+
+</div><!-- end page-wrap -->
+
+<!-- ── CTA footers fijos de los 4 pasos ──────────────────────────────────
+     Hijos directos de <body>, fuera de .insc-step a propósito -- mismo
+     motivo documentado en ../inscripcion/index.html (.insc-step.activo
+     anima transform, un footer anidado quedaría atrapado por el containing
+     block durante la animación de entrada). -->
+<div class="cta-footer-fixed" id="cta-footer-re-step-0">
+  <button class="btn btn-outline" onclick="reContinuar0()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+</div>
+<div class="cta-footer-fixed" id="cta-footer-re-step-1">
+  <button class="btn btn-outline" onclick="reContinuar1()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+</div>
+<div class="cta-footer-fixed" id="cta-footer-re-step-2">
+  <button class="btn btn-outline" onclick="reContinuar2()">Continuar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_forward</span></button>
+</div>
+<div class="cta-footer-fixed" id="cta-footer-re-step-3">
+  <button class="btn btn-primary" id="re-btn-enviar" onclick="reEnviar()">Registrarme y reservar <span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">check</span></button>
+</div>
+
+<script src="../js/config.js"></script>
+<script src="registro-express.js"></script>
+</body>
+</html>

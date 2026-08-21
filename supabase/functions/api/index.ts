@@ -557,6 +557,45 @@ async function inscribirPersona(params: Record<string, any>): Promise<Record<str
   return { exito: true, token, nombre, datos: getDatosCompletos(newRow) };
 }
 
+// ─── Registro Express (registro-express/) ──────────────────────────────────
+// Variante de inscribirPersona() de arriba, SIN Google Sign-In -- no hay
+// idToken ni email real disponibles en ese flujo (ver MANIFEST.md). Se sacó
+// por completo la validación/duplicado de email (`email: ''` para toda
+// cuenta creada así -- el duplicado por `.maybeSingle()` sobre email vacío
+// habría reventado con más de una fila ya existente con email='') y se hizo
+// el PIN OBLIGATORIO en vez de opcional: sin email/Google, el PIN es la
+// ÚNICA vía de acceso futuro a esta cuenta -- sin esta guardia, una cuenta
+// creada sin PIN quedaría inaccesible para siempre apenas se cierre la sesión.
+async function inscribirPersonaExpress(params: Record<string, any>): Promise<Record<string, any>> {
+  const nombre = (params.nombre ?? '').toString().trim();
+  const pronombres = params.pronombres ?? '';
+  const necesitaPatines = params.necesitaPatines ?? '';
+  const talla = params.talla ?? '';
+  const necesitaProtecciones = params.necesitaProtecciones ?? '';
+  const pinHash = (params.pinHash ?? '').toString();
+
+  if (!nombre) return { exito: false, error: 'El nombre es obligatorio.' };
+  if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s'\-]+$/.test(nombre)) return { exito: false, error: 'El nombre solo puede contener letras y espacios.' };
+  if (pinHash.length !== 64) return { exito: false, error: 'PIN inválido.' };
+
+  const { data: nombreExiste } = await supabase.from('equipo').select('username').ilike('username', nombre).maybeSingle();
+  if (nombreExiste) return { exito: false, error: 'Este nombre de usuario ya está en uso.' };
+
+  const row: Record<string, any> = {
+    username: nombre, email: '', pronombres, prefijo: '', telefono: '',
+    necesita_patines: necesitaPatines, talla, necesita_protecciones: necesitaProtecciones,
+    cupon_disponible: true, permisos_configurados: true,
+    fecha_registro: new Date().toISOString(), pin_hash: pinHash,
+  };
+
+  const { error } = await supabase.from('equipo').insert(row);
+  if (error) return { exito: false, error: error.message };
+
+  const token = await _crearToken(nombre);
+  const newRow = await _getEquipoRow(nombre);
+  return { exito: true, token, nombre, datos: getDatosCompletos(newRow) };
+}
+
 async function eliminarCuenta(params: Record<string, any>): Promise<Record<string, any>> {
   const tok = params.token as string;
   const usr = await _validarToken(tok);
@@ -1657,6 +1696,7 @@ Deno.serve(async (req: Request) => {
       case 'cerrarSesion':                    return json(await cerrarSesion(params));
       case 'resolverNombre':                  return json(await resolverNombre(params));
       case 'inscribirPersona':                return json(await inscribirPersona(params));
+      case 'inscribirPersonaExpress':          return json(await inscribirPersonaExpress(params));
       case 'eliminarCuenta':                  return json(await eliminarCuenta(params));
       // Perfil
       case 'getDatosCompletos':               return json(await getDatosCompletosAction(params));

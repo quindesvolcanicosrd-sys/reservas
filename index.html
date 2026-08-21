@@ -2656,6 +2656,17 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div id="admin-excepciones-lista"></div>
     </div>
 
+    <!-- Copiar link de registro-express/ -- .btn-text-simple, mismo botón
+         "secundario" que ya usa Mi Liga (ver "Agregar administradorx"/
+         "Agregar talla"/"Actualizar" en esta misma pantalla), no .btn-outline/
+         .btn-secondary (esos son de otra sección). mostrarToast(..., 'ok', true)
+         -- el pedido original pasaba `true` como 2º argumento (tipo), no un
+         tipo válido ('error'/'ok'); con `true` el toast se muestra pero sin
+         el color/estilo de éxito. -->
+    <button type="button" class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin:8px 0 4px;" onclick="navigator.clipboard.writeText(window.location.origin+'/registro-express/').then(function(){mostrarToast('Link copiado','ok',true)})">
+      <span class="material-symbols-outlined" style="font-size:1.1rem;">link</span> Copiar link de registro express
+    </button>
+
     <!-- Administradorxs -- al final, como pidió Victor. -->
     <div class="seccion-label" style="margin-top:8px;">Administradorxs</div>
     <div id="miliga-admins-lista"></div>

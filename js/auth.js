@@ -420,6 +420,24 @@ window.onload = function() {
     history.replaceState({}, '', location.pathname);
   }
 
+  // Alta vía registro-express/ -- a diferencia de ?nuevx=1 (arriba), acá NO
+  // hay ningún idToken de Google: `token` es directamente el token de
+  // `sessions` que ya devolvió inscribirPersonaExpress() (ver MANIFEST.md).
+  // Por eso este camino NO reusa onGoogleCredentialUsuario() (espera un JWT
+  // de Google real, fallaría la verificación) -- en cambio reproduce el
+  // mecanismo de restauración de 'session' de localStorage (más abajo en
+  // este archivo: `_token = s.token; ... api({action:'restaurarSesion'})`),
+  // solo que la fuente del token es la URL, no localStorage.
+  var _tokenRegistro = '';
+  var _tipoRegistro = '';
+  var _fechasRegistro = [];
+  if (_urlParams.get('registro') === '1') {
+    _tokenRegistro = _urlParams.get('token') || '';
+    _tipoRegistro = _urlParams.get('tipo') || 'clase';
+    try { _fechasRegistro = JSON.parse(_urlParams.get('fechas') || '[]'); } catch (ex) { _fechasRegistro = []; }
+    history.replaceState({}, '', location.pathname);
+  }
+
   var _restaurando = false;
 
   // Prioridad de restauración (bug real corregido -- ver MANIFEST.md
@@ -500,7 +518,44 @@ window.onload = function() {
   }
 
   if (!_restaurando) {
-    if (_tokenNuevx) {
+    if (_tokenRegistro) {
+      window._loginAutoEnCurso = true;
+      mostrarCargando('Preparando tu cuenta...');
+      _token = _tokenRegistro;
+      api({ action: 'restaurarSesion' }, function(res) {
+        window._loginAutoEnCurso = false;
+        if (!res.valido || !res.datos) { _token = ''; ocultarCargando(); ir('s1', true); return; }
+        E.nombre = res.nombre; E.datos = res.datos; E.datosCompletos = res.datos;
+        localStorage.setItem('session', JSON.stringify({ nombre: E.nombre, token: _token }));
+        vincularPush(E.nombre);
+        if (res.esAdmin) {
+          _adminToken = res.adminToken; _adminEmail = res.email; _adminNombre = E.nombre;
+          _dashboardAdminLimitado = (res.dashboardAdmin !== false);
+          localStorage.setItem('adminSession', JSON.stringify({ adminToken: _adminToken, email: _adminEmail, nombre: _adminNombre, dashboardAdmin: _dashboardAdminLimitado, exp: Date.now() + 11.5 * 3600 * 1000 }));
+        }
+        ocultarCargando();
+        // Pre-selección de fechas: E._fechasPresel (array, nueva -- ver
+        // cargarFechas()/js/reservas.js) en vez de un setTimeout()+toggleFecha()
+        // manual desde acá. Un setTimeout fijo (80ms) alcanza para
+        // selTipoPago() (opera sobre DOM ya estático), pero NO para marcar
+        // fechas: la lista todavía no existe hasta que el fetch async de
+        // getFechasDisponibles() (dentro de cargarFechas()) resuelve, tiempo
+        // variable según la red -- 80ms puede correr antes de que la lista
+        // exista, marcando nada en silencio. E._fechasPresel se consume
+        // DENTRO de cargarFechas(), justo después de pintar la lista real,
+        // mismo criterio ya usado (y ya corregido una vez) para
+        // E._fechaPresel (una sola fecha, Fase 5) -- se extiende ese mismo
+        // mecanismo para aceptar un array en vez de inventar uno nuevo.
+        E._fechasPresel = _fechasRegistro.length ? _fechasRegistro : null;
+        irNuevaReserva(false, null);
+        setTimeout(function() {
+          if (_tipoRegistro === 'mensual' && typeof selTipoPago === 'function') selTipoPago('mensual');
+        }, 80);
+      }, function() {
+        window._loginAutoEnCurso = false;
+        _token = ''; ocultarCargando(); ir('s1', true);
+      });
+    } else if (_tokenNuevx) {
       window._loginAutoEnCurso = true;
       mostrarCargando('Iniciando tu sesión...');
       onGoogleCredentialUsuario({ credential: _tokenNuevx });
