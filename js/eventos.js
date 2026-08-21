@@ -1999,7 +1999,7 @@ function _evCardEventoHtml(e, sufijo) {
       '<span class="badge ' + estBadgeClase + '"><span class="material-symbols-outlined">' + estIcono + '</span>' + estLabel + '</span>' +
       '<span class="rn-status-info" onclick="event.stopPropagation();abrirModalEstados()">¿Qué significa esto?</span>' +
       '</div>';
-    // Botón "Cancelar o re-agendar reserva" -- solo para Pendiente/Confirmada
+    // Botón "Cancelar o re - agendar" -- solo para Pendiente/Confirmada
     // (una reserva 'Reagendar', "clase a favor", ya está cancelada de fondo,
     // sin acción real que ofrecer sobre ESE evento puntual). `_evBtnCancelarReagendarHtml()`
     // (más abajo en este archivo) es la misma que usa el detalle del evento.
@@ -2044,7 +2044,7 @@ function _evCardEventoHtml(e, sufijo) {
     btnCancelarReagendarHtml +
   '</div>';
 }
-// Botón "Cancelar o re-agendar reserva" -- reusa abrirGestionar() (js/home.js,
+// Botón "Cancelar o re - agendar" -- reusa abrirGestionar() (js/home.js,
 // el sheet real "Reagendar"/"Cancelar reserva") sobre una reserva de tipo
 // "clase" ya existente para este evento puntual. Compartido entre la card
 // del timeline y el detalle del evento (ver _evDetalleInfoHtml()) para no
@@ -2061,7 +2061,7 @@ function _evBtnCancelarReagendarHtml(ev, extraClass) {
   var horaEsc = (ev.horaInicio || '').replace(/'/g, "\\'");
   var lugarEsc = (ev.lugar || '').replace(/'/g, "\\'");
   return '<button type="button" class="btn btn-danger' + (extraClass ? ' ' + extraClass : '') + '"' +
-    ' onclick="event.stopPropagation();abrirGestionar(\'' + fechaEsc + '\',null,\'' + fechaTextoEsc + '\',\'' + horaEsc + '\',\'' + lugarEsc + '\')">Cancelar o re-agendar reserva</button>';
+    ' onclick="event.stopPropagation();abrirGestionar(\'' + fechaEsc + '\',null,\'' + fechaTextoEsc + '\',\'' + horaEsc + '\',\'' + lugarEsc + '\')">Cancelar o re - agendar</button>';
 }
 
 // Hidrata TODOS los avatares-placeholder visibles a la vez (`.avatar-pill`
@@ -3937,7 +3937,7 @@ function _evDetalleInfoHtml(ev) {
       '<span class="fi-pill fi-pill-fin"><span class="material-symbols-outlined">schedule</span>Fin ' + _evHoraFin(ev) + 'hs</span>' +
     '</div>' +
     (desc ? '<p class="ev-detalle-desc">' + desc + '</p>' : '');
-  // Botón "Cancelar o re-agendar reserva" (mirlxs, ver "Cambios recientes")
+  // Botón "Cancelar o re - agendar" (mirlxs, ver "Cambios recientes")
   // -- justo debajo de la descripción, pedido explícito de ubicación (antes
   // vivía en una sección propia al final de la pantalla, después de
   // Asistencia -- se saca esa sección entera, esto la reemplaza). Mismo

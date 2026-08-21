@@ -1486,7 +1486,7 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
   gap: 4px;
   flex-shrink: 0;
 }
-/* Botón "Cancelar o re-agendar reserva" -- mismo botón real (`_evBtnCancelarReagendarHtml()`,
+/* Botón "Cancelar o re - agendar" -- mismo botón real (`_evBtnCancelarReagendarHtml()`,
    js/eventos.js) en la card del timeline y en el detalle del evento, cada
    uno con su propio margen (la card lo pone DEBAJO de `.ev-card-top-row`,
    el detalle lo pone DEBAJO de la descripción -- 2 contextos de layout
