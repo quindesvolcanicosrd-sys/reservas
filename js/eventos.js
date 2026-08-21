@@ -1772,7 +1772,7 @@ function _evCardEventoHtml(e, sufijo) {
   if (cancelado) accionBody = _evEstadoNotaPillHtml(e.estado);
   else if (_adminToken && _evYaEmpezo(e)) accionBody = _evRsvpBarraHtml(e) + _evAccionAdminHtml(e);
   else accionBody = _evRsvpBarraHtml(e);
-  return '<div class="ev-card" id="ev-card-' + e.id + sufijo + '" onclick="abrirEvDetalle(\'' + e.id + '\')">' +
+  return '<div class="ev-card" id="ev-card-' + e.id + sufijo + '" onclick="_evTapCard(\'' + e.id + '\',\'' + e.tipo + '\')">' +
     '<div class="ev-card-top-row">' +
       '<div class="ev-card-body">' +
         '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline">' + icono + '</span><div class="ev-card-titulo">' + e.lugar + '</div></div>' +
@@ -1969,9 +1969,49 @@ function _evAsistenciaRealHtml(e) {
 // reusado en `_evRsvpBarraHtml()` (card) y `_evRenderDetalle()` (detalle) --
 // ver el comentario de esta última para por qué no alcanza con que
 // `_evRsvpBarraHtml()` sola devuelva `''`.
+function _evTapCard(eventoId, eventoTipo) {
+  if (_modoUsuario() === 'equipamiento' && eventoTipo === 'Entrenamiento') {
+    evAbrirAccionCard(eventoId);
+  } else {
+    abrirEvDetalle(eventoId);
+  }
+}
+var _evAccionCardCtx = null;
+function evAbrirAccionCard(eventoId) {
+  var e = _EV_EVENTOS.filter(function(x) { return x.id === eventoId; })[0];
+  if (!e) { abrirEvDetalle(eventoId); return; }
+  _evAccionCardCtx = e;
+  var titulo = document.getElementById('sheet-ev-accion-titulo');
+  if (titulo) titulo.textContent = (e.tipo || 'Evento') + ' — ' + _evFechaCompleta(e.fecha);
+  var ov = document.getElementById('sheet-ev-accion-overlay');
+  var sh = document.getElementById('sheet-ev-accion');
+  if (!ov || !sh) { abrirEvDetalle(eventoId); return; }
+  ov.style.display = 'block'; sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(cerrarSheetEvAccion);
+}
+function cerrarSheetEvAccion(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var sh = document.getElementById('sheet-ev-accion');
+  var ov = document.getElementById('sheet-ev-accion-overlay');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() {
+    if (sh) sh.style.display = 'none';
+    if (ov) ov.style.display = 'none';
+  }, 350);
+}
+function cerrarSheetEvAccionEIrDetalle() {
+  cerrarSheetEvAccion(true);
+  if (_evAccionCardCtx) setTimeout(function() { abrirEvDetalle(_evAccionCardCtx.id); }, 360);
+}
+function cerrarSheetEvAccionEIrReserva() {
+  var ctx = _evAccionCardCtx;
+  cerrarSheetEvAccion(true);
+  if (ctx) setTimeout(function() { irNuevaReserva(false, ctx.fecha); }, 360);
+}
 function evAbrirEquipamiento() {
   // Abre el mismo bottom sheet de equipamiento que usa Reservas
-  if (typeof abrirBottomSheetEquipamiento === 'function') abrirBottomSheetEquipamiento();
+  if (typeof abrirSheetEquipHome === 'function') abrirSheetEquipHome();
 }
 function _evOcultarRsvpPorEquipoClub(e) {
   return e.tipo === 'Entrenamiento' && !!E.datos &&

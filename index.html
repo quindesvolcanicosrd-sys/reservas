@@ -4009,6 +4009,26 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDSGkh2AyuM_-6ngo5-XMPi0NYrXZHEBl8&libraries=places&callback=_initMapsCallback&loading=async" defer></script>
 
+<!-- Sheet: acción sobre una card de Entrenamiento en Eventos (modo equipamiento) -->
+<div id="sheet-ev-accion-overlay" class="bsheet-overlay" style="z-index:9500;" onclick="cerrarSheetEvAccion()"></div>
+<div id="sheet-ev-accion" class="bsheet" style="z-index:9550;display:none;transform:translateY(100%);">
+  <div class="bsheet-handle"></div>
+  <div class="bsheet-title" id="sheet-ev-accion-titulo">Entrenamiento</div>
+  <div class="bsheet-body">
+    <div class="aj-group">
+      <div class="aj-dato-row" id="sheet-ev-accion-info" onclick="cerrarSheetEvAccionEIrDetalle()">
+        <span class="material-symbols-outlined">info</span>
+        <span>Ver más información</span>
+      </div>
+      <div class="aj-dato-row" id="sheet-ev-accion-reservar" onclick="cerrarSheetEvAccionEIrReserva()">
+        <span class="material-symbols-outlined">add_circle</span>
+        <span>Reservar esta fecha</span>
+      </div>
+    </div>
+    <button class="btn btn-outline" onclick="cerrarSheetEvAccion()" style="margin-top:8px;">Cancelar</button>
+  </div>
+</div>
+
 <!-- Sheet: Cambiar mi equipamiento (desde home) -->
 <div id="sheet-equip-home-overlay" class="bsheet-overlay" style="z-index:9500;" onclick="cerrarSheetEquipHome()"></div>
 <div id="sheet-equip-home" class="bsheet" style="z-index:9550;">
