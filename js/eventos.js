@@ -1809,16 +1809,8 @@ function _evToggleSeleccion(eventoId) {
 function _evActualizarBotonesReserva() {
   document.querySelectorAll('[data-ev-reservar]').forEach(function(btn) {
     var evid = btn.getAttribute('data-evid');
-    btn.classList.remove('ev-card-btn-reservar--sel', 'ev-card-btn-reservar--add');
-    if (_evSeleccionados.has(evid)) {
-      btn.classList.add('ev-card-btn-reservar--sel');
-      btn.innerHTML = '<span class="material-symbols-outlined">check</span>';
-    } else if (_evModoReservaActivo) {
-      btn.classList.add('ev-card-btn-reservar--add');
-      btn.innerHTML = '<span class="material-symbols-outlined">add</span>';
-    } else {
-      btn.innerHTML = 'Reservar';
-    }
+    if (_evSeleccionados.has(evid)) { btn.classList.add('ev-card-btn-reservar--sel'); }
+    else { btn.classList.remove('ev-card-btn-reservar--sel'); }
   });
 }
 function _evActualizarFooterReserva() {
@@ -2219,7 +2211,11 @@ function _evActualizarTopBarModo() {
   var fabRes = document.getElementById('ev-fab-reserva');
   if (fabRes) {
     var esAdmin = typeof _adminToken !== 'undefined' && !!_adminToken;
-    fabRes.style.display = (modo !== 'equipamiento' && !esAdmin) ? 'flex' : 'none';
+    // Ya no "modo !== 'equipamiento'" (ver MANIFEST.md, eliminación de ese
+    // modo) -- mirlxs tiene el botón "Reservar" inline en cada card
+    // (_evReservarClase()), este FAB quedaría duplicado/redundante para
+    // ellxs. Exclusivo de quindes, que no tienen ese botón en la card.
+    fabRes.style.display = (modo === 'quindes' && !esAdmin) ? 'flex' : 'none';
   }
 }
 

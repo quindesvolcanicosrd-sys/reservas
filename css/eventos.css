@@ -1461,13 +1461,6 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
    en js/eventos.js) -- mismo botón, relleno de marca en vez de outline. */
 .ev-card-btn-reservar--sel {
   background: var(--brand);
-  border-color: var(--brand);
   color: #fff;
-}
-/* Estado "modo selección activo, esta card todavía no elegida" -- mismo
-   botón outline de siempre, ver _evActualizarBotonesReserva(). */
-.ev-card-btn-reservar--add {
-  background: transparent;
-  border: 1px solid var(--brand);
-  color: var(--brand);
+  border-color: var(--brand);
 }
