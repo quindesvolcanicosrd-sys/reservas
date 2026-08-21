@@ -1802,11 +1802,14 @@ function _evToggleSeleccion(eventoId) {
 function _evActualizarBotonesReserva() {
   document.querySelectorAll('[data-ev-reservar]').forEach(function(btn) {
     var evid = btn.getAttribute('data-evid');
+    btn.classList.remove('ev-card-btn-reservar--sel', 'ev-card-btn-reservar--add');
     if (_evSeleccionados.has(evid)) {
       btn.classList.add('ev-card-btn-reservar--sel');
       btn.innerHTML = '<span class="material-symbols-outlined">check</span>';
+    } else if (_evModoReservaActivo) {
+      btn.classList.add('ev-card-btn-reservar--add');
+      btn.innerHTML = '<span class="material-symbols-outlined">add</span>';
     } else {
-      btn.classList.remove('ev-card-btn-reservar--sel');
       btn.innerHTML = 'Reservar';
     }
   });

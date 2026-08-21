@@ -1464,3 +1464,10 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
   border-color: var(--brand);
   color: #fff;
 }
+/* Estado "modo selección activo, esta card todavía no elegida" -- mismo
+   botón outline de siempre, ver _evActualizarBotonesReserva(). */
+.ev-card-btn-reservar--add {
+  background: transparent;
+  border: 1px solid var(--brand);
+  color: var(--brand);
+}
