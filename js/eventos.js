@@ -2007,7 +2007,7 @@ function cerrarSheetEvAccionEIrDetalle() {
 function cerrarSheetEvAccionEIrReserva() {
   var ctx = _evAccionCardCtx;
   cerrarSheetEvAccion(true);
-  if (ctx) setTimeout(function() { irNuevaReserva(false, ctx.fecha); }, 360);
+  if (ctx) setTimeout(function() { irNuevaReserva(false, ctx.id); }, 360);
 }
 function evAbrirEquipamiento() {
   // Abre el mismo bottom sheet de equipamiento que usa Reservas

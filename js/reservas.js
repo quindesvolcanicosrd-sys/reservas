@@ -686,6 +686,18 @@ function cargarFechas() {
     }
     var listaFechasEl = document.getElementById('lista-fechas');
     listaFechasEl.innerHTML = html; E.fechas = []; E.tallasPorFecha = {}; _conflictosTalla = {}; _fechasPosibleProtecRiesgo = {}; _fechaInfoDisponible = fechaInfoNueva;
+    if (E._fechaPresel) {
+      var _fp = E._fechaPresel;
+      E._fechaPresel = null;
+      var _slug = _fp.replace(/-/g, '');
+      var _fi = document.getElementById('fi-' + _slug);
+      if (!_fi) {
+        // Intentar buscar por valor del input como fallback
+        var _inp = document.querySelector('input[name="fecha"][value="' + _fp + '"]');
+        if (_inp) _fi = _inp.closest('.fecha-item');
+      }
+      if (_fi) { toggleFecha(_fi, _fp); }
+    }
     void listaFechasEl.offsetWidth;
     listaFechasEl.style.animation = 'fadeIn 0.3s ease';
     // Selector Por clase/Mensual: sale del estado "cargando" en el mismo

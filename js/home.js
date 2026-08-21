@@ -212,8 +212,9 @@ function _ptrOcultarIndicador() {
   if (ptrHelper) ptrHelper.classList.remove('ptr-helper-oculto');
 }
 
-function irNuevaReserva(skipEquip) {
+function irNuevaReserva(skipEquip, _fechaPresel) {
   E.conf = ''; E.fechas = []; E.tallasPorFecha = {}; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = ''; E.cuponAplicado = false; E.creditosUsados = 0; E.reagendando = false;
+  E._fechaPresel = _fechaPresel || null;
   var chkC = document.getElementById('chk-cupon'); if (chkC) chkC.checked = false;
   document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
   // Flecha atrás de #s4-nav condicional según el origen (ver "Cambios
