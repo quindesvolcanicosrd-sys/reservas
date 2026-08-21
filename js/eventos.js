@@ -3238,18 +3238,19 @@ function _evEsRestoDeSemana(iso) {
 // paralelas que puedan desincronizarse.
 function _evTimelineItems() {
   var items = [];
-  // Relevancia por equipo prestado (ver "Cambios recientes") -- solo aplica
-  // a Entrenamiento (único tipo con concepto de "Reservar"/asistencia vía
-  // reserva para estas cuentas; Torneo/Asamblea/etc. son RSVP normal, sin
-  // relación con equipamiento, quedan siempre visibles) y nunca para admin
-  // (necesita ver/gestionar TODOS los eventos, sin importar su propio
-  // necesitaPatines -- exclusión no pedida en el pedido original pero
-  // necesaria: sin ella, un evento fuera del filtro desaparecería también
-  // de la vista de gestión admin). `_evProximas6EntrenIds` (mismo cálculo
-  // exacto que ya usa `_evCardEventoHtml()` para `mostrarBtnReservar` --
-  // ver esa función, más arriba -- computado UNA sola vez acá en vez de por
-  // cada evento evaluado) marca qué Entrenamientos futuros tienen botón
-  // "Reservar" real.
+  // Relevancia por equipo prestado (ver "Cambios recientes") -- para
+  // hoy/futuro solo aplica a Entrenamiento (único tipo con concepto de
+  // "Reservar" real para estas cuentas; Torneo/Asamblea/etc. nunca lo
+  // tienen, quedan siempre visibles); para PASADO aplica a cualquier tipo
+  // (corrección explícita sobre el alcance original, ver más abajo).
+  // Nunca para admin (necesita ver/gestionar TODOS los eventos, sin
+  // importar su propio necesitaPatines -- exclusión no pedida en el pedido
+  // original pero necesaria: sin ella, un evento fuera del filtro
+  // desaparecería también de la vista de gestión admin). `_evProximas6EntrenIds`
+  // (mismo cálculo exacto que ya usa `_evCardEventoHtml()` para
+  // `mostrarBtnReservar` -- ver esa función, más arriba -- computado UNA
+  // sola vez acá en vez de por cada evento evaluado) marca qué
+  // Entrenamientos futuros tienen botón "Reservar" real.
   var _hoyIsoTimeline = _evHoyISO();
   var _filtroEquipoActivo = _evNecesitaEquipo() && !_adminToken;
   var _evProximas6EntrenIds = {};
@@ -3260,12 +3261,21 @@ function _evTimelineItems() {
       .forEach(function(x) { _evProximas6EntrenIds[x.id] = true; });
   }
   function _evEsRelevantePorEquipo(e) {
-    if (!_filtroEquipoActivo || e.tipo !== 'Entrenamiento') return true;
+    if (!_filtroEquipoActivo) return true;
     var cmp = _evFechaCmp(e.fecha, _hoyIsoTimeline);
-    if (cmp === 0) return true; // hoy/reciente -- siempre visible
-    if (cmp > 0) return !!_evProximas6EntrenIds[e.id]; // futuro sin botón Reservar -- oculto
-    if (e.miAsistenciaReal) return true; // pasado con asistencia confirmada -- siempre visible
-    return (_todasReservas || []).some(function(r) { return r.fecha === e.id; }); // pasado sin reserva -- oculto
+    if (cmp >= 0) {
+      // Hoy/futuro: el filtro solo tiene sentido para Entrenamiento (único
+      // tipo con "botón Reservar" real -- Torneo/Asamblea/etc. nunca lo
+      // tienen, ocultarlos acá los haría desaparecer siempre sin relación
+      // con el problema real). Hoy, o cualquier tipo que no sea
+      // Entrenamiento, siempre visible.
+      if (e.tipo !== 'Entrenamiento' || cmp === 0) return true;
+      return !!_evProximas6EntrenIds[e.id]; // futuro sin botón Reservar -- oculto
+    }
+    // Pasado: aplica a CUALQUIER tipo (pedido explícito -- corrige el
+    // alcance "solo Entrenamiento" de la entrada anterior de este MANIFEST).
+    if (e.miAsistenciaReal) return true; // asistencia confirmada -- siempre visible
+    return (_todasReservas || []).some(function(r) { return r.fecha === e.id; }); // sin reserva -- oculto
   }
   _EV_EVENTOS.filter(function(e) { return _evPasaFiltroLugarTipo(e.lugar, e.tipo) && _evPasaBusqueda(e.lugar + ' ' + e.tipo) && _evEsRelevantePorEquipo(e); })
     .forEach(function(e) { items.push({ fecha: e.fecha, orden: e.horaInicio || '00:00', tipo: 'evento', data: e }); });
