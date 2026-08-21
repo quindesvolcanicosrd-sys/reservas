@@ -2033,6 +2033,11 @@ function _evActualizarTopBarModo() {
   if (btnPatin) btnPatin.style.display = modo === 'equipamiento' ? '' : 'none';
   if (btnAnticipada) btnAnticipada.style.display = modo === 'equipamiento' ? 'none' : '';
   _evPillsInit(modo);
+  var fabRes = document.getElementById('ev-fab-reserva');
+  if (fabRes) {
+    var esAdmin = typeof _adminToken !== 'undefined' && !!_adminToken;
+    fabRes.style.display = (modo !== 'equipamiento' && !esAdmin) ? 'flex' : 'none';
+  }
 }
 
 var _evPillsTimer = null;
@@ -2090,6 +2095,81 @@ function _evPillsCerrar() {
     if (banner) banner.style.display = 'none';
     if (_evPillsTimer) { clearInterval(_evPillsTimer); _evPillsTimer = null; }
   }
+}
+function evAbrirSheetTipoPago() {
+  var modo = _modoUsuario();
+  if (modo === 'quindes') { irNuevaReservaConTipo('mensual'); return; }
+  var cont = document.getElementById('ev-tipo-pago-opciones');
+  if (cont) {
+    cont.innerHTML =
+      '<div class="ev-tipo-pago-opcion" onclick="irNuevaReservaConTipo(\'clase\')">' +
+        '<span class="material-symbols-outlined ev-tipo-pago-opcion-icono">confirmation_number</span>' +
+        '<div class="ev-tipo-pago-opcion-texto">' +
+          '<span class="ev-tipo-pago-opcion-titulo">Por clase</span>' +
+          '<span class="ev-tipo-pago-opcion-desc">Reservá clases individuales según disponibilidad</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="ev-tipo-pago-opcion" onclick="irNuevaReservaConTipo(\'mensual\')">' +
+        '<span class="material-symbols-outlined ev-tipo-pago-opcion-icono">calendar_month</span>' +
+        '<div class="ev-tipo-pago-opcion-texto">' +
+          '<span class="ev-tipo-pago-opcion-titulo">Mensual</span>' +
+          '<span class="ev-tipo-pago-opcion-desc">Pago único por el mes — acceso a todas las clases</span>' +
+        '</div>' +
+        '<span class="ev-tipo-pago-badge">Más económico</span>' +
+      '</div>';
+  }
+  var sh = document.getElementById('sheet-ev-tipo-pago');
+  var ov = document.getElementById('sheet-ev-tipo-pago-overlay');
+  if (!sh || !ov) return;
+  // Mismo patrón de apertura que abrirSheetEquipHome()/evAbrirAccionCard():
+  // display:block ANTES del transform, y el cambio real de transform recién
+  // en el 2do rAF -- necesario para que el navegador pinte el estado cerrado
+  // (translateY(100%), inline en el HTML) antes de animar hacia abierto; sin
+  // el display:block acá, .bsheet/.bsheet-overlay quedan en su display:none
+  // de base (css/global.css) sin importar qué transform/opacity se les
+  // setee, el sheet nunca llega a verse.
+  ov.style.display = 'block'; sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() {
+    sh.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
+    sh.style.transform = 'translateY(0)';
+    ov.style.opacity = '1';
+  }); });
+  _registrarOverlayAbierto(function() { cerrarSheetTipoPago(true); });
+}
+function cerrarSheetTipoPago(porGesto) {
+  // Mismo contrato que cerrarSheetEquipHome()/cerrarSheetEvAccion(): sin
+  // porGesto (tap en "Cancelar"/overlay), delega en history.back() -- el
+  // popstate/_overlayStack (js/ui.js) vuelve a llamar acá con porGesto=true,
+  // que es la única rama que hace el cierre visual real. Sin esta guardia,
+  // un cierre por tap deja la entrada de historial de _registrarOverlayAbierto()
+  // sin consumir -- el próximo gesto de "atrás" real quedaría absorbido por
+  // ese entry viejo en vez de navegar de verdad.
+  if (!porGesto) { history.back(); return; }
+  var sh = document.getElementById('sheet-ev-tipo-pago');
+  var ov = document.getElementById('sheet-ev-tipo-pago-overlay');
+  if (sh) { sh.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1)'; sh.style.transform = 'translateY(100%)'; }
+  if (ov) ov.style.opacity = '0';
+  setTimeout(function() {
+    if (sh) sh.style.display = 'none';
+    if (ov) ov.style.display = 'none';
+  }, 300);
+}
+function irNuevaReservaConTipo(tipo) {
+  // Mismo patrón que cerrarSheetEvAccionEIrReserva(): cierre visual directo
+  // (porGesto=true, sin pasar por history.back()) + navegación diferida
+  // hasta que termine la animación de cierre (300ms + margen) -- NO se
+  // encadena history.back() seguido de ir('s4')/pushState() sincrónico
+  // (irNuevaReserva()->cargarFechas()->ir('s4')): son 2 operaciones de
+  // historial en curso a la vez, compitiendo en orden impredecible contra
+  // el popstate asíncrono del back(), con riesgo real de corromper la pila
+  // de navegación o dejar el sheet visualmente encimado sobre s4.
+  cerrarSheetTipoPago(true);
+  setTimeout(function() {
+    irNuevaReserva(false, null);
+    if (tipo === 'mensual') {
+      setTimeout(function() { if (typeof selTipoPago === 'function') selTipoPago('mensual'); }, 80);
+    }
+  }, 310);
 }
 function _evRsvpBarraHtml(e) {
   if (e.estado === 'Cancelado' || e.estado === 'No se entrena') return '';

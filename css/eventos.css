@@ -1411,3 +1411,28 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 .ev-pill-texto { flex: 1; }
 .ev-pill-cerrar { background: none; border: none; cursor: pointer; padding: 0; color: var(--muted); display: flex; }
 .ev-pill-cerrar .material-symbols-outlined { font-size: 16px; }
+
+/* Opciones del sheet #sheet-ev-tipo-pago (index.html) -- tokens reales del
+   sistema de colores (--surface-1/--text-1 del pedido original no existen
+   en css/colors.css): --surface-2/--border-light/--text/--muted, mismo
+   criterio que .ev-ant-card/.ev-crear-tipo-card (más arriba en este
+   archivo), el componente más parecido que ya existía para una card
+   seleccionable con ícono+título+descripción. */
+.ev-tipo-pago-opcion {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border-light);
+  background: var(--surface-2);
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ev-tipo-pago-opcion:active { background: var(--surface-2); border-color: var(--brand); }
+.ev-tipo-pago-opcion-icono { color: var(--brand); font-size: 28px; flex-shrink: 0; }
+.ev-tipo-pago-opcion-texto { flex: 1; }
+.ev-tipo-pago-opcion-titulo { font-weight: 600; font-size: 15px; color: var(--text); display: block; }
+.ev-tipo-pago-opcion-desc { font-size: 13px; color: var(--muted); display: block; margin-top: 2px; }
+.ev-tipo-pago-badge { font-size: 11px; font-weight: 600; background: var(--brand); color: #fff; border-radius: 99px; padding: 2px 8px; flex-shrink: 0; }

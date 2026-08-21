@@ -4009,6 +4009,17 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDSGkh2AyuM_-6ngo5-XMPi0NYrXZHEBl8&libraries=places&callback=_initMapsCallback&loading=async" defer></script>
 
+<!-- Sheet: elegir tipo de reserva (por clase / mensual) -->
+<div class="bsheet" id="sheet-ev-tipo-pago" style="transform:translateY(100%);z-index:9450;">
+  <div class="bsheet-handle"></div>
+  <div class="bsheet-title">Nueva reserva</div>
+  <div class="bsheet-body" style="padding:16px;padding-bottom:max(24px,env(safe-area-inset-bottom,24px));">
+    <div id="ev-tipo-pago-opciones"></div>
+    <button type="button" onclick="cerrarSheetTipoPago()" style="width:100%;padding:12px;margin-top:4px;background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;">Cancelar</button>
+  </div>
+</div>
+<div class="bsheet-overlay" id="sheet-ev-tipo-pago-overlay" style="z-index:9400;" onclick="cerrarSheetTipoPago()"></div>
+
 <!-- Sheet: acción sobre una card de Entrenamiento en Eventos (modo equipamiento) -->
 <div id="sheet-ev-accion-overlay" class="bsheet-overlay" style="z-index:9500;" onclick="cerrarSheetEvAccion()"></div>
 <div id="sheet-ev-accion" class="bsheet" style="z-index:9550;display:none;transform:translateY(100%);">
@@ -4200,6 +4211,13 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
   <button type="button" class="ev-fab-btn" id="ev-fab-btn" onclick="irEvCrear()" title="Nuevo">
     <span class="material-symbols-outlined">add</span>
+  </button>
+</div>
+
+<!-- FAB reserva: visible solo para mirlxs/quindes no-admin -->
+<div class="ev-fab-menu" id="ev-fab-reserva" style="display:none;">
+  <button type="button" class="ev-fab-btn" onclick="evAbrirSheetTipoPago()" title="Nueva reserva" aria-label="Nueva reserva">
+    <span class="material-symbols-outlined">event_available</span>
   </button>
 </div>
 
