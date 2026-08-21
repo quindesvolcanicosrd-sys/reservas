@@ -393,9 +393,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
       <div style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
     </div>
-    <div id="ev-reserva-footer" style="display:none;position:fixed;bottom:calc(var(--bottom-nav-h) + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);width:100%;max-width:523px;z-index:400;background:var(--bg);border-top:1px solid var(--border-light);box-shadow:0 -4px 16px rgba(0,0,0,0.18);padding:12px 16px 14px;">
-      <button type="button" id="ev-btn-continuar-reserva" class="btn btn-primary" style="width:100%;" onclick="_evContinuarReserva()">Finalizar tu reserva <span class="material-symbols-outlined" style="vertical-align:middle;font-size:18px;">arrow_forward</span></button>
-    </div>
+  </div>
+  <div id="ev-reserva-footer" style="display:none;position:fixed;bottom:calc(var(--bottom-nav-h) + env(safe-area-inset-bottom,0px) - 1px);left:50%;transform:translateX(-50%);width:100%;max-width:523px;z-index:400;background:var(--bg);border-top:1px solid var(--border-light);box-shadow:0 -4px 16px rgba(0,0,0,0.18);padding:12px 16px 14px;">
+    <button type="button" id="ev-btn-continuar-reserva" class="btn btn-primary" style="width:100%;" onclick="_evContinuarReserva()"><span id="ev-footer-btn-texto" style="transition:opacity 0.15s;">Finalizar tu reserva</span> <span class="material-symbols-outlined" style="vertical-align:middle;font-size:18px;">arrow_forward</span></button>
   </div>
 
 <!-- ═══ Detalle de un evento (Eventos, ver MANIFEST.md "Cambios recientes")
@@ -2234,7 +2234,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
   <div class="pantalla" id="s-pago">
     <div class="card">
-      <h2>Realiza tu transferencia</h2>
+
       <div class="total-box" id="s-pago-total" style="margin-bottom:20px;">
         <div id="s-pago-total-monto"></div>
         <div class="total-detalle" id="s-pago-total-detalle"></div>
@@ -2277,8 +2277,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div class="exito-titulo" id="s6-titulo">¡Reserva/Pago registrado!</div>
       <div class="resumen" id="s6-resumen"></div>
       <div class="aviso-pendiente" id="s6-email-aviso" style="display:none;"></div>
-      <p id="s6-aviso-pago" style="display:none;">Al confirmar nos avisas que ya realizaste el pago. <strong>Revisaremos tu transferencia y tu reserva quedará pendiente</strong>. Recibirás confirmación por correo o <strong>cuando esté aprobada.</strong> <button onclick="abrirModalInfoEstado()" style="background:none;border:none;cursor:pointer;font-size:inherit;font-weight:700;color:var(--brand);padding:0;font-family:inherit;text-decoration:underline;">¿Qué significa esto?</button></p>
-      <p id="s6-liberar-cupo" style="display:none;margin-top:12px;">Si no puedes venir, <strong>avisa lo antes posible</strong> para liberar tu cupo o para evitar que movilicemos tus pertenencias. <button onclick="abrirModalInfoPolitica()" style="background:none;border:none;cursor:pointer;font-size:inherit;font-weight:700;color:var(--brand);padding:0;font-family:inherit;text-decoration:underline;">¿Qué significa esto?</button></p>
+      <p id="s6-aviso-pago" style="display:none;">Al confirmar nos avisas que ya realizaste el pago. <strong>Revisaremos tu transferencia y tu reserva quedará pendiente</strong>. Recibirás una notificación <strong>cuando esté aprobada.</strong> <button onclick="abrirModalInfoEstado()" style="background:none;border:none;cursor:pointer;font-size:inherit;font-weight:700;color:var(--brand);padding:0;font-family:inherit;text-decoration:underline;">¿Qué significa esto?</button></p>
+      <p id="s6-liberar-cupo" style="display:none;margin-top:12px;">Si no puedes venir, <strong>cancela o re-agenda lo antes posible</strong> para liberar tu cupo o para evitar que movilicemos tus pertenencias. <button onclick="abrirModalInfoPolitica()" style="background:none;border:none;cursor:pointer;font-size:inherit;font-weight:700;color:var(--brand);padding:0;font-family:inherit;text-decoration:underline;">¿Qué significa esto?</button></p>
       <div class="exito-texto" id="s6-texto" style="margin-top:12px;">Puedes revisar el estado de tu reserva en cualquier momento desde <strong>"Ver mis reservas"</strong>.</div>
       <!-- +var(--bottom-nav-h) (ver "Cambios recientes" -- s6 ahora suma nav
            vía _BOTTOM_NAV_EXTRA/js/ui.js, antes no lo necesitaba). -->
@@ -2709,11 +2709,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=5f18b1a9"></script>
-<script src="js/eventos.js?v=6c0ffb99"></script>
+<script src="js/ui.js?v=62a69d96"></script>
+<script src="js/eventos.js?v=940701cf"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
-<script src="js/reservas.js?v=c183515e"></script>
+<script src="js/reservas.js?v=b847514e"></script>
 <script src="js/perfil.js?v=c251c158"></script>
 <script src="js/admin.js"></script>
 <script src="js/pwa.js"></script>
@@ -4258,7 +4258,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" style="flex-shrink:0;vertical-align:middle;" fill="var(--success-dark)"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
     Enviar comprobante por WhatsApp
   </a>
-  <button class="btn btn-outline" onclick="irHomeDesdeExito()" style="margin-top:14px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Volver a Mis Reservas</button>
+  <button class="btn btn-outline" onclick="irHomeDesdeExito()" style="margin-top:14px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">arrow_back</span> Regresar a eventos</button>
 </div>
 
 <!-- Footer fijo compartido por los 9 pasos del wizard de Salud (aj-sub-salud).

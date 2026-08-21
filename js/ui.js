@@ -170,7 +170,7 @@ var TOP_BAR_CONFIG = {
   // _evContinuarReserva(), js/eventos.js; reseteado por irNuevaReserva(),
   // js/home.js) distingue las 2 rutas, mismo patrón ya usado por
   // `E.editandoDesdeHome` en 's3a' de acá arriba.
-  's-pago': { titulo: 'Pago', volver: function() { return E.viaEventosInline ? 's-eventos' : 's4'; } },
+  's-pago': { titulo: 'Realiza tu transferencia', volver: function() { return E.viaEventosInline ? 's-eventos' : 's4'; } },
   's-gestionar': { titulo: 'Re-agendar fecha', volver: 's-home' },
   's-misreservas': { titulo: 'Historial de reservas', volver: 's-home' },
   // Detalle de un evento (Eventos) -- ya NO usa el #top-bar genérico (ver
@@ -591,7 +591,7 @@ var APP_BOTTOM_NAV_ITEMS = [
     // ABANDONAR la sección, sin importar hacia dónde -- complementa a
     // `abrirEvDetalle()` (que guarda lo mismo al entrar a un detalle, un
     // camino distinto hacia la misma variable, `_evTimelineScrollY`).
-    alSalir: function() { if (typeof _evGuardarScrollTimeline === 'function') _evGuardarScrollTimeline(); },
+    alSalir: function() { if (typeof _evGuardarScrollTimeline === 'function') _evGuardarScrollTimeline(); if (typeof _evSalirModoReserva === 'function') _evSalirModoReserva(); },
     visible: function() { return true; } },
   { id: 'ajustes', icono: 'settings', texto: 'Ajustes', pantalla: 's-datos',
     entrar: function() { irEditarDatos(); },

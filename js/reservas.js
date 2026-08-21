@@ -1124,7 +1124,14 @@ function confirmarReserva(btn) {
     if (E.tipoPago === 'clase') {
       var fechasConTalla = fechasExitosas.map(function(f) {
         var tFecha = (E.tallasPorFecha && E.tallasPorFecha[f]) ? E.tallasPorFecha[f] : tallaLocal;
-        return '• ' + (_fechaInfoDisponible[f] || f) + (necesitaPatinesLocal && tFecha ? ' — Talla ' + tFecha : '');
+        var info = _fechaInfoDisponible[f] || '';
+        // Formato corto DD/MM/YYYY en vez de "Miércoles 26 de Agosto"
+        var fechaCorta = (f && /^\d{4}-\d{2}-\d{2}/.test(f))
+          ? f.substring(8, 10) + '/' + f.substring(5, 7) + '/' + f.substring(0, 4)
+          : f;
+        var resto = info ? info.replace(/^[^-]+-\s*/, '') : '';
+        var linea = resto ? fechaCorta + ' - ' + resto : (info || f);
+        return linea + (necesitaPatinesLocal && tFecha ? ' — Talla ' + tFecha : '');
       }).join('<br>');
       h += '<div style="padding: 10px 0; border-bottom: 1px solid var(--border-softest); font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Fecha/s:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + fechasConTalla + '</div></div>';
     } else if (mesesExitosos && mesesExitosos.length > 0) {

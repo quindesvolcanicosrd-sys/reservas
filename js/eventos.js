@@ -1907,6 +1907,14 @@ function _evConfirmarTallaConflicto() {
   _evModoReservaActivo = true;
   _evToggleSeleccion(evId);
 }
+function _evActualizarFooterTexto() {
+  var span = document.getElementById('ev-footer-btn-texto');
+  if (!span) return;
+  var texto = _evSeleccionados.size === 1 ? 'Finalizar tu reserva' : 'Finalizar tus reservas';
+  if (span.textContent === texto) return;
+  span.style.opacity = '0';
+  setTimeout(function() { span.textContent = texto; span.style.opacity = '1'; }, 150);
+}
 function _evActualizarFooterReserva() {
   if (_evSeleccionados.size === 0) { _evSalirModoReserva(); return; }
   // Footer compacto (ver "Cambios recientes" -- se saca el detalle/total,
@@ -1929,11 +1937,7 @@ function _evActualizarFooterReserva() {
       requestAnimationFrame(function() { footer.classList.add('ev-reserva-footer--visible'); });
     });
   }
-  var _btnCont = document.getElementById('ev-btn-continuar-reserva');
-  if (_btnCont) {
-    var _nSel = _evSeleccionados.size;
-    _btnCont.innerHTML = (_nSel > 1 ? 'Finalizar tus reservas' : 'Finalizar tu reserva') + ' <span class="material-symbols-outlined" style="vertical-align:middle;font-size:18px;">arrow_forward</span>';
-  }
+  _evActualizarFooterTexto();
 }
 function _evSalirModoReserva() {
   _evModoReservaActivo = false;
