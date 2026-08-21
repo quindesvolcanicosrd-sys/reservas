@@ -5562,4 +5562,16 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
 
 - **Fix 401 en `apiPost()` local de `inscripcion/inscripcion.js` (línea ~759) — faltaban los headers de autenticación de Supabase.** El `fetch()` de este helper mandaba únicamente `Content-Type: application/x-www-form-urlencoded`, sin `apikey`/`Authorization: Bearer` con `SUPABASE_ANON_KEY` — a diferencia de `api()`/`apiPost()` de `js/api.js` (app principal, ver la tabla de esa sección, ambos ya documentados con esos 2 headers) y de la propia `apiGet()` de este mismo archivo, que tampoco los manda pero corre por una ruta distinta (ver nota abajo). Cualquier acción que pasa por esta copia local — `verificarGoogle` (paso 1 de inscripción) e `inscribirPersona` (paso final) — quedaba expuesta a que Supabase Edge Functions rechazara la request con 401 en cuanto la función se redesplegara sin `--no-verify-jwt` (ver el punto siguiente). **Fix:** headers ahora incluyen `apikey: SUPABASE_ANON_KEY` y `Authorization: 'Bearer ' + SUPABASE_ANON_KEY` (constante ya cargada en la página vía `../js/config.js`, sin import nuevo). `apiGet()` (misma sección, unas líneas arriba) queda sin este fix — no se tocó, fuera del pedido explícito de esta tanda; sigue funcionando porque no depende del JWT mientras la Edge Function esté desplegada con `--no-verify-jwt`.
 
+### Fix: Rollback de ediciones en modo 'periodo' (2026-08-21)
+- **Bug**: ediciones de venue/horario hechas con modo 'periodo' en _evAdminEditarEvento()
+  revertían al día siguiente porque el cron GAS (3am) regenera asistencias desde venues
+  sin respetar es_excepcion = true.
+- **Fix**: trigger Postgres trg_proteger_asistencias_excepciones en tabla asistencias:
+  si OLD.es_excepcion = TRUE y NEW.es_excepcion no es explícitamente TRUE → RETURN OLD.
+  El admin siempre manda es_excepcion = true en sus patches, por lo que sus ediciones
+  pasan normalmente. El trigger bloquea solo las escrituras de GAS.
+- **Archivo**: supabase/migrations/20260821_protect_excepcion_rows.sql
+- **IMPORTANTE**: Este SQL debe correrse manualmente en el Supabase SQL Editor del proyecto
+  (o via `supabase db push` si las migraciones están sincronizadas).
+
 - **Redeploy de la Edge Function con `--no-verify-jwt` restaurado.** Las 2 tandas anteriores de esta sesión (fix de `verificarGoogle` y fix del ícono de push del dominio nuevo) desplegaron con `supabase functions deploy api --project-ref uusbnreitoobqssizbfq`, **sin** el flag `--no-verify-jwt` que sí llevan los deploys documentados más arriba en este mismo archivo (líneas ~772/~792, tandas de Rectificar Asistencia). Sin ese flag, Supabase exige un JWT válido en `Authorization` para invocar la función — probablemente la causa real detrás del 401 que motivó el fix de `apiPost()` de arriba (la Edge Function volvió a verificar JWT en el redeploy, y esta copia local no mandaba ninguno). **Fix:** redeployado con `supabase functions deploy api --project-ref uusbnreitoobqssizbfq --no-verify-jwt`, mismo comando que el resto de deploys documentados en este archivo. Ninguno de los 2 fixes anteriores de esta sesión (`verificarGoogle`, ícono de push) necesita corrección de código adicional — el contenido desplegado ya es el correcto, solo faltaba este flag en el comando.
