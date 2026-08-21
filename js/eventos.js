@@ -34,6 +34,12 @@ var _EV_OFFSEASON = [];
 var _evSeleccionados = new Set();
 var _evDisponibles = {};
 var _evModoReservaActivo = false;
+// Doble tap real en "Reservar" (ver "Cambios recientes"): _evModoReservaActivo
+// solo se prendía DENTRO del callback de éxito del apiPost, no antes de
+// llamarlo -- un 2º tap mientras el 1er fetch todavía estaba en vuelo
+// disparaba un 2º apiPost idéntico, sin ninguna guardia. Este flag se prende
+// SÍNCRONO, antes del apiPost, y se apaga en los 2 callbacks (éxito y error).
+var _evCargandoDisponibles = false;
 
 // 'Partido'/'Evento social'/'Otro' sumados para el formulario de Venues (ver
 // MANIFEST.md) -- mismo mapa ya usado por las cards de evento reales
@@ -1768,6 +1774,8 @@ function _evCardAniversarioHtml(a) {
 // _evContinuarReserva() más abajo).
 function _evReservarClase(eventoId) {
   if (!_evModoReservaActivo) {
+    if (_evCargandoDisponibles) return;
+    _evCargandoDisponibles = true;
     // Ya no es exclusivo de "equipo propio" (ver MANIFEST.md, eliminación del
     // modo 'equipamiento') -- talla/necesitaProtecciones viajan igual que en
     // cargarFechas() (js/reservas.js:613-619, mismo criterio: talla vacía si
@@ -1776,6 +1784,7 @@ function _evReservarClase(eventoId) {
     var dRes = E.datos || {};
     var tallaRes = (dRes.necesitaPatines && dRes.necesitaPatines.toLowerCase() !== 'no') ? dRes.talla : '';
     apiPost({ action: 'getFechasDisponibles', token: _token, nombre: E.nombre, talla: tallaRes, necesitaProtecciones: dRes.necesitaProtecciones }, function(res) {
+      _evCargandoDisponibles = false;
       (res || []).forEach(function(f) {
         _evDisponibles[f.fecha] = f;
         // Mismo formato exacto que cargarFechas() (js/reservas.js:633-639)
@@ -1800,7 +1809,7 @@ function _evReservarClase(eventoId) {
         return;
       }
       _evToggleSeleccion(eventoId);
-    }, function() { mostrarToast('Error de conexión.', 'error', true); });
+    }, function() { _evCargandoDisponibles = false; mostrarToast('Error de conexión.', 'error', true); });
   } else {
     _evToggleSeleccion(eventoId);
   }
@@ -1829,16 +1838,38 @@ function _evActualizarFooterReserva() {
   // que vivía en #ev-reserva-footer-detalle/-total, ya sin esos elementos en
   // index.html): solo togglea el footer, el monto real se ve en #s-pago
   // (continuar_s4()/_pagoTotalActualizar(), ya poblado con el total real).
+  // Fade-in real (ver "Cambios recientes") -- display:block ANTES del
+  // cambio de opacity/clase (mismo patrón que abrirSheetTipoPago()/
+  // evAbrirAccionCard()/etc.: .bsheet-* parten de display:none por CSS, el
+  // transform/opacity no alcanza solo para mostrarlos) + doble
+  // requestAnimationFrame para que el navegador pinte el estado opacity:0
+  // (recién puesto por el display:block) antes de animar hacia opacity:1 --
+  // sin el 2º frame, la transición podría arrancar ya en el valor final,
+  // sin animar nada. El guard evita re-disparar el rAF si el footer ya
+  // estaba visible (ej. seleccionar una 2ª fecha con el footer ya abierto).
   var footer = document.getElementById('ev-reserva-footer');
-  if (footer) footer.style.display = 'flex';
+  if (footer && !footer.classList.contains('ev-reserva-footer--visible')) {
+    footer.style.display = 'block';
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() { footer.classList.add('ev-reserva-footer--visible'); });
+    });
+  }
 }
 function _evSalirModoReserva() {
   _evModoReservaActivo = false;
   _evSeleccionados = new Set();
   _evDisponibles = {};
   _evActualizarBotonesReserva();
+  // Fade-out real -- se saca la clase (arranca la transición de opacity) y
+  // recién 220ms después (mismo valor que la transición CSS, criterio ya
+  // usado en toda la app para este tipo de cierre -- ver cerrarSheetTipoPago()/
+  // cerrarSheetEvAccion()/etc., ninguno usa `transitionend`) se vuelve a
+  // poner display:none, para no cortar la animación a la mitad.
   var footer = document.getElementById('ev-reserva-footer');
-  if (footer) footer.style.display = 'none';
+  if (footer) {
+    footer.classList.remove('ev-reserva-footer--visible');
+    setTimeout(function() { footer.style.display = 'none'; }, 220);
+  }
 }
 // Cierra continuar_s4() completo (js/reservas.js) en vez de navegar directo
 // a 's-pago' -- esa función arma detalleTexto/fechasHtml + llama

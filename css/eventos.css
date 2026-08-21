@@ -1450,7 +1450,16 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
+/* Fade in/out (ver "Cambios recientes" -- antes display:none/block puro,
+   sin transición) -- mismo criterio opacity+pointer-events que el resto de
+   la app usa para elementos fijos que aparecen/desaparecen (_evActualizarFooterReserva()/
+   _evSalirModoReserva(), js/eventos.js: display:block + doble rAF agrega
+   esta clase para el fade-in; se saca la clase y, 220ms después -- mismo
+   valor que la transición -- recién se vuelve a poner display:none). */
+#ev-reserva-footer { opacity: 0; transition: opacity 0.22s ease; pointer-events: none; }
+#ev-reserva-footer.ev-reserva-footer--visible { opacity: 1; pointer-events: auto; }
 .ev-card-btn-reservar--off {
   border-color: var(--border-light);
   color: var(--muted);
