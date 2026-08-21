@@ -1436,3 +1436,24 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 .ev-tipo-pago-opcion-titulo { font-weight: 600; font-size: 15px; color: var(--text); display: block; }
 .ev-tipo-pago-opcion-desc { font-size: 13px; color: var(--muted); display: block; margin-top: 2px; }
 .ev-tipo-pago-badge { font-size: 11px; font-weight: 600; background: var(--brand); color: #fff; border-radius: 99px; padding: 2px 8px; flex-shrink: 0; }
+
+/* Botón "Reservar" en cards de Entrenamiento del timeline (mirlxs, próximas
+   6 clases) -- ver _evCardEventoHtml()/_evReservarClase(). */
+.ev-card-btn-reservar {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: var(--radius);
+  border: 1.5px solid var(--brand);
+  background: none;
+  color: var(--brand);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ev-card-btn-reservar--off {
+  border-color: var(--border-light);
+  color: var(--muted);
+  cursor: default;
+  opacity: 0.6;
+}

@@ -4039,6 +4039,18 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDSGkh2AyuM_-6ngo5-XMPi0NYrXZHEBl8&libraries=places&callback=_initMapsCallback&loading=async" defer></script>
 
+<!-- Sheet: cuota pendiente -->
+<div class="bsheet" id="sheet-cuota-pendiente" style="transform:translateY(100%);z-index:9450;">
+  <div class="bsheet-handle"></div>
+  <div class="bsheet-title">Cuota pendiente</div>
+  <div class="bsheet-body" style="padding:16px;padding-bottom:max(24px,env(safe-area-inset-bottom,24px));">
+    <p style="color:var(--text);font-size:15px;margin:0 0 20px;">Para confirmar tu asistencia necesitás tener tu cuota al día.</p>
+    <div id="sheet-cuota-pendiente-acciones"></div>
+    <button type="button" onclick="cerrarSheetCuotaPendiente()" style="width:100%;padding:12px;margin-top:8px;background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;">Cancelar</button>
+  </div>
+</div>
+<div class="bsheet-overlay" id="sheet-cuota-pendiente-overlay" style="z-index:9400;" onclick="cerrarSheetCuotaPendiente()"></div>
+
 <!-- Sheet: elegir tipo de reserva (por clase / mensual) -->
 <div class="bsheet" id="sheet-ev-tipo-pago" style="transform:translateY(100%);z-index:9450;">
   <div class="bsheet-handle"></div>

@@ -1750,6 +1750,15 @@ function _evCardAniversarioHtml(a) {
     '<div class="ev-confetti-host" id="ev-confetti-' + a.id + '" style="position:absolute;inset:0;pointer-events:none;"></div>' +
   '</div>';
 }
+// `eventoId` es el id de evento real (`e.id`, `String(idEvento)`) -- mismo
+// valor que espera la pre-selección de `cargarFechas()`/`js/reservas.js`
+// (`f.fecha` ahí es el id de evento, no una fecha calendario, ver MANIFEST.md
+// -- ya verificado y corregido una vez para este mismo 2º parámetro).
+function _evReservarClase(eventoId) {
+  irNuevaReserva(false, eventoId);
+  // tipoPago 'clase' es el default en irNuevaReserva -- no hace falta forzarlo
+}
+
 function _evCardEventoHtml(e, sufijo) {
   sufijo = sufijo || '';
   var icono = _EV_ICONOS[e.tipo] || 'event';
@@ -1772,6 +1781,41 @@ function _evCardEventoHtml(e, sufijo) {
   if (cancelado) accionBody = _evEstadoNotaPillHtml(e.estado);
   else if (_adminToken && _evYaEmpezo(e)) accionBody = _evRsvpBarraHtml(e) + _evAccionAdminHtml(e);
   else accionBody = _evRsvpBarraHtml(e);
+
+  // Botón "Reservar" (mirlxs -- equipo propio, paga por clase) en cards de
+  // Entrenamiento futuras dentro de las próximas 6 -- fuera de esa ventana
+  // no se ofrece (evita reservar con demasiada anticipación). `_evFechaCmp()`
+  // (no comparación de string `>=`) -- toda comparación de fechas ISO de
+  // este archivo pasa por ahí (ver esa función, más arriba: comparar como
+  // texto solo da el orden correcto si el ancho/cero-padding es idéntico
+  // siempre, no garantizado según el origen del dato). `e.horaInicio` (no
+  // `e.inicia`, que no existe en el objeto evento -- ver `_evMapEventoBackend()`,
+  // el campo real es `horaInicio`) para el corte de 2hs antes del inicio,
+  // hoy mismo.
+  var mostrarBtnReservar = false;
+  var btnReservarDesactivado = false;
+  if (_modoUsuario() === 'mirlxs' && e.tipo === 'Entrenamiento') {
+    var hoyISO = _evHoyISO();
+    if (_evFechaCmp(e.fecha, hoyISO) >= 0) {
+      var proximas6 = (_EV_EVENTOS || []).filter(function(x) {
+        return x.tipo === 'Entrenamiento' && _evFechaCmp(x.fecha, hoyISO) >= 0;
+      }).sort(function(a, b) { return _evFechaCmp(a.fecha, b.fecha); }).slice(0, 6);
+      mostrarBtnReservar = proximas6.some(function(x) { return x.id === e.id; });
+      if (mostrarBtnReservar && e.fecha === hoyISO && e.horaInicio) {
+        var partes = e.horaInicio.split(':');
+        var inicioH = parseInt(partes[0], 10), inicioM = parseInt(partes[1] || '0', 10);
+        var ahora = new Date();
+        var minHastaInicio = (inicioH * 60 + inicioM) - (ahora.getHours() * 60 + ahora.getMinutes());
+        if (minHastaInicio < 120) btnReservarDesactivado = true;
+      }
+    }
+  }
+  var btnReservarHtml = mostrarBtnReservar ?
+    '<button type="button" class="ev-card-btn-reservar' + (btnReservarDesactivado ? ' ev-card-btn-reservar--off' : '') + '"' +
+    ' onclick="event.stopPropagation();' + (btnReservarDesactivado ? 'mostrarToast(\'No se puede reservar para esta clase. Ya se cerraron las reservas.\',\'info\',true)' : '_evReservarClase(\'' + e.id + '\')') + '"' +
+    '>Reservar</button>'
+    : '';
+
   return '<div class="ev-card" id="ev-card-' + e.id + sufijo + '" onclick="_evTapCard(\'' + e.id + '\',\'' + e.tipo + '\')">' +
     '<div class="ev-card-top-row">' +
       '<div class="ev-card-body">' +
@@ -1779,6 +1823,7 @@ function _evCardEventoHtml(e, sufijo) {
         '<div class="ev-card-sub"><span class="material-symbols-outlined">schedule</span>' + e.horaInicio + ' · ' + e.tipo + '</div>' +
         accionBody +
       '</div>' +
+      btnReservarHtml +
     '</div>' +
   '</div>';
 }
@@ -2166,6 +2211,65 @@ function cerrarSheetTipoPago(porGesto) {
     if (ov) ov.style.display = 'none';
   }, 300);
 }
+
+function _evAbrirSheetCuotaPendiente() {
+  var modo = _modoUsuario();
+  var acc = document.getElementById('sheet-cuota-pendiente-acciones');
+  if (acc) {
+    var html = '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:10px;" onclick="_evCuotaPagarAhora()">Pagar ahora</button>';
+    if (modo === 'quindes') {
+      html += '<button type="button" class="btn btn-secondary" style="width:100%;margin-bottom:10px;" onclick="_evCuotaSolicitarAyuda()">Solicitar ayuda con el pago</button>';
+    }
+    acc.innerHTML = html;
+  }
+  var sh = document.getElementById('sheet-cuota-pendiente');
+  var ov = document.getElementById('sheet-cuota-pendiente-overlay');
+  if (!sh || !ov) return;
+  ov.style.display = 'block'; sh.style.display = 'flex';
+  requestAnimationFrame(function() { requestAnimationFrame(function() {
+    sh.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
+    sh.style.transform = 'translateY(0)';
+    ov.style.opacity = '1';
+  }); });
+  _registrarOverlayAbierto(function() { cerrarSheetCuotaPendiente(true); });
+}
+// Mismo contrato que cerrarSheetTipoPago()/cerrarSheetEvAccion() de arriba
+// (porGesto/history.back(), ver el comentario de cerrarSheetTipoPago()) --
+// sin esta guardia, un tap en "Cancelar"/overlay hubiera dejado huérfana la
+// entrada de historial de _registrarOverlayAbierto(), mismo bug ya
+// encontrado y corregido 2 veces antes en este archivo (ver MANIFEST.md).
+function cerrarSheetCuotaPendiente(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var sh = document.getElementById('sheet-cuota-pendiente');
+  var ov = document.getElementById('sheet-cuota-pendiente-overlay');
+  if (sh) { sh.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1)'; sh.style.transform = 'translateY(100%)'; }
+  if (ov) ov.style.opacity = '0';
+  setTimeout(function() {
+    if (sh) sh.style.display = 'none';
+    if (ov) ov.style.display = 'none';
+  }, 300);
+}
+// "Pagar ahora"/"Solicitar ayuda" -- cierre sin argumento (pasa por
+// history.back(), no cierre directo) + navegación diferida por setTimeout,
+// mismo patrón que irNuevaReservaConTipo() (abajo): llamar acá mismo,
+// sincrónicamente, a evAbrirSheetTipoPago()/irNuevaReservaConTipo()/
+// abrirWizardExcepcion() (cada una con su propio _registrarOverlayAbierto(),
+// osea su propio history.pushState()) hubiera competido con el
+// history.back() todavía en curso de este cierre -- exactamente la carrera
+// que ya se corrigió una vez en este archivo para irNuevaReservaConTipo().
+function _evCuotaPagarAhora() {
+  var modo = _modoUsuario();
+  cerrarSheetCuotaPendiente();
+  setTimeout(function() {
+    if (modo === 'quindes') irNuevaReservaConTipo('mensual');
+    else evAbrirSheetTipoPago();
+  }, 310);
+}
+function _evCuotaSolicitarAyuda() {
+  cerrarSheetCuotaPendiente();
+  setTimeout(function() { abrirWizardExcepcion(); }, 310);
+}
+
 function irNuevaReservaConTipo(tipo) {
   // Corrección de una tanda anterior (ver MANIFEST.md "Cambios recientes"):
   // acá se llamaba `cerrarSheetTipoPago(true)` -- cierre visual directo, sin
@@ -2252,20 +2356,34 @@ function _evUpdateRsvpSliders(animate) {
 // puede estar renderizado en más de un lugar a la vez (lista + detalle), y
 // reconstruir el nodo mataría la animación del indicador (un nodo recién
 // creado no tiene "posición anterior" desde la cual animar).
+// Cuota al día para Mirlxs-mensual/Quindes -- cierra el "PUNTO DE EXTENSIÓN"
+// que señalaba `_evMarcarAsistencia()` (ver MANIFEST.md). Equipo propio no
+// depende de esto (_modoUsuario()==='equipamiento' → true directo, ese caso
+// ya ni siquiera llega a mostrar el botón de RSVP, ver
+// `_evOcultarRsvpPorEquipoClub()`). `_todasReservas` (js/home.js, global) es
+// la misma fuente que ya usa `_clasificarReservas()` para "reserva mensual
+// activa" -- mismo criterio de campo/parseo (`r.validezHasta` vía
+// `_parseFechaSimple()`, formato real `d/m/aaaa`, NO ISO -- `new Date(...)`
+// directo sobre ese string da `Invalid Date`/fecha mal interpretada).
+function _evTieneCuotaAlDia() {
+  var modo = _modoUsuario();
+  if (modo === 'equipamiento') return true;
+  var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  return (_todasReservas || []).some(function(r) {
+    if (r.tipo !== 'mensual') return false;
+    if (r.estado === 'Cancelada') return false;
+    var vh = _parseFechaSimple(r.validezHasta);
+    return !vh || hoy <= vh;
+  });
+}
+
 function _evMarcarAsistencia(id, estado) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === id; })[0];
   if (!ev) return;
-  // PUNTO DE EXTENSIÓN, todavía no construido: validación de cuota al día
-  // para Mirlxs-mensual/Quindes ANTES de escribir el RSVP, pendiente (fuera
-  // de alcance de esta tanda -- solo se pidió conectar los llamados reales,
-  // no las reglas de negocio de cuota). La otra mitad de este comentario
-  // (equipamiento del club → asistencia vía reserva, no manual) YA NO está
-  // pendiente -- implementada, pero como gate de RENDER, no acá: con
-  // equipamiento del club en un Entrenamiento, `_evRsvpBarraHtml()` ni
-  // siquiera dibuja el botón que llamaría a esta función (ver
-  // `_evOcultarRsvpPorEquipoClub()`, más arriba en este archivo, y su
-  // entrada en MANIFEST.md) -- `_evMarcarAsistencia()` queda inalcanzable
-  // desde la UI para ese caso, no hace falta un guard defensivo acá también.
+  if (estado === 'Asistiré' && !_evTieneCuotaAlDia()) {
+    _evAbrirSheetCuotaPendiente();
+    return;
+  }
   var estadoAnterior = ev.miEstado;
   var rsvpsAnterior = ev.rsvps || [];
   ev.miEstado = estado;
