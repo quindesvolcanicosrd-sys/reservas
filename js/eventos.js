@@ -40,6 +40,9 @@ var _evModoReservaActivo = false;
 // disparaba un 2º apiPost idéntico, sin ninguna guardia. Este flag se prende
 // SÍNCRONO, antes del apiPost, y se apaga en los 2 callbacks (éxito y error).
 var _evCargandoDisponibles = false;
+var _evConflictosTalla = {}; // evId -> razon (string)
+var _evTallasPorFecha = {};  // evId -> talla override elegida por el usuario
+var _evTallaConflictoEvId = ''; // evId pendiente de confirmar talla en sheet
 
 // 'Partido'/'Evento social'/'Otro' sumados para el formulario de Venues (ver
 // MANIFEST.md) -- mismo mapa ya usado por las cards de evento reales
@@ -1776,6 +1779,8 @@ function _evReservarClase(eventoId) {
   if (!_evModoReservaActivo) {
     if (_evCargandoDisponibles) return;
     _evCargandoDisponibles = true;
+    var _btnEvCargando = document.querySelector('[data-ev-reservar][data-evid="' + eventoId + '"]');
+    if (_btnEvCargando) { _btnEvCargando.disabled = true; _btnEvCargando.style.opacity = '0.45'; }
     // Ya no es exclusivo de "equipo propio" (ver MANIFEST.md, eliminación del
     // modo 'equipamiento') -- talla/necesitaProtecciones viajan igual que en
     // cargarFechas() (js/reservas.js:613-619, mismo criterio: talla vacía si
@@ -1785,6 +1790,7 @@ function _evReservarClase(eventoId) {
     var tallaRes = (dRes.necesitaPatines && dRes.necesitaPatines.toLowerCase() !== 'no') ? dRes.talla : '';
     apiPost({ action: 'getFechasDisponibles', token: _token, nombre: E.nombre, talla: tallaRes, necesitaProtecciones: dRes.necesitaProtecciones }, function(res) {
       _evCargandoDisponibles = false;
+      if (_btnEvCargando) { _btnEvCargando.disabled = false; _btnEvCargando.style.opacity = ''; }
       (res || []).forEach(function(f) {
         _evDisponibles[f.fecha] = f;
         // Mismo formato exacto que cargarFechas() (js/reservas.js:633-639)
@@ -1796,6 +1802,13 @@ function _evReservarClase(eventoId) {
         var fechaLegibleEv = (typeof _fechaCalendarioATexto === 'function' ? _fechaCalendarioATexto(f.fechaCalendario) : '') || f.fecha;
         _fechaInfoDisponible[f.fecha] = fechaLegibleEv + (f.horaInicio ? ' - ' + f.horaInicio + 'hs' : '') + (f.donde ? ' - ' + f.donde : '');
       });
+      _evConflictosTalla = {};
+      (res || []).forEach(function(f) {
+        if (!f.disponible && f.razon && /patines|talla|protec|equip/i.test(f.razon)) {
+          _evConflictosTalla[f.fecha] = f.razon;
+        }
+      });
+      _evActualizarAdvertenciasTalla();
       _evModoReservaActivo = true;
       // E.precioPorClase ya se carga al iniciar sesión (js/auth.js,
       // getPreciosClases) -- guardia solo por si ese fetch async todavía no
@@ -1804,14 +1817,23 @@ function _evReservarClase(eventoId) {
       E.precioPorClase = E.precioPorClase || 0;
       var f = _evDisponibles[eventoId];
       if (!f || f.disponible === false) {
-        mostrarToast((f && f.razon) || 'No disponible', 'error', true);
-        _evModoReservaActivo = false;
+        if (f && f.razon && /patines|talla|protec|equip/i.test(f.razon)) {
+          _evModoReservaActivo = false;
+          _evAbrirSheetTallaConflicto(eventoId);
+        } else {
+          mostrarToast((f && f.razon) || 'No disponible', 'error', true);
+          _evModoReservaActivo = false;
+        }
         return;
       }
       _evToggleSeleccion(eventoId);
-    }, function() { _evCargandoDisponibles = false; mostrarToast('Error de conexión.', 'error', true); });
+    }, function() { _evCargandoDisponibles = false; if (_btnEvCargando) { _btnEvCargando.disabled = false; _btnEvCargando.style.opacity = ''; } mostrarToast('Error de conexión.', 'error', true); });
   } else {
-    _evToggleSeleccion(eventoId);
+    if (_evConflictosTalla[eventoId] && !_evTallasPorFecha[eventoId]) {
+      _evAbrirSheetTallaConflicto(eventoId);
+    } else {
+      _evToggleSeleccion(eventoId);
+    }
   }
 }
 function _evToggleSeleccion(eventoId) {
@@ -1831,6 +1853,59 @@ function _evActualizarBotonesReserva() {
     if (_evSeleccionados.has(evid)) { btn.classList.add('ev-card-btn-reservar--sel'); }
     else { btn.classList.remove('ev-card-btn-reservar--sel'); }
   });
+}
+// Disclaimer inline en la card cuando la talla/protecciones de la persona no
+// están disponibles para esa fecha puntual (ver "Cambios recientes") --
+// `_evConflictosTalla` ya viene poblado por _evReservarClase() con la razón
+// real que mandó el backend para cada fecha en conflicto.
+function _evActualizarAdvertenciasTalla() {
+  Object.keys(_evConflictosTalla).forEach(function(evId) {
+    var div = document.getElementById('ev-talla-conflicto-' + evId);
+    if (!div) return;
+    var razon = _evConflictosTalla[evId] || '';
+    var msg = /protec/i.test(razon)
+      ? 'Las protecciones no están disponibles para este entrenamiento'
+      : 'La talla que usas no está disponible para este entrenamiento';
+    div.innerHTML = '<span class="material-symbols-outlined" style="font-size:14px;vertical-align:middle;color:var(--warning);margin-right:4px;">warning</span><span style="font-size:0.76rem;color:var(--warning);font-weight:600;">' + msg + '</span>';
+    div.style.display = 'block';
+  });
+}
+// Sheet de talla en modo "resolver conflicto" (ver "Cambios recientes") --
+// reusa `#sheet-talla`/`_abrirSheetTallaBase()` (js/home.js), el mismo sheet
+// que ya usan `abrirSheetTalla()` (reserva existente) y `_confirmarTallaNuevaReserva()`
+// (flujo S1-S4 viejo) -- `_tallaSheetModo = 'ev-nueva-reserva'` (nuevo, junto
+// a los 2 existentes 'existente'/'nueva-reserva') identifica esta 3ª rama
+// para que `confirmarTallaSheet()` (js/home.js) sepa a cuál de las 3
+// funciones de confirmación derivar. Se llama `_abrirSheetTallaBase()`
+// directo (no `abrirSheetTalla()`, que pisa `_tallaSheetModo` a 'existente'
+// incondicional). El aviso de protecciones se setea DESPUÉS de
+// `_abrirSheetTallaBase()`, no antes -- esa función resetea
+// `#sheet-talla-aviso-protec` a `display:none` incondicional al abrir
+// (mismo reset que hace para cualquier apertura del sheet), así que
+// setearlo antes se hubiera pisado solo.
+function _evAbrirSheetTallaConflicto(eventoId) {
+  _evTallaConflictoEvId = eventoId;
+  _tallaSheetModo = 'ev-nueva-reserva';
+  var titulo = document.getElementById('sheet-talla-titulo');
+  if (titulo) titulo.textContent = 'Elegir talla para este entrenamiento';
+  var btn = document.getElementById('btn-confirmar-talla');
+  if (btn) btn.textContent = 'Reservar con esta talla';
+  _abrirSheetTallaBase(eventoId, (E.datos && E.datos.talla) || '');
+  var avisoProtec = document.getElementById('sheet-talla-aviso-protec');
+  if (avisoProtec) avisoProtec.style.display = /protec/i.test(_evConflictosTalla[eventoId] || '') ? 'block' : 'none';
+}
+function _evConfirmarTallaConflicto() {
+  var evId = _evTallaConflictoEvId;
+  var talla = _tallaSheetSel;
+  if (!talla || !evId) { cerrarSheetTalla(); return; }
+  _evTallasPorFecha[evId] = talla;
+  if (_evDisponibles[evId]) _evDisponibles[evId].disponible = true;
+  delete _evConflictosTalla[evId];
+  var div = document.getElementById('ev-talla-conflicto-' + evId);
+  if (div) div.style.display = 'none';
+  cerrarSheetTalla();
+  _evModoReservaActivo = true;
+  _evToggleSeleccion(evId);
 }
 function _evActualizarFooterReserva() {
   if (_evSeleccionados.size === 0) { _evSalirModoReserva(); return; }
@@ -1854,11 +1929,18 @@ function _evActualizarFooterReserva() {
       requestAnimationFrame(function() { footer.classList.add('ev-reserva-footer--visible'); });
     });
   }
+  var _btnCont = document.getElementById('ev-btn-continuar-reserva');
+  if (_btnCont) {
+    var _nSel = _evSeleccionados.size;
+    _btnCont.innerHTML = (_nSel > 1 ? 'Finalizar tus reservas' : 'Finalizar tu reserva') + ' <span class="material-symbols-outlined" style="vertical-align:middle;font-size:18px;">arrow_forward</span>';
+  }
 }
 function _evSalirModoReserva() {
   _evModoReservaActivo = false;
   _evSeleccionados = new Set();
   _evDisponibles = {};
+  _evTallasPorFecha = {};
+  _evConflictosTalla = {};
   _evActualizarBotonesReserva();
   // Fade-out real -- se saca la clase (arranca la transición de opacity) y
   // recién 220ms después (mismo valor que la transición CSS, criterio ya
@@ -1891,6 +1973,15 @@ function _evContinuarReserva() {
   // intentara volver ahí. Reseteado a false en irNuevaReserva() (flujo
   // normal S1-S4) para que no quede pegado entre sesiones.
   E.viaEventosInline = true;
+  // Tallas elegidas al resolver un conflicto de stock (ver "Cambios
+  // recientes", _evAbrirSheetTallaConflicto()/_evConfirmarTallaConflicto())
+  // -- confirmarReserva() (js/reservas.js:~1196) ya lee `E.tallasPorFecha[fecha]
+  // || talla` por cada reserva guardada, mismo mecanismo que usa el flujo
+  // S1-S4 viejo para "talla distinta por fecha" -- copia superficial
+  // (Object.assign a un objeto nuevo) para no compartir referencia con
+  // _evTallasPorFecha, que _evSalirModoReserva() limpia unas líneas más
+  // abajo.
+  E.tallasPorFecha = Object.assign({}, _evTallasPorFecha);
   // Mismo mecanismo que abrirEvDetalle() (más abajo en este archivo) para
   // no perder la posición de scroll del timeline -- `ir()` (js/ui.js) ya
   // tiene el hook genérico que restaura `_evTimelineScrollY` en CUALQUIER
@@ -2042,6 +2133,7 @@ function _evCardEventoHtml(e, sufijo) {
       btnReservarHtml + miReservaChipHtml + btnReservarEquipHtml +
     '</div>' +
     btnCancelarReagendarHtml +
+    '<div class="ev-card-talla-conflicto" id="ev-talla-conflicto-' + e.id + sufijo + '" style="display:none;padding:0 12px 10px;animation:fadeIn 0.3s ease;"></div>' +
   '</div>';
 }
 // Botón "Cancelar o re - agendar" -- reusa abrirGestionar() (js/home.js,
@@ -3948,6 +4040,13 @@ function _evDetalleInfoHtml(ev) {
   var miReservaInfo = ev.tipo === 'Entrenamiento' ? (_todasReservas || []).filter(function(r) { return r.fecha === ev.id && r.estado !== 'Cancelada'; })[0] : null;
   if (miReservaInfo && miReservaInfo.estado !== 'Reagendar') {
     html += _evBtnCancelarReagendarHtml(ev, 'ev-detalle-btn-cancelar');
+  }
+  if (miReservaInfo && _evNecesitaEquipo()) {
+    var _tallaActualDet = (E.datos && E.datos.talla) ? E.datos.talla : '';
+    var _fechaDetTxt = _evFechaCompleta(ev.fecha).replace(/'/g, "\\'");
+    var _evIdEsc = String(ev.id).replace(/'/g, "\\'");
+    var _tallaEsc = _tallaActualDet.replace(/'/g, "\\'");
+    html += '<button type="button" class="btn btn-outline" style="width:100%;margin-top:8px;" onclick="abrirSheetTalla(\'' + _fechaDetTxt + '\',\'' + _evIdEsc + '\',\'' + _tallaEsc + '\')"><span class="material-symbols-outlined" style="vertical-align:middle;font-size:18px;margin-right:4px;">straight</span>Cambiar talla para esta reserva</button>';
   }
   // "Rectificar asistencia" (usuario no-admin) -- ver MANIFEST.md, justo
   // debajo de la descripción del evento. Repite la pill de

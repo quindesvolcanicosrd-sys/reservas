@@ -830,6 +830,7 @@ function cerrarSheetTalla(porGesto) {
 function confirmarTallaSheet() {
   if (_tallaSheetSel === null || _tallaSheetSel === _tallaSheetActual) return;
   if (_tallaSheetModo === 'nueva-reserva') { _confirmarTallaNuevaReserva(); return; }
+  if (_tallaSheetModo === 'ev-nueva-reserva') { if (typeof _evConfirmarTallaConflicto === 'function') _evConfirmarTallaConflicto(); return; }
   var btn = document.getElementById('btn-confirmar-talla');
   if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
   api({ action: 'actualizarTallaReserva', nombre: E.nombre, fecha: _tallaSheetFecha, tallaNueva: _tallaSheetSel }, function() {
