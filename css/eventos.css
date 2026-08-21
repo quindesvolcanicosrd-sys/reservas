@@ -1457,3 +1457,10 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
   cursor: default;
   opacity: 0.6;
 }
+/* Estado seleccionado (modo selección múltiple, ver _evActualizarBotonesReserva()
+   en js/eventos.js) -- mismo botón, relleno de marca en vez de outline. */
+.ev-card-btn-reservar--sel {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}

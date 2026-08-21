@@ -27,6 +27,14 @@ var _EV_ANIVERSARIO_INGRESO = null;
 // {id, nombre, fechaInicio, fechaFin} (fechas 'yyyy-mm-dd').
 var _EV_OFFSEASON = [];
 
+// Selección múltiple de fechas para reservar clases directo desde el
+// timeline (ver _evReservarClase()/_evToggleSeleccion()/_evContinuarReserva()
+// más abajo, MANIFEST.md "Cambios recientes"). _evDisponibles: mapa
+// idEvento -> objeto crudo de getFechasDisponibles (incluye disponible/razon).
+var _evSeleccionados = new Set();
+var _evDisponibles = {};
+var _evModoReservaActivo = false;
+
 // 'Partido'/'Evento social'/'Otro' sumados para el formulario de Venues (ver
 // MANIFEST.md) -- mismo mapa ya usado por las cards de evento reales
 // (Venues!Tipo de ícono), ahora también alimentado por el selector de pills
@@ -1754,9 +1762,88 @@ function _evCardAniversarioHtml(a) {
 // valor que espera la pre-selección de `cargarFechas()`/`js/reservas.js`
 // (`f.fecha` ahí es el id de evento, no una fecha calendario, ver MANIFEST.md
 // -- ya verificado y corregido una vez para este mismo 2º parámetro).
+// Ya no navega directo a Nueva Reserva -- entra en modo selección múltiple
+// sobre el propio timeline (botones "Reservar" de las cards + footer sticky
+// #ev-reserva-footer, ver _evToggleSeleccion()/_evActualizarFooterReserva()/
+// _evContinuarReserva() más abajo).
 function _evReservarClase(eventoId) {
-  irNuevaReserva(false, eventoId);
-  // tipoPago 'clase' es el default en irNuevaReserva -- no hace falta forzarlo
+  if (!_evModoReservaActivo) {
+    apiPost({ action: 'getFechasDisponibles', token: _token, nombre: E.nombre }, function(res) {
+      (res || []).forEach(function(f) { _evDisponibles[f.fecha] = f; });
+      _evModoReservaActivo = true;
+      // E.precioPorClase ya se carga al iniciar sesión (js/auth.js,
+      // getPreciosClases) -- guardia solo por si ese fetch async todavía no
+      // resolvió cuando se entra acá, para que el total del footer nunca
+      // muestre NaN.
+      E.precioPorClase = E.precioPorClase || 0;
+      var f = _evDisponibles[eventoId];
+      if (!f || f.disponible === false) {
+        mostrarToast((f && f.razon) || 'No disponible', 'error', true);
+        _evModoReservaActivo = false;
+        return;
+      }
+      _evToggleSeleccion(eventoId);
+    }, function() { mostrarToast('Error de conexión.', 'error', true); });
+  } else {
+    _evToggleSeleccion(eventoId);
+  }
+}
+function _evToggleSeleccion(eventoId) {
+  var f = _evDisponibles[eventoId];
+  if (!f || f.disponible === false) {
+    mostrarToast((f && f.razon) || 'No disponible', 'error', true);
+    return;
+  }
+  if (_evSeleccionados.has(eventoId)) { _evSeleccionados.delete(eventoId); }
+  else { _evSeleccionados.add(eventoId); }
+  _evActualizarBotonesReserva();
+  _evActualizarFooterReserva();
+}
+function _evActualizarBotonesReserva() {
+  document.querySelectorAll('[data-ev-reservar]').forEach(function(btn) {
+    var evid = btn.getAttribute('data-evid');
+    if (_evSeleccionados.has(evid)) {
+      btn.classList.add('ev-card-btn-reservar--sel');
+      btn.innerHTML = '<span class="material-symbols-outlined">check</span>';
+    } else {
+      btn.classList.remove('ev-card-btn-reservar--sel');
+      btn.innerHTML = 'Reservar';
+    }
+  });
+}
+function _evActualizarFooterReserva() {
+  if (_evSeleccionados.size === 0) { _evSalirModoReserva(); return; }
+  var footer = document.getElementById('ev-reserva-footer');
+  if (footer) footer.style.display = 'flex';
+  var n = _evSeleccionados.size;
+  var detalle = document.getElementById('ev-reserva-footer-detalle');
+  if (detalle) detalle.textContent = n + (n === 1 ? ' clase seleccionada' : ' clases seleccionadas');
+  var total = document.getElementById('ev-reserva-footer-total');
+  if (total) total.textContent = '$' + ((E.precioPorClase || 0) * n).toFixed(2);
+}
+function _evSalirModoReserva() {
+  _evModoReservaActivo = false;
+  _evSeleccionados = new Set();
+  _evDisponibles = {};
+  _evActualizarBotonesReserva();
+  var footer = document.getElementById('ev-reserva-footer');
+  if (footer) footer.style.display = 'none';
+}
+// Cierra continuar_s4() completo (js/reservas.js) en vez de navegar directo
+// a 's-pago' -- esa función arma detalleTexto/fechasHtml + llama
+// _pagoTotalActualizar()/_resetChkPago() a partir de E antes de navegar,
+// además de la rama de total $0 (crédito/cupón) que llama confirmarReserva()
+// directo en vez de ir a s-pago. Reimplementar eso acá duplicaría lógica de
+// negocio real ya escrita, con riesgo de que las 2 copias diverjan.
+function _evContinuarReserva() {
+  E.fechas = Array.from(_evSeleccionados);
+  E.tipoPago = 'clase';
+  E.totalPago = (E.precioPorClase || 0) * _evSeleccionados.size;
+  E.cuponAplicado = false;
+  E.creditosUsados = 0;
+  E.notaPago = '';
+  continuar_s4();
+  _evSalirModoReserva();
 }
 
 function _evCardEventoHtml(e, sufijo) {
@@ -1812,18 +1899,45 @@ function _evCardEventoHtml(e, sufijo) {
   }
   var btnReservarHtml = mostrarBtnReservar ?
     '<button type="button" class="ev-card-btn-reservar' + (btnReservarDesactivado ? ' ev-card-btn-reservar--off' : '') + '"' +
+    ' data-ev-reservar="true" data-evid="' + e.id + '"' +
     ' onclick="event.stopPropagation();' + (btnReservarDesactivado ? 'mostrarToast(\'No se puede reservar para esta clase. Ya se cerraron las reservas.\',\'info\',true)' : '_evReservarClase(\'' + e.id + '\')') + '"' +
     '>Reservar</button>'
     : '';
 
-  return '<div class="ev-card" id="ev-card-' + e.id + sufijo + '" onclick="_evTapCard(\'' + e.id + '\',\'' + e.tipo + '\')">' +
+  // Botón "Reservar" (equipamiento -- equipo del club) en cards de
+  // Entrenamiento futuras dentro de las próximas 6, "zona segura": el botón
+  // abre el mismo sheet de acción de siempre (evAbrirAccionCard(), 2
+  // opciones: "Ver más información"/"Reservar esta fecha") en vez de
+  // requerir tocar la card entera para llegar ahí -- el resto de la card
+  // (fuera del botón) pasa a ir directo a abrirEvDetalle(), ver el onclick
+  // de la card más abajo. Mismo criterio de "próximas 6" que el botón de
+  // mirlxs de arriba, pero gateado a `_modoUsuario() === 'equipamiento'`.
+  var mostrarBtnReservarEquip = false;
+  if (_modoUsuario() === 'equipamiento' && e.tipo === 'Entrenamiento') {
+    var hoyISOEquip = _evHoyISO();
+    if (_evFechaCmp(e.fecha, hoyISOEquip) >= 0) {
+      var proximas6Equip = (_EV_EVENTOS || []).filter(function(x) {
+        return x.tipo === 'Entrenamiento' && _evFechaCmp(x.fecha, hoyISOEquip) >= 0;
+      }).sort(function(a, b) { return _evFechaCmp(a.fecha, b.fecha); }).slice(0, 6);
+      mostrarBtnReservarEquip = proximas6Equip.some(function(x) { return x.id === e.id; });
+    }
+  }
+  var btnReservarEquipHtml = mostrarBtnReservarEquip ?
+    '<button type="button" class="ev-card-btn-reservar" data-ev-reservar="true" data-evid="' + e.id + '"' +
+    ' onclick="event.stopPropagation();evAbrirAccionCard(\'' + e.id + '\')">Reservar</button>'
+    : '';
+  var cardOnclick = mostrarBtnReservarEquip ?
+    'abrirEvDetalle(\'' + e.id + '\')' :
+    '_evTapCard(\'' + e.id + '\',\'' + e.tipo + '\')';
+
+  return '<div class="ev-card" id="ev-card-' + e.id + sufijo + '" onclick="' + cardOnclick + '">' +
     '<div class="ev-card-top-row">' +
       '<div class="ev-card-body">' +
         '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline">' + icono + '</span><div class="ev-card-titulo">' + e.lugar + '</div></div>' +
         '<div class="ev-card-sub"><span class="material-symbols-outlined">schedule</span>' + e.horaInicio + ' · ' + e.tipo + '</div>' +
         accionBody +
       '</div>' +
-      btnReservarHtml +
+      btnReservarHtml + btnReservarEquipHtml +
     '</div>' +
   '</div>';
 }

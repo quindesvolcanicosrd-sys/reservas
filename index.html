@@ -393,6 +393,14 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
       <div style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
     </div>
+    <div id="ev-reserva-footer" style="display:none;position:fixed;bottom:calc(var(--bottom-nav-h) + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);width:100%;max-width:523px;z-index:400;background:var(--surface-2);border-top:1px solid var(--border-light);padding:12px 16px 14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span id="ev-reserva-footer-detalle" style="color:var(--muted);font-size:13px;"></span>
+        <span id="ev-reserva-footer-total" style="font-weight:700;font-size:18px;color:var(--brand);">$0.00</span>
+      </div>
+      <button type="button" class="btn btn-primary" style="width:100%;" onclick="_evContinuarReserva()">Continuar <span class="material-symbols-outlined" style="vertical-align:middle;font-size:18px;">arrow_forward</span></button>
+      <button type="button" style="width:100%;padding:10px;margin-top:6px;background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;" onclick="_evSalirModoReserva()">Cancelar selección</button>
+    </div>
   </div>
 
 <!-- ═══ Detalle de un evento (Eventos, ver MANIFEST.md "Cambios recientes")
