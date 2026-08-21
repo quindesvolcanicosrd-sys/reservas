@@ -2001,12 +2001,24 @@ function cerrarSheetEvAccion(porGesto) {
   }, 350);
 }
 function cerrarSheetEvAccionEIrDetalle() {
-  cerrarSheetEvAccion(true);
+  // Bug real corregido: `cerrarSheetEvAccion(true)` cierra visualmente pero
+  // salta la rama `history.back()` de esa función -- la entrada de historial
+  // que `_registrarOverlayAbierto()` empujó al abrir el sheet queda huérfana
+  // (sin `.pantalla` asociada), y `ir()` (llamado 360ms después por
+  // abrirEvDetalle()) solo vacía `_overlayStack` en JS, no el historial del
+  // navegador. Resultado: 1 solo "atrás" después de este flujo saltaba a
+  // s-home/s1 en vez de volver a s-eventos. Fix: sin argumento (como
+  // `cerrarSheetEquipHome()` en `irTallaDesdeHomeEquip()`/js/home.js, mismo
+  // patrón ya usado y correcto), pasa por `history.back()` de verdad -- el
+  // popstate resultante consume esa entrada y hace el cierre visual real vía
+  // `_overlayStack`, todo antes de que el `setTimeout` de abajo navegue.
+  cerrarSheetEvAccion();
   if (_evAccionCardCtx) setTimeout(function() { abrirEvDetalle(_evAccionCardCtx.id); }, 360);
 }
 function cerrarSheetEvAccionEIrReserva() {
   var ctx = _evAccionCardCtx;
-  cerrarSheetEvAccion(true);
+  // Mismo bug/fix que cerrarSheetEvAccionEIrDetalle() de arriba.
+  cerrarSheetEvAccion();
   if (ctx) setTimeout(function() { irNuevaReserva(false, ctx.id); }, 360);
 }
 function evAbrirEquipamiento() {
@@ -2155,15 +2167,20 @@ function cerrarSheetTipoPago(porGesto) {
   }, 300);
 }
 function irNuevaReservaConTipo(tipo) {
-  // Mismo patrón que cerrarSheetEvAccionEIrReserva(): cierre visual directo
-  // (porGesto=true, sin pasar por history.back()) + navegación diferida
-  // hasta que termine la animación de cierre (300ms + margen) -- NO se
-  // encadena history.back() seguido de ir('s4')/pushState() sincrónico
-  // (irNuevaReserva()->cargarFechas()->ir('s4')): son 2 operaciones de
-  // historial en curso a la vez, compitiendo en orden impredecible contra
-  // el popstate asíncrono del back(), con riesgo real de corromper la pila
-  // de navegación o dejar el sheet visualmente encimado sobre s4.
-  cerrarSheetTipoPago(true);
+  // Corrección de una tanda anterior (ver MANIFEST.md "Cambios recientes"):
+  // acá se llamaba `cerrarSheetTipoPago(true)` -- cierre visual directo, sin
+  // pasar por `history.back()`. Eso evita la carrera contra un pushState
+  // síncrono (motivo original del cambio), pero deja huérfana la entrada de
+  // historial que `_registrarOverlayAbierto()` empujó al abrir el sheet:
+  // `ir('s4')` (vía irNuevaReserva()->cargarFechas(), 310ms después) sí vacía
+  // `_overlayStack` en JS pero no toca esa entrada de historial del
+  // navegador -- 1 solo "atrás" desde s4 saltaba a s-home/s1 en vez de volver
+  // a s-eventos. Fix real: sin argumento (mismo patrón ya usado y correcto
+  // en `cerrarSheetEquipHome()`/`irTallaDesdeHomeEquip()`, js/home.js) --
+  // pasa por `history.back()`, que consume esa entrada antes de que corra
+  // el `setTimeout` de abajo, sin competir con el pushState de ir('s4')
+  // porque éste corre recién después, no en el mismo tick.
+  cerrarSheetTipoPago();
   setTimeout(function() {
     irNuevaReserva(false, null);
     if (tipo === 'mensual') {
