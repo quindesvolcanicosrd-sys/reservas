@@ -507,6 +507,11 @@ var ADMIN_TILE_INFO = {
         _adminRenderCupones('');
       }, function(e) { mostrarToast(e.message || 'Error al cargar usuarios.', 'error'); });
     }
+  },
+  'admin-excepciones': {
+    bubbleId: 'admin-burbuja-excepciones',
+    listaId: 'admin-excepciones-lista',
+    cargar: function() { cargarExcepcionesPendientes(); }
   }
 };
 
@@ -898,6 +903,71 @@ function adminCambiarEstado(fila, estado, btn) {
     if (res.exito) {
       _admTodasReservas.forEach(function(r) { if (r.id === fila) r.estado = estado; });
       adminRenderReservas();
+    } else { btn.disabled = false; mostrarToast(res.error || 'Error al actualizar.', 'error'); }
+  }, function(e) { btn.disabled = false; mostrarToast(e.message || 'Error al actualizar.', 'error'); });
+}
+
+// ── Excepciones de pago (ausencias justificadas / dificultad económica) ──
+// Mismo patrón que Reservas (arriba): fetch -> array en memoria -> render:
+// actualización optimista en aprobar/rechazar (sin re-fetch), mismo criterio
+// que adminCambiarEstado(). A diferencia de Reservas, acá no hay tab "Todas"
+// -- una vez aprobada/rechazada, la solicitud simplemente se saca de la
+// lista en memoria (ya no es "pendiente", que es lo único que se muestra).
+var _admExcepciones = [];
+
+// Sin escape reusable en el proyecto (ver grep antes de escribir esto) --
+// necesario acá porque `datos`/`nombre` vienen de texto libre escrito por
+// cualquier socix (motivo/justificación económica), y esto se renderiza en
+// la sesión del ADMIN vía innerHTML -- sin escapar, una persona podría
+// inyectar HTML/JS que se ejecute con privilegios de admin al abrir esta
+// burbuja (XSS almacenado real, no cosmético).
+function _admEscHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function cargarExcepcionesPendientes() {
+  adminApi({ action: 'adminGetExcepciones' }, function(res) {
+    _admExcepciones = res || [];
+    adminRenderExcepciones();
+  }, function() { _admExcepciones = []; adminRenderExcepciones(); });
+}
+
+function _admExcepcionResumenHtml(e) {
+  var d = e.datos || {};
+  if (e.tipo === 'ausencias') return _admEscHtml(d.motivo || '');
+  return 'Nivel ' + _admEscHtml((d.nivelIngreso || '').toUpperCase()) + ' · ' + _admEscHtml(d.situacionEconomica || '');
+}
+
+function adminRenderExcepciones() {
+  var cont = document.getElementById('admin-excepciones-lista');
+  if (!cont) return;
+  if (!_admExcepciones || _admExcepciones.length === 0) {
+    cont.innerHTML = '<p style="text-align:center;color:var(--muted);padding:20px 0;">No hay solicitudes pendientes.</p>';
+    return;
+  }
+  var html = '';
+  _admExcepciones.forEach(function(e) {
+    var tipoLabel = e.tipo === 'ausencias' ? 'Ausencias justificadas' : 'Dificultad económica';
+    html += '<div class="reserva-card">' +
+      '<div class="reserva-header"><span class="reserva-fecha">' + _admEscHtml(e.nombre) + '</span><span class="badge badge-pendiente">' + tipoLabel + '</span></div>' +
+      '<div class="reserva-detalle">' + _admEscHtml(e.mesAplicacion) + ' · ' + _admExcepcionResumenHtml(e) + '</div>' +
+      '<div style="display:flex;gap:8px;margin-top:10px;">' +
+        '<button class="btn btn-primary" style="padding:11px;font-size:0.82rem;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="adminCambiarEstadoExcepcion(\'' + e.id + '\',\'aprobada\',this)"><span class="material-symbols-outlined" style="font-size:1rem;">check</span> Aprobar</button>' +
+        '<button class="btn-cancelar" style="margin-top:0;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="adminCambiarEstadoExcepcion(\'' + e.id + '\',\'rechazada\',this)"><span class="material-symbols-outlined" style="font-size:1rem;">close</span> Rechazar</button>' +
+      '</div>' +
+    '</div>';
+  });
+  cont.innerHTML = html;
+}
+
+function adminCambiarEstadoExcepcion(id, estado, btn) {
+  var accionTexto = estado === 'aprobada' ? 'aprobar' : 'rechazar';
+  if (!confirm('¿Deseas ' + accionTexto + ' esta solicitud?')) return;
+  btn.disabled = true;
+  adminApi({ action: 'adminSetEstadoExcepcion', id: id, estado: estado }, function(res) {
+    if (res.exito) {
+      _admExcepciones = _admExcepciones.filter(function(e) { return e.id !== id; });
+      adminRenderExcepciones();
     } else { btn.disabled = false; mostrarToast(res.error || 'Error al actualizar.', 'error'); }
   }, function(e) { btn.disabled = false; mostrarToast(e.message || 'Error al actualizar.', 'error'); });
 }
@@ -1352,6 +1422,7 @@ function adminElegirCandidatoAdmin(email) {
 function _adminCargarMiLiga() {
   _adminCargarRectificaciones('-ml');
   _adminCargarBanners('-ml');
+  cargarExcepcionesPendientes();
   _adminCargarAdmins();
   adminRenderColorEnfasis();
   _adminCargarPrecios();

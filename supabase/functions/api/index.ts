@@ -1152,6 +1152,47 @@ async function adminSetEstadoRectificacion(params: Record<string, any>): Promise
   return { exito: true };
 }
 
+// ─── Acciones: excepciones de pago (ausencias justificadas / dificultad económica) ────
+// Mismo patrón exacto que rectificaciones_asistencia (arriba): tabla propia,
+// solicitarX identifica a la persona por token (nunca por un id mandado por
+// el cliente), adminGetX/adminSetEstadoX requieren adminToken. `datos` viaja
+// como JSON string en el body form-urlencoded (apiPost()) -- se parsea acá
+// igual que `actualizarDatosPersona()` parsea su propio `datos`.
+async function solicitarExcepcion(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const tipo = String(params.tipo ?? '').trim();
+  if (!['ausencias', 'economica'].includes(tipo)) return { exito: false, error: 'Tipo de solicitud inválido.' };
+  const mesAplicacion = String(params.mesAplicacion ?? '').trim();
+  if (!mesAplicacion) return { exito: false, error: 'Mes de aplicación inválido.' };
+  let datos = params.datos;
+  if (typeof datos === 'string') { try { datos = JSON.parse(datos); } catch { return { exito: false, error: 'Datos inválidos.' }; } }
+  const { data, error } = await supabase.from('solicitudes_excepcion').insert({
+    nombre: username, tipo, datos: datos ?? {}, mes_aplicacion: mesAplicacion, estado: 'pendiente',
+  }).select('id').maybeSingle();
+  if (error) return { exito: false, error: error.message };
+  return { exito: true, id: data?.id };
+}
+
+async function adminGetExcepciones(params: Record<string, any>): Promise<any[]> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return [];
+  const { data } = await supabase.from('solicitudes_excepcion').select('*').eq('estado', 'pendiente').order('created_at', { ascending: false });
+  return (data ?? []).map((r: any) => ({ id: r.id, nombre: r.nombre, tipo: r.tipo, datos: r.datos, mesAplicacion: r.mes_aplicacion, createdAt: r.created_at }));
+}
+
+async function adminSetEstadoExcepcion(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const id = params.id;
+  const estado = String(params.estado ?? '').trim();
+  if (!id || !['aprobada', 'rechazada'].includes(estado)) return { exito: false, error: 'Parámetros inválidos.' };
+  const notaAdmin = params.notaAdmin != null && params.notaAdmin !== '' ? String(params.notaAdmin) : null;
+  const { error } = await supabase.from('solicitudes_excepcion').update({ estado, nota_admin: notaAdmin }).eq('id', id);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
 // ─── Acciones: reservas ───────────────────────────────────────────────────────
 
 async function getProximosEntrenamientos(): Promise<any[]> {
@@ -1679,6 +1720,9 @@ Deno.serve(async (req: Request) => {
       case 'solicitarRectificacionAsistencia': return json(await solicitarRectificacionAsistencia(params));
       case 'adminGetRectificaciones':          return json(await adminGetRectificaciones(params));
       case 'adminSetEstadoRectificacion':      return json(await adminSetEstadoRectificacion(params));
+      case 'solicitarExcepcion':               return json(await solicitarExcepcion(params));
+      case 'adminGetExcepciones':              return json(await adminGetExcepciones(params));
+      case 'adminSetEstadoExcepcion':          return json(await adminSetEstadoExcepcion(params));
       // Reservas
       case 'getProximosEntrenamientos':       return json(await getProximosEntrenamientos());
       case 'getFechasDisponibles':            return json(await getFechasDisponibles(params));

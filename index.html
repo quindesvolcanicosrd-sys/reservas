@@ -2370,6 +2370,23 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
     </div>
 
+    <!-- Excepción de pago (ausencias justificadas / dificultad económica) --
+         punto de entrada no especificado en el pedido original -- ubicado
+         acá, mismo lugar/patrón que la fila de "Salud" de arriba, decisión
+         propia señalada para reubicar fácil si no es donde se quería. No usa
+         irAjSub() -- el wizard nuevo se abre/cierra vía _registrarOverlayAbierto()
+         (ver #wizard-excepcion más abajo), no vía el mecanismo aj-sub-*. -->
+    <div class="aj-group">
+      <div class="aj-row" data-aj-key="excepcion-pago" onclick="abrirWizardExcepcion()">
+        <div class="aj-icon aj-icon-orange"><span class="material-symbols-outlined">volunteer_activism</span></div>
+        <div class="aj-content">
+          <div class="aj-title">Excepción de pago</div>
+          <div class="aj-value">Ausencias justificadas o dificultad económica</div>
+        </div>
+        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
+      </div>
+    </div>
+
     <!-- Aplicación -->
     <div class="aj-app-rows">
       <div class="aj-app-row" id="row-notif-home" data-aj-key="notif" onclick="toggleNotifHome(document.getElementById('toggle-notif'))">
@@ -2559,6 +2576,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">confirmation_number</span></div>
         <div class="admin-dash-tile-label">Cupones</div>
       </div>
+      <div class="admin-dash-tile admin-dash-pill" data-tile="admin-excepciones" onclick="adminToggleBurbuja('admin-excepciones', this)">
+        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">volunteer_activism</span></div>
+        <div class="admin-dash-tile-label">Excepciones de pago</div>
+      </div>
     </div>
 
     <!-- Burbuja "Color". -->
@@ -2624,6 +2645,15 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">confirmation_number</span> Cupones</div>
       <input type="text" id="admin-cupones-search" placeholder="Buscar por nombre..." style="margin-bottom:12px;padding:10px 14px;background:var(--surface-2);border:1.5px solid var(--border-light);border-radius:10px;font-size:0.85rem;font-family:inherit;width:100%;" oninput="adminFiltrarCupones(this.value)">
       <div id="admin-cupones-lista"></div>
+    </div>
+
+    <!-- Burbuja "Excepciones de pago" -- mismo componente .admin-tile-bubble
+         que las demás, cards con el mismo look que Reservas (.reserva-card,
+         css/reservas.css), sin tab "Todas" -- solo pendientes, ver
+         cargarExcepcionesPendientes()/js/admin.js. -->
+    <div id="admin-burbuja-excepciones" class="admin-tile-bubble" style="display:none;">
+      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">volunteer_activism</span> Excepciones de pago</div>
+      <div id="admin-excepciones-lista"></div>
     </div>
 
     <!-- Administradorxs -- al final, como pidió Victor. -->
@@ -4065,6 +4095,100 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
     </div>
     <button onclick="cerrarSheetEquipHome()" style="width:100%;margin-top:16px;background:none;border:none;font-size:0.82rem;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;padding:8px;">Cerrar</button>
+  </div>
+</div>
+
+<!-- Wizard: Solicitar excepción de pago (ausencias justificadas / dificultad
+     económica) -- estructura visual del wizard de Salud (css/perfil.css:
+     .salud-paso/.salud-prog*, reusadas tal cual, sin CSS nuevo para eso),
+     pero abierto/cerrado vía _registrarOverlayAbierto() (js/ui.js) en vez
+     del mecanismo aj-sub-*/irAjSub() que usa Salud -- el wizard de Salud NO
+     usa _registrarOverlayAbierto() pese a lo que decía el pedido original
+     (verificado antes de implementar), así que se combinan los 2 patrones a
+     propósito: la parte visual de Salud + el overlay-stack ya usado por
+     #sheet-ev-tipo-pago/#sheet-ev-accion (mismo criterio de porGesto/
+     history.back() para no dejar entradas de historial huérfanas, ver
+     MANIFEST.md "Cambios recientes" sobre ese bug ya corregido una vez). -->
+<div id="wizard-excepcion-overlay" class="bsheet-overlay" style="z-index:9650;" onclick="cerrarWizardExcepcion()"></div>
+<div id="wizard-excepcion" class="wizard-excepcion">
+  <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
+    <button type="button" class="app-nav-back" onclick="wizExcAtras()"><span class="material-symbols-outlined">arrow_back</span></button>
+    <span class="app-nav-title">Excepción de pago</span>
+  </div>
+  <div class="aj-sub-inner" id="wiz-exc-scroll">
+    <div class="salud-prog" id="wiz-exc-prog"></div>
+
+    <!-- Paso 0 -- Tipo de solicitud -->
+    <div class="salud-paso activo" id="wiz-exc-paso-0">
+      <h2>¿Qué tipo de solicitud necesitás?</h2>
+      <div class="ev-ant-card ev-crear-tipo-card" onclick="wizExcSelTipo('ausencias')" style="cursor:pointer;">
+        <span class="material-symbols-outlined ev-crear-tipo-card-icono">event_busy</span>
+        <div class="ev-crear-tipo-card-titulo">AUSENCIAS JUSTIFICADAS</div>
+        <div class="ev-crear-tipo-card-desc">Pagarás media cuota si tu solicitud es aceptada</div>
+      </div>
+      <div class="ev-ant-card ev-crear-tipo-card" onclick="wizExcSelTipo('economica')" style="cursor:pointer;margin-top:12px;">
+        <span class="material-symbols-outlined ev-crear-tipo-card-icono">volunteer_activism</span>
+        <div class="ev-crear-tipo-card-titulo">DIFICULTAD ECONÓMICA</div>
+        <div class="ev-crear-tipo-card-desc">Pide una subvención parcial o completa</div>
+      </div>
+    </div>
+
+    <!-- Paso 1a -- Ausencias justificadas -->
+    <div class="salud-paso" id="wiz-exc-paso-1a">
+      <h2>Ausencias justificadas</h2>
+      <label class="ev-lugar-campo-label" for="wiz-exc-motivo">Motivo de las ausencias</label>
+      <textarea id="wiz-exc-motivo" rows="3" placeholder="Describe brevemente el motivo"></textarea>
+      <label class="ev-lugar-campo-label" for="wiz-exc-justif" style="margin-top:14px;">Justificación para media cuota</label>
+      <textarea id="wiz-exc-justif" rows="3" placeholder="Explica por qué corresponde media cuota"></textarea>
+      <div class="error-msg" id="err-wiz-exc-1a"></div>
+      <button type="button" class="btn btn-outline" style="margin-top:16px;" onclick="wizExcIrConfirmacion()">Continuar</button>
+    </div>
+
+    <!-- Paso 1b -- Dificultad económica -->
+    <div class="salud-paso" id="wiz-exc-paso-1b">
+      <h2>Dificultad económica</h2>
+      <p style="font-weight:700;color:var(--text);margin-bottom:8px;">Nivel de ingreso económico</p>
+      <label class="ev-tipo-pago-opcion" style="display:flex;">
+        <input type="radio" name="wiz-exc-nivel" value="bajo" style="margin-top:2px;">
+        <div class="ev-tipo-pago-opcion-texto">
+          <span class="ev-tipo-pago-opcion-titulo">BAJO</span>
+          <span class="ev-tipo-pago-opcion-desc">No puedo cubrir necesidades básicas como alimentación, alquiler u otros gastos esenciales.</span>
+        </div>
+      </label>
+      <label class="ev-tipo-pago-opcion" style="display:flex;">
+        <input type="radio" name="wiz-exc-nivel" value="medio" style="margin-top:2px;">
+        <div class="ev-tipo-pago-opcion-texto">
+          <span class="ev-tipo-pago-opcion-titulo">MEDIO</span>
+          <span class="ev-tipo-pago-opcion-desc">Puedo cubrir lo básico, pero el pago de la cuota supone un esfuerzo económico significativo.</span>
+        </div>
+      </label>
+      <label class="ev-tipo-pago-opcion" style="display:flex;">
+        <input type="radio" name="wiz-exc-nivel" value="alto" style="margin-top:2px;">
+        <div class="ev-tipo-pago-opcion-texto">
+          <span class="ev-tipo-pago-opcion-titulo">ALTO</span>
+          <span class="ev-tipo-pago-opcion-desc">No tengo dificultades para pagar la cuota en las condiciones habituales.</span>
+        </div>
+      </label>
+      <label class="ev-lugar-campo-label" for="wiz-exc-sit-econ" style="margin-top:6px;">Justificación de tu situación económica</label>
+      <textarea id="wiz-exc-sit-econ" rows="3" placeholder="Describe tu contexto actual: tipo de ingreso, situación laboral, cargas, etc. La información será tratada con total confidencialidad."></textarea>
+      <label class="ev-lugar-campo-label" for="wiz-exc-compromiso" style="margin-top:14px;">Compromiso y aportación al equipo</label>
+      <textarea id="wiz-exc-compromiso" rows="3" placeholder="Indicá con qué tareas concretas puedes contribuir. Evitá respuestas genéricas. Ejemplos: gestión de redes sociales · fotografía/video · logística · coordinación."></textarea>
+      <label style="display:flex;align-items:flex-start;gap:10px;margin-top:16px;font-size:0.82rem;color:var(--muted);line-height:1.4;">
+        <input type="checkbox" id="wiz-exc-acepta" style="margin-top:2px;flex-shrink:0;">
+        Entiendo que el incumplimiento del compromiso asumido puede acarrear las sanciones establecidas por la organización.
+      </label>
+      <div class="error-msg" id="err-wiz-exc-1b"></div>
+      <button type="button" class="btn btn-outline" style="margin-top:16px;" onclick="wizExcIrConfirmacion()">Continuar</button>
+    </div>
+
+    <!-- Paso 2 -- Confirmación -->
+    <div class="salud-paso" id="wiz-exc-paso-2">
+      <h2>Confirmá tu solicitud</h2>
+      <p>Revisá tu solicitud antes de enviarla. Esta solicitud es válida únicamente para el mes en curso.</p>
+      <div class="aj-group" id="wiz-exc-resumen"></div>
+      <div class="error-msg" id="err-wiz-exc-2"></div>
+      <button type="button" class="btn btn-primary" id="wiz-exc-btn-enviar" style="margin-top:16px;" onclick="wizExcEnviar()">Enviar solicitud</button>
+    </div>
   </div>
 </div>
 

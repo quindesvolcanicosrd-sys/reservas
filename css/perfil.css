@@ -183,6 +183,19 @@
 .salud-paso p { font-size:0.85rem; color:var(--muted); margin-bottom:16px; line-height:1.5; }
 .salud-paso textarea, .salud-paso input[type="text"] { width:100%; }
 
+/* Wizard "Excepción de pago" (#wizard-excepcion, index.html) -- mismo look
+   de pantalla completa que .aj-sub (position:fixed, mismo z-index de "sheet
+   grande" que la app ya usa 9600+), pero abierto/cerrado vía
+   _registrarOverlayAbierto() (no vía irAjSub()/_ajSubAbierto, ver comentario
+   en index.html) -- por eso no reusa la clase .aj-sub tal cual (esa está
+   acoplada a #s-datos-card/_ajSubAbierto). Reusa .salud-paso/.salud-prog*
+   sin cambios para los pasos en sí, ver css/perfil.css más arriba. */
+.wizard-excepcion {
+  display: none; flex-direction: column; position: fixed; inset: 0;
+  background: var(--bg); transform: translateY(100%); opacity: 0;
+  transition: transform 0.32s var(--ease-sheet), opacity 0.32s var(--ease-sheet);
+}
+
 .aj-selector-btn { width:100%; padding:13px 16px; background:var(--surface-2); border:0; border-radius:12px; color:var(--text); font-size:0.88rem; font-family:inherit; display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition:border-color 0.15s; }
 .aj-selector-btn:hover { border-color:var(--brand); }
 

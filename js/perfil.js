@@ -1349,6 +1349,167 @@ function saludCerrarWizard() {
   _saludMostrarEstado();
 }
 
+// ─── Wizard "Excepción de pago" (#wizard-excepcion, index.html) ────────────
+// Estructura visual del wizard de Salud (arriba, .salud-paso/.salud-prog*
+// reusados tal cual) pero abierto/cerrado vía _registrarOverlayAbierto()
+// (js/ui.js) en vez de irAjSub()/_ajSubAbierto -- Salud usa ese 2do
+// mecanismo, no _registrarOverlayAbierto() (verificado antes de escribir
+// esto), así que acá se combinan los 2 patrones a propósito.
+var _wizExcPaso = 0;
+var _wizExcTipo = '';
+var _wizExcDatos = {};
+
+function _wizExcEscHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function _wizExcIdDePaso(paso) {
+  if (paso === 1) return _wizExcTipo === 'economica' ? 'wiz-exc-paso-1b' : 'wiz-exc-paso-1a';
+  return 'wiz-exc-paso-' + paso;
+}
+
+function _wizExcRenderProg() {
+  var cont = document.getElementById('wiz-exc-prog');
+  if (!cont) return;
+  var html = '';
+  for (var i = 0; i < 3; i++) {
+    html += '<div class="salud-prog-dot' + (i < _wizExcPaso ? ' done' : '') + (i === _wizExcPaso ? ' active' : '') + '"></div>';
+  }
+  cont.innerHTML = html;
+}
+
+function _wizExcMostrarPaso(paso) {
+  _wizExcPaso = paso;
+  document.querySelectorAll('#wizard-excepcion .salud-paso').forEach(function(el) { el.classList.remove('activo'); });
+  var el = document.getElementById(_wizExcIdDePaso(paso));
+  if (el) el.classList.add('activo');
+  _wizExcRenderProg();
+  var scroll = document.getElementById('wiz-exc-scroll');
+  if (scroll) scroll.scrollTop = 0;
+}
+
+function abrirWizardExcepcion() {
+  _wizExcPaso = 0; _wizExcTipo = ''; _wizExcDatos = {};
+  ['wiz-exc-motivo', 'wiz-exc-justif', 'wiz-exc-sit-econ', 'wiz-exc-compromiso'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.querySelectorAll('input[name="wiz-exc-nivel"]').forEach(function(r) { r.checked = false; });
+  var acepta = document.getElementById('wiz-exc-acepta'); if (acepta) acepta.checked = false;
+  ['err-wiz-exc-1a', 'err-wiz-exc-1b', 'err-wiz-exc-2'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) { el.textContent = ''; el.style.display = 'none'; }
+  });
+  _wizExcMostrarPaso(0);
+  var ov = document.getElementById('wizard-excepcion-overlay');
+  var sh = document.getElementById('wizard-excepcion');
+  if (!ov || !sh) return;
+  ov.style.display = 'block'; sh.style.display = 'flex';
+  requestAnimationFrame(function() { requestAnimationFrame(function() {
+    sh.style.transform = 'translateY(0)'; sh.style.opacity = '1'; ov.style.opacity = '1';
+  }); });
+  _registrarOverlayAbierto(function() { cerrarWizardExcepcion(true); });
+}
+
+// Sin argumento (tap en la flecha de "atrás" del paso 0, o el overlay):
+// pasa por history.back() de verdad -- mismo patrón ya corregido para
+// cerrarSheetEvAccion()/cerrarSheetTipoPago() (ver MANIFEST.md "Cambios
+// recientes"), evita dejar una entrada de historial huérfana.
+function cerrarWizardExcepcion(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var sh = document.getElementById('wizard-excepcion');
+  var ov = document.getElementById('wizard-excepcion-overlay');
+  if (sh) { sh.style.transform = 'translateY(100%)'; sh.style.opacity = '0'; }
+  if (ov) ov.style.opacity = '0';
+  setTimeout(function() {
+    if (sh) sh.style.display = 'none';
+    if (ov) ov.style.display = 'none';
+  }, 320);
+}
+
+function wizExcAtras() {
+  if (_wizExcPaso > 0) { _wizExcMostrarPaso(_wizExcPaso === 2 ? 1 : 0); return; }
+  cerrarWizardExcepcion();
+}
+
+function wizExcSelTipo(tipo) {
+  _wizExcTipo = tipo;
+  _wizExcMostrarPaso(1);
+}
+
+function wizExcValidar() {
+  // `errId` -- NUNCA nombrada `err` acá: esa es la función global (js/ui.js)
+  // que muestra un .error-msg (textContent + display:block + fade + auto-
+  // ocultar) -- una variable local `err` la taparía en todo este scope,
+  // dejando el mensaje seteado pero invisible (.error-msg parte de
+  // `display:none` por CSS, ver css/global.css).
+  var errId = _wizExcTipo === 'economica' ? 'err-wiz-exc-1b' : 'err-wiz-exc-1a';
+  if (_wizExcTipo === 'ausencias') {
+    var motivo = (document.getElementById('wiz-exc-motivo').value || '').trim();
+    var justif = (document.getElementById('wiz-exc-justif').value || '').trim();
+    if (!motivo || !justif) { err(errId, 'Completa los 2 campos para continuar.'); return false; }
+    return true;
+  }
+  if (_wizExcTipo === 'economica') {
+    var nivel = document.querySelector('input[name="wiz-exc-nivel"]:checked');
+    var sitEcon = (document.getElementById('wiz-exc-sit-econ').value || '').trim();
+    var compromiso = (document.getElementById('wiz-exc-compromiso').value || '').trim();
+    var acepta = document.getElementById('wiz-exc-acepta').checked;
+    if (!nivel || !sitEcon || !compromiso) { err(errId, 'Completa todos los campos para continuar.'); return false; }
+    if (!acepta) { err(errId, 'Debes aceptar el compromiso para continuar.'); return false; }
+    return true;
+  }
+  return false;
+}
+
+function _wizExcResumenHtml() {
+  var d = _wizExcDatos;
+  function fila(label, val) {
+    return '<div class="aj-dato-row"><div class="aj-dato-texts"><div class="aj-dato-label">' + label + '</div><div class="aj-dato-val">' + _wizExcEscHtml(val) + '</div></div></div>';
+  }
+  if (_wizExcTipo === 'ausencias') {
+    return fila('Tipo', 'Ausencias justificadas') + fila('Motivo', d.motivo) + fila('Justificación', d.justificacion);
+  }
+  return fila('Tipo', 'Dificultad económica') + fila('Nivel de ingreso', d.nivelIngreso.toUpperCase()) +
+    fila('Situación económica', d.situacionEconomica) + fila('Compromiso', d.compromiso);
+}
+
+function wizExcIrConfirmacion() {
+  if (!wizExcValidar()) return;
+  if (_wizExcTipo === 'ausencias') {
+    _wizExcDatos = {
+      motivo: document.getElementById('wiz-exc-motivo').value.trim(),
+      justificacion: document.getElementById('wiz-exc-justif').value.trim(),
+    };
+  } else {
+    _wizExcDatos = {
+      nivelIngreso: document.querySelector('input[name="wiz-exc-nivel"]:checked').value,
+      situacionEconomica: document.getElementById('wiz-exc-sit-econ').value.trim(),
+      compromiso: document.getElementById('wiz-exc-compromiso').value.trim(),
+    };
+  }
+  var resumen = document.getElementById('wiz-exc-resumen');
+  if (resumen) resumen.innerHTML = _wizExcResumenHtml();
+  _wizExcMostrarPaso(2);
+}
+
+function wizExcEnviar() {
+  var btn = document.getElementById('wiz-exc-btn-enviar');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+  apiPost({
+    action: 'solicitarExcepcion',
+    token: _token,
+    tipo: _wizExcTipo,
+    datos: JSON.stringify(_wizExcDatos),
+    mesAplicacion: new Date().toISOString().slice(0, 7),
+  }, function() {
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar solicitud'; }
+    mostrarToast('Solicitud enviada. El administrador la revisará pronto.', 'ok', true);
+    cerrarWizardExcepcion();
+  }, function(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Enviar solicitud'; }
+    err('err-wiz-exc-2', (e && e.message) || 'No se pudo enviar la solicitud.');
+  });
+}
+
 function _saludRenderProg() {
   var cont = document.getElementById('salud-prog'); if (!cont) return;
   cont.innerHTML = '';
