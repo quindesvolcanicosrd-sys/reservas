@@ -2334,9 +2334,25 @@ function _evActualizarTopBarModo() {
   var modo = _modoUsuario();
   var btnPatin = document.getElementById('ev-btn-patin');
   var btnAnticipada = document.getElementById('ev-btn-anticipada');
-  if (btnPatin) btnPatin.style.display = modo === 'equipamiento' ? '' : 'none';
-  if (btnAnticipada) btnAnticipada.style.display = modo === 'equipamiento' ? 'none' : '';
-  _evPillsInit(modo);
+  // Bug real corregido (ver "Cambios recientes"): comparaban contra
+  // `modo === 'equipamiento'`, un valor que `_modoUsuario()` ya no devuelve
+  // desde el refactor que lo redujo a mirlxs/quindes -- #ev-btn-patin
+  // quedaba oculto para TODA cuenta, sin importar si dependía de equipo del
+  // club. `_evNecesitaEquipo()` (junto a `_modoUsuario()`, más arriba) es
+  // el reemplazo real -- lee `necesitaPatines` directo, independiente de la
+  // categoría mirlxs/quindes.
+  var necesitaEquipo = _evNecesitaEquipo();
+  if (btnPatin) btnPatin.style.display = necesitaEquipo ? '' : 'none';
+  if (btnAnticipada) btnAnticipada.style.display = necesitaEquipo ? 'none' : '';
+  // Hallazgo relacionado, no pedido explícito pero mismo bug de fondo:
+  // _evPillsInit() (más abajo, listas['equipamiento'] YA existe con los
+  // tips correctos -- ícono de patín, reagendar/cancelar) recibía siempre
+  // `modo` ('mirlxs'/'quindes'), nunca 'equipamiento' -- una cuenta con
+  // equipo del club veía las sugerencias de mirlxs (mencionan "asistencia
+  // anticipada", el ícono que este mismo fix oculta para ellas 2 líneas
+  // arriba). Se pasa la lista correcta sin tocar `modo` en sí (sigue
+  // resolviendo mirlxs/quindes para todo lo demás de esta función).
+  _evPillsInit(necesitaEquipo ? 'equipamiento' : modo);
   var fabRes = document.getElementById('ev-fab-reserva');
   if (fabRes) {
     var esAdmin = typeof _adminToken !== 'undefined' && !!_adminToken;
