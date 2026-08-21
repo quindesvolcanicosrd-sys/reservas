@@ -1905,9 +1905,23 @@ function _evCardEventoHtml(e, sufijo) {
   // `e.inicia`, que no existe en el objeto evento -- ver `_evMapEventoBackend()`,
   // el campo real es `horaInicio`) para el corte de 2hs antes del inicio,
   // hoy mismo.
+  // Estado de una reserva ya hecha para este evento (mirlxs -- ver "Cambios
+  // recientes"). `_todasReservas` (js/home.js, global, poblado por
+  // getReservasPersona) -- `r.fecha` es el id_evento para una reserva de
+  // tipo "clase" (mismo campo/valor que `e.id` acá, ya confirmado y usado en
+  // el resto de este archivo/`js/reservas.js` para el mismo cruce). Se
+  // excluye 'Cancelada' -- una reserva cancelada no debe tapar el botón de
+  // volver a reservar. Estados reales de la app: 'Pendiente' (default, sin
+  // valor)/'Confirmada'/'Cancelada'/'Reagendar' (ver `_renderCardHome()`,
+  // js/home.js -- NO existen 'Aprobada'/'Rechazada' en ningún lado del
+  // proyecto, ese vocabulario no es el real).
+  var miReserva = null;
+  if (_modoUsuario() === 'mirlxs' && e.tipo === 'Entrenamiento') {
+    miReserva = (_todasReservas || []).filter(function(r) { return r.fecha === e.id && r.estado !== 'Cancelada'; })[0] || null;
+  }
   var mostrarBtnReservar = false;
   var btnReservarDesactivado = false;
-  if (_modoUsuario() === 'mirlxs' && e.tipo === 'Entrenamiento') {
+  if (_modoUsuario() === 'mirlxs' && e.tipo === 'Entrenamiento' && !miReserva) {
     var hoyISO = _evHoyISO();
     if (_evFechaCmp(e.fecha, hoyISO) >= 0) {
       var proximas6 = (_EV_EVENTOS || []).filter(function(x) {
@@ -1929,6 +1943,23 @@ function _evCardEventoHtml(e, sufijo) {
     ' onclick="event.stopPropagation();' + (btnReservarDesactivado ? 'mostrarToast(\'No se puede reservar para esta clase. Ya se cerraron las reservas.\',\'info\',true)' : '_evReservarClase(\'' + e.id + '\')') + '"' +
     '>Reservar</button>'
     : '';
+  // Chip de estado -- mismo componente/labels/colores que ya usa
+  // `_renderCardHome()` (js/home.js, `.badge`/`.badge-<estado>`/
+  // `.rn-status-row`/`.rn-status-info`), reusado tal cual (no reinventado).
+  // `abrirModalEstados()` (js/home.js) es el modal real "¿Qué significa
+  // esto?" del flujo de reservas -- distinto de `abrirModalInfoEstado()`
+  // (js/ui.js), que es el modal de la pantalla de confirmación de PAGO (s6),
+  // no el de estados de reserva.
+  var miReservaChipHtml = '';
+  if (miReserva) {
+    var estIcono = miReserva.estado === 'Confirmada' ? 'check_circle' : miReserva.estado === 'Reagendar' ? 'swap_horiz' : 'hourglass_empty';
+    var estLabel = miReserva.estado === 'Confirmada' ? 'Reserva confirmada' : miReserva.estado === 'Reagendar' ? 'Clase a favor' : 'Reserva pendiente';
+    var estBadgeClase = 'badge-' + (miReserva.estado === 'Confirmada' ? 'confirmada' : miReserva.estado === 'Reagendar' ? 'reagendar' : 'pendiente');
+    miReservaChipHtml = '<div class="rn-status-row" onclick="event.stopPropagation()">' +
+      '<span class="badge ' + estBadgeClase + '"><span class="material-symbols-outlined">' + estIcono + '</span>' + estLabel + '</span>' +
+      '<span class="rn-status-info" onclick="abrirModalEstados()">¿Qué significa esto?</span>' +
+      '</div>';
+  }
 
   // Botón "Reservar" (equipamiento -- equipo del club) en cards de
   // Entrenamiento futuras dentro de las próximas 6, "zona segura": el botón
@@ -1961,7 +1992,7 @@ function _evCardEventoHtml(e, sufijo) {
       '<div class="ev-card-body">' +
         '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline">' + icono + '</span><div class="ev-card-titulo">' + e.lugar + '</div></div>' +
         '<div class="ev-card-sub"><span class="material-symbols-outlined">schedule</span>' + e.horaInicio + ' · ' + e.tipo + '</div>' +
-        accionBody +
+        accionBody + miReservaChipHtml +
       '</div>' +
       btnReservarHtml + btnReservarEquipHtml +
     '</div>' +
@@ -3497,6 +3528,38 @@ function _evRenderDetalle(ev) {
     ? _evDetalleEstadoNotaHtml(ev)
     : (_yaMostradaEnInfo ? '' : (_preIngresoDetalle && _noAsistioDetalle ? '' : (_evOcultarRsvpPorEquipoClub(ev) ? '' : (_evRsvpBarraHtml(ev) || _evDetalleEstadoNotaHtml(ev)))));
   _evRenderDetalleAsistencia(ev);
+  var acciones = document.getElementById('ev-detalle-acciones');
+  if (acciones) acciones.innerHTML = _evDetalleAccionesHtml(ev);
+}
+// Acciones sobre MI reserva de este evento (mirlxs, ver "Cambios recientes").
+// Reusa LITERAL el mismo botón + sheet que ya usa "Mis Reservas" para una
+// reserva tipo "clase" (`.rn-btn-reagendar` + `abrirGestionar()`, ambos
+// `js/home.js`/`css/home.css`) en vez de 2 botones nuevos "Cancelar
+// reserva"/"Reagendar" -- ese es el patrón real ya probado para este tipo de
+// reserva (una reserva mensual tiene su propio botón aparte, sin reagendar,
+// que no aplica acá: el match siempre es por id_evento). `fila` (2º
+// parámetro de `abrirGestionar()`) se manda `null` a propósito -- se
+// confirmó leyendo el código que `_sgFilaActual` nunca se lee en ningún
+// lado, sirve solo para el flujo de Home donde sí hay una card/fila real.
+// `null` (`_todasReservas`, poblado por `getReservasPersona`; `r.fecha` es
+// el id_evento para una reserva de tipo "clase", mismo campo/valor que
+// `ev.id` acá -- ya confirmado y usado para el chip de la card, ver la
+// entrada de arriba de este MANIFEST) identifica si hay una reserva activa
+// (`estado !== 'Cancelada'`) para este evento puntual.
+function _evDetalleAccionesHtml(ev) {
+  if (ev.tipo !== 'Entrenamiento') return '';
+  var miReserva = (_todasReservas || []).filter(function(r) { return r.fecha === ev.id && r.estado !== 'Cancelada'; })[0];
+  if (!miReserva) return '';
+  var fechaTexto = _evFechaCompleta(ev.fecha);
+  var fechaEsc = String(ev.id).replace(/'/g, "\\'");
+  var fechaTextoEsc = fechaTexto.replace(/'/g, "\\'");
+  var horaEsc = (ev.horaInicio || '').replace(/'/g, "\\'");
+  var lugarEsc = (ev.lugar || '').replace(/'/g, "\\'");
+  return '<div class="ev-detalle-titulo-seccion">Mi reserva</div>' +
+    '<button class="rn-btn-reagendar" onclick="abrirGestionar(\'' + fechaEsc + '\',null,\'' + fechaTextoEsc + '\',\'' + horaEsc + '\',\'' + lugarEsc + '\')">' +
+    '<span class="rn-btn-reagendar-full">Re-agendar o cancelar reserva</span>' +
+    '<span class="rn-btn-reagendar-corto">Re-agendar/cancelar</span>' +
+    '</button>';
 }
 // Mismo componente que la card (`_evEstadoNotaPillHtml()`, más arriba en
 // este archivo) para Cancelado/No se entrena -- reuso literal, no una

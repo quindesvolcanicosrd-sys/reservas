@@ -422,6 +422,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="ev-stats-grid ev-detalle-stats-sticky" id="ev-detalle-stats"></div>
         <div id="ev-detalle-asistencia-lista"></div>
       </div>
+      <!-- Acciones sobre MI reserva de este evento (mirlxs, ver "Cambios
+           recientes") -- poblada por _evRenderDetalle()/_evDetalleAccionesHtml(),
+           vacía (sin título ni margen propio) cuando no hay reserva. -->
+      <div class="ev-detalle-section" id="ev-detalle-acciones"></div>
       <!-- "Cancelar evento" (admin) ya NO vive acá como botón del contenido
            scrolleable -- ver MANIFEST.md "Cambios recientes": pasó a ser el
            ícono `event_busy` del nav (_evDetalleStickyHtml(), js/eventos.js),

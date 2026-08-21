@@ -284,7 +284,21 @@ function irHomeDesdeExito() {
   // mismo flag/criterio) -- "Volver a Mis Reservas" regresa a #s-eventos, de
   // donde salió el flujo, en vez de #s-home (que sigue siendo el destino
   // normal para cualquier reserva hecha por el camino S1-S4 de siempre).
-  if (E.viaEventosInline) { E.viaEventosInline = false; ir('s-eventos'); return; }
+  if (E.viaEventosInline) {
+    E.viaEventosInline = false;
+    ir('s-eventos');
+    // Recarga _todasReservas (mismo fetch que _recargarYRenderReservas()
+    // hace internamente, sin su parte de UI -- esa función anima/repinta
+    // #home-reservas-lista, DOM de #s-home, no de #s-eventos) y re-renderiza
+    // el timeline para que el chip de estado nuevo (_evCardEventoHtml(),
+    // ver "Cambios recientes") aparezca sin esperar a que Eventos se
+    // re-visite por otra vía.
+    api({ action: 'getReservasPersona', nombre: E.nombre }, function(reservas) {
+      _todasReservas = reservas || [];
+      if (typeof _evRenderTimeline === 'function') _evRenderTimeline(true);
+    }, function() {});
+    return;
+  }
   // ir() primero: así el nav forzado más abajo aparece ya sobre #s-home (position:fixed,
   // independiente de qué .pantalla esté activa) en vez de asomar un instante sobre s6.
   ir('s-home');
