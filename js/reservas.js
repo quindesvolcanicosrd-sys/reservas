@@ -3,7 +3,8 @@ var E = {
   conf: '', editPat: '', editTalla: '', editProtec: '',
   fechas: [], tallasPorFecha: {}, tipoPago: 'clase', meses: [],
   precioPorClase: 0, precioMensual: 0,
-  totalPago: 0, notaPago: '', wpEnviado: false, wpUrl: '', cuponAplicado: false, creditosUsados: 0, reagendando: false, editandoDesdeHome: false
+  totalPago: 0, notaPago: '', wpEnviado: false, wpUrl: '', cuponAplicado: false, creditosUsados: 0, reagendando: false, editandoDesdeHome: false,
+  viaEventosInline: false
 };
 
 var _conflictosTalla = {};
@@ -975,6 +976,16 @@ function continuar_s4() {
   var fechasHtml = esClase ? E.fechas.map(function(f) { return '• ' + (_fechaInfoDisponible[f] || f); }).join('<br>') : '';
   _pagoTotalActualizar('Total: $' + (E.totalPago || 0).toFixed(2), detalleTexto, fechasHtml, esClase);
   _resetChkPago();
+  // #chk-pago-texto normalmente lo llena actualizarTextosPago() (más arriba
+  // en este archivo), pero esa función es parte de la inicialización de #s4
+  // (cargarFechas()) -- la ruta de selección inline desde Eventos
+  // (_evContinuarReserva()) llega hasta acá SIN pasar nunca por #s4, así que
+  // ese texto quedaba vacío (el <span> nace sin contenido en index.html).
+  // Se pone acá mismo, en el único punto real por el que TODO camino hacia
+  // #s-pago pasa, en vez de depender de que el caller haya pasado por #s4
+  // antes -- mismo texto exacto que actualizarTextosPago() (no reinventado).
+  var chkPagoTexto = document.getElementById('chk-pago-texto');
+  if (chkPagoTexto) chkPagoTexto.textContent = canPayMonthly() ? 'Ya realicé mi pago y entiendo este estará pendiente hasta que sea verificada por el equipo.' : 'Realicé mi pago y entiendo que mi reserva quedará pendiente.';
   var lineasFechas = E.tipoPago === 'mensual' ? 'Meses pagados:\n- ' + E.meses.join('\n- ') + '\n\nTotal: $' + (E.totalPago || 0).toFixed(2) : E.fechas.map(function(f) { return '- ' + (_fechaInfoDisponible[f] || f); }).join('\n');
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : ''; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : '';
   var equipLinea = (talla && protec && protec.toLowerCase() !== 'no') ? 'Necesitare patines talla ' + talla + ' y protecciones.' : (talla) ? 'Necesitare patines talla ' + talla + '.' : (protec && protec.toLowerCase() !== 'no') ? 'Necesitare protecciones (' + protec + ').' : 'Llevare mi propio equipamiento.';

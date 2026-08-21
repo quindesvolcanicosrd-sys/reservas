@@ -163,7 +163,14 @@ var TOP_BAR_CONFIG = {
   // título ni flecha; o con el título de siempre + flecha atrás real). Sin
   // entrada acá, `ir()` oculta el #top-bar entero para esta pantalla, mismo
   // criterio que la pantalla de detalle de Eventos.
-  's-pago': { titulo: 'Pago', volver: 's4' },
+  // volver dinámico (ver "Cambios recientes" -- selección inline desde
+  // Eventos): esa ruta llama continuar_s4() directo, sin pasar nunca por
+  // cargarFechas()/#s4 -- volver a 's4' ahí dejaría al usuario en una
+  // pantalla vacía/sin datos. `E.viaEventosInline` (seteado por
+  // _evContinuarReserva(), js/eventos.js; reseteado por irNuevaReserva(),
+  // js/home.js) distingue las 2 rutas, mismo patrón ya usado por
+  // `E.editandoDesdeHome` en 's3a' de acá arriba.
+  's-pago': { titulo: 'Pago', volver: function() { return E.viaEventosInline ? 's-eventos' : 's4'; } },
   's-gestionar': { titulo: 'Re-agendar fecha', volver: 's-home' },
   's-misreservas': { titulo: 'Historial de reservas', volver: 's-home' },
   // Detalle de un evento (Eventos) -- ya NO usa el #top-bar genérico (ver

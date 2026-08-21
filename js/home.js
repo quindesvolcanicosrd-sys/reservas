@@ -213,7 +213,7 @@ function _ptrOcultarIndicador() {
 }
 
 function irNuevaReserva(skipEquip, _fechaPresel) {
-  E.conf = ''; E.fechas = []; E.tallasPorFecha = {}; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = ''; E.cuponAplicado = false; E.creditosUsados = 0; E.reagendando = false;
+  E.conf = ''; E.fechas = []; E.tallasPorFecha = {}; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = ''; E.cuponAplicado = false; E.creditosUsados = 0; E.reagendando = false; E.viaEventosInline = false;
   E._fechaPresel = _fechaPresel || null;
   var chkC = document.getElementById('chk-cupon'); if (chkC) chkC.checked = false;
   document.querySelectorAll('input[name="conf"]').forEach(function(r) { r.checked = false; r.closest('.opcion').classList.remove('sel'); });
@@ -279,6 +279,12 @@ function irHomeDesdeExito() {
     _mostrarModalWpComprobante();
     return;
   }
+  // Reserva hecha por selección inline desde Eventos (ver "Cambios
+  // recientes", _evContinuarReserva()/TOP_BAR_CONFIG['s-pago'] en js/ui.js,
+  // mismo flag/criterio) -- "Volver a Mis Reservas" regresa a #s-eventos, de
+  // donde salió el flujo, en vez de #s-home (que sigue siendo el destino
+  // normal para cualquier reserva hecha por el camino S1-S4 de siempre).
+  if (E.viaEventosInline) { E.viaEventosInline = false; ir('s-eventos'); return; }
   // ir() primero: así el nav forzado más abajo aparece ya sobre #s-home (position:fixed,
   // independiente de qué .pantalla esté activa) en vez de asomar un instante sobre s6.
   ir('s-home');

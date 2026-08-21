@@ -1776,7 +1776,17 @@ function _evReservarClase(eventoId) {
     var dRes = E.datos || {};
     var tallaRes = (dRes.necesitaPatines && dRes.necesitaPatines.toLowerCase() !== 'no') ? dRes.talla : '';
     apiPost({ action: 'getFechasDisponibles', token: _token, nombre: E.nombre, talla: tallaRes, necesitaProtecciones: dRes.necesitaProtecciones }, function(res) {
-      (res || []).forEach(function(f) { _evDisponibles[f.fecha] = f; });
+      (res || []).forEach(function(f) {
+        _evDisponibles[f.fecha] = f;
+        // Mismo formato exacto que cargarFechas() (js/reservas.js:633-639)
+        // para _fechaInfoDisponible -- sin esto, continuar_s4()/confirmarReserva()
+        // (js/reservas.js) caen a su fallback `_fechaInfoDisponible[f] || f` y
+        // muestran el id crudo del evento en vez de una fecha legible (footer,
+        // resumen de pago, mensaje de WhatsApp) -- ese fallback nunca se puebla
+        // solo, porque esta ruta nueva no pasa por cargarFechas().
+        var fechaLegibleEv = (typeof _fechaCalendarioATexto === 'function' ? _fechaCalendarioATexto(f.fechaCalendario) : '') || f.fecha;
+        _fechaInfoDisponible[f.fecha] = fechaLegibleEv + (f.horaInicio ? ' - ' + f.horaInicio + 'hs' : '') + (f.donde ? ' - ' + f.donde : '');
+      });
       _evModoReservaActivo = true;
       // E.precioPorClase ya se carga al iniciar sesión (js/auth.js,
       // getPreciosClases) -- guardia solo por si ese fetch async todavía no
@@ -1817,9 +1827,16 @@ function _evActualizarFooterReserva() {
   if (_evSeleccionados.size === 0) { _evSalirModoReserva(); return; }
   var footer = document.getElementById('ev-reserva-footer');
   if (footer) footer.style.display = 'flex';
-  var n = _evSeleccionados.size;
+  var ids = Array.from(_evSeleccionados);
+  var n = ids.length;
   var detalle = document.getElementById('ev-reserva-footer-detalle');
-  if (detalle) detalle.textContent = n + (n === 1 ? ' clase seleccionada' : ' clases seleccionadas');
+  // Con 1 sola fecha, se muestra su nombre legible real (mismo texto que
+  // _evReservarClase() ya deja en _fechaInfoDisponible[id] -- fecha+hora+
+  // lugar, el mismo formato que usa toda la app) en vez de "1 clase
+  // seleccionada" -- más útil para confirmar CUÁL clase es. Con 2+, el
+  // detalle por fecha no entra cómodo en una sola línea -- se resume a un
+  // conteo, igual que antes.
+  if (detalle) detalle.textContent = n === 1 ? (_fechaInfoDisponible[ids[0]] || 'Total por 1 clase') : ('Total por ' + n + ' clases');
   var total = document.getElementById('ev-reserva-footer-total');
   if (total) total.textContent = '$' + ((E.precioPorClase || 0) * n).toFixed(2);
 }
@@ -1844,6 +1861,13 @@ function _evContinuarReserva() {
   E.cuponAplicado = false;
   E.creditosUsados = 0;
   E.notaPago = '';
+  // Marca el origen para que la flecha atrás de #s-pago (TOP_BAR_CONFIG,
+  // js/ui.js) y "Volver a Mis Reservas" (irHomeDesdeExito(), js/home.js)
+  // vuelvan acá (#s-eventos) en vez de 's4'/'s-home' -- esta ruta nunca pasa
+  // por cargarFechas()/#s4, así que 's4' quedaría vacío/sin datos si alguien
+  // intentara volver ahí. Reseteado a false en irNuevaReserva() (flujo
+  // normal S1-S4) para que no quede pegado entre sesiones.
+  E.viaEventosInline = true;
   continuar_s4();
   _evSalirModoReserva();
 }
