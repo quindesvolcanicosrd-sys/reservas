@@ -1768,7 +1768,14 @@ function _evCardAniversarioHtml(a) {
 // _evContinuarReserva() más abajo).
 function _evReservarClase(eventoId) {
   if (!_evModoReservaActivo) {
-    apiPost({ action: 'getFechasDisponibles', token: _token, nombre: E.nombre }, function(res) {
+    // Ya no es exclusivo de "equipo propio" (ver MANIFEST.md, eliminación del
+    // modo 'equipamiento') -- talla/necesitaProtecciones viajan igual que en
+    // cargarFechas() (js/reservas.js:613-619, mismo criterio: talla vacía si
+    // la persona no necesita patines) para que el backend chequee stock real
+    // también para quien depende de equipo del club.
+    var dRes = E.datos || {};
+    var tallaRes = (dRes.necesitaPatines && dRes.necesitaPatines.toLowerCase() !== 'no') ? dRes.talla : '';
+    apiPost({ action: 'getFechasDisponibles', token: _token, nombre: E.nombre, talla: tallaRes, necesitaProtecciones: dRes.necesitaProtecciones }, function(res) {
       (res || []).forEach(function(f) { _evDisponibles[f.fecha] = f; });
       _evModoReservaActivo = true;
       // E.precioPorClase ya se carga al iniciar sesión (js/auth.js,
@@ -2191,12 +2198,14 @@ function _evOcultarRsvpPorEquipoClub(e) {
   return e.tipo === 'Entrenamiento' && !!E.datos &&
     (E.datos.necesitaPatines === 'Sí' || E.datos.necesitaProtecciones === 'Sí');
 }
+// Modelo real (ver MANIFEST.md "Cambios recientes" -- ya NO existe un 3er
+// modo 'equipamiento'): mirlxs incluye cuentas con y sin equipo propio,
+// distinguidas por necesitaPatines/necesitaProtecciones donde haga falta
+// (ver _evOcultarRsvpPorEquipoClub(), que sigue leyendo esos 2 campos
+// directo, sin pasar por acá) -- categoria es lo único que separa quindes.
 function _modoUsuario() {
   var d = E.datos;
-  if (!d) return 'equipamiento';
-  var tieneEquipo = d.necesitaPatines === 'No' && d.necesitaProtecciones === 'No';
-  if (!tieneEquipo) return 'equipamiento';
-  if (d.categoria === 'Quindes') return 'quindes';
+  if (d && d.categoria === 'Quindes') return 'quindes';
   return 'mirlxs';
 }
 
@@ -2474,17 +2483,16 @@ function _evUpdateRsvpSliders(animate) {
 // reconstruir el nodo mataría la animación del indicador (un nodo recién
 // creado no tiene "posición anterior" desde la cual animar).
 // Cuota al día para Mirlxs-mensual/Quindes -- cierra el "PUNTO DE EXTENSIÓN"
-// que señalaba `_evMarcarAsistencia()` (ver MANIFEST.md). Equipo propio no
-// depende de esto (_modoUsuario()==='equipamiento' → true directo, ese caso
-// ya ni siquiera llega a mostrar el botón de RSVP, ver
-// `_evOcultarRsvpPorEquipoClub()`). `_todasReservas` (js/home.js, global) es
-// la misma fuente que ya usa `_clasificarReservas()` para "reserva mensual
-// activa" -- mismo criterio de campo/parseo (`r.validezHasta` vía
-// `_parseFechaSimple()`, formato real `d/m/aaaa`, NO ISO -- `new Date(...)`
-// directo sobre ese string da `Invalid Date`/fecha mal interpretada).
+// que señalaba `_evMarcarAsistencia()` (ver MANIFEST.md). Ya NO hay
+// excepción por depender de equipo del club (ver MANIFEST.md, eliminación
+// del modo 'equipamiento') -- toda cuenta pasa por el mismo chequeo de
+// reserva mensual activa, sin importar si necesita patines/protecciones.
+// `_todasReservas` (js/home.js, global) es la misma fuente que ya usa
+// `_clasificarReservas()` para "reserva mensual activa" -- mismo criterio de
+// campo/parseo (`r.validezHasta` vía `_parseFechaSimple()`, formato real
+// `d/m/aaaa`, NO ISO -- `new Date(...)` directo sobre ese string da
+// `Invalid Date`/fecha mal interpretada).
 function _evTieneCuotaAlDia() {
-  var modo = _modoUsuario();
-  if (modo === 'equipamiento') return true;
   var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   return (_todasReservas || []).some(function(r) {
     if (r.tipo !== 'mensual') return false;
