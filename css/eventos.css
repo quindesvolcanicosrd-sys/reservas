@@ -1464,3 +1464,31 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
   color: #fff;
   border-color: var(--brand);
 }
+/* Estado + link "¿Qué significa esto?" de MI reserva en la card (mirlxs,
+   ver "Cambios recientes") -- va en la esquina superior derecha, mismo slot
+   que ocupaba el botón "Reservar" (reemplazándolo), apilado y alineado a la
+   derecha -- a diferencia de `.rn-status-row` (horizontal, pensada para el
+   ancho completo de una card de Home), acá conviven en la columna angosta
+   junto al body de la card. */
+.ev-card-reserva-estado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+/* Botón "Cancelar o re-agendar reserva" -- mismo botón real (`_evBtnCancelarReagendarHtml()`,
+   js/eventos.js) en la card del timeline y en el detalle del evento, cada
+   uno con su propio margen (la card lo pone DEBAJO de `.ev-card-top-row`,
+   el detalle lo pone DEBAJO de la descripción -- 2 contextos de layout
+   distintos, mismo botón). */
+.ev-card-btn-cancelar {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+}
+.ev-detalle-btn-cancelar {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+}
