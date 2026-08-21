@@ -2044,7 +2044,7 @@ function _evCardEventoHtml(e, sufijo) {
   }
   var mostrarBtnReservar = false;
   var btnReservarDesactivado = false;
-  if (_modoUsuario() === 'mirlxs' && e.tipo === 'Entrenamiento' && !miReserva) {
+  if (_modoUsuario() === 'mirlxs' && e.tipo === 'Entrenamiento' && !miReserva && _evTieneCuotaAlDia()) {
     var hoyISO = _evHoyISO();
     if (_evFechaCmp(e.fecha, hoyISO) >= 0) {
       var proximas6 = (_EV_EVENTOS || []).filter(function(x) {

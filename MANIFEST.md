@@ -5574,4 +5574,15 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
 - **IMPORTANTE**: Este SQL debe correrse manualmente en el Supabase SQL Editor del proyecto
   (o via `supabase db push` si las migraciones están sincronizadas).
 
+### Fix: botón "Reservar" visible sin cuota al día (2026-08-21)
+- **Bug**: `_evCardEventoHtml()` (`js/eventos.js`, ~línea 2047) mostraba el botón
+  "Reservar" en cards de Entrenamiento para cuentas mirlxs sin verificar
+  `_evTieneCuotaAlDia()` (línea ~2728, ya existente y usada en el flujo de
+  asistencia vía `_evMarcarAsistencia()`, pero nunca en el de reservas).
+- **Fix**: se agregó `&& _evTieneCuotaAlDia()` a la condición que decide
+  `mostrarBtnReservar`, mismo helper ya usado en el resto de la app —
+  sin lógica nueva.
+- **Cache-busting (`index.html`)** — `js/eventos.js?v=6c0ffb99` (recalculado a
+  mano, no hay hook de pre-commit instalado en este entorno).
+
 - **Redeploy de la Edge Function con `--no-verify-jwt` restaurado.** Las 2 tandas anteriores de esta sesión (fix de `verificarGoogle` y fix del ícono de push del dominio nuevo) desplegaron con `supabase functions deploy api --project-ref uusbnreitoobqssizbfq`, **sin** el flag `--no-verify-jwt` que sí llevan los deploys documentados más arriba en este mismo archivo (líneas ~772/~792, tandas de Rectificar Asistencia). Sin ese flag, Supabase exige un JWT válido en `Authorization` para invocar la función — probablemente la causa real detrás del 401 que motivó el fix de `apiPost()` de arriba (la Edge Function volvió a verificar JWT en el redeploy, y esta copia local no mandaba ninguno). **Fix:** redeployado con `supabase functions deploy api --project-ref uusbnreitoobqssizbfq --no-verify-jwt`, mismo comando que el resto de deploys documentados en este archivo. Ninguno de los 2 fixes anteriores de esta sesión (`verificarGoogle`, ícono de push) necesita corrección de código adicional — el contenido desplegado ya es el correcto, solo faltaba este flag en el comando.
