@@ -305,13 +305,14 @@ function _s4ActualizarNav() {
 // Onclick real de #s4-nav-back (index.html) -- wrapper sobre
 // volver(_s4OrigenSeccion || 's-home') para poder sumar side-effects propios
 // de la flecha atrás sin tocar el atributo inline. Restaura el FAB de
-// reserva mensual de mirlxs (#ev-mirlxs-fab, js/eventos.js) que
-// irNuevaReserva() (js/home.js) oculta al entrar al wizard -- sin esto,
-// tocar atrás desde s4 dejaba el FAB oculto hasta la próxima recarga del
-// timeline, aunque el timeline mismo ya estuviera visible de nuevo.
+// reserva mensual (#ev-mirlxs-fab, js/eventos.js -- mirlxs y quindes, ver
+// MANIFEST.md "Cambios recientes") que irNuevaReserva() (js/home.js) oculta
+// al entrar al wizard -- sin esto, tocar atrás desde s4 dejaba el FAB oculto
+// hasta la próxima recarga del timeline, aunque el timeline mismo ya
+// estuviera visible de nuevo.
 function _s4NavBack() {
   volver(_s4OrigenSeccion || 's-home');
-  if (typeof _evActualizarFabMirlxs === 'function') _evActualizarFabMirlxs();
+  if (typeof _evActualizarFabReserva === 'function') _evActualizarFabReserva();
 }
 
 // Bug real corregido (ver "Cambios recientes"): el contenido de abajo

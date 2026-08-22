@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=a3b1d52d">
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
-<link rel="stylesheet" href="css/eventos.css?v=7b8034c9">
+<link rel="stylesheet" href="css/eventos.css?v=ecc68eeb">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
@@ -2734,11 +2734,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=129a8154"></script>
-<script src="js/eventos.js?v=63728194"></script>
+<script src="js/ui.js?v=20a524b0"></script>
+<script src="js/eventos.js?v=0794fe89"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
-<script src="js/reservas.js?v=44b4ad68"></script>
+<script src="js/reservas.js?v=323ea1b1"></script>
 <script src="js/perfil.js?v=3c533542"></script>
 <script src="js/admin.js"></script>
 <script src="js/pwa.js"></script>
@@ -4396,8 +4396,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </button>
 </div>
 
-<!-- FAB mensual dinámico: mirlxs -- "Reservar <Mes>" según el mes navegado en el timeline (ver _evActualizarFabMirlxs()/js/eventos.js) -->
-<button id="ev-mirlxs-fab" onclick="_evMirlxsFabReserva()" style="display:none"></button>
+<!-- FAB mensual dinámico: mirlxs y quindes -- "Reservar <Mes>" según el mes navegado en el timeline (ver _evActualizarFabReserva()/js/eventos.js) -->
+<button id="ev-mirlxs-fab" onclick="_evFabReserva()" style="display:none"></button>
 
 <!-- FAB de #s-tareas (admin) -- ver MANIFEST.md "Cambios recientes": ya NO
      es un speed-dial -- "Tareas por validar" y "Gestionar tareas activas"

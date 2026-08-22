@@ -1401,7 +1401,7 @@ function _evActualizarNavMesLabel(instant) {
   if (!span || !_evNavMesActual) return;
   _evFadeSwap(span, function() {
     span.textContent = NOMBRES_MESES[_evNavMesActual.month];
-    _evActualizarFabMirlxs();
+    _evActualizarFabReserva();
   }, instant);
 }
 // Alto REAL de la cabecera sticky en este instante (incluye el panel de
@@ -2439,7 +2439,14 @@ function _evActualizarTopBarModo() {
   // categoría mirlxs/quindes.
   var necesitaEquipo = _evNecesitaEquipo();
   if (btnPatin) btnPatin.style.display = necesitaEquipo ? '' : 'none';
-  if (btnAnticipada) btnAnticipada.style.display = necesitaEquipo ? 'none' : '';
+  // Asistencia anticipada pasa a ser exclusiva de quindes (ver "Cambios
+  // recientes" -- Fase 1 de diferenciación mirlxs/quindes): mirlxs ya tiene
+  // el botón "Reservar" inline por clase (_evReservarClase(), en cada card)
+  // + el FAB "Reservar <Mes>" (_evActualizarFabReserva(), abajo) para el
+  // flujo mensual -- la asistencia anticipada quedaba redundante para
+  // ellxs. `necesitaEquipo` (equipo del club) sigue ocultándolo también,
+  // sin cambios en ese criterio.
+  if (btnAnticipada) btnAnticipada.style.display = (necesitaEquipo || modo === 'mirlxs') ? 'none' : '';
   // Hallazgo relacionado, no pedido explícito pero mismo bug de fondo:
   // _evPillsInit() (más abajo, listas['equipamiento'] YA existe con los
   // tips correctos -- ícono de patín, reagendar/cancelar) recibía siempre
@@ -2458,14 +2465,18 @@ function _evActualizarTopBarModo() {
     // ellxs. Exclusivo de quindes, que no tienen ese botón en la card.
     fabRes.style.display = (modo === 'quindes' && !esAdmin) ? 'flex' : 'none';
   }
-  _evActualizarFabMirlxs();
+  _evActualizarFabReserva();
 }
 
-// FAB dinámico "Reservar <Mes>" para mirlxs (#ev-mirlxs-fab, index.html) --
-// atado al mes navegado en el timeline (_evNavMesActual), no a un mes fijo:
-// oculto para mes pasado o ya pagado (_evMesPagado()), texto/visibilidad se
-// recalculan cada vez que cambia el label de mes (_evActualizarNavMesLabel())
-// o el modo de cuenta (_evActualizarTopBarModo()).
+// FAB dinámico "Reservar <Mes>" (#ev-mirlxs-fab, index.html) -- atado al mes
+// navegado en el timeline (_evNavMesActual), no a un mes fijo: oculto para
+// mes pasado o ya pagado (_evMesPagado()), texto/visibilidad se recalculan
+// cada vez que cambia el label de mes (_evActualizarNavMesLabel()) o el modo
+// de cuenta (_evActualizarTopBarModo()). Generalizado a mirlxs Y quindes (ver
+// "Cambios recientes" -- antes exclusivo de mirlxs, `_evActualizarFabMirlxs()`)
+// -- quindes solo lo ve si ya tiene algún historial de cuota mensual (una
+// cuenta quindes que nunca reservó nada mensual todavía, `_quindesSinCuota()`,
+// arranca sin este FAB -- ver esa función/eventosAbrirAnticipada()).
 // Token incremental: cada llamada invalida los timeouts/rAF encolados por
 // llamadas anteriores todavía en vuelo (nav de mes puede cambiar más rápido
 // que la duración del fade, 250ms) -- sin esto, un hide() en curso podía
@@ -2475,16 +2486,25 @@ function _evActualizarTopBarModo() {
 // verdad de "¿está oculto?" mientras el fade está en curso, porque durante
 // el fade-out `display` sigue sin ser 'none' por 250ms.
 var _evFabToken = 0;
-function _evActualizarFabMirlxs() {
+function _evActualizarFabReserva() {
   var fab = document.getElementById('ev-mirlxs-fab');
   if (!fab) return;
   var deboMostrar = false, nuevoTexto = '';
-  // Bug real corregido antes de aplicar: _evActualizarTopBarModo() se llama
-  // (irEventos()) ANTES de que _evNavMesActual reciba su primer valor real
-  // -- eso ocurre recién dentro del callback async de _evCargarDatosReales().
-  // Sin esta guarda, .month sobre null tira TypeError y corta el resto de
-  // irEventos() (_evActualizarTopBarModo() corre al final de esa función).
-  if (_modoUsuario() === 'mirlxs' && !_adminToken && _evNavMesActual) {
+  var modo = _modoUsuario();
+  // Bug real corregido antes de aplicar (mirlxs, sin cambios en esta tanda):
+  // _evActualizarTopBarModo() se llama (irEventos()) ANTES de que
+  // _evNavMesActual reciba su primer valor real -- eso ocurre recién dentro
+  // del callback async de _evCargarDatosReales(). Sin esta guarda, .month
+  // sobre null tira TypeError y corta el resto de irEventos()
+  // (_evActualizarTopBarModo() corre al final de esa función).
+  // `quindesConHistorial` se calcula como condición extra (no un early
+  // return) para que quindes sin historial siga pasando por el MISMO
+  // mecanismo de fade-out de abajo si el FAB ya estaba visible (ej. hizo
+  // una reserva mensual, se le canceló, y ahora _todasReservas ya no trae
+  // ningún 'mensual') -- un return temprano acá saltearía esa animación.
+  var quindesConHistorial = modo !== 'quindes' ||
+    (_todasReservas || []).some(function(r) { return r.tipo === 'mensual'; });
+  if (!_adminToken && _evNavMesActual && (modo === 'mirlxs' || modo === 'quindes') && quindesConHistorial) {
     var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
     var mes = _evNavMesActual.month, anio = _evNavMesActual.year;
     var esPasado = anio < hoy.getFullYear() || (anio === hoy.getFullYear() && mes < hoy.getMonth());
@@ -2528,22 +2548,26 @@ function _evActualizarFabMirlxs() {
   }, 150);
 }
 
-// Onclick real del FAB de arriba -- abre el wizard de reserva ya en el modo
-// mensual (mismo mecanismo que el resto de accesos a s4 mensual, ver
-// "Cambios recientes" -- E.origenSeccionS4 para que la flecha atrás de s4
-// vuelva al timeline en vez de a Mis Reservas) y preselecciona el rango de
-// meses desde el mes actual hasta el que estaba navegado cuando se tocó el
-// FAB (inclusive). Antes esto se hacía simulando un click() sobre el
-// checkbox del mes destino 300ms después del render, confiando en
-// _autoencadenarMeses() (js/ui.js) para rellenar hacia atrás -- frágil ante
-// timing (el render de generarMeses() puede correr async detrás del
-// fadeOut de selTipoPago(), ver aplicarSwap()/js/reservas.js) y dejaba un
-// estado visualmente "saltado" (meses aparecían sin marcar y se marcaban
+// Onclick real del FAB de arriba (mirlxs Y quindes, ver "Cambios recientes"
+// -- antes exclusivo de mirlxs, `_evMirlxsFabReserva()`) -- abre el wizard
+// de reserva ya en el modo mensual (mismo mecanismo que el resto de accesos
+// a s4 mensual, ver "Cambios recientes" -- E.origenSeccionS4 para que la
+// flecha atrás de s4 vuelva al timeline en vez de a Mis Reservas) y
+// preselecciona el rango de meses desde el mes actual hasta el que estaba
+// navegado cuando se tocó el FAB (inclusive). Antes esto se hacía simulando
+// un click() sobre el checkbox del mes destino 300ms después del render,
+// confiando en _autoencadenarMeses() (js/ui.js) para rellenar hacia atrás --
+// frágil ante timing (el render de generarMeses() puede correr async detrás
+// del fadeOut de selTipoPago(), ver aplicarSwap()/js/reservas.js) y dejaba
+// un estado visualmente "saltado" (meses aparecían sin marcar y se marcaban
 // solo, 300ms después). Ahora el rango se calcula y se guarda en
 // E.mirlxsMesesPresel ANTES de disparar selTipoPago('mensual'), así que
 // generarMeses() (js/ui.js) ya lo lee al armar el HTML inicial de los
-// checkboxes -- sin click() simulado ni segundo setTimeout.
-function _evMirlxsFabReserva() {
+// checkboxes -- sin click() simulado ni segundo setTimeout. Nombre de los 2
+// flags de estado (E.mirlxsPreselMes/E.mirlxsMesesPresel) sin renombrar --
+// legacy de cuando el flujo era exclusivo de mirlxs, hoy compartido por los
+// 2 modos que usan este FAB.
+function _evFabReserva() {
   E.mirlxsPreselMes = _evNavMesActual.month;
   E.origenSeccionS4 = 's-eventos';
   var mesActual = new Date().getMonth();
@@ -2857,6 +2881,19 @@ function _evTieneCuotaAlDia() {
     var vh = _parseFechaSimple(r.validezHasta);
     return !vh || hoy <= vh;
   });
+}
+
+// Quindes que NUNCA tuvo ninguna reserva mensual (ni activa ni vencida,
+// cancelada o no) -- a diferencia de `_evTieneCuotaAlDia()` (¿tiene una
+// cuota VIGENTE ahora mismo?), esto pregunta "¿tuvo alguna vez algo que
+// restrinja su AA?" -- una cuenta quindes sin historial nunca pasó por el
+// flujo mensual, así que no hay ningún mes/rango del que partir para
+// restringirla. Usada desde Fase 2 en adelante para saltear restricciones
+// (RSVP libre, sin límites en Asistencia Anticipada) -- ver
+// eventosAbrirAnticipada() para el primer uso real.
+function _quindesSinCuota() {
+  return _modoUsuario() === 'quindes' && !_adminToken &&
+    !(_todasReservas || []).some(function(r) { return r.tipo === 'mensual'; });
 }
 
 // Fecha ISO hasta la que el mes pagado es válido (validezHasta de la cuota
@@ -5091,13 +5128,20 @@ function _evAntCargaVigente(miCarga) {
 function eventosAbrirAnticipada() {
   // Con cuota mensual activa, "Indefinido" no tiene sentido -- la asistencia
   // anticipada solo puede cubrir hasta el mes pagado (ver Cambios 2/3/4 en
-  // _evAntRenderMesesGrid()/_evAntCalTocarDia()/_evAntCalRender()). Se oculta
-  // la pill acá, al abrir la pantalla, para toda la visita (no cambia de
-  // cuota a mitad de sesión) -- el auto-cambio a "Por meses" si una regla
-  // existente ya tenía "Indefinido" seleccionado vive en
-  // _evAntIniciarWizard() (único lugar donde una pill puede quedar
-  // preseleccionada, ver ese comentario).
-  var _antTieneCuota = _evTieneCuotaAlDia();
+  // _evAntRenderMesesGrid()/_evAntCalTocarDia()/_evAntCalRender(), agnósticos
+  // a mirlxs/quindes -- mismo criterio de cuota para los 2 modos, sin ningún
+  // guard que los limite a mirlxs). Se oculta la pill acá, al abrir la
+  // pantalla, para toda la visita (no cambia de cuota a mitad de sesión) --
+  // el auto-cambio a "Por meses" si una regla existente ya tenía "Indefinido"
+  // seleccionado vive en _evAntIniciarWizard() (único lugar donde una pill
+  // puede quedar preseleccionada, ver ese comentario).
+  // Quindes sin cuota (_quindesSinCuota(), nunca tuvo ninguna reserva
+  // mensual): bypass explícito, sin restricciones -- aunque hoy ya coincide
+  // con `!_antTieneCuota` (sin historial mensual no puede haber cuota
+  // vigente), se deja como chequeo propio en vez de depender de esa
+  // equivalencia implícita, ver _quindesSinCuota() para el resto del criterio
+  // que Fase 2 va a reusar en RSVP.
+  var _antTieneCuota = _evTieneCuotaAlDia() && !_quindesSinCuota();
   var _antPillIndef = document.querySelector('#ev-ant-tipo-pills [data-val="indefinido"]');
   if (_antPillIndef) _antPillIndef.style.display = _antTieneCuota ? 'none' : '';
   _evGuardarScrollTimeline();

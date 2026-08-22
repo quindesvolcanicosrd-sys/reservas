@@ -166,8 +166,8 @@
    sutil en vez de las 2 apareciendo en el mismo instante exacto. */
 .ev-fab-menu.ev-fab-abierto .ev-fab-opcion:first-child { transition-delay: 0.04s; }
 
-/* FAB dinámico "Reservar <Mes>" para mirlxs (#ev-mirlxs-fab, index.html,
-   ver _evActualizarFabMirlxs()/js/eventos.js) -- pill de texto en vez del
+/* FAB dinámico "Reservar <Mes>" para mirlxs y quindes (#ev-mirlxs-fab,
+   index.html, ver _evActualizarFabReserva()/js/eventos.js) -- pill de texto en vez del
    botón cuadrado con ícono de los otros 2 FAB de esta pantalla (arriba, en
    `.ev-fab-menu`/`.ev-fab-btn`) porque el texto cambia según el mes
    navegado. Mismo bottom-offset que `.ev-fab-menu` (por encima de

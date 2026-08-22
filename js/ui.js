@@ -937,8 +937,8 @@ function generarMeses() {
     .filter(function(r) { return r.estado === 'Confirmada'; })
     .map(function(r) { return r.fecha.toLowerCase().trim(); });
 
-  // Preselección de rango del FAB mensual de mirlxs (ver
-  // _evMirlxsFabReserva(), js/eventos.js): E.mirlxsMesesPresel es un array
+  // Preselección de rango del FAB mensual (mirlxs y quindes, ver
+  // _evFabReserva(), js/eventos.js): E.mirlxsMesesPresel es un array
   // de índices de mes (0-based, mismo formato que `i` acá). Esta función
   // SOLO lo lee -- nunca lo limpia -- porque generarMeses() puede correr
   // más de una vez para la misma preselección (sync + de nuevo detrás del
