@@ -2761,6 +2761,24 @@ function _evTieneCuotaAlDia() {
   });
 }
 
+// Fecha ISO hasta la que el mes pagado es válido (validezHasta de la cuota
+// mensual activa). Null si no hay cuota activa. Usada en _evTimelineItems()
+// para no mostrar Entrenamientos del mes siguiente al pagado.
+function _evVencimientoCuota() {
+  var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  var res = null;
+  (_todasReservas || []).some(function(r) {
+    if (r.tipo !== 'mensual' || r.estado === 'Cancelada') return false;
+    var vh = _parseFechaSimple(r.validezHasta);
+    // _evFechaCmp() (más abajo, único comparador de fechas de este archivo)
+    // solo entiende ISO -- r.validezHasta viene en "d/m/aaaa" (ver comentario
+    // en _evTieneCuotaAlDia()), hay que convertir antes de devolver.
+    if (vh && hoy <= vh) { res = _evToISO(vh); return true; }
+    return false;
+  });
+  return res;
+}
+
 function _evMarcarAsistencia(id, estado) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === id; })[0];
   if (!ev) return;
@@ -3417,11 +3435,16 @@ function _evTimelineItems() {
   // sola vez acá en vez de por cada evento evaluado) marca qué
   // Entrenamientos futuros tienen botón "Reservar" real.
   var _hoyIsoTimeline = _evHoyISO();
-  // Con cuota mensual activa el timeline se abre completo (sin filtrar por
-  // próximas 6 ni por asistencia pasada) -- el usuario ve todos los eventos
-  // del mes pagado. Sin cuota, se aplica el mismo filtro que a cuentas con
-  // equipo del club: solo próximas 6 clases futuras + pasadas con asistencia.
+  // Con cuota mensual activa el timeline se abre sin el filtro de "próximas
+  // 6" ni de asistencia pasada -- pero los Entrenamientos futuros siguen
+  // acotados al mes pagado (`_cuotaVenceISO`, más abajo): bug real corregido,
+  // antes se veían TODOS los meses futuros con solo 1 mes pagado. Sin cuota,
+  // se aplica el mismo filtro que a cuentas con equipo del club: solo
+  // próximas 6 clases futuras + pasadas con asistencia.
   var _filtroEquipoActivo = _modoUsuario() === 'mirlxs' && !_adminToken && !_evTieneCuotaAlDia();
+  // Fecha de vencimiento del mes pagado — limita los Entrenamientos futuros
+  // visibles cuando hay cuota activa (no mostrar meses siguientes al pagado).
+  var _cuotaVenceISO = (_modoUsuario() === 'mirlxs' && !_adminToken) ? _evVencimientoCuota() : null;
   var _evProximas6EntrenIds = {};
   if (_filtroEquipoActivo) {
     (_EV_EVENTOS || []).filter(function(x) {
@@ -3430,7 +3453,15 @@ function _evTimelineItems() {
       .forEach(function(x) { _evProximas6EntrenIds[x.id] = true; });
   }
   function _evEsRelevantePorEquipo(e) {
-    if (!_filtroEquipoActivo) return true;
+    if (!_filtroEquipoActivo) {
+      // Cuota activa: ocultar Entrenamientos futuros que caen después del
+      // mes pagado (no mostrar meses siguientes al validezHasta).
+      if (_cuotaVenceISO && e.tipo === 'Entrenamiento') {
+        var _cmpFut = _evFechaCmp(e.fecha, _hoyIsoTimeline);
+        if (_cmpFut > 0) return _evFechaCmp(e.fecha, _cuotaVenceISO) <= 0;
+      }
+      return true;
+    }
     var cmp = _evFechaCmp(e.fecha, _hoyIsoTimeline);
     if (cmp >= 0) {
       // Hoy/futuro: el filtro solo tiene sentido para Entrenamiento (único
