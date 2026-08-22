@@ -968,18 +968,12 @@ function _autoencadenarMeses(el) {
   if (!el.checked) return;
   var checkboxes = Array.prototype.slice.call(document.querySelectorAll('#lista-meses-unificada .mes-item input[type="checkbox"]'));
   var idx = checkboxes.indexOf(el);
-  var agregados = [];
   for (var i = idx - 1; i >= 0; i--) {
     var cb = checkboxes[i];
     var item = cb.closest('.mes-item');
     if (item.classList.contains('mes-past')) break;
     if (cb.checked) break;
     cb.checked = true;
-    agregados.push(cb.value);
-  }
-  if (agregados.length > 0) {
-    agregados.reverse();
-    mostrarToast(agregados.join(', ') + (agregados.length > 1 ? ' también se agregaron' : ' también se agregó'), null, true);
   }
 }
 
@@ -987,15 +981,11 @@ function _autodesencadenarMeses(el) {
   if (el.checked) return;
   var checkboxes = Array.prototype.slice.call(document.querySelectorAll('#lista-meses-unificada .mes-item input[type="checkbox"]'));
   var idx = checkboxes.indexOf(el);
-  var quitados = [];
   for (var i = idx + 1; i < checkboxes.length; i++) {
     var cb = checkboxes[i];
     var item = cb.closest('.mes-item');
     if (item.classList.contains('mes-confirmado')) break;
-    if (cb.checked) { cb.checked = false; quitados.push(cb.value); }
-  }
-  if (quitados.length > 0) {
-    mostrarToast(quitados.join(', ') + (quitados.length > 1 ? ' también se quitaron' : ' también se quitó'), null, true);
+    if (cb.checked) cb.checked = false;
   }
 }
 

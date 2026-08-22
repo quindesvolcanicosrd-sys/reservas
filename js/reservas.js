@@ -282,8 +282,17 @@ function _s4ActualizarNav() {
   // "sin reservas" (ver _s4VacioAutoRedirect, arriba de este archivo).
   if (tituloVacio) tituloVacio.style.display = (puedeElegir && _s4VacioAutoRedirect) ? '' : 'none';
   // Mirlxs: tipo ya elegido antes de entrar a s4 (FAB → mensual,
-  // botón inline → clase). Ocultar el selector Por clase/Mensual.
-  if (_modoUsuario() === 'mirlxs') segWrap.style.display = 'none';
+  // botón inline → clase). Ocultar el selector Por clase/Mensual y mostrar
+  // un título fijo -- sin esto, con canPayMonthly()===true (`puedeElegir`)
+  // el título quedaba oculto (mutuamente excluyente con el selector, más
+  // arriba) Y el selector se ocultaba acá mismo, dejando el nav sin ningún
+  // texto real para esta cuenta (bug real, único camino de mirlxs a s4 hoy
+  // es el FAB de reserva mensual, ver "Cambios recientes").
+  if (_modoUsuario() === 'mirlxs') {
+    segWrap.style.display = 'none';
+    titulo.textContent = 'Reservas mensuales';
+    titulo.style.display = '';
+  }
   // #s4-nav-spacer (ver index.html): re-medir siempre acá, no solo al entrar
   // a s4 -- las 2 variantes de #s4-nav (arriba) pueden tener alto distinto y
   // esta función es la única fuente que las togglea, mismo criterio que
@@ -291,6 +300,18 @@ function _s4ActualizarNav() {
   var nav = document.getElementById('s4-nav');
   var spacer = document.getElementById('s4-nav-spacer');
   if (nav && spacer) spacer.style.height = (nav.offsetHeight + 8) + 'px';
+}
+
+// Onclick real de #s4-nav-back (index.html) -- wrapper sobre
+// volver(_s4OrigenSeccion || 's-home') para poder sumar side-effects propios
+// de la flecha atrás sin tocar el atributo inline. Restaura el FAB de
+// reserva mensual de mirlxs (#ev-mirlxs-fab, js/eventos.js) que
+// irNuevaReserva() (js/home.js) oculta al entrar al wizard -- sin esto,
+// tocar atrás desde s4 dejaba el FAB oculto hasta la próxima recarga del
+// timeline, aunque el timeline mismo ya estuviera visible de nuevo.
+function _s4NavBack() {
+  volver(_s4OrigenSeccion || 's-home');
+  if (typeof _evActualizarFabMirlxs === 'function') _evActualizarFabMirlxs();
 }
 
 // Bug real corregido (ver "Cambios recientes"): el contenido de abajo
