@@ -937,6 +937,14 @@ function generarMeses() {
     .filter(function(r) { return r.estado === 'Confirmada'; })
     .map(function(r) { return r.fecha.toLowerCase().trim(); });
 
+  // Preselección de rango del FAB mensual de mirlxs (ver
+  // _evMirlxsFabReserva(), js/eventos.js): E.mirlxsMesesPresel es un array
+  // de índices de mes (0-based, mismo formato que `i` acá) de un solo uso --
+  // se consume en este render y se limpia recién al final de la función
+  // (nunca antes de que este render corra), porque generarMeses() puede
+  // ejecutarse de forma async detrás del fadeOut de selTipoPago().
+  var mesesPresel = E.mirlxsMesesPresel || [];
+
   var html = '';
   for (var i = 0; i < 12; i++) {
     if (i === mesActual && mesActual > 0) {
@@ -945,20 +953,24 @@ function generarMeses() {
     var nombre = NOMBRES_MESES[i];
     var esPasado = i < mesActual;
     var confirmado = mesesConfirmados.indexOf(nombre.toLowerCase()) !== -1;
-    html += crearMesItem(nombre, esPasado, confirmado);
+    var preseleccionado = !confirmado && mesesPresel.indexOf(i) !== -1;
+    html += crearMesItem(nombre, esPasado, confirmado, preseleccionado);
   }
   lista.innerHTML = html;
+
+  E.mirlxsPreselMes = null;
+  E.mirlxsMesesPresel = null;
 }
 
-function crearMesItem(nombre, esPasado, confirmado) {
+function crearMesItem(nombre, esPasado, confirmado, preseleccionado) {
   var clases = 'mes-item' + (esPasado ? ' mes-past' : '') + (confirmado ? ' mes-confirmado' : '');
   var badge = confirmado
     ? '<span class="mes-badge"><span class="material-symbols-outlined">check_circle</span>Pagado</span>'
     : '';
-  var disabled = confirmado ? ' disabled checked' : '';
+  var attrs = confirmado ? ' disabled checked' : (preseleccionado ? ' checked' : '');
   var onchange = confirmado ? '' : ' onchange="this.checked ? _autoencadenarMeses(this) : _autodesencadenarMeses(this);actualizarTotalS4()"';
   return '<label class="' + clases + '">' +
-    '<input type="checkbox" value="' + nombre + '"' + disabled + onchange + '>' +
+    '<input type="checkbox" value="' + nombre + '"' + attrs + onchange + '>' +
     '<span class="mes-nombre">' + nombre + '</span>' +
     badge +
     '</label>';

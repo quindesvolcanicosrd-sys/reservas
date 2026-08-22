@@ -2531,23 +2531,27 @@ function _evActualizarFabMirlxs() {
 // Onclick real del FAB de arriba -- abre el wizard de reserva ya en el modo
 // mensual (mismo mecanismo que el resto de accesos a s4 mensual, ver
 // "Cambios recientes" -- E.origenSeccionS4 para que la flecha atrás de s4
-// vuelva al timeline en vez de a Mis Reservas) y preselecciona el checkbox
-// del mes que estaba navegado cuando se tocó el FAB.
+// vuelva al timeline en vez de a Mis Reservas) y preselecciona el rango de
+// meses desde el mes actual hasta el que estaba navegado cuando se tocó el
+// FAB (inclusive). Antes esto se hacía simulando un click() sobre el
+// checkbox del mes destino 300ms después del render, confiando en
+// _autoencadenarMeses() (js/ui.js) para rellenar hacia atrás -- frágil ante
+// timing (el render de generarMeses() puede correr async detrás del
+// fadeOut de selTipoPago(), ver aplicarSwap()/js/reservas.js) y dejaba un
+// estado visualmente "saltado" (meses aparecían sin marcar y se marcaban
+// solo, 300ms después). Ahora el rango se calcula y se guarda en
+// E.mirlxsMesesPresel ANTES de disparar selTipoPago('mensual'), así que
+// generarMeses() (js/ui.js) ya lo lee al armar el HTML inicial de los
+// checkboxes -- sin click() simulado ni segundo setTimeout.
 function _evMirlxsFabReserva() {
   E.mirlxsPreselMes = _evNavMesActual.month;
   E.origenSeccionS4 = 's-eventos';
+  var mesActual = new Date().getMonth();
+  var rango = [];
+  for (var m = mesActual; m <= E.mirlxsPreselMes; m++) rango.push(m);
+  E.mirlxsMesesPresel = rango;
   irNuevaReserva(false, null);
   setTimeout(function() { selTipoPago('mensual'); }, 80);
-  setTimeout(function() {
-    // Los checkbox de #lista-meses-unificada se identifican por `value`
-    // (nombre del mes, ver crearMesItem()/js/ui.js), no por índice --
-    // buscar por índice fijo asumía que el checkbox N-ésimo del DOM
-    // corresponde al mes N-ésimo (0-based), supuesto frágil ante cualquier
-    // cambio futuro en generarMeses() que filtre o reordene meses.
-    var nombreMes = NOMBRES_MESES[E.mirlxsPreselMes];
-    var cb = document.querySelector('#lista-meses-unificada input[value="' + nombreMes + '"]');
-    if (cb && !cb.checked) cb.click();
-  }, 300);
 }
 
 var _evPillsTimer = null;
