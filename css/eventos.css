@@ -166,6 +166,40 @@
    sutil en vez de las 2 apareciendo en el mismo instante exacto. */
 .ev-fab-menu.ev-fab-abierto .ev-fab-opcion:first-child { transition-delay: 0.04s; }
 
+/* FAB dinámico "Reservar <Mes>" para mirlxs (#ev-mirlxs-fab, index.html,
+   ver _evActualizarFabMirlxs()/js/eventos.js) -- pill de texto en vez del
+   botón cuadrado con ícono de los otros 2 FAB de esta pantalla (arriba, en
+   `.ev-fab-menu`/`.ev-fab-btn`) porque el texto cambia según el mes
+   navegado. Mismo bottom-offset que `.ev-fab-menu` (por encima de
+   `.app-bottom-nav`, `--bottom-nav-h`, en vez de un `24px` fijo que hubiera
+   quedado tapado detrás/adentro de la nav) y mismo criterio de `right` con
+   piso de 20px en vez de `right:20px` a secas -- la app vive en una columna
+   centrada de máx. 523px (ver el comentario de `.ev-fab-menu`, arriba), no
+   en el viewport completo: sin el `max()`, en desktop ancho el botón se iría
+   al borde crudo del navegador en vez de quedar pegado a la columna real de
+   la app (`50vw - 241.5px` = mitad de la columna, 261.5px, menos los 20px
+   de margen deseado; en mobile, viewport ≤523px, el `max()` cae siempre en
+   el piso de 20px). */
+#ev-mirlxs-fab {
+  position: fixed;
+  right: max(20px, calc(50vw - 241.5px));
+  bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 16px);
+  z-index: 500;
+  padding: 14px 20px;
+  border-radius: 24px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  background: var(--brand);
+  color: var(--white);
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+@media (hover: hover) { #ev-mirlxs-fab:hover { background: var(--brand-dk); } }
+#ev-mirlxs-fab:active { transform: scale(0.96); }
+
 .ev-dot {
   width: 6px; height: 6px; border-radius: 50%; background: var(--brand); flex-shrink: 0;
   cursor: pointer;

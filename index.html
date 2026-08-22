@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=a3b1d52d">
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
-<link rel="stylesheet" href="css/eventos.css?v=15e9f002">
+<link rel="stylesheet" href="css/eventos.css?v=2e53e8ee">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
@@ -2710,7 +2710,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=2f6dc221"></script>
-<script src="js/eventos.js?v=a4364f80"></script>
+<script src="js/eventos.js?v=7533bda0"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=b0083bd1"></script>
@@ -4371,12 +4371,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </button>
 </div>
 
-<!-- FAB mensual: mirlxs sin cuota — acceso directo a reserva mensual -->
-<div class="ev-fab-menu" id="ev-mirlxs-fab" style="display:none;">
-  <button type="button" class="ev-fab-btn" onclick="_evMirlxsIrMensual()" title="Reserva mensual" aria-label="Reserva mensual">
-    <span class="material-symbols-outlined">add</span>
-  </button>
-</div>
+<!-- FAB mensual dinámico: mirlxs -- "Reservar <Mes>" según el mes navegado en el timeline (ver _evActualizarFabMirlxs()/js/eventos.js) -->
+<button id="ev-mirlxs-fab" onclick="_evMirlxsFabReserva()" style="display:none"></button>
 
 <!-- FAB de #s-tareas (admin) -- ver MANIFEST.md "Cambios recientes": ya NO
      es un speed-dial -- "Tareas por validar" y "Gestionar tareas activas"

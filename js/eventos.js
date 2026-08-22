@@ -540,16 +540,6 @@ document.addEventListener('click', function(e) {
   var menu = document.getElementById('ev-fab-menu');
   if (menu && !menu.contains(e.target)) _evFabCerrar();
 });
-// FAB mensual para mirlxs con equipo propio (#ev-mirlxs-fab, index.html) --
-// botón único, sin speed-dial (ver "Cambios recientes").
-// Ir al flujo mensual desde el FAB sin pasar por cerrarSheetTipoPago
-// (ese helper solo aplica cuando el sheet de tipo-pago está abierto).
-function _evMirlxsIrMensual() {
-  E.origenSeccionS4 = 's-eventos';
-  irNuevaReserva(false, null);
-  setTimeout(function() { if (typeof selTipoPago === 'function') selTipoPago('mensual'); }, 80);
-}
-
 // Skeleton de #ev-timeline mientras _evCargarDatosReales() espera la
 // respuesta real -- reemplaza el loader de pantalla completa que tenía antes
 // (ver "Cambios recientes"), mismo criterio ya establecido en este mismo
@@ -1410,7 +1400,8 @@ function _evActualizarNavMesLabel(instant) {
   var span = document.getElementById('ev-nav-mes-texto');
   if (!span || !_evNavMesActual) return;
   _evFadeSwap(span, function() {
-    span.textContent = NOMBRES_MESES[_evNavMesActual.month] + ' ' + _evNavMesActual.year;
+    span.textContent = NOMBRES_MESES[_evNavMesActual.month];
+    _evActualizarFabMirlxs();
   }, instant);
 }
 // Alto REAL de la cabecera sticky en este instante (incluye el panel de
@@ -2467,11 +2458,47 @@ function _evActualizarTopBarModo() {
     // ellxs. Exclusivo de quindes, que no tienen ese botón en la card.
     fabRes.style.display = (modo === 'quindes' && !esAdmin) ? 'flex' : 'none';
   }
-  var fabMirlxs = document.getElementById('ev-mirlxs-fab');
-  if (fabMirlxs) {
-    var _mostrarMirlxsFab = modo === 'mirlxs' && !necesitaEquipo && !esAdmin;
-    fabMirlxs.style.display = _mostrarMirlxsFab ? 'flex' : 'none';
-  }
+  _evActualizarFabMirlxs();
+}
+
+// FAB dinámico "Reservar <Mes>" para mirlxs (#ev-mirlxs-fab, index.html) --
+// atado al mes navegado en el timeline (_evNavMesActual), no a un mes fijo:
+// oculto para mes pasado o ya pagado (_evMesPagado()), texto/visibilidad se
+// recalculan cada vez que cambia el label de mes (_evActualizarNavMesLabel())
+// o el modo de cuenta (_evActualizarTopBarModo()).
+function _evActualizarFabMirlxs() {
+  var fab = document.getElementById('ev-mirlxs-fab');
+  if (!fab) return;
+  if (_modoUsuario() !== 'mirlxs' || _adminToken) { fab.style.display = 'none'; return; }
+  // Bug real corregido antes de aplicar: _evActualizarTopBarModo() se llama
+  // (irEventos()) ANTES de que _evNavMesActual reciba su primer valor real
+  // -- eso ocurre recién dentro del callback async de _evCargarDatosReales().
+  // Sin esta guarda, .month sobre null tira TypeError y corta el resto de
+  // irEventos() (_evActualizarTopBarModo() corre al final de esa función).
+  if (!_evNavMesActual) { fab.style.display = 'none'; return; }
+  var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  var mes = _evNavMesActual.month, anio = _evNavMesActual.year;
+  var esPasado = anio < hoy.getFullYear() || (anio === hoy.getFullYear() && mes < hoy.getMonth());
+  if (esPasado || _evMesPagado(mes, anio)) { fab.style.display = 'none'; return; }
+  fab.textContent = 'Reservar ' + NOMBRES_MESES[mes];
+  fab.style.display = '';
+}
+
+// Onclick real del FAB de arriba -- abre el wizard de reserva ya en el modo
+// mensual (mismo mecanismo que el resto de accesos a s4 mensual, ver
+// "Cambios recientes" -- E.origenSeccionS4 para que la flecha atrás de s4
+// vuelva al timeline en vez de a Mis Reservas) y preselecciona el checkbox
+// del mes que estaba navegado cuando se tocó el FAB.
+function _evMirlxsFabReserva() {
+  E.mirlxsPreselMes = _evNavMesActual.month;
+  E.origenSeccionS4 = 's-eventos';
+  irNuevaReserva(false, null);
+  setTimeout(function() { selTipoPago('mensual'); }, 80);
+  setTimeout(function() {
+    var cbs = document.querySelectorAll('#lista-meses-unificada input[type="checkbox"]');
+    var idx = E.mirlxsPreselMes;
+    if (cbs[idx] && !cbs[idx].checked) cbs[idx].click();
+  }, 200);
 }
 
 var _evPillsTimer = null;
@@ -2785,6 +2812,18 @@ function _evVencimientoCuota() {
     return false;
   });
   return res;
+}
+
+function _evMesPagado(mesIdx, anio) {
+  var _MK = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var mn = _MK[mesIdx];
+  return (_todasReservas || []).some(function(r) {
+    if (r.tipo !== 'mensual' || r.estado === 'Cancelada') return false;
+    if ((r.fecha || '').toLowerCase().trim() !== mn) return false;
+    var vh = _parseFechaSimple(r.validezHasta);
+    if (!vh) return true;
+    return vh.getFullYear() === anio;
+  });
 }
 
 function _evMarcarAsistencia(id, estado) {
@@ -3444,17 +3483,14 @@ function _evTimelineItems() {
   // Entrenamientos futuros tienen botón "Reservar" real.
   var _hoyIsoTimeline = _evHoyISO();
   // Con cuota mensual activa el timeline se abre sin el filtro de "próximas
-  // 6" -- pero los Entrenamientos futuros siguen acotados al mes pagado
-  // (`_cuotaVenceISO`, más abajo: bug real corregido, antes se veían TODOS
-  // los meses futuros con solo 1 mes pagado) y los pasados también quedan
-  // acotados a lo relevante (asistencia real, reserva de clase puntual, o
-  // caer dentro de un mes que sí estuvo pagado -- ver `_evEsRelevantePorEquipo()`).
-  // Sin cuota, se aplica el mismo filtro que a cuentas con equipo del club:
-  // solo próximas 6 clases futuras + pasadas con asistencia.
+  // 6" -- los Entrenamientos futuros son SIEMPRE visibles (sin límite por
+  // mes pagado, a propósito -- ver "Cambios recientes") y los pasados
+  // quedan acotados a lo relevante (asistencia real, reserva de clase
+  // puntual, o caer dentro de un mes que sí estuvo pagado -- ver
+  // `_evEsRelevantePorEquipo()`). Sin cuota, se aplica el mismo filtro que
+  // a cuentas con equipo del club: solo próximas 6 clases futuras + pasadas
+  // con asistencia.
   var _filtroEquipoActivo = _modoUsuario() === 'mirlxs' && !_adminToken && !_evTieneCuotaAlDia();
-  // Fecha de vencimiento del mes pagado — limita los Entrenamientos futuros
-  // visibles cuando hay cuota activa (no mostrar meses siguientes al pagado).
-  var _cuotaVenceISO = (_modoUsuario() === 'mirlxs' && !_adminToken) ? _evVencimientoCuota() : null;
   var _evProximas6EntrenIds = {};
   if (_filtroEquipoActivo) {
     (_EV_EVENTOS || []).filter(function(x) {
@@ -3464,12 +3500,6 @@ function _evTimelineItems() {
   }
   function _evEsRelevantePorEquipo(e) {
     if (!_filtroEquipoActivo) {
-      // Cuota activa: ocultar Entrenamientos futuros que caen después del
-      // mes pagado (no mostrar meses siguientes al validezHasta).
-      if (_cuotaVenceISO && e.tipo === 'Entrenamiento') {
-        var _cmpFut = _evFechaCmp(e.fecha, _hoyIsoTimeline);
-        if (_cmpFut > 0) return _evFechaCmp(e.fecha, _cuotaVenceISO) <= 0;
-      }
       // Pasado (mirlxs con cuota): mostrar solo lo relevante
       if (_modoUsuario() === 'mirlxs' && _evFechaCmp(e.fecha, _hoyIsoTimeline) < 0) {
         if (e.miAsistenciaReal) return true;
