@@ -3444,11 +3444,13 @@ function _evTimelineItems() {
   // Entrenamientos futuros tienen botón "Reservar" real.
   var _hoyIsoTimeline = _evHoyISO();
   // Con cuota mensual activa el timeline se abre sin el filtro de "próximas
-  // 6" ni de asistencia pasada -- pero los Entrenamientos futuros siguen
-  // acotados al mes pagado (`_cuotaVenceISO`, más abajo): bug real corregido,
-  // antes se veían TODOS los meses futuros con solo 1 mes pagado. Sin cuota,
-  // se aplica el mismo filtro que a cuentas con equipo del club: solo
-  // próximas 6 clases futuras + pasadas con asistencia.
+  // 6" -- pero los Entrenamientos futuros siguen acotados al mes pagado
+  // (`_cuotaVenceISO`, más abajo: bug real corregido, antes se veían TODOS
+  // los meses futuros con solo 1 mes pagado) y los pasados también quedan
+  // acotados a lo relevante (asistencia real, reserva de clase puntual, o
+  // caer dentro de un mes que sí estuvo pagado -- ver `_evEsRelevantePorEquipo()`).
+  // Sin cuota, se aplica el mismo filtro que a cuentas con equipo del club:
+  // solo próximas 6 clases futuras + pasadas con asistencia.
   var _filtroEquipoActivo = _modoUsuario() === 'mirlxs' && !_adminToken && !_evTieneCuotaAlDia();
   // Fecha de vencimiento del mes pagado — limita los Entrenamientos futuros
   // visibles cuando hay cuota activa (no mostrar meses siguientes al pagado).
@@ -3467,6 +3469,22 @@ function _evTimelineItems() {
       if (_cuotaVenceISO && e.tipo === 'Entrenamiento') {
         var _cmpFut = _evFechaCmp(e.fecha, _hoyIsoTimeline);
         if (_cmpFut > 0) return _evFechaCmp(e.fecha, _cuotaVenceISO) <= 0;
+      }
+      // Pasado (mirlxs con cuota): mostrar solo lo relevante
+      if (_modoUsuario() === 'mirlxs' && _evFechaCmp(e.fecha, _hoyIsoTimeline) < 0) {
+        if (e.miAsistenciaReal) return true;
+        if (e.tipo !== 'Entrenamiento') return false;
+        // Entrenamiento: reserva de clase puntual
+        if ((_todasReservas || []).some(function(r) { return r.fecha === e.id && r.estado !== 'Cancelada'; })) return true;
+        // O cae dentro de un mes pagado
+        var _p = e.fecha.split('-'), _mesEv = parseInt(_p[1]) - 1, _anioEv = parseInt(_p[0]);
+        return (_todasReservas || []).some(function(r) {
+          if (r.tipo !== 'mensual' || r.estado === 'Cancelada') return false;
+          var mn = _MESES_MAP[(r.fecha || '').toLowerCase().trim()];
+          if (mn !== _mesEv) return false;
+          var vh = _parseFechaSimple(r.validezHasta);
+          return (vh ? vh.getFullYear() : _anioEv) === _anioEv;
+        });
       }
       return true;
     }
