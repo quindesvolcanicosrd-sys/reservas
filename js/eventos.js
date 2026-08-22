@@ -2774,6 +2774,14 @@ function _evVencimientoCuota() {
     // solo entiende ISO -- r.validezHasta viene en "d/m/aaaa" (ver comentario
     // en _evTieneCuotaAlDia()), hay que convertir antes de devolver.
     if (vh && hoy <= vh) { res = _evToISO(vh); return true; }
+    if (vh) return false; // validezHasta existe pero ya expiró
+    // Sin validezHasta: inferir fin de mes desde el nombre del mes (r.fecha)
+    var mesNum = _MESES_MAP[(r.fecha || '').toLowerCase().trim()];
+    if (mesNum !== undefined) {
+      var finMes = new Date(hoy.getFullYear(), mesNum + 1, 0);
+      finMes.setHours(0, 0, 0, 0);
+      if (hoy <= finMes) { res = _evToISO(finMes); return true; }
+    }
     return false;
   });
   return res;
