@@ -309,8 +309,13 @@ function _s4ActualizarNav() {
 // MANIFEST.md "Cambios recientes") que irNuevaReserva() (js/home.js) oculta
 // al entrar al wizard -- sin esto, tocar atrás desde s4 dejaba el FAB oculto
 // hasta la próxima recarga del timeline, aunque el timeline mismo ya
-// estuviera visible de nuevo.
+// estuviera visible de nuevo. También limpia E.quindesPendingRsvpEvento
+// (ver "Cambios recientes" -- flujo de gracia de quindes, js/eventos.js):
+// abandonar el wizard acá (único botón atrás real de s4) es un cancelar
+// explícito -- sin pago, no corresponde auto-marcar "Asistiré" si la
+// persona vuelve a pagar por otro camino más adelante en la misma sesión.
 function _s4NavBack() {
+  E.quindesPendingRsvpEvento = null;
   volver(_s4OrigenSeccion || 's-home');
   if (typeof _evActualizarFabReserva === 'function') _evActualizarFabReserva();
 }
@@ -810,6 +815,11 @@ function cargarFechas() {
     window._cargandoFechasReserva = false;
     var tpSegErrEl = document.getElementById('tp-seg');
     if (tpSegErrEl) tpSegErrEl.classList.remove('tp-seg-cargando');
+    // getFechasDisponibles falló -- el wizard nunca llega a mostrarse, se
+    // saca a la persona de vuelta a s-home. Mismo criterio que _s4NavBack()
+    // (arriba, ver ese comentario): salir de s4 sin pagar no debe dejar
+    // E.quindesPendingRsvpEvento vivo para un pago no relacionado más tarde.
+    E.quindesPendingRsvpEvento = null;
     ir('s-home'); mostrarToast(e.message || 'No se pudieron cargar las fechas disponibles.', 'error');
   });
 }
