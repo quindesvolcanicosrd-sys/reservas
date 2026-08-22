@@ -2018,6 +2018,8 @@ function ajGuardarTallaAjustes(btn) {
     _actualizarResumenEquipAjustes();
     if (typeof _renderHomeEquipBtn === 'function') _renderHomeEquipBtn();
     ajCerrarSheetTallaAjustes();
+    if (typeof _evActualizarTopBarModo === 'function') _evActualizarTopBarModo();
+    if (typeof _evRenderTimeline === 'function') _evRenderTimeline(true);
     mostrarToast('Equipamiento actualizado', 'ok');
   }, function(e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
@@ -2092,6 +2094,8 @@ function ajGuardarProtecAjustes(btn) {
     _actualizarResumenEquipAjustes();
     if (typeof _renderHomeEquipBtn === 'function') _renderHomeEquipBtn();
     ajCerrarSheetProtecAjustes();
+    if (typeof _evActualizarTopBarModo === 'function') _evActualizarTopBarModo();
+    if (typeof _evRenderTimeline === 'function') _evRenderTimeline(true);
     mostrarToast('Equipamiento actualizado', 'ok');
   }, function(e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
