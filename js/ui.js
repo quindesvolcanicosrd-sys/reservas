@@ -940,11 +940,13 @@ function generarMeses() {
   // Preselección de rango del FAB mensual de mirlxs (ver
   // _evMirlxsFabReserva(), js/eventos.js): E.mirlxsMesesPresel es un array
   // de índices de mes (0-based, mismo formato que `i` acá). Esta función
-  // SOLO lo lee -- nunca lo limpia -- porque generarMeses() puede correr 2
-  // veces por la misma preselección (sync + de nuevo ~200ms después detrás
-  // del fadeOut de selTipoPago()); limpiar acá corría el riesgo de borrar el
-  // flag entre esas 2 pasadas. El propio _evMirlxsFabReserva() limpia ambos
-  // flags con un setTimeout de 600ms, con margen de sobra para las 2 pasadas.
+  // SOLO lo lee -- nunca lo limpia -- porque generarMeses() puede correr
+  // más de una vez para la misma preselección (sync + de nuevo detrás del
+  // fadeOut de selTipoPago(), o incluso más tarde por cualquier fetch que
+  // dispare un re-render) y no hay forma de saber de antemano cuál de esos
+  // renders es "el último". El flag se limpia recién cuando la persona
+  // toca un checkbox a mano (onchange de abajo, en crearMesItem()) -- ese
+  // sí es un punto real donde ya no hace falta seguir preseleccionando.
   var mesesPresel = E.mirlxsMesesPresel || [];
 
   var html = '';
@@ -967,7 +969,13 @@ function crearMesItem(nombre, esPasado, confirmado, preseleccionado) {
     ? '<span class="mes-badge"><span class="material-symbols-outlined">check_circle</span>Pagado</span>'
     : '';
   var attrs = confirmado ? ' disabled checked' : (preseleccionado ? ' checked' : '');
-  var onchange = confirmado ? '' : ' onchange="this.checked ? _autoencadenarMeses(this) : _autodesencadenarMeses(this);actualizarTotalS4()"';
+  // Primer toque real del usuario sobre cualquier checkbox de mes: limpia
+  // la preselección del FAB mensual de mirlxs (E.mirlxsPreselMes/
+  // E.mirlxsMesesPresel, ver nota en generarMeses()) ANTES de despachar a
+  // _autoencadenarMeses()/_autodesencadenarMeses() -- de ahí en adelante la
+  // selección es 100% manual, sin importar cuántos re-renders de
+  // generarMeses() ocurran después.
+  var onchange = confirmado ? '' : ' onchange="E.mirlxsPreselMes=undefined;E.mirlxsMesesPresel=null;this.checked ? _autoencadenarMeses(this) : _autodesencadenarMeses(this);actualizarTotalS4()"';
   return '<label class="' + clases + '">' +
     '<input type="checkbox" value="' + nombre + '"' + attrs + onchange + '>' +
     '<span class="mes-nombre">' + nombre + '</span>' +

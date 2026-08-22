@@ -2552,14 +2552,14 @@ function _evMirlxsFabReserva() {
   E.mirlxsMesesPresel = rango;
   irNuevaReserva(false, null);
   setTimeout(function() { selTipoPago('mensual'); }, 80);
-  // Limpieza de los flags -- generarMeses() (js/ui.js) solo los lee, nunca
-  // los limpia (puede correr 2 veces por esta misma preselección: sync +
-  // de nuevo ~200ms después detrás del fadeOut de selTipoPago()). 600ms da
-  // margen de sobra a ambas pasadas (80ms + hasta 200ms) antes de limpiar.
-  setTimeout(function() {
-    E.mirlxsPreselMes = undefined;
-    E.mirlxsMesesPresel = null;
-  }, 600);
+  // La limpieza de E.mirlxsPreselMes/E.mirlxsMesesPresel ya NO vive acá
+  // (ver "Cambios recientes" en MANIFEST.md) -- pasa al onchange de los
+  // checkboxes de mes (crearMesItem(), js/ui.js), en el primer toque real
+  // del usuario. Un setTimeout fijo (probado con 300ms y luego 600ms)
+  // siempre corría el riesgo de limpiar antes de que el/los renders reales
+  // de generarMeses() terminaran (ej. un re-render disparado por un fetch
+  // que tarda más que el margen elegido) -- sin una duración máxima
+  // conocida para eso, cualquier timeout fijo es una apuesta.
 }
 
 var _evPillsTimer = null;
