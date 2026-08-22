@@ -1211,6 +1211,31 @@ function confirmarReserva(btn) {
     // función repuebla el innerHTML de estos botones, solo _resetChkPago()
     // vuelve a deshabilitar #btn-pago sin tocar su texto).
     if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
+    // Auto-marcar "Asistiré" tras un pago mensual disparado desde el sheet
+    // de cuota pendiente en modo "gracia" (ver _evMarcarAsistencia()/
+    // _evCuotaPagarAhora(), js/eventos.js) -- E.quindesPendingRsvpEvento
+    // (seteado ahí, sobrevive todo el wizard s4/s-pago sin que
+    // irNuevaReserva() lo toque) guarda el evento puntual que quedó
+    // bloqueado. apiPost() (js/api.js) es callback-based, no devuelve una
+    // Promise -- `.then()` sobre su valor de retorno (undefined) tiraría
+    // directo; se usa la misma firma (params, onSuccess, onError) que
+    // cualquier otra llamada de este archivo, con `token: _token` explícito
+    // (apiPost no lo auto-inyecta como sí hace api() para GET) -- mismo
+    // patrón exacto que ya usa _evMarcarAsistencia() (js/eventos.js) para
+    // esta misma action. Falla silenciosa (solo console.warn) a propósito:
+    // el pago YA se guardó y s6 ya muestra éxito, un error acá no debería
+    // alarmar con un toast justo después de esa pantalla -- la persona
+    // igual puede marcar "Asistiré" a mano si esto no llegó a aplicarse.
+    if (E.quindesPendingRsvpEvento) {
+      var _pId = E.quindesPendingRsvpEvento;
+      E.quindesPendingRsvpEvento = null;
+      apiPost({ action: 'marcarAsistenciaUsuario', token: _token, idEvento: _pId, estado: 'Asistiré' }, function() {
+        var _pEv = (typeof _EV_EVENTOS !== 'undefined' ? _EV_EVENTOS : []).filter(function(e) { return e.id === _pId; })[0];
+        if (_pEv) _pEv.miEstado = 'Asistiré';
+      }, function(e) {
+        if (window.console) console.warn('marcarAsistenciaUsuario (post-pago mensual): ' + (e && e.message || 'error'));
+      });
+    }
     ir('s6');
     if (huboFalloParcial) {
       mostrarToast('Algunas fechas no se pudieron guardar', 'error');

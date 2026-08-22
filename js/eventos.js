@@ -2067,7 +2067,7 @@ function _evCardEventoHtml(e, sufijo) {
   var btnReservarHtml = mostrarBtnReservar ?
     '<button type="button" class="ev-card-btn-reservar' + (btnReservarDesactivado ? ' ev-card-btn-reservar--off' : '') + '"' +
     ' data-ev-reservar="true" data-evid="' + e.id + '"' +
-    ' onclick="event.stopPropagation();' + (btnReservarDesactivado ? 'mostrarToast(\'No se puede reservar para esta clase. Ya se cerraron las reservas.\',\'info\',true)' : '_evReservarClase(\'' + e.id + '\')') + '"' +
+    ' onclick="event.stopPropagation();' + (btnReservarDesactivado ? 'mostrarToast(\'No se puede reservar para esta clase. Ya se cerraron las reservas.\',\'info\',true)' : '_evAbrirSheetTipoReserva(\'' + e.id + '\')') + '"' +
     '>Reservar</button>'
     : '';
   // Chip de estado -- mismo componente/labels/colores que ya usa
@@ -2586,6 +2586,25 @@ function _evFabReserva() {
   // conocida para eso, cualquier timeout fijo es una apuesta.
 }
 
+// _evFabReserva() (arriba) no acepta un mes como parámetro -- lee
+// _evNavMesActual directo (el mes que el timeline tiene navegado en este
+// instante). Este wrapper lo fuerza al mes de un evento puntual ANTES de
+// llamarla, para los 2 casos donde hace falta preseleccionar un mes
+// específico que puede no coincidir con el navegado: el sheet de cuota
+// pendiente en modo "gracia" (_evCuotaPagarAhora(), arriba) y "Todo el mes"
+// del sheet #sheet-tipo-reserva (_evTipoReservaTodoMes(), más abajo). Sin
+// evento encontrado o sin `fecha`, deja _evNavMesActual tal cual estaba --
+// _evFabReserva() sigue funcionando con el mes que ya tenía navegado, no
+// hay guard adicional que agregar acá.
+function _evFabReservaParaEvento(idEvento) {
+  var ev = (_EV_EVENTOS || []).find(function(e) { return e.id === idEvento; });
+  if (ev && ev.fecha) {
+    var fp = ev.fecha.split('-');
+    _evNavMesActual = { year: parseInt(fp[0], 10), month: parseInt(fp[1], 10) - 1 };
+  }
+  _evFabReserva();
+}
+
 var _evPillsTimer = null;
 function _evPillsInit(modo) {
   if (localStorage.getItem('ev_pills_ocultos') === '1') return;
@@ -2701,7 +2720,12 @@ function cerrarSheetTipoPago(porGesto) {
   }, 300);
 }
 
-function _evAbrirSheetCuotaPendiente() {
+// `opts` (opcional) -- `{ esGracia, mesNombre }`: variante de mensaje para
+// quindes que agotó su gracia de 1 Entrenamiento libre por mes
+// (_quindesGraciaAgotada(), ver _evMarcarAsistencia()) sobre un mes puntual
+// distinto del genérico "cuota pendiente" -- mismos 2 botones de acción de
+// siempre, solo cambia el texto de #sheet-cuota-msg.
+function _evAbrirSheetCuotaPendiente(opts) {
   var modo = _modoUsuario();
   var acc = document.getElementById('sheet-cuota-pendiente-acciones');
   if (acc) {
@@ -2710,6 +2734,12 @@ function _evAbrirSheetCuotaPendiente() {
       html += '<button type="button" class="btn btn-secondary" style="width:100%;margin-bottom:10px;" onclick="_evCuotaSolicitarAyuda()">Solicitar ayuda con el pago</button>';
     }
     acc.innerHTML = html;
+  }
+  var msgEl = document.getElementById('sheet-cuota-msg');
+  if (msgEl) {
+    msgEl.textContent = (opts && opts.esGracia)
+      ? 'Ya asististe a un entrenamiento este mes. Debes pagar el mes de ' + opts.mesNombre + ' para marcar Asistiré.'
+      : 'Para confirmar tu asistencia necesitás tener tu cuota al día.';
   }
   var sh = document.getElementById('sheet-cuota-pendiente');
   var ov = document.getElementById('sheet-cuota-pendiente-overlay');
@@ -2748,15 +2778,79 @@ function cerrarSheetCuotaPendiente(porGesto) {
 // que ya se corrigió una vez en este archivo para irNuevaReservaConTipo().
 function _evCuotaPagarAhora() {
   var modo = _modoUsuario();
+  // Con E.quindesPendingRsvpEvento seteado (venimos del sheet en modo
+  // "gracia", ver _evMarcarAsistencia()/_quindesGraciaAgotada()): el mes a
+  // pagar es el DEL EVENTO puntual que se intentó marcar, no necesariamente
+  // el mes que el timeline tenía navegado en ese momento (ej. tocar
+  // "Asistiré" desde una card fuera del mes actual) -- _evFabReserva()
+  // (js/eventos.js) no acepta un mes como parámetro, lee _evNavMesActual
+  // directo, así que _evFabReservaParaEvento() lo fuerza a ese mes antes de
+  // llamarla. E.quindesPendingRsvpEvento sigue seteado a propósito -- lo
+  // consume/limpia finalizar() (js/reservas.js) recién tras el pago real,
+  // para poder auto-marcar "Asistiré" una vez confirmado.
+  var pendingId = E.quindesPendingRsvpEvento;
   cerrarSheetCuotaPendiente();
   setTimeout(function() {
-    if (modo === 'quindes') irNuevaReservaConTipo('mensual');
+    if (pendingId) _evFabReservaParaEvento(pendingId);
+    else if (modo === 'quindes') irNuevaReservaConTipo('mensual');
     else evAbrirSheetTipoPago();
   }, 310);
 }
 function _evCuotaSolicitarAyuda() {
   cerrarSheetCuotaPendiente();
   setTimeout(function() { abrirWizardExcepcion(); }, 310);
+}
+
+// Onclick real del botón "Reservar" de una card de Entrenamiento (mirlxs,
+// ver _evCardEventoHtml()) -- antes llamaba _evReservarClase(e.id) directo
+// (reserva por clase, único camino); ahora abre este sheet a elegir entre
+// esa misma reserva puntual o saltar directo al flujo mensual para el mes
+// de ESE evento (ver _evTipoReservaClase()/_evTipoReservaTodoMes(), abajo).
+// Mismo patrón abrirX/cerrarX (fade + doble requestAnimationFrame +
+// _registrarOverlayAbierto) que el resto de los sheets de este archivo.
+function _evAbrirSheetTipoReserva(idEvento) {
+  E.reservaEventoId = idEvento;
+  var sh = document.getElementById('sheet-tipo-reserva');
+  var ov = document.getElementById('sheet-tipo-reserva-overlay');
+  if (!sh || !ov) return;
+  ov.style.display = 'block'; sh.style.display = 'flex';
+  requestAnimationFrame(function() { requestAnimationFrame(function() {
+    sh.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
+    sh.style.transform = 'translateY(0)';
+    ov.style.opacity = '1';
+  }); });
+  _registrarOverlayAbierto(function() { cerrarSheetTipoReserva(true); });
+}
+// Mismo contrato que cerrarSheetCuotaPendiente()/cerrarSheetTipoPago() de
+// arriba (porGesto/history.back()).
+function cerrarSheetTipoReserva(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var sh = document.getElementById('sheet-tipo-reserva');
+  var ov = document.getElementById('sheet-tipo-reserva-overlay');
+  if (sh) { sh.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1)'; sh.style.transform = 'translateY(100%)'; }
+  if (ov) ov.style.opacity = '0';
+  setTimeout(function() {
+    if (sh) sh.style.display = 'none';
+    if (ov) ov.style.display = 'none';
+  }, 300);
+}
+// "Solo esta clase" -- mismo cierre-diferido-por-history.back() que
+// _evCuotaPagarAhora()/irNuevaReservaConTipo(), evita la carrera ya
+// documentada contra el pushState propio de _evReservarClase() (que no abre
+// overlay propio, pero sí puede tocar el DOM de la card mientras el sheet
+// todavía está cerrando).
+function _evTipoReservaClase() {
+  var id = E.reservaEventoId;
+  cerrarSheetTipoReserva();
+  setTimeout(function() { _evReservarClase(id); }, 310);
+}
+// "Todo el mes" -- reusa _evFabReservaParaEvento() (junto a _evFabReserva(),
+// más arriba) para preseleccionar el mes de ESTE evento puntual, no el mes
+// que el timeline tenga navegado en este momento.
+function _evTipoReservaTodoMes() {
+  var id = E.reservaEventoId;
+  cerrarSheetTipoReserva();
+  setTimeout(function() { _evFabReservaParaEvento(id); }, 310);
 }
 
 function irNuevaReservaConTipo(tipo) {
@@ -2883,17 +2977,42 @@ function _evTieneCuotaAlDia() {
   });
 }
 
-// Quindes que NUNCA tuvo ninguna reserva mensual (ni activa ni vencida,
-// cancelada o no) -- a diferencia de `_evTieneCuotaAlDia()` (¿tiene una
-// cuota VIGENTE ahora mismo?), esto pregunta "¿tuvo alguna vez algo que
-// restrinja su AA?" -- una cuenta quindes sin historial nunca pasó por el
-// flujo mensual, así que no hay ningún mes/rango del que partir para
-// restringirla. Usada desde Fase 2 en adelante para saltear restricciones
-// (RSVP libre, sin límites en Asistencia Anticipada) -- ver
-// eventosAbrirAnticipada() para el primer uso real.
+// Quindes que NUNCA tuvo ninguna reserva mensual REAL (ni activa ni vencida
+// -- pero SÍ excluye 'Cancelada', ver "Cambios recientes": una reserva
+// cancelada no cuenta como historial real, mismo criterio que ya usan
+// _evTieneCuotaAlDia()/_evMesPagado()/_evVencimientoCuota() más abajo, del
+// que esta función se había quedado afuera) -- a diferencia de
+// `_evTieneCuotaAlDia()` (¿tiene una cuota VIGENTE ahora mismo?), esto
+// pregunta "¿tuvo alguna vez algo que restrinja su AA/RSVP?" -- una cuenta
+// quindes sin historial nunca pasó por el flujo mensual, así que no hay
+// ningún mes/rango del que partir para restringirla. Usada desde Fase 2 en
+// adelante para saltear restricciones (RSVP libre, sin límites en
+// Asistencia Anticipada) -- ver eventosAbrirAnticipada()/_evMarcarAsistencia()
+// para los usos reales.
 function _quindesSinCuota() {
   return _modoUsuario() === 'quindes' && !_adminToken &&
-    !(_todasReservas || []).some(function(r) { return r.tipo === 'mensual'; });
+    !(_todasReservas || []).some(function(r) { return r.tipo === 'mensual' && r.estado !== 'Cancelada'; });
+}
+
+// "Gracia" de 1 Entrenamiento por mes -- para quindes CON historial mensual
+// (algo pagaron alguna vez, `!_quindesSinCuota()`) pero sin cuota vigente
+// para el mes de `idEvento` puntual: puede marcar "Asistiré" en 1 sola clase
+// de ese mes sin pagar antes de que se le bloquee (mismo criterio "probar
+// antes de pagar" que ya existe para reservar por clase, entrenamientos
+// pasados no cuentan -- ver _evMarcarAsistencia()). `mesStr` = "aaaa-mm" de
+// `e.fecha` (ISO), comparado con `startsWith` en vez de parsear a Date --
+// mismo criterio ligero que el resto de este archivo para agrupar por mes
+// calendario. `e.id !== idEvento` excluye el evento que se está por marcar
+// AHORA del conteo -- cuenta solo asistencias YA confirmadas antes de esta.
+function _quindesGraciaAgotada(idEvento) {
+  var ev = (_EV_EVENTOS || []).find(function(e) { return e.id === idEvento; });
+  if (!ev || !ev.fecha) return false;
+  var mesStr = ev.fecha.substring(0, 7);
+  var count = (_EV_EVENTOS || []).filter(function(e) {
+    return e.tipo === 'Entrenamiento' && e.miEstado === 'Asistiré' &&
+           (e.fecha || '').startsWith(mesStr) && e.id !== idEvento;
+  }).length;
+  return count >= 1;
 }
 
 // Fecha ISO hasta la que el mes pagado es válido (validezHasta de la cuota
@@ -2937,9 +3056,38 @@ function _evMesPagado(mesIdx, anio) {
 function _evMarcarAsistencia(id, estado) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === id; })[0];
   if (!ev) return;
+  // Gracia para quindes sin cuota vigente (ver "Cambios recientes" --
+  // _quindesSinCuota()/_quindesGraciaAgotada()): mirlxs sin cuota (rama
+  // `else if`, comportamiento sin cambios de antes de esta tanda) sigue
+  // bloqueado directo. Quindes se abre en 3 casos, de más a menos permisivo:
+  // (a) `_quindesSinCuota()` true (nunca tuvo NINGÚN historial mensual) --
+  // ni siquiera entra acá, el `if` de más abajo no aplica; (b) el mes
+  // puntual del evento SÍ está pagado (`_evMesPagado()`, cuota de OTRO mes
+  // vigente pero este particular ya se cubrió aparte) -- sin restricción;
+  // (c) todavía no gastó su gracia de 1 Entrenamiento libre este mes
+  // (`!_quindesGraciaAgotada()`) -- se deja pasar, ya gastada -- se bloquea
+  // con el sheet de cuota pendiente en modo "gracia", guardando el evento en
+  // `E.quindesPendingRsvpEvento` para que `_evCuotaPagarAhora()` (abajo) y
+  // `finalizar()` (js/reservas.js) puedan retomarlo tras el pago.
   if (estado === 'Asistiré' && !_evTieneCuotaAlDia()) {
-    _evAbrirSheetCuotaPendiente();
-    return;
+    if (!_quindesSinCuota() && _modoUsuario() === 'quindes') {
+      var _gEv = (_EV_EVENTOS || []).find(function(e) { return e.id === id; });
+      var _gFp = _gEv ? (_gEv.fecha || '').split('-') : [];
+      var _gMes = _gFp.length >= 2 ? parseInt(_gFp[1]) - 1 : -1;
+      var _gAnio = _gFp.length >= 1 ? parseInt(_gFp[0]) : -1;
+      if (_gMes >= 0 && _evMesPagado(_gMes, _gAnio)) {
+        // mes puntual pagado → sin restricción
+      } else if (_quindesGraciaAgotada(id)) {
+        E.quindesPendingRsvpEvento = id;
+        var _gMesNombre = _gMes >= 0 ? NOMBRES_MESES[_gMes] : '';
+        _evAbrirSheetCuotaPendiente({ esGracia: true, mesNombre: _gMesNombre });
+        return;
+      }
+      // else: gracia disponible → continuar sin restricción
+    } else if (!_quindesSinCuota()) {
+      _evAbrirSheetCuotaPendiente({});
+      return;
+    }
   }
   var estadoAnterior = ev.miEstado;
   var rsvpsAnterior = ev.rsvps || [];
