@@ -939,10 +939,12 @@ function generarMeses() {
 
   // Preselección de rango del FAB mensual de mirlxs (ver
   // _evMirlxsFabReserva(), js/eventos.js): E.mirlxsMesesPresel es un array
-  // de índices de mes (0-based, mismo formato que `i` acá) de un solo uso --
-  // se consume en este render y se limpia recién al final de la función
-  // (nunca antes de que este render corra), porque generarMeses() puede
-  // ejecutarse de forma async detrás del fadeOut de selTipoPago().
+  // de índices de mes (0-based, mismo formato que `i` acá). Esta función
+  // SOLO lo lee -- nunca lo limpia -- porque generarMeses() puede correr 2
+  // veces por la misma preselección (sync + de nuevo ~200ms después detrás
+  // del fadeOut de selTipoPago()); limpiar acá corría el riesgo de borrar el
+  // flag entre esas 2 pasadas. El propio _evMirlxsFabReserva() limpia ambos
+  // flags con un setTimeout de 600ms, con margen de sobra para las 2 pasadas.
   var mesesPresel = E.mirlxsMesesPresel || [];
 
   var html = '';
@@ -957,9 +959,6 @@ function generarMeses() {
     html += crearMesItem(nombre, esPasado, confirmado, preseleccionado);
   }
   lista.innerHTML = html;
-
-  E.mirlxsPreselMes = null;
-  E.mirlxsMesesPresel = null;
 }
 
 function crearMesItem(nombre, esPasado, confirmado, preseleccionado) {

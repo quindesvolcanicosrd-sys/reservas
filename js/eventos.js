@@ -2552,6 +2552,14 @@ function _evMirlxsFabReserva() {
   E.mirlxsMesesPresel = rango;
   irNuevaReserva(false, null);
   setTimeout(function() { selTipoPago('mensual'); }, 80);
+  // Limpieza de los flags -- generarMeses() (js/ui.js) solo los lee, nunca
+  // los limpia (puede correr 2 veces por esta misma preselección: sync +
+  // de nuevo ~200ms después detrás del fadeOut de selTipoPago()). 600ms da
+  // margen de sobra a ambas pasadas (80ms + hasta 200ms) antes de limpiar.
+  setTimeout(function() {
+    E.mirlxsPreselMes = undefined;
+    E.mirlxsMesesPresel = null;
+  }, 600);
 }
 
 var _evPillsTimer = null;
