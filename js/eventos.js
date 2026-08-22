@@ -5018,6 +5018,17 @@ function _evAntCargaVigente(miCarga) {
 // ícono del header de `#s-eventos` (`index.html`), siempre se abandona el
 // timeline en sí.
 function eventosAbrirAnticipada() {
+  // Con cuota mensual activa, "Indefinido" no tiene sentido -- la asistencia
+  // anticipada solo puede cubrir hasta el mes pagado (ver Cambios 2/3/4 en
+  // _evAntRenderMesesGrid()/_evAntCalTocarDia()/_evAntCalRender()). Se oculta
+  // la pill acá, al abrir la pantalla, para toda la visita (no cambia de
+  // cuota a mitad de sesión) -- el auto-cambio a "Por meses" si una regla
+  // existente ya tenía "Indefinido" seleccionado vive en
+  // _evAntIniciarWizard() (único lugar donde una pill puede quedar
+  // preseleccionada, ver ese comentario).
+  var _antTieneCuota = _evTieneCuotaAlDia();
+  var _antPillIndef = document.querySelector('#ev-ant-tipo-pills [data-val="indefinido"]');
+  if (_antPillIndef) _antPillIndef.style.display = _antTieneCuota ? 'none' : '';
   _evGuardarScrollTimeline();
   _evRestaurarScrollTimeline = true;
   ir('s-eventos-anticipada');
@@ -5242,9 +5253,23 @@ function _evAntIniciarWizard(regla) {
   });
 
   if (_evAntData.tipoRango) {
-    var pill = document.querySelector('#ev-ant-tipo-pills .aj-pill[data-val="' + _evAntData.tipoRango + '"]');
-    if (pill) pill.classList.add('activa');
-    _evAntMostrarSubFrecuencia();
+    // Regla existente con "Indefinido" (regla.tipoRango, ver arriba) pero la
+    // pill quedó oculta por cuota activa (eventosAbrirAnticipada(), más
+    // arriba en este archivo) -- único punto real donde "Indefinido" puede
+    // llegar preseleccionado (una regla ya guardada, vía _evAntEditar()), no
+    // dejarla como estado inválido/invisible: se auto-cambia a "Por meses",
+    // mismo mecanismo (_evAntSelFrecuencia(), resetea fechaDesde/Hasta) que
+    // usaría la persona si tocara la pill a mano.
+    var _pillIndef = document.querySelector('#ev-ant-tipo-pills [data-val="indefinido"]');
+    var _pillIndefOculta = _evAntData.tipoRango === 'indefinido' &&
+      _pillIndef && _pillIndef.style.display === 'none';
+    if (_pillIndefOculta) {
+      _evAntSelFrecuencia(document.querySelector('#ev-ant-tipo-pills [data-val="meses"]'));
+    } else {
+      var pill = document.querySelector('#ev-ant-tipo-pills .aj-pill[data-val="' + _evAntData.tipoRango + '"]');
+      if (pill) pill.classList.add('activa');
+      _evAntMostrarSubFrecuencia();
+    }
   } else {
     document.body.classList.remove('ev-ant-cal-abierto');
   }
@@ -5453,13 +5478,20 @@ function _evAntRenderMesesGrid() {
   var cont = document.getElementById('ev-ant-meses-grid'); if (!cont) return;
   cont.innerHTML = '';
   var mesActual = new Date().getMonth(); // 0-indexado
+  var anio = new Date().getFullYear();
+  // Con cuota mensual activa, la asistencia anticipada solo puede aplicarse
+  // a meses efectivamente pagados (_evMesPagado(), 0-indexado -- mesNum acá
+  // es 1-12) -- sin cuota, el único criterio sigue siendo "mes ya pasado"
+  // (comportamiento sin cambios).
+  var _antTieneCuota = _evTieneCuotaAlDia();
   NOMBRES_MESES.forEach(function(nombre, idx) {
     var mesNum = idx + 1;
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'ev-ant-mes-cell' + (_evAntData.meses.indexOf(mesNum) !== -1 ? ' activo' : '');
     btn.textContent = nombre;
-    if (idx < mesActual) {
+    var _antMesDeshabilitado = idx < mesActual || (_antTieneCuota && !_evMesPagado(mesNum - 1, anio));
+    if (_antMesDeshabilitado) {
       btn.classList.add('deshabilitado');
       btn.disabled = true;
     } else {
@@ -5510,6 +5542,18 @@ function _evAntCalMoverMes(cual, dir) {
 // disparara esta función con una fecha inválida.
 function _evAntCalTocarDia(cual, iso) {
   if (_evFechaCmp(iso, _evHoyISO()) < 0) return;
+  // Con cuota mensual activa, "Por período" no puede extenderse más allá del
+  // mes pagado (_evVencimientoCuota()) -- "Indefinido" ya queda inalcanzable
+  // en este estado (pill oculta, ver eventosAbrirAnticipada()/
+  // _evAntIniciarWizard()), así que el chequeo solo aplica a 'periodo'.
+  // `_vence == null` (cuota activa pero sin fecha de vencimiento detectable,
+  // caso borde) no bloquea nada extra -- mismo criterio permisivo que
+  // _evTieneCuotaAlDia()/_evVencimientoCuota() ya usan en el resto del
+  // archivo.
+  if (cual === 'periodo' && _evTieneCuotaAlDia()) {
+    var _vence = _evVencimientoCuota();
+    if (_vence && _evFechaCmp(iso, _vence) > 0) return;
+  }
   if (cual === 'indefinido') {
     _evAntData.fechaDesde = iso;
   } else {
@@ -5806,20 +5850,29 @@ function _evAntCalRender(cual) {
   finGrid.setDate(finGrid.getDate() + 6);
   var hoy = _evHoyISO();
   var desde = _evAntData.fechaDesde, hasta = _evAntData.fechaHasta;
+  // Con cuota mensual activa, "Por período" no puede extenderse más allá del
+  // mes pagado -- mismo criterio (y mismo caso borde: `_antVence` null con
+  // cuota activa no bloquea nada extra) que _evAntCalTocarDia(), calculado
+  // UNA sola vez acá (no por celda). "Indefinido" no aplica (`cual` !==
+  // 'periodo'), ya inalcanzable con cuota activa (pill oculta, ver
+  // eventosAbrirAnticipada()/_evAntIniciarWizard()).
+  var _antVence = (cual === 'periodo' && _evTieneCuotaAlDia()) ? _evVencimientoCuota() : null;
   var html = _EV_DIAS_CORTOS.map(function(d) { return '<div class="ev-cal-dow">' + d + '</div>'; }).join('');
   var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
   while (cur <= finGrid) {
     var celdaIso = _evToISO(cur);
     var ajeno = cur.getMonth() !== m.month;
     var pasado = _evFechaCmp(celdaIso, hoy) < 0;
-    var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (pasado ? ' ev-ant-cal-pasado' : '');
+    var fueraDeCuota = _antVence && _evFechaCmp(celdaIso, _antVence) > 0;
+    var deshabilitada = pasado || fueraDeCuota;
+    var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (deshabilitada ? ' ev-ant-cal-pasado' : '');
     if (desde && celdaIso === desde) clases += ' ev-ant-cal-sel';
     if (cual === 'periodo') {
       if (hasta && celdaIso === hasta) clases += ' ev-ant-cal-sel';
       if (desde && hasta && _evFechaCmp(celdaIso, desde) > 0 && _evFechaCmp(celdaIso, hasta) < 0) clases += ' ev-ant-cal-en-rango';
     }
     if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
-    var onclickAttr = pasado ? '' : ' onclick="_evAntCalTocarDia(\'' + cual + '\',\'' + celdaIso + '\')"';
+    var onclickAttr = deshabilitada ? '' : ' onclick="_evAntCalTocarDia(\'' + cual + '\',\'' + celdaIso + '\')"';
     html += '<div class="' + clases + '" data-iso="' + celdaIso + '"' + onclickAttr + '>' +
       '<div class="ev-cal-num">' + cur.getDate() + '</div>' +
     '</div>';
