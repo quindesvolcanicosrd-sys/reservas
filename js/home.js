@@ -228,7 +228,14 @@ function irNuevaReserva(skipEquip, _fechaPresel) {
   // callers posibles (CTA de `#home-nav`, `irReservas()`).
   var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   var hayActivas = _clasificarReservas(_todasReservas || [], hoy).activas.length > 0;
-  _s4MostrarAtras = hayActivas;
+  if (E.origenSeccionS4) {
+    _s4OrigenSeccion = E.origenSeccionS4;
+    _s4MostrarAtras = true; // siempre hay pantalla real a la que volver
+    E.origenSeccionS4 = null;
+  } else {
+    _s4OrigenSeccion = 's-home';
+    _s4MostrarAtras = hayActivas;
+  }
   // Título "Realiza una reserva" (ver _s4VacioAutoRedirect, js/reservas.js):
   // mismo cálculo que la flecha atrás de arriba, flag propio a propósito.
   _s4VacioAutoRedirect = !hayActivas;

@@ -545,6 +545,7 @@ document.addEventListener('click', function(e) {
 // Ir al flujo mensual desde el FAB sin pasar por cerrarSheetTipoPago
 // (ese helper solo aplica cuando el sheet de tipo-pago está abierto).
 function _evMirlxsIrMensual() {
+  E.origenSeccionS4 = 's-eventos';
   irNuevaReserva(false, null);
   setTimeout(function() { if (typeof selTipoPago === 'function') selTipoPago('mensual'); }, 80);
 }

@@ -26,6 +26,9 @@ var _fechaInfoDisponible = {};
 // (esa decide título vs. selector Por clase/Mensual, no si hay o no una
 // pantalla previa real a la que volver).
 var _s4MostrarAtras = false;
+// Pantalla de origen para el botón atrás de s4 -- 's-home' por defecto,
+// 's-eventos' cuando se llega desde el timeline (FAB mirlxs).
+var _s4OrigenSeccion = 's-home';
 // Título "Realiza una reserva" (#s4-titulo-vacio, junto al selector Por
 // clase/Mensual) -- visible SOLO cuando se llega a #s4 por el auto-redirect
 // de "sin reservas" (`irReservas()`, js/home.js, cuando `activas.length===0`
