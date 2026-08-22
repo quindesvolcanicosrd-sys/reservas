@@ -2709,8 +2709,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=62a69d96"></script>
-<script src="js/eventos.js?v=940701cf"></script>
+<script src="js/ui.js?v=2b1228f7"></script>
+<script src="js/eventos.js?v=183d407c"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=b847514e"></script>
@@ -4368,6 +4368,26 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <div class="ev-fab-menu" id="ev-fab-reserva" style="display:none;">
   <button type="button" class="ev-fab-btn" onclick="evAbrirSheetTipoPago()" title="Nueva reserva" aria-label="Nueva reserva">
     <span class="material-symbols-outlined">event_available</span>
+  </button>
+</div>
+
+<!-- FAB speed-dial "+" para mirlxs con equipo propio (necesitaPatines=No/nulo).
+     Solo visible en #s-eventos para cuentas mirlxs sin necesidad de equipo
+     del club y sin rol admin. Visibilidad controlada por
+     _evActualizarTopBarModo()/js/eventos.js. Misma mecánica de
+     .ev-fab-abierto que #ev-fab-menu: el ícono "+" rota a "×" y aparecen
+     las opciones con fade+slide al agregar la clase. -->
+<div class="ev-fab-menu" id="ev-mirlxs-fab" style="display:none;">
+  <button type="button" class="ev-fab-opcion" onclick="_evMirlxsFabCerrar(); irNuevaReserva(false, null);">
+    <span class="material-symbols-outlined">confirmation_number</span>
+    <span>Reserva por clase</span>
+  </button>
+  <button type="button" class="ev-fab-opcion" onclick="_evMirlxsIrMensual();">
+    <span class="material-symbols-outlined">calendar_month</span>
+    <span>Reserva mensual</span>
+  </button>
+  <button type="button" class="ev-fab-btn" id="ev-mirlxs-fab-btn" onclick="_evMirlxsFabToggle()" title="Reservar" aria-label="Reservar" aria-expanded="false">
+    <span class="material-symbols-outlined">add</span>
   </button>
 </div>
 

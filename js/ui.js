@@ -591,7 +591,11 @@ var APP_BOTTOM_NAV_ITEMS = [
     // ABANDONAR la sección, sin importar hacia dónde -- complementa a
     // `abrirEvDetalle()` (que guarda lo mismo al entrar a un detalle, un
     // camino distinto hacia la misma variable, `_evTimelineScrollY`).
-    alSalir: function() { if (typeof _evGuardarScrollTimeline === 'function') _evGuardarScrollTimeline(); if (typeof _evSalirModoReserva === 'function') _evSalirModoReserva(); },
+    alSalir: function() {
+      if (typeof _evGuardarScrollTimeline === 'function') _evGuardarScrollTimeline();
+      if (typeof _evSalirModoReserva === 'function') _evSalirModoReserva();
+      if (typeof _evMirlxsFabCerrar === 'function') _evMirlxsFabCerrar();
+    },
     visible: function() { return true; } },
   { id: 'ajustes', icono: 'settings', texto: 'Ajustes', pantalla: 's-datos',
     entrar: function() { irEditarDatos(); },

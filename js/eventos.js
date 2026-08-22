@@ -540,6 +540,36 @@ document.addEventListener('click', function(e) {
   var menu = document.getElementById('ev-fab-menu');
   if (menu && !menu.contains(e.target)) _evFabCerrar();
 });
+// FAB speed-dial para mirlxs con equipo propio (#ev-mirlxs-fab, index.html).
+// Misma mecánica que el FAB admin de arriba: toggle + cerrar al tocar afuera.
+var _evMirlxsFabAbierto = false;
+function _evMirlxsFabToggle() {
+  _evMirlxsFabAbierto = !_evMirlxsFabAbierto;
+  var menu = document.getElementById('ev-mirlxs-fab');
+  if (menu) menu.classList.toggle('ev-fab-abierto', _evMirlxsFabAbierto);
+  var btn = document.getElementById('ev-mirlxs-fab-btn');
+  if (btn) btn.setAttribute('aria-expanded', String(_evMirlxsFabAbierto));
+}
+function _evMirlxsFabCerrar() {
+  if (!_evMirlxsFabAbierto) return;
+  _evMirlxsFabAbierto = false;
+  var menu = document.getElementById('ev-mirlxs-fab');
+  if (menu) menu.classList.remove('ev-fab-abierto');
+  var btn = document.getElementById('ev-mirlxs-fab-btn');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+// Ir al flujo mensual desde el FAB sin pasar por cerrarSheetTipoPago
+// (ese helper solo aplica cuando el sheet de tipo-pago está abierto).
+function _evMirlxsIrMensual() {
+  _evMirlxsFabCerrar();
+  irNuevaReserva(false, null);
+  setTimeout(function() { if (typeof selTipoPago === 'function') selTipoPago('mensual'); }, 80);
+}
+document.addEventListener('click', function(e) {
+  if (!_evMirlxsFabAbierto) return;
+  var menu = document.getElementById('ev-mirlxs-fab');
+  if (menu && !menu.contains(e.target)) _evMirlxsFabCerrar();
+});
 
 // Skeleton de #ev-timeline mientras _evCargarDatosReales() espera la
 // respuesta real -- reemplaza el loader de pantalla completa que tenía antes
@@ -2458,6 +2488,12 @@ function _evActualizarTopBarModo() {
     // ellxs. Exclusivo de quindes, que no tienen ese botón en la card.
     fabRes.style.display = (modo === 'quindes' && !esAdmin) ? 'flex' : 'none';
   }
+  var fabMirlxs = document.getElementById('ev-mirlxs-fab');
+  if (fabMirlxs) {
+    var _mostrarMirlxsFab = modo === 'mirlxs' && !necesitaEquipo && !esAdmin;
+    fabMirlxs.style.display = _mostrarMirlxsFab ? 'flex' : 'none';
+    if (!_mostrarMirlxsFab && typeof _evMirlxsFabCerrar === 'function') _evMirlxsFabCerrar();
+  }
 }
 
 var _evPillsTimer = null;
@@ -3395,7 +3431,11 @@ function _evTimelineItems() {
   // sola vez acá en vez de por cada evento evaluado) marca qué
   // Entrenamientos futuros tienen botón "Reservar" real.
   var _hoyIsoTimeline = _evHoyISO();
-  var _filtroEquipoActivo = _evNecesitaEquipo() && !_adminToken;
+  // Con cuota mensual activa el timeline se abre completo (sin filtrar por
+  // próximas 6 ni por asistencia pasada) -- el usuario ve todos los eventos
+  // del mes pagado. Sin cuota, se aplica el mismo filtro que a cuentas con
+  // equipo del club: solo próximas 6 clases futuras + pasadas con asistencia.
+  var _filtroEquipoActivo = _modoUsuario() === 'mirlxs' && !_adminToken && !_evTieneCuotaAlDia();
   var _evProximas6EntrenIds = {};
   if (_filtroEquipoActivo) {
     (_EV_EVENTOS || []).filter(function(x) {
@@ -3420,8 +3460,11 @@ function _evTimelineItems() {
     if (e.miAsistenciaReal) return true; // asistencia confirmada -- siempre visible
     return (_todasReservas || []).some(function(r) { return r.fecha === e.id; }); // sin reserva -- oculto
   }
-  _EV_EVENTOS.filter(function(e) { return _evPasaFiltroLugarTipo(e.lugar, e.tipo) && _evPasaBusqueda(e.lugar + ' ' + e.tipo) && _evEsRelevantePorEquipo(e); })
-    .forEach(function(e) { items.push({ fecha: e.fecha, orden: e.horaInicio || '00:00', tipo: 'evento', data: e }); });
+  var _fi = (E.datos && E.datos.fechaIngreso) || null;
+  _EV_EVENTOS.filter(function(e) {
+    if (_modoUsuario() === 'mirlxs' && !_adminToken && _fi && _evFechaCmp(e.fecha, _fi) < 0) return false;
+    return _evPasaFiltroLugarTipo(e.lugar, e.tipo) && _evPasaBusqueda(e.lugar + ' ' + e.tipo) && _evEsRelevantePorEquipo(e);
+  }).forEach(function(e) { items.push({ fecha: e.fecha, orden: e.horaInicio || '00:00', tipo: 'evento', data: e }); });
   // "Cumpleaños de <nombre>" -- ver "Cambios recientes", bug real: buscar
   // "cumpleaños" no encontraba ninguno porque solo se comparaba contra el
   // nombre de la persona, nunca contra la palabra que en realidad aparece en
