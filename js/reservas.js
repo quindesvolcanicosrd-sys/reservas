@@ -278,6 +278,9 @@ function _s4ActualizarNav() {
   // el selector) -- solo cuando además se llegó por el auto-redirect de
   // "sin reservas" (ver _s4VacioAutoRedirect, arriba de este archivo).
   if (tituloVacio) tituloVacio.style.display = (puedeElegir && _s4VacioAutoRedirect) ? '' : 'none';
+  // Mirlxs: tipo ya elegido antes de entrar a s4 (FAB → mensual,
+  // botón inline → clase). Ocultar el selector Por clase/Mensual.
+  if (_modoUsuario() === 'mirlxs') segWrap.style.display = 'none';
   // #s4-nav-spacer (ver index.html): re-medir siempre acá, no solo al entrar
   // a s4 -- las 2 variantes de #s4-nav (arriba) pueden tener alto distinto y
   // esta función es la única fuente que las togglea, mismo criterio que

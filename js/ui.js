@@ -594,7 +594,6 @@ var APP_BOTTOM_NAV_ITEMS = [
     alSalir: function() {
       if (typeof _evGuardarScrollTimeline === 'function') _evGuardarScrollTimeline();
       if (typeof _evSalirModoReserva === 'function') _evSalirModoReserva();
-      if (typeof _evMirlxsFabCerrar === 'function') _evMirlxsFabCerrar();
     },
     visible: function() { return true; } },
   { id: 'ajustes', icono: 'settings', texto: 'Ajustes', pantalla: 's-datos',

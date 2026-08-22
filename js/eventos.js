@@ -540,36 +540,14 @@ document.addEventListener('click', function(e) {
   var menu = document.getElementById('ev-fab-menu');
   if (menu && !menu.contains(e.target)) _evFabCerrar();
 });
-// FAB speed-dial para mirlxs con equipo propio (#ev-mirlxs-fab, index.html).
-// Misma mecánica que el FAB admin de arriba: toggle + cerrar al tocar afuera.
-var _evMirlxsFabAbierto = false;
-function _evMirlxsFabToggle() {
-  _evMirlxsFabAbierto = !_evMirlxsFabAbierto;
-  var menu = document.getElementById('ev-mirlxs-fab');
-  if (menu) menu.classList.toggle('ev-fab-abierto', _evMirlxsFabAbierto);
-  var btn = document.getElementById('ev-mirlxs-fab-btn');
-  if (btn) btn.setAttribute('aria-expanded', String(_evMirlxsFabAbierto));
-}
-function _evMirlxsFabCerrar() {
-  if (!_evMirlxsFabAbierto) return;
-  _evMirlxsFabAbierto = false;
-  var menu = document.getElementById('ev-mirlxs-fab');
-  if (menu) menu.classList.remove('ev-fab-abierto');
-  var btn = document.getElementById('ev-mirlxs-fab-btn');
-  if (btn) btn.setAttribute('aria-expanded', 'false');
-}
+// FAB mensual para mirlxs con equipo propio (#ev-mirlxs-fab, index.html) --
+// botón único, sin speed-dial (ver "Cambios recientes").
 // Ir al flujo mensual desde el FAB sin pasar por cerrarSheetTipoPago
 // (ese helper solo aplica cuando el sheet de tipo-pago está abierto).
 function _evMirlxsIrMensual() {
-  _evMirlxsFabCerrar();
   irNuevaReserva(false, null);
   setTimeout(function() { if (typeof selTipoPago === 'function') selTipoPago('mensual'); }, 80);
 }
-document.addEventListener('click', function(e) {
-  if (!_evMirlxsFabAbierto) return;
-  var menu = document.getElementById('ev-mirlxs-fab');
-  if (menu && !menu.contains(e.target)) _evMirlxsFabCerrar();
-});
 
 // Skeleton de #ev-timeline mientras _evCargarDatosReales() espera la
 // respuesta real -- reemplaza el loader de pantalla completa que tenía antes
@@ -2078,7 +2056,7 @@ function _evCardEventoHtml(e, sufijo) {
   }
   var mostrarBtnReservar = false;
   var btnReservarDesactivado = false;
-  if (_modoUsuario() === 'mirlxs' && e.tipo === 'Entrenamiento' && !miReserva && _evTieneCuotaAlDia()) {
+  if (_modoUsuario() === 'mirlxs' && e.tipo === 'Entrenamiento' && !miReserva && !_evTieneCuotaAlDia()) {
     var hoyISO = _evHoyISO();
     if (_evFechaCmp(e.fecha, hoyISO) >= 0) {
       var proximas6 = (_EV_EVENTOS || []).filter(function(x) {
@@ -2492,7 +2470,6 @@ function _evActualizarTopBarModo() {
   if (fabMirlxs) {
     var _mostrarMirlxsFab = modo === 'mirlxs' && !necesitaEquipo && !esAdmin;
     fabMirlxs.style.display = _mostrarMirlxsFab ? 'flex' : 'none';
-    if (!_mostrarMirlxsFab && typeof _evMirlxsFabCerrar === 'function') _evMirlxsFabCerrar();
   }
 }
 
@@ -2695,6 +2672,14 @@ function _evRsvpBarraHtml(e) {
   if (e.estado === 'Cancelado' || e.estado === 'No se entrena') return '';
   if (_evEsPasado(e)) return _evAsistenciaRealHtml(e);
   if (_evOcultarRsvpPorEquipoClub(e)) return '';
+  // Sin cuota mensual activa: mirlxs no tiene RSVP (el botón "Reservar"
+  // inline maneja por clase; el FAB lleva al flujo mensual).
+  if (_modoUsuario() === 'mirlxs' && !_evTieneCuotaAlDia()) return '';
+  // Con reserva de clase ya activa para este evento: ocultar RSVP.
+  var _tieneReservaEste = (_todasReservas || []).some(function(r) {
+    return r.fecha === e.id && r.estado !== 'Cancelada';
+  });
+  if (_tieneReservaEste) return '';
   var botones = _EV_RESP_OPCIONES.map(function(estado) {
     var act = e.miEstado === estado ? ' activa' : '';
     return '<div class="ev-rsvp-opt' + act + '" data-estado="' + estado + '" onclick="_evMarcarAsistencia(\'' + e.id + '\',\'' + estado + '\')"><span class="material-symbols-outlined">' + _EV_RESP_ICONO[estado] + '</span>' + estado + '</div>';
