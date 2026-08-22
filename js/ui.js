@@ -977,17 +977,15 @@ function _autoencadenarMeses(el) {
   }
 }
 
-function _autodesencadenarMeses(el) {
-  if (el.checked) return;
-  var checkboxes = Array.prototype.slice.call(document.querySelectorAll('#lista-meses-unificada .mes-item input[type="checkbox"]'));
-  var idx = checkboxes.indexOf(el);
-  for (var i = idx + 1; i < checkboxes.length; i++) {
-    var cb = checkboxes[i];
-    var item = cb.closest('.mes-item');
-    if (item.classList.contains('mes-confirmado')) break;
-    if (cb.checked) cb.checked = false;
-  }
-}
+// Deseleccionar un mes afecta solo a ese mes -- antes esta función
+// desmarcaba en cascada todos los meses posteriores ya seleccionados
+// (modelaba la selección como un rango [inicio,fin] recalculado en cada
+// cambio), así que destildar cualquier mes del medio borraba también los
+// que venían después. La selección real es un conjunto de meses
+// individuales: el único auto-comportamiento deseado es el de
+// _autoencadenarMeses() de arriba (rellenar hacia atrás por conveniencia al
+// seleccionar), nunca al deseleccionar.
+function _autodesencadenarMeses(el) {}
 
 function togglePagoMetodo(header) {
   var body = header.nextElementSibling;

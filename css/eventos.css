@@ -195,7 +195,9 @@
   border: none;
   cursor: pointer;
   box-shadow: var(--shadow-lg);
-  transition: background 0.2s ease, transform 0.2s ease;
+  opacity: 1;
+  pointer-events: auto;
+  transition: background 0.2s ease, transform 0.2s ease, opacity 0.25s ease;
 }
 @media (hover: hover) { #ev-mirlxs-fab:hover { background: var(--brand-dk); } }
 #ev-mirlxs-fab:active { transform: scale(0.96); }

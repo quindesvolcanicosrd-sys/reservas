@@ -2466,22 +2466,66 @@ function _evActualizarTopBarModo() {
 // oculto para mes pasado o ya pagado (_evMesPagado()), texto/visibilidad se
 // recalculan cada vez que cambia el label de mes (_evActualizarNavMesLabel())
 // o el modo de cuenta (_evActualizarTopBarModo()).
+// Token incremental: cada llamada invalida los timeouts/rAF encolados por
+// llamadas anteriores todavía en vuelo (nav de mes puede cambiar más rápido
+// que la duración del fade, 250ms) -- sin esto, un hide() en curso podía
+// terminar aplicando `display:none` después de que una llamada posterior ya
+// hubiera decidido mostrar el FAB de nuevo, dejándolo invisible pese a
+// opacity:1. `fab.dataset.oculto` (no `style.display`) es la fuente de
+// verdad de "¿está oculto?" mientras el fade está en curso, porque durante
+// el fade-out `display` sigue sin ser 'none' por 250ms.
+var _evFabToken = 0;
 function _evActualizarFabMirlxs() {
   var fab = document.getElementById('ev-mirlxs-fab');
   if (!fab) return;
-  if (_modoUsuario() !== 'mirlxs' || _adminToken) { fab.style.display = 'none'; return; }
+  var deboMostrar = false, nuevoTexto = '';
   // Bug real corregido antes de aplicar: _evActualizarTopBarModo() se llama
   // (irEventos()) ANTES de que _evNavMesActual reciba su primer valor real
   // -- eso ocurre recién dentro del callback async de _evCargarDatosReales().
   // Sin esta guarda, .month sobre null tira TypeError y corta el resto de
   // irEventos() (_evActualizarTopBarModo() corre al final de esa función).
-  if (!_evNavMesActual) { fab.style.display = 'none'; return; }
-  var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-  var mes = _evNavMesActual.month, anio = _evNavMesActual.year;
-  var esPasado = anio < hoy.getFullYear() || (anio === hoy.getFullYear() && mes < hoy.getMonth());
-  if (esPasado || _evMesPagado(mes, anio)) { fab.style.display = 'none'; return; }
-  fab.textContent = 'Reservar ' + NOMBRES_MESES[mes];
-  fab.style.display = '';
+  if (_modoUsuario() === 'mirlxs' && !_adminToken && _evNavMesActual) {
+    var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+    var mes = _evNavMesActual.month, anio = _evNavMesActual.year;
+    var esPasado = anio < hoy.getFullYear() || (anio === hoy.getFullYear() && mes < hoy.getMonth());
+    if (!esPasado && !_evMesPagado(mes, anio)) { deboMostrar = true; nuevoTexto = 'Reservar ' + NOMBRES_MESES[mes]; }
+  }
+  var token = ++_evFabToken;
+  var estabaVisible = fab.style.display !== 'none' && fab.dataset.oculto !== '1';
+
+  if (!deboMostrar) {
+    if (!estabaVisible) return;
+    fab.dataset.oculto = '1';
+    fab.style.opacity = '0';
+    fab.style.pointerEvents = 'none';
+    setTimeout(function() {
+      if (token === _evFabToken && fab.dataset.oculto === '1') fab.style.display = 'none';
+    }, 250);
+    return;
+  }
+
+  if (!estabaVisible) {
+    fab.dataset.oculto = '0';
+    fab.textContent = nuevoTexto;
+    fab.style.display = '';
+    fab.style.opacity = '0';
+    fab.style.pointerEvents = 'none';
+    requestAnimationFrame(function() { requestAnimationFrame(function() {
+      if (token !== _evFabToken) return;
+      fab.style.opacity = '1';
+      fab.style.pointerEvents = 'auto';
+    }); });
+    return;
+  }
+
+  // Ya visible: si solo cambió el texto del mes, fade out -> texto -> fade in.
+  if (fab.textContent === nuevoTexto) return;
+  fab.style.opacity = '0';
+  setTimeout(function() {
+    if (token !== _evFabToken) return;
+    fab.textContent = nuevoTexto;
+    fab.style.opacity = '1';
+  }, 150);
 }
 
 // Onclick real del FAB de arriba -- abre el wizard de reserva ya en el modo
@@ -2495,10 +2539,15 @@ function _evMirlxsFabReserva() {
   irNuevaReserva(false, null);
   setTimeout(function() { selTipoPago('mensual'); }, 80);
   setTimeout(function() {
-    var cbs = document.querySelectorAll('#lista-meses-unificada input[type="checkbox"]');
-    var idx = E.mirlxsPreselMes;
-    if (cbs[idx] && !cbs[idx].checked) cbs[idx].click();
-  }, 200);
+    // Los checkbox de #lista-meses-unificada se identifican por `value`
+    // (nombre del mes, ver crearMesItem()/js/ui.js), no por índice --
+    // buscar por índice fijo asumía que el checkbox N-ésimo del DOM
+    // corresponde al mes N-ésimo (0-based), supuesto frágil ante cualquier
+    // cambio futuro en generarMeses() que filtre o reordene meses.
+    var nombreMes = NOMBRES_MESES[E.mirlxsPreselMes];
+    var cb = document.querySelector('#lista-meses-unificada input[value="' + nombreMes + '"]');
+    if (cb && !cb.checked) cb.click();
+  }, 300);
 }
 
 var _evPillsTimer = null;
@@ -2697,6 +2746,16 @@ function irNuevaReservaConTipo(tipo) {
   }, 310);
 }
 function _evRsvpBarraHtml(e) {
+  // Entrenamiento futuro de un mes que mirlxs todavía no pagó: sin RSVP,
+  // aunque tenga cuota al día para el mes actual (chequeo de más abajo) --
+  // evita marcar "Asistiré" a una clase de un mes que aún no reservó.
+  // `_evHoyISO()` en vez de una var local como `_hoyIsoTimeline` (usada en
+  // otra función de este archivo) porque acá no está en scope.
+  if (_modoUsuario() === 'mirlxs' && !_adminToken && e.tipo === 'Entrenamiento') {
+    var _fp = (e.fecha || '').split('-');
+    if (_fp.length === 3 && _evFechaCmp(e.fecha, _evHoyISO()) > 0 &&
+        !_evMesPagado(parseInt(_fp[1]) - 1, parseInt(_fp[0]))) return '';
+  }
   if (e.estado === 'Cancelado' || e.estado === 'No se entrena') return '';
   if (_evEsPasado(e)) return _evAsistenciaRealHtml(e);
   if (_evOcultarRsvpPorEquipoClub(e)) return '';
