@@ -1,5 +1,9 @@
 /* Service Worker — Mirlxs RD Reservas
-   Estrategia: network-first con fallback a cache (solo recursos del mismo origen).
+   Estrategia: network-first con fallback a cache (solo recursos del mismo origen),
+   con timeout de 4s (ver fetch handler, Promise.race red/timeout) — si la red no
+   responde en ese margen se sirve desde caché, sin dejar la navegación/el recurso
+   colgado indefinidamente ante una red en estado ambiguo (ver "Cambios recientes"
+   en MANIFEST.md, loader que quedaba indefinido al reabrir el navegador).
    Las llamadas a la API de Apps Script (script.google.com) NUNCA se cachean.
    js/config.js además se pide con cache:'no-store' (ver fetch handler) para que
    ni el caché HTTP local del navegador pueda servirlo sin ir a la red — ver
@@ -36,14 +40,20 @@ self.addEventListener('fetch', function (e) {
   // encima del cache-busting por query string.
   var esConfig = /\/js\/config\.js(\?|$)/.test(e.request.url);
 
+  var redPromise = fetch(e.request, esConfig ? { cache: 'no-store' } : undefined)
+    .then(function (resp) {
+      if (esConfig) return resp;
+      var copia = resp.clone();
+      caches.open(CACHE).then(function (c) { c.put(e.request, copia); }).catch(function () {});
+      return resp;
+    });
+
+  var timeoutPromise = new Promise(function (resolve) {
+    setTimeout(function () { resolve(caches.match(e.request)); }, 4000);
+  });
+
   e.respondWith(
-    fetch(e.request, esConfig ? { cache: 'no-store' } : undefined)
-      .then(function (resp) {
-        if (esConfig) return resp;
-        var copia = resp.clone();
-        caches.open(CACHE).then(function (c) { c.put(e.request, copia); }).catch(function () {});
-        return resp;
-      })
+    Promise.race([redPromise, timeoutPromise])
       .catch(function () { return caches.match(e.request); })
   );
 });

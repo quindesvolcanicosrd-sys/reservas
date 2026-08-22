@@ -2704,6 +2704,31 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 </div>
 
+<!-- Safety net de arranque (ver MANIFEST.md "Cambios recientes" -- loader que
+     quedaba indefinido al reabrir el navegador con la pestaña ya abierta):
+     si a los 8s ocultarCargando() (js/ui.js) todavía no existe, ninguno de
+     los <script src=...> de la app terminó de ejecutar (típicamente el
+     fetch del Service Worker colgado en algún script mismo-origen, ver
+     OneSignalSDKWorker.js) -- se limpian todos los Cache Storage del SW y
+     se recarga UNA sola vez (flag en sessionStorage evita loop infinito si
+     el reload tampoco arregla nada). -->
+<script>
+(function() {
+  var _reloadTimeout = setTimeout(function() {
+    if (typeof ocultarCargando !== 'undefined') return;
+    var ya = sessionStorage.getItem('_sw_reload');
+    if (ya) { sessionStorage.removeItem('_sw_reload'); return; }
+    sessionStorage.setItem('_sw_reload', '1');
+    if ('caches' in window) {
+      caches.keys().then(function(ks) {
+        return Promise.all(ks.map(function(k) { return caches.delete(k); }));
+      }).then(function() { location.reload(); });
+    } else {
+      location.reload();
+    }
+  }, 8000);
+})();
+</script>
 <script src="js/config.js?v=08d1b7e9"></script>
 <script src="shared/bsheet.js"></script>
 <script src="shared/axis-transicion.js"></script>
