@@ -1022,13 +1022,29 @@ async function getEventosRango(params: Record<string, any>): Promise<Record<stri
   const eventos = (data ?? []).map((fila: any) => {
     const idEvento = fila.id_evento;
     const logDeEvento = asistLog[idEvento] ?? [];
+    // `log_asistencias` mezcla 2 conceptos bajo la misma tabla (ver
+    // MANIFEST.md): RSVPs pre-evento (origen 'Usuario'/'AsistenciaAnticipada',
+    // estado 'Asistiré'/'No asistiré'/'No jugador') y asistencia REAL
+    // post-evento tomada por un admin (origen 'Admin', estado 'A tiempo'/
+    // 'Tarde'/'Ninguno'). `logDeEvento.length` solo no alcanza para decidir
+    // si "ya hay asistencia real" -- un evento con SOLO RSVPs (nunca pasado
+    // por rollcall) tiene filas igual, pero ninguna es una marca real de
+    // admin. `logAdminReal` filtra específicamente eso (bug real reportado
+    // por Victor, confirmado contra datos de Supabase).
+    const logAdminReal = logDeEvento.filter((a: any) => a.origen === 'Admin' && (a.estado === 'A tiempo' || a.estado === 'Tarde'));
     // Fallback a las columnas legacy `a_horario`/`tarde` (`_asistenciaEFPorEvento()`)
-    // solo cuando `log_asistencias` no tiene ninguna fila para este evento --
+    // solo cuando NO hay ninguna marca real de admin para este evento --
     // eventos históricos anteriores a la migración a `log_asistencias` (ver
-    // MANIFEST.md) tienen datos únicamente en esas columnas. No se usa como
-    // fuente primaria: mezclarla siempre reintroducía el bug de RSVP anticipado
-    // mostrándose como "marcado por un admin" (ver MANIFEST.md).
-    const fuenteAsistencia = logDeEvento.length ? logDeEvento : (asistEF[idEvento] ?? []);
+    // MANIFEST.md), o eventos con RSVPs pero sin rollcall, tienen datos
+    // únicamente en esas columnas. No se usa como fuente primaria: mezclarla
+    // siempre reintroducía el bug de RSVP anticipado mostrándose como
+    // "marcado por un admin" (ver MANIFEST.md). Cuando SÍ hay marca real, se
+    // sigue mandando `logDeEvento` completo (no `logAdminReal`) -- el
+    // frontend (`_evMapEventoBackend()`, js/eventos.js) ya separa por estado
+    // en `asistentes`/`rsvps`, y `rsvps` sigue haciendo falta ahí (resumen
+    // de RSVP de cuentas no-admin/no-quindes, rol combinado en el label de
+    // puntualidad) -- filtrar acá de más le borraría esa data sin necesidad.
+    const fuenteAsistencia = logAdminReal.length ? logDeEvento : (asistEF[idEvento] ?? []);
     const asistencias = fuenteAsistencia.map((a: any) => {
       const eq = equipoPorNombre[String(a.nombre).trim().toUpperCase()] ?? {};
       return { nombre: a.nombre, estado: a.estado, origen: a.origen, nombreDerby: eq.nombreDerby ?? '', fotoPerfil: eq.fotoPerfil ?? '' };
