@@ -512,6 +512,11 @@ var ADMIN_TILE_INFO = {
     bubbleId: 'admin-burbuja-excepciones',
     listaId: 'admin-excepciones-lista',
     cargar: function() { cargarExcepcionesPendientes(); }
+  },
+  'admin-tiers': {
+    bubbleId: 'admin-burbuja-tiers',
+    listaId: 'ml-tiers-lista',
+    cargar: function() { _mlIrSeccion(); }
   }
 };
 
@@ -1426,4 +1431,201 @@ function _adminCargarMiLiga() {
   _adminCargarAdmins();
   adminRenderColorEnfasis();
   _adminCargarPrecios();
+}
+
+// ── Mi Liga — "Categorías" (Fase A del sistema de tiers, config_tiers) ──────
+// Base de las Edge Functions de Supabase, derivada de BACKEND (js/config.js:
+// '.../functions/v1/api') sacando el segmento final -- '.../functions/v1',
+// mismo prefijo para cualquier otra función standalone del proyecto
+// (recalcular-categorias es la única hoy). Ver MANIFEST.md "Cambios recientes".
+var BACKEND_BASE_URL = BACKEND.substring(0, BACKEND.lastIndexOf('/'));
+
+// Timers de guardado debounced por fila (clave = id real o el id temporal
+// 'new-<timestamp>' de una fila todavía no guardada) -- mismo criterio
+// 500ms que adminGuardarPreciosAuto()/adminGuardarEquipAuto(), pero por fila
+// en vez de un único timer global (varias filas pueden estar editándose).
+var _mlGuardarTimers = {};
+
+// Único punto de entrada de la burbuja "Categorías" (ADMIN_TILE_INFO['admin-tiers'].cargar,
+// llamado por _adminAbrirBurbuja() que ya se encargó de mostrar la burbuja
+// y marcar la tile activa antes de llegar acá) -- carga los 2 bloques.
+function _mlIrSeccion() {
+  _mlCargarTiers();
+  _mlCargarMiembros();
+}
+
+function _mlCargarTiers() {
+  adminApi({ action: 'getTiers' }, function(res) {
+    _mlRenderTiers(res.tiers || []);
+  }, function(e) { mostrarToast(e.message || 'Error al cargar los tiers.', 'error'); });
+}
+
+function _mlStepperHtml(campoClass, label, val, min) {
+  val = (val === null || val === undefined) ? 0 : val;
+  return '<div class="ml-tier-field"><label>' + label + '</label>' +
+    '<div class="qty-stepper" data-step="1" data-min="' + min + '">' +
+      '<button type="button" class="qty-btn" onclick="adminStepperChange(this,-1);_mlGuardarTier(this.closest(\'.ml-tier-row\').dataset.id);">−</button>' +
+      '<span class="qty-value">' + val + '</span>' +
+      '<button type="button" class="qty-btn" onclick="adminStepperChange(this,1);_mlGuardarTier(this.closest(\'.ml-tier-row\').dataset.id);">+</button>' +
+      '<input type="hidden" class="' + campoClass + '" value="' + val + '">' +
+    '</div></div>';
+}
+
+function _mlTierFilaHtml(t) {
+  var esDefault = !!t.es_default;
+  var logicaY = t.logica === 'Y';
+  var nombreEsc = (t.nombre || '').replace(/"/g, '&quot;');
+  return '<div class="ml-tier-row" data-id="' + t.id + '" data-es-default="' + (esDefault ? 'true' : 'false') + '">' +
+    '<div class="ml-tier-row-head">' +
+      '<input type="text" class="ml-tier-nombre" value="' + nombreEsc + '" placeholder="Nombre del tier" onchange="_mlGuardarTier(this.closest(\'.ml-tier-row\').dataset.id)">' +
+      (esDefault
+        ? '<span class="badge badge-confirmada">Default</span>'
+        : '<button type="button" class="adm-talla-quitar" onclick="_mlEliminarTier(this.closest(\'.ml-tier-row\').dataset.id)" aria-label="Eliminar tier"><span class="material-symbols-outlined" style="font-size:1.1rem;">delete</span></button>') +
+    '</div>' +
+    '<div class="ml-tier-steppers">' +
+      _mlStepperHtml('ml-tier-orden', 'Orden', t.orden, 1) +
+      _mlStepperHtml('ml-tier-min-clases', 'Min. clases', t.min_clases, 0) +
+      _mlStepperHtml('ml-tier-min-puntos', 'Min. puntos', t.min_puntos, 0) +
+      _mlStepperHtml('ml-tier-ventana', 'Ventana (meses)', t.ventana_meses, 1) +
+    '</div>' +
+    '<div class="ml-tier-logica">' +
+      '<span class="ml-tier-logica-label">Lógica</span>' +
+      '<div class="ml-tier-logica-toggle">' +
+        '<button type="button" class="aj-pill ml-tier-logica-btn' + (logicaY ? ' activa' : '') + '" data-val="Y" onclick="_mlSetLogica(this)">Y · ambos</button>' +
+        '<button type="button" class="aj-pill ml-tier-logica-btn' + (!logicaY ? ' activa' : '') + '" data-val="O" onclick="_mlSetLogica(this)">O · cualquiera</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function _mlRenderTiers(tiers) {
+  var el = document.getElementById('ml-tiers-lista');
+  if (!el) return;
+  if (!tiers.length) { el.innerHTML = '<p style="padding:14px;color:var(--muted);font-size:0.85rem;">Sin tiers configurados.</p>'; return; }
+  el.innerHTML = tiers.map(_mlTierFilaHtml).join('');
+}
+
+// Toggle Y/O de un tier -- mismo criterio de selección única que cualquier
+// otro grupo de .aj-pill de la app (ej. pills de protecciones), guarda apenas
+// se togglea (sin esperar a que se toque otro campo).
+function _mlSetLogica(btn) {
+  var row = btn.closest('.ml-tier-row');
+  if (!row) return;
+  var pills = row.querySelectorAll('.ml-tier-logica-btn');
+  for (var i = 0; i < pills.length; i++) pills[i].classList.toggle('activa', pills[i] === btn);
+  _mlGuardarTier(row.dataset.id);
+}
+
+// Agrega una fila vacía y sin guardar -- id temporal 'new-<timestamp>' hasta
+// el primer guardado real (_mlGuardarTier() la reconoce por el prefijo y
+// manda upsertTier SIN id, insertando en vez de actualizar; en éxito
+// reescribe data-id con el id real devuelto por el backend).
+function _mlAgregarTier() {
+  var el = document.getElementById('ml-tiers-lista');
+  if (!el) return;
+  var maxOrden = 0;
+  el.querySelectorAll('.ml-tier-orden').forEach(function(inp) { maxOrden = Math.max(maxOrden, Number(inp.value) || 0); });
+  var vacio = el.querySelector('p');
+  if (vacio) el.innerHTML = '';
+  var tierNuevo = { id: 'new-' + Date.now(), orden: maxOrden + 1, nombre: '', min_clases: 0, min_puntos: 0, ventana_meses: 2, logica: 'O', es_default: false };
+  el.insertAdjacentHTML('beforeend', _mlTierFilaHtml(tierNuevo));
+}
+
+// Recoge los valores actuales de la fila `id` desde el DOM y guarda (debounced
+// 500ms por fila, mismo criterio que adminGuardarPreciosAuto()/
+// adminGuardarEquipAuto()) -- llamada por CADA campo editable de la fila
+// (nombre, los 4 steppers, el toggle de lógica), siempre resolviendo `id`
+// en vivo desde `row.dataset.id` (no un valor baked-in en el onclick), para
+// que una fila nueva recién guardada (id temporal -> id real) siga
+// actualizando la MISMA fila en vez de crear una segunda.
+function _mlGuardarTier(id) {
+  var key = id || '';
+  if (!key) return;
+  clearTimeout(_mlGuardarTimers[key]);
+  _mlGuardarTimers[key] = setTimeout(function() {
+    var row = document.querySelector('.ml-tier-row[data-id="' + key + '"]');
+    if (!row) return;
+    var logicaBtn = row.querySelector('.ml-tier-logica-btn.activa');
+    var payload = {
+      action: 'upsertTier',
+      orden: row.querySelector('.ml-tier-orden').value,
+      nombre: row.querySelector('.ml-tier-nombre').value,
+      min_clases: row.querySelector('.ml-tier-min-clases').value,
+      min_puntos: row.querySelector('.ml-tier-min-puntos').value,
+      ventana_meses: row.querySelector('.ml-tier-ventana').value,
+      logica: logicaBtn ? logicaBtn.dataset.val : 'O',
+      // Cadena vacía en vez de 'false': upsertTier hace `!!es_default` en el
+      // backend, y `!!'false'` da true (cualquier string no vacío es
+      // truthy) -- solo '' o 'true' dan el resultado correcto ahí.
+      es_default: row.dataset.esDefault === 'true' ? 'true' : ''
+    };
+    if (key.indexOf('new-') !== 0) payload.id = key;
+    adminApi(payload, function(res) {
+      if (res.tier && res.tier.id) row.dataset.id = res.tier.id;
+    }, function(e) { mostrarToast(e.message || 'Error al guardar el tier.', 'error'); });
+  }, 500);
+}
+
+function _mlEliminarTier(id) {
+  if (!id) return;
+  if (id.indexOf('new-') === 0) {
+    var fila = document.querySelector('.ml-tier-row[data-id="' + id + '"]');
+    if (fila) fila.remove();
+    return;
+  }
+  if (!confirm('¿Eliminar este tier? Esta acción no se puede deshacer.')) return;
+  adminApi({ action: 'deleteTier', id: id }, function(res) {
+    if (res.ok) { _mlCargarTiers(); } else { mostrarToast(res.error || 'Error al eliminar el tier.', 'error'); }
+  }, function(e) { mostrarToast(e.message || 'Error al eliminar el tier.', 'error'); });
+}
+
+function _mlCargarMiembros() {
+  var el = document.getElementById('ml-miembros-lista');
+  if (el) el.innerHTML = _skeletonQueLlevarHtml();
+  adminApi({ action: 'adminGetCategorias' }, function(res) {
+    _mlRenderMiembros(res.personas || []);
+  }, function(e) { mostrarToast(e.message || 'Error al cargar el equipo.', 'error'); });
+}
+
+function _mlRenderMiembros(personas) {
+  var el = document.getElementById('ml-miembros-lista');
+  if (!el) return;
+  if (!personas.length) { el.innerHTML = '<p style="padding:14px;color:var(--muted);font-size:0.85rem;">Sin miembros.</p>'; return; }
+  el.innerHTML = personas.map(function(p) {
+    return '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
+      '<div style="font-weight:700;font-size:0.88rem;">' + p.username + '</div>' +
+      '<span class="badge badge-confirmada">' + (p.categoria || 'Sin categoría') + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+// Llama directo a recalcular-categorias (Edge Function standalone, NO parte
+// del switch de acciones de supabase/functions/api/index.ts -- por eso un
+// fetch() propio en vez de adminApi()/api()). Manda el adminToken en
+// Authorization -- válido porque esa función se despliega con
+// --no-verify-jwt (ver "Tareas pendientes manuales"), así que ese header
+// queda libre para el token de ESTA app en vez del JWT que exige Supabase
+// por default; sin apikey (no hace falta con el gate de plataforma
+// desactivado).
+function _mlRecalcular() {
+  var btn = document.getElementById('ml-btn-recalcular');
+  if (btn) btn.disabled = true;
+  fetch(BACKEND_BASE_URL + '/recalcular-categorias', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + _adminToken }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (btn) btn.disabled = false;
+    if (data && data.ok) {
+      mostrarToast('Categorías recalculadas: ' + data.procesados + ' persona(s).', 'ok', true);
+      _mlCargarMiembros();
+    } else {
+      mostrarToast((data && data.error) || 'Error al recalcular.', 'error');
+    }
+  })
+  .catch(function(e) {
+    if (btn) btn.disabled = false;
+    mostrarToast(e.message || 'Error al recalcular.', 'error');
+  });
 }

@@ -1803,6 +1803,42 @@ Deno.serve(async (req: Request) => {
       case 'subirFotoPerfil':
       case 'subirFotoInscripcion':
         return forwardToGASPost(params);
+      // Mi Liga — config de tiers (categorías de equipo)
+      case 'getTiers': {
+        const adminEmail = await _validarAdminToken(params.adminToken);
+        if (!adminEmail) return json({ error: 'Sesión admin inválida.' }, 401);
+        const { data, error } = await supabase.from('config_tiers').select('*').order('orden');
+        if (error) return json({ error: error.message }, 500);
+        return json({ tiers: data });
+      }
+      case 'upsertTier': {
+        const adminEmail = await _validarAdminToken(params.adminToken);
+        if (!adminEmail) return json({ error: 'Sesión admin inválida.' }, 401);
+        const { id, orden, nombre, min_clases, min_puntos, ventana_meses, logica, es_default } = params;
+        const row = { orden, nombre, min_clases, min_puntos, ventana_meses, logica, es_default: !!es_default };
+        const { data, error } = id
+          ? await supabase.from('config_tiers').update(row).eq('id', id).select().single()
+          : await supabase.from('config_tiers').insert(row).select().single();
+        if (error) return json({ error: error.message }, 500);
+        return json({ tier: data });
+      }
+      case 'deleteTier': {
+        const adminEmail = await _validarAdminToken(params.adminToken);
+        if (!adminEmail) return json({ error: 'Sesión admin inválida.' }, 401);
+        const { data: tier } = await supabase.from('config_tiers').select('es_default').eq('id', params.id).single();
+        if (!tier || tier.es_default) return json({ error: 'No se puede eliminar el tier por defecto' }, 400);
+        const { error } = await supabase.from('config_tiers').delete().eq('id', params.id);
+        if (error) return json({ error: error.message }, 500);
+        return json({ ok: true });
+      }
+      // Mi Liga — roster con categoría actual (adminGetRosterEquipo ya existente no trae `categoria`, sin tocarla)
+      case 'adminGetCategorias': {
+        const adminEmail = await _validarAdminToken(params.adminToken);
+        if (!adminEmail) return json({ error: 'Sesión admin inválida.' }, 401);
+        const { data, error } = await supabase.from('equipo').select('username, categoria').order('username');
+        if (error) return json({ error: error.message }, 500);
+        return json({ personas: data });
+      }
       // Aún en GAS: AsistenciaAnticipada, enviarResumenReservas, adminRegenerarVentanaAsistencias, adminCancelarEvento, guardarNotaPago
       default:
         return forwardToGAS(params);

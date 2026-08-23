@@ -76,6 +76,12 @@ Cosas que requieren acción humana en el SQL Editor de Supabase (dashboard del p
   ```
   Después de desplegar, llamarla una vez manualmente (GET o POST, sin params) para la primera corrida real y confirmar que `equipo.categoria` quede seteada según los mínimos configurados.
 
+- **Redesplegar `api` y `recalcular-categorias` (Fase B del sistema de tiers, UI admin "Categorías" en Mi Liga, ver "Cambios recientes").** `api` ganó 4 cases nuevos (`getTiers`/`upsertTier`/`deleteTier`/`adminGetCategorias`) — sin redesplegar, la burbuja "Categorías" de Mi Liga va a fallar (esas acciones no van a existir en el switch desplegado, caen a `forwardToGAS()` que tampoco las conoce). `recalcular-categorias` ganó una validación de admin token nueva (leía nada del request antes) — sin redesplegar, `_mlRecalcular()` va a funcionar igual (la validación es aditiva, no rompe el contrato) pero sin la protección real hasta que se actualice.
+  ```
+  supabase functions deploy api --project-ref uusbnreitoobqssizbfq
+  supabase functions deploy recalcular-categorias --project-ref uusbnreitoobqssizbfq --no-verify-jwt
+  ```
+
 ---
 
 ## 1. Estructura del proyecto
@@ -438,6 +444,45 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
 | `body.ev-ant-footer-visible #app-toast` | **Nuevo (ver "Cambios recientes")** — sube el toast global (`#app-toast`, css/estilos.css, `bottom:28px` fijo de fábrica) para que en `#s-eventos-anticipada` quede justo encima de `#cta-footer-eventos-anticipada` en vez de tapar las pills del wizard. `#app-toast` es un `<div>` creado por JS y agregado directo a `<body>` la primera vez que corre `mostrarToast()` (mismo criterio de "`position:fixed` va directo en `<body>`, no dentro de `.pantalla`/`.card`" que ya rige `.cta-footer-fixed`) — el override también apunta ahí sin anidarlo dentro de ninguna pantalla. `body.ev-ant-footer-visible` la togglean `_evAntActualizarFooter()`/`_evAntOcultarFooter()` (js/eventos.js) junto con el propio footer |
 
 ### Cambios recientes
+- **Fase B del sistema de tiers: UI admin de config_tiers ("Categorías"), dentro de Mi Liga — no una sección nueva.** El pedido original describía "la sección admin Mi Liga" con su propio header, pero **"Mi Liga" ya existe** (`#s-miliga`/`irMiLiga()`, panel admin completo: Reservas/Notificación/Equipamiento/Qué llevar/Color/Precios/Cupones/Excepciones/Administradorxs, todo embebido vía el mecanismo `ADMIN_TILE_INFO` de burbujas) — crear una sección nueva con el mismo nombre hubiera quedado duplicado/confuso. **Confirmado con Victor:** la config de tiers se suma como una burbuja/tile más de Mi Liga, mismo mecanismo que "Color"/"Precios de clases", no una pantalla propia.
+
+  1. **`supabase/functions/api/index.ts` — 4 cases nuevos, todos con `_validarAdminToken(params.adminToken)` (mismo patrón que `adminBorrarEvento`/`adminSetColorEnfasis`/etc., ya existentes), insertados antes del `default:` (después de `subirFotoInscripcion`, sin tocar ningún case existente):**
+     - `getTiers` — `select('*')` de `config_tiers` ordenado por `orden`, devuelve `{tiers}`.
+     - `upsertTier` — `update` (si viene `id`) o `insert` (si no) sobre `config_tiers`, devuelve `{tier}`. `es_default: !!es_default` tal cual vino en el pedido — el frontend evita a propósito mandar el string `'false'` (ver punto 5 más abajo, `_mlGuardarTier()`).
+     - `deleteTier` — rechaza borrar el tier `es_default` (`{error:'No se puede eliminar el tier por defecto'}`, 400), si no lo es hace `delete` y devuelve `{ok:true}`.
+     - `adminGetCategorias` — **nuevo, no pedido explícitamente pero necesario** (Parte 3 del pedido lo preveía: "o una acción que devuelva username + categoria de todos" — `adminGetRosterEquipo`, la acción existente más parecida, no trae `categoria` y no se modificó para no tocar un case existente). `select('username, categoria')` de `equipo`, devuelve `{personas}`.
+     - **Respuesta NO usa el patrón `{exito, error}` del resto del archivo** — literal como vino en el pedido (`{tiers}`/`{tier}`/`{ok:true}`/`{error}`). Funciona igual con `api()`/`apiPost()` (`js/api.js`): esas funciones solo miran `data.error` para decidir `onError` vs `onSuccess`, agnósticas a qué más trae el body — confirmado leyendo esas 2 funciones antes de escribir el frontend, no asumido.
+
+  2. **`supabase/functions/recalcular-categorias/index.ts` — validación de admin agregada (fuera del pedido original de 3 partes, pero necesaria: el frontend manda el adminToken en `Authorization` a propósito, ver punto 6 — sin esto esa función quedaba pública, cualquiera con la URL podía recalcular categorías de todo el equipo).** `_validarAdminToken()` reimplementada ahí mismo (mismo criterio contra `admin_sessions` que la de `api/index.ts`, sin acceso a sus helpers por ser una función standalone aparte) — lee `Authorization: Bearer <adminToken>`, 401 si inválido/vencido, antes de tocar cualquier tabla.
+
+  3. **`index.html` — pill nueva "Categorías" (`data-tile="admin-tiers"`, ícono `military_tech`) en `.admin-dash-pills-row` de Mi Liga, junto a Color/Precios/Cupones/Excepciones.** Burbuja `#admin-burbuja-tiers` después de la de Excepciones: 2 bloques separados por `.seccion-label` (ya existente, sin envolver en `.card` — ya está dentro de `#s-miliga-card`, anidar otra `.card` hubiera quedado pesado):
+     - **"Configuración de tiers"** — `#ml-tiers-lista` (`.aj-group`) con una fila por tier + botón "Agregar tier" + `#ml-btn-recalcular` (`.btn.btn-primary`, ícono `refresh`, "Recalcular ahora").
+     - **"Estado actual del equipo"** — `#ml-miembros-lista`, una card por persona (username + badge de categoría).
+     - **Cero CSS/colores nuevos que no sean variables de `colors.css`** — reusa `.qty-stepper`/`.qty-btn`/`.qty-value` (steppers de orden/mínimos/ventana), `.aj-pill`/`.activa` (toggle Y/O de lógica), `.badge`/`.badge-confirmada` (badge "Default" y categoría en la tabla de estado), `.adm-talla-quitar` (borrar tier), `.reserva-card` (fila de persona). Layout nuevo agregado a `css/admin.css`: `.ml-tier-row`/`.ml-tier-row-head`/`.ml-tier-steppers`/`.ml-tier-field`/`.ml-tier-logica*` — todo `var(--...)`, ningún hex/rgba literal.
+
+  4. **`ADMIN_TILE_INFO['admin-tiers']` (`js/admin.js`) — `{bubbleId:'admin-burbuja-tiers', listaId:'ml-tiers-lista', cargar:_mlIrSeccion}`**, mismo mecanismo genérico que las demás 7 tiles/pills — `_adminAbrirBurbuja()` ya se encarga de mostrar la burbuja/marcar la tile activa/skeleton de `listaId` antes de llamar a `cargar()`.
+
+  5. **Funciones nuevas en `js/admin.js` (al final del archivo), nombres tal cual los pidió Victor:**
+
+     | Función | Descripción |
+     |---|---|
+     | `_mlIrSeccion()` | El `cargar` de la tile — llama `_mlCargarTiers()` + `_mlCargarMiembros()`. Mostrar la burbuja ya lo resuelve `_adminAbrirBurbuja()` antes de esta llamada |
+     | `_mlCargarTiers()` | `adminApi({action:'getTiers'})` → `_mlRenderTiers(res.tiers)` |
+     | `_mlStepperHtml(campoClass, label, val, min)` | Helper interno — arma un `.ml-tier-field` con `.qty-stepper` (reusa `adminStepperChange()` ya existente), evita repetir el markup 4 veces por fila |
+     | `_mlTierFilaHtml(t)` | HTML de una fila de tier — nombre editable, 4 steppers, toggle Y/O, badge Default o botón borrar según `es_default` |
+     | `_mlRenderTiers(tiers)` | Puebla `#ml-tiers-lista` con `_mlTierFilaHtml` por tier, o un aviso "Sin tiers configurados" |
+     | `_mlSetLogica(btn)` | Togglea la pill Y/O tocada dentro de su fila y guarda (`_mlGuardarTier`) |
+     | `_mlAgregarTier()` | Agrega una fila vacía sin guardar — `id` temporal `'new-'+Date.now()`, `orden = max(órdenes actuales)+1`, `es_default:false` |
+     | `_mlGuardarTier(id)` | Debounced 500ms **por fila** (`_mlGuardarTimers[id]`, no un timer global — varias filas pueden estar editándose a la vez). Lee TODO el estado actual de la fila desde el DOM (resuelto en vivo vía `row.dataset.id` en cada `onclick`/`onchange`, no un id fijado en el HTML generado) y hace `adminApi({action:'upsertTier',...})`. Si la fila era nueva (`id` con prefijo `'new-'`) no manda `id` (insert); en éxito reescribe `row.dataset.id` con el id real devuelto — así una fila recién creada sigue actualizando la MISMA fila en ediciones siguientes, no crea una segunda |
+     | `_mlEliminarTier(id)` | Fila nueva sin guardar (`id` con prefijo `'new-'`): la borra del DOM sin ir al backend. Fila real: `confirm()` + `adminApi({action:'deleteTier'})` + recarga |
+     | `_mlCargarMiembros()` | `adminApi({action:'adminGetCategorias'})` → `_mlRenderMiembros(res.personas)` |
+     | `_mlRenderMiembros(personas)` | Puebla `#ml-miembros-lista`, una `.reserva-card` por persona (username + `.badge` de categoría) |
+     | `_mlRecalcular()` | Único caller que NO pasa por `adminApi()`/`api()` — `recalcular-categorias` es una Edge Function standalone, no un `case` del switch de `api/index.ts`. `fetch(BACKEND_BASE_URL + '/recalcular-categorias', {method:'POST', headers:{Authorization:'Bearer '+_adminToken}})` — sin `apikey` (esa función se despliega con `--no-verify-jwt`, ver "Tareas pendientes manuales", así que el header `Authorization` queda libre para el adminToken de esta app en vez del JWT que Supabase exigiría por default). Toast de éxito/error + recarga `_mlCargarMiembros()` |
+     | `BACKEND_BASE_URL` | Nueva constante — `BACKEND.substring(0, BACKEND.lastIndexOf('/'))` (`js/config.js`: `.../functions/v1/api` → `.../functions/v1`), derivada en runtime como pidió Victor, no un segundo string hardcodeado |
+
+  - **Sin desplegar/verificar contra datos reales** — no ejecutable por el asistente (sin acceso al CLI/dashboard de Supabase). Pendiente de Victor: correr la migración de `config_tiers` (ver "Tareas pendientes manuales", entrada de Fase A), redesplegar `api` (`supabase functions deploy api`) para que los 4 cases nuevos queden disponibles, y redesplegar `recalcular-categorias` con la validación de admin agregada en el punto 2.
+  - **Sin verificar con Playwright** (sin navegador en este entorno) — verificado por lectura de código cruzada contra `_validarAdminToken()`/el resto de cases admin existentes (`api/index.ts`), `api()`/`apiPost()`/`adminApi()` completas (`js/api.js`/`js/admin.js`), la estructura real de `#s-miliga`/`ADMIN_TILE_INFO`/`_adminAbrirBurbuja()` (`index.html`/`js/admin.js`) y `node --check` sobre `js/admin.js` para descartar errores de sintaxis (sin equivalente de `--check` disponible para los `.ts` de Supabase en este entorno — Deno no está instalado acá, revisados por lectura completa en su lugar).
+
 - **`_modoUsuario()` (`js/eventos.js`) implementada — lee `E.datos.categoria` (campo ya existente en `equipo`, mapeado por `getDatosCompletos()`). Retorna el nombre del tier en minúsculas. Fallback: `'mirlxs'` si el dato está ausente o null.**
 
 - **Fase A del sistema de tiers (categorías de equipo automáticas): tabla `config_tiers` nueva + columna `equipo.categoria` (ya existente, confirmada por uso real en `getDatosCompletos()`/`getDatosPersona()`) + Edge Function nueva `recalcular-categorias` que recalcula la categoría de cada miembro según asistencias reales y puntos.**

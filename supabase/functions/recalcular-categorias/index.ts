@@ -35,11 +35,27 @@ function nombresDe(s: string | null | undefined): string[] {
   return String(s ?? '').split(',').map((n: string) => n.trim().toUpperCase()).filter(Boolean);
 }
 
+// Mismo criterio que _validarAdminToken() en supabase/functions/api/index.ts
+// (tabla admin_sessions), reimplementado acá porque esta es una Edge Function
+// standalone, sin acceso a los helpers de esa otra.
+async function _validarAdminToken(token: string | null): Promise<string | null> {
+  if (!token) return null;
+  const { data } = await supabase.from('admin_sessions').select('email, expires_at').eq('token', token).maybeSingle();
+  if (!data) return null;
+  if (new Date(data.expires_at) <= new Date()) return null;
+  return data.email;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (req.method !== 'GET' && req.method !== 'POST') {
     return json({ ok: false, error: 'Método no soportado.' }, 405);
   }
+
+  const authHeader = req.headers.get('Authorization') ?? '';
+  const adminToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+  const adminEmail = await _validarAdminToken(adminToken);
+  if (!adminEmail) return json({ ok: false, error: 'Sesión admin inválida.' }, 401);
 
   try {
     const { data: tiersData, error: tiersError } = await supabase

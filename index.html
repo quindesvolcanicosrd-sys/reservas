@@ -2583,6 +2583,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">volunteer_activism</span></div>
         <div class="admin-dash-tile-label">Excepciones de pago</div>
       </div>
+      <div class="admin-dash-tile admin-dash-pill" data-tile="admin-tiers" onclick="adminToggleBurbuja('admin-tiers', this)">
+        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">military_tech</span></div>
+        <div class="admin-dash-tile-label">Categorías</div>
+      </div>
     </div>
 
     <!-- Burbuja "Color". -->
@@ -2657,6 +2661,31 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div id="admin-burbuja-excepciones" class="admin-tile-bubble" style="display:none;">
       <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">volunteer_activism</span> Excepciones de pago</div>
       <div id="admin-excepciones-lista"></div>
+    </div>
+
+    <!-- Burbuja "Categorías" -- Fase A del sistema de tiers (ver MANIFEST.md
+         "Cambios recientes"): config_tiers (config editable) + equipo.categoria
+         (estado actual, recalculado por la Edge Function recalcular-categorias).
+         Mismo componente .admin-tile-bubble que las demás -- sin pantalla
+         propia. Reusa .qty-stepper (steppers de orden/mínimos/ventana),
+         .aj-pill/.activa (toggle Y/O de lógica), .badge/.badge-confirmada
+         (badge "Default" y categoría actual en la tabla de estado) y
+         .adm-talla-quitar (borrar tier) -- ningún componente de color nuevo,
+         solo el layout propio en .ml-tier-* (css/admin.css). -->
+    <div id="admin-burbuja-tiers" class="admin-tile-bubble" style="display:none;">
+      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">military_tech</span> Categorías</div>
+
+      <div class="seccion-label" style="margin-top:2px;">Configuración de tiers</div>
+      <div id="ml-tiers-lista" class="aj-group"></div>
+      <button type="button" class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin:2px 0 4px;" onclick="_mlAgregarTier()">
+        <span class="material-symbols-outlined" style="font-size:1.1rem;">add</span> Agregar tier
+      </button>
+      <button type="button" class="btn btn-primary" id="ml-btn-recalcular" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;" onclick="_mlRecalcular()">
+        <span class="material-symbols-outlined" style="font-size:1.1rem;">refresh</span> Recalcular ahora
+      </button>
+
+      <div class="seccion-label" style="margin-top:22px;">Estado actual del equipo</div>
+      <div id="ml-miembros-lista"></div>
     </div>
 
     <!-- Copiar link de registro-express/ -- .btn-text-simple, mismo botón
