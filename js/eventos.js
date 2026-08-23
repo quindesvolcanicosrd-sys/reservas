@@ -4958,13 +4958,15 @@ function _evRenderDetalleAsistencia(ev) {
   if (cancelado) return;
   // Regla de tiempo, no solo de rol/fecha calendario -- mismo criterio ya
   // usado por _evCardEventoHtml()/_evYaEmpezo() para la card: desde que el
-  // evento arranca, admin ve la asistencia REAL (rollcall E/F) + gestión acá
-  // también (ver _evRenderDetalleAsistenciaReal(), más abajo), no el RSVP de
-  // intención pre-evento. Antes de arrancar (cualquier cuenta) o para
-  // cuentas no-admin en cualquier momento, sigue el resumen de RSVP de
+  // evento arranca, admin Y quindes ven la asistencia REAL (rollcall E/F,
+  // ver _evRenderDetalleAsistenciaReal() más abajo) en vez del RSVP de
+  // intención pre-evento -- quindes de solo lectura, la gestión (toggle
+  // "Tomar asistencia") sigue admin-only vía `conToggle`/`_adminToken` en
+  // _evActualizarStatsAsistenciaReal(). Antes de arrancar, o para el resto
+  // de las cuentas en cualquier momento, sigue el resumen de RSVP de
   // siempre, sin cambios.
   console.log('[ev-detalle]', 'pasado:', _evEsPasado(ev), 'asistentes:', JSON.stringify(ev.asistentes), 'asistencias:', JSON.stringify(ev.asistencias));
-  if (_adminToken && _evYaEmpezo(ev)) { _evRenderDetalleAsistenciaReal(ev); return; }
+  if ((_adminToken || _modoUsuario() === 'quindes') && _evYaEmpezo(ev)) { _evRenderDetalleAsistenciaReal(ev); return; }
   var rsvps = ev.rsvps || [];
   var grupos = _EV_GRUPOS_ASISTENCIA.map(function(g) {
     return { key: g.key, label: g.label, clase: g.clase, personas: rsvps.filter(function(p) { return p.estado === g.estado; }) };

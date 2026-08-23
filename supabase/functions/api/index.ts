@@ -1016,13 +1016,20 @@ async function getEventosRango(params: Record<string, any>): Promise<Record<stri
         hasta  = params.fechaFin   ?? params.hasta;
   const d0 = desde.substring(0, 10), d1 = hasta.substring(0, 10);
   const { data } = await supabase.from('asistencias').select('id_evento, fecha, donde, inicia, termina, estado, google_maps, info_adicional, tipo_evento').gte('fecha', d0).lte('fecha', d1);
-  const [tipoIcono, requiereReserva, asistLog, equipoPorNombre, videoInstructivo] = await Promise.all([
-    _mapaTipoIconoPorLugar(), _mapaRequiereReservaPorLugar(), _ultimaAsistenciaPorPersonaTodas(), _mapaEquipoPorNombre(), _mapaVideoInstructivoPorLugar()
+  const [tipoIcono, requiereReserva, asistLog, asistEF, equipoPorNombre, videoInstructivo] = await Promise.all([
+    _mapaTipoIconoPorLugar(), _mapaRequiereReservaPorLugar(), _ultimaAsistenciaPorPersonaTodas(), _asistenciaEFPorEvento(), _mapaEquipoPorNombre(), _mapaVideoInstructivoPorLugar()
   ]);
   const eventos = (data ?? []).map((fila: any) => {
     const idEvento = fila.id_evento;
     const logDeEvento = asistLog[idEvento] ?? [];
-    const asistencias = logDeEvento.map((a: any) => {
+    // Fallback a las columnas legacy `a_horario`/`tarde` (`_asistenciaEFPorEvento()`)
+    // solo cuando `log_asistencias` no tiene ninguna fila para este evento --
+    // eventos históricos anteriores a la migración a `log_asistencias` (ver
+    // MANIFEST.md) tienen datos únicamente en esas columnas. No se usa como
+    // fuente primaria: mezclarla siempre reintroducía el bug de RSVP anticipado
+    // mostrándose como "marcado por un admin" (ver MANIFEST.md).
+    const fuenteAsistencia = logDeEvento.length ? logDeEvento : (asistEF[idEvento] ?? []);
+    const asistencias = fuenteAsistencia.map((a: any) => {
       const eq = equipoPorNombre[String(a.nombre).trim().toUpperCase()] ?? {};
       return { nombre: a.nombre, estado: a.estado, origen: a.origen, nombreDerby: eq.nombreDerby ?? '', fotoPerfil: eq.fotoPerfil ?? '' };
     });
