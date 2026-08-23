@@ -3755,6 +3755,7 @@ function _evTimelineItems() {
       .forEach(function(x) { _evProximas6EntrenIds[x.id] = true; });
   }
   function _evEsRelevantePorEquipo(e) {
+    if (_adminToken || _modoUsuario() === 'quindes') return true;
     if (!_filtroEquipoActivo) {
       // Pasado (mirlxs con cuota): mostrar solo lo relevante
       if (_modoUsuario() === 'mirlxs' && _evFechaCmp(e.fecha, _hoyIsoTimeline) < 0) {
