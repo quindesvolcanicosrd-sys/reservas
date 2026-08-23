@@ -2412,9 +2412,8 @@ function _evOcultarRsvpPorEquipoClub(e) {
 // (ver _evOcultarRsvpPorEquipoClub(), que sigue leyendo esos 2 campos
 // directo, sin pasar por acá) -- categoria es lo único que separa quindes.
 function _modoUsuario() {
-  var d = E.datos;
-  if (d && d.categoria === 'Quindes') return 'quindes';
-  return 'mirlxs';
+  if (!E.datos || !E.datos.categoria) return 'mirlxs';
+  return E.datos.categoria.toLowerCase();
 }
 // Equipo del club (no propio) -- mismo campo/criterio guardado (case-
 // insensitive) que ya usa el resto de la app para esta misma distinción

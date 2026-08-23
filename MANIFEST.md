@@ -438,6 +438,8 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
 | `body.ev-ant-footer-visible #app-toast` | **Nuevo (ver "Cambios recientes")** — sube el toast global (`#app-toast`, css/estilos.css, `bottom:28px` fijo de fábrica) para que en `#s-eventos-anticipada` quede justo encima de `#cta-footer-eventos-anticipada` en vez de tapar las pills del wizard. `#app-toast` es un `<div>` creado por JS y agregado directo a `<body>` la primera vez que corre `mostrarToast()` (mismo criterio de "`position:fixed` va directo en `<body>`, no dentro de `.pantalla`/`.card`" que ya rige `.cta-footer-fixed`) — el override también apunta ahí sin anidarlo dentro de ninguna pantalla. `body.ev-ant-footer-visible` la togglean `_evAntActualizarFooter()`/`_evAntOcultarFooter()` (js/eventos.js) junto con el propio footer |
 
 ### Cambios recientes
+- **`_modoUsuario()` (`js/eventos.js`) implementada — lee `E.datos.categoria` (campo ya existente en `equipo`, mapeado por `getDatosCompletos()`). Retorna el nombre del tier en minúsculas. Fallback: `'mirlxs'` si el dato está ausente o null.**
+
 - **Fase A del sistema de tiers (categorías de equipo automáticas): tabla `config_tiers` nueva + columna `equipo.categoria` (ya existente, confirmada por uso real en `getDatosCompletos()`/`getDatosPersona()`) + Edge Function nueva `recalcular-categorias` que recalcula la categoría de cada miembro según asistencias reales y puntos.**
 
   **Migración nueva:** `supabase/migrations/20260823_config_tiers.sql` — pendiente de correr manualmente en el SQL Editor de Supabase (no ejecutable por el asistente, mismo criterio que el resto de "Tareas pendientes manuales" al principio de este archivo).
