@@ -3161,9 +3161,13 @@ function _evAsistAdminToggle(id) {
   _evAsistAdminAbierto = estabaAbierto ? null : id;
   if (_evAsistAdminAbierto) _evAsistAdminSetAbierto(_evAsistAdminAbierto, true);
 }
-function _evAccionAdminHtml(e) {
+// Extraída de _evAccionAdminHtml() para poder re-generar SOLO estas filas
+// (_evActualizarListaAsistAdmin(), _evMarcarAsistenciaAdmin() más abajo) sin
+// reconstruir el resto de la card (botón "Tomar asistencia" + header con
+// contador, que ya se actualizaba aparte vía _evActualizarContadorAsistAdmin()).
+function _evAsistentesFilasHtml(e) {
   var asistentes = e.asistentes || [];
-  var filas = asistentes.map(function(a) {
+  return asistentes.map(function(a) {
     // Puntualidad (a.estado) + rol (RSVP original de esa persona, si lo
     // hay) combinados -- ver _evLabelPuntualidadRol(). El badge de color
     // sigue leyendo a.estado a secas (A tiempo/Tarde/Ausente): el rol nunca
@@ -3172,6 +3176,9 @@ function _evAccionAdminHtml(e) {
     return '<div class="ev-asistente-row"><span class="ev-asistente-nombre">' + (a.nombreDerby || a.nombre) + '</span>' +
       '<span class="badge ' + (_EV_CHIP_BADGE[a.estado] || 'badge-pendiente') + '">' + label + '</span></div>';
   }).join('');
+}
+function _evAccionAdminHtml(e) {
+  var filas = _evAsistentesFilasHtml(e);
   var abierto = _evAsistAdminAbierto === e.id;
   // stopPropagation: mismo motivo que _evRsvpBarraHtml() -- la card entera
   // ahora es clickeable (abre el detalle), esto evita que tocar el header,
@@ -3181,7 +3188,7 @@ function _evAccionAdminHtml(e) {
   return '<div class="ev-asistentes-list" onclick="event.stopPropagation()">' +
     '<button class="ev-btn-agregar-persona" onclick="_evAbrirMarcarAsistencia(\'' + e.id + '\',\'s-eventos\')"><span class="material-symbols-outlined">person_add</span>Tomar asistencia</button>' +
     '<div class="ev-asist-admin-header' + (abierto ? ' abierto' : '') + '" id="ev-asist-admin-header-' + e.id + '" onclick="_evAsistAdminToggle(\'' + e.id + '\')">' +
-      '<span class="ev-asist-admin-header-titulo">Asistencia (' + asistentes.length + ')</span>' +
+      '<span class="ev-asist-admin-header-titulo">Asistencia (' + (e.asistentes || []).length + ')</span>' +
       '<span class="material-symbols-outlined ev-asist-admin-chevron">expand_more</span>' +
     '</div>' +
     '<div class="ev-asist-admin-body' + (abierto ? ' abierto' : '') + '" id="ev-asist-admin-body-' + e.id + '">' +
@@ -3320,8 +3327,10 @@ function _evRosterAdminFilasHtml(e, q) {
 // propio, más arriba): resalta la opción y reposiciona SOLO el slider de
 // esa fila (`btnEl.closest('.ev-rsvp-seg')`, nunca un sweep de
 // `_evUpdateRsvpSliders()` sobre todo el roster) y actualiza
-// `ev.asistentes`/el contador del header de la card (si esa card sigue en
-// el timeline detrás del detalle -- consistencia gratis, sin costo) en
+// `ev.asistentes`/el contador del header Y las filas nombre+badge de la
+// lista "Asistencia (N)" de la card (`_evActualizarListaAsistAdmin()`, si
+// esa card sigue en el timeline detrás del detalle -- consistencia gratis,
+// sin costo, sin esperar a que el timeline se reconstruya entero) en
 // memoria antes de que la escritura real resuelva. Repinta también las
 // tarjetas de estadística + lista del detalle (`_evActualizarStatsAsistenciaReal()`)
 // si ese evento está abierto ahí -- sin reconstruir la subpantalla "Marcar
@@ -3362,11 +3371,13 @@ function _evMarcarAsistenciaAdmin(idEvento, nombre, estado, btnEl) {
     sinPersona.concat([{ nombre: nombre, estado: estadoAEnviar, origen: 'Admin', nombreDerby: datosRoster.nombreDerby || '', fotoPerfil: datosRoster.fotoPerfil || '' }]);
   aplicarEnDom(estadoAEnviar === 'Ninguno' ? null : estadoAEnviar);
   _evActualizarContadorAsistAdmin(idEvento);
+  _evActualizarListaAsistAdmin(idEvento);
   if (_evDetalleActual && _evDetalleActual.id === idEvento) _evActualizarStatsAsistenciaReal(ev);
   apiPost({ action: 'adminMarcarAsistencia', adminToken: _adminToken, idEvento: idEvento, nombre: nombre, estado: estadoAEnviar }, function() {}, function(e) {
     ev.asistentes = asistentesAnterior;
     aplicarEnDom(anteriorDeEstaPersona ? anteriorDeEstaPersona.estado : null);
     _evActualizarContadorAsistAdmin(idEvento);
+    _evActualizarListaAsistAdmin(idEvento);
     if (_evDetalleActual && _evDetalleActual.id === idEvento) _evActualizarStatsAsistenciaReal(ev);
     mostrarToast(e && e.message ? e.message : 'No se pudo guardar la asistencia.', 'error');
   });
@@ -3375,6 +3386,23 @@ function _evActualizarContadorAsistAdmin(idEvento) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
   var titulo = document.querySelector('#ev-asist-admin-header-' + idEvento + ' .ev-asist-admin-header-titulo');
   if (ev && titulo) titulo.textContent = 'Asistencia (' + (ev.asistentes || []).length + ')';
+}
+// Repinta SOLO las filas nombre+badge de la lista "Asistencia (N)" que ya
+// vive en la card del timeline (`#ev-asist-admin-body-<id> .ev-asist-admin-body-inner`,
+// armada por _evAccionAdminHtml()/_evAsistentesFilasHtml()) -- sin esto, tras
+// marcar a alguien desde el roster de "Marcar asistencia" o el toggle inline
+// del detalle, el contador del header ya se actualizaba (_evActualizarContadorAsistAdmin(),
+// arriba) pero las filas de abajo quedaban con los datos del render inicial
+// de la card hasta la próxima vez que se reconstruyera el timeline entero
+// (volver a Eventos, cambiar de mes, etc.) -- el bug real reportado ("el
+// timeline no refleja el cambio sin recargar"). Mismo criterio que esa
+// función: no-op silencioso si la card no está montada en este momento (la
+// pantalla de Eventos puede no ser la que está visible mientras se marca).
+function _evActualizarListaAsistAdmin(idEvento) {
+  var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
+  var inner = document.querySelector('#ev-asist-admin-body-' + idEvento + ' .ev-asist-admin-body-inner');
+  if (!ev || !inner) return;
+  inner.innerHTML = _evAsistentesFilasHtml(ev) || '<div style="font-size:0.76rem;color:var(--muted);">Nadie ha marcado todavía.</div>';
 }
 
 /* ── Card de cumpleaños ────────────────────────────────────────────────
