@@ -2967,6 +2967,7 @@ function _evUpdateRsvpSliders(animate) {
 // `d/m/aaaa`, NO ISO -- `new Date(...)` directo sobre ese string da
 // `Invalid Date`/fecha mal interpretada).
 function _evTieneCuotaAlDia() {
+  if (E.datos && (E.datos.estado_miembro === 'Técnico' || E.datos.estado_miembro === 'Lesionadx')) return true;
   var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   return (_todasReservas || []).some(function(r) {
     if (r.tipo !== 'mensual') return false;
@@ -3004,6 +3005,7 @@ function _quindesSinCuota() {
 // calendario. `e.id !== idEvento` excluye el evento que se está por marcar
 // AHORA del conteo -- cuenta solo asistencias YA confirmadas antes de esta.
 function _quindesGraciaAgotada(idEvento) {
+  if (E.datos && (E.datos.estado_miembro === 'Técnico' || E.datos.estado_miembro === 'Lesionadx')) return false;
   var ev = (_EV_EVENTOS || []).find(function(e) { return e.id === idEvento; });
   if (!ev || !ev.fecha) return false;
   var mesStr = ev.fecha.substring(0, 7);
@@ -3055,6 +3057,16 @@ function _evMesPagado(mesIdx, anio) {
 function _evMarcarAsistencia(id, estado) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === id; })[0];
   if (!ev) return;
+  // Estado de miembro (Mi Liga > Categorías, admin): quien marca "Asistiré"
+  // estando Ausente/Lesionadx vuelve a Activx automáticamente -- reactivación
+  // implícita por uso real, antes de evaluar la gracia de abajo (que ya debe
+  // correr con el estado nuevo -- ver _evTieneCuotaAlDia()/_quindesGraciaAgotada()).
+  if (estado === 'Asistiré' && E.datos && (E.datos.estado_miembro === 'Ausente' || E.datos.estado_miembro === 'Lesionadx')) {
+    E.datos.estado_miembro = 'Activx';
+    api({ action: 'actualizarDatosPersona', nombre: E.nombre, datos: JSON.stringify({ estado_miembro: 'Activx' }) }, function() {}, function(e) {
+      if (window.console) console.warn('Eventos: no se pudo reactivar estado_miembro -- ' + (e && e.message || 'error'));
+    });
+  }
   // Gracia para quindes sin cuota vigente (ver "Cambios recientes" --
   // _quindesSinCuota()/_quindesGraciaAgotada()): mirlxs sin cuota (rama
   // `else if`, comportamiento sin cambios de antes de esta tanda) sigue

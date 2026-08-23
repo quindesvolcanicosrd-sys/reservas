@@ -1587,16 +1587,44 @@ function _mlCargarMiembros() {
   }, function(e) { mostrarToast(e.message || 'Error al cargar el equipo.', 'error'); });
 }
 
+// Opciones de estado_miembro -- "Técnico" solo se ofrece a Quindes (pedido
+// explícito de Victor); para Mirlxs el selector se muestra igual (sin
+// impacto funcional en cuota/tier, ver _evTieneCuotaAlDia()/
+// _quindesGraciaAgotada()/recalcular-categorias) pero sin esa opción.
+var ML_ESTADOS_MIEMBRO_BASE = ['Activx', 'Ausente', 'Satélite', 'Lesionadx'];
+
 function _mlRenderMiembros(personas) {
   var el = document.getElementById('ml-miembros-lista');
   if (!el) return;
   if (!personas.length) { el.innerHTML = '<p style="padding:14px;color:var(--muted);font-size:0.85rem;">Sin miembros.</p>'; return; }
   el.innerHTML = personas.map(function(p) {
+    var esQuindes = String(p.categoria || '').toLowerCase() === 'quindes';
+    var opciones = esQuindes ? ML_ESTADOS_MIEMBRO_BASE.concat(['Técnico']) : ML_ESTADOS_MIEMBRO_BASE.slice();
+    var estadoActual = p.estado_miembro || 'Activx';
+    if (opciones.indexOf(estadoActual) === -1) opciones.push(estadoActual);
+    var opcionesHtml = opciones.map(function(o) {
+      return '<option value="' + o + '"' + (o === estadoActual ? ' selected' : '') + '>' + o + '</option>';
+    }).join('');
+    var usernameEsc = p.username.replace(/'/g, "\\'");
     return '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
       '<div style="font-weight:700;font-size:0.88rem;">' + p.username + '</div>' +
-      '<span class="badge badge-confirmada">' + (p.categoria || 'Sin categoría') + '</span>' +
+      '<div style="display:flex;align-items:center;gap:8px;">' +
+        '<span class="badge badge-confirmada">' + (p.categoria || 'Sin categoría') + '</span>' +
+        '<select class="ml-estado-select" onchange="_mlGuardarEstadoMiembro(\'' + usernameEsc + '\', this.value)">' + opcionesHtml + '</select>' +
+      '</div>' +
     '</div>';
   }).join('');
+}
+
+// Guarda estado_miembro de UN miembro (admin, cualquier cuenta -- distinto
+// de _ajGuardar()/actualizarDatosPersona en js/perfil.js, que es self-service
+// con token de usuario). Ver adminSetEstadoMiembro() en
+// supabase/functions/api/index.ts.
+function _mlGuardarEstadoMiembro(username, valor) {
+  adminApi({ action: 'adminSetEstadoMiembro', nombre: username, estadoMiembro: valor }, function(res) {
+    if (!res.exito) { mostrarToast(res.error || 'Error al actualizar el estado.', 'error'); _mlCargarMiembros(); return; }
+    mostrarToast('Estado actualizado.', 'ok');
+  }, function(e) { mostrarToast(e.message || 'Error al actualizar el estado.', 'error'); _mlCargarMiembros(); });
 }
 
 // Llama directo a recalcular-categorias (Edge Function standalone, NO parte

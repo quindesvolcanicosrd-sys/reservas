@@ -73,9 +73,11 @@ Deno.serve(async (req: Request) => {
       .filter((t: any) => t.id !== tierDefault.id)
       .sort((a: any, b: any) => a.orden - b.orden);
 
-    const { data: equipoData, error: equipoError } = await supabase.from('equipo').select('username');
+    const { data: equipoData, error: equipoError } = await supabase.from('equipo').select('username, estado_miembro');
     if (equipoError) return json({ ok: false, error: equipoError.message }, 500);
-    const miembros: string[] = (equipoData ?? []).map((r: any) => r.username).filter(Boolean);
+    const miembros: { username: string; estadoMiembro: string | null }[] = (equipoData ?? [])
+      .filter((r: any) => r.username)
+      .map((r: any) => ({ username: r.username, estadoMiembro: r.estado_miembro ?? null }));
 
     const maxVentana = Math.max(0, ...tiers.map((t: any) => Number(t.ventana_meses) || 0));
 
@@ -120,18 +122,28 @@ Deno.serve(async (req: Request) => {
 
     const resultados: { username: string; categoria: string }[] = [];
 
-    for (const username of miembros) {
-      let categoriaAsignada = tierDefault.nombre;
-      for (const tier of tiersNoDefault) {
-        const ventanaMeses = Number(tier.ventana_meses) || 0;
-        const clases = contarClases(username, ventanaMeses);
-        const puntos = sumarPuntos(username, ventanaMeses);
-        const cumpleClases = clases >= (Number(tier.min_clases) || 0);
-        const cumplePuntos = puntos >= (Number(tier.min_puntos) || 0);
-        const cumple = tier.logica === 'Y' ? (cumpleClases && cumplePuntos) : (cumpleClases || cumplePuntos);
-        if (cumple) {
-          categoriaAsignada = tier.nombre;
-          break;
+    for (const { username, estadoMiembro } of miembros) {
+      // Lesionadx: no se toca la categoría (queda como esté, no participa
+      // del recálculo -- ver MANIFEST.md "estado_miembro").
+      if (estadoMiembro === 'Lesionadx') continue;
+
+      let categoriaAsignada: string;
+      if (estadoMiembro === 'Técnico') {
+        // Técnico: siempre Quindes, sin calcular clases/puntos.
+        categoriaAsignada = 'Quindes';
+      } else {
+        categoriaAsignada = tierDefault.nombre;
+        for (const tier of tiersNoDefault) {
+          const ventanaMeses = Number(tier.ventana_meses) || 0;
+          const clases = contarClases(username, ventanaMeses);
+          const puntos = sumarPuntos(username, ventanaMeses);
+          const cumpleClases = clases >= (Number(tier.min_clases) || 0);
+          const cumplePuntos = puntos >= (Number(tier.min_puntos) || 0);
+          const cumple = tier.logica === 'Y' ? (cumpleClases && cumplePuntos) : (cumpleClases || cumplePuntos);
+          if (cumple) {
+            categoriaAsignada = tier.nombre;
+            break;
+          }
         }
       }
       await supabase.from('equipo').update({ categoria: categoriaAsignada }).eq('username', username);

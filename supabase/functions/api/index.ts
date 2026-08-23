@@ -36,6 +36,7 @@ function getDatosCompletos(row: Record<string, any> | null): Record<string, any>
     talla:                row.talla                 ?? '',
     necesitaProtecciones: row.necesita_protecciones ?? '',
     categoria:            row.categoria             ?? '',
+    estado_miembro:       row.estado_miembro        ?? 'Activx',
     nombreDerby:          row.nombre_derby          ?? '',
     numeroDerby:          row.numero_derby          ?? '',
     pronombres:           row.pronombres            ?? '',
@@ -435,6 +436,7 @@ async function actualizarDatosPersona(params: Record<string, any>): Promise<Reco
     nombreDerby: 'nombre_derby', numeroDerby: 'numero_derby', pronombres: 'pronombres',
     fechaIngreso: 'fecha_ingreso',
     dieta: 'dieta', prefijo: 'prefijo', telefono: 'telefono', email: 'email',
+    estado_miembro: 'estado_miembro',
     fechaPublica: 'fecha_publica', edadPublica: 'edad_publica', fechaNacimiento: 'fecha_nacimiento',
     tipoDocumento: 'tipo_documento', paisExpedicion: 'pais_expedicion', numeroDocumento: 'numero_documento',
     nombreLegal: 'nombre_legal', callePrincipal: 'calle_principal', calleSecundaria: 'calle_secundaria',
@@ -1526,6 +1528,18 @@ async function adminToggleCupon(params: Record<string, any>): Promise<Record<str
   return { exito: true };
 }
 
+const ESTADOS_MIEMBRO = ['Activx', 'Ausente', 'Satélite', 'Técnico', 'Lesionadx'];
+
+async function adminSetEstadoMiembro(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const { nombre, estadoMiembro } = params;
+  if (!nombre || !ESTADOS_MIEMBRO.includes(estadoMiembro)) return { exito: false, error: 'Parámetros inválidos.' };
+  const { error } = await supabase.from('equipo').update({ estado_miembro: estadoMiembro }).eq('username', nombre);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
 async function adminEliminarUsuario(params: Record<string, any>): Promise<Record<string, any>> {
   const { nombre } = params;
   const { error } = await supabase.from('equipo').delete().eq('username', nombre);
@@ -1809,6 +1823,7 @@ Deno.serve(async (req: Request) => {
       // Usuarios / admins
       case 'adminGetUsuarios':               return json(await adminGetUsuarios());
       case 'adminToggleCupon':               return json(await adminToggleCupon(params));
+      case 'adminSetEstadoMiembro':          return json(await adminSetEstadoMiembro(params));
       case 'adminEliminarUsuario':           return json(await adminEliminarUsuario(params));
       case 'adminGetAdmins':                 return json(await adminGetAdmins());
       case 'adminAgregarAdmin':              return json(await adminAgregarAdmin(params));
@@ -1858,7 +1873,7 @@ Deno.serve(async (req: Request) => {
       case 'adminGetCategorias': {
         const adminEmail = await _validarAdminToken(params.adminToken);
         if (!adminEmail) return json({ error: 'Sesión admin inválida.' }, 401);
-        const { data, error } = await supabase.from('equipo').select('username, categoria').order('username');
+        const { data, error } = await supabase.from('equipo').select('username, categoria, estado_miembro').order('username');
         if (error) return json({ error: error.message }, 500);
         return json({ personas: data });
       }

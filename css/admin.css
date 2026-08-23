@@ -182,3 +182,4 @@
 .ml-tier-logica { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .ml-tier-logica-label { font-size: 0.68rem; color: var(--neutral-gray); font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; }
 .ml-tier-logica-toggle { display: flex; gap: 8px; }
+.ml-estado-select { width: auto; min-width: 100px; margin-bottom: 0; padding: 6px 28px 6px 10px; font-size: 0.78rem; }
