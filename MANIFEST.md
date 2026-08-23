@@ -70,6 +70,12 @@ Cosas que requieren acción humana en el SQL Editor de Supabase (dashboard del p
   ALTER TABLE venues ADD COLUMN video_instructivo text;
   ```
 
+- **Correr la migración `supabase/migrations/20260823_config_tiers.sql` y desplegar la Edge Function nueva `recalcular-categorias`** (Fase A del sistema de tiers, ver "Cambios recientes"). La migración crea `config_tiers` (con los 2 tiers iniciales `Quindes`/`Mirlxs`) y asegura `equipo.categoria` (`ADD COLUMN IF NOT EXISTS` + normaliza nulls a `'Mirlxs'`). Sin correrla, `recalcular-categorias` va a fallar al leer `config_tiers` (tabla inexistente). Desplegar con:
+  ```
+  supabase functions deploy recalcular-categorias --project-ref uusbnreitoobqssizbfq --no-verify-jwt
+  ```
+  Después de desplegar, llamarla una vez manualmente (GET o POST, sin params) para la primera corrida real y confirmar que `equipo.categoria` quede seteada según los mínimos configurados.
+
 ---
 
 ## 1. Estructura del proyecto
@@ -432,6 +438,39 @@ Reusa a propósito lo que ya existe en vez de redefinirlo: `.app-nav-search` (`n
 | `body.ev-ant-footer-visible #app-toast` | **Nuevo (ver "Cambios recientes")** — sube el toast global (`#app-toast`, css/estilos.css, `bottom:28px` fijo de fábrica) para que en `#s-eventos-anticipada` quede justo encima de `#cta-footer-eventos-anticipada` en vez de tapar las pills del wizard. `#app-toast` es un `<div>` creado por JS y agregado directo a `<body>` la primera vez que corre `mostrarToast()` (mismo criterio de "`position:fixed` va directo en `<body>`, no dentro de `.pantalla`/`.card`" que ya rige `.cta-footer-fixed`) — el override también apunta ahí sin anidarlo dentro de ninguna pantalla. `body.ev-ant-footer-visible` la togglean `_evAntActualizarFooter()`/`_evAntOcultarFooter()` (js/eventos.js) junto con el propio footer |
 
 ### Cambios recientes
+- **Fase A del sistema de tiers (categorías de equipo automáticas): tabla `config_tiers` nueva + columna `equipo.categoria` (ya existente, confirmada por uso real en `getDatosCompletos()`/`getDatosPersona()`) + Edge Function nueva `recalcular-categorias` que recalcula la categoría de cada miembro según asistencias reales y puntos.**
+
+  **Migración nueva:** `supabase/migrations/20260823_config_tiers.sql` — pendiente de correr manualmente en el SQL Editor de Supabase (no ejecutable por el asistente, mismo criterio que el resto de "Tareas pendientes manuales" al principio de este archivo).
+
+  **Tabla nueva `config_tiers`:**
+
+  | Columna | Tipo Postgres | Descripción |
+  |---|---|---|
+  | `id` | `uuid` (PK) | `gen_random_uuid()` |
+  | `orden` | `integer` | Orden de evaluación — menor número = tier más exigente, evaluado primero |
+  | `nombre` | `text` | Nombre de la categoría (ej. `Quindes`, `Mirlxs`) — este valor es el que termina escrito en `equipo.categoria` |
+  | `min_clases` | `integer` | Mínimo de asistencias reales (A tiempo o Tarde) en la ventana para calificar |
+  | `min_puntos` | `integer` | Mínimo de puntos (`puntos_mensuales.puntos_total`) en la ventana para calificar |
+  | `ventana_meses` | `integer` | Cuántos meses hacia atrás (desde el primer día del mes hace N meses hasta hoy) se cuentan clases/puntos para este tier — cada tier puede tener su propia ventana |
+  | `logica` | `text` | `'Y'` requiere cumplir `min_clases` Y `min_puntos`; `'O'` alcanza con cualquiera de los dos |
+  | `es_default` | `boolean` | El tier fallback cuando nadie de los no-default se cumple — exactamente uno debe tener `true` |
+  | `created_at` | `timestamptz` | `now()` |
+
+  **Datos iniciales:** `Quindes` (orden 1, min_clases 8, min_puntos 50, ventana 2 meses, lógica `O`, no-default) y `Mirlxs` (orden 2, sin mínimos, ventana 2 meses, lógica `O`, `es_default=true`).
+
+  **Columna `equipo.categoria`:** la migración la agrega con `ADD COLUMN IF NOT EXISTS` por si todavía no existe en el entorno donde se corra — en producción ya existía de una tanda anterior (`getDatosCompletos()`/`getDatosPersona()` en `supabase/functions/api/index.ts` ya la leen). La migración además normaliza cualquier fila con `categoria IS NULL` a `'Mirlxs'` (el tier default), para que `recalcular-categorias` no tenga que lidiar con nulls en la primera corrida.
+
+  **Edge Function nueva `supabase/functions/recalcular-categorias/index.ts`** (standalone, mismo patrón de `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` y helpers `CORS`/`json()` que `supabase/functions/api/index.ts`; acepta `GET` y `POST` por igual, sin body/params — recalcula a todo el equipo de una sola corrida):
+  1. Lee `config_tiers` ordenados por `orden` ASC, separa el tier `es_default` (fallback) del resto.
+  2. Trae `username` de todos los miembros de `equipo`.
+  3. Trae en una sola consulta todas las filas de `asistencias` (`fecha`, `a_horario`, `tarde`) desde el primer día del mes hace `N` meses (la ventana más larga de todos los tiers) hasta hoy, y todas las filas de `puntos_mensuales` (`nombre_usuario`, `anio`, `mes`, `puntos_total`) desde ese mismo año en adelante — evita 1 query por persona por tier.
+  4. **Asistencia real:** como `asistencias` no tiene una columna de username por fila, `a_horario`/`tarde` son texto con nombres separados por coma (mismo mecanismo que usa el resto del Edge Function existente, ej. `_asistenciaEFPorEvento()`/`adminMarcarAsistencia` en `supabase/functions/api/index.ts`) — se cuenta una fila como asistencia real de la persona si su `username` aparece en `a_horario` (a tiempo) o en `tarde` (tarde), comparando `.trim().toUpperCase()` (mismo criterio de tolerancia a mayúsculas/espacios que ya usa el resto del proyecto), una sola vez por evento aunque apareciera en ambas listas.
+  5. **Puntos:** suma `puntos_total` de las filas de `puntos_mensuales` de esa persona cuyo `(anio, mes)` cae dentro de la ventana propia del tier que se está evaluando (cada tier puede tener una ventana distinta, no una global).
+  6. Para cada persona, evalúa los tiers no-default en orden de `orden` ASC (de más a menos exigente): con `logica='Y'` exige cumplir `min_clases` Y `min_puntos`, con `'O'` alcanza con cualquiera de los dos; el primer tier que cumple se asigna y corta la evaluación. Si ninguno cumple, se asigna el tier `es_default`.
+  7. Hace `UPDATE equipo SET categoria=... WHERE username=...` por cada persona y devuelve `{ ok: true, procesados: N, resultados: [{username, categoria}] }`.
+  - **Sin desplegar todavía** (`supabase functions deploy recalcular-categorias`) y sin verificar contra datos reales — no ejecutable por el asistente (sin acceso al CLI/dashboard de Supabase). Pendiente de Victor: correr la migración, desplegar la función, y llamarla manualmente (GET o POST, sin params) desde el dashboard o `curl` para la primera corrida real.
+  - **Fuera de alcance de esta Fase A (a propósito):** ningún disparador automático (cron/trigger) que la corra sola, y ningún consumidor en el frontend que lea `equipo.categoria` para cambiar comportamiento — eso es de una fase posterior.
+
 - **`_evEsRelevantePorEquipo` — bypass total para admin y quindes: Si el usuario es admin (`_adminToken`) o quindes (`_modoUsuario() === 'quindes'`), todos los eventos (pasados y futuros) son visibles sin ningún filtro de cuota, reserva ni asistencia real.**
 
 - **Bug real corregido (limitación ya señalada en la entrada de abajo): `E.quindesPendingRsvpEvento` (flujo de gracia de RSVP de quindes, ver esa entrada) quedaba vivo si la persona abandonaba el wizard mensual sin pagar -- un pago exitoso posterior y NO relacionado podía terminar auto-marcando "Asistiré" en el evento viejo que había quedado pendiente. Se limpia en los 2 puntos reales de `js/reservas.js` donde s4 se cierra/cancela sin pasar por `finalizar()` (búsqueda acotada a `js/reservas.js`/`js/home.js`, pedida explícita -- ningún `ir('s-home')`/`ir('s-eventos')`/`volver(` de `js/home.js` resultó ser un cancelar real del wizard, ver detalle abajo).**
