@@ -3725,8 +3725,17 @@ function _evNotaAsistenciaHtml(e) {
   return cancelado ? _evEstadoNotaPillHtml(e.estado) : (_preIngreso && _noAsistio ? '' : _evAsistenciaRealHtml(e));
 }
 function _evTimelineFilaHtml(e) {
-  var hoy = _evHoyISO();
-  if (_evFechaCmp(e.fecha, hoy) >= 0) return _evCardEventoHtml(e, '');
+  // Bug real corregido (Victor): antes comparaba solo por fecha
+  // (`_evFechaCmp(e.fecha, hoy) >= 0`), un criterio DISTINTO del que usa
+  // `_evEsPasado()` (fecha < hoy `||` `estado === 'Finalizado'`) en el resto
+  // del archivo (`_evRsvpBarraHtml()`/`_evActualizarAsistenciaPropiaCard()`,
+  // real-time). Un evento de HOY ya cerrado (`estado === 'Finalizado'`)
+  // pasaba por acá al render inicial (esta función delegaba a
+  // `_evCardEventoHtml()`, que SÍ usa `_evEsPasado()` y mostraba bien la
+  // asistencia real) pero en la práctica ambos deben coincidir siempre --
+  // se unifica al mismo criterio para no depender de 2 caminos que puedan
+  // desalinearse.
+  if (!_evEsPasado(e)) return _evCardEventoHtml(e, '');
   var icono = _EV_ICONOS[e.tipo] || 'event';
   var cancelado = (e.estado === 'Cancelado' || e.estado === 'No se entrena');
   var nota = _evNotaAsistenciaHtml(e);
