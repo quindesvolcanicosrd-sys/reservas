@@ -2019,7 +2019,15 @@ function _evCardEventoHtml(e, sufijo) {
   // (RSVP futuro / chip de asistencia real pasado) que antes duplicaba a
   // mano acá.
   if (cancelado) accionBody = _evEstadoNotaPillHtml(e.estado);
-  else if (_adminToken && _evYaEmpezo(e)) accionBody = _evRsvpBarraHtml(e) + _evAccionAdminHtml(e);
+  // `id="ev-asist-real-<id>"` -- mismo ancla que usa la fila compacta
+  // (_evTimelineFilaHtml(), pasado) para que _evActualizarAsistenciaPropiaCard()
+  // pueda refrescar el estado propio tras marcar asistencia (ver
+  // _evMarcarAsistenciaAdmin()) sin reconstruir la card entera -- solo hace
+  // falta en la rama admin (única que puede disparar ese refresco). Sin
+  // sufijo: esta card se monta una sola vez por evento en el timeline (el
+  // 2º parámetro `sufijo` de esta función nunca llega no-vacío hoy, ver
+  // único caller en _evTimelineFilaHtml()).
+  else if (_adminToken && _evYaEmpezo(e)) accionBody = '<div id="ev-asist-real-' + e.id + '">' + _evRsvpBarraHtml(e) + '</div>' + _evAccionAdminHtml(e);
   else accionBody = _evRsvpBarraHtml(e);
 
   // Botón "Reservar" (mirlxs -- equipo propio, paga por clase) en cards de
@@ -2321,7 +2329,22 @@ function _evYaEmpezo(e) {
   return new Date() >= inicio;
 }
 function _evAsistenciaRealHtml(e) {
-  var estadoReal = e.miAsistenciaReal || 'Sin registrar';
+  // Bug real corregido (Victor): `e.miAsistenciaReal` se calcula UNA sola
+  // vez al mapear el evento del backend (_evMapEventoBackend()) -- si un
+  // admin marca asistencia DESPUÉS desde el roster de "Marcar asistencia"
+  // (_evMarcarAsistenciaAdmin(), que solo toca `e.asistentes` en memoria)
+  // ese campo queda stale hasta la próxima carga completa del timeline, y
+  // el card seguía mostrando el RSVP/estado viejo. Se relee fresco de
+  // `e.asistentes` primero -- comparado contra `E.nombre`, no
+  // `E.datos.username` (esa columna no existe en el objeto que arma
+  // getDatosCompletos(), supabase/functions/api/index.ts -- `E.nombre` es
+  // el equivalente real, ya usado por _evMapEventoBackend()/
+  // _evNombresCoinciden() en todo este archivo) -- si no hay ninguna
+  // entrada real ahí, cae al valor ya calculado de siempre.
+  var _miReal = (e.asistentes || []).filter(function(a) {
+    return _evNombresCoinciden(a.nombre, E.nombre) && (a.estado === 'A tiempo' || a.estado === 'Tarde');
+  })[0];
+  var estadoReal = _miReal ? _miReal.estado : (e.miAsistenciaReal || 'Sin registrar');
   // Puntualidad (miAsistenciaReal, E/F) + rol (miEstado, el RSVP propio ya
   // cargado con el evento) combinados -- ver _evLabelPuntualidadRol().
   var label = _evLabelPuntualidadRol(_EV_ASISTENCIA_REAL_LABEL[estadoReal] || estadoReal, e.miEstado);
@@ -3384,12 +3407,20 @@ function _evMarcarAsistenciaAdmin(idEvento, nombre, estado, btnEl) {
   aplicarEnDom(estadoAEnviar === 'Ninguno' ? null : estadoAEnviar);
   _evActualizarContadorAsistAdmin(idEvento);
   _evActualizarListaAsistAdmin(idEvento);
+  _evActualizarAsistenciaPropiaCard(idEvento);
   if (_evDetalleActual && _evDetalleActual.id === idEvento) _evActualizarStatsAsistenciaReal(ev);
-  apiPost({ action: 'adminMarcarAsistencia', adminToken: _adminToken, idEvento: idEvento, nombre: nombre, estado: estadoAEnviar }, function() {}, function(e) {
+  apiPost({ action: 'adminMarcarAsistencia', adminToken: _adminToken, idEvento: idEvento, nombre: nombre, estado: estadoAEnviar }, function() {
+    // No-op hoy (el estado ya quedó aplicado arriba, optimista, antes del
+    // POST) -- se confirma igual acá por si el éxito real llega a divergir
+    // del optimista más adelante (mismo criterio defensivo que el resto de
+    // estos refrescos parciales, sin costo real: es idempotente).
+    _evActualizarAsistenciaPropiaCard(idEvento);
+  }, function(e) {
     ev.asistentes = asistentesAnterior;
     aplicarEnDom(anteriorDeEstaPersona ? anteriorDeEstaPersona.estado : null);
     _evActualizarContadorAsistAdmin(idEvento);
     _evActualizarListaAsistAdmin(idEvento);
+    _evActualizarAsistenciaPropiaCard(idEvento);
     if (_evDetalleActual && _evDetalleActual.id === idEvento) _evActualizarStatsAsistenciaReal(ev);
     mostrarToast(e && e.message ? e.message : 'No se pudo guardar la asistencia.', 'error');
   });
@@ -3415,6 +3446,26 @@ function _evActualizarListaAsistAdmin(idEvento) {
   var inner = document.querySelector('#ev-asist-admin-body-' + idEvento + ' .ev-asist-admin-body-inner');
   if (!ev || !inner) return;
   inner.innerHTML = _evAsistentesFilasHtml(ev) || '<div style="font-size:0.76rem;color:var(--muted);">Nadie ha marcado todavía.</div>';
+}
+// Bug real corregido (Victor): distinto de _evActualizarListaAsistAdmin()
+// (arriba), que solo repinta el roster interno "Asistencia (N)" -- esta
+// refresca la nota/pill de "MI propia asistencia real" de la card del
+// timeline (`#ev-asist-real-<id>`, ver _evCardEventoHtml()/
+// _evTimelineFilaHtml()), que quedaba con el estado viejo cuando la cuenta
+// admin se marcaba a SÍ MISMA desde ese roster (nunca se reconstruía hasta
+// recargar la página o el timeline entero). No usa `_evAsistenciaRealHtml()`
+// directo -- reproduce la MISMA rama que decide el render inicial
+// (`_evCardEventoHtml()` para hoy/futuro vía `_evRsvpBarraHtml()`,
+// `_evNotaAsistenciaHtml()` para pasado, ver esa función) para no forzar la
+// pill de asistencia real sobre un evento que todavía no es "pasado" (p.ej.
+// hoy, en curso, con el RSVP editable todavía vigente). No-op silencioso si
+// la card no está montada, mismo criterio que el resto de estos refrescos
+// parciales.
+function _evActualizarAsistenciaPropiaCard(idEvento) {
+  var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
+  var nodo = document.getElementById('ev-asist-real-' + idEvento);
+  if (!ev || !nodo) return;
+  nodo.innerHTML = _evFechaCmp(ev.fecha, _evHoyISO()) >= 0 ? _evRsvpBarraHtml(ev) : _evNotaAsistenciaHtml(ev);
 }
 
 /* ── Card de cumpleaños ────────────────────────────────────────────────
@@ -3661,14 +3712,24 @@ function _evBuscar(q) { _evBusqueda = q; _evRenderTimeline(true); }
 // registrada) en vez de la asistencia real (nunca hubo/habrá una que
 // mostrar). La fecha ya la muestra el badge lateral del grupo
 // (_evRenderTimeline()), así que la fila en sí solo necesita hora+tipo.
+// Nota de asistencia propia de la fila compacta (pasado) -- extraída de
+// _evTimelineFilaHtml() (función pura, mismo resultado) para poder
+// recalcularla sola desde _evActualizarAsistenciaPropiaCard() sin
+// reconstruir la fila entera -- mismo criterio ya usado por
+// _evAsistentesFilasHtml()/_evActualizarListaAsistAdmin() para el roster
+// admin (ver "Cambios recientes").
+function _evNotaAsistenciaHtml(e) {
+  var cancelado = (e.estado === 'Cancelado' || e.estado === 'No se entrena');
+  var _preIngreso = E.datos && E.datos.fechaIngreso && _evFechaCmp(e.fecha, E.datos.fechaIngreso) < 0;
+  var _noAsistio = !e.miAsistenciaReal || e.miAsistenciaReal === 'Ausente';
+  return cancelado ? _evEstadoNotaPillHtml(e.estado) : (_preIngreso && _noAsistio ? '' : _evAsistenciaRealHtml(e));
+}
 function _evTimelineFilaHtml(e) {
   var hoy = _evHoyISO();
   if (_evFechaCmp(e.fecha, hoy) >= 0) return _evCardEventoHtml(e, '');
   var icono = _EV_ICONOS[e.tipo] || 'event';
   var cancelado = (e.estado === 'Cancelado' || e.estado === 'No se entrena');
-  var _preIngreso = E.datos && E.datos.fechaIngreso && _evFechaCmp(e.fecha, E.datos.fechaIngreso) < 0;
-  var _noAsistio = !e.miAsistenciaReal || e.miAsistenciaReal === 'Ausente';
-  var nota = cancelado ? _evEstadoNotaPillHtml(e.estado) : (_preIngreso && _noAsistio ? '' : _evAsistenciaRealHtml(e));
+  var nota = _evNotaAsistenciaHtml(e);
   // Bug real corregido (gestión de asistencia admin "desaparecida" en
   // eventos pasados, reportado por Victor): esta fila compacta solo
   // mostraba la propia asistencia (`nota`, arriba) -- a diferencia de
@@ -3690,7 +3751,7 @@ function _evTimelineFilaHtml(e) {
         '<div class="ev-card-compacta-sub">' + e.horaInicio + ' · ' + e.tipo + '</div>' +
       '</div>' +
     '</div>' +
-    nota +
+    '<div id="ev-asist-real-' + e.id + '">' + nota + '</div>' +
     gestionAdmin +
   '</div>';
 }
