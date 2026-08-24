@@ -5970,3 +5970,8 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
 - **Q4 — auto-RSVP "Asistiré" al finalizar reserva por clase:** dentro de `finalizar()` (función anidada en `confirmarReserva()`, `js/reservas.js`), si `E.tipoPago === 'clase' && E.viaEventosInline` (reserva por clase iniciada desde el timeline de Eventos), se llama `marcarAsistenciaUsuario` por cada evento en `E.fechas`. Falla silenciosa (solo `console.warn`) a propósito, mismo criterio que el auto-RSVP de `E.quindesPendingRsvpEvento` ya existente unas líneas más abajo: el pago ya se guardó, un error de RSVP no debe arruinar la pantalla de éxito.
 - **Sin verificar con Playwright** (sin navegador en este entorno) — verificado con `node --check` sobre `js/admin.js`/`js/reservas.js` (sin errores de sintaxis).
 - **Cache-busting (`index.html`)** — `js/admin.js`/`js/reservas.js` se recalculan automáticamente por el hook de pre-commit del repo al commitear.
+
+### Cambio 22 — js/admin.js sumado al cache-busting del hook de pre-commit (`.githooks/pre-commit`, `index.html`) (2026-08-24)
+
+- **Gap encontrado en el Cambio 21:** `js/admin.js` no estaba en `CACHEBUST_FILES` (`.githooks/pre-commit`) a diferencia de `eventos.js`/`ui.js`/`perfil.js`/`reservas.js`/etc. — los cambios de admin.js (como el sheet "Registrar pago" del Cambio 21) podían tardar hasta 10 min en propagarse a los edges de Fastly/GitHub Pages sin este mecanismo.
+- **Fix:** se agrega `js/admin.js` a `CACHEBUST_FILES`. Sembrado a mano `?v=ba272777` (hash de contenido actual) en `<script src="js/admin.js">` de `index.html`, siguiendo el procedimiento de setup ya documentado en el propio hook — de acá en adelante el hook lo mantiene solo en cada commit que toque el archivo.
