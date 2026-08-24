@@ -220,9 +220,9 @@ async function _asistenciaEFPorEvento(): Promise<Record<string, any[]>> {
   return porEvento;
 }
 
-async function _agregarFilaLogAsistencia(idEvento: string, nombre: string, origen: string, estado: string): Promise<void> {
+async function _agregarFilaLogAsistencia(idEvento: string, nombre: string, origen: string, estado: string): Promise<{ error: string | null }> {
   const { data: ev } = await supabase.from('asistencias').select('fecha').eq('id_evento', idEvento).maybeSingle();
-  await supabase.from('log_asistencias').insert({
+  const { error } = await supabase.from('log_asistencias').insert({
     id_evento: idEvento,
     fecha_entrenamiento: ev?.fecha ? ev.fecha + 'T00:00:00Z' : null,
     nombre_usuario: nombre,
@@ -230,6 +230,7 @@ async function _agregarFilaLogAsistencia(idEvento: string, nombre: string, orige
     estado,
     marca_temporal: new Date().toISOString(),
   });
+  return { error: error?.message ?? null };
 }
 
 async function _acreditarPuntosTarea(nombre: string, anio: number, mes: number, puntos: number): Promise<void> {
@@ -1119,18 +1120,23 @@ async function adminMarcarAsistencia(params: Record<string, any>): Promise<Recor
   const estado   = String(params.estado   ?? '').trim();
   if (!idEvento || !nombre) return { exito: false, error: 'Datos incompletos.' };
   if (!ESTADOS_ROLLCALL.includes(estado)) return { exito: false, error: 'Estado inválido.' };
-  await _agregarFilaLogAsistencia(idEvento, nombre, 'Admin', estado);
+
+  const logResult = await _agregarFilaLogAsistencia(idEvento, nombre, 'Admin', estado);
+  if (logResult.error) return { exito: false, error: 'Error insertando log: ' + logResult.error };
 
   // Actualizar a_horario / tarde en asistencias directamente
-  const { data: ev } = await supabase.from('asistencias').select('a_horario, tarde').eq('id_evento', idEvento).maybeSingle();
-  if (ev) {
-    const parseNames = (s: string) => String(s ?? '').split(',').map((n: string) => n.trim()).filter(Boolean);
-    let aHorario = parseNames(ev.a_horario).filter((n: string) => n.toUpperCase() !== nombre.toUpperCase());
-    let tarde     = parseNames(ev.tarde).filter((n: string) => n.toUpperCase() !== nombre.toUpperCase());
-    if (estado === 'A tiempo') aHorario.push(nombre);
-    else if (estado === 'Tarde') tarde.push(nombre);
-    await supabase.from('asistencias').update({ a_horario: aHorario.join(', '), tarde: tarde.join(', ') }).eq('id_evento', idEvento);
-  }
+  const { data: ev, error: errorLectura } = await supabase.from('asistencias').select('a_horario, tarde').eq('id_evento', idEvento).maybeSingle();
+  if (errorLectura) return { exito: false, error: 'Error leyendo asistencias: ' + errorLectura.message };
+  if (!ev) return { exito: false, error: 'No existe fila en asistencias para evento: ' + idEvento };
+
+  const parseNames = (s: string) => String(s ?? '').split(',').map((n: string) => n.trim()).filter(Boolean);
+  let aHorario = parseNames(ev.a_horario).filter((n: string) => n.toUpperCase() !== nombre.toUpperCase());
+  let tarde     = parseNames(ev.tarde).filter((n: string) => n.toUpperCase() !== nombre.toUpperCase());
+  if (estado === 'A tiempo') aHorario.push(nombre);
+  else if (estado === 'Tarde') tarde.push(nombre);
+  const { error: errorUpdate } = await supabase.from('asistencias').update({ a_horario: aHorario.join(', '), tarde: tarde.join(', ') }).eq('id_evento', idEvento);
+  if (errorUpdate) return { exito: false, error: 'Error actualizando asistencias: ' + errorUpdate.message };
+
   return { exito: true };
 }
 
