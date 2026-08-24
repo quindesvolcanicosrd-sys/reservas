@@ -5730,18 +5730,46 @@ function _evAntIniciarWizard(regla) {
 
 function _evAntCerrarWizard() {
   _evAntOcultarFooter();
-  document.getElementById('ev-ant-wizard').style.display = 'none';
-  if (_evAntReglas.length > 0) {
-    document.getElementById('ev-ant-resumen').style.display = 'block';
-  } else {
-    ir('s-eventos');
-  }
+  var _wiz = document.getElementById('ev-ant-wizard');
+  var _res = document.getElementById('ev-ant-resumen');
+  if (_wiz) { _wiz.style.transition = 'opacity 0.2s ease, transform 0.2s var(--ease-sheet)'; _wiz.style.opacity = '0'; _wiz.style.transform = 'translateY(8px)'; }
+  setTimeout(function() {
+    if (_wiz) { _wiz.style.display = 'none'; _wiz.style.opacity = ''; _wiz.style.transform = ''; _wiz.style.transition = ''; }
+    if (_evAntReglas.length > 0) {
+      if (_res) {
+        _res.style.opacity = '0';
+        _res.style.display = 'block';
+        requestAnimationFrame(function() {
+          requestAnimationFrame(function() {
+            _res.style.transition = 'opacity 0.22s ease';
+            _res.style.opacity = '1';
+            setTimeout(function() { _res.style.transition = ''; }, 250);
+          });
+        });
+      }
+    } else { ir('s-eventos'); }
+  }, 210);
 }
 
 function _evAntCerrarWizardAResumen() {
   _evAntOcultarFooter();
-  document.getElementById('ev-ant-wizard').style.display = 'none';
-  document.getElementById('ev-ant-resumen').style.display = 'block';
+  var _wiz = document.getElementById('ev-ant-wizard');
+  var _res = document.getElementById('ev-ant-resumen');
+  if (_wiz) { _wiz.style.transition = 'opacity 0.2s ease, transform 0.2s var(--ease-sheet)'; _wiz.style.opacity = '0'; _wiz.style.transform = 'translateY(8px)'; }
+  setTimeout(function() {
+    if (_wiz) { _wiz.style.display = 'none'; _wiz.style.opacity = ''; _wiz.style.transform = ''; _wiz.style.transition = ''; }
+    if (_res) {
+      _res.style.opacity = '0';
+      _res.style.display = 'block';
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          _res.style.transition = 'opacity 0.22s ease';
+          _res.style.opacity = '1';
+          setTimeout(function() { _res.style.transition = ''; }, 250);
+        });
+      });
+    }
+  }, 210);
 }
 
 function _evAntActualizarFooter() {
