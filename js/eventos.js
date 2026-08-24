@@ -2649,7 +2649,7 @@ function _evPillsInit(modo) {
   var _mesItem = function() {
     var t = document.getElementById('ev-nav-mes-texto');
     var ml = t ? (t.textContent || '').trim() : '';
-    return 'Utiliza la vista calendario seleccionando <span class="ev-pill-ref-mes">' + (ml || 'el mes') + ' ' + _picon('expand_more') + '</span>';
+    return 'Abre el calendario desde <span class="ev-pill-ref-mes">' + (ml || 'el mes') + ' ' + _picon('expand_more') + '</span>';
   };
   var listas = {
     equipamiento: [
@@ -2660,13 +2660,11 @@ function _evPillsInit(modo) {
       _mesItem
     ],
     mirlxs: [
-      'Pon <span class="ev-pill-ref-badge ev-pill-ref-badge-verde">Asistiré</span> de manera automática desde ' + _picon('event_available'),
       'Entra a un evento para ver más información',
       'Busca fechas y eventos desde ' + _picon('search'),
       _mesItem
     ],
     quindes: [
-      'Pon <span class="ev-pill-ref-badge ev-pill-ref-badge-verde">Asistiré</span> de manera automática desde ' + _picon('event_available'),
       'Toca un evento para ver más información',
       'Busca fechas y eventos desde ' + _picon('search'),
       _mesItem
