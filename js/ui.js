@@ -507,11 +507,9 @@ function ir(id, desdeHistorial, sinTrampa) {
   // admin"). Recalculado en cada `ir()` -- cubre login directo, restaurar
   // sesión y cambio de tab por igual, sin caso especial en ninguno.
   var eventosFab = document.getElementById('ev-fab-menu');
-  if (eventosFab) {
-    var _mostrarFab = id === 's-eventos' && !!_adminToken;
-    eventosFab.style.display = _mostrarFab ? 'flex' : 'none';
-    if (!_mostrarFab && typeof _evFabCerrar === 'function') _evFabCerrar();
-  }
+  if (eventosFab) { eventosFab.style.display = 'none'; if (typeof _evFabCerrar === 'function') _evFabCerrar(); }
+  var evBtnCrear = document.getElementById('ev-btn-crear');
+  if (evBtnCrear) evBtnCrear.style.display = (id === 's-eventos' && !!_adminToken) ? '' : 'none';
 
   // FAB "+ Nueva tarea" de #s-tareas -- mismo criterio que el de Eventos de
   // arriba (admin real, `_adminToken`, y solo en la pantalla raíz, no en el
@@ -574,7 +572,7 @@ var APP_BOTTOM_NAV_ITEMS = [
   // `entrar` (no volver(pantalla) a secas) porque #s-eventos necesita
   // poblarse por JS (semana/mes actual + cards) antes de mostrarse, mismo
   // motivo que 'ajustes'/irEditarDatos().
-  { id: 'eventos', icono: 'campaign', texto: 'Eventos', pantalla: 's-eventos',
+  { id: 'eventos', icono: 'calendar_today', texto: 'Eventos', pantalla: 's-eventos',
     entrar: function() { irEventos(); },
     // `restaurar` (ver "Cambios recientes" -- preservación de estado por tab,
     // regla general de _bottomNavClick() de más arriba): al volver a Eventos

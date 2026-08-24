@@ -516,6 +516,7 @@ var _evYaInicializadoEnSesion = false;
    en sí (admin + pantalla activa) la resuelve ir()/js/ui.js en cada
    cambio de pantalla, mismo criterio que #home-nav/#s4-nav. */
 var _evFabAbierto = false;
+var _evPillEraVisibleAntesDeCalendario = false;
 function _evFabToggle() {
   _evFabAbierto = !_evFabAbierto;
   var menu = document.getElementById('ev-fab-menu');
@@ -916,6 +917,13 @@ function _evAbrirCalendario() {
   // ningún set instantáneo previo que pise el punto de partida.
   _evCalRenderContenido(true);
   _evCalRenderPills();
+  var _evPillB = document.getElementById('ev-pill-banner');
+  if (_evPillB && _evPillB.style.display !== 'none') {
+    _evPillEraVisibleAntesDeCalendario = true;
+    _evPillB.style.display = 'none';
+  } else {
+    _evPillEraVisibleAntesDeCalendario = false;
+  }
   _evCalVisible = true;
   var el = document.getElementById('ev-mes-panel');
   if (el) { el.classList.add('abierta'); el.style.maxHeight = el.scrollHeight + 'px'; }
@@ -933,6 +941,13 @@ function _evCerrarCalendario() {
       requestAnimationFrame(function() {
         el.classList.remove('abierta');
         el.style.maxHeight = '0px';
+        if (_evPillEraVisibleAntesDeCalendario && localStorage.getItem('ev_pills_ocultos') !== '1') {
+          setTimeout(function() {
+            var _p = document.getElementById('ev-pill-banner');
+            if (_p) _p.style.display = 'flex';
+            _evPillEraVisibleAntesDeCalendario = false;
+          }, 290);
+        }
       });
     });
   }
