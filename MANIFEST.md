@@ -5943,3 +5943,7 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
 
 - **Pills de información:** ahora usan `innerHTML` con referencias visuales inline (badges, íconos Material Symbols, botón danger, selector de mes). Nuevas clases CSS en `eventos.css`: `ev-pill-ref-icon`, `ev-pill-ref-badge`, `ev-pill-ref-badge-verde`, `ev-pill-ref-btn-danger`, `ev-pill-ref-mes`. Todos los colores via CSS vars, sin hardcoding.
 - **Botón cancelar/re-agendar** (`ev-card-btn-cancelar`, `ev-detalle-btn-cancelar`): se sobreescribe el `text-transform: uppercase` de `.btn` con `none`.
+
+### Cambio 18 — degradación automática de categoría quindes → mirlxs al guardar equipamiento (`js/perfil.js`, `js/reservas.js`) (2026-08-24)
+
+- **Degradación automática quindes → mirlxs:** Si un usuario con `categoria = 'Quindes'` guarda equipamiento con `necesitaPatines = 'Sí'` (desde ajustes vía `ajGuardarTallaAjustes` en `js/perfil.js`, o desde el wizard de equipamiento vía `continuar_s3c_nuevo` en `js/reservas.js`), se actualiza `E.datos.categoria = 'Mirlxs'` localmente y se persiste vía `actualizarDatosPersona`. No puede existir un quindes que necesite equipamiento del club. El toast de ajustes muestra mensaje específico cuando ocurre el downgrade.

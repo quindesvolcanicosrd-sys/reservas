@@ -216,6 +216,10 @@ function continuar_s3c_nuevo(btn) {
     E.datos.necesitaPatines = E.editPat;
     E.datos.talla = E.editTalla;
     E.datos.necesitaProtecciones = protecFinal;
+    if (E.editPat === 'Sí' && (E.datos.categoria || '').toLowerCase() === 'quindes') {
+      E.datos.categoria = 'Mirlxs';
+      api({ action: 'actualizarDatosPersona', nombre: E.nombre, datos: JSON.stringify({ categoria: 'Mirlxs' }) }, function() {}, function(e) { if (window.console) console.warn('reservas: no se pudo actualizar categoría — ' + (e && e.message || 'error')); });
+    }
     E.editProtec = '';
     if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
     if (E.editandoDesdeHome) { E.editandoDesdeHome = false; ir('s-datos'); } else { cargarFechas(); }

@@ -2013,6 +2013,12 @@ function ajGuardarTallaAjustes(btn) {
   api({ action: 'actualizarEquipamientoPersona', nombre: E.nombre, necesitaPatines: necesitaPatines, talla: talla, necesitaProtecciones: E.datos.necesitaProtecciones || 'No' }, function() {
     E.datos.necesitaPatines = necesitaPatines;
     E.datos.talla = talla;
+    var _catDegradada = false;
+    if (necesitaPatines === 'Sí' && (E.datos.categoria || '').toLowerCase() === 'quindes') {
+      E.datos.categoria = 'Mirlxs';
+      api({ action: 'actualizarDatosPersona', nombre: E.nombre, datos: JSON.stringify({ categoria: 'Mirlxs' }) }, function() {}, function(e) { if (window.console) console.warn('ajustes: no se pudo actualizar categoría — ' + (e && e.message || 'error')); });
+      _catDegradada = true;
+    }
     if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
     document.getElementById('aj-equip-pat-val').textContent = talla ? 'Talla ' + talla : 'No necesitas patines';
     _actualizarResumenEquipAjustes();
@@ -2020,7 +2026,7 @@ function ajGuardarTallaAjustes(btn) {
     ajCerrarSheetTallaAjustes();
     if (typeof _evActualizarTopBarModo === 'function') _evActualizarTopBarModo();
     if (typeof _evRenderTimeline === 'function') _evRenderTimeline(true);
-    mostrarToast('Equipamiento actualizado', 'ok');
+    mostrarToast(_catDegradada ? 'Tu categoría cambió a Mirlxs porque ahora usas equipamiento del club.' : 'Equipamiento actualizado', 'ok');
   }, function(e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
     document.getElementById('err-aj-talla').textContent = e.message || 'Error al guardar.';
