@@ -186,8 +186,9 @@ async function _mapaVideoInstructivoPorLugar(): Promise<Record<string, string>> 
   return mapa;
 }
 
-async function _ultimaAsistenciaPorPersonaTodas(): Promise<Record<string, any[]>> {
-  const { data } = await supabase.from('log_asistencias').select('id_evento, nombre_usuario, origen, estado, marca_temporal').range(0, 9999);
+async function _ultimaAsistenciaPorPersonaTodas(idsEvento: string[]): Promise<Record<string, any[]>> {
+  if (idsEvento.length === 0) return {};
+  const { data } = await supabase.from('log_asistencias').select('id_evento, nombre_usuario, origen, estado, marca_temporal').in('id_evento', idsEvento);
   const ultimaPorClave: Record<string, any> = {};
   (data ?? []).forEach((fila: any) => {
     const clave = fila.id_evento + '|' + fila.nombre_usuario;
@@ -1019,8 +1020,9 @@ async function getEventosRango(params: Record<string, any>): Promise<Record<stri
         hasta  = params.fechaFin   ?? params.hasta;
   const d0 = desde.substring(0, 10), d1 = hasta.substring(0, 10);
   const { data } = await supabase.from('asistencias').select('id_evento, fecha, donde, inicia, termina, estado, google_maps, info_adicional, tipo_evento').gte('fecha', d0).lte('fecha', d1);
+  const idsEvento = (data ?? []).map((f: any) => f.id_evento);
   const [tipoIcono, requiereReserva, asistLog, asistEF, equipoPorNombre, videoInstructivo] = await Promise.all([
-    _mapaTipoIconoPorLugar(), _mapaRequiereReservaPorLugar(), _ultimaAsistenciaPorPersonaTodas(), _asistenciaEFPorEvento(), _mapaEquipoPorNombre(), _mapaVideoInstructivoPorLugar()
+    _mapaTipoIconoPorLugar(), _mapaRequiereReservaPorLugar(), _ultimaAsistenciaPorPersonaTodas(idsEvento), _asistenciaEFPorEvento(), _mapaEquipoPorNombre(), _mapaVideoInstructivoPorLugar()
   ]);
   const eventos = (data ?? []).map((fila: any) => {
     const idEvento = fila.id_evento;
@@ -1143,7 +1145,7 @@ async function adminMarcarAsistencia(params: Record<string, any>): Promise<Recor
 async function adminBuscarPersonasParaEvento(params: Record<string, any>): Promise<Record<string, any>> {
   const idEvento = String(params.idEvento ?? '').trim();
   const { data: equipo } = await supabase.from('equipo').select('username').order('username');
-  const asistLog = await _ultimaAsistenciaPorPersonaTodas();
+  const asistLog = await _ultimaAsistenciaPorPersonaTodas([idEvento]);
   const yaMarcadas: Record<string, string> = {};
   (asistLog[idEvento] ?? []).forEach((a: any) => { yaMarcadas[a.nombre] = a.estado; });
   const personas = (equipo ?? []).map((r: any) => ({ nombre: r.username, estadoActual: yaMarcadas[r.username] ?? null }));
