@@ -2645,28 +2645,31 @@ function _evFabReservaParaEvento(idEvento) {
 var _evPillsTimer = null;
 function _evPillsInit(modo) {
   if (localStorage.getItem('ev_pills_ocultos') === '1') return;
-  var mesLabel = (document.getElementById('ev-nav-mes-texto') || {}).textContent || 'el mes';
   var _picon = function(n) { return '<span class="material-symbols-outlined ev-pill-ref-icon">' + n + '</span>'; };
-  var mesHtml = '<span class="ev-pill-ref-mes">' + mesLabel + ' ' + _picon('expand_more') + '</span>';
+  var _mesItem = function() {
+    var t = document.getElementById('ev-nav-mes-texto');
+    var ml = t ? (t.textContent || '').trim() : '';
+    return 'Utiliza la vista calendario seleccionando <span class="ev-pill-ref-mes">' + (ml || 'el mes') + ' ' + _picon('expand_more') + '</span>';
+  };
   var listas = {
     equipamiento: [
       'Usa <span class="ev-pill-ref-badge ev-pill-ref-badge-verde">Reserva</span> para reservar por clase',
       'Cambia tu equipamiento desde ' + _picon('settings') + ' o desde ' + _picon('roller_skating'),
       '<span class="ev-pill-ref-btn-danger">Re&#8209;Agenda o cancela</span> cuando quieras tus eventos reservados',
       'Busca fechas y eventos desde ' + _picon('search'),
-      'Utiliza la vista calendario seleccionando ' + mesHtml
+      _mesItem
     ],
     mirlxs: [
       'Pon <span class="ev-pill-ref-badge ev-pill-ref-badge-verde">Asistiré</span> de manera automática desde ' + _picon('event_available'),
       'Entra a un evento para ver más información',
       'Busca fechas y eventos desde ' + _picon('search'),
-      'Utiliza la vista calendario seleccionando ' + mesHtml
+      _mesItem
     ],
     quindes: [
       'Pon <span class="ev-pill-ref-badge ev-pill-ref-badge-verde">Asistiré</span> de manera automática desde ' + _picon('event_available'),
       'Toca un evento para ver más información',
       'Busca fechas y eventos desde ' + _picon('search'),
-      'Utiliza la vista calendario seleccionando ' + mesHtml
+      _mesItem
     ]
   };
   var msgs = listas[modo] || listas.mirlxs;
@@ -2677,13 +2680,13 @@ function _evPillsInit(modo) {
   if (!banner || !texto) return;
   banner.style.display = 'flex';
   if (cerrar) cerrar.style.display = '';
-  texto.innerHTML = msgs[0];
+  texto.innerHTML = typeof msgs[0] === 'function' ? msgs[0]() : msgs[0];
   if (_evPillsTimer) clearInterval(_evPillsTimer);
   _evPillsTimer = setInterval(function() {
     banner.classList.add('ev-pill-fade');
     setTimeout(function() {
       idx = (idx + 1) % msgs.length;
-      texto.innerHTML = msgs[idx];
+      texto.innerHTML = typeof msgs[idx] === 'function' ? msgs[idx]() : msgs[idx];
       banner.classList.remove('ev-pill-fade');
     }, 400);
   }, 10000);
