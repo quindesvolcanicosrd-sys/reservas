@@ -5524,11 +5524,10 @@ function _evAntFechaLegible(iso) {
   if (!iso) return '';
   var p = iso.split('-');
   if (p.length !== 3) return iso;
-  return parseInt(p[2], 10) + ' de ' + NOMBRES_MESES[parseInt(p[1], 10) - 1] + ' de ' + p[0];
+  return parseInt(p[2], 10) + '/' + parseInt(p[1], 10) + '/' + p[0];
 }
 function _evAntResumenDetalle(r) {
-  var tipos = (r.tiposEvento && r.tiposEvento.length) ? r.tiposEvento.join(', ') : 'Todos los tipos';
-  return 'Tipos: ' + tipos + ' · Estado: ' + r.estado;
+  return 'Estado: ' + r.estado;
 }
 
 // Sheet de confirmación "Eliminar asistencia anticipada" (#ev-ant-sheet-eliminar,
