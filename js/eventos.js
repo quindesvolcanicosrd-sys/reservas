@@ -4149,6 +4149,13 @@ function abrirEvDetalle(id) {
   // debe pararse en su posición inicial de una, no animar un scroll que el
   // usuario no disparó.
   window.scrollTo(0, 0);
+  var _detFade = document.getElementById('s-eventos-detalle');
+  if (_detFade) { _detFade.style.opacity = '0'; }
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      if (_detFade) { _detFade.style.transition = 'opacity 0.25s ease'; _detFade.style.opacity = ''; }
+    });
+  });
   // Bug real (ver "Cambios recientes"): `_evDetalleActualizarSticky()` vivía
   // en el mismo `setTimeout(50)` que `_evUpdateRsvpSliders()` de abajo,
   // "por si acaso" -- de más, y con costo real: durante esos ~50ms el RSVP y
