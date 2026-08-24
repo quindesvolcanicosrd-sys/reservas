@@ -2580,7 +2580,7 @@ function _evActualizarFabReserva() {
   // ningún 'mensual') -- un return temprano acá saltearía esa animación.
   var quindesConHistorial = modo !== 'quindes' ||
     (_todasReservas || []).some(function(r) { return r.tipo === 'mensual'; });
-  if (!_adminToken && !_evModoReservaActivo && _evNavMesActual && (modo === 'mirlxs' || modo === 'quindes') && quindesConHistorial) {
+  if (!_adminToken && !_evModoReservaActivo && _evNavMesActual && (modo === 'mirlxs' || modo === 'quindes') && quindesConHistorial && !_evNecesitaEquipo()) {
     var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
     var mes = _evNavMesActual.month, anio = _evNavMesActual.year;
     var esPasado = anio < hoy.getFullYear() || (anio === hoy.getFullYear() && mes < hoy.getMonth());
