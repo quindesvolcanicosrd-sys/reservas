@@ -5626,8 +5626,19 @@ function _evAntIniciarWizard(regla) {
   _evAntCal.periodo.touched = !!(regla && regla.fechaDesde);
   _evAntCal.indefinido.touched = !!(regla && regla.fechaDesde);
   document.getElementById('ev-ant-resumen').style.display = 'none';
-  document.getElementById('ev-ant-wizard').style.display = 'block';
+  var _wiz = document.getElementById('ev-ant-wizard');
+  _wiz.style.transition = 'none';
+  _wiz.style.opacity = '0';
+  _wiz.style.transform = 'translateY(12px)';
+  _wiz.style.display = 'block';
   window.scrollTo(0, 0);
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      _wiz.style.transition = 'opacity 0.25s ease, transform 0.25s var(--ease-sheet)';
+      _wiz.style.opacity = '1';
+      _wiz.style.transform = 'translateY(0)';
+    });
+  });
 
   document.querySelectorAll('#ev-ant-wizard .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   document.querySelectorAll('#ev-ant-wizard .ev-rsvp-opt').forEach(function(o) { o.classList.remove('activa'); });
