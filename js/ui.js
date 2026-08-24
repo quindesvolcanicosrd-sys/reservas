@@ -511,6 +511,20 @@ function ir(id, desdeHistorial, sinTrampa) {
   var evBtnCrear = document.getElementById('ev-btn-crear');
   if (evBtnCrear) evBtnCrear.style.display = (id === 's-eventos' && !!_adminToken) ? '' : 'none';
 
+  // FAB "Reservar Mes" del usuario (#ev-mirlxs-fab): visible solo en s-eventos.
+  // Mismo criterio que #ev-fab-menu arriba: ir() es el único punto de cambio
+  // de pantalla — el lugar correcto para gatearlo por pantalla activa.
+  var _uFab = document.getElementById('ev-mirlxs-fab');
+  if (_uFab) {
+    if (id === 's-eventos' && typeof _evActualizarFabReserva === 'function') {
+      _evActualizarFabReserva();
+    } else if (id !== 's-eventos') {
+      if (typeof _evFabToken !== 'undefined') ++_evFabToken;
+      _uFab.style.display = 'none';
+      _uFab.dataset.oculto = '1';
+    }
+  }
+
   // FAB "+ Nueva tarea" de #s-tareas -- mismo criterio que el de Eventos de
   // arriba (admin real, `_adminToken`, y solo en la pantalla raíz, no en el
   // wizard). Un solo botón (no speed-dial) -- las otras 2 acciones admin,
