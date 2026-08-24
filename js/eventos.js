@@ -1806,6 +1806,11 @@ function _evReservarClase(eventoId) {
     _evCargandoDisponibles = true;
     var _btnEvCargando = document.querySelector('[data-ev-reservar][data-evid="' + eventoId + '"]');
     if (_btnEvCargando) { _btnEvCargando.disabled = true; _btnEvCargando.style.opacity = '0.45'; }
+    // Optimista: footer aparece inmediatamente. Se revierte si la API dice no disponible.
+    _evModoReservaActivo = true;
+    _evSeleccionados.add(eventoId);
+    _evActualizarBotonesReserva();
+    _evActualizarFooterReserva();
     // Ya no es exclusivo de "equipo propio" (ver MANIFEST.md, eliminación del
     // modo 'equipamiento') -- talla/necesitaProtecciones viajan igual que en
     // cargarFechas() (js/reservas.js:613-619, mismo criterio: talla vacía si
@@ -1834,24 +1839,27 @@ function _evReservarClase(eventoId) {
         }
       });
       _evActualizarAdvertenciasTalla();
-      _evModoReservaActivo = true;
-      // E.precioPorClase ya se carga al iniciar sesión (js/auth.js,
-      // getPreciosClases) -- guardia solo por si ese fetch async todavía no
-      // resolvió cuando se entra acá, para que el total del footer nunca
-      // muestre NaN.
       E.precioPorClase = E.precioPorClase || 0;
       var f = _evDisponibles[eventoId];
       if (!f || f.disponible === false) {
+        // Revertir selección optimista
+        _evSeleccionados.delete(eventoId);
+        _evModoReservaActivo = false;
         if (f && f.razon && /patines|talla|protec|equip/i.test(f.razon)) {
-          _evModoReservaActivo = false;
+          // Ocultar footer sin borrar _evConflictosTalla (el sheet lo necesita)
+          var _ftR = document.getElementById('ev-reserva-footer');
+          if (_ftR) { _ftR.classList.remove('ev-reserva-footer--visible'); setTimeout(function() { _ftR.style.display = 'none'; }, 220); }
+          _evActualizarBotonesReserva();
           _evAbrirSheetTallaConflicto(eventoId);
         } else {
+          _evSalirModoReserva();
           mostrarToast((f && f.razon) || 'No disponible', 'error', true);
-          _evModoReservaActivo = false;
         }
         return;
       }
-      _evToggleSeleccion(eventoId);
+      // Disponible: ya seleccionado optimistamente, solo refrescar UI
+      _evActualizarBotonesReserva();
+      _evActualizarFooterReserva();
     }, function() { _evCargandoDisponibles = false; if (_btnEvCargando) { _btnEvCargando.disabled = false; _btnEvCargando.style.opacity = ''; } mostrarToast('Error de conexión.', 'error', true); });
   } else {
     if (_evConflictosTalla[eventoId] && !_evTallasPorFecha[eventoId]) {
