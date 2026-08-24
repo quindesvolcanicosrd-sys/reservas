@@ -2902,6 +2902,8 @@ function _evAbrirSheetTipoReserva(idEvento) {
     ov.style.opacity = '1';
   }); });
   _registrarOverlayAbierto(function() { cerrarSheetTipoReserva(true); });
+  var filaMes = document.getElementById('str-todo-mes');
+  if (filaMes) filaMes.style.display = _evNecesitaEquipo() ? 'none' : '';
 }
 // Mismo contrato que cerrarSheetCuotaPendiente()/cerrarSheetTipoPago() de
 // arriba (porGesto/history.back()).
