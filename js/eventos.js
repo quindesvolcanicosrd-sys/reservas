@@ -2649,7 +2649,7 @@ function _evPillsInit(modo) {
   var _mesItem = function() {
     var t = document.getElementById('ev-nav-mes-texto');
     var ml = t ? (t.textContent || '').trim() : '';
-    return 'Abre el calendario desde <span class="ev-pill-ref-mes">' + (ml || 'el mes') + ' ' + _picon('expand_more') + '</span>';
+    return 'Abre el calendario pulsando en <span class="ev-pill-ref-mes">' + (ml || 'el mes') + ' ' + _picon('expand_more') + '</span>';
   };
   var listas = {
     equipamiento: [
