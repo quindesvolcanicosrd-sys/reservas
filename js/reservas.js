@@ -1240,6 +1240,13 @@ function confirmarReserva(btn) {
     // el pago YA se guardó y s6 ya muestra éxito, un error acá no debería
     // alarmar con un toast justo después de esa pantalla -- la persona
     // igual puede marcar "Asistiré" a mano si esto no llegó a aplicarse.
+    if (E.tipoPago === 'clase' && E.viaEventosInline && E.fechas && E.fechas.length) {
+      var _fechasParaRsvp = E.fechas.slice();
+      _fechasParaRsvp.forEach(function(idEvento) {
+        apiPost({ action: 'marcarAsistenciaUsuario', token: _token, idEvento: idEvento, estado: 'Asistiré' },
+          function() {}, function(e) { if (window.console) console.warn('rsvp clase: ' + (e && e.message || 'error')); });
+      });
+    }
     if (E.quindesPendingRsvpEvento) {
       var _pId = E.quindesPendingRsvpEvento;
       E.quindesPendingRsvpEvento = null;

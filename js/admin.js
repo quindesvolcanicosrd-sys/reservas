@@ -1610,11 +1610,12 @@ function _mlRenderMiembros(personas) {
     var catOpciones = ['Mirlxs', 'Quindes'].map(function(c) {
       return '<option value="' + c + '"' + (c === catActual ? ' selected' : '') + '>' + c + '</option>';
     }).join('');
-    return '<div class="reserva-card" style="display:flex;flex-direction:column;gap:6px;">' +
+    return '<div class="reserva-card" style="display:flex;flex-direction:column;gap:8px;">' +
       '<div style="font-weight:700;font-size:0.88rem;">' + p.username + '</div>' +
       '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
-        '<select class="ml-estado-select" onchange="_mlGuardarCategoria(\'' + usernameEsc + '\', this.value)">' + catOpciones + '</select>' +
-        '<select class="ml-estado-select" onchange="_mlGuardarEstadoMiembro(\'' + usernameEsc + '\', this.value)">' + opcionesHtml + '</select>' +
+        '<select class="ml-estado-select" title="Categoría" onchange="_mlGuardarCategoria(\'' + usernameEsc + '\', this.value)">' + catOpciones + '</select>' +
+        '<select class="ml-estado-select" title="Estado" onchange="_mlGuardarEstadoMiembro(\'' + usernameEsc + '\', this.value)">' + opcionesHtml + '</select>' +
+        '<button type="button" class="btn btn-outline" style="padding:6px 12px;font-size:0.78rem;" onclick="_mlAbrirRegistrarPago(\'' + usernameEsc + '\')">Registrar pago</button>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -1633,6 +1634,65 @@ function _mlGuardarCategoria(username, categoria) {
     mostrarToast('Categoría actualizada.', 'ok');
     _mlCargarMiembros();
   }, function(e) { mostrarToast(e.message || 'Error al actualizar categoría.', 'error'); _mlCargarMiembros(); });
+}
+var _mlPagoUsername = null;
+
+function _mlAbrirRegistrarPago(username) {
+  _mlPagoUsername = username;
+  var sh = document.getElementById('ml-sheet-pago');
+  var ov = document.getElementById('ml-sheet-pago-overlay');
+  var nombre = document.getElementById('ml-sheet-pago-nombre');
+  if (nombre) nombre.textContent = username;
+  var hoy = new Date();
+  var mes = document.getElementById('ml-pago-mes');
+  var anio = document.getElementById('ml-pago-anio');
+  if (mes) {
+    var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    mes.innerHTML = MESES.map(function(m, i) {
+      return '<option value="' + (i + 1) + '"' + (i === hoy.getMonth() ? ' selected' : '') + '>' + m + '</option>';
+    }).join('');
+  }
+  if (anio) {
+    var ay = hoy.getFullYear();
+    anio.innerHTML = [ay - 1, ay, ay + 1].map(function(y) {
+      return '<option value="' + y + '"' + (y === ay ? ' selected' : '') + '>' + y + '</option>';
+    }).join('');
+  }
+  var monto = document.getElementById('ml-pago-monto');
+  var notas = document.getElementById('ml-pago-notas');
+  if (monto) monto.value = '';
+  if (notas) notas.value = '';
+  if (ov) ov.style.display = 'block';
+  if (sh) { sh.style.display = 'flex'; requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); }); }
+}
+
+function _mlCerrarRegistrarPago() {
+  var sh = document.getElementById('ml-sheet-pago');
+  var ov = document.getElementById('ml-sheet-pago-overlay');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+  _mlPagoUsername = null;
+}
+
+function _mlConfirmarRegistrarPago(btn) {
+  if (!_mlPagoUsername) return;
+  var mes = parseInt(document.getElementById('ml-pago-mes').value, 10);
+  var anio = parseInt(document.getElementById('ml-pago-anio').value, 10);
+  var monto = parseFloat(document.getElementById('ml-pago-monto').value) || 0;
+  var notas = (document.getElementById('ml-pago-notas').value || '').trim();
+  if (!mes || !anio) { mostrarToast('Seleccioná mes y año.', 'error'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+  var datos = { nombre: _mlPagoUsername, mes: mes, anio: anio, monto: monto, formaPago: 'Efectivo' };
+  if (notas) datos.notas = notas;
+  adminApi({ action: 'adminRegistrarPago', datosJson: JSON.stringify(datos) }, function(res) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirmar pago'; }
+    if (res && res.exito === false) { mostrarToast(res.error || 'Error al registrar el pago.', 'error'); return; }
+    mostrarToast('Pago registrado correctamente.', 'ok');
+    _mlCerrarRegistrarPago();
+  }, function(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirmar pago'; }
+    mostrarToast(e.message || 'Error al registrar el pago.', 'error');
+  });
 }
 function _mlGuardarEstadoMiembro(username, valor) {
   adminApi({ action: 'adminSetEstadoMiembro', nombre: username, estadoMiembro: valor }, function(res) {

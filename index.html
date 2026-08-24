@@ -2770,7 +2770,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/eventos.js?v=4fca9913"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
-<script src="js/reservas.js?v=de9f3e18"></script>
+<script src="js/reservas.js?v=5c0715cb"></script>
 <script src="js/perfil.js?v=43970d97"></script>
 <script src="js/admin.js"></script>
 <script src="js/pwa.js"></script>
@@ -3885,6 +3885,34 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <!-- BOTTOM SHEET: Agregar administradorx (Mi Liga, Tanda 3 — ver MANIFEST.md
      "Cambios recientes") -->
+<div id="ml-sheet-pago-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="_mlCerrarRegistrarPago()"></div>
+<div id="ml-sheet-pago" class="bsheet bsheet-scroll" style="z-index:9601;max-height:80vh;">
+  <div class="bsheet-handle"></div>
+  <div class="bsheet-title">Registrar pago</div>
+  <div class="bsheet-body">
+    <p id="ml-sheet-pago-nombre" style="font-weight:700;font-size:0.95rem;margin:0 0 16px;"></p>
+    <div style="display:flex;gap:10px;margin-bottom:14px;">
+      <div style="flex:1;">
+        <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:4px;">Mes</label>
+        <select id="ml-pago-mes" class="ml-estado-select" style="width:100%;"></select>
+      </div>
+      <div style="flex:1;">
+        <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:4px;">Año</label>
+        <select id="ml-pago-anio" class="ml-estado-select" style="width:100%;"></select>
+      </div>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:4px;">Monto (opcional)</label>
+      <input id="ml-pago-monto" type="number" min="0" placeholder="0" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--card-bg);color:var(--text);font-size:0.9rem;">
+    </div>
+    <div style="margin-bottom:20px;">
+      <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:4px;">Notas (opcional)</label>
+      <input id="ml-pago-notas" type="text" placeholder="ej: efectivo en mano" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--card-bg);color:var(--text);font-size:0.9rem;">
+    </div>
+    <button type="button" class="btn btn-primary" onclick="_mlConfirmarRegistrarPago(this)" style="margin-bottom:10px;">Confirmar pago</button>
+    <button type="button" class="btn btn-outline" onclick="_mlCerrarRegistrarPago()">Cancelar</button>
+  </div>
+</div>
 <div id="admin-sheet-agregar-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="adminCerrarSheetAgregarAdmin()"></div>
 <div id="admin-sheet-agregar" class="bsheet bsheet-scroll" style="z-index:9601;max-height:80vh;">
   <div class="bsheet-handle" style="flex-shrink:0;"></div>
