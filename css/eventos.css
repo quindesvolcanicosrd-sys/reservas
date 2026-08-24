@@ -1537,3 +1537,15 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
   width: 100%;
   margin-top: 14px;
 }
+
+/* ----- Pills: referencias visuales inline ----- */
+.ev-pill-ref-icon { font-size: 1.05rem; vertical-align: -3px; line-height: 1; }
+.ev-pill-ref-badge { display:inline-flex; align-items:center; padding:1px 7px; border-radius:20px; font-size:0.68rem; font-weight:800; letter-spacing:0.3px; vertical-align:middle; }
+.ev-pill-ref-badge-verde { background:var(--success); color:var(--white); }
+.ev-pill-ref-btn-danger { display:inline-flex; align-items:center; padding:1px 8px; border-radius:6px; font-size:0.68rem; font-weight:700; vertical-align:middle; background:var(--danger); color:var(--white); }
+.ev-pill-ref-mes { display:inline-flex; align-items:center; gap:1px; padding:1px 2px 1px 7px; border-radius:8px; font-size:0.75rem; font-weight:600; vertical-align:middle; background:var(--surface-alt); color:var(--text); }
+.ev-pill-ref-mes .material-symbols-outlined { font-size:0.9rem; vertical-align:-2px; }
+
+/* Botón cancelar/re-agendar: override del text-transform uppercase de .btn */
+.ev-card-btn-cancelar,
+.ev-detalle-btn-cancelar { text-transform: none; letter-spacing: 0; }

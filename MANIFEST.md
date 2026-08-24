@@ -5938,3 +5938,8 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
 - **Eliminado `case 'debugLogDedup'`** (debug temporal de una sesión anterior, nunca comiteado) — ya no hace falta, el fix real reemplaza lo que ese debug estaba diagnosticando.
 - **Sin verificar con Playwright/Deno** (sin `deno` disponible en este entorno) — revisado a mano; confirmado con grep que no quedan otros call sites de `_ultimaAsistenciaPorPersonaTodas()` sin actualizar.
 - **Deploy:** `supabase functions deploy api` — desplegado a producción (`uusbnreitoobqssizbfq`), confirmado con `"message":"Deployed Functions."` en la respuesta del CLI.
+
+### Cambio 17 — Pills de información con referencias visuales inline; override de text-transform en botón cancelar/re-agendar (`css/eventos.css`, `js/eventos.js`) (2026-08-24)
+
+- **Pills de información:** ahora usan `innerHTML` con referencias visuales inline (badges, íconos Material Symbols, botón danger, selector de mes). Nuevas clases CSS en `eventos.css`: `ev-pill-ref-icon`, `ev-pill-ref-badge`, `ev-pill-ref-badge-verde`, `ev-pill-ref-btn-danger`, `ev-pill-ref-mes`. Todos los colores via CSS vars, sin hardcoding.
+- **Botón cancelar/re-agendar** (`ev-card-btn-cancelar`, `ev-detalle-btn-cancelar`): se sobreescribe el `text-transform: uppercase` de `.btn` con `none`.

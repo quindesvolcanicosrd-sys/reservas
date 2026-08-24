@@ -2645,27 +2645,28 @@ function _evFabReservaParaEvento(idEvento) {
 var _evPillsTimer = null;
 function _evPillsInit(modo) {
   if (localStorage.getItem('ev_pills_ocultos') === '1') return;
+  var mesLabel = (document.getElementById('ev-nav-mes-texto') || {}).textContent || 'el mes';
+  var _picon = function(n) { return '<span class="material-symbols-outlined ev-pill-ref-icon">' + n + '</span>'; };
+  var mesHtml = '<span class="ev-pill-ref-mes">' + mesLabel + ' ' + _picon('expand_more') + '</span>';
   var listas = {
     equipamiento: [
-      'Selecciona una fecha para hacer una reserva',
-      'Cambia tu equipamiento desde el ícono de patín',
-      'Re Agenda o cancela cuando quieras entrando a un evento reservado',
-      'Busca fechas y eventos desde el buscador',
-      'Selecciona el mes en la esquina superior para ver la vista calendario'
+      'Usa <span class="ev-pill-ref-badge ev-pill-ref-badge-verde">Reserva</span> para reservar por clase',
+      'Cambia tu equipamiento desde ' + _picon('settings') + ' o desde ' + _picon('roller_skating'),
+      '<span class="ev-pill-ref-btn-danger">Re&#8209;Agenda o cancela</span> cuando quieras tus eventos reservados',
+      'Busca fechas y eventos desde ' + _picon('search'),
+      'Utiliza la vista calendario seleccionando ' + mesHtml
     ],
     mirlxs: [
-      'Para registrar una reserva mensual o por clase selecciona el ícono de +',
-      'Anticipa tu asistencia desde el ícono de asistencia anticipada',
-      'Toca un evento para ver más información',
-      'Busca fechas y eventos desde el buscador',
-      'Selecciona el mes en la esquina superior para ver la vista calendario'
+      'Pon <span class="ev-pill-ref-badge ev-pill-ref-badge-verde">Asistiré</span> de manera automática desde ' + _picon('event_available'),
+      'Entra a un evento para ver más información',
+      'Busca fechas y eventos desde ' + _picon('search'),
+      'Utiliza la vista calendario seleccionando ' + mesHtml
     ],
     quindes: [
-      'Para registrar una reserva mensual selecciona el ícono de +',
-      'Anticipa tu asistencia desde el ícono de asistencia anticipada',
+      'Pon <span class="ev-pill-ref-badge ev-pill-ref-badge-verde">Asistiré</span> de manera automática desde ' + _picon('event_available'),
       'Toca un evento para ver más información',
-      'Busca fechas y eventos desde el buscador',
-      'Selecciona el mes en la esquina superior para ver la vista calendario'
+      'Busca fechas y eventos desde ' + _picon('search'),
+      'Utiliza la vista calendario seleccionando ' + mesHtml
     ]
   };
   var msgs = listas[modo] || listas.mirlxs;
@@ -2676,13 +2677,13 @@ function _evPillsInit(modo) {
   if (!banner || !texto) return;
   banner.style.display = 'flex';
   if (cerrar) cerrar.style.display = '';
-  texto.textContent = msgs[0];
+  texto.innerHTML = msgs[0];
   if (_evPillsTimer) clearInterval(_evPillsTimer);
   _evPillsTimer = setInterval(function() {
     banner.classList.add('ev-pill-fade');
     setTimeout(function() {
       idx = (idx + 1) % msgs.length;
-      texto.textContent = msgs[idx];
+      texto.innerHTML = msgs[idx];
       banner.classList.remove('ev-pill-fade');
     }, 400);
   }, 10000);
