@@ -438,7 +438,7 @@ async function actualizarDatosPersona(params: Record<string, any>): Promise<Reco
     nombreDerby: 'nombre_derby', numeroDerby: 'numero_derby', pronombres: 'pronombres',
     fechaIngreso: 'fecha_ingreso',
     dieta: 'dieta', prefijo: 'prefijo', telefono: 'telefono', email: 'email',
-    estado_miembro: 'estado_miembro',
+    estado_miembro: 'estado_miembro', categoria: 'categoria',
     fechaPublica: 'fecha_publica', edadPublica: 'edad_publica', fechaNacimiento: 'fecha_nacimiento',
     tipoDocumento: 'tipo_documento', paisExpedicion: 'pais_expedicion', numeroDocumento: 'numero_documento',
     nombreLegal: 'nombre_legal', callePrincipal: 'calle_principal', calleSecundaria: 'calle_secundaria',
@@ -1884,6 +1884,16 @@ Deno.serve(async (req: Request) => {
         const { data, error } = await supabase.from('equipo').select('username, categoria, estado_miembro').order('username');
         if (error) return json({ error: error.message }, 500);
         return json({ personas: data });
+      }
+      // Cambia equipo.categoria (admin, cualquier cuenta) -- distinto de
+      // actualizarDatosPersona (self-service, exige token propio de la
+      // misma cuenta, ver más abajo en este archivo).
+      case 'adminSetCategoria': {
+        const adminEmail = await _validarAdminToken(params.adminToken);
+        if (!adminEmail) return json({ exito: false, error: 'Sesión admin inválida.' }, 401);
+        const { error } = await supabase.from('equipo').update({ categoria: params.categoria }).eq('username', params.nombre);
+        if (error) return json({ exito: false, error: error.message });
+        return json({ exito: true });
       }
       // Aún en GAS: AsistenciaAnticipada, enviarResumenReservas, adminRegenerarVentanaAsistencias, adminCancelarEvento, guardarNotaPago
       default:

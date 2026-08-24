@@ -1606,10 +1606,14 @@ function _mlRenderMiembros(personas) {
       return '<option value="' + o + '"' + (o === estadoActual ? ' selected' : '') + '>' + o + '</option>';
     }).join('');
     var usernameEsc = p.username.replace(/'/g, "\\'");
-    return '<div class="reserva-card" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">' +
+    var catActual = p.categoria || 'Mirlxs';
+    var catOpciones = ['Mirlxs', 'Quindes'].map(function(c) {
+      return '<option value="' + c + '"' + (c === catActual ? ' selected' : '') + '>' + c + '</option>';
+    }).join('');
+    return '<div class="reserva-card" style="display:flex;flex-direction:column;gap:6px;">' +
       '<div style="font-weight:700;font-size:0.88rem;">' + p.username + '</div>' +
-      '<div style="display:flex;align-items:center;gap:8px;">' +
-        '<span class="badge badge-confirmada">' + (p.categoria || 'Sin categoría') + '</span>' +
+      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">' +
+        '<select class="ml-estado-select" onchange="_mlGuardarCategoria(\'' + usernameEsc + '\', this.value)">' + catOpciones + '</select>' +
         '<select class="ml-estado-select" onchange="_mlGuardarEstadoMiembro(\'' + usernameEsc + '\', this.value)">' + opcionesHtml + '</select>' +
       '</div>' +
     '</div>';
@@ -1620,6 +1624,16 @@ function _mlRenderMiembros(personas) {
 // de _ajGuardar()/actualizarDatosPersona en js/perfil.js, que es self-service
 // con token de usuario). Ver adminSetEstadoMiembro() en
 // supabase/functions/api/index.ts.
+// Cambia equipo.categoria (admin, cualquier cuenta) -- distinto de
+// actualizarDatosPersona (self-service, exige token propio), ver
+// adminSetCategoria() en supabase/functions/api/index.ts.
+function _mlGuardarCategoria(username, categoria) {
+  adminApi({ action: 'adminSetCategoria', nombre: username, categoria: categoria }, function(res) {
+    if (!res || res.exito === false) { mostrarToast((res && res.error) || 'Error al actualizar categoría.', 'error'); _mlCargarMiembros(); return; }
+    mostrarToast('Categoría actualizada.', 'ok');
+    _mlCargarMiembros();
+  }, function(e) { mostrarToast(e.message || 'Error al actualizar categoría.', 'error'); _mlCargarMiembros(); });
+}
 function _mlGuardarEstadoMiembro(username, valor) {
   adminApi({ action: 'adminSetEstadoMiembro', nombre: username, estadoMiembro: valor }, function(res) {
     if (!res.exito) { mostrarToast(res.error || 'Error al actualizar el estado.', 'error'); _mlCargarMiembros(); return; }
