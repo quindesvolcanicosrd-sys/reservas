@@ -3126,6 +3126,22 @@ function _evMesPagado(mesIdx, anio) {
   });
 }
 
+function _evReservaMesPendiente(mesIdx, anio) {
+  var _MK = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var mn = _MK[mesIdx];
+  return (_todasReservas || []).some(function(r) {
+    if (r.tipo !== 'mensual' || r.estado !== 'Pendiente') return false;
+    if ((r.fecha || '').toLowerCase().trim() !== mn) return false;
+    var vh = _parseFechaSimple(r.validezHasta);
+    return !vh || vh.getFullYear() === anio;
+  });
+}
+function _evCerrarModalReservaPendiente() {
+  var m = document.getElementById('modal-reserva-pendiente');
+  if (!m) return;
+  m.style.opacity = '0';
+  setTimeout(function() { m.style.display = 'none'; }, 300);
+}
 function _evMarcarAsistencia(id, estado) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === id; })[0];
   if (!ev) return;
@@ -3133,6 +3149,14 @@ function _evMarcarAsistencia(id, estado) {
   // estando Ausente/Lesionadx vuelve a Activx automáticamente -- reactivación
   // implícita por uso real, antes de evaluar la gracia de abajo (que ya debe
   // correr con el estado nuevo -- ver _evTieneCuotaAlDia()/_quindesGraciaAgotada()).
+  if (estado === 'Asistiré' && _modoUsuario() === 'mirlxs' && !_adminToken && ev && ev.tipo === 'Entrenamiento' && !_evEsPasado(ev)) {
+    var _fpPend = (ev.fecha || '').split('-');
+    if (_fpPend.length === 3 && _evReservaMesPendiente(parseInt(_fpPend[1]) - 1, parseInt(_fpPend[0]))) {
+      var _mp = document.getElementById('modal-reserva-pendiente');
+      if (_mp) { _mp.style.display = 'flex'; requestAnimationFrame(function() { _mp.style.opacity = '1'; }); }
+      return;
+    }
+  }
   if (estado === 'Asistiré' && E.datos && (E.datos.estado_miembro === 'Ausente' || E.datos.estado_miembro === 'Lesionadx')) {
     E.datos.estado_miembro = 'Activx';
     api({ action: 'actualizarDatosPersona', nombre: E.nombre, datos: JSON.stringify({ estado_miembro: 'Activx' }) }, function() {}, function(e) {

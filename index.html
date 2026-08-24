@@ -471,6 +471,14 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
        descripción del evento (_evAbrirRectSheet(), js/eventos.js) -- el id
        del evento pendiente viaja en _evRectIdEvento (variable de módulo), no
        en un data-attribute. -->
+  <div id="modal-reserva-pendiente" style="display:none;opacity:0;position:fixed;inset:0;z-index:9800;background:var(--overlay-dark);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;transition:opacity 0.3s ease;">
+    <div style="background:var(--card-bg);border-radius:14px;padding:24px 20px;width:100%;max-width:340px;text-align:center;">
+      <span class="material-symbols-outlined" style="font-size:2.5rem;color:var(--warning);margin-bottom:12px;display:block;">pending</span>
+      <div style="font-weight:700;font-size:1rem;margin-bottom:10px;">Reserva pendiente de aprobación</div>
+      <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 20px;">Tu reserva todavía está siendo revisada por un administrador. Una vez aprobada, podrás marcar tu asistencia.</p>
+      <button type="button" class="btn btn-primary" onclick="_evCerrarModalReservaPendiente()">Entendido</button>
+    </div>
+  </div>
   <div id="modal-rect-enviada" style="display:none;opacity:0;position:fixed;inset:0;z-index:9800;background:var(--overlay-dark);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;transition:opacity 0.3s ease;">
     <div style="background:var(--card-bg);border-radius:14px;padding:24px 20px;width:100%;max-width:340px;text-align:center;">
       <span class="material-symbols-outlined" style="font-size:2.5rem;color:var(--brand);margin-bottom:12px;display:block;">task_alt</span>
@@ -2787,7 +2795,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=2531b626"></script>
-<script src="js/eventos.js?v=554c8caf"></script>
+<script src="js/eventos.js?v=a4efcdc4"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=5c0715cb"></script>
