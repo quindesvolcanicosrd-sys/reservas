@@ -219,7 +219,11 @@ function irNuevaReserva(skipEquip, _fechaPresel) {
   // confirmar/cancelar (ver esos callers para el resto de los puntos de
   // salida de s4).
   var _fab = document.getElementById('ev-mirlxs-fab');
-  if (_fab) _fab.style.display = 'none';
+  if (_fab) {
+    if (typeof _evFabToken !== 'undefined') ++_evFabToken;
+    _fab.style.display = 'none';
+    _fab.dataset.oculto = '1';
+  }
   E.conf = ''; E.fechas = []; E.tallasPorFecha = {}; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = ''; E.cuponAplicado = false; E.creditosUsados = 0; E.reagendando = false; E.viaEventosInline = false;
   E._fechaPresel = _fechaPresel || null;
   var chkC = document.getElementById('chk-cupon'); if (chkC) chkC.checked = false;
