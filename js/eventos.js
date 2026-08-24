@@ -2020,6 +2020,7 @@ function _evContinuarReserva() {
   // armar el flag acá una sola vez, antes de navegar lejos de Eventos.
   _evGuardarScrollTimeline();
   _evRestaurarScrollTimeline = true;
+  E.origenSeccionS4 = 's-eventos';
   continuar_s4();
   _evSalirModoReserva();
   var _fab = document.getElementById('ev-mirlxs-fab');
