@@ -472,6 +472,19 @@ window.onload = function() {
         api({ action: 'restaurarSesion' }, function(res) {
           if (!res.valido || !res.datos) { window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true); return; }
           E.datos = res.datos; E.datosCompletos = res.datos;
+          // Salvaguarda (Victor, ver MANIFEST.md "Cambio 12"): si en algún
+          // momento _EV_EVENTOS ya llegó a poblarse/renderizarse ANTES de que
+          // este callback resuelva `E.nombre`/`E.datos` reales (no confirmado
+          // como camino real hoy -- irEventos() siempre corre después de este
+          // punto en los flujos actuales -- pero E.nombre parte de '' hasta
+          // acá y _evMapEventoBackend()/_evAsistenciaRealHtml() dependen de
+          // compararlo contra `asistencias[].nombre`), esto re-lee la
+          // asistencia real de cada evento pasado ya en pantalla contra el
+          // E.nombre recién confirmado. No-op si Eventos no se visitó todavía
+          // esta sesión (`_EV_EVENTOS` vacío) o si sus funciones no cargaron.
+          if (typeof _EV_EVENTOS !== 'undefined' && typeof _evEsPasado === 'function' && typeof _evActualizarAsistenciaPropiaCard === 'function') {
+            _EV_EVENTOS.forEach(function(_ev) { if (_evEsPasado(_ev)) _evActualizarAsistenciaPropiaCard(_ev.id); });
+          }
           if (res.esAdmin) {
             _adminToken = res.adminToken;
             _adminEmail = res.email;
