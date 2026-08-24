@@ -5947,3 +5947,8 @@ El sitio se publica con GitHub Pages en modo "Deploy from a branch" (rama `main`
 ### Cambio 18 — degradación automática de categoría quindes → mirlxs al guardar equipamiento (`js/perfil.js`, `js/reservas.js`) (2026-08-24)
 
 - **Degradación automática quindes → mirlxs:** Si un usuario con `categoria = 'Quindes'` guarda equipamiento con `necesitaPatines = 'Sí'` (desde ajustes vía `ajGuardarTallaAjustes` en `js/perfil.js`, o desde el wizard de equipamiento vía `continuar_s3c_nuevo` en `js/reservas.js`), se actualiza `E.datos.categoria = 'Mirlxs'` localmente y se persiste vía `actualizarDatosPersona`. No puede existir un quindes que necesite equipamiento del club. El toast de ajustes muestra mensaje específico cuando ocurre el downgrade.
+
+### Cambio 19 — sheet "Solo esta clase / Todo el mes" recordado por sesión; FAB de reserva mensual se oculta durante el modo reserva por clase y en el wizard de pago (`js/eventos.js`) (2026-08-24)
+
+- **FAB `#ev-mirlxs-fab` y modo reserva por clase (mirlxs):** `_evActualizarFabReserva()` ahora respeta `_evModoReservaActivo`: si el modo está activo (footer de selección visible), el FAB hace fade-out inmediato; se llama desde `_evActualizarFooterReserva()` (para fade-out al seleccionar la 1ª clase) y desde `_evSalirModoReserva()` (para restaurar al cancelar). `_evContinuarReserva()` fuerza `display:none` y cancela el token de animación para que el FAB no aparezca en el wizard de pago.
+- **Preferencia de tipo de reserva:** `_evTipoReservaPref` (`'clase'|'mes'|null`) se guarda en sesión al 1er uso del sheet `#sheet-tipo-reserva`; los siguientes toques a "Reservar" van directo a la preferencia guardada sin abrir el sheet.

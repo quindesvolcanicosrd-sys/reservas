@@ -1959,6 +1959,7 @@ function _evActualizarFooterReserva() {
     requestAnimationFrame(function() {
       requestAnimationFrame(function() { footer.classList.add('ev-reserva-footer--visible'); });
     });
+    _evActualizarFabReserva();
   }
   _evActualizarFooterTexto();
 }
@@ -1979,6 +1980,7 @@ function _evSalirModoReserva() {
     footer.classList.remove('ev-reserva-footer--visible');
     setTimeout(function() { footer.style.display = 'none'; }, 220);
   }
+  _evActualizarFabReserva();
 }
 // Cierra continuar_s4() completo (js/reservas.js) en vez de navegar directo
 // a 's-pago' -- esa función arma detalleTexto/fechasHtml + llama
@@ -2020,6 +2022,8 @@ function _evContinuarReserva() {
   _evRestaurarScrollTimeline = true;
   continuar_s4();
   _evSalirModoReserva();
+  var _fab = document.getElementById('ev-mirlxs-fab');
+  if (_fab) { ++_evFabToken; _fab.style.display = 'none'; _fab.dataset.oculto = '1'; _fab.style.opacity = ''; _fab.style.transition = ''; _fab.style.pointerEvents = ''; }
 }
 
 function _evCardEventoHtml(e, sufijo) {
@@ -2534,6 +2538,17 @@ var _evFabToken = 0;
 function _evActualizarFabReserva() {
   var fab = document.getElementById('ev-mirlxs-fab');
   if (!fab) return;
+  if (_evModoReservaActivo) {
+    if (fab.style.display !== 'none' && fab.dataset.oculto !== '1') {
+      fab.dataset.oculto = '1';
+      fab.style.transition = 'opacity 0.18s ease';
+      fab.style.opacity = '0';
+      fab.style.pointerEvents = 'none';
+      var _tokM = ++_evFabToken;
+      setTimeout(function() { if (_tokM === _evFabToken && fab.dataset.oculto === '1') { fab.style.display = 'none'; fab.style.transition = ''; } }, 200);
+    }
+    return;
+  }
   var deboMostrar = false, nuevoTexto = '';
   var modo = _modoUsuario();
   // Bug real corregido antes de aplicar (mirlxs, sin cambios en esta tanda):
@@ -2856,8 +2871,11 @@ function _evCuotaSolicitarAyuda() {
 // de ESE evento (ver _evTipoReservaClase()/_evTipoReservaTodoMes(), abajo).
 // Mismo patrón abrirX/cerrarX (fade + doble requestAnimationFrame +
 // _registrarOverlayAbierto) que el resto de los sheets de este archivo.
+var _evTipoReservaPref = null; // 'clase' | 'mes' | null -- memorizado por sesión
 function _evAbrirSheetTipoReserva(idEvento) {
   E.reservaEventoId = idEvento;
+  if (_evTipoReservaPref === 'clase') { _evReservarClase(idEvento); return; }
+  if (_evTipoReservaPref === 'mes') { _evFabReservaParaEvento(idEvento); return; }
   var sh = document.getElementById('sheet-tipo-reserva');
   var ov = document.getElementById('sheet-tipo-reserva-overlay');
   if (!sh || !ov) return;
@@ -2888,6 +2906,7 @@ function cerrarSheetTipoReserva(porGesto) {
 // overlay propio, pero sí puede tocar el DOM de la card mientras el sheet
 // todavía está cerrando).
 function _evTipoReservaClase() {
+  _evTipoReservaPref = 'clase';
   var id = E.reservaEventoId;
   cerrarSheetTipoReserva();
   setTimeout(function() { _evReservarClase(id); }, 310);
@@ -2896,6 +2915,7 @@ function _evTipoReservaClase() {
 // más arriba) para preseleccionar el mes de ESTE evento puntual, no el mes
 // que el timeline tenga navegado en este momento.
 function _evTipoReservaTodoMes() {
+  _evTipoReservaPref = 'mes';
   var id = E.reservaEventoId;
   cerrarSheetTipoReserva();
   setTimeout(function() { _evFabReservaParaEvento(id); }, 310);
