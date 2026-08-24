@@ -323,6 +323,24 @@ function _adminCargarRectificaciones(scope) {
 function _adminRenderRectificaciones(scope) {
   scope = scope || '';
   var slot = document.getElementById('admin-banner-rectif-slot' + scope);
+  var lista = document.getElementById('admin-rect-lista-ml');
+  if (lista && scope === '-ml') {
+    if (!_admRectificaciones || _admRectificaciones.length === 0) {
+      lista.innerHTML = '<p style="font-size:0.85rem;color:var(--muted);text-align:center;padding:16px 0;">No hay rectificaciones pendientes.</p>';
+    } else {
+      var filasTile = _admRectificaciones.map(function(r) {
+        var estadoTexto = r.estadoSolicitado === 'Sin registrar' ? 'No asistí' : r.estadoSolicitado === 'A tiempo' ? 'A horario' : 'Tarde';
+        return '<div class="admin-banner-res-row" id="ev-rectif-tile-row-' + r.id + '">' +
+          '<div class="admin-banner-res-info"><div class="admin-banner-res-nombre">' + (r.nombre || '') + '</div>' +
+          '<div class="admin-banner-res-fecha">' + (r.fechaEvento || '') + ' · Solicita: ' + estadoTexto + '</div></div>' +
+          '<div class="admin-banner-res-actions">' +
+            '<button class="admin-banner-btn admin-banner-btn-ok" onclick="_adminRectifSetEstado(\'' + r.id + '\',\'Aprobada\',this,\'' + scope + '\')" aria-label="Aprobar"><span class="material-symbols-outlined">check</span></button>' +
+            '<button class="admin-banner-btn admin-banner-btn-no" onclick="_adminRectifSetEstado(\'' + r.id + '\',\'Rechazada\',this,\'' + scope + '\')" aria-label="Rechazar"><span class="material-symbols-outlined">close</span></button>' +
+          '</div></div>';
+      }).join('');
+      lista.innerHTML = filasTile;
+    }
+  }
   if (!slot) return;
   if (!_admRectificaciones || _admRectificaciones.length === 0) { slot.innerHTML = ''; return; }
   var n = _admRectificaciones.length;
@@ -484,6 +502,11 @@ var ADMIN_TILE_INFO = {
         adminRenderQueLlevar(res);
       }, function(e) { mostrarToast(e.message || 'Error al cargar equipamiento.', 'error'); });
     }
+  },
+  's-admin-rectificaciones': {
+    bubbleId: 'admin-burbuja-rectificaciones',
+    listaId: 'admin-rect-lista-ml',
+    cargar: function() { _adminCargarRectificaciones('-ml'); }
   },
   'admin-color': {
     bubbleId: 'admin-burbuja-color',

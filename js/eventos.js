@@ -1047,12 +1047,14 @@ function _evCalRenderMes(cont, iso) {
   var hoy = _evHoyISO();
   var html = _EV_DIAS_CORTOS.map(function(d) { return '<div class="ev-cal-dow">' + d + '</div>'; }).join('');
   var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
+  var _calVisiblesIds = {};
+  _evTimelineItems().forEach(function(it) { if (it.tipo === 'evento') _calVisiblesIds[it.data.id] = true; });
   while (cur <= finGrid) {
     var celdaIso = _evToISO(cur);
     var ajeno = cur.getMonth() !== m.month;
     var esHoy = celdaIso === hoy;
     var esSeleccionada = !esHoy && celdaIso === _evCalFechaSeleccionada;
-    var tieneEv = _evEventosDeFecha(celdaIso).length > 0;
+    var tieneEv = _evEventosDeFecha(celdaIso).some(function(e) { return _calVisiblesIds[e.id]; });
     var tieneCumple = _evCumpleDeFecha(celdaIso).length > 0;
     var tieneOffseason = _evOffseasonDeFecha(celdaIso);
     html += '<div class="ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (esHoy ? ' ev-dia-hoy' : '') + (esSeleccionada ? ' ev-dia-seleccionado' : '') +
@@ -2706,12 +2708,12 @@ function _evPillsInit(modo) {
   texto.innerHTML = typeof msgs[0] === 'function' ? msgs[0]() : msgs[0];
   if (_evPillsTimer) clearInterval(_evPillsTimer);
   _evPillsTimer = setInterval(function() {
-    banner.classList.add('ev-pill-fade');
+    texto.style.opacity = '0';
     setTimeout(function() {
       idx = (idx + 1) % msgs.length;
       texto.innerHTML = typeof msgs[idx] === 'function' ? msgs[idx]() : msgs[idx];
-      banner.classList.remove('ev-pill-fade');
-    }, 400);
+      texto.style.opacity = '1';
+    }, 300);
   }, 10000);
 }
 
@@ -3929,6 +3931,11 @@ function _evTimelineItems() {
           return (vh ? vh.getFullYear() : _anioEv) === _anioEv;
         });
       }
+      // Futuro (mirlxs con cuota): solo entrenamientos de meses que ya pagó
+      if (_modoUsuario() === 'mirlxs' && e.tipo === 'Entrenamiento' && _evFechaCmp(e.fecha, _hoyIsoTimeline) > 0) {
+        var _fpCuota = e.fecha.split('-');
+        if (!_evMesPagado(parseInt(_fpCuota[1]) - 1, parseInt(_fpCuota[0]))) return false;
+      }
       return true;
     }
     var cmp = _evFechaCmp(e.fecha, _hoyIsoTimeline);
@@ -4197,6 +4204,8 @@ function abrirEvDetalle(id) {
   // ya sacó la pantalla de `display:none`, así que llamar esto ACÁ MISMO
   // (sin ningún `setTimeout`) ya mide valores reales, sin ventana de tiempo
   // en la que se vea la posición vieja/rota.
+  var _detFab = document.getElementById('ev-mirlxs-fab');
+  if (_detFab) { ++_evFabToken; _detFab.style.display = 'none'; _detFab.dataset.oculto = '1'; _detFab.style.opacity = ''; _detFab.style.transition = ''; _detFab.style.pointerEvents = ''; }
   _evDetalleActualizarSticky();
   // `_evUpdateRsvpSliders()` SÍ sigue necesitando el setTimeout -- motivo
   // distinto (bug real aparte, ya documentado): entrar al detalle con un
@@ -4456,7 +4465,8 @@ function _evEnviarRectificacion(btn) {
   apiPost({ action: 'solicitarRectificacionAsistencia', token: _token, idEvento: id, estadoSolicitado: estado }, function(res) {
     if (res && res.exito) {
       _evCerrarRectSheet();
-      mostrarToast('Solicitud enviada. Un administrador la revisará pronto.');
+      var m = document.getElementById('modal-rect-enviada');
+      if (m) { m.style.display = 'flex'; requestAnimationFrame(function() { m.style.opacity = '1'; }); }
     } else {
       if (btn) { btn.disabled = false; btn.textContent = 'Enviar rectificación'; }
       mostrarToast((res && res.error) || 'Error al enviar la solicitud.', 'error');
@@ -4465,6 +4475,12 @@ function _evEnviarRectificacion(btn) {
     if (btn) { btn.disabled = false; btn.textContent = 'Enviar rectificación'; }
     mostrarToast((e && e.message) || 'Error al enviar la solicitud.', 'error');
   });
+}
+function _evCerrarModalRectEnviada() {
+  var m = document.getElementById('modal-rect-enviada');
+  if (!m) return;
+  m.style.opacity = '0';
+  setTimeout(function() { m.style.display = 'none'; }, 300);
 }
 function _evConfirmarBorrarEvento(btn) {
   if (!_evBorrarPendienteId) return;
@@ -4601,6 +4617,24 @@ function _evDetalleInfoHtml(ev) {
       html += '<button type="button" class="ev-stat-marcar" onclick="_evAbrirRectSheet(\'' + ev.id + '\')"><span class="material-symbols-outlined">edit</span>Rectificar asistencia</button>';
     }
     html += '</div>';
+  }
+  // Botones de reserva inline para entrenamientos futuros sin reserva activa
+  if (!_adminToken && ev.tipo === 'Entrenamiento' && !_evEsPasado(ev) && !miReservaInfo) {
+    var _modo = _modoUsuario();
+    if (_modo === 'mirlxs' || _modo === 'quindes') {
+      var _fp = (ev.fecha || '').split('-');
+      var _mesEv = parseInt(_fp[1]) - 1, _anioEv = parseInt(_fp[0]);
+      var _mesNombre = NOMBRES_MESES[_mesEv] || '';
+      var _evIdEsc2 = String(ev.id).replace(/'/g, "\\'");
+      html += '<div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;">';
+      if (_modo === 'mirlxs') {
+        html += '<button type="button" class="btn btn-outline" onclick="_evReservarClase(\'' + _evIdEsc2 + '\')"><span class="material-symbols-outlined" style="vertical-align:middle;font-size:18px;margin-right:4px;">confirmation_number</span>Reservar esta clase</button>';
+      }
+      if (!_evMesPagado(_mesEv, _anioEv)) {
+        html += '<button type="button" class="btn btn-outline" onclick="_evFabReservaParaEvento(\'' + _evIdEsc2 + '\')"><span class="material-symbols-outlined" style="vertical-align:middle;font-size:18px;margin-right:4px;">calendar_month</span>Reservar ' + _mesNombre + '</button>';
+      }
+      html += '</div>';
+    }
   }
   return html;
 }

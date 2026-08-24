@@ -747,7 +747,8 @@
 /* "Rectificar asistencia" (usuario no-admin) -- botón único fuera de
    `.ev-stats-grid` (ver _evDetalleInfoHtml(), js/eventos.js), reusa
    `.ev-stat-marcar` tal cual salvo el espaciado propio de esa ubicación. */
-.ev-detalle-section .ev-stat-marcar { margin-top: 10px; width: 100%; }
+.ev-detalle-section .ev-stat-marcar { margin-top: 10px; width: 100%; border-style: solid; border-color: var(--border); background: var(--surface-2); display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; border-radius: var(--radius); font-size: 0.88rem; font-weight: 600; }
+.ev-detalle-section .ev-stat-marcar:hover { border-color: var(--brand); background: var(--brand-lightest); }
 /* Opciones del sheet de rectificación (#ev-rect-sheet, index.html) --
    display flex column con gap, mismo criterio de las pills de selección
    única del wizard de Salud (`.aj-pill`, css/perfil.css) pero como fila
@@ -1444,7 +1445,7 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 }
 .ev-pill-banner.ev-pill-fade { opacity: 0; }
 .ev-pill-icono { font-size: 18px; flex-shrink: 0; color: var(--brand); }
-.ev-pill-texto { flex: 1; }
+.ev-pill-texto { flex: 1; transition: opacity 0.3s ease; will-change: opacity; }
 .ev-pill-cerrar { background: none; border: none; cursor: pointer; padding: 0; color: var(--muted); display: flex; }
 .ev-pill-cerrar .material-symbols-outlined { font-size: 16px; }
 

@@ -32,7 +32,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=a3b1d52d">
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
-<link rel="stylesheet" href="css/eventos.css?v=9d83ae32">
+<link rel="stylesheet" href="css/eventos.css?v=46962738">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
@@ -471,11 +471,20 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
        descripción del evento (_evAbrirRectSheet(), js/eventos.js) -- el id
        del evento pendiente viaja en _evRectIdEvento (variable de módulo), no
        en un data-attribute. -->
+  <div id="modal-rect-enviada" style="display:none;opacity:0;position:fixed;inset:0;z-index:9800;background:var(--overlay-dark);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;transition:opacity 0.3s ease;">
+    <div style="background:var(--card-bg);border-radius:14px;padding:24px 20px;width:100%;max-width:340px;text-align:center;">
+      <span class="material-symbols-outlined" style="font-size:2.5rem;color:var(--brand);margin-bottom:12px;display:block;">task_alt</span>
+      <div style="font-weight:700;font-size:1rem;margin-bottom:10px;">Rectificación enviada</div>
+      <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 20px;">Un administrador revisará tu nueva respuesta y, si la aprueba, verás que tu asistencia habrá cambiado de manera exitosa.</p>
+      <button type="button" class="btn btn-primary" onclick="_evCerrarModalRectEnviada()">Entendido</button>
+    </div>
+  </div>
   <div id="ev-rect-sheet-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_evCerrarRectSheet()"></div>
   <div id="ev-rect-sheet" class="bsheet" style="z-index:9701;">
     <div class="bsheet-handle"></div>
     <div class="bsheet-title">Rectificar asistencia</div>
     <div class="bsheet-body">
+      <p style="font-size:0.82rem;color:var(--muted);line-height:1.5;margin:0 0 14px;">Indica cuál fue realmente tu asistencia. Un administrador revisará tu solicitud y, si la aprueba, tu estado se actualizará.</p>
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
         <button type="button" class="ev-rect-opt" data-estado="A tiempo" onclick="_evRectElegir(this)"><span class="material-symbols-outlined">check_circle</span>A horario</button>
         <button type="button" class="ev-rect-opt" data-estado="Tarde" onclick="_evRectElegir(this)"><span class="material-symbols-outlined">schedule</span>Tarde</button>
@@ -2437,9 +2446,20 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <div class="pantalla" id="s-miliga">
   <div class="card" id="s-miliga-card">
     <div class="admin-dash-banners">
-      <div id="admin-banner-rectif-slot-ml"></div>
       <div id="admin-banner-pendientes-slot-ml"></div>
       <div id="admin-banner-equip-slot-ml"></div>
+    </div>
+
+    <!-- Fila 0: Rectificaciones de asistencia (siempre visible, solo muestra badge con conteo si hay pendientes). -->
+    <div class="admin-dash-row">
+      <div class="admin-dash-tile" style="grid-column:span 2;" data-tile="s-admin-rectificaciones" onclick="adminToggleBurbuja('s-admin-rectificaciones', this)">
+        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">edit_note</span></div>
+        <div class="admin-dash-tile-label">Rectificaciones</div>
+      </div>
+    </div>
+    <div id="admin-burbuja-rectificaciones" class="admin-tile-bubble" style="display:none;">
+      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">edit_note</span> Rectificaciones de asistencia</div>
+      <div id="admin-rect-lista-ml"></div>
     </div>
 
     <!-- Fila 1: Qué llevar + Reservas. -->
@@ -2767,12 +2787,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=2531b626"></script>
-<script src="js/eventos.js?v=4fca9913"></script>
+<script src="js/eventos.js?v=554c8caf"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
 <script src="js/reservas.js?v=5c0715cb"></script>
 <script src="js/perfil.js?v=43970d97"></script>
-<script src="js/admin.js?v=ba272777"></script>
+<script src="js/admin.js?v=a05c0f73"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js"></script>
 
