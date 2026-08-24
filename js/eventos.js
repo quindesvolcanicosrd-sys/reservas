@@ -34,6 +34,7 @@ var _EV_OFFSEASON = [];
 var _evSeleccionados = new Set();
 var _evDisponibles = {};
 var _evModoReservaActivo = false;
+var _evReservaAutoFinalizar = false;
 // Doble tap real en "Reservar" (ver "Cambios recientes"): _evModoReservaActivo
 // solo se prendía DENTRO del callback de éxito del apiPost, no antes de
 // llamarlo -- un 2º tap mientras el 1er fetch todavía estaba en vuelo
@@ -1846,12 +1847,14 @@ function _evReservarClase(eventoId) {
         _evSeleccionados.delete(eventoId);
         _evModoReservaActivo = false;
         if (f && f.razon && /patines|talla|protec|equip/i.test(f.razon)) {
+          _evReservaAutoFinalizar = false;
           // Ocultar footer sin borrar _evConflictosTalla (el sheet lo necesita)
           var _ftR = document.getElementById('ev-reserva-footer');
           if (_ftR) { _ftR.classList.remove('ev-reserva-footer--visible'); setTimeout(function() { _ftR.style.display = 'none'; }, 220); }
           _evActualizarBotonesReserva();
           _evAbrirSheetTallaConflicto(eventoId);
         } else {
+          _evReservaAutoFinalizar = false;
           _evSalirModoReserva();
           mostrarToast((f && f.razon) || 'No disponible', 'error', true);
         }
@@ -1860,12 +1863,14 @@ function _evReservarClase(eventoId) {
       // Disponible: ya seleccionado optimistamente, solo refrescar UI
       _evActualizarBotonesReserva();
       _evActualizarFooterReserva();
-    }, function() { _evCargandoDisponibles = false; if (_btnEvCargando) { _btnEvCargando.disabled = false; _btnEvCargando.style.opacity = ''; } mostrarToast('Error de conexión.', 'error', true); });
+      if (_evReservaAutoFinalizar && _evSeleccionados.has(eventoId)) { _evReservaAutoFinalizar = false; setTimeout(_evContinuarReserva, 80); }
+    }, function() { _evCargandoDisponibles = false; _evReservaAutoFinalizar = false; if (_btnEvCargando) { _btnEvCargando.disabled = false; _btnEvCargando.style.opacity = ''; } mostrarToast('Error de conexión.', 'error', true); });
   } else {
     if (_evConflictosTalla[eventoId] && !_evTallasPorFecha[eventoId]) {
       _evAbrirSheetTallaConflicto(eventoId);
     } else {
       _evToggleSeleccion(eventoId);
+      if (_evReservaAutoFinalizar && _evSeleccionados.has(eventoId)) { _evReservaAutoFinalizar = false; setTimeout(_evContinuarReserva, 80); }
     }
   }
 }
@@ -2909,16 +2914,39 @@ function cerrarSheetTipoReserva(porGesto) {
   setTimeout(function() {
     if (sh) sh.style.display = 'none';
     if (ov) ov.style.display = 'none';
+    var p1 = document.getElementById('str-paso1');
+    var p2 = document.getElementById('str-paso2');
+    if (p1) p1.style.display = '';
+    if (p2) p2.style.display = 'none';
   }, 300);
 }
-// "Solo esta clase" -- mismo cierre-diferido-por-history.back() que
-// _evCuotaPagarAhora()/irNuevaReservaConTipo(), evita la carrera ya
+// "Solo esta clase" -- no cierra el sheet, muestra el paso 2 (#str-paso2,
+// index.html) dentro del mismo sheet ya abierto, preguntando si agregar
+// otra clase o finalizar.
+function _evTipoReservaClase() {
+  var p1 = document.getElementById('str-paso1');
+  var p2 = document.getElementById('str-paso2');
+  if (p1) p1.style.display = 'none';
+  if (p2) p2.style.display = '';
+}
+// Paso 2, opción "Agregar otra clase" -- mismo cierre-diferido-por-history.back()
+// que _evCuotaPagarAhora()/irNuevaReservaConTipo(), evita la carrera ya
 // documentada contra el pushState propio de _evReservarClase() (que no abre
 // overlay propio, pero sí puede tocar el DOM de la card mientras el sheet
 // todavía está cerrando).
-function _evTipoReservaClase() {
+function _evTipoReservaAgregarOtra() {
   _evTipoReservaPref = 'clase';
   var id = E.reservaEventoId;
+  cerrarSheetTipoReserva();
+  setTimeout(function() { _evReservarClase(id); }, 310);
+}
+// Paso 2, opción "Finalizar mi reserva" -- mismo flujo que arriba, pero
+// prende _evReservaAutoFinalizar para que _evReservarClase() salte directo
+// a _evContinuarReserva() apenas confirme la disponibilidad de esta clase.
+function _evTipoReservaFinalizar() {
+  _evTipoReservaPref = 'clase';
+  var id = E.reservaEventoId;
+  _evReservaAutoFinalizar = true;
   cerrarSheetTipoReserva();
   setTimeout(function() { _evReservarClase(id); }, 310);
 }

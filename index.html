@@ -4181,19 +4181,34 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <!-- Sheet: elegir tipo de reserva al tocar "Reservar" en una card de Entrenamiento (mirlxs, ver _evAbrirSheetTipoReserva()/js/eventos.js) -->
 <div class="bsheet" id="sheet-tipo-reserva" style="transform:translateY(100%);z-index:9450;">
   <div class="bsheet-handle"></div>
-  <div class="bsheet-title">¿Cómo querés reservar?</div>
-  <div class="bsheet-body" style="padding:16px;padding-bottom:max(24px,env(safe-area-inset-bottom,24px));">
-    <div class="aj-group">
-      <div class="aj-dato-row" onclick="_evTipoReservaClase()">
-        <span class="material-symbols-outlined">event</span>
-        <span>Solo esta clase</span>
+  <!-- Paso 1 -->
+  <div id="str-paso1">
+    <div class="bsheet-title">¿Cómo quieres reservar?</div>
+    <div class="bsheet-body" style="padding:16px;padding-bottom:max(24px,env(safe-area-inset-bottom,24px));">
+      <div class="aj-group">
+        <div class="aj-dato-row" onclick="_evTipoReservaClase()">
+          <span class="material-symbols-outlined">event</span>
+          <span>Solo esta clase</span>
+        </div>
+        <div class="aj-dato-row" onclick="_evTipoReservaTodoMes()">
+          <span class="material-symbols-outlined">calendar_month</span>
+          <span>Todo el mes</span>
+        </div>
       </div>
-      <div class="aj-dato-row" onclick="_evTipoReservaTodoMes()">
-        <span class="material-symbols-outlined">calendar_month</span>
-        <span>Todo el mes</span>
-      </div>
+      <button type="button" onclick="cerrarSheetTipoReserva()" style="width:100%;padding:12px;margin-top:8px;background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;">Cancelar</button>
     </div>
-    <button type="button" onclick="cerrarSheetTipoReserva()" style="width:100%;padding:12px;margin-top:8px;background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;">Cancelar</button>
+  </div>
+  <!-- Paso 2 -->
+  <div id="str-paso2" style="display:none;">
+    <div class="bsheet-title">Clase seleccionada</div>
+    <div class="bsheet-body" style="padding:16px;padding-bottom:max(24px,env(safe-area-inset-bottom,24px));">
+      <p style="font-size:0.88rem;color:var(--muted);text-align:center;line-height:1.5;margin:0 0 20px;">¿Quieres agregar otra clase o prefieres finalizar tu reserva?</p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button type="button" onclick="_evTipoReservaAgregarOtra()" class="btn btn-primary" style="display:flex;align-items:center;justify-content:center;gap:8px;"><span class="material-symbols-outlined" style="font-size:1.1rem;">add</span>Agregar otra clase</button>
+        <button type="button" onclick="_evTipoReservaFinalizar()" class="btn btn-outline" style="display:flex;align-items:center;justify-content:center;gap:8px;"><span class="material-symbols-outlined" style="font-size:1.1rem;">check</span>Finalizar mi reserva</button>
+      </div>
+      <button type="button" onclick="cerrarSheetTipoReserva()" style="width:100%;padding:12px;margin-top:8px;background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;">Cancelar</button>
+    </div>
   </div>
 </div>
 <div class="bsheet-overlay" id="sheet-tipo-reserva-overlay" style="z-index:9400;" onclick="cerrarSheetTipoReserva()"></div>
