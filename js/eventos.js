@@ -516,7 +516,6 @@ var _evYaInicializadoEnSesion = false;
    en sí (admin + pantalla activa) la resuelve ir()/js/ui.js en cada
    cambio de pantalla, mismo criterio que #home-nav/#s4-nav. */
 var _evFabAbierto = false;
-var _evPillEraVisibleAntesDeCalendario = false;
 function _evFabToggle() {
   _evFabAbierto = !_evFabAbierto;
   var menu = document.getElementById('ev-fab-menu');
@@ -917,17 +916,17 @@ function _evAbrirCalendario() {
   // ningún set instantáneo previo que pise el punto de partida.
   _evCalRenderContenido(true);
   _evCalRenderPills();
-  var _evPillB = document.getElementById('ev-pill-banner');
-  if (_evPillB && _evPillB.style.display !== 'none') {
-    _evPillEraVisibleAntesDeCalendario = true;
-    _evPillB.style.display = 'none';
-  } else {
-    _evPillEraVisibleAntesDeCalendario = false;
-  }
   _evCalVisible = true;
   var el = document.getElementById('ev-mes-panel');
   if (el) { el.classList.add('abierta'); el.style.maxHeight = el.scrollHeight + 'px'; }
   _evActualizarNavMesChevron();
+  var _pillRef = document.getElementById('ev-pill-banner');
+  _evPillEraVisible = !!(_pillRef && _pillRef.style.display !== 'none');
+  if (_evPillEraVisible) {
+    _pillRef.style.transition = 'opacity 0.18s ease';
+    _pillRef.style.opacity = '0';
+    setTimeout(function() { _pillRef.style.display = 'none'; _pillRef.style.opacity = ''; _pillRef.style.transition = ''; }, 200);
+  }
 }
 // Única acción que cierra el calendario del todo (ver "Cambios recientes",
 // punto 7 del rediseño) -- sin importar si estaba expandido (mes) o
@@ -941,11 +940,20 @@ function _evCerrarCalendario() {
       requestAnimationFrame(function() {
         el.classList.remove('abierta');
         el.style.maxHeight = '0px';
-        if (_evPillEraVisibleAntesDeCalendario && localStorage.getItem('ev_pills_ocultos') !== '1') {
+        if (_evPillEraVisible) {
           setTimeout(function() {
-            var _p = document.getElementById('ev-pill-banner');
-            if (_p) _p.style.display = 'flex';
-            _evPillEraVisibleAntesDeCalendario = false;
+            var _pill = document.getElementById('ev-pill-banner');
+            if (_pill) {
+              _pill.style.display = 'flex';
+              _pill.style.opacity = '0';
+              requestAnimationFrame(function() {
+                requestAnimationFrame(function() {
+                  _pill.style.transition = 'opacity 0.22s ease';
+                  _pill.style.opacity = '1';
+                  setTimeout(function() { _pill.style.transition = ''; }, 250);
+                });
+              });
+            }
           }, 290);
         }
       });
@@ -2643,6 +2651,7 @@ function _evFabReservaParaEvento(idEvento) {
 }
 
 var _evPillsTimer = null;
+var _evPillEraVisible = false;
 function _evPillsInit(modo) {
   if (localStorage.getItem('ev_pills_ocultos') === '1') return;
   var _picon = function(n) { return '<span class="material-symbols-outlined ev-pill-ref-icon">' + n + '</span>'; };
