@@ -740,7 +740,7 @@
    Borde dashed (antes sólido transparente, heredado de `.ev-stat-card`) --
    mismo estilo que `.ev-btn-agregar-persona` (la card de home), para
    diferenciarlo visualmente de las tarjetas de borde continuo. */
-.ev-stat-marcar { font: inherit; color: var(--brand); grid-column: span 2; border-style: dashed; border-color: var(--border-mid); }
+.ev-stat-marcar { font: inherit; color: var(--brand); grid-column: span 2; border-style: dashed; border-color: var(--border-mid); align-self: stretch; }
 .ev-stat-marcar .material-symbols-outlined { font-size: 20px; }
 .ev-stat-marcar .ev-stat-label { color: var(--brand); }
 .ev-stat-marcar:hover { border-color: var(--brand); background: var(--brand-lightest); }
