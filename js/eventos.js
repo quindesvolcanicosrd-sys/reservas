@@ -5128,6 +5128,21 @@ function _evRenderDetalleAsistencia(ev) {
     rsvps.forEach(function(p) { respondieron[String(p.nombre).trim().toUpperCase()] = true; });
     var sinResponder = (res.personas || []).filter(function(p) { return !respondieron[String(p.nombre).trim().toUpperCase()]; }).map(function(p) { return { nombre: p.nombre, nombreDerby: p.nombreDerby || '', fotoPerfil: p.fotoPerfil || '' }; });
     _evPintarStatsAsistencia(grupos.concat([{ key: _EV_GRUPO_SIN_RESPONDER.key, label: _EV_GRUPO_SIN_RESPONDER.label, clase: _EV_GRUPO_SIN_RESPONDER.clase, personas: sinResponder }]));
+    [
+      document.querySelector('#ev-detalle-stats .ev-stat-sin-respuesta'),
+      document.querySelector('#ev-detalle-asistencia-lista [data-grupo="SinRespuesta"]')
+    ].forEach(function(el) {
+      if (!el) return;
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(8px)';
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          el.style.transition = 'opacity 0.24s ease, transform 0.24s var(--ease-sheet)';
+          el.style.opacity = '1';
+          el.style.transform = 'translateY(0)';
+        });
+      });
+    });
   }, function() { /* silencioso -- el resto de la pantalla ya funciona sin este grupo */ });
 }
 // Asistencia REAL (rollcall E/F, `ev.asistentes`) agrupada en 2 tarjetas de
