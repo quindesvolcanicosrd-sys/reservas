@@ -5497,6 +5497,9 @@ function _evAntRenderLista() {
     cont.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">No tenés asistencias anticipadas todavía.</p>';
     return;
   }
+  cont.style.transition = 'none';
+  cont.style.opacity = '0';
+  cont.style.transform = 'translateY(8px)';
   cont.innerHTML = _evAntReglas.map(function(r) {
     return '<div class="ev-ant-card">' +
       '<div class="ev-card-top-row">' +
@@ -5514,6 +5517,13 @@ function _evAntRenderLista() {
       '</button>' +
     '</div>';
   }).join('');
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      cont.style.transition = 'opacity 0.24s ease, transform 0.24s var(--ease-sheet)';
+      cont.style.opacity = '1';
+      cont.style.transform = 'translateY(0)';
+    });
+  });
 }
 
 function _evAntResumenRango(r) {
