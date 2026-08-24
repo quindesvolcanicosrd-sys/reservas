@@ -187,7 +187,7 @@ async function _mapaVideoInstructivoPorLugar(): Promise<Record<string, string>> 
 }
 
 async function _ultimaAsistenciaPorPersonaTodas(): Promise<Record<string, any[]>> {
-  const { data } = await supabase.from('log_asistencias').select('id_evento, nombre_usuario, origen, estado, marca_temporal');
+  const { data } = await supabase.from('log_asistencias').select('id_evento, nombre_usuario, origen, estado, marca_temporal').range(0, 9999);
   const ultimaPorClave: Record<string, any> = {};
   (data ?? []).forEach((fila: any) => {
     const clave = fila.id_evento + '|' + fila.nombre_usuario;
