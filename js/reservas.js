@@ -940,7 +940,7 @@ function mostrarModalEquip(fechasAfectadas) {
   if (!lista) return;
   lista.innerHTML = fechasAfectadas.map(function(f) {
     return '<div style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:0.8rem;">' +
-      '<div style="font-weight:700;color:var(--text);margin-bottom:3px;">' + f.fecha + '</div>' +
+      '<div style="font-weight:700;color:var(--text);margin-bottom:3px;">' + (_fechaInfoDisponible[f.fecha] || f.fecha) + '</div>' +
       '<div style="color:var(--brand);font-weight:600;">⚠ ' + f.razon + '</div>' +
       '</div>';
   }).join('');
