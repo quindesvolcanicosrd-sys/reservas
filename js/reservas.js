@@ -799,6 +799,11 @@ function cargarFechas() {
     if (hintCupon) hintCupon.classList.toggle('visible', tieneCupon);
     if (chkCupon) chkCupon.checked = false; E.cuponAplicado = false;
     _s4SincronizarCuponWrapper();
+    api({ action: 'getCuponDisponible', nombre: E.nombre }, function(res) {
+      if (E.datos) E.datos.cuponDisponible = res.cuponDisponible === true;
+      if (res.cuponDisponible) localStorage.removeItem('cupon_' + E.nombre);
+      _s4SincronizarCuponWrapper();
+    }, function() {});
     var agotadasEquip = fechas.filter(function(f) {
       return !f.disponible && f.razon && /patines|talla|protec|equip/i.test(f.razon);
     });
