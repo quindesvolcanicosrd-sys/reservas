@@ -2111,7 +2111,7 @@ function _evCardEventoHtml(e, sufijo) {
   }
   var mostrarBtnReservar = false;
   var btnReservarDesactivado = false;
-  if (_modoUsuario() === 'mirlxs' && e.tipo === 'Entrenamiento' && !miReserva && !_evTieneCuotaAlDia()) {
+  if (_modoUsuario() === 'mirlxs' && e.tipo === 'Entrenamiento' && !cancelado && !miReserva && !_evTieneCuotaAlDia()) {
     var hoyISO = _evHoyISO();
     if (_evFechaCmp(e.fecha, hoyISO) >= 0) {
       var proximas6 = (_EV_EVENTOS || []).filter(function(x) {
@@ -2173,7 +2173,7 @@ function _evCardEventoHtml(e, sufijo) {
   // de la card más abajo. Mismo criterio de "próximas 6" que el botón de
   // mirlxs de arriba, pero gateado a `_modoUsuario() === 'equipamiento'`.
   var mostrarBtnReservarEquip = false;
-  if (_modoUsuario() === 'equipamiento' && e.tipo === 'Entrenamiento') {
+  if (_modoUsuario() === 'equipamiento' && e.tipo === 'Entrenamiento' && !cancelado) {
     var hoyISOEquip = _evHoyISO();
     if (_evFechaCmp(e.fecha, hoyISOEquip) >= 0) {
       var proximas6Equip = (_EV_EVENTOS || []).filter(function(x) {
