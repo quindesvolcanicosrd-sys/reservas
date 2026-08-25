@@ -4693,7 +4693,7 @@ function _evDetalleInfoHtml(ev) {
     html += '</div>';
   }
   // Botones de reserva inline para entrenamientos futuros sin reserva activa
-  if (!_adminToken && ev.tipo === 'Entrenamiento' && !_evEsPasado(ev) && !miReservaInfo) {
+  if (!_adminToken && ev.tipo === 'Entrenamiento' && !_evEsPasado(ev) && !(ev.estado === 'Cancelado' || ev.estado === 'No se entrena') && !miReservaInfo) {
     var _modo = _modoUsuario();
     if (_modo === 'mirlxs' || _modo === 'quindes') {
       var _fp = (ev.fecha || '').split('-');
