@@ -4704,7 +4704,9 @@ function _evDetalleInfoHtml(ev) {
       if (_modo === 'mirlxs') {
         html += '<button type="button" class="btn btn-outline" onclick="_evReservarClase(\'' + _evIdEsc2 + '\')"><span class="material-symbols-outlined" style="vertical-align:middle;font-size:18px;margin-right:4px;">confirmation_number</span>Reservar esta clase</button>';
       }
-      if (!_evMesPagado(_mesEv, _anioEv)) {
+      var _dEquipDet = E.datos || {};
+      var _necesitaEquipDet = (_dEquipDet.necesitaPatines && _dEquipDet.necesitaPatines.toLowerCase() !== 'no') || (_dEquipDet.necesitaProtecciones && _dEquipDet.necesitaProtecciones.toLowerCase() !== 'no');
+      if (!_evMesPagado(_mesEv, _anioEv) && !_necesitaEquipDet) {
         html += '<button type="button" class="btn btn-outline" onclick="_evFabReservaParaEvento(\'' + _evIdEsc2 + '\')"><span class="material-symbols-outlined" style="vertical-align:middle;font-size:18px;margin-right:4px;">calendar_month</span>Reservar ' + _mesNombre + '</button>';
       }
       html += '</div>';
