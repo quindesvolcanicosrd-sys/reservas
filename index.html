@@ -30,7 +30,7 @@
 <link rel="stylesheet" href="css/ui.css?v=626a894b">
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
-<link rel="stylesheet" href="css/reservas.css?v=a3b1d52d">
+<link rel="stylesheet" href="css/reservas.css?v=4dbd5b57">
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
 <link rel="stylesheet" href="css/eventos.css?v=46962738">
 <link rel="stylesheet" href="css/tareas.css">
@@ -2261,6 +2261,25 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="total-fechas-lista" id="s-pago-total-fechas" style="display:none;"></div>
       </div>
 
+      <!-- Cupón en #s-pago (ver MANIFEST, "Cambios recientes") -- mismo patrón
+           que #s4-cupon-wrapper (arriba, sección #s4), IDs propios
+           (pago-cupon-wrapper/chk-pago-cupon/pago-cupon-circle) para no
+           colisionar con los de #s4 en el mismo DOM. Necesario porque la
+           reserva inline desde Eventos (_evContinuarReserva(), js/eventos.js)
+           llega directo acá sin pasar nunca por #s4, la única pantalla que
+           antes ofrecía aplicar el cupón. -->
+      <div id="pago-cupon-wrapper" style="display:none;">
+        <label for="chk-pago-cupon" style="display:flex;align-items:center;gap:12px;background:var(--amber-lighter);border:2px solid var(--amber);border-radius:12px;padding:16px;cursor:pointer;transition:all 0.2s;">
+          <input type="checkbox" id="chk-pago-cupon" style="display:none;" onchange="togglePagoCupon(this)">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:800;color:var(--amber-dark);font-size:0.95rem;display:flex;align-items:center;gap:6px;"><span class="material-symbols-outlined" style="font-size:1.1rem;color:var(--amber-dark);">confirmation_number</span> Aplicar cupón</div>
+            <div style="font-size:0.8rem;color:var(--amber-darker);margin-top:2px;"><strong>Válido para 1 clase gratis.</strong></div>
+            <div style="font-size:0.72rem;color:var(--amber-dark);margin-top:2px;opacity:0.8;">Personal e intransferible.</div>
+</div>
+          <div class="fi-circle" id="pago-cupon-circle"><span class="material-symbols-outlined">check</span></div>
+        </label>
+      </div>
+
       <a href="https://pagar.deuna.app/H92p/person/payment?id=34699738dd140ab641e3993377662e6a210132d2" target="_blank" class="btn btn-deuna" style="display:flex;align-items:center;justify-content:center;gap:10px;text-decoration:none;margin-bottom:14px;">
         <img src="assets/deuna-logo-white.svg" alt="" style="height:22px;width:auto;" aria-hidden="true">
         Paga con DeUna
@@ -2798,7 +2817,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/eventos.js?v=6d285dad"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js"></script>
-<script src="js/reservas.js?v=5c0715cb"></script>
+<script src="js/reservas.js?v=4671e05b"></script>
 <script src="js/perfil.js?v=43970d97"></script>
 <script src="js/admin.js?v=a05c0f73"></script>
 <script src="js/pwa.js"></script>

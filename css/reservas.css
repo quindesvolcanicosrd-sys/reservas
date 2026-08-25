@@ -113,6 +113,14 @@
 #s4-cupon-wrapper.mostrar { max-height: 300px; opacity: 1; margin: 0 0 18px; }
 .s4-cupon-aplicado-linea { font-size: 0.78rem; font-weight: 700; color: var(--amber-dark); margin-top: 6px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 
+/* Gemela de #s4-cupon-wrapper (arriba) para #pago-cupon-wrapper (#s-pago, ver
+   MANIFEST.md "Cambios recientes") -- mismo colapso animado. */
+#pago-cupon-wrapper {
+  overflow: hidden; max-height: 0; opacity: 0; margin: 0;
+  transition: opacity 0.32s var(--ease-sheet), max-height 0.32s var(--ease-sheet), margin 0.32s var(--ease-sheet);
+}
+#pago-cupon-wrapper.mostrar { max-height: 300px; opacity: 1; margin: 0 0 14px; }
+
 .tipo-pago-wrapper { border-radius: 12px; margin-bottom: 20px; }
 
 /* ── Nav fija de s4 (ver "Cambios recientes") ──────────
@@ -260,10 +268,10 @@
 .equip-pill-protec.sel .equip-pcheck { background:var(--brand); border-color:var(--brand); }
 .equip-pill-protec.sel .equip-pcheck .material-symbols-outlined { color:var(--white); }
 
-#s4-cupon-wrapper .fi-circle { width:28px; height:28px; border-radius:50%; border:2px solid var(--brand-30); display:flex; align-items:center; justify-content:center; transition:background 0.2s, border-color 0.2s; flex-shrink:0; }
-#s4-cupon-wrapper .fi-circle .material-symbols-outlined { font-size:1rem; color:transparent; transition:color 0.2s; }
-#s4-cupon-wrapper .fi-circle.sel-cupon { background:var(--brand); border-color:var(--brand); }
-#s4-cupon-wrapper .fi-circle.sel-cupon .material-symbols-outlined { color:var(--white); }
+#s4-cupon-wrapper .fi-circle, #pago-cupon-wrapper .fi-circle { width:28px; height:28px; border-radius:50%; border:2px solid var(--brand-30); display:flex; align-items:center; justify-content:center; transition:background 0.2s, border-color 0.2s; flex-shrink:0; }
+#s4-cupon-wrapper .fi-circle .material-symbols-outlined, #pago-cupon-wrapper .fi-circle .material-symbols-outlined { font-size:1rem; color:transparent; transition:color 0.2s; }
+#s4-cupon-wrapper .fi-circle.sel-cupon, #pago-cupon-wrapper .fi-circle.sel-cupon { background:var(--brand); border-color:var(--brand); }
+#s4-cupon-wrapper .fi-circle.sel-cupon .material-symbols-outlined, #pago-cupon-wrapper .fi-circle.sel-cupon .material-symbols-outlined { color:var(--white); }
 
 .chk-pago-label .fi-circle { flex-shrink:0; }
 .chk-pago-label .fi-circle.sel-pago { background:var(--brand); border-color:var(--brand); }

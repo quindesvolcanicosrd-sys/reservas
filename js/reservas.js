@@ -1003,11 +1003,13 @@ function _pagoTotalActualizar(montoTexto, detalleTexto, fechasHtml, mostrarFecha
   }
 }
 
-function continuar_s4() {
-  if (E.tipoPago === 'mensual') { if (!E.meses || E.meses.length === 0) { err('err-s4', 'Por favor selecciona al menos un mes.'); return; } }
-  else { if (!E.fechas || E.fechas.length === 0) { err('err-s4', 'Por favor selecciona al menos una fecha.'); return; } }
+// Arma/actualiza TODO lo que depende de E.fechas/E.meses/E.cuponAplicado/
+// E.creditosUsados para #s-pago (monto+detalle+desglose, #chk-pago-texto,
+// mensaje de WhatsApp post-pago) -- extraído de continuar_s4() para poder
+// re-ejecutarse solo (sin re-navegar/re-validar) cuando togglePagoCupon()
+// cambia el cupón ya estando en #s-pago, sin duplicar esta lógica una 3ª vez.
+function _pagoArmarResumen() {
   var esClase = E.tipoPago === 'clase';
-
   var detalleTexto = '';
   if (esClase) {
     var partesDet = [];
@@ -1015,6 +1017,7 @@ function continuar_s4() {
     var conCupon = E.cuponAplicado && E.fechas.length > (E.creditosUsados || 0);
     if (conCupon) partesDet.push('🎟️ 1 clase con cupón');
     var cobradasDet = E.fechas.length - (E.creditosUsados || 0) - (conCupon ? 1 : 0);
+    E.totalPago = cobradasDet * E.precioPorClase;
     if (cobradasDet > 0) partesDet.push(cobradasDet + (cobradasDet === 1 ? ' clase' : ' clases') + ' × $' + E.precioPorClase.toFixed(2));
     detalleTexto = partesDet.join(' + ');
   } else {
@@ -1022,15 +1025,6 @@ function continuar_s4() {
   }
   var fechasHtml = esClase ? E.fechas.map(function(f) { return '• ' + (_fechaInfoDisponible[f] || f); }).join('<br>') : '';
   _pagoTotalActualizar('Total: $' + (E.totalPago || 0).toFixed(2), detalleTexto, fechasHtml, esClase);
-  _resetChkPago();
-  // #chk-pago-texto normalmente lo llena actualizarTextosPago() (más arriba
-  // en este archivo), pero esa función es parte de la inicialización de #s4
-  // (cargarFechas()) -- la ruta de selección inline desde Eventos
-  // (_evContinuarReserva()) llega hasta acá SIN pasar nunca por #s4, así que
-  // ese texto quedaba vacío (el <span> nace sin contenido en index.html).
-  // Se pone acá mismo, en el único punto real por el que TODO camino hacia
-  // #s-pago pasa, en vez de depender de que el caller haya pasado por #s4
-  // antes -- mismo texto exacto que actualizarTextosPago() (no reinventado).
   var chkPagoTexto = document.getElementById('chk-pago-texto');
   if (chkPagoTexto) chkPagoTexto.textContent = canPayMonthly() ? 'Ya realicé mi pago y entiendo este estará pendiente hasta que sea verificada por el equipo.' : 'Realicé mi pago y entiendo que mi reserva quedará pendiente.';
   var lineasFechas = E.tipoPago === 'mensual' ? 'Meses pagados:\n- ' + E.meses.join('\n- ') + '\n\nTotal: $' + (E.totalPago || 0).toFixed(2) : E.fechas.map(function(f) { return '- ' + (_fechaInfoDisponible[f] || f); }).join('\n');
@@ -1038,12 +1032,77 @@ function continuar_s4() {
   var equipLinea = (talla && protec && protec.toLowerCase() !== 'no') ? 'Necesitare patines talla ' + talla + ' y protecciones.' : (talla) ? 'Necesitare patines talla ' + talla + '.' : (protec && protec.toLowerCase() !== 'no') ? 'Necesitare protecciones (' + protec + ').' : 'Llevare mi propio equipamiento.';
   var msgWp = '¡Hola! Soy *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '*.\n\n*Clases reservadas:*\n' + lineasFechas + '\n\n' + equipLinea + '\n\nTe envío el comprobante adjunto. Si no lo ves, por favor solicítamelo. ¡Gracias!';
   E.wpUrl = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp); // usado por #btn-wp-exito en s6 (finalizar())
+}
+
+// Checkbox de #pago-cupon-wrapper (mismo patrón que toggleCupon()/#s4-cupon-wrapper,
+// más arriba) -- recalcula in-place (_pagoArmarResumen(), sin volver a llamar
+// continuar_s4()/ir('s-pago'): re-navegar solo por tocar un checkbox reabriría
+// overlays/history de ir() innecesariamente, y el auto-confirm de "$0" de
+// continuar_s4() no debe dispararse solo porque el cupón dejó el total en 0
+// mientras la persona todavía está mirando #s-pago, sin haber tocado nada más).
+function togglePagoCupon(cb) {
+  E.cuponAplicado = cb.checked;
+  var circle = document.getElementById('pago-cupon-circle');
+  if (circle) circle.classList.toggle('sel-cupon', cb.checked);
+  _pagoArmarResumen();
+  _pagoSincronizarCuponWrapper();
+}
+
+// Gemela de _s4SincronizarCuponWrapper() (más arriba) para #pago-cupon-wrapper
+// -- mismo criterio de mostrar/ocultar y mismo auto-revert de seguridad si
+// tieneCuponDisponible() ya no respalda un cupón marcado como aplicado.
+function _pagoSincronizarCuponWrapper() {
+  var w = document.getElementById('pago-cupon-wrapper');
+  if (!w) return;
+  if (E.cuponAplicado && !tieneCuponDisponible()) {
+    E.cuponAplicado = false;
+    var chk = document.getElementById('chk-pago-cupon'); if (chk) chk.checked = false;
+    var circle = document.getElementById('pago-cupon-circle'); if (circle) circle.classList.remove('sel-cupon');
+    _pagoArmarResumen();
+  }
+  var mostrar = E.tipoPago === 'clase' && tieneCuponDisponible() && !E.cuponAplicado;
+  var yaVisible = w.classList.contains('mostrar');
+  if (mostrar && !yaVisible) {
+    w.style.display = 'block';
+    requestAnimationFrame(function() { requestAnimationFrame(function() { w.classList.add('mostrar'); }); });
+  } else if (!mostrar && yaVisible) {
+    w.classList.remove('mostrar');
+    setTimeout(function() { if (!w.classList.contains('mostrar')) w.style.display = 'none'; }, 350);
+  } else if (!mostrar) {
+    w.style.display = 'none';
+  }
+}
+
+function continuar_s4() {
+  if (E.tipoPago === 'mensual') { if (!E.meses || E.meses.length === 0) { err('err-s4', 'Por favor selecciona al menos un mes.'); return; } }
+  else { if (!E.fechas || E.fechas.length === 0) { err('err-s4', 'Por favor selecciona al menos una fecha.'); return; } }
+  _pagoArmarResumen();
+  _resetChkPago();
   if ((E.cuponAplicado || E.creditosUsados > 0) && E.totalPago === 0) {
     E.notaPago = E.creditosUsados > 0
       ? 'Clase(s) a favor por entrenamiento cancelado' + (E.cuponAplicado ? ' + cupón' : '')
       : 'Cupón clase gratis';
     confirmarReserva(document.getElementById('btn-s4-continuar')); return;
   }
+  // #pago-cupon-wrapper (ver "Cambios recientes"): sincroniza checkbox/circle
+  // con E.cuponAplicado (por si arrastra un cupón ya aplicado desde #s4) y
+  // muestra/oculta el wrapper -- necesario en cada entrada a #s-pago, no solo
+  // una vez, porque la ruta inline desde Eventos (_evContinuarReserva(),
+  // js/eventos.js) llega acá SIN haber pasado nunca por #s4/cargarFechas(),
+  // la única otra pantalla que hoy ofrece aplicar el cupón.
+  var chkPagoCuponEl = document.getElementById('chk-pago-cupon');
+  if (chkPagoCuponEl) chkPagoCuponEl.checked = E.cuponAplicado;
+  var pagoCuponCircleEl = document.getElementById('pago-cupon-circle');
+  if (pagoCuponCircleEl) pagoCuponCircleEl.classList.toggle('sel-cupon', E.cuponAplicado);
+  _pagoSincronizarCuponWrapper();
+  // Dato fresco de getCuponDisponible (mismo patrón ya usado en cargarFechas()/
+  // js/home.js) -- cubre el caso de sesión con E.datos.cuponDisponible cacheado
+  // desactualizado, que la ruta inline desde Eventos nunca refresca por su cuenta.
+  api({ action: 'getCuponDisponible', nombre: E.nombre }, function(res) {
+    if (E.datos) E.datos.cuponDisponible = res.cuponDisponible === true;
+    if (res.cuponDisponible) localStorage.removeItem('cupon_' + E.nombre);
+    _pagoSincronizarCuponWrapper();
+  }, function() {});
   ir('s-pago');
 }
 
