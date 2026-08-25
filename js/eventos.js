@@ -2004,6 +2004,18 @@ function _evSalirModoReserva() {
 // directo en vez de ir a s-pago. Reimplementar eso acá duplicaría lógica de
 // negocio real ya escrita, con riesgo de que las 2 copias diverjan.
 function _evContinuarReserva() {
+  // Bug real corregido: esta ruta nunca pasa por cargarFechas()/#s4 (ver
+  // comentario más abajo, `E.viaEventosInline`), así que `_fechaInfoDisponible`
+  // (js/reservas.js, poblado ahí por getFechasDisponibles) nunca tenía entrada
+  // para estos IDs -- el desglose de #s-pago (continuar_s4()) caía al
+  // fallback `|| f` y mostraba el id_evento crudo en vez de un texto legible.
+  _evSeleccionados.forEach(function(id) {
+    var ev = _EV_EVENTOS.filter(function(e) { return e.id === id; })[0];
+    if (ev) {
+      var p = ev.fecha.split('-');
+      _fechaInfoDisponible[id] = p[2] + '/' + p[1] + (ev.horaInicio ? ' - ' + ev.horaInicio + 'hs' : '') + (ev.lugar ? ' - ' + ev.lugar : '');
+    }
+  });
   E.fechas = Array.from(_evSeleccionados);
   E.tipoPago = 'clase';
   E.totalPago = (E.precioPorClase || 0) * _evSeleccionados.size;
