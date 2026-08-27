@@ -327,9 +327,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <button type="button" id="ev-btn-anticipada" class="app-nav-icon-btn ev-header-icon-btn" onclick="eventosAbrirAnticipada()" title="Asistencia anticipada">
             <span class="material-symbols-outlined">event_available</span>
           </button>
-          <button type="button" id="ev-btn-crear" class="app-nav-icon-btn app-nav-icon-btn-brand ev-header-icon-btn" onclick="irEvCrear()" title="Nuevo evento" style="display:none;">
-            <span class="material-symbols-outlined">add</span>
-          </button>
         </div>
 
         <!-- Panel de calendario -- swipe-first, sin chevrones/borde/título
@@ -2815,7 +2812,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/ui.js?v=2531b626"></script>
 <script src="js/eventos.js?v=620e7e86"></script>
 <script src="js/tareas.js"></script>
-<script src="js/home.js"></script>
+<script src="js/home.js?v=66bab538"></script>
 <script src="js/reservas.js?v=4671e05b"></script>
 <script src="js/perfil.js?v=43970d97"></script>
 <script src="js/admin.js?v=a05c0f73"></script>
@@ -4196,41 +4193,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 </div>
 <div class="bsheet-overlay" id="sheet-cuota-pendiente-overlay" style="z-index:9400;" onclick="cerrarSheetCuotaPendiente()"></div>
 
-<!-- Sheet: elegir tipo de reserva al tocar "Reservar" en una card de Entrenamiento (mirlxs, ver _evAbrirSheetTipoReserva()/js/eventos.js) -->
-<div class="bsheet" id="sheet-tipo-reserva" style="transform:translateY(100%);z-index:9450;">
-  <div class="bsheet-handle"></div>
-  <!-- Paso 1 -->
-  <div id="str-paso1">
-    <div class="bsheet-title">¿Cómo quieres reservar?</div>
-    <div class="bsheet-body" style="padding:16px;padding-bottom:max(24px,env(safe-area-inset-bottom,24px));">
-      <div class="aj-group">
-        <div class="aj-dato-row" onclick="_evTipoReservaClase()">
-          <span class="material-symbols-outlined">event</span>
-          <span>Solo esta clase</span>
-        </div>
-        <div id="str-todo-mes" class="aj-dato-row" onclick="_evTipoReservaTodoMes()">
-          <span class="material-symbols-outlined">calendar_month</span>
-          <span>Todo el mes</span>
-        </div>
-      </div>
-      <button type="button" onclick="cerrarSheetTipoReserva()" style="width:100%;padding:12px;margin-top:8px;background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;">Cancelar</button>
-    </div>
-  </div>
-  <!-- Paso 2 -->
-  <div id="str-paso2" style="display:none;">
-    <div class="bsheet-title">Clase seleccionada</div>
-    <div class="bsheet-body" style="padding:16px;padding-bottom:max(24px,env(safe-area-inset-bottom,24px));">
-      <p style="font-size:0.88rem;color:var(--muted);text-align:center;line-height:1.5;margin:0 0 20px;">¿Quieres agregar otra clase o prefieres finalizar tu reserva?</p>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        <button type="button" onclick="_evTipoReservaAgregarOtra()" class="btn btn-primary" style="display:flex;align-items:center;justify-content:center;gap:8px;"><span class="material-symbols-outlined" style="font-size:1.1rem;">add</span>Agregar otra clase</button>
-        <button type="button" onclick="_evTipoReservaFinalizar()" class="btn btn-outline" style="display:flex;align-items:center;justify-content:center;gap:8px;"><span class="material-symbols-outlined" style="font-size:1.1rem;">check</span>Finalizar mi reserva</button>
-      </div>
-      <button type="button" onclick="cerrarSheetTipoReserva()" style="width:100%;padding:12px;margin-top:8px;background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;">Cancelar</button>
-    </div>
-  </div>
-</div>
-<div class="bsheet-overlay" id="sheet-tipo-reserva-overlay" style="z-index:9400;" onclick="cerrarSheetTipoReserva()"></div>
-
 <!-- Sheet: elegir tipo de reserva (por clase / mensual) -->
 <div class="bsheet" id="sheet-ev-tipo-pago" style="transform:translateY(100%);z-index:9450;">
   <div class="bsheet-handle"></div>
@@ -4477,68 +4439,36 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <button type="button" class="btn btn-primary" id="ev-editar-btn-footer" disabled>Guardar cambios</button>
 </div>
 
-<!-- FAB de #s-eventos (solo admin, reemplaza el "+" que vivía en
-     .ev-header-row -- ver comentario que quedó ahí). Hijo directo de <body>,
-     fuera de .pantalla/.card, mismo motivo que .cta-footer-fixed de arriba
-     (position:fixed atrapado por el containing block de .pantalla.activa
-     mientras corre su animación de entrada). display:none por default --
-     ir()/js/ui.js lo muestra solo con 's-eventos' activa Y _adminToken (ver
-     "Cambios recientes" -- antes _esAdminDemo, un flag de demo que nunca
-     reflejaba una sesión admin real), mismo criterio que #home-nav/#s4-nav
-     ahí. Ya NO es un "speed dial" (ver MANIFEST.md "Cambios recientes" --
-     wizard "Tipo → Lugar → Detalles"): `#ev-fab-btn` llama `irEvCrear()`
-     directo, sin pasar por `_evFabToggle()`. El menú de 4 opciones (Tanda
-     C1) queda oculto en el DOM (`display:none` en su wrapper) por si se
-     retoma más adelante -- `_evFabToggle()`/`_evFabCerrar()`/`.ev-fab-abierto`
-     (js/eventos.js/css/eventos.css) siguen definidas tal cual, sin caller
-     real desde este botón (el listener de "click afuera cierra el menú"
-     queda inerte, `_evFabAbierto` nunca vuelve a `true`). -->
+<!-- FAB "+" unificado de #s-eventos, para TODO perfil de cuenta (admin y
+     mirlxs/quindes por igual, ver MANIFEST.md "Cambios recientes" --
+     reemplaza los 3 FAB previos de esta pantalla: `#ev-fab-menu` admin-only,
+     `#ev-fab-reserva` quindes-no-admin y `#ev-mirlxs-fab` -- y también al
+     "+" que vivía en la nav bar (`#ev-btn-crear`), que ya no puede coexistir
+     con este). Hijo directo de <body>, fuera de .pantalla/.card, mismo
+     motivo que .cta-footer-fixed de arriba (position:fixed atrapado por el
+     containing block de .pantalla.activa mientras corre su animación de
+     entrada). display:none por default -- ir()/js/ui.js lo muestra solo con
+     's-eventos' activa, y `_evFabUnificadoActualizar()` (js/eventos.js)
+     arma el contenido según el perfil real cada vez que se entra a la
+     pantalla o cambia el modo de cuenta. El botón principal (`#ev-fab-btn`)
+     ya no llama `irEvCrear()` fijo -- pasa por `_evFabPlusClick()`, que
+     decide entre navegar directo (sin abrir el speed-dial) o togglear
+     `_evFabToggle()`/`.ev-fab-abierto` según el perfil. `#ev-fab-opciones`
+     se puebla dinámicamente (innerHTML) con 0, 1 o 2 `.ev-fab-opcion` --
+     mismo componente ya usado por el ex speed-dial admin de "Gestionar
+     venues" (`.ev-fab-menu`/`.ev-fab-opcion`/`.ev-fab-abierto`,
+     css/eventos.css), sin CSS nuevo. -->
 <!-- "Editar evento" (admin) ya NO es un bottom sheet -- ver #s-eventos-editar,
      pantalla de página completa, más abajo en este archivo (junto al resto
      de las pantallas de Eventos). Entrada: ícono `edit` del sticky nav de
      #s-eventos-detalle (_evDetalleStickyHtml()/js/eventos.js). -->
 
 <div class="ev-fab-menu" id="ev-fab-menu" style="display:none;">
-  <!-- Speed-dial oculto (no eliminado, ver MANIFEST.md "Cambios recientes" --
-       wizard de 3 pasos "Tipo → Lugar → Detalles"): el "+" ahora abre
-       irEvCrear() directo, sin este menú. Queda escondido con
-       display:none propio (en vez de sacarlo del DOM) por si se retoma
-       "Gestionar venues" desde acá más adelante -- "Único"/"Descanso" ya
-       viven dentro del wizard nuevo (paso "Tipo"), esos 2 botones quedan
-       huérfanos junto con las pantallas #s-eventos-crear-unico/
-       #s-eventos-crear-descanso que abrían (JS intacto, sin caller real). -->
-  <div style="display:none;">
-    <button type="button" class="ev-fab-opcion" id="ev-fab-crear-evento" onclick="_evFabCerrar(); irEvCrear();">
-      <span class="material-symbols-outlined">repeat</span>
-      <span>Recurrente</span>
-    </button>
-    <button type="button" class="ev-fab-opcion" id="ev-fab-crear-unico" onclick="_evFabCerrar(); irEvCrearUnico();">
-      <span class="material-symbols-outlined">event_available</span>
-      <span>Evento único</span>
-    </button>
-    <button type="button" class="ev-fab-opcion" id="ev-fab-crear-descanso" onclick="_evFabCerrar(); irEvCrearDescanso();">
-      <span class="material-symbols-outlined">bedtime</span>
-      <span>Temporada de descanso</span>
-    </button>
-    <button type="button" class="ev-fab-opcion" id="ev-fab-editar-lugares" onclick="_evFabCerrar(); irEvLugares();">
-      <span class="material-symbols-outlined">place</span>
-      <span>Gestionar venues</span>
-    </button>
-  </div>
-  <button type="button" class="ev-fab-btn" id="ev-fab-btn" onclick="irEvCrear()" title="Nuevo">
+  <div id="ev-fab-opciones"></div>
+  <button type="button" class="ev-fab-btn" id="ev-fab-btn" onclick="_evFabPlusClick()" title="Nueva reserva" aria-label="Nueva reserva">
     <span class="material-symbols-outlined">add</span>
   </button>
 </div>
-
-<!-- FAB reserva: visible solo para mirlxs/quindes no-admin -->
-<div class="ev-fab-menu" id="ev-fab-reserva" style="display:none;">
-  <button type="button" class="ev-fab-btn" onclick="evAbrirSheetTipoPago()" title="Nueva reserva" aria-label="Nueva reserva">
-    <span class="material-symbols-outlined">event_available</span>
-  </button>
-</div>
-
-<!-- FAB mensual dinámico: mirlxs y quindes -- "Reservar <Mes>" según el mes navegado en el timeline (ver _evActualizarFabReserva()/js/eventos.js) -->
-<button id="ev-mirlxs-fab" onclick="_evFabReserva()" style="display:none"></button>
 
 <!-- FAB de #s-tareas (admin) -- ver MANIFEST.md "Cambios recientes": ya NO
      es un speed-dial -- "Tareas por validar" y "Gestionar tareas activas"

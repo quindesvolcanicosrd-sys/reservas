@@ -486,42 +486,25 @@ function ir(id, desdeHistorial, sinTrampa) {
     }
   }
 
-  // FAB de #s-eventos (#ev-fab-menu, index.html) -- solo cuenta admin Y con
-  // 's-eventos' como pantalla activa (no en s-eventos-detalle/
-  // s-eventos-anticipada, aunque compartan tab de la nav inferior). Mismo
-  // criterio que #home-nav/#s4-nav de arriba: togglea acá, único punto real
-  // de "cambio de pantalla" (ver comentario de arriba de esta función). Si
-  // se abandona 's-eventos' con el menú "speed dial" abierto, se fuerza su
-  // cierre -- no debe quedar abierto e invisible esperando la próxima vez
-  // que se muestre el FAB.
-  // Bug real corregido (ver "Cambios recientes"): gateaba con `_esAdminDemo`
-  // (js/eventos.js) -- un flag de demo para probar la variante admin de la
-  // card SIN sesión real (`var _esAdminDemo = false;`, nunca lo pisa ningún
-  // flujo de login/restauración real), no la señal real de sesión admin --
-  // con eso, el FAB quedaba invisible para CUALQUIER cuenta admin real,
-  // siempre. `_adminToken` (js/admin.js) es la señal real ya usada por el
-  // resto de la UI admin fuera de Eventos (ej. el tab "Mi Liga" en
-  // `APP_BOTTOM_NAV_ITEMS`, mismo criterio: truthy con cualquier sesión admin,
-  // "pura" o con cuota) -- no `E.datos`/`_dashboardAdminLimitado` (esa
-  // distingue admin "puro" de admin+usuarix, un eje distinto, no "es
-  // admin"). Recalculado en cada `ir()` -- cubre login directo, restaurar
-  // sesión y cambio de tab por igual, sin caso especial en ninguno.
+  // FAB "+" unificado de #s-eventos (#ev-fab-menu, index.html) -- visible
+  // para TODO perfil de cuenta (ya no admin-only, ver MANIFEST.md "Cambios
+  // recientes") con 's-eventos' como pantalla activa (no en
+  // s-eventos-detalle/s-eventos-anticipada, aunque compartan tab de la nav
+  // inferior). Mismo criterio que #home-nav/#s4-nav de arriba: togglea acá,
+  // único punto real de "cambio de pantalla" (ver comentario de arriba de
+  // esta función). Si se abandona 's-eventos' con el speed-dial abierto, se
+  // fuerza su cierre -- no debe quedar abierto e invisible esperando la
+  // próxima vez que se muestre el FAB. `_evFabUnificadoActualizar()`
+  // (js/eventos.js) arma contenido/visibilidad reales según el perfil
+  // (admin+cuota, admin sin cuota, mirlxs con/sin equipo propio, quindes) --
+  // acá solo se decide SI corresponde evaluarla (pantalla activa).
   var eventosFab = document.getElementById('ev-fab-menu');
-  if (eventosFab) { eventosFab.style.display = 'none'; if (typeof _evFabCerrar === 'function') _evFabCerrar(); }
-  var evBtnCrear = document.getElementById('ev-btn-crear');
-  if (evBtnCrear) evBtnCrear.style.display = (id === 's-eventos' && !!_adminToken) ? '' : 'none';
-
-  // FAB "Reservar Mes" del usuario (#ev-mirlxs-fab): visible solo en s-eventos.
-  // Mismo criterio que #ev-fab-menu arriba: ir() es el único punto de cambio
-  // de pantalla — el lugar correcto para gatearlo por pantalla activa.
-  var _uFab = document.getElementById('ev-mirlxs-fab');
-  if (_uFab) {
-    if (id === 's-eventos' && typeof _evActualizarFabReserva === 'function') {
-      _evActualizarFabReserva();
-    } else if (id !== 's-eventos') {
-      if (typeof _evFabToken !== 'undefined') ++_evFabToken;
-      _uFab.style.display = 'none';
-      _uFab.dataset.oculto = '1';
+  if (eventosFab) {
+    if (id === 's-eventos' && typeof _evFabUnificadoActualizar === 'function') {
+      _evFabUnificadoActualizar();
+    } else {
+      eventosFab.style.display = 'none';
+      if (typeof _evFabCerrar === 'function') _evFabCerrar();
     }
   }
 
@@ -606,7 +589,6 @@ var APP_BOTTOM_NAV_ITEMS = [
     alSalir: function() {
       if (typeof _evGuardarScrollTimeline === 'function') _evGuardarScrollTimeline();
       if (typeof _evSalirModoReserva === 'function') _evSalirModoReserva();
-      if (typeof _evTipoReservaPref !== 'undefined') _evTipoReservaPref = null;
     },
     visible: function() { return true; } },
   { id: 'ajustes', icono: 'settings', texto: 'Ajustes', pantalla: 's-datos',

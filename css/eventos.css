@@ -80,7 +80,7 @@
 .ev-nav-mes-label.ev-nav-mes-label-activo { color: var(--brand); }
 .ev-nav-mes-label.ev-nav-mes-label-activo .ev-nav-mes-chevron { color: var(--brand); }
 
-/* ── FAB de #s-eventos (solo admin) ─────────────────────
+/* ── FAB "+" unificado de #s-eventos (todo perfil de cuenta) ────────────
    Ver comentario HTML (index.html, hijo directo de <body>) -- reemplaza el
    "+" que vivía en .ev-header-row. `.ev-fab-menu` es el contenedor fixed
    completo (centrado igual que .app-bottom-nav/.cta-footer-fixed --
@@ -165,42 +165,6 @@
    el DOM, ver index.html) entra/sale con un toque más de delay, cascada
    sutil en vez de las 2 apareciendo en el mismo instante exacto. */
 .ev-fab-menu.ev-fab-abierto .ev-fab-opcion:first-child { transition-delay: 0.04s; }
-
-/* FAB dinámico "Reservar <Mes>" para mirlxs y quindes (#ev-mirlxs-fab,
-   index.html, ver _evActualizarFabReserva()/js/eventos.js) -- pill de texto en vez del
-   botón cuadrado con ícono de los otros 2 FAB de esta pantalla (arriba, en
-   `.ev-fab-menu`/`.ev-fab-btn`) porque el texto cambia según el mes
-   navegado. Mismo bottom-offset que `.ev-fab-menu` (por encima de
-   `.app-bottom-nav`, `--bottom-nav-h`, en vez de un `24px` fijo que hubiera
-   quedado tapado detrás/adentro de la nav) y mismo criterio de `right` con
-   piso de 20px en vez de `right:20px` a secas -- la app vive en una columna
-   centrada de máx. 523px (ver el comentario de `.ev-fab-menu`, arriba), no
-   en el viewport completo: sin el `max()`, en desktop ancho el botón se iría
-   al borde crudo del navegador en vez de quedar pegado a la columna real de
-   la app (`50vw - 241.5px` = mitad de la columna, 261.5px, menos los 20px
-   de margen deseado; en mobile, viewport ≤523px, el `max()` cae siempre en
-   el piso de 20px). */
-#ev-mirlxs-fab {
-  position: fixed;
-  right: max(20px, calc(50vw - 241.5px));
-  bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 16px);
-  z-index: 500;
-  padding: 14px 20px;
-  border-radius: 24px;
-  font-size: 15px;
-  font-weight: 600;
-  font-family: inherit;
-  background: var(--brand);
-  color: var(--white);
-  border: none;
-  cursor: pointer;
-  box-shadow: var(--shadow-lg);
-  opacity: 1;
-  pointer-events: auto;
-  transition: background 0.2s ease, transform 0.2s ease, opacity 0.25s ease;
-}
-@media (hover: hover) { #ev-mirlxs-fab:hover { background: var(--brand-dk); } }
-#ev-mirlxs-fab:active { transform: scale(0.96); }
 
 .ev-dot {
   width: 6px; height: 6px; border-radius: 50%; background: var(--brand); flex-shrink: 0;
@@ -1474,21 +1438,6 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 .ev-tipo-pago-opcion-desc { font-size: 13px; color: var(--muted); display: block; margin-top: 2px; }
 .ev-tipo-pago-badge { font-size: 11px; font-weight: 600; background: var(--brand); color: #fff; border-radius: 99px; padding: 2px 8px; flex-shrink: 0; }
 
-/* Botón "Reservar" en cards de Entrenamiento del timeline (mirlxs, próximas
-   6 clases) -- ver _evCardEventoHtml()/_evReservarClase(). */
-.ev-card-btn-reservar {
-  flex-shrink: 0;
-  padding: 6px 14px;
-  border-radius: var(--radius);
-  border: 1.5px solid var(--brand);
-  background: none;
-  color: var(--brand);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-}
 /* Fade in/out (ver "Cambios recientes" -- antes display:none/block puro,
    sin transición) -- mismo criterio opacity+pointer-events que el resto de
    la app usa para elementos fijos que aparecen/desaparecen (_evActualizarFooterReserva()/
@@ -1497,19 +1446,6 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
    valor que la transición -- recién se vuelve a poner display:none). */
 #ev-reserva-footer { opacity: 0; transition: opacity 0.22s ease; pointer-events: none; }
 #ev-reserva-footer.ev-reserva-footer--visible { opacity: 1; pointer-events: auto; }
-.ev-card-btn-reservar--off {
-  border-color: var(--border-light);
-  color: var(--muted);
-  cursor: default;
-  opacity: 0.6;
-}
-/* Estado seleccionado (modo selección múltiple, ver _evActualizarBotonesReserva()
-   en js/eventos.js) -- mismo botón, relleno de marca en vez de outline. */
-.ev-card-btn-reservar--sel {
-  background: var(--brand);
-  color: #fff;
-  border-color: var(--brand);
-}
 /* Estado + link "¿Qué significa esto?" de MI reserva en la card (mirlxs,
    ver "Cambios recientes") -- va en la esquina superior derecha, mismo slot
    que ocupaba el botón "Reservar" (reemplazándolo), apilado y alineado a la
@@ -1541,8 +1477,6 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 
 /* ----- Pills: referencias visuales inline ----- */
 .ev-pill-ref-icon { font-size: 1.05rem; vertical-align: -3px; line-height: 1; }
-.ev-pill-ref-badge { display:inline-flex; align-items:center; padding:1px 7px; border-radius:20px; font-size:0.68rem; font-weight:800; letter-spacing:0.3px; vertical-align:middle; }
-.ev-pill-ref-badge-verde { background:var(--success); color:var(--white); }
 .ev-pill-ref-btn-danger { display:inline-flex; align-items:center; padding:1px 8px; border-radius:6px; font-size:0.68rem; font-weight:700; vertical-align:middle; background:var(--danger); color:var(--white); }
 .ev-pill-ref-mes { display:inline-flex; align-items:center; gap:1px; padding:1px 2px 1px 7px; border-radius:8px; font-size:0.75rem; font-weight:600; vertical-align:middle; background:var(--surface-alt); color:var(--text); }
 .ev-pill-ref-mes .material-symbols-outlined { font-size:0.9rem; vertical-align:-2px; }

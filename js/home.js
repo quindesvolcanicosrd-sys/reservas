@@ -213,16 +213,14 @@ function _ptrOcultarIndicador() {
 }
 
 function irNuevaReserva(skipEquip, _fechaPresel) {
-  // Oculta el FAB de reserva mensual (#ev-mirlxs-fab, js/eventos.js --
-  // mirlxs y quindes) mientras dura el wizard -- restaurado por _s4NavBack()
-  // (js/reservas.js) al volver atrás, o por _evActualizarFabReserva() al
-  // confirmar/cancelar (ver esos callers para el resto de los puntos de
-  // salida de s4).
-  var _fab = document.getElementById('ev-mirlxs-fab');
+  // Oculta el FAB "+" unificado (#ev-fab-menu, js/eventos.js) mientras dura
+  // el wizard -- restaurado por _s4NavBack() (js/reservas.js) al volver
+  // atrás, o por _evFabUnificadoActualizar() al confirmar/cancelar (ver esos
+  // callers para el resto de los puntos de salida de s4).
+  var _fab = document.getElementById('ev-fab-menu');
   if (_fab) {
-    if (typeof _evFabToken !== 'undefined') ++_evFabToken;
     _fab.style.display = 'none';
-    _fab.dataset.oculto = '1';
+    if (typeof _evFabCerrar === 'function') _evFabCerrar();
   }
   E.conf = ''; E.fechas = []; E.tallasPorFecha = {}; E.tipoPago = 'clase'; E.totalPago = 0; E.notaPago = ''; E.cuponAplicado = false; E.creditosUsados = 0; E.reagendando = false; E.viaEventosInline = false;
   E._fechaPresel = _fechaPresel || null;

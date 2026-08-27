@@ -27,10 +27,11 @@ var _EV_ANIVERSARIO_INGRESO = null;
 // {id, nombre, fechaInicio, fechaFin} (fechas 'yyyy-mm-dd').
 var _EV_OFFSEASON = [];
 
-// Selección múltiple de fechas para reservar clases directo desde el
-// timeline (ver _evReservarClase()/_evToggleSeleccion()/_evContinuarReserva()
-// más abajo, MANIFEST.md "Cambios recientes"). _evDisponibles: mapa
-// idEvento -> objeto crudo de getFechasDisponibles (incluye disponible/razon).
+// Selección múltiple de fechas para reservar clases, entrada real desde el
+// botón "Reservar esta clase" del detalle de un evento (ver
+// _evReservarClase()/_evToggleSeleccion()/_evContinuarReserva() más abajo,
+// MANIFEST.md "Cambios recientes"). _evDisponibles: mapa idEvento -> objeto
+// crudo de getFechasDisponibles (incluye disponible/razon).
 var _evSeleccionados = new Set();
 var _evDisponibles = {};
 var _evModoReservaActivo = false;
@@ -507,15 +508,24 @@ function _evPrecargarRoster() {
 // timeline, con los filtros/búsqueda/calendario tal cual estaban.
 var _evYaInicializadoEnSesion = false;
 
-/* ── FAB de #s-eventos (solo admin, ver #ev-fab-menu en index.html) ──────
-   Ex-menú "speed dial" -- ver MANIFEST.md "Cambios recientes" (wizard
-   "Tipo → Lugar → Detalles"): `#ev-fab-btn` ya NO llama `_evFabToggle()`,
-   llama `irEvCrear()` directo. Funciones/listener de abajo quedan
-   definidas sin caller real desde el FAB de Eventos (dejadas tal cual,
-   no eliminadas -- `js/ui.js` sigue invocando `_evFabCerrar()` de forma
-   defensiva al ocultar el FAB, ver ese archivo). La visibilidad del FAB
-   en sí (admin + pantalla activa) la resuelve ir()/js/ui.js en cada
-   cambio de pantalla, mismo criterio que #home-nav/#s4-nav. */
+/* ── FAB "+" unificado de #s-eventos (ver #ev-fab-menu en index.html) ────
+   Reemplaza los 3 FAB previos de esta pantalla (`#ev-fab-menu` admin-only,
+   `#ev-fab-reserva` quindes-no-admin, `#ev-mirlxs-fab` "Reservar <mes>") más
+   el "+" de la nav bar (`#ev-btn-crear`) -- ver MANIFEST.md "Cambios
+   recientes". Un solo botón (`#ev-fab-btn`) visible para toda cuenta en
+   `#s-eventos`, con comportamiento que depende del perfil real:
+     - Admin CON cuota al día: speed-dial "Reserva por mes" + "Eventos".
+     - Admin SIN cuota al día: speed-dial solo "Eventos".
+     - Mirlxs CON equipo propio (no necesita el del club): speed-dial
+       "Reserva por clase" + "Reserva por mes".
+     - Mirlxs SIN equipo propio (necesita rentar del club, solo por clase) O
+       quindes no-admin (solo reserva mensual, ver `evAbrirSheetTipoPago()`):
+       sin speed-dial -- el toque navega directo a la acción única.
+   `_evFabPlusClick()` es el onclick real del botón: decide navegar directo
+   o togglear el speed-dial. `_evFabUnificadoActualizar()` (más abajo, junto
+   a `_evFabReserva()`) arma el contenido de `#ev-fab-opciones` y la
+   visibilidad del FAB en sí -- llamada desde `_evActualizarTopBarModo()`
+   (cambio de perfil/datos) y desde `ir()` (js/ui.js, cambio de pantalla). */
 var _evFabAbierto = false;
 function _evFabToggle() {
   _evFabAbierto = !_evFabAbierto;
@@ -541,6 +551,21 @@ document.addEventListener('click', function(e) {
   var menu = document.getElementById('ev-fab-menu');
   if (menu && !menu.contains(e.target)) _evFabCerrar();
 });
+// Onclick real de #ev-fab-btn. Mirlxs que depende de equipo del club (renta,
+// no tiene propio) solo puede reservar por clase -- un speed-dial de una
+// sola opción sería ruido, así que navega directo. Quindes no-admin tampoco
+// tiene speed-dial -- mismo criterio ya usado por `evAbrirSheetTipoPago()`
+// (quindes no paga por clase, un solo camino real: mensual). Cualquier otro
+// perfil (admin, o mirlxs con equipo propio) togglea el speed-dial armado
+// por `_evFabUnificadoActualizar()`.
+function _evFabPlusClick() {
+  var esAdmin = typeof _adminToken !== 'undefined' && !!_adminToken;
+  if (!esAdmin) {
+    if (_evNecesitaEquipo()) { irNuevaReservaConTipo('clase'); return; }
+    if (_modoUsuario() === 'quindes') { irNuevaReservaConTipo('mensual'); return; }
+  }
+  _evFabToggle();
+}
 // Skeleton de #ev-timeline mientras _evCargarDatosReales() espera la
 // respuesta real -- reemplaza el loader de pantalla completa que tenía antes
 // (ver "Cambios recientes"), mismo criterio ya establecido en este mismo
@@ -1427,7 +1452,6 @@ function _evActualizarNavMesLabel(instant) {
   if (!span || !_evNavMesActual) return;
   _evFadeSwap(span, function() {
     span.textContent = NOMBRES_MESES[_evNavMesActual.month];
-    _evActualizarFabReserva();
   }, instant);
 }
 // Alto REAL de la cabecera sticky en este instante (incluye el panel de
@@ -1974,7 +1998,7 @@ function _evActualizarFooterReserva() {
     requestAnimationFrame(function() {
       requestAnimationFrame(function() { footer.classList.add('ev-reserva-footer--visible'); });
     });
-    _evActualizarFabReserva();
+    _evFabUnificadoActualizar();
   }
   _evActualizarFooterTexto();
 }
@@ -1995,7 +2019,7 @@ function _evSalirModoReserva() {
     footer.classList.remove('ev-reserva-footer--visible');
     setTimeout(function() { footer.style.display = 'none'; }, 220);
   }
-  _evActualizarFabReserva();
+  _evFabUnificadoActualizar();
 }
 // Cierra continuar_s4() completo (js/reservas.js) en vez de navegar directo
 // a 's-pago' -- esa función arma detalleTexto/fechasHtml + llama
@@ -2050,8 +2074,9 @@ function _evContinuarReserva() {
   E.origenSeccionS4 = 's-eventos';
   continuar_s4();
   _evSalirModoReserva();
-  var _fab = document.getElementById('ev-mirlxs-fab');
-  if (_fab) { ++_evFabToken; _fab.style.display = 'none'; _fab.dataset.oculto = '1'; _fab.style.opacity = ''; _fab.style.transition = ''; _fab.style.pointerEvents = ''; }
+  var _fabU = document.getElementById('ev-fab-menu');
+  if (_fabU) _fabU.style.display = 'none';
+  if (typeof _evFabCerrar === 'function') _evFabCerrar();
 }
 
 function _evCardEventoHtml(e, sufijo) {
@@ -2085,23 +2110,13 @@ function _evCardEventoHtml(e, sufijo) {
   else if (_adminToken && _evYaEmpezo(e)) accionBody = '<div id="ev-asist-real-' + e.id + '">' + _evRsvpBarraHtml(e) + '</div>' + _evAccionAdminHtml(e);
   else accionBody = _evRsvpBarraHtml(e);
 
-  // Botón "Reservar" (mirlxs -- equipo propio, paga por clase) en cards de
-  // Entrenamiento futuras dentro de las próximas 6 -- fuera de esa ventana
-  // no se ofrece (evita reservar con demasiada anticipación). `_evFechaCmp()`
-  // (no comparación de string `>=`) -- toda comparación de fechas ISO de
-  // este archivo pasa por ahí (ver esa función, más arriba: comparar como
-  // texto solo da el orden correcto si el ancho/cero-padding es idéntico
-  // siempre, no garantizado según el origen del dato). `e.horaInicio` (no
-  // `e.inicia`, que no existe en el objeto evento -- ver `_evMapEventoBackend()`,
-  // el campo real es `horaInicio`) para el corte de 2hs antes del inicio,
-  // hoy mismo.
   // Estado de una reserva ya hecha para este evento (mirlxs -- ver "Cambios
   // recientes"). `_todasReservas` (js/home.js, global, poblado por
   // getReservasPersona) -- `r.fecha` es el id_evento para una reserva de
   // tipo "clase" (mismo campo/valor que `e.id` acá, ya confirmado y usado en
   // el resto de este archivo/`js/reservas.js` para el mismo cruce). Se
-  // excluye 'Cancelada' -- una reserva cancelada no debe tapar el botón de
-  // volver a reservar. Estados reales de la app: 'Pendiente' (default, sin
+  // excluye 'Cancelada' -- una reserva cancelada no debe tapar el chip de
+  // estado. Estados reales de la app: 'Pendiente' (default, sin
   // valor)/'Confirmada'/'Cancelada'/'Reagendar' (ver `_renderCardHome()`,
   // js/home.js -- NO existen 'Aprobada'/'Rechazada' en ningún lado del
   // proyecto, ese vocabulario no es el real).
@@ -2109,30 +2124,6 @@ function _evCardEventoHtml(e, sufijo) {
   if (_modoUsuario() === 'mirlxs' && e.tipo === 'Entrenamiento') {
     miReserva = (_todasReservas || []).filter(function(r) { return r.fecha === e.id && r.estado !== 'Cancelada'; })[0] || null;
   }
-  var mostrarBtnReservar = false;
-  var btnReservarDesactivado = false;
-  if (_modoUsuario() === 'mirlxs' && e.tipo === 'Entrenamiento' && !cancelado && !miReserva && !_evTieneCuotaAlDia()) {
-    var hoyISO = _evHoyISO();
-    if (_evFechaCmp(e.fecha, hoyISO) >= 0) {
-      var proximas6 = (_EV_EVENTOS || []).filter(function(x) {
-        return x.tipo === 'Entrenamiento' && _evFechaCmp(x.fecha, hoyISO) >= 0;
-      }).sort(function(a, b) { return _evFechaCmp(a.fecha, b.fecha); }).slice(0, 6);
-      mostrarBtnReservar = proximas6.some(function(x) { return x.id === e.id; });
-      if (mostrarBtnReservar && e.fecha === hoyISO && e.horaInicio) {
-        var partes = e.horaInicio.split(':');
-        var inicioH = parseInt(partes[0], 10), inicioM = parseInt(partes[1] || '0', 10);
-        var ahora = new Date();
-        var minHastaInicio = (inicioH * 60 + inicioM) - (ahora.getHours() * 60 + ahora.getMinutes());
-        if (minHastaInicio < 120) btnReservarDesactivado = true;
-      }
-    }
-  }
-  var btnReservarHtml = mostrarBtnReservar ?
-    '<button type="button" class="ev-card-btn-reservar' + (btnReservarDesactivado ? ' ev-card-btn-reservar--off' : '') + '"' +
-    ' data-ev-reservar="true" data-evid="' + e.id + '"' +
-    ' onclick="event.stopPropagation();' + (btnReservarDesactivado ? 'mostrarToast(\'No se puede reservar para esta clase. Ya se cerraron las reservas.\',\'info\',true)' : '_evAbrirSheetTipoReserva(\'' + e.id + '\')') + '"' +
-    '>Reservar</button>'
-    : '';
   // Chip de estado -- mismo componente/labels/colores que ya usa
   // `_renderCardHome()` (js/home.js, `.badge`/`.badge-<estado>`), reusado
   // tal cual (no reinventado) -- `.ev-card-reserva-estado` (nueva,
@@ -2164,31 +2155,14 @@ function _evCardEventoHtml(e, sufijo) {
     if (miReserva.estado !== 'Reagendar') btnCancelarReagendarHtml = _evBtnCancelarReagendarHtml(e, 'ev-card-btn-cancelar');
   }
 
-  // Botón "Reservar" (equipamiento -- equipo del club) en cards de
-  // Entrenamiento futuras dentro de las próximas 6, "zona segura": el botón
-  // abre el mismo sheet de acción de siempre (evAbrirAccionCard(), 2
-  // opciones: "Ver más información"/"Reservar esta fecha") en vez de
-  // requerir tocar la card entera para llegar ahí -- el resto de la card
-  // (fuera del botón) pasa a ir directo a abrirEvDetalle(), ver el onclick
-  // de la card más abajo. Mismo criterio de "próximas 6" que el botón de
-  // mirlxs de arriba, pero gateado a `_modoUsuario() === 'equipamiento'`.
-  var mostrarBtnReservarEquip = false;
-  if (_modoUsuario() === 'equipamiento' && e.tipo === 'Entrenamiento' && !cancelado) {
-    var hoyISOEquip = _evHoyISO();
-    if (_evFechaCmp(e.fecha, hoyISOEquip) >= 0) {
-      var proximas6Equip = (_EV_EVENTOS || []).filter(function(x) {
-        return x.tipo === 'Entrenamiento' && _evFechaCmp(x.fecha, hoyISOEquip) >= 0;
-      }).sort(function(a, b) { return _evFechaCmp(a.fecha, b.fecha); }).slice(0, 6);
-      mostrarBtnReservarEquip = proximas6Equip.some(function(x) { return x.id === e.id; });
-    }
-  }
-  var btnReservarEquipHtml = mostrarBtnReservarEquip ?
-    '<button type="button" class="ev-card-btn-reservar" data-ev-reservar="true" data-evid="' + e.id + '"' +
-    ' onclick="event.stopPropagation();evAbrirAccionCard(\'' + e.id + '\')">Reservar</button>'
-    : '';
-  var cardOnclick = mostrarBtnReservarEquip ?
-    'abrirEvDetalle(\'' + e.id + '\')' :
-    '_evTapCard(\'' + e.id + '\',\'' + e.tipo + '\')';
+  // Botón "Reservar" inline (mirlxs/equipamiento) eliminado de la card --
+  // ver MANIFEST.md "Cambios recientes": la reserva ahora se inicia siempre
+  // desde el FAB "+" unificado de la pantalla (_evFabPlusClick()/
+  // _evFabUnificadoActualizar(), más abajo). `cardOnclick` queda unificado a
+  // `_evTapCard()` sin importar el modo -- esa función ya sabe abrir el
+  // sheet de acción (`evAbrirAccionCard()`) para cuentas con equipo del club
+  // en vez del detalle directo.
+  var cardOnclick = '_evTapCard(\'' + e.id + '\',\'' + e.tipo + '\')';
 
   return '<div class="ev-card" id="ev-card-' + e.id + sufijo + '" onclick="' + cardOnclick + '">' +
     '<div class="ev-card-top-row">' +
@@ -2197,7 +2171,7 @@ function _evCardEventoHtml(e, sufijo) {
         '<div class="ev-card-sub"><span class="material-symbols-outlined">schedule</span>' + e.horaInicio + ' · ' + e.tipo + '</div>' +
         accionBody +
       '</div>' +
-      btnReservarHtml + miReservaChipHtml + btnReservarEquipHtml +
+      miReservaChipHtml +
     '</div>' +
     btnCancelarReagendarHtml +
     '<div class="ev-card-talla-conflicto" id="ev-talla-conflicto-' + e.id + sufijo + '" style="display:none;padding:0 12px 10px;animation:fadeIn 0.3s ease;"></div>' +
@@ -2516,13 +2490,11 @@ function _evActualizarTopBarModo() {
   // categoría mirlxs/quindes.
   var necesitaEquipo = _evNecesitaEquipo();
   if (btnPatin) btnPatin.style.display = necesitaEquipo ? '' : 'none';
-  // Asistencia anticipada pasa a ser exclusiva de quindes (ver "Cambios
-  // recientes" -- Fase 1 de diferenciación mirlxs/quindes): mirlxs ya tiene
-  // el botón "Reservar" inline por clase (_evReservarClase(), en cada card)
-  // + el FAB "Reservar <Mes>" (_evActualizarFabReserva(), abajo) para el
-  // flujo mensual -- la asistencia anticipada quedaba redundante para
-  // ellxs. `necesitaEquipo` (equipo del club) sigue ocultándolo también,
-  // sin cambios en ese criterio.
+  // Asistencia anticipada sigue exclusiva de quindes (ver "Cambios
+  // recientes" -- Fase 1 de diferenciación mirlxs/quindes): mirlxs ya cubre
+  // el flujo de reserva desde el FAB "+" unificado
+  // (_evFabUnificadoActualizar(), más abajo). `necesitaEquipo` (equipo del
+  // club) sigue ocultándolo también, sin cambios en ese criterio.
   if (btnAnticipada) btnAnticipada.style.display = (necesitaEquipo || modo === 'mirlxs') ? 'none' : '';
   // Hallazgo relacionado, no pedido explícito pero mismo bug de fondo:
   // _evPillsInit() (más abajo, listas['equipamiento'] YA existe con los
@@ -2533,111 +2505,12 @@ function _evActualizarTopBarModo() {
   // arriba). Se pasa la lista correcta sin tocar `modo` en sí (sigue
   // resolviendo mirlxs/quindes para todo lo demás de esta función).
   _evPillsInit(necesitaEquipo ? 'equipamiento' : modo);
-  var fabRes = document.getElementById('ev-fab-reserva');
-  if (fabRes) {
-    var esAdmin = typeof _adminToken !== 'undefined' && !!_adminToken;
-    // Ya no "modo !== 'equipamiento'" (ver MANIFEST.md, eliminación de ese
-    // modo) -- mirlxs tiene el botón "Reservar" inline en cada card
-    // (_evReservarClase()), este FAB quedaría duplicado/redundante para
-    // ellxs. Exclusivo de quindes, que no tienen ese botón en la card.
-    fabRes.style.display = (modo === 'quindes' && !esAdmin) ? 'flex' : 'none';
-  }
-  _evActualizarFabReserva();
+  _evFabUnificadoActualizar();
 }
 
-// FAB dinámico "Reservar <Mes>" (#ev-mirlxs-fab, index.html) -- atado al mes
-// navegado en el timeline (_evNavMesActual), no a un mes fijo: oculto para
-// mes pasado o ya pagado (_evMesPagado()), texto/visibilidad se recalculan
-// cada vez que cambia el label de mes (_evActualizarNavMesLabel()) o el modo
-// de cuenta (_evActualizarTopBarModo()). Generalizado a mirlxs Y quindes (ver
-// "Cambios recientes" -- antes exclusivo de mirlxs, `_evActualizarFabMirlxs()`)
-// -- quindes solo lo ve si ya tiene algún historial de cuota mensual (una
-// cuenta quindes que nunca reservó nada mensual todavía, `_quindesSinCuota()`,
-// arranca sin este FAB -- ver esa función/eventosAbrirAnticipada()).
-// Token incremental: cada llamada invalida los timeouts/rAF encolados por
-// llamadas anteriores todavía en vuelo (nav de mes puede cambiar más rápido
-// que la duración del fade, 250ms) -- sin esto, un hide() en curso podía
-// terminar aplicando `display:none` después de que una llamada posterior ya
-// hubiera decidido mostrar el FAB de nuevo, dejándolo invisible pese a
-// opacity:1. `fab.dataset.oculto` (no `style.display`) es la fuente de
-// verdad de "¿está oculto?" mientras el fade está en curso, porque durante
-// el fade-out `display` sigue sin ser 'none' por 250ms.
-var _evFabToken = 0;
-function _evActualizarFabReserva() {
-  var fab = document.getElementById('ev-mirlxs-fab');
-  if (!fab) return;
-  if (_evModoReservaActivo) {
-    if (fab.style.display !== 'none' && fab.dataset.oculto !== '1') {
-      fab.dataset.oculto = '1';
-      fab.style.transition = 'opacity 0.18s ease';
-      fab.style.opacity = '0';
-      fab.style.pointerEvents = 'none';
-      var _tokM = ++_evFabToken;
-      setTimeout(function() { if (_tokM === _evFabToken && fab.dataset.oculto === '1') { fab.style.display = 'none'; fab.style.transition = ''; } }, 200);
-    }
-    return;
-  }
-  var deboMostrar = false, nuevoTexto = '';
-  var modo = _modoUsuario();
-  // Bug real corregido antes de aplicar (mirlxs, sin cambios en esta tanda):
-  // _evActualizarTopBarModo() se llama (irEventos()) ANTES de que
-  // _evNavMesActual reciba su primer valor real -- eso ocurre recién dentro
-  // del callback async de _evCargarDatosReales(). Sin esta guarda, .month
-  // sobre null tira TypeError y corta el resto de irEventos()
-  // (_evActualizarTopBarModo() corre al final de esa función).
-  // `quindesConHistorial` se calcula como condición extra (no un early
-  // return) para que quindes sin historial siga pasando por el MISMO
-  // mecanismo de fade-out de abajo si el FAB ya estaba visible (ej. hizo
-  // una reserva mensual, se le canceló, y ahora _todasReservas ya no trae
-  // ningún 'mensual') -- un return temprano acá saltearía esa animación.
-  var quindesConHistorial = modo !== 'quindes' ||
-    (_todasReservas || []).some(function(r) { return r.tipo === 'mensual'; });
-  if (!_adminToken && !_evModoReservaActivo && _evNavMesActual && (modo === 'mirlxs' || modo === 'quindes') && quindesConHistorial && !_evNecesitaEquipo()) {
-    var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
-    var mes = _evNavMesActual.month, anio = _evNavMesActual.year;
-    var esPasado = anio < hoy.getFullYear() || (anio === hoy.getFullYear() && mes < hoy.getMonth());
-    if (!esPasado && !_evMesPagado(mes, anio)) { deboMostrar = true; nuevoTexto = 'Reservar ' + NOMBRES_MESES[mes]; }
-  }
-  var token = ++_evFabToken;
-  var estabaVisible = fab.style.display !== 'none' && fab.dataset.oculto !== '1';
-
-  if (!deboMostrar) {
-    if (!estabaVisible) return;
-    fab.dataset.oculto = '1';
-    fab.style.opacity = '0';
-    fab.style.pointerEvents = 'none';
-    setTimeout(function() {
-      if (token === _evFabToken && fab.dataset.oculto === '1') fab.style.display = 'none';
-    }, 250);
-    return;
-  }
-
-  if (!estabaVisible) {
-    fab.dataset.oculto = '0';
-    fab.textContent = nuevoTexto;
-    fab.style.display = '';
-    fab.style.opacity = '0';
-    fab.style.pointerEvents = 'none';
-    requestAnimationFrame(function() { requestAnimationFrame(function() {
-      if (token !== _evFabToken) return;
-      fab.style.opacity = '1';
-      fab.style.pointerEvents = 'auto';
-    }); });
-    return;
-  }
-
-  // Ya visible: si solo cambió el texto del mes, fade out -> texto -> fade in.
-  if (fab.textContent === nuevoTexto) return;
-  fab.style.opacity = '0';
-  setTimeout(function() {
-    if (token !== _evFabToken) return;
-    fab.textContent = nuevoTexto;
-    fab.style.opacity = '1';
-  }, 150);
-}
-
-// Onclick real del FAB de arriba (mirlxs Y quindes, ver "Cambios recientes"
-// -- antes exclusivo de mirlxs, `_evMirlxsFabReserva()`) -- abre el wizard
+// Onclick real de la opción "Reserva por mes" del FAB unificado (mirlxs Y
+// quindes admin, ver _evFabUnificadoActualizar()/js/eventos.js más abajo --
+// antes exclusivo de mirlxs, `_evMirlxsFabReserva()`) -- abre el wizard
 // de reserva ya en el modo mensual (mismo mecanismo que el resto de accesos
 // a s4 mensual, ver "Cambios recientes" -- E.origenSeccionS4 para que la
 // flecha atrás de s4 vuelva al timeline en vez de a Mis Reservas) y
@@ -2677,13 +2550,12 @@ function _evFabReserva() {
 // _evFabReserva() (arriba) no acepta un mes como parámetro -- lee
 // _evNavMesActual directo (el mes que el timeline tiene navegado en este
 // instante). Este wrapper lo fuerza al mes de un evento puntual ANTES de
-// llamarla, para los 2 casos donde hace falta preseleccionar un mes
-// específico que puede no coincidir con el navegado: el sheet de cuota
-// pendiente en modo "gracia" (_evCuotaPagarAhora(), arriba) y "Todo el mes"
-// del sheet #sheet-tipo-reserva (_evTipoReservaTodoMes(), más abajo). Sin
-// evento encontrado o sin `fecha`, deja _evNavMesActual tal cual estaba --
-// _evFabReserva() sigue funcionando con el mes que ya tenía navegado, no
-// hay guard adicional que agregar acá.
+// llamarla, para cuando hace falta preseleccionar un mes específico que
+// puede no coincidir con el navegado: el sheet de cuota pendiente en modo
+// "gracia" (_evCuotaPagarAhora(), arriba). Sin evento encontrado o sin
+// `fecha`, deja _evNavMesActual tal cual estaba -- _evFabReserva() sigue
+// funcionando con el mes que ya tenía navegado, no hay guard adicional que
+// agregar acá.
 function _evFabReservaParaEvento(idEvento) {
   var ev = (_EV_EVENTOS || []).find(function(e) { return e.id === idEvento; });
   if (ev && ev.fecha) {
@@ -2691,6 +2563,52 @@ function _evFabReservaParaEvento(idEvento) {
     _evNavMesActual = { year: parseInt(fp[0], 10), month: parseInt(fp[1], 10) - 1 };
   }
   _evFabReserva();
+}
+
+// Arma el contenido (0/1/2 opciones) y la visibilidad de #ev-fab-menu según
+// el perfil real de la cuenta -- ver comentario de _evFabPlusClick(), más
+// arriba, para el resumen de los 4 perfiles. Llamada desde
+// _evActualizarTopBarModo() (cambia con el perfil/datos reales) y desde
+// ir() (js/ui.js, cambia con la pantalla activa) -- mismo patrón dual que
+// tenía _evActualizarFabReserva() antes de esta tanda.
+function _evFabUnificadoActualizar() {
+  var fab = document.getElementById('ev-fab-menu');
+  var opciones = document.getElementById('ev-fab-opciones');
+  if (!fab) return;
+  // Durante el modo selección múltiple del timeline (entrada desde el
+  // detalle de un evento, "Reservar esta clase" -- ver _evReservarClase()) el
+  // footer sticky de abajo (#ev-reserva-footer) ya cubre esa esquina; el FAB
+  // se oculta para no superponerse, mismo criterio que ya usaba
+  // #ev-mirlxs-fab antes de esta tanda.
+  if (_evModoReservaActivo) {
+    fab.style.display = 'none';
+    _evFabCerrar();
+    return;
+  }
+  var esAdmin = typeof _adminToken !== 'undefined' && !!_adminToken;
+  var modo = _modoUsuario();
+  var necesitaEquipo = _evNecesitaEquipo();
+  var html = '';
+  if (esAdmin) {
+    if (_evTieneCuotaAlDia()) {
+      html += '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); _evFabReserva();">' +
+        '<span class="material-symbols-outlined">calendar_month</span><span>Reserva por mes</span></button>';
+    }
+    html += '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); irEvCrear();">' +
+      '<span class="material-symbols-outlined">edit_calendar</span><span>Eventos</span></button>';
+  } else if (!necesitaEquipo && modo === 'mirlxs') {
+    // Mirlxs con equipo propio -- puede reservar por clase O por mes, ver
+    // MANIFEST.md "Cambios recientes". Mirlxs sin equipo propio (renta del
+    // club) y quindes no-admin quedan sin opciones acá -- _evFabPlusClick()
+    // los manda directo a su único camino real, sin abrir este speed-dial.
+    html =
+      '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); irNuevaReservaConTipo(\'clase\');">' +
+        '<span class="material-symbols-outlined">confirmation_number</span><span>Reserva por clase</span></button>' +
+      '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); _evFabReserva();">' +
+        '<span class="material-symbols-outlined">calendar_month</span><span>Reserva por mes</span></button>';
+  }
+  if (opciones) opciones.innerHTML = html;
+  fab.style.display = '';
 }
 
 var _evPillsTimer = null;
@@ -2703,9 +2621,13 @@ function _evPillsInit(modo) {
     var ml = t ? (t.textContent || '').trim() : '';
     return 'Abre el calendario pulsando en <span class="ev-pill-ref-mes">' + (ml || 'el mes') + ' ' + _picon('expand_more') + '</span>';
   };
+  // Pill "Pulsa en [+] para realizar una reserva" -- mismo ícono del FAB
+  // unificado (#ev-fab-btn, index.html/_evFabUnificadoActualizar()), común a
+  // los 3 perfiles: la reserva ahora se inicia siempre desde ahí.
+  var _fabItem = 'Pulsa en ' + _picon('add') + ' para realizar una reserva';
   var listas = {
     equipamiento: [
-      'Usa <span class="ev-pill-ref-badge ev-pill-ref-badge-verde">Reserva</span> para reservar por clase',
+      _fabItem,
       'Cambia tu equipamiento desde ' + _picon('settings') + ' o desde ' + _picon('roller_skating'),
       '<span class="ev-pill-ref-btn-danger">Re&#8209;Agenda o cancela</span> cuando quieras tus eventos reservados',
       'Busca fechas y eventos desde ' + _picon('search'),
@@ -2713,11 +2635,13 @@ function _evPillsInit(modo) {
     ],
     mirlxs: [
       'Entra a un evento para ver más información',
+      _fabItem,
       'Busca fechas y eventos desde ' + _picon('search'),
       _mesItem
     ],
     quindes: [
       'Toca un evento para ver más información',
+      _fabItem,
       'Busca fechas y eventos desde ' + _picon('search'),
       _mesItem
     ]
@@ -2890,88 +2814,6 @@ function _evCuotaPagarAhora() {
 function _evCuotaSolicitarAyuda() {
   cerrarSheetCuotaPendiente();
   setTimeout(function() { abrirWizardExcepcion(); }, 310);
-}
-
-// Onclick real del botón "Reservar" de una card de Entrenamiento (mirlxs,
-// ver _evCardEventoHtml()) -- antes llamaba _evReservarClase(e.id) directo
-// (reserva por clase, único camino); ahora abre este sheet a elegir entre
-// esa misma reserva puntual o saltar directo al flujo mensual para el mes
-// de ESE evento (ver _evTipoReservaClase()/_evTipoReservaTodoMes(), abajo).
-// Mismo patrón abrirX/cerrarX (fade + doble requestAnimationFrame +
-// _registrarOverlayAbierto) que el resto de los sheets de este archivo.
-var _evTipoReservaPref = null; // 'clase' | 'mes' | null -- memorizado por sesión
-function _evAbrirSheetTipoReserva(idEvento) {
-  E.reservaEventoId = idEvento;
-  if (_evTipoReservaPref === 'clase') { _evReservarClase(idEvento); return; }
-  if (_evTipoReservaPref === 'mes') { _evFabReservaParaEvento(idEvento); return; }
-  var sh = document.getElementById('sheet-tipo-reserva');
-  var ov = document.getElementById('sheet-tipo-reserva-overlay');
-  if (!sh || !ov) return;
-  ov.style.display = 'block'; sh.style.display = 'flex';
-  requestAnimationFrame(function() { requestAnimationFrame(function() {
-    sh.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
-    sh.style.transform = 'translateY(0)';
-    ov.style.opacity = '1';
-  }); });
-  _registrarOverlayAbierto(function() { cerrarSheetTipoReserva(true); });
-  var filaMes = document.getElementById('str-todo-mes');
-  if (filaMes) filaMes.style.display = _evNecesitaEquipo() ? 'none' : '';
-}
-// Mismo contrato que cerrarSheetCuotaPendiente()/cerrarSheetTipoPago() de
-// arriba (porGesto/history.back()).
-function cerrarSheetTipoReserva(porGesto) {
-  if (!porGesto) { history.back(); return; }
-  var sh = document.getElementById('sheet-tipo-reserva');
-  var ov = document.getElementById('sheet-tipo-reserva-overlay');
-  if (sh) { sh.style.transition = 'transform 0.28s cubic-bezier(0.32,0.72,0,1)'; sh.style.transform = 'translateY(100%)'; }
-  if (ov) ov.style.opacity = '0';
-  setTimeout(function() {
-    if (sh) sh.style.display = 'none';
-    if (ov) ov.style.display = 'none';
-    var p1 = document.getElementById('str-paso1');
-    var p2 = document.getElementById('str-paso2');
-    if (p1) p1.style.display = '';
-    if (p2) p2.style.display = 'none';
-  }, 300);
-}
-// "Solo esta clase" -- no cierra el sheet, muestra el paso 2 (#str-paso2,
-// index.html) dentro del mismo sheet ya abierto, preguntando si agregar
-// otra clase o finalizar.
-function _evTipoReservaClase() {
-  var p1 = document.getElementById('str-paso1');
-  var p2 = document.getElementById('str-paso2');
-  if (p1) p1.style.display = 'none';
-  if (p2) p2.style.display = '';
-}
-// Paso 2, opción "Agregar otra clase" -- mismo cierre-diferido-por-history.back()
-// que _evCuotaPagarAhora()/irNuevaReservaConTipo(), evita la carrera ya
-// documentada contra el pushState propio de _evReservarClase() (que no abre
-// overlay propio, pero sí puede tocar el DOM de la card mientras el sheet
-// todavía está cerrando).
-function _evTipoReservaAgregarOtra() {
-  _evTipoReservaPref = 'clase';
-  var id = E.reservaEventoId;
-  cerrarSheetTipoReserva();
-  setTimeout(function() { _evReservarClase(id); }, 310);
-}
-// Paso 2, opción "Finalizar mi reserva" -- mismo flujo que arriba, pero
-// prende _evReservaAutoFinalizar para que _evReservarClase() salte directo
-// a _evContinuarReserva() apenas confirme la disponibilidad de esta clase.
-function _evTipoReservaFinalizar() {
-  _evTipoReservaPref = 'clase';
-  var id = E.reservaEventoId;
-  _evReservaAutoFinalizar = true;
-  cerrarSheetTipoReserva();
-  setTimeout(function() { _evReservarClase(id); }, 310);
-}
-// "Todo el mes" -- reusa _evFabReservaParaEvento() (junto a _evFabReserva(),
-// más arriba) para preseleccionar el mes de ESTE evento puntual, no el mes
-// que el timeline tenga navegado en este momento.
-function _evTipoReservaTodoMes() {
-  _evTipoReservaPref = 'mes';
-  var id = E.reservaEventoId;
-  cerrarSheetTipoReserva();
-  setTimeout(function() { _evFabReservaParaEvento(id); }, 310);
 }
 
 function irNuevaReservaConTipo(tipo) {
@@ -4278,8 +4120,8 @@ function abrirEvDetalle(id) {
   // ya sacó la pantalla de `display:none`, así que llamar esto ACÁ MISMO
   // (sin ningún `setTimeout`) ya mide valores reales, sin ventana de tiempo
   // en la que se vea la posición vieja/rota.
-  var _detFab = document.getElementById('ev-mirlxs-fab');
-  if (_detFab) { ++_evFabToken; _detFab.style.display = 'none'; _detFab.dataset.oculto = '1'; _detFab.style.opacity = ''; _detFab.style.transition = ''; _detFab.style.pointerEvents = ''; }
+  var _detFab = document.getElementById('ev-fab-menu');
+  if (_detFab) { _detFab.style.display = 'none'; if (typeof _evFabCerrar === 'function') _evFabCerrar(); }
   _evDetalleActualizarSticky();
   // `_evUpdateRsvpSliders()` SÍ sigue necesitando el setTimeout -- motivo
   // distinto (bug real aparte, ya documentado): entrar al detalle con un
