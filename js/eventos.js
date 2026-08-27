@@ -2528,6 +2528,21 @@ function _evActualizarTopBarModo() {
 // flags de estado (E.mirlxsPreselMes/E.mirlxsMesesPresel) sin renombrar --
 // legacy de cuando el flujo era exclusivo de mirlxs, hoy compartido por los
 // 2 modos que usan este FAB.
+// Onclick real de la opción "Reserva por clase" del FAB unificado (mirlxs
+// con equipo propio, ver _evFabUnificadoActualizar() más abajo). Antes
+// llamaba a irNuevaReservaConTipo('clase'), pensada para cerrar el sheet
+// #sheet-ev-tipo-pago (evAbrirSheetTipoPago()) vía history.back() -- acá ese
+// sheet nunca se abrió, así que ese history.back() se comía una entrada real
+// del historial de la app y navegaba a una pantalla ajena antes de que
+// cargarFechas() llegara a pintar las clases. Misma solución que ya usa
+// _evFabReserva() (abajo) para "Reserva por mes": ir directo a
+// irNuevaReserva(), que ya deja E.tipoPago en 'clase' por default (ver E en
+// js/reservas.js) -- es el mismo camino que el CTA "Nueva reserva"
+// (#home-nav-cta, index.html) usa para esta misma pantalla.
+function _evFabReservaClase() {
+  E.origenSeccionS4 = 's-eventos';
+  irNuevaReserva(false, null);
+}
 function _evFabReserva() {
   E.mirlxsPreselMes = _evNavMesActual.month;
   E.origenSeccionS4 = 's-eventos';
@@ -2602,7 +2617,7 @@ function _evFabUnificadoActualizar() {
     // club) y quindes no-admin quedan sin opciones acá -- _evFabPlusClick()
     // los manda directo a su único camino real, sin abrir este speed-dial.
     html =
-      '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); irNuevaReservaConTipo(\'clase\');">' +
+      '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); _evFabReservaClase();">' +
         '<span class="material-symbols-outlined">confirmation_number</span><span>Reserva por clase</span></button>' +
       '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); _evFabReserva();">' +
         '<span class="material-symbols-outlined">calendar_month</span><span>Reserva por mes</span></button>';
