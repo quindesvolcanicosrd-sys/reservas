@@ -770,7 +770,15 @@ function cargarFechas() {
       _mostrarConflictoTalla(item.slug, talla);
     });
     fechasAChequearTalla.forEach(function(item) { _chequearTallaFecha(item.fecha, item.slug); });
-    var puedeMensual = canPayMonthly() && !E.reagendando; var wrapper = document.getElementById('s4-tipo-pago-wrapper'); var subtitulo = document.getElementById('s4-fechas-subtitulo');
+    // E.forzarTipoClase (ver _evFabReservaClase(), js/eventos.js): igual que
+    // E.reagendando, se lee UNA vez acá (canPayMonthly() sería true para el
+    // perfil que dispara ese flag -- mirlxs con equipo propio, sin patines/
+    // protecciones que rentar -- y sin este guard puedeMensual siempre
+    // ganaba, pisando E.tipoPago a 'mensual' sin importar qué se hubiera
+    // preseteado antes de llamar a cargarFechas()) y se limpia de inmediato
+    // para no quedar pegado en la próxima carga real de #s4.
+    var forzarClase = E.forzarTipoClase; E.forzarTipoClase = false;
+    var puedeMensual = canPayMonthly() && !E.reagendando && !forzarClase; var wrapper = document.getElementById('s4-tipo-pago-wrapper'); var subtitulo = document.getElementById('s4-fechas-subtitulo');
     if (puedeMensual) {
       wrapper.style.display = 'block';
       E.tipoPago = 'mensual';

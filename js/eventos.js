@@ -2534,13 +2534,19 @@ function _evActualizarTopBarModo() {
 // #sheet-ev-tipo-pago (evAbrirSheetTipoPago()) vía history.back() -- acá ese
 // sheet nunca se abrió, así que ese history.back() se comía una entrada real
 // del historial de la app y navegaba a una pantalla ajena antes de que
-// cargarFechas() llegara a pintar las clases. Misma solución que ya usa
-// _evFabReserva() (abajo) para "Reserva por mes": ir directo a
-// irNuevaReserva(), que ya deja E.tipoPago en 'clase' por default (ver E en
-// js/reservas.js) -- es el mismo camino que el CTA "Nueva reserva"
-// (#home-nav-cta, index.html) usa para esta misma pantalla.
+// cargarFechas() llegara a pintar las clases. Ese fix (ir directo a
+// irNuevaReserva()) no alcanzó solo: cargarFechas() (js/reservas.js) recalcula
+// E.tipoPago desde canPayMonthly() en el callback async de
+// getFechasDisponibles, IGNORANDO lo que haya quedado seteado antes de
+// llamarla -- y canPayMonthly() da true justo para el perfil que ve este
+// botón (mirlxs con equipo propio, sin patines/protecciones que rentar), así
+// que siempre terminaba mostrando el selector de meses. E.forzarTipoClase
+// (nuevo, mismo patrón que E.reagendando -- ver el guard que ya lee
+// cargarFechas()) le avisa que no auto-seleccione mensual esta vez.
 function _evFabReservaClase() {
   E.origenSeccionS4 = 's-eventos';
+  E.forzarTipoClase = true;
+  E.tipoPago = 'clase';
   irNuevaReserva(false, null);
 }
 function _evFabReserva() {
