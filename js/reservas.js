@@ -286,15 +286,25 @@ function _s4ActualizarNav() {
   // "sin reservas" (ver _s4VacioAutoRedirect, arriba de este archivo).
   if (tituloVacio) tituloVacio.style.display = (puedeElegir && _s4VacioAutoRedirect) ? '' : 'none';
   // Mirlxs: tipo ya elegido antes de entrar a s4 (FAB → mensual,
-  // botón inline → clase). Ocultar el selector Por clase/Mensual y mostrar
-  // un título fijo -- sin esto, con canPayMonthly()===true (`puedeElegir`)
-  // el título quedaba oculto (mutuamente excluyente con el selector, más
-  // arriba) Y el selector se ocultaba acá mismo, dejando el nav sin ningún
-  // texto real para esta cuenta (bug real, único camino de mirlxs a s4 hoy
-  // es el FAB de reserva mensual, ver "Cambios recientes").
+  // speed-dial "Reserva por clase" → clase). Ocultar el selector Por clase/
+  // Mensual y mostrar un título fijo -- sin esto, con canPayMonthly()===true
+  // (`puedeElegir`) el título quedaba oculto (mutuamente excluyente con el
+  // selector, más arriba) Y el selector se ocultaba acá mismo, dejando el
+  // nav sin ningún texto real para esta cuenta.
+  // Título condicional (antes siempre "Reservas mensuales", sin mirar
+  // E.tipoPago -- correcto cuando el único camino de mirlxs a s4 era el FAB
+  // mensual, ya no desde que existe "Reserva por clase" en el speed-dial
+  // unificado, ver _evFabReservaClase()/js/eventos.js): E.tipoPago==='clase'
+  // cubre la llamada TARDÍA de esta función (tras la respuesta real de
+  // cargarFechas(), donde E.tipoPago ya quedó asentado en 'clase' o
+  // 'mensual'); E.forzarTipoClase (mismo flag que ya lee cargarFechas() para
+  // decidir puedeMensual, todavía sin consumir en ese punto) cubre la
+  // llamada TEMPRANA -- ir('s4'), dentro de cargarFechas(), antes de que la
+  // respuesta async llegue -- donde E.tipoPago todavía vale 'clase' por el
+  // default de irNuevaReserva() sin importar el flujo real.
   if (_modoUsuario() === 'mirlxs') {
     segWrap.style.display = 'none';
-    titulo.textContent = 'Reservas mensuales';
+    titulo.textContent = (E.tipoPago === 'clase' || E.forzarTipoClase === true) ? 'Reserva por clase' : 'Reservas mensuales';
     titulo.style.display = '';
   }
   // #s4-nav-spacer (ver index.html): re-medir siempre acá, no solo al entrar

@@ -2642,10 +2642,17 @@ function _evPillsInit(modo) {
     var ml = t ? (t.textContent || '').trim() : '';
     return 'Abre el calendario pulsando en <span class="ev-pill-ref-mes">' + (ml || 'el mes') + ' ' + _picon('expand_more') + '</span>';
   };
-  // Pill "Pulsa en [+] para realizar una reserva" -- mismo ícono del FAB
+  // Pill "Pulsa en [ícono] para realizar una reserva" -- mismo glyph del FAB
   // unificado (#ev-fab-btn, index.html/_evFabUnificadoActualizar()), común a
-  // los 3 perfiles: la reserva ahora se inicia siempre desde ahí.
-  var _fabItem = 'Pulsa en ' + _picon('add') + ' para realizar una reserva';
+  // los 3 perfiles: la reserva ahora se inicia siempre desde ahí. Glyph
+  // actualizado a 'calendar_add_on' junto con el rediseño del FAB (antes
+  // 'add', cuando el botón era solo el ícono "+") -- se mantiene con
+  // _picon()/`material-symbols-outlined` (helper compartido por el resto de
+  // los íconos de esta lista) aunque el FAB real ahora use la variante
+  // `material-symbols-rounded`: mismo glyph, estilo de trazo levemente
+  // distinto, sin justificar una 2ª familia de fuente cargada solo para este
+  // ícono de referencia.
+  var _fabItem = 'Pulsa en ' + _picon('calendar_add_on') + ' para realizar una reserva';
   var listas = {
     equipamiento: [
       _fabItem,

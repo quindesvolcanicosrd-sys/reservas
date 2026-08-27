@@ -141,8 +141,32 @@
 .ev-fab-btn:active { transform: scale(0.94); }
 .ev-fab-btn .material-symbols-outlined { font-size: 1.6rem; display: block; transition: transform 0.25s ease; }
 /* Ícono "+" rota a "×" visual mientras el menú está abierto -- togglea
-   junto con .ev-fab-abierto (_evFabToggle()/_evFabCerrar(), js/eventos.js). */
+   junto con .ev-fab-abierto (_evFabToggle()/_evFabCerrar(), js/eventos.js).
+   Sigue aplicando solo a #tar-fab-btn/#tar-detalle-fab-btn (los otros 2
+   `.ev-fab-btn`, solo-ícono con "+"/"add_task" -- nunca reciben
+   .ev-fab-abierto, así que esta regla ya no tenía efecto ahí tampoco): con
+   el ícono de #ev-fab-btn pasado a "calendar_add_on" (ver override de abajo)
+   el selector `.material-symbols-outlined` ya no matchea ese botón, sin
+   necesidad de excluirlo a mano. */
 .ev-fab-menu.ev-fab-abierto .ev-fab-btn .material-symbols-outlined { transform: rotate(45deg); }
+/* #ev-fab-btn (Eventos, "Reservar") -- único de los 3 `.ev-fab-btn` del repo
+   con ícono+texto en vez de solo-ícono (#tar-fab-btn/#tar-detalle-fab-btn
+   siguen icon-only). Override puntual por id en vez de tocar `.ev-fab-btn`
+   -- esa clase compartida define `width:56px` pensado para ícono solo;
+   cambiarla de raíz habría afectado a esos otros 2 botones. Alto/
+   border-radius/sombra/color/cursor se heredan sin cambios de `.ev-fab-btn`
+   (mismo estilo visual del FAB original, según lo pedido) -- solo se pisa el
+   ancho fijo por uno automático + padding para que entre el texto. */
+#ev-fab-btn {
+  width: auto;
+  padding: 0 20px;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: inherit;
+  white-space: nowrap;
+}
+#ev-fab-btn .material-symbols-rounded { font-size: 1.4rem; display: block; }
 /* Opciones del speed dial -- SIEMPRE en el DOM (no display:none), ocultas
    con opacity+transform+visibility para poder animar la entrada/salida
    (fade+slide) apenas se suma/saca .ev-fab-abierto del contenedor padre. */
