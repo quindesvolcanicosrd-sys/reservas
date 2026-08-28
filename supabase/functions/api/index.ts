@@ -1895,7 +1895,19 @@ Deno.serve(async (req: Request) => {
         if (error) return json({ exito: false, error: error.message });
         return json({ exito: true });
       }
-      // Aún en GAS: AsistenciaAnticipada, enviarResumenReservas, adminRegenerarVentanaAsistencias, adminCancelarEvento, guardarNotaPago
+      // Ventana de asistencias -- ahora una función nativa de Postgres
+      // (regenerar_ventana_asistencias(), supabase/migrations/20260828_*),
+      // corrida por pg_cron cada 15 min y también invocada acá a demanda
+      // justo después de crear/editar un venue (_evCrearGuardar(),
+      // js/eventos.js) para no esperar el próximo tick del cron.
+      case 'adminRegenerarVentanaAsistencias': {
+        const adminEmail = await _validarAdminToken(params.adminToken);
+        if (!adminEmail) return json({ exito: false, error: 'Sesión admin inválida.' }, 401);
+        const { error } = await supabase.rpc('regenerar_ventana_asistencias');
+        if (error) return json({ exito: false, error: error.message }, 500);
+        return json({ exito: true });
+      }
+      // Aún en GAS: AsistenciaAnticipada, enviarResumenReservas, adminCancelarEvento, guardarNotaPago
       default:
         return forwardToGAS(params);
     }
