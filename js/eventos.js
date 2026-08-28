@@ -4148,6 +4148,33 @@ function abrirEvDetalle(id) {
   _evRestaurarScrollTimeline = true;
   _evDetalleActual = ev;
   _evRenderDetalle(ev);
+  // "Reservar esta clase" (_evDetalleInfoHtml(), más abajo) arranca oculto
+  // (`display:none`, id fijo `ev-detalle-btn-reservar-clase`) -- recién se
+  // revela acá si ESTE evento aparece en la respuesta real de
+  // getFechasDisponibles (mismo backend que usa cargarFechas()/js/reservas.js
+  // para la pantalla de checkboxes, ya capado a los próximos 6 disponibles
+  // del lado del servidor -- `_proximosEntrenamientos()`,
+  // supabase/functions/api/index.ts, que además filtra por venue
+  // "requiereReserva" y un corte real de 2hs antes del evento -- datos que no
+  // están cargados en el cliente, por eso el fetch real en vez de aproximar).
+  // Acotado a las mismas condiciones que ya gatean el botón en
+  // _evDetalleInfoHtml() (mirlxs no-admin, Entrenamiento futuro no
+  // cancelado/"no se entrena") para no gastar un fetch cuando el botón ni
+  // siquiera se va a renderizar.
+  if (!_adminToken && _modoUsuario() === 'mirlxs' && ev.tipo === 'Entrenamiento' && !_evEsPasado(ev) && !(ev.estado === 'Cancelado' || ev.estado === 'No se entrena')) {
+    var _detD = E.datos || {};
+    var _detTalla = (_detD.necesitaPatines && _detD.necesitaPatines.toLowerCase() !== 'no') ? _detD.talla : '';
+    apiPost({ action: 'getFechasDisponibles', token: _token, nombre: E.nombre, talla: _detTalla, necesitaProtecciones: _detD.necesitaProtecciones }, function(res) {
+      // _evDetalleActual pudo cambiar (usuario salió/entró a otro evento)
+      // mientras este fetch estaba en vuelo -- sin este guard, un fetch lento
+      // podía revelar el botón de un evento que ya no es el que está en
+      // pantalla.
+      if (!_evDetalleActual || _evDetalleActual.id !== id) return;
+      var _enProximas6 = (res || []).some(function(f) { return f.fecha === id && f.disponible !== false; });
+      var _btnResClase = document.getElementById('ev-detalle-btn-reservar-clase');
+      if (_btnResClase) _btnResClase.style.display = _enProximas6 ? '' : 'none';
+    }, function() {});
+  }
   ir('s-eventos-detalle');
   // Bug real de esta sesión (2do intento -- el 1ro, `_evDetalleActualizarSticky()`
   // síncrono más abajo, era real pero NO era la causa de este síntoma en
@@ -4611,7 +4638,26 @@ function _evDetalleInfoHtml(ev) {
       var _evIdEsc2 = String(ev.id).replace(/'/g, "\\'");
       html += '<div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;">';
       if (_modo === 'mirlxs') {
-        html += '<button type="button" class="btn btn-outline" onclick="_evReservarClase(\'' + _evIdEsc2 + '\')"><span class="material-symbols-outlined" style="vertical-align:middle;font-size:18px;margin-right:4px;">confirmation_number</span>Reservar esta clase</button>';
+        // _evReservaAutoFinalizar=true (ver declaración, más arriba en este
+        // archivo) -- saltea el footer sticky "Finalizar tu reserva" de la
+        // selección múltiple (pensado para elegir VARIAS clases desde el
+        // timeline) y avanza directo a _evContinuarReserva()/#s-pago apenas
+        // _evReservarClase() confirma disponibilidad (mismo mecanismo que
+        // usaba _evTipoReservaFinalizar(), eliminada en el Cambio 25 junto
+        // con el sheet "¿Cómo quieres reservar?" -- el flag quedó declarado
+        // y consumido en _evReservarClase() pero sin ningún caller real que
+        // lo prendiera desde entonces). "Reservar esta clase" es una
+        // intención de UNA sola clase puntual, no amerita el flujo de
+        // selección múltiple completo.
+        // Oculto por default (`style="display:none"`) -- solo debe verse si
+        // ESTE evento está entre los próximos 6 "disponibles" que devuelve
+        // getFechasDisponibles (mismo backend/acción que usa cargarFechas()
+        // para la pantalla de checkboxes, ver "Cambios recientes"), dato que
+        // no está cargado en el cliente al armar este HTML (síncrono). Lo
+        // revela abrirEvDetalle() (más abajo) tras un fetch real a esa misma
+        // acción -- id fijo (`ev-detalle-btn-reservar-clase`) para que ese
+        // callback lo encuentre sin re-renderizar toda la pantalla.
+        html += '<button type="button" class="btn btn-outline" id="ev-detalle-btn-reservar-clase" style="display:none;" onclick="_evReservaAutoFinalizar=true;_evReservarClase(\'' + _evIdEsc2 + '\')"><span class="material-symbols-outlined" style="vertical-align:middle;font-size:18px;margin-right:4px;">confirmation_number</span>Reservar esta clase</button>';
       }
       var _dEquipDet = E.datos || {};
       var _necesitaEquipDet = (_dEquipDet.necesitaPatines && _dEquipDet.necesitaPatines.toLowerCase() !== 'no') || (_dEquipDet.necesitaProtecciones && _dEquipDet.necesitaProtecciones.toLowerCase() !== 'no');
