@@ -7931,7 +7931,7 @@ var _EV_CREAR_PASO_TITULOS = {
   'ev-crear-paso-recurrencia': 'Frecuencia',
   'ev-crear-paso-config': 'Detalles',
   'ev-crear-paso-fecha': 'Fecha del evento',
-  'ev-crear-paso-hora': 'Hora de inicio',
+  'ev-crear-paso-hora': 'Horario',
   'ev-crear-paso-descanso-rango': 'Período de descanso'
 };
 // Secuencia ORDENADA del flujo actual -- solo para los dots de progreso
@@ -7961,7 +7961,7 @@ function irEvCrear() {
     descripcion: '',
     venueExistente: null,
     tipoRecurrencia: null, diasSemana: [], frecuenciaNumero: null, frecuenciaUnidad: null,
-    fecha: null, hora: '09:00',
+    fecha: null, hora: '09:00', horaFin: '09:00',
     fechaInicioDescanso: null, fechaFinDescanso: null,
     // Estado del bottom sheet "Frecuencia personalizada" (Cambio 2, ver
     // MANIFEST.md "Cambios recientes") -- se espeja hacia
@@ -8764,17 +8764,23 @@ function _evCrearActualizarCalResumen(cual) {
   if (el) el.textContent = _evCrearData.fecha ? _evAntFechaLegible(_evCrearData.fecha) : '';
 }
 
-/* ── Paso "Hora de inicio" (`ev-crear-paso-hora`) -- el stepper YA existía
-   (_evHoraStepper*, ver ese bloque más arriba en este archivo), lo único
-   nuevo es CUÁNDO se inicializa: antes lo hacía _evCrearMostrarSubRecurrencia()
-   la primera vez que revelaba el wrap `#ev-crear-hora-wrap` dentro del paso
-   "Detalles"; ahora este paso entero ES ese wrap (mostrado/ocultado por
-   `.salud-paso.activo`, sin wrap interno propio), así que la bandera
-   `_evCrearHoraInicializada` reemplaza a ese chequeo de "primera vez". ── */
+/* ── Paso "Horario" (`ev-crear-paso-hora`) -- los 2 steppers (inicio/fin) YA
+   EXISTÍAN (_evHoraStepper*, ver ese bloque más arriba en este archivo), lo
+   único nuevo es CUÁNDO se inicializan: antes lo hacía
+   _evCrearMostrarSubRecurrencia() la primera vez que revelaba el wrap
+   `#ev-crear-hora-wrap` dentro del paso "Detalles"; ahora este paso entero
+   ES ese wrap (mostrado/ocultado por `.salud-paso.activo`, sin wrap interno
+   propio), así que la bandera `_evCrearHoraInicializada` reemplaza a ese
+   chequeo de "primera vez" para AMBOS steppers. "Hora de finalización" no
+   llama `_evCrearActualizarFooter()` en su `onChange` -- a diferencia de
+   "Hora de inicio", no participa de `_evCrearRecurrenciaValidaWizard()`
+   (opcional, ver `venues.finaliza`/_evCrearGuardar() más abajo), así que
+   cambiarla nunca puede habilitar/deshabilitar el botón "Guardar". ── */
 function _evCrearActualizarPasoHora() {
   if (_evCrearHoraInicializada) return;
   _evCrearHoraInicializada = true;
   _evHoraStepperInit('ev-crear-hora', _evCrearData.hora, function(v) { _evCrearData.hora = v; _evCrearActualizarFooter(); });
+  _evHoraStepperInit('ev-crear-horaFin', _evCrearData.horaFin, function(v) { _evCrearData.horaFin = v; });
 }
 function _evCrearRecurrenciaValidaWizard() {
   var t = _evCrearData.tipoRecurrencia;
@@ -8862,7 +8868,13 @@ function _evCrearGuardar() {
     tipo_icono: v.tipoIcono,
     requiere_reserva: v.requiereReserva !== false,
     tipo: _evCrearData.tipoRecurrencia,
-    inicia: _evCrearData.hora
+    inicia: _evCrearData.hora,
+    // `finaliza` (no `termina` -- esa es la columna de `asistencias`, la
+    // tabla de OCURRENCIAS puntuales que edita _evAdminEditarEvento(); acá
+    // se está insertando/actualizando la REGLA en `venues`, confirmada con
+    // `information_schema.columns` antes de este cambio) -- mismo criterio
+    // que ya usa `inicia` en la línea de arriba, columna real de `venues`.
+    finaliza: _evCrearData.horaFin
   };
   if (_evCrearData.tipoRecurrencia === 'dias_semana') {
     payload.dias = _evCrearData.diasSemana.slice().sort(function(a, b) { return a - b; });

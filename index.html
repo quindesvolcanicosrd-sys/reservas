@@ -1263,16 +1263,21 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
       </div>
 
-      <!-- Paso "Hora de inicio" (`ev-crear-paso-hora`) -- stepper
-           (_evHoraStepper*, ya existente) SOLO, sin nada más -- compartido
-           por "Recurrente" (cualquier sub-tipo) y "Único", último paso real
-           de esos 2 flujos (footer = "Guardar" acá, ver
-           _evCrearActualizarFooter()/js/eventos.js). Se inicializa UNA sola
-           vez por visita al wizard (`_evCrearHoraInicializada`, ya no
-           depende de "primera vez que se revela un wrap" como antes -- este
-           paso entero YA ES ese wrap). No aplica a "Descanso" (sin hora). -->
+      <!-- Paso "Horario" (`ev-crear-paso-hora`) -- 2 steppers
+           (_evHoraStepper*, ya existente) "Hora de inicio"/"Hora de
+           finalización", sin nada más -- compartido por "Recurrente"
+           (cualquier sub-tipo) y "Único", último paso real de esos 2 flujos
+           (footer = "Guardar" acá, ver _evCrearActualizarFooter()/
+           js/eventos.js). Se inicializan UNA sola vez por visita al wizard
+           (`_evCrearHoraInicializada`, ya no depende de "primera vez que se
+           revela un wrap" como antes -- este paso entero YA ES ese wrap).
+           "Hora de finalización" es opcional (`venues.finaliza`, nullable) --
+           a diferencia de "Hora de inicio" no participa de
+           _evCrearRecurrenciaValidaWizard(). No aplica a "Descanso" (sin
+           hora). -->
       <div class="salud-paso" id="ev-crear-paso-hora">
         <div class="ev-lugar-campo" style="margin-top:0;">
+          <p class="ev-lugar-campo-label">Hora de inicio</p>
           <div class="ev-hora-stepper" id="ev-crear-hora-stepper">
             <div class="ev-hora-stepper-cols">
               <div class="ev-hora-stepper-col">
@@ -1290,6 +1295,28 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <div class="ev-hora-stepper-meridiano" id="ev-crear-hora-meridiano">
               <span class="aj-pill" data-val="AM" onclick="_evHoraStepperSetMeridiano('ev-crear-hora',this)">AM</span>
               <span class="aj-pill" data-val="PM" onclick="_evHoraStepperSetMeridiano('ev-crear-hora',this)">PM</span>
+            </div>
+          </div>
+        </div>
+        <div class="ev-lugar-campo">
+          <p class="ev-lugar-campo-label">Hora de finalización</p>
+          <div class="ev-hora-stepper" id="ev-crear-horaFin-stepper">
+            <div class="ev-hora-stepper-cols">
+              <div class="ev-hora-stepper-col">
+                <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-crear-horaFin','hora',1)"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
+                <span class="ev-hora-stepper-valor" id="ev-crear-horaFin-hora"></span>
+                <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-crear-horaFin','hora',-1)"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
+              </div>
+              <span class="ev-hora-stepper-sep">:</span>
+              <div class="ev-hora-stepper-col">
+                <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-crear-horaFin','minuto',1)"><span class="material-symbols-outlined">keyboard_arrow_up</span></button>
+                <span class="ev-hora-stepper-valor" id="ev-crear-horaFin-minuto"></span>
+                <button type="button" class="ev-ant-cal-nav-btn" onclick="_evHoraStepperCambiar('ev-crear-horaFin','minuto',-1)"><span class="material-symbols-outlined">keyboard_arrow_down</span></button>
+              </div>
+            </div>
+            <div class="ev-hora-stepper-meridiano" id="ev-crear-horaFin-meridiano">
+              <span class="aj-pill" data-val="AM" onclick="_evHoraStepperSetMeridiano('ev-crear-horaFin',this)">AM</span>
+              <span class="aj-pill" data-val="PM" onclick="_evHoraStepperSetMeridiano('ev-crear-horaFin',this)">PM</span>
             </div>
           </div>
         </div>
@@ -2811,7 +2838,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=2531b626"></script>
-<script src="js/eventos.js?v=bbcd070d"></script>
+<script src="js/eventos.js?v=d4638653"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js?v=5c22841b"></script>
 <script src="js/reservas.js?v=4910a3f3"></script>
