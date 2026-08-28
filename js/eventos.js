@@ -561,7 +561,16 @@ document.addEventListener('click', function(e) {
 function _evFabPlusClick() {
   var esAdmin = typeof _adminToken !== 'undefined' && !!_adminToken;
   if (!esAdmin) {
-    if (_evNecesitaEquipo()) { irNuevaReservaConTipo('clase'); return; }
+    // _evFabReservaClase() (más abajo, junto a _evFabReserva()) -- mismo fix
+    // que ya se aplicó al botón "Reserva por clase" del speed-dial: llamar acá
+    // irNuevaReservaConTipo('clase') hacía un history.back() pensado para
+    // cerrar el sheet #sheet-ev-tipo-pago, que acá nunca se abre -- se comía
+    // una entrada real de historial y flasheaba la pantalla anterior (ej.
+    // Ajustes) antes de que cargarFechas() pintara la lista de clases.
+    // _evFabReservaClase() además deja E.origenSeccionS4='s-eventos' antes de
+    // navegar, así que el botón atrás de #s4 vuelve al timeline en vez de a
+    // #s-home (la home vieja de Reservas).
+    if (_evNecesitaEquipo()) { _evFabReservaClase(); return; }
     if (_modoUsuario() === 'quindes') { irNuevaReservaConTipo('mensual'); return; }
   }
   _evFabToggle();
@@ -2529,7 +2538,10 @@ function _evActualizarTopBarModo() {
 // legacy de cuando el flujo era exclusivo de mirlxs, hoy compartido por los
 // 2 modos que usan este FAB.
 // Onclick real de la opción "Reserva por clase" del FAB unificado (mirlxs
-// con equipo propio, ver _evFabUnificadoActualizar() más abajo). Antes
+// con equipo propio, ver _evFabUnificadoActualizar() más abajo) Y de
+// _evFabPlusClick() (más arriba) para mirlxs SIN equipo propio -- ese perfil
+// no tiene speed-dial, el toque navega directo acá, mismo destino (lista de
+// clases) por el mismo camino, sin sheet ni menú de por medio. Antes
 // llamaba a irNuevaReservaConTipo('clase'), pensada para cerrar el sheet
 // #sheet-ev-tipo-pago (evAbrirSheetTipoPago()) vía history.back() -- acá ese
 // sheet nunca se abrió, así que ese history.back() se comía una entrada real
