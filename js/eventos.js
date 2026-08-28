@@ -2796,9 +2796,14 @@ var _evTourRafPendiente = false;
 // (ver "Cambios recientes" -- bug real: el overlay, opaco, pinta encima del
 // target normal antes de que el "agujero" del box-shadow de la lente pueda
 // mostrar nada -- la lente solo recorta SU PROPIO fondo, no revela lo que
-// hay debajo del overlay). `_evTourElevarTarget()`/`_evTourRestaurarElevado()`
-// guardan/restauran `position`/`z-index` inline originales del target acá,
-// para poder deshacerlo aunque el tour se cierre a mitad de paso.
+// hay debajo del overlay). Tampoco alcanza solo con el z-index en dark mode
+// -- si el target tiene fondo oscuro propio, elevarlo no lo distingue del
+// overlay (también oscuro) sin un marco visible propio -- por eso además
+// del z-index se le agrega un `outline` color `--brand`, ver
+// `_evTourElevarTarget()`. `_evTourElevarTarget()`/`_evTourRestaurarElevado()`
+// guardan/restauran `position`/`z-index`/`outline`/`border-radius` inline
+// originales del target acá, para poder deshacerlo aunque el tour se
+// cierre a mitad de paso.
 var _evTourElAnterior = null;
 var _evTourElEstiloOriginal = null;
 
@@ -2819,25 +2824,21 @@ function _evTourIniciarSiCorresponde(esAdmin) {
   _evTourMostrarPaso(0);
 }
 
-// Recorre `_evTourPasos` desde `idx`, en la dirección `direccion` (+1
-// avanzando/-1 retrocediendo, default +1), y muestra el primero cuyo
-// selector resuelva a un elemento realmente visible -- salta en silencio
-// los que no existen o están en `display:none` (ej. #ev-btn-patin para
-// cuentas sin equipo del club, ver _evNecesitaEquipo()/js/eventos.js).
-// Avanzando: si no queda ninguno, cierra el tour y lo marca como visto.
-// Retrocediendo: si no queda ninguno (ya se está en el primer paso
-// visible), no-op -- `_evTourAnterior()` no debería poder llamarse en ese
-// estado de todos modos (chevron oculto, ver `_evTourHayAnterior()`).
-function _evTourMostrarPaso(idx, direccion) {
+// Recorre `_evTourPasos` desde `idx` hacia adelante y muestra el primero
+// cuyo selector resuelva a un elemento realmente visible -- salta en
+// silencio los que no existen o están en `display:none` (ej. #ev-btn-patin
+// para cuentas sin equipo del club, ver _evNecesitaEquipo()/js/eventos.js).
+// Si no queda ninguno, cierra el tour y lo marca como visto. Navegación
+// solo hacia adelante -- sin botón/lógica de retroceso (ver "Cambios
+// recientes").
+function _evTourMostrarPaso(idx) {
   if (!_evTourActivo || !_evTourPasos) return;
-  direccion = direccion || 1;
-  if (idx < 0) return;
   if (idx >= _evTourPasos.length) { _evTourCerrar(true); return; }
   var paso = _evTourPasos[idx];
   var el = document.querySelector(paso.selector);
   var rect = el ? el.getBoundingClientRect() : null;
   if (!el || !rect || (rect.width === 0 && rect.height === 0)) {
-    _evTourMostrarPaso(idx + direccion, direccion);
+    _evTourMostrarPaso(idx + 1);
     return;
   }
   _evTourIdx = idx;
@@ -2850,17 +2851,28 @@ function _evTourMostrarPaso(idx, direccion) {
 // dura su paso, para que se vea limpio dentro del "agujero" de la lente en
 // vez de oscurecido por el overlay (ver comentario de `_evTourElAnterior`
 // más arriba). Restaura primero cualquier elevación previa (paso anterior)
-// -- así un solo punto de entrada cubre tanto "avanzar/retroceder de paso"
-// como "cerrar el tour" (`_evTourCerrar()` llama a `_evTourRestaurarElevado()`
+// -- así un solo punto de entrada cubre tanto "avanzar de paso" como
+// "cerrar el tour" (`_evTourCerrar()` llama a `_evTourRestaurarElevado()`
 // directo, sin pasar por acá). Solo fuerza `position:relative` si el
 // target no tenía ya un position distinto de `static` -- no pisa un
-// `position:absolute`/`fixed` que ya tuviera por su cuenta.
+// `position:absolute`/`fixed` que ya tuviera por su cuenta. Suma también
+// un `outline` color `--brand` + `border-radius` -- el z-index solo no
+// alcanza en dark mode (ver "Cambios recientes"): si el target tiene fondo
+// oscuro propio, elevarlo no lo distingue visualmente del overlay (también
+// oscuro) sin un marco propio que lo enmarque en cualquier modo de color.
 function _evTourElevarTarget(el) {
   _evTourRestaurarElevado();
   if (!el) return;
-  _evTourElEstiloOriginal = { position: el.style.position, zIndex: el.style.zIndex };
+  _evTourElEstiloOriginal = {
+    position: el.style.position,
+    zIndex: el.style.zIndex,
+    outline: el.style.outline,
+    borderRadius: el.style.borderRadius
+  };
   if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
   el.style.zIndex = '9903';
+  el.style.outline = '3px solid var(--brand)';
+  el.style.borderRadius = '10px';
   _evTourElAnterior = el;
 }
 
@@ -2868,22 +2880,10 @@ function _evTourRestaurarElevado() {
   if (!_evTourElAnterior) return;
   _evTourElAnterior.style.position = _evTourElEstiloOriginal.position;
   _evTourElAnterior.style.zIndex = _evTourElEstiloOriginal.zIndex;
+  _evTourElAnterior.style.outline = _evTourElEstiloOriginal.outline;
+  _evTourElAnterior.style.borderRadius = _evTourElEstiloOriginal.borderRadius;
   _evTourElAnterior = null;
   _evTourElEstiloOriginal = null;
-}
-
-// Recorre los pasos anteriores a `idx` buscando alguno con target visible
-// -- usado por `_evTourRenderTooltip()` para decidir si el chevron
-// "volver" se muestra u oculta en el paso actual (mismo criterio de
-// visibilidad que el skip de `_evTourMostrarPaso()`, sin mover el estado
-// del tour).
-function _evTourHayAnterior(idx) {
-  for (var i = idx - 1; i >= 0; i--) {
-    var el = document.querySelector(_evTourPasos[i].selector);
-    var rect = el ? el.getBoundingClientRect() : null;
-    if (el && rect && !(rect.width === 0 && rect.height === 0)) return true;
-  }
-  return false;
 }
 
 function _evTourPosicionarLente(rect) {
@@ -2896,29 +2896,15 @@ function _evTourPosicionarLente(rect) {
   lens.style.height = (rect.height + pad * 2) + 'px';
 }
 
-// Fila de navegación del tooltip (ver MANIFEST.md "Cambios recientes" --
-// reemplaza el link "Omitir" de antes): chevron "volver" a la izquierda
-// (oculto vía `.ev-tour-tooltip-atras--oculto`, no removido del DOM, en el
-// primer paso visible -- así el layout no salta de ancho entre pasos),
-// contador "X / Y" al centro, botón "Siguiente"/"Entendido" a la derecha
-// -- mismo estilo que ya tenía. Ambos chevrones (acá solo el de volver;
-// el de mes/mes-panel en otra parte de esta pantalla es el otro consumidor
-// real de `.app-nav-icon-btn` con glyph de flecha) usan `.app-nav-icon-btn`
-// (css/nav.css) -- mismo tamaño/área de toque que el resto de los íconos
-// de la nav de Eventos, sin CSS nuevo para el botón en sí.
 function _evTourRenderTooltip(paso, rect) {
   var tooltip = document.getElementById('ev-tour-tooltip');
   if (!tooltip) return;
   var esUltimo = _evTourIdx >= _evTourPasos.length - 1;
-  var hayAnterior = _evTourHayAnterior(_evTourIdx);
   tooltip.innerHTML =
     '<div class="ev-tour-tooltip-titulo">' + paso.titulo + '</div>' +
     '<div class="ev-tour-tooltip-texto">' + paso.texto + '</div>' +
     '<div class="ev-tour-tooltip-footer">' +
-      '<button type="button" class="app-nav-icon-btn ev-tour-tooltip-atras' + (hayAnterior ? '' : ' ev-tour-tooltip-atras--oculto') + '" onclick="_evTourAnterior()" title="Paso anterior" aria-label="Paso anterior">' +
-        '<span class="material-symbols-outlined">chevron_left</span>' +
-      '</button>' +
-      '<span class="ev-tour-tooltip-contador">' + (_evTourIdx + 1) + ' / ' + _evTourPasos.length + '</span>' +
+      '<a href="javascript:void(0)" class="ev-tour-tooltip-omitir" onclick="_evTourCerrar(true)">Omitir</a>' +
       '<button type="button" class="btn btn-primary ev-tour-tooltip-btn" onclick="_evTourSiguiente()">' + (esUltimo ? 'Entendido' : 'Siguiente') + '</button>' +
     '</div>';
   tooltip.classList.remove('ev-tour-tooltip--visible');
@@ -2960,11 +2946,7 @@ function _evTourPosicionarTooltip(rect, prefer) {
 }
 
 function _evTourSiguiente() {
-  _evTourMostrarPaso(_evTourIdx + 1, 1);
-}
-
-function _evTourAnterior() {
-  _evTourMostrarPaso(_evTourIdx - 1, -1);
+  _evTourMostrarPaso(_evTourIdx + 1);
 }
 
 function _evTourCerrar(marcarVisto) {
