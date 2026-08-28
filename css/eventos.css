@@ -1446,7 +1446,11 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
    tanto el resto de la pantalla. z-index en cascada 9900/9901/9902
    (overlay/lente/tooltip), por encima de los bottom sheets (9400-9450) y
    del loading overlay (9999 -- el tour nunca corre a la vez que una
-   pantalla de carga). */
+   pantalla de carga). El target real de cada paso se eleva a z-index 9903
+   (por encima de los 3, inline vía JS -- ver `_evTourElevarTarget()`,
+   js/eventos.js) mientras dura ese paso -- sin esto, el overlay (opaco)
+   lo pintaba encima antes de que el "agujero" de la lente pudiera mostrar
+   algo, dejándolo oscurecido en vez de limpio dentro del spotlight. */
 #ev-tour-overlay {
   position: fixed;
   inset: 0;
@@ -1478,7 +1482,8 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 .ev-tour-tooltip-titulo { font-weight: 700; font-size: 1rem; color: var(--brand); margin-bottom: 6px; }
 .ev-tour-tooltip-texto { font-size: 0.88rem; color: var(--text); line-height: 1.45; margin-bottom: 14px; }
 .ev-tour-tooltip-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.ev-tour-tooltip-omitir { font-size: 0.78rem; color: var(--muted); text-decoration: none; }
+.ev-tour-tooltip-contador { font-size: 0.8rem; color: var(--muted); flex: 1; text-align: center; }
+.ev-tour-tooltip-atras--oculto { opacity: 0; pointer-events: none; }
 .ev-tour-tooltip-btn { padding: 8px 18px; font-size: 0.85rem; }
 
 /* Opciones del sheet #sheet-ev-tipo-pago (index.html) -- tokens reales del
