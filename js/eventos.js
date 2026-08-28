@@ -3850,41 +3850,29 @@ function _evEsRestoDeSemana(iso) {
 // paralelas que puedan desincronizarse.
 function _evTimelineItems() {
   var items = [];
-  // Relevancia por equipo prestado (ver "Cambios recientes") -- para
-  // hoy/futuro solo aplica a Entrenamiento (único tipo con concepto de
-  // "Reservar" real para estas cuentas; Torneo/Asamblea/etc. nunca lo
-  // tienen, quedan siempre visibles); para PASADO aplica a cualquier tipo
-  // (corrección explícita sobre el alcance original, ver más abajo).
-  // Nunca para admin (necesita ver/gestionar TODOS los eventos, sin
-  // importar su propio necesitaPatines -- exclusión no pedida en el pedido
-  // original pero necesaria: sin ella, un evento fuera del filtro
-  // desaparecería también de la vista de gestión admin). `_evProximas6EntrenIds`
-  // (mismo cálculo exacto que ya usa `_evCardEventoHtml()` para
-  // `mostrarBtnReservar` -- ver esa función, más arriba -- computado UNA
-  // sola vez acá en vez de por cada evento evaluado) marca qué
-  // Entrenamientos futuros tienen botón "Reservar" real.
+  // Relevancia por equipo prestado (ver "Cambios recientes") -- ya NO aplica
+  // a hoy/futuro (pedido explícito: todo evento futuro visible para
+  // cualquier perfil, sin filtro de cuota/equipo/"próximas 6" -- ver más
+  // abajo, primer `if` de `_evEsRelevantePorEquipo()`); para PASADO sigue
+  // aplicando, sin cambios (no pedido, fuera de alcance de este pedido --
+  // "elimina esos filtros para que TODOS los eventos FUTUROS sean
+  // visibles"). Nunca para admin (necesita ver/gestionar TODOS los eventos,
+  // sin importar su propio necesitaPatines).
   var _hoyIsoTimeline = _evHoyISO();
-  // Con cuota mensual activa el timeline se abre sin el filtro de "próximas
-  // 6" -- los Entrenamientos futuros son SIEMPRE visibles (sin límite por
-  // mes pagado, a propósito -- ver "Cambios recientes") y los pasados
-  // quedan acotados a lo relevante (asistencia real, reserva de clase
-  // puntual, o caer dentro de un mes que sí estuvo pagado -- ver
-  // `_evEsRelevantePorEquipo()`). Sin cuota, se aplica el mismo filtro que
-  // a cuentas con equipo del club: solo próximas 6 clases futuras + pasadas
-  // con asistencia.
   var _filtroEquipoActivo = _modoUsuario() === 'mirlxs' && !_adminToken && !_evTieneCuotaAlDia();
-  var _evProximas6EntrenIds = {};
-  if (_filtroEquipoActivo) {
-    (_EV_EVENTOS || []).filter(function(x) {
-      return x.tipo === 'Entrenamiento' && _evFechaCmp(x.fecha, _hoyIsoTimeline) >= 0;
-    }).sort(function(a, b) { return _evFechaCmp(a.fecha, b.fecha); }).slice(0, 6)
-      .forEach(function(x) { _evProximas6EntrenIds[x.id] = true; });
-  }
   function _evEsRelevantePorEquipo(e) {
     if (_adminToken || _modoUsuario() === 'quindes') return true;
+    // Hoy/futuro: siempre visible para todo perfil (pedido explícito --
+    // antes acá se aplicaban 2 filtros distintos según cuota: "próximas 6
+    // Entrenamientos" (mirlxs sin cuota al día / con equipo del club) o
+    // "solo Entrenamientos de meses ya pagados" (mirlxs con cuota al día).
+    // Los 2 se eliminan -- el filtrado de RESERVA en sí (mostrarBtnReservar
+    // en _evCardEventoHtml(), _evNecesitaEquipo(), _evMesPagado(), etc.) no
+    // se tocó, solo la visibilidad del evento en el timeline/calendario.
+    if (_evFechaCmp(e.fecha, _hoyIsoTimeline) >= 0) return true;
     if (!_filtroEquipoActivo) {
       // Pasado (mirlxs con cuota): mostrar solo lo relevante
-      if (_modoUsuario() === 'mirlxs' && _evFechaCmp(e.fecha, _hoyIsoTimeline) < 0) {
+      if (_modoUsuario() === 'mirlxs') {
         if (e.miAsistenciaReal) return true;
         if (e.tipo !== 'Entrenamiento') return false;
         // Entrenamiento: reserva de clase puntual
@@ -3899,25 +3887,11 @@ function _evTimelineItems() {
           return (vh ? vh.getFullYear() : _anioEv) === _anioEv;
         });
       }
-      // Futuro (mirlxs con cuota): solo entrenamientos de meses que ya pagó
-      if (_modoUsuario() === 'mirlxs' && e.tipo === 'Entrenamiento' && _evFechaCmp(e.fecha, _hoyIsoTimeline) > 0) {
-        var _fpCuota = e.fecha.split('-');
-        if (!_evMesPagado(parseInt(_fpCuota[1]) - 1, parseInt(_fpCuota[0]))) return false;
-      }
       return true;
     }
-    var cmp = _evFechaCmp(e.fecha, _hoyIsoTimeline);
-    if (cmp >= 0) {
-      // Hoy/futuro: el filtro solo tiene sentido para Entrenamiento (único
-      // tipo con "botón Reservar" real -- Torneo/Asamblea/etc. nunca lo
-      // tienen, ocultarlos acá los haría desaparecer siempre sin relación
-      // con el problema real). Hoy, o cualquier tipo que no sea
-      // Entrenamiento, siempre visible.
-      if (e.tipo !== 'Entrenamiento' || cmp === 0) return true;
-      return !!_evProximas6EntrenIds[e.id]; // futuro sin botón Reservar -- oculto
-    }
-    // Pasado: aplica a CUALQUIER tipo (pedido explícito -- corrige el
-    // alcance "solo Entrenamiento" de la entrada anterior de este MANIFEST).
+    // Pasado (sin cuota / equipo del club): aplica a CUALQUIER tipo (pedido
+    // explícito de una tanda anterior -- corrige el alcance "solo
+    // Entrenamiento" de una entrada previa de este MANIFEST).
     if (e.miAsistenciaReal) return true; // asistencia confirmada -- siempre visible
     return (_todasReservas || []).some(function(r) { return r.fecha === e.id; }); // sin reserva -- oculto
   }
