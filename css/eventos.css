@@ -1438,14 +1438,15 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
    .cta-footer-fixed y los bottom sheets, ver index.html -- position:fixed
    atrapado por el containing block de .pantalla.activa mientras corre su
    animación de entrada). Tokens reales del sistema de colores: --overlay-dark
-   (rgba(0,0,0,0.7), la variable de css/colors.css más cercana al
-   rgba(0,0,0,0.72) del pedido original, que no existe como token) para el
-   fondo del overlay y el "recorte" de la lente vía box-shadow; --bg/--text/
-   --brand/--border-light/--shadow-lg para el tooltip, mismo border-radius
-   (14px, var(--radius)) que el resto de la app. z-index en cascada
-   9900/9901/9902 (overlay/lente/tooltip), por encima de los bottom sheets
-   (9400-9450) y del loading overlay (9999 -- el tour nunca corre a la vez
-   que una pantalla de carga). */
+   (rgba(0,0,0,0.7)) para el fondo del overlay; --bg/--text/--brand/
+   --border-light/--shadow-lg para el tooltip, mismo border-radius (14px,
+   var(--radius)) que el resto de la app. El "recorte" de la lente vía
+   box-shadow usa rgba(0,0,0,0.45) literal, a propósito más claro que
+   --overlay-dark -- pedido explícito para que el spotlight no oscurezca
+   tanto el resto de la pantalla. z-index en cascada 9900/9901/9902
+   (overlay/lente/tooltip), por encima de los bottom sheets (9400-9450) y
+   del loading overlay (9999 -- el tour nunca corre a la vez que una
+   pantalla de carga). */
 #ev-tour-overlay {
   position: fixed;
   inset: 0;
@@ -1455,7 +1456,7 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 #ev-tour-lens {
   position: fixed;
   border-radius: 12px;
-  box-shadow: 0 0 0 9999px var(--overlay-dark);
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.45);
   pointer-events: none;
   transition: top 0.35s var(--ease-sheet), left 0.35s var(--ease-sheet), width 0.35s var(--ease-sheet), height 0.35s var(--ease-sheet);
   z-index: 9901;

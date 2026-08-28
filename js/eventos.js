@@ -2848,7 +2848,7 @@ function _evTourRenderTooltip(paso, rect) {
     '<div class="ev-tour-tooltip-titulo">' + paso.titulo + '</div>' +
     '<div class="ev-tour-tooltip-texto">' + paso.texto + '</div>' +
     '<div class="ev-tour-tooltip-footer">' +
-      '<a href="javascript:void(0)" class="ev-tour-tooltip-omitir" onclick="_evTourCerrar(true)">Omitir tour</a>' +
+      '<a href="javascript:void(0)" class="ev-tour-tooltip-omitir" onclick="_evTourCerrar(true)">Omitir</a>' +
       '<button type="button" class="btn btn-primary ev-tour-tooltip-btn" onclick="_evTourSiguiente()">' + (esUltimo ? 'Entendido' : 'Siguiente') + '</button>' +
     '</div>';
   tooltip.classList.remove('ev-tour-tooltip--visible');
