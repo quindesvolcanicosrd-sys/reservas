@@ -3321,6 +3321,12 @@ function _evAbrirMarcarAsistencia(idEvento, origen) {
   if (!_adminToken) return;
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
   if (!ev) return;
+  // Bug real corregido (ver MANIFEST.md "Cambios recientes"): mismo criterio
+  // que la guardia de arriba (`!_adminToken`) -- un evento cancelado no
+  // debería aceptar "Tomar asistencia" aunque se llegue acá por un botón que
+  // debería estar oculto (ej. "atrás" del navegador tras cancelar desde otra
+  // pestaña/sesión).
+  if (ev.estado === 'Cancelado' || ev.estado === 'No se entrena') return;
   var origenFinal = origen || 's-eventos';
   // Bug real corregido (ver "Cambios recientes" -- scroll del timeline
   // perdido al volver de esta subpantalla): a diferencia de `abrirEvDetalle()`,
@@ -3441,6 +3447,16 @@ function _evRosterAdminFilasHtml(e, q) {
 function _evMarcarAsistenciaAdmin(idEvento, nombre, estado, btnEl) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
   if (!ev) return;
+  // Bug real corregido (ver MANIFEST.md "Cambios recientes"): esta función
+  // no chequeaba `ev.estado` -- si la subpantalla "Marcar asistencia" (o el
+  // detalle de un evento) quedaba abierta cuando se cancelaba el evento
+  // (otra pestaña/admin, o el gesto de "atrás" tras cancelar), el roster
+  // seguía vivo y aceptaba marcar asistencia real sobre un evento ya
+  // cancelado. El resto de los renders de esta pantalla (`_evCardEventoHtml()`,
+  // `_evRsvpBarraHtml()`, `_evRenderDetalleAsistencia()`) ya ocultan sus
+  // propios botones/secciones para eventos cancelados -- este es el único
+  // punto de escritura real que no tenía guardia propia.
+  if (ev.estado === 'Cancelado' || ev.estado === 'No se entrena') return;
   var seg = btnEl.closest('.ev-rsvp-seg');
   // Toggle-off (ver "Cambios recientes"): tocar la opción que YA está
   // activa para esta persona la deselecciona, en vez de re-aplicar el
@@ -4379,7 +4395,9 @@ function _evCancelarEvento(idEvento, btn) {
       if (_evDetalleActual && _evDetalleActual.id === idEvento) _evRenderDetalle(ev);
       _evRenderTimeline(true);
       mostrarToast(res.error || 'No se pudo cancelar el evento.', 'error');
+      return;
     }
+    _evLimpiarAsistenciasCanceladas(idEvento);
   }, function(e) {
     ev.estado = estadoAnterior;
     if (btn) btn.disabled = false;
@@ -4387,6 +4405,32 @@ function _evCancelarEvento(idEvento, btn) {
     _evRenderTimeline(true);
     mostrarToast((e && e.message) || 'No se pudo cancelar el evento.', 'error');
   });
+}
+// Bug real corregido (ver MANIFEST.md "Cambios recientes"): cancelar un
+// evento dejaba las marcas de asistencia real ("A tiempo"/"Tarde") intactas
+// -- alguien marcado presente en un evento que después se cancela quedaba
+// con esa marca para siempre, tanto en el historial (`log_asistencias`)
+// como en el fallback CSV que lee `adminMarcarAsistencia()`
+// (`asistencias.a_horario`/`.tarde`, ver ese handler en
+// supabase/functions/api/index.ts). `adminCancelarEvento` (la acción real,
+// todavía en Google Apps Script -- `forwardToGAS()`, fuera de este repo) no
+// hace esta limpieza. Se agrega acá como fetch directo a la REST API de
+// Supabase -- mismo mecanismo que ya usa este archivo para `venues`/
+// `temporadas_descanso` cuando la Edge Function todavía no tiene una acción
+// propia para la tabla puntual. `'A tiempo'`/`'Tarde'` a mano (no
+// `_EV_ESTADOS_ROLLCALL`, que además incluye `'Ausente'`) -- pedido
+// explícito, solo esos 2 estados. Fire-and-forget (console.warn si falla) --
+// el evento ya quedó cancelado igual del lado del estado real, no bloquea
+// ni revierte ese resultado por un problema de limpieza aparte.
+function _evLimpiarAsistenciasCanceladas(idEvento) {
+  var headers = { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+  var _estadosBorrar = ['A tiempo', 'Tarde'].map(function(s) { return encodeURIComponent('"' + s + '"'); }).join(',');
+  fetch(SUPABASE_URL + '/rest/v1/log_asistencias?id_evento=eq.' + encodeURIComponent(idEvento) + '&estado=in.(' + _estadosBorrar + ')', {
+    method: 'DELETE', headers: headers
+  }).catch(function(e) { console.warn('No se pudo limpiar log_asistencias tras cancelar:', e); });
+  fetch(SUPABASE_URL + '/rest/v1/asistencias?id_evento=eq.' + encodeURIComponent(idEvento), {
+    method: 'PATCH', headers: headers, body: JSON.stringify({ a_horario: '', tarde: '' })
+  }).catch(function(e) { console.warn('No se pudo limpiar asistencias.a_horario/tarde tras cancelar:', e); });
 }
 /* ── Sheet de confirmación "Cancelar evento" (#ev-sheet-cancelar,
    index.html) -- mismo patrón abrir/cerrar que el resto de la app (ver
@@ -4626,7 +4670,13 @@ function _evDetalleInfoHtml(ev) {
   // abajo ya la muestra también vía _evRsvpBarraHtml() para eventos pasados)
   // porque acá es el ancla visual del botón "Rectificar asistencia" -- pedido
   // explícito de Victor sobre la ubicación exacta del bloque.
-  if (_evEsPasado(ev) && ev.miAsistenciaReal && ev.miAsistenciaReal !== 'Sin registrar') {
+  // Bug real corregido (ver MANIFEST.md "Cambios recientes"): sin chequear
+  // `ev.estado`, un evento cancelado con `miAsistenciaReal` todavía en 'A
+  // tiempo'/'Tarde' en el objeto local (no se refresca solo con la limpieza
+  // de _evLimpiarAsistenciasCanceladas(), fire-and-forget contra Supabase --
+  // recién se ve reflejado en el próximo getEventosRango() real) seguía
+  // ofreciendo "Rectificar asistencia" sobre una marca que ya no aplica.
+  if (_evEsPasado(ev) && ev.estado !== 'Cancelado' && ev.estado !== 'No se entrena' && ev.miAsistenciaReal && ev.miAsistenciaReal !== 'Sin registrar') {
     html += '<div class="ev-detalle-section" style="padding-top:0">';
     html += _evAsistenciaRealHtml(ev);
     if (!_adminToken && (ev.miAsistenciaReal === 'A tiempo' || ev.miAsistenciaReal === 'Tarde' || ev.miAsistenciaReal === 'Ausente')) {
@@ -6901,6 +6951,15 @@ var _evLugarEditarAutocomp = null;
 // `false` en cualquier otro flujo (`irEvLugares()` -> "+ Nuevo lugar"), el
 // wizard de 3 pasos completo sigue disponible tal cual ahí.
 var _evLugarFromWizard = false;
+// Bug real corregido (duplicación de venue al crear un evento, ver
+// MANIFEST.md "Cambios recientes"): guarda el `id` (fila) del venue recién
+// insertado por `_evLugarGuardar()` cuando se llega desde el wizard
+// (`_evLugarFromWizard`) -- esa fila nace como placeholder, sin la
+// recurrencia real todavía. Si esa misma fila termina seleccionada,
+// `_evCrearGuardar()` la actualiza (PATCH) en vez de insertar una 2ª fila
+// para el mismo lugar. `null` = sin venue placeholder pendiente (estado
+// normal); se limpia apenas se consume o se reusa exitosamente.
+var _evLugarRecienCreadoDesdeWizardFila = null;
 
 function _evLugarFormVolver() { return _evLugarOrigen; }
 
@@ -7366,40 +7425,51 @@ function _evLugarGuardar() {
 
   var editando = _evLugarData.fila;
   var url = SUPABASE_URL + '/rest/v1/venues' + (editando ? ('?id=eq.' + encodeURIComponent(editando)) : '');
-  var headers = { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+  // `return=representation` (antes `minimal`) -- necesario para leer el
+  // `id` real de la fila recién insertada cuando se crea desde el wizard
+  // (ver `_evLugarRecienCreadoDesdeWizardFila`, más arriba) -- sin cambio de
+  // comportamiento para el resto de los callers, que ya ignoraban el body.
+  var headers = { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json', Prefer: 'return=representation' };
 
   mostrarCargando(editando ? 'Guardando cambios...' : 'Creando lugar...');
   fetch(url, { method: editando ? 'PATCH' : 'POST', headers: headers, body: JSON.stringify(payload) })
     .then(function(r) {
       if (r.ok) {
-        ocultarCargando();
-        mostrarToast(editando ? 'Lugar actualizado.' : 'Lugar creado.', 'ok');
-        // Si se editó (no creó) un venue y el nombre cambió, las filas de
-        // `asistencias` ya generadas por este venue quedan con `donde`
-        // apuntando al nombre viejo (esa columna no se deriva del venue,
-        // se copió al generarlas -- ver `_mantenerVentanaAsistenciasInterno()`
-        // en GAS) -- fire & forget, no bloquea la navegación ni el toast de
-        // éxito ya mostrado arriba.
-        if (editando && _evLugarData.nombreOriginal && _evLugarData.nombreOriginal !== payload.lugar) {
-          fetch(SUPABASE_URL + '/rest/v1/asistencias?donde=eq.' + encodeURIComponent(_evLugarData.nombreOriginal), {
-            method: 'PATCH', headers: headers, body: JSON.stringify({ donde: payload.lugar })
-          }).catch(function(e) { console.warn('No se pudo sincronizar asistencias.donde tras renombrar el lugar:', e); });
-        }
-        // Vuelve al wizard "Crear evento" en vez de a `_evLugarFormVolver()`
-        // -- NO usa irEvCrear() (resetea todo el wizard a cero, perdiendo el
-        // tipo ya elegido en el Paso "Tipo") -- solo recarga la lista de
-        // lugares (para que el venue recién creado aparezca) y muestra el
-        // paso "Lugar" directo, ver MANIFEST.md "Cambios recientes".
-        if (_evLugarFromWizard) {
-          _evLugarFromWizard = false;
-          ir('s-eventos-crear');
-          _evCrearMostrarPaso('ev-crear-paso-lugar');
-          _evCrearCargarLugares();
-          return;
-        }
-        var volver = _evLugarFormVolver();
-        if (volver === 's-eventos-lugares') irEvLugares(); else ir(volver);
-        return;
+        return r.json().catch(function() { return null; }).then(function(filas) {
+          ocultarCargando();
+          mostrarToast(editando ? 'Lugar actualizado.' : 'Lugar creado.', 'ok');
+          // Si se editó (no creó) un venue y el nombre cambió, las filas de
+          // `asistencias` ya generadas por este venue quedan con `donde`
+          // apuntando al nombre viejo (esa columna no se deriva del venue,
+          // se copió al generarlas -- ver `_mantenerVentanaAsistenciasInterno()`
+          // en GAS) -- fire & forget, no bloquea la navegación ni el toast de
+          // éxito ya mostrado arriba.
+          if (editando && _evLugarData.nombreOriginal && _evLugarData.nombreOriginal !== payload.lugar) {
+            fetch(SUPABASE_URL + '/rest/v1/asistencias?donde=eq.' + encodeURIComponent(_evLugarData.nombreOriginal), {
+              method: 'PATCH', headers: headers, body: JSON.stringify({ donde: payload.lugar })
+            }).catch(function(e) { console.warn('No se pudo sincronizar asistencias.donde tras renombrar el lugar:', e); });
+          }
+          // Vuelve al wizard "Crear evento" en vez de a `_evLugarFormVolver()`
+          // -- NO usa irEvCrear() (resetea todo el wizard a cero, perdiendo el
+          // tipo ya elegido en el Paso "Tipo") -- solo recarga la lista de
+          // lugares (para que el venue recién creado aparezca) y muestra el
+          // paso "Lugar" directo, ver MANIFEST.md "Cambios recientes".
+          if (_evLugarFromWizard) {
+            _evLugarFromWizard = false;
+            // Bug real corregido (duplicación de venue, ver MANIFEST.md
+            // "Cambios recientes"): solo al CREAR (no al editar) desde el
+            // wizard -- guarda el id real de la fila para que
+            // _evCrearGuardar() la reutilice (PATCH) en vez de duplicarla si
+            // termina siendo la seleccionada.
+            if (!editando && filas && filas[0] && filas[0].id) _evLugarRecienCreadoDesdeWizardFila = filas[0].id;
+            ir('s-eventos-crear');
+            _evCrearMostrarPaso('ev-crear-paso-lugar');
+            _evCrearCargarLugares();
+            return;
+          }
+          var volver = _evLugarFormVolver();
+          if (volver === 's-eventos-lugares') irEvLugares(); else ir(volver);
+        });
       }
       return r.json().catch(function() { return null; }).then(function(body) {
         throw new Error((body && body.message) || ('No se pudo guardar el lugar (HTTP ' + r.status + ').'));
@@ -8708,7 +8778,16 @@ function _evCrearGuardar() {
     mostrarToast('Temporada de descanso: disponible próximamente.', 'ok', true);
     return;
   }
-  if (!_evCrearLugarValido() || !_evCrearRecurrenciaValidaWizard()) return;
+  // Bug real corregido (doble submit, ver MANIFEST.md "Cambios recientes"):
+  // esta función no tenía ninguna guardia contra un 2º tap mientras el
+  // primer POST/PATCH todavía estaba en vuelo (a diferencia de
+  // _evCancelarEvento(), que sí deshabilita su botón) -- un doble tap rápido
+  // disparaba 2 escrituras idénticas a `venues`. El botón es estático
+  // (`#ev-crear-btn-footer`, index.html), `_evCrearActualizarFooter()` ya lo
+  // re-habilita solo en cada entrada real al wizard.
+  var btnGuardar = document.getElementById('ev-crear-btn-footer');
+  if (btnGuardar) { if (btnGuardar.disabled) return; btnGuardar.disabled = true; }
+  if (!_evCrearLugarValido() || !_evCrearRecurrenciaValidaWizard()) { if (btnGuardar) btnGuardar.disabled = false; return; }
   var v = _evCrearData.venueExistente;
   var payload = {
     lugar: v.nombre,
@@ -8728,13 +8807,27 @@ function _evCrearGuardar() {
     payload.fecha_referencia = _evCrearData.fecha;
   }
 
+  // Bug real corregido (duplicación de venue, ver MANIFEST.md "Cambios
+  // recientes"): si el lugar elegido es el que se acaba de crear INLINE en
+  // este mismo wizard ("Agregar lugar" → _evLugarGuardar(), que deja su id
+  // real en `_evLugarRecienCreadoDesdeWizardFila`), esa fila ya existe en
+  // `venues` como placeholder sin la recurrencia real -- actualizarla
+  // (PATCH) en vez de insertar una 2ª fila para el mismo lugar. Cualquier
+  // otro venue (ya existía antes de este wizard, con su propia regla real)
+  // sigue insertando una fila NUEVA -- "1 fila = 1 regla" (ver encabezado de
+  // esta sección): pisar la regla de un venue YA establecido rompería su
+  // recurrencia existente.
+  var esVenuePlaceholderRecienCreado = !!_evLugarRecienCreadoDesdeWizardFila && v.fila === _evLugarRecienCreadoDesdeWizardFila;
+  var urlVenues = SUPABASE_URL + '/rest/v1/venues' + (esVenuePlaceholderRecienCreado ? ('?id=eq.' + encodeURIComponent(v.fila)) : '');
+
   mostrarCargando('Creando evento...');
-  fetch(SUPABASE_URL + '/rest/v1/venues', {
-    method: 'POST',
+  fetch(urlVenues, {
+    method: esVenuePlaceholderRecienCreado ? 'PATCH' : 'POST',
     headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
     body: JSON.stringify(payload)
   }).then(function(r) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (esVenuePlaceholderRecienCreado) _evLugarRecienCreadoDesdeWizardFila = null;
     // El POST de arriba solo guarda la REGLA (fila de `venues`) -- las
     // filas de `asistencias` que el timeline realmente lee (getEventosRango())
     // las genera un proceso de backend aparte (_mantenerVentanaAsistenciasInterno(),
@@ -8784,6 +8877,7 @@ function _evCrearGuardar() {
     api({ action: 'adminRegenerarVentanaAsistencias', adminToken: _adminToken }, _evCrearGuardarTerminar, _evCrearGuardarTerminar);
   }).catch(function(e) {
     ocultarCargando();
+    if (btnGuardar) btnGuardar.disabled = false;
     mostrarToast((e && e.message) || 'No se pudo crear el evento.', 'error');
   });
 }
