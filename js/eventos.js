@@ -2543,11 +2543,23 @@ function _evActualizarTopBarModo() {
 // que siempre terminaba mostrando el selector de meses. E.forzarTipoClase
 // (nuevo, mismo patrón que E.reagendando -- ver el guard que ya lee
 // cargarFechas()) le avisa que no auto-seleccione mensual esta vez.
+// E.viaEventosInline = true (seteado DESPUÉS de irNuevaReserva() -- esa
+// función lo resetea a false como parte de su reset estándar, pisaría un
+// `true` seteado antes) -- mismo flag que ya usa _evContinuarReserva() (más
+// abajo en este archivo, flujo de selección múltiple inline) para que
+// TOP_BAR_CONFIG['s-pago'].volver/irHomeDesdeExito() (js/ui.js, js/home.js)
+// vuelvan a `s-eventos` en vez de `s4`/`s-home` al terminar. Sin esto, "Reserva
+// por clase" completada desde el FAB volvía a #s-home (destino normal del
+// flujo S1-S4 de siempre) en vez del timeline de donde salió, y el timeline
+// nunca se refrescaba con el chip "pendiente" nuevo -- irHomeDesdeExito() ya
+// refetchea _todasReservas + llama _evRenderTimeline(true) en la rama
+// E.viaEventosInline, mismo mecanismo, no hizo falta duplicarlo acá.
 function _evFabReservaClase() {
   E.origenSeccionS4 = 's-eventos';
   E.forzarTipoClase = true;
   E.tipoPago = 'clase';
   irNuevaReserva(false, null);
+  E.viaEventosInline = true;
 }
 function _evFabReserva() {
   E.mirlxsPreselMes = _evNavMesActual.month;
