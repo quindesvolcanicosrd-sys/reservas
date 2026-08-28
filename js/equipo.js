@@ -8,26 +8,27 @@ var _EQ_EQUIPO_DEMO = [
   { id: 'q1', nombreDerby: 'Comet Fatal', numeroDerby: 7, username: 'cometfatal', fotoPerfil: '',
     rol: 'Quindes', pronombres: 'Ella, elle', roles: ['Jammer', 'Coach'],
     telefono: '+593987654321', cumple: '15 de abril', email: 'comet@example.com',
-    stats: { horasPatinadas: 48, asistenciaPct: 87 } },
+    rankPct: 82, stats: { horasPatinadas: 48, asistenciaPct: 87 } },
   { id: 'q2', nombreDerby: 'Furia Andina', numeroDerby: 22, username: 'furiaandina', fotoPerfil: '',
     rol: 'Quindes', pronombres: 'Ella', roles: ['Bloqueadora'],
     telefono: '+593998765432', cumple: '3 de julio', email: 'furia@example.com',
-    stats: { horasPatinadas: 36, asistenciaPct: 74 } },
+    rankPct: 22, stats: { horasPatinadas: 36, asistenciaPct: 74 } },
   { id: 'q3', nombreDerby: 'Vudú Cría', numeroDerby: 13, username: 'vuducria', fotoPerfil: '',
     rol: 'Quindes', pronombres: 'Elle', roles: ['Pivot', 'Capitana'],
     telefono: '', cumple: '', email: '',
-    stats: { horasPatinadas: 52, asistenciaPct: 92 } },
+    rankPct: 95, stats: { horasPatinadas: 52, asistenciaPct: 92 } },
   { id: 'm1', nombreDerby: 'Pluma Letal', numeroDerby: 9, username: 'plumaletal', fotoPerfil: '',
     rol: 'Mirlxs', pronombres: 'Ella, elle', roles: ['Jammer'],
     telefono: '+593991112233', cumple: '22 de octubre', email: 'pluma@example.com',
-    stats: { horasPatinadas: 31, asistenciaPct: 68 } },
+    rankPct: 55, stats: { horasPatinadas: 31, asistenciaPct: 68 } },
   { id: 'm2', nombreDerby: 'Chukirawa', numeroDerby: 44, username: 'chukirawa', fotoPerfil: '',
     rol: 'Mirlxs', pronombres: 'Él', roles: ['Bloqueador', 'Entrenador'],
     telefono: '+593984445566', cumple: '9 de enero', email: 'chukirawa@example.com',
-    stats: { horasPatinadas: 60, asistenciaPct: 95 } },
+    rankPct: 90, stats: { horasPatinadas: 60, asistenciaPct: 95 } },
   { id: 'm3', nombreDerby: 'Neblina Roja', numeroDerby: 18, username: 'neblinaroja', fotoPerfil: '',
     rol: 'Mirlxs', pronombres: 'Ella', roles: ['Pivot'],
     telefono: '', cumple: '30 de mayo', email: '',
+    rankPct: 30,
     stats: { horasPatinadas: 24, asistenciaPct: 55 } }
 ];
 
@@ -202,6 +203,25 @@ function _eqNavHtml(p) {
     '</div>';
 }
 
+// Texto contextual de la barra de rango -- mismos 3 escalones (>=75/>=50/<50)
+// para los 2 roles, pero con la narrativa invertida: para Mirlxs es "cuánto
+// falta para llegar a Quindes" (progreso hacia arriba), para Quindes es
+// "cuánto margen queda antes de bajar a Mirlxs" (colchón antes de caer) --
+// mismo `rankPct` numérico en los 2 casos, sin invertir el número ni el
+// ancho del fill (0 = punta Mirlxs de la escala, 100 = punta Quindes),
+// solo cambia qué significa ese número para cada rol.
+function _eqRankTexto(p) {
+  var esQuindes = p.rol === 'Quindes';
+  if (esQuindes) {
+    if (p.rankPct >= 75) return 'Posición sólida como Quinde';
+    if (p.rankPct >= 50) return 'Mantené el ritmo';
+    return 'Cerca del límite con Mirlxs';
+  }
+  if (p.rankPct >= 75) return 'Muy cerca de ser Quinde';
+  if (p.rankPct >= 50) return 'Buen progreso hacia Quindes';
+  return 'Seguí sumando asistencia';
+}
+
 function _eqPerfilContenidoHtml(p) {
   var pills = [];
   if (p.pronombres) pills.push(p.pronombres);
@@ -223,8 +243,13 @@ function _eqPerfilContenidoHtml(p) {
     '</div>' +
     (pillsHtml ? '<div class="eq-perfil-pills-row">' + pillsHtml + '</div>' : '') +
     '<div class="eq-stats-grid">' +
-      '<div class="eq-stat-card"><span class="eq-stat-icon">🛼</span><div class="eq-stat-valor">' + p.stats.horasPatinadas + 'h</div><div class="eq-stat-label">Horas patinadas</div></div>' +
-      '<div class="eq-stat-card"><span class="eq-stat-icon">⭐</span><div class="eq-stat-valor">' + p.stats.asistenciaPct + '%</div><div class="eq-stat-label">Asistencia anual</div></div>' +
+      '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">roller_skating</span><div class="eq-stat-valor">' + p.stats.horasPatinadas + 'h</div><div class="eq-stat-label">Horas patinadas</div></div>' +
+      '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">kid_star</span><div class="eq-stat-valor">' + p.stats.asistenciaPct + '%</div><div class="eq-stat-label">Asistencia anual</div></div>' +
+    '</div>' +
+    '<div class="eq-rank-wrap">' +
+      '<div class="eq-rank-labels"><span>Mirlxs</span><span>Quindes</span></div>' +
+      '<div class="eq-rank-track"><div class="eq-rank-fill" id="eq-rank-fill" style="width:0%;"></div></div>' +
+      '<div class="eq-rank-texto">' + _eqEsc(_eqRankTexto(p)) + '</div>' +
     '</div>' +
     (filas ? '<div class="eq-info-lista">' + filas + '</div>' : '');
 }
@@ -241,4 +266,14 @@ function _eqRenderPerfil(p) {
   if (nav) nav.innerHTML = _eqNavHtml(p);
   if (cont) cont.innerHTML = _eqPerfilContenidoHtml(p);
   _eqHidratarAvatares();
+  // Arranca en width:0 (innerHTML de arriba) y recién acá sube a su valor
+  // real -- doble rAF para forzar al navegador a pintar el 0% primero, sin
+  // eso la transición de `.eq-rank-fill` (css/equipo.css) no se ve (mismo
+  // truco ya usado en abrirContacto(), js/ui.js).
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      var fill = document.getElementById('eq-rank-fill');
+      if (fill) fill.style.width = p.rankPct + '%';
+    });
+  });
 }

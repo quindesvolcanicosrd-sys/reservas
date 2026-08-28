@@ -112,9 +112,26 @@
 /* Stats anuales -- 2 tarjetas lado a lado, fondo suave sin borde duro. */
 .eq-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0 6px; }
 .eq-stat-card { background: var(--surface-2); border-radius: 16px; padding: 18px 12px; text-align: center; }
-.eq-stat-icon { display: block; font-size: 1.5rem; margin-bottom: 6px; }
+.eq-stat-icon { display: block; font-size: 1.5rem; margin-bottom: 6px; color: var(--brand); }
 .eq-stat-valor { font-size: 1.35rem; font-weight: 800; color: var(--text); }
 .eq-stat-label { font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-top: 2px; }
+
+/* Barra de rango -- estilo "ranked meter": mismo `rankPct` (0-100,
+   _EQ_EQUIPO_DEMO/js/equipo.js) para Mirlxs (progreso hacia Quindes) y
+   Quindes (margen antes de bajar a Mirlxs), solo cambia el texto contextual
+   de abajo (`_eqRankTexto()`) -- el fill nunca se invierte. */
+.eq-rank-wrap { margin: 18px 0 6px; }
+.eq-rank-labels {
+  display: flex; justify-content: space-between; margin-bottom: 6px;
+  font-size: 0.68rem; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.4px;
+}
+.eq-rank-track { width: 100%; height: 8px; border-radius: 999px; background: var(--border-light); overflow: hidden; }
+/* `width` inline (0% al render, subido a `rankPct`% en el siguiente frame
+   por _eqRenderPerfil(), js/equipo.js) -- la transición de acá abajo es lo
+   que la anima en vez de aparecer ya llena. */
+.eq-rank-fill { height: 100%; width: 0%; border-radius: 999px; background: var(--brand); transition: width 0.6s ease; }
+.eq-rank-texto { margin-top: 8px; font-size: 0.78rem; color: var(--muted); text-align: center; }
 
 /* Filas de información de contacto -- separador sutil entre filas. */
 .eq-info-lista { margin-top: 10px; }
