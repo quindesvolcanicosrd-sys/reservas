@@ -1431,65 +1431,81 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
   margin: 0 0 20px;
 }
 
-/* Tour guiado de bienvenida de Eventos (#ev-tour-*, ver MANIFEST.md
-   "Cambios recientes") -- reemplaza el banner rotativo #ev-pill-banner/
-   _evPillsInit() de antes. Spotlight/coach-marks: 3 elementos hijos
-   directos de <body>, fuera de .pantalla (mismo criterio que
-   .cta-footer-fixed y los bottom sheets, ver index.html -- position:fixed
-   atrapado por el containing block de .pantalla.activa mientras corre su
-   animación de entrada). Tokens reales del sistema de colores: --overlay-dark
-   (rgba(0,0,0,0.7)) para el fondo del overlay; --bg/--text/--brand/
-   --border-light/--shadow-lg para el tooltip, mismo border-radius (14px,
-   var(--radius)) que el resto de la app. El "recorte" de la lente vía
-   box-shadow usa rgba(0,0,0,0.45) literal, a propósito más claro que
-   --overlay-dark -- pedido explícito para que el spotlight no oscurezca
-   tanto el resto de la pantalla. z-index en cascada 9900/9901/9902
-   (overlay/lente/tooltip), por encima de los bottom sheets (9400-9450) y
-   del loading overlay (9999 -- el tour nunca corre a la vez que una
-   pantalla de carga). El target real de cada paso se eleva a z-index 9903
-   (por encima de los 3, inline vía JS -- ver `_evTourElevarTarget()`,
-   js/eventos.js) mientras dura ese paso -- sin esto, el overlay (opaco)
-   lo pintaba encima antes de que el "agujero" de la lente pudiera mostrar
-   algo, dejándolo oscurecido en vez de limpio dentro del spotlight. El
-   z-index solo no alcanza en dark mode (fondo del target tan oscuro como
-   el overlay, sin contraste real): `_evTourElevarTarget()` le suma además
-   `outline:3px solid var(--brand)` + `border-radius:10px` inline, un marco
-   naranja visible en cualquier modo de color -- ambos también inline, no
-   hay clase CSS propia para esto (se restauran a mano al salir del paso,
-   ver esa función). */
-#ev-tour-overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--overlay-dark);
-  z-index: 9900;
-}
-#ev-tour-lens {
-  position: fixed;
-  border-radius: 12px;
-  box-shadow: 0 0 0 9999px rgba(0,0,0,0.45);
-  pointer-events: none;
-  transition: top 0.35s var(--ease-sheet), left 0.35s var(--ease-sheet), width 0.35s var(--ease-sheet), height 0.35s var(--ease-sheet);
-  z-index: 9901;
-}
+/* Tour guiado de bienvenida de Eventos (#ev-tour-tooltip, ver MANIFEST.md
+   "Cambios recientes") -- Opción D: tooltip sutil SIN overlay/lens (las
+   tandas anteriores oscurecían toda la pantalla con un spotlight -- ese
+   mecanismo se elimina por completo acá, junto con #ev-tour-overlay/
+   #ev-tour-lens). La app se ve 100% normal en todo momento -- el único
+   elemento del tour que queda es #ev-tour-tooltip, hijo directo de <body>
+   (mismo criterio que .cta-footer-fixed y los bottom sheets, ver
+   index.html); el target de cada paso se resalta con `.ev-tour-halo` (más
+   abajo) en vez de elevarse por encima de nada. Tokens reales del sistema
+   de colores: `--card-bg` (no `--bg-card`, que no existe en css/colors.css
+   -- se usa el token real más cercano al pedido)/`--text`/`--border-light`/
+   `--shadow-lg` para el bubble, `--brand` para el título/la flecha/los
+   segmentos activos de la barra de progreso, `--brand-60` (con opacity,
+   pedido explícito -- el token con alpha más cercano a "brand con
+   opacity") para el halo punteado del target. z-index 9902 (heredado de
+   tandas anteriores, sigue por debajo del loading overlay 9999 y de los
+   bottom sheets que el usuario pueda abrir mientras el tour está activo). */
 #ev-tour-tooltip {
   position: fixed;
-  width: min(320px, calc(100vw - 32px));
-  background: var(--bg);
+  width: min(220px, calc(100vw - 32px));
+  background: var(--card-bg);
   color: var(--text);
   border: 1px solid var(--border-light);
-  border-radius: var(--radius);
+  border-radius: 12px;
   box-shadow: var(--shadow-lg);
-  padding: 16px;
+  padding: 12px 14px;
   opacity: 0;
   transition: opacity 0.2s ease, top 0.35s var(--ease-sheet), left 0.35s var(--ease-sheet);
   z-index: 9902;
 }
 #ev-tour-tooltip.ev-tour-tooltip--visible { opacity: 1; }
+/* Flecha del bubble -- triángulo CSS clásico (bordes transparentes +
+   1 lado sólido), apunta hacia el target. `.arrow-up` (bubble ABAJO del
+   target, flecha en el borde superior apuntando hacia arriba) vs
+   `.arrow-down` (bubble ARRIBA del target, flecha en el borde inferior
+   apuntando hacia abajo) -- decidida en runtime por `_evTourPosicionarTooltip()`,
+   js/eventos.js, según en qué mitad de la pantalla cae el target. Posición
+   horizontal dinámica vía `--ev-tour-arrow-left` (custom property seteada
+   por esa misma función, clampeada al ancho real del bubble) -- sigue
+   apuntando al centro real del target aunque el bubble se haya tenido que
+   desplazar para no salirse de pantalla (fallback `50%` solo mientras la
+   property todavía no se seteó). */
+#ev-tour-tooltip::before {
+  content: '';
+  position: absolute;
+  left: var(--ev-tour-arrow-left, 50%);
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border: 7px solid transparent;
+}
+#ev-tour-tooltip.arrow-up::before {
+  top: -7px;
+  border-top-width: 0;
+  border-bottom-color: var(--card-bg);
+}
+#ev-tour-tooltip.arrow-down::before {
+  bottom: -7px;
+  border-bottom-width: 0;
+  border-top-color: var(--card-bg);
+}
+/* Barra de progreso -- 5 segmentos finos (uno por paso, ver
+   `_evTourProgressHtml()`/js/eventos.js), el del paso actual en `--brand`. */
+.ev-tour-progress { display: flex; gap: 4px; margin-bottom: 10px; }
+.ev-tour-progress-seg { flex: 1; height: 3px; border-radius: 2px; background: var(--border-light); }
+.ev-tour-progress-seg--activo { background: var(--brand); }
 .ev-tour-tooltip-titulo { font-weight: 700; font-size: 1rem; color: var(--brand); margin-bottom: 6px; }
 .ev-tour-tooltip-texto { font-size: 0.88rem; color: var(--text); line-height: 1.45; margin-bottom: 14px; }
 .ev-tour-tooltip-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .ev-tour-tooltip-omitir { font-size: 0.78rem; color: var(--muted); text-decoration: none; }
 .ev-tour-tooltip-btn { padding: 8px 18px; font-size: 0.85rem; }
+/* Halo del target resaltado -- agregada/quitada por `_evTourResaltarTarget()`
+   (js/eventos.js), sin tocar `position`/`z-index` del elemento para nada
+   (a diferencia de tandas anteriores). */
+.ev-tour-halo { outline: 2px dashed var(--brand-60); border-radius: 10px; }
 
 /* Opciones del sheet #sheet-ev-tipo-pago (index.html) -- tokens reales del
    sistema de colores (--surface-1/--text-1 del pedido original no existen

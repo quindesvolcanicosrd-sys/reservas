@@ -33,7 +33,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=4dbd5b57">
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
-<link rel="stylesheet" href="css/eventos.css?v=c50f3449">
+<link rel="stylesheet" href="css/eventos.css?v=4439af6d">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
@@ -2831,7 +2831,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=2531b626"></script>
-<script src="js/eventos.js?v=b12c4a64"></script>
+<script src="js/eventos.js?v=461cf64e"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js?v=5c22841b"></script>
 <script src="js/reservas.js?v=4910a3f3"></script>
@@ -4519,15 +4519,18 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <!-- Tour guiado de bienvenida de Eventos (ver MANIFEST.md "Cambios
      recientes") -- reemplaza el banner rotativo #ev-pill-banner de antes.
-     3 elementos, hijos directos de <body>, fuera de .pantalla/.card (mismo
-     motivo que .cta-footer-fixed/.ev-fab-menu de arriba). Vacíos/ocultos
-     por default -- `_evTourIniciarSiCorresponde()`/js/eventos.js los
-     muestra y puebla (innerHTML de #ev-tour-tooltip) la primera vez que se
-     entra a #s-eventos (localStorage `ev_tour_visto`), y los vuelve a
-     ocultar al cerrarse -- se quedan en el DOM entre tours, no se
-     recrean. -->
-<div id="ev-tour-overlay" style="display:none;"></div>
-<div id="ev-tour-lens" style="display:none;"></div>
+     Opción D: tooltip sutil sin overlay/lens (ese mecanismo de spotlight
+     de tandas anteriores se eliminó por completo -- #ev-tour-overlay/
+     #ev-tour-lens ya no existen). Único elemento del tour, hijo directo de
+     <body>, fuera de .pantalla/.card (mismo motivo que .cta-footer-fixed/
+     .ev-fab-menu de arriba). Vacío/oculto por default --
+     `_evTourIniciarSiCorresponde()`/js/eventos.js lo muestra y puebla
+     (innerHTML) la primera vez que se entra a #s-eventos (localStorage
+     `ev_tour_visto`), y lo vuelve a ocultar al cerrarse -- se queda en el
+     DOM entre tours, no se recrea. El target de cada paso se resalta con
+     la clase `.ev-tour-halo` (css/eventos.css), agregada/quitada
+     directo sobre el elemento real de la nav -- no es un elemento propio
+     del tour. -->
 <div id="ev-tour-tooltip" style="display:none;"></div>
 
 </body>

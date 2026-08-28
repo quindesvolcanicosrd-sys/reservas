@@ -2757,10 +2757,15 @@ function _evFabUnificadoActualizar() {
 
 // ═══ Tour guiado de bienvenida de Eventos (ver MANIFEST.md "Cambios
 // recientes") -- reemplaza el banner rotativo #ev-pill-banner/_evPillsInit()
-// de antes. Spotlight/coach-marks sobre #ev-tour-overlay/#ev-tour-lens/
-// #ev-tour-tooltip (index.html, hijos directos de <body>, ver
-// css/eventos.css para el detalle de z-index/tokens). Se dispara una única
-// vez por dispositivo (localStorage `ev_tour_visto`) la primera vez que se
+// de antes. Opción D: tooltip sutil SIN overlay/lens (las tandas
+// anteriores oscurecían toda la pantalla con un spotlight -- eliminado
+// por completo, ver "Cambios recientes"). La app se ve 100% normal en
+// todo momento; el único elemento del tour es #ev-tour-tooltip (index.html,
+// hijo directo de <body>, ver css/eventos.css para tokens/z-index) y el
+// target de cada paso se resalta con la clase `.ev-tour-halo` (halo
+// punteado, agregada/quitada por `_evTourResaltarTarget()` más abajo -- ya
+// no se le toca `position`/`z-index` para nada). Se dispara una única vez
+// por dispositivo (localStorage `ev_tour_visto`) la primera vez que se
 // entra a #s-eventos -- `_evTourIniciarSiCorresponde()` es un no-op si ya
 // se vio o si ya hay un tour corriendo.
 //
@@ -2772,52 +2777,44 @@ function _evFabUnificadoActualizar() {
 // fusiona sus 2 tips -- cambiar equipo + reagendar/cancelar -- en uno solo)
 // se salta solo en runtime para cuentas sin equipo del club, ver
 // `_evTourMostrarPaso()` más abajo (mismo criterio ya usado por
-// `_evActualizarTopBarModo()` para mostrar/ocultar #ev-btn-patin).
+// `_evActualizarTopBarModo()` para mostrar/ocultar #ev-btn-patin). Sin
+// `posTooltip` por paso (existía en tandas anteriores) -- el nuevo
+// posicionamiento (`_evTourPosicionarTooltip()`) decide arriba/abajo solo
+// en base a en qué mitad de la pantalla cae el target, no hace falta
+// declararlo por paso.
 var _EV_TOUR_PASOS_USER = [
-  { selector: '#ev-nav-mes-label', titulo: 'Navega por mes', texto: 'Abre el calendario pulsando en el mes actual para saltar directo a la fecha que buscas.', posTooltip: 'bottom' },
-  { selector: '#ev-busqueda-toggle-btn', titulo: 'Busca y filtra', texto: 'Busca eventos, cumpleaños o lugares por texto, o filtra por Lugar y Tipo.', posTooltip: 'bottom' },
-  { selector: '#ev-btn-patin', titulo: 'Tu equipamiento', texto: 'Cambia el equipamiento que usas del club desde aquí. Para reagendar o cancelar un evento reservado, usa el botón rojo dentro de su card.', posTooltip: 'bottom' },
-  { selector: '#ev-fab-btn', titulo: 'Reserva tu lugar', texto: 'Pulsa aquí para reservar tu lugar en un evento o clase.', posTooltip: 'top' },
-  { selector: '#ev-timeline', titulo: 'Explora el calendario', texto: 'Toca un evento para ver toda su información.', posTooltip: 'bottom' }
+  { selector: '#ev-nav-mes-label', titulo: 'Navega por mes', texto: 'Abre el calendario pulsando en el mes actual para saltar directo a la fecha que buscas.' },
+  { selector: '#ev-busqueda-toggle-btn', titulo: 'Busca y filtra', texto: 'Busca eventos, cumpleaños o lugares por texto, o filtra por Lugar y Tipo.' },
+  { selector: '#ev-btn-patin', titulo: 'Tu equipamiento', texto: 'Cambia el equipamiento que usas del club desde aquí. Para reagendar o cancelar un evento reservado, usa el botón rojo dentro de su card.' },
+  { selector: '#ev-fab-btn', titulo: 'Reserva tu lugar', texto: 'Pulsa aquí para reservar tu lugar en un evento o clase.' },
+  { selector: '#ev-timeline', titulo: 'Explora el calendario', texto: 'Toca un evento para ver toda su información.' }
 ];
 var _EV_TOUR_PASOS_ADMIN = [
-  { selector: '#ev-nav-mes-label', titulo: 'Navega por mes', texto: 'Abre el calendario pulsando en el mes actual para saltar directo a la fecha que buscas.', posTooltip: 'bottom' },
-  { selector: '#ev-busqueda-toggle-btn', titulo: 'Busca y filtra', texto: 'Busca eventos, cumpleaños o lugares por texto, o filtra por Lugar y Tipo.', posTooltip: 'bottom' },
-  { selector: '#ev-btn-patin', titulo: 'Tu equipamiento', texto: 'Cambia el equipamiento que usas del club desde aquí. Para reagendar o cancelar un evento reservado, usa el botón rojo dentro de su card.', posTooltip: 'bottom' },
-  { selector: '#ev-fab-btn', titulo: 'Reserva o crea eventos', texto: 'Pulsa aquí para reservar tu lugar en un evento o clase, o para crear un nuevo evento.', posTooltip: 'top' },
-  { selector: '#ev-timeline', titulo: 'Explora el calendario', texto: 'Toca un evento para ver toda su información.', posTooltip: 'bottom' }
+  { selector: '#ev-nav-mes-label', titulo: 'Navega por mes', texto: 'Abre el calendario pulsando en el mes actual para saltar directo a la fecha que buscas.' },
+  { selector: '#ev-busqueda-toggle-btn', titulo: 'Busca y filtra', texto: 'Busca eventos, cumpleaños o lugares por texto, o filtra por Lugar y Tipo.' },
+  { selector: '#ev-btn-patin', titulo: 'Tu equipamiento', texto: 'Cambia el equipamiento que usas del club desde aquí. Para reagendar o cancelar un evento reservado, usa el botón rojo dentro de su card.' },
+  { selector: '#ev-fab-btn', titulo: 'Reserva o crea eventos', texto: 'Pulsa aquí para reservar tu lugar en un evento o clase, o para crear un nuevo evento.' },
+  { selector: '#ev-timeline', titulo: 'Explora el calendario', texto: 'Toca un evento para ver toda su información.' }
 ];
 
 var _evTourPasos = null;
 var _evTourIdx = 0;
 var _evTourActivo = false;
 var _evTourRafPendiente = false;
-// Elemento target elevado por encima de #ev-tour-overlay en el paso actual
-// (ver "Cambios recientes" -- bug real: el overlay, opaco, pinta encima del
-// target normal antes de que el "agujero" del box-shadow de la lente pueda
-// mostrar nada -- la lente solo recorta SU PROPIO fondo, no revela lo que
-// hay debajo del overlay). Tampoco alcanza solo con el z-index en dark mode
-// -- si el target tiene fondo oscuro propio, elevarlo no lo distingue del
-// overlay (también oscuro) sin un marco visible propio -- por eso además
-// del z-index se le agrega un `outline` color `--brand`, ver
-// `_evTourElevarTarget()`. `_evTourElevarTarget()`/`_evTourRestaurarElevado()`
-// guardan/restauran `position`/`z-index`/`outline`/`border-radius` inline
-// originales del target acá, para poder deshacerlo aunque el tour se
-// cierre a mitad de paso.
+// Target resaltado en el paso actual (clase `.ev-tour-halo`, css/eventos.css)
+// -- única razón de ser de esta variable: poder quitarle esa clase al
+// salir del paso (siguiente paso o cierre del tour), sin guardar/restaurar
+// ningún estilo propio (a diferencia de tandas anteriores -- ya no se
+// toca `position`/`z-index`/`outline` inline del target).
 var _evTourElAnterior = null;
-var _evTourElEstiloOriginal = null;
 
 function _evTourIniciarSiCorresponde(esAdmin) {
   if (_evTourActivo) return;
   if (localStorage.getItem('ev_tour_visto') === '1') return;
-  var overlay = document.getElementById('ev-tour-overlay');
-  var lens = document.getElementById('ev-tour-lens');
   var tooltip = document.getElementById('ev-tour-tooltip');
-  if (!overlay || !lens || !tooltip) return;
+  if (!tooltip) return;
   _evTourPasos = esAdmin ? _EV_TOUR_PASOS_ADMIN : _EV_TOUR_PASOS_USER;
   _evTourActivo = true;
-  overlay.style.display = 'block';
-  lens.style.display = 'block';
   tooltip.style.display = 'block';
   window.addEventListener('resize', _evTourReposicionar);
   window.addEventListener('scroll', _evTourReposicionar, true);
@@ -2829,8 +2826,7 @@ function _evTourIniciarSiCorresponde(esAdmin) {
 // silencio los que no existen o están en `display:none` (ej. #ev-btn-patin
 // para cuentas sin equipo del club, ver _evNecesitaEquipo()/js/eventos.js).
 // Si no queda ninguno, cierra el tour y lo marca como visto. Navegación
-// solo hacia adelante -- sin botón/lógica de retroceso (ver "Cambios
-// recientes").
+// solo hacia adelante -- sin botón/lógica de retroceso.
 function _evTourMostrarPaso(idx) {
   if (!_evTourActivo || !_evTourPasos) return;
   if (idx >= _evTourPasos.length) { _evTourCerrar(true); return; }
@@ -2842,58 +2838,28 @@ function _evTourMostrarPaso(idx) {
     return;
   }
   _evTourIdx = idx;
-  _evTourElevarTarget(el);
-  _evTourPosicionarLente(rect);
+  _evTourResaltarTarget(el);
   _evTourRenderTooltip(paso, rect);
 }
 
-// Sube el target por encima de #ev-tour-overlay (z-index 9900) mientras
-// dura su paso, para que se vea limpio dentro del "agujero" de la lente en
-// vez de oscurecido por el overlay (ver comentario de `_evTourElAnterior`
-// más arriba). Restaura primero cualquier elevación previa (paso anterior)
-// -- así un solo punto de entrada cubre tanto "avanzar de paso" como
-// "cerrar el tour" (`_evTourCerrar()` llama a `_evTourRestaurarElevado()`
-// directo, sin pasar por acá). Solo fuerza `position:relative` si el
-// target no tenía ya un position distinto de `static` -- no pisa un
-// `position:absolute`/`fixed` que ya tuviera por su cuenta. Suma también
-// un `outline` color `--brand` + `border-radius` -- el z-index solo no
-// alcanza en dark mode (ver "Cambios recientes"): si el target tiene fondo
-// oscuro propio, elevarlo no lo distingue visualmente del overlay (también
-// oscuro) sin un marco propio que lo enmarque en cualquier modo de color.
-function _evTourElevarTarget(el) {
-  _evTourRestaurarElevado();
-  if (!el) return;
-  _evTourElEstiloOriginal = {
-    position: el.style.position,
-    zIndex: el.style.zIndex,
-    outline: el.style.outline,
-    borderRadius: el.style.borderRadius
-  };
-  if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
-  el.style.zIndex = '9903';
-  el.style.outline = '3px solid var(--brand)';
-  el.style.borderRadius = '10px';
-  _evTourElAnterior = el;
+// Quita `.ev-tour-halo` del target del paso anterior (si había) y se la
+// agrega al nuevo -- `el === null` (llamado desde `_evTourCerrar()`) solo
+// limpia, sin resaltar nada nuevo.
+function _evTourResaltarTarget(el) {
+  if (_evTourElAnterior) _evTourElAnterior.classList.remove('ev-tour-halo');
+  _evTourElAnterior = el || null;
+  if (el) el.classList.add('ev-tour-halo');
 }
 
-function _evTourRestaurarElevado() {
-  if (!_evTourElAnterior) return;
-  _evTourElAnterior.style.position = _evTourElEstiloOriginal.position;
-  _evTourElAnterior.style.zIndex = _evTourElEstiloOriginal.zIndex;
-  _evTourElAnterior.style.outline = _evTourElEstiloOriginal.outline;
-  _evTourElAnterior.style.borderRadius = _evTourElEstiloOriginal.borderRadius;
-  _evTourElAnterior = null;
-  _evTourElEstiloOriginal = null;
-}
-
-function _evTourPosicionarLente(rect) {
-  var lens = document.getElementById('ev-tour-lens');
-  if (!lens) return;
-  var pad = 8;
-  lens.style.top = (rect.top - pad) + 'px';
-  lens.style.left = (rect.left - pad) + 'px';
-  lens.style.width = (rect.width + pad * 2) + 'px';
-  lens.style.height = (rect.height + pad * 2) + 'px';
+// Barra de progreso -- 5 segmentos fijos (`_evTourPasos.length`, mismo
+// tamaño en ambos arrays), el del paso actual en `--brand`, el resto en
+// `--border-light` (ver `.ev-tour-progress-seg`/`--activo`, css/eventos.css).
+function _evTourProgressHtml() {
+  var html = '';
+  for (var i = 0; i < _evTourPasos.length; i++) {
+    html += '<span class="ev-tour-progress-seg' + (i === _evTourIdx ? ' ev-tour-progress-seg--activo' : '') + '"></span>';
+  }
+  return '<div class="ev-tour-progress">' + html + '</div>';
 }
 
 function _evTourRenderTooltip(paso, rect) {
@@ -2901,48 +2867,60 @@ function _evTourRenderTooltip(paso, rect) {
   if (!tooltip) return;
   var esUltimo = _evTourIdx >= _evTourPasos.length - 1;
   tooltip.innerHTML =
+    _evTourProgressHtml() +
     '<div class="ev-tour-tooltip-titulo">' + paso.titulo + '</div>' +
     '<div class="ev-tour-tooltip-texto">' + paso.texto + '</div>' +
     '<div class="ev-tour-tooltip-footer">' +
-      '<a href="javascript:void(0)" class="ev-tour-tooltip-omitir" onclick="_evTourCerrar(true)">Omitir</a>' +
-      '<button type="button" class="btn btn-primary ev-tour-tooltip-btn" onclick="_evTourSiguiente()">' + (esUltimo ? 'Entendido' : 'Siguiente') + '</button>' +
+      '<a href="javascript:void(0)" class="ev-tour-tooltip-omitir" onclick="_evTourCerrar(true)">Omitir tour</a>' +
+      '<button type="button" class="btn btn-primary ev-tour-tooltip-btn" onclick="_evTourSiguiente()">' + (esUltimo ? 'Entendido ✓' : 'Siguiente →') + '</button>' +
     '</div>';
   tooltip.classList.remove('ev-tour-tooltip--visible');
-  _evTourPosicionarTooltip(rect, paso.posTooltip);
+  _evTourPosicionarTooltip(rect);
   tooltip.classList.add('ev-tour-tooltip--visible');
 }
 
-// Arriba/abajo de la lente según `posTooltip` -- si el lado preferido no
-// tiene espacio real en el viewport, cae al otro lado; si ninguno alcanza
-// (viewport muy bajo), se clampea contra el borde. Centrado horizontal
-// sobre la lente, clampeado a los bordes del viewport con el mismo margen.
-function _evTourPosicionarTooltip(rect, prefer) {
+// Posiciona el bubble cerca del target, sin depender de ninguna
+// preferencia declarada por paso: si el target cae en la mitad superior
+// de la pantalla, el bubble va abajo (flecha `.arrow-up`, apuntando hacia
+// arriba, hacia el target); si cae en la mitad inferior (ej. el FAB,
+// siempre fijo abajo a la derecha), el bubble va arriba (flecha
+// `.arrow-down`). El FAB no necesita ninguna rama especial pese a
+// mencionarse aparte en el pedido original -- cae solo dentro de la regla
+// general de "mitad inferior", y el clamp horizontal de acá abajo ya lo
+// empuja hacia la izquierda para no salirse de pantalla. La flecha se
+// posiciona dinámicamente (`--ev-tour-arrow-left`, custom property leída
+// por `::before` en css/eventos.css) apuntando siempre al centro real del
+// target, clampeada dentro del ancho del bubble -- así sigue apuntando
+// bien incluso cuando el bubble tuvo que desplazarse para no salirse de
+// pantalla (el caso del FAB: bubble arriba-izquierda, flecha corrida hacia
+// la derecha del bubble, "apuntando abajo-derecha" en los hechos).
+function _evTourPosicionarTooltip(rect) {
   var tooltip = document.getElementById('ev-tour-tooltip');
   if (!tooltip) return;
-  var pad = 8;
   var margen = 12;
-  var lensTop = rect.top - pad;
-  var lensLeft = rect.left - pad;
-  var lensAncho = rect.width + pad * 2;
-  var lensAlto = rect.height + pad * 2;
-  var alto = tooltip.offsetHeight;
-  var ancho = tooltip.offsetWidth;
   var vh = window.innerHeight;
   var vw = window.innerWidth;
-  var arriba = lensTop - margen - alto;
-  var abajo = lensTop + lensAlto + margen;
-  var cabeArriba = arriba >= margen;
-  var cabeAbajo = (abajo + alto) <= (vh - margen);
+  var alto = tooltip.offsetHeight;
+  var ancho = tooltip.offsetWidth;
+  var centroY = rect.top + rect.height / 2;
+  var targetEnMitadInferior = centroY >= vh / 2;
+  tooltip.classList.remove('arrow-up', 'arrow-down');
   var top;
-  if (prefer === 'top') {
-    top = cabeArriba ? arriba : (cabeAbajo ? abajo : margen);
+  if (targetEnMitadInferior) {
+    top = rect.top - margen - alto;
+    tooltip.classList.add('arrow-down');
   } else {
-    top = cabeAbajo ? abajo : (cabeArriba ? arriba : (vh - margen - alto));
+    top = rect.bottom + margen;
+    tooltip.classList.add('arrow-up');
   }
-  var left = lensLeft + lensAncho / 2 - ancho / 2;
+  top = Math.max(margen, Math.min(top, vh - margen - alto));
+  var centroX = rect.left + rect.width / 2;
+  var left = centroX - ancho / 2;
   left = Math.max(margen, Math.min(left, vw - margen - ancho));
   tooltip.style.top = top + 'px';
   tooltip.style.left = left + 'px';
+  var flechaLeft = Math.max(16, Math.min(centroX - left, ancho - 16));
+  tooltip.style.setProperty('--ev-tour-arrow-left', flechaLeft + 'px');
 }
 
 function _evTourSiguiente() {
@@ -2953,15 +2931,15 @@ function _evTourCerrar(marcarVisto) {
   if (marcarVisto) localStorage.setItem('ev_tour_visto', '1');
   _evTourActivo = false;
   _evTourPasos = null;
-  _evTourRestaurarElevado();
+  _evTourResaltarTarget(null);
   window.removeEventListener('resize', _evTourReposicionar);
   window.removeEventListener('scroll', _evTourReposicionar, true);
-  var overlay = document.getElementById('ev-tour-overlay');
-  var lens = document.getElementById('ev-tour-lens');
   var tooltip = document.getElementById('ev-tour-tooltip');
-  if (overlay) overlay.style.display = 'none';
-  if (lens) lens.style.display = 'none';
-  if (tooltip) { tooltip.style.display = 'none'; tooltip.classList.remove('ev-tour-tooltip--visible'); tooltip.innerHTML = ''; }
+  if (tooltip) {
+    tooltip.style.display = 'none';
+    tooltip.classList.remove('ev-tour-tooltip--visible', 'arrow-up', 'arrow-down');
+    tooltip.innerHTML = '';
+  }
 }
 
 // Reposiciona el paso actual sin re-renderizar el tooltip (evita parpadeo
@@ -2977,9 +2955,7 @@ function _evTourReposicionar() {
     var paso = _evTourPasos[_evTourIdx];
     var el = paso && document.querySelector(paso.selector);
     if (!el) return;
-    var rect = el.getBoundingClientRect();
-    _evTourPosicionarLente(rect);
-    _evTourPosicionarTooltip(rect, paso.posTooltip);
+    _evTourPosicionarTooltip(el.getBoundingClientRect());
   });
 }
 function evAbrirSheetTipoPago() {
