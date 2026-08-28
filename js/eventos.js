@@ -2757,17 +2757,24 @@ function _evFabUnificadoActualizar() {
 
 // ═══ Tour guiado de bienvenida de Eventos (ver MANIFEST.md "Cambios
 // recientes") -- reemplaza el banner rotativo #ev-pill-banner/_evPillsInit()
-// de antes. Opción D: tooltip sutil SIN overlay/lens (las tandas
-// anteriores oscurecían toda la pantalla con un spotlight -- eliminado
-// por completo, ver "Cambios recientes"). La app se ve 100% normal en
-// todo momento; el único elemento del tour es #ev-tour-tooltip (index.html,
-// hijo directo de <body>, ver css/eventos.css para tokens/z-index) y el
-// target de cada paso se resalta con la clase `.ev-tour-halo` (halo
-// punteado, agregada/quitada por `_evTourResaltarTarget()` más abajo -- ya
-// no se le toca `position`/`z-index` para nada). Se dispara una única vez
-// por dispositivo (localStorage `ev_tour_visto`) la primera vez que se
-// entra a #s-eventos -- `_evTourIniciarSiCorresponde()` es un no-op si ya
-// se vio o si ya hay un tour corriendo.
+// de antes. Cambio 47: híbrido entre la Opción D (tooltip sutil, sin
+// overlay) y el spotlight original de tandas anteriores -- #ev-tour-overlay
+// vuelve, pero muy suave (`rgba(0,0,0,0.28)`, ver css/eventos.css), sin la
+// "lente" recortada que sí tenía el spotlight original (#ev-tour-lens NO
+// vuelve). 2 elementos de tour, ambos hijos directos de <body> (index.html):
+// #ev-tour-overlay (oscurece todo detrás) y #ev-tour-tooltip (el bubble),
+// más el target de cada paso resaltado con `.ev-tour-halo` (halo punteado)
+// Y elevado temporalmente por encima del overlay (`position:relative` +
+// `z-index:9903` inline, agregados/restaurados por `_evTourResaltarTarget()`
+// más abajo). Se dispara una única vez por dispositivo (localStorage
+// `ev_tour_visto`) la primera vez que se entra a #s-eventos --
+// `_evTourIniciarSiCorresponde()` es un no-op si ya se vio o si ya hay un
+// tour corriendo. Si el usuario navega a otra sección con el tour activo,
+// `alSalir` del ítem 'eventos' (APP_BOTTOM_NAV_ITEMS, js/ui.js) llama
+// `_evTourCerrar(false)` -- cierra tooltip+overlay y restaura el target
+// elevado, SIN marcarlo como visto (`ev_tour_visto` solo se setea al llegar
+// al último paso o tocar "Omitir tour") -- la próxima vez que entre a
+// Eventos, el tour arranca de nuevo desde el paso 0.
 //
 // El contenido de cada paso cubre lo mismo que mostraban las listas de
 // `_evPillsInit()` (equipamiento/mirlxs/quindes) -- acá reagrupado en 2
@@ -2802,11 +2809,17 @@ var _evTourIdx = 0;
 var _evTourActivo = false;
 var _evTourRafPendiente = false;
 // Target resaltado en el paso actual (clase `.ev-tour-halo`, css/eventos.css)
-// -- única razón de ser de esta variable: poder quitarle esa clase al
-// salir del paso (siguiente paso o cierre del tour), sin guardar/restaurar
-// ningún estilo propio (a diferencia de tandas anteriores -- ya no se
-// toca `position`/`z-index`/`outline` inline del target).
+// -- también se eleva temporalmente por encima de #ev-tour-overlay (Cambio
+// 47: `position:relative`+`z-index:9903` inline, ver `_evTourResaltarTarget()`
+// más abajo), mismo mecanismo que `_evTourElevarTarget()`/
+// `_evTourRestaurarElevado()` de tandas anteriores, reintroducido acá.
 var _evTourElAnterior = null;
+// Estilo inline original (`position`/`zIndex`) del target guardado en
+// `_evTourElAnterior`, para restaurarlo exacto al salir del paso -- casi
+// siempre ambos son '' (el target no traía ningún inline propio), pero se
+// guarda el valor real en vez de asumirlo por si algún selector futuro sí
+// lo tuviera.
+var _evTourElAnteriorEstilo = null;
 
 function _evTourIniciarSiCorresponde(esAdmin) {
   if (_evTourActivo) return;
@@ -2816,6 +2829,8 @@ function _evTourIniciarSiCorresponde(esAdmin) {
   _evTourPasos = esAdmin ? _EV_TOUR_PASOS_ADMIN : _EV_TOUR_PASOS_USER;
   _evTourActivo = true;
   tooltip.style.display = 'block';
+  var overlay = document.getElementById('ev-tour-overlay');
+  if (overlay) overlay.style.display = 'block';
   window.addEventListener('resize', _evTourReposicionar);
   window.addEventListener('scroll', _evTourReposicionar, true);
   _evTourMostrarPaso(0);
@@ -2842,13 +2857,29 @@ function _evTourMostrarPaso(idx) {
   _evTourRenderTooltip(paso, rect);
 }
 
-// Quita `.ev-tour-halo` del target del paso anterior (si había) y se la
-// agrega al nuevo -- `el === null` (llamado desde `_evTourCerrar()`) solo
-// limpia, sin resaltar nada nuevo.
+// Quita `.ev-tour-halo` del target del paso anterior (si había) y le
+// restaura el `position`/`zIndex` inline que tenía antes de elevarse;
+// se la agrega al nuevo target y lo eleva por encima de #ev-tour-overlay
+// (`position:relative`+`z-index:9903`, guardando su estilo inline original
+// en `_evTourElAnteriorEstilo` para poder restaurarlo después). `el === null`
+// (llamado desde `_evTourCerrar()`) solo limpia/restaura, sin resaltar nada
+// nuevo.
 function _evTourResaltarTarget(el) {
-  if (_evTourElAnterior) _evTourElAnterior.classList.remove('ev-tour-halo');
+  if (_evTourElAnterior) {
+    _evTourElAnterior.classList.remove('ev-tour-halo');
+    if (_evTourElAnteriorEstilo) {
+      _evTourElAnterior.style.position = _evTourElAnteriorEstilo.position;
+      _evTourElAnterior.style.zIndex = _evTourElAnteriorEstilo.zIndex;
+    }
+    _evTourElAnteriorEstilo = null;
+  }
   _evTourElAnterior = el || null;
-  if (el) el.classList.add('ev-tour-halo');
+  if (el) {
+    el.classList.add('ev-tour-halo');
+    _evTourElAnteriorEstilo = { position: el.style.position, zIndex: el.style.zIndex };
+    el.style.position = 'relative';
+    el.style.zIndex = '9903';
+  }
 }
 
 // Barra de progreso -- 5 segmentos fijos (`_evTourPasos.length`, mismo
@@ -2865,6 +2896,10 @@ function _evTourProgressHtml() {
 function _evTourRenderTooltip(paso, rect) {
   var tooltip = document.getElementById('ev-tour-tooltip');
   if (!tooltip) return;
+  // #ev-tour-overlay comparte la MISMA clase de visibilidad que el tooltip
+  // (`.ev-tour-tooltip--visible`, pedido explícito -- Cambio 47) en vez de
+  // una propia -- los 2 aparecen/desaparecen siempre juntos, un solo toggle.
+  var overlay = document.getElementById('ev-tour-overlay');
   var esUltimo = _evTourIdx >= _evTourPasos.length - 1;
   tooltip.innerHTML =
     _evTourProgressHtml() +
@@ -2875,8 +2910,10 @@ function _evTourRenderTooltip(paso, rect) {
       '<button type="button" class="btn btn-primary ev-tour-tooltip-btn" onclick="_evTourSiguiente()">' + (esUltimo ? 'Entendido ✓' : 'Siguiente →') + '</button>' +
     '</div>';
   tooltip.classList.remove('ev-tour-tooltip--visible');
+  if (overlay) overlay.classList.remove('ev-tour-tooltip--visible');
   _evTourPosicionarTooltip(rect);
   tooltip.classList.add('ev-tour-tooltip--visible');
+  if (overlay) overlay.classList.add('ev-tour-tooltip--visible');
 }
 
 // Posiciona el bubble cerca del target, sin depender de ninguna
@@ -2939,6 +2976,11 @@ function _evTourCerrar(marcarVisto) {
     tooltip.style.display = 'none';
     tooltip.classList.remove('ev-tour-tooltip--visible', 'arrow-up', 'arrow-down');
     tooltip.innerHTML = '';
+  }
+  var overlay = document.getElementById('ev-tour-overlay');
+  if (overlay) {
+    overlay.style.display = 'none';
+    overlay.classList.remove('ev-tour-tooltip--visible');
   }
 }
 

@@ -1431,26 +1431,40 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
   margin: 0 0 20px;
 }
 
-/* Tour guiado de bienvenida de Eventos (#ev-tour-tooltip, ver MANIFEST.md
-   "Cambios recientes") -- Opción D: tooltip sutil SIN overlay/lens (las
-   tandas anteriores oscurecían toda la pantalla con un spotlight -- ese
-   mecanismo se elimina por completo acá, junto con #ev-tour-overlay/
-   #ev-tour-lens). La app se ve 100% normal en todo momento -- el único
-   elemento del tour que queda es #ev-tour-tooltip, hijo directo de <body>
-   (mismo criterio que .cta-footer-fixed y los bottom sheets, ver
-   index.html); el target de cada paso se resalta con `.ev-tour-halo` (más
-   abajo) en vez de elevarse por encima de nada. Tokens reales del sistema
-   de colores: `--card-bg` (no `--bg-card`, que no existe en css/colors.css
-   -- se usa el token real más cercano al pedido)/`--text`/`--border-light`/
-   `--shadow-lg` para el bubble, `--brand` para el título/la flecha/los
-   segmentos activos de la barra de progreso, `--brand-60` (con opacity,
-   pedido explícito -- el token con alpha más cercano a "brand con
-   opacity") para el halo punteado del target. z-index 9902 (heredado de
-   tandas anteriores, sigue por debajo del loading overlay 9999 y de los
-   bottom sheets que el usuario pueda abrir mientras el tour está activo). */
+/* Tour guiado de bienvenida de Eventos (#ev-tour-overlay/#ev-tour-tooltip,
+   ver MANIFEST.md "Cambios recientes") -- Cambio 47: híbrido entre la
+   Opción D (tooltip sutil sin overlay) y el spotlight original -- vuelve
+   #ev-tour-overlay, pero muy suave (`rgba(0,0,0,0.28)`, pedido explícito),
+   SIN la "lente" recortada que tenía el spotlight original (#ev-tour-lens
+   no vuelve). El target de cada paso se resalta con `.ev-tour-halo` (más
+   abajo) Y se eleva por encima del overlay con `position:relative`+
+   `z-index:9903` inline (`_evTourResaltarTarget()`, js/eventos.js) --
+   guardado/restaurado ahí mismo, nada de eso vive en este archivo. Tokens
+   reales del sistema de colores: `--card-bg` (no `--bg-card`, que no existe
+   en css/colors.css -- se usa el token real más cercano al pedido)/`--text`/
+   `--border-light`/`--shadow-lg` para el bubble, `--brand` para el título/
+   la flecha/los segmentos activos de la barra de progreso, `--brand-60`
+   (con opacity, pedido explícito -- el token con alpha más cercano a
+   "brand con opacity") para el halo punteado del target. z-index escalonado:
+   overlay 9900 < tooltip 9902 < target elevado 9903 -- los 3 por debajo del
+   loading overlay (9999) y de los bottom sheets que el usuario pueda abrir
+   mientras el tour está activo. */
+#ev-tour-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.28);
+  z-index: 9900;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+/* Misma clase de visibilidad que #ev-tour-tooltip (pedido explícito) -- los
+   2 aparecen/desaparecen siempre juntos, ver _evTourRenderTooltip()/
+   _evTourCerrar() (js/eventos.js). */
+#ev-tour-overlay.ev-tour-tooltip--visible { opacity: 1; }
 #ev-tour-tooltip {
   position: fixed;
-  width: min(280px, calc(100vw - 32px));
+  width: min(320px, calc(100vw - 56px));
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border-light);
@@ -1503,8 +1517,10 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 .ev-tour-tooltip-omitir { font-size: 0.78rem; color: var(--muted); text-decoration: none; }
 .ev-tour-tooltip-btn { padding: 8px 18px; font-size: 0.85rem; }
 /* Halo del target resaltado -- agregada/quitada por `_evTourResaltarTarget()`
-   (js/eventos.js), sin tocar `position`/`z-index` del elemento para nada
-   (a diferencia de tandas anteriores). */
+   (js/eventos.js), que además eleva el elemento (`position:relative`+
+   `z-index:9903` inline, Cambio 47) para que quede por encima de
+   #ev-tour-overlay -- ese `position`/`z-index` vive inline en JS, no acá,
+   para poder guardar/restaurar el valor real que tenía el elemento antes. */
 .ev-tour-halo { outline: 2px dashed var(--brand-60); border-radius: 10px; }
 
 /* Opciones del sheet #sheet-ev-tipo-pago (index.html) -- tokens reales del

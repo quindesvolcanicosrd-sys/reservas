@@ -33,7 +33,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=4dbd5b57">
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
-<link rel="stylesheet" href="css/eventos.css?v=edc78293">
+<link rel="stylesheet" href="css/eventos.css?v=ceaac4cd">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/equipo.css?v=1">
 <link rel="stylesheet" href="css/perfil.css">
@@ -2892,8 +2892,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=2531b626"></script>
-<script src="js/eventos.js?v=461cf64e"></script>
+<script src="js/ui.js?v=28059ed9"></script>
+<script src="js/eventos.js?v=411b5fff"></script>
 <script src="js/tareas.js"></script>
 <script src="js/equipo.js?v=1"></script>
 <script src="js/home.js?v=5c22841b"></script>
@@ -4582,18 +4582,22 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
 <!-- Tour guiado de bienvenida de Eventos (ver MANIFEST.md "Cambios
      recientes") -- reemplaza el banner rotativo #ev-pill-banner de antes.
-     Opción D: tooltip sutil sin overlay/lens (ese mecanismo de spotlight
-     de tandas anteriores se eliminó por completo -- #ev-tour-overlay/
-     #ev-tour-lens ya no existen). Único elemento del tour, hijo directo de
-     <body>, fuera de .pantalla/.card (mismo motivo que .cta-footer-fixed/
-     .ev-fab-menu de arriba). Vacío/oculto por default --
-     `_evTourIniciarSiCorresponde()`/js/eventos.js lo muestra y puebla
-     (innerHTML) la primera vez que se entra a #s-eventos (localStorage
-     `ev_tour_visto`), y lo vuelve a ocultar al cerrarse -- se queda en el
-     DOM entre tours, no se recrea. El target de cada paso se resalta con
-     la clase `.ev-tour-halo` (css/eventos.css), agregada/quitada
-     directo sobre el elemento real de la nav -- no es un elemento propio
-     del tour. -->
+     Cambio 47: híbrido entre la Opción D (tooltip sutil sin overlay) y el
+     spotlight original -- #ev-tour-overlay vuelve (oscuridad leve,
+     `rgba(0,0,0,0.28)`, css/eventos.css), pero #ev-tour-lens (la "lente"
+     recortada del spotlight original) NO vuelve. 2 elementos de tour,
+     ambos hijos directos de <body>, fuera de .pantalla/.card (mismo motivo
+     que .cta-footer-fixed/.ev-fab-menu de arriba), vacíos/ocultos por
+     default -- `_evTourIniciarSiCorresponde()`/js/eventos.js los muestra
+     juntos la primera vez que se entra a #s-eventos (localStorage
+     `ev_tour_visto`), y los vuelve a ocultar al cerrarse (`_evTourCerrar()`)
+     -- se quedan en el DOM entre tours, no se recrean. El target de cada
+     paso se resalta con la clase `.ev-tour-halo` (css/eventos.css) Y se
+     eleva por encima de #ev-tour-overlay (`position:relative`+
+     `z-index:9903` inline, `_evTourResaltarTarget()`) directo sobre el
+     elemento real de la nav -- ninguno de los 2 es un elemento propio del
+     tour. -->
+<div id="ev-tour-overlay" style="display:none;"></div>
 <div id="ev-tour-tooltip" style="display:none;"></div>
 
 </body>

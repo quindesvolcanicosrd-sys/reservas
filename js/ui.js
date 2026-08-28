@@ -586,9 +586,22 @@ var APP_BOTTOM_NAV_ITEMS = [
     // ABANDONAR la sección, sin importar hacia dónde -- complementa a
     // `abrirEvDetalle()` (que guarda lo mismo al entrar a un detalle, un
     // camino distinto hacia la misma variable, `_evTimelineScrollY`).
+    // Cambio 47 -- bug real corregido (ver MANIFEST.md): el tour guiado
+    // (#ev-tour-overlay/#ev-tour-tooltip, js/eventos.js) son hijos directos
+    // de <body> con `position:fixed` -- navegar a OTRA sección desde la nav
+    // inferior mientras el tour está activo los dejaba flotando encima de
+    // esa sección nueva, porque nada los cerraba al abandonar Eventos.
+    // `_evTourCerrar(false)` acá (mismo criterio que `_evGuardarScrollTimeline`/
+    // `_evSalirModoReserva` de arriba: no-op seguro si el tour ni siquiera
+    // está activo) los oculta y restaura el target elevado -- `false` porque
+    // salir por navegación NO cuenta como "visto" (`ev_tour_visto` solo se
+    // setea al llegar al último paso o tocar "Omitir tour", ver
+    // `_evTourCerrar()`) -- la próxima vez que entre a Eventos, el tour
+    // arranca de nuevo desde el paso 0.
     alSalir: function() {
       if (typeof _evGuardarScrollTimeline === 'function') _evGuardarScrollTimeline();
       if (typeof _evSalirModoReserva === 'function') _evSalirModoReserva();
+      if (typeof _evTourCerrar === 'function') _evTourCerrar(false);
     },
     visible: function() { return true; } },
   { id: 'ajustes', icono: 'settings', texto: 'Ajustes', pantalla: 's-datos',
