@@ -33,7 +33,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=4dbd5b57">
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
-<link rel="stylesheet" href="css/eventos.css?v=ceaac4cd">
+<link rel="stylesheet" href="css/eventos.css?v=667f2167">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/equipo.css?v=2">
 <link rel="stylesheet" href="css/perfil.css">
@@ -2893,7 +2893,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=28059ed9"></script>
-<script src="js/eventos.js?v=411b5fff"></script>
+<script src="js/eventos.js?v=9f6c0738"></script>
 <script src="js/tareas.js"></script>
 <script src="js/equipo.js?v=2"></script>
 <script src="js/home.js?v=5c22841b"></script>
@@ -4593,10 +4593,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
      `ev_tour_visto`), y los vuelve a ocultar al cerrarse (`_evTourCerrar()`)
      -- se quedan en el DOM entre tours, no se recrean. El target de cada
      paso se resalta con la clase `.ev-tour-halo` (css/eventos.css) Y se
-     eleva por encima de #ev-tour-overlay (`position:relative`+
-     `z-index:9903` inline, `_evTourResaltarTarget()`) directo sobre el
-     elemento real de la nav -- ninguno de los 2 es un elemento propio del
-     tour. -->
+     eleva a `z-index:9903` por encima de #ev-tour-overlay
+     (`_evTourResaltarTarget()`) -- normalmente el target mismo, o su
+     ancestro `fixed`/`sticky` más cercano si tiene uno (Cambio 49, fix de
+     stacking context -- ver `_evTourAncestroFijo()`, js/eventos.js) --
+     directo sobre el elemento real de la nav -- ninguno de los 2 es un
+     elemento propio del tour. -->
 <div id="ev-tour-overlay" style="display:none;"></div>
 <div id="ev-tour-tooltip" style="display:none;"></div>
 

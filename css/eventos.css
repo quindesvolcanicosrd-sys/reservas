@@ -1434,25 +1434,30 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 /* Tour guiado de bienvenida de Eventos (#ev-tour-overlay/#ev-tour-tooltip,
    ver MANIFEST.md "Cambios recientes") -- Cambio 47: híbrido entre la
    Opción D (tooltip sutil sin overlay) y el spotlight original -- vuelve
-   #ev-tour-overlay, pero muy suave (`rgba(0,0,0,0.28)`, pedido explícito),
+   #ev-tour-overlay, pero muy suave (`rgba(0,0,0,0.52)`, pedido explícito),
    SIN la "lente" recortada que tenía el spotlight original (#ev-tour-lens
    no vuelve). El target de cada paso se resalta con `.ev-tour-halo` (más
-   abajo) Y se eleva por encima del overlay con `position:relative`+
-   `z-index:9903` inline (`_evTourResaltarTarget()`, js/eventos.js) --
-   guardado/restaurado ahí mismo, nada de eso vive en este archivo. Tokens
-   reales del sistema de colores: `--card-bg` (no `--bg-card`, que no existe
-   en css/colors.css -- se usa el token real más cercano al pedido)/`--text`/
-   `--border-light`/`--shadow-lg` para el bubble, `--brand` para el título/
-   la flecha/los segmentos activos de la barra de progreso, `--brand-60`
-   (con opacity, pedido explícito -- el token con alpha más cercano a
-   "brand con opacity") para el halo punteado del target. z-index escalonado:
-   overlay 9900 < tooltip 9902 < target elevado 9903 -- los 3 por debajo del
+   abajo) Y se eleva por encima del overlay con `z-index:9903` inline
+   (`_evTourResaltarTarget()`, js/eventos.js) -- normalmente sobre el target
+   mismo (sumando `position:relative`, un elemento `static` ignora
+   `z-index`), pero sobre su ancestro `fixed`/`sticky` más cercano si tiene
+   uno (Cambio 49, fix de stacking context -- ver `_evTourAncestroFijo()`),
+   sin tocarle la `position` a ese ancestro (ya es fixed/sticky por su
+   propio CSS). Guardado/restaurado ahí mismo, nada de eso vive en este
+   archivo. Tokens reales del sistema de colores: `--card-bg` (no
+   `--bg-card`, que no existe en css/colors.css -- se usa el token real más
+   cercano al pedido)/`--text`/`--border-light`/`--shadow-lg` para el
+   bubble, `--brand` para el título/la flecha/los segmentos activos de la
+   barra de progreso, `--brand-60` (con opacity, pedido explícito -- el
+   token con alpha más cercano a "brand con opacity") para el halo punteado
+   del target. z-index escalonado: overlay 9900 < tooltip 9902 < elemento
+   elevado (target o su ancestro fixed/sticky) 9903 -- los 3 por debajo del
    loading overlay (9999) y de los bottom sheets que el usuario pueda abrir
    mientras el tour está activo. */
 #ev-tour-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.28);
+  background: rgba(0,0,0,0.52);
   z-index: 9900;
   pointer-events: none;
   opacity: 0;
@@ -1469,7 +1474,6 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
   color: var(--text);
   border: 1px solid var(--border-light);
   border-radius: 12px;
-  box-shadow: var(--shadow-lg);
   padding: 12px 14px;
   opacity: 0;
   transition: opacity 0.2s ease, top 0.35s var(--ease-sheet), left 0.35s var(--ease-sheet);
@@ -1515,12 +1519,14 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 .ev-tour-tooltip-texto { font-size: 0.88rem; color: var(--text); line-height: 1.45; margin-bottom: 14px; }
 .ev-tour-tooltip-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .ev-tour-tooltip-omitir { font-size: 0.78rem; color: var(--muted); text-decoration: none; }
-.ev-tour-tooltip-btn { padding: 8px 18px; font-size: 0.85rem; }
+.ev-tour-tooltip-btn { padding: 8px 18px; font-size: 0.85rem; width: 60%; }
 /* Halo del target resaltado -- agregada/quitada por `_evTourResaltarTarget()`
-   (js/eventos.js), que además eleva el elemento (`position:relative`+
-   `z-index:9903` inline, Cambio 47) para que quede por encima de
-   #ev-tour-overlay -- ese `position`/`z-index` vive inline en JS, no acá,
-   para poder guardar/restaurar el valor real que tenía el elemento antes. */
+   (js/eventos.js), que además eleva a `z-index:9903` inline por encima de
+   #ev-tour-overlay -- normalmente al target mismo (siempre con `.ev-tour-halo`,
+   sin importar quién recibe el z-index), pero al ancestro `fixed`/`sticky`
+   más cercano si tiene uno (Cambio 49, `_evTourAncestroFijo()`) -- ese
+   `position`/`z-index` vive inline en JS, no acá, para poder guardar/
+   restaurar el valor real que tenía el elemento elevado antes. */
 .ev-tour-halo { outline: 2px dashed var(--brand-60); border-radius: 10px; }
 
 /* Opciones del sheet #sheet-ev-tipo-pago (index.html) -- tokens reales del

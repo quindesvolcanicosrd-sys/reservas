@@ -2764,9 +2764,13 @@ function _evFabUnificadoActualizar() {
 // vuelve). 2 elementos de tour, ambos hijos directos de <body> (index.html):
 // #ev-tour-overlay (oscurece todo detrás) y #ev-tour-tooltip (el bubble),
 // más el target de cada paso resaltado con `.ev-tour-halo` (halo punteado)
-// Y elevado temporalmente por encima del overlay (`position:relative` +
-// `z-index:9903` inline, agregados/restaurados por `_evTourResaltarTarget()`
-// más abajo). Se dispara una única vez por dispositivo (localStorage
+// Y elevado temporalmente por encima del overlay -- `z-index:9903` inline,
+// agregado/restaurado por `_evTourResaltarTarget()` más abajo, normalmente
+// sobre el target mismo (`position:relative`) pero sobre su ancestro
+// `fixed`/`sticky` más cercano si tiene uno (Cambio 49, fix de stacking
+// context: un ancestro así crea su propio contexto de apilamiento, elevar
+// solo al hijo no le gana nada a #ev-tour-overlay -- ver
+// `_evTourAncestroFijo()`). Se dispara una única vez por dispositivo (localStorage
 // `ev_tour_visto`) la primera vez que se entra a #s-eventos --
 // `_evTourIniciarSiCorresponde()` es un no-op si ya se vio o si ya hay un
 // tour corriendo. Si el usuario navega a otra sección con el tour activo,
@@ -2809,17 +2813,24 @@ var _evTourIdx = 0;
 var _evTourActivo = false;
 var _evTourRafPendiente = false;
 // Target resaltado en el paso actual (clase `.ev-tour-halo`, css/eventos.css)
-// -- también se eleva temporalmente por encima de #ev-tour-overlay (Cambio
-// 47: `position:relative`+`z-index:9903` inline, ver `_evTourResaltarTarget()`
-// más abajo), mismo mecanismo que `_evTourElevarTarget()`/
-// `_evTourRestaurarElevado()` de tandas anteriores, reintroducido acá.
+// -- SOLO el halo visual vive acá; a quién se le eleva el `z-index` por
+// encima de #ev-tour-overlay es una variable aparte (`_evTourContenedorAnterior`,
+// más abajo -- Cambio 49) porque no siempre es el mismo elemento.
 var _evTourElAnterior = null;
-// Estilo inline original (`position`/`zIndex`) del target guardado en
-// `_evTourElAnterior`, para restaurarlo exacto al salir del paso -- casi
-// siempre ambos son '' (el target no traía ningún inline propio), pero se
-// guarda el valor real en vez de asumirlo por si algún selector futuro sí
-// lo tuviera.
-var _evTourElAnteriorEstilo = null;
+// Elemento realmente elevado por encima de #ev-tour-overlay para el target
+// actual (Cambio 49, fix de stacking context) -- normalmente es el propio
+// target (`_evTourElAnterior`), pero si el target vive dentro de un
+// ancestro `position:fixed`/`sticky` (ej. el botón "Reservar" dentro de
+// `.cta-footer-fixed`), ese ancestro crea su PROPIO stacking context y
+// ponerle `z-index` al hijo no alcanza para ganarle a `#ev-tour-overlay` --
+// en ese caso se eleva el ancestro entero en su lugar (ver
+// `_evTourAncestroFijo()`/`_evTourResaltarTarget()` más abajo).
+var _evTourContenedorAnterior = null;
+// Estilo inline original (`position`/`zIndex`) de `_evTourContenedorAnterior`,
+// para restaurarlo exacto al salir del paso -- casi siempre ambos son '' (el
+// elemento no traía ningún inline propio), pero se guarda el valor real en
+// vez de asumirlo por si algún selector futuro sí lo tuviera.
+var _evTourContenedorAnteriorEstilo = null;
 
 function _evTourIniciarSiCorresponde(esAdmin) {
   if (_evTourActivo) return;
@@ -2857,29 +2868,56 @@ function _evTourMostrarPaso(idx) {
   _evTourRenderTooltip(paso, rect);
 }
 
-// Quita `.ev-tour-halo` del target del paso anterior (si había) y le
-// restaura el `position`/`zIndex` inline que tenía antes de elevarse;
-// se la agrega al nuevo target y lo eleva por encima de #ev-tour-overlay
-// (`position:relative`+`z-index:9903`, guardando su estilo inline original
-// en `_evTourElAnteriorEstilo` para poder restaurarlo después). `el === null`
+// Sube por la cadena de ancestros de `el` (sin incluirlo) buscando el
+// primer contenedor con `position:fixed`/`sticky` REAL (computedStyle, no
+// el inline -- puede venir de una regla de css/*.css) hasta `<body>`
+// (excluido: si nada intermedio es fixed/sticky, no hay nada que hacer,
+// `<body>` en sí nunca es el problema acá). Ese ancestro ya crea su propio
+// stacking context -- elevar el `z-index` de un HIJO suyo no le gana nada a
+// `#ev-tour-overlay` si el ancestro mismo queda por debajo, hay que elevar
+// el ancestro entero. `null` si no hay ninguno (caso normal: el target no
+// vive dentro de nada fixed/sticky).
+function _evTourAncestroFijo(el) {
+  var nodo = el.parentElement;
+  while (nodo && nodo !== document.body) {
+    var pos = window.getComputedStyle(nodo).position;
+    if (pos === 'fixed' || pos === 'sticky') return nodo;
+    nodo = nodo.parentElement;
+  }
+  return null;
+}
+
+// Quita `.ev-tour-halo` del target anterior (si había) y restaura el
+// `position`/`zIndex` inline que tenía el elemento que se hubiera elevado
+// para él (`_evTourContenedorAnterior` -- el target mismo, o su ancestro
+// fixed/sticky, ver `_evTourAncestroFijo()`); resalta el nuevo target y
+// eleva por encima de #ev-tour-overlay a quien corresponda:
+//   - Si `el` vive dentro de un ancestro fixed/sticky (ej. el botón
+//     "Reservar" dentro de `.cta-footer-fixed`), se eleva ESE ancestro
+//     (solo `z-index` -- su `position` ya es fixed/sticky por su propio
+//     CSS, no hace falta ni conviene tocarla) y `el` queda sin tocar.
+//   - Si no, se eleva `el` mismo tal como antes (`position:relative` +
+//     `z-index:9903`, porque un elemento `static` ignora `z-index`).
+// En los 2 casos se guarda el estilo inline original en
+// `_evTourContenedorAnteriorEstilo` para restaurarlo después. `el === null`
 // (llamado desde `_evTourCerrar()`) solo limpia/restaura, sin resaltar nada
 // nuevo.
 function _evTourResaltarTarget(el) {
-  if (_evTourElAnterior) {
-    _evTourElAnterior.classList.remove('ev-tour-halo');
-    if (_evTourElAnteriorEstilo) {
-      _evTourElAnterior.style.position = _evTourElAnteriorEstilo.position;
-      _evTourElAnterior.style.zIndex = _evTourElAnteriorEstilo.zIndex;
-    }
-    _evTourElAnteriorEstilo = null;
+  if (_evTourElAnterior) _evTourElAnterior.classList.remove('ev-tour-halo');
+  if (_evTourContenedorAnterior) {
+    _evTourContenedorAnterior.style.position = _evTourContenedorAnteriorEstilo.position;
+    _evTourContenedorAnterior.style.zIndex = _evTourContenedorAnteriorEstilo.zIndex;
+    _evTourContenedorAnterior = null;
+    _evTourContenedorAnteriorEstilo = null;
   }
   _evTourElAnterior = el || null;
-  if (el) {
-    el.classList.add('ev-tour-halo');
-    _evTourElAnteriorEstilo = { position: el.style.position, zIndex: el.style.zIndex };
-    el.style.position = 'relative';
-    el.style.zIndex = '9903';
-  }
+  if (!el) return;
+  el.classList.add('ev-tour-halo');
+  var ancestroFijo = _evTourAncestroFijo(el);
+  _evTourContenedorAnterior = ancestroFijo || el;
+  _evTourContenedorAnteriorEstilo = { position: _evTourContenedorAnterior.style.position, zIndex: _evTourContenedorAnterior.style.zIndex };
+  if (!ancestroFijo) _evTourContenedorAnterior.style.position = 'relative';
+  _evTourContenedorAnterior.style.zIndex = '9903';
 }
 
 // Barra de progreso -- 5 segmentos fijos (`_evTourPasos.length`, mismo
