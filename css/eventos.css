@@ -1451,7 +1451,7 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 #ev-tour-tooltip {
   position: fixed;
   width: min(220px, calc(100vw - 32px));
-  background: var(--card-bg);
+  background: var(--surface-2)
   color: var(--text);
   border: 1px solid var(--border-light);
   border-radius: 12px;
