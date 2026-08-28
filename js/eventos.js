@@ -514,18 +514,30 @@ var _evYaInicializadoEnSesion = false;
    el "+" de la nav bar (`#ev-btn-crear`) -- ver MANIFEST.md "Cambios
    recientes". Un solo botón (`#ev-fab-btn`) visible para toda cuenta en
    `#s-eventos`, con comportamiento que depende del perfil real:
-     - Admin CON cuota al día: speed-dial "Reserva por mes" + "Eventos".
-     - Admin SIN cuota al día: speed-dial solo "Eventos".
-     - Mirlxs CON equipo propio (no necesita el del club): speed-dial
+     - Mirlxs admin CON cuota al día: speed-dial "Reserva por mes" + "Eventos".
+     - Mirlxs admin SIN cuota al día: speed-dial solo "Eventos".
+     - Mirlxs no-admin CON equipo propio (no necesita el del club): speed-dial
        "Reserva por clase" + "Reserva por mes".
-     - Mirlxs SIN equipo propio (necesita rentar del club, solo por clase) O
-       quindes no-admin (solo reserva mensual, ver `evAbrirSheetTipoPago()`):
-       sin speed-dial -- el toque navega directo a la acción única.
+     - Mirlxs no-admin SIN equipo propio (necesita rentar del club, solo por
+       clase): sin speed-dial -- el toque navega directo a la acción única.
+     - Quindes admin CON cuota al día: speed-dial "Nueva reserva" (mismo
+       flujo que "Reserva por mes" de mirlxs) + "Nuevo evento".
+     - Quindes admin SIN cuota al día: sin speed-dial -- directo a "Nuevo
+       evento".
+     - Quindes no-admin CON cuota al día: sin speed-dial -- directo a
+       reservar el mes (mismo flujo que "Reserva por mes" de mirlxs).
+     - Quindes no-admin SIN cuota al día: el FAB no se muestra (ningún
+       camino real sin pagar antes).
+   Además, para TODO perfil Quindes el FAB es siempre solo-ícono (sin el
+   texto "Reservar" que sí llevan mirlxs/admin, `#ev-fab-btn-texto` en
+   index.html + `.ev-fab-btn--icono-solo` en css/eventos.css) -- el "+" de
+   la nav bar ya estaba oculto para quindes de antes, sin relación con esto.
    `_evFabPlusClick()` es el onclick real del botón: decide navegar directo
    o togglear el speed-dial. `_evFabUnificadoActualizar()` (más abajo, junto
-   a `_evFabReserva()`) arma el contenido de `#ev-fab-opciones` y la
-   visibilidad del FAB en sí -- llamada desde `_evActualizarTopBarModo()`
-   (cambio de perfil/datos) y desde `ir()` (js/ui.js, cambio de pantalla). */
+   a `_evFabReserva()`) arma el contenido de `#ev-fab-opciones`, el
+   ícono-solo de Quindes y la visibilidad del FAB en sí -- llamada desde
+   `_evActualizarTopBarModo()` (cambio de perfil/datos) y desde `ir()`
+   (js/ui.js, cambio de pantalla). */
 var _evFabAbierto = false;
 function _evFabToggle() {
   _evFabAbierto = !_evFabAbierto;
@@ -553,13 +565,21 @@ document.addEventListener('click', function(e) {
 });
 // Onclick real de #ev-fab-btn. Mirlxs que depende de equipo del club (renta,
 // no tiene propio) solo puede reservar por clase -- un speed-dial de una
-// sola opción sería ruido, así que navega directo. Quindes no-admin tampoco
-// tiene speed-dial -- mismo criterio ya usado por `evAbrirSheetTipoPago()`
-// (quindes no paga por clase, un solo camino real: mensual). Cualquier otro
-// perfil (admin, o mirlxs con equipo propio) togglea el speed-dial armado
-// por `_evFabUnificadoActualizar()`.
+// sola opción sería ruido, así que navega directo. Quindes (admin sin cuota
+// al día, o no-admin) también navega directo por el mismo motivo -- ver el
+// comentario grande de más arriba (junto a `_evFabToggle()`) para el
+// resumen completo de los 4 perfiles de Quindes. Cualquier otro perfil
+// (mirlxs admin, quindes admin CON cuota al día, o mirlxs con equipo
+// propio) togglea el speed-dial armado por `_evFabUnificadoActualizar()`.
 function _evFabPlusClick() {
   var esAdmin = typeof _adminToken !== 'undefined' && !!_adminToken;
+  var modo = _modoUsuario();
+  // Quindes admin SIN cuota al día: una sola acción real ("Nuevo evento"),
+  // mismo criterio de "sin speed-dial para una sola opción" que ya usaba
+  // esta función para mirlxs sin equipo propio (ver más abajo) -- ver
+  // _evFabUnificadoActualizar() más abajo para el resto de los 4 perfiles
+  // de Quindes.
+  if (esAdmin && modo === 'quindes' && !_evTieneCuotaAlDia()) { irEvCrear(); return; }
   if (!esAdmin) {
     // _evFabReservaClase() (más abajo, junto a _evFabReserva()) -- mismo fix
     // que ya se aplicó al botón "Reserva por clase" del speed-dial: llamar acá
@@ -571,7 +591,14 @@ function _evFabPlusClick() {
     // navegar, así que el botón atrás de #s4 vuelve al timeline en vez de a
     // #s-home (la home vieja de Reservas).
     if (_evNecesitaEquipo()) { _evFabReservaClase(); return; }
-    if (_modoUsuario() === 'quindes') { irNuevaReservaConTipo('mensual'); return; }
+    // Quindes no-admin: si el toque llegó hasta acá es porque tiene cuota al
+    // día -- _evFabUnificadoActualizar() (más abajo) oculta el FAB entero si
+    // no la tiene. Un solo camino real, sin speed-dial: reservar el mes,
+    // mismo flujo (_evFabReservaMesActual()) que usa la opción "Reserva por
+    // mes" del speed-dial de mirlxs/admin -- reemplaza el
+    // irNuevaReservaConTipo('mensual') viejo, que arrastraba el mismo bug de
+    // history.back() ya corregido arriba para mirlxs sin equipo propio.
+    if (modo === 'quindes') { _evFabReservaMesActual(); return; }
   }
   _evFabToggle();
 }
@@ -2680,19 +2707,59 @@ function _evFabUnificadoActualizar() {
   var esAdmin = typeof _adminToken !== 'undefined' && !!_adminToken;
   var modo = _modoUsuario();
   var necesitaEquipo = _evNecesitaEquipo();
+  var esQuindes = modo === 'quindes';
+  // Quindes: el FAB siempre muestra SOLO el ícono, sin el texto "Reservar"
+  // que sí llevan mirlxs/admin (ver Cambio 28) -- el "+" de la nav bar ya
+  // estaba oculto para quindes de antes, sin relación con este toggle.
+  // #ev-fab-btn-texto/`.ev-fab-btn--icono-solo` en index.html/css/eventos.css.
+  var btn = document.getElementById('ev-fab-btn');
+  var btnTexto = document.getElementById('ev-fab-btn-texto');
+  if (btn) btn.classList.toggle('ev-fab-btn--icono-solo', esQuindes);
+  if (btnTexto) btnTexto.style.display = esQuindes ? 'none' : '';
   var html = '';
+  if (esQuindes && !esAdmin) {
+    // Quindes no-admin: los 2 perfiles que NO son admin, ver el resumen de
+    // los 4 casos al inicio de este bloque. Sin cuota al día, el FAB no
+    // tiene ningún camino real (no puede crear eventos ni reservar sin
+    // pagar antes) -- se oculta entero. Con cuota, navega directo a
+    // reservar el mes sin speed-dial (_evFabPlusClick(), más arriba) -- una
+    // sola opción real sería ruido, mismo criterio que mirlxs sin equipo
+    // propio.
+    if (!_evTieneCuotaAlDia()) { fab.style.display = 'none'; _evFabCerrar(); return; }
+    if (opciones) opciones.innerHTML = '';
+    fab.style.display = '';
+    return;
+  }
   if (esAdmin) {
-    if (_evTieneCuotaAlDia()) {
-      html += '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); _evFabReservaMesActual();">' +
-        '<span class="material-symbols-outlined">calendar_month</span><span>Reserva por mes</span></button>';
+    if (esQuindes) {
+      // Quindes admin sin cuota al día: directo a "Nuevo evento" sin
+      // speed-dial (_evFabPlusClick(), más arriba) -- misma "una sola
+      // opción real" de arriba. Con cuota, speed-dial con las 2 opciones
+      // reales (etiquetas propias de Quindes, distintas de las de mirlxs
+      // admin más abajo).
+      if (!_evTieneCuotaAlDia()) {
+        if (opciones) opciones.innerHTML = '';
+        fab.style.display = '';
+        return;
+      }
+      html =
+        '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); _evFabReservaMesActual();">' +
+          '<span class="material-symbols-outlined">calendar_month</span><span>Nueva reserva</span></button>' +
+        '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); irEvCrear();">' +
+          '<span class="material-symbols-outlined">edit_calendar</span><span>Nuevo evento</span></button>';
+    } else {
+      if (_evTieneCuotaAlDia()) {
+        html += '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); _evFabReservaMesActual();">' +
+          '<span class="material-symbols-outlined">calendar_month</span><span>Reserva por mes</span></button>';
+      }
+      html += '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); irEvCrear();">' +
+        '<span class="material-symbols-outlined">edit_calendar</span><span>Eventos</span></button>';
     }
-    html += '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); irEvCrear();">' +
-      '<span class="material-symbols-outlined">edit_calendar</span><span>Eventos</span></button>';
   } else if (!necesitaEquipo && modo === 'mirlxs') {
     // Mirlxs con equipo propio -- puede reservar por clase O por mes, ver
     // MANIFEST.md "Cambios recientes". Mirlxs sin equipo propio (renta del
-    // club) y quindes no-admin quedan sin opciones acá -- _evFabPlusClick()
-    // los manda directo a su único camino real, sin abrir este speed-dial.
+    // club) queda sin opciones acá -- _evFabPlusClick() lo manda directo a
+    // su único camino real, sin abrir este speed-dial.
     html =
       '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); _evFabReservaClase();">' +
         '<span class="material-symbols-outlined">confirmation_number</span><span>Reserva por clase</span></button>' +

@@ -167,6 +167,15 @@
   white-space: nowrap;
 }
 #ev-fab-btn .material-symbols-rounded { font-size: 1.4rem; display: block; }
+/* Quindes: el FAB de #s-eventos vuelve a solo-ícono (revierte el override de
+   arriba) -- clase togglada junto con #ev-fab-btn-texto (index.html) en
+   _evFabUnificadoActualizar() (js/eventos.js), ver MANIFEST.md "Cambios
+   recientes". Id+clase para ganarle de especificidad al `#ev-fab-btn` solo. */
+#ev-fab-btn.ev-fab-btn--icono-solo {
+  width: 56px;
+  padding: 0;
+  gap: 0;
+}
 /* Opciones del speed dial -- SIEMPRE en el DOM (no display:none), ocultas
    con opacity+transform+visibility para poder animar la entrada/salida
    (fade+slide) apenas se suma/saca .ev-fab-abierto del contenedor padre. */
