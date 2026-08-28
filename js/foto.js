@@ -276,7 +276,41 @@ function _subirFotoRecortada(base64) {
   apiPost(params, function(res) {
     ocultarCargando();
     if (res && res.exito) {
-      _fotoAplicarResultado(res.url || '', 'subida');
+      var url = res.url || '';
+      // Cache-busting (BUG REAL corregido, ver MANIFEST.md "Cambios
+      // recientes"): GAS puede reusar el mismo nombre/id de archivo entre
+      // 2 subidas del mismo usuario -- la URL pública queda IDÉNTICA a la
+      // anterior, así que el navegador servía la versión vieja cacheada de
+      // esa misma URL al recargar la página en vez de pedirla de nuevo.
+      // Sufijo único por subida (no por render -- se persiste tal cual,
+      // ver la llamada de abajo) para forzar un fetch nuevo, mismo criterio
+      // que el `?v=<hash>` de cache-busting de JS/CSS en index.html.
+      if (url) url += (url.indexOf('?') === -1 ? '?' : '&') + 'cb=' + Date.now();
+      _fotoAplicarResultado(url, 'subida');
+      // BUG REAL corregido (causa principal, ver MANIFEST.md "Cambios
+      // recientes"): `subirFotoPerfil` vive entero en GAS (Apps Script,
+      // fuera de este repo, no editable desde acá) y no siempre persistía
+      // la URL nueva en `equipo.foto_perfil` -- la actualización visual
+      // inmediata de arriba es optimista (usa el `url` que devuelve la
+      // respuesta), no una confirmación de que quedó guardada; recargar la
+      // página volvía a pedir el perfil real (`restaurarSesion()`, sin
+      // ninguna caché local de por medio) y mostraba la foto vieja. Refuerzo
+      // acá con `actualizarPerfilGoogle` -- la MISMA acción ya usada por
+      // "Usar foto de Google" (`sfpUsarGoogle()`, más arriba en este
+      // archivo), nativa de Supabase (no GAS, ver
+      // supabase/functions/api/index.ts) y ya confirmada funcionando -- para
+      // que `equipo.foto_perfil` quede escrito de verdad sin depender de
+      // GAS. Solo en contexto "ajustes" (inscripción no tiene sesión/token
+      // todavía, ver comentario de esta función) y solo con `url` no vacía
+      // (esa acción ignora un `foto` vacío -- "quitar foto" sigue
+      // dependiendo de GAS como antes, fuera del bug reportado). Silenciosa
+      // a propósito (sin loader/toast propio) -- la subida en sí YA mostró
+      // su resultado arriba, esto es solo un refuerzo de persistencia.
+      if (_fotoContexto === 'ajustes' && url && typeof api === 'function') {
+        api({ action: 'actualizarPerfilGoogle', foto: url }, function() {}, function(e) {
+          console.warn('No se pudo reforzar la persistencia de foto_perfil:', e);
+        });
+      }
     } else {
       _fotoToast((res && res.error) || 'No se pudo actualizar la foto.');
     }
