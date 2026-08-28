@@ -33,7 +33,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=4dbd5b57">
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
-<link rel="stylesheet" href="css/eventos.css?v=bcf38c18">
+<link rel="stylesheet" href="css/eventos.css?v=6ed4522f">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
@@ -379,13 +379,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-lugar"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-lugar"></div></div>
             <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-tipo"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-tipo"></div></div>
           </div>
-        </div>
-        <div id="ev-pill-banner" class="ev-pill-banner" style="display:none;" role="status">
-          <span class="material-symbols-outlined ev-pill-icono">info</span>
-          <span id="ev-pill-texto" class="ev-pill-texto"></span>
-          <button type="button" id="ev-pill-cerrar" class="ev-pill-cerrar" onclick="_evPillsCerrar()" title="Ocultar sugerencias" style="display:none;">
-            <span class="material-symbols-outlined">close</span>
-          </button>
         </div>
       </div>
 
@@ -2838,7 +2831,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=2531b626"></script>
-<script src="js/eventos.js?v=d4638653"></script>
+<script src="js/eventos.js?v=52457eb5"></script>
 <script src="js/tareas.js"></script>
 <script src="js/home.js?v=5c22841b"></script>
 <script src="js/reservas.js?v=4910a3f3"></script>
@@ -4523,6 +4516,19 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <button class="btn-text-simple" onclick="wpComprobanteOmitir()">Omitir y volver</button>
   </div>
 </div>
+
+<!-- Tour guiado de bienvenida de Eventos (ver MANIFEST.md "Cambios
+     recientes") -- reemplaza el banner rotativo #ev-pill-banner de antes.
+     3 elementos, hijos directos de <body>, fuera de .pantalla/.card (mismo
+     motivo que .cta-footer-fixed/.ev-fab-menu de arriba). Vacíos/ocultos
+     por default -- `_evTourIniciarSiCorresponde()`/js/eventos.js los
+     muestra y puebla (innerHTML de #ev-tour-tooltip) la primera vez que se
+     entra a #s-eventos (localStorage `ev_tour_visto`), y los vuelve a
+     ocultar al cerrarse -- se quedan en el DOM entre tours, no se
+     recrean. -->
+<div id="ev-tour-overlay" style="display:none;"></div>
+<div id="ev-tour-lens" style="display:none;"></div>
+<div id="ev-tour-tooltip" style="display:none;"></div>
 
 </body>
 </html>

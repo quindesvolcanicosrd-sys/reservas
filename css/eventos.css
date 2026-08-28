@@ -1431,31 +1431,54 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
   margin: 0 0 20px;
 }
 
-/* Banner rotativo de sugerencias (#ev-pill-banner, ver MANIFEST.md
-   "Cambios recientes") -- tokens reales del sistema de colores (no los
-   nombres --color-* genéricos del pedido original, que no existen en
-   css/colors.css): mismo patrón que .admin-dash-banner (css/admin.css)
-   -- --surface-2/--border-light para el fondo/borde neutro, --brand para
-   el ícono de acento, --muted para texto secundario, --radius (14px)
-   para el border-radius de card ya estándar en toda la app. */
-.ev-pill-banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  margin: 8px 0 4px;
-  border-radius: var(--radius);
-  background: var(--surface-2);
-  border: 1px solid var(--border-light);
-  font-size: 0.85rem;
-  color: var(--muted);
-  transition: opacity 0.4s ease;
+/* Tour guiado de bienvenida de Eventos (#ev-tour-*, ver MANIFEST.md
+   "Cambios recientes") -- reemplaza el banner rotativo #ev-pill-banner/
+   _evPillsInit() de antes. Spotlight/coach-marks: 3 elementos hijos
+   directos de <body>, fuera de .pantalla (mismo criterio que
+   .cta-footer-fixed y los bottom sheets, ver index.html -- position:fixed
+   atrapado por el containing block de .pantalla.activa mientras corre su
+   animación de entrada). Tokens reales del sistema de colores: --overlay-dark
+   (rgba(0,0,0,0.7), la variable de css/colors.css más cercana al
+   rgba(0,0,0,0.72) del pedido original, que no existe como token) para el
+   fondo del overlay y el "recorte" de la lente vía box-shadow; --bg/--text/
+   --brand/--border-light/--shadow-lg para el tooltip, mismo border-radius
+   (14px, var(--radius)) que el resto de la app. z-index en cascada
+   9900/9901/9902 (overlay/lente/tooltip), por encima de los bottom sheets
+   (9400-9450) y del loading overlay (9999 -- el tour nunca corre a la vez
+   que una pantalla de carga). */
+#ev-tour-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-dark);
+  z-index: 9900;
 }
-.ev-pill-banner.ev-pill-fade { opacity: 0; }
-.ev-pill-icono { font-size: 18px; flex-shrink: 0; color: var(--brand); }
-.ev-pill-texto { flex: 1; transition: opacity 0.3s ease; will-change: opacity; }
-.ev-pill-cerrar { background: none; border: none; cursor: pointer; padding: 0; color: var(--muted); display: flex; }
-.ev-pill-cerrar .material-symbols-outlined { font-size: 16px; }
+#ev-tour-lens {
+  position: fixed;
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px var(--overlay-dark);
+  pointer-events: none;
+  transition: top 0.35s var(--ease-sheet), left 0.35s var(--ease-sheet), width 0.35s var(--ease-sheet), height 0.35s var(--ease-sheet);
+  z-index: 9901;
+}
+#ev-tour-tooltip {
+  position: fixed;
+  width: min(320px, calc(100vw - 32px));
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 16px;
+  opacity: 0;
+  transition: opacity 0.2s ease, top 0.35s var(--ease-sheet), left 0.35s var(--ease-sheet);
+  z-index: 9902;
+}
+#ev-tour-tooltip.ev-tour-tooltip--visible { opacity: 1; }
+.ev-tour-tooltip-titulo { font-weight: 700; font-size: 1rem; color: var(--brand); margin-bottom: 6px; }
+.ev-tour-tooltip-texto { font-size: 0.88rem; color: var(--text); line-height: 1.45; margin-bottom: 14px; }
+.ev-tour-tooltip-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ev-tour-tooltip-omitir { font-size: 0.78rem; color: var(--muted); text-decoration: none; }
+.ev-tour-tooltip-btn { padding: 8px 18px; font-size: 0.85rem; }
 
 /* Opciones del sheet #sheet-ev-tipo-pago (index.html) -- tokens reales del
    sistema de colores (--surface-1/--text-1 del pedido original no existen
@@ -1518,12 +1541,6 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
   width: 100%;
   margin-top: 14px;
 }
-
-/* ----- Pills: referencias visuales inline ----- */
-.ev-pill-ref-icon { font-size: 1.05rem; vertical-align: -3px; line-height: 1; }
-.ev-pill-ref-btn-danger { display:inline-flex; align-items:center; padding:1px 8px; border-radius:6px; font-size:0.68rem; font-weight:700; vertical-align:middle; background:var(--danger); color:var(--white); }
-.ev-pill-ref-mes { display:inline-flex; align-items:center; gap:1px; padding:1px 2px 1px 7px; border-radius:8px; font-size:0.75rem; font-weight:600; vertical-align:middle; background:var(--surface-alt); color:var(--text); }
-.ev-pill-ref-mes .material-symbols-outlined { font-size:0.9rem; vertical-align:-2px; }
 
 /* Botón cancelar/re-agendar: override del text-transform uppercase de .btn */
 .ev-card-btn-cancelar,

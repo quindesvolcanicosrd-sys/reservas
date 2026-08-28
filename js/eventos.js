@@ -982,13 +982,6 @@ function _evAbrirCalendario() {
   var el = document.getElementById('ev-mes-panel');
   if (el) { el.classList.add('abierta'); el.style.maxHeight = el.scrollHeight + 'px'; }
   _evActualizarNavMesChevron();
-  var _pillRef = document.getElementById('ev-pill-banner');
-  _evPillEraVisible = !!(_pillRef && _pillRef.style.display !== 'none');
-  if (_evPillEraVisible) {
-    _pillRef.style.transition = 'opacity 0.18s ease';
-    _pillRef.style.opacity = '0';
-    setTimeout(function() { _pillRef.style.display = 'none'; _pillRef.style.opacity = ''; _pillRef.style.transition = ''; }, 200);
-  }
 }
 // Única acción que cierra el calendario del todo (ver "Cambios recientes",
 // punto 7 del rediseño) -- sin importar si estaba expandido (mes) o
@@ -1002,22 +995,6 @@ function _evCerrarCalendario() {
       requestAnimationFrame(function() {
         el.classList.remove('abierta');
         el.style.maxHeight = '0px';
-        if (_evPillEraVisible) {
-          setTimeout(function() {
-            var _pill = document.getElementById('ev-pill-banner');
-            if (_pill) {
-              _pill.style.display = 'flex';
-              _pill.style.opacity = '0';
-              requestAnimationFrame(function() {
-                requestAnimationFrame(function() {
-                  _pill.style.transition = 'opacity 0.22s ease';
-                  _pill.style.opacity = '1';
-                  setTimeout(function() { _pill.style.transition = ''; }, 250);
-                });
-              });
-            }
-          }, 290);
-        }
       });
     });
   }
@@ -2521,6 +2498,7 @@ function _evNecesitaEquipo() {
 
 function _evActualizarTopBarModo() {
   var modo = _modoUsuario();
+  var esAdmin = typeof _adminToken !== 'undefined' && !!_adminToken;
   var btnPatin = document.getElementById('ev-btn-patin');
   var btnAnticipada = document.getElementById('ev-btn-anticipada');
   // Bug real corregido (ver "Cambios recientes"): comparaban contra
@@ -2538,16 +2516,23 @@ function _evActualizarTopBarModo() {
   // (_evFabUnificadoActualizar(), más abajo). `necesitaEquipo` (equipo del
   // club) sigue ocultándolo también, sin cambios en ese criterio.
   if (btnAnticipada) btnAnticipada.style.display = (necesitaEquipo || modo === 'mirlxs') ? 'none' : '';
-  // Hallazgo relacionado, no pedido explícito pero mismo bug de fondo:
-  // _evPillsInit() (más abajo, listas['equipamiento'] YA existe con los
-  // tips correctos -- ícono de patín, reagendar/cancelar) recibía siempre
-  // `modo` ('mirlxs'/'quindes'), nunca 'equipamiento' -- una cuenta con
-  // equipo del club veía las sugerencias de mirlxs (mencionan "asistencia
-  // anticipada", el ícono que este mismo fix oculta para ellas 2 líneas
-  // arriba). Se pasa la lista correcta sin tocar `modo` en sí (sigue
-  // resolviendo mirlxs/quindes para todo lo demás de esta función).
-  _evPillsInit(necesitaEquipo ? 'equipamiento' : modo);
   _evFabUnificadoActualizar();
+  // Tour guiado de bienvenida (ver "Cambios recientes" -- reemplaza el
+  // banner rotativo `#ev-pill-banner`/`_evPillsInit()` de antes). Se
+  // dispara acá, después de `_evFabUnificadoActualizar()`, para que el FAB
+  // ya esté en su estado final (visible/con el speed-dial correcto) antes
+  // de intentar spotlightearlo. Diferido 650ms (mismo motivo que el
+  // setTimeout(50) de `_evScrollAFecha()` en `irEventos()` -- las
+  // `getBoundingClientRect()` de esta primera entrada NO son reales hasta
+  // que termina la animación de entrada `smoothSlideUp 0.6s` de
+  // `.pantalla.activa`, que además desplaza `translateY(20px)` a TODO lo
+  // de adentro de `.pantalla#s-eventos` -- mes/buscar/equipo/timeline
+  // quedarían con la lente desalineada esos primeros ~600ms si se midiera
+  // antes; `#ev-fab-btn`, hijo directo de `<body>`, no lo necesitaría, pero
+  // es más simple un solo delay para todos los pasos que 2 caminos
+  // distintos). `_evTourIniciarSiCorresponde()` es un no-op silencioso si
+  // ya se vio (localStorage `ev_tour_visto`) o si ya hay un tour corriendo.
+  setTimeout(function() { _evTourIniciarSiCorresponde(esAdmin); }, 650);
 }
 
 // Onclick real de la opción "Reserva por mes" del FAB unificado (mirlxs Y
@@ -2770,77 +2755,175 @@ function _evFabUnificadoActualizar() {
   fab.style.display = '';
 }
 
-var _evPillsTimer = null;
-var _evPillEraVisible = false;
-function _evPillsInit(modo) {
-  if (localStorage.getItem('ev_pills_ocultos') === '1') return;
-  var _picon = function(n) { return '<span class="material-symbols-outlined ev-pill-ref-icon">' + n + '</span>'; };
-  var _mesItem = function() {
-    var t = document.getElementById('ev-nav-mes-texto');
-    var ml = t ? (t.textContent || '').trim() : '';
-    return 'Abre el calendario pulsando en <span class="ev-pill-ref-mes">' + (ml || 'el mes') + ' ' + _picon('expand_more') + '</span>';
-  };
-  // Pill "Pulsa en [ícono] para realizar una reserva" -- mismo glyph del FAB
-  // unificado (#ev-fab-btn, index.html/_evFabUnificadoActualizar()), común a
-  // los 3 perfiles: la reserva ahora se inicia siempre desde ahí. Glyph
-  // actualizado a 'calendar_add_on' junto con el rediseño del FAB (antes
-  // 'add', cuando el botón era solo el ícono "+") -- se mantiene con
-  // _picon()/`material-symbols-outlined` (helper compartido por el resto de
-  // los íconos de esta lista) aunque el FAB real ahora use la variante
-  // `material-symbols-rounded`: mismo glyph, estilo de trazo levemente
-  // distinto, sin justificar una 2ª familia de fuente cargada solo para este
-  // ícono de referencia.
-  var _fabItem = 'Pulsa en ' + _picon('calendar_add_on') + ' para realizar una reserva';
-  var listas = {
-    equipamiento: [
-      _fabItem,
-      'Cambia tu equipamiento desde ' + _picon('settings') + ' o desde ' + _picon('roller_skating'),
-      '<span class="ev-pill-ref-btn-danger">Re&#8209;Agenda o cancela</span> cuando quieras tus eventos reservados',
-      'Busca fechas y eventos desde ' + _picon('search'),
-      _mesItem
-    ],
-    mirlxs: [
-      'Entra a un evento para ver más información',
-      _fabItem,
-      'Busca fechas y eventos desde ' + _picon('search'),
-      _mesItem
-    ],
-    quindes: [
-      'Toca un evento para ver más información',
-      _fabItem,
-      'Busca fechas y eventos desde ' + _picon('search'),
-      _mesItem
-    ]
-  };
-  var msgs = listas[modo] || listas.mirlxs;
-  var idx = 0;
-  var banner = document.getElementById('ev-pill-banner');
-  var texto = document.getElementById('ev-pill-texto');
-  var cerrar = document.getElementById('ev-pill-cerrar');
-  if (!banner || !texto) return;
-  banner.style.display = 'flex';
-  if (cerrar) cerrar.style.display = '';
-  texto.innerHTML = typeof msgs[0] === 'function' ? msgs[0]() : msgs[0];
-  if (_evPillsTimer) clearInterval(_evPillsTimer);
-  _evPillsTimer = setInterval(function() {
-    texto.style.opacity = '0';
-    setTimeout(function() {
-      idx = (idx + 1) % msgs.length;
-      texto.innerHTML = typeof msgs[idx] === 'function' ? msgs[idx]() : msgs[idx];
-      texto.style.opacity = '1';
-    }, 300);
-  }, 10000);
+// ═══ Tour guiado de bienvenida de Eventos (ver MANIFEST.md "Cambios
+// recientes") -- reemplaza el banner rotativo #ev-pill-banner/_evPillsInit()
+// de antes. Spotlight/coach-marks sobre #ev-tour-overlay/#ev-tour-lens/
+// #ev-tour-tooltip (index.html, hijos directos de <body>, ver
+// css/eventos.css para el detalle de z-index/tokens). Se dispara una única
+// vez por dispositivo (localStorage `ev_tour_visto`) la primera vez que se
+// entra a #s-eventos -- `_evTourIniciarSiCorresponde()` es un no-op si ya
+// se vio o si ya hay un tour corriendo.
+//
+// El contenido de cada paso cubre lo mismo que mostraban las listas de
+// `_evPillsInit()` (equipamiento/mirlxs/quindes) -- acá reagrupado en 2
+// arrays por perfil (admin/usuario, no por categoría mirlxs/quindes) porque
+// esa era la única diferenciación real de contenido que pedía el rediseño;
+// el paso "Tu equipamiento" (antes exclusivo de la lista `equipamiento`,
+// fusiona sus 2 tips -- cambiar equipo + reagendar/cancelar -- en uno solo)
+// se salta solo en runtime para cuentas sin equipo del club, ver
+// `_evTourMostrarPaso()` más abajo (mismo criterio ya usado por
+// `_evActualizarTopBarModo()` para mostrar/ocultar #ev-btn-patin).
+var _EV_TOUR_PASOS_USER = [
+  { selector: '#ev-nav-mes-label', titulo: 'Navega por mes', texto: 'Abre el calendario pulsando en el mes actual para saltar directo a la fecha que buscas.', posTooltip: 'bottom' },
+  { selector: '#ev-busqueda-toggle-btn', titulo: 'Busca y filtra', texto: 'Busca eventos, cumpleaños o lugares por texto, o filtra por Lugar y Tipo.', posTooltip: 'bottom' },
+  { selector: '#ev-btn-patin', titulo: 'Tu equipamiento', texto: 'Cambia el equipamiento que usas del club desde aquí. Para reagendar o cancelar un evento reservado, usa el botón rojo dentro de su card.', posTooltip: 'bottom' },
+  { selector: '#ev-fab-btn', titulo: 'Reserva tu lugar', texto: 'Pulsa aquí para reservar tu lugar en un evento o clase.', posTooltip: 'top' },
+  { selector: '#ev-timeline', titulo: 'Explora el calendario', texto: 'Toca un evento para ver toda su información.', posTooltip: 'bottom' }
+];
+var _EV_TOUR_PASOS_ADMIN = [
+  { selector: '#ev-nav-mes-label', titulo: 'Navega por mes', texto: 'Abre el calendario pulsando en el mes actual para saltar directo a la fecha que buscas.', posTooltip: 'bottom' },
+  { selector: '#ev-busqueda-toggle-btn', titulo: 'Busca y filtra', texto: 'Busca eventos, cumpleaños o lugares por texto, o filtra por Lugar y Tipo.', posTooltip: 'bottom' },
+  { selector: '#ev-btn-patin', titulo: 'Tu equipamiento', texto: 'Cambia el equipamiento que usas del club desde aquí. Para reagendar o cancelar un evento reservado, usa el botón rojo dentro de su card.', posTooltip: 'bottom' },
+  { selector: '#ev-fab-btn', titulo: 'Reserva o crea eventos', texto: 'Pulsa aquí para reservar tu lugar en un evento o clase, o para crear un nuevo evento.', posTooltip: 'top' },
+  { selector: '#ev-timeline', titulo: 'Explora el calendario', texto: 'Toca un evento para ver toda su información.', posTooltip: 'bottom' }
+];
+
+var _evTourPasos = null;
+var _evTourIdx = 0;
+var _evTourActivo = false;
+var _evTourRafPendiente = false;
+
+function _evTourIniciarSiCorresponde(esAdmin) {
+  if (_evTourActivo) return;
+  if (localStorage.getItem('ev_tour_visto') === '1') return;
+  var overlay = document.getElementById('ev-tour-overlay');
+  var lens = document.getElementById('ev-tour-lens');
+  var tooltip = document.getElementById('ev-tour-tooltip');
+  if (!overlay || !lens || !tooltip) return;
+  _evTourPasos = esAdmin ? _EV_TOUR_PASOS_ADMIN : _EV_TOUR_PASOS_USER;
+  _evTourActivo = true;
+  overlay.style.display = 'block';
+  lens.style.display = 'block';
+  tooltip.style.display = 'block';
+  window.addEventListener('resize', _evTourReposicionar);
+  window.addEventListener('scroll', _evTourReposicionar, true);
+  _evTourMostrarPaso(0);
 }
 
-function _evPillsCerrar() {
-  var modal = document.getElementById('modal-deshabilitar-pills');
-  if (modal) { modal.style.display = 'flex'; return; }
-  if (confirm('¿Deseas deshabilitar las sugerencias?')) {
-    localStorage.setItem('ev_pills_ocultos', '1');
-    var banner = document.getElementById('ev-pill-banner');
-    if (banner) banner.style.display = 'none';
-    if (_evPillsTimer) { clearInterval(_evPillsTimer); _evPillsTimer = null; }
+// Recorre `_evTourPasos` desde `idx` y muestra el primero cuyo selector
+// resuelva a un elemento realmente visible -- salta en silencio los que no
+// existen o están en `display:none` (ej. #ev-btn-patin para cuentas sin
+// equipo del club, ver _evNecesitaEquipo()/js/eventos.js). Si ninguno queda,
+// cierra el tour y lo marca como visto.
+function _evTourMostrarPaso(idx) {
+  if (!_evTourActivo || !_evTourPasos) return;
+  if (idx >= _evTourPasos.length) { _evTourCerrar(true); return; }
+  var paso = _evTourPasos[idx];
+  var el = document.querySelector(paso.selector);
+  var rect = el ? el.getBoundingClientRect() : null;
+  if (!el || !rect || (rect.width === 0 && rect.height === 0)) {
+    _evTourMostrarPaso(idx + 1);
+    return;
   }
+  _evTourIdx = idx;
+  _evTourPosicionarLente(rect);
+  _evTourRenderTooltip(paso, rect);
+}
+
+function _evTourPosicionarLente(rect) {
+  var lens = document.getElementById('ev-tour-lens');
+  if (!lens) return;
+  var pad = 8;
+  lens.style.top = (rect.top - pad) + 'px';
+  lens.style.left = (rect.left - pad) + 'px';
+  lens.style.width = (rect.width + pad * 2) + 'px';
+  lens.style.height = (rect.height + pad * 2) + 'px';
+}
+
+function _evTourRenderTooltip(paso, rect) {
+  var tooltip = document.getElementById('ev-tour-tooltip');
+  if (!tooltip) return;
+  var esUltimo = _evTourIdx >= _evTourPasos.length - 1;
+  tooltip.innerHTML =
+    '<div class="ev-tour-tooltip-titulo">' + paso.titulo + '</div>' +
+    '<div class="ev-tour-tooltip-texto">' + paso.texto + '</div>' +
+    '<div class="ev-tour-tooltip-footer">' +
+      '<a href="javascript:void(0)" class="ev-tour-tooltip-omitir" onclick="_evTourCerrar(true)">Omitir tour</a>' +
+      '<button type="button" class="btn btn-primary ev-tour-tooltip-btn" onclick="_evTourSiguiente()">' + (esUltimo ? 'Entendido' : 'Siguiente') + '</button>' +
+    '</div>';
+  tooltip.classList.remove('ev-tour-tooltip--visible');
+  _evTourPosicionarTooltip(rect, paso.posTooltip);
+  tooltip.classList.add('ev-tour-tooltip--visible');
+}
+
+// Arriba/abajo de la lente según `posTooltip` -- si el lado preferido no
+// tiene espacio real en el viewport, cae al otro lado; si ninguno alcanza
+// (viewport muy bajo), se clampea contra el borde. Centrado horizontal
+// sobre la lente, clampeado a los bordes del viewport con el mismo margen.
+function _evTourPosicionarTooltip(rect, prefer) {
+  var tooltip = document.getElementById('ev-tour-tooltip');
+  if (!tooltip) return;
+  var pad = 8;
+  var margen = 12;
+  var lensTop = rect.top - pad;
+  var lensLeft = rect.left - pad;
+  var lensAncho = rect.width + pad * 2;
+  var lensAlto = rect.height + pad * 2;
+  var alto = tooltip.offsetHeight;
+  var ancho = tooltip.offsetWidth;
+  var vh = window.innerHeight;
+  var vw = window.innerWidth;
+  var arriba = lensTop - margen - alto;
+  var abajo = lensTop + lensAlto + margen;
+  var cabeArriba = arriba >= margen;
+  var cabeAbajo = (abajo + alto) <= (vh - margen);
+  var top;
+  if (prefer === 'top') {
+    top = cabeArriba ? arriba : (cabeAbajo ? abajo : margen);
+  } else {
+    top = cabeAbajo ? abajo : (cabeArriba ? arriba : (vh - margen - alto));
+  }
+  var left = lensLeft + lensAncho / 2 - ancho / 2;
+  left = Math.max(margen, Math.min(left, vw - margen - ancho));
+  tooltip.style.top = top + 'px';
+  tooltip.style.left = left + 'px';
+}
+
+function _evTourSiguiente() {
+  _evTourMostrarPaso(_evTourIdx + 1);
+}
+
+function _evTourCerrar(marcarVisto) {
+  if (marcarVisto) localStorage.setItem('ev_tour_visto', '1');
+  _evTourActivo = false;
+  _evTourPasos = null;
+  window.removeEventListener('resize', _evTourReposicionar);
+  window.removeEventListener('scroll', _evTourReposicionar, true);
+  var overlay = document.getElementById('ev-tour-overlay');
+  var lens = document.getElementById('ev-tour-lens');
+  var tooltip = document.getElementById('ev-tour-tooltip');
+  if (overlay) overlay.style.display = 'none';
+  if (lens) lens.style.display = 'none';
+  if (tooltip) { tooltip.style.display = 'none'; tooltip.classList.remove('ev-tour-tooltip--visible'); tooltip.innerHTML = ''; }
+}
+
+// Reposiciona el paso actual sin re-renderizar el tooltip (evita parpadeo
+// del botón/link en cada tick de scroll) -- limitado a 1 recálculo por
+// frame vía rAF, igual que el resto de los listeners de scroll de esta
+// pantalla (_evActualizarNavMesPorScroll()).
+function _evTourReposicionar() {
+  if (_evTourRafPendiente) return;
+  _evTourRafPendiente = true;
+  requestAnimationFrame(function() {
+    _evTourRafPendiente = false;
+    if (!_evTourActivo || !_evTourPasos) return;
+    var paso = _evTourPasos[_evTourIdx];
+    var el = paso && document.querySelector(paso.selector);
+    if (!el) return;
+    var rect = el.getBoundingClientRect();
+    _evTourPosicionarLente(rect);
+    _evTourPosicionarTooltip(rect, paso.posTooltip);
+  });
 }
 function evAbrirSheetTipoPago() {
   var modo = _modoUsuario();
