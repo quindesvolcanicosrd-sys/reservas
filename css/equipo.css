@@ -1,0 +1,128 @@
+/* ═══════════════════════════════════════════════
+   EQUIPO.CSS — Sección Equipo (Cambio 42, greenfield)
+   Lista (#s-equipo) + perfil de detalle (#s-equipo-perfil).
+   Solo variables de colors.css. Prefijo de clases: eq-
+   ═══════════════════════════════════════════════ */
+
+/* ── Favoritos ────────────────────────────────── */
+.eq-seccion-favoritos { margin-bottom: 18px; }
+.eq-favoritos-header {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.82rem; font-weight: 800; color: var(--brand);
+  text-transform: uppercase; letter-spacing: 0.6px;
+  margin: 4px 0 10px;
+}
+.eq-favoritos-header .material-symbols-outlined { font-size: 1.1rem; }
+.eq-favoritos-vacio {
+  border: 1.5px dashed var(--border-mid); border-radius: 14px;
+  padding: 28px 16px; text-align: center; color: var(--muted); font-size: 0.82rem;
+}
+.eq-favoritos-vacio .material-symbols-outlined {
+  display: block; font-size: 2rem; color: var(--brand-30); margin-bottom: 8px;
+}
+
+/* ── Grupos colapsables (Quindes / Mirlxs) ───────
+   Header: línea a cada lado + pill de conteo + nombre + chevron -- botón
+   real (no solo texto) para que todo el ancho sea tocable, no solo el
+   nombre. Body con max-height animado, mismo mecanismo que el resto de
+   acordeones de la app (ver css/eventos.css .ev-ant-acc-body). */
+.eq-grupo { margin-bottom: 6px; }
+.eq-grupo-header {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  background: none; border: none; padding: 10px 0; margin: 0;
+  cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
+}
+.eq-grupo-linea { flex: 1; height: 1px; background: var(--border-light); }
+.eq-grupo-pill {
+  flex-shrink: 0; background: var(--brand-light); color: var(--brand);
+  font-size: 0.68rem; font-weight: 800; padding: 3px 9px; border-radius: 999px;
+}
+.eq-grupo-nombre {
+  flex-shrink: 0; font-size: 0.82rem; font-weight: 800; color: var(--text);
+  text-transform: uppercase; letter-spacing: 0.6px;
+}
+.eq-grupo-chevron { flex-shrink: 0; font-size: 1.2rem; color: var(--muted); transition: transform 0.25s; }
+.eq-grupo-header.abierto .eq-grupo-chevron { transform: rotate(180deg); color: var(--brand); }
+.eq-grupo-body { max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0.16,1,0.3,1); }
+.eq-grupo-body.abierto { max-height: 2000px; }
+.eq-grupo-body-inner { padding: 4px 0 10px; }
+
+/* ── Fila de miembro (lista + favoritos) ─────────── */
+.eq-miembro-fila {
+  display: flex; align-items: center; gap: 12px; padding: 9px 4px;
+  border-radius: 12px; cursor: pointer; transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) { .eq-miembro-fila:hover { background: var(--brand-lightest); } }
+.eq-miembro-fila:active { background: var(--brand-light); }
+.eq-miembro-info { flex: 1; min-width: 0; }
+.eq-miembro-nombre {
+  font-size: 0.9rem; font-weight: 800; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.eq-miembro-numero { font-weight: 700; color: var(--muted); font-size: 0.8rem; }
+.eq-miembro-username {
+  font-size: 0.78rem; color: var(--muted); margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.eq-fav-btn {
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; border-radius: 50%; background: none; border: none;
+  color: var(--muted); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) { .eq-fav-btn:hover { background: var(--brand-lightest); } }
+.eq-fav-btn .material-symbols-outlined { font-size: 1.3rem; }
+.eq-fav-btn.activo { color: var(--brand); }
+
+/* ── Perfil de detalle (#s-equipo-perfil) ────────── */
+#eq-perfil-nav { position: sticky; top: 0; z-index: 30; }
+.eq-perfil-nav-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 22px 16px; background: var(--bg); flex-shrink: 0;
+}
+/* Botón WhatsApp -- verde de marca, no el naranja de énfasis del resto de
+   .app-nav-icon-btn (ver "Cambios recientes" en colors.css: --wa-brand no
+   deriva del color de énfasis, es un color de marca fijo). */
+.eq-wa-btn { background: var(--wa-bg); color: var(--wa-brand); }
+@media (hover: hover) { .eq-wa-btn:hover { background: var(--wa-bg-hover); } }
+
+.eq-perfil-header { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 4px 16px 22px; }
+.eq-avatar-wrap { position: relative; width: 96px; height: 96px; }
+.eq-avatar-grande { width: 96px; height: 96px; }
+.eq-avatar-grande .avatar-pill-letter { font-size: 34px; }
+/* Pill de rol -- "superpuesto debajo del avatar (no encima)": pegado al
+   borde inferior del círculo, sin taparle la cara. */
+.eq-rol-pill {
+  position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%);
+  background: var(--brand); color: var(--white); font-size: 0.62rem; font-weight: 800;
+  padding: 4px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px;
+  white-space: nowrap; box-shadow: 0 2px 8px var(--black-15);
+}
+.eq-perfil-nombre { font-size: 1.3rem; font-weight: 800; color: var(--text); margin-top: 20px; }
+.eq-perfil-sub { font-size: 0.85rem; color: var(--muted); margin-top: 3px; }
+
+/* Fila de pills deslizable -- pronombres + roles, sin scrollbar visible. */
+.eq-perfil-pills-row {
+  display: flex; gap: 8px; overflow-x: auto; padding: 18px 16px 2px; margin: 0 -16px;
+  scrollbar-width: none;
+}
+.eq-perfil-pills-row::-webkit-scrollbar { display: none; }
+.eq-perfil-pills-row .aj-pill { flex-shrink: 0; cursor: default; }
+
+/* Stats anuales -- 2 tarjetas lado a lado, fondo suave sin borde duro. */
+.eq-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0 6px; }
+.eq-stat-card { background: var(--surface-2); border-radius: 16px; padding: 18px 12px; text-align: center; }
+.eq-stat-icon { display: block; font-size: 1.5rem; margin-bottom: 6px; }
+.eq-stat-valor { font-size: 1.35rem; font-weight: 800; color: var(--text); }
+.eq-stat-label { font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-top: 2px; }
+
+/* Filas de información de contacto -- separador sutil entre filas. */
+.eq-info-lista { margin-top: 10px; }
+.eq-info-fila {
+  display: flex; align-items: center; gap: 14px; padding: 14px 4px;
+  border-bottom: 1px solid var(--border-light); color: var(--text); text-decoration: none;
+}
+.eq-info-fila:last-child { border-bottom: none; }
+.eq-info-fila .material-symbols-outlined { flex-shrink: 0; font-size: 1.2rem; color: var(--brand); }
+.eq-info-texto { font-size: 0.88rem; font-weight: 600; }
+a.eq-info-fila:active { background: var(--brand-lightest); }

@@ -1,0 +1,244 @@
+// js/equipo.js — Sección Equipo (Cambio 42, greenfield). Roster del club:
+// lista con búsqueda + favoritos (localStorage) + perfil de detalle.
+// Datos 100% demo (_EQ_EQUIPO_DEMO abajo) -- sin backend real todavía, ver
+// MANIFEST.md. Reusa helpers compartidos ya existentes: _avatarSetFotoOInicial
+// (js/ui.js), ir()/volver() (js/ui.js), .aj-pill (css/perfil.css).
+
+var _EQ_EQUIPO_DEMO = [
+  { id: 'q1', nombreDerby: 'Comet Fatal', numeroDerby: 7, username: 'cometfatal', fotoPerfil: '',
+    rol: 'Quindes', pronombres: 'Ella, elle', roles: ['Jammer', 'Coach'],
+    telefono: '+593987654321', cumple: '15 de abril', email: 'comet@example.com',
+    stats: { horasPatinadas: 48, asistenciaPct: 87 } },
+  { id: 'q2', nombreDerby: 'Furia Andina', numeroDerby: 22, username: 'furiaandina', fotoPerfil: '',
+    rol: 'Quindes', pronombres: 'Ella', roles: ['Bloqueadora'],
+    telefono: '+593998765432', cumple: '3 de julio', email: 'furia@example.com',
+    stats: { horasPatinadas: 36, asistenciaPct: 74 } },
+  { id: 'q3', nombreDerby: 'Vudú Cría', numeroDerby: 13, username: 'vuducria', fotoPerfil: '',
+    rol: 'Quindes', pronombres: 'Elle', roles: ['Pivot', 'Capitana'],
+    telefono: '', cumple: '', email: '',
+    stats: { horasPatinadas: 52, asistenciaPct: 92 } },
+  { id: 'm1', nombreDerby: 'Pluma Letal', numeroDerby: 9, username: 'plumaletal', fotoPerfil: '',
+    rol: 'Mirlxs', pronombres: 'Ella, elle', roles: ['Jammer'],
+    telefono: '+593991112233', cumple: '22 de octubre', email: 'pluma@example.com',
+    stats: { horasPatinadas: 31, asistenciaPct: 68 } },
+  { id: 'm2', nombreDerby: 'Chukirawa', numeroDerby: 44, username: 'chukirawa', fotoPerfil: '',
+    rol: 'Mirlxs', pronombres: 'Él', roles: ['Bloqueador', 'Entrenador'],
+    telefono: '+593984445566', cumple: '9 de enero', email: 'chukirawa@example.com',
+    stats: { horasPatinadas: 60, asistenciaPct: 95 } },
+  { id: 'm3', nombreDerby: 'Neblina Roja', numeroDerby: 18, username: 'neblinaroja', fotoPerfil: '',
+    rol: 'Mirlxs', pronombres: 'Ella', roles: ['Pivot'],
+    telefono: '', cumple: '30 de mayo', email: '',
+    stats: { horasPatinadas: 24, asistenciaPct: 55 } }
+];
+
+var _eqYaInicializado = false;
+var _eqPersonaActual = null;
+var _eqBusqueda = '';
+
+function _eqEsc(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+
+function _eqPersonaPorId(id) {
+  return _EQ_EQUIPO_DEMO.filter(function(p) { return p.id === id; })[0] || null;
+}
+
+/* ── Favoritos (localStorage, clave 'eq_favoritos') ──────────────────── */
+function _eqFavoritos() {
+  try {
+    var raw = localStorage.getItem('eq_favoritos');
+    return raw ? JSON.parse(raw) : [];
+  } catch (ex) { return []; }
+}
+function _eqSetFavoritos(arr) {
+  try { localStorage.setItem('eq_favoritos', JSON.stringify(arr)); } catch (ex) {}
+}
+function _eqEsFavorito(id) { return _eqFavoritos().indexOf(id) !== -1; }
+function _eqToggleFavorito(id) {
+  var favs = _eqFavoritos();
+  var idx = favs.indexOf(id);
+  if (idx === -1) favs.push(id); else favs.splice(idx, 1);
+  _eqSetFavoritos(favs);
+  _eqRenderFavoritos();
+  _eqRenderGrupo('Quindes');
+  _eqRenderGrupo('Mirlxs');
+  if (_eqPersonaActual && _eqPersonaActual.id === id) _eqActualizarNavPerfil();
+}
+
+/* ── Punto de entrada (ver 'entrar' de APP_BOTTOM_NAV_ITEMS en js/ui.js) ── */
+function irEquipo() {
+  if (!_eqYaInicializado) _eqInit();
+  volver('s-equipo');
+}
+
+function _eqInit() {
+  _eqRenderFavoritos();
+  _eqRenderGrupo('Quindes');
+  _eqRenderGrupo('Mirlxs');
+  _eqYaInicializado = true;
+}
+
+/* ── Hidratación de avatares (mismo patrón que _evHidratarAvatares(),
+   js/eventos.js): puebla cualquier `.eq-avatar[data-nombre]` visible con
+   foto o inicial vía el helper compartido. */
+function _eqHidratarAvatares() {
+  document.querySelectorAll('.eq-avatar[data-nombre]').forEach(function(el) {
+    _avatarSetFotoOInicial(el, el.getAttribute('data-foto') || '', el.getAttribute('data-nombre'));
+  });
+}
+
+function _eqAvatarHtml(p, claseExtra) {
+  return '<div class="avatar-pill ' + claseExtra + ' eq-avatar" data-nombre="' + _eqEsc(p.nombreDerby) + '" data-foto="' + _eqEsc(p.fotoPerfil || '') + '"></div>';
+}
+
+function _eqFilaHtml(p) {
+  var fav = _eqEsFavorito(p.id);
+  return '<div class="eq-miembro-fila" onclick="_eqAbrirPerfil(\'' + p.id + '\')">' +
+      _eqAvatarHtml(p, 'avatar-pill--sm') +
+      '<div class="eq-miembro-info">' +
+        '<div class="eq-miembro-nombre">' + _eqEsc(p.nombreDerby) + ' <span class="eq-miembro-numero">#' + p.numeroDerby + '</span></div>' +
+        '<div class="eq-miembro-username">@' + _eqEsc(p.username) + '</div>' +
+      '</div>' +
+      '<button type="button" class="eq-fav-btn' + (fav ? ' activo' : '') + '" onclick="event.stopPropagation();_eqToggleFavorito(\'' + p.id + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '">' +
+        '<span class="material-symbols-outlined">' + (fav ? 'favorite' : 'favorite_border') + '</span>' +
+      '</button>' +
+    '</div>';
+}
+
+/* ── Búsqueda (filtra por nombre derby + username, AND implícito con el
+   grupo/favoritos que la contiene) -- oculta secciones sin resultados sin
+   sacarlas del DOM, mismo criterio que el resto de la app. */
+function _eqBuscar(valor) {
+  _eqBusqueda = (valor || '').trim().toLowerCase();
+  _eqRenderFavoritos();
+  _eqRenderGrupo('Quindes');
+  _eqRenderGrupo('Mirlxs');
+}
+function _eqPasaBusqueda(p) {
+  if (!_eqBusqueda) return true;
+  return p.nombreDerby.toLowerCase().indexOf(_eqBusqueda) !== -1 ||
+    p.username.toLowerCase().indexOf(_eqBusqueda) !== -1;
+}
+
+function _eqRenderFavoritos() {
+  var wrap = document.getElementById('eq-favoritos-wrap');
+  var cont = document.getElementById('eq-favoritos-lista');
+  if (!wrap || !cont) return;
+  var todas = _eqFavoritos().map(_eqPersonaPorId).filter(function(p) { return !!p; });
+  if (_eqBusqueda) {
+    var filtradas = todas.filter(_eqPasaBusqueda);
+    wrap.style.display = filtradas.length ? '' : 'none';
+    if (filtradas.length) cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
+  } else {
+    wrap.style.display = '';
+    cont.innerHTML = todas.length
+      ? todas.map(_eqFilaHtml).join('')
+      : '<div class="eq-favoritos-vacio"><span class="material-symbols-outlined">favorite</span>Agrega personas a favoritos para verlos aquí</div>';
+  }
+  _eqHidratarAvatares();
+}
+
+function _eqRenderGrupo(rol) {
+  var key = rol.toLowerCase();
+  var wrap = document.getElementById('eq-grupo-' + key);
+  var cont = document.getElementById('eq-grupo-' + key + '-lista');
+  var pillEl = document.getElementById('eq-grupo-' + key + '-pill');
+  if (!wrap || !cont) return;
+  var filtradas = _EQ_EQUIPO_DEMO.filter(function(p) { return p.rol === rol; }).filter(_eqPasaBusqueda);
+  wrap.style.display = filtradas.length ? '' : 'none';
+  if (pillEl) pillEl.textContent = filtradas.length;
+  cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
+  _eqHidratarAvatares();
+}
+
+function _eqToggleGrupo(rol) {
+  var key = rol.toLowerCase();
+  var header = document.getElementById('eq-grupo-' + key + '-header');
+  var body = document.getElementById('eq-grupo-' + key + '-body');
+  if (!header || !body) return;
+  var abrir = !header.classList.contains('abierto');
+  header.classList.toggle('abierto', abrir);
+  body.classList.toggle('abierto', abrir);
+}
+
+/* ── Perfil de detalle (#s-equipo-perfil) ────────────────────────────── */
+function _eqAbrirPerfil(id) {
+  var p = _eqPersonaPorId(id);
+  if (!p) return;
+  _eqPersonaActual = p;
+  _eqRenderPerfil(p);
+  ir('s-equipo-perfil');
+}
+function _eqVolverLista() { volver('s-equipo'); }
+
+// Esta app identifica cuentas por nombre derby (E.nombre), no por un `id`
+// numérico real (comparación normalizada, mismo criterio que
+// _evNombresCoinciden(), js/eventos.js) -- _EQ_EQUIPO_DEMO no está atado al
+// backend real, así que "el usuario logueado" se resuelve así en vez de
+// contra un E.id que no existe en esta app.
+function _eqEsUsuarioActual(p) {
+  return !!(p && p.nombreDerby && typeof E !== 'undefined' && E.nombre &&
+    p.nombreDerby.trim().toUpperCase() === String(E.nombre).trim().toUpperCase());
+}
+
+function _eqWhatsappUrl(telefono) {
+  var limpio = String(telefono || '').replace(/\D/g, '');
+  return limpio ? 'https://wa.me/' + limpio : '';
+}
+
+var _EQ_WA_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>';
+
+function _eqNavHtml(p) {
+  var fav = _eqEsFavorito(p.id);
+  var waUrl = _eqWhatsappUrl(p.telefono);
+  var acciones = '<button type="button" class="app-nav-icon-btn" onclick="_eqToggleFavorito(\'' + p.id + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '"><span class="material-symbols-outlined">' + (fav ? 'favorite' : 'favorite_border') + '</span></button>';
+  if (waUrl) {
+    acciones += '<a class="app-nav-icon-btn eq-wa-btn" href="' + waUrl + '" target="_blank" rel="noopener" title="WhatsApp">' + _EQ_WA_SVG + '</a>';
+  }
+  if (_eqEsUsuarioActual(p)) {
+    acciones += '<button type="button" class="app-nav-icon-btn" onclick="irEditarDatos()" title="Editar mis datos"><span class="material-symbols-outlined">edit</span></button>';
+  }
+  return '<div class="eq-perfil-nav-row">' +
+      '<button class="app-nav-back" onclick="_eqVolverLista()" title="Volver"><span class="material-symbols-outlined">arrow_back</span></button>' +
+      '<div class="app-nav-actions">' + acciones + '</div>' +
+    '</div>';
+}
+
+function _eqPerfilContenidoHtml(p) {
+  var pills = [];
+  if (p.pronombres) pills.push(p.pronombres);
+  (p.roles || []).forEach(function(r) { pills.push(r); });
+  var pillsHtml = pills.map(function(txt) { return '<span class="aj-pill">' + _eqEsc(txt) + '</span>'; }).join('');
+
+  var filas = '';
+  if (p.telefono) filas += '<a class="eq-info-fila" href="tel:' + _eqEsc(p.telefono) + '"><span class="material-symbols-outlined">call</span><span class="eq-info-texto">' + _eqEsc(p.telefono) + '</span></a>';
+  if (p.cumple) filas += '<div class="eq-info-fila"><span class="material-symbols-outlined">cake</span><span class="eq-info-texto">' + _eqEsc(p.cumple) + '</span></div>';
+  if (p.email) filas += '<a class="eq-info-fila" href="mailto:' + _eqEsc(p.email) + '"><span class="material-symbols-outlined">mail</span><span class="eq-info-texto">' + _eqEsc(p.email) + '</span></a>';
+
+  return '<div class="eq-perfil-header">' +
+      '<div class="eq-avatar-wrap">' +
+        _eqAvatarHtml(p, 'eq-avatar-grande') +
+        '<span class="eq-rol-pill">' + _eqEsc(p.rol) + '</span>' +
+      '</div>' +
+      '<div class="eq-perfil-nombre">' + _eqEsc(p.nombreDerby) + '</div>' +
+      '<div class="eq-perfil-sub">#' + p.numeroDerby + ' &bull; @' + _eqEsc(p.username) + '</div>' +
+    '</div>' +
+    (pillsHtml ? '<div class="eq-perfil-pills-row">' + pillsHtml + '</div>' : '') +
+    '<div class="eq-stats-grid">' +
+      '<div class="eq-stat-card"><span class="eq-stat-icon">🛼</span><div class="eq-stat-valor">' + p.stats.horasPatinadas + 'h</div><div class="eq-stat-label">Horas patinadas</div></div>' +
+      '<div class="eq-stat-card"><span class="eq-stat-icon">⭐</span><div class="eq-stat-valor">' + p.stats.asistenciaPct + '%</div><div class="eq-stat-label">Asistencia anual</div></div>' +
+    '</div>' +
+    (filas ? '<div class="eq-info-lista">' + filas + '</div>' : '');
+}
+
+function _eqActualizarNavPerfil() {
+  if (!_eqPersonaActual) return;
+  var nav = document.getElementById('eq-perfil-nav');
+  if (nav) nav.innerHTML = _eqNavHtml(_eqPersonaActual);
+}
+
+function _eqRenderPerfil(p) {
+  var nav = document.getElementById('eq-perfil-nav');
+  var cont = document.getElementById('eq-perfil-contenido');
+  if (nav) nav.innerHTML = _eqNavHtml(p);
+  if (cont) cont.innerHTML = _eqPerfilContenidoHtml(p);
+  _eqHidratarAvatares();
+}

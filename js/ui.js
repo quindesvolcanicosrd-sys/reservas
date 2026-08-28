@@ -608,6 +608,16 @@ var APP_BOTTOM_NAV_ITEMS = [
   { id: 'tareas', icono: 'task_alt', texto: 'Tareas', pantalla: 's-tareas',
     entrar: function() { irTareas(); },
     visible: function() { return true; } },
+  // 'equipo' -- Cambio 42 (ver MANIFEST.md "Cambios recientes" -- sección
+  // Equipo, greenfield): roster del club (lista + favoritos + perfil de
+  // detalle). Mismo criterio que 'eventos'/'tareas': visible para todo tipo
+  // de cuenta, con `entrar` propio porque #s-equipo necesita poblarse por
+  // JS (favoritos/grupos) antes de mostrarse -- `irEquipo()`/js/equipo.js
+  // solo corre `_eqInit()` la primera vez (`_eqYaInicializado`), mismo
+  // patrón que `_evYaInicializadoEnSesion` de Eventos.
+  { id: 'equipo', icono: 'groups', texto: 'Equipo', pantalla: 's-equipo',
+    entrar: function() { irEquipo(); },
+    visible: function() { return true; } },
   // 'miliga' -- panel administrativo (banners condicionales + Qué llevar/
   // Reservas/Equipamiento/Notificación + Color/Precios + Administradorxs),
   // trasladado tal cual desde Ajustes a su propio tab. `_adminToken` es el
@@ -690,7 +700,11 @@ var _BOTTOM_NAV_EXTRA = {
   // "Editar personas" es a su vez un drill-down DEL detalle (2 niveles),
   // sigue sumando acá con el mismo criterio -- _esPantallaAlcanzable() no
   // distingue profundidad, solo "pertenece a esta tab sí/no".
-  's-tareas-detalle': 'tareas', 's-tareas-detalle-personas': 'tareas'
+  's-tareas-detalle': 'tareas', 's-tareas-detalle-personas': 'tareas',
+  // Perfil de un miembro (Cambio 42, ver MANIFEST.md) -- mismo criterio que
+  // 's-eventos-detalle': drill-down de la tab 'equipo', alcanzable desde
+  // cualquier fila de #s-equipo (lista o favoritos).
+  's-equipo-perfil': 'equipo'
 };
 
 // Reusa el `icono` ya definido por ítem para el slot de la flecha atrás de

@@ -35,6 +35,7 @@
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
 <link rel="stylesheet" href="css/eventos.css?v=4439af6d">
 <link rel="stylesheet" href="css/tareas.css">
+<link rel="stylesheet" href="css/equipo.css?v=1">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2342,6 +2343,67 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
 
+  <!-- ═══ Sección Equipo (Cambio 42, greenfield) -- roster del club con
+       favoritos (localStorage) + perfil de detalle. Datos demo en
+       _EQ_EQUIPO_DEMO (js/equipo.js), sin backend real todavía. Nav propia
+       (sin #top-bar genérico), mismo criterio que #s-eventos/#s-tareas --
+       ver TOP_BAR_CONFIG, js/ui.js. ═══ -->
+  <div class="pantalla" id="s-equipo">
+    <div class="card" style="text-align:left;padding-bottom:32px;">
+      <div class="app-nav app-nav-sticky" id="eq-search-header">
+        <div class="app-nav-search">
+          <span class="material-symbols-outlined">search</span>
+          <input type="text" id="eq-search-input" placeholder="Buscar por nombre o username" oninput="_eqBuscar(this.value)">
+        </div>
+      </div>
+
+      <div class="eq-seccion-favoritos" id="eq-favoritos-wrap">
+        <div class="eq-favoritos-header"><span class="material-symbols-outlined">favorite</span>Favoritos</div>
+        <div id="eq-favoritos-lista"></div>
+      </div>
+
+      <div class="eq-grupo" id="eq-grupo-quindes">
+        <button type="button" class="eq-grupo-header abierto" id="eq-grupo-quindes-header" onclick="_eqToggleGrupo('Quindes')">
+          <span class="eq-grupo-linea"></span>
+          <span class="eq-grupo-pill" id="eq-grupo-quindes-pill">0</span>
+          <span class="eq-grupo-nombre">Quindes</span>
+          <span class="material-symbols-outlined eq-grupo-chevron">expand_more</span>
+          <span class="eq-grupo-linea"></span>
+        </button>
+        <div class="eq-grupo-body abierto" id="eq-grupo-quindes-body">
+          <div class="eq-grupo-body-inner" id="eq-grupo-quindes-lista"></div>
+        </div>
+      </div>
+
+      <div class="eq-grupo" id="eq-grupo-mirlxs">
+        <button type="button" class="eq-grupo-header abierto" id="eq-grupo-mirlxs-header" onclick="_eqToggleGrupo('Mirlxs')">
+          <span class="eq-grupo-linea"></span>
+          <span class="eq-grupo-pill" id="eq-grupo-mirlxs-pill">0</span>
+          <span class="eq-grupo-nombre">Mirlxs</span>
+          <span class="material-symbols-outlined eq-grupo-chevron">expand_more</span>
+          <span class="eq-grupo-linea"></span>
+        </button>
+        <div class="eq-grupo-body abierto" id="eq-grupo-mirlxs-body">
+          <div class="eq-grupo-body-inner" id="eq-grupo-mirlxs-lista"></div>
+        </div>
+      </div>
+
+      <div style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+
+  <!-- ═══ Detalle de un miembro (Equipo) -- ya NO usa el #top-bar genérico
+       (mismo criterio que #s-eventos-detalle): nav compacta propia sticky
+       (#eq-perfil-nav, poblada por _eqRenderPerfil()/js/equipo.js) con
+       flecha atrás + favorito/WhatsApp/editar a la derecha. ═══ -->
+  <div class="pantalla" id="s-equipo-perfil">
+    <div id="eq-perfil-nav"></div>
+    <div class="card" style="text-align:left;">
+      <div id="eq-perfil-contenido"></div>
+      <div style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+
   <div class="pantalla" id="s-datos">
   <div class="card" id="s-datos-card">
 
@@ -2833,6 +2895,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/ui.js?v=2531b626"></script>
 <script src="js/eventos.js?v=461cf64e"></script>
 <script src="js/tareas.js"></script>
+<script src="js/equipo.js?v=1"></script>
 <script src="js/home.js?v=5c22841b"></script>
 <script src="js/reservas.js?v=4910a3f3"></script>
 <script src="js/perfil.js?v=43970d97"></script>
