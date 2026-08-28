@@ -2581,6 +2581,13 @@ function _evFabReserva() {
   for (var m = mesActual; m <= E.mirlxsPreselMes; m++) rango.push(m);
   E.mirlxsMesesPresel = rango;
   irNuevaReserva(false, null);
+  // E.viaEventosInline (mismo mecanismo que _evFabReservaClase(), ver esa
+  // función más arriba) -- único caller real hoy es _evFabReservaParaEvento()
+  // (más abajo, sheet de cuota pendiente en modo "gracia"), también iniciado
+  // desde Eventos -- sin esto, terminar ese pago volvía a #s-home (la home
+  // vieja de Reservas, ya sin tab propio en la nav inferior) en vez del
+  // timeline de donde salió.
+  E.viaEventosInline = true;
   setTimeout(function() { selTipoPago('mensual'); }, 80);
   // La limpieza de E.mirlxsPreselMes/E.mirlxsMesesPresel ya NO vive acá
   // (ver "Cambios recientes" en MANIFEST.md) -- pasa al onchange de los
@@ -2590,6 +2597,40 @@ function _evFabReserva() {
   // de generarMeses() terminaran (ej. un re-render disparado por un fetch
   // que tarda más que el margen elegido) -- sin una duración máxima
   // conocida para eso, cualquier timeout fijo es una apuesta.
+}
+// Onclick real de la opción "Reserva por mes" del speed-dial del FAB
+// unificado (admin CON cuota al día y mirlxs con equipo propio -- ver
+// _evFabUnificadoActualizar(), más abajo). Antes llamaba directo a
+// _evFabReserva() (arriba) -- esa función encadena TODOS los meses desde el
+// actual hasta el que el timeline tenía NAVEGADO en ese instante
+// (E.mirlxsPreselMes = _evNavMesActual.month), que puede no coincidir con
+// "hoy" si la persona había scrolleado el calendario antes de tocar el FAB.
+// _evFabReserva() sigue intacta -- la sigue usando _evFabReservaParaEvento()
+// (más abajo), que SÍ necesita preseleccionar el mes de un evento puntual
+// (sheet de cuota pendiente en modo "gracia"), no el mes actual real.
+// Pedido explícito para el botón del speed-dial: preseleccionar SOLO el mes
+// actual real (hoy), o el siguiente si ese ya está pagado (_evMesPagado()) --
+// sin depender de qué mes tenga navegado el timeline ni encadenar de por
+// medio.
+function _evFabReservaMesActual() {
+  E.origenSeccionS4 = 's-eventos';
+  var hoy = new Date();
+  var mes = hoy.getMonth(), anio = hoy.getFullYear();
+  if (_evMesPagado(mes, anio)) {
+    mes++;
+    if (mes > 11) { mes = 0; anio++; }
+  }
+  // generarMeses() (js/ui.js) solo pinta los 12 meses del año EN CURSO, sin
+  // selector de año -- si "hoy" es diciembre y ya está pagado, "el siguiente"
+  // cae en enero del año QUE VIENE, un mes que esa grilla no puede
+  // representar aparte de enero del año actual (ya pasado a esa altura,
+  // marcado `mes-past`). Limitación preexistente de generarMeses(), no
+  // introducida acá -- fuera de alcance de este pedido arreglarla.
+  E.mirlxsPreselMes = mes;
+  E.mirlxsMesesPresel = [mes];
+  irNuevaReserva(false, null);
+  E.viaEventosInline = true;
+  setTimeout(function() { selTipoPago('mensual'); }, 80);
 }
 
 // _evFabReserva() (arriba) no acepta un mes como parámetro -- lee
@@ -2636,7 +2677,7 @@ function _evFabUnificadoActualizar() {
   var html = '';
   if (esAdmin) {
     if (_evTieneCuotaAlDia()) {
-      html += '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); _evFabReserva();">' +
+      html += '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); _evFabReservaMesActual();">' +
         '<span class="material-symbols-outlined">calendar_month</span><span>Reserva por mes</span></button>';
     }
     html += '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); irEvCrear();">' +
@@ -2649,7 +2690,7 @@ function _evFabUnificadoActualizar() {
     html =
       '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); _evFabReservaClase();">' +
         '<span class="material-symbols-outlined">confirmation_number</span><span>Reserva por clase</span></button>' +
-      '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); _evFabReserva();">' +
+      '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); _evFabReservaMesActual();">' +
         '<span class="material-symbols-outlined">calendar_month</span><span>Reserva por mes</span></button>';
   }
   if (opciones) opciones.innerHTML = html;
