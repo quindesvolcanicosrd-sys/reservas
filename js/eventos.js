@@ -2045,8 +2045,14 @@ function _evContinuarReserva() {
   _evSeleccionados.forEach(function(id) {
     var ev = _EV_EVENTOS.filter(function(e) { return e.id === id; })[0];
     if (ev) {
+      // "DD de Mes" (ej. "26 de Agosto"), no "DD/MM" -- pedido explícito
+      // (ver MANIFEST.md "Cambios recientes"): este texto termina en
+      // #s-pago ("Realiza tu transferencia") y en el mensaje de WhatsApp
+      // post-pago (_pagoArmarResumen(), js/reservas.js -- ambos leen
+      // _fechaInfoDisponible[f] directo, sin reformatear).
       var p = ev.fecha.split('-');
-      _fechaInfoDisponible[id] = p[2] + '/' + p[1] + (ev.horaInicio ? ' - ' + ev.horaInicio + 'hs' : '') + (ev.lugar ? ' - ' + ev.lugar : '');
+      var _mesTxt = NOMBRES_MESES[parseInt(p[1], 10) - 1] || p[1];
+      _fechaInfoDisponible[id] = parseInt(p[2], 10) + ' de ' + _mesTxt + (ev.horaInicio ? ' - ' + ev.horaInicio + 'hs' : '') + (ev.lugar ? ' - ' + ev.lugar : '');
     }
   });
   E.fechas = Array.from(_evSeleccionados);

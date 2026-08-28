@@ -1047,8 +1047,20 @@ function _pagoArmarResumen() {
   if (chkPagoTexto) chkPagoTexto.textContent = canPayMonthly() ? 'Ya realicé mi pago y entiendo este estará pendiente hasta que sea verificada por el equipo.' : 'Realicé mi pago y entiendo que mi reserva quedará pendiente.';
   var lineasFechas = E.tipoPago === 'mensual' ? 'Meses pagados:\n- ' + E.meses.join('\n- ') + '\n\nTotal: $' + (E.totalPago || 0).toFixed(2) : E.fechas.map(function(f) { return '- ' + (_fechaInfoDisponible[f] || f); }).join('\n');
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : ''; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : '';
-  var equipLinea = (talla && protec && protec.toLowerCase() !== 'no') ? 'Necesitare patines talla ' + talla + ' y protecciones.' : (talla) ? 'Necesitare patines talla ' + talla + '.' : (protec && protec.toLowerCase() !== 'no') ? 'Necesitare protecciones (' + protec + ').' : 'Llevare mi propio equipamiento.';
-  var msgWp = '¡Hola! Soy *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '*.\n\n*Clases reservadas:*\n' + lineasFechas + '\n\n' + equipLinea + '\n\nTe envío el comprobante adjunto. Si no lo ves, por favor solicítamelo. ¡Gracias!';
+  var equipLinea = (talla && protec && protec.toLowerCase() !== 'no') ? 'Necesitare patines talla ' + talla + ' y protecciones.' : (talla) ? 'Necesitare patines talla ' + talla + '.' : (protec && protec.toLowerCase() !== 'no') ? 'Necesitare protecciones (' + protec + ').' : 'Llevaré mi propio equipamiento.';
+  // Formato de mensaje distinto para "por clase" (pedido explícito, ver
+  // MANIFEST.md "Cambios recientes") -- "por mes" NO se toca, sigue con el
+  // formato de siempre. `fechaHoyTxt`: fecha REAL del pago (hoy), no la de
+  // ninguna clase -- "DD de Mes de AAAA" mismo criterio de formato que
+  // lineasFechas (ver fix de _evContinuarReserva(), js/eventos.js).
+  var msgWp;
+  if (esClase) {
+    var _hoyWp = new Date();
+    var fechaHoyTxt = _hoyWp.getDate() + ' de ' + NOMBRES_MESES[_hoyWp.getMonth()] + ' de ' + _hoyWp.getFullYear();
+    msgWp = '¡Hola! Mi nombre de usuario es *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '* el día ' + fechaHoyTxt + '.\n*Clases reservadas*\n' + lineasFechas + '\n' + equipLinea + '\n*Mi mail es: ' + (d.email || '') + '*\nTe envío el comprobante adjunto. Si no lo ves, por favor solicítalo. ¡Gracias!';
+  } else {
+    msgWp = '¡Hola! Soy *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '*.\n\n*Clases reservadas:*\n' + lineasFechas + '\n\n' + equipLinea + '\n\nTe envío el comprobante adjunto. Si no lo ves, por favor solicítamelo. ¡Gracias!';
+  }
   E.wpUrl = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp); // usado por #btn-wp-exito en s6 (finalizar())
 }
 
@@ -1235,7 +1247,7 @@ function confirmarReserva(btn) {
     var necesitaPatinesLocal = (E.datos.necesitaPatines || '').toLowerCase() !== 'no' && E.datos.necesitaPatines; var tallaLocal = E.datos.talla || ''; var protecLocal = (E.datos.necesitaProtecciones || '').toLowerCase() !== 'no' ? E.datos.necesitaProtecciones : '';
     var necesitaEquipoLocal = !!necesitaPatinesLocal || !!protecLocal;
 
-    var h = fila('Nombre', E.nombre); h += fila('Tipo de pago', E.tipoPago === 'mensual' ? '📅 Mensual' : '🎟️ Por clase');
+    var h = fila('Nombre de usuario', E.nombre); h += fila('Tipo de pago', E.tipoPago === 'mensual' ? '📅 Mensual' : 'Por clase');
     if (E.cuponAplicado || E.creditosUsados > 0) {
       var partesT = [];
       if (E.creditosUsados > 0) partesT.push('🔁 ' + E.creditosUsados + ' a favor');
@@ -1249,10 +1261,19 @@ function confirmarReserva(btn) {
       var fechasConTalla = fechasExitosas.map(function(f) {
         var tFecha = (E.tallasPorFecha && E.tallasPorFecha[f]) ? E.tallasPorFecha[f] : tallaLocal;
         var info = _fechaInfoDisponible[f] || '';
-        // Formato corto DD/MM/YYYY en vez de "Miércoles 26 de Agosto"
-        var fechaCorta = (f && /^\d{4}-\d{2}-\d{2}/.test(f))
-          ? f.substring(8, 10) + '/' + f.substring(5, 7) + '/' + f.substring(0, 4)
-          : f;
+        // `f` es el id_evento real (ej. "ev_20260829_cumanda"), no una fecha
+        // -- antes caía siempre al fallback `: f` de abajo (el regex de fecha
+        // simple nunca matcheaba un id), mostrando el id crudo en vez de una
+        // fecha legible. Se parsea la fecha (YYYYMMDD) directo del id en vez
+        // de reconstruirla desde `info` (que ya trae día+mes, ver
+        // _evContinuarReserva()/js/eventos.js, pero sin año) -- "DD de Mes de
+        // AAAA", pedido explícito.
+        var _idFechaM = f && /^ev_(\d{4})(\d{2})(\d{2})_/.exec(f);
+        var fechaCorta = _idFechaM
+          ? (parseInt(_idFechaM[3], 10) + ' de ' + (NOMBRES_MESES[parseInt(_idFechaM[2], 10) - 1] || _idFechaM[2]) + ' de ' + _idFechaM[1])
+          : (f && /^\d{4}-\d{2}-\d{2}/.test(f))
+            ? f.substring(8, 10) + '/' + f.substring(5, 7) + '/' + f.substring(0, 4)
+            : f;
         var resto = info ? info.replace(/^[^-]+-\s*/, '') : '';
         var linea = resto ? fechaCorta + ' - ' + resto : (info || f);
         return linea + (necesitaPatinesLocal && tFecha ? ' — Talla ' + tFecha : '');
@@ -1265,7 +1286,7 @@ function confirmarReserva(btn) {
     document.getElementById('s6-resumen').innerHTML = h;
 
     if (E.reagendando) { document.getElementById('s6-titulo').textContent = '🔁 ¡Clase reagendada!'; document.getElementById('s6-texto').innerHTML = 'Tu nueva reserva está <strong>pendiente de confirmación</strong>. Podés ver el estado desde "Mis reservas".'; document.getElementById('s6-texto').style.display = 'block'; }
-    else if (necesitaEquipoLocal) { document.getElementById('s6-titulo').textContent = '¡Reserva registrada!'; document.getElementById('s6-texto').style.display = 'none'; } else { document.getElementById('s6-titulo').textContent = '¡Pago registrado!'; document.getElementById('s6-texto').innerHTML = 'Puedes revisar el estado de tu pago desde <strong>"Ver mis reservas"</strong>.'; document.getElementById('s6-texto').style.display = 'block'; }
+    else if (necesitaEquipoLocal) { document.getElementById('s6-titulo').textContent = '¡Reserva registrada!'; document.getElementById('s6-texto').style.display = 'none'; } else { document.getElementById('s6-titulo').textContent = '¡Pago registrado!'; document.getElementById('s6-texto').innerHTML = 'Puedes revisar el estado de tu pago desde <strong>Eventos <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">calendar_today</span></strong>.'; document.getElementById('s6-texto').style.display = 'block'; }
 
     var avisoEl = document.getElementById('s6-email-aviso');
     var avisoPagoEl = document.getElementById('s6-aviso-pago');

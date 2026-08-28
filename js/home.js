@@ -367,7 +367,12 @@ function irHomeDesdeExito() {
 function _mostrarModalWpComprobante() {
   var el = document.getElementById('modal-wp-comprobante');
   el.style.display = 'flex';
-  requestAnimationFrame(function() { el.style.opacity = '1'; el.classList.add('modal-wp-visible'); });
+  // Doble rAF (mismo patrón que evAbrirSheetTipoPago()/abrirSheetEquipHome(),
+  // ver esos comentarios) -- necesario para que el navegador pinte el estado
+  // cerrado (opacity:0, sin .modal-wp-visible) antes de animar hacia abierto;
+  // un solo rAF podía correr antes de ese primer paint y saltar directo al
+  // estado final, sin transición visible ("solo tenía animate-out").
+  requestAnimationFrame(function() { requestAnimationFrame(function() { el.style.opacity = '1'; el.classList.add('modal-wp-visible'); }); });
 }
 function wpComprobanteDesdeModal() {
   _wpComprobanteEnviado = true;
