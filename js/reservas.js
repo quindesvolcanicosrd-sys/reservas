@@ -1048,19 +1048,18 @@ function _pagoArmarResumen() {
   var lineasFechas = E.tipoPago === 'mensual' ? 'Meses pagados:\n- ' + E.meses.join('\n- ') + '\n\nTotal: $' + (E.totalPago || 0).toFixed(2) : E.fechas.map(function(f) { return '- ' + (_fechaInfoDisponible[f] || f); }).join('\n');
   var d = E.datos; var talla = (d.necesitaPatines && d.necesitaPatines.toLowerCase() !== 'no') ? d.talla : ''; var protec = (d.necesitaProtecciones && d.necesitaProtecciones.toLowerCase() !== 'no') ? d.necesitaProtecciones : '';
   var equipLinea = (talla && protec && protec.toLowerCase() !== 'no') ? 'Necesitare patines talla ' + talla + ' y protecciones.' : (talla) ? 'Necesitare patines talla ' + talla + '.' : (protec && protec.toLowerCase() !== 'no') ? 'Necesitare protecciones (' + protec + ').' : 'Llevaré mi propio equipamiento.';
-  // Formato de mensaje distinto para "por clase" (pedido explícito, ver
-  // MANIFEST.md "Cambios recientes") -- "por mes" NO se toca, sigue con el
-  // formato de siempre. `fechaHoyTxt`: fecha REAL del pago (hoy), no la de
-  // ninguna clase -- "DD de Mes de AAAA" mismo criterio de formato que
+  // Formato de mensaje nuevo para "por clase" Y "por mes" (pedido explícito,
+  // ver MANIFEST.md "Cambios recientes") -- mismo saludo/cierre/línea de
+  // mail para los 2, solo cambia el bloque de en medio (fechas de clases vs.
+  // meses). `fechaHoyTxt`: fecha REAL del pago (hoy), no la de ninguna
+  // clase/mes -- "DD de Mes de AAAA" mismo criterio de formato que
   // lineasFechas (ver fix de _evContinuarReserva(), js/eventos.js).
-  var msgWp;
-  if (esClase) {
-    var _hoyWp = new Date();
-    var fechaHoyTxt = _hoyWp.getDate() + ' de ' + NOMBRES_MESES[_hoyWp.getMonth()] + ' de ' + _hoyWp.getFullYear();
-    msgWp = '¡Hola! Mi nombre de usuario es *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '* el día ' + fechaHoyTxt + '.\n*Clases reservadas*\n' + lineasFechas + '\n' + equipLinea + '\n*Mi mail es: ' + (d.email || '') + '*\nTe envío el comprobante adjunto. Si no lo ves, por favor solicítalo. ¡Gracias!';
-  } else {
-    msgWp = '¡Hola! Soy *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '*.\n\n*Clases reservadas:*\n' + lineasFechas + '\n\n' + equipLinea + '\n\nTe envío el comprobante adjunto. Si no lo ves, por favor solicítamelo. ¡Gracias!';
-  }
+  var _hoyWp = new Date();
+  var fechaHoyTxt = _hoyWp.getDate() + ' de ' + NOMBRES_MESES[_hoyWp.getMonth()] + ' de ' + _hoyWp.getFullYear();
+  var _bloqueReservado = esClase
+    ? '*Clases reservadas*\n' + lineasFechas
+    : (E.meses.length === 1 ? '*Mes reservado*\n' : '*Meses reservados*\n') + E.meses.map(function(m) { return '- ' + m; }).join('\n');
+  var msgWp = '¡Hola! Mi nombre de usuario es *' + E.nombre + '* y acabo de realizar mi pago de *$' + (E.totalPago || 0).toFixed(2) + '* el día ' + fechaHoyTxt + '.\n' + _bloqueReservado + '\n' + equipLinea + '\n*Mi mail es: ' + (d.email || '') + '*\nTe envío el comprobante adjunto. Si no lo ves, por favor solicítalo. ¡Gracias!';
   E.wpUrl = 'https://wa.me/593998690423?text=' + encodeURIComponent(msgWp); // usado por #btn-wp-exito en s6 (finalizar())
 }
 
@@ -1247,7 +1246,7 @@ function confirmarReserva(btn) {
     var necesitaPatinesLocal = (E.datos.necesitaPatines || '').toLowerCase() !== 'no' && E.datos.necesitaPatines; var tallaLocal = E.datos.talla || ''; var protecLocal = (E.datos.necesitaProtecciones || '').toLowerCase() !== 'no' ? E.datos.necesitaProtecciones : '';
     var necesitaEquipoLocal = !!necesitaPatinesLocal || !!protecLocal;
 
-    var h = fila('Nombre de usuario', E.nombre); h += fila('Tipo de pago', E.tipoPago === 'mensual' ? '📅 Mensual' : 'Por clase');
+    var h = fila('Nombre de usuario', E.nombre); h += fila('Tipo de pago', E.tipoPago === 'mensual' ? 'Mensual' : 'Por clase');
     if (E.cuponAplicado || E.creditosUsados > 0) {
       var partesT = [];
       if (E.creditosUsados > 0) partesT.push('🔁 ' + E.creditosUsados + ' a favor');
@@ -1280,13 +1279,29 @@ function confirmarReserva(btn) {
       }).join('<br>');
       h += '<div style="padding: 10px 0; border-bottom: 1px solid var(--border-softest); font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Fecha/s:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + fechasConTalla + '</div></div>';
     } else if (mesesExitosos && mesesExitosos.length > 0) {
-      h += '<div style="padding: 10px 0; border-bottom: 1px solid var(--border-softest); font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">Meses pagados:</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + mesesExitosos.map(function(m) { return '• ' + m; }).join('<br>') + '</div></div>';
+      var _etiquetaMeses = (mesesExitosos.length === 1 ? 'Mes pagado:' : 'Meses pagados:');
+      h += '<div style="padding: 10px 0; border-bottom: 1px solid var(--border-softest); font-size: 0.9rem; color: inherit;"><div class="r-label" style="margin-bottom: 6px;">' + _etiquetaMeses + '</div><div style="font-weight: 600; color: inherit; line-height: 1.6; text-align: left;">' + mesesExitosos.map(function(m) { return '• ' + m; }).join('<br>') + '</div></div>';
     }
-    h += fila('Patines', d.necesitaPatines || 'No'); h += fila('Protecciones', d.necesitaProtecciones); if (E.notaPago) h += fila('Referencia pago', E.notaPago);
+    // "Patines"/"Protecciones" solo tienen sentido para "por clase" -- quien
+    // reserva por mes nunca necesita equipamiento (canPayMonthly(), que
+    // habilita ese flujo, ya exige `!necesitaPatines && !necesitaProtecciones`
+    // -- estas 2 filas siempre hubieran mostrado "No" para esa cuenta, sin
+    // aportar información real).
+    if (E.tipoPago !== 'mensual') { h += fila('Patines', d.necesitaPatines || 'No'); h += fila('Protecciones', d.necesitaProtecciones); }
+    if (E.notaPago) h += fila('Referencia pago', E.notaPago);
     document.getElementById('s6-resumen').innerHTML = h;
 
     if (E.reagendando) { document.getElementById('s6-titulo').textContent = '🔁 ¡Clase reagendada!'; document.getElementById('s6-texto').innerHTML = 'Tu nueva reserva está <strong>pendiente de confirmación</strong>. Podés ver el estado desde "Mis reservas".'; document.getElementById('s6-texto').style.display = 'block'; }
-    else if (necesitaEquipoLocal) { document.getElementById('s6-titulo').textContent = '¡Reserva registrada!'; document.getElementById('s6-texto').style.display = 'none'; } else { document.getElementById('s6-titulo').textContent = '¡Pago registrado!'; document.getElementById('s6-texto').innerHTML = 'Puedes revisar el estado de tu pago desde <strong>Eventos <span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">calendar_today</span></strong>.'; document.getElementById('s6-texto').style.display = 'block'; }
+    else if (necesitaEquipoLocal) { document.getElementById('s6-titulo').textContent = '¡Reserva registrada!'; document.getElementById('s6-texto').style.display = 'none'; } else {
+      document.getElementById('s6-titulo').textContent = '¡Pago registrado!';
+      // Texto distinto para "por mes" (pedido explícito, ver MANIFEST.md
+      // "Cambios recientes") -- "por clase" conserva el texto de siempre.
+      var _iconoEventosTxt = '<span class="material-symbols-outlined" style="font-size:1rem;vertical-align:middle;">calendar_today</span>';
+      document.getElementById('s6-texto').innerHTML = E.tipoPago === 'mensual'
+        ? 'Podrás marcar tus asistencias desde <strong>Eventos ' + _iconoEventosTxt + '</strong> una vez tu pago sea verificado.'
+        : 'Puedes revisar el estado de tu pago desde <strong>Eventos ' + _iconoEventosTxt + '</strong>.';
+      document.getElementById('s6-texto').style.display = 'block';
+    }
 
     var avisoEl = document.getElementById('s6-email-aviso');
     var avisoPagoEl = document.getElementById('s6-aviso-pago');
