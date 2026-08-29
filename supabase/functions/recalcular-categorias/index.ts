@@ -24,7 +24,10 @@ function json(body: unknown, status = 200): Response {
 // Primer día del mes que fue hace `n` meses (relativo a hoy, UTC).
 function primerDiaMesesAtras(n: number): Date {
   const hoy = new Date();
-  return new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() - n, 1));
+  const year = hoy.getUTCFullYear();
+  const month = hoy.getUTCMonth() - n;
+  const dia = Math.min(hoy.getUTCDate(), new Date(Date.UTC(year, month + 1, 0)).getUTCDate());
+  return new Date(Date.UTC(year, month, dia));
 }
 
 function fechaISO(d: Date): string {
