@@ -73,11 +73,11 @@ Deno.serve(async (req: Request) => {
       .filter((t: any) => t.id !== tierDefault.id)
       .sort((a: any, b: any) => a.orden - b.orden);
 
-    const { data: equipoData, error: equipoError } = await supabase.from('equipo').select('username, estado_miembro');
+    const { data: equipoData, error: equipoError } = await supabase.from('equipo').select('username, estado_miembro, tier_modo');
     if (equipoError) return json({ ok: false, error: equipoError.message }, 500);
-    const miembros: { username: string; estadoMiembro: string | null }[] = (equipoData ?? [])
+    const miembros: { username: string; estadoMiembro: string | null; tierModo: string | null }[] = (equipoData ?? [])
       .filter((r: any) => r.username)
-      .map((r: any) => ({ username: r.username, estadoMiembro: r.estado_miembro ?? null }));
+      .map((r: any) => ({ username: r.username, estadoMiembro: r.estado_miembro ?? null, tierModo: r.tier_modo ?? 'auto' }));
 
     const maxVentana = Math.max(0, ...tiers.map((t: any) => Number(t.ventana_meses) || 0));
 
@@ -122,10 +122,15 @@ Deno.serve(async (req: Request) => {
 
     const resultados: { username: string; categoria: string }[] = [];
 
-    for (const { username, estadoMiembro } of miembros) {
+    for (const { username, estadoMiembro, tierModo } of miembros) {
       // Lesionadx: no se toca la categoría (queda como esté, no participa
       // del recálculo -- ver MANIFEST.md "estado_miembro").
       if (estadoMiembro === 'Lesionadx') continue;
+      // tier_modo fijado a mano (Cambio 55, control Quindes/Auto/Mirlxs del
+      // perfil de Equipo, ver adminSetTierModo()/supabase/functions/api/index.ts)
+      // -- mismo criterio que Lesionadx: la categoría queda como esté,
+      // "Recalcular ahora" no la pisa mientras no esté en 'auto'.
+      if (tierModo && tierModo !== 'auto') continue;
 
       let categoriaAsignada: string;
       if (estadoMiembro === 'Técnico') {

@@ -1544,7 +1544,46 @@ async function adminSetEstadoMiembro(params: Record<string, any>): Promise<Recor
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { nombre, estadoMiembro } = params;
   if (!nombre || !ESTADOS_MIEMBRO.includes(estadoMiembro)) return { exito: false, error: 'Parámetros inválidos.' };
-  const { error } = await supabase.from('equipo').update({ estado_miembro: estadoMiembro }).eq('username', nombre);
+  // `exenta_cuota` sigue a Lesionadx como única fuente de verdad (Cambio 55)
+  // sin importar el camino que llega acá -- este action es compartido por
+  // el selector de Mi Liga → Categorías y por el perfil de Equipo.
+  const { error } = await supabase.from('equipo')
+    .update({ estado_miembro: estadoMiembro, exenta_cuota: estadoMiembro === 'Lesionadx' })
+    .eq('username', nombre);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
+// Fija/libera la categoría (Cambio 55, control Quindes/Auto/Mirlxs del
+// perfil de Equipo, ver _eqCambiarTier()/js/equipo.js) -- `categoria` se
+// actualiza también de una, no solo `tier_modo`: fijar a mano sin tocar la
+// categoría actual la dejaría desincronizada hasta el próximo "Recalcular
+// ahora" (que además, con tier_modo!='auto', ahora se salta a esta persona,
+// ver recalcular-categorias/index.ts) -- fijar "Quindes" debe hacer a la
+// persona Quindes de inmediato, no solo "protegerla" del próximo recálculo.
+async function adminSetTierModo(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const { nombre, tierModo } = params;
+  if (!nombre || !['auto', 'quinde', 'mirlxs'].includes(tierModo)) return { exito: false, error: 'Parámetros inválidos.' };
+  const update: Record<string, any> = { tier_modo: tierModo };
+  if (tierModo === 'quinde') update.categoria = 'Quindes';
+  else if (tierModo === 'mirlxs') update.categoria = 'Mirlxs';
+  const { error } = await supabase.from('equipo').update(update).eq('username', nombre);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
+// Exención de cuota (Cambio 55, toggle "Paga cuota" del perfil de Equipo,
+// ver _eqToggleCuota()/js/equipo.js) -- columna dedicada `exenta_cuota`,
+// distinta de `paga_cuota` (texto 'sí'/'no', propósito no relacionado, ver
+// la migración 20260829_equipo_campos_nuevos.sql).
+async function adminSetExentaCuota(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const { nombre } = params;
+  if (!nombre) return { exito: false, error: 'Parámetros inválidos.' };
+  const { error } = await supabase.from('equipo').update({ exenta_cuota: !!params.valor }).eq('username', nombre);
   if (error) return { exito: false, error: error.message };
   return { exito: true };
 }
@@ -1580,7 +1619,9 @@ async function recuperarseLesion(params: Record<string, any>): Promise<Record<st
   if (!username) return { exito: false, error: 'Sesión inválida.' };
   const row = await _getEquipoRow(username);
   if (!row || row.estado_miembro !== 'Lesionadx') return { exito: false, error: 'No estás marcadx como Lesionadx.' };
-  const { error } = await supabase.from('equipo').update({ estado_miembro: 'Activx', solicitud_lesion_pendiente: false }).eq('username', username);
+  // exenta_cuota vuelve a false -- la exención estaba atada a Lesionadx
+  // (Cambio 55, ver adminAprobarLesion/adminSetEstadoMiembro).
+  const { error } = await supabase.from('equipo').update({ estado_miembro: 'Activx', solicitud_lesion_pendiente: false, exenta_cuota: false }).eq('username', username);
   if (error) return { exito: false, error: error.message };
   return { exito: true };
 }
@@ -1600,16 +1641,17 @@ async function adminGetSolicitudesLesion(params: Record<string, any>): Promise<a
 // pero con un propósito distinto y no relacionado: gatea el `dashboardAdmin`
 // del propio ADMIN cuando NO ha pagado su cuota (ver loginGoogle()/
 // adminLogin() arriba), no un flag general de "está exento de cuota" por
-// cualquier miembro. Pisarlo acá para exentar a unx lesionadx rompería esa
-// lógica ajena si esa persona también es admin. La exención de cuota real
-// por Lesionadx (Cambio 53, toggle en js/equipo.js) sigue siendo 100%
-// frontend/demo hasta que exista un campo real dedicado para eso.
+// cualquier miembro. **Actualización Cambio 55:** ahora sí existe un campo
+// real dedicado para la exención general (`exenta_cuota`, ver la migración
+// 20260829_equipo_campos_nuevos.sql) -- se setea acá junto con
+// `estado_miembro`, cerrando el TODO que había quedado abierto en el
+// Cambio 54.
 async function adminAprobarLesion(params: Record<string, any>): Promise<Record<string, any>> {
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { nombre } = params;
   if (!nombre) return { exito: false, error: 'Parámetros inválidos.' };
-  const { error } = await supabase.from('equipo').update({ estado_miembro: 'Lesionadx', solicitud_lesion_pendiente: false }).eq('username', nombre);
+  const { error } = await supabase.from('equipo').update({ estado_miembro: 'Lesionadx', solicitud_lesion_pendiente: false, exenta_cuota: true }).eq('username', nombre);
   if (error) return { exito: false, error: error.message };
   return { exito: true };
 }
@@ -1673,6 +1715,65 @@ async function adminGetRosterEquipo(): Promise<Record<string, any>> {
   const { data } = await supabase.from('equipo').select('username, nombre_derby, foto_perfil').order('username');
   const personas = (data ?? []).map((r: any) => ({ nombre: r.username, nombreDerby: r.nombre_derby ?? '', fotoPerfil: r.foto_perfil ?? '' }));
   return { personas };
+}
+
+// ─── Acciones: Equipo (Cambio 55, roster real -- ver MANIFEST.md "Auditoría
+// previa" para el detalle completo de qué columnas existen/faltaban) ───────────
+// Sin token requerido -- mismo criterio que getNombres()/getProximosEntrenamientos()
+// (arriba): la sección Equipo es un directorio visible para cualquier cuenta
+// logueada, no admin-only, y esta app no valida sesión en la mayoría de sus
+// acciones de solo-lectura.
+async function getEquipo(): Promise<Record<string, any>> {
+  const { data: filas } = await supabase.from('equipo')
+    .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota')
+    .order('username');
+  const personas = filas ?? [];
+  if (!personas.length) return { personas: [] };
+
+  const usernames = personas.map((p: any) => p.username);
+
+  // Última asistencia REAL (no solicitada/rectificada por el usuario) --
+  // origen 'Admin' (rollcall real, no autoreporte) y estado != 'Ninguno'
+  // (no ausente). `log_asistencias.fecha_entrenamiento` ya viene copiada de
+  // `asistencias.fecha` al insertar (ver _agregarFilaLogAsistencia() arriba),
+  // sin necesitar JOIN.
+  const { data: logs } = await supabase.from('log_asistencias')
+    .select('nombre_usuario, fecha_entrenamiento')
+    .eq('origen', 'Admin').neq('estado', 'Ninguno').in('nombre_usuario', usernames);
+  const ultimaPorUsuario: Record<string, string> = {};
+  (logs ?? []).forEach((l: any) => {
+    if (!l.fecha_entrenamiento) return;
+    const actual = ultimaPorUsuario[l.nombre_usuario];
+    if (!actual || l.fecha_entrenamiento > actual) ultimaPorUsuario[l.nombre_usuario] = l.fecha_entrenamiento;
+  });
+
+  // "Es admin de miembro" -- no existe ningún flag por miembro en `equipo`;
+  // el admin real de esta app vive en la tabla `admins` + ADMIN_PRINCIPAL,
+  // mismo criterio ya usado por adminGetCandidatosAdmin() (arriba).
+  const { data: adminsData } = await supabase.from('admins').select('email');
+  const adminEmails = new Set([ADMIN_PRINCIPAL.toLowerCase(), ...(adminsData ?? []).map((a: any) => a.email.toLowerCase())]);
+
+  // horasPatinadas/asistenciaPct/rankPct: sin ninguna columna real que las
+  // trackee (auditado antes de escribir esto, ver MANIFEST.md) -- se
+  // devuelven en 0 en vez de inventar una fórmula que no existe en ningún
+  // otro lado del repo. Pendiente que Victor decida si quiere una métrica
+  // real nueva para esto o si el bloque de stats de Ajustes (Cambio 51)
+  // debería ocultarse mientras tanto.
+  const personasOut = personas.map((r: any) => ({
+    id: r.username, nombre: r.username, username: r.username,
+    nombreDerby: r.nombre_derby ?? '', numeroDerby: r.numero_derby ?? '',
+    fotoPerfil: r.foto_perfil ?? '', rol: r.categoria ?? 'Mirlxs',
+    pronombres: r.pronombres ?? '', telefono: r.telefono ?? '', email: r.email ?? '',
+    estado: r.estado_miembro ?? 'Activx',
+    solicitudLesionPendiente: r.solicitud_lesion_pendiente === true,
+    tierModo: r.tier_modo ?? 'auto', exentaCuota: r.exenta_cuota === true,
+    esAdminMiembro: adminEmails.has(String(r.email ?? '').toLowerCase()),
+    stats: { horasPatinadas: 0, asistenciaPct: 0 },
+    rankPct: 0,
+    ultimaAsistencia: ultimaPorUsuario[r.username] ? ultimaPorUsuario[r.username].slice(0, 10) : null,
+  }));
+
+  return { personas: personasOut };
 }
 
 async function adminGetQueLlevar(): Promise<any[]> {
@@ -1908,6 +2009,8 @@ Deno.serve(async (req: Request) => {
       case 'adminGetUsuarios':               return json(await adminGetUsuarios());
       case 'adminToggleCupon':               return json(await adminToggleCupon(params));
       case 'adminSetEstadoMiembro':          return json(await adminSetEstadoMiembro(params));
+      case 'adminSetTierModo':               return json(await adminSetTierModo(params));
+      case 'adminSetExentaCuota':            return json(await adminSetExentaCuota(params));
       case 'solicitarLesion':                return json(await solicitarLesion(params));
       case 'cancelarSolicitudLesion':         return json(await cancelarSolicitudLesion(params));
       case 'recuperarseLesion':              return json(await recuperarseLesion(params));
@@ -1920,6 +2023,7 @@ Deno.serve(async (req: Request) => {
       case 'adminQuitarAdmin':               return json(await adminQuitarAdmin(params));
       case 'adminGetCandidatosAdmin':        return json(await adminGetCandidatosAdmin());
       case 'adminGetRosterEquipo':           return json(await adminGetRosterEquipo());
+      case 'getEquipo':                      return json(await getEquipo());
       case 'adminGetQueLlevar':              return json(await adminGetQueLlevar());
       // Push
       case 'adminEnviarPush':               return json(await adminEnviarPush(params));

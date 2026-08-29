@@ -4,6 +4,11 @@
    Solo variables de colors.css. Prefijo de clases: eq-
    ═══════════════════════════════════════════════ */
 
+/* ── Estado de carga del roster real (Cambio 55, #eq-estado-carga,
+   index.html) -- ver _eqInit()/js/equipo.js. */
+.eq-loading, .eq-error { text-align: center; font-size: 0.85rem; color: var(--muted); padding: 32px 16px; }
+.eq-error { color: var(--danger); }
+
 /* ── Favoritos ────────────────────────────────── */
 .eq-seccion-favoritos { margin-bottom: 18px; }
 .eq-favoritos-header {

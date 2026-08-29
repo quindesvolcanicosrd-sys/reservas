@@ -35,7 +35,7 @@
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
 <link rel="stylesheet" href="css/eventos.css?v=e12fb09e">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=5">
+<link rel="stylesheet" href="css/equipo.css?v=6">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2343,11 +2343,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
 
-  <!-- ═══ Sección Equipo (Cambio 42, greenfield) -- roster del club con
-       favoritos (localStorage) + perfil de detalle. Datos demo en
-       _EQ_EQUIPO_DEMO (js/equipo.js), sin backend real todavía. Nav propia
-       (sin #top-bar genérico), mismo criterio que #s-eventos/#s-tareas --
-       ver TOP_BAR_CONFIG, js/ui.js. ═══ -->
+  <!-- ═══ Sección Equipo (Cambio 42, greenfield; Cambio 55: roster real vía
+       getEquipo(), ver js/equipo.js) -- favoritos (localStorage) + perfil de
+       detalle. Nav propia (sin #top-bar genérico), mismo criterio que
+       #s-eventos/#s-tareas -- ver TOP_BAR_CONFIG, js/ui.js. ═══ -->
   <div class="pantalla" id="s-equipo">
     <div class="card" style="text-align:left;padding-bottom:32px;">
       <div class="app-nav app-nav-sticky" id="eq-search-header">
@@ -2356,6 +2355,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <input type="text" id="eq-search-input" placeholder="Buscar por nombre o username" oninput="_eqBuscar(this.value)">
         </div>
       </div>
+
+      <!-- Cargando/error del roster real (Cambio 55, getEquipo(), ver
+           _eqInit()/js/equipo.js) -- vacío en el estado normal (roster ya
+           cargado, ver #eq-favoritos-wrap/#eq-grupo-* debajo). -->
+      <div id="eq-estado-carga"></div>
 
       <div class="eq-seccion-favoritos" id="eq-favoritos-wrap">
         <div class="eq-favoritos-header"><span class="material-symbols-outlined">favorite</span>Favoritos</div>
@@ -2419,11 +2423,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
     </div>
 
-    <!-- Stats de Equipo (Cambio 51, ver MANIFEST.md) -- horas patinadas/
-         asistencia + termómetro de categoría del usuario logueado, poblado
-         por _datosRenderStats() (js/perfil.js) desde _EQ_EQUIPO_DEMO
-         (js/equipo.js). Vacío/sin tocar si la cuenta no tiene fila en
-         Equipo (ver el guard de esa función). -->
+    <!-- Stats de Equipo (Cambio 51, datos reales desde el Cambio 55 -- ver
+         MANIFEST.md) -- horas patinadas/asistencia + termómetro de categoría
+         del usuario logueado, poblado (async) por _datosRenderStats()
+         (js/perfil.js) desde el roster real (getEquipo(), js/equipo.js).
+         Vacío/sin tocar si la cuenta no tiene fila en Equipo (ver el guard
+         de esa función). -->
     <div id="dat-stats-wrap"></div>
 
     <!-- Flujo de lesión (Cambio 54, ver MANIFEST.md) -- reportar/cancelar/
@@ -2920,10 +2925,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/ui.js?v=28059ed9"></script>
 <script src="js/eventos.js?v=492b83a6"></script>
 <script src="js/tareas.js"></script>
-<script src="js/equipo.js?v=5"></script>
+<script src="js/equipo.js?v=6"></script>
 <script src="js/home.js?v=5c22841b"></script>
 <script src="js/reservas.js?v=4910a3f3"></script>
-<script src="js/perfil.js?v=d7f59dd1"></script>
+<script src="js/perfil.js?v=06d8be67"></script>
 <script src="js/admin.js?v=3fc749c6"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js"></script>

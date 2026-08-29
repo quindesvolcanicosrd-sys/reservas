@@ -1,9 +1,20 @@
-// js/equipo.js — Sección Equipo (Cambio 42, greenfield). Roster del club:
-// lista con búsqueda + favoritos (localStorage) + perfil de detalle.
-// Datos 100% demo (_EQ_EQUIPO_DEMO abajo) -- sin backend real todavía, ver
-// MANIFEST.md. Reusa helpers compartidos ya existentes: _avatarSetFotoOInicial
-// (js/ui.js), ir()/volver() (js/ui.js), .aj-pill (css/perfil.css).
+// js/equipo.js — Sección Equipo (Cambio 42, greenfield; Cambio 55: conectada
+// a Supabase real, ver MANIFEST.md "Auditoría previa" para el detalle de qué
+// columnas existen/faltaban). Roster del club: lista con búsqueda +
+// favoritos (localStorage) + perfil de detalle. Reusa helpers compartidos ya
+// existentes: _avatarSetFotoOInicial (js/ui.js), ir()/volver() (js/ui.js),
+// .aj-pill (css/perfil.css).
 
+// Datos reales, poblados por _eqAsegurarCargado() (action 'getEquipo',
+// supabase/functions/api/index.ts) -- ver más abajo. Reemplaza a
+// _EQ_EQUIPO_DEMO (Cambios 42-54), que queda comentada como referencia de
+// desarrollo, sin ningún caller vivo.
+var _eqPersonas = [];
+var _eqCargado = false;
+var _eqCargando = false;
+var _eqCallbacksEspera = [];
+
+/*
 var _EQ_EQUIPO_DEMO = [
   { id: 'q1', nombreDerby: 'Comet Fatal', numeroDerby: 7, username: 'cometfatal', fotoPerfil: '',
     rol: 'Quindes', pronombres: 'Ella, elle', roles: ['Jammer', 'Coach'],
@@ -21,9 +32,6 @@ var _EQ_EQUIPO_DEMO = [
     rol: 'Quindes', pronombres: 'Elle', roles: ['Pivot', 'Capitana'],
     telefono: '', cumple: '', email: '',
     rankPct: 95, tierModo: 'auto',
-    // esAdminMiembro:true acá -- rankPct más alto de las 6 personas demo
-    // (95) y ya tiene el rol "Capitana", combinación natural para ser
-    // también quien administra al resto del equipo en la demo.
     estado: 'Activx', pagaCuota: true, esAdminMiembro: true, ultimaAsistencia: '2026-08-20',
     stats: { horasPatinadas: 52, asistenciaPct: 92 } },
   { id: 'm1', nombreDerby: 'Pluma Letal', numeroDerby: 9, username: 'plumaletal', fotoPerfil: '',
@@ -45,12 +53,15 @@ var _EQ_EQUIPO_DEMO = [
     estado: 'Activx', pagaCuota: true, esAdminMiembro: false, ultimaAsistencia: '2026-08-20',
     stats: { horasPatinadas: 24, asistenciaPct: 55 } }
 ];
+*/
 
 // Descripciones del modo de categoría (tier) -- ver _eqCambiarTier()/
 // _eqPerfilContenidoHtml() más abajo (Cambio 52). 'quinde'/'mirlxs': fijado
-// a mano por un admin, el sistema deja de recalcularla según asistencia.
-// 'auto' (default de todas las personas en _EQ_EQUIPO_DEMO): la categoría
-// sigue derivándose del % de asistencia (el termómetro, `rankPct`).
+// a mano por un admin (persiste en `equipo.tier_modo`, Cambio 55) -- el
+// recálculo automático (recalcular-categorias, botón "Recalcular ahora" de
+// Mi Liga) salta a esa persona mientras no esté en 'auto'. 'auto' (default
+// real de la columna): la categoría sigue derivándose del % de asistencia
+// según config_tiers.
 var _EQ_TIER_DESCRIPCIONES = {
   quinde: 'Categoría fijada manualmente en Quindes. El sistema ignorará los stats de asistencia.',
   auto:   'La categoría se asigna automáticamente según el porcentaje de asistencia.',
@@ -89,7 +100,34 @@ var _eqBusqueda = '';
 function _eqEsc(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
 
 function _eqPersonaPorId(id) {
-  return _EQ_EQUIPO_DEMO.filter(function(p) { return p.id === id; })[0] || null;
+  return _eqPersonas.filter(function(p) { return p.id === id; })[0] || null;
+}
+
+// Carga el roster real UNA sola vez por sesión y la reusa -- tanto
+// _eqInit() (visita a la sección Equipo) como _datosRenderStats()
+// (js/perfil.js, Cambio 51 -- stats del usuario logueado en Ajustes) la
+// necesitan, y pueden dispararse en cualquier orden según qué pantalla visite
+// primero la persona. Callbacks en cola mientras hay un fetch en curso, para
+// no disparar 2 requests si ambas pantallas piden la carga casi al mismo
+// tiempo. `cb` se invoca igual si el fetch falla (con `_eqPersonas` vacío) --
+// cada caller decide qué mostrar según el resultado, ninguno se queda
+// esperando para siempre.
+function _eqAsegurarCargado(cb) {
+  if (_eqCargado) { cb(); return; }
+  _eqCallbacksEspera.push(cb);
+  if (_eqCargando) return;
+  _eqCargando = true;
+  api({ action: 'getEquipo' }, function(res) {
+    _eqPersonas = (res && res.personas) || [];
+    _eqCargado = true;
+    _eqCargando = false;
+    var cbs = _eqCallbacksEspera; _eqCallbacksEspera = [];
+    cbs.forEach(function(fn) { fn(); });
+  }, function() {
+    _eqCargando = false;
+    var cbs = _eqCallbacksEspera; _eqCallbacksEspera = [];
+    cbs.forEach(function(fn) { fn(); });
+  });
 }
 
 /* ── Favoritos (localStorage, clave 'eq_favoritos') ──────────────────── */
@@ -121,10 +159,25 @@ function irEquipo() {
 }
 
 function _eqInit() {
-  _eqRenderFavoritos();
-  _eqRenderGrupo('Quindes');
-  _eqRenderGrupo('Mirlxs');
   _eqYaInicializado = true;
+  var estadoEl = document.getElementById('eq-estado-carga');
+  if (estadoEl) estadoEl.innerHTML = '<p class="eq-loading">Cargando equipo...</p>';
+  _eqAsegurarCargado(function() {
+    // `_eqPersonas` vacío acá cubre tanto "falló el fetch" como "el equipo
+    // real no tiene ningún miembro" (edge case improbable en producción,
+    // ver MANIFEST.md) -- en cualquiera de los 2 casos se resetea
+    // `_eqYaInicializado` para que volver a entrar a la pestaña reintente en
+    // vez de quedar pegada para siempre con el mensaje de error.
+    if (!_eqPersonas.length) {
+      _eqYaInicializado = false;
+      if (estadoEl) estadoEl.innerHTML = '<p class="eq-error">No se pudo cargar el equipo. Intentá de nuevo.</p>';
+      return;
+    }
+    if (estadoEl) estadoEl.innerHTML = '';
+    _eqRenderFavoritos();
+    _eqRenderGrupo('Quindes');
+    _eqRenderGrupo('Mirlxs');
+  });
 }
 
 /* ── Hidratación de avatares (mismo patrón que _evHidratarAvatares(),
@@ -193,7 +246,7 @@ function _eqRenderGrupo(rol) {
   var cont = document.getElementById('eq-grupo-' + key + '-lista');
   var pillEl = document.getElementById('eq-grupo-' + key + '-pill');
   if (!wrap || !cont) return;
-  var filtradas = _EQ_EQUIPO_DEMO.filter(function(p) { return p.rol === rol; }).filter(_eqPasaBusqueda);
+  var filtradas = _eqPersonas.filter(function(p) { return p.rol === rol; }).filter(_eqPasaBusqueda);
   wrap.style.display = filtradas.length ? '' : 'none';
   if (pillEl) pillEl.textContent = filtradas.length;
   cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
@@ -220,14 +273,18 @@ function _eqAbrirPerfil(id) {
 }
 function _eqVolverLista() { volver('s-equipo'); }
 
-// Esta app identifica cuentas por nombre derby (E.nombre), no por un `id`
-// numérico real (comparación normalizada, mismo criterio que
-// _evNombresCoinciden(), js/eventos.js) -- _EQ_EQUIPO_DEMO no está atado al
-// backend real, así que "el usuario logueado" se resuelve así en vez de
-// contra un E.id que no existe en esta app.
+// `E.nombre` es el username real (así llega desde loginGoogle()/adminLogin(),
+// supabase/functions/api/index.ts: `nombre: row.username`), NO el nombre
+// derby -- comparación normalizada, mismo criterio que _evNombresCoinciden()
+// (js/eventos.js). **Bug real corregido en el Cambio 55:** hasta acá (demo,
+// sin backend) comparaba contra `p.nombreDerby`, que en los datos demo
+// coincidía por casualidad con lo que se probaba a mano -- contra datos
+// reales (derby ≠ username casi siempre) esta comparación era falsa para
+// cualquier cuenta real, rompiendo silenciosamente "es mi propio perfil"
+// (botón WhatsApp/editar en la nav del perfil).
 function _eqEsUsuarioActual(p) {
-  return !!(p && p.nombreDerby && typeof E !== 'undefined' && E.nombre &&
-    p.nombreDerby.trim().toUpperCase() === String(E.nombre).trim().toUpperCase());
+  return !!(p && p.nombre && typeof E !== 'undefined' && E.nombre &&
+    p.nombre.trim().toUpperCase() === String(E.nombre).trim().toUpperCase());
 }
 
 function _eqWhatsappUrl(telefono) {
@@ -297,9 +354,10 @@ function _eqTierAdminHtml(p) {
 // `.eq-tier-btn` (mismo patrón que el resto de este archivo, ej.
 // `_eqToggleFavorito()`/`_eqAbrirPerfil()`: onclick inline con el id como
 // string, sin ningún listener delegado -- no hay ninguno en toda esta
-// sección, no hacía falta sumar el primero acá). `id` siempre es el string
-// de `_EQ_EQUIPO_DEMO` (`'q1'`, `'m2'`, etc.), nunca numérico -- no hace
-// falta `parseInt`/`+id`.
+// sección, no hacía falta sumar el primero acá). `id` es el `username` real
+// (Cambio 55 -- `equipo` no tiene ningún id numérico propio, se identifica
+// por esa natural key en todas las acciones existentes), siempre string --
+// no hace falta `parseInt`/`+id`.
 function _eqCambiarTier(id, modo) {
   var persona = _eqPersonaPorId(id);
   if (!persona) return;
@@ -327,7 +385,9 @@ function _eqCambiarTier(id, modo) {
     }
   }
 
-  // TODO: guardar en Supabase cuando esté integrado.
+  apiPost({ action: 'adminSetTierModo', adminToken: _adminToken, nombre: persona.nombre, tierModo: modo }, function() {}, function() {
+    mostrarToast('No se pudo guardar el cambio de categoría.', 'error');
+  });
 }
 
 // ── Gestión admin de miembro (Cambio 53): estado + cuota + admin ───────
@@ -343,6 +403,16 @@ function _eqAdminGestionHtml(p) {
   var hint = (estadoActual === 'Ausente' && p.estado !== 'Ausente')
     ? 'Marcada automáticamente como ausente por más de 30 días sin asistir.'
     : 'Si no asiste por 30 días seguidos, pasa a Ausente automáticamente.';
+  // "Paga cuota" (visible) es el inverso de `exentaCuota` (real, Cambio 55) --
+  // el toggle sigue leyendo/mostrando "paga" (más natural para un admin que
+  // "está exenta"), pero internamente togglea `exenta_cuota` invertido, ver
+  // _eqToggleCuota() más abajo.
+  var pagaCuota = !p.exentaCuota;
+  // Sin email registrado, `adminAgregarAdmin`/`adminQuitarAdmin` (acciones
+  // reales, identifican por email -- no hay ningún flag de admin por
+  // username en el backend) no tienen a quién apuntar -- mismo criterio de
+  // "deshabilitar con hint" que el toggle de cuota en Lesionadx.
+  var sinEmail = !p.email;
   return '<div class="eq-admin-quindes' + (p.tierModo === 'mirlxs' ? ' eq-oculto' : '') + '" id="eq-admin-q-' + p.id + '">' +
       '<div class="eq-admin-sep"></div>' +
       '<div class="eq-admin-campo">' +
@@ -356,7 +426,7 @@ function _eqAdminGestionHtml(p) {
           '<p class="eq-admin-hint" style="margin:0" id="eq-cuota-hint-' + p.id + '">' + (estadoActual === 'Lesionadx' ? 'Exento/a de cuota mientras está Lesionadx.' : 'Indica si está al día con la cuota mensual.') + '</p>' +
         '</div>' +
         '<label class="eq-toggle" id="eq-tog-cuota-' + p.id + '">' +
-          '<input type="checkbox"' + (p.pagaCuota ? ' checked' : '') + (estadoActual === 'Lesionadx' ? ' disabled' : '') +
+          '<input type="checkbox"' + (pagaCuota ? ' checked' : '') + (estadoActual === 'Lesionadx' ? ' disabled' : '') +
             ' onchange="_eqToggleCuota(\'' + p.id + '\', this.checked)">' +
           '<span class="eq-toggle-slider"></span>' +
         '</label>' +
@@ -364,10 +434,10 @@ function _eqAdminGestionHtml(p) {
       '<div class="eq-admin-campo eq-admin-campo--row">' +
         '<div>' +
           '<p class="eq-tier-label" style="margin-bottom:2px">Administradora</p>' +
-          '<p class="eq-admin-hint" style="margin:0">Podrá editar datos de todos los miembros.</p>' +
+          '<p class="eq-admin-hint" style="margin:0" id="eq-admin-hint-' + p.id + '">' + (sinEmail ? 'Sin email registrado -- no se puede dar acceso admin.' : 'Tendrá acceso completo al panel de administración (Mi Liga).') + '</p>' +
         '</div>' +
         '<label class="eq-toggle" id="eq-tog-admin-' + p.id + '">' +
-          '<input type="checkbox"' + (p.esAdminMiembro ? ' checked' : '') +
+          '<input type="checkbox"' + (p.esAdminMiembro ? ' checked' : '') + (sinEmail ? ' disabled' : '') +
             ' onchange="_eqToggleAdmin(\'' + p.id + '\', this.checked, this)">' +
           '<span class="eq-toggle-slider"></span>' +
         '</label>' +
@@ -392,29 +462,42 @@ function _eqCambiarEstado(id, nuevoEstado) {
     bots[i].className = 'eq-estado-btn' + (bots[i].getAttribute('data-estado') === nuevoEstado ? ' activo' : '');
   }
   // Auto-cuota: Lesionadx exime de cuota -- deshabilita el toggle con un
-  // hint (sin forzar su valor), cualquier otro estado lo rehabilita y
-  // restaura el hint default (mismo criterio que _eqAdminGestionHtml() al
-  // renderizar el perfil de entrada).
+  // hint (sin forzar su valor localmente; el backend sí la fuerza --
+  // adminSetEstadoMiembro mantiene exenta_cuota en sync con Lesionadx como
+  // única fuente de verdad, ver supabase/functions/api/index.ts), cualquier
+  // otro estado lo rehabilita y restaura el hint default.
   var cuotaInput = document.querySelector('#eq-tog-cuota-' + id + ' input');
   if (cuotaInput) cuotaInput.disabled = (nuevoEstado === 'Lesionadx');
   var cuotaHint = document.getElementById('eq-cuota-hint-' + id);
   if (cuotaHint) cuotaHint.textContent = (nuevoEstado === 'Lesionadx') ? 'Exento/a de cuota mientras está Lesionadx.' : 'Indica si está al día con la cuota mensual.';
-  // TODO: guardar en Supabase (equipo.estado_miembro, ver
-  // supabase/migrations/20260823_estado_miembro.sql + adminSetEstadoMiembro
-  // en supabase/functions/api/index.ts -- la acción real ya existe).
+  persona.exentaCuota = (nuevoEstado === 'Lesionadx');
+  if (cuotaInput) cuotaInput.checked = !persona.exentaCuota;
+  apiPost({ action: 'adminSetEstadoMiembro', adminToken: _adminToken, nombre: persona.nombre, estadoMiembro: nuevoEstado }, function() {}, function() {
+    mostrarToast('No se pudo guardar el cambio de estado.', 'error');
+  });
 }
 
-function _eqToggleCuota(id, valor) {
+// "Paga cuota" (checked) es el inverso de `exentaCuota` (real) -- ver el
+// comentario de _eqAdminGestionHtml() de arriba.
+function _eqToggleCuota(id, valorPagaCuota) {
   var persona = _eqPersonaPorId(id);
-  if (persona) persona.pagaCuota = valor;
-  // TODO: guardar en Supabase
+  if (!persona) return;
+  persona.exentaCuota = !valorPagaCuota;
+  apiPost({ action: 'adminSetExentaCuota', adminToken: _adminToken, nombre: persona.nombre, valor: !valorPagaCuota }, function() {}, function() {
+    mostrarToast('No se pudo guardar el cambio de cuota.', 'error');
+  });
 }
 
 function _eqToggleAdmin(id, valor, checkboxEl) {
   if (!valor) {
     var persona = _eqPersonaPorId(id);
-    if (persona) persona.esAdminMiembro = false;
-    // TODO: guardar en Supabase
+    if (!persona) return;
+    persona.esAdminMiembro = false;
+    apiPost({ action: 'adminQuitarAdmin', adminToken: _adminToken, email: persona.email }, function() {}, function(e) {
+      persona.esAdminMiembro = true;
+      checkboxEl.checked = true;
+      mostrarToast((e && e.message) || 'No se pudo quitar el acceso admin.', 'error');
+    });
     return;
   }
   // Revertir visualmente hasta confirmación
@@ -424,10 +507,13 @@ function _eqToggleAdmin(id, valor, checkboxEl) {
 
 function _eqAbrirConfirmAdmin(id) {
   var persona = _eqPersonaPorId(id);
-  if (!persona) return;
+  if (!persona || !persona.email) return; // toggle ya viene disabled sin email, ver _eqAdminGestionHtml()
   var sheet = document.getElementById('eq-sheet-confirm-admin');
   var msg = document.getElementById('eq-sheet-confirm-msg');
-  if (msg) msg.textContent = '¿Dar acceso de administradora a ' + persona.nombreDerby + '? Podrá editar los datos de todos los miembros del equipo.';
+  // Mensaje real (Cambio 55) -- el admin de esta app es global (tabla
+  // `admins`), no un rol acotado a "editar el equipo": corregido para no
+  // subestimar el alcance real del acceso que se está por otorgar.
+  if (msg) msg.textContent = '¿Dar acceso de administradora a ' + persona.nombreDerby + '? Tendrá acceso completo al panel de administración (Mi Liga).';
   sheet.setAttribute('data-pendiente-id', id);
   sheet.classList.add('visible');
 }
@@ -436,11 +522,16 @@ function _eqConfirmarAdminOk() {
   var sheet = document.getElementById('eq-sheet-confirm-admin');
   var id = sheet.getAttribute('data-pendiente-id');
   var persona = _eqPersonaPorId(id);
-  if (persona) persona.esAdminMiembro = true;
+  sheet.classList.remove('visible');
+  if (!persona || !persona.email) return;
+  persona.esAdminMiembro = true;
   var cb = document.querySelector('#eq-tog-admin-' + id + ' input');
   if (cb) cb.checked = true;
-  sheet.classList.remove('visible');
-  // TODO: guardar en Supabase
+  apiPost({ action: 'adminAgregarAdmin', adminToken: _adminToken, email: persona.email }, function() {}, function(e) {
+    persona.esAdminMiembro = false;
+    if (cb) cb.checked = false;
+    mostrarToast((e && e.message) || 'No se pudo dar el acceso admin.', 'error');
+  });
 }
 
 function _eqConfirmarAdminCancelar() {
@@ -450,12 +541,22 @@ function _eqConfirmarAdminCancelar() {
 function _eqPerfilContenidoHtml(p) {
   var pills = [];
   if (p.pronombres) pills.push(p.pronombres);
+  // `p.roles` (Jammer/Bloqueadora/Capitana/etc) nunca tuvo columna real en
+  // `equipo` (auditado en el Cambio 55, ver MANIFEST.md) -- `getEquipo()` no
+  // lo devuelve, así que este `.forEach` no agrega nada hoy. Se deja el
+  // guard (no un array hardcodeado) por si Victor agrega esa columna a futuro.
   (p.roles || []).forEach(function(r) { pills.push(r); });
   var pillsHtml = pills.map(function(txt) { return '<span class="aj-pill">' + _eqEsc(txt) + '</span>'; }).join('');
 
+  // Fila de cumpleaños sacada (Cambio 55) -- `getEquipo()` no la devuelve:
+  // el dato real (`fecha_nacimiento`) está gateado por privacidad
+  // (`fecha_publica`, hoy solo consumida por getCumpleañosRango()/js/eventos.js
+  // para el listado de cumples, con su propia regla de visibilidad) -- traerla
+  // acá habría requerido decidir de nuevo esa regla para un contexto distinto,
+  // fuera de alcance de "reemplazar el demo por datos reales". Pendiente que
+  // Victor decida si la quiere de vuelta en el perfil de Equipo.
   var filas = '';
   if (p.telefono) filas += '<a class="eq-info-fila" href="tel:' + _eqEsc(p.telefono) + '"><span class="material-symbols-outlined">call</span><span class="eq-info-texto">' + _eqEsc(p.telefono) + '</span></a>';
-  if (p.cumple) filas += '<div class="eq-info-fila"><span class="material-symbols-outlined">cake</span><span class="eq-info-texto">' + _eqEsc(p.cumple) + '</span></div>';
   if (p.email) filas += '<a class="eq-info-fila" href="mailto:' + _eqEsc(p.email) + '"><span class="material-symbols-outlined">mail</span><span class="eq-info-texto">' + _eqEsc(p.email) + '</span></a>';
 
   return '<div class="eq-perfil-header">' +

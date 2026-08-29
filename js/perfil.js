@@ -113,25 +113,35 @@ function irEditarDatos(sinNavegar) {
   if (!sinNavegar) ir('s-datos');
 }
 
-// Stats de Equipo en Ajustes (Cambio 51) -- reusa el mismo demo data de
-// _EQ_EQUIPO_DEMO (js/equipo.js, cargado ANTES que este archivo en
-// index.html) buscando a la persona cuyo `nombreDerby` coincide con
-// `E.nombre` -- esta app identifica cuentas por nombre derby, no por un
-// `id` numérico (mismo criterio ya usado por `_eqEsUsuarioActual()`,
-// js/equipo.js). `#dat-stats-wrap` (index.html, dentro de #s-datos, justo
-// después de la fila "Foto de perfil") queda vacío/sin tocar si la cuenta
-// no tiene fila en Equipo (ej. una cuenta admin "pura", ver el guard de
-// `irEditarDatos()` más arriba) -- sin toast ni error, mismo criterio que
-// el resto de esta pantalla con datos ausentes.
+// Stats de Equipo en Ajustes (Cambio 51; conectado a datos reales en el
+// Cambio 55, ver MANIFEST.md "Auditoría previa") -- busca a la persona cuyo
+// `nombre` (username real, `E.nombre` también lo es -- así llega desde
+// loginGoogle()/adminLogin()) coincide, no `nombreDerby` (bug real que
+// tenía esta función antes del Cambio 55, mismo que `_eqEsUsuarioActual()`
+// ya tenía y se corrigió ahí, ver js/equipo.js). `_eqAsegurarCargado()`
+// (js/equipo.js, cargado ANTES que este archivo en index.html) trae el
+// roster real UNA sola vez por sesión, compartido con quien haya visitado
+// primero la sección Equipo -- por eso este render ahora es asíncrono
+// (contra el array demo, antes, era síncrono). `#dat-stats-wrap` queda
+// vacío/sin tocar si la cuenta no tiene fila en Equipo o el fetch no
+// encuentra a la persona -- sin toast ni error, mismo criterio que el resto
+// de esta pantalla con datos ausentes. **horasPatinadas/asistenciaPct/
+// rankPct llegan en 0** (sin ninguna columna real que los trackee todavía,
+// ver getEquipo()/supabase/functions/api/index.ts) -- el bloque se muestra
+// igual, solo con esos valores en cero; pendiente que Victor decida si
+// prefiere ocultarlo hasta que exista una métrica real.
 function _datosRenderStats() {
-  var persona = (typeof _EQ_EQUIPO_DEMO !== 'undefined')
-    ? _EQ_EQUIPO_DEMO.filter(function(p) { return p.nombreDerby === E.nombre; })[0]
-    : null;
-  if (!persona) return;
-
   var contenedor = document.getElementById('dat-stats-wrap');
   if (!contenedor) return;
+  if (typeof _eqAsegurarCargado === 'undefined') return;
+  _eqAsegurarCargado(function() {
+    var persona = _eqPersonas.filter(function(p) { return p.nombre === E.nombre; })[0];
+    if (!persona) return;
+    _datosRenderStatsHtml(contenedor, persona);
+  });
+}
 
+function _datosRenderStatsHtml(contenedor, persona) {
   var rankHtml = persona.tierModo === 'auto'
     ? '<div class="dat-rank-wrap eq-rank-wrap">' +
         '<div class="eq-rank-labels"><span>Mirlxs</span><span>Quindes</span></div>' +
