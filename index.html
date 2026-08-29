@@ -35,7 +35,7 @@
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
 <link rel="stylesheet" href="css/eventos.css?v=e12fb09e">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=3">
+<link rel="stylesheet" href="css/equipo.css?v=4">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2902,7 +2902,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/ui.js?v=28059ed9"></script>
 <script src="js/eventos.js?v=492b83a6"></script>
 <script src="js/tareas.js"></script>
-<script src="js/equipo.js?v=3"></script>
+<script src="js/equipo.js?v=4"></script>
 <script src="js/home.js?v=5c22841b"></script>
 <script src="js/reservas.js?v=4910a3f3"></script>
 <script src="js/perfil.js?v=cd8d2553"></script>
@@ -4614,6 +4614,24 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
      elemento propio del tour. -->
 <div id="ev-tour-overlay" style="display:none;"></div>
 <div id="ev-tour-tooltip" style="display:none;"></div>
+
+<!-- Bottom sheet — confirmación dar rol admin (Cambio 53, Equipo, ver
+     MANIFEST.md) -- hijo directo de <body> (mismo criterio que
+     #ev-tour-overlay/.cta-footer-fixed de arriba), abierta/cerrada por
+     _eqAbrirConfirmAdmin()/_eqConfirmarAdminOk()/_eqConfirmarAdminCancelar()
+     (js/equipo.js) vía la clase `.visible`. `data-pendiente-id` (seteado al
+     abrir) guarda a qué persona de _EQ_EQUIPO_DEMO aplica la confirmación. -->
+<div id="eq-sheet-confirm-admin" class="eq-confirm-sheet-overlay">
+  <div class="eq-confirm-sheet">
+    <div class="eq-confirm-sheet-handle"></div>
+    <p class="eq-confirm-sheet-title">Confirmar acceso admin</p>
+    <p id="eq-sheet-confirm-msg" class="eq-confirm-sheet-msg"></p>
+    <div class="eq-confirm-sheet-btns">
+      <button class="eq-confirm-btn-cancel" onclick="_eqConfirmarAdminCancelar()">Cancelar</button>
+      <button class="eq-confirm-btn-ok" onclick="_eqConfirmarAdminOk()">Confirmar</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>

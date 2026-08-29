@@ -8,27 +8,41 @@ var _EQ_EQUIPO_DEMO = [
   { id: 'q1', nombreDerby: 'Comet Fatal', numeroDerby: 7, username: 'cometfatal', fotoPerfil: '',
     rol: 'Quindes', pronombres: 'Ella, elle', roles: ['Jammer', 'Coach'],
     telefono: '+593987654321', cumple: '15 de abril', email: 'comet@example.com',
-    rankPct: 82, tierModo: 'auto', stats: { horasPatinadas: 48, asistenciaPct: 87 } },
+    rankPct: 82, tierModo: 'auto',
+    estado: 'Activx', pagaCuota: true, esAdminMiembro: false, ultimaAsistencia: '2026-08-20',
+    stats: { horasPatinadas: 48, asistenciaPct: 87 } },
   { id: 'q2', nombreDerby: 'Furia Andina', numeroDerby: 22, username: 'furiaandina', fotoPerfil: '',
     rol: 'Quindes', pronombres: 'Ella', roles: ['Bloqueadora'],
     telefono: '+593998765432', cumple: '3 de julio', email: 'furia@example.com',
-    rankPct: 22, tierModo: 'auto', stats: { horasPatinadas: 36, asistenciaPct: 74 } },
+    rankPct: 22, tierModo: 'auto',
+    estado: 'Activx', pagaCuota: true, esAdminMiembro: false, ultimaAsistencia: '2026-08-20',
+    stats: { horasPatinadas: 36, asistenciaPct: 74 } },
   { id: 'q3', nombreDerby: 'Vudú Cría', numeroDerby: 13, username: 'vuducria', fotoPerfil: '',
     rol: 'Quindes', pronombres: 'Elle', roles: ['Pivot', 'Capitana'],
     telefono: '', cumple: '', email: '',
-    rankPct: 95, tierModo: 'auto', stats: { horasPatinadas: 52, asistenciaPct: 92 } },
+    rankPct: 95, tierModo: 'auto',
+    // esAdminMiembro:true acá -- rankPct más alto de las 6 personas demo
+    // (95) y ya tiene el rol "Capitana", combinación natural para ser
+    // también quien administra al resto del equipo en la demo.
+    estado: 'Activx', pagaCuota: true, esAdminMiembro: true, ultimaAsistencia: '2026-08-20',
+    stats: { horasPatinadas: 52, asistenciaPct: 92 } },
   { id: 'm1', nombreDerby: 'Pluma Letal', numeroDerby: 9, username: 'plumaletal', fotoPerfil: '',
     rol: 'Mirlxs', pronombres: 'Ella, elle', roles: ['Jammer'],
     telefono: '+593991112233', cumple: '22 de octubre', email: 'pluma@example.com',
-    rankPct: 55, tierModo: 'auto', stats: { horasPatinadas: 31, asistenciaPct: 68 } },
+    rankPct: 55, tierModo: 'auto',
+    estado: 'Activx', pagaCuota: true, esAdminMiembro: false, ultimaAsistencia: '2026-08-20',
+    stats: { horasPatinadas: 31, asistenciaPct: 68 } },
   { id: 'm2', nombreDerby: 'Chukirawa', numeroDerby: 44, username: 'chukirawa', fotoPerfil: '',
     rol: 'Mirlxs', pronombres: 'Él', roles: ['Bloqueador', 'Entrenador'],
     telefono: '+593984445566', cumple: '9 de enero', email: 'chukirawa@example.com',
-    rankPct: 90, tierModo: 'auto', stats: { horasPatinadas: 60, asistenciaPct: 95 } },
+    rankPct: 90, tierModo: 'auto',
+    estado: 'Activx', pagaCuota: true, esAdminMiembro: false, ultimaAsistencia: '2026-08-20',
+    stats: { horasPatinadas: 60, asistenciaPct: 95 } },
   { id: 'm3', nombreDerby: 'Neblina Roja', numeroDerby: 18, username: 'neblinaroja', fotoPerfil: '',
     rol: 'Mirlxs', pronombres: 'Ella', roles: ['Pivot'],
     telefono: '', cumple: '30 de mayo', email: '',
     rankPct: 30, tierModo: 'auto',
+    estado: 'Activx', pagaCuota: true, esAdminMiembro: false, ultimaAsistencia: '2026-08-20',
     stats: { horasPatinadas: 24, asistenciaPct: 55 } }
 ];
 
@@ -42,6 +56,31 @@ var _EQ_TIER_DESCRIPCIONES = {
   auto:   'La categoría se asigna automáticamente según el porcentaje de asistencia.',
   mirlxs: 'Categoría fijada manualmente en Mirlxs. El sistema ignorará los stats de asistencia.'
 };
+
+// Estados de miembro (Cambio 53) -- NO es una lista inventada/fallback: son
+// los 5 valores reales del CHECK constraint de `equipo.estado_miembro`
+// (`supabase/migrations/20260823_estado_miembro.sql`, sistema ya real y
+// conectado al backend desde el Cambio 9 -- ver MANIFEST.md). Se reusan acá
+// tal cual para que el selector de esta demo no invente un vocabulario
+// paralelo que después no tenga a dónde mapear en la integración real.
+var _EQ_ESTADOS = ['Activx', 'Ausente', 'Satélite', 'Técnico', 'Lesionadx'];
+
+// Estado "efectivo" a mostrar/resaltar -- si ya está fijado a mano en
+// 'Ausente' se respeta tal cual; si no, se deriva de `ultimaAsistencia`
+// (30+ días sin asistir → 'Ausente' automático, sin tocar `persona.estado`
+// real -- el toggle manual y el cálculo automático son 2 cosas separadas,
+// mismo criterio que ya usa el backend real para reactivar a 'Activx' al
+// marcar asistencia de nuevo, ver `_evMarcarAsistencia()`/js/eventos.js).
+// 'Ausente' (no 'Inactiva', que no es un valor válido del enum real de
+// arriba) es el estado más cercano semánticamente a "30 días sin venir".
+function _eqEstadoEfectivo(persona) {
+  if (persona.estado === 'Ausente') return 'Ausente';
+  if (persona.ultimaAsistencia) {
+    var dias = Math.floor((Date.now() - new Date(persona.ultimaAsistencia).getTime()) / 86400000);
+    if (dias >= 30) return 'Ausente';
+  }
+  return persona.estado;
+}
 
 var _eqYaInicializado = false;
 var _eqPersonaActual = null;
@@ -276,7 +315,128 @@ function _eqCambiarTier(id, modo) {
   var rankWrap = document.querySelector('#s-equipo-perfil .eq-rank-wrap');
   if (rankWrap) rankWrap.classList.toggle('eq-rank-oculto', modo !== 'auto');
 
+  // Sección de gestión admin (estado/cuota/admin, Cambio 53) -- solo tiene
+  // sentido para Quindes, se desvanece si la categoría pasa a Mirlxs (y
+  // vuelve si sale de ahí), mismo mecanismo `.eq-oculto` que el termómetro.
+  var secAdminQ = document.getElementById('eq-admin-q-' + id);
+  if (secAdminQ) {
+    if (modo === 'mirlxs') {
+      secAdminQ.classList.add('eq-oculto');
+    } else {
+      secAdminQ.classList.remove('eq-oculto');
+    }
+  }
+
   // TODO: guardar en Supabase cuando esté integrado.
+}
+
+// ── Gestión admin de miembro (Cambio 53): estado + cuota + admin ───────
+// Sección propia del perfil, solo Quindes (se oculta con fade si la
+// categoría es Mirlxs, ver `.eq-oculto`/`_eqCambiarTier()` arriba) --
+// admin-only, mismo gate que `_eqTierAdminHtml()`.
+function _eqAdminGestionHtml(p) {
+  if (typeof _adminToken === 'undefined' || !_adminToken) return '';
+  var estadoActual = _eqEstadoEfectivo(p);
+  var botonesEstado = _EQ_ESTADOS.map(function(est) {
+    return '<button type="button" class="eq-estado-btn' + (estadoActual === est ? ' activo' : '') + '" data-estado="' + est + '" onclick="_eqCambiarEstado(\'' + p.id + '\',\'' + est + '\')">' + est + '</button>';
+  }).join('');
+  var hint = (estadoActual === 'Ausente' && p.estado !== 'Ausente')
+    ? 'Marcada automáticamente como ausente por más de 30 días sin asistir.'
+    : 'Si no asiste por 30 días seguidos, pasa a Ausente automáticamente.';
+  return '<div class="eq-admin-quindes' + (p.tierModo === 'mirlxs' ? ' eq-oculto' : '') + '" id="eq-admin-q-' + p.id + '">' +
+      '<div class="eq-admin-sep"></div>' +
+      '<div class="eq-admin-campo">' +
+        '<p class="eq-tier-label">Estado</p>' +
+        '<div class="eq-estado-opciones">' + botonesEstado + '</div>' +
+        '<p class="eq-admin-hint" id="eq-estado-hint-' + p.id + '">' + hint + '</p>' +
+      '</div>' +
+      '<div class="eq-admin-campo eq-admin-campo--row">' +
+        '<div>' +
+          '<p class="eq-tier-label" style="margin-bottom:2px">Paga cuota</p>' +
+          '<p class="eq-admin-hint" style="margin:0">Indica si está al día con la cuota mensual.</p>' +
+        '</div>' +
+        '<label class="eq-toggle">' +
+          '<input type="checkbox"' + (p.pagaCuota ? ' checked' : '') +
+            ' onchange="_eqToggleCuota(\'' + p.id + '\', this.checked)">' +
+          '<span class="eq-toggle-slider"></span>' +
+        '</label>' +
+      '</div>' +
+      '<div class="eq-admin-campo eq-admin-campo--row">' +
+        '<div>' +
+          '<p class="eq-tier-label" style="margin-bottom:2px">Administradora</p>' +
+          '<p class="eq-admin-hint" style="margin:0">Podrá editar datos de todos los miembros.</p>' +
+        '</div>' +
+        '<label class="eq-toggle" id="eq-tog-admin-' + p.id + '">' +
+          '<input type="checkbox"' + (p.esAdminMiembro ? ' checked' : '') +
+            ' onchange="_eqToggleAdmin(\'' + p.id + '\', this.checked, this)">' +
+          '<span class="eq-toggle-slider"></span>' +
+        '</label>' +
+      '</div>' +
+    '</div>';
+}
+
+// Cambia el estado manual de una persona -- botones del segmented control
+// de arriba, sin listener delegado (mismo criterio que `_eqCambiarTier()`).
+// `querySelectorAll` sin scope por id: hay como mucho UN perfil abierto a
+// la vez en esta app (#s-equipo-perfil muestra una sola persona), así que
+// nunca conviven 2 `.eq-estado-opciones` distintas en el DOM al mismo
+// tiempo -- no hace falta escopear por `data-id` como sí hace el control
+// de tier (ese si puede, en teoría, convivir con el próximo si se
+// reabriera rápido; acá el propio querySelectorAll ya alcanza).
+function _eqCambiarEstado(id, nuevoEstado) {
+  var persona = _eqPersonaPorId(id); // helper ya existente
+  if (!persona) return;
+  persona.estado = nuevoEstado;
+  var bots = document.querySelectorAll('.eq-estado-opciones .eq-estado-btn');
+  for (var i = 0; i < bots.length; i++) {
+    bots[i].className = 'eq-estado-btn' + (bots[i].getAttribute('data-estado') === nuevoEstado ? ' activo' : '');
+  }
+  // TODO: guardar en Supabase (equipo.estado_miembro, ver
+  // supabase/migrations/20260823_estado_miembro.sql + adminSetEstadoMiembro
+  // en supabase/functions/api/index.ts -- la acción real ya existe).
+}
+
+function _eqToggleCuota(id, valor) {
+  var persona = _eqPersonaPorId(id);
+  if (persona) persona.pagaCuota = valor;
+  // TODO: guardar en Supabase
+}
+
+function _eqToggleAdmin(id, valor, checkboxEl) {
+  if (!valor) {
+    var persona = _eqPersonaPorId(id);
+    if (persona) persona.esAdminMiembro = false;
+    // TODO: guardar en Supabase
+    return;
+  }
+  // Revertir visualmente hasta confirmación
+  checkboxEl.checked = false;
+  _eqAbrirConfirmAdmin(id);
+}
+
+function _eqAbrirConfirmAdmin(id) {
+  var persona = _eqPersonaPorId(id);
+  if (!persona) return;
+  var sheet = document.getElementById('eq-sheet-confirm-admin');
+  var msg = document.getElementById('eq-sheet-confirm-msg');
+  if (msg) msg.textContent = '¿Dar acceso de administradora a ' + persona.nombreDerby + '? Podrá editar los datos de todos los miembros del equipo.';
+  sheet.setAttribute('data-pendiente-id', id);
+  sheet.classList.add('visible');
+}
+
+function _eqConfirmarAdminOk() {
+  var sheet = document.getElementById('eq-sheet-confirm-admin');
+  var id = sheet.getAttribute('data-pendiente-id');
+  var persona = _eqPersonaPorId(id);
+  if (persona) persona.esAdminMiembro = true;
+  var cb = document.querySelector('#eq-tog-admin-' + id + ' input');
+  if (cb) cb.checked = true;
+  sheet.classList.remove('visible');
+  // TODO: guardar en Supabase
+}
+
+function _eqConfirmarAdminCancelar() {
+  document.getElementById('eq-sheet-confirm-admin').classList.remove('visible');
 }
 
 function _eqPerfilContenidoHtml(p) {
@@ -309,6 +469,7 @@ function _eqPerfilContenidoHtml(p) {
       '<div class="eq-rank-texto">' + _eqEsc(_eqRankTexto(p)) + '</div>' +
     '</div>' +
     _eqTierAdminHtml(p) +
+    _eqAdminGestionHtml(p) +
     (filas ? '<div class="eq-info-lista">' + filas + '</div>' : '');
 }
 

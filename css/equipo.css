@@ -173,3 +173,80 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
 }
 .eq-tier-btn.activo { background: var(--brand); color: var(--white); border-color: var(--brand); }
 .eq-tier-desc { font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
+
+/* Sección admin-Quindes (Cambio 53) -- gestión de estado/cuota/admin de un
+   miembro, solo Quindes: fade+colapso con `.eq-oculto` al pasar a Mirlxs
+   (`_eqCambiarTier()`, js/equipo.js), mismo mecanismo que `.eq-rank-oculto`
+   de arriba (Cambio 52) -- `.eq-oculto` es genérica a propósito (no
+   `.eq-rank-oculto` de nuevo), reusable por cualquier bloque futuro que
+   necesite el mismo fade+colapso condicionado por tier. `!important` en
+   `.eq-oculto` porque conviven reglas de layout más específicas (flex,
+   grid) sobre los mismos elementos que podrían ganarle a `opacity`/
+   `max-height` en cascada normal -- necesita ganar siempre, sin importar
+   qué tan específico sea el selector del elemento al que se le aplica. */
+.eq-admin-quindes { transition: opacity 0.3s ease, max-height 0.35s ease; max-height: 700px; overflow: hidden; }
+.eq-oculto { opacity: 0 !important; max-height: 0 !important; pointer-events: none; }
+.eq-admin-sep { height: 1px; background: var(--border-light); margin: 14px 0; }
+.eq-admin-campo { margin-bottom: 14px; }
+.eq-admin-campo--row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.eq-admin-hint { font-size: 0.68rem; color: var(--muted); line-height: 1.45; margin-top: 6px; }
+
+/* Botones de estado -- mismo look que .eq-tier-btn pero SIN flex:1 (son
+   `_EQ_ESTADOS`, 5 valores reales del enum de Supabase, ver la constante
+   en js/equipo.js -- envuelven en `flex-wrap`, no caben en una sola fila
+   de ancho parejo como los 3 botones de tier). */
+.eq-estado-opciones { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.eq-estado-btn {
+  padding: 6px 12px; border-radius: var(--radius); border: 1px solid var(--border-light);
+  background: var(--surface); color: var(--muted); font-size: 0.72rem; font-weight: 600;
+  cursor: pointer; font-family: inherit; transition: background 0.2s, color 0.2s, border-color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.eq-estado-btn.activo { background: var(--brand); color: var(--white); border-color: var(--brand); }
+
+/* Toggle switch (paga cuota / es admin) -- checkbox real oculto
+   (accesible, togglea con teclado/lector de pantalla) + slider visual. */
+.eq-toggle { position: relative; display: inline-block; width: 44px; height: 26px; flex-shrink: 0; }
+.eq-toggle input { opacity: 0; width: 0; height: 0; }
+.eq-toggle-slider { position: absolute; inset: 0; border-radius: 13px; background: var(--border-light); cursor: pointer; transition: background 0.2s; }
+.eq-toggle-slider::before { content: ''; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px; background: var(--white); border-radius: 50%; transition: transform 0.2s; }
+.eq-toggle input:checked + .eq-toggle-slider { background: var(--brand); }
+.eq-toggle input:checked + .eq-toggle-slider::before { transform: translateX(18px); }
+
+/* Bottom sheet de confirmación "dar acceso admin" (#eq-sheet-confirm-admin,
+   index.html) -- hijo directo de <body>, mismo criterio de fade+slide que
+   `.bsheet`/`.bsheet-overlay` (css/global.css), pero con clases propias
+   (pedido explícito) en vez de reusar esas -- `--overlay-light`
+   (`rgba(0,0,0,0.55)`) en vez del `rgba(0,0,0,0.5)` literal del pedido: es
+   el token de oscurecimiento más cercano que ya existe en css/colors.css,
+   más suave que `--overlay-dark` (0.7, el que usa `.bsheet-overlay`) a
+   propósito -- esto es una confirmación liviana, no un flujo completo. */
+.eq-confirm-sheet-overlay {
+  position: fixed; inset: 0; background: var(--overlay-light);
+  z-index: 9980; display: flex; align-items: flex-end;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s;
+}
+.eq-confirm-sheet-overlay.visible { opacity: 1; pointer-events: all; }
+.eq-confirm-sheet {
+  width: 100%; background: var(--surface);
+  border-radius: 20px 20px 0 0; padding: 12px 20px 32px;
+  border-top: 1px solid var(--border-light);
+  transform: translateY(100%);
+  transition: transform 0.3s cubic-bezier(.16,1,.3,1);
+}
+.eq-confirm-sheet-overlay.visible .eq-confirm-sheet { transform: translateY(0); }
+.eq-confirm-sheet-handle { width: 36px; height: 4px; background: var(--border-light); border-radius: 2px; margin: 0 auto 16px; }
+.eq-confirm-sheet-title { font-size: 1.05rem; font-weight: 800; color: var(--text); margin-bottom: 10px; }
+.eq-confirm-sheet-msg { font-size: 0.88rem; color: var(--muted); line-height: 1.55; margin-bottom: 24px; }
+.eq-confirm-sheet-btns { display: flex; gap: 10px; }
+.eq-confirm-btn-cancel {
+  flex: 1; padding: 12px; border-radius: var(--radius);
+  border: 1px solid var(--border-light); background: var(--surface);
+  color: var(--muted); font-size: 0.92rem; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.eq-confirm-btn-ok {
+  flex: 1; padding: 12px; border-radius: var(--radius);
+  border: none; background: var(--brand);
+  color: var(--white); font-size: 0.92rem; font-weight: 700; cursor: pointer; font-family: inherit;
+}
