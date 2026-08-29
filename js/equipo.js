@@ -8,29 +8,40 @@ var _EQ_EQUIPO_DEMO = [
   { id: 'q1', nombreDerby: 'Comet Fatal', numeroDerby: 7, username: 'cometfatal', fotoPerfil: '',
     rol: 'Quindes', pronombres: 'Ella, elle', roles: ['Jammer', 'Coach'],
     telefono: '+593987654321', cumple: '15 de abril', email: 'comet@example.com',
-    rankPct: 82, stats: { horasPatinadas: 48, asistenciaPct: 87 } },
+    rankPct: 82, tierModo: 'auto', stats: { horasPatinadas: 48, asistenciaPct: 87 } },
   { id: 'q2', nombreDerby: 'Furia Andina', numeroDerby: 22, username: 'furiaandina', fotoPerfil: '',
     rol: 'Quindes', pronombres: 'Ella', roles: ['Bloqueadora'],
     telefono: '+593998765432', cumple: '3 de julio', email: 'furia@example.com',
-    rankPct: 22, stats: { horasPatinadas: 36, asistenciaPct: 74 } },
+    rankPct: 22, tierModo: 'auto', stats: { horasPatinadas: 36, asistenciaPct: 74 } },
   { id: 'q3', nombreDerby: 'Vudú Cría', numeroDerby: 13, username: 'vuducria', fotoPerfil: '',
     rol: 'Quindes', pronombres: 'Elle', roles: ['Pivot', 'Capitana'],
     telefono: '', cumple: '', email: '',
-    rankPct: 95, stats: { horasPatinadas: 52, asistenciaPct: 92 } },
+    rankPct: 95, tierModo: 'auto', stats: { horasPatinadas: 52, asistenciaPct: 92 } },
   { id: 'm1', nombreDerby: 'Pluma Letal', numeroDerby: 9, username: 'plumaletal', fotoPerfil: '',
     rol: 'Mirlxs', pronombres: 'Ella, elle', roles: ['Jammer'],
     telefono: '+593991112233', cumple: '22 de octubre', email: 'pluma@example.com',
-    rankPct: 55, stats: { horasPatinadas: 31, asistenciaPct: 68 } },
+    rankPct: 55, tierModo: 'auto', stats: { horasPatinadas: 31, asistenciaPct: 68 } },
   { id: 'm2', nombreDerby: 'Chukirawa', numeroDerby: 44, username: 'chukirawa', fotoPerfil: '',
     rol: 'Mirlxs', pronombres: 'Él', roles: ['Bloqueador', 'Entrenador'],
     telefono: '+593984445566', cumple: '9 de enero', email: 'chukirawa@example.com',
-    rankPct: 90, stats: { horasPatinadas: 60, asistenciaPct: 95 } },
+    rankPct: 90, tierModo: 'auto', stats: { horasPatinadas: 60, asistenciaPct: 95 } },
   { id: 'm3', nombreDerby: 'Neblina Roja', numeroDerby: 18, username: 'neblinaroja', fotoPerfil: '',
     rol: 'Mirlxs', pronombres: 'Ella', roles: ['Pivot'],
     telefono: '', cumple: '30 de mayo', email: '',
-    rankPct: 30,
+    rankPct: 30, tierModo: 'auto',
     stats: { horasPatinadas: 24, asistenciaPct: 55 } }
 ];
+
+// Descripciones del modo de categoría (tier) -- ver _eqCambiarTier()/
+// _eqPerfilContenidoHtml() más abajo (Cambio 52). 'quinde'/'mirlxs': fijado
+// a mano por un admin, el sistema deja de recalcularla según asistencia.
+// 'auto' (default de todas las personas en _EQ_EQUIPO_DEMO): la categoría
+// sigue derivándose del % de asistencia (el termómetro, `rankPct`).
+var _EQ_TIER_DESCRIPCIONES = {
+  quinde: 'Categoría fijada manualmente en Quindes. El sistema ignorará los stats de asistencia.',
+  auto:   'La categoría se asigna automáticamente según el porcentaje de asistencia.',
+  mirlxs: 'Categoría fijada manualmente en Mirlxs. El sistema ignorará los stats de asistencia.'
+};
 
 var _eqYaInicializado = false;
 var _eqPersonaActual = null;
@@ -222,6 +233,52 @@ function _eqRankTexto(p) {
   return 'Seguí sumando asistencia';
 }
 
+// Segmented control [Quindes | Auto | Mirlxs] del perfil de detalle,
+// admin-only (Cambio 52) -- fija/libera manualmente la categoría de una
+// persona (`persona.tierModo`, ver _EQ_TIER_DESCRIPCIONES/_eqCambiarTier()
+// más abajo). `_adminToken` (no un `E.esAdmin` que no existe en esta app --
+// el admin real se identifica con ese token, mismo criterio ya usado en
+// todo js/eventos.js, ej. `_evTourIniciarSiCorresponde()`) gatea el bloque
+// entero, incluido para el propio perfil del admin.
+function _eqTierAdminHtml(p) {
+  if (typeof _adminToken === 'undefined' || !_adminToken) return '';
+  var modos = ['quinde', 'auto', 'mirlxs'];
+  var textos = { quinde: 'Quindes', auto: 'Auto', mirlxs: 'Mirlxs' };
+  var botones = modos.map(function(m) {
+    return '<button type="button" class="eq-tier-btn' + (p.tierModo === m ? ' activo' : '') + '" data-modo="' + m + '" onclick="_eqCambiarTier(\'' + p.id + '\',\'' + m + '\')">' + textos[m] + '</button>';
+  }).join('');
+  return '<div class="eq-tier-admin">' +
+      '<p class="eq-tier-label">Categoría (solo admins)</p>' +
+      '<div class="eq-tier-control" data-id="' + p.id + '">' + botones + '</div>' +
+      '<p class="eq-tier-desc" id="eq-tier-desc-' + p.id + '">' + _eqEsc(_EQ_TIER_DESCRIPCIONES[p.tierModo]) + '</p>' +
+    '</div>';
+}
+
+// Toggle de modo de tier -- llamada directa desde el `onclick` de cada
+// `.eq-tier-btn` (mismo patrón que el resto de este archivo, ej.
+// `_eqToggleFavorito()`/`_eqAbrirPerfil()`: onclick inline con el id como
+// string, sin ningún listener delegado -- no hay ninguno en toda esta
+// sección, no hacía falta sumar el primero acá). `id` siempre es el string
+// de `_EQ_EQUIPO_DEMO` (`'q1'`, `'m2'`, etc.), nunca numérico -- no hace
+// falta `parseInt`/`+id`.
+function _eqCambiarTier(id, modo) {
+  var persona = _eqPersonaPorId(id);
+  if (!persona) return;
+  persona.tierModo = modo;
+
+  document.querySelectorAll('.eq-tier-control[data-id="' + id + '"] .eq-tier-btn').forEach(function(btn) {
+    btn.classList.toggle('activo', btn.getAttribute('data-modo') === modo);
+  });
+
+  var desc = document.getElementById('eq-tier-desc-' + id);
+  if (desc) desc.textContent = _EQ_TIER_DESCRIPCIONES[modo];
+
+  var rankWrap = document.querySelector('#s-equipo-perfil .eq-rank-wrap');
+  if (rankWrap) rankWrap.classList.toggle('eq-rank-oculto', modo !== 'auto');
+
+  // TODO: guardar en Supabase cuando esté integrado.
+}
+
 function _eqPerfilContenidoHtml(p) {
   var pills = [];
   if (p.pronombres) pills.push(p.pronombres);
@@ -251,6 +308,7 @@ function _eqPerfilContenidoHtml(p) {
       '<div class="eq-rank-track"><div class="eq-rank-fill" id="eq-rank-fill" style="width:0%;"></div></div>' +
       '<div class="eq-rank-texto">' + _eqEsc(_eqRankTexto(p)) + '</div>' +
     '</div>' +
+    _eqTierAdminHtml(p) +
     (filas ? '<div class="eq-info-lista">' + filas + '</div>' : '');
 }
 
@@ -266,6 +324,17 @@ function _eqRenderPerfil(p) {
   if (nav) nav.innerHTML = _eqNavHtml(p);
   if (cont) cont.innerHTML = _eqPerfilContenidoHtml(p);
   _eqHidratarAvatares();
+  // Tier fijado a mano (Cambio 52) -- el termómetro arranca YA oculto, sin
+  // animar el estado inicial (`.sin-transicion` se saca en el frame
+  // siguiente, mismo truco doble-rAF que el fill de acá abajo) en vez de
+  // aparecer un instante y recién ahí desvanecerse.
+  if (p.tierModo !== 'auto') {
+    var rankWrap = document.querySelector('#s-equipo-perfil .eq-rank-wrap');
+    if (rankWrap) {
+      rankWrap.classList.add('eq-rank-oculto', 'sin-transicion');
+      requestAnimationFrame(function() { rankWrap.classList.remove('sin-transicion'); });
+    }
+  }
   // Arranca en width:0 (innerHTML de arriba) y recién acá sube a su valor
   // real -- doble rAF para forzar al navegador a pintar el 0% primero, sin
   // eso la transición de `.eq-rank-fill` (css/equipo.css) no se ve (mismo

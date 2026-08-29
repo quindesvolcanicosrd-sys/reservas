@@ -318,3 +318,20 @@
   filter: drop-shadow(0 3px 4px var(--black-35));
 }
 .aj-mapa-pin .material-symbols-outlined { font-size: 2.4rem; font-variation-settings: 'FILL' 1; }
+
+/* Stats de Equipo en Ajustes (Cambio 51, #dat-stats-wrap, ver
+   _datosRenderStats()/js/perfil.js) -- las clases `.eq-rank-*` del
+   termómetro ya existen en css/equipo.css (cargado antes que este archivo
+   en index.html) y se reusan tal cual, sin duplicarlas -- solo las 2
+   tarjetas de stat y el texto "categoría fija" son propios de acá.
+   `--muted` en vez de `--text-muted` (no existe en css/colors.css), mismo
+   motivo que en css/equipo.css. */
+.dat-stat-row { display: flex; gap: 10px; margin: 16px 0 8px; }
+.dat-stat-card {
+  flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;
+}
+.dat-stat-card .material-symbols-rounded { font-size: 22px; color: var(--brand); }
+.dat-stat-valor { font-size: 1.25rem; font-weight: 800; color: var(--text); }
+.dat-stat-label { font-size: 0.68rem; color: var(--muted); }
+.dat-tier-fijo { font-size: 0.8rem; color: var(--muted); text-align: center; margin: 8px 0; }

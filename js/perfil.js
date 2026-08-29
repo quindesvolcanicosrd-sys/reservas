@@ -38,6 +38,9 @@ function irEditarDatos(sinNavegar) {
     if (d.pronombres) partes.push(d.pronombres.split(',').map(function(p){ return p.trim().split('/')[0]; }).join(', '));
     derbySub.textContent = partes.join(' · ') || '—';
   }
+  // Stats de Equipo (Cambio 51) -- horas patinadas/asistencia + termómetro
+  // de categoría del usuario logueado, ver _datosRenderStats() más abajo.
+  _datosRenderStats();
   // Equipamiento
   var eqVal = document.getElementById('aj-equip-val');
   if (eqVal) {
@@ -105,6 +108,49 @@ function irEditarDatos(sinNavegar) {
   if (_ajYaInicializadoEnSesion) _ajRestaurarScroll = true;
   else _ajYaInicializadoEnSesion = true;
   if (!sinNavegar) ir('s-datos');
+}
+
+// Stats de Equipo en Ajustes (Cambio 51) -- reusa el mismo demo data de
+// _EQ_EQUIPO_DEMO (js/equipo.js, cargado ANTES que este archivo en
+// index.html) buscando a la persona cuyo `nombreDerby` coincide con
+// `E.nombre` -- esta app identifica cuentas por nombre derby, no por un
+// `id` numérico (mismo criterio ya usado por `_eqEsUsuarioActual()`,
+// js/equipo.js). `#dat-stats-wrap` (index.html, dentro de #s-datos, justo
+// después de la fila "Foto de perfil") queda vacío/sin tocar si la cuenta
+// no tiene fila en Equipo (ej. una cuenta admin "pura", ver el guard de
+// `irEditarDatos()` más arriba) -- sin toast ni error, mismo criterio que
+// el resto de esta pantalla con datos ausentes.
+function _datosRenderStats() {
+  var persona = (typeof _EQ_EQUIPO_DEMO !== 'undefined')
+    ? _EQ_EQUIPO_DEMO.filter(function(p) { return p.nombreDerby === E.nombre; })[0]
+    : null;
+  if (!persona) return;
+
+  var contenedor = document.getElementById('dat-stats-wrap');
+  if (!contenedor) return;
+
+  var rankHtml = persona.tierModo === 'auto'
+    ? '<div class="dat-rank-wrap eq-rank-wrap">' +
+        '<div class="eq-rank-labels"><span>Mirlxs</span><span>Quindes</span></div>' +
+        '<div class="eq-rank-track"><div class="eq-rank-fill" style="width:' + persona.rankPct + '%;"></div></div>' +
+        '<p class="eq-rank-texto">' + _eqEsc(_eqRankTexto(persona)) + '</p>' +
+      '</div>'
+    : '<p class="dat-tier-fijo">Categoría fija: <strong>' + (persona.tierModo === 'quinde' ? 'Quindes' : 'Mirlxs') + '</strong></p>';
+
+  contenedor.innerHTML =
+    '<div class="dat-stat-row">' +
+      '<div class="dat-stat-card">' +
+        '<span class="material-symbols-rounded">roller_skating</span>' +
+        '<span class="dat-stat-valor">' + persona.stats.horasPatinadas + 'h</span>' +
+        '<span class="dat-stat-label">Horas patinadas</span>' +
+      '</div>' +
+      '<div class="dat-stat-card">' +
+        '<span class="material-symbols-rounded">kid_star</span>' +
+        '<span class="dat-stat-valor">' + persona.stats.asistenciaPct + '%</span>' +
+        '<span class="dat-stat-label">Asistencia anual</span>' +
+      '</div>' +
+    '</div>' +
+    rankHtml;
 }
 
 function irEditarPerfil() { irAjSub('aj-sub-perfil'); }

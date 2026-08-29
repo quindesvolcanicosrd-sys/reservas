@@ -120,7 +120,18 @@
    _EQ_EQUIPO_DEMO/js/equipo.js) para Mirlxs (progreso hacia Quindes) y
    Quindes (margen antes de bajar a Mirlxs), solo cambia el texto contextual
    de abajo (`_eqRankTexto()`) -- el fill nunca se invierte. */
-.eq-rank-wrap { margin: 18px 0 6px; }
+/* `max-height`/`overflow`/`transition` (Cambio 52) -- soportan el
+   fade+colapso de `.eq-rank-oculto` cuando un admin fija la categoría a
+   mano (`_eqCambiarTier()`, js/equipo.js) en vez de dejarla en "Auto".
+   200px de techo (generoso, mismo criterio que el resto de los acordeones
+   de max-height fijo de la app, ej. `.eq-grupo-body.abierto`) -- el
+   contenido real (labels+track+texto) nunca se acerca a esa altura. */
+.eq-rank-wrap { margin: 18px 0 6px; max-height: 200px; overflow: hidden; transition: opacity 0.3s ease, max-height 0.35s ease; }
+.eq-rank-wrap.eq-rank-oculto { opacity: 0; max-height: 0; }
+/* Solo para el frame inicial del perfil (`_eqRenderPerfil()`, js/equipo.js)
+   -- si la categoría ya viene fijada a mano, el termómetro debe arrancar
+   YA oculto, sin animar ese primer colapso. */
+.eq-rank-wrap.sin-transicion { transition: none; }
 .eq-rank-labels {
   display: flex; justify-content: space-between; margin-bottom: 6px;
   font-size: 0.68rem; font-weight: 700; color: var(--muted);
@@ -143,3 +154,22 @@
 .eq-info-fila .material-symbols-outlined { flex-shrink: 0; font-size: 1.2rem; color: var(--brand); }
 .eq-info-texto { font-size: 0.88rem; font-weight: 600; }
 a.eq-info-fila:active { background: var(--brand-lightest); }
+
+/* Control de categoría (tier), admin-only -- segmented control
+   [Quindes | Auto | Mirlxs] del perfil de detalle (Cambio 52,
+   `_eqTierAdminHtml()`/`_eqCambiarTier()`, js/equipo.js). `--border-light`
+   para el separador (mismo criterio que `.eq-info-fila` de arriba, no
+   `--border` -- ese es el tinte de marca de los inputs/cards con borde,
+   no un divisor neutro) y `--muted` para textos apagados (no existe
+   `--text-muted` en css/colors.css, `--muted` es el token real). */
+.eq-tier-admin { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-light); }
+.eq-tier-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 8px; }
+.eq-tier-control { display: flex; gap: 6px; margin-bottom: 8px; }
+.eq-tier-btn {
+  flex: 1; padding: 8px 0; border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--surface); color: var(--muted); font-size: 0.8rem; font-weight: 700;
+  cursor: pointer; font-family: inherit; transition: background 0.2s, color 0.2s, border-color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.eq-tier-btn.activo { background: var(--brand); color: var(--white); border-color: var(--brand); }
+.eq-tier-desc { font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
