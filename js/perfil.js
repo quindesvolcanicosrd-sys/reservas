@@ -41,6 +41,9 @@ function irEditarDatos(sinNavegar) {
   // Stats de Equipo (Cambio 51) -- horas patinadas/asistencia + termómetro
   // de categoría del usuario logueado, ver _datosRenderStats() más abajo.
   _datosRenderStats();
+  // Flujo de lesión (Cambio 54) -- reportar/cancelar/recuperarse, ver
+  // _datosRenderLesion() más abajo.
+  _datosRenderLesion();
   // Equipamiento
   var eqVal = document.getElementById('aj-equip-val');
   if (eqVal) {
@@ -151,6 +154,75 @@ function _datosRenderStats() {
       '</div>' +
     '</div>' +
     rankHtml;
+}
+
+// Flujo de lesión (Cambio 54) -- auto-reporte de usuario + aprobación admin
+// (contraparte de aprobación en Mi Liga, ver js/admin.js). `estado_miembro`
+// (no camelCase -- así viaja tal cual desde getDatosCompletos()/index.ts,
+// mismo criterio que ya usa js/eventos.js para leerlo de E.datos) y
+// `solicitudLesionPendiente` (sí camelCase, campo nuevo agregado a
+// getDatosCompletos() para esta tanda) son los 2 datos reales que gobiernan
+// qué se muestra acá. `#dat-lesion-wrap` (index.html, dentro de #s-datos,
+// justo después de #dat-stats-wrap) queda vacío para cualquier estado que no
+// sea Activx/Lesionadx/con solicitud pendiente (Ausente/Técnico) -- mismo
+// criterio sin toast/error que _datosRenderStats() para una cuenta sin datos.
+function _datosRenderLesion() {
+  var contenedor = document.getElementById('dat-lesion-wrap');
+  if (!contenedor) return;
+  var d = E.datos || {};
+  var estado = d.estado_miembro || 'Activx';
+  var html = '';
+  if (d.solicitudLesionPendiente) {
+    html = '<p class="dat-lesion-texto">Solicitud enviada, esperando aprobación de los admins.</p>' +
+      '<a href="javascript:void(0)" class="dat-lesion-link" onclick="_datLesionCancelarSolicitud()">Cancelar solicitud</a>';
+  } else if (estado === 'Lesionadx') {
+    html = '<p class="dat-lesion-texto">Estás marcadx como Lesionadx. Estás exentx de la cuota durante este período.</p>' +
+      '<button type="button" class="dat-lesion-btn" onclick="_datLesionRecuperarse()">Estoy recuperadx</button>';
+  } else if (estado === 'Activx') {
+    html = '<button type="button" class="dat-lesion-btn" onclick="_datLesionAbrirSheet()">Reportar lesión</button>';
+  }
+  contenedor.innerHTML = html;
+}
+
+function _datLesionAbrirSheet() {
+  var sheet = document.getElementById('dat-lesion-sheet');
+  if (sheet) sheet.classList.add('visible');
+}
+function _datLesionCancelar() {
+  var sheet = document.getElementById('dat-lesion-sheet');
+  if (sheet) sheet.classList.remove('visible');
+}
+function _datLesionConfirmar() {
+  _datLesionCancelar();
+  // apiPost() (js/api.js), a diferencia de api()/GET, NO inyecta `_token`
+  // solo -- hay que pasarlo explícito (mismo criterio que wizExcEnviar()/
+  // js/eventos.js con solicitarExcepcion()), o la acción real (que valida
+  // por token de sesión) rechaza el pedido como "Sesión inválida".
+  apiPost({ action: 'solicitarLesion', token: _token }, function(res) {
+    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo enviar la solicitud. Intentá de nuevo.', 'error'); return; }
+    if (E.datos) E.datos.solicitudLesionPendiente = true;
+    _datosRenderLesion();
+  }, function(e) {
+    mostrarToast((e && e.message) || 'No se pudo enviar la solicitud. Intentá de nuevo.', 'error');
+  });
+}
+function _datLesionCancelarSolicitud() {
+  apiPost({ action: 'cancelarSolicitudLesion', token: _token }, function(res) {
+    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo cancelar la solicitud.', 'error'); return; }
+    if (E.datos) E.datos.solicitudLesionPendiente = false;
+    _datosRenderLesion();
+  }, function(e) {
+    mostrarToast((e && e.message) || 'No se pudo cancelar la solicitud.', 'error');
+  });
+}
+function _datLesionRecuperarse() {
+  apiPost({ action: 'recuperarseLesion', token: _token }, function(res) {
+    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo actualizar tu estado.', 'error'); return; }
+    if (E.datos) E.datos.estado_miembro = 'Activx';
+    _datosRenderLesion();
+  }, function(e) {
+    mostrarToast((e && e.message) || 'No se pudo actualizar tu estado.', 'error');
+  });
 }
 
 function irEditarPerfil() { irAjSub('aj-sub-perfil'); }

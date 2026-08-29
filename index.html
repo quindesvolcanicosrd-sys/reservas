@@ -35,7 +35,7 @@
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
 <link rel="stylesheet" href="css/eventos.css?v=e12fb09e">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=4">
+<link rel="stylesheet" href="css/equipo.css?v=5">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2426,6 +2426,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
          Equipo (ver el guard de esa función). -->
     <div id="dat-stats-wrap"></div>
 
+    <!-- Flujo de lesión (Cambio 54, ver MANIFEST.md) -- reportar/cancelar/
+         recuperarse, poblado por _datosRenderLesion() (js/perfil.js) desde
+         E.datos (estado_miembro/solicitudLesionPendiente, datos reales de
+         Supabase). Vacío para cualquier estado sin acción disponible. -->
+    <div id="dat-lesion-wrap"></div>
+
     <!-- Equipamiento -->
     <div class="aj-group">
       <div class="aj-row" data-aj-key="equip" onclick="irAjSub('aj-sub-equip')">
@@ -2719,6 +2725,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">volunteer_activism</span></div>
         <div class="admin-dash-tile-label">Excepciones de pago</div>
       </div>
+      <div class="admin-dash-tile admin-dash-pill" data-tile="admin-lesiones" onclick="adminToggleBurbuja('admin-lesiones', this)">
+        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">personal_injury</span></div>
+        <div class="admin-dash-tile-label">Lesiones</div>
+      </div>
       <div class="admin-dash-tile admin-dash-pill" data-tile="admin-tiers" onclick="adminToggleBurbuja('admin-tiers', this)">
         <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">military_tech</span></div>
         <div class="admin-dash-tile-label">Categorías</div>
@@ -2797,6 +2807,14 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div id="admin-burbuja-excepciones" class="admin-tile-bubble" style="display:none;">
       <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">volunteer_activism</span> Excepciones de pago</div>
       <div id="admin-excepciones-lista"></div>
+    </div>
+
+    <!-- Burbuja "Lesiones" (Cambio 54) -- mismo componente .admin-tile-bubble
+         que las demás, filas propias `.miliga-lesion-*` (css/admin.css), ver
+         cargarSolicitudesLesion()/_adminRenderSolicitudesLesion() (js/admin.js). -->
+    <div id="admin-burbuja-lesiones" class="admin-tile-bubble" style="display:none;">
+      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">personal_injury</span> Solicitudes de lesión</div>
+      <div id="miliga-lesion-lista"></div>
     </div>
 
     <!-- Burbuja "Categorías" -- Fase A del sistema de tiers (ver MANIFEST.md
@@ -2902,11 +2920,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/ui.js?v=28059ed9"></script>
 <script src="js/eventos.js?v=492b83a6"></script>
 <script src="js/tareas.js"></script>
-<script src="js/equipo.js?v=4"></script>
+<script src="js/equipo.js?v=5"></script>
 <script src="js/home.js?v=5c22841b"></script>
 <script src="js/reservas.js?v=4910a3f3"></script>
-<script src="js/perfil.js?v=cd8d2553"></script>
-<script src="js/admin.js?v=a05c0f73"></script>
+<script src="js/perfil.js?v=d7f59dd1"></script>
+<script src="js/admin.js?v=3fc749c6"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js"></script>
 
@@ -4629,6 +4647,25 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="eq-confirm-sheet-btns">
       <button class="eq-confirm-btn-cancel" onclick="_eqConfirmarAdminCancelar()">Cancelar</button>
       <button class="eq-confirm-btn-ok" onclick="_eqConfirmarAdminOk()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom sheet — confirmar reporte de lesión (Cambio 54, Ajustes, ver
+     MANIFEST.md) -- hijo directo de <body> (mismo criterio que
+     #eq-sheet-confirm-admin de arriba), abierta/cerrada por
+     _datLesionAbrirSheet()/_datLesionConfirmar()/_datLesionCancelar()
+     (js/perfil.js) vía la clase `.visible`. Reusa las clases
+     `.eq-confirm-sheet-*` de css/equipo.css tal cual (cargado antes que
+     css/perfil.css en este archivo), sin duplicarlas. -->
+<div id="dat-lesion-sheet" class="eq-confirm-sheet-overlay">
+  <div class="eq-confirm-sheet">
+    <div class="eq-confirm-sheet-handle"></div>
+    <p class="eq-confirm-sheet-title">Reportar lesión</p>
+    <p class="eq-confirm-sheet-msg">Tu solicitud será enviada a los admins para aprobación. Mientras esté pendiente, tu estado no cambia.</p>
+    <div class="eq-confirm-sheet-btns">
+      <button class="eq-confirm-btn-cancel" onclick="_datLesionCancelar()">Cancelar</button>
+      <button class="eq-confirm-btn-ok" onclick="_datLesionConfirmar()">Enviar solicitud</button>
     </div>
   </div>
 </div>

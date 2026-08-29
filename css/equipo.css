@@ -212,6 +212,10 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
 .eq-toggle-slider::before { content: ''; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px; background: var(--white); border-radius: 50%; transition: transform 0.2s; }
 .eq-toggle input:checked + .eq-toggle-slider { background: var(--brand); }
 .eq-toggle input:checked + .eq-toggle-slider::before { transform: translateX(18px); }
+/* Deshabilitado -- toggle de cuota mientras el estado es Lesionadx (Cambio 54,
+   exención automática, ver _eqAdminGestionHtml()/_eqCambiarEstado() en
+   js/equipo.js): no togglea su valor, solo lo atenúa y marca como no-clickeable. */
+.eq-toggle input:disabled + .eq-toggle-slider { opacity: 0.5; cursor: not-allowed; }
 
 /* Bottom sheet de confirmación "dar acceso admin" (#eq-sheet-confirm-admin,
    index.html) -- hijo directo de <body>, mismo criterio de fade+slide que

@@ -58,12 +58,12 @@ var _EQ_TIER_DESCRIPCIONES = {
 };
 
 // Estados de miembro (Cambio 53) -- NO es una lista inventada/fallback: son
-// los 5 valores reales del CHECK constraint de `equipo.estado_miembro`
-// (`supabase/migrations/20260823_estado_miembro.sql`, sistema ya real y
-// conectado al backend desde el Cambio 9 -- ver MANIFEST.md). Se reusan acá
-// tal cual para que el selector de esta demo no invente un vocabulario
-// paralelo que después no tenga a dónde mapear en la integración real.
-var _EQ_ESTADOS = ['Activx', 'Ausente', 'Satélite', 'Técnico', 'Lesionadx'];
+// los 4 valores reales del CHECK constraint de `equipo.estado_miembro`
+// (`supabase/migrations/20260823_estado_miembro.sql` + 20260829_solicitud_lesion.sql,
+// que le quita 'Satélite' al constraint -- Cambio 54, ver MANIFEST.md).
+// Se reusan acá tal cual para que el selector de esta demo no invente un
+// vocabulario paralelo que después no tenga a dónde mapear en la integración real.
+var _EQ_ESTADOS = ['Activx', 'Ausente', 'Técnico', 'Lesionadx'];
 
 // Estado "efectivo" a mostrar/resaltar -- si ya está fijado a mano en
 // 'Ausente' se respeta tal cual; si no, se deriva de `ultimaAsistencia`
@@ -353,10 +353,10 @@ function _eqAdminGestionHtml(p) {
       '<div class="eq-admin-campo eq-admin-campo--row">' +
         '<div>' +
           '<p class="eq-tier-label" style="margin-bottom:2px">Paga cuota</p>' +
-          '<p class="eq-admin-hint" style="margin:0">Indica si está al día con la cuota mensual.</p>' +
+          '<p class="eq-admin-hint" style="margin:0" id="eq-cuota-hint-' + p.id + '">' + (estadoActual === 'Lesionadx' ? 'Exento/a de cuota mientras está Lesionadx.' : 'Indica si está al día con la cuota mensual.') + '</p>' +
         '</div>' +
-        '<label class="eq-toggle">' +
-          '<input type="checkbox"' + (p.pagaCuota ? ' checked' : '') +
+        '<label class="eq-toggle" id="eq-tog-cuota-' + p.id + '">' +
+          '<input type="checkbox"' + (p.pagaCuota ? ' checked' : '') + (estadoActual === 'Lesionadx' ? ' disabled' : '') +
             ' onchange="_eqToggleCuota(\'' + p.id + '\', this.checked)">' +
           '<span class="eq-toggle-slider"></span>' +
         '</label>' +
@@ -391,6 +391,14 @@ function _eqCambiarEstado(id, nuevoEstado) {
   for (var i = 0; i < bots.length; i++) {
     bots[i].className = 'eq-estado-btn' + (bots[i].getAttribute('data-estado') === nuevoEstado ? ' activo' : '');
   }
+  // Auto-cuota: Lesionadx exime de cuota -- deshabilita el toggle con un
+  // hint (sin forzar su valor), cualquier otro estado lo rehabilita y
+  // restaura el hint default (mismo criterio que _eqAdminGestionHtml() al
+  // renderizar el perfil de entrada).
+  var cuotaInput = document.querySelector('#eq-tog-cuota-' + id + ' input');
+  if (cuotaInput) cuotaInput.disabled = (nuevoEstado === 'Lesionadx');
+  var cuotaHint = document.getElementById('eq-cuota-hint-' + id);
+  if (cuotaHint) cuotaHint.textContent = (nuevoEstado === 'Lesionadx') ? 'Exento/a de cuota mientras está Lesionadx.' : 'Indica si está al día con la cuota mensual.';
   // TODO: guardar en Supabase (equipo.estado_miembro, ver
   // supabase/migrations/20260823_estado_miembro.sql + adminSetEstadoMiembro
   // en supabase/functions/api/index.ts -- la acción real ya existe).

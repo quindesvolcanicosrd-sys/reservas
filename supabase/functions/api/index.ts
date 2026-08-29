@@ -37,6 +37,7 @@ function getDatosCompletos(row: Record<string, any> | null): Record<string, any>
     necesitaProtecciones: row.necesita_protecciones ?? '',
     categoria:            row.categoria             ?? '',
     estado_miembro:       row.estado_miembro        ?? 'Activx',
+    solicitudLesionPendiente: row.solicitud_lesion_pendiente === true,
     nombreDerby:          row.nombre_derby          ?? '',
     numeroDerby:          row.numero_derby          ?? '',
     pronombres:           row.pronombres            ?? '',
@@ -1536,7 +1537,7 @@ async function adminToggleCupon(params: Record<string, any>): Promise<Record<str
   return { exito: true };
 }
 
-const ESTADOS_MIEMBRO = ['Activx', 'Ausente', 'Satélite', 'Técnico', 'Lesionadx'];
+const ESTADOS_MIEMBRO = ['Activx', 'Ausente', 'Técnico', 'Lesionadx'];
 
 async function adminSetEstadoMiembro(params: Record<string, any>): Promise<Record<string, any>> {
   const adminEmail = await _validarAdminToken(params.adminToken);
@@ -1544,6 +1545,81 @@ async function adminSetEstadoMiembro(params: Record<string, any>): Promise<Recor
   const { nombre, estadoMiembro } = params;
   if (!nombre || !ESTADOS_MIEMBRO.includes(estadoMiembro)) return { exito: false, error: 'Parámetros inválidos.' };
   const { error } = await supabase.from('equipo').update({ estado_miembro: estadoMiembro }).eq('username', nombre);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
+// ─── Acciones: solicitud de lesión (auto-reporte usuario + aprobación admin) ──
+// Mismo patrón que rectificaciones/excepciones (arriba): la persona se
+// identifica por token, nunca por un id mandado por el cliente. A diferencia
+// de esas 2 (tabla propia `solicitudes_*`), acá no hace falta una tabla
+// aparte -- el pedido es 1 solicitud pendiente por persona a la vez, así que
+// vive como 2 columnas directas en `equipo` (`estado_miembro`/
+// `solicitud_lesion_pendiente`, ver la migración 20260829_solicitud_lesion.sql).
+async function solicitarLesion(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const row = await _getEquipoRow(username);
+  if (!row) return { exito: false, error: 'Usuarix no encontradx.' };
+  if (row.estado_miembro === 'Lesionadx') return { exito: false, error: 'Ya estás marcadx como Lesionadx.' };
+  const { error } = await supabase.from('equipo').update({ solicitud_lesion_pendiente: true }).eq('username', username);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
+async function cancelarSolicitudLesion(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const { error } = await supabase.from('equipo').update({ solicitud_lesion_pendiente: false }).eq('username', username);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
+async function recuperarseLesion(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const row = await _getEquipoRow(username);
+  if (!row || row.estado_miembro !== 'Lesionadx') return { exito: false, error: 'No estás marcadx como Lesionadx.' };
+  const { error } = await supabase.from('equipo').update({ estado_miembro: 'Activx', solicitud_lesion_pendiente: false }).eq('username', username);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
+async function adminGetSolicitudesLesion(params: Record<string, any>): Promise<any[]> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return [];
+  const { data } = await supabase.from('equipo').select('username, nombre_derby, foto_perfil, estado_miembro')
+    .eq('solicitud_lesion_pendiente', true).order('username');
+  return (data ?? []).map((r: any) => ({
+    nombre: r.username, nombreDerby: r.nombre_derby ?? '', fotoPerfil: r.foto_perfil ?? '',
+    estado_miembro: r.estado_miembro ?? 'Activx',
+  }));
+}
+
+// No toca `paga_cuota` (columna TEXT real, 'sí'/'no') -- ese campo ya existe
+// pero con un propósito distinto y no relacionado: gatea el `dashboardAdmin`
+// del propio ADMIN cuando NO ha pagado su cuota (ver loginGoogle()/
+// adminLogin() arriba), no un flag general de "está exento de cuota" por
+// cualquier miembro. Pisarlo acá para exentar a unx lesionadx rompería esa
+// lógica ajena si esa persona también es admin. La exención de cuota real
+// por Lesionadx (Cambio 53, toggle en js/equipo.js) sigue siendo 100%
+// frontend/demo hasta que exista un campo real dedicado para eso.
+async function adminAprobarLesion(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const { nombre } = params;
+  if (!nombre) return { exito: false, error: 'Parámetros inválidos.' };
+  const { error } = await supabase.from('equipo').update({ estado_miembro: 'Lesionadx', solicitud_lesion_pendiente: false }).eq('username', nombre);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
+async function adminRechazarLesion(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const { nombre } = params;
+  if (!nombre) return { exito: false, error: 'Parámetros inválidos.' };
+  const { error } = await supabase.from('equipo').update({ solicitud_lesion_pendiente: false }).eq('username', nombre);
   if (error) return { exito: false, error: error.message };
   return { exito: true };
 }
@@ -1832,6 +1908,12 @@ Deno.serve(async (req: Request) => {
       case 'adminGetUsuarios':               return json(await adminGetUsuarios());
       case 'adminToggleCupon':               return json(await adminToggleCupon(params));
       case 'adminSetEstadoMiembro':          return json(await adminSetEstadoMiembro(params));
+      case 'solicitarLesion':                return json(await solicitarLesion(params));
+      case 'cancelarSolicitudLesion':         return json(await cancelarSolicitudLesion(params));
+      case 'recuperarseLesion':              return json(await recuperarseLesion(params));
+      case 'adminGetSolicitudesLesion':      return json(await adminGetSolicitudesLesion(params));
+      case 'adminAprobarLesion':             return json(await adminAprobarLesion(params));
+      case 'adminRechazarLesion':            return json(await adminRechazarLesion(params));
       case 'adminEliminarUsuario':           return json(await adminEliminarUsuario(params));
       case 'adminGetAdmins':                 return json(await adminGetAdmins());
       case 'adminAgregarAdmin':              return json(await adminAgregarAdmin(params));

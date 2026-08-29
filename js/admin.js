@@ -536,6 +536,11 @@ var ADMIN_TILE_INFO = {
     listaId: 'admin-excepciones-lista',
     cargar: function() { cargarExcepcionesPendientes(); }
   },
+  'admin-lesiones': {
+    bubbleId: 'admin-burbuja-lesiones',
+    listaId: 'miliga-lesion-lista',
+    cargar: function() { _adminCargarSolicitudesLesion(); }
+  },
   'admin-tiers': {
     bubbleId: 'admin-burbuja-tiers',
     listaId: 'ml-tiers-lista',
@@ -1000,6 +1005,61 @@ function adminCambiarEstadoExcepcion(id, estado, btn) {
   }, function(e) { btn.disabled = false; mostrarToast(e.message || 'Error al actualizar.', 'error'); });
 }
 
+// ── Solicitudes de lesión (Cambio 54, auto-reporte de usuario + aprobación
+// admin, ver #dat-lesion-wrap/js/perfil.js para la contraparte de usuario) ──
+// Mismo patrón que Excepciones (arriba): fetch -> array en memoria -> render,
+// actualización optimista en aprobar/rechazar (sin re-fetch). `adminApi()`
+// (no `apiGet`, que no existe en este repo -- solo hay `api()`/`apiPost()`
+// en js/api.js) ya inyecta `adminToken` y maneja la sesión admin expirada.
+var _admLesiones = [];
+
+function _adminCargarSolicitudesLesion() {
+  adminApi({ action: 'adminGetSolicitudesLesion' }, function(res) {
+    _admLesiones = Array.isArray(res) ? res : [];
+    _adminRenderSolicitudesLesion();
+  }, function() { _admLesiones = []; _adminRenderSolicitudesLesion(); });
+}
+
+function _adminRenderSolicitudesLesion() {
+  var wrap = document.getElementById('miliga-lesion-lista');
+  if (!wrap) return;
+  if (!_admLesiones || _admLesiones.length === 0) {
+    wrap.innerHTML = '<p style="text-align:center;color:var(--muted);padding:20px 0;">No hay solicitudes pendientes.</p>';
+    return;
+  }
+  var html = '';
+  // `_admEscHtml()` (ya existente, ver Excepciones arriba) -- nombreDerby es
+  // texto libre editado por cualquier socix (onboarding/registro), esto se
+  // renderiza en la sesión del ADMIN vía innerHTML, mismo riesgo de XSS
+  // almacenado ya documentado ahí.
+  _admLesiones.forEach(function(p) {
+    html += '<div class="miliga-lesion-fila">' +
+      '<span class="miliga-lesion-nombre">' + _admEscHtml(p.nombreDerby || p.nombre) + '</span>' +
+      '<div class="miliga-lesion-btns">' +
+        '<button class="btn-lesion-rechazar" onclick="_adminRechazarLesion(\'' + p.nombre + '\')">Rechazar</button>' +
+        '<button class="btn-lesion-aprobar" onclick="_adminAprobarLesion(\'' + p.nombre + '\')">Aprobar</button>' +
+      '</div>' +
+    '</div>';
+  });
+  wrap.innerHTML = html;
+}
+
+function _adminAprobarLesion(nombre) {
+  adminApi({ action: 'adminAprobarLesion', nombre: nombre }, function(res) {
+    if (!res || !res.exito) { mostrarToast((res && res.error) || 'Error al aprobar.', 'error'); return; }
+    _admLesiones = _admLesiones.filter(function(p) { return p.nombre !== nombre; });
+    _adminRenderSolicitudesLesion();
+  }, function(e) { mostrarToast((e && e.message) || 'Error al aprobar.', 'error'); });
+}
+
+function _adminRechazarLesion(nombre) {
+  adminApi({ action: 'adminRechazarLesion', nombre: nombre }, function(res) {
+    if (!res || !res.exito) { mostrarToast((res && res.error) || 'Error al rechazar.', 'error'); return; }
+    _admLesiones = _admLesiones.filter(function(p) { return p.nombre !== nombre; });
+    _adminRenderSolicitudesLesion();
+  }, function(e) { mostrarToast((e && e.message) || 'Error al rechazar.', 'error'); });
+}
+
 // ── Notificaciones ────────────────────────────────────────────────────────────
 // ADMIN_TILE_INFO['notif'].cargar (más arriba) tiene el reset de campos que
 // antes vivía en adminAbrirNotifBubble(), junto al resto de la mecánica de
@@ -1451,6 +1511,7 @@ function _adminCargarMiLiga() {
   _adminCargarRectificaciones('-ml');
   _adminCargarBanners('-ml');
   cargarExcepcionesPendientes();
+  _adminCargarSolicitudesLesion();
   _adminCargarAdmins();
   adminRenderColorEnfasis();
   _adminCargarPrecios();
@@ -1614,7 +1675,12 @@ function _mlCargarMiembros() {
 // explícito de Victor); para Mirlxs el selector se muestra igual (sin
 // impacto funcional en cuota/tier, ver _evTieneCuotaAlDia()/
 // _quindesGraciaAgotada()/recalcular-categorias) pero sin esa opción.
-var ML_ESTADOS_MIEMBRO_BASE = ['Activx', 'Ausente', 'Satélite', 'Lesionadx'];
+// 'Satélite' sacado (Cambio 54, ver MANIFEST.md) -- ya no es un valor válido
+// del CHECK real de `equipo.estado_miembro`; dejarlo acá hubiera permitido
+// elegirlo en este <select> y que `_mlGuardarEstadoMiembro()` fallara recién
+// al pegarle a `adminSetEstadoMiembro` (que valida contra `ESTADOS_MIEMBRO`,
+// también actualizado).
+var ML_ESTADOS_MIEMBRO_BASE = ['Activx', 'Ausente', 'Lesionadx'];
 
 function _mlRenderMiembros(personas) {
   var el = document.getElementById('ml-miembros-lista');

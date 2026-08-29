@@ -335,3 +335,20 @@
 .dat-stat-valor { font-size: 1.25rem; font-weight: 800; color: var(--text); }
 .dat-stat-label { font-size: 0.68rem; color: var(--muted); }
 .dat-tier-fijo { font-size: 0.8rem; color: var(--muted); text-align: center; margin: 8px 0; }
+
+/* Flujo de lesión en Ajustes (Cambio 54, #dat-lesion-wrap, ver
+   _datosRenderLesion()/js/perfil.js) -- vive justo debajo de las stats de
+   Equipo de arriba. `.dat-lesion-btn` reusa el mismo look de botón primario
+   que `.aj-btn-agregar` (mismo padding/radius/tipografía) pero relleno
+   sólido en vez de borde punteado, para que se lea como una acción real
+   ("Reportar lesión"/"Estoy recuperadx") y no como un "agregar" secundario. */
+.dat-lesion-texto { font-size: 0.85rem; color: var(--muted); text-align: center; line-height: 1.5; margin: 10px 0 8px; }
+.dat-lesion-btn {
+  display: block; width: 100%; padding: 12px; margin-top: 8px;
+  border: none; border-radius: var(--radius); background: var(--brand);
+  color: var(--white); font-size: 0.85rem; font-weight: 700; cursor: pointer; font-family: inherit;
+}
+.dat-lesion-link {
+  display: block; text-align: center; font-size: 0.8rem; font-weight: 600;
+  color: var(--brand); text-decoration: underline; cursor: pointer;
+}
