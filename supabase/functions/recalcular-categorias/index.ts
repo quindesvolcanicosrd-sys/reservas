@@ -120,6 +120,37 @@ Deno.serve(async (req: Request) => {
       return total;
     }
 
+    // Termómetro real (Cambio 59, 0-100, escala Mirlxs→Quindes -- ver
+    // MANIFEST.md) -- "el tier techo" (pedido: "Quindes, o el tier de mayor
+    // requisito") es el tier `'Quindes'` por nombre si existe; si no, el
+    // primero de `tiersNoDefault` (ya ordenado por `orden` ascendente arriba,
+    // el MISMO criterio que ya usa el loop de abajo: el primer tier que se
+    // evalúa/el más exigente, orden=1 en la config real). `null` si no hay
+    // ningún tier no-default configurado (config_tiers con un solo tier) --
+    // caso borde sin techo posible, el termómetro queda en 0.
+    const tierTecho = tiersNoDefault.find((t: any) => t.nombre === 'Quindes') ?? tiersNoDefault[0] ?? null;
+
+    // Ratio de cada criterio activo del tier techo contra lo que la persona
+    // ya tiene -- "activo" = `min_clases`/`min_puntos` > 0 (pedido: "si algún
+    // min_* es 0 o null, ignorar ese criterio para no dividir por cero"). Con
+    // AMBOS criterios activos, `logica` decide min (Y, el más restrictivo) o
+    // max (O, el más laxo) -- con UNO solo activo, da lo mismo min/max (un
+    // único valor), así que no hace falta bifurcar por `logica` en ese caso.
+    function calcularTermometroPct(username: string): number {
+      if (!tierTecho) return 0;
+      const ventanaMeses = Number(tierTecho.ventana_meses) || 0;
+      const clases = contarClases(username, ventanaMeses);
+      const puntos = sumarPuntos(username, ventanaMeses);
+      const minClases = Number(tierTecho.min_clases) || 0;
+      const minPuntos = Number(tierTecho.min_puntos) || 0;
+      const ratios: number[] = [];
+      if (minClases > 0) ratios.push(clases / minClases);
+      if (minPuntos > 0) ratios.push(puntos / minPuntos);
+      if (!ratios.length) return 0;
+      const combinado = tierTecho.logica === 'Y' ? Math.min(...ratios) : Math.max(...ratios);
+      return Math.min(100, Math.max(0, combinado * 100));
+    }
+
     const resultados: { username: string; categoria: string }[] = [];
 
     for (const { username, estadoMiembro, tierModo } of miembros) {
@@ -151,7 +182,8 @@ Deno.serve(async (req: Request) => {
           }
         }
       }
-      await supabase.from('equipo').update({ categoria: categoriaAsignada }).eq('username', username);
+      const termometroPct = calcularTermometroPct(username);
+      await supabase.from('equipo').update({ categoria: categoriaAsignada, termometro_pct: termometroPct }).eq('username', username);
       resultados.push({ username, categoria: categoriaAsignada });
     }
 

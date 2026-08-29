@@ -1800,7 +1800,7 @@ async function adminGetRosterEquipo(): Promise<Record<string, any>> {
 // acciones de solo-lectura.
 async function getEquipo(): Promise<Record<string, any>> {
   const { data: filas } = await supabase.from('equipo')
-    .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano')
+    .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano, termometro_pct')
     .order('username');
   const personas = filas ?? [];
   if (!personas.length) return { personas: [] };
@@ -1834,9 +1834,12 @@ async function getEquipo(): Promise<Record<string, any>> {
   // mismo criterio que `estado_miembro` en getDatosCompletos()/Cambio 54: el
   // frontend las consume así de directo, sin traducir a camelCase, ver
   // _datosRenderStatsHtml()/js/perfil.js y _eqPerfilContenidoHtml()/js/equipo.js).
-  // `rankPct` (termómetro Quindes/Mirlxs) sigue en 0 -- ninguna columna real
-  // lo trackea todavía, fuera de alcance de esta tanda (ver MANIFEST.md
-  // Cambio 55).
+  // `termometro_pct` (Cambio 59, migración 20260829_termometro.sql): real
+  // desde entonces, poblada por calcularTermometroPct()/
+  // recalcular-categorias/index.ts junto con `categoria` en el mismo
+  // UPDATE -- reemplaza el `rankPct: 0` fijo del Cambio 55. Mismo criterio
+  // snake_case que horas_ano/asistencias_ano/total_eventos_ano (arriba): el
+  // frontend la consume tal cual, sin traducir a camelCase.
   const personasOut = personas.map((r: any) => ({
     id: r.username, nombre: r.username, username: r.username,
     nombreDerby: r.nombre_derby ?? '', numeroDerby: r.numero_derby ?? '',
@@ -1849,7 +1852,7 @@ async function getEquipo(): Promise<Record<string, any>> {
     horas_ano: Number(r.horas_ano) || 0,
     asistencias_ano: Number(r.asistencias_ano) || 0,
     total_eventos_ano: Number(r.total_eventos_ano) || 0,
-    rankPct: 0,
+    termometro_pct: Number(r.termometro_pct) || 0,
     ultimaAsistencia: ultimaPorUsuario[r.username] ? ultimaPorUsuario[r.username].slice(0, 10) : null,
   }));
 

@@ -130,7 +130,9 @@ function irEditarDatos(sinNavegar) {
 // snake_case tal cual llegan de getEquipo() -- ver ese comentario en
 // supabase/functions/api/index.ts) vía `_eqStatsCalc()` (js/equipo.js,
 // cargado antes que este archivo, mismo cálculo que usa el perfil de
-// Equipo). `rankPct` (termómetro) sigue en 0, fuera de alcance de esta tanda.
+// Equipo). Termómetro real desde el Cambio 59 -- `persona.termometro_pct`
+// (antes `rankPct`, 0 fijo, ver MANIFEST.md), snake_case tal cual llega de
+// getEquipo(), mismo criterio que horas_ano/asistencias_ano.
 function _datosRenderStats() {
   var contenedor = document.getElementById('dat-stats-wrap');
   if (!contenedor) return;
@@ -146,7 +148,7 @@ function _datosRenderStatsHtml(contenedor, persona) {
   var rankHtml = persona.tierModo === 'auto'
     ? '<div class="dat-rank-wrap eq-rank-wrap">' +
         '<div class="eq-rank-labels"><span>Mirlxs</span><span>Quindes</span></div>' +
-        '<div class="eq-rank-track"><div class="eq-rank-fill" style="width:' + persona.rankPct + '%;"></div></div>' +
+        '<div class="eq-rank-track"><div class="eq-rank-fill" style="width:' + (persona.termometro_pct || 0) + '%;"></div></div>' +
         '<p class="eq-rank-texto">' + _eqEsc(_eqRankTexto(persona)) + '</p>' +
       '</div>'
     : '<p class="dat-tier-fijo">Categoría fija: <strong>' + (persona.tierModo === 'quinde' ? 'Quindes' : 'Mirlxs') + '</strong></p>';

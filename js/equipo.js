@@ -314,9 +314,12 @@ function _eqNavHtml(p) {
 // para los 2 roles, pero con la narrativa invertida: para Mirlxs es "cuánto
 // falta para llegar a Quindes" (progreso hacia arriba), para Quindes es
 // "cuánto margen queda antes de bajar a Mirlxs" (colchón antes de caer) --
-// mismo `rankPct` numérico en los 2 casos, sin invertir el número ni el
-// ancho del fill (0 = punta Mirlxs de la escala, 100 = punta Quindes),
-// solo cambia qué significa ese número para cada rol.
+// mismo `termometro_pct` numérico en los 2 casos, sin invertir el número ni
+// el ancho del fill (0 = punta Mirlxs de la escala, 100 = punta Quindes),
+// solo cambia qué significa ese número para cada rol. `termometro_pct` real
+// desde el Cambio 59 (antes `rankPct`, 0 fijo desde el Cambio 55 -- ver
+// MANIFEST.md), snake_case tal cual llega de getEquipo(), mismo criterio que
+// horas_ano/asistencias_ano.
 // Horas/asistencia real del año (Cambio 58) -- `p.horas_ano`/
 // `p.asistencias_ano`/`p.total_eventos_ano` llegan tal cual de getEquipo()
 // (snake_case, ver ese comentario en supabase/functions/api/index.ts),
@@ -333,12 +336,12 @@ function _eqStatsCalc(p) {
 function _eqRankTexto(p) {
   var esQuindes = p.rol === 'Quindes';
   if (esQuindes) {
-    if (p.rankPct >= 75) return 'Posición sólida como Quinde';
-    if (p.rankPct >= 50) return 'Mantené el ritmo';
+    if (p.termometro_pct >= 75) return 'Posición sólida como Quinde';
+    if (p.termometro_pct >= 50) return 'Mantené el ritmo';
     return 'Cerca del límite con Mirlxs';
   }
-  if (p.rankPct >= 75) return 'Muy cerca de ser Quinde';
-  if (p.rankPct >= 50) return 'Buen progreso hacia Quindes';
+  if (p.termometro_pct >= 75) return 'Muy cerca de ser Quinde';
+  if (p.termometro_pct >= 50) return 'Buen progreso hacia Quindes';
   return 'Seguí sumando asistencia';
 }
 
@@ -644,7 +647,7 @@ function _eqRenderPerfil(p) {
   requestAnimationFrame(function() {
     requestAnimationFrame(function() {
       var fill = document.getElementById('eq-rank-fill');
-      if (fill) fill.style.width = p.rankPct + '%';
+      if (fill) fill.style.width = (p.termometro_pct || 0) + '%';
     });
   });
 }

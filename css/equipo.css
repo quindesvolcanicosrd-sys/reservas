@@ -121,10 +121,11 @@
 .eq-stat-valor { font-size: 1.35rem; font-weight: 800; color: var(--text); }
 .eq-stat-label { font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-top: 2px; }
 
-/* Barra de rango -- estilo "ranked meter": mismo `rankPct` (0-100,
-   _EQ_EQUIPO_DEMO/js/equipo.js) para Mirlxs (progreso hacia Quindes) y
-   Quindes (margen antes de bajar a Mirlxs), solo cambia el texto contextual
-   de abajo (`_eqRankTexto()`) -- el fill nunca se invierte. */
+/* Barra de rango -- estilo "ranked meter": mismo `termometro_pct` (0-100,
+   real desde el Cambio 59, ver getEquipo()/supabase/functions/api/index.ts)
+   para Mirlxs (progreso hacia Quindes) y Quindes (margen antes de bajar a
+   Mirlxs), solo cambia el texto contextual de abajo (`_eqRankTexto()`) -- el
+   fill nunca se invierte. */
 /* `max-height`/`overflow`/`transition` (Cambio 52) -- soportan el
    fade+colapso de `.eq-rank-oculto` cuando un admin fija la categoría a
    mano (`_eqCambiarTier()`, js/equipo.js) en vez de dejarla en "Auto".
@@ -143,9 +144,9 @@
   text-transform: uppercase; letter-spacing: 0.4px;
 }
 .eq-rank-track { width: 100%; height: 8px; border-radius: 999px; background: var(--border-light); overflow: hidden; }
-/* `width` inline (0% al render, subido a `rankPct`% en el siguiente frame
-   por _eqRenderPerfil(), js/equipo.js) -- la transición de acá abajo es lo
-   que la anima en vez de aparecer ya llena. */
+/* `width` inline (0% al render, subido a `termometro_pct`% en el siguiente
+   frame por _eqRenderPerfil(), js/equipo.js) -- la transición de acá abajo
+   es lo que la anima en vez de aparecer ya llena. */
 .eq-rank-fill { height: 100%; width: 0%; border-radius: 999px; background: var(--brand); transition: width 0.6s ease; }
 .eq-rank-texto { margin-top: 8px; font-size: 0.78rem; color: var(--muted); text-align: center; }
 
