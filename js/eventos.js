@@ -2763,8 +2763,13 @@ function _evFabUnificadoActualizar() {
 // "lente" recortada que sí tenía el spotlight original (#ev-tour-lens NO
 // vuelve). 2 elementos de tour, ambos hijos directos de <body> (index.html):
 // #ev-tour-overlay (oscurece todo detrás) y #ev-tour-tooltip (el bubble),
-// más el target de cada paso resaltado con `.ev-tour-halo` (halo punteado)
-// Y elevado temporalmente por encima del overlay -- `z-index:9903` inline,
+// más el target de cada paso resaltado con un halo punteado -- Cambio 50:
+// ya no es la clase CSS `.ev-tour-halo` (eliminada) sino un
+// `<div id="ev-tour-halo">` creado en runtime por `_evTourPosicionarHalo()`,
+// medido con `getBoundingClientRect()` + el `border-radius` computado real
+// del target, para calzar con su forma exacta -- ver esa función más abajo.
+// El target también queda elevado temporalmente por encima del overlay --
+// `z-index:9903` inline,
 // agregado/restaurado por `_evTourResaltarTarget()` más abajo, normalmente
 // sobre el target mismo (`position:relative`) pero sobre su ancestro
 // `fixed`/`sticky` más cercano si tiene uno (Cambio 49, fix de stacking
@@ -2812,16 +2817,12 @@ var _evTourPasos = null;
 var _evTourIdx = 0;
 var _evTourActivo = false;
 var _evTourRafPendiente = false;
-// Target resaltado en el paso actual (clase `.ev-tour-halo`, css/eventos.css)
-// -- SOLO el halo visual vive acá; a quién se le eleva el `z-index` por
-// encima de #ev-tour-overlay es una variable aparte (`_evTourContenedorAnterior`,
-// más abajo -- Cambio 49) porque no siempre es el mismo elemento.
-var _evTourElAnterior = null;
 // Elemento realmente elevado por encima de #ev-tour-overlay para el target
 // actual (Cambio 49, fix de stacking context) -- normalmente es el propio
-// target (`_evTourElAnterior`), pero si el target vive dentro de un
-// ancestro `position:fixed`/`sticky` (ej. el botón "Reservar" dentro de
-// `.cta-footer-fixed`), ese ancestro crea su PROPIO stacking context y
+// target (el `el` recibido por `_evTourResaltarTarget()`, ver más abajo),
+// pero si el target vive dentro de un ancestro `position:fixed`/`sticky`
+// (ej. el botón "Reservar" dentro de `.cta-footer-fixed`), ese ancestro
+// crea su PROPIO stacking context y
 // ponerle `z-index` al hijo no alcanza para ganarle a `#ev-tour-overlay` --
 // en ese caso se eleva el ancestro entero en su lugar (ver
 // `_evTourAncestroFijo()`/`_evTourResaltarTarget()` más abajo).
@@ -2831,6 +2832,15 @@ var _evTourContenedorAnterior = null;
 // elemento no traía ningún inline propio), pero se guarda el valor real en
 // vez de asumirlo por si algún selector futuro sí lo tuviera.
 var _evTourContenedorAnteriorEstilo = null;
+// Halo dinámico del target actual (Cambio 50) -- ya NO es la clase CSS
+// `.ev-tour-halo` (eliminada de css/eventos.css) sino un `<div id="ev-tour-halo">`
+// creado por JS (`_evTourPosicionarHalo()` más abajo), medido con
+// `getBoundingClientRect()` + el `border-radius` COMPUTADO real del target
+// -- el outline fijo de la clase CSS (10px) no calzaba bien contra
+// elementos con otro radio propio (ej. el FAB circular, `#ev-fab-btn`).
+// Referencia al `<div>` actual, para poder sacarlo del DOM al pasar de
+// paso o cerrar el tour (`_evTourLimpiarHalo()`).
+var _evTourHaloEl = null;
 
 function _evTourIniciarSiCorresponde(esAdmin) {
   if (_evTourActivo) return;
@@ -2887,7 +2897,40 @@ function _evTourAncestroFijo(el) {
   return null;
 }
 
-// Quita `.ev-tour-halo` del target anterior (si había) y restaura el
+// Crea (reemplazando cualquier halo anterior, `_evTourLimpiarHalo()`) el
+// `<div id="ev-tour-halo">` que resalta `el` -- `position:fixed` medido con
+// `getBoundingClientRect()` (5px de margen a cada lado) y `border-radius`
+// COMPUTADO real de `el` (`window.getComputedStyle()`, no un valor fijo),
+// para que el halo calce con la forma real del target (esquinas cuadradas,
+// redondeadas, o circular). `z-index:9905` -- por encima del elemento
+// elevado (9903, ver `_evTourResaltarTarget()`) y del propio tooltip (9902),
+// siempre visible aunque el target o el tooltip lo tapen parcialmente.
+function _evTourPosicionarHalo(el) {
+  _evTourLimpiarHalo();
+  var r = el.getBoundingClientRect();
+  var cs = window.getComputedStyle(el);
+  var div = document.createElement('div');
+  div.id = 'ev-tour-halo';
+  div.style.cssText = [
+    'position:fixed',
+    'top:' + (r.top - 5) + 'px',
+    'left:' + (r.left - 5) + 'px',
+    'width:' + (r.width + 10) + 'px',
+    'height:' + (r.height + 10) + 'px',
+    'border-radius:' + cs.borderRadius,
+    'border:2px dashed var(--brand)',
+    'pointer-events:none',
+    'z-index:9905',
+    'box-sizing:border-box'
+  ].join(';');
+  document.body.appendChild(div);
+  _evTourHaloEl = div;
+}
+function _evTourLimpiarHalo() {
+  if (_evTourHaloEl) { _evTourHaloEl.remove(); _evTourHaloEl = null; }
+}
+
+// Saca el halo dinámico del target anterior (si había) y restaura el
 // `position`/`zIndex` inline que tenía el elemento que se hubiera elevado
 // para él (`_evTourContenedorAnterior` -- el target mismo, o su ancestro
 // fixed/sticky, ver `_evTourAncestroFijo()`); resalta el nuevo target y
@@ -2899,25 +2942,27 @@ function _evTourAncestroFijo(el) {
 //   - Si no, se eleva `el` mismo tal como antes (`position:relative` +
 //     `z-index:9903`, porque un elemento `static` ignora `z-index`).
 // En los 2 casos se guarda el estilo inline original en
-// `_evTourContenedorAnteriorEstilo` para restaurarlo después. `el === null`
-// (llamado desde `_evTourCerrar()`) solo limpia/restaura, sin resaltar nada
-// nuevo.
+// `_evTourContenedorAnteriorEstilo` para restaurarlo después. El halo
+// (`_evTourPosicionarHalo()`) se arma con el `el` ORIGINAL (el target real,
+// nunca el ancestro elevado) -- son 2 mecanismos independientes: el halo es
+// puramente visual/posicional, la elevación es de stacking context.
+// `el === null` (llamado desde `_evTourCerrar()`) solo limpia/restaura, sin
+// resaltar nada nuevo.
 function _evTourResaltarTarget(el) {
-  if (_evTourElAnterior) _evTourElAnterior.classList.remove('ev-tour-halo');
+  _evTourLimpiarHalo();
   if (_evTourContenedorAnterior) {
     _evTourContenedorAnterior.style.position = _evTourContenedorAnteriorEstilo.position;
     _evTourContenedorAnterior.style.zIndex = _evTourContenedorAnteriorEstilo.zIndex;
     _evTourContenedorAnterior = null;
     _evTourContenedorAnteriorEstilo = null;
   }
-  _evTourElAnterior = el || null;
   if (!el) return;
-  el.classList.add('ev-tour-halo');
   var ancestroFijo = _evTourAncestroFijo(el);
   _evTourContenedorAnterior = ancestroFijo || el;
   _evTourContenedorAnteriorEstilo = { position: _evTourContenedorAnterior.style.position, zIndex: _evTourContenedorAnterior.style.zIndex };
   if (!ancestroFijo) _evTourContenedorAnterior.style.position = 'relative';
   _evTourContenedorAnterior.style.zIndex = '9903';
+  _evTourPosicionarHalo(el);
 }
 
 // Barra de progreso -- 5 segmentos fijos (`_evTourPasos.length`, mismo
