@@ -1811,6 +1811,7 @@ function _mlRecalcular() {
     if (data && data.ok) {
       mostrarToast('Categorías recalculadas: ' + data.procesados + ' persona(s).', 'ok', true);
       _mlCargarMiembros();
+      if (typeof _eqInit === 'function') _eqInit();
     } else {
       mostrarToast((data && data.error) || 'Error al recalcular.', 'error');
     }
