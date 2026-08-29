@@ -317,6 +317,19 @@ function _eqNavHtml(p) {
 // mismo `rankPct` numérico en los 2 casos, sin invertir el número ni el
 // ancho del fill (0 = punta Mirlxs de la escala, 100 = punta Quindes),
 // solo cambia qué significa ese número para cada rol.
+// Horas/asistencia real del año (Cambio 58) -- `p.horas_ano`/
+// `p.asistencias_ano`/`p.total_eventos_ano` llegan tal cual de getEquipo()
+// (snake_case, ver ese comentario en supabase/functions/api/index.ts),
+// pobladas por recalcularStatsEquipo(). Reusada por el panel de Equipo
+// (_eqPerfilContenidoHtml(), más abajo) y por Ajustes (_datosRenderStatsHtml(),
+// js/perfil.js) para no duplicar la fórmula en 2 archivos.
+function _eqStatsCalc(p) {
+  return {
+    horas: Math.round((p.horas_ano || 0) * 10) / 10,
+    asistenciaPct: (p.total_eventos_ano || 0) > 0 ? Math.round((p.asistencias_ano || 0) / p.total_eventos_ano * 100) : 0,
+  };
+}
+
 function _eqRankTexto(p) {
   var esQuindes = p.rol === 'Quindes';
   if (esQuindes) {
@@ -343,11 +356,24 @@ function _eqTierAdminHtml(p) {
   var botones = modos.map(function(m) {
     return '<button type="button" class="eq-tier-btn' + (p.tierModo === m ? ' activo' : '') + '" data-modo="' + m + '" onclick="_eqCambiarTier(\'' + p.id + '\',\'' + m + '\')">' + textos[m] + '</button>';
   }).join('');
-  return '<div class="eq-tier-admin">' +
-      '<p class="eq-tier-label">Categoría (solo admins)</p>' +
-      '<div class="eq-tier-control" data-id="' + p.id + '">' + botones + '</div>' +
-      '<p class="eq-tier-desc" id="eq-tier-desc-' + p.id + '">' + _eqEsc(_EQ_TIER_DESCRIPCIONES[p.tierModo]) + '</p>' +
+  return '<div class="eq-tier-admin eq-acord">' +
+      '<div class="eq-acord-header" onclick="eqToggleAcordeon(this)">' +
+        '<p class="eq-tier-label" style="margin:0">Categoría</p>' +
+        '<span class="eq-acord-icono"><span class="material-symbols-rounded">chevron_right</span></span>' +
+      '</div>' +
+      '<div class="eq-acord-cuerpo">' +
+        '<div class="eq-tier-control" data-id="' + p.id + '">' + botones + '</div>' +
+        '<p class="eq-tier-desc" id="eq-tier-desc-' + p.id + '">' + _eqEsc(_EQ_TIER_DESCRIPCIONES[p.tierModo]) + '</p>' +
+      '</div>' +
     '</div>';
+}
+
+// Toggle genérico de acordeón (Cambio 57) -- `header` es el `.eq-acord-header`
+// clickeado (`this` del onclick inline, mismo patrón sin listener delegado
+// que el resto de este archivo); el contenedor a togglear es su padre
+// directo (`.eq-acord`, ver `_eqTierAdminHtml()`/`_eqAdminGestionHtml()`).
+function eqToggleAcordeon(header) {
+  header.parentNode.classList.toggle('eq-acord-abierto');
 }
 
 // Toggle de modo de tier -- llamada directa desde el `onclick` de cada
@@ -415,10 +441,15 @@ function _eqAdminGestionHtml(p) {
   var sinEmail = !p.email;
   return '<div class="eq-admin-quindes' + (p.tierModo === 'mirlxs' ? ' eq-oculto' : '') + '" id="eq-admin-q-' + p.id + '">' +
       '<div class="eq-admin-sep"></div>' +
-      '<div class="eq-admin-campo">' +
-        '<p class="eq-tier-label">Estado</p>' +
-        '<div class="eq-estado-opciones">' + botonesEstado + '</div>' +
-        '<p class="eq-admin-hint" id="eq-estado-hint-' + p.id + '">' + hint + '</p>' +
+      '<div class="eq-admin-campo eq-acord">' +
+        '<div class="eq-acord-header" onclick="eqToggleAcordeon(this)">' +
+          '<p class="eq-tier-label" style="margin:0">Estado</p>' +
+          '<span class="eq-acord-icono"><span class="material-symbols-rounded">chevron_right</span></span>' +
+        '</div>' +
+        '<div class="eq-acord-cuerpo">' +
+          '<div class="eq-estado-opciones">' + botonesEstado + '</div>' +
+          '<p class="eq-admin-hint" id="eq-estado-hint-' + p.id + '">' + hint + '</p>' +
+        '</div>' +
       '</div>' +
       '<div class="eq-admin-campo eq-admin-campo--row">' +
         '<div>' +
@@ -559,6 +590,7 @@ function _eqPerfilContenidoHtml(p) {
   if (p.telefono) filas += '<a class="eq-info-fila" href="tel:' + _eqEsc(p.telefono) + '"><span class="material-symbols-outlined">call</span><span class="eq-info-texto">' + _eqEsc(p.telefono) + '</span></a>';
   if (p.email) filas += '<a class="eq-info-fila" href="mailto:' + _eqEsc(p.email) + '"><span class="material-symbols-outlined">mail</span><span class="eq-info-texto">' + _eqEsc(p.email) + '</span></a>';
 
+  var statsCalc = _eqStatsCalc(p);
   return '<div class="eq-perfil-header">' +
       '<div class="eq-avatar-wrap">' +
         _eqAvatarHtml(p, 'eq-avatar-grande') +
@@ -569,8 +601,8 @@ function _eqPerfilContenidoHtml(p) {
     '</div>' +
     (pillsHtml ? '<div class="eq-perfil-pills-row">' + pillsHtml + '</div>' : '') +
     '<div class="eq-stats-grid">' +
-      '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">roller_skating</span><div class="eq-stat-valor">' + p.stats.horasPatinadas + 'h</div><div class="eq-stat-label">Horas patinadas</div></div>' +
-      '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">kid_star</span><div class="eq-stat-valor">' + p.stats.asistenciaPct + '%</div><div class="eq-stat-label">Asistencia anual</div></div>' +
+      '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">roller_skating</span><div class="eq-stat-valor">' + statsCalc.horas + 'h</div><div class="eq-stat-label">Horas patinadas</div></div>' +
+      '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">kid_star</span><div class="eq-stat-valor">' + statsCalc.asistenciaPct + '%</div><div class="eq-stat-label">Asistencia anual</div></div>' +
     '</div>' +
     '<div class="eq-rank-wrap">' +
       '<div class="eq-rank-labels"><span>Mirlxs</span><span>Quindes</span></div>' +

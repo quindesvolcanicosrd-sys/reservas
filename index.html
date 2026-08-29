@@ -35,7 +35,7 @@
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
 <link rel="stylesheet" href="css/eventos.css?v=e12fb09e">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=6">
+<link rel="stylesheet" href="css/equipo.css?v=7">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2423,20 +2423,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
     </div>
 
-    <!-- Stats de Equipo (Cambio 51, datos reales desde el Cambio 55 -- ver
-         MANIFEST.md) -- horas patinadas/asistencia + termómetro de categoría
-         del usuario logueado, poblado (async) por _datosRenderStats()
-         (js/perfil.js) desde el roster real (getEquipo(), js/equipo.js).
-         Vacío/sin tocar si la cuenta no tiene fila en Equipo (ver el guard
-         de esa función). -->
-    <div id="dat-stats-wrap"></div>
-
-    <!-- Flujo de lesión (Cambio 54, ver MANIFEST.md) -- reportar/cancelar/
-         recuperarse, poblado por _datosRenderLesion() (js/perfil.js) desde
-         E.datos (estado_miembro/solicitudLesionPendiente, datos reales de
-         Supabase). Vacío para cualquier estado sin acción disponible. -->
-    <div id="dat-lesion-wrap"></div>
-
     <!-- Equipamiento -->
     <div class="aj-group">
       <div class="aj-row" data-aj-key="equip" onclick="irAjSub('aj-sub-equip')">
@@ -2925,10 +2911,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/ui.js?v=28059ed9"></script>
 <script src="js/eventos.js?v=492b83a6"></script>
 <script src="js/tareas.js"></script>
-<script src="js/equipo.js?v=6"></script>
+<script src="js/equipo.js?v=7"></script>
 <script src="js/home.js?v=5c22841b"></script>
 <script src="js/reservas.js?v=4910a3f3"></script>
-<script src="js/perfil.js?v=06d8be67"></script>
+<script src="js/perfil.js?v=748b9856"></script>
 <script src="js/admin.js?v=3fc749c6"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js"></script>
@@ -3452,6 +3438,21 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
       </div>
     </div>
+
+    <!-- Stats de Equipo (Cambio 51, datos reales desde el Cambio 55 -- ver
+         MANIFEST.md; movido a "Mi perfil" en el Cambio 56) -- horas
+         patinadas/asistencia + termómetro de categoría del usuario logueado,
+         poblado (async) por _datosRenderStats() (js/perfil.js) desde el
+         roster real (getEquipo(), js/equipo.js). Vacío/sin tocar si la
+         cuenta no tiene fila en Equipo (ver el guard de esa función). -->
+    <div id="dat-stats-wrap"></div>
+
+    <!-- Flujo de lesión (Cambio 54, ver MANIFEST.md; movido a "Mi perfil" en
+         el Cambio 56) -- reportar/cancelar/recuperarse, poblado por
+         _datosRenderLesion() (js/perfil.js) desde E.datos
+         (estado_miembro/solicitudLesionPendiente, datos reales de
+         Supabase). Vacío para cualquier estado sin acción disponible. -->
+    <div id="dat-lesion-wrap"></div>
 
     <!-- Zona cuenta (ver "Cambios recientes" -- movida acá desde el fondo de
          la pantalla principal de Ajustes, debajo de la card de pronombres).

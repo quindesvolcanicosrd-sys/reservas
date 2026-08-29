@@ -259,3 +259,18 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
   border: none; background: var(--brand);
   color: var(--white); font-size: 0.92rem; font-weight: 700; cursor: pointer; font-family: inherit;
 }
+
+/* ── Acordeones Categoría/Estado del perfil de detalle (Cambio 57) ──────
+   `.eq-acord` es el contenedor (`.eq-tier-admin`/`.eq-admin-campo` ya
+   existentes, ver _eqTierAdminHtml()/_eqAdminGestionHtml() en js/equipo.js)
+   -- `eqToggleAcordeon(this)` (onclick inline del header) togglea
+   `.eq-acord-abierto` ahí. Colapsado por default: sin esa clase, `max-height`
+   en 0. */
+.eq-acord-header {
+  cursor: pointer; display: flex; justify-content: space-between;
+  align-items: center; padding: 12px 0;
+}
+.eq-acord-cuerpo { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+.eq-acord-abierto .eq-acord-cuerpo { max-height: 600px; }
+.eq-acord-icono { transition: transform 0.3s; display: inline-block; color: var(--muted); }
+.eq-acord-abierto .eq-acord-icono { transform: rotate(90deg); }

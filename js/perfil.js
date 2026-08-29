@@ -125,11 +125,12 @@ function irEditarDatos(sinNavegar) {
 // (contra el array demo, antes, era síncrono). `#dat-stats-wrap` queda
 // vacío/sin tocar si la cuenta no tiene fila en Equipo o el fetch no
 // encuentra a la persona -- sin toast ni error, mismo criterio que el resto
-// de esta pantalla con datos ausentes. **horasPatinadas/asistenciaPct/
-// rankPct llegan en 0** (sin ninguna columna real que los trackee todavía,
-// ver getEquipo()/supabase/functions/api/index.ts) -- el bloque se muestra
-// igual, solo con esos valores en cero; pendiente que Victor decida si
-// prefiere ocultarlo hasta que exista una métrica real.
+// de esta pantalla con datos ausentes. **Horas/asistencia real desde el
+// Cambio 58** (`persona.horas_ano`/`asistencias_ano`/`total_eventos_ano`,
+// snake_case tal cual llegan de getEquipo() -- ver ese comentario en
+// supabase/functions/api/index.ts) vía `_eqStatsCalc()` (js/equipo.js,
+// cargado antes que este archivo, mismo cálculo que usa el perfil de
+// Equipo). `rankPct` (termómetro) sigue en 0, fuera de alcance de esta tanda.
 function _datosRenderStats() {
   var contenedor = document.getElementById('dat-stats-wrap');
   if (!contenedor) return;
@@ -150,16 +151,18 @@ function _datosRenderStatsHtml(contenedor, persona) {
       '</div>'
     : '<p class="dat-tier-fijo">Categoría fija: <strong>' + (persona.tierModo === 'quinde' ? 'Quindes' : 'Mirlxs') + '</strong></p>';
 
+  var statsCalc = _eqStatsCalc(persona);
+
   contenedor.innerHTML =
     '<div class="dat-stat-row">' +
       '<div class="dat-stat-card">' +
         '<span class="material-symbols-rounded">roller_skating</span>' +
-        '<span class="dat-stat-valor">' + persona.stats.horasPatinadas + 'h</span>' +
+        '<span class="dat-stat-valor">' + statsCalc.horas + 'h</span>' +
         '<span class="dat-stat-label">Horas patinadas</span>' +
       '</div>' +
       '<div class="dat-stat-card">' +
         '<span class="material-symbols-rounded">kid_star</span>' +
-        '<span class="dat-stat-valor">' + persona.stats.asistenciaPct + '%</span>' +
+        '<span class="dat-stat-valor">' + statsCalc.asistenciaPct + '%</span>' +
         '<span class="dat-stat-label">Asistencia anual</span>' +
       '</div>' +
     '</div>' +
@@ -172,10 +175,11 @@ function _datosRenderStatsHtml(contenedor, persona) {
 // mismo criterio que ya usa js/eventos.js para leerlo de E.datos) y
 // `solicitudLesionPendiente` (sí camelCase, campo nuevo agregado a
 // getDatosCompletos() para esta tanda) son los 2 datos reales que gobiernan
-// qué se muestra acá. `#dat-lesion-wrap` (index.html, dentro de #s-datos,
-// justo después de #dat-stats-wrap) queda vacío para cualquier estado que no
-// sea Activx/Lesionadx/con solicitud pendiente (Ausente/Técnico) -- mismo
-// criterio sin toast/error que _datosRenderStats() para una cuenta sin datos.
+// qué se muestra acá. `#dat-lesion-wrap` (index.html, dentro de #aj-sub-perfil
+// desde el Cambio 56, justo después de #dat-stats-wrap) queda vacío para
+// cualquier estado que no sea Activx/Lesionadx/con solicitud pendiente
+// (Ausente/Técnico) -- mismo criterio sin toast/error que _datosRenderStats()
+// para una cuenta sin datos.
 function _datosRenderLesion() {
   var contenedor = document.getElementById('dat-lesion-wrap');
   if (!contenedor) return;

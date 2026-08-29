@@ -155,6 +155,35 @@ Deno.serve(async (req: Request) => {
       resultados.push({ username, categoria: categoriaAsignada });
     }
 
+    // Cambio 58 -- recalcular horas_ano/asistencias_ano/total_eventos_ano
+    // (equipo, ver migración 20260829_stats_equipo.sql) al final de cada
+    // "Recalcular ahora", mismo trigger que categorías/puntos de arriba.
+    // `recalcularStatsEquipo` vive en supabase/functions/api/index.ts (esta
+    // función es standalone, sin acceso directo a esos handlers) -- se
+    // invoca por HTTP con el MISMO `adminToken` (app-level, tabla
+    // admin_sessions) que ya validó esta request, reusado tal cual, no uno
+    // nuevo. `apikey`/`Authorization` acá son el JWT de plataforma que exige
+    // el gateway de Supabase para llegar a la función (a diferencia de esta
+    // función, `api` NO se despliega con --no-verify-jwt) -- se usa
+    // SUPABASE_SERVICE_KEY (ya disponible acá server-side) en vez de la anon
+    // key del frontend, que esta función no tiene motivo para conocer.
+    // Best-effort: un fallo acá no debe tirar abajo la respuesta de
+    // "Recalcular ahora" (categorías/puntos ya se guardaron igual) -- solo
+    // se registra en logs.
+    try {
+      await fetch(SUPABASE_URL + '/functions/v1/api', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_SERVICE_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_SERVICE_KEY,
+        },
+        body: JSON.stringify({ action: 'recalcularStatsEquipo', adminToken }),
+      });
+    } catch (statsErr) {
+      console.warn('recalcularStatsEquipo falló tras recalcular-categorias:', statsErr);
+    }
+
     return json({ ok: true, procesados: resultados.length, resultados });
   } catch (err) {
     return json({ ok: false, error: String((err as any)?.message ?? err) }, 500);

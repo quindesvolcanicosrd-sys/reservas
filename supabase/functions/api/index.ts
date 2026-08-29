@@ -1588,6 +1588,81 @@ async function adminSetExentaCuota(params: Record<string, any>): Promise<Record<
   return { exito: true };
 }
 
+// Diferencia en horas entre 2 strings "HH:MM" (o "HH:MM:SS", el formato real
+// que devuelve un `time` de Postgres -- se ignoran los segundos) -- 0 si
+// cualquiera de los 2 falta o no parsea, en vez de tirar NaN a `equipo.horas_ano`.
+function _horasEntreHorarios(inicia: string | null | undefined, termina: string | null | undefined): number {
+  const aMin = (s: string | null | undefined): number | null => {
+    const partes = String(s ?? '').split(':');
+    if (partes.length < 2) return null;
+    const h = parseInt(partes[0], 10), m = parseInt(partes[1], 10);
+    if (Number.isNaN(h) || Number.isNaN(m)) return null;
+    return h * 60 + m;
+  };
+  const mi = aMin(inicia), mt = aMin(termina);
+  if (mi === null || mt === null) return 0;
+  return Math.max(0, mt - mi) / 60;
+}
+
+// Recalcula equipo.horas_ano/asistencias_ano/total_eventos_ano desde
+// `asistencias` (Cambio 58, ver MANIFEST.md) -- botón "Recalcular ahora" de
+// Mi Liga → Categorías (mismo trigger que categorías/puntos) e invocada
+// también al final de recalcular-categorias/index.ts (mismo adminToken, ver
+// ese archivo). **Desvío real respecto al pedido -- comparación contra
+// `username`, no `nombre_derby`:** el pedido pedía comparar los nombres
+// separados de `a_horario`/`tarde` contra `nombre_derby`, pero esas 2
+// columnas en realidad guardan el `username` real -- confirmado contra los 2
+// únicos escritores reales de esas columnas (`adminMarcarAsistencia`, arriba
+// en este archivo, y `_evMarcarAsistenciaAdmin()`/js/eventos.js, que arma el
+// `nombre` que manda desde `p.nombre` del roster, `username` según
+// `getEquipo()`) y contra el único otro lector real que ya existía
+// (`recalcular-categorias/index.ts`, `contarClases()`, compara
+// `nombresDe(fila.a_horario)` contra `username.trim().toUpperCase()`).
+// Comparar contra `nombre_derby` como pedía el pedido literal habría dejado
+// esta función sin ningún match real en producción -- se usó el mismo
+// criterio ya validado que el resto del repo.
+async function recalcularStatsEquipo(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+
+  const hoy = new Date();
+  const inicioAnio = hoy.getUTCFullYear() + '-01-01';
+  const hoyISO = hoy.toISOString().substring(0, 10);
+
+  const { data: filasAsist, error: errorAsist } = await supabase.from('asistencias')
+    .select('fecha, a_horario, tarde, inicia, termina, estado')
+    .gte('fecha', inicioAnio).lte('fecha', hoyISO);
+  if (errorAsist) return { exito: false, error: errorAsist.message };
+  const eventos = (filasAsist ?? []).filter((f: any) => f.estado !== 'Cancelado' && f.estado !== 'No se entrena');
+  const totalEventos = eventos.length;
+
+  const { data: miembros, error: errorMiembros } = await supabase.from('equipo').select('username');
+  if (errorMiembros) return { exito: false, error: errorMiembros.message };
+
+  const parseNombres = (s: string | null | undefined): string[] =>
+    String(s ?? '').split(',').map((n: string) => n.trim().toUpperCase()).filter(Boolean);
+
+  for (const m of (miembros ?? [])) {
+    const u = String(m.username).trim().toUpperCase();
+    let horas = 0;
+    let asistencias = 0;
+    for (const ev of eventos) {
+      const enHorario = parseNombres(ev.a_horario).includes(u);
+      const enTarde = parseNombres(ev.tarde).includes(u);
+      if (!enHorario && !enTarde) continue;
+      const horasEvento = _horasEntreHorarios(ev.inicia, ev.termina);
+      if (enHorario) horas += horasEvento;
+      if (enTarde) horas += horasEvento / 2;
+      asistencias++;
+    }
+    await supabase.from('equipo')
+      .update({ horas_ano: horas, asistencias_ano: asistencias, total_eventos_ano: totalEventos })
+      .eq('username', m.username);
+  }
+
+  return { exito: true, totalEventos, procesados: (miembros ?? []).length };
+}
+
 // ─── Acciones: solicitud de lesión (auto-reporte usuario + aprobación admin) ──
 // Mismo patrón que rectificaciones/excepciones (arriba): la persona se
 // identifica por token, nunca por un id mandado por el cliente. A diferencia
@@ -1725,7 +1800,7 @@ async function adminGetRosterEquipo(): Promise<Record<string, any>> {
 // acciones de solo-lectura.
 async function getEquipo(): Promise<Record<string, any>> {
   const { data: filas } = await supabase.from('equipo')
-    .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota')
+    .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano')
     .order('username');
   const personas = filas ?? [];
   if (!personas.length) return { personas: [] };
@@ -1753,12 +1828,15 @@ async function getEquipo(): Promise<Record<string, any>> {
   const { data: adminsData } = await supabase.from('admins').select('email');
   const adminEmails = new Set([ADMIN_PRINCIPAL.toLowerCase(), ...(adminsData ?? []).map((a: any) => a.email.toLowerCase())]);
 
-  // horasPatinadas/asistenciaPct/rankPct: sin ninguna columna real que las
-  // trackee (auditado antes de escribir esto, ver MANIFEST.md) -- se
-  // devuelven en 0 en vez de inventar una fórmula que no existe en ningún
-  // otro lado del repo. Pendiente que Victor decida si quiere una métrica
-  // real nueva para esto o si el bloque de stats de Ajustes (Cambio 51)
-  // debería ocultarse mientras tanto.
+  // horas_ano/asistencias_ano/total_eventos_ano: columnas reales desde el
+  // Cambio 58 (migración 20260829_stats_equipo.sql), pobladas por
+  // recalcularStatsEquipo() (arriba) -- se devuelven tal cual (snake_case,
+  // mismo criterio que `estado_miembro` en getDatosCompletos()/Cambio 54: el
+  // frontend las consume así de directo, sin traducir a camelCase, ver
+  // _datosRenderStatsHtml()/js/perfil.js y _eqPerfilContenidoHtml()/js/equipo.js).
+  // `rankPct` (termómetro Quindes/Mirlxs) sigue en 0 -- ninguna columna real
+  // lo trackea todavía, fuera de alcance de esta tanda (ver MANIFEST.md
+  // Cambio 55).
   const personasOut = personas.map((r: any) => ({
     id: r.username, nombre: r.username, username: r.username,
     nombreDerby: r.nombre_derby ?? '', numeroDerby: r.numero_derby ?? '',
@@ -1768,7 +1846,9 @@ async function getEquipo(): Promise<Record<string, any>> {
     solicitudLesionPendiente: r.solicitud_lesion_pendiente === true,
     tierModo: r.tier_modo ?? 'auto', exentaCuota: r.exenta_cuota === true,
     esAdminMiembro: adminEmails.has(String(r.email ?? '').toLowerCase()),
-    stats: { horasPatinadas: 0, asistenciaPct: 0 },
+    horas_ano: Number(r.horas_ano) || 0,
+    asistencias_ano: Number(r.asistencias_ano) || 0,
+    total_eventos_ano: Number(r.total_eventos_ano) || 0,
     rankPct: 0,
     ultimaAsistencia: ultimaPorUsuario[r.username] ? ultimaPorUsuario[r.username].slice(0, 10) : null,
   }));
@@ -2011,6 +2091,7 @@ Deno.serve(async (req: Request) => {
       case 'adminSetEstadoMiembro':          return json(await adminSetEstadoMiembro(params));
       case 'adminSetTierModo':               return json(await adminSetTierModo(params));
       case 'adminSetExentaCuota':            return json(await adminSetExentaCuota(params));
+      case 'recalcularStatsEquipo':          return json(await recalcularStatsEquipo(params));
       case 'solicitarLesion':                return json(await solicitarLesion(params));
       case 'cancelarSolicitudLesion':         return json(await cancelarSolicitudLesion(params));
       case 'recuperarseLesion':              return json(await recuperarseLesion(params));
