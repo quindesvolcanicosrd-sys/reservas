@@ -2812,7 +2812,7 @@ var _EV_TOUR_PASOS_USER = [
   // recortado alrededor suyo no "spotlightea" nada real (termina calcando
   // casi el mismo rectángulo que el overlay). Este paso usa oscurecimiento
   // plano en vez de spotlight -- ver `_evTourMostrarPaso()`.
-  { selector: '#ev-timeline', sinHalo: true, titulo: 'Explora el calendario', texto: 'Toca un evento para ver toda su información.' },
+  { selector: '#ev-timeline', sinHalo: true, titulo: 'Explora la línea de tiempo', texto: 'Encontrá todos los eventos próximos, pasados y actuales. Programados, cancelados y más — todo a simple vista.' },
   // 3 pasos nuevos (Cambio 63, FIX G) -- se apoyan en el mismo mecanismo
   // genérico de `_evTourMostrarPaso()` (saltea el paso si el selector no
   // resuelve a un elemento visible), no necesitan guardas propias:
@@ -3056,6 +3056,13 @@ function _evTourLimpiarHalo() {
   var db = document.getElementById('ev-tour-dash-box');
   if (db && db.parentNode) db.parentNode.removeChild(db);
   _evTourSinHaloActivo = false;
+  // `#ev-tour-fade` (fix reciente, ver `_evTourRenderTooltip()`) -- mismo
+  // criterio que el dashed-box de arriba: se recrea entera en cada paso
+  // (`_evTourRenderTooltip()` la reposiciona con `cssText` cada vez que
+  // corre), así que alcanza con sacarla acá y dejar que el próximo paso la
+  // vuelva a crear si corresponde.
+  var fd = document.getElementById('ev-tour-fade');
+  if (fd && fd.parentNode) fd.parentNode.removeChild(fd);
   // `#ev-tour-click-absorber` (fix reciente, ver `_evTourResaltarTarget()`)
   // -- mismo criterio que el dashed-box de arriba: se crea una sola vez por
   // target (no hay una "posicionadora" que lo reemplace en cada frame), se
@@ -3158,6 +3165,23 @@ function _evTourRenderTooltip(paso, rect) {
   tooltip.classList.remove('ev-tour-tooltip--visible');
   if (overlay) overlay.classList.remove('ev-tour-tooltip--visible');
   _evTourPosicionarTooltip(rect);
+  // Fade de transición sobre el borde superior del tooltip (fix reciente) --
+  // agregado ACÁ, después de `_evTourPosicionarTooltip()` (no adentro de
+  // ella, pese a que el pedido lo daba "al final de esa función"), para que
+  // corra sin importar qué rama haya tomado esa función internamente: el
+  // cálculo normal (`top`/`bottom` según mitad de pantalla) o el paso
+  // `sinHalo`, que hace un `return` temprano antes de llegar a su propio
+  // final. Puesto acá, cubre los 2 casos con un solo bloque, tal como pedía
+  // el pedido ("en cualquier paso donde el tooltip quede abajo de la
+  // pantalla, no solo en el paso del timeline").
+  var fade = document.getElementById('ev-tour-fade');
+  if (!fade) {
+    fade = document.createElement('div');
+    fade.id = 'ev-tour-fade';
+    document.body.appendChild(fade);
+  }
+  var tooltipTop = tooltip.getBoundingClientRect().top;
+  fade.style.cssText = 'position:fixed;left:0;right:0;bottom:' + (window.innerHeight - tooltipTop) + 'px;height:90px;background:linear-gradient(to bottom, transparent, var(--bg));pointer-events:none;z-index:9925;';
   tooltip.classList.add('ev-tour-tooltip--visible');
   if (overlay) overlay.classList.add('ev-tour-tooltip--visible');
 }
