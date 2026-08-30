@@ -1800,7 +1800,7 @@ async function adminGetRosterEquipo(): Promise<Record<string, any>> {
 // acciones de solo-lectura.
 async function getEquipo(): Promise<Record<string, any>> {
   const { data: filas } = await supabase.from('equipo')
-    .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano, termometro_pct')
+    .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, prefijo, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano, termometro_pct, fecha_ingreso')
     .order('username');
   const personas = filas ?? [];
   if (!personas.length) return { personas: [] };
@@ -1840,11 +1840,19 @@ async function getEquipo(): Promise<Record<string, any>> {
   // UPDATE -- reemplaza el `rankPct: 0` fijo del Cambio 55. Mismo criterio
   // snake_case que horas_ano/asistencias_ano/total_eventos_ano (arriba): el
   // frontend la consume tal cual, sin traducir a camelCase.
+  // `prefijo`/`fechaIngreso` (Cambio 61): faltaban en el shape de esta
+  // función -- `prefijo` es el campo real con el código de país (formato
+  // "🇦🇷 +54 (Argentina)", ver inscripcion.js), sin el cual el botón de
+  // WhatsApp del perfil de Equipo (`_eqWhatsappUrl()`/js/equipo.js) arma un
+  // link sin código de país para cualquier cuenta real. `fechaIngreso` ya
+  // viajaba para la cuenta propia (getDatosCompletos()) pero no para el
+  // resto del roster.
   const personasOut = personas.map((r: any) => ({
     id: r.username, nombre: r.username, username: r.username,
     nombreDerby: r.nombre_derby ?? '', numeroDerby: r.numero_derby ?? '',
     fotoPerfil: r.foto_perfil ?? '', rol: r.categoria ?? 'Mirlxs',
-    pronombres: r.pronombres ?? '', telefono: r.telefono ?? '', email: r.email ?? '',
+    pronombres: r.pronombres ?? '', prefijo: r.prefijo ?? '', telefono: r.telefono ?? '', email: r.email ?? '',
+    fechaIngreso: r.fecha_ingreso ?? null,
     estado: r.estado_miembro ?? 'Activx',
     solicitudLesionPendiente: r.solicitud_lesion_pendiente === true,
     tierModo: r.tier_modo ?? 'auto', exentaCuota: r.exenta_cuota === true,

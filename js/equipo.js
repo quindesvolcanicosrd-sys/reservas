@@ -150,6 +150,20 @@ function _eqToggleFavorito(id) {
   _eqRenderGrupo('Quindes');
   _eqRenderGrupo('Mirlxs');
   if (_eqPersonaActual && _eqPersonaActual.id === id) _eqActualizarNavPerfil();
+  // Fade in/out breve sobre CADA instancia visible del ícono de esta persona
+  // (`[data-eq-fav]`, `_eqFilaHtml()`/`_eqNavHtml()`) -- puede haber más de
+  // una a la vez (favoritos + su grupo, o nav de detalle + fila de lista) ya
+  // que los 3 renders de arriba reconstruyen el HTML entero por `innerHTML`,
+  // así que la clase se aplica DESPUÉS de re-renderizar, sobre los elementos
+  // nuevos. Reflow forzado (`offsetWidth`) antes de agregar la clase para que
+  // la animación reinicie si la persona togglea de nuevo antes de que termine
+  // la anterior (0.3s), en vez de quedarse sin efecto la segunda vez.
+  document.querySelectorAll('[data-eq-fav="' + id + '"]').forEach(function(el) {
+    el.classList.remove('eq-fav-pulse');
+    void el.offsetWidth;
+    el.classList.add('eq-fav-pulse');
+    setTimeout(function() { el.classList.remove('eq-fav-pulse'); }, 300);
+  });
 }
 
 /* ── Punto de entrada (ver 'entrar' de APP_BOTTOM_NAV_ITEMS en js/ui.js) ── */
@@ -201,7 +215,7 @@ function _eqFilaHtml(p) {
         '<div class="eq-miembro-nombre">' + _eqEsc(p.nombreDerby) + ' <span class="eq-miembro-numero">#' + p.numeroDerby + '</span></div>' +
         '<div class="eq-miembro-username">@' + _eqEsc(p.username) + '</div>' +
       '</div>' +
-      '<button type="button" class="eq-fav-btn' + (fav ? ' activo' : '') + '" onclick="event.stopPropagation();_eqToggleFavorito(\'' + p.id + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '">' +
+      '<button type="button" class="eq-fav-btn' + (fav ? ' activo' : '') + '" data-eq-fav="' + p.id + '" onclick="event.stopPropagation();_eqToggleFavorito(\'' + p.id + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '">' +
         '<span class="material-symbols-outlined">' + (fav ? 'favorite' : 'favorite_border') + '</span>' +
       '</button>' +
     '</div>';
@@ -226,7 +240,7 @@ function _eqRenderFavoritos() {
   var wrap = document.getElementById('eq-favoritos-wrap');
   var cont = document.getElementById('eq-favoritos-lista');
   if (!wrap || !cont) return;
-  var todas = _eqFavoritos().map(_eqPersonaPorId).filter(function(p) { return !!p; });
+  var todas = _eqFavoritos().map(_eqPersonaPorId).filter(function(p) { return !!p && !_eqEsUsuarioActual(p); });
   if (_eqBusqueda) {
     var filtradas = todas.filter(_eqPasaBusqueda);
     wrap.style.display = filtradas.length ? '' : 'none';
@@ -246,7 +260,7 @@ function _eqRenderGrupo(rol) {
   var cont = document.getElementById('eq-grupo-' + key + '-lista');
   var pillEl = document.getElementById('eq-grupo-' + key + '-pill');
   if (!wrap || !cont) return;
-  var filtradas = _eqPersonas.filter(function(p) { return p.rol === rol; }).filter(_eqPasaBusqueda);
+  var filtradas = _eqPersonas.filter(function(p) { return p.rol === rol; }).filter(function(p) { return !_eqEsUsuarioActual(p); }).filter(_eqPasaBusqueda);
   wrap.style.display = filtradas.length ? '' : 'none';
   if (pillEl) pillEl.textContent = filtradas.length;
   cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
@@ -287,17 +301,33 @@ function _eqEsUsuarioActual(p) {
     p.nombre.trim().toUpperCase() === String(E.nombre).trim().toUpperCase());
 }
 
-function _eqWhatsappUrl(telefono) {
-  var limpio = String(telefono || '').replace(/\D/g, '');
-  return limpio ? 'https://wa.me/' + limpio : '';
+// `telefono` (columna real, `getEquipo()`) es el número LOCAL sin código de
+// país -- el código de país vive aparte en `prefijo` (formato real
+// "🇦🇷 +54 (Argentina)", armado por inscripcion.js), nunca en `telefono`.
+// Mismo criterio de extracción/limpieza ya usado por `adminGetQueLlevar()`
+// (supabase/functions/api/index.ts, botón WhatsApp de "Qué llevar"): regex
+// `/\+(\d+)/` sobre `prefijo` para quedarse solo con los dígitos después del
+// `+` (descarta bandera/nombre de país), `telefono` sin nada no-numérico y
+// sin el `0` inicial (formato de discado local, inválido en un link
+// internacional de wa.me). Antes de este fix, esta función ignoraba
+// `prefijo` por completo y armaba el link solo con `telefono` -- para
+// cualquier cuenta real (a diferencia de los datos demo, que tenían el `+`
+// embebido a mano en el propio `telefono`) el link quedaba sin código de
+// país, apuntando a un número inválido/distinto.
+function _eqWhatsappUrl(prefijo, telefono) {
+  var matchPrefijo = String(prefijo || '').match(/\+(\d+)/);
+  if (!matchPrefijo || !telefono) return '';
+  var limpio = String(telefono).replace(/\D/g, '');
+  if (limpio.charAt(0) === '0') limpio = limpio.slice(1);
+  return limpio ? 'https://wa.me/' + matchPrefijo[1] + limpio : '';
 }
 
 var _EQ_WA_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>';
 
 function _eqNavHtml(p) {
   var fav = _eqEsFavorito(p.id);
-  var waUrl = _eqWhatsappUrl(p.telefono);
-  var acciones = '<button type="button" class="app-nav-icon-btn" onclick="_eqToggleFavorito(\'' + p.id + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '"><span class="material-symbols-outlined">' + (fav ? 'favorite' : 'favorite_border') + '</span></button>';
+  var waUrl = _eqWhatsappUrl(p.prefijo, p.telefono);
+  var acciones = '<button type="button" class="app-nav-icon-btn" data-eq-fav="' + p.id + '" onclick="_eqToggleFavorito(\'' + p.id + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '"><span class="material-symbols-outlined">' + (fav ? 'favorite' : 'favorite_border') + '</span></button>';
   if (waUrl) {
     acciones += '<a class="app-nav-icon-btn eq-wa-btn" href="' + waUrl + '" target="_blank" rel="noopener" title="WhatsApp">' + _EQ_WA_SVG + '</a>';
   }
@@ -572,6 +602,17 @@ function _eqConfirmarAdminCancelar() {
   document.getElementById('eq-sheet-confirm-admin').classList.remove('visible');
 }
 
+// "2024-07-03" -> "3 de julio de 2024" -- misma fórmula que
+// _ajFormatearFechaIngreso() (js/perfil.js), duplicada a propósito acá en
+// vez de depender de que perfil.js ya haya cargado (carga DESPUÉS de
+// equipo.js, ver orden de scripts en index.html), mismo criterio ya usado
+// por _fechaCalendarioATexto()/js/home.js.
+function _eqFormatearFechaIngreso(iso) {
+  var p = iso.split('-');
+  var meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  return p[2].replace(/^0/, '') + ' de ' + meses[+p[1] - 1] + ' de ' + p[0];
+}
+
 function _eqPerfilContenidoHtml(p) {
   var pills = [];
   if (p.pronombres) pills.push(p.pronombres);
@@ -592,6 +633,12 @@ function _eqPerfilContenidoHtml(p) {
   var filas = '';
   if (p.telefono) filas += '<a class="eq-info-fila" href="tel:' + _eqEsc(p.telefono) + '"><span class="material-symbols-outlined">call</span><span class="eq-info-texto">' + _eqEsc(p.telefono) + '</span></a>';
   if (p.email) filas += '<a class="eq-info-fila" href="mailto:' + _eqEsc(p.email) + '"><span class="material-symbols-outlined">mail</span><span class="eq-info-texto">' + _eqEsc(p.email) + '</span></a>';
+  // `fechaIngreso` ('fecha_ingreso', getEquipo()) -- mismo dato ya expuesto
+  // para la cuenta propia en Ajustes (E.datos.fechaIngreso, js/perfil.js),
+  // ahora también visible en el perfil de detalle de CUALQUIER miembro. Sin
+  // link (a diferencia de telefono/email) -- `<div>`, no `<a>`, mismo
+  // `.eq-info-fila` (estilo genérico de fila, no depende de ser un enlace).
+  if (p.fechaIngreso) filas += '<div class="eq-info-fila"><span class="material-symbols-outlined">calendar_month</span><span class="eq-info-texto">Entró al equipo ' + _eqEsc(_eqFormatearFechaIngreso(p.fechaIngreso)) + '</span></div>';
 
   var statsCalc = _eqStatsCalc(p);
   return '<div class="eq-perfil-header">' +
@@ -612,9 +659,9 @@ function _eqPerfilContenidoHtml(p) {
       '<div class="eq-rank-track"><div class="eq-rank-fill" id="eq-rank-fill" style="width:0%;"></div></div>' +
       '<div class="eq-rank-texto">' + _eqEsc(_eqRankTexto(p)) + '</div>' +
     '</div>' +
+    (filas ? '<div class="eq-info-lista">' + filas + '</div>' : '') +
     _eqTierAdminHtml(p) +
-    _eqAdminGestionHtml(p) +
-    (filas ? '<div class="eq-info-lista">' + filas + '</div>' : '');
+    _eqAdminGestionHtml(p);
 }
 
 function _eqActualizarNavPerfil() {

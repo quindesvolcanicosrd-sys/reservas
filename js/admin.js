@@ -126,6 +126,10 @@ function onGoogleCredential(resp) {
 // ahí) al que aterrizar de entrada.
 function adminEntrar() {
   _admDashAbierto = null;
+  // Mismo pre-fetch de Equipo que prepararHome()/js/home.js -- una cuenta
+  // admin "pura" nunca pasa por prepararHome(), así que sin esto llegaría a
+  // "Mi Liga" sin el roster precargado.
+  if (!_eqYaInicializado && typeof _eqInit === 'function') _eqInit();
   irMiLiga();
 }
 

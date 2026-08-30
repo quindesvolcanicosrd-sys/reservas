@@ -29,6 +29,12 @@ function prepararHome(saltarFadeInicial, onListo) {
     if (typeof cerrarSesion === 'function') cerrarSesion();
     return;
   }
+  // Pre-carga el roster de Equipo apenas la persona está autenticada y
+  // aterriza en Home (mismo guard `_eqYaInicializado` que ya usa
+  // irEquipo()/js/equipo.js, para no disparar un fetch de más en cada
+  // re-render de Home) -- así los datos ya están en memoria cuando navegue
+  // a la tab Equipo, en vez de recién arrancar el fetch en ese momento.
+  if (!_eqYaInicializado && typeof _eqInit === 'function') _eqInit();
   var saludoEl = document.getElementById('home-saludo');
   if (saludoEl) saludoEl.textContent = E.nombre + '!';
   var homeContent = document.getElementById('home-reservas-lista');

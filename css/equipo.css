@@ -79,11 +79,28 @@
 .eq-fav-btn .material-symbols-outlined { font-size: 1.3rem; }
 .eq-fav-btn.activo { color: var(--brand); }
 
+/* Fade in/out breve al togglear favorito (`data-eq-fav`, `_eqToggleFavorito()`/
+   js/equipo.js) -- aplica tanto sobre `.eq-fav-btn` (fila de lista/favoritos)
+   como sobre `.app-nav-icon-btn` del nav de detalle, ambos comparten el
+   mismo atributo `data-eq-fav`. */
+@keyframes eqFavPulse { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+.eq-fav-pulse { animation: eqFavPulse 0.3s ease; }
+
 /* ── Perfil de detalle (#s-equipo-perfil) ────────── */
 #eq-perfil-nav { position: sticky; top: 0; z-index: 30; }
+/* Mismo padding horizontal (16px) que `.app-nav` (css/nav.css, "la barra de
+   navegación unificada -- todas las navs de la app usan estas clases") --
+   ya coincidía en el valor, pero le faltaban `width`/`box-sizing`/
+   `min-height`, los mismos que hacen que `.app-nav` nunca se vea más baja/
+   angosta que el resto de las navs de la app (sin `box-sizing:border-box`,
+   el padding se suma al 100% heredado del padre en vez de restarse, y sin
+   `min-height` el alto queda 100% a merced del contenido) -- agregados acá
+   para que esta nav quede pixel-consistente con el resto, no solo con el
+   mismo número de padding declarado. */
 .eq-perfil-nav-row {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: 22px 16px; background: var(--bg); flex-shrink: 0;
+  width: 100%; box-sizing: border-box; min-height: 56px;
 }
 /* Botón WhatsApp -- verde de marca, no el naranja de énfasis del resto de
    .app-nav-icon-btn (ver "Cambios recientes" en colors.css: --wa-brand no
