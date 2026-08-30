@@ -1140,6 +1140,12 @@ async function adminMarcarAsistencia(params: Record<string, any>): Promise<Recor
   const { error: errorUpdate } = await supabase.from('asistencias').update({ a_horario: aHorario.join(', '), tarde: tarde.join(', ') }).eq('id_evento', idEvento);
   if (errorUpdate) return { exito: false, error: 'Error actualizando asistencias: ' + errorUpdate.message };
 
+  // Batch 8 (ver MANIFEST.md): recalcula los stats de ESTA persona apenas
+  // se confirma que la asistencia quedó guardada -- antes solo pasaba con
+  // el botón manual "Recalcular ahora" (recalcularStatsEquipo(), completo,
+  // no se toca acá). Después del `return` de arriba (errores), nunca antes.
+  await recalcularStatsUsuario(nombre);
+
   return { exito: true };
 }
 
@@ -1208,6 +1214,14 @@ async function _aplicarRectificacion(idEvento: string, nombre: string, estadoSol
     if (estadoSolicitado === 'A tiempo') aHorario.push(nombre);
     else if (estadoSolicitado === 'Tarde') tarde.push(nombre);
     await supabase.from('asistencias').update({ a_horario: aHorario.join(', '), tarde: tarde.join(', ') }).eq('id_evento', idEvento);
+    // Batch 8 (ver MANIFEST.md): mismo hook que adminMarcarAsistencia() --
+    // esta función también escribe `a_horario`/`tarde` directamente (una
+    // rectificación aprobada es, en los hechos, otra forma de marcar
+    // asistencia), así que también necesita disparar el recálculo de ESTA
+    // persona. Corre para los 3 estados (incluido 'Sin registrar' -- ese
+    // caso también cambia el resultado real, al sacar a la persona de
+    // `aHorario`/`tarde` arriba).
+    await recalcularStatsUsuario(nombre);
   }
 }
 
@@ -1673,6 +1687,63 @@ async function recalcularStatsEquipo(params: Record<string, any>): Promise<Recor
   }
 
   return { exito: true, totalEventos, procesados: (miembros ?? []).length };
+}
+
+// Recalcula equipo.horas_ano/asistencias_ano/total_eventos_ano para UNA sola
+// persona (Batch 8, ver MANIFEST.md -- hallazgo de Batch 7: los stats no se
+// actualizaban tras marcar asistencia, solo con el botón manual "Recalcular
+// ahora"/recalcularStatsEquipo() de arriba). Misma fórmula EXACTA que esa
+// función, acotada a `username` -- 1 sola query a `asistencias` (mismo
+// filtro `estado = 'Evento Finalizado'`/ventana del año) + 1 sola fila de
+// `equipo` actualizada, en vez de recorrer TODO el equipo por CADA marca
+// individual (el costo real que Batch 7 documentó como motivo para no
+// conectar recalcularStatsEquipo() acá). Pensada para colgarse del final de
+// cada escritor real de `asistencias.a_horario`/`.tarde` -- ver
+// `adminMarcarAsistencia()`/`_aplicarRectificacion()`, los 2 callers reales,
+// más abajo en este archivo. Sin `adminToken` propio ni entrada en el
+// switch de acciones: es un helper interno que corre DESPUÉS de que el
+// caller ya validó lo que tenía que validar, mismo criterio que
+// `_aplicarRectificacion()`/`_agregarFilaLogAsistencia()` (tampoco expuestas
+// como acciones propias). `username`, no un `userId` numérico -- esta app
+// no tiene ningún id propio por persona, el username ES el id real en todo
+// el resto del repo (ver `_eqCambiarTier()`/js/equipo.js). Sin `try/catch`
+// propio: cualquier error acá queda silencioso (mismo criterio que
+// `_aplicarRectificacion()`) -- no debe poder tumbar la respuesta real de
+// "asistencia guardada", que ya tuvo éxito antes de llegar a este punto.
+async function recalcularStatsUsuario(username: string): Promise<void> {
+  if (!username) return;
+  const u = String(username).trim().toUpperCase();
+
+  const hoy = new Date();
+  const inicioAnio = hoy.getUTCFullYear() + '-01-01';
+  const hoyISO = hoy.toISOString().substring(0, 10);
+
+  const { data: filasAsist, error: errorAsist } = await supabase.from('asistencias')
+    .select('fecha, a_horario, tarde, inicia, termina')
+    .eq('estado', 'Evento Finalizado')
+    .gte('fecha', inicioAnio).lte('fecha', hoyISO);
+  if (errorAsist) return;
+  const eventos = filasAsist ?? [];
+  const totalEventos = eventos.length;
+
+  const parseNombres = (s: string | null | undefined): string[] =>
+    String(s ?? '').split(',').map((n: string) => n.trim().toUpperCase()).filter(Boolean);
+
+  let horas = 0;
+  let asistencias = 0;
+  for (const ev of eventos) {
+    const enHorario = parseNombres(ev.a_horario).includes(u);
+    const enTarde = parseNombres(ev.tarde).includes(u);
+    if (!enHorario && !enTarde) continue;
+    const horasEvento = _horasEntreHorarios(ev.inicia, ev.termina);
+    if (enHorario) horas += horasEvento;
+    if (enTarde) horas += horasEvento / 2;
+    asistencias++;
+  }
+
+  await supabase.from('equipo')
+    .update({ horas_ano: horas, asistencias_ano: asistencias, total_eventos_ano: totalEventos })
+    .eq('username', username);
 }
 
 // ─── Acciones: solicitud de lesión (auto-reporte usuario + aprobación admin) ──
