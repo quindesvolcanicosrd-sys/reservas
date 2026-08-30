@@ -1526,15 +1526,21 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
   transform: translateX(-50%);
   width: 0;
   height: 0;
-  border: 7px solid transparent;
+  /* 14px (antes 7px, fix reciente -- el pedido asumía 8px, el valor real
+     era 7px) -- el offset `top`/`bottom` de las 2 reglas de abajo debe
+     seguir siendo EXACTAMENTE este mismo número: es un triángulo CSS por
+     bordes, su "alto" real (punta a base) es igual al border-width, así que
+     el offset tiene que matchear para que la punta quede pegada al borde
+     del tooltip sin gap ni superposición. */
+  border: 14px solid transparent;
 }
 #ev-tour-tooltip.arrow-up::before {
-  top: -7px;
+  top: -14px;
   border-top-width: 0;
   border-bottom-color: var(--card-bg);
 }
 #ev-tour-tooltip.arrow-down::before {
-  bottom: -7px;
+  bottom: -14px;
   border-bottom-width: 0;
   border-top-color: var(--card-bg);
 }

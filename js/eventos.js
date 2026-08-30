@@ -2802,10 +2802,12 @@ function _evFabUnificadoActualizar() {
 // en base a en qué mitad de la pantalla cae el target, no hace falta
 // declararlo por paso.
 var _EV_TOUR_PASOS_USER = [
+  // Movido a la posición 0 (fix reciente, antes era el 4to paso) -- pedido
+  // explícito de Victor, sin motivo técnico documentado en el código.
+  { selector: '#ev-fab-btn', titulo: 'Reserva tu lugar', texto: 'Pulsa aquí para reservar tu lugar en un evento o clase.' },
   { selector: '#ev-nav-mes-label', titulo: 'Navega por mes', texto: 'Abre el calendario pulsando en el mes actual para saltar directo a la fecha que buscas.' },
   { selector: '#ev-busqueda-toggle-btn', titulo: 'Busca y filtra', texto: 'Busca eventos, cumpleaños o lugares por texto, o filtra por Lugar y Tipo.' },
   { selector: '#ev-btn-patin', titulo: 'Tu equipamiento', texto: 'Cambia el equipamiento que usas del club desde aquí. Para reagendar o cancelar un evento reservado, usa el botón rojo dentro de su card.' },
-  { selector: '#ev-fab-btn', titulo: 'Reserva tu lugar', texto: 'Pulsa aquí para reservar tu lugar en un evento o clase.' },
   // `sinHalo: true` -- el timeline ocupa casi toda la pantalla, un halo
   // recortado alrededor suyo no "spotlightea" nada real (termina calcando
   // casi el mismo rectángulo que el overlay). Este paso usa oscurecimiento
@@ -2873,7 +2875,22 @@ function _evTourIniciarSiCorresponde(esAdmin) {
   if (localStorage.getItem('ev_tour_visto') === '1') return;
   var tooltip = document.getElementById('ev-tour-tooltip');
   if (!tooltip) return;
-  _evTourPasos = esAdmin ? _EV_TOUR_PASOS_ADMIN : _EV_TOUR_PASOS_USER;
+  // Filtrado al armar el array activo (fix reciente) -- antes, un paso cuyo
+  // selector no resolvía a nada en el DOM se saltaba recién en runtime
+  // (`_evTourMostrarPaso()`, chequeo ya existente, sigue ahí como red de
+  // seguridad para selectores que aparecen/desaparecen DURANTE el tour) sin
+  // sacarse de `_evTourPasos` -- la barra de progreso (`_evTourProgressHtml()`,
+  // un segmento por `_evTourPasos.length`) contaba esos pasos igual,
+  // mostrando un total inflado ("paso 3 de 8" cuando en los hechos solo
+  // 6 iban a llegar a mostrarse). Filtrando ACÁ, antes de asignar
+  // `_evTourPasos`, el conteo real ya refleja solo los pasos que van a
+  // aparecer. **Aplicado a los 2 arrays (USER y ADMIN), no solo a
+  // `_EV_TOUR_PASOS_USER` como daba el pedido literal** -- el tour admin
+  // también tiene pasos condicionales (`#ev-btn-patin`, oculto sin equipo
+  // del club) expuestos al mismo problema de conteo.
+  _evTourPasos = (esAdmin ? _EV_TOUR_PASOS_ADMIN : _EV_TOUR_PASOS_USER).filter(function(p) {
+    return !p.selector || !!document.querySelector(p.selector);
+  });
   _evTourActivo = true;
   tooltip.style.display = 'block';
   var overlay = document.getElementById('ev-tour-overlay');
@@ -2930,8 +2947,12 @@ function _evTourMostrarPaso(idx) {
     _evTourResaltarTarget(el);
   } else {
     _evTourResaltarTarget(null);
-    var ov = document.getElementById('ev-tour-overlay');
-    if (ov) ov.style.background = 'rgba(0,0,0,0.52)';
+    // El overlay se deja transparente (fix reciente -- ya NO se fuerza a
+    // `rgba(0,0,0,0.52)` acá): el oscurecimiento real de este paso ahora lo
+    // hace el `box-shadow` del dashed-box de más abajo, mismo mecanismo de
+    // spotlight que ya usa el halo real en el resto de los pasos -- así el
+    // INTERIOR del recuadro (el timeline) queda limpio, en vez de tapado
+    // por el mismo velo oscuro que el resto de la pantalla.
     var h = document.getElementById('ev-tour-halo');
     if (h) h.style.display = 'none';
     // Dashed box (fix reciente) -- reemplaza el halo puntual por un
@@ -2948,7 +2969,7 @@ function _evTourMostrarPaso(idx) {
     var yBot = navBot ? navBot.getBoundingClientRect().top - 8 : window.innerHeight - 60;
     var dashBox = document.createElement('div');
     dashBox.id = 'ev-tour-dash-box';
-    dashBox.style.cssText = 'position:fixed;left:12px;right:12px;top:' + yTop + 'px;height:' + (yBot - yTop) + 'px;border:2px dashed var(--brand);border-radius:12px;z-index:9905;pointer-events:none;';
+    dashBox.style.cssText = 'position:fixed;left:12px;right:12px;top:' + yTop + 'px;height:' + (yBot - yTop) + 'px;border:2px dashed var(--brand);border-radius:12px;z-index:9905;pointer-events:none;box-shadow:0 0 0 9999px rgba(0,0,0,0.52);';
     document.body.appendChild(dashBox);
     _evTourSinHaloActivo = true;
   }
@@ -3035,6 +3056,12 @@ function _evTourLimpiarHalo() {
   var db = document.getElementById('ev-tour-dash-box');
   if (db && db.parentNode) db.parentNode.removeChild(db);
   _evTourSinHaloActivo = false;
+  // `#ev-tour-click-absorber` (fix reciente, ver `_evTourResaltarTarget()`)
+  // -- mismo criterio que el dashed-box de arriba: se crea una sola vez por
+  // target (no hay una "posicionadora" que lo reemplace en cada frame), se
+  // elimina acá.
+  var abs = document.getElementById('ev-tour-click-absorber');
+  if (abs && abs.parentNode) abs.parentNode.removeChild(abs);
   if (_evTourHaloEl) { _evTourHaloEl.remove(); _evTourHaloEl = null; }
   document.body.style.overflow = '';
 }
@@ -3070,6 +3097,22 @@ function _evTourResaltarTarget(el) {
   if (!el.style.position) el.style.position = 'relative';
   el.style.zIndex = '9903';
   _evTourPosicionarHalo(el);
+  // Absorber de clicks (fix reciente) -- el target elevado (`z-index:9903`)
+  // queda por encima de `#ev-tour-overlay` (9900, `pointer-events:all` desde
+  // el fix anterior), así que sin esto seguía siendo el único elemento
+  // clickeable del tour: tocarlo disparaba SU acción real (ej. abrir el
+  // detalle de un `.ev-card`, el FAB, "ir a hoy") en vez de solo servir de
+  // referencia visual para el paso. `position:fixed` propio (no hijo de
+  // `el`) medido con el mismo `getBoundingClientRect()` que ya usa el halo,
+  // `z-index:9910` -- por encima del target (9903) y del halo/dash-box
+  // (9905), por debajo del blocker anti-tap-through (9920) y del tooltip
+  // (9960). Removido en `_evTourLimpiarHalo()`, mismo único punto de
+  // limpieza que el resto de los elementos dinámicos del tour.
+  var r = el.getBoundingClientRect();
+  var abs = document.createElement('div');
+  abs.id = 'ev-tour-click-absorber';
+  abs.style.cssText = 'position:fixed;top:' + r.top + 'px;left:' + r.left + 'px;width:' + r.width + 'px;height:' + r.height + 'px;z-index:9910;pointer-events:all;background:transparent;';
+  document.body.appendChild(abs);
 }
 
 // Barra de progreso -- un segmento por paso (`_evTourPasos.length`; ya NO es
@@ -3186,7 +3229,13 @@ function _evTourPosicionarTooltip(rect) {
   left = Math.max(margen, Math.min(left, vw - margen - ancho));
   tooltip.style.top = top + 'px';
   tooltip.style.left = left + 'px';
-  var flechaLeft = Math.max(16, Math.min(centroX - left, ancho - 16));
+  // Clamp de 20px (antes 16px) -- consecuencia directa de agrandar el
+  // triángulo de la flecha a 14px de border (css/eventos.css, fix reciente):
+  // su ancho total real es 28px (14px a cada lado del centro), así que un
+  // clamp de 16px dejaba la punta del triángulo pisando el `border-radius:12px`
+  // del tooltip en posiciones extremas (target muy pegado al borde de
+  // pantalla). 20px le da un margen real por sobre la mitad del triángulo.
+  var flechaLeft = Math.max(20, Math.min(centroX - left, ancho - 20));
   tooltip.style.setProperty('--ev-tour-arrow-left', flechaLeft + 'px');
 }
 
