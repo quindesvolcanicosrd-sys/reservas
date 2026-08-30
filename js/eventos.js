@@ -2806,7 +2806,11 @@ var _EV_TOUR_PASOS_USER = [
   { selector: '#ev-busqueda-toggle-btn', titulo: 'Busca y filtra', texto: 'Busca eventos, cumpleaños o lugares por texto, o filtra por Lugar y Tipo.' },
   { selector: '#ev-btn-patin', titulo: 'Tu equipamiento', texto: 'Cambia el equipamiento que usas del club desde aquí. Para reagendar o cancelar un evento reservado, usa el botón rojo dentro de su card.' },
   { selector: '#ev-fab-btn', titulo: 'Reserva tu lugar', texto: 'Pulsa aquí para reservar tu lugar en un evento o clase.' },
-  { selector: '#ev-timeline', titulo: 'Explora el calendario', texto: 'Toca un evento para ver toda su información.' },
+  // `sinHalo: true` -- el timeline ocupa casi toda la pantalla, un halo
+  // recortado alrededor suyo no "spotlightea" nada real (termina calcando
+  // casi el mismo rectángulo que el overlay). Este paso usa oscurecimiento
+  // plano en vez de spotlight -- ver `_evTourMostrarPaso()`.
+  { selector: '#ev-timeline', sinHalo: true, titulo: 'Explora el calendario', texto: 'Toca un evento para ver toda su información.' },
   // 3 pasos nuevos (Cambio 63, FIX G) -- se apoyan en el mismo mecanismo
   // genérico de `_evTourMostrarPaso()` (saltea el paso si el selector no
   // resuelve a un elemento visible), no necesitan guardas propias:
@@ -2906,7 +2910,25 @@ function _evTourMostrarPaso(idx) {
     return;
   }
   _evTourIdx = idx;
-  _evTourResaltarTarget(el);
+  // `paso.sinHalo` (ej. `#ev-timeline`) -- en vez de elevar+resaltar el
+  // target con el halo recortado de siempre (`_evTourResaltarTarget()`, que
+  // en este archivo YA incluye armar el halo vía `_evTourPosicionarHalo()`,
+  // no son 2 pasos separados como en otras implementaciones de este patrón),
+  // usa el oscurecimiento plano que tenía el overlay antes del Cambio 63.
+  // `_evTourResaltarTarget(null)` primero -- necesario para restaurar/limpiar
+  // lo que hubiera quedado elevado del paso ANTERIOR (si no se llama, un
+  // target real elevado en el paso previo se quedaría con `z-index:9903`
+  // por encima del overlay recién oscurecido, viéndose "pegado" fuera de
+  // lugar durante este paso).
+  if (!paso.sinHalo) {
+    _evTourResaltarTarget(el);
+  } else {
+    _evTourResaltarTarget(null);
+    var ov = document.getElementById('ev-tour-overlay');
+    if (ov) ov.style.background = 'rgba(0,0,0,0.52)';
+    var h = document.getElementById('ev-tour-halo');
+    if (h) h.style.display = 'none';
+  }
   // Timeline bloqueado durante su propio paso (Cambio 63, FIX E, issue 3a):
   // scrollear la lista de eventos mientras el halo la resalta desalineaba el
   // recuadro del target real -- el halo se mide una sola vez al mostrar el
@@ -2966,7 +2988,22 @@ function _evTourPosicionarHalo(el) {
 // transición de paso normal, vía `_evTourResaltarTarget()`) y
 // `_evTourResaltarTarget(null)` (cierre/omitir tour, `_evTourCerrar()`),
 // así que un solo lugar cubre ambos sin duplicar la restauración.
+// `#ev-tour-overlay`/`#ev-tour-halo` (paso `sinHalo`, ver `_evTourMostrarPaso()`):
+// deshace el oscurecimiento plano que ese paso pudo haber dejado, volviendo
+// al estado default del spotlight real (overlay transparente, halo
+// visible) -- mismo criterio, único lugar de restauración para que ningún
+// camino de salida se olvide de deshacerlo. Con la implementación real de
+// esta app (el halo se crea/destruye entero por paso, `_evTourHaloEl` de
+// abajo, nunca se deja oculto con `display:none` para reusarlo), el halo ya
+// no existe en el DOM para cuando se llega acá en el camino normal --
+// `document.getElementById('ev-tour-halo')` da `null` y este `if` es un
+// no-op; se deja como red de seguridad ante cualquier camino futuro que sí
+// lo oculte en vez de destruirlo.
 function _evTourLimpiarHalo() {
+  var ov = document.getElementById('ev-tour-overlay');
+  if (ov) ov.style.background = 'transparent';
+  var h = document.getElementById('ev-tour-halo');
+  if (h) h.style.display = '';
   if (_evTourHaloEl) { _evTourHaloEl.remove(); _evTourHaloEl = null; }
   document.body.style.overflow = '';
 }
