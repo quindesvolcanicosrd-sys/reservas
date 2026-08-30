@@ -3417,50 +3417,6 @@ function _evTourReposicionar() {
   });
 }
 
-// ═══ Mini-tours puntuales (distintos del tour guiado `_evTour*` de arriba --
-// sin overlay/halo/pasos, solo un tooltip suelto anclado a UN elemento
-// puntual, mostrado una única vez por dispositivo vía su propia clave de
-// localStorage). 3 usos: `.ev-asistire-wrap` (RSVP), `.ev-estado-pill-danger`
-// (evento cancelado), `.ev-estado-pill-success` (llegada registrada) -- ver
-// los 3 call sites en `abrirEvDetalle()`/`_evRenderTimeline()` más abajo.
-// `key` arma la clave real `ev_mtour_<key>` -- no-op silencioso si ya se
-// vio, o si `selector` no resuelve a nada en el DOM en este momento (mismo
-// criterio "no forzar" que ya usa el tour guiado). ═══
-function _evMiniTour(key, selector, titulo, texto) {
-  var lsKey = 'ev_mtour_' + key;
-  if (localStorage.getItem(lsKey)) return;
-  // Guard del tour guiado principal (fix reciente) -- sin esto, un mini-tour
-  // podía dispararse ENCIMA del tour guiado (ej. su propio paso ".ev-card"
-  // resaltando la misma card cuyo pill dispara un mini-tour), 2 tooltips
-  // flotantes compitiendo por atención a la vez. `#ev-tour-overlay` es el
-  // mismo indicador que ya usa el resto del tour guiado para "está visible"
-  // (`style.display`, ver `_evTourIniciarSiCorresponde()`/`_evTourCerrar()`).
-  if (document.getElementById('ev-tour-overlay') &&
-      document.getElementById('ev-tour-overlay').style.display !== 'none') return;
-  var target = document.querySelector(selector);
-  if (!target) return;
-  var rect = target.getBoundingClientRect();
-  var ttW = 260;
-  var spaceBelow = window.innerHeight - rect.bottom;
-  var posAbove = spaceBelow < 130;
-  var left = Math.min(Math.max(rect.left + rect.width / 2 - ttW / 2, 12), window.innerWidth - ttW - 12);
-  var tt = document.createElement('div');
-  tt.className = 'ev-mini-tour-tooltip';
-  tt.style.cssText = 'position:fixed;left:' + left + 'px;width:' + ttW + 'px;' +
-    (posAbove ? 'bottom:' + (window.innerHeight - rect.top + 10) + 'px;' : 'top:' + (rect.bottom + 10) + 'px;') +
-    'z-index:9800;opacity:0;transition:opacity 0.25s;pointer-events:all;';
-  tt.innerHTML = '<strong>' + titulo + '</strong><p>' + texto + '</p>' +
-    '<button class="ev-mini-tour-ok" onclick="_evMiniTourCerrar(\'' + lsKey + '\')">Entendido</button>';
-  document.body.appendChild(tt);
-  setTimeout(function() { tt.style.opacity = '1'; }, 30);
-}
-function _evMiniTourCerrar(lsKey) {
-  localStorage.setItem(lsKey, '1');
-  document.querySelectorAll('.ev-mini-tour-tooltip').forEach(function(el) {
-    el.style.opacity = '0';
-    setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 270);
-  });
-}
 function evAbrirSheetTipoPago() {
   var modo = _modoUsuario();
   if (modo === 'quindes') { irNuevaReservaConTipo('mensual'); return; }
@@ -4815,13 +4771,6 @@ function _evRenderTimeline(instant, alTerminar) {
     // la nav fija con el nuevo DOM (ej. un filtro nuevo pudo haber sacado del
     // timeline el mes que el label estaba mostrando).
     _evActualizarNavMesPorScroll();
-    // Mini-tours de "evento cancelado"/"llegada registrada" -- SACADOS de
-    // acá (fix reciente): disparar al renderizar el timeline entero era
-    // demasiado temprano/genérico -- podían aparecer apenas se entra a
-    // Eventos, ancladas al primer pill que hubiera en pantalla, sin que la
-    // persona haya interactuado con ESE evento puntual. Movidas a
-    // `abrirEvDetalle()`, junto al mini-tour de RSVP -- se disparan recién
-    // cuando la persona abre el detalle del evento que tiene ese pill.
     if (alTerminar) alTerminar();
   }, instant, _EV_TIMELINE_FADE_MS);
 }
@@ -4937,39 +4886,6 @@ function abrirEvDetalle(id) {
   // estado ya elegido desde la card dejaba el indicador sin su fondo sólido
   // (offsetWidth/offsetLeft de la opción activa medidos en 0).
   setTimeout(function() { _evUpdateRsvpSliders(false); }, 50);
-  // Mini-tours (fix reciente) -- **desvío real respecto al pedido original:**
-  // el de RSVP se pidió justo después de que `_evRenderDetalle()` asigna el
-  // HTML del RSVP a `.innerHTML`, pero esa función corre ACÁ ARRIBA, varias
-  // líneas antes de `ir('s-eventos-detalle')` -- la pantalla todavía está
-  // `display:none` en ese punto (mismo motivo ya documentado unas líneas
-  // arriba para `_evUpdateRsvpSliders()`/`_evDetalleActualizarSticky()`), así
-  // que `target.getBoundingClientRect()` (`_evMiniTour()`) hubiera medido
-  // todo en 0 y posicionado el tooltip en la esquina superior izquierda en
-  // vez de junto al RSVP real. Se movió a este punto, después de `ir()` (la
-  // pantalla ya visible) -- mismo `setTimeout(100)` que pedía el pedido,
-  // acá cumple el mismo rol que el `smoothSlideUp 0.6s` de entrada de
-  // `.pantalla.activa` que documenta el tour guiado más arriba en este
-  // archivo (`_evTourIniciarSiCorresponde()`/`_evActualizarTopBarModo()`):
-  // deja pasar el arranque de esa animación antes de medir geometría real.
-  // "Evento cancelado"/"Llegada registrada" (antes disparados desde
-  // `_evRenderTimeline()`, fix posterior -- ver comentario en esa función)
-  // se movieron ACÁ, junto al de RSVP: los 3 pills que targetean
-  // (`.ev-asistire-wrap`/`.ev-estado-pill-danger`/`.ev-estado-pill-success`)
-  // también se renderizan dentro de esta misma pantalla de detalle
-  // (`_evRenderDetalle()`, arriba), así que disparan recién cuando la
-  // persona realmente abre el evento puntual que tiene ese pill, no apenas
-  // se pinta el timeline entero.
-  setTimeout(function() {
-    _evMiniTour('rsvp', '.ev-asistire-wrap',
-      'Marca tu asistencia',
-      'Indica si vas a asistir, no asistir o no juegas. El equipo lo ve en tiempo real.');
-    _evMiniTour('cancelado', '.ev-estado-pill-danger',
-      'Evento cancelado',
-      'Este evento no se realiza. No cuenta para tu asistencia ni para el cálculo de tu categoría.');
-    _evMiniTour('llegada', '.ev-estado-pill-success',
-      'Tu registro de llegada',
-      'Indica si llegaste a horario al entrenamiento. Puedes corregirlo tocando el evento.');
-  }, 100);
 }
 // Sticky de 3 niveles apilados (ver "Cambios recientes"): nav (ya sticky por
 // CSS, top:0, sin pills desde el rediseño -- ver _evDetalleStickyHtml())
