@@ -152,8 +152,15 @@
 /* Botón de favorito de la nav de detalle (Batch 3, bug real "no muestra
    estado activo") -- `.app-nav-icon-btn` no trae ningún color de estado
    propio, a diferencia de `.eq-fav-btn.activo` (lista) -- mismo color,
-   sin tocar tamaño/forma (esos ya los aporta `.app-nav-icon-btn`). */
-.eq-nav-fav-btn.activo { color: var(--brand); }
+   sin tocar tamaño/forma (esos ya los aporta `.app-nav-icon-btn`).
+   Pedido posterior de Victor: el solo cambio de color se veía poco
+   permanente en esta vista (a diferencia de la fila de lista, este botón
+   vive solo en su propia nav, sin otras filas activas alrededor con las
+   que contrastar) -- se suma relleno de fondo, mismo tratamiento que un
+   ícono "activo" del resto de la nav. */
+.eq-nav-fav-btn.activo {
+  background: var(--brand); color: var(--white); transition: background 0.2s, color 0.2s;
+}
 
 .eq-perfil-header { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 4px 16px 22px; }
 .eq-avatar-wrap { position: relative; width: 96px; height: 96px; }

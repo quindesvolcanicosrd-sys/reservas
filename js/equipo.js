@@ -137,14 +137,19 @@ function _eqEstadoEfectivo(persona) {
 // depende de que `ultimaAsistencia` (getEquipo(), poblada desde
 // `log_asistencias`) esté al día en el modelo** -- si esa columna deja de
 // actualizarse o el log real se desincroniza, esta función evalúa contra un
-// dato viejo sin ningún aviso. Sin fecha registrada (nunca asistió, o el
-// campo no llegó) se asume ACTIVX -- mismo criterio conservador que
-// `_eqEstadoEfectivo()`, no hay con qué evaluar inactividad todavía. Al
-// volver a tener una asistencia real, `ultimaAsistencia` se actualiza en el
-// próximo `getEquipo()` y esta función vuelve a evaluar `false` sola -- sin
-// ningún estado propio que "reactivar" a mano.
+// dato viejo sin ningún aviso. Reversión explícita de Victor sobre el
+// criterio anterior: antes, sin fecha registrada (nunca asistió, o el campo
+// no llegó) se asumía ACTIVX ("no hay con qué evaluar inactividad
+// todavía") -- pero eso dejaba a personas que JAMÁS asistieron (caso real:
+// Zafiro) mostradas como activas indefinidamente, que es el escenario
+// opuesto al que este chequeo existe para detectar. Ahora sin ninguna
+// asistencia registrada se asume INACTIVX. Al registrarse una asistencia
+// real, `ultimaAsistencia` se llena en el próximo `getEquipo()` y esta
+// función vuelve a evaluar según los 30 días normales -- sin ningún estado
+// propio que "reactivar" a mano.
 function _eqEsInactivo(p) {
-  if (!p || !p.ultimaAsistencia) return false;
+  if (!p) return false;
+  if (!p.ultimaAsistencia) return true;
   var dias = Math.floor((Date.now() - new Date(p.ultimaAsistencia).getTime()) / 86400000);
   return dias >= 30;
 }
