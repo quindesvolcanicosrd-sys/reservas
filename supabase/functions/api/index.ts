@@ -1712,7 +1712,8 @@ async function recalcularStatsEquipo(params: Record<string, any>): Promise<Recor
 // "asistencia guardada", que ya tuvo éxito antes de llegar a este punto.
 async function recalcularStatsUsuario(username: string): Promise<void> {
   if (!username) return;
-  const u = String(username).trim().toUpperCase();
+  const usernameTrim = String(username).trim();
+  const u = usernameTrim.toUpperCase();
 
   const hoy = new Date();
   const inicioAnio = hoy.getUTCFullYear() + '-01-01';
@@ -1741,9 +1742,20 @@ async function recalcularStatsUsuario(username: string): Promise<void> {
     asistencias++;
   }
 
-  await supabase.from('equipo')
+  // Bug real (Bug 13, "stats de Andrea siguen en 0"): este UPDATE comparaba
+  // contra `username` crudo mientras el resto de la función ya normaliza
+  // con `.trim().toUpperCase()` (`u`, arriba) -- un espacio de más en el
+  // nombre recibido (típico en datos con historial migrado desde Sheets)
+  // hace que `.eq('username', username)` no matchee ninguna fila real de
+  // `equipo` y el UPDATE quede en 0 filas afectadas, sin error, sin aviso.
+  // `usernameTrim` (recortado pero sin tocar mayúsculas -- `equipo.username`
+  // no está garantizado en un solo case) cierra ese gap sin arriesgar un
+  // mismatch nuevo por mayúsculas para el resto de las cuentas.
+  const { error: errorUpdate, data: dataUpdate } = await supabase.from('equipo')
     .update({ horas_ano: horas, asistencias_ano: asistencias, total_eventos_ano: totalEventos })
-    .eq('username', username);
+    .eq('username', usernameTrim)
+    .select('username');
+  console.log('[recalcularStats] usuario:', username, 'resultado:', JSON.stringify({ error: errorUpdate?.message, filasActualizadas: dataUpdate }));
 }
 
 // ─── Acciones: solicitud de lesión (auto-reporte usuario + aprobación admin) ──

@@ -158,8 +158,14 @@
    vive solo en su propia nav, sin otras filas activas alrededor con las
    que contrastar) -- se suma relleno de fondo, mismo tratamiento que un
    ícono "activo" del resto de la nav. */
+.eq-nav-fav-btn {
+  transition: background 0.2s, color 0.2s;
+}
 .eq-nav-fav-btn.activo {
-  background: var(--brand); color: var(--white); transition: background 0.2s, color 0.2s;
+  background: var(--brand);
+}
+.eq-nav-fav-btn.activo .material-symbols-outlined {
+  color: var(--white);
 }
 
 .eq-perfil-header { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 4px 16px 22px; }

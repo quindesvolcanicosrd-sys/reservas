@@ -73,6 +73,7 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Equipo
 
+2026-08-30 — Batch de 8 pedidos (Bugs 2/3/4/5/9/11/12/13) re-auditado contra código real: 6 ya cubiertos por batches anteriores (2/3/4/9/11/12, sin cambios — el 3 con una implementación ya más refinada que la pedida, no se downgradeó), 1 mejora CSS real (Bug 5 detail: `.eq-nav-fav-btn` no animaba el apagado del corazón por faltarle `transition` a la clase base, solo la tenía `.activo`), 1 bug real de backend (Bug 13: stats de una persona puntual quedaban en 0 porque `recalcularStatsUsuario()` comparaba contra el username sin recortar mientras el resto de la función ya normalizaba con `.trim().toUpperCase()` — un espacio de más rompía el `UPDATE` en silencio; agregado `console.log` temporal de diagnóstico y redeploy de la Edge Function).
 2026-08-30 — Batch de 7 pedidos re-auditado contra código real: 1 bug real revertido, 1 mejora CSS aditiva, 1 deploy pendiente resuelto, 5 ya cubiertos por batches anteriores.
 2026-08-30 — Bug 4 re-confirmado sin cambios + Bugs 11/12 rediseñados: acordeón "INACTIVOS" reemplaza el ocultamiento directo.
 2026-08-30 — Pedido rechazado: "migrar recalcularStatsEquipo/recalcularStatsUsuario al Edge Function" — premisa falsa, contradecía código ya funcionando.
@@ -183,6 +184,7 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Edge Function / Backend
 
+2026-08-30 — Bug 13: `recalcularStatsUsuario()` — el `UPDATE` final a `equipo` comparaba `username` sin `.trim()` mientras el resto de la función sí normalizaba, dejando el `UPDATE` en 0 filas afectadas y sin error visible cuando el nombre traía un espacio de más; agregado `console.log` de diagnóstico, redeploy de `api`.
 2026-08-30 — Pedido rechazado: migrar `recalcularStatsEquipo`/`recalcularStatsUsuario` al Edge Function — premisa falsa, código ya funcionaba como estaba.
 2026-08-30 — Batch 8: `recalcularStatsUsuario()` conectado a `adminMarcarAsistencia`/`_aplicarRectificacion`.
 2026-08-29 — Cambio 62: fix filtro `estado = 'Evento Finalizado'` en stats/categorías (`api/index.ts`, `recalcular-categorias`).

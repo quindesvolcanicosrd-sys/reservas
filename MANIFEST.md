@@ -4,7 +4,7 @@ Referencia del estado actual de la arquitectura. El historial de cambios vive en
 
 ## Descripción general
 
-App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mensualidades, calendario de eventos con asistencia (RSVP + rollcall real), perfil/equipamiento de cada miembro, tareas del club y panel admin ("Mi Liga"). SPA en `index.html` sobre Supabase (Postgres + Edge Function), con 2 mini-SPA hermanas standalone (`inscripcion/`, `registro-express/`) para altas nuevas. Backend legado en Google Apps Script (Code.gs, fuera de este repo) en migración progresiva a una Edge Function de Supabase — lo no migrado todavía cae por proxy a GAS.
+App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mensualidades, calendario de eventos con asistencia (RSVP + rollcall real), sección Equipo (roster con favoritos/grupos por rol, perfil de detalle con stats y termómetro Quindes/Mirlxs), perfil/equipamiento de cada miembro, tareas del club y panel admin ("Mi Liga"). SPA en `index.html` sobre Supabase (Postgres + Edge Function), con 2 mini-SPA hermanas standalone (`inscripcion/`, `registro-express/`) para altas nuevas. Backend legado en Google Apps Script (Code.gs, fuera de este repo) en migración progresiva a una Edge Function de Supabase — lo no migrado todavía cae por proxy a GAS.
 
 ## 1. Estructura de archivos
 
@@ -26,6 +26,7 @@ reservas/
 │   ├── home.css                 Home y card de reserva (estados, badges)
 │   ├── reservas.css             Flujo de reserva s2–s6
 │   ├── perfil.css               Ajustes del perfil (aj-sub-*, date picker ddp-*)
+│   ├── equipo.css               Sección Equipo: lista/acordeones por rol + INACTIVOS, perfil de detalle, termómetro
 │   ├── admin.css                Overrides admin (dark mode del panel)
 │   ├── eventos.css              Sección Eventos: timeline, panel de mes, cards, detalle
 │   └── tareas.css               Sección Tareas — deliberadamente chico, reusa clases de eventos.css/reservas.css/perfil.css/admin.css/ui.css
@@ -39,6 +40,7 @@ reservas/
 │   ├── home.js                  Home, historial, cancelar/reagendar
 │   ├── reservas.js              Flujo de reserva (s2→s6)
 │   ├── perfil.js                Editar datos, permisos Google, wizard de Salud, eliminar cuenta
+│   ├── equipo.js                 Roster de Equipo (favoritos, grupos por rol + INACTIVOS colapsado), perfil de detalle
 │   ├── admin.js                 Mi Liga: reservas, notificaciones, equipamiento, usuarios, admins, tiers/categorías
 │   ├── pwa.js                   Install prompt, push (OneSignal)
 │   ├── auth.js                  Google Sign-In, PIN, restaurar sesión, window.onload
@@ -70,13 +72,14 @@ reservas/
 - **Estilos inline:** evitar en HTML y strings JS; si se repite, convertir en clase.
 - **Bottom sheets:** un solo chrome visual compartido (`.bsheet-overlay/.bsheet/.bsheet-handle/.bsheet-title/.bsheet-body`, `css/global.css`) — nunca repetir el bloque a mano; solo `z-index`/`max-height` van inline por instancia.
 - **Animación de entrada y salida obligatoria** en todo elemento transitorio (modal, sheet, overlay, toast, error inline) — nunca un `display` seco sin transición en ningún extremo. Patrón: doble `requestAnimationFrame` para la entrada (opacity 0→1 o transform), `setTimeout` con la misma duración del CSS antes de ocultar en la salida.
+- **Acordeones animados con `max-height`:** medir `scrollHeight` con la pantalla todavía `display:none` da `0` (colapsa el acordeón sin que nada esté roto en el JS) — en el render inicial de un acordeón ya abierto, fijar `max-height:'none'` directo, nunca `scrollHeight + 'px'`. Al abrir/cerrar por click sí hace falta animar entre 2 valores numéricos (`none` no es interpolable): abrir fija `scrollHeight`px y recién post-transición lo suelta a `none`; cerrar "aterriza" primero en `scrollHeight`px y en el frame siguiente baja a `0px` (doble `requestAnimationFrame`). Mismo patrón reusado por `.eq-grupo` (Equipo, incluido el acordeón "INACTIVOS", colapsado por defecto) y Mi Liga.
 - **z-index, jerarquía aproximada:** nav superior/inferior `900`; footers fijos de pantalla (`.cta-footer-fixed`) `100` por default, con overrides puntuales a `960` cuando conviven con un panel `.aj-sub` (`950`); modales informativos (`.modal-info`) `8000`; `#loading-overlay` `9999`. Bottom sheets apilables via `_overlayStack`, `z-index` inline por instancia.
 
 ## 3. Tablas de Supabase (columnas clave)
 
 Fuente de verdad real: `supabase/functions/api/index.ts` (la Edge Function usa la service role key, bypasea RLS).
 
-- **`equipo`** — fila por persona, keyed por `username`. Columnas usadas activamente: `necesita_patines`, `talla`, `necesita_protecciones`, `categoria` (tier Quindes/Mirlxs), `estado_miembro` (`Activx`/`Ausente`/`Satélite`/`Técnico`/`Lesionadx`, default `Activx`), `solicitud_lesion_pendiente`, `nombre_derby`, `numero_derby`, `pronombres`, `fecha_ingreso`, `email`, `prefijo`, `telefono`, `fecha_publica`, `edad_publica`, `fecha_nacimiento`, datos legales (`tipo_documento`/`pais_expedicion`/`numero_documento`/`nombre_legal`), dirección (`calle_principal`/`calle_secundaria`/`numeracion`/`sector`/`canton`), 2 contactos de emergencia (`emerg1_*`/`emerg2_*`), datos médicos (`enfermedad`/`alergias`/`dieta`/`antecedentes`/`medicamentos`/`atencion_medica`/`seguro*`), `cupon_disponible`, `foto_perfil`, `permisos_configurados`.
+- **`equipo`** — fila por persona, keyed por `username`. Columnas usadas activamente: `necesita_patines`, `talla`, `necesita_protecciones`, `categoria` (tier Quindes/Mirlxs), `tier_modo` (`'auto'` o fijado a mano por admin), `exenta_cuota`, `estado_miembro` (`Activx`/`Ausente`/`Satélite`/`Técnico`/`Lesionadx`, default `Activx`), `solicitud_lesion_pendiente`, `nombre_derby`, `numero_derby`, `pronombres`, `fecha_ingreso`, `email`, `prefijo`, `telefono`, `fecha_publica`, `edad_publica`, `fecha_nacimiento`, datos legales (`tipo_documento`/`pais_expedicion`/`numero_documento`/`nombre_legal`), dirección (`calle_principal`/`calle_secundaria`/`numeracion`/`sector`/`canton`), 2 contactos de emergencia (`emerg1_*`/`emerg2_*`), datos médicos (`enfermedad`/`alergias`/`dieta`/`antecedentes`/`medicamentos`/`atencion_medica`/`seguro*`), `cupon_disponible`, `foto_perfil`, `permisos_configurados`, stats anuales `horas_ano`/`asistencias_ano`/`total_eventos_ano` (pobladas por `recalcularStatsEquipo`/`recalcularStatsUsuario`, Edge Function) y `termometro_pct` (poblada por `recalcular-categorias`).
 - **`asistencias`** — una fila por evento/clase. `id_evento` (PK lógica), `fecha`, `donde` (lugar), `inicia`/`termina` (hora), `dura`, `estado`, `google_maps`, `info_adicional`, `tipo_evento`, `bloqueado`, `id_regla` (venue/regla de recurrencia que lo generó), `es_excepcion`. Columnas legado `a_horario`/`tarde` (texto CSV de nombres) — se siguen actualizando en paralelo a `log_asistencias` como fallback para eventos sin marca real de admin.
 - **`log_asistencias`** — mezcla 2 conceptos por fila: RSVP pre-evento (`origen:'Usuario'`/`'AsistenciaAnticipada'`, `estado:'Asistiré'`/`'No asistiré'`/`'No jugador'`) y asistencia real post-evento tomada por un admin (`origen:'Admin'`, `estado:'A tiempo'`/`'Tarde'`/`'Ninguno'`). Columnas: `id_evento`, `nombre_usuario`, `origen`, `estado`, `marca_temporal`, `fecha_entrenamiento`. Al leer, filtrar por `origen==='Admin'` antes de asumir "ya hay asistencia real".
 - **`rectificaciones_asistencia`** — solicitud de corrección de un usuario sobre su propia marca. `id` (uuid), `nombre`, `id_evento`, `fecha_evento`, `estado_solicitado` (`'A tiempo'`/`'Tarde'`/`'Sin registrar'`), `decision` (default `'Pendiente'`, luego `'Aprobada'`/`'Rechazada'`), `created_at`. Aprobar aplica el mismo mecanismo que `adminMarcarAsistencia`.
