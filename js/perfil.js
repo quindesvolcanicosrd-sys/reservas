@@ -162,13 +162,26 @@ function _datosRenderStatsHtml(contenedor, persona) {
   // js/equipo.js -- pedido explícito de reusarlo) -- se le agrega el % real
   // como número (antes solo la barra + el texto contextual, sin un valor
   // explícito) + la tendencia de arriba, entre las 2 etiquetas.
-  var rankHtml = persona.tierModo === 'auto'
+  // Termómetro solo con equipo propio (bug real, ver MANIFEST.md -- mismo
+  // fix que `_eqPerfilContenidoHtml()`/js/equipo.js, "Termómetro visible
+  // para Mirlxs con equipamiento del club" -- acá se había quedado afuera
+  // porque este render vive en un archivo distinto). `persona.necesitaPatines`/
+  // `necesitaProtecciones` (`getEquipo()`) son los mismos 2 campos, misma
+  // persona (`_eqPersonas`, compartido entre Equipo y esta pantalla).
+  var necesitaEquipoClub = !!(persona.necesitaPatines || persona.necesitaProtecciones);
+  // 3 casos, no 2 -- `necesitaEquipoClub` es independiente de `tierModo`
+  // (una persona puede tener el tier en 'auto' Y necesitar equipo del club
+  // a la vez): con equipo del club, ningún texto reemplaza al termómetro
+  // (mismo criterio que `_eqPerfilContenidoHtml()`/js/equipo.js -- '' lisa y
+  // llana) -- mostrar "Categoría fija" ahí sería un mensaje incorrecto
+  // (nadie fijó la categoría a mano, sigue en 'auto').
+  var rankHtml = necesitaEquipoClub ? '' : (persona.tierModo === 'auto'
     ? '<div class="dat-rank-wrap eq-rank-wrap">' +
         '<div class="eq-rank-labels"><span>Mirlxs</span><span class="dat-rank-valor">' + (persona.termometro_pct || 0) + '%' + tendenciaHtml + '</span><span>Quindes</span></div>' +
         '<div class="eq-rank-track"><div class="eq-rank-fill" style="width:' + (persona.termometro_pct || 0) + '%;"></div></div>' +
         '<p class="eq-rank-texto">' + _eqEsc(_eqRankTexto(persona)) + '</p>' +
       '</div>'
-    : '<p class="dat-tier-fijo">Categoría fija: <strong>' + (persona.tierModo === 'quinde' ? 'Quindes' : 'Mirlxs') + '</strong></p>';
+    : '<p class="dat-tier-fijo">Categoría fija: <strong>' + (persona.tierModo === 'quinde' ? 'Quindes' : 'Mirlxs') + '</strong></p>');
 
   var statsCalc = _eqStatsCalc(persona);
 

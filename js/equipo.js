@@ -260,18 +260,54 @@ function _eqAnimarCambioFavorito(id, fav) {
   if (!persona || _eqEsUsuarioActual(persona)) return;
   if (fav) {
     if (_eqBusqueda && !_eqPasaBusqueda(persona)) return; // no visible bajo el filtro actual -- nada que animar
-    var vacio = cont.querySelector('.eq-favoritos-vacio');
-    if (vacio) vacio.remove();
-    var tmp = document.createElement('div');
-    tmp.innerHTML = _eqFilaHtml(persona);
-    var fila = tmp.firstChild;
-    fila.classList.add('eq-fila-fade');
-    fila.style.opacity = '0';
-    cont.insertBefore(fila, cont.firstChild);
-    wrap.style.display = '';
-    _eqHidratarAvatares();
-    void fila.offsetWidth;
-    fila.style.opacity = '1';
+    // Bug real corregido (ver MANIFEST.md -- "el fade existe pero la
+    // persona no se mueve hacia arriba"): la versión anterior solo creaba
+    // la fila nueva de Favoritos y la hacía aparecer con fade-in, sin
+    // ningún fade-out previo en la posición de origen (donde de verdad
+    // tocó el corazón -- su fila dentro de Quindes/Mirlxs) -- se veía como
+    // "aparece arriba", nunca como "se mueve hacia arriba". Fix: si hay una
+    // instancia visible de esta persona FUERA de Favoritos (`origen`), esa
+    // fila puntual hace fade-out (250ms) primero: recién ahí se inserta la
+    // fila nueva en Favoritos con su propio fade-in, y `origen` recupera su
+    // opacidad. `origen` nunca se borra del DOM de su grupo -- a
+    // diferencia de una lista única, esta app mantiene Favoritos como una
+    // sección aparte, no exclusiva (la persona sigue perteneciendo a su
+    // grupo de rol aunque también sea favorita, ver `_eqRenderGrupo()`) --
+    // borrarla de ahí la sacaría de su grupo hasta el próximo re-render,
+    // una regresión real. El efecto visual (fade-out en su fila actual,
+    // fade-in arriba de Favoritos) es el mismo "viaje" pedido, sin ese
+    // costo.
+    var origen = null;
+    document.querySelectorAll('[data-eq-fav="' + id + '"]').forEach(function(btn) {
+      if (origen) return;
+      var f = btn.closest('.eq-miembro-fila');
+      if (f && !cont.contains(f)) origen = f;
+    });
+    var insertarEnFavoritos = function() {
+      var vacio = cont.querySelector('.eq-favoritos-vacio');
+      if (vacio) vacio.remove();
+      var tmp = document.createElement('div');
+      tmp.innerHTML = _eqFilaHtml(persona);
+      var filaNueva = tmp.firstChild;
+      filaNueva.classList.add('eq-fila-fade');
+      filaNueva.style.opacity = '0';
+      cont.insertBefore(filaNueva, cont.firstChild);
+      wrap.style.display = '';
+      _eqHidratarAvatares();
+      void filaNueva.offsetWidth;
+      filaNueva.style.opacity = '1';
+    };
+    if (origen) {
+      origen.classList.add('eq-fila-fade');
+      void origen.offsetWidth;
+      origen.style.opacity = '0';
+      setTimeout(function() {
+        insertarEnFavoritos();
+        origen.style.opacity = '1'; // restaurada -- sigue viva en su grupo, ver comentario de arriba
+      }, 250);
+    } else {
+      insertarEnFavoritos();
+    }
   } else {
     var btnExistente = cont.querySelector('[data-eq-fav="' + id + '"]');
     var filaExistente = btnExistente ? btnExistente.closest('.eq-miembro-fila') : null;
@@ -289,9 +325,33 @@ function _eqAnimarCambioFavorito(id, fav) {
 }
 
 /* ── Punto de entrada (ver 'entrar' de APP_BOTTOM_NAV_ITEMS en js/ui.js) ── */
+// Bug real corregido (ver MANIFEST.md -- "acordeones siguen colapsados al
+// abrir"): el orden ERA `_eqInit()` primero, `volver('s-equipo')` después.
+// `_eqInit()` -> `_eqAsegurarCargado(cb)` llama a `cb()` DE INMEDIATO
+// (síncrono, sin red) si el roster ya se cargó antes en la sesión -- caso
+// real y común, no un edge case: `_datosRenderStats()` (js/perfil.js,
+// stats de "Mi perfil" en Ajustes) dispara el mismo `_eqAsegurarCargado()`,
+// así que cualquiera que visite Ajustes ANTES que Equipo llega acá con
+// `_eqCargado` ya en `true`. En ese camino síncrono, `_eqRenderGrupo()`
+// (llamado dentro de ese mismo `cb()`) mide `body.scrollHeight` de los
+// acordeones ANTES de que `volver('s-equipo')` le sume `.activa` a
+// `#s-equipo` -- y `.pantalla` (css/global.css) es `display:none` hasta esa
+// clase, así que CUALQUIER medición de `scrollHeight` dentro de una
+// `.pantalla` no-activa da `0` (elementos sin caja de layout, no es un bug
+// de esta función puntual -- mismo problema ya documentado para los
+// sliders de RSVP de Eventos, ver "Cambios recientes" en MANIFEST.md:
+// "medir con la pantalla todavía display:none da 0"). Resultado real:
+// `max-height:0px` aplicado con la clase `.abierto` puesta -- exactamente
+// "acordeón colapsado pese al fix anterior". Fix: `volver('s-equipo')`
+// PRIMERO -- para cuando `_eqInit()` corra (y con ella cualquier `cb()`
+// síncrono), `#s-equipo` ya es `display:block` y `scrollHeight` mide la
+// altura real. Sin impacto visual por invertir el orden: `_eqInit()` solo
+// escribe `innerHTML`/estilos, nunca dispara un paint intermedio -- todo
+// corre en el mismo tick síncrono antes de que el navegador pinte una sola
+// vez, con o sin este reorden.
 function irEquipo() {
-  if (!_eqYaInicializado) _eqInit();
   volver('s-equipo');
+  if (!_eqYaInicializado) _eqInit();
 }
 
 function _eqInit() {
@@ -343,6 +403,26 @@ function _eqColorAvatarDe(nombre) {
   var letra = String(nombre || '?').trim().charAt(0).toUpperCase() || '?';
   return _EQ_AVATAR_PALETTE[letra.charCodeAt(0) % _EQ_AVATAR_PALETTE.length];
 }
+// Re-auditado (ver MANIFEST.md -- "avatar con signo de pregunta en lugar de
+// inicial"). TODOS los puntos reales donde se renderiza un avatar de
+// persona en esta sección (grep de `_eqAvatarHtml(` en este archivo, la
+// única función que arma el `<div class="avatar-pill eq-avatar">`):
+// `_eqFilaHtml()` (fila de lista -- reusada tal cual por Favoritos, los
+// grupos Quindes/Mirlxs Y los acordeones de búsqueda por rol, `_eqRenderPorRol()`
+// -- NO hay una función de fila separada por sección) y
+// `_eqPerfilContenidoHtml()` (avatar grande del detalle). Las 5 pantallas
+// (lista general, favoritos, grupos, búsqueda por rol, detalle) pasan por
+// ESTA MISMA función de hidratación (`_eqHidratarAvatares()`, llamada al
+// final de cada uno de esos renders) -- no hay una 2da implementación de
+// avatar en ningún lado de esta sección. `_avatarSetFotoOInicial()`
+// (js/ui.js) ya evalúa `foto` ANTES de crear cualquier `<img>` (`if
+// (!foto) { ...letra...; return; }`, primeras líneas de esa función) -- el
+// fallback de letra NUNCA depende de un evento `onerror` de imagen rota
+// para el caso "sin foto" (ese `onerror` de más abajo es un caso aparte:
+// SÍ hay `foto`, pero la URL no carga). Código verificado correcto; si el
+// "?" seguía visible en producción, incluye la misma sospecha que el resto
+// de este batch: `equipo.js` servido desde una copia vieja cacheada por
+// Fastly (no estaba en `CACHEBUST_FILES` hasta este commit).
 function _eqHidratarAvatares() {
   document.querySelectorAll('.eq-avatar[data-nombre]').forEach(function(el) {
     var foto = el.getAttribute('data-foto') || '';
@@ -384,30 +464,54 @@ function _eqStatsInlineHtml(p) {
   if (p.total_eventos_ano !== undefined && p.total_eventos_ano !== null) {
     html += '<span class="eq-mini-stat"><span class="material-symbols-rounded">kid_star</span>' + statsCalc.asistenciaPct + '%</span>';
   }
-  // Puntos por tareas/asistencia (pedido nuevo, ver MANIFEST.md) -- **sin
-  // dato real todavía**: `getEquipo()` no devuelve `puntosTareas`/
-  // `puntosAsistencia` -- los puntos reales viven en `puntos_mensuales`
-  // (columnas `puntos_tareas`/`puntos_asistencias`, una fila por
-  // `nombre_usuario`+año+mes, ver esquema en MANIFEST.md), y agregarlos acá
-  // exige antes decidir qué período mostrar (¿mes actual? ¿año?), una
-  // decisión de producto fuera de alcance de este fix. Mismo criterio que
-  // el chevron de tendencia de abajo: el `<span>` queda condicionado a que
-  // el campo exista, sin inventar un valor mientras tanto -- en los datos
-  // reales de hoy, sencillamente no se pintan.
+  // Puntos por tareas/asistencia (re-auditado, ver MANIFEST.md -- "puntos
+  // no aparecen"). **Campos reales que devuelve `getEquipo()` hoy, uno por
+  // uno (confirmado leyendo el `.select()`/el `.map()` de esa función en
+  // supabase/functions/api/index.ts, no supuesto):** `id`/`nombre`/`username`,
+  // `nombreDerby`, `numeroDerby`, `fotoPerfil`, `rol`, `pronombres`,
+  // `prefijo`, `telefono`, `email`, `fechaIngreso`, `estado`,
+  // `solicitudLesionPendiente`, `tierModo`, `exentaCuota`, `esAdminMiembro`,
+  // `horas_ano`, `asistencias_ano`, `total_eventos_ano`, `termometro_pct`,
+  // `ultimaAsistencia`, `necesitaPatines`, `necesitaProtecciones`. **Ninguno
+  // de esos es de puntos** -- no existe `puntos`/`puntos_tareas`/
+  // `puntos_asistencia`/`score` ni nada equivalente en esta respuesta. Los
+  // puntos reales SÍ existen en la base, pero en OTRA tabla que
+  // `getEquipo()` no toca: `puntos_mensuales` (columnas `puntos_tareas`/
+  // `puntos_asistencias`/`puntos_bonificaciones`/`puntos_total`, una fila
+  // por `nombre_usuario`+año+mes, ver "Datos pendientes del backend" en
+  // MANIFEST.md) -- sumarla acá exige antes decidir qué período mostrar
+  // (¿mes actual? ¿acumulado del año?), una decisión de producto fuera de
+  // alcance de este fix. Mismo criterio que el chevron de tendencia de
+  // abajo: el `<span>` queda condicionado a que el campo exista algún día
+  // (`puntosTareas`/`puntosAsistencia`, nombres elegidos para cuando se
+  // sumen), sin inventar un valor mientras tanto -- en los datos reales de
+  // hoy, sencillamente no se pintan (no hay ningún "—" acá tampoco: mismo
+  // criterio ya usado por el chevron, no repetir un placeholder en cada fila
+  // de cada card de toda la lista -- el "—" explícito sí vive en el perfil
+  // de detalle, `_eqPerfilContenidoHtml()`, más abajo en este archivo, un
+  // solo lugar por persona).
   if (p.puntosTareas !== undefined && p.puntosTareas !== null) {
     html += '<span class="eq-mini-stat"><span class="material-symbols-rounded">task_alt</span>' + p.puntosTareas + '</span>';
   }
   if (p.puntosAsistencia !== undefined && p.puntosAsistencia !== null) {
     html += '<span class="eq-mini-stat"><span class="material-symbols-rounded">stars</span>' + p.puntosAsistencia + '</span>';
   }
-  // Chevron de tendencia -- **sin dato real**: `getEquipo()` no devuelve
-  // ningún valor anterior del termómetro para comparar (no existe
-  // `termometro_pct_anterior` ni nada equivalente en el schema real, ver
-  // supabase/functions/api/index.ts) -- placeholder listo para cuando ese
-  // campo exista, sin inventar una tendencia falsa mientras tanto. Pill Q/M
-  // de tier SACADA (pedido explícito, ver MANIFEST.md -- "quitar pills Q/M,
-  // mantener solo chevrones de tendencia"): el chevron de acá abajo es hoy
-  // el único indicador de tier/tendencia en la fila.
+  // Chevron de tendencia (re-auditado, ver MANIFEST.md -- "chevrones no
+  // aparecen en vista preliminar de cards"). Campo buscado explícitamente
+  // en el objeto real (misma lista completa que el comentario de puntos, un
+  // poco más arriba en esta función): `getEquipo()` trae `termometro_pct`
+  // (el valor ACTUAL), pero ningún valor anterior con el que compararlo --
+  // ni `tendencia`, ni `termometro_delta`, ni `termometro_pct_anterior`, ni
+  // nada equivalente (confirmado contra el `.select()`/`.map()` real de esa
+  // función, supabase/functions/api/index.ts). Sin un 2do punto en el
+  // tiempo no hay tendencia real que calcular -- este `<span>` queda
+  // condicionado a `termometro_pct_anterior` (nombre elegido para cuando
+  // exista) a propósito, en vez de comparar contra 0 o inventar cualquier
+  // otro valor que simule una tendencia falsa. Documentado en MANIFEST.md
+  // ("Datos pendientes del backend"). Pill Q/M de tier SACADA (pedido
+  // explícito, ver MANIFEST.md -- "quitar pills Q/M, mantener solo
+  // chevrones de tendencia"): el chevron de acá abajo es hoy el único
+  // indicador de tier/tendencia en la fila.
   if (p.termometro_pct_anterior !== undefined && p.termometro_pct_anterior !== null) {
     var diff = (p.termometro_pct || 0) - p.termometro_pct_anterior;
     if (diff > 0) html += '<span class="eq-mini-tendencia eq-mini-tendencia-up">▲</span>';
@@ -716,6 +820,25 @@ function _eqNavHtml(p) {
   // `eq-nav-fav-btn` (nueva, css/equipo.css) + `.activo` condicional -- NO
   // se reusa `.eq-fav-btn` tal cual (esa clase trae su propio tamaño/forma
   // circular, pisaría el cuadrado de `.app-nav-icon-btn`), solo el color.
+  // Re-auditado (ver MANIFEST.md -- "corazón de favoritos no cambia
+  // visualmente"): selector real del botón en el detalle es
+  // `button.app-nav-icon-btn.eq-nav-fav-btn[data-eq-fav]`, con `.activo`
+  // agregada acá mismo según `fav` (calculado arriba, `_eqEsFavorito(p.id)`
+  // -- SÍ nace en estado activo si la persona ya es favorita, no depende de
+  // ningún evento de click). `.eq-nav-fav-btn.activo { color: var(--brand); }`
+  // (css/equipo.css) es la única regla que le toca el color a esta clase --
+  // sin conflicto de cascada real: `css/nav.css` (carga ANTES que
+  // css/equipo.css en index.html) no define ningún `.app-nav-icon-btn.activo`
+  // ni usa `!important` que pudiera ganarle. `_eqToggleFavorito()` llama a
+  // `_eqActualizarBotonesFavorito(id, fav)` en cada toggle, que hace
+  // `document.querySelectorAll('[data-eq-fav="'+id+'"]')` y togglea
+  // `.activo` + el glyph ahí mismo -- este botón de nav queda incluido
+  // (mismo atributo `data-eq-fav`). Código verificado correcto extremo a
+  // extremo -- no se encontró ningún bug real acá; si seguía sin verse en
+  // producción, la causa más probable es `equipo.js`/`equipo.css` servidos
+  // desde una copia vieja cacheada por Fastly (ver "Cache-busting" en
+  // MANIFEST.md -- estos 2 archivos NO estaban en `CACHEBUST_FILES` hasta
+  // este mismo commit, fix aparte, ver ese archivo).
   var acciones = '<button type="button" class="app-nav-icon-btn eq-nav-fav-btn' + (fav ? ' activo' : '') + '" data-eq-fav="' + p.id + '" onclick="_eqToggleFavorito(\'' + p.id + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '"><span class="material-symbols-outlined">' + (fav ? 'favorite' : 'favorite_border') + '</span></button>';
   if (waUrl) {
     acciones += '<a class="app-nav-icon-btn eq-wa-btn" href="' + waUrl + '" target="_blank" rel="noopener" title="WhatsApp">' + _EQ_WA_SVG + '</a>';
