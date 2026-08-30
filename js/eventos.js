@@ -2807,7 +2807,7 @@ var _EV_TOUR_PASOS_USER = [
   { selector: '#ev-fab-btn', titulo: 'Reserva tu lugar', texto: 'Pulsa aquí para reservar tu lugar en un evento o clase.' },
   // Movido a la posición 1, justo después del FAB (fix reciente, antes 4to
   // paso) -- pedido explícito de Victor, sin motivo técnico documentado.
-  { selector: '#ev-btn-patin', titulo: 'Tu equipamiento', texto: 'Cambia el equipamiento que usas del club desde aquí. Para reagendar o cancelar un evento reservado, usa el botón rojo dentro de su card.' },
+  { selector: '#ev-btn-patin', titulo: 'Tu equipamiento', texto: 'Cambia el equipamiento que usas del club desde aquí.' },
   { selector: '#ev-nav-mes-label', titulo: 'Navega por mes', texto: 'Abre el calendario pulsando en el mes actual para saltar directo a la fecha que buscas.' },
   { selector: '#ev-busqueda-toggle-btn', titulo: 'Busca y filtra', texto: 'Busca eventos, cumpleaños o lugares por texto, o filtra por Lugar y Tipo.' },
   // `sinHalo: true` -- el timeline ocupa casi toda la pantalla, un halo
@@ -2826,7 +2826,7 @@ var _EV_TOUR_PASOS_USER = [
   // (una por evento visible) -- resuelto por `_evTourResolverTarget()`
   // (nueva, ver `_evTourMostrarPaso()`), que toma la primera realmente
   // visible en vez de la primera en orden de DOM sin más.
-  { selector: '.ev-card', titulo: 'Detalle del evento', texto: 'Toca cualquier evento para ver quiénes asisten, rectificar tu asistencia y mucho más.' },
+  { selector: '.ev-card', titulo: 'Detalle del evento', texto: 'Toca cualquier evento para ver quiénes asisten, rectificar tu asistencia y mucho más. Desde aquí también puedes cancelar o reagendar tu reserva directamente desde la card del evento.' },
   // `#ev-btn-anticipada` -- oculto (`display:none`) para mirlxs y para
   // cuentas que necesitan equipo del club (`_evActualizarTopBarModo()`, más
   // abajo en este archivo) -- el chequeo de visibilidad genérico de
@@ -2837,7 +2837,7 @@ var _EV_TOUR_PASOS_USER = [
 var _EV_TOUR_PASOS_ADMIN = [
   { selector: '#ev-nav-mes-label', titulo: 'Navega por mes', texto: 'Abre el calendario pulsando en el mes actual para saltar directo a la fecha que buscas.' },
   { selector: '#ev-busqueda-toggle-btn', titulo: 'Busca y filtra', texto: 'Busca eventos, cumpleaños o lugares por texto, o filtra por Lugar y Tipo.' },
-  { selector: '#ev-btn-patin', titulo: 'Tu equipamiento', texto: 'Cambia el equipamiento que usas del club desde aquí. Para reagendar o cancelar un evento reservado, usa el botón rojo dentro de su card.' },
+  { selector: '#ev-btn-patin', titulo: 'Tu equipamiento', texto: 'Cambia el equipamiento que usas del club desde aquí.' },
   { selector: '#ev-fab-btn', titulo: 'Reserva o crea eventos', texto: 'Pulsa aquí para reservar tu lugar en un evento o clase, o para crear un nuevo evento.' },
   // `sinHalo: true` agregado acá (fix reciente) -- antes solo lo tenía el
   // paso equivalente de `_EV_TOUR_PASOS_USER` (asimetría real entre los 2
@@ -2846,7 +2846,7 @@ var _EV_TOUR_PASOS_ADMIN = [
   // spotlightea nada real" aplica igual acá). Título sin cambios ("Explora
   // el calendario", distinto del texto de usuario "Explora la línea de
   // tiempo") -- no pedido explícitamente para este array.
-  { selector: '#ev-timeline', sinHalo: true, titulo: 'Explora el calendario', texto: 'Toca un evento para ver toda su información.' }
+  { selector: '#ev-timeline', sinHalo: true, titulo: 'Explora la línea de tiempo', texto: 'Toca un evento para ver toda su información.' }
 ];
 
 var _evTourPasos = null;
@@ -2960,9 +2960,31 @@ function _evTourIniciarSiCorresponde(esAdmin) {
     // (o el elemento no está en el documento) -- no sirve para `position:fixed`
     // con `display:none` heredado de un ancestro con overflow, pero ningún
     // caso real de este archivo cae en esa excepción.
+    // Ajuste real (fix reciente, reportado por Victor: "Ir a hoy" y
+    // "Asistencia anticipada" no aparecían para una cuenta Quindes) -- el
+    // chequeo anterior EXCLUÍA el paso tanto si el elemento no existía
+    // TODAVÍA (ej. este filtro corre 650ms después de entrar a Eventos,
+    // `_evActualizarTopBarModo()`, pero `_evCargarDatosReales()` es async y
+    // puede tardar más en redes lentas) como si existía pero estaba oculto
+    // -- 2 situaciones distintas tratadas igual. Ahora solo EXCLUYE cuando
+    // el elemento existe Y está oculto (`el && el.offsetParent === null`)
+    // -- si el elemento simplemente no existe todavía, el paso se CUENTA
+    // igual (el chequeo de visibilidad real al mostrarlo,
+    // `_evTourMostrarPaso()`, ya reintenta solo al paso siguiente si para
+    // entonces sigue sin aparecer -- ver ese `if (!el || !rect...)` más
+    // abajo). No se pudo reproducir el síntoma reportado en este entorno
+    // (sin navegador/cuenta Quindes real conectados) -- `#ev-nav-hoy-btn`
+    // no tiene NINGUNA lógica de ocultamiento condicional en todo el
+    // archivo (siempre visible, para cualquier tipo de cuenta), así que si
+    // de verdad faltaba, esto (existencia tardía) es la explicación más
+    // probable; `#ev-btn-anticipada` si SÍ debería ocultarse para una
+    // cuenta Quindes que además necesita equipo del club
+    // (`_evNecesitaEquipo()`, comportamiento intencional documentado en
+    // `_evActualizarTopBarModo()`) -- si la cuenta de prueba cae en ese
+    // caso, no sería un bug.
     return !p.selector || (function() {
       var el = document.querySelector(p.selector);
-      return !!el && el.offsetParent !== null;
+      return !el || el.offsetParent !== null;
     }());
   });
   _evTourActivo = true;
@@ -3072,7 +3094,7 @@ function _evTourMostrarPaso(idx) {
     // punteado inferior sin cubrir, siempre visible.
     var dashFade = document.createElement('div');
     dashFade.id = 'ev-tour-dash-fade';
-    dashFade.style.cssText = 'position:fixed;left:14px;right:14px;top:' + (yBot - 260) + 'px;height:248px;background:linear-gradient(to bottom,transparent,rgba(0,0,0,0.78));pointer-events:none;border-radius:0 0 10px 10px;z-index:9906;';
+    dashFade.style.cssText = 'position:fixed;left:14px;right:14px;top:' + (yBot - 260) + 'px;height:248px;background:linear-gradient(to bottom,transparent 15%,rgba(0,0,0,0.85));pointer-events:none;border-radius:0 0 10px 10px;z-index:9906;';
     document.body.appendChild(dashFade);
     _evTourSinHaloActivo = true;
   }
