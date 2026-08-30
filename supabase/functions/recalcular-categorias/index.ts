@@ -84,9 +84,17 @@ Deno.serve(async (req: Request) => {
 
     const maxVentana = Math.max(0, ...tiers.map((t: any) => Number(t.ventana_meses) || 0));
 
+    // Bug real (Cambio 62): este fetch no filtraba por `estado` en absoluto
+    // -- eventos cancelados ('Evento Cancelado') o todavía no sucedidos
+    // ('Evento Programado', con `fecha` ya dentro de la ventana) contaban
+    // igual que uno real hacia `contarClases()`, pudiendo calificar a
+    // alguien para un tier sin cumplir el requisito real de asistencia.
+    // Mismo fix que `recalcularStatsEquipo()`/supabase/functions/api/index.ts:
+    // solo 'Evento Finalizado' representa un evento real ya sucedido.
     const { data: asistData, error: asistError } = await supabase
       .from('asistencias')
       .select('fecha, a_horario, tarde')
+      .eq('estado', 'Evento Finalizado')
       .gte('fecha', fechaISO(primerDiaMesesAtras(maxVentana)));
     if (asistError) return json({ ok: false, error: asistError.message }, 500);
 

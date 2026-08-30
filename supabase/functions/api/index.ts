@@ -1629,11 +1629,23 @@ async function recalcularStatsEquipo(params: Record<string, any>): Promise<Recor
   const inicioAnio = hoy.getUTCFullYear() + '-01-01';
   const hoyISO = hoy.toISOString().substring(0, 10);
 
+  // Bug real (Cambio 62): este filtro comparaba contra 'Cancelado'/'No se
+  // entrena', pero el valor REAL de la columna `estado` para un evento
+  // cancelado es 'Evento Cancelado' (con el prefijo "Evento " -- ver
+  // _EV_ESTADO_MAP/js/eventos.js, que documenta el mismo desfasaje para
+  // 2 de los 4 valores posibles) -- nunca matcheaba, así que ningún evento
+  // cancelado quedaba afuera. Además, un evento de hoy todavía no marcado
+  // ('Evento Programado', `fecha <= hoyISO`) tampoco quedaba excluido,
+  // inflando el denominador de asistencia % con clases que ni siquiera
+  // pasaron. Fix: filtrar directo por el único estado que representa un
+  // evento real ya sucedido, 'Evento Finalizado', en vez de una lista
+  // negra de los otros 3.
   const { data: filasAsist, error: errorAsist } = await supabase.from('asistencias')
-    .select('fecha, a_horario, tarde, inicia, termina, estado')
+    .select('fecha, a_horario, tarde, inicia, termina')
+    .eq('estado', 'Evento Finalizado')
     .gte('fecha', inicioAnio).lte('fecha', hoyISO);
   if (errorAsist) return { exito: false, error: errorAsist.message };
-  const eventos = (filasAsist ?? []).filter((f: any) => f.estado !== 'Cancelado' && f.estado !== 'No se entrena');
+  const eventos = filasAsist ?? [];
   const totalEventos = eventos.length;
 
   const { data: miembros, error: errorMiembros } = await supabase.from('equipo').select('username');
