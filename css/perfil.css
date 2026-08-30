@@ -253,6 +253,23 @@
   font-size: 16px;
   color: var(--text-faint);
 }
+/* ── Nombre de usuario editable (Batch 4) ─────────────────────────────── */
+.aj-username-input {
+  width: 100%; border: none; border-bottom: 1.5px solid var(--brand);
+  background: transparent; color: var(--text); font-size: 0.85rem;
+  font-weight: 500; font-family: inherit; padding: 2px 0; outline: none;
+}
+.aj-username-estado { font-size: 0.72rem; font-weight: 700; margin-top: 4px; }
+.aj-username-estado-ok { color: var(--success); }
+.aj-username-estado-error { color: var(--danger); }
+.aj-dato-lapiz {
+  flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; color: var(--brand); cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.aj-dato-lapiz .material-symbols-outlined { font-size: 1.1rem; }
+@media (hover: hover) { .aj-dato-lapiz:hover { background: var(--brand-lightest); } }
 .aj-sec-titulo {
   font-size: 0.72rem;
   font-weight: 700;
@@ -352,3 +369,42 @@
   display: block; text-align: center; font-size: 0.8rem; font-weight: 600;
   color: var(--brand); text-decoration: underline; cursor: pointer;
 }
+
+/* Estado + tendencia + botón "Reportar lesión" reubicado (Batch 4, ver
+   _datosRenderStatsHtml()/js/perfil.js) -- todo dentro de #dat-stats-wrap
+   ahora, no de #dat-lesion-wrap. Colores 100% de css/colors.css, sin
+   hardcodear (pedido explícito): `--success`/`--success-bg` (Activo),
+   `--warning`/`--warning-bg` (Lesionadx), `--muted` + `--surface-2` (Inactivo
+   -- no existe un token gris/neutral dedicado, confirmado antes de escribir
+   esto, así que se arma con los 2 tokens neutros que sí existen). */
+.dat-estado-fila {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 14px 0 4px;
+}
+.dat-estado-label { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+.dat-estado-chip {
+  display: inline-block; padding: 3px 12px; border-radius: 999px;
+  font-size: 0.78rem; font-weight: 700;
+}
+.dat-estado-activo { background: var(--success-bg); color: var(--success); }
+.dat-estado-lesion { background: var(--warning-bg); color: var(--warning); }
+.dat-estado-inactivo { background: var(--surface-2); color: var(--muted); }
+.dat-estado-vacio { background: var(--surface-2); color: var(--muted); }
+
+.dat-rank-valor {
+  display: inline-flex; align-items: center; gap: 2px;
+  font-weight: 800; color: var(--text);
+}
+.dat-tendencia { font-size: 15px; }
+.dat-tendencia-up { color: var(--success); }
+.dat-tendencia-down { color: var(--danger); }
+
+/* `.btn`/`.btn-outline` (css/ui.css) son las clases reales de botón
+   secundario de la app -- `.dat-lesion-btn-sutil` solo ajusta el layout
+   propio (ícono + texto en fila, ancho completo) encima de ese look ya
+   existente, sin reinventar colores. */
+.dat-lesion-btn-sutil {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; margin-top: 14px;
+}
+.dat-lesion-btn-sutil .material-symbols-outlined { font-size: 18px; }

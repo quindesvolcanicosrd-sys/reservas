@@ -55,6 +55,39 @@ var _EQ_EQUIPO_DEMO = [
 ];
 */
 
+// Roles dentro del equipo (Jammer/Blocker/etc, Batch 4) -- **sin columna
+// real en `equipo`** (mismo hallazgo ya documentado para `roles` desde el
+// Cambio 55: nunca existió esa columna, confirmado de nuevo antes de escribir
+// esto). Se persiste por `localStorage`, clave `eq_roles_<username>` --
+// leído/escrito por username, no por `id` (mismo valor en este roster, ver
+// getEquipo()), para que "mi perfil" (Ajustes, `js/perfil.js`, guarda con
+// `E.nombre`) y "ver a alguien en Equipo" (lee con `p.username`) apunten a
+// la MISMA clave real. **Limitación real, no resuelta -- sin backend, el rol
+// que alguien fija en su propio perfil solo es visible desde el MISMO
+// dispositivo/navegador** (cualquier otra cuenta viendo ese perfil, en otro
+// dispositivo, no lo va a ver) -- documentado tal cual en MANIFEST.md, no
+// se inventó ningún endpoint real que no existe.
+var _EQ_ROLES = ['Jammer', 'Blocker', 'Coach', 'Bench', 'SO', 'NSO', 'No definido'];
+function _eqRolesDe(username) {
+  if (!username) return [];
+  try {
+    var raw = localStorage.getItem('eq_roles_' + username);
+    return raw ? JSON.parse(raw) : [];
+  } catch (ex) { return []; }
+}
+function _eqSetRolesDe(username, roles) {
+  if (!username) return;
+  try { localStorage.setItem('eq_roles_' + username, JSON.stringify(roles)); } catch (ex) {}
+}
+// Texto para mostrar (detalle de Equipo, tarjetas) -- roles reales
+// separados por coma, o el fallback pedido si está vacío o es
+// exactamente `['No definido']` (mismo criterio: "sin rol real que mostrar").
+function _eqRolesTexto(username) {
+  var roles = _eqRolesDe(username);
+  if (!roles.length || (roles.length === 1 && roles[0] === 'No definido')) return null;
+  return roles.join(', ');
+}
+
 // Descripciones del modo de categoría (tier) -- ver _eqCambiarTier()/
 // _eqPerfilContenidoHtml() más abajo (Cambio 52). 'quinde'/'mirlxs': fijado
 // a mano por un admin (persiste en `equipo.tier_modo`, Cambio 55) -- el
@@ -199,6 +232,9 @@ function irEquipo() {
 
 function _eqInit() {
   _eqYaInicializado = true;
+  // No depende del roster real (Batch 4) -- arranca ya, aunque el fetch de
+  // abajo todavía no resolvió.
+  _eqSugerenciasIniciar();
   var estadoEl = document.getElementById('eq-estado-carga');
   if (estadoEl) estadoEl.innerHTML = '<p class="eq-loading">Cargando equipo...</p>';
   _eqAsegurarCargado(function() {
@@ -232,13 +268,51 @@ function _eqAvatarHtml(p, claseExtra) {
   return '<div class="avatar-pill ' + claseExtra + ' eq-avatar" data-nombre="' + _eqEsc(p.nombreDerby) + '" data-foto="' + _eqEsc(p.fotoPerfil || '') + '"></div>';
 }
 
+// Fila de stats inline (Batch 4) -- `pointer-events:none` propio de cada
+// pieza (clases de abajo, css/equipo.css) para que el click siempre
+// propague a `.eq-miembro-fila` (abre el detalle), pedido explícito -- en
+// los hechos ya pasaría igual por burbujeo normal (son `<span>` sin
+// comportamiento propio), pero se deja explícito tal como se pidió.
+function _eqStatsInlineHtml(p) {
+  var statsCalc = _eqStatsCalc(p);
+  var html = '';
+  // Horas/asistencia -- `horas_ano`/`total_eventos_ano` (getEquipo(), Cambio
+  // 58) SIEMPRE vienen en el objeto real (default 0 si no hay datos) -- el
+  // chequeo cubre el caso teórico de un objeto en memoria sin esos campos
+  // (no ocurre con el backend actual, ver supabase/functions/api/index.ts).
+  if (p.horas_ano !== undefined && p.horas_ano !== null) {
+    html += '<span class="eq-mini-stat"><span class="material-symbols-rounded">roller_skating</span>' + statsCalc.horas + 'hs</span>';
+  }
+  if (p.total_eventos_ano !== undefined && p.total_eventos_ano !== null) {
+    html += '<span class="eq-mini-stat"><span class="material-symbols-rounded">kid_star</span>' + statsCalc.asistenciaPct + '%</span>';
+  }
+  // Tier pill Q/M -- oculta si el tier está fijado a mano (`tierModo !== 'auto'`,
+  // pedido explícito -- ver `_eqTierAdminHtml()` más abajo para el mismo campo).
+  if (p.tierModo === 'auto' && p.rol) {
+    html += '<span class="eq-mini-tier-pill">' + (p.rol === 'Quindes' ? 'Q' : 'M') + '</span>';
+  }
+  // Chevron de tendencia -- **sin dato real**: `getEquipo()` no devuelve
+  // ningún valor anterior del termómetro para comparar (no existe
+  // `termometro_pct_anterior` ni nada equivalente en el schema real, ver
+  // supabase/functions/api/index.ts) -- placeholder listo para cuando ese
+  // campo exista, sin inventar una tendencia falsa mientras tanto.
+  if (p.termometro_pct_anterior !== undefined && p.termometro_pct_anterior !== null) {
+    var diff = (p.termometro_pct || 0) - p.termometro_pct_anterior;
+    if (diff > 0) html += '<span class="eq-mini-tendencia eq-mini-tendencia-up material-symbols-outlined">arrow_drop_up</span>';
+    else if (diff < 0) html += '<span class="eq-mini-tendencia eq-mini-tendencia-down material-symbols-outlined">arrow_drop_down</span>';
+  }
+  return html;
+}
+
 function _eqFilaHtml(p) {
   var fav = _eqEsFavorito(p.id);
+  var statsHtml = _eqStatsInlineHtml(p);
   return '<div class="eq-miembro-fila" onclick="_eqAbrirPerfil(\'' + p.id + '\')">' +
       _eqAvatarHtml(p, 'avatar-pill--sm') +
       '<div class="eq-miembro-info">' +
         '<div class="eq-miembro-nombre">' + _eqEsc(p.nombreDerby) + ' <span class="eq-miembro-numero">#' + p.numeroDerby + '</span></div>' +
         '<div class="eq-miembro-username">@' + _eqEsc(p.username) + '</div>' +
+        (statsHtml ? '<div class="eq-miembro-stats">' + statsHtml + '</div>' : '') +
       '</div>' +
       '<button type="button" class="eq-fav-btn' + (fav ? ' activo' : '') + '" data-eq-fav="' + p.id + '" onclick="event.stopPropagation();_eqToggleFavorito(\'' + p.id + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '">' +
         '<span class="material-symbols-outlined">' + (fav ? 'favorite' : 'favorite_border') + '</span>' +
@@ -246,19 +320,148 @@ function _eqFilaHtml(p) {
     '</div>';
 }
 
-/* ── Búsqueda (filtra por nombre derby + username, AND implícito con el
-   grupo/favoritos que la contiene) -- oculta secciones sin resultados sin
-   sacarlas del DOM, mismo criterio que el resto de la app. */
+// Meses reales para detectar una búsqueda "por mes de cumpleaños" (Batch 4)
+// -- simple `indexOf` del nombre del mes contra el query ya en minúsculas,
+// sin parsear frases -- "abril", "cumple en abril", "cumpleaños en abril"
+// coinciden todos igual, el nombre del mes está en las 3.
+var _EQ_MESES_BUSQUEDA = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+function _eqDetectarMes(q) {
+  for (var i = 0; i < _EQ_MESES_BUSQUEDA.length; i++) {
+    if (q.indexOf(_EQ_MESES_BUSQUEDA[i]) !== -1) return i;
+  }
+  return null;
+}
+// "rol"/"roles" como palabra completa (`\b`, evita falsos positivos tipo
+// una palabra que solo CONTENGA "rol") o coincidencia EXACTA con un nombre
+// de rol real -- exacta, no `indexOf`, porque roles como "SO"/"NSO" son
+// substrings casi seguros de un montón de nombres/usernames reales; con
+// `indexOf` cualquier búsqueda normal hubiera disparado el modo rol por
+// error.
+function _eqEsQueryDeRol(q) {
+  if (/\brol(es)?\b/.test(q)) return true;
+  return _EQ_ROLES.some(function(r) { return r.toLowerCase() === q; });
+}
+
+/* ── Búsqueda (Batch 4 -- 4 modos según el query, mutuamente excluyentes):
+   1) "@" en el query -- filtra por email (p.email), dentro de la vista
+      normal (Favoritos + Quindes/Mirlxs), mismo mecanismo que nombre/username.
+   2) Nombre de un rol real, o la palabra "rol"/"roles" -- vista alternativa
+      de acordeones agrupados por rol (#eq-roles-wrap/_eqRenderPorRol()),
+      reemplaza Favoritos+grupos mientras está activa.
+   3) Nombre de un mes -- `getEquipo()` no expone fecha de nacimiento (dato
+      gateado por privacidad, ver Cambio 55/MANIFEST.md) -- sin ese campo no
+      hay con qué filtrar de verdad; se muestra #eq-mes-vacio en vez de
+      inventar un resultado.
+   4) Default -- nombre derby + username, comportamiento de siempre. ── */
 function _eqBuscar(valor) {
   _eqBusqueda = (valor || '').trim().toLowerCase();
+  var favWrap = document.getElementById('eq-favoritos-wrap');
+  var grupoQuindes = document.getElementById('eq-grupo-quindes');
+  var grupoMirlxs = document.getElementById('eq-grupo-mirlxs');
+  var rolesWrap = document.getElementById('eq-roles-wrap');
+  var mesVacio = document.getElementById('eq-mes-vacio');
+  var esRol = !!_eqBusqueda && _eqEsQueryDeRol(_eqBusqueda);
+  var mesIdx = (_eqBusqueda && !esRol) ? _eqDetectarMes(_eqBusqueda) : null;
+  if (esRol) {
+    if (favWrap) favWrap.style.display = 'none';
+    if (grupoQuindes) grupoQuindes.style.display = 'none';
+    if (grupoMirlxs) grupoMirlxs.style.display = 'none';
+    if (mesVacio) mesVacio.style.display = 'none';
+    if (rolesWrap) rolesWrap.style.display = '';
+    _eqRenderPorRol();
+    return;
+  }
+  if (mesIdx !== null) {
+    if (favWrap) favWrap.style.display = 'none';
+    if (grupoQuindes) grupoQuindes.style.display = 'none';
+    if (grupoMirlxs) grupoMirlxs.style.display = 'none';
+    if (rolesWrap) rolesWrap.style.display = 'none';
+    if (mesVacio) mesVacio.style.display = '';
+    return;
+  }
+  // Modo normal (nombre/username/email) -- restaura los contenedores reales
+  // por si el query anterior había activado el modo rol/mes.
+  if (rolesWrap) rolesWrap.style.display = 'none';
+  if (mesVacio) mesVacio.style.display = 'none';
+  if (grupoQuindes) grupoQuindes.style.display = '';
+  if (grupoMirlxs) grupoMirlxs.style.display = '';
   _eqRenderFavoritos();
   _eqRenderGrupo('Quindes');
   _eqRenderGrupo('Mirlxs');
 }
 function _eqPasaBusqueda(p) {
   if (!_eqBusqueda) return true;
+  // Por email (Batch 4) -- el único de los 4 modos que sigue usando la
+  // vista normal (Favoritos/grupos), solo cambia el campo contra el que
+  // compara.
+  if (_eqBusqueda.indexOf('@') !== -1) return (p.email || '').toLowerCase().indexOf(_eqBusqueda) !== -1;
   return p.nombreDerby.toLowerCase().indexOf(_eqBusqueda) !== -1 ||
     p.username.toLowerCase().indexOf(_eqBusqueda) !== -1;
+}
+// Vista alternativa "por rol" (Batch 4) -- un acordeón por rol real (mismas
+// clases `.eq-grupo*` que ya usan Quindes/Mirlxs, "reutilizá el patrón de
+// acordeón que ya exista" del pedido) con al menos 1 persona -- roles sin
+// nadie asignado no generan un acordeón vacío (mismo criterio que
+// _eqRenderGrupo(), que oculta el grupo entero si `filtradas.length === 0`).
+function _eqRenderPorRol() {
+  var cont = document.getElementById('eq-roles-wrap');
+  if (!cont) return;
+  var html = '';
+  _EQ_ROLES.forEach(function(rol) {
+    var miembros = _eqPersonas.filter(function(p) {
+      return !_eqEsUsuarioActual(p) && _eqRolesDe(p.username).indexOf(rol) !== -1;
+    });
+    if (!miembros.length) return;
+    var key = rol.toLowerCase().replace(/\s+/g, '-');
+    html += '<div class="eq-grupo">' +
+        '<button type="button" class="eq-grupo-header abierto" id="eq-grupo-' + key + '-header" onclick="_eqToggleGrupo(\'' + rol.replace(/'/g, "\\'") + '\')">' +
+          '<span class="eq-grupo-linea"></span>' +
+          '<span class="eq-grupo-pill">' + miembros.length + '</span>' +
+          '<span class="eq-grupo-nombre">' + _eqEsc(rol) + '</span>' +
+          '<span class="material-symbols-outlined eq-grupo-chevron">expand_more</span>' +
+          '<span class="eq-grupo-linea"></span>' +
+        '</button>' +
+        '<div class="eq-grupo-body abierto" id="eq-grupo-' + key + '-body">' +
+          '<div class="eq-grupo-body-inner">' + miembros.map(_eqFilaHtml).join('') + '</div>' +
+        '</div>' +
+      '</div>';
+  });
+  cont.innerHTML = html || '<div class="eq-favoritos-vacio"><span class="material-symbols-outlined">group_off</span>Nadie tiene un rol asignado todavía.</div>';
+  _eqHidratarAvatares();
+}
+
+// Sugerencias rotativas del buscador (Batch 4) -- placeholder real, estático
+// (no animable), reemplazado visualmente por este overlay que sí puede
+// hacer fade. Pausa con foco (`_eqSugerenciasPausar()`, onfocus del input)
+// o con texto tipeado (chequeado en cada tick, no solo al enfocar/desenfocar
+// -- cubre el caso de escribir sin que el input pierda el foco).
+var _EQ_SUGERENCIAS = ['Busca por nombre o usuario', 'Prueba: Cumpleaños en abril', 'Prueba: Jammer', 'Prueba: Rol en el equipo'];
+var _eqSugerenciaIdx = 0;
+var _eqSugerenciaIntervalo = null;
+function _eqSugerenciasIniciar() {
+  var el = document.getElementById('eq-search-suggestion');
+  var input = document.getElementById('eq-search-input');
+  if (!el || !input || _eqSugerenciaIntervalo) return;
+  el.textContent = _EQ_SUGERENCIAS[0];
+  _eqSugerenciaIdx = 0;
+  _eqSugerenciaIntervalo = setInterval(function() {
+    if (document.activeElement === input || input.value) return;
+    el.style.opacity = '0';
+    setTimeout(function() {
+      _eqSugerenciaIdx = (_eqSugerenciaIdx + 1) % _EQ_SUGERENCIAS.length;
+      el.textContent = _EQ_SUGERENCIAS[_eqSugerenciaIdx];
+      el.style.opacity = '1';
+    }, 400);
+  }, 3000);
+}
+function _eqSugerenciasPausar() {
+  var el = document.getElementById('eq-search-suggestion');
+  if (el) el.style.opacity = '0';
+}
+function _eqSugerenciasReanudar() {
+  var el = document.getElementById('eq-search-suggestion');
+  var input = document.getElementById('eq-search-input');
+  if (el && input && !input.value) el.style.opacity = '1';
 }
 
 function _eqRenderFavoritos() {
@@ -299,7 +502,12 @@ function _eqRenderGrupo(rol) {
 }
 
 function _eqToggleGrupo(rol) {
-  var key = rol.toLowerCase();
+  // `.replace(/\s+/g, '-')` (Batch 4) -- antes solo `.toLowerCase()`, suficiente
+  // mientras los únicos 2 valores reales eran "Quindes"/"Mirlxs" (una sola
+  // palabra). Los acordeones por rol (`_eqRenderPorRol()`, más abajo)
+  // reusan esta misma función con nombres como "No definido" -- sin este
+  // slug, el id generado tendría un espacio literal adentro.
+  var key = rol.toLowerCase().replace(/\s+/g, '-');
   var header = document.getElementById('eq-grupo-' + key + '-header');
   var body = document.getElementById('eq-grupo-' + key + '-body');
   if (!header || !body) return;
@@ -691,6 +899,13 @@ function _eqPerfilContenidoHtml(p) {
   // link (a diferencia de telefono/email) -- `<div>`, no `<a>`, mismo
   // `.eq-info-fila` (estilo genérico de fila, no depende de ser un enlace).
   if (p.fechaIngreso) filas += '<div class="eq-info-fila"><span class="material-symbols-outlined">calendar_month</span><span class="eq-info-texto">Entró al equipo ' + _eqEsc(_eqFormatearFechaIngreso(p.fechaIngreso)) + '</span></div>';
+  // Rol en el equipo (Batch 4) -- `_eqRolesTexto()` (arriba en este archivo)
+  // da `null` si no hay roles reales guardados (o si el único guardado es
+  // "No definido") -- en ese caso se muestra igual la fila, con el texto
+  // fijo pedido y la clase `eq-info-texto-vacio` (color secundario, sin
+  // negrita) en vez de ocultarla del todo.
+  var rolTexto = _eqRolesTexto(p.username);
+  filas += '<div class="eq-info-fila"><span class="material-symbols-outlined">badge</span><span class="eq-info-texto' + (rolTexto ? '' : ' eq-info-texto-vacio') + '">' + (rolTexto ? _eqEsc(rolTexto) : 'Rol no definido') + '</span></div>';
 
   var statsCalc = _eqStatsCalc(p);
   return '<div class="eq-perfil-header">' +

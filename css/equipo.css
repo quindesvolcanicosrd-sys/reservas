@@ -9,6 +9,21 @@
 .eq-loading, .eq-error { text-align: center; font-size: 0.85rem; color: var(--muted); padding: 32px 16px; }
 .eq-error { color: var(--danger); }
 
+/* ── Sugerencias rotativas del buscador (Batch 4, #eq-search-suggestion,
+   index.html) -- overlay sobre el placeholder real (estático, no animable),
+   `_eqSugerenciasIniciar()`/js/equipo.js. `left` calculado a mano contra
+   `.app-nav-search` (css/nav.css): 16px de padding del pill + ~19px del
+   ícono de lupa (font-size:1.2rem) + 8px de gap = 43px hasta donde arranca
+   el texto real del input. `pointer-events:none` -- el click debe llegar
+   al input de abajo, no a este overlay decorativo. */
+.eq-search-suggestion {
+  position: absolute; left: 43px; top: 50%; transform: translateY(-50%);
+  color: var(--muted); font-size: 0.9rem; font-weight: 500;
+  pointer-events: none; opacity: 1; transition: opacity 0.4s ease;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: calc(100% - 60px);
+}
+
 /* ── Favoritos ────────────────────────────────── */
 .eq-seccion-favoritos { margin-bottom: 18px; }
 .eq-favoritos-header {
@@ -76,6 +91,23 @@
   font-size: 0.78rem; color: var(--muted); margin-top: 1px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* ── Stats inline de la card de lista (Batch 4, _eqStatsInlineHtml()) ──── */
+.eq-miembro-stats { display: flex; align-items: center; gap: 8px; margin-top: 3px; flex-wrap: wrap; }
+.eq-mini-stat {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 0.72rem; font-weight: 700; color: var(--muted);
+  pointer-events: none;
+}
+.eq-mini-stat .material-symbols-rounded { font-size: 0.9rem; color: var(--brand); }
+.eq-mini-tier-pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--brand-light); color: var(--brand);
+  font-size: 0.65rem; font-weight: 800; pointer-events: none;
+}
+.eq-mini-tendencia { font-size: 1.1rem; line-height: 1; pointer-events: none; }
+.eq-mini-tendencia-up { color: var(--success); }
+.eq-mini-tendencia-down { color: var(--danger); }
 .eq-fav-btn {
   flex-shrink: 0; display: flex; align-items: center; justify-content: center;
   width: 38px; height: 38px; border-radius: 50%; background: none; border: none;
@@ -187,6 +219,9 @@
 .eq-info-fila:last-child { border-bottom: none; }
 .eq-info-fila .material-symbols-outlined { flex-shrink: 0; font-size: 1.2rem; color: var(--brand); }
 .eq-info-texto { font-size: 0.88rem; font-weight: 600; }
+/* Rol no definido (Batch 4) -- "color secundario y sin peso" pedido para
+   el fallback de la fila de rol, css/equipo.css. */
+.eq-info-texto-vacio { color: var(--muted); font-weight: 400; }
 a.eq-info-fila:active { background: var(--brand-lightest); }
 
 /* Control de categoría (tier), admin-only -- segmented control

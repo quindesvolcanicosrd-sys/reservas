@@ -145,15 +145,65 @@ function _datosRenderStats() {
 }
 
 function _datosRenderStatsHtml(contenedor, persona) {
+  // Tendencia del termómetro (Batch 4) -- **sin dato real**: no existe
+  // ningún valor anterior de `termometro_pct` para comparar (mismo hallazgo
+  // que en `_eqStatsInlineHtml()`/js/equipo.js -- ver ese comentario) --
+  // placeholder listo para cuando `persona.termometro_pct_anterior` exista
+  // de verdad, sin inventar una tendencia mientras tanto. Va junto al VALOR
+  // del termómetro (pedido explícito: "Termómetro: valor actual con
+  // indicador de tendencia"), no junto a Asistencia anual.
+  var tendenciaHtml = '';
+  if (persona.termometro_pct_anterior !== undefined && persona.termometro_pct_anterior !== null) {
+    var diffTerm = (persona.termometro_pct || 0) - persona.termometro_pct_anterior;
+    if (diffTerm > 0) tendenciaHtml = '<span class="dat-tendencia dat-tendencia-up material-symbols-outlined">arrow_upward</span>';
+    else if (diffTerm < 0) tendenciaHtml = '<span class="dat-tendencia dat-tendencia-down material-symbols-outlined">arrow_downward</span>';
+  }
+  // Reutiliza el componente de termómetro real (`.eq-rank-wrap`/`_eqRankTexto()`,
+  // js/equipo.js -- pedido explícito de reusarlo) -- se le agrega el % real
+  // como número (antes solo la barra + el texto contextual, sin un valor
+  // explícito) + la tendencia de arriba, entre las 2 etiquetas.
   var rankHtml = persona.tierModo === 'auto'
     ? '<div class="dat-rank-wrap eq-rank-wrap">' +
-        '<div class="eq-rank-labels"><span>Mirlxs</span><span>Quindes</span></div>' +
+        '<div class="eq-rank-labels"><span>Mirlxs</span><span class="dat-rank-valor">' + (persona.termometro_pct || 0) + '%' + tendenciaHtml + '</span><span>Quindes</span></div>' +
         '<div class="eq-rank-track"><div class="eq-rank-fill" style="width:' + (persona.termometro_pct || 0) + '%;"></div></div>' +
         '<p class="eq-rank-texto">' + _eqEsc(_eqRankTexto(persona)) + '</p>' +
       '</div>'
     : '<p class="dat-tier-fijo">Categoría fija: <strong>' + (persona.tierModo === 'quinde' ? 'Quindes' : 'Mirlxs') + '</strong></p>';
 
   var statsCalc = _eqStatsCalc(persona);
+
+  // Estado (Batch 4) -- simplifica los 4 estados reales de
+  // `equipo.estado_miembro` (`_EQ_ESTADOS`, js/equipo.js: Activx/Ausente/
+  // Técnico/Lesionadx) a los 3 que pedía el pedido -- Ausente/Técnico caen
+  // en "Inactivo" (gris), el pedido no contempló un 4to color/estado.
+  // "Lesionadx" (ámbar) solo si `estado_miembro` YA es Lesionadx -- eso
+  // implica aprobación admin real (`adminAprobarLesion` es la ÚNICA acción
+  // que lo pone en ese valor, ver supabase/functions/api/index.ts); una
+  // solicitud todavía pendiente NO cambia este campo (sigue en 'Activx'
+  // hasta que se aprueba), así que el chip nunca muestra "Lesionadx" para
+  // una solicitud sin aprobar, tal como pedía el pedido explícitamente
+  // ("solo si la solicitud de lesión fue aprobada").
+  var d = E.datos || null;
+  var estadoReal = d ? (d.estado_miembro || 'Activx') : null;
+  var estadoChip = !d
+    ? { texto: '—', clase: 'dat-estado-vacio' }
+    : estadoReal === 'Lesionadx'
+    ? { texto: 'Lesionadx', clase: 'dat-estado-lesion' }
+    : estadoReal === 'Activx'
+    ? { texto: 'Activo', clase: 'dat-estado-activo' }
+    : { texto: 'Inactivo', clase: 'dat-estado-inactivo' };
+
+  // Botón "Reportar lesión" (Batch 4) -- **movido acá** desde
+  // `_datosRenderLesion()` (antes su propio botón para el caso Activx sin
+  // solicitud pendiente, ver esa función más abajo -- ese branch se sacó de
+  // ahí) -- estilo `.btn-outline` (el secundario real de esta app, no existe
+  // ninguna clase `.btn-secondary`, confirmado antes de escribir esto) en
+  // vez del `.dat-lesion-btn` viejo (fondo naranja sólido), + ícono
+  // `personal_injury` (mismo patrón `<span class="material-symbols-outlined">`
+  // que el resto de la app).
+  var lesionBtnHtml = (d && estadoReal === 'Activx' && !d.solicitudLesionPendiente)
+    ? '<button type="button" class="btn btn-outline dat-lesion-btn-sutil" onclick="_datLesionAbrirSheet()"><span class="material-symbols-outlined">personal_injury</span>Reportar lesión</button>'
+    : '';
 
   contenedor.innerHTML =
     '<div class="dat-stat-row">' +
@@ -168,7 +218,9 @@ function _datosRenderStatsHtml(contenedor, persona) {
         '<span class="dat-stat-label">Asistencia anual</span>' +
       '</div>' +
     '</div>' +
-    rankHtml;
+    rankHtml +
+    '<div class="dat-estado-fila"><span class="dat-estado-label">Estado:</span><span class="dat-estado-chip ' + estadoChip.clase + '">' + estadoChip.texto + '</span></div>' +
+    lesionBtnHtml;
 }
 
 // Flujo de lesión (Cambio 54) -- auto-reporte de usuario + aprobación admin
@@ -179,9 +231,12 @@ function _datosRenderStatsHtml(contenedor, persona) {
 // getDatosCompletos() para esta tanda) son los 2 datos reales que gobiernan
 // qué se muestra acá. `#dat-lesion-wrap` (index.html, dentro de #aj-sub-perfil
 // desde el Cambio 56, justo después de #dat-stats-wrap) queda vacío para
-// cualquier estado que no sea Activx/Lesionadx/con solicitud pendiente
-// (Ausente/Técnico) -- mismo criterio sin toast/error que _datosRenderStats()
-// para una cuenta sin datos.
+// cualquier estado que no sea Lesionadx/con solicitud pendiente -- **el caso
+// Activx sin solicitud pendiente (el botón "Reportar lesión" en sí) se
+// movió a `_datosRenderStatsHtml()` (Batch 4, al final de "Estadísticas",
+// pedido explícito) -- ver ese comentario ahí.** Los otros 2 casos
+// (solicitud pendiente / ya Lesionadx) siguen acá tal cual, el pedido solo
+// pidió mover "el botón", no todo el flujo de lesión.
 function _datosRenderLesion() {
   var contenedor = document.getElementById('dat-lesion-wrap');
   if (!contenedor) return;
@@ -194,17 +249,28 @@ function _datosRenderLesion() {
   } else if (estado === 'Lesionadx') {
     html = '<p class="dat-lesion-texto">Estás marcadx como Lesionadx. Estás exentx de la cuota durante este período.</p>' +
       '<button type="button" class="dat-lesion-btn" onclick="_datLesionRecuperarse()">Estoy recuperadx</button>';
-  } else if (estado === 'Activx') {
-    html = '<button type="button" class="dat-lesion-btn" onclick="_datLesionAbrirSheet()">Reportar lesión</button>';
   }
   contenedor.innerHTML = html;
 }
 
+// Integración con el botón/gesto atrás (Batch 4) -- este sheet reusaba
+// `.eq-confirm-sheet-*` (correcto, css/equipo.css) pero, a diferencia de los
+// ~15 sheets de este mismo archivo (ajAbrirSheetLogout, _ddpAbrir,
+// ajAbrirSheetTexto, etc.), nunca llamaba a `_registrarOverlayAbierto()`
+// (js/ui.js) -- el gesto de volver atrás lo saltaba directo a la pantalla
+// de atrás en vez de solo cerrar el sheet. Mismo patrón que esos: abrir
+// empuja un estado de historial + registra el cierre; el cierre acepta
+// `porGesto` y, si se llama manual (click de "Cancelar", o desde
+// `_datLesionConfirmar()` más abajo), dispara `history.back()` en vez de
+// cerrar directo -- el popstate resultante es el que efectivamente cierra
+// (con `porGesto=true`), igual que en el resto de la app.
 function _datLesionAbrirSheet() {
   var sheet = document.getElementById('dat-lesion-sheet');
   if (sheet) sheet.classList.add('visible');
+  _registrarOverlayAbierto(_datLesionCancelar);
 }
-function _datLesionCancelar() {
+function _datLesionCancelar(porGesto) {
+  if (!porGesto) { history.back(); return; }
   var sheet = document.getElementById('dat-lesion-sheet');
   if (sheet) sheet.classList.remove('visible');
 }
@@ -812,6 +878,7 @@ function _ajCargarSub(id) {
   }
   if (id === 'aj-sub-perfil') {
     _ajSetDatoVal('aj-nombre-display', d.nombre || E.nombre, '—', false);
+    _ajUsernameCancelarEdicion();
     _ajSetDatoVal('aj-nombreDerby-val', d.nombreDerby, '—', false);
     _ajSetDatoVal('aj-numeroDerby-val', d.numeroDerby, 'Sin número asignado', true);
     _ajSetDatoVal('aj-pron-val', d.pronombres, '—', false);
@@ -821,6 +888,9 @@ function _ajCargarSub(id) {
     // "Foto de perfil" completa la que abre el sheet de recorte (onclick en
     // el .aj-row en index.html), no un botón de cámara separado.
     _avatarSetFotoOInicial(document.getElementById('aj-avatar-hero'), d.fotoPerfil || '', E.nombre);
+    // Rol en el equipo + Estadísticas (Batch 4) -- ver esas 2 funciones más
+    // abajo en este archivo.
+    _ajRenderRol();
   } else if (id === 'aj-sub-contacto') {
     _ajSetDatoVal('aj-email-display', d.email, '—', false);
     _ajSetPrefijo('aj-prefijo-display', null, d.prefijo || '');
@@ -899,6 +969,170 @@ function _ajCargarSub(id) {
     if (!d.atencionMedica) { _saludAutoLanzado = true; saludIniciarWizard(); }
     else { _saludMostrarEstado(); }
   }
+}
+
+// ── Nombre de usuario editable (Batch 4) ────────────────────────────────
+// Ver el comentario largo en index.html, junto a `#aj-username-row`, para
+// el porqué completo -- resumen: `username` es la clave natural real de
+// TODO el backend (reservas/asistencias/log_asistencias/puntos_mensuales/
+// admins, ver auditoría del Cambio 55 en MANIFEST.md, ninguna tabla tiene
+// un id numérico aparte) -- renombrarla de verdad implica una migración
+// real a través de todas esas tablas a la vez, no un `UPDATE` simple.
+// `_ajUsernameGuardar()` llama a una acción (`cambiarNombreUsuario`) que NO
+// existe en el router real (supabase/functions/api/index.ts) -- el resto
+// del flujo (activar edición, chequeo de disponibilidad en vivo,
+// validación, habilitar/deshabilitar el botón) queda 100% funcional.
+function _ajUsernameActivarEdicion() {
+  var display = document.getElementById('aj-nombre-display');
+  var input = document.getElementById('aj-username-input');
+  var lapiz = document.getElementById('aj-username-lapiz-btn');
+  if (!display || !input) return;
+  input.value = E.nombre || '';
+  display.style.display = 'none';
+  input.style.display = '';
+  if (lapiz) lapiz.style.display = 'none';
+  input.focus();
+}
+function _ajUsernameCancelarEdicion() {
+  var display = document.getElementById('aj-nombre-display');
+  var input = document.getElementById('aj-username-input');
+  var lapiz = document.getElementById('aj-username-lapiz-btn');
+  var estado = document.getElementById('aj-username-estado');
+  var btnGuardar = document.getElementById('aj-username-guardar-btn');
+  if (display) display.style.display = '';
+  if (input) { input.style.display = 'none'; input.value = ''; }
+  if (lapiz) lapiz.style.display = '';
+  if (estado) { estado.style.display = 'none'; estado.textContent = ''; }
+  if (btnGuardar) { btnGuardar.style.display = 'none'; btnGuardar.disabled = true; }
+}
+function _ajUsernameInput(valor) {
+  var estado = document.getElementById('aj-username-estado');
+  var btnGuardar = document.getElementById('aj-username-guardar-btn');
+  if (!estado || !btnGuardar) return;
+  var limpio = valor.trim();
+  var actual = E.nombre || '';
+  btnGuardar.style.display = limpio ? '' : 'none';
+  if (!limpio || limpio.toLowerCase() === actual.toLowerCase()) {
+    estado.style.display = 'none';
+    btnGuardar.disabled = true;
+    return;
+  }
+  if (/\s/.test(limpio)) {
+    estado.textContent = 'El nombre de usuario no puede tener espacios';
+    estado.className = 'aj-username-estado aj-username-estado-error';
+    estado.style.display = '';
+    btnGuardar.disabled = true;
+    return;
+  }
+  if (limpio.length < 3) {
+    estado.textContent = 'Mínimo 3 caracteres';
+    estado.className = 'aj-username-estado aj-username-estado-error';
+    estado.style.display = '';
+    btnGuardar.disabled = true;
+    return;
+  }
+  // Disponibilidad -- contra el roster real ya en memoria (`_eqPersonas`,
+  // js/equipo.js, cargado por `_eqAsegurarCargado()` -- disparado desde
+  // esta misma pantalla por `_datosRenderStats()`, ver más abajo). No existe
+  // ningún endpoint real de verificación de disponibilidad -- si el roster
+  // todavía no cargó (cuenta que nunca visitó Equipo ni vio sus stats en
+  // esta sesión), se asume disponible de forma optimista, mismo criterio
+  // que el resto de este flujo (frontend completo, backend pendiente).
+  var enUso = typeof _eqPersonas !== 'undefined' && _eqPersonas.some(function(p) {
+    return p.username && p.username.toLowerCase() === limpio.toLowerCase() && p.username.toLowerCase() !== actual.toLowerCase();
+  });
+  estado.className = 'aj-username-estado ' + (enUso ? 'aj-username-estado-error' : 'aj-username-estado-ok');
+  estado.textContent = enUso ? 'Ya está en uso' : 'Disponible';
+  estado.style.display = '';
+  btnGuardar.disabled = enUso;
+}
+function _ajUsernameGuardar() {
+  var input = document.getElementById('aj-username-input');
+  var btnGuardar = document.getElementById('aj-username-guardar-btn');
+  if (!input || !btnGuardar) return;
+  var nuevo = input.value.trim();
+  if (!nuevo || btnGuardar.disabled) return;
+  var htmlOriginal = btnGuardar.innerHTML;
+  btnGuardar.disabled = true;
+  btnGuardar.innerHTML = '<span class="btn-spinner"></span>Guardando...';
+  apiPost({ action: 'cambiarNombreUsuario', token: _token, nuevoUsername: nuevo }, function(res) {
+    if (!res || !res.exito) {
+      btnGuardar.disabled = false;
+      btnGuardar.innerHTML = htmlOriginal;
+      mostrarToast((res && res.error) || 'No se pudo cambiar el nombre de usuario. Esta función todavía no está disponible.', 'error');
+      return;
+    }
+    E.nombre = nuevo;
+    if (E.datos) E.datos.nombre = nuevo;
+    _ajUsernameCancelarEdicion();
+    _ajSetDatoVal('aj-nombre-display', nuevo, '—', false);
+    mostrarToast('Nombre de usuario actualizado.', 'ok', true);
+  }, function(e) {
+    btnGuardar.disabled = false;
+    btnGuardar.innerHTML = htmlOriginal;
+    mostrarToast((e && e.message) || 'No se pudo cambiar el nombre de usuario. Esta función todavía no está disponible.', 'error');
+  });
+}
+
+// ── Rol en el equipo (Batch 4) ──────────────────────────────────────────
+// Sin columna real en `equipo` (mismo hallazgo ya documentado para
+// `p.roles` desde el Cambio 55) -- persistido por `localStorage`
+// (`_eqRolesDe()`/`_eqSetRolesDe()`, js/equipo.js, carga antes que este
+// archivo) bajo la clave `eq_roles_<username>`, la MISMA que lee
+// `_eqPerfilContenidoHtml()` al ver este perfil desde Equipo -- "guardar en
+// localStorage + endpoint si existe" (pedido) -- no existe un endpoint
+// real, se documentó la limitación (visible solo desde el mismo
+// dispositivo) en el comentario de esa función.
+function _ajRenderRol() {
+  var cont = document.getElementById('aj-rol-pills');
+  if (!cont) return;
+  var actuales = _eqRolesDe(E.nombre);
+  if (!actuales.length) actuales = ['No definido'];
+  cont.innerHTML = _EQ_ROLES.map(function(r) {
+    return '<span class="aj-pill' + (actuales.indexOf(r) !== -1 ? ' activa' : '') + '" onclick="_ajRolToggle(this, \'' + r.replace(/'/g, "\\'") + '\')">' + _eqEsc(r) + '</span>';
+  }).join('');
+  var btnGuardar = document.getElementById('aj-rol-guardar-btn');
+  if (btnGuardar) btnGuardar.style.display = 'none';
+}
+function _ajRolToggle(el, rol) {
+  var cont = document.getElementById('aj-rol-pills');
+  if (!cont) return;
+  var esNoDefinido = rol === 'No definido';
+  if (esNoDefinido) {
+    // Selecciona SOLO "No definido", deselecciona todo lo demás (pedido
+    // explícito) -- mientras esté activo, un click en cualquier otro pill
+    // lo saca a él primero (rama de abajo) en vez de sumarse a una
+    // selección múltiple.
+    cont.querySelectorAll('.aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+    el.classList.add('activa');
+  } else if (el.classList.contains('activa')) {
+    el.classList.remove('activa');
+  } else {
+    // Si "No definido" estaba activo, sacarlo -- volver a habilitar
+    // selección múltiple real (pedido: "bloqueá selección múltiple hasta
+    // que se deseleccione").
+    var noDef = Array.prototype.filter.call(cont.querySelectorAll('.aj-pill'), function(p) { return p.textContent === 'No definido'; })[0];
+    if (noDef) noDef.classList.remove('activa');
+    el.classList.add('activa');
+  }
+  // Si nada quedó seleccionado, "No definido" vuelve solo (pedido: "si el
+  // usuario no tiene rol guardado, No definido aparece seleccionado por
+  // defecto" -- mismo criterio aplicado en vivo, no solo al cargar).
+  if (!cont.querySelector('.aj-pill.activa')) {
+    var noDef2 = Array.prototype.filter.call(cont.querySelectorAll('.aj-pill'), function(p) { return p.textContent === 'No definido'; })[0];
+    if (noDef2) noDef2.classList.add('activa');
+  }
+  var btnGuardar = document.getElementById('aj-rol-guardar-btn');
+  if (btnGuardar) btnGuardar.style.display = '';
+}
+function _ajRolGuardar() {
+  var cont = document.getElementById('aj-rol-pills');
+  if (!cont) return;
+  var seleccionados = Array.prototype.filter.call(cont.querySelectorAll('.aj-pill.activa'), function() { return true; }).map(function(p) { return p.textContent; });
+  _eqSetRolesDe(E.nombre, seleccionados);
+  var btnGuardar = document.getElementById('aj-rol-guardar-btn');
+  if (btnGuardar) btnGuardar.style.display = 'none';
+  mostrarToast('Rol actualizado.', 'ok', true);
 }
 
 function ajTogglePill(el) {
