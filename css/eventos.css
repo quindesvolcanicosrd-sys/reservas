@@ -1537,12 +1537,18 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 #ev-tour-tooltip.arrow-up::before {
   top: -14px;
   border-top-width: 0;
-  border-bottom-color: var(--card-bg);
+  /* `--brand` (antes `--card-bg`, fix reciente) -- la colita queda del
+     naranja de marca en vez del fondo de la card, sólida y visible en
+     cualquier contexto (antes, con `--card-bg`, ya no coincidía ni con el
+     `background` real del tooltip -- `var(--bg)`, no `--card-bg` -- así que
+     en algunos temas podía notarse un salto de color entre la colita y el
+     cuerpo del bubble). */
+  border-bottom-color: var(--brand);
 }
 #ev-tour-tooltip.arrow-down::before {
   bottom: -14px;
   border-bottom-width: 0;
-  border-top-color: var(--card-bg);
+  border-top-color: var(--brand);
 }
 /* Barra de progreso -- 5 segmentos finos (uno por paso, ver
    `_evTourProgressHtml()`/js/eventos.js), el del paso actual en `--brand`. */

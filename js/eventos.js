@@ -2816,7 +2816,7 @@ var _EV_TOUR_PASOS_USER = [
   // 3 pasos nuevos (Cambio 63, FIX G) -- se apoyan en el mismo mecanismo
   // genérico de `_evTourMostrarPaso()` (saltea el paso si el selector no
   // resuelve a un elemento visible), no necesitan guardas propias:
-  { selector: '#ev-nav-hoy-btn', titulo: 'Ir a hoy', texto: 'Vuelve al día de hoy desde cualquier punto del calendario con un toque.' },
+  { selector: '#ev-nav-hoy-btn', titulo: 'Ir a hoy', texto: 'Consultá qué eventos hay hoy en el calendario desde cualquier punto.' },
   // `.ev-evento-card` (el selector que traía el pedido) no existe en este
   // archivo -- la clase real de cada card de evento del timeline es
   // `.ev-card` (confirmado grepeando `class="ev-card`, `_evCardEventoHtml()`
