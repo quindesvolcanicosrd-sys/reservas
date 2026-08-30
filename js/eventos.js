@@ -2812,11 +2812,11 @@ var _EV_TOUR_PASOS_USER = [
   // recortado alrededor suyo no "spotlightea" nada real (termina calcando
   // casi el mismo rectángulo que el overlay). Este paso usa oscurecimiento
   // plano en vez de spotlight -- ver `_evTourMostrarPaso()`.
-  { selector: '#ev-timeline', sinHalo: true, titulo: 'Explora la línea de tiempo', texto: 'Encontrá todos los eventos próximos, pasados y actuales. Programados, cancelados y más — todo a simple vista.' },
+  { selector: '#ev-timeline', sinHalo: true, titulo: 'Explora la línea de tiempo', texto: 'Encuentra todos los eventos próximos, pasados y actuales. Programados, cancelados y más — todo a simple vista.' },
   // 3 pasos nuevos (Cambio 63, FIX G) -- se apoyan en el mismo mecanismo
   // genérico de `_evTourMostrarPaso()` (saltea el paso si el selector no
   // resuelve a un elemento visible), no necesitan guardas propias:
-  { selector: '#ev-nav-hoy-btn', titulo: 'Ir a hoy', texto: 'Consultá qué eventos hay hoy en el calendario desde cualquier punto.' },
+  { selector: '#ev-nav-hoy-btn', titulo: 'Ir a hoy', texto: 'Consulta qué eventos hay hoy en el calendario desde cualquier punto.' },
   // `.ev-evento-card` (el selector que traía el pedido) no existe en este
   // archivo -- la clase real de cada card de evento del timeline es
   // `.ev-card` (confirmado grepeando `class="ev-card`, `_evCardEventoHtml()`
@@ -2824,13 +2824,13 @@ var _EV_TOUR_PASOS_USER = [
   // (una por evento visible) -- resuelto por `_evTourResolverTarget()`
   // (nueva, ver `_evTourMostrarPaso()`), que toma la primera realmente
   // visible en vez de la primera en orden de DOM sin más.
-  { selector: '.ev-card', titulo: 'Detalle del evento', texto: 'Tocá cualquier evento para ver quiénes asisten, rectificar tu asistencia y mucho más.' },
+  { selector: '.ev-card', titulo: 'Detalle del evento', texto: 'Toca cualquier evento para ver quiénes asisten, rectificar tu asistencia y mucho más.' },
   // `#ev-btn-anticipada` -- oculto (`display:none`) para mirlxs y para
   // cuentas que necesitan equipo del club (`_evActualizarTopBarModo()`, más
   // abajo en este archivo) -- el chequeo de visibilidad genérico de
   // `_evTourMostrarPaso()` ya lo saltea solo para esas cuentas, sin
   // necesitar ninguna lógica de guarda aparte (tal como pedía el pedido).
-  { selector: '#ev-btn-anticipada', titulo: 'Asistencia anticipada', texto: 'Marcá tu asistencia para varios eventos futuros de una sola vez, sin repetirlo evento por evento.' }
+  { selector: '#ev-btn-anticipada', titulo: 'Asistencia anticipada', texto: 'Marca tu asistencia para varios eventos futuros de una sola vez, sin repetirlo evento por evento.' }
 ];
 var _EV_TOUR_PASOS_ADMIN = [
   { selector: '#ev-nav-mes-label', titulo: 'Navega por mes', texto: 'Abre el calendario pulsando en el mes actual para saltar directo a la fecha que buscas.' },
@@ -2980,7 +2980,7 @@ function _evTourMostrarPaso(idx) {
     // que no se note el borde recto contra la esquina redondeada.
     var dashFade = document.createElement('div');
     dashFade.id = 'ev-tour-dash-fade';
-    dashFade.style.cssText = 'position:fixed;left:14px;right:14px;top:' + (yBot - 110) + 'px;height:110px;background:linear-gradient(to bottom,transparent,rgba(0,0,0,0.65));pointer-events:none;border-radius:0 0 10px 10px;z-index:9906;';
+    dashFade.style.cssText = 'position:fixed;left:14px;right:14px;top:' + (yBot - 200) + 'px;height:200px;background:linear-gradient(to bottom,transparent,rgba(0,0,0,0.65));pointer-events:none;border-radius:0 0 10px 10px;z-index:9906;';
     document.body.appendChild(dashFade);
     _evTourSinHaloActivo = true;
   }
@@ -3381,6 +3381,14 @@ function _evTourReposicionar() {
 function _evMiniTour(key, selector, titulo, texto) {
   var lsKey = 'ev_mtour_' + key;
   if (localStorage.getItem(lsKey)) return;
+  // Guard del tour guiado principal (fix reciente) -- sin esto, un mini-tour
+  // podía dispararse ENCIMA del tour guiado (ej. su propio paso ".ev-card"
+  // resaltando la misma card cuyo pill dispara un mini-tour), 2 tooltips
+  // flotantes compitiendo por atención a la vez. `#ev-tour-overlay` es el
+  // mismo indicador que ya usa el resto del tour guiado para "está visible"
+  // (`style.display`, ver `_evTourIniciarSiCorresponde()`/`_evTourCerrar()`).
+  if (document.getElementById('ev-tour-overlay') &&
+      document.getElementById('ev-tour-overlay').style.display !== 'none') return;
   var target = document.querySelector(selector);
   if (!target) return;
   var rect = target.getBoundingClientRect();
@@ -4759,27 +4767,13 @@ function _evRenderTimeline(instant, alTerminar) {
     // la nav fija con el nuevo DOM (ej. un filtro nuevo pudo haber sacado del
     // timeline el mes que el label estaba mostrando).
     _evActualizarNavMesPorScroll();
-    // Mini-tours de evento cancelado / llegada registrada (fix reciente) --
-    // **desvío real respecto al pedido:** se pidió "al final de la función
-    // que renderiza el timeline", pero `cont.innerHTML = html` (arriba en
-    // este mismo callback) corre DENTRO de `_evFadeSwap()` -- async (fade de
-    // salida antes del swap real) -- así que el final LITERAL de
-    // `_evRenderTimeline()` se ejecuta ANTES de que el DOM nuevo exista,
-    // dejando `document.querySelector('.ev-estado-pill-danger'/'-success')`
-    // sin nada que encontrar. Puestas acá, adentro del callback, después de
-    // que el DOM real ya está insertado -- sin necesitar ningún `setTimeout`
-    // (asignar `.innerHTML` puebla el DOM de forma síncrona, a diferencia de
-    // la pantalla de detalle de `abrirEvDetalle()`, que además depende de
-    // que la PANTALLA deje de estar `display:none`). Ambas se re-intentan en
-    // cada render del timeline (cambio de filtro, de mes, etc.) sin costo
-    // real -- `_evMiniTour()` ya se auto-descarta sola si su clave de
-    // localStorage ya está marcada.
-    _evMiniTour('cancelado', '.ev-estado-pill-danger',
-      'Evento cancelado',
-      'Este evento no se realiza. No cuenta para tu asistencia ni para el cálculo de tu categoría.');
-    _evMiniTour('llegada', '.ev-estado-pill-success',
-      'Tu registro de llegada',
-      'Indica si llegaste a horario al entrenamiento. Podés corregirlo tocando el evento.');
+    // Mini-tours de "evento cancelado"/"llegada registrada" -- SACADOS de
+    // acá (fix reciente): disparar al renderizar el timeline entero era
+    // demasiado temprano/genérico -- podían aparecer apenas se entra a
+    // Eventos, ancladas al primer pill que hubiera en pantalla, sin que la
+    // persona haya interactuado con ESE evento puntual. Movidas a
+    // `abrirEvDetalle()`, junto al mini-tour de RSVP -- se disparan recién
+    // cuando la persona abre el detalle del evento que tiene ese pill.
     if (alTerminar) alTerminar();
   }, instant, _EV_TIMELINE_FADE_MS);
 }
@@ -4895,10 +4889,10 @@ function abrirEvDetalle(id) {
   // estado ya elegido desde la card dejaba el indicador sin su fondo sólido
   // (offsetWidth/offsetLeft de la opción activa medidos en 0).
   setTimeout(function() { _evUpdateRsvpSliders(false); }, 50);
-  // Mini-tour de RSVP (fix reciente) -- **desvío real respecto al pedido:**
-  // se pidió justo después de que `_evRenderDetalle()` asigna el HTML del
-  // RSVP a `.innerHTML`, pero esa función corre ACÁ ARRIBA, varias líneas
-  // antes de `ir('s-eventos-detalle')` -- la pantalla todavía está
+  // Mini-tours (fix reciente) -- **desvío real respecto al pedido original:**
+  // el de RSVP se pidió justo después de que `_evRenderDetalle()` asigna el
+  // HTML del RSVP a `.innerHTML`, pero esa función corre ACÁ ARRIBA, varias
+  // líneas antes de `ir('s-eventos-detalle')` -- la pantalla todavía está
   // `display:none` en ese punto (mismo motivo ya documentado unas líneas
   // arriba para `_evUpdateRsvpSliders()`/`_evDetalleActualizarSticky()`), así
   // que `target.getBoundingClientRect()` (`_evMiniTour()`) hubiera medido
@@ -4909,10 +4903,24 @@ function abrirEvDetalle(id) {
   // `.pantalla.activa` que documenta el tour guiado más arriba en este
   // archivo (`_evTourIniciarSiCorresponde()`/`_evActualizarTopBarModo()`):
   // deja pasar el arranque de esa animación antes de medir geometría real.
+  // "Evento cancelado"/"Llegada registrada" (antes disparados desde
+  // `_evRenderTimeline()`, fix posterior -- ver comentario en esa función)
+  // se movieron ACÁ, junto al de RSVP: los 3 pills que targetean
+  // (`.ev-asistire-wrap`/`.ev-estado-pill-danger`/`.ev-estado-pill-success`)
+  // también se renderizan dentro de esta misma pantalla de detalle
+  // (`_evRenderDetalle()`, arriba), así que disparan recién cuando la
+  // persona realmente abre el evento puntual que tiene ese pill, no apenas
+  // se pinta el timeline entero.
   setTimeout(function() {
     _evMiniTour('rsvp', '.ev-asistire-wrap',
-      'Marcá tu asistencia',
-      'Indicá si vas a asistir, no asistir o no jugás. El equipo lo ve en tiempo real.');
+      'Marca tu asistencia',
+      'Indica si vas a asistir, no asistir o no juegas. El equipo lo ve en tiempo real.');
+    _evMiniTour('cancelado', '.ev-estado-pill-danger',
+      'Evento cancelado',
+      'Este evento no se realiza. No cuenta para tu asistencia ni para el cálculo de tu categoría.');
+    _evMiniTour('llegada', '.ev-estado-pill-success',
+      'Tu registro de llegada',
+      'Indica si llegaste a horario al entrenamiento. Puedes corregirlo tocando el evento.');
   }, 100);
 }
 // Sticky de 3 niveles apilados (ver "Cambios recientes"): nav (ya sticky por

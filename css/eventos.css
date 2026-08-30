@@ -1495,7 +1495,11 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
   width: min(320px, calc(100vw - 56px));
   background: var(--bg);
   color: var(--text);
-  border: 1px solid var(--border-light);
+  /* `var(--brand)` (antes `var(--border-light)`, fix reciente) -- una
+     segunda declaración `border` en la misma regla no "se suma" a esta, la
+     reemplaza (la última gana) -- se cambió el valor acá en vez de dejar 2
+     líneas `border:` (la vieja quedaría muerta, nunca aplicada). */
+  border: 1.5px solid var(--brand);
   border-radius: 12px;
   padding: 12px 14px;
   opacity: 0;
