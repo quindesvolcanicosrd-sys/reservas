@@ -730,6 +730,14 @@ var _ajSubAbierto = null; // id del aj-sub-* actualmente abierto, o null
 // si el usuario ya lo cerró él mismo antes de cambiar de tab, no hay nada
 // que restaurar.
 var _ajUltimoSubAbierto = null;
+// Bandera de un solo uso -- `_bottomNavClick()` (js/ui.js) la prende justo
+// antes de llamar `irAjSub(_ajUltimoSubAbierto)` al volver a Ajustes desde
+// OTRO tab (regreso desde afuera de la sección) -- `irAjSub()` la consume y
+// apaga en su primera línea real, para que la próxima apertura (navegación
+// interna normal, ej. tocar una fila del home de Ajustes) vuelva al shared
+// axis X de siempre sin quedar "pegada" en modo fade. Ver el comentario
+// grande en `irAjSub()` para el porqué de la distinción.
+var _ajEntradaDesdeAfuera = false;
 
 // Clase en <body> mientras "Salud" (aj-sub-salud) es el sub-panel activo --
 // scopea el override de posición de #app-toast (css/estilos.css) que lo
@@ -750,6 +758,16 @@ function irAjSub(id, desdeHistorial) {
   // flotando sobre la pantalla equivocada sin esto.
   if (id !== 'aj-sub-salud' && typeof _saludOcultarFooter === 'function') _saludOcultarFooter();
   _ajCargarSub(id);
+  // Bug real corregido -- reabrir el sub-panel con el que se había quedado
+  // Ajustes al volver desde OTRO tab (`_ajEntradaDesdeAfuera`, ver esa var
+  // más arriba) reusaba el mismo "shared axis X" (slide + dim de fondo) de
+  // abrir un sub-panel nuevo desde el home de Ajustes -- correcto para ESE
+  // caso (hay 2 pantallas reales involucradas, lista→detalle), pero un
+  // "barrido" que no correspondía acá: no se está navegando de un sub a
+  // otro, solo se re-muestra la sección tal cual había quedado. Ese caso
+  // puntual solo hace fade de opacidad, sin mover el panel ni el fondo.
+  var soloFade = _ajEntradaDesdeAfuera;
+  _ajEntradaDesdeAfuera = false;
   // Shared axis X (Material Design 3, ver .aj-sub/#s-datos-card en
   // css/perfil.css y "Cambios recientes"): el panel nuevo entra
   // (translateX 100%→0, opacity 0.85→1) mientras #s-datos-card (el fondo)
@@ -757,8 +775,11 @@ function irAjSub(id, desdeHistorial) {
   // Por si quedó a mitad de una animación de salida (reapertura rápida del
   // mismo sub-panel): limpia el inline de sub para que arranque desde el
   // estado de reposo real de la clase (.aj-sub sin .activa: translateX(100%)/
-  // opacity 0.85), no desde un valor a medio camino.
-  sub.style.transform = ''; sub.style.opacity = '';
+  // opacity 0.85), no desde un valor a medio camino. `soloFade` arranca ya
+  // en su posición final (translateX(0)) y solo en opacity 0 -- nada que
+  // recorrer salvo la opacidad.
+  sub.style.transform = soloFade ? 'translateX(0)' : '';
+  sub.style.opacity = soloFade ? '0' : '';
   sub.classList.add('activa');
   // Doble rAF: deja que el navegador pinte el estado de reposo (recién visible
   // vía display:flex) antes de moverlo al destino — si se setea el transform
@@ -769,8 +790,14 @@ function irAjSub(id, desdeHistorial) {
     requestAnimationFrame(function() {
       sub.style.transform = 'translateX(0)';
       sub.style.opacity = '1';
-      var fondo = document.getElementById('s-datos-card');
-      if (fondo) { fondo.style.transform = 'translateX(-25%)'; fondo.style.opacity = '0.85'; }
+      // Fondo sin tocar en `soloFade` -- ya está en su posición neutra (el
+      // force-close de `ir()`/js/ui.js lo resetea al abandonar Ajustes
+      // entera, ver ese comentario) y este regreso no debe dimarlo ni
+      // desplazarlo, sería el mismo "barrido" que se está evitando.
+      if (!soloFade) {
+        var fondo = document.getElementById('s-datos-card');
+        if (fondo) { fondo.style.transform = 'translateX(-25%)'; fondo.style.opacity = '0.85'; }
+      }
     });
   });
   _ajSubAbierto = id;

@@ -420,3 +420,14 @@
    margen propio, scoped a esta lista, sin tocar ninguna otra card de
    Eventos/Tareas que hoy ya se ve bien con el valor base. */
 #tar-archivadas-lista .ev-card { margin-bottom: 14px; padding: 16px; }
+
+/* Empty state del tablero fusionado (#tar-tablero-vacio) -- bug real
+   corregido: aparecía visible al mismo tiempo que el skeleton de alguna
+   sección todavía cargando (ver el guard `cargando` agregado en
+   `_tarActualizarLayoutTablero()`, js/tareas.js). Arranca en `opacity:0`
+   (además del `display:none` inline que ya trae en index.html) y solo
+   sube a `opacity:1` -- vía `.tar-vacio-visible`, sumada recién cuando esa
+   función confirma que las 4 secciones ya terminaron de cargar Y quedaron
+   sin nada -- con una transición real en vez de aparecer de golpe. */
+#tar-tablero-vacio { opacity: 0; transition: opacity 0.35s ease; }
+#tar-tablero-vacio.tar-vacio-visible { opacity: 1; }

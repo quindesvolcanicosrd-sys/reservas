@@ -865,7 +865,12 @@ function _bottomNavClick(id) {
     // implementación paralela sin animación -- ver "Cambios recientes",
     // eliminada) -- mismo mecanismo de entrada (shared axis X) que abrir el
     // sub-panel por primera vez, sin excepciones entre los 2 caminos.
-    if (id === 'ajustes' && _ajUltimoSubAbierto) irAjSub(_ajUltimoSubAbierto);
+    // `_ajEntradaDesdeAfuera` (js/perfil.js) -- bug real corregido: reabrir
+    // el sub-panel acá (regreso desde OTRO tab) disparaba el mismo slide
+    // "shared axis X" que abrir un sub-panel nuevo desde el home de
+    // Ajustes -- ver el comentario grande en `irAjSub()` para el porqué de
+    // la distinción (ese caso pasa a un fade simple).
+    if (id === 'ajustes' && _ajUltimoSubAbierto) { _ajEntradaDesdeAfuera = true; irAjSub(_ajUltimoSubAbierto); }
     return;
   }
 }

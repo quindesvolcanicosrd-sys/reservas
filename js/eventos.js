@@ -2687,6 +2687,23 @@ function _evFabUnificadoActualizar() {
   var fab = document.getElementById('ev-fab-menu');
   var opciones = document.getElementById('ev-fab-opciones');
   if (!fab) return;
+  // Guard defensivo (bug real reportado: "el FAB de Eventos aparece en
+  // Ajustes") -- `ir()`/js/ui.js ya oculta `#ev-fab-menu` al navegar a
+  // cualquier pantalla que no sea 's-eventos', pero esa es una gate del
+  // LADO de la navegación -- si esta función se llegara a disparar después
+  // (ej. un callback async que resuelve tarde, ya con otra pantalla activa),
+  // no había ningún chequeo acá del lado de "quién me está llamando" que lo
+  // impidiera, y cualquiera de sus ramas de abajo puede volver a poner
+  // `display:''`. Chequeo directo de la pantalla activa real, en el único
+  // punto que de verdad decide mostrar el FAB (en vez de auditar cada
+  // caller para garantizar que nunca corra tarde) -- más robusto que
+  // depender de que ningún camino futuro rompa esa garantía.
+  var pantallaActiva = document.querySelector('.pantalla.activa');
+  if (!pantallaActiva || pantallaActiva.id !== 's-eventos') {
+    fab.style.display = 'none';
+    _evFabCerrar();
+    return;
+  }
   // Durante el modo selección múltiple del timeline (entrada desde el
   // detalle de un evento, "Reservar esta clase" -- ver _evReservarClase()) el
   // footer sticky de abajo (#ev-reserva-footer) ya cubre esa esquina; el FAB
@@ -2735,13 +2752,27 @@ function _evFabUnificadoActualizar() {
         fab.style.display = '';
         return;
       }
-      html =
-        '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); _evFabReservaMesActual();">' +
-          '<span class="material-symbols-outlined">calendar_month</span><span>Nueva reserva</span></button>' +
-        '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); irEvCrear();">' +
+      // Bug real corregido -- "Nueva reserva" (mensual) se ofrecía acá sin
+      // chequear `necesitaEquipo`, a diferencia del camino NO-admin
+      // (`_evFabPlusClick()`, más arriba: `_evNecesitaEquipo()` manda a
+      // reserva por clase ANTES de mirar el modo) -- una cuenta admin
+      // Quindes que depende de equipo del club podía reservar mensual
+      // igual, algo que su contraparte no-admin nunca podía hacer. Con
+      // equipo del club, solo queda "Nuevo evento" (la otra acción real de
+      // este perfil -- no se agregó acá un camino de reserva por clase,
+      // fuera del pedido).
+      if (!necesitaEquipo) {
+        html += '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); _evFabReservaMesActual();">' +
+          '<span class="material-symbols-outlined">calendar_month</span><span>Nueva reserva</span></button>';
+      }
+      html += '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); irEvCrear();">' +
           '<span class="material-symbols-outlined">edit_calendar</span><span>Nuevo evento</span></button>';
     } else {
-      if (_evTieneCuotaAlDia()) {
+      // Bug real corregido -- mismo hallazgo que arriba: "Reserva por mes"
+      // no chequeaba `necesitaEquipo`, a diferencia de la rama NO-admin de
+      // mirlxs (más abajo, `!necesitaEquipo && modo === 'mirlxs'`) que sí lo
+      // exige para ofrecer el speed-dial con las 2 opciones.
+      if (_evTieneCuotaAlDia() && !necesitaEquipo) {
         html += '<button type="button" class="ev-fab-opcion" onclick="_evFabCerrar(); _evFabReservaMesActual();">' +
           '<span class="material-symbols-outlined">calendar_month</span><span>Reserva por mes</span></button>';
       }
@@ -2925,26 +2956,35 @@ function _evTourIniciarConPasos(pasos, lsKey, labelFinalizar) {
 // Texto dinámico del paso `#ev-fab-btn`, factorizado (Batch 2) para que
 // `_evTourCambioUsuario()` lo reuse tal cual en vez de copiar la fórmula --
 // mismo criterio ya usado en este archivo para `_eqStatsCalc()`/js/equipo.js.
-// Condiciones reales auditadas contra `_evFabPlusClick()`/
-// `_evFabUnificadoActualizar()` (este archivo, las funciones que de verdad
-// deciden qué hace el botón): para una cuenta no-admin, `_evFabPlusClick()`
-// resuelve sin speed-dial a `_evFabReservaClase()` si `_evNecesitaEquipo()`
-// (mirlxs sin equipo propio, "por clase" es su ÚNICO camino) o a
-// `_evFabReservaMesActual()` si `modo === 'quindes'` ("por mes" es el único
-// camino de quindes, nunca tiene "por clase" en ningún camino del archivo);
-// el 3er caso (mirlxs CON equipo propio) cae a `_evFabToggle()`, que abre el
-// speed-dial con AMBAS opciones. Para admin, un solo texto genérico alcanza
-// -- CUALQUIER admin tiene "crear evento" siempre disponible + "reserva por
-// mes" condicional a cuota al día, pero NUNCA "por clase" en ningún branch
-// admin de `_evFabUnificadoActualizar()`.
+// Condiciones reales auditadas contra `_evFabPlusClick()` (este archivo, la
+// función que de verdad decide qué hace el botón para una cuenta no-admin):
+// `_evNecesitaEquipo()` se chequea PRIMERO, antes que el modo -- cualquier
+// cuenta que dependa de equipo del club (Quindes incluida, bug real
+// corregido más abajo -- antes se asumía que Quindes nunca tenía "por
+// clase") resuelve sin speed-dial a `_evFabReservaClase()`. Sin necesitar
+// equipo, recién ahí importa el modo: Quindes resuelve directo a
+// `_evFabReservaMesActual()` ("por mes" su único camino real); mirlxs cae a
+// `_evFabToggle()`, que abre el speed-dial con AMBAS opciones. Para admin,
+// un solo texto genérico alcanza -- CUALQUIER admin tiene "crear evento"
+// siempre disponible + "reserva por mes" condicional a cuota al día Y a no
+// necesitar equipo del club (bug real corregido en
+// `_evFabUnificadoActualizar()`, más arriba).
 function _evTourTextoFab(esAdmin) {
   var modo = _modoUsuario();
-  var esQuindes = modo === 'quindes';
   var necesitaEquipo = _evNecesitaEquipo();
-  var puedeMes = esQuindes || (modo === 'mirlxs' && !necesitaEquipo);
-  var puedeClase = modo === 'mirlxs';
+  // Bug real corregido -- `puedeMes`/`puedeClase` (y el `esQuindes ||` del
+  // primer `return` de abajo, ya sacado) nunca consultaban `necesitaEquipo`
+  // para Quindes -- asumían que TODO Quindes puede reservar mensual y NUNCA
+  // por clase, sin importar el equipamiento. La ruta real
+  // (`_evFabPlusClick()`, más arriba en este archivo) dice otra cosa:
+  // `_evNecesitaEquipo()` manda a reserva por clase ANTES de mirar el modo,
+  // para CUALQUIER cuenta no-admin (Quindes incluida) -- recién si NO
+  // necesita equipo se evalúa `modo === 'quindes'` para mensual.
+  // `puedeClase`/`puedeMes` alineados a esa misma prioridad real.
+  var puedeClase = necesitaEquipo || modo === 'mirlxs';
+  var puedeMes = !necesitaEquipo;
   if (esAdmin) return 'Reserva tu lugar en los entrenamientos o crea nuevos eventos desde este botón.';
-  if (esQuindes || (puedeMes && !puedeClase)) return 'Podrás reservar tu mensualidad desde este botón.';
+  if (puedeMes && !puedeClase) return 'Podrás reservar tu mensualidad desde este botón.';
   if (puedeClase && !puedeMes) return 'Podrás reservar tu clase desde este botón.';
   return 'Podrás reservar tu clase o tu mensualidad desde este botón.';
 }
@@ -4816,6 +4856,17 @@ function _evRenderTimeline(instant, alTerminar) {
 
   var cont = document.getElementById('ev-timeline');
   if (!cont) return;
+  // Revela el FAB unificado (bug real corregido -- "aparece roto" con
+  // Ctrl+F5, ver `#ev-fab-menu`/css/eventos.css) -- este es el único punto
+  // real donde el timeline recibe su primer batch de eventos renderizados
+  // (`irEventos()` llama acá dentro del callback de `_evCargarDatosReales()`),
+  // así que alcanza con sumar la clase acá una vez, sin importar cuál de
+  // las 2 ramas de abajo (vacía/con contenido) termine corriendo.
+  // `classList.add()` es no-op en las llamadas siguientes (filtros,
+  // búsqueda, etc. también pasan por esta función) -- no vuelve a des-revelar
+  // el FAB entre medio.
+  var fabMenu = document.getElementById('ev-fab-menu');
+  if (fabMenu) fabMenu.classList.add('ev-fab-listo');
   if (items.length === 0) {
     _evFadeSwap(cont, function() {
       cont.innerHTML = '<div class="ev-lista-vacia"><span class="material-symbols-outlined">event_busy</span>No hay eventos ni cumpleaños con estos filtros.</div>';

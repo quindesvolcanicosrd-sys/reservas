@@ -104,6 +104,21 @@
   padding-right: var(--space-screen);
   pointer-events: none;
 }
+/* Bug real corregido, scoped a `#ev-fab-menu` por id (NO a `.ev-fab-menu`
+   -- esa clase también la usan `#tar-fab-menu`/su equivalente de detalle,
+   ver css/tareas.css, que no pasan por este mismo mecanismo de "listo" y
+   quedarían invisibles para siempre si el gate fuera por clase): con
+   Ctrl+F5, `_evActualizarTopBarModo()` (dispara `_evFabUnificadoActualizar()`,
+   que pone `display:flex`) corre síncrono apenas se entra a Eventos, ANTES
+   de que `_evCargarDatosReales()` (async) resuelva y el timeline tenga su
+   primer contenido real -- el FAB se veía "aparecer roto" durante ese hueco.
+   Arranca en `opacity:0` + sin poder recibir clicks (`.ev-fab-btn` es el
+   único hijo con `pointer-events:auto` propio, ver más abajo) hasta que
+   `_evRenderTimeline()` (js/eventos.js) suma `.ev-fab-listo` -- recién ahí
+   el fade real de 0.3s hacia opacity:1. */
+#ev-fab-menu { opacity: 0; transition: opacity 0.3s ease; }
+#ev-fab-menu.ev-fab-listo { opacity: 1; }
+#ev-fab-menu:not(.ev-fab-listo) .ev-fab-btn { pointer-events: none; }
 /* Contenedor de las opciones del speed dial (#ev-fab-opciones, index.html) --
    sin este `display:flex` propio, los `.ev-fab-opcion` (abajo) quedaban
    apilados sin espacio entre sí: el `gap` de `.ev-fab-menu` (arriba) solo

@@ -532,7 +532,7 @@ function _tarCargarTodo() {
   var vacio = document.getElementById('tar-tablero-vacio');
   if (misHeader) misHeader.style.display = '';
   if (dispHeader) dispHeader.style.display = '';
-  if (vacio) { vacio.style.display = 'none'; vacio.innerHTML = ''; }
+  if (vacio) { vacio.style.display = 'none'; vacio.innerHTML = ''; vacio.classList.remove('tar-vacio-visible'); }
   if (contDisp) contDisp.innerHTML = _tarSkeletonHtml(2);
   if (contMis) contMis.innerHTML = _tarSkeletonHtml(2);
   if (_adminToken) {
@@ -918,13 +918,36 @@ function _tarActualizarLayoutTablero() {
   // nada para esa cuenta -- ver `_tarRenderValidacion()`/`_tarRenderGestionar()`).
   var vacio = document.getElementById('tar-tablero-vacio');
   if (vacio) {
-    if (misN + dispN + baulN + validarN + gestN === 0) {
+    // Bug real corregido -- esta reconciliación corre cada vez que
+    // CUALQUIERA de las 4 llamadas paralelas de `_tarCargarTodo()` resuelve
+    // (ver el comentario de esa función), sin orden garantizado entre ellas.
+    // Antes solo contaba `.ev-card`/`.admin-banner-res-row` ya pintados --
+    // si "Mis tareas" resolvía vacío ANTES que "Disponibles" (carrera real),
+    // el total ya daba 0 con Disponibles todavía mostrando su skeleton
+    // (`.ev-ant-card`, `_tarSkeletonHtml()`) -- "No hay tareas por ahora"
+    // aparecía superpuesto al skeleton en vez de esperar a que terminara.
+    // `.ev-ant-card` es EXCLUSIVO del skeleton (las cards reales usan
+    // `.ev-card`/`.admin-banner-res-row`, confirmado por grep antes de
+    // usar este selector) -- su presencia en cualquiera de las 4 listas es
+    // señal confiable de "todavía cargando esa sección".
+    var cargando = !!document.querySelector('#tar-lista-disponibles .ev-ant-card, #tar-lista-mis .ev-ant-card, #tar-lista-validar .ev-ant-card, #tar-lista-gestionar .ev-ant-card');
+    if (cargando) {
+      vacio.classList.remove('tar-vacio-visible');
+      vacio.style.display = 'none';
+    } else if (misN + dispN + baulN + validarN + gestN === 0) {
       var hayDatosReales = !!(_tarMisTareas.length || _tarDisponibles.length || _tarBaul.length || _tarPendientesValidacion.length || _tarActivas.length);
+      // Empty state con fade real (Batch nuevo) -- `display:block` primero
+      // (parte de `opacity:0` por CSS, ver css/tareas.css), doble rAF para
+      // que el navegador pinte ese `opacity:0` antes de animar a `1` (mismo
+      // patrón que el resto de la app, ej. `abrirSheetTipoPago()`), recién
+      // con el skeleton ya afuera del DOM (rama `cargando` de arriba).
       vacio.style.display = 'block';
       vacio.innerHTML = (hayDatosReales && _tarFiltroActivo('principal')) ?
         '<div class="ev-lista-vacia"><span class="material-symbols-outlined">filter_alt_off</span>No hay tareas que coincidan con estos filtros.</div>' :
         '<div class="ev-lista-vacia"><span class="material-symbols-outlined">task_alt</span>No hay tareas por ahora.</div>';
+      requestAnimationFrame(function() { requestAnimationFrame(function() { vacio.classList.add('tar-vacio-visible'); }); });
     } else {
+      vacio.classList.remove('tar-vacio-visible');
       vacio.style.display = 'none';
       vacio.innerHTML = '';
     }
