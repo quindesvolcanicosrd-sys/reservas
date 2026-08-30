@@ -35,7 +35,7 @@
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
 <link rel="stylesheet" href="css/eventos.css?v=94f3cbd9">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=11">
+<link rel="stylesheet" href="css/equipo.css?v=12">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2355,7 +2355,16 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
              sugerencias rotativas. -->
         <div class="app-nav-search" style="position:relative;">
           <span class="material-symbols-outlined">search</span>
-          <input type="text" id="eq-search-input" placeholder="Buscar por nombre o username" oninput="_eqBuscar(this.value)" onfocus="_eqSugerenciasPausar()" onblur="_eqSugerenciasReanudar()">
+          <!-- Bug real corregido (ver MANIFEST.md -- "textos del buscador se
+               superponen"): este input NO lleva `placeholder` propio -- el
+               overlay `#eq-search-suggestion` de abajo ya cumple ese rol
+               (arranca mostrando la misma sugerencia default apenas
+               `_eqSugerenciasIniciar()` corre) y se dibuja exactamente en la
+               misma posición (`left:43px`, css/equipo.css). Con los 2 a la
+               vez (placeholder nativo del navegador + overlay superpuesto)
+               el resultado eran 2 textos casi idénticos renderizados uno
+               encima del otro, ilegible. -->
+          <input type="text" id="eq-search-input" oninput="_eqBuscar(this.value)" onfocus="_eqSugerenciasPausar()" onblur="_eqSugerenciasReanudar()">
           <!-- Sugerencias rotativas (Batch 4) -- placeholder real, estático,
                no es animable (`transition` no aplica a `::placeholder` con
                contenido que cambia) -- este `<span>` superpuesto sí, ver
@@ -2934,9 +2943,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=66148b6f"></script>
-<script src="js/eventos.js?v=e2ae65c7"></script>
+<script src="js/eventos.js?v=30628b15"></script>
 <script src="js/tareas.js"></script>
-<script src="js/equipo.js?v=11"></script>
+<script src="js/equipo.js?v=12"></script>
 <script src="js/home.js?v=cf4b0197"></script>
 <script src="js/reservas.js?v=ce8c13b6"></script>
 <script src="js/perfil.js?v=3f14b298"></script>

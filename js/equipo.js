@@ -126,6 +126,29 @@ function _eqEstadoEfectivo(persona) {
   return persona.estado;
 }
 
+// Usuarios inactivos (bug real corregido, ver MANIFEST.md -- "no aparecen
+// en la lista de Equipo ni en las listas de toma de asistencia"): definición
+// PURA por fecha (30+ días sin una asistencia real registrada),
+// independiente del `estado` fijado a mano por un admin -- a diferencia de
+// `_eqEstadoEfectivo()` (arriba, mezcla ambos criterios para lo que se
+// MUESTRA como estado en el panel admin), acá se separan a propósito:
+// "Técnico"/"Lesionadx" siguen siendo miembros visibles del roster aunque
+// no entrenen, este filtro es solo sobre inasistencia real. **Client-side,
+// depende de que `ultimaAsistencia` (getEquipo(), poblada desde
+// `log_asistencias`) esté al día en el modelo** -- si esa columna deja de
+// actualizarse o el log real se desincroniza, esta función evalúa contra un
+// dato viejo sin ningún aviso. Sin fecha registrada (nunca asistió, o el
+// campo no llegó) se asume ACTIVX -- mismo criterio conservador que
+// `_eqEstadoEfectivo()`, no hay con qué evaluar inactividad todavía. Al
+// volver a tener una asistencia real, `ultimaAsistencia` se actualiza en el
+// próximo `getEquipo()` y esta función vuelve a evaluar `false` sola -- sin
+// ningún estado propio que "reactivar" a mano.
+function _eqEsInactivo(p) {
+  if (!p || !p.ultimaAsistencia) return false;
+  var dias = Math.floor((Date.now() - new Date(p.ultimaAsistencia).getTime()) / 86400000);
+  return dias >= 30;
+}
+
 var _eqYaInicializado = false;
 var _eqPersonaActual = null;
 var _eqBusqueda = '';
@@ -200,16 +223,13 @@ function _eqToggleFavorito(id) {
   var fav = idx === -1;
   if (fav) favs.push(id); else favs.splice(idx, 1);
   _eqSetFavoritos(favs);
-  // `_eqRenderFavoritos()` sigue siendo un re-render completo (a diferencia
-  // de los 2 de abajo que se sacaron) -- a diferencia de los grupos, acá SÍ
-  // hace falta: la persona tiene que aparecer/desaparecer de la lista de
-  // Favoritos, un cambio estructural real, no solo de ícono. Los grupos
-  // (Quindes/Mirlxs) NO necesitaban re-renderizarse nunca para esto -- la
-  // pertenencia a un grupo no depende de ser favorito, solo cambiaba el
-  // ícono de una fila puntual; `_eqActualizarBotonesFavorito()` (nueva, ver
-  // arriba) cubre eso sin re-crear ninguna fila ni avatar.
-  _eqRenderFavoritos();
   _eqActualizarBotonesFavorito(id, fav);
+  // Bug real corregido (ver MANIFEST.md -- "persona desaparece y reaparece
+  // arriba al agregar a favoritos"): `_eqRenderFavoritos()` (re-render
+  // completo del `innerHTML` de #eq-favoritos-lista) quedó reemplazada acá
+  // por `_eqAnimarCambioFavorito()`, que solo toca el DOM de ESA fila
+  // puntual con un fade -- el resto de la lista de Favoritos ni se toca.
+  _eqAnimarCambioFavorito(id, fav);
   // Fade in/out breve sobre CADA instancia visible del ícono de esta persona
   // (`[data-eq-fav]`, `_eqFilaHtml()`/`_eqNavHtml()`) -- puede haber más de
   // una a la vez (favoritos + su grupo, o nav de detalle + fila de lista).
@@ -222,6 +242,50 @@ function _eqToggleFavorito(id) {
     el.classList.add('eq-fav-pulse');
     setTimeout(function() { el.classList.remove('eq-fav-pulse'); }, 300);
   });
+}
+
+// Mueve/agrega/saca SOLO la fila de `id` en #eq-favoritos-lista, con fade
+// (ver _eqToggleFavorito() arriba) -- nunca reconstruye el resto de la
+// lista. Al agregar: crea la fila con opacity:0 e insertada al inicio,
+// reflow forzado (mismo truco que el pulse de arriba) para que el navegador
+// registre el estado inicial antes de subir a opacity:1, si no la
+// transición no se ve. Al sacar: fade-out de 0.25s y recién ahí `.remove()`
+// -- el timeout coincide con la `transition` de css/equipo.css
+// (`.eq-fila-fade`).
+function _eqAnimarCambioFavorito(id, fav) {
+  var wrap = document.getElementById('eq-favoritos-wrap');
+  var cont = document.getElementById('eq-favoritos-lista');
+  if (!wrap || !cont) return;
+  var persona = _eqPersonaPorId(id);
+  if (!persona || _eqEsUsuarioActual(persona)) return;
+  if (fav) {
+    if (_eqBusqueda && !_eqPasaBusqueda(persona)) return; // no visible bajo el filtro actual -- nada que animar
+    var vacio = cont.querySelector('.eq-favoritos-vacio');
+    if (vacio) vacio.remove();
+    var tmp = document.createElement('div');
+    tmp.innerHTML = _eqFilaHtml(persona);
+    var fila = tmp.firstChild;
+    fila.classList.add('eq-fila-fade');
+    fila.style.opacity = '0';
+    cont.insertBefore(fila, cont.firstChild);
+    wrap.style.display = '';
+    _eqHidratarAvatares();
+    void fila.offsetWidth;
+    fila.style.opacity = '1';
+  } else {
+    var btnExistente = cont.querySelector('[data-eq-fav="' + id + '"]');
+    var filaExistente = btnExistente ? btnExistente.closest('.eq-miembro-fila') : null;
+    if (!filaExistente) return;
+    filaExistente.classList.add('eq-fila-fade');
+    void filaExistente.offsetWidth;
+    filaExistente.style.opacity = '0';
+    setTimeout(function() {
+      filaExistente.remove();
+      if (!cont.children.length) {
+        cont.innerHTML = '<div class="eq-favoritos-vacio"><span class="material-symbols-outlined">favorite</span>Agrega personas a favoritos para verlos aquí</div>';
+      }
+    }, 250);
+  }
 }
 
 /* ── Punto de entrada (ver 'entrar' de APP_BOTTOM_NAV_ITEMS en js/ui.js) ── */
@@ -258,9 +322,43 @@ function _eqInit() {
 /* ── Hidratación de avatares (mismo patrón que _evHidratarAvatares(),
    js/eventos.js): puebla cualquier `.eq-avatar[data-nombre]` visible con
    foto o inicial vía el helper compartido. */
+// Paleta de fondo/letra para avatares sin foto (Bug real corregido, ver
+// MANIFEST.md -- antes SIEMPRE el mismo fondo neutro, `var(--surface-2)`,
+// para cualquier persona, css/global.css). Pares bg/fg ya existentes en
+// css/colors.css (con su propia variante oscura -- nada hardcodeado acá),
+// mismo patrón visual que ya usa `.eq-mini-tier-pill`/etc: fondo tenue +
+// letra en el color sólido correspondiente.
+var _EQ_AVATAR_PALETTE = [
+  { bg: 'var(--brand-light)', fg: 'var(--brand)' },
+  { bg: 'var(--purple-bg)', fg: 'var(--purple)' },
+  { bg: 'var(--info-bg)', fg: 'var(--info)' },
+  { bg: 'var(--success-bg)', fg: 'var(--success)' },
+  { bg: 'var(--amber-light)', fg: 'var(--amber)' }
+];
+// `charCodeAt(0) % paleta.length` (pedido explícito) sobre la PRIMERA letra
+// real (mismo criterio que `_avatarSetFotoOInicial()`, js/ui.js, para
+// decidir qué letra mostrar) -- consistente entre renders, nunca al azar,
+// porque depende solo del nombre.
+function _eqColorAvatarDe(nombre) {
+  var letra = String(nombre || '?').trim().charAt(0).toUpperCase() || '?';
+  return _EQ_AVATAR_PALETTE[letra.charCodeAt(0) % _EQ_AVATAR_PALETTE.length];
+}
 function _eqHidratarAvatares() {
   document.querySelectorAll('.eq-avatar[data-nombre]').forEach(function(el) {
-    _avatarSetFotoOInicial(el, el.getAttribute('data-foto') || '', el.getAttribute('data-nombre'));
+    var foto = el.getAttribute('data-foto') || '';
+    var nombre = el.getAttribute('data-nombre');
+    _avatarSetFotoOInicial(el, foto, nombre);
+    // Solo en Equipo (`.eq-avatar`) -- `.avatar-pill` es compartido por el
+    // resto de la app (Tareas, Eventos, Ajustes...) y tocarle el color ahí
+    // también queda fuera de alcance de este pedido.
+    if (!foto) {
+      var c = _eqColorAvatarDe(nombre);
+      el.style.background = c.bg;
+      var letraEl = el.querySelector('.avatar-pill-letter');
+      if (letraEl) letraEl.style.color = c.fg;
+    } else {
+      el.style.background = '';
+    }
   });
 }
 
@@ -286,20 +384,34 @@ function _eqStatsInlineHtml(p) {
   if (p.total_eventos_ano !== undefined && p.total_eventos_ano !== null) {
     html += '<span class="eq-mini-stat"><span class="material-symbols-rounded">kid_star</span>' + statsCalc.asistenciaPct + '%</span>';
   }
-  // Tier pill Q/M -- oculta si el tier está fijado a mano (`tierModo !== 'auto'`,
-  // pedido explícito -- ver `_eqTierAdminHtml()` más abajo para el mismo campo).
-  if (p.tierModo === 'auto' && p.rol) {
-    html += '<span class="eq-mini-tier-pill">' + (p.rol === 'Quindes' ? 'Q' : 'M') + '</span>';
+  // Puntos por tareas/asistencia (pedido nuevo, ver MANIFEST.md) -- **sin
+  // dato real todavía**: `getEquipo()` no devuelve `puntosTareas`/
+  // `puntosAsistencia` -- los puntos reales viven en `puntos_mensuales`
+  // (columnas `puntos_tareas`/`puntos_asistencias`, una fila por
+  // `nombre_usuario`+año+mes, ver esquema en MANIFEST.md), y agregarlos acá
+  // exige antes decidir qué período mostrar (¿mes actual? ¿año?), una
+  // decisión de producto fuera de alcance de este fix. Mismo criterio que
+  // el chevron de tendencia de abajo: el `<span>` queda condicionado a que
+  // el campo exista, sin inventar un valor mientras tanto -- en los datos
+  // reales de hoy, sencillamente no se pintan.
+  if (p.puntosTareas !== undefined && p.puntosTareas !== null) {
+    html += '<span class="eq-mini-stat"><span class="material-symbols-rounded">task_alt</span>' + p.puntosTareas + '</span>';
+  }
+  if (p.puntosAsistencia !== undefined && p.puntosAsistencia !== null) {
+    html += '<span class="eq-mini-stat"><span class="material-symbols-rounded">stars</span>' + p.puntosAsistencia + '</span>';
   }
   // Chevron de tendencia -- **sin dato real**: `getEquipo()` no devuelve
   // ningún valor anterior del termómetro para comparar (no existe
   // `termometro_pct_anterior` ni nada equivalente en el schema real, ver
   // supabase/functions/api/index.ts) -- placeholder listo para cuando ese
-  // campo exista, sin inventar una tendencia falsa mientras tanto.
+  // campo exista, sin inventar una tendencia falsa mientras tanto. Pill Q/M
+  // de tier SACADA (pedido explícito, ver MANIFEST.md -- "quitar pills Q/M,
+  // mantener solo chevrones de tendencia"): el chevron de acá abajo es hoy
+  // el único indicador de tier/tendencia en la fila.
   if (p.termometro_pct_anterior !== undefined && p.termometro_pct_anterior !== null) {
     var diff = (p.termometro_pct || 0) - p.termometro_pct_anterior;
-    if (diff > 0) html += '<span class="eq-mini-tendencia eq-mini-tendencia-up material-symbols-outlined">arrow_drop_up</span>';
-    else if (diff < 0) html += '<span class="eq-mini-tendencia eq-mini-tendencia-down material-symbols-outlined">arrow_drop_down</span>';
+    if (diff > 0) html += '<span class="eq-mini-tendencia eq-mini-tendencia-up">▲</span>';
+    else if (diff < 0) html += '<span class="eq-mini-tendencia eq-mini-tendencia-down">▼</span>';
   }
   return html;
 }
@@ -307,10 +419,16 @@ function _eqStatsInlineHtml(p) {
 function _eqFilaHtml(p) {
   var fav = _eqEsFavorito(p.id);
   var statsHtml = _eqStatsInlineHtml(p);
+  // Bug real corregido (ver MANIFEST.md -- "no mostrar '#' si el usuario no
+  // tiene número de derby"): `numeroDerby` puede llegar `null`/`undefined`/
+  // `''` (getEquipo(), `numero_derby ?? ''`) -- antes se concatenaba
+  // igual, mostrando un "#" pelado sin número al lado del nombre.
+  var numeroHtml = (p.numeroDerby !== null && p.numeroDerby !== undefined && p.numeroDerby !== '')
+    ? ' <span class="eq-miembro-numero">#' + p.numeroDerby + '</span>' : '';
   return '<div class="eq-miembro-fila" onclick="_eqAbrirPerfil(\'' + p.id + '\')">' +
       _eqAvatarHtml(p, 'avatar-pill--sm') +
       '<div class="eq-miembro-info">' +
-        '<div class="eq-miembro-nombre">' + _eqEsc(p.nombreDerby) + ' <span class="eq-miembro-numero">#' + p.numeroDerby + '</span></div>' +
+        '<div class="eq-miembro-nombre">' + _eqEsc(p.nombreDerby) + numeroHtml + '</div>' +
         '<div class="eq-miembro-username">@' + _eqEsc(p.username) + '</div>' +
         (statsHtml ? '<div class="eq-miembro-stats">' + statsHtml + '</div>' : '') +
       '</div>' +
@@ -409,7 +527,7 @@ function _eqRenderPorRol() {
   var html = '';
   _EQ_ROLES.forEach(function(rol) {
     var miembros = _eqPersonas.filter(function(p) {
-      return !_eqEsUsuarioActual(p) && _eqRolesDe(p.username).indexOf(rol) !== -1;
+      return !_eqEsUsuarioActual(p) && !_eqEsInactivo(p) && _eqRolesDe(p.username).indexOf(rol) !== -1;
     });
     if (!miembros.length) return;
     var key = rol.toLowerCase().replace(/\s+/g, '-');
@@ -428,6 +546,17 @@ function _eqRenderPorRol() {
   });
   cont.innerHTML = html || '<div class="eq-favoritos-vacio"><span class="material-symbols-outlined">group_off</span>Nadie tiene un rol asignado todavía.</div>';
   _eqHidratarAvatares();
+  // Bug real corregido (ver MANIFEST.md -- "acordeones de roles no se ven
+  // expandidos"): la clase `.abierto` de arriba ya NO trae ningún
+  // `max-height` propio (esa regla se sacó de css/equipo.css, ver el
+  // comentario ahí -- "lista de Mirlxs truncada") -- solo el `style.maxHeight`
+  // inline que fija `_eqToggleGrupo()` la abre de verdad. Sin este paso, cada
+  // acordeón nacía con la clase `.abierto` puesta pero `max-height:0` heredado
+  // de `.eq-grupo-body`, colapsado pese al pedido explícito de "expandido por
+  // defecto".
+  cont.querySelectorAll('.eq-grupo-body.abierto').forEach(function(body) {
+    body.style.maxHeight = body.scrollHeight + 'px';
+  });
 }
 
 // Sugerencias rotativas del buscador (Batch 4) -- placeholder real, estático
@@ -468,7 +597,7 @@ function _eqRenderFavoritos() {
   var wrap = document.getElementById('eq-favoritos-wrap');
   var cont = document.getElementById('eq-favoritos-lista');
   if (!wrap || !cont) return;
-  var todas = _eqFavoritos().map(_eqPersonaPorId).filter(function(p) { return !!p && !_eqEsUsuarioActual(p); });
+  var todas = _eqFavoritos().map(_eqPersonaPorId).filter(function(p) { return !!p && !_eqEsUsuarioActual(p) && !_eqEsInactivo(p); });
   if (_eqBusqueda) {
     var filtradas = todas.filter(_eqPasaBusqueda);
     wrap.style.display = filtradas.length ? '' : 'none';
@@ -488,7 +617,7 @@ function _eqRenderGrupo(rol) {
   var cont = document.getElementById('eq-grupo-' + key + '-lista');
   var pillEl = document.getElementById('eq-grupo-' + key + '-pill');
   if (!wrap || !cont) return;
-  var filtradas = _eqPersonas.filter(function(p) { return p.rol === rol; }).filter(function(p) { return !_eqEsUsuarioActual(p); }).filter(_eqPasaBusqueda);
+  var filtradas = _eqPersonas.filter(function(p) { return p.rol === rol; }).filter(function(p) { return !_eqEsUsuarioActual(p) && !_eqEsInactivo(p); }).filter(_eqPasaBusqueda);
   wrap.style.display = filtradas.length ? '' : 'none';
   if (pillEl) pillEl.textContent = filtradas.length;
   cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
@@ -908,24 +1037,45 @@ function _eqPerfilContenidoHtml(p) {
   filas += '<div class="eq-info-fila"><span class="material-symbols-outlined">badge</span><span class="eq-info-texto' + (rolTexto ? '' : ' eq-info-texto-vacio') + '">' + (rolTexto ? _eqEsc(rolTexto) : 'Rol no definido') + '</span></div>';
 
   var statsCalc = _eqStatsCalc(p);
+  // Puntos por tareas/asistencia (pedido nuevo, ver MANIFEST.md) -- **sin
+  // dato real todavía**: mismo hallazgo que `_eqStatsInlineHtml()` (arriba
+  // en este archivo) -- `getEquipo()` no devuelve `puntosTareas`/
+  // `puntosAsistencia` (viven en `puntos_mensuales`, agregados por mes, sin
+  // decidir todavía qué período mostrar acá). "—" mientras tanto, pedido
+  // explícito, en vez de esconder las 2 tarjetas nuevas del todo.
+  var puntosTareasTxt = (p.puntosTareas !== undefined && p.puntosTareas !== null) ? p.puntosTareas : '—';
+  var puntosAsistenciaTxt = (p.puntosAsistencia !== undefined && p.puntosAsistencia !== null) ? p.puntosAsistencia : '—';
+  // Termómetro solo con equipo propio (bug real, ver MANIFEST.md): oculto
+  // por completo si la persona necesita patines o protecciones del club
+  // (`necesitaPatines`/`necesitaProtecciones`, `getEquipo()` -- equivalente
+  // real al "necesita_equipo_club" del pedido, ver ese comentario en
+  // supabase/functions/api/index.ts). `_eqRenderPerfil()` (más abajo) ya
+  // guarda con `if (rankWrap)`/`if (fill)` antes de tocar este bloque, así
+  // que no renderizarlo acá no rompe nada ahí.
+  var necesitaEquipoClub = !!(p.necesitaPatines || p.necesitaProtecciones);
   return '<div class="eq-perfil-header">' +
       '<div class="eq-avatar-wrap">' +
         _eqAvatarHtml(p, 'eq-avatar-grande') +
         '<span class="eq-rol-pill">' + _eqEsc(p.rol) + '</span>' +
       '</div>' +
       '<div class="eq-perfil-nombre">' + _eqEsc(p.nombreDerby) + '</div>' +
-      '<div class="eq-perfil-sub">#' + p.numeroDerby + ' &bull; @' + _eqEsc(p.username) + '</div>' +
+      '<div class="eq-perfil-sub">' + ((p.numeroDerby !== null && p.numeroDerby !== undefined && p.numeroDerby !== '') ? '#' + p.numeroDerby + ' &bull; ' : '') + '@' + _eqEsc(p.username) + '</div>' +
     '</div>' +
     (pillsHtml ? '<div class="eq-perfil-pills-row">' + pillsHtml + '</div>' : '') +
     '<div class="eq-stats-grid">' +
       '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">roller_skating</span><div class="eq-stat-valor">' + statsCalc.horas + 'h</div><div class="eq-stat-label">Horas patinadas</div></div>' +
       '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">kid_star</span><div class="eq-stat-valor">' + statsCalc.asistenciaPct + '%</div><div class="eq-stat-label">Asistencia anual</div></div>' +
     '</div>' +
+    '<div class="eq-stats-grid">' +
+      '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">task_alt</span><div class="eq-stat-valor">' + puntosTareasTxt + '</div><div class="eq-stat-label">Puntos por tareas</div></div>' +
+      '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">stars</span><div class="eq-stat-valor">' + puntosAsistenciaTxt + '</div><div class="eq-stat-label">Puntos por asistencia</div></div>' +
+    '</div>' +
+    (necesitaEquipoClub ? '' :
     '<div class="eq-rank-wrap">' +
       '<div class="eq-rank-labels"><span>Mirlxs</span><span>Quindes</span></div>' +
       '<div class="eq-rank-track"><div class="eq-rank-fill" id="eq-rank-fill" style="width:0%;"></div></div>' +
       '<div class="eq-rank-texto">' + _eqEsc(_eqRankTexto(p)) + '</div>' +
-    '</div>' +
+    '</div>') +
     (filas ? '<div class="eq-info-lista">' + filas + '</div>' : '') +
     _eqTierAdminHtml(p) +
     _eqAdminGestionHtml(p);

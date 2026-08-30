@@ -99,15 +99,13 @@
   pointer-events: none;
 }
 .eq-mini-stat .material-symbols-rounded { font-size: 0.9rem; color: var(--brand); }
-.eq-mini-tier-pill {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 18px; height: 18px; border-radius: 50%;
-  background: var(--brand-light); color: var(--brand);
-  font-size: 0.65rem; font-weight: 800; pointer-events: none;
-}
-.eq-mini-tendencia { font-size: 1.1rem; line-height: 1; pointer-events: none; }
+/* `.eq-mini-tier-pill` (pill Q/M) eliminada (pedido explícito, ver
+   MANIFEST.md -- "quitar pills Q/M, mantener solo chevrones de tendencia"):
+   `_eqStatsInlineHtml()`/js/equipo.js ya no la renderiza, el chevron de
+   abajo es el único indicador que queda. */
+.eq-mini-tendencia { font-size: 0.85rem; line-height: 1; font-weight: 700; pointer-events: none; }
 .eq-mini-tendencia-up { color: var(--success); }
-.eq-mini-tendencia-down { color: var(--danger); }
+.eq-mini-tendencia-down { color: var(--error); }
 .eq-fav-btn {
   flex-shrink: 0; display: flex; align-items: center; justify-content: center;
   width: 38px; height: 38px; border-radius: 50%; background: none; border: none;
@@ -123,6 +121,12 @@
    mismo atributo `data-eq-fav`. */
 @keyframes eqFavPulse { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
 .eq-fav-pulse { animation: eqFavPulse 0.3s ease; }
+
+/* Fade al agregar/sacar una fila puntual de #eq-favoritos-lista
+   (`_eqAnimarCambioFavorito()`/js/equipo.js) -- reemplaza el re-render
+   completo que causaba el salto abrupto al reordenar (bug real, ver
+   MANIFEST.md). */
+.eq-fila-fade { transition: opacity 0.25s ease; }
 
 /* ── Perfil de detalle (#s-equipo-perfil) ────────── */
 #eq-perfil-nav { position: sticky; top: 0; z-index: 30; }

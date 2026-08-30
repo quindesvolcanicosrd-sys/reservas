@@ -1801,6 +1801,27 @@ async function adminGetCandidatosAdmin(): Promise<any[]> {
 async function adminGetRosterEquipo(): Promise<Record<string, any>> {
   const { data } = await supabase.from('equipo').select('username, nombre_derby, foto_perfil').order('username');
   const personas = (data ?? []).map((r: any) => ({ nombre: r.username, nombreDerby: r.nombre_derby ?? '', fotoPerfil: r.foto_perfil ?? '' }));
+  if (!personas.length) return { personas };
+  // `ultimaAsistencia` (bug real "usuarios inactivos siguen en la lista de
+  // toma de asistencia", ver MANIFEST.md): mismo query que getEquipo() (más
+  // abajo en este archivo) duplicado acá a propósito -- 2 endpoints
+  // distintos con su propio shape de salida, mismo criterio de duplicación
+  // ya usado en el resto del repo (ver comentario de cabecera de
+  // _eqFormatearFechaIngreso(), js/equipo.js) en vez de hacer que este
+  // endpoint dependa de getEquipo(). `_evEsInactivo()`/js/eventos.js filtra
+  // el roster de "Marcar asistencia" con este campo, mismo criterio de 30
+  // días que `_eqEstadoEfectivo()`/js/equipo.js.
+  const usernames = personas.map((p: any) => p.nombre);
+  const { data: logs } = await supabase.from('log_asistencias')
+    .select('nombre_usuario, fecha_entrenamiento')
+    .eq('origen', 'Admin').neq('estado', 'Ninguno').in('nombre_usuario', usernames);
+  const ultimaPorUsuario: Record<string, string> = {};
+  (logs ?? []).forEach((l: any) => {
+    if (!l.fecha_entrenamiento) return;
+    const actual = ultimaPorUsuario[l.nombre_usuario];
+    if (!actual || l.fecha_entrenamiento > actual) ultimaPorUsuario[l.nombre_usuario] = l.fecha_entrenamiento;
+  });
+  personas.forEach((p: any) => { p.ultimaAsistencia = ultimaPorUsuario[p.nombre] ? ultimaPorUsuario[p.nombre].slice(0, 10) : null; });
   return { personas };
 }
 
@@ -1812,7 +1833,7 @@ async function adminGetRosterEquipo(): Promise<Record<string, any>> {
 // acciones de solo-lectura.
 async function getEquipo(): Promise<Record<string, any>> {
   const { data: filas } = await supabase.from('equipo')
-    .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, prefijo, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano, termometro_pct, fecha_ingreso')
+    .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, prefijo, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano, termometro_pct, fecha_ingreso, necesita_patines, necesita_protecciones')
     .order('username');
   const personas = filas ?? [];
   if (!personas.length) return { personas: [] };
@@ -1874,6 +1895,14 @@ async function getEquipo(): Promise<Record<string, any>> {
     total_eventos_ano: Number(r.total_eventos_ano) || 0,
     termometro_pct: Number(r.termometro_pct) || 0,
     ultimaAsistencia: ultimaPorUsuario[r.username] ? ultimaPorUsuario[r.username].slice(0, 10) : null,
+    // Bug real "termómetro visible aunque la persona necesite equipo del
+    // club" (ver MANIFEST.md): `equipo.necesita_patines`/`necesita_protecciones`
+    // (columnas reales, ver actualizarEquipamientoPersona() arriba en este
+    // archivo) son el equivalente real al "necesita_equipo_club" del pedido
+    // -- no existe un flag único combinado en el modelo, así que el
+    // frontend (`_eqPerfilContenidoHtml()`, js/equipo.js) los combina con OR.
+    necesitaPatines: r.necesita_patines === true,
+    necesitaProtecciones: r.necesita_protecciones === true,
   }));
 
   return { personas: personasOut };

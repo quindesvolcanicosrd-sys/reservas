@@ -4252,8 +4252,22 @@ function _evRepintarMarcarAsistSiHaceFalta() {
 // constante de arriba), el slider arranca sin ninguna opción activa
 // (`_evPosicionarRsvpSlider()` ya sabe mostrar eso con opacity:0, mismo
 // comportamiento que la barra de RSVP para alguien que nunca respondió).
+// Usuarios inactivos fuera del roster de "Marcar asistencia" (bug real
+// corregido, ver MANIFEST.md -- "no aparecen en las listas de toma de
+// asistencia"): mismo criterio de 30 días que `_eqEsInactivo()`/js/equipo.js
+// (duplicado a propósito acá, mismo patrón de duplicación ya usado en el
+// resto de este archivo -- `_evRosterEquipo` es un roster propio, distinto
+// del `_eqPersonas` de esa otra sección). **Client-side, depende de
+// `ultimaAsistencia`** (ahora poblada también por `adminGetRosterEquipo()`,
+// ver supabase/functions/api/index.ts) -- si esa columna se desincroniza,
+// este filtro queda evaluando contra un dato viejo sin aviso.
+function _evEsInactivo(p) {
+  if (!p || !p.ultimaAsistencia) return false;
+  var dias = Math.floor((Date.now() - new Date(p.ultimaAsistencia).getTime()) / 86400000);
+  return dias >= 30;
+}
 function _evRosterAdminFilasHtml(e, q) {
-  var roster = _evRosterEquipo || [];
+  var roster = (_evRosterEquipo || []).filter(function(p) { return !_evEsInactivo(p); });
   var qn = (q || '').toLowerCase().trim();
   var filtrado = qn ? roster.filter(function(p) { return (p.nombreDerby || '').toLowerCase().indexOf(qn) !== -1 || String(p.nombre).toLowerCase().indexOf(qn) !== -1; }) : roster;
   if (!filtrado.length) return '<div class="ev-roster-vacio">' + (roster.length ? 'Sin resultados.' : 'No se pudo cargar el equipo.') + '</div>';
