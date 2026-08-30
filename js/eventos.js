@@ -3017,7 +3017,7 @@ function _evTourMostrarPaso(idx) {
     var yBot = navBot ? navBot.getBoundingClientRect().top - 8 : window.innerHeight - 60;
     var dashBox = document.createElement('div');
     dashBox.id = 'ev-tour-dash-box';
-    dashBox.style.cssText = 'position:fixed;left:12px;right:12px;top:' + yTop + 'px;height:' + (yBot - yTop) + 'px;border:2px dashed var(--brand);border-radius:12px;z-index:9905;pointer-events:none;box-shadow:0 0 0 9999px rgba(0,0,0,0.52);';
+    dashBox.style.cssText = 'position:fixed;left:12px;right:12px;top:' + yTop + 'px;height:' + (yBot - yTop) + 'px;border:2px dashed var(--brand);border-radius:12px;z-index:9905;pointer-events:none;box-shadow:0 0 0 9999px rgba(0,0,0,0.72);';
     document.body.appendChild(dashBox);
     // Gradiente de separación DENTRO del recuadro punteado, pegado a su
     // borde inferior (fix reciente -- reemplaza el intento anterior,
@@ -3077,7 +3077,7 @@ function _evTourPosicionarHalo(el) {
     'height:' + (r.height + 10) + 'px',
     'border-radius:' + br + 'px',
     'border:2px dashed var(--brand)',
-    'box-shadow:0 0 0 9999px rgba(0,0,0,0.55)',
+    'box-shadow:0 0 0 9999px rgba(0,0,0,0.72)',
     'pointer-events:none',
     'z-index:9905',
     'box-sizing:border-box'

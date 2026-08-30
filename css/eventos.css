@@ -1461,12 +1461,16 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
    hacer falta, y elevar el ancestro entero terminaba resaltando de más que
    el target real -- `_evTourAncestroFijo()` fue eliminada). Guardado/
    restaurado en `_evTourResaltarTarget()`, nada de eso vive en este archivo.
-   Tokens reales del sistema de colores: `--card-bg` (no `--bg-card`, que no
-   existe en css/colors.css -- se usa el token real más cercano al
-   pedido)/`--text`/`--border-light`/`--shadow-lg` para el bubble, `--brand`
-   para el título/la flecha/los segmentos activos de la barra de progreso Y
-   el halo punteado del target (antes `--brand-60`, con opacity -- el halo
-   dinámico usa `--brand` sólido, pedido explícito del Cambio 50). z-index
+   Tokens reales del sistema de colores para el bubble (actualizado, fix
+   reciente -- ya NO son los del pedido original de Cambio 47, quedaron
+   desactualizados por fixes posteriores): `--bg`/`--text` para
+   fondo/texto, `--brand` para el borde + el glow del `box-shadow`
+   (`--brand-pulse`, 35% de opacidad del color de marca actual --
+   `js/color-enfasis.js`), antes `--card-bg`/`--border-light`/`--shadow-lg`.
+   `--brand` también para el título/la flecha/los segmentos activos de la
+   barra de progreso Y el halo punteado del target (antes `--brand-60`, con
+   opacity -- el halo dinámico usa `--brand` sólido, pedido explícito del
+   Cambio 50). z-index
    escalonado (fix reciente, tooltip subido de 9902 a 9960): overlay 9900 <
    target elevado 9903 < halo/dash-box 9905 < blocker anti-tap-through 9920
    < tooltip 9960 -- todos por debajo del loading overlay (9999) y de los
@@ -1502,6 +1506,18 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
   border: 1.5px solid var(--brand);
   border-radius: 12px;
   padding: 12px 14px;
+  /* Glow (fix reciente) -- 3 capas: `0 0 0 1px var(--brand)` reafirma el
+     borde (el color de acento, dinámico -- ver "Motor de color de énfasis",
+     `js/color-enfasis.js` -- se recalcula en runtime, nunca queda fijo en
+     `#F97316`), `0 0 18px 4px var(--brand-pulse)` el resplandor difuso, y
+     `0 4px 24px rgba(0,0,0,0.4)` la sombra de profundidad de siempre.
+     `var(--brand-pulse)` (no un rgba hardcodeado tipo `rgba(249,115,22,0.35)`,
+     ni `color-mix()`) -- ya existe en `js/color-enfasis.js` exactamente como
+     "el color de marca actual al 35% de opacidad" (`rgbaBrand(0.35)`, mismo
+     mecanismo que ya usan `--brand-light`/`--brand-glow`/etc.) -- se
+     recalcula solo cuando cambia el color de énfasis, sin quedar
+     desincronizado del naranja real como haría un valor fijo. */
+  box-shadow: 0 0 0 1px var(--brand), 0 0 18px 4px var(--brand-pulse), 0 4px 24px rgba(0,0,0,0.4);
   opacity: 0;
   transition: opacity 0.2s ease, top 0.35s var(--ease-sheet), left 0.35s var(--ease-sheet);
   /* 9960 (antes 9902, fix reciente) -- por encima de TODO lo demás del tour,
