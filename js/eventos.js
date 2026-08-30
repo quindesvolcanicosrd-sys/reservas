@@ -2842,6 +2842,12 @@ var _evTourPasos = null;
 var _evTourIdx = 0;
 var _evTourActivo = false;
 var _evTourRafPendiente = false;
+// Fix reciente -- `true` mientras el paso actual es `sinHalo` (ej.
+// `#ev-timeline`): `_evTourPosicionarTooltip()` lo lee para reposicionar el
+// tooltip fijo abajo de la pantalla en vez del cálculo normal relativo al
+// target (ese paso no tiene un target puntual del que colgar el tooltip, el
+// "target" es casi toda la pantalla). Reseteado en `_evTourLimpiarHalo()`.
+var _evTourSinHaloActivo = false;
 // Elemento elevado por encima de #ev-tour-overlay para el target actual --
 // siempre el `el` recibido por `_evTourResaltarTarget()` (ver más abajo);
 // hasta el Cambio 63 podía ser un ancestro `fixed`/`sticky` suyo en su
@@ -2928,6 +2934,23 @@ function _evTourMostrarPaso(idx) {
     if (ov) ov.style.background = 'rgba(0,0,0,0.52)';
     var h = document.getElementById('ev-tour-halo');
     if (h) h.style.display = 'none';
+    // Dashed box (fix reciente) -- reemplaza el halo puntual por un
+    // recuadro grande entre el header sticky de Eventos y la nav inferior
+    // (`#ev-sticky-header`/`.app-bottom-nav`, NO `.app-nav-fixed` como daba
+    // el pedido original -- esa clase es de la nav FIJA de Home/`#s4-nav`,
+    // ausente/oculta en la pantalla de Eventos; `getBoundingClientRect()`
+    // sobre un elemento `display:none` da todo en 0, hubiera dejado
+    // `yTop`/`yBot` mal calculados). Fallbacks (`64`/`window.innerHeight - 60`)
+    // solo por si ninguno de los 2 elementos existe.
+    var navTop = document.getElementById('ev-sticky-header');
+    var navBot = document.querySelector('.app-bottom-nav');
+    var yTop = navTop ? navTop.getBoundingClientRect().bottom + 8 : 64;
+    var yBot = navBot ? navBot.getBoundingClientRect().top - 8 : window.innerHeight - 60;
+    var dashBox = document.createElement('div');
+    dashBox.id = 'ev-tour-dash-box';
+    dashBox.style.cssText = 'position:fixed;left:12px;right:12px;top:' + yTop + 'px;height:' + (yBot - yTop) + 'px;border:2px dashed var(--brand);border-radius:12px;z-index:9905;pointer-events:none;';
+    document.body.appendChild(dashBox);
+    _evTourSinHaloActivo = true;
   }
   // Timeline bloqueado durante su propio paso (Cambio 63, FIX E, issue 3a):
   // scrollear la lista de eventos mientras el halo la resalta desalineaba el
@@ -3004,6 +3027,14 @@ function _evTourLimpiarHalo() {
   if (ov) ov.style.background = 'transparent';
   var h = document.getElementById('ev-tour-halo');
   if (h) h.style.display = '';
+  // `#ev-tour-dash-box` (fix reciente, paso `sinHalo`) -- a diferencia del
+  // halo real (creado/destruido por `_evTourPosicionarHalo()`/`_evTourHaloEl`),
+  // este SÍ se elimina acá (no hay una función "posicionadora" propia que lo
+  // reemplace en cada paso, se crea una sola vez por entrada al paso
+  // `sinHalo`, ver `_evTourMostrarPaso()`).
+  var db = document.getElementById('ev-tour-dash-box');
+  if (db && db.parentNode) db.parentNode.removeChild(db);
+  _evTourSinHaloActivo = false;
   if (_evTourHaloEl) { _evTourHaloEl.remove(); _evTourHaloEl = null; }
   document.body.style.overflow = '';
 }
@@ -3062,14 +3093,24 @@ function _evTourRenderTooltip(paso, rect) {
   // (`.ev-tour-tooltip--visible`, pedido explícito -- Cambio 47) en vez de
   // una propia -- los 2 aparecen/desaparecen siempre juntos, un solo toggle.
   var overlay = document.getElementById('ev-tour-overlay');
+  // `esUltimo` sigue leyendo `_evTourPasos` (el array REALMENTE activo, no
+  // `_EV_TOUR_PASOS_USER` a secas como daba el pedido original -- hardcodear
+  // ese array hubiera dado un "último paso" incorrecto para el tour admin,
+  // que usa `_EV_TOUR_PASOS_ADMIN`, de largo distinto desde el Cambio 63).
   var esUltimo = _evTourIdx >= _evTourPasos.length - 1;
   tooltip.innerHTML =
     _evTourProgressHtml() +
     '<div class="ev-tour-tooltip-titulo">' + paso.titulo + '</div>' +
     '<div class="ev-tour-tooltip-texto">' + paso.texto + '</div>' +
     '<div class="ev-tour-tooltip-footer">' +
-      '<a href="javascript:void(0)" class="ev-tour-tooltip-omitir" onclick="_evTourCerrar(true, event)">Omitir tour</a>' +
-      '<button type="button" class="btn btn-primary ev-tour-tooltip-btn" onclick="_evTourSiguiente(event)">' + (esUltimo ? 'Entendido ✓' : 'Siguiente →') + '</button>' +
+      // "Omitir tour" oculto en el último paso (fix reciente) -- sin sentido
+      // "omitir" cuando ya no queda nada más que ver.
+      (!esUltimo ? '<a href="javascript:void(0)" class="ev-tour-tooltip-omitir" onclick="_evTourCerrar(true, event)">Omitir tour</a>' : '') +
+      // Último paso: "FINALIZAR TOUR" llama a `_evTourCerrar()` DIRECTO con
+      // `conFade:true` (fix reciente) -- no a `_evTourSiguiente()`, que solo
+      // dispara el cierre SIN fade de rebote al agotar `_evTourPasos` en
+      // `_evTourMostrarPaso()` (ver ese `if (idx >= _evTourPasos.length)`).
+      '<button type="button" class="btn btn-primary ev-tour-tooltip-btn" onclick="' + (esUltimo ? '_evTourCerrar(true, event, true)' : '_evTourSiguiente(event)') + '">' + (esUltimo ? 'FINALIZAR TOUR' : 'SIGUIENTE →') + '</button>' +
     '</div>';
   tooltip.classList.remove('ev-tour-tooltip--visible');
   if (overlay) overlay.classList.remove('ev-tour-tooltip--visible');
@@ -3096,12 +3137,33 @@ function _evTourRenderTooltip(paso, rect) {
 function _evTourPosicionarTooltip(rect) {
   var tooltip = document.getElementById('ev-tour-tooltip');
   if (!tooltip) return;
+  // Paso `sinHalo` (fix reciente) -- sin un target puntual del que colgar
+  // el tooltip (el "target" es casi toda la pantalla, ver `#ev-tour-dash-box`
+  // en `_evTourMostrarPaso()`), se lo fija centrado abajo en vez de correr
+  // el cálculo normal relativo a `rect`. Se sacan `arrow-up`/`arrow-down`
+  // (a diferencia del pedido original, que no las tocaba) -- sin esto, el
+  // triángulo del bubble quedaba apuntando en la dirección que tenía en el
+  // paso anterior, hacia un target que ya no existe en este paso.
+  if (_evTourSinHaloActivo) {
+    tooltip.classList.remove('arrow-up', 'arrow-down');
+    tooltip.style.top = '';
+    tooltip.style.bottom = '80px';
+    tooltip.style.left = '50%';
+    tooltip.style.transform = 'translateX(-50%)';
+    return;
+  }
   // 28px (antes 12px, Cambio 63 issues 1d/2b) -- con el halo dinámico
   // agrandado 5px por lado (`_evTourPosicionarHalo()`) el margen viejo dejaba
   // el tooltip casi pegado al borde punteado del halo, sensación de
   // amontonamiento. Mismo valor sirve de margen respecto al target Y de
   // margen respecto a los bordes de pantalla (`Math.max`/`Math.min` de más
   // abajo) -- un solo número, sin bifurcar en 2 constantes.
+  // Limpia el inline `bottom`/`transform` que pudo haber dejado el paso
+  // `sinHalo` anterior (arriba) -- sin esto, un paso normal después de uno
+  // `sinHalo` quedaba con `top` Y `bottom` fijados a la vez (altura
+  // distorsionada) y `translateX(-50%)` corriendo el `left` recién calculado.
+  tooltip.style.bottom = '';
+  tooltip.style.transform = '';
   var margen = 28;
   var vh = window.innerHeight;
   var vw = window.innerWidth;
@@ -3172,8 +3234,28 @@ function _evTourSiguiente(ev) {
 // (cierre de paneles al tocar afuera, swipe del calendario). `ev` opcional
 // -- los demás call sites (`_evTourMostrarPaso()` al agotar los pasos,
 // `alSalir` del ítem 'eventos'/js/ui.js) siguen llamando sin él.
-function _evTourCerrar(marcarVisto, ev) {
+// `conFade` (fix reciente) -- el botón "FINALIZAR TOUR" del último paso
+// (`_evTourRenderTooltip()`) lo llama `true`: en vez de cerrar de golpe,
+// hace un fade-out de 0.35s sobre tooltip+overlay y recién ahí se
+// re-invoca a sí misma SIN `conFade` (ni `ev`, ya consumido) para el cierre
+// real. **Desvío respecto al pedido -- `stopPropagation`/`preventDefault`
+// se mantienen ANTES del branch de `conFade`, no después:** el pedido daba
+// el bloque de `conFade` como lo primero adentro de la función, antes de
+// esas 2 líneas -- de haberlo dejado así, el click de "FINALIZAR TOUR"
+// hubiera vuelto a quedar expuesto al mismo bug de burbujeo (issue 5) que
+// el fix anterior ya había cerrado para este mismo botón.
+function _evTourCerrar(marcarVisto, ev, conFade) {
   if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+  if (conFade) {
+    var card = document.getElementById('ev-tour-tooltip');
+    var ovr = document.getElementById('ev-tour-overlay');
+    if (card) card.style.transition = 'opacity 0.35s';
+    if (ovr) ovr.style.transition = 'opacity 0.35s';
+    if (card) card.style.opacity = '0';
+    if (ovr) ovr.style.opacity = '0';
+    setTimeout(function() { _evTourCerrar(marcarVisto); }, 360);
+    return;
+  }
   if (marcarVisto) localStorage.setItem('ev_tour_visto', '1');
   _evTourActivo = false;
   _evTourPasos = null;
@@ -3185,11 +3267,22 @@ function _evTourCerrar(marcarVisto, ev) {
     tooltip.style.display = 'none';
     tooltip.classList.remove('ev-tour-tooltip--visible', 'arrow-up', 'arrow-down');
     tooltip.innerHTML = '';
+    // Limpia el inline `opacity`/`transition` que pudo haber dejado el fade
+    // de "FINALIZAR TOUR" -- no pedido explícitamente, pero necesario: un
+    // estilo inline SIEMPRE gana por encima de `.ev-tour-tooltip--visible`
+    // (clase del stylesheet), así que sin este reset el tooltip hubiera
+    // quedado con `opacity:0` inline para siempre, invisible en cualquier
+    // tour futuro (ej. si Victor agrega un "ver tour de nuevo" o alguien
+    // limpia `ev_tour_visto` a mano).
+    tooltip.style.opacity = '';
+    tooltip.style.transition = '';
   }
   var overlay = document.getElementById('ev-tour-overlay');
   if (overlay) {
     overlay.style.display = 'none';
     overlay.classList.remove('ev-tour-tooltip--visible');
+    overlay.style.opacity = '';
+    overlay.style.transition = '';
   }
   _evTourBlockerAntiTap();
 }

@@ -1467,15 +1467,22 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
    para el título/la flecha/los segmentos activos de la barra de progreso Y
    el halo punteado del target (antes `--brand-60`, con opacity -- el halo
    dinámico usa `--brand` sólido, pedido explícito del Cambio 50). z-index
-   escalonado: overlay 9900 < tooltip 9902 < target elevado 9903 < halo
-   9905 -- los 4 por debajo del loading overlay (9999) y de los bottom
-   sheets que el usuario pueda abrir mientras el tour está activo. */
+   escalonado (fix reciente, tooltip subido de 9902 a 9960): overlay 9900 <
+   target elevado 9903 < halo/dash-box 9905 < blocker anti-tap-through 9920
+   < tooltip 9960 -- todos por debajo del loading overlay (9999) y de los
+   bottom sheets que el usuario pueda abrir mientras el tour está activo. */
 #ev-tour-overlay {
   position: fixed;
   inset: 0;
   background: transparent;
   z-index: 9900;
-  pointer-events: none;
+  /* `all` (antes `none`, fix reciente) -- bloquea cualquier toque sobre el
+     contenido real de Eventos mientras el tour está activo, para que la
+     única forma de avanzar sea a través del propio tooltip (que sigue
+     interactivo por tener mayor z-index, ver más abajo) -- antes, con
+     `none`, se podía tocar "a través" del overlay directo sobre el
+     contenido de la pantalla. */
+  pointer-events: all;
   opacity: 0;
   transition: opacity 0.2s ease;
 }
@@ -1493,7 +1500,12 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
   padding: 12px 14px;
   opacity: 0;
   transition: opacity 0.2s ease, top 0.35s var(--ease-sheet), left 0.35s var(--ease-sheet);
-  z-index: 9902;
+  /* 9960 (antes 9902, fix reciente) -- por encima de TODO lo demás del tour,
+     incluido `#ev-tour-dash-box` (9905, paso `sinHalo`, js/eventos.js) --
+     ese dashed box es un rectángulo grande que puede coincidir con la zona
+     donde el tooltip se reposiciona en su propio paso (`bottom:80px`), y con
+     9902 quedaba tapado debajo suyo. */
+  z-index: 9960;
 }
 #ev-tour-tooltip.ev-tour-tooltip--visible { opacity: 1; }
 /* Flecha del bubble -- triángulo CSS clásico (bordes transparentes +
