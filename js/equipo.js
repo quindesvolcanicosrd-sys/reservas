@@ -141,22 +141,47 @@ function _eqSetFavoritos(arr) {
   try { localStorage.setItem('eq_favoritos', JSON.stringify(arr)); } catch (ex) {}
 }
 function _eqEsFavorito(id) { return _eqFavoritos().indexOf(id) !== -1; }
+// Actualiza SOLO el botón de favorito (ícono/clase/title) de cada instancia
+// visible de esta persona -- Batch 3, bug real "parpadeo al agregar a
+// favoritos con usuarios con foto": `_eqRenderGrupo()` reconstruye el
+// `innerHTML` entero de la lista (`_eqFilaHtml()`, incluye un `.eq-avatar`
+// vacío que recién se hidrata DESPUÉS con la `<img>` real vía
+// `_eqHidratarAvatares()`/`_avatarSetFotoOInicial()`) -- llamarla en cada
+// toggle de favorito destruía y recreaba la `<img>` de TODOS los miembros
+// del grupo (no solo el que cambió), forzando al navegador a re-pintarlas
+// todas de nuevo, visible como parpadeo. `[data-eq-fav="id"]` ya identifica
+// cada instancia del botón (fila de lista/favoritos, nav de detalle) sin
+// necesitar tocar nada del resto de la fila (avatar incluido).
+function _eqActualizarBotonesFavorito(id, fav) {
+  document.querySelectorAll('[data-eq-fav="' + id + '"]').forEach(function(btn) {
+    btn.classList.toggle('activo', fav);
+    btn.title = fav ? 'Quitar de favoritos' : 'Agregar a favoritos';
+    var icono = btn.querySelector('.material-symbols-outlined');
+    if (icono) icono.textContent = fav ? 'favorite' : 'favorite_border';
+  });
+}
+
 function _eqToggleFavorito(id) {
   var favs = _eqFavoritos();
   var idx = favs.indexOf(id);
-  if (idx === -1) favs.push(id); else favs.splice(idx, 1);
+  var fav = idx === -1;
+  if (fav) favs.push(id); else favs.splice(idx, 1);
   _eqSetFavoritos(favs);
+  // `_eqRenderFavoritos()` sigue siendo un re-render completo (a diferencia
+  // de los 2 de abajo que se sacaron) -- a diferencia de los grupos, acá SÍ
+  // hace falta: la persona tiene que aparecer/desaparecer de la lista de
+  // Favoritos, un cambio estructural real, no solo de ícono. Los grupos
+  // (Quindes/Mirlxs) NO necesitaban re-renderizarse nunca para esto -- la
+  // pertenencia a un grupo no depende de ser favorito, solo cambiaba el
+  // ícono de una fila puntual; `_eqActualizarBotonesFavorito()` (nueva, ver
+  // arriba) cubre eso sin re-crear ninguna fila ni avatar.
   _eqRenderFavoritos();
-  _eqRenderGrupo('Quindes');
-  _eqRenderGrupo('Mirlxs');
-  if (_eqPersonaActual && _eqPersonaActual.id === id) _eqActualizarNavPerfil();
+  _eqActualizarBotonesFavorito(id, fav);
   // Fade in/out breve sobre CADA instancia visible del ícono de esta persona
   // (`[data-eq-fav]`, `_eqFilaHtml()`/`_eqNavHtml()`) -- puede haber más de
-  // una a la vez (favoritos + su grupo, o nav de detalle + fila de lista) ya
-  // que los 3 renders de arriba reconstruyen el HTML entero por `innerHTML`,
-  // así que la clase se aplica DESPUÉS de re-renderizar, sobre los elementos
-  // nuevos. Reflow forzado (`offsetWidth`) antes de agregar la clase para que
-  // la animación reinicie si la persona togglea de nuevo antes de que termine
+  // una a la vez (favoritos + su grupo, o nav de detalle + fila de lista).
+  // Reflow forzado (`offsetWidth`) antes de agregar la clase para que la
+  // animación reinicie si la persona togglea de nuevo antes de que termine
   // la anterior (0.3s), en vez de quedarse sin efecto la segunda vez.
   document.querySelectorAll('[data-eq-fav="' + id + '"]').forEach(function(el) {
     el.classList.remove('eq-fav-pulse');
@@ -265,6 +290,12 @@ function _eqRenderGrupo(rol) {
   if (pillEl) pillEl.textContent = filtradas.length;
   cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
   _eqHidratarAvatares();
+  // Bug real corregido (Batch 3) -- ver _eqToggleGrupo() más abajo: si el
+  // grupo está abierto cuando el contenido cambia (búsqueda/filtro), el
+  // `max-height` inline que dejó _eqToggleGrupo() queda desactualizado --
+  // recalculado acá para que no quede recortado ni con espacio vacío de más.
+  var bodyAbierto = document.getElementById('eq-grupo-' + key + '-body');
+  if (bodyAbierto && bodyAbierto.classList.contains('abierto')) bodyAbierto.style.maxHeight = bodyAbierto.scrollHeight + 'px';
 }
 
 function _eqToggleGrupo(rol) {
@@ -275,6 +306,18 @@ function _eqToggleGrupo(rol) {
   var abrir = !header.classList.contains('abierto');
   header.classList.toggle('abierto', abrir);
   body.classList.toggle('abierto', abrir);
+  // Bug real corregido (Batch 3, "Lista de Mirlxs truncada") -- la clase
+  // `.abierto` (css/equipo.css) fijaba `max-height:2000px`, un techo FIJO
+  // que un grupo con más miembros (Mirlxs, típicamente el grupo más grande)
+  // podía superar en alto real, recortando el resto de la lista sin scroll
+  // ni aviso -- nunca hubo ningún `slice()`/límite en JS, era 100% este
+  // techo de CSS. Medido con `scrollHeight` real (mismo criterio que ya usa
+  // "Mi Liga" para sus propios acordeones, ver comentario de cabecera de
+  // este archivo) en vez de una constante -- crece con la lista real, sin
+  // techo. El inline (`style.maxHeight`) siempre gana sobre la clase CSS,
+  // así que la declaración vieja en `css/equipo.css` queda sin uso -- se
+  // sacó de ahí (ver ese archivo).
+  body.style.maxHeight = abrir ? (body.scrollHeight + 'px') : '';
 }
 
 /* ── Perfil de detalle (#s-equipo-perfil) ────────────────────────────── */
@@ -327,7 +370,16 @@ var _EQ_WA_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" wi
 function _eqNavHtml(p) {
   var fav = _eqEsFavorito(p.id);
   var waUrl = _eqWhatsappUrl(p.prefijo, p.telefono);
-  var acciones = '<button type="button" class="app-nav-icon-btn" data-eq-fav="' + p.id + '" onclick="_eqToggleFavorito(\'' + p.id + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '"><span class="material-symbols-outlined">' + (fav ? 'favorite' : 'favorite_border') + '</span></button>';
+  // Bug real corregido (Batch 3, "botón de favoritos en detalle no muestra
+  // estado activo") -- `.app-nav-icon-btn` (css/nav.css) no tiene NINGÚN
+  // color propio de estado, a diferencia de `.eq-fav-btn.activo` (color:
+  // `--brand`) que sí usan las filas de lista -- acá el único indicador
+  // real era el glyph (`favorite`/`favorite_border`), un cambio de forma
+  // mucho más sutil que el color naranja de la lista, fácil de no notar.
+  // `eq-nav-fav-btn` (nueva, css/equipo.css) + `.activo` condicional -- NO
+  // se reusa `.eq-fav-btn` tal cual (esa clase trae su propio tamaño/forma
+  // circular, pisaría el cuadrado de `.app-nav-icon-btn`), solo el color.
+  var acciones = '<button type="button" class="app-nav-icon-btn eq-nav-fav-btn' + (fav ? ' activo' : '') + '" data-eq-fav="' + p.id + '" onclick="_eqToggleFavorito(\'' + p.id + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '"><span class="material-symbols-outlined">' + (fav ? 'favorite' : 'favorite_border') + '</span></button>';
   if (waUrl) {
     acciones += '<a class="app-nav-icon-btn eq-wa-btn" href="' + waUrl + '" target="_blank" rel="noopener" title="WhatsApp">' + _EQ_WA_SVG + '</a>';
   }
@@ -662,12 +714,6 @@ function _eqPerfilContenidoHtml(p) {
     (filas ? '<div class="eq-info-lista">' + filas + '</div>' : '') +
     _eqTierAdminHtml(p) +
     _eqAdminGestionHtml(p);
-}
-
-function _eqActualizarNavPerfil() {
-  if (!_eqPersonaActual) return;
-  var nav = document.getElementById('eq-perfil-nav');
-  if (nav) nav.innerHTML = _eqNavHtml(_eqPersonaActual);
 }
 
 function _eqRenderPerfil(p) {

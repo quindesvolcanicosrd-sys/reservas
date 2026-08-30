@@ -49,7 +49,13 @@
 .eq-grupo-chevron { flex-shrink: 0; font-size: 1.2rem; color: var(--muted); transition: transform 0.25s; }
 .eq-grupo-header.abierto .eq-grupo-chevron { transform: rotate(180deg); color: var(--brand); }
 .eq-grupo-body { max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(0.16,1,0.3,1); }
-.eq-grupo-body.abierto { max-height: 2000px; }
+/* `.eq-grupo-body.abierto { max-height: 2000px; }` eliminada (Batch 3, bug
+   real "lista de Mirlxs truncada") -- ese techo fijo recortaba cualquier
+   grupo con más miembros de los que entraban en 2000px de alto, sin scroll
+   ni aviso. `_eqToggleGrupo()`/js/equipo.js ahora fija el `max-height`
+   inline con el `scrollHeight` real del contenido al abrir -- un inline
+   siempre gana sobre esta clase, así que dejarla no hacía nada salvo
+   confundir a un lector futuro sobre de dónde sale el alto real. */
 .eq-grupo-body-inner { padding: 4px 0 10px; }
 
 /* ── Fila de miembro (lista + favoritos) ─────────── */
@@ -107,6 +113,11 @@
    deriva del color de énfasis, es un color de marca fijo). */
 .eq-wa-btn { background: var(--wa-bg); color: var(--wa-brand); }
 @media (hover: hover) { .eq-wa-btn:hover { background: var(--wa-bg-hover); } }
+/* Botón de favorito de la nav de detalle (Batch 3, bug real "no muestra
+   estado activo") -- `.app-nav-icon-btn` no trae ningún color de estado
+   propio, a diferencia de `.eq-fav-btn.activo` (lista) -- mismo color,
+   sin tocar tamaño/forma (esos ya los aporta `.app-nav-icon-btn`). */
+.eq-nav-fav-btn.activo { color: var(--brand); }
 
 .eq-perfil-header { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 4px 16px 22px; }
 .eq-avatar-wrap { position: relative; width: 96px; height: 96px; }
