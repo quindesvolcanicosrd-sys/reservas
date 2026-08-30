@@ -2805,9 +2805,11 @@ var _EV_TOUR_PASOS_USER = [
   // Movido a la posición 0 (fix reciente, antes era el 4to paso) -- pedido
   // explícito de Victor, sin motivo técnico documentado en el código.
   { selector: '#ev-fab-btn', titulo: 'Reserva tu lugar', texto: 'Pulsa aquí para reservar tu lugar en un evento o clase.' },
+  // Movido a la posición 1, justo después del FAB (fix reciente, antes 4to
+  // paso) -- pedido explícito de Victor, sin motivo técnico documentado.
+  { selector: '#ev-btn-patin', titulo: 'Tu equipamiento', texto: 'Cambia el equipamiento que usas del club desde aquí. Para reagendar o cancelar un evento reservado, usa el botón rojo dentro de su card.' },
   { selector: '#ev-nav-mes-label', titulo: 'Navega por mes', texto: 'Abre el calendario pulsando en el mes actual para saltar directo a la fecha que buscas.' },
   { selector: '#ev-busqueda-toggle-btn', titulo: 'Busca y filtra', texto: 'Busca eventos, cumpleaños o lugares por texto, o filtra por Lugar y Tipo.' },
-  { selector: '#ev-btn-patin', titulo: 'Tu equipamiento', texto: 'Cambia el equipamiento que usas del club desde aquí. Para reagendar o cancelar un evento reservado, usa el botón rojo dentro de su card.' },
   // `sinHalo: true` -- el timeline ocupa casi toda la pantalla, un halo
   // recortado alrededor suyo no "spotlightea" nada real (termina calcando
   // casi el mismo rectángulo que el overlay). Este paso usa oscurecimiento
@@ -2837,7 +2839,14 @@ var _EV_TOUR_PASOS_ADMIN = [
   { selector: '#ev-busqueda-toggle-btn', titulo: 'Busca y filtra', texto: 'Busca eventos, cumpleaños o lugares por texto, o filtra por Lugar y Tipo.' },
   { selector: '#ev-btn-patin', titulo: 'Tu equipamiento', texto: 'Cambia el equipamiento que usas del club desde aquí. Para reagendar o cancelar un evento reservado, usa el botón rojo dentro de su card.' },
   { selector: '#ev-fab-btn', titulo: 'Reserva o crea eventos', texto: 'Pulsa aquí para reservar tu lugar en un evento o clase, o para crear un nuevo evento.' },
-  { selector: '#ev-timeline', titulo: 'Explora el calendario', texto: 'Toca un evento para ver toda su información.' }
+  // `sinHalo: true` agregado acá (fix reciente) -- antes solo lo tenía el
+  // paso equivalente de `_EV_TOUR_PASOS_USER` (asimetría real entre los 2
+  // arrays, sin motivo -- el timeline ocupa casi toda la pantalla para
+  // CUALQUIER tipo de cuenta, el mismo argumento "un halo recortado no
+  // spotlightea nada real" aplica igual acá). Título sin cambios ("Explora
+  // el calendario", distinto del texto de usuario "Explora la línea de
+  // tiempo") -- no pedido explícitamente para este array.
+  { selector: '#ev-timeline', sinHalo: true, titulo: 'Explora el calendario', texto: 'Toca un evento para ver toda su información.' }
 ];
 
 var _evTourPasos = null;
@@ -2907,17 +2916,34 @@ function _evTourIniciarSiCorresponde(esAdmin) {
   // `!necesitaEquipo && modo === 'mirlxs'`). De ahí: `puedeClase` es
   // simplemente "es mirlxs" (con o sin equipo propio, siempre tiene ese
   // camino); `puedeMes` es quindes, o mirlxs CON equipo propio.
+  // Rama admin (fix reciente) -- antes el `.map()` solo tocaba `#ev-fab-btn`
+  // para `!esAdmin`, dejando el texto fijo original de `_EV_TOUR_PASOS_ADMIN`
+  // ("Pulsa aquí para reservar tu lugar en un evento o clase, o para crear
+  // un nuevo evento.") sin importar el perfil real. Auditado igual que la
+  // rama no-admin contra `_evFabUnificadoActualizar()`: CUALQUIER admin
+  // (quindes-admin o mirlxs-admin) tiene "crear evento" como camino SIEMPRE
+  // disponible, más "reserva por mes" condicional a tener cuota al día --
+  // pero NUNCA "por clase" (`_evFabReservaClase()` no se llama en ningún
+  // branch admin de esa función) -- un solo texto genérico alcanza para los
+  // 2 sub-casos de admin (no se distingue cuota al día, a diferencia de la
+  // rama no-admin, por pedido explícito de mantenerlo simple acá).
   _evTourPasos = (esAdmin ? _EV_TOUR_PASOS_ADMIN : _EV_TOUR_PASOS_USER).map(function(p) {
-    if (!esAdmin && p.selector === '#ev-fab-btn') {
+    if (p.selector === '#ev-fab-btn') {
       var modo = _modoUsuario();
+      var esQuindes = modo === 'quindes';
       var necesitaEquipo = _evNecesitaEquipo();
-      var puedeMes = modo === 'quindes' || (modo === 'mirlxs' && !necesitaEquipo);
+      var puedeMes = esQuindes || (modo === 'mirlxs' && !necesitaEquipo);
       var puedeClase = modo === 'mirlxs';
-      var txt = (puedeMes && puedeClase)
-        ? 'Podrás reservar tu clase o tu mensualidad desde este botón.'
-        : puedeMes
-        ? 'Podrás reservar tu mensualidad desde este botón.'
-        : 'Podrás reservar tu clase desde este botón.';
+      var txt;
+      if (esAdmin) {
+        txt = 'Reserva tu lugar en los entrenamientos o crea nuevos eventos desde este botón.';
+      } else if (esQuindes || (puedeMes && !puedeClase)) {
+        txt = 'Podrás reservar tu mensualidad desde este botón.';
+      } else if (puedeClase && !puedeMes) {
+        txt = 'Podrás reservar tu clase desde este botón.';
+      } else {
+        txt = 'Podrás reservar tu clase o tu mensualidad desde este botón.';
+      }
       return { selector: p.selector, sinHalo: p.sinHalo, titulo: p.titulo, texto: txt };
     }
     return p;
@@ -3011,6 +3037,20 @@ function _evTourMostrarPaso(idx) {
     // sobre un elemento `display:none` da todo en 0, hubiera dejado
     // `yTop`/`yBot` mal calculados). Fallbacks (`64`/`window.innerHeight - 60`)
     // solo por si ninguno de los 2 elementos existe.
+    // Re-verificado (fix reciente, a pedido de Victor -- sospecha de que
+    // admin/Quindes pudieran tener un header con otro id, rompiendo este
+    // cálculo para esas cuentas): `#ev-sticky-header` es un ÚNICO elemento
+    // estático en index.html, el mismo para admin/quindes/mirlxs por igual
+    // -- ninguna cuenta tiene un header propio distinto, solo cambian los
+    // BOTONES de adentro (patín/anticipada) según el perfil, vía
+    // `_evActualizarTopBarModo()`. **NO se agregó el fallback
+    // `document.querySelector('.app-nav-fixed')` que se sugirió** -- sería
+    // activamente incorrecto, no una red de seguridad real: `.app-nav-fixed`
+    // es la nav de Home (`#home-nav`/`#s4-nav`), oculta (`display:none`)
+    // mientras se está en Eventos -- si `#ev-sticky-header` alguna vez
+    // faltara, ese fallback resolvería contra un elemento oculto y
+    // reintroduciría el mismo bug (`getBoundingClientRect()` en `{0,0,0,0}`)
+    // que motivó sacar `.app-nav-fixed` de acá en el fix anterior.
     var navTop = document.getElementById('ev-sticky-header');
     var navBot = document.querySelector('.app-bottom-nav');
     var yTop = navTop ? navTop.getBoundingClientRect().bottom + 8 : 64;
@@ -3025,10 +3065,14 @@ function _evTourMostrarPaso(idx) {
     // CUALQUIER paso con el tooltip abajo, no solo a este -- removido por
     // completo, ver `_evTourLimpiarHalo()`). Mismo `border-radius` inferior
     // que el dashed-box (10px vs 12px del box -- valor tal cual pedido) para
-    // que no se note el borde recto contra la esquina redondeada.
+    // que no se note el borde recto contra la esquina redondeada. Más alto
+    // y oscuro (fix reciente, `200px`/`rgba(...,0.65)` → `248px`/`0.78`) pero
+    // termina en `yBot - 12` (arranca en `yBot - 260`, alto `248` -> `260 -
+    // 248 = 12`), no pegado a `yBot` -- deja los últimos 12px del borde
+    // punteado inferior sin cubrir, siempre visible.
     var dashFade = document.createElement('div');
     dashFade.id = 'ev-tour-dash-fade';
-    dashFade.style.cssText = 'position:fixed;left:14px;right:14px;top:' + (yBot - 200) + 'px;height:200px;background:linear-gradient(to bottom,transparent,rgba(0,0,0,0.65));pointer-events:none;border-radius:0 0 10px 10px;z-index:9906;';
+    dashFade.style.cssText = 'position:fixed;left:14px;right:14px;top:' + (yBot - 260) + 'px;height:248px;background:linear-gradient(to bottom,transparent,rgba(0,0,0,0.78));pointer-events:none;border-radius:0 0 10px 10px;z-index:9906;';
     document.body.appendChild(dashFade);
     _evTourSinHaloActivo = true;
   }
