@@ -2426,6 +2426,25 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
       </div>
 
+      <!-- Acordeón "INACTIVOS" (Bugs 11+12 rediseñados, ver MANIFEST.md --
+           antes se ocultaban del todo, ahora viven acá) -- SIN clase
+           `abierto` en header/body a propósito: colapsado por defecto,
+           mismo mecanismo `eq-grupo-header`/`eq-grupo-body` que
+           Quindes/Mirlxs de arriba, poblado por `_eqRenderInactivos()`/
+           js/equipo.js. -->
+      <div class="eq-grupo" id="eq-grupo-inactivos">
+        <button type="button" class="eq-grupo-header" id="eq-grupo-inactivos-header" onclick="_eqToggleGrupo('Inactivos')">
+          <span class="eq-grupo-linea"></span>
+          <span class="eq-grupo-pill" id="eq-grupo-inactivos-pill">0</span>
+          <span class="eq-grupo-nombre">Inactivos</span>
+          <span class="material-symbols-outlined eq-grupo-chevron">expand_more</span>
+          <span class="eq-grupo-linea"></span>
+        </button>
+        <div class="eq-grupo-body" id="eq-grupo-inactivos-body">
+          <div class="eq-grupo-body-inner" id="eq-grupo-inactivos-lista"></div>
+        </div>
+      </div>
+
       <div style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
     </div>
   </div>
@@ -2945,7 +2964,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/ui.js?v=66148b6f"></script>
 <script src="js/eventos.js?v=30628b15"></script>
 <script src="js/tareas.js"></script>
-<script src="js/equipo.js?v=fca5b42f"></script>
+<script src="js/equipo.js?v=db63dbc3"></script>
 <script src="js/home.js?v=cf4b0197"></script>
 <script src="js/reservas.js?v=ce8c13b6"></script>
 <script src="js/perfil.js?v=b56e42f0"></script>

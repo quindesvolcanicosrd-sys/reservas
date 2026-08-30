@@ -376,6 +376,7 @@ function _eqInit() {
     _eqRenderFavoritos();
     _eqRenderGrupo('Quindes');
     _eqRenderGrupo('Mirlxs');
+    _eqRenderInactivos();
   });
 }
 
@@ -588,6 +589,7 @@ function _eqBuscar(valor) {
   var favWrap = document.getElementById('eq-favoritos-wrap');
   var grupoQuindes = document.getElementById('eq-grupo-quindes');
   var grupoMirlxs = document.getElementById('eq-grupo-mirlxs');
+  var grupoInactivos = document.getElementById('eq-grupo-inactivos');
   var rolesWrap = document.getElementById('eq-roles-wrap');
   var mesVacio = document.getElementById('eq-mes-vacio');
   var esRol = !!_eqBusqueda && _eqEsQueryDeRol(_eqBusqueda);
@@ -596,6 +598,7 @@ function _eqBuscar(valor) {
     if (favWrap) favWrap.style.display = 'none';
     if (grupoQuindes) grupoQuindes.style.display = 'none';
     if (grupoMirlxs) grupoMirlxs.style.display = 'none';
+    if (grupoInactivos) grupoInactivos.style.display = 'none';
     if (mesVacio) mesVacio.style.display = 'none';
     if (rolesWrap) rolesWrap.style.display = '';
     _eqRenderPorRol();
@@ -605,6 +608,7 @@ function _eqBuscar(valor) {
     if (favWrap) favWrap.style.display = 'none';
     if (grupoQuindes) grupoQuindes.style.display = 'none';
     if (grupoMirlxs) grupoMirlxs.style.display = 'none';
+    if (grupoInactivos) grupoInactivos.style.display = 'none';
     if (rolesWrap) rolesWrap.style.display = 'none';
     if (mesVacio) mesVacio.style.display = '';
     return;
@@ -615,9 +619,11 @@ function _eqBuscar(valor) {
   if (mesVacio) mesVacio.style.display = 'none';
   if (grupoQuindes) grupoQuindes.style.display = '';
   if (grupoMirlxs) grupoMirlxs.style.display = '';
+  if (grupoInactivos) grupoInactivos.style.display = '';
   _eqRenderFavoritos();
   _eqRenderGrupo('Quindes');
   _eqRenderGrupo('Mirlxs');
+  _eqRenderInactivos();
 }
 function _eqPasaBusqueda(p) {
   if (!_eqBusqueda) return true;
@@ -761,6 +767,33 @@ function _eqRenderGrupo(rol) {
   // a uno cerrado.
   var bodyAbierto = document.getElementById('eq-grupo-' + key + '-body');
   if (bodyAbierto && bodyAbierto.classList.contains('abierto')) bodyAbierto.style.maxHeight = 'none';
+}
+
+// Acordeón "INACTIVOS" (Bugs 11+12 rediseñados, ver MANIFEST.md -- antes
+// se ocultaban del todo de la lista de Equipo; ahora viven acá, colapsados
+// por defecto en vez de invisibles). Reusa LITERAL el mismo componente que
+// Quindes/Mirlxs (`.eq-grupo-header`/`.eq-grupo-body`, `id="eq-grupo-inactivos-*"`
+// -- ver el bloque estático nuevo en index.html) para que `_eqToggleGrupo('Inactivos')`
+// funcione sin ningún caso especial. Todos los roles juntos en un solo
+// grupo (no separado en "Quindes inactivas"/"Mirlxs inactivos") -- acá
+// "Inactivos" es un cajón aparte, no una 3ra categoría de tier. `_eqEsInactivo(p)`
+// es el ÚNICO filtro (sin el `p.rol === rol` de `_eqRenderGrupo()`) --
+// entre esta función y esa, cada persona cae en exactamente un balde: activa
+// de su rol, o acá. Este acordeón nace SIN la clase `.abierto` en index.html
+// (colapsado por defecto, pedido explícito) -- por eso, a diferencia de
+// `_eqRenderGrupo()`, acá NUNCA hay que tocar `style.maxHeight` en el
+// render (ese `if (bodyAbierto.classList.contains('abierto'))` de
+// `_eqRenderGrupo()` no aplica -- este grupo nunca nace abierto).
+function _eqRenderInactivos() {
+  var wrap = document.getElementById('eq-grupo-inactivos');
+  var cont = document.getElementById('eq-grupo-inactivos-lista');
+  var pillEl = document.getElementById('eq-grupo-inactivos-pill');
+  if (!wrap || !cont) return;
+  var filtradas = _eqPersonas.filter(function(p) { return _eqEsInactivo(p) && !_eqEsUsuarioActual(p); }).filter(_eqPasaBusqueda);
+  wrap.style.display = filtradas.length ? '' : 'none';
+  if (pillEl) pillEl.textContent = filtradas.length;
+  cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
+  _eqHidratarAvatares();
 }
 
 function _eqToggleGrupo(rol) {
