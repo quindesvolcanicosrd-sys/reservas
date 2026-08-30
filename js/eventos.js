@@ -2758,32 +2758,35 @@ function _evFabUnificadoActualizar() {
 // ═══ Tour guiado de bienvenida de Eventos (ver MANIFEST.md "Cambios
 // recientes") -- reemplaza el banner rotativo #ev-pill-banner/_evPillsInit()
 // de antes. Cambio 47: híbrido entre la Opción D (tooltip sutil, sin
-// overlay) y el spotlight original de tandas anteriores -- #ev-tour-overlay
-// vuelve, pero muy suave (`rgba(0,0,0,0.28)`, ver css/eventos.css), sin la
-// "lente" recortada que sí tenía el spotlight original (#ev-tour-lens NO
-// vuelve). 2 elementos de tour, ambos hijos directos de <body> (index.html):
-// #ev-tour-overlay (oscurece todo detrás) y #ev-tour-tooltip (el bubble),
-// más el target de cada paso resaltado con un halo punteado -- Cambio 50:
-// ya no es la clase CSS `.ev-tour-halo` (eliminada) sino un
-// `<div id="ev-tour-halo">` creado en runtime por `_evTourPosicionarHalo()`,
-// medido con `getBoundingClientRect()` + el `border-radius` computado real
-// del target, para calzar con su forma exacta -- ver esa función más abajo.
-// El target también queda elevado temporalmente por encima del overlay --
-// `z-index:9903` inline,
-// agregado/restaurado por `_evTourResaltarTarget()` más abajo, normalmente
-// sobre el target mismo (`position:relative`) pero sobre su ancestro
-// `fixed`/`sticky` más cercano si tiene uno (Cambio 49, fix de stacking
-// context: un ancestro así crea su propio contexto de apilamiento, elevar
-// solo al hijo no le gana nada a #ev-tour-overlay -- ver
-// `_evTourAncestroFijo()`). Se dispara una única vez por dispositivo (localStorage
-// `ev_tour_visto`) la primera vez que se entra a #s-eventos --
-// `_evTourIniciarSiCorresponde()` es un no-op si ya se vio o si ya hay un
-// tour corriendo. Si el usuario navega a otra sección con el tour activo,
-// `alSalir` del ítem 'eventos' (APP_BOTTOM_NAV_ITEMS, js/ui.js) llama
-// `_evTourCerrar(false)` -- cierra tooltip+overlay y restaura el target
-// elevado, SIN marcarlo como visto (`ev_tour_visto` solo se setea al llegar
-// al último paso o tocar "Omitir tour") -- la próxima vez que entre a
-// Eventos, el tour arranca de nuevo desde el paso 0.
+// overlay) y el spotlight original de tandas anteriores. 2 elementos de
+// tour, ambos hijos directos de <body> (index.html): #ev-tour-overlay y
+// #ev-tour-tooltip (el bubble), más el target de cada paso resaltado con un
+// halo punteado -- Cambio 50: ya no es la clase CSS `.ev-tour-halo`
+// (eliminada) sino un `<div id="ev-tour-halo">` creado en runtime por
+// `_evTourPosicionarHalo()`, medido con `getBoundingClientRect()` + el
+// `border-radius` computado real del target, para calzar con su forma
+// exacta -- ver esa función más abajo. **Cambio 63 (spotlight real):**
+// `#ev-tour-overlay` ya NO oscurece nada (`background:transparent`, ver
+// css/eventos.css) -- el oscurecimiento ahora es un `box-shadow:0 0 0
+// 9999px` sobre el halo mismo (`_evTourPosicionarHalo()`), que recorta
+// limpio alrededor del target en vez de tapar todo detrás con un velo
+// plano; `#ev-tour-overlay` sigue existiendo solo para el fade de
+// entrada/salida sincronizado con el tooltip (ver `_evTourRenderTooltip()`).
+// El target también queda elevado temporalmente por encima de todo --
+// `z-index:9903` inline, agregado/restaurado por `_evTourResaltarTarget()`
+// más abajo, siempre sobre el target mismo (`position:relative`) -- **ya NO
+// sobre su ancestro `fixed`/`sticky`** (Cambio 49 lo agregaba para ganarle
+// el stacking context a `#ev-tour-overlay`; con el overlay transparente del
+// Cambio 63 eso ya no hace falta, y elevar el ancestro entero resaltaba de
+// más -- ver `_evTourResaltarTarget()`). Se dispara una única vez por
+// dispositivo (localStorage `ev_tour_visto`) la primera vez que se entra a
+// #s-eventos -- `_evTourIniciarSiCorresponde()` es un no-op si ya se vio o
+// si ya hay un tour corriendo. Si el usuario navega a otra sección con el
+// tour activo, `alSalir` del ítem 'eventos' (APP_BOTTOM_NAV_ITEMS,
+// js/ui.js) llama `_evTourCerrar(false)` -- cierra tooltip+overlay y
+// restaura el target elevado, SIN marcarlo como visto (`ev_tour_visto`
+// solo se setea al llegar al último paso o tocar "Omitir tour") -- la
+// próxima vez que entre a Eventos, el tour arranca de nuevo desde el paso 0.
 //
 // El contenido de cada paso cubre lo mismo que mostraban las listas de
 // `_evPillsInit()` (equipamiento/mirlxs/quindes) -- acá reagrupado en 2
@@ -2803,7 +2806,25 @@ var _EV_TOUR_PASOS_USER = [
   { selector: '#ev-busqueda-toggle-btn', titulo: 'Busca y filtra', texto: 'Busca eventos, cumpleaños o lugares por texto, o filtra por Lugar y Tipo.' },
   { selector: '#ev-btn-patin', titulo: 'Tu equipamiento', texto: 'Cambia el equipamiento que usas del club desde aquí. Para reagendar o cancelar un evento reservado, usa el botón rojo dentro de su card.' },
   { selector: '#ev-fab-btn', titulo: 'Reserva tu lugar', texto: 'Pulsa aquí para reservar tu lugar en un evento o clase.' },
-  { selector: '#ev-timeline', titulo: 'Explora el calendario', texto: 'Toca un evento para ver toda su información.' }
+  { selector: '#ev-timeline', titulo: 'Explora el calendario', texto: 'Toca un evento para ver toda su información.' },
+  // 3 pasos nuevos (Cambio 63, FIX G) -- se apoyan en el mismo mecanismo
+  // genérico de `_evTourMostrarPaso()` (saltea el paso si el selector no
+  // resuelve a un elemento visible), no necesitan guardas propias:
+  { selector: '#ev-nav-hoy-btn', titulo: 'Ir a hoy', texto: 'Vuelve al día de hoy desde cualquier punto del calendario con un toque.' },
+  // `.ev-evento-card` (el selector que traía el pedido) no existe en este
+  // archivo -- la clase real de cada card de evento del timeline es
+  // `.ev-card` (confirmado grepeando `class="ev-card`, `_evCardEventoHtml()`
+  // más abajo en este archivo) -- se usó esa. Puede matchear más de una
+  // (una por evento visible) -- resuelto por `_evTourResolverTarget()`
+  // (nueva, ver `_evTourMostrarPaso()`), que toma la primera realmente
+  // visible en vez de la primera en orden de DOM sin más.
+  { selector: '.ev-card', titulo: 'Detalle del evento', texto: 'Tocá cualquier evento para ver quiénes asisten, rectificar tu asistencia y mucho más.' },
+  // `#ev-btn-anticipada` -- oculto (`display:none`) para mirlxs y para
+  // cuentas que necesitan equipo del club (`_evActualizarTopBarModo()`, más
+  // abajo en este archivo) -- el chequeo de visibilidad genérico de
+  // `_evTourMostrarPaso()` ya lo saltea solo para esas cuentas, sin
+  // necesitar ninguna lógica de guarda aparte (tal como pedía el pedido).
+  { selector: '#ev-btn-anticipada', titulo: 'Asistencia anticipada', texto: 'Marcá tu asistencia para varios eventos futuros de una sola vez, sin repetirlo evento por evento.' }
 ];
 var _EV_TOUR_PASOS_ADMIN = [
   { selector: '#ev-nav-mes-label', titulo: 'Navega por mes', texto: 'Abre el calendario pulsando en el mes actual para saltar directo a la fecha que buscas.' },
@@ -2817,15 +2838,10 @@ var _evTourPasos = null;
 var _evTourIdx = 0;
 var _evTourActivo = false;
 var _evTourRafPendiente = false;
-// Elemento realmente elevado por encima de #ev-tour-overlay para el target
-// actual (Cambio 49, fix de stacking context) -- normalmente es el propio
-// target (el `el` recibido por `_evTourResaltarTarget()`, ver más abajo),
-// pero si el target vive dentro de un ancestro `position:fixed`/`sticky`
-// (ej. el botón "Reservar" dentro de `.cta-footer-fixed`), ese ancestro
-// crea su PROPIO stacking context y
-// ponerle `z-index` al hijo no alcanza para ganarle a `#ev-tour-overlay` --
-// en ese caso se eleva el ancestro entero en su lugar (ver
-// `_evTourAncestroFijo()`/`_evTourResaltarTarget()` más abajo).
+// Elemento elevado por encima de #ev-tour-overlay para el target actual --
+// siempre el `el` recibido por `_evTourResaltarTarget()` (ver más abajo);
+// hasta el Cambio 63 podía ser un ancestro `fixed`/`sticky` suyo en su
+// lugar (Cambio 49) -- eliminado, ver esa función.
 var _evTourContenedorAnterior = null;
 // Estilo inline original (`position`/`zIndex`) de `_evTourContenedorAnterior`,
 // para restaurarlo exacto al salir del paso -- casi siempre ambos son '' (el
@@ -2857,17 +2873,33 @@ function _evTourIniciarSiCorresponde(esAdmin) {
   _evTourMostrarPaso(0);
 }
 
+// Resuelve el selector de un paso a un elemento real -- si matchea más de
+// uno (ej. `.ev-card`, una por evento del timeline, Cambio 63 FIX G), toma
+// el primero realmente visible en vez de quedarse siempre con el primero en
+// orden de DOM sin importar si está oculto (filtrado por búsqueda/`display:none`).
+// Si ninguno es visible, devuelve el primero igual -- `_evTourMostrarPaso()`
+// ya lo descarta por su propio chequeo de `rect` y saltea el paso.
+function _evTourResolverTarget(selector) {
+  var candidatos = document.querySelectorAll(selector);
+  for (var i = 0; i < candidatos.length; i++) {
+    var r = candidatos[i].getBoundingClientRect();
+    if (r.width > 0 || r.height > 0) return candidatos[i];
+  }
+  return candidatos[0] || null;
+}
+
 // Recorre `_evTourPasos` desde `idx` hacia adelante y muestra el primero
 // cuyo selector resuelva a un elemento realmente visible -- salta en
 // silencio los que no existen o están en `display:none` (ej. #ev-btn-patin
-// para cuentas sin equipo del club, ver _evNecesitaEquipo()/js/eventos.js).
+// para cuentas sin equipo del club, ver _evNecesitaEquipo()/js/eventos.js, o
+// #ev-btn-anticipada para mirlxs/cuentas sin equipo del club, Cambio 63 FIX G).
 // Si no queda ninguno, cierra el tour y lo marca como visto. Navegación
 // solo hacia adelante -- sin botón/lógica de retroceso.
 function _evTourMostrarPaso(idx) {
   if (!_evTourActivo || !_evTourPasos) return;
   if (idx >= _evTourPasos.length) { _evTourCerrar(true); return; }
   var paso = _evTourPasos[idx];
-  var el = document.querySelector(paso.selector);
+  var el = _evTourResolverTarget(paso.selector);
   var rect = el ? el.getBoundingClientRect() : null;
   if (!el || !rect || (rect.width === 0 && rect.height === 0)) {
     _evTourMostrarPaso(idx + 1);
@@ -2875,40 +2907,41 @@ function _evTourMostrarPaso(idx) {
   }
   _evTourIdx = idx;
   _evTourResaltarTarget(el);
+  // Timeline bloqueado durante su propio paso (Cambio 63, FIX E, issue 3a):
+  // scrollear la lista de eventos mientras el halo la resalta desalineaba el
+  // recuadro del target real -- el halo se mide una sola vez al mostrar el
+  // paso (`getBoundingClientRect()`), no en cada frame de scroll (a
+  // diferencia del reposicionamiento del tooltip, `_evTourReposicionar()`).
+  // Restaurado en `_evTourLimpiarHalo()` (corre en TODAS las transiciones de
+  // paso y al cerrar/omitir el tour), no acá -- un solo lugar de limpieza.
+  if (/timeline|lista/i.test(paso.selector)) document.body.style.overflow = 'hidden';
   _evTourRenderTooltip(paso, rect);
-}
-
-// Sube por la cadena de ancestros de `el` (sin incluirlo) buscando el
-// primer contenedor con `position:fixed`/`sticky` REAL (computedStyle, no
-// el inline -- puede venir de una regla de css/*.css) hasta `<body>`
-// (excluido: si nada intermedio es fixed/sticky, no hay nada que hacer,
-// `<body>` en sí nunca es el problema acá). Ese ancestro ya crea su propio
-// stacking context -- elevar el `z-index` de un HIJO suyo no le gana nada a
-// `#ev-tour-overlay` si el ancestro mismo queda por debajo, hay que elevar
-// el ancestro entero. `null` si no hay ninguno (caso normal: el target no
-// vive dentro de nada fixed/sticky).
-function _evTourAncestroFijo(el) {
-  var nodo = el.parentElement;
-  while (nodo && nodo !== document.body) {
-    var pos = window.getComputedStyle(nodo).position;
-    if (pos === 'fixed' || pos === 'sticky') return nodo;
-    nodo = nodo.parentElement;
-  }
-  return null;
 }
 
 // Crea (reemplazando cualquier halo anterior, `_evTourLimpiarHalo()`) el
 // `<div id="ev-tour-halo">` que resalta `el` -- `position:fixed` medido con
 // `getBoundingClientRect()` (5px de margen a cada lado) y `border-radius`
-// COMPUTADO real de `el` (`window.getComputedStyle()`, no un valor fijo),
-// para que el halo calce con la forma real del target (esquinas cuadradas,
-// redondeadas, o circular). `z-index:9905` -- por encima del elemento
-// elevado (9903, ver `_evTourResaltarTarget()`) y del propio tooltip (9902),
-// siempre visible aunque el target o el tooltip lo tapen parcialmente.
+// COMPUTADO real de `el` (`window.getComputedStyle()`, no un valor fijo, con
+// un piso de 8px -- Cambio 63, issue 1a: un target con esquinas cuadradas o
+// apenas redondeadas quedaba con un halo visualmente "duro" pegado a la
+// forma exacta del elemento; 8px de mínimo lo suaviza sin desalinearlo de
+// targets ya redondeados como el FAB circular, donde el radio computado real
+// sigue ganando por ser mayor), para que el halo calce con la forma real del
+// target. `z-index:9905` -- por encima del elemento elevado (9903, ver
+// `_evTourResaltarTarget()`) y del propio tooltip (9902), siempre visible
+// aunque el target o el tooltip lo tapen parcialmente.
+// `box-shadow` (Cambio 63, issues 1c/2a/3b): reemplaza el oscurecimiento
+// plano de `#ev-tour-overlay` (bajado a `transparent`, ver css/eventos.css)
+// por un spotlight real -- una sombra de 9999px hacia afuera del halo
+// oscurece TODA la pantalla salvo el recorte del halo mismo, que queda
+// limpio (sin el velo encima tapando el target, issue 1c/3b) y sin el
+// desfasaje/parpadeo que tenía el oscurecimiento de `#ev-tour-overlay`
+// corriendo como capa aparte (issue 2a).
 function _evTourPosicionarHalo(el) {
   _evTourLimpiarHalo();
   var r = el.getBoundingClientRect();
   var cs = window.getComputedStyle(el);
+  var br = Math.max(parseFloat(cs.borderRadius) || 0, 8);
   var div = document.createElement('div');
   div.id = 'ev-tour-halo';
   div.style.cssText = [
@@ -2917,8 +2950,9 @@ function _evTourPosicionarHalo(el) {
     'left:' + (r.left - 5) + 'px',
     'width:' + (r.width + 10) + 'px',
     'height:' + (r.height + 10) + 'px',
-    'border-radius:' + cs.borderRadius,
+    'border-radius:' + br + 'px',
     'border:2px dashed var(--brand)',
+    'box-shadow:0 0 0 9999px rgba(0,0,0,0.55)',
     'pointer-events:none',
     'z-index:9905',
     'box-sizing:border-box'
@@ -2926,28 +2960,34 @@ function _evTourPosicionarHalo(el) {
   document.body.appendChild(div);
   _evTourHaloEl = div;
 }
+// Restaura también el `overflow` del timeline si el paso que se está
+// dejando lo había bloqueado (Cambio 63, FIX E, issue 3a) -- se llama en
+// TODOS los caminos de salida de un paso: `_evTourPosicionarHalo()` (cada
+// transición de paso normal, vía `_evTourResaltarTarget()`) y
+// `_evTourResaltarTarget(null)` (cierre/omitir tour, `_evTourCerrar()`),
+// así que un solo lugar cubre ambos sin duplicar la restauración.
 function _evTourLimpiarHalo() {
   if (_evTourHaloEl) { _evTourHaloEl.remove(); _evTourHaloEl = null; }
+  document.body.style.overflow = '';
 }
 
 // Saca el halo dinámico del target anterior (si había) y restaura el
 // `position`/`zIndex` inline que tenía el elemento que se hubiera elevado
-// para él (`_evTourContenedorAnterior` -- el target mismo, o su ancestro
-// fixed/sticky, ver `_evTourAncestroFijo()`); resalta el nuevo target y
-// eleva por encima de #ev-tour-overlay a quien corresponda:
-//   - Si `el` vive dentro de un ancestro fixed/sticky (ej. el botón
-//     "Reservar" dentro de `.cta-footer-fixed`), se eleva ESE ancestro
-//     (solo `z-index` -- su `position` ya es fixed/sticky por su propio
-//     CSS, no hace falta ni conviene tocarla) y `el` queda sin tocar.
-//   - Si no, se eleva `el` mismo tal como antes (`position:relative` +
-//     `z-index:9903`, porque un elemento `static` ignora `z-index`).
-// En los 2 casos se guarda el estilo inline original en
-// `_evTourContenedorAnteriorEstilo` para restaurarlo después. El halo
-// (`_evTourPosicionarHalo()`) se arma con el `el` ORIGINAL (el target real,
-// nunca el ancestro elevado) -- son 2 mecanismos independientes: el halo es
-// puramente visual/posicional, la elevación es de stacking context.
+// para él (`_evTourContenedorAnterior`); resalta el nuevo target y lo eleva
+// por encima de #ev-tour-overlay (`position:relative` + `z-index:9903`,
+// porque un elemento `static` ignora `z-index`). Se guarda el estilo inline
+// original en `_evTourContenedorAnteriorEstilo` para restaurarlo después.
 // `el === null` (llamado desde `_evTourCerrar()`) solo limpia/restaura, sin
 // resaltar nada nuevo.
+// Cambio 63 (FIX C, issues 1b/1c/3a) -- YA NO sube por los ancestros
+// buscando uno `fixed`/`sticky` para elevarlo en su lugar (`_evTourAncestroFijo()`,
+// eliminada): con el spotlight real de `box-shadow` (ver `_evTourPosicionarHalo()`)
+// ya no hace falta ganarle el stacking context a `#ev-tour-overlay` --
+// `#ev-tour-overlay` ya no oscurece nada (`background:transparent`, ver
+// css/eventos.css), así que elevar el target por encima suyo ya no es
+// necesario para que se vea "limpio"; elevar el ANCESTRO fixed/sticky
+// completo (ej. `.cta-footer-fixed`) en vez del elemento puntual traía sus
+// propios bugs (todo el footer quedaba resaltado, no solo el botón real).
 function _evTourResaltarTarget(el) {
   _evTourLimpiarHalo();
   if (_evTourContenedorAnterior) {
@@ -2957,17 +2997,19 @@ function _evTourResaltarTarget(el) {
     _evTourContenedorAnteriorEstilo = null;
   }
   if (!el) return;
-  var ancestroFijo = _evTourAncestroFijo(el);
-  _evTourContenedorAnterior = ancestroFijo || el;
-  _evTourContenedorAnteriorEstilo = { position: _evTourContenedorAnterior.style.position, zIndex: _evTourContenedorAnterior.style.zIndex };
-  if (!ancestroFijo) _evTourContenedorAnterior.style.position = 'relative';
-  _evTourContenedorAnterior.style.zIndex = '9903';
+  _evTourContenedorAnterior = el;
+  _evTourContenedorAnteriorEstilo = { position: el.style.position, zIndex: el.style.zIndex };
+  if (!el.style.position) el.style.position = 'relative';
+  el.style.zIndex = '9903';
   _evTourPosicionarHalo(el);
 }
 
-// Barra de progreso -- 5 segmentos fijos (`_evTourPasos.length`, mismo
-// tamaño en ambos arrays), el del paso actual en `--brand`, el resto en
-// `--border-light` (ver `.ev-tour-progress-seg`/`--activo`, css/eventos.css).
+// Barra de progreso -- un segmento por paso (`_evTourPasos.length`; ya NO es
+// el mismo tamaño en los 2 arrays desde el Cambio 63, `_EV_TOUR_PASOS_USER`
+// sumó 3 pasos nuevos y `_EV_TOUR_PASOS_ADMIN` quedó en 5 -- el largo real
+// de esta barra sigue al array activo, no a un número fijo), el del paso
+// actual en `--brand`, el resto en `--border-light` (ver
+// `.ev-tour-progress-seg`/`--activo`, css/eventos.css).
 function _evTourProgressHtml() {
   var html = '';
   for (var i = 0; i < _evTourPasos.length; i++) {
@@ -2990,7 +3032,7 @@ function _evTourRenderTooltip(paso, rect) {
     '<div class="ev-tour-tooltip-texto">' + paso.texto + '</div>' +
     '<div class="ev-tour-tooltip-footer">' +
       '<a href="javascript:void(0)" class="ev-tour-tooltip-omitir" onclick="_evTourCerrar(true)">Omitir tour</a>' +
-      '<button type="button" class="btn btn-primary ev-tour-tooltip-btn" onclick="_evTourSiguiente()">' + (esUltimo ? 'Entendido ✓' : 'Siguiente →') + '</button>' +
+      '<button type="button" class="btn btn-primary ev-tour-tooltip-btn" onclick="_evTourSiguiente(event)">' + (esUltimo ? 'Entendido ✓' : 'Siguiente →') + '</button>' +
     '</div>';
   tooltip.classList.remove('ev-tour-tooltip--visible');
   if (overlay) overlay.classList.remove('ev-tour-tooltip--visible');
@@ -3017,7 +3059,13 @@ function _evTourRenderTooltip(paso, rect) {
 function _evTourPosicionarTooltip(rect) {
   var tooltip = document.getElementById('ev-tour-tooltip');
   if (!tooltip) return;
-  var margen = 12;
+  // 28px (antes 12px, Cambio 63 issues 1d/2b) -- con el halo dinámico
+  // agrandado 5px por lado (`_evTourPosicionarHalo()`) el margen viejo dejaba
+  // el tooltip casi pegado al borde punteado del halo, sensación de
+  // amontonamiento. Mismo valor sirve de margen respecto al target Y de
+  // margen respecto a los bordes de pantalla (`Math.max`/`Math.min` de más
+  // abajo) -- un solo número, sin bifurcar en 2 constantes.
+  var margen = 28;
   var vh = window.innerHeight;
   var vw = window.innerWidth;
   var alto = tooltip.offsetHeight;
@@ -3043,7 +3091,23 @@ function _evTourPosicionarTooltip(rect) {
   tooltip.style.setProperty('--ev-tour-arrow-left', flechaLeft + 'px');
 }
 
-function _evTourSiguiente() {
+// `ev` (Cambio 63, FIX F, issue 5) -- el botón "Siguiente"/"Entendido" es un
+// `<button>` común dentro de `#ev-tour-tooltip` (hijo directo de `<body>`,
+// fuera del target) -- su click SIGUE burbujeando por el DOM real (tooltip
+// -> body -> document) igual que cualquier otro, aunque visualmente el
+// tooltip flote sobre el contenido. Esta app ya tiene varios handlers
+// delegados/globales enganchados a ese nivel (cierre de paneles/burbujas al
+// tocar afuera, listeners de swipe del calendario -- "único, sin
+// re-adjuntar por render", ver comentarios de `#ev-mes-panel` en index.html)
+// que podían reaccionar a ese burbujeo como si fuera un tap sobre el
+// contenido real de Eventos, disparando su propio efecto (cerrar un panel,
+// interpretar el toque como gesto) al mismo tiempo que el tour avanzaba o
+// cerraba. `stopPropagation()` corta el burbujeo antes de que llegue a esos
+// handlers; `preventDefault()` cubre además cualquier comportamiento
+// default del propio click (sin efecto real hoy sobre un `<button>`, pero
+// consistente con el resto de los handlers de acción de esta app).
+function _evTourSiguiente(ev) {
+  if (ev) { ev.stopPropagation(); ev.preventDefault(); }
   _evTourMostrarPaso(_evTourIdx + 1);
 }
 

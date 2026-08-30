@@ -1433,39 +1433,47 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 
 /* Tour guiado de bienvenida de Eventos (#ev-tour-overlay/#ev-tour-tooltip,
    ver MANIFEST.md "Cambios recientes") -- Cambio 47: híbrido entre la
-   Opción D (tooltip sutil sin overlay) y el spotlight original -- vuelve
-   #ev-tour-overlay, pero muy suave (`rgba(0,0,0,0.52)`, pedido explícito),
-   SIN la "lente" recortada que tenía el spotlight original (#ev-tour-lens
-   no vuelve). El target de cada paso se resalta con un halo punteado --
-   Cambio 50: ya NO es la clase `.ev-tour-halo` de acá (eliminada por
-   completo) sino un `<div id="ev-tour-halo">` creado en runtime por
-   `_evTourPosicionarHalo()` (js/eventos.js), medido con
-   `getBoundingClientRect()` + el `border-radius` COMPUTADO real del target
-   -- el `border-radius:10px` fijo que tenía la clase CSS no calzaba contra
-   elementos con otra forma (ej. el FAB circular, `#ev-fab-btn`). Ese `<div>`
-   vive 100% inline (`div.style.cssText`, js/eventos.js) -- nada de su
-   estilo real vive en este archivo. El target también se eleva por encima
-   del overlay con `z-index:9903` inline (`_evTourResaltarTarget()`,
-   js/eventos.js) -- normalmente sobre el target mismo (sumando
-   `position:relative`, un elemento `static` ignora `z-index`), pero sobre
-   su ancestro `fixed`/`sticky` más cercano si tiene uno (Cambio 49, fix de
-   stacking context -- ver `_evTourAncestroFijo()`), sin tocarle la
-   `position` a ese ancestro (ya es fixed/sticky por su propio CSS).
-   Guardado/restaurado ahí mismo, nada de eso vive en este archivo tampoco.
+   Opción D (tooltip sutil sin overlay) y el spotlight original. El target
+   de cada paso se resalta con un halo punteado -- Cambio 50: ya NO es la
+   clase `.ev-tour-halo` de acá (eliminada por completo) sino un
+   `<div id="ev-tour-halo">` creado en runtime por `_evTourPosicionarHalo()`
+   (js/eventos.js), medido con `getBoundingClientRect()` + el
+   `border-radius` COMPUTADO real del target (con un piso de 8px desde el
+   Cambio 63) -- el `border-radius:10px` fijo que tenía la clase CSS no
+   calzaba contra elementos con otra forma (ej. el FAB circular,
+   `#ev-fab-btn`). Ese `<div>` vive 100% inline (`div.style.cssText`,
+   js/eventos.js) -- nada de su estilo real vive en este archivo.
+   **Cambio 63 (spotlight real vía box-shadow):** `#ev-tour-overlay` baja de
+   `rgba(0,0,0,0.52)` a `transparent` -- el oscurecimiento real ahora es un
+   `box-shadow:0 0 0 9999px rgba(0,0,0,0.55)` en el halo mismo (inline,
+   `_evTourPosicionarHalo()`), que oscurece TODA la pantalla salvo el
+   recorte exacto alrededor del target -- antes, con las 2 capas
+   independientes (overlay plano + halo con solo borde), el área DENTRO del
+   halo quedaba igual de oscurecida que el resto, target incluido.
+   `#ev-tour-overlay` se mantiene como elemento (no se borra) solo por su
+   `opacity`/`transition` -- sigue siendo el fade de entrada/salida
+   sincronizado con el tooltip, ver `.ev-tour-tooltip--visible` más abajo.
+   El target también se eleva por encima con `z-index:9903` inline
+   (`_evTourResaltarTarget()`, js/eventos.js), sumando `position:relative`
+   (un elemento `static` ignora `z-index`) -- **ya NO se eleva su ancestro
+   `fixed`/`sticky`** (Cambio 49 lo hacía para ganarle el stacking context al
+   overlay opaco; con el overlay transparente del Cambio 63 eso dejó de
+   hacer falta, y elevar el ancestro entero terminaba resaltando de más que
+   el target real -- `_evTourAncestroFijo()` fue eliminada). Guardado/
+   restaurado en `_evTourResaltarTarget()`, nada de eso vive en este archivo.
    Tokens reales del sistema de colores: `--card-bg` (no `--bg-card`, que no
    existe en css/colors.css -- se usa el token real más cercano al
    pedido)/`--text`/`--border-light`/`--shadow-lg` para el bubble, `--brand`
    para el título/la flecha/los segmentos activos de la barra de progreso Y
    el halo punteado del target (antes `--brand-60`, con opacity -- el halo
    dinámico usa `--brand` sólido, pedido explícito del Cambio 50). z-index
-   escalonado: overlay 9900 < tooltip 9902 < elemento elevado (target o su
-   ancestro fixed/sticky) 9903 < halo 9905 -- los 4 por debajo del loading
-   overlay (9999) y de los bottom sheets que el usuario pueda abrir mientras
-   el tour está activo. */
+   escalonado: overlay 9900 < tooltip 9902 < target elevado 9903 < halo
+   9905 -- los 4 por debajo del loading overlay (9999) y de los bottom
+   sheets que el usuario pueda abrir mientras el tour está activo. */
 #ev-tour-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.52);
+  background: transparent;
   z-index: 9900;
   pointer-events: none;
   opacity: 0;
