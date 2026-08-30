@@ -2816,7 +2816,7 @@ var _EV_TOUR_PASOS_USER = [
   // 3 pasos nuevos (Cambio 63, FIX G) -- se apoyan en el mismo mecanismo
   // genérico de `_evTourMostrarPaso()` (saltea el paso si el selector no
   // resuelve a un elemento visible), no necesitan guardas propias:
-  { selector: '#ev-nav-hoy-btn', titulo: 'Ir a hoy', texto: 'Consulta qué eventos hay hoy en el calendario desde cualquier punto.' },
+  { selector: '#ev-nav-hoy-btn', titulo: 'Ir a hoy', texto: 'Consulta qué eventos hay hoy en el calendario.' },
   // `.ev-evento-card` (el selector que traía el pedido) no existe en este
   // archivo -- la clase real de cada card de evento del timeline es
   // `.ev-card` (confirmado grepeando `class="ev-card`, `_evCardEventoHtml()`
@@ -2888,8 +2888,56 @@ function _evTourIniciarSiCorresponde(esAdmin) {
   // `_EV_TOUR_PASOS_USER` como daba el pedido literal** -- el tour admin
   // también tiene pasos condicionales (`#ev-btn-patin`, oculto sin equipo
   // del club) expuestos al mismo problema de conteo.
-  _evTourPasos = (esAdmin ? _EV_TOUR_PASOS_ADMIN : _EV_TOUR_PASOS_USER).filter(function(p) {
-    return !p.selector || !!document.querySelector(p.selector);
+  // Texto dinámico del paso `#ev-fab-btn` (fix reciente, solo cuentas
+  // no-admin). `canPayMonthly()` SÍ existe (js/reservas.js:229) -- pero es
+  // el gate de un flujo DISTINTO (Reservas: si puede pagar mensual sin
+  // necesitar NINGÚN equipo del club, patines Y protecciones) -- no es lo
+  // que gobierna el speed-dial de ESTE FAB de Eventos, que usa su propia
+  // `_evNecesitaEquipo()` (arriba en este archivo, solo mira `necesitaPatines`,
+  // sin `necesitaProtecciones`) + `_modoUsuario()`. Condiciones reales
+  // auditadas contra `_evFabPlusClick()`/`_evFabUnificadoActualizar()`
+  // (arriba en este archivo, las funciones que de verdad deciden qué hace
+  // este botón): para una cuenta no-admin, `_evFabPlusClick()` resuelve sin
+  // speed-dial a `_evFabReservaClase()` si `_evNecesitaEquipo()` (mirlxs sin
+  // equipo propio, "por clase" es su ÚNICO camino) o a
+  // `_evFabReservaMesActual()` si `modo === 'quindes'` ("por mes" es el único
+  // camino de quindes, nunca tiene "por clase" en ningún camino del archivo);
+  // el 3er caso (mirlxs CON equipo propio) cae a `_evFabToggle()`, que abre
+  // el speed-dial con AMBAS opciones (`_evFabUnificadoActualizar()`, rama
+  // `!necesitaEquipo && modo === 'mirlxs'`). De ahí: `puedeClase` es
+  // simplemente "es mirlxs" (con o sin equipo propio, siempre tiene ese
+  // camino); `puedeMes` es quindes, o mirlxs CON equipo propio.
+  _evTourPasos = (esAdmin ? _EV_TOUR_PASOS_ADMIN : _EV_TOUR_PASOS_USER).map(function(p) {
+    if (!esAdmin && p.selector === '#ev-fab-btn') {
+      var modo = _modoUsuario();
+      var necesitaEquipo = _evNecesitaEquipo();
+      var puedeMes = modo === 'quindes' || (modo === 'mirlxs' && !necesitaEquipo);
+      var puedeClase = modo === 'mirlxs';
+      var txt = (puedeMes && puedeClase)
+        ? 'Podrás reservar tu clase o tu mensualidad desde este botón.'
+        : puedeMes
+        ? 'Podrás reservar tu mensualidad desde este botón.'
+        : 'Podrás reservar tu clase desde este botón.';
+      return { selector: p.selector, sinHalo: p.sinHalo, titulo: p.titulo, texto: txt };
+    }
+    return p;
+  }).filter(function(p) {
+    // `el.offsetParent !== null` (fix reciente, antes solo chequeaba
+    // existencia) -- `#ev-btn-anticipada` (y `#ev-btn-patin`) existen
+    // siempre en el DOM (index.html), solo se ocultan con `display:none`
+    // en runtime (`_evActualizarTopBarModo()`) -- `document.querySelector()`
+    // solo los encontraba a secas, sin importar si estaban ocultos, así que
+    // el conteo de la barra de progreso (mismo problema documentado arriba
+    // para el filtro por existencia) seguía inflado para cualquier cuenta
+    // donde ese paso terminara oculto en runtime. `offsetParent` da `null`
+    // cuando el elemento MISMO o cualquier ancestro tiene `display:none`
+    // (o el elemento no está en el documento) -- no sirve para `position:fixed`
+    // con `display:none` heredado de un ancestro con overflow, pero ningún
+    // caso real de este archivo cae en esa excepción.
+    return !p.selector || (function() {
+      var el = document.querySelector(p.selector);
+      return !!el && el.offsetParent !== null;
+    }());
   });
   _evTourActivo = true;
   tooltip.style.display = 'block';
