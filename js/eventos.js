@@ -3376,6 +3376,43 @@ function _evTourReposicionar() {
     _evTourPosicionarTooltip(el.getBoundingClientRect());
   });
 }
+
+// ═══ Mini-tours puntuales (distintos del tour guiado `_evTour*` de arriba --
+// sin overlay/halo/pasos, solo un tooltip suelto anclado a UN elemento
+// puntual, mostrado una única vez por dispositivo vía su propia clave de
+// localStorage). 3 usos: `.ev-asistire-wrap` (RSVP), `.ev-estado-pill-danger`
+// (evento cancelado), `.ev-estado-pill-success` (llegada registrada) -- ver
+// los 3 call sites en `abrirEvDetalle()`/`_evRenderTimeline()` más abajo.
+// `key` arma la clave real `ev_mtour_<key>` -- no-op silencioso si ya se
+// vio, o si `selector` no resuelve a nada en el DOM en este momento (mismo
+// criterio "no forzar" que ya usa el tour guiado). ═══
+function _evMiniTour(key, selector, titulo, texto) {
+  var lsKey = 'ev_mtour_' + key;
+  if (localStorage.getItem(lsKey)) return;
+  var target = document.querySelector(selector);
+  if (!target) return;
+  var rect = target.getBoundingClientRect();
+  var ttW = 260;
+  var spaceBelow = window.innerHeight - rect.bottom;
+  var posAbove = spaceBelow < 130;
+  var left = Math.min(Math.max(rect.left + rect.width / 2 - ttW / 2, 12), window.innerWidth - ttW - 12);
+  var tt = document.createElement('div');
+  tt.className = 'ev-mini-tour-tooltip';
+  tt.style.cssText = 'position:fixed;left:' + left + 'px;width:' + ttW + 'px;' +
+    (posAbove ? 'bottom:' + (window.innerHeight - rect.top + 10) + 'px;' : 'top:' + (rect.bottom + 10) + 'px;') +
+    'z-index:9800;opacity:0;transition:opacity 0.25s;pointer-events:all;';
+  tt.innerHTML = '<strong>' + titulo + '</strong><p>' + texto + '</p>' +
+    '<button class="ev-mini-tour-ok" onclick="_evMiniTourCerrar(\'' + lsKey + '\')">Entendido</button>';
+  document.body.appendChild(tt);
+  setTimeout(function() { tt.style.opacity = '1'; }, 30);
+}
+function _evMiniTourCerrar(lsKey) {
+  localStorage.setItem(lsKey, '1');
+  document.querySelectorAll('.ev-mini-tour-tooltip').forEach(function(el) {
+    el.style.opacity = '0';
+    setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 270);
+  });
+}
 function evAbrirSheetTipoPago() {
   var modo = _modoUsuario();
   if (modo === 'quindes') { irNuevaReservaConTipo('mensual'); return; }
@@ -4730,6 +4767,27 @@ function _evRenderTimeline(instant, alTerminar) {
     // la nav fija con el nuevo DOM (ej. un filtro nuevo pudo haber sacado del
     // timeline el mes que el label estaba mostrando).
     _evActualizarNavMesPorScroll();
+    // Mini-tours de evento cancelado / llegada registrada (fix reciente) --
+    // **desvío real respecto al pedido:** se pidió "al final de la función
+    // que renderiza el timeline", pero `cont.innerHTML = html` (arriba en
+    // este mismo callback) corre DENTRO de `_evFadeSwap()` -- async (fade de
+    // salida antes del swap real) -- así que el final LITERAL de
+    // `_evRenderTimeline()` se ejecuta ANTES de que el DOM nuevo exista,
+    // dejando `document.querySelector('.ev-estado-pill-danger'/'-success')`
+    // sin nada que encontrar. Puestas acá, adentro del callback, después de
+    // que el DOM real ya está insertado -- sin necesitar ningún `setTimeout`
+    // (asignar `.innerHTML` puebla el DOM de forma síncrona, a diferencia de
+    // la pantalla de detalle de `abrirEvDetalle()`, que además depende de
+    // que la PANTALLA deje de estar `display:none`). Ambas se re-intentan en
+    // cada render del timeline (cambio de filtro, de mes, etc.) sin costo
+    // real -- `_evMiniTour()` ya se auto-descarta sola si su clave de
+    // localStorage ya está marcada.
+    _evMiniTour('cancelado', '.ev-estado-pill-danger',
+      'Evento cancelado',
+      'Este evento no se realiza. No cuenta para tu asistencia ni para el cálculo de tu categoría.');
+    _evMiniTour('llegada', '.ev-estado-pill-success',
+      'Tu registro de llegada',
+      'Indica si llegaste a horario al entrenamiento. Podés corregirlo tocando el evento.');
     if (alTerminar) alTerminar();
   }, instant, _EV_TIMELINE_FADE_MS);
 }
@@ -4845,6 +4903,25 @@ function abrirEvDetalle(id) {
   // estado ya elegido desde la card dejaba el indicador sin su fondo sólido
   // (offsetWidth/offsetLeft de la opción activa medidos en 0).
   setTimeout(function() { _evUpdateRsvpSliders(false); }, 50);
+  // Mini-tour de RSVP (fix reciente) -- **desvío real respecto al pedido:**
+  // se pidió justo después de que `_evRenderDetalle()` asigna el HTML del
+  // RSVP a `.innerHTML`, pero esa función corre ACÁ ARRIBA, varias líneas
+  // antes de `ir('s-eventos-detalle')` -- la pantalla todavía está
+  // `display:none` en ese punto (mismo motivo ya documentado unas líneas
+  // arriba para `_evUpdateRsvpSliders()`/`_evDetalleActualizarSticky()`), así
+  // que `target.getBoundingClientRect()` (`_evMiniTour()`) hubiera medido
+  // todo en 0 y posicionado el tooltip en la esquina superior izquierda en
+  // vez de junto al RSVP real. Se movió a este punto, después de `ir()` (la
+  // pantalla ya visible) -- mismo `setTimeout(100)` que pedía el pedido,
+  // acá cumple el mismo rol que el `smoothSlideUp 0.6s` de entrada de
+  // `.pantalla.activa` que documenta el tour guiado más arriba en este
+  // archivo (`_evTourIniciarSiCorresponde()`/`_evActualizarTopBarModo()`):
+  // deja pasar el arranque de esa animación antes de medir geometría real.
+  setTimeout(function() {
+    _evMiniTour('rsvp', '.ev-asistire-wrap',
+      'Marcá tu asistencia',
+      'Indicá si vas a asistir, no asistir o no jugás. El equipo lo ve en tiempo real.');
+  }, 100);
 }
 // Sticky de 3 niveles apilados (ver "Cambios recientes"): nav (ya sticky por
 // CSS, top:0, sin pills desde el rediseño -- ver _evDetalleStickyHtml())
