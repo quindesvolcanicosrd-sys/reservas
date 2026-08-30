@@ -2532,7 +2532,15 @@ function _evActualizarTopBarModo() {
   // es más simple un solo delay para todos los pasos que 2 caminos
   // distintos). `_evTourIniciarSiCorresponde()` es un no-op silencioso si
   // ya se vio (localStorage `ev_tour_visto`) o si ya hay un tour corriendo.
-  setTimeout(function() { _evTourIniciarSiCorresponde(esAdmin); }, 650);
+  // Batch 2 -- `_evTourVerificarCambioUsuario()` primero, mismo delay
+  // (necesita el mismo margen de 650ms que el tour de bienvenida antes de
+  // medir geometría real -- ver el comentario de arriba, mismo motivo
+  // exacto). Sin `if (_evTourActivo)` acá -- ya lo chequea
+  // `_evTourIniciarConPasos()` adentro, un solo lugar para las 2 llamadas.
+  setTimeout(function() {
+    _evTourVerificarCambioUsuario();
+    _evTourIniciarSiCorresponde(esAdmin);
+  }, 650);
 }
 
 // Onclick real de la opción "Reserva por mes" del FAB unificado (mirlxs Y
@@ -2878,6 +2886,68 @@ var _evTourContenedorAnteriorEstilo = null;
 // Referencia al `<div>` actual, para poder sacarlo del DOM al pasar de
 // paso o cerrar el tour (`_evTourLimpiarHalo()`).
 var _evTourHaloEl = null;
+// Batch 2 -- generalización del motor para reusarlo en más de un tour real
+// (bienvenida/`_evTourIniciarSiCorresponde()`, "primera reserva"/
+// `_evTourPrimeraReserva()`, "cambio de tipo de cuenta"/`_evTourCambioUsuario()`),
+// cada uno con su propia clave de localStorage y su propio texto de botón
+// final -- antes ambos vivían hardcodeados (`'ev_tour_visto'` en
+// `_evTourCerrar()`, `'FINALIZAR TOUR'` en `_evTourRenderTooltip()`), sin
+// forma de que un 2do tour real los personalizara sin duplicar TODO el
+// motor (halo/spotlight/absorber/dash-fade/etc.). Reseteados a los
+// defaults del tour de bienvenida por cada "iniciar" real, ver
+// `_evTourIniciarConPasos()` más abajo.
+var _evTourLsKey = 'ev_tour_visto';
+var _evTourLabelFinalizar = 'FINALIZAR TOUR';
+
+// Arranque genérico compartido por los 3 tours reales de este archivo --
+// asigna el array de pasos + la clave de localStorage + el label del botón
+// final, y corre exactamente la misma secuencia de arranque que ya usaba
+// `_evTourIniciarSiCorresponde()` (mostrar tooltip/overlay, enganchar
+// listeners de reposicionamiento, arrancar en el paso 0). `if (_evTourActivo)`
+// acá (no en cada caller) -- un solo lugar que impide que 2 tours reales se
+// pisen si de casualidad se disparan casi al mismo tiempo.
+function _evTourIniciarConPasos(pasos, lsKey, labelFinalizar) {
+  if (_evTourActivo) return;
+  var tooltip = document.getElementById('ev-tour-tooltip');
+  if (!tooltip) return;
+  _evTourPasos = pasos;
+  _evTourLsKey = lsKey;
+  _evTourLabelFinalizar = labelFinalizar || 'FINALIZAR TOUR';
+  _evTourActivo = true;
+  tooltip.style.display = 'block';
+  var overlay = document.getElementById('ev-tour-overlay');
+  if (overlay) overlay.style.display = 'block';
+  window.addEventListener('resize', _evTourReposicionar);
+  window.addEventListener('scroll', _evTourReposicionar, true);
+  _evTourMostrarPaso(0);
+}
+
+// Texto dinámico del paso `#ev-fab-btn`, factorizado (Batch 2) para que
+// `_evTourCambioUsuario()` lo reuse tal cual en vez de copiar la fórmula --
+// mismo criterio ya usado en este archivo para `_eqStatsCalc()`/js/equipo.js.
+// Condiciones reales auditadas contra `_evFabPlusClick()`/
+// `_evFabUnificadoActualizar()` (este archivo, las funciones que de verdad
+// deciden qué hace el botón): para una cuenta no-admin, `_evFabPlusClick()`
+// resuelve sin speed-dial a `_evFabReservaClase()` si `_evNecesitaEquipo()`
+// (mirlxs sin equipo propio, "por clase" es su ÚNICO camino) o a
+// `_evFabReservaMesActual()` si `modo === 'quindes'` ("por mes" es el único
+// camino de quindes, nunca tiene "por clase" en ningún camino del archivo);
+// el 3er caso (mirlxs CON equipo propio) cae a `_evFabToggle()`, que abre el
+// speed-dial con AMBAS opciones. Para admin, un solo texto genérico alcanza
+// -- CUALQUIER admin tiene "crear evento" siempre disponible + "reserva por
+// mes" condicional a cuota al día, pero NUNCA "por clase" en ningún branch
+// admin de `_evFabUnificadoActualizar()`.
+function _evTourTextoFab(esAdmin) {
+  var modo = _modoUsuario();
+  var esQuindes = modo === 'quindes';
+  var necesitaEquipo = _evNecesitaEquipo();
+  var puedeMes = esQuindes || (modo === 'mirlxs' && !necesitaEquipo);
+  var puedeClase = modo === 'mirlxs';
+  if (esAdmin) return 'Reserva tu lugar en los entrenamientos o crea nuevos eventos desde este botón.';
+  if (esQuindes || (puedeMes && !puedeClase)) return 'Podrás reservar tu mensualidad desde este botón.';
+  if (puedeClase && !puedeMes) return 'Podrás reservar tu clase desde este botón.';
+  return 'Podrás reservar tu clase o tu mensualidad desde este botón.';
+}
 
 function _evTourIniciarSiCorresponde(esAdmin) {
   if (_evTourActivo) return;
@@ -2897,54 +2967,12 @@ function _evTourIniciarSiCorresponde(esAdmin) {
   // `_EV_TOUR_PASOS_USER` como daba el pedido literal** -- el tour admin
   // también tiene pasos condicionales (`#ev-btn-patin`, oculto sin equipo
   // del club) expuestos al mismo problema de conteo.
-  // Texto dinámico del paso `#ev-fab-btn` (fix reciente, solo cuentas
-  // no-admin). `canPayMonthly()` SÍ existe (js/reservas.js:229) -- pero es
-  // el gate de un flujo DISTINTO (Reservas: si puede pagar mensual sin
-  // necesitar NINGÚN equipo del club, patines Y protecciones) -- no es lo
-  // que gobierna el speed-dial de ESTE FAB de Eventos, que usa su propia
-  // `_evNecesitaEquipo()` (arriba en este archivo, solo mira `necesitaPatines`,
-  // sin `necesitaProtecciones`) + `_modoUsuario()`. Condiciones reales
-  // auditadas contra `_evFabPlusClick()`/`_evFabUnificadoActualizar()`
-  // (arriba en este archivo, las funciones que de verdad deciden qué hace
-  // este botón): para una cuenta no-admin, `_evFabPlusClick()` resuelve sin
-  // speed-dial a `_evFabReservaClase()` si `_evNecesitaEquipo()` (mirlxs sin
-  // equipo propio, "por clase" es su ÚNICO camino) o a
-  // `_evFabReservaMesActual()` si `modo === 'quindes'` ("por mes" es el único
-  // camino de quindes, nunca tiene "por clase" en ningún camino del archivo);
-  // el 3er caso (mirlxs CON equipo propio) cae a `_evFabToggle()`, que abre
-  // el speed-dial con AMBAS opciones (`_evFabUnificadoActualizar()`, rama
-  // `!necesitaEquipo && modo === 'mirlxs'`). De ahí: `puedeClase` es
-  // simplemente "es mirlxs" (con o sin equipo propio, siempre tiene ese
-  // camino); `puedeMes` es quindes, o mirlxs CON equipo propio.
-  // Rama admin (fix reciente) -- antes el `.map()` solo tocaba `#ev-fab-btn`
-  // para `!esAdmin`, dejando el texto fijo original de `_EV_TOUR_PASOS_ADMIN`
-  // ("Pulsa aquí para reservar tu lugar en un evento o clase, o para crear
-  // un nuevo evento.") sin importar el perfil real. Auditado igual que la
-  // rama no-admin contra `_evFabUnificadoActualizar()`: CUALQUIER admin
-  // (quindes-admin o mirlxs-admin) tiene "crear evento" como camino SIEMPRE
-  // disponible, más "reserva por mes" condicional a tener cuota al día --
-  // pero NUNCA "por clase" (`_evFabReservaClase()` no se llama en ningún
-  // branch admin de esa función) -- un solo texto genérico alcanza para los
-  // 2 sub-casos de admin (no se distingue cuota al día, a diferencia de la
-  // rama no-admin, por pedido explícito de mantenerlo simple acá).
-  _evTourPasos = (esAdmin ? _EV_TOUR_PASOS_ADMIN : _EV_TOUR_PASOS_USER).map(function(p) {
+  // Texto dinámico del paso `#ev-fab-btn` -- fórmula factorizada en
+  // `_evTourTextoFab(esAdmin)` (Batch 2, ver esa función más arriba) para
+  // que `_evTourCambioUsuario()` la reuse tal cual sin duplicarla.
+  var pasos = (esAdmin ? _EV_TOUR_PASOS_ADMIN : _EV_TOUR_PASOS_USER).map(function(p) {
     if (p.selector === '#ev-fab-btn') {
-      var modo = _modoUsuario();
-      var esQuindes = modo === 'quindes';
-      var necesitaEquipo = _evNecesitaEquipo();
-      var puedeMes = esQuindes || (modo === 'mirlxs' && !necesitaEquipo);
-      var puedeClase = modo === 'mirlxs';
-      var txt;
-      if (esAdmin) {
-        txt = 'Reserva tu lugar en los entrenamientos o crea nuevos eventos desde este botón.';
-      } else if (esQuindes || (puedeMes && !puedeClase)) {
-        txt = 'Podrás reservar tu mensualidad desde este botón.';
-      } else if (puedeClase && !puedeMes) {
-        txt = 'Podrás reservar tu clase desde este botón.';
-      } else {
-        txt = 'Podrás reservar tu clase o tu mensualidad desde este botón.';
-      }
-      return { selector: p.selector, sinHalo: p.sinHalo, titulo: p.titulo, texto: txt };
+      return { selector: p.selector, sinHalo: p.sinHalo, titulo: p.titulo, texto: _evTourTextoFab(esAdmin) };
     }
     return p;
   }).filter(function(p) {
@@ -2987,13 +3015,74 @@ function _evTourIniciarSiCorresponde(esAdmin) {
       return !el || el.offsetParent !== null;
     }());
   });
-  _evTourActivo = true;
-  tooltip.style.display = 'block';
-  var overlay = document.getElementById('ev-tour-overlay');
-  if (overlay) overlay.style.display = 'block';
-  window.addEventListener('resize', _evTourReposicionar);
-  window.addEventListener('scroll', _evTourReposicionar, true);
-  _evTourMostrarPaso(0);
+  // Arranque real vía `_evTourIniciarConPasos()` (Batch 2) -- mismas 6
+  // líneas que antes vivían acá sueltas (mostrar tooltip/overlay, enganchar
+  // listeners, `_evTourMostrarPaso(0)`), ahora compartidas con
+  // `_evTourPrimeraReserva()`/`_evTourCambioUsuario()`.
+  _evTourIniciarConPasos(pasos, 'ev_tour_visto', 'FINALIZAR TOUR');
+}
+
+// ═══ Tour "primera reserva" (Batch 2) -- 2 pasos, reusa el mismo motor del
+// tour de bienvenida (`_evTourIniciarConPasos()`) con su propia clave de
+// localStorage (`ev_primera_reserva_tour_visto`) y su propio label de
+// cierre ("Finalizar", no "FINALIZAR TOUR"). Selectores: `.ev-card-btn-cancelar`
+// (botón real "Cancelar o re - agendar", `_evBtnCancelarReagendarHtml()`
+// más arriba en este archivo -- clase compartida por CUALQUIER card con una
+// reserva propia activa, no un id por evento; en el momento real en que
+// este tour aplica -- la primera reserva de la cuenta -- solo puede haber
+// una, así que alcanza sin necesitar el id puntual) y `.badge-pendiente`
+// (chip real "Reserva pendiente", `_evCardEventoHtml()` más arriba --
+// `.badge-confirmada`/`.badge-reagendar` son los otros 2 estados posibles,
+// esta clase sola ya identifica "pendiente" sin ambigüedad). ═══
+function _evTourPrimeraReserva() {
+  if (localStorage.getItem('ev_primera_reserva_tour_visto')) return;
+  var pasos = [
+    { selector: '.ev-card-btn-cancelar', titulo: 'Cancela o reagenda', texto: "Usa el botón 'Cancelar o reagendar' para cambiar el estado de tu reserva cuando lo necesites." },
+    { selector: '.badge-pendiente', titulo: 'Estado de tu reserva', texto: 'Las reservas nuevas siempre quedan pendientes de aprobación. No deberías asistir al entrenamiento hasta que sea aprobada.' }
+  ];
+  _evTourIniciarConPasos(pasos, 'ev_primera_reserva_tour_visto', 'Finalizar');
+}
+
+// ═══ Tour "cambio de tipo de cuenta" (Batch 2) -- 2 pasos, mismo motor,
+// clave `ev_tipo_usuario_visto` (guarda el TIPO real, no un booleano -- ver
+// `_evTourVerificarCambioUsuario()` más abajo, que decide cuándo llamar a
+// esta función) y label de cierre "Listo". Paso 1 (`#ev-fab-btn`) reusa
+// `_evTourTextoFab()` tal cual (mismo texto que vería en el tour de
+// bienvenida para el tipo de cuenta ACTUAL); paso 2 (`#ev-btn-anticipada`)
+// se apoya en el mismo mecanismo genérico de `_evTourMostrarPaso()`
+// (saltea el paso si el selector no resuelve a un elemento visible) para
+// las cuentas donde ese botón no aplica -- sin guarda propia, igual que en
+// el tour de bienvenida. ═══
+function _evTourCambioUsuario() {
+  var esAdmin = typeof _adminToken !== 'undefined' && !!_adminToken;
+  var pasos = [
+    { selector: '#ev-fab-btn', titulo: 'Reserva tu lugar', texto: _evTourTextoFab(esAdmin) },
+    { selector: '#ev-btn-anticipada', titulo: 'Asistencia anticipada', texto: 'Puedes confirmar tu asistencia antes del entrenamiento usando este botón.' }
+  ];
+  _evTourIniciarConPasos(pasos, 'ev_tipo_usuario_visto_mostrado', 'Listo');
+}
+
+// Decide si corresponde disparar `_evTourCambioUsuario()` -- se llama desde
+// `_evActualizarTopBarModo()` (mismo punto donde ya se decide el tour de
+// bienvenida), después de chequear que ESE ya se vio: si es la primera vez
+// que la cuenta entra a Eventos, mostrar los 2 tours casi al mismo tiempo
+// (ambos compiten por el mismo `_evTourActivo`) no tendría sentido -- "cambio
+// de tipo" solo es relevante para una cuenta que YA usó la app antes.
+// `ev_tipo_usuario_visto` (clave de DATOS, guarda el tipo real -- 'quindes'/
+// 'mirlxs', no un booleano) es distinta de `ev_tipo_usuario_visto_mostrado`
+// (clave de CONTROL del tour en sí, ver `_evTourIniciarConPasos()` arriba,
+// se marca recién cuando el tour realmente termina) -- necesitaban 2 claves
+// separadas porque esta función actualiza la primera SIEMPRE (haya
+// cambiado el tipo o no), mientras que la segunda solo se marca si el tour
+// realmente se mostró y se cerró.
+function _evTourVerificarCambioUsuario() {
+  if (localStorage.getItem('ev_tour_visto') !== '1') return;
+  var tipoActual = _modoUsuario();
+  var tipoGuardado = localStorage.getItem('ev_tipo_usuario_visto');
+  var mostrar = (tipoGuardado !== null && tipoGuardado !== tipoActual) ||
+    (tipoGuardado === null && tipoActual === 'quindes');
+  localStorage.setItem('ev_tipo_usuario_visto', tipoActual);
+  if (mostrar) _evTourCambioUsuario();
 }
 
 // Resuelve el selector de un paso a un elemento real -- si matchea más de
@@ -3279,11 +3368,15 @@ function _evTourRenderTooltip(paso, rect) {
       // "Omitir tour" oculto en el último paso (fix reciente) -- sin sentido
       // "omitir" cuando ya no queda nada más que ver.
       (!esUltimo ? '<a href="javascript:void(0)" class="ev-tour-tooltip-omitir" onclick="_evTourCerrar(true, event)">Omitir tour</a>' : '') +
-      // Último paso: "FINALIZAR TOUR" llama a `_evTourCerrar()` DIRECTO con
-      // `conFade:true` (fix reciente) -- no a `_evTourSiguiente()`, que solo
-      // dispara el cierre SIN fade de rebote al agotar `_evTourPasos` en
+      // Último paso: llama a `_evTourCerrar()` DIRECTO con `conFade:true`
+      // (fix reciente) -- no a `_evTourSiguiente()`, que solo dispara el
+      // cierre SIN fade de rebote al agotar `_evTourPasos` en
       // `_evTourMostrarPaso()` (ver ese `if (idx >= _evTourPasos.length)`).
-      '<button type="button" class="btn btn-primary ev-tour-tooltip-btn" onclick="' + (esUltimo ? '_evTourCerrar(true, event, true)' : '_evTourSiguiente(event)') + '">' + (esUltimo ? 'FINALIZAR TOUR' : 'SIGUIENTE →') + '</button>' +
+      // `_evTourLabelFinalizar` (Batch 2, antes 'FINALIZAR TOUR' fijo) --
+      // cada tour real fija el label que le corresponde en
+      // `_evTourIniciarConPasos()` ("Finalizar"/"Listo" para los tours
+      // nuevos, "FINALIZAR TOUR" para el de bienvenida).
+      '<button type="button" class="btn btn-primary ev-tour-tooltip-btn" onclick="' + (esUltimo ? '_evTourCerrar(true, event, true)' : '_evTourSiguiente(event)') + '">' + (esUltimo ? _evTourLabelFinalizar : 'SIGUIENTE →') + '</button>' +
     '</div>';
   tooltip.classList.remove('ev-tour-tooltip--visible');
   if (overlay) overlay.classList.remove('ev-tour-tooltip--visible');
@@ -3435,7 +3528,11 @@ function _evTourCerrar(marcarVisto, ev, conFade) {
     setTimeout(function() { _evTourCerrar(marcarVisto); }, 360);
     return;
   }
-  if (marcarVisto) localStorage.setItem('ev_tour_visto', '1');
+  // `_evTourLsKey` (Batch 2, antes hardcodeado a `'ev_tour_visto'`) -- cada
+  // tour real (`_evTourIniciarConPasos()`) la fija a la suya antes de
+  // arrancar, así que acá siempre apunta a la clave del tour que se está
+  // cerrando en este momento.
+  if (marcarVisto) localStorage.setItem(_evTourLsKey, '1');
   _evTourActivo = false;
   _evTourPasos = null;
   _evTourResaltarTarget(null);
@@ -4837,6 +4934,21 @@ function _evRenderTimeline(instant, alTerminar) {
     // la nav fija con el nuevo DOM (ej. un filtro nuevo pudo haber sacado del
     // timeline el mes que el label estaba mostrando).
     _evActualizarNavMesPorScroll();
+    // Tour "primera reserva" (Batch 2) -- consume la bandera dejada por
+    // `finalizar()`/js/reservas.js (la confirmación real de reserva navega
+    // a `s6`, no acá; recién en el PRÓXIMO render del timeline -- volviendo
+    // de `s6`, o entrando de nuevo a Eventos más tarde -- existen de verdad
+    // `.ev-card-btn-cancelar`/`.badge-pendiente`, ver esos selectores en
+    // `_evTourPrimeraReserva()`). `setTimeout(100)` -- mismo margen chico
+    // que ya usaba el sistema de mini-tours (retirado) para dejar que el
+    // `innerHTML` recién asignado termine de pintarse antes de medir
+    // geometría; acá alcanza con eso (no con los 650ms del tour de
+    // bienvenida) porque esta pantalla YA está visible hace rato, sin
+    // ninguna animación de entrada nueva de por medio.
+    if (E._evTourPrimeraReservaPendiente) {
+      E._evTourPrimeraReservaPendiente = false;
+      setTimeout(function() { _evTourPrimeraReserva(); }, 100);
+    }
     if (alTerminar) alTerminar();
   }, instant, _EV_TIMELINE_FADE_MS);
 }

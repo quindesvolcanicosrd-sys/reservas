@@ -1375,6 +1375,18 @@ function confirmarReserva(btn) {
         if (window.console) console.warn('marcarAsistenciaUsuario (post-pago mensual): ' + (e && e.message || 'error'));
       });
     }
+    // Tour "primera reserva" (Batch 2, js/eventos.js) -- acá se confirma la
+    // reserva (al menos una fecha/mes se guardó con éxito, `huboFalloParcial`
+    // permitido), pero esta pantalla navega a `s6` (resumen), no de vuelta a
+    // Eventos -- los targets reales del tour (`.ev-card-btn-cancelar`/
+    // `.badge-pendiente`) viven DENTRO de `#ev-timeline`, inexistentes acá.
+    // Se deja pendiente en `E._evTourPrimeraReservaPendiente` -- consumido
+    // por `_evRenderTimeline()`/js/eventos.js la próxima vez que la persona
+    // vuelva a ver su timeline con la card ya reservada real. Gate por
+    // localStorage repetido acá (además del que ya hace
+    // `_evTourPrimeraReserva()` al consumir la bandera) para no dejar la
+    // bandera prendida sin necesidad si el tour ya se vio hace tiempo.
+    if (!localStorage.getItem('ev_primera_reserva_tour_visto')) E._evTourPrimeraReservaPendiente = true;
     ir('s6');
     if (huboFalloParcial) {
       mostrarToast('Algunas fechas no se pudieron guardar', 'error');
