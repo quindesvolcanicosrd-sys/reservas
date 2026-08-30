@@ -3106,8 +3106,26 @@ function _evTourPosicionarTooltip(rect) {
 // handlers; `preventDefault()` cubre además cualquier comportamiento
 // default del propio click (sin efecto real hoy sobre un `<button>`, pero
 // consistente con el resto de los handlers de acción de esta app).
+// Blocker anti-tap-through (Cambio 63, fix adicional) -- `<div>` transparente
+// full-screen, `pointer-events:all`, por encima de TODO lo del tour
+// (z-index:9920, más alto que el halo en 9905) durante 400ms. En mobile, el
+// click sintético que sigue a un `touchend` puede llegar con un delay real
+// de hasta ~300ms -- si en ese lapso el elemento que estaba debajo del
+// tooltip/halo queda expuesto (tour avanza de paso o se cierra), ese click
+// tardío le pega a ESE elemento (ej. abre el detalle de un `.ev-card`, o el
+// FAB) en vez de perderse. El blocker absorbe ese toque residual sin
+// bloquear nada real por más tiempo del necesario -- se saca solo a los
+// 400ms, después de que cualquier click sintético demorado ya pasó.
+function _evTourBlockerAntiTap() {
+  var _blocker = document.createElement('div');
+  _blocker.style.cssText = 'position:fixed;inset:0;z-index:9920;pointer-events:all;background:transparent;';
+  document.body.appendChild(_blocker);
+  setTimeout(function() { if (_blocker.parentNode) _blocker.parentNode.removeChild(_blocker); }, 400);
+}
+
 function _evTourSiguiente(ev) {
   if (ev) { ev.stopPropagation(); ev.preventDefault(); }
+  _evTourBlockerAntiTap();
   _evTourMostrarPaso(_evTourIdx + 1);
 }
 
@@ -3136,6 +3154,7 @@ function _evTourCerrar(marcarVisto, ev) {
     overlay.style.display = 'none';
     overlay.classList.remove('ev-tour-tooltip--visible');
   }
+  _evTourBlockerAntiTap();
 }
 
 // Reposiciona el paso actual sin re-renderizar el tooltip (evita parpadeo
