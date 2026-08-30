@@ -658,8 +658,21 @@ function _eqRenderPorRol() {
   // acordeón nacía con la clase `.abierto` puesta pero `max-height:0` heredado
   // de `.eq-grupo-body`, colapsado pese al pedido explícito de "expandido por
   // defecto".
+  // `'none'`, no `scrollHeight + 'px'` (2do bug real, Batch 9 -- ver
+  // MANIFEST.md): medir `scrollHeight` acá daba `0` si `#s-equipo` todavía
+  // era `display:none` en ese momento (una `.pantalla` no-activa no tiene
+  // caja de layout, cualquier medición de sus descendientes da 0 en
+  // cualquier navegador -- no dependía de esta función en particular). El
+  // reorden de `irEquipo()` (Batch 9) ya evita ESE camino puntual, pero
+  // `'none'` es la fix real y a prueba de futuro: sin depender de ninguna
+  // medición ni de en qué momento/orden corra esta función, el acordeón
+  // recién renderizado con `.abierto` puesto simplemente no tiene techo. Sin
+  // animación en el primer render (no hace falta -- nace ya abierto) y sin
+  // problema con la `transition` de `.eq-grupo-body` (css/equipo.css): un
+  // salto de `max-height:0` a `none` no es interpolable, así que no anima,
+  // pero tampoco tiene por qué acá.
   cont.querySelectorAll('.eq-grupo-body.abierto').forEach(function(body) {
-    body.style.maxHeight = body.scrollHeight + 'px';
+    body.style.maxHeight = 'none';
   });
 }
 
@@ -730,8 +743,16 @@ function _eqRenderGrupo(rol) {
   // grupo está abierto cuando el contenido cambia (búsqueda/filtro), el
   // `max-height` inline que dejó _eqToggleGrupo() queda desactualizado --
   // recalculado acá para que no quede recortado ni con espacio vacío de más.
+  // `'none'`, no `scrollHeight + 'px'` (Batch 9 -- mismo fix y mismo motivo
+  // que `_eqRenderPorRol()`, más arriba: medir `scrollHeight` con la
+  // `.pantalla` todavía `display:none` da 0, colapsando el acordeón pese a
+  // la clase `.abierto`). Con `'none'` este recálculo ni siquiera hace
+  // falta en el sentido estricto -- un acordeón sin techo nunca queda
+  // recortado por más que cambie el contenido -- pero se deja el guard
+  // (recién actualiza si YA estaba abierto) para no pisarle el `max-height`
+  // a uno cerrado.
   var bodyAbierto = document.getElementById('eq-grupo-' + key + '-body');
-  if (bodyAbierto && bodyAbierto.classList.contains('abierto')) bodyAbierto.style.maxHeight = bodyAbierto.scrollHeight + 'px';
+  if (bodyAbierto && bodyAbierto.classList.contains('abierto')) bodyAbierto.style.maxHeight = 'none';
 }
 
 function _eqToggleGrupo(rol) {
@@ -758,7 +779,43 @@ function _eqToggleGrupo(rol) {
   // techo. El inline (`style.maxHeight`) siempre gana sobre la clase CSS,
   // así que la declaración vieja en `css/equipo.css` queda sin uso -- se
   // sacó de ahí (ver ese archivo).
-  body.style.maxHeight = abrir ? (body.scrollHeight + 'px') : '';
+  // Reescrito (Batch 9, ver MANIFEST.md -- mismo diagnóstico de
+  // `_eqRenderGrupo()`/`_eqRenderPorRol()` de arriba, "acordeones
+  // colapsados"): esta función SÍ necesita animar (a diferencia del primer
+  // render, acá el click ya está pasando con la pantalla visible, `scrollHeight`
+  // nunca da 0), pero ninguno de los 2 extremos puede ser la palabra clave
+  // `none` -- CSS no puede interpolar una `transition` entre `none` y un
+  // valor en píxeles, el cambio se aplicaría de golpe, sin animación.
+  // Al abrir: arranca la transición real con `scrollHeight`px (valor
+  // concreto, anima 0→alto real) y, recién cuando esa transición ya
+  // terminó, se suelta a `'none'` -- así, si el contenido cambia después
+  // mientras sigue abierto (buscar, filtrar), el acordeón no vuelve a
+  // quedar corto por un `max-height` numérico desactualizado (mismo
+  // problema que ya resolvía `_eqRenderGrupo()` recalculando, ahora
+  // innecesario una vez que llega a `none`). `setTimeout(...,400)` -- 400,
+  // no menos: tiene que ser >= la duración real de la `transition` de
+  // `.eq-grupo-body` (css/equipo.css, `0.4s` = 400ms) para no cortarla a
+  // mitad de camino; si ese `0.4s` cambia algún día, este número tiene que
+  // moverse junto. Al cerrar: el `max-height` actual puede ser YA `'none'`
+  // (si se abrió hace rato y se asentó) -- para animar el cierre hace falta
+  // primero "aterrizarlo" en un valor concreto (`scrollHeight`px, la altura
+  // real actual, sin cambiar nada visualmente) y RECIÉN en el frame
+  // siguiente bajarlo a `0px`, para que la `transition` tenga 2 valores
+  // numéricos reales entre los que interpolar -- doble `requestAnimationFrame`
+  // (mismo truco ya usado en `_eqRenderPerfil()`, más abajo en este
+  // archivo, y en `abrirContacto()`/js/ui.js) para forzar que el navegador
+  // pinte el valor "aterrizado" en un frame antes de cambiarlo de nuevo, si
+  // no el navegador colapsa los 2 cambios en un solo frame y tampoco anima.
+  if (abrir) {
+    body.style.maxHeight = body.scrollHeight + 'px';
+    var t = body;
+    setTimeout(function() { t.style.maxHeight = 'none'; }, 400);
+  } else {
+    body.style.maxHeight = body.scrollHeight + 'px';
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() { body.style.maxHeight = '0px'; });
+    });
+  }
 }
 
 /* ── Perfil de detalle (#s-equipo-perfil) ────────────────────────────── */
