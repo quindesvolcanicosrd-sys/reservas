@@ -2865,7 +2865,7 @@ var _EV_TOUR_PASOS_USER = [
   // (una por evento visible) -- resuelto por `_evTourResolverTarget()`
   // (nueva, ver `_evTourMostrarPaso()`), que toma la primera realmente
   // visible en vez de la primera en orden de DOM sin más.
-  { selector: '.ev-card', titulo: 'Detalle del evento', texto: 'Toca cualquier evento para ver quiénes asisten, rectificar tu asistencia y mucho más. Desde aquí también puedes cancelar o reagendar tu reserva directamente desde la card del evento.' },
+  { selector: '.ev-card', titulo: 'Detalle del evento', texto: 'Toca cualquier evento para ver quiénes asisten, rectificar tu asistencia y mucho más. Desde aquí también puedes cancelar o reagendar tu reserva y consultar su estado directamente desde la tarjeta del evento.' },
   // `#ev-btn-anticipada` -- oculto (`display:none`) para mirlxs y para
   // cuentas que necesitan equipo del club (`_evActualizarTopBarModo()`, más
   // abajo en este archivo) -- el chequeo de visibilidad genérico de
@@ -3216,14 +3216,16 @@ function _evTourMostrarPaso(idx) {
     // CUALQUIER paso con el tooltip abajo, no solo a este -- removido por
     // completo, ver `_evTourLimpiarHalo()`). Mismo `border-radius` inferior
     // que el dashed-box (10px vs 12px del box -- valor tal cual pedido) para
-    // que no se note el borde recto contra la esquina redondeada. Más alto
-    // y oscuro (fix reciente, `200px`/`rgba(...,0.65)` → `248px`/`0.78`) pero
-    // termina en `yBot - 12` (arranca en `yBot - 260`, alto `248` -> `260 -
-    // 248 = 12`), no pegado a `yBot` -- deja los últimos 12px del borde
-    // punteado inferior sin cubrir, siempre visible.
+    // que no se note el borde recto contra la esquina redondeada. Bug real
+    // corregido: terminaba en `yBot - 12` (arranca en `yBot - 260`, alto
+    // fijo `248`), dejando un gap visible de 12px del borde punteado
+    // inferior sin cubrir -- `height` ahora se calcula desde `dashFadeTop`
+    // para terminar en `yBot - 2` (gap mínimo, ya no perceptible) sin
+    // importar dónde arranque.
+    var dashFadeTop = yBot - 260;
     var dashFade = document.createElement('div');
     dashFade.id = 'ev-tour-dash-fade';
-    dashFade.style.cssText = 'position:fixed;left:14px;right:14px;top:' + (yBot - 260) + 'px;height:248px;background:linear-gradient(to bottom,transparent 15%,rgba(0,0,0,0.85));pointer-events:none;border-radius:0 0 10px 10px;z-index:9906;';
+    dashFade.style.cssText = 'position:fixed;left:14px;right:14px;top:' + dashFadeTop + 'px;height:' + (yBot - dashFadeTop - 2) + 'px;background:linear-gradient(to bottom,transparent 15%,rgba(0,0,0,0.85));pointer-events:none;border-radius:0 0 10px 10px;z-index:9906;';
     document.body.appendChild(dashFade);
     _evTourSinHaloActivo = true;
   }
@@ -3416,7 +3418,11 @@ function _evTourRenderTooltip(paso, rect) {
       // cada tour real fija el label que le corresponde en
       // `_evTourIniciarConPasos()` ("Finalizar"/"Listo" para los tours
       // nuevos, "FINALIZAR TOUR" para el de bienvenida).
-      '<button type="button" class="btn btn-primary ev-tour-tooltip-btn" onclick="' + (esUltimo ? '_evTourCerrar(true, event, true)' : '_evTourSiguiente(event)') + '">' + (esUltimo ? _evTourLabelFinalizar : 'SIGUIENTE →') + '</button>' +
+      // Ícono Material (`arrow_forward`) en vez del carácter `→` -- mismo
+      // patrón `<span class="material-symbols-outlined">` que el resto de
+      // la app -- `.ev-tour-tooltip-btn-icono` (css/eventos.css) ajusta
+      // tamaño/alineado para que quede a la altura del texto del botón.
+      '<button type="button" class="btn btn-primary ev-tour-tooltip-btn" onclick="' + (esUltimo ? '_evTourCerrar(true, event, true)' : '_evTourSiguiente(event)') + '">' + (esUltimo ? _evTourLabelFinalizar : 'SIGUIENTE <span class="material-symbols-outlined ev-tour-tooltip-btn-icono">arrow_forward</span>') + '</button>' +
     '</div>';
   tooltip.classList.remove('ev-tour-tooltip--visible');
   if (overlay) overlay.classList.remove('ev-tour-tooltip--visible');

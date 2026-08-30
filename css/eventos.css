@@ -1595,6 +1595,22 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 .ev-tour-tooltip-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .ev-tour-tooltip-omitir { font-size: 0.78rem; color: var(--muted); text-decoration: none; }
 .ev-tour-tooltip-btn { padding: 8px 18px; font-size: 0.85rem; width: 60%; }
+/* Ícono `arrow_forward` del botón "SIGUIENTE" (reemplaza el carácter `→`,
+   ver `_evTourRenderTooltip()`) -- tamaño/alineado propios para que quede a
+   la altura del texto en mayúsculas del botón, no colgando por debajo
+   (line-height por default de los Material Symbols). */
+.ev-tour-tooltip-btn-icono { font-size: 1.1em; vertical-align: -3px; margin-left: 2px; }
+/* Bug real corregido -- botón "Finalizar"/"Listo"/"FINALIZAR TOUR" (último
+   paso de CUALQUIER tour, ver `_evTourRenderTooltip()`, motor compartido
+   por los 3 tours de esta pantalla) quedaba pegado a la izquierda: en el
+   último paso "Omitir tour" se oculta (sin sentido "omitir" con nada más
+   que ver), dejando el botón como ÚNICO hijo de `.ev-tour-tooltip-footer`
+   -- con un solo ítem, `justify-content:space-between` (arriba) lo coloca
+   al inicio del eje en vez de centrarlo. `margin:0 auto` en un flex item
+   único absorbe todo el espacio sobrante repartido a ambos lados,
+   centrándolo sin depender del valor de `justify-content` del contenedor
+   (no afecta al caso de 2 hijos -- `:only-child` no aplica ahí). */
+.ev-tour-tooltip-footer .ev-tour-tooltip-btn:only-child { margin: 0 auto; }
 
 /* Opciones del sheet #sheet-ev-tipo-pago (index.html) -- tokens reales del
    sistema de colores (--surface-1/--text-1 del pedido original no existen
