@@ -442,8 +442,16 @@ function _eqHidratarAvatares() {
   });
 }
 
+// `p.nombreDerby || p.username` (Batch 10, ver MANIFEST.md -- "avatar '?'
+// para usuarios sin nombre derby"): `nombreDerby` puede llegar `''`
+// (getEquipo(), `nombre_derby ?? ''`) -- sin este fallback, `data-nombre`
+// quedaba vacío y `_avatarSetFotoOInicial()` (js/ui.js) caía a su propio
+// fallback final, el "?" literal. `username` (siempre presente, es la
+// natural key real de `equipo`, ver `_eqCambiarTier()`/más abajo en este
+// archivo) da una inicial real en vez del signo de pregunta para esos
+// casos.
 function _eqAvatarHtml(p, claseExtra) {
-  return '<div class="avatar-pill ' + claseExtra + ' eq-avatar" data-nombre="' + _eqEsc(p.nombreDerby) + '" data-foto="' + _eqEsc(p.fotoPerfil || '') + '"></div>';
+  return '<div class="avatar-pill ' + claseExtra + ' eq-avatar" data-nombre="' + _eqEsc(p.nombreDerby || p.username) + '" data-foto="' + _eqEsc(p.fotoPerfil || '') + '"></div>';
 }
 
 // Fila de stats inline (Batch 4) -- `pointer-events:none` propio de cada
