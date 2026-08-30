@@ -2971,6 +2971,17 @@ function _evTourMostrarPaso(idx) {
     dashBox.id = 'ev-tour-dash-box';
     dashBox.style.cssText = 'position:fixed;left:12px;right:12px;top:' + yTop + 'px;height:' + (yBot - yTop) + 'px;border:2px dashed var(--brand);border-radius:12px;z-index:9905;pointer-events:none;box-shadow:0 0 0 9999px rgba(0,0,0,0.52);';
     document.body.appendChild(dashBox);
+    // Gradiente de separación DENTRO del recuadro punteado, pegado a su
+    // borde inferior (fix reciente -- reemplaza el intento anterior,
+    // `#ev-tour-fade`, que vivía en `_evTourRenderTooltip()` y aplicaba a
+    // CUALQUIER paso con el tooltip abajo, no solo a este -- removido por
+    // completo, ver `_evTourLimpiarHalo()`). Mismo `border-radius` inferior
+    // que el dashed-box (10px vs 12px del box -- valor tal cual pedido) para
+    // que no se note el borde recto contra la esquina redondeada.
+    var dashFade = document.createElement('div');
+    dashFade.id = 'ev-tour-dash-fade';
+    dashFade.style.cssText = 'position:fixed;left:14px;right:14px;top:' + (yBot - 110) + 'px;height:110px;background:linear-gradient(to bottom,transparent,rgba(0,0,0,0.65));pointer-events:none;border-radius:0 0 10px 10px;z-index:9906;';
+    document.body.appendChild(dashFade);
     _evTourSinHaloActivo = true;
   }
   // Timeline bloqueado durante su propio paso (Cambio 63, FIX E, issue 3a):
@@ -3055,14 +3066,12 @@ function _evTourLimpiarHalo() {
   // `sinHalo`, ver `_evTourMostrarPaso()`).
   var db = document.getElementById('ev-tour-dash-box');
   if (db && db.parentNode) db.parentNode.removeChild(db);
+  // `#ev-tour-dash-fade` (fix reciente, ver `_evTourMostrarPaso()`) -- mismo
+  // criterio que el dashed-box de arriba: se crea una sola vez por entrada
+  // al paso `sinHalo`, se elimina acá.
+  var dfd = document.getElementById('ev-tour-dash-fade');
+  if (dfd && dfd.parentNode) dfd.parentNode.removeChild(dfd);
   _evTourSinHaloActivo = false;
-  // `#ev-tour-fade` (fix reciente, ver `_evTourRenderTooltip()`) -- mismo
-  // criterio que el dashed-box de arriba: se recrea entera en cada paso
-  // (`_evTourRenderTooltip()` la reposiciona con `cssText` cada vez que
-  // corre), así que alcanza con sacarla acá y dejar que el próximo paso la
-  // vuelva a crear si corresponde.
-  var fd = document.getElementById('ev-tour-fade');
-  if (fd && fd.parentNode) fd.parentNode.removeChild(fd);
   // `#ev-tour-click-absorber` (fix reciente, ver `_evTourResaltarTarget()`)
   // -- mismo criterio que el dashed-box de arriba: se crea una sola vez por
   // target (no hay una "posicionadora" que lo reemplace en cada frame), se
@@ -3165,23 +3174,6 @@ function _evTourRenderTooltip(paso, rect) {
   tooltip.classList.remove('ev-tour-tooltip--visible');
   if (overlay) overlay.classList.remove('ev-tour-tooltip--visible');
   _evTourPosicionarTooltip(rect);
-  // Fade de transición sobre el borde superior del tooltip (fix reciente) --
-  // agregado ACÁ, después de `_evTourPosicionarTooltip()` (no adentro de
-  // ella, pese a que el pedido lo daba "al final de esa función"), para que
-  // corra sin importar qué rama haya tomado esa función internamente: el
-  // cálculo normal (`top`/`bottom` según mitad de pantalla) o el paso
-  // `sinHalo`, que hace un `return` temprano antes de llegar a su propio
-  // final. Puesto acá, cubre los 2 casos con un solo bloque, tal como pedía
-  // el pedido ("en cualquier paso donde el tooltip quede abajo de la
-  // pantalla, no solo en el paso del timeline").
-  var fade = document.getElementById('ev-tour-fade');
-  if (!fade) {
-    fade = document.createElement('div');
-    fade.id = 'ev-tour-fade';
-    document.body.appendChild(fade);
-  }
-  var tooltipTop = tooltip.getBoundingClientRect().top;
-  fade.style.cssText = 'position:fixed;left:0;right:0;bottom:' + (window.innerHeight - tooltipTop) + 'px;height:90px;background:linear-gradient(to bottom, transparent, var(--bg));pointer-events:none;z-index:9925;';
   tooltip.classList.add('ev-tour-tooltip--visible');
   if (overlay) overlay.classList.add('ev-tour-tooltip--visible');
 }
