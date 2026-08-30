@@ -3031,7 +3031,7 @@ function _evTourRenderTooltip(paso, rect) {
     '<div class="ev-tour-tooltip-titulo">' + paso.titulo + '</div>' +
     '<div class="ev-tour-tooltip-texto">' + paso.texto + '</div>' +
     '<div class="ev-tour-tooltip-footer">' +
-      '<a href="javascript:void(0)" class="ev-tour-tooltip-omitir" onclick="_evTourCerrar(true)">Omitir tour</a>' +
+      '<a href="javascript:void(0)" class="ev-tour-tooltip-omitir" onclick="_evTourCerrar(true, event)">Omitir tour</a>' +
       '<button type="button" class="btn btn-primary ev-tour-tooltip-btn" onclick="_evTourSiguiente(event)">' + (esUltimo ? 'Entendido ✓' : 'Siguiente →') + '</button>' +
     '</div>';
   tooltip.classList.remove('ev-tour-tooltip--visible');
@@ -3111,7 +3111,14 @@ function _evTourSiguiente(ev) {
   _evTourMostrarPaso(_evTourIdx + 1);
 }
 
-function _evTourCerrar(marcarVisto) {
+// `ev` (Cambio 63, fix adicional -- mismo motivo que `_evTourSiguiente(ev)`
+// más arriba): el link "Omitir tour" vive en el mismo `#ev-tour-tooltip`,
+// sujeto al mismo riesgo de burbujeo hacia handlers globales de la app
+// (cierre de paneles al tocar afuera, swipe del calendario). `ev` opcional
+// -- los demás call sites (`_evTourMostrarPaso()` al agotar los pasos,
+// `alSalir` del ítem 'eventos'/js/ui.js) siguen llamando sin él.
+function _evTourCerrar(marcarVisto, ev) {
+  if (ev) { ev.stopPropagation(); ev.preventDefault(); }
   if (marcarVisto) localStorage.setItem('ev_tour_visto', '1');
   _evTourActivo = false;
   _evTourPasos = null;
