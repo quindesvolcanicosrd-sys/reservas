@@ -1733,13 +1733,87 @@ async function recalcularStatsEquipo(params: Record<string, any>): Promise<Recor
 // `username`, delega en `recalcularStatsEquipo()` tal cual -- mismo
 // comportamiento que el botón "Recalcular ahora" ya existente, sin
 // duplicar ese loop acá.
+// Recalcula equipo.puntos_mensuales.puntos_asistencia de TODO el equipo
+// para un mes/año dado, a partir de `log_asistencias` (rollcall real de
+// admin, no RSVP -- ver MANIFEST.md, `origen==='Admin'` es el filtro
+// establecido en todo el repo para distinguir asistencia real de RSVP).
+// `fecha_entrenamiento` ya viene copiada de `asistencias.fecha` al
+// insertar (`_agregarFilaLogAsistencia()`, arriba en este archivo) -- sin
+// JOIN a ninguna tabla de eventos (esta app no tiene una tabla `eventos`
+// separada, es `asistencias`). 'A tiempo' = 1 punto, 'Tarde' = 0.5 --
+// cualquier otro estado ('Ninguno', o filas de RSVP que ya quedaron fuera
+// por el filtro `origen==='Admin'`) no suma nada.
+//
+// Limitación real, a propósito (mismo alcance que pidió Victor): el
+// UPSERT solo toca las columnas `nombre_usuario`/`anio`/`mes` que
+// aparecen en el resultado agregado -- si alguien pierde TODAS sus marcas
+// reales de un mes (ej. una rectificación a 'Sin registrar' que la deja
+// en 0), su fila existente en `puntos_mensuales` no se resetea a 0 acá
+// (nunca se genera una fila con 0 para forzar el UPDATE). No es un caso
+// real hoy (nadie pierde el 100% de su asistencia de un mes de un
+// plumazo), pero es una desprolijidad conocida si llegara a pasar.
+async function recalcularPuntosAsistencia(mes: number, anio: number): Promise<{ exito: boolean; error?: string; procesados?: number }> {
+  const mesStr = String(mes).padStart(2, '0');
+  const desde = anio + '-' + mesStr + '-01';
+  const anioSiguiente = mes === 12 ? anio + 1 : anio;
+  const mesSiguiente = mes === 12 ? 1 : mes + 1;
+  const hasta = anioSiguiente + '-' + String(mesSiguiente).padStart(2, '0') + '-01';
+
+  const { data: logs, error: errorLogs } = await supabase.from('log_asistencias')
+    .select('nombre_usuario, estado, fecha_entrenamiento')
+    .eq('origen', 'Admin')
+    .gte('fecha_entrenamiento', desde).lt('fecha_entrenamiento', hasta);
+  if (errorLogs) return { exito: false, error: errorLogs.message };
+
+  const puntosPorUsuario: Record<string, number> = {};
+  (logs ?? []).forEach((l: any) => {
+    const u = String(l.nombre_usuario ?? '').trim();
+    if (!u) return;
+    if (l.estado === 'A tiempo') puntosPorUsuario[u] = (puntosPorUsuario[u] || 0) + 1;
+    else if (l.estado === 'Tarde') puntosPorUsuario[u] = (puntosPorUsuario[u] || 0) + 0.5;
+  });
+
+  const filas = Object.keys(puntosPorUsuario).map((nombre_usuario) => ({
+    nombre_usuario, anio, mes, puntos_asistencia: puntosPorUsuario[nombre_usuario],
+  }));
+  if (!filas.length) return { exito: true, procesados: 0 };
+
+  // `onConflict` acota el UPDATE a las columnas realmente mandadas en cada
+  // fila (`puntos_asistencia`) -- `puntos_tareas`/`puntos_bonificacion`/
+  // `puntos_extra` de una fila ya existente quedan intactos. `puntos_total`
+  // (columna GENERATED, ver MANIFEST.md) nunca se manda -- Postgres la
+  // recalcula solo.
+  const { error: errorUpsert } = await supabase.from('puntos_mensuales')
+    .upsert(filas, { onConflict: 'nombre_usuario,anio,mes' });
+  if (errorUpsert) return { exito: false, error: errorUpsert.message };
+  return { exito: true, procesados: filas.length };
+}
+
+// Acción admin nueva: recalcula puntos_asistencia para un mes/año puntual
+// (default: mes/año actuales) -- útil para corregir un mes histórico sin
+// esperar a que `adminRecalcularStats()` (que solo toca el mes actual, ver
+// abajo) llegue ahí.
+async function adminRecalcularPuntosAsistencia(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const hoy = new Date();
+  const mes = (params.mes !== undefined && params.mes !== null && params.mes !== '') ? Number(params.mes) : hoy.getUTCMonth() + 1;
+  const anio = (params.anio !== undefined && params.anio !== null && params.anio !== '') ? Number(params.anio) : hoy.getUTCFullYear();
+  return await recalcularPuntosAsistencia(mes, anio);
+}
+
 async function adminRecalcularStats(params: Record<string, any>): Promise<Record<string, any>> {
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const username = String(params.username ?? '').trim();
-  if (!username) return await recalcularStatsEquipo(params);
-  const resultado = await recalcularStatsUsuario(username);
-  return { ...resultado, username };
+  const resultado = username ? await recalcularStatsUsuario(username) : await recalcularStatsEquipo(params);
+  // Al final (pedido explícito de Victor): recalcula puntos_asistencia del
+  // mes actual junto con las stats -- mismo criterio que
+  // recalcularStatsEquipo()/recalcularStatsUsuario() de arriba, que solo
+  // cubren horas_ano/asistencias_ano/total_eventos_ano, nunca los puntos.
+  const hoy = new Date();
+  await recalcularPuntosAsistencia(hoy.getUTCMonth() + 1, hoy.getUTCFullYear());
+  return username ? { ...resultado, username } : resultado;
 }
 
 // Recalcula equipo.horas_ano/asistencias_ano/total_eventos_ano para UNA sola
@@ -2337,6 +2411,7 @@ Deno.serve(async (req: Request) => {
       case 'adminSetExentaCuota':            return json(await adminSetExentaCuota(params));
       case 'recalcularStatsEquipo':          return json(await recalcularStatsEquipo(params));
       case 'adminRecalcularStats':           return json(await adminRecalcularStats(params));
+      case 'adminRecalcularPuntosAsistencia': return json(await adminRecalcularPuntosAsistencia(params));
       case 'solicitarLesion':                return json(await solicitarLesion(params));
       case 'cancelarSolicitudLesion':         return json(await cancelarSolicitudLesion(params));
       case 'recuperarseLesion':              return json(await recuperarseLesion(params));

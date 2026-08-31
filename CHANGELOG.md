@@ -197,6 +197,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Edge Function / Backend
 
+2026-08-31 — `recalcularPuntosAsistencia(mes, anio)` nueva: recalcula `puntos_mensuales.puntos_asistencia` de todo el equipo desde `log_asistencias` (`origen==='Admin'`, sin JOIN a ninguna tabla `eventos` -- esta app no tiene una, `fecha_entrenamiento` ya viene copiada de `asistencias.fecha`). `'A tiempo'`=1 punto, `'Tarde'`=0.5. Expuesta como acción `adminRecalcularPuntosAsistencia` (mes/año opcionales, default mes/año actuales) y disparada automáticamente para el mes actual al final de `adminRecalcularStats()`.
+
 2026-08-30 — `getEquipo()`: nuevo `select` a `puntos_mensuales` (filtrado por año actual, agrupado por `nombre_usuario`) para devolver `puntosAsistencia`/`puntosTareas`/`puntosTotal` (mes actual) y `puntosAnio` (acumulado del año) por persona.
 2026-08-30 — `adminGetEstadoPagosMes()`/`adminGetPagosAnual()`: dejan de leer `nivel_actual.nivel_orden=2` (congelada desde 12/08, ver sección Equipo) y pasan a leer `equipo.categoria='Quindes'` directo — misma forma de string, sin mapeo de `nivel_orden` necesario.
 2026-08-30 — Seguridad: RLS habilitado en `puntos_mensuales` (migración `20260831_puntos_mensuales_rls.sql`) — reemplaza una policy `FOR ALL TO anon USING(true)` (lectura y escritura sin autenticación) por `puntos_read_authenticated` (`SELECT` a `authenticated`). Aplicado vía `supabase db query -f`, mismo motivo que `equipo` (`db push` sigue desincronizado).
