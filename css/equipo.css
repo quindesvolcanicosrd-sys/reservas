@@ -290,7 +290,11 @@
       `pointer-events:none` -- mismo criterio que el resto de indicadores
       sueltos de esta sección (`.eq-mini-stat`, arriba): el click siempre
       tiene que propagar al contenedor real (`_eqAbrirPerfil()`/toggle de
-      favorito), nunca quedar atrapado acá.
+      favorito), nunca quedar atrapado acá. `z-index:2` (bug real
+      corregido, perfil de detalle) -- sin esto, `.eq-rol-pill` (agregada
+      después en el DOM dentro del mismo `.eq-avatar-wrap`, sin z-index
+      propio) pintaba encima del badge por orden de aparición, tapándolo
+      parcialmente.
    Fondo OPACO (pedido explícito, re-ajuste -- antes `--success-bg`/
    `--danger-bg`, que son rgba con alpha reducido en colors.css, pensadas
    para "fondo sutil" de chips sobre superficie plana; sobre una FOTO se
@@ -305,7 +309,7 @@
    "se veía muy pequeño"). */
 .eq-avatar-badge-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
 .eq-tendencia-badge {
-  position: absolute; right: -2px; bottom: -2px;
+  position: absolute; right: -2px; bottom: -2px; z-index: 2;
   display: flex; align-items: center; justify-content: center;
   width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
   pointer-events: none;
