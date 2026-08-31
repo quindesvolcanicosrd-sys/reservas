@@ -296,10 +296,19 @@ function _eqAnimarAlturaFavoritos(cont, mutar) {
 // un salto seco un instante antes de que la altura empezara a interpolar).
 // Si no hay empty state visible (ya hay >=1 favorito), corre `cb` directo
 // -- caso normal, sin este delay extra.
+// Bug real corregido (seguía sin animar al agregar el primer favorito):
+// faltaba el reflow forzado (`void vacio.offsetWidth`) entre fijar
+// `transition` y recién ahí cambiar `opacity` -- sin ese paso el navegador
+// puede colapsar las 2 escrituras de estilo en el mismo recálculo y saltar
+// directo al valor final sin interpolar. Mismo truco que ya usa CADA OTRA
+// transición inline de este archivo (fade de `origen`, fade de
+// `filaExistente`, fade-in de `vacioNuevo` en el path de sacar -- esta
+// función era la única que se lo saltaba).
 function _eqFadeVacioFavoritosYLuego(cont, cb) {
   var vacio = cont.querySelector('.eq-favoritos-vacio');
   if (!vacio) { cb(); return; }
   vacio.style.transition = 'opacity 0.18s';
+  void vacio.offsetWidth;
   vacio.style.opacity = '0';
   setTimeout(cb, 180);
 }
@@ -382,8 +391,17 @@ function _eqAnimarCambioFavorito(id, fav) {
           cont.innerHTML = '<div class="eq-favoritos-vacio" style="opacity:0"><span class="material-symbols-outlined">favorite</span>Agrega personas a favoritos para verlos aquí</div>';
           var vacioNuevo = cont.querySelector('.eq-favoritos-vacio');
           vacioNuevo.style.transition = 'opacity 0.2s';
-          void vacioNuevo.offsetWidth;
-          vacioNuevo.style.opacity = '1';
+          // Delay de 1500ms antes de empezar el fade-in (pedido explícito
+          // de Victor): sin este respiro el recuadro entraba apenas
+          // terminaba de encogerse el contenedor (~260ms después de que
+          // `filaExistente` arrancó su propio fade-out), cortando la
+          // sensación de "salida" de la fila antes de que termine de
+          // asentarse. No hace falta el truco de reflow forzado acá --
+          // con 1500ms reales de por medio el navegador ya pintó de sobra
+          // el estado `opacity:0` antes de este cambio.
+          setTimeout(function() {
+            vacioNuevo.style.opacity = '1';
+          }, 1500);
         }
       });
     }, 250);
