@@ -35,7 +35,7 @@
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
 <link rel="stylesheet" href="css/eventos.css?v=94f3cbd9">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=cfe85c9e">
+<link rel="stylesheet" href="css/equipo.css?v=e444e1d3">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2350,42 +2350,63 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div class="pantalla" id="s-equipo">
     <div class="card" style="text-align:left;padding-bottom:32px;">
       <div class="app-nav app-nav-sticky" id="eq-search-header">
-        <!-- Placeholder fijo (rediseño, ver MANIFEST.md/CHANGELOG.md) --
-             reemplaza las sugerencias rotativas (`_eqSugerenciasIniciar()`,
-             overlay `#eq-search-suggestion`) por un `placeholder` nativo
-             simple. `.app-nav-search:focus-within input::placeholder`
-             (css/nav.css) ya lo desvanece solo al tocar el input, sin
-             necesitar el mecanismo de pausa/reanudación que tenía el overlay. -->
-        <div class="app-nav-search">
+        <!-- Rediseño de nav (ver MANIFEST.md/CHANGELOG.md) -- reemplaza el
+             buscador+botón "Filtros" siempre visibles por 2 triggers, mismo
+             mecanismo de burbuja mutuamente excluyente que Eventos
+             (`_evTogglePanel()`/`.ev-header-burbuja`, js/eventos.js+
+             css/eventos.css) pero con JS/CSS propios de esta sección
+             (`_eqTogglePanel()`/`.eq-header-panel`, más abajo en este
+             archivo/css/equipo.css) -- mismo criterio de siempre, cada
+             sección mantiene su propio archivo, ver MANIFEST.md.
+             Izquierda: avatar (36px) + "Mis estadísticas" + chevron --
+             reemplaza a la card fija que existía antes encima de
+             Favoritos, mismo contenido, ahora en un panel deslizable
+             (`_eqTogglePanel('stats')`). Arranca oculto (display:none) --
+             igual que la card vieja, `_eqRenderMisEstadisticas()`/js/equipo.js
+             lo muestra si la cuenta logueada tiene fila propia en Equipo.
+             Derecha: un solo ícono de lupa -- el buscador de texto libre y
+             el panel de Filtros (período de puntaje + rol) que antes vivían
+             separados ahora comparten un solo panel fusionado
+             (`_eqTogglePanel('busqueda')`), mismo criterio que el panel
+             único de búsqueda+filtros de Eventos. -->
+        <button type="button" class="eq-misstats-toggle-btn" id="eq-misstats-toggle-btn" onclick="_eqTogglePanel('stats')" style="display:none;">
+          <span class="avatar-pill eq-avatar eq-misstats-toggle-avatar" id="eq-misstats-toggle-avatar" data-nombre="" data-foto=""></span>
+          <span class="eq-misstats-toggle-texto">Mis estadísticas</span>
+          <span class="material-symbols-outlined eq-misstats-toggle-chevron">expand_more</span>
+        </button>
+        <button type="button" class="app-nav-icon-btn eq-filtro-toggle-btn" id="eq-busqueda-toggle-btn" onclick="_eqTogglePanel('busqueda')" title="Buscar y filtrar">
           <span class="material-symbols-outlined">search</span>
-          <input type="text" id="eq-search-input" placeholder="Busca en el equipo" oninput="_eqBuscar(this.value)">
-        </div>
-        <!-- Botón "Filtros" (feat nueva) -- mismo mecanismo de animación
-             (max-height + doble requestAnimationFrame al cerrar) que el
-             botón de búsqueda/filtros de Eventos (`_evTogglePanel()`/
-             `.ev-header-burbuja`, js/eventos.js+css/eventos.css) -- ver
-             `_eqToggleFiltros()`/js/equipo.js y `.eq-filtros-panel`/
-             css/equipo.css, misma mecánica pero sin cruzar CSS entre
-             secciones (cada sección mantiene su propio archivo, ver
-             MANIFEST.md). Sin ícono de lupa (ya está en el buscador de al
-             lado) -- ícono `tune` (sliders), texto "Filtros" también
-             visible (pedido: "sin ícono de lupa -- puede llevar ícono de
-             filtro o solo el texto"). -->
-        <button type="button" class="app-nav-icon-btn eq-filtro-toggle-btn" id="eq-filtros-toggle-btn" onclick="_eqToggleFiltros()" title="Filtros" style="width:auto;padding:0 12px;gap:6px;">
-          <span class="material-symbols-outlined">tune</span>Filtros
         </button>
       </div>
 
-      <!-- Panel de filtros (feat nueva, ver MANIFEST.md/CHANGELOG.md) --
-           2 secciones: A) período de puntaje (afecta puntosAsistencia/
+      <!-- Panel "Mis estadísticas" (rediseño, ver MANIFEST.md/CHANGELOG.md)
+           -- mismo contenido exacto que la card fija de antes (foto, nombre
+           derby, número, rol, status, horas patinadas, % asistencia, puntos
+           tareas, puntos asistencia, puntos totales del período, barra de
+           tier), poblado por _eqRenderMisEstadisticas()/js/equipo.js, solo
+           cambia dónde vive (panel deslizable en vez de card fija). -->
+      <div class="eq-header-panel" id="eq-misstats-panel">
+        <div class="eq-misstats-panel-inner" id="eq-misstats-panel-inner"></div>
+      </div>
+
+      <!-- Panel de búsqueda + filtros fusionados (rediseño, ver MANIFEST.md/
+           CHANGELOG.md) -- buscador de texto libre arriba (mismo
+           comportamiento de siempre, `_eqBuscar()`/js/equipo.js sin
+           cambios) + 2 secciones de filtros debajo, cada una con su propio
+           `.seccion-label`: A) período de puntaje (afecta puntosAsistencia/
            puntosTareas/puntosTotal de getEquipo(), tanto en las cards como
            en el perfil de detalle) y B) rol (chips, filtrado 100% en
            frontend sobre `_eqPersonas` ya cargado -- sin nueva llamada al
            backend, ver `_eqRolesDe()`/`_EQ_ROLES` ya existentes más abajo
            en este archivo). -->
-      <div class="eq-filtros-panel" id="eq-filtros-panel">
-        <div class="eq-filtros-panel-inner">
-          <div class="seccion-label" style="margin-top:0;">Período de puntaje</div>
+      <div class="eq-header-panel" id="eq-busqueda-panel">
+        <div class="eq-busqueda-panel-inner">
+          <div class="app-nav-search">
+            <span class="material-symbols-outlined">search</span>
+            <input type="text" id="eq-search-input" placeholder="Busca en el equipo" oninput="_eqBuscar(this.value)">
+          </div>
+
+          <div class="seccion-label eq-periodo-label">Período de puntaje</div>
           <div class="aj-pills-row" id="eq-filtro-periodo-modo">
             <span class="aj-pill activa" data-modo="mes" onclick="_eqFiltroPeriodoModo('mes')">Mes</span>
             <span class="aj-pill" data-modo="rango" onclick="_eqFiltroPeriodoModo('rango')">Rango</span>
@@ -2426,13 +2447,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <button type="button" class="btn btn-primary" style="width:100%;margin-top:16px;" onclick="_eqAplicarFiltros()">Aplicar filtros</button>
         </div>
       </div>
-
-      <!-- "Mis estadísticas" (feat nueva, ver MANIFEST.md/CHANGELOG.md) --
-           card con los datos/stats de la cuenta logueada, reusando lo que
-           ya trae getEquipo() (sin llamada extra). Poblada por
-           _eqRenderMisEstadisticas()/js/equipo.js -- oculta (display:none)
-           si la cuenta no tiene fila propia en Equipo. -->
-      <div id="eq-mis-stats-card" class="eq-mis-stats-card" style="display:none;"></div>
 
       <!-- Cargando/error del roster real (Cambio 55, getEquipo(), ver
            _eqInit()/js/equipo.js) -- vacío en el estado normal (roster ya
@@ -3070,7 +3084,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/ui.js?v=66148b6f"></script>
 <script src="js/eventos.js?v=30628b15"></script>
 <script src="js/tareas.js"></script>
-<script src="js/equipo.js?v=3f4e0e8a"></script>
+<script src="js/equipo.js?v=9aa7dc25"></script>
 <script src="js/home.js?v=cf4b0197"></script>
 <script src="js/reservas.js?v=ce8c13b6"></script>
 <script src="js/perfil.js?v=05689dc1"></script>

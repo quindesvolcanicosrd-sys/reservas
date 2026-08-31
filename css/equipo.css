@@ -9,34 +9,74 @@
 .eq-loading, .eq-error { text-align: center; font-size: 0.85rem; color: var(--muted); padding: 32px 16px; }
 .eq-error { color: var(--danger); }
 
-/* ── "Mis estadísticas" (feat nueva, ver MANIFEST.md/CHANGELOG.md) ──────
-   Card propia en la home de Equipo -- `.eq-stats-grid`/`.eq-stat-card`/
+/* ── "Mis estadísticas" (rediseño, ver MANIFEST.md/CHANGELOG.md) ────────
+   Antes card fija encima de Favoritos, ahora contenido de un panel
+   deslizable (`#eq-misstats-panel`, mecánica compartida con el panel de
+   búsqueda+filtros, ver bloque de abajo) -- `.eq-stats-grid`/`.eq-stat-card`/
    `.eq-rank-wrap` (más abajo, "Perfil de detalle") y `.dat-estado-chip`
    (css/perfil.css) se reusan tal cual, sin duplicar nada -- esto es SOLO
    el layout del wrapper + la fila de header (avatar + nombre/rol/estado). */
-.eq-mis-stats-card {
-  background: var(--surface); border: 1.5px solid var(--border-light);
-  border-radius: 18px; padding: 16px; margin-bottom: 18px;
+.eq-misstats-panel-inner {
+  background: var(--surface-2); border-radius: 16px; padding: 16px;
+  margin-top: 10px;
 }
 .eq-mis-stats-header { display: flex; align-items: center; gap: 12px; }
 .eq-mis-stats-info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .eq-mis-stats-nombre { font-size: 1.05rem; font-weight: 800; color: var(--text); }
 .eq-mis-stats-sub { font-size: 0.8rem; color: var(--muted); }
 
-/* ── Botón + panel de Filtros (feat nueva, ver MANIFEST.md/CHANGELOG.md) ──
-   Mismo mecanismo de animación que `.ev-header-burbuja`/css/eventos.css
-   (botón de búsqueda de Eventos) -- max-height animado + `.abierta`, JS
-   idéntico en `_eqToggleFiltros()`/js/equipo.js (lock del alto real antes
-   de cerrar + doble requestAnimationFrame) -- CSS propio en vez de
-   reusar la clase de eventos.css literal, mismo criterio de "cada sección
-   mantiene su propio archivo" ya establecido en el resto de la app. */
+/* ── Trigger "Mis estadísticas" de la nav (rediseño, ver MANIFEST.md/
+   CHANGELOG.md) -- avatar 36px (escalón propio, ninguna variante global de
+   `.avatar-pill` -- css/global.css -- cae justo en 36px: --sm es 44px,
+   --xs es 26px) + texto + chevron, mismo look "botón fantasma" que
+   `.ev-nav-mes-label`/css/eventos.css (sin fondo propio en reposo). Oculto
+   por default (`style="display:none"` inline, index.html) -- lo muestra
+   `_eqRenderMisEstadisticas()`/js/equipo.js solo si la cuenta logueada
+   tiene fila propia en Equipo, mismo criterio que la card fija que
+   reemplaza. */
+.eq-misstats-toggle-btn {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+  background: none; border: none; padding: 4px 8px 4px 4px; border-radius: 12px;
+  cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+@media (hover: hover) {
+  .eq-misstats-toggle-btn:hover { background: var(--brand-lightest); }
+}
+.eq-misstats-toggle-btn .eq-misstats-toggle-avatar { width: 36px; height: 36px; flex-shrink: 0; }
+.eq-misstats-toggle-btn .eq-misstats-toggle-avatar .avatar-pill-letter { font-size: 14px; }
+.eq-misstats-toggle-texto {
+  font-size: 0.86rem; font-weight: 700; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.eq-misstats-toggle-chevron { flex-shrink: 0; font-size: 1.2rem; color: var(--muted); transition: transform 0.25s; }
+.eq-misstats-toggle-btn.activo .eq-misstats-toggle-chevron { transform: rotate(180deg); color: var(--brand); }
+
+/* ── Paneles deslizables de la nav: "Mis estadísticas" + búsqueda/filtros
+   (rediseño, ver MANIFEST.md/CHANGELOG.md) -- mismo mecanismo de animación
+   que `.ev-header-burbuja`/css/eventos.css (botón de búsqueda de Eventos):
+   max-height animado + `.abierta`, JS idéntico en `_eqTogglePanel()`/
+   js/equipo.js (lock del alto real antes de cerrar + doble
+   requestAnimationFrame), mutuamente excluyentes entre sí (abrir uno cierra
+   el otro) -- CSS propio en vez de reusar la clase de eventos.css literal,
+   mismo criterio de "cada sección mantiene su propio archivo" ya
+   establecido en el resto de la app. Clase compartida por los 2 paneles
+   (antes solo el de filtros, `.eq-filtros-panel`) -- el contenido interno
+   de cada uno sigue en su propia clase `-inner` (`.eq-misstats-panel-inner`/
+   `.eq-busqueda-panel-inner`, ver esos bloques). */
 .eq-filtro-toggle-btn.activo { background: var(--brand); color: var(--white); }
-.eq-filtros-panel { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
-.eq-filtros-panel.abierta { margin-bottom: 18px; }
-.eq-filtros-panel-inner {
+.eq-header-panel { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
+.eq-header-panel.abierta { margin-bottom: 18px; }
+.eq-busqueda-panel-inner {
   background: var(--surface-2); border-radius: 16px; padding: 16px;
   margin-top: 10px;
 }
+/* Buscador dentro del panel fusionado -- mismo `.app-nav-search` de
+   siempre (css/nav.css), solo pierde el `margin-top` de la 1ra
+   `.seccion-label` que sigue (`.eq-periodo-label`, mismo criterio que
+   `.ev-filtros-label`/css/eventos.css: separa el subtítulo del buscador de
+   arriba, la propia `.seccion-label` ya trae su `margin-bottom`). */
+.eq-periodo-label { margin-top: 18px; }
 .eq-filtro-mes-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .eq-filtro-mes-pills .aj-pill { padding: 6px 12px; font-size: 0.74rem; }
 .eq-filtro-anio-stepper {

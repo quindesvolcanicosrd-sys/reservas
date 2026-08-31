@@ -26,7 +26,7 @@ reservas/
 │   ├── home.css                 Home y card de reserva (estados, badges)
 │   ├── reservas.css             Flujo de reserva s2–s6
 │   ├── perfil.css               Ajustes del perfil (aj-sub-*, date picker ddp-*)
-│   ├── equipo.css               Sección Equipo: lista/acordeones por categoría + INACTIVOS/LESIONADXS, card "Mis estadísticas", panel de Filtros, perfil de detalle, termómetro
+│   ├── equipo.css               Sección Equipo: lista/acordeones por categoría + INACTIVOS/LESIONADXS, nav con 2 triggers (avatar+"Mis estadísticas" / lupa) + paneles deslizables "Mis estadísticas" y búsqueda+filtros fusionados, perfil de detalle, termómetro
 │   ├── admin.css                Overrides admin (dark mode del panel)
 │   ├── eventos.css              Sección Eventos: timeline, panel de mes, cards, detalle
 │   └── tareas.css               Sección Tareas — deliberadamente chico, reusa clases de eventos.css/reservas.css/perfil.css/admin.css/ui.css
@@ -40,7 +40,7 @@ reservas/
 │   ├── home.js                  Home, historial, cancelar/reagendar
 │   ├── reservas.js              Flujo de reserva (s2→s6)
 │   ├── perfil.js                Editar datos, permisos Google, wizard de Salud, eliminar cuenta
-│   ├── equipo.js                 Roster de Equipo (Favoritos como acordeón no colapsable, grupos por categoría + INACTIVOS colapsado + LESIONADXS no colapsable, card "Mis estadísticas" del usuario logueado, panel de Filtros — período de puntaje + rol), perfil de detalle
+│   ├── equipo.js                 Roster de Equipo (Favoritos como acordeón no colapsable, grupos por categoría + INACTIVOS colapsado + LESIONADXS no colapsable, nav con panel deslizable "Mis estadísticas" del usuario logueado + panel deslizable de búsqueda+filtros fusionados — período de puntaje + rol —, `_eqTogglePanel()` mutuamente excluyente entre ambos), perfil de detalle
 │   ├── admin.js                 Mi Liga: reservas, notificaciones, equipamiento, usuarios, admins, tiers/categorías
 │   ├── pwa.js                   Install prompt, push (OneSignal)
 │   ├── auth.js                  Google Sign-In, PIN, restaurar sesión, window.onload

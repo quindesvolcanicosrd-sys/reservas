@@ -739,25 +739,47 @@ function _eqRenderPorRol() {
   });
 }
 
-/* ── Filtros (feat nueva, ver MANIFEST.md/CHANGELOG.md) ──────────────────
-   Botón + panel: mismo mecanismo de animación que `_evTogglePanel()`/
-   `.ev-header-burbuja` (Eventos, js/eventos.js+css/eventos.css) -- abrir
-   fija `max-height` al `scrollHeight` real de una; cerrar "aterriza"
-   primero en ese alto real y recién en el frame siguiente (doble
+/* ── Paneles de nav: "Mis estadísticas" + búsqueda/filtros (rediseño, ver
+   MANIFEST.md/CHANGELOG.md) -- 2 triggers en `#eq-search-header`
+   (`#eq-misstats-toggle-btn`/`#eq-busqueda-toggle-btn`), un solo panel
+   abierto a la vez (mismo criterio que `_evTogglePanel()`/`_EV_PANELES`,
+   Eventos, js/eventos.js+css/eventos.css -- abrir uno cierra el otro,
+   `_eqPanelAbierto` guarda cuál). Mecanismo de animación idéntico al que
+   tenía `_eqToggleFiltros()` (reemplazada por esto): abrir fija
+   `max-height` al `scrollHeight` real del panel; cerrar "aterriza" primero
+   en ese alto real y recién en el frame siguiente (doble
    `requestAnimationFrame`) baja a `0px`, para que la transición tenga 2
    valores numéricos entre los que interpolar (ver "Acordeones animados
-   con max-height" en MANIFEST.md -- mismo patrón, adaptado de un
-   .eq-grupo persistente a un panel tipo dropdown que se cierra del todo). */
-function _eqToggleFiltros() {
-  var panel = document.getElementById('eq-filtros-panel');
-  var btn = document.getElementById('eq-filtros-toggle-btn');
+   con max-height" en MANIFEST.md). */
+var _EQ_PANELES = {
+  stats: { el: 'eq-misstats-panel', btn: 'eq-misstats-toggle-btn' },
+  busqueda: { el: 'eq-busqueda-panel', btn: 'eq-busqueda-toggle-btn' }
+};
+var _eqPanelAbierto = null;
+function _eqTogglePanel(tag) {
+  if (_eqPanelAbierto === tag) { _eqCerrarPanel(tag); return; }
+  if (_eqPanelAbierto) _eqCerrarPanel(_eqPanelAbierto);
+  _eqAbrirPanel(tag);
+}
+function _eqAbrirPanel(tag) {
+  var cfg = _EQ_PANELES[tag];
+  var panel = document.getElementById(cfg.el);
+  var btn = document.getElementById(cfg.btn);
   if (!panel || !btn) return;
-  var abrir = !panel.classList.contains('abierta');
-  if (abrir) {
-    panel.classList.add('abierta');
-    panel.style.maxHeight = panel.scrollHeight + 'px';
-    btn.classList.add('activo');
-  } else {
+  _eqPanelAbierto = tag;
+  panel.classList.add('abierta');
+  panel.style.maxHeight = panel.scrollHeight + 'px';
+  btn.classList.add('activo');
+  if (tag === 'busqueda') {
+    setTimeout(function() { var inp = document.getElementById('eq-search-input'); if (inp) inp.focus(); }, 50);
+  }
+}
+function _eqCerrarPanel(tag) {
+  var cfg = _EQ_PANELES[tag];
+  var panel = document.getElementById(cfg.el);
+  var btn = document.getElementById(cfg.btn);
+  if (_eqPanelAbierto === tag) _eqPanelAbierto = null;
+  if (panel) {
     panel.style.maxHeight = panel.scrollHeight + 'px';
     requestAnimationFrame(function() {
       requestAnimationFrame(function() {
@@ -765,8 +787,8 @@ function _eqToggleFiltros() {
         panel.style.maxHeight = '0px';
       });
     });
-    btn.classList.remove('activo');
   }
+  if (btn) btn.classList.remove('activo');
 }
 
 // Estado del período de puntaje -- default mes/año actuales (mismo
@@ -875,14 +897,14 @@ function _eqAplicarFiltros() {
   } else {
     params.mes = p.mesUnico; params.anio = p.anioUnico;
   }
-  var btn = document.querySelector('#eq-filtros-panel .btn-primary');
+  var btn = document.querySelector('#eq-busqueda-panel .btn-primary');
   var htmlOriginal = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Aplicando...'; }
   api(params, function(res) {
     if (btn) { btn.disabled = false; btn.innerHTML = htmlOriginal; }
     _eqPersonas = (res && res.personas) || [];
     _eqCargado = true;
-    _eqToggleFiltros();
+    _eqCerrarPanel('busqueda');
     _eqRenderFavoritos();
     _eqRenderGrupo('Quindes');
     _eqRenderGrupo('Mirlxs');
@@ -999,24 +1021,39 @@ function _eqRenderLesionadxs() {
   _eqHidratarAvatares();
 }
 
-// "Mis estadísticas" -- card en la home de Equipo (feat nueva, ver
-// MANIFEST.md/CHANGELOG.md), debajo de la nav y encima de Favoritos. La
-// persona propia YA está en `_eqPersonas` (roster completo, cargado una
-// sola vez por `_eqAsegurarCargado()`) -- sin ninguna llamada extra al
-// backend, mismo criterio de búsqueda que `_eqEsUsuarioActual()`. Mismos
-// componentes visuales que el perfil de detalle (`.eq-stats-grid`/
-// `.eq-stat-card`/`.eq-rank-wrap`, ver `_eqPerfilContenidoHtml()` más
-// abajo) y que el chip de estado de Ajustes (`.dat-estado-chip`/
-// `.dat-estado-*`, css/perfil.css) -- sin duplicar ningún estilo, solo el
-// layout propio del wrapper (`.eq-mis-stats-*`, css/equipo.css). Sin datos
-// de contacto (pedido explícito) -- a diferencia del perfil de detalle,
-// acá nunca se muestra teléfono/email.
+// "Mis estadísticas" -- panel deslizable de la nav de Equipo (rediseño, ver
+// MANIFEST.md/CHANGELOG.md; antes card fija debajo de la nav y encima de
+// Favoritos, mismo contenido, ahora dentro de `#eq-misstats-panel`/
+// `_eqTogglePanel('stats')`). La persona propia YA está en `_eqPersonas`
+// (roster completo, cargado una sola vez por `_eqAsegurarCargado()`) -- sin
+// ninguna llamada extra al backend, mismo criterio de búsqueda que
+// `_eqEsUsuarioActual()`. Mismos componentes visuales que el perfil de
+// detalle (`.eq-stats-grid`/`.eq-stat-card`/`.eq-rank-wrap`, ver
+// `_eqPerfilContenidoHtml()` más abajo) y que el chip de estado de Ajustes
+// (`.dat-estado-chip`/`.dat-estado-*`, css/perfil.css) -- sin duplicar
+// ningún estilo, solo el layout propio del wrapper (`.eq-mis-stats-*`,
+// css/equipo.css). Sin datos de contacto (pedido explícito) -- a diferencia
+// del perfil de detalle, acá nunca se muestra teléfono/email.
 function _eqRenderMisEstadisticas() {
-  var cont = document.getElementById('eq-mis-stats-card');
-  if (!cont) return;
+  var cont = document.getElementById('eq-misstats-panel-inner');
+  var toggleBtn = document.getElementById('eq-misstats-toggle-btn');
+  var toggleAvatar = document.getElementById('eq-misstats-toggle-avatar');
+  if (!cont || !toggleBtn) return;
   var persona = _eqPersonas.filter(function(p) { return _eqEsUsuarioActual(p); })[0];
-  if (!persona) { cont.style.display = 'none'; return; }
-  cont.style.display = '';
+  if (!persona) {
+    toggleBtn.style.display = 'none';
+    // Nadie puede haber abierto un panel sin su trigger visible, pero por
+    // las dudas (ej. cambio de cuenta mid-sesión) -- lo cierra si había
+    // quedado abierto, mismo criterio defensivo que el resto de esta
+    // función.
+    if (_eqPanelAbierto === 'stats') _eqCerrarPanel('stats');
+    return;
+  }
+  toggleBtn.style.display = '';
+  if (toggleAvatar) {
+    toggleAvatar.setAttribute('data-nombre', persona.nombreDerby || persona.username);
+    toggleAvatar.setAttribute('data-foto', persona.fotoPerfil || '');
+  }
   var statsCalc = _eqStatsCalc(persona);
   var numeroTxt = (persona.numeroDerby !== null && persona.numeroDerby !== undefined && persona.numeroDerby !== '') ? '#' + persona.numeroDerby + ' &bull; ' : '';
   var estadoTexto = persona.estado === 'Lesionadx' ? 'Lesionadx' : persona.estado === 'Activx' ? 'Activo' : 'Inactivo';
