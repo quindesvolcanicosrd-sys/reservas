@@ -2412,6 +2412,9 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     // existencia de `puntos_mensuales` (importado a mano al migrar el
     // sistema de puntos) -- solo tiene sentido sumarlo al total histórico,
     // nunca a un mes/rango puntual, así que solo entra cuando `esHistorico`.
+    // Se expone también suelto (`puntosAnteriores`) para que el frontend
+    // pueda desglosarlo en vez de mezclarlo ciego dentro de `puntosTotal`.
+    puntosAnteriores: esHistorico ? (Number(r.puntos_anteriores) || 0) : 0,
     puntosTotal: (puntosPeriodoPorUsuario[r.username] ? puntosPeriodoPorUsuario[r.username].total : 0)
       + (esHistorico ? (Number(r.puntos_anteriores) || 0) : 0),
     puntosAnio: Number(puntosAnioPorUsuario[r.username]) || 0,

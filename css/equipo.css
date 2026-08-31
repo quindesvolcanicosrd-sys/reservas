@@ -228,6 +228,7 @@
 /* Stats anuales -- 2 tarjetas lado a lado, fondo suave sin borde duro. */
 .eq-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0 6px; }
 .eq-stat-card { background: var(--surface-2); border-radius: 16px; padding: 18px 12px; text-align: center; }
+.eq-stat-card--full { grid-column: 1 / -1; }
 .eq-stat-icon { display: block; font-size: 1.5rem; margin-bottom: 6px; color: var(--brand); }
 .eq-stat-valor { font-size: 1.35rem; font-weight: 800; color: var(--text); }
 .eq-stat-label { font-size: 0.72rem; color: var(--muted); font-weight: 600; margin-top: 2px; }

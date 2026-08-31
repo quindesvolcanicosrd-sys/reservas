@@ -1049,6 +1049,12 @@ function _eqRenderMisEstadisticas() {
       '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">task_alt</span><div class="eq-stat-valor">' + (persona.puntosTareas !== undefined && persona.puntosTareas !== null ? persona.puntosTareas : '—') + '</div><div class="eq-stat-label">Puntos por tareas (mes)</div></div>' +
       '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">stars</span><div class="eq-stat-valor">' + (persona.puntosAsistencia !== undefined && persona.puntosAsistencia !== null ? persona.puntosAsistencia : '—') + '</div><div class="eq-stat-label">Puntos por asistencia (mes)</div></div>' +
     '</div>' +
+    // Total del período pedido (`puntosTotal`, getEquipo()) -- en modo
+    // histórico ya viene con `equipo.puntos_anteriores` sumado adentro
+    // (ver supabase/functions/api/index.ts), sin nada que recalcular acá.
+    '<div class="eq-stats-grid">' +
+      '<div class="eq-stat-card eq-stat-card--full"><span class="eq-stat-icon material-symbols-rounded">military_tech</span><div class="eq-stat-valor">' + (persona.puntosTotal !== undefined && persona.puntosTotal !== null ? persona.puntosTotal : '—') + '</div><div class="eq-stat-label">' + _eqEsc(_eqFiltroPeriodo.modo === 'historico' ? 'Puntos totales (histórico)' : 'Puntos totales') + '</div></div>' +
+    '</div>' +
     rankHtml;
   _eqHidratarAvatares();
 }
@@ -1523,6 +1529,17 @@ function _eqPerfilContenidoHtml(p) {
   // explícito, en vez de esconder las 2 tarjetas nuevas del todo.
   var puntosTareasTxt = (p.puntosTareas !== undefined && p.puntosTareas !== null) ? p.puntosTareas : '—';
   var puntosAsistenciaTxt = (p.puntosAsistencia !== undefined && p.puntosAsistencia !== null) ? p.puntosAsistencia : '—';
+  // Puntos totales del período pedido (getEquipo(), `puntosTotal`) -- en
+  // modo histórico ya viene con `equipo.puntos_anteriores` sumado adentro
+  // (ver supabase/functions/api/index.ts), así que basta con pintar el
+  // campo tal cual, sin volver a sumar nada acá. Card propia, span completo
+  // (`eq-stat-card--full`, css/equipo.css) en vez de compartir grid de a 2
+  // con tareas/asistencia -- es un total, no un dato del mismo nivel.
+  var puntosTotalTxt = (p.puntosTotal !== undefined && p.puntosTotal !== null) ? p.puntosTotal : '—';
+  var puntosTotalLabel = _eqFiltroPeriodo.modo === 'historico' ? 'Puntos totales (histórico)' : 'Puntos totales';
+  var puntosTotalHtml = '<div class="eq-stats-grid">' +
+      '<div class="eq-stat-card eq-stat-card--full"><span class="eq-stat-icon material-symbols-rounded">military_tech</span><div class="eq-stat-valor">' + puntosTotalTxt + '</div><div class="eq-stat-label">' + _eqEsc(puntosTotalLabel) + '</div></div>' +
+    '</div>';
   // Termómetro solo con equipo propio (bug real, ver MANIFEST.md): oculto
   // por completo si la persona necesita patines o protecciones del club
   // (`necesitaPatines`/`necesitaProtecciones`, `getEquipo()` -- equivalente
@@ -1548,6 +1565,7 @@ function _eqPerfilContenidoHtml(p) {
       '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">task_alt</span><div class="eq-stat-valor">' + puntosTareasTxt + '</div><div class="eq-stat-label">Puntos por tareas</div></div>' +
       '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">stars</span><div class="eq-stat-valor">' + puntosAsistenciaTxt + '</div><div class="eq-stat-label">Puntos por asistencia</div></div>' +
     '</div>' +
+    puntosTotalHtml +
     (necesitaEquipoClub ? '' :
     '<div class="eq-rank-wrap">' +
       '<div class="eq-rank-labels"><span>Mirlxs</span><span>Quindes</span></div>' +
