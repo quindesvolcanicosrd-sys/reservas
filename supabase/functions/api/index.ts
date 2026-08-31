@@ -864,7 +864,34 @@ async function adminValidarTarea(params: Record<string, any>): Promise<Record<st
   if (accion === 'aprobar') {
     await supabase.from('asignaciones_tareas').update({ estado: 'aprobada', fecha_revision: new Date().toISOString() }).eq('id', idAsignacion);
     const { data: t } = await supabase.from('tareas').select('puntos').eq('id', a.tarea_id).maybeSingle();
-    const puntos = Number(t?.puntos) || 0;
+    const puntosOriginales = Number(t?.puntos) || 0;
+    // Modificador de tardanza (feat nueva, ver MANIFEST.md/CHANGELOG.md):
+    // "fecha límite" real es `a.fecha_vencimiento_personal` (asignaciones_tareas),
+    // NO `tareas.fecha_vencimiento` -- una tarea rescatada del baúl
+    // (`rescatarTarea()`, arriba en este archivo) recalcula su propio
+    // vencimiento personal, distinto del de la tarea original. "Fecha de
+    // entrega" real es `a.fecha_envio` (seteada por `enviarRevisionTarea()`).
+    // Ajuste de -5h antes de extraer el día (mismo offset Ecuador=UTC-5 ya
+    // documentado en este archivo, ver _horasEntreHorarios()/comentario
+    // "Ecuador = UTC-5" más abajo): `fecha_envio` es un instante UTC real,
+    // `fecha_vencimiento_personal` es una fecha de calendario Ecuador sin
+    // componente de hora -- comparar los milisegundos crudos sin este
+    // ajuste corría el riesgo de contar como "un día tarde" una entrega
+    // hecha de noche (hora Ecuador) del mismo día límite, que en UTC ya
+    // cae del otro lado de la medianoche.
+    let diasTarde = 0;
+    if (a.fecha_vencimiento_personal && a.fecha_envio) {
+      const entregaLocalMs = new Date(a.fecha_envio).getTime() - 5 * 3600000;
+      const fechaEntregaLocal = new Date(entregaLocalMs).toISOString().substring(0, 10);
+      const limiteMs = new Date(a.fecha_vencimiento_personal + 'T00:00:00Z').getTime();
+      const entregaMs = new Date(fechaEntregaLocal + 'T00:00:00Z').getTime();
+      diasTarde = Math.max(0, Math.round((entregaMs - limiteMs) / 86400000));
+    }
+    // Nunca menos de la mitad de los puntos originales (pedido explícito) --
+    // si `diasTarde === 0` esta misma fórmula ya da `puntosOriginales`
+    // (Math.max(x - 0, x/2) === x para cualquier x >= 0), sin necesitar un
+    // caso aparte para "a tiempo".
+    const puntos = Math.max(puntosOriginales - diasTarde, puntosOriginales / 2);
     const hoy = new Date();
     await _acreditarPuntosTarea(a.nombre_usuario, hoy.getFullYear(), hoy.getMonth() + 1, puntos);
     const { data: quedan } = await supabase.from('asignaciones_tareas').select('id').eq('tarea_id', a.tarea_id).in('estado', ['iniciada', 'pendiente_revision']);
@@ -1142,6 +1169,15 @@ async function adminMarcarAsistencia(params: Record<string, any>): Promise<Recor
   if (!idEvento || !nombre) return { exito: false, error: 'Datos incompletos.' };
   if (!ESTADOS_ROLLCALL.includes(estado)) return { exito: false, error: 'Estado inválido.' };
 
+  // Fix real (racha inflada en re-marcados, ver MANIFEST.md/CHANGELOG.md):
+  // chequear ANTES de insertar la fila nueva de log -- si se chequeara
+  // después, esa misma fila recién insertada ya contaría como "marca
+  // previa" y CUALQUIER llamada (la primera incluida) se vería como una
+  // corrección.
+  const { data: marcaPrevia } = await supabase.from('log_asistencias')
+    .select('id').eq('id_evento', idEvento).eq('nombre_usuario', nombre).eq('origen', 'Admin').limit(1).maybeSingle();
+  const esCorreccion = !!marcaPrevia;
+
   const logResult = await _agregarFilaLogAsistencia(idEvento, nombre, 'Admin', estado);
   if (logResult.error) return { exito: false, error: 'Error insertando log: ' + logResult.error };
 
@@ -1158,29 +1194,37 @@ async function adminMarcarAsistencia(params: Record<string, any>): Promise<Recor
   const { error: errorUpdate } = await supabase.from('asistencias').update({ a_horario: aHorario.join(', '), tarde: tarde.join(', ') }).eq('id_evento', idEvento);
   if (errorUpdate) return { exito: false, error: 'Error actualizando asistencias: ' + errorUpdate.message };
 
-  // Racha de asistencias consecutivas (feature nueva, ver MANIFEST.md/
-  // CHANGELOG.md) -- `equipo.racha_actual` sube 1 en cada marca real de
-  // 'A tiempo'/'Tarde' y se resetea a 0 en 'Ninguno'; cada 3ra consecutiva
-  // acredita +2 a `puntos_mensuales.puntos_extra` del mes ACTUAL (no el mes
-  // del evento -- mismo criterio ya usado por `_acreditarPuntosTarea()` en
+  // Racha de asistencias consecutivas (ver MANIFEST.md/CHANGELOG.md) --
+  // `equipo.racha_actual` sube 1 en cada marca real de 'A tiempo'/'Tarde'
+  // y se resetea a 0 en 'Ninguno'; cada 3ra consecutiva acredita +2 a
+  // `puntos_mensuales.puntos_extra` del mes ACTUAL (no el mes del evento --
+  // mismo criterio ya usado por `_acreditarPuntosTarea()` en
   // `adminValidarTarea()`, que tampoco usa la fecha de la tarea).
-  // Limitación conocida, a propósito (mismo alcance pedido): esta función
-  // puede llamarse más de una vez para el MISMO evento+persona (re-marcar
-  // para corregir un click) -- cada llamada sigue sumando/reseteando la
-  // racha aunque el resultado neto en `asistencias.a_horario`/`.tarde` para
-  // ESE evento no haya cambiado de estado real. `recalcularPuntosAsistencia()`
-  // (más abajo) reconstruye la racha entera desde `log_asistencias` --
-  // corre eso si una racha queda inflada/desinflada por re-marcados.
-  const { data: filaEquipo } = await supabase.from('equipo').select('racha_actual').eq('username', nombre).maybeSingle();
-  if (estado === 'A tiempo' || estado === 'Tarde') {
-    const rachaNueva = (Number(filaEquipo?.racha_actual) || 0) + 1;
-    await supabase.from('equipo').update({ racha_actual: rachaNueva }).eq('username', nombre);
-    if (rachaNueva % 3 === 0) {
-      const hoy = new Date();
-      await _acreditarPuntosExtra(nombre, hoy.getUTCFullYear(), hoy.getUTCMonth() + 1, 2);
+  //
+  // Fix real (racha inflada en re-marcados): el incremento en vivo de
+  // abajo asume que CADA llamada es una marca nueva -- si esta misma
+  // persona ya tenía una marca previa para ESTE evento (`esCorreccion`,
+  // calculado arriba ANTES de insertar la fila nueva), es una corrección
+  // (ej. el admin tocó "A tiempo" por error y lo cambia a "Tarde"), no un
+  // evento nuevo -- sumar/resetear la racha en vivo la infla o desinfla
+  // sin motivo real. En ese caso, reconstruye la racha de ESTA persona
+  // desde cero a partir de `log_asistencias` (`_reconstruirRachasHistoricas()`,
+  // acotada por `soloUsuario` -- más abajo en este archivo) en vez de
+  // aplicar el incremento.
+  if (esCorreccion) {
+    await _reconstruirRachasHistoricas(nombre);
+  } else {
+    const { data: filaEquipo } = await supabase.from('equipo').select('racha_actual').eq('username', nombre).maybeSingle();
+    if (estado === 'A tiempo' || estado === 'Tarde') {
+      const rachaNueva = (Number(filaEquipo?.racha_actual) || 0) + 1;
+      await supabase.from('equipo').update({ racha_actual: rachaNueva }).eq('username', nombre);
+      if (rachaNueva % 3 === 0) {
+        const hoy = new Date();
+        await _acreditarPuntosExtra(nombre, hoy.getUTCFullYear(), hoy.getUTCMonth() + 1, 2);
+      }
+    } else if (estado === 'Ninguno') {
+      await supabase.from('equipo').update({ racha_actual: 0 }).eq('username', nombre);
     }
-  } else if (estado === 'Ninguno') {
-    await supabase.from('equipo').update({ racha_actual: 0 }).eq('username', nombre);
   }
 
   // Batch 8 (ver MANIFEST.md): recalcula los stats de ESTA persona apenas
@@ -1879,7 +1923,17 @@ async function recalcularPuntosAsistencia(mes: number, anio: number): Promise<{ 
 // (nunca se le tomó lista, ej. no pertenece a ese tier) no cuenta ni como
 // racha ni como corte: no todo evento aplica a toda persona en este
 // club (ver `_modoUsuario()`/Quindes-Mirlxs, MANIFEST.md).
-async function _reconstruirRachasHistoricas(): Promise<void> {
+//
+// `soloUsuario` (opcional, fix real "racha inflada en re-marcados" --
+// `adminMarcarAsistencia()`, arriba en este archivo): acota la
+// reconstrucción a UNA sola persona, en vez de recorrer/reescribir todo
+// el equipo -- ese camino en caliente (re-marcar el mismo evento+persona
+// para corregir un click) necesita recalcular YA, no puede esperar a la
+// próxima corrida completa/manual de `recalcularPuntosAsistencia()`. Los
+// eventos siguen leyéndose completos (el orden cronológico es compartido,
+// no depende de quién se está recalculando) -- solo el filtro de
+// `log_asistencias` cambia.
+async function _reconstruirRachasHistoricas(soloUsuario?: string): Promise<void> {
   const { data: eventos } = await supabase.from('asistencias')
     .select('id_evento, fecha, inicia')
     .not('estado', 'in', '("Evento Cancelado","No se entrena")')
@@ -1895,9 +1949,11 @@ async function _reconstruirRachasHistoricas(): Promise<void> {
     mesAnioPorEvento[ev.id_evento] = { anio: Number(partes[0]), mes: Number(partes[1]) };
   });
 
-  const { data: logsTodos } = await supabase.from('log_asistencias')
+  let queryLogs = supabase.from('log_asistencias')
     .select('id_evento, nombre_usuario, estado, marca_temporal')
     .eq('origen', 'Admin');
+  if (soloUsuario) queryLogs = queryLogs.eq('nombre_usuario', soloUsuario);
+  const { data: logsTodos } = await queryLogs;
 
   // Última marca real por (evento, persona) -- puede haber más de 1 fila
   // para el mismo evento+persona (re-marcados, rectificaciones aprobadas).
