@@ -2391,6 +2391,21 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
   // link sin código de país para cualquier cuenta real. `fechaIngreso` ya
   // viajaba para la cuenta propia (getDatosCompletos()) pero no para el
   // resto del roster.
+  // Diagnóstico temporal (bug real "puntosTotal histórico no sumaba
+  // puntos_anteriores en el frontend pese a que la lógica de abajo ya la
+  // suma"): la causa real terminó siendo que el Edge Function desplegado
+  // en Supabase quedaba desactualizado tras cada `git push` -- este repo
+  // NO tiene CI que redeploye funciones (confirmado: no hay `.github/`),
+  // el deploy es manual (`supabase functions deploy api --project-ref
+  // uusbnreitoobqssizbfq`, ver MANIFEST.md sección 8) y quedaba pendiente.
+  // Este log confirma en los logs reales del Edge Function (`supabase
+  // functions logs api`) qué valor de `puntos_anteriores` llegó de la DB
+  // y con qué queda `puntosTotal`, para poder verificar post-deploy sin
+  // adivinar. Sacar si ya no hace falta seguir confirmando esto.
+  if (esHistorico) {
+    console.log('[getEquipo][historico] equipo.puntos_anteriores por persona:',
+      JSON.stringify(personas.map((r: any) => ({ username: r.username, puntos_anteriores_raw: r.puntos_anteriores, puntos_anteriores_num: Number(r.puntos_anteriores) || 0 }))));
+  }
   const personasOut = personas.map((r: any) => ({
     id: r.username, nombre: r.username, username: r.username,
     nombreDerby: r.nombre_derby ?? '', numeroDerby: r.numero_derby ?? '',
