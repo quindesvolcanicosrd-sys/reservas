@@ -68,7 +68,7 @@ var _EV_MAPS_URL_POR_LUGAR = {
 var _EV_DURACION_MIN_POR_TIPO = { 'Entrenamiento': 90, 'Torneo': 180, 'Asamblea': 60, 'Ciclopaseo': 120 };
 var _EV_DESCRIPCION_POR_TIPO = {
   'Entrenamiento': 'Entrenamiento regular del equipo. Trae tus patines y protecciones completas.',
-  'Torneo': 'Competencia oficial. Revisá el reglamento y llegá con anticipación para el registro.',
+  'Torneo': 'Competencia oficial. Revisa el reglamento y llega con anticipación para el registro.',
   'Asamblea': 'Reunión general del equipo para tratar temas administrativos y de organización.',
   'Ciclopaseo': 'Paseo recreativo abierto a todo el equipo. No requiere reserva previa.'
 };
@@ -3704,7 +3704,7 @@ function _evAbrirSheetCuotaPendiente(opts) {
   if (msgEl) {
     msgEl.textContent = (opts && opts.esGracia)
       ? 'Ya asististe a un entrenamiento este mes. Debes pagar el mes de ' + opts.mesNombre + ' para marcar Asistiré.'
-      : 'Para confirmar tu asistencia necesitás tener tu cuota al día.';
+      : 'Para confirmar tu asistencia necesitas tener tu cuota al día.';
   }
   var sh = document.getElementById('sheet-cuota-pendiente');
   var ov = document.getElementById('sheet-cuota-pendiente-overlay');
@@ -6551,7 +6551,7 @@ function _evAntRecargarLista(cb) {
 function _evAntRenderLista() {
   var cont = document.getElementById('ev-ant-lista'); if (!cont) return;
   if (!_evAntReglas.length) {
-    cont.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">No tenés asistencias anticipadas todavía.</p>';
+    cont.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">No tienes asistencias anticipadas todavía.</p>';
     return;
   }
   cont.style.transition = 'none';

@@ -275,7 +275,7 @@ function _adminRenderBannerPendientes(scope) {
     '<div class="admin-dash-banner" id="admin-banner-pendientes' + scope + '">' +
       '<div class="admin-dash-banner-header" onclick="adminToggleBanner(\'admin-banner-pendientes-body' + scope + '\')">' +
         '<span class="material-symbols-outlined admin-dash-banner-icon">pending_actions</span>' +
-        '<span class="admin-dash-banner-texto" id="admin-banner-pendientes-texto' + scope + '">Tenés ' + n + ' reserva' + (n !== 1 ? 's' : '') + ' pendiente' + (n !== 1 ? 's' : '') + ' de revisión</span>' +
+        '<span class="admin-dash-banner-texto" id="admin-banner-pendientes-texto' + scope + '">Tienes ' + n + ' reserva' + (n !== 1 ? 's' : '') + ' pendiente' + (n !== 1 ? 's' : '') + ' de revisión</span>' +
         '<span class="material-symbols-outlined admin-dash-banner-chevron" id="admin-banner-pendientes-body' + scope + '-chevron">expand_more</span>' +
       '</div>' +
       '<div class="admin-dash-banner-body" id="admin-banner-pendientes-body' + scope + '">' +
@@ -302,7 +302,7 @@ function adminBannerSetEstado(fila, estado, btn, scope) {
       var banner = document.getElementById('admin-banner-pendientes' + scope);
       if (n === 0) { if (banner) banner.remove(); if (_admDashAbierto === 'admin-banner-pendientes-body' + scope) _admDashAbierto = null; return; }
       var texto = document.getElementById('admin-banner-pendientes-texto' + scope);
-      if (texto) texto.textContent = 'Tenés ' + n + ' reserva' + (n !== 1 ? 's' : '') + ' pendiente' + (n !== 1 ? 's' : '') + ' de revisión';
+      if (texto) texto.textContent = 'Tienes ' + n + ' reserva' + (n !== 1 ? 's' : '') + ' pendiente' + (n !== 1 ? 's' : '') + ' de revisión';
       var body = document.getElementById('admin-banner-pendientes-body' + scope);
       if (body && body.style.maxHeight && body.style.maxHeight !== '0px') body.style.maxHeight = body.scrollHeight + 'px';
     }, 250);
@@ -1773,7 +1773,7 @@ function _mlConfirmarRegistrarPago(btn) {
   var anio = parseInt(document.getElementById('ml-pago-anio').value, 10);
   var monto = parseFloat(document.getElementById('ml-pago-monto').value) || 0;
   var notas = (document.getElementById('ml-pago-notas').value || '').trim();
-  if (!mes || !anio) { mostrarToast('Seleccioná mes y año.', 'error'); return; }
+  if (!mes || !anio) { mostrarToast('Selecciona mes y año.', 'error'); return; }
   if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
   var datos = { nombre: _mlPagoUsername, mes: mes, anio: anio, monto: monto, formaPago: 'Efectivo' };
   if (notas) datos.notas = notas;

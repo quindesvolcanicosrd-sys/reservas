@@ -236,11 +236,11 @@ function _datLesionConfirmar() {
   // js/eventos.js con solicitarExcepcion()), o la acción real (que valida
   // por token de sesión) rechaza el pedido como "Sesión inválida".
   apiPost({ action: 'solicitarLesion', token: _token }, function(res) {
-    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo enviar la solicitud. Intentá de nuevo.', 'error'); return; }
+    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo enviar la solicitud. Intenta de nuevo.', 'error'); return; }
     if (E.datos) E.datos.solicitudLesionPendiente = true;
     _datosRenderLesion();
   }, function(e) {
-    mostrarToast((e && e.message) || 'No se pudo enviar la solicitud. Intentá de nuevo.', 'error');
+    mostrarToast((e && e.message) || 'No se pudo enviar la solicitud. Intenta de nuevo.', 'error');
   });
 }
 function _datLesionCancelarSolicitud() {

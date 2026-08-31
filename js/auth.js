@@ -266,7 +266,7 @@ function continuar_pin() {
       if (!res.valido) {
         if (res.pinNeedsReset) {
           ocultarCargando();
-          err('err-pin', 'Tu PIN anterior no es compatible. Ingresá con Google para configurar uno nuevo.');
+          err('err-pin', 'Tu PIN anterior no es compatible. Ingresa con Google para configurar uno nuevo.');
           return;
         }
         ocultarCargando(); resetPinPad();

@@ -438,7 +438,7 @@ function _eqInit() {
     // vez de quedar pegada para siempre con el mensaje de error.
     if (!_eqPersonas.length) {
       _eqYaInicializado = false;
-      if (estadoEl) estadoEl.innerHTML = '<p class="eq-error">No se pudo cargar el equipo. Intentá de nuevo.</p>';
+      if (estadoEl) estadoEl.innerHTML = '<p class="eq-error">No se pudo cargar el equipo. Intenta de nuevo.</p>';
       return;
     }
     if (estadoEl) estadoEl.innerHTML = '';
@@ -917,7 +917,7 @@ function _eqRenderFiltroPeriodoUI() {
   if (wrapRango) wrapRango.style.display = p.modo === 'rango' ? '' : 'none';
 }
 
-/* ── Modal "Elegí el mes"/"Elegí el rango" (rediseño, ver MANIFEST.md) ───
+/* ── Modal "Elige el mes"/"Elige el rango" (rediseño, ver MANIFEST.md) ───
    Reemplaza los bloques de año+meses que antes vivían siempre visibles
    inline en el panel de filtros -- ahora el acordeón "Filtrar puntos según
    periodo" solo muestra 3 pills (Mes/Rango/Histórico); elegir Mes o Rango
@@ -969,7 +969,7 @@ function _eqAbrirModalPeriodo(modo) {
   var sh = document.getElementById('eq-modal-periodo-sheet');
   var titulo = document.getElementById('eq-modal-periodo-titulo');
   if (!ov || !sh) return;
-  if (titulo) titulo.textContent = modo === 'rango' ? 'Elegí el rango' : 'Elegí el mes';
+  if (titulo) titulo.textContent = modo === 'rango' ? 'Elige el rango' : 'Elige el mes';
   _eqRenderFiltroPeriodoUI();
   ov.style.display = 'block';
   sh.style.display = 'block';
@@ -1548,12 +1548,12 @@ function _eqRankTexto(p) {
   var esQuindes = p.rol === 'Quindes';
   if (esQuindes) {
     if (p.termometro_pct >= 75) return 'Posición sólida como Quinde';
-    if (p.termometro_pct >= 50) return 'Mantené el ritmo';
+    if (p.termometro_pct >= 50) return 'Mantén el ritmo';
     return 'Cerca del límite con Mirlxs';
   }
   if (p.termometro_pct >= 75) return 'Muy cerca de ser Quinde';
   if (p.termometro_pct >= 50) return 'Buen progreso hacia Quindes';
-  return 'Seguí sumando asistencia';
+  return 'Sigue sumando asistencia';
 }
 
 // Segmented control [Quindes | Auto | Mirlxs] del perfil de detalle,

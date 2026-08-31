@@ -233,7 +233,7 @@ function necesitaEquipo() { return !canPayMonthly(); }
 // — usado tanto por cargarFechas() como por selTipoPago() para que el
 // elemento nunca quede visible vacío (ver esa nota en index.html).
 function _s4SubtituloFechasTexto() {
-  return E.reagendando ? 'Seleccioná la nueva fecha para tu clase a favor.' : 'Selecciona uno o varios entrenamientos.';
+  return E.reagendando ? 'Selecciona la nueva fecha para tu clase a favor.' : 'Selecciona uno o varios entrenamientos.';
 }
 
 function actualizarTextosPago() {
@@ -1291,7 +1291,7 @@ function confirmarReserva(btn) {
     if (E.notaPago) h += fila('Referencia pago', E.notaPago);
     document.getElementById('s6-resumen').innerHTML = h;
 
-    if (E.reagendando) { document.getElementById('s6-titulo').textContent = '🔁 ¡Clase reagendada!'; document.getElementById('s6-texto').innerHTML = 'Tu nueva reserva está <strong>pendiente de confirmación</strong>. Podés ver el estado desde "Mis reservas".'; document.getElementById('s6-texto').style.display = 'block'; }
+    if (E.reagendando) { document.getElementById('s6-titulo').textContent = '🔁 ¡Clase reagendada!'; document.getElementById('s6-texto').innerHTML = 'Tu nueva reserva está <strong>pendiente de confirmación</strong>. Puedes ver el estado desde "Mis reservas".'; document.getElementById('s6-texto').style.display = 'block'; }
     else if (necesitaEquipoLocal) { document.getElementById('s6-titulo').textContent = '¡Reserva registrada!'; document.getElementById('s6-texto').style.display = 'none'; } else {
       document.getElementById('s6-titulo').textContent = '¡Pago registrado!';
       // Texto distinto para "por mes" (pedido explícito, ver MANIFEST.md
