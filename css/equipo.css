@@ -9,20 +9,49 @@
 .eq-loading, .eq-error { text-align: center; font-size: 0.85rem; color: var(--muted); padding: 32px 16px; }
 .eq-error { color: var(--danger); }
 
-/* ── Sugerencias rotativas del buscador (Batch 4, #eq-search-suggestion,
-   index.html) -- overlay sobre el placeholder real (estático, no animable),
-   `_eqSugerenciasIniciar()`/js/equipo.js. `left` calculado a mano contra
-   `.app-nav-search` (css/nav.css): 16px de padding del pill + ~19px del
-   ícono de lupa (font-size:1.2rem) + 8px de gap = 43px hasta donde arranca
-   el texto real del input. `pointer-events:none` -- el click debe llegar
-   al input de abajo, no a este overlay decorativo. */
-.eq-search-suggestion {
-  position: absolute; left: 43px; top: 50%; transform: translateY(-50%);
-  color: var(--muted); font-size: 0.9rem; font-weight: 500;
-  pointer-events: none; opacity: 1; transition: opacity 0.4s ease;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  max-width: calc(100% - 60px);
+/* ── "Mis estadísticas" (feat nueva, ver MANIFEST.md/CHANGELOG.md) ──────
+   Card propia en la home de Equipo -- `.eq-stats-grid`/`.eq-stat-card`/
+   `.eq-rank-wrap` (más abajo, "Perfil de detalle") y `.dat-estado-chip`
+   (css/perfil.css) se reusan tal cual, sin duplicar nada -- esto es SOLO
+   el layout del wrapper + la fila de header (avatar + nombre/rol/estado). */
+.eq-mis-stats-card {
+  background: var(--surface); border: 1.5px solid var(--border-light);
+  border-radius: 18px; padding: 16px; margin-bottom: 18px;
 }
+.eq-mis-stats-header { display: flex; align-items: center; gap: 12px; }
+.eq-mis-stats-info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.eq-mis-stats-nombre { font-size: 1.05rem; font-weight: 800; color: var(--text); }
+.eq-mis-stats-sub { font-size: 0.8rem; color: var(--muted); }
+
+/* ── Botón + panel de Filtros (feat nueva, ver MANIFEST.md/CHANGELOG.md) ──
+   Mismo mecanismo de animación que `.ev-header-burbuja`/css/eventos.css
+   (botón de búsqueda de Eventos) -- max-height animado + `.abierta`, JS
+   idéntico en `_eqToggleFiltros()`/js/equipo.js (lock del alto real antes
+   de cerrar + doble requestAnimationFrame) -- CSS propio en vez de
+   reusar la clase de eventos.css literal, mismo criterio de "cada sección
+   mantiene su propio archivo" ya establecido en el resto de la app. */
+.eq-filtro-toggle-btn.activo { background: var(--brand); color: var(--white); }
+.eq-filtros-panel { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
+.eq-filtros-panel.abierta { margin-bottom: 18px; }
+.eq-filtros-panel-inner {
+  background: var(--surface-2); border-radius: 16px; padding: 16px;
+  margin-top: 10px;
+}
+.eq-filtro-mes-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.eq-filtro-mes-pills .aj-pill { padding: 6px 12px; font-size: 0.74rem; }
+.eq-filtro-anio-stepper {
+  display: inline-flex; align-items: center; gap: 12px;
+  background: var(--surface); border: 1.5px solid var(--border-light);
+  border-radius: 10px; padding: 6px 14px; margin: 10px 0 4px;
+}
+.eq-anio-btn {
+  background: none; border: none; color: var(--brand); font-size: 1.1rem;
+  font-weight: 800; cursor: pointer; padding: 0 4px; font-family: inherit;
+  line-height: 1;
+}
+.eq-anio-valor { font-size: 0.9rem; font-weight: 800; color: var(--text); min-width: 40px; text-align: center; }
+.eq-filtro-rango-label { font-size: 0.76rem; font-weight: 700; color: var(--muted); margin: 12px 0 0; }
+.eq-filtro-rango-label:first-of-type { margin-top: 0; }
 
 /* ── Favoritos ────────────────────────────────── */
 /* Rediseño: Favoritos ahora es un `.eq-grupo` idéntico a Quindes/Mirlxs/

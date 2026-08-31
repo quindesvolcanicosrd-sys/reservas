@@ -2276,7 +2276,7 @@ async function adminGetRosterEquipo(): Promise<Record<string, any>> {
 // (arriba): la sección Equipo es un directorio visible para cualquier cuenta
 // logueada, no admin-only, y esta app no valida sesión en la mayoría de sus
 // acciones de solo-lectura.
-async function getEquipo(): Promise<Record<string, any>> {
+async function getEquipo(params: Record<string, any> = {}): Promise<Record<string, any>> {
   const { data: filas } = await supabase.from('equipo')
     .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, prefijo, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano, termometro_pct, fecha_ingreso, necesita_patines, necesita_protecciones')
     .order('username');
@@ -2305,20 +2305,65 @@ async function getEquipo(): Promise<Record<string, any>> {
   // "Puntos por tareas"/"Puntos por asistencia" armadas (`p.puntosTareas`/
   // `p.puntosAsistencia`) mostrando "—" porque este endpoint nunca las
   // devolvía. `puntos_total` es columna GENERATED (suma de las otras 4,
-  // Postgres la calcula solo -- nunca escribirla a mano). `puntosAnio` es
-  // la suma de `puntos_total` de TODOS los meses del año actual -- no solo
-  // el mes en curso -- para un acumulado real, no solo el mes corriente.
+  // Postgres la calcula solo -- nunca escribirla a mano).
+  //
+  // Período de puntaje (feat nueva, "Filtros" en Equipo, ver MANIFEST.md/
+  // CHANGELOG.md) -- `puntosAsistencia`/`puntosTareas`/`puntosTotal` ahora
+  // reflejan el período pedido (afecta tanto las stat cards de la lista
+  // como el perfil de detalle, que leen los mismos 3 campos), en vez de
+  // estar fijos al mes actual. Prioridad si se manda más de un modo a la
+  // vez: histórico > rango > mes específico > default (mes/año actuales,
+  // comportamiento de siempre si no se manda ningún parámetro).
+  // `puntosAnio` NO cambia con este filtro -- sigue siendo el acumulado del
+  // año calendario real, sin usarse hoy en ningún render (campo defensivo
+  // agregado para cuando haga falta), así que no hay razón para
+  // complicarlo con el mismo período que los otros 3.
   const hoy = new Date();
   const anioActual = hoy.getUTCFullYear();
   const mesActual = hoy.getUTCMonth() + 1;
+  let desdePeriodo: string; let hastaPeriodo: string;
+  const esHistorico = params.historico === true || params.historico === 'true';
+  const primerDiaSiguiente = function(anio: number, mes: number): string {
+    const a = mes === 12 ? anio + 1 : anio;
+    const m = mes === 12 ? 1 : mes + 1;
+    return a + '-' + String(m).padStart(2, '0') + '-01';
+  };
+  if (esHistorico) {
+    desdePeriodo = '1900-01-01';
+    hastaPeriodo = '2999-01-01';
+  } else if (params.mesDesde && params.mesHasta && params.anioDesde && params.anioHasta) {
+    const anioDesde = Number(params.anioDesde), mesDesde = Number(params.mesDesde);
+    const anioHasta = Number(params.anioHasta), mesHasta = Number(params.mesHasta);
+    desdePeriodo = anioDesde + '-' + String(mesDesde).padStart(2, '0') + '-01';
+    hastaPeriodo = primerDiaSiguiente(anioHasta, mesHasta);
+  } else if (params.mes && params.anio) {
+    const m = Number(params.mes), a = Number(params.anio);
+    desdePeriodo = a + '-' + String(m).padStart(2, '0') + '-01';
+    hastaPeriodo = primerDiaSiguiente(a, m);
+  } else {
+    desdePeriodo = anioActual + '-' + String(mesActual).padStart(2, '0') + '-01';
+    hastaPeriodo = primerDiaSiguiente(anioActual, mesActual);
+  }
+  // Sin `.eq('anio', ...)` a nivel de query -- un rango o el histórico
+  // pueden cruzar años, así que el filtro real de período se aplica abajo
+  // comparando fechas de calendario completas (`anio-mes-01`), no por año
+  // suelto.
   const { data: puntosData } = await supabase.from('puntos_mensuales')
-    .select('nombre_usuario, mes, puntos_asistencia, puntos_tareas, puntos_total')
-    .eq('anio', anioActual).in('nombre_usuario', usernames);
-  const puntosMesPorUsuario: Record<string, any> = {};
+    .select('nombre_usuario, anio, mes, puntos_asistencia, puntos_tareas, puntos_total')
+    .in('nombre_usuario', usernames);
+  const puntosPeriodoPorUsuario: Record<string, { asistencia: number; tareas: number; total: number }> = {};
   const puntosAnioPorUsuario: Record<string, number> = {};
   (puntosData ?? []).forEach((p: any) => {
-    puntosAnioPorUsuario[p.nombre_usuario] = (puntosAnioPorUsuario[p.nombre_usuario] || 0) + (Number(p.puntos_total) || 0);
-    if (p.mes === mesActual) puntosMesPorUsuario[p.nombre_usuario] = p;
+    if (Number(p.anio) === anioActual) {
+      puntosAnioPorUsuario[p.nombre_usuario] = (puntosAnioPorUsuario[p.nombre_usuario] || 0) + (Number(p.puntos_total) || 0);
+    }
+    const fechaFila = p.anio + '-' + String(p.mes).padStart(2, '0') + '-01';
+    if (fechaFila >= desdePeriodo && fechaFila < hastaPeriodo) {
+      if (!puntosPeriodoPorUsuario[p.nombre_usuario]) puntosPeriodoPorUsuario[p.nombre_usuario] = { asistencia: 0, tareas: 0, total: 0 };
+      puntosPeriodoPorUsuario[p.nombre_usuario].asistencia += Number(p.puntos_asistencia) || 0;
+      puntosPeriodoPorUsuario[p.nombre_usuario].tareas += Number(p.puntos_tareas) || 0;
+      puntosPeriodoPorUsuario[p.nombre_usuario].total += Number(p.puntos_total) || 0;
+    }
   });
 
   // "Es admin de miembro" -- no existe ningún flag por miembro en `equipo`;
@@ -2361,9 +2406,9 @@ async function getEquipo(): Promise<Record<string, any>> {
     total_eventos_ano: Number(r.total_eventos_ano) || 0,
     termometro_pct: Number(r.termometro_pct) || 0,
     ultimaAsistencia: ultimaPorUsuario[r.username] ? ultimaPorUsuario[r.username].slice(0, 10) : null,
-    puntosAsistencia: Number(puntosMesPorUsuario[r.username]?.puntos_asistencia) || 0,
-    puntosTareas: Number(puntosMesPorUsuario[r.username]?.puntos_tareas) || 0,
-    puntosTotal: Number(puntosMesPorUsuario[r.username]?.puntos_total) || 0,
+    puntosAsistencia: puntosPeriodoPorUsuario[r.username] ? puntosPeriodoPorUsuario[r.username].asistencia : 0,
+    puntosTareas: puntosPeriodoPorUsuario[r.username] ? puntosPeriodoPorUsuario[r.username].tareas : 0,
+    puntosTotal: puntosPeriodoPorUsuario[r.username] ? puntosPeriodoPorUsuario[r.username].total : 0,
     puntosAnio: Number(puntosAnioPorUsuario[r.username]) || 0,
     // Bug real "termómetro visible aunque la persona necesite equipo del
     // club" (ver MANIFEST.md): `equipo.necesita_patines`/`necesita_protecciones`
@@ -2647,7 +2692,7 @@ Deno.serve(async (req: Request) => {
       case 'adminQuitarAdmin':               return json(await adminQuitarAdmin(params));
       case 'adminGetCandidatosAdmin':        return json(await adminGetCandidatosAdmin());
       case 'adminGetRosterEquipo':           return json(await adminGetRosterEquipo());
-      case 'getEquipo':                      return json(await getEquipo());
+      case 'getEquipo':                      return json(await getEquipo(params));
       case 'adminGetQueLlevar':              return json(await adminGetQueLlevar());
       // Push
       case 'adminEnviarPush':               return json(await adminEnviarPush(params));

@@ -113,26 +113,17 @@ function irEditarDatos(sinNavegar) {
   if (!sinNavegar) ir('s-datos');
 }
 
-// Stats de Equipo en Ajustes (Cambio 51; conectado a datos reales en el
-// Cambio 55, ver MANIFEST.md "Auditoría previa") -- busca a la persona cuyo
-// `nombre` (username real, `E.nombre` también lo es -- así llega desde
-// loginGoogle()/adminLogin()) coincide, no `nombreDerby` (bug real que
-// tenía esta función antes del Cambio 55, mismo que `_eqEsUsuarioActual()`
-// ya tenía y se corrigió ahí, ver js/equipo.js). `_eqAsegurarCargado()`
+// Estado + botón "Reportar lesión" en Mi Perfil (Ajustes). Desde el Cambio
+// "filtros equipo / card Mis estadísticas" ya NO renderiza horas/asistencia
+// ni el termómetro acá -- esos datos se movieron a la card "Mis estadísticas"
+// de Equipo (`_eqRenderMisEstadisticas()`, js/equipo.js), que reusa la misma
+// persona de `_eqPersonas` sin pedir nada nuevo al backend. `_eqAsegurarCargado()`
 // (js/equipo.js, cargado ANTES que este archivo en index.html) trae el
 // roster real UNA sola vez por sesión, compartido con quien haya visitado
-// primero la sección Equipo -- por eso este render ahora es asíncrono
-// (contra el array demo, antes, era síncrono). `#dat-stats-wrap` queda
-// vacío/sin tocar si la cuenta no tiene fila en Equipo o el fetch no
+// primero la sección Equipo -- por eso este render es asíncrono. `#dat-stats-wrap`
+// queda vacío/sin tocar si la cuenta no tiene fila en Equipo o el fetch no
 // encuentra a la persona -- sin toast ni error, mismo criterio que el resto
-// de esta pantalla con datos ausentes. **Horas/asistencia real desde el
-// Cambio 58** (`persona.horas_ano`/`asistencias_ano`/`total_eventos_ano`,
-// snake_case tal cual llegan de getEquipo() -- ver ese comentario en
-// supabase/functions/api/index.ts) vía `_eqStatsCalc()` (js/equipo.js,
-// cargado antes que este archivo, mismo cálculo que usa el perfil de
-// Equipo). Termómetro real desde el Cambio 59 -- `persona.termometro_pct`
-// (antes `rankPct`, 0 fijo, ver MANIFEST.md), snake_case tal cual llega de
-// getEquipo(), mismo criterio que horas_ano/asistencias_ano.
+// de esta pantalla con datos ausentes.
 function _datosRenderStats() {
   var contenedor = document.getElementById('dat-stats-wrap');
   if (!contenedor) return;
@@ -145,45 +136,12 @@ function _datosRenderStats() {
 }
 
 function _datosRenderStatsHtml(contenedor, persona) {
-  // Tendencia del termómetro (Batch 4) -- **sin dato real**: no existe
-  // ningún valor anterior de `termometro_pct` para comparar (mismo hallazgo
-  // que en `_eqStatsInlineHtml()`/js/equipo.js -- ver ese comentario) --
-  // placeholder listo para cuando `persona.termometro_pct_anterior` exista
-  // de verdad, sin inventar una tendencia mientras tanto. Va junto al VALOR
-  // del termómetro (pedido explícito: "Termómetro: valor actual con
-  // indicador de tendencia"), no junto a Asistencia anual.
-  var tendenciaHtml = '';
-  if (persona.termometro_pct_anterior !== undefined && persona.termometro_pct_anterior !== null) {
-    var diffTerm = (persona.termometro_pct || 0) - persona.termometro_pct_anterior;
-    if (diffTerm > 0) tendenciaHtml = '<span class="dat-tendencia dat-tendencia-up material-symbols-outlined">arrow_upward</span>';
-    else if (diffTerm < 0) tendenciaHtml = '<span class="dat-tendencia dat-tendencia-down material-symbols-outlined">arrow_downward</span>';
-  }
-  // Reutiliza el componente de termómetro real (`.eq-rank-wrap`/`_eqRankTexto()`,
-  // js/equipo.js -- pedido explícito de reusarlo) -- se le agrega el % real
-  // como número (antes solo la barra + el texto contextual, sin un valor
-  // explícito) + la tendencia de arriba, entre las 2 etiquetas.
-  // Termómetro solo con equipo propio (bug real, ver MANIFEST.md -- mismo
-  // fix que `_eqPerfilContenidoHtml()`/js/equipo.js, "Termómetro visible
-  // para Mirlxs con equipamiento del club" -- acá se había quedado afuera
-  // porque este render vive en un archivo distinto). `persona.necesitaPatines`/
-  // `necesitaProtecciones` (`getEquipo()`) son los mismos 2 campos, misma
-  // persona (`_eqPersonas`, compartido entre Equipo y esta pantalla).
-  var necesitaEquipoClub = !!(persona.necesitaPatines || persona.necesitaProtecciones);
-  // 3 casos, no 2 -- `necesitaEquipoClub` es independiente de `tierModo`
-  // (una persona puede tener el tier en 'auto' Y necesitar equipo del club
-  // a la vez): con equipo del club, ningún texto reemplaza al termómetro
-  // (mismo criterio que `_eqPerfilContenidoHtml()`/js/equipo.js -- '' lisa y
-  // llana) -- mostrar "Categoría fija" ahí sería un mensaje incorrecto
-  // (nadie fijó la categoría a mano, sigue en 'auto').
-  var rankHtml = necesitaEquipoClub ? '' : (persona.tierModo === 'auto'
-    ? '<div class="dat-rank-wrap eq-rank-wrap">' +
-        '<div class="eq-rank-labels"><span>Mirlxs</span><span class="dat-rank-valor">' + (persona.termometro_pct || 0) + '%' + tendenciaHtml + '</span><span>Quindes</span></div>' +
-        '<div class="eq-rank-track"><div class="eq-rank-fill" style="width:' + (persona.termometro_pct || 0) + '%;"></div></div>' +
-        '<p class="eq-rank-texto">' + _eqEsc(_eqRankTexto(persona)) + '</p>' +
-      '</div>'
-    : '<p class="dat-tier-fijo">Categoría fija: <strong>' + (persona.tierModo === 'quinde' ? 'Quindes' : 'Mirlxs') + '</strong></p>');
-
-  var statsCalc = _eqStatsCalc(persona);
+  // Cambio 5A (filtros equipo / card Mis estadísticas): las estadísticas
+  // (horas, % asistencia) y la barra de tier/termómetro se sacaron de acá --
+  // ahora viven en la card "Mis estadísticas" de Equipo (`_eqRenderMisEstadisticas()`,
+  // js/equipo.js), que reusa los mismos `_eqStatsCalc()`/`_eqRankTexto()` sobre
+  // los mismos datos de `_eqPersonas`. Esta función ahora solo renderiza el
+  // estado y el botón de "Reportar lesión".
 
   // Estado (Batch 4) -- simplifica los 4 estados reales de
   // `equipo.estado_miembro` (`_EQ_ESTADOS`, js/equipo.js: Activx/Ausente/
@@ -219,19 +177,6 @@ function _datosRenderStatsHtml(contenedor, persona) {
     : '';
 
   contenedor.innerHTML =
-    '<div class="dat-stat-row">' +
-      '<div class="dat-stat-card">' +
-        '<span class="material-symbols-rounded">roller_skating</span>' +
-        '<span class="dat-stat-valor">' + statsCalc.horas + 'h</span>' +
-        '<span class="dat-stat-label">Horas patinadas</span>' +
-      '</div>' +
-      '<div class="dat-stat-card">' +
-        '<span class="material-symbols-rounded">kid_star</span>' +
-        '<span class="dat-stat-valor">' + statsCalc.asistenciaPct + '%</span>' +
-        '<span class="dat-stat-label">Asistencia anual</span>' +
-      '</div>' +
-    '</div>' +
-    rankHtml +
     '<div class="dat-estado-fila"><span class="dat-estado-label">Estado:</span><span class="dat-estado-chip ' + estadoChip.clase + '">' + estadoChip.texto + '</span></div>' +
     lesionBtnHtml;
 }
@@ -266,26 +211,36 @@ function _datosRenderLesion() {
   contenedor.innerHTML = html;
 }
 
-// Integración con el botón/gesto atrás (Batch 4) -- este sheet reusaba
-// `.eq-confirm-sheet-*` (correcto, css/equipo.css) pero, a diferencia de los
-// ~15 sheets de este mismo archivo (ajAbrirSheetLogout, _ddpAbrir,
-// ajAbrirSheetTexto, etc.), nunca llamaba a `_registrarOverlayAbierto()`
-// (js/ui.js) -- el gesto de volver atrás lo saltaba directo a la pantalla
-// de atrás en vez de solo cerrar el sheet. Mismo patrón que esos: abrir
+// Integración con el botón/gesto atrás (mantenida del Batch 4) -- abrir
 // empuja un estado de historial + registra el cierre; el cierre acepta
 // `porGesto` y, si se llama manual (click de "Cancelar", o desde
 // `_datLesionConfirmar()` más abajo), dispara `history.back()` en vez de
 // cerrar directo -- el popstate resultante es el que efectivamente cierra
 // (con `porGesto=true`), igual que en el resto de la app.
+// Rediseño (ver MANIFEST.md/CHANGELOG.md): migrado de `.eq-confirm-sheet-*`
+// (clase `.visible`) al componente `.bsheet-overlay`/`.bsheet` estándar de
+// Ajustes -- mismo mecanismo `style.display`+`transform` (doble
+// `requestAnimationFrame` al abrir, 350ms de espera antes de `display:none`
+// al cerrar) que usa el resto de sheets `.bsheet` de la app, ej.
+// `_evAbrirSheetCancelar()`/js/eventos.js.
 function _datLesionAbrirSheet() {
-  var sheet = document.getElementById('dat-lesion-sheet');
-  if (sheet) sheet.classList.add('visible');
+  var ov = document.getElementById('dat-lesion-sheet-overlay');
+  var sh = document.getElementById('dat-lesion-sheet');
+  if (!ov || !sh) return;
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
   _registrarOverlayAbierto(_datLesionCancelar);
 }
 function _datLesionCancelar(porGesto) {
   if (!porGesto) { history.back(); return; }
-  var sheet = document.getElementById('dat-lesion-sheet');
-  if (sheet) sheet.classList.remove('visible');
+  var ov = document.getElementById('dat-lesion-sheet-overlay');
+  var sh = document.getElementById('dat-lesion-sheet');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() {
+    if (sh) sh.style.display = 'none';
+    if (ov) ov.style.display = 'none';
+  }, 350);
 }
 function _datLesionConfirmar() {
   _datLesionCancelar();
@@ -1114,65 +1069,41 @@ function _ajUsernameGuardar() {
   });
 }
 
-// ── Rol en el equipo (Batch 4) ──────────────────────────────────────────
+// ── Rol en el equipo (rediseño, ver MANIFEST.md/CHANGELOG.md) ───────────
 // Sin columna real en `equipo` (mismo hallazgo ya documentado para
 // `p.roles` desde el Cambio 55) -- persistido por `localStorage`
 // (`_eqRolesDe()`/`_eqSetRolesDe()`, js/equipo.js, carga antes que este
 // archivo) bajo la clave `eq_roles_<username>`, la MISMA que lee
-// `_eqPerfilContenidoHtml()` al ver este perfil desde Equipo -- "guardar en
-// localStorage + endpoint si existe" (pedido) -- no existe un endpoint
-// real, se documentó la limitación (visible solo desde el mismo
-// dispositivo) en el comentario de esa función.
+// `_eqPerfilContenidoHtml()` al ver este perfil desde Equipo -- limitación
+// real, no resuelta: visible solo desde el mismo dispositivo/navegador.
+// Ahora es una `.aj-dato-row` que abre el bottom sheet genérico de pills
+// (`_ajAbrirSheetTextoPills()`, mismo componente que usan "Pronombres"/
+// "Tipo de documento" más abajo en este archivo) en vez de los chips
+// inline + botón "Guardar rol" que tenía antes -- guarda al tocar
+// "Guardar" en el sheet (ya viene resuelto por ese componente compartido,
+// modo `'pills-multi'`). Simplificación real: se pierde la exclusividad
+// especial que tenía "No definido" (deseleccionaba todo lo demás y
+// viceversa) -- el componente genérico no tiene ese caso especial por
+// campo; cualquier combinación (incluida "No definido" + otro rol a la
+// vez) queda permitida ahora, mismo criterio que "Pronombres".
 function _ajRenderRol() {
-  var cont = document.getElementById('aj-rol-pills');
-  if (!cont) return;
+  var disp = document.getElementById('aj-rol-val');
+  if (!disp) return;
+  var actuales = _eqRolesDe(E.nombre);
+  disp.textContent = (!actuales.length || (actuales.length === 1 && actuales[0] === 'No definido')) ? 'No definido' : actuales.join(', ');
+}
+function ajAbrirSheetRol() {
   var actuales = _eqRolesDe(E.nombre);
   if (!actuales.length) actuales = ['No definido'];
-  cont.innerHTML = _EQ_ROLES.map(function(r) {
-    return '<span class="aj-pill' + (actuales.indexOf(r) !== -1 ? ' activa' : '') + '" onclick="_ajRolToggle(this, \'' + r.replace(/'/g, "\\'") + '\')">' + _eqEsc(r) + '</span>';
+  var html = _EQ_ROLES.map(function(r) {
+    var sel = actuales.indexOf(r) !== -1;
+    return '<span class="aj-pill' + (sel ? ' activa' : '') + '" data-val="' + r + '" onclick="ajTogglePill(this)">' + _eqEsc(r) + '</span>';
   }).join('');
-  var btnGuardar = document.getElementById('aj-rol-guardar-btn');
-  if (btnGuardar) btnGuardar.style.display = 'none';
-}
-function _ajRolToggle(el, rol) {
-  var cont = document.getElementById('aj-rol-pills');
-  if (!cont) return;
-  var esNoDefinido = rol === 'No definido';
-  if (esNoDefinido) {
-    // Selecciona SOLO "No definido", deselecciona todo lo demás (pedido
-    // explícito) -- mientras esté activo, un click en cualquier otro pill
-    // lo saca a él primero (rama de abajo) en vez de sumarse a una
-    // selección múltiple.
-    cont.querySelectorAll('.aj-pill').forEach(function(p) { p.classList.remove('activa'); });
-    el.classList.add('activa');
-  } else if (el.classList.contains('activa')) {
-    el.classList.remove('activa');
-  } else {
-    // Si "No definido" estaba activo, sacarlo -- volver a habilitar
-    // selección múltiple real (pedido: "bloqueá selección múltiple hasta
-    // que se deseleccione").
-    var noDef = Array.prototype.filter.call(cont.querySelectorAll('.aj-pill'), function(p) { return p.textContent === 'No definido'; })[0];
-    if (noDef) noDef.classList.remove('activa');
-    el.classList.add('activa');
-  }
-  // Si nada quedó seleccionado, "No definido" vuelve solo (pedido: "si el
-  // usuario no tiene rol guardado, No definido aparece seleccionado por
-  // defecto" -- mismo criterio aplicado en vivo, no solo al cargar).
-  if (!cont.querySelector('.aj-pill.activa')) {
-    var noDef2 = Array.prototype.filter.call(cont.querySelectorAll('.aj-pill'), function(p) { return p.textContent === 'No definido'; })[0];
-    if (noDef2) noDef2.classList.add('activa');
-  }
-  var btnGuardar = document.getElementById('aj-rol-guardar-btn');
-  if (btnGuardar) btnGuardar.style.display = '';
-}
-function _ajRolGuardar() {
-  var cont = document.getElementById('aj-rol-pills');
-  if (!cont) return;
-  var seleccionados = Array.prototype.filter.call(cont.querySelectorAll('.aj-pill.activa'), function() { return true; }).map(function(p) { return p.textContent; });
-  _eqSetRolesDe(E.nombre, seleccionados);
-  var btnGuardar = document.getElementById('aj-rol-guardar-btn');
-  if (btnGuardar) btnGuardar.style.display = 'none';
-  mostrarToast('Rol actualizado.', 'ok', true);
+  _ajAbrirSheetTextoPills('Rol en el equipo', 'Selecciona todos los que apliquen.', 'pills-multi', html, function(valorJoin) {
+    _eqSetRolesDe(E.nombre, valorJoin.split(', '));
+    _ajRenderRol();
+    mostrarToast('Rol actualizado.', 'ok', true);
+  });
 }
 
 function ajTogglePill(el) {

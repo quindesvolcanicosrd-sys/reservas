@@ -394,9 +394,11 @@ function irEquipo() {
 
 function _eqInit() {
   _eqYaInicializado = true;
-  // No depende del roster real (Batch 4) -- arranca ya, aunque el fetch de
-  // abajo todavía no resolvió.
-  _eqSugerenciasIniciar();
+  // No depende del roster real -- arranca ya, aunque el fetch de abajo
+  // todavía no resolvió (mismo criterio que antes tenía la inicialización
+  // de sugerencias rotativas, que ocupaba este lugar).
+  _eqRenderFiltroPeriodoUI();
+  _eqRenderFiltroRolPills();
   var estadoEl = document.getElementById('eq-estado-carga');
   if (estadoEl) estadoEl.innerHTML = '<p class="eq-loading">Cargando equipo...</p>';
   _eqAsegurarCargado(function() {
@@ -415,6 +417,8 @@ function _eqInit() {
     _eqRenderGrupo('Quindes');
     _eqRenderGrupo('Mirlxs');
     _eqRenderInactivos();
+    _eqRenderLesionadxs();
+    _eqRenderMisEstadisticas();
   });
 }
 
@@ -628,6 +632,7 @@ function _eqBuscar(valor) {
   var grupoQuindes = document.getElementById('eq-grupo-quindes');
   var grupoMirlxs = document.getElementById('eq-grupo-mirlxs');
   var grupoInactivos = document.getElementById('eq-grupo-inactivos');
+  var grupoLesionadxs = document.getElementById('eq-grupo-lesionadxs');
   var rolesWrap = document.getElementById('eq-roles-wrap');
   var mesVacio = document.getElementById('eq-mes-vacio');
   var esRol = !!_eqBusqueda && _eqEsQueryDeRol(_eqBusqueda);
@@ -637,6 +642,7 @@ function _eqBuscar(valor) {
     if (grupoQuindes) grupoQuindes.style.display = 'none';
     if (grupoMirlxs) grupoMirlxs.style.display = 'none';
     if (grupoInactivos) grupoInactivos.style.display = 'none';
+    if (grupoLesionadxs) grupoLesionadxs.style.display = 'none';
     if (mesVacio) mesVacio.style.display = 'none';
     if (rolesWrap) rolesWrap.style.display = '';
     _eqRenderPorRol();
@@ -647,12 +653,16 @@ function _eqBuscar(valor) {
     if (grupoQuindes) grupoQuindes.style.display = 'none';
     if (grupoMirlxs) grupoMirlxs.style.display = 'none';
     if (grupoInactivos) grupoInactivos.style.display = 'none';
+    if (grupoLesionadxs) grupoLesionadxs.style.display = 'none';
     if (rolesWrap) rolesWrap.style.display = 'none';
     if (mesVacio) mesVacio.style.display = '';
     return;
   }
   // Modo normal (nombre/username/email) -- restaura los contenedores reales
-  // por si el query anterior había activado el modo rol/mes.
+  // por si el query anterior había activado el modo rol/mes. `grupoLesionadxs`
+  // NO se fuerza a `''` acá a propósito (a diferencia de Quindes/Mirlxs/
+  // Inactivos) -- su visibilidad depende de si hay alguien lesionadx, no
+  // del modo de búsqueda; `_eqRenderLesionadxs()` de abajo decide sola.
   if (rolesWrap) rolesWrap.style.display = 'none';
   if (mesVacio) mesVacio.style.display = 'none';
   if (grupoQuindes) grupoQuindes.style.display = '';
@@ -662,6 +672,7 @@ function _eqBuscar(valor) {
   _eqRenderGrupo('Quindes');
   _eqRenderGrupo('Mirlxs');
   _eqRenderInactivos();
+  _eqRenderLesionadxs();
 }
 function _eqPasaBusqueda(p) {
   if (!_eqBusqueda) return true;
@@ -728,38 +739,160 @@ function _eqRenderPorRol() {
   });
 }
 
-// Sugerencias rotativas del buscador (Batch 4) -- placeholder real, estático
-// (no animable), reemplazado visualmente por este overlay que sí puede
-// hacer fade. Pausa con foco (`_eqSugerenciasPausar()`, onfocus del input)
-// o con texto tipeado (chequeado en cada tick, no solo al enfocar/desenfocar
-// -- cubre el caso de escribir sin que el input pierda el foco).
-var _EQ_SUGERENCIAS = ['Busca por nombre o usuario', 'Prueba: Cumpleaños en abril', 'Prueba: Jammer', 'Prueba: Rol en el equipo'];
-var _eqSugerenciaIdx = 0;
-var _eqSugerenciaIntervalo = null;
-function _eqSugerenciasIniciar() {
-  var el = document.getElementById('eq-search-suggestion');
-  var input = document.getElementById('eq-search-input');
-  if (!el || !input || _eqSugerenciaIntervalo) return;
-  el.textContent = _EQ_SUGERENCIAS[0];
-  _eqSugerenciaIdx = 0;
-  _eqSugerenciaIntervalo = setInterval(function() {
-    if (document.activeElement === input || input.value) return;
-    el.style.opacity = '0';
-    setTimeout(function() {
-      _eqSugerenciaIdx = (_eqSugerenciaIdx + 1) % _EQ_SUGERENCIAS.length;
-      el.textContent = _EQ_SUGERENCIAS[_eqSugerenciaIdx];
-      el.style.opacity = '1';
-    }, 400);
-  }, 3000);
+/* ── Filtros (feat nueva, ver MANIFEST.md/CHANGELOG.md) ──────────────────
+   Botón + panel: mismo mecanismo de animación que `_evTogglePanel()`/
+   `.ev-header-burbuja` (Eventos, js/eventos.js+css/eventos.css) -- abrir
+   fija `max-height` al `scrollHeight` real de una; cerrar "aterriza"
+   primero en ese alto real y recién en el frame siguiente (doble
+   `requestAnimationFrame`) baja a `0px`, para que la transición tenga 2
+   valores numéricos entre los que interpolar (ver "Acordeones animados
+   con max-height" en MANIFEST.md -- mismo patrón, adaptado de un
+   .eq-grupo persistente a un panel tipo dropdown que se cierra del todo). */
+function _eqToggleFiltros() {
+  var panel = document.getElementById('eq-filtros-panel');
+  var btn = document.getElementById('eq-filtros-toggle-btn');
+  if (!panel || !btn) return;
+  var abrir = !panel.classList.contains('abierta');
+  if (abrir) {
+    panel.classList.add('abierta');
+    panel.style.maxHeight = panel.scrollHeight + 'px';
+    btn.classList.add('activo');
+  } else {
+    panel.style.maxHeight = panel.scrollHeight + 'px';
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        panel.classList.remove('abierta');
+        panel.style.maxHeight = '0px';
+      });
+    });
+    btn.classList.remove('activo');
+  }
 }
-function _eqSugerenciasPausar() {
-  var el = document.getElementById('eq-search-suggestion');
-  if (el) el.style.opacity = '0';
+
+// Estado del período de puntaje -- default mes/año actuales (mismo
+// comportamiento que getEquipo() sin parámetros). `modo`: 'mes' | 'rango' |
+// 'historico'. Los 4 campos de rango/mes único conviven siempre en el
+// objeto (no se borran al cambiar de modo) para no perder la selección si
+// el usuario va y vuelve entre pestañas del panel.
+var _eqFiltroPeriodo = (function() {
+  var hoy = new Date();
+  var m = hoy.getMonth() + 1, a = hoy.getFullYear();
+  return { modo: 'mes', mesUnico: m, anioUnico: a, mesDesde: m, anioDesde: a, mesHasta: m, anioHasta: a };
+})();
+var _EQ_MESES_CORTOS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+var _eqFiltroRoles = [];
+
+function _eqFiltroPeriodoModo(modo) {
+  _eqFiltroPeriodo.modo = modo;
+  document.querySelectorAll('#eq-filtro-periodo-modo .aj-pill').forEach(function(p) {
+    p.classList.toggle('activa', p.getAttribute('data-modo') === modo);
+  });
+  _eqRenderFiltroPeriodoUI();
 }
-function _eqSugerenciasReanudar() {
-  var el = document.getElementById('eq-search-suggestion');
-  var input = document.getElementById('eq-search-input');
-  if (el && input && !input.value) el.style.opacity = '1';
+function _eqFiltroAnioSumar(cual, delta) {
+  if (cual === 'unico') _eqFiltroPeriodo.anioUnico += delta;
+  else if (cual === 'desde') _eqFiltroPeriodo.anioDesde += delta;
+  else if (cual === 'hasta') _eqFiltroPeriodo.anioHasta += delta;
+  _eqRenderFiltroPeriodoUI();
+}
+function _eqFiltroMesClick(cual, mes) {
+  if (cual === 'unico') _eqFiltroPeriodo.mesUnico = mes;
+  else if (cual === 'desde') _eqFiltroPeriodo.mesDesde = mes;
+  else if (cual === 'hasta') _eqFiltroPeriodo.mesHasta = mes;
+  _eqRenderFiltroPeriodoUI();
+}
+function _eqRenderMesPillsInto(contId, mesSel, cual) {
+  var cont = document.getElementById(contId);
+  if (!cont) return;
+  cont.innerHTML = _EQ_MESES_CORTOS.map(function(nombre, i) {
+    var m = i + 1;
+    return '<span class="aj-pill' + (m === mesSel ? ' activa' : '') + '" onclick="_eqFiltroMesClick(\'' + cual + '\',' + m + ')">' + nombre + '</span>';
+  }).join('');
+}
+function _eqRenderFiltroPeriodoUI() {
+  var p = _eqFiltroPeriodo;
+  _eqRenderMesPillsInto('eq-filtro-mes-pills', p.mesUnico, 'unico');
+  _eqRenderMesPillsInto('eq-filtro-mes-pills-desde', p.mesDesde, 'desde');
+  _eqRenderMesPillsInto('eq-filtro-mes-pills-hasta', p.mesHasta, 'hasta');
+  var elU = document.getElementById('eq-filtro-anio-unico-val'); if (elU) elU.textContent = p.anioUnico;
+  var elD = document.getElementById('eq-filtro-anio-desde-val'); if (elD) elD.textContent = p.anioDesde;
+  var elH = document.getElementById('eq-filtro-anio-hasta-val'); if (elH) elH.textContent = p.anioHasta;
+  var wrapMes = document.getElementById('eq-filtro-periodo-mes-wrap');
+  var wrapRango = document.getElementById('eq-filtro-periodo-rango-wrap');
+  var notaHist = document.getElementById('eq-filtro-periodo-historico-nota');
+  if (wrapMes) wrapMes.style.display = p.modo === 'mes' ? '' : 'none';
+  if (wrapRango) wrapRango.style.display = p.modo === 'rango' ? '' : 'none';
+  if (notaHist) notaHist.style.display = p.modo === 'historico' ? '' : 'none';
+}
+
+// Filtro por rol (Cambio 2B) -- 100% frontend sobre `_eqPersonas` ya
+// cargado, sin nueva llamada al backend: reusa `_EQ_ROLES`/`_eqRolesDe()`
+// (arriba en este archivo), el único sistema de "rol" que existe hoy en
+// esta app -- `equipo` (la tabla real) NO tiene columna `rol`/`posicion`
+// (verificado contra el schema real antes de escribir esto); lo más
+// cercano es `categoria` (Quindes/Mirlxs, el tier -- ya separado en sus
+// propios acordeones, filtrarlo con chips sería redundante). Roles reales
+// son client-side/localStorage (`eq_roles_<username>`), la MISMA
+// limitación ya documentada en `_eqRolesDe()`.
+function _eqRenderFiltroRolPills() {
+  var cont = document.getElementById('eq-filtro-rol-pills');
+  if (!cont) return;
+  cont.innerHTML = _EQ_ROLES.map(function(r) {
+    return '<span class="aj-pill' + (_eqFiltroRoles.indexOf(r) !== -1 ? ' activa' : '') + '" onclick="_eqFiltroRolToggle(\'' + r.replace(/'/g, "\\'") + '\')">' + _eqEsc(r) + '</span>';
+  }).join('');
+}
+function _eqFiltroRolToggle(rol) {
+  var idx = _eqFiltroRoles.indexOf(rol);
+  if (idx === -1) _eqFiltroRoles.push(rol); else _eqFiltroRoles.splice(idx, 1);
+  _eqRenderFiltroRolPills();
+}
+// Predicado adicional a `_eqPasaBusqueda()` (nunca modificada -- pedido
+// explícito de no tocar la lógica de búsqueda si ya funciona) -- se suma
+// con `.filter()` en cada render, no se fusiona con ella.
+function _eqPasaFiltroRol(p) {
+  if (!_eqFiltroRoles.length) return true;
+  var rolesDe = _eqRolesDe(p.username);
+  if (!rolesDe.length) rolesDe = ['No definido'];
+  return _eqFiltroRoles.some(function(r) { return rolesDe.indexOf(r) !== -1; });
+}
+
+// Aplica el período de puntaje pedido -- SÍ pega contra el backend (a
+// diferencia del filtro de rol): `puntosAsistencia`/`puntosTareas`/
+// `puntosTotal` de cada persona dependen de qué período se pidió, así que
+// hay que volver a pedir el roster completo con los parámetros nuevos
+// (`getEquipo()`, supabase/functions/api/index.ts). Reemplaza `_eqPersonas`
+// entero y re-renderiza todo lo que depende de él -- mismo criterio que
+// `_eqAsegurarCargado()`, pero sin el guard de caché -- acá SIEMPRE hay que
+// volver a pedir, cambió el período.
+function _eqAplicarFiltros() {
+  var p = _eqFiltroPeriodo;
+  var params = { action: 'getEquipo' };
+  if (p.modo === 'historico') {
+    params.historico = true;
+  } else if (p.modo === 'rango') {
+    params.mesDesde = p.mesDesde; params.anioDesde = p.anioDesde;
+    params.mesHasta = p.mesHasta; params.anioHasta = p.anioHasta;
+  } else {
+    params.mes = p.mesUnico; params.anio = p.anioUnico;
+  }
+  var btn = document.querySelector('#eq-filtros-panel .btn-primary');
+  var htmlOriginal = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Aplicando...'; }
+  api(params, function(res) {
+    if (btn) { btn.disabled = false; btn.innerHTML = htmlOriginal; }
+    _eqPersonas = (res && res.personas) || [];
+    _eqCargado = true;
+    _eqToggleFiltros();
+    _eqRenderFavoritos();
+    _eqRenderGrupo('Quindes');
+    _eqRenderGrupo('Mirlxs');
+    _eqRenderInactivos();
+    if (typeof _eqRenderLesionadxs === 'function') _eqRenderLesionadxs();
+    if (typeof _eqRenderMisEstadisticas === 'function') _eqRenderMisEstadisticas();
+  }, function(e) {
+    if (btn) { btn.disabled = false; btn.innerHTML = htmlOriginal; }
+    mostrarToast((e && e.message) || 'No se pudo aplicar el filtro.', 'error');
+  });
 }
 
 // Re-render completo (init / cambio de búsqueda) -- a diferencia de
@@ -778,7 +911,7 @@ function _eqRenderFavoritos() {
   var cont = document.getElementById('eq-favoritos-lista');
   var pillEl = document.getElementById('eq-favoritos-pill');
   if (!wrap || !cont) return;
-  var todas = _eqFavoritos().map(_eqPersonaPorId).filter(function(p) { return !!p && !_eqEsUsuarioActual(p) && !_eqEsInactivo(p); });
+  var todas = _eqFavoritos().map(_eqPersonaPorId).filter(function(p) { return !!p && !_eqEsUsuarioActual(p) && !_eqEsInactivo(p); }).filter(_eqPasaFiltroRol);
   var visibles = _eqBusqueda ? todas.filter(_eqPasaBusqueda) : todas;
   cont.innerHTML = visibles.map(_eqFilaHtml).join('');
   if (pillEl) pillEl.textContent = visibles.length;
@@ -795,7 +928,7 @@ function _eqRenderGrupo(rol) {
   var cont = document.getElementById('eq-grupo-' + key + '-lista');
   var pillEl = document.getElementById('eq-grupo-' + key + '-pill');
   if (!wrap || !cont) return;
-  var filtradas = _eqPersonas.filter(function(p) { return p.rol === rol; }).filter(function(p) { return !_eqEsUsuarioActual(p) && !_eqEsInactivo(p); }).filter(_eqPasaBusqueda);
+  var filtradas = _eqPersonas.filter(function(p) { return p.rol === rol; }).filter(function(p) { return !_eqEsUsuarioActual(p) && !_eqEsInactivo(p); }).filter(_eqPasaBusqueda).filter(_eqPasaFiltroRol);
   wrap.style.display = filtradas.length ? '' : 'none';
   if (pillEl) pillEl.textContent = filtradas.length;
   cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
@@ -836,10 +969,87 @@ function _eqRenderInactivos() {
   var cont = document.getElementById('eq-grupo-inactivos-lista');
   var pillEl = document.getElementById('eq-grupo-inactivos-pill');
   if (!wrap || !cont) return;
-  var filtradas = _eqPersonas.filter(function(p) { return _eqEsInactivo(p) && !_eqEsUsuarioActual(p); }).filter(_eqPasaBusqueda);
+  var filtradas = _eqPersonas.filter(function(p) { return _eqEsInactivo(p) && !_eqEsUsuarioActual(p); }).filter(_eqPasaBusqueda).filter(_eqPasaFiltroRol);
   wrap.style.display = filtradas.length ? '' : 'none';
   if (pillEl) pillEl.textContent = filtradas.length;
   cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
+  _eqHidratarAvatares();
+}
+
+// Acordeón "LESIONADXS" (feat nueva, ver MANIFEST.md/CHANGELOG.md) --
+// `getEquipo()` ya devuelve `estado` (`equipo.estado_miembro` tal cual,
+// mismo campo que ya usa `_datosRenderStatsHtml()`/js/perfil.js para el
+// chip de estado en Ajustes) -- sin cambio de backend necesario. NO
+// colapsable (pedido explícito, mismo criterio que Favoritos): nunca pasa
+// por `_eqToggleGrupo()`, `max-height:'none'` fijo. Oculta por completo
+// (display:none, sin fade -- a diferencia de Favoritos, acá no se pidió
+// animación de entrada/salida de la sección) cuando no hay nadie
+// lesionadx.
+function _eqRenderLesionadxs() {
+  var wrap = document.getElementById('eq-grupo-lesionadxs');
+  var cont = document.getElementById('eq-grupo-lesionadxs-lista');
+  var pillEl = document.getElementById('eq-grupo-lesionadxs-pill');
+  if (!wrap || !cont) return;
+  var filtradas = _eqPersonas.filter(function(p) { return p.estado === 'Lesionadx' && !_eqEsUsuarioActual(p); }).filter(_eqPasaBusqueda).filter(_eqPasaFiltroRol);
+  wrap.style.display = filtradas.length ? '' : 'none';
+  if (pillEl) pillEl.textContent = filtradas.length;
+  cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
+  var body = wrap.querySelector('.eq-grupo-body');
+  if (body) body.style.maxHeight = 'none';
+  _eqHidratarAvatares();
+}
+
+// "Mis estadísticas" -- card en la home de Equipo (feat nueva, ver
+// MANIFEST.md/CHANGELOG.md), debajo de la nav y encima de Favoritos. La
+// persona propia YA está en `_eqPersonas` (roster completo, cargado una
+// sola vez por `_eqAsegurarCargado()`) -- sin ninguna llamada extra al
+// backend, mismo criterio de búsqueda que `_eqEsUsuarioActual()`. Mismos
+// componentes visuales que el perfil de detalle (`.eq-stats-grid`/
+// `.eq-stat-card`/`.eq-rank-wrap`, ver `_eqPerfilContenidoHtml()` más
+// abajo) y que el chip de estado de Ajustes (`.dat-estado-chip`/
+// `.dat-estado-*`, css/perfil.css) -- sin duplicar ningún estilo, solo el
+// layout propio del wrapper (`.eq-mis-stats-*`, css/equipo.css). Sin datos
+// de contacto (pedido explícito) -- a diferencia del perfil de detalle,
+// acá nunca se muestra teléfono/email.
+function _eqRenderMisEstadisticas() {
+  var cont = document.getElementById('eq-mis-stats-card');
+  if (!cont) return;
+  var persona = _eqPersonas.filter(function(p) { return _eqEsUsuarioActual(p); })[0];
+  if (!persona) { cont.style.display = 'none'; return; }
+  cont.style.display = '';
+  var statsCalc = _eqStatsCalc(persona);
+  var numeroTxt = (persona.numeroDerby !== null && persona.numeroDerby !== undefined && persona.numeroDerby !== '') ? '#' + persona.numeroDerby + ' &bull; ' : '';
+  var estadoTexto = persona.estado === 'Lesionadx' ? 'Lesionadx' : persona.estado === 'Activx' ? 'Activo' : 'Inactivo';
+  var estadoClase = persona.estado === 'Lesionadx' ? 'dat-estado-lesion' : persona.estado === 'Activx' ? 'dat-estado-activo' : 'dat-estado-inactivo';
+  // Termómetro solo con equipo propio -- mismo bug real/mismo criterio ya
+  // corregido en `_eqPerfilContenidoHtml()`/`_datosRenderStatsHtml()`
+  // (js/perfil.js): `necesitaPatines`/`necesitaProtecciones` (getEquipo())
+  // son el equivalente real a "usa equipo del club".
+  var necesitaEquipoClub = !!(persona.necesitaPatines || persona.necesitaProtecciones);
+  var rankHtml = necesitaEquipoClub ? '' :
+    '<div class="eq-rank-wrap">' +
+      '<div class="eq-rank-labels"><span>Mirlxs</span><span>Quindes</span></div>' +
+      '<div class="eq-rank-track"><div class="eq-rank-fill" style="width:' + (persona.termometro_pct || 0) + '%;"></div></div>' +
+      '<div class="eq-rank-texto">' + _eqEsc(_eqRankTexto(persona)) + '</div>' +
+    '</div>';
+  cont.innerHTML =
+    '<div class="eq-mis-stats-header">' +
+      _eqAvatarHtml(persona, 'avatar-pill--md') +
+      '<div class="eq-mis-stats-info">' +
+        '<div class="eq-mis-stats-nombre">' + _eqEsc(persona.nombreDerby || persona.username) + '</div>' +
+        '<div class="eq-mis-stats-sub">' + numeroTxt + _eqEsc(persona.rol) + '</div>' +
+        '<span class="dat-estado-chip ' + estadoClase + '">' + estadoTexto + '</span>' +
+      '</div>' +
+    '</div>' +
+    '<div class="eq-stats-grid">' +
+      '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">roller_skating</span><div class="eq-stat-valor">' + statsCalc.horas + 'h</div><div class="eq-stat-label">Horas patinadas</div></div>' +
+      '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">kid_star</span><div class="eq-stat-valor">' + statsCalc.asistenciaPct + '%</div><div class="eq-stat-label">Asistencia anual</div></div>' +
+    '</div>' +
+    '<div class="eq-stats-grid">' +
+      '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">task_alt</span><div class="eq-stat-valor">' + (persona.puntosTareas !== undefined && persona.puntosTareas !== null ? persona.puntosTareas : '—') + '</div><div class="eq-stat-label">Puntos por tareas (mes)</div></div>' +
+      '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">stars</span><div class="eq-stat-valor">' + (persona.puntosAsistencia !== undefined && persona.puntosAsistencia !== null ? persona.puntosAsistencia : '—') + '</div><div class="eq-stat-label">Puntos por asistencia (mes)</div></div>' +
+    '</div>' +
+    rankHtml;
   _eqHidratarAvatares();
 }
 

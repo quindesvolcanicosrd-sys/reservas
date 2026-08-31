@@ -35,7 +35,7 @@
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
 <link rel="stylesheet" href="css/eventos.css?v=94f3cbd9">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=a8a40283">
+<link rel="stylesheet" href="css/equipo.css?v=7049e0f9">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2350,30 +2350,89 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div class="pantalla" id="s-equipo">
     <div class="card" style="text-align:left;padding-bottom:32px;">
       <div class="app-nav app-nav-sticky" id="eq-search-header">
-        <!-- `position:relative` (inline, ver css/equipo.css para el resto)
-             -- ancla real de #eq-search-suggestion (Batch 4), el overlay de
-             sugerencias rotativas. -->
-        <div class="app-nav-search" style="position:relative;">
+        <!-- Placeholder fijo (rediseño, ver MANIFEST.md/CHANGELOG.md) --
+             reemplaza las sugerencias rotativas (`_eqSugerenciasIniciar()`,
+             overlay `#eq-search-suggestion`) por un `placeholder` nativo
+             simple. `.app-nav-search:focus-within input::placeholder`
+             (css/nav.css) ya lo desvanece solo al tocar el input, sin
+             necesitar el mecanismo de pausa/reanudación que tenía el overlay. -->
+        <div class="app-nav-search">
           <span class="material-symbols-outlined">search</span>
-          <!-- Bug real corregido (ver MANIFEST.md -- "textos del buscador se
-               superponen"): este input NO lleva `placeholder` propio -- el
-               overlay `#eq-search-suggestion` de abajo ya cumple ese rol
-               (arranca mostrando la misma sugerencia default apenas
-               `_eqSugerenciasIniciar()` corre) y se dibuja exactamente en la
-               misma posición (`left:43px`, css/equipo.css). Con los 2 a la
-               vez (placeholder nativo del navegador + overlay superpuesto)
-               el resultado eran 2 textos casi idénticos renderizados uno
-               encima del otro, ilegible. -->
-          <input type="text" id="eq-search-input" oninput="_eqBuscar(this.value)" onfocus="_eqSugerenciasPausar()" onblur="_eqSugerenciasReanudar()">
-          <!-- Sugerencias rotativas (Batch 4) -- placeholder real, estático,
-               no es animable (`transition` no aplica a `::placeholder` con
-               contenido que cambia) -- este `<span>` superpuesto sí, ver
-               `_eqSugerenciasIniciar()`/js/equipo.js. Empieza vacío
-               (contenido real recién al iniciar el intervalo) para no
-               mostrar nada hasta que ese JS corra. -->
-          <span id="eq-search-suggestion" class="eq-search-suggestion"></span>
+          <input type="text" id="eq-search-input" placeholder="Busca en el equipo" oninput="_eqBuscar(this.value)">
+        </div>
+        <!-- Botón "Filtros" (feat nueva) -- mismo mecanismo de animación
+             (max-height + doble requestAnimationFrame al cerrar) que el
+             botón de búsqueda/filtros de Eventos (`_evTogglePanel()`/
+             `.ev-header-burbuja`, js/eventos.js+css/eventos.css) -- ver
+             `_eqToggleFiltros()`/js/equipo.js y `.eq-filtros-panel`/
+             css/equipo.css, misma mecánica pero sin cruzar CSS entre
+             secciones (cada sección mantiene su propio archivo, ver
+             MANIFEST.md). Sin ícono de lupa (ya está en el buscador de al
+             lado) -- ícono `tune` (sliders), texto "Filtros" también
+             visible (pedido: "sin ícono de lupa -- puede llevar ícono de
+             filtro o solo el texto"). -->
+        <button type="button" class="app-nav-icon-btn eq-filtro-toggle-btn" id="eq-filtros-toggle-btn" onclick="_eqToggleFiltros()" title="Filtros" style="width:auto;padding:0 12px;gap:6px;">
+          <span class="material-symbols-outlined">tune</span>Filtros
+        </button>
+      </div>
+
+      <!-- Panel de filtros (feat nueva, ver MANIFEST.md/CHANGELOG.md) --
+           2 secciones: A) período de puntaje (afecta puntosAsistencia/
+           puntosTareas/puntosTotal de getEquipo(), tanto en las cards como
+           en el perfil de detalle) y B) rol (chips, filtrado 100% en
+           frontend sobre `_eqPersonas` ya cargado -- sin nueva llamada al
+           backend, ver `_eqRolesDe()`/`_EQ_ROLES` ya existentes más abajo
+           en este archivo). -->
+      <div class="eq-filtros-panel" id="eq-filtros-panel">
+        <div class="eq-filtros-panel-inner">
+          <div class="seccion-label" style="margin-top:0;">Período de puntaje</div>
+          <div class="aj-pills-row" id="eq-filtro-periodo-modo">
+            <span class="aj-pill activa" data-modo="mes" onclick="_eqFiltroPeriodoModo('mes')">Mes</span>
+            <span class="aj-pill" data-modo="rango" onclick="_eqFiltroPeriodoModo('rango')">Rango</span>
+            <span class="aj-pill" data-modo="historico" onclick="_eqFiltroPeriodoModo('historico')">Histórico</span>
+          </div>
+
+          <div id="eq-filtro-periodo-mes-wrap">
+            <div class="eq-filtro-mes-pills" id="eq-filtro-mes-pills"></div>
+            <div class="eq-filtro-anio-stepper">
+              <button type="button" class="eq-anio-btn" onclick="_eqFiltroAnioSumar('unico', -1)">−</button>
+              <span class="eq-anio-valor" id="eq-filtro-anio-unico-val">2026</span>
+              <button type="button" class="eq-anio-btn" onclick="_eqFiltroAnioSumar('unico', 1)">+</button>
+            </div>
+          </div>
+
+          <div id="eq-filtro-periodo-rango-wrap" style="display:none;">
+            <div class="eq-filtro-rango-label">Desde</div>
+            <div class="eq-filtro-mes-pills" id="eq-filtro-mes-pills-desde"></div>
+            <div class="eq-filtro-anio-stepper">
+              <button type="button" class="eq-anio-btn" onclick="_eqFiltroAnioSumar('desde', -1)">−</button>
+              <span class="eq-anio-valor" id="eq-filtro-anio-desde-val">2026</span>
+              <button type="button" class="eq-anio-btn" onclick="_eqFiltroAnioSumar('desde', 1)">+</button>
+            </div>
+            <div class="eq-filtro-rango-label">Hasta</div>
+            <div class="eq-filtro-mes-pills" id="eq-filtro-mes-pills-hasta"></div>
+            <div class="eq-filtro-anio-stepper">
+              <button type="button" class="eq-anio-btn" onclick="_eqFiltroAnioSumar('hasta', -1)">−</button>
+              <span class="eq-anio-valor" id="eq-filtro-anio-hasta-val">2026</span>
+              <button type="button" class="eq-anio-btn" onclick="_eqFiltroAnioSumar('hasta', 1)">+</button>
+            </div>
+          </div>
+
+          <p id="eq-filtro-periodo-historico-nota" style="display:none;font-size:0.82rem;color:var(--muted);margin:6px 0 0;">Suma de todos los registros de puntos guardados.</p>
+
+          <div class="seccion-label" style="margin-top:18px;">Filtrar por rol</div>
+          <div class="aj-pills-row" id="eq-filtro-rol-pills"></div>
+
+          <button type="button" class="btn btn-primary" style="width:100%;margin-top:16px;" onclick="_eqAplicarFiltros()">Aplicar filtros</button>
         </div>
       </div>
+
+      <!-- "Mis estadísticas" (feat nueva, ver MANIFEST.md/CHANGELOG.md) --
+           card con los datos/stats de la cuenta logueada, reusando lo que
+           ya trae getEquipo() (sin llamada extra). Poblada por
+           _eqRenderMisEstadisticas()/js/equipo.js -- oculta (display:none)
+           si la cuenta no tiene fila propia en Equipo. -->
+      <div id="eq-mis-stats-card" class="eq-mis-stats-card" style="display:none;"></div>
 
       <!-- Cargando/error del roster real (Cambio 55, getEquipo(), ver
            _eqInit()/js/equipo.js) -- vacío en el estado normal (roster ya
@@ -2457,6 +2516,26 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </button>
         <div class="eq-grupo-body" id="eq-grupo-inactivos-body">
           <div class="eq-grupo-body-inner" id="eq-grupo-inactivos-lista"></div>
+        </div>
+      </div>
+
+      <!-- Acordeón "LESIONADXS" (feat nueva, ver MANIFEST.md/CHANGELOG.md)
+           -- mismo markup .eq-grupo que Quindes/Mirlxs/Inactivos, pero NO
+           colapsable (pedido explícito): mismo criterio que Favoritos --
+           sin botón/chevron, body con max-height:'none' fijo, nunca pasa
+           por _eqToggleGrupo(). Arranca oculta -- _eqRenderLesionadxs()/
+           js/equipo.js la muestra solo si hay al menos 1 persona con
+           estado_miembro='Lesionadx' (getEquipo() ya lo devuelve como
+           `estado`, sin cambio de backend necesario). -->
+      <div class="eq-grupo" id="eq-grupo-lesionadxs" style="display:none;">
+        <div class="eq-grupo-header">
+          <span class="eq-grupo-linea"></span>
+          <span class="eq-grupo-pill" id="eq-grupo-lesionadxs-pill">0</span>
+          <span class="eq-grupo-nombre">Lesionadxs</span>
+          <span class="eq-grupo-linea"></span>
+        </div>
+        <div class="eq-grupo-body abierto">
+          <div class="eq-grupo-body-inner" id="eq-grupo-lesionadxs-lista"></div>
         </div>
       </div>
 
@@ -2991,10 +3070,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/ui.js?v=66148b6f"></script>
 <script src="js/eventos.js?v=30628b15"></script>
 <script src="js/tareas.js"></script>
-<script src="js/equipo.js?v=22b6565e"></script>
+<script src="js/equipo.js?v=097c2c53"></script>
 <script src="js/home.js?v=cf4b0197"></script>
 <script src="js/reservas.js?v=ce8c13b6"></script>
-<script src="js/perfil.js?v=b56e42f0"></script>
+<script src="js/perfil.js?v=05689dc1"></script>
 <script src="js/admin.js?v=d549625d"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js"></script>
@@ -3500,13 +3579,20 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
       <button type="button" class="btn btn-primary" id="aj-username-guardar-btn" style="display:none;width:calc(100% - 28px);margin:0 14px 14px;" disabled onclick="_ajUsernameGuardar()">Guardar nombre de usuario</button>
 
-      <!-- Rol en el equipo (Batch 4) -- chips seleccionables, sin columna
+      <!-- Rol en el equipo (rediseño, ver MANIFEST.md/CHANGELOG.md) -- fila
+           .aj-dato-row igual que el resto de esta pantalla, abre el
+           bottom sheet genérico de pills (`_ajAbrirSheetTextoPills()`,
+           mismo componente que "Pronombres"/"Tipo de documento" más abajo
+           en este archivo) en vez de mostrar los chips inline. Sin columna
            real en `equipo` (ver comentario largo de `_ajRenderRol()`,
            js/perfil.js) -- persistido por localStorage. -->
-      <div style="padding:0 14px 14px;">
-        <div class="aj-sec-titulo" style="margin-top:0;">Rol en el equipo</div>
-        <div class="aj-pills-row" id="aj-rol-pills"></div>
-        <button type="button" class="btn btn-primary" id="aj-rol-guardar-btn" style="display:none;width:100%;margin-top:12px;" onclick="_ajRolGuardar()">Guardar rol</button>
+      <div class="aj-dato-row" onclick="ajAbrirSheetRol()">
+        <div class="aj-dato-icon"><span class="material-symbols-outlined">badge</span></div>
+        <div class="aj-dato-texts">
+          <div class="aj-dato-label">Rol en el equipo</div>
+          <div class="aj-dato-val" id="aj-rol-val">—</div>
+        </div>
+        <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
       </div>
 
       <div class="aj-dato-row" onclick="ajAbrirSheetTextoGenerico('Nombre Derby','¿Cómo te conocen en la pista?','aj-nombreDerby-val','nombreDerby','Ej: Roller Reina', null, 25)">
@@ -4764,22 +4850,21 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 </div>
 
-<!-- Bottom sheet — confirmar reporte de lesión (Cambio 54, Ajustes, ver
-     MANIFEST.md) -- hijo directo de <body> (mismo criterio que
-     #eq-sheet-confirm-admin de arriba), abierta/cerrada por
-     _datLesionAbrirSheet()/_datLesionConfirmar()/_datLesionCancelar()
-     (js/perfil.js) vía la clase `.visible`. Reusa las clases
-     `.eq-confirm-sheet-*` de css/equipo.css tal cual (cargado antes que
-     css/perfil.css en este archivo), sin duplicarlas. -->
-<div id="dat-lesion-sheet" class="eq-confirm-sheet-overlay">
-  <div class="eq-confirm-sheet">
-    <div class="eq-confirm-sheet-handle"></div>
-    <p class="eq-confirm-sheet-title">Reportar lesión</p>
-    <p class="eq-confirm-sheet-msg">Tu solicitud será enviada a los admins para aprobación. Mientras esté pendiente, tu estado no cambia.</p>
-    <div class="eq-confirm-sheet-btns">
-      <button class="eq-confirm-btn-cancel" onclick="_datLesionCancelar()">Cancelar</button>
-      <button class="eq-confirm-btn-ok" onclick="_datLesionConfirmar()">Enviar solicitud</button>
-    </div>
+<!-- Bottom sheet — confirmar reporte de lesión (Ajustes) -- rediseño, ver
+     MANIFEST.md/CHANGELOG.md: migrado de `.eq-confirm-sheet-*` (propio de
+     Equipo) al componente `.bsheet-overlay`/`.bsheet` estándar (mismo que
+     usa el resto de los sheets de Ajustes/Eventos, ej. #ev-sheet-cancelar)
+     para consistencia real dentro de Ajustes -- mismo criterio de apertura/
+     cierre (`style.display`+`transform`, no una clase `.visible`), ver
+     _datLesionAbrirSheet()/_datLesionCancelar() (js/perfil.js). -->
+<div id="dat-lesion-sheet-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_datLesionCancelar()"></div>
+<div id="dat-lesion-sheet" class="bsheet" style="z-index:9701;">
+  <div class="bsheet-handle"></div>
+  <div class="bsheet-title">Reportar lesión</div>
+  <div class="bsheet-body">
+    <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 20px;">Tu solicitud será enviada a los admins para aprobación. Mientras esté pendiente, tu estado no cambia.</p>
+    <button type="button" class="btn btn-primary" onclick="_datLesionConfirmar()" style="margin-bottom:10px;">Enviar solicitud</button>
+    <button type="button" class="btn btn-outline" onclick="_datLesionCancelar()">Cancelar</button>
   </div>
 </div>
 
