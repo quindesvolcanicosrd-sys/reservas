@@ -143,26 +143,15 @@ function _datosRenderStatsHtml(contenedor, persona) {
   // los mismos datos de `_eqPersonas`. Esta función ahora solo renderiza el
   // estado y el botón de "Reportar lesión".
 
-  // Estado (Batch 4) -- simplifica los 4 estados reales de
-  // `equipo.estado_miembro` (`_EQ_ESTADOS`, js/equipo.js: Activx/Ausente/
-  // Técnico/Lesionadx) a los 3 que pedía el pedido -- Ausente/Técnico caen
-  // en "Inactivo" (gris), el pedido no contempló un 4to color/estado.
-  // "Lesionadx" (ámbar) solo si `estado_miembro` YA es Lesionadx -- eso
-  // implica aprobación admin real (`adminAprobarLesion` es la ÚNICA acción
-  // que lo pone en ese valor, ver supabase/functions/api/index.ts); una
-  // solicitud todavía pendiente NO cambia este campo (sigue en 'Activx'
-  // hasta que se aprueba), así que el chip nunca muestra "Lesionadx" para
-  // una solicitud sin aprobar, tal como pedía el pedido explícitamente
-  // ("solo si la solicitud de lesión fue aprobada").
+  // `estadoReal` (Batch 4) -- ya NO se pinta como chip visible acá (pedido
+  // explícito: sacar el campo "Estado" de Mi Perfil, solo lo visual -- ver
+  // MANIFEST.md "Cambios recientes"), pero SIGUE decidiendo si corresponde
+  // mostrar el botón "Reportar lesión" (`lesionBtnHtml` de abajo): oculto
+  // salvo `estado_miembro === 'Activx'` (ver ese criterio documentado en
+  // `_datLesionAbrirSheet()`/flujo de lesión, más abajo en este archivo) --
+  // ese dato/lógica no cambia, solo el chip de texto que lo mostraba.
   var d = E.datos || null;
   var estadoReal = d ? (d.estado_miembro || 'Activx') : null;
-  var estadoChip = !d
-    ? { texto: '—', clase: 'dat-estado-vacio' }
-    : estadoReal === 'Lesionadx'
-    ? { texto: 'Lesionadx', clase: 'dat-estado-lesion' }
-    : estadoReal === 'Activx'
-    ? { texto: 'Activo', clase: 'dat-estado-activo' }
-    : { texto: 'Inactivo', clase: 'dat-estado-inactivo' };
 
   // Botón "Reportar lesión" (Batch 4) -- **movido acá** desde
   // `_datosRenderLesion()` (antes su propio botón para el caso Activx sin
@@ -176,9 +165,7 @@ function _datosRenderStatsHtml(contenedor, persona) {
     ? '<button type="button" class="btn btn-outline dat-lesion-btn-sutil" onclick="_datLesionAbrirSheet()"><span class="material-symbols-outlined">personal_injury</span>Reportar lesión</button>'
     : '';
 
-  contenedor.innerHTML =
-    '<div class="dat-estado-fila"><span class="dat-estado-label">Estado:</span><span class="dat-estado-chip ' + estadoChip.clase + '">' + estadoChip.texto + '</span></div>' +
-    lesionBtnHtml;
+  contenedor.innerHTML = lesionBtnHtml;
 }
 
 // Flujo de lesión (Cambio 54) -- auto-reporte de usuario + aprobación admin

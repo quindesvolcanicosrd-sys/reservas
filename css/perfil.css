@@ -370,18 +370,18 @@
   color: var(--brand); text-decoration: underline; cursor: pointer;
 }
 
-/* Estado + tendencia + botón "Reportar lesión" reubicado (Batch 4, ver
-   _datosRenderStatsHtml()/js/perfil.js) -- todo dentro de #dat-stats-wrap
-   ahora, no de #dat-lesion-wrap. Colores 100% de css/colors.css, sin
-   hardcodear (pedido explícito): `--success`/`--success-bg` (Activo),
-   `--warning`/`--warning-bg` (Lesionadx), `--muted` + `--surface-2` (Inactivo
-   -- no existe un token gris/neutral dedicado, confirmado antes de escribir
-   esto, así que se arma con los 2 tokens neutros que sí existen). */
-.dat-estado-fila {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  margin: 14px 0 4px;
-}
-.dat-estado-label { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+/* Chip "Estado" (Batch 4) -- el campo visual propio de Mi Perfil que usaba
+   `.dat-estado-fila`/`.dat-estado-label`/`.dat-estado-vacio` se sacó (pedido
+   explícito, ver MANIFEST.md "Cambios recientes": solo el campo visual,
+   `_datosRenderStatsHtml()`/js/perfil.js sigue calculando `estadoReal` igual
+   que antes para decidir el botón "Reportar lesión", nada de lógica/dato
+   tocado). `.dat-estado-chip` + sus 3 modificadores de color SIGUEN en uso
+   -- Equipo reusa este mismo componente (`_eqRenderMisEstadisticas()`/
+   `_eqPerfilContenidoHtml()`, js/equipo.js), nunca con `-vacio` (ese caso
+   era exclusivo del campo ya sacado). Colores 100% de css/colors.css, sin
+   hardcodear: `--success`/`--success-bg` (Activo), `--warning`/`--warning-bg`
+   (Lesionadx), `--muted` + `--surface-2` (Inactivo -- no existe un token
+   gris/neutral dedicado, confirmado antes de escribir esto). */
 .dat-estado-chip {
   display: inline-block; padding: 3px 12px; border-radius: 999px;
   font-size: 0.78rem; font-weight: 700;
@@ -389,7 +389,6 @@
 .dat-estado-activo { background: var(--success-bg); color: var(--success); }
 .dat-estado-lesion { background: var(--warning-bg); color: var(--warning); }
 .dat-estado-inactivo { background: var(--surface-2); color: var(--muted); }
-.dat-estado-vacio { background: var(--surface-2); color: var(--muted); }
 
 .dat-rank-valor {
   display: inline-flex; align-items: center; gap: 2px;
