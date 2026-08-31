@@ -255,6 +255,24 @@ async function _restarPuntosTarea(nombre: string, anio: number, mes: number, pun
   }
 }
 
+// Mismo patrón que _acreditarPuntosTarea() (arriba) -- sumar `puntos` al
+// `puntos_extra` YA existente de esa persona/mes, no reemplazarlo. Un
+// `.upsert()` con `ON CONFLICT DO UPDATE SET puntos_extra = puntos_extra +
+// N` no es posible vía supabase-js (el cliente no arma expresiones SQL en
+// el conflicto, solo puede pisar valores) -- select-o-insert/update manual
+// es la única forma de hacerlo aditivo. Usada por el bonus de racha de
+// asistencia (`adminMarcarAsistencia()`/racha_actual, más abajo).
+async function _acreditarPuntosExtra(nombre: string, anio: number, mes: number, puntos: number): Promise<void> {
+  const { data } = await supabase.from('puntos_mensuales').select('id, puntos_extra')
+    .eq('nombre_usuario', nombre).eq('anio', anio).eq('mes', mes).maybeSingle();
+  if (data) {
+    const nuevo = (Number(data.puntos_extra) || 0) + puntos;
+    await supabase.from('puntos_mensuales').update({ puntos_extra: nuevo }).eq('id', data.id);
+  } else {
+    await supabase.from('puntos_mensuales').insert({ nombre_usuario: nombre, anio, mes, puntos_extra: puntos });
+  }
+}
+
 async function _limiteTareasActivas(): Promise<number> {
   const { data } = await supabase.from('config_tareas').select('limite_tareas_activas').limit(1).maybeSingle();
   return data?.limite_tareas_activas ?? 3;
@@ -1140,6 +1158,31 @@ async function adminMarcarAsistencia(params: Record<string, any>): Promise<Recor
   const { error: errorUpdate } = await supabase.from('asistencias').update({ a_horario: aHorario.join(', '), tarde: tarde.join(', ') }).eq('id_evento', idEvento);
   if (errorUpdate) return { exito: false, error: 'Error actualizando asistencias: ' + errorUpdate.message };
 
+  // Racha de asistencias consecutivas (feature nueva, ver MANIFEST.md/
+  // CHANGELOG.md) -- `equipo.racha_actual` sube 1 en cada marca real de
+  // 'A tiempo'/'Tarde' y se resetea a 0 en 'Ninguno'; cada 3ra consecutiva
+  // acredita +2 a `puntos_mensuales.puntos_extra` del mes ACTUAL (no el mes
+  // del evento -- mismo criterio ya usado por `_acreditarPuntosTarea()` en
+  // `adminValidarTarea()`, que tampoco usa la fecha de la tarea).
+  // Limitación conocida, a propósito (mismo alcance pedido): esta función
+  // puede llamarse más de una vez para el MISMO evento+persona (re-marcar
+  // para corregir un click) -- cada llamada sigue sumando/reseteando la
+  // racha aunque el resultado neto en `asistencias.a_horario`/`.tarde` para
+  // ESE evento no haya cambiado de estado real. `recalcularPuntosAsistencia()`
+  // (más abajo) reconstruye la racha entera desde `log_asistencias` --
+  // corre eso si una racha queda inflada/desinflada por re-marcados.
+  const { data: filaEquipo } = await supabase.from('equipo').select('racha_actual').eq('username', nombre).maybeSingle();
+  if (estado === 'A tiempo' || estado === 'Tarde') {
+    const rachaNueva = (Number(filaEquipo?.racha_actual) || 0) + 1;
+    await supabase.from('equipo').update({ racha_actual: rachaNueva }).eq('username', nombre);
+    if (rachaNueva % 3 === 0) {
+      const hoy = new Date();
+      await _acreditarPuntosExtra(nombre, hoy.getUTCFullYear(), hoy.getUTCMonth() + 1, 2);
+    }
+  } else if (estado === 'Ninguno') {
+    await supabase.from('equipo').update({ racha_actual: 0 }).eq('username', nombre);
+  }
+
   // Batch 8 (ver MANIFEST.md): recalcula los stats de ESTA persona apenas
   // se confirma que la asistencia quedó guardada -- antes solo pasaba con
   // el botón manual "Recalcular ahora" (recalcularStatsEquipo(), completo,
@@ -1776,7 +1819,13 @@ async function recalcularPuntosAsistencia(mes: number, anio: number): Promise<{ 
   const filas = Object.keys(puntosPorUsuario).map((nombre_usuario) => ({
     nombre_usuario, anio, mes, puntos_asistencia: puntosPorUsuario[nombre_usuario],
   }));
-  if (!filas.length) return { exito: true, procesados: 0 };
+  if (!filas.length) {
+    // Igual reconstruye rachas -- ver comentario de _reconstruirRachasHistoricas()
+    // más abajo: es independiente del mes/año pedidos acá, corre siempre
+    // que se recalculan puntos de asistencia.
+    await _reconstruirRachasHistoricas();
+    return { exito: true, procesados: 0 };
+  }
 
   // `onConflict` acota el UPDATE a las columnas realmente mandadas en cada
   // fila (`puntos_asistencia`) -- `puntos_tareas`/`puntos_bonificacion`/
@@ -1786,7 +1835,125 @@ async function recalcularPuntosAsistencia(mes: number, anio: number): Promise<{ 
   const { error: errorUpsert } = await supabase.from('puntos_mensuales')
     .upsert(filas, { onConflict: 'nombre_usuario,anio,mes' });
   if (errorUpsert) return { exito: false, error: errorUpsert.message };
+
+  // Reconstrucción de racha (feature nueva, ver MANIFEST.md/CHANGELOG.md):
+  // "al final del cálculo de puntos de asistencia por mes, TAMBIÉN
+  // reconstruir rachas históricas" (pedido explícito) -- permite
+  // reconstruir racha_actual + los bonus de puntos_extra desde cero si
+  // quedaron inflados/desinflados por re-marcados (ver comentario en
+  // adminMarcarAsistencia()) o por cualquier otra corrección manual de
+  // log_asistencias.
+  await _reconstruirRachasHistoricas();
   return { exito: true, procesados: filas.length };
+}
+
+// Reconstruye racha_actual (equipo) y los bonus de racha (puntos_extra,
+// puntos_mensuales) desde CERO, recorriendo TODO el historial de
+// log_asistencias en orden cronológico REAL del evento (no la fecha en
+// que se hizo la marca) -- a diferencia del cálculo de puntos_asistencia
+// de arriba (que solo mira el mes pedido), una racha depende de TODO lo
+// que pasó antes: no se puede calcular mirando un mes aislado.
+//
+// Costo real: recorre TODA `asistencias`/`log_asistencias` de punta a
+// punta en cada llamada -- aceptable acá porque `recalcularPuntosAsistencia()`
+// es una acción de recálculo manual/ocasional (disparada por un admin, o
+// al final de `adminRecalcularStats()`, también manual), NUNCA por cada
+// marca individual de asistencia -- ese camino en caliente sigue siendo
+// el incremento en vivo de `adminMarcarAsistencia()` (racha_actual +=1 /
+// =0, arriba en este archivo). Mismo criterio de costo que ya documentó
+// Batch 7 para no conectar el equivalente de `recalcularStatsEquipo()`
+// (recorre TODO el equipo) a cada marca individual.
+//
+// SET, no ADD -- a diferencia de `_acreditarPuntosExtra()` (aditivo, cada
+// marca en vivo es un evento nuevo que se suma), acá se recalcula el
+// total completo de cada mes tocado por una racha y se SOBREESCRIBE: de
+// otro modo, correr esta reconstrucción 2 veces duplicaría cada bonus ya
+// acreditado. Ambos caminos (en vivo vs. reconstrucción completa)
+// convergen al mismo resultado si los datos no cambiaron entre medio --
+// misma regla en los 2: +1 en cada asistencia real ('A tiempo'/'Tarde'),
+// reset a 0 en 'Ninguno', +2 de puntos_extra cada 3ra consecutiva.
+//
+// "Sus asistencias" (pedido) se interpreta como SOLO los eventos donde
+// la persona tiene una marca real de admin (`log_asistencias`,
+// `origen==='Admin'`) -- un evento sin ninguna fila para esa persona
+// (nunca se le tomó lista, ej. no pertenece a ese tier) no cuenta ni como
+// racha ni como corte: no todo evento aplica a toda persona en este
+// club (ver `_modoUsuario()`/Quindes-Mirlxs, MANIFEST.md).
+async function _reconstruirRachasHistoricas(): Promise<void> {
+  const { data: eventos } = await supabase.from('asistencias')
+    .select('id_evento, fecha, inicia')
+    .not('estado', 'in', '("Evento Cancelado","No se entrena")')
+    .order('fecha', { ascending: true })
+    .order('inicia', { ascending: true, nullsFirst: false });
+  if (!eventos || !eventos.length) return;
+
+  const ordenPorEvento: Record<string, number> = {};
+  const mesAnioPorEvento: Record<string, { anio: number; mes: number }> = {};
+  eventos.forEach((ev: any, i: number) => {
+    ordenPorEvento[ev.id_evento] = i;
+    const partes = String(ev.fecha).split('-');
+    mesAnioPorEvento[ev.id_evento] = { anio: Number(partes[0]), mes: Number(partes[1]) };
+  });
+
+  const { data: logsTodos } = await supabase.from('log_asistencias')
+    .select('id_evento, nombre_usuario, estado, marca_temporal')
+    .eq('origen', 'Admin');
+
+  // Última marca real por (evento, persona) -- puede haber más de 1 fila
+  // para el mismo evento+persona (re-marcados, rectificaciones aprobadas).
+  const ultimaPorClave: Record<string, { estado: string; marca: number }> = {};
+  (logsTodos ?? []).forEach((l: any) => {
+    if (!Object.prototype.hasOwnProperty.call(ordenPorEvento, l.id_evento)) return; // evento cancelado/inexistente -- no cuenta
+    const u = String(l.nombre_usuario ?? '').trim();
+    if (!u) return;
+    const clave = l.id_evento + '|' + u;
+    const marca = l.marca_temporal ? new Date(l.marca_temporal).getTime() : 0;
+    const actual = ultimaPorClave[clave];
+    if (!actual || marca >= actual.marca) ultimaPorClave[clave] = { estado: l.estado, marca };
+  });
+
+  // Agrupar por persona, cada entrada con el orden cronológico real del
+  // evento (no de la marca) para poder ordenar la secuencia correctamente.
+  const entradasPorUsuario: Record<string, Array<{ orden: number; estado: string; idEvento: string }>> = {};
+  Object.keys(ultimaPorClave).forEach((clave) => {
+    const sep = clave.lastIndexOf('|');
+    const idEvento = clave.substring(0, sep);
+    const u = clave.substring(sep + 1);
+    if (!entradasPorUsuario[u]) entradasPorUsuario[u] = [];
+    entradasPorUsuario[u].push({ orden: ordenPorEvento[idEvento], estado: ultimaPorClave[clave].estado, idEvento });
+  });
+
+  const puntosExtraPorClaveMes: Record<string, number> = {}; // clave 'usuario|anio|mes' -> total del mes
+  const rachaFinalPorUsuario: Record<string, number> = {};
+
+  Object.keys(entradasPorUsuario).forEach((u) => {
+    const entradas = entradasPorUsuario[u].sort(function(a, b) { return a.orden - b.orden; });
+    let racha = 0;
+    entradas.forEach((e) => {
+      const mesAnio = mesAnioPorEvento[e.idEvento];
+      const claveMes = u + '|' + mesAnio.anio + '|' + mesAnio.mes;
+      if (puntosExtraPorClaveMes[claveMes] === undefined) puntosExtraPorClaveMes[claveMes] = 0;
+      if (e.estado === 'A tiempo' || e.estado === 'Tarde') {
+        racha++;
+        if (racha % 3 === 0) puntosExtraPorClaveMes[claveMes] += 2;
+      } else if (e.estado === 'Ninguno') {
+        racha = 0;
+      }
+    });
+    rachaFinalPorUsuario[u] = racha;
+  });
+
+  const filasPuntosExtra = Object.keys(puntosExtraPorClaveMes).map((clave) => {
+    const partes = clave.split('|');
+    return { nombre_usuario: partes[0], anio: Number(partes[1]), mes: Number(partes[2]), puntos_extra: puntosExtraPorClaveMes[clave] };
+  });
+  if (filasPuntosExtra.length) {
+    await supabase.from('puntos_mensuales').upsert(filasPuntosExtra, { onConflict: 'nombre_usuario,anio,mes' });
+  }
+
+  for (const u of Object.keys(rachaFinalPorUsuario)) {
+    await supabase.from('equipo').update({ racha_actual: rachaFinalPorUsuario[u] }).eq('username', u);
+  }
 }
 
 // Acción admin nueva: recalcula puntos_asistencia para un mes/año puntual

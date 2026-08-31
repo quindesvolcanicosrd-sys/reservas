@@ -73,6 +73,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Equipo
 
+2026-08-31 — Sistema de racha de asistencias: racha_actual en equipo, bonus +2 puntos_extra cada 3 clases consecutivas, reconstrucción histórica en recalcularPuntosAsistencia.
+
 2026-08-31 — Favoritos rediseñado como sección acordeón no colapsable (fade in/out de la sección completa al agregar/quitar el primer/último favorito).
 
 2026-08-30 — Feature: `getEquipo()` ahora devuelve `puntosAsistencia`/`puntosTareas`/`puntosTotal` del mes actual + `puntosAnio` (suma de `puntos_total` de todo el año en curso) por persona, leyendo `puntos_mensuales`. Las stat cards "Puntos por tareas"/"Puntos por asistencia" de `js/equipo.js` ya existían pero mostraban "—" desde que se agregaron — quedan conectadas sin tocar el frontend (los nombres de campo ya coincidían).
@@ -196,6 +198,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 2025–2026 (fundacional) — Flujo base de Google Sign-In + PIN, `window.onload`, restauración de sesión.
 
 ## Edge Function / Backend
+
+2026-08-31 — Sistema de racha de asistencias: racha_actual en equipo, bonus +2 puntos_extra cada 3 clases consecutivas, reconstrucción histórica en recalcularPuntosAsistencia.
 
 2026-08-31 — `recalcularPuntosAsistencia(mes, anio)` nueva: recalcula `puntos_mensuales.puntos_asistencia` de todo el equipo desde `log_asistencias` (`origen==='Admin'`, sin JOIN a ninguna tabla `eventos` -- esta app no tiene una, `fecha_entrenamiento` ya viene copiada de `asistencias.fecha`). `'A tiempo'`=1 punto, `'Tarde'`=0.5. Expuesta como acción `adminRecalcularPuntosAsistencia` (mes/año opcionales, default mes/año actuales) y disparada automáticamente para el mes actual al final de `adminRecalcularStats()`.
 

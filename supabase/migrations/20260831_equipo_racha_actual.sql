@@ -1,0 +1,1 @@
+ALTER TABLE equipo ADD COLUMN IF NOT EXISTS racha_actual integer NOT NULL DEFAULT 0;
