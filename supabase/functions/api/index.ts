@@ -2037,8 +2037,27 @@ async function getEquipo(): Promise<Record<string, any>> {
     // archivo) son el equivalente real al "necesita_equipo_club" del pedido
     // -- no existe un flag único combinado en el modelo, así que el
     // frontend (`_eqPerfilContenidoHtml()`, js/equipo.js) los combina con OR.
-    necesitaPatines: r.necesita_patines === true,
-    necesitaProtecciones: r.necesita_protecciones === true,
+    //
+    // Bug real #2 (Bug 4, persistía pese al fix anterior): ambas columnas
+    // son `text` en la DB (confirmado contra el schema real), NUNCA
+    // `boolean` -- `necesita_patines` guarda literalmente 'Sí'/'No';
+    // `necesita_protecciones` guarda 'Sí'/'No' O una lista libre de lo que
+    // falta (ej. "Muñequeras, Coderas", "Solamente tengo casco, me falta
+    // el resto"). `r.necesita_patines === true` comparaba ese texto contra
+    // el booleano `true` -- en JS eso da `false` SIEMPRE sin importar el
+    // valor real, así que `necesitaPatines`/`necesitaProtecciones` le
+    // llegaban al frontend ya rotos en `false` para todo el mundo, y el
+    // fix anterior (la condición `!!(p.necesitaPatines || ...)` en
+    // `_eqPerfilContenidoHtml()`/js/equipo.js y en `perfil.js`) nunca tuvo
+    // chance de aplicar sobre un dato real. Mismo criterio de
+    // interpretación de texto ya usado en `adminGetQueLlevar()` (más abajo
+    // en este archivo) y en `js/home.js`/`js/perfil.js`
+    // (`d.necesitaPatines.toLowerCase() !== 'no'`): truthy y distinto de
+    // 'no' (case-insensitive) cuenta como "sí necesita" -- cubre tanto
+    // 'Sí' como cualquier texto libre de protecciones faltantes; string
+    // vacío o 'No' cuentan como "no necesita".
+    necesitaPatines: !!r.necesita_patines && String(r.necesita_patines).toLowerCase() !== 'no',
+    necesitaProtecciones: !!r.necesita_protecciones && String(r.necesita_protecciones).toLowerCase() !== 'no',
   }));
 
   return { personas: personasOut };

@@ -257,6 +257,36 @@ function _eqToggleFavorito(id) {
 // transición no se ve. Al sacar: fade-out de 0.25s y recién ahí `.remove()`
 // -- el timeout coincide con la `transition` de css/equipo.css
 // (`.eq-fila-fade`).
+// Anima la altura de #eq-favoritos-lista entre el estado antes/después de
+// `mutar()` (Bug 3 -- "cards vecinas saltan sin animación al cambiar
+// favorito"): sin esto, insertar/sacar una fila cambia la altura real del
+// contenedor de golpe en el mismo frame, empujando todo lo que sigue en el
+// flujo normal del documento (`#eq-grupo-quindes`/etc., ver index.html --
+// van justo debajo, sin posicionamiento propio). Mismo patrón lock-old-
+// height/mutar/medir-scrollHeight/rAF-a-nuevo-alto ya usado para los
+// acordeones `.eq-grupo-body` (ver css/equipo.css -- "Acordeones animados
+// con max-height" en MANIFEST.md), adaptado a `height` (acá SÍ hace falta
+// volver a un valor numérico al final, a diferencia del acordeón, porque
+// el contenido de esta lista sigue cambiando con cada toggle -- dejarla en
+// `'auto'` explícito evita que un toggle futuro anime desde un `px` viejo
+// desactualizado).
+function _eqAnimarAlturaFavoritos(cont, mutar) {
+  var alturaVieja = cont.offsetHeight;
+  cont.style.height = alturaVieja + 'px';
+  cont.style.overflow = 'hidden';
+  mutar();
+  var alturaNueva = cont.scrollHeight;
+  cont.style.transition = 'height 0.25s ease';
+  requestAnimationFrame(function() {
+    cont.style.height = alturaNueva + 'px';
+  });
+  setTimeout(function() {
+    cont.style.height = 'auto';
+    cont.style.overflow = '';
+    cont.style.transition = '';
+  }, 260);
+}
+
 function _eqAnimarCambioFavorito(id, fav) {
   var wrap = document.getElementById('eq-favoritos-wrap');
   var cont = document.getElementById('eq-favoritos-lista');
@@ -289,18 +319,20 @@ function _eqAnimarCambioFavorito(id, fav) {
       if (f && !cont.contains(f)) origen = f;
     });
     var insertarEnFavoritos = function() {
-      var vacio = cont.querySelector('.eq-favoritos-vacio');
-      if (vacio) vacio.remove();
-      var tmp = document.createElement('div');
-      tmp.innerHTML = _eqFilaHtml(persona);
-      var filaNueva = tmp.firstChild;
-      filaNueva.classList.add('eq-fila-fade');
-      filaNueva.style.opacity = '0';
-      cont.insertBefore(filaNueva, cont.firstChild);
-      wrap.style.display = '';
-      _eqHidratarAvatares();
-      void filaNueva.offsetWidth;
-      filaNueva.style.opacity = '1';
+      _eqAnimarAlturaFavoritos(cont, function() {
+        var vacio = cont.querySelector('.eq-favoritos-vacio');
+        if (vacio) vacio.remove();
+        var tmp = document.createElement('div');
+        tmp.innerHTML = _eqFilaHtml(persona);
+        var filaNueva = tmp.firstChild;
+        filaNueva.classList.add('eq-fila-fade');
+        filaNueva.style.opacity = '0';
+        cont.insertBefore(filaNueva, cont.firstChild);
+        wrap.style.display = '';
+        _eqHidratarAvatares();
+        void filaNueva.offsetWidth;
+        filaNueva.style.opacity = '1';
+      });
     };
     if (origen) {
       origen.classList.add('eq-fila-fade');
@@ -321,10 +353,12 @@ function _eqAnimarCambioFavorito(id, fav) {
     void filaExistente.offsetWidth;
     filaExistente.style.opacity = '0';
     setTimeout(function() {
-      filaExistente.remove();
-      if (!cont.children.length) {
-        cont.innerHTML = '<div class="eq-favoritos-vacio"><span class="material-symbols-outlined">favorite</span>Agrega personas a favoritos para verlos aquí</div>';
-      }
+      _eqAnimarAlturaFavoritos(cont, function() {
+        filaExistente.remove();
+        if (!cont.children.length) {
+          cont.innerHTML = '<div class="eq-favoritos-vacio"><span class="material-symbols-outlined">favorite</span>Agrega personas a favoritos para verlos aquí</div>';
+        }
+      });
     }, 250);
   }
 }
