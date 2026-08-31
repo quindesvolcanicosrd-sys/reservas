@@ -497,6 +497,32 @@ function _eqAvatarHtml(p, claseExtra) {
   return '<div class="avatar-pill ' + claseExtra + ' eq-avatar" data-nombre="' + _eqEsc(p.nombreDerby || p.username) + '" data-foto="' + _eqEsc(p.fotoPerfil || '') + '"></div>';
 }
 
+// Badge de tendencia de termómetro (re-ubicado, ver MANIFEST.md -- vivía
+// como círculo suelto en la fila de stats, `_eqStatsInlineHtml()` más abajo
+// -- pedido explícito de moverlo a la esquina inferior derecha de la foto de
+// perfil, tipo badge de estado). `p.tendencia` ('sube'/'baja'/`null`,
+// getEquipo()/supabase/functions/api/index.ts) sin nada que recalcular acá.
+// Ícono Material `keyboard_arrow_up`/`_down` (pedido explícito -- ya NO
+// `keyboard_double_arrow_*`, cambio de ícono sin cambiar el resto de la
+// lógica/estilo). Vacío si `tendencia` es `null` -- ver `_eqAvatarConTendenciaHtml()`
+// justo abajo, que decide si hace falta el wrapper `position:relative`.
+function _eqTendenciaBadgeHtml(p) {
+  if (p.tendencia !== 'sube' && p.tendencia !== 'baja') return '';
+  return '<span class="eq-tendencia-badge eq-tendencia-badge-' + p.tendencia + '">' +
+    '<span class="material-symbols-outlined">keyboard_arrow_' + (p.tendencia === 'sube' ? 'up' : 'down') + '</span></span>';
+}
+
+// Avatar + badge de tendencia superpuesto (esquina inferior derecha, ver
+// `.eq-avatar-badge-wrap`/css/equipo.css) -- usado en las 2 fotos SIN
+// wrapper `position:relative` propio ya existente (fila de lista/favoritos
+// y "Mis estadísticas"; el perfil de detalle sí tiene el suyo,
+// `.eq-avatar-wrap`, `_eqPerfilContenidoHtml()` más abajo, así que ese caso
+// no pasa por acá -- pone `_eqTendenciaBadgeHtml()` directo adentro de ese
+// wrapper existente en vez de anidar uno nuevo).
+function _eqAvatarConTendenciaHtml(p, claseExtra) {
+  return '<span class="eq-avatar-badge-wrap">' + _eqAvatarHtml(p, claseExtra) + _eqTendenciaBadgeHtml(p) + '</span>';
+}
+
 // Fila de stats inline (Batch 4) -- `pointer-events:none` propio de cada
 // pieza (clases de abajo, css/equipo.css) para que el click siempre
 // propague a `.eq-miembro-fila` (abre el detalle), pedido explícito -- en
@@ -532,41 +558,20 @@ function _eqStatsInlineHtml(p) {
   // por `nombre_usuario`+año+mes, ver "Datos pendientes del backend" en
   // MANIFEST.md) -- sumarla acá exige antes decidir qué período mostrar
   // (¿mes actual? ¿acumulado del año?), una decisión de producto fuera de
-  // alcance de este fix. Mismo criterio que el chevron de tendencia de
-  // abajo: el `<span>` queda condicionado a que el campo exista algún día
-  // (`puntosTareas`/`puntosAsistencia`, nombres elegidos para cuando se
-  // sumen), sin inventar un valor mientras tanto -- en los datos reales de
-  // hoy, sencillamente no se pintan (no hay ningún "—" acá tampoco: mismo
-  // criterio ya usado por el chevron, no repetir un placeholder en cada fila
-  // de cada card de toda la lista -- el "—" explícito sí vive en el perfil
+  // alcance de este fix. El `<span>` queda condicionado a que el campo
+  // exista (`puntosTareas`/`puntosAsistencia`), sin inventar un valor
+  // mientras tanto -- en los datos reales de hoy, sencillamente no se pintan
+  // (no hay ningún "—" acá tampoco -- el "—" explícito sí vive en el perfil
   // de detalle, `_eqPerfilContenidoHtml()`, más abajo en este archivo, un
-  // solo lugar por persona).
+  // solo lugar por persona). El badge de tendencia de termómetro que vivía
+  // acá (círculo suelto en esta misma fila) se movió a la foto de perfil --
+  // ver `_eqAvatarConTendenciaHtml()`/`_eqTendenciaBadgeHtml()`, arriba en
+  // este archivo, pedido explícito.
   if (p.puntosTareas !== undefined && p.puntosTareas !== null) {
     html += '<span class="eq-mini-stat"><span class="material-symbols-rounded">task_alt</span>' + p.puntosTareas + '</span>';
   }
   if (p.puntosAsistencia !== undefined && p.puntosAsistencia !== null) {
     html += '<span class="eq-mini-stat"><span class="material-symbols-rounded">stars</span>' + p.puntosAsistencia + '</span>';
-  }
-  // Círculo de tendencia de termómetro (re-hecho, ver MANIFEST.md -- 1ra
-  // versión comparaba puntosTareas+puntosAsistencia del mes actual/anterior;
-  // pedido explícito de basarla en el MISMO valor que usa el termómetro de
-  // la vista de detalle, no los puntos del mes). YA CALCULADO en el backend
-  // (`tendencia`, getEquipo()/supabase/functions/api/index.ts:
-  // 'sube'/'baja'/`null` -- re-ejecuta `calcularTermometroPct()` con "hoy" y
-  // "hace 1 mes" como fecha de referencia y compara) -- nada que recalcular
-  // acá, el frontend solo pinta según ese valor. `null` = mismo valor en
-  // ambos momentos, o sin tier no-default configurado (termómetro sin
-  // sentido posible) -- en ambos casos, no se pinta nada (pedido explícito:
-  // "si es igual o sin datos anteriores, no mostrar nada"). Reemplaza al
-  // chevron muerto que existía acá antes (`.eq-mini-tendencia`, condicionado
-  // a `termometro_pct_anterior` -- un campo que nunca llegó a existir en
-  // `getEquipo()`, nunca se pintó en producción) -- mismo concepto
-  // (tendencia de termómetro), ahora con dato real. Íconos Material
-  // (`keyboard_double_arrow_up`/`_down`, pedido explícito -- no glifos de
-  // texto ▲/▼) sobre un círculo con fondo sutil.
-  if (p.tendencia === 'sube' || p.tendencia === 'baja') {
-    html += '<span class="eq-tendencia-circulo eq-tendencia-circulo-' + p.tendencia + '">' +
-      '<span class="material-symbols-outlined">keyboard_double_arrow_' + (p.tendencia === 'sube' ? 'up' : 'down') + '</span></span>';
   }
   return html;
 }
@@ -581,7 +586,7 @@ function _eqFilaHtml(p) {
   var numeroHtml = (p.numeroDerby !== null && p.numeroDerby !== undefined && p.numeroDerby !== '')
     ? ' <span class="eq-miembro-numero">#' + p.numeroDerby + '</span>' : '';
   return '<div class="eq-miembro-fila" onclick="_eqAbrirPerfil(\'' + p.id + '\')">' +
-      _eqAvatarHtml(p, 'avatar-pill--sm') +
+      _eqAvatarConTendenciaHtml(p, 'avatar-pill--sm') +
       '<div class="eq-miembro-info">' +
         '<div class="eq-miembro-nombre">' + _eqEsc(p.nombreDerby) + numeroHtml + '</div>' +
         '<div class="eq-miembro-username">@' + _eqEsc(p.username) + '</div>' +
@@ -1071,7 +1076,7 @@ function _eqRenderMisEstadisticas() {
     '</div>';
   cont.innerHTML =
     '<div class="eq-mis-stats-header">' +
-      _eqAvatarHtml(persona, 'avatar-pill--md') +
+      _eqAvatarConTendenciaHtml(persona, 'avatar-pill--md') +
       '<div class="eq-mis-stats-info">' +
         '<div class="eq-mis-stats-nombre">' + _eqEsc(persona.nombreDerby || persona.username) + '</div>' +
         '<div class="eq-mis-stats-sub">' + numeroTxt + _eqEsc(persona.rol) + '</div>' +
@@ -1588,6 +1593,7 @@ function _eqPerfilContenidoHtml(p) {
   return '<div class="eq-perfil-header">' +
       '<div class="eq-avatar-wrap">' +
         _eqAvatarHtml(p, 'eq-avatar-grande') +
+        _eqTendenciaBadgeHtml(p) +
         '<span class="eq-rol-pill">' + _eqEsc(p.rol) + '</span>' +
       '</div>' +
       '<div class="eq-perfil-nombre">' + _eqEsc(p.nombreDerby) + '</div>' +

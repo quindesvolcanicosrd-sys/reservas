@@ -178,25 +178,11 @@
    `_eqStatsInlineHtml()`/js/equipo.js ya no la renderiza. El chevron de
    tendencia que reemplazó a esa pill (texto pelado, condicionado a
    `termometro_pct_anterior` -- un campo que nunca llegó a existir en
-   `getEquipo()`) también se sacó (ver MANIFEST.md "Cambios recientes"):
-   `.eq-tendencia-circulo` de abajo es hoy el único indicador de tendencia,
-   mismo concepto (termómetro), ahora con dato real. */
-/* Círculo de tendencia de termómetro (ver MANIFEST.md) -- círculo ~20px con
-   fondo sutil + ícono Material adentro, sobre el mismo valor que arma el
-   termómetro de la vista de detalle (`p.tendencia`, getEquipo():
-   'sube'/'baja'/`null`, re-ejecuta `calcularTermometroPct()` con "hoy" y
-   "hace 1 mes"). Variables de colors.css tal cual, sin colores hardcodeados
-   -- `--success`/`--success-bg` y `--danger`/`--danger-bg` (no
-   `--error`/`--error-light`, aunque son alias del mismo valor -- mismo par
-   ya usado en el resto de esta sección para verde/rojo). */
-.eq-tendencia-circulo {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
-  pointer-events: none;
-}
-.eq-tendencia-circulo .material-symbols-outlined { font-size: 14px; }
-.eq-tendencia-circulo-sube { background: var(--success-bg); color: var(--success); }
-.eq-tendencia-circulo-baja { background: var(--danger-bg); color: var(--danger); }
+   `getEquipo()`) también se sacó, y el círculo con fondo sutil que lo
+   reemplazó (vivía acá mismo, en esta fila de stats) se movió a la foto de
+   perfil como badge -- ver `.eq-avatar-badge-wrap`/`.eq-tendencia-badge`
+   más abajo (css/equipo.css, junto a "Perfil de detalle"). Nada de
+   indicador de tendencia queda en esta fila de stats. */
 .eq-fav-btn {
   flex-shrink: 0; display: flex; align-items: center; justify-content: center;
   width: 38px; height: 38px; border-radius: 50%; background: none; border: none;
@@ -271,6 +257,35 @@
   padding: 4px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px;
   white-space: nowrap; box-shadow: 0 2px 8px var(--black-15);
 }
+/* Badge de tendencia de termómetro sobre la foto (rediseño, ver
+   MANIFEST.md -- vivía como círculo suelto en la fila de stats de la lista,
+   ver el comentario de `.eq-mini-stat` más arriba; pedido explícito de
+   moverlo encima de la foto, esquina inferior derecha, tipo badge). Mismo
+   `p.tendencia`/getEquipo() de siempre ('sube'/'baja'/`null`, ver
+   `_eqTendenciaBadgeHtml()`/js/equipo.js). Usado en 3 lugares:
+   1) `.eq-avatar-wrap` de acá arriba (perfil de detalle, YA
+      `position:relative` -- el badge entra directo, sin wrapper propio, ver
+      `_eqPerfilContenidoHtml()`). 2) `.eq-avatar-badge-wrap` de abajo (fila
+      de lista/favoritos y "Mis estadísticas" -- esas 2 fotos NO tenían
+      ningún wrapper `position:relative` propio antes de esto, se agrega acá
+      -- ver `_eqAvatarConTendenciaHtml()`/js/equipo.js). `right`/`bottom`
+      negativos a propósito (mismo criterio visual que `.eq-rol-pill`
+      arriba, semi-superpuesto al borde del círculo, no clavado adentro).
+      `pointer-events:none` -- mismo criterio que el resto de indicadores
+      sueltos de esta sección (`.eq-mini-stat`, arriba): el click siempre
+      tiene que propagar al contenedor real (`_eqAbrirPerfil()`/toggle de
+      favorito), nunca quedar atrapado acá. Colores 100% de colors.css, sin
+      hardcodear -- `--success`/`--success-bg` y `--danger`/`--danger-bg`. */
+.eq-avatar-badge-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
+.eq-tendencia-badge {
+  position: absolute; right: -2px; bottom: -2px;
+  display: flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+  pointer-events: none;
+}
+.eq-tendencia-badge .material-symbols-outlined { font-size: 13px; }
+.eq-tendencia-badge-sube { background: var(--success-bg); color: var(--success); }
+.eq-tendencia-badge-baja { background: var(--danger-bg); color: var(--danger); }
 .eq-perfil-nombre { font-size: 1.3rem; font-weight: 800; color: var(--text); margin-top: 20px; }
 .eq-perfil-sub { font-size: 0.85rem; color: var(--muted); margin-top: 3px; }
 
