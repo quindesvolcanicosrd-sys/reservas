@@ -547,22 +547,38 @@ function _eqStatsInlineHtml(p) {
   if (p.puntosAsistencia !== undefined && p.puntosAsistencia !== null) {
     html += '<span class="eq-mini-stat"><span class="material-symbols-rounded">stars</span>' + p.puntosAsistencia + '</span>';
   }
-  // Chevron de tendencia (re-auditado, ver MANIFEST.md -- "chevrones no
-  // aparecen en vista preliminar de cards"). Campo buscado explícitamente
-  // en el objeto real (misma lista completa que el comentario de puntos, un
-  // poco más arriba en esta función): `getEquipo()` trae `termometro_pct`
-  // (el valor ACTUAL), pero ningún valor anterior con el que compararlo --
-  // ni `tendencia`, ni `termometro_delta`, ni `termometro_pct_anterior`, ni
-  // nada equivalente (confirmado contra el `.select()`/`.map()` real de esa
-  // función, supabase/functions/api/index.ts). Sin un 2do punto en el
-  // tiempo no hay tendencia real que calcular -- este `<span>` queda
-  // condicionado a `termometro_pct_anterior` (nombre elegido para cuando
-  // exista) a propósito, en vez de comparar contra 0 o inventar cualquier
-  // otro valor que simule una tendencia falsa. Documentado en MANIFEST.md
-  // ("Datos pendientes del backend"). Pill Q/M de tier SACADA (pedido
-  // explícito, ver MANIFEST.md -- "quitar pills Q/M, mantener solo
-  // chevrones de tendencia"): el chevron de acá abajo es hoy el único
-  // indicador de tier/tendencia en la fila.
+  // Círculo de tendencia de puntos (feat nueva, ver MANIFEST.md) -- compara
+  // puntosTareas+puntosAsistencia del mes actual contra el mes anterior,
+  // YA CALCULADO en el backend (`tendencia`, getEquipo()/
+  // supabase/functions/api/index.ts: 'sube'/'baja'/`null`) -- nada que
+  // recalcular acá, el frontend solo pinta según ese valor. `null` cubre 3
+  // casos que el backend distingue pero el frontend no necesita separar:
+  // período pedido distinto al mes actual (mes específico pasado, rango,
+  // histórico), sin fila de `puntos_mensuales` para el mes anterior, o
+  // mismo puntaje en ambos meses -- en los 3, no se pinta nada (pedido
+  // explícito: "si es igual o no hay datos del mes anterior, no mostrar
+  // nada"). Distinto del chevron de tendencia de termómetro de abajo
+  // (`.eq-mini-tendencia`, `termometro_pct_anterior` -- campo que sigue sin
+  // existir en `getEquipo()`, ese sigue muerto) -- son 2 indicadores de
+  // tendencia separados, sobre 2 métricas distintas (puntos vs. tier), con
+  // su propio estilo visual (círculo con fondo sutil acá, texto pelado ahí).
+  if (p.tendencia === 'sube' || p.tendencia === 'baja') {
+    html += '<span class="eq-tendencia-circulo eq-tendencia-circulo-' + p.tendencia + '">' + (p.tendencia === 'sube' ? '▲' : '▼') + '</span>';
+  }
+  // Chevron de tendencia de termómetro (re-auditado, ver MANIFEST.md --
+  // "chevrones no aparecen en vista preliminar de cards"). Campo buscado
+  // explícitamente en el objeto real (misma lista completa que el
+  // comentario de puntos, un poco más arriba en esta función): `getEquipo()`
+  // trae `termometro_pct` (el valor ACTUAL), pero ningún valor anterior con
+  // el que compararlo -- ni `termometro_delta`, ni `termometro_pct_anterior`,
+  // ni nada equivalente (confirmado contra el `.select()`/`.map()` real de
+  // esa función, supabase/functions/api/index.ts -- distinto de `tendencia`,
+  // arriba, que sí existe pero es sobre puntos, no termómetro). Sin un 2do
+  // punto en el tiempo no hay tendencia real que calcular -- este `<span>`
+  // queda condicionado a `termometro_pct_anterior` (nombre elegido para
+  // cuando exista) a propósito, en vez de comparar contra 0 o inventar
+  // cualquier otro valor que simule una tendencia falsa. Documentado en
+  // MANIFEST.md ("Datos pendientes del backend").
   if (p.termometro_pct_anterior !== undefined && p.termometro_pct_anterior !== null) {
     var diff = (p.termometro_pct || 0) - p.termometro_pct_anterior;
     if (diff > 0) html += '<span class="eq-mini-tendencia eq-mini-tendencia-up">▲</span>';

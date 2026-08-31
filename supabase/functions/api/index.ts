@@ -2348,11 +2348,34 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
   // pueden cruzar años, así que el filtro real de período se aplica abajo
   // comparando fechas de calendario completas (`anio-mes-01`), no por año
   // suelto.
+  // Tendencia mes actual vs. mes anterior (feat nueva, ver MANIFEST.md) --
+  // solo tiene sentido comparar 2 puntos consecutivos en el tiempo cuando
+  // el período pedido ES el mes calendario actual (default sin parámetros,
+  // o `params.mes`/`params.anio` explícitos que resuelven a hoy) -- contra
+  // un histórico, un rango de varios meses o un mes pasado puntual no hay
+  // un "mes anterior" real y único con el que comparar, así que la
+  // comparación queda condicionada a esto en vez de forzar una lectura
+  // engañosa. Comparado tal cual contra `desdePeriodo`/`hastaPeriodo` ya
+  // resueltos arriba -- cubre los 2 caminos que llegan al mes actual (el
+  // branch default Y `mes`+`anio` explícitos con esos valores) sin
+  // duplicar la lógica de resolución de fechas.
+  const esPeriodoMesActual = desdePeriodo === (anioActual + '-' + String(mesActual).padStart(2, '0') + '-01')
+    && hastaPeriodo === primerDiaSiguiente(anioActual, mesActual);
+  const mesAnteriorRef = mesActual === 1 ? 12 : mesActual - 1;
+  const anioAnteriorRef = mesActual === 1 ? anioActual - 1 : anioActual;
   const { data: puntosData } = await supabase.from('puntos_mensuales')
     .select('nombre_usuario, anio, mes, puntos_asistencia, puntos_tareas, puntos_total')
     .in('nombre_usuario', usernames);
   const puntosPeriodoPorUsuario: Record<string, { asistencia: number; tareas: number; total: number }> = {};
   const puntosAnioPorUsuario: Record<string, number> = {};
+  // Suma SOLO puntos_asistencia + puntos_tareas del mes anterior (no
+  // puntos_total -- pedido explícito: la tendencia compara esfuerzo
+  // "activo" mes a mes, sin que un ajuste de puntos_bonificacion/
+  // puntos_extra de un solo mes dispare una tendencia falsa). Presencia en
+  // el mapa (no el valor) es lo que distingue "hay fila real para ese mes"
+  // de "nunca se generó puntos_mensuales para ese mes" -- ver el uso más
+  // abajo, `!== undefined` es la condición real de "hay datos".
+  const puntosMesAnteriorPorUsuario: Record<string, number> = {};
   (puntosData ?? []).forEach((p: any) => {
     if (Number(p.anio) === anioActual) {
       puntosAnioPorUsuario[p.nombre_usuario] = (puntosAnioPorUsuario[p.nombre_usuario] || 0) + (Number(p.puntos_total) || 0);
@@ -2364,7 +2387,27 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
       puntosPeriodoPorUsuario[p.nombre_usuario].tareas += Number(p.puntos_tareas) || 0;
       puntosPeriodoPorUsuario[p.nombre_usuario].total += Number(p.puntos_total) || 0;
     }
+    if (esPeriodoMesActual && Number(p.anio) === anioAnteriorRef && Number(p.mes) === mesAnteriorRef) {
+      puntosMesAnteriorPorUsuario[p.nombre_usuario] = (puntosMesAnteriorPorUsuario[p.nombre_usuario] || 0)
+        + (Number(p.puntos_asistencia) || 0) + (Number(p.puntos_tareas) || 0);
+    }
   });
+  // `tendencia` por persona ('sube'/'baja'/ausente = sin comparación
+  // posible) -- calculada acá, aparte, en vez de inline en `personasOut`
+  // más abajo (que sigue siendo un objeto de una sola expresión por
+  // persona, mismo criterio que `puntosPeriodoPorUsuario`/
+  // `puntosAnioPorUsuario` de arriba).
+  const tendenciaPorUsuario: Record<string, 'sube' | 'baja'> = {};
+  if (esPeriodoMesActual) {
+    usernames.forEach((u: string) => {
+      const anteriorSum = puntosMesAnteriorPorUsuario[u];
+      if (anteriorSum === undefined) return;
+      const actualSum = puntosPeriodoPorUsuario[u] ? puntosPeriodoPorUsuario[u].asistencia + puntosPeriodoPorUsuario[u].tareas : 0;
+      if (actualSum > anteriorSum) tendenciaPorUsuario[u] = 'sube';
+      else if (actualSum < anteriorSum) tendenciaPorUsuario[u] = 'baja';
+      // Iguales -- queda sin entrada, `personasOut` la traduce a `null`.
+    });
+  }
 
   // "Es admin de miembro" -- no existe ningún flag por miembro en `equipo`;
   // el admin real de esta app vive en la tabla `admins` + ADMIN_PRINCIPAL,
@@ -2433,6 +2476,13 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     puntosTotal: (puntosPeriodoPorUsuario[r.username] ? puntosPeriodoPorUsuario[r.username].total : 0)
       + (esHistorico ? (Number(r.puntos_anteriores) || 0) : 0),
     puntosAnio: Number(puntosAnioPorUsuario[r.username]) || 0,
+    // Tendencia mes actual vs. mes anterior (feat nueva, ver MANIFEST.md) --
+    // 'sube'/'baja' calculadas arriba (`tendenciaPorUsuario`, solo cuando
+    // `esPeriodoMesActual`), `null` en cualquier otro caso: período distinto
+    // al mes actual, sin fila de `puntos_mensuales` para el mes anterior, o
+    // mismo puntaje en ambos meses -- el frontend (`_eqStatsInlineHtml()`/
+    // js/equipo.js) solo pinta el círculo de tendencia si esto NO es `null`.
+    tendencia: tendenciaPorUsuario[r.username] || null,
     // Bug real "termómetro visible aunque la persona necesite equipo del
     // club" (ver MANIFEST.md): `equipo.necesita_patines`/`necesita_protecciones`
     // (columnas reales, ver actualizarEquipamientoPersona() arriba en este
