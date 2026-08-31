@@ -1813,7 +1813,6 @@ async function recalcularStatsUsuario(username: string): Promise<{ exito: boolea
     .update({ horas_ano: horas, asistencias_ano: asistencias, total_eventos_ano: totalEventos })
     .eq('username', usernameTrim)
     .select('username');
-  console.log('[recalcularStats] usuario:', username, 'resultado:', JSON.stringify({ error: errorUpdate?.message, filasActualizadas: dataUpdate }));
   if (errorUpdate) return { exito: false, error: errorUpdate.message };
   // `dataUpdate` vacío (`.select()` sin filas) es la señal real de "el
   // WHERE no matcheó nada en `equipo`" -- sin esto, un `UPDATE` de 0 filas
