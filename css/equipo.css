@@ -9,13 +9,26 @@
 .eq-loading, .eq-error { text-align: center; font-size: 0.85rem; color: var(--muted); padding: 32px 16px; }
 .eq-error { color: var(--danger); }
 
+/* Cursor parpadeante del buscador (pedido explícito) -- la regla global
+   `input[placeholder*="uscar" i]` (css/ui.css) NO alcanza a este input: su
+   placeholder es "Busca en el equipo" (imperativo, sin la "r" de "buscar"),
+   no contiene el substring "uscar" que esa regla matchea -- por eso el
+   caret seguía parpadeando acá cuando en Eventos/Tareas (placeholders con
+   "Buscar...") ya no. Fix puntual, scoped a este input -- no toca la regla
+   global ni el placeholder real (cambiar el texto para que matchee sería
+   más frágil, dependería de que nadie lo retoque después). */
+#eq-search-input { caret-color: transparent; }
+
 /* ── "Mis estadísticas" (rediseño, ver MANIFEST.md/CHANGELOG.md) ────────
    Antes card fija encima de Favoritos, ahora contenido de un panel
    deslizable (`#eq-misstats-panel`, mecánica compartida con el panel de
    búsqueda+filtros, ver bloque de abajo) -- `.eq-stats-grid`/`.eq-stat-card`/
    `.eq-rank-wrap` (más abajo, "Perfil de detalle") y `.dat-estado-chip`
    (css/perfil.css) se reusan tal cual, sin duplicar nada -- esto es SOLO
-   el layout del wrapper + la fila de header (avatar + nombre/rol/estado). */
+   el layout del wrapper + la fila de header. Header recortado (pedido
+   explícito): sin foto/nombre/número -- `.eq-mis-stats-sub` (línea de
+   número+rol que vivía debajo del nombre) se sacó, ya no queda ningún
+   consumidor. */
 .eq-misstats-panel-inner {
   background: var(--surface-2); border-radius: 16px; padding: 16px;
   margin-top: 10px;
@@ -23,7 +36,6 @@
 .eq-mis-stats-header { display: flex; align-items: center; gap: 12px; }
 .eq-mis-stats-info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .eq-mis-stats-nombre { font-size: 1.05rem; font-weight: 800; color: var(--text); }
-.eq-mis-stats-sub { font-size: 0.8rem; color: var(--muted); }
 
 /* ── Trigger "Mis estadísticas" de la nav (rediseño, ver MANIFEST.md/
    CHANGELOG.md) -- avatar 36px (escalón propio, ninguna variante global de
@@ -97,12 +109,16 @@
 /* Rediseño: Favoritos ahora es un `.eq-grupo` idéntico a Quindes/Mirlxs/
    Inactivos (hereda TODOS sus estilos de ahí -- header, pill, líneas,
    body, ver "Grupos colapsables" más abajo -- sin duplicar nada). Lo único
-   específico es la transición de opacidad para el fade in/out de la
-   SECCIÓN completa al agregar/sacar el primer/último favorito
+   específico es la transición de `max-height` + opacidad para el slide+fade
+   de la SECCIÓN completa al agregar/sacar el primer/último favorito
    (`_eqAnimarCambioFavorito()`/`_eqMostrarSeccionFavoritos()`/
    `_eqOcultarSeccionFavoritos()`, js/equipo.js) -- no colapsable, nunca
-   pasa por `_eqToggleGrupo()`. */
-.eq-favoritos-wrap { transition: opacity 0.3s ease; }
+   pasa por `_eqToggleGrupo()`. `max-height`/`overflow` (pedido explícito:
+   "debe deslizarse suavemente hacia abajo... no debe aparecer
+   abruptamente" -- antes solo animaba opacity, con `display:block` dando
+   el alto final de un salto en el mismo frame) ~300ms, misma curva `ease`
+   que la opacidad para que ambas terminen juntas. */
+.eq-favoritos-wrap { overflow: hidden; transition: opacity 0.3s ease, max-height 0.3s ease; }
 /* `.eq-favoritos-vacio` sigue viva -- NO es exclusiva de Favoritos (que ya
    no la usa, ver arriba): la reusan el empty state de "sin rol asignado"
    (`_eqRenderPorRol()`) y `#eq-mes-vacio` (búsqueda por mes de cumpleaños,
@@ -274,8 +290,19 @@
       `pointer-events:none` -- mismo criterio que el resto de indicadores
       sueltos de esta sección (`.eq-mini-stat`, arriba): el click siempre
       tiene que propagar al contenedor real (`_eqAbrirPerfil()`/toggle de
-      favorito), nunca quedar atrapado acá. Colores 100% de colors.css, sin
-      hardcodear -- `--success`/`--success-bg` y `--danger`/`--danger-bg`. */
+      favorito), nunca quedar atrapado acá.
+   Fondo OPACO (pedido explícito, re-ajuste -- antes `--success-bg`/
+   `--danger-bg`, que son rgba con alpha reducido en colors.css, pensadas
+   para "fondo sutil" de chips sobre superficie plana; sobre una FOTO se
+   veían demasiado tenues/casi invisibles). `--success`/`--danger` (sólidos,
+   sin alpha, colors.css) + ícono en `--white` -- el único par de esta
+   sección que es 100% opaco en los 2 temas (los `-bg`/`-lightest` de verde
+   quedan con alpha en dark mode, confirmado leyendo colors.css antes de
+   elegir este par). Tamaño base (18px/13px) para "Mis estadísticas"
+   (`avatar-pill--md`, no pedido explícito de agrandar ahí) -- 2
+   modificadores de tamaño para los 2 casos que sí pidieron agrandarse:
+   `--card` (fila de lista, foto chica) y `--detalle` (perfil, foto grande,
+   "se veía muy pequeño"). */
 .eq-avatar-badge-wrap { position: relative; display: inline-flex; flex-shrink: 0; }
 .eq-tendencia-badge {
   position: absolute; right: -2px; bottom: -2px;
@@ -284,8 +311,12 @@
   pointer-events: none;
 }
 .eq-tendencia-badge .material-symbols-outlined { font-size: 13px; }
-.eq-tendencia-badge-sube { background: var(--success-bg); color: var(--success); }
-.eq-tendencia-badge-baja { background: var(--danger-bg); color: var(--danger); }
+.eq-tendencia-badge--card { width: 22px; height: 22px; }
+.eq-tendencia-badge--card .material-symbols-outlined { font-size: 16px; }
+.eq-tendencia-badge--detalle { width: 28px; height: 28px; }
+.eq-tendencia-badge--detalle .material-symbols-outlined { font-size: 20px; }
+.eq-tendencia-badge-sube { background: var(--success); color: var(--white); }
+.eq-tendencia-badge-baja { background: var(--danger); color: var(--white); }
 .eq-perfil-nombre { font-size: 1.3rem; font-weight: 800; color: var(--text); margin-top: 20px; }
 .eq-perfil-sub { font-size: 0.85rem; color: var(--muted); margin-top: 3px; }
 

@@ -264,25 +264,49 @@ function _eqToggleFavorito(id) {
 // (`.eq-favoritos-vacio` se sacó de acá -- sigue viva en este archivo para
 // "sin rol asignado"/"mes no disponible", ver css/equipo.css). En su
 // lugar, la SECCIÓN entera (`#eq-favoritos-wrap`) se muestra/oculta con
-// fade de opacidad al agregar el primer favorito o sacar el último, vía
-// `_eqMostrarSeccionFavoritos()`/`_eqOcultarSeccionFavoritos()` de abajo.
-// Sin animación de altura del contenedor (`_eqAnimarAlturaFavoritos()`,
-// eliminada) -- igual que Quindes/Mirlxs/Inactivos, que nunca la tuvieron:
-// agregar/sacar un favorito que no sea el primero/último simplemente
-// cambia el alto de la lista sin transición propia, consistente con el
-// resto de las secciones.
+// slide (max-height) + fade de opacidad al agregar el primer favorito o
+// sacar el último, vía `_eqMostrarSeccionFavoritos()`/
+// `_eqOcultarSeccionFavoritos()` de abajo -- pedido explícito ("debe
+// deslizarse suavemente hacia abajo... no debe aparecer abruptamente"):
+// antes solo animaba `opacity`, con `display:block` dando el alto final de
+// golpe en el mismo frame -- se veía como un salto, no un slide. Mismo
+// mecanismo de `max-height` que el resto de acordeones/paneles de esta
+// sección (`_eqToggleGrupo()`/`_eqAbrirPanel()`/`_eqCerrarPanel()`, más
+// abajo): abrir mide el `scrollHeight` real y anima hacia ahí; cerrar
+// "aterriza" primero en ese alto real (nunca se puede animar DESDE `none`)
+// y recién al frame siguiente baja a `0px`. Sin animación de altura para
+// agregar/sacar un favorito que no sea el primero/último -- eso sigue
+// cambiando el alto de la lista sin transición propia, igual que
+// Quindes/Mirlxs/Inactivos.
 function _eqMostrarSeccionFavoritos() {
   var wrap = document.getElementById('eq-favoritos-wrap');
   if (!wrap) return;
   wrap.style.display = 'block';
+  wrap.style.maxHeight = '0px';
   void wrap.offsetWidth;
+  wrap.style.maxHeight = wrap.scrollHeight + 'px';
   wrap.style.opacity = '1';
+  // Libera el techo fijo una vez terminada la animación (mismo bug real ya
+  // corregido para `.eq-grupo-body`, ver ese comentario más abajo -- "lista
+  // de Mirlxs truncada"): sin esto, agregar un 2do/3er favorito después de
+  // este primero quedaría recortado contra el alto medido en ESTE momento.
+  wrap.addEventListener('transitionend', function liberarAlturaAlTerminar(ev) {
+    if (ev.propertyName !== 'max-height') return;
+    wrap.removeEventListener('transitionend', liberarAlturaAlTerminar);
+    wrap.style.maxHeight = 'none';
+  });
 }
 
 function _eqOcultarSeccionFavoritos() {
   var wrap = document.getElementById('eq-favoritos-wrap');
   if (!wrap) return;
-  wrap.style.opacity = '0';
+  wrap.style.maxHeight = wrap.scrollHeight + 'px'; // aterriza en el alto real (pudo estar en 'none') antes de animar a 0
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      wrap.style.maxHeight = '0px';
+      wrap.style.opacity = '0';
+    });
+  });
   wrap.addEventListener('transitionend', function ocultarAlTerminar(ev) {
     if (ev.propertyName !== 'opacity') return;
     wrap.removeEventListener('transitionend', ocultarAlTerminar);
@@ -396,7 +420,12 @@ function _eqInit() {
   _eqYaInicializado = true;
   // No depende del roster real -- arranca ya, aunque el fetch de abajo
   // todavía no resolvió (mismo criterio que antes tenía la inicialización
-  // de sugerencias rotativas, que ocupaba este lugar).
+  // de sugerencias rotativas, que ocupaba este lugar). Reestructura el
+  // panel de filtros en acordeones + modal ANTES de poblarlo (rediseño, ver
+  // MANIFEST.md) -- corre una sola vez (guard propio), tiene que pasar
+  // antes de `_eqRenderFiltroPeriodoUI()` para que los ids que esa función
+  // busca ya estén en su ubicación final (dentro del acordeón/la modal).
+  _eqReestructurarPanelFiltros();
   _eqRenderFiltroPeriodoUI();
   _eqRenderFiltroRolPills();
   var estadoEl = document.getElementById('eq-estado-carga');
@@ -506,9 +535,14 @@ function _eqAvatarHtml(p, claseExtra) {
 // `keyboard_double_arrow_*`, cambio de ícono sin cambiar el resto de la
 // lógica/estilo). Vacío si `tendencia` es `null` -- ver `_eqAvatarConTendenciaHtml()`
 // justo abajo, que decide si hace falta el wrapper `position:relative`.
-function _eqTendenciaBadgeHtml(p) {
+// `claseTamano` opcional (pedido explícito, re-ajuste de tamaño): sin
+// pasarla, el badge queda en el tamaño base 18px (usado hoy solo en "Mis
+// estadísticas", sin pedido de agrandarlo ahí) -- `'eq-tendencia-badge--card'`
+// (22px, filas de lista) o `'eq-tendencia-badge--detalle'` (28px, perfil de
+// detalle, foto mucho más grande) la agrandan, ver css/equipo.css.
+function _eqTendenciaBadgeHtml(p, claseTamano) {
   if (p.tendencia !== 'sube' && p.tendencia !== 'baja') return '';
-  return '<span class="eq-tendencia-badge eq-tendencia-badge-' + p.tendencia + '">' +
+  return '<span class="eq-tendencia-badge eq-tendencia-badge-' + p.tendencia + (claseTamano ? ' ' + claseTamano : '') + '">' +
     '<span class="material-symbols-outlined">keyboard_arrow_' + (p.tendencia === 'sube' ? 'up' : 'down') + '</span></span>';
 }
 
@@ -518,9 +552,10 @@ function _eqTendenciaBadgeHtml(p) {
 // y "Mis estadísticas"; el perfil de detalle sí tiene el suyo,
 // `.eq-avatar-wrap`, `_eqPerfilContenidoHtml()` más abajo, así que ese caso
 // no pasa por acá -- pone `_eqTendenciaBadgeHtml()` directo adentro de ese
-// wrapper existente en vez de anidar uno nuevo).
-function _eqAvatarConTendenciaHtml(p, claseExtra) {
-  return '<span class="eq-avatar-badge-wrap">' + _eqAvatarHtml(p, claseExtra) + _eqTendenciaBadgeHtml(p) + '</span>';
+// wrapper existente en vez de anidar uno nuevo). `claseTamano` se pasa tal
+// cual a `_eqTendenciaBadgeHtml()`.
+function _eqAvatarConTendenciaHtml(p, claseExtra, claseTamano) {
+  return '<span class="eq-avatar-badge-wrap">' + _eqAvatarHtml(p, claseExtra) + _eqTendenciaBadgeHtml(p, claseTamano) + '</span>';
 }
 
 // Fila de stats inline (Batch 4) -- `pointer-events:none` propio de cada
@@ -586,7 +621,7 @@ function _eqFilaHtml(p) {
   var numeroHtml = (p.numeroDerby !== null && p.numeroDerby !== undefined && p.numeroDerby !== '')
     ? ' <span class="eq-miembro-numero">#' + p.numeroDerby + '</span>' : '';
   return '<div class="eq-miembro-fila" onclick="_eqAbrirPerfil(\'' + p.id + '\')">' +
-      _eqAvatarConTendenciaHtml(p, 'avatar-pill--sm') +
+      _eqAvatarConTendenciaHtml(p, 'avatar-pill--sm', 'eq-tendencia-badge--card') +
       '<div class="eq-miembro-info">' +
         '<div class="eq-miembro-nombre">' + _eqEsc(p.nombreDerby) + numeroHtml + '</div>' +
         '<div class="eq-miembro-username">@' + _eqEsc(p.username) + '</div>' +
@@ -809,12 +844,41 @@ var _eqFiltroPeriodo = (function() {
 var _EQ_MESES_CORTOS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 var _eqFiltroRoles = [];
 
+// Modo de período (rediseño, ver MANIFEST.md -- "eliminar botón Aplicar
+// filtros: los filtros se aplican automáticamente al seleccionar cada
+// opción"): 'historico' aplica directo (sin datos que elegir) y es
+// toggleable (tocarlo YA activo lo desactiva y vuelve al default, mes
+// actual -- "para resetear, el usuario deselecciona los pills", pedido
+// explícito). 'mes'/'rango' SIEMPRE abren la modal al tocarlos (`_eqAbrirModalPeriodo()`,
+// más abajo) -- **no** son toggleables del mismo modo: bug real encontrado
+// con Playwright antes de este comentario -- "Mes" arranca `activa` por
+// default (mes actual ya aplicado sin que el usuario haga nada), así que
+// tratarlo como toggleable hacía que el PRIMER tap en "Mes" (para elegir
+// OTRO mes) se leyera como "ya está activo, desactivar" en vez de "abrir
+// la modal" -- la modal nunca abría. El filtro real de mes/rango recién se
+// aplica al confirmar la modal (`_eqConfirmarModalPeriodo()`), nunca al
+// tocar el pill.
 function _eqFiltroPeriodoModo(modo) {
+  if (modo === 'historico') {
+    var pillHist = document.querySelector('#eq-filtro-periodo-modo .aj-pill[data-modo="historico"]');
+    if (pillHist && pillHist.classList.contains('activa')) {
+      var hoy = new Date();
+      _eqFiltroPeriodo.modo = 'mes';
+      _eqFiltroPeriodo.mesUnico = hoy.getMonth() + 1;
+      _eqFiltroPeriodo.anioUnico = hoy.getFullYear();
+      document.querySelectorAll('#eq-filtro-periodo-modo .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+      _eqRenderFiltroPeriodoUI();
+      _eqAplicarFiltrosAhora();
+      return;
+    }
+  }
   _eqFiltroPeriodo.modo = modo;
   document.querySelectorAll('#eq-filtro-periodo-modo .aj-pill').forEach(function(p) {
     p.classList.toggle('activa', p.getAttribute('data-modo') === modo);
   });
   _eqRenderFiltroPeriodoUI();
+  if (modo === 'historico') _eqAplicarFiltrosAhora();
+  else _eqAbrirModalPeriodo(modo);
 }
 function _eqFiltroAnioSumar(cual, delta) {
   if (cual === 'unico') _eqFiltroPeriodo.anioUnico += delta;
@@ -844,12 +908,85 @@ function _eqRenderFiltroPeriodoUI() {
   var elU = document.getElementById('eq-filtro-anio-unico-val'); if (elU) elU.textContent = p.anioUnico;
   var elD = document.getElementById('eq-filtro-anio-desde-val'); if (elD) elD.textContent = p.anioDesde;
   var elH = document.getElementById('eq-filtro-anio-hasta-val'); if (elH) elH.textContent = p.anioHasta;
+  // Mes/rango ahora viven dentro de la modal (`_eqAbrirModalPeriodo()`, más
+  // abajo), no siempre visibles inline -- pero cuál de los 2 mostrar sigue
+  // dependiendo de `p.modo`, mismo criterio de siempre.
   var wrapMes = document.getElementById('eq-filtro-periodo-mes-wrap');
   var wrapRango = document.getElementById('eq-filtro-periodo-rango-wrap');
-  var notaHist = document.getElementById('eq-filtro-periodo-historico-nota');
   if (wrapMes) wrapMes.style.display = p.modo === 'mes' ? '' : 'none';
   if (wrapRango) wrapRango.style.display = p.modo === 'rango' ? '' : 'none';
-  if (notaHist) notaHist.style.display = p.modo === 'historico' ? '' : 'none';
+}
+
+/* ── Modal "Elegí el mes"/"Elegí el rango" (rediseño, ver MANIFEST.md) ───
+   Reemplaza los bloques de año+meses que antes vivían siempre visibles
+   inline en el panel de filtros -- ahora el acordeón "Filtrar puntos según
+   periodo" solo muestra 3 pills (Mes/Rango/Histórico); elegir Mes o Rango
+   abre esta modal. Construida 100% desde JS -- sin markup nuevo en
+   index.html (pedido explícito de esta feature: solo js/equipo.js y
+   css/equipo.css) -- REUBICANDO (no clonando) los nodos
+   `#eq-filtro-periodo-mes-wrap`/`#eq-filtro-periodo-rango-wrap` que
+   index.html ya tenía (año+12 pills, `_eqFiltroAnioSumar()`/
+   `_eqFiltroMesClick()`/`_eqRenderMesPillsInto()` sin cambios, siguen
+   funcionando igual estén donde estén en el DOM) hacia el body de esta
+   modal, una sola vez (`_eqReestructurarPanelFiltros()`, más abajo). Mismo
+   componente `.bsheet-overlay`/`.bsheet` estándar que el resto de sheets de
+   la app (ver `_datLesionAbrirSheet()`/js/perfil.js) -- mismo criterio de
+   apertura/cierre (`style.display`+`transform`) y drag-to-close/tap-to-
+   close "gratis" vía el listener delegado de `shared/bsheet.js` (escucha
+   CUALQUIER `.bsheet-handle`/`.bsheet-title` del documento, no solo los que
+   ya existían al cargar la página -- confirmado leyendo ese archivo antes
+   de asumirlo). */
+var _eqModalPeriodoCreada = false;
+function _eqCrearModalPeriodoSiHaceFalta() {
+  if (_eqModalPeriodoCreada) return;
+  _eqModalPeriodoCreada = true;
+  var ov = document.createElement('div');
+  ov.id = 'eq-modal-periodo-overlay';
+  ov.className = 'bsheet-overlay';
+  // `z-index` inline (mismo criterio que el resto de sheets de la app,
+  // ej. `#dat-lesion-sheet-overlay`/index.html) -- `.bsheet-overlay`/
+  // `.bsheet` (css/global.css) NO traen z-index propio en la clase base,
+  // cada instancia lo fija a mano; sin esto, un overlay creado por JS y
+  // apendeado al final de `<body>` puede terminar pintado DETRÁS de otros
+  // elementos `position:fixed` de la app que sí declaran su propio z-index
+  // (nav inferior, otros sheets), pese a venir después en el DOM.
+  ov.style.zIndex = '9700';
+  ov.setAttribute('onclick', '_eqCerrarModalPeriodo()');
+  var sh = document.createElement('div');
+  sh.id = 'eq-modal-periodo-sheet';
+  sh.className = 'bsheet';
+  sh.style.zIndex = '9701';
+  sh.innerHTML =
+    '<div class="bsheet-handle"></div>' +
+    '<div class="bsheet-title" id="eq-modal-periodo-titulo"></div>' +
+    '<div class="bsheet-body" id="eq-modal-periodo-body"></div>';
+  document.body.appendChild(ov);
+  document.body.appendChild(sh);
+}
+function _eqAbrirModalPeriodo(modo) {
+  _eqCrearModalPeriodoSiHaceFalta();
+  var ov = document.getElementById('eq-modal-periodo-overlay');
+  var sh = document.getElementById('eq-modal-periodo-sheet');
+  var titulo = document.getElementById('eq-modal-periodo-titulo');
+  if (!ov || !sh) return;
+  if (titulo) titulo.textContent = modo === 'rango' ? 'Elegí el rango' : 'Elegí el mes';
+  _eqRenderFiltroPeriodoUI();
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+}
+function _eqCerrarModalPeriodo() {
+  var ov = document.getElementById('eq-modal-periodo-overlay');
+  var sh = document.getElementById('eq-modal-periodo-sheet');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() {
+    if (sh) sh.style.display = 'none';
+    if (ov) ov.style.display = 'none';
+  }, 350);
+}
+function _eqConfirmarModalPeriodo() {
+  _eqCerrarModalPeriodo();
+  _eqAplicarFiltrosAhora();
 }
 
 // Filtro por rol (Cambio 2B) -- 100% frontend sobre `_eqPersonas` ya
@@ -868,10 +1005,23 @@ function _eqRenderFiltroRolPills() {
     return '<span class="aj-pill' + (_eqFiltroRoles.indexOf(r) !== -1 ? ' activa' : '') + '" onclick="_eqFiltroRolToggle(\'' + r.replace(/'/g, "\\'") + '\')">' + _eqEsc(r) + '</span>';
   }).join('');
 }
+// Toggle + aplicación inmediata (rediseño, ver MANIFEST.md -- sin botón
+// "Aplicar filtros"): 100% frontend, sin re-pedir `getEquipo()` (el rol NO
+// vive en el backend, ver comentario de arriba) -- alcanza con
+// re-renderizar las listas ya cargadas, mismo set de renders que usaba
+// `_eqAplicarFiltrosAhora()` para el resto de la pantalla, sin el fetch.
+// El panel de búsqueda/filtros NO se cierra acá (a diferencia de
+// `_eqAplicarFiltrosAhora()`) -- a propósito, deja seguir tildando/
+// destildando varios roles sin que el panel se cierre en cada toque.
 function _eqFiltroRolToggle(rol) {
   var idx = _eqFiltroRoles.indexOf(rol);
   if (idx === -1) _eqFiltroRoles.push(rol); else _eqFiltroRoles.splice(idx, 1);
   _eqRenderFiltroRolPills();
+  _eqRenderFavoritos();
+  _eqRenderGrupo('Quindes');
+  _eqRenderGrupo('Mirlxs');
+  _eqRenderInactivos();
+  if (typeof _eqRenderLesionadxs === 'function') _eqRenderLesionadxs();
 }
 // Predicado adicional a `_eqPasaBusqueda()` (nunca modificada -- pedido
 // explícito de no tocar la lógica de búsqueda si ya funciona) -- se suma
@@ -890,8 +1040,14 @@ function _eqPasaFiltroRol(p) {
 // (`getEquipo()`, supabase/functions/api/index.ts). Reemplaza `_eqPersonas`
 // entero y re-renderiza todo lo que depende de él -- mismo criterio que
 // `_eqAsegurarCargado()`, pero sin el guard de caché -- acá SIEMPRE hay que
-// volver a pedir, cambió el período.
-function _eqAplicarFiltros() {
+// volver a pedir, cambió el período. Renombrada de `_eqAplicarFiltros()`
+// (rediseño, sin botón "Aplicar filtros" -- ver MANIFEST.md): ahora la
+// disparan 3 caminos automáticos en vez de un click de botón manual --
+// `_eqFiltroPeriodoModo('historico')` (directo), `_eqConfirmarModalPeriodo()`
+// (Mes/Rango, al confirmar la modal), y el toggle-off de un pill (vuelve al
+// default, arriba). Sin spinner de botón propio -- ya no hay botón que
+// deshabilitar.
+function _eqAplicarFiltrosAhora() {
   var p = _eqFiltroPeriodo;
   var params = { action: 'getEquipo' };
   if (p.modo === 'historico') {
@@ -902,11 +1058,7 @@ function _eqAplicarFiltros() {
   } else {
     params.mes = p.mesUnico; params.anio = p.anioUnico;
   }
-  var btn = document.querySelector('#eq-busqueda-panel .btn-primary');
-  var htmlOriginal = btn ? btn.innerHTML : '';
-  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Aplicando...'; }
   api(params, function(res) {
-    if (btn) { btn.disabled = false; btn.innerHTML = htmlOriginal; }
     _eqPersonas = (res && res.personas) || [];
     _eqCargado = true;
     _eqCerrarPanel('busqueda');
@@ -917,9 +1069,112 @@ function _eqAplicarFiltros() {
     if (typeof _eqRenderLesionadxs === 'function') _eqRenderLesionadxs();
     if (typeof _eqRenderMisEstadisticas === 'function') _eqRenderMisEstadisticas();
   }, function(e) {
-    if (btn) { btn.disabled = false; btn.innerHTML = htmlOriginal; }
     mostrarToast((e && e.message) || 'No se pudo aplicar el filtro.', 'error');
   });
+}
+
+/* ── Acordeones del panel de filtros (rediseño, ver MANIFEST.md) ─────────
+   "Filtrar puntos según periodo" y "Filtrar por rol" ahora van envueltos en
+   un acordeón colapsable -- mismo patrón `.eq-grupo-header`/`.eq-grupo-body`
+   que Quindes/Mirlxs/Inactivos (css/equipo.css, "Grupos colapsables"), pero
+   armado desde JS reubicando los nodos que index.html YA tenía (label +
+   fila de pills), no agregando markup nuevo -- mismo criterio que la modal
+   de arriba, sin tocar index.html. Corre una sola vez
+   (`_eqFiltrosReestructurados`), disparada desde `_eqInit()`. Nacen
+   abiertos (`max-height:'none'` directo, no medido -- mismo fix ya usado en
+   otros acordeones de esta sección para el bug real "nace abierto pero
+   colapsado": medir `scrollHeight` con la pantalla todavía sin layout real
+   da 0). */
+var _eqFiltrosReestructurados = false;
+function _eqCrearAcordeonFiltro(key, titulo) {
+  var wrap = document.createElement('div');
+  wrap.className = 'eq-grupo eq-filtro-acordeon';
+  var header = document.createElement('button');
+  header.type = 'button';
+  header.className = 'eq-grupo-header abierto';
+  header.id = 'eq-filtro-acc-' + key + '-header';
+  header.setAttribute('onclick', "_eqToggleAcordeonFiltro('" + key + "')");
+  header.innerHTML = '<span class="eq-grupo-linea"></span>' +
+    '<span class="eq-grupo-nombre">' + _eqEsc(titulo) + '</span>' +
+    '<span class="material-symbols-outlined eq-grupo-chevron">expand_more</span>' +
+    '<span class="eq-grupo-linea"></span>';
+  var body = document.createElement('div');
+  body.className = 'eq-grupo-body abierto';
+  body.id = 'eq-filtro-acc-' + key + '-body';
+  body.style.maxHeight = 'none';
+  var inner = document.createElement('div');
+  inner.className = 'eq-grupo-body-inner';
+  body.appendChild(inner);
+  wrap.appendChild(header);
+  wrap.appendChild(body);
+  return { wrap: wrap, inner: inner };
+}
+function _eqToggleAcordeonFiltro(key) {
+  var header = document.getElementById('eq-filtro-acc-' + key + '-header');
+  var body = document.getElementById('eq-filtro-acc-' + key + '-body');
+  if (!header || !body) return;
+  var abrir = !header.classList.contains('abierto');
+  header.classList.toggle('abierto', abrir);
+  body.classList.toggle('abierto', abrir);
+  body.style.maxHeight = abrir ? body.scrollHeight + 'px' : '0px';
+}
+function _eqReestructurarPanelFiltros() {
+  if (_eqFiltrosReestructurados) return;
+  _eqFiltrosReestructurados = true;
+
+  // "Filtrar puntos según periodo" (3c: texto renombrado de "Período de
+  // puntaje") -- el acordeón envuelve la fila de 3 pills Mes/Rango/
+  // Histórico (`#eq-filtro-periodo-modo`, sin cambios de markup/lógica
+  // propia). El año+12 pills que antes vivían visibles bajo esta fila se
+  // mueven a la modal (`_eqCrearModalPeriodoSiHaceFalta()`, arriba) -- ya
+  // no quedan inline acá.
+  var labelPeriodo = document.querySelector('.eq-periodo-label');
+  var pillsModo = document.getElementById('eq-filtro-periodo-modo');
+  if (labelPeriodo && pillsModo && labelPeriodo.parentNode) {
+    var accPeriodo = _eqCrearAcordeonFiltro('periodo', 'Filtrar puntos según periodo');
+    labelPeriodo.parentNode.insertBefore(accPeriodo.wrap, labelPeriodo);
+    accPeriodo.inner.appendChild(pillsModo);
+    labelPeriodo.remove();
+  }
+  _eqCrearModalPeriodoSiHaceFalta();
+  var modalBody = document.getElementById('eq-modal-periodo-body');
+  var mesWrap = document.getElementById('eq-filtro-periodo-mes-wrap');
+  var rangoWrap = document.getElementById('eq-filtro-periodo-rango-wrap');
+  var notaHist = document.getElementById('eq-filtro-periodo-historico-nota');
+  if (modalBody && mesWrap) modalBody.appendChild(mesWrap);
+  if (modalBody && rangoWrap) modalBody.appendChild(rangoWrap);
+  // La nota de histórico ("Suma de todos los registros...") ya no tiene
+  // dónde vivir -- Histórico aplica directo, sin abrir modal (3d, pedido
+  // explícito) -- se oculta, sin borrarla (referenciada por id en
+  // `_eqRenderFiltroPeriodoUI()` de una versión anterior; más simple
+  // dejarla inerte que sacarla).
+  if (notaHist) notaHist.style.display = 'none';
+  if (modalBody) {
+    var btnConfirmarPeriodo = document.createElement('button');
+    btnConfirmarPeriodo.type = 'button';
+    btnConfirmarPeriodo.className = 'btn btn-primary';
+    btnConfirmarPeriodo.style.cssText = 'width:100%;margin-top:16px;';
+    btnConfirmarPeriodo.textContent = 'Aplicar';
+    btnConfirmarPeriodo.setAttribute('onclick', '_eqConfirmarModalPeriodo()');
+    modalBody.appendChild(btnConfirmarPeriodo);
+  }
+
+  // "Filtrar por rol" (3e: sin cambios de contenido, solo envuelto).
+  var pillsRol = document.getElementById('eq-filtro-rol-pills');
+  var labelRol = pillsRol ? pillsRol.previousElementSibling : null;
+  if (labelRol && pillsRol && labelRol.parentNode) {
+    var accRol = _eqCrearAcordeonFiltro('rol', 'Filtrar por rol');
+    labelRol.parentNode.insertBefore(accRol.wrap, labelRol);
+    accRol.inner.appendChild(pillsRol);
+    labelRol.remove();
+  }
+
+  // Botón "Aplicar filtros" eliminado (3f, pedido explícito) -- los 3
+  // caminos de aplicación automática (`_eqFiltroPeriodoModo()`/
+  // `_eqConfirmarModalPeriodo()`/`_eqFiltroRolToggle()`, arriba) lo
+  // reemplazan.
+  var btnAplicarViejo = document.querySelector('#eq-busqueda-panel .btn-primary');
+  if (btnAplicarViejo) btnAplicarViejo.remove();
 }
 
 // Re-render completo (init / cambio de búsqueda) -- a diferencia de
@@ -944,6 +1199,14 @@ function _eqRenderFavoritos() {
   if (pillEl) pillEl.textContent = visibles.length;
   wrap.style.display = visibles.length ? 'block' : 'none';
   wrap.style.opacity = visibles.length ? '1' : '0';
+  // Re-render "instantáneo" (init/búsqueda/filtro) -- sin animar, a
+  // diferencia de `_eqMostrarSeccionFavoritos()`/`_eqOcultarSeccionFavoritos()`
+  // (esas SÍ animan, solo se usan al tocar el corazón de una fila puntual).
+  // `wrap.style.maxHeight` igual necesita quedar consistente acá (`'none'`
+  // si hay favoritos, `'0px'` si no) -- si no, un techo numérico que haya
+  // quedado fijo de una animación anterior (`_eqOcultarSeccionFavoritos()`
+  // interrumpida, por ejemplo) recortaría la lista sin que nada lo repare.
+  wrap.style.maxHeight = visibles.length ? 'none' : '0px';
   var body = wrap.querySelector('.eq-grupo-body');
   if (body) body.style.maxHeight = 'none';
   _eqHidratarAvatares();
@@ -1038,7 +1301,13 @@ function _eqRenderLesionadxs() {
 // (`.dat-estado-chip`/`.dat-estado-*`, css/perfil.css) -- sin duplicar
 // ningún estilo, solo el layout propio del wrapper (`.eq-mis-stats-*`,
 // css/equipo.css). Sin datos de contacto (pedido explícito) -- a diferencia
-// del perfil de detalle, acá nunca se muestra teléfono/email.
+// del perfil de detalle, acá nunca se muestra teléfono/email. Header
+// recortado (pedido explícito, ver MANIFEST.md): SIN foto, nombre real,
+// nombre derby ni número -- solo rol (Quindes/Mirlxs, `persona.rol`) +
+// chip de estado (activo/inactivo/lesionadx). Esos 3 datos sacados siguen
+// visibles en el trigger de la nav (`#eq-misstats-toggle-btn`/
+// `toggleAvatar` más abajo) y en el perfil de detalle -- este panel es el
+// único lugar donde dejan de mostrarse.
 function _eqRenderMisEstadisticas() {
   var cont = document.getElementById('eq-misstats-panel-inner');
   var toggleBtn = document.getElementById('eq-misstats-toggle-btn');
@@ -1060,7 +1329,6 @@ function _eqRenderMisEstadisticas() {
     toggleAvatar.setAttribute('data-foto', persona.fotoPerfil || '');
   }
   var statsCalc = _eqStatsCalc(persona);
-  var numeroTxt = (persona.numeroDerby !== null && persona.numeroDerby !== undefined && persona.numeroDerby !== '') ? '#' + persona.numeroDerby + ' &bull; ' : '';
   var estadoTexto = persona.estado === 'Lesionadx' ? 'Lesionadx' : persona.estado === 'Activx' ? 'Activo' : 'Inactivo';
   var estadoClase = persona.estado === 'Lesionadx' ? 'dat-estado-lesion' : persona.estado === 'Activx' ? 'dat-estado-activo' : 'dat-estado-inactivo';
   // Termómetro solo con equipo propio -- mismo bug real/mismo criterio ya
@@ -1076,10 +1344,8 @@ function _eqRenderMisEstadisticas() {
     '</div>';
   cont.innerHTML =
     '<div class="eq-mis-stats-header">' +
-      _eqAvatarConTendenciaHtml(persona, 'avatar-pill--md') +
       '<div class="eq-mis-stats-info">' +
-        '<div class="eq-mis-stats-nombre">' + _eqEsc(persona.nombreDerby || persona.username) + '</div>' +
-        '<div class="eq-mis-stats-sub">' + numeroTxt + _eqEsc(persona.rol) + '</div>' +
+        '<div class="eq-mis-stats-nombre">' + _eqEsc(persona.rol) + '</div>' +
         '<span class="dat-estado-chip ' + estadoClase + '">' + estadoTexto + '</span>' +
       '</div>' +
     '</div>' +
@@ -1593,7 +1859,7 @@ function _eqPerfilContenidoHtml(p) {
   return '<div class="eq-perfil-header">' +
       '<div class="eq-avatar-wrap">' +
         _eqAvatarHtml(p, 'eq-avatar-grande') +
-        _eqTendenciaBadgeHtml(p) +
+        _eqTendenciaBadgeHtml(p, 'eq-tendencia-badge--detalle') +
         '<span class="eq-rol-pill">' + _eqEsc(p.rol) + '</span>' +
       '</div>' +
       '<div class="eq-perfil-nombre">' + _eqEsc(p.nombreDerby) + '</div>' +
