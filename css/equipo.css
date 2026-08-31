@@ -84,11 +84,17 @@
   margin-top: 10px;
 }
 /* Buscador dentro del panel fusionado -- mismo `.app-nav-search` de
-   siempre (css/nav.css), solo pierde el `margin-top` de la 1ra
-   `.seccion-label` que sigue (`.eq-periodo-label`, mismo criterio que
-   `.ev-filtros-label`/css/eventos.css: separa el subtítulo del buscador de
-   arriba, la propia `.seccion-label` ya trae su `margin-bottom`). */
+   siempre (css/nav.css). `.eq-periodo-label` ya NO cumple ningún rol
+   visual (el `margin-top` que tenía acá quedó huérfano desde el rediseño
+   de acordeones, ver MANIFEST.md -- `_eqReestructurarPanelFiltros()`/
+   js/equipo.js remueve ese `<div>` del DOM en cuanto arranca la sección,
+   reemplazado por el acordeón de abajo) -- la clase sigue viva SOLO como
+   selector (`document.querySelector('.eq-periodo-label')`, esa misma
+   función), no tocar/borrar sin actualizar ese JS. Separación real
+   buscador↔acordeón: `.app-nav-search + .eq-filtro-acordeon` (bug real
+   corregido -- sin esto, el primer acordeón quedaba pegado al buscador). */
 .eq-periodo-label { margin-top: 18px; }
+.app-nav-search + .eq-filtro-acordeon { margin-top: 20px; }
 .eq-filtro-mes-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .eq-filtro-mes-pills .aj-pill { padding: 6px 12px; font-size: 0.74rem; }
 .eq-filtro-anio-stepper {
