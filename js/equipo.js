@@ -1073,57 +1073,36 @@ function _eqAplicarFiltrosAhora() {
   });
 }
 
-/* ── Acordeones del panel de filtros (rediseño, ver MANIFEST.md) ─────────
-   "Filtrar puntos según periodo" y "Filtrar por rol" ahora van envueltos en
-   un acordeón colapsable -- mismo patrón `.eq-grupo-header`/`.eq-grupo-body`
-   que Quindes/Mirlxs/Inactivos (css/equipo.css, "Grupos colapsables"), pero
-   armado desde JS reubicando los nodos que index.html YA tenía (label +
-   fila de pills), no agregando markup nuevo -- mismo criterio que la modal
-   de arriba, sin tocar index.html. Corre una sola vez
-   (`_eqFiltrosReestructurados`), disparada desde `_eqInit()`. Nacen
-   abiertos (`max-height:'none'` directo, no medido -- mismo fix ya usado en
-   otros acordeones de esta sección para el bug real "nace abierto pero
-   colapsado": medir `scrollHeight` con la pantalla todavía sin layout real
-   da 0). */
+/* ── Secciones del panel de filtros (re-ajuste, ver MANIFEST.md) ─────────
+   "Filtrar puntos según periodo" y "Filtrar por rol" -- pasaron por una
+   versión intermedia como acordeón colapsable (`.eq-grupo-header`/
+   `.eq-grupo-body`, mismo patrón que Quindes/Mirlxs/Inactivos), pero
+   pedido explícito de sacarle el comportamiento de colapsar/expandir: sin
+   chevron, sin botón, siempre visibles y expandidas -- solo el título de
+   sección + el contenido de siempre debajo. Sigue armado desde JS
+   reubicando los nodos que index.html YA tenía (label + fila de pills), no
+   agregando markup nuevo -- mismo criterio que la modal de arriba, sin
+   tocar index.html. Corre una sola vez (`_eqFiltrosReestructurados`),
+   disparada desde `_eqInit()`. */
 var _eqFiltrosReestructurados = false;
-function _eqCrearAcordeonFiltro(key, titulo) {
+function _eqCrearSeccionFiltro(titulo) {
   var wrap = document.createElement('div');
-  wrap.className = 'eq-grupo eq-filtro-acordeon';
-  var header = document.createElement('button');
-  header.type = 'button';
-  header.className = 'eq-grupo-header abierto';
-  header.id = 'eq-filtro-acc-' + key + '-header';
-  header.setAttribute('onclick', "_eqToggleAcordeonFiltro('" + key + "')");
-  header.innerHTML = '<span class="eq-grupo-linea"></span>' +
-    '<span class="eq-grupo-nombre">' + _eqEsc(titulo) + '</span>' +
-    '<span class="material-symbols-outlined eq-grupo-chevron">expand_more</span>' +
-    '<span class="eq-grupo-linea"></span>';
-  var body = document.createElement('div');
-  body.className = 'eq-grupo-body abierto';
-  body.id = 'eq-filtro-acc-' + key + '-body';
-  body.style.maxHeight = 'none';
+  wrap.className = 'eq-filtro-seccion';
+  var tituloEl = document.createElement('div');
+  tituloEl.className = 'seccion-label';
+  tituloEl.textContent = titulo;
   var inner = document.createElement('div');
-  inner.className = 'eq-grupo-body-inner';
-  body.appendChild(inner);
-  wrap.appendChild(header);
-  wrap.appendChild(body);
+  inner.className = 'eq-filtro-seccion-body';
+  wrap.appendChild(tituloEl);
+  wrap.appendChild(inner);
   return { wrap: wrap, inner: inner };
-}
-function _eqToggleAcordeonFiltro(key) {
-  var header = document.getElementById('eq-filtro-acc-' + key + '-header');
-  var body = document.getElementById('eq-filtro-acc-' + key + '-body');
-  if (!header || !body) return;
-  var abrir = !header.classList.contains('abierto');
-  header.classList.toggle('abierto', abrir);
-  body.classList.toggle('abierto', abrir);
-  body.style.maxHeight = abrir ? body.scrollHeight + 'px' : '0px';
 }
 function _eqReestructurarPanelFiltros() {
   if (_eqFiltrosReestructurados) return;
   _eqFiltrosReestructurados = true;
 
   // "Filtrar puntos según periodo" (3c: texto renombrado de "Período de
-  // puntaje") -- el acordeón envuelve la fila de 3 pills Mes/Rango/
+  // puntaje") -- la sección envuelve la fila de 3 pills Mes/Rango/
   // Histórico (`#eq-filtro-periodo-modo`, sin cambios de markup/lógica
   // propia). El año+12 pills que antes vivían visibles bajo esta fila se
   // mueven a la modal (`_eqCrearModalPeriodoSiHaceFalta()`, arriba) -- ya
@@ -1131,7 +1110,7 @@ function _eqReestructurarPanelFiltros() {
   var labelPeriodo = document.querySelector('.eq-periodo-label');
   var pillsModo = document.getElementById('eq-filtro-periodo-modo');
   if (labelPeriodo && pillsModo && labelPeriodo.parentNode) {
-    var accPeriodo = _eqCrearAcordeonFiltro('periodo', 'Filtrar puntos según periodo');
+    var accPeriodo = _eqCrearSeccionFiltro('Filtrar puntos según periodo');
     labelPeriodo.parentNode.insertBefore(accPeriodo.wrap, labelPeriodo);
     accPeriodo.inner.appendChild(pillsModo);
     labelPeriodo.remove();
@@ -1159,11 +1138,11 @@ function _eqReestructurarPanelFiltros() {
     modalBody.appendChild(btnConfirmarPeriodo);
   }
 
-  // "Filtrar por rol" (3e: sin cambios de contenido, solo envuelto).
+  // "Filtrar por rol" (sin cambios de contenido, solo envuelto).
   var pillsRol = document.getElementById('eq-filtro-rol-pills');
   var labelRol = pillsRol ? pillsRol.previousElementSibling : null;
   if (labelRol && pillsRol && labelRol.parentNode) {
-    var accRol = _eqCrearAcordeonFiltro('rol', 'Filtrar por rol');
+    var accRol = _eqCrearSeccionFiltro('Filtrar por rol');
     labelRol.parentNode.insertBefore(accRol.wrap, labelRol);
     accRol.inner.appendChild(pillsRol);
     labelRol.remove();
@@ -1345,8 +1324,17 @@ function _eqRenderMisEstadisticas() {
   cont.innerHTML =
     '<div class="eq-mis-stats-header">' +
       '<div class="eq-mis-stats-info">' +
-        '<div class="eq-mis-stats-nombre">' + _eqEsc(persona.rol) + '</div>' +
-        '<span class="dat-estado-chip ' + estadoClase + '">' + estadoTexto + '</span>' +
+        // Pill de categoría + pill de estado en la misma fila (pedido
+        // explícito) -- antes `rol` era texto pelado (`.eq-mis-stats-nombre`)
+        // arriba del chip de estado, apilados. `.eq-mis-stats-rol-pill`
+        // nueva, mismas métricas de caja que `.dat-estado-chip` (padding/
+        // radius/font, css/perfil.css) para que ambas pills midan igual,
+        // pero con el color de marca (no un color de estado -- no es un
+        // estado, es la categoría/tier).
+        '<div class="eq-mis-stats-pills">' +
+          '<span class="eq-mis-stats-rol-pill">' + _eqEsc(persona.rol) + '</span>' +
+          '<span class="dat-estado-chip ' + estadoClase + '">' + estadoTexto + '</span>' +
+        '</div>' +
       '</div>' +
     '</div>' +
     '<div class="eq-stats-grid">' +

@@ -28,14 +28,40 @@
    el layout del wrapper + la fila de header. Header recortado (pedido
    explícito): sin foto/nombre/número -- `.eq-mis-stats-sub` (línea de
    número+rol que vivía debajo del nombre) se sacó, ya no queda ningún
-   consumidor. */
+   consumidor. Panel compactado (pedido explícito, re-ajuste) -- padding e
+   inner-gap más chicos que antes. */
 .eq-misstats-panel-inner {
-  background: var(--surface-2); border-radius: 16px; padding: 16px;
+  background: var(--surface-2); border-radius: 16px; padding: 12px;
   margin-top: 10px;
 }
 .eq-mis-stats-header { display: flex; align-items: center; gap: 12px; }
 .eq-mis-stats-info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
-.eq-mis-stats-nombre { font-size: 1.05rem; font-weight: 800; color: var(--text); }
+/* Pill de categoría (Quindes/Mirlxs) + pill de estado en la misma fila
+   (pedido explícito, re-ajuste -- antes `rol` era texto pelado arriba del
+   chip de estado, apilados en 2 líneas). `.eq-mis-stats-rol-pill`: mismas
+   métricas de caja que `.dat-estado-chip` (padding/radius/font,
+   css/perfil.css) para que ambas pills midan igual -- duplicadas a mano
+   acá (4 declaraciones) en vez de cruzar a css/perfil.css por una clase
+   compartida, mismo criterio ya usado en el resto de esta sección para
+   piezas visuales chicas y de un solo lugar. Color de marca (no un color
+   de estado -- esto es la categoría/tier, no un estado). */
+.eq-mis-stats-pills { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.eq-mis-stats-rol-pill {
+  display: inline-block; padding: 3px 12px; border-radius: 999px;
+  font-size: 0.78rem; font-weight: 700; background: var(--brand-light); color: var(--brand);
+}
+/* Compactación del contenido de stats (pedido explícito, re-ajuste) --
+   `.eq-stats-grid`/`.eq-stat-card`/`.eq-stat-icon`/`.eq-stat-valor`/
+   `.eq-stat-label` son compartidas con el perfil de detalle
+   (`_eqPerfilContenidoHtml()`, "Perfil de detalle" más abajo) -- estos
+   overrides van SCOPEADOS a `#eq-misstats-panel-inner` (nunca la clase a
+   secas) para no achicar también las cards del perfil, que no se pidió
+   tocar. */
+#eq-misstats-panel-inner .eq-stats-grid { gap: 8px; margin: 10px 0 4px; }
+#eq-misstats-panel-inner .eq-stat-card { padding: 10px 8px; }
+#eq-misstats-panel-inner .eq-stat-icon { font-size: 1.15rem; margin-bottom: 4px; }
+#eq-misstats-panel-inner .eq-stat-valor { font-size: 15px; }
+#eq-misstats-panel-inner .eq-stat-label { font-size: 13px; margin-top: 1px; }
 
 /* ── Trigger "Mis estadísticas" de la nav (rediseño, ver MANIFEST.md/
    CHANGELOG.md) -- avatar 36px (escalón propio, ninguna variante global de
@@ -86,15 +112,24 @@
 /* Buscador dentro del panel fusionado -- mismo `.app-nav-search` de
    siempre (css/nav.css). `.eq-periodo-label` ya NO cumple ningún rol
    visual (el `margin-top` que tenía acá quedó huérfano desde el rediseño
-   de acordeones, ver MANIFEST.md -- `_eqReestructurarPanelFiltros()`/
+   de secciones, ver MANIFEST.md -- `_eqReestructurarPanelFiltros()`/
    js/equipo.js remueve ese `<div>` del DOM en cuanto arranca la sección,
-   reemplazado por el acordeón de abajo) -- la clase sigue viva SOLO como
+   reemplazado por la sección de abajo) -- la clase sigue viva SOLO como
    selector (`document.querySelector('.eq-periodo-label')`, esa misma
-   función), no tocar/borrar sin actualizar ese JS. Separación real
-   buscador↔acordeón: `.app-nav-search + .eq-filtro-acordeon` (bug real
-   corregido -- sin esto, el primer acordeón quedaba pegado al buscador). */
+   función), no tocar/borrar sin actualizar ese JS. */
 .eq-periodo-label { margin-top: 18px; }
-.app-nav-search + .eq-filtro-acordeon { margin-top: 20px; }
+/* "Filtrar puntos según periodo"/"Filtrar por rol" (re-ajuste, ver
+   MANIFEST.md) -- pasaron por una versión intermedia como acordeón
+   colapsable, pedido explícito de sacarle ese comportamiento: siempre
+   visibles y expandidas, solo el título de sección (`.seccion-label`, sin
+   clase propia) + el contenido de siempre debajo. `.app-nav-search +` da
+   la separación contra el buscador (bug real corregido -- sin esto, la 1ra
+   sección quedaba pegada al buscador); `+ .eq-filtro-seccion` (selector de
+   hermano adyacente, sin `:first-child`) separa a "Filtrar por rol" de
+   "Filtrar puntos según periodo" arriba, sin duplicar el margen en la 1ra
+   sección (que ya lo recibe del selector anterior). */
+.app-nav-search + .eq-filtro-seccion { margin-top: 20px; }
+.eq-filtro-seccion + .eq-filtro-seccion { margin-top: 18px; }
 .eq-filtro-mes-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .eq-filtro-mes-pills .aj-pill { padding: 6px 12px; font-size: 0.74rem; }
 .eq-filtro-anio-stepper {
