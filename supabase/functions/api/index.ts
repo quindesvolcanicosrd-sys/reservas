@@ -2278,7 +2278,7 @@ async function adminGetRosterEquipo(): Promise<Record<string, any>> {
 // acciones de solo-lectura.
 async function getEquipo(params: Record<string, any> = {}): Promise<Record<string, any>> {
   const { data: filas } = await supabase.from('equipo')
-    .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, prefijo, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano, termometro_pct, fecha_ingreso, necesita_patines, necesita_protecciones')
+    .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, prefijo, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano, termometro_pct, fecha_ingreso, necesita_patines, necesita_protecciones, puntos_anteriores')
     .order('username');
   const personas = filas ?? [];
   if (!personas.length) return { personas: [] };
@@ -2408,7 +2408,12 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     ultimaAsistencia: ultimaPorUsuario[r.username] ? ultimaPorUsuario[r.username].slice(0, 10) : null,
     puntosAsistencia: puntosPeriodoPorUsuario[r.username] ? puntosPeriodoPorUsuario[r.username].asistencia : 0,
     puntosTareas: puntosPeriodoPorUsuario[r.username] ? puntosPeriodoPorUsuario[r.username].tareas : 0,
-    puntosTotal: puntosPeriodoPorUsuario[r.username] ? puntosPeriodoPorUsuario[r.username].total : 0,
+    // `equipo.puntos_anteriores` es el arrastre de puntos previos a la
+    // existencia de `puntos_mensuales` (importado a mano al migrar el
+    // sistema de puntos) -- solo tiene sentido sumarlo al total histórico,
+    // nunca a un mes/rango puntual, así que solo entra cuando `esHistorico`.
+    puntosTotal: (puntosPeriodoPorUsuario[r.username] ? puntosPeriodoPorUsuario[r.username].total : 0)
+      + (esHistorico ? (Number(r.puntos_anteriores) || 0) : 0),
     puntosAnio: Number(puntosAnioPorUsuario[r.username]) || 0,
     // Bug real "termómetro visible aunque la persona necesite equipo del
     // club" (ver MANIFEST.md): `equipo.necesita_patines`/`necesita_protecciones`
