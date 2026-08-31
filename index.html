@@ -2897,6 +2897,18 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <span class="material-symbols-outlined" style="font-size:1.1rem;">refresh</span> Recalcular ahora
       </button>
 
+      <!-- "Recalcular puntos" (feat nueva, ver MANIFEST.md/CHANGELOG.md) --
+           llama a `adminRecalcularPuntosAsistencia` (supabase/functions/api/index.ts),
+           parte del switch de acciones normal (a diferencia de "Recalcular
+           ahora" de arriba, que pega directo a la Edge Function standalone
+           `recalcular-categorias` -- ver _mlRecalcular()/js/admin.js) --
+           mismo botón .btn/.btn-primary + ícono refresh, mismo patrón de
+           loading (.btn-spinner) que ya usa "Enviar notificación" más abajo
+           en esta pantalla. -->
+      <button type="button" class="btn btn-primary" id="ml-btn-recalcular-puntos" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;" onclick="_mlRecalcularPuntos()">
+        <span class="material-symbols-outlined" style="font-size:1.1rem;">refresh</span> Recalcular puntos
+      </button>
+
       <div class="seccion-label" style="margin-top:22px;">Estado actual del equipo</div>
       <div id="ml-miembros-lista"></div>
     </div>
@@ -2983,7 +2995,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/home.js?v=cf4b0197"></script>
 <script src="js/reservas.js?v=ce8c13b6"></script>
 <script src="js/perfil.js?v=b56e42f0"></script>
-<script src="js/admin.js?v=821b70e0"></script>
+<script src="js/admin.js?v=d549625d"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js"></script>
 

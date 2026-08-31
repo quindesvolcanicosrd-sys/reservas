@@ -73,6 +73,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Equipo
 
+2026-08-31 — Botón admin: Recalcular puntos de asistencia y rachas.
+
 2026-08-31 — Sistema de racha de asistencias: racha_actual en equipo, bonus +2 puntos_extra cada 3 clases consecutivas, reconstrucción histórica en recalcularPuntosAsistencia.
 
 2026-08-31 — Favoritos rediseñado como sección acordeón no colapsable (fade in/out de la sección completa al agregar/quitar el primer/último favorito).

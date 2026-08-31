@@ -1825,3 +1825,35 @@ function _mlRecalcular() {
     mostrarToast(e.message || 'Error al recalcular.', 'error');
   });
 }
+
+// "Recalcular puntos" (feat nueva, ver MANIFEST.md/CHANGELOG.md) --
+// a diferencia de _mlRecalcular() de arriba, `adminRecalcularPuntosAsistencia`
+// SÍ es parte del switch de acciones normal (supabase/functions/api/index.ts)
+// -- adminApi()/api() de siempre, no un fetch() propio. Recalcula
+// puntos_asistencia del mes actual (todo el equipo) + reconstruye
+// racha_actual/puntos_extra desde cero (`_reconstruirRachasHistoricas()`,
+// mismo Edge Function). Loading con `.btn-spinner` (css/estilos.css) --
+// mismo patrón ya usado por "Enviar notificación" (_BTN_ADM_NOTIF_HTML,
+// más abajo en este archivo) -- HTML original cacheado en
+// `_BTN_ML_RECALC_PUNTOS_HTML` para restaurarlo tal cual al terminar, en
+// vez de reconstruirlo a mano cada vez. Toast de éxito forzado (`true`,
+// 3er argumento) -- mismo criterio que _mlRecalcular(): mostrarToast() es
+// silencioso por default para tipos no-error (ver MANIFEST.md), pero acá
+// SÍ se quiere la confirmación visible, misma decisión ya tomada para el
+// otro botón de recalcular.
+var _BTN_ML_RECALC_PUNTOS_HTML = '<span class="material-symbols-outlined" style="font-size:1.1rem;">refresh</span> Recalcular puntos';
+function _mlRecalcularPuntos() {
+  var btn = document.getElementById('ml-btn-recalcular-puntos');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Recalculando...'; }
+  adminApi({ action: 'adminRecalcularPuntosAsistencia' }, function(res) {
+    if (btn) { btn.disabled = false; btn.innerHTML = _BTN_ML_RECALC_PUNTOS_HTML; }
+    if (res && res.exito) {
+      mostrarToast('Puntos de asistencia recalculados' + (res.procesados !== undefined ? ' (' + res.procesados + ' persona(s))' : '') + '.', 'ok', true);
+    } else {
+      mostrarToast((res && res.error) || 'Error al recalcular puntos.', 'error');
+    }
+  }, function(e) {
+    if (btn) { btn.disabled = false; btn.innerHTML = _BTN_ML_RECALC_PUNTOS_HTML; }
+    mostrarToast(e.message || 'Error al recalcular puntos.', 'error');
+  });
+}
