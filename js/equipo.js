@@ -287,6 +287,23 @@ function _eqAnimarAlturaFavoritos(cont, mutar) {
   }, 260);
 }
 
+// Fade-out del empty state ("Agrega personas a favoritos...") ANTES de
+// reemplazarlo (Bug 3, fix específico -- el recuadro desaparecía de golpe
+// al agregar el primer favorito, pese a que `_eqAnimarAlturaFavoritos()`
+// ya anima la altura del contenedor: esa animación cubre el ALTO del
+// contenedor, pero el `.eq-favoritos-vacio` en sí se borraba del DOM sin
+// transición propia dentro del mismo `mutar()`, así que el texto pegaba
+// un salto seco un instante antes de que la altura empezara a interpolar).
+// Si no hay empty state visible (ya hay >=1 favorito), corre `cb` directo
+// -- caso normal, sin este delay extra.
+function _eqFadeVacioFavoritosYLuego(cont, cb) {
+  var vacio = cont.querySelector('.eq-favoritos-vacio');
+  if (!vacio) { cb(); return; }
+  vacio.style.transition = 'opacity 0.18s';
+  vacio.style.opacity = '0';
+  setTimeout(cb, 180);
+}
+
 function _eqAnimarCambioFavorito(id, fav) {
   var wrap = document.getElementById('eq-favoritos-wrap');
   var cont = document.getElementById('eq-favoritos-lista');
@@ -319,19 +336,21 @@ function _eqAnimarCambioFavorito(id, fav) {
       if (f && !cont.contains(f)) origen = f;
     });
     var insertarEnFavoritos = function() {
-      _eqAnimarAlturaFavoritos(cont, function() {
-        var vacio = cont.querySelector('.eq-favoritos-vacio');
-        if (vacio) vacio.remove();
-        var tmp = document.createElement('div');
-        tmp.innerHTML = _eqFilaHtml(persona);
-        var filaNueva = tmp.firstChild;
-        filaNueva.classList.add('eq-fila-fade');
-        filaNueva.style.opacity = '0';
-        cont.insertBefore(filaNueva, cont.firstChild);
-        wrap.style.display = '';
-        _eqHidratarAvatares();
-        void filaNueva.offsetWidth;
-        filaNueva.style.opacity = '1';
+      _eqFadeVacioFavoritosYLuego(cont, function() {
+        _eqAnimarAlturaFavoritos(cont, function() {
+          var vacio = cont.querySelector('.eq-favoritos-vacio');
+          if (vacio) vacio.remove();
+          var tmp = document.createElement('div');
+          tmp.innerHTML = _eqFilaHtml(persona);
+          var filaNueva = tmp.firstChild;
+          filaNueva.classList.add('eq-fila-fade');
+          filaNueva.style.opacity = '0';
+          cont.insertBefore(filaNueva, cont.firstChild);
+          wrap.style.display = '';
+          _eqHidratarAvatares();
+          void filaNueva.offsetWidth;
+          filaNueva.style.opacity = '1';
+        });
       });
     };
     if (origen) {
@@ -356,7 +375,15 @@ function _eqAnimarCambioFavorito(id, fav) {
       _eqAnimarAlturaFavoritos(cont, function() {
         filaExistente.remove();
         if (!cont.children.length) {
-          cont.innerHTML = '<div class="eq-favoritos-vacio"><span class="material-symbols-outlined">favorite</span>Agrega personas a favoritos para verlos aquí</div>';
+          // Fade-in del empty state nuevo (Bug 3, fix específico -- mismo
+          // criterio inverso al fade-out de _eqFadeVacioFavoritosYLuego():
+          // sin esto, el recuadro aparecía de golpe en el mismo frame en
+          // que la altura del contenedor termina de encogerse).
+          cont.innerHTML = '<div class="eq-favoritos-vacio" style="opacity:0"><span class="material-symbols-outlined">favorite</span>Agrega personas a favoritos para verlos aquí</div>';
+          var vacioNuevo = cont.querySelector('.eq-favoritos-vacio');
+          vacioNuevo.style.transition = 'opacity 0.2s';
+          void vacioNuevo.offsetWidth;
+          vacioNuevo.style.opacity = '1';
         }
       });
     }, 250);
