@@ -257,66 +257,44 @@ function _eqToggleFavorito(id) {
 // transición no se ve. Al sacar: fade-out de 0.25s y recién ahí `.remove()`
 // -- el timeout coincide con la `transition` de css/equipo.css
 // (`.eq-fila-fade`).
-// Anima la altura de #eq-favoritos-lista entre el estado antes/después de
-// `mutar()` (Bug 3 -- "cards vecinas saltan sin animación al cambiar
-// favorito"): sin esto, insertar/sacar una fila cambia la altura real del
-// contenedor de golpe en el mismo frame, empujando todo lo que sigue en el
-// flujo normal del documento (`#eq-grupo-quindes`/etc., ver index.html --
-// van justo debajo, sin posicionamiento propio). Mismo patrón lock-old-
-// height/mutar/medir-scrollHeight/rAF-a-nuevo-alto ya usado para los
-// acordeones `.eq-grupo-body` (ver css/equipo.css -- "Acordeones animados
-// con max-height" en MANIFEST.md), adaptado a `height` (acá SÍ hace falta
-// volver a un valor numérico al final, a diferencia del acordeón, porque
-// el contenido de esta lista sigue cambiando con cada toggle -- dejarla en
-// `'auto'` explícito evita que un toggle futuro anime desde un `px` viejo
-// desactualizado).
-function _eqAnimarAlturaFavoritos(cont, mutar) {
-  var alturaVieja = cont.offsetHeight;
-  cont.style.height = alturaVieja + 'px';
-  cont.style.overflow = 'hidden';
-  mutar();
-  var alturaNueva = cont.scrollHeight;
-  cont.style.transition = 'height 0.25s ease';
-  requestAnimationFrame(function() {
-    cont.style.height = alturaNueva + 'px';
-  });
-  setTimeout(function() {
-    cont.style.height = 'auto';
-    cont.style.overflow = '';
-    cont.style.transition = '';
-  }, 260);
+//
+// Rediseño (Favoritos ahora es un acordeón `.eq-grupo` no colapsable,
+// oculto por completo cuando no hay favoritos -- ver MANIFEST.md/
+// CHANGELOG.md): ya no hay ningún empty state dentro de la lista
+// (`.eq-favoritos-vacio` se sacó de acá -- sigue viva en este archivo para
+// "sin rol asignado"/"mes no disponible", ver css/equipo.css). En su
+// lugar, la SECCIÓN entera (`#eq-favoritos-wrap`) se muestra/oculta con
+// fade de opacidad al agregar el primer favorito o sacar el último, vía
+// `_eqMostrarSeccionFavoritos()`/`_eqOcultarSeccionFavoritos()` de abajo.
+// Sin animación de altura del contenedor (`_eqAnimarAlturaFavoritos()`,
+// eliminada) -- igual que Quindes/Mirlxs/Inactivos, que nunca la tuvieron:
+// agregar/sacar un favorito que no sea el primero/último simplemente
+// cambia el alto de la lista sin transición propia, consistente con el
+// resto de las secciones.
+function _eqMostrarSeccionFavoritos() {
+  var wrap = document.getElementById('eq-favoritos-wrap');
+  if (!wrap) return;
+  wrap.style.display = 'block';
+  void wrap.offsetWidth;
+  wrap.style.opacity = '1';
 }
 
-// Fade-out del empty state ("Agrega personas a favoritos...") ANTES de
-// reemplazarlo (Bug 3, fix específico -- el recuadro desaparecía de golpe
-// al agregar el primer favorito, pese a que `_eqAnimarAlturaFavoritos()`
-// ya anima la altura del contenedor: esa animación cubre el ALTO del
-// contenedor, pero el `.eq-favoritos-vacio` en sí se borraba del DOM sin
-// transición propia dentro del mismo `mutar()`, así que el texto pegaba
-// un salto seco un instante antes de que la altura empezara a interpolar).
-// Si no hay empty state visible (ya hay >=1 favorito), corre `cb` directo
-// -- caso normal, sin este delay extra.
-// Bug real corregido (seguía sin animar al agregar el primer favorito):
-// faltaba el reflow forzado (`void vacio.offsetWidth`) entre fijar
-// `transition` y recién ahí cambiar `opacity` -- sin ese paso el navegador
-// puede colapsar las 2 escrituras de estilo en el mismo recálculo y saltar
-// directo al valor final sin interpolar. Mismo truco que ya usa CADA OTRA
-// transición inline de este archivo (fade de `origen`, fade de
-// `filaExistente`, fade-in de `vacioNuevo` en el path de sacar -- esta
-// función era la única que se lo saltaba).
-function _eqFadeVacioFavoritosYLuego(cont, cb) {
-  var vacio = cont.querySelector('.eq-favoritos-vacio');
-  if (!vacio) { cb(); return; }
-  vacio.style.transition = 'opacity 0.18s';
-  void vacio.offsetWidth;
-  vacio.style.opacity = '0';
-  setTimeout(cb, 180);
+function _eqOcultarSeccionFavoritos() {
+  var wrap = document.getElementById('eq-favoritos-wrap');
+  if (!wrap) return;
+  wrap.style.opacity = '0';
+  wrap.addEventListener('transitionend', function ocultarAlTerminar(ev) {
+    if (ev.propertyName !== 'opacity') return;
+    wrap.removeEventListener('transitionend', ocultarAlTerminar);
+    wrap.style.display = 'none';
+  });
 }
 
 function _eqAnimarCambioFavorito(id, fav) {
   var wrap = document.getElementById('eq-favoritos-wrap');
   var cont = document.getElementById('eq-favoritos-lista');
   if (!wrap || !cont) return;
+  var pillEl = document.getElementById('eq-favoritos-pill');
   var persona = _eqPersonaPorId(id);
   if (!persona || _eqEsUsuarioActual(persona)) return;
   if (fav) {
@@ -345,22 +323,18 @@ function _eqAnimarCambioFavorito(id, fav) {
       if (f && !cont.contains(f)) origen = f;
     });
     var insertarEnFavoritos = function() {
-      _eqFadeVacioFavoritosYLuego(cont, function() {
-        _eqAnimarAlturaFavoritos(cont, function() {
-          var vacio = cont.querySelector('.eq-favoritos-vacio');
-          if (vacio) vacio.remove();
-          var tmp = document.createElement('div');
-          tmp.innerHTML = _eqFilaHtml(persona);
-          var filaNueva = tmp.firstChild;
-          filaNueva.classList.add('eq-fila-fade');
-          filaNueva.style.opacity = '0';
-          cont.insertBefore(filaNueva, cont.firstChild);
-          wrap.style.display = '';
-          _eqHidratarAvatares();
-          void filaNueva.offsetWidth;
-          filaNueva.style.opacity = '1';
-        });
-      });
+      var eraVacio = !cont.children.length;
+      var tmp = document.createElement('div');
+      tmp.innerHTML = _eqFilaHtml(persona);
+      var filaNueva = tmp.firstChild;
+      filaNueva.classList.add('eq-fila-fade');
+      filaNueva.style.opacity = '0';
+      cont.insertBefore(filaNueva, cont.firstChild);
+      if (pillEl) pillEl.textContent = cont.children.length;
+      _eqHidratarAvatares();
+      void filaNueva.offsetWidth;
+      filaNueva.style.opacity = '1';
+      if (eraVacio) _eqMostrarSeccionFavoritos();
     };
     if (origen) {
       origen.classList.add('eq-fila-fade');
@@ -381,29 +355,9 @@ function _eqAnimarCambioFavorito(id, fav) {
     void filaExistente.offsetWidth;
     filaExistente.style.opacity = '0';
     setTimeout(function() {
-      _eqAnimarAlturaFavoritos(cont, function() {
-        filaExistente.remove();
-        if (!cont.children.length) {
-          // Fade-in del empty state nuevo (Bug 3, fix específico -- mismo
-          // criterio inverso al fade-out de _eqFadeVacioFavoritosYLuego():
-          // sin esto, el recuadro aparecía de golpe en el mismo frame en
-          // que la altura del contenedor termina de encogerse).
-          cont.innerHTML = '<div class="eq-favoritos-vacio" style="opacity:0"><span class="material-symbols-outlined">favorite</span>Agrega personas a favoritos para verlos aquí</div>';
-          var vacioNuevo = cont.querySelector('.eq-favoritos-vacio');
-          vacioNuevo.style.transition = 'opacity 0.2s';
-          // Delay antes de empezar el fade-in (pedido explícito de Victor,
-          // ajustado de 1500 a 1000ms): sin este respiro el recuadro entraba
-          // apenas terminaba de encogerse el contenedor (~260ms después de
-          // que `filaExistente` arrancó su propio fade-out), cortando la
-          // sensación de "salida" de la fila antes de que termine de
-          // asentarse. No hace falta el truco de reflow forzado acá -- con
-          // 1000ms reales de por medio el navegador ya pintó de sobra el
-          // estado `opacity:0` antes de este cambio.
-          setTimeout(function() {
-            vacioNuevo.style.opacity = '1';
-          }, 1000);
-        }
-      });
+      filaExistente.remove();
+      if (pillEl) pillEl.textContent = cont.children.length;
+      if (!cont.children.length) _eqOcultarSeccionFavoritos();
     }, 250);
   }
 }
@@ -808,21 +762,30 @@ function _eqSugerenciasReanudar() {
   if (el && input && !input.value) el.style.opacity = '1';
 }
 
+// Re-render completo (init / cambio de búsqueda) -- a diferencia de
+// _eqAnimarCambioFavorito() (toggle de un corazón puntual, con fade), acá
+// no hace falta animar nada: mismo criterio ya usado por
+// _eqRenderGrupo()/_eqRenderInactivos(), que tampoco animan sus propios
+// re-renders completos. Rediseño (acordeón .eq-grupo no colapsable, ver
+// MANIFEST.md/CHANGELOG.md): la sección se oculta del todo
+// (display:none + opacity:0) cuando no hay favoritos visibles, sin ningún
+// empty state propio -- `body.style.maxHeight = 'none'` es el mismo truco
+// ya usado por _eqRenderGrupo()/_eqRenderPorRol() para que un acordeón que
+// nace "abierto" (clase `.abierto` en el HTML, ver index.html) no quede
+// colapsado por el `max-height:0` default de `.eq-grupo-body`.
 function _eqRenderFavoritos() {
   var wrap = document.getElementById('eq-favoritos-wrap');
   var cont = document.getElementById('eq-favoritos-lista');
+  var pillEl = document.getElementById('eq-favoritos-pill');
   if (!wrap || !cont) return;
   var todas = _eqFavoritos().map(_eqPersonaPorId).filter(function(p) { return !!p && !_eqEsUsuarioActual(p) && !_eqEsInactivo(p); });
-  if (_eqBusqueda) {
-    var filtradas = todas.filter(_eqPasaBusqueda);
-    wrap.style.display = filtradas.length ? '' : 'none';
-    if (filtradas.length) cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
-  } else {
-    wrap.style.display = '';
-    cont.innerHTML = todas.length
-      ? todas.map(_eqFilaHtml).join('')
-      : '<div class="eq-favoritos-vacio"><span class="material-symbols-outlined">favorite</span>Agrega personas a favoritos para verlos aquí</div>';
-  }
+  var visibles = _eqBusqueda ? todas.filter(_eqPasaBusqueda) : todas;
+  cont.innerHTML = visibles.map(_eqFilaHtml).join('');
+  if (pillEl) pillEl.textContent = visibles.length;
+  wrap.style.display = visibles.length ? 'block' : 'none';
+  wrap.style.opacity = visibles.length ? '1' : '0';
+  var body = wrap.querySelector('.eq-grupo-body');
+  if (body) body.style.maxHeight = 'none';
   _eqHidratarAvatares();
 }
 

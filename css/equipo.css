@@ -25,14 +25,19 @@
 }
 
 /* ── Favoritos ────────────────────────────────── */
-.eq-seccion-favoritos { margin-bottom: 18px; }
-.eq-favoritos-header {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 0.82rem; font-weight: 800; color: var(--brand);
-  text-transform: uppercase; letter-spacing: 0.6px;
-  margin: 4px 0 10px;
-}
-.eq-favoritos-header .material-symbols-outlined { font-size: 1.1rem; }
+/* Rediseño: Favoritos ahora es un `.eq-grupo` idéntico a Quindes/Mirlxs/
+   Inactivos (hereda TODOS sus estilos de ahí -- header, pill, líneas,
+   body, ver "Grupos colapsables" más abajo -- sin duplicar nada). Lo único
+   específico es la transición de opacidad para el fade in/out de la
+   SECCIÓN completa al agregar/sacar el primer/último favorito
+   (`_eqAnimarCambioFavorito()`/`_eqMostrarSeccionFavoritos()`/
+   `_eqOcultarSeccionFavoritos()`, js/equipo.js) -- no colapsable, nunca
+   pasa por `_eqToggleGrupo()`. */
+.eq-favoritos-wrap { transition: opacity 0.3s ease; }
+/* `.eq-favoritos-vacio` sigue viva -- NO es exclusiva de Favoritos (que ya
+   no la usa, ver arriba): la reusan el empty state de "sin rol asignado"
+   (`_eqRenderPorRol()`) y `#eq-mes-vacio` (búsqueda por mes de cumpleaños,
+   index.html), ambos en este mismo archivo. */
 .eq-favoritos-vacio {
   border: 1.5px dashed var(--border-mid); border-radius: 14px;
   padding: 28px 16px; text-align: center; color: var(--muted); font-size: 0.82rem;

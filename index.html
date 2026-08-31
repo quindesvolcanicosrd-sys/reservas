@@ -35,7 +35,7 @@
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
 <link rel="stylesheet" href="css/eventos.css?v=94f3cbd9">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=7b8f7683">
+<link rel="stylesheet" href="css/equipo.css?v=a8a40283">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2395,9 +2395,24 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            fabricado. -->
       <div id="eq-mes-vacio" style="display:none;" class="eq-favoritos-vacio"><span class="material-symbols-outlined">cake</span>La fecha de cumpleaños no está disponible en esta lista todavía.</div>
 
-      <div class="eq-seccion-favoritos" id="eq-favoritos-wrap">
-        <div class="eq-favoritos-header"><span class="material-symbols-outlined">favorite</span>Favoritos</div>
-        <div id="eq-favoritos-lista"></div>
+      <!-- Favoritos -- acordeón NO colapsable (rediseño, ver MANIFEST.md/
+           CHANGELOG.md): mismo markup que .eq-grupo (Quindes/Mirlxs/
+           Inactivos, más abajo) para heredar sus estilos tal cual, sin
+           botón de colapsar ni chevron -- nunca pasa por _eqToggleGrupo().
+           Arranca oculta (display:none + opacity:0); _eqRenderFavoritos()/
+           js/equipo.js la muestra si hay al menos 1 favorito real. El fade
+           in/out al agregar/sacar el primer/último favorito lo maneja
+           _eqAnimarCambioFavorito() (misma función de siempre). -->
+      <div class="eq-grupo eq-favoritos-wrap" id="eq-favoritos-wrap" style="display:none; opacity:0;">
+        <div class="eq-grupo-header">
+          <span class="eq-grupo-linea"></span>
+          <span class="eq-grupo-pill" id="eq-favoritos-pill">0</span>
+          <span class="eq-grupo-nombre">Favoritos</span>
+          <span class="eq-grupo-linea"></span>
+        </div>
+        <div class="eq-grupo-body abierto">
+          <div class="eq-grupo-body-inner" id="eq-favoritos-lista"></div>
+        </div>
       </div>
 
       <div class="eq-grupo" id="eq-grupo-quindes">
@@ -2964,7 +2979,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/ui.js?v=66148b6f"></script>
 <script src="js/eventos.js?v=30628b15"></script>
 <script src="js/tareas.js"></script>
-<script src="js/equipo.js?v=231e6dee"></script>
+<script src="js/equipo.js?v=22b6565e"></script>
 <script src="js/home.js?v=cf4b0197"></script>
 <script src="js/reservas.js?v=ce8c13b6"></script>
 <script src="js/perfil.js?v=b56e42f0"></script>
