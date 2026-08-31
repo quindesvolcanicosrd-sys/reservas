@@ -175,24 +175,26 @@
 .eq-mini-stat .material-symbols-rounded { font-size: 0.9rem; color: var(--brand); }
 /* `.eq-mini-tier-pill` (pill Q/M) eliminada (pedido explícito, ver
    MANIFEST.md -- "quitar pills Q/M, mantener solo chevrones de tendencia"):
-   `_eqStatsInlineHtml()`/js/equipo.js ya no la renderiza, el chevron de
-   abajo es el único indicador que queda. */
-.eq-mini-tendencia { font-size: 0.85rem; line-height: 1; font-weight: 700; pointer-events: none; }
-.eq-mini-tendencia-up { color: var(--success); }
-.eq-mini-tendencia-down { color: var(--error); }
-/* Círculo de tendencia de puntos (feat nueva, ver MANIFEST.md) -- distinto
-   del chevron de arriba (pelado, sin fondo, tendencia de termómetro): este
-   es un círculo ~20px con fondo sutil, sobre `puntosTareas+puntosAsistencia`
-   mes actual vs. mes anterior (`p.tendencia`, getEquipo()). Variables de
-   colors.css tal cual, sin colores hardcodeados -- `--success`/`--success-bg`
-   y `--danger`/`--danger-bg` (no `--error`/`--error-light`, aunque son alias
-   del mismo valor -- mismo par ya usado en el resto de esta sección para
-   verde/rojo). */
+   `_eqStatsInlineHtml()`/js/equipo.js ya no la renderiza. El chevron de
+   tendencia que reemplazó a esa pill (texto pelado, condicionado a
+   `termometro_pct_anterior` -- un campo que nunca llegó a existir en
+   `getEquipo()`) también se sacó (ver MANIFEST.md "Cambios recientes"):
+   `.eq-tendencia-circulo` de abajo es hoy el único indicador de tendencia,
+   mismo concepto (termómetro), ahora con dato real. */
+/* Círculo de tendencia de termómetro (ver MANIFEST.md) -- círculo ~20px con
+   fondo sutil + ícono Material adentro, sobre el mismo valor que arma el
+   termómetro de la vista de detalle (`p.tendencia`, getEquipo():
+   'sube'/'baja'/`null`, re-ejecuta `calcularTermometroPct()` con "hoy" y
+   "hace 1 mes"). Variables de colors.css tal cual, sin colores hardcodeados
+   -- `--success`/`--success-bg` y `--danger`/`--danger-bg` (no
+   `--error`/`--error-light`, aunque son alias del mismo valor -- mismo par
+   ya usado en el resto de esta sección para verde/rojo). */
 .eq-tendencia-circulo {
   display: inline-flex; align-items: center; justify-content: center;
   width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
-  font-size: 0.62rem; line-height: 1; pointer-events: none;
+  pointer-events: none;
 }
+.eq-tendencia-circulo .material-symbols-outlined { font-size: 14px; }
 .eq-tendencia-circulo-sube { background: var(--success-bg); color: var(--success); }
 .eq-tendencia-circulo-baja { background: var(--danger-bg); color: var(--danger); }
 .eq-fav-btn {

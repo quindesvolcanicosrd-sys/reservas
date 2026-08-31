@@ -2348,34 +2348,11 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
   // pueden cruzar años, así que el filtro real de período se aplica abajo
   // comparando fechas de calendario completas (`anio-mes-01`), no por año
   // suelto.
-  // Tendencia mes actual vs. mes anterior (feat nueva, ver MANIFEST.md) --
-  // solo tiene sentido comparar 2 puntos consecutivos en el tiempo cuando
-  // el período pedido ES el mes calendario actual (default sin parámetros,
-  // o `params.mes`/`params.anio` explícitos que resuelven a hoy) -- contra
-  // un histórico, un rango de varios meses o un mes pasado puntual no hay
-  // un "mes anterior" real y único con el que comparar, así que la
-  // comparación queda condicionada a esto en vez de forzar una lectura
-  // engañosa. Comparado tal cual contra `desdePeriodo`/`hastaPeriodo` ya
-  // resueltos arriba -- cubre los 2 caminos que llegan al mes actual (el
-  // branch default Y `mes`+`anio` explícitos con esos valores) sin
-  // duplicar la lógica de resolución de fechas.
-  const esPeriodoMesActual = desdePeriodo === (anioActual + '-' + String(mesActual).padStart(2, '0') + '-01')
-    && hastaPeriodo === primerDiaSiguiente(anioActual, mesActual);
-  const mesAnteriorRef = mesActual === 1 ? 12 : mesActual - 1;
-  const anioAnteriorRef = mesActual === 1 ? anioActual - 1 : anioActual;
   const { data: puntosData } = await supabase.from('puntos_mensuales')
     .select('nombre_usuario, anio, mes, puntos_asistencia, puntos_tareas, puntos_total')
     .in('nombre_usuario', usernames);
   const puntosPeriodoPorUsuario: Record<string, { asistencia: number; tareas: number; total: number }> = {};
   const puntosAnioPorUsuario: Record<string, number> = {};
-  // Suma SOLO puntos_asistencia + puntos_tareas del mes anterior (no
-  // puntos_total -- pedido explícito: la tendencia compara esfuerzo
-  // "activo" mes a mes, sin que un ajuste de puntos_bonificacion/
-  // puntos_extra de un solo mes dispare una tendencia falsa). Presencia en
-  // el mapa (no el valor) es lo que distingue "hay fila real para ese mes"
-  // de "nunca se generó puntos_mensuales para ese mes" -- ver el uso más
-  // abajo, `!== undefined` es la condición real de "hay datos".
-  const puntosMesAnteriorPorUsuario: Record<string, number> = {};
   (puntosData ?? []).forEach((p: any) => {
     if (Number(p.anio) === anioActual) {
       puntosAnioPorUsuario[p.nombre_usuario] = (puntosAnioPorUsuario[p.nombre_usuario] || 0) + (Number(p.puntos_total) || 0);
@@ -2387,24 +2364,115 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
       puntosPeriodoPorUsuario[p.nombre_usuario].tareas += Number(p.puntos_tareas) || 0;
       puntosPeriodoPorUsuario[p.nombre_usuario].total += Number(p.puntos_total) || 0;
     }
-    if (esPeriodoMesActual && Number(p.anio) === anioAnteriorRef && Number(p.mes) === mesAnteriorRef) {
-      puntosMesAnteriorPorUsuario[p.nombre_usuario] = (puntosMesAnteriorPorUsuario[p.nombre_usuario] || 0)
-        + (Number(p.puntos_asistencia) || 0) + (Number(p.puntos_tareas) || 0);
-    }
   });
-  // `tendencia` por persona ('sube'/'baja'/ausente = sin comparación
-  // posible) -- calculada acá, aparte, en vez de inline en `personasOut`
-  // más abajo (que sigue siendo un objeto de una sola expresión por
-  // persona, mismo criterio que `puntosPeriodoPorUsuario`/
-  // `puntosAnioPorUsuario` de arriba).
+
+  // Tendencia de termómetro, hoy vs. hace 1 mes (feat re-hecha, ver
+  // MANIFEST.md -- la 1ra versión comparaba puntosAsistencia+puntosTareas
+  // del mes actual/anterior; pedido explícito de reemplazarla por "el mismo
+  // valor que usa el termómetro", NO los puntos del mes). El termómetro real
+  // (`equipo.termometro_pct`, poblado por `calcularTermometroPct()` en
+  // `recalcular-categorias/index.ts`) es un snapshot que se pisa cada vez
+  // que corre ese recálculo -- no existe ninguna columna con el valor de
+  // hace un mes para comparar. En vez de sumar una columna/migración nueva
+  // para guardar historial, esta función RE-EJECUTA la misma fórmula
+  // (puerto 1:1 de `calcularTermometroPct()`/`contarClases()`/
+  // `sumarPuntos()`, mismo archivo de arriba) 2 veces con una fecha de
+  // referencia distinta ("hoy" y "hace 1 mes") -- da el valor real que el
+  // termómetro tendría en cada momento, sin depender de si
+  // "Recalcular ahora" corrió recientemente. Sin período/filtro de la UI
+  // (a diferencia de puntosAsistencia/puntosTareas/puntosTotal arriba): el
+  // termómetro nunca dependió del filtro de período de puntaje, así que su
+  // tendencia tampoco -- se calcula siempre, en cualquier modo (mes/rango/
+  // histórico).
+  const fechaISO = (d: Date): string => d.toISOString().slice(0, 10);
+  // "n meses atrás desde una fecha de referencia" -- puerto directo de
+  // primerDiaMesesAtras()/recalcular-categorias/index.ts, parametrizado por
+  // `refDate` (ahí siempre era "hoy") para poder pedir la ventana tanto
+  // desde hoy como desde `haceUnMes` (definida abajo, con `n=1` sobre este
+  // mismo helper -- sin duplicar la aritmética de fin-de-mes).
+  const primerDiaMesesAtras = (refDate: Date, n: number): Date => {
+    const year = refDate.getUTCFullYear();
+    const month = refDate.getUTCMonth() - n;
+    const dia = Math.min(refDate.getUTCDate(), new Date(Date.UTC(year, month + 1, 0)).getUTCDate());
+    return new Date(Date.UTC(year, month, dia));
+  };
+  const haceUnMes = primerDiaMesesAtras(hoy, 1);
+  const nombresDe = (s: string | null | undefined): string[] =>
+    String(s ?? '').split(',').map((n: string) => n.trim().toUpperCase()).filter(Boolean);
+  const { data: tiersData } = await supabase.from('config_tiers').select('*').order('orden', { ascending: true });
+  const tiers = tiersData ?? [];
+  const tierDefaultTermometro = tiers.find((t: any) => t.es_default === true);
+  const tiersNoDefaultTermometro = tierDefaultTermometro
+    ? tiers.filter((t: any) => t.id !== tierDefaultTermometro.id).sort((a: any, b: any) => a.orden - b.orden)
+    : [];
+  // "Tier techo" -- mismo criterio que calcularTermometroPct()/
+  // recalcular-categorias/index.ts: 'Quindes' por nombre si existe, si no
+  // el primero de los no-default (ya ordenados por `orden`).
+  const tierTecho = tiersNoDefaultTermometro.find((t: any) => t.nombre === 'Quindes') ?? tiersNoDefaultTermometro[0] ?? null;
+  const ventanaMesesTecho = tierTecho ? (Number(tierTecho.ventana_meses) || 0) : 0;
+  // Ventana ancha (`ventanaMesesTecho + 1` meses atrás desde HOY) para cubrir
+  // en un solo fetch tanto la ventana de "hoy" ([hoy−ventana, hoy)) como la
+  // de "hace 1 mes" ([haceUnMes−ventana, haceUnMes)) -- contarClases() de
+  // abajo filtra la porción exacta de cada una sobre este mismo array, sin
+  // pedirle a la DB 2 veces.
+  const { data: asistDataTermometro } = await supabase.from('asistencias')
+    .select('fecha, a_horario, tarde')
+    .not('estado', 'in', '("Evento Cancelado","No se entrena")')
+    .gte('fecha', fechaISO(primerDiaMesesAtras(hoy, ventanaMesesTecho + 1)))
+    .lt('fecha', fechaISO(hoy));
+  const contarClases = (username: string, asOf: Date): number => {
+    const desde = fechaISO(primerDiaMesesAtras(asOf, ventanaMesesTecho));
+    const hasta = fechaISO(asOf);
+    const u = username.trim().toUpperCase();
+    let n = 0;
+    for (const fila of asistDataTermometro ?? []) {
+      if (!fila.fecha || fila.fecha < desde || fila.fecha >= hasta) continue;
+      if (nombresDe(fila.a_horario).includes(u) || nombresDe(fila.tarde).includes(u)) n++;
+    }
+    return n;
+  };
+  // `puntos_total` (no `puntos_asistencia+puntos_tareas`) -- mismo campo
+  // que usa sumarPuntos()/recalcular-categorias/index.ts para el
+  // termómetro real, a propósito distinto del criterio que usa
+  // `puntosPeriodoPorUsuario` de arriba (esa sí es solo asistencia+tareas,
+  // por pedido explícito de esa feature -- 2 cálculos distintos, cada uno
+  // fiel a su propia fuente real).
+  const sumarPuntosTermometro = (username: string, asOfIdx: number): number => {
+    let total = 0;
+    for (const fila of puntosData ?? []) {
+      if (fila.nombre_usuario !== username) continue;
+      const idxFila = Number(fila.anio) * 12 + (Number(fila.mes) - 1);
+      const diff = asOfIdx - idxFila;
+      if (diff < 0 || diff > ventanaMesesTecho) continue;
+      total += Number(fila.puntos_total) || 0;
+    }
+    return total;
+  };
+  const calcularTermometroPctAsOf = (username: string, asOf: Date, asOfIdx: number): number => {
+    if (!tierTecho) return 0;
+    const clases = contarClases(username, asOf);
+    const puntos = sumarPuntosTermometro(username, asOfIdx);
+    const minClases = Number(tierTecho.min_clases) || 0;
+    const minPuntos = Number(tierTecho.min_puntos) || 0;
+    const ratios: number[] = [];
+    if (minClases > 0) ratios.push(clases / minClases);
+    if (minPuntos > 0) ratios.push(puntos / minPuntos);
+    if (!ratios.length) return 0;
+    const combinado = tierTecho.logica === 'Y' ? Math.min(...ratios) : Math.max(...ratios);
+    return Math.min(100, Math.max(0, combinado * 100));
+  };
+  const idxActualTermometro = anioActual * 12 + (mesActual - 1);
+  // `tendencia` por persona ('sube'/'baja'/ausente = igual o sin tier techo
+  // configurado) -- calculada acá, aparte, en vez de inline en
+  // `personasOut` más abajo (mismo criterio que `puntosPeriodoPorUsuario`/
+  // `puntosAnioPorUsuario`: un objeto de una sola expresión por persona).
   const tendenciaPorUsuario: Record<string, 'sube' | 'baja'> = {};
-  if (esPeriodoMesActual) {
+  if (tierTecho) {
     usernames.forEach((u: string) => {
-      const anteriorSum = puntosMesAnteriorPorUsuario[u];
-      if (anteriorSum === undefined) return;
-      const actualSum = puntosPeriodoPorUsuario[u] ? puntosPeriodoPorUsuario[u].asistencia + puntosPeriodoPorUsuario[u].tareas : 0;
-      if (actualSum > anteriorSum) tendenciaPorUsuario[u] = 'sube';
-      else if (actualSum < anteriorSum) tendenciaPorUsuario[u] = 'baja';
+      const actualPct = calcularTermometroPctAsOf(u, hoy, idxActualTermometro);
+      const anteriorPct = calcularTermometroPctAsOf(u, haceUnMes, idxActualTermometro - 1);
+      if (actualPct > anteriorPct) tendenciaPorUsuario[u] = 'sube';
+      else if (actualPct < anteriorPct) tendenciaPorUsuario[u] = 'baja';
       // Iguales -- queda sin entrada, `personasOut` la traduce a `null`.
     });
   }
@@ -2476,12 +2544,13 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     puntosTotal: (puntosPeriodoPorUsuario[r.username] ? puntosPeriodoPorUsuario[r.username].total : 0)
       + (esHistorico ? (Number(r.puntos_anteriores) || 0) : 0),
     puntosAnio: Number(puntosAnioPorUsuario[r.username]) || 0,
-    // Tendencia mes actual vs. mes anterior (feat nueva, ver MANIFEST.md) --
-    // 'sube'/'baja' calculadas arriba (`tendenciaPorUsuario`, solo cuando
-    // `esPeriodoMesActual`), `null` en cualquier otro caso: período distinto
-    // al mes actual, sin fila de `puntos_mensuales` para el mes anterior, o
-    // mismo puntaje en ambos meses -- el frontend (`_eqStatsInlineHtml()`/
-    // js/equipo.js) solo pinta el círculo de tendencia si esto NO es `null`.
+    // Tendencia de termómetro, hoy vs. hace 1 mes (ver el bloque
+    // `calcularTermometroPctAsOf()` más arriba en esta función) --
+    // 'sube'/'baja' calculadas ahí (`tendenciaPorUsuario`), `null` si el
+    // termómetro dio el mismo valor en ambos momentos o si no hay ningún
+    // tier no-default configurado (`tierTecho` null, termómetro sin sentido
+    // posible). El frontend (`_eqStatsInlineHtml()`/js/equipo.js) solo
+    // pinta el círculo de tendencia si esto NO es `null`.
     tendencia: tendenciaPorUsuario[r.username] || null,
     // Bug real "termómetro visible aunque la persona necesite equipo del
     // club" (ver MANIFEST.md): `equipo.necesita_patines`/`necesita_protecciones`

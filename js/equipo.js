@@ -547,42 +547,26 @@ function _eqStatsInlineHtml(p) {
   if (p.puntosAsistencia !== undefined && p.puntosAsistencia !== null) {
     html += '<span class="eq-mini-stat"><span class="material-symbols-rounded">stars</span>' + p.puntosAsistencia + '</span>';
   }
-  // Círculo de tendencia de puntos (feat nueva, ver MANIFEST.md) -- compara
-  // puntosTareas+puntosAsistencia del mes actual contra el mes anterior,
-  // YA CALCULADO en el backend (`tendencia`, getEquipo()/
-  // supabase/functions/api/index.ts: 'sube'/'baja'/`null`) -- nada que
-  // recalcular acá, el frontend solo pinta según ese valor. `null` cubre 3
-  // casos que el backend distingue pero el frontend no necesita separar:
-  // período pedido distinto al mes actual (mes específico pasado, rango,
-  // histórico), sin fila de `puntos_mensuales` para el mes anterior, o
-  // mismo puntaje en ambos meses -- en los 3, no se pinta nada (pedido
-  // explícito: "si es igual o no hay datos del mes anterior, no mostrar
-  // nada"). Distinto del chevron de tendencia de termómetro de abajo
-  // (`.eq-mini-tendencia`, `termometro_pct_anterior` -- campo que sigue sin
-  // existir en `getEquipo()`, ese sigue muerto) -- son 2 indicadores de
-  // tendencia separados, sobre 2 métricas distintas (puntos vs. tier), con
-  // su propio estilo visual (círculo con fondo sutil acá, texto pelado ahí).
+  // Círculo de tendencia de termómetro (re-hecho, ver MANIFEST.md -- 1ra
+  // versión comparaba puntosTareas+puntosAsistencia del mes actual/anterior;
+  // pedido explícito de basarla en el MISMO valor que usa el termómetro de
+  // la vista de detalle, no los puntos del mes). YA CALCULADO en el backend
+  // (`tendencia`, getEquipo()/supabase/functions/api/index.ts:
+  // 'sube'/'baja'/`null` -- re-ejecuta `calcularTermometroPct()` con "hoy" y
+  // "hace 1 mes" como fecha de referencia y compara) -- nada que recalcular
+  // acá, el frontend solo pinta según ese valor. `null` = mismo valor en
+  // ambos momentos, o sin tier no-default configurado (termómetro sin
+  // sentido posible) -- en ambos casos, no se pinta nada (pedido explícito:
+  // "si es igual o sin datos anteriores, no mostrar nada"). Reemplaza al
+  // chevron muerto que existía acá antes (`.eq-mini-tendencia`, condicionado
+  // a `termometro_pct_anterior` -- un campo que nunca llegó a existir en
+  // `getEquipo()`, nunca se pintó en producción) -- mismo concepto
+  // (tendencia de termómetro), ahora con dato real. Íconos Material
+  // (`keyboard_double_arrow_up`/`_down`, pedido explícito -- no glifos de
+  // texto ▲/▼) sobre un círculo con fondo sutil.
   if (p.tendencia === 'sube' || p.tendencia === 'baja') {
-    html += '<span class="eq-tendencia-circulo eq-tendencia-circulo-' + p.tendencia + '">' + (p.tendencia === 'sube' ? '▲' : '▼') + '</span>';
-  }
-  // Chevron de tendencia de termómetro (re-auditado, ver MANIFEST.md --
-  // "chevrones no aparecen en vista preliminar de cards"). Campo buscado
-  // explícitamente en el objeto real (misma lista completa que el
-  // comentario de puntos, un poco más arriba en esta función): `getEquipo()`
-  // trae `termometro_pct` (el valor ACTUAL), pero ningún valor anterior con
-  // el que compararlo -- ni `termometro_delta`, ni `termometro_pct_anterior`,
-  // ni nada equivalente (confirmado contra el `.select()`/`.map()` real de
-  // esa función, supabase/functions/api/index.ts -- distinto de `tendencia`,
-  // arriba, que sí existe pero es sobre puntos, no termómetro). Sin un 2do
-  // punto en el tiempo no hay tendencia real que calcular -- este `<span>`
-  // queda condicionado a `termometro_pct_anterior` (nombre elegido para
-  // cuando exista) a propósito, en vez de comparar contra 0 o inventar
-  // cualquier otro valor que simule una tendencia falsa. Documentado en
-  // MANIFEST.md ("Datos pendientes del backend").
-  if (p.termometro_pct_anterior !== undefined && p.termometro_pct_anterior !== null) {
-    var diff = (p.termometro_pct || 0) - p.termometro_pct_anterior;
-    if (diff > 0) html += '<span class="eq-mini-tendencia eq-mini-tendencia-up">▲</span>';
-    else if (diff < 0) html += '<span class="eq-mini-tendencia eq-mini-tendencia-down">▼</span>';
+    html += '<span class="eq-tendencia-circulo eq-tendencia-circulo-' + p.tendencia + '">' +
+      '<span class="material-symbols-outlined">keyboard_double_arrow_' + (p.tendencia === 'sube' ? 'up' : 'down') + '</span></span>';
   }
   return html;
 }
