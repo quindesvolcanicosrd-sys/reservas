@@ -306,14 +306,10 @@
 .eq-avatar-wrap { position: relative; width: 96px; height: 96px; }
 .eq-avatar-grande { width: 96px; height: 96px; }
 .eq-avatar-grande .avatar-pill-letter { font-size: 34px; }
-/* Pill de rol -- "superpuesto debajo del avatar (no encima)": pegado al
-   borde inferior del círculo, sin taparle la cara. */
-.eq-rol-pill {
-  position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%);
-  background: var(--brand); color: var(--white); font-size: 0.62rem; font-weight: 800;
-  padding: 4px 12px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px;
-  white-space: nowrap; box-shadow: 0 2px 8px var(--black-15);
-}
+/* `.eq-rol-pill` (pill de categoría superpuesta bajo la foto) eliminada
+   (pedido explícito, re-ajuste, ver MANIFEST.md) -- la categoría
+   Quindes/Mirlxs se movió a `.eq-perfil-pills-row--top` (más abajo, junto
+   a pronombres), ya no vive sobre/bajo la foto. */
 /* Badge de tendencia de termómetro sobre la foto (rediseño, ver
    MANIFEST.md -- vivía como círculo suelto en la fila de stats de la lista,
    ver el comentario de `.eq-mini-stat` más arriba; pedido explícito de
@@ -326,16 +322,15 @@
       de lista/favoritos y "Mis estadísticas" -- esas 2 fotos NO tenían
       ningún wrapper `position:relative` propio antes de esto, se agrega acá
       -- ver `_eqAvatarConTendenciaHtml()`/js/equipo.js). `right`/`bottom`
-      negativos a propósito (mismo criterio visual que `.eq-rol-pill`
-      arriba, semi-superpuesto al borde del círculo, no clavado adentro).
-      `pointer-events:none` -- mismo criterio que el resto de indicadores
-      sueltos de esta sección (`.eq-mini-stat`, arriba): el click siempre
-      tiene que propagar al contenedor real (`_eqAbrirPerfil()`/toggle de
-      favorito), nunca quedar atrapado acá. `z-index:2` (bug real
-      corregido, perfil de detalle) -- sin esto, `.eq-rol-pill` (agregada
-      después en el DOM dentro del mismo `.eq-avatar-wrap`, sin z-index
-      propio) pintaba encima del badge por orden de aparición, tapándolo
-      parcialmente.
+      negativos a propósito, semi-superpuesto al borde del círculo, no
+      clavado adentro. `pointer-events:none` -- mismo criterio que el resto
+      de indicadores sueltos de esta sección (`.eq-mini-stat`, arriba): el
+      click siempre tiene que propagar al contenedor real
+      (`_eqAbrirPerfil()`/toggle de favorito), nunca quedar atrapado acá.
+      `z-index:2` (bug real corregido en el perfil de detalle cuando
+      `.eq-rol-pill` todavía vivía en este wrapper -- pintaba encima del
+      badge por orden de aparición; se deja el z-index igual, ya no hace
+      falta pero tampoco molesta a nada).
    Fondo OPACO (pedido explícito, re-ajuste -- antes `--success-bg`/
    `--danger-bg`, que son rgba con alpha reducido en colors.css, pensadas
    para "fondo sutil" de chips sobre superficie plana; sobre una FOTO se
@@ -365,13 +360,23 @@
 .eq-perfil-nombre { font-size: 1.3rem; font-weight: 800; color: var(--text); margin-top: 20px; }
 .eq-perfil-sub { font-size: 0.85rem; color: var(--muted); margin-top: 3px; }
 
-/* Fila de pills deslizable -- pronombres + roles, sin scrollbar visible. */
+/* Fila de pills deslizable -- roles (ver comentario en
+   _eqPerfilContenidoHtml()/js/equipo.js: sin dato real hoy, nunca se
+   pinta en la práctica), sin scrollbar visible. */
 .eq-perfil-pills-row {
   display: flex; gap: 8px; overflow-x: auto; padding: 18px 16px 2px; margin: 0 -16px;
   scrollbar-width: none;
 }
 .eq-perfil-pills-row::-webkit-scrollbar { display: none; }
 .eq-perfil-pills-row .aj-pill { flex-shrink: 0; cursor: default; }
+/* Fila "de arriba" -- categoría (Quindes/Mirlxs) + pronombres, justo debajo
+   del nombre (pedido explícito, re-ajuste, ver MANIFEST.md) -- variante de
+   `.eq-perfil-pills-row` de arriba, pero centrada y sin scroll/sangrado de
+   borde (esta fila nunca tiene más de 2 pills, a diferencia de `roles`, que
+   sí puede desbordar). */
+.eq-perfil-pills-row--top {
+  overflow: visible; justify-content: center; padding: 10px 0 0; margin: 0;
+}
 
 /* Stats anuales -- 2 tarjetas lado a lado, fondo suave sin borde duro. */
 .eq-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0 6px; }
@@ -432,7 +437,12 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
    no un divisor neutro) y `--muted` para textos apagados (no existe
    `--text-muted` en css/colors.css, `--muted` es el token real). */
 .eq-tier-admin { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-light); }
-.eq-tier-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 8px; }
+/* `text-transform:uppercase` sacado (pedido explícito, re-ajuste) -- los 4
+   labels que usan esta clase ("Categoría"/"Estado"/"Paga cuota"/"Admin",
+   ver _eqTierAdminHtml()/_eqAdminGestionHtml()/js/equipo.js) ya vienen en
+   minúscula normal desde el string real, este `text-transform` era lo
+   único que los mostraba en mayúsculas. */
+.eq-tier-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 8px; }
 .eq-tier-control { display: flex; gap: 6px; margin-bottom: 8px; }
 .eq-tier-btn {
   flex: 1; padding: 8px 0; border-radius: var(--radius); border: 1px solid var(--border);

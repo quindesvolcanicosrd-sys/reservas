@@ -1641,6 +1641,16 @@ function _eqAdminGestionHtml(p) {
   // username en el backend) no tienen a quién apuntar -- mismo criterio de
   // "deshabilitar con hint" que el toggle de cuota en Lesionadx.
   var sinEmail = !p.email;
+  // "Paga cuota"/"Admin" (pedido explícito, re-ajuste, ver MANIFEST.md) --
+  // se movieron DENTRO de `.eq-acord-cuerpo` de "Estado" (antes eran 2
+  // `.eq-admin-campo--row` propios, siempre visibles) -- al colapsar
+  // "Estado" (`eqToggleAcordeon()`, ya existente) ambos toggles se ocultan
+  // solos, sin lógica nueva: `.eq-acord-cuerpo` ya colapsa TODO su
+  // contenido vía `max-height:0` (css/equipo.css), pasen los toggles a
+  // formar parte de él o no. `_eqToggleCuota()`/`_eqToggleAdmin()`/
+  // `_eqCambiarEstado()` (más abajo) siguen ubicando estos nodos por id
+  // (`#eq-tog-cuota-<id>`/`#eq-tog-admin-<id>`/etc.) -- ningún cambio de
+  // lógica, solo de posición en el DOM.
   return '<div class="eq-admin-quindes' + (p.tierModo === 'mirlxs' ? ' eq-oculto' : '') + '" id="eq-admin-q-' + p.id + '">' +
       '<div class="eq-admin-sep"></div>' +
       '<div class="eq-admin-campo eq-acord">' +
@@ -1651,29 +1661,29 @@ function _eqAdminGestionHtml(p) {
         '<div class="eq-acord-cuerpo">' +
           '<div class="eq-estado-opciones">' + botonesEstado + '</div>' +
           '<p class="eq-admin-hint" id="eq-estado-hint-' + p.id + '">' + hint + '</p>' +
+          '<div class="eq-admin-campo--row" style="margin-top:14px;">' +
+            '<div>' +
+              '<p class="eq-tier-label" style="margin-bottom:2px">Paga cuota</p>' +
+              '<p class="eq-admin-hint" style="margin:0" id="eq-cuota-hint-' + p.id + '">' + (estadoActual === 'Lesionadx' ? 'Exento/a de cuota mientras está Lesionadx.' : 'Indica si está al día con la cuota mensual.') + '</p>' +
+            '</div>' +
+            '<label class="eq-toggle" id="eq-tog-cuota-' + p.id + '">' +
+              '<input type="checkbox"' + (pagaCuota ? ' checked' : '') + (estadoActual === 'Lesionadx' ? ' disabled' : '') +
+                ' onchange="_eqToggleCuota(\'' + p.id + '\', this.checked)">' +
+              '<span class="eq-toggle-slider"></span>' +
+            '</label>' +
+          '</div>' +
+          '<div class="eq-admin-campo--row" style="margin-top:14px;">' +
+            '<div>' +
+              '<p class="eq-tier-label" style="margin-bottom:2px">Admin</p>' +
+              '<p class="eq-admin-hint" style="margin:0" id="eq-admin-hint-' + p.id + '">' + (sinEmail ? 'Sin email registrado -- no se puede dar acceso admin.' : 'Tendrá acceso completo al panel de administración (Mi Liga).') + '</p>' +
+            '</div>' +
+            '<label class="eq-toggle" id="eq-tog-admin-' + p.id + '">' +
+              '<input type="checkbox"' + (p.esAdminMiembro ? ' checked' : '') + (sinEmail ? ' disabled' : '') +
+                ' onchange="_eqToggleAdmin(\'' + p.id + '\', this.checked, this)">' +
+              '<span class="eq-toggle-slider"></span>' +
+            '</label>' +
+          '</div>' +
         '</div>' +
-      '</div>' +
-      '<div class="eq-admin-campo eq-admin-campo--row">' +
-        '<div>' +
-          '<p class="eq-tier-label" style="margin-bottom:2px">Paga cuota</p>' +
-          '<p class="eq-admin-hint" style="margin:0" id="eq-cuota-hint-' + p.id + '">' + (estadoActual === 'Lesionadx' ? 'Exento/a de cuota mientras está Lesionadx.' : 'Indica si está al día con la cuota mensual.') + '</p>' +
-        '</div>' +
-        '<label class="eq-toggle" id="eq-tog-cuota-' + p.id + '">' +
-          '<input type="checkbox"' + (pagaCuota ? ' checked' : '') + (estadoActual === 'Lesionadx' ? ' disabled' : '') +
-            ' onchange="_eqToggleCuota(\'' + p.id + '\', this.checked)">' +
-          '<span class="eq-toggle-slider"></span>' +
-        '</label>' +
-      '</div>' +
-      '<div class="eq-admin-campo eq-admin-campo--row">' +
-        '<div>' +
-          '<p class="eq-tier-label" style="margin-bottom:2px">Administradora</p>' +
-          '<p class="eq-admin-hint" style="margin:0" id="eq-admin-hint-' + p.id + '">' + (sinEmail ? 'Sin email registrado -- no se puede dar acceso admin.' : 'Tendrá acceso completo al panel de administración (Mi Liga).') + '</p>' +
-        '</div>' +
-        '<label class="eq-toggle" id="eq-tog-admin-' + p.id + '">' +
-          '<input type="checkbox"' + (p.esAdminMiembro ? ' checked' : '') + (sinEmail ? ' disabled' : '') +
-            ' onchange="_eqToggleAdmin(\'' + p.id + '\', this.checked, this)">' +
-          '<span class="eq-toggle-slider"></span>' +
-        '</label>' +
       '</div>' +
     '</div>';
 }
@@ -1783,12 +1793,14 @@ function _eqFormatearFechaIngreso(iso) {
 }
 
 function _eqPerfilContenidoHtml(p) {
+  // `pronombres` se sacó de acá (pedido explícito, re-ajuste, ver
+  // MANIFEST.md) -- se muestra en `categoriaPronombresHtml`, más abajo,
+  // junto a la categoría. `pills`/`pillsHtml` quedan solo para `p.roles`
+  // (Jammer/Bloqueadora/Capitana/etc, nunca tuvo columna real en `equipo`,
+  // auditado en el Cambio 55, ver MANIFEST.md -- `getEquipo()` no lo
+  // devuelve, así que este `.forEach` no agrega nada hoy; se deja el guard,
+  // no un array hardcodeado, por si Victor agrega esa columna a futuro).
   var pills = [];
-  if (p.pronombres) pills.push(p.pronombres);
-  // `p.roles` (Jammer/Bloqueadora/Capitana/etc) nunca tuvo columna real en
-  // `equipo` (auditado en el Cambio 55, ver MANIFEST.md) -- `getEquipo()` no
-  // lo devuelve, así que este `.forEach` no agrega nada hoy. Se deja el
-  // guard (no un array hardcodeado) por si Victor agrega esa columna a futuro.
   (p.roles || []).forEach(function(r) { pills.push(r); });
   var pillsHtml = pills.map(function(txt) { return '<span class="aj-pill">' + _eqEsc(txt) + '</span>'; }).join('');
 
@@ -1844,13 +1856,26 @@ function _eqPerfilContenidoHtml(p) {
   // guarda con `if (rankWrap)`/`if (fill)` antes de tocar este bloque, así
   // que no renderizarlo acá no rompe nada ahí.
   var necesitaEquipoClub = !!(p.necesitaPatines || p.necesitaProtecciones);
+  // Categoría (Quindes/Mirlxs) + pronombres, misma fila, justo debajo del
+  // nombre (pedido explícito, re-ajuste, ver MANIFEST.md) -- la categoría
+  // vivía como `.eq-rol-pill` superpuesta bajo la foto (ver comentario en
+  // css/equipo.css); pronombres vivía mezclado con `roles` (ver `pills`/
+  // `pillsHtml` más arriba, todavía usado para `roles`, que nunca tuvo
+  // dato real -- ver ese comentario) en `.eq-perfil-pills-row` de abajo.
+  // Reusa `.eq-mis-stats-rol-pill` (misma pill de categoría que "Mis
+  // estadísticas", css/equipo.css) para la categoría -- pronombres sigue
+  // en `.aj-pill`, mismo look genérico de siempre.
+  var categoriaPronombresHtml = '<div class="eq-perfil-pills-row eq-perfil-pills-row--top">' +
+    '<span class="eq-mis-stats-rol-pill">' + _eqEsc(p.rol) + '</span>' +
+    (p.pronombres ? '<span class="aj-pill">' + _eqEsc(p.pronombres) + '</span>' : '') +
+  '</div>';
   return '<div class="eq-perfil-header">' +
       '<div class="eq-avatar-wrap">' +
         _eqAvatarHtml(p, 'eq-avatar-grande') +
         _eqTendenciaBadgeHtml(p, 'eq-tendencia-badge--detalle') +
-        '<span class="eq-rol-pill">' + _eqEsc(p.rol) + '</span>' +
       '</div>' +
       '<div class="eq-perfil-nombre">' + _eqEsc(p.nombreDerby) + '</div>' +
+      categoriaPronombresHtml +
       '<div class="eq-perfil-sub">' + ((p.numeroDerby !== null && p.numeroDerby !== undefined && p.numeroDerby !== '') ? '#' + p.numeroDerby + ' &bull; ' : '') + '@' + _eqEsc(p.username) + '</div>' +
     '</div>' +
     (pillsHtml ? '<div class="eq-perfil-pills-row">' + pillsHtml + '</div>' : '') +
