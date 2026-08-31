@@ -1468,11 +1468,23 @@ async function adminRegistrarEgreso(params: Record<string, any>): Promise<any> {
   return data;
 }
 
+// Bug real (ver MANIFEST.md/CHANGELOG.md -- "nivel_actual congelado"):
+// `nivel_actual` era un snapshot poblado una sola vez (12 de agosto,
+// confirmado por `actualizado_en` idéntico en las 43 filas) y nunca
+// actualizado desde entonces -- desde ese día quedó completamente
+// desincronizado de `equipo.categoria` (fuente real, mantenida por
+// `recalcular-categorias`/cambios manuales de admin). Verificado en vivo
+// antes de este fix: `nivel_actual` marcaba solo 2 personas como Quindes
+// (Nico, Vic); `equipo.categoria='Quindes'` real eran 8 (Ale, Cami,
+// Gringa la Vikinga, Laru, Lucile, Nadinka, Sant, Vic) -- 7 personas que
+// sí deben pagar cuota quedaban invisibles para estas 2 pantallas de
+// pagos. `equipo.categoria` usa los mismos strings `'Quindes'`/`'Mirlxs'`,
+// sin necesidad de mapear `nivel_orden`.
 async function adminGetEstadoPagosMes(params: Record<string, any>): Promise<any[]> {
   const mes = Number(params.mes), anio = Number(params.anio);
   const hoy = new Date();
-  const { data: nivelActual } = await supabase.from('nivel_actual').select('nombre_usuario').eq('nivel_orden', 2);
-  const personas = (nivelActual ?? []).map((n: any) => n.nombre_usuario);
+  const { data: quindes } = await supabase.from('equipo').select('username').eq('categoria', 'Quindes');
+  const personas = (quindes ?? []).map((n: any) => n.username);
   const [{ data: pagosDelMes }, { data: solicitudesAprobadas }] = await Promise.all([
     supabase.from('pagos').select('nombre_usuario, exoneradx, monto').eq('mes', mes).eq('anio', anio),
     supabase.from('solicitudes_pago').select('nombre_usuario, tipo').eq('estado', 'aprobada').eq('mes', mes).eq('anio', anio),
@@ -1480,11 +1492,12 @@ async function adminGetEstadoPagosMes(params: Record<string, any>): Promise<any[
   return personas.map((nombre: string) => ({ nombre, estado: _estadoPagoPersonaMes(nombre, mes, anio, pagosDelMes ?? [], solicitudesAprobadas ?? [], hoy) }));
 }
 
+// Mismo fix que adminGetEstadoPagosMes() -- ver comentario ahí.
 async function adminGetPagosAnual(params: Record<string, any>): Promise<Record<string, any>> {
   const anio = Number(params.anio);
   const hoy = new Date();
-  const { data: nivelActual } = await supabase.from('nivel_actual').select('nombre_usuario').eq('nivel_orden', 2);
-  const personas = (nivelActual ?? []).map((n: any) => n.nombre_usuario);
+  const { data: quindes } = await supabase.from('equipo').select('username').eq('categoria', 'Quindes');
+  const personas = (quindes ?? []).map((n: any) => n.username);
   const [{ data: pagosDelAnio }, { data: solicitudesDelAnio }] = await Promise.all([
     supabase.from('pagos').select('nombre_usuario, mes, exoneradx, monto').eq('anio', anio),
     supabase.from('solicitudes_pago').select('nombre_usuario, tipo, mes').eq('estado', 'aprobada').eq('anio', anio),
@@ -1991,6 +2004,27 @@ async function getEquipo(): Promise<Record<string, any>> {
     if (!actual || l.fecha_entrenamiento > actual) ultimaPorUsuario[l.nombre_usuario] = l.fecha_entrenamiento;
   });
 
+  // Puntos mensuales (Bug/feature "exponer puntos en getEquipo()", ver
+  // MANIFEST.md/CHANGELOG.md) -- `js/equipo.js` ya tenía las stat cards
+  // "Puntos por tareas"/"Puntos por asistencia" armadas (`p.puntosTareas`/
+  // `p.puntosAsistencia`) mostrando "—" porque este endpoint nunca las
+  // devolvía. `puntos_total` es columna GENERATED (suma de las otras 4,
+  // Postgres la calcula solo -- nunca escribirla a mano). `puntosAnio` es
+  // la suma de `puntos_total` de TODOS los meses del año actual -- no solo
+  // el mes en curso -- para un acumulado real, no solo el mes corriente.
+  const hoy = new Date();
+  const anioActual = hoy.getUTCFullYear();
+  const mesActual = hoy.getUTCMonth() + 1;
+  const { data: puntosData } = await supabase.from('puntos_mensuales')
+    .select('nombre_usuario, mes, puntos_asistencia, puntos_tareas, puntos_total')
+    .eq('anio', anioActual).in('nombre_usuario', usernames);
+  const puntosMesPorUsuario: Record<string, any> = {};
+  const puntosAnioPorUsuario: Record<string, number> = {};
+  (puntosData ?? []).forEach((p: any) => {
+    puntosAnioPorUsuario[p.nombre_usuario] = (puntosAnioPorUsuario[p.nombre_usuario] || 0) + (Number(p.puntos_total) || 0);
+    if (p.mes === mesActual) puntosMesPorUsuario[p.nombre_usuario] = p;
+  });
+
   // "Es admin de miembro" -- no existe ningún flag por miembro en `equipo`;
   // el admin real de esta app vive en la tabla `admins` + ADMIN_PRINCIPAL,
   // mismo criterio ya usado por adminGetCandidatosAdmin() (arriba).
@@ -2031,6 +2065,10 @@ async function getEquipo(): Promise<Record<string, any>> {
     total_eventos_ano: Number(r.total_eventos_ano) || 0,
     termometro_pct: Number(r.termometro_pct) || 0,
     ultimaAsistencia: ultimaPorUsuario[r.username] ? ultimaPorUsuario[r.username].slice(0, 10) : null,
+    puntosAsistencia: Number(puntosMesPorUsuario[r.username]?.puntos_asistencia) || 0,
+    puntosTareas: Number(puntosMesPorUsuario[r.username]?.puntos_tareas) || 0,
+    puntosTotal: Number(puntosMesPorUsuario[r.username]?.puntos_total) || 0,
+    puntosAnio: Number(puntosAnioPorUsuario[r.username]) || 0,
     // Bug real "termómetro visible aunque la persona necesite equipo del
     // club" (ver MANIFEST.md): `equipo.necesita_patines`/`necesita_protecciones`
     // (columnas reales, ver actualizarEquipamientoPersona() arriba en este
