@@ -391,17 +391,17 @@ function _eqAnimarCambioFavorito(id, fav) {
           cont.innerHTML = '<div class="eq-favoritos-vacio" style="opacity:0"><span class="material-symbols-outlined">favorite</span>Agrega personas a favoritos para verlos aquí</div>';
           var vacioNuevo = cont.querySelector('.eq-favoritos-vacio');
           vacioNuevo.style.transition = 'opacity 0.2s';
-          // Delay de 1500ms antes de empezar el fade-in (pedido explícito
-          // de Victor): sin este respiro el recuadro entraba apenas
-          // terminaba de encogerse el contenedor (~260ms después de que
-          // `filaExistente` arrancó su propio fade-out), cortando la
+          // Delay antes de empezar el fade-in (pedido explícito de Victor,
+          // ajustado de 1500 a 1000ms): sin este respiro el recuadro entraba
+          // apenas terminaba de encogerse el contenedor (~260ms después de
+          // que `filaExistente` arrancó su propio fade-out), cortando la
           // sensación de "salida" de la fila antes de que termine de
-          // asentarse. No hace falta el truco de reflow forzado acá --
-          // con 1500ms reales de por medio el navegador ya pintó de sobra
-          // el estado `opacity:0` antes de este cambio.
+          // asentarse. No hace falta el truco de reflow forzado acá -- con
+          // 1000ms reales de por medio el navegador ya pintó de sobra el
+          // estado `opacity:0` antes de este cambio.
           setTimeout(function() {
             vacioNuevo.style.opacity = '1';
-          }, 1500);
+          }, 1000);
         }
       });
     }, 250);
