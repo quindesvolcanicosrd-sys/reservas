@@ -89,13 +89,20 @@ Deno.serve(async (req: Request) => {
     // ('Evento Programado', con `fecha` ya dentro de la ventana) contaban
     // igual que uno real hacia `contarClases()`, pudiendo calificar a
     // alguien para un tier sin cumplir el requisito real de asistencia.
-    // Mismo fix que `recalcularStatsEquipo()`/supabase/functions/api/index.ts:
-    // solo 'Evento Finalizado' representa un evento real ya sucedido.
+    // Fix original: solo 'Evento Finalizado'.
+    //
+    // Bug real #2 (Bug 13, ver comentario completo en recalcularStatsEquipo()/
+    // supabase/functions/api/index.ts): 'Evento Finalizado' es un status
+    // huérfano -- nada lo transiciona desde que la generación de eventos se
+    // migró a pg_cron nativo de Postgres. Mismo fix: `fecha < hoy` (no
+    // `Evento Finalizado`) + excluir por nombre los 2 estados reales que
+    // significan "no cuenta".
     const { data: asistData, error: asistError } = await supabase
       .from('asistencias')
       .select('fecha, a_horario, tarde')
-      .eq('estado', 'Evento Finalizado')
-      .gte('fecha', fechaISO(primerDiaMesesAtras(maxVentana)));
+      .not('estado', 'in', '("Evento Cancelado","No se entrena")')
+      .gte('fecha', fechaISO(primerDiaMesesAtras(maxVentana)))
+      .lt('fecha', fechaISO(new Date()));
     if (asistError) return json({ ok: false, error: asistError.message }, 500);
 
     const anioDesde = primerDiaMesesAtras(maxVentana).getUTCFullYear();

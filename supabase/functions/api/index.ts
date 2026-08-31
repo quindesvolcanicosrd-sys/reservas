@@ -1651,13 +1651,35 @@ async function recalcularStatsEquipo(params: Record<string, any>): Promise<Recor
   // cancelado quedaba afuera. Además, un evento de hoy todavía no marcado
   // ('Evento Programado', `fecha <= hoyISO`) tampoco quedaba excluido,
   // inflando el denominador de asistencia % con clases que ni siquiera
-  // pasaron. Fix: filtrar directo por el único estado que representa un
-  // evento real ya sucedido, 'Evento Finalizado', en vez de una lista
-  // negra de los otros 3.
+  // pasaron. Fix original: filtrar directo por el único estado que
+  // representa un evento real ya sucedido, 'Evento Finalizado'.
+  //
+  // Bug real #2 (Bug 13, "stats de Andrea siguen en 0" -- investigación
+  // completa): ESE fix asumía que algo transiciona `estado` a 'Evento
+  // Finalizado' cuando un evento pasa. Verificado contra datos reales
+  // (`asistencias.estado` agrupado por fecha): todo evento hasta
+  // 2026-08-19 es 'Evento Finalizado', pero CUALQUIER evento desde
+  // 2026-08-20/22 en adelante -- incluidos ya pasados -- quedó atascado en
+  // 'Evento Programado' para siempre. Nada en este repo escribe 'Evento
+  // Finalizado' (confirmado por grep -- ni acá, ni en las migraciones SQL,
+  // ni en `regenerar_ventana_asistencias()`, que solo inserta 'Próximo').
+  // La transición vivía en la automatización vieja de Apps Script/Sheets,
+  // huérfana desde que la generación de eventos se migró a pg_cron nativo
+  // de Postgres (Cambio 57/migración `20260828_regenerar_ventana_...`) --
+  // coincide con el corte real observado en los datos. Cualquier persona
+  // cuya asistencia real caiga solo en ese rango (como Andrea, sus 2 únicas
+  // marcas son del 24 y 29 de agosto) queda con stats en 0 para siempre,
+  // sin importar cuántas veces se recalculen. Fix real: dejar de confiar en
+  // el status (nadie lo mantiene) y derivar "ya sucedió" de la FECHA en vez
+  // -- `fecha < hoyISO` (estricto, no `<=`, preserva la razón original de
+  // Cambio 62 de no contar el evento de hoy todavía no jugado) + excluir
+  // por nombre los 2 estados reales que SÍ representan "no cuenta"
+  // ('Evento Cancelado'/'No se entrena', las 2 strings reales confirmadas
+  // contra la tabla -- no una lista vieja incorrecta como la de Cambio 62).
   const { data: filasAsist, error: errorAsist } = await supabase.from('asistencias')
     .select('fecha, a_horario, tarde, inicia, termina')
-    .eq('estado', 'Evento Finalizado')
-    .gte('fecha', inicioAnio).lte('fecha', hoyISO);
+    .not('estado', 'in', '("Evento Cancelado","No se entrena")')
+    .gte('fecha', inicioAnio).lt('fecha', hoyISO);
   if (errorAsist) return { exito: false, error: errorAsist.message };
   const eventos = filasAsist ?? [];
   const totalEventos = eventos.length;
@@ -1689,6 +1711,24 @@ async function recalcularStatsEquipo(params: Record<string, any>): Promise<Recor
   return { exito: true, totalEventos, procesados: (miembros ?? []).length };
 }
 
+// Acción admin nueva (Bug 13, "corregir stats históricos como el de
+// Andrea") -- wrapper sobre las 2 funciones de arriba/abajo según venga o
+// no `username`: con `username`, recalcula SOLO esa persona
+// (`recalcularStatsUsuario()`, ahora devuelve diagnóstico en vez de `void`)
+// y devuelve el resultado real (útil para confirmar en el momento si el
+// UPDATE encontró la fila o no, sin tener que ir a mirar logs). Sin
+// `username`, delega en `recalcularStatsEquipo()` tal cual -- mismo
+// comportamiento que el botón "Recalcular ahora" ya existente, sin
+// duplicar ese loop acá.
+async function adminRecalcularStats(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const username = String(params.username ?? '').trim();
+  if (!username) return await recalcularStatsEquipo(params);
+  const resultado = await recalcularStatsUsuario(username);
+  return { ...resultado, username };
+}
+
 // Recalcula equipo.horas_ano/asistencias_ano/total_eventos_ano para UNA sola
 // persona (Batch 8, ver MANIFEST.md -- hallazgo de Batch 7: los stats no se
 // actualizaban tras marcar asistencia, solo con el botón manual "Recalcular
@@ -1710,8 +1750,8 @@ async function recalcularStatsEquipo(params: Record<string, any>): Promise<Recor
 // propio: cualquier error acá queda silencioso (mismo criterio que
 // `_aplicarRectificacion()`) -- no debe poder tumbar la respuesta real de
 // "asistencia guardada", que ya tuvo éxito antes de llegar a este punto.
-async function recalcularStatsUsuario(username: string): Promise<void> {
-  if (!username) return;
+async function recalcularStatsUsuario(username: string): Promise<{ exito: boolean; error?: string; horas?: number; asistencias?: number; totalEventos?: number }> {
+  if (!username) return { exito: false, error: 'username vacío.' };
   const usernameTrim = String(username).trim();
   const u = usernameTrim.toUpperCase();
 
@@ -1719,11 +1759,16 @@ async function recalcularStatsUsuario(username: string): Promise<void> {
   const inicioAnio = hoy.getUTCFullYear() + '-01-01';
   const hoyISO = hoy.toISOString().substring(0, 10);
 
+  // Mismo fix real que recalcularStatsEquipo() (arriba, ver ese comentario
+  // completo -- Bug 13): 'Evento Finalizado' es un status huérfano que nada
+  // transiciona desde que la generación de eventos se migró a pg_cron.
+  // `fecha < hoyISO` + excluir por nombre 'Evento Cancelado'/'No se
+  // entrena' reemplaza la dependencia de ese status.
   const { data: filasAsist, error: errorAsist } = await supabase.from('asistencias')
     .select('fecha, a_horario, tarde, inicia, termina')
-    .eq('estado', 'Evento Finalizado')
-    .gte('fecha', inicioAnio).lte('fecha', hoyISO);
-  if (errorAsist) return;
+    .not('estado', 'in', '("Evento Cancelado","No se entrena")')
+    .gte('fecha', inicioAnio).lt('fecha', hoyISO);
+  if (errorAsist) return { exito: false, error: errorAsist.message };
   const eventos = filasAsist ?? [];
   const totalEventos = eventos.length;
 
@@ -1756,6 +1801,14 @@ async function recalcularStatsUsuario(username: string): Promise<void> {
     .eq('username', usernameTrim)
     .select('username');
   console.log('[recalcularStats] usuario:', username, 'resultado:', JSON.stringify({ error: errorUpdate?.message, filasActualizadas: dataUpdate }));
+  if (errorUpdate) return { exito: false, error: errorUpdate.message };
+  // `dataUpdate` vacío (`.select()` sin filas) es la señal real de "el
+  // WHERE no matcheó nada en `equipo`" -- sin esto, un `UPDATE` de 0 filas
+  // se ve idéntico a uno exitoso (mismo motivo raíz que Bug 13 antes del
+  // `.trim()`, ver comentario de arriba -- ahora queda explícito en vez de
+  // silencioso para quien llame a esta función esperando un resultado).
+  if (!dataUpdate || !dataUpdate.length) return { exito: false, error: 'Ningún registro de equipo coincide con username="' + usernameTrim + '" -- el UPDATE no tocó ninguna fila.' };
+  return { exito: true, horas, asistencias, totalEventos };
 }
 
 // ─── Acciones: solicitud de lesión (auto-reporte usuario + aprobación admin) ──
@@ -2227,6 +2280,7 @@ Deno.serve(async (req: Request) => {
       case 'adminSetTierModo':               return json(await adminSetTierModo(params));
       case 'adminSetExentaCuota':            return json(await adminSetExentaCuota(params));
       case 'recalcularStatsEquipo':          return json(await recalcularStatsEquipo(params));
+      case 'adminRecalcularStats':           return json(await adminRecalcularStats(params));
       case 'solicitarLesion':                return json(await solicitarLesion(params));
       case 'cancelarSolicitudLesion':         return json(await cancelarSolicitudLesion(params));
       case 'recuperarseLesion':              return json(await recuperarseLesion(params));
