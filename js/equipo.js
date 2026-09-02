@@ -2010,7 +2010,6 @@ function _eqRenderMisEstadisticas() {
   // solo el badge se re-renderiza acá, adentro de su propio wrapper
   // `.eq-avatar-badge-wrap` (index.html) ya `position:relative`.
   if (toggleTendencia) toggleTendencia.innerHTML = _eqTendenciaBadgeHtml(persona);
-  var statsCalc = _eqStatsCalc(persona);
   // Pill de nivel en la nav (rediseño compacto, ver MANIFEST.md/CHANGELOG.md)
   // -- vive en `#eq-misstats-toggle-pills` (index.html), entre el texto
   // "Mis estadísticas" y el chevron, SIEMPRE visible (panel abierto o
@@ -2025,74 +2024,77 @@ function _eqRenderMisEstadisticas() {
   if (togglePills) {
     togglePills.innerHTML = '<span class="eq-mis-stats-rol-pill">' + _eqEsc(persona.rol) + '</span>';
   }
-  // Termómetro solo con equipo propio -- mismo bug real/mismo criterio ya
-  // corregido en `_eqPerfilContenidoHtml()`/`_datosRenderStatsHtml()`
-  // (js/perfil.js): `necesitaPatines`/`necesitaProtecciones` (getEquipo())
-  // son el equivalente real a "usa equipo del club".
-  var necesitaEquipoClub = !!(persona.necesitaPatines || persona.necesitaProtecciones);
+  // Contenido de stats -- función compartida con `_eqPerfilContenidoHtml()`
+  // (más abajo en este archivo, ver `_eqStatsContenidoHtml()`) -- pedido
+  // explícito, ver MANIFEST.md/CHANGELOG.md: "la vista detallada debe usar
+  // exactamente el mismo layout, clases y estructura HTML que Mis
+  // estadísticas" -- antes esta función tenía su propia copia de este
+  // bloque entero (horas/asistencia + separador PUNTOS + grid
+  // tareas/asistencia-combo + termómetro), duplicada a mano en las 2
+  // funciones -- extraída a un solo lugar, un solo caller cada una.
+  cont.innerHTML = _eqStatsContenidoHtml(persona);
+  _eqHidratarAvatares();
+}
+// Contenido de stats compartido entre "Mis estadísticas" (arriba) y el
+// perfil de detalle (`_eqPerfilContenidoHtml()`, más abajo) -- pedido
+// explícito, ver MANIFEST.md/CHANGELOG.md: "mismo layout, clases y
+// estructura HTML... mismas cards de Horas/Asistencia arriba, mismo
+// separador 'PUNTOS [total]', mismo grid de 2 cards (Tareas |
+// Asistencia con pill de racha si aplica), mismo termómetro abajo".
+// Termómetro solo con equipo propio -- mismo bug real/mismo criterio ya
+// corregido en `_datosRenderStatsHtml()` (js/perfil.js):
+// `necesitaPatines`/`necesitaProtecciones` (getEquipo()) son el
+// equivalente real a "usa equipo del club". Racha inline en la card
+// combinada -- badge propio SOLO si hay puntos de racha ese período,
+// mismo criterio "nunca mostrar 0" que `_eqPuntosRachaHtml()` (esa sigue
+// viva, sin más consumidores tras este cambio -- ni "Mis estadísticas" ni
+// el perfil de detalle la llaman más, la racha se dobla acá adentro de la
+// card de asistencia en vez de tener su propia card aparte -- se deja
+// definida por si algún día hace falta una card de racha suelta de
+// nuevo). Card combinada Asistencia -- toda la card abre el desglose de
+// ASISTENCIA (concepto principal/valor grande); el badge de racha, si hay
+// puntos ese período, es su PROPIO target de tap con
+// `event.stopPropagation()` (mismo patrón ya usado por `.eq-fav-btn`
+// dentro de `.eq-miembro-fila`, más arriba en este archivo) para no
+// competir con el tap de la card completa. Solo ícono `sports` arriba
+// (sin `local_fire_department` -- el fuego de la racha ya se ve en el
+// badge inline, sin duplicarlo). Label "Asistencia" sola (sin "+ Racha"
+// -- ya se entiende por el ícono/badge de fuego).
+function _eqStatsContenidoHtml(p) {
+  var statsCalc = _eqStatsCalc(p);
+  var necesitaEquipoClub = !!(p.necesitaPatines || p.necesitaProtecciones);
   var rankHtml = necesitaEquipoClub ? '' :
     '<div class="eq-rank-wrap">' +
       '<div class="eq-rank-labels"><span>Mirlxs</span><span>Quindes</span></div>' +
-      '<div class="eq-rank-track"><div class="eq-rank-fill" style="width:' + (persona.termometro_pct || 0) + '%;"></div></div>' +
-      '<div class="eq-rank-texto">' + _eqEsc(_eqRankTexto(persona)) + '</div>' +
+      '<div class="eq-rank-track"><div class="eq-rank-fill" style="width:' + (p.termometro_pct || 0) + '%;"></div></div>' +
+      '<div class="eq-rank-texto">' + _eqEsc(_eqRankTexto(p)) + '</div>' +
     '</div>';
-  // Racha inline en la card combinada de abajo (rediseño compacto, pedido
-  // explícito) -- badge propio SOLO si hay puntos de racha ese período,
-  // mismo criterio "nunca mostrar 0" que `_eqPuntosRachaHtml()` (que sigue
-  // viva, reusada tal cual por `_eqPerfilContenidoHtml()` -- este panel es
-  // el único que ya NO la llama, la racha se folding acá adentro de la
-  // card de asistencia en vez de tener su propia card aparte).
-  var rachaPuntos = Number(persona.puntosRacha) || 0;
+  var rachaPuntos = Number(p.puntosRacha) || 0;
   var rachaBadgeHtml = rachaPuntos > 0
-    ? '<span class="eq-stat-combo-racha-badge" onclick="event.stopPropagation();' + _eqDesgloseOnclick(persona.username, 'racha', 'Puntos por racha') + '"><span class="material-symbols-rounded">local_fire_department</span>+' + rachaPuntos + '</span>'
+    ? '<span class="eq-stat-combo-racha-badge" onclick="event.stopPropagation();' + _eqDesgloseOnclick(p.username, 'racha', 'Puntos por racha') + '"><span class="material-symbols-rounded">local_fire_department</span>+' + rachaPuntos + '</span>'
     : '';
-  cont.innerHTML =
-    '<div class="eq-stats-grid">' +
+  return '<div class="eq-stats-grid">' +
       '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">roller_skating</span><div class="eq-stat-valor">' + statsCalc.horas + 'h</div><div class="eq-stat-label">Horas patinadas</div></div>' +
       '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">kid_star</span><div class="eq-stat-valor">' + statsCalc.asistenciaPct + '%</div><div class="eq-stat-label">Asistencia anual</div></div>' +
     '</div>' +
-    // Separador "PUNTOS" con el total inline (rediseño compacto, pedido
-    // explícito) -- reemplaza la card `.eq-stat-card--full` de "Puntos
-    // totales" que vivía como una card más del grid. `.eq-grupo-linea`
-    // reusada tal cual (ya existente, líneas laterales de los headers de
-    // acordeón de la lista) -- mismo look, sin duplicar la regla CSS.
     '<div class="eq-mis-stats-puntos-row">' +
       '<span class="eq-grupo-linea"></span>' +
       '<span class="eq-grupo-nombre">Puntos</span>' +
-      '<span class="eq-mis-stats-total-pill">' + (persona.puntosTotal !== undefined && persona.puntosTotal !== null ? persona.puntosTotal : '—') + '</span>' +
+      '<span class="eq-mis-stats-total-pill">' + (p.puntosTotal !== undefined && p.puntosTotal !== null ? p.puntosTotal : '—') + '</span>' +
       '<span class="eq-grupo-linea"></span>' +
     '</div>' +
     '<div class="eq-stats-grid">' +
-      '<div class="eq-stat-card eq-stat-card--tappable" onclick="' + _eqDesgloseOnclick(persona.username, 'tareas', 'Puntos por tareas') + '"><span class="eq-stat-icon material-symbols-rounded">task_alt</span><div class="eq-stat-valor">' + (persona.puntosTareas !== undefined && persona.puntosTareas !== null ? persona.puntosTareas : '—') + '</div><div class="eq-stat-label">Puntos por tareas</div></div>' +
-      // Card combinada Asistencia+Racha (rediseño compacto, pedido
-      // explícito -- "en lugar de 2 cards separadas") -- toda la card
-      // abre el desglose de ASISTENCIA (concepto principal/valor grande);
-      // el badge de racha, si hay puntos ese período, es su PROPIO target
-      // de tap con `event.stopPropagation()` (mismo patrón ya usado por
-      // `.eq-fav-btn` dentro de `.eq-miembro-fila`, más arriba en este
-      // archivo) para no competir con el tap de la card completa.
-      '<div class="eq-stat-card eq-stat-card--combo eq-stat-card--tappable" onclick="' + _eqDesgloseOnclick(persona.username, 'asistencia', 'Puntos por asistencia') + '">' +
-        // Solo `sports` (re-ajuste, pedido explícito, ver MANIFEST.md/
-        // CHANGELOG.md -- "quitar local_fire_department de la fila
-        // superior de íconos") -- el fuego de la racha sigue viéndose en
-        // el badge inline (`rachaBadgeHtml`, más abajo), sin duplicarlo
-        // acá arriba.
+      '<div class="eq-stat-card eq-stat-card--tappable" onclick="' + _eqDesgloseOnclick(p.username, 'tareas', 'Puntos por tareas') + '"><span class="eq-stat-icon material-symbols-rounded">task_alt</span><div class="eq-stat-valor">' + (p.puntosTareas !== undefined && p.puntosTareas !== null ? p.puntosTareas : '—') + '</div><div class="eq-stat-label">Puntos por tareas</div></div>' +
+      '<div class="eq-stat-card eq-stat-card--combo eq-stat-card--tappable" onclick="' + _eqDesgloseOnclick(p.username, 'asistencia', 'Puntos por asistencia') + '">' +
         '<div class="eq-stat-combo-iconos"><span class="material-symbols-rounded">sports</span></div>' +
         '<div class="eq-stat-combo-valor-row">' +
-          '<span class="eq-stat-valor">' + (persona.puntosAsistencia !== undefined && persona.puntosAsistencia !== null ? persona.puntosAsistencia : '—') + '</span>' +
+          '<span class="eq-stat-valor">' + (p.puntosAsistencia !== undefined && p.puntosAsistencia !== null ? p.puntosAsistencia : '—') + '</span>' +
           rachaBadgeHtml +
         '</div>' +
-        // Label "Asistencia" solo (re-ajuste, pedido explícito, ver
-        // MANIFEST.md/CHANGELOG.md -- "label de la card: solo
-        // 'Asistencia'") -- la card sigue siendo la combinada
-        // (íconos+badge de racha arriba, sin cambios de eso), único
-        // cambio es el texto del label -- "+ Racha" ya se entiende por el
-        // ícono/badge de fuego, no hace falta repetirlo en el label.
         '<div class="eq-stat-label">Asistencia</div>' +
       '</div>' +
     '</div>' +
     rankHtml;
-  _eqHidratarAvatares();
 }
 
 function _eqToggleGrupo(rol) {
@@ -2792,7 +2794,18 @@ function _eqTierAdminHtml(p) {
 // que el resto de este archivo); el contenedor a togglear es su padre
 // directo (`.eq-acord`, ver `_eqTierAdminHtml()`/`_eqAdminGestionHtml()`).
 function eqToggleAcordeon(header) {
-  header.parentNode.classList.toggle('eq-acord-abierto');
+  var acord = header.parentNode;
+  var seAbrio = !acord.classList.contains('eq-acord-abierto');
+  acord.classList.toggle('eq-acord-abierto');
+  // Auto-scroll al abrir (pedido explícito, ver MANIFEST.md) -- espera a
+  // que termine la transición de `max-height` de `.eq-acord-cuerpo`
+  // (css/equipo.css, 0.3s) antes de medir/scrollear, si no el cálculo de
+  // `scrollIntoView` usa la altura vieja (colapsada) y no mueve nada.
+  if (seAbrio) {
+    setTimeout(function() {
+      acord.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 320);
+  }
 }
 
 // Toggle de modo de tier -- llamada directa desde el `onclick` de cada
@@ -3049,54 +3062,6 @@ function _eqPerfilContenidoHtml(p) {
   var rolTexto = _eqRolesTexto(p.username);
   if (rolTexto) filas += '<div class="eq-info-fila"><span class="material-symbols-outlined">badge</span><span class="eq-info-texto">' + _eqEsc(rolTexto) + '</span></div>';
 
-  var statsCalc = _eqStatsCalc(p);
-  var puntosTareasTxt = (p.puntosTareas !== undefined && p.puntosTareas !== null) ? p.puntosTareas : '—';
-  var puntosAsistenciaTxt = (p.puntosAsistencia !== undefined && p.puntosAsistencia !== null) ? p.puntosAsistencia : '—';
-  // Puntos totales del período pedido (getEquipo(), `puntosTotal`) -- en
-  // modo histórico ya viene con `equipo.puntos_anteriores` sumado adentro
-  // (ver supabase/functions/api/index.ts), así que basta con pintar el
-  // campo tal cual, sin volver a sumar nada acá. Card propia, span completo
-  // (`eq-stat-card--full`, css/equipo.css) en vez de compartir grid de a 2
-  // con tareas/asistencia -- es un total, no un dato del mismo nivel.
-  var puntosTotalTxt = (p.puntosTotal !== undefined && p.puntosTotal !== null) ? p.puntosTotal : '—';
-  var puntosTotalLabel = _eqFiltroPeriodo.modo === 'historico' ? 'Puntos totales (histórico)' : 'Puntos totales';
-  var puntosTotalHtml = '<div class="eq-stats-grid">' +
-      '<div class="eq-stat-card eq-stat-card--full"><span class="eq-stat-icon material-symbols-rounded">military_tech</span><div class="eq-stat-valor">' + puntosTotalTxt + '</div><div class="eq-stat-label">' + _eqEsc(puntosTotalLabel) + '</div></div>' +
-    '</div>';
-  // Termómetro solo con equipo propio (bug real, ver MANIFEST.md): oculto
-  // por completo si la persona necesita patines o protecciones del club
-  // (`necesitaPatines`/`necesitaProtecciones`, `getEquipo()` -- equivalente
-  // real al "necesita_equipo_club" del pedido, ver ese comentario en
-  // supabase/functions/api/index.ts). `_eqRenderPerfil()` (más abajo) ya
-  // guarda con `if (rankWrap)`/`if (fill)` antes de tocar este bloque, así
-  // que no renderizarlo acá no rompe nada ahí.
-  var necesitaEquipoClub = !!(p.necesitaPatines || p.necesitaProtecciones);
-  var rankWrapHtml = necesitaEquipoClub ? '' :
-    '<div class="eq-rank-wrap">' +
-      '<div class="eq-rank-labels"><span>Mirlxs</span><span>Quindes</span></div>' +
-      '<div class="eq-rank-track"><div class="eq-rank-fill" id="eq-rank-fill" style="width:0%;"></div></div>' +
-      '<div class="eq-rank-texto">' + _eqEsc(_eqRankTexto(p)) + '</div>' +
-    '</div>';
-  // Filtro de período (feat nueva, ver MANIFEST.md -- "igual al filtro de
-  // período que existe en la home de Equipo") -- MISMAS 2 pills
-  // (Fecha/Histórico) y MISMOS handlers (`_eqFiltroPeriodoModo()`, que
-  // abre la misma modal global `#eq-modal-fecha-*` de siempre) que el
-  // panel de Filtros de la lista --
-  // sin duplicar la lógica, solo una 2da instancia de la fila de pills,
-  // identificada por la clase compartida `.eq-periodo-pills` (no un id
-  // único: `_eqFiltroPeriodoModo()` ahora sincroniza TODAS las instancias
-  // en el DOM a la vez, ver ese comentario más arriba en este archivo).
-  // Confirmar la modal (o tocar "Histórico") dispara `_eqAplicarFiltrosAhora()`,
-  // que re-pide `getEquipo()` con el período nuevo y, si hay un perfil de
-  // detalle abierto, lo vuelve a renderizar completo con los stats de ese
-  // período -- mismo mecanismo ya usado por la lista, extendido acá.
-  var periodoPillsHtml = '<div class="eq-perfil-stats-periodo">' +
-      '<p class="eq-tier-label" style="margin:0 0 6px">Período</p>' +
-      '<div class="aj-pills-row eq-periodo-pills">' +
-        '<span class="aj-pill' + (_eqFiltroPeriodo.modo === 'fecha' ? ' activa' : '') + '" data-modo="fecha" onclick="_eqFiltroPeriodoModo(\'fecha\')">Fecha</span>' +
-        '<span class="aj-pill' + (_eqFiltroPeriodo.modo === 'historico' ? ' activa' : '') + '" data-modo="historico" onclick="_eqFiltroPeriodoModo(\'historico\')">Histórico</span>' +
-      '</div>' +
-    '</div>';
   // Sección de stats -- rediseñada como acordeón compacto (pedido explícito,
   // ver MANIFEST.md: "colapsable y más compacta, igual de liviana que el
   // panel Mis estadísticas de la home") -- reusa `.eq-acord`/`.eq-acord-header`/
@@ -3109,25 +3074,32 @@ function _eqPerfilContenidoHtml(p) {
   // compacto. `.eq-perfil-stats-acord` (css/equipo.css) aplica el mismo
   // achique de `.eq-stat-card`/`.eq-rank-wrap` que ya usa
   // `#eq-misstats-panel-inner` ("Mis estadísticas", scopeado igual, sin
-  // duplicar valores).
+  // duplicar valores). Re-ajuste (pedido explícito, ver MANIFEST.md/CHANGELOG.md
+  // -- "mismo layout, clases y estructura HTML que Mis estadísticas"):
+  // el contenido real (horas/asistencia + separador PUNTOS + grid
+  // tareas/asistencia-combo + termómetro) ahora es `_eqStatsContenidoHtml(p)`
+  // (función compartida, ver ese bloque más arriba en este archivo) --
+  // antes era una copia a mano de todo ese bloque, con la card de
+  // "Puntos totales" separada y las 2 cards de tareas/asistencia sin
+  // fusionar (versión vieja de "Mis estadísticas", desactualizada desde
+  // el rediseño compacto de esa función). Filtro de período (2 pills
+  // Fecha/Histórico, `.eq-periodo-pills`) SACADO (pedido explícito,
+  // re-ajuste -- "sin filtros de período en estadísticas del detalle") --
+  // reemplazado por una nota de texto chica (`.eq-perfil-stats-nota`,
+  // color `var(--muted)`) que aclara que el período viene del filtro
+  // global de Equipo (el mismo que ya usa "Mis estadísticas", sin UI
+  // propia ahí tampoco) -- `_eqFiltroPeriodoModo()` sigue sincronizando
+  // TODAS las instancias de `.eq-periodo-pills` que queden en el DOM
+  // (panel de Filtros de la lista, la única que sobrevive), sin romperse
+  // por esta menos.
   var statsAcordHtml = '<div class="eq-acord eq-perfil-stats-acord eq-acord-abierto">' +
       '<div class="eq-acord-header" onclick="eqToggleAcordeon(this)">' +
         '<p class="eq-tier-label" style="margin:0">Estadísticas</p>' +
         '<span class="eq-acord-icono"><span class="material-symbols-rounded">chevron_right</span></span>' +
       '</div>' +
       '<div class="eq-acord-cuerpo">' +
-        periodoPillsHtml +
-        '<div class="eq-stats-grid">' +
-          '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">roller_skating</span><div class="eq-stat-valor">' + statsCalc.horas + 'h</div><div class="eq-stat-label">Horas patinadas</div></div>' +
-          '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">kid_star</span><div class="eq-stat-valor">' + statsCalc.asistenciaPct + '%</div><div class="eq-stat-label">Asistencia anual</div></div>' +
-        '</div>' +
-        '<div class="eq-stats-grid">' +
-          '<div class="eq-stat-card eq-stat-card--tappable" onclick="' + _eqDesgloseOnclick(p.username, 'tareas', 'Puntos por tareas') + '"><span class="eq-stat-icon material-symbols-rounded">task_alt</span><div class="eq-stat-valor">' + puntosTareasTxt + '</div><div class="eq-stat-label">Puntos por tareas</div></div>' +
-          '<div class="eq-stat-card eq-stat-card--tappable" onclick="' + _eqDesgloseOnclick(p.username, 'asistencia', 'Puntos por asistencia') + '"><span class="eq-stat-icon material-symbols-rounded">stars</span><div class="eq-stat-valor">' + puntosAsistenciaTxt + '</div><div class="eq-stat-label">Puntos por asistencia</div></div>' +
-        '</div>' +
-        _eqPuntosRachaHtml(p) +
-        puntosTotalHtml +
-        rankWrapHtml +
+        '<p class="eq-perfil-stats-nota">Los resultados se basan en los filtros aplicados en Equipo.</p>' +
+        _eqStatsContenidoHtml(p) +
       '</div>' +
     '</div>';
   // Categoría (Quindes/Mirlxs) + pronombres, misma fila, justo debajo del
@@ -3138,7 +3110,13 @@ function _eqPerfilContenidoHtml(p) {
   // dato real -- ver ese comentario) en `.eq-perfil-pills-row` de abajo.
   // Reusa `.eq-mis-stats-rol-pill` (misma pill de categoría que "Mis
   // estadísticas", css/equipo.css) para la categoría -- pronombres sigue
-  // en `.aj-pill`, mismo look genérico de siempre.
+  // en `.aj-pill`, mismo look genérico de siempre. Re-ajuste posterior
+  // (pedido explícito, ver MANIFEST.md/CHANGELOG.md -- "mismo tamaño,
+  // padding y font-size que el pill de pronombres"): `.eq-mis-stats-rol-pill`
+  // en este contexto puntual (`.eq-perfil-pills-row--top`, css/equipo.css)
+  // pisa su propio padding/font-size/radius con los mismos valores EXACTOS
+  // de `.aj-pill` (perfil.css) -- sin tocar la declaración base (la de la
+  // nav de "Mis estadísticas" sigue chica, sin este pedido).
   var categoriaPronombresHtml = '<div class="eq-perfil-pills-row eq-perfil-pills-row--top">' +
     '<span class="eq-mis-stats-rol-pill">' + _eqEsc(p.rol) + '</span>' +
     (p.pronombres ? '<span class="aj-pill">' + _eqEsc(p.pronombres) + '</span>' : '') +
@@ -3153,9 +3131,16 @@ function _eqPerfilContenidoHtml(p) {
       '<div class="eq-perfil-sub">' + ((p.numeroDerby !== null && p.numeroDerby !== undefined && p.numeroDerby !== '') ? '#' + p.numeroDerby + ' &bull; ' : '') + '@' + _eqEsc(p.username) + '</div>' +
     '</div>' +
     (pillsHtml ? '<div class="eq-perfil-pills-row">' + pillsHtml + '</div>' : '') +
+    // Orden re-ajustado (pedido explícito, ver MANIFEST.md/CHANGELOG.md --
+    // "mover el acordeón de estadísticas para que aparezca justo encima
+    // del acordeón de categoría"): Estadísticas -> Categoría
+    // (`_eqTierAdminHtml()`, admin-only) -> datos personales (`filas`,
+    // teléfono/email/fecha de ingreso/rol) -> Estado/gestión admin
+    // (`_eqAdminGestionHtml()`) -- antes `filas` vivía ENTRE Estadísticas
+    // y Categoría, separándolas.
     statsAcordHtml +
-    (filas ? '<div class="eq-info-lista">' + filas + '</div>' : '') +
     _eqTierAdminHtml(p) +
+    (filas ? '<div class="eq-info-lista">' + filas + '</div>' : '') +
     _eqAdminGestionHtml(p);
 }
 
@@ -3176,14 +3161,4 @@ function _eqRenderPerfil(p) {
       requestAnimationFrame(function() { rankWrap.classList.remove('sin-transicion'); });
     }
   }
-  // Arranca en width:0 (innerHTML de arriba) y recién acá sube a su valor
-  // real -- doble rAF para forzar al navegador a pintar el 0% primero, sin
-  // eso la transición de `.eq-rank-fill` (css/equipo.css) no se ve (mismo
-  // truco ya usado en abrirContacto(), js/ui.js).
-  requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-      var fill = document.getElementById('eq-rank-fill');
-      if (fill) fill.style.width = (p.termometro_pct || 0) + '%';
-    });
-  });
 }

@@ -788,6 +788,17 @@
 .eq-perfil-pills-row--top {
   overflow: visible; justify-content: center; align-items: center; padding: 10px 0 0; margin: 0;
 }
+/* Pill de nivel (Quindes/Mirlxs) al mismo tamaño que la de pronombres
+   (pedido explícito, re-ajuste, ver MANIFEST.md -- "mismo tamaño, padding
+   y font-size que el pill de pronombres") -- pisa acá, SOLO en esta fila,
+   el padding/font-size/radius chicos de `.eq-mis-stats-rol-pill` (arriba,
+   2px 10px / 0.72rem, pensados para la nav de "Mis estadísticas") con los
+   mismos valores EXACTOS de `.aj-pill` (css/perfil.css, pill de
+   pronombres) -- color/borde/fondo de `.eq-mis-stats-rol-pill` quedan
+   igual, solo cambia el tamaño de la caja. */
+.eq-perfil-pills-row--top .eq-mis-stats-rol-pill {
+  padding: 7px 16px; border-radius: 20px; font-size: 0.78rem;
+}
 
 /* ── Acordeón "Estadísticas" del perfil de detalle (rediseño, ver
    MANIFEST.md -- "colapsable y más compacta, igual de liviana que Mis
@@ -804,11 +815,15 @@
 .eq-perfil-stats-acord .eq-stat-valor { font-size: 15px; }
 .eq-perfil-stats-acord .eq-stat-label { font-size: 13px; margin-top: 1px; }
 .eq-perfil-stats-acord .eq-rank-wrap { margin: 10px 0 4px; }
-/* Filtro de período (feat nueva) -- misma fila de pills que el panel de
-   Filtros de la lista (`.eq-periodo-pills`, sin clase propia hasta acá),
-   solo el espaciado alrededor es propio de este contexto (dentro del
-   acordeón, antes de las stat cards). */
-.eq-perfil-stats-periodo { margin: 2px 0 12px; }
+/* Nota de período (re-ajuste, pedido explícito, ver MANIFEST.md -- "sin
+   filtros de período en estadísticas del detalle") -- reemplaza las 2
+   pills Fecha/Histórico que vivían acá (`.eq-perfil-stats-periodo`/
+   `.eq-periodo-pills`, ver CHANGELOG.md) por un texto chico aclarando que
+   el período se controla desde el filtro global de Equipo, sin UI propia
+   en el detalle (mismo criterio que "Mis estadísticas", que tampoco tiene
+   selector propio). `.eq-periodo-pills` sigue viva sin cambios: la usa el
+   panel de Filtros de la lista. */
+.eq-perfil-stats-nota { margin: 2px 0 12px; font-size: 0.72rem; color: var(--muted); }
 
 /* Stats anuales -- 2 tarjetas lado a lado, fondo suave sin borde duro. */
 .eq-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0 6px; }
