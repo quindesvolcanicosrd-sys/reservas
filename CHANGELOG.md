@@ -64,6 +64,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Tareas
 
+2026-09-02 — Paso nuevo en el wizard "Nueva tarea", justo antes de la fecha: "¿Cuándo se hace esta tarea?" con 2 cards (mismo estilo que el paso de asignación) — "Tarea por realizar" (se publica para completarse próximamente) o "Tarea ya realizada" (ya se completó, elegí la fecha en que ocurrió). Según la opción, el paso de fecha cambia de título ("¿Cuál es la fecha límite?" / "¿Cuándo se completó?") e invierte qué fechas bloquea el calendario (pasadas / futuras respectivamente). Si se eligió "ya realizada" y además se asignó gente en el paso anterior, al guardar el backend (`adminCrearTarea`) crea esas asignaciones directo como `'aprobada'` con `fecha_revision` = la fecha elegida y acredita los puntos de una sola vez (mismo mecanismo que aprobar una tarea a mano), sin pasar por el flujo de revisión — la tarea queda archivada. Indicador de pasos (dots de progreso) actualizado solo, se deriva del largo de la lista de pasos. Verificado con Playwright (mock de `adminApi`): orden de pasos, títulos por modo, dirección del calendario en los 2 sentidos, y el campo `yaRealizada` viajando en el payload de guardado.
+
 2026-08 (aprox.) — Tareas por validar / Gestión de tareas activas dejan de ser subpantallas detrás de un ícono "Administrar" y pasan a ser 2 secciones más del tablero fusionado (4ta y 5ta, admin-only).
 2026-08 (aprox.) — Fusión de Tareas en una sola pantalla con scroll (reemplaza el pill-toggle Disponibles/Mis tareas); selector de salto rápido en el header.
 2026-08 (aprox.) — Rediseño de card + detalle según 2 mockups; bug real corregido en "A cargo"; límites de caracteres en el wizard "Nueva tarea".

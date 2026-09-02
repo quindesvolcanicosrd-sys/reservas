@@ -1975,6 +1975,34 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div id="tar-crear-personas-lista" class="ev-marcar-lista"></div>
       </div>
 
+      <!-- Paso nuevo (ver MANIFEST.md "Cambios recientes" -- "paso nuevo
+           justo antes de la fecha: tarea por realizar / ya realizada"):
+           mismo componente `.opciones`/`.opcion` que "¿Cómo se asigna esta
+           tarea?" de arriba (2 cards grandes ícono+título+descripción,
+           toggle de selección exclusiva a mano vía `_tarCrearSelTipo()`).
+           Decide el TÍTULO y la dirección del calendario del paso
+           siguiente (`_tarCrearMostrarPaso()`/`_tarCrearCalRender()`,
+           js/tareas.js). -->
+      <div class="salud-paso" id="tar-crear-paso-tipo">
+        <p class="ev-lugar-campo-label" style="margin-top:0;">¿Cuándo se hace esta tarea?</p>
+        <div class="opciones" id="tar-crear-tipo-opciones" style="margin-bottom:0;">
+          <div class="opcion" data-val="futura" onclick="_tarCrearSelTipo(this,'futura')">
+            <span class="material-symbols-outlined">schedule</span>
+            <div>
+              <div style="font-weight:700;">Tarea por realizar</div>
+              <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Se publicará para que sea completada próximamente.</div>
+            </div>
+          </div>
+          <div class="opcion" data-val="realizada" onclick="_tarCrearSelTipo(this,'realizada')">
+            <span class="material-symbols-outlined">task_alt</span>
+            <div>
+              <div style="font-weight:700;">Tarea ya realizada</div>
+              <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">La tarea ya fue completada. Elegí la fecha en que ocurrió.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Paso 5 (último, ver MANIFEST.md "Cambios recientes" -- el paso
            "Notas" que cerraba el wizard se eliminó, ahora Fecha límite es
            el paso final): calendario inline, mismo componente que
@@ -1986,10 +2014,13 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            del texto completo (`#tar-crear-dias-wrap`) si cambia el "texto"
            (aparece por primera vez, o pasa de singular "1 día" a plural
            "N días" o viceversa), fade solo del número (`#tar-crear-dias-num`)
-           si el resto de la frase se mantiene igual. -->
+           si el resto de la frase se mantiene igual. Título dinámico (ver
+           MANIFEST.md "Cambios recientes" -- paso nuevo "tipo" de arriba):
+           "¿Cuál es la fecha límite?"/"¿Cuándo se completó?" según
+           `_tarCrearData.tipo`, seteado en `_tarCrearMostrarPaso()`. -->
       <div class="salud-paso" id="tar-crear-paso-fecha">
         <p class="ev-lugar-campo-label" style="margin-top:0;display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;">
-          <span>Fecha límite</span>
+          <span id="tar-crear-fecha-titulo">¿Cuál es la fecha límite?</span>
           <span id="tar-crear-dias-wrap" style="display:none;"><span id="tar-crear-dias-num">0</span><span id="tar-crear-dias-resto"> días para realizar la tarea</span></span>
         </p>
         <div class="ev-ant-cal-nav">

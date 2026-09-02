@@ -1311,11 +1311,15 @@ function _tarArchivar(idTarea, btn) {
 // sin cambios de nombre/shape): 0 Nombre+Área+Descripción / 1 Puntos+
 // Máximo de personas / 2 Modo de asignación / 3 Asignar a personas (SOLO
 // si modoAsignacion==='elegir', ver `_tarCrearIrSiguiente()`/
-// `_tarCrearBack()`) / 4 Fecha límite (último paso siempre, sin importar
-// el modo -- "Crear tarea").
-var _TAR_CREAR_STEPS = ['tar-crear-paso-0', 'tar-crear-paso-1', 'tar-crear-paso-modo', 'tar-crear-paso-personas', 'tar-crear-paso-fecha'];
+// `_tarCrearBack()`) / 4 "¿Cuándo se hace esta tarea?" (nuevo, ver
+// MANIFEST.md "Cambios recientes" -- por realizar/ya realizada, mismo
+// componente `.opciones` que el paso de Modo) / 5 Fecha límite (último
+// paso siempre, sin importar el modo -- "Crear tarea"; título y dirección
+// del calendario dependen de `_tarCrearData.tipo`, ver
+// `_tarCrearMostrarPaso()`/`_tarCrearCalRender()` más abajo).
+var _TAR_CREAR_STEPS = ['tar-crear-paso-0', 'tar-crear-paso-1', 'tar-crear-paso-modo', 'tar-crear-paso-personas', 'tar-crear-paso-tipo', 'tar-crear-paso-fecha'];
 var _tarCrearCurIdx = 0;
-var _tarCrearData = { titulo: '', area: null, fecha: null, notas: '', asignarA: [], modoAsignacion: null };
+var _tarCrearData = { titulo: '', area: null, fecha: null, notas: '', asignarA: [], modoAsignacion: null, tipo: null };
 var _tarCrearCal = { mostrado: null };
 // Último valor de "días para completar" mostrado (ver
 // `_tarActualizarDiasParaCompletar()` más abajo) -- `null` = todavía no se
@@ -1332,7 +1336,7 @@ var _tarCrearDiasAnterior = null;
 var _tarCrearEnLimiteAnterior = null;
 
 function irTarCrear() {
-  _tarCrearData = { titulo: '', area: null, fecha: null, notas: '', asignarA: [], modoAsignacion: null };
+  _tarCrearData = { titulo: '', area: null, fecha: null, notas: '', asignarA: [], modoAsignacion: null, tipo: null };
   _tarCrearCal.mostrado = _evHoyISO();
   ir('s-tareas-crear');
   _tarCrearResetUI();
@@ -1356,6 +1360,7 @@ function _tarCrearResetUI() {
   _adminSetStepperValue('tar-crear-puntos', 0);
   _adminSetStepperValue('tar-crear-cupos', 1);
   document.querySelectorAll('#tar-crear-modo-opciones .opcion').forEach(function(o) { o.classList.remove('sel'); });
+  document.querySelectorAll('#tar-crear-tipo-opciones .opcion').forEach(function(o) { o.classList.remove('sel'); });
   var n = document.getElementById('tar-crear-notas'); if (n) n.value = '';
   _tarActualizarContador('tar-crear-titulo-contador', '', _TAR_TITULO_MAXLEN);
   _tarActualizarContador('tar-crear-notas-contador', '', _TAR_NOTAS_MAXLEN);
@@ -1394,6 +1399,16 @@ function _tarCrearMostrarPaso(idx) {
     var inp = document.getElementById('tar-crear-personas-search');
     _tarCrearRenderPersonas(inp ? inp.value : '');
   }
+  // Paso "Fecha límite"/"¿Cuándo se completó?" -- título y dirección del
+  // calendario dependen de `_tarCrearData.tipo` (paso anterior, nuevo, ver
+  // MANIFEST.md "Cambios recientes"), así que se re-derivan cada vez que
+  // este paso se vuelve el activo (no solo una vez al abrir el wizard) --
+  // cubre ir y volver cambiando de tipo en el medio.
+  if (_TAR_CREAR_STEPS[idx] === 'tar-crear-paso-fecha') {
+    var tituloEl = document.getElementById('tar-crear-fecha-titulo');
+    if (tituloEl) tituloEl.textContent = _tarCrearData.tipo === 'realizada' ? '¿Cuándo se completó?' : '¿Cuál es la fecha límite?';
+    _tarCrearCalRender();
+  }
 }
 function _tarCrearRenderProg() {
   var cont = document.getElementById('tar-crear-prog'); if (!cont) return;
@@ -1417,6 +1432,7 @@ function _tarCrearBack() {
 function _tarCrearIrSiguiente() {
   if (_tarCrearCurIdx === 0 && !_tarCrearPaso0Valido()) return;
   if (_TAR_CREAR_STEPS[_tarCrearCurIdx] === 'tar-crear-paso-modo' && !_tarCrearData.modoAsignacion) return;
+  if (_TAR_CREAR_STEPS[_tarCrearCurIdx] === 'tar-crear-paso-tipo' && !_tarCrearData.tipo) return;
   var next = _tarCrearCurIdx + 1;
   if (_TAR_CREAR_STEPS[next] === 'tar-crear-paso-personas' && _tarCrearData.modoAsignacion !== 'elegir') next++;
   _tarCrearMostrarPaso(next);
@@ -1441,7 +1457,8 @@ function _tarCrearActualizarFooter() {
     var pasoId = _TAR_CREAR_STEPS[_tarCrearCurIdx];
     btn.disabled = pasoId === 'tar-crear-paso-0' ? !_tarCrearPaso0Valido() :
       (pasoId === 'tar-crear-paso-modo' ? !_tarCrearData.modoAsignacion :
-      (pasoId === 'tar-crear-paso-fecha' ? !_tarCrearPasoFechaValido() : false));
+      (pasoId === 'tar-crear-paso-tipo' ? !_tarCrearData.tipo :
+      (pasoId === 'tar-crear-paso-fecha' ? !_tarCrearPasoFechaValido() : false)));
   }
 }
 // Límites de caracteres del wizard "Nueva tarea" (ver MANIFEST.md "Cambios
@@ -1476,12 +1493,38 @@ function _tarCrearSelModo(el, val) {
   _tarCrearData.modoAsignacion = val;
   _tarCrearActualizarFooter();
 }
+/* Paso nuevo "¿Cuándo se hace esta tarea?" (ver MANIFEST.md "Cambios
+   recientes") -- mismo patrón exacto que `_tarCrearSelModo()` de arriba
+   (`.opcion`/`.opcion.sel`, toggle exclusivo a mano). Al cambiar de tipo
+   se limpia la fecha ya elegida (si había una) -- una fecha futura válida
+   para "por realizar" puede no serlo para "ya realizada" (y viceversa),
+   el paso siguiente vuelve a pedirla contra la dirección correcta del
+   calendario en vez de arrastrar una selección que podría quedar
+   deshabilitada. */
+function _tarCrearSelTipo(el, val) {
+  document.querySelectorAll('#tar-crear-tipo-opciones .opcion').forEach(function(o) { o.classList.remove('sel'); });
+  el.classList.add('sel');
+  _tarCrearData.tipo = val;
+  _tarCrearData.fecha = null;
+  var resumen = document.getElementById('tar-crear-cal-resumen'); if (resumen) resumen.textContent = '';
+  var diasWrap = document.getElementById('tar-crear-dias-wrap'); if (diasWrap) diasWrap.style.display = 'none';
+  _tarCrearDiasAnterior = null;
+  _tarCrearActualizarFooter();
+}
 
 /* Calendario inline de fecha límite -- mismo componente (.ev-ant-cal-nav,
    .ev-cal-grid, .ev-cal-dow, .ev-cal-celda, .ev-ant-cal-sel, .ev-ant-cal-pasado,
    css/eventos.css) que ya usan Asistencia anticipada/Crear evento
    (`_evCrearCalRender()`), reusado con estado propio -- un único día, sin
-   rango, bloqueando fechas pasadas. */
+   rango. Dirección de bloqueo depende de `_tarCrearData.tipo` (paso nuevo
+   "¿Cuándo se hace esta tarea?", ver MANIFEST.md "Cambios recientes"):
+   "futura" (default, tarea por realizar) bloquea fechas PASADAS, como
+   siempre; "realizada" (ya se hizo) invierte el criterio y bloquea fechas
+   FUTURAS -- solo pasado/hoy habilitados. Reusa la misma clase visual
+   `.ev-ant-cal-pasado` ("celda deshabilitada, texto tenue") en los 2
+   casos -- el nombre de la clase describe el look, no la razón, y ya
+   existía para el otro sentido -- sin sumar una clase nueva solo para
+   invertir la etiqueta. */
 function _tarCrearCalRender() {
   var cont = document.getElementById('tar-crear-cal'); if (!cont) return;
   var m = _evCalMesDe(_tarCrearCal.mostrado);
@@ -1491,17 +1534,18 @@ function _tarCrearCalRender() {
   var finMes = new Date(m.year, m.month + 1, 0);
   var finGrid = _evLunesDeSemana(finMes); finGrid.setDate(finGrid.getDate() + 6);
   var hoy = _evHoyISO();
+  var esRealizada = _tarCrearData.tipo === 'realizada';
   var seleccionada = _tarCrearData.fecha;
   var html = _EV_DIAS_CORTOS.map(function(d) { return '<div class="ev-cal-dow">' + d + '</div>'; }).join('');
   var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
   while (cur <= finGrid) {
     var celdaIso = _evToISO(cur);
     var ajeno = cur.getMonth() !== m.month;
-    var pasado = _evFechaCmp(celdaIso, hoy) < 0;
-    var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (pasado ? ' ev-ant-cal-pasado' : '');
+    var deshabilitada = esRealizada ? _evFechaCmp(celdaIso, hoy) > 0 : _evFechaCmp(celdaIso, hoy) < 0;
+    var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (deshabilitada ? ' ev-ant-cal-pasado' : '');
     if (seleccionada && celdaIso === seleccionada) clases += ' ev-ant-cal-sel';
     if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
-    var onclickAttr = pasado ? '' : ' onclick="_tarCrearCalTocarDia(\'' + celdaIso + '\')"';
+    var onclickAttr = deshabilitada ? '' : ' onclick="_tarCrearCalTocarDia(\'' + celdaIso + '\')"';
     html += '<div class="' + clases + '" data-iso="' + celdaIso + '"' + onclickAttr + '><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
     cur.setDate(cur.getDate() + 1);
   }
@@ -1541,7 +1585,10 @@ function _tarCrearCalTocarDia(iso) {
   var resumen = document.getElementById('tar-crear-cal-resumen');
   if (resumen) resumen.textContent = _evAntFechaLegible(iso);
   _tarCrearActualizarFooter();
-  _tarActualizarDiasParaCompletar();
+  // "X días para realizar la tarea" no tiene sentido en modo "ya
+  // realizada" (la fecha elegida es pasada/hoy, no un plazo a futuro) --
+  // se deja oculto en vez de mostrar "0 días".
+  if (_tarCrearData.tipo !== 'realizada') _tarActualizarDiasParaCompletar();
 }
 
 /* "X días para realizar la tarea" (ver MANIFEST.md "Cambios recientes") --
@@ -1679,8 +1726,13 @@ function _tarCrearGuardar() {
     fechaVencimiento: _tarCrearData.fecha,
     creadoPor: E.nombre,
     // Opcional -- si viene con gente, el backend crea la asignación directo
-    // (estado 'iniciada') para cada unx y la tarea pasa a 'en_progreso'.
-    asignarA: _tarCrearData.asignarA
+    // (estado 'iniciada') para cada unx y la tarea pasa a 'en_progreso' --
+    // salvo `yaRealizada` (paso nuevo "¿Cuándo se hace esta tarea?", ver
+    // MANIFEST.md "Cambios recientes"): ahí el backend crea esas mismas
+    // asignaciones directo en 'aprobada' con `fecha_revision`=la fecha
+    // elegida y acredita los puntos ya, sin pasar por revisión.
+    asignarA: _tarCrearData.asignarA,
+    yaRealizada: _tarCrearData.tipo === 'realizada'
   };
   mostrarCargando('Creando tarea...');
   adminApi({ action: 'adminCrearTarea', datos: JSON.stringify(datos) }, function(res) {

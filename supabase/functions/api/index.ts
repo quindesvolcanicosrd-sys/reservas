@@ -1012,7 +1012,32 @@ async function adminCrearTarea(params: Record<string, any>): Promise<any> {
   if (error) return { exito: false, error: error.message };
   const tarea = creada[0];
   const asignarA: string[] = Array.isArray(datos.asignarA) ? datos.asignarA : [];
-  if (asignarA.length) {
+  // "Tarea ya realizada" (feat nueva, ver MANIFEST.md/CHANGELOG.md -- "paso
+  // nuevo en el wizard de creación: tarea por realizar / ya realizada") --
+  // en vez del camino normal (asignaciones en 'iniciada', tarea pasa a
+  // 'en_progreso'), crea las asignaciones YA `estado:'aprobada'` con
+  // `fecha_revision`=la fecha elegida y acredita los puntos de una sola vez
+  // -- mismo mecanismo que `adminValidarTarea('aprobar')`, sin pasar por el
+  // flujo de revisión (no aplica descuento por atraso, `_puntosTareaCreditados()`,
+  // porque no hay "envío" real que comparar contra un vencimiento: la tarea
+  // se está registrando retroactivamente como ya hecha). Puntos acreditados
+  // al MES/AÑO de la fecha elegida (no el de hoy), mismo criterio que el
+  // resto de esta app usa para créditos retroactivos (ej. racha, "mes del
+  // evento" no "mes del click"). Solo aplica si además se eligió gente
+  // (`asignarA`) -- sin nadie a quien acreditarle, no hay nada que aprobar.
+  if (asignarA.length && datos.yaRealizada) {
+    const fecha: string | null = datos.fechaVencimiento ?? null;
+    const fechaObj = fecha ? new Date(fecha + 'T00:00:00Z') : new Date();
+    const puntosOriginales = Number(datos.puntos) || 0;
+    await supabase.from('asignaciones_tareas').insert(asignarA.map((n: string) => ({
+      tarea_id: tarea.id, nombre_usuario: n, estado: 'aprobada', es_rescate: false,
+      fecha_vencimiento_personal: fecha, fecha_revision: fecha ? fecha + 'T00:00:00.000Z' : new Date().toISOString(),
+    })));
+    for (const n of asignarA) {
+      await _acreditarPuntosTarea(n, fechaObj.getUTCFullYear(), fechaObj.getUTCMonth() + 1, puntosOriginales);
+    }
+    await supabase.from('tareas').update({ estado: 'archivada', fecha_archivado: new Date().toISOString() }).eq('id', tarea.id);
+  } else if (asignarA.length) {
     await supabase.from('asignaciones_tareas').insert(asignarA.map((n: string) => ({ tarea_id: tarea.id, nombre_usuario: n, estado: 'iniciada', es_rescate: false, fecha_vencimiento_personal: tarea.fecha_vencimiento ?? null })));
     await supabase.from('tareas').update({ estado: 'en_progreso' }).eq('id', tarea.id);
   }
