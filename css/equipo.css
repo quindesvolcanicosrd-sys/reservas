@@ -55,22 +55,31 @@
    que el radio queda scopeado por id en vez de sumado a `.eq-header-panel`
    a secas. */
 #eq-misstats-panel { border-radius: 0 0 16px 16px; }
-.eq-mis-stats-header { display: flex; align-items: center; gap: 12px; }
-.eq-mis-stats-info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
-/* Pill de categoría (Quindes/Mirlxs) + pill de estado en la misma fila
-   (pedido explícito, re-ajuste -- antes `rol` era texto pelado arriba del
-   chip de estado, apilados en 2 líneas). `.eq-mis-stats-rol-pill`: mismas
-   métricas de caja que `.dat-estado-chip` (padding/radius/font,
-   css/perfil.css) para que ambas pills midan igual -- duplicadas a mano
-   acá (4 declaraciones) en vez de cruzar a css/perfil.css por una clase
-   compartida, mismo criterio ya usado en el resto de esta sección para
-   piezas visuales chicas y de un solo lugar. Color de marca (no un color
-   de estado -- esto es la categoría/tier, no un estado). */
-.eq-mis-stats-pills { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.eq-mis-stats-rol-pill {
-  display: inline-block; padding: 3px 12px; border-radius: 999px;
-  font-size: 0.78rem; font-weight: 700; background: var(--brand-light); color: var(--brand);
+/* Pill de nivel (Q/M/I) + pill de estado -- rediseño compacto (pedido
+   explícito, ver MANIFEST.md/CHANGELOG.md -- "rediseñar Mis estadísticas
+   para que sea más compacto"): MOVIDAS a la nav (`.eq-misstats-toggle-pills`,
+   más abajo) -- antes vivían dentro del panel (`.eq-mis-stats-header`/
+   `.eq-mis-stats-info`/`.eq-mis-stats-pills`, sacadas de acá, sin más
+   consumidores). `.eq-mis-stats-rol-pill` con BORDE nuevo (antes solo
+   fondo tenue + texto) -- pedido explícito, "borde naranja, fondo naranja
+   tenue, texto naranja" -- mismo selector reusado tal cual por
+   `.eq-mis-stats-total-pill` (el total al lado de "PUNTOS", más abajo):
+   "el mismo estilo naranja que los pills de nivel", pedido explícito,
+   comparten declaración en vez de duplicarla. `.dat-estado-chip` (estado,
+   css/perfil.css) queda sin tocar -- solo cambia de UBICACIÓN, nunca de
+   color/forma. */
+.eq-mis-stats-rol-pill, .eq-mis-stats-total-pill {
+  display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px;
+  font-size: 0.72rem; font-weight: 800; border: 1px solid var(--brand);
+  background: var(--brand-light); color: var(--brand);
 }
+/* Separador "PUNTOS" con el total inline (rediseño compacto, pedido
+   explícito) -- reemplaza la card `.eq-stat-card--full` de "Puntos
+   totales" que vivía como una card más del grid. Línea-label-pill-línea,
+   mismo layout general que `.eq-grupo-header` (headers de acordeón de la
+   lista, más abajo en este archivo) -- `.eq-grupo-linea`/`.eq-grupo-nombre`
+   reusadas tal cual (mismo look, sin duplicar esas 2 reglas). */
+.eq-mis-stats-puntos-row { display: flex; align-items: center; gap: 8px; width: 100%; margin: 14px 0 2px; }
 /* Compactación del contenido de stats (pedido explícito, re-ajuste) --
    `.eq-stats-grid`/`.eq-stat-card`/`.eq-stat-icon`/`.eq-stat-valor`/
    `.eq-stat-label` son compartidas con el perfil de detalle
@@ -83,6 +92,27 @@
 #eq-misstats-panel-inner .eq-stat-icon { font-size: 1.15rem; margin-bottom: 4px; }
 #eq-misstats-panel-inner .eq-stat-valor { font-size: 15px; }
 #eq-misstats-panel-inner .eq-stat-label { font-size: 13px; margin-top: 1px; }
+/* Card combinada "Asistencia + Racha" (rediseño compacto, pedido explícito
+   -- "en lugar de 2 cards separadas, mostrar una sola") -- 2 íconos juntos
+   arriba (`sports`/asistencia + `local_fire_department`/racha), valor
+   principal (asistencia) + badge de racha inline al lado (SOLO si hay
+   puntos de racha ese período, `_eqRenderMisEstadisticas()`/js/equipo.js
+   -- mismo criterio "nunca 0" que el resto de esta sección), label único
+   abajo. `.eq-stat-combo-racha-badge` es su PROPIO target de tap
+   (`event.stopPropagation()`, ver ese comentario en js/equipo.js) -- mismo
+   estilo naranja tenue que el resto de pills de esta sección, sin repetir
+   la declaración completa (distinto padding/tamaño, chico a propósito
+   para caber inline junto al valor grande). */
+.eq-stat-card--combo { display: flex; flex-direction: column; align-items: center; }
+.eq-stat-combo-iconos { display: flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 4px; }
+.eq-stat-combo-iconos .material-symbols-rounded { font-size: 1.15rem; color: var(--brand); }
+.eq-stat-combo-valor-row { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.eq-stat-combo-racha-badge {
+  display: inline-flex; align-items: center; gap: 1px; padding: 1px 7px; border-radius: 999px;
+  font-size: 0.68rem; font-weight: 800; background: var(--brand-light); color: var(--brand);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.eq-stat-combo-racha-badge .material-symbols-rounded { font-size: 0.8rem; }
 
 /* ── Trigger "Mis estadísticas" de la nav (rediseño, ver MANIFEST.md/
    CHANGELOG.md) -- avatar 36px (escalón propio, ninguna variante global de
@@ -104,10 +134,24 @@
 }
 .eq-misstats-toggle-btn .eq-misstats-toggle-avatar { width: 36px; height: 36px; flex-shrink: 0; }
 .eq-misstats-toggle-btn .eq-misstats-toggle-avatar .avatar-pill-letter { font-size: 14px; }
+/* `min-width:0` (bug real corregido, ver MANIFEST.md/CHANGELOG.md --
+   "rediseño compacto de Mis estadísticas"): sin él, un flex-item con
+   contenido de texto no se achica más allá de su ancho natural
+   (`min-width:auto` default de flexbox, mismo gotcha ya documentado en
+   otros lugares de este archivo) -- con las 2 pills nuevas sumadas al
+   lado (`.eq-misstats-toggle-pills`, más abajo) en pantallas angostas el
+   texto "Mis estadísticas" necesita poder ceder ancho de verdad para que
+   `text-overflow:ellipsis` realmente entre en juego, en vez de empujar
+   las pills/el chevron fuera del botón. */
 .eq-misstats-toggle-texto {
-  font-size: 0.86rem; font-weight: 700; color: var(--text);
+  font-size: 0.86rem; font-weight: 700; color: var(--text); min-width: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+/* Pills de nivel/estado en la nav (rediseño compacto, pedido explícito) --
+   `flex-shrink:0` (nunca se achican/truncan, a diferencia del texto de
+   arriba -- una pill cortada a la mitad no comunica nada) + `white-space:nowrap`
+   por si el texto de estado más largo ("Lesionadx") tentara a envolver. */
+.eq-misstats-toggle-pills { display: flex; align-items: center; gap: 6px; flex-shrink: 0; white-space: nowrap; }
 .eq-misstats-toggle-chevron { flex-shrink: 0; font-size: 1.2rem; color: var(--muted); transition: transform 0.25s; }
 .eq-misstats-toggle-btn.activo .eq-misstats-toggle-chevron { transform: rotate(180deg); color: var(--brand); }
 

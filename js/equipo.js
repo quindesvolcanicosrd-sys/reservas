@@ -1942,11 +1942,22 @@ function _eqRenderLesionadxs() {
 // visibles en el trigger de la nav (`#eq-misstats-toggle-btn`/
 // `toggleAvatar` más abajo) y en el perfil de detalle -- este panel es el
 // único lugar donde dejan de mostrarse.
+// Abreviaturas de nivel para la pill de la nav (pedido explícito, ver
+// MANIFEST.md/CHANGELOG.md -- "rediseño compacto de Mis estadísticas"):
+// "Quindes"->"Q", "Mirlxs"->"M", "Inactivxs"->"I" -- este último nunca
+// sale de `persona.rol` en la práctica (esa columna es SIEMPRE
+// 'Quindes'/'Mirlxs', ver `getEquipo()`/supabase/functions/api/index.ts,
+// "Inactivxs" es un concepto de `estado`/`_eqEsInactivo()`, no de
+// categoría) -- se deja mapeado igual, pedido explícito, defensivo por si
+// algún día existe un 3er valor real. Fallback al texto completo si el
+// rol no está en el mapa, nunca una abreviatura inventada.
+var _EQ_NIVEL_ABREV = { Quindes: 'Q', Mirlxs: 'M', Inactivxs: 'I' };
 function _eqRenderMisEstadisticas() {
   var cont = document.getElementById('eq-misstats-panel-inner');
   var toggleBtn = document.getElementById('eq-misstats-toggle-btn');
   var toggleAvatar = document.getElementById('eq-misstats-toggle-avatar');
   var toggleTendencia = document.getElementById('eq-misstats-toggle-tendencia');
+  var togglePills = document.getElementById('eq-misstats-toggle-pills');
   if (!cont || !toggleBtn) return;
   var persona = _eqPersonas.filter(function(p) { return _eqEsUsuarioActual(p); })[0];
   if (!persona) {
@@ -1983,6 +1994,20 @@ function _eqRenderMisEstadisticas() {
   var statsCalc = _eqStatsCalc(persona);
   var estadoTexto = persona.estado === 'Lesionadx' ? 'Lesionadx' : persona.estado === 'Activx' ? 'Activo' : 'Inactivo';
   var estadoClase = persona.estado === 'Lesionadx' ? 'dat-estado-lesion' : persona.estado === 'Activx' ? 'dat-estado-activo' : 'dat-estado-inactivo';
+  // Pills de nivel + estado MOVIDAS a la nav (rediseño compacto, pedido
+  // explícito, ver MANIFEST.md/CHANGELOG.md) -- antes vivían dentro del
+  // panel (`.eq-mis-stats-header`/`.eq-mis-stats-info`/`.eq-mis-stats-pills`,
+  // ya sacados de acá abajo) -- ahora en `#eq-misstats-toggle-pills`
+  // (index.html), entre el texto "Mis estadísticas" y el chevron, SIEMPRE
+  // visibles (panel abierto o cerrado), mismo criterio que ya tiene el
+  // avatar/chevron de tendencia de la nav. Nivel abreviado
+  // (`_EQ_NIVEL_ABREV`, más arriba) -- estado queda completo ("Activo"),
+  // mismo `.dat-estado-chip`/`estadoClase` de siempre, sin tocar su color.
+  if (togglePills) {
+    togglePills.innerHTML =
+      '<span class="eq-mis-stats-rol-pill">' + _eqEsc(_EQ_NIVEL_ABREV[persona.rol] || persona.rol) + '</span>' +
+      '<span class="dat-estado-chip ' + estadoClase + '">' + estadoTexto + '</span>';
+  }
   // Termómetro solo con equipo propio -- mismo bug real/mismo criterio ya
   // corregido en `_eqPerfilContenidoHtml()`/`_datosRenderStatsHtml()`
   // (js/perfil.js): `necesitaPatines`/`necesitaProtecciones` (getEquipo())
@@ -1994,36 +2019,49 @@ function _eqRenderMisEstadisticas() {
       '<div class="eq-rank-track"><div class="eq-rank-fill" style="width:' + (persona.termometro_pct || 0) + '%;"></div></div>' +
       '<div class="eq-rank-texto">' + _eqEsc(_eqRankTexto(persona)) + '</div>' +
     '</div>';
+  // Racha inline en la card combinada de abajo (rediseño compacto, pedido
+  // explícito) -- badge propio SOLO si hay puntos de racha ese período,
+  // mismo criterio "nunca mostrar 0" que `_eqPuntosRachaHtml()` (que sigue
+  // viva, reusada tal cual por `_eqPerfilContenidoHtml()` -- este panel es
+  // el único que ya NO la llama, la racha se folding acá adentro de la
+  // card de asistencia en vez de tener su propia card aparte).
+  var rachaPuntos = Number(persona.puntosRacha) || 0;
+  var rachaBadgeHtml = rachaPuntos > 0
+    ? '<span class="eq-stat-combo-racha-badge" onclick="event.stopPropagation();' + _eqDesgloseOnclick(persona.username, 'racha', 'Puntos por racha') + '"><span class="material-symbols-rounded">local_fire_department</span>+' + rachaPuntos + '</span>'
+    : '';
   cont.innerHTML =
-    '<div class="eq-mis-stats-header">' +
-      '<div class="eq-mis-stats-info">' +
-        // Pill de categoría + pill de estado en la misma fila (pedido
-        // explícito) -- antes `rol` era texto pelado (`.eq-mis-stats-nombre`)
-        // arriba del chip de estado, apilados. `.eq-mis-stats-rol-pill`
-        // nueva, mismas métricas de caja que `.dat-estado-chip` (padding/
-        // radius/font, css/perfil.css) para que ambas pills midan igual,
-        // pero con el color de marca (no un color de estado -- no es un
-        // estado, es la categoría/tier).
-        '<div class="eq-mis-stats-pills">' +
-          '<span class="eq-mis-stats-rol-pill">' + _eqEsc(persona.rol) + '</span>' +
-          '<span class="dat-estado-chip ' + estadoClase + '">' + estadoTexto + '</span>' +
-        '</div>' +
-      '</div>' +
-    '</div>' +
     '<div class="eq-stats-grid">' +
       '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">roller_skating</span><div class="eq-stat-valor">' + statsCalc.horas + 'h</div><div class="eq-stat-label">Horas patinadas</div></div>' +
       '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">kid_star</span><div class="eq-stat-valor">' + statsCalc.asistenciaPct + '%</div><div class="eq-stat-label">Asistencia anual</div></div>' +
     '</div>' +
-    '<div class="eq-stats-grid">' +
-      '<div class="eq-stat-card eq-stat-card--tappable" onclick="' + _eqDesgloseOnclick(persona.username, 'tareas', 'Puntos por tareas') + '"><span class="eq-stat-icon material-symbols-rounded">task_alt</span><div class="eq-stat-valor">' + (persona.puntosTareas !== undefined && persona.puntosTareas !== null ? persona.puntosTareas : '—') + '</div><div class="eq-stat-label">Puntos por tareas (mes)</div></div>' +
-      '<div class="eq-stat-card eq-stat-card--tappable" onclick="' + _eqDesgloseOnclick(persona.username, 'asistencia', 'Puntos por asistencia') + '"><span class="eq-stat-icon material-symbols-rounded">stars</span><div class="eq-stat-valor">' + (persona.puntosAsistencia !== undefined && persona.puntosAsistencia !== null ? persona.puntosAsistencia : '—') + '</div><div class="eq-stat-label">Puntos por asistencia (mes)</div></div>' +
+    // Separador "PUNTOS" con el total inline (rediseño compacto, pedido
+    // explícito) -- reemplaza la card `.eq-stat-card--full` de "Puntos
+    // totales" que vivía como una card más del grid. `.eq-grupo-linea`
+    // reusada tal cual (ya existente, líneas laterales de los headers de
+    // acordeón de la lista) -- mismo look, sin duplicar la regla CSS.
+    '<div class="eq-mis-stats-puntos-row">' +
+      '<span class="eq-grupo-linea"></span>' +
+      '<span class="eq-grupo-nombre">Puntos</span>' +
+      '<span class="eq-mis-stats-total-pill">' + (persona.puntosTotal !== undefined && persona.puntosTotal !== null ? persona.puntosTotal : '—') + '</span>' +
+      '<span class="eq-grupo-linea"></span>' +
     '</div>' +
-    _eqPuntosRachaHtml(persona) +
-    // Total del período pedido (`puntosTotal`, getEquipo()) -- en modo
-    // histórico ya viene con `equipo.puntos_anteriores` sumado adentro
-    // (ver supabase/functions/api/index.ts), sin nada que recalcular acá.
     '<div class="eq-stats-grid">' +
-      '<div class="eq-stat-card eq-stat-card--full"><span class="eq-stat-icon material-symbols-rounded">military_tech</span><div class="eq-stat-valor">' + (persona.puntosTotal !== undefined && persona.puntosTotal !== null ? persona.puntosTotal : '—') + '</div><div class="eq-stat-label">' + _eqEsc(_eqFiltroPeriodo.modo === 'historico' ? 'Puntos totales (histórico)' : 'Puntos totales') + '</div></div>' +
+      '<div class="eq-stat-card eq-stat-card--tappable" onclick="' + _eqDesgloseOnclick(persona.username, 'tareas', 'Puntos por tareas') + '"><span class="eq-stat-icon material-symbols-rounded">task_alt</span><div class="eq-stat-valor">' + (persona.puntosTareas !== undefined && persona.puntosTareas !== null ? persona.puntosTareas : '—') + '</div><div class="eq-stat-label">Puntos por tareas</div></div>' +
+      // Card combinada Asistencia+Racha (rediseño compacto, pedido
+      // explícito -- "en lugar de 2 cards separadas") -- toda la card
+      // abre el desglose de ASISTENCIA (concepto principal/valor grande);
+      // el badge de racha, si hay puntos ese período, es su PROPIO target
+      // de tap con `event.stopPropagation()` (mismo patrón ya usado por
+      // `.eq-fav-btn` dentro de `.eq-miembro-fila`, más arriba en este
+      // archivo) para no competir con el tap de la card completa.
+      '<div class="eq-stat-card eq-stat-card--combo eq-stat-card--tappable" onclick="' + _eqDesgloseOnclick(persona.username, 'asistencia', 'Puntos por asistencia') + '">' +
+        '<div class="eq-stat-combo-iconos"><span class="material-symbols-rounded">sports</span><span class="material-symbols-rounded">local_fire_department</span></div>' +
+        '<div class="eq-stat-combo-valor-row">' +
+          '<span class="eq-stat-valor">' + (persona.puntosAsistencia !== undefined && persona.puntosAsistencia !== null ? persona.puntosAsistencia : '—') + '</span>' +
+          rachaBadgeHtml +
+        '</div>' +
+        '<div class="eq-stat-label">Asistencia + Racha</div>' +
+      '</div>' +
     '</div>' +
     rankHtml;
   _eqHidratarAvatares();
