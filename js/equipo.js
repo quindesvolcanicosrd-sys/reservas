@@ -807,6 +807,13 @@ function _eqAbrirPanel(tag) {
   if (tag === 'busqueda') {
     setTimeout(function() { var inp = document.getElementById('eq-search-input'); if (inp) inp.focus(); }, 50);
   }
+  // El alto de `#eq-sticky-header` cambia al abrirse un panel (ver
+  // "Headers sticky apilados" -- css/equipo.css) -- los headers de sección
+  // que ya estén stuck en ese momento necesitan correrse hacia abajo para no
+  // quedar tapados. `setTimeout(300)` espera a que termine la transición de
+  // `max-height` (0.28s, `.eq-header-panel`) para medir el alto FINAL, no el
+  // de a mitad de camino.
+  setTimeout(_eqActualizarStickyHeaders, 300);
 }
 function _eqCerrarPanel(tag) {
   var cfg = _EQ_PANELES[tag];
@@ -823,6 +830,7 @@ function _eqCerrarPanel(tag) {
     });
   }
   if (btn) btn.classList.remove('activo');
+  setTimeout(_eqActualizarStickyHeaders, 300);
 }
 
 /* ── Colapso progresivo de los paneles de nav al scrollear (ver MANIFEST.md
@@ -896,6 +904,7 @@ function _eqInicializarCierrePanelesPorScroll() {
     } else {
       panel.style.maxHeight = _eqListaDragAlturaOriginal + 'px';
     }
+    setTimeout(_eqActualizarStickyHeaders, 300);
   }, { passive: true });
 }
 _eqInicializarCierrePanelesPorScroll();
