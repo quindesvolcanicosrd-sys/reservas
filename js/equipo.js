@@ -2060,7 +2060,13 @@ function _eqRenderMisEstadisticas() {
           '<span class="eq-stat-valor">' + (persona.puntosAsistencia !== undefined && persona.puntosAsistencia !== null ? persona.puntosAsistencia : '—') + '</span>' +
           rachaBadgeHtml +
         '</div>' +
-        '<div class="eq-stat-label">Asistencia + Racha</div>' +
+        // Label "Asistencia" solo (re-ajuste, pedido explícito, ver
+        // MANIFEST.md/CHANGELOG.md -- "label de la card: solo
+        // 'Asistencia'") -- la card sigue siendo la combinada
+        // (íconos+badge de racha arriba, sin cambios de eso), único
+        // cambio es el texto del label -- "+ Racha" ya se entiende por el
+        // ícono/badge de fuego, no hace falta repetirlo en el label.
+        '<div class="eq-stat-label">Asistencia</div>' +
       '</div>' +
     '</div>' +
     rankHtml;
@@ -2529,29 +2535,59 @@ function _eqAbrirDesglosePuntos(nombreUsuario, concepto, titulo) {
     });
   });
   _registrarOverlayAbierto(_eqCerrarDesglosePuntos);
+  var mostrarError = function() { lista.innerHTML = '<p class="eq-error">No se pudo cargar el desglose.</p>'; };
+  // Bonificación de racha dentro del desglose de asistencia (feat nueva,
+  // ver MANIFEST.md/CHANGELOG.md -- "mostrar bonificaciones de racha en el
+  // mismo desglose") -- `getDesglosePuntos()` no tiene un modo "combinado"
+  // (cada `concepto` es una consulta propia, ver supabase/functions/api/index.ts)
+  // así que acá se piden los 2 en paralelo y se combinan recién al
+  // renderizar (`_eqRenderDesgloseAsistenciaConRacha()`, más abajo) --
+  // nunca se bloquean entre sí, cualquiera de los 2 puede resolver primero.
+  if (concepto === 'asistencia') {
+    var pendientes = { asistencia: null, racha: null };
+    var intentarRenderizar = function() {
+      if (pendientes.asistencia === null || pendientes.racha === null) return;
+      if (pendientes.asistencia === false) { mostrarError(); return; }
+      _eqRenderDesgloseAsistenciaConRacha(pendientes.asistencia, pendientes.racha);
+    };
+    api(_eqDesglosePuntosParams(nombreUsuario, 'asistencia'), function(res) {
+      pendientes.asistencia = (res && res.exito !== false) ? res : false;
+      intentarRenderizar();
+    }, function() { pendientes.asistencia = false; intentarRenderizar(); });
+    api(_eqDesglosePuntosParams(nombreUsuario, 'racha'), function(res) {
+      // Sin bloquear el desglose de asistencia por un error puntual acá --
+      // si la racha falla, simplemente no se muestra esa sección (mismo
+      // criterio que "ocultar si viene vacío", punto 2 del pedido).
+      pendientes.racha = (res && res.exito !== false) ? res : { filas: [], total: 0 };
+      intentarRenderizar();
+    }, function() { pendientes.racha = { filas: [], total: 0 }; intentarRenderizar(); });
+    return;
+  }
+  api(_eqDesglosePuntosParams(nombreUsuario, concepto), function(res) {
+    if (!res || res.exito === false) {
+      lista.innerHTML = '<p class="eq-error">' + _eqEsc((res && res.error) || 'No se pudo cargar el desglose.') + '</p>';
+      return;
+    }
+    _eqRenderDesglosePuntos(res, concepto);
+  }, mostrarError);
+}
+// Mismos params EXACTOS que `_eqAplicarFiltrosAhora()` arma para
+// `getEquipo()` (más arriba en este archivo) -- extraído a helper propio
+// (antes inline, duplicado a mano acá abajo desde que `_eqAbrirDesglosePuntos()`
+// necesita armar 2 requests en paralelo para `concepto:'asistencia'`, ver
+// arriba) en vez de tocar esa otra función ya probada varias veces contra
+// producción esta sesión, mismo criterio de riesgo ya documentado en
+// supabase/functions/api/index.ts para `_periodoDesdeParams()`.
+function _eqDesglosePuntosParams(nombreUsuario, concepto) {
   var params = { action: 'getDesglosePuntos', nombreUsuario: nombreUsuario, concepto: concepto };
   var periodo = _eqFiltroPeriodo;
-  // Mismos params EXACTOS que `_eqAplicarFiltrosAhora()` arma para
-  // `getEquipo()` (más arriba en este archivo) -- duplicado a propósito
-  // (función chica, un solo consumidor nuevo) en vez de extraer un
-  // helper que también toque esa función ya probada varias veces contra
-  // producción esta sesión, mismo criterio de riesgo ya documentado en
-  // supabase/functions/api/index.ts para `_periodoDesdeParams()`.
   if (periodo.modo === 'historico') {
     params.historico = true;
   } else {
     params.mesDesde = periodo.mesDesde; params.anioDesde = periodo.anioDesde;
     params.mesHasta = periodo.mesHasta; params.anioHasta = periodo.anioHasta;
   }
-  api(params, function(res) {
-    if (!res || res.exito === false) {
-      lista.innerHTML = '<p class="eq-error">' + _eqEsc((res && res.error) || 'No se pudo cargar el desglose.') + '</p>';
-      return;
-    }
-    _eqRenderDesglosePuntos(res, concepto);
-  }, function() {
-    lista.innerHTML = '<p class="eq-error">No se pudo cargar el desglose.</p>';
-  });
+  return params;
 }
 var _eqDesgloseCtx = null; // { fondoId } -- qué card retroceder al abrir/restaurar al cerrar
 function _eqCerrarDesglosePuntos(porGesto) {
@@ -2598,6 +2634,50 @@ function _eqRenderDesglosePuntos(res, concepto) {
   }
   html += filas.map(function(f) { return _eqDesgloseFilaHtml(f, concepto, icono); }).join('');
   html += '<div class="eq-desglose-total"><span>Total</span><span class="eq-desglose-total-valor">' + _eqDesglosePuntosTxt(res.total) + '</span></div>';
+  lista.innerHTML = html;
+}
+// Desglose de asistencia + sección "Bonificación por racha" (feat nueva,
+// ver MANIFEST.md/CHANGELOG.md -- "mostrar bonificaciones de racha en el
+// mismo desglose") -- variante de `_eqRenderDesglosePuntos()` (arriba)
+// SOLO para `concepto:'asistencia'`, que recibe los 2 resultados ya
+// resueltos (`_eqAbrirDesglosePuntos()`, más arriba) y los pinta como 2
+// bloques secuenciales: filas de asistencia normales primero (mismo
+// criterio que la función de arriba, empty-state incluido), después --
+// SOLO si `resRacha.filas` trae algo, pedido explícito ("ni el header ni
+// las filas" si no hay bonificaciones) -- un separador "Bonificación por
+// racha" (reusa `.eq-mis-stats-puntos-row`/`.eq-grupo-linea`/`.eq-grupo-nombre`
+// tal cual, mismo look que el separador "Puntos" de "Mis estadísticas",
+// sin duplicar esas reglas) + las filas de racha con `_eqDesgloseFilaHtml()`
+// (mismo formato de fila que asistencia, pedido explícito) pero con ícono
+// `local_fire_department` -- distinto del `emoji_events` que usa la vista
+// STANDALONE del concepto `'racha'` (`_EQ_DESGLOSE_ICONOS.racha`, sin
+// tocar, sigue viva -- se llega ahí tocando el badge de racha de la card
+// combinada, `_eqPuntosRachaHtml()`/onclick de `.eq-stat-combo-racha-badge`
+// más arriba) -- acá el fuego calza con el mismo ícono que ya usa ese
+// badge en la card, más coherente en este contexto puntual. Un "Total"
+// propio para la sección de racha, separado del total de asistencia --
+// 2 números con distinto significado, nunca mezclados en una sola suma.
+function _eqRenderDesgloseAsistenciaConRacha(resAsistencia, resRacha) {
+  var lista = document.getElementById('eq-desglose-lista');
+  if (!lista) return;
+  var filasAsistencia = resAsistencia.filas || [];
+  var filasRacha = resRacha.filas || [];
+  var html = '<p class="eq-desglose-periodo">' + _eqEsc(_eqDesglosePeriodoTxt()) + '</p>';
+  if (!filasAsistencia.length) {
+    html += '<div class="eq-favoritos-vacio"><span class="material-symbols-outlined">inbox</span>' + _eqEsc(_EQ_DESGLOSE_VACIO_TXT.asistencia) + '</div>';
+  } else {
+    html += filasAsistencia.map(function(f) { return _eqDesgloseFilaHtml(f, 'asistencia', _EQ_DESGLOSE_ICONOS.asistencia); }).join('');
+    html += '<div class="eq-desglose-total"><span>Total</span><span class="eq-desglose-total-valor">' + _eqDesglosePuntosTxt(resAsistencia.total) + '</span></div>';
+  }
+  if (filasRacha.length) {
+    html += '<div class="eq-mis-stats-puntos-row">' +
+        '<span class="eq-grupo-linea"></span>' +
+        '<span class="eq-grupo-nombre">Bonificación por racha</span>' +
+        '<span class="eq-grupo-linea"></span>' +
+      '</div>' +
+      filasRacha.map(function(f) { return _eqDesgloseFilaHtml(f, 'racha', 'local_fire_department'); }).join('') +
+      '<div class="eq-desglose-total"><span>Total racha</span><span class="eq-desglose-total-valor">' + _eqDesglosePuntosTxt(resRacha.total) + '</span></div>';
+  }
   lista.innerHTML = html;
 }
 // "agosto 2026" -- sin día, para filas que representan un MES entero sin
