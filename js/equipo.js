@@ -1950,8 +1950,8 @@ function _eqRenderMisEstadisticas() {
       '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">kid_star</span><div class="eq-stat-valor">' + statsCalc.asistenciaPct + '%</div><div class="eq-stat-label">Asistencia anual</div></div>' +
     '</div>' +
     '<div class="eq-stats-grid">' +
-      '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">task_alt</span><div class="eq-stat-valor">' + (persona.puntosTareas !== undefined && persona.puntosTareas !== null ? persona.puntosTareas : '—') + '</div><div class="eq-stat-label">Puntos por tareas (mes)</div></div>' +
-      '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">stars</span><div class="eq-stat-valor">' + (persona.puntosAsistencia !== undefined && persona.puntosAsistencia !== null ? persona.puntosAsistencia : '—') + '</div><div class="eq-stat-label">Puntos por asistencia (mes)</div></div>' +
+      '<div class="eq-stat-card eq-stat-card--tappable" onclick="' + _eqDesgloseOnclick(persona.username, 'tareas', 'Puntos por tareas') + '"><span class="eq-stat-icon material-symbols-rounded">task_alt</span><div class="eq-stat-valor">' + (persona.puntosTareas !== undefined && persona.puntosTareas !== null ? persona.puntosTareas : '—') + '</div><div class="eq-stat-label">Puntos por tareas (mes)</div></div>' +
+      '<div class="eq-stat-card eq-stat-card--tappable" onclick="' + _eqDesgloseOnclick(persona.username, 'asistencia', 'Puntos por asistencia') + '"><span class="eq-stat-icon material-symbols-rounded">stars</span><div class="eq-stat-valor">' + (persona.puntosAsistencia !== undefined && persona.puntosAsistencia !== null ? persona.puntosAsistencia : '—') + '</div><div class="eq-stat-label">Puntos por asistencia (mes)</div></div>' +
     '</div>' +
     _eqPuntosRachaHtml(persona) +
     // Total del período pedido (`puntosTotal`, getEquipo()) -- en modo
@@ -2343,7 +2343,189 @@ function _eqPuntosRachaHtml(p) {
   var puntos = Number(p.puntosRacha) || 0;
   if (puntos <= 0) return '';
   return '<div class="eq-stats-grid">' +
-      '<div class="eq-stat-card eq-stat-card--full"><span class="eq-stat-icon material-symbols-rounded">emoji_events</span><div class="eq-stat-valor">' + puntos + '</div><div class="eq-stat-label">Puntos por racha</div></div>' +
+      '<div class="eq-stat-card eq-stat-card--full eq-stat-card--tappable" onclick="' + _eqDesgloseOnclick(p.username, 'racha', 'Puntos por racha') + '"><span class="eq-stat-icon material-symbols-rounded">emoji_events</span><div class="eq-stat-valor">' + puntos + '</div><div class="eq-stat-label">Puntos por racha</div></div>' +
+    '</div>';
+}
+
+/* ── Desglose detallado de puntos por concepto (feat nueva, ver
+   MANIFEST.md/CHANGELOG.md -- "subpantalla de desglose de puntos por
+   concepto") -- tocar cualquiera de las 3 cards de puntos tappables
+   (asistencia/tareas/racha, `.eq-stat-card--tappable` arriba y en
+   `_eqPerfilContenidoHtml()` más abajo) abre `#eq-desglose-panel`, la
+   contraparte "línea por línea" de esos mismos 3 totales -- backend nuevo,
+   `getDesglosePuntos`/supabase/functions/api/index.ts, un `concepto` a la
+   vez.
+   Mecanismo visual "shared axis X" (Material Design 3) -- MISMO criterio
+   que `irAjSub()`/`cerrarAjSub()` (js/perfil.js, subsecciones de Ajustes,
+   pedido explícito "igual a como se navega a subsecciones en Ajustes"):
+   el panel entra desde la derecha (`translateX(100%)->0`,
+   `opacity:0.85->1`) mientras la card de la pantalla de ORIGEN retrocede
+   levemente (`translateX(0)->-25%`, `opacity:1->0.85`), en simultáneo;
+   cerrar invierte ambos. A diferencia de `irAjSub()` (que agrega su propio
+   chequeo dedicado -- `if (_ajSubAbierto)` -- al handler GLOBAL de
+   `popstate`, js/ui.js) esto usa `_registrarOverlayAbierto()`/
+   `_overlayStack` (ui.js), el mecanismo YA genérico para overlays (ver
+   MANIFEST.md, "Principios UX" -- "Todo overlay/modal/sheet se cierra vía
+   _overlayStack") -- mismo resultado real para el usuario (gesto nativo de
+   "atrás" cierra el panel en vez de navegar la pantalla de fondo, un
+   `history.pushState` propio por apertura) sin sumar un 2do caso especial
+   al handler compartido que hay que mantener sincronizado a mano.
+   `_eqCerrarDesglosePuntos(porGesto)` sigue el mismo patrón ya usado por
+   `cerrarSheetEvAccion()`/js/eventos.js (mismo overlay stack): sin
+   `porGesto` (tap en la flecha atrás propia) hace `history.back()`, que
+   dispara un popstate real -- el propio handler de `_overlayStack`
+   (ui.js) vuelve a llamar a esta función, ahora SÍ con `porGesto:true`,
+   recién ahí anima/oculta de verdad. Evita duplicar la animación de
+   cierre en 2 lugares (botón vs. gesto nativo).
+   Pantalla de ORIGEN -- puede abrirse desde "Mis estadísticas" (panel
+   deslizable dentro de `#s-equipo`) o desde el perfil de detalle
+   (`#s-equipo-perfil`) -- cada una con su propia card a retroceder
+   (`#eq-lista-card`/`#eq-perfil-card`, index.html) -- `_eqDesgloseCtx`
+   guarda cuál para que `_eqCerrarDesglosePuntos()` sepa a cuál devolverle
+   la posición neutra, sin asumir siempre la misma. */
+var _EQ_DESGLOSE_ICONOS = { asistencia: 'stars', tareas: 'task_alt', racha: 'emoji_events' };
+var _EQ_DESGLOSE_VACIO_TXT = {
+  asistencia: 'No hay asistencias registradas en este período.',
+  tareas: 'No hay tareas completadas en este período.',
+  racha: 'No hay bonos de racha en este período.'
+};
+// `username` es dato real (nombre_usuario), no un literal controlado --
+// se escapa para no romper el string JS de una sola comilla dentro del
+// atributo `onclick="..."` (mismo criterio ya usado por
+// `rol.replace(/'/g, "\\'")` en `_eqRenderPorRol()`, más arriba en este
+// archivo) + `&quot;` por si acaso, para el delimitador del atributo HTML
+// en sí. `concepto`/`titulo` sí son literales fijos, pasados tal cual por
+// cada caller -- nunca dato de usuario.
+function _eqDesgloseOnclick(username, concepto, titulo) {
+  var u = String(username || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+  return "_eqAbrirDesglosePuntos('" + u + "', '" + concepto + "', '" + titulo + "')";
+}
+function _eqAbrirDesglosePuntos(nombreUsuario, concepto, titulo) {
+  var panel = document.getElementById('eq-desglose-panel');
+  var tituloEl = document.getElementById('eq-desglose-titulo');
+  var lista = document.getElementById('eq-desglose-lista');
+  if (!panel || !lista) return;
+  if (tituloEl) tituloEl.textContent = titulo;
+  var perfilEl = document.getElementById('s-equipo-perfil');
+  var fondoId = (perfilEl && perfilEl.classList.contains('activa')) ? 'eq-perfil-card' : 'eq-lista-card';
+  _eqDesgloseCtx = { fondoId: fondoId };
+  var fondo = document.getElementById(fondoId);
+  lista.innerHTML = '<p class="eq-loading">Cargando...</p>';
+  // Por si quedó a mitad de una animación de salida (reapertura rápida) --
+  // mismo criterio que `irAjSub()`: limpia el inline para arrancar desde
+  // el estado de reposo real de la clase (sin `.activa`: `translateX(100%)`/
+  // `opacity:0.85`), no desde un valor a medio camino.
+  panel.style.transform = '';
+  panel.style.opacity = '';
+  panel.classList.add('activa');
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      panel.style.transform = 'translateX(0)';
+      panel.style.opacity = '1';
+      if (fondo) { fondo.style.transform = 'translateX(-25%)'; fondo.style.opacity = '0.85'; }
+    });
+  });
+  _registrarOverlayAbierto(_eqCerrarDesglosePuntos);
+  var params = { action: 'getDesglosePuntos', nombreUsuario: nombreUsuario, concepto: concepto };
+  var periodo = _eqFiltroPeriodo;
+  // Mismos params EXACTOS que `_eqAplicarFiltrosAhora()` arma para
+  // `getEquipo()` (más arriba en este archivo) -- duplicado a propósito
+  // (función chica, un solo consumidor nuevo) en vez de extraer un
+  // helper que también toque esa función ya probada varias veces contra
+  // producción esta sesión, mismo criterio de riesgo ya documentado en
+  // supabase/functions/api/index.ts para `_periodoDesdeParams()`.
+  if (periodo.modo === 'historico') {
+    params.historico = true;
+  } else {
+    params.mesDesde = periodo.mesDesde; params.anioDesde = periodo.anioDesde;
+    params.mesHasta = periodo.mesHasta; params.anioHasta = periodo.anioHasta;
+  }
+  api(params, function(res) {
+    if (!res || res.exito === false) {
+      lista.innerHTML = '<p class="eq-error">' + _eqEsc((res && res.error) || 'No se pudo cargar el desglose.') + '</p>';
+      return;
+    }
+    _eqRenderDesglosePuntos(res, concepto);
+  }, function() {
+    lista.innerHTML = '<p class="eq-error">No se pudo cargar el desglose.</p>';
+  });
+}
+var _eqDesgloseCtx = null; // { fondoId } -- qué card retroceder al abrir/restaurar al cerrar
+function _eqCerrarDesglosePuntos(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var panel = document.getElementById('eq-desglose-panel');
+  var fondo = _eqDesgloseCtx ? document.getElementById(_eqDesgloseCtx.fondoId) : null;
+  if (panel) { panel.style.transform = 'translateX(100%)'; panel.style.opacity = '0.85'; }
+  if (fondo) { fondo.style.transform = 'translateX(0)'; fondo.style.opacity = '1'; }
+  setTimeout(function() {
+    if (panel) { panel.classList.remove('activa'); panel.style.transform = ''; panel.style.opacity = ''; }
+    if (fondo) { fondo.style.transform = ''; fondo.style.opacity = ''; }
+    _eqDesgloseCtx = null;
+  }, 320);
+}
+// "+1 pt"/"+0.5 pts"/"+2 pts" -- `Math.round(n*10)/10` evita basura de
+// punto flotante (ej. 0.1+0.2) antes de decidir singular/plural; los
+// únicos valores reales posibles hoy son 0.5/1 (asistencia), enteros
+// (tareas, racha) o el `Math.max(x-diasTarde, x/2)` de tareas (puede dar
+// cualquier .5), así que 1 decimal alcanza siempre.
+function _eqDesglosePuntosTxt(n) {
+  var num = Math.round((Number(n) || 0) * 10) / 10;
+  return '+' + num + (Math.abs(num) === 1 ? ' pt' : ' pts');
+}
+// Período mostrado como subtítulo de la lista (pedido explícito: "el
+// período mostrado debe respetar el filtro activo") -- mismo criterio de
+// lectura de `_eqFiltroPeriodo` que el resto de esta sección, solo texto,
+// nada que recalcular.
+function _eqDesglosePeriodoTxt() {
+  var p = _eqFiltroPeriodo;
+  if (p.modo === 'historico') return 'Histórico';
+  if (p.mesDesde === p.mesHasta && p.anioDesde === p.anioHasta) return NOMBRES_MESES[p.mesDesde - 1] + ' ' + p.anioDesde;
+  return NOMBRES_MESES[p.mesDesde - 1] + ' ' + p.anioDesde + ' – ' + NOMBRES_MESES[p.mesHasta - 1] + ' ' + p.anioHasta;
+}
+function _eqRenderDesglosePuntos(res, concepto) {
+  var lista = document.getElementById('eq-desglose-lista');
+  if (!lista) return;
+  var filas = res.filas || [];
+  var icono = _EQ_DESGLOSE_ICONOS[concepto] || 'military_tech';
+  var html = '<p class="eq-desglose-periodo">' + _eqEsc(_eqDesglosePeriodoTxt()) + '</p>';
+  if (!filas.length) {
+    html += '<div class="eq-favoritos-vacio"><span class="material-symbols-outlined">inbox</span>' + _eqEsc(_EQ_DESGLOSE_VACIO_TXT[concepto] || 'Sin datos en este período.') + '</div>';
+    lista.innerHTML = html;
+    return;
+  }
+  html += filas.map(function(f) { return _eqDesgloseFilaHtml(f, concepto, icono); }).join('');
+  html += '<div class="eq-desglose-total"><span>Total</span><span class="eq-desglose-total-valor">' + _eqDesglosePuntosTxt(res.total) + '</span></div>';
+  lista.innerHTML = html;
+}
+// Fila individual -- `fecha` (todos los conceptos) llega `'YYYY-MM-DD'`
+// (getDesglosePuntos()/supabase/functions/api/index.ts, ya recortada a
+// solo fecha, sin hora) -- reusa `_eqFormatearFechaIngreso()` (más abajo
+// en este archivo) para el mismo formato "3 de julio de 2024" que ya usa
+// el resto de Equipo, sin inventar un 2do formato de fecha. Racha
+// `legado:true` (bono del sistema anterior, sin fecha de evento real
+// disponible -- ver el comentario grande en supabase/functions/api/index.ts,
+// `getDesglosePuntos()`) usa el mes tal cual en vez de fingir un día
+// puntual que no existe en los datos reales.
+function _eqDesgloseFilaHtml(f, concepto, icono) {
+  var titulo, sub;
+  if (concepto === 'asistencia') {
+    titulo = f.estado;
+    sub = _eqFormatearFechaIngreso(f.fecha);
+  } else if (concepto === 'tareas') {
+    titulo = f.titulo;
+    sub = _eqFormatearFechaIngreso(f.fecha);
+  } else {
+    titulo = f.legado ? 'Bono histórico' : '+2 racha';
+    var partesFecha = f.fecha.split('-');
+    sub = f.legado ? (NOMBRES_MESES[Number(partesFecha[1]) - 1] + ' ' + partesFecha[0]) : _eqFormatearFechaIngreso(f.fecha);
+  }
+  return '<div class="eq-desglose-fila">' +
+      '<span class="eq-desglose-fila-icono"><span class="material-symbols-rounded">' + icono + '</span></span>' +
+      '<div class="eq-desglose-fila-info">' +
+        '<div class="eq-desglose-fila-titulo">' + _eqEsc(titulo) + '</div>' +
+        '<div class="eq-desglose-fila-sub">' + _eqEsc(sub) + '</div>' +
+      '</div>' +
+      '<div class="eq-desglose-fila-valor">' + _eqDesglosePuntosTxt(f.puntos) + '</div>' +
     '</div>';
 }
 
@@ -2720,8 +2902,8 @@ function _eqPerfilContenidoHtml(p) {
           '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">kid_star</span><div class="eq-stat-valor">' + statsCalc.asistenciaPct + '%</div><div class="eq-stat-label">Asistencia anual</div></div>' +
         '</div>' +
         '<div class="eq-stats-grid">' +
-          '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">task_alt</span><div class="eq-stat-valor">' + puntosTareasTxt + '</div><div class="eq-stat-label">Puntos por tareas</div></div>' +
-          '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">stars</span><div class="eq-stat-valor">' + puntosAsistenciaTxt + '</div><div class="eq-stat-label">Puntos por asistencia</div></div>' +
+          '<div class="eq-stat-card eq-stat-card--tappable" onclick="' + _eqDesgloseOnclick(p.username, 'tareas', 'Puntos por tareas') + '"><span class="eq-stat-icon material-symbols-rounded">task_alt</span><div class="eq-stat-valor">' + puntosTareasTxt + '</div><div class="eq-stat-label">Puntos por tareas</div></div>' +
+          '<div class="eq-stat-card eq-stat-card--tappable" onclick="' + _eqDesgloseOnclick(p.username, 'asistencia', 'Puntos por asistencia') + '"><span class="eq-stat-icon material-symbols-rounded">stars</span><div class="eq-stat-valor">' + puntosAsistenciaTxt + '</div><div class="eq-stat-label">Puntos por asistencia</div></div>' +
         '</div>' +
         _eqPuntosRachaHtml(p) +
         puntosTotalHtml +

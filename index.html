@@ -35,7 +35,7 @@
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
 <link rel="stylesheet" href="css/eventos.css?v=e852ff46">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=a82066ff">
+<link rel="stylesheet" href="css/equipo.css?v=b11fbc66">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2348,7 +2348,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
        detalle. Nav propia (sin #top-bar genérico), mismo criterio que
        #s-eventos/#s-tareas -- ver TOP_BAR_CONFIG, js/ui.js. ═══ -->
   <div class="pantalla" id="s-equipo">
-    <div class="card" style="text-align:left;padding-bottom:32px;">
+    <div class="card" id="eq-lista-card" style="text-align:left;padding-bottom:32px;">
       <!-- Rediseño de header sticky (ver MANIFEST.md -- "colapso progresivo
            al scrollear", mismo criterio que `.ev-sticky-header`/`#ev-mes-panel`/
            `#ev-busqueda-panel` de css/eventos.css+index.html: ahora la fila
@@ -2678,10 +2678,30 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
        flecha atrás + favorito/WhatsApp/editar a la derecha. ═══ -->
   <div class="pantalla" id="s-equipo-perfil">
     <div id="eq-perfil-nav"></div>
-    <div class="card" style="text-align:left;">
+    <div class="card" id="eq-perfil-card" style="text-align:left;">
       <div id="eq-perfil-contenido"></div>
       <div style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
     </div>
+  </div>
+
+  <!-- Desglose detallado de puntos por concepto (feat nueva, ver
+       MANIFEST.md/CHANGELOG.md -- "subpantalla de desglose de puntos por
+       concepto") -- equivalente de `.aj-sub` (subsecciones de Ajustes,
+       css/perfil.css) en Equipo, clase propia `.eq-desglose-panel`
+       (css/equipo.css) -- se abre desde "Mis estadísticas" (#s-equipo) o
+       el perfil de detalle (#s-equipo-perfil), `_eqAbrirDesglosePuntos()`/
+       js/equipo.js decide cuál de las 2 cards (#eq-lista-card/
+       #eq-perfil-card, arriba) retrocede como fondo según cuál esté
+       activa en ese momento. -->
+  <div class="eq-desglose-panel" id="eq-desglose-panel">
+    <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
+      <button class="app-nav-back" onclick="_eqCerrarDesglosePuntos()">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <span class="app-nav-title" id="eq-desglose-titulo">Puntos</span>
+      <div style="width:40px;flex-shrink:0;"></div>
+    </div>
+    <div class="eq-desglose-panel-inner" id="eq-desglose-lista"></div>
   </div>
 
   <div class="pantalla" id="s-datos">
@@ -3199,7 +3219,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/ui.js?v=66148b6f"></script>
 <script src="js/eventos.js?v=ad1428aa"></script>
 <script src="js/tareas.js"></script>
-<script src="js/equipo.js?v=68adfe5c"></script>
+<script src="js/equipo.js?v=bc61e77f"></script>
 <script src="js/home.js?v=cf4b0197"></script>
 <script src="js/reservas.js?v=e53c9c46"></script>
 <script src="js/perfil.js?v=e7e04c90"></script>

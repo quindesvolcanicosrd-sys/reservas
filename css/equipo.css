@@ -900,3 +900,70 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
 .eq-acord-abierto .eq-acord-cuerpo { max-height: 600px; }
 .eq-acord-icono { transition: transform 0.3s; display: inline-block; color: var(--muted); }
 .eq-acord-abierto .eq-acord-icono { transform: rotate(90deg); }
+
+/* ── Desglose detallado de puntos por concepto (feat nueva, ver
+   MANIFEST.md/CHANGELOG.md -- "subpantalla de desglose de puntos por
+   concepto") -- `#eq-desglose-panel` (index.html) es el equivalente de
+   `.aj-sub`/css/perfil.css (subsecciones de Ajustes, pedido explícito
+   "igual a como se navega a subsecciones en Ajustes") en ESTA sección:
+   mismos valores EXACTOS (`position:fixed` a pantalla completa salvo la
+   nav inferior, `z-index:950`, `translateX(100%)`/`opacity:0.85` en
+   reposo, mismos 0.32s `var(--ease-axis)`) -- clase propia en vez de
+   reusar `.aj-sub` literal, mismo criterio de "cada sección es dueña de
+   sus propias clases" ya establecido en el resto de este archivo (`.aj-sub`
+   vive en css/perfil.css, sección ajena). `_eqAbrirDesglosePuntos()`/
+   `_eqCerrarDesglosePuntos()` (js/equipo.js) animan `transform`/`opacity`
+   a mano (mismo "shared axis X" que `irAjSub()`/`cerrarAjSub()`,
+   js/perfil.js) -- esta clase solo aporta el estado de REPOSO (panel
+   cerrado) y la `transition`, igual que `.aj-sub`. */
+.eq-desglose-panel {
+  display: none; position: fixed; top: 0; right: 0; left: 0;
+  bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));
+  background: var(--bg); z-index: 950; flex-direction: column; overflow: hidden;
+  transform: translateX(100%); opacity: 0.85;
+  transition: transform 0.32s var(--ease-axis), opacity 0.32s var(--ease-axis);
+}
+.eq-desglose-panel.activa { display: flex; }
+.eq-desglose-panel-inner { overflow-y: auto; flex: 1; padding: var(--space-screen); }
+
+/* Subtítulo de período (pedido explícito: "el período mostrado debe
+   respetar el filtro activo") -- `_eqDesglosePeriodoTxt()`/js/equipo.js. */
+.eq-desglose-periodo { font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; }
+
+/* Fila individual del desglose -- ícono redondo + título/subtítulo +
+   valor a la derecha, mismo criterio general de fila que `.eq-info-fila`
+   (perfil de detalle, más arriba) pero con un 3er bloque (`-valor`) que
+   esa no tiene. */
+.eq-desglose-fila {
+  display: flex; align-items: center; gap: 12px; padding: 12px 4px;
+  border-bottom: 1px solid var(--border-light);
+}
+.eq-desglose-fila:last-child { border-bottom: none; }
+.eq-desglose-fila-icono {
+  flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--brand-light); color: var(--brand);
+}
+.eq-desglose-fila-icono .material-symbols-rounded { font-size: 1.2rem; }
+.eq-desglose-fila-info { flex: 1; min-width: 0; }
+.eq-desglose-fila-titulo { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+.eq-desglose-fila-sub { font-size: 0.78rem; color: var(--muted); margin-top: 1px; }
+.eq-desglose-fila-valor { flex-shrink: 0; font-size: 0.9rem; font-weight: 800; color: var(--brand); }
+
+/* Total, al final de la lista (pedido explícito) -- separador propio,
+   mismo peso visual que `.eq-desglose-fila-valor` pero más grande, para
+   distinguirlo de una fila más. */
+.eq-desglose-total {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 4px 4px; margin-top: 4px; border-top: 1.5px solid var(--border-mid);
+  font-size: 0.92rem; font-weight: 800; color: var(--text);
+}
+.eq-desglose-total-valor { color: var(--brand); }
+
+/* Cards de puntos tappables (Puntos por tareas/asistencia/racha, "Mis
+   estadísticas" y perfil de detalle) -- affordance de tap mínima sobre
+   `.eq-stat-card` ya existente (scoped como modificador, nunca la clase
+   base a secas -- las cards de horas/asistencia anual NO son tappables,
+   se quedan sin este modificador). */
+.eq-stat-card--tappable { cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background 0.15s; }
+.eq-stat-card--tappable:active { background: var(--brand-light); }

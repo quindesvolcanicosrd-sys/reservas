@@ -857,6 +857,41 @@ async function enviarRevisionTarea(params: Record<string, any>): Promise<Record<
   return { exito: true };
 }
 
+// Puntos reales acreditados por una tarea aprobada -- descuento lineal por
+// día de atraso, nunca menos de la mitad de los puntos originales (pedido
+// explícito, feat "modificador de tardanza", ver MANIFEST.md/CHANGELOG.md).
+// "Fecha límite" real es `fechaVencimientoPersonal` (`asignaciones_tareas`,
+// NO `tareas.fecha_vencimiento` -- una tarea rescatada del baúl,
+// `rescatarTarea()`, recalcula su propio vencimiento personal, distinto
+// del de la tarea original). "Fecha de entrega" real es `fechaEnvio`
+// (seteada por `enviarRevisionTarea()`). Ajuste de -5h antes de extraer el
+// día (Ecuador=UTC-5, mismo offset que `_horasEntreHorarios()`/comentario
+// "Ecuador = UTC-5" más abajo en este archivo): `fechaEnvio` es un
+// instante UTC real, `fechaVencimientoPersonal` es una fecha de calendario
+// Ecuador sin componente de hora -- comparar los milisegundos crudos sin
+// este ajuste corría el riesgo de contar como "un día tarde" una entrega
+// hecha de noche (hora Ecuador) del mismo día límite, que en UTC ya cae
+// del otro lado de la medianoche. Extraída de `adminValidarTarea()`
+// (antes inline ahí) para poder reusarla también en `getDesglosePuntos()`
+// -- el desglose de "Puntos por tareas" necesita reconstruir el valor
+// EXACTO que se acreditó por cada asignación aprobada, que nunca queda
+// persistido por separado (solo el agregado mensual en
+// `puntos_mensuales.puntos_tareas`) -- misma fórmula, un solo lugar.
+function _puntosTareaCreditados(puntosOriginales: number, fechaVencimientoPersonal: string | null, fechaEnvio: string | null): number {
+  let diasTarde = 0;
+  if (fechaVencimientoPersonal && fechaEnvio) {
+    const entregaLocalMs = new Date(fechaEnvio).getTime() - 5 * 3600000;
+    const fechaEntregaLocal = new Date(entregaLocalMs).toISOString().substring(0, 10);
+    const limiteMs = new Date(fechaVencimientoPersonal + 'T00:00:00Z').getTime();
+    const entregaMs = new Date(fechaEntregaLocal + 'T00:00:00Z').getTime();
+    diasTarde = Math.max(0, Math.round((entregaMs - limiteMs) / 86400000));
+  }
+  // Nunca menos de la mitad de los puntos originales -- si `diasTarde === 0`
+  // esta misma fórmula ya da `puntosOriginales` (Math.max(x - 0, x/2) === x
+  // para cualquier x >= 0), sin necesitar un caso aparte para "a tiempo".
+  return Math.max(puntosOriginales - diasTarde, puntosOriginales / 2);
+}
+
 async function adminValidarTarea(params: Record<string, any>): Promise<Record<string, any>> {
   const { idAsignacion, accion, notaRechazo } = params;
   const { data: a } = await supabase.from('asignaciones_tareas').select('*').eq('id', idAsignacion).maybeSingle();
@@ -883,33 +918,7 @@ async function adminValidarTarea(params: Record<string, any>): Promise<Record<st
     await supabase.from('asignaciones_tareas').update({ estado: 'aprobada', fecha_revision: new Date().toISOString() }).eq('id', idAsignacion);
     const { data: t } = await supabase.from('tareas').select('puntos').eq('id', a.tarea_id).maybeSingle();
     const puntosOriginales = Number(t?.puntos) || 0;
-    // Modificador de tardanza (feat nueva, ver MANIFEST.md/CHANGELOG.md):
-    // "fecha límite" real es `a.fecha_vencimiento_personal` (asignaciones_tareas),
-    // NO `tareas.fecha_vencimiento` -- una tarea rescatada del baúl
-    // (`rescatarTarea()`, arriba en este archivo) recalcula su propio
-    // vencimiento personal, distinto del de la tarea original. "Fecha de
-    // entrega" real es `a.fecha_envio` (seteada por `enviarRevisionTarea()`).
-    // Ajuste de -5h antes de extraer el día (mismo offset Ecuador=UTC-5 ya
-    // documentado en este archivo, ver _horasEntreHorarios()/comentario
-    // "Ecuador = UTC-5" más abajo): `fecha_envio` es un instante UTC real,
-    // `fecha_vencimiento_personal` es una fecha de calendario Ecuador sin
-    // componente de hora -- comparar los milisegundos crudos sin este
-    // ajuste corría el riesgo de contar como "un día tarde" una entrega
-    // hecha de noche (hora Ecuador) del mismo día límite, que en UTC ya
-    // cae del otro lado de la medianoche.
-    let diasTarde = 0;
-    if (a.fecha_vencimiento_personal && a.fecha_envio) {
-      const entregaLocalMs = new Date(a.fecha_envio).getTime() - 5 * 3600000;
-      const fechaEntregaLocal = new Date(entregaLocalMs).toISOString().substring(0, 10);
-      const limiteMs = new Date(a.fecha_vencimiento_personal + 'T00:00:00Z').getTime();
-      const entregaMs = new Date(fechaEntregaLocal + 'T00:00:00Z').getTime();
-      diasTarde = Math.max(0, Math.round((entregaMs - limiteMs) / 86400000));
-    }
-    // Nunca menos de la mitad de los puntos originales (pedido explícito) --
-    // si `diasTarde === 0` esta misma fórmula ya da `puntosOriginales`
-    // (Math.max(x - 0, x/2) === x para cualquier x >= 0), sin necesitar un
-    // caso aparte para "a tiempo".
-    const puntos = Math.max(puntosOriginales - diasTarde, puntosOriginales / 2);
+    const puntos = _puntosTareaCreditados(puntosOriginales, a.fecha_vencimiento_personal, a.fecha_envio);
     const hoy = new Date();
     await _acreditarPuntosTarea(a.nombre_usuario, hoy.getFullYear(), hoy.getMonth() + 1, puntos);
     const { data: quedan } = await supabase.from('asignaciones_tareas').select('id').eq('tarea_id', a.tarea_id).in('estado', ['iniciada', 'pendiente_revision']);
@@ -2707,6 +2716,189 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
   return { personas: personasOut };
 }
 
+// Mismo cálculo de período que `getEquipo()` (mes/rango/histórico/default),
+// extraído acá como función propia -- `getEquipo()` sigue con el suyo
+// inline, sin tocarlo, para no arriesgar una regresión en una función ya
+// verificada contra producción varias veces esta sesión; esta versión
+// nueva es la única consumidora, pensada para no duplicarse una 3ra vez si
+// aparece un futuro endpoint con el mismo período seleccionable.
+function _periodoDesdeParams(params: Record<string, any>, hoy: Date): { desde: string; hasta: string } {
+  const anioActual = hoy.getUTCFullYear();
+  const mesActual = hoy.getUTCMonth() + 1;
+  const primerDiaSiguiente = (anio: number, mes: number): string => {
+    const a = mes === 12 ? anio + 1 : anio;
+    const m = mes === 12 ? 1 : mes + 1;
+    return a + '-' + String(m).padStart(2, '0') + '-01';
+  };
+  const esHistorico = params.historico === true || params.historico === 'true';
+  if (esHistorico) return { desde: '1900-01-01', hasta: '2999-01-01' };
+  if (params.mesDesde && params.mesHasta && params.anioDesde && params.anioHasta) {
+    const anioDesde = Number(params.anioDesde), mesDesde = Number(params.mesDesde);
+    const anioHasta = Number(params.anioHasta), mesHasta = Number(params.mesHasta);
+    return { desde: anioDesde + '-' + String(mesDesde).padStart(2, '0') + '-01', hasta: primerDiaSiguiente(anioHasta, mesHasta) };
+  }
+  if (params.mes && params.anio) {
+    const m = Number(params.mes), a = Number(params.anio);
+    return { desde: a + '-' + String(m).padStart(2, '0') + '-01', hasta: primerDiaSiguiente(a, m) };
+  }
+  return { desde: anioActual + '-' + String(mesActual).padStart(2, '0') + '-01', hasta: primerDiaSiguiente(anioActual, mesActual) };
+}
+
+// Desglose línea por línea de un concepto de puntos (feat nueva, ver
+// MANIFEST.md/CHANGELOG.md -- "subpantalla de desglose de puntos por
+// concepto") -- `getEquipo()` ya expone los 4 totales por persona/período
+// (`puntosAsistencia`/`puntosTareas`/`puntosRacha`/`puntosTotal`) pero
+// nunca el detalle de QUÉ los compone; esta acción es la contraparte
+// "detalle" de esos mismos 4 números, un `concepto` a la vez. Gateada con
+// `_validarToken()` (cualquier sesión de usuario válida, no
+// necesariamente la de `nombreUsuario`) -- mismo criterio de visibilidad
+// que ya tiene el roster completo de `getEquipo()` (sin auth propia,
+// cualquier sesión ve los puntos de cualquier persona) -- FIN nuevo sí
+// pide al menos una sesión válida, `getEquipo()` en los hechos no exige
+// ninguna.
+async function getDesglosePuntos(params: Record<string, any>): Promise<Record<string, any>> {
+  const solicitante = await _validarToken(params.token);
+  if (!solicitante) return { exito: false, error: 'Sesión inválida.' };
+  const nombreUsuario = String(params.nombreUsuario || '').trim();
+  if (!nombreUsuario) return { exito: false, error: 'Falta nombreUsuario.' };
+  const concepto = String(params.concepto || '');
+  const periodo = _periodoDesdeParams(params, new Date());
+
+  if (concepto === 'asistencia') {
+    // Mismo criterio EXACTO que `recalcularPuntosAsistencia()` (más abajo
+    // en este archivo, `puntos_asistencia`): mismos filtros
+    // (`origen==='Admin'`, `fecha_entrenamiento` en el período), mismo
+    // valor por fila ('A tiempo'=1, 'Tarde'=0.5), SIN de-duplicar por
+    // evento -- esa función tampoco lo hace, suma cada fila de
+    // `log_asistencias` tal cual viene. A propósito NO se corrige acá:
+    // el objetivo de este desglose es que sume EXACTO lo mismo que la
+    // card "Puntos por asistencia" ya muestra (`puntosAsistencia`,
+    // `getEquipo()`, poblada por esa misma función) -- una fila de más por
+    // un re-marcado sin de-duplicar quedaría VISIBLE acá igual, lo cual es
+    // preferible a un desglose "corregido" que ya no sume lo mismo que el
+    // total de arriba (bug real potencial, ver MANIFEST.md -- posible
+    // seguimiento futuro: `recalcularPuntosAsistencia()` no de-duplica
+    // re-marcados por evento, mismo patrón de bug ya corregido para tareas
+    // en `adminValidarTarea()`, sin confirmar todavía si ocurre en la
+    // práctica).
+    const { data: logs } = await supabase.from('log_asistencias')
+      .select('estado, fecha_entrenamiento')
+      .eq('nombre_usuario', nombreUsuario).eq('origen', 'Admin')
+      .in('estado', ['A tiempo', 'Tarde'])
+      .gte('fecha_entrenamiento', periodo.desde).lt('fecha_entrenamiento', periodo.hasta)
+      .order('fecha_entrenamiento', { ascending: false });
+    const filas = (logs ?? []).map((l: any) => ({
+      fecha: String(l.fecha_entrenamiento).slice(0, 10),
+      estado: l.estado,
+      puntos: l.estado === 'A tiempo' ? 1 : 0.5,
+    }));
+    const total = filas.reduce((s: number, f: any) => s + f.puntos, 0);
+    return { exito: true, concepto, filas, total };
+  }
+
+  if (concepto === 'tareas') {
+    // Mismo criterio que `puntos_mensuales.puntos_tareas`: el mes/año que
+    // recibe el crédito es el de `fecha_revision` (momento de la
+    // aprobación, `adminValidarTarea()`), no `fecha_asignacion` ni
+    // `fecha_envio`. Los puntos reales por fila se reconstruyen con
+    // `_puntosTareaCreditados()` (arriba en este archivo, misma fórmula
+    // que usó `adminValidarTarea()` al aprobar -- el valor exacto
+    // acreditado nunca queda persistido por separado, solo el agregado
+    // mensual).
+    const { data: asignaciones } = await supabase.from('asignaciones_tareas')
+      .select('tarea_id, fecha_revision, fecha_envio, fecha_vencimiento_personal')
+      .eq('nombre_usuario', nombreUsuario).eq('estado', 'aprobada')
+      .gte('fecha_revision', periodo.desde).lt('fecha_revision', periodo.hasta)
+      .order('fecha_revision', { ascending: false });
+    const tareaIds = Array.from(new Set((asignaciones ?? []).map((a: any) => a.tarea_id)));
+    const { data: tareasData } = tareaIds.length
+      ? await supabase.from('tareas').select('id, titulo, puntos').in('id', tareaIds)
+      : { data: [] as any[] };
+    const tareaPorId: Record<string, any> = {};
+    (tareasData ?? []).forEach((t: any) => { tareaPorId[t.id] = t; });
+    const filas = (asignaciones ?? []).map((a: any) => {
+      const t = tareaPorId[a.tarea_id];
+      const puntosOriginales = Number(t?.puntos) || 0;
+      return {
+        titulo: t?.titulo || '(tarea eliminada)',
+        fecha: String(a.fecha_revision).slice(0, 10),
+        puntos: _puntosTareaCreditados(puntosOriginales, a.fecha_vencimiento_personal, a.fecha_envio),
+      };
+    });
+    const total = filas.reduce((s: number, f: any) => s + f.puntos, 0);
+    return { exito: true, concepto, filas, total };
+  }
+
+  if (concepto === 'racha') {
+    // Puerto acotado a UN usuario de la misma caminata cronológica que
+    // `_reconstruirRachasHistoricas()` (más abajo en este archivo) --
+    // deliberadamente NO reusa esa función ni comparte código con ella
+    // (aunque el algoritmo es el mismo): esta necesita devolver una FILA
+    // por bonus individual con su fecha real, esa otra un mapa acumulado
+    // por mes -- forzarlas a compartir implementación arriesgaba una
+    // regresión en una función ya verificada varias veces contra
+    // producción esta sesión, por una ganancia de reuso chica. `puntos_extra`
+    // es la ÚNICA de las 2 fuentes de `puntosRacha` (ver `getEquipo()`,
+    // más arriba) con trazabilidad evento por evento en este repo --
+    // `puntos_bonificacion` (sistema legado, Code.gs, sin escritor en este
+    // repo) es un agregado mensual opaco, sin ningún dato de origen por
+    // evento disponible en esta base -- sus meses con datos entran acá
+    // como UNA fila por mes (`fecha` = primer día de ese mes, `legado:true`)
+    // en vez de inventar una fecha de evento que no existe.
+    const { data: eventos } = await supabase.from('asistencias')
+      .select('id_evento, fecha, inicia')
+      .not('estado', 'in', '("Evento Cancelado","No se entrena")')
+      .order('fecha', { ascending: true })
+      .order('inicia', { ascending: true, nullsFirst: false });
+    const ordenPorEvento: Record<string, number> = {};
+    const fechaPorEvento: Record<string, string> = {};
+    (eventos ?? []).forEach((ev: any, i: number) => { ordenPorEvento[ev.id_evento] = i; fechaPorEvento[ev.id_evento] = ev.fecha; });
+
+    const { data: logsTodos } = await supabase.from('log_asistencias')
+      .select('id_evento, estado, marca_temporal')
+      .eq('origen', 'Admin').eq('nombre_usuario', nombreUsuario);
+    const ultimaPorEvento: Record<string, { estado: string; marca: number }> = {};
+    (logsTodos ?? []).forEach((l: any) => {
+      if (!Object.prototype.hasOwnProperty.call(ordenPorEvento, l.id_evento)) return;
+      const marca = l.marca_temporal ? new Date(l.marca_temporal).getTime() : 0;
+      const actual = ultimaPorEvento[l.id_evento];
+      if (!actual || marca >= actual.marca) ultimaPorEvento[l.id_evento] = { estado: l.estado, marca };
+    });
+    const entradas = Object.keys(ultimaPorEvento)
+      .map((idEvento) => ({ idEvento, orden: ordenPorEvento[idEvento], estado: ultimaPorEvento[idEvento].estado }))
+      .sort((x, y) => x.orden - y.orden);
+    let racha = 0;
+    const filasExtra: Array<{ fecha: string; puntos: number; legado: boolean }> = [];
+    entradas.forEach((e) => {
+      if (e.estado === 'A tiempo' || e.estado === 'Tarde') {
+        racha++;
+        if (racha % 3 === 0) filasExtra.push({ fecha: String(fechaPorEvento[e.idEvento]).slice(0, 10), puntos: 2, legado: false });
+      } else if (e.estado === 'Ninguno') {
+        racha = 0;
+      }
+    });
+    const filasExtraEnPeriodo = filasExtra.filter((f) => f.fecha >= periodo.desde && f.fecha < periodo.hasta);
+
+    const { data: bonifData } = await supabase.from('puntos_mensuales')
+      .select('anio, mes, puntos_bonificacion')
+      .eq('nombre_usuario', nombreUsuario).neq('puntos_bonificacion', 0);
+    const filasBonif = (bonifData ?? [])
+      .map((b: any) => ({ anio: Number(b.anio), mes: Number(b.mes), puntos: Number(b.puntos_bonificacion) || 0 }))
+      .filter((b: any) => {
+        const fechaFila = b.anio + '-' + String(b.mes).padStart(2, '0') + '-01';
+        return fechaFila >= periodo.desde && fechaFila < periodo.hasta;
+      })
+      .map((b: any) => ({ fecha: b.anio + '-' + String(b.mes).padStart(2, '0') + '-01', puntos: b.puntos, legado: true }));
+
+    const filas = filasExtraEnPeriodo.concat(filasBonif)
+      .sort((x, y) => (x.fecha < y.fecha ? 1 : x.fecha > y.fecha ? -1 : 0));
+    const total = filas.reduce((s: number, f: any) => s + f.puntos, 0);
+    return { exito: true, concepto, filas, total };
+  }
+
+  return { exito: false, error: 'Concepto inválido.' };
+}
+
 async function adminGetQueLlevar(): Promise<any[]> {
   const hoyISO = new Date().toISOString().substring(0, 10);
   const { data: reservas } = await supabase.from('reservas').select('nombre_usuario, id_evento, talla, protecciones, estado').in('estado', ['Confirmada', 'Pendiente']).eq('tipo', 'clase');
@@ -2958,6 +3150,7 @@ Deno.serve(async (req: Request) => {
       case 'adminGetCandidatosAdmin':        return json(await adminGetCandidatosAdmin());
       case 'adminGetRosterEquipo':           return json(await adminGetRosterEquipo());
       case 'getEquipo':                      return json(await getEquipo(params));
+      case 'getDesglosePuntos':              return json(await getDesglosePuntos(params));
       case 'adminGetQueLlevar':              return json(await adminGetQueLlevar());
       // Push
       case 'adminEnviarPush':               return json(await adminEnviarPush(params));
