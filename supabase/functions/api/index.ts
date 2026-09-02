@@ -862,6 +862,24 @@ async function adminValidarTarea(params: Record<string, any>): Promise<Record<st
   const { data: a } = await supabase.from('asignaciones_tareas').select('*').eq('id', idAsignacion).maybeSingle();
   if (!a) return { exito: false, error: 'Asignación no encontrada.' };
   if (accion === 'aprobar') {
+    // Bug real corregido (ver MANIFEST.md/CHANGELOG.md -- "puntos por
+    // tareas inflados, 8 en vez de 2"): sin este guard, aprobar una
+    // asignación que YA está `estado==='aprobada'` volvía a correr TODO el
+    // camino de abajo -- `_acreditarPuntosTarea()` es aditivo
+    // (select-then-update, suma sobre lo que ya había, mismo patrón que
+    // `_acreditarPuntosExtra()`), así que cada re-aprobación sumaba los
+    // puntos de la tarea de nuevo, sin ningún tope. Vector real
+    // confirmado contra producción: `_tarGestionarToggle()`/js/tareas.js
+    // (el toggle de "Gestión de tareas activas") es optimista y NO
+    // deshabilita el control mientras la request está en vuelo -- a
+    // diferencia de `_tarValidarEnviar()`/"Tareas por validar", que sí
+    // bloquea los botones -- un doble-tap ahí puede disparar esta acción
+    // más de una vez para la misma asignación. Mismo criterio que ya usa
+    // `adminMarcarAsistencia()` (`esCorreccion`) para no inflar la racha
+    // en re-marcados -- acá más simple: aprobar algo que YA está aprobado
+    // no tiene ningún efecto nuevo que aplicar, se ignora sin error (la
+    // UI ya muestra el estado que pidió, no hace falta fallar).
+    if (a.estado === 'aprobada') return { exito: true };
     await supabase.from('asignaciones_tareas').update({ estado: 'aprobada', fecha_revision: new Date().toISOString() }).eq('id', idAsignacion);
     const { data: t } = await supabase.from('tareas').select('puntos').eq('id', a.tarea_id).maybeSingle();
     const puntosOriginales = Number(t?.puntos) || 0;
