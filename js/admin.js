@@ -1581,7 +1581,7 @@ function _mlTierFilaHtml(t) {
   var nombreEsc = (t.nombre || '').replace(/"/g, '&quot;');
   return '<div class="ml-tier-row" data-id="' + t.id + '" data-es-default="' + (esDefault ? 'true' : 'false') + '">' +
     '<div class="ml-tier-row-head">' +
-      '<input type="text" class="ml-tier-nombre" value="' + nombreEsc + '" placeholder="Nombre del tier" onchange="_mlGuardarTier(this.closest(\'.ml-tier-row\').dataset.id)">' +
+      '<input type="text" class="ml-tier-nombre" value="' + nombreEsc + '" placeholder="Nombre del tier" maxlength="12" onchange="_mlGuardarTier(this.closest(\'.ml-tier-row\').dataset.id)">' +
       (esDefault
         ? '<span class="badge badge-confirmada">Default</span>'
         : '<button type="button" class="adm-talla-quitar" onclick="_mlEliminarTier(this.closest(\'.ml-tier-row\').dataset.id)" aria-label="Eliminar tier"><span class="material-symbols-outlined" style="font-size:1.1rem;">delete</span></button>') +
