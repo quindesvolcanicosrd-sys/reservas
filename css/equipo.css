@@ -418,6 +418,31 @@
   background: none; border: none; padding: 10px 0; margin: 0;
   cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
 }
+/* Headers sticky apilados (rediseño, ver MANIFEST.md/CHANGELOG.md -- "sticky
+   headers apilados con comportamiento dual al tocar") -- modificador APARTE
+   de `.eq-grupo-header` (nunca fusionado a esa clase base): `.eq-grupo-header`
+   también la generan al vuelo los acordeones de la vista "por rol"
+   (`_eqRenderPorRol()`, más arriba en este archivo, un header por rol con
+   miembros) -- esos NUNCA entran en `_EQ_GRUPO_HEADERS`/js/equipo.js, así
+   que su `top` nunca se calcularía, y quedarían todos pegados a `top:0` a
+   la vez (superpuestos) si heredaran `position:sticky` de la clase base.
+   `.eq-grupo-header--sticky` se suma SOLO a los 5 headers reales de la
+   lista normal (Favoritos/Quindes/Mirlxs/Inactivxs/Lesionadxs, ver
+   index.html), nunca a los de "por rol". `top` arranca en `0` solo como
+   fallback antes del primer cálculo real -- `_eqActualizarStickyHeaders()`/
+   js/equipo.js lo pisa siempre con un valor inline (alto de la nav + headers
+   anteriores visibles apilados encima), el `position:sticky` nativo hace el
+   resto (cada header se pega en SU `top` mientras su sección todavía tiene
+   contenido debajo por scrollear, y se suelta solo cuando esa sección
+   entera ya pasó -- sin más CSS/JS que eso). `background: var(--bg)`
+   (mismo valor que `.eq-sticky-header`/`.pantalla`, no un color nuevo) --
+   necesario recién al quedar stuck, para tapar el roster que sigue
+   scrolleando detrás; en flujo normal es invisible igual, mismo color que
+   ya tiene el fondo de la pantalla ahí. `z-index:5` -- por encima del
+   roster (sin z-index propio) pero bien por debajo de `.eq-sticky-header`
+   (`z-index:100`, así nunca queda tapando la nav si sus alturas llegaran a
+   coincidir). */
+.eq-grupo-header--sticky { position: sticky; top: 0; z-index: 5; background: var(--bg); }
 .eq-grupo-linea { flex: 1; height: 1px; background: var(--border-light); }
 .eq-grupo-pill {
   flex-shrink: 0; background: var(--brand-light); color: var(--brand);

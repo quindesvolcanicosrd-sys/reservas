@@ -300,6 +300,7 @@ function _eqMostrarSeccionFavoritos() {
   if (wrap.offsetParent === null) {
     wrap.style.maxHeight = 'none';
     wrap.style.opacity = '1';
+    wrap.style.overflow = 'visible';
     return;
   }
   wrap.style.maxHeight = '0px';
@@ -314,6 +315,18 @@ function _eqMostrarSeccionFavoritos() {
     if (ev.propertyName !== 'max-height') return;
     wrap.removeEventListener('transitionend', liberarAlturaAlTerminar);
     wrap.style.maxHeight = 'none';
+    // `overflow:visible` (ver MANIFEST.md -- "sticky headers apilados"):
+    // el `overflow:hidden` de `.eq-favoritos-wrap` (CSS) es necesario
+    // mientras este `max-height` anima (clipea el crecimiento) pero, una
+    // vez asentado en `'none'`, seguiría siendo el ANCESTRO SCROLLEABLE más
+    // cercano del header sticky de adentro (`#eq-favoritos-header`) para el
+    // navegador -- cualquier `overflow` != `visible` cuenta como tal, aunque
+    // el wrap en sí nunca tenga scroll propio -- así que el header quedaría
+    // "stuck" relativo a ESTE wrap en vez del scroll real de la página. Con
+    // `overflow:visible` acá (recién cuando ya no hace falta clipear nada,
+    // el alto es `'none'` = el contenido real) el header vuelve a stickear
+    // contra el scroll de la página, igual que los otros 4.
+    wrap.style.overflow = 'visible';
   });
 }
 
@@ -327,9 +340,11 @@ function _eqOcultarSeccionFavoritos() {
     wrap.style.maxHeight = '0px';
     wrap.style.opacity = '0';
     wrap.style.display = 'none';
+    wrap.style.overflow = 'hidden';
     return;
   }
   wrap.style.maxHeight = wrap.scrollHeight + 'px'; // aterriza en el alto real (pudo estar en 'none') antes de animar a 0
+  wrap.style.overflow = 'hidden'; // restablecido antes de animar a 0 -- ver `_eqMostrarSeccionFavoritos()`, se relaja a 'visible' solo mientras está asentada abierta
   requestAnimationFrame(function() {
     requestAnimationFrame(function() {
       wrap.style.maxHeight = '0px';
@@ -1584,6 +1599,15 @@ function _eqAplicarFiltrosAhora() {
 // `_eqRenderPorRol()`, sin pedido de tocar esos 2).
 var _EQ_LISTA_VACIA_FADE_MS = 250;
 function _eqActualizarListaVacia() {
+  // Reusa este mismo punto de entrada (llamado al final de las 5 funciones
+  // de render) para recalcular el apilado de headers sticky (ver
+  // MANIFEST.md -- "sticky headers apilados") -- cualquier cambio de
+  // visibilidad de las 5 secciones (búsqueda, filtro de rol, filtro de
+  // período, carga inicial) puede correr headers dentro/fuera del apilado,
+  // así que necesita el mismo trigger que este empty-state. Antes del
+  // guard de abajo (`#eq-lista-vacia` siempre existe en el DOM real, pero
+  // que falte no debería frenar esto).
+  _eqActualizarStickyHeaders();
   var el = document.getElementById('eq-lista-vacia');
   if (!el) return;
   var mostrar;
@@ -1637,6 +1661,11 @@ function _eqRenderFavoritos() {
   // quedado fijo de una animación anterior (`_eqOcultarSeccionFavoritos()`
   // interrumpida, por ejemplo) recortaría la lista sin que nada lo repare.
   wrap.style.maxHeight = visibles.length ? 'none' : '0px';
+  // Mismo criterio que `_eqMostrarSeccionFavoritos()`/`_eqOcultarSeccionFavoritos()`
+  // (ver esos comentarios, más arriba) -- necesario para que el header
+  // sticky de adentro (`#eq-favoritos-header`) quede libre de stickear
+  // contra el scroll real de la página en vez de contra este wrap.
+  wrap.style.overflow = visibles.length ? 'visible' : 'hidden';
   var body = wrap.querySelector('.eq-grupo-body');
   if (body) body.style.maxHeight = 'none';
   _eqHidratarAvatares();
@@ -1871,6 +1900,79 @@ function _eqToggleGrupo(rol) {
       requestAnimationFrame(function() { body.style.maxHeight = '0px'; });
     });
   }
+}
+
+/* ── Headers sticky apilados (rediseño, ver MANIFEST.md/CHANGELOG.md --
+   "sticky headers apilados con comportamiento dual al tocar") -- los 5
+   headers de sección (Favoritos/Quindes/Mirlxs/Inactivos/Lesionadxs,
+   `.eq-grupo-header.eq-grupo-header--sticky` en index.html, ver ese
+   modificador en css/equipo.css -- NUNCA fusionado a `.eq-grupo-header` a
+   secas, que también generan al vuelo los acordeones de "por rol",
+   `_eqRenderPorRol()` más arriba, y esos no deben volverse sticky) se apilan
+   uno debajo del otro a medida que el usuario scrollea: cada header
+   VISIBLE recibe un `top` inline igual al alto de la nav (`#eq-sticky-header`)
+   más el alto acumulado de los headers visibles ANTERIORES a él en el DOM
+   -- puro CSS `position:sticky` hace el resto (un header queda fijo en su
+   propio `top` mientras su sección todavía tiene contenido por scrollear
+   debajo, y se suelta solo cuando el `.eq-grupo`/`.eq-favoritos-wrap` que
+   lo contiene termina de pasar -- no hace falta más JS para el apilado
+   visual en sí). `header.offsetParent === null` (mismo truco que
+   `_eqMostrarSeccionFavoritos()`, más arriba) detecta headers ocultos (un
+   grupo sin resultados, Lesionadxs sin nadie lesionadx) sin que ocupen un
+   lugar en el apilado. Recalculado desde `_eqActualizarListaVacia()`
+   (llamada al final de las 5 funciones de render -- cubre búsqueda/filtro
+   de rol/filtro de período/carga inicial), en cada resize, y al abrir/
+   cerrar cualquiera de los 2 paneles de la nav (`_eqAbrirPanel()`/
+   `_eqCerrarPanel()`/`_eqInicializarCierrePanelesPorScroll()` -- el alto de
+   `#eq-sticky-header` cambia con ellos, así que un header ya stuck necesita
+   correrse para no quedar tapado). NO hace falta recalcular al abrir/cerrar
+   un acordeón (`_eqToggleGrupo()`, arriba) -- el `top` de cada header
+   depende solo del alto de los headers ANTERIORES a él, nunca del body que
+   crece/encoge debajo suyo. */
+var _EQ_GRUPO_HEADERS = ['eq-favoritos-header', 'eq-grupo-quindes-header', 'eq-grupo-mirlxs-header', 'eq-grupo-inactivos-header', 'eq-grupo-lesionadxs-header'];
+function _eqActualizarStickyHeaders() {
+  var navEl = document.getElementById('eq-sticky-header');
+  var acumulado = navEl ? navEl.offsetHeight : 0;
+  _EQ_GRUPO_HEADERS.forEach(function(id) {
+    var header = document.getElementById(id);
+    if (!header || header.offsetParent === null) return;
+    header.style.top = acumulado + 'px';
+    acumulado += header.offsetHeight;
+  });
+}
+window.addEventListener('resize', _eqActualizarStickyHeaders);
+
+/* Comportamiento dual al tocar un header (ver MANIFEST.md): `offsetTop` de
+   un elemento `position:sticky` siempre refleja su posición ESTÁTICA real
+   en el documento (la que tendría con `position:static`), nunca la
+   posición "pegada" actual en pantalla -- por eso alcanza con comparar
+   `window.scrollY` (más el propio `top` sticky asignado, ver abajo) contra
+   ese valor para saber si el header está en modo sticky ahora mismo, sin
+   necesitar guardar un snapshot aparte de su "posición original" en cada
+   render. El header está stuck cuando su posición estática quedaría por
+   encima de su `top` sticky asignado si no lo frenara `position:sticky` --
+   es decir, cuando `scrollY > offsetTop - top` (`>` estricto, no `>=`:
+   scrollear EXACTO a ese punto lo deja recién saliendo de sticky, se
+   considera modo natural -- coincide con el destino exacto de
+   `_eqScrollAlGrupo()`, así que un 2do tap justo después de un scroll-to ya
+   cae del lado de "expandir/contraer", sin quedar pegado en un limbo). */
+function _eqHeaderEstaSticky(header) {
+  var topPx = parseFloat(header.style.top) || 0;
+  return window.scrollY > (header.offsetTop - topPx);
+}
+function _eqScrollAlGrupo(header) {
+  var topPx = parseFloat(header.style.top) || 0;
+  window.scrollTo({ top: header.offsetTop - topPx, behavior: 'smooth' });
+}
+// `rol` null para Favoritos/Lesionadxs -- no colapsables, nunca pasan por
+// `_eqToggleGrupo()` (ver ese comentario más arriba): "comportamiento
+// actual" en modo natural para esos 2 es no hacer nada, mismo que tenían
+// antes de sumar este handler, así que acá simplemente no llama a nada.
+function _eqGrupoHeaderTap(headerId, rol) {
+  var header = document.getElementById(headerId);
+  if (!header) return;
+  if (_eqHeaderEstaSticky(header)) { _eqScrollAlGrupo(header); return; }
+  if (rol) _eqToggleGrupo(rol);
 }
 
 /* ── Perfil de detalle (#s-equipo-perfil) ────────────────────────────── */
