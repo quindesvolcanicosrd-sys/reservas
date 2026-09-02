@@ -282,6 +282,26 @@ function _eqMostrarSeccionFavoritos() {
   var wrap = document.getElementById('eq-favoritos-wrap');
   if (!wrap) return;
   wrap.style.display = 'block';
+  // Bug real corregido (ver MANIFEST.md -- "favorito agregado desde el
+  // perfil de detalle no aparece en Favoritos al volver a la home"):
+  // togglear un favorito desde `#s-equipo-perfil` deja `#s-equipo` (y con
+  // él, `#eq-favoritos-wrap`) en `display:none` -- `.pantalla` no activa,
+  // ver `ir()`/js/ui.js -- así que `wrap.scrollHeight` mide `0` (mismo
+  // problema ya documentado para los acordeones en la cabecera de este
+  // archivo: "medir con la pantalla todavía display:none da 0"). Ese `0px`
+  // quedaba fijado en `wrap.style.maxHeight` para siempre: sin transición
+  // real (0px→0px no dispara `transitionend`), el listener que libera el
+  // techo a `'none'` (más abajo) nunca corría, y la sección quedaba con
+  // `display:block` pero `max-height:0px` -- invisible pese a tener
+  // contenido, incluso después de volver a la lista. `offsetParent === null`
+  // detecta ese caso (cualquier ancestro, incluida esta pantalla, en
+  // `display:none`) -- sin nada realmente visible que animar, se fija el
+  // estado final directo, sin medir ni animar.
+  if (wrap.offsetParent === null) {
+    wrap.style.maxHeight = 'none';
+    wrap.style.opacity = '1';
+    return;
+  }
   wrap.style.maxHeight = '0px';
   void wrap.offsetWidth;
   wrap.style.maxHeight = wrap.scrollHeight + 'px';
@@ -300,6 +320,15 @@ function _eqMostrarSeccionFavoritos() {
 function _eqOcultarSeccionFavoritos() {
   var wrap = document.getElementById('eq-favoritos-wrap');
   if (!wrap) return;
+  // Mismo fix que _eqMostrarSeccionFavoritos() de arriba -- sección
+  // invisible ahora mismo (perfil de detalle abierto encima), nada que
+  // animar de verdad.
+  if (wrap.offsetParent === null) {
+    wrap.style.maxHeight = '0px';
+    wrap.style.opacity = '0';
+    wrap.style.display = 'none';
+    return;
+  }
   wrap.style.maxHeight = wrap.scrollHeight + 'px'; // aterriza en el alto real (pudo estar en 'none') antes de animar a 0
   requestAnimationFrame(function() {
     requestAnimationFrame(function() {
@@ -420,13 +449,7 @@ function _eqInit() {
   _eqYaInicializado = true;
   // No depende del roster real -- arranca ya, aunque el fetch de abajo
   // todavía no resolvió (mismo criterio que antes tenía la inicialización
-  // de sugerencias rotativas, que ocupaba este lugar). Reestructura el
-  // panel de filtros en acordeones + modal ANTES de poblarlo (rediseño, ver
-  // MANIFEST.md) -- corre una sola vez (guard propio), tiene que pasar
-  // antes de `_eqRenderFiltroPeriodoUI()` para que los ids que esa función
-  // busca ya estén en su ubicación final (dentro del acordeón/la modal).
-  _eqReestructurarPanelFiltros();
-  _eqRenderFiltroPeriodoUI();
+  // de sugerencias rotativas, que ocupaba este lugar).
   _eqRenderFiltroRolPills();
   var estadoEl = document.getElementById('eq-estado-carga');
   if (estadoEl) estadoEl.innerHTML = '<p class="eq-loading">Cargando equipo...</p>';
@@ -563,52 +586,17 @@ function _eqAvatarConTendenciaHtml(p, claseExtra, claseTamano) {
 // propague a `.eq-miembro-fila` (abre el detalle), pedido explícito -- en
 // los hechos ya pasaría igual por burbujeo normal (son `<span>` sin
 // comportamiento propio), pero se deja explícito tal como se pidió.
+// Reducida a un solo dato (pedido explícito, re-ajuste, ver MANIFEST.md --
+// "en cada card de la lista, mostrar únicamente el total de puntos"): horas
+// patinadas/% asistencia/puntos por tareas/puntos por asistencia se sacaron
+// de la card de lista -- siguen disponibles completos en el perfil de
+// detalle (`_eqPerfilContenidoHtml()`, más abajo), un toque más lejos.
+// `puntosTotal` (getEquipo(), ya respeta el período elegido en el panel de
+// filtros -- mismo campo que usa el perfil de detalle) es el único dato que
+// queda en esta fila.
 function _eqStatsInlineHtml(p) {
-  var statsCalc = _eqStatsCalc(p);
-  var html = '';
-  // Horas/asistencia -- `horas_ano`/`total_eventos_ano` (getEquipo(), Cambio
-  // 58) SIEMPRE vienen en el objeto real (default 0 si no hay datos) -- el
-  // chequeo cubre el caso teórico de un objeto en memoria sin esos campos
-  // (no ocurre con el backend actual, ver supabase/functions/api/index.ts).
-  if (p.horas_ano !== undefined && p.horas_ano !== null) {
-    html += '<span class="eq-mini-stat"><span class="material-symbols-rounded">roller_skating</span>' + statsCalc.horas + 'hs</span>';
-  }
-  if (p.total_eventos_ano !== undefined && p.total_eventos_ano !== null) {
-    html += '<span class="eq-mini-stat"><span class="material-symbols-rounded">kid_star</span>' + statsCalc.asistenciaPct + '%</span>';
-  }
-  // Puntos por tareas/asistencia (re-auditado, ver MANIFEST.md -- "puntos
-  // no aparecen"). **Campos reales que devuelve `getEquipo()` hoy, uno por
-  // uno (confirmado leyendo el `.select()`/el `.map()` de esa función en
-  // supabase/functions/api/index.ts, no supuesto):** `id`/`nombre`/`username`,
-  // `nombreDerby`, `numeroDerby`, `fotoPerfil`, `rol`, `pronombres`,
-  // `prefijo`, `telefono`, `email`, `fechaIngreso`, `estado`,
-  // `solicitudLesionPendiente`, `tierModo`, `exentaCuota`, `esAdminMiembro`,
-  // `horas_ano`, `asistencias_ano`, `total_eventos_ano`, `termometro_pct`,
-  // `ultimaAsistencia`, `necesitaPatines`, `necesitaProtecciones`. **Ninguno
-  // de esos es de puntos** -- no existe `puntos`/`puntos_tareas`/
-  // `puntos_asistencia`/`score` ni nada equivalente en esta respuesta. Los
-  // puntos reales SÍ existen en la base, pero en OTRA tabla que
-  // `getEquipo()` no toca: `puntos_mensuales` (columnas `puntos_tareas`/
-  // `puntos_asistencias`/`puntos_bonificaciones`/`puntos_total`, una fila
-  // por `nombre_usuario`+año+mes, ver "Datos pendientes del backend" en
-  // MANIFEST.md) -- sumarla acá exige antes decidir qué período mostrar
-  // (¿mes actual? ¿acumulado del año?), una decisión de producto fuera de
-  // alcance de este fix. El `<span>` queda condicionado a que el campo
-  // exista (`puntosTareas`/`puntosAsistencia`), sin inventar un valor
-  // mientras tanto -- en los datos reales de hoy, sencillamente no se pintan
-  // (no hay ningún "—" acá tampoco -- el "—" explícito sí vive en el perfil
-  // de detalle, `_eqPerfilContenidoHtml()`, más abajo en este archivo, un
-  // solo lugar por persona). El badge de tendencia de termómetro que vivía
-  // acá (círculo suelto en esta misma fila) se movió a la foto de perfil --
-  // ver `_eqAvatarConTendenciaHtml()`/`_eqTendenciaBadgeHtml()`, arriba en
-  // este archivo, pedido explícito.
-  if (p.puntosTareas !== undefined && p.puntosTareas !== null) {
-    html += '<span class="eq-mini-stat"><span class="material-symbols-rounded">task_alt</span>' + p.puntosTareas + '</span>';
-  }
-  if (p.puntosAsistencia !== undefined && p.puntosAsistencia !== null) {
-    html += '<span class="eq-mini-stat"><span class="material-symbols-rounded">stars</span>' + p.puntosAsistencia + '</span>';
-  }
-  return html;
+  if (p.puntosTotal === undefined || p.puntosTotal === null) return '';
+  return '<span class="eq-mini-stat"><span class="material-symbols-rounded">military_tech</span>' + p.puntosTotal + ' pts</span>';
 }
 
 function _eqFilaHtml(p) {
@@ -849,143 +837,270 @@ var _eqFiltroRoles = [];
 // opción"): 'historico' aplica directo (sin datos que elegir) y es
 // toggleable (tocarlo YA activo lo desactiva y vuelve al default, mes
 // actual -- "para resetear, el usuario deselecciona los pills", pedido
-// explícito). 'mes'/'rango' SIEMPRE abren la modal al tocarlos (`_eqAbrirModalPeriodo()`,
-// más abajo) -- **no** son toggleables del mismo modo: bug real encontrado
-// con Playwright antes de este comentario -- "Mes" arranca `activa` por
-// default (mes actual ya aplicado sin que el usuario haga nada), así que
-// tratarlo como toggleable hacía que el PRIMER tap en "Mes" (para elegir
-// OTRO mes) se leyera como "ya está activo, desactivar" en vez de "abrir
-// la modal" -- la modal nunca abría. El filtro real de mes/rango recién se
-// aplica al confirmar la modal (`_eqConfirmarModalPeriodo()`), nunca al
-// tocar el pill.
+// explícito). 'mes'/'rango' SIEMPRE abren su modal de calendario al
+// tocarlos (`_eqAbrirModalMes()`/`_eqAbrirModalRango()`, más abajo) --
+// **no** son toggleables del mismo modo: bug real encontrado con
+// Playwright en una versión anterior de esta función -- "Mes" arranca
+// `activa` por default (mes actual ya aplicado sin que el usuario haga
+// nada), así que tratarlo como toggleable hacía que el PRIMER tap en
+// "Mes" (para elegir OTRO mes) se leyera como "ya está activo, desactivar"
+// en vez de "abrir la modal". El filtro real de mes/rango recién se aplica
+// al confirmar la modal correspondiente, nunca al tocar el pill.
 function _eqFiltroPeriodoModo(modo) {
   if (modo === 'historico') {
-    var pillHist = document.querySelector('#eq-filtro-periodo-modo .aj-pill[data-modo="historico"]');
+    var pillHist = document.querySelector('.eq-periodo-pills .aj-pill[data-modo="historico"]');
     if (pillHist && pillHist.classList.contains('activa')) {
       var hoy = new Date();
       _eqFiltroPeriodo.modo = 'mes';
       _eqFiltroPeriodo.mesUnico = hoy.getMonth() + 1;
       _eqFiltroPeriodo.anioUnico = hoy.getFullYear();
-      document.querySelectorAll('#eq-filtro-periodo-modo .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
-      _eqRenderFiltroPeriodoUI();
+      document.querySelectorAll('.eq-periodo-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
       _eqAplicarFiltrosAhora();
       return;
     }
   }
   _eqFiltroPeriodo.modo = modo;
-  document.querySelectorAll('#eq-filtro-periodo-modo .aj-pill').forEach(function(p) {
+  // `.eq-periodo-pills` (no `#eq-filtro-periodo-modo` a secas) -- feat
+  // nueva, filtro de período también en el perfil de detalle (ver
+  // MANIFEST.md/`_eqPerfilContenidoHtml()` más abajo): hay 2 instancias
+  // posibles de esta fila de pills en el DOM a la vez (panel de Filtros de
+  // la home + acordeón "Estadísticas" del perfil, si está abierto), ambas
+  // comparten esta clase -- togglear 'activa' desde CUALQUIERA de las 2
+  // mantiene a la otra en sync, sin importar cuál disparó el click.
+  document.querySelectorAll('.eq-periodo-pills .aj-pill').forEach(function(p) {
     p.classList.toggle('activa', p.getAttribute('data-modo') === modo);
   });
-  _eqRenderFiltroPeriodoUI();
   if (modo === 'historico') _eqAplicarFiltrosAhora();
-  else _eqAbrirModalPeriodo(modo);
-}
-function _eqFiltroAnioSumar(cual, delta) {
-  if (cual === 'unico') _eqFiltroPeriodo.anioUnico += delta;
-  else if (cual === 'desde') _eqFiltroPeriodo.anioDesde += delta;
-  else if (cual === 'hasta') _eqFiltroPeriodo.anioHasta += delta;
-  _eqRenderFiltroPeriodoUI();
-}
-function _eqFiltroMesClick(cual, mes) {
-  if (cual === 'unico') _eqFiltroPeriodo.mesUnico = mes;
-  else if (cual === 'desde') _eqFiltroPeriodo.mesDesde = mes;
-  else if (cual === 'hasta') _eqFiltroPeriodo.mesHasta = mes;
-  _eqRenderFiltroPeriodoUI();
-}
-function _eqRenderMesPillsInto(contId, mesSel, cual) {
-  var cont = document.getElementById(contId);
-  if (!cont) return;
-  cont.innerHTML = _EQ_MESES_CORTOS.map(function(nombre, i) {
-    var m = i + 1;
-    return '<span class="aj-pill' + (m === mesSel ? ' activa' : '') + '" onclick="_eqFiltroMesClick(\'' + cual + '\',' + m + ')">' + nombre + '</span>';
-  }).join('');
-}
-function _eqRenderFiltroPeriodoUI() {
-  var p = _eqFiltroPeriodo;
-  _eqRenderMesPillsInto('eq-filtro-mes-pills', p.mesUnico, 'unico');
-  _eqRenderMesPillsInto('eq-filtro-mes-pills-desde', p.mesDesde, 'desde');
-  _eqRenderMesPillsInto('eq-filtro-mes-pills-hasta', p.mesHasta, 'hasta');
-  var elU = document.getElementById('eq-filtro-anio-unico-val'); if (elU) elU.textContent = p.anioUnico;
-  var elD = document.getElementById('eq-filtro-anio-desde-val'); if (elD) elD.textContent = p.anioDesde;
-  var elH = document.getElementById('eq-filtro-anio-hasta-val'); if (elH) elH.textContent = p.anioHasta;
-  // Mes/rango ahora viven dentro de la modal (`_eqAbrirModalPeriodo()`, más
-  // abajo), no siempre visibles inline -- pero cuál de los 2 mostrar sigue
-  // dependiendo de `p.modo`, mismo criterio de siempre.
-  var wrapMes = document.getElementById('eq-filtro-periodo-mes-wrap');
-  var wrapRango = document.getElementById('eq-filtro-periodo-rango-wrap');
-  if (wrapMes) wrapMes.style.display = p.modo === 'mes' ? '' : 'none';
-  if (wrapRango) wrapRango.style.display = p.modo === 'rango' ? '' : 'none';
+  else if (modo === 'mes') _eqAbrirModalMes();
+  else if (modo === 'rango') _eqAbrirModalRango();
 }
 
-/* ── Modal "Elige el mes"/"Elige el rango" (rediseño, ver MANIFEST.md) ───
-   Reemplaza los bloques de año+meses que antes vivían siempre visibles
-   inline en el panel de filtros -- ahora el acordeón "Filtrar puntos según
-   periodo" solo muestra 3 pills (Mes/Rango/Histórico); elegir Mes o Rango
-   abre esta modal. Construida 100% desde JS -- sin markup nuevo en
-   index.html (pedido explícito de esta feature: solo js/equipo.js y
-   css/equipo.css) -- REUBICANDO (no clonando) los nodos
-   `#eq-filtro-periodo-mes-wrap`/`#eq-filtro-periodo-rango-wrap` que
-   index.html ya tenía (año+12 pills, `_eqFiltroAnioSumar()`/
-   `_eqFiltroMesClick()`/`_eqRenderMesPillsInto()` sin cambios, siguen
-   funcionando igual estén donde estén en el DOM) hacia el body de esta
-   modal, una sola vez (`_eqReestructurarPanelFiltros()`, más abajo). Mismo
-   componente `.bsheet-overlay`/`.bsheet` estándar que el resto de sheets de
-   la app (ver `_datLesionAbrirSheet()`/js/perfil.js) -- mismo criterio de
-   apertura/cierre (`style.display`+`transform`) y drag-to-close/tap-to-
-   close "gratis" vía el listener delegado de `shared/bsheet.js` (escucha
-   CUALQUIER `.bsheet-handle`/`.bsheet-title` del documento, no solo los que
-   ya existían al cargar la página -- confirmado leyendo ese archivo antes
-   de asumirlo). */
-var _eqModalPeriodoCreada = false;
-function _eqCrearModalPeriodoSiHaceFalta() {
-  if (_eqModalPeriodoCreada) return;
-  _eqModalPeriodoCreada = true;
-  var ov = document.createElement('div');
-  ov.id = 'eq-modal-periodo-overlay';
-  ov.className = 'bsheet-overlay';
-  // `z-index` inline (mismo criterio que el resto de sheets de la app,
-  // ej. `#dat-lesion-sheet-overlay`/index.html) -- `.bsheet-overlay`/
-  // `.bsheet` (css/global.css) NO traen z-index propio en la clase base,
-  // cada instancia lo fija a mano; sin esto, un overlay creado por JS y
-  // apendeado al final de `<body>` puede terminar pintado DETRÁS de otros
-  // elementos `position:fixed` de la app que sí declaran su propio z-index
-  // (nav inferior, otros sheets), pese a venir después en el DOM.
-  ov.style.zIndex = '9700';
-  ov.setAttribute('onclick', '_eqCerrarModalPeriodo()');
-  var sh = document.createElement('div');
-  sh.id = 'eq-modal-periodo-sheet';
-  sh.className = 'bsheet';
-  sh.style.zIndex = '9701';
-  sh.innerHTML =
-    '<div class="bsheet-handle"></div>' +
-    '<div class="bsheet-title" id="eq-modal-periodo-titulo"></div>' +
-    '<div class="bsheet-body" id="eq-modal-periodo-body"></div>';
-  document.body.appendChild(ov);
-  document.body.appendChild(sh);
-}
-function _eqAbrirModalPeriodo(modo) {
-  _eqCrearModalPeriodoSiHaceFalta();
-  var ov = document.getElementById('eq-modal-periodo-overlay');
-  var sh = document.getElementById('eq-modal-periodo-sheet');
-  var titulo = document.getElementById('eq-modal-periodo-titulo');
+/* ── Modal "Elige el mes" (rediseño, ver MANIFEST.md -- reemplaza la
+   modal anterior de año+12 pills genéricas) -- header de navegación por
+   AÑO (`‹ 2025 ›`, `.ev-ant-cal-nav*`/css/eventos.css, reusado tal cual --
+   pedido explícito de "mismo header, mismos estilos, mismo fondo" que la
+   modal de Rango, más abajo) + los 12 meses como pills
+   (`.ev-ant-mes-grid`/`.ev-ant-mes-cell`, MISMA grilla que ya usaba
+   "asistencia anticipada → Por meses", `_evAntRenderMesesGrid()`/
+   js/eventos.js -- acá sin la restricción de "mes ya pasado"/cuota al día
+   de esa función, que no aplica al filtro histórico de Equipo: cualquier
+   mes, pasado o futuro, es un período válido para filtrar puntos).
+   Single-select (un mes a la vez, no varios) -- `_eqFiltroPeriodo.mesUnico`/
+   `anioUnico` son un único par, mismo contrato que siempre tuvo el modo
+   'mes' de `getEquipo()` (supabase/functions/api/index.ts): un pill grid
+   multi-seleccionable no tendría a dónde mapear una selección de varios
+   meses sin cambiar ese contrato, fuera de alcance de esta feature (solo
+   UI). Markup real en index.html (`#eq-modal-mes-overlay`/
+   `#eq-modal-mes-sheet`) -- mismo componente `.bsheet-overlay`/`.bsheet`
+   estándar que el resto de sheets de la app (`_datLesionAbrirSheet()`/
+   js/perfil.js), mismo criterio de apertura/cierre. */
+var _eqCalMes = { anio: null, mesSel: null, anioSel: null };
+function _eqAbrirModalMes() {
+  var hoy = new Date();
+  _eqCalMes.anio = _eqFiltroPeriodo.anioUnico || hoy.getFullYear();
+  _eqCalMes.mesSel = _eqFiltroPeriodo.mesUnico || null;
+  _eqCalMes.anioSel = _eqFiltroPeriodo.mesUnico ? _eqFiltroPeriodo.anioUnico : null;
+  _eqRenderModalMes();
+  var ov = document.getElementById('eq-modal-mes-overlay');
+  var sh = document.getElementById('eq-modal-mes-sheet');
   if (!ov || !sh) return;
-  if (titulo) titulo.textContent = modo === 'rango' ? 'Elige el rango' : 'Elige el mes';
-  _eqRenderFiltroPeriodoUI();
   ov.style.display = 'block';
   sh.style.display = 'block';
   requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
 }
-function _eqCerrarModalPeriodo() {
-  var ov = document.getElementById('eq-modal-periodo-overlay');
-  var sh = document.getElementById('eq-modal-periodo-sheet');
+function _eqCerrarModalMes() {
+  var ov = document.getElementById('eq-modal-mes-overlay');
+  var sh = document.getElementById('eq-modal-mes-sheet');
   if (sh) sh.style.transform = 'translateY(100%)';
   setTimeout(function() {
     if (sh) sh.style.display = 'none';
     if (ov) ov.style.display = 'none';
   }, 350);
 }
-function _eqConfirmarModalPeriodo() {
-  _eqCerrarModalPeriodo();
+function _eqCalMesAnio(delta) {
+  _eqCalMes.anio += delta;
+  _eqRenderModalMes();
+}
+function _eqRenderModalMes() {
+  var label = document.getElementById('eq-modal-mes-anio-label');
+  if (label) label.textContent = String(_eqCalMes.anio);
+  var cont = document.getElementById('eq-modal-mes-grid');
+  if (!cont) return;
+  cont.innerHTML = _EQ_MESES_CORTOS.map(function(nombre, i) {
+    var mesNum = i + 1;
+    var activo = _eqCalMes.mesSel === mesNum && _eqCalMes.anioSel === _eqCalMes.anio;
+    return '<button type="button" class="ev-ant-mes-cell' + (activo ? ' activo' : '') + '" onclick="_eqTocarMesModal(' + mesNum + ')">' + nombre + '</button>';
+  }).join('');
+}
+function _eqTocarMesModal(mesNum) {
+  _eqCalMes.mesSel = mesNum;
+  _eqCalMes.anioSel = _eqCalMes.anio;
+  _eqRenderModalMes();
+}
+function _eqConfirmarModalMes() {
+  if (!_eqCalMes.mesSel || !_eqCalMes.anioSel) { _eqCerrarModalMes(); return; }
+  _eqFiltroPeriodo.modo = 'mes';
+  _eqFiltroPeriodo.mesUnico = _eqCalMes.mesSel;
+  _eqFiltroPeriodo.anioUnico = _eqCalMes.anioSel;
+  _eqCerrarModalMes();
+  _eqAplicarFiltrosAhora();
+}
+
+/* ── Modal "Elige el rango" (rediseño, ver MANIFEST.md -- reemplaza la
+   modal anterior de 2 bloques año+12 pills "Desde"/"Hasta") -- pedido
+   explícito: "reusar/adaptar el calendario de asistencia anticipada
+   (grilla de días con selección de rango de inicio y fin)" + "selector de
+   año en el encabezado... de modo que el usuario pueda seleccionar un
+   rango que cruce años". Una grilla de un solo mes con nav mes-a-mes (como
+   `_evAntCalRender()`, js/eventos.js) no alcanza para eso sin 12 clicks de
+   "mes siguiente" por cada año de diferencia -- en vez de eso, esta
+   modal muestra los 12 MESES COMPLETOS del año elegido a la vez (12
+   mini-calendarios apilados, `.eq-cal-mini*`/css/equipo.css -- la MISMA
+   grilla `.ev-cal-grid`/`.ev-cal-celda`/`.ev-cal-num` de siempre, escalada
+   chica para que las 12 quepan en una sola modal con scroll), con el
+   header navegando por AÑO -- tocar cualquier día de cualquier mes fija
+   inicio/fin del rango, y cruzar a otro año es tan simple como tocar
+   `›`/`‹` y tocar el otro extremo ahí. Mismo mecanismo "ida y vuelta" que
+   `_evAntCalTocarDia()` (primer toque fija Desde y limpia Hasta; un toque
+   posterior -- fecha >= Desde -- fija Hasta; uno anterior a Desde reemplaza
+   Desde) pero SIN el guard de "fecha pasada"/cuota de esa función -- no
+   aplican acá: el filtro de Equipo es sobre puntos ya guardados, un rango
+   íntegramente en el pasado es el caso de uso normal, no una excepción a
+   bloquear. El día tocado exacto es solo el mecanismo de selección visual
+   -- lo que de verdad importa para `getEquipo()` es el MES+AÑO de ese día
+   (`params.mesDesde`/`anioDesde`/`mesHasta`/`anioHasta`, granularidad real
+   del filtro, ver supabase/functions/api/index.ts) -- por eso el resumen
+   de abajo muestra "Marzo 2025", no "15/3/2025": el día en sí nunca viajó
+   al backend, mostrarlo sugeriría una precisión que el filtro no tiene. */
+var _eqCalRango = { anio: null, desde: null, hasta: null };
+function _eqAbrirModalRango() {
+  _eqCalRango.anio = _eqFiltroPeriodo.anioDesde || new Date().getFullYear();
+  _eqCalRango.desde = (_eqFiltroPeriodo.mesDesde && _eqFiltroPeriodo.anioDesde)
+    ? _eqFiltroPeriodo.anioDesde + '-' + String(_eqFiltroPeriodo.mesDesde).padStart(2, '0') + '-01' : null;
+  _eqCalRango.hasta = (_eqFiltroPeriodo.mesHasta && _eqFiltroPeriodo.anioHasta)
+    ? _eqFiltroPeriodo.anioHasta + '-' + String(_eqFiltroPeriodo.mesHasta).padStart(2, '0') + '-01' : null;
+  _eqRenderModalRango();
+  var ov = document.getElementById('eq-modal-rango-overlay');
+  var sh = document.getElementById('eq-modal-rango-sheet');
+  if (!ov || !sh) return;
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+}
+function _eqCerrarModalRango() {
+  var ov = document.getElementById('eq-modal-rango-overlay');
+  var sh = document.getElementById('eq-modal-rango-sheet');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() {
+    if (sh) sh.style.display = 'none';
+    if (ov) ov.style.display = 'none';
+  }, 350);
+}
+function _eqCalRangoAnio(delta) {
+  _eqCalRango.anio += delta;
+  _eqRenderModalRango();
+}
+// Un mini-calendario (mes `mesIdx`, 0-indexado, del año `anio`) -- mismo
+// algoritmo de grilla que `_evAntCalRender()`/js/eventos.js (lunes de la
+// semana del día 1, hasta el domingo de la semana del último día del mes),
+// mismas clases (`.ev-cal-grid`/`.ev-cal-celda`/`.ev-cal-num`/`.ev-ajeno`/
+// `.ev-ant-cal-sel`/`.ev-ant-cal-en-rango`/`.ev-ant-cal-hoy`). Celdas
+// "ajenas" (día de OTRO mes, relleno de grilla) sin onclick a propósito --
+// ese mismo día ya es tocable en SU mini-calendario real, más abajo o más
+// arriba en la lista de los 12; dejarlo clickeable acá también sería un
+// 2do camino redundante hacia el mismo resultado.
+function _eqCalMiniHtml(anio, mesIdx) {
+  var inicioGrid = _evLunesDeSemana(new Date(anio, mesIdx, 1));
+  var finMes = new Date(anio, mesIdx + 1, 0);
+  var finGrid = _evLunesDeSemana(finMes);
+  finGrid.setDate(finGrid.getDate() + 6);
+  var desde = _eqCalRango.desde, hasta = _eqCalRango.hasta;
+  var hoy = _evHoyISO();
+  var html = '<div class="eq-cal-mini-titulo">' + _EQ_MESES_CORTOS[mesIdx] + '</div><div class="ev-cal-grid eq-cal-mini-grid">';
+  var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
+  while (cur <= finGrid) {
+    var celdaIso = _evToISO(cur);
+    var ajeno = cur.getMonth() !== mesIdx;
+    var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '');
+    var onclickAttr = '';
+    if (!ajeno) {
+      if (desde && celdaIso === desde) clases += ' ev-ant-cal-sel';
+      if (hasta && celdaIso === hasta) clases += ' ev-ant-cal-sel';
+      if (desde && hasta && _evFechaCmp(celdaIso, desde) > 0 && _evFechaCmp(celdaIso, hasta) < 0) clases += ' ev-ant-cal-en-rango';
+      if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
+      onclickAttr = ' onclick="_eqTocarDiaRangoModal(\'' + celdaIso + '\')"';
+    }
+    html += '<div class="' + clases + '"' + onclickAttr + '><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
+    cur.setDate(cur.getDate() + 1);
+  }
+  html += '</div>';
+  return '<div class="eq-cal-mini">' + html + '</div>';
+}
+function _eqRenderModalRango() {
+  var label = document.getElementById('eq-modal-rango-anio-label');
+  if (label) label.textContent = String(_eqCalRango.anio);
+  var cont = document.getElementById('eq-modal-rango-meses');
+  if (cont) {
+    var html = '';
+    for (var m = 0; m < 12; m++) html += _eqCalMiniHtml(_eqCalRango.anio, m);
+    cont.innerHTML = html;
+  }
+  _eqCalRangoActualizarResumen();
+}
+// Ida y vuelta -- mismo criterio que `_evAntCalTocarDia()`/js/eventos.js
+// para 'periodo' (ver comentario grande de arriba, "Modal 'Elige el
+// rango'"), sin el guard de fecha pasada/cuota que esa función sí tiene.
+function _eqTocarDiaRangoModal(iso) {
+  var desde = _eqCalRango.desde, hasta = _eqCalRango.hasta;
+  if (!desde || hasta) {
+    _eqCalRango.desde = iso;
+    _eqCalRango.hasta = null;
+  } else if (_evFechaCmp(iso, desde) < 0) {
+    _eqCalRango.desde = iso;
+  } else {
+    _eqCalRango.hasta = iso;
+  }
+  _eqRenderModalRango();
+}
+// "Marzo 2025" en vez de "15/3/2025" -- ver el comentario grande de
+// "Modal 'Elige el rango'" más arriba: el día tocado es solo el mecanismo
+// de selección, `getEquipo()` nunca recibe un día real, así que mostrarlo
+// sugeriría una precisión que el filtro no tiene.
+function _eqFechaCortaModal(iso) {
+  var p = iso.split('-');
+  return NOMBRES_MESES[parseInt(p[1], 10) - 1] + ' ' + p[0];
+}
+function _eqCalRangoActualizarResumen() {
+  var cont = document.getElementById('eq-modal-rango-resumen');
+  var btn = document.getElementById('eq-modal-rango-btn-restablecer');
+  if (!cont) return;
+  var desde = _eqCalRango.desde, hasta = _eqCalRango.hasta;
+  if (!desde) {
+    cont.innerHTML = '<span class="ev-ant-rango-vacio">Toca un día para empezar</span>';
+    if (btn) btn.style.display = 'none';
+    return;
+  }
+  var html = 'Del ' + _eqEsc(_eqFechaCortaModal(desde));
+  if (hasta) html += ' al ' + _eqEsc(_eqFechaCortaModal(hasta));
+  cont.innerHTML = html;
+  if (btn) btn.style.display = '';
+}
+function _eqCalRangoRestablecer() {
+  _eqCalRango.desde = null;
+  _eqCalRango.hasta = null;
+  _eqRenderModalRango();
+}
+function _eqConfirmarModalRango() {
+  if (!_eqCalRango.desde) { _eqCerrarModalRango(); return; }
+  var desdeParts = _eqCalRango.desde.split('-');
+  var hastaIso = _eqCalRango.hasta || _eqCalRango.desde;
+  var hastaParts = hastaIso.split('-');
+  _eqFiltroPeriodo.modo = 'rango';
+  _eqFiltroPeriodo.mesDesde = parseInt(desdeParts[1], 10);
+  _eqFiltroPeriodo.anioDesde = parseInt(desdeParts[0], 10);
+  _eqFiltroPeriodo.mesHasta = parseInt(hastaParts[1], 10);
+  _eqFiltroPeriodo.anioHasta = parseInt(hastaParts[0], 10);
+  _eqCerrarModalRango();
   _eqAplicarFiltrosAhora();
 }
 
@@ -1043,8 +1158,9 @@ function _eqPasaFiltroRol(p) {
 // volver a pedir, cambió el período. Renombrada de `_eqAplicarFiltros()`
 // (rediseño, sin botón "Aplicar filtros" -- ver MANIFEST.md): ahora la
 // disparan 3 caminos automáticos en vez de un click de botón manual --
-// `_eqFiltroPeriodoModo('historico')` (directo), `_eqConfirmarModalPeriodo()`
-// (Mes/Rango, al confirmar la modal), y el toggle-off de un pill (vuelve al
+// `_eqFiltroPeriodoModo('historico')` (directo), `_eqConfirmarModalMes()`/
+// `_eqConfirmarModalRango()` (al confirmar la modal de calendario
+// correspondiente), y el toggle-off del pill de histórico (vuelve al
 // default, arriba). Sin spinner de botón propio -- ya no hay botón que
 // deshabilitar.
 function _eqAplicarFiltrosAhora() {
@@ -1068,92 +1184,21 @@ function _eqAplicarFiltrosAhora() {
     _eqRenderInactivos();
     if (typeof _eqRenderLesionadxs === 'function') _eqRenderLesionadxs();
     if (typeof _eqRenderMisEstadisticas === 'function') _eqRenderMisEstadisticas();
+    // Filtro de período del perfil de detalle (feat nueva, ver MANIFEST.md)
+    // -- `_eqPersonas` se reemplazó entero arriba, así que `_eqPersonaActual`
+    // (si hay un perfil abierto -- puede o no estarlo, `_eqAplicarFiltrosAhora()`
+    // también se dispara desde el panel de Filtros de la lista) apunta a un
+    // objeto YA VIEJO, de la carga anterior. Se re-busca por id en el array
+    // nuevo y se re-renderiza el perfil completo con los stats del período
+    // recién pedido -- mismo criterio que el resto de esta función (siempre
+    // vuelve a pedir, nunca recalcula localmente un período nuevo).
+    if (_eqPersonaActual) {
+      var actualizada = _eqPersonaPorId(_eqPersonaActual.id);
+      if (actualizada) { _eqPersonaActual = actualizada; _eqRenderPerfil(actualizada); }
+    }
   }, function(e) {
     mostrarToast((e && e.message) || 'No se pudo aplicar el filtro.', 'error');
   });
-}
-
-/* ── Secciones del panel de filtros (re-ajuste, ver MANIFEST.md) ─────────
-   "Filtrar puntos según periodo" y "Filtrar por rol" -- pasaron por una
-   versión intermedia como acordeón colapsable (`.eq-grupo-header`/
-   `.eq-grupo-body`, mismo patrón que Quindes/Mirlxs/Inactivos), pero
-   pedido explícito de sacarle el comportamiento de colapsar/expandir: sin
-   chevron, sin botón, siempre visibles y expandidas -- solo el título de
-   sección + el contenido de siempre debajo. Sigue armado desde JS
-   reubicando los nodos que index.html YA tenía (label + fila de pills), no
-   agregando markup nuevo -- mismo criterio que la modal de arriba, sin
-   tocar index.html. Corre una sola vez (`_eqFiltrosReestructurados`),
-   disparada desde `_eqInit()`. */
-var _eqFiltrosReestructurados = false;
-function _eqCrearSeccionFiltro(titulo) {
-  var wrap = document.createElement('div');
-  wrap.className = 'eq-filtro-seccion';
-  var tituloEl = document.createElement('div');
-  tituloEl.className = 'seccion-label';
-  tituloEl.textContent = titulo;
-  var inner = document.createElement('div');
-  inner.className = 'eq-filtro-seccion-body';
-  wrap.appendChild(tituloEl);
-  wrap.appendChild(inner);
-  return { wrap: wrap, inner: inner };
-}
-function _eqReestructurarPanelFiltros() {
-  if (_eqFiltrosReestructurados) return;
-  _eqFiltrosReestructurados = true;
-
-  // "Filtrar puntos según periodo" (3c: texto renombrado de "Período de
-  // puntaje") -- la sección envuelve la fila de 3 pills Mes/Rango/
-  // Histórico (`#eq-filtro-periodo-modo`, sin cambios de markup/lógica
-  // propia). El año+12 pills que antes vivían visibles bajo esta fila se
-  // mueven a la modal (`_eqCrearModalPeriodoSiHaceFalta()`, arriba) -- ya
-  // no quedan inline acá.
-  var labelPeriodo = document.querySelector('.eq-periodo-label');
-  var pillsModo = document.getElementById('eq-filtro-periodo-modo');
-  if (labelPeriodo && pillsModo && labelPeriodo.parentNode) {
-    var accPeriodo = _eqCrearSeccionFiltro('Filtrar puntos según periodo');
-    labelPeriodo.parentNode.insertBefore(accPeriodo.wrap, labelPeriodo);
-    accPeriodo.inner.appendChild(pillsModo);
-    labelPeriodo.remove();
-  }
-  _eqCrearModalPeriodoSiHaceFalta();
-  var modalBody = document.getElementById('eq-modal-periodo-body');
-  var mesWrap = document.getElementById('eq-filtro-periodo-mes-wrap');
-  var rangoWrap = document.getElementById('eq-filtro-periodo-rango-wrap');
-  var notaHist = document.getElementById('eq-filtro-periodo-historico-nota');
-  if (modalBody && mesWrap) modalBody.appendChild(mesWrap);
-  if (modalBody && rangoWrap) modalBody.appendChild(rangoWrap);
-  // La nota de histórico ("Suma de todos los registros...") ya no tiene
-  // dónde vivir -- Histórico aplica directo, sin abrir modal (3d, pedido
-  // explícito) -- se oculta, sin borrarla (referenciada por id en
-  // `_eqRenderFiltroPeriodoUI()` de una versión anterior; más simple
-  // dejarla inerte que sacarla).
-  if (notaHist) notaHist.style.display = 'none';
-  if (modalBody) {
-    var btnConfirmarPeriodo = document.createElement('button');
-    btnConfirmarPeriodo.type = 'button';
-    btnConfirmarPeriodo.className = 'btn btn-primary';
-    btnConfirmarPeriodo.style.cssText = 'width:100%;margin-top:16px;';
-    btnConfirmarPeriodo.textContent = 'Aplicar';
-    btnConfirmarPeriodo.setAttribute('onclick', '_eqConfirmarModalPeriodo()');
-    modalBody.appendChild(btnConfirmarPeriodo);
-  }
-
-  // "Filtrar por rol" (sin cambios de contenido, solo envuelto).
-  var pillsRol = document.getElementById('eq-filtro-rol-pills');
-  var labelRol = pillsRol ? pillsRol.previousElementSibling : null;
-  if (labelRol && pillsRol && labelRol.parentNode) {
-    var accRol = _eqCrearSeccionFiltro('Filtrar por rol');
-    labelRol.parentNode.insertBefore(accRol.wrap, labelRol);
-    accRol.inner.appendChild(pillsRol);
-    labelRol.remove();
-  }
-
-  // Botón "Aplicar filtros" eliminado (3f, pedido explícito) -- los 3
-  // caminos de aplicación automática (`_eqFiltroPeriodoModo()`/
-  // `_eqConfirmarModalPeriodo()`/`_eqFiltroRolToggle()`, arriba) lo
-  // reemplazan.
-  var btnAplicarViejo = document.querySelector('#eq-busqueda-panel .btn-primary');
-  if (btnAplicarViejo) btnAplicarViejo.remove();
 }
 
 // Re-render completo (init / cambio de búsqueda) -- a diferencia de
@@ -1820,21 +1865,19 @@ function _eqPerfilContenidoHtml(p) {
   // link (a diferencia de telefono/email) -- `<div>`, no `<a>`, mismo
   // `.eq-info-fila` (estilo genérico de fila, no depende de ser un enlace).
   if (p.fechaIngreso) filas += '<div class="eq-info-fila"><span class="material-symbols-outlined">calendar_month</span><span class="eq-info-texto">Entró al equipo ' + _eqEsc(_eqFormatearFechaIngreso(p.fechaIngreso)) + '</span></div>';
-  // Rol en el equipo (Batch 4) -- `_eqRolesTexto()` (arriba en este archivo)
-  // da `null` si no hay roles reales guardados (o si el único guardado es
-  // "No definido") -- en ese caso se muestra igual la fila, con el texto
-  // fijo pedido y la clase `eq-info-texto-vacio` (color secundario, sin
-  // negrita) en vez de ocultarla del todo.
+  // Rol en el equipo (Batch 4, re-ajuste ver MANIFEST.md) -- `_eqRolesTexto()`
+  // (arriba en este archivo) da `null` si no hay roles reales guardados (o
+  // si el único guardado es "No definido"). Pedido explícito posterior: sin
+  // dato, la fila entera se OCULTA (no se muestra un "Rol no definido") --
+  // mismo criterio que el resto de `filas` acá (telefono/email/fechaIngreso
+  // ya solo se agregan `if` hay dato real). `eq-info-texto-vacio` (color
+  // secundario) queda sin ningún consumidor en este archivo tras este
+  // cambio, pero se deja viva en css/equipo.css por si un campo futuro
+  // vuelve a necesitar ese tratamiento.
   var rolTexto = _eqRolesTexto(p.username);
-  filas += '<div class="eq-info-fila"><span class="material-symbols-outlined">badge</span><span class="eq-info-texto' + (rolTexto ? '' : ' eq-info-texto-vacio') + '">' + (rolTexto ? _eqEsc(rolTexto) : 'Rol no definido') + '</span></div>';
+  if (rolTexto) filas += '<div class="eq-info-fila"><span class="material-symbols-outlined">badge</span><span class="eq-info-texto">' + _eqEsc(rolTexto) + '</span></div>';
 
   var statsCalc = _eqStatsCalc(p);
-  // Puntos por tareas/asistencia (pedido nuevo, ver MANIFEST.md) -- **sin
-  // dato real todavía**: mismo hallazgo que `_eqStatsInlineHtml()` (arriba
-  // en este archivo) -- `getEquipo()` no devuelve `puntosTareas`/
-  // `puntosAsistencia` (viven en `puntos_mensuales`, agregados por mes, sin
-  // decidir todavía qué período mostrar acá). "—" mientras tanto, pedido
-  // explícito, en vez de esconder las 2 tarjetas nuevas del todo.
   var puntosTareasTxt = (p.puntosTareas !== undefined && p.puntosTareas !== null) ? p.puntosTareas : '—';
   var puntosAsistenciaTxt = (p.puntosAsistencia !== undefined && p.puntosAsistencia !== null) ? p.puntosAsistencia : '—';
   // Puntos totales del período pedido (getEquipo(), `puntosTotal`) -- en
@@ -1856,6 +1899,65 @@ function _eqPerfilContenidoHtml(p) {
   // guarda con `if (rankWrap)`/`if (fill)` antes de tocar este bloque, así
   // que no renderizarlo acá no rompe nada ahí.
   var necesitaEquipoClub = !!(p.necesitaPatines || p.necesitaProtecciones);
+  var rankWrapHtml = necesitaEquipoClub ? '' :
+    '<div class="eq-rank-wrap">' +
+      '<div class="eq-rank-labels"><span>Mirlxs</span><span>Quindes</span></div>' +
+      '<div class="eq-rank-track"><div class="eq-rank-fill" id="eq-rank-fill" style="width:0%;"></div></div>' +
+      '<div class="eq-rank-texto">' + _eqEsc(_eqRankTexto(p)) + '</div>' +
+    '</div>';
+  // Filtro de período (feat nueva, ver MANIFEST.md -- "igual al filtro de
+  // período que existe en la home de Equipo") -- MISMAS 3 pills
+  // (Mes/Rango/Histórico) y MISMOS handlers (`_eqFiltroPeriodoModo()`,
+  // que abre las mismas 2 modales globales `#eq-modal-mes-*`/
+  // `#eq-modal-rango-*` de siempre) que el panel de Filtros de la lista --
+  // sin duplicar la lógica, solo una 2da instancia de la fila de pills,
+  // identificada por la clase compartida `.eq-periodo-pills` (no un id
+  // único: `_eqFiltroPeriodoModo()` ahora sincroniza TODAS las instancias
+  // en el DOM a la vez, ver ese comentario más arriba en este archivo).
+  // Confirmar la modal (o tocar "Histórico") dispara `_eqAplicarFiltrosAhora()`,
+  // que re-pide `getEquipo()` con el período nuevo y, si hay un perfil de
+  // detalle abierto, lo vuelve a renderizar completo con los stats de ese
+  // período -- mismo mecanismo ya usado por la lista, extendido acá.
+  var periodoPillsHtml = '<div class="eq-perfil-stats-periodo">' +
+      '<p class="eq-tier-label" style="margin:0 0 6px">Período</p>' +
+      '<div class="aj-pills-row eq-periodo-pills">' +
+        '<span class="aj-pill' + (_eqFiltroPeriodo.modo === 'mes' ? ' activa' : '') + '" data-modo="mes" onclick="_eqFiltroPeriodoModo(\'mes\')">Mes</span>' +
+        '<span class="aj-pill' + (_eqFiltroPeriodo.modo === 'rango' ? ' activa' : '') + '" data-modo="rango" onclick="_eqFiltroPeriodoModo(\'rango\')">Rango</span>' +
+        '<span class="aj-pill' + (_eqFiltroPeriodo.modo === 'historico' ? ' activa' : '') + '" data-modo="historico" onclick="_eqFiltroPeriodoModo(\'historico\')">Histórico</span>' +
+      '</div>' +
+    '</div>';
+  // Sección de stats -- rediseñada como acordeón compacto (pedido explícito,
+  // ver MANIFEST.md: "colapsable y más compacta, igual de liviana que el
+  // panel Mis estadísticas de la home") -- reusa `.eq-acord`/`.eq-acord-header`/
+  // `.eq-acord-cuerpo`/`eqToggleAcordeon()` (mismo mecanismo ya usado por
+  // "Categoría"/"Estado" en este mismo perfil, ver `_eqTierAdminHtml()`/
+  // `_eqAdminGestionHtml()` más abajo) -- a diferencia de esos 2 (admin-only,
+  // colapsados por default), este nace YA abierto (`eq-acord-abierto` en el
+  // HTML inicial): es el contenido principal que cualquiera que abre un
+  // perfil quiere ver primero, solo colapsable para quien lo prefiera
+  // compacto. `.eq-perfil-stats-acord` (css/equipo.css) aplica el mismo
+  // achique de `.eq-stat-card`/`.eq-rank-wrap` que ya usa
+  // `#eq-misstats-panel-inner` ("Mis estadísticas", scopeado igual, sin
+  // duplicar valores).
+  var statsAcordHtml = '<div class="eq-acord eq-perfil-stats-acord eq-acord-abierto">' +
+      '<div class="eq-acord-header" onclick="eqToggleAcordeon(this)">' +
+        '<p class="eq-tier-label" style="margin:0">Estadísticas</p>' +
+        '<span class="eq-acord-icono"><span class="material-symbols-rounded">chevron_right</span></span>' +
+      '</div>' +
+      '<div class="eq-acord-cuerpo">' +
+        periodoPillsHtml +
+        '<div class="eq-stats-grid">' +
+          '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">roller_skating</span><div class="eq-stat-valor">' + statsCalc.horas + 'h</div><div class="eq-stat-label">Horas patinadas</div></div>' +
+          '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">kid_star</span><div class="eq-stat-valor">' + statsCalc.asistenciaPct + '%</div><div class="eq-stat-label">Asistencia anual</div></div>' +
+        '</div>' +
+        '<div class="eq-stats-grid">' +
+          '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">task_alt</span><div class="eq-stat-valor">' + puntosTareasTxt + '</div><div class="eq-stat-label">Puntos por tareas</div></div>' +
+          '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">stars</span><div class="eq-stat-valor">' + puntosAsistenciaTxt + '</div><div class="eq-stat-label">Puntos por asistencia</div></div>' +
+        '</div>' +
+        puntosTotalHtml +
+        rankWrapHtml +
+      '</div>' +
+    '</div>';
   // Categoría (Quindes/Mirlxs) + pronombres, misma fila, justo debajo del
   // nombre (pedido explícito, re-ajuste, ver MANIFEST.md) -- la categoría
   // vivía como `.eq-rol-pill` superpuesta bajo la foto (ver comentario en
@@ -1879,21 +1981,7 @@ function _eqPerfilContenidoHtml(p) {
       '<div class="eq-perfil-sub">' + ((p.numeroDerby !== null && p.numeroDerby !== undefined && p.numeroDerby !== '') ? '#' + p.numeroDerby + ' &bull; ' : '') + '@' + _eqEsc(p.username) + '</div>' +
     '</div>' +
     (pillsHtml ? '<div class="eq-perfil-pills-row">' + pillsHtml + '</div>' : '') +
-    '<div class="eq-stats-grid">' +
-      '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">roller_skating</span><div class="eq-stat-valor">' + statsCalc.horas + 'h</div><div class="eq-stat-label">Horas patinadas</div></div>' +
-      '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">kid_star</span><div class="eq-stat-valor">' + statsCalc.asistenciaPct + '%</div><div class="eq-stat-label">Asistencia anual</div></div>' +
-    '</div>' +
-    '<div class="eq-stats-grid">' +
-      '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">task_alt</span><div class="eq-stat-valor">' + puntosTareasTxt + '</div><div class="eq-stat-label">Puntos por tareas</div></div>' +
-      '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">stars</span><div class="eq-stat-valor">' + puntosAsistenciaTxt + '</div><div class="eq-stat-label">Puntos por asistencia</div></div>' +
-    '</div>' +
-    puntosTotalHtml +
-    (necesitaEquipoClub ? '' :
-    '<div class="eq-rank-wrap">' +
-      '<div class="eq-rank-labels"><span>Mirlxs</span><span>Quindes</span></div>' +
-      '<div class="eq-rank-track"><div class="eq-rank-fill" id="eq-rank-fill" style="width:0%;"></div></div>' +
-      '<div class="eq-rank-texto">' + _eqEsc(_eqRankTexto(p)) + '</div>' +
-    '</div>') +
+    statsAcordHtml +
     (filas ? '<div class="eq-info-lista">' + filas + '</div>' : '') +
     _eqTierAdminHtml(p) +
     _eqAdminGestionHtml(p);

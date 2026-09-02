@@ -6159,7 +6159,16 @@ function _evRenderDetalleAsistencia(ev) {
     // cruce con el roster completo en vez de con E.nombre solo).
     var respondieron = {};
     rsvps.forEach(function(p) { respondieron[String(p.nombre).trim().toUpperCase()] = true; });
-    var sinResponder = (res.personas || []).filter(function(p) { return !respondieron[String(p.nombre).trim().toUpperCase()]; }).map(function(p) { return { nombre: p.nombre, nombreDerby: p.nombreDerby || '', fotoPerfil: p.fotoPerfil || '' }; });
+    // `estadoMiembro !== 'Ausente'` (feat nueva, ver MANIFEST.md -- "Sin
+    // respuesta no debe mostrar usuarios inactivos"): 'Ausente' es el único
+    // valor real de `equipo.estado_miembro` que representa inactividad
+    // detectada (30+ días sin asistir, ver `_eqEstadoEfectivo()`/
+    // js/equipo.js) -- alguien que ni siquiera está activo en el equipo no
+    // tiene sentido reclamado como "sin respuesta" a un evento. No excluye
+    // 'Técnico'/'Lesionadx' (categorías de membresía propias, no inactividad).
+    var sinResponder = (res.personas || []).filter(function(p) {
+      return !respondieron[String(p.nombre).trim().toUpperCase()] && p.estadoMiembro !== 'Ausente';
+    }).map(function(p) { return { nombre: p.nombre, nombreDerby: p.nombreDerby || '', fotoPerfil: p.fotoPerfil || '' }; });
     _evPintarStatsAsistencia(grupos.concat([{ key: _EV_GRUPO_SIN_RESPONDER.key, label: _EV_GRUPO_SIN_RESPONDER.label, clase: _EV_GRUPO_SIN_RESPONDER.clase, personas: sinResponder }]));
     [
       document.querySelector('#ev-detalle-stats .ev-stat-sin-respuesta'),

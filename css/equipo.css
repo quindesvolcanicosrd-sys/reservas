@@ -110,41 +110,61 @@
   margin-top: 10px;
 }
 /* Buscador dentro del panel fusionado -- mismo `.app-nav-search` de
-   siempre (css/nav.css). `.eq-periodo-label` ya NO cumple ningún rol
-   visual (el `margin-top` que tenía acá quedó huérfano desde el rediseño
-   de secciones, ver MANIFEST.md -- `_eqReestructurarPanelFiltros()`/
-   js/equipo.js remueve ese `<div>` del DOM en cuanto arranca la sección,
-   reemplazado por la sección de abajo) -- la clase sigue viva SOLO como
-   selector (`document.querySelector('.eq-periodo-label')`, esa misma
-   función), no tocar/borrar sin actualizar ese JS. */
-.eq-periodo-label { margin-top: 18px; }
-/* "Filtrar puntos según periodo"/"Filtrar por rol" (re-ajuste, ver
-   MANIFEST.md) -- pasaron por una versión intermedia como acordeón
-   colapsable, pedido explícito de sacarle ese comportamiento: siempre
-   visibles y expandidas, solo el título de sección (`.seccion-label`, sin
-   clase propia) + el contenido de siempre debajo. `.app-nav-search +` da
-   la separación contra el buscador (bug real corregido -- sin esto, la 1ra
-   sección quedaba pegada al buscador); `+ .eq-filtro-seccion` (selector de
-   hermano adyacente, sin `:first-child`) separa a "Filtrar por rol" de
-   "Filtrar puntos según periodo" arriba, sin duplicar el margen en la 1ra
-   sección (que ya lo recibe del selector anterior). */
+   siempre (css/nav.css). "Filtrar puntos según periodo"/"Filtrar por rol"
+   (re-ajuste, ver MANIFEST.md) -- pasaron por una versión intermedia como
+   acordeón colapsable, pedido explícito de sacarle ese comportamiento:
+   siempre visibles y expandidas, solo el título de sección
+   (`.seccion-label`, sin clase propia) + el contenido de siempre debajo.
+   `.app-nav-search +` da la separación contra el buscador (bug real
+   corregido -- sin esto, la 1ra sección quedaba pegada al buscador);
+   `+ .eq-filtro-seccion` (selector de hermano adyacente, sin
+   `:first-child`) separa a "Filtrar por rol" de "Filtrar puntos según
+   periodo" arriba, sin duplicar el margen en la 1ra sección (que ya lo
+   recibe del selector anterior). El año+12 pills que vivían acá (mes
+   único y rango Desde/Hasta) se sacaron -- reemplazadas por las 2 modales
+   de calendario (`#eq-modal-mes-*`/`#eq-modal-rango-*`, index.html, ver
+   "Modal calendario Mes/Rango" más abajo), sin nada de eso inline en el
+   panel. */
 .app-nav-search + .eq-filtro-seccion { margin-top: 20px; }
 .eq-filtro-seccion + .eq-filtro-seccion { margin-top: 18px; }
-.eq-filtro-mes-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-.eq-filtro-mes-pills .aj-pill { padding: 6px 12px; font-size: 0.74rem; }
-.eq-filtro-anio-stepper {
-  display: inline-flex; align-items: center; gap: 12px;
-  background: var(--surface); border: 1.5px solid var(--border-light);
-  border-radius: 10px; padding: 6px 14px; margin: 10px 0 4px;
+
+/* ── Modal calendario Mes/Rango (feat nueva, ver MANIFEST.md) ────────────
+   Reemplaza las 2 modales anteriores de año+12 pills genéricas por 2
+   modales de calendario consistentes entre sí y con el de asistencia
+   anticipada -- pedido explícito: "usar los estilos y variables ya
+   existentes del calendario de asistencia anticipada como base". El header
+   (`.ev-ant-cal-nav*`), la grilla de mes único de "Mes" (`.ev-ant-mes-grid`/
+   `.ev-ant-mes-cell`) y el resumen de rango (`.ev-ant-rango-*`) son TODOS
+   de css/eventos.css, reusados 1:1 sin una sola declaración duplicada acá
+   -- ver `#eq-modal-mes-*`/`#eq-modal-rango-*` en index.html y
+   `_eqAbrirModalMes()`/`_eqAbrirModalRango()`/js/equipo.js. Lo único
+   genuinamente nuevo es este bloque: `.eq-cal-mini*`, la versión chica de
+   `.ev-cal-grid`/`.ev-cal-celda`/`.ev-cal-num` (también de css/eventos.css,
+   MISMAS clases, sin fork) que hace falta para que los 12 meses del año
+   elegido quepan apilados en una sola modal (la modal de "Rango" -- ver el
+   comentario grande de `_eqCalMiniHtml()`/js/equipo.js sobre por qué son 12
+   calendarios completos y no un mes-a-mes con nav). Selectores de
+   descendiente (`.eq-cal-mini .ev-cal-celda`, nunca la clase a secas) --
+   mismo criterio que las demás compactaciones de esta sección (ver
+   `#eq-misstats-panel-inner .eq-stat-card`, más abajo): así el tamaño
+   normal de `.ev-cal-celda`/`.ev-cal-num` en el resto de la app (Eventos,
+   asistencia anticipada) queda intacto. */
+.eq-cal-mini { margin-bottom: 14px; }
+.eq-cal-mini:last-child { margin-bottom: 0; }
+.eq-cal-mini-titulo {
+  font-size: 0.72rem; font-weight: 800; color: var(--brand); text-transform: uppercase;
+  letter-spacing: 0.6px; margin-bottom: 4px;
 }
-.eq-anio-btn {
-  background: none; border: none; color: var(--brand); font-size: 1.1rem;
-  font-weight: 800; cursor: pointer; padding: 0 4px; font-family: inherit;
-  line-height: 1;
-}
-.eq-anio-valor { font-size: 0.9rem; font-weight: 800; color: var(--text); min-width: 40px; text-align: center; }
-.eq-filtro-rango-label { font-size: 0.76rem; font-weight: 700; color: var(--muted); margin: 12px 0 0; }
-.eq-filtro-rango-label:first-of-type { margin-top: 0; }
+.eq-cal-mini .ev-cal-grid { gap: 1px; }
+.eq-cal-mini .ev-cal-dow { font-size: 0.5rem; padding-bottom: 2px; }
+.eq-cal-mini .ev-cal-celda { min-height: 24px; padding: 1px 0 2px; gap: 1px; }
+.eq-cal-mini .ev-cal-num { width: 19px; height: 19px; font-size: 0.6rem; }
+/* Fila de días de la semana compartida por los 12 mini-calendarios (ver
+   #eq-modal-rango-meses/index.html) -- 1 sola vez arriba de todos, mismo
+   tamaño que la de cada mini-calendario individual (arriba) para que las
+   columnas calcen exactas. */
+.eq-cal-mini-dow { gap: 1px; margin-bottom: 6px; }
+.eq-cal-mini-dow .ev-cal-dow { font-size: 0.58rem; padding-bottom: 0; }
 
 /* ── Favoritos ────────────────────────────────── */
 /* Rediseño: Favoritos ahora es un `.eq-grupo` idéntico a Quindes/Mirlxs/
@@ -374,9 +394,39 @@
    `.eq-perfil-pills-row` de arriba, pero centrada y sin scroll/sangrado de
    borde (esta fila nunca tiene más de 2 pills, a diferencia de `roles`, que
    sí puede desbordar). */
+/* `align-items: center` (bug real corregido, ver MANIFEST.md -- "pill
+   Quindes/Mirlxs no está bien centrado"): esta fila es `display:flex` sin
+   `align-items` propio (hereda el default `stretch`) -- `.eq-mis-stats-rol-pill`
+   (padding 3px) y `.aj-pill` (padding 7px, pronombres) tienen alturas
+   naturales distintas, así que la pill más chica se estiraba para igualar
+   a la más alta cuando conviven las 2 en la fila; `display:inline-block`
+   (no flex) no centra su propio texto dentro de esa caja estirada, el
+   texto quedaba pegado arriba. `align-items:center` centra cada pill en su
+   propia altura natural en vez de estirarla. */
 .eq-perfil-pills-row--top {
-  overflow: visible; justify-content: center; padding: 10px 0 0; margin: 0;
+  overflow: visible; justify-content: center; align-items: center; padding: 10px 0 0; margin: 0;
 }
+
+/* ── Acordeón "Estadísticas" del perfil de detalle (rediseño, ver
+   MANIFEST.md -- "colapsable y más compacta, igual de liviana que Mis
+   estadísticas") -- `.eq-acord`/`.eq-acord-header`/`.eq-acord-cuerpo` ya
+   existentes (ver "Acordeones Categoría/Estado" más abajo), esto es solo
+   el achique de `.eq-stat-card`/`.eq-rank-wrap` puertas adentro: MISMOS
+   valores que `#eq-misstats-panel-inner` (ver bloque "Mis estadísticas"
+   más arriba en este archivo) -- selector de descendiente, nunca la clase
+   a secas, para no achicar ninguna otra card de la app. */
+.eq-perfil-stats-acord { margin-top: 14px; }
+.eq-perfil-stats-acord .eq-stats-grid { gap: 8px; margin: 10px 0 4px; }
+.eq-perfil-stats-acord .eq-stat-card { padding: 10px 8px; }
+.eq-perfil-stats-acord .eq-stat-icon { font-size: 1.15rem; margin-bottom: 4px; }
+.eq-perfil-stats-acord .eq-stat-valor { font-size: 15px; }
+.eq-perfil-stats-acord .eq-stat-label { font-size: 13px; margin-top: 1px; }
+.eq-perfil-stats-acord .eq-rank-wrap { margin: 10px 0 4px; }
+/* Filtro de período (feat nueva) -- misma fila de pills que el panel de
+   Filtros de la lista (`.eq-periodo-pills`, sin clase propia hasta acá),
+   solo el espaciado alrededor es propio de este contexto (dentro del
+   acordeón, antes de las stat cards). */
+.eq-perfil-stats-periodo { margin: 2px 0 12px; }
 
 /* Stats anuales -- 2 tarjetas lado a lado, fondo suave sin borde duro. */
 .eq-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0 6px; }

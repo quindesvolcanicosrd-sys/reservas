@@ -1182,7 +1182,11 @@ async function adminMarcarAsistencia(params: Record<string, any>): Promise<Recor
   if (logResult.error) return { exito: false, error: 'Error insertando log: ' + logResult.error };
 
   // Actualizar a_horario / tarde en asistencias directamente
-  const { data: ev, error: errorLectura } = await supabase.from('asistencias').select('a_horario, tarde').eq('id_evento', idEvento).maybeSingle();
+  // `fecha` sumada al select (bug real, ver MANIFEST.md/CHANGELOG.md --
+  // "puntos totales muestran de más en un mes sin asistencia real"): hace
+  // falta más abajo para acreditar el bonus de racha al MES DEL EVENTO, no
+  // al mes en que el admin hizo click (ver ese comentario).
+  const { data: ev, error: errorLectura } = await supabase.from('asistencias').select('a_horario, tarde, fecha').eq('id_evento', idEvento).maybeSingle();
   if (errorLectura) return { exito: false, error: 'Error leyendo asistencias: ' + errorLectura.message };
   if (!ev) return { exito: false, error: 'No existe fila en asistencias para evento: ' + idEvento };
 
@@ -1197,9 +1201,28 @@ async function adminMarcarAsistencia(params: Record<string, any>): Promise<Recor
   // Racha de asistencias consecutivas (ver MANIFEST.md/CHANGELOG.md) --
   // `equipo.racha_actual` sube 1 en cada marca real de 'A tiempo'/'Tarde'
   // y se resetea a 0 en 'Ninguno'; cada 3ra consecutiva acredita +2 a
-  // `puntos_mensuales.puntos_extra` del mes ACTUAL (no el mes del evento --
-  // mismo criterio ya usado por `_acreditarPuntosTarea()` en
-  // `adminValidarTarea()`, que tampoco usa la fecha de la tarea).
+  // `puntos_mensuales.puntos_extra`.
+  //
+  // Bug real corregido (ver MANIFEST.md/CHANGELOG.md -- "puntos totales
+  // muestran 2 en un mes con asistencia y tareas en 0"): este bonus se
+  // acreditaba al mes ACTUAL (`new Date()`, la fecha real del click del
+  // admin), mientras que `_reconstruirRachasHistoricas()` (más abajo en
+  // este archivo, la reconstrucción completa/autoritativa que corre al
+  // final de `recalcularPuntosAsistencia()`) siempre lo acredita al MES DEL
+  // EVENTO (`mesAnioPorEvento`, ahí mismo). Si un admin toma lista de un
+  // evento días/semanas después de que ocurrió (catch-up real, no
+  // infrecuente) y esa marca resulta ser la 3ra consecutiva, el camino en
+  // vivo de acá abajo acreditaba el bonus al mes en que se hizo el click, NO
+  // al mes del evento -- un mes sin ninguna asistencia real podía terminar
+  // con `puntos_extra:2` (y por lo tanto `puntos_total:2`, columna
+  // GENERATED) pese a `puntos_asistencia`/`puntos_tareas` en 0. Fix: usar
+  // la fecha real del evento (`ev.fecha`, ya seleccionada arriba) para
+  // ambos, mismo criterio que la reconstrucción -- los 2 caminos quedan
+  // consistentes entre sí. (Datos ya escritos con el bug viejo se corrigen
+  // solos la próxima vez que corra `recalcularPuntosAsistencia()`/
+  // "Recalcular ahora" para ese mes -- `_reconstruirRachasHistoricas()`
+  // SOBREESCRIBE `puntos_extra`, no lo suma.)
+  const [anioEvento, mesEvento] = String(ev.fecha).split('-').map((n: string) => Number(n));
   //
   // Fix real (racha inflada en re-marcados): el incremento en vivo de
   // abajo asume que CADA llamada es una marca nueva -- si esta misma
@@ -1214,13 +1237,25 @@ async function adminMarcarAsistencia(params: Record<string, any>): Promise<Recor
   if (esCorreccion) {
     await _reconstruirRachasHistoricas(nombre);
   } else {
-    const { data: filaEquipo } = await supabase.from('equipo').select('racha_actual').eq('username', nombre).maybeSingle();
+    const { data: filaEquipo } = await supabase.from('equipo').select('racha_actual, estado_miembro').eq('username', nombre).maybeSingle();
     if (estado === 'A tiempo' || estado === 'Tarde') {
       const rachaNueva = (Number(filaEquipo?.racha_actual) || 0) + 1;
       await supabase.from('equipo').update({ racha_actual: rachaNueva }).eq('username', nombre);
       if (rachaNueva % 3 === 0) {
-        const hoy = new Date();
-        await _acreditarPuntosExtra(nombre, hoy.getUTCFullYear(), hoy.getUTCMonth() + 1, 2);
+        await _acreditarPuntosExtra(nombre, anioEvento, mesEvento, 2);
+      }
+      // Reactivación automática (feat nueva, ver MANIFEST.md -- "usuarios
+      // inactivos en Eventos"): una marca real de presente ('A
+      // tiempo'/'Tarde') ES la prueba de que la persona volvió -- si estaba
+      // 'Ausente' (el único estado que este mismo backend marca solo por
+      // inactividad -- ver `_eqEstadoEfectivo()`/js/equipo.js, "30+ días sin
+      // asistir"), pasa a 'Activx' sola, sin que el admin tenga que ir
+      // aparte al perfil de Equipo a cambiarla a mano. NO toca
+      // 'Técnico'/'Lesionadx' -- esos son categorías de membresía propias,
+      // no un estado de inactividad detectado por fecha, tomarle asistencia
+      // a alguien en esos estados no implica que deban dejar de serlo.
+      if (filaEquipo?.estado_miembro === 'Ausente') {
+        await supabase.from('equipo').update({ estado_miembro: 'Activx' }).eq('username', nombre);
       }
     } else if (estado === 'Ninguno') {
       await supabase.from('equipo').update({ racha_actual: 0 }).eq('username', nombre);
@@ -1238,11 +1273,17 @@ async function adminMarcarAsistencia(params: Record<string, any>): Promise<Recor
 
 async function adminBuscarPersonasParaEvento(params: Record<string, any>): Promise<Record<string, any>> {
   const idEvento = String(params.idEvento ?? '').trim();
-  const { data: equipo } = await supabase.from('equipo').select('username').order('username');
+  // `estado_miembro` sumada al select (feat nueva, ver MANIFEST.md --
+  // "Sin respuesta no debe mostrar usuarios inactivos") -- `js/eventos.js`
+  // (`_evRenderDetalleAsistencia()`) la usa para sacar del grupo "Sin
+  // respuesta" a quien esté 'Ausente' (el único valor de este enum que
+  // representa inactividad detectada -- ver el mismo criterio en
+  // `adminMarcarAsistencia()`, arriba en este archivo).
+  const { data: equipo } = await supabase.from('equipo').select('username, estado_miembro').order('username');
   const asistLog = await _ultimaAsistenciaPorPersonaTodas([idEvento]);
   const yaMarcadas: Record<string, string> = {};
   (asistLog[idEvento] ?? []).forEach((a: any) => { yaMarcadas[a.nombre] = a.estado; });
-  const personas = (equipo ?? []).map((r: any) => ({ nombre: r.username, estadoActual: yaMarcadas[r.username] ?? null }));
+  const personas = (equipo ?? []).map((r: any) => ({ nombre: r.username, estadoActual: yaMarcadas[r.username] ?? null, estadoMiembro: r.estado_miembro ?? 'Activx' }));
   return { personas };
 }
 
@@ -2469,6 +2510,23 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
   const tendenciaPorUsuario: Record<string, 'sube' | 'baja'> = {};
   if (tierTecho) {
     usernames.forEach((u: string) => {
+      // Reforzado (bug real, ver MANIFEST.md -- "chevron para personas que
+      // regresan de inactividad"): el chevron solo tiene sentido como
+      // COMPARACIÓN de una tendencia real, no para "alguien que no
+      // entrenaba nada empezó a entrenar de nuevo" -- ese caso es un
+      // regreso, no una mejora/caída medible. `contarClases()` (arriba en
+      // esta función) ya cuenta asistencia REAL (a_horario/tarde) en cada
+      // una de las 2 ventanas comparadas ("hoy" y "hace 1 mes") -- si
+      // CUALQUIERA de las 2 tiene 0 clases reales, no hay tendencia que
+      // mostrar (sin entrada en el mapa, `personasOut` la traduce a `null`,
+      // igual que el caso "dio lo mismo" de siempre) -- cubre tanto la
+      // primera vuelta tras inactividad (ventana de "hace 1 mes" en 0,
+      // todavía sin nada con qué comparar) como a alguien que dejó de venir
+      // (ventana de "hoy" en 0, no hay "tendencia" que reportar sobre una
+      // ausencia).
+      const clasesActual = contarClases(u, hoy);
+      const clasesAnterior = contarClases(u, haceUnMes);
+      if (clasesActual === 0 || clasesAnterior === 0) return;
       const actualPct = calcularTermometroPctAsOf(u, hoy, idxActualTermometro);
       const anteriorPct = calcularTermometroPctAsOf(u, haceUnMes, idxActualTermometro - 1);
       if (actualPct > anteriorPct) tendenciaPorUsuario[u] = 'sube';

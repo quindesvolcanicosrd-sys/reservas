@@ -35,7 +35,7 @@
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
 <link rel="stylesheet" href="css/eventos.css?v=94f3cbd9">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=15144052">
+<link rel="stylesheet" href="css/equipo.css?v=8aeb0ab0">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2393,12 +2393,19 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            CHANGELOG.md) -- buscador de texto libre arriba (mismo
            comportamiento de siempre, `_eqBuscar()`/js/equipo.js sin
            cambios) + 2 secciones de filtros debajo, cada una con su propio
-           `.seccion-label`: A) período de puntaje (afecta puntosAsistencia/
+           `.seccion-label`, siempre visibles (sin acordeón, pedido
+           explícito): A) período de puntaje (afecta puntosAsistencia/
            puntosTareas/puntosTotal de getEquipo(), tanto en las cards como
            en el perfil de detalle) y B) rol (chips, filtrado 100% en
            frontend sobre `_eqPersonas` ya cargado -- sin nueva llamada al
            backend, ver `_eqRolesDe()`/`_EQ_ROLES` ya existentes más abajo
-           en este archivo). -->
+           en este archivo). Elegir "Mes"/"Rango" abre una de las 2 modales
+           de calendario de más abajo (#eq-modal-mes-overlay/
+           #eq-modal-rango-overlay) -- el filtro recién se aplica al
+           confirmar esa modal, o de inmediato con "Histórico" (sin modal,
+           nada que elegir). Sin botón "Aplicar filtros" -- cada elección
+           aplica sola (`_eqFiltroPeriodoModo()`/`_eqConfirmarModalMes()`/
+           `_eqConfirmarModalRango()`/`_eqFiltroRolToggle()`, js/equipo.js). -->
       <div class="eq-header-panel" id="eq-busqueda-panel">
         <div class="eq-busqueda-panel-inner">
           <div class="app-nav-search">
@@ -2406,45 +2413,19 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <input type="text" id="eq-search-input" placeholder="Busca en el equipo" oninput="_eqBuscar(this.value)">
           </div>
 
-          <div class="seccion-label eq-periodo-label">Período de puntaje</div>
-          <div class="aj-pills-row" id="eq-filtro-periodo-modo">
-            <span class="aj-pill activa" data-modo="mes" onclick="_eqFiltroPeriodoModo('mes')">Mes</span>
-            <span class="aj-pill" data-modo="rango" onclick="_eqFiltroPeriodoModo('rango')">Rango</span>
-            <span class="aj-pill" data-modo="historico" onclick="_eqFiltroPeriodoModo('historico')">Histórico</span>
-          </div>
-
-          <div id="eq-filtro-periodo-mes-wrap">
-            <div class="eq-filtro-mes-pills" id="eq-filtro-mes-pills"></div>
-            <div class="eq-filtro-anio-stepper">
-              <button type="button" class="eq-anio-btn" onclick="_eqFiltroAnioSumar('unico', -1)">−</button>
-              <span class="eq-anio-valor" id="eq-filtro-anio-unico-val">2026</span>
-              <button type="button" class="eq-anio-btn" onclick="_eqFiltroAnioSumar('unico', 1)">+</button>
+          <div class="eq-filtro-seccion">
+            <div class="seccion-label">Filtrar puntos según periodo</div>
+            <div class="aj-pills-row eq-periodo-pills" id="eq-filtro-periodo-modo">
+              <span class="aj-pill activa" data-modo="mes" onclick="_eqFiltroPeriodoModo('mes')">Mes</span>
+              <span class="aj-pill" data-modo="rango" onclick="_eqFiltroPeriodoModo('rango')">Rango</span>
+              <span class="aj-pill" data-modo="historico" onclick="_eqFiltroPeriodoModo('historico')">Histórico</span>
             </div>
           </div>
 
-          <div id="eq-filtro-periodo-rango-wrap" style="display:none;">
-            <div class="eq-filtro-rango-label">Desde</div>
-            <div class="eq-filtro-mes-pills" id="eq-filtro-mes-pills-desde"></div>
-            <div class="eq-filtro-anio-stepper">
-              <button type="button" class="eq-anio-btn" onclick="_eqFiltroAnioSumar('desde', -1)">−</button>
-              <span class="eq-anio-valor" id="eq-filtro-anio-desde-val">2026</span>
-              <button type="button" class="eq-anio-btn" onclick="_eqFiltroAnioSumar('desde', 1)">+</button>
-            </div>
-            <div class="eq-filtro-rango-label">Hasta</div>
-            <div class="eq-filtro-mes-pills" id="eq-filtro-mes-pills-hasta"></div>
-            <div class="eq-filtro-anio-stepper">
-              <button type="button" class="eq-anio-btn" onclick="_eqFiltroAnioSumar('hasta', -1)">−</button>
-              <span class="eq-anio-valor" id="eq-filtro-anio-hasta-val">2026</span>
-              <button type="button" class="eq-anio-btn" onclick="_eqFiltroAnioSumar('hasta', 1)">+</button>
-            </div>
+          <div class="eq-filtro-seccion">
+            <div class="seccion-label">Filtrar por rol</div>
+            <div class="aj-pills-row" id="eq-filtro-rol-pills"></div>
           </div>
-
-          <p id="eq-filtro-periodo-historico-nota" style="display:none;font-size:0.82rem;color:var(--muted);margin:6px 0 0;">Suma de todos los registros de puntos guardados.</p>
-
-          <div class="seccion-label" style="margin-top:18px;">Filtrar por rol</div>
-          <div class="aj-pills-row" id="eq-filtro-rol-pills"></div>
-
-          <button type="button" class="btn btn-primary" style="width:100%;margin-top:16px;" onclick="_eqAplicarFiltros()">Aplicar filtros</button>
         </div>
       </div>
 
@@ -2554,6 +2535,80 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
 
       <div style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+    </div>
+  </div>
+
+  <!-- ═══ Modales de calendario "Mes"/"Rango" del filtro de período de Equipo
+       (reemplazan las modales anteriores de año+12 pills, ver MANIFEST.md) --
+       mismo componente `.bsheet-overlay`/`.bsheet` estándar que el resto de
+       sheets de la app (`#dat-lesion-sheet`, js/perfil.js, mismo criterio de
+       apertura/cierre `style.display`+`transform`) + `.bsheet-scroll` (el
+       body puede ser alto, sobre todo en Rango con 12 mini-calendarios) --
+       overlay y sheet SIBLINGS, no anidados (`shared/bsheet.js` asume
+       `sheet.previousElementSibling` === su overlay para el cierre por
+       tap/drag en la manija+título, delegado a CUALQUIER `.bsheet-handle`/
+       `.bsheet-title` del documento, funciona igual para estos 2 sheets sin
+       cambiar ese script compartido). Ambas comparten exactamente el mismo
+       header (nav de AÑO -- `‹ 2025 ›`, pedido explícito -- nunca de mes:
+       "Rango" muestra los 12 meses del año elegido como mini-calendarios
+       completos en vez de un mes a la vez, así se puede armar un rango que
+       cruce años sin 12 clicks de "mes siguiente"; "Mes" muestra esos mismos
+       12 meses como pills, mismo header/fondo/estilos, ver
+       `_eqAbrirModalMes()`/`_eqAbrirModalRango()`/js/equipo.js). Reusa 1:1
+       las clases del calendario de asistencia anticipada (`.ev-cal-grid`/
+       `.ev-cal-dow`/`.ev-cal-celda`/`.ev-cal-num`/`.ev-ajeno`/
+       `.ev-ant-cal-sel`/`.ev-ant-cal-en-rango`/`.ev-ant-cal-hoy`/
+       `.ev-ant-cal-nav*`/`.ev-ant-mes-grid`/`.ev-ant-mes-cell`/
+       `.ev-ant-rango-fila`/`.ev-ant-rango-linea`/`.ev-ant-rango-vacio`/
+       `.ev-ant-btn-restablecer-icono`, todas ya definidas en
+       css/eventos.css, ver `_evAntCal*`/js/eventos.js) -- pedido explícito
+       de esta feature ("usar los estilos y variables ya existentes del
+       calendario de asistencia anticipada como base"). Lo único nuevo es
+       `.eq-cal-mini*` (css/equipo.css): la MISMA grilla de día
+       (`.ev-cal-grid`) pero escalada a un tamaño mini para caber 12 veces
+       en una sola modal. -->
+  <div id="eq-modal-mes-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_eqCerrarModalMes()"></div>
+  <div id="eq-modal-mes-sheet" class="bsheet bsheet-scroll" style="z-index:9701;max-height:80vh;">
+    <div class="bsheet-handle" style="flex-shrink:0;"></div>
+    <div class="bsheet-title" style="flex-shrink:0;">Elige el mes</div>
+    <div style="overflow-y:auto;flex:1;padding:16px;">
+      <div class="ev-ant-cal-nav">
+        <button type="button" class="ev-ant-cal-nav-btn" onclick="_eqCalMesAnio(-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+        <span class="ev-ant-cal-nav-label" id="eq-modal-mes-anio-label"></span>
+        <button type="button" class="ev-ant-cal-nav-btn" onclick="_eqCalMesAnio(1)"><span class="material-symbols-outlined">chevron_right</span></button>
+      </div>
+      <div class="ev-ant-mes-grid" id="eq-modal-mes-grid"></div>
+      <button type="button" class="btn btn-primary" style="width:100%;margin-top:18px;" onclick="_eqConfirmarModalMes()">Aplicar</button>
+    </div>
+  </div>
+
+  <div id="eq-modal-rango-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_eqCerrarModalRango()"></div>
+  <div id="eq-modal-rango-sheet" class="bsheet bsheet-scroll" style="z-index:9701;max-height:80vh;">
+    <div class="bsheet-handle" style="flex-shrink:0;"></div>
+    <div class="bsheet-title" style="flex-shrink:0;">Elige el rango</div>
+    <div style="overflow-y:auto;flex:1;padding:16px;">
+      <div class="ev-ant-cal-nav">
+        <button type="button" class="ev-ant-cal-nav-btn" onclick="_eqCalRangoAnio(-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+        <span class="ev-ant-cal-nav-label" id="eq-modal-rango-anio-label"></span>
+        <button type="button" class="ev-ant-cal-nav-btn" onclick="_eqCalRangoAnio(1)"><span class="material-symbols-outlined">chevron_right</span></button>
+      </div>
+      <div class="ev-ant-rango-fila" style="margin:10px 0;">
+        <div class="ev-ant-rango-linea" id="eq-modal-rango-resumen"></div>
+        <button type="button" class="btn-text-simple ev-ant-btn-restablecer-icono" id="eq-modal-rango-btn-restablecer" onclick="_eqCalRangoRestablecer()" aria-label="Restablecer fechas" title="Restablecer fechas" style="display:none;">
+          <span class="material-symbols-outlined">undo</span>
+        </button>
+      </div>
+      <!-- Fila de días de la semana (Lun/Mar/Mié/.../Dom) -- 1 sola vez para
+           las 12 mini-calendarios de abajo, no repetida en cada una (misma
+           grilla de 7 columnas siempre alineada, ver .eq-cal-mini-dow/
+           css/equipo.css): repetirla 12 veces sería puro ruido visual, esta
+           única fila ya alcanza para leer cualquiera de los 12 meses. -->
+      <div class="ev-cal-grid eq-cal-mini-dow">
+        <div class="ev-cal-dow">L</div><div class="ev-cal-dow">M</div><div class="ev-cal-dow">M</div>
+        <div class="ev-cal-dow">J</div><div class="ev-cal-dow">V</div><div class="ev-cal-dow">S</div><div class="ev-cal-dow">D</div>
+      </div>
+      <div id="eq-modal-rango-meses"></div>
+      <button type="button" class="btn btn-primary" style="width:100%;margin-top:18px;" onclick="_eqConfirmarModalRango()">Aplicar</button>
     </div>
   </div>
 
@@ -3082,9 +3137,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=66148b6f"></script>
-<script src="js/eventos.js?v=fb158372"></script>
+<script src="js/eventos.js?v=ad1428aa"></script>
 <script src="js/tareas.js"></script>
-<script src="js/equipo.js?v=443a2e23"></script>
+<script src="js/equipo.js?v=eee95a4c"></script>
 <script src="js/home.js?v=cf4b0197"></script>
 <script src="js/reservas.js?v=e53c9c46"></script>
 <script src="js/perfil.js?v=e7e04c90"></script>
