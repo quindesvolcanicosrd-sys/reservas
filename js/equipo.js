@@ -887,43 +887,96 @@ function _eqFiltroPeriodoModo(modo) {
    css/eventos.css, reusado tal cual) en vez de las 12-meses-apilados que
    usaba la modal de Rango vieja (`.eq-cal-mini*`, ya sacada de este
    archivo/css/equipo.css -- sin más consumidores tras este cambio).
-   2 modificaciones sobre ese componente base, ambas pedidas explícitas:
-   (1) el label central del header (`_eqCalFecha.mesMostrado`+`anioMostrado`,
-   "Septiembre 2026") es TAPPEABLE (`.eq-cal-fecha-label`, css/equipo.css)
-   -- togglea a una grilla de años (`_eqCalFechaToggleAnio()`, más abajo)
-   estilo Google Calendar (3 columnas, año actual/mostrado resaltado,
-   scroll vertical) -- mismo patrón visual que `.dp-year-grid`/`.dp-year-btn`
-   (`shared/date-picker.js`+`inscripcion/inscripcion.css`, el selector de
-   fecha de nacimiento) pero DUPLICADO acá como `.eq-cal-fecha-year-*`
-   (css/equipo.css) en vez de importado -- ese CSS vive en
-   `inscripcion/inscripcion.css`, que esta SPA principal no carga (ver
-   MANIFEST.md, sección 1: `shared/date-picker.js` está "usado en
-   inscripcion/" únicamente). Elegir un año vuelve a la vista de mes para
-   ese año (`_eqCalFechaElegirAnio()`). (2) selección "flexible": un tap en
-   un día filtra por ese MES completo, no por el día exacto -- el día
-   tocado es solo el mecanismo de selección visual (mismo criterio que ya
-   tenía la modal de Rango vieja: `getEquipo()` nunca recibió un día real,
-   solo mes+año) -- por eso el estado interno (`_eqCalFecha.desdeClave`/
-   `hastaClave`) se guarda como CLAVE DE MES (`anio*12+mes`, 0-indexado),
-   no como fecha ISO -- comparar 2 taps en el MISMO mes pero distinto día
-   (ej. día 3 después de día 15) no debe generar ningún cambio real de
-   selección, cosa que sí pasaba con el mecanismo anterior (`_eqCalRango`,
-   basado en comparar strings ISO día a día). Un 2do tap define un rango de
-   mes/año a mes/año -- mismo mecanismo "ida y vuelta" que ya usaba la
-   modal de Rango (primer tap fija Desde y limpia Hasta; un tap posterior
-   -- clave >= Desde -- fija Hasta; uno anterior a Desde reemplaza Desde),
-   ahora comparando claves de mes en vez de fechas ISO. Markup real en
-   index.html (`#eq-modal-fecha-*`) -- mismo componente `.bsheet-overlay`/
-   `.bsheet` estándar que el resto de sheets de la app, mismo criterio de
-   apertura/cierre. */
-var _eqCalFecha = { anioMostrado: null, mesMostrado: null, desdeClave: null, hastaClave: null, vistaAnio: false };
+
+   3 vistas dentro del mismo bottom sheet (`_eqCalFecha.vista`, ver
+   `_eqRenderModalFecha()`/`_eqCalFechaRenderContenido()` más abajo -- TODOS
+   los cambios de vista/mes/día pintan a través de esa única función, que
+   anima la transición, ver el bloque grande de más abajo, "Animación de
+   contenido"): 'dias' (default, la grilla de un solo mes), 'meses' (grilla
+   Ene-Dic, `.ev-ant-mes-grid`/`.ev-ant-mes-cell`, MISMO componente/clases
+   que ya usa "asistencia anticipada → Por meses",
+   `_evAntRenderMesesGrid()`/js/eventos.js, reusado tal cual, sin fork) y
+   'anios' (grilla de años estilo Google Calendar, `.eq-cal-fecha-year-*`,
+   ver más abajo). El header (re-ajuste, pedido explícito: "header separado
+   en 2 partes tappeables") tiene 2 palabras tappeables INDEPENDIENTES
+   (`#eq-modal-fecha-label-mes`/`#eq-modal-fecha-label-anio`, cada una con
+   su propio subrayado -- punteado el mes, sólido el año,
+   `.eq-cal-fecha-label-mes`/`-anio`/css/equipo.css -- para que se lean como
+   2 controles distintos, no 1 solo): tocar el mes abre/cierra 'meses'
+   (`_eqCalFechaAbrirMeses()`), tocar el año abre/cierra 'anios'
+   (`_eqCalFechaAbrirAnios()`) -- las 2 SIEMPRE tappeables sin importar la
+   vista activa (tocar "año" estando en 'meses' salta directo a 'anios', sin
+   pasar por 'dias' en el medio). Los chevrones `‹›` (mes-a-mes) solo tienen
+   sentido mirando días -- se ocultan con `visibility:hidden` (no `display`,
+   para no correr los labels del centro al sacar 1 de los 3 hijos de
+   `.ev-ant-cal-nav`, `justify-content:space-between`) en 'meses'/'anios'.
+   El título del sheet (`#eq-modal-fecha-titulo`) es DINÁMICO por vista
+   ("Elige la fecha"/"Elige el mes"/"Elige el año", pedido explícito,
+   "limpiar textos" -- reemplaza un texto secundario redundante que vivía
+   antes en el header mismo, "Elige un año"/"Elige un mes", ya sacado del
+   todo: con el título ya comunicando en qué vista se está, una 2da leyenda
+   ahí adentro era ruido, no información nueva).
+
+   Elegir un mes (`_eqCalFechaElegirMes()`) o un año
+   (`_eqCalFechaElegirAnio()`) vuelve a 'dias' mostrando ese mes/año.
+   Selección "flexible" (sin cambios de esta ronda): un tap en un día filtra
+   por ese MES completo, no por el día exacto -- el día tocado es solo el
+   mecanismo de selección visual (mismo criterio que ya tenía la modal de
+   Rango vieja: `getEquipo()` nunca recibió un día real, solo mes+año) -- por
+   eso el estado interno (`_eqCalFecha.desdeClave`/`hastaClave`) se guarda
+   como CLAVE DE MES (`anio*12+mes`, 0-indexado), no como fecha ISO. Un 2do
+   tap define un rango de mes/año a mes/año -- mismo mecanismo "ida y
+   vuelta" de siempre (primer tap fija Desde y limpia Hasta; un tap
+   posterior -- clave >= Desde -- fija Hasta; uno anterior a Desde reemplaza
+   Desde). "Restablecer" (`_eqCalFechaRestablecer()`, re-ajuste, pedido
+   explícito) ya NO limpia la selección a vacío -- navega al mes actual
+   (animado, mismo camino que cualquier otro cambio) y lo deja
+   pre-seleccionado como el rango (Desde=Hasta=mes de hoy), un default útil
+   en vez de un estado vacío que obligaba a tocar un día de nuevo. Markup
+   real en index.html (`#eq-modal-fecha-*`) -- mismo componente
+   `.bsheet-overlay`/`.bsheet` estándar que el resto de sheets de la app,
+   mismo criterio de apertura/cierre.
+
+   ── Animación de contenido (pedido explícito, "todas las transiciones
+   dentro del bottom sheet deben estar animadas... actualmente solo se
+   anima la apertura/cierre del bottom sheet") ──
+   `_eqCalFechaRenderContenido(pintarFn, instant)` es el ÚNICO camino que
+   toca el HTML de `#eq-modal-fecha-contenido` (grilla de días, de meses o
+   de años, según la vista) -- centraliza la animación para que cambiar de
+   mes, abrir/cerrar el selector de meses, abrir/cerrar el de años y volver
+   al calendario se vean todos igual, sin duplicar la coreografía en cada
+   handler. 2 animaciones en paralelo sobre 2 elementos DISTINTOS (mismo
+   criterio que ya usan los acordeones de esta sección para separar "qué se
+   anima" de "cuánto mide"):
+   1) FADE del contenido -- reusa `_evFadeSwap()`/js/eventos.js TAL CUAL
+      (la misma función que ya usa `_evAntCalRender()` para animar sus
+      propios cambios de mes/selección -- sin fork, sin reimplementar):
+      opacity a 0, recién con el contenido ya invisible pinta el HTML nuevo,
+      y sube la opacity de vuelta.
+   2) RESIZE del wrapper -- `#eq-modal-fecha-viewport` (`.eq-cal-fecha-viewport`,
+      css/equipo.css: `overflow:hidden` + `transition:max-height`) envuelve
+      a `#eq-modal-fecha-contenido` -- antes de pintar se "aterriza" en su
+      alto ACTUAL real (`scrollHeight`, nunca animar desde `none`, mismo
+      criterio que el resto de acordeones de este archivo); el callback que
+      `_evFadeSwap()` corre para pintar el HTML nuevo (con el contenido
+      todavía en opacity:0, así que medir acá no se ve saltar) también mide
+      el `scrollHeight` NUEVO y se lo asigna a `viewport.style.maxHeight` --
+      la `transition` de esa clase anima el resize del wrapper (y por lo
+      tanto el alto real del bottom sheet, que crece/encoge con su
+      contenido) en paralelo al fade. Sin el bug de "medir con la pantalla
+      en display:none da 0" (documentado en la cabecera de este archivo):
+      esta función solo corre con el sheet YA abierto y visible -- el primer
+      render (`_eqAbrirModalFecha()`) pasa `instant:true` y salta toda la
+      coreografía (`viewport.style.maxHeight='none'` directo, sin medir),
+      mismo criterio que el resto de acordeones que nacen ya abiertos. */
+var _eqCalFecha = { anioMostrado: null, mesMostrado: null, desdeClave: null, hastaClave: null, vista: 'dias' };
 function _eqAbrirModalFecha() {
   var hoy = new Date();
   // Arranca mostrando el mes "Desde" ya elegido (si había uno) -- reabrir
   // la modal conserva la última selección en vez de resetear a hoy.
   _eqCalFecha.anioMostrado = _eqFiltroPeriodo.anioDesde || hoy.getFullYear();
   _eqCalFecha.mesMostrado = (_eqFiltroPeriodo.mesDesde || (hoy.getMonth() + 1)) - 1;
-  _eqCalFecha.vistaAnio = false;
+  _eqCalFecha.vista = 'dias';
   if (_eqFiltroPeriodo.mesDesde && _eqFiltroPeriodo.anioDesde) {
     _eqCalFecha.desdeClave = _eqFiltroPeriodo.anioDesde * 12 + (_eqFiltroPeriodo.mesDesde - 1);
     _eqCalFecha.hastaClave = (_eqFiltroPeriodo.mesHasta && _eqFiltroPeriodo.anioHasta && !(_eqFiltroPeriodo.mesHasta === _eqFiltroPeriodo.mesDesde && _eqFiltroPeriodo.anioHasta === _eqFiltroPeriodo.anioDesde))
@@ -932,7 +985,7 @@ function _eqAbrirModalFecha() {
     _eqCalFecha.desdeClave = null;
     _eqCalFecha.hastaClave = null;
   }
-  _eqRenderModalFecha();
+  _eqRenderModalFecha(true);
   var ov = document.getElementById('eq-modal-fecha-overlay');
   var sh = document.getElementById('eq-modal-fecha-sheet');
   if (!ov || !sh) return;
@@ -955,43 +1008,70 @@ function _eqCalFechaMoverMes(dir) {
   else if (_eqCalFecha.mesMostrado < 0) { _eqCalFecha.mesMostrado = 11; _eqCalFecha.anioMostrado--; }
   _eqRenderModalFecha();
 }
-// Header tappeable -> grilla de años (pedido explícito, "estilo Google
-// Calendar"). Togglea, no siempre-abre -- volver a tocar el label estando
-// en modo año cierra la grilla sin elegir nada (mismo criterio que
-// `initDatePickerListeners()`/shared/date-picker.js: `dpState.yearMode =
-// !dpState.yearMode`).
-function _eqCalFechaToggleAnio() {
-  _eqCalFecha.vistaAnio = !_eqCalFecha.vistaAnio;
+// Las 2 palabras del header togglean su propia vista -- volver a tocar la
+// que ya está abierta cierra sin elegir nada (mismo criterio que el
+// selector de fecha de nacimiento, `shared/date-picker.js`:
+// `dpState.yearMode = !dpState.yearMode`). Tocar la OTRA palabra mientras
+// una ya está abierta salta directo a esa otra vista, sin pasar por 'dias'.
+function _eqCalFechaAbrirMeses() {
+  _eqCalFecha.vista = _eqCalFecha.vista === 'meses' ? 'dias' : 'meses';
+  _eqRenderModalFecha();
+}
+function _eqCalFechaAbrirAnios() {
+  _eqCalFecha.vista = _eqCalFecha.vista === 'anios' ? 'dias' : 'anios';
+  _eqRenderModalFecha();
+}
+function _eqCalFechaElegirMes(mesIdx) {
+  _eqCalFecha.mesMostrado = mesIdx;
+  _eqCalFecha.vista = 'dias';
   _eqRenderModalFecha();
 }
 function _eqCalFechaElegirAnio(anio) {
   _eqCalFecha.anioMostrado = anio;
-  _eqCalFecha.vistaAnio = false;
+  _eqCalFecha.vista = 'dias';
   _eqRenderModalFecha();
 }
-function _eqRenderModalFecha() {
-  var label = document.getElementById('eq-modal-fecha-label');
+// Orquesta el header (título dinámico + las 2 palabras + chevrones) y
+// delega el contenido (días/meses/años) a `_eqCalFechaRenderContenido()`,
+// que es quien de verdad anima -- ver el comentario grande de arriba,
+// "Animación de contenido". `instant` (default false) lo pasa
+// `_eqAbrirModalFecha()` en el primer render de cada apertura.
+function _eqRenderModalFecha(instant) {
+  var titulo = document.getElementById('eq-modal-fecha-titulo');
+  var labelMes = document.getElementById('eq-modal-fecha-label-mes');
+  var labelAnio = document.getElementById('eq-modal-fecha-label-anio');
   var prevBtn = document.getElementById('eq-modal-fecha-prev');
   var nextBtn = document.getElementById('eq-modal-fecha-next');
-  var diasCont = document.getElementById('eq-modal-fecha-dias');
-  var aniosCont = document.getElementById('eq-modal-fecha-anios');
-  if (!diasCont || !aniosCont) return;
-  if (_eqCalFecha.vistaAnio) {
-    if (label) label.textContent = 'Elige un año';
-    if (prevBtn) prevBtn.style.display = 'none';
-    if (nextBtn) nextBtn.style.display = 'none';
-    diasCont.style.display = 'none';
-    aniosCont.style.display = '';
-    _eqRenderAniosGrid();
-  } else {
-    if (label) label.textContent = NOMBRES_MESES[_eqCalFecha.mesMostrado] + ' ' + _eqCalFecha.anioMostrado;
-    if (prevBtn) prevBtn.style.display = '';
-    if (nextBtn) nextBtn.style.display = '';
-    aniosCont.style.display = 'none';
-    diasCont.style.display = '';
-    _eqRenderDiasGrid();
-  }
+  var vista = _eqCalFecha.vista;
+  if (titulo) titulo.textContent = vista === 'anios' ? 'Elige el año' : vista === 'meses' ? 'Elige el mes' : 'Elige la fecha';
+  if (labelMes) labelMes.textContent = NOMBRES_MESES[_eqCalFecha.mesMostrado];
+  if (labelAnio) labelAnio.textContent = String(_eqCalFecha.anioMostrado);
+  if (prevBtn) prevBtn.style.visibility = vista === 'dias' ? '' : 'hidden';
+  if (nextBtn) nextBtn.style.visibility = vista === 'dias' ? '' : 'hidden';
+  _eqCalFechaRenderContenido(function(cont) {
+    if (vista === 'anios') _eqPintarAniosGrid(cont);
+    else if (vista === 'meses') _eqPintarMesesGrid(cont);
+    else _eqPintarDiasGrid(cont);
+  }, instant);
   _eqCalFechaActualizarResumen();
+}
+// Fade (reusa `_evFadeSwap()`/js/eventos.js tal cual) + resize del wrapper
+// en paralelo -- ver el comentario grande de "Animación de contenido" más
+// arriba para el porqué de cada pieza.
+function _eqCalFechaRenderContenido(pintarFn, instant) {
+  var viewport = document.getElementById('eq-modal-fecha-viewport');
+  var contenido = document.getElementById('eq-modal-fecha-contenido');
+  if (!viewport || !contenido) return;
+  if (instant) {
+    pintarFn(contenido);
+    viewport.style.maxHeight = 'none';
+    return;
+  }
+  viewport.style.maxHeight = contenido.scrollHeight + 'px';
+  _evFadeSwap(contenido, function() {
+    pintarFn(contenido);
+    viewport.style.maxHeight = contenido.scrollHeight + 'px';
+  }, false);
 }
 // Grilla de días de un solo mes -- puerto directo del algoritmo de
 // `_evAntCalRender()`/js/eventos.js, sin su guard de "fecha pasada"/cuota
@@ -1004,10 +1084,11 @@ function _eqRenderModalFecha() {
 // `_evAntCalRender()`, que tampoco excluye del `onclick` a sus celdas
 // ajenas) caiga dentro de [Desde,Hasta] se pinta con `.ev-ant-cal-en-rango`
 // -- el mes ENTERO se ve "seleccionado", no solo el día tocado (coherente
-// con que la selección real es de mes, no de día).
-function _eqRenderDiasGrid() {
-  var cont = document.getElementById('eq-modal-fecha-dias');
-  if (!cont) return;
+// con que la selección real es de mes, no de día). Recibe `cont` (el
+// contenedor a poblar) -- lo pasa `_eqCalFechaRenderContenido()`, nunca
+// busca `#eq-modal-fecha-dias` por su cuenta (esa id ya no existe --
+// las 3 vistas comparten `#eq-modal-fecha-contenido`).
+function _eqPintarDiasGrid(cont) {
   var anio = _eqCalFecha.anioMostrado, mes = _eqCalFecha.mesMostrado;
   var inicioGrid = _evLunesDeSemana(new Date(anio, mes, 1));
   var finMes = new Date(anio, mes + 1, 0);
@@ -1033,6 +1114,22 @@ function _eqRenderDiasGrid() {
   }
   cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>';
 }
+// Grilla Ene-Dic (feat nueva, pedido explícito: "tocar 'Septiembre' abre un
+// selector de meses") -- MISMO componente que "asistencia anticipada → Por
+// meses" (`.ev-ant-mes-grid`/`.ev-ant-mes-cell`, css/eventos.css,
+// `_evAntRenderMesesGrid()`/js/eventos.js), reusado tal cual (nombres
+// completos de mes, 3 columnas) -- sin la restricción de "mes ya
+// pasado"/cuota de esa función, que no aplica acá (mismo criterio que el
+// resto de esta modal). `.activo` marca el mes actualmente MOSTRADO en la
+// grilla de días (no necesariamente el seleccionado como Desde/Hasta -- ver
+// el mismo criterio dual documentado en `_eqPintarAniosGrid()`, abajo).
+function _eqPintarMesesGrid(cont) {
+  var html = NOMBRES_MESES.map(function(nombre, idx) {
+    var clases = 'ev-ant-mes-cell' + (idx === _eqCalFecha.mesMostrado ? ' activo' : '');
+    return '<button type="button" class="' + clases + '" onclick="_eqCalFechaElegirMes(' + idx + ')">' + nombre + '</button>';
+  }).join('');
+  cont.innerHTML = '<div class="ev-ant-mes-grid">' + html + '</div>';
+}
 // Grilla de años estilo Google Calendar (pedido explícito) -- mismo patrón
 // que `renderYearGrid()`/shared/date-picker.js (año actual/mostrado
 // resaltado + `scrollIntoView` para que arranque centrado), acotada a una
@@ -1044,17 +1141,18 @@ function _eqRenderDiasGrid() {
 // año calendario REAL de hoy, separado de `.activo` (relleno de marca),
 // que marca el año actualmente MOSTRADO -- coinciden la primera vez que se
 // abre la modal (arranca en el mes/año de hoy o de la selección previa),
-// pero no necesariamente después de navegar.
-function _eqRenderAniosGrid() {
-  var cont = document.getElementById('eq-modal-fecha-anios');
-  if (!cont) return;
+// pero no necesariamente después de navegar. `scrollIntoView` corre igual
+// con el contenedor todavía en opacity:0 (el fade de `_evFadeSwap()` no
+// afecta layout/scroll, solo pintado) -- no hace falta esperar a que
+// termine de aparecer.
+function _eqPintarAniosGrid(cont) {
   var anioReal = new Date().getFullYear();
   var html = '';
   for (var y = anioReal + 1; y >= anioReal - 14; y--) {
     var clases = 'eq-cal-fecha-year-btn' + (y === _eqCalFecha.anioMostrado ? ' activo' : '') + (y === anioReal ? ' hoy' : '');
     html += '<button type="button" class="' + clases + '" onclick="_eqCalFechaElegirAnio(' + y + ')">' + y + '</button>';
   }
-  cont.innerHTML = html;
+  cont.innerHTML = '<div class="eq-cal-fecha-year-grid">' + html + '</div>';
   requestAnimationFrame(function() {
     var sel = cont.querySelector('.eq-cal-fecha-year-btn.activo');
     if (sel) sel.scrollIntoView({ block: 'center' });
@@ -1095,8 +1193,18 @@ function _eqCalFechaActualizarResumen() {
   cont.innerHTML = html;
   if (btn) btn.style.display = '';
 }
+// Re-ajuste (pedido explícito): ya NO limpia la selección a vacío -- vuelve
+// al mes actual (animado, mismo camino que cualquier otro cambio de esta
+// modal) y lo deja pre-seleccionado como Desde=Hasta (mismo criterio que un
+// primer tap fresco en `_eqCalFechaTocarDia()`: `hastaClave:null` ya se
+// interpreta como "Hasta = Desde" en `_eqPintarDiasGrid()`/
+// `_eqCalFechaActualizarResumen()`, sin necesidad de fijarlo aparte).
 function _eqCalFechaRestablecer() {
-  _eqCalFecha.desdeClave = null;
+  var hoy = new Date();
+  _eqCalFecha.anioMostrado = hoy.getFullYear();
+  _eqCalFecha.mesMostrado = hoy.getMonth();
+  _eqCalFecha.vista = 'dias';
+  _eqCalFecha.desdeClave = hoy.getFullYear() * 12 + hoy.getMonth();
   _eqCalFecha.hastaClave = null;
   _eqRenderModalFecha();
 }

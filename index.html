@@ -35,7 +35,7 @@
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
 <link rel="stylesheet" href="css/eventos.css?v=94f3cbd9">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=1223bc56">
+<link rel="stylesheet" href="css/equipo.css?v=1767f365">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2539,47 +2539,62 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 
   <!-- ═══ Modal de calendario "Fecha" del filtro de período de Equipo
-       (rediseño, ver MANIFEST.md -- reemplaza las 2 modales anteriores
-       "Elige el mes"/"Elige el rango" con una sola, pedido explícito:
-       "reemplazar los pills actuales de período por solo dos: Fecha e
-       Histórico") -- mismo componente `.bsheet-overlay`/`.bsheet` estándar
-       que el resto de sheets de la app (`#dat-lesion-sheet`, js/perfil.js,
-       mismo criterio de apertura/cierre `style.display`+`transform`) +
-       `.bsheet-scroll` -- overlay y sheet SIBLINGS, no anidados
-       (`shared/bsheet.js` asume `sheet.previousElementSibling` === su
-       overlay para el cierre por tap/drag en la manija+título). Grilla de
-       UN SOLO MES con nav `‹ Septiembre 2026 ›` (`.ev-ant-cal-nav*`,
-       reusado tal cual de "asistencia anticipada", `_evAntCalRender()`/
-       js/eventos.js -- pedido explícito: "abre la modal de calendario
-       existente"), en vez de las 2 vistas alternativas que existían antes
-       (12 pills de mes o 12 mini-calendarios apilados). El label central
-       (`#eq-modal-fecha-label`) es TAPPEABLE (pedido explícito, "selector
-       de año en el header... estilo Google Calendar") -- alterna a
-       `#eq-modal-fecha-anios` (grilla de años, 3 columnas/scroll, año
-       actual/mostrado resaltado -- `.eq-cal-fecha-year-*`/css/equipo.css,
-       mismo patrón visual que `.dp-year-grid`/`.dp-year-btn` de
-       `shared/date-picker.js`+`inscripcion/inscripcion.css`, el selector
-       de fecha de nacimiento -- ese CSS no está cargado en esta SPA
-       principal, así que el patrón se duplicó acá en vez de importarlo).
-       Tocar un día filtra por ese MES completo (no el día exacto); un 2do
-       toque define un rango de mes/año a mes/año -- mismo mecanismo "ida y
-       vuelta" que ya usaba la modal de Rango anterior, ahora sobre un solo
-       mes visible a la vez (`_eqCalFechaTocarDia()`/js/equipo.js). Reusa
-       1:1 las clases del calendario de asistencia anticipada
-       (`.ev-cal-grid`/`.ev-cal-dow`/`.ev-cal-celda`/`.ev-cal-num`/
-       `.ev-ajeno`/`.ev-ant-cal-sel`/`.ev-ant-cal-en-rango`/
-       `.ev-ant-cal-hoy`/`.ev-ant-cal-nav*`/`.ev-ant-rango-fila`/
-       `.ev-ant-rango-linea`/`.ev-ant-rango-vacio`/
+       (rediseño, ver MANIFEST.md) -- mismo componente `.bsheet-overlay`/
+       `.bsheet` estándar que el resto de sheets de la app (`#dat-lesion-sheet`,
+       js/perfil.js, mismo criterio de apertura/cierre
+       `style.display`+`transform`) + `.bsheet-scroll` -- overlay y sheet
+       SIBLINGS, no anidados (`shared/bsheet.js` asume
+       `sheet.previousElementSibling` === su overlay para el cierre por
+       tap/drag en la manija+título). 3 vistas dentro del MISMO sheet, todas
+       pintadas dentro de `#eq-modal-fecha-contenido` (`_eqCalFecha.vista`/
+       `_eqRenderModalFecha()`/js/equipo.js, ver el comentario grande ahí --
+       "Modal 'Elige la fecha'"/"Animación de contenido" -- para el detalle
+       completo de las 3 vistas y de cómo se anima cada cambio, pedido
+       explícito de esta ronda: "todas las transiciones... deben estar
+       animadas"): 'dias' (grilla de UN SOLO MES, `.ev-cal-grid`/
+       `.ev-cal-dow`/`.ev-cal-celda`/`.ev-cal-num`/`.ev-ajeno`/
+       `.ev-ant-cal-sel`/`.ev-ant-cal-en-rango`/`.ev-ant-cal-hoy`, reusado
+       1:1 de "asistencia anticipada", `_evAntCalRender()`/js/eventos.js),
+       'meses' (grilla Ene-Dic, `.ev-ant-mes-grid`/`.ev-ant-mes-cell`, MISMO
+       componente que "asistencia anticipada → Por meses",
+       `_evAntRenderMesesGrid()`/js/eventos.js) y 'anios' (grilla de años
+       estilo Google Calendar, `.eq-cal-fecha-year-*`/css/equipo.css, mismo
+       patrón visual que `.dp-year-grid`/`.dp-year-btn` de
+       `shared/date-picker.js`+`inscripcion/inscripcion.css`, el selector de
+       fecha de nacimiento -- ese CSS no está cargado en esta SPA principal,
+       así que el patrón se duplicó acá en vez de importarlo). El header
+       tiene 2 palabras TAPPEABLES independientes (pedido explícito, "header
+       separado en 2 partes tappeables", `#eq-modal-fecha-label-mes`/
+       `#eq-modal-fecha-label-anio`, cada una con su propio subrayado --
+       punteado el mes, sólido el año, `.eq-cal-fecha-label-mes`/`-anio`/
+       css/equipo.css -- para que se lean como 2 controles distintos) que
+       abren 'meses'/'anios' respectivamente; los chevrones `‹›` (mes-a-mes)
+       se ocultan mientras esas 2 vistas están abiertas (`visibility:hidden`,
+       solo tienen sentido mirando días). El TÍTULO del sheet
+       (`#eq-modal-fecha-titulo`) es dinámico por vista ("Elige la
+       fecha"/"Elige el mes"/"Elige el año", pedido explícito, "limpiar
+       textos" -- sin ninguna leyenda secundaria redundante dentro del
+       header, ver comentario grande en js/equipo.js). Tocar un día filtra
+       por ese MES completo (no el día exacto); un 2do toque define un rango
+       de mes/año a mes/año -- mismo mecanismo "ida y vuelta" de siempre
+       (`_eqCalFechaTocarDia()`/js/equipo.js). "Restablecer" navega
+       (animado) al mes actual y lo deja pre-seleccionado como el rango, ya
+       no limpia a vacío (pedido explícito, re-ajuste). Reusa 1:1 las clases
+       del calendario de asistencia anticipada (`.ev-ant-cal-nav*`/
+       `.ev-ant-rango-fila`/`.ev-ant-rango-linea`/`.ev-ant-rango-vacio`/
        `.ev-ant-btn-restablecer-icono`, todas ya definidas en
        css/eventos.css, ver `_evAntCal*`/js/eventos.js). -->
   <div id="eq-modal-fecha-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_eqCerrarModalFecha()"></div>
   <div id="eq-modal-fecha-sheet" class="bsheet bsheet-scroll" style="z-index:9701;max-height:85vh;">
     <div class="bsheet-handle" style="flex-shrink:0;"></div>
-    <div class="bsheet-title" style="flex-shrink:0;">Elige la fecha</div>
+    <div class="bsheet-title" id="eq-modal-fecha-titulo" style="flex-shrink:0;">Elige la fecha</div>
     <div style="overflow-y:auto;flex:1;padding:16px;">
       <div class="ev-ant-cal-nav">
         <button type="button" class="ev-ant-cal-nav-btn" id="eq-modal-fecha-prev" onclick="_eqCalFechaMoverMes(-1)"><span class="material-symbols-outlined">chevron_left</span></button>
-        <span class="ev-ant-cal-nav-label eq-cal-fecha-label" id="eq-modal-fecha-label" onclick="_eqCalFechaToggleAnio()"></span>
+        <div class="eq-cal-fecha-header-labels">
+          <span class="ev-ant-cal-nav-label eq-cal-fecha-label eq-cal-fecha-label-mes" id="eq-modal-fecha-label-mes" onclick="_eqCalFechaAbrirMeses()"></span>
+          <span class="ev-ant-cal-nav-label eq-cal-fecha-label eq-cal-fecha-label-anio" id="eq-modal-fecha-label-anio" onclick="_eqCalFechaAbrirAnios()"></span>
+        </div>
         <button type="button" class="ev-ant-cal-nav-btn" id="eq-modal-fecha-next" onclick="_eqCalFechaMoverMes(1)"><span class="material-symbols-outlined">chevron_right</span></button>
       </div>
       <div class="ev-ant-rango-fila" style="margin:10px 0;">
@@ -2588,8 +2603,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <span class="material-symbols-outlined">undo</span>
         </button>
       </div>
-      <div id="eq-modal-fecha-dias"></div>
-      <div class="eq-cal-fecha-year-grid" id="eq-modal-fecha-anios" style="display:none;"></div>
+      <div class="eq-cal-fecha-viewport" id="eq-modal-fecha-viewport">
+        <div id="eq-modal-fecha-contenido"></div>
+      </div>
       <button type="button" class="btn btn-primary" style="width:100%;margin-top:18px;" onclick="_eqConfirmarModalFecha()">Aplicar</button>
     </div>
   </div>
@@ -3121,7 +3137,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/ui.js?v=66148b6f"></script>
 <script src="js/eventos.js?v=ad1428aa"></script>
 <script src="js/tareas.js"></script>
-<script src="js/equipo.js?v=946d34ca"></script>
+<script src="js/equipo.js?v=d7c85ae4"></script>
 <script src="js/home.js?v=cf4b0197"></script>
 <script src="js/reservas.js?v=e53c9c46"></script>
 <script src="js/perfil.js?v=e7e04c90"></script>

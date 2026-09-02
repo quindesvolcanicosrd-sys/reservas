@@ -128,23 +128,22 @@
 .eq-filtro-seccion + .eq-filtro-seccion { margin-top: 18px; }
 
 /* ── Modal calendario "Fecha" (rediseño, ver MANIFEST.md) ─────────────────
-   Reemplaza las 2 modales anteriores "Elige el mes"/"Elige el rango" (12
-   pills de mes / 12 mini-calendarios apilados) por una sola grilla de UN
-   SOLO MES a la vez -- pedido explícito: "abre la modal de calendario
-   existente (la que se usa en asistencia anticipada...)". El header
-   (`.ev-ant-cal-nav*`), la grilla de días (`.ev-cal-grid`/`.ev-cal-dow`/
-   `.ev-cal-celda`/`.ev-cal-num`) y el resumen (`.ev-ant-rango-*`) son TODOS
-   de css/eventos.css, reusados 1:1 sin una sola declaración duplicada acá
-   -- ver `#eq-modal-fecha-*` en index.html y `_eqAbrirModalFecha()`/
-   js/equipo.js. `.eq-cal-mini*` (la versión chica de esa grilla para los 12
-   mini-calendarios apilados de la vieja modal de Rango) se sacó de acá --
-   sin más consumidores, esa vista ya no existe. Lo nuevo de este rediseño
-   es: (1) `.eq-cal-fecha-label`, el label de mes/año del header, ahora
-   TAPPEABLE (pedido explícito, "selector de año en el header") -- mismo
-   `.ev-ant-cal-nav-label` de siempre + subrayado punteado sutil para que se
-   note que es interactivo (a diferencia del resto de usos de esa clase en
-   la app, texto pelado); (2) `.eq-cal-fecha-year-*`, la grilla de años que
-   ese label abre -- mismo patrón visual que `.dp-year-grid`/`.dp-year-btn`
+   3 vistas dentro del mismo sheet -- días/meses/años, ver el comentario
+   grande en js/equipo.js ("Modal 'Elige la fecha'") para el detalle
+   completo. El header (`.ev-ant-cal-nav*`), la grilla de días
+   (`.ev-cal-grid`/`.ev-cal-dow`/`.ev-cal-celda`/`.ev-cal-num`), la grilla de
+   meses (`.ev-ant-mes-grid`/`.ev-ant-mes-cell`) y el resumen
+   (`.ev-ant-rango-*`) son TODOS de css/eventos.css, reusados 1:1 sin una
+   sola declaración duplicada acá -- ver `#eq-modal-fecha-*` en index.html y
+   `_eqRenderModalFecha()`/js/equipo.js. Lo genuinamente nuevo acá es:
+   (1) `.eq-cal-fecha-header-labels`, el wrapper de las 2 PALABRAS tappeables
+   del header (mes/año, pedido explícito re-ajuste: "header separado en 2
+   partes tappeables... deben verse visualmente distintas") -- cada palabra
+   con su propio subrayado para diferenciarse entre sí Y del resto de usos
+   de `.ev-ant-cal-nav-label` en la app (texto pelado, no interactivo):
+   punteado + color de marca para el mes, sólido + color de texto normal
+   para el año; (2) `.eq-cal-fecha-year-*`, la grilla de años -- mismo
+   patrón visual que `.dp-year-grid`/`.dp-year-btn`
    (`shared/date-picker.js`+`inscripcion/inscripcion.css`, el selector de
    fecha de nacimiento -- 3 columnas, año actual/mostrado resaltado, scroll
    vertical, pedido explícito "estilo Google Calendar") DUPLICADO acá en vez
@@ -152,8 +151,22 @@
    principal no carga. `.hoy` (borde, sin relleno) marca el año calendario
    REAL de hoy -- separado de `.activo` (relleno de marca), que marca el año
    actualmente MOSTRADO en la grilla de días -- mismo criterio dual que
-   `.ev-ant-cal-hoy`/`.ev-ant-cal-sel` de la grilla de días. */
-.eq-cal-fecha-label { cursor: pointer; -webkit-tap-highlight-color: transparent; text-decoration: underline dotted; text-underline-offset: 4px; }
+   `.ev-ant-cal-hoy`/`.ev-ant-cal-sel` de la grilla de días; (3)
+   `.eq-cal-fecha-viewport`, el wrapper que anima el RESIZE del bottom sheet
+   al cambiar de mes/vista (pedido explícito re-ajuste: "no debe
+   expandirse/contraerse abruptamente") -- `overflow:hidden` +
+   `transition:max-height` clásico de esta sección (mismo patrón que
+   `.eq-header-panel`/`.eq-acord-cuerpo`, más arriba/abajo en este archivo),
+   `_eqCalFechaRenderContenido()`/js/equipo.js es quien anima el valor real
+   en cada cambio (fija el alto ACTUAL antes de pintar, mide el alto NUEVO
+   recién pintado, deja que esta `transition` interpole entre los 2) EN
+   PARALELO al fade del contenido (`_evFadeSwap()`/js/eventos.js, reusada
+   tal cual -- sin duplicar esa lógica acá). */
+.eq-cal-fecha-header-labels { display: flex; align-items: center; gap: 6px; }
+.eq-cal-fecha-label { cursor: pointer; -webkit-tap-highlight-color: transparent; text-underline-offset: 4px; }
+.eq-cal-fecha-label-mes { color: var(--brand); text-decoration: underline dotted; }
+.eq-cal-fecha-label-anio { color: var(--text); text-decoration: underline solid; }
+.eq-cal-fecha-viewport { overflow: hidden; transition: max-height 0.32s ease; }
 .eq-cal-fecha-year-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-height: 320px; overflow-y: auto; padding: 4px 0; }
 .eq-cal-fecha-year-btn {
   padding: 14px 4px; border-radius: 14px; border: 1.5px solid transparent; font-size: 0.95rem; font-weight: 600;
