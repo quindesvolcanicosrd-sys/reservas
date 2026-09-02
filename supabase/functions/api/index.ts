@@ -2040,6 +2040,33 @@ async function _reconstruirRachasHistoricas(soloUsuario?: string): Promise<void>
     rachaFinalPorUsuario[u] = racha;
   });
 
+  // Bug real corregido (ver MANIFEST.md/CHANGELOG.md -- "2 puntos totales
+  // en un mes sin ningún entrenamiento todavía"): el bucle de arriba solo
+  // agrega una clave a `puntosExtraPorClaveMes` para (usuario, mes) con AL
+  // MENOS 1 evento real marcado ese mes -- un mes recién empezado, sin
+  // ningún evento marcado todavía, NUNCA entra ahí, así que el upsert de
+  // abajo nunca lo toca. El comentario de la función de arriba prometía
+  // "los datos ya escritos con el bug viejo se corrigen solos la próxima
+  // vez que corra esta reconstrucción" -- cierto SOLO para un mes que SÍ
+  // tiene eventos (el upsert lo sobreescribe con el valor recalculado,
+  // incluido 0); FALSO para un mes sin eventos en absoluto, que queda
+  // huérfano para siempre con cualquier `puntos_extra` viejo que haya
+  // quedado ahí (típicamente del bug de "mes del click" pre-commit
+  // 58c01f6: un admin tomando lista tarde de un evento de fin del mes
+  // ANTERIOR corría ese click ya en el mes nuevo). Fix: buscar filas
+  // EXISTENTES con `puntos_extra != 0` (acotadas a `soloUsuario` si
+  // aplica) y sumarlas al mismo mapa con `0` si no quedaron ya cubiertas
+  // por el recálculo real de arriba -- mismo upsert, mismo onConflict, sin
+  // pisar ningún valor legítimo (`if (=== undefined)` nunca sobreescribe
+  // una clave que el recálculo real ya fijó).
+  let queryFilasConExtra = supabase.from('puntos_mensuales').select('nombre_usuario, anio, mes').neq('puntos_extra', 0);
+  if (soloUsuario) queryFilasConExtra = queryFilasConExtra.eq('nombre_usuario', soloUsuario);
+  const { data: filasConExtraViejas } = await queryFilasConExtra;
+  (filasConExtraViejas ?? []).forEach((fila: any) => {
+    const clave = fila.nombre_usuario + '|' + fila.anio + '|' + fila.mes;
+    if (puntosExtraPorClaveMes[clave] === undefined) puntosExtraPorClaveMes[clave] = 0;
+  });
+
   const filasPuntosExtra = Object.keys(puntosExtraPorClaveMes).map((clave) => {
     const partes = clave.split('|');
     return { nombre_usuario: partes[0], anio: Number(partes[1]), mes: Number(partes[2]), puntos_extra: puntosExtraPorClaveMes[clave] };
