@@ -192,6 +192,20 @@
    sin cambios para los pasos en sí, ver css/perfil.css más arriba. */
 .wizard-excepcion {
   display: none; flex-direction: column; position: fixed; inset: 0;
+  /* Bug real corregido (ver MANIFEST.md/CHANGELOG.md -- "pantalla de Pedir
+     excepción de cuota aparece oscura, solo con un buscador, sin poder
+     interactuar"): a esta clase le faltaba el z-index -- el comentario de
+     arriba decía "mismo z-index de sheet grande que la app ya usa 9600+"
+     pero nunca se aplicó, así que el panel quedaba en z-index:auto,
+     colgado del stacking normal (por debajo de cualquier otro elemento
+     fixed con z-index explícito, ej. la nav/buscador de la pantalla de
+     atrás) mientras su overlay (#wizard-excepcion-overlay, 9650) SÍ se
+     pintaba encima de todo y oscurecía el fondo -- de ahí la vista oscura
+     con solo ese otro elemento asomando y sin poder tocar el wizard real,
+     debajo de todo. Mismo patrón overlay+1 que el resto de los "sheet
+     grande" de esta app (ver index.html, ej. #ev-sheet-cancelar-overlay
+     9700 / #ev-sheet-cancelar 9701). */
+  z-index: 9651;
   background: var(--bg); transform: translateY(100%); opacity: 0;
   transition: transform 0.32s var(--ease-sheet), opacity 0.32s var(--ease-sheet);
 }

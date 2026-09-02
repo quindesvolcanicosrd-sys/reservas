@@ -3691,20 +3691,36 @@ function cerrarSheetTipoPago(porGesto) {
 // distinto del genérico "cuota pendiente" -- mismos 2 botones de acción de
 // siempre, solo cambia el texto de #sheet-cuota-msg.
 function _evAbrirSheetCuotaPendiente(opts) {
-  var modo = _modoUsuario();
   var acc = document.getElementById('sheet-cuota-pendiente-acciones');
+  // Re-ajuste (pedido explícito, ver MANIFEST.md/CHANGELOG.md -- "modal de
+  // cuota pendiente: nuevo texto + acceso a excepción de cuota") -- "Pedir
+  // una excepción de cuota" ahora es un link chico bajo el botón principal,
+  // SIEMPRE visible (antes "Solicitar ayuda con el pago" solo aparecía para
+  // quindes, `modo==='quindes'`) -- mirlxs también puede pedir una
+  // excepción de cuota (`abrirWizardExcepcion()`, js/perfil.js, mismo
+  // flujo de Ajustes → "Pedir excepción de cuota"), no hay motivo real
+  // para limitarlo por modo.
   if (acc) {
-    var html = '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:10px;" onclick="_evCuotaPagarAhora()">Pagar ahora</button>';
-    if (modo === 'quindes') {
-      html += '<button type="button" class="btn btn-secondary" style="width:100%;margin-bottom:10px;" onclick="_evCuotaSolicitarAyuda()">Solicitar ayuda con el pago</button>';
-    }
-    acc.innerHTML = html;
+    acc.innerHTML = '<button type="button" class="btn btn-primary" style="width:100%;margin-bottom:14px;" onclick="_evCuotaPagarAhora()">Pagar ahora</button>' +
+      '<p style="text-align:center;color:var(--muted);font-size:0.8rem;margin:0 0 4px;">¿No podés pagar la cuota?</p>' +
+      '<button type="button" style="display:block;width:100%;background:none;border:none;color:var(--brand);font-size:0.85rem;font-weight:700;font-family:inherit;text-align:center;cursor:pointer;padding:4px;" onclick="_evCuotaSolicitarAyuda()">Pedir una excepción de cuota</button>';
   }
   var msgEl = document.getElementById('sheet-cuota-msg');
   if (msgEl) {
-    msgEl.textContent = (opts && opts.esGracia)
-      ? 'Ya asististe a un entrenamiento este mes. Debes pagar el mes de ' + opts.mesNombre + ' para marcar Asistiré.'
-      : 'Para confirmar tu asistencia necesitas tener tu cuota al día.';
+    if (opts && opts.esGracia) {
+      msgEl.textContent = 'Ya asististe a un entrenamiento este mes. Debes pagar el mes de ' + opts.mesNombre + ' para marcar Asistiré.';
+    } else {
+      // Meses adeudados en prosa (feat nueva, `_evMesesAdeudadosTexto()`,
+      // más abajo en este archivo) -- lista real calculada desde el
+      // historial de reservas mensuales de la persona, no un texto
+      // genérico. Sin meses detectados (caso raro/defensivo -- este sheet
+      // solo se abre cuando `!_evTieneCuotaAlDia()`, así que siempre debería
+      // haber al menos 1) cae a un texto sin la lista.
+      var mesesTxt = _evMesesAdeudadosTexto();
+      msgEl.textContent = mesesTxt
+        ? 'Debes ponerte al día con tus cuotas. Pagá ' + mesesTxt + ' para poder marcar tu asistencia y seguir viniendo.'
+        : 'Debes ponerte al día con tus cuotas para poder marcar tu asistencia y seguir viniendo.';
+    }
   }
   var sh = document.getElementById('sheet-cuota-pendiente');
   var ov = document.getElementById('sheet-cuota-pendiente-overlay');
@@ -3742,7 +3758,6 @@ function cerrarSheetCuotaPendiente(porGesto) {
 // history.back() todavía en curso de este cierre -- exactamente la carrera
 // que ya se corrigió una vez en este archivo para irNuevaReservaConTipo().
 function _evCuotaPagarAhora() {
-  var modo = _modoUsuario();
   // Con E.quindesPendingRsvpEvento seteado (venimos del sheet en modo
   // "gracia", ver _evMarcarAsistencia()/_quindesGraciaAgotada()): el mes a
   // pagar es el DEL EVENTO puntual que se intentó marcar, no necesariamente
@@ -3756,9 +3771,30 @@ function _evCuotaPagarAhora() {
   var pendingId = E.quindesPendingRsvpEvento;
   cerrarSheetCuotaPendiente();
   setTimeout(function() {
-    if (pendingId) _evFabReservaParaEvento(pendingId);
-    else if (modo === 'quindes') irNuevaReservaConTipo('mensual');
-    else evAbrirSheetTipoPago();
+    if (pendingId) { _evFabReservaParaEvento(pendingId); return; }
+    // Caso genérico -- re-ajuste (pedido explícito, ver MANIFEST.md/
+    // CHANGELOG.md -- "Pagar ahora lleva al checkout con los meses
+    // adeudados ya preseleccionados y el monto total visible"): mismo
+    // mecanismo que ya usa _evFabReserva() más arriba en este archivo
+    // (E.mirlxsMesesPresel, leído por generarMeses()/js/ui.js al armar los
+    // checkboxes) -- acotado al año actual (mismas 12 posiciones de
+    // siempre, generarMeses() no puede representar un mes de un año
+    // distinto -- limitación preexistente de ese mecanismo, no nueva de
+    // este cambio). Reemplaza el camino anterior (mirlxs abría
+    // evAbrirSheetTipoPago(), un sub-menú clase/mensual sin preselección;
+    // quindes iba directo a mensual pero también sin preseleccionar nada)
+    // -- unificado para los 2 modos, la cuota mensual es el mismo concepto
+    // sin importar quién la debe. El total ya queda visible solo: s4 lo
+    // recalcula en vivo (actualizarTotalS4()) apenas los checkboxes
+    // preseleccionados quedan marcados.
+    var anioActual = new Date().getFullYear();
+    E.mirlxsMesesPresel = _evMesesAdeudados()
+      .filter(function(m) { return m.anio === anioActual; })
+      .map(function(m) { return m.mesIdx; });
+    E.origenSeccionS4 = 's-eventos';
+    irNuevaReserva(false, null);
+    E.viaEventosInline = true;
+    setTimeout(function() { selTipoPago('mensual'); }, 80);
   }, 310);
 }
 function _evCuotaSolicitarAyuda() {
@@ -3968,6 +4004,65 @@ function _evMesPagado(mesIdx, anio) {
   });
 }
 
+// "Meses adeudados" (feat nueva, ver MANIFEST.md/CHANGELOG.md -- "modal de
+// cuota pendiente: listar los meses adeudados") -- camina mes a mes desde
+// el siguiente al último mes CUBIERTO (última reserva mensual no
+// cancelada, sea que su vigencia ya haya expirado o no -- a propósito NO
+// reusa `_evVencimientoCuota()`: esa función devuelve `null` para una
+// cuota YA EXPIRADA ("sin cuota activa AHORA"), que es exactamente el
+// caso típico acá -- este sheet solo se abre cuando `!_evTieneCuotaAlDia()`,
+// osea cuando lo más probable es que la última cuota real ya haya
+// vencido; usar esa función hubiera tratado a alguien que debe 1 mes
+// igual que alguien que nunca pagó nada, arrancando siempre en el mes
+// actual) hasta el mes actual (inclusive), saltando cualquiera que ya
+// esté cubierto (`_evMesPagado()`, defensivo -- no debería haber huecos
+// cubiertos en el medio, pero por las dudas). Sin ninguna reserva mensual
+// nunca (`ultimoFin` sigue `null`), arranca directo en el mes actual -- 1
+// solo mes adeudado, el mínimo real. Tope de 12 meses (guard) para no
+// devolver una lista sin fin en una cuenta con MUCHO historial sin pagar
+// -- casuística no esperada en la práctica de este club, pero sin
+// crashear si pasara. Mismo criterio "no cancelada = cubierto" que
+// `_evMesPagado()`/`_evTieneCuotaAlDia()` (una reserva 'Pendiente' de
+// verificación ya cuenta como mes cubierto para este propósito, no solo
+// 'Confirmada').
+function _evMesesAdeudados() {
+  var MESES_MIN = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  var ultimoFin = null;
+  (_todasReservas || []).forEach(function(r) {
+    if (r.tipo !== 'mensual' || r.estado === 'Cancelada') return;
+    var vh = _parseFechaSimple(r.validezHasta);
+    if (!vh) {
+      // Sin validezHasta -- mismo fallback que _evVencimientoCuota(): inferir
+      // fin de mes desde el nombre del mes (r.fecha), año actual (best-effort,
+      // este campo legado no trae año propio).
+      var mesNum = _MESES_MAP[(r.fecha || '').toLowerCase().trim()];
+      if (mesNum === undefined) return;
+      vh = new Date(hoy.getFullYear(), mesNum + 1, 0);
+    }
+    if (!ultimoFin || vh > ultimoFin) ultimoFin = vh;
+  });
+  var cursor = ultimoFin
+    ? new Date(ultimoFin.getFullYear(), ultimoFin.getMonth() + 1, 1)
+    : new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  var limite = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  var meses = [];
+  for (var guard = 0; cursor <= limite && guard < 12; guard++) {
+    if (!_evMesPagado(cursor.getMonth(), cursor.getFullYear())) {
+      meses.push({ mesIdx: cursor.getMonth(), anio: cursor.getFullYear(), nombre: MESES_MIN[cursor.getMonth()] });
+    }
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+  }
+  return meses;
+}
+// "enero" / "enero y febrero" / "marzo, abril y mayo" -- mismo criterio de
+// listas en prosa que el resto de la app (ver ej. _eqDesglosePeriodoTxt()).
+function _evMesesAdeudadosTexto() {
+  var nombres = _evMesesAdeudados().map(function(m) { return m.nombre; });
+  if (nombres.length === 0) return '';
+  if (nombres.length === 1) return nombres[0];
+  return nombres.slice(0, -1).join(', ') + ' y ' + nombres[nombres.length - 1];
+}
 function _evReservaMesPendiente(mesIdx, anio) {
   var _MK = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   var mn = _MK[mesIdx];
