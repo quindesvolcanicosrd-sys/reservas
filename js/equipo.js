@@ -569,19 +569,30 @@ function _eqAvatarHtml(p, claseExtra) {
 // -- pedido explícito de moverlo a la esquina inferior derecha de la foto de
 // perfil, tipo badge de estado). `p.tendencia` ('sube'/'baja'/`null`,
 // getEquipo()/supabase/functions/api/index.ts) sin nada que recalcular acá.
-// Ícono Material `keyboard_arrow_up`/`_down` (pedido explícito -- ya NO
+// Ícono Material `keyboard_arrow_up` (pedido explícito -- ya NO
 // `keyboard_double_arrow_*`, cambio de ícono sin cambiar el resto de la
 // lógica/estilo). Vacío si `tendencia` es `null` -- ver `_eqAvatarConTendenciaHtml()`
 // justo abajo, que decide si hace falta el wrapper `position:relative`.
+// **Chevron de descenso eliminado de toda la UI** (pedido explícito, ver
+// MANIFEST.md -- "quitar los chevrones de descenso en todos los lugares
+// donde aparecen en Equipo"): `tendencia === 'baja'` ahora se trata igual
+// que `null` -- vacío, sin badge -- en los 3 consumidores de esta función
+// (cards de la lista/favoritos y "Mis estadísticas" vía
+// `_eqAvatarConTendenciaHtml()`, perfil de detalle vía llamada directa en
+// `_eqPerfilContenidoHtml()`), sin tocar el cálculo de `tendencia` en sí
+// (`getEquipo()`/supabase/functions/api/index.ts sigue devolviendo
+// `'baja'` tal cual -- solo se dejó de RENDERIZAR acá, pedido explícito de
+// solo tocar la UI). `.eq-tendencia-badge-baja` (css/equipo.css) queda sin
+// ningún consumidor -- ver ese archivo si hace falta limpiarla.
 // `claseTamano` opcional (pedido explícito, re-ajuste de tamaño): sin
 // pasarla, el badge queda en el tamaño base 18px (usado hoy solo en "Mis
 // estadísticas", sin pedido de agrandarlo ahí) -- `'eq-tendencia-badge--card'`
 // (22px, filas de lista) o `'eq-tendencia-badge--detalle'` (28px, perfil de
 // detalle, foto mucho más grande) la agrandan, ver css/equipo.css.
 function _eqTendenciaBadgeHtml(p, claseTamano) {
-  if (p.tendencia !== 'sube' && p.tendencia !== 'baja') return '';
-  return '<span class="eq-tendencia-badge eq-tendencia-badge-' + p.tendencia + (claseTamano ? ' ' + claseTamano : '') + '">' +
-    '<span class="material-symbols-outlined">keyboard_arrow_' + (p.tendencia === 'sube' ? 'up' : 'down') + '</span></span>';
+  if (p.tendencia !== 'sube') return '';
+  return '<span class="eq-tendencia-badge eq-tendencia-badge-sube' + (claseTamano ? ' ' + claseTamano : '') + '">' +
+    '<span class="material-symbols-outlined">keyboard_arrow_up</span></span>';
 }
 
 // Avatar + badge de tendencia superpuesto (esquina inferior derecha, ver
