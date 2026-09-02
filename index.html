@@ -35,7 +35,7 @@
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
 <link rel="stylesheet" href="css/eventos.css?v=94f3cbd9">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=d1da067b">
+<link rel="stylesheet" href="css/equipo.css?v=4e276a71">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2376,6 +2376,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </button>
         <button type="button" class="app-nav-icon-btn eq-filtro-toggle-btn" id="eq-busqueda-toggle-btn" onclick="_eqTogglePanel('busqueda')" title="Buscar y filtrar">
           <span class="material-symbols-outlined">search</span>
+          <span class="eq-filtro-badge" id="eq-filtro-badge" style="display:none;">0</span>
         </button>
       </div>
 
@@ -2431,7 +2432,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           </div>
           <div class="eq-filtro-burbuja" id="eq-filtro-burbuja-puntos">
             <div class="aj-pills-row eq-periodo-pills eq-filtro-burbuja-pills" id="eq-filtro-periodo-modo">
-              <span class="aj-pill eq-pill-fecha activa" data-modo="fecha" onclick="_eqFiltroPeriodoModo('fecha')">Fecha<span class="material-symbols-outlined eq-pill-chevron">expand_more</span></span>
+              <span class="aj-pill activa" data-modo="fecha" onclick="_eqFiltroPeriodoModo('fecha')">Fecha</span>
               <span class="aj-pill" data-modo="historico" onclick="_eqFiltroPeriodoModo('historico')">Histórico</span>
             </div>
           </div>
@@ -3144,7 +3145,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/ui.js?v=66148b6f"></script>
 <script src="js/eventos.js?v=ad1428aa"></script>
 <script src="js/tareas.js"></script>
-<script src="js/equipo.js?v=7bcf81e8"></script>
+<script src="js/equipo.js?v=460e7279"></script>
 <script src="js/home.js?v=cf4b0197"></script>
 <script src="js/reservas.js?v=e53c9c46"></script>
 <script src="js/perfil.js?v=e7e04c90"></script>

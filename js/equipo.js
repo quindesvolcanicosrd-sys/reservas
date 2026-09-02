@@ -820,39 +820,56 @@ function _eqCerrarPanel(tag) {
 }
 
 // Burbujas de categoría "Puntos"/"Rol" (rediseño, ver MANIFEST.md --
-// "rediseñar completamente el panel de filtros... para que funcione igual
-// que Eventos") -- mismo mecanismo que `_evToggleFiltroBurbuja()`/
-// js/eventos.js: togglea `.abierta` (techo FIJO 320px, css/equipo.css, sin
+// re-ajuste: "acordeón mutuamente excluyente, comportamiento radio, solo
+// uno abierto a la vez") -- AHORA sí mismo mecanismo EXACTO que
+// `_evToggleFiltroBurbuja()`/js/eventos.js (una ronda anterior las dejaba
+// independientes, pedido explícito revertido): `_eqFiltroBurbujaAbierta` es
+// un solo valor ('puntos'|'rol'|null), no un mapa de booleanos -- abrir un
+// campo cierra el otro si estaba abierto, tocar el que ya está abierto lo
+// cierra. `.abierta` togglea con techo FIJO 320px (css/equipo.css, sin
 // medir `scrollHeight` -- contenido chico y acotado, 2 pills o 7 pills como
 // mucho) + el ícono chevron (`expand_more`/`expand_less`) + `.eq-filtro-activo`
-// en el trigger. A diferencia de Eventos (`_evToggleFiltroBurbuja()` colapsa
-// cualquier otra burbuja antes de expandir la tocada, un panel Lugar/Tipo a
-// la vez) -- acá "Puntos" y "Rol" son independientes, pedido explícito
-// ("pueden estar ambos expandidos al mismo tiempo"): sin ningún paso de
-// "cerrar la otra", cada campo togglea solo el suyo.
-var _eqFiltroBurbujaAbierta = { puntos: false, rol: false };
-function _eqToggleFiltroBurbuja(campo) {
-  _eqFiltroBurbujaAbierta[campo] = !_eqFiltroBurbujaAbierta[campo];
-  var abierta = _eqFiltroBurbujaAbierta[campo];
+// en el trigger.
+var _eqFiltroBurbujaAbierta = null; // 'puntos' | 'rol' | null
+function _eqAbrirFiltroBurbuja(campo) {
   var burbuja = document.getElementById('eq-filtro-burbuja-' + campo);
   var btn = document.getElementById('eq-filtro-btn-' + campo);
-  if (burbuja) burbuja.classList.toggle('abierta', abierta);
+  if (burbuja) burbuja.classList.add('abierta');
   if (btn) {
-    btn.classList.toggle('eq-filtro-activo', abierta);
+    btn.classList.add('eq-filtro-activo');
     var chevron = btn.querySelector('.material-symbols-outlined');
-    if (chevron) chevron.textContent = abierta ? 'expand_less' : 'expand_more';
+    if (chevron) chevron.textContent = 'expand_less';
+  }
+}
+function _eqCerrarFiltroBurbuja(campo) {
+  var burbuja = document.getElementById('eq-filtro-burbuja-' + campo);
+  var btn = document.getElementById('eq-filtro-btn-' + campo);
+  if (burbuja) burbuja.classList.remove('abierta');
+  if (btn) {
+    btn.classList.remove('eq-filtro-activo');
+    var chevron = btn.querySelector('.material-symbols-outlined');
+    if (chevron) chevron.textContent = 'expand_more';
+  }
+}
+function _eqToggleFiltroBurbuja(campo) {
+  if (_eqFiltroBurbujaAbierta === campo) {
+    _eqCerrarFiltroBurbuja(campo);
+    _eqFiltroBurbujaAbierta = null;
+  } else {
+    if (_eqFiltroBurbujaAbierta) _eqCerrarFiltroBurbuja(_eqFiltroBurbujaAbierta);
+    _eqFiltroBurbujaAbierta = campo;
+    _eqAbrirFiltroBurbuja(campo);
   }
   // El panel exterior (#eq-busqueda-panel) fija su `max-height` al alto
   // real de SU contenido en el momento de abrirse (`_eqAbrirPanel()`, más
   // arriba en este archivo), sin ninguna burbuja de categoría abierta
   // todavía -- relajarlo acá a un techo holgado evita que esa altura ya
   // ajustada recorte una burbuja que se expande DESPUÉS (mismo fix ya
-  // aplicado en Eventos, `_evToggleFiltroBurbuja()`/js/eventos.js -- ahí
-  // 550px alcanza porque nunca hay más de UNA burbuja abierta a la vez; acá
-  // "Puntos" y "Rol" pueden estar los 2 abiertos juntos, así que el techo
-  // es más alto para no recortar ese caso).
+  // aplicado en Eventos, `_evToggleFiltroBurbuja()`/js/eventos.js). Nunca
+  // hay más de UNA burbuja abierta a la vez (comportamiento radio, ver
+  // arriba), mismo techo que usa Eventos alcanza acá también.
   var panelEl = document.getElementById('eq-busqueda-panel');
-  if (panelEl && panelEl.classList.contains('abierta')) panelEl.style.maxHeight = '900px';
+  if (panelEl && panelEl.classList.contains('abierta')) panelEl.style.maxHeight = '600px';
 }
 
 // Estado del período de puntaje -- default mes/año actuales (mismo
@@ -1298,6 +1315,36 @@ function _eqFiltroRolToggle(rol) {
   _eqRenderGrupo('Mirlxs');
   _eqRenderInactivos();
   if (typeof _eqRenderLesionadxs === 'function') _eqRenderLesionadxs();
+  _eqActualizarBadgeFiltros();
+}
+// Badge numérico del ícono de lupa (feat nueva, ver MANIFEST.md -- "igual a
+// como funciona en Eventos") -- mismo criterio que
+// `_evActualizarBadgeFiltros()`/js/eventos.js: cuenta CATEGORÍAS de filtro
+// con selección activa (0 a 2 acá, "Puntos"/"Rol"), no el total de opciones
+// marcadas (ej. 3 roles tildados siguen contando como 1 sola categoría
+// activa). Oculto del todo (`display:none`) si el resultado es 0. "Puntos"
+// cuenta activo con `_eqPeriodoEsDefault()` (más abajo) -- Histórico
+// siempre cuenta, "Fecha" solo si el mes/rango elegido es distinto al mes
+// actual (pedido explícito: "una fecha seleccionada distinta al mes
+// actual"). Llamada desde los 2 caminos reales que pueden cambiar el
+// resultado: `_eqAplicarFiltrosAhora()` (Puntos: Histórico/Fecha, siempre
+// re-pega contra el backend) y `_eqFiltroRolToggle()` (Rol, 100%
+// frontend).
+function _eqPeriodoEsDefault() {
+  if (_eqFiltroPeriodo.modo !== 'fecha') return false;
+  var hoy = new Date();
+  var mesActual = hoy.getMonth() + 1, anioActual = hoy.getFullYear();
+  return _eqFiltroPeriodo.mesDesde === mesActual && _eqFiltroPeriodo.anioDesde === anioActual &&
+    _eqFiltroPeriodo.mesHasta === mesActual && _eqFiltroPeriodo.anioHasta === anioActual;
+}
+function _eqActualizarBadgeFiltros() {
+  var badge = document.getElementById('eq-filtro-badge');
+  if (!badge) return;
+  var n = 0;
+  if (!_eqPeriodoEsDefault()) n++;
+  if (_eqFiltroRoles.length > 0) n++;
+  badge.textContent = String(n);
+  badge.style.display = n > 0 ? 'flex' : 'none';
 }
 // Predicado adicional a `_eqPasaBusqueda()` (nunca modificada -- pedido
 // explícito de no tocar la lógica de búsqueda si ya funciona) -- se suma
@@ -1343,6 +1390,7 @@ function _eqAplicarFiltrosAhora() {
     _eqPersonas = (res && res.personas) || [];
     _eqCargado = true;
     _eqCerrarPanel('busqueda');
+    _eqActualizarBadgeFiltros();
     _eqRenderFavoritos();
     _eqRenderGrupo('Quindes');
     _eqRenderGrupo('Mirlxs');
@@ -2086,7 +2134,7 @@ function _eqPerfilContenidoHtml(p) {
   var periodoPillsHtml = '<div class="eq-perfil-stats-periodo">' +
       '<p class="eq-tier-label" style="margin:0 0 6px">Período</p>' +
       '<div class="aj-pills-row eq-periodo-pills">' +
-        '<span class="aj-pill eq-pill-fecha' + (_eqFiltroPeriodo.modo === 'fecha' ? ' activa' : '') + '" data-modo="fecha" onclick="_eqFiltroPeriodoModo(\'fecha\')">Fecha<span class="material-symbols-outlined eq-pill-chevron">expand_more</span></span>' +
+        '<span class="aj-pill' + (_eqFiltroPeriodo.modo === 'fecha' ? ' activa' : '') + '" data-modo="fecha" onclick="_eqFiltroPeriodoModo(\'fecha\')">Fecha</span>' +
         '<span class="aj-pill' + (_eqFiltroPeriodo.modo === 'historico' ? ' activa' : '') + '" data-modo="historico" onclick="_eqFiltroPeriodoModo(\'historico\')">Histórico</span>' +
       '</div>' +
     '</div>';

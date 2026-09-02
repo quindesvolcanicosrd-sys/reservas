@@ -103,6 +103,19 @@
    de cada uno sigue en su propia clase `-inner` (`.eq-misstats-panel-inner`/
    `.eq-busqueda-panel-inner`, ver esos bloques). */
 .eq-filtro-toggle-btn.activo { background: var(--brand); color: var(--white); }
+/* Badge numérico del ícono de lupa (feat nueva, ver MANIFEST.md -- "igual a
+   como funciona en Eventos") -- COPIADO 1:1 de `.ev-header-icon-btn`/
+   `.ev-filtro-badge` (css/eventos.css): `position:relative` ancla el badge
+   (único aporte propio acá, igual que en Eventos -- tamaño/fondo/color/hover
+   del botón en sí vienen de `.app-nav-icon-btn`, css/nav.css, sin tocar).
+   Cuenta real en `_eqActualizarBadgeFiltros()`/js/equipo.js. */
+.eq-filtro-toggle-btn { position: relative; }
+.eq-filtro-badge {
+  position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 3px;
+  border-radius: 999px; background: var(--danger); color: var(--white);
+  font-size: 0.62rem; font-weight: 800; display: flex; align-items: center; justify-content: center;
+  line-height: 1; box-shadow: 0 0 0 2px var(--card-bg);
+}
 .eq-header-panel { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
 .eq-header-panel.abierta { margin-bottom: 18px; }
 .eq-busqueda-panel-inner {
@@ -145,12 +158,13 @@
    (320px, sin medir `scrollHeight`) -- mismo criterio que la burbuja de
    Eventos: contenido chico y acotado (2 pills / 7 pills como mucho) que
    nunca se acerca a ese techo, no hace falta el patrón scrollHeight-medido
-   del resto de acordeones de esta sección. A diferencia de Eventos (un
-   panel Lugar/Tipo a la vez) -- acá "Puntos"/"Rol" son independientes
-   (`_eqToggleFiltroBurbuja()`/js/equipo.js, pedido explícito: "pueden
-   estar ambos expandidos al mismo tiempo"), simplemente sin lógica de
-   "cerrar el otro" -- cada `.eq-filtro-burbuja` anima sola, sin
-   interferir con la otra. */
+   del resto de acordeones de esta sección. MISMO comportamiento radio que
+   Eventos (re-ajuste, ver MANIFEST.md -- una ronda anterior las dejaba
+   independientes, revertido por pedido explícito: "'Puntos' y 'Rol' no
+   pueden estar abiertos al mismo tiempo") -- `_eqToggleFiltroBurbuja()`/
+   js/equipo.js abrir una cierra la otra si estaba abierta, un solo valor
+   `_eqFiltroBurbujaAbierta` ('puntos'|'rol'|null), no un mapa de
+   booleanos. */
 .eq-filtros-label { margin-top: 18px; }
 .eq-filtros-row { display: flex; gap: 8px; margin-bottom: 4px; }
 .eq-filtro-trigger {
@@ -167,44 +181,26 @@
 .eq-filtro-burbuja.abierta { max-height: 320px; margin-bottom: 18px; }
 .eq-filtro-burbuja-pills { padding: 10px 2px 16px; }
 
-/* ── Pills de filtro (período + rol) — estilo OUTLINED igual a Eventos
-   (rediseño, ver MANIFEST.md -- "cambiar el estilo visual de los pills de
-   filtro de Equipo para que coincidan con los pills de Eventos") -- copiado
-   de `.ev-filtro-trigger`/`.ev-filtro-activo` (css/eventos.css, los
-   triggers "Lugar"/"Tipo"): inactivo = borde sutil + fondo neutro + texto
-   secundario; activo = borde + texto de marca + fondo apenas teñido (NO
-   relleno sólido). Reemplaza el look default de `.aj-pill`
-   (`perfil.css`) para estos 2 contenedores puntuales -- esa clase es
-   compartida por TODA la app (selección de talla, tipo de documento, etc.)
-   y su versión activa (relleno sólido `--brand`+texto blanco) es la
-   correcta para esos otros usos, así que el override va SCOPEADO a
-   `.eq-periodo-pills`/`#eq-filtro-rol-pills` (selector de descendiente,
-   nunca `.aj-pill` a secas -- mismo criterio que el resto de
-   compactaciones locales de este archivo, ver `#eq-misstats-panel-inner
-   .eq-stat-card` más abajo), nunca tocando la clase base. Solo variables de
-   `colors.css`, ninguna acá es nueva -- las mismas 4 que ya usa
-   `.ev-filtro-trigger`. */
-.eq-periodo-pills .aj-pill,
-#eq-filtro-rol-pills .aj-pill {
-  background: var(--surface-light); color: var(--text-2); border: 1.5px solid var(--border-light);
-}
-.eq-periodo-pills .aj-pill.activa,
-#eq-filtro-rol-pills .aj-pill.activa {
-  background: var(--brand-lightest); color: var(--brand); border-color: var(--brand);
-}
-/* Chevron ∨ del pill "Fecha" (pedido explícito) -- SIEMPRE presente y fijo
-   (nunca rotado/flippeado): a diferencia de `.ev-filtro-trigger`, donde el
-   chevron indica un acordeón inline que se abre/cierra en el lugar, "Fecha"
-   siempre abre la misma modal de calendario (`_eqAbrirModalFecha()`), así
-   que el ícono es un afiche fijo de "esto abre algo", no un indicador de
-   estado. "Histórico" (toggle simple, sin nada que abrir) y los pills de
-   rol (Jammer/Blocker/etc., mismo criterio) no llevan chevron -- sin
-   markup ni CSS de ícono en ninguno de los 2. Color heredado del pill
-   (`currentColor` implícito de los íconos ligature de Material Symbols) --
-   sin fijar un color propio, sigue el mismo texto muted/marca del estado
-   activo/inactivo sin duplicar esa lógica acá. */
-.eq-pill-fecha { gap: 4px; }
-.eq-pill-fecha .eq-pill-chevron { font-size: 16px; flex-shrink: 0; }
+/* ── Sub-pills dentro de las burbujas "Puntos"/"Rol" (Fecha/Histórico/roles)
+   -- re-ajuste, ver MANIFEST.md: SIN override propio, a propósito. Una
+   ronda anterior scopeaba acá un estilo "outlined" (borde+texto de marca,
+   sin relleno) para `.eq-periodo-pills`/`#eq-filtro-rol-pills`, pero el
+   pedido real era que estos sub-pills se vieran IGUAL a los sub-pills de
+   Eventos ("Asamblea", "Eventos", etc. dentro de las burbujas Lugar/Tipo,
+   `_evRenderFiltroBurbujaPills()`/js/eventos.js) -- y esos son `.aj-pill`/
+   `.aj-pill.activa` 100% vanilla (confirmado: css/eventos.css no trae
+   ningún override de color/borde para `.ev-filtro-burbuja-pills .aj-pill`,
+   solo el padding de la burbuja en sí, ver `.eq-filtro-burbuja-pills`
+   arriba). El look "outlined" era correcto para los TRIGGERS de categoría
+   (`.eq-filtro-trigger`, que sí replican `.ev-filtro-trigger` -- ESE
+   componente sí es outlined en Eventos), pero no para estos sub-pills --
+   `.aj-pill.activa` (perfil.css, relleno sólido `--brand`+texto
+   `--white`) es exactamente el naranja que ya usa cualquier sub-pill
+   seleccionado en toda la app, sin necesitar ningún override local. El
+   pill "Fecha" tampoco lleva chevron (re-ajuste, pedido explícito: "es un
+   sub-pill, no un acordeón") -- vuelve a ser un `<span class="aj-pill">`
+   liso, sin `.eq-pill-fecha`/ícono, igual que "Histórico" y los pills de
+   rol. */
 
 /* ── Modal centrada "Fecha" (rediseño, ver MANIFEST.md -- "convertir el
    bottom sheet del selector de fecha a una modal centrada tipo Google
