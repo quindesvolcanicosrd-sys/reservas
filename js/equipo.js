@@ -674,6 +674,11 @@ function _eqBuscar(valor) {
     if (mesVacio) mesVacio.style.display = 'none';
     if (rolesWrap) rolesWrap.style.display = '';
     _eqRenderPorRol();
+    // La vista "por rol" tiene su propio empty-state (`_eqRenderPorRol()`,
+    // más arriba) -- `_eqActualizarListaVacia()` se llama igual acá para
+    // que `#eq-lista-vacia` (de la vista normal) se OCULTE si había
+    // quedado visible de un ciclo anterior, en vez de mostrarse encima.
+    _eqActualizarListaVacia();
     return;
   }
   if (mesIdx !== null) {
@@ -684,6 +689,7 @@ function _eqBuscar(valor) {
     if (grupoLesionadxs) grupoLesionadxs.style.display = 'none';
     if (rolesWrap) rolesWrap.style.display = 'none';
     if (mesVacio) mesVacio.style.display = '';
+    _eqActualizarListaVacia();
     return;
   }
   // Modo normal (nombre/username/email) -- restaura los contenedores reales
@@ -1425,6 +1431,43 @@ function _eqAplicarFiltrosAhora() {
 // ya usado por _eqRenderGrupo()/_eqRenderPorRol() para que un acordeón que
 // nace "abierto" (clase `.abierto` en el HTML, ver index.html) no quede
 // colapsado por el `max-height:0` default de `.eq-grupo-body`.
+// Bug real corregido (ver MANIFEST.md -- "lista de personas desaparece al
+// usar los filtros") -- Favoritos/Quindes/Mirlxs/Inactivos/Lesionadxs se
+// ocultan uno por uno (`wrap.style.display='none'`) cuando su propio
+// filtrado da 0 resultados; si los 5 dan 0 A LA VEZ (el caso real más
+// común: un pill de rol tildado que nadie tiene asignado en ESTE
+// dispositivo -- `_eqRolesDe()` es per-dispositivo/localStorage, ver
+// MANIFEST.md -- así que casi cualquier rol salvo "No definido" filtra a
+// TODO el mundo afuera) no quedaba NINGÚN contenido visible debajo de la
+// nav, sin ningún aviso -- indistinguible de un bug real de renderizado
+// (que es exactamente cómo se reportó). Revisa el resultado FINAL de los
+// 5 contenedores (nunca reconstruye nada -- solo lee `style.display`, ya
+// escrito por cada render) y muestra `#eq-lista-vacia` (mismo componente
+// `.eq-favoritos-vacio` que ya usan `_eqRenderPorRol()`/`#eq-mes-vacio`)
+// en vez de dejar la pantalla en blanco. Se salta la vista alternativa
+// "por rol" (`#eq-roles-wrap`) y el empty-state de mes de cumpleaños
+// (`#eq-mes-vacio`) -- esos 2 ya tienen su propio aviso, no hay que
+// duplicarlo encima. Llamada al FINAL de cada una de las 5 funciones de
+// render de abajo -- así queda correcta sin importar qué combinación de
+// ellas corrió en cada ciclo (búsqueda, filtro de rol, filtro de período,
+// carga inicial) sin tener que acordarse de llamarla aparte en cada
+// caller.
+function _eqActualizarListaVacia() {
+  var el = document.getElementById('eq-lista-vacia');
+  if (!el) return;
+  var rolesWrap = document.getElementById('eq-roles-wrap');
+  var mesVacio = document.getElementById('eq-mes-vacio');
+  if ((rolesWrap && rolesWrap.style.display !== 'none') || (mesVacio && mesVacio.style.display !== 'none')) {
+    el.style.display = 'none';
+    return;
+  }
+  var ids = ['eq-favoritos-wrap', 'eq-grupo-quindes', 'eq-grupo-mirlxs', 'eq-grupo-inactivos', 'eq-grupo-lesionadxs'];
+  var algunaVisible = ids.some(function(id) {
+    var wrap = document.getElementById(id);
+    return wrap && wrap.style.display !== 'none';
+  });
+  el.style.display = algunaVisible ? 'none' : '';
+}
 function _eqRenderFavoritos() {
   var wrap = document.getElementById('eq-favoritos-wrap');
   var cont = document.getElementById('eq-favoritos-lista');
@@ -1447,6 +1490,7 @@ function _eqRenderFavoritos() {
   var body = wrap.querySelector('.eq-grupo-body');
   if (body) body.style.maxHeight = 'none';
   _eqHidratarAvatares();
+  _eqActualizarListaVacia();
 }
 
 function _eqRenderGrupo(rol) {
@@ -1474,6 +1518,7 @@ function _eqRenderGrupo(rol) {
   // a uno cerrado.
   var bodyAbierto = document.getElementById('eq-grupo-' + key + '-body');
   if (bodyAbierto && bodyAbierto.classList.contains('abierto')) bodyAbierto.style.maxHeight = 'none';
+  _eqActualizarListaVacia();
 }
 
 // Acordeón "INACTIVOS" (Bugs 11+12 rediseñados, ver MANIFEST.md -- antes
@@ -1501,6 +1546,7 @@ function _eqRenderInactivos() {
   if (pillEl) pillEl.textContent = filtradas.length;
   cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
   _eqHidratarAvatares();
+  _eqActualizarListaVacia();
 }
 
 // Acordeón "LESIONADXS" (feat nueva, ver MANIFEST.md/CHANGELOG.md) --
@@ -1524,6 +1570,7 @@ function _eqRenderLesionadxs() {
   var body = wrap.querySelector('.eq-grupo-body');
   if (body) body.style.maxHeight = 'none';
   _eqHidratarAvatares();
+  _eqActualizarListaVacia();
 }
 
 // "Mis estadísticas" -- panel deslizable de la nav de Equipo (rediseño, ver
