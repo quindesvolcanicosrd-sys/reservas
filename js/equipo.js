@@ -978,23 +978,27 @@ function _eqFiltroPeriodoModo(modo) {
 
    Elegir un mes (`_eqCalFechaElegirMes()`) o un año
    (`_eqCalFechaElegirAnio()`) vuelve a 'dias' mostrando ese mes/año.
-   Selección "flexible" (sin cambios de esta ronda): un tap en un día filtra
-   por ese MES completo, no por el día exacto -- el día tocado es solo el
-   mecanismo de selección visual (mismo criterio que ya tenía la modal de
-   Rango vieja: `getEquipo()` nunca recibió un día real, solo mes+año) -- por
-   eso el estado interno (`_eqCalFecha.desdeClave`/`hastaClave`) se guarda
-   como CLAVE DE MES (`anio*12+mes`, 0-indexado), no como fecha ISO. Un 2do
-   tap define un rango de mes/año a mes/año -- mismo mecanismo "ida y
-   vuelta" de siempre (primer tap fija Desde y limpia Hasta; un tap
-   posterior -- clave >= Desde -- fija Hasta; uno anterior a Desde reemplaza
-   Desde). "Restablecer" (`_eqCalFechaRestablecer()`, re-ajuste, pedido
-   explícito) ya NO limpia la selección a vacío -- navega al mes actual
-   (animado, mismo camino que cualquier otro cambio) y lo deja
-   pre-seleccionado como el rango (Desde=Hasta=mes de hoy), un default útil
-   en vez de un estado vacío que obligaba a tocar un día de nuevo. Markup
-   real en index.html (`#eq-modal-fecha-*`) -- mismo componente
-   `.bsheet-overlay`/`.bsheet` estándar que el resto de sheets de la app,
-   mismo criterio de apertura/cierre.
+   Selección por FECHA ISO real (bug real corregido, ver MANIFEST.md -- "al
+   tocar un día del calendario el período seleccionado no se actualiza") --
+   `_eqCalFecha.desde`/`hasta` guardan la fecha ISO exacta tocada, mismo
+   mecanismo "ida y vuelta" de siempre (primer tap fija Desde y limpia
+   Hasta; un tap posterior -- fecha >= Desde -- fija Hasta; uno anterior a
+   Desde reemplaza Desde), ver el comentario grande de `_eqPintarDiasGrid()`
+   más abajo para el detalle del bug (una ronda anterior guardaba una CLAVE
+   DE MES en vez de la fecha real, que no distinguía 2 días del mismo mes
+   entre sí -- el resumen quedaba pegado mostrando el mismo mes 2 veces sin
+   importar qué día se tocara). El filtro real que llega a `getEquipo()`
+   sigue siendo solo mes/año (`_eqConfirmarModalFecha()` descarta el día al
+   confirmar) -- pero el resumen visual ahora SÍ muestra el día exacto
+   tocado ("01/09/2026 al 17/09/2026", pedido explícito), no el mes pelado.
+   "Restablecer" (`_eqCalFechaRestablecer()`, re-ajuste, pedido explícito)
+   ya NO limpia la selección a vacío -- navega al mes actual (animado,
+   mismo camino que cualquier otro cambio) y lo deja pre-seleccionado como
+   el rango (Desde=Hasta=hoy), un default útil en vez de un estado vacío
+   que obligaba a tocar un día de nuevo. Markup real en index.html
+   (`#eq-modal-fecha-*`) -- mismo componente `.bsheet-overlay`/`.bsheet`
+   estándar que el resto de sheets de la app, mismo criterio de
+   apertura/cierre.
 
    ── Animación de contenido (pedido explícito, "todas las transiciones
    dentro del bottom sheet deben estar animadas... actualmente solo se
@@ -1030,21 +1034,26 @@ function _eqFiltroPeriodoModo(modo) {
       primer render (`_eqAbrirModalFecha()`) sigue existiendo, pero solo
       para no duplicar el fade de la modal entera con un 2do fade del
       contenido encima, ver ese comentario. */
-var _eqCalFecha = { anioMostrado: null, mesMostrado: null, desdeClave: null, hastaClave: null, vista: 'dias' };
+var _eqCalFecha = { anioMostrado: null, mesMostrado: null, desde: null, hasta: null, vista: 'dias' };
 function _eqAbrirModalFecha() {
   var hoy = new Date();
   // Arranca mostrando el mes "Desde" ya elegido (si había uno) -- reabrir
   // la modal conserva la última selección en vez de resetear a hoy.
+  // `desde`/`hasta` se reconstruyen como fecha ISO al día 1 del mes
+  // correspondiente -- `_eqFiltroPeriodo` solo guarda mes/año (nunca un día
+  // real, ver `_eqConfirmarModalFecha()` más abajo), así que el día exacto
+  // es arbitrario acá; lo que importa es que caiga en el mes/año correcto
+  // para que `_eqPintarDiasGrid()` lo resalte bien.
   _eqCalFecha.anioMostrado = _eqFiltroPeriodo.anioDesde || hoy.getFullYear();
   _eqCalFecha.mesMostrado = (_eqFiltroPeriodo.mesDesde || (hoy.getMonth() + 1)) - 1;
   _eqCalFecha.vista = 'dias';
   if (_eqFiltroPeriodo.mesDesde && _eqFiltroPeriodo.anioDesde) {
-    _eqCalFecha.desdeClave = _eqFiltroPeriodo.anioDesde * 12 + (_eqFiltroPeriodo.mesDesde - 1);
-    _eqCalFecha.hastaClave = (_eqFiltroPeriodo.mesHasta && _eqFiltroPeriodo.anioHasta && !(_eqFiltroPeriodo.mesHasta === _eqFiltroPeriodo.mesDesde && _eqFiltroPeriodo.anioHasta === _eqFiltroPeriodo.anioDesde))
-      ? _eqFiltroPeriodo.anioHasta * 12 + (_eqFiltroPeriodo.mesHasta - 1) : null;
+    _eqCalFecha.desde = _eqFiltroPeriodo.anioDesde + '-' + _evPad(_eqFiltroPeriodo.mesDesde) + '-01';
+    _eqCalFecha.hasta = (_eqFiltroPeriodo.mesHasta && _eqFiltroPeriodo.anioHasta && !(_eqFiltroPeriodo.mesHasta === _eqFiltroPeriodo.mesDesde && _eqFiltroPeriodo.anioHasta === _eqFiltroPeriodo.anioDesde))
+      ? _eqFiltroPeriodo.anioHasta + '-' + _evPad(_eqFiltroPeriodo.mesHasta) + '-01' : null;
   } else {
-    _eqCalFecha.desdeClave = null;
-    _eqCalFecha.hastaClave = null;
+    _eqCalFecha.desde = null;
+    _eqCalFecha.hasta = null;
   }
   // `true` -- primer paint instantáneo, sin el fade+resize normal de
   // `_eqCalFechaRenderContenido()`: la modal entera ya está entrando con su
@@ -1144,17 +1153,29 @@ function _eqCalFechaRenderContenido(pintarFn, instant) {
 // Grilla de días de un solo mes -- puerto directo del algoritmo de
 // `_evAntCalRender()`/js/eventos.js, sin su guard de "fecha pasada"/cuota
 // (no aplica acá: el filtro de Equipo es sobre puntos ya guardados, un mes
-// íntegramente en el pasado es el caso de uso normal). Selección por CLAVE
-// DE MES (`anio*12+mes`, no por fecha ISO -- ver comentario grande de
-// arriba): cualquier celda cuyo mes real (el de `cur`, no el mes
+// íntegramente en el pasado es el caso de uso normal). Selección por FECHA
+// ISO real (bug real corregido, ver MANIFEST.md -- "al tocar un día del
+// calendario el período seleccionado no se actualiza"): una ronda anterior
+// usaba una CLAVE DE MES (`anio*12+mes`) en vez de la fecha real, con la
+// intención de que "lo que importa es el mes, no el día" -- pero eso hacía
+// que 2 días DISTINTOS del MISMO mes (ej. tocar el 1 y despuós el 17 de
+// septiembre) produjeran la MISMA clave, así que el mecanismo "ida y
+// vuelta" (ver `_eqCalFechaTocarDia()` más abajo) no podía distinguir un
+// 2do toque real de "tocar el mismo valor de nuevo" -- el resumen quedaba
+// pegado en "Septiembre 2026 al Septiembre 2026" sin importar qué día se
+// tocara. Ahora la selección visual/interna es por fecha ISO real (como
+// cualquier selector de rango de fechas normal); el mes+año siguen siendo
+// lo único que de verdad viaja a `getEquipo()` (`_eqConfirmarModalFecha()`,
+// más abajo, se queda solo con la parte `anio-mes` de cada fecha ISO al
+// confirmar) -- el día exacto es el mecanismo de selección, el resumen
+// ahora SÍ lo muestra tal cual ("01/09/2026 al 17/09/2026"), pedido
+// explícito. Cualquier celda cuyo mes real (el de `cur`, no el mes
 // mostrado -- así una celda "ajena" que bordea al mes anterior/siguiente
-// también es tocable y selecciona SU propio mes real, mismo criterio que
-// `_evAntCalRender()`, que tampoco excluye del `onclick` a sus celdas
-// ajenas) caiga dentro de [Desde,Hasta] se pinta con `.ev-ant-cal-en-rango`
-// -- el mes ENTERO se ve "seleccionado", no solo el día tocado (coherente
-// con que la selección real es de mes, no de día). Recibe `cont` (el
-// contenedor a poblar) -- lo pasa `_eqCalFechaRenderContenido()`, nunca
-// busca `#eq-modal-fecha-dias` por su cuenta (esa id ya no existe --
+// también es tocable) caiga dentro de [Desde,Hasta] se pinta con
+// `.ev-ant-cal-en-rango`, Desde/Hasta mismos con `.ev-ant-cal-sel` -- mismo
+// criterio visual que `_evAntCalRender()`/asistencia anticipada. Recibe
+// `cont` (el contenedor a poblar) -- lo pasa `_eqCalFechaRenderContenido()`,
+// nunca busca `#eq-modal-fecha-dias` por su cuenta (esa id ya no existe --
 // las 3 vistas comparten `#eq-modal-fecha-contenido`).
 function _eqPintarDiasGrid(cont) {
   var anio = _eqCalFecha.anioMostrado, mes = _eqCalFecha.mesMostrado;
@@ -1163,21 +1184,18 @@ function _eqPintarDiasGrid(cont) {
   var finGrid = _evLunesDeSemana(finMes);
   finGrid.setDate(finGrid.getDate() + 6);
   var hoy = _evHoyISO();
-  var claveDesde = _eqCalFecha.desdeClave;
-  var claveHasta = _eqCalFecha.hastaClave !== null ? _eqCalFecha.hastaClave : claveDesde;
-  var claveMin = claveDesde !== null ? Math.min(claveDesde, claveHasta) : null;
-  var claveMax = claveDesde !== null ? Math.max(claveDesde, claveHasta) : null;
+  var desde = _eqCalFecha.desde;
+  var hasta = _eqCalFecha.hasta !== null ? _eqCalFecha.hasta : desde;
   var html = _EV_DIAS_CORTOS.map(function(d) { return '<div class="ev-cal-dow">' + d + '</div>'; }).join('');
   var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
   while (cur <= finGrid) {
     var celdaIso = _evToISO(cur);
     var ajeno = cur.getMonth() !== mes;
-    var claveCelda = cur.getFullYear() * 12 + cur.getMonth();
     var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '');
-    if (claveMin !== null && claveCelda >= claveMin && claveCelda <= claveMax) clases += ' ev-ant-cal-en-rango';
-    if (claveCelda === claveDesde || claveCelda === claveHasta) clases += ' ev-ant-cal-sel';
+    if (desde !== null && _evFechaCmp(celdaIso, desde) >= 0 && _evFechaCmp(celdaIso, hasta) <= 0) clases += ' ev-ant-cal-en-rango';
+    if (celdaIso === desde || celdaIso === hasta) clases += ' ev-ant-cal-sel';
     if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
-    html += '<div class="' + clases + '" onclick="_eqCalFechaTocarDia(' + claveCelda + ')"><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
+    html += '<div class="' + clases + '" onclick="_eqCalFechaTocarDia(\'' + celdaIso + '\')"><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
     cur.setDate(cur.getDate() + 1);
   }
   cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>';
@@ -1227,44 +1245,53 @@ function _eqPintarAniosGrid(cont) {
   });
 }
 // Ida y vuelta -- mismo criterio que `_evAntCalTocarDia()`/js/eventos.js,
-// ahora sobre claves de mes en vez de fechas ISO (ver comentario grande de
-// "Modal 'Elige la fecha'" más arriba).
-function _eqCalFechaTocarDia(claveCelda) {
-  if (_eqCalFecha.desdeClave === null || _eqCalFecha.hastaClave !== null) {
-    _eqCalFecha.desdeClave = claveCelda;
-    _eqCalFecha.hastaClave = null;
-  } else if (claveCelda < _eqCalFecha.desdeClave) {
-    _eqCalFecha.desdeClave = claveCelda;
+// sobre fechas ISO reales (bug real corregido, ver comentario grande de
+// `_eqPintarDiasGrid()` más arriba -- antes comparaba una CLAVE DE MES, que
+// no distinguía 2 días del mismo mes entre sí). Primer toque (o uno
+// posterior a ya tener el rango completo) fija Desde y limpia Hasta; un
+// toque posterior -- fecha >= Desde -- fija Hasta; uno anterior a Desde
+// reemplaza Desde.
+function _eqCalFechaTocarDia(iso) {
+  if (_eqCalFecha.desde === null || _eqCalFecha.hasta !== null) {
+    _eqCalFecha.desde = iso;
+    _eqCalFecha.hasta = null;
+  } else if (_evFechaCmp(iso, _eqCalFecha.desde) < 0) {
+    _eqCalFecha.desde = iso;
   } else {
-    _eqCalFecha.hastaClave = claveCelda;
+    _eqCalFecha.hasta = iso;
   }
   _eqRenderModalFecha();
 }
-// "Septiembre 2026" a partir de una clave de mes (`anio*12+mes`) -- mismo
-// criterio que la modal de Rango vieja: lo que de verdad importa para
-// `getEquipo()` es el mes+año, nunca un día real.
-function _eqCalFechaClaveATexto(clave) {
-  return NOMBRES_MESES[clave % 12] + ' ' + Math.floor(clave / 12);
+// "01/09/2026" a partir de una fecha ISO -- pedido explícito (bug real
+// corregido): antes mostraba "Septiembre 2026" (mes+año, la única
+// granularidad real que le importa a `getEquipo()`), pero eso ocultaba
+// CUALQUIER cambio de día dentro del mismo mes -- ahora el resumen
+// refleja el día exacto tocado, aunque el filtro real que se aplica al
+// confirmar siga siendo por mes/año (ver `_eqConfirmarModalFecha()`, más
+// abajo).
+function _eqCalFechaTextoCorto(iso) {
+  var p = iso.split('-');
+  return p[2] + '/' + p[1] + '/' + p[0];
 }
 function _eqCalFechaActualizarResumen() {
   var cont = document.getElementById('eq-modal-fecha-resumen');
   var btn = document.getElementById('eq-modal-fecha-btn-restablecer');
   if (!cont) return;
-  var desde = _eqCalFecha.desdeClave, hasta = _eqCalFecha.hastaClave;
+  var desde = _eqCalFecha.desde, hasta = _eqCalFecha.hasta;
   if (desde === null) {
-    cont.innerHTML = '<span class="ev-ant-rango-vacio">Toca un mes para empezar</span>';
+    cont.innerHTML = '<span class="ev-ant-rango-vacio">Toca un día para empezar</span>';
     if (btn) btn.style.display = 'none';
     return;
   }
-  var html = _eqEsc(_eqCalFechaClaveATexto(desde));
-  if (hasta !== null) html += ' al ' + _eqEsc(_eqCalFechaClaveATexto(hasta));
+  var html = _eqEsc(_eqCalFechaTextoCorto(desde));
+  if (hasta !== null) html += ' al ' + _eqEsc(_eqCalFechaTextoCorto(hasta));
   cont.innerHTML = html;
   if (btn) btn.style.display = '';
 }
 // Re-ajuste (pedido explícito): ya NO limpia la selección a vacío -- vuelve
 // al mes actual (animado, mismo camino que cualquier otro cambio de esta
 // modal) y lo deja pre-seleccionado como Desde=Hasta (mismo criterio que un
-// primer tap fresco en `_eqCalFechaTocarDia()`: `hastaClave:null` ya se
+// primer tap fresco en `_eqCalFechaTocarDia()`: `hasta:null` ya se
 // interpreta como "Hasta = Desde" en `_eqPintarDiasGrid()`/
 // `_eqCalFechaActualizarResumen()`, sin necesidad de fijarlo aparte).
 function _eqCalFechaRestablecer() {
@@ -1272,18 +1299,24 @@ function _eqCalFechaRestablecer() {
   _eqCalFecha.anioMostrado = hoy.getFullYear();
   _eqCalFecha.mesMostrado = hoy.getMonth();
   _eqCalFecha.vista = 'dias';
-  _eqCalFecha.desdeClave = hoy.getFullYear() * 12 + hoy.getMonth();
-  _eqCalFecha.hastaClave = null;
+  _eqCalFecha.desde = _evHoyISO();
+  _eqCalFecha.hasta = null;
   _eqRenderModalFecha();
 }
+// El filtro real que viaja a `getEquipo()` sigue siendo mes/año, nunca un
+// día exacto (`params.mesDesde`/`anioDesde`/`mesHasta`/`anioHasta`, ver
+// supabase/functions/api/index.ts) -- acá es donde se descarta el día real
+// de `_eqCalFecha.desde`/`hasta` y se queda solo con la parte `anio-mes`.
 function _eqConfirmarModalFecha() {
-  if (_eqCalFecha.desdeClave === null) { _eqCerrarModalFecha(); return; }
-  var claveHasta = _eqCalFecha.hastaClave !== null ? _eqCalFecha.hastaClave : _eqCalFecha.desdeClave;
+  if (_eqCalFecha.desde === null) { _eqCerrarModalFecha(); return; }
+  var hastaIso = _eqCalFecha.hasta !== null ? _eqCalFecha.hasta : _eqCalFecha.desde;
+  var desdeParts = _eqCalFecha.desde.split('-');
+  var hastaParts = hastaIso.split('-');
   _eqFiltroPeriodo.modo = 'fecha';
-  _eqFiltroPeriodo.anioDesde = Math.floor(_eqCalFecha.desdeClave / 12);
-  _eqFiltroPeriodo.mesDesde = (_eqCalFecha.desdeClave % 12) + 1;
-  _eqFiltroPeriodo.anioHasta = Math.floor(claveHasta / 12);
-  _eqFiltroPeriodo.mesHasta = (claveHasta % 12) + 1;
+  _eqFiltroPeriodo.anioDesde = parseInt(desdeParts[0], 10);
+  _eqFiltroPeriodo.mesDesde = parseInt(desdeParts[1], 10);
+  _eqFiltroPeriodo.anioHasta = parseInt(hastaParts[0], 10);
+  _eqFiltroPeriodo.mesHasta = parseInt(hastaParts[1], 10);
   _eqCerrarModalFecha();
   _eqAplicarFiltrosAhora();
 }

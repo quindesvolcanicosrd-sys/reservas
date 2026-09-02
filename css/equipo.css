@@ -226,9 +226,14 @@
    como techo de seguridad en viewports chicos (pedido explícito: "altura
    fija suficiente para mostrar el calendario completo sin cortes") -- a
    diferencia de un bsheet (que crece con su contenido), acá el contenido
-   nunca debería necesitar más alto que eso; `overflow-y:auto` en
-   `.eq-modal-centro-body` queda como red de seguridad, no como
-   comportamiento esperado. Estructura en 3 franjas fijas
+   SÍ puede necesitar más alto que eso en la práctica (un mes de 6 filas,
+   ej. agosto arrancando en sábado, o la grilla Ene-Dic completa, ver
+   `.eq-modal-centro-body` más abajo -- bug real corregido, "el calendario
+   se corta al cambiar de mes"): `overflow-y:auto` ahí SÍ es el
+   comportamiento esperado para esos casos, con `min-height:0` (mismo
+   bloque) haciendo que ese scroll interno realmente se active en vez de
+   que el body se desborde silenciosamente y `overflow:hidden` de esta
+   card lo recorte. Estructura en 3 franjas fijas
    (`display:flex;flex-direction:column`): header (título + botón cerrar
    "×", `.eq-modal-centro-header`), body scrolleable (`.eq-modal-centro-body`,
    contiene el calendario -- ver el bloque siguiente, "Modal calendario
@@ -269,7 +274,21 @@
   color: var(--muted); cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 @media (hover: hover) { .eq-modal-centro-cerrar:hover { background: var(--brand-lightest); color: var(--text); } }
-.eq-modal-centro-body { flex: 1; overflow-y: auto; padding: 16px; }
+/* `min-height: 0` (bug real corregido, ver MANIFEST.md -- "el calendario se
+   corta al cambiar de mes"/"últimos meses del selector cortados") -- un
+   `flex-item` sin `min-height` propio tiene `min-height:auto` por default
+   (gotcha clásico de flexbox), que lo deja CRECER más allá del alto
+   disponible en vez de respetar `flex:1` y activar su propio
+   `overflow-y:auto` -- con un mes de 6 filas (ej. agosto, que arranca en
+   sábado) o la grilla Ene-Dic completa, el body terminaba más alto que el
+   espacio real que le quedaba dentro de `.eq-modal-centro-card` (alto FIJO,
+   ver arriba), y el `overflow:hidden` de esa card (ahí solo para las
+   esquinas redondeadas) recortaba silenciosamente las últimas filas en vez
+   de dejarlas scrolleables. `min-height:0` fuerza al body a respetar de
+   verdad el alto que le asigna `flex:1`, activando su `overflow-y:auto`
+   real -- cualquier mes/grilla que no entre entero queda scrolleable
+   adentro del body, nunca cortado sin forma de llegar a él. */
+.eq-modal-centro-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 16px 24px; }
 .eq-modal-centro-footer { padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px)); flex-shrink: 0; border-top: 1px solid var(--border-light); }
 
 /* ── Modal calendario "Fecha" (contenido interno, sin cambios de esta ronda
