@@ -35,7 +35,7 @@
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
 <link rel="stylesheet" href="css/eventos.css?v=94f3cbd9">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=1767f365">
+<link rel="stylesheet" href="css/equipo.css?v=974294b5">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2539,56 +2539,48 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 
   <!-- ═══ Modal de calendario "Fecha" del filtro de período de Equipo
-       (rediseño, ver MANIFEST.md) -- mismo componente `.bsheet-overlay`/
-       `.bsheet` estándar que el resto de sheets de la app (`#dat-lesion-sheet`,
-       js/perfil.js, mismo criterio de apertura/cierre
-       `style.display`+`transform`) + `.bsheet-scroll` -- overlay y sheet
-       SIBLINGS, no anidados (`shared/bsheet.js` asume
-       `sheet.previousElementSibling` === su overlay para el cierre por
-       tap/drag en la manija+título). 3 vistas dentro del MISMO sheet, todas
-       pintadas dentro de `#eq-modal-fecha-contenido` (`_eqCalFecha.vista`/
-       `_eqRenderModalFecha()`/js/equipo.js, ver el comentario grande ahí --
-       "Modal 'Elige la fecha'"/"Animación de contenido" -- para el detalle
-       completo de las 3 vistas y de cómo se anima cada cambio, pedido
-       explícito de esta ronda: "todas las transiciones... deben estar
-       animadas"): 'dias' (grilla de UN SOLO MES, `.ev-cal-grid`/
-       `.ev-cal-dow`/`.ev-cal-celda`/`.ev-cal-num`/`.ev-ajeno`/
-       `.ev-ant-cal-sel`/`.ev-ant-cal-en-rango`/`.ev-ant-cal-hoy`, reusado
-       1:1 de "asistencia anticipada", `_evAntCalRender()`/js/eventos.js),
-       'meses' (grilla Ene-Dic, `.ev-ant-mes-grid`/`.ev-ant-mes-cell`, MISMO
-       componente que "asistencia anticipada → Por meses",
-       `_evAntRenderMesesGrid()`/js/eventos.js) y 'anios' (grilla de años
-       estilo Google Calendar, `.eq-cal-fecha-year-*`/css/equipo.css, mismo
-       patrón visual que `.dp-year-grid`/`.dp-year-btn` de
-       `shared/date-picker.js`+`inscripcion/inscripcion.css`, el selector de
-       fecha de nacimiento -- ese CSS no está cargado en esta SPA principal,
-       así que el patrón se duplicó acá en vez de importarlo). El header
-       tiene 2 palabras TAPPEABLES independientes (pedido explícito, "header
-       separado en 2 partes tappeables", `#eq-modal-fecha-label-mes`/
-       `#eq-modal-fecha-label-anio`, cada una con su propio subrayado --
-       punteado el mes, sólido el año, `.eq-cal-fecha-label-mes`/`-anio`/
-       css/equipo.css -- para que se lean como 2 controles distintos) que
-       abren 'meses'/'anios' respectivamente; los chevrones `‹›` (mes-a-mes)
-       se ocultan mientras esas 2 vistas están abiertas (`visibility:hidden`,
-       solo tienen sentido mirando días). El TÍTULO del sheet
-       (`#eq-modal-fecha-titulo`) es dinámico por vista ("Elige la
-       fecha"/"Elige el mes"/"Elige el año", pedido explícito, "limpiar
-       textos" -- sin ninguna leyenda secundaria redundante dentro del
-       header, ver comentario grande en js/equipo.js). Tocar un día filtra
-       por ese MES completo (no el día exacto); un 2do toque define un rango
-       de mes/año a mes/año -- mismo mecanismo "ida y vuelta" de siempre
-       (`_eqCalFechaTocarDia()`/js/equipo.js). "Restablecer" navega
-       (animado) al mes actual y lo deja pre-seleccionado como el rango, ya
-       no limpia a vacío (pedido explícito, re-ajuste). Reusa 1:1 las clases
-       del calendario de asistencia anticipada (`.ev-ant-cal-nav*`/
+       (rediseño, ver MANIFEST.md -- "convertir el bottom sheet del selector
+       de fecha a una modal centrada tipo Google Calendar") -- YA NO es un
+       bottom sheet: dejó las clases `.bsheet-overlay`/`.bsheet` (y con
+       ellas, `shared/bsheet.js` -- ese listener delegado solo escucha
+       `.bsheet-handle`/`.bsheet-title` con un `.bsheet` real como ancestro,
+       no matchea nada acá, así que no hace falta ningún guard nuevo) por un
+       componente propio, `.eq-modal-centro-*`/css/equipo.css: overlay+card
+       SIBLINGS igual que antes (mismo criterio de apertura/cierre
+       `style.display`+JS, ver `_eqAbrirModalFecha()`/`_eqCerrarModalFecha()`/
+       js/equipo.js), pero la card centrada en el viewport (`position:fixed`
+       + `inset:0` + `margin:auto` + ancho/alto fijos, sin wrapper flex
+       nuevo) en vez de anclada abajo, con entrada fade+scale (pedido
+       explícito: "aparece desde el centro, no desde abajo") en vez de
+       slide-up. Cierra tocando el overlay (`onclick` de siempre) O el botón
+       "Cancelar" del footer (pedido explícito -- antes el único botón del
+       sheet era "Aplicar"; sin manija que arrastrar, hacía falta un botón
+       de cierre explícito que no confirme nada). Alto fijo (~520px,
+       `max-height:90vh` como techo de seguridad en viewports chicos) en vez
+       del `max-height:85vh`/contenido variable de antes -- pedido explícito
+       ("altura fija suficiente para mostrar el calendario completo sin
+       cortes"). Estructura en 3 franjas (`display:flex;flex-direction:column`,
+       mismo criterio que cualquier dialog con footer fijo): header (título
+       dinámico + botón cerrar "×"), body scrolleable (nav de mes/año +
+       resumen + calendario -- CERO cambios de lógica acá, ver el comentario
+       grande en js/equipo.js, "Modal 'Elige la fecha'"/"Animación de
+       contenido", para las 3 vistas días/meses/años y cómo se anima cada
+       cambio -- todo eso sigue intacto, esta ronda solo tocó el CHROME
+       exterior del modal) y footer fijo (Cancelar/Aplicar, reusa
+       `.eq-confirm-sheet-btns`/`.eq-confirm-btn-cancel`/`.eq-confirm-btn-ok`
+       -- MISMO componente que ya usa `#eq-sheet-confirm-admin`, más abajo en
+       este archivo, para el mismo patrón "2 botones, cancelar vs.
+       confirmar" -- sin inventar un botón nuevo). Reusa 1:1 las clases del
+       calendario de asistencia anticipada (`.ev-ant-cal-nav*`/
        `.ev-ant-rango-fila`/`.ev-ant-rango-linea`/`.ev-ant-rango-vacio`/
-       `.ev-ant-btn-restablecer-icono`, todas ya definidas en
-       css/eventos.css, ver `_evAntCal*`/js/eventos.js). -->
-  <div id="eq-modal-fecha-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_eqCerrarModalFecha()"></div>
-  <div id="eq-modal-fecha-sheet" class="bsheet bsheet-scroll" style="z-index:9701;max-height:85vh;">
-    <div class="bsheet-handle" style="flex-shrink:0;"></div>
-    <div class="bsheet-title" id="eq-modal-fecha-titulo" style="flex-shrink:0;">Elige la fecha</div>
-    <div style="overflow-y:auto;flex:1;padding:16px;">
+       `.ev-ant-btn-restablecer-icono`, css/eventos.css). -->
+  <div id="eq-modal-fecha-overlay" class="eq-modal-centro-overlay" onclick="_eqCerrarModalFecha()"></div>
+  <div id="eq-modal-fecha-sheet" class="eq-modal-centro-card">
+    <div class="eq-modal-centro-header">
+      <div class="eq-modal-centro-titulo" id="eq-modal-fecha-titulo">Elige la fecha</div>
+      <button type="button" class="eq-modal-centro-cerrar" onclick="_eqCerrarModalFecha()" aria-label="Cerrar"><span class="material-symbols-outlined">close</span></button>
+    </div>
+    <div class="eq-modal-centro-body">
       <div class="ev-ant-cal-nav">
         <button type="button" class="ev-ant-cal-nav-btn" id="eq-modal-fecha-prev" onclick="_eqCalFechaMoverMes(-1)"><span class="material-symbols-outlined">chevron_left</span></button>
         <div class="eq-cal-fecha-header-labels">
@@ -2606,7 +2598,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div class="eq-cal-fecha-viewport" id="eq-modal-fecha-viewport">
         <div id="eq-modal-fecha-contenido"></div>
       </div>
-      <button type="button" class="btn btn-primary" style="width:100%;margin-top:18px;" onclick="_eqConfirmarModalFecha()">Aplicar</button>
+    </div>
+    <div class="eq-confirm-sheet-btns eq-modal-centro-footer">
+      <button type="button" class="eq-confirm-btn-cancel" onclick="_eqCerrarModalFecha()">Cancelar</button>
+      <button type="button" class="eq-confirm-btn-ok" onclick="_eqConfirmarModalFecha()">Aplicar</button>
     </div>
   </div>
 
@@ -3137,7 +3132,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/ui.js?v=66148b6f"></script>
 <script src="js/eventos.js?v=ad1428aa"></script>
 <script src="js/tareas.js"></script>
-<script src="js/equipo.js?v=d7c85ae4"></script>
+<script src="js/equipo.js?v=ec46db2e"></script>
 <script src="js/home.js?v=cf4b0197"></script>
 <script src="js/reservas.js?v=e53c9c46"></script>
 <script src="js/perfil.js?v=e7e04c90"></script>

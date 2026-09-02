@@ -888,7 +888,7 @@ function _eqFiltroPeriodoModo(modo) {
    usaba la modal de Rango vieja (`.eq-cal-mini*`, ya sacada de este
    archivo/css/equipo.css -- sin más consumidores tras este cambio).
 
-   3 vistas dentro del mismo bottom sheet (`_eqCalFecha.vista`, ver
+   3 vistas dentro de la misma modal (`_eqCalFecha.vista`, ver
    `_eqRenderModalFecha()`/`_eqCalFechaRenderContenido()` más abajo -- TODOS
    los cambios de vista/mes/día pintan a través de esa única función, que
    anima la transición, ver el bloque grande de más abajo, "Animación de
@@ -910,7 +910,7 @@ function _eqFiltroPeriodoModo(modo) {
    sentido mirando días -- se ocultan con `visibility:hidden` (no `display`,
    para no correr los labels del centro al sacar 1 de los 3 hijos de
    `.ev-ant-cal-nav`, `justify-content:space-between`) en 'meses'/'anios'.
-   El título del sheet (`#eq-modal-fecha-titulo`) es DINÁMICO por vista
+   El título de la modal (`#eq-modal-fecha-titulo`) es DINÁMICO por vista
    ("Elige la fecha"/"Elige el mes"/"Elige el año", pedido explícito,
    "limpiar textos" -- reemplaza un texto secundario redundante que vivía
    antes en el header mismo, "Elige un año"/"Elige un mes", ya sacado del
@@ -962,13 +962,15 @@ function _eqFiltroPeriodoModo(modo) {
       todavía en opacity:0, así que medir acá no se ve saltar) también mide
       el `scrollHeight` NUEVO y se lo asigna a `viewport.style.maxHeight` --
       la `transition` de esa clase anima el resize del wrapper (y por lo
-      tanto el alto real del bottom sheet, que crece/encoge con su
-      contenido) en paralelo al fade. Sin el bug de "medir con la pantalla
-      en display:none da 0" (documentado en la cabecera de este archivo):
-      esta función solo corre con el sheet YA abierto y visible -- el primer
-      render (`_eqAbrirModalFecha()`) pasa `instant:true` y salta toda la
-      coreografía (`viewport.style.maxHeight='none'` directo, sin medir),
-      mismo criterio que el resto de acordeones que nacen ya abiertos. */
+      tanto el alto real de la modal, que crece/encoge con su contenido) en
+      paralelo al fade. Esta modal ya no pasa por `display:none` en ningún
+      momento (`.eq-modal-centro-*`/css/equipo.css -- oculta/revela con
+      `opacity`+`pointer-events`, no con `display`), así que ni siquiera
+      aplica el bug de "medir con la pantalla en display:none da 0"
+      documentado en la cabecera de este archivo -- `instant:true` en el
+      primer render (`_eqAbrirModalFecha()`) sigue existiendo, pero solo
+      para no duplicar el fade de la modal entera con un 2do fade del
+      contenido encima, ver ese comentario. */
 var _eqCalFecha = { anioMostrado: null, mesMostrado: null, desdeClave: null, hastaClave: null, vista: 'dias' };
 function _eqAbrirModalFecha() {
   var hoy = new Date();
@@ -985,22 +987,29 @@ function _eqAbrirModalFecha() {
     _eqCalFecha.desdeClave = null;
     _eqCalFecha.hastaClave = null;
   }
+  // `true` -- primer paint instantáneo, sin el fade+resize normal de
+  // `_eqCalFechaRenderContenido()`: la modal entera ya está entrando con su
+  // propia animación fade+scale (`.visible`, más abajo), un 2do fade del
+  // contenido por encima sería redundante, no un fix de ningún bug de
+  // medición (a diferencia del bsheet anterior, esta modal nunca pasa por
+  // `display:none` -- ver `.eq-modal-centro-*`/css/equipo.css -- así que
+  // `scrollHeight` siempre mide real, con o sin `.visible`).
   _eqRenderModalFecha(true);
   var ov = document.getElementById('eq-modal-fecha-overlay');
   var sh = document.getElementById('eq-modal-fecha-sheet');
   if (!ov || !sh) return;
-  ov.style.display = 'block';
-  sh.style.display = 'block';
-  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  ov.classList.add('visible');
+  sh.classList.add('visible');
 }
+// Mismo mecanismo "siempre montada, opacity+pointer-events" que
+// `.eq-confirm-sheet-overlay`/`_eqConfirmarAdminCancelar()` (más abajo en
+// este archivo) -- sin `setTimeout` ni `display:none`: sacar `.visible`
+// alcanza, la propia `transition` de css/equipo.css anima la salida.
 function _eqCerrarModalFecha() {
   var ov = document.getElementById('eq-modal-fecha-overlay');
   var sh = document.getElementById('eq-modal-fecha-sheet');
-  if (sh) sh.style.transform = 'translateY(100%)';
-  setTimeout(function() {
-    if (sh) sh.style.display = 'none';
-    if (ov) ov.style.display = 'none';
-  }, 350);
+  if (ov) ov.classList.remove('visible');
+  if (sh) sh.classList.remove('visible');
 }
 function _eqCalFechaMoverMes(dir) {
   _eqCalFecha.mesMostrado += dir;

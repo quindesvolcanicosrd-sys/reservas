@@ -127,7 +127,79 @@
 .app-nav-search + .eq-filtro-seccion { margin-top: 20px; }
 .eq-filtro-seccion + .eq-filtro-seccion { margin-top: 18px; }
 
-/* ── Modal calendario "Fecha" (rediseño, ver MANIFEST.md) ─────────────────
+/* ── Modal centrada "Fecha" (rediseño, ver MANIFEST.md -- "convertir el
+   bottom sheet del selector de fecha a una modal centrada tipo Google
+   Calendar") -- reemplaza por completo el `.bsheet-overlay`/`.bsheet` que
+   tenía antes (slide-up desde abajo, ancho tope 480px, alto variable según
+   contenido) por un componente propio, `.eq-modal-centro-*`. Mismo patrón
+   "siempre montada, `opacity:0`+`pointer-events:none` en reposo, clase
+   `.visible` la revela" que YA usa `.eq-confirm-sheet-overlay`/
+   `.eq-confirm-sheet` (más abajo en este archivo, el sheet de confirmación
+   "dar acceso admin") -- reusado tal cual en vez de reinventar el
+   mecanismo `display:none`+`setTimeout` de los bsheets: sin `display:none`
+   de por medio, `_eqCalFechaRenderContenido()`/js/equipo.js puede medir
+   `scrollHeight` en cualquier momento sin el bug de "medir con
+   display:none da 0" documentado en la cabecera de js/equipo.js -- ya ni
+   hace falta el guard `instant` de esa función para EVITAR ese bug (sigue
+   existiendo, pero ahora solo para que el primer paint no haga un 2do fade
+   redundante sobre el fade+scale de la modal entera, ver
+   `_eqAbrirModalFecha()`). La card CENTRADA en el viewport (`position:fixed`
+   + `inset:0` + `margin:auto` + ancho/alto fijos -- centra un elemento
+   `fixed` con dimensiones explícitas sin necesitar un wrapper flex nuevo)
+   con entrada fade+scale (pedido explícito: "aparece desde el centro, no
+   desde abajo") en vez de slide-up. Alto FIJO ~520px con `max-height:90vh`
+   como techo de seguridad en viewports chicos (pedido explícito: "altura
+   fija suficiente para mostrar el calendario completo sin cortes") -- a
+   diferencia de un bsheet (que crece con su contenido), acá el contenido
+   nunca debería necesitar más alto que eso; `overflow-y:auto` en
+   `.eq-modal-centro-body` queda como red de seguridad, no como
+   comportamiento esperado. Estructura en 3 franjas fijas
+   (`display:flex;flex-direction:column`): header (título + botón cerrar
+   "×", `.eq-modal-centro-header`), body scrolleable (`.eq-modal-centro-body`,
+   contiene el calendario -- ver el bloque siguiente, "Modal calendario
+   'Fecha'", sin cambios de esa lógica en esta ronda) y footer fijo
+   (`.eq-modal-centro-footer`, reusa `.eq-confirm-sheet-btns`/
+   `.eq-confirm-btn-cancel`/`.eq-confirm-btn-ok`, más abajo en este archivo
+   -- MISMO componente 2-botones que ya usa `#eq-sheet-confirm-admin`/
+   index.html, sin inventar un botón nuevo -- pedido explícito, "cerrarse al
+   tocar el overlay o el botón Cancelar": antes el único botón del sheet era
+   "Aplicar", sin ningún "Cancelar" explícito -- el cierre dependía de la
+   manija/drag, que esta modal ya no tiene). `shared/bsheet.js`
+   (drag-to-close de la manija) queda automáticamente fuera de juego -- ese
+   listener delegado busca un `.bsheet` ancestro real, que esta card ya no
+   tiene. */
+.eq-modal-centro-overlay {
+  position: fixed; inset: 0; z-index: 9700;
+  background: var(--overlay-dark); opacity: 0; pointer-events: none;
+  transition: opacity 0.28s ease;
+}
+.eq-modal-centro-overlay.visible { opacity: 1; pointer-events: all; }
+.eq-modal-centro-card {
+  position: fixed; z-index: 9701; inset: 0; margin: auto;
+  width: min(400px, 92vw); height: min(520px, 90vh);
+  display: flex; flex-direction: column; background: var(--bg); border: 1px solid var(--border-light);
+  border-radius: 20px; overflow: hidden;
+  opacity: 0; transform: scale(0.92); pointer-events: none;
+  transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.16,1,0.3,1);
+}
+.eq-modal-centro-card.visible { opacity: 1; transform: scale(1); pointer-events: all; }
+.eq-modal-centro-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 16px 8px 12px 20px; flex-shrink: 0; border-bottom: 1px solid var(--border-light);
+}
+.eq-modal-centro-titulo { font-size: 1rem; font-weight: 800; color: var(--text); }
+.eq-modal-centro-cerrar {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 36px; height: 36px; border-radius: 50%; background: none; border: none;
+  color: var(--muted); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) { .eq-modal-centro-cerrar:hover { background: var(--brand-lightest); color: var(--text); } }
+.eq-modal-centro-body { flex: 1; overflow-y: auto; padding: 16px; }
+.eq-modal-centro-footer { padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px)); flex-shrink: 0; border-top: 1px solid var(--border-light); }
+
+/* ── Modal calendario "Fecha" (contenido interno, sin cambios de esta ronda
+   -- ver el bloque de arriba, "Modal centrada 'Fecha'", para el chrome
+   exterior nuevo) ────────────────────────────────────────────────────────
    3 vistas dentro del mismo sheet -- días/meses/años, ver el comentario
    grande en js/equipo.js ("Modal 'Elige la fecha'") para el detalle
    completo. El header (`.ev-ant-cal-nav*`), la grilla de días
