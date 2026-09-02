@@ -127,6 +127,45 @@
 .app-nav-search + .eq-filtro-seccion { margin-top: 20px; }
 .eq-filtro-seccion + .eq-filtro-seccion { margin-top: 18px; }
 
+/* ── Pills de filtro (período + rol) — estilo OUTLINED igual a Eventos
+   (rediseño, ver MANIFEST.md -- "cambiar el estilo visual de los pills de
+   filtro de Equipo para que coincidan con los pills de Eventos") -- copiado
+   de `.ev-filtro-trigger`/`.ev-filtro-activo` (css/eventos.css, los
+   triggers "Lugar"/"Tipo"): inactivo = borde sutil + fondo neutro + texto
+   secundario; activo = borde + texto de marca + fondo apenas teñido (NO
+   relleno sólido). Reemplaza el look default de `.aj-pill`
+   (`perfil.css`) para estos 2 contenedores puntuales -- esa clase es
+   compartida por TODA la app (selección de talla, tipo de documento, etc.)
+   y su versión activa (relleno sólido `--brand`+texto blanco) es la
+   correcta para esos otros usos, así que el override va SCOPEADO a
+   `.eq-periodo-pills`/`#eq-filtro-rol-pills` (selector de descendiente,
+   nunca `.aj-pill` a secas -- mismo criterio que el resto de
+   compactaciones locales de este archivo, ver `#eq-misstats-panel-inner
+   .eq-stat-card` más abajo), nunca tocando la clase base. Solo variables de
+   `colors.css`, ninguna acá es nueva -- las mismas 4 que ya usa
+   `.ev-filtro-trigger`. */
+.eq-periodo-pills .aj-pill,
+#eq-filtro-rol-pills .aj-pill {
+  background: var(--surface-light); color: var(--text-2); border: 1.5px solid var(--border-light);
+}
+.eq-periodo-pills .aj-pill.activa,
+#eq-filtro-rol-pills .aj-pill.activa {
+  background: var(--brand-lightest); color: var(--brand); border-color: var(--brand);
+}
+/* Chevron ∨ del pill "Fecha" (pedido explícito) -- SIEMPRE presente y fijo
+   (nunca rotado/flippeado): a diferencia de `.ev-filtro-trigger`, donde el
+   chevron indica un acordeón inline que se abre/cierra en el lugar, "Fecha"
+   siempre abre la misma modal de calendario (`_eqAbrirModalFecha()`), así
+   que el ícono es un afiche fijo de "esto abre algo", no un indicador de
+   estado. "Histórico" (toggle simple, sin nada que abrir) y los pills de
+   rol (Jammer/Blocker/etc., mismo criterio) no llevan chevron -- sin
+   markup ni CSS de ícono en ninguno de los 2. Color heredado del pill
+   (`currentColor` implícito de los íconos ligature de Material Symbols) --
+   sin fijar un color propio, sigue el mismo texto muted/marca del estado
+   activo/inactivo sin duplicar esa lógica acá. */
+.eq-pill-fecha { gap: 4px; }
+.eq-pill-fecha .eq-pill-chevron { font-size: 16px; flex-shrink: 0; }
+
 /* ── Modal centrada "Fecha" (rediseño, ver MANIFEST.md -- "convertir el
    bottom sheet del selector de fecha a una modal centrada tipo Google
    Calendar") -- reemplaza por completo el `.bsheet-overlay`/`.bsheet` que

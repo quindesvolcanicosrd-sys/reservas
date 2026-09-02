@@ -2050,7 +2050,7 @@ function _eqPerfilContenidoHtml(p) {
   var periodoPillsHtml = '<div class="eq-perfil-stats-periodo">' +
       '<p class="eq-tier-label" style="margin:0 0 6px">Período</p>' +
       '<div class="aj-pills-row eq-periodo-pills">' +
-        '<span class="aj-pill' + (_eqFiltroPeriodo.modo === 'fecha' ? ' activa' : '') + '" data-modo="fecha" onclick="_eqFiltroPeriodoModo(\'fecha\')">Fecha</span>' +
+        '<span class="aj-pill eq-pill-fecha' + (_eqFiltroPeriodo.modo === 'fecha' ? ' activa' : '') + '" data-modo="fecha" onclick="_eqFiltroPeriodoModo(\'fecha\')">Fecha<span class="material-symbols-outlined eq-pill-chevron">expand_more</span></span>' +
         '<span class="aj-pill' + (_eqFiltroPeriodo.modo === 'historico' ? ' activa' : '') + '" data-modo="historico" onclick="_eqFiltroPeriodoModo(\'historico\')">Histórico</span>' +
       '</div>' +
     '</div>';
