@@ -734,6 +734,25 @@ function _eqBuscar(valor) {
   _eqRenderInactivos();
   _eqRenderLesionadxs();
 }
+// Orden de la lista dentro de cada acordeón (bug real corregido, ver
+// MANIFEST.md/CHANGELOG.md -- "ordenar por puntos totales, no
+// alfabético"): `_eqPersonas` llega de `getEquipo()` ordenada por
+// `username` (`.order('username')`, supabase/functions/api/index.ts) --
+// sin ningún `.sort()` propio de este lado, cada render heredaba ese
+// orden alfabético tal cual. `puntosTotal` ya respeta el período activo
+// (mes/rango/histórico, mismo campo que pintan las cards) -- reusado tal
+// cual, sin recalcular nada acá. Empate -> alfabético por `nombreDerby`
+// (`localeCompare('es')`, ordena acentos/ñ correctamente) como desempate,
+// pedido explícito. Comparador compartido por los 4 renders que arman un
+// acordeón real (Favoritos/Quindes-Mirlxs/Inactivos/Lesionadxs, más abajo
+// en este archivo) -- NO se aplica a `_eqRenderPorRol()` (vista alternativa
+// de búsqueda por rol, fuera del alcance de este pedido, que habla de "cada
+// acordeón" refiriéndose a los reales de la lista, no a esa vista aparte).
+function _eqCompararPorPuntos(a, b) {
+  var pa = Number(a.puntosTotal) || 0, pb = Number(b.puntosTotal) || 0;
+  if (pb !== pa) return pb - pa;
+  return String(a.nombreDerby || '').localeCompare(String(b.nombreDerby || ''), 'es');
+}
 function _eqPasaBusqueda(p) {
   if (!_eqBusqueda) return true;
   // Por email (Batch 4) -- el único de los 4 modos que sigue usando la
@@ -821,12 +840,38 @@ function _eqTogglePanel(tag) {
   if (_eqPanelAbierto) _eqCerrarPanel(_eqPanelAbierto);
   _eqAbrirPanel(tag);
 }
+// Fade out/in de los sticky headers mientras cualquier panel de la nav
+// está abierto (bug real corregido, ver MANIFEST.md/CHANGELOG.md --
+// "acordeones se rompen cuando el panel está abierto"): `_eqActualizarStickyHeaders()`
+// (top/left/width de los headers `--stuck`) solo se llama al abrir/cerrar
+// vía `setTimeout(...,300)`, DESPUÉS de que termina la transición CSS de
+// `max-height` del panel (0.28s) -- durante esos ~280ms el alto real de
+// `#eq-sticky-header` cambia continuamente (por la propia transición) pero
+// ningún header stuck se resincroniza en el medio, así que quedan mal
+// posicionados/superpuestos justo mientras el panel se expande o se
+// contrae. En vez de perseguir esa sincronización a mano frame a frame
+// (requeriría un rAF loop calcado a la curva de easing del `max-height`,
+// bastante más frágil), la solución pedida es más simple: ocultar del
+// todo los headers stuck mientras CUALQUIER panel está abierto -- nada que
+// se vea "roto" si no se está pintando. `.eq-panel-abierto` en `#s-equipo`
+// (clase, no en cada header suelto) + `.eq-grupo-header--stuck` con
+// `opacity`/`transition` propios (css/equipo.css) -- así CUALQUIER header
+// que pase a stuck MIENTRAS el panel sigue abierto (ej. el usuario scrollea
+// más abajo sin cerrar el panel) también nace oculto, sin depender de que
+// esta función lo haya "agarrado" en el instante exacto de abrir/cerrar.
+// Los headers en posición NATURAL (sin `--stuck`) no tienen ninguna regla
+// de opacidad ligada a esta clase -- no se ven afectados (pedido explícito).
+function _eqSincronizarClasePanelAbierto() {
+  var s = document.getElementById('s-equipo');
+  if (s) s.classList.toggle('eq-panel-abierto', !!_eqPanelAbierto);
+}
 function _eqAbrirPanel(tag) {
   var cfg = _EQ_PANELES[tag];
   var panel = document.getElementById(cfg.el);
   var btn = document.getElementById(cfg.btn);
   if (!panel || !btn) return;
   _eqPanelAbierto = tag;
+  _eqSincronizarClasePanelAbierto();
   panel.classList.add('abierta');
   panel.style.maxHeight = panel.scrollHeight + 'px';
   btn.classList.add('activo');
@@ -846,6 +891,7 @@ function _eqCerrarPanel(tag) {
   var panel = document.getElementById(cfg.el);
   var btn = document.getElementById(cfg.btn);
   if (_eqPanelAbierto === tag) _eqPanelAbierto = null;
+  _eqSincronizarClasePanelAbierto();
   if (panel) {
     panel.style.maxHeight = panel.scrollHeight + 'px';
     requestAnimationFrame(function() {
@@ -954,6 +1000,7 @@ function _eqInicializarCierrePanelesPorScroll() {
     panel.style.transition = '';
     if (arrastrado >= _eqListaDragAlturaOriginal * _EQ_PANEL_DRAG_UMBRAL_FRACCION) {
       _eqPanelAbierto = null;
+      _eqSincronizarClasePanelAbierto();
       requestAnimationFrame(function() {
         panel.classList.remove('abierta');
         panel.style.maxHeight = '0px';
@@ -1772,7 +1819,7 @@ function _eqRenderFavoritos() {
   var pillEl = document.getElementById('eq-favoritos-pill');
   if (!wrap || !cont) return;
   var todas = _eqFavoritos().map(_eqPersonaPorId).filter(function(p) { return !!p && !_eqEsUsuarioActual(p) && !_eqEsInactivo(p); }).filter(_eqPasaFiltroRol);
-  var visibles = _eqBusqueda ? todas.filter(_eqPasaBusqueda) : todas;
+  var visibles = (_eqBusqueda ? todas.filter(_eqPasaBusqueda) : todas).sort(_eqCompararPorPuntos);
   cont.innerHTML = visibles.map(_eqFilaHtml).join('');
   if (pillEl) pillEl.textContent = visibles.length;
   wrap.style.display = visibles.length ? 'block' : 'none';
@@ -1802,7 +1849,7 @@ function _eqRenderGrupo(rol) {
   var cont = document.getElementById('eq-grupo-' + key + '-lista');
   var pillEl = document.getElementById('eq-grupo-' + key + '-pill');
   if (!wrap || !cont) return;
-  var filtradas = _eqPersonas.filter(function(p) { return p.rol === rol; }).filter(function(p) { return !_eqEsUsuarioActual(p) && !_eqEsInactivo(p); }).filter(_eqPasaBusqueda).filter(_eqPasaFiltroRol);
+  var filtradas = _eqPersonas.filter(function(p) { return p.rol === rol; }).filter(function(p) { return !_eqEsUsuarioActual(p) && !_eqEsInactivo(p); }).filter(_eqPasaBusqueda).filter(_eqPasaFiltroRol).sort(_eqCompararPorPuntos);
   wrap.style.display = filtradas.length ? '' : 'none';
   if (pillEl) pillEl.textContent = filtradas.length;
   cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
@@ -1844,7 +1891,7 @@ function _eqRenderInactivos() {
   var cont = document.getElementById('eq-grupo-inactivos-lista');
   var pillEl = document.getElementById('eq-grupo-inactivos-pill');
   if (!wrap || !cont) return;
-  var filtradas = _eqPersonas.filter(function(p) { return _eqEsInactivo(p) && !_eqEsUsuarioActual(p); }).filter(_eqPasaBusqueda).filter(_eqPasaFiltroRol);
+  var filtradas = _eqPersonas.filter(function(p) { return _eqEsInactivo(p) && !_eqEsUsuarioActual(p); }).filter(_eqPasaBusqueda).filter(_eqPasaFiltroRol).sort(_eqCompararPorPuntos);
   wrap.style.display = filtradas.length ? '' : 'none';
   if (pillEl) pillEl.textContent = filtradas.length;
   cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
@@ -1866,7 +1913,7 @@ function _eqRenderLesionadxs() {
   var cont = document.getElementById('eq-grupo-lesionadxs-lista');
   var pillEl = document.getElementById('eq-grupo-lesionadxs-pill');
   if (!wrap || !cont) return;
-  var filtradas = _eqPersonas.filter(function(p) { return p.estado === 'Lesionadx' && !_eqEsUsuarioActual(p); }).filter(_eqPasaBusqueda).filter(_eqPasaFiltroRol);
+  var filtradas = _eqPersonas.filter(function(p) { return p.estado === 'Lesionadx' && !_eqEsUsuarioActual(p); }).filter(_eqPasaBusqueda).filter(_eqPasaFiltroRol).sort(_eqCompararPorPuntos);
   wrap.style.display = filtradas.length ? '' : 'none';
   if (pillEl) pillEl.textContent = filtradas.length;
   cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
@@ -1899,6 +1946,7 @@ function _eqRenderMisEstadisticas() {
   var cont = document.getElementById('eq-misstats-panel-inner');
   var toggleBtn = document.getElementById('eq-misstats-toggle-btn');
   var toggleAvatar = document.getElementById('eq-misstats-toggle-avatar');
+  var toggleTendencia = document.getElementById('eq-misstats-toggle-tendencia');
   if (!cont || !toggleBtn) return;
   var persona = _eqPersonas.filter(function(p) { return _eqEsUsuarioActual(p); })[0];
   if (!persona) {
@@ -1915,6 +1963,23 @@ function _eqRenderMisEstadisticas() {
     toggleAvatar.setAttribute('data-nombre', persona.nombreDerby || persona.username);
     toggleAvatar.setAttribute('data-foto', persona.fotoPerfil || '');
   }
+  // Chevron de tendencia sobre el avatar chico del botón colapsado (bug
+  // real corregido, ver MANIFEST.md/CHANGELOG.md -- "chevron en Mis
+  // estadísticas"): el tamaño base de `.eq-tendencia-badge` (18px/13px,
+  // css/equipo.css) ya estaba pensado para este lugar exacto desde que se
+  // agregó la feature de tendencia ("usado hoy solo en 'Mis estadísticas'"
+  // dice el comentario de ese momento) pero nunca se llegó a conectar acá
+  // en el JS -- el panel en sí no tiene foto propia (recortada a propósito
+  // en una ronda anterior, "sin foto/nombre/número"), así que este avatar
+  // chico de la nav (siempre visible, panel abierto o cerrado) es el único
+  // lugar real donde puede vivir. `_eqTendenciaBadgeHtml()` sin
+  // `claseTamano` (tamaño base) -- mismo criterio que el resto de esta
+  // función, sin `_eqAvatarConTendenciaHtml()` completo porque el avatar
+  // en sí ya es markup estático en index.html (`#eq-misstats-toggle-avatar`,
+  // mutado con `data-nombre`/`data-foto` arriba, nunca reconstruido) --
+  // solo el badge se re-renderiza acá, adentro de su propio wrapper
+  // `.eq-avatar-badge-wrap` (index.html) ya `position:relative`.
+  if (toggleTendencia) toggleTendencia.innerHTML = _eqTendenciaBadgeHtml(persona);
   var statsCalc = _eqStatsCalc(persona);
   var estadoTexto = persona.estado === 'Lesionadx' ? 'Lesionadx' : persona.estado === 'Activx' ? 'Activo' : 'Inactivo';
   var estadoClase = persona.estado === 'Lesionadx' ? 'dat-estado-lesion' : persona.estado === 'Activx' ? 'dat-estado-activo' : 'dat-estado-inactivo';

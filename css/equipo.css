@@ -186,7 +186,22 @@
   font-size: 0.62rem; font-weight: 800; display: flex; align-items: center; justify-content: center;
   line-height: 1; box-shadow: 0 0 0 2px var(--card-bg);
 }
-.eq-header-panel { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
+/* `background: var(--bg)` (bug real corregido, ver MANIFEST.md/CHANGELOG.md
+   -- "borde del panel con contenido de la lista transparentándose por
+   debajo"): antes este contenedor (el que de verdad recorta el contenido,
+   `overflow:hidden`, durante el colapso progresivo al scrollear -- ver
+   arriba) no pintaba NINGÚN fondo propio -- solo `.eq-misstats-panel-inner`/
+   `.eq-busqueda-panel-inner` (más abajo) lo hacen, con un `margin-top:10px`
+   antes de esa tarjeta. En flujo normal ese hueco de 10px queda cubierto
+   por `background:var(--bg)` de `.eq-sticky-header` (su padre, ver arriba
+   en este archivo) -- pero durante el arrastre en vivo (`_eqInicializarCierrePanelesPorScroll()`,
+   js/equipo.js, `panel.style.maxHeight` pisado en cada `touchmove`) el
+   recorte puede caer justo en ese hueco sin fondo propio, dejando ver una
+   franja del roster que sigue scrolleando detrás -- exactamente el "borde
+   transparentándose" reportado. Fondo opaco DIRECTO en el contenedor que
+   recorta, sin depender de ningún padre/hijo, elimina la franja pase lo
+   que pase con la clip-line en cualquier instante de la animación. */
+.eq-header-panel { max-height: 0; overflow: hidden; background: var(--bg); transition: max-height 0.28s var(--ease-sheet); }
 .eq-header-panel.abierta { margin-bottom: 18px; }
 .eq-busqueda-panel-inner {
   background: var(--surface-2); border-radius: 16px; padding: 16px;
@@ -504,7 +519,28 @@
    contenido saltaría hacia arriba el alto exacto del header apenas se
    vuelve stuck. */
 .eq-grupo-header-spacer { height: 0; }
-.eq-grupo-header--stuck { position: fixed; z-index: 5; background: var(--bg); }
+/* `transition:opacity` vive en la regla BASE (no solo en `.eq-panel-abierto`
+   de abajo) -- necesaria en los 2 sentidos: cuando `#s-equipo` gana
+   `.eq-panel-abierto` (fade out) Y cuando lo pierde (fade in, la regla de
+   abajo deja de aplicar y el header vuelve a su opacity normal) -- sin la
+   `transition` acá, ese 2do caso sería un salto seco, no una animación. */
+.eq-grupo-header--stuck { position: fixed; z-index: 5; background: var(--bg); transition: opacity 0.2s ease; }
+/* Fade out/in de los headers stuck mientras cualquier panel de la nav está
+   abierto (bug real corregido, ver MANIFEST.md/CHANGELOG.md -- "acordeones
+   se rompen cuando el panel está abierto") -- ver el comentario grande en
+   `_eqSincronizarClasePanelAbierto()`/js/equipo.js para el porqué completo:
+   en resumen, el `top`/`left`/`width` de estos headers solo se resincroniza
+   300ms DESPUÉS de que termina la transición de `max-height` del panel
+   (0.28s), así que durante esos ~280ms quedan mal posicionados/superpuestos
+   mientras el panel se expande o se contrae -- en vez de perseguir esa
+   sincronización frame a frame, se ocultan del todo mientras dura. Scopeado
+   a `#s-equipo.eq-panel-abierto` (clase en la pantalla, no en cada header
+   suelto) -- así un header que recién pasa a stuck MIENTRAS el panel sigue
+   abierto (el usuario scrollea más sin cerrarlo) también nace oculto, sin
+   depender de haber estado stuck en el instante exacto de abrir/cerrar.
+   Los headers en posición NATURAL (sin `.eq-grupo-header--stuck`) no están
+   alcanzados por este selector -- no se ven afectados (pedido explícito). */
+#s-equipo.eq-panel-abierto .eq-grupo-header--stuck { opacity: 0; pointer-events: none; }
 .eq-grupo-linea { flex: 1; height: 1px; background: var(--border-light); }
 .eq-grupo-pill {
   flex-shrink: 0; background: var(--brand-light); color: var(--brand);
