@@ -891,7 +891,25 @@ function _eqCerrarPanel(tag) {
   var panel = document.getElementById(cfg.el);
   var btn = document.getElementById(cfg.btn);
   if (_eqPanelAbierto === tag) _eqPanelAbierto = null;
-  _eqSincronizarClasePanelAbierto();
+  // Bug real corregido (ver MANIFEST.md/CHANGELOG.md -- "glitch visual al
+  // colapsar Mis estadísticas: el header sticky aparece desplazado"): a
+  // diferencia de `_eqAbrirPanel()` (arriba -- ahí SÍ hay que sincronizar
+  // la clase de una, para ocultar los headers ANTES de que la nav empiece
+  // a crecer), acá NO se llama `_eqSincronizarClasePanelAbierto()` todavía
+  // -- hacerlo de una sacaba `.eq-panel-abierto` de `#s-equipo` en el
+  // mismo instante en que `_eqPanelAbierto` pasa a `null`, lo que
+  // reaparecía (fade-in) los headers stuck DE INMEDIATO, mientras la
+  // transición de `max-height` del panel (0.28s) recién estaba empezando
+  // -- sus `top`/`left`/`width` seguían siendo los de la nav TODAVÍA
+  // abierta (`_eqActualizarStickyHeaders()` no corre hasta el
+  // `setTimeout(...,300)` de más abajo), así que quedaban visibles en la
+  // posición vieja durante todo el colapso. Fix: la clase se queda tal
+  // cual está (todavía `.eq-panel-abierto`, headers ocultos) durante toda
+  // la transición -- recién se sincroniza en el mismo `setTimeout` de
+  // abajo, DESPUÉS de recalcular las posiciones (`_eqActualizarStickyHeaders()`
+  // primero, `_eqSincronizarClasePanelAbierto()` después) -- para cuando
+  // los headers reaparecen (fade-in) ya están en su lugar correcto, sin
+  // ningún frame intermedio con la posición vieja.
   if (panel) {
     panel.style.maxHeight = panel.scrollHeight + 'px';
     requestAnimationFrame(function() {
@@ -902,7 +920,10 @@ function _eqCerrarPanel(tag) {
     });
   }
   if (btn) btn.classList.remove('activo');
-  setTimeout(_eqActualizarStickyHeaders, 300);
+  setTimeout(function() {
+    _eqActualizarStickyHeaders();
+    _eqSincronizarClasePanelAbierto();
+  }, 300);
 }
 
 /* ── Colapso progresivo de "Mis estadísticas" al scrollear (ver MANIFEST.md
@@ -1000,7 +1021,12 @@ function _eqInicializarCierrePanelesPorScroll() {
     panel.style.transition = '';
     if (arrastrado >= _eqListaDragAlturaOriginal * _EQ_PANEL_DRAG_UMBRAL_FRACCION) {
       _eqPanelAbierto = null;
-      _eqSincronizarClasePanelAbierto();
+      // Mismo bug real corregido que en `_eqCerrarPanel()` (ver ese
+      // comentario grande, más arriba) -- `_eqSincronizarClasePanelAbierto()`
+      // NO se llama acá todavía, para no reaparecer los headers stuck
+      // antes de que el snap final a `0px` (abajo) termine y
+      // `_eqActualizarStickyHeaders()` corrija sus posiciones (mismo
+      // `setTimeout(...,300)` de siempre, al final de este handler).
       requestAnimationFrame(function() {
         panel.classList.remove('abierta');
         panel.style.maxHeight = '0px';
@@ -1009,7 +1035,10 @@ function _eqInicializarCierrePanelesPorScroll() {
     } else {
       panel.style.maxHeight = _eqListaDragAlturaOriginal + 'px';
     }
-    setTimeout(_eqActualizarStickyHeaders, 300);
+    setTimeout(function() {
+      _eqActualizarStickyHeaders();
+      _eqSincronizarClasePanelAbierto();
+    }, 300);
   }, { passive: true });
 }
 _eqInicializarCierrePanelesPorScroll();
