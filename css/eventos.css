@@ -387,6 +387,45 @@
   background: var(--surface-2); border: 1.5px solid var(--border-light); border-radius: 14px;
 }
 .ev-lista-vacia .material-symbols-outlined { font-size: 2.2rem; display: block; margin-bottom: 8px; color: var(--brand); }
+/* Banner "Sin conexión" / "Datos de hace N min" (feat nueva, ver
+   MANIFEST.md/CHANGELOG.md -- "modo sin conexión completo para Eventos")
+   -- mismo tono ámbar que `--warning`/`--warning-bg`/`--warning-bdr` usa
+   en el resto de la app para avisos no bloqueantes (ej. "Llegué tarde").
+   `#ev-offline-banner` vive en flujo normal, arriba de `#ev-timeline`
+   (index.html), oculto por default -- `_offActualizarBanner()`/
+   js/offline.js decide cuándo mostrarlo. */
+.ev-offline-banner {
+  display: none; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 12px;
+  background: var(--warning-bg); border: 1px solid var(--warning-bdr); border-radius: 12px;
+}
+.ev-offline-banner-icono { font-size: 1.2rem; color: var(--warning); flex-shrink: 0; }
+.ev-offline-banner-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 0.78rem; color: var(--text); }
+.ev-offline-banner-sync { font-size: 0.7rem; color: var(--muted); }
+.ev-offline-banner-btn {
+  flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; border: none;
+  background: var(--warning-bg); color: var(--warning); display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.ev-offline-banner-btn .material-symbols-outlined { font-size: 1.15rem; }
+.ev-offline-banner-btn--girando .material-symbols-outlined { animation: ev-offline-girar 0.8s linear infinite; }
+@keyframes ev-offline-girar { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+/* Ícono "pendiente de sincronizar" sobre un control tocado sin conexión
+   (`.ev-rsvp-seg`/`#ev-asist-admin-header-<id>`) -- inyectado/sacado por
+   `_offMarcarPendiente()`/js/offline.js, sobrevive un re-render completo
+   del timeline porque se reaplica ahí mismo
+   (`_offAplicarIndicadoresPendientes()`). Offset SIN negativos (`top`/
+   `right` positivos, dentro de la caja) a propósito -- `.ev-rsvp-seg`
+   (arriba) tiene `overflow:hidden` propio (para las esquinas redondeadas
+   del indicador deslizante), un offset negativo hubiera quedado recortado
+   por ese mismo `overflow`. `.ev-asist-admin-header` ya es `position:relative`
+   implícito vía este mismo selector (no lo era antes, sin efecto en su
+   layout `flex` existente). */
+.ev-rsvp-seg, .ev-asist-admin-header { position: relative; }
+.ev-sync-badge {
+  position: absolute; top: 3px; right: 3px; font-size: 12px; width: 16px; height: 16px;
+  border-radius: 50%; background: var(--warning); color: var(--white);
+  display: flex; align-items: center; justify-content: center;
+  animation: ev-offline-girar 1.4s linear infinite; z-index: 1; pointer-events: none;
+}
 /* Separador HOY/MAÑANA/PRÓXIMA SEMANA (ver "Cambios recientes" -- restaurado,
    mismo componente que existía antes de unificar las vistas del timeline). */
 /* `scroll-margin-top` (ver "Cambios recientes" -- bug real: el separador

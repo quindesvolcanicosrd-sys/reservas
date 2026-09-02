@@ -33,7 +33,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=4dbd5b57">
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
-<link rel="stylesheet" href="css/eventos.css?v=e852ff46">
+<link rel="stylesheet" href="css/eventos.css?v=d7e1508a">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/equipo.css?v=ca906961">
 <link rel="stylesheet" href="css/perfil.css">
@@ -381,6 +381,25 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <div class="ev-filtro-burbuja" id="ev-filtro-burbuja-tipo"><div class="aj-pills-row ev-filtro-burbuja-pills" id="ev-filtro-burbuja-pills-tipo"></div></div>
           </div>
         </div>
+      </div>
+
+      <!-- Banner de modo sin conexión (feat nueva, ver MANIFEST.md/
+           CHANGELOG.md -- "modo sin conexión completo para Eventos") --
+           oculto por default, mostrado/actualizado por
+           _offActualizarBanner()/js/offline.js: sin conexión (con la hora
+           del último snapshot guardado), o con conexión pero el snapshot
+           ya pasó los 15 min sin refrescar. El botón fuerza un sync
+           manual (_offRefrescarManual()) -- mismo ícono que gira mientras
+           dura, ver css/eventos.css. -->
+      <div class="ev-offline-banner" id="ev-offline-banner" style="display:none;">
+        <span class="material-symbols-outlined ev-offline-banner-icono">cloud_off</span>
+        <div class="ev-offline-banner-texto">
+          <span id="ev-offline-banner-msg"></span>
+          <span class="ev-offline-banner-sync" id="ev-offline-banner-sync" style="display:none;"></span>
+        </div>
+        <button type="button" class="ev-offline-banner-btn" id="ev-offline-banner-btn" onclick="_offRefrescarManual()" title="Actualizar">
+          <span class="material-symbols-outlined">refresh</span>
+        </button>
       </div>
 
       <div class="ev-timeline" id="ev-timeline"></div>
@@ -3252,7 +3271,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=66148b6f"></script>
-<script src="js/eventos.js?v=579ce915"></script>
+<script src="js/eventos.js?v=7cde7664"></script>
+<script src="js/offline.js?v=2b836485"></script>
 <script src="js/tareas.js"></script>
 <script src="js/equipo.js?v=9828c802"></script>
 <script src="js/home.js?v=cf4b0197"></script>

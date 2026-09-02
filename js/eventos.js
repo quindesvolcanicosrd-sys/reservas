@@ -375,6 +375,17 @@ function _evMapCumpleBackend(raw, idx) {
 // secundarios del timeline, ninguno debería bloquear ni asustar con un error
 // visible por un problema ajeno al resto de la pantalla.
 function _evCargarDatosReales(onListo) {
+  // Modo sin conexión (feat nueva, ver MANIFEST.md/CHANGELOG.md -- "modo
+  // sin conexión completo para Eventos") -- sin red, sirve el último
+  // snapshot cacheado en IndexedDB (`_offCargarDesdeCache()`, js/offline.js)
+  // en vez de disparar los 4 pedidos de red de abajo (que fallarían
+  // igual). Chequeo de función (no solo de `navigator.onLine`) para que
+  // este archivo siga funcionando solo si offline.js no llegara a cargar
+  // por algún motivo -- degrada al camino de red de siempre.
+  if (!navigator.onLine && typeof _offCargarDesdeCache === 'function') {
+    _offCargarDesdeCache(onListo);
+    return;
+  }
   var rango = _evRangoCargaCompleto();
   var pendientes = 4;
   // Reglas de asistencia anticipada del usuario actual, cargadas en
@@ -388,7 +399,14 @@ function _evCargarDatosReales(onListo) {
   var reglasAnt = [];
   function unoListo() {
     pendientes--;
-    if (pendientes === 0) { _evAntReconciliarConReglas(reglasAnt); onListo(); }
+    if (pendientes === 0) {
+      _evAntReconciliarConReglas(reglasAnt);
+      // Cachea el snapshot recién cargado para la próxima vez que
+      // Eventos se abra sin conexión (ver offline.js) -- no-op silencioso
+      // si offline.js no cargó o IndexedDB no está disponible.
+      if (typeof _offGuardarCache === 'function') _offGuardarCache();
+      onListo();
+    }
   }
   api({ action: 'getEventosRango', desde: rango.desde, hasta: rango.hasta }, function(res) {
     _EV_EVENTOS = (res.eventos || []).map(_evMapEventoBackend);
@@ -4166,6 +4184,20 @@ function _evMarcarAsistencia(id, estado) {
   // resaltado animado de la opción tocada ya es feedback suficiente, mismo
   // criterio que el resto de la app: toasts silenciados salvo error real.
   actualizarDom(estado);
+  // Modo sin conexión (feat nueva, ver MANIFEST.md/CHANGELOG.md, js/offline.js)
+  // -- el cambio optimista de arriba (ev.miEstado/ev.rsvps + DOM) ya quedó
+  // aplicado; sin red, se encola la escritura real en vez de llamar
+  // apiPost() (que fallaría igual) y se PRESERVA el estado optimista --
+  // nunca se revierte por estar offline, a diferencia del error real de
+  // más abajo.
+  if (!navigator.onLine && typeof _offEjecutarOEncolar === 'function') {
+    _offEjecutarOEncolar({
+      tipo: 'rsvp',
+      apiParams: { action: 'marcarAsistenciaUsuario', token: _token, idEvento: id, estado: estado },
+      meta: { idEvento: id, previo: estadoAnterior, estadoNuevo: estado, descripcion: 'tu asistencia' }
+    });
+    return;
+  }
   apiPost({ action: 'marcarAsistenciaUsuario', token: _token, idEvento: id, estado: estado }, function() {}, function(e) {
     ev.miEstado = estadoAnterior;
     ev.rsvps = rsvpsAnterior;
@@ -4449,6 +4481,19 @@ function _evMarcarAsistenciaAdmin(idEvento, nombre, estado, btnEl) {
   _evActualizarListaAsistAdmin(idEvento);
   _evActualizarAsistenciaPropiaCard(idEvento);
   if (_evDetalleActual && _evDetalleActual.id === idEvento) _evActualizarStatsAsistenciaReal(ev);
+  // Modo sin conexión (feat nueva, ver MANIFEST.md/CHANGELOG.md, js/offline.js)
+  // -- mismo criterio que _evMarcarAsistencia(): el cambio optimista de
+  // arriba (ev.asistentes + DOM + contador) ya quedó aplicado, se encola
+  // la escritura real en vez de llamar apiPost() y se preserva el estado
+  // optimista sin revertir.
+  if (!navigator.onLine && typeof _offEjecutarOEncolar === 'function') {
+    _offEjecutarOEncolar({
+      tipo: 'adminMarcar',
+      apiParams: { action: 'adminMarcarAsistencia', adminToken: _adminToken, idEvento: idEvento, nombre: nombre, estado: estadoAEnviar },
+      meta: { idEvento: idEvento, nombre: nombre, previo: anteriorDeEstaPersona ? anteriorDeEstaPersona.estado : null, estadoNuevo: estadoAEnviar, descripcion: 'la asistencia de ' + nombre }
+    });
+    return;
+  }
   apiPost({ action: 'adminMarcarAsistencia', adminToken: _adminToken, idEvento: idEvento, nombre: nombre, estado: estadoAEnviar }, function() {
     // No-op hoy (el estado ya quedó aplicado arriba, optimista, antes del
     // POST) -- se confirma igual acá por si el éxito real llega a divergir
@@ -5115,6 +5160,14 @@ function _evRenderTimeline(instant, alTerminar) {
       E._evTourPrimeraReservaPendiente = false;
       setTimeout(function() { _evTourPrimeraReserva(); }, 100);
     }
+    // Modo sin conexión (ver MANIFEST.md/CHANGELOG.md, js/offline.js) --
+    // un render completo reconstruye el DOM desde cero, así que cualquier
+    // ícono de "pendiente de sincronizar" que hubiera sobre una card
+    // anterior se pierde con ella; se reaplica acá contra la cola real.
+    // El banner también se re-evalúa acá (mismo lugar donde el timeline
+    // recién quedó pintado, ver "Cambios recientes" de esta función).
+    if (typeof _offAplicarIndicadoresPendientes === 'function') _offAplicarIndicadoresPendientes();
+    if (typeof _offActualizarBanner === 'function') _offActualizarBanner();
     if (alTerminar) alTerminar();
   }, instant, _EV_TIMELINE_FADE_MS);
 }
