@@ -466,31 +466,45 @@
   background: none; border: none; padding: 10px 0; margin: 0;
   cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
 }
-/* Headers sticky apilados (rediseño, ver MANIFEST.md/CHANGELOG.md -- "sticky
-   headers apilados con comportamiento dual al tocar") -- modificador APARTE
-   de `.eq-grupo-header` (nunca fusionado a esa clase base): `.eq-grupo-header`
-   también la generan al vuelo los acordeones de la vista "por rol"
-   (`_eqRenderPorRol()`, más arriba en este archivo, un header por rol con
-   miembros) -- esos NUNCA entran en `_EQ_GRUPO_HEADERS`/js/equipo.js, así
-   que su `top` nunca se calcularía, y quedarían todos pegados a `top:0` a
-   la vez (superpuestos) si heredaran `position:sticky` de la clase base.
-   `.eq-grupo-header--sticky` se suma SOLO a los 5 headers reales de la
-   lista normal (Favoritos/Quindes/Mirlxs/Inactivxs/Lesionadxs, ver
-   index.html), nunca a los de "por rol". `top` arranca en `0` solo como
-   fallback antes del primer cálculo real -- `_eqActualizarStickyHeaders()`/
-   js/equipo.js lo pisa siempre con un valor inline (alto de la nav + headers
-   anteriores visibles apilados encima), el `position:sticky` nativo hace el
-   resto (cada header se pega en SU `top` mientras su sección todavía tiene
-   contenido debajo por scrollear, y se suelta solo cuando esa sección
-   entera ya pasó -- sin más CSS/JS que eso). `background: var(--bg)`
-   (mismo valor que `.eq-sticky-header`/`.pantalla`, no un color nuevo) --
-   necesario recién al quedar stuck, para tapar el roster que sigue
-   scrolleando detrás; en flujo normal es invisible igual, mismo color que
-   ya tiene el fondo de la pantalla ahí. `z-index:5` -- por encima del
-   roster (sin z-index propio) pero bien por debajo de `.eq-sticky-header`
-   (`z-index:100`, así nunca queda tapando la nav si sus alturas llegaran a
-   coincidir). */
-.eq-grupo-header--sticky { position: sticky; top: 0; z-index: 5; background: var(--bg); }
+/* Headers sticky apilados (rediseño REAL, ver MANIFEST.md/CHANGELOG.md --
+   "los sticky headers deben apilarse, no reemplazarse") -- `position:sticky`
+   nativo (versión anterior de esta feature) NO ALCANZA para un apilado que
+   sobreviva más allá de la sección propia: un elemento `position:sticky`
+   solo puede quedar pegado mientras su PROPIO contenedor (`.eq-grupo`/
+   `#eq-favoritos-wrap`, uno por sección) todavía tiene alto por scrollear
+   debajo -- en cuanto esa sección entera pasa, el navegador lo suelta y
+   sigue de largo con el resto del scroll (bug real: "aparece Mirlxs,
+   desaparece Quindes" en vez de acumularse). Fix: el pegado ahora lo maneja
+   `_eqActualizarStickyHeaders()`/js/equipo.js A MANO, alternando cada
+   header entre `.eq-grupo-header--sticky` (marcador, SIN estilo propio --
+   solo distingue estos 5 headers reales de los `.eq-grupo-header` al vuelo
+   de la vista "por rol", `_eqRenderPorRol()`, que nunca deben stickear) y
+   este modificador nuevo:
+   - `.eq-grupo-header--stuck` (JS la agrega/saca en cada pasada de scroll):
+     `position:fixed` con `top`/`left`/`width` inline (JS, ver
+     js/equipo.js) -- flota pegado arriba en CUALQUIER punto del scroll
+     posterior a su sección, no solo dentro de ella, así se acumula con los
+     headers stuck anteriores en vez de desaparecer con ellos.
+   `background: var(--bg)` (mismo valor que `.eq-sticky-header`/`.pantalla`,
+   no un color nuevo) -- opaco a propósito (ver MANIFEST.md -- "las cards de
+   personas se ven a través del sticky header"): sin esto, el roster que
+   sigue scrolleando detrás se vería a través del header apilado. `z-index:5`
+   -- por encima del roster (sin z-index propio) pero bien por debajo de
+   `.eq-sticky-header` (`z-index:100`, así nunca queda tapando la nav si sus
+   alturas llegaran a coincidir) -- suficiente para cubrir del todo el
+   contenido que pasa por debajo, headers stuck nunca se superponen ENTRE
+   sí (sus `top` se calculan para quedar exactamente apilados, sin overlap).
+   `.eq-grupo-header-spacer` (nuevo `<div>` vacío, index.html, uno por
+   header, JUSTO ANTES de él dentro del mismo `.eq-grupo`/
+   `#eq-favoritos-wrap`) compensa el espacio que el header deja de aportar
+   al flujo del documento apenas pasa a `position:fixed` (que lo saca del
+   flujo por completo) -- 0px mientras el header está NATURAL (no hace
+   falta, el header ya reserva su propio lugar), `header.offsetHeight`px
+   mientras está STUCK (ver js/equipo.js) -- sin este spacer, el resto del
+   contenido saltaría hacia arriba el alto exacto del header apenas se
+   vuelve stuck. */
+.eq-grupo-header-spacer { height: 0; }
+.eq-grupo-header--stuck { position: fixed; z-index: 5; background: var(--bg); }
 .eq-grupo-linea { flex: 1; height: 1px; background: var(--border-light); }
 .eq-grupo-pill {
   flex-shrink: 0; background: var(--brand-light); color: var(--brand);

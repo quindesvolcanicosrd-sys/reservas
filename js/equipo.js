@@ -2015,52 +2015,139 @@ function _eqToggleGrupo(rol) {
   }
 }
 
-/* ── Headers sticky apilados (rediseño, ver MANIFEST.md/CHANGELOG.md --
-   "sticky headers apilados con comportamiento dual al tocar") -- los 5
-   headers de sección (Favoritos/Quindes/Mirlxs/Inactivos/Lesionadxs,
+/* ── Headers sticky apilados (rediseño REAL, ver MANIFEST.md/CHANGELOG.md
+   -- "los sticky headers deben apilarse, no reemplazarse") -- los 5 headers
+   de sección (Favoritos/Quindes/Mirlxs/Inactivos/Lesionadxs,
    `.eq-grupo-header.eq-grupo-header--sticky` en index.html, ver ese
    modificador en css/equipo.css -- NUNCA fusionado a `.eq-grupo-header` a
    secas, que también generan al vuelo los acordeones de "por rol",
-   `_eqRenderPorRol()` más arriba, y esos no deben volverse sticky) se apilan
-   uno debajo del otro a medida que el usuario scrollea: cada header
-   VISIBLE recibe un `top` inline igual al alto de la nav (`#eq-sticky-header`)
-   más el alto acumulado de los headers visibles ANTERIORES a él en el DOM
-   -- puro CSS `position:sticky` hace el resto (un header queda fijo en su
-   propio `top` mientras su sección todavía tiene contenido por scrollear
-   debajo, y se suelta solo cuando el `.eq-grupo`/`.eq-favoritos-wrap` que
-   lo contiene termina de pasar -- no hace falta más JS para el apilado
-   visual en sí). `header.offsetParent === null` (mismo truco que
-   `_eqMostrarSeccionFavoritos()`, más arriba) detecta headers ocultos (un
-   grupo sin resultados, Lesionadxs sin nadie lesionadx) sin que ocupen un
-   lugar en el apilado. Recalculado desde `_eqActualizarListaVacia()`
-   (llamada al final de las 5 funciones de render -- cubre búsqueda/filtro
-   de rol/filtro de período/carga inicial), en cada resize, y al abrir/
-   cerrar cualquiera de los 2 paneles de la nav (`_eqAbrirPanel()`/
-   `_eqCerrarPanel()`/`_eqInicializarCierrePanelesPorScroll()` -- el alto de
-   `#eq-sticky-header` cambia con ellos, así que un header ya stuck necesita
-   correrse para no quedar tapado). NO hace falta recalcular al abrir/cerrar
-   un acordeón (`_eqToggleGrupo()`, arriba) -- el `top` de cada header
-   depende solo del alto de los headers ANTERIORES a él, nunca del body que
-   crece/encoge debajo suyo. */
+   `_eqRenderPorRol()` más arriba, y esos no deben volverse sticky) se
+   apilan uno debajo del otro a medida que el usuario scrollea, y SIGUEN
+   apilados aunque su propia sección ya haya pasado del todo -- solo
+   desaparecen del stack al scrollear de vuelta hacia arriba, por encima de
+   su posición original en el DOM.
+   Bug real corregido (ver MANIFEST.md -- "cuando aparece un nuevo sticky
+   header el anterior desaparece"): la 1ra versión de esta feature usaba
+   `position:sticky` nativo -- pero cada header vive dentro de su propio
+   `.eq-grupo`/`#eq-favoritos-wrap`, y un `position:sticky` SOLO puede
+   quedar pegado mientras su propio contenedor (el ancestro de layout más
+   cercano) todavía tiene alto por scrollear debajo; en cuanto esa sección
+   entera termina de pasar, el navegador lo suelta y sigue de largo con el
+   resto del scroll -- funciona perfecto DENTRO de la propia sección (por
+   eso nunca se notaba ahí), pero es estructuralmente incapaz de mantener
+   un header pegado más allá de los límites de su propia sección:
+   exactamente "aparece Mirlxs, desaparece Quindes" en vez de acumularse.
+   Fix: ya no se usa `position:sticky` -- `_eqActualizarStickyHeaders()`
+   ahora maneja el pegado A MANO, alternando cada header entre 2 modos
+   (clase `.eq-grupo-header--stuck`, css/equipo.css):
+   - NATURAL (default): el header vive en flujo normal, sin `position`
+     propio -- comportamiento de toda la vida, tap colapsa/expande.
+   - STUCK (`position:fixed`, `top`/`left`/`width` inline): flota pegado
+     arriba en CUALQUIER punto del scroll posterior a su sección, sin
+     depender de los límites de su `.eq-grupo` -- tap hace scroll-to.
+   Cada header, recorrido en orden de DOM (Favoritos→Quindes→Mirlxs→
+   Inactivos→Lesionadxs), pasa a STUCK cuando `window.scrollY` supera su
+   propio umbral (posición natural menos el alto acumulado de los headers
+   YA decididos STUCK antes que él en ESTA MISMA pasada) -- puro JS,
+   recalculado en cada evento de `scroll` de la página (throttled por
+   `requestAnimationFrame`, ver `_eqActualizarStickyHeadersThrottled()` más
+   abajo) más los mismos triggers de siempre (resize,
+   `_eqActualizarListaVacia()`, abrir/cerrar los 2 paneles de la nav). Como
+   el recorrido va sumando el alto de los headers YA stuck en la misma
+   pasada, el apilado (top dinámico = suma de los stuck anteriores) sale
+   solo, sin nada especial por header.
+   `position:fixed` saca al header del flujo del documento -- sin
+   compensar, el resto del contenido (su propio body + todo lo que sigue)
+   saltaría hacia arriba el alto exacto del header apenas se vuelve stuck.
+   `.eq-grupo-header-spacer` (nuevo, un `<div>` vacío justo ANTES de cada
+   header en index.html, dentro del mismo `.eq-grupo`/`#eq-favoritos-wrap`
+   -- así `display:none` en el grupo sigue ocultando spacer+header juntos
+   sin JS extra) es quien compensa: `0px` mientras el header está NATURAL
+   (no hace falta, el header ya reserva su propio lugar),
+   `header.offsetHeight`px mientras está STUCK (el header ya no aporta nada
+   al flujo, el spacer aporta exactamente lo mismo que aportaba antes --
+   alto total sin cambios, cero salto visual). El spacer sirve ADEMÁS como
+   referencia ESTABLE de la posición "natural" de cada header
+   (`spacer.offsetTop`) -- a diferencia del header, que una vez
+   `position:fixed` ya no tiene una posición de flujo real que leer con
+   `.offsetTop`, el spacer JAMÁS deja el flujo normal, así que su
+   `offsetTop` siempre refleja bien dónde arrancaría su sección, sin
+   importar el estado (natural/stuck) de NINGÚN header, incluido él mismo
+   (por el "alto total sin cambios" de arriba, el offsetTop de cada spacer
+   tampoco se mueve cuando otro header anterior pasa de natural a stuck o
+   viceversa).
+   `left`/`width` del header STUCK se toman de
+   `#eq-lista-contenido.getBoundingClientRect()` (mismo ancho de contenido
+   que ya tenía en flujo normal -- ni `.eq-grupo` ni `#eq-lista-contenido`
+   tienen padding propio, ver css/equipo.css) -- recalculados en cada
+   pasada, así que un `resize`/rotación de pantalla los mantiene al día
+   solos, sin listener aparte.
+   `#eq-favoritos-wrap`'s `overflow:hidden` permanente (ver
+   `_eqMostrarSeccionFavoritos()`/`_eqOcultarSeccionFavoritos()`, más
+   arriba en este archivo) sigue siendo necesario con este mecanismo nuevo
+   -- un `overflow`≠`visible` en un ancestro recorta a CUALQUIER
+   descendiente `position:fixed` durante el pintado (no solo a
+   `position:sticky`, mismo problema, otra causa) -- por eso ese wrap lo
+   sigue relajando a `visible` recién una vez asentado abierto.
+   `header.parentElement.offsetParent === null` (el header sigue siendo
+   hijo real de su `.eq-grupo` en el DOM aunque esté `position:fixed` --
+   eso nunca lo desconecta del árbol, solo cambia cómo se pinta) detecta
+   secciones ocultas (grupo sin resultados, Lesionadxs sin nadie
+   lesionadx, o `#s-equipo` no activa) -- se lee del PADRE, no del propio
+   header, porque un header `position:fixed` SIEMPRE da
+   `offsetParent === null` así esté perfectamente visible (por spec,
+   ningún elemento `fixed` tiene offsetParent), así que ese chequeo en el
+   header mismo ya no serviría para detectar "oculto". */
 var _EQ_GRUPO_HEADERS = ['eq-favoritos-header', 'eq-grupo-quindes-header', 'eq-grupo-mirlxs-header', 'eq-grupo-inactivos-header', 'eq-grupo-lesionadxs-header'];
+// Umbral de `window.scrollY` a partir del cual cada header pasa a STUCK --
+// recalculado en cada pasada de `_eqActualizarStickyHeaders()`, reusado
+// por `_eqScrollAlGrupo()` (destino del scroll suave al tocar un header
+// stuck) sin tener que re-derivarlo ahí.
+var _eqHeaderUmbral = {};
 function _eqActualizarStickyHeaders() {
   var navEl = document.getElementById('eq-sticky-header');
   var acumulado = navEl ? navEl.offsetHeight : 0;
+  var listaEl = document.getElementById('eq-lista-contenido');
+  var rectLista = listaEl ? listaEl.getBoundingClientRect() : null;
+  var scrollY = window.scrollY;
   _EQ_GRUPO_HEADERS.forEach(function(id) {
     var header = document.getElementById(id);
-    if (!header || header.offsetParent === null) return;
-    header.style.top = acumulado + 'px';
-    acumulado += header.offsetHeight;
+    if (!header) return;
+    var spacer = document.getElementById(id + '-spacer');
+    var grupo = header.parentElement;
+    if (!grupo || grupo.offsetParent === null) {
+      header.classList.remove('eq-grupo-header--stuck');
+      header.style.position = ''; header.style.top = ''; header.style.left = ''; header.style.width = '';
+      if (spacer) spacer.style.height = '0px';
+      return;
+    }
+    var offsetNatural = spacer ? spacer.offsetTop : header.offsetTop;
+    var umbral = offsetNatural - acumulado;
+    _eqHeaderUmbral[id] = umbral;
+    if (scrollY > umbral) {
+      header.classList.add('eq-grupo-header--stuck');
+      header.style.position = 'fixed';
+      header.style.top = acumulado + 'px';
+      if (rectLista) { header.style.left = rectLista.left + 'px'; header.style.width = rectLista.width + 'px'; }
+      if (spacer) spacer.style.height = header.offsetHeight + 'px';
+      acumulado += header.offsetHeight;
+    } else {
+      header.classList.remove('eq-grupo-header--stuck');
+      header.style.position = ''; header.style.top = ''; header.style.left = ''; header.style.width = '';
+      if (spacer) spacer.style.height = '0px';
+    }
   });
 }
 window.addEventListener('resize', _eqActualizarStickyHeaders);
-// Throttle por `requestAnimationFrame` (bug real corregido, ver comentario
-// grande en `_eqInicializarCierrePanelesPorScroll()` más arriba -- "header
-// sticky del acordeón se superpone sobre los nombres") -- usado durante el
-// arrastre en vivo del panel "Mis estadísticas" (`touchmove`, muchos
-// eventos por segundo) para mantener el `top` de los 5 headers al día con
-// el alto real de `#eq-sticky-header` sin forzar `offsetHeight`/layout en
-// cada frame del gesto, solo una vez por frame de pantalla.
+// Throttle por `requestAnimationFrame` -- usado tanto por el listener de
+// `scroll` de abajo (nuevo: el pegado ahora es 100% manejado a mano, así
+// que necesita reaccionar a CUALQUIER scroll de la página, no solo al
+// arrastre en vivo del panel "Mis estadísticas") como por el drag de
+// `_eqInicializarCierrePanelesPorScroll()` (bug real corregido antes, ver
+// MANIFEST.md -- "header sticky del acordeón se superpone sobre los
+// nombres") -- en ambos casos evita forzar `offsetHeight`/
+// `getBoundingClientRect()` (layout) en cada evento crudo, una sola vez
+// por frame de pantalla.
 var _eqStickyHeadersRafPendiente = false;
 function _eqActualizarStickyHeadersThrottled() {
   if (_eqStickyHeadersRafPendiente) return;
@@ -2070,28 +2157,31 @@ function _eqActualizarStickyHeadersThrottled() {
     _eqActualizarStickyHeaders();
   });
 }
+window.addEventListener('scroll', _eqActualizarStickyHeadersThrottled, { passive: true });
 
-/* Comportamiento dual al tocar un header (ver MANIFEST.md): `offsetTop` de
-   un elemento `position:sticky` siempre refleja su posición ESTÁTICA real
-   en el documento (la que tendría con `position:static`), nunca la
-   posición "pegada" actual en pantalla -- por eso alcanza con comparar
-   `window.scrollY` (más el propio `top` sticky asignado, ver abajo) contra
-   ese valor para saber si el header está en modo sticky ahora mismo, sin
-   necesitar guardar un snapshot aparte de su "posición original" en cada
-   render. El header está stuck cuando su posición estática quedaría por
-   encima de su `top` sticky asignado si no lo frenara `position:sticky` --
-   es decir, cuando `scrollY > offsetTop - top` (`>` estricto, no `>=`:
-   scrollear EXACTO a ese punto lo deja recién saliendo de sticky, se
-   considera modo natural -- coincide con el destino exacto de
-   `_eqScrollAlGrupo()`, así que un 2do tap justo después de un scroll-to ya
-   cae del lado de "expandir/contraer", sin quedar pegado en un limbo). */
+/* Comportamiento dual al tocar un header (ver MANIFEST.md): con el pegado
+   ahora manejado a mano (arriba), el estado STUCK/NATURAL de cada header
+   ya no hay que derivarlo con matemática de scroll -- `.eq-grupo-header--stuck`
+   (clase que `_eqActualizarStickyHeaders()` pone/saca en cada pasada) ES
+   la fuente de verdad, ya la tenemos. Header STUCK -> tap hace scroll
+   suave hasta `_eqHeaderUmbral[headerId]` (el mismo `scrollY` que
+   `_eqActualizarStickyHeaders()` usó para decidir que este header entra en
+   modo stuck) -- el listener de `scroll` de arriba corre en cada frame del
+   scroll suave, así que el header vuelve a NATURAL en vivo, a mitad de
+   camino de la animación, apenas `scrollY` cruza ese umbral de nuevo hacia
+   abajo (`scrollY > umbral`, `>` estricto -- aterrizar EXACTO en el umbral
+   cae del lado NATURAL, así un 2do tap justo después de un scroll-to ya
+   expande/contrae en vez de quedar en un limbo). Header NATURAL -> tap
+   llama `_eqToggleGrupo(rol)` tal cual (comportamiento de siempre) si
+   `rol` no es null -- nunca se llega acá con el header stuck (el `if` de
+   abajo corta antes), así que colapsar/expandir el acordeón mientras está
+   pegado arriba es imposible por construcción, no por un chequeo aparte. */
 function _eqHeaderEstaSticky(header) {
-  var topPx = parseFloat(header.style.top) || 0;
-  return window.scrollY > (header.offsetTop - topPx);
+  return header.classList.contains('eq-grupo-header--stuck');
 }
 function _eqScrollAlGrupo(header) {
-  var topPx = parseFloat(header.style.top) || 0;
-  window.scrollTo({ top: header.offsetTop - topPx, behavior: 'smooth' });
+  var umbral = _eqHeaderUmbral[header.id];
+  window.scrollTo({ top: umbral || 0, behavior: 'smooth' });
 }
 // `rol` null para Favoritos/Lesionadxs -- no colapsables, nunca pasan por
 // `_eqToggleGrupo()` (ver ese comentario más arriba): "comportamiento

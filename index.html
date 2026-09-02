@@ -35,7 +35,7 @@
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
 <link rel="stylesheet" href="css/eventos.css?v=e852ff46">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=b881ec39">
+<link rel="stylesheet" href="css/equipo.css?v=a82066ff">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2514,6 +2514,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            porque este grupo no es colapsable, el 2do parámetro solo importa
            en modo sticky (scroll-to). -->
       <div class="eq-grupo eq-favoritos-wrap" id="eq-favoritos-wrap" style="display:none; opacity:0;">
+        <div class="eq-grupo-header-spacer" id="eq-favoritos-header-spacer"></div>
         <button type="button" class="eq-grupo-header eq-grupo-header--sticky" id="eq-favoritos-header" onclick="_eqGrupoHeaderTap('eq-favoritos-header', null)">
           <span class="eq-grupo-linea"></span>
           <span class="eq-grupo-pill" id="eq-favoritos-pill">0</span>
@@ -2526,6 +2527,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
 
       <div class="eq-grupo" id="eq-grupo-quindes">
+        <div class="eq-grupo-header-spacer" id="eq-grupo-quindes-header-spacer"></div>
         <button type="button" class="eq-grupo-header eq-grupo-header--sticky abierto" id="eq-grupo-quindes-header" onclick="_eqGrupoHeaderTap('eq-grupo-quindes-header', 'Quindes')">
           <span class="eq-grupo-linea"></span>
           <span class="eq-grupo-pill" id="eq-grupo-quindes-pill">0</span>
@@ -2539,6 +2541,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
 
       <div class="eq-grupo" id="eq-grupo-mirlxs">
+        <div class="eq-grupo-header-spacer" id="eq-grupo-mirlxs-header-spacer"></div>
         <button type="button" class="eq-grupo-header eq-grupo-header--sticky abierto" id="eq-grupo-mirlxs-header" onclick="_eqGrupoHeaderTap('eq-grupo-mirlxs-header', 'Mirlxs')">
           <span class="eq-grupo-linea"></span>
           <span class="eq-grupo-pill" id="eq-grupo-mirlxs-pill">0</span>
@@ -2561,6 +2564,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            etc. sigue siendo "Inactivos" (`_eqGrupoHeaderTap()` de abajo
            sigue mandando ese string tal cual, sin tocar ningún id/función). -->
       <div class="eq-grupo" id="eq-grupo-inactivos">
+        <div class="eq-grupo-header-spacer" id="eq-grupo-inactivos-header-spacer"></div>
         <button type="button" class="eq-grupo-header eq-grupo-header--sticky" id="eq-grupo-inactivos-header" onclick="_eqGrupoHeaderTap('eq-grupo-inactivos-header', 'Inactivos')">
           <span class="eq-grupo-linea"></span>
           <span class="eq-grupo-pill" id="eq-grupo-inactivos-pill">0</span>
@@ -2584,6 +2588,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            mismo criterio que Favoritos (ver comentario de ese bloque, más
            arriba). -->
       <div class="eq-grupo" id="eq-grupo-lesionadxs" style="display:none;">
+        <div class="eq-grupo-header-spacer" id="eq-grupo-lesionadxs-header-spacer"></div>
         <button type="button" class="eq-grupo-header eq-grupo-header--sticky" id="eq-grupo-lesionadxs-header" onclick="_eqGrupoHeaderTap('eq-grupo-lesionadxs-header', null)">
           <span class="eq-grupo-linea"></span>
           <span class="eq-grupo-pill" id="eq-grupo-lesionadxs-pill">0</span>
@@ -3194,7 +3199,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/ui.js?v=66148b6f"></script>
 <script src="js/eventos.js?v=ad1428aa"></script>
 <script src="js/tareas.js"></script>
-<script src="js/equipo.js?v=55a751be"></script>
+<script src="js/equipo.js?v=c99b24b9"></script>
 <script src="js/home.js?v=cf4b0197"></script>
 <script src="js/reservas.js?v=e53c9c46"></script>
 <script src="js/perfil.js?v=e7e04c90"></script>
