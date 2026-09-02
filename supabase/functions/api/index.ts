@@ -1915,17 +1915,43 @@ async function recalcularPuntosAsistencia(mes: number, anio: number): Promise<{ 
   const hasta = anioSiguiente + '-' + String(mesSiguiente).padStart(2, '0') + '-01';
 
   const { data: logs, error: errorLogs } = await supabase.from('log_asistencias')
-    .select('nombre_usuario, estado, fecha_entrenamiento')
+    .select('nombre_usuario, id_evento, estado, fecha_entrenamiento, marca_temporal')
     .eq('origen', 'Admin')
     .gte('fecha_entrenamiento', desde).lt('fecha_entrenamiento', hasta);
   if (errorLogs) return { exito: false, error: errorLogs.message };
 
-  const puntosPorUsuario: Record<string, number> = {};
+  // Bug real corregido (ver MANIFEST.md/CHANGELOG.md -- "puntos de
+  // asistencia inflados por re-marcados"): `_agregarFilaLogAsistencia()`
+  // (arriba en este archivo) SIEMPRE hace `.insert()`, nunca update -- cada
+  // vez que un admin re-marca la misma persona en el mismo evento (ej.
+  // corrige "A tiempo" a "Tarde", o simplemente re-toca por las dudas) se
+  // suma una fila NUEVA a `log_asistencias`, la vieja queda ahí tal cual.
+  // Confirmado contra producción: casos reales con más de 10 filas
+  // `origen==='Admin'` para el mismo (evento, persona) -- ej. 13 marcas
+  // "A tiempo" para el mismo evento, todas contando de más. Antes de este
+  // fix, el `forEach` de abajo sumaba TODAS esas filas sin ningún criterio
+  // de de-duplicación -- 13 marcas "A tiempo" del mismo evento sumaban 13
+  // puntos en vez de 1. Fix: "última marca real por (evento, persona)"
+  // ANTES de sumar -- mismo patrón EXACTO ya usado por
+  // `_reconstruirRachasHistoricas()` (`ultimaPorClave`, más abajo en este
+  // archivo) para el mismo problema aplicado a la racha -- acá recién se
+  // extiende también a `puntos_asistencia`, que hasta ahora había quedado
+  // afuera de ese fix.
+  const ultimaPorClave: Record<string, { estado: string; nombre_usuario: string; marca: number }> = {};
   (logs ?? []).forEach((l: any) => {
     const u = String(l.nombre_usuario ?? '').trim();
     if (!u) return;
-    if (l.estado === 'A tiempo') puntosPorUsuario[u] = (puntosPorUsuario[u] || 0) + 1;
-    else if (l.estado === 'Tarde') puntosPorUsuario[u] = (puntosPorUsuario[u] || 0) + 0.5;
+    const clave = l.id_evento + '|' + u;
+    const marca = l.marca_temporal ? new Date(l.marca_temporal).getTime() : 0;
+    const actual = ultimaPorClave[clave];
+    if (!actual || marca >= actual.marca) ultimaPorClave[clave] = { estado: l.estado, nombre_usuario: u, marca };
+  });
+
+  const puntosPorUsuario: Record<string, number> = {};
+  Object.keys(ultimaPorClave).forEach((clave) => {
+    const l = ultimaPorClave[clave];
+    if (l.estado === 'A tiempo') puntosPorUsuario[l.nombre_usuario] = (puntosPorUsuario[l.nombre_usuario] || 0) + 1;
+    else if (l.estado === 'Tarde') puntosPorUsuario[l.nombre_usuario] = (puntosPorUsuario[l.nombre_usuario] || 0) + 0.5;
   });
 
   const filas = Object.keys(puntosPorUsuario).map((nombre_usuario) => ({
@@ -2766,32 +2792,32 @@ async function getDesglosePuntos(params: Record<string, any>): Promise<Record<st
 
   if (concepto === 'asistencia') {
     // Mismo criterio EXACTO que `recalcularPuntosAsistencia()` (más abajo
-    // en este archivo, `puntos_asistencia`): mismos filtros
-    // (`origen==='Admin'`, `fecha_entrenamiento` en el período), mismo
-    // valor por fila ('A tiempo'=1, 'Tarde'=0.5), SIN de-duplicar por
-    // evento -- esa función tampoco lo hace, suma cada fila de
-    // `log_asistencias` tal cual viene. A propósito NO se corrige acá:
-    // el objetivo de este desglose es que sume EXACTO lo mismo que la
-    // card "Puntos por asistencia" ya muestra (`puntosAsistencia`,
-    // `getEquipo()`, poblada por esa misma función) -- una fila de más por
-    // un re-marcado sin de-duplicar quedaría VISIBLE acá igual, lo cual es
-    // preferible a un desglose "corregido" que ya no sume lo mismo que el
-    // total de arriba (bug real potencial, ver MANIFEST.md -- posible
-    // seguimiento futuro: `recalcularPuntosAsistencia()` no de-duplica
-    // re-marcados por evento, mismo patrón de bug ya corregido para tareas
-    // en `adminValidarTarea()`, sin confirmar todavía si ocurre en la
-    // práctica).
+    // en este archivo, `puntos_asistencia`) -- incluida la de-duplicación
+    // por (evento, persona) (bug real corregido, ver MANIFEST.md/CHANGELOG.md
+    // -- "puntos de asistencia inflados por re-marcados"): sin ella, este
+    // desglose volvería a desalinearse del total de la card apenas esa otra
+    // función se corrigió para de-duplicar -- mismo motivo por el que antes
+    // (a propósito) NO de-duplicaba acá, para calzar con el total viejo
+    // (ya inflado). Ahora los 2 coinciden de nuevo, ambos de-duplicados.
     const { data: logs } = await supabase.from('log_asistencias')
-      .select('estado, fecha_entrenamiento')
+      .select('id_evento, estado, fecha_entrenamiento, marca_temporal')
       .eq('nombre_usuario', nombreUsuario).eq('origen', 'Admin')
-      .in('estado', ['A tiempo', 'Tarde'])
-      .gte('fecha_entrenamiento', periodo.desde).lt('fecha_entrenamiento', periodo.hasta)
-      .order('fecha_entrenamiento', { ascending: false });
-    const filas = (logs ?? []).map((l: any) => ({
-      fecha: String(l.fecha_entrenamiento).slice(0, 10),
-      estado: l.estado,
-      puntos: l.estado === 'A tiempo' ? 1 : 0.5,
-    }));
+      .gte('fecha_entrenamiento', periodo.desde).lt('fecha_entrenamiento', periodo.hasta);
+    const ultimaPorEventoDesglose: Record<string, { estado: string; fecha: string; marca: number }> = {};
+    (logs ?? []).forEach((l: any) => {
+      const marca = l.marca_temporal ? new Date(l.marca_temporal).getTime() : 0;
+      const actual = ultimaPorEventoDesglose[l.id_evento];
+      if (!actual || marca >= actual.marca) ultimaPorEventoDesglose[l.id_evento] = { estado: l.estado, fecha: l.fecha_entrenamiento, marca };
+    });
+    const filas = Object.keys(ultimaPorEventoDesglose)
+      .map((idEvento) => ultimaPorEventoDesglose[idEvento])
+      .filter((f) => f.estado === 'A tiempo' || f.estado === 'Tarde')
+      .sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0))
+      .map((l: any) => ({
+        fecha: String(l.fecha).slice(0, 10),
+        estado: l.estado,
+        puntos: l.estado === 'A tiempo' ? 1 : 0.5,
+      }));
     const total = filas.reduce((s: number, f: any) => s + f.puntos, 0);
     return { exito: true, concepto, filas, total };
   }
