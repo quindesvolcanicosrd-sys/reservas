@@ -825,6 +825,81 @@ function _eqCerrarPanel(tag) {
   if (btn) btn.classList.remove('activo');
 }
 
+/* ── Colapso progresivo de los paneles de nav al scrollear (ver MANIFEST.md
+   -- "el panel debe cerrarse progresivamente/animado según el scroll, no de
+   golpe") -- puerto 1:1 de `_evInicializarCierreCalendarioPorScroll()`/
+   js/eventos.js (drag-to-dismiss EN VIVO sobre el contenedor que scrollea,
+   mismo criterio que Google Calendar: mientras el dedo sigue abajo, el
+   panel se achica proporcional al arrastre, como un acordeón que sigue el
+   gesto real; recién al soltar se decide terminar de cerrar -- si se pasó
+   el umbral -- o volver al alto original -- si no --, ambos animados). A
+   diferencia de Eventos (SOLO el panel de calendario tiene este gesto -- el
+   de búsqueda ahí se cierra instantáneo al primer toque afuera, ver
+   `_evCerrarBurbujaSiFueraDe()`) acá aplica a los 2 paneles de esta sección
+   por igual (pedido explícito) -- `_eqPanelAbierto` decide cuál está activo
+   en cada momento, nunca los 2 a la vez. Escucha `#eq-lista-contenido`
+   (roster completo, equivalente de `#ev-timeline`) -- nunca el panel en sí,
+   que sigue cerrándose instantáneo por acción directa (chevron/ícono). El
+   dedo moviéndose hacia ARRIBA (`dy` negativo) es lo que hace que el
+   contenido scrollee hacia ABAJO -- por eso el panel se achica cuando `dy`
+   se hace más negativo, no al revés. Solo touch, mismo alcance que el resto
+   de los gestos de esta sección. A propósito NO reusa `_eqCerrarPanel()`
+   para terminar de cerrar -- esa función arranca fijando `max-height` al
+   `scrollHeight` COMPLETO antes de animar a 0 (pensada para cerrar desde
+   abierto-de-siempre, sin arrastre de por medio) -- llamarla acá saltaría
+   primero de vuelta al alto completo y recién ahí cerraría, un "rebote" que
+   el usuario no pidió (mismo motivo documentado en la versión de Eventos). */
+var _eqListaDragY = 0, _eqListaDragActivo = false, _eqListaDragAlturaOriginal = 0;
+var _EQ_PANEL_DRAG_UMBRAL_FRACCION = 0.3;
+function _eqInicializarCierrePanelesPorScroll() {
+  var cont = document.getElementById('eq-lista-contenido');
+  if (!cont) return;
+  cont.addEventListener('touchstart', function(e) {
+    if (e.touches.length !== 1 || !_eqPanelAbierto) return;
+    var cfg = _EQ_PANELES[_eqPanelAbierto];
+    var panel = cfg && document.getElementById(cfg.el);
+    if (!panel) return;
+    _eqListaDragY = e.touches[0].clientY;
+    _eqListaDragActivo = true;
+    _eqListaDragAlturaOriginal = panel.getBoundingClientRect().height;
+  }, { passive: true });
+  cont.addEventListener('touchmove', function(e) {
+    if (!_eqListaDragActivo || !_eqPanelAbierto) return;
+    var cfg = _EQ_PANELES[_eqPanelAbierto];
+    var panel = cfg && document.getElementById(cfg.el);
+    if (!panel) return;
+    var dy = e.touches[0].clientY - _eqListaDragY;
+    if (dy >= 0) { panel.style.transition = ''; panel.style.maxHeight = _eqListaDragAlturaOriginal + 'px'; return; }
+    panel.style.transition = 'none';
+    var nuevaAltura = Math.max(0, _eqListaDragAlturaOriginal + dy);
+    panel.style.maxHeight = nuevaAltura + 'px';
+  }, { passive: true });
+  cont.addEventListener('touchend', function(e) {
+    if (!_eqListaDragActivo) return;
+    _eqListaDragActivo = false;
+    if (!_eqPanelAbierto) return;
+    var tagCerrado = _eqPanelAbierto;
+    var cfg = _EQ_PANELES[tagCerrado];
+    var panel = cfg && document.getElementById(cfg.el);
+    var btn = cfg && document.getElementById(cfg.btn);
+    if (!panel) return;
+    var dy = e.changedTouches[0].clientY - _eqListaDragY;
+    var arrastrado = Math.max(0, -dy);
+    panel.style.transition = '';
+    if (arrastrado >= _eqListaDragAlturaOriginal * _EQ_PANEL_DRAG_UMBRAL_FRACCION) {
+      _eqPanelAbierto = null;
+      requestAnimationFrame(function() {
+        panel.classList.remove('abierta');
+        panel.style.maxHeight = '0px';
+      });
+      if (btn) btn.classList.remove('activo');
+    } else {
+      panel.style.maxHeight = _eqListaDragAlturaOriginal + 'px';
+    }
+  }, { passive: true });
+}
+_eqInicializarCierrePanelesPorScroll();
+
 // Burbujas de categoría "Puntos"/"Rol" (rediseño, ver MANIFEST.md --
 // re-ajuste: "acordeón mutuamente excluyente, comportamiento radio, solo
 // uno abierto a la vez") -- AHORA sí mismo mecanismo EXACTO que
@@ -1485,21 +1560,54 @@ function _eqAplicarFiltrosAhora() {
 // ellas corrió en cada ciclo (búsqueda, filtro de rol, filtro de período,
 // carga inicial) sin tener que acordarse de llamarla aparte en cada
 // caller.
+// Fade-in/out (ver MANIFEST.md -- "aparece de golpe sin transición, agregar
+// fade-in consistente con el resto de la app") -- antes un `style.display`
+// seco sin transición en ningún extremo, contra el principio general de
+// "Animación de entrada y salida obligatoria" (MANIFEST.md, sección 2).
+// Mismo patrón documentado ahí (doble `requestAnimationFrame` para la
+// entrada, `setTimeout` con la misma duración del CSS antes de ocultar en la
+// salida) -- 100% opacidad, sin `max-height`/slide (a diferencia de
+// `_eqMostrarSeccionFavoritos()`/`_eqOcultarSeccionFavoritos()`, pensadas
+// para una sección con contenido real debajo que necesita space real
+// mientras entra/sale -- acá es una sola card fija, un fade solo alcanza).
+// `transition`/`opacity` quedan inline, scopeados a esta instancia -- no se
+// toca `.eq-favoritos-vacio` (CSS compartida con `#eq-mes-vacio`/
+// `_eqRenderPorRol()`, sin pedido de tocar esos 2).
+var _EQ_LISTA_VACIA_FADE_MS = 250;
 function _eqActualizarListaVacia() {
   var el = document.getElementById('eq-lista-vacia');
   if (!el) return;
+  var mostrar;
   var rolesWrap = document.getElementById('eq-roles-wrap');
   var mesVacio = document.getElementById('eq-mes-vacio');
   if ((rolesWrap && rolesWrap.style.display !== 'none') || (mesVacio && mesVacio.style.display !== 'none')) {
-    el.style.display = 'none';
-    return;
+    mostrar = false;
+  } else {
+    var ids = ['eq-favoritos-wrap', 'eq-grupo-quindes', 'eq-grupo-mirlxs', 'eq-grupo-inactivos', 'eq-grupo-lesionadxs'];
+    var algunaVisible = ids.some(function(id) {
+      var wrap = document.getElementById(id);
+      return wrap && wrap.style.display !== 'none';
+    });
+    mostrar = !algunaVisible;
   }
-  var ids = ['eq-favoritos-wrap', 'eq-grupo-quindes', 'eq-grupo-mirlxs', 'eq-grupo-inactivos', 'eq-grupo-lesionadxs'];
-  var algunaVisible = ids.some(function(id) {
-    var wrap = document.getElementById(id);
-    return wrap && wrap.style.display !== 'none';
-  });
-  el.style.display = algunaVisible ? 'none' : '';
+  var yaVisible = el.style.display !== 'none';
+  if (mostrar === yaVisible) return; // ya está en el estado pedido, nada que animar
+  if (mostrar) {
+    el.style.transition = 'none';
+    el.style.display = '';
+    el.style.opacity = '0';
+    void el.offsetWidth; // fuerza el reflow antes de animar, mismo truco que el resto de la app
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        el.style.transition = 'opacity ' + _EQ_LISTA_VACIA_FADE_MS + 'ms ease';
+        el.style.opacity = '1';
+      });
+    });
+  } else {
+    el.style.transition = 'opacity ' + _EQ_LISTA_VACIA_FADE_MS + 'ms ease';
+    el.style.opacity = '0';
+    setTimeout(function() { el.style.display = 'none'; }, _EQ_LISTA_VACIA_FADE_MS);
+  }
 }
 function _eqRenderFavoritos() {
   var wrap = document.getElementById('eq-favoritos-wrap');

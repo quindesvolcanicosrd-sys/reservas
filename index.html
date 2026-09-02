@@ -35,7 +35,7 @@
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
 <link rel="stylesheet" href="css/eventos.css?v=94f3cbd9">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=b5dbdc56">
+<link rel="stylesheet" href="css/equipo.css?v=fa736fb3">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2349,99 +2349,123 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
        #s-eventos/#s-tareas -- ver TOP_BAR_CONFIG, js/ui.js. ═══ -->
   <div class="pantalla" id="s-equipo">
     <div class="card" style="text-align:left;padding-bottom:32px;">
-      <div class="app-nav app-nav-sticky" id="eq-search-header">
-        <!-- Rediseño de nav (ver MANIFEST.md/CHANGELOG.md) -- reemplaza el
-             buscador+botón "Filtros" siempre visibles por 2 triggers, mismo
-             mecanismo de burbuja mutuamente excluyente que Eventos
-             (`_evTogglePanel()`/`.ev-header-burbuja`, js/eventos.js+
-             css/eventos.css) pero con JS/CSS propios de esta sección
-             (`_eqTogglePanel()`/`.eq-header-panel`, más abajo en este
-             archivo/css/equipo.css) -- mismo criterio de siempre, cada
-             sección mantiene su propio archivo, ver MANIFEST.md.
-             Izquierda: avatar (36px) + "Mis estadísticas" + chevron --
-             reemplaza a la card fija que existía antes encima de
-             Favoritos, mismo contenido, ahora en un panel deslizable
-             (`_eqTogglePanel('stats')`). Arranca oculto (display:none) --
-             igual que la card vieja, `_eqRenderMisEstadisticas()`/js/equipo.js
-             lo muestra si la cuenta logueada tiene fila propia en Equipo.
-             Derecha: un solo ícono de lupa -- el buscador de texto libre y
-             el panel de Filtros (período de puntaje + rol) que antes vivían
-             separados ahora comparten un solo panel fusionado
-             (`_eqTogglePanel('busqueda')`), mismo criterio que el panel
-             único de búsqueda+filtros de Eventos. -->
-        <button type="button" class="eq-misstats-toggle-btn" id="eq-misstats-toggle-btn" onclick="_eqTogglePanel('stats')" style="display:none;">
-          <span class="avatar-pill eq-avatar eq-misstats-toggle-avatar" id="eq-misstats-toggle-avatar" data-nombre="" data-foto=""></span>
-          <span class="eq-misstats-toggle-texto">Mis estadísticas</span>
-          <span class="material-symbols-outlined eq-misstats-toggle-chevron">expand_more</span>
-        </button>
-        <button type="button" class="app-nav-icon-btn eq-filtro-toggle-btn" id="eq-busqueda-toggle-btn" onclick="_eqTogglePanel('busqueda')" title="Buscar y filtrar">
-          <span class="material-symbols-outlined">search</span>
-          <span class="eq-filtro-badge" id="eq-filtro-badge" style="display:none;">0</span>
-        </button>
-      </div>
-
-      <!-- Panel "Mis estadísticas" (rediseño, ver MANIFEST.md/CHANGELOG.md)
-           -- mismo contenido exacto que la card fija de antes (foto, nombre
-           derby, número, rol, status, horas patinadas, % asistencia, puntos
-           tareas, puntos asistencia, puntos totales del período, barra de
-           tier), poblado por _eqRenderMisEstadisticas()/js/equipo.js, solo
-           cambia dónde vive (panel deslizable en vez de card fija). -->
-      <div class="eq-header-panel" id="eq-misstats-panel">
-        <div class="eq-misstats-panel-inner" id="eq-misstats-panel-inner"></div>
-      </div>
-
-      <!-- Panel de búsqueda + filtros fusionados (rediseño, ver MANIFEST.md/
-           CHANGELOG.md -- "que funcione igual que Eventos": mismo patrón
-           `.ev-header-burbuja`/`.ev-header-burbuja-panel`/`.ev-filtros-row`/
-           `.ev-filtro-trigger`/`.ev-filtro-burbuja`/`.ev-filtro-burbuja-pills`
-           de css/eventos.css -- ver `#ev-busqueda-panel`, más arriba en este
-           archivo -- COPIADO a `.eq-*` propias en css/equipo.css, no
-           reusado cross-archivo (cada sección es dueña de sus propias
-           clases, mismo criterio ya aplicado en el resto de esta sección).
-           Buscador de texto libre arriba (mismo comportamiento de siempre,
-           `_eqBuscar()`/js/equipo.js sin cambios), subtítulo "Filtros"
-           (`.seccion-label`, como el resto de la app) y 2 pills de
-           categoría con chevron -- "Puntos" y "Rol", cada una despliega su
-           propia burbuja con los sub-pills reales debajo al tocarla
-           (`_eqToggleFiltroBurbuja()`/js/equipo.js) -- REEMPLAZAN los 2
-           títulos de sección fijos "Filtrar puntos según periodo"/"Filtrar
-           por rol" que había antes (pedido explícito: sacarlos, ahora
-           comunican lo mismo los pills de categoría). A diferencia de
-           Eventos (un panel Lugar/Tipo a la vez, `_evToggleFiltroBurbuja()`
-           colapsa cualquier otro antes de expandir el tocado) -- acá
-           "Puntos" y "Rol" son independientes, pueden estar los 2
-           expandidos a la vez (pedido explícito). Sub-pills sin cambios de
-           comportamiento: "Fecha"/"Histórico" (`_eqFiltroPeriodoModo()`) y
-           los pills de rol (`_eqFiltroRolToggle()`, multi-selección). Sin
-           botón "Aplicar filtros" -- cada elección aplica sola. -->
-      <div class="eq-header-panel" id="eq-busqueda-panel">
-        <div class="eq-busqueda-panel-inner">
-          <div class="app-nav-search">
+      <!-- Rediseño de header sticky (ver MANIFEST.md -- "colapso progresivo
+           al scrollear", mismo criterio que `.ev-sticky-header`/`#ev-mes-panel`/
+           `#ev-busqueda-panel` de css/eventos.css+index.html: ahora la fila
+           de íconos Y los 2 paneles deslizables viven DENTRO del mismo
+           contenedor sticky -- antes solo la fila de íconos era sticky
+           (`.app-nav-sticky`, css/nav.css) y los paneles quedaban afuera en
+           flujo normal, así que al abrirse solo empujaban el contenido de
+           abajo en vez de quedar pegados arriba por encima de él. `.eq-sticky-header`
+           (css/equipo.css) es el wrapper sticky nuevo -- mismo bleed
+           -16px/+32px que tenía `.app-nav-sticky` antes, ver ese CSS --
+           `#eq-search-header` (ya no sticky por su cuenta) pasa a ser solo
+           la fila interna de íconos (`.eq-header-row`, copiado de
+           `.ev-header-row`). -->
+      <div class="eq-sticky-header" id="eq-sticky-header">
+        <div class="eq-header-row" id="eq-search-header">
+          <!-- Rediseño de nav (ver MANIFEST.md/CHANGELOG.md) -- reemplaza el
+               buscador+botón "Filtros" siempre visibles por 2 triggers, mismo
+               mecanismo de burbuja mutuamente excluyente que Eventos
+               (`_evTogglePanel()`/`.ev-header-burbuja`, js/eventos.js+
+               css/eventos.css) pero con JS/CSS propios de esta sección
+               (`_eqTogglePanel()`/`.eq-header-panel`, más abajo en este
+               archivo/css/equipo.css) -- mismo criterio de siempre, cada
+               sección mantiene su propio archivo, ver MANIFEST.md.
+               Izquierda: avatar (36px) + "Mis estadísticas" + chevron --
+               reemplaza a la card fija que existía antes encima de
+               Favoritos, mismo contenido, ahora en un panel deslizable
+               (`_eqTogglePanel('stats')`). Arranca oculto (display:none) --
+               igual que la card vieja, `_eqRenderMisEstadisticas()`/js/equipo.js
+               lo muestra si la cuenta logueada tiene fila propia en Equipo.
+               Derecha: un solo ícono de lupa -- el buscador de texto libre y
+               el panel de Filtros (período de puntaje + rol) que antes vivían
+               separados ahora comparten un solo panel fusionado
+               (`_eqTogglePanel('busqueda')`), mismo criterio que el panel
+               único de búsqueda+filtros de Eventos. -->
+          <button type="button" class="eq-misstats-toggle-btn" id="eq-misstats-toggle-btn" onclick="_eqTogglePanel('stats')" style="display:none;">
+            <span class="avatar-pill eq-avatar eq-misstats-toggle-avatar" id="eq-misstats-toggle-avatar" data-nombre="" data-foto=""></span>
+            <span class="eq-misstats-toggle-texto">Mis estadísticas</span>
+            <span class="material-symbols-outlined eq-misstats-toggle-chevron">expand_more</span>
+          </button>
+          <button type="button" class="app-nav-icon-btn eq-filtro-toggle-btn" id="eq-busqueda-toggle-btn" onclick="_eqTogglePanel('busqueda')" title="Buscar y filtrar">
             <span class="material-symbols-outlined">search</span>
-            <input type="text" id="eq-search-input" placeholder="Busca en el equipo" oninput="_eqBuscar(this.value)">
-          </div>
+            <span class="eq-filtro-badge" id="eq-filtro-badge" style="display:none;">0</span>
+          </button>
+        </div>
 
-          <div class="seccion-label eq-filtros-label">Filtros</div>
-          <div class="eq-filtros-row">
-            <button type="button" class="eq-filtro-trigger" id="eq-filtro-btn-puntos" onclick="_eqToggleFiltroBurbuja('puntos')">
-              <span class="eq-filtro-trigger-label">Puntos</span><span class="material-symbols-outlined">expand_more</span>
-            </button>
-            <button type="button" class="eq-filtro-trigger" id="eq-filtro-btn-rol" onclick="_eqToggleFiltroBurbuja('rol')">
-              <span class="eq-filtro-trigger-label">Rol</span><span class="material-symbols-outlined">expand_more</span>
-            </button>
-          </div>
-          <div class="eq-filtro-burbuja" id="eq-filtro-burbuja-puntos">
-            <div class="aj-pills-row eq-periodo-pills eq-filtro-burbuja-pills" id="eq-filtro-periodo-modo">
-              <span class="aj-pill activa" data-modo="fecha" onclick="_eqFiltroPeriodoModo('fecha')">Fecha</span>
-              <span class="aj-pill" data-modo="historico" onclick="_eqFiltroPeriodoModo('historico')">Histórico</span>
+        <!-- Panel "Mis estadísticas" (rediseño, ver MANIFEST.md/CHANGELOG.md)
+             -- mismo contenido exacto que la card fija de antes (foto, nombre
+             derby, número, rol, status, horas patinadas, % asistencia, puntos
+             tareas, puntos asistencia, puntos totales del período, barra de
+             tier), poblado por _eqRenderMisEstadisticas()/js/equipo.js, solo
+             cambia dónde vive (panel deslizable en vez de card fija). -->
+        <div class="eq-header-panel" id="eq-misstats-panel">
+          <div class="eq-misstats-panel-inner" id="eq-misstats-panel-inner"></div>
+        </div>
+
+        <!-- Panel de búsqueda + filtros fusionados (rediseño, ver MANIFEST.md/
+             CHANGELOG.md -- "que funcione igual que Eventos": mismo patrón
+             `.ev-header-burbuja`/`.ev-header-burbuja-panel`/`.ev-filtros-row`/
+             `.ev-filtro-trigger`/`.ev-filtro-burbuja`/`.ev-filtro-burbuja-pills`
+             de css/eventos.css -- ver `#ev-busqueda-panel`, más arriba en este
+             archivo -- COPIADO a `.eq-*` propias en css/equipo.css, no
+             reusado cross-archivo (cada sección es dueña de sus propias
+             clases, mismo criterio ya aplicado en el resto de esta sección).
+             Buscador de texto libre arriba (mismo comportamiento de siempre,
+             `_eqBuscar()`/js/equipo.js sin cambios), subtítulo "Filtros"
+             (`.seccion-label`, como el resto de la app) y 2 pills de
+             categoría con chevron -- "Puntos" y "Rol", cada una despliega su
+             propia burbuja con los sub-pills reales debajo al tocarla
+             (`_eqToggleFiltroBurbuja()`/js/equipo.js) -- REEMPLAZAN los 2
+             títulos de sección fijos "Filtrar puntos según periodo"/"Filtrar
+             por rol" que había antes (pedido explícito: sacarlos, ahora
+             comunican lo mismo los pills de categoría). A diferencia de
+             Eventos (un panel Lugar/Tipo a la vez, `_evToggleFiltroBurbuja()`
+             colapsa cualquier otro antes de expandir el tocado) -- acá
+             "Puntos" y "Rol" son independientes, pueden estar los 2
+             expandidos a la vez (pedido explícito). Sub-pills sin cambios de
+             comportamiento: "Fecha"/"Histórico" (`_eqFiltroPeriodoModo()`) y
+             los pills de rol (`_eqFiltroRolToggle()`, multi-selección). Sin
+             botón "Aplicar filtros" -- cada elección aplica sola. -->
+        <div class="eq-header-panel" id="eq-busqueda-panel">
+          <div class="eq-busqueda-panel-inner">
+            <div class="app-nav-search">
+              <span class="material-symbols-outlined">search</span>
+              <input type="text" id="eq-search-input" placeholder="Busca en el equipo" oninput="_eqBuscar(this.value)">
             </div>
-          </div>
-          <div class="eq-filtro-burbuja" id="eq-filtro-burbuja-rol">
-            <div class="aj-pills-row eq-filtro-burbuja-pills" id="eq-filtro-rol-pills"></div>
+
+            <div class="seccion-label eq-filtros-label">Filtros</div>
+            <div class="eq-filtros-row">
+              <button type="button" class="eq-filtro-trigger" id="eq-filtro-btn-puntos" onclick="_eqToggleFiltroBurbuja('puntos')">
+                <span class="eq-filtro-trigger-label">Puntos</span><span class="material-symbols-outlined">expand_more</span>
+              </button>
+              <button type="button" class="eq-filtro-trigger" id="eq-filtro-btn-rol" onclick="_eqToggleFiltroBurbuja('rol')">
+                <span class="eq-filtro-trigger-label">Rol</span><span class="material-symbols-outlined">expand_more</span>
+              </button>
+            </div>
+            <div class="eq-filtro-burbuja" id="eq-filtro-burbuja-puntos">
+              <div class="aj-pills-row eq-periodo-pills eq-filtro-burbuja-pills" id="eq-filtro-periodo-modo">
+                <span class="aj-pill activa" data-modo="fecha" onclick="_eqFiltroPeriodoModo('fecha')">Fecha</span>
+                <span class="aj-pill" data-modo="historico" onclick="_eqFiltroPeriodoModo('historico')">Histórico</span>
+              </div>
+            </div>
+            <div class="eq-filtro-burbuja" id="eq-filtro-burbuja-rol">
+              <div class="aj-pills-row eq-filtro-burbuja-pills" id="eq-filtro-rol-pills"></div>
+            </div>
           </div>
         </div>
       </div>
 
+      <!-- Contenedor del roster completo (nuevo, ver MANIFEST.md -- "colapso
+           progresivo al scrollear") -- equivalente a `#ev-timeline`/
+           css/eventos.css: único blanco de los listeners de touch que
+           achican los paneles de arriba en vivo mientras se scrollea,
+           `_eqInicializarCierrePanelesPorScroll()`/js/equipo.js. Envuelve
+           TODO lo que antes vivía suelto acá (estado de carga, vista por
+           rol, empty states, Favoritos/Quindes/Mirlxs/Inactivos/Lesionadxs)
+           sin cambiar nada de esos elementos en sí. -->
+      <div id="eq-lista-contenido">
       <!-- Cargando/error del roster real (Cambio 55, getEquipo(), ver
            _eqInit()/js/equipo.js) -- vacío en el estado normal (roster ya
            cargado, ver #eq-favoritos-wrap/#eq-grupo-* debajo). -->
@@ -2559,6 +2583,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="eq-grupo-body abierto">
           <div class="eq-grupo-body-inner" id="eq-grupo-lesionadxs-lista"></div>
         </div>
+      </div>
       </div>
 
       <div style="height:calc(24px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
@@ -3159,7 +3184,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/ui.js?v=66148b6f"></script>
 <script src="js/eventos.js?v=ad1428aa"></script>
 <script src="js/tareas.js"></script>
-<script src="js/equipo.js?v=0ba9788d"></script>
+<script src="js/equipo.js?v=ff49bd29"></script>
 <script src="js/home.js?v=cf4b0197"></script>
 <script src="js/reservas.js?v=e53c9c46"></script>
 <script src="js/perfil.js?v=e7e04c90"></script>
