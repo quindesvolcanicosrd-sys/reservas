@@ -1154,6 +1154,18 @@ function _eqAbrirModalFecha() {
     _eqCalFecha.desde = null;
     _eqCalFecha.hasta = null;
   }
+  // Clamp defensivo (ver MANIFEST.md/CHANGELOG.md -- "si por alguna razón
+  // se selecciona un rango que incluye fechas futuras, el límite superior
+  // debe ajustarse a hoy") -- si `_eqFiltroPeriodo` traía guardado un mes
+  // futuro (estado viejo, de antes de este fix, u otro camino cualquiera),
+  // tanto el mes MOSTRADO como `desde`/`hasta` se ajustan a hoy acá -- sin
+  // esto la modal se abriría mostrando un mes futuro con todo deshabilitado
+  // y ninguna fecha realmente seleccionada a la vista.
+  if (_eqCalFecha.anioMostrado > hoy.getFullYear() || (_eqCalFecha.anioMostrado === hoy.getFullYear() && _eqCalFecha.mesMostrado > hoy.getMonth())) {
+    _eqCalFecha.anioMostrado = hoy.getFullYear();
+    _eqCalFecha.mesMostrado = hoy.getMonth();
+  }
+  _eqCalFechaClampAFuturo();
   // `true` -- primer paint instantáneo, sin el fade+resize normal de
   // `_eqCalFechaRenderContenido()`: la modal entera ya está entrando con su
   // propia animación fade+scale (`.visible`, más abajo), un 2do fade del
@@ -1276,6 +1288,15 @@ function _eqCalFechaRenderContenido(pintarFn, instant) {
 // `cont` (el contenedor a poblar) -- lo pasa `_eqCalFechaRenderContenido()`,
 // nunca busca `#eq-modal-fecha-dias` por su cuenta (esa id ya no existe --
 // las 3 vistas comparten `#eq-modal-fecha-contenido`).
+// Fechas futuras deshabilitadas (ver MANIFEST.md/CHANGELOG.md -- "días
+// futuros no seleccionables"): `esFuturo` compara contra `hoy` (fecha REAL
+// del dispositivo, `new Date()`/`_evHoyISO()`, nunca el mes MOSTRADO) --
+// aplica igual a celdas "ajenas" (bordean el mes anterior/siguiente, ya
+// tocables por diseño, ver comentario grande de arriba) -- una celda ajena
+// cuya fecha real cae en el futuro también se deshabilita, mismo criterio
+// que cualquier otra. Sin `onclick` en las celdas deshabilitadas (no
+// alcanza con `pointer-events:none` solo, ver `.eq-cal-fecha-futuro`/
+// css/equipo.css) -- mismo criterio que `_evAntCalRender()`/js/eventos.js.
 function _eqPintarDiasGrid(cont) {
   var anio = _eqCalFecha.anioMostrado, mes = _eqCalFecha.mesMostrado;
   var inicioGrid = _evLunesDeSemana(new Date(anio, mes, 1));
@@ -1290,11 +1311,13 @@ function _eqPintarDiasGrid(cont) {
   while (cur <= finGrid) {
     var celdaIso = _evToISO(cur);
     var ajeno = cur.getMonth() !== mes;
-    var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '');
+    var futuro = _evFechaCmp(celdaIso, hoy) > 0;
+    var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '') + (futuro ? ' eq-cal-fecha-futuro' : '');
     if (desde !== null && _evFechaCmp(celdaIso, desde) >= 0 && _evFechaCmp(celdaIso, hasta) <= 0) clases += ' ev-ant-cal-en-rango';
     if (celdaIso === desde || celdaIso === hasta) clases += ' ev-ant-cal-sel';
     if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
-    html += '<div class="' + clases + '" onclick="_eqCalFechaTocarDia(\'' + celdaIso + '\')"><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
+    var onclickAttr = futuro ? '' : ' onclick="_eqCalFechaTocarDia(\'' + celdaIso + '\')"';
+    html += '<div class="' + clases + '"' + onclickAttr + '><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
     cur.setDate(cur.getDate() + 1);
   }
   cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>';
@@ -1308,10 +1331,24 @@ function _eqPintarDiasGrid(cont) {
 // resto de esta modal). `.activo` marca el mes actualmente MOSTRADO en la
 // grilla de días (no necesariamente el seleccionado como Desde/Hasta -- ver
 // el mismo criterio dual documentado en `_eqPintarAniosGrid()`, abajo).
+// Meses futuros deshabilitados (ver MANIFEST.md/CHANGELOG.md -- "meses
+// futuros no seleccionables") -- compara `(_eqCalFecha.anioMostrado, idx)`
+// contra el año/mes REALES de hoy, no solo "meses futuros DEL AÑO ACTUAL":
+// generaliza sola al caso de un año mostrado ya futuro (alcanzable desde
+// `_eqPintarAniosGrid()`, que sí ofrece `anioReal + 1` como opción) -- ahí
+// los 12 meses quedan deshabilitados, no solo los posteriores al actual.
+// `disabled` real (botón real, a diferencia de las celdas de día que son
+// `<div>`) además de la clase visual -- más robusto que solo omitir el
+// `onclick` (bloquea también activación por teclado).
 function _eqPintarMesesGrid(cont) {
+  var hoy = new Date();
+  var anioHoy = hoy.getFullYear(), mesHoy = hoy.getMonth();
   var html = NOMBRES_MESES.map(function(nombre, idx) {
-    var clases = 'ev-ant-mes-cell' + (idx === _eqCalFecha.mesMostrado ? ' activo' : '');
-    return '<button type="button" class="' + clases + '" onclick="_eqCalFechaElegirMes(' + idx + ')">' + nombre + '</button>';
+    var futuro = _eqCalFecha.anioMostrado > anioHoy || (_eqCalFecha.anioMostrado === anioHoy && idx > mesHoy);
+    var clases = 'ev-ant-mes-cell' + (idx === _eqCalFecha.mesMostrado ? ' activo' : '') + (futuro ? ' eq-cal-fecha-futuro' : '');
+    var onclickAttr = futuro ? '' : ' onclick="_eqCalFechaElegirMes(' + idx + ')"';
+    var disabledAttr = futuro ? ' disabled' : '';
+    return '<button type="button" class="' + clases + '"' + onclickAttr + disabledAttr + '>' + nombre + '</button>';
   }).join('');
   cont.innerHTML = '<div class="ev-ant-mes-grid">' + html + '</div>';
 }
@@ -1343,6 +1380,20 @@ function _eqPintarAniosGrid(cont) {
     if (sel) sel.scrollIntoView({ block: 'center' });
   });
 }
+// Clamp defensivo de fechas futuras (ver MANIFEST.md/CHANGELOG.md -- "si
+// por alguna razón se selecciona un rango que incluye fechas futuras, el
+// límite superior debe ajustarse a hoy") -- bajo uso normal esto nunca
+// debería hacer falta (las celdas/meses futuros ya salen del HTML sin
+// `onclick`, ver `_eqPintarDiasGrid()`/`_eqPintarMesesGrid()`, así que un
+// toque real nunca puede llegar acá con una fecha futura) pero cubre
+// cualquier otro camino que pudiera dejar `desde`/`hasta` en el futuro --
+// usa `new Date()`/`_evHoyISO()` como referencia, la fecha real del
+// dispositivo, nunca el mes MOSTRADO en la modal.
+function _eqCalFechaClampAFuturo() {
+  var hoy = _evHoyISO();
+  if (_eqCalFecha.desde !== null && _evFechaCmp(_eqCalFecha.desde, hoy) > 0) _eqCalFecha.desde = hoy;
+  if (_eqCalFecha.hasta !== null && _evFechaCmp(_eqCalFecha.hasta, hoy) > 0) _eqCalFecha.hasta = hoy;
+}
 // Ida y vuelta -- mismo criterio que `_evAntCalTocarDia()`/js/eventos.js,
 // sobre fechas ISO reales (bug real corregido, ver comentario grande de
 // `_eqPintarDiasGrid()` más arriba -- antes comparaba una CLAVE DE MES, que
@@ -1359,6 +1410,7 @@ function _eqCalFechaTocarDia(iso) {
   } else {
     _eqCalFecha.hasta = iso;
   }
+  _eqCalFechaClampAFuturo();
   _eqRenderModalFecha();
 }
 // "01/09/2026" a partir de una fecha ISO -- pedido explícito (bug real
@@ -1407,6 +1459,7 @@ function _eqCalFechaRestablecer() {
 // supabase/functions/api/index.ts) -- acá es donde se descarta el día real
 // de `_eqCalFecha.desde`/`hasta` y se queda solo con la parte `anio-mes`.
 function _eqConfirmarModalFecha() {
+  _eqCalFechaClampAFuturo(); // último gate defensivo antes de escribir el filtro real -- ver ese comentario, más arriba
   if (_eqCalFecha.desde === null) { _eqCerrarModalFecha(); return; }
   var hastaIso = _eqCalFecha.hasta !== null ? _eqCalFecha.hasta : _eqCalFecha.desde;
   var desdeParts = _eqCalFecha.desde.split('-');
