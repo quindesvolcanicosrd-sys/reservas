@@ -166,6 +166,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Admin (Mi Liga)
 
+2026-09-01 — Cards de "Reservas" (pendientes de revisión) muestran el monto pagado ("Pagó: $N", `reservas.monto`) — bug real corregido de paso: antes un chequeo truthy (`r.monto ? ... : ''`) ocultaba esta línea por completo en reservas de $0 (crédito de reagendo o cupón consumido), en vez de mostrar "$0".
+
 2026-08 (aprox.) — UI admin de `config_tiers` ("Categorías") integrada dentro de Mi Liga, no como sección nueva (Fase B del sistema de tiers).
 2026-08-24 — Cambio 20: cambiar categoría desde admin (Mi Liga → Miembros).
 2026-08-24 — Cambio 21: registrar pago en efectivo desde admin (Mi Liga → Miembros).

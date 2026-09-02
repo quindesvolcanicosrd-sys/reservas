@@ -895,7 +895,23 @@ function adminRenderReservas() {
         if (r.talla && r.talla.toLowerCase() !== 'no') equip.push('<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">roller_skating</span>' + r.talla + '</span>');
         if (r.protecciones && r.protecciones.toLowerCase() !== 'no') equip.push('<span class="fi-pill fi-pill-patines"><span class="material-symbols-outlined">shield</span>' + r.protecciones + '</span>');
         var detalleEquip = equip.length ? equip.join(' ') : '<span class="material-symbols-outlined" style="font-size:0.85rem;vertical-align:-2px;">check_circle</span> Equipo propio';
-        var detalleMonto = r.monto ? ' · <span class="material-symbols-outlined" style="font-size:0.85rem;vertical-align:-2px;">payments</span> ' + r.monto : '';
+        // Monto abonado (feat nueva, ver MANIFEST.md) -- `reservas.monto`
+        // (columna real, `adminGetReservas()`/supabase/functions/api/index.ts,
+        // spread tal cual desde la fila de `reservas` -- sin transformar en
+        // `_normalizeReserva()`), el precio de lista fijado server-side al
+        // crear la reserva (`guardarReserva()`, misma función) -- `0` cuando
+        // se consumió un crédito de reagendo o un cupón (`montoFinal = 0`
+        // en cualquiera de los 2 casos, sin un campo separado que distinga
+        // cuál de los 2 fue). Bug real corregido: antes `r.monto ? ... :
+        // ''` ocultaba esta línea POR COMPLETO en una reserva de $0 (cupón/
+        // crédito) -- el chequeo truthy trataba `0` igual que "sin dato".
+        // Ahora siempre se muestra, con el mismo texto "Pagó: $N" para
+        // cualquier monto (incluido $0) -- no se etiqueta "Cupón" a secas
+        // porque el dato no alcanza para distinguir cupón de crédito de
+        // reagendo, y afirmar el motivo equivocado sería peor que no
+        // afirmar ninguno.
+        var montoNum = Number(r.monto) || 0;
+        var detalleMonto = ' · <span class="material-symbols-outlined" style="font-size:0.85rem;vertical-align:-2px;">payments</span> Pagó: $' + montoNum;
         html += '<div class="reserva-card" style="margin-bottom:8px;">' +
           '<div class="reserva-header"><span class="reserva-fecha">' + r.nombre + '</span><span class="badge ' + badgeClass + '">' + r.estado + '</span></div>' +
           '<div class="reserva-detalle">' + detalleEquip + detalleMonto + '</div>';
