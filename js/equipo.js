@@ -1953,6 +1953,7 @@ function _eqRenderMisEstadisticas() {
       '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">task_alt</span><div class="eq-stat-valor">' + (persona.puntosTareas !== undefined && persona.puntosTareas !== null ? persona.puntosTareas : '—') + '</div><div class="eq-stat-label">Puntos por tareas (mes)</div></div>' +
       '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">stars</span><div class="eq-stat-valor">' + (persona.puntosAsistencia !== undefined && persona.puntosAsistencia !== null ? persona.puntosAsistencia : '—') + '</div><div class="eq-stat-label">Puntos por asistencia (mes)</div></div>' +
     '</div>' +
+    _eqPuntosRachaHtml(persona) +
     // Total del período pedido (`puntosTotal`, getEquipo()) -- en modo
     // histórico ya viene con `equipo.puntos_anteriores` sumado adentro
     // (ver supabase/functions/api/index.ts), sin nada que recalcular acá.
@@ -2317,6 +2318,33 @@ function _eqStatsCalc(p) {
     horas: Math.round((p.horas_ano || 0) * 10) / 10,
     asistenciaPct: (p.total_eventos_ano || 0) > 0 ? Math.round((p.asistencias_ano || 0) / p.total_eventos_ano * 100) : 0,
   };
+}
+
+// "Puntos por racha" -- línea del desglose de estadísticas (feat nueva, ver
+// MANIFEST.md/CHANGELOG.md -- "el total de puntos no cierra con el
+// desglose mostrado"): `p.puntosRacha` (getEquipo(), suma de
+// `puntos_bonificacion` + `puntos_extra` del período pedido -- ver el
+// comentario grande en supabase/functions/api/index.ts, junto a
+// `puntosPeriodoPorUsuario`, para el porqué de sumar 2 columnas reales
+// distintas bajo un solo concepto) faltaba como línea propia -- sin ella,
+// "Puntos por tareas" + "Puntos por asistencia" nunca sumaban lo mismo que
+// "Puntos totales" para alguien con bonus de racha ese período. Oculta del
+// todo si `puntosRacha` es `0`/`undefined`/`null` (pedido explícito: nunca
+// mostrar "0 pts por racha") -- a diferencia de tareas/asistencia (arriba
+// en los 2 renders que la usan), que siempre se muestran con `'—'` de
+// fallback si el dato no llegó; acá el criterio es otro, "sin racha no hay
+// línea", no "sin dato togavía". `emoji_events` (trofeo, Material Symbols)
+// -- pedido explícito "estrella/trofeo", distinto del resto de íconos ya
+// usados en este desglose (`task_alt`/`stars`/`military_tech`) para no
+// repetir. Reusada por `_eqRenderMisEstadisticas()` y
+// `_eqPerfilContenidoHtml()`, más abajo -- mismo criterio que `_eqStatsCalc()`
+// de arriba, una sola fórmula para los 2 lugares.
+function _eqPuntosRachaHtml(p) {
+  var puntos = Number(p.puntosRacha) || 0;
+  if (puntos <= 0) return '';
+  return '<div class="eq-stats-grid">' +
+      '<div class="eq-stat-card eq-stat-card--full"><span class="eq-stat-icon material-symbols-rounded">emoji_events</span><div class="eq-stat-valor">' + puntos + '</div><div class="eq-stat-label">Puntos por racha</div></div>' +
+    '</div>';
 }
 
 function _eqRankTexto(p) {
@@ -2695,6 +2723,7 @@ function _eqPerfilContenidoHtml(p) {
           '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">task_alt</span><div class="eq-stat-valor">' + puntosTareasTxt + '</div><div class="eq-stat-label">Puntos por tareas</div></div>' +
           '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">stars</span><div class="eq-stat-valor">' + puntosAsistenciaTxt + '</div><div class="eq-stat-label">Puntos por asistencia</div></div>' +
         '</div>' +
+        _eqPuntosRachaHtml(p) +
         puntosTotalHtml +
         rankWrapHtml +
       '</div>' +

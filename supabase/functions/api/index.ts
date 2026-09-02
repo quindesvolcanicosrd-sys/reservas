@@ -2435,9 +2435,25 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
   // comparando fechas de calendario completas (`anio-mes-01`), no por año
   // suelto.
   const { data: puntosData } = await supabase.from('puntos_mensuales')
-    .select('nombre_usuario, anio, mes, puntos_asistencia, puntos_tareas, puntos_total')
+    .select('nombre_usuario, anio, mes, puntos_asistencia, puntos_tareas, puntos_bonificacion, puntos_extra, puntos_total')
     .in('nombre_usuario', usernames);
-  const puntosPeriodoPorUsuario: Record<string, { asistencia: number; tareas: number; total: number }> = {};
+  // `racha` = `puntos_bonificacion` + `puntos_extra` combinados (feat
+  // nueva, ver MANIFEST.md/CHANGELOG.md -- "el total no cierra con el
+  // desglose mostrado, falta una línea de puntos por racha") -- 2 columnas
+  // reales para el MISMO concepto (bonus de racha de asistencias
+  // consecutivas), de 2 sistemas distintos en el tiempo: `puntos_bonificacion`
+  // es el bonus de racha que escribía el backend legado (Code.gs, sin
+  // ningún escritor en ESTE repo, pero con datos reales de antes de la
+  // migración -- confirmado contra la DB real, Ene-Ago 2026) y `puntos_extra`
+  // es el mismo concepto desde que la racha se migró a este backend
+  // (`_acreditarPuntosExtra()`/`_reconstruirRachasHistoricas()`, ver
+  // "Racha de asistencias" más abajo) -- Ago 2026 tiene datos en AMBAS
+  // columnas a la vez (mes de transición), confirmado contra la DB real.
+  // Ninguna de las 2 se exponía suelta hasta ahora -- solo entraban
+  // mezcladas, sin desglosar, dentro de `puntos_total` (columna GENERATED,
+  // suma de las 4), así que cualquier UI que armara "Asistencia + Tareas"
+  // como desglose del total nunca cerraba para alguien con racha activa.
+  const puntosPeriodoPorUsuario: Record<string, { asistencia: number; tareas: number; racha: number; total: number }> = {};
   const puntosAnioPorUsuario: Record<string, number> = {};
   (puntosData ?? []).forEach((p: any) => {
     if (Number(p.anio) === anioActual) {
@@ -2445,9 +2461,10 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     }
     const fechaFila = p.anio + '-' + String(p.mes).padStart(2, '0') + '-01';
     if (fechaFila >= desdePeriodo && fechaFila < hastaPeriodo) {
-      if (!puntosPeriodoPorUsuario[p.nombre_usuario]) puntosPeriodoPorUsuario[p.nombre_usuario] = { asistencia: 0, tareas: 0, total: 0 };
+      if (!puntosPeriodoPorUsuario[p.nombre_usuario]) puntosPeriodoPorUsuario[p.nombre_usuario] = { asistencia: 0, tareas: 0, racha: 0, total: 0 };
       puntosPeriodoPorUsuario[p.nombre_usuario].asistencia += Number(p.puntos_asistencia) || 0;
       puntosPeriodoPorUsuario[p.nombre_usuario].tareas += Number(p.puntos_tareas) || 0;
+      puntosPeriodoPorUsuario[p.nombre_usuario].racha += (Number(p.puntos_bonificacion) || 0) + (Number(p.puntos_extra) || 0);
       puntosPeriodoPorUsuario[p.nombre_usuario].total += Number(p.puntos_total) || 0;
     }
   });
@@ -2637,6 +2654,9 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     ultimaAsistencia: ultimaPorUsuario[r.username] ? ultimaPorUsuario[r.username].slice(0, 10) : null,
     puntosAsistencia: puntosPeriodoPorUsuario[r.username] ? puntosPeriodoPorUsuario[r.username].asistencia : 0,
     puntosTareas: puntosPeriodoPorUsuario[r.username] ? puntosPeriodoPorUsuario[r.username].tareas : 0,
+    // `puntos_bonificacion` + `puntos_extra` combinados -- ver comentario
+    // grande junto a `puntosPeriodoPorUsuario` más arriba en esta función.
+    puntosRacha: puntosPeriodoPorUsuario[r.username] ? puntosPeriodoPorUsuario[r.username].racha : 0,
     // `equipo.puntos_anteriores` es el arrastre de puntos previos a la
     // existencia de `puntos_mensuales` (importado a mano al migrar el
     // sistema de puntos) -- solo tiene sentido sumarlo al total histórico,
