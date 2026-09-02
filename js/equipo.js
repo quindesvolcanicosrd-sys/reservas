@@ -819,6 +819,42 @@ function _eqCerrarPanel(tag) {
   if (btn) btn.classList.remove('activo');
 }
 
+// Burbujas de categoría "Puntos"/"Rol" (rediseño, ver MANIFEST.md --
+// "rediseñar completamente el panel de filtros... para que funcione igual
+// que Eventos") -- mismo mecanismo que `_evToggleFiltroBurbuja()`/
+// js/eventos.js: togglea `.abierta` (techo FIJO 320px, css/equipo.css, sin
+// medir `scrollHeight` -- contenido chico y acotado, 2 pills o 7 pills como
+// mucho) + el ícono chevron (`expand_more`/`expand_less`) + `.eq-filtro-activo`
+// en el trigger. A diferencia de Eventos (`_evToggleFiltroBurbuja()` colapsa
+// cualquier otra burbuja antes de expandir la tocada, un panel Lugar/Tipo a
+// la vez) -- acá "Puntos" y "Rol" son independientes, pedido explícito
+// ("pueden estar ambos expandidos al mismo tiempo"): sin ningún paso de
+// "cerrar la otra", cada campo togglea solo el suyo.
+var _eqFiltroBurbujaAbierta = { puntos: false, rol: false };
+function _eqToggleFiltroBurbuja(campo) {
+  _eqFiltroBurbujaAbierta[campo] = !_eqFiltroBurbujaAbierta[campo];
+  var abierta = _eqFiltroBurbujaAbierta[campo];
+  var burbuja = document.getElementById('eq-filtro-burbuja-' + campo);
+  var btn = document.getElementById('eq-filtro-btn-' + campo);
+  if (burbuja) burbuja.classList.toggle('abierta', abierta);
+  if (btn) {
+    btn.classList.toggle('eq-filtro-activo', abierta);
+    var chevron = btn.querySelector('.material-symbols-outlined');
+    if (chevron) chevron.textContent = abierta ? 'expand_less' : 'expand_more';
+  }
+  // El panel exterior (#eq-busqueda-panel) fija su `max-height` al alto
+  // real de SU contenido en el momento de abrirse (`_eqAbrirPanel()`, más
+  // arriba en este archivo), sin ninguna burbuja de categoría abierta
+  // todavía -- relajarlo acá a un techo holgado evita que esa altura ya
+  // ajustada recorte una burbuja que se expande DESPUÉS (mismo fix ya
+  // aplicado en Eventos, `_evToggleFiltroBurbuja()`/js/eventos.js -- ahí
+  // 550px alcanza porque nunca hay más de UNA burbuja abierta a la vez; acá
+  // "Puntos" y "Rol" pueden estar los 2 abiertos juntos, así que el techo
+  // es más alto para no recortar ese caso).
+  var panelEl = document.getElementById('eq-busqueda-panel');
+  if (panelEl && panelEl.classList.contains('abierta')) panelEl.style.maxHeight = '900px';
+}
+
 // Estado del período de puntaje -- default mes/año actuales (mismo
 // comportamiento que getEquipo() sin parámetros). `modo`: 'mes' | 'rango' |
 // 'historico'. Los 4 campos de rango/mes único conviven siempre en el

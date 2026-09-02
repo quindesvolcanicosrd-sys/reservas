@@ -108,24 +108,64 @@
 .eq-busqueda-panel-inner {
   background: var(--surface-2); border-radius: 16px; padding: 16px;
   margin-top: 10px;
+  /* Border/stroke (rediseño, ver MANIFEST.md -- "revisar cómo está
+     estilizado `.ev-header-burbuja-panel` y aplicar el mismo border/stroke
+     al `.eq-busqueda-panel-inner`") -- mismo valor exacto que
+     `.ev-header-burbuja-panel`/css/eventos.css (`1.5px solid
+     var(--border-light)`), la única propiedad que le faltaba a este panel
+     para quedar visualmente igual -- padding/radius/margin-top quedan como
+     ya estaban (14px/14px/16px en Eventos vs. 16px/16px/10px acá, nunca
+     pedido tocarlos, solo el borde). */
+  border: 1.5px solid var(--border-light);
 }
 /* Buscador dentro del panel fusionado -- mismo `.app-nav-search` de
-   siempre (css/nav.css). "Filtrar puntos según periodo"/"Filtrar por rol"
-   (re-ajuste, ver MANIFEST.md) -- pasaron por una versión intermedia como
-   acordeón colapsable, pedido explícito de sacarle ese comportamiento:
-   siempre visibles y expandidas, solo el título de sección
-   (`.seccion-label`, sin clase propia) + el contenido de siempre debajo.
-   `.app-nav-search +` da la separación contra el buscador (bug real
-   corregido -- sin esto, la 1ra sección quedaba pegada al buscador);
-   `+ .eq-filtro-seccion` (selector de hermano adyacente, sin
-   `:first-child`) separa a "Filtrar por rol" de "Filtrar puntos según
-   periodo" arriba, sin duplicar el margen en la 1ra sección (que ya lo
-   recibe del selector anterior). El año+12 pills que vivían acá se
-   sacaron -- reemplazadas por la modal de calendario "Fecha"
-   (`#eq-modal-fecha-*`, index.html, ver "Modal calendario 'Fecha'" más
-   abajo), sin nada de eso inline en el panel. */
-.app-nav-search + .eq-filtro-seccion { margin-top: 20px; }
-.eq-filtro-seccion + .eq-filtro-seccion { margin-top: 18px; }
+   siempre (css/nav.css). El año+12 pills que vivían acá se sacaron --
+   reemplazadas por la modal de calendario "Fecha" (`#eq-modal-fecha-*`,
+   index.html, ver "Modal calendario 'Fecha'" más abajo), sin nada de eso
+   inline en el panel. */
+
+/* ── "Filtros" + pills de categoría Puntos/Rol (rediseño, ver MANIFEST.md
+   -- "rediseñar completamente el panel de filtros... para que funcione
+   igual que Eventos") -- reemplaza los 2 títulos de sección fijos
+   "Filtrar puntos según periodo"/"Filtrar por rol" (`.eq-filtro-seccion`,
+   ya sacada de acá y de index.html, sin más consumidores) por el mismo
+   patrón de Eventos: subtítulo "Filtros" + 2 pills de categoría con
+   chevron ("Puntos"/"Rol") que despliegan su propia burbuja con los
+   sub-pills reales al tocarlos. Bloque entero COPIADO 1:1 de
+   `.ev-filtros-label`/`.ev-filtros-row`/`.ev-filtro-trigger`/
+   `.ev-filtro-activo`/`.ev-filtro-burbuja`/`.ev-filtro-burbuja-pills`
+   (css/eventos.css, los triggers "Lugar"/"Tipo") -- pedido explícito
+   ("copiar el estilo visual... para los nuevos pills 'Puntos' y 'Rol' en
+   equipo.css"), no reusado cross-archivo pese a que css/eventos.css ya
+   está cargado en esta misma SPA: cada sección es dueña de sus propias
+   clases, mismo criterio que el resto de este archivo (ver `.eq-cal-fecha-year-*`
+   más abajo, mismo patrón con el selector de fecha de nacimiento). Solo
+   variables de `colors.css`, ninguna nueva -- las mismas que ya usa
+   `.ev-filtro-trigger`. `.eq-filtro-burbuja.abierta` con techo FIJO
+   (320px, sin medir `scrollHeight`) -- mismo criterio que la burbuja de
+   Eventos: contenido chico y acotado (2 pills / 7 pills como mucho) que
+   nunca se acerca a ese techo, no hace falta el patrón scrollHeight-medido
+   del resto de acordeones de esta sección. A diferencia de Eventos (un
+   panel Lugar/Tipo a la vez) -- acá "Puntos"/"Rol" son independientes
+   (`_eqToggleFiltroBurbuja()`/js/equipo.js, pedido explícito: "pueden
+   estar ambos expandidos al mismo tiempo"), simplemente sin lógica de
+   "cerrar el otro" -- cada `.eq-filtro-burbuja` anima sola, sin
+   interferir con la otra. */
+.eq-filtros-label { margin-top: 18px; }
+.eq-filtros-row { display: flex; gap: 8px; margin-bottom: 4px; }
+.eq-filtro-trigger {
+  flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 4px;
+  padding: 10px 6px 10px 12px; border-radius: 18px; border: 1.5px solid var(--border-light);
+  background: var(--surface-light); color: var(--text-2); font-size: 0.78rem; font-weight: 700;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.eq-filtro-trigger-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eq-filtro-trigger .material-symbols-outlined { font-size: 18px; color: var(--muted); flex-shrink: 0; }
+.eq-filtro-trigger.eq-filtro-activo { border-color: var(--brand); color: var(--brand); background: var(--brand-lightest); }
+.eq-filtro-trigger.eq-filtro-activo .material-symbols-outlined { color: var(--brand); }
+.eq-filtro-burbuja { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
+.eq-filtro-burbuja.abierta { max-height: 320px; margin-bottom: 18px; }
+.eq-filtro-burbuja-pills { padding: 10px 2px 16px; }
 
 /* ── Pills de filtro (período + rol) — estilo OUTLINED igual a Eventos
    (rediseño, ver MANIFEST.md -- "cambiar el estilo visual de los pills de

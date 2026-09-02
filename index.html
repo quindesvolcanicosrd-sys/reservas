@@ -35,7 +35,7 @@
 <link rel="stylesheet" href="css/nav.css?v=1622604f">
 <link rel="stylesheet" href="css/eventos.css?v=94f3cbd9">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=ac2e2844">
+<link rel="stylesheet" href="css/equipo.css?v=d1da067b">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2390,23 +2390,29 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
 
       <!-- Panel de búsqueda + filtros fusionados (rediseño, ver MANIFEST.md/
-           CHANGELOG.md) -- buscador de texto libre arriba (mismo
-           comportamiento de siempre, `_eqBuscar()`/js/equipo.js sin
-           cambios) + 2 secciones de filtros debajo, cada una con su propio
-           `.seccion-label`, siempre visibles (sin acordeón, pedido
-           explícito): A) período de puntaje (afecta puntosAsistencia/
-           puntosTareas/puntosTotal de getEquipo(), tanto en las cards como
-           en el perfil de detalle) y B) rol (chips, filtrado 100% en
-           frontend sobre `_eqPersonas` ya cargado -- sin nueva llamada al
-           backend, ver `_eqRolesDe()`/`_EQ_ROLES` ya existentes más abajo
-           en este archivo). Solo 2 pills de período (rediseño, ver
-           MANIFEST.md -- reemplaza las 3 pills Mes/Rango/Histórico
-           anteriores): "Fecha" abre la modal de calendario de más abajo
-           (#eq-modal-fecha-overlay) -- el filtro recién se aplica al
-           confirmarla -- o "Histórico" de inmediato (sin modal, nada que
-           elegir). Sin botón "Aplicar filtros" -- cada elección aplica
-           sola (`_eqFiltroPeriodoModo()`/`_eqConfirmarModalFecha()`/
-           `_eqFiltroRolToggle()`, js/equipo.js). -->
+           CHANGELOG.md -- "que funcione igual que Eventos": mismo patrón
+           `.ev-header-burbuja`/`.ev-header-burbuja-panel`/`.ev-filtros-row`/
+           `.ev-filtro-trigger`/`.ev-filtro-burbuja`/`.ev-filtro-burbuja-pills`
+           de css/eventos.css -- ver `#ev-busqueda-panel`, más arriba en este
+           archivo -- COPIADO a `.eq-*` propias en css/equipo.css, no
+           reusado cross-archivo (cada sección es dueña de sus propias
+           clases, mismo criterio ya aplicado en el resto de esta sección).
+           Buscador de texto libre arriba (mismo comportamiento de siempre,
+           `_eqBuscar()`/js/equipo.js sin cambios), subtítulo "Filtros"
+           (`.seccion-label`, como el resto de la app) y 2 pills de
+           categoría con chevron -- "Puntos" y "Rol", cada una despliega su
+           propia burbuja con los sub-pills reales debajo al tocarla
+           (`_eqToggleFiltroBurbuja()`/js/equipo.js) -- REEMPLAZAN los 2
+           títulos de sección fijos "Filtrar puntos según periodo"/"Filtrar
+           por rol" que había antes (pedido explícito: sacarlos, ahora
+           comunican lo mismo los pills de categoría). A diferencia de
+           Eventos (un panel Lugar/Tipo a la vez, `_evToggleFiltroBurbuja()`
+           colapsa cualquier otro antes de expandir el tocado) -- acá
+           "Puntos" y "Rol" son independientes, pueden estar los 2
+           expandidos a la vez (pedido explícito). Sub-pills sin cambios de
+           comportamiento: "Fecha"/"Histórico" (`_eqFiltroPeriodoModo()`) y
+           los pills de rol (`_eqFiltroRolToggle()`, multi-selección). Sin
+           botón "Aplicar filtros" -- cada elección aplica sola. -->
       <div class="eq-header-panel" id="eq-busqueda-panel">
         <div class="eq-busqueda-panel-inner">
           <div class="app-nav-search">
@@ -2414,17 +2420,23 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
             <input type="text" id="eq-search-input" placeholder="Busca en el equipo" oninput="_eqBuscar(this.value)">
           </div>
 
-          <div class="eq-filtro-seccion">
-            <div class="seccion-label">Filtrar puntos según periodo</div>
-            <div class="aj-pills-row eq-periodo-pills" id="eq-filtro-periodo-modo">
+          <div class="seccion-label eq-filtros-label">Filtros</div>
+          <div class="eq-filtros-row">
+            <button type="button" class="eq-filtro-trigger" id="eq-filtro-btn-puntos" onclick="_eqToggleFiltroBurbuja('puntos')">
+              <span class="eq-filtro-trigger-label">Puntos</span><span class="material-symbols-outlined">expand_more</span>
+            </button>
+            <button type="button" class="eq-filtro-trigger" id="eq-filtro-btn-rol" onclick="_eqToggleFiltroBurbuja('rol')">
+              <span class="eq-filtro-trigger-label">Rol</span><span class="material-symbols-outlined">expand_more</span>
+            </button>
+          </div>
+          <div class="eq-filtro-burbuja" id="eq-filtro-burbuja-puntos">
+            <div class="aj-pills-row eq-periodo-pills eq-filtro-burbuja-pills" id="eq-filtro-periodo-modo">
               <span class="aj-pill eq-pill-fecha activa" data-modo="fecha" onclick="_eqFiltroPeriodoModo('fecha')">Fecha<span class="material-symbols-outlined eq-pill-chevron">expand_more</span></span>
               <span class="aj-pill" data-modo="historico" onclick="_eqFiltroPeriodoModo('historico')">Histórico</span>
             </div>
           </div>
-
-          <div class="eq-filtro-seccion">
-            <div class="seccion-label">Filtrar por rol</div>
-            <div class="aj-pills-row" id="eq-filtro-rol-pills"></div>
+          <div class="eq-filtro-burbuja" id="eq-filtro-burbuja-rol">
+            <div class="aj-pills-row eq-filtro-burbuja-pills" id="eq-filtro-rol-pills"></div>
           </div>
         </div>
       </div>
@@ -3132,7 +3144,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/ui.js?v=66148b6f"></script>
 <script src="js/eventos.js?v=ad1428aa"></script>
 <script src="js/tareas.js"></script>
-<script src="js/equipo.js?v=4924b871"></script>
+<script src="js/equipo.js?v=7bcf81e8"></script>
 <script src="js/home.js?v=cf4b0197"></script>
 <script src="js/reservas.js?v=e53c9c46"></script>
 <script src="js/perfil.js?v=e7e04c90"></script>
