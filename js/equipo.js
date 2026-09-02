@@ -2562,15 +2562,31 @@ function _eqRenderDesglosePuntos(res, concepto) {
   html += '<div class="eq-desglose-total"><span>Total</span><span class="eq-desglose-total-valor">' + _eqDesglosePuntosTxt(res.total) + '</span></div>';
   lista.innerHTML = html;
 }
+// "agosto 2026" -- sin día, para filas que representan un MES entero sin
+// fecha real más precisa disponible (racha `legado:true`, reconciliación
+// de tareas `reconciliacion:true`, ver comentario grande más abajo) --
+// `fecha` en esos casos ya llega como el primer día de ese mes
+// (`'YYYY-MM-01'`, getDesglosePuntos()/supabase/functions/api/index.ts),
+// nunca un día real -- mostrarlo con `_eqFormatearFechaIngreso()` (que sí
+// muestra el día) fingiría una precisión que no existe en el dato.
+function _eqDesgloseMesTxt(fechaIso) {
+  var partes = fechaIso.split('-');
+  return NOMBRES_MESES[Number(partes[1]) - 1] + ' ' + partes[0];
+}
 // Fila individual -- `fecha` (todos los conceptos) llega `'YYYY-MM-DD'`
 // (getDesglosePuntos()/supabase/functions/api/index.ts, ya recortada a
 // solo fecha, sin hora) -- reusa `_eqFormatearFechaIngreso()` (más abajo
 // en este archivo) para el mismo formato "3 de julio de 2024" que ya usa
-// el resto de Equipo, sin inventar un 2do formato de fecha. Racha
-// `legado:true` (bono del sistema anterior, sin fecha de evento real
-// disponible -- ver el comentario grande en supabase/functions/api/index.ts,
-// `getDesglosePuntos()`) usa el mes tal cual en vez de fingir un día
-// puntual que no existe en los datos reales.
+// el resto de Equipo, sin inventar un 2do formato de fecha, salvo en las
+// filas de mes-entero de arriba (`_eqDesgloseMesTxt()`). `reconciliacion:true`
+// (tareas, feat nueva, ver MANIFEST.md/CHANGELOG.md -- "hueco de datos en
+// puntos_tareas sin asignaciones_tareas trazables") -- mismo criterio que
+// `legado:true` en racha: un mes con más puntos guardados en
+// `puntos_mensuales.puntos_tareas` que tareas trazables via
+// `asignaciones_tareas` (típico de una importación histórica que solo
+// trajo el total mensual) entra como una fila "Otros" por ese mes, en vez
+// de dejar que el desglose sume menos que la card de arriba sin ninguna
+// explicación.
 function _eqDesgloseFilaHtml(f, concepto, icono) {
   var titulo, sub;
   if (concepto === 'asistencia') {
@@ -2578,11 +2594,10 @@ function _eqDesgloseFilaHtml(f, concepto, icono) {
     sub = _eqFormatearFechaIngreso(f.fecha);
   } else if (concepto === 'tareas') {
     titulo = f.titulo;
-    sub = _eqFormatearFechaIngreso(f.fecha);
+    sub = f.reconciliacion ? _eqDesgloseMesTxt(f.fecha) : _eqFormatearFechaIngreso(f.fecha);
   } else {
     titulo = f.legado ? 'Bono histórico' : '+2 racha';
-    var partesFecha = f.fecha.split('-');
-    sub = f.legado ? (NOMBRES_MESES[Number(partesFecha[1]) - 1] + ' ' + partesFecha[0]) : _eqFormatearFechaIngreso(f.fecha);
+    sub = f.legado ? _eqDesgloseMesTxt(f.fecha) : _eqFormatearFechaIngreso(f.fecha);
   }
   return '<div class="eq-desglose-fila">' +
       '<span class="eq-desglose-fila-icono"><span class="material-symbols-rounded">' + icono + '</span></span>' +

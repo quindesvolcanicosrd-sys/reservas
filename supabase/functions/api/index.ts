@@ -2842,7 +2842,7 @@ async function getDesglosePuntos(params: Record<string, any>): Promise<Record<st
       : { data: [] as any[] };
     const tareaPorId: Record<string, any> = {};
     (tareasData ?? []).forEach((t: any) => { tareaPorId[t.id] = t; });
-    const filas = (asignaciones ?? []).map((a: any) => {
+    const filas: Array<{ titulo: string; fecha: string; puntos: number; reconciliacion?: boolean }> = (asignaciones ?? []).map((a: any) => {
       const t = tareaPorId[a.tarea_id];
       const puntosOriginales = Number(t?.puntos) || 0;
       return {
@@ -2851,6 +2851,53 @@ async function getDesglosePuntos(params: Record<string, any>): Promise<Record<st
         puntos: _puntosTareaCreditados(puntosOriginales, a.fecha_vencimiento_personal, a.fecha_envio),
       };
     });
+
+    // Reconciliación por mes (feat nueva, ver MANIFEST.md/CHANGELOG.md --
+    // "hueco de datos en puntos_tareas sin asignaciones_tareas trazables")
+    // -- a diferencia de `puntos_asistencia` (arriba en este archivo, ahora
+    // recalculable desde cero y 100% trazable tras el fix de-dup),
+    // `puntos_tareas` NUNCA tiene una función de recálculo completo -- es
+    // un ledger puramente incremental (`_acreditarPuntosTarea()`/
+    // `_restarPuntosTarea()`, solo en aprobar/revertir/eliminar), así que
+    // cualquier hueco histórico (confirmado contra producción: 9
+    // combinaciones usuario+mes reales con `puntos_tareas>0` y CERO
+    // asignaciones aprobadas con `fecha_revision` ese mes -- típicamente
+    // una importación histórica que solo trajo el total mensual, sin el
+    // detalle de tarea por tarea, mismo patrón que `puntos_bonificacion`
+    // en racha, ver concepto `'racha'` más abajo, pero sin una columna
+    // separada que lo distinga acá) NUNCA se resuelve solo, ni con
+    // "Recalcular ahora" (esa acción no existe para tareas). Sin esta
+    // reconciliación, el desglose de alguien con un hueco así muestra
+    // MENOS que la card de arriba, indistinguible de un bug real. Compara,
+    // mes por mes dentro del período pedido, el total TRAZABLE armado
+    // arriba contra el agregado real guardado en
+    // `puntos_mensuales.puntos_tareas` -- si el real es mayor, agrega UNA
+    // fila por ese mes con la diferencia, `fecha` = primer día del mes
+    // (sin detalle más preciso posible) y `reconciliacion:true` (el
+    // frontend la etiqueta "Otros" en vez de un título de tarea real,
+    // `_eqDesgloseFilaHtml()`/js/equipo.js). Nunca al revés -- si el
+    // trazable diera MÁS que el real guardado, eso sería un bug distinto
+    // (¿un mes ya recalculado con datos más nuevos que el agregado
+    // guardado?), no se inventa una fila negativa para taparlo.
+    const trazablePorMes: Record<string, number> = {};
+    filas.forEach((f) => {
+      const claveMes = f.fecha.slice(0, 7);
+      trazablePorMes[claveMes] = (trazablePorMes[claveMes] || 0) + f.puntos;
+    });
+    const { data: puntosStoredData } = await supabase.from('puntos_mensuales')
+      .select('anio, mes, puntos_tareas')
+      .eq('nombre_usuario', nombreUsuario);
+    (puntosStoredData ?? []).forEach((p: any) => {
+      const fechaFila = p.anio + '-' + String(p.mes).padStart(2, '0') + '-01';
+      if (fechaFila < periodo.desde || fechaFila >= periodo.hasta) return;
+      const claveMes = p.anio + '-' + String(p.mes).padStart(2, '0');
+      const diferencia = Math.round(((Number(p.puntos_tareas) || 0) - (trazablePorMes[claveMes] || 0)) * 100) / 100;
+      if (diferencia > 0.001) {
+        filas.push({ titulo: 'Otros (sin detalle disponible)', fecha: fechaFila, puntos: diferencia, reconciliacion: true });
+      }
+    });
+    filas.sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0));
+
     const total = filas.reduce((s: number, f: any) => s + f.puntos, 0);
     return { exito: true, concepto, filas, total };
   }
