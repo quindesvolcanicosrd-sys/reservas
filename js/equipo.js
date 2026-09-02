@@ -2043,7 +2043,12 @@ function _eqRenderMisEstadisticas() {
       // `.eq-fav-btn` dentro de `.eq-miembro-fila`, más arriba en este
       // archivo) para no competir con el tap de la card completa.
       '<div class="eq-stat-card eq-stat-card--combo eq-stat-card--tappable" onclick="' + _eqDesgloseOnclick(persona.username, 'asistencia', 'Puntos por asistencia') + '">' +
-        '<div class="eq-stat-combo-iconos"><span class="material-symbols-rounded">sports</span><span class="material-symbols-rounded">local_fire_department</span></div>' +
+        // Solo `sports` (re-ajuste, pedido explícito, ver MANIFEST.md/
+        // CHANGELOG.md -- "quitar local_fire_department de la fila
+        // superior de íconos") -- el fuego de la racha sigue viéndose en
+        // el badge inline (`rachaBadgeHtml`, más abajo), sin duplicarlo
+        // acá arriba.
+        '<div class="eq-stat-combo-iconos"><span class="material-symbols-rounded">sports</span></div>' +
         '<div class="eq-stat-combo-valor-row">' +
           '<span class="eq-stat-valor">' + (persona.puntosAsistencia !== undefined && persona.puntosAsistencia !== null ? persona.puntosAsistencia : '—') + '</span>' +
           rachaBadgeHtml +
