@@ -827,280 +827,288 @@ function _eqCerrarPanel(tag) {
 var _eqFiltroPeriodo = (function() {
   var hoy = new Date();
   var m = hoy.getMonth() + 1, a = hoy.getFullYear();
-  return { modo: 'mes', mesUnico: m, anioUnico: a, mesDesde: m, anioDesde: a, mesHasta: m, anioHasta: a };
+  return { modo: 'fecha', mesDesde: m, anioDesde: a, mesHasta: m, anioHasta: a };
 })();
-var _EQ_MESES_CORTOS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 var _eqFiltroRoles = [];
 
-// Modo de período (rediseño, ver MANIFEST.md -- "eliminar botón Aplicar
-// filtros: los filtros se aplican automáticamente al seleccionar cada
-// opción"): 'historico' aplica directo (sin datos que elegir) y es
-// toggleable (tocarlo YA activo lo desactiva y vuelve al default, mes
-// actual -- "para resetear, el usuario deselecciona los pills", pedido
-// explícito). 'mes'/'rango' SIEMPRE abren su modal de calendario al
-// tocarlos (`_eqAbrirModalMes()`/`_eqAbrirModalRango()`, más abajo) --
-// **no** son toggleables del mismo modo: bug real encontrado con
-// Playwright en una versión anterior de esta función -- "Mes" arranca
-// `activa` por default (mes actual ya aplicado sin que el usuario haga
-// nada), así que tratarlo como toggleable hacía que el PRIMER tap en
-// "Mes" (para elegir OTRO mes) se leyera como "ya está activo, desactivar"
-// en vez de "abrir la modal". El filtro real de mes/rango recién se aplica
-// al confirmar la modal correspondiente, nunca al tocar el pill.
+// Modo de período (rediseño, ver MANIFEST.md -- "reemplazar Mes/Rango/
+// Histórico por solo 2 pills: Fecha e Histórico"): 'historico' aplica
+// directo (sin datos que elegir) y es toggleable (tocarlo YA activo lo
+// desactiva y vuelve al default, mes actual -- "para resetear, el usuario
+// deselecciona los pills", pedido explícito). 'fecha' SIEMPRE abre la
+// modal de calendario al tocarla (`_eqAbrirModalFecha()`, más abajo) --
+// **no** es toggleable del mismo modo: mismo bug real ya encontrado con
+// Playwright en una versión anterior de esta función (cuando existían las
+// 3 pills Mes/Rango/Histórico) -- "Fecha" arranca `activa` por default
+// (mes actual ya aplicado sin que el usuario haga nada), así que tratarla
+// como toggleable haría que el PRIMER tap (para elegir OTRA fecha) se
+// leyera como "ya está activa, desactivar" en vez de "abrir la modal". El
+// filtro real recién se aplica al confirmar la modal, nunca al tocar el
+// pill.
 function _eqFiltroPeriodoModo(modo) {
   if (modo === 'historico') {
     var pillHist = document.querySelector('.eq-periodo-pills .aj-pill[data-modo="historico"]');
     if (pillHist && pillHist.classList.contains('activa')) {
       var hoy = new Date();
-      _eqFiltroPeriodo.modo = 'mes';
-      _eqFiltroPeriodo.mesUnico = hoy.getMonth() + 1;
-      _eqFiltroPeriodo.anioUnico = hoy.getFullYear();
+      _eqFiltroPeriodo.modo = 'fecha';
+      _eqFiltroPeriodo.mesDesde = _eqFiltroPeriodo.mesHasta = hoy.getMonth() + 1;
+      _eqFiltroPeriodo.anioDesde = _eqFiltroPeriodo.anioHasta = hoy.getFullYear();
       document.querySelectorAll('.eq-periodo-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
       _eqAplicarFiltrosAhora();
       return;
     }
   }
   _eqFiltroPeriodo.modo = modo;
-  // `.eq-periodo-pills` (no `#eq-filtro-periodo-modo` a secas) -- feat
-  // nueva, filtro de período también en el perfil de detalle (ver
-  // MANIFEST.md/`_eqPerfilContenidoHtml()` más abajo): hay 2 instancias
-  // posibles de esta fila de pills en el DOM a la vez (panel de Filtros de
-  // la home + acordeón "Estadísticas" del perfil, si está abierto), ambas
-  // comparten esta clase -- togglear 'activa' desde CUALQUIERA de las 2
-  // mantiene a la otra en sync, sin importar cuál disparó el click.
+  // `.eq-periodo-pills` (no `#eq-filtro-periodo-modo` a secas) -- filtro de
+  // período también en el perfil de detalle (ver MANIFEST.md/
+  // `_eqPerfilContenidoHtml()` más abajo): hay 2 instancias posibles de
+  // esta fila de pills en el DOM a la vez (panel de Filtros de la home +
+  // acordeón "Estadísticas" del perfil, si está abierto), ambas comparten
+  // esta clase -- togglear 'activa' desde CUALQUIERA de las 2 mantiene a
+  // la otra en sync, sin importar cuál disparó el click.
   document.querySelectorAll('.eq-periodo-pills .aj-pill').forEach(function(p) {
     p.classList.toggle('activa', p.getAttribute('data-modo') === modo);
   });
   if (modo === 'historico') _eqAplicarFiltrosAhora();
-  else if (modo === 'mes') _eqAbrirModalMes();
-  else if (modo === 'rango') _eqAbrirModalRango();
+  else if (modo === 'fecha') _eqAbrirModalFecha();
 }
 
-/* ── Modal "Elige el mes" (rediseño, ver MANIFEST.md -- reemplaza la
-   modal anterior de año+12 pills genéricas) -- header de navegación por
-   AÑO (`‹ 2025 ›`, `.ev-ant-cal-nav*`/css/eventos.css, reusado tal cual --
-   pedido explícito de "mismo header, mismos estilos, mismo fondo" que la
-   modal de Rango, más abajo) + los 12 meses como pills
-   (`.ev-ant-mes-grid`/`.ev-ant-mes-cell`, MISMA grilla que ya usaba
-   "asistencia anticipada → Por meses", `_evAntRenderMesesGrid()`/
-   js/eventos.js -- acá sin la restricción de "mes ya pasado"/cuota al día
-   de esa función, que no aplica al filtro histórico de Equipo: cualquier
-   mes, pasado o futuro, es un período válido para filtrar puntos).
-   Single-select (un mes a la vez, no varios) -- `_eqFiltroPeriodo.mesUnico`/
-   `anioUnico` son un único par, mismo contrato que siempre tuvo el modo
-   'mes' de `getEquipo()` (supabase/functions/api/index.ts): un pill grid
-   multi-seleccionable no tendría a dónde mapear una selección de varios
-   meses sin cambiar ese contrato, fuera de alcance de esta feature (solo
-   UI). Markup real en index.html (`#eq-modal-mes-overlay`/
-   `#eq-modal-mes-sheet`) -- mismo componente `.bsheet-overlay`/`.bsheet`
-   estándar que el resto de sheets de la app (`_datLesionAbrirSheet()`/
-   js/perfil.js), mismo criterio de apertura/cierre. */
-var _eqCalMes = { anio: null, mesSel: null, anioSel: null };
-function _eqAbrirModalMes() {
+/* ── Modal "Elige la fecha" (rediseño, ver MANIFEST.md -- unifica las 2
+   modales anteriores "Elige el mes"/"Elige el rango" en una sola, pedido
+   explícito: "reemplazar los pills actuales de período (Mes, Rango,
+   Histórico) por solo dos: Fecha e Histórico") -- reusa al máximo el
+   componente de calendario de un solo mes ya existente en la app
+   ("asistencia anticipada", `_evAntCalRender()`/js/eventos.js: mismas
+   clases `.ev-cal-grid`/`.ev-cal-dow`/`.ev-cal-celda`/`.ev-cal-num`/
+   `.ev-ajeno`/`.ev-ant-cal-sel`/`.ev-ant-cal-en-rango`/`.ev-ant-cal-hoy`,
+   mismo algoritmo de grilla -- lunes de la semana del día 1 hasta el
+   domingo de la semana del último día del mes, `_evLunesDeSemana()`/
+   `_evToISO()`, js/eventos.js) con nav `‹ mes-a-mes ›` (`.ev-ant-cal-nav*`,
+   css/eventos.css, reusado tal cual) en vez de las 12-meses-apilados que
+   usaba la modal de Rango vieja (`.eq-cal-mini*`, ya sacada de este
+   archivo/css/equipo.css -- sin más consumidores tras este cambio).
+   2 modificaciones sobre ese componente base, ambas pedidas explícitas:
+   (1) el label central del header (`_eqCalFecha.mesMostrado`+`anioMostrado`,
+   "Septiembre 2026") es TAPPEABLE (`.eq-cal-fecha-label`, css/equipo.css)
+   -- togglea a una grilla de años (`_eqCalFechaToggleAnio()`, más abajo)
+   estilo Google Calendar (3 columnas, año actual/mostrado resaltado,
+   scroll vertical) -- mismo patrón visual que `.dp-year-grid`/`.dp-year-btn`
+   (`shared/date-picker.js`+`inscripcion/inscripcion.css`, el selector de
+   fecha de nacimiento) pero DUPLICADO acá como `.eq-cal-fecha-year-*`
+   (css/equipo.css) en vez de importado -- ese CSS vive en
+   `inscripcion/inscripcion.css`, que esta SPA principal no carga (ver
+   MANIFEST.md, sección 1: `shared/date-picker.js` está "usado en
+   inscripcion/" únicamente). Elegir un año vuelve a la vista de mes para
+   ese año (`_eqCalFechaElegirAnio()`). (2) selección "flexible": un tap en
+   un día filtra por ese MES completo, no por el día exacto -- el día
+   tocado es solo el mecanismo de selección visual (mismo criterio que ya
+   tenía la modal de Rango vieja: `getEquipo()` nunca recibió un día real,
+   solo mes+año) -- por eso el estado interno (`_eqCalFecha.desdeClave`/
+   `hastaClave`) se guarda como CLAVE DE MES (`anio*12+mes`, 0-indexado),
+   no como fecha ISO -- comparar 2 taps en el MISMO mes pero distinto día
+   (ej. día 3 después de día 15) no debe generar ningún cambio real de
+   selección, cosa que sí pasaba con el mecanismo anterior (`_eqCalRango`,
+   basado en comparar strings ISO día a día). Un 2do tap define un rango de
+   mes/año a mes/año -- mismo mecanismo "ida y vuelta" que ya usaba la
+   modal de Rango (primer tap fija Desde y limpia Hasta; un tap posterior
+   -- clave >= Desde -- fija Hasta; uno anterior a Desde reemplaza Desde),
+   ahora comparando claves de mes en vez de fechas ISO. Markup real en
+   index.html (`#eq-modal-fecha-*`) -- mismo componente `.bsheet-overlay`/
+   `.bsheet` estándar que el resto de sheets de la app, mismo criterio de
+   apertura/cierre. */
+var _eqCalFecha = { anioMostrado: null, mesMostrado: null, desdeClave: null, hastaClave: null, vistaAnio: false };
+function _eqAbrirModalFecha() {
   var hoy = new Date();
-  _eqCalMes.anio = _eqFiltroPeriodo.anioUnico || hoy.getFullYear();
-  _eqCalMes.mesSel = _eqFiltroPeriodo.mesUnico || null;
-  _eqCalMes.anioSel = _eqFiltroPeriodo.mesUnico ? _eqFiltroPeriodo.anioUnico : null;
-  _eqRenderModalMes();
-  var ov = document.getElementById('eq-modal-mes-overlay');
-  var sh = document.getElementById('eq-modal-mes-sheet');
+  // Arranca mostrando el mes "Desde" ya elegido (si había uno) -- reabrir
+  // la modal conserva la última selección en vez de resetear a hoy.
+  _eqCalFecha.anioMostrado = _eqFiltroPeriodo.anioDesde || hoy.getFullYear();
+  _eqCalFecha.mesMostrado = (_eqFiltroPeriodo.mesDesde || (hoy.getMonth() + 1)) - 1;
+  _eqCalFecha.vistaAnio = false;
+  if (_eqFiltroPeriodo.mesDesde && _eqFiltroPeriodo.anioDesde) {
+    _eqCalFecha.desdeClave = _eqFiltroPeriodo.anioDesde * 12 + (_eqFiltroPeriodo.mesDesde - 1);
+    _eqCalFecha.hastaClave = (_eqFiltroPeriodo.mesHasta && _eqFiltroPeriodo.anioHasta && !(_eqFiltroPeriodo.mesHasta === _eqFiltroPeriodo.mesDesde && _eqFiltroPeriodo.anioHasta === _eqFiltroPeriodo.anioDesde))
+      ? _eqFiltroPeriodo.anioHasta * 12 + (_eqFiltroPeriodo.mesHasta - 1) : null;
+  } else {
+    _eqCalFecha.desdeClave = null;
+    _eqCalFecha.hastaClave = null;
+  }
+  _eqRenderModalFecha();
+  var ov = document.getElementById('eq-modal-fecha-overlay');
+  var sh = document.getElementById('eq-modal-fecha-sheet');
   if (!ov || !sh) return;
   ov.style.display = 'block';
   sh.style.display = 'block';
   requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
 }
-function _eqCerrarModalMes() {
-  var ov = document.getElementById('eq-modal-mes-overlay');
-  var sh = document.getElementById('eq-modal-mes-sheet');
+function _eqCerrarModalFecha() {
+  var ov = document.getElementById('eq-modal-fecha-overlay');
+  var sh = document.getElementById('eq-modal-fecha-sheet');
   if (sh) sh.style.transform = 'translateY(100%)';
   setTimeout(function() {
     if (sh) sh.style.display = 'none';
     if (ov) ov.style.display = 'none';
   }, 350);
 }
-function _eqCalMesAnio(delta) {
-  _eqCalMes.anio += delta;
-  _eqRenderModalMes();
+function _eqCalFechaMoverMes(dir) {
+  _eqCalFecha.mesMostrado += dir;
+  if (_eqCalFecha.mesMostrado > 11) { _eqCalFecha.mesMostrado = 0; _eqCalFecha.anioMostrado++; }
+  else if (_eqCalFecha.mesMostrado < 0) { _eqCalFecha.mesMostrado = 11; _eqCalFecha.anioMostrado--; }
+  _eqRenderModalFecha();
 }
-function _eqRenderModalMes() {
-  var label = document.getElementById('eq-modal-mes-anio-label');
-  if (label) label.textContent = String(_eqCalMes.anio);
-  var cont = document.getElementById('eq-modal-mes-grid');
+// Header tappeable -> grilla de años (pedido explícito, "estilo Google
+// Calendar"). Togglea, no siempre-abre -- volver a tocar el label estando
+// en modo año cierra la grilla sin elegir nada (mismo criterio que
+// `initDatePickerListeners()`/shared/date-picker.js: `dpState.yearMode =
+// !dpState.yearMode`).
+function _eqCalFechaToggleAnio() {
+  _eqCalFecha.vistaAnio = !_eqCalFecha.vistaAnio;
+  _eqRenderModalFecha();
+}
+function _eqCalFechaElegirAnio(anio) {
+  _eqCalFecha.anioMostrado = anio;
+  _eqCalFecha.vistaAnio = false;
+  _eqRenderModalFecha();
+}
+function _eqRenderModalFecha() {
+  var label = document.getElementById('eq-modal-fecha-label');
+  var prevBtn = document.getElementById('eq-modal-fecha-prev');
+  var nextBtn = document.getElementById('eq-modal-fecha-next');
+  var diasCont = document.getElementById('eq-modal-fecha-dias');
+  var aniosCont = document.getElementById('eq-modal-fecha-anios');
+  if (!diasCont || !aniosCont) return;
+  if (_eqCalFecha.vistaAnio) {
+    if (label) label.textContent = 'Elige un año';
+    if (prevBtn) prevBtn.style.display = 'none';
+    if (nextBtn) nextBtn.style.display = 'none';
+    diasCont.style.display = 'none';
+    aniosCont.style.display = '';
+    _eqRenderAniosGrid();
+  } else {
+    if (label) label.textContent = NOMBRES_MESES[_eqCalFecha.mesMostrado] + ' ' + _eqCalFecha.anioMostrado;
+    if (prevBtn) prevBtn.style.display = '';
+    if (nextBtn) nextBtn.style.display = '';
+    aniosCont.style.display = 'none';
+    diasCont.style.display = '';
+    _eqRenderDiasGrid();
+  }
+  _eqCalFechaActualizarResumen();
+}
+// Grilla de días de un solo mes -- puerto directo del algoritmo de
+// `_evAntCalRender()`/js/eventos.js, sin su guard de "fecha pasada"/cuota
+// (no aplica acá: el filtro de Equipo es sobre puntos ya guardados, un mes
+// íntegramente en el pasado es el caso de uso normal). Selección por CLAVE
+// DE MES (`anio*12+mes`, no por fecha ISO -- ver comentario grande de
+// arriba): cualquier celda cuyo mes real (el de `cur`, no el mes
+// mostrado -- así una celda "ajena" que bordea al mes anterior/siguiente
+// también es tocable y selecciona SU propio mes real, mismo criterio que
+// `_evAntCalRender()`, que tampoco excluye del `onclick` a sus celdas
+// ajenas) caiga dentro de [Desde,Hasta] se pinta con `.ev-ant-cal-en-rango`
+// -- el mes ENTERO se ve "seleccionado", no solo el día tocado (coherente
+// con que la selección real es de mes, no de día).
+function _eqRenderDiasGrid() {
+  var cont = document.getElementById('eq-modal-fecha-dias');
   if (!cont) return;
-  cont.innerHTML = _EQ_MESES_CORTOS.map(function(nombre, i) {
-    var mesNum = i + 1;
-    var activo = _eqCalMes.mesSel === mesNum && _eqCalMes.anioSel === _eqCalMes.anio;
-    return '<button type="button" class="ev-ant-mes-cell' + (activo ? ' activo' : '') + '" onclick="_eqTocarMesModal(' + mesNum + ')">' + nombre + '</button>';
-  }).join('');
-}
-function _eqTocarMesModal(mesNum) {
-  _eqCalMes.mesSel = mesNum;
-  _eqCalMes.anioSel = _eqCalMes.anio;
-  _eqRenderModalMes();
-}
-function _eqConfirmarModalMes() {
-  if (!_eqCalMes.mesSel || !_eqCalMes.anioSel) { _eqCerrarModalMes(); return; }
-  _eqFiltroPeriodo.modo = 'mes';
-  _eqFiltroPeriodo.mesUnico = _eqCalMes.mesSel;
-  _eqFiltroPeriodo.anioUnico = _eqCalMes.anioSel;
-  _eqCerrarModalMes();
-  _eqAplicarFiltrosAhora();
-}
-
-/* ── Modal "Elige el rango" (rediseño, ver MANIFEST.md -- reemplaza la
-   modal anterior de 2 bloques año+12 pills "Desde"/"Hasta") -- pedido
-   explícito: "reusar/adaptar el calendario de asistencia anticipada
-   (grilla de días con selección de rango de inicio y fin)" + "selector de
-   año en el encabezado... de modo que el usuario pueda seleccionar un
-   rango que cruce años". Una grilla de un solo mes con nav mes-a-mes (como
-   `_evAntCalRender()`, js/eventos.js) no alcanza para eso sin 12 clicks de
-   "mes siguiente" por cada año de diferencia -- en vez de eso, esta
-   modal muestra los 12 MESES COMPLETOS del año elegido a la vez (12
-   mini-calendarios apilados, `.eq-cal-mini*`/css/equipo.css -- la MISMA
-   grilla `.ev-cal-grid`/`.ev-cal-celda`/`.ev-cal-num` de siempre, escalada
-   chica para que las 12 quepan en una sola modal con scroll), con el
-   header navegando por AÑO -- tocar cualquier día de cualquier mes fija
-   inicio/fin del rango, y cruzar a otro año es tan simple como tocar
-   `›`/`‹` y tocar el otro extremo ahí. Mismo mecanismo "ida y vuelta" que
-   `_evAntCalTocarDia()` (primer toque fija Desde y limpia Hasta; un toque
-   posterior -- fecha >= Desde -- fija Hasta; uno anterior a Desde reemplaza
-   Desde) pero SIN el guard de "fecha pasada"/cuota de esa función -- no
-   aplican acá: el filtro de Equipo es sobre puntos ya guardados, un rango
-   íntegramente en el pasado es el caso de uso normal, no una excepción a
-   bloquear. El día tocado exacto es solo el mecanismo de selección visual
-   -- lo que de verdad importa para `getEquipo()` es el MES+AÑO de ese día
-   (`params.mesDesde`/`anioDesde`/`mesHasta`/`anioHasta`, granularidad real
-   del filtro, ver supabase/functions/api/index.ts) -- por eso el resumen
-   de abajo muestra "Marzo 2025", no "15/3/2025": el día en sí nunca viajó
-   al backend, mostrarlo sugeriría una precisión que el filtro no tiene. */
-var _eqCalRango = { anio: null, desde: null, hasta: null };
-function _eqAbrirModalRango() {
-  _eqCalRango.anio = _eqFiltroPeriodo.anioDesde || new Date().getFullYear();
-  _eqCalRango.desde = (_eqFiltroPeriodo.mesDesde && _eqFiltroPeriodo.anioDesde)
-    ? _eqFiltroPeriodo.anioDesde + '-' + String(_eqFiltroPeriodo.mesDesde).padStart(2, '0') + '-01' : null;
-  _eqCalRango.hasta = (_eqFiltroPeriodo.mesHasta && _eqFiltroPeriodo.anioHasta)
-    ? _eqFiltroPeriodo.anioHasta + '-' + String(_eqFiltroPeriodo.mesHasta).padStart(2, '0') + '-01' : null;
-  _eqRenderModalRango();
-  var ov = document.getElementById('eq-modal-rango-overlay');
-  var sh = document.getElementById('eq-modal-rango-sheet');
-  if (!ov || !sh) return;
-  ov.style.display = 'block';
-  sh.style.display = 'block';
-  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
-}
-function _eqCerrarModalRango() {
-  var ov = document.getElementById('eq-modal-rango-overlay');
-  var sh = document.getElementById('eq-modal-rango-sheet');
-  if (sh) sh.style.transform = 'translateY(100%)';
-  setTimeout(function() {
-    if (sh) sh.style.display = 'none';
-    if (ov) ov.style.display = 'none';
-  }, 350);
-}
-function _eqCalRangoAnio(delta) {
-  _eqCalRango.anio += delta;
-  _eqRenderModalRango();
-}
-// Un mini-calendario (mes `mesIdx`, 0-indexado, del año `anio`) -- mismo
-// algoritmo de grilla que `_evAntCalRender()`/js/eventos.js (lunes de la
-// semana del día 1, hasta el domingo de la semana del último día del mes),
-// mismas clases (`.ev-cal-grid`/`.ev-cal-celda`/`.ev-cal-num`/`.ev-ajeno`/
-// `.ev-ant-cal-sel`/`.ev-ant-cal-en-rango`/`.ev-ant-cal-hoy`). Celdas
-// "ajenas" (día de OTRO mes, relleno de grilla) sin onclick a propósito --
-// ese mismo día ya es tocable en SU mini-calendario real, más abajo o más
-// arriba en la lista de los 12; dejarlo clickeable acá también sería un
-// 2do camino redundante hacia el mismo resultado.
-function _eqCalMiniHtml(anio, mesIdx) {
-  var inicioGrid = _evLunesDeSemana(new Date(anio, mesIdx, 1));
-  var finMes = new Date(anio, mesIdx + 1, 0);
+  var anio = _eqCalFecha.anioMostrado, mes = _eqCalFecha.mesMostrado;
+  var inicioGrid = _evLunesDeSemana(new Date(anio, mes, 1));
+  var finMes = new Date(anio, mes + 1, 0);
   var finGrid = _evLunesDeSemana(finMes);
   finGrid.setDate(finGrid.getDate() + 6);
-  var desde = _eqCalRango.desde, hasta = _eqCalRango.hasta;
   var hoy = _evHoyISO();
-  var html = '<div class="eq-cal-mini-titulo">' + _EQ_MESES_CORTOS[mesIdx] + '</div><div class="ev-cal-grid eq-cal-mini-grid">';
+  var claveDesde = _eqCalFecha.desdeClave;
+  var claveHasta = _eqCalFecha.hastaClave !== null ? _eqCalFecha.hastaClave : claveDesde;
+  var claveMin = claveDesde !== null ? Math.min(claveDesde, claveHasta) : null;
+  var claveMax = claveDesde !== null ? Math.max(claveDesde, claveHasta) : null;
+  var html = _EV_DIAS_CORTOS.map(function(d) { return '<div class="ev-cal-dow">' + d + '</div>'; }).join('');
   var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
   while (cur <= finGrid) {
     var celdaIso = _evToISO(cur);
-    var ajeno = cur.getMonth() !== mesIdx;
+    var ajeno = cur.getMonth() !== mes;
+    var claveCelda = cur.getFullYear() * 12 + cur.getMonth();
     var clases = 'ev-cal-celda' + (ajeno ? ' ev-ajeno' : '');
-    var onclickAttr = '';
-    if (!ajeno) {
-      if (desde && celdaIso === desde) clases += ' ev-ant-cal-sel';
-      if (hasta && celdaIso === hasta) clases += ' ev-ant-cal-sel';
-      if (desde && hasta && _evFechaCmp(celdaIso, desde) > 0 && _evFechaCmp(celdaIso, hasta) < 0) clases += ' ev-ant-cal-en-rango';
-      if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
-      onclickAttr = ' onclick="_eqTocarDiaRangoModal(\'' + celdaIso + '\')"';
-    }
-    html += '<div class="' + clases + '"' + onclickAttr + '><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
+    if (claveMin !== null && claveCelda >= claveMin && claveCelda <= claveMax) clases += ' ev-ant-cal-en-rango';
+    if (claveCelda === claveDesde || claveCelda === claveHasta) clases += ' ev-ant-cal-sel';
+    if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
+    html += '<div class="' + clases + '" onclick="_eqCalFechaTocarDia(' + claveCelda + ')"><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
     cur.setDate(cur.getDate() + 1);
   }
-  html += '</div>';
-  return '<div class="eq-cal-mini">' + html + '</div>';
+  cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>';
 }
-function _eqRenderModalRango() {
-  var label = document.getElementById('eq-modal-rango-anio-label');
-  if (label) label.textContent = String(_eqCalRango.anio);
-  var cont = document.getElementById('eq-modal-rango-meses');
-  if (cont) {
-    var html = '';
-    for (var m = 0; m < 12; m++) html += _eqCalMiniHtml(_eqCalRango.anio, m);
-    cont.innerHTML = html;
-  }
-  _eqCalRangoActualizarResumen();
-}
-// Ida y vuelta -- mismo criterio que `_evAntCalTocarDia()`/js/eventos.js
-// para 'periodo' (ver comentario grande de arriba, "Modal 'Elige el
-// rango'"), sin el guard de fecha pasada/cuota que esa función sí tiene.
-function _eqTocarDiaRangoModal(iso) {
-  var desde = _eqCalRango.desde, hasta = _eqCalRango.hasta;
-  if (!desde || hasta) {
-    _eqCalRango.desde = iso;
-    _eqCalRango.hasta = null;
-  } else if (_evFechaCmp(iso, desde) < 0) {
-    _eqCalRango.desde = iso;
-  } else {
-    _eqCalRango.hasta = iso;
-  }
-  _eqRenderModalRango();
-}
-// "Marzo 2025" en vez de "15/3/2025" -- ver el comentario grande de
-// "Modal 'Elige el rango'" más arriba: el día tocado es solo el mecanismo
-// de selección, `getEquipo()` nunca recibe un día real, así que mostrarlo
-// sugeriría una precisión que el filtro no tiene.
-function _eqFechaCortaModal(iso) {
-  var p = iso.split('-');
-  return NOMBRES_MESES[parseInt(p[1], 10) - 1] + ' ' + p[0];
-}
-function _eqCalRangoActualizarResumen() {
-  var cont = document.getElementById('eq-modal-rango-resumen');
-  var btn = document.getElementById('eq-modal-rango-btn-restablecer');
+// Grilla de años estilo Google Calendar (pedido explícito) -- mismo patrón
+// que `renderYearGrid()`/shared/date-picker.js (año actual/mostrado
+// resaltado + `scrollIntoView` para que arranque centrado), acotada a una
+// ventana de 16 años (año próximo a 15 atrás) en vez de bajar hasta 1920
+// como esa función -- ahí tiene sentido para una fecha de nacimiento, acá
+// no: cualquier período con puntos guardados va a estar dentro de la vida
+// reciente del club. `.hoy` (borde, no relleno -- mismo criterio dual que
+// `.ev-ant-cal-hoy`/`.ev-ant-cal-sel` del día-grilla de arriba) marca el
+// año calendario REAL de hoy, separado de `.activo` (relleno de marca),
+// que marca el año actualmente MOSTRADO -- coinciden la primera vez que se
+// abre la modal (arranca en el mes/año de hoy o de la selección previa),
+// pero no necesariamente después de navegar.
+function _eqRenderAniosGrid() {
+  var cont = document.getElementById('eq-modal-fecha-anios');
   if (!cont) return;
-  var desde = _eqCalRango.desde, hasta = _eqCalRango.hasta;
-  if (!desde) {
-    cont.innerHTML = '<span class="ev-ant-rango-vacio">Toca un día para empezar</span>';
+  var anioReal = new Date().getFullYear();
+  var html = '';
+  for (var y = anioReal + 1; y >= anioReal - 14; y--) {
+    var clases = 'eq-cal-fecha-year-btn' + (y === _eqCalFecha.anioMostrado ? ' activo' : '') + (y === anioReal ? ' hoy' : '');
+    html += '<button type="button" class="' + clases + '" onclick="_eqCalFechaElegirAnio(' + y + ')">' + y + '</button>';
+  }
+  cont.innerHTML = html;
+  requestAnimationFrame(function() {
+    var sel = cont.querySelector('.eq-cal-fecha-year-btn.activo');
+    if (sel) sel.scrollIntoView({ block: 'center' });
+  });
+}
+// Ida y vuelta -- mismo criterio que `_evAntCalTocarDia()`/js/eventos.js,
+// ahora sobre claves de mes en vez de fechas ISO (ver comentario grande de
+// "Modal 'Elige la fecha'" más arriba).
+function _eqCalFechaTocarDia(claveCelda) {
+  if (_eqCalFecha.desdeClave === null || _eqCalFecha.hastaClave !== null) {
+    _eqCalFecha.desdeClave = claveCelda;
+    _eqCalFecha.hastaClave = null;
+  } else if (claveCelda < _eqCalFecha.desdeClave) {
+    _eqCalFecha.desdeClave = claveCelda;
+  } else {
+    _eqCalFecha.hastaClave = claveCelda;
+  }
+  _eqRenderModalFecha();
+}
+// "Septiembre 2026" a partir de una clave de mes (`anio*12+mes`) -- mismo
+// criterio que la modal de Rango vieja: lo que de verdad importa para
+// `getEquipo()` es el mes+año, nunca un día real.
+function _eqCalFechaClaveATexto(clave) {
+  return NOMBRES_MESES[clave % 12] + ' ' + Math.floor(clave / 12);
+}
+function _eqCalFechaActualizarResumen() {
+  var cont = document.getElementById('eq-modal-fecha-resumen');
+  var btn = document.getElementById('eq-modal-fecha-btn-restablecer');
+  if (!cont) return;
+  var desde = _eqCalFecha.desdeClave, hasta = _eqCalFecha.hastaClave;
+  if (desde === null) {
+    cont.innerHTML = '<span class="ev-ant-rango-vacio">Toca un mes para empezar</span>';
     if (btn) btn.style.display = 'none';
     return;
   }
-  var html = 'Del ' + _eqEsc(_eqFechaCortaModal(desde));
-  if (hasta) html += ' al ' + _eqEsc(_eqFechaCortaModal(hasta));
+  var html = _eqEsc(_eqCalFechaClaveATexto(desde));
+  if (hasta !== null) html += ' al ' + _eqEsc(_eqCalFechaClaveATexto(hasta));
   cont.innerHTML = html;
   if (btn) btn.style.display = '';
 }
-function _eqCalRangoRestablecer() {
-  _eqCalRango.desde = null;
-  _eqCalRango.hasta = null;
-  _eqRenderModalRango();
+function _eqCalFechaRestablecer() {
+  _eqCalFecha.desdeClave = null;
+  _eqCalFecha.hastaClave = null;
+  _eqRenderModalFecha();
 }
-function _eqConfirmarModalRango() {
-  if (!_eqCalRango.desde) { _eqCerrarModalRango(); return; }
-  var desdeParts = _eqCalRango.desde.split('-');
-  var hastaIso = _eqCalRango.hasta || _eqCalRango.desde;
-  var hastaParts = hastaIso.split('-');
-  _eqFiltroPeriodo.modo = 'rango';
-  _eqFiltroPeriodo.mesDesde = parseInt(desdeParts[1], 10);
-  _eqFiltroPeriodo.anioDesde = parseInt(desdeParts[0], 10);
-  _eqFiltroPeriodo.mesHasta = parseInt(hastaParts[1], 10);
-  _eqFiltroPeriodo.anioHasta = parseInt(hastaParts[0], 10);
-  _eqCerrarModalRango();
+function _eqConfirmarModalFecha() {
+  if (_eqCalFecha.desdeClave === null) { _eqCerrarModalFecha(); return; }
+  var claveHasta = _eqCalFecha.hastaClave !== null ? _eqCalFecha.hastaClave : _eqCalFecha.desdeClave;
+  _eqFiltroPeriodo.modo = 'fecha';
+  _eqFiltroPeriodo.anioDesde = Math.floor(_eqCalFecha.desdeClave / 12);
+  _eqFiltroPeriodo.mesDesde = (_eqCalFecha.desdeClave % 12) + 1;
+  _eqFiltroPeriodo.anioHasta = Math.floor(claveHasta / 12);
+  _eqFiltroPeriodo.mesHasta = (claveHasta % 12) + 1;
+  _eqCerrarModalFecha();
   _eqAplicarFiltrosAhora();
 }
 
@@ -1158,21 +1166,25 @@ function _eqPasaFiltroRol(p) {
 // volver a pedir, cambió el período. Renombrada de `_eqAplicarFiltros()`
 // (rediseño, sin botón "Aplicar filtros" -- ver MANIFEST.md): ahora la
 // disparan 3 caminos automáticos en vez de un click de botón manual --
-// `_eqFiltroPeriodoModo('historico')` (directo), `_eqConfirmarModalMes()`/
-// `_eqConfirmarModalRango()` (al confirmar la modal de calendario
-// correspondiente), y el toggle-off del pill de histórico (vuelve al
-// default, arriba). Sin spinner de botón propio -- ya no hay botón que
-// deshabilitar.
+// `_eqFiltroPeriodoModo('historico')` (directo), `_eqConfirmarModalFecha()`
+// (al confirmar la modal de calendario), y el toggle-off del pill de
+// histórico (vuelve al default, arriba). Sin spinner de botón propio -- ya
+// no hay botón que deshabilitar.
 function _eqAplicarFiltrosAhora() {
   var p = _eqFiltroPeriodo;
   var params = { action: 'getEquipo' };
   if (p.modo === 'historico') {
     params.historico = true;
-  } else if (p.modo === 'rango') {
+  } else {
+    // Siempre como rango (mesDesde/anioDesde/mesHasta/anioHasta), incluso
+    // para un solo mes -- `getEquipo()` (supabase/functions/api/index.ts)
+    // ya trata un rango con Desde===Hasta exactamente igual que un mes
+    // suelto (misma ventana de fechas resultante), así que no hace falta
+    // un 3er set de parámetros (`params.mes`/`params.anio`) separado para
+    // ese caso -- 2 pills (Fecha/Histórico, ver MANIFEST.md), 1 solo modo
+    // real de filtro de fecha.
     params.mesDesde = p.mesDesde; params.anioDesde = p.anioDesde;
     params.mesHasta = p.mesHasta; params.anioHasta = p.anioHasta;
-  } else {
-    params.mes = p.mesUnico; params.anio = p.anioUnico;
   }
   api(params, function(res) {
     _eqPersonas = (res && res.personas) || [];
@@ -1906,10 +1918,10 @@ function _eqPerfilContenidoHtml(p) {
       '<div class="eq-rank-texto">' + _eqEsc(_eqRankTexto(p)) + '</div>' +
     '</div>';
   // Filtro de período (feat nueva, ver MANIFEST.md -- "igual al filtro de
-  // período que existe en la home de Equipo") -- MISMAS 3 pills
-  // (Mes/Rango/Histórico) y MISMOS handlers (`_eqFiltroPeriodoModo()`,
-  // que abre las mismas 2 modales globales `#eq-modal-mes-*`/
-  // `#eq-modal-rango-*` de siempre) que el panel de Filtros de la lista --
+  // período que existe en la home de Equipo") -- MISMAS 2 pills
+  // (Fecha/Histórico) y MISMOS handlers (`_eqFiltroPeriodoModo()`, que
+  // abre la misma modal global `#eq-modal-fecha-*` de siempre) que el
+  // panel de Filtros de la lista --
   // sin duplicar la lógica, solo una 2da instancia de la fila de pills,
   // identificada por la clase compartida `.eq-periodo-pills` (no un id
   // único: `_eqFiltroPeriodoModo()` ahora sincroniza TODAS las instancias
@@ -1921,8 +1933,7 @@ function _eqPerfilContenidoHtml(p) {
   var periodoPillsHtml = '<div class="eq-perfil-stats-periodo">' +
       '<p class="eq-tier-label" style="margin:0 0 6px">Período</p>' +
       '<div class="aj-pills-row eq-periodo-pills">' +
-        '<span class="aj-pill' + (_eqFiltroPeriodo.modo === 'mes' ? ' activa' : '') + '" data-modo="mes" onclick="_eqFiltroPeriodoModo(\'mes\')">Mes</span>' +
-        '<span class="aj-pill' + (_eqFiltroPeriodo.modo === 'rango' ? ' activa' : '') + '" data-modo="rango" onclick="_eqFiltroPeriodoModo(\'rango\')">Rango</span>' +
+        '<span class="aj-pill' + (_eqFiltroPeriodo.modo === 'fecha' ? ' activa' : '') + '" data-modo="fecha" onclick="_eqFiltroPeriodoModo(\'fecha\')">Fecha</span>' +
         '<span class="aj-pill' + (_eqFiltroPeriodo.modo === 'historico' ? ' activa' : '') + '" data-modo="historico" onclick="_eqFiltroPeriodoModo(\'historico\')">Histórico</span>' +
       '</div>' +
     '</div>';

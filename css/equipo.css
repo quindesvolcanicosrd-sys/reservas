@@ -120,51 +120,48 @@
    `+ .eq-filtro-seccion` (selector de hermano adyacente, sin
    `:first-child`) separa a "Filtrar por rol" de "Filtrar puntos según
    periodo" arriba, sin duplicar el margen en la 1ra sección (que ya lo
-   recibe del selector anterior). El año+12 pills que vivían acá (mes
-   único y rango Desde/Hasta) se sacaron -- reemplazadas por las 2 modales
-   de calendario (`#eq-modal-mes-*`/`#eq-modal-rango-*`, index.html, ver
-   "Modal calendario Mes/Rango" más abajo), sin nada de eso inline en el
-   panel. */
+   recibe del selector anterior). El año+12 pills que vivían acá se
+   sacaron -- reemplazadas por la modal de calendario "Fecha"
+   (`#eq-modal-fecha-*`, index.html, ver "Modal calendario 'Fecha'" más
+   abajo), sin nada de eso inline en el panel. */
 .app-nav-search + .eq-filtro-seccion { margin-top: 20px; }
 .eq-filtro-seccion + .eq-filtro-seccion { margin-top: 18px; }
 
-/* ── Modal calendario Mes/Rango (feat nueva, ver MANIFEST.md) ────────────
-   Reemplaza las 2 modales anteriores de año+12 pills genéricas por 2
-   modales de calendario consistentes entre sí y con el de asistencia
-   anticipada -- pedido explícito: "usar los estilos y variables ya
-   existentes del calendario de asistencia anticipada como base". El header
-   (`.ev-ant-cal-nav*`), la grilla de mes único de "Mes" (`.ev-ant-mes-grid`/
-   `.ev-ant-mes-cell`) y el resumen de rango (`.ev-ant-rango-*`) son TODOS
+/* ── Modal calendario "Fecha" (rediseño, ver MANIFEST.md) ─────────────────
+   Reemplaza las 2 modales anteriores "Elige el mes"/"Elige el rango" (12
+   pills de mes / 12 mini-calendarios apilados) por una sola grilla de UN
+   SOLO MES a la vez -- pedido explícito: "abre la modal de calendario
+   existente (la que se usa en asistencia anticipada...)". El header
+   (`.ev-ant-cal-nav*`), la grilla de días (`.ev-cal-grid`/`.ev-cal-dow`/
+   `.ev-cal-celda`/`.ev-cal-num`) y el resumen (`.ev-ant-rango-*`) son TODOS
    de css/eventos.css, reusados 1:1 sin una sola declaración duplicada acá
-   -- ver `#eq-modal-mes-*`/`#eq-modal-rango-*` en index.html y
-   `_eqAbrirModalMes()`/`_eqAbrirModalRango()`/js/equipo.js. Lo único
-   genuinamente nuevo es este bloque: `.eq-cal-mini*`, la versión chica de
-   `.ev-cal-grid`/`.ev-cal-celda`/`.ev-cal-num` (también de css/eventos.css,
-   MISMAS clases, sin fork) que hace falta para que los 12 meses del año
-   elegido quepan apilados en una sola modal (la modal de "Rango" -- ver el
-   comentario grande de `_eqCalMiniHtml()`/js/equipo.js sobre por qué son 12
-   calendarios completos y no un mes-a-mes con nav). Selectores de
-   descendiente (`.eq-cal-mini .ev-cal-celda`, nunca la clase a secas) --
-   mismo criterio que las demás compactaciones de esta sección (ver
-   `#eq-misstats-panel-inner .eq-stat-card`, más abajo): así el tamaño
-   normal de `.ev-cal-celda`/`.ev-cal-num` en el resto de la app (Eventos,
-   asistencia anticipada) queda intacto. */
-.eq-cal-mini { margin-bottom: 14px; }
-.eq-cal-mini:last-child { margin-bottom: 0; }
-.eq-cal-mini-titulo {
-  font-size: 0.72rem; font-weight: 800; color: var(--brand); text-transform: uppercase;
-  letter-spacing: 0.6px; margin-bottom: 4px;
+   -- ver `#eq-modal-fecha-*` en index.html y `_eqAbrirModalFecha()`/
+   js/equipo.js. `.eq-cal-mini*` (la versión chica de esa grilla para los 12
+   mini-calendarios apilados de la vieja modal de Rango) se sacó de acá --
+   sin más consumidores, esa vista ya no existe. Lo nuevo de este rediseño
+   es: (1) `.eq-cal-fecha-label`, el label de mes/año del header, ahora
+   TAPPEABLE (pedido explícito, "selector de año en el header") -- mismo
+   `.ev-ant-cal-nav-label` de siempre + subrayado punteado sutil para que se
+   note que es interactivo (a diferencia del resto de usos de esa clase en
+   la app, texto pelado); (2) `.eq-cal-fecha-year-*`, la grilla de años que
+   ese label abre -- mismo patrón visual que `.dp-year-grid`/`.dp-year-btn`
+   (`shared/date-picker.js`+`inscripcion/inscripcion.css`, el selector de
+   fecha de nacimiento -- 3 columnas, año actual/mostrado resaltado, scroll
+   vertical, pedido explícito "estilo Google Calendar") DUPLICADO acá en vez
+   de importado: ese CSS vive en `inscripcion/inscripcion.css`, que esta SPA
+   principal no carga. `.hoy` (borde, sin relleno) marca el año calendario
+   REAL de hoy -- separado de `.activo` (relleno de marca), que marca el año
+   actualmente MOSTRADO en la grilla de días -- mismo criterio dual que
+   `.ev-ant-cal-hoy`/`.ev-ant-cal-sel` de la grilla de días. */
+.eq-cal-fecha-label { cursor: pointer; -webkit-tap-highlight-color: transparent; text-decoration: underline dotted; text-underline-offset: 4px; }
+.eq-cal-fecha-year-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-height: 320px; overflow-y: auto; padding: 4px 0; }
+.eq-cal-fecha-year-btn {
+  padding: 14px 4px; border-radius: 14px; border: 1.5px solid transparent; font-size: 0.95rem; font-weight: 600;
+  color: var(--text); background: var(--surface-2); cursor: pointer; text-align: center;
+  -webkit-tap-highlight-color: transparent; font-family: inherit; transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
-.eq-cal-mini .ev-cal-grid { gap: 1px; }
-.eq-cal-mini .ev-cal-dow { font-size: 0.5rem; padding-bottom: 2px; }
-.eq-cal-mini .ev-cal-celda { min-height: 24px; padding: 1px 0 2px; gap: 1px; }
-.eq-cal-mini .ev-cal-num { width: 19px; height: 19px; font-size: 0.6rem; }
-/* Fila de días de la semana compartida por los 12 mini-calendarios (ver
-   #eq-modal-rango-meses/index.html) -- 1 sola vez arriba de todos, mismo
-   tamaño que la de cada mini-calendario individual (arriba) para que las
-   columnas calcen exactas. */
-.eq-cal-mini-dow { gap: 1px; margin-bottom: 6px; }
-.eq-cal-mini-dow .ev-cal-dow { font-size: 0.58rem; padding-bottom: 0; }
+.eq-cal-fecha-year-btn.hoy:not(.activo) { border-color: var(--brand); color: var(--brand); }
+.eq-cal-fecha-year-btn.activo { background: var(--brand); color: var(--white); border-color: var(--brand); font-weight: 700; }
 
 /* ── Favoritos ────────────────────────────────── */
 /* Rediseño: Favoritos ahora es un `.eq-grupo` idéntico a Quindes/Mirlxs/
