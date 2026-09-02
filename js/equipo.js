@@ -848,37 +848,64 @@ function _eqCerrarPanel(tag) {
   setTimeout(_eqActualizarStickyHeaders, 300);
 }
 
-/* ── Colapso progresivo de los paneles de nav al scrollear (ver MANIFEST.md
+/* ── Colapso progresivo de "Mis estadísticas" al scrollear (ver MANIFEST.md
    -- "el panel debe cerrarse progresivamente/animado según el scroll, no de
    golpe") -- puerto 1:1 de `_evInicializarCierreCalendarioPorScroll()`/
    js/eventos.js (drag-to-dismiss EN VIVO sobre el contenedor que scrollea,
    mismo criterio que Google Calendar: mientras el dedo sigue abajo, el
    panel se achica proporcional al arrastre, como un acordeón que sigue el
    gesto real; recién al soltar se decide terminar de cerrar -- si se pasó
-   el umbral -- o volver al alto original -- si no --, ambos animados). A
-   diferencia de Eventos (SOLO el panel de calendario tiene este gesto -- el
-   de búsqueda ahí se cierra instantáneo al primer toque afuera, ver
-   `_evCerrarBurbujaSiFueraDe()`) acá aplica a los 2 paneles de esta sección
-   por igual (pedido explícito) -- `_eqPanelAbierto` decide cuál está activo
-   en cada momento, nunca los 2 a la vez. Escucha `#eq-lista-contenido`
-   (roster completo, equivalente de `#ev-timeline`) -- nunca el panel en sí,
-   que sigue cerrándose instantáneo por acción directa (chevron/ícono). El
-   dedo moviéndose hacia ARRIBA (`dy` negativo) es lo que hace que el
-   contenido scrollee hacia ABAJO -- por eso el panel se achica cuando `dy`
-   se hace más negativo, no al revés. Solo touch, mismo alcance que el resto
-   de los gestos de esta sección. A propósito NO reusa `_eqCerrarPanel()`
-   para terminar de cerrar -- esa función arranca fijando `max-height` al
-   `scrollHeight` COMPLETO antes de animar a 0 (pensada para cerrar desde
-   abierto-de-siempre, sin arrastre de por medio) -- llamarla acá saltaría
-   primero de vuelta al alto completo y recién ahí cerraría, un "rebote" que
-   el usuario no pidió (mismo motivo documentado en la versión de Eventos). */
+   el umbral -- o volver al alto original -- si no --, ambos animados).
+   SOLO aplica a `stats` (re-ajuste, ver MANIFEST.md -- "el panel de
+   búsqueda/filtros debe ocultarse rápido al scrollear, igual que en
+   Eventos, no progresivo"): una ronda anterior aplicaba este mismo drag a
+   los 2 paneles por igual (pedido explícito de ese momento), pero eso
+   dejaba a `busqueda` con un comportamiento DISTINTO al de Eventos, donde
+   el panel de búsqueda nunca sigue al dedo -- se cierra de una sola vez
+   apenas arranca cualquier gesto afuera, ver `_eqCerrarBurbujaSiFueraDe()`
+   más abajo, puerto de `_evCerrarBurbujaSiFueraDe()`/js/eventos.js. Ahora
+   Equipo replica esa MISMA distinción: `stats` sigue con el drag en vivo de
+   acá, `busqueda` usa el mecanismo instantáneo de abajo -- `_eqPanelAbierto`
+   decide cuál está activo en cada momento, nunca los 2 a la vez. Escucha
+   `#eq-lista-contenido` (roster completo, equivalente de `#ev-timeline`) --
+   nunca el panel en sí, que sigue cerrándose instantáneo por acción directa
+   (chevron/ícono). El dedo moviéndose hacia ARRIBA (`dy` negativo) es lo que
+   hace que el contenido scrollee hacia ABAJO -- por eso el panel se achica
+   cuando `dy` se hace más negativo, no al revés. Solo touch, mismo alcance
+   que el resto de los gestos de esta sección. A propósito NO reusa
+   `_eqCerrarPanel()` para terminar de cerrar -- esa función arranca fijando
+   `max-height` al `scrollHeight` COMPLETO antes de animar a 0 (pensada para
+   cerrar desde abierto-de-siempre, sin arrastre de por medio) -- llamarla
+   acá saltaría primero de vuelta al alto completo y recién ahí cerraría, un
+   "rebote" que el usuario no pidió (mismo motivo documentado en la versión
+   de Eventos).
+   Bug real corregido (ver MANIFEST.md -- "header sticky del acordeón se
+   superpone sobre los nombres de las personas"): antes, `touchmove`
+   achicaba `panel.style.maxHeight` (y con él, el alto real de
+   `#eq-sticky-header`, que envuelve al panel) en cada frame del gesto, pero
+   `_eqActualizarStickyHeaders()` -- la única función que mantiene el `top`
+   inline de los 5 headers de sección sincronizado con ese alto real -- solo
+   se llamaba en `touchend` + 300ms, nunca durante el propio arrastre.
+   Durante todo ese gesto (que puede durar varios segundos), los headers
+   quedaban con un `top` desactualizado (el del panel todavía abierto del
+   todo), position:sticky los pegaba mucho más abajo de lo real, y al ser
+   opacos con z-index por encima del roster (`.eq-grupo-header--sticky`,
+   css/equipo.css) terminaban tapando nombres de personas -- no era en
+   realidad un problema de VALORES de z-index (`.eq-sticky-header` ya es
+   100 contra 5 de `.eq-grupo-header--sticky`, jerarquía correcta) sino de
+   un `top` desincronizado durante el arrastre en vivo. Fix:
+   `_eqActualizarStickyHeadersThrottled()` (throttle por
+   `requestAnimationFrame`, evita forzar layout -- `offsetHeight` -- en
+   cada uno de los muchos eventos `touchmove` por segundo) se llama al
+   final de cada `touchmove`, así el `top` de los headers stuck se mantiene
+   al día con el alto real de la nav en todo momento, no solo al soltar. */
 var _eqListaDragY = 0, _eqListaDragActivo = false, _eqListaDragAlturaOriginal = 0;
 var _EQ_PANEL_DRAG_UMBRAL_FRACCION = 0.3;
 function _eqInicializarCierrePanelesPorScroll() {
   var cont = document.getElementById('eq-lista-contenido');
   if (!cont) return;
   cont.addEventListener('touchstart', function(e) {
-    if (e.touches.length !== 1 || !_eqPanelAbierto) return;
+    if (e.touches.length !== 1 || _eqPanelAbierto !== 'stats') return;
     var cfg = _EQ_PANELES[_eqPanelAbierto];
     var panel = cfg && document.getElementById(cfg.el);
     if (!panel) return;
@@ -887,15 +914,20 @@ function _eqInicializarCierrePanelesPorScroll() {
     _eqListaDragAlturaOriginal = panel.getBoundingClientRect().height;
   }, { passive: true });
   cont.addEventListener('touchmove', function(e) {
-    if (!_eqListaDragActivo || !_eqPanelAbierto) return;
+    if (!_eqListaDragActivo || _eqPanelAbierto !== 'stats') return;
     var cfg = _EQ_PANELES[_eqPanelAbierto];
     var panel = cfg && document.getElementById(cfg.el);
     if (!panel) return;
     var dy = e.touches[0].clientY - _eqListaDragY;
-    if (dy >= 0) { panel.style.transition = ''; panel.style.maxHeight = _eqListaDragAlturaOriginal + 'px'; return; }
-    panel.style.transition = 'none';
-    var nuevaAltura = Math.max(0, _eqListaDragAlturaOriginal + dy);
-    panel.style.maxHeight = nuevaAltura + 'px';
+    if (dy >= 0) {
+      panel.style.transition = '';
+      panel.style.maxHeight = _eqListaDragAlturaOriginal + 'px';
+    } else {
+      panel.style.transition = 'none';
+      var nuevaAltura = Math.max(0, _eqListaDragAlturaOriginal + dy);
+      panel.style.maxHeight = nuevaAltura + 'px';
+    }
+    _eqActualizarStickyHeadersThrottled();
   }, { passive: true });
   cont.addEventListener('touchend', function(e) {
     if (!_eqListaDragActivo) return;
@@ -923,6 +955,34 @@ function _eqInicializarCierrePanelesPorScroll() {
   }, { passive: true });
 }
 _eqInicializarCierrePanelesPorScroll();
+
+/* ── Cierre rápido del panel de búsqueda/filtros al iniciar cualquier gesto
+   afuera (ver MANIFEST.md -- "el panel de búsqueda/filtros debe ocultarse
+   rápido al scrollear, igual que en Eventos") -- puerto 1:1 de
+   `_evCerrarBurbujaSiFueraDe()`/js/eventos.js: a diferencia de `stats`
+   (arriba, colapso PROGRESIVO en vivo mientras el dedo arrastra sobre
+   `#eq-lista-contenido`), `busqueda` se cierra de UNA SOLA VEZ con la
+   transición CSS normal de siempre (`_eqCerrarPanel()`, sin arrastre en
+   vivo) apenas arranca cualquier gesto -- `pointerdown`/`touchstart` en
+   FASE DE CAPTURA sobre `document` (dispara con el simple inicio de un
+   scroll del roster, no hace falta esperar a un `touchend`), o un `click`
+   normal -- fuera del panel y de su botón trigger. Con texto ya escrito en
+   el buscador este cierre-por-gesto-afuera se desactiva (mismo criterio
+   que Eventos) -- solo la lupa lo cierra en ese caso, para no perder el
+   query a mitad de tipeo por un scroll accidental. */
+function _eqCerrarBurbujaSiFueraDe(target) {
+  if (_eqPanelAbierto !== 'busqueda') return;
+  if (_eqBusqueda !== '') return;
+  var cfg = _EQ_PANELES.busqueda;
+  var panelEl = document.getElementById(cfg.el);
+  var btnEl = document.getElementById(cfg.btn);
+  if ((panelEl && panelEl.contains(target)) || (btnEl && btnEl.contains(target))) return;
+  _eqCerrarPanel('busqueda');
+}
+document.addEventListener('click', function(e) { _eqCerrarBurbujaSiFueraDe(e.target); });
+['pointerdown', 'touchstart'].forEach(function(tipo) {
+  document.addEventListener(tipo, function(e) { _eqCerrarBurbujaSiFueraDe(e.target); }, { capture: true, passive: true });
+});
 
 // Burbujas de categoría "Puntos"/"Rol" (rediseño, ver MANIFEST.md --
 // re-ajuste: "acordeón mutuamente excluyente, comportamiento radio, solo
@@ -1994,6 +2054,22 @@ function _eqActualizarStickyHeaders() {
   });
 }
 window.addEventListener('resize', _eqActualizarStickyHeaders);
+// Throttle por `requestAnimationFrame` (bug real corregido, ver comentario
+// grande en `_eqInicializarCierrePanelesPorScroll()` más arriba -- "header
+// sticky del acordeón se superpone sobre los nombres") -- usado durante el
+// arrastre en vivo del panel "Mis estadísticas" (`touchmove`, muchos
+// eventos por segundo) para mantener el `top` de los 5 headers al día con
+// el alto real de `#eq-sticky-header` sin forzar `offsetHeight`/layout en
+// cada frame del gesto, solo una vez por frame de pantalla.
+var _eqStickyHeadersRafPendiente = false;
+function _eqActualizarStickyHeadersThrottled() {
+  if (_eqStickyHeadersRafPendiente) return;
+  _eqStickyHeadersRafPendiente = true;
+  requestAnimationFrame(function() {
+    _eqStickyHeadersRafPendiente = false;
+    _eqActualizarStickyHeaders();
+  });
+}
 
 /* Comportamiento dual al tocar un header (ver MANIFEST.md): `offsetTop` de
    un elemento `position:sticky` siempre refleja su posición ESTÁTICA real
