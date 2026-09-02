@@ -1942,16 +1942,6 @@ function _eqRenderLesionadxs() {
 // visibles en el trigger de la nav (`#eq-misstats-toggle-btn`/
 // `toggleAvatar` más abajo) y en el perfil de detalle -- este panel es el
 // único lugar donde dejan de mostrarse.
-// Abreviaturas de nivel para la pill de la nav (pedido explícito, ver
-// MANIFEST.md/CHANGELOG.md -- "rediseño compacto de Mis estadísticas"):
-// "Quindes"->"Q", "Mirlxs"->"M", "Inactivxs"->"I" -- este último nunca
-// sale de `persona.rol` en la práctica (esa columna es SIEMPRE
-// 'Quindes'/'Mirlxs', ver `getEquipo()`/supabase/functions/api/index.ts,
-// "Inactivxs" es un concepto de `estado`/`_eqEsInactivo()`, no de
-// categoría) -- se deja mapeado igual, pedido explícito, defensivo por si
-// algún día existe un 3er valor real. Fallback al texto completo si el
-// rol no está en el mapa, nunca una abreviatura inventada.
-var _EQ_NIVEL_ABREV = { Quindes: 'Q', Mirlxs: 'M', Inactivxs: 'I' };
 function _eqRenderMisEstadisticas() {
   var cont = document.getElementById('eq-misstats-panel-inner');
   var toggleBtn = document.getElementById('eq-misstats-toggle-btn');
@@ -1992,21 +1982,19 @@ function _eqRenderMisEstadisticas() {
   // `.eq-avatar-badge-wrap` (index.html) ya `position:relative`.
   if (toggleTendencia) toggleTendencia.innerHTML = _eqTendenciaBadgeHtml(persona);
   var statsCalc = _eqStatsCalc(persona);
-  var estadoTexto = persona.estado === 'Lesionadx' ? 'Lesionadx' : persona.estado === 'Activx' ? 'Activo' : 'Inactivo';
-  var estadoClase = persona.estado === 'Lesionadx' ? 'dat-estado-lesion' : persona.estado === 'Activx' ? 'dat-estado-activo' : 'dat-estado-inactivo';
-  // Pills de nivel + estado MOVIDAS a la nav (rediseño compacto, pedido
-  // explícito, ver MANIFEST.md/CHANGELOG.md) -- antes vivían dentro del
-  // panel (`.eq-mis-stats-header`/`.eq-mis-stats-info`/`.eq-mis-stats-pills`,
-  // ya sacados de acá abajo) -- ahora en `#eq-misstats-toggle-pills`
-  // (index.html), entre el texto "Mis estadísticas" y el chevron, SIEMPRE
-  // visibles (panel abierto o cerrado), mismo criterio que ya tiene el
-  // avatar/chevron de tendencia de la nav. Nivel abreviado
-  // (`_EQ_NIVEL_ABREV`, más arriba) -- estado queda completo ("Activo"),
-  // mismo `.dat-estado-chip`/`estadoClase` de siempre, sin tocar su color.
+  // Pill de nivel en la nav (rediseño compacto, ver MANIFEST.md/CHANGELOG.md)
+  // -- vive en `#eq-misstats-toggle-pills` (index.html), entre el texto
+  // "Mis estadísticas" y el chevron, SIEMPRE visible (panel abierto o
+  // cerrado), mismo criterio que ya tiene el avatar/chevron de tendencia
+  // de la nav. Re-ajuste (pedido explícito, ver MANIFEST.md/CHANGELOG.md
+  // -- "nombre completo del nivel, no abreviado; sin pill de estado"):
+  // `persona.rol` tal cual ("Quindes"/"Mirlxs", ya NO abreviado a "Q"/"M"
+  // -- `_EQ_NIVEL_ABREV` sin más consumidores, sacada) -- el pill de
+  // estado (`.dat-estado-chip`, "Activo"/"Inactivo"/"Lesionadx") se sacó
+  // de acá, ya no se muestra en la nav (`estadoTexto`/`estadoClase`
+  // también sin más consumidores en esta función, sacadas).
   if (togglePills) {
-    togglePills.innerHTML =
-      '<span class="eq-mis-stats-rol-pill">' + _eqEsc(_EQ_NIVEL_ABREV[persona.rol] || persona.rol) + '</span>' +
-      '<span class="dat-estado-chip ' + estadoClase + '">' + estadoTexto + '</span>';
+    togglePills.innerHTML = '<span class="eq-mis-stats-rol-pill">' + _eqEsc(persona.rol) + '</span>';
   }
   // Termómetro solo con equipo propio -- mismo bug real/mismo criterio ya
   // corregido en `_eqPerfilContenidoHtml()`/`_datosRenderStatsHtml()`
