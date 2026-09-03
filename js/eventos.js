@@ -4194,9 +4194,25 @@ function _evMarcarAsistencia(id, estado) {
       apiParams: { action: 'marcarAsistenciaUsuario', token: _token, idEvento: id, estado: estado },
       meta: { idEvento: id, previo: estadoAnterior, estadoNuevo: estado, descripcion: 'tu asistencia' }
     });
+    // Bug real corregido (ver MANIFEST.md/CHANGELOG.md — "el RSVP no
+    // persiste al cerrar y reabrir la app"): el cambio optimista de arriba
+    // vive solo en memoria (`_EV_EVENTOS`) -- `_offGuardarCache()` (mismo
+    // snapshot que ya escribe `_evCargarDatosReales()` tras cada fetch
+    // real) lo persiste también acá, para que reabrir la app TODAVÍA
+    // offline (antes de que la cola llegue a sincronizar) siga mostrando
+    // este RSVP, no el que había antes de tocarlo.
+    if (typeof _offGuardarCache === 'function') _offGuardarCache();
     return;
   }
-  apiPost({ action: 'marcarAsistenciaUsuario', token: _token, idEvento: id, estado: estado }, function() {}, function(e) {
+  apiPost({ action: 'marcarAsistenciaUsuario', token: _token, idEvento: id, estado: estado }, function() {
+    // Mismo fix que la rama offline de arriba -- acá el estado ya está
+    // CONFIRMADO por el backend (no solo optimista), así que persistir el
+    // cache es directo, sin esperar al próximo `_evCargarDatosReales()`
+    // (que hoy es el único lugar que escribe este cache) -- sin esto, cerrar
+    // la app antes de esa próxima carga completa dejaba el snapshot local
+    // con el RSVP viejo, visible recién al reabrir sin conexión.
+    if (typeof _offGuardarCache === 'function') _offGuardarCache();
+  }, function(e) {
     ev.miEstado = estadoAnterior;
     ev.rsvps = rsvpsAnterior;
     actualizarDom(estadoAnterior);
@@ -4490,6 +4506,11 @@ function _evMarcarAsistenciaAdmin(idEvento, nombre, estado, btnEl) {
       apiParams: { action: 'adminMarcarAsistencia', adminToken: _adminToken, idEvento: idEvento, nombre: nombre, estado: estadoAEnviar },
       meta: { idEvento: idEvento, nombre: nombre, previo: anteriorDeEstaPersona ? anteriorDeEstaPersona.estado : null, estadoNuevo: estadoAEnviar, descripcion: 'la asistencia de ' + nombre }
     });
+    // Mismo fix que _evMarcarAsistencia() (ver MANIFEST.md/CHANGELOG.md --
+    // "el RSVP no persiste al cerrar y reabrir la app") -- el cambio
+    // optimista de `ev.asistentes` de arriba también necesita quedar en el
+    // snapshot de IndexedDB, no solo en memoria.
+    if (typeof _offGuardarCache === 'function') _offGuardarCache();
     return;
   }
   apiPost({ action: 'adminMarcarAsistencia', adminToken: _adminToken, idEvento: idEvento, nombre: nombre, estado: estadoAEnviar }, function() {
@@ -4498,6 +4519,9 @@ function _evMarcarAsistenciaAdmin(idEvento, nombre, estado, btnEl) {
     // del optimista más adelante (mismo criterio defensivo que el resto de
     // estos refrescos parciales, sin costo real: es idempotente).
     _evActualizarAsistenciaPropiaCard(idEvento);
+    // Mismo fix que _evMarcarAsistencia() -- persistir el cache apenas el
+    // backend confirma, sin esperar al próximo _evCargarDatosReales().
+    if (typeof _offGuardarCache === 'function') _offGuardarCache();
   }, function(e) {
     ev.asistentes = asistentesAnterior;
     aplicarEnDom(anteriorDeEstaPersona ? anteriorDeEstaPersona.estado : null);

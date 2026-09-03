@@ -46,6 +46,16 @@ function getDatosCompletos(row: Record<string, any> | null): Record<string, any>
     necesitaProtecciones: row.necesita_protecciones ?? '',
     categoria:            row.categoria             ?? '',
     estado_miembro:       row.estado_miembro        ?? 'Activx',
+    // snake_case a propósito, mismo criterio que estado_miembro arriba --
+    // el frontend ya lee `E.datos.exenta_cuota` tal cual en varios lugares
+    // (_evTieneCuotaAlDia()/js/eventos.js y otros, todos escritos ANTES de
+    // que este mapeo existiera) — bug real corregido: esta función nunca
+    // exponía la columna, así que `E.datos.exenta_cuota` era `undefined`
+    // SIEMPRE (para cualquier cuenta, no solo admin) y ninguna de esas
+    // verificaciones de cuota podía saltearse aunque `equipo.exenta_cuota`
+    // estuviera en `true` en la base — la lógica de gating en sí ya estaba
+    // bien, el dato nunca llegaba.
+    exenta_cuota:         row.exenta_cuota          === true,
     solicitudLesionPendiente: row.solicitud_lesion_pendiente === true,
     nombreDerby:          row.nombre_derby          ?? '',
     numeroDerby:          row.numero_derby          ?? '',

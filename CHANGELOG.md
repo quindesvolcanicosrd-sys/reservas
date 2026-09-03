@@ -177,6 +177,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Asistencias
 
+2026-09-03 — 2 bugs reales corregidos: (1) `getDatosCompletos()` (Edge Function) nunca mapeaba `exenta_cuota` a `E.datos` — la lógica de gating de cuota del RSVP (`_evTieneCuotaAlDia()`) ya la leía bien, pero el dato nunca llegaba, así que ninguna cuenta exenta se salteaba el gate de pago. (2) `_evMarcarAsistencia()`/`_evMarcarAsistenciaAdmin()` no persistían su cambio optimista en el cache de IndexedDB (`_offGuardarCache()`, js/offline.js) — solo `_evCargarDatosReales()` lo hacía — así que cerrar la app antes de la próxima carga completa mostraba el RSVP/marca anterior al reabrir.
+
 2026-08 (aprox.) — `log_asistencias` documentada como mezcla de 2 conceptos por fila (RSVP pre-evento vs. rollcall real de admin) — fuente de un bug recurrente (RSVP mostrándose como "marcado por un admin"), corregido filtrando por `origen==='Admin'` antes de leer como asistencia real.
 2026-08 (aprox.) — Regla de negocio: puntualidad (confirmada por admin) y rol (RSVP "No jugador"/jugador) se combinan en un solo texto ("Llegó a horario · No jugador") en vez de que una pise a la otra.
 2026-08 (aprox.) — Bug real: `adminMarcarAsistencia` siempre retornaba `exito:true` sin capturar errores reales de escritura — corregido para propagar el error real.
