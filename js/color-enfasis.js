@@ -131,7 +131,13 @@ function _ceAplicarPaleta() {
   vars['--brand-lightest'] = rgbaBrand(0.06);
   vars['--brand-lighter'] = rgbaBrand(0.07);
   vars['--brand-08'] = rgbaBrand(0.08);
-  vars['--brand-soft'] = rgbaBrand(0.1);
+  // --brand-soft: tope MÁS BAJO en claro (0.04, no 0.1) -- pedido explícito
+  // (ver MANIFEST.md, "fondo rosado en cards/items") -- un rojo saturado a
+  // 0.1 de alpha ya se leía como tinte rosa visible sobre superficies
+  // grandes (esta variable también se usa para `border-color`/`box-shadow`,
+  // no solo fondos, pero el mismo alpha más bajo mejora los 2 casos). Sin
+  // cambios en oscuro -- el pedido fue puntual a "modo claro".
+  vars['--brand-soft'] = rgbaBrand(oscuro ? 0.1 : 0.04);
   vars['--brand-light'] = rgbaBrand(0.13);
   vars['--brand-mid'] = rgbaBrand(0.14);
   vars['--brand-focus'] = rgbaBrand(0.15);
@@ -157,9 +163,22 @@ function _ceAplicarPaleta() {
     vars['--brand-warm-border'] = derivar('#fde8d4');
     bgHex = derivar('#FDF3EB');
     vars['--bg-2'] = derivar('#F7EAE0');
+    // --surface/--surface-2/--surface-3: NEUTRALES a propósito (bug real
+    // corregido -- ver MANIFEST.md, "fondo rosado en cards/items de
+    // Ajustes"): esta familia se usa como fondo GENÉRICO de cards/filas
+    // agrupadas (`.aj-group`/`.aj-app-rows`, 11 archivos CSS en total) --
+    // antes derivaba su matiz de `--brand` igual que la familia --brand-*
+    // real (pensado para un naranja cálido, apenas perceptible), pero con
+    // un rojo saturado como marca esa misma derivación se leía como un tinte
+    // ROSA visible en cualquier superficie grande. El objetivo de esta
+    // paleta es que SOLO los elementos interactivos activos (botón primario,
+    // tab seleccionado, badges) usen el rojo -- el resto (fondos "de
+    // contenedor") debe ser gris neutro puro, sin relación con `--brand`.
+    // `#F5F5F5` coincide a propósito con `--card-bg` (mismo rol visual,
+    // "card/fila agrupada sobre el fondo de la página").
     vars['--surface'] = 'rgba(255,255,255,0.90)'; // S=0 (blanco puro) — no-op siempre, no depende del matiz
-    vars['--surface-2'] = derivarRgba('#fff5eb', 0.95);
-    vars['--surface-3'] = derivarRgba('#ffebdc', 0.45);
+    vars['--surface-2'] = '#F5F5F5';
+    vars['--surface-3'] = 'rgba(0,0,0,0.03)';
     vars['--surface-light'] = derivar('#fafafa'); // S=0 — no-op
     vars['--border-warm'] = derivarRgba('#a89587', 0.3);
     vars['--border-mid'] = derivar('#d4d4d4'); // S=0 — no-op
@@ -191,10 +210,16 @@ function _ceAplicarPaleta() {
     vars['--brand-warm-border'] = rgbaBrand(0.2);
     bgHex = _CE_BG_DARK;
     vars['--bg-2'] = derivar('#1f0d00');
-    vars['--surface'] = rgbaBrand(0.07);
-    vars['--surface-2'] = rgbaBrand(0.04);
-    vars['--surface-3'] = rgbaBrand(0.02);
-    vars['--surface-light'] = rgbaBrand(0.05);
+    // --surface/--surface-2/--surface-3/--surface-light/--btn-secondary-bg:
+    // NEUTRALES en oscuro también (mismo motivo que en claro, ver comentario
+    // grande de la rama `!oscuro` de arriba) -- overlay blanco translúcido
+    // (patrón estándar de "elevación" en UI oscura) en vez de rojo
+    // translúcido sobre el negro casi puro. `--surface-2` coincide con
+    // `--card-bg` (mismo `#1A1A1A`, mismo rol visual que en claro).
+    vars['--surface'] = 'rgba(255,255,255,0.06)';
+    vars['--surface-2'] = '#1A1A1A';
+    vars['--surface-3'] = 'rgba(255,255,255,0.03)';
+    vars['--surface-light'] = 'rgba(255,255,255,0.05)';
     vars['--border-warm'] = rgbaBrand(0.15);
     vars['--border-mid'] = rgbaBrand(0.15);
     vars['--border-softest'] = rgbaBrand(0.1);
@@ -211,8 +236,8 @@ function _ceAplicarPaleta() {
     vars['--shadow-sm'] = '0 4px 12px rgba(0,0,0,0.4)';
     vars['--shadow'] = '0 8px 32px rgba(0,0,0,0.5)';
     vars['--shadow-lg'] = '0 16px 48px rgba(0,0,0,0.6)';
-    vars['--btn-secondary-bg'] = rgbaBrand(0.08);
-    vars['--btn-secondary-hover-bg'] = rgbaBrand(0.1);
+    vars['--btn-secondary-bg'] = 'rgba(255,255,255,0.06)';
+    vars['--btn-secondary-hover-bg'] = 'rgba(255,255,255,0.1)';
     vars['--disabled-border'] = rgbaBrand(0.12);
     var bgRgb = hexToRgb(bgHex);
     var overlayBg = function(alpha) { return 'rgba(' + bgRgb.r + ',' + bgRgb.g + ',' + bgRgb.b + ',' + alpha + ')'; };
