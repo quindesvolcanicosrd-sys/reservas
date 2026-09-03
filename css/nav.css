@@ -16,8 +16,8 @@
      padding, no un número mágico; los spacers que compensan cada nav fija
      ya se miden en JS con `offsetHeight` (`_initHomeNav()`, ver otros
      `*-nav-spacer`), así que se adaptan solos. */
-  padding: 22px 16px;
-  min-height: 56px;
+  padding: 26px 16px;
+  min-height: 60px;
   background: var(--bg);
   width: 100%;
   box-sizing: border-box;
@@ -402,12 +402,12 @@
   cursor: pointer;
   color: var(--muted);
   font-family: inherit;
-  font-size: 0.68rem;
+  font-size: 0.71rem;
   font-weight: 700;
   -webkit-tap-highlight-color: transparent;
   transition: color 0.2s ease;
 }
-.app-bottom-nav-item .material-symbols-outlined { font-size: 1.4rem; }
+.app-bottom-nav-item .material-symbols-outlined { font-size: 1.5rem; }
 /* Tab de la pantalla activa, resaltado con el color de énfasis -- el resto
    queda en var(--muted) por la regla base de arriba, sin clase extra. */
 .app-bottom-nav-item.activo { color: var(--brand); }
