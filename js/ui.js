@@ -1082,7 +1082,14 @@ function lanzarConfetti(contenedorEl) {
   canvas.width = ancho;
   canvas.height = alto;
   var piezas = [];
-  var colores = ['#F97316','#fb923c','#fbbf24','#22c55e','#60a5fa','#c084fc','#f472b6'];
+  // Paleta Pivot (rojo/blanco/negro/grises) -- re-ajuste, pedido explícito
+  // tras el rebrand (ver MANIFEST.md/AUDITORIA_ESTILOS.md): reemplaza la
+  // paleta arcoíris vieja (naranja de marca + 6 acentos de estado/purple/
+  // pink sin relación con la marca actual). Colores de canvas -- no
+  // interpretados como CSS, excepción ya documentada (no usan var()) --
+  // los 2 rojos son --brand claro/oscuro literales (`#E8000D`/`#FF2020`,
+  // css/colors.css), el resto son neutros planos.
+  var colores = ['#E8000D','#FF2020','#FFFFFF','#000000','#666666','#CCCCCC'];
   var nPiezas = acotado ? 14 : 120;
   function reciclar(p) {
     p.x = Math.random() * canvas.width;

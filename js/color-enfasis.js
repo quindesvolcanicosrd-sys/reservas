@@ -162,44 +162,43 @@ function _ceAplicarPaleta() {
     vars['--brand-warm-3'] = derivar('#fff4ec');
     vars['--brand-warm-border'] = derivar('#fde8d4');
     bgHex = derivar('#FDF3EB');
-    vars['--bg-2'] = derivar('#F7EAE0');
-    // --surface/--surface-2/--surface-3: NEUTRALES a propósito (bug real
-    // corregido -- ver MANIFEST.md, "fondo rosado en cards/items de
-    // Ajustes"): esta familia se usa como fondo GENÉRICO de cards/filas
-    // agrupadas (`.aj-group`/`.aj-app-rows`, 11 archivos CSS en total) --
-    // antes derivaba su matiz de `--brand` igual que la familia --brand-*
-    // real (pensado para un naranja cálido, apenas perceptible), pero con
-    // un rojo saturado como marca esa misma derivación se leía como un tinte
-    // ROSA visible en cualquier superficie grande. El objetivo de esta
-    // paleta es que SOLO los elementos interactivos activos (botón primario,
-    // tab seleccionado, badges) usen el rojo -- el resto (fondos "de
-    // contenedor") debe ser gris neutro puro, sin relación con `--brand`.
-    // `#F5F5F5` coincide a propósito con `--card-bg` (mismo rol visual,
-    // "card/fila agrupada sobre el fondo de la página").
-    vars['--surface'] = 'rgba(255,255,255,0.90)'; // S=0 (blanco puro) — no-op siempre, no depende del matiz
+    // --bg-2/--surface/--surface-2/--surface-3/--surface-light/--border-warm/
+    // --border-mid/--border-softest/--text-2/--hint: NEUTRALES FIJAS a
+    // propósito, ya NO derivadas de `--brand` (re-ajuste, pedido explícito
+    // tras el fix anterior de "fondo rosado en cards/items" -- ver
+    // MANIFEST.md). El fix anterior solo neutralizó --surface-2/--surface-3
+    // (la fuente puntual del bug); acá se extiende el mismo principio a TODA
+    // la familia de "fondo/borde/texto ambiente" (--surface/--surface-light/
+    // --border-warm/--border-mid/--border-softest/--bg-2/--text-2/--hint) --
+    // ninguna de estas es un elemento interactivo, así que ninguna debe
+    // llevar tinte de marca. Solo la familia --brand-*/--brand-warm* (arriba)
+    // sigue derivando -- esa SÍ es la familia real de acento/interactivo.
+    vars['--bg-2'] = '#FAFAFA';
+    vars['--surface'] = '#F7F7F7';
     vars['--surface-2'] = '#F5F5F5';
-    vars['--surface-3'] = 'rgba(0,0,0,0.03)';
-    vars['--surface-light'] = derivar('#fafafa'); // S=0 — no-op
-    vars['--border-warm'] = derivarRgba('#a89587', 0.3);
-    vars['--border-mid'] = derivar('#d4d4d4'); // S=0 — no-op
-    vars['--border-softest'] = derivar('#eaeaea'); // S=0 — no-op
+    vars['--surface-3'] = '#F2F2F2';
+    vars['--surface-light'] = '#FAFAFA';
+    vars['--border-warm'] = '#EBEBEB';
+    vars['--border-mid'] = '#D4D4D4';
+    vars['--border-softest'] = '#EAEAEA';
     // --border-slate: SIN derivar en claro a propósito — #cbd5e1 es azul
     // genuino (H≈213°), no emparentado con la marca (ver comentario de
     // cabecera). Queda con el valor fijo de colors.css, no se toca acá.
-    vars['--text-2'] = derivar('#6B3E26');
-    vars['--hint'] = derivar('#B89080');
+    vars['--text-2'] = '#444444';
+    vars['--hint'] = '#999999';
     vars['--text-mid'] = derivar('#444444'); // S=0 — no-op
     vars['--text-faint'] = derivar('#aaaaaa'); // S=0 — no-op
     vars['--placeholder-color'] = derivar('#a89587');
     vars['--skeleton-base'] = derivar('#d1d1d1'); // S=0 — no-op
     vars['--skeleton-shine'] = derivar('#e8e8e8'); // S=0 — no-op
-    // Shorthand completo, no solo el color — colors.css declara offset/blur
-    // fijos junto al color (ej. "0 8px 32px rgba(...)"), perderlos acá
-    // dejaría la sombra sin desplazamiento/difuminado.
-    vars['--card-shadow'] = '0 8px 32px ' + rgbaBrand(0.08);
-    vars['--shadow-sm'] = '0 4px 12px ' + rgbaBrand(0.08);
-    vars['--shadow'] = '0 8px 32px ' + rgbaBrand(0.1);
-    vars['--shadow-lg'] = '0 16px 48px ' + rgbaBrand(0.15);
+    // Sombras: NEUTRAS (negro), ya NO tinte de marca -- mismo motivo que la
+    // familia de arriba (re-ajuste, pedido explícito). Shorthand completo,
+    // no solo el color — colors.css declara offset/blur fijos junto al
+    // color, perderlos acá dejaría la sombra sin desplazamiento/difuminado.
+    vars['--card-shadow'] = '0 8px 32px rgba(0,0,0,0.06)';
+    vars['--shadow-sm'] = '0 4px 12px rgba(0,0,0,0.06)';
+    vars['--shadow'] = '0 8px 32px rgba(0,0,0,0.08)';
+    vars['--shadow-lg'] = '0 16px 48px rgba(0,0,0,0.12)';
     vars['--btn-secondary-hover-bg'] = derivar('#ebebeb'); // S=0 — no-op
     vars['--disabled-border'] = derivar('#eeeeee'); // S=0 — no-op
     vars['--modal-info-card-bg'] = '#ffffff'; // S=0 — no-op
@@ -209,36 +208,39 @@ function _ceAplicarPaleta() {
     vars['--brand-warm-3'] = rgbaBrand(0.1);
     vars['--brand-warm-border'] = rgbaBrand(0.2);
     bgHex = _CE_BG_DARK;
-    vars['--bg-2'] = derivar('#1f0d00');
-    // --surface/--surface-2/--surface-3/--surface-light/--btn-secondary-bg:
-    // NEUTRALES en oscuro también (mismo motivo que en claro, ver comentario
-    // grande de la rama `!oscuro` de arriba) -- overlay blanco translúcido
-    // (patrón estándar de "elevación" en UI oscura) en vez de rojo
-    // translúcido sobre el negro casi puro. `--surface-2` coincide con
-    // `--card-bg` (mismo `#1A1A1A`, mismo rol visual que en claro).
+    // --bg-2/--surface*/--border*/--text-2/--hint: NEUTRALES en oscuro
+    // también (mismo motivo/re-ajuste que en claro, ver comentario grande de
+    // la rama `!oscuro` de arriba) -- overlay BLANCO translúcido (patrón
+    // estándar de "elevación" en UI oscura) en vez de rojo translúcido sobre
+    // el negro casi puro. `--surface-2` ya no coincide con el hex exacto de
+    // `--card-bg` (antes `#1A1A1A` fijo) -- ahora es un overlay translúcido
+    // como el resto de la familia, visualmente muy cercano pero reactivo a
+    // `--bg` si ese valor cambiara algún día.
+    vars['--bg-2'] = '#111111';
     vars['--surface'] = 'rgba(255,255,255,0.06)';
-    vars['--surface-2'] = '#1A1A1A';
-    vars['--surface-3'] = 'rgba(255,255,255,0.03)';
-    vars['--surface-light'] = 'rgba(255,255,255,0.05)';
-    vars['--border-warm'] = rgbaBrand(0.15);
-    vars['--border-mid'] = rgbaBrand(0.15);
-    vars['--border-softest'] = rgbaBrand(0.1);
-    vars['--border-slate'] = rgbaBrand(0.2); // en oscuro sí es rgba de marca — deriva normal
-    vars['--text-2'] = derivar('#C9A090');
-    vars['--hint'] = derivar('#6A4030');
+    vars['--surface-2'] = 'rgba(255,255,255,0.04)';
+    vars['--surface-3'] = 'rgba(255,255,255,0.025)';
+    vars['--surface-light'] = 'rgba(255,255,255,0.04)';
+    vars['--border-warm'] = 'rgba(255,255,255,0.10)';
+    vars['--border-mid'] = 'rgba(255,255,255,0.13)';
+    vars['--border-softest'] = 'rgba(255,255,255,0.06)';
+    vars['--border-slate'] = 'rgba(255,255,255,0.15)'; // ya no rgba de marca -- ver re-ajuste arriba
+    vars['--text-2'] = '#AAAAAA';
+    vars['--hint'] = '#555555';
     vars['--text-mid'] = derivar('#b0a090');
     vars['--text-faint'] = derivar('#6a5a50');
     vars['--skeleton-base'] = derivar('#2a1a0e');
     vars['--skeleton-shine'] = derivar('#3a2a1e');
-    // Fijo a propósito en oscuro (ver cabecera) — mismo shorthand completo
-    // que colors.css, con negro puro en vez de la parte de color derivada.
-    vars['--card-shadow'] = '0 8px 32px rgba(0,0,0,0.4)';
-    vars['--shadow-sm'] = '0 4px 12px rgba(0,0,0,0.4)';
-    vars['--shadow'] = '0 8px 32px rgba(0,0,0,0.5)';
-    vars['--shadow-lg'] = '0 16px 48px rgba(0,0,0,0.6)';
+    // Sombras -- alphas bajados (re-ajuste, pedido explícito), sombra más
+    // sutil sobre el fondo casi negro nuevo. Ya eran neutras (negro puro)
+    // desde antes del rebrand, sin cambios en ESE sentido.
+    vars['--card-shadow'] = '0 8px 32px rgba(0,0,0,0.40)';
+    vars['--shadow-sm'] = '0 4px 12px rgba(0,0,0,0.35)';
+    vars['--shadow'] = '0 8px 32px rgba(0,0,0,0.45)';
+    vars['--shadow-lg'] = '0 16px 48px rgba(0,0,0,0.55)';
     vars['--btn-secondary-bg'] = 'rgba(255,255,255,0.06)';
-    vars['--btn-secondary-hover-bg'] = 'rgba(255,255,255,0.1)';
-    vars['--disabled-border'] = rgbaBrand(0.12);
+    vars['--btn-secondary-hover-bg'] = 'rgba(255,255,255,0.07)';
+    vars['--disabled-border'] = 'rgba(255,255,255,0.08)';
     var bgRgb = hexToRgb(bgHex);
     var overlayBg = function(alpha) { return 'rgba(' + bgRgb.r + ',' + bgRgb.g + ',' + bgRgb.b + ',' + alpha + ')'; };
     vars['--dk-overlay-95'] = overlayBg(0.95);

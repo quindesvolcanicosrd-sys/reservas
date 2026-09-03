@@ -177,6 +177,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Asistencias
 
+2026-09-03 — 2 bugs reales corregidos: (1) `getDatosCompletos()` (Edge Function) nunca mapeaba `exenta_cuota` a `E.datos` — la lógica de gating de cuota del RSVP (`_evTieneCuotaAlDia()`) ya la leía bien, pero el dato nunca llegaba, así que ninguna cuenta exenta se salteaba el gate de pago. (2) `_evMarcarAsistencia()`/`_evMarcarAsistenciaAdmin()` no persistían su cambio optimista en el cache de IndexedDB (`_offGuardarCache()`, js/offline.js) — solo `_evCargarDatosReales()` lo hacía — así que cerrar la app antes de la próxima carga completa mostraba el RSVP/marca anterior al reabrir.
+
 2026-08 (aprox.) — `log_asistencias` documentada como mezcla de 2 conceptos por fila (RSVP pre-evento vs. rollcall real de admin) — fuente de un bug recurrente (RSVP mostrándose como "marcado por un admin"), corregido filtrando por `origen==='Admin'` antes de leer como asistencia real.
 2026-08 (aprox.) — Regla de negocio: puntualidad (confirmada por admin) y rol (RSVP "No jugador"/jugador) se combinan en un solo texto ("Llegó a horario · No jugador") en vez de que una pise a la otra.
 2026-08 (aprox.) — Bug real: `adminMarcarAsistencia` siempre retornaba `exito:true` sin capturar errores reales de escritura — corregido para propagar el error real.
@@ -203,6 +205,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 2025–2026 (fundacional) — Rediseño de `s-datos` → "Ajustes del perfil"; wizard de datos de identidad/dirección/emergencia construido incrementalmente sobre múltiples sesiones.
 
 ## Admin (Mi Liga)
+
+2026-09-03 — "Activar cuenta pre-creada" (feat nueva, mini-SPA `activar/`): un admin puede dar de alta a alguien en `equipo` sin pasar por `inscripcion/` (ej. ya está en el roster real pero nunca se registró) y generar, desde el perfil de esa persona en Equipo, un link de un solo uso ("Generar link", visible solo si la cuenta no tiene email vinculado) que copia al portapapeles. Esa persona lo usa para vincular su cuenta de Google (mismo mecanismo de auth que el resto de la app — GIS crudo + verificación server-side, NO Supabase Auth, que esta app nunca usó) y completar pronombres/teléfono/equipamiento en 3 pasos cortos, con el mismo look que `inscripcion/`. 4 acciones nuevas en la Edge Function: `validarInviteToken`/`activarCuenta`/`completarActivacion`/`generarInviteToken`. Tabla nueva `invite_tokens` (migración `20260903_invite_tokens.sql`).
 
 2026-09-03 — Selector de color de énfasis eliminado por completo (pill "Color", burbuja, presets/eyedropper, `adminRenderColorEnfasis()`/`adminCambiarColorEnfasis()`/`ADMIN_COLOR_PRESETS` en js/admin.js, `adminGetColorEnfasis`/`adminSetColorEnfasis` en la Edge Function) — la app pasó a tener una paleta fija de marca ("Pivot"), ya no personalizable por admin. Ver sección CSS/Diseño para el rebrand en sí.
 
@@ -236,6 +240,14 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 2025–2026 (fundacional) — Logo circular de Mirlxs sacado de toda la app; rediseño de `s1` (login) a botones apilados; ícono decorativo en el hueco que dejaron flecha atrás/avatar sacados de las pantallas raíz.
 
 ## CSS / Diseño
+
+2026-09-03 — `--bottom-nav-h`: `60px` → `66px` (pedido explícito) — fuente única entre la nav inferior, decenas de spacers/footers fijos en `index.html`/varios `.css`, y 2 fallbacks JS (`js/eventos.js`/`js/tareas.js`) actualizados junto con la variable.
+
+2026-09-03 — Confetti (`lanzarConfetti()`/`js/ui.js`) actualizado a la paleta Pivot — único remanente visual real del naranja `#F97316` viejo encontrado en una búsqueda global (`_CE_BRAND_ORIGINAL` en `js/color-enfasis.js` es intencional, ancla matemática, no un color mostrado). Array de colores del canvas: rojo/blanco/negro/grises en vez de la paleta arcoíris original. `AUDITORIA_ESTILOS.md` (doc de auditoría pre-rebrand) actualizado en sus filas de theme-color/confetti, con nota aclarando que el resto no se re-auditó.
+
+2026-09-03 — `inscripcion/index.html`/`registro-express/index.html` tenían sus propios `<meta name="theme-color">` hardcodeados a mano, sin actualizar tras el rebrand a Pivot (seguían en `#FDF3EB`/`#170900`) — mismo fix que ya se había aplicado a `index.html`, corregidos a `#FFFFFF`/`#0D0D0D`. `js/color-enfasis.js` en sí ya sincronizaba estos tags correctamente en runtime en las 3 páginas, sin cambios ahí.
+
+2026-09-03 — Re-ajuste: extendido el fix de "fondo rosado" a toda la familia de fondo/borde/texto/sombra "ambiente" que seguía derivando de `--brand` (`--bg-2`/`--surface`/`--surface-light`/`--border-warm`/`--border-mid`/`--border-softest`/`--text-2`/`--hint`/sombras, en los 2 modos) — ahora neutras fijas en los 2 modos. Solo `--brand*`/`--brand-warm*` (el acento real) sigue derivando. También: `<meta name="theme-color">` (2 tags, claro/oscuro) y `manifest.json` (`theme_color`/`background_color`) tenían valores de la paleta vieja (`#FDF3EB`/`#170900`) sin actualizar tras el rebrand — corregidos a `#FFFFFF`/`#0D0D0D`.
 
 2026-09-03 — Fix real: fondo rosado en cards/items (`.aj-group`/`.aj-app-rows` de Ajustes y otros 11 archivos CSS) — `--surface-2`/`--surface-3` seguían derivando su matiz de `--brand` (heredado del sistema pensado para el naranja viejo, casi imperceptible ahí), pero con el rojo saturado de Pivot se leía como un tinte rosa visible. Pasaron a neutras puras (coinciden con `--card-bg`), igual que `--surface`/`--surface-light`/`--btn-secondary-bg` en oscuro. `--brand-soft` bajó de 0.1 a 0.04 de alpha en claro. Principio: solo botón primario/tab seleccionado/badges usan el rojo, el resto es gris neutro. También: `--success`/`--success-bg` en claro (botón "Asistiré", se veía lavado) más oscuro/saturado — `#15803D`/`#DCFCE7`.
 

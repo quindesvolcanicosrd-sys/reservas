@@ -46,6 +46,16 @@ function getDatosCompletos(row: Record<string, any> | null): Record<string, any>
     necesitaProtecciones: row.necesita_protecciones ?? '',
     categoria:            row.categoria             ?? '',
     estado_miembro:       row.estado_miembro        ?? 'Activx',
+    // snake_case a propósito, mismo criterio que estado_miembro arriba --
+    // el frontend ya lee `E.datos.exenta_cuota` tal cual en varios lugares
+    // (_evTieneCuotaAlDia()/js/eventos.js y otros, todos escritos ANTES de
+    // que este mapeo existiera) — bug real corregido: esta función nunca
+    // exponía la columna, así que `E.datos.exenta_cuota` era `undefined`
+    // SIEMPRE (para cualquier cuenta, no solo admin) y ninguna de esas
+    // verificaciones de cuota podía saltearse aunque `equipo.exenta_cuota`
+    // estuviera en `true` en la base — la lógica de gating en sí ya estaba
+    // bien, el dato nunca llegaba.
+    exenta_cuota:         row.exenta_cuota          === true,
     solicitudLesionPendiente: row.solicitud_lesion_pendiente === true,
     nombreDerby:          row.nombre_derby          ?? '',
     numeroDerby:          row.numero_derby          ?? '',
@@ -531,6 +541,88 @@ async function verificarGoogle(params: Record<string, any>): Promise<Record<stri
   if (esAdmin) return { error: 'Esta cuenta es de administradorx — iniciá sesión desde el panel admin.' };
   const row = await _getEquipoRowByEmail(email);
   return { yaRegistrado: !!row, email, foto: info.picture ?? '', nombre: info.given_name ?? info.name ?? '' };
+}
+
+// ─── Acciones: activación de cuenta pre-creada (activar/) ─────────────────────
+// Un admin da de alta a alguien en `equipo` sin pasar por inscribirPersona()
+// (ej. ya está en el roster real pero nunca se registró solx) y genera un
+// link de un solo uso (generarInviteToken) — esa persona lo usa para
+// vincular su Google y completar los datos que falten. Reusa
+// `_verificarGoogleToken()`/`_crearToken()` tal cual (mismo mecanismo de
+// sesión que loginGoogle()/inscribirPersona()) -- NO es Supabase Auth (esta
+// app nunca lo usó, no hay ningún provider de Google configurado ahí; el
+// GIS crudo + verificación server-side del idToken YA es el mecanismo real
+// de auth de toda la app, ver MANIFEST.md).
+
+async function validarInviteToken(params: Record<string, any>): Promise<Record<string, any>> {
+  const token = (params.token ?? '').toString().trim();
+  if (!token) return { valido: false };
+  const { data: invite } = await supabase.from('invite_tokens').select('*').eq('token', token).maybeSingle();
+  if (!invite) return { valido: false };
+  if (invite.usado) return { valido: false, usado: true };
+  if (new Date(invite.expires_at) <= new Date()) return { valido: false, expirado: true };
+  return { valido: true, miembro: invite.datos_prefill ?? {} };
+}
+
+async function activarCuenta(params: Record<string, any>): Promise<Record<string, any>> {
+  const token = (params.token ?? '').toString().trim();
+  const info = await _verificarGoogleToken(params.idToken);
+  if (!info) return { exito: false, error: 'Token de Google inválido o expirado.' };
+  const email = (info.email ?? '').toLowerCase();
+
+  const { data: invite } = await supabase.from('invite_tokens').select('*').eq('token', token).maybeSingle();
+  if (!invite) return { exito: false, error: 'Este link no es válido.' };
+  if (invite.usado) return { exito: false, error: 'Este link ya fue usado.' };
+  if (new Date(invite.expires_at) <= new Date()) return { exito: false, error: 'Este link expiró.' };
+
+  const row = await _getEquipoRow(invite.username);
+  if (!row) return { exito: false, error: 'La cuenta asociada a este link ya no existe.' };
+  if (row.email) return { exito: false, error: 'Esta cuenta ya está activada. Iniciá sesión desde la app.' };
+
+  // Evita que el mismo email de Google quede vinculado a 2 filas de equipo
+  // a la vez (misma cuenta de Google activando 2 invitaciones distintas).
+  const emailExiste = await _getEquipoRowByEmail(email);
+  if (emailExiste) return { exito: false, error: 'Este correo ya está registrado en otra cuenta.' };
+
+  const { error } = await supabase.from('equipo').update({ email }).eq('username', invite.username);
+  if (error) return { exito: false, error: error.message };
+  await supabase.from('invite_tokens').update({ usado: true }).eq('token', token);
+
+  const sessionToken = await _crearToken(invite.username);
+  const newRow = await _getEquipoRow(invite.username);
+  return { exito: true, token: sessionToken, nombre: invite.username, email, foto: info.picture ?? '', datos: getDatosCompletos(newRow) };
+}
+
+async function completarActivacion(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const update: Record<string, any> = { permisos_configurados: true };
+  if (params.pronombres !== undefined) update.pronombres = params.pronombres;
+  if (params.prefijo !== undefined) update.prefijo = params.prefijo;
+  if (params.telefono !== undefined) update.telefono = params.telefono;
+  if (params.necesitaPatines !== undefined) update.necesita_patines = params.necesitaPatines;
+  if (params.talla !== undefined) update.talla = params.talla;
+  if (params.necesitaProtecciones !== undefined) update.necesita_protecciones = params.necesitaProtecciones;
+  const { error } = await supabase.from('equipo').update(update).eq('username', username);
+  if (error) return { exito: false, error: error.message };
+  const newRow = await _getEquipoRow(username);
+  return { exito: true, datos: getDatosCompletos(newRow) };
+}
+
+// Admin, desde Mi Liga/Equipo — genera el link de activación de una fila de
+// `equipo` que todavía no tiene email vinculado.
+async function generarInviteToken(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const username = (params.username ?? '').toString().trim();
+  if (!username) return { exito: false, error: 'Falta el nombre de usuario.' };
+  const row = await _getEquipoRow(username);
+  if (!row) return { exito: false, error: 'No se encontró esa cuenta.' };
+  if (row.email) return { exito: false, error: 'Esta cuenta ya tiene un email vinculado — no necesita link de activación.' };
+  const datosPrefill = { username: row.username, nombreDerby: row.nombre_derby ?? '', fotoPerfil: row.foto_perfil ?? '' };
+  const { data, error } = await supabase.from('invite_tokens').insert({ username, datos_prefill: datosPrefill }).select('token').maybeSingle();
+  if (error) return { exito: false, error: error.message };
+  return { exito: true, token: data?.token ?? '' };
 }
 
 async function inscribirPersona(params: Record<string, any>): Promise<Record<string, any>> {
@@ -3444,6 +3536,10 @@ Deno.serve(async (req: Request) => {
       case 'verificarEmailDisponible':        return json(await verificarEmailDisponible(params));
       case 'verificarNombreDisponible':       return json(await verificarNombreDisponible(params));
       case 'verificarGoogle':                 return json(await verificarGoogle(params));
+      case 'validarInviteToken':              return json(await validarInviteToken(params));
+      case 'activarCuenta':                   return json(await activarCuenta(params));
+      case 'completarActivacion':             return json(await completarActivacion(params));
+      case 'generarInviteToken':              return json(await generarInviteToken(params));
       // Config
       case 'getPreciosClases':                return json(await getPreciosClases());
       case 'adminSetPreciosClases':           return json(await adminSetPreciosClases(params));
