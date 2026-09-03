@@ -390,10 +390,10 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
    Mismos colores de warning que el resto de la app (css/colors.css). */
 #app-offline-banner {
   position: fixed;
-  top: 0;
+  top: 56px;
   left: 0;
   right: 0;
-  z-index: 9999;
+  z-index: 50;
   background: var(--warning-bg);
   color: var(--text);
   border-bottom: 1px solid var(--warning-bdr);
