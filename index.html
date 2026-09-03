@@ -33,7 +33,7 @@
      del primer paint real (ambos coinciden hoy, el valor de entrada es el
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=580dd587"></script>
-<link rel="stylesheet" href="css/global.css?v=1c535079">
+<link rel="stylesheet" href="css/global.css?v=a96b4c0e">
 <link rel="stylesheet" href="css/estilos.css?v=7e3d0e54">
 <link rel="stylesheet" href="css/ui.css?v=626a894b">
 <link rel="stylesheet" href="css/login.css">
@@ -5111,8 +5111,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div class="pwa-gate-overlay">
     <div class="pwa-gate-card">
       <span class="material-symbols-rounded pwa-gate-icon">install_mobile</span>
-      <h2 class="pwa-gate-titulo">Instalá la app</h2>
-      <p class="pwa-gate-desc">Para usar Pivot y recibir notificaciones, instalá la app en tu pantalla de inicio.</p>
+      <h2 class="pwa-gate-titulo">Instala la app</h2>
+      <p class="pwa-gate-desc">Para usar Pivot y recibir notificaciones, instala la app en tu pantalla de inicio.</p>
 
       <!-- Android -->
       <div id="pwa-instrucciones-android" style="display:none">
@@ -5127,20 +5127,35 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           Instalar app
         </button>
         <div id="pwa-pasos-manuales" class="pwa-gate-pasos">
-          <div class="pwa-gate-paso"><span class="material-symbols-rounded">more_vert</span><span>Tocá el menú <strong>⋮</strong> de Chrome (arriba a la derecha)</span></div>
-          <div class="pwa-gate-paso"><span class="material-symbols-rounded">add_to_home_screen</span><span>Seleccioná <strong>"Agregar a pantalla de inicio"</strong></span></div>
-          <div class="pwa-gate-paso"><span class="material-symbols-rounded">check_circle</span><span>Tocá <strong>"Agregar"</strong> y abrí Pivot desde tu pantalla de inicio</span></div>
+          <div class="pwa-gate-paso"><span class="material-symbols-rounded">more_vert</span><span>Toca el menú <strong>⋮</strong> de Chrome (arriba a la derecha)</span></div>
+          <div class="pwa-gate-paso"><span class="material-symbols-rounded">add_to_home_screen</span><span>Selecciona <strong>"Agregar a pantalla de inicio"</strong></span></div>
+          <div class="pwa-gate-paso"><span class="material-symbols-rounded">check_circle</span><span>Toca <strong>"Agregar"</strong> y abre Pivot desde tu pantalla de inicio</span></div>
         </div>
       </div>
 
       <!-- iOS -->
       <div id="pwa-instrucciones-ios" style="display:none">
         <div class="pwa-gate-pasos">
-          <div class="pwa-gate-paso"><span class="material-symbols-rounded">ios_share</span><span>Tocá el ícono de compartir <strong>↑</strong> en la barra de Safari</span></div>
-          <div class="pwa-gate-paso"><span class="material-symbols-rounded">add_box</span><span>Seleccioná <strong>"Agregar a pantalla de inicio"</strong></span></div>
-          <div class="pwa-gate-paso"><span class="material-symbols-rounded">check_circle</span><span>Tocá <strong>"Agregar"</strong> y abrí Pivot desde tu pantalla de inicio</span></div>
+          <div class="pwa-gate-paso"><span class="material-symbols-rounded">ios_share</span><span>Toca el ícono de compartir <strong>↑</strong> en la barra de Safari</span></div>
+          <div class="pwa-gate-paso"><span class="material-symbols-rounded">add_box</span><span>Selecciona <strong>"Agregar a pantalla de inicio"</strong></span></div>
+          <div class="pwa-gate-paso"><span class="material-symbols-rounded">check_circle</span><span>Toca <strong>"Agregar"</strong> y abre Pivot desde tu pantalla de inicio</span></div>
         </div>
         <p class="pwa-gate-nota">Una vez instalada, la app te pedirá activar las notificaciones.</p>
+      </div>
+
+      <!-- Ya instalada -- `_pwaMostrarYaInstalada()`/js/pwa.js reemplaza el
+           texto default en 2 casos: el timeout de 2.5s de `_verificarPwa()`
+           (`beforeinstallprompt` nunca llegó del lado Android -- señal real
+           de que ya está instalada o el navegador no la soporta) y el
+           `outcome==='accepted'` de `_pwaInstalarDirecto()` (mensaje de
+           "recién instalada" en vez del genérico). Oculta por default,
+           mutuamente excluyente con `#pwa-instrucciones-android`/`-ios`. -->
+      <div id="pwa-ya-instalada" style="display:none">
+        <div class="pwa-gate-ya-inst-icono">
+          <span class="material-symbols-rounded">check_circle</span>
+        </div>
+        <p class="pwa-gate-ya-inst-texto">La app ya está instalada en tu dispositivo.</p>
+        <p class="pwa-gate-ya-inst-sub">Cierra esta ventana y abre <strong>Pivot</strong> desde tu pantalla de inicio.</p>
       </div>
 
       <!-- Navegador incompatible (ej. in-app browser de Instagram/Facebook,
@@ -5151,11 +5166,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="pwa-gate-pasos">
           <div class="pwa-gate-paso">
             <span class="material-symbols-rounded" id="pwa-browser-icono">open_in_browser</span>
-            <span id="pwa-browser-texto">Para instalar Pivot abrí esta página en Chrome.</span>
+            <span id="pwa-browser-texto">Para instalar Pivot abre esta página en Chrome.</span>
           </div>
           <div class="pwa-gate-paso">
             <span class="material-symbols-rounded">content_copy</span>
-            <span>Copiá la URL y pegala en Chrome o Safari según tu dispositivo.</span>
+            <span>Copia la URL y pégala en Chrome o Safari según tu dispositivo.</span>
           </div>
         </div>
         <button type="button" class="pwa-gate-btn-instalar" onclick="navigator.clipboard && navigator.clipboard.writeText(location.href).then(function(){ mostrarToast('URL copiada'); })">
@@ -5179,7 +5194,16 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <p class="notif-gate-desc">Las notificaciones avisan de nuevos eventos, cambios de asistencia y recordatorios importantes del equipo.</p>
       <button type="button" class="notif-gate-btn" onclick="_activarNotificaciones()">Activar notificaciones</button>
       <div id="notif-gate-denegado" style="display:none">
-        <p class="notif-gate-manual">Las notificaciones están bloqueadas en tu navegador. Para activarlas: toca el ícono 🔒 en la barra de direcciones → Notificaciones → Permitir.</p>
+        <p class="notif-gate-denegado-titulo">Las notificaciones están bloqueadas</p>
+        <div class="notif-gate-pasos">
+          <div class="notif-gate-paso"><span class="material-symbols-rounded">lock</span><span>Toca el ícono 🔒 o ⓘ en la barra de direcciones de Chrome</span></div>
+          <div class="notif-gate-paso"><span class="material-symbols-rounded">tune</span><span>Selecciona <strong>Configuración del sitio</strong></span></div>
+          <div class="notif-gate-paso"><span class="material-symbols-rounded">notifications</span><span>Toca <strong>Notificaciones</strong> y cambia a <strong>Permitir</strong></span></div>
+        </div>
+        <button type="button" class="notif-gate-btn notif-gate-btn-ajustes" onclick="_notifAbrirAjustesChrome()">
+          <span class="material-symbols-rounded">open_in_new</span>
+          Ir a ajustes de notificaciones
+        </button>
       </div>
     </div>
   </div>

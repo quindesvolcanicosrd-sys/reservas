@@ -247,6 +247,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Auth
 
+2026-09-03 — Detección de "ya instalada" en el gate de PWA: del lado Android, si `beforeinstallprompt` no llega 2.5s después de mostrar el gate, se asume que ya está instalada (o el navegador no la soporta) y se muestra un mensaje de confirmación en vez de instrucciones de instalación. `_pwaInstalarDirecto()` ya no cierra el gate al aceptar el prompt nativo — muestra el mismo mensaje con texto de "recién instalada" (el navegador tarda unos segundos en terminar de instalar). También: instrucciones más completas (3 pasos + botón "Ir a ajustes") para cuando las notificaciones quedaron bloqueadas — en Android intenta un intent directo a los ajustes del sitio en Chrome, con copiar-URL como respaldo siempre.
+
 2026-09-03 — Gate de PWA extendido a iOS + detección de navegador incompatible: `_verificarPwa()` ahora también bloquea iPhone/iPad/iPod (antes solo Android), con su propia sección de pasos manuales para Safari (sin prompt nativo, no existe en iOS). Nueva `_pwaBrowserCompatible()` detecta un navegador que no puede instalar nada (Chrome/Edge/Opera/Samsung Internet en Android en vez de Chrome real, o cualquier cosa que no sea Safari real en iOS — típico: in-app browser de Instagram/Facebook) y muestra un mensaje + botón "Copiar enlace" en vez de instrucciones que no aplican ahí.
 
 2026-09-03 — Re-ajuste del gate de PWA: `#pwa-gate` ahora ofrece un botón "Instalar app" que dispara el prompt nativo (`beforeinstallprompt`/`_deferredPrompt`, reusando la misma captura que ya tenía el banner descartable) en vez de solo instrucciones manuales — esas quedan como fallback si el navegador no llega a entregar el evento.

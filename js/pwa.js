@@ -1,4 +1,8 @@
 var _deferredPrompt = null;
+// Setead por `_pwaInstalarDirecto()` cuando la persona acepta el prompt
+// nativo -- evita que el timeout de "ya instalada" de `_verificarPwa()` pise
+// el mensaje de "recién instalada" si vence DESPUÉS de ese accept.
+var _pwaInstaladoAhora = false;
 window.addEventListener('beforeinstallprompt', function(e) { e.preventDefault(); _deferredPrompt = e; });
 // Segundo listener (no reemplaza al de arriba -- corre DESPUÉS, mismo evento,
 // mismo orden de registro) -- refresca los botones del gate bloqueante si
@@ -53,6 +57,8 @@ function _verificarPwa() {
   var secAndroid = document.getElementById('pwa-instrucciones-android');
   var secIos = document.getElementById('pwa-instrucciones-ios');
   var secBrowser = document.getElementById('pwa-instrucciones-browser');
+  var secYaInstalada = document.getElementById('pwa-ya-instalada');
+  if (secYaInstalada) secYaInstalada.style.display = 'none';
 
   // Navegador sin soporte real de instalación (ej. in-app browser de
   // Instagram/Facebook, Firefox en Android) -- ni el botón directo ni los
@@ -66,7 +72,7 @@ function _verificarPwa() {
     if (secBrowser) {
       secBrowser.style.display = '';
       var txtBrowser = document.getElementById('pwa-browser-texto');
-      if (txtBrowser) txtBrowser.textContent = esIos ? 'Para instalar Pivot abrí esta página en Safari.' : 'Para instalar Pivot abrí esta página en Chrome.';
+      if (txtBrowser) txtBrowser.textContent = esIos ? 'Para instalar Pivot abre esta página en Safari.' : 'Para instalar Pivot abre esta página en Chrome.';
       var iconBrowser = document.getElementById('pwa-browser-icono');
       if (iconBrowser) iconBrowser.textContent = esIos ? 'safari' : 'open_in_browser';
     }
@@ -79,8 +85,44 @@ function _verificarPwa() {
   // Botón de instalación directa vs. pasos manuales -- solo aplica del lado
   // Android (`beforeinstallprompt` no existe en Safari/iOS, esa sección
   // siempre son los 3 pasos manuales, sin alternativa).
-  if (esAndroid) _pwaActualizarBotonesGate();
+  if (esAndroid) {
+    _pwaActualizarBotonesGate();
+    // Detección de "ya instalada" -- SOLO del lado Android: `beforeinstallprompt`
+    // no se dispara si el navegador ya considera la PWA instalada (entre
+    // otras razones reales) -- 2.5s le da tiempo de sobra al navegador para
+    // decidir (normalmente dispara casi al instante) antes de asumir que no
+    // va a llegar. A propósito NO se aplica del lado iOS -- Safari JAMÁS
+    // dispara este evento, esté instalada o no, así que su ausencia ahí no
+    // significa nada (los pasos manuales de iOS ya cubren ambos casos).
+    // `_pwaInstaladoAhora` (más abajo, seteado por `_pwaInstalarDirecto()`)
+    // evita pisar el mensaje de "recién instalada" si esta espera vence
+    // DESPUÉS de que la persona ya instaló por el botón directo.
+    if (!_deferredPrompt) {
+      setTimeout(function() {
+        if (!_deferredPrompt && !_pwaInstaladoAhora) _pwaMostrarYaInstalada();
+      }, 2500);
+    }
+  }
   return true;
+}
+
+// Reemplaza el contenido del gate por el mensaje de "ya instalada" -- 2
+// call sites (el timeout de `_verificarPwa()`, sin argumentos = mensaje
+// default; `_pwaInstalarDirecto()` tras un prompt aceptado, con texto
+// propio de "recién instalada") comparten esta función en vez de duplicar
+// la manipulación del DOM.
+function _pwaMostrarYaInstalada(textoPrincipal, textoSub) {
+  var secAndroid = document.getElementById('pwa-instrucciones-android');
+  var secIos = document.getElementById('pwa-instrucciones-ios');
+  var secYaInstalada = document.getElementById('pwa-ya-instalada');
+  if (secAndroid) secAndroid.style.display = 'none';
+  if (secIos) secIos.style.display = 'none';
+  if (!secYaInstalada) return;
+  secYaInstalada.style.display = '';
+  var txt = secYaInstalada.querySelector('.pwa-gate-ya-inst-texto');
+  var sub = secYaInstalada.querySelector('.pwa-gate-ya-inst-sub');
+  if (txt) txt.textContent = textoPrincipal || 'La app ya está instalada en tu dispositivo.';
+  if (sub) sub.textContent = textoSub || 'Cierra esta ventana y abre Pivot desde tu pantalla de inicio.';
 }
 
 // Alterna entre el botón de instalación directa y los pasos manuales dentro
@@ -104,17 +146,22 @@ function _pwaActualizarBotonesGate() {
 // Dispara el prompt NATIVO de instalación (mismo `_deferredPrompt` que ya
 // usa `pwaInstalar()`, más abajo en este archivo) -- distinto de esa función
 // en que esta es SOLO el camino directo (sin fallback a `mostrarModalNavegador()`/
-// instrucciones del banner viejo, que no aplican dentro de este gate) y
-// cierra el gate entero si la persona acepta instalar.
+// instrucciones del banner viejo, que no aplican dentro de este gate). Ya NO
+// cierra el gate al aceptar (re-ajuste, pedido explícito) -- el navegador
+// tarda unos segundos en terminar de instalar/pasar a `display-mode:standalone`
+// DESPUÉS del accept, así que cerrar de inmediato dejaba a la persona de
+// vuelta en la app sin la PWA todavía lista -- ahora muestra la confirmación
+// "ya instalada" (`_pwaMostrarYaInstalada()`, arriba) y la deja cerrar ella
+// misma la pestaña/ventana para abrir la app real desde el ícono nuevo.
 function _pwaInstalarDirecto() {
   if (!_deferredPrompt) return;
   _deferredPrompt.prompt();
   _deferredPrompt.userChoice.then(function(result) {
-    if (result.outcome === 'accepted') {
-      var gate = document.getElementById('pwa-gate');
-      if (gate) { gate.style.display = 'none'; document.body.style.overflow = ''; }
-    }
     _deferredPrompt = null;
+    if (result.outcome === 'accepted') {
+      _pwaInstaladoAhora = true;
+      _pwaMostrarYaInstalada('¡Listo! La app quedó instalada.', 'Cierra esta ventana y abre Pivot desde tu pantalla de inicio para continuar.');
+    }
   });
 }
 
@@ -172,6 +219,34 @@ function _activarNotificaciones() {
       if (btn) btn.style.display = 'none';
     });
   });
+}
+
+// Intenta llevar a la persona directo a los ajustes de notificaciones del
+// sitio -- Android/Chrome soporta un intent especial para eso; iOS no tiene
+// forma de abrir un ajuste específico desde la web (limitación real de
+// Safari/WebKit, no de esta app), así que ahí se queda en instrucciones de
+// texto. En Android, el intent puede no dispararse en cada combinación de
+// versión/OEM de Chrome (no hay forma de detectarlo desde JS) -- el
+// fallback de copiar la URL corre SIEMPRE de todos modos (no solo si el
+// intent falla), para que la persona tenga la referencia igual así el
+// intent sí haya abierto la pantalla correcta.
+function _notifAbrirAjustesChrome() {
+  var esAndroid = /android/i.test(navigator.userAgent);
+  if (!esAndroid) {
+    mostrarToast('Ve a Configuración → Safari → Notificaciones para activarlas.');
+    return;
+  }
+  var intentUrl = 'intent://settings/content/siteDetails#Intent;scheme=android-app;package=com.android.chrome;end';
+  var a = document.createElement('a');
+  a.href = intentUrl;
+  try { a.click(); } catch(e) {}
+  setTimeout(function() {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(location.origin).then(function() {
+        mostrarToast('URL copiada. Búscala en Ajustes de Chrome → Notificaciones.');
+      }).catch(function() {});
+    }
+  }, 500);
 }
 
 function esStandalone() {

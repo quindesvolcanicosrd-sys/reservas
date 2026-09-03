@@ -501,6 +501,26 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
   flex-shrink: 0;
   margin-top: 2px;
 }
+/* "Ya instalada" (#pwa-ya-instalada, index.html) -- mensaje de confirmación
+   dentro de #pwa-gate, alternativa a las instrucciones de arriba (ver
+   _pwaMostrarYaInstalada()/js/pwa.js). */
+.pwa-gate-ya-inst-icono {
+  font-size: 56px;
+  color: var(--success);
+  margin: 8px 0 16px;
+}
+.pwa-gate-ya-inst-texto {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+.pwa-gate-ya-inst-sub {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.5;
+}
 .notif-gate-btn {
   width: 100%;
   border: none;
@@ -515,9 +535,52 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
 .notif-gate-btn:active {
   background: var(--btn-primary-hover);
 }
-.notif-gate-manual {
-  font-size: 13px;
+/* Instrucciones manuales de #notif-gate-denegado (index.html) -- mismo
+   componente .notif-gate-paso que .pwa-gate-paso (arriba), clase propia
+   para no acoplar los 2 gates a la misma regla si algún día divergen. */
+.notif-gate-denegado-titulo {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 16px;
+}
+.notif-gate-pasos {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+  margin-bottom: 20px;
+}
+.notif-gate-paso {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.notif-gate-paso .material-symbols-rounded {
+  font-size: 20px;
   color: var(--muted);
-  line-height: 1.5;
-  margin: 18px 0 0;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.notif-gate-btn-ajustes {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px;
+  background: var(--card-bg);
+  color: var(--text);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 4px;
+}
+.notif-gate-btn-ajustes .material-symbols-rounded {
+  font-size: 18px;
 }
