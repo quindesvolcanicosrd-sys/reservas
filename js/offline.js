@@ -166,52 +166,7 @@ function _offActualizarEnCola(accion, cb) {
 // de "pendiente de sincronizar" sobre el control tocado.
 function _offEjecutarOEncolar(accion) {
   _offEncolar(accion, function() {
-    _offMarcarPendiente(accion.tipo, accion.meta.idEvento, true);
     _offActualizarBanner();
-  });
-}
-
-// ── Ícono "pendiente de sincronizar" sobre el control tocado ───────────
-// RSVP propio: `.ev-rsvp-seg[data-evid]` (ya existe, ver _evRsvpBarraHtml()).
-// Marcado admin: `#ev-asist-admin-header-<id>` (ya existe, ver
-// _evAccionAdminHtml()) -- 1 solo ícono por evento alcanza ahí aunque haya
-// varias personas encoladas para el mismo evento, es un indicador de
-// "este evento tiene cambios sin sincronizar", no un contador por fila.
-// Un re-render completo del timeline (_evRenderTimeline()) reconstruye
-// estos nodos desde cero -- por eso _offAplicarIndicadoresPendientes()
-// (más abajo) se re-llama al final de ese render, para que el ícono
-// sobreviva en vez de desaparecer con el nodo viejo.
-function _offMarcarPendiente(tipo, idEvento, pendiente) {
-  var targets = [];
-  if (tipo === 'rsvp') {
-    targets = Array.prototype.slice.call(document.querySelectorAll('.ev-rsvp-seg[data-evid="' + idEvento + '"]'));
-  } else {
-    var header = document.getElementById('ev-asist-admin-header-' + idEvento);
-    if (header) targets = [header];
-  }
-  targets.forEach(function(el) {
-    var existente = el.querySelector('.ev-sync-badge');
-    if (pendiente) {
-      if (!existente) {
-        var b = document.createElement('span');
-        b.className = 'ev-sync-badge material-symbols-outlined';
-        b.textContent = 'sync';
-        b.title = 'Pendiente de sincronizar';
-        el.appendChild(b);
-      }
-    } else if (existente) {
-      existente.parentNode.removeChild(existente);
-    }
-  });
-}
-// Reaplica los íconos de "pendiente" de TODA la cola actual -- llamada al
-// final de _evRenderTimeline() (js/eventos.js), ver el hook chico agregado
-// ahí, y tras cada sync exitoso/fallido (por si queda algo en la cola).
-function _offAplicarIndicadoresPendientes() {
-  _offListarCola(function(cola) {
-    (cola || []).forEach(function(accion) {
-      _offMarcarPendiente(accion.tipo, accion.meta.idEvento, true);
-    });
   });
 }
 
@@ -252,7 +207,7 @@ function _offProcesarAccion(accion, cb) {
   if (conflicto) {
     _offResolverConflicto(accion, conflicto, function(procederIgual) {
       if (!procederIgual) {
-        _offBorrarDeCola(accion.id, function() { _offMarcarPendiente(accion.tipo, accion.meta.idEvento, false); cb(); });
+        _offBorrarDeCola(accion.id, cb);
         return;
       }
       _offEjecutarAccionReal(accion, cb);
@@ -304,20 +259,14 @@ function _offResolverConflicto(accion, conflicto, cb) {
 // la cola para siempre por una sola acción que sigue fallando.
 function _offEjecutarAccionReal(accion, cb) {
   apiPost(accion.apiParams, function() {
-    _offBorrarDeCola(accion.id, function() {
-      _offMarcarPendiente(accion.tipo, accion.meta.idEvento, false);
-      cb();
-    });
+    _offBorrarDeCola(accion.id, cb);
   }, function(e) {
     accion.intentos = (accion.intentos || 0) + 1;
     if (accion.intentos >= 3) {
       if (typeof mostrarToast === 'function') {
         mostrarToast('No se pudo sincronizar: ' + (accion.meta.descripcion || 'un cambio pendiente') + '.', 'error');
       }
-      _offBorrarDeCola(accion.id, function() {
-        _offMarcarPendiente(accion.tipo, accion.meta.idEvento, false);
-        cb();
-      });
+      _offBorrarDeCola(accion.id, cb);
       return;
     }
     var espera = Math.pow(2, accion.intentos - 1) * 1000;
@@ -376,3 +325,17 @@ function _offActualizarBanner() {
 window.addEventListener('online', function() { _offActualizarBanner(); _offSincronizarTodo(); });
 window.addEventListener('offline', function() { _offActualizarBanner(); });
 setInterval(function() { _offActualizarBanner(); }, 60000);
+
+// ── Banner offline global (#app-offline-banner, index.html) ────────────
+// Distinto de _offActualizarBanner() (arriba, propio de #ev-offline-banner
+// en Eventos, con hora del último snapshot + botón "Actualizar") -- este es
+// un aviso genérico, sin estado propio más allá de mostrar/ocultar según
+// `navigator.onLine`, visible en cualquier sección de la app.
+function _offActualizarBannerGlobal() {
+  var banner = document.getElementById('app-offline-banner');
+  if (!banner) return;
+  banner.style.display = navigator.onLine ? 'none' : 'block';
+}
+window.addEventListener('online', _offActualizarBannerGlobal);
+window.addEventListener('offline', _offActualizarBannerGlobal);
+document.addEventListener('DOMContentLoaded', _offActualizarBannerGlobal);

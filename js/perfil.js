@@ -103,6 +103,9 @@ function irEditarDatos(sinNavegar) {
   // desde acá.
   var zonaCuenta = document.getElementById('aj-zona-cuenta');
   if (zonaCuenta) zonaCuenta.style.display = E.datos ? '' : 'none';
+  // "Ajustes de admin" (pedido explícito, ver MANIFEST.md) -- al final del
+  // render, ver _datosRenderAdmin() más abajo.
+  _datosRenderAdmin();
   // Restaurar scroll del home solo de la 2da visita en adelante (ver
   // "Cambios recientes" -- mismo criterio que Eventos): los campos de arriba
   // se repueblan SIEMPRE (a diferencia de Eventos, acá no hay ningún reset
@@ -132,6 +135,43 @@ function _datosRenderStats() {
     var persona = _eqPersonas.filter(function(p) { return p.nombre === E.nombre; })[0];
     if (!persona) return;
     _datosRenderStatsHtml(contenedor, persona);
+  });
+}
+
+// "Ajustes de admin" (pedido explícito, ver MANIFEST.md) -- sección nueva al
+// final de Ajustes, admin-only (`_adminToken`, mismo gate que
+// _eqTierAdminHtml()/_eqAdminGestionHtml() en sí, js/equipo.js), con
+// acordeones de Categoría/Estado idénticos a los del perfil de detalle de
+// Equipo -- reusa esas 2 funciones tal cual en vez de duplicar el markup.
+// `E.nombre` es la misma natural key que `p.id`/`p.nombre` en `_eqPersonas`
+// (el `username`, ver getEquipo()/supabase/functions/api/index.ts) -- si la
+// cuenta admin logueada tiene fila en Equipo, `_eqPersonaPorId(E.nombre)` la
+// encuentra ahí y se le pasa el objeto REAL (tierModo/exentaCuota/etc. al
+// día, y los onclick de esas 2 funciones -- `_eqCambiarTier()`/
+// `_eqCambiarEstado()`/etc. -- resuelven la persona a togglear buscando por
+// ese mismo id en `_eqPersonas`, así que el toggle real solo funciona con
+// el objeto que YA vive ahí). Sin fila en Equipo (cuenta admin "pura",
+// dashboardAdmin:true, ver irEditarDatos() más arriba) se arma un objeto
+// mínimo con `id:E.nombre` y los valores iniciales que sí trae `E.datos`
+// (categoria/estado_miembro) -- los toggles de esa sección quedan sin
+// efecto real en ese caso (no hay fila que actualizar), mismo criterio de
+// "degradación silenciosa" que el resto de esta pantalla con datos ausentes.
+function _datosRenderAdmin() {
+  var wrap = document.getElementById('aj-admin-wrap');
+  if (!wrap) return;
+  if (typeof _adminToken === 'undefined' || !_adminToken) { wrap.innerHTML = ''; return; }
+  if (typeof _eqAsegurarCargado === 'undefined' || typeof _eqTierAdminHtml === 'undefined' || typeof _eqAdminGestionHtml === 'undefined') return;
+  _eqAsegurarCargado(function() {
+    var d = E.datos || {};
+    var persona = (typeof _eqPersonaPorId === 'function' && _eqPersonaPorId(E.nombre)) || {
+      id: E.nombre, nombre: E.nombre, username: E.nombre,
+      tierModo: d.categoria === 'Quindes' ? 'quinde' : (d.categoria === 'Mirlxs' ? 'mirlxs' : 'auto'),
+      exentaCuota: !!d.exentaCuota,
+      estado: d.estado_miembro || 'Activx',
+      esAdminMiembro: true,
+      email: d.email || ''
+    };
+    wrap.innerHTML = '<p class="seccion-label">Ajustes de admin</p>' + _eqTierAdminHtml(persona) + _eqAdminGestionHtml(persona);
   });
 }
 

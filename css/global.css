@@ -381,3 +381,24 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
    default de la librería, sin depender de que Cropper.js no reescriba
    estilos inline con !important en alguna versión futura. No duplicar
    estas reglas acá. */
+
+/* Banner offline global (#app-offline-banner, index.html, hijo directo de
+   <body>) -- distinto de #ev-offline-banner (propio de Eventos, css/eventos.css,
+   con hora del último snapshot + botón "Actualizar"): este es un aviso
+   genérico visible en CUALQUIER sección de la app, poblado/ocultado por
+   _offActualizarBannerGlobal() (js/offline.js) según navigator.onLine.
+   Mismos colores de warning que el resto de la app (css/colors.css). */
+#app-offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: var(--warning-bg);
+  color: var(--text);
+  border-bottom: 1px solid var(--warning-bdr);
+  padding: 10px 16px;
+  font-size: 0.8rem;
+  text-align: center;
+  display: none;
+}

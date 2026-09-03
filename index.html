@@ -26,7 +26,7 @@
      del primer paint real (ambos coinciden hoy, el valor de entrada es el
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=580dd587"></script>
-<link rel="stylesheet" href="css/global.css?v=4813023a">
+<link rel="stylesheet" href="css/global.css?v=0cd982c1">
 <link rel="stylesheet" href="css/estilos.css?v=7e3d0e54">
 <link rel="stylesheet" href="css/ui.css?v=626a894b">
 <link rel="stylesheet" href="css/login.css">
@@ -66,6 +66,13 @@
 <script src="js/foto.js"></script>
 </head>
 <body>
+
+<!-- Banner offline global (distinto de #ev-offline-banner, propio de
+     Eventos -- ver css/eventos.css/js/offline.js) -- avisa en CUALQUIER
+     sección que la conexión se perdió, poblado/ocultado por
+     _offActualizarBannerGlobal() (js/offline.js) según navigator.onLine.
+     Oculto por default (display:none inline, ver css/global.css). -->
+<div id="app-offline-banner" style="display:none;">Estás sin conexión. Cualquier cambio que hagas se actualizará cuando vuelvas a tener conexión.</div>
 
 <div id="loading-overlay">
   <div class="loading-card">
@@ -3272,12 +3279,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=66148b6f"></script>
 <script src="js/eventos.js?v=c9ad29c9"></script>
-<script src="js/offline.js?v=2b836485"></script>
+<script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js"></script>
 <script src="js/equipo.js?v=9828c802"></script>
 <script src="js/home.js?v=cf4b0197"></script>
 <script src="js/reservas.js?v=e53c9c46"></script>
-<script src="js/perfil.js?v=e7e04c90"></script>
+<script src="js/perfil.js?v=e07ee7b6"></script>
 <script src="js/admin.js?v=4d88b71e"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js"></script>
@@ -3862,6 +3869,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <button onclick="ajAbrirSheetLogout()" class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:8px;"><span class="material-symbols-outlined" style="font-size:1.1rem;">logout</span>Cerrar sesión</button>
       <button onclick="eliminarCuenta()" class="aj-btn-delete"><span class="material-symbols-outlined" style="font-size:1.1rem;">delete</span>Eliminar cuenta</button>
     </div>
+
+    <!-- "Ajustes de admin" (pedido explícito, ver MANIFEST.md) -- acordeones
+         de Categoría/Estado, admin-only, poblado por _datosRenderAdmin()
+         (js/perfil.js) reusando _eqTierAdminHtml()/_eqAdminGestionHtml()
+         (js/equipo.js) tal cual. Vacío para cualquier cuenta sin _adminToken. -->
+    <div id="aj-admin-wrap" style="margin-top:20px;"></div>
   </div>
 </div>
 
