@@ -488,6 +488,13 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
   font-size: 15px;
   color: var(--text);
 }
+.pwa-gate-nota {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 16px;
+  text-align: center;
+  line-height: 1.4;
+}
 .pwa-gate-paso .material-symbols-rounded {
   font-size: 24px;
   color: var(--muted);

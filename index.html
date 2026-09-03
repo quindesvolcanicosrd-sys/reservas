@@ -33,7 +33,7 @@
      del primer paint real (ambos coinciden hoy, el valor de entrada es el
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=580dd587"></script>
-<link rel="stylesheet" href="css/global.css?v=3007d7fd">
+<link rel="stylesheet" href="css/global.css?v=1c535079">
 <link rel="stylesheet" href="css/estilos.css?v=7e3d0e54">
 <link rel="stylesheet" href="css/ui.css?v=626a894b">
 <link rel="stylesheet" href="css/login.css">
@@ -5092,31 +5092,76 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 </div>
 
-<!-- Enforcement de instalación PWA en Android -- gate bloqueante (distinto
-     de #pwa-banner, más arriba: ese es descartable/informativo, este NO
-     tiene forma de cerrarse -- `_verificarPwa()`/js/pwa.js lo muestra apenas
-     carga la página, antes que cualquier otra pantalla, si detecta Android
-     fuera de modo standalone). Ver MANIFEST.md. -->
+<!-- Enforcement de instalación PWA en Android + iOS -- gate bloqueante
+     (distinto de #pwa-banner, más arriba: ese es descartable/informativo,
+     este NO tiene forma de cerrarse -- `_verificarPwa()`/js/pwa.js lo
+     muestra apenas carga la página, antes que cualquier otra pantalla, si
+     detecta Android o iPhone/iPad/iPod fuera de modo standalone). 3
+     variantes de contenido, mutuamente excluyentes, alternadas por
+     `_verificarPwa()` según plataforma/navegador -- nunca 2 visibles a la
+     vez: `#pwa-instrucciones-android` (botón de instalación directa si
+     `beforeinstallprompt` ya llegó, si no los 3 pasos manuales de Chrome),
+     `#pwa-instrucciones-ios` (Safari no expone ningún prompt nativo de
+     instalación -- SIEMPRE son los 3 pasos manuales de "Compartir → Agregar
+     a pantalla de inicio"), `#pwa-instrucciones-browser` (navegador
+     incompatible -- ej. Instagram/Facebook in-app browser, Firefox en
+     Android -- ninguno de los 2 caminos de arriba funciona ahí, mensaje +
+     botón "Copiar enlace" para abrir en Chrome/Safari real). Ver MANIFEST.md. -->
 <div id="pwa-gate" style="display:none">
   <div class="pwa-gate-overlay">
     <div class="pwa-gate-card">
       <span class="material-symbols-rounded pwa-gate-icon">install_mobile</span>
-      <h2 class="pwa-gate-titulo">Instala la app</h2>
-      <p class="pwa-gate-desc">Para usar esta app en Android, instálala en tu pantalla de inicio. No requiere descarga desde ninguna tienda.</p>
-      <!-- Botón de instalación directa (`_pwaInstalarDirecto()`/js/pwa.js) --
-           visible solo si el navegador ya disparó `beforeinstallprompt`
-           (reusa `_deferredPrompt`, mismo mecanismo que `pwaInstalar()` del
-           banner descartable existente, sin duplicar la captura del evento).
-           Oculto por default -- `_pwaActualizarBotonesGate()` decide cuál de
-           los 2 (botón directo vs. pasos manuales) mostrar. -->
-      <button type="button" id="pwa-install-btn" class="pwa-gate-btn-instalar" onclick="_pwaInstalarDirecto()" style="display:none">
-        <span class="material-symbols-rounded">download</span>
-        Instalar app
-      </button>
-      <div id="pwa-pasos-manuales" class="pwa-gate-pasos">
-        <div class="pwa-gate-paso"><span class="material-symbols-rounded">more_vert</span><span>Toca el menú <strong>⋮</strong> de Chrome (arriba a la derecha)</span></div>
-        <div class="pwa-gate-paso"><span class="material-symbols-rounded">add_to_home_screen</span><span>Selecciona <strong>"Agregar a pantalla de inicio"</strong></span></div>
-        <div class="pwa-gate-paso"><span class="material-symbols-rounded">check_circle</span><span>Toca <strong>"Agregar"</strong> y abre la app desde tu pantalla de inicio</span></div>
+      <h2 class="pwa-gate-titulo">Instalá la app</h2>
+      <p class="pwa-gate-desc">Para usar Pivot y recibir notificaciones, instalá la app en tu pantalla de inicio.</p>
+
+      <!-- Android -->
+      <div id="pwa-instrucciones-android" style="display:none">
+        <!-- Botón de instalación directa (`_pwaInstalarDirecto()`/js/pwa.js) --
+             visible solo si el navegador ya disparó `beforeinstallprompt`
+             (reusa `_deferredPrompt`, mismo mecanismo que `pwaInstalar()` del
+             banner descartable existente, sin duplicar la captura del evento).
+             Oculto por default -- `_pwaActualizarBotonesGate()` decide cuál de
+             los 2 (botón directo vs. pasos manuales) mostrar. -->
+        <button type="button" id="pwa-install-btn" class="pwa-gate-btn-instalar" onclick="_pwaInstalarDirecto()" style="display:none">
+          <span class="material-symbols-rounded">download</span>
+          Instalar app
+        </button>
+        <div id="pwa-pasos-manuales" class="pwa-gate-pasos">
+          <div class="pwa-gate-paso"><span class="material-symbols-rounded">more_vert</span><span>Tocá el menú <strong>⋮</strong> de Chrome (arriba a la derecha)</span></div>
+          <div class="pwa-gate-paso"><span class="material-symbols-rounded">add_to_home_screen</span><span>Seleccioná <strong>"Agregar a pantalla de inicio"</strong></span></div>
+          <div class="pwa-gate-paso"><span class="material-symbols-rounded">check_circle</span><span>Tocá <strong>"Agregar"</strong> y abrí Pivot desde tu pantalla de inicio</span></div>
+        </div>
+      </div>
+
+      <!-- iOS -->
+      <div id="pwa-instrucciones-ios" style="display:none">
+        <div class="pwa-gate-pasos">
+          <div class="pwa-gate-paso"><span class="material-symbols-rounded">ios_share</span><span>Tocá el ícono de compartir <strong>↑</strong> en la barra de Safari</span></div>
+          <div class="pwa-gate-paso"><span class="material-symbols-rounded">add_box</span><span>Seleccioná <strong>"Agregar a pantalla de inicio"</strong></span></div>
+          <div class="pwa-gate-paso"><span class="material-symbols-rounded">check_circle</span><span>Tocá <strong>"Agregar"</strong> y abrí Pivot desde tu pantalla de inicio</span></div>
+        </div>
+        <p class="pwa-gate-nota">Una vez instalada, la app te pedirá activar las notificaciones.</p>
+      </div>
+
+      <!-- Navegador incompatible (ej. in-app browser de Instagram/Facebook,
+           Firefox en Android -- ninguno soporta instalar como PWA) --
+           `_pwaBrowserCompatible()`/js/pwa.js decide, texto/ícono seteados
+           en vivo por `_verificarPwa()` según Android/iOS detectado. -->
+      <div id="pwa-instrucciones-browser" style="display:none">
+        <div class="pwa-gate-pasos">
+          <div class="pwa-gate-paso">
+            <span class="material-symbols-rounded" id="pwa-browser-icono">open_in_browser</span>
+            <span id="pwa-browser-texto">Para instalar Pivot abrí esta página en Chrome.</span>
+          </div>
+          <div class="pwa-gate-paso">
+            <span class="material-symbols-rounded">content_copy</span>
+            <span>Copiá la URL y pegala en Chrome o Safari según tu dispositivo.</span>
+          </div>
+        </div>
+        <button type="button" class="pwa-gate-btn-instalar" onclick="navigator.clipboard && navigator.clipboard.writeText(location.href).then(function(){ mostrarToast('URL copiada'); })">
+          <span class="material-symbols-rounded">content_copy</span>
+          Copiar enlace
+        </button>
       </div>
     </div>
   </div>

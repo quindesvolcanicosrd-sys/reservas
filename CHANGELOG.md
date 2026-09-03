@@ -247,6 +247,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Auth
 
+2026-09-03 — Gate de PWA extendido a iOS + detección de navegador incompatible: `_verificarPwa()` ahora también bloquea iPhone/iPad/iPod (antes solo Android), con su propia sección de pasos manuales para Safari (sin prompt nativo, no existe en iOS). Nueva `_pwaBrowserCompatible()` detecta un navegador que no puede instalar nada (Chrome/Edge/Opera/Samsung Internet en Android en vez de Chrome real, o cualquier cosa que no sea Safari real en iOS — típico: in-app browser de Instagram/Facebook) y muestra un mensaje + botón "Copiar enlace" en vez de instrucciones que no aplican ahí.
+
 2026-09-03 — Re-ajuste del gate de PWA: `#pwa-gate` ahora ofrece un botón "Instalar app" que dispara el prompt nativo (`beforeinstallprompt`/`_deferredPrompt`, reusando la misma captura que ya tenía el banner descartable) en vez de solo instrucciones manuales — esas quedan como fallback si el navegador no llega a entregar el evento.
 
 2026-09-03 — Enforcement de PWA en Android + notificaciones obligatorias: `_verificarPwa()`/`_verificarNotificaciones()` (js/pwa.js), llamadas al inicio de `window.onload`, muestran pantallas completas bloqueantes (`#pwa-gate`/`#notif-gate`, sin botón de cierre) si el dispositivo es Android fuera de modo standalone, o si la app ya está instalada pero las notificaciones no están concedidas — distinto de los banners descartables ya existentes (`#pwa-banner`/`#notif-banner`). RSVP directo desde los botones de acción de una push notification de evento nuevo (`?rsvp=<id>&estado=<estado>`) via poll acotado sobre `_EV_EVENTOS` + `_evMarcarAsistencia()`.

@@ -9,25 +9,78 @@ window.addEventListener('beforeinstallprompt', function(e) { e.preventDefault();
 // variable propia, para no mantener 2 fuentes del mismo dato.
 window.addEventListener('beforeinstallprompt', function() { _pwaActualizarBotonesGate(); });
 
-// ── Enforcement de instalación PWA en Android ──────────────────────────────
+// Navegador compatible con instalar como PWA -- Android exige Chrome real
+// (no Edge/Opera/Samsung Internet, cada uno con su propio flujo de
+// instalación distinto al de Chrome, o directamente sin soporte), iOS exige
+// Safari real (no Chrome/Firefox/Opera para iOS -- son WebKit por mandato de
+// Apple pero NINGUNO expone "Agregar a pantalla de inicio" salvo Safari, ni
+// siquiera Mercury/otros navegadores WebKit de terceros). Cualquier otro
+// navegador (desktop, o ninguno de los de arriba) se considera compatible
+// por default -- esta función solo se consulta desde dentro de
+// `_verificarPwa()`, ya acotada a Android/iOS antes de llamarla.
+function _pwaBrowserCompatible() {
+  var ua = navigator.userAgent.toLowerCase();
+  var esAndroidUa = /android/.test(ua);
+  var esIosUa = /iphone|ipad|ipod/.test(ua);
+  if (esAndroidUa) return /chrome/.test(ua) && !/edg|opr|samsung/.test(ua);
+  if (esIosUa) return /safari/.test(ua) && !/crios|fxios|opios|mercury/.test(ua);
+  return true;
+}
+
+// ── Enforcement de instalación PWA en Android + iOS ────────────────────────
 // A diferencia de mostrarBannerPWA() (arriba en este archivo -- descartable,
 // localStorage.pwa_dismiss), esto BLOQUEA la pantalla entera sin forma de
-// cerrarla mientras la condición sea cierta -- Android real, navegador
-// (no ya instalada como standalone). iPhone/iPad y desktop no se tocan acá,
-// a propósito (pedido explícito: "enforcement de PWA en Android"). Llamada
-// PRIMERO que cualquier otra cosa en window.onload (js/auth.js) -- si
-// bloquea, el resto del boot (login, restaurar sesión) sigue corriendo
-// igual en segundo plano (no hay ningún `return` que lo frene), pero la
-// persona no puede ver ni operar nada detrás del gate.
+// cerrarla mientras la condición sea cierta -- Android o iPhone/iPad/iPod
+// reales, fuera de modo standalone. Desktop no se toca, a propósito (pedido
+// original: "enforcement de PWA en Android", extendido después a iOS -- el
+// mismo motivo real de fondo, recibir push notifications, aplica en los 2).
+// Llamada PRIMERO que cualquier otra cosa en window.onload (js/auth.js) --
+// si bloquea, el resto del boot (login, restaurar sesión) sigue corriendo
+// igual en segundo plano (no hay ningún `return` que lo frene ahí), pero la
+// persona no puede ver ni operar nada detrás del gate. `esStandalone()`
+// (más abajo en este archivo) ya cubre `display-mode:standalone` (Android/
+// Chrome) Y `navigator.standalone===true` (iOS/Safari) -- una sola función
+// para las 2 plataformas, sin reimplementar el chequeo acá.
 function _verificarPwa() {
   var esAndroid = /android/i.test(navigator.userAgent);
-  if (esAndroid && !esStandalone()) {
-    var gate = document.getElementById('pwa-gate');
-    if (gate) { gate.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
-    _pwaActualizarBotonesGate();
+  var esIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if ((!esAndroid && !esIos) || esStandalone()) return false;
+
+  var gate = document.getElementById('pwa-gate');
+  if (gate) gate.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+
+  var secAndroid = document.getElementById('pwa-instrucciones-android');
+  var secIos = document.getElementById('pwa-instrucciones-ios');
+  var secBrowser = document.getElementById('pwa-instrucciones-browser');
+
+  // Navegador sin soporte real de instalación (ej. in-app browser de
+  // Instagram/Facebook, Firefox en Android) -- ni el botón directo ni los
+  // pasos manuales de Chrome/Safari sirven ahí (esos menús no existen en
+  // ese navegador): mensaje aparte con "Copiar enlace" para abrir la URL en
+  // un navegador real, en vez de instrucciones que la persona no va a poder
+  // seguir.
+  if (!_pwaBrowserCompatible()) {
+    if (secAndroid) secAndroid.style.display = 'none';
+    if (secIos) secIos.style.display = 'none';
+    if (secBrowser) {
+      secBrowser.style.display = '';
+      var txtBrowser = document.getElementById('pwa-browser-texto');
+      if (txtBrowser) txtBrowser.textContent = esIos ? 'Para instalar Pivot abrí esta página en Safari.' : 'Para instalar Pivot abrí esta página en Chrome.';
+      var iconBrowser = document.getElementById('pwa-browser-icono');
+      if (iconBrowser) iconBrowser.textContent = esIos ? 'safari' : 'open_in_browser';
+    }
     return true;
   }
-  return false;
+
+  if (secBrowser) secBrowser.style.display = 'none';
+  if (secAndroid) secAndroid.style.display = esAndroid ? '' : 'none';
+  if (secIos) secIos.style.display = esIos ? '' : 'none';
+  // Botón de instalación directa vs. pasos manuales -- solo aplica del lado
+  // Android (`beforeinstallprompt` no existe en Safari/iOS, esa sección
+  // siempre son los 3 pasos manuales, sin alternativa).
+  if (esAndroid) _pwaActualizarBotonesGate();
+  return true;
 }
 
 // Alterna entre el botón de instalación directa y los pasos manuales dentro
