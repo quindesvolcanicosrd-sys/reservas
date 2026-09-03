@@ -278,14 +278,15 @@ function _ceAplicarPaleta() {
 
   for (var nombre in vars) root.style.setProperty(nombre, vars[nombre]);
 
-  // meta[name="theme-color"] no soporta var() — sincronizado en runtime acá
-  // con --bg (ahora fijo en colors.css, leído directo en vez de recalculado)
-  // para no duplicar el literal en un 3er lugar además de colors.css/acá.
-  var bgFijo = getComputedStyle(root).getPropertyValue('--bg').trim() || bgHex;
+  // meta[name="theme-color"] no soporta var(). Antes se leía --bg vía
+  // getComputedStyle, pero esa lectura puede resolver en blanco si corre
+  // antes de que el media query oscuro del sistema termine de aplicarse --
+  // ahora valores fijos, uno por meta (cada uno ya tiene su propio media
+  // attribute light/dark, así que el navegador elige el que corresponde).
   var metaLight = document.querySelector('meta[name="theme-color"][media*="light"]');
   var metaDark = document.querySelector('meta[name="theme-color"][media*="dark"]');
-  if (!oscuro && metaLight) metaLight.setAttribute('content', bgFijo);
-  if (oscuro && metaDark) metaDark.setAttribute('content', bgFijo);
+  if (metaLight) metaLight.setAttribute('content', '#FFFFFF');
+  if (metaDark) metaDark.setAttribute('content', '#0D0D0D');
 }
 
 if (window.matchMedia) {
