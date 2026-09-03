@@ -1,8 +1,10 @@
-# MANIFEST — Mirlxs Reservas
+# MANIFEST — Pivot
 
 Referencia del estado actual de la arquitectura. El historial de cambios vive en `CHANGELOG.md` — este archivo describe solo cómo es el proyecto hoy.
 
 ## Descripción general
+
+**Rebrand** (pedido explícito, ver CHANGELOG.md) — el producto se llamaba "Mirlxs — Reservas"/"Mirlxs RD" de cara al usuario (`<title>`, metadata, `manifest.json`, banner de instalación); ahora es **Pivot** en todo texto/metadata visible como marca del producto. Sin relación con "Mirlxs" como nombre del equipo de patinaje/derby real que usa la app (sigue igual, ver abajo) ni con la categoría/tier de integrantes "Mirlxs" (variables, lógica, clases CSS, keys de storage, nombres de función — todo eso NO se tocó, es un concepto de dominio distinto que coincide de nombre por casualidad).
 
 App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mensualidades, calendario de eventos con asistencia (RSVP + rollcall real), sección Equipo (roster con favoritos/grupos por rol, perfil de detalle con stats y termómetro Quindes/Mirlxs), perfil/equipamiento de cada miembro, tareas del club y panel admin ("Mi Liga"). SPA en `index.html` sobre Supabase (Postgres + Edge Function), con 2 mini-SPA hermanas standalone (`inscripcion/`, `registro-express/`) para altas nuevas. Backend legado en Google Apps Script (Code.gs, fuera de este repo) en migración progresiva a una Edge Function de Supabase — lo no migrado todavía cae por proxy a GAS.
 

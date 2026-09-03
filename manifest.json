@@ -1,7 +1,7 @@
 {
-  "name": "Mirlxs — Reservas",
-  "short_name": "Mirlxs",
-  "description": "Reserva entrenamientos, registra tus pagos y recibe avisos de confirmaciones y cancelaciones.",
+  "name": "Pivot",
+  "short_name": "Pivot",
+  "description": "Gestión integral de equipo",
   "lang": "es",
   "start_url": "./index.html?source=pwa",
   "scope": "./",
