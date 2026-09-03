@@ -5435,6 +5435,11 @@ function _evCancelarEvento(idEvento, btn) {
       return;
     }
     _evLimpiarAsistenciasCanceladas(idEvento);
+    // Push notification a todo el equipo -- `adminCancelarEvento` en sí
+    // todavía vive en GAS (ver "Aún en GAS", supabase/functions/api/index.ts),
+    // pero el aviso no depende de dónde corrió la mutación real, solo de que
+    // este callback de éxito haya llegado.
+    api({ action: 'pushEventoCancelado', adminToken: _adminToken, tipo: ev.tipo, fecha: ev.fecha, hora: ev.horaInicio, lugar: ev.lugar }, function(){}, function(){});
   }, function(e) {
     ev.estado = estadoAnterior;
     if (btn) btn.disabled = false;
@@ -6144,6 +6149,21 @@ function _evEditarScopeValido() {
 // (ej. el pill de lugar del sticky) mostraba el dato desactualizado por un
 // instante -- o directamente uno viejo si `ir('s-eventos')` no esperaba ese
 // refetch.
+// Arma el texto de "Cambios: ..." de la push notification de edición, a
+// partir de los mismos `_evEditarCambios`/`_evEditarOriginal` que ya arma el
+// resumen en pantalla (`_evEditarActualizarResumenCampo()`, arriba en este
+// archivo) -- solo los campos que el admin efectivamente confirmó, mismo
+// criterio. String vacío si no hay ningún cambio confirmado (no debería
+// pasar -- el footer exige al menos 1 -- pero sin esto un llamado con
+// `cambios` vacío mandaría un push sin contenido real).
+function _evEditarResumenCambios() {
+  var partes = [];
+  if (_evEditarCambios.hasOwnProperty('lugar')) partes.push('Lugar: ' + (_evEditarOriginal.lugar || 'sin definir') + ' → ' + _evEditarCambios.lugar);
+  if (_evEditarCambios.hasOwnProperty('horaInicio')) partes.push('Hora: ' + (_evEditarOriginal.horaInicio || 'sin definir') + ' → ' + _evEditarCambios.horaInicio);
+  if (_evEditarCambios.hasOwnProperty('horaFin')) partes.push('Hora fin: ' + (_evEditarOriginal.horaFin || 'sin definir') + ' → ' + _evEditarCambios.horaFin);
+  if (_evEditarCambios.hasOwnProperty('descripcion')) partes.push('Descripción actualizada');
+  return partes.join(' · ');
+}
 function _evEditarConfirmar() {
   if (!_evEditarScopeValido()) return;
   var ev = _evDetalleActual;
@@ -6159,12 +6179,18 @@ function _evEditarConfirmar() {
   var fechaHasta = modo === 'periodo' ? _evEditarFechaHasta : null;
 
   mostrarCargando('Guardando cambios...');
+  var _cambiosTexto = _evEditarResumenCambios();
+  var _lugarParaNotif = _evEditarCambios.hasOwnProperty('lugar') ? _evEditarCambios.lugar : _evEditarOriginal.lugar;
+  var _fechaParaNotif = ev.fecha;
   _evAdminEditarEvento(
     ev.id, campos, modo, ev.fecha, fechaHasta,
     function() {
       ocultarCargando();
       _evEditarAplicarCambiosLocal(ev);
       mostrarToast('Cambios guardados.', 'ok', true);
+      if (_cambiosTexto) {
+        api({ action: 'pushEventoEditado', adminToken: _adminToken, fecha: _fechaParaNotif, lugar: _lugarParaNotif, cambios: _cambiosTexto }, function(){}, function(){});
+      }
       ir('s-eventos');
       _evCargarDatosReales(function() { _evRenderTimeline(true); });
     },
@@ -9906,6 +9932,16 @@ function _evCrearGuardar() {
     function _evCrearGuardarTerminar() {
       ocultarCargando();
       mostrarToast('Evento creado.', 'ok');
+      // Push notification a todo el equipo -- best-effort, sin bloquear ni
+      // condicionar el flujo de guardado (el evento ya quedó creado arriba,
+      // esto es solo el aviso). Sin `idEvento` real disponible acá (el POST
+      // de `venues` usa `Prefer: return=minimal`, no devuelve el id nuevo, y
+      // la fila de `asistencias` la genera después el cron
+      // regenerar_ventana_asistencias()) -- el push queda sin los botones de
+      // RSVP directo, solo con el link a la sección Eventos.
+      if (fechaEventoCreado) {
+        api({ action: 'pushEventoCreado', adminToken: _adminToken, tipo: v.tipoIcono, fecha: fechaEventoCreado, hora: _evCrearData.hora, lugar: v.nombre }, function(){}, function(){});
+      }
       ir('s-eventos');
       // Bug real corregido (ver MANIFEST.md "Cambios recientes"): esto le
       // faltaba a este guardado en particular -- `ir('s-eventos')` sola NO
@@ -10398,6 +10434,13 @@ function _evCrearDescansoGuardar() {
     if (r.ok) {
       ocultarCargando();
       mostrarToast(editando ? 'Temporada actualizada' : 'Temporada creada', 'ok', true);
+      // Push notification a todo el equipo -- solo en la creación, no en
+      // cada edición posterior (mismo criterio que el resto de esta tanda:
+      // avisar de novedades reales, no de cada ajuste de un descanso ya
+      // anunciado).
+      if (!editando) {
+        api({ action: 'pushOffseasonCreado', adminToken: _adminToken, desde: d.fechaDesde, hasta: d.fechaHasta }, function(){}, function(){});
+      }
       _evDescansoEditandoId = null;
       ir('s-eventos');
       _evCargarDatosReales(function() { _evRenderTimeline(true); });

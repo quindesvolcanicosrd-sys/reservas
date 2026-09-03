@@ -11,6 +11,15 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbw40qNuCKh7_wDusEGRHmZt
 
 const ONESIGNAL_APP_ID  = Deno.env.get('ONESIGNAL_APP_ID')  ?? '';
 const ONESIGNAL_API_KEY = Deno.env.get('ONESIGNAL_API_KEY') ?? '';
+// URL pública de la SPA -- destino de los `url`/`web_buttons` de las push
+// notifications (sendPush(), más abajo). Configurable vía secret para no
+// hardcodear si algún día cambia de dominio; el literal es el dominio real
+// de producción (mismo usado ya en chrome_web_icon de adminEnviarPush()).
+const APP_URL = Deno.env.get('APP_URL') ?? 'https://app.quindesvolcanicos.com';
+// Header x-cron-secret que debe traer cualquier llamada a `action:'cronDiario'`
+// (pg_cron -> net.http_post, ver supabase/migrations) -- sin este secret
+// configurado, cronDiario queda inalcanzable (falla cerrado, no abierto).
+const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? '';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
@@ -577,6 +586,12 @@ async function inscribirPersona(params: Record<string, any>): Promise<Record<str
 
   const token = await _crearToken(nombre);
   const newRow = await _getEquipoRow(nombre);
+  await sendPush({
+    included_segments: ['All'],
+    headings: { es: '¡Nuevo integrante en el equipo!' },
+    contents: { es: `${nombre} se unió hoy. ¡Bienvenidx!` },
+    url: APP_URL + '/?tab=equipo',
+  });
   return { exito: true, token, nombre, datos: getDatosCompletos(newRow) };
 }
 
@@ -616,6 +631,12 @@ async function inscribirPersonaExpress(params: Record<string, any>): Promise<Rec
 
   const token = await _crearToken(nombre);
   const newRow = await _getEquipoRow(nombre);
+  await sendPush({
+    included_segments: ['All'],
+    headings: { es: '¡Nuevo integrante en el equipo!' },
+    contents: { es: `${nombre} se unió hoy. ¡Bienvenidx!` },
+    url: APP_URL + '/?tab=equipo',
+  });
   return { exito: true, token, nombre, datos: getDatosCompletos(newRow) };
 }
 
@@ -1205,11 +1226,45 @@ async function getEventosFiltrados(params: Record<string, any>): Promise<Record<
 }
 
 const ESTADOS_RSVP = ['Asistiré', 'No asistiré', 'No jugador'];
+// Estados RSVP que representan una baja -- usados para decidir si avisar a
+// los admins cuando alguien cambia de 'Asistiré' a uno de estos (ver más
+// abajo). No incluye el caso "nunca había respondido"/estado inicial, solo
+// una baja real desde 'Asistiré'.
+const ESTADOS_RSVP_BAJA = ['No asistiré', 'No jugador'];
+
 async function marcarAsistenciaUsuario(params: Record<string, any>): Promise<Record<string, any>> {
   const { nombre, idEvento, estado } = params;
   if (!idEvento) return { exito: false, error: 'Evento inválido.' };
   if (!ESTADOS_RSVP.includes(estado)) return { exito: false, error: 'Estado inválido.' };
+
+  // RSVP anterior de ESTA persona en ESTE evento (origen 'Usuario', la última
+  // fila por marca_temporal) -- leído ANTES de insertar la fila nueva de log,
+  // igual criterio que adminMarcarAsistencia() usa para "marcaPrevia" más
+  // abajo en este archivo. Solo hace falta si el estado nuevo es una baja --
+  // evita la query en el camino normal (marcar 'Asistiré', la mayoría).
+  let eraAsistire = false;
+  if (ESTADOS_RSVP_BAJA.includes(estado)) {
+    const { data: previo } = await supabase.from('log_asistencias')
+      .select('estado').eq('id_evento', idEvento).eq('nombre_usuario', nombre).eq('origen', 'Usuario')
+      .order('marca_temporal', { ascending: false }).limit(1).maybeSingle();
+    eraAsistire = previo?.estado === 'Asistiré';
+  }
+
   await _agregarFilaLogAsistencia(String(idEvento).trim(), nombre, 'Usuario', estado);
+
+  if (eraAsistire) {
+    const { data: ev } = await supabase.from('asistencias').select('fecha, donde, inicia, tipo_evento').eq('id_evento', idEvento).maybeSingle();
+    if (ev) {
+      const esHoy = ev.fecha === _hoyEcuadorISO();
+      await sendPush({
+        include_aliases: { external_id: await _adminOneSignalAliases() },
+        headings: { es: 'Baja de asistencia' },
+        contents: { es: `${nombre} no asistirá al ${ev.tipo_evento || 'evento'} de ${esHoy ? 'hoy' : _fechaEs(ev.fecha)} · ${_horaEs(ev.inicia)} · ${ev.donde || ''}` },
+        url: APP_URL + '/?tab=eventos',
+      });
+    }
+  }
+
   return { exito: true };
 }
 
@@ -1553,6 +1608,19 @@ async function getReservasPersona(params: Record<string, any>): Promise<any[]> {
   });
 }
 
+// Notifica a los admins una baja/reagendo de reserva MENSUAL (r.tipo -- ver
+// guardarReserva() más arriba -- 'mensual' vs 'clase') -- reservas de clase
+// puntual son frecuentes y de bajo impacto, a propósito fuera de este aviso.
+async function _notificarReservaMensualCambio(r: Record<string, any>, nombre: string, accion: 'cancelar' | 'reagendar'): Promise<void> {
+  if (r?.tipo !== 'mensual') return;
+  await sendPush({
+    include_aliases: { external_id: await _adminOneSignalAliases() },
+    headings: { es: accion === 'cancelar' ? 'Reserva cancelada' : 'Reserva reagendada' },
+    contents: { es: `${nombre} ${accion === 'cancelar' ? 'canceló' : 'reagendó'} su reserva mensual.` },
+    url: APP_URL + '/?tab=miliga',
+  });
+}
+
 async function cancelarReserva(params: Record<string, any>): Promise<Record<string, any>> {
   const { nombre, fecha } = params;
   const { data } = await supabase.from('reservas').select('*').eq('nombre_usuario', nombre).eq('id_evento', fecha).neq('estado', 'Cancelada').limit(1);
@@ -1565,16 +1633,18 @@ async function cancelarReserva(params: Record<string, any>): Promise<Record<stri
     await supabase.from('equipo').update({ cupon_disponible: true }).eq('username', nombre);
     cuponRestaurado = true;
   }
+  await _notificarReservaMensualCambio(r, nombre, 'cancelar');
   return { exito: true, cuponRestaurado };
 }
 
 async function reagendarReserva(params: Record<string, any>): Promise<Record<string, any>> {
   const { nombre, fechaAnterior, fechaNueva } = params;
-  const { data } = await supabase.from('reservas').select('id').eq('nombre_usuario', nombre).eq('id_evento', fechaAnterior).neq('estado', 'Cancelada').limit(1);
+  const { data } = await supabase.from('reservas').select('id, tipo').eq('nombre_usuario', nombre).eq('id_evento', fechaAnterior).neq('estado', 'Cancelada').limit(1);
   const reserva = data?.[0];
   if (!reserva) return { exito: false, error: 'Reserva no encontrada.' };
   const { error } = await supabase.from('reservas').update({ id_evento: fechaNueva, estado: 'Pendiente' }).eq('id', reserva.id);
   if (error) return { exito: false, error: error.message };
+  await _notificarReservaMensualCambio(reserva, nombre, 'reagendar');
   return { exito: true };
 }
 
@@ -3030,6 +3100,77 @@ async function adminGetQueLlevar(): Promise<any[]> {
 
 // ─── Acciones: push ───────────────────────────────────────────────────────────
 
+// Helper genérico de push automáticas (a diferencia de adminEnviarPush(),
+// que es el envío MANUAL desde el panel admin, con su propio payload/target
+// -- este helper no se reusa ahí para no tocar ese flujo ya en producción).
+// Mismo endpoint/convención de auth que ya usa adminEnviarPush() (API v2,
+// sin app_id en la URL, target_channel:'push') -- confirmado funcionando,
+// se reusa tal cual en vez del v1 (`onesignal.com/api/v1/...`, deprecado).
+// Best-effort a propósito: un push que falla nunca debe tumbar la acción
+// real (crear evento, marcar RSVP, etc.) que lo disparó.
+async function sendPush(payload: {
+  include_aliases?: { external_id: string[] };
+  included_segments?: string[];
+  headings: { es: string };
+  contents: { es: string };
+  url?: string;
+  web_buttons?: { id: string; text: string; url: string }[];
+}): Promise<void> {
+  if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) return;
+  if (!payload.include_aliases && !payload.included_segments) return;
+  try {
+    await fetch('https://api.onesignal.com/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Key ' + ONESIGNAL_API_KEY },
+      body: JSON.stringify({ app_id: ONESIGNAL_APP_ID, target_channel: 'push', ...payload }),
+    });
+  } catch (_e) { /* best-effort, no bloquea la acción que disparó el push */ }
+}
+
+// Identidades OneSignal de cuentas admin -- 'admin_'+email, mismo prefijo que
+// ya usa auth.js (OneSignal.login('admin_'+_adminEmail)) en cada login/
+// restauración de sesión admin. Fuente real: tabla `admins` + ADMIN_PRINCIPAL
+// (mismo criterio que adminGetCandidatosAdmin()/adminGetAdmins(), más abajo).
+async function _adminOneSignalAliases(): Promise<string[]> {
+  const { data } = await supabase.from('admins').select('email');
+  const emails = new Set([ADMIN_PRINCIPAL.toLowerCase(), ...(data ?? []).map((a: any) => String(a.email).toLowerCase())]);
+  return Array.from(emails).map((e) => 'admin_' + e);
+}
+
+const DIAS_ES  = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const MESES_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+// 'YYYY-MM-DD' -> "lunes 3 de marzo". new Date(y,m-1,d) (componentes, no el
+// string ISO directo) a propósito -- new Date('YYYY-MM-DD') parsea como UTC
+// medianoche, que en cualquier huso negativo (Ecuador, UTC-5) cae al día
+// ANTERIOR al mostrarse en hora local -- mismo tipo de bug ya evitado en el
+// resto de este archivo con fechas de `asistencias`/`equipo`.
+function _fechaEs(fechaIso: string): string {
+  const [y, m, d] = String(fechaIso).split('-').map((n) => Number(n));
+  if (!y || !m || !d) return String(fechaIso ?? '');
+  const dt = new Date(y, m - 1, d);
+  return DIAS_ES[dt.getDay()] + ' ' + d + ' de ' + MESES_ES[m - 1];
+}
+
+// 'HH:MM(:SS)' -> "6:00 p.m."
+function _horaEs(horaStr: string | null): string {
+  if (!horaStr) return '';
+  const partes = String(horaStr).split(':');
+  const hh = Number(partes[0]), mm = Number(partes[1] ?? 0);
+  if (Number.isNaN(hh)) return '';
+  const ampm = hh >= 12 ? 'p.m.' : 'a.m.';
+  let h12 = hh % 12; if (h12 === 0) h12 = 12;
+  return h12 + (mm ? ':' + String(mm).padStart(2, '0') : '') + ' ' + ampm;
+}
+
+// Fecha de hoy en hora de pared de Ecuador (UTC-5 fijo, sin DST -- mismo
+// criterio ya documentado en supabase/migrations/20260831_cron_eventos_finalizados.sql),
+// como string 'YYYY-MM-DD'.
+function _hoyEcuadorISO(): string {
+  const ecu = new Date(Date.now() - 5 * 3600 * 1000);
+  return ecu.toISOString().substring(0, 10);
+}
+
 async function adminEnviarPush(params: Record<string, any>): Promise<Record<string, any>> {
   const { titulo, mensaje, destino, sendAfter } = params;
   if (!titulo || !mensaje) return { exito: false, error: 'Falta título o mensaje.' };
@@ -3049,6 +3190,167 @@ async function adminEnviarPush(params: Record<string, any>): Promise<Record<stri
   const body = await resp.json().catch(() => ({}));
   if (!resp.ok || body.errors) return { exito: false, error: JSON.stringify(body.errors ?? body) };
   return { exito: true, id: body.id ?? '' };
+}
+
+// Notificaciones puntuales de eventos/offseason -- llamadas desde el
+// FRONTEND (js/eventos.js) justo después de que el fetch() directo a
+// PostgREST (crear/editar evento, crear temporada de descanso) ya resolvió
+// con éxito -- esa parte del flujo nunca pasó por esta Edge Function (ver
+// MANIFEST.md, "Eventos -- creación/edición vía REST directo"), así que no
+// hay ningún insert/update propio de acá del que enganchar el push: estas
+// 4 acciones son wrappers finos sobre sendPush(), gateadas por adminToken
+// (cualquier cuenta con sesión admin válida puede dispararlas, mismo
+// criterio que el resto de acciones `admin*` de este archivo), que reciben
+// los datos YA CONOCIDOS por el frontend en vez de volver a leerlos de la
+// base. `adminCancelarEvento` (todavía en GAS, ver comentario "Aún en GAS"
+// más abajo) también dispara `pushEventoCancelado` desde el mismo call site
+// del frontend -- el push no depende de dónde vive la mutación real.
+async function pushEventoCreado(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const { tipo, fecha, hora, lugar, idEvento } = params;
+  await sendPush({
+    included_segments: ['All'],
+    headings: { es: `Nuevo ${tipo || 'evento'}: ${_fechaEs(fecha)}` },
+    contents: { es: `${_horaEs(hora)} · ${lugar || ''}` },
+    url: APP_URL + '/?tab=eventos',
+    web_buttons: idEvento ? [
+      { id: 'asistire', text: 'Asistiré', url: APP_URL + '/?rsvp=' + encodeURIComponent(idEvento) + '&estado=' + encodeURIComponent('Asistiré') },
+      { id: 'no-asistire', text: 'No asistiré', url: APP_URL + '/?rsvp=' + encodeURIComponent(idEvento) + '&estado=' + encodeURIComponent('No asistiré') },
+    ] : undefined,
+  });
+  return { exito: true };
+}
+
+async function pushEventoCancelado(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const { tipo, fecha, hora, lugar } = params;
+  await sendPush({
+    included_segments: ['All'],
+    headings: { es: 'Evento cancelado' },
+    contents: { es: `${tipo || 'Evento'} del ${_fechaEs(fecha)} · ${lugar || ''} · ${_horaEs(hora)}` },
+    url: APP_URL + '/?tab=eventos',
+  });
+  return { exito: true };
+}
+
+async function pushEventoEditado(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const { fecha, lugar, cambios } = params;
+  if (!cambios) return { exito: true };
+  await sendPush({
+    included_segments: ['All'],
+    headings: { es: `Evento actualizado: ${_fechaEs(fecha)}` },
+    contents: { es: `${lugar || ''} · Cambios: ${cambios}` },
+    url: APP_URL + '/?tab=eventos',
+  });
+  return { exito: true };
+}
+
+async function pushOffseasonCreado(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const { desde, hasta } = params;
+  await sendPush({
+    included_segments: ['All'],
+    headings: { es: 'Período de descanso programado' },
+    contents: { es: `Sin entrenamientos del ${_fechaEs(desde)} al ${_fechaEs(hasta)}.` },
+    url: APP_URL + '/?tab=eventos',
+  });
+  return { exito: true };
+}
+
+// ─── Acciones: cron diario de notificaciones ──────────────────────────────────
+// Disparado por pg_cron todos los días a las 8am hora de Ecuador (ver
+// supabase/migrations/*_cron_notificaciones_diarias.sql) vía net.http_post
+// con el header `x-cron-secret` -- validado en el router (Deno.serve), no
+// acá, porque necesita leer `req.headers`, no `params`.
+async function cronDiario(): Promise<Record<string, any>> {
+  const hoyIso = _hoyEcuadorISO();
+  const diaMes = hoyIso.substring(5);              // 'MM-DD'
+  const diaDelMes = Number(hoyIso.substring(8, 10));
+  const anio = Number(hoyIso.substring(0, 4));
+
+  // 1) Recordatorio de entrenamientos/eventos de hoy -- mismas 2 etiquetas de
+  // estado "no cuenta" que ya usa el resto de este archivo (getEventosRango
+  // y compañía) para excluir cancelados/sin entrenamiento.
+  const { data: eventosHoy } = await supabase.from('asistencias')
+    .select('id_evento, inicia, donde, tipo_evento')
+    .eq('fecha', hoyIso)
+    .not('estado', 'in', '("Evento Cancelado","No se entrena")');
+  const idsHoy = (eventosHoy ?? []).map((e: any) => e.id_evento);
+  const asistPorEvento = await _ultimaAsistenciaPorPersonaTodas(idsHoy);
+  for (const ev of (eventosHoy ?? [])) {
+    const asistentes = (asistPorEvento[ev.id_evento] ?? []).filter((a: any) => a.estado === 'Asistiré').length;
+    await sendPush({
+      included_segments: ['All'],
+      headings: { es: `${ev.tipo_evento || 'Entrenamiento'} hoy a las ${_horaEs(ev.inicia)}` },
+      contents: { es: `${asistentes} ${asistentes === 1 ? 'persona asistirá' : 'personas asistirán'} · ${ev.donde || ''}` },
+      url: APP_URL + '/?tab=eventos',
+    });
+  }
+
+  // 2) Cumpleaños -- mismo doble opt-in que getCumpleañosRango() (fecha
+  // guardada Y hecha pública); edad solo si edad_publica='Sí'.
+  const { data: cumpleaneros } = await supabase.from('equipo')
+    .select('username, fecha_nacimiento, edad_publica')
+    .not('fecha_nacimiento', 'is', null)
+    .not('fecha_publica', 'is', null);
+  for (const p of (cumpleaneros ?? [])) {
+    if (String(p.fecha_nacimiento).substring(5) !== diaMes) continue;
+    const edad = anio - Number(String(p.fecha_nacimiento).substring(0, 4));
+    const mostrarEdad = p.edad_publica === 'Sí';
+    await sendPush({
+      included_segments: ['All'],
+      headings: { es: `Hoy es el cumpleaños de ${p.username}` },
+      contents: { es: mostrarEdad ? `Deséale felices ${edad} años.` : 'Deséale feliz cumpleaños.' },
+      url: APP_URL + '/?tab=equipo',
+    });
+  }
+
+  // 3) Aniversario en el equipo (fecha_ingreso, solo a la propia persona).
+  const { data: miembros } = await supabase.from('equipo')
+    .select('username, fecha_ingreso')
+    .not('fecha_ingreso', 'is', null);
+  for (const p of (miembros ?? [])) {
+    if (String(p.fecha_ingreso).substring(5) !== diaMes) continue;
+    const anios = anio - Number(String(p.fecha_ingreso).substring(0, 4));
+    if (anios <= 0) continue;
+    await sendPush({
+      include_aliases: { external_id: [p.username] },
+      headings: { es: '¡Feliz aniversario!' },
+      contents: { es: `Hoy cumples ${anios} ${anios === 1 ? 'año' : 'años'} en el equipo. ¡Gracias por estar!` },
+      url: APP_URL + '/?tab=ajustes',
+    });
+  }
+
+  // 4) Cuota pendiente -- solo el día 1 de cada mes, reusando la MISMA lógica
+  // de "quién debe" que ya usa adminGetEstadoPagosMes() (_estadoPagoPersonaMes(),
+  // más arriba en este archivo) -- únicamente cuentas 'Quindes' pagan cuota.
+  if (diaDelMes === 1) {
+    const mes = Number(hoyIso.substring(5, 7));
+    const { data: quindes } = await supabase.from('equipo').select('username').eq('categoria', 'Quindes');
+    const personas = (quindes ?? []).map((q: any) => q.username);
+    const [{ data: pagosDelMes }, { data: solicitudesAprobadas }] = await Promise.all([
+      supabase.from('pagos').select('nombre_usuario, exoneradx, monto').eq('mes', mes).eq('anio', anio),
+      supabase.from('solicitudes_pago').select('nombre_usuario, tipo').eq('estado', 'aprobada').eq('mes', mes).eq('anio', anio),
+    ]);
+    const hoyDate = new Date(hoyIso + 'T00:00:00');
+    for (const nombre of personas) {
+      const estadoPago = _estadoPagoPersonaMes(nombre, mes, anio, pagosDelMes ?? [], solicitudesAprobadas ?? [], hoyDate);
+      if (estadoPago !== 'Debe') continue;
+      await sendPush({
+        include_aliases: { external_id: [nombre] },
+        headings: { es: 'Recordatorio de cuota mensual' },
+        contents: { es: `${nombre}, tienes cuota pendiente. Haz una reserva y envía el comprobante.` },
+        url: APP_URL + '/?tab=ajustes',
+      });
+    }
+  }
+
+  return { exito: true };
 }
 
 // ─── Acciones: reservas admin ─────────────────────────────────────────────────
@@ -3252,6 +3554,15 @@ Deno.serve(async (req: Request) => {
       case 'adminGetQueLlevar':              return json(await adminGetQueLlevar());
       // Push
       case 'adminEnviarPush':               return json(await adminEnviarPush(params));
+      case 'pushEventoCreado':              return json(await pushEventoCreado(params));
+      case 'pushEventoCancelado':           return json(await pushEventoCancelado(params));
+      case 'pushEventoEditado':             return json(await pushEventoEditado(params));
+      case 'pushOffseasonCreado':           return json(await pushOffseasonCreado(params));
+      case 'cronDiario': {
+        const secretHeader = req.headers.get('x-cron-secret') ?? '';
+        if (!CRON_SECRET || secretHeader !== CRON_SECRET) return json({ error: 'No autorizado.' }, 401);
+        return json(await cronDiario());
+      }
       // Reservas admin / sesión admin
       case 'adminGetReservas':              return json(await adminGetReservas(params));
       case 'adminSetEstadoReserva':         return json(await adminSetEstadoReserva(params));
@@ -3302,8 +3613,18 @@ Deno.serve(async (req: Request) => {
       case 'adminSetCategoria': {
         const adminEmail = await _validarAdminToken(params.adminToken);
         if (!adminEmail) return json({ exito: false, error: 'Sesión admin inválida.' }, 401);
+        const { data: filaPrevia } = await supabase.from('equipo').select('categoria').eq('username', params.nombre).maybeSingle();
         const { error } = await supabase.from('equipo').update({ categoria: params.categoria }).eq('username', params.nombre);
         if (error) return json({ exito: false, error: error.message });
+        if (filaPrevia && filaPrevia.categoria !== params.categoria) {
+          const subio = filaPrevia.categoria === 'Mirlxs' && params.categoria === 'Quindes';
+          await sendPush({
+            include_aliases: { external_id: [params.nombre] },
+            headings: { es: subio ? '¡Subiste de categoría!' : 'Cambio de categoría' },
+            contents: { es: subio ? '¡Ahora eres Quindes! Felicitaciones.' : `Pasaste a ${params.categoria}.` },
+            url: APP_URL + '/?tab=ajustes',
+          });
+        }
         return json({ exito: true });
       }
       // Ventana de asistencias -- ahora una función nativa de Postgres

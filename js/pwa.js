@@ -1,6 +1,82 @@
 var _deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e) { e.preventDefault(); _deferredPrompt = e; });
 
+// ── Enforcement de instalación PWA en Android ──────────────────────────────
+// A diferencia de mostrarBannerPWA() (arriba en este archivo -- descartable,
+// localStorage.pwa_dismiss), esto BLOQUEA la pantalla entera sin forma de
+// cerrarla mientras la condición sea cierta -- Android real, navegador
+// (no ya instalada como standalone). iPhone/iPad y desktop no se tocan acá,
+// a propósito (pedido explícito: "enforcement de PWA en Android"). Llamada
+// PRIMERO que cualquier otra cosa en window.onload (js/auth.js) -- si
+// bloquea, el resto del boot (login, restaurar sesión) sigue corriendo
+// igual en segundo plano (no hay ningún `return` que lo frene), pero la
+// persona no puede ver ni operar nada detrás del gate.
+function _verificarPwa() {
+  var esAndroid = /android/i.test(navigator.userAgent);
+  if (esAndroid && !esStandalone()) {
+    var gate = document.getElementById('pwa-gate');
+    if (gate) { gate.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+    return true;
+  }
+  return false;
+}
+
+// ── Modal obligatoria de notificaciones dentro de la PWA instalada ────────
+// Solo aplica ya INSTALADA como PWA (esStandalone()) -- dentro del navegador
+// normal ya existe el banner descartable (#notif-banner/mostrarBannerPWA()),
+// pedir el permiso de forma obligatoria ahí sería redundante con ese banner
+// y con el propio prompt nativo del navegador. Idempotente: puede llamarse
+// más de una vez por sesión (login fresco Y restauración de sesión) sin
+// duplicar nada -- si el permiso ya está concedido, no hace nada.
+function _verificarNotificaciones() {
+  if (!esStandalone()) return;
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'granted') return;
+  var gate = document.getElementById('notif-gate');
+  if (!gate) return;
+  gate.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  var denegado = document.getElementById('notif-gate-denegado');
+  var btn = gate.querySelector('.notif-gate-btn');
+  if (Notification.permission === 'denied') {
+    if (denegado) denegado.style.display = 'block';
+    if (btn) btn.style.display = 'none';
+  } else {
+    if (denegado) denegado.style.display = 'none';
+    if (btn) btn.style.display = 'block';
+  }
+}
+
+function _cerrarNotifGate() {
+  var gate = document.getElementById('notif-gate');
+  if (gate) { gate.style.display = 'none'; document.body.style.overflow = ''; }
+}
+
+function _activarNotificaciones() {
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(function(OneSignal) {
+    OneSignal.Notifications.requestPermission().then(function(granted) {
+      if (granted) {
+        OneSignal.User.PushSubscription.optIn().catch(function(){});
+        _cerrarNotifGate();
+        return;
+      }
+      var denegado = document.getElementById('notif-gate-denegado');
+      var btn = document.querySelector('#notif-gate .notif-gate-btn');
+      if (denegado) denegado.style.display = 'block';
+      if (btn) btn.style.display = 'none';
+    }).catch(function() {
+      // El propio navegador (no OneSignal) es el que puede rechazar/fallar
+      // el prompt -- mismo tratamiento que un "denied" real: instrucciones
+      // manuales en vez de dejar el botón colgado sin feedback.
+      var denegado = document.getElementById('notif-gate-denegado');
+      var btn = document.querySelector('#notif-gate .notif-gate-btn');
+      if (denegado) denegado.style.display = 'block';
+      if (btn) btn.style.display = 'none';
+    });
+  });
+}
+
 function esStandalone() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }

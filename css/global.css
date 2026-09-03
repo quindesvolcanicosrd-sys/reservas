@@ -402,3 +402,88 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
   text-align: center;
   display: none;
 }
+
+/* ── Gates bloqueantes (#pwa-gate/#notif-gate, index.html) ─────────────────
+   Enforcement de instalación PWA en Android + notificaciones obligatorias
+   dentro de la PWA -- ver _verificarPwa()/_verificarNotificaciones()
+   (js/pwa.js) y MANIFEST.md. A diferencia de #pwa-banner/#notif-banner (ya
+   existentes, descartables) estos 2 NO tienen botón de cierre -- ocupan toda
+   la pantalla hasta que la condición real se resuelve (app instalada /
+   permiso concedido). Mismo layout para los 2 (icono + título + texto +
+   contenido propio), solo el prefijo de clase cambia. */
+#pwa-gate, #notif-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+.pwa-gate-overlay, .notif-gate-overlay {
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+.pwa-gate-card, .notif-gate-card {
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+}
+.pwa-gate-icon, .notif-gate-icon {
+  font-size: 56px;
+  color: var(--brand);
+  margin-bottom: 16px;
+}
+.pwa-gate-titulo, .notif-gate-titulo {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 12px;
+}
+.pwa-gate-desc, .notif-gate-desc {
+  font-size: 15px;
+  color: var(--muted);
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+.pwa-gate-pasos {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.pwa-gate-paso {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 15px;
+  color: var(--text);
+}
+.pwa-gate-paso .material-symbols-rounded {
+  font-size: 24px;
+  color: var(--muted);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.notif-gate-btn {
+  width: 100%;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-color);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 14px;
+  cursor: pointer;
+}
+.notif-gate-btn:active {
+  background: var(--btn-primary-hover);
+}
+.notif-gate-manual {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 18px 0 0;
+}

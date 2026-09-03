@@ -389,6 +389,13 @@ function solicitarNuevoPIN(){
 }
 
 window.onload = function() {
+  // Gates bloqueantes (js/pwa.js) -- corren ANTES que todo lo demás, a
+  // propósito (ver MANIFEST.md): el resto de este boot sigue de largo en
+  // segundo plano sin esperar a ninguno de los 2 (ningún `return` acá), pero
+  // la persona no ve ni puede operar nada detrás mientras la condición real
+  // (instalar la app / conceder el permiso) siga sin resolverse.
+  _verificarPwa();
+  _verificarNotificaciones();
   document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
   var ov = document.getElementById('loading-overlay');
   ov.classList.remove('fade-out');
@@ -436,6 +443,33 @@ window.onload = function() {
     _tipoRegistro = _urlParams.get('tipo') || 'clase';
     try { _fechasRegistro = JSON.parse(_urlParams.get('fechas') || '[]'); } catch (ex) { _fechasRegistro = []; }
     history.replaceState({}, '', location.pathname);
+  }
+
+  // RSVP directo desde los botones de acción de una push notification de
+  // evento (`web_buttons` de pushEventoCreado(), supabase/functions/api/index.ts
+  // -- ?rsvp=<idEvento>&estado=<estado>). `_evMarcarAsistencia()` (js/eventos.js)
+  // necesita `_EV_EVENTOS` ya poblado (viene de `irEventos()`, que recién
+  // corre más abajo en esta función tras confirmar la sesión) -- en vez de
+  // encadenar esto a mano a cada rama posible de login/restauración de acá
+  // abajo, se poll-ea con un timeout acotado (mismo criterio defensivo que
+  // ya usa el resto de esta función, ver el timeout de 12000ms del loader):
+  // para cuando `_EV_EVENTOS` tiene el evento buscado, la sesión YA está
+  // resuelta (es un prerequisito real de que ese array exista con datos).
+  var _rsvpIdUrl = _urlParams.get('rsvp') || '';
+  var _rsvpEstadoUrl = _urlParams.get('estado') || '';
+  if (_rsvpIdUrl && _rsvpEstadoUrl) {
+    history.replaceState({}, '', location.pathname);
+    var _rsvpIntentos = 0;
+    var _rsvpPoll = setInterval(function() {
+      _rsvpIntentos++;
+      if (typeof _EV_EVENTOS !== 'undefined' && _EV_EVENTOS && _EV_EVENTOS.some(function(e) { return e.id === _rsvpIdUrl; })) {
+        clearInterval(_rsvpPoll);
+        if (typeof irEventos === 'function') irEventos();
+        if (typeof _evMarcarAsistencia === 'function') _evMarcarAsistencia(_rsvpIdUrl, _rsvpEstadoUrl);
+      } else if (_rsvpIntentos >= 24) {
+        clearInterval(_rsvpPoll);
+      }
+    }, 350);
   }
 
   var _restaurando = false;

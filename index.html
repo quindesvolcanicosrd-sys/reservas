@@ -26,7 +26,7 @@
      del primer paint real (ambos coinciden hoy, el valor de entrada es el
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=580dd587"></script>
-<link rel="stylesheet" href="css/global.css?v=9280ef5d">
+<link rel="stylesheet" href="css/global.css?v=98079fce">
 <link rel="stylesheet" href="css/estilos.css?v=7e3d0e54">
 <link rel="stylesheet" href="css/ui.css?v=626a894b">
 <link rel="stylesheet" href="css/login.css">
@@ -3278,7 +3278,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=66148b6f"></script>
-<script src="js/eventos.js?v=c9ad29c9"></script>
+<script src="js/eventos.js?v=085ea571"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=55b7610c"></script>
 <script src="js/equipo.js?v=d9e98ea2"></script>
@@ -3287,7 +3287,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/perfil.js?v=c10d778f"></script>
 <script src="js/admin.js?v=4d88b71e"></script>
 <script src="js/pwa.js"></script>
-<script src="js/auth.js?v=19c3790c"></script>
+<script src="js/auth.js?v=e1295ad6"></script>
 
   <!-- Modal primer login: permisos Google -->
   <div id="modal-permisos" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);align-items:center;justify-content:center;padding:16px;transition:opacity 0.25s ease;">
@@ -5082,6 +5082,44 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 20px;">Tu solicitud será enviada a los admins para aprobación. Mientras esté pendiente, tu estado no cambia.</p>
     <button type="button" class="btn btn-primary" onclick="_datLesionConfirmar()" style="margin-bottom:10px;">Enviar solicitud</button>
     <button type="button" class="btn btn-outline" onclick="_datLesionCancelar()">Cancelar</button>
+  </div>
+</div>
+
+<!-- Enforcement de instalación PWA en Android -- gate bloqueante (distinto
+     de #pwa-banner, más arriba: ese es descartable/informativo, este NO
+     tiene forma de cerrarse -- `_verificarPwa()`/js/pwa.js lo muestra apenas
+     carga la página, antes que cualquier otra pantalla, si detecta Android
+     fuera de modo standalone). Ver MANIFEST.md. -->
+<div id="pwa-gate" style="display:none">
+  <div class="pwa-gate-overlay">
+    <div class="pwa-gate-card">
+      <span class="material-symbols-rounded pwa-gate-icon">install_mobile</span>
+      <h2 class="pwa-gate-titulo">Instala la app</h2>
+      <p class="pwa-gate-desc">Para usar esta app en Android, instálala en tu pantalla de inicio. No requiere descarga desde ninguna tienda.</p>
+      <div class="pwa-gate-pasos">
+        <div class="pwa-gate-paso"><span class="material-symbols-rounded">more_vert</span><span>Toca el menú <strong>⋮</strong> de Chrome (arriba a la derecha)</span></div>
+        <div class="pwa-gate-paso"><span class="material-symbols-rounded">add_to_home_screen</span><span>Selecciona <strong>"Agregar a pantalla de inicio"</strong></span></div>
+        <div class="pwa-gate-paso"><span class="material-symbols-rounded">check_circle</span><span>Toca <strong>"Agregar"</strong> y abre la app desde tu pantalla de inicio</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal obligatoria de notificaciones dentro de la PWA instalada --
+     `_verificarNotificaciones()`/js/pwa.js, llamada tras restaurar/confirmar
+     sesión (después de `_verificarPwa()` -- nunca compiten por pantalla, ver
+     MANIFEST.md: esta solo se evalúa si la PWA gate de arriba no bloqueó). -->
+<div id="notif-gate" style="display:none">
+  <div class="notif-gate-overlay">
+    <div class="notif-gate-card">
+      <span class="material-symbols-rounded notif-gate-icon">notifications_active</span>
+      <h2 class="notif-gate-titulo">Activa las notificaciones</h2>
+      <p class="notif-gate-desc">Las notificaciones avisan de nuevos eventos, cambios de asistencia y recordatorios importantes del equipo.</p>
+      <button type="button" class="notif-gate-btn" onclick="_activarNotificaciones()">Activar notificaciones</button>
+      <div id="notif-gate-denegado" style="display:none">
+        <p class="notif-gate-manual">Las notificaciones están bloqueadas en tu navegador. Para activarlas: toca el ícono 🔒 en la barra de direcciones → Notificaciones → Permitir.</p>
+      </div>
+    </div>
   </div>
 </div>
 
