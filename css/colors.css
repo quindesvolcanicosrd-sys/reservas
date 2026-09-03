@@ -97,33 +97,34 @@
      instalada) — archivo estático que el SO lee al instalar, sin mecanismo
      de recarga en vivo desde JS de la página. */
   --bg:             #FFFFFF;
-  --bg-2:           #F7EAE0;
+  --bg-2:           #FAFAFA;
 
   /* ── Superficies (runtime) ─────────────────────────────── */
-  /* --surface-2/--surface-3 son NEUTRAS a propósito (bug real corregido,
-     "fondo rosado en cards/items") — ver js/color-enfasis.js: fondo genérico
-     de cards/filas agrupadas, sin relación con --brand, coincide con
-     --card-bg. Solo los elementos interactivos activos (botón primario, tab
-     seleccionado, badges) usan rojo — ver cabecera del archivo. */
-  --surface:        rgba(255,255,255,0.90);
+  /* --surface/--surface-2/--surface-3 son NEUTRAS a propósito (bug real
+     corregido + re-ajuste, "fondo rosado en cards/items") — ver
+     js/color-enfasis.js: fondo genérico de cards/filas agrupadas, sin
+     relación con --brand. Solo los elementos interactivos activos (botón
+     primario, tab seleccionado, badges) usan rojo — ver cabecera del
+     archivo. */
+  --surface:        #F7F7F7;
   --surface-2:      #F5F5F5;
-  --surface-3:      rgba(0,0,0,0.03);
+  --surface-3:      #F2F2F2;
   --surface-blur:   blur(16px);
 
   /* ── Bordes (runtime, salvo --border-slate en claro — ver más abajo) ── */
   --border:         rgba(232,0,13,0.22);
   --border-2:       rgba(232,0,13,0.08);
-  --border-warm:    rgba(168,149,135,0.3);
+  --border-warm:    #EBEBEB;
   --brand-warm-border: #fde8d4;
 
   /* ── Texto ───────────────────────────────────────────────── */
   /* --text/--muted fijos (paleta Pivot) — YA NO "(runtime)". --text-2/--hint
-     siguen derivando con tinte de marca (js/color-enfasis.js), sin cambios
-     en ese mecanismo. */
+     pasaron a fijas también (re-ajuste, "fondo rosado en cards/items") —
+     ya no derivan tinte de marca, ver js/color-enfasis.js. */
   --text:           #111111;
-  --text-2:         #6B3E26;
+  --text-2:         #444444;
   --muted:          #666666;
-  --hint:           #B89080;
+  --hint:           #999999;
 
   /* ── Estados ─────────────────────────────────────────── */
   /* --danger/--success/--warning y sus -bg/-bdr son literales fijos de la
@@ -183,7 +184,7 @@
      propio, ver sección Sombras de arriba. */
   --card-bg:        #F5F5F5;
   --card-border:    var(--border);
-  --card-shadow:    0 8px 32px rgba(232,0,13,0.08);
+  --card-shadow:    0 8px 32px rgba(0,0,0,0.06);
   --card-blur:      var(--surface-blur);
 
   /* ── Radius ──────────────────────────────────────────── */
@@ -203,10 +204,10 @@
      el alto de la nav cambia algún día. */
   --bottom-nav-h:   60px;
 
-  /* ── Sombras (runtime — en oscuro quedan en negro fijo, ver js/color-enfasis.js) ── */
-  --shadow-sm:      0 4px 12px rgba(232,0,13,0.08);
-  --shadow:         0 8px 32px rgba(232,0,13,0.1);
-  --shadow-lg:      0 16px 48px rgba(232,0,13,0.15);
+  /* ── Sombras (runtime — neutras/negras en los 2 modos, re-ajuste, ver js/color-enfasis.js) ── */
+  --shadow-sm:      0 4px 12px rgba(0,0,0,0.06);
+  --shadow:         0 8px 32px rgba(0,0,0,0.08);
+  --shadow-lg:      0 16px 48px rgba(0,0,0,0.12);
 
   /* Neutros — la mayoría "(runtime)": hoy son grises/blancos planos en
      claro (S=0, la fórmula de color-enfasis.js los reproduce sin cambio,
@@ -381,7 +382,7 @@
   :root {
     /* Fondo */
     --bg:             #0D0D0D;
-    --bg-2:           #1f0d00;
+    --bg-2:           #111111;
 
     /* Brand (runtime) — hex de marca DISTINTO en oscuro (ver cabecera del
        archivo), no una variante de opacidad del mismo rojo de claro. */
@@ -409,10 +410,11 @@
     /* Superficies — NEUTRAS a propósito (mismo bug/fix que en claro, ver
        comentario junto a --surface-2 más arriba en este archivo) — overlay
        blanco translúcido en vez de rojo translúcido sobre el negro casi
-       puro. --surface-2 coincide con --card-bg (mismo rol visual). */
+       puro. --surface-2 ya no es un hex fijo igual a --card-bg -- pasó a
+       overlay translúcido como el resto de la familia (re-ajuste). */
     --surface:        rgba(255,255,255,0.06);
-    --surface-2:      #1A1A1A;
-    --surface-3:      rgba(255,255,255,0.03);
+    --surface-2:      rgba(255,255,255,0.04);
+    --surface-3:      rgba(255,255,255,0.025);
 
     /* Bordes */
     --border:         rgba(255,32,32,0.18);
@@ -420,18 +422,18 @@
 
     /* Texto */
     --text:           #F2F2F2;
-    --text-2:         #C9A090;
+    --text-2:         #AAAAAA;
     --muted:          #888888;
-    --hint:           #6A4030;
+    --hint:           #555555;
 
     /* Sombras */
-    --shadow-sm:      0 4px 12px rgba(0,0,0,0.4);
-    --shadow:         0 8px 32px rgba(0,0,0,0.5);
-    --shadow-lg:      0 16px 48px rgba(0,0,0,0.6);
+    --shadow-sm:      0 4px 12px rgba(0,0,0,0.35);
+    --shadow:         0 8px 32px rgba(0,0,0,0.45);
+    --shadow-lg:      0 16px 48px rgba(0,0,0,0.55);
 
     /* Cards */
     --card-bg:        #1A1A1A;
-    --card-shadow:    0 8px 32px rgba(0,0,0,0.4);
+    --card-shadow:    0 8px 32px rgba(0,0,0,0.40);
 
     /* Botones -- --btn-secondary-bg NEUTRO a propósito (mismo criterio que
        --surface-2 arriba): solo el botón PRIMARIO usa el rojo de marca. */
@@ -458,12 +460,12 @@
     --cyan-border:    rgba(34,211,238,0.3);
 
     /* Superficies neutras → versiones oscuras */
-    --surface-light:       rgba(255,255,255,0.05);
+    --surface-light:       rgba(255,255,255,0.04);
     --disabled-bg:         rgba(255,255,255,0.06);
     --disabled-bg-2:       rgba(255,255,255,0.05);
-    --disabled-border:     rgba(255,32,32,0.12);
-    --border-light:        #2D2D2D;
-    --btn-secondary-hover-bg: rgba(255,255,255,0.1);
+    --disabled-border:     rgba(255,255,255,0.08);
+    --border-light:        rgba(255,255,255,0.09);
+    --btn-secondary-hover-bg: rgba(255,255,255,0.07);
 
     /* Brand warm → tints oscuros */
     --brand-warm:          rgba(255,32,32,0.08);
@@ -484,8 +486,8 @@
     --neutral-dark:        var(--text);
     --text-mid:            #b0a090;
     --text-faint:          #6a5a50;
-    --border-slate:        rgba(255,32,32,0.2);
-    --border-mid:          rgba(255,32,32,0.15);
+    --border-slate:        rgba(255,255,255,0.15);
+    --border-mid:          rgba(255,255,255,0.13);
 
     /* Errores dark */
     --error-lightest:      rgba(220,38,38,0.12);
@@ -518,8 +520,8 @@
     --skeleton-shine:      #3a2a1e;
 
     /* Bordes y superficies dark */
-    --border-softest:      rgba(255,32,32,0.1);
-    --border-warm:         rgba(255,32,32,0.15);
+    --border-softest:      rgba(255,255,255,0.06);
+    --border-warm:         rgba(255,255,255,0.10);
     --brand-warm-border:   rgba(255,32,32,0.2);
     --neutral-lighter:     #666;
     --modal-info-card-bg:  rgba(23,9,0,0.97);
