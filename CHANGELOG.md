@@ -206,6 +206,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Admin (Mi Liga)
 
+2026-09-03 — "Activar cuenta pre-creada" (feat nueva, mini-SPA `activar/`): un admin puede dar de alta a alguien en `equipo` sin pasar por `inscripcion/` (ej. ya está en el roster real pero nunca se registró) y generar, desde el perfil de esa persona en Equipo, un link de un solo uso ("Generar link", visible solo si la cuenta no tiene email vinculado) que copia al portapapeles. Esa persona lo usa para vincular su cuenta de Google (mismo mecanismo de auth que el resto de la app — GIS crudo + verificación server-side, NO Supabase Auth, que esta app nunca usó) y completar pronombres/teléfono/equipamiento en 3 pasos cortos, con el mismo look que `inscripcion/`. 4 acciones nuevas en la Edge Function: `validarInviteToken`/`activarCuenta`/`completarActivacion`/`generarInviteToken`. Tabla nueva `invite_tokens` (migración `20260903_invite_tokens.sql`).
+
 2026-09-03 — Selector de color de énfasis eliminado por completo (pill "Color", burbuja, presets/eyedropper, `adminRenderColorEnfasis()`/`adminCambiarColorEnfasis()`/`ADMIN_COLOR_PRESETS` en js/admin.js, `adminGetColorEnfasis`/`adminSetColorEnfasis` en la Edge Function) — la app pasó a tener una paleta fija de marca ("Pivot"), ya no personalizable por admin. Ver sección CSS/Diseño para el rebrand en sí.
 
 2026-09-02 — Límite de 12 caracteres en el input de nombre de categoría/tier (`_mlTierFilaHtml()`/js/admin.js, sección "Categorías") — `maxlength="12"` en el `<input>`.

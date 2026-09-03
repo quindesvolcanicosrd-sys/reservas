@@ -2932,9 +2932,48 @@ function _eqAdminGestionHtml(p) {
               '<span class="eq-toggle-slider"></span>' +
             '</label>' +
           '</div>' +
+          // "Generar link de activación" -- SOLO si todavía no tiene email
+          // vinculado (mismo campo/criterio que `sinEmail` arriba, ver
+          // MANIFEST.md — activar/): una cuenta con email ya pasó por
+          // inscripcion/ o ya se activó, este link no aplica más ahí. Fila
+          // propia en vez de acordeón nuevo -- mismo patrón visual que las
+          // 2 de arriba (`.eq-admin-campo--row`), pero un botón en vez de
+          // un toggle (acción puntual, no un estado persistente).
+          (sinEmail ? (
+            '<div class="eq-admin-campo--row" style="margin-top:14px;">' +
+              '<div>' +
+                '<p class="eq-tier-label" style="margin-bottom:2px">Activar cuenta</p>' +
+                '<p class="eq-admin-hint" style="margin:0">Genera un link de un solo uso para que vincule su cuenta de Google.</p>' +
+              '</div>' +
+              '<button type="button" class="btn-text-simple" style="white-space:nowrap;" onclick="_eqGenerarInviteLink(\'' + p.id + '\')">Generar link</button>' +
+            '</div>'
+          ) : '') +
         '</div>' +
       '</div>' +
     '</div>';
+}
+
+// "Activar cuenta" (fila de arriba) -- crea la invitación (Edge Function,
+// `generarInviteToken`) y copia el link listo para compartir por WhatsApp/
+// donde sea. `p.id` es el username (mismo criterio que el resto de esta
+// función). Sin confirmación previa -- generar un link de más no tiene
+// costo real (el anterior, si existía, sigue siendo válido hasta que se
+// use o expire; no hay límite de 1 vigente por persona).
+function _eqGenerarInviteLink(id) {
+  if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible generar el link en este momento.', 'error'); return; }
+  apiPost({ action: 'generarInviteToken', adminToken: _adminToken, username: id }, function(res) {
+    if (!res.exito) { mostrarToast(res.error || 'No se pudo generar el link.', 'error'); return; }
+    var url = 'https://app.quindesvolcanicos.com/activar/?token=' + encodeURIComponent(res.token);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(function() { mostrarToast('¡Link copiado!', 'ok', true); }).catch(function() {
+        mostrarToast('No se pudo copiar el link automáticamente: ' + url, 'error');
+      });
+    } else {
+      mostrarToast('No se pudo copiar el link automáticamente: ' + url, 'error');
+    }
+  }, function(e) {
+    mostrarToast(e && e.message ? e.message : 'No se pudo generar el link.', 'error');
+  });
 }
 
 // Cambia el estado manual de una persona -- botones del segmented control
