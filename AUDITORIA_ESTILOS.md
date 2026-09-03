@@ -3,6 +3,8 @@
 > Documento temporal, no forma parte de MANIFEST.md todavía. Generado recorriendo todos los `.html`/`.js` de raíz + `inscripcion/` + `shared/`, y todos los `.css` excepto `colors.css`.
 >
 > **Nada fue modificado.** Este es solo el inventario para revisar antes de aplicar cambios.
+>
+> **Nota (2026-09-03, post-rebrand a Pivot):** este inventario es de ANTES del rebrand — varios de los hex/valores puntuales que documenta cambiaron desde entonces (theme-color, confetti, y en general cualquier tono derivado del naranja `#F97316` original). Filas #1/#2/#14 (abajo) ya se actualizaron para reflejar el estado actual; el resto del documento (radius/transition/font-size/selectores muertos/otros hex sin relación con la marca) NO se re-auditó — sigue siendo el snapshot original, puede tener divergencias puntuales si algo más cambió de paso durante el rebrand.
 
 ---
 
@@ -26,8 +28,8 @@ Los colores son el bloque chico y accionable (~24 puntos). `border-radius`, tran
 
 | # | Archivo:línea | Valor hardcodeado | Contexto | Propuesta |
 |---|---|---|---|---|
-| 1 | `index.html:13-14` | `#170900` / `#FDF3EB` | `<meta name="theme-color">` | **(c) Excepción ya documentada en MANIFEST** — los `<meta>` no soportan `var()`, sincronizado a mano con `--bg`. No tocar. |
-| 2 | `inscripcion/index.html:12-13` | `#170900` / `#FDF3EB` | ídem, con comentario propio explicando la excepción | Igual que #1, no tocar. |
+| 1 | `index.html:21-22` | `#FFFFFF` / `#0D0D0D` (**actualizado 2026-09-03**, era `#170900`/`#FDF3EB`) | `<meta name="theme-color">` | **(c) Excepción ya documentada en MANIFEST** — los `<meta>` no soportan `var()`. Sincronizado en runtime por `js/color-enfasis.js` (lee `--bg` de `colors.css`); este valor estático es el fallback de primer paint. Ya corregido, no tocar. |
+| 2 | `inscripcion/index.html:12-13` / `registro-express/index.html:11-12` | `#FFFFFF` / `#0D0D0D` (**actualizado 2026-09-03**, era `#170900`/`#FDF3EB`) | ídem, con comentario propio explicando la excepción — ambos archivos también cargan `js/color-enfasis.js`, que sincroniza estos mismos tags en runtime igual que en `index.html` | Igual que #1, ya corregido, no tocar. |
 | 3 | `index.html:851` | `rgba(0,0,0,0.25)` | `box-shadow` de `#pwa-banner` | (b) No existe variable exacta (`--black-15` es 0.15, el resto de `--black-*` no llega a 0.25). Crear `--black-25` en `colors.css` y usarla acá. |
 | 4 | `index.html:885` | `background:rgba(0,0,0,0.82)` | `#modal-info-reserva`, que **ya tiene** `class="modal-info"` | El inline es un **duplicado redundante** del `background` que la clase `.modal-info` ya define en `global.css:136` (mismo valor exacto). Propuesta: eliminar el `background` inline (la clase ya lo cubre) y resolver el color en la clase (ver fila #6). |
 | 5 | `index.html:947` | `background:rgba(0,0,0,0.82)` | `#modal-info-home`, mismo patrón que #4 | Igual que #4. |
@@ -39,7 +41,7 @@ Los colores son el bloque chico y accionable (~24 puntos). `border-radius`, tran
 | 11 | `js/reservas.js:855` | `box-shadow: 0 4px 12px rgba(34,197,94,0.1)` | mismo aviso | (a) `rgba(34,197,94,0.1)` = exactamente `--success-bg`. Reemplazar por `var(--success-bg)`. |
 | 12 | `js/reservas.js:858` | `border:1px solid #bbf7d0` | Aviso "créditos usados" (bloque casi idéntico al de #10) | Mismo caso que #10. |
 | 13 | `js/reservas.js:858` | `box-shadow: 0 4px 12px rgba(34,197,94,0.1)` | mismo aviso | Mismo caso que #11. |
-| 14 | `js/ui.js:302` | `['#F97316','#fb923c','#fbbf24','#22c55e','#60a5fa','#c084fc','#f472b6']` | Array de colores del confetti (canvas) | **(c) Excepción ya documentada explícitamente en MANIFEST** (colores pasados a canvas, no interpretados como CSS). No tocar. |
+| 14 | `js/ui.js:1085` | `['#E8000D','#FF2020','#FFFFFF','#000000','#666666','#CCCCCC']` (**actualizado 2026-09-03**, era `['#F97316','#fb923c','#fbbf24','#22c55e','#60a5fa','#c084fc','#f472b6']`) | Array de colores del confetti (canvas) | **(c) Excepción ya documentada explícitamente en MANIFEST** (colores pasados a canvas, no interpretados como CSS, así que no puede usar `var()`) — pero la EXCEPCIÓN era solo sobre el mecanismo (hex fijo vs. variable), no una decisión de mantener la paleta naranja vieja para siempre. Actualizado a rojo/blanco/negro/grises (paleta Pivot) — los 2 rojos son `--brand` claro/oscuro literales (`#E8000D`/`#FF2020`, `colors.css`), el resto neutros planos. |
 | 15 | `css/home.css:146` | `var(--amber-dark,#b45309)` | `.rn-status-pendiente` | Fallback redundante pero **inocuo** — el valor del fallback coincide exactamente con `--amber-dark`. Propuesta: quitar el fallback (`var(--amber-dark)` a secas) por prolijidad, bajo impacto. |
 | 16 | `css/home.css:149` | `var(--dk-purple-mid,#7c3aed)` | `.rn-status-reagendar` | Ver ambigüedad (sección 1.1) — el fallback **no** coincide con `--dk-purple-mid` (`#6d28d9`), coincide con `--purple` (`#7c3aed`). |
 | 17 | `css/login.css:39` | `#fafafa7a` | `-webkit-box-shadow` del autofill de `#input-pin` | (b) No hay variable con canal alfa equivalente. La más cercana en valor base es `--surface-light` (`#fafafa`, sin alfa). Propuesta: crear variable propia (ej. `--autofill-bg: rgba(250,250,250,0.48)`) o usar `color-mix(in srgb, var(--surface-light) 48%, transparent)` — a definir con el usuario. |
