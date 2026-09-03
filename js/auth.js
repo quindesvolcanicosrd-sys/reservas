@@ -394,8 +394,8 @@ window.onload = function() {
   // segundo plano sin esperar a ninguno de los 2 (ningún `return` acá), pero
   // la persona no ve ni puede operar nada detrás mientras la condición real
   // (instalar la app / conceder el permiso) siga sin resolverse.
-  _verificarPwa();
-  _verificarNotificaciones();
+  if (typeof _verificarPwa === 'function') _verificarPwa();
+  if (typeof _verificarNotificaciones === 'function') if (typeof _verificarNotificaciones === 'function') _verificarNotificaciones();
   document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
   var ov = document.getElementById('loading-overlay');
   ov.classList.remove('fade-out');
