@@ -26,13 +26,13 @@
 <meta name="apple-mobile-web-app-title" content="Pivot">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/colors.css?v=991a22b4">
+<link rel="stylesheet" href="css/colors.css?v=2ad420ac">
 <!-- Motor de color de énfasis (Tanda 1/2, ver MANIFEST.md) — recalcula en
      runtime las variables de colors.css derivadas de la marca. Va apenas
      después del <link> de colors.css para pisar el fallback estático antes
      del primer paint real (ambos coinciden hoy, el valor de entrada es el
      mismo naranja de siempre — sin flash). -->
-<script src="js/color-enfasis.js?v=580dd587"></script>
+<script src="js/color-enfasis.js?v=731ff5cb"></script>
 <link rel="stylesheet" href="css/global.css?v=a96b4c0e">
 <link rel="stylesheet" href="css/estilos.css?v=7e3d0e54">
 <link rel="stylesheet" href="css/ui.css?v=626a894b">
@@ -3058,16 +3058,12 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <button class="btn btn-outline" id="btn-adm-notif" onclick="adminEnviarNotif()"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">send</span> Enviar notificación</button>
     </div>
 
-    <!-- Pills "Color"/"Precios de clases" -- mismo mecanismo que las 4 tiles
+    <!-- Pills "Precios de clases"/etc -- mismo mecanismo que las 4 tiles
          grandes de arriba, .admin-dash-pill solo achica tamaño/forma (mismo
-         look que .aj-pill, css/perfil.css). "Color" reemplaza a la vieja
-         sección "Personalización" siempre-visible; "Precios de clases" es
-         nueva acá (antes solo existía en el dashboard viejo). -->
+         look que .aj-pill, css/perfil.css). La pill "Color" (personalización
+         de color de énfasis) se eliminó por completo -- ver MANIFEST.md,
+         "el color de la app ya no es personalizable". -->
     <div class="admin-dash-pills-row">
-      <div class="admin-dash-tile admin-dash-pill" data-tile="admin-color" onclick="adminToggleBurbuja('admin-color', this)">
-        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">palette</span></div>
-        <div class="admin-dash-tile-label">Color</div>
-      </div>
       <div class="admin-dash-tile admin-dash-pill" data-tile="admin-precios" onclick="adminToggleBurbuja('admin-precios', this)">
         <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">payments</span></div>
         <div class="admin-dash-tile-label">Precios de clases</div>
@@ -3088,12 +3084,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">military_tech</span></div>
         <div class="admin-dash-tile-label">Categorías</div>
       </div>
-    </div>
-
-    <!-- Burbuja "Color". -->
-    <div id="admin-burbuja-color" class="admin-tile-bubble" style="display:none;">
-      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">palette</span> Color</div>
-      <div class="admin-color-swatches"></div>
     </div>
 
     <!-- Burbuja "Precios de clases". -->
@@ -3292,9 +3282,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/home.js?v=cf4b0197"></script>
 <script src="js/reservas.js?v=e53c9c46"></script>
 <script src="js/perfil.js?v=c10d778f"></script>
-<script src="js/admin.js?v=4d88b71e"></script>
+<script src="js/admin.js?v=5fa9666b"></script>
 <script src="js/pwa.js"></script>
-<script src="js/auth.js?v=56777382"></script>
+<script src="js/auth.js?v=8473f013"></script>
 
   <!-- Modal primer login: permisos Google -->
   <div id="modal-permisos" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);align-items:center;justify-content:center;padding:16px;transition:opacity 0.25s ease;">

@@ -1,48 +1,53 @@
 /* ═══════════════════════════════════════════════════════
-   MIRLXS — Sistema de colores unificado
+   PIVOT — Sistema de colores unificado
    ═══════════════════════════════════════════════════════
-   IMPORTANTE (Tanda 1/2 del color de énfasis, ver MANIFEST.md): las
-   variables marcadas "(runtime)" en los comentarios de sección de abajo
-   ya NO se editan acá para cambiar el aspecto visual — `js/color-enfasis.js`
-   las recalcula en tiempo real a partir de un solo color de entrada
-   (`aplicarColorEnfasis(hex)`, hoy hardcodeado a `#F97316`, el mismo
-   naranja de siempre) y las pisa vía `root.style.setProperty()` apenas
-   carga la página. El valor que sigue escrito acá abajo para esas
-   variables es SOLO el fallback del primer paint, antes de que el JS
-   corra — hoy coincide exacto con lo que el JS calcula (mismo naranja de
-   entrada), así que no hay ningún flash ni doble fuente de verdad
-   compitiendo en la práctica, pero editar el hex de acá **no tiene efecto
-   visible** en esas variables puntuales una vez que la página carga. Para
-   cambiar el color de énfasis, la vía real es `js/color-enfasis.js`
-   (Tanda 2: selector de color, todavía no implementado). El resto de las
-   variables (sin la marca "(runtime)") no está tocado por ese archivo y
-   se sigue editando acá normalmente, como siempre. */
+   Rebrand a "Pivot" (ver MANIFEST.md — "el color de la app ya no es
+   personalizable"): la personalización de color por admin (Mi Liga →
+   "Color") se eliminó por completo — ya no existe ningún selector, ninguna
+   acción de backend, ninguna fila en `config_app` para esto. La paleta de
+   marca es fija: rojo (`#E8000D` en claro, `#FF2020` en oscuro — 2 hex
+   DISTINTOS, no una variante de opacidad del mismo color, para mantener
+   contraste sobre cada fondo).
+
+   Las variables marcadas "(runtime)" en los comentarios de sección de abajo
+   siguen sin editarse acá para cambiar el aspecto visual — `js/color-
+   enfasis.js` las recalcula en tiempo real a partir de los 2 hex fijos de
+   arriba y las pisa vía `root.style.setProperty()` apenas carga la página
+   (mismo motor de siempre — deriva ~40 variables con tinte de marca
+   preservando su matiz relativo — solo que ahora el color de entrada es fijo,
+   no elegido por un admin). El valor que sigue escrito acá abajo para esas
+   variables es el fallback del primer paint, antes de que el JS corra.
+   `--bg`/`--text`/`--muted`/`--border-light`/`--card-bg` y la familia de
+   estados (`--danger`/`--success`/`--warning`) YA NO son "(runtime)" — son
+   literales fijos de la nueva paleta, sin ningún cálculo de por medio, en
+   ambos modos. El resto de las variables (sin la marca "(runtime)") tampoco
+   está tocado por ese archivo y se sigue editando acá normalmente. */
 
 :root {
 
   /* ── Brand (runtime) ─────────────────────────────────── */
-  --brand:          #F97316;
-  --brand-dk:       #ea6407;
+  --brand:          #E8000D;
+  --brand-dk:       #B8000A;
   --brand-secondary:#fb923c;
-  --brand-zero:     rgba(249,115,22,0);
-  --brand-subtle:   rgba(249,115,22,0.04);
-  --brand-lightest: rgba(249,115,22,0.06);
+  --brand-zero:     rgba(232,0,13,0);
+  --brand-subtle:   rgba(232,0,13,0.04);
+  --brand-lightest: rgba(232,0,13,0.06);
   --brand-06:       var(--brand-lightest);
-  --brand-lighter:  rgba(249,115,22,0.07);
-  --brand-08:       rgba(249,115,22,0.08);
-  --brand-soft:     rgba(249,115,22,0.1);
-  --brand-light:    rgba(249,115,22,0.13);
-  --brand-mid:      rgba(249,115,22,0.14);
-  --brand-focus:    rgba(249,115,22,0.15);
-  --brand-hover:    rgba(249,115,22,0.18);
-  --brand-20:       rgba(249,115,22,0.2);
-  --brand-glow:     rgba(249,115,22,0.25);
-  --brand-30:       rgba(249,115,22,0.3);
-  --brand-pulse:    rgba(249,115,22,0.35);
-  --brand-40:       rgba(249,115,22,0.4);
-  --brand-55:       rgba(249,115,22,0.55);
-  --brand-60:       rgba(249,115,22,0.6);
-  --brand-strong:   rgba(249,115,22,0.7);
+  --brand-lighter:  rgba(232,0,13,0.07);
+  --brand-08:       rgba(232,0,13,0.08);
+  --brand-soft:     rgba(232,0,13,0.1);
+  --brand-light:    rgba(232,0,13,0.13);
+  --brand-mid:      rgba(232,0,13,0.14);
+  --brand-focus:    rgba(232,0,13,0.15);
+  --brand-hover:    rgba(232,0,13,0.18);
+  --brand-20:       rgba(232,0,13,0.2);
+  --brand-glow:     rgba(232,0,13,0.25);
+  --brand-30:       rgba(232,0,13,0.3);
+  --brand-pulse:    rgba(232,0,13,0.35);
+  --brand-40:       rgba(232,0,13,0.4);
+  --brand-55:       rgba(232,0,13,0.55);
+  --brand-60:       rgba(232,0,13,0.6);
+  --brand-strong:   rgba(232,0,13,0.7);
   --brand-warm:          #fff8f4;
   --brand-warm-2:        #fffcf9;
   --brand-warm-3:        #fff4ec;
@@ -63,8 +68,9 @@
      propia hoja de estilos de producción, deuna.app/_astro/BaseLayout*.css,
      verificado en julio 2026), no relacionado con --purple de arriba (acento
      genérico de la app, usado en badges). Sin variante dark: igual que
-     --brand, un color de marca no cambia con el tema, sirve de fondo sólido
-     en cualquier modo — solo usado por .btn-deuna (css/ui.css). */
+     --brand, un color de marca no cambia de familia con el tema (aunque
+     Pivot sí usa un hex distinto por modo, ver cabecera), sirve de fondo
+     sólido en cualquier modo — solo usado por .btn-deuna (css/ui.css). */
   --deuna:          #4C1D80;
   --deuna-dk:       #3D1766;
 
@@ -81,15 +87,16 @@
   --overlay-dark:   rgba(0,0,0,0.7);
   --overlay-modal-info: rgba(0,0,0,0.82);
 
-  /* ── Fondo (runtime) ───────────────────────────────────── */
-  /* js/color-enfasis.js sincroniza el <meta name="theme-color"> correspondiente
-     (light/dark, por atributo media) cada vez que recalcula --bg — ya no hace
-     falta tocarlo a mano al cambiar el color de énfasis. manifest.json es la
-     única pieza que SÍ sigue siendo manual (background_color/theme_color, barra
-     de gestos de Android en PWA instalada) — es un archivo estático que el SO
-     lee al instalar, sin ningún mecanismo real de recarga en vivo desde JS de
-     la página; señalado como limitación conocida, sin resolver todavía. */
-  --bg:             #FDF3EB;
+  /* ── Fondo ──────────────────────────────────────────────── */
+  /* Fijo (paleta Pivot) — YA NO "(runtime)": js/color-enfasis.js no toca
+     --bg desde el rebrand (ver cabecera del archivo). El <meta
+     name="theme-color"> sigue sincronizándose en runtime (lee este mismo
+     valor vía getComputedStyle, no lo recalcula) — ver js/color-enfasis.js.
+     manifest.json es la única pieza que SÍ sigue siendo manual
+     (background_color/theme_color, barra de gestos de Android en PWA
+     instalada) — archivo estático que el SO lee al instalar, sin mecanismo
+     de recarga en vivo desde JS de la página. */
+  --bg:             #FFFFFF;
   --bg-2:           #F7EAE0;
 
   /* ── Superficies (runtime) ─────────────────────────────── */
@@ -99,21 +106,29 @@
   --surface-blur:   blur(16px);
 
   /* ── Bordes (runtime, salvo --border-slate en claro — ver más abajo) ── */
-  --border:         rgba(249,115,22,0.22);
-  --border-2:       rgba(249,115,22,0.08);
+  --border:         rgba(232,0,13,0.22);
+  --border-2:       rgba(232,0,13,0.08);
   --border-warm:    rgba(168,149,135,0.3);
   --brand-warm-border: #fde8d4;
 
-  /* ── Texto (runtime) ───────────────────────────────────── */
-  --text:           #2C1A0E;
+  /* ── Texto ───────────────────────────────────────────────── */
+  /* --text/--muted fijos (paleta Pivot) — YA NO "(runtime)". --text-2/--hint
+     siguen derivando con tinte de marca (js/color-enfasis.js), sin cambios
+     en ese mecanismo. */
+  --text:           #111111;
   --text-2:         #6B3E26;
-  --muted:          #9A6A52;
+  --muted:          #666666;
   --hint:           #B89080;
 
   /* ── Estados ─────────────────────────────────────────── */
-  --success:        #22c55e;
-  --success-bg:     rgba(34,197,94,0.1);
-  --success-bdr:    rgba(34,197,94,0.3);
+  /* --danger/--success/--warning y sus -bg/-bdr son literales fijos de la
+     paleta Pivot en los 2 modos (ver override dentro de la media query
+     dark, más abajo) — --danger es un alias de --brand (mismo rojo,
+     literalmente el mismo concepto de marca) en vez de un literal propio
+     repetido, mismo criterio que --error: var(--danger) ya usa arriba. */
+  --success:        #16A34A;
+  --success-bg:     #F0FFF4;
+  --success-bdr:    #BBF7D0;
   --success-dark:   #16a34a;
   --success-bright: #4ade80;
   --success-border-dark: #15803d;
@@ -121,12 +136,12 @@
   --success-glow:        rgba(22,163,74,0.3);
   --success-shadow-hover: rgba(34,197,94,0.15);
   --success-lightest:    #dcfce7;
-  --warning:        #f59e0b;
-  --warning-bg:     rgba(245,158,11,0.1);
-  --warning-bdr:    rgba(245,158,11,0.3);
-  --danger:         #dc2626;
-  --danger-bg:      rgba(220,38,38,0.1);
-  --danger-bdr:     rgba(220,38,38,0.3);
+  --warning:        #D97706;
+  --warning-bg:     #FFFBEB;
+  --warning-bdr:    #FDE68A;
+  --danger:         var(--brand);
+  --danger-bg:      #FFF0F0;
+  --danger-bdr:     #FFD0D0;
   --danger-dark:    #991b1b;
   --info:           #0ea5e9;
   --info-bg:        rgba(14,165,233,0.1);
@@ -158,11 +173,12 @@
   --btn-secondary-color:var(--text-2);
 
   /* ── Cards ───────────────────────────────────────────── */
-  /* --card-bg/--card-border son var() (derivan solas); --card-shadow es
-     "(runtime)" propio, ver sección Sombras de arriba. */
-  --card-bg:        var(--surface);
+  /* --card-bg fijo (paleta Pivot) — YA NO alias de --surface. --card-border
+     sigue siendo var() (deriva sola); --card-shadow sigue "(runtime)"
+     propio, ver sección Sombras de arriba. */
+  --card-bg:        #F5F5F5;
   --card-border:    var(--border);
-  --card-shadow:    0 8px 32px rgba(249,115,22,0.08);
+  --card-shadow:    0 8px 32px rgba(232,0,13,0.08);
   --card-blur:      var(--surface-blur);
 
   /* ── Radius ──────────────────────────────────────────── */
@@ -183,21 +199,22 @@
   --bottom-nav-h:   60px;
 
   /* ── Sombras (runtime — en oscuro quedan en negro fijo, ver js/color-enfasis.js) ── */
-  --shadow-sm:      0 4px 12px rgba(249,115,22,0.08);
-  --shadow:         0 8px 32px rgba(249,115,22,0.1);
-  --shadow-lg:      0 16px 48px rgba(249,115,22,0.15);
+  --shadow-sm:      0 4px 12px rgba(232,0,13,0.08);
+  --shadow:         0 8px 32px rgba(232,0,13,0.1);
+  --shadow-lg:      0 16px 48px rgba(232,0,13,0.15);
 
   /* Neutros — la mayoría "(runtime)": hoy son grises/blancos planos en
      claro (S=0, la fórmula de color-enfasis.js los reproduce sin cambio,
      ver ese archivo) pero ya tenían tinte de marca en oscuro, así que
-     quedaron dentro del alcance de la derivación para no dejar la UI
-     "parcialmente actualizada" cuando cambie el color de énfasis (Tanda 2).
-     Únicas excepciones reales, NO tocadas por color-enfasis.js en ningún
-     modo: --neutral-dark/-gray/-mid/-light/-lighter (grises puros sin
-     ningún tinte en ningún modo) y --disabled-bg-2/--disabled-bg (su
-     versión oscura es blanco translúcido, no naranja). --border-slate es
-     "runtime" SOLO en oscuro — su valor claro (#cbd5e1) es azul genuino,
-     no emparentado con la marca, se deja fijo a propósito. */
+     quedaron dentro del alcance de la derivación. --border-light pasó a ser
+     fijo (paleta Pivot, YA NO "(runtime)") en los 2 modos — ver override
+     dentro de la media query dark. Únicas excepciones reales, NO tocadas
+     por color-enfasis.js en ningún modo: --neutral-dark/-gray/-mid/-light/
+     -lighter (grises puros sin ningún tinte en ningún modo) y
+     --disabled-bg-2/--disabled-bg (su versión oscura es blanco translúcido,
+     no de marca). --border-slate es "runtime" SOLO en oscuro — su valor
+     claro (#cbd5e1) es azul genuino, no emparentado con la marca, se deja
+     fijo a propósito. */
   --neutral-dark:        #1a1a1a;
   --neutral-gray:        #777;
   --neutral-mid:         #666;
@@ -207,7 +224,7 @@
   --text-mid:            #444;
   --disabled-bg-2:       #f5f5f5;
   --btn-secondary-hover-bg: #ebebeb;
-  --border-light:        #e5e5e5;
+  --border-light:        #E8E8E8;
   --border-slate:        #cbd5e1;
   --border-mid:          #d4d4d4;
   --border-softest:      #eaeaea;
@@ -264,8 +281,7 @@
   /* ── Cumpleaños (Eventos) ──────────────────────────────
      --cumple-dot (puntito de 6px que marca un cumpleaños en la grilla
      mensual/franja semanal del calendario, css/eventos.css): deriva de
-     --brand sin mezclar -- elemento chico, necesita contraste sólido --
-     coherente con cualquier color de énfasis que el admin elija.
+     --brand sin mezclar -- elemento chico, necesita contraste sólido.
      --cumple-bg (mezcla tenue de --brand con el fondo, color-mix, no rgba
      plano) quedó sin consumidor desde que la card de cumpleaños dejó de
      llevar fondo propio (ver "Cambios recientes" en css/eventos.css --
@@ -282,13 +298,11 @@
   /* ── Temporadas de descanso / offseason (Eventos, Tanda B) ─────────────
      Mismo mecanismo de mezcla que --cumple-bg de arriba (color-mix contra
      --surface-2, nunca un hex/rgba plano) pero tiñendo con --amber en vez de
-     --brand -- a propósito: --brand es el color de énfasis, deriva en
-     runtime por color de la liga (js/color-enfasis.js) y ya lo usan las
-     cards de evento normales; un descanso NO es un evento, necesita un tinte
-     que se distinga incluso si el admin elige un color de énfasis parecido
-     al ámbar. --amber es un "acento propio" fijo (ver el alcance documentado
-     de color-enfasis.js, más abajo en este archivo) -- nunca cambia con el
-     color de énfasis, mismo criterio ya usado para --success/--danger/etc.
+     --brand -- a propósito: --brand es la marca fija de Pivot y ya lo usan
+     las cards de evento normales; un descanso NO es un evento, necesita un
+     tinte que se distinga. --amber es un "acento propio" fijo (ver el
+     alcance documentado de color-enfasis.js, más abajo en este archivo) --
+     nunca cambia de marca, mismo criterio ya usado para --success/--danger/etc.
      --offseason-border reusa --amber-border tal cual (ya tiene su propia
      variante dark-mode-aware, ver el bloque `@media` más abajo) -- sin
      redefinir nada ahí, ambas variables quedan correctas en claro/oscuro sin
@@ -355,29 +369,51 @@
    gana por especificidad sobre CUALQUIER regla de stylesheet, incluida
    esta media query, así que una vez que js/color-enfasis.js corre, lo que
    esté escrito literal acá abajo para esas variables deja de tener efecto
-   visible en la práctica (coincide con lo calculado hoy, mismo naranja de
-   entrada — sin diferencia real, pero el mecanismo real ya no es este
-   bloque). */
+   visible en la práctica. --bg/--text/--muted/--border-light/--card-bg y la
+   familia de estados YA NO son "(runtime)" — literales fijos, igual que en
+   el :root claro de arriba, ninguno tocado por ese script. */
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Fondo (runtime) */
-    /* js/color-enfasis.js sincroniza el <meta name="theme-color"> de este modo — ver la nota equivalente en la sección "Fondo" del :root claro, más arriba. */
-    --bg:             #170900;
+    /* Fondo */
+    --bg:             #0D0D0D;
     --bg-2:           #1f0d00;
 
-    /* Superficies — capas translúcidas naranjas sobre el bg oscuro */
-    --surface:        rgba(249,115,22,0.07);
-    --surface-2:      rgba(249,115,22,0.04);
-    --surface-3:      rgba(249,115,22,0.02);
+    /* Brand (runtime) — hex de marca DISTINTO en oscuro (ver cabecera del
+       archivo), no una variante de opacidad del mismo rojo de claro. */
+    --brand:          #FF2020;
+    --brand-dk:       #CC0000;
+    --brand-zero:     rgba(255,32,32,0);
+    --brand-subtle:   rgba(255,32,32,0.04);
+    --brand-lightest: rgba(255,32,32,0.06);
+    --brand-lighter:  rgba(255,32,32,0.07);
+    --brand-08:       rgba(255,32,32,0.08);
+    --brand-soft:     rgba(255,32,32,0.1);
+    --brand-light:    rgba(255,32,32,0.13);
+    --brand-mid:      rgba(255,32,32,0.14);
+    --brand-focus:    rgba(255,32,32,0.15);
+    --brand-hover:    rgba(255,32,32,0.18);
+    --brand-20:       rgba(255,32,32,0.2);
+    --brand-glow:     rgba(255,32,32,0.25);
+    --brand-30:       rgba(255,32,32,0.3);
+    --brand-pulse:    rgba(255,32,32,0.35);
+    --brand-40:       rgba(255,32,32,0.4);
+    --brand-55:       rgba(255,32,32,0.55);
+    --brand-60:       rgba(255,32,32,0.6);
+    --brand-strong:   rgba(255,32,32,0.7);
+
+    /* Superficies — capas translúcidas de marca sobre el bg oscuro */
+    --surface:        rgba(255,32,32,0.07);
+    --surface-2:      rgba(255,32,32,0.04);
+    --surface-3:      rgba(255,32,32,0.02);
 
     /* Bordes */
-    --border:         rgba(249,115,22,0.18);
-    --border-2:       rgba(249,115,22,0.1);
+    --border:         rgba(255,32,32,0.18);
+    --border-2:       rgba(255,32,32,0.1);
 
     /* Texto */
-    --text:           #F0E0D0;
+    --text:           #F2F2F2;
     --text-2:         #C9A090;
-    --muted:          #9A7060;
+    --muted:          #888888;
     --hint:           #6A4030;
 
     /* Sombras */
@@ -386,17 +422,22 @@
     --shadow-lg:      0 16px 48px rgba(0,0,0,0.6);
 
     /* Cards */
-    --card-bg:        rgba(249,115,22,0.06);
+    --card-bg:        #1A1A1A;
     --card-shadow:    0 8px 32px rgba(0,0,0,0.4);
 
     /* Botones */
-    --btn-secondary-bg:    rgba(249,115,22,0.08);
+    --btn-secondary-bg:    rgba(255,32,32,0.08);
     --btn-secondary-color: #C9A090;
 
     /* Estados dark */
-    --success-bg:     rgba(34,197,94,0.08);
-    --warning-bg:     rgba(245,158,11,0.08);
-    --danger-bg:      rgba(220,38,38,0.08);
+    --success:        #22C55E;
+    --success-bg:     rgba(34,197,94,0.12);
+    --success-bdr:    rgba(34,197,94,0.25);
+    --warning:        #F59E0B;
+    --warning-bg:     rgba(245,158,11,0.12);
+    --warning-bdr:    rgba(245,158,11,0.25);
+    --danger-bg:      rgba(255,32,32,0.10);
+    --danger-bdr:     rgba(255,32,32,0.25);
     --info-bg:        rgba(14,165,233,0.08);
 
     /* Cyan dark -- más claro que el de modo claro (mismo criterio que
@@ -408,17 +449,17 @@
     --cyan-border:    rgba(34,211,238,0.3);
 
     /* Superficies neutras → versiones oscuras */
-    --surface-light:       rgba(249,115,22,0.05);
+    --surface-light:       rgba(255,32,32,0.05);
     --disabled-bg:         rgba(255,255,255,0.06);
     --disabled-bg-2:       rgba(255,255,255,0.05);
-    --disabled-border:     rgba(249,115,22,0.12);
-    --border-light:        rgba(249,115,22,0.12);
-    --btn-secondary-hover-bg: rgba(249,115,22,0.1);
+    --disabled-border:     rgba(255,32,32,0.12);
+    --border-light:        #2D2D2D;
+    --btn-secondary-hover-bg: rgba(255,32,32,0.1);
 
     /* Brand warm → tints oscuros */
-    --brand-warm:          rgba(249,115,22,0.08);
-    --brand-warm-2:        rgba(249,115,22,0.05);
-    --brand-warm-3:        rgba(249,115,22,0.1);
+    --brand-warm:          rgba(255,32,32,0.08);
+    --brand-warm-2:        rgba(255,32,32,0.05);
+    --brand-warm-3:        rgba(255,32,32,0.1);
 
     /* Info → dark */
     --info-btn-bg:         #0a1929;
@@ -434,8 +475,8 @@
     --neutral-dark:        var(--text);
     --text-mid:            #b0a090;
     --text-faint:          #6a5a50;
-    --border-slate:        rgba(249,115,22,0.2);
-    --border-mid:          rgba(249,115,22,0.15);
+    --border-slate:        rgba(255,32,32,0.2);
+    --border-mid:          rgba(255,32,32,0.15);
 
     /* Errores dark */
     --error-lightest:      rgba(220,38,38,0.12);
@@ -468,9 +509,9 @@
     --skeleton-shine:      #3a2a1e;
 
     /* Bordes y superficies dark */
-    --border-softest:      rgba(249,115,22,0.1);
-    --border-warm:         rgba(249,115,22,0.15);
-    --brand-warm-border:   rgba(249,115,22,0.2);
+    --border-softest:      rgba(255,32,32,0.1);
+    --border-warm:         rgba(255,32,32,0.15);
+    --brand-warm-border:   rgba(255,32,32,0.2);
     --neutral-lighter:     #666;
     --modal-info-card-bg:  rgba(23,9,0,0.97);
   }

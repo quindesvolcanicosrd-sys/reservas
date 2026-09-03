@@ -204,6 +204,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Admin (Mi Liga)
 
+2026-09-03 — Selector de color de énfasis eliminado por completo (pill "Color", burbuja, presets/eyedropper, `adminRenderColorEnfasis()`/`adminCambiarColorEnfasis()`/`ADMIN_COLOR_PRESETS` en js/admin.js, `adminGetColorEnfasis`/`adminSetColorEnfasis` en la Edge Function) — la app pasó a tener una paleta fija de marca ("Pivot"), ya no personalizable por admin. Ver sección CSS/Diseño para el rebrand en sí.
+
 2026-09-02 — Límite de 12 caracteres en el input de nombre de categoría/tier (`_mlTierFilaHtml()`/js/admin.js, sección "Categorías") — `maxlength="12"` en el `<input>`.
 
 2026-09-01 — Cards de "Reservas" (pendientes de revisión) muestran el monto pagado ("Pagó: $N", `reservas.monto`) — bug real corregido de paso: antes un chequeo truthy (`r.monto ? ... : ''`) ocultaba esta línea por completo en reservas de $0 (crédito de reagendo o cupón consumido), en vez de mostrar "$0".
@@ -234,6 +236,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 2025–2026 (fundacional) — Logo circular de Mirlxs sacado de toda la app; rediseño de `s1` (login) a botones apilados; ícono decorativo en el hueco que dejaron flecha atrás/avatar sacados de las pantallas raíz.
 
 ## CSS / Diseño
+
+2026-09-03 — Rebrand a "Pivot": nueva paleta fija de marca (rojo, `#E8000D` claro / `#FF2020` oscuro — 2 hex distintos, no una variante de alpha del mismo rojo) en `css/colors.css`, acotado a los tokens directamente relacionados a marca/estados (`--brand*`, `--bg`/`--text`/`--muted`/`--border-light`/`--card-bg`, `--danger`/`--success`/`--warning` + sus `-bg`/`-bdr`) — el resto del archivo (spacing, radius, acentos no relacionados, colores de terceros) quedó sin tocar a propósito. `js/color-enfasis.js` (el motor que deriva ~40 variables con tinte de marca a partir de un color de entrada) pasó de tomar un color configurable por admin a 2 hex fijos, uno por modo — ver sección Admin (Mi Liga) para la eliminación del selector que antes lo alimentaba.
 
 2026-08 (aprox.) — Sección Tareas (`css/tareas.css`) deliberadamente chico: reusa clases de `eventos.css`/`reservas.css`/`perfil.css`/`admin.css`/`ui.css` en vez de duplicar.
 2026-07 (aprox.) — Consolidación de bottom sheets al "Sistema A": chrome único (`.bsheet-overlay`/`.bsheet`/`.bsheet-handle`/`.bsheet-title`/`.bsheet-body`) en `css/global.css`, migrando `#modal-eliminar-cuenta` y otros modales centrados que simulaban ser bottom sheet solo en mobile.

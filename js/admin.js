@@ -23,10 +23,10 @@ var _gisInicializado = false;
 // ADMIN_TILE_INFO/adminToggleBurbuja() más abajo. `_admDashAbierto` trackea
 // qué hay abierto entre lo que puede convivir con "Mi Liga" visible: los 2
 // acordeones de banner ('admin-banner-pendientes-body-ml'/
-// 'admin-banner-equip-body-ml') o una de las 6 burbujas (clave de
+// 'admin-banner-equip-body-ml') o una de las burbujas (clave de
 // ADMIN_TILE_INFO: 'notif'/'s-admin-reservas'/'s-admin-equip'/
-// 's-admin-quellevar'/'admin-color'/'admin-precios') — todo vive siempre en
-// el mismo `s-miliga`, así que sí necesitan exclusión mutua entre sí.
+// 's-admin-quellevar'/'admin-precios'/etc.) — todo vive siempre en el mismo
+// `s-miliga`, así que sí necesitan exclusión mutua entre sí.
 var _admDashAbierto = null;
 var _admBannerPendientes = null; // null = todavía no llegó la respuesta
 var _admBannerQueLlevar = null;
@@ -512,14 +512,6 @@ var ADMIN_TILE_INFO = {
     listaId: 'admin-rect-lista-ml',
     cargar: function() { _adminCargarRectificaciones('-ml'); }
   },
-  'admin-color': {
-    bubbleId: 'admin-burbuja-color',
-    // El color de énfasis ya se carga/aplica al entrar (adminEntrar() ->
-    // adminRenderColorEnfasis()) -- acá solo se re-renderiza por si cambió
-    // en otro lado de la misma sesión (ej. Mi Liga), mismo criterio "fresco
-    // al abrir" que las demás tiles aunque acá no haya ningún fetch de por medio.
-    cargar: function() { adminRenderColorEnfasis(); }
-  },
   'admin-precios': {
     bubbleId: 'admin-burbuja-precios',
     cargar: function() { _adminCargarPrecios(); }
@@ -580,58 +572,6 @@ function _adminAbrirBurbuja(tileKey, tileEl) {
 function adminToggleBurbuja(tileKey, tileEl) {
   if (_admDashAbierto === tileKey) { _adminCerrarTodoAbierto(); return; }
   _adminAbrirBurbuja(tileKey, tileEl);
-}
-
-// ── Color de énfasis ──────────────────────────────────────────────────────────
-// Paleta de arranque, mismo criterio que el color picker de Pivot: unos
-// pocos presets + personalizado libre via <input type="color">. Tanda 5 (ver
-// MANIFEST.md "Cambios recientes"): 2 filas de 7 columnas -- 7 presets
-// "de siempre" (fila 1, se sacó `#F59E0B` amber de la lista original de 8 por
-// ser el tono más parecido a `#F97316` orange, el que menos variedad sumaba)
-// + 6 presets nuevos (fila 2, hues elegidos para no repetir ningún tono de la
-// fila 1: amarillo, lima, cian, índigo, fucsia y un neutro gris-azulado) + el
-// eyedropper como 14º ítem (ver adminRenderColorEnfasis()).
-var ADMIN_COLOR_PRESETS = [
-  '#F97316', '#EF4444', '#EC4899', '#A855F7', '#3B82F6', '#14B8A6', '#22C55E',
-  '#EAB308', '#84CC16', '#06B6D4', '#6366F1', '#D946EF', '#64748B'
-];
-
-// Un solo valor de color de énfasis, mostrado en sync donde sea que viva
-// `.admin-color-swatches` -- se repinta por clase (no por `id` único) para
-// no necesitar trackear "cuál instancia" cambió, todas terminan mostrando lo
-// mismo. Antes (Tanda 3-6) vivía en 2 lugares a la vez ("Ajustes
-// adicionales"/"Más" del dashboard viejo y "Personalización" de Mi Liga);
-// desde la Tanda 7 (ver MANIFEST.md "Cambios recientes" — elimina
-// s-admin-home) hay una sola instancia real, la burbuja "Color" de Mi Liga.
-function adminRenderColorEnfasis() {
-  var conts = document.querySelectorAll('.admin-color-swatches');
-  if (!conts.length) return;
-  var actual = (typeof _ceColorActual !== 'undefined' && _ceColorActual) ? _ceColorActual.toLowerCase() : '#f97316';
-  var html = ADMIN_COLOR_PRESETS.map(function(hex) {
-    var sel = hex.toLowerCase() === actual;
-    return '<button type="button" class="admin-color-swatch' + (sel ? ' sel' : '') + '" style="background:' + hex + ';" onclick="adminCambiarColorEnfasis(\'' + hex + '\')" aria-label="' + hex + '"></button>';
-  }).join('');
-  // Eyedropper -- 14º ítem del grid de 7 columnas (cae solo al final de la
-  // fila 2), reemplaza al botón "Personalizado" separado que había antes
-  // (Tanda 4, ver MANIFEST.md "Cambios recientes"): mismo tamaño/forma que un
-  // swatch (`.admin-color-swatch`), con el <input type="color"> real
-  // invisible pero clickeable adentro (mismo truco que `.admin-color-custom-btn`,
-  // eliminada).
-  html += '<label class="admin-color-swatch admin-color-eyedropper" aria-label="Personalizado">' +
-    '<span class="material-symbols-outlined">colorize</span>' +
-    '<input type="color" class="admin-color-custom-input" onchange="adminCambiarColorEnfasis(this.value)">' +
-    '</label>';
-  conts.forEach(function(cont) { cont.innerHTML = html; });
-  document.querySelectorAll('.admin-color-custom-input').forEach(function(custom) { custom.value = actual; });
-}
-
-function adminCambiarColorEnfasis(hex) {
-  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return;
-  aplicarColorEnfasis(hex);
-  adminRenderColorEnfasis();
-  adminApi({ action: 'adminSetColorEnfasis', hex: hex }, function(res) {
-    if (!res.exito) mostrarToast(res.error || 'No se pudo guardar el color.', 'error');
-  }, function(e) { mostrarToast(e.message || 'No se pudo guardar el color.', 'error'); });
 }
 
 // Stepper +/- genérico (Tanda 4, ver MANIFEST.md "Cambios recientes") --
@@ -1519,21 +1459,21 @@ function adminElegirCandidatoAdmin(email) {
   }, function(e) { mostrarToast(e.message || 'Error al agregar.', 'error'); });
 }
 
-// Mi Liga: banners (scope='-ml') + Administradorxs + color de énfasis +
-// precios de clases — "todo de entrada, sin subsecciones" (Tanda 3). Tanda 7
-// (ver MANIFEST.md "Cambios recientes" — elimina s-admin-home): además de
-// Administradorxs/Personalización, "Mi Liga" pasa a tener también las 4
-// tiles operativas (Qué llevar/Reservas/Equipamiento/Notificación, mismo
-// `ADMIN_TILE_INFO`/lazy-load-on-open de siempre, no precargadas acá) y la
-// pill "Precios de clases" (nueva en Mi Liga, `_adminCargarPrecios()` suma a
-// la lista de lo que se precarga fresco al abrir).
+// Mi Liga: banners (scope='-ml') + Administradorxs + precios de clases —
+// "todo de entrada, sin subsecciones" (Tanda 3). Tanda 7 (ver MANIFEST.md
+// "Cambios recientes" — elimina s-admin-home): además de Administradorxs,
+// "Mi Liga" pasa a tener también las 4 tiles operativas (Qué llevar/
+// Reservas/Equipamiento/Notificación, mismo `ADMIN_TILE_INFO`/lazy-load-on-
+// open de siempre, no precargadas acá) y la pill "Precios de clases" (nueva
+// en Mi Liga, `_adminCargarPrecios()` suma a la lista de lo que se precarga
+// fresco al abrir). La pill "Color" (personalización de color de énfasis)
+// se eliminó por completo — ver MANIFEST.md.
 function _adminCargarMiLiga() {
   _adminCargarRectificaciones('-ml');
   _adminCargarBanners('-ml');
   cargarExcepcionesPendientes();
   _adminCargarSolicitudesLesion();
   _adminCargarAdmins();
-  adminRenderColorEnfasis();
   _adminCargarPrecios();
 }
 

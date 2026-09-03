@@ -665,23 +665,11 @@ async function actualizarPerfilGoogle(params: Record<string, any>): Promise<Reco
 
 // ─── Acciones: config ─────────────────────────────────────────────────────────
 
-async function adminGetColorEnfasis(): Promise<Record<string, any>> {
-  const { data } = await supabase.from('config_app').select('value').eq('key', 'color_enfasis').maybeSingle();
-  return { colorEnfasis: data?.value ?? null };
-}
-
 async function adminBorrarEvento(params: Record<string, any>): Promise<Record<string, any>> {
   const email = await _validarAdminToken(params.adminToken);
   if (!email) return { exito: false, error: 'Sesión admin inválida.' };
   const { error } = await supabase.from('asistencias').delete().eq('id_evento', params.idEvento);
   if (error) return { exito: false, error: error.message };
-  return { exito: true };
-}
-
-async function adminSetColorEnfasis(params: Record<string, any>): Promise<Record<string, any>> {
-  const email = await _validarAdminToken(params.adminToken);
-  if (!email) return { exito: false, error: 'Sesión admin inválida.' };
-  await supabase.from('config_app').update({ value: params.hex }).eq('key', 'color_enfasis');
   return { exito: true };
 }
 
@@ -3457,8 +3445,6 @@ Deno.serve(async (req: Request) => {
       case 'verificarNombreDisponible':       return json(await verificarNombreDisponible(params));
       case 'verificarGoogle':                 return json(await verificarGoogle(params));
       // Config
-      case 'adminGetColorEnfasis':            return json(await adminGetColorEnfasis());
-      case 'adminSetColorEnfasis':            return json(await adminSetColorEnfasis(params));
       case 'getPreciosClases':                return json(await getPreciosClases());
       case 'adminSetPreciosClases':           return json(await adminSetPreciosClases(params));
       // Venues

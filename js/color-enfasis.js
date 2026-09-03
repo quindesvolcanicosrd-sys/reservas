@@ -1,52 +1,32 @@
-/* ══ COLOR DE ÉNFASIS — motor de derivación (Tanda 1/2) ═══════════════════
-   Port de la lógica de Pivot (aplicarColorPrimario(hex), js/ajustes.js de
-   Pivot) a las variables reales que Mirlxs ya tiene en css/colors.css —
-   NO a los nombres de Pivot. Tanda 1: se aplica el naranja actual (#F97316)
-   como valor fijo, para validar que el mecanismo no cambia nada visible
-   antes de construir el selector real (Tanda 2).
+/* ══ Paleta de marca — motor de derivación ══════════════════════════════════
+   Rebrand a "Pivot" (ver MANIFEST.md — "el color de la app ya no es
+   personalizable"): la personalización de color por admin (Mi Liga →
+   "Color", `adminGetColorEnfasis`/`adminSetColorEnfasis`/`config_app.color_
+   enfasis`) se eliminó por completo — este archivo pasa de "aplicar el color
+   que el admin haya guardado" a "aplicar SIEMPRE los 2 colores fijos de la
+   marca Pivot" (`_CE_BRAND_LIGHT`/`_CE_BRAND_DARK` abajo), uno para modo
+   claro y otro para oscuro — a propósito 2 hex DISTINTOS, no una misma marca
+   con alpha/lightness distinta entre modos (criterio anterior de este mismo
+   archivo, cuando --brand no cambiaba con el tema) — el rojo de marca en
+   oscuro es más claro/saturado (#FF2020) que en claro (#E8000D) para
+   mantener contraste sobre el fondo casi negro nuevo.
 
-   Mirlxs no tiene toggle manual de tema (a diferencia de Pivot) — el modo
-   claro/oscuro depende 100% de prefers-color-scheme del sistema. Por eso
-   este archivo escucha matchMedia('(prefers-color-scheme: dark)') y
-   reaplica si el usuario cambia el tema del SO con la app abierta, en vez
-   de asumir que ya existe un mecanismo de toggle como en Pivot.
+   Mirlxs no tiene toggle manual de tema — el modo claro/oscuro depende 100%
+   de prefers-color-scheme del sistema, por eso este archivo escucha
+   matchMedia('(prefers-color-scheme: dark)') y reaplica si el usuario
+   cambia el tema del SO con la app abierta.
 
-   Alcance (inventario confirmado con Victor antes de escribir esto — ver
-   MANIFEST.md, "Cambios recientes"): deriva TODA variable que hoy tenga
-   algún tinte de marca en cualquiera de los 2 modos (claro u oscuro),
-   incluida la familia de grises/cafés "ambiguos" que en un modo son
-   neutros planos y en el otro ya son rgba(249,115,22,...) — con una única
-   excepción real encontrada al hacer los números: `--border-slate` tiene
-   un matiz AZUL genuino en claro (#cbd5e1, H≈213°, no emparentado con el
-   naranja) — forzarle el matiz de marca ahí cambiaría un color que hoy no
-   tiene nada que ver con la marca, así que su valor claro se deja fijo
-   (colors.css) y solo el oscuro (que sí es rgba de marca) se deriva acá.
-   Los estados (--success/--danger/--warning/--info), los acentos propios
-   (--purple, --amber), y las excepciones de marca ajena ya documentadas
-   (--deuna, --banco-internacional, --wa-brand) NUNCA se tocan acá.
-
-   MÉTODO — matiz por DESPLAZAMIENTO RELATIVO, no absoluto (importante,
-   corrige un bug real de la primera versión de este archivo): cada
-   variable derivada de aquí conserva su propio matiz "delta" respecto al
-   matiz original de la marca (#F97316), no se le fuerza el matiz exacto
-   de la marca. Los ~70 valores hardcodeados que este archivo reemplaza
-   nunca fueron generados por una fórmula — se eligieron a mano, cada uno
-   con su propio matiz ligeramente distinto (todos "cálidos", 17°-30°,
-   pero no idénticos entre sí ni idénticos al matiz exacto de --brand).
-   Forzar el matiz exacto de la marca a todos (primera versión de este
-   archivo) igual reproducía algo visualmente parecido, pero NO byte a
-   byte — con el naranja de siempre como entrada, `--bg` daba `#fdf2eb`
-   en vez de `#FDF3EB` (1 unidad de diferencia en verde), `--hint` daba
-   hasta 7 unidades de diferencia — pequeño pero real, detectado
-   comparando cada variable contra su valor pre-cambio con Playwright, no
-   a simple vista. Con el desplazamiento relativo (`derivar()`/
-   `derivarRgba()` abajo), cuando la entrada es el propio `#F97316` el
-   delta de cada variable es exactamente el que ya tenía y el resultado
-   reproduce el hex original bit a bit (verificado variable por variable);
-   cuando la Tanda 2 cambie el color de entrada, cada variable rota su
-   matiz la misma cantidad de grados que la marca, preservando la relación
-   relativa que el paleta actual ya tiened entre sí en vez de aplanarlas
-   todas al mismo matiz. */
+   MÉTODO — matiz por DESPLAZAMIENTO RELATIVO, no absoluto (sin cambios desde
+   la versión anterior de este archivo, ver historial en CHANGELOG.md): cada
+   variable derivada conserva su propio matiz "delta" respecto al matiz
+   ORIGINAL de referencia (`_CE_BRAND_ORIGINAL`, el naranja `#F97316` que
+   tenía toda la paleta vieja antes de este archivo existir) en vez de
+   forzarle a todas el matiz exacto de la marca nueva — así el rojo nuevo se
+   propaga a texto/bordes/superficies/sombras preservando la MISMA relación
+   relativa de matices que ya tenía la paleta original entre sí, en vez de
+   aplanarlas todas al mismo tono. Ese punto de referencia NO cambia con el
+   rebrand — sigue siendo el ancla desde la que se miden los deltas, no un
+   valor que deba coincidir con ningún brand real actual. */
 
 function hexToRgb(hex) {
   hex = hex.replace('#', '');
@@ -95,27 +75,29 @@ function hslToHex(h, s, l) {
   return '#' + [c.r, c.g, c.b].map(function(x) { return x.toString(16).padStart(2, '0'); }).join('');
 }
 
+// Ancla de referencia para los deltas de matiz -- NO es un color que se
+// muestre en ningún lado, ver comentario de cabecera.
 var _CE_BRAND_ORIGINAL = '#F97316';
 var _CE_BRAND_ORIGINAL_HSL = hexToHsl(_CE_BRAND_ORIGINAL);
-var _ceColorActual = null;
 
-function aplicarColorEnfasis(hex) {
-  _ceColorActual = hex;
-  // Cachea el último color real aplicado (ver bottom de este archivo) -- sin
-  // esto, cada carga de página arranca con el naranja default hasta que
-  // js/auth.js resuelve su fetch async a adminGetColorEnfasis (Apps Script,
-  // con cold starts de cientos de ms a varios segundos, ver MANIFEST.md) y
-  // reaplica el color real -- visible como un recoloreo brusco de cualquier
-  // UI de marca que ya esté en pantalla en ese momento (bug real encontrado
-  // en la card de cumpleaños de Eventos, ver "Cambios recientes": al
-  // derivar --cumple-bg de --brand quedó expuesta a este salto default→real
-  // que antes, con su tono fijo, no la afectaba -- --cumple-bg hoy tampoco
-  // se usa ya en la card, ver css/colors.css, pero el mecanismo de cache
-  // sigue aplicando igual a cualquier otro token --brand* de la app).
-  try { localStorage.setItem('ce_color_cache', hex); } catch (ex) {}
+// Paleta fija de marca Pivot -- ya NO configurable (sin selector de color en
+// Mi Liga, sin `config_app.color_enfasis`, sin acción de backend). Único
+// lugar del código donde estos 2 hex viven escritos a mano.
+var _CE_BRAND_LIGHT = '#E8000D';
+var _CE_BRAND_DARK = '#FF2020';
+// --bg fijo de la nueva paleta (css/colors.css) -- MISMO literal repetido acá
+// a propósito, no `getComputedStyle`, porque hace falta ANTES del primer
+// `root.style.setProperty()` de esta pasada (--dk-overlay-95/-97 se calculan
+// mezclando esto con alpha, ver más abajo) -- son neutros puros en la nueva
+// paleta (sin tinte de marca), a diferencia de la versión anterior de este
+// archivo (que derivaba un negro con tinte naranja para estos overlays).
+var _CE_BG_DARK = '#0D0D0D';
+
+function _ceAplicarPaleta() {
+  var oscuro = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var hex = oscuro ? _CE_BRAND_DARK : _CE_BRAND_LIGHT;
   var brand = hexToHsl(hex);
   var rgb = hexToRgb(hex);
-  var oscuro = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   var root = document.documentElement;
 
   // rgba(entrada, alpha) directo — para la familia --brand* pura, ya
@@ -124,7 +106,7 @@ function aplicarColorEnfasis(hex) {
   function rgbaBrand(alpha) { return 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + alpha + ')'; }
 
   // Deriva un color sólido a partir de su hex ORIGINAL (el que tenía
-  // hardcodeado hoy en colors.css) conservando su desplazamiento de matiz
+  // hardcodeado la paleta vieja) conservando su desplazamiento de matiz
   // relativo a la marca — ver el comentario grande de cabecera.
   function derivar(hexOriginal) {
     var o = hexToHsl(hexOriginal);
@@ -174,22 +156,18 @@ function aplicarColorEnfasis(hex) {
     vars['--brand-warm-3'] = derivar('#fff4ec');
     vars['--brand-warm-border'] = derivar('#fde8d4');
     bgHex = derivar('#FDF3EB');
-    vars['--bg'] = bgHex;
     vars['--bg-2'] = derivar('#F7EAE0');
     vars['--surface'] = 'rgba(255,255,255,0.90)'; // S=0 (blanco puro) — no-op siempre, no depende del matiz
     vars['--surface-2'] = derivarRgba('#fff5eb', 0.95);
     vars['--surface-3'] = derivarRgba('#ffebdc', 0.45);
     vars['--surface-light'] = derivar('#fafafa'); // S=0 — no-op
     vars['--border-warm'] = derivarRgba('#a89587', 0.3);
-    vars['--border-light'] = derivar('#e5e5e5'); // S=0 — no-op
     vars['--border-mid'] = derivar('#d4d4d4'); // S=0 — no-op
     vars['--border-softest'] = derivar('#eaeaea'); // S=0 — no-op
     // --border-slate: SIN derivar en claro a propósito — #cbd5e1 es azul
     // genuino (H≈213°), no emparentado con la marca (ver comentario de
     // cabecera). Queda con el valor fijo de colors.css, no se toca acá.
-    vars['--text'] = derivar('#2C1A0E');
     vars['--text-2'] = derivar('#6B3E26');
-    vars['--muted'] = derivar('#9A6A52');
     vars['--hint'] = derivar('#B89080');
     vars['--text-mid'] = derivar('#444444'); // S=0 — no-op
     vars['--text-faint'] = derivar('#aaaaaa'); // S=0 — no-op
@@ -211,21 +189,17 @@ function aplicarColorEnfasis(hex) {
     vars['--brand-warm-2'] = rgbaBrand(0.05);
     vars['--brand-warm-3'] = rgbaBrand(0.1);
     vars['--brand-warm-border'] = rgbaBrand(0.2);
-    bgHex = derivar('#170900');
-    vars['--bg'] = bgHex;
+    bgHex = _CE_BG_DARK;
     vars['--bg-2'] = derivar('#1f0d00');
     vars['--surface'] = rgbaBrand(0.07);
     vars['--surface-2'] = rgbaBrand(0.04);
     vars['--surface-3'] = rgbaBrand(0.02);
     vars['--surface-light'] = rgbaBrand(0.05);
     vars['--border-warm'] = rgbaBrand(0.15);
-    vars['--border-light'] = rgbaBrand(0.12);
     vars['--border-mid'] = rgbaBrand(0.15);
     vars['--border-softest'] = rgbaBrand(0.1);
     vars['--border-slate'] = rgbaBrand(0.2); // en oscuro sí es rgba de marca — deriva normal
-    vars['--text'] = derivar('#F0E0D0');
     vars['--text-2'] = derivar('#C9A090');
-    vars['--muted'] = derivar('#9A7060');
     vars['--hint'] = derivar('#6A4030');
     vars['--text-mid'] = derivar('#b0a090');
     vars['--text-faint'] = derivar('#6a5a50');
@@ -240,54 +214,55 @@ function aplicarColorEnfasis(hex) {
     vars['--btn-secondary-bg'] = rgbaBrand(0.08);
     vars['--btn-secondary-hover-bg'] = rgbaBrand(0.1);
     vars['--disabled-border'] = rgbaBrand(0.12);
-    vars['--card-bg'] = rgbaBrand(0.06);
     var bgRgb = hexToRgb(bgHex);
     var overlayBg = function(alpha) { return 'rgba(' + bgRgb.r + ',' + bgRgb.g + ',' + bgRgb.b + ',' + alpha + ')'; };
     vars['--dk-overlay-95'] = overlayBg(0.95);
     vars['--dk-overlay-97'] = overlayBg(0.97);
     vars['--modal-info-card-bg'] = overlayBg(0.97);
   }
+  // --bg/--text/--muted/--border-light/--card-bg ya NO son "(runtime)" --
+  // valores fijos de la nueva paleta Pivot (css/colors.css, claro/oscuro
+  // cada uno con su propio literal) — este motor deja de tocarlos del todo,
+  // a diferencia de la versión anterior de este archivo. `bgHex` sigue
+  // resuelto arriba SOLO para los overlays atados a --bg oscuro
+  // (`--dk-overlay-95/-97`) y el `theme-color` de abajo — no se escribe a
+  // `--bg` en sí, y en oscuro ya NO lleva tinte de marca (`_CE_BG_DARK`,
+  // literal neutro, ver más arriba) a diferencia de la versión anterior.
 
   // --dk-skeleton-base/--dk-pin-press/--dk-modal-btn-bg/--dk-brand-burn: un
   // solo valor (no tienen rama clara propia, se definen una vez en :root y
-  // solo se referencian desde contextos ya oscuros) — se recalculan siempre,
-  // sin condicionar a `oscuro`.
-  vars['--dk-skeleton-base'] = derivar('#2c1c11');
-  vars['--dk-pin-press'] = derivar('#2a1a0e');
-  vars['--dk-modal-btn-bg'] = derivar('#2c1c11');
-  vars['--dk-brand-burn'] = derivar('#e55a00');
+  // solo se referencian desde contextos ya oscuros) — se recalculan siempre
+  // con el rojo de marca OSCURO (`_CE_BRAND_DARK`), sin condicionar a
+  // `oscuro` real de esta pasada -- son consumidos desde UI que ya es oscura
+  // por diseño (ej. modales) sin importar el tema del sistema en este
+  // momento.
+  (function() {
+    var brandDk = hexToHsl(_CE_BRAND_DARK);
+    function derivarDk(hexOriginal) {
+      var o = hexToHsl(hexOriginal);
+      var deltaH = o.h - _CE_BRAND_ORIGINAL_HSL.h;
+      return hslToHex(brandDk.h + deltaH, o.s, o.l);
+    }
+    vars['--dk-skeleton-base'] = derivarDk('#2c1c11');
+    vars['--dk-pin-press'] = derivarDk('#2a1a0e');
+    vars['--dk-modal-btn-bg'] = derivarDk('#2c1c11');
+    vars['--dk-brand-burn'] = derivarDk('#e55a00');
+  })();
 
   for (var nombre in vars) root.style.setProperty(nombre, vars[nombre]);
 
-  // meta[name="theme-color"] no soporta var() — se sincroniza a mano en
-  // colors.css hoy (comentarios junto a --bg), pero eso alcanzaba porque
-  // --bg era estático. Ahora que --bg se recalcula en runtime, el meta
-  // tag también tiene que actualizarse en runtime para no quedar
-  // desincronizado apenas cambie el color de énfasis (Tanda 2). No se
-  // toca manifest.json — es un archivo estático que el SO lee al momento
-  // de instalar la PWA, sin ningún mecanismo real de "recarga en vivo"
-  // desde JS de la página; queda como limitación conocida, señalada para
-  // revisar en la Tanda 2 si hace falta.
+  // meta[name="theme-color"] no soporta var() — sincronizado en runtime acá
+  // con --bg (ahora fijo en colors.css, leído directo en vez de recalculado)
+  // para no duplicar el literal en un 3er lugar además de colors.css/acá.
+  var bgFijo = getComputedStyle(root).getPropertyValue('--bg').trim() || bgHex;
   var metaLight = document.querySelector('meta[name="theme-color"][media*="light"]');
   var metaDark = document.querySelector('meta[name="theme-color"][media*="dark"]');
-  if (!oscuro && metaLight) metaLight.setAttribute('content', bgHex);
-  if (oscuro && metaDark) metaDark.setAttribute('content', bgHex);
+  if (!oscuro && metaLight) metaLight.setAttribute('content', bgFijo);
+  if (oscuro && metaDark) metaDark.setAttribute('content', bgFijo);
 }
 
 if (window.matchMedia) {
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
-    if (_ceColorActual) aplicarColorEnfasis(_ceColorActual);
-  });
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', _ceAplicarPaleta);
 }
 
-// Arranca con el último color REAL conocido (cache de localStorage, ver
-// comentario de cabecera de aplicarColorEnfasis) en vez del naranja
-// hardcodeado siempre -- así, salvo la primerísima visita de un navegador
-// (sin cache todavía, inevitable: nadie conoce el color real hasta que
-// js/auth.js lo pida al backend por primera vez), el primer paint YA es el
-// color correcto y auth.js reaplicar el mismo valor al resolver su fetch es
-// un no-op visual, no un recoloreo. Cache inválido (no hex de 6 dígitos,
-// ej. corrupción manual) cae de vuelta al default sin romper nada.
-var _ceCache = null;
-try { _ceCache = localStorage.getItem('ce_color_cache'); } catch (ex) {}
-aplicarColorEnfasis(/^#[0-9a-fA-F]{6}$/.test(_ceCache || '') ? _ceCache : '#F97316');
+_ceAplicarPaleta();
