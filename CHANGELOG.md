@@ -237,6 +237,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## CSS / Diseño
 
+2026-09-03 — Fix real: fondo rosado en cards/items (`.aj-group`/`.aj-app-rows` de Ajustes y otros 11 archivos CSS) — `--surface-2`/`--surface-3` seguían derivando su matiz de `--brand` (heredado del sistema pensado para el naranja viejo, casi imperceptible ahí), pero con el rojo saturado de Pivot se leía como un tinte rosa visible. Pasaron a neutras puras (coinciden con `--card-bg`), igual que `--surface`/`--surface-light`/`--btn-secondary-bg` en oscuro. `--brand-soft` bajó de 0.1 a 0.04 de alpha en claro. Principio: solo botón primario/tab seleccionado/badges usan el rojo, el resto es gris neutro. También: `--success`/`--success-bg` en claro (botón "Asistiré", se veía lavado) más oscuro/saturado — `#15803D`/`#DCFCE7`.
+
 2026-09-03 — Rebrand a "Pivot": nueva paleta fija de marca (rojo, `#E8000D` claro / `#FF2020` oscuro — 2 hex distintos, no una variante de alpha del mismo rojo) en `css/colors.css`, acotado a los tokens directamente relacionados a marca/estados (`--brand*`, `--bg`/`--text`/`--muted`/`--border-light`/`--card-bg`, `--danger`/`--success`/`--warning` + sus `-bg`/`-bdr`) — el resto del archivo (spacing, radius, acentos no relacionados, colores de terceros) quedó sin tocar a propósito. `js/color-enfasis.js` (el motor que deriva ~40 variables con tinte de marca a partir de un color de entrada) pasó de tomar un color configurable por admin a 2 hex fijos, uno por modo — ver sección Admin (Mi Liga) para la eliminación del selector que antes lo alimentaba.
 
 2026-08 (aprox.) — Sección Tareas (`css/tareas.css`) deliberadamente chico: reusa clases de `eventos.css`/`reservas.css`/`perfil.css`/`admin.css`/`ui.css` en vez de duplicar.

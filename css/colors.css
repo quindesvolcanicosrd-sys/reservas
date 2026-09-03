@@ -35,7 +35,7 @@
   --brand-06:       var(--brand-lightest);
   --brand-lighter:  rgba(232,0,13,0.07);
   --brand-08:       rgba(232,0,13,0.08);
-  --brand-soft:     rgba(232,0,13,0.1);
+  --brand-soft:     rgba(232,0,13,0.04);
   --brand-light:    rgba(232,0,13,0.13);
   --brand-mid:      rgba(232,0,13,0.14);
   --brand-focus:    rgba(232,0,13,0.15);
@@ -100,9 +100,14 @@
   --bg-2:           #F7EAE0;
 
   /* ── Superficies (runtime) ─────────────────────────────── */
+  /* --surface-2/--surface-3 son NEUTRAS a propósito (bug real corregido,
+     "fondo rosado en cards/items") — ver js/color-enfasis.js: fondo genérico
+     de cards/filas agrupadas, sin relación con --brand, coincide con
+     --card-bg. Solo los elementos interactivos activos (botón primario, tab
+     seleccionado, badges) usan rojo — ver cabecera del archivo. */
   --surface:        rgba(255,255,255,0.90);
-  --surface-2:      rgba(255,245,235,0.95);
-  --surface-3:      rgba(255,235,220,0.45);
+  --surface-2:      #F5F5F5;
+  --surface-3:      rgba(0,0,0,0.03);
   --surface-blur:   blur(16px);
 
   /* ── Bordes (runtime, salvo --border-slate en claro — ver más abajo) ── */
@@ -126,8 +131,8 @@
      dark, más abajo) — --danger es un alias de --brand (mismo rojo,
      literalmente el mismo concepto de marca) en vez de un literal propio
      repetido, mismo criterio que --error: var(--danger) ya usa arriba. */
-  --success:        #16A34A;
-  --success-bg:     #F0FFF4;
+  --success:        #15803D;
+  --success-bg:     #DCFCE7;
   --success-bdr:    #BBF7D0;
   --success-dark:   #16a34a;
   --success-bright: #4ade80;
@@ -401,10 +406,13 @@
     --brand-60:       rgba(255,32,32,0.6);
     --brand-strong:   rgba(255,32,32,0.7);
 
-    /* Superficies — capas translúcidas de marca sobre el bg oscuro */
-    --surface:        rgba(255,32,32,0.07);
-    --surface-2:      rgba(255,32,32,0.04);
-    --surface-3:      rgba(255,32,32,0.02);
+    /* Superficies — NEUTRAS a propósito (mismo bug/fix que en claro, ver
+       comentario junto a --surface-2 más arriba en este archivo) — overlay
+       blanco translúcido en vez de rojo translúcido sobre el negro casi
+       puro. --surface-2 coincide con --card-bg (mismo rol visual). */
+    --surface:        rgba(255,255,255,0.06);
+    --surface-2:      #1A1A1A;
+    --surface-3:      rgba(255,255,255,0.03);
 
     /* Bordes */
     --border:         rgba(255,32,32,0.18);
@@ -425,8 +433,9 @@
     --card-bg:        #1A1A1A;
     --card-shadow:    0 8px 32px rgba(0,0,0,0.4);
 
-    /* Botones */
-    --btn-secondary-bg:    rgba(255,32,32,0.08);
+    /* Botones -- --btn-secondary-bg NEUTRO a propósito (mismo criterio que
+       --surface-2 arriba): solo el botón PRIMARIO usa el rojo de marca. */
+    --btn-secondary-bg:    rgba(255,255,255,0.06);
     --btn-secondary-color: #C9A090;
 
     /* Estados dark */
@@ -449,12 +458,12 @@
     --cyan-border:    rgba(34,211,238,0.3);
 
     /* Superficies neutras → versiones oscuras */
-    --surface-light:       rgba(255,32,32,0.05);
+    --surface-light:       rgba(255,255,255,0.05);
     --disabled-bg:         rgba(255,255,255,0.06);
     --disabled-bg-2:       rgba(255,255,255,0.05);
     --disabled-border:     rgba(255,32,32,0.12);
     --border-light:        #2D2D2D;
-    --btn-secondary-hover-bg: rgba(255,32,32,0.1);
+    --btn-secondary-hover-bg: rgba(255,255,255,0.1);
 
     /* Brand warm → tints oscuros */
     --brand-warm:          rgba(255,32,32,0.08);
