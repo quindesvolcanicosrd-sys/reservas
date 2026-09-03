@@ -448,6 +448,33 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
   margin: 0 0 24px;
   line-height: 1.5;
 }
+/* Botón de instalación directa (#pwa-install-btn, index.html) -- mismo
+   look/tratamiento que .notif-gate-btn (más abajo, mismo patrón de gate
+   bloqueante) en vez de un estilo ad-hoc propio -- solo suma flex+gap para
+   el ícono. Oculto por default vía el `style="display:none"` inline del
+   HTML; `_pwaActualizarBotonesGate()`/js/pwa.js decide cuándo mostrarlo. */
+.pwa-gate-btn-instalar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-color);
+  font-size: 15px;
+  font-weight: 700;
+  padding: 14px;
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+.pwa-gate-btn-instalar:active {
+  background: var(--btn-primary-hover);
+}
+.pwa-gate-btn-instalar .material-symbols-rounded {
+  font-size: 20px;
+}
 .pwa-gate-pasos {
   text-align: left;
   display: flex;

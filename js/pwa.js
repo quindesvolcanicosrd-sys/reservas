@@ -1,5 +1,13 @@
 var _deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e) { e.preventDefault(); _deferredPrompt = e; });
+// Segundo listener (no reemplaza al de arriba -- corre DESPUÉS, mismo evento,
+// mismo orden de registro) -- refresca los botones del gate bloqueante si
+// `beforeinstallprompt` llega DESPUÉS de que `_verificarPwa()` ya lo mostró
+// (caso real: el navegador puede tardar unos segundos en decidir que la PWA
+// es instalable). Reusa `_deferredPrompt` -- ya capturado arriba por
+// `pwaInstalar()`/el banner descartable existente -- en vez de una 2da
+// variable propia, para no mantener 2 fuentes del mismo dato.
+window.addEventListener('beforeinstallprompt', function() { _pwaActualizarBotonesGate(); });
 
 // ── Enforcement de instalación PWA en Android ──────────────────────────────
 // A diferencia de mostrarBannerPWA() (arriba en este archivo -- descartable,
@@ -16,9 +24,45 @@ function _verificarPwa() {
   if (esAndroid && !esStandalone()) {
     var gate = document.getElementById('pwa-gate');
     if (gate) { gate.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+    _pwaActualizarBotonesGate();
     return true;
   }
   return false;
+}
+
+// Alterna entre el botón de instalación directa y los pasos manuales dentro
+// de #pwa-gate según si el navegador ya entregó `beforeinstallprompt`
+// (`_deferredPrompt`, capturado arriba) -- Chrome/Android real lo dispara
+// casi siempre; los pasos manuales quedan como fallback real para cuando no
+// llega (navegador sin soporte, ya descartado antes en esta sesión, etc.).
+function _pwaActualizarBotonesGate() {
+  var btnInstalar = document.getElementById('pwa-install-btn');
+  var pasosManuales = document.getElementById('pwa-pasos-manuales');
+  if (!btnInstalar || !pasosManuales) return;
+  if (_deferredPrompt) {
+    btnInstalar.style.display = 'flex';
+    pasosManuales.style.display = 'none';
+  } else {
+    btnInstalar.style.display = 'none';
+    pasosManuales.style.display = 'flex';
+  }
+}
+
+// Dispara el prompt NATIVO de instalación (mismo `_deferredPrompt` que ya
+// usa `pwaInstalar()`, más abajo en este archivo) -- distinto de esa función
+// en que esta es SOLO el camino directo (sin fallback a `mostrarModalNavegador()`/
+// instrucciones del banner viejo, que no aplican dentro de este gate) y
+// cierra el gate entero si la persona acepta instalar.
+function _pwaInstalarDirecto() {
+  if (!_deferredPrompt) return;
+  _deferredPrompt.prompt();
+  _deferredPrompt.userChoice.then(function(result) {
+    if (result.outcome === 'accepted') {
+      var gate = document.getElementById('pwa-gate');
+      if (gate) { gate.style.display = 'none'; document.body.style.overflow = ''; }
+    }
+    _deferredPrompt = null;
+  });
 }
 
 // ── Modal obligatoria de notificaciones dentro de la PWA instalada ────────

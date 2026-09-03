@@ -26,7 +26,7 @@
      del primer paint real (ambos coinciden hoy, el valor de entrada es el
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=580dd587"></script>
-<link rel="stylesheet" href="css/global.css?v=98079fce">
+<link rel="stylesheet" href="css/global.css?v=3007d7fd">
 <link rel="stylesheet" href="css/estilos.css?v=7e3d0e54">
 <link rel="stylesheet" href="css/ui.css?v=626a894b">
 <link rel="stylesheet" href="css/login.css">
@@ -5096,7 +5096,17 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <span class="material-symbols-rounded pwa-gate-icon">install_mobile</span>
       <h2 class="pwa-gate-titulo">Instala la app</h2>
       <p class="pwa-gate-desc">Para usar esta app en Android, instálala en tu pantalla de inicio. No requiere descarga desde ninguna tienda.</p>
-      <div class="pwa-gate-pasos">
+      <!-- Botón de instalación directa (`_pwaInstalarDirecto()`/js/pwa.js) --
+           visible solo si el navegador ya disparó `beforeinstallprompt`
+           (reusa `_deferredPrompt`, mismo mecanismo que `pwaInstalar()` del
+           banner descartable existente, sin duplicar la captura del evento).
+           Oculto por default -- `_pwaActualizarBotonesGate()` decide cuál de
+           los 2 (botón directo vs. pasos manuales) mostrar. -->
+      <button type="button" id="pwa-install-btn" class="pwa-gate-btn-instalar" onclick="_pwaInstalarDirecto()" style="display:none">
+        <span class="material-symbols-rounded">download</span>
+        Instalar app
+      </button>
+      <div id="pwa-pasos-manuales" class="pwa-gate-pasos">
         <div class="pwa-gate-paso"><span class="material-symbols-rounded">more_vert</span><span>Toca el menú <strong>⋮</strong> de Chrome (arriba a la derecha)</span></div>
         <div class="pwa-gate-paso"><span class="material-symbols-rounded">add_to_home_screen</span><span>Selecciona <strong>"Agregar a pantalla de inicio"</strong></span></div>
         <div class="pwa-gate-paso"><span class="material-symbols-rounded">check_circle</span><span>Toca <strong>"Agregar"</strong> y abre la app desde tu pantalla de inicio</span></div>

@@ -247,6 +247,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Auth
 
+2026-09-03 — Re-ajuste del gate de PWA: `#pwa-gate` ahora ofrece un botón "Instalar app" que dispara el prompt nativo (`beforeinstallprompt`/`_deferredPrompt`, reusando la misma captura que ya tenía el banner descartable) en vez de solo instrucciones manuales — esas quedan como fallback si el navegador no llega a entregar el evento.
+
 2026-09-03 — Enforcement de PWA en Android + notificaciones obligatorias: `_verificarPwa()`/`_verificarNotificaciones()` (js/pwa.js), llamadas al inicio de `window.onload`, muestran pantallas completas bloqueantes (`#pwa-gate`/`#notif-gate`, sin botón de cierre) si el dispositivo es Android fuera de modo standalone, o si la app ya está instalada pero las notificaciones no están concedidas — distinto de los banners descartables ya existentes (`#pwa-banner`/`#notif-banner`). RSVP directo desde los botones de acción de una push notification de evento nuevo (`?rsvp=<id>&estado=<estado>`) via poll acotado sobre `_EV_EVENTOS` + `_evMarcarAsistencia()`.
 
 2026-09-03 — Cambio 65: soporte offline para Ajustes/Equipo/Tareas (ver también Perfil/Equipo/Tareas más abajo) — `restaurarSesion()` persiste `E.datos` en `localStorage` (clave `'edat'`) tras cada resolución exitosa contra el backend. Si `window.onload` arranca sin conexión y hay una `'session'` guardada, ya no intenta la llamada de red: lee ese último `'edat'` cacheado, lo asigna directo a `E.datos`/`E.datosCompletos` y navega igual a la pantalla de aterrizaje (`_irTabAterrizajeInicial()`), en vez de quedarse colgada esperando un `restaurarSesion()` que sin red nunca resuelve.
