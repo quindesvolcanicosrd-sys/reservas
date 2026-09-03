@@ -3848,8 +3848,7 @@ function _evRsvpBarraHtml(e) {
   // evita marcar "Asistiré" a una clase de un mes que aún no reservó.
   // `_evHoyISO()` en vez de una var local como `_hoyIsoTimeline` (usada en
   // otra función de este archivo) porque acá no está en scope.
-  if (_modoUsuario() === 'mirlxs' && !_adminToken && e.tipo === 'Entrenamiento') {
-    var _fp = (e.fecha || '').split('-');
+  if (_modoUsuario() === 'mirlxs' && !_adminToken && e.tipo === 'Entrenamiento' && !(E.datos && E.datos.exenta_cuota)) {    var _fp = (e.fecha || '').split('-');
     if (_fp.length === 3 && _evFechaCmp(e.fecha, _evHoyISO()) > 0 &&
         !_evMesPagado(parseInt(_fp[1]) - 1, parseInt(_fp[0]))) return '';
   }
@@ -3935,7 +3934,7 @@ function _evUpdateRsvpSliders(animate) {
 // `d/m/aaaa`, NO ISO -- `new Date(...)` directo sobre ese string da
 // `Invalid Date`/fecha mal interpretada).
 function _evTieneCuotaAlDia() {
-  if (E.datos && (E.datos.estado_miembro === 'Técnico' || E.datos.estado_miembro === 'Lesionadx')) return true;
+  if (E.datos && (E.datos.exenta_cuota || E.datos.estado_miembro === 'Técnico' || E.datos.estado_miembro === 'Lesionadx')) return true;
   var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   return (_todasReservas || []).some(function(r) {
     if (r.tipo !== 'mensual') return false;
@@ -4104,8 +4103,7 @@ function _evMarcarAsistencia(id, estado) {
   // estando Ausente/Lesionadx vuelve a Activx automáticamente -- reactivación
   // implícita por uso real, antes de evaluar la gracia de abajo (que ya debe
   // correr con el estado nuevo -- ver _evTieneCuotaAlDia()/_quindesGraciaAgotada()).
-  if (estado === 'Asistiré' && _modoUsuario() === 'mirlxs' && !_adminToken && ev && ev.tipo === 'Entrenamiento' && !_evEsPasado(ev)) {
-    var _fpPend = (ev.fecha || '').split('-');
+  if (estado === 'Asistiré' && _modoUsuario() === 'mirlxs' && !_adminToken && !(E.datos && E.datos.exenta_cuota) && ev && ev.tipo === 'Entrenamiento' && !_evEsPasado(ev)) {    var _fpPend = (ev.fecha || '').split('-');
     if (_fpPend.length === 3 && _evReservaMesPendiente(parseInt(_fpPend[1]) - 1, parseInt(_fpPend[0]))) {
       var _mp = document.getElementById('modal-reserva-pendiente');
       if (_mp) { _mp.style.display = 'flex'; requestAnimationFrame(function() { _mp.style.opacity = '1'; }); }

@@ -511,7 +511,15 @@ window.onload = function() {
               setTimeout(function() { irNuevaReserva(true); }, 300);
             } else { _irTabAterrizajeInicial(); _mostrarPermisosSiHaceFalta(); }
           }, function() { prepararHome(); _irTabAterrizajeInicial(); window._restaurandoSesion = false; });
-        }, function() { window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true); });
+        }, function() {
+  if (!navigator.onLine) {
+    window._restaurandoSesion = false;
+    ocultarCargando();
+    _irTabAterrizajeInicial();
+    return;
+  }
+  window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true);
+});
       } else { localStorage.removeItem('session'); }
     } catch (ex) { localStorage.removeItem('session'); }
   }
