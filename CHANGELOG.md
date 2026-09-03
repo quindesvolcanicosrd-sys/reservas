@@ -241,6 +241,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## CSS / Diseño
 
+2026-09-03 — `--bottom-nav-h`: `60px` → `66px` (pedido explícito) — fuente única entre la nav inferior, decenas de spacers/footers fijos en `index.html`/varios `.css`, y 2 fallbacks JS (`js/eventos.js`/`js/tareas.js`) actualizados junto con la variable.
+
 2026-09-03 — Confetti (`lanzarConfetti()`/`js/ui.js`) actualizado a la paleta Pivot — único remanente visual real del naranja `#F97316` viejo encontrado en una búsqueda global (`_CE_BRAND_ORIGINAL` en `js/color-enfasis.js` es intencional, ancla matemática, no un color mostrado). Array de colores del canvas: rojo/blanco/negro/grises en vez de la paleta arcoíris original. `AUDITORIA_ESTILOS.md` (doc de auditoría pre-rebrand) actualizado en sus filas de theme-color/confetti, con nota aclarando que el resto no se re-auditó.
 
 2026-09-03 — `inscripcion/index.html`/`registro-express/index.html` tenían sus propios `<meta name="theme-color">` hardcodeados a mano, sin actualizar tras el rebrand a Pivot (seguían en `#FDF3EB`/`#170900`) — mismo fix que ya se había aplicado a `index.html`, corregidos a `#FFFFFF`/`#0D0D0D`. `js/color-enfasis.js` en sí ya sincronizaba estos tags correctamente en runtime en las 3 páginas, sin cambios ahí.
