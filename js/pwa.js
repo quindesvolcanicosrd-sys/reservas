@@ -196,27 +196,85 @@ function _cerrarNotifGate() {
   if (gate) { gate.style.display = 'none'; document.body.style.overflow = ''; }
 }
 
+// Feedback de "Activando..." en el botón mientras se resuelve cualquiera de
+// los 2 caminos de abajo (OneSignal o el fallback nativo) -- reusa el mismo
+// selector que ya usaba esta función (`.notif-gate-btn` dentro de
+// `#notif-gate`), sin agregar un id nuevo solo para esto.
+function _notifActivarBtn() {
+  return document.querySelector('#notif-gate .notif-gate-btn');
+}
+function _notifActivarTerminar() {
+  var btn = _notifActivarBtn();
+  if (btn) { btn.disabled = false; btn.textContent = 'Activar notificaciones'; }
+}
+function _notifActivarMostrarDenegado() {
+  var denegado = document.getElementById('notif-gate-denegado');
+  var btn = _notifActivarBtn();
+  if (denegado) denegado.style.display = 'block';
+  if (btn) btn.style.display = 'none';
+  _notifActivarTerminar();
+}
+
 function _activarNotificaciones() {
+  var btn = _notifActivarBtn();
+  if (btn) { btn.disabled = true; btn.textContent = 'Activando...'; }
+
+  if (!('Notification' in window)) { _cerrarNotifGate(); return; }
+  if (Notification.permission === 'granted') { _cerrarNotifGate(); _notifActivarTerminar(); return; }
+  if (Notification.permission === 'denied') { _notifActivarMostrarDenegado(); return; }
+
+  // Fallback nativo -- pide el permiso directo al navegador, SIN pasar por
+  // OneSignal. No deja el dispositivo en el estado óptimo (permiso
+  // concedido pero sin `PushSubscription.optIn()` -- OneSignal no va a
+  // saber de este dispositivo hasta que su SDK cargue de verdad en una
+  // visita futura, `vincularPush()`/js/pwa.js ya reintenta eso en cada
+  // login), pero es preferible a dejar a la persona encerrada para siempre
+  // detrás de este gate -- no tiene botón de cierre propio.
+  function fallbackNativo() {
+    Notification.requestPermission().then(function(permiso) {
+      if (permiso === 'granted') { _cerrarNotifGate(); _notifActivarTerminar(); return; }
+      if (permiso === 'denied') { _notifActivarMostrarDenegado(); return; }
+      _notifActivarTerminar();
+    }).catch(_notifActivarTerminar);
+  }
+
+  // Timeout de seguridad: si el SDK de OneSignal nunca terminó de cargar
+  // (bloqueado por un ad-blocker -- su CDN es de los dominios más comunes
+  // en esas listas -- o sin red hacia ahí), `OneSignalDeferred.push()` de
+  // abajo JAMÁS ejecuta su callback y el botón quedaría "Activando..." para
+  // siempre, con la persona encerrada detrás de un gate bloqueante sin
+  // ningún botón de cierre. `yaResolvio` evita que el timeout y la
+  // resolución real de OneSignal (si igual llega tarde) se pisen entre sí.
+  var yaResolvio = false;
+  var timeoutFallback = setTimeout(function() {
+    if (yaResolvio) return;
+    yaResolvio = true;
+    fallbackNativo();
+  }, 4000);
+
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   OneSignalDeferred.push(function(OneSignal) {
+    if (yaResolvio) return;
     OneSignal.Notifications.requestPermission().then(function(granted) {
+      if (yaResolvio) return;
+      yaResolvio = true;
+      clearTimeout(timeoutFallback);
       if (granted) {
         OneSignal.User.PushSubscription.optIn().catch(function(){});
         _cerrarNotifGate();
+        _notifActivarTerminar();
         return;
       }
-      var denegado = document.getElementById('notif-gate-denegado');
-      var btn = document.querySelector('#notif-gate .notif-gate-btn');
-      if (denegado) denegado.style.display = 'block';
-      if (btn) btn.style.display = 'none';
+      _notifActivarMostrarDenegado();
     }).catch(function() {
+      if (yaResolvio) return;
+      yaResolvio = true;
+      clearTimeout(timeoutFallback);
       // El propio navegador (no OneSignal) es el que puede rechazar/fallar
-      // el prompt -- mismo tratamiento que un "denied" real: instrucciones
-      // manuales en vez de dejar el botón colgado sin feedback.
-      var denegado = document.getElementById('notif-gate-denegado');
-      var btn = document.querySelector('#notif-gate .notif-gate-btn');
-      if (denegado) denegado.style.display = 'block';
-      if (btn) btn.style.display = 'none';
+      // el prompt -- probá igual el camino nativo antes de rendirte del
+      // todo (puede que OneSignal.Notifications.requestPermission() haya
+      // fallado por un motivo propio de su SDK, no del permiso en sí).
+      fallbackNativo();
     });
   });
 }
