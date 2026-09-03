@@ -175,6 +175,23 @@ function _eqPersonaPorId(id) {
 // esperando para siempre.
 function _eqAsegurarCargado(cb) {
   if (_eqCargado) { cb(); return; }
+  // Modo sin conexión (ver MANIFEST.md/CHANGELOG.md -- "soporte offline
+  // para Ajustes, Equipo y Tareas"): sin red, sirve el último roster
+  // cacheado ('eqcache', ver el hook chico en el callback de éxito de
+  // abajo) en vez de encolar el callback esperando un fetch que nunca va
+  // a resolver. `_eqCargado` queda en `false` a propósito -- al volver la
+  // conexión, la próxima llamada real sigue pegándole a la red.
+  if (!navigator.onLine) {
+    var _eqCache = localStorage.getItem('eqcache');
+    if (_eqCache) {
+      try {
+        var _eqCacheParsed = JSON.parse(_eqCache);
+        _eqPersonas = _eqCacheParsed.equipo || [];
+        cb();
+        return;
+      } catch (exEqCache) {}
+    }
+  }
   _eqCallbacksEspera.push(cb);
   if (_eqCargando) return;
   _eqCargando = true;
@@ -182,6 +199,7 @@ function _eqAsegurarCargado(cb) {
     _eqPersonas = (res && res.personas) || [];
     _eqCargado = true;
     _eqCargando = false;
+    try { localStorage.setItem('eqcache', JSON.stringify({ equipo: _eqPersonas, ts: Date.now() })); } catch (exEqSave) {}
     var cbs = _eqCallbacksEspera; _eqCallbacksEspera = [];
     cbs.forEach(function(fn) { fn(); });
   }, function() {
@@ -2817,6 +2835,7 @@ function eqToggleAcordeon(header) {
 // por esa natural key en todas las acciones existentes), siempre string --
 // no hace falta `parseInt`/`+id`.
 function _eqCambiarTier(id, modo) {
+  if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible guardar cambios en este momento.', 'error'); return; }
   var persona = _eqPersonaPorId(id);
   if (!persona) return;
   persona.tierModo = modo;
@@ -2927,6 +2946,7 @@ function _eqAdminGestionHtml(p) {
 // de tier (ese si puede, en teoría, convivir con el próximo si se
 // reabriera rápido; acá el propio querySelectorAll ya alcanza).
 function _eqCambiarEstado(id, nuevoEstado) {
+  if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible guardar cambios en este momento.', 'error'); return; }
   var persona = _eqPersonaPorId(id); // helper ya existente
   if (!persona) return;
   persona.estado = nuevoEstado;
@@ -2953,6 +2973,7 @@ function _eqCambiarEstado(id, nuevoEstado) {
 // "Paga cuota" (checked) es el inverso de `exentaCuota` (real) -- ver el
 // comentario de _eqAdminGestionHtml() de arriba.
 function _eqToggleCuota(id, valorPagaCuota) {
+  if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible guardar cambios en este momento.', 'error'); return; }
   var persona = _eqPersonaPorId(id);
   if (!persona) return;
   persona.exentaCuota = !valorPagaCuota;

@@ -468,10 +468,32 @@ window.onload = function() {
         _restaurando = true;
         window._restaurandoSesion = true;
         _token = s.token; E.nombre = s.nombre;
+        // Modo sin conexión (ver MANIFEST.md/CHANGELOG.md -- "soporte
+        // offline para Ajustes, Equipo y Tareas"): sin red, ni intenta
+        // restaurarSesion() -- sirve directo el último E.datos cacheado
+        // ('edat', ver el hook chico en el callback de éxito de abajo) y
+        // navega igual, en vez de quedarse colgada esperando un fetch que
+        // nunca va a resolver.
+        var _edatOffline = false;
+        if (!navigator.onLine) {
+          var _edatCache = localStorage.getItem('edat');
+          if (_edatCache) {
+            try {
+              E.datos = JSON.parse(_edatCache);
+              E.datosCompletos = E.datos;
+              _edatOffline = true;
+            } catch (exEdat) {}
+          }
+        }
+        if (_edatOffline) {
+          window._restaurandoSesion = false;
+          _irTabAterrizajeInicial();
+        } else {
         mostrarCargando('Restaurando tu sesión...');
         api({ action: 'restaurarSesion' }, function(res) {
           if (!res.valido || !res.datos) { window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true); return; }
           E.datos = res.datos; E.datosCompletos = res.datos;
+          try { localStorage.setItem('edat', JSON.stringify(E.datos)); } catch (exEdatSave) {}
           // Salvaguarda (Victor, ver MANIFEST.md "Cambio 12"): si en algún
           // momento _EV_EVENTOS ya llegó a poblarse/renderizarse ANTES de que
           // este callback resuelva `E.nombre`/`E.datos` reales (no confirmado
@@ -520,6 +542,7 @@ window.onload = function() {
   }
   window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true);
 });
+        }
       } else { localStorage.removeItem('session'); }
     } catch (ex) { localStorage.removeItem('session'); }
   }

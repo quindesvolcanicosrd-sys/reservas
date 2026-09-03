@@ -510,7 +510,45 @@ function irTareas() {
    error, lo que sea que haya resuelto primero para cada una). `getMisTareas`
    sigue pintando "Mis tareas" en cuanto resuelve (una sola llamada real la
    alimenta, no hay nada que coalescer ahí). */
+// Modo sin conexión (ver MANIFEST.md/CHANGELOG.md -- "soporte offline para
+// Ajustes, Equipo y Tareas"): snapshot combinado de todas las listas que
+// pinta el tablero -- se guarda tal cual llega cada respuesta exitosa
+// (ver los hooks chicos en los callbacks de abajo) y se sirve completo
+// cuando `_tarCargarTodo()` arranca sin red, en vez de duplicar un cache
+// por lista.
+function _tarGuardarCache() {
+  try {
+    localStorage.setItem('tarcache', JSON.stringify({
+      disponibles: _tarDisponibles,
+      baul: _tarBaul,
+      config: _tarConfig,
+      misTareas: _tarMisTareas,
+      pendientesValidacion: _tarPendientesValidacion,
+      activas: _tarActivas,
+      ts: Date.now()
+    }));
+  } catch (exTarSave) {}
+}
 function _tarCargarTodo() {
+  if (!navigator.onLine) {
+    var _tarCache = localStorage.getItem('tarcache');
+    if (_tarCache) {
+      try {
+        var _tarCacheParsed = JSON.parse(_tarCache);
+        _tarDisponibles = _tarCacheParsed.disponibles || [];
+        _tarBaul = _tarCacheParsed.baul || [];
+        _tarConfig = _tarCacheParsed.config || { limiteTareasActivas: null };
+        _tarMisTareas = _tarCacheParsed.misTareas || [];
+        _tarPendientesValidacion = _tarCacheParsed.pendientesValidacion || [];
+        _tarActivas = _tarCacheParsed.activas || [];
+        _tarRenderDisponibles();
+        _tarRenderMisTareas();
+        _tarRenderValidacion();
+        _tarRenderGestionar();
+        return;
+      } catch (exTarCache) {}
+    }
+  }
   var miCarga = ++_tarCargaId;
   var contDisp = document.getElementById('tar-lista-disponibles');
   var contMis = document.getElementById('tar-lista-mis');
@@ -559,6 +597,7 @@ function _tarCargarTodo() {
     _tarBaul = (res && res.baul) || [];
     disponiblesOk = true;
     listo.disponibles = true;
+    _tarGuardarCache();
     _tarPintarDisponiblesSiListo();
   }, function(e) {
     if (miCarga !== _tarCargaId) return;
@@ -581,6 +620,7 @@ function _tarCargarTodo() {
     if (miCarga !== _tarCargaId) return;
     _tarMisTareas = res || [];
     listo.misTareas = true;
+    _tarGuardarCache();
     _tarRenderMisTareas();
     _tarPintarDisponiblesSiListo();
   }, function(e) {
@@ -1217,6 +1257,7 @@ function _tarSincronizarTrasSoltar() {
   }, function() {});
 }
 function _tarEnviarRevision(idAsignacion, btn) {
+  if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible guardar cambios en este momento.', 'error'); return; }
   // El botón real desaparece con el fade de `_tarSwapAccionMis()` de abajo,
   // pero se deshabilita también acá de una (mismo criterio anti-doble-toque
   // que el resto de las acciones) por si un segundo toque llega mientras el
@@ -1714,6 +1755,7 @@ function _tarCrearTogglePersona(el, nombre) {
 // nunca se agregó adminCrearTarea al router de POST, el fix es 100%
 // frontend.
 function _tarCrearGuardar() {
+  if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible guardar cambios en este momento.', 'error'); return; }
   if (!_tarCrearPaso0Valido() || !_tarCrearPasoFechaValido()) return;
   var puntosEl = document.getElementById('tar-crear-puntos');
   var cuposEl = document.getElementById('tar-crear-cupos');
@@ -1762,6 +1804,7 @@ function _tarCargarPendientesValidacion() {
   if (!_adminToken) { _tarPendientesValidacion = []; _tarRenderValidacion(); return; }
   adminApi({ action: 'adminGetTareasPendientesValidacion' }, function(res) {
     _tarPendientesValidacion = res || [];
+    _tarGuardarCache();
     _tarRenderValidacion();
   }, function() { _tarPendientesValidacion = []; _tarRenderValidacion(); });
 }
@@ -1894,6 +1937,7 @@ function _tarCargarGestionar() {
   adminApi({ action: 'adminGetTareasActivas' }, function(res) {
     if (miCarga !== _tarActivasCargaId) return;
     _tarActivas = res || [];
+    _tarGuardarCache();
     _tarRenderGestionar();
   }, function(e) {
     if (miCarga !== _tarActivasCargaId) return;

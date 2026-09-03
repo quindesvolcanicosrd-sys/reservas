@@ -2296,6 +2296,7 @@ function ajEliminarEmerg2() {
 }
 
 function _ajGuardar(payload, btn, subId, onExito) {
+  if (!navigator.onLine) { mostrarToast('Sin conexión. Los cambios se guardarán cuando vuelvas a conectarte.', 'error'); return; }
   if (btn) { btn.textContent = 'Guardando...'; btn.disabled = true; }
   api({ action: 'actualizarDatosPersona', nombre: E.nombre, datos: JSON.stringify(payload) }, function() {
     Object.assign(E.datos, payload);
