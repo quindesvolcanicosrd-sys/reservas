@@ -35,3 +35,7 @@ CREATE INDEX IF NOT EXISTS idx_invite_tokens_token ON invite_tokens(token);
 -- tabla directo vía PostgREST -- expondría tokens de activación válidos de
 -- cualquier cuenta a cualquiera.
 ALTER TABLE invite_tokens ENABLE ROW LEVEL SECURITY;
+
+GRANT ALL ON TABLE invite_tokens TO service_role;
+GRANT ALL ON TABLE invite_tokens TO authenticated;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO service_role;
