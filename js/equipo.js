@@ -2105,7 +2105,18 @@ function _eqStatsColapsadoGuardado() {
 // -- ya se entiende por el ícono/badge de fuego).
 function _eqStatsContenidoHtml(p) {
   var statsCalc = _eqStatsCalc(p);
-  var necesitaEquipoClub = !!(p.necesitaPatines || p.necesitaProtecciones);
+  // Bug real corregido (ver MANIFEST.md/CHANGELOG.md -- "termómetro
+  // Quindes/Mirlxs ya no se muestra"): `necesitaPatines`/`necesitaProtecciones`
+  // son strings ("Sí"/"No"/lista parcial, ver js/perfil.js), no booleanos --
+  // `!!(a || b)` daba `true` con CUALQUIER valor no vacío, incluido el
+  // string literal "No" (JS lo trata como truthy), así que el termómetro se
+  // ocultaba para prácticamente todo el roster (confirmado: 100% de las
+  // filas de `equipo` tienen `necesita_patines` en "Sí" o "No", nunca
+  // vacío) -- exactamente al revés de la intención ("solo con equipo
+  // propio"). Comparación explícita, mismo criterio que ya usa
+  // `js/perfil.js` para estos mismos campos.
+  var necesitaEquipoClub = p.necesitaPatines === 'Sí' ||
+    (!!p.necesitaProtecciones && p.necesitaProtecciones.toLowerCase() !== 'no');
   var rankHtml = necesitaEquipoClub ? '' :
     '<div class="eq-rank-wrap">' +
       '<div class="eq-rank-labels"><span>Mirlxs</span><span>Quindes</span></div>' +
