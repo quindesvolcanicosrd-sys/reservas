@@ -1018,7 +1018,7 @@
    atributo `input[placeholder*="uscar" i]` (css/ui.css) -- ver
    MANIFEST.md "Cambios recientes". */
 
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark) and (min-width: 99999px) { /* deshabilitado temporalmente, ver MANIFEST.md */
   .ev-lista-vacia { background: var(--surface-2); border-color: var(--border-light); }
 }
 
@@ -1354,7 +1354,7 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
 .ev-lugar-cal-resumen { text-align: center; font-size: 0.85rem; font-weight: 700; color: var(--text); margin-top: 10px; }
 .ev-lugar-cal-resumen:empty::before { content: 'Toca una fecha en el calendario'; color: var(--muted); font-weight: 500; font-size: 0.8rem; }
 
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark) and (min-width: 99999px) { /* deshabilitado temporalmente, ver MANIFEST.md */
   .ev-lugar-input { background: var(--surface-2); }
 }
 
@@ -1482,7 +1482,7 @@ body.ev-ant-footer-visible.ev-ant-cal-abierto #app-toast {
    criterio de ID-scoping que los 2 anteriores. */
 #ev-crear-descripcion-input { resize: none; overflow-y: hidden; }
 
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark) and (min-width: 99999px) { /* deshabilitado temporalmente, ver MANIFEST.md */
   .ev-crear-venue-card.activa { background: var(--brand-20); }
 }
 

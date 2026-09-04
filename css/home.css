@@ -70,7 +70,7 @@
   .home-mobile-actions { display: block !important; margin-top: 8px; border-top: 1px solid var(--gray-divider); }
 }
 
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark) and (min-width: 99999px) { /* deshabilitado temporalmente, ver MANIFEST.md */
   #btn-meses-pasados, #btn-meses-actuales { background: var(--surface-2) !important; border-color: var(--border) !important; color: var(--muted) !important; }
   #pwa-banner { border-color: var(--brand) !important; }
   #pwa-banner div { color: var(--muted); }

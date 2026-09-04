@@ -610,7 +610,7 @@ var APP_BOTTOM_NAV_ITEMS = [
       if (typeof _evTourCerrar === 'function') _evTourCerrar(false);
     },
     visible: function() { return true; } },
-  { id: 'ajustes', icono: 'settings', texto: 'Ajustes', pantalla: 's-datos',
+  { id: 'ajustes', icono: 'settings', texto: 'Mi perfil', pantalla: 's-datos',
     entrar: function() { irEditarDatos(); },
     // `alSalir` (ver "Cambios recientes") -- guarda el scroll del HOME de
     // Ajustes (`#s-datos`) al abandonar la sección, distinto de
@@ -902,13 +902,29 @@ function _actualizarBottomNav(id) {
   var html = '';
   APP_BOTTOM_NAV_ITEMS.forEach(function(item) {
     if (!item.visible()) return;
+    // "Mi perfil" (pedido explícito, antes "Ajustes"): si la cuenta tiene
+    // foto de perfil cargada, la nav usa su avatar circular (mismo tamaño
+    // que los otros íconos, `.avatar-pill--xs`) en vez del ícono `settings`
+    // -- sin foto, sigue siendo el gear de siempre (fallback explícito, no
+    // el fallback de inicial que usa `_avatarSetFotoOInicial()` en el
+    // resto de la app -- acá una inicial no aportaría nada sobre el ícono
+    // ya reconocible). Hidratado DESPUÉS de `nav.innerHTML` (más abajo),
+    // mismo helper compartido que ya usa el resto de la app (`js/ui.js`).
+    var iconoHtml = '<span class="material-symbols-outlined">' + item.icono + '</span>';
+    if (item.id === 'ajustes' && E.datos && E.datos.fotoPerfil) {
+      var nombreAttr = (E.nombre || '').replace(/"/g, '&quot;');
+      var fotoAttr = String(E.datos.fotoPerfil).replace(/"/g, '&quot;');
+      iconoHtml = '<div class="avatar-pill avatar-pill--xs app-bottom-nav-avatar" data-nombre="' + nombreAttr + '" data-foto="' + fotoAttr + '"></div>';
+    }
     html += '<button type="button" class="app-bottom-nav-item' + (item.pantalla === pantallaAResaltar ? ' activo' : '') + '" onclick="_bottomNavClick(\'' + item.id + '\')">' +
-      '<span class="material-symbols-outlined">' + item.icono + '</span>' +
+      iconoHtml +
       '<span class="app-bottom-nav-label">' + item.texto + '</span>' +
       '</button>';
   });
   nav.innerHTML = html;
   nav.style.display = 'flex';
+  var avatarNav = nav.querySelector('.app-bottom-nav-avatar');
+  if (avatarNav) _avatarSetFotoOInicial(avatarNav, avatarNav.getAttribute('data-foto'), avatarNav.getAttribute('data-nombre'));
 }
 
 // Bug real corregido (ver MANIFEST.md "Cambios recientes" -- scroll perdido

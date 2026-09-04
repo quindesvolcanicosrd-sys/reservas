@@ -504,7 +504,37 @@ function _eqInit() {
     _eqRenderInactivos();
     _eqRenderLesionadxs();
     _eqRenderMisEstadisticas();
+    _eqTourIniciarSiCorresponde();
   });
+}
+
+// ═══ Tour guiado de Equipo (pedido explícito, "idéntico al tour de
+// Eventos -- mismos estilos, misma lógica, mismo componente") -- reusa el
+// motor genérico de `_evTourIniciarConPasos()`/js/eventos.js (mismo
+// tooltip/overlay/halo que ya usan los 3 tours de Eventos, `#ev-tour-*`
+// pese al prefijo -- son hijos directos de `<body>`, compartidos por
+// cualquier tour de la app, no exclusivos de esa sección) con clave de
+// localStorage y selectores propios de esta sección. `_evTourMostrarPaso()`
+// ya saltea solo cualquier paso cuyo selector no resuelva a un elemento
+// VISIBLE (ver ese archivo) -- sin guardas propias acá, mismo criterio que
+// los tours de Eventos. 650ms (mismo margen que el tour de bienvenida de
+// Eventos) -- deja asentar el layout real del roster recién renderizado
+// antes de medir geometría para posicionar el primer halo/tooltip. */
+var _EQ_TOUR_PASOS = [
+  { selector: '#eq-misstats-toggle-btn', titulo: 'Tus estadísticas', texto: 'Consulta tus estadísticas personales.' },
+  { selector: '#eq-busqueda-toggle-btn', titulo: 'Busca y filtra', texto: 'Busca y filtra por puntos según períodos y filtra según rol en el equipo.' },
+  { selector: '.eq-grupo-header', titulo: 'Colapsa secciones', texto: 'Colapsa las secciones que te interesan de las personas que te interesan.' },
+  { selector: '.eq-fav-btn', titulo: 'Favoritos', texto: 'Agrega miembros del equipo a favoritos para tenerlos siempre visibles.' },
+  { selector: '.eq-miembro-fila', titulo: 'Detalle de cada persona', texto: 'Toca donde se encuentra alguien del equipo para consultar información adicional.' }
+];
+function _eqTourIniciarSiCorresponde() {
+  if (typeof _evTourActivo !== 'undefined' && _evTourActivo) return;
+  if (localStorage.getItem('eq_tour_visto') === '1') return;
+  var tooltip = document.getElementById('ev-tour-tooltip');
+  if (!tooltip) return;
+  setTimeout(function() {
+    _evTourIniciarConPasos(_EQ_TOUR_PASOS, 'eq_tour_visto', 'FINALIZAR TOUR');
+  }, 650);
 }
 
 /* ── Hidratación de avatares (mismo patrón que _evHidratarAvatares(),

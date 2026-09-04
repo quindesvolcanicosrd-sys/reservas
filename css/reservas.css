@@ -223,7 +223,7 @@
 .tp-hint.visible { display: flex; }
 
 /* ─── DARK MODE ──────────────────────────────────────────────────── */
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: dark) and (min-width: 99999px) { /* deshabilitado temporalmente, ver MANIFEST.md */
   .fi-pill-hora { color: var(--dk-purple-text); }
   .fi-pill-fin  { color: var(--dk-info-text); }
   .fi-pill-validez { color: var(--dk-purple-text); }

@@ -114,6 +114,32 @@ function irEditarDatos(sinNavegar) {
   if (_ajYaInicializadoEnSesion) _ajRestaurarScroll = true;
   else _ajYaInicializadoEnSesion = true;
   if (!sinNavegar) ir('s-datos');
+  if (!sinNavegar) _ajTourIniciarSiCorresponde();
+}
+
+// ═══ Tour guiado de Mi Perfil (pedido explícito, "idéntico al tour de
+// Eventos -- mismos estilos, misma lógica, mismo componente") -- mismo
+// motor genérico que `_eqTourIniciarSiCorresponde()`/js/equipo.js, ver el
+// comentario grande de esa función para el detalle del mecanismo
+// compartido (`_evTourIniciarConPasos()`/js/eventos.js). `!sinNavegar`
+// (arriba, en `irEditarDatos()`) -- ese flag es para repoblar campos en
+// segundo plano sin navegar de verdad a la pantalla (ver el resto de este
+// archivo), un tour ahí no tendría sentido -- sin ella nunca se llegó a
+// ver #s-datos, nada que resaltar todavía. */
+var _AJ_TOUR_PASOS = [
+  { selector: '#aj-search-wrap', titulo: 'Busca rápido', texto: 'Busca lo que necesites, fácil y rápido.' },
+  { selector: '.aj-row[data-aj-key="perfil"]', titulo: 'Tus datos visibles', texto: 'Edita o agrega tus datos más visibles: foto de perfil, nombre derby y más.' },
+  { selector: '.aj-row[data-aj-key="equip"]', titulo: 'Tu equipamiento', texto: 'Cambia tu equipamiento fácilmente: tallas y protecciones.' },
+  { selector: '.aj-row[data-aj-key="emerg"]', titulo: 'Más ajustes', texto: 'Explora más ajustes de tu perfil: datos de emergencia, información adicional y más.' }
+];
+function _ajTourIniciarSiCorresponde() {
+  if (typeof _evTourActivo !== 'undefined' && _evTourActivo) return;
+  if (localStorage.getItem('aj_tour_visto') === '1') return;
+  var tooltip = document.getElementById('ev-tour-tooltip');
+  if (!tooltip) return;
+  setTimeout(function() {
+    _evTourIniciarConPasos(_AJ_TOUR_PASOS, 'aj_tour_visto', 'FINALIZAR TOUR');
+  }, 650);
 }
 
 // Estado + botón "Reportar lesión" en Mi Perfil (Ajustes). Desde el Cambio
