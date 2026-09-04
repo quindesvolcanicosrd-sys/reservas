@@ -1304,6 +1304,8 @@ function _evInicializarCierreCalendarioPorScroll() {
     _evTimelineDragY = e.touches[0].clientY;
     _evTimelineDragActivo = true;
     _evTimelineDragAlturaOriginal = panel.getBoundingClientRect().height;
+    panel.style.height = _evTimelineDragAlturaOriginal + 'px';
+    panel.classList.remove('ev-panel-auto');
     _evTimelineStickyHdr = document.getElementById('ev-sticky-header');
     if (_evTimelineStickyHdr) { _evTimelineStickyHdr.style.transition = 'none'; _evTimelineStickyHdr.style.height = _evTimelineStickyHdr.getBoundingClientRect().height + 'px'; _evTimelineStickyHdr.style.overflow = 'hidden'; }
   }, { passive: true });
