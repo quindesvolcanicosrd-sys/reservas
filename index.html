@@ -18,8 +18,16 @@
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0D0D0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#FFFFFF" id="tc-meta">
+<script>
+(function(){
+  var m = document.getElementById('tc-meta');
+  var mq = window.matchMedia('(prefers-color-scheme: dark)');
+  function upd(dark){ m.content = dark ? '#0D0D0D' : '#FFFFFF'; }
+  upd(mq.matches);
+  mq.addEventListener('change', function(e){ upd(e.matches); });
+})();
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
