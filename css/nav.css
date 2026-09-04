@@ -16,8 +16,8 @@
      padding, no un número mágico; los spacers que compensan cada nav fija
      ya se miden en JS con `offsetHeight` (`_initHomeNav()`, ver otros
      `*-nav-spacer`), así que se adaptan solos. */
-  padding: 33px 16px;
-  min-height: 67px;
+  padding: 37px 16px;
+  min-height: 71px;
   background: var(--bg);
   width: 100%;
   box-sizing: border-box;
@@ -67,7 +67,7 @@
 }
 .app-nav-back:hover { background: var(--brand-20); }
 .app-nav-back:active { transform: scale(0.95); }
-.app-nav-back .material-symbols-outlined { font-size: 1.4rem; display: block; }
+.app-nav-back .material-symbols-outlined { font-size: 1.5rem; display: block; }
 
 /* ── Variante decorativa (pantallas raíz sin "volver") ─
    Mismo tamaño/forma/color que .app-nav-back (ocupa exactamente el mismo
@@ -86,8 +86,8 @@
   left: 0;
   right: 0;
   text-align: left;
-  font-size: 0.86rem;
-  font-weight: 800;
+  font-size: 1.1rem;
+  font-weight: 600;
   color: var(--brand);
   text-transform: uppercase;
   letter-spacing: 1.2px;
@@ -218,7 +218,7 @@
   .app-nav-icon-btn:hover { background: var(--brand-lightest); }
   .app-nav-icon-btn-brand:hover { background: var(--brand-dk); }
 }
-.app-nav-icon-btn .material-symbols-outlined { font-size: 22px; }
+.app-nav-icon-btn .material-symbols-outlined { font-size: 1.5rem; }
 
 /* ── Variante naranja de marca (ej. ícono "Asistencia anticipada" de
    Eventos) -- mismo componente (.app-nav-icon-btn), no una clase de nav

@@ -993,7 +993,11 @@ function _evAnimarPanel(panel, alturaPx, translateY) {
   var hijos = panel.children;
   for (var i = 0; i < hijos.length; i++) {
     hijos[i].classList.add('ev-panel-inner-anim');
-    hijos[i].style.transform = translateY;
+    // `translateZ(0)` sumado acá (mismo motivo que `_eqAnimarPanel()`/
+    // js/equipo.js, pedido explícito de pulido) -- un `style.transform`
+    // inline pisa cualquier `transform` de la clase, incluido el
+    // `translateZ(0)` permanente de reposo de `.ev-header-burbuja > *`.
+    hijos[i].style.transform = translateY + ' translateZ(0)';
   }
   panel.addEventListener('transitionend', function limpiar() {
     panel.classList.remove('ev-panel-wrapper-anim');
@@ -1278,17 +1282,19 @@ function _evInicializarCierreCalendarioPorScroll() {
       if (dy >= 0) {
         panel.style.transition = '';
         panel.style.height = _evTimelineDragAlturaOriginal + 'px';
-        for (k = 0; k < hijos.length; k++) hijos[k].style.transform = 'translateY(0)';
+        for (k = 0; k < hijos.length; k++) hijos[k].style.transform = 'translateY(0) translateZ(0)';
         return;
       }
       // Sin transición mientras se arrastra -- cada frame pisa `height`
       // directo, 1:1 con el dedo (si hubiera transición encima, el panel
       // iría "atrasado" respecto al dedo en vez de seguirlo en vivo).
+      // `translateZ(0)` sumado (mismo motivo que `_evAnimarPanel()`, más
+      // arriba) -- un `style.transform` inline pisa el permanente de reposo.
       panel.style.transition = 'none';
       var nuevaAltura = Math.max(0, _evTimelineDragAlturaOriginal + dy);
       panel.style.height = nuevaAltura + 'px';
       var pct = _evTimelineDragAlturaOriginal > 0 ? (1 - nuevaAltura / _evTimelineDragAlturaOriginal) : 0;
-      for (k = 0; k < hijos.length; k++) hijos[k].style.transform = 'translateY(-' + (pct * 100) + '%)';
+      for (k = 0; k < hijos.length; k++) hijos[k].style.transform = 'translateY(-' + (pct * 100) + '%) translateZ(0)';
     });
   }, { passive: true });
   cont.addEventListener('touchend', function(e) {

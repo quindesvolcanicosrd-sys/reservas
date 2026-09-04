@@ -913,7 +913,13 @@ function _eqAnimarPanel(panel, alturaPx, translateY) {
   var hijos = panel.children;
   for (var i = 0; i < hijos.length; i++) {
     hijos[i].classList.add('eq-panel-inner-anim');
-    hijos[i].style.transform = translateY;
+    // `translateZ(0)` sumado acá (no solo en la regla CSS de reposo,
+    // pedido explícito de pulido) -- un `style.transform` inline pisaría
+    // por completo cualquier `transform` de la clase, incluido el
+    // `translateZ(0)` permanente de `.eq-misstats-panel-inner`/
+    // `.eq-busqueda-panel-inner` -- sin esto, la capa de compositing se
+    // perdía justo durante la animación real, que es cuando más importa.
+    hijos[i].style.transform = translateY + ' translateZ(0)';
   }
   panel.addEventListener('transitionend', function limpiar() {
     panel.classList.remove('eq-panel-wrapper-anim');
@@ -1073,7 +1079,7 @@ function _eqInicializarCierrePanelesPorScroll() {
       if (dy >= 0) {
         panel.style.transition = '';
         panel.style.height = _eqListaDragAlturaOriginal + 'px';
-        for (k = 0; k < hijos.length; k++) hijos[k].style.transform = 'translateY(0)';
+        for (k = 0; k < hijos.length; k++) hijos[k].style.transform = 'translateY(0) translateZ(0)';
       } else {
         panel.style.transition = 'none';
         var nuevaAltura = Math.max(0, _eqListaDragAlturaOriginal + dy);
@@ -1081,8 +1087,11 @@ function _eqInicializarCierrePanelesPorScroll() {
         // % arrastrado (0 = recién empezando, 1 = ya llegó a 0) -- mismo
         // porcentaje para el `translateY` de los hijos, así el contenido se
         // desliza 1:1 con el recorte del wrapper durante el gesto en vivo.
+        // `translateZ(0)` sumado (mismo motivo que `_eqAnimarPanel()`, más
+        // arriba) -- un `style.transform` inline pisa cualquier `transform`
+        // de la clase, incluido el permanente de reposo.
         var pct = _eqListaDragAlturaOriginal > 0 ? (1 - nuevaAltura / _eqListaDragAlturaOriginal) : 0;
-        for (k = 0; k < hijos.length; k++) hijos[k].style.transform = 'translateY(-' + (pct * 100) + '%)';
+        for (k = 0; k < hijos.length; k++) hijos[k].style.transform = 'translateY(-' + (pct * 100) + '%) translateZ(0)';
       }
       _eqActualizarStickyHeadersThrottled();
     });
@@ -1147,7 +1156,7 @@ _eqInicializarCierrePanelesPorScroll();
    vuelve a expandir solo -- re-expandir es siempre manual, vía el chevron
    (`_eqTogglePanel()`). */
 function _eqInicializarColapsoStatsPorScroll() {
-  var UMBRAL_PX = 60;
+  var UMBRAL_PX = 80;
   // Perf real (pedido explícito) -- rAF+flag ("ticking"), mismo patrón que
   // el resto de esta app usa para listeners de `scroll` de bajo costo
   // (`_eqActualizarStickyHeadersThrottled()`, más abajo): como mucho 1

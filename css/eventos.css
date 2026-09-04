@@ -895,10 +895,15 @@
    sola) + `transform:translateY` en los hijos directos (`#ev-cal-contenido`/
    `#ev-mes-pills-row`), que sí corre por compositor -- el contenido se
    desliza en vez de solo recortarse. `will-change` como clase temporal,
-   nunca permanente. */
-.ev-header-burbuja { height: 0; overflow: hidden; transition: height 260ms cubic-bezier(0.4,0,0.2,1); }
+   nunca permanente. Pulido posterior (pedido explícito, "sigue
+   cortándose"): 350ms (antes 260ms) + easing `cubic-bezier(0.25,0.46,0.45,0.94)`
+   (antes `cubic-bezier(0.4,0,0.2,1)`) + `translateZ(0)` PERMANENTE en los 2
+   (mismo motivo que `.eq-header-panel`/css/equipo.css -- crear la capa de
+   compositing recién al arrancar la transición puede generar el mismo
+   tranco que se busca evitar). */
+.ev-header-burbuja { height: 0; overflow: hidden; transition: height 350ms cubic-bezier(0.25,0.46,0.45,0.94); transform: translateZ(0); }
 .ev-header-burbuja.ev-panel-wrapper-anim { will-change: height; }
-.ev-header-burbuja > * { transition: transform 260ms cubic-bezier(0.4,0,0.2,1); }
+.ev-header-burbuja > * { transition: transform 350ms cubic-bezier(0.25,0.46,0.45,0.94); transform: translateZ(0); }
 .ev-header-burbuja > *.ev-panel-inner-anim { will-change: transform; }
 /* Espacio contra el contenido que sigue inmediatamente debajo (el timeline)
    -- sin esto, la burbuja abierta quedaba pegada contra ese contenido. El

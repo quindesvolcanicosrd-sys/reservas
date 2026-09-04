@@ -280,10 +280,19 @@
    (`.eq-panel-wrapper-anim`) solo mientras dura la transición real
    (`_eqAnimarPanel()`), nunca permanente (costo de memoria de GPU si
    quedara siempre activo sin necesidad). */
-.eq-header-panel { height: 0; overflow: hidden; background: var(--bg); transition: height 260ms cubic-bezier(0.4,0,0.2,1); }
+/* Pulido posterior (pedido explícito, "sigue cortándose en Android
+   Chrome"): 350ms (antes 260ms) + easing `cubic-bezier(0.25,0.46,0.45,0.94)`
+   (entrada más suave, antes `cubic-bezier(0.4,0,0.2,1)`). `translateZ(0)`
+   PERMANENTE (no atado a `.eq-panel-wrapper-anim`/`.eq-panel-inner-anim`,
+   que siguen existiendo solo para `will-change`) -- promueve estos 2
+   elementos a su propia capa de compositing desde que la página carga, no
+   recién cuando arranca la transición: crear la capa a mitad de la
+   animación (lo que pasaba antes, sin esto) puede generar el mismo tranco
+   que se busca evitar. */
+.eq-header-panel { height: 0; overflow: hidden; background: var(--bg); transition: height 350ms cubic-bezier(0.25,0.46,0.45,0.94); transform: translateZ(0); }
 .eq-header-panel.abierta { margin-bottom: 18px; }
 .eq-header-panel.eq-panel-wrapper-anim { will-change: height; }
-.eq-misstats-panel-inner, .eq-busqueda-panel-inner { transition: transform 260ms cubic-bezier(0.4,0,0.2,1); }
+.eq-misstats-panel-inner, .eq-busqueda-panel-inner { transition: transform 350ms cubic-bezier(0.25,0.46,0.45,0.94); transform: translateZ(0); }
 .eq-misstats-panel-inner.eq-panel-inner-anim, .eq-busqueda-panel-inner.eq-panel-inner-anim { will-change: transform; }
 .eq-busqueda-panel-inner {
   background: var(--surface-2); border-radius: 16px; padding: 16px;
