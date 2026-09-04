@@ -1288,6 +1288,7 @@ _evInicializarSwipeCalendario();
 // importar cuántos `touchmove` lleguen.
 var _evDragRafTicking = false;
 var _evTimelineDragY = 0, _evTimelineDragActivo = false, _evTimelineDragAlturaOriginal = 0;
+var _evTimelineStickyHdr = null;
 // Umbral de "commit" como fracción del alto del panel (no el `_EV_CAL_SWIPE_UMBRAL`
 // fijo de 45px que usan los otros gestos de esta pantalla) -- mismo criterio
 // que un bottom sheet nativo (iOS/Android): con un panel que puede medir
@@ -1303,6 +1304,8 @@ function _evInicializarCierreCalendarioPorScroll() {
     _evTimelineDragY = e.touches[0].clientY;
     _evTimelineDragActivo = true;
     _evTimelineDragAlturaOriginal = panel.getBoundingClientRect().height;
+    _evTimelineStickyHdr = document.getElementById('ev-sticky-header');
+    if (_evTimelineStickyHdr) { _evTimelineStickyHdr.style.transition = 'none'; _evTimelineStickyHdr.style.height = _evTimelineStickyHdr.getBoundingClientRect().height + 'px'; }
   }, { passive: true });
   cont.addEventListener('touchmove', function(e) {
     if (!_evTimelineDragActivo || !_evCalVisible) return;
@@ -1348,9 +1351,19 @@ function _evInicializarCierreCalendarioPorScroll() {
       // y recién ahí cerraría, un "rebote" que el usuario no pidió.
       _evCalVisible = false;
       panel.classList.remove('abierta');
+      if (_evTimelineStickyHdr) {
+        var h = _evTimelineStickyHdr;
+        var hdrCol = Math.max(0, parseFloat(h.style.height) - _evTimelineDragAlturaOriginal);
+        h.style.transition = 'height 0.28s var(--ease-sheet)';
+        requestAnimationFrame(function() {
+          h.style.height = hdrCol + 'px';
+          setTimeout(function() { h.style.transition = ''; h.style.height = ''; _evTimelineStickyHdr = null; }, 350);
+        });
+      }
       _evAnimarPanel(panel, panel.style.height, '0px', 'translateY(-100%)');
       _evActualizarNavMesChevron();
     } else {
+      if (_evTimelineStickyHdr) { _evTimelineStickyHdr.style.transition = ''; _evTimelineStickyHdr.style.height = ''; _evTimelineStickyHdr = null; }
       // No llegó al umbral -- vuelve animado al alto original, el
       // calendario se queda abierto tal cual estaba. `desdePx` es el alto
       // parcial actual del arrastre (`panel.style.height`, lo último que
