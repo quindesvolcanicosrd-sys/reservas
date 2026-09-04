@@ -60,6 +60,12 @@ body {
   font-family: 'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text);
   -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
   -webkit-touch-callout: none;
+  /* apple-mobile-web-app-status-bar-style=black-translucent (index.html) deja
+     el contenido pasar detrás de la barra de estado -- este padding compensa
+     ese espacio. Requiere viewport-fit=cover en el <meta name="viewport">
+     (index.html); sin eso env(safe-area-inset-top) siempre vale 0, sin
+     excepción, y este padding sería un no-op. */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 button, input, select, textarea { font-family: inherit; }
 
