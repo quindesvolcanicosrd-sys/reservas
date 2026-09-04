@@ -3228,7 +3228,16 @@ function _eqPerfilContenidoHtml(p) {
   // TODAS las instancias de `.eq-periodo-pills` que queden en el DOM
   // (panel de Filtros de la lista, la única que sobrevive), sin romperse
   // por esta menos.
-  var statsAcordHtml = '<div class="eq-acord eq-perfil-stats-acord eq-acord-abierto">' +
+  // Bug real corregido (pedido explícito) -- "expandido por defecto solo en
+  // la vista propia de la home de Equipo": este acordeón nacía SIEMPRE
+  // abierto (`eq-acord-abierto` hardcodeado) sin importar de quién sea el
+  // perfil -- esta función es la vista de DETALLE (roster -> tocar a
+  // alguien), un componente distinto de "Mis estadísticas"
+  // (`_eqRenderMisEstadisticas()`, arriba en este archivo, el único lugar
+  // con expandido-por-defecto real). Ahora nace colapsado, igual que
+  // Categoría/Estado (`_eqTierAdminHtml()`/`_eqAdminGestionHtml()`, mismo
+  // mecanismo `.eq-acord`/`eqToggleAcordeon()`).
+  var statsAcordHtml = '<div class="eq-acord eq-perfil-stats-acord">' +
       '<div class="eq-acord-header" onclick="eqToggleAcordeon(this)">' +
         '<p class="eq-tier-label" style="margin:0">Estadísticas</p>' +
         '<span class="eq-acord-icono"><span class="material-symbols-rounded">chevron_right</span></span>' +
@@ -3267,16 +3276,16 @@ function _eqPerfilContenidoHtml(p) {
       '<div class="eq-perfil-sub">' + ((p.numeroDerby !== null && p.numeroDerby !== undefined && p.numeroDerby !== '') ? '#' + p.numeroDerby + ' &bull; ' : '') + '@' + _eqEsc(p.username) + '</div>' +
     '</div>' +
     (pillsHtml ? '<div class="eq-perfil-pills-row">' + pillsHtml + '</div>' : '') +
-    // Orden re-ajustado (pedido explícito, ver MANIFEST.md/CHANGELOG.md --
-    // "mover el acordeón de estadísticas para que aparezca justo encima
-    // del acordeón de categoría"): Estadísticas -> Categoría
-    // (`_eqTierAdminHtml()`, admin-only) -> datos personales (`filas`,
-    // teléfono/email/fecha de ingreso/rol) -> Estado/gestión admin
-    // (`_eqAdminGestionHtml()`) -- antes `filas` vivía ENTRE Estadísticas
-    // y Categoría, separándolas.
+    // Orden re-ajustado (pedido explícito, "los datos de contacto deben
+    // aparecer siempre ANTES de cualquier desplegable") -- `filas` (datos
+    // personales con ícono: teléfono/email/fecha de ingreso/rol) pasa a
+    // ser lo PRIMERO después del header, antes de los 3 acordeones
+    // (Estadísticas/Categoría/Estado). Orden anterior (ver "Cambios
+    // recientes" de una ronda previa, ya sin vigencia): Estadísticas ->
+    // Categoría -> `filas` -> Estado.
+    (filas ? '<div class="eq-info-lista">' + filas + '</div>' : '') +
     statsAcordHtml +
     _eqTierAdminHtml(p) +
-    (filas ? '<div class="eq-info-lista">' + filas + '</div>' : '') +
     _eqAdminGestionHtml(p);
 }
 

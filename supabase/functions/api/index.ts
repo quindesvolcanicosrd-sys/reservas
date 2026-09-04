@@ -2516,7 +2516,11 @@ async function adminGetAdmins(): Promise<any[]> {
 async function adminAgregarAdmin(params: Record<string, any>): Promise<Record<string, any>> {
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
-  const { error } = await supabase.from('admins').insert({ email: params.email.toLowerCase(), invitado_por: adminEmail, fecha: new Date().toISOString().substring(0, 10) });
+  // Bug real corregido -- "could not find 'fecha' column of 'admins' in
+  // the schema cache": la tabla real (verificado contra Supabase) tiene
+  // `email`/`invited_by`/`created_at` (con default propio) -- ni `fecha`
+  // existe ni la columna de auditoría se llama `invitado_por`.
+  const { error } = await supabase.from('admins').insert({ email: params.email.toLowerCase(), invited_by: adminEmail });
   if (error) return { exito: false, error: error.message };
   return { exito: true };
 }

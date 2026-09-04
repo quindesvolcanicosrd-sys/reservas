@@ -143,8 +143,18 @@
    texto "Mis estadísticas" necesita poder ceder ancho de verdad para que
    `text-overflow:ellipsis` realmente entre en juego, en vez de empujar
    las pills/el chevron fuera del botón. */
+/* Bug real corregido -- "nombre/'Estadísticas' no alineados a la
+   izquierda": `.eq-misstats-toggle-texto` vive dentro de un `<button>`
+   (`.eq-misstats-toggle-btn`), y el `text-align:center` del user-agent
+   sobre `<button>` se hereda hacia estos 2 spans (nada en la cadena lo
+   pisaba) -- con `align-items:stretch` (default de flex-column) las 2
+   líneas se estiran al ancho de la más larga, así que centradas dentro de
+   ESE ancho quedaban en diagonal entre sí en vez de arrancar las 2 del
+   mismo borde izquierdo. `text-align:left` explícito, se hereda a los 2
+   hijos. */
 .eq-misstats-toggle-texto {
-  display: flex; flex-direction: column; min-width: 0; line-height: 1.25;
+  display: flex; flex-direction: column; align-items: flex-start; min-width: 0; line-height: 1.25;
+  text-align: left;
 }
 /* Título personalizado (pedido explícito, "reemplazar 'Mis Estadísticas'
    fijo por el nombre de la persona") -- mismo tamaño/peso que el texto fijo
@@ -966,10 +976,18 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
   transition: opacity 0.25s;
 }
 .eq-confirm-sheet-overlay.visible { opacity: 1; pointer-events: all; }
+/* Bug real corregido -- "sheet transparente": `--surface` es un overlay
+   TRANSLÚCIDO en oscuro (`rgba(255,255,255,0.06)`, pensado para una card
+   apoyada sobre `--bg` ya pintado detrás, ver "CSS -- principios" en
+   MANIFEST.md) -- este sheet no tiene ningún fondo opaco detrás (flota
+   directo sobre el overlay semitransparente de arriba), así que en oscuro
+   se veía prácticamente transparente. `--bg` (sólido, el mismo que usa
+   `.bsheet`, css/global.css) + `border` completo (no solo `border-top`,
+   mismo criterio que `.bsheet`) en vez de `--surface`. */
 .eq-confirm-sheet {
-  width: 100%; background: var(--surface);
+  width: 100%; background: var(--bg);
   border-radius: 20px 20px 0 0; padding: 12px 20px 32px;
-  border-top: 1px solid var(--border-light);
+  border: 1px solid var(--border-light);
   transform: translateY(100%);
   transition: transform 0.3s cubic-bezier(.16,1,.3,1);
 }
