@@ -1231,7 +1231,6 @@ function _eqInicializarCierrePanelesPorScroll() {
     var arrastrado = Math.max(0, -dy);
     panel.style.transition = '';
     if (arrastrado >= _eqListaDragAlturaOriginal * _EQ_PANEL_DRAG_UMBRAL_FRACCION) {
-      _eqPanelAbierto = null;
       // Mismo bug real corregido que en `_eqCerrarPanel()` (ver ese
       // comentario grande, más arriba) -- `_eqSincronizarClasePanelAbierto()`
       // NO se llama acá todavía, para no reaparecer los headers stuck
@@ -1239,6 +1238,8 @@ function _eqInicializarCierrePanelesPorScroll() {
       // `_eqActualizarStickyHeaders()` corrija sus posiciones (mismo
       // `setTimeout(...,300)` de siempre, al final de este handler).
       var panelH = panel.offsetHeight + 'px';
+      panel.style.height = panelH;
+      _eqPanelAbierto = null;
       panel.classList.remove('abierta');
       panel.classList.remove('eq-panel-auto');
       _eqAnimarPanel(panel, panelH, '0px', 'translateY(0)');

@@ -1350,6 +1350,7 @@ function _evInicializarCierreCalendarioPorScroll() {
       // medio) -- llamarla acá saltaría primero de vuelta al alto completo
       // y recién ahí cerraría, un "rebote" que el usuario no pidió.
       var panelH = panel.offsetHeight + 'px';
+      panel.style.height = panelH;
       _evCalVisible = false;
       panel.classList.remove('abierta');
       if (_evTimelineStickyHdr) {
