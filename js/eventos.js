@@ -6621,9 +6621,41 @@ function _evAntReconciliarConReglas(reglas) {
   var orden = { 'indefinido': 0, 'meses': 1, 'periodo': 2 };
   reglas.sort(function(a, b) { return orden[a.tipoRango] - orden[b.tipoRango]; });
 
+  // `tocados` marca qué eventos matcheó al menos 1 regla en este pase --
+  // separado del loop de arriba (en vez de persistir inline en cada match)
+  // para no disparar 1 apiPost por regla que toca el mismo evento (ej. una
+  // 'indefinido' y una 'periodo' que se solapan): acá se persiste una sola
+  // vez por evento, ya con el `miEstado` FINAL (el de la regla más
+  // específica, que es la que gana según el orden de arriba).
+  var tocados = {};
   reglas.forEach(function(r) {
     futuros.forEach(function(ev) {
-      if (tipoAplica(r, ev) && matchFecha(r, ev)) ev.miEstado = r.estado;
+      if (tipoAplica(r, ev) && matchFecha(r, ev)) { ev.miEstado = r.estado; tocados[ev.id] = true; }
+    });
+  });
+
+  // Materializa en el backend el RSVP que la regla acaba de resolver --
+  // silencioso (sin toast, sin bloquear el render del timeline) y solo si
+  // esta persona NO tiene todavía un RSVP real para este evento (`ev.rsvps`,
+  // ya cargado con el evento -- ver _evMapEventoBackend()): si ya respondió
+  // manualmente (aunque sea con un estado distinto al de la regla), esa
+  // respuesta real NO se pisa. Mismo par acción/campos que usa el marcado
+  // manual (`_evMarcarAsistencia()`, más abajo en este archivo) --
+  // `marcarAsistenciaUsuario` (Edge Function) + `nombre`/`idEvento`/`estado`,
+  // y el mismo shape `{nombre, estado, origen:'Usuario'}` para inyectar en
+  // `ev.rsvps` tras confirmar. Corre para cuentas ya con reglas configuradas
+  // de antes de este fix también -- la próxima carga del timeline post-
+  // deploy materializa solas las que estaban pendientes, sin script aparte.
+  futuros.forEach(function(ev) {
+    if (!tocados[ev.id]) return;
+    var yaGuardado = (ev.rsvps || []).some(function(r) { return _evNombresCoinciden(r.nombre, E.nombre); });
+    if (yaGuardado) return;
+    var estadoAplicado = ev.miEstado;
+    apiPost({ action: 'marcarAsistenciaUsuario', token: _token, nombre: E.nombre, idEvento: ev.id, estado: estadoAplicado }, function() {
+      if (!ev.rsvps) ev.rsvps = [];
+      ev.rsvps.push({ nombre: E.nombre, estado: estadoAplicado, origen: 'Usuario' });
+    }, function(e) {
+      if (window.console) console.warn('reglas_asistencia (auto-persist): ' + (e && e.message || 'error'));
     });
   });
 }
