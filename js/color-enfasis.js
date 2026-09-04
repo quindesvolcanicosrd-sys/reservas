@@ -287,6 +287,20 @@ function _ceAplicarPaleta() {
   var metaDark = document.querySelector('meta[name="theme-color"][media*="dark"]');
   if (metaLight) metaLight.setAttribute('content', '#FFFFFF');
   if (metaDark) metaDark.setAttribute('content', '#0D0D0D');
+
+  // Android, PWA instalada: ignora los 2 meta[theme-color] de arriba (con
+  // media query) -- solo respeta un meta SIN atributo media, que manifest.json
+  // tampoco puede cubrir (theme_color ahí es un string estático, sin
+  // prefers-color-scheme). Se crea una sola vez si no existe (persiste entre
+  // corridas de esta función, incluida la del listener de más abajo ante un
+  // cambio de tema del sistema en runtime) y se actualiza siempre acá mismo.
+  var metaSinMedia = document.querySelector('meta[name="theme-color"]:not([media])');
+  if (!metaSinMedia) {
+    metaSinMedia = document.createElement('meta');
+    metaSinMedia.setAttribute('name', 'theme-color');
+    document.head.appendChild(metaSinMedia);
+  }
+  metaSinMedia.setAttribute('content', oscuro ? '#0D0D0D' : '#FFFFFF');
 }
 
 if (window.matchMedia) {
