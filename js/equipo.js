@@ -1180,10 +1180,11 @@ function _eqInicializarCierrePanelesPorScroll() {
     var cfg = _EQ_PANELES[_eqPanelAbierto];
     var panel = cfg && document.getElementById(cfg.el);
     if (!panel) return;
+    _eqListaDragAlturaOriginal = panel.getBoundingClientRect().height;
+    panel.style.height = _eqListaDragAlturaOriginal + 'px';
     panel.classList.remove('eq-panel-auto'); // no se arrastra un height `auto` -- necesita un px real de partida
     _eqListaDragY = e.touches[0].clientY;
     _eqListaDragActivo = true;
-    _eqListaDragAlturaOriginal = panel.getBoundingClientRect().height;
   }, { passive: true });
   cont.addEventListener('touchmove', function(e) {
     if (!_eqListaDragActivo || _eqPanelAbierto !== 'stats') return;

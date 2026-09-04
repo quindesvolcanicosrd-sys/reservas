@@ -1319,6 +1319,7 @@ function _evInicializarCierreCalendarioPorScroll() {
       var k;
       if (dy >= 0) {
         panel.style.transition = '';
+        panel.style.overflow = '';
         panel.style.height = _evTimelineDragAlturaOriginal + 'px';
         for (k = 0; k < hijos.length; k++) hijos[k].style.transform = 'translateY(0) translateZ(0)';
         return;
@@ -1329,10 +1330,10 @@ function _evInicializarCierreCalendarioPorScroll() {
       // `translateZ(0)` sumado (mismo motivo que `_evAnimarPanel()`, más
       // arriba) -- un `style.transform` inline pisa el permanente de reposo.
       panel.style.transition = 'none';
+      panel.style.overflow = 'hidden';
       var nuevaAltura = Math.max(0, _evTimelineDragAlturaOriginal + dy);
       panel.style.height = nuevaAltura + 'px';
-      var pct = _evTimelineDragAlturaOriginal > 0 ? (1 - nuevaAltura / _evTimelineDragAlturaOriginal) : 0;
-      for (k = 0; k < hijos.length; k++) hijos[k].style.transform = 'translateY(-' + (pct * 100) + '%) translateZ(0)';
+      for (k = 0; k < hijos.length; k++) hijos[k].style.transform = 'translateY(' + dy + 'px) translateZ(0)';
     });
   }, { passive: true });
   cont.addEventListener('touchend', function(e) {
@@ -1367,6 +1368,9 @@ function _evInicializarCierreCalendarioPorScroll() {
       panel.style.height = '0px';
       panel.addEventListener('transitionend', function() {
         panel.style.height = '';
+        panel.style.overflow = '';
+        var hc = panel.children;
+        for (var i = 0; i < hc.length; i++) hc[i].style.transform = '';
         _evActualizarNavMesChevron();
       }, { once: true });
     } else {
@@ -1378,6 +1382,7 @@ function _evInicializarCierreCalendarioPorScroll() {
       // (pedido explícito #15, unifica con `_eqAnimarPanel()`/js/equipo.js)
       // -- vuelve a `height:auto` de verdad al terminar, no congelado en el
       // px que medía en este momento puntual del drag.
+      panel.style.overflow = '';
       _evAnimarPanel(panel, panel.style.height, _evTimelineDragAlturaOriginal + 'px', 'translateY(0)', true);
     }
   }, { passive: true });
