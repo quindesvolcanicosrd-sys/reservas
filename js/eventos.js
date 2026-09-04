@@ -4204,8 +4204,17 @@ function _evMarcarAsistencia(id, estado) {
   // siendo el array de la última carga de `getEventosRango()`, de antes de
   // este marcado. Mismo criterio de normalización que ya usa el resto del
   // archivo para cruzar nombres de 2 hojas distintas (`_evNombresCoinciden()`).
+  // Bug real corregido -- "lista de asistentes muestra username en vez de
+  // nombre derby y sin foto": este push optimista no traía `nombreDerby`/
+  // `fotoPerfil` (a diferencia de `_evMarcarAsistenciaAdmin()`, que sí los
+  // busca vía `datosRoster` más abajo en este archivo) -- `_evGrupoAsistenciaHtml()`
+  // cae a `p.nombre` sin ese dato, así que la propia fila de quien acaba de
+  // marcar se veía con username/sin foto hasta el próximo reload completo
+  // (`_evMapEventoBackend()`, que sí los trae del backend). `E.datos` es el
+  // perfil completo de la propia persona logueada, ya en memoria -- mismo
+  // shape que ya expone `getDatosCompletos()`, sin fetch extra.
   ev.rsvps = rsvpsAnterior.filter(function(p) { return !_evNombresCoinciden(p.nombre, E.nombre); })
-    .concat([{ nombre: E.nombre, estado: estado, origen: 'Usuario' }]);
+    .concat([{ nombre: E.nombre, estado: estado, origen: 'Usuario', nombreDerby: (E.datos && E.datos.nombreDerby) || '', fotoPerfil: (E.datos && E.datos.fotoPerfil) || '' }]);
   var actualizarDom = function(est) {
     document.querySelectorAll('.ev-rsvp-seg').forEach(function(seg) {
       if (seg.getAttribute('data-evid') !== id) return;
@@ -6724,7 +6733,10 @@ function _evAntReconciliarConReglas(reglas) {
     var estadoAplicado = ev.miEstado;
     apiPost({ action: 'marcarAsistenciaUsuario', token: _token, nombre: E.nombre, idEvento: ev.id, estado: estadoAplicado }, function() {
       if (!ev.rsvps) ev.rsvps = [];
-      ev.rsvps.push({ nombre: E.nombre, estado: estadoAplicado, origen: 'Usuario' });
+      // Bug real corregido -- "lista de asistentes muestra username en vez
+      // de nombre derby y sin foto" (mismo fix que _evMarcarAsistencia(),
+      // más arriba en este archivo): faltaban acá también.
+      ev.rsvps.push({ nombre: E.nombre, estado: estadoAplicado, origen: 'Usuario', nombreDerby: (E.datos && E.datos.nombreDerby) || '', fotoPerfil: (E.datos && E.datos.fotoPerfil) || '' });
     }, function(e) {
       if (window.console) console.warn('reglas_asistencia (auto-persist): ' + (e && e.message || 'error'));
     });
