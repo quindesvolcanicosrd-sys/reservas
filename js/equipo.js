@@ -2140,20 +2140,13 @@ function _eqRenderMisEstadisticas() {
   // solo el badge se re-renderiza acá, adentro de su propio wrapper
   // `.eq-avatar-badge-wrap` (index.html) ya `position:relative`.
   if (toggleTendencia) toggleTendencia.innerHTML = _eqTendenciaBadgeHtml(persona);
-  // Pill de nivel en la nav (rediseño compacto, ver MANIFEST.md/CHANGELOG.md)
-  // -- vive en `#eq-misstats-toggle-pills` (index.html), entre el texto
-  // "Mis estadísticas" y el chevron, SIEMPRE visible (panel abierto o
-  // cerrado), mismo criterio que ya tiene el avatar/chevron de tendencia
-  // de la nav. Re-ajuste (pedido explícito, ver MANIFEST.md/CHANGELOG.md
-  // -- "nombre completo del nivel, no abreviado; sin pill de estado"):
-  // `persona.rol` tal cual ("Quindes"/"Mirlxs", ya NO abreviado a "Q"/"M"
-  // -- `_EQ_NIVEL_ABREV` sin más consumidores, sacada) -- el pill de
-  // estado (`.dat-estado-chip`, "Activo"/"Inactivo"/"Lesionadx") se sacó
-  // de acá, ya no se muestra en la nav (`estadoTexto`/`estadoClase`
-  // también sin más consumidores en esta función, sacadas).
-  if (togglePills) {
-    togglePills.innerHTML = '<span class="eq-mis-stats-rol-pill">' + _eqEsc(persona.rol) + '</span>';
-  }
+  // Pill de nivel SACADO de la nav (pedido explícito, "se va a mover al
+  // termómetro") -- vivía en `#eq-misstats-toggle-pills` (index.html), ahora
+  // vacío a propósito, sin más consumidores acá. Reemplazado por el pill
+  // dentro de `.eq-rank-labels` (`_eqStatsContenidoHtml()`, más abajo en
+  // este archivo) -- mismo `.eq-mis-stats-rol-pill`, misma persona, solo
+  // cambia dónde vive.
+  if (togglePills) togglePills.innerHTML = '';
   // Contenido de stats -- función compartida con `_eqPerfilContenidoHtml()`
   // (más abajo en este archivo, ver `_eqStatsContenidoHtml()`) -- pedido
   // explícito, ver MANIFEST.md/CHANGELOG.md: "la vista detallada debe usar
@@ -2218,9 +2211,17 @@ function _eqStatsContenidoHtml(p) {
   // `js/perfil.js` para estos mismos campos.
   var necesitaEquipoClub = p.necesitaPatines === 'Sí' ||
     (!!p.necesitaProtecciones && p.necesitaProtecciones.toLowerCase() !== 'no');
+  // Pill de tier DENTRO del termómetro (pedido explícito, "acá estás vos")
+  // -- reemplaza el texto plano del lado que coincide con `p.rol`, mismo
+  // `.eq-mis-stats-rol-pill` (var(--brand), ya destacado) que antes vivía
+  // en la nav (`.eq-misstats-toggle-pills`, sacado de ahí -- ver
+  // `_eqRenderMisEstadisticas()` más abajo). El lado opuesto sigue texto
+  // plano, sin cambios.
+  var labelMirlxs = p.rol === 'Quindes' ? '<span>Mirlxs</span>' : '<span class="eq-mis-stats-rol-pill">Mirlxs</span>';
+  var labelQuindes = p.rol === 'Quindes' ? '<span class="eq-mis-stats-rol-pill">Quindes</span>' : '<span>Quindes</span>';
   var rankHtml = necesitaEquipoClub ? '' :
     '<div class="eq-rank-wrap">' +
-      '<div class="eq-rank-labels"><span>Mirlxs</span><span>Quindes</span></div>' +
+      '<div class="eq-rank-labels">' + labelMirlxs + labelQuindes + '</div>' +
       '<div class="eq-rank-track"><div class="eq-rank-fill" style="width:' + (p.termometro_pct || 0) + '%;"></div></div>' +
       '<div class="eq-rank-texto">' + _eqEsc(_eqRankTexto(p)) + '</div>' +
     '</div>';
@@ -2228,7 +2229,16 @@ function _eqStatsContenidoHtml(p) {
   var rachaBadgeHtml = rachaPuntos > 0
     ? '<span class="eq-stat-combo-racha-badge" onclick="event.stopPropagation();' + _eqDesgloseOnclick(p.username, 'racha', 'Puntos por racha') + '"><span class="material-symbols-rounded">local_fire_department</span>+' + rachaPuntos + '</span>'
     : '';
-  return '<div class="eq-stats-grid">' +
+  // Divisor "Datos anuales" (pedido explícito) -- mismo estilo/clases
+  // exactas que el separador "Puntos" de más abajo (`.eq-mis-stats-puntos-row`/
+  // `.eq-grupo-linea`/`.eq-grupo-nombre`), sin el pill de total (acá no hay
+  // un valor único que resumir, son 2 cards distintas debajo).
+  return '<div class="eq-mis-stats-puntos-row">' +
+      '<span class="eq-grupo-linea"></span>' +
+      '<span class="eq-grupo-nombre">Datos anuales</span>' +
+      '<span class="eq-grupo-linea"></span>' +
+    '</div>' +
+    '<div class="eq-stats-grid">' +
       '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">roller_skating</span><div class="eq-stat-valor">' + statsCalc.horas + 'h</div><div class="eq-stat-label">Horas patinadas</div></div>' +
       '<div class="eq-stat-card"><span class="eq-stat-icon material-symbols-rounded">kid_star</span><div class="eq-stat-valor">' + statsCalc.asistenciaPct + '%</div><div class="eq-stat-label">Asistencia anual</div></div>' +
     '</div>' +
