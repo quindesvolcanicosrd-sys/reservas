@@ -151,8 +151,16 @@ body.aj-sub-salud-activo #app-toast {
 
 /* ── Dark mode ───────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
-  .loading-card { border-color: var(--dk-skeleton-base); }
-  .loading-card p { color: var(--dk-text-muted); }
+  /* .loading-card/.loading-card p (skeleton de carga) deshabilitadas
+     acá -- pedido explícito, "dark mode deshabilitado, los skeletons
+     seguían apareciendo oscuros": este bloque quedó fuera del fix de
+     colors.css (ese solo neutralizó SU PROPIO @media dark, este es un
+     bloque aparte en otro archivo) -- el sistema real todavía puede
+     estar en dark mode (el <meta name="color-scheme"> no cambia lo que
+     @media (prefers-color-scheme:dark) evalúa, solo el theming de
+     controles nativos), así que este @media seguía aplicando de verdad.
+     .loading-card { border-color: var(--dk-skeleton-base); }
+     .loading-card p { color: var(--dk-text-muted); } */
   .app-toast.app-toast-error { background: var(--dk-error-bg); border-color: var(--dk-error-border); color: var(--dk-error-text); }
 }
 
