@@ -378,7 +378,20 @@
    visible en la práctica. --bg/--text/--muted/--border-light/--card-bg y la
    familia de estados YA NO son "(runtime)" — literales fijos, igual que en
    el :root claro de arriba, ninguno tocado por ese script. */
-@media (prefers-color-scheme: dark) {
+/* Dark mode deshabilitado TEMPORALMENTE (pedido explícito, "la app siempre
+   se muestra en light mode independientemente del modo del sistema", ver
+   MANIFEST.md) -- condición de la media query modificada a un ancho de
+   pantalla imposible (and (min-width: 99999px)) para que este bloque NUNCA
+   aplique, en vez de comentar/borrar el contenido: tiene decenas de
+   comentarios propios anidados adentro que romperían un comentario simple
+   envolviendo todo el bloque (el primer cierre interno terminaría el
+   comentario de afuera antes de tiempo, dejando el resto como CSS activo
+   roto). Para reactivar dark mode: sacar el " and (min-width: 99999px)" de
+   la condición de abajo -- nada más cambió, todo el contenido sigue
+   intacto. `<meta name="color-scheme" content="light">` (index.html) ya
+   cubre esto mismo a nivel de página/navegador -- este bloque queda
+   inerte por partida doble, no es la única barrera. */
+@media (prefers-color-scheme: dark) and (min-width: 99999px) {
   :root {
     /* Fondo */
     --bg:             #0D0D0D;

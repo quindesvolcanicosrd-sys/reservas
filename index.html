@@ -18,26 +18,8 @@
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<meta name="theme-color" content="#FFFFFF" id="tc-meta">
-<script>
-(function(){
-  var m = document.getElementById('tc-meta');
-  var mq = window.matchMedia('(prefers-color-scheme: dark)');
-  function upd(dark){ m.content = dark ? '#0D0D0D' : '#FFFFFF'; }
-  upd(mq.matches);
-  mq.addEventListener('change', function(e){ upd(e.matches); });
-})();
-</script>
-<div id="debug-tc" style="position:fixed;top:40px;left:0;right:0;z-index:99999;background:rgba(0,0,0,0.8);color:white;font-size:12px;padding:8px;text-align:center;font-family:monospace"></div>
-<script>
-(function(){
-  var d = document.getElementById('debug-tc');
-  var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  var meta = document.getElementById('tc-meta');
-  d.textContent = 'dark:' + dark + ' | meta:' + (meta ? meta.content : 'NO META');
-  setTimeout(function(){ d.remove(); }, 30000);
-})();
-</script>
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#FFFFFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -46,7 +28,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/colors.css?v=81bfc4ee">
+<link rel="stylesheet" href="css/colors.css?v=89b34d63">
 <!-- Motor de color de énfasis (Tanda 1/2, ver MANIFEST.md) — recalcula en
      runtime las variables de colors.css derivadas de la marca. Va apenas
      después del <link> de colors.css para pisar el fallback estático antes
