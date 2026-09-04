@@ -936,7 +936,17 @@ function _eqSincronizarClasePanelAbierto() {
 // saca sola en `transitionend` (`{once:true}`, sin acumular listeners),
 // nunca queda permanente (costo de memoria de GPU si will-change quedara
 // siempre activo sin necesidad real).
-function _eqAnimarPanel(panel, alturaPx, translateY) {
+// `volverseAuto` (pedido explícito, "panel invisible al abrir" -- fix más
+// robusto que el rAF anterior): al TERMINAR de abrir, pasa a `height:auto`
+// real (clase `.eq-panel-auto`, css/equipo.css) en vez de quedarse
+// congelado en el valor en px que se midió -- `auto` se recalcula SOLO
+// cuando hace falta (ej. si el ancestro estaba `display:none` en el
+// momento de la transición, o si el contenido cambia de tamaño después),
+// nunca depende de una medición vieja. `panel.style.height = ''` limpia el
+// inline ANTES de agregar la clase -- un inline pisa cualquier `height` de
+// clase, `auto` incluido. Nunca se usa al CERRAR (`volverseAuto` false/
+// omitido) -- 0 sigue siendo un valor real, no auto.
+function _eqAnimarPanel(panel, alturaPx, translateY, volverseAuto) {
   if (!panel) return;
   panel.classList.add('eq-panel-wrapper-anim');
   panel.style.height = alturaPx;
@@ -954,9 +964,20 @@ function _eqAnimarPanel(panel, alturaPx, translateY) {
   panel.addEventListener('transitionend', function limpiar() {
     panel.classList.remove('eq-panel-wrapper-anim');
     for (var j = 0; j < hijos.length; j++) hijos[j].classList.remove('eq-panel-inner-anim');
+    if (volverseAuto) { panel.style.height = ''; panel.classList.add('eq-panel-auto'); }
   }, { once: true });
 }
-function _eqAbrirPanel(tag) {
+// `instantAuto` (pedido explícito, "estado inicial expandido" más robusto
+// que el doble rAF anterior): en vez de medir `scrollHeight` (puede dar 0
+// si `#s-equipo` sigue `display:none` en ese instante -- el bug real
+// reportado) y animar hasta ese valor, salta DIRECTO a `height:auto` (clase
+// `eq-panel-auto`) sin transición ni medición -- `auto` no depende de que
+// el ancestro ya sea visible, se recalcula solo cuando el layout real
+// corra. Uso: SOLO el auto-open inicial de "Mis estadísticas"
+// (`_eqRenderMisEstadisticas()`, más abajo); el toggle manual del chevron
+// sigue el camino animado de siempre (mide `scrollHeight`, transiciona,
+// recién después pasa a `auto` -- ver `_eqAnimarPanel()`, arriba).
+function _eqAbrirPanel(tag, instantAuto) {
   var cfg = _EQ_PANELES[tag];
   var panel = document.getElementById(cfg.el);
   var btn = document.getElementById(cfg.btn);
@@ -964,7 +985,20 @@ function _eqAbrirPanel(tag) {
   _eqPanelAbierto = tag;
   _eqSincronizarClasePanelAbierto();
   panel.classList.add('abierta');
-  _eqAnimarPanel(panel, panel.scrollHeight + 'px', 'translateY(0)');
+  var hijos = panel.children;
+  var i;
+  if (instantAuto) {
+    panel.style.transition = 'none';
+    for (i = 0; i < hijos.length; i++) hijos[i].style.transition = 'none';
+    panel.style.height = '';
+    panel.classList.add('eq-panel-auto');
+    for (i = 0; i < hijos.length; i++) hijos[i].style.transform = 'translateY(0) translateZ(0)';
+    void panel.offsetHeight; // fuerza reflow síncrono antes de restaurar la transición
+    panel.style.transition = '';
+    for (i = 0; i < hijos.length; i++) hijos[i].style.transition = '';
+  } else {
+    _eqAnimarPanel(panel, panel.scrollHeight + 'px', 'translateY(0)', true);
+  }
   btn.classList.add('activo');
   if (tag === 'busqueda') {
     setTimeout(function() { var inp = document.getElementById('eq-search-input'); if (inp) inp.focus(); }, 50);
@@ -973,11 +1007,18 @@ function _eqAbrirPanel(tag) {
   // "Headers sticky apilados" -- css/equipo.css) -- los headers de sección
   // que ya estén stuck en ese momento necesitan correrse hacia abajo para no
   // quedar tapados. `setTimeout(300)` espera a que termine la transición de
-  // `max-height` (0.28s, `.eq-header-panel`) para medir el alto FINAL, no el
-  // de a mitad de camino.
-  setTimeout(_eqActualizarStickyHeaders, 300);
+  // `height` (0.35s, `.eq-header-panel`) para medir el alto FINAL, no el de
+  // a mitad de camino -- `instantAuto` no tiene transición que esperar.
+  setTimeout(_eqActualizarStickyHeaders, instantAuto ? 0 : 300);
 }
-function _eqCerrarPanel(tag) {
+// `instant` (pedido explícito, "el cierre por scroll siempre debe ser
+// instantáneo, sin transición -- la suave queda solo para el toggle manual
+// del chevron"): `transition:none` real (en el wrapper Y en los hijos,
+// forzando reflow síncrono en el medio) en vez del camino animado de
+// siempre -- `_eqInicializarColapsoStatsPorScroll()` (más abajo en este
+// archivo) pasa `true` acá; `_eqTogglePanel()` (toque manual) no manda
+// nada, sigue el camino animado sin cambios.
+function _eqCerrarPanel(tag, instant) {
   var cfg = _EQ_PANELES[tag];
   var panel = document.getElementById(cfg.el);
   var btn = document.getElementById(cfg.btn);
@@ -1002,23 +1043,42 @@ function _eqCerrarPanel(tag) {
   // los headers reaparecen (fade-in) ya están en su lugar correcto, sin
   // ningún frame intermedio con la posición vieja.
   if (panel) {
-    // Freeze del punto de partida real -- sin `_eqAnimarPanel()` acá a
-    // propósito (mismo motivo de siempre: puede ser el mismo valor que ya
-    // tenía, sin transición real que reproducir, así que tampoco necesita
-    // will-change todavía).
-    panel.style.height = panel.scrollHeight + 'px';
-    requestAnimationFrame(function() {
+    // `eq-panel-auto` sacada ANTES de tocar `height` -- no se puede animar
+    // (ni siquiera saltar instantáneo con un valor con sentido) DESDE
+    // `auto`; `scrollHeight` sigue midiendo bien el alto real esté el panel
+    // en `auto` o en un px explícito, así que el freeze de abajo funciona
+    // igual en los 2 casos.
+    panel.classList.remove('eq-panel-auto');
+    var hijos = panel.children;
+    var k;
+    if (instant) {
+      panel.style.transition = 'none';
+      for (k = 0; k < hijos.length; k++) hijos[k].style.transition = 'none';
+      panel.classList.remove('abierta');
+      panel.style.height = '0px';
+      for (k = 0; k < hijos.length; k++) hijos[k].style.transform = 'translateY(-100%) translateZ(0)';
+      void panel.offsetHeight; // fuerza reflow síncrono antes de restaurar la transición
+      panel.style.transition = '';
+      for (k = 0; k < hijos.length; k++) hijos[k].style.transition = '';
+    } else {
+      // Freeze del punto de partida real -- sin `_eqAnimarPanel()` acá a
+      // propósito (mismo motivo de siempre: puede ser el mismo valor que ya
+      // tenía, sin transición real que reproducir, así que tampoco necesita
+      // will-change todavía).
+      panel.style.height = panel.scrollHeight + 'px';
       requestAnimationFrame(function() {
-        panel.classList.remove('abierta');
-        _eqAnimarPanel(panel, '0px', 'translateY(-100%)');
+        requestAnimationFrame(function() {
+          panel.classList.remove('abierta');
+          _eqAnimarPanel(panel, '0px', 'translateY(-100%)');
+        });
       });
-    });
+    }
   }
   if (btn) btn.classList.remove('activo');
   setTimeout(function() {
     _eqActualizarStickyHeaders();
     _eqSincronizarClasePanelAbierto();
-  }, 300);
+  }, instant ? 0 : 300);
 }
 
 /* ── Colapso progresivo de "Mis estadísticas" al scrollear (ver MANIFEST.md
@@ -1089,6 +1149,7 @@ function _eqInicializarCierrePanelesPorScroll() {
     var cfg = _EQ_PANELES[_eqPanelAbierto];
     var panel = cfg && document.getElementById(cfg.el);
     if (!panel) return;
+    panel.classList.remove('eq-panel-auto'); // no se arrastra un height `auto` -- necesita un px real de partida
     _eqListaDragY = e.touches[0].clientY;
     _eqListaDragActivo = true;
     _eqListaDragAlturaOriginal = panel.getBoundingClientRect().height;
@@ -1152,7 +1213,11 @@ function _eqInicializarCierrePanelesPorScroll() {
       });
       if (btn) btn.classList.remove('activo');
     } else {
-      _eqAnimarPanel(panel, _eqListaDragAlturaOriginal + 'px', 'translateY(0)');
+      // `volverseAuto:true` -- el drag no llegó al umbral, el panel vuelve a
+      // abierto de verdad (no solo visualmente): mismo motivo que el toggle
+      // manual, queda flexible en `auto` en vez de congelado en el px que
+      // medía la nav en ESTE momento puntual.
+      _eqAnimarPanel(panel, _eqListaDragAlturaOriginal + 'px', 'translateY(0)', true);
     }
     setTimeout(function() {
       _eqActualizarStickyHeaders();
@@ -1168,9 +1233,14 @@ _eqInicializarCierrePanelesPorScroll();
    arrastre) -- nunca dispara con scroll de mouse/trackpad/rueda ni con
    scroll inercial después de soltar el dedo (`touchend` ya pasó,
    `_eqListaDragActivo` vuelve a `false`), porque nunca hubo un `touchstart`
-   que lo arranque. Esto cubre esos casos con un umbral fijo (60px) en vez
-   de seguir el gesto -- corta de una sola vez, con la MISMA transición de
-   0.28s de siempre (`_eqCerrarPanel()`, sin re-implementar la animación).
+   que lo arranque. Esto cubre esos casos con un umbral fijo (80px) en vez
+   de seguir el gesto -- corta de una sola vez. Pulido posterior (pedido
+   explícito, "no se ve bien en Android Chrome, que el cierre por scroll
+   sea instantáneo, sin transición -- la suave queda solo para el toggle
+   manual del chevron"): `_eqCerrarPanel('stats', true)` -- `instant:true`
+   salta directo a colapsado con `transition:none` real, sin la animación
+   de 350ms que sigue usando el toggle manual (`_eqTogglePanel()`, sin ese
+   2do argumento).
    El pedido original decía "contenedor interno de la sección, no window,
    para no interferir con otras secciones" -- pero esta app no tiene
    contenedor propio con scroll: cada `.pantalla` scrollea a nivel
@@ -1200,7 +1270,7 @@ function _eqInicializarColapsoStatsPorScroll() {
       if (_eqPanelAbierto !== 'stats' || _eqListaDragActivo) return;
       var s = document.getElementById('s-equipo');
       if (!s || !s.classList.contains('activa')) return;
-      if (window.scrollY > UMBRAL_PX) _eqCerrarPanel('stats');
+      if (window.scrollY > UMBRAL_PX) _eqCerrarPanel('stats', true);
     });
   }, { passive: true });
 }
@@ -2202,25 +2272,23 @@ function _eqRenderMisEstadisticas() {
   // archivo -- forzar el estado acá en CADA corrida pisaría un toggle
   // manual de la persona a mitad de sesión). `_eqStatsColapsadoGuardado()`
   // default `false` (expandido) si `pivot_stats_collapsed` nunca se guardó.
-  // Bug real corregido -- "chevron dice expandido, contenido no se ve":
-  // esta función puede correr con `#s-equipo` todavía `display:none` (ej.
-  // re-render disparado por un fetch en segundo plano mientras otra
-  // pestaña está activa) -- `panel.scrollHeight` con un ancestro oculto da
-  // `0`, así que `_eqAbrirPanel('stats')` fijaba `height:0px` (contenido
-  // invisible) mientras el chevron SÍ quedaba rotado a "expandido"
-  // (`.activo`, misma llamada) -- desincronizado, no por escribirlos en
-  // funciones separadas (ya se escriben juntos, en la misma
-  // `_eqAbrirPanel()`), sino porque la MEDICIÓN de esa llamada podía ser
-  // 0 por un layout todavía no asentado/pantalla todavía no visible.
-  // Doble `requestAnimationFrame` (mismo patrón ya usado en este archivo
-  // para "medir recién cuando el layout ya asentó", ver `_eqCerrarPanel()`)
-  // difiere la llamada real -- `_eqAbrirPanel()` mide `scrollHeight` DE
-  // NUEVO en ese momento posterior, nunca reusa un valor viejo.
+  // Bug real corregido -- "chevron dice expandido, contenido no se ve",
+  // 2da vuelta (fix más robusto, el doble rAF de la ronda anterior no
+  // alcanzaba): esta función puede correr con `#s-equipo` todavía
+  // `display:none` (ej. re-render disparado por un fetch en segundo plano
+  // mientras otra pestaña está activa) -- `panel.scrollHeight` con un
+  // ancestro oculto da `0` SIN IMPORTAR cuánto se difiera la medición con
+  // rAF, porque el problema no es timing de layout sino que el ancestro
+  // sigue oculto en el momento en que se mide. Fix real: `_eqAbrirPanel('stats',
+  // true)` -- `instantAuto:true` salta DIRECTO a `height:auto` (clase
+  // `eq-panel-auto`, css/equipo.css) sin medir nada -- `auto` se recalcula
+  // solo cuando el layout real corra (cuando `#s-equipo` se vuelva visible
+  // de verdad), nunca depende de una medición congelada mientras estaba
+  // oculto. Sin transición (mismo `instantAuto`) -- es el estado de
+  // ARRANQUE, no una animación disparada por una acción real.
   if (!_eqStatsPanelInicializado) {
     _eqStatsPanelInicializado = true;
-    if (!_eqStatsColapsadoGuardado()) {
-      requestAnimationFrame(function() { requestAnimationFrame(function() { _eqAbrirPanel('stats'); }); });
-    }
+    if (!_eqStatsColapsadoGuardado()) _eqAbrirPanel('stats', true);
   }
 }
 var _eqStatsPanelInicializado = false;

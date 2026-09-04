@@ -292,6 +292,14 @@
 .eq-header-panel { height: 0; overflow: hidden; background: var(--bg); transition: height 350ms cubic-bezier(0.25,0.46,0.45,0.94); transform: translateZ(0); }
 .eq-header-panel.abierta { margin-bottom: 18px; }
 .eq-header-panel.eq-panel-wrapper-anim { will-change: height; }
+/* Estado "expandido de verdad" (pedido explícito, fix más robusto que medir
+   `scrollHeight` al inicializar -- ver `_eqAbrirPanel()`/js/equipo.js):
+   `height:auto` se recalcula solo en cada layout real, nunca depende de
+   una medición congelada en un momento en que el ancestro (`#s-equipo`)
+   podía seguir `display:none`. `overflow:visible` -- ya no hay nada que
+   recortar con el panel en su alto natural; vuelve a `hidden` (regla base)
+   apenas se saca esta clase para animar un cierre real. */
+.eq-header-panel.eq-panel-auto { height: auto; overflow: visible; }
 .eq-misstats-panel-inner, .eq-busqueda-panel-inner { transition: transform 350ms cubic-bezier(0.25,0.46,0.45,0.94); transform: translateZ(0); }
 .eq-misstats-panel-inner.eq-panel-inner-anim, .eq-busqueda-panel-inner.eq-panel-inner-anim { will-change: transform; }
 .eq-busqueda-panel-inner {
