@@ -32,6 +32,19 @@
   right: 0;
   z-index: 900;
   transition: all 0.3s ease;
+  /* Bug real corregido -- "línea blanca arriba" (pedido explícito): a
+     diferencia de `.app-nav-sticky` (flujo normal de documento, ya
+     compensada por el `padding-top:env(safe-area-inset-top)` de `body`,
+     css/global.css), esta variante es `position:fixed` -- ignora por
+     completo el padding de `body`, así que quedaba pegada al borde real
+     del viewport sin nada que la corra por debajo de la barra de estado
+     (`black-translucent`, index.html). Pisa el `padding:37px 16px` de
+     `.app-nav` (mismo elemento, misma especificidad -- gana por venir
+     después en la cascada) solo en el lado `top`, sumando el safe-area al
+     valor fijo de siempre en vez de reemplazarlo. El spacer que compensa
+     esta nav en el flujo (`_initHomeNav()`/js/ui.js) mide `offsetHeight`
+     en vivo -- se adapta solo al alto nuevo, sin tocar JS. */
+  padding-top: calc(37px + env(safe-area-inset-top, 0px));
 }
 
 /* ── Nav sticky (pantallas internas) ─────────── */

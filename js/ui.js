@@ -610,13 +610,20 @@ var APP_BOTTOM_NAV_ITEMS = [
       if (typeof _evTourCerrar === 'function') _evTourCerrar(false);
     },
     visible: function() { return true; } },
-  { id: 'ajustes', icono: 'settings', texto: 'Mi perfil', pantalla: 's-datos',
-    entrar: function() { irEditarDatos(); },
-    // `alSalir` (ver "Cambios recientes") -- guarda el scroll del HOME de
-    // Ajustes (`#s-datos`) al abandonar la sección, distinto de
-    // `_ajUltimoSubAbierto`/js/perfil.js (que guarda qué SUB-sección estaba
-    // abierta, no el scroll del home en sí).
-    alSalir: function() { if (typeof _ajGuardarScrollHome === 'function') _ajGuardarScrollHome(); },
+  // Orden de tabs (pedido explícito, re-ajuste): Eventos/Equipo/Tareas/Mi
+  // perfil/Mi Liga -- antes Eventos/Mi perfil/Tareas/Equipo/Mi Liga. Sin
+  // cambios de ícono/label/id/pantalla en ninguno, solo la posición en este
+  // array (el orden acá ES el orden visual real -- `_actualizarBottomNav()`,
+  // más abajo en este archivo, itera este mismo array tal cual).
+  // 'equipo' -- Cambio 42 (ver MANIFEST.md "Cambios recientes" -- sección
+  // Equipo, greenfield): roster del club (lista + favoritos + perfil de
+  // detalle). Mismo criterio que 'eventos'/'tareas': visible para todo tipo
+  // de cuenta, con `entrar` propio porque #s-equipo necesita poblarse por
+  // JS (favoritos/grupos) antes de mostrarse -- `irEquipo()`/js/equipo.js
+  // solo corre `_eqInit()` la primera vez (`_eqYaInicializado`), mismo
+  // patrón que `_evYaInicializadoEnSesion` de Eventos.
+  { id: 'equipo', icono: 'groups', texto: 'Equipo', pantalla: 's-equipo',
+    entrar: function() { irEquipo(); },
     visible: function() { return true; } },
   // 'tareas' -- sección Tareas (backend Apps Script ya desplegado): tablero
   // de tareas con cupos + "Mis tareas" + wizard de creación/validación
@@ -627,15 +634,13 @@ var APP_BOTTOM_NAV_ITEMS = [
   { id: 'tareas', icono: 'task_alt', texto: 'Tareas', pantalla: 's-tareas',
     entrar: function() { irTareas(); },
     visible: function() { return true; } },
-  // 'equipo' -- Cambio 42 (ver MANIFEST.md "Cambios recientes" -- sección
-  // Equipo, greenfield): roster del club (lista + favoritos + perfil de
-  // detalle). Mismo criterio que 'eventos'/'tareas': visible para todo tipo
-  // de cuenta, con `entrar` propio porque #s-equipo necesita poblarse por
-  // JS (favoritos/grupos) antes de mostrarse -- `irEquipo()`/js/equipo.js
-  // solo corre `_eqInit()` la primera vez (`_eqYaInicializado`), mismo
-  // patrón que `_evYaInicializadoEnSesion` de Eventos.
-  { id: 'equipo', icono: 'groups', texto: 'Equipo', pantalla: 's-equipo',
-    entrar: function() { irEquipo(); },
+  { id: 'ajustes', icono: 'settings', texto: 'Mi perfil', pantalla: 's-datos',
+    entrar: function() { irEditarDatos(); },
+    // `alSalir` (ver "Cambios recientes") -- guarda el scroll del HOME de
+    // Ajustes (`#s-datos`) al abandonar la sección, distinto de
+    // `_ajUltimoSubAbierto`/js/perfil.js (que guarda qué SUB-sección estaba
+    // abierta, no el scroll del home en sí).
+    alSalir: function() { if (typeof _ajGuardarScrollHome === 'function') _ajGuardarScrollHome(); },
     visible: function() { return true; } },
   // 'miliga' -- panel administrativo (banners condicionales + Qué llevar/
   // Reservas/Equipamiento/Notificación + Color/Precios + Administradorxs),
@@ -923,9 +928,41 @@ function _actualizarBottomNav(id) {
   });
   nav.innerHTML = html;
   nav.style.display = 'flex';
+  // Bug real corregido -- "flash de foto en nav inferior" (pedido
+  // explícito): `_actualizarBottomNav()` corre en CADA navegación (`ir()`
+  // la llama siempre, más abajo en este archivo) y reconstruye `nav.innerHTML`
+  // completo -- el `<div class="app-bottom-nav-avatar">` se destruye y se
+  // crea de cero en cada cambio de tab, así que el de-dupe propio de
+  // `_avatarSetFotoOInicial()` (`el.dataset.avatarClave`, vive en el
+  // ELEMENTO, no sobrevive a que ese elemento se recree) nunca llega a
+  // activarse -- vuelve a mostrar el skeleton + precargar la imagen de
+  // cero en cada tab, aunque ya se hubiera resuelto segundos antes.
+  // `_bottomNavAvatarCache` (variable de módulo, sobrevive entre renders)
+  // guarda el HTML YA resuelto (el `<img>` real, tal cual queda tras
+  // `_avatarSetFotoOInicial()`) la primera vez -- si la foto/nombre no
+  // cambiaron, se reinyecta directo, sin skeleton ni precarga de nuevo.
   var avatarNav = nav.querySelector('.app-bottom-nav-avatar');
-  if (avatarNav) _avatarSetFotoOInicial(avatarNav, avatarNav.getAttribute('data-foto'), avatarNav.getAttribute('data-nombre'));
+  if (avatarNav) {
+    var claveAvatar = avatarNav.getAttribute('data-foto') + '|' + avatarNav.getAttribute('data-nombre');
+    if (_bottomNavAvatarCache && _bottomNavAvatarCache.clave === claveAvatar) {
+      avatarNav.innerHTML = _bottomNavAvatarCache.html;
+    } else {
+      _avatarSetFotoOInicial(avatarNav, avatarNav.getAttribute('data-foto'), avatarNav.getAttribute('data-nombre'));
+      // La carga real es async (precarga con Image() adentro del helper) --
+      // se observa el propio nodo para capturar el HTML recién cuando
+      // termina de resolverse (deja de ser el skeleton), no antes.
+      (function(elAvatar, clave) {
+        var obs = new MutationObserver(function() {
+          if (elAvatar.querySelector('.avatar-pill-skel')) return;
+          _bottomNavAvatarCache = { clave: clave, html: elAvatar.innerHTML };
+          obs.disconnect();
+        });
+        obs.observe(elAvatar, { childList: true });
+      })(avatarNav, claveAvatar);
+    }
+  }
 }
+var _bottomNavAvatarCache = null;
 
 // Bug real corregido (ver MANIFEST.md "Cambios recientes" -- scroll perdido
 // al volver de "Tomar asistencia" con el gesto/botón NATIVO de atrás, nunca

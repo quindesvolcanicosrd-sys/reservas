@@ -475,7 +475,23 @@ function _eqAnimarCambioFavorito(id, fav) {
 // vez, con o sin este reorden.
 function irEquipo() {
   volver('s-equipo');
+  // Bug real corregido -- "el tour no vuelve a intentar mostrarse al
+  // renavegar a la sección" (pedido explícito): a diferencia de Eventos
+  // (`_evActualizarTopBarModo()`, llamada SIN gate en cada `irEventos()`)
+  // y Mi Perfil (`_ajTourIniciarSiCorresponde()`, llamada en cada
+  // `irEditarDatos()` real), acá el chequeo vivía SOLO adentro de
+  // `_eqInit()` -- una función que corre una única vez por sesión
+  // (`_eqYaInicializado`, guard de arriba). Si la primera visita se
+  // abandonaba antes de que el tour llegara a completarse/marcarse visto
+  // (`eq_tour_visto`), volver a Equipo más tarde en la MISMA sesión nunca
+  // volvía a intentarlo -- `_eqInit()` ya no corre de nuevo. El `else`
+  // cubre exactamente esa entrada repetida (el roster ya está en el DOM
+  // de la visita anterior, sin necesitar esperar ningún fetch) -- la
+  // primera visita sigue disparándolo desde adentro de `_eqInit()`
+  // (`_eqAsegurarCargado()`, más abajo), recién cuando el roster real ya
+  // está pintado.
   if (!_eqYaInicializado) _eqInit();
+  else _eqTourIniciarSiCorresponde();
 }
 
 function _eqInit() {
