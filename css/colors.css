@@ -431,28 +431,68 @@
        comentario junto a --surface-2 más arriba en este archivo) — overlay
        blanco translúcido en vez de rojo translúcido sobre el negro casi
        puro. --surface-2 ya no es un hex fijo igual a --card-bg -- pasó a
-       overlay translúcido como el resto de la familia (re-ajuste). */
-    --surface:        rgba(255,255,255,0.06);
-    --surface-2:      rgba(255,255,255,0.04);
-    --surface-3:      rgba(255,255,255,0.025);
+       overlay translúcido como el resto de la familia (re-ajuste).
+       Alphas subidas (pedido explícito #13, "aumentar contraste dark mode"
+       -- audit de accesibilidad): con el valor viejo, `--surface-2`
+       (la superficie de card REAL más usada, 71 usos en css/*.css, muy por
+       encima de `--card-bg`, 8 usos) blendeada sobre `--bg` (#0D0D0D) daba
+       ~9% de luminosidad HSL contra el 5.1% de `--bg` -- ~4 puntos de
+       diferencia, card casi invisible contra el fondo. Con 0.13 queda en
+       ~17.6% (~12.5 puntos de diferencia), dentro del rango pedido
+       (10-15 puntos). `--surface` (nivel "elevado" sobre `--surface-2`,
+       9 usos) y `--surface-3` (2 usos, el más sutil) suben en la misma
+       proporción relativa entre sí. */
+    --surface:        rgba(255,255,255,0.16);
+    --surface-2:      rgba(255,255,255,0.13);
+    --surface-3:      rgba(255,255,255,0.08);
 
-    /* Bordes */
-    --border:         rgba(255,32,32,0.18);
-    --border-2:       rgba(255,32,32,0.1);
+    /* Bordes -- alphas subidas (pedido explícito #13): con el valor viejo,
+       `--border` blendeado sobre `--bg` daba ~1.2:1 de contraste (casi
+       invisible); con 0.30 sube a ~1.7:1 -- un divisor rojo sutil pero
+       perceptible, no un 3:1 pleno (inalcanzable con un tinte rojo tan
+       oscuro sin que deje de verse "sutil" -- llegar ahí requeriría casi
+       opacidad total). El rgb base (255,32,32, el rojo VIEJO de antes del
+       rebrand) queda sin tocar a propósito -- unificarlo con el `--brand`
+       sólido actual (#E8000D) sigue pendiente, ver bullet "Dark mode
+       RE-HABILITADO" más abajo en este archivo, fuera de alcance puntual
+       de este pedido (que pedía subir opacidad/claridad, no el matiz). */
+    --border:         rgba(255,32,32,0.30);
+    --border-2:       rgba(255,32,32,0.18);
 
-    /* Texto */
+    /* Texto -- pedido explícito #13 ("aumentar contraste"), verificado
+       contra el estado real antes de tocar nada: los nombres pedidos
+       (`--text-secondary`/`--text-muted`) no existen tal cual en este
+       archivo -- se mapean a los tokens reales por USO real (grep en
+       css/*.css), no por parecido de nombre. `--text` (#F2F2F2, 17.4:1
+       contra `--bg`) ya cumplía de sobra el rango pedido (blanco o casi
+       blanco) -- sin cambios. `--muted` (137 usos, el texto secundario/
+       subtítulo REAL de casi toda la app) ya estaba en 5.5:1 (AA cumplido)
+       pero pedido explícito lo sube igual, mismo target que `--text-2`
+       (14 usos, tono secundario alternativo, menos usado) -- ambos a
+       #BBBBBB (10.1:1), uno de los 2 valores sugeridos. `--hint` (2 usos
+       reales: `::placeholder`/`.fnac-placeholder`, css/global.css -- este
+       SÍ es el "texto tenue/placeholder" real que describe el pedido, no
+       `--muted`) estaba en #555555, 2.6:1 -- por debajo de AA para texto
+       grande incluso -- bug real de contraste, no detectado hasta este
+       audit. Sube al piso pedido, #888888 (5.5:1), quedando igualado a
+       `--muted` de antes del cambio de arriba. */
     --text:           #F2F2F2;
-    --text-2:         #AAAAAA;
-    --muted:          #888888;
-    --hint:           #555555;
+    --text-2:         #BBBBBB;
+    --muted:          #BBBBBB;
+    --hint:           #888888;
 
     /* Sombras */
     --shadow-sm:      0 4px 12px rgba(0,0,0,0.35);
     --shadow:         0 8px 32px rgba(0,0,0,0.45);
     --shadow-lg:      0 16px 48px rgba(0,0,0,0.55);
 
-    /* Cards */
-    --card-bg:        #1A1A1A;
+    /* Cards -- pedido explícito #13: #1A1A1A daba solo ~5 puntos de
+       luminosidad HSL sobre `--bg` (#0D0D0D) -- casi el mismo tono, sin
+       diferencia real visible (8 usos reales, bastante menos que
+       `--surface-2` de arriba, que es la superficie de card dominante --
+       igualado a su nuevo tono ~17.6% para que ambos caminos de "fondo de
+       card" den el mismo resultado visual). */
+    --card-bg:        #2D2D2D;
     --card-shadow:    0 8px 32px rgba(0,0,0,0.40);
 
     /* Botones -- --btn-secondary-bg NEUTRO a propósito (mismo criterio que
@@ -484,7 +524,15 @@
     --disabled-bg:         rgba(255,255,255,0.06);
     --disabled-bg-2:       rgba(255,255,255,0.05);
     --disabled-border:     rgba(255,255,255,0.08);
-    --border-light:        rgba(255,255,255,0.09);
+    /* Pedido explícito #13, "separadores poco visibles": `--border-light`
+       es el separador genérico REAL más usado de la app (76 usos, muy por
+       encima de `--border`, 34) -- 0.09 blendeado sobre `--bg` daba ~1.2:1
+       de contraste, una línea casi invisible. 0.16 la hace claramente
+       perceptible sin volverla un borde duro. `--disabled-border` (arriba,
+       2 usos) queda igual a propósito -- un estado disabled debe seguir
+       viéndose apagado, esa NO es la "línea de separación" que describe
+       el pedido. */
+    --border-light:        rgba(255,255,255,0.16);
     --btn-secondary-hover-bg: rgba(255,255,255,0.07);
 
     /* Brand warm → tints oscuros */
