@@ -1239,7 +1239,7 @@ function _eqInicializarCierrePanelesPorScroll() {
       // `_eqActualizarStickyHeaders()` corrija sus posiciones (mismo
       // `setTimeout(...,300)` de siempre, al final de este handler).
       panel.classList.remove('abierta');
-      _eqAnimarPanel(panel, panel.style.height, '0px', 'translateY(-100%)');
+      _eqAnimarPanel(panel, panel.style.height, '0px', 'translateY(0)');
       if (btn) btn.classList.remove('activo');
     } else {
       // `volverseAuto:true` -- el drag no llegó al umbral, el panel vuelve a

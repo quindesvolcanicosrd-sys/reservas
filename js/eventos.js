@@ -1305,7 +1305,7 @@ function _evInicializarCierreCalendarioPorScroll() {
     _evTimelineDragActivo = true;
     _evTimelineDragAlturaOriginal = panel.getBoundingClientRect().height;
     _evTimelineStickyHdr = document.getElementById('ev-sticky-header');
-    if (_evTimelineStickyHdr) { _evTimelineStickyHdr.style.transition = 'none'; _evTimelineStickyHdr.style.height = _evTimelineStickyHdr.getBoundingClientRect().height + 'px'; }
+    if (_evTimelineStickyHdr) { _evTimelineStickyHdr.style.transition = 'none'; _evTimelineStickyHdr.style.height = _evTimelineStickyHdr.getBoundingClientRect().height + 'px'; _evTimelineStickyHdr.style.overflow = 'hidden'; }
   }, { passive: true });
   cont.addEventListener('touchmove', function(e) {
     if (!_evTimelineDragActivo || !_evCalVisible) return;
@@ -1357,13 +1357,13 @@ function _evInicializarCierreCalendarioPorScroll() {
         h.style.transition = 'height 0.28s var(--ease-sheet)';
         requestAnimationFrame(function() {
           h.style.height = hdrCol + 'px';
-          setTimeout(function() { h.style.transition = ''; h.style.height = ''; _evTimelineStickyHdr = null; }, 350);
+          setTimeout(function() { h.style.transition = ''; h.style.height = ''; h.style.overflow = ''; _evTimelineStickyHdr = null; }, 350);
         });
       }
-      _evAnimarPanel(panel, panel.style.height, '0px', 'translateY(-100%)');
+      _evAnimarPanel(panel, panel.style.height, '0px', 'translateY(0)');
       _evActualizarNavMesChevron();
     } else {
-      if (_evTimelineStickyHdr) { _evTimelineStickyHdr.style.transition = ''; _evTimelineStickyHdr.style.height = ''; _evTimelineStickyHdr = null; }
+      if (_evTimelineStickyHdr) { _evTimelineStickyHdr.style.transition = ''; _evTimelineStickyHdr.style.height = ''; _evTimelineStickyHdr.style.overflow = ''; _evTimelineStickyHdr = null; }
       // No llegó al umbral -- vuelve animado al alto original, el
       // calendario se queda abierto tal cual estaba. `desdePx` es el alto
       // parcial actual del arrastre (`panel.style.height`, lo último que
