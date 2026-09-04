@@ -177,7 +177,7 @@ function onGoogleCredentialUsuario(resp) {
       var errEl = document.getElementById('err-google-login');
       errEl.textContent = res.error || 'Error al iniciar sesión. Intenta de nuevo.';
       errEl.style.display = 'block';
-      setTimeout(function(){ errEl.style.display = 'none'; }, 5000);
+      setTimeout(function(){ errEl.style.display = 'none'; }, 15000);
       return;
     }
     _token = res.token || '';
@@ -210,7 +210,7 @@ function onGoogleCredentialUsuario(resp) {
     var errEl = document.getElementById('err-google-login');
     errEl.textContent = 'Error de conexión: ' + (e && e.message || 'intenta de nuevo');
     errEl.style.display = 'block';
-    setTimeout(function(){ errEl.style.display = 'none'; }, 5000);
+    setTimeout(function(){ errEl.style.display = 'none'; }, 15000);
   });
 }
 
