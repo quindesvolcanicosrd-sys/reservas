@@ -1027,13 +1027,13 @@ function _eqAbrirPanel(tag, instantAuto) {
   // a mitad de camino -- `instantAuto` no tiene transición que esperar.
   setTimeout(_eqActualizarStickyHeaders, instantAuto ? 0 : 300);
 }
-// `instant` (pedido explícito, "el cierre por scroll siempre debe ser
-// instantáneo, sin transición -- la suave queda solo para el toggle manual
-// del chevron"): `transition:none` real (en el wrapper Y en los hijos,
+// `instant` -- `transition:none` real (en el wrapper Y en los hijos,
 // forzando reflow síncrono en el medio) en vez del camino animado de
-// siempre -- `_eqInicializarColapsoStatsPorScroll()` (más abajo en este
-// archivo) pasa `true` acá; `_eqTogglePanel()` (toque manual) no manda
-// nada, sigue el camino animado sin cambios.
+// siempre. Ya NO lo usa nadie en este archivo (`_eqInicializarColapsoStatsPorScroll()`
+// volvió al camino animado, ver ese comentario más abajo) -- el parámetro
+// queda vivo, sin uso real por ahora, por si hace falta un cierre
+// instantáneo de nuevo más adelante (mismo mecanismo que sigue usando
+// `_evCerrarPanel(tag, instant)`/js/eventos.js para su panel de búsqueda).
 function _eqCerrarPanel(tag, instant) {
   var cfg = _EQ_PANELES[tag];
   var panel = document.getElementById(cfg.el);
@@ -1250,13 +1250,20 @@ _eqInicializarCierrePanelesPorScroll();
    scroll inercial después de soltar el dedo (`touchend` ya pasó,
    `_eqListaDragActivo` vuelve a `false`), porque nunca hubo un `touchstart`
    que lo arranque. Esto cubre esos casos con un umbral fijo (80px) en vez
-   de seguir el gesto -- corta de una sola vez. Pulido posterior (pedido
-   explícito, "no se ve bien en Android Chrome, que el cierre por scroll
-   sea instantáneo, sin transición -- la suave queda solo para el toggle
-   manual del chevron"): `_eqCerrarPanel('stats', true)` -- `instant:true`
-   salta directo a colapsado con `transition:none` real, sin la animación
-   de 350ms que sigue usando el toggle manual (`_eqTogglePanel()`, sin ese
-   2do argumento).
+   de seguir el gesto -- corta de una sola vez. Re-ajuste (pedido explícito,
+   "cierre consistente con el toggle manual, animado siempre") -- vuelve a
+   `_eqCerrarPanel('stats')`, SIN `instant:true` -- mismo camino animado
+   (350ms, `_eqAnimarPanel()` con `translateZ(0)` en los hijos) que ya usa
+   el toggle manual del chevron (`_eqTogglePanel()`). Revierte el pulido
+   anterior (ver CHANGELOG.md, "no se ve bien en Android Chrome" -- ese
+   pedido cambió esto a `instant:true`/`transition:none`) -- pedido
+   explícito de probar de nuevo con la promoción a capa GPU que ya tiene
+   `_eqAnimarPanel()` desde la ronda de perf posterior a ese fix (no
+   existía todavía cuando se hizo instantáneo). Si vuelve a trabarse en
+   Android Chrome, la causa más probable no es la falta de GPU layer (los
+   hijos ya la tienen) sino que animar `height` en sí dispara layout en
+   cada frame mientras el scroll compositor sigue corriendo en paralelo --
+   ahí el único fix real sería volver a `instant:true`.
    El pedido original decía "contenedor interno de la sección, no window,
    para no interferir con otras secciones" -- pero esta app no tiene
    contenedor propio con scroll: cada `.pantalla` scrollea a nivel
@@ -1286,7 +1293,7 @@ function _eqInicializarColapsoStatsPorScroll() {
       if (_eqPanelAbierto !== 'stats' || _eqListaDragActivo) return;
       var s = document.getElementById('s-equipo');
       if (!s || !s.classList.contains('activa')) return;
-      if (window.scrollY > UMBRAL_PX) _eqCerrarPanel('stats', true);
+      if (window.scrollY > UMBRAL_PX) _eqCerrarPanel('stats');
     });
   }, { passive: true });
 }
