@@ -738,16 +738,18 @@
    (`justify-content:space-between`), acá resuelto con `flex:1` porque
    `.ev-detalle-nav-row` no usa ese layout. */
 .ev-detalle-nav-texto { min-width: 0; flex: 1; }
-/* `font-size`/`letter-spacing` igualados a `.app-nav-title` (css/nav.css,
-   ver "Cambios recientes" -- auditoría de consistencia de nav: antes
-   0.74rem/0.6px, más chico que el estándar 0.86rem/1.2px que ya comparten
-   el resto de los títulos de nav de la app -- `font-weight`/`color`/
-   `text-transform` ya coincidían). No se reusa la clase `.app-nav-title`
-   tal cual (posicionamiento `absolute` + padding pensados para la fila
-   `.app-nav` genérica, layout distinto al de `#ev-detalle-sticky`) -- se
-   iguala el tamaño real, no la mecánica de posicionamiento. */
+/* `font-size`/`font-weight`/`letter-spacing` igualados a `.app-nav-title`
+   (css/nav.css) -- bug real corregido (pedido explícito, auditoría de
+   consistencia del top nav entre secciones): esta copia manual había
+   quedado en 0.86rem/800 (el valor VIEJO de `.app-nav-title`, de antes de
+   la ronda "top nav más grande" que lo subió a 1.1rem/600) -- al ser una
+   copia a mano, no una reutilización de la clase, nunca siguió ese
+   cambio. No se reusa la clase `.app-nav-title` tal cual (posicionamiento
+   `absolute` + padding pensados para la fila `.app-nav` genérica, layout
+   distinto al de `#ev-detalle-sticky`) -- se iguala el tamaño real, no la
+   mecánica de posicionamiento. */
 .ev-detalle-tipo {
-  font-size: 0.86rem; font-weight: 800; color: var(--brand); text-transform: uppercase; letter-spacing: 1.2px;
+  font-size: 1.1rem; font-weight: 600; color: var(--brand); text-transform: uppercase; letter-spacing: 1.2px;
 }
 .ev-detalle-fechahora { font-size: 0.85rem; color: var(--text-2); font-weight: 600; margin-top: 2px; }
 /* Pills -- ver "Cambios recientes" -- rediseño, corrección sobre un intento

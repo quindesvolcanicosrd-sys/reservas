@@ -795,12 +795,26 @@ function _evTogglePanel(tag) {
   if (_evPanelAbierto === tag) _evCerrarPanel(tag);
   else { if (_evPanelAbierto) _evCerrarPanel(_evPanelAbierto); _evAbrirPanel(tag); }
 }
+// Bug real corregido -- "búsqueda de Eventos rota/animación brusca": la
+// ronda de perf de colapso (`.ev-header-burbuja`, css/eventos.css) cambió
+// esa clase de `max-height` a `height` -- pero estas 2 funciones (genéricas,
+// usadas SOLO por 'busqueda', `#ev-busqueda-panel`, misma clase
+// `.ev-header-burbuja` que el calendario) habían quedado explícitamente
+// FUERA de esa ronda (el pedido de esa vez era puntual al calendario/stats)
+// y seguían escribiendo `el.style.maxHeight`, una propiedad que la clase ya
+// no anima ni usa para nada -- la única propiedad real (`height`) nunca se
+// tocaba, así que el panel de búsqueda no abría/cerraba de verdad. Mismo
+// fix de nombre que ya se aplicó en su momento a `_evAbrirCalendario()`/
+// `_evCerrarCalendario()` -- sin `_evAnimarPanel()`/translateY acá a
+// propósito (no lo pedía este fix, "restaurar el comportamiento original"),
+// esta función queda igual a como estaba, solo con el nombre de propiedad
+// correcto.
 function _evAbrirPanel(tag) {
   _evPanelAbierto = tag;
   var cfg = _EV_PANELES[tag];
   var el = document.getElementById(cfg.el);
   var btn = document.getElementById(cfg.btn);
-  if (el) { el.classList.add('abierta'); el.style.maxHeight = el.scrollHeight + 'px'; }
+  if (el) { el.classList.add('abierta'); el.style.height = el.scrollHeight + 'px'; }
   if (btn) btn.classList.add(cfg.claseActiva);
   if (tag === 'busqueda') {
     setTimeout(function() { var inp = document.getElementById('ev-search-input'); if (inp) inp.focus(); }, 50);
@@ -815,18 +829,18 @@ function _evCerrarPanel(tag, instant) {
     if (instant) {
       el.style.transition = 'none';
       el.classList.remove('abierta');
-      el.style.maxHeight = '0px';
+      el.style.height = '0px';
       void el.offsetHeight; // fuerza el reflow síncrono antes de restaurar la transición
       el.style.transition = '';
     } else {
       // Congela el alto actualmente visible ANTES de animar a 0 -- una
       // burbuja hija (filtro Lugar/Tipo) pudo haber relajado el techo por su
       // cuenta mientras este panel estaba abierto.
-      el.style.maxHeight = el.scrollHeight + 'px';
+      el.style.height = el.scrollHeight + 'px';
       requestAnimationFrame(function() {
         requestAnimationFrame(function() {
           el.classList.remove('abierta');
-          el.style.maxHeight = '0px';
+          el.style.height = '0px';
         });
       });
     }

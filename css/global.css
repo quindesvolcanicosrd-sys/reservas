@@ -56,6 +56,12 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; overflow-anchor: none; scrollbar-width: none; }
 *::-webkit-scrollbar { display: none; }
 html, body, .time-wheel, .ddp-year-grid, .aj-sub-inner, .modal-info-card, .ev-mes-pills-row, .axis-enter { overscroll-behavior: contain; }
+/* html no heredaba background de body: en el rubber-band/overscroll superior
+   (iOS/Android PWA) y en la franja de safe-area, el navegador pinta el fondo
+   de <html>, no el de <body> -- sin esta regla <html> queda con el blanco por
+   default del user-agent y aparece como una línea/franja blanca sobre la
+   status bar en dark mode, aunque --bg y body ya estén correctos. */
+html { background-color: var(--bg); }
 body {
   font-family: 'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text);
   -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none;
