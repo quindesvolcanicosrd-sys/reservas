@@ -1237,13 +1237,15 @@ function _eqInicializarCierrePanelesPorScroll() {
       // antes de que el snap final a `0px` (abajo) termine y
       // `_eqActualizarStickyHeaders()` corrija sus posiciones (mismo
       // `setTimeout(...,300)` de siempre, al final de este handler).
-      var panelH = panel.offsetHeight + 'px';
-      panel.style.height = panelH;
+      var panelH = panel.offsetHeight;
+      panel.style.height = panelH + 'px';
       _eqPanelAbierto = null;
+      if (btn) btn.classList.remove('activo');
       panel.classList.remove('abierta');
       panel.classList.remove('eq-panel-auto');
-      _eqAnimarPanel(panel, panelH, '0px', 'translateY(0)');
-      if (btn) btn.classList.remove('activo');
+      void panel.offsetHeight;
+      panel.style.height = '0px';
+      panel.addEventListener('transitionend', function() { panel.style.height = ''; }, { once: true });
     } else {
       // `volverseAuto:true` -- el drag no llegó al umbral, el panel vuelve a
       // abierto de verdad (no solo visualmente): mismo motivo que el toggle

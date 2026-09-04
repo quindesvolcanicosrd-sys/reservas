@@ -1349,8 +1349,8 @@ function _evInicializarCierreCalendarioPorScroll() {
       // (pensada para cerrar desde abierto-de-siempre, sin arrastre de por
       // medio) -- llamarla acá saltaría primero de vuelta al alto completo
       // y recién ahí cerraría, un "rebote" que el usuario no pidió.
-      var panelH = panel.offsetHeight + 'px';
-      panel.style.height = panelH;
+      var panelH = panel.offsetHeight;
+      panel.style.height = panelH + 'px';
       _evCalVisible = false;
       panel.classList.remove('abierta');
       if (_evTimelineStickyHdr) {
@@ -1362,8 +1362,12 @@ function _evInicializarCierreCalendarioPorScroll() {
           setTimeout(function() { h.style.transition = ''; h.style.height = ''; h.style.overflow = ''; _evTimelineStickyHdr = null; }, 350);
         });
       }
-      _evAnimarPanel(panel, panelH, '0px', 'translateY(0)');
-      _evActualizarNavMesChevron();
+      void panel.offsetHeight;
+      panel.style.height = '0px';
+      panel.addEventListener('transitionend', function() {
+        panel.style.height = '';
+        _evActualizarNavMesChevron();
+      }, { once: true });
     } else {
       if (_evTimelineStickyHdr) { _evTimelineStickyHdr.style.transition = ''; _evTimelineStickyHdr.style.height = ''; _evTimelineStickyHdr.style.overflow = ''; _evTimelineStickyHdr = null; }
       // No llegó al umbral -- vuelve animado al alto original, el
