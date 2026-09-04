@@ -277,30 +277,15 @@ function _ceAplicarPaleta() {
   })();
 
   for (var nombre in vars) root.style.setProperty(nombre, vars[nombre]);
-
-  // meta[name="theme-color"] no soporta var(). Antes se leía --bg vía
-  // getComputedStyle, pero esa lectura puede resolver en blanco si corre
-  // antes de que el media query oscuro del sistema termine de aplicarse --
-  // ahora valores fijos, uno por meta (cada uno ya tiene su propio media
-  // attribute light/dark, así que el navegador elige el que corresponde).
-  var metaLight = document.querySelector('meta[name="theme-color"][media*="light"]');
-  var metaDark = document.querySelector('meta[name="theme-color"][media*="dark"]');
-  if (metaLight) metaLight.setAttribute('content', '#FFFFFF');
-  if (metaDark) metaDark.setAttribute('content', '#0D0D0D');
-
-  // Android, PWA instalada: ignora los 2 meta[theme-color] de arriba (con
-  // media query) -- solo respeta un meta SIN atributo media, que manifest.json
-  // tampoco puede cubrir (theme_color ahí es un string estático, sin
-  // prefers-color-scheme). Se crea una sola vez si no existe (persiste entre
-  // corridas de esta función, incluida la del listener de más abajo ante un
-  // cambio de tema del sistema en runtime) y se actualiza siempre acá mismo.
-  var metaSinMedia = document.querySelector('meta[name="theme-color"]:not([media])');
-  if (!metaSinMedia) {
-    metaSinMedia = document.createElement('meta');
-    metaSinMedia.setAttribute('name', 'theme-color');
-    document.head.appendChild(metaSinMedia);
-  }
-  metaSinMedia.setAttribute('content', oscuro ? '#0D0D0D' : '#FFFFFF');
+  // theme-color YA NO se toca acá (bug real corregido, "conflicto JS vs.
+  // meta tags de Android") -- este archivo llegó a mantener 2 mecanismos
+  // en paralelo (los 2 `meta[theme-color][media]` de index.html + un 3er
+  // meta SIN media creado a mano acá para la PWA instalada) sin que
+  // ninguno terminara resolviendo el problema real de Android (que
+  // depende del `theme_color` ESTÁTICO de manifest.json para la barra de
+  // estado nativa, no de meta tags dinámicos) -- los 2 meta con media
+  // query en index.html quedan como los únicos responsables de esto,
+  // sin JS de por medio.
 }
 
 if (window.matchMedia) {
