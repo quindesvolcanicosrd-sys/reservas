@@ -680,7 +680,7 @@ function irEventos() {
   _evCalUltimaAccionTs = 0;
   _evRestaurarScrollTimeline = false;
   var mesPanel = document.getElementById('ev-mes-panel');
-  if (mesPanel) { mesPanel.classList.remove('abierta'); mesPanel.style.maxHeight = '0px'; }
+  if (mesPanel) { mesPanel.classList.remove('abierta'); mesPanel.style.height = '0px'; }
   var navMesLabel = document.getElementById('ev-nav-mes-label');
   if (navMesLabel) navMesLabel.classList.remove('ev-nav-mes-label-activo');
   _evActualizarNavMesChevron();
@@ -978,6 +978,28 @@ function _evSincronizarNavMesDesde(iso, instant) {
   _evNavMesActual = { year: m.year, month: m.month };
   _evActualizarNavMesLabel(instant);
 }
+// Perf real (pedido explícito, jank de Android Chrome al colapsar) -- mismo
+// helper que `_eqAnimarPanel()`/js/equipo.js: `height` medido (nunca
+// `auto`) en el wrapper + `transform:translateY` en sus hijos directos
+// (`#ev-cal-contenido`/`#ev-mes-pills-row`) -- el `transform` corre por
+// compositor, el `height` sigue disparando layout igual que `max-height`
+// (misma familia de propiedad, ninguna es GPU-only sola). `will-change`
+// como clase temporal (`ev-panel-wrapper-anim`/`ev-panel-inner-anim`,
+// css/eventos.css), sacada sola en `transitionend` (`{once:true}`).
+function _evAnimarPanel(panel, alturaPx, translateY) {
+  if (!panel) return;
+  panel.classList.add('ev-panel-wrapper-anim');
+  panel.style.height = alturaPx;
+  var hijos = panel.children;
+  for (var i = 0; i < hijos.length; i++) {
+    hijos[i].classList.add('ev-panel-inner-anim');
+    hijos[i].style.transform = translateY;
+  }
+  panel.addEventListener('transitionend', function limpiar() {
+    panel.classList.remove('ev-panel-wrapper-anim');
+    for (var j = 0; j < hijos.length; j++) hijos[j].classList.remove('ev-panel-inner-anim');
+  }, { once: true });
+}
 function _evAbrirCalendario() {
   _evCalUltimaAccionTs = Date.now();
   var base = _evNavMesActual ? _evToISO(new Date(_evNavMesActual.year, _evNavMesActual.month, 1)) : _evHoyISO();
@@ -998,7 +1020,7 @@ function _evAbrirCalendario() {
   _evCalRenderPills();
   _evCalVisible = true;
   var el = document.getElementById('ev-mes-panel');
-  if (el) { el.classList.add('abierta'); el.style.maxHeight = el.scrollHeight + 'px'; }
+  if (el) { el.classList.add('abierta'); _evAnimarPanel(el, el.scrollHeight + 'px', 'translateY(0)'); }
   _evActualizarNavMesChevron();
 }
 // Única acción que cierra el calendario del todo (ver "Cambios recientes",
@@ -1008,11 +1030,14 @@ function _evCerrarCalendario() {
   _evCalVisible = false;
   var el = document.getElementById('ev-mes-panel');
   if (el) {
-    el.style.maxHeight = el.scrollHeight + 'px';
+    // Freeze del punto de partida real -- sin `_evAnimarPanel()` acá a
+    // propósito (mismo motivo que `_eqCerrarPanel()`/js/equipo.js: puede
+    // ser el mismo valor que ya tenía, sin transición real que reproducir).
+    el.style.height = el.scrollHeight + 'px';
     requestAnimationFrame(function() {
       requestAnimationFrame(function() {
         el.classList.remove('abierta');
-        el.style.maxHeight = '0px';
+        _evAnimarPanel(el, '0px', 'translateY(-100%)');
       });
     });
   }
@@ -1047,11 +1072,11 @@ function _evCalActualizarMaxHeightExterior(instant) {
   if (!el) return;
   if (instant) {
     el.style.transition = 'none';
-    el.style.maxHeight = el.scrollHeight + 'px';
+    el.style.height = el.scrollHeight + 'px';
     void el.offsetHeight;
     el.style.transition = '';
   } else {
-    el.style.maxHeight = el.scrollHeight + 'px';
+    el.style.height = el.scrollHeight + 'px';
   }
 }
 window.addEventListener('resize', function() { if (_evCalVisible) _evCalActualizarMaxHeightExterior(true); });
@@ -1218,6 +1243,11 @@ _evInicializarSwipeCalendario();
 // mes, cierre por umbral -- ninguno soporta mouse-drag tampoco; un
 // click-and-drag sobre el timeline no es un gesto estándar de desktop, ahí
 // se scrollea con la rueda).
+// Perf real (pedido explícito) -- rAF+flag ("ticking"), mismo patrón que
+// `_eqInicializarCierrePanelesPorScroll()`/js/equipo.js: como mucho 1
+// escritura real de `height`/`transform` por frame de pantalla, sin
+// importar cuántos `touchmove` lleguen.
+var _evDragRafTicking = false;
 var _evTimelineDragY = 0, _evTimelineDragActivo = false, _evTimelineDragAlturaOriginal = 0;
 // Umbral de "commit" como fracción del alto del panel (no el `_EV_CAL_SWIPE_UMBRAL`
 // fijo de 45px que usan los otros gestos de esta pantalla) -- mismo criterio
@@ -1237,15 +1267,29 @@ function _evInicializarCierreCalendarioPorScroll() {
   }, { passive: true });
   cont.addEventListener('touchmove', function(e) {
     if (!_evTimelineDragActivo || !_evCalVisible) return;
-    var dy = e.touches[0].clientY - _evTimelineDragY;
-    if (dy >= 0) { panel.style.transition = ''; panel.style.maxHeight = _evTimelineDragAlturaOriginal + 'px'; return; }
-    // Sin transición mientras se arrastra -- cada frame de touchmove pisa
-    // el `max-height` directo, 1:1 con el dedo (si hubiera transición
-    // encima, el panel iría "atrasado" respecto al dedo en vez de seguirlo
-    // en vivo).
-    panel.style.transition = 'none';
-    var nuevaAltura = Math.max(0, _evTimelineDragAlturaOriginal + dy);
-    panel.style.maxHeight = nuevaAltura + 'px';
+    if (_evDragRafTicking) return;
+    _evDragRafTicking = true;
+    var clientY = e.touches[0].clientY;
+    requestAnimationFrame(function() {
+      _evDragRafTicking = false;
+      var dy = clientY - _evTimelineDragY;
+      var hijos = panel.children;
+      var k;
+      if (dy >= 0) {
+        panel.style.transition = '';
+        panel.style.height = _evTimelineDragAlturaOriginal + 'px';
+        for (k = 0; k < hijos.length; k++) hijos[k].style.transform = 'translateY(0)';
+        return;
+      }
+      // Sin transición mientras se arrastra -- cada frame pisa `height`
+      // directo, 1:1 con el dedo (si hubiera transición encima, el panel
+      // iría "atrasado" respecto al dedo en vez de seguirlo en vivo).
+      panel.style.transition = 'none';
+      var nuevaAltura = Math.max(0, _evTimelineDragAlturaOriginal + dy);
+      panel.style.height = nuevaAltura + 'px';
+      var pct = _evTimelineDragAlturaOriginal > 0 ? (1 - nuevaAltura / _evTimelineDragAlturaOriginal) : 0;
+      for (k = 0; k < hijos.length; k++) hijos[k].style.transform = 'translateY(-' + (pct * 100) + '%)';
+    });
   }, { passive: true });
   cont.addEventListener('touchend', function(e) {
     if (!_evTimelineDragActivo) return;
@@ -1253,27 +1297,24 @@ function _evInicializarCierreCalendarioPorScroll() {
     if (!_evCalVisible) return;
     var dy = e.changedTouches[0].clientY - _evTimelineDragY;
     var arrastrado = Math.max(0, -dy);
-    // Restaura la transición del CSS (`.ev-header-burbuja`, 0.28s) para que
-    // el tramo final -- terminar de cerrar o volver al alto original --
-    // quede animado, no un salto.
     panel.style.transition = '';
     if (arrastrado >= _evTimelineDragAlturaOriginal * _EV_CAL_DRAG_UMBRAL_FRACCION) {
       // Termina de cerrar DESDE el alto parcial actual -- a propósito no
       // reusa `_evCerrarCalendario()` tal cual: esa función arranca
-      // fijando `max-height` al `scrollHeight` COMPLETO antes de animar a
-      // 0 (pensada para cerrar desde abierto-de-siempre, sin arrastre de
-      // por medio) -- llamarla acá saltaría primero de vuelta al alto
-      // completo y recién ahí cerraría, un "rebote" que el usuario no pidió.
+      // fijando `height` al `scrollHeight` COMPLETO antes de animar a 0
+      // (pensada para cerrar desde abierto-de-siempre, sin arrastre de por
+      // medio) -- llamarla acá saltaría primero de vuelta al alto completo
+      // y recién ahí cerraría, un "rebote" que el usuario no pidió.
       _evCalVisible = false;
       requestAnimationFrame(function() {
         panel.classList.remove('abierta');
-        panel.style.maxHeight = '0px';
+        _evAnimarPanel(panel, '0px', 'translateY(-100%)');
       });
       _evActualizarNavMesChevron();
     } else {
       // No llegó al umbral -- vuelve animado al alto original, el
       // calendario se queda abierto tal cual estaba.
-      panel.style.maxHeight = _evTimelineDragAlturaOriginal + 'px';
+      _evAnimarPanel(panel, _evTimelineDragAlturaOriginal + 'px', 'translateY(0)');
     }
   }, { passive: true });
 }

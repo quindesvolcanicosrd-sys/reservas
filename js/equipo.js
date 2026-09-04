@@ -894,6 +894,32 @@ function _eqSincronizarClasePanelAbierto() {
   var s = document.getElementById('s-equipo');
   if (s) s.classList.toggle('eq-panel-abierto', !!_eqPanelAbierto);
 }
+// Perf real (pedido explícito, jank de Android Chrome al colapsar) -- fija
+// `height` (medido, nunca `auto`/infinito) en el wrapper Y `transform:
+// translateY` en sus hijos directos (`.eq-misstats-panel-inner`/
+// `.eq-busqueda-panel-inner`), en vez de un solo `max-height`: el `height`
+// sigue disparando layout igual (es la misma familia de propiedad que
+// `max-height`, ninguna es GPU-only) pero el `transform` de los hijos SÍ
+// corre por compositor -- el contenido se desliza en vez de solo
+// aparecer/desaparecer recortado. `will-change` como clase temporal
+// (`eq-panel-wrapper-anim`/`eq-panel-inner-anim`, css/equipo.css) -- se
+// saca sola en `transitionend` (`{once:true}`, sin acumular listeners),
+// nunca queda permanente (costo de memoria de GPU si will-change quedara
+// siempre activo sin necesidad real).
+function _eqAnimarPanel(panel, alturaPx, translateY) {
+  if (!panel) return;
+  panel.classList.add('eq-panel-wrapper-anim');
+  panel.style.height = alturaPx;
+  var hijos = panel.children;
+  for (var i = 0; i < hijos.length; i++) {
+    hijos[i].classList.add('eq-panel-inner-anim');
+    hijos[i].style.transform = translateY;
+  }
+  panel.addEventListener('transitionend', function limpiar() {
+    panel.classList.remove('eq-panel-wrapper-anim');
+    for (var j = 0; j < hijos.length; j++) hijos[j].classList.remove('eq-panel-inner-anim');
+  }, { once: true });
+}
 function _eqAbrirPanel(tag) {
   var cfg = _EQ_PANELES[tag];
   var panel = document.getElementById(cfg.el);
@@ -902,7 +928,7 @@ function _eqAbrirPanel(tag) {
   _eqPanelAbierto = tag;
   _eqSincronizarClasePanelAbierto();
   panel.classList.add('abierta');
-  panel.style.maxHeight = panel.scrollHeight + 'px';
+  _eqAnimarPanel(panel, panel.scrollHeight + 'px', 'translateY(0)');
   btn.classList.add('activo');
   if (tag === 'busqueda') {
     setTimeout(function() { var inp = document.getElementById('eq-search-input'); if (inp) inp.focus(); }, 50);
@@ -940,11 +966,15 @@ function _eqCerrarPanel(tag) {
   // los headers reaparecen (fade-in) ya están en su lugar correcto, sin
   // ningún frame intermedio con la posición vieja.
   if (panel) {
-    panel.style.maxHeight = panel.scrollHeight + 'px';
+    // Freeze del punto de partida real -- sin `_eqAnimarPanel()` acá a
+    // propósito (mismo motivo de siempre: puede ser el mismo valor que ya
+    // tenía, sin transición real que reproducir, así que tampoco necesita
+    // will-change todavía).
+    panel.style.height = panel.scrollHeight + 'px';
     requestAnimationFrame(function() {
       requestAnimationFrame(function() {
         panel.classList.remove('abierta');
-        panel.style.maxHeight = '0px';
+        _eqAnimarPanel(panel, '0px', 'translateY(-100%)');
       });
     });
   }
@@ -1008,6 +1038,13 @@ function _eqCerrarPanel(tag) {
    al día con el alto real de la nav en todo momento, no solo al soltar. */
 var _eqListaDragY = 0, _eqListaDragActivo = false, _eqListaDragAlturaOriginal = 0;
 var _EQ_PANEL_DRAG_UMBRAL_FRACCION = 0.3;
+// Perf real (pedido explícito) -- `touchmove` puede disparar más de una vez
+// por frame en algunos dispositivos; el patrón rAF+flag ya usado en esta
+// app (`_eqActualizarStickyHeadersThrottled()`, más abajo) se aplica acá
+// TAMBIÉN al propio trabajo de arrastrar el panel (antes solo envolvía el
+// resync de headers sticky que corre al final) -- como mucho 1 escritura
+// real de `height`/`transform` por frame de pantalla.
+var _eqDragRafTicking = false;
 function _eqInicializarCierrePanelesPorScroll() {
   var cont = document.getElementById('eq-lista-contenido');
   if (!cont) return;
@@ -1022,19 +1059,33 @@ function _eqInicializarCierrePanelesPorScroll() {
   }, { passive: true });
   cont.addEventListener('touchmove', function(e) {
     if (!_eqListaDragActivo || _eqPanelAbierto !== 'stats') return;
-    var cfg = _EQ_PANELES[_eqPanelAbierto];
-    var panel = cfg && document.getElementById(cfg.el);
-    if (!panel) return;
-    var dy = e.touches[0].clientY - _eqListaDragY;
-    if (dy >= 0) {
-      panel.style.transition = '';
-      panel.style.maxHeight = _eqListaDragAlturaOriginal + 'px';
-    } else {
-      panel.style.transition = 'none';
-      var nuevaAltura = Math.max(0, _eqListaDragAlturaOriginal + dy);
-      panel.style.maxHeight = nuevaAltura + 'px';
-    }
-    _eqActualizarStickyHeadersThrottled();
+    if (_eqDragRafTicking) return;
+    _eqDragRafTicking = true;
+    var clientY = e.touches[0].clientY;
+    requestAnimationFrame(function() {
+      _eqDragRafTicking = false;
+      var cfg = _EQ_PANELES[_eqPanelAbierto];
+      var panel = cfg && document.getElementById(cfg.el);
+      if (!panel) return;
+      var dy = clientY - _eqListaDragY;
+      var hijos = panel.children;
+      var k;
+      if (dy >= 0) {
+        panel.style.transition = '';
+        panel.style.height = _eqListaDragAlturaOriginal + 'px';
+        for (k = 0; k < hijos.length; k++) hijos[k].style.transform = 'translateY(0)';
+      } else {
+        panel.style.transition = 'none';
+        var nuevaAltura = Math.max(0, _eqListaDragAlturaOriginal + dy);
+        panel.style.height = nuevaAltura + 'px';
+        // % arrastrado (0 = recién empezando, 1 = ya llegó a 0) -- mismo
+        // porcentaje para el `translateY` de los hijos, así el contenido se
+        // desliza 1:1 con el recorte del wrapper durante el gesto en vivo.
+        var pct = _eqListaDragAlturaOriginal > 0 ? (1 - nuevaAltura / _eqListaDragAlturaOriginal) : 0;
+        for (k = 0; k < hijos.length; k++) hijos[k].style.transform = 'translateY(-' + (pct * 100) + '%)';
+      }
+      _eqActualizarStickyHeadersThrottled();
+    });
   }, { passive: true });
   cont.addEventListener('touchend', function(e) {
     if (!_eqListaDragActivo) return;
@@ -1058,11 +1109,11 @@ function _eqInicializarCierrePanelesPorScroll() {
       // `setTimeout(...,300)` de siempre, al final de este handler).
       requestAnimationFrame(function() {
         panel.classList.remove('abierta');
-        panel.style.maxHeight = '0px';
+        _eqAnimarPanel(panel, '0px', 'translateY(-100%)');
       });
       if (btn) btn.classList.remove('activo');
     } else {
-      panel.style.maxHeight = _eqListaDragAlturaOriginal + 'px';
+      _eqAnimarPanel(panel, _eqListaDragAlturaOriginal + 'px', 'translateY(0)');
     }
     setTimeout(function() {
       _eqActualizarStickyHeaders();
@@ -1097,11 +1148,21 @@ _eqInicializarCierrePanelesPorScroll();
    (`_eqTogglePanel()`). */
 function _eqInicializarColapsoStatsPorScroll() {
   var UMBRAL_PX = 60;
+  // Perf real (pedido explícito) -- rAF+flag ("ticking"), mismo patrón que
+  // el resto de esta app usa para listeners de `scroll` de bajo costo
+  // (`_eqActualizarStickyHeadersThrottled()`, más abajo): como mucho 1
+  // chequeo real por frame, sin importar cuántos eventos `scroll` lleguen.
+  var ticking = false;
   window.addEventListener('scroll', function() {
-    if (_eqPanelAbierto !== 'stats' || _eqListaDragActivo) return;
-    var s = document.getElementById('s-equipo');
-    if (!s || !s.classList.contains('activa')) return;
-    if (window.scrollY > UMBRAL_PX) _eqCerrarPanel('stats');
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function() {
+      ticking = false;
+      if (_eqPanelAbierto !== 'stats' || _eqListaDragActivo) return;
+      var s = document.getElementById('s-equipo');
+      if (!s || !s.classList.contains('activa')) return;
+      if (window.scrollY > UMBRAL_PX) _eqCerrarPanel('stats');
+    });
   }, { passive: true });
 }
 _eqInicializarColapsoStatsPorScroll();

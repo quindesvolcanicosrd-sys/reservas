@@ -263,8 +263,28 @@
    transparentándose" reportado. Fondo opaco DIRECTO en el contenedor que
    recorta, sin depender de ningún padre/hijo, elimina la franja pase lo
    que pase con la clip-line en cualquier instante de la animación. */
-.eq-header-panel { max-height: 0; overflow: hidden; background: var(--bg); transition: max-height 0.28s var(--ease-sheet); }
+/* Perf real (pedido explícito, jank en Android Chrome al colapsar) --
+   `max-height`/`height` siguen disparando layout en cada frame igual (son
+   propiedades de box model, ninguna es "solo GPU") -- el cambio real de
+   compositor-only es el `transform` de `.eq-panel-inner-anim` (hijos
+   directos de este panel, ver `_eqAnimarPanel()`/js/equipo.js): el
+   contenido se desliza vía `translateY` mientras el wrapper recorta con
+   `height`, en vez de que TODO el trabajo visual dependa de reflow. `height`
+   en vez de `max-height` -- valor numérico real medido (`scrollHeight`) en
+   los 2 extremos de la transición, nunca infinito/auto, así que el cambio
+   de propiedad no altera el comportamiento, solo separa el nombre de la
+   propiedad para poder documentarla aparte de `max-height` (que sigue
+   viviendo en otros paneles de esta sección sin este fix, ver
+   `.eq-modal-centro-body`/etc., fuera de alcance de este pedido). `will-change`
+   NO fijo acá -- se agrega/saca como clase temporal
+   (`.eq-panel-wrapper-anim`) solo mientras dura la transición real
+   (`_eqAnimarPanel()`), nunca permanente (costo de memoria de GPU si
+   quedara siempre activo sin necesidad). */
+.eq-header-panel { height: 0; overflow: hidden; background: var(--bg); transition: height 260ms cubic-bezier(0.4,0,0.2,1); }
 .eq-header-panel.abierta { margin-bottom: 18px; }
+.eq-header-panel.eq-panel-wrapper-anim { will-change: height; }
+.eq-misstats-panel-inner, .eq-busqueda-panel-inner { transition: transform 260ms cubic-bezier(0.4,0,0.2,1); }
+.eq-misstats-panel-inner.eq-panel-inner-anim, .eq-busqueda-panel-inner.eq-panel-inner-anim { will-change: transform; }
 .eq-busqueda-panel-inner {
   background: var(--surface-2); border-radius: 16px; padding: 16px;
   margin-top: 10px;

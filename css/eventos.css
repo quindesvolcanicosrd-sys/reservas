@@ -892,7 +892,18 @@
    abrió. Las 2 burbujas (mes/búsqueda+filtros fusionados, ver "Cambios
    recientes") comparten este mismo mecanismo -- solo una abierta a la vez,
    ver `_evTogglePanel()`. */
-.ev-header-burbuja { max-height: 0; overflow: hidden; transition: max-height 0.28s var(--ease-sheet); }
+/* Perf real (pedido explícito, jank en Android Chrome al colapsar el
+   calendario) -- mismo criterio que `.eq-header-panel`/js/equipo.js
+   (`_evAnimarPanel()`, más abajo en este archivo): `height` en vez de
+   `max-height` (ambas disparan layout igual, ninguna es GPU-only por sí
+   sola) + `transform:translateY` en los hijos directos (`#ev-cal-contenido`/
+   `#ev-mes-pills-row`), que sí corre por compositor -- el contenido se
+   desliza en vez de solo recortarse. `will-change` como clase temporal,
+   nunca permanente. */
+.ev-header-burbuja { height: 0; overflow: hidden; transition: height 260ms cubic-bezier(0.4,0,0.2,1); }
+.ev-header-burbuja.ev-panel-wrapper-anim { will-change: height; }
+.ev-header-burbuja > * { transition: transform 260ms cubic-bezier(0.4,0,0.2,1); }
+.ev-header-burbuja > *.ev-panel-inner-anim { will-change: transform; }
 /* Espacio contra el contenido que sigue inmediatamente debajo (el timeline)
    -- sin esto, la burbuja abierta quedaba pegada contra ese contenido. El
    margen vive AFUERA de la caja (`overflow:hidden` de la burbuja colapsada
