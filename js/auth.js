@@ -395,7 +395,7 @@ window.onload = function() {
   // la persona no ve ni puede operar nada detrás mientras la condición real
   // (instalar la app / conceder el permiso) siga sin resolverse.
   if (typeof _verificarPwa === 'function') _verificarPwa();
-  if (typeof _verificarNotificaciones === 'function') if (typeof _verificarNotificaciones === 'function') _verificarNotificaciones();
+  if (typeof _verificarNotificaciones === 'function') _verificarNotificaciones();
   document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
   var ov = document.getElementById('loading-overlay');
   ov.classList.remove('fade-out');
