@@ -2172,9 +2172,25 @@ function _eqRenderMisEstadisticas() {
   // archivo -- forzar el estado acá en CADA corrida pisaría un toggle
   // manual de la persona a mitad de sesión). `_eqStatsColapsadoGuardado()`
   // default `false` (expandido) si `pivot_stats_collapsed` nunca se guardó.
+  // Bug real corregido -- "chevron dice expandido, contenido no se ve":
+  // esta función puede correr con `#s-equipo` todavía `display:none` (ej.
+  // re-render disparado por un fetch en segundo plano mientras otra
+  // pestaña está activa) -- `panel.scrollHeight` con un ancestro oculto da
+  // `0`, así que `_eqAbrirPanel('stats')` fijaba `height:0px` (contenido
+  // invisible) mientras el chevron SÍ quedaba rotado a "expandido"
+  // (`.activo`, misma llamada) -- desincronizado, no por escribirlos en
+  // funciones separadas (ya se escriben juntos, en la misma
+  // `_eqAbrirPanel()`), sino porque la MEDICIÓN de esa llamada podía ser
+  // 0 por un layout todavía no asentado/pantalla todavía no visible.
+  // Doble `requestAnimationFrame` (mismo patrón ya usado en este archivo
+  // para "medir recién cuando el layout ya asentó", ver `_eqCerrarPanel()`)
+  // difiere la llamada real -- `_eqAbrirPanel()` mide `scrollHeight` DE
+  // NUEVO en ese momento posterior, nunca reusa un valor viejo.
   if (!_eqStatsPanelInicializado) {
     _eqStatsPanelInicializado = true;
-    if (!_eqStatsColapsadoGuardado()) _eqAbrirPanel('stats');
+    if (!_eqStatsColapsadoGuardado()) {
+      requestAnimationFrame(function() { requestAnimationFrame(function() { _eqAbrirPanel('stats'); }); });
+    }
   }
 }
 var _eqStatsPanelInicializado = false;
