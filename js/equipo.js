@@ -1193,6 +1193,7 @@ function _eqInicializarCierrePanelesPorScroll() {
     var clientY = e.touches[0].clientY;
     requestAnimationFrame(function() {
       _eqDragRafTicking = false;
+      if (!_eqListaDragActivo) return;
       var cfg = _EQ_PANELES[_eqPanelAbierto];
       var panel = cfg && document.getElementById(cfg.el);
       if (!panel) return;
@@ -1202,19 +1203,10 @@ function _eqInicializarCierrePanelesPorScroll() {
       if (dy >= 0) {
         panel.style.transition = '';
         panel.style.height = _eqListaDragAlturaOriginal + 'px';
-        for (k = 0; k < hijos.length; k++) hijos[k].style.transform = 'translateY(0) translateZ(0)';
       } else {
         panel.style.transition = 'none';
         var nuevaAltura = Math.max(0, _eqListaDragAlturaOriginal + dy);
         panel.style.height = nuevaAltura + 'px';
-        // % arrastrado (0 = recién empezando, 1 = ya llegó a 0) -- mismo
-        // porcentaje para el `translateY` de los hijos, así el contenido se
-        // desliza 1:1 con el recorte del wrapper durante el gesto en vivo.
-        // `translateZ(0)` sumado (mismo motivo que `_eqAnimarPanel()`, más
-        // arriba) -- un `style.transform` inline pisa cualquier `transform`
-        // de la clase, incluido el permanente de reposo.
-        var pct = _eqListaDragAlturaOriginal > 0 ? (1 - nuevaAltura / _eqListaDragAlturaOriginal) : 0;
-        for (k = 0; k < hijos.length; k++) hijos[k].style.transform = 'translateY(-' + (pct * 100) + '%) translateZ(0)';
       }
       _eqActualizarStickyHeadersThrottled();
     });
