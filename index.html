@@ -28,6 +28,16 @@
   mq.addEventListener('change', function(e){ upd(e.matches); });
 })();
 </script>
+<div id="debug-tc" style="position:fixed;top:40px;left:0;right:0;z-index:99999;background:rgba(0,0,0,0.8);color:white;font-size:12px;padding:8px;text-align:center;font-family:monospace"></div>
+<script>
+(function(){
+  var d = document.getElementById('debug-tc');
+  var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var meta = document.getElementById('tc-meta');
+  d.textContent = 'dark:' + dark + ' | meta:' + (meta ? meta.content : 'NO META');
+  setTimeout(function(){ d.remove(); }, 30000);
+})();
+</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
