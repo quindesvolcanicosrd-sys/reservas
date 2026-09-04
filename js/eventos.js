@@ -1349,6 +1349,7 @@ function _evInicializarCierreCalendarioPorScroll() {
       // (pensada para cerrar desde abierto-de-siempre, sin arrastre de por
       // medio) -- llamarla acá saltaría primero de vuelta al alto completo
       // y recién ahí cerraría, un "rebote" que el usuario no pidió.
+      var panelH = panel.offsetHeight + 'px';
       _evCalVisible = false;
       panel.classList.remove('abierta');
       if (_evTimelineStickyHdr) {
@@ -1360,7 +1361,7 @@ function _evInicializarCierreCalendarioPorScroll() {
           setTimeout(function() { h.style.transition = ''; h.style.height = ''; h.style.overflow = ''; _evTimelineStickyHdr = null; }, 350);
         });
       }
-      _evAnimarPanel(panel, panel.style.height, '0px', 'translateY(0)');
+      _evAnimarPanel(panel, panelH, '0px', 'translateY(0)');
       _evActualizarNavMesChevron();
     } else {
       if (_evTimelineStickyHdr) { _evTimelineStickyHdr.style.transition = ''; _evTimelineStickyHdr.style.height = ''; _evTimelineStickyHdr.style.overflow = ''; _evTimelineStickyHdr = null; }

@@ -1238,8 +1238,10 @@ function _eqInicializarCierrePanelesPorScroll() {
       // antes de que el snap final a `0px` (abajo) termine y
       // `_eqActualizarStickyHeaders()` corrija sus posiciones (mismo
       // `setTimeout(...,300)` de siempre, al final de este handler).
+      var panelH = panel.offsetHeight + 'px';
       panel.classList.remove('abierta');
-      _eqAnimarPanel(panel, panel.style.height, '0px', 'translateY(0)');
+      panel.classList.remove('eq-panel-auto');
+      _eqAnimarPanel(panel, panelH, '0px', 'translateY(0)');
       if (btn) btn.classList.remove('activo');
     } else {
       // `volverseAuto:true` -- el drag no llegó al umbral, el panel vuelve a
