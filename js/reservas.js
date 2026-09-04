@@ -1361,14 +1361,14 @@ function confirmarReserva(btn) {
     if (E.tipoPago === 'clase' && E.viaEventosInline && E.fechas && E.fechas.length) {
       var _fechasParaRsvp = E.fechas.slice();
       _fechasParaRsvp.forEach(function(idEvento) {
-        apiPost({ action: 'marcarAsistenciaUsuario', token: _token, idEvento: idEvento, estado: 'Asistiré' },
+        apiPost({ action: 'marcarAsistenciaUsuario', token: _token, nombre: E.nombre, idEvento: idEvento, estado: 'Asistiré' },
           function() {}, function(e) { if (window.console) console.warn('rsvp clase: ' + (e && e.message || 'error')); });
       });
     }
     if (E.quindesPendingRsvpEvento) {
       var _pId = E.quindesPendingRsvpEvento;
       E.quindesPendingRsvpEvento = null;
-      apiPost({ action: 'marcarAsistenciaUsuario', token: _token, idEvento: _pId, estado: 'Asistiré' }, function() {
+      apiPost({ action: 'marcarAsistenciaUsuario', token: _token, nombre: E.nombre, idEvento: _pId, estado: 'Asistiré' }, function() {
         var _pEv = (typeof _EV_EVENTOS !== 'undefined' ? _EV_EVENTOS : []).filter(function(e) { return e.id === _pId; })[0];
         if (_pEv) _pEv.miEstado = 'Asistiré';
       }, function(e) {

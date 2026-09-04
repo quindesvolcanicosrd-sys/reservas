@@ -4191,7 +4191,7 @@ function _evMarcarAsistencia(id, estado) {
   if (!navigator.onLine && typeof _offEjecutarOEncolar === 'function') {
     _offEjecutarOEncolar({
       tipo: 'rsvp',
-      apiParams: { action: 'marcarAsistenciaUsuario', token: _token, idEvento: id, estado: estado },
+      apiParams: { action: 'marcarAsistenciaUsuario', token: _token, nombre: E.nombre, idEvento: id, estado: estado },
       meta: { idEvento: id, previo: estadoAnterior, estadoNuevo: estado, descripcion: 'tu asistencia' }
     });
     // Bug real corregido (ver MANIFEST.md/CHANGELOG.md — "el RSVP no
@@ -4204,7 +4204,7 @@ function _evMarcarAsistencia(id, estado) {
     if (typeof _offGuardarCache === 'function') _offGuardarCache();
     return;
   }
-  apiPost({ action: 'marcarAsistenciaUsuario', token: _token, idEvento: id, estado: estado }, function() {
+  apiPost({ action: 'marcarAsistenciaUsuario', token: _token, nombre: E.nombre, idEvento: id, estado: estado }, function() {
     // Mismo fix que la rama offline de arriba -- acá el estado ya está
     // CONFIRMADO por el backend (no solo optimista), así que persistir el
     // cache es directo, sin esperar al próximo `_evCargarDatosReales()`
