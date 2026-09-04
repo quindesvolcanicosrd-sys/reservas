@@ -391,16 +391,23 @@
    intacto. `<meta name="color-scheme" content="light">` (index.html) ya
    cubre esto mismo a nivel de página/navegador -- este bloque queda
    inerte por partida doble, no es la única barrera. */
-@media (prefers-color-scheme: dark) and (min-width: 99999px) {
+@media (prefers-color-scheme: dark) {
   :root {
     /* Fondo */
     --bg:             #0D0D0D;
     --bg-2:           #111111;
 
-    /* Brand (runtime) — hex de marca DISTINTO en oscuro (ver cabecera del
-       archivo), no una variante de opacidad del mismo rojo de claro. */
-    --brand:          #FF2020;
-    --brand-dk:       #CC0000;
+    /* Brand (runtime) — pedido explícito, "el rojo no cambia entre modos":
+       mismos hex que en claro (antes #FF2020/#CC0000, un rojo DISTINTO acá
+       a propósito para contraste sobre el fondo casi negro -- ver
+       CHANGELOG.md, esa decisión se revierte con este pedido). La familia
+       rgba(255,32,32,...) de abajo (hover/glow/border, mismas variables)
+       sigue con el rgb VIEJO -- fuera del alcance puntual de este pedido
+       ("verificar que el bloque tenga --brand/--brand-dk definidos igual
+       que en claro"), pero queda desalineada del nuevo `--brand` sólido de
+       arriba hasta que se actualice también. */
+    --brand:          #E8000D;
+    --brand-dk:       #B8000A;
     --brand-zero:     rgba(255,32,32,0);
     --brand-subtle:   rgba(255,32,32,0.04);
     --brand-lightest: rgba(255,32,32,0.06);

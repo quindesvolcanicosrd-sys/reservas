@@ -57,7 +57,7 @@
 .ddp-month-btn { padding: 14px 6px; border: none; border-radius: 12px; background: transparent; color: var(--neutral-dark); font-size: 14px; cursor: pointer; text-align: center; transition: background 0.15s; font-family: inherit; -webkit-tap-highlight-color: transparent; }
 .ddp-month-btn.ddp-month-sel { background: var(--brand); color: var(--white); font-weight: 700; }
 
-@media (prefers-color-scheme: dark) and (min-width: 99999px) { /* deshabilitado temporalmente, ver MANIFEST.md */
+@media (prefers-color-scheme: dark) {
   #ddp-modal .ddp-card { background: var(--dk-overlay-97) !important; }
   .ddp-selected-date, .ddp-nav-label, .ddp-day, .ddp-year-btn, .ddp-month-btn { color: var(--text) !important; }
   .ddp-day.ddp-other { color: var(--dk-text-ghost) !important; }

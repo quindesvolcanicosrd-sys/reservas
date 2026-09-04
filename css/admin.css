@@ -1,5 +1,5 @@
 /* Admin panel reutiliza clases de ui.css, home.css y reservas.css */
-@media (prefers-color-scheme: dark) and (min-width: 99999px) { /* deshabilitado temporalmente, ver MANIFEST.md */
+@media (prefers-color-scheme: dark) {
   #modal-nav-inner { background: var(--dk-surface-opaque) !important; }
   #modal-nav-titulo { color: var(--dk-modal-text) !important; }
   #modal-nav-texto { color: var(--dk-modal-btn-text) !important; }

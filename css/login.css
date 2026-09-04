@@ -35,7 +35,7 @@
 footer { display: block; }
 @media (max-width: 600px) { footer { display: none !important; } }
 
-@media (prefers-color-scheme: dark) and (min-width: 99999px) { /* deshabilitado temporalmente, ver MANIFEST.md */
+@media (prefers-color-scheme: dark) {
   .btn-pin-key { background: var(--dk-input-bg); border-color: var(--dk-input-bg); color: var(--dk-modal-text); }
   .btn-pin-key:hover { background: var(--dk-skeleton-base); border-color: var(--brand-secondary); }
   .btn-pin-key:active { background: var(--dk-pin-press); border-color: var(--brand); }

@@ -206,7 +206,7 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
 }
 
 /* ─── DARK MODE ──────────────────────────────────────────────────────────── */
-@media (prefers-color-scheme: dark) and (min-width: 99999px) { /* deshabilitado temporalmente, ver MANIFEST.md */
+@media (prefers-color-scheme: dark) {
 /* solo overrides específicos no cubiertos por variables */
   [id^="grp-res-"] { background: var(--brand-subtle); }
   [id^="grp-res-"] + div,

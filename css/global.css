@@ -172,19 +172,12 @@ input, textarea,
 
 select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important; }
 
-/* Deshabilitado -- pedido explícito, "dark mode deshabilitado, los
-   skeletons seguían apareciendo oscuros": el <meta name="color-scheme">
-   no cambia lo que @media (prefers-color-scheme:dark) evalúa (eso sigue
-   reflejando el sistema real), así que este bloque -- el skeleton del
-   botón de Google Sign-In, #gsignin-skeleton/-main -- seguía aplicando
-   de verdad con el sistema en dark mode, sin relación con el @media de
-   colors.css que sí se neutralizó.
 @media (prefers-color-scheme: dark) {
   #gsignin-skeleton, #gsignin-skeleton-main {
     background: linear-gradient(90deg,var(--dk-skeleton-base) 25%,var(--dk-skeleton-shine) 50%,var(--dk-skeleton-shine-2) 75%) !important;
     background-size: 200% 100% !important;
   }
-} */
+}
 
 /* WhatsApp grupo */
 .btn-wp-grupo {
