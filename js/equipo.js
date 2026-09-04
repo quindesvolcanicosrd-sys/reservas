@@ -952,6 +952,28 @@ function _eqSincronizarClasePanelAbierto() {
 // saca sola en `transitionend` (`{once:true}`, sin acumular listeners),
 // nunca queda permanente (costo de memoria de GPU si will-change quedara
 // siempre activo sin necesidad real).
+// Patrón único de acordeón (pedido explícito #15, "unificar animación entre
+// Equipo y Eventos" -- código idéntico a `_evAnimarPanel()`/js/eventos.js,
+// mismos nombres salvo el prefijo eq/ev): recibe el punto de partida
+// (`desdePx`, el valor YA visible -- `'0px'` para abrir, `scrollHeight+'px'`
+// congelado para cerrar, nunca `'auto'`, que no se puede animar) Y el
+// destino (`haciaPx`) -- fija `desdePx` ya en este tick (sin pisar nada
+// visualmente, es el valor que el panel ya tenía) y recién en el próximo
+// frame (`requestAnimationFrame`) fija `haciaPx`, para que el navegador
+// registre el cambio como una transición real de un valor a otro, no un
+// salto directo al destino en el mismo tick. `transform:translateY` en los
+// hijos directos (`.eq-misstats-panel-inner`/`.eq-busqueda-panel-inner`) en
+// vez de animar solo `height`: `height` sigue disparando layout igual (es
+// la misma familia de propiedad que `max-height`, ninguna es GPU-only)
+// pero el `transform` de los hijos SÍ corre por compositor -- el contenido
+// se desliza en vez de solo aparecer/desaparecer recortado. `translateZ(0)`
+// sumado acá (no solo en la regla CSS de reposo) -- un `style.transform`
+// inline pisaría por completo cualquier `transform` de la clase, incluido
+// el `translateZ(0)` permanente de `.eq-misstats-panel-inner`/
+// `.eq-busqueda-panel-inner` -- sin esto la capa de compositing se perdía
+// justo durante la animación real. `will-change` como clase temporal
+// (`eq-panel-wrapper-anim`/`eq-panel-inner-anim`, css/equipo.css) -- se
+// saca sola en `transitionend` (`{once:true}`, sin acumular listeners).
 // `volverseAuto` (pedido explícito, "panel invisible al abrir" -- fix más
 // robusto que el rAF anterior): al TERMINAR de abrir, pasa a `height:auto`
 // real (clase `.eq-panel-auto`, css/equipo.css) en vez de quedarse
@@ -962,26 +984,24 @@ function _eqSincronizarClasePanelAbierto() {
 // inline ANTES de agregar la clase -- un inline pisa cualquier `height` de
 // clase, `auto` incluido. Nunca se usa al CERRAR (`volverseAuto` false/
 // omitido) -- 0 sigue siendo un valor real, no auto.
-function _eqAnimarPanel(panel, alturaPx, translateY, volverseAuto) {
+function _eqAnimarPanel(panel, desdePx, haciaPx, translateY, volverseAuto) {
   if (!panel) return;
   panel.classList.add('eq-panel-wrapper-anim');
-  panel.style.height = alturaPx;
+  panel.style.height = desdePx;
   var hijos = panel.children;
-  for (var i = 0; i < hijos.length; i++) {
+  var i;
+  for (i = 0; i < hijos.length; i++) {
     hijos[i].classList.add('eq-panel-inner-anim');
-    // `translateZ(0)` sumado acá (no solo en la regla CSS de reposo,
-    // pedido explícito de pulido) -- un `style.transform` inline pisaría
-    // por completo cualquier `transform` de la clase, incluido el
-    // `translateZ(0)` permanente de `.eq-misstats-panel-inner`/
-    // `.eq-busqueda-panel-inner` -- sin esto, la capa de compositing se
-    // perdía justo durante la animación real, que es cuando más importa.
     hijos[i].style.transform = translateY + ' translateZ(0)';
   }
-  panel.addEventListener('transitionend', function limpiar() {
-    panel.classList.remove('eq-panel-wrapper-anim');
-    for (var j = 0; j < hijos.length; j++) hijos[j].classList.remove('eq-panel-inner-anim');
-    if (volverseAuto) { panel.style.height = ''; panel.classList.add('eq-panel-auto'); }
-  }, { once: true });
+  requestAnimationFrame(function() {
+    panel.style.height = haciaPx;
+    panel.addEventListener('transitionend', function limpiar() {
+      panel.classList.remove('eq-panel-wrapper-anim');
+      for (var j = 0; j < hijos.length; j++) hijos[j].classList.remove('eq-panel-inner-anim');
+      if (volverseAuto) { panel.style.height = ''; panel.classList.add('eq-panel-auto'); }
+    }, { once: true });
+  });
 }
 // `instantAuto` (pedido explícito, "estado inicial expandido" más robusto
 // que el doble rAF anterior): en vez de medir `scrollHeight` (puede dar 0
@@ -1013,7 +1033,7 @@ function _eqAbrirPanel(tag, instantAuto) {
     panel.style.transition = '';
     for (i = 0; i < hijos.length; i++) hijos[i].style.transition = '';
   } else {
-    _eqAnimarPanel(panel, panel.scrollHeight + 'px', 'translateY(0)', true);
+    _eqAnimarPanel(panel, '0px', panel.scrollHeight + 'px', 'translateY(0)', true);
   }
   btn.classList.add('activo');
   if (tag === 'busqueda') {
@@ -1077,17 +1097,12 @@ function _eqCerrarPanel(tag, instant) {
       panel.style.transition = '';
       for (k = 0; k < hijos.length; k++) hijos[k].style.transition = '';
     } else {
-      // Freeze del punto de partida real -- sin `_eqAnimarPanel()` acá a
-      // propósito (mismo motivo de siempre: puede ser el mismo valor que ya
-      // tenía, sin transición real que reproducir, así que tampoco necesita
-      // will-change todavía).
-      panel.style.height = panel.scrollHeight + 'px';
-      requestAnimationFrame(function() {
-        requestAnimationFrame(function() {
-          panel.classList.remove('abierta');
-          _eqAnimarPanel(panel, '0px', 'translateY(-100%)');
-        });
-      });
+      // El freeze del punto de partida real (`scrollHeight`, nunca `auto`)
+      // ahora es interno a `_eqAnimarPanel()` -- un solo rAF ahí adentro
+      // alcanza (pedido explícito #15, "mismo patrón que Eventos"), sin el
+      // doble rAF externo que este archivo usaba antes acá.
+      panel.classList.remove('abierta');
+      _eqAnimarPanel(panel, panel.scrollHeight + 'px', '0px', 'translateY(-100%)');
     }
   }
   if (btn) btn.classList.remove('activo');
@@ -1223,17 +1238,17 @@ function _eqInicializarCierrePanelesPorScroll() {
       // antes de que el snap final a `0px` (abajo) termine y
       // `_eqActualizarStickyHeaders()` corrija sus posiciones (mismo
       // `setTimeout(...,300)` de siempre, al final de este handler).
-      requestAnimationFrame(function() {
-        panel.classList.remove('abierta');
-        _eqAnimarPanel(panel, '0px', 'translateY(-100%)');
-      });
+      panel.classList.remove('abierta');
+      _eqAnimarPanel(panel, panel.style.height, '0px', 'translateY(-100%)');
       if (btn) btn.classList.remove('activo');
     } else {
       // `volverseAuto:true` -- el drag no llegó al umbral, el panel vuelve a
       // abierto de verdad (no solo visualmente): mismo motivo que el toggle
       // manual, queda flexible en `auto` en vez de congelado en el px que
-      // medía la nav en ESTE momento puntual.
-      _eqAnimarPanel(panel, _eqListaDragAlturaOriginal + 'px', 'translateY(0)', true);
+      // medía la nav en ESTE momento puntual. `desdePx` es el alto parcial
+      // actual del arrastre (`panel.style.height`, lo último que dejó el
+      // `touchmove`) -- no `scrollHeight`, que ya mide el alto COMPLETO.
+      _eqAnimarPanel(panel, panel.style.height, _eqListaDragAlturaOriginal + 'px', 'translateY(0)', true);
     }
     setTimeout(function() {
       _eqActualizarStickyHeaders();

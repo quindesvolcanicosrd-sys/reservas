@@ -289,7 +289,11 @@
    recién cuando arranca la transición: crear la capa a mitad de la
    animación (lo que pasaba antes, sin esto) puede generar el mismo tranco
    que se busca evitar. */
-.eq-header-panel { height: 0; overflow: hidden; background: var(--bg); transition: height 350ms cubic-bezier(0.25,0.46,0.45,0.94); transform: translateZ(0); }
+/* Easing -- `ease` a secas (pedido explícito #15, "unificar animación entre
+   Equipo y Eventos"): reemplaza el `cubic-bezier(0.25,0.46,0.45,0.94)`
+   custom ("entrada más suave") de la ronda de pulido anterior -- mismo
+   valor exacto en `.ev-header-burbuja`/css/eventos.css. */
+.eq-header-panel { height: 0; overflow: hidden; background: var(--bg); transition: height 350ms ease; transform: translateZ(0); }
 .eq-header-panel.abierta { margin-bottom: 18px; }
 .eq-header-panel.eq-panel-wrapper-anim { will-change: height; }
 /* Estado "expandido de verdad" (pedido explícito, fix más robusto que medir
@@ -300,7 +304,7 @@
    recortar con el panel en su alto natural; vuelve a `hidden` (regla base)
    apenas se saca esta clase para animar un cierre real. */
 .eq-header-panel.eq-panel-auto { height: auto; overflow: visible; }
-.eq-misstats-panel-inner, .eq-busqueda-panel-inner { transition: transform 350ms cubic-bezier(0.25,0.46,0.45,0.94); transform: translateZ(0); }
+.eq-misstats-panel-inner, .eq-busqueda-panel-inner { transition: transform 350ms ease; transform: translateZ(0); }
 .eq-misstats-panel-inner.eq-panel-inner-anim, .eq-busqueda-panel-inner.eq-panel-inner-anim { will-change: transform; }
 .eq-busqueda-panel-inner {
   background: var(--surface-2); border-radius: 16px; padding: 16px;

@@ -992,31 +992,53 @@ function _evSincronizarNavMesDesde(iso, instant) {
   _evNavMesActual = { year: m.year, month: m.month };
   _evActualizarNavMesLabel(instant);
 }
-// Perf real (pedido explícito, jank de Android Chrome al colapsar) -- mismo
-// helper que `_eqAnimarPanel()`/js/equipo.js: `height` medido (nunca
-// `auto`) en el wrapper + `transform:translateY` en sus hijos directos
-// (`#ev-cal-contenido`/`#ev-mes-pills-row`) -- el `transform` corre por
-// compositor, el `height` sigue disparando layout igual que `max-height`
-// (misma familia de propiedad, ninguna es GPU-only sola). `will-change`
-// como clase temporal (`ev-panel-wrapper-anim`/`ev-panel-inner-anim`,
+// Patrón único de acordeón (pedido explícito #15, "unificar animación entre
+// Equipo y Eventos" -- código idéntico a `_eqAnimarPanel()`/js/equipo.js,
+// mismos nombres salvo el prefijo eq/ev): recibe el punto de partida
+// (`desdePx`, el valor YA visible -- `'0px'` para abrir, `scrollHeight+'px'`
+// congelado para cerrar, nunca `'auto'`, que no se puede animar) Y el
+// destino (`haciaPx`) -- fija `desdePx` ya en este tick (sin pisar nada
+// visualmente, es el valor que el panel ya tenía) y recién en el próximo
+// frame (`requestAnimationFrame`) fija `haciaPx`, para que el navegador
+// registre el cambio como una transición real de un valor a otro. `height`
+// medido (nunca `auto` durante la transición) en el wrapper +
+// `transform:translateY` en sus hijos directos (`#ev-cal-contenido`/
+// `#ev-mes-pills-row`) -- el `transform` corre por compositor, el `height`
+// sigue disparando layout igual que `max-height` (misma familia de
+// propiedad, ninguna es GPU-only sola). `translateZ(0)` sumado acá (no
+// solo en la regla CSS de reposo) -- un `style.transform` inline pisa
+// cualquier `transform` de la clase, incluido el `translateZ(0)`
+// permanente de reposo de `.ev-header-burbuja > *`. `will-change` como
+// clase temporal (`ev-panel-wrapper-anim`/`ev-panel-inner-anim`,
 // css/eventos.css), sacada sola en `transitionend` (`{once:true}`).
-function _evAnimarPanel(panel, alturaPx, translateY) {
+// `volverseAuto` (nuevo -- antes el calendario no lo tenía, a diferencia
+// de "Mis estadísticas"/js/equipo.js -- pedido explícito #15 unifica esto
+// también): al TERMINAR de abrir, pasa a `height:auto` real (clase
+// `.ev-panel-auto`, css/eventos.css) en vez de quedar congelado en el
+// valor en px medido -- se recalcula solo si el contenido cambia de
+// tamaño después (ej. swipe a un mes con más semanas visibles). Sin
+// riesgo del bug de "ancestro `display:none` al medir" que motivó esto en
+// Equipo -- `_evAbrirCalendario()` solo se llama desde un tap directo del
+// usuario (`_evTogglePanel('mes')`), nunca en un re-render de fondo con
+// la pantalla oculta.
+function _evAnimarPanel(panel, desdePx, haciaPx, translateY, volverseAuto) {
   if (!panel) return;
   panel.classList.add('ev-panel-wrapper-anim');
-  panel.style.height = alturaPx;
+  panel.style.height = desdePx;
   var hijos = panel.children;
-  for (var i = 0; i < hijos.length; i++) {
+  var i;
+  for (i = 0; i < hijos.length; i++) {
     hijos[i].classList.add('ev-panel-inner-anim');
-    // `translateZ(0)` sumado acá (mismo motivo que `_eqAnimarPanel()`/
-    // js/equipo.js, pedido explícito de pulido) -- un `style.transform`
-    // inline pisa cualquier `transform` de la clase, incluido el
-    // `translateZ(0)` permanente de reposo de `.ev-header-burbuja > *`.
     hijos[i].style.transform = translateY + ' translateZ(0)';
   }
-  panel.addEventListener('transitionend', function limpiar() {
-    panel.classList.remove('ev-panel-wrapper-anim');
-    for (var j = 0; j < hijos.length; j++) hijos[j].classList.remove('ev-panel-inner-anim');
-  }, { once: true });
+  requestAnimationFrame(function() {
+    panel.style.height = haciaPx;
+    panel.addEventListener('transitionend', function limpiar() {
+      panel.classList.remove('ev-panel-wrapper-anim');
+      for (var j = 0; j < hijos.length; j++) hijos[j].classList.remove('ev-panel-inner-anim');
+      if (volverseAuto) { panel.style.height = ''; panel.classList.add('ev-panel-auto'); }
+    }, { once: true });
+  });
 }
 function _evAbrirCalendario() {
   _evCalUltimaAccionTs = Date.now();
@@ -1038,7 +1060,7 @@ function _evAbrirCalendario() {
   _evCalRenderPills();
   _evCalVisible = true;
   var el = document.getElementById('ev-mes-panel');
-  if (el) { el.classList.add('abierta'); _evAnimarPanel(el, el.scrollHeight + 'px', 'translateY(0)'); }
+  if (el) { el.classList.add('abierta'); _evAnimarPanel(el, '0px', el.scrollHeight + 'px', 'translateY(0)', true); }
   _evActualizarNavMesChevron();
 }
 // Única acción que cierra el calendario del todo (ver "Cambios recientes",
@@ -1048,16 +1070,15 @@ function _evCerrarCalendario() {
   _evCalVisible = false;
   var el = document.getElementById('ev-mes-panel');
   if (el) {
-    // Freeze del punto de partida real -- sin `_evAnimarPanel()` acá a
-    // propósito (mismo motivo que `_eqCerrarPanel()`/js/equipo.js: puede
-    // ser el mismo valor que ya tenía, sin transición real que reproducir).
-    el.style.height = el.scrollHeight + 'px';
-    requestAnimationFrame(function() {
-      requestAnimationFrame(function() {
-        el.classList.remove('abierta');
-        _evAnimarPanel(el, '0px', 'translateY(-100%)');
-      });
-    });
+    // `ev-panel-auto` sacada ANTES de tocar `height` -- no se puede animar
+    // DESDE `auto`; `scrollHeight` sigue midiendo bien el alto real esté
+    // el panel en `auto` o en un px explícito. El freeze del punto de
+    // partida (`scrollHeight`) ahora es interno a `_evAnimarPanel()` --
+    // mismo patrón que `_eqCerrarPanel()`/js/equipo.js, pedido explícito
+    // #15, sin el doble rAF externo que este archivo usaba antes acá.
+    el.classList.remove('ev-panel-auto');
+    el.classList.remove('abierta');
+    _evAnimarPanel(el, el.scrollHeight + 'px', '0px', 'translateY(-100%)');
   }
   _evActualizarNavMesChevron();
 }
@@ -1326,15 +1347,18 @@ function _evInicializarCierreCalendarioPorScroll() {
       // medio) -- llamarla acá saltaría primero de vuelta al alto completo
       // y recién ahí cerraría, un "rebote" que el usuario no pidió.
       _evCalVisible = false;
-      requestAnimationFrame(function() {
-        panel.classList.remove('abierta');
-        _evAnimarPanel(panel, '0px', 'translateY(-100%)');
-      });
+      panel.classList.remove('abierta');
+      _evAnimarPanel(panel, panel.style.height, '0px', 'translateY(-100%)');
       _evActualizarNavMesChevron();
     } else {
       // No llegó al umbral -- vuelve animado al alto original, el
-      // calendario se queda abierto tal cual estaba.
-      _evAnimarPanel(panel, _evTimelineDragAlturaOriginal + 'px', 'translateY(0)');
+      // calendario se queda abierto tal cual estaba. `desdePx` es el alto
+      // parcial actual del arrastre (`panel.style.height`, lo último que
+      // dejó el `touchmove`) -- no `scrollHeight`. `volverseAuto:true`
+      // (pedido explícito #15, unifica con `_eqAnimarPanel()`/js/equipo.js)
+      // -- vuelve a `height:auto` de verdad al terminar, no congelado en el
+      // px que medía en este momento puntual del drag.
+      _evAnimarPanel(panel, panel.style.height, _evTimelineDragAlturaOriginal + 'px', 'translateY(0)', true);
     }
   }, { passive: true });
 }
