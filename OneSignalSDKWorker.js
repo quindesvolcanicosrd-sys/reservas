@@ -14,7 +14,7 @@
 
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
-var CACHE = 'mirlxs-v7';
+var CACHE = 'mirlxs-v8';
 
 self.addEventListener('install', function (e) {
   self.skipWaiting();
