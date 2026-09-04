@@ -144,9 +144,17 @@
    `text-overflow:ellipsis` realmente entre en juego, en vez de empujar
    las pills/el chevron fuera del botón. */
 .eq-misstats-toggle-texto {
-  font-size: 0.86rem; font-weight: 700; color: var(--text); min-width: 0;
+  display: flex; flex-direction: column; min-width: 0; line-height: 1.25;
+}
+/* Título personalizado (pedido explícito, "reemplazar 'Mis Estadísticas'
+   fijo por el nombre de la persona") -- mismo tamaño/peso que el texto fijo
+   de antes, ellipsis propio (en vez de heredarlo del padre, ahora flex
+   column) porque es la línea que puede ser larga (nombre derby). */
+.eq-misstats-toggle-nombre {
+  font-size: 0.86rem; font-weight: 700; color: var(--text);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+.eq-misstats-toggle-sub { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
 /* Pills de nivel/estado en la nav (rediseño compacto, pedido explícito) --
    `flex-shrink:0` (nunca se achican/truncan, a diferencia del texto de
    arriba -- una pill cortada a la mitad no comunica nada) + `white-space:nowrap`

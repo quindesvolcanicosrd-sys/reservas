@@ -893,6 +893,10 @@ function _eqAbrirPanel(tag) {
   panel.classList.add('abierta');
   panel.style.maxHeight = panel.scrollHeight + 'px';
   btn.classList.add('activo');
+  // Preferencia de "Mis estadísticas" persistida (pedido explícito) -- solo
+  // este panel, 'busqueda' nunca se guarda (no tiene sentido recordar un
+  // buscador abierto entre sesiones).
+  if (tag === 'stats') { try { localStorage.setItem('pivot_stats_collapsed', 'false'); } catch (e) {} }
   if (tag === 'busqueda') {
     setTimeout(function() { var inp = document.getElementById('eq-search-input'); if (inp) inp.focus(); }, 50);
   }
@@ -938,6 +942,7 @@ function _eqCerrarPanel(tag) {
     });
   }
   if (btn) btn.classList.remove('activo');
+  if (tag === 'stats') { try { localStorage.setItem('pivot_stats_collapsed', 'true'); } catch (e) {} }
   setTimeout(function() {
     _eqActualizarStickyHeaders();
     _eqSincronizarClasePanelAbierto();
@@ -2011,6 +2016,12 @@ function _eqRenderMisEstadisticas() {
     toggleAvatar.setAttribute('data-nombre', persona.nombreDerby || persona.username);
     toggleAvatar.setAttribute('data-foto', persona.fotoPerfil || '');
   }
+  // Título personalizado (pedido explícito, "reemplazar 'Mis Estadísticas'
+  // fijo por el nombre de la persona") -- mismo fallback `nombreDerby ||
+  // username` que ya usa el avatar de arriba, único lugar de este archivo
+  // donde se resuelve ese nombre para esta persona.
+  var toggleNombre = document.getElementById('eq-misstats-toggle-nombre');
+  if (toggleNombre) toggleNombre.textContent = persona.nombreDerby || persona.username || '';
   // Chevron de tendencia sobre el avatar chico del botón colapsado (bug
   // real corregido, ver MANIFEST.md/CHANGELOG.md -- "chevron en Mis
   // estadísticas"): el tamaño base de `.eq-tendencia-badge` (18px/13px,
@@ -2052,6 +2063,20 @@ function _eqRenderMisEstadisticas() {
   // funciones -- extraída a un solo lugar, un solo caller cada una.
   cont.innerHTML = _eqStatsContenidoHtml(persona);
   _eqHidratarAvatares();
+  // Expandido por defecto (pedido explícito) -- una sola vez por carga de
+  // pantalla, no en cada re-render (esta función se re-llama en cada
+  // refresh/filtro del roster, ver los 2 callers más arriba en este
+  // archivo -- forzar el estado acá en CADA corrida pisaría un toggle
+  // manual de la persona a mitad de sesión). `_eqStatsColapsadoGuardado()`
+  // default `false` (expandido) si `pivot_stats_collapsed` nunca se guardó.
+  if (!_eqStatsPanelInicializado) {
+    _eqStatsPanelInicializado = true;
+    if (!_eqStatsColapsadoGuardado()) _eqAbrirPanel('stats');
+  }
+}
+var _eqStatsPanelInicializado = false;
+function _eqStatsColapsadoGuardado() {
+  try { return localStorage.getItem('pivot_stats_collapsed') === 'true'; } catch (e) { return false; }
 }
 // Contenido de stats compartido entre "Mis estadísticas" (arriba) y el
 // perfil de detalle (`_eqPerfilContenidoHtml()`, más abajo) -- pedido
