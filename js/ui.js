@@ -526,6 +526,12 @@ function ir(id, desdeHistorial, sinTrampa) {
   var tareasDetalleFab = document.getElementById('tar-detalle-fab-menu');
   if (tareasDetalleFab) tareasDetalleFab.style.display = (id === 's-tareas-detalle' && !!_adminToken) ? 'flex' : 'none';
 
+  // FAB "Acciones" de #s-eventos-detalle (pedido explícito, reemplaza los 3
+  // botones sueltos que vivían en la nav del detalle) -- mismo criterio
+  // exacto que el FAB de tareas de arriba.
+  var eventosDetalleFab = document.getElementById('ev-detalle-fab-menu');
+  if (eventosDetalleFab) eventosDetalleFab.style.display = (id === 's-eventos-detalle' && !!_adminToken) ? 'flex' : 'none';
+
   _actualizarBottomNav(id);
 
   var sinPasos = ['s1','s-home','s-misreservas','s-carga','s6','s-datos','s-gestionar'].concat(ADMIN_PANTALLAS);

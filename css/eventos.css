@@ -729,10 +729,6 @@
   .ev-detalle-rsvp-sticky, .ev-detalle-stats-sticky { background: var(--bg); }
 }
 .ev-detalle-nav-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-/* Ícono de tipo SUELTO (pedido explícito, ver "Cambios recientes"): sin el
-   cuadrado de fondo que tenía antes (`.ev-detalle-icon-grande`, eliminada) --
-   compite menos con el botón circular de la flecha atrás al lado. */
-.ev-detalle-nav-icono { color: var(--brand); font-size: 22px; flex-shrink: 0; }
 /* `flex:1` (ver MANIFEST.md "Cambios recientes" -- ícono "Editar evento" del
    sticky nav): antes solo `min-width:0`, sin crecer -- suficiente cuando
    `.ev-detalle-nav-row` no tenía nada después. Con el `.app-nav-actions` del

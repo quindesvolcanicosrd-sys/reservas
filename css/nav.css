@@ -16,8 +16,8 @@
      padding, no un número mágico; los spacers que compensan cada nav fija
      ya se miden en JS con `offsetHeight` (`_initHomeNav()`, ver otros
      `*-nav-spacer`), así que se adaptan solos. */
-  padding: 26px 16px;
-  min-height: 60px;
+  padding: 33px 16px;
+  min-height: 67px;
   background: var(--bg);
   width: 100%;
   box-sizing: border-box;
@@ -218,7 +218,7 @@
   .app-nav-icon-btn:hover { background: var(--brand-lightest); }
   .app-nav-icon-btn-brand:hover { background: var(--brand-dk); }
 }
-.app-nav-icon-btn .material-symbols-outlined { font-size: 18px; }
+.app-nav-icon-btn .material-symbols-outlined { font-size: 22px; }
 
 /* ── Variante naranja de marca (ej. ícono "Asistencia anticipada" de
    Eventos) -- mismo componente (.app-nav-icon-btn), no una clase de nav
@@ -402,12 +402,12 @@
   cursor: pointer;
   color: var(--muted);
   font-family: inherit;
-  font-size: 0.71rem;
+  font-size: 0.73rem;
   font-weight: 700;
   -webkit-tap-highlight-color: transparent;
   transition: color 0.2s ease;
 }
-.app-bottom-nav-item .material-symbols-outlined { font-size: 1.5rem; }
+.app-bottom-nav-item .material-symbols-outlined { font-size: 1.6rem; }
 /* Tab de la pantalla activa, resaltado con el color de énfasis -- el resto
    queda en var(--muted) por la regla base de arriba, sin clase extra. */
 .app-bottom-nav-item.activo { color: var(--brand); }

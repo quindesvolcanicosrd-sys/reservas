@@ -202,7 +202,7 @@
      nav en sí, el spacer de scroll de cada pantalla raíz y el offset de
      #cta-footer-s-home (css/estilos.css), para que los 3 se muevan juntos si
      el alto de la nav cambia algún día. */
-  --bottom-nav-h:   66px;
+  --bottom-nav-h:   71px;
 
   /* ── Sombras (runtime — neutras/negras en los 2 modos, re-ajuste, ver js/color-enfasis.js) ── */
   --shadow-sm:      0 4px 12px rgba(0,0,0,0.06);

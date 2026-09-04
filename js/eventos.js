@@ -1765,7 +1765,7 @@ function _evScrollAFecha(iso, instant, forzar) {
   var absTop = _evOffsetAbsoluto(el);
   var destino = Math.max(0, absTop - margenSup);
   if (!forzar) {
-    var margenInf = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-h')) || 66;
+    var margenInf = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-h')) || 71;
     var vh = window.innerHeight || document.documentElement.clientHeight;
     var yaVisible = window.scrollY <= destino && window.scrollY >= (absTop + el.offsetHeight - vh + margenInf);
     if (yaVisible) return;
@@ -5709,25 +5709,55 @@ function _evConfirmarCancelarEvento(btn) {
 // (`e.estado !== 'Cancelado'`) -- un evento ya cancelado no tiene nada más
 // que cancelar. Abre el sheet de confirmación en vez de cancelar directo
 // (`_evAbrirSheetCancelar()`, arriba en este archivo).
+// Bug real corregido / re-ajuste (pedido explícito, "quitar ícono de tipo
+// de evento" -- el ícono de marca -- silbato, etc., ver `_EV_ICONOS` -- que
+// vivía suelto al lado de la flecha atrás, `.ev-detalle-nav-icono`,
+// css/eventos.css) -- eliminado del todo, sin reemplazo (el tipo ya se lee
+// en `.ev-detalle-tipo`, texto, al lado). Las 3 acciones admin (Editar/
+// Eliminar/Cancelar) que vivían acá como botones sueltos (`acciones`/
+// `.app-nav-actions`) se sacan también -- ahora viven en el FAB
+// `#ev-detalle-fab-menu` (abajo-derecha, admin-only, ver `ir()`/js/ui.js) +
+// el menú `#ev-fab-admin-sheet` (index.html), `_evAbrirFabAdminMenu()` más
+// abajo en este archivo.
 function _evDetalleStickyHtml(ev) {
-  var acciones = '';
-  if (_adminToken) {
-    acciones += '<button type="button" class="app-nav-icon-btn" onclick="_evEditarAbrir()" title="Editar evento" aria-label="Editar evento"><span class="material-symbols-outlined">edit</span></button>';
-    acciones += '<button type="button" class="app-nav-icon-btn app-nav-icon-btn-danger" onclick="_evAbrirSheetBorrar(\'' + ev.id + '\')" title="Eliminar evento" aria-label="Eliminar evento"><span class="material-symbols-outlined">delete</span></button>';
-    if (ev.estado !== 'Cancelado') {
-      acciones += '<button type="button" class="app-nav-icon-btn app-nav-icon-btn-danger" onclick="_evAbrirSheetCancelar(\'' + ev.id + '\')" title="Cancelar evento" aria-label="Cancelar evento"><span class="material-symbols-outlined">event_busy</span></button>';
-    }
-  }
   return '<div class="ev-detalle-nav-row">' +
       '<button class="app-nav-back" onclick="volver(\'s-eventos\')" title="Volver"><span class="material-symbols-outlined">arrow_back</span></button>' +
-      '<span class="material-symbols-outlined ev-detalle-nav-icono">' + (_EV_ICONOS[ev.tipo] || 'event') + '</span>' +
       '<div class="ev-detalle-nav-texto">' +
         '<div class="ev-detalle-tipo">' + ev.tipo + '</div>' +
         '<div class="ev-detalle-fechahora">' + _evFechaCompleta(ev.fecha) + '</div>' +
       '</div>' +
-      (acciones ? '<div class="app-nav-actions">' + acciones + '</div>' : '') +
     '</div>';
 }
+// FAB de acciones admin de #s-eventos-detalle (pedido explícito, reemplaza
+// los 3 botones sueltos que antes vivía `_evDetalleStickyHtml()`) -- mismo
+// mecanismo overlay+history que el resto de los bottom sheets de esta app
+// (`_registrarOverlayAbierto()`/js/ui.js, ver `ajAbrirSheetLogout()`/
+// js/perfil.js para el mismo patrón). `_evDetalleActual` (variable de
+// módulo que ya trackea qué evento se está mostrando, ver "Detalle de un
+// evento" más arriba en este archivo) resuelve a qué evento aplica -- el
+// FAB es markup estático, no se regenera por render, así que no puede
+// llevar el id en un onclick como sí hacían los botones viejos.
+function _evAbrirFabAdminMenu() {
+  var ev = _evDetalleActual;
+  if (!ev) return;
+  var cancelarBtn = document.getElementById('ev-fab-admin-cancelar');
+  if (cancelarBtn) cancelarBtn.style.display = ev.estado === 'Cancelado' ? 'none' : 'flex';
+  var ov = document.getElementById('ev-fab-admin-overlay');
+  var sh = document.getElementById('ev-fab-admin-sheet');
+  if (ov) ov.style.display = 'block';
+  if (sh) { sh.style.display = 'block'; requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); }); }
+  _registrarOverlayAbierto(_evCerrarFabAdminMenu);
+}
+function _evCerrarFabAdminMenu(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var sh = document.getElementById('ev-fab-admin-sheet');
+  var ov = document.getElementById('ev-fab-admin-overlay');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+function _evFabAdminEditar() { _evCerrarFabAdminMenu(true); _evEditarAbrir(); }
+function _evFabAdminEliminar() { var ev = _evDetalleActual; _evCerrarFabAdminMenu(true); if (ev) _evAbrirSheetBorrar(ev.id); }
+function _evFabAdminCancelar() { var ev = _evDetalleActual; _evCerrarFabAdminMenu(true); if (ev) _evAbrirSheetCancelar(ev.id); }
 // Las 3 pills juntas -- Ubicación/Inicio/Fin, ver "Cambios recientes" --
 // corrección de orden + fusión + recorte: antes Inicio/Lugar/"Cómo
 // llegar"/Fin/Duración (5 pills, con el link a Maps viviendo aparte de

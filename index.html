@@ -28,7 +28,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="css/colors.css?v=fb06896e">
+<link rel="stylesheet" href="css/colors.css?v=81bfc4ee">
 <!-- Motor de color de énfasis (Tanda 1/2, ver MANIFEST.md) — recalcula en
      runtime las variables de colors.css derivadas de la marca. Va apenas
      después del <link> de colors.css para pisar el fallback estático antes
@@ -41,8 +41,8 @@
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=4dbd5b57">
-<link rel="stylesheet" href="css/nav.css?v=5ae3b1db">
-<link rel="stylesheet" href="css/eventos.css?v=c6fec103">
+<link rel="stylesheet" href="css/nav.css?v=833f76a2">
+<link rel="stylesheet" href="css/eventos.css?v=a4964875">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/equipo.css?v=e73d7d52">
 <link rel="stylesheet" href="css/perfil.css">
@@ -487,6 +487,41 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 20px;">¿Eliminar este evento? Esta acción no se puede deshacer.</p>
       <button type="button" class="btn btn-danger" onclick="_evConfirmarBorrarEvento(this)" style="margin-bottom:10px;">Eliminar definitivamente</button>
       <button type="button" class="btn btn-outline" onclick="_evCerrarSheetBorrar()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- FAB "Acciones" de #s-eventos-detalle (admin, pedido explícito --
+       reemplaza los 3 botones que vivían sueltos en la nav del detalle:
+       Editar/Eliminar/Cancelar). Mismo mecanismo/posicionamiento que
+       `#tar-detalle-fab-menu` (fixed, abajo-derecha sobre la bottom nav,
+       hijo directo de <body>). display:none por default -- ir()/js/ui.js
+       lo muestra solo con 's-eventos-detalle' activa Y _adminToken. Abre
+       `#ev-fab-admin-sheet` (mismo patrón `.bsheet` que "Gestionar reserva"
+       -- ver `#sheet-gestionar` -- una fila por opción, la de Cancelar
+       oculta si el evento ya está Cancelado) en vez de las 3 acciones
+       directo -- cada opción llama a la MISMA función que antes disparaba
+       el botón de la nav (`_evEditarAbrir()`/`_evAbrirSheetBorrar()`/
+       `_evAbrirSheetCancelar()`), sin duplicar esa lógica. -->
+  <div class="ev-fab-menu" id="ev-detalle-fab-menu" style="display:none;">
+    <button type="button" class="ev-fab-btn" id="ev-detalle-fab-btn" onclick="_evAbrirFabAdminMenu()" title="Acciones del evento" aria-label="Acciones del evento">
+      <span class="material-symbols-outlined">edit</span>
+    </button>
+  </div>
+  <div id="ev-fab-admin-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_evCerrarFabAdminMenu()"></div>
+  <div id="ev-fab-admin-sheet" class="bsheet" style="z-index:9701;">
+    <div class="bsheet-handle"></div>
+    <div class="bsheet-title">Acciones del evento</div>
+    <div class="bsheet-body" style="display:flex;flex-direction:column;gap:10px;">
+      <button type="button" onclick="_evFabAdminEditar()" style="width:100%;padding:14px;background:var(--surface-2);border:1.5px solid var(--border-light);border-radius:12px;color:var(--text);font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
+        <span class="material-symbols-outlined" style="font-size:1.2rem;">edit</span>Editar evento
+      </button>
+      <button type="button" id="ev-fab-admin-cancelar" onclick="_evFabAdminCancelar()" style="width:100%;padding:14px;background:var(--danger-bg);border:1.5px solid var(--danger);border-radius:12px;color:var(--danger);font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
+        <span class="material-symbols-outlined" style="font-size:1.2rem;">event_busy</span>Cancelar evento
+      </button>
+      <button type="button" onclick="_evFabAdminEliminar()" style="width:100%;padding:14px;background:var(--danger-bg);border:1.5px solid var(--danger);border-radius:12px;color:var(--danger);font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;">
+        <span class="material-symbols-outlined" style="font-size:1.2rem;">delete</span>Eliminar evento
+      </button>
+      <button type="button" onclick="_evCerrarFabAdminMenu(true)" style="width:100%;padding:12px;background:transparent;border:none;color:var(--muted);font-size:0.82rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancelar</button>
     </div>
   </div>
 
@@ -3279,10 +3314,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=279f8301"></script>
-<script src="js/eventos.js?v=0d5cfeb4"></script>
+<script src="js/ui.js?v=021dbc66"></script>
+<script src="js/eventos.js?v=1092d9bc"></script>
 <script src="js/offline.js?v=35b214a2"></script>
-<script src="js/tareas.js?v=3ae67120"></script>
+<script src="js/tareas.js?v=9376d780"></script>
 <script src="js/equipo.js?v=d6a41937"></script>
 <script src="js/home.js?v=cf4b0197"></script>
 <script src="js/reservas.js?v=c7b480d0"></script>
