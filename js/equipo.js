@@ -854,9 +854,20 @@ var _EQ_PANELES = {
 };
 var _eqPanelAbierto = null;
 function _eqTogglePanel(tag) {
-  if (_eqPanelAbierto === tag) { _eqCerrarPanel(tag); return; }
+  // localStorage SOLO acá (toque manual del chevron/trigger) -- ni el
+  // auto-open inicial (_eqRenderMisEstadisticas()) ni el auto-colapso por
+  // scroll (_eqInicializarColapsoStatsPorScroll(), más abajo) pasan por
+  // esta función, así que nunca pisan la preferencia guardada -- pedido
+  // explícito: "si el usuario nunca la tocó [manualmente], siempre
+  // expandido al abrir", un scroll no cuenta como haberla tocado.
+  if (_eqPanelAbierto === tag) {
+    _eqCerrarPanel(tag);
+    if (tag === 'stats') { try { localStorage.setItem('pivot_stats_collapsed', 'true'); } catch (e) {} }
+    return;
+  }
   if (_eqPanelAbierto) _eqCerrarPanel(_eqPanelAbierto);
   _eqAbrirPanel(tag);
+  if (tag === 'stats') { try { localStorage.setItem('pivot_stats_collapsed', 'false'); } catch (e) {} }
 }
 // Fade out/in de los sticky headers mientras cualquier panel de la nav
 // está abierto (bug real corregido, ver MANIFEST.md/CHANGELOG.md --
@@ -893,10 +904,6 @@ function _eqAbrirPanel(tag) {
   panel.classList.add('abierta');
   panel.style.maxHeight = panel.scrollHeight + 'px';
   btn.classList.add('activo');
-  // Preferencia de "Mis estadísticas" persistida (pedido explícito) -- solo
-  // este panel, 'busqueda' nunca se guarda (no tiene sentido recordar un
-  // buscador abierto entre sesiones).
-  if (tag === 'stats') { try { localStorage.setItem('pivot_stats_collapsed', 'false'); } catch (e) {} }
   if (tag === 'busqueda') {
     setTimeout(function() { var inp = document.getElementById('eq-search-input'); if (inp) inp.focus(); }, 50);
   }
@@ -942,7 +949,6 @@ function _eqCerrarPanel(tag) {
     });
   }
   if (btn) btn.classList.remove('activo');
-  if (tag === 'stats') { try { localStorage.setItem('pivot_stats_collapsed', 'true'); } catch (e) {} }
   setTimeout(function() {
     _eqActualizarStickyHeaders();
     _eqSincronizarClasePanelAbierto();
@@ -1065,6 +1071,40 @@ function _eqInicializarCierrePanelesPorScroll() {
   }, { passive: true });
 }
 _eqInicializarCierrePanelesPorScroll();
+
+/* ── Colapso de "Mis estadísticas" por umbral de scroll (pedido explícito)
+   -- distinto del drag-to-dismiss de arriba (`_eqInicializarCierrePanelesPorScroll()`):
+   ese SOLO corre en `touchmove` (sigue el gesto en vivo, proporcional al
+   arrastre) -- nunca dispara con scroll de mouse/trackpad/rueda ni con
+   scroll inercial después de soltar el dedo (`touchend` ya pasó,
+   `_eqListaDragActivo` vuelve a `false`), porque nunca hubo un `touchstart`
+   que lo arranque. Esto cubre esos casos con un umbral fijo (60px) en vez
+   de seguir el gesto -- corta de una sola vez, con la MISMA transición de
+   0.28s de siempre (`_eqCerrarPanel()`, sin re-implementar la animación).
+   El pedido original decía "contenedor interno de la sección, no window,
+   para no interferir con otras secciones" -- pero esta app no tiene
+   contenedor propio con scroll: cada `.pantalla` scrollea a nivel
+   `window`/`body` (css/global.css, sin `overflow-y` en `#s-equipo` ni en
+   `#eq-lista-contenido`) -- un listener de `scroll` en ese div nunca
+   dispararía (no es él quien scrollea). Se escucha `window` (mismo patrón
+   ya usado por `_eqActualizarStickyHeadersThrottled()`, más abajo en este
+   archivo) pero se sale de una si `#s-equipo` no es la pantalla activa --
+   ahí queda resuelto el "no interferir con otras secciones" del pedido
+   original, por otro camino. `!_eqListaDragActivo` evita pisar el drag en
+   vivo de arriba mientras el dedo sigue abajo (los 2 mecanismos conviven:
+   el drag maneja el gesto táctil en curso, este cubre todo lo demás). No
+   vuelve a expandir solo -- re-expandir es siempre manual, vía el chevron
+   (`_eqTogglePanel()`). */
+function _eqInicializarColapsoStatsPorScroll() {
+  var UMBRAL_PX = 60;
+  window.addEventListener('scroll', function() {
+    if (_eqPanelAbierto !== 'stats' || _eqListaDragActivo) return;
+    var s = document.getElementById('s-equipo');
+    if (!s || !s.classList.contains('activa')) return;
+    if (window.scrollY > UMBRAL_PX) _eqCerrarPanel('stats');
+  }, { passive: true });
+}
+_eqInicializarColapsoStatsPorScroll();
 
 /* ── Cierre rápido del panel de búsqueda/filtros al iniciar cualquier gesto
    afuera (ver MANIFEST.md -- "el panel de búsqueda/filtros debe ocultarse
