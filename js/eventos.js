@@ -1352,6 +1352,7 @@ function _evInicializarCierreCalendarioPorScroll() {
       var panelH = panel.offsetHeight;
       panel.style.height = panelH + 'px';
       _evCalVisible = false;
+      panel.classList.remove('ev-panel-auto');
       panel.classList.remove('abierta');
       if (_evTimelineStickyHdr) {
         var h = _evTimelineStickyHdr;

@@ -1241,8 +1241,8 @@ function _eqInicializarCierrePanelesPorScroll() {
       panel.style.height = panelH + 'px';
       _eqPanelAbierto = null;
       if (btn) btn.classList.remove('activo');
-      panel.classList.remove('abierta');
       panel.classList.remove('eq-panel-auto');
+      panel.classList.remove('abierta');
       void panel.offsetHeight;
       panel.style.height = '0px';
       panel.addEventListener('transitionend', function() { panel.style.height = ''; }, { once: true });
