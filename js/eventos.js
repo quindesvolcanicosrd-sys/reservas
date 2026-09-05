@@ -6771,9 +6771,21 @@ function _evAntReconciliarConReglas(reglas) {
   // 'indefinido' y una 'periodo' que se solapan): acá se persiste una sola
   // vez por evento, ya con el `miEstado` FINAL (el de la regla más
   // específica, que es la que gana según el orden de arriba).
+  // Snapshot de qué eventos ya tenían un RSVP explícito ANTES de este pase
+  // (miEstado viene del backend, ver _evMapEventoBackend()) -- una regla
+  // automática nunca debe pisar una respuesta real del usuario, pero entre
+  // reglas automáticas sí debe seguir ganando la más específica según el
+  // orden del `.sort()` de arriba (si se chequeara `ev.miEstado == null` en
+  // vivo dentro del loop, la primera regla que matchea un evento -- la
+  // menos específica -- dejaría `miEstado` no-null y bloquearía a las más
+  // específicas de pisarlo después, invirtiendo la prioridad real).
+  var conRsvpExplicito = {};
+  futuros.forEach(function(ev) { if (ev.miEstado != null) conRsvpExplicito[ev.id] = true; });
+
   var tocados = {};
   reglas.forEach(function(r) {
     futuros.forEach(function(ev) {
+      if (conRsvpExplicito[ev.id]) return;
       if (tipoAplica(r, ev) && matchFecha(r, ev)) { ev.miEstado = r.estado; tocados[ev.id] = true; }
     });
   });

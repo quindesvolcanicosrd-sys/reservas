@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-09-05 — Fix en `_evAntReconciliarConReglas`: una regla de asistencia anticipada ya no pisa un RSVP explícito real del usuario (`ev.miEstado` ya cargado desde el backend) — el snapshot de eventos con RSVP explícito se calcula una sola vez antes del loop de reglas (`conRsvpExplicito`), para no romper la prioridad entre reglas automáticas entre sí (indefinido < meses < periodo, según el orden del `.sort()`), que sigue funcionando igual que antes.
+
 2026-09-05 — Deploy manual (`supabase functions deploy api`) de la Edge Function `api` con los 3 fixes de asistencia de esta fecha (fallback de `getEventosRango`, prioridad de origen 'Usuario' en `_ultimaAsistenciaPorPersonaTodas`, propagación de error en `marcarAsistenciaUsuario` — ver entradas debajo) — quedan confirmados en vivo, no solo en el repo.
 
 2026-09-05 — Verificación (sin cambio de código): se pidió agregar `nombre: E.nombre` a los dos call sites de `marcarAsistenciaUsuario` en `_evMarcarAsistencia()` (js/eventos.js). Ya estaba aplicado desde el commit 498dc78 (2026-09-03, "marcarAsistenciaUsuario no recibía nombre desde la migración a Edge Function") — confirmado con `git log -S` sobre ambos bloques (apiPost y apiParams del offline queue).
