@@ -1248,7 +1248,7 @@ async function getEventosRango(params: Record<string, any>): Promise<Record<stri
     // en `asistentes`/`rsvps`, y `rsvps` sigue haciendo falta ahí (resumen
     // de RSVP de cuentas no-admin/no-quindes, rol combinado en el label de
     // puntualidad) -- filtrar acá de más le borraría esa data sin necesidad.
-    const fuenteAsistencia = logAdminReal.length ? logDeEvento : (asistEF[idEvento] ?? []);
+    const fuenteAsistencia = logDeEvento.length ? logDeEvento : (asistEF[idEvento] ?? []);
     const asistencias = fuenteAsistencia.map((a: any) => {
       const eq = equipoPorNombre[String(a.nombre).trim().toUpperCase()] ?? {};
       return { nombre: a.nombre, estado: a.estado, origen: a.origen, nombreDerby: eq.nombreDerby ?? '', fotoPerfil: eq.fotoPerfil ?? '' };
