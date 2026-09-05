@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-09-05 — Fix en `marcarAsistenciaUsuario`: si el INSERT de `_agregarFilaLogAsistencia` falla, ahora se propaga el error real (`{ exito: false, error }`) en vez de ignorarlo — el frontend recibe el error, revierte el estado optimista y muestra el toast, en vez de quedar con un RSVP marcado en pantalla que nunca se guardó.
+
 2026-09-05 — Fix en `_ultimaAsistenciaPorPersonaTodas`: la elección explícita del usuario (`origen==='Usuario'`) ahora siempre gana sobre una regla automática anticipada, sin importar el orden de los timestamps — se prioriza `origen` antes de comparar `marca_temporal`.
 
 2026-09-05 — Fix bug de asistencia en eventos de un día — `getEventosRango` ahora usa `logDeEvento` si tiene cualquier fila, en vez de requerir marks de admin (`logAdminReal`) para no caer al fallback legacy (`asistEF[idEvento]`).

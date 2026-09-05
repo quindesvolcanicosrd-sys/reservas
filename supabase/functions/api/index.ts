@@ -1331,7 +1331,8 @@ async function marcarAsistenciaUsuario(params: Record<string, any>): Promise<Rec
     eraAsistire = previo?.estado === 'Asistiré';
   }
 
-  await _agregarFilaLogAsistencia(String(idEvento).trim(), nombre, 'Usuario', estado);
+  const { error: errLog } = await _agregarFilaLogAsistencia(String(idEvento).trim(), nombre, 'Usuario', estado);
+  if (errLog) return { exito: false, error: 'No se pudo guardar la asistencia: ' + errLog };
 
   if (eraAsistire) {
     const { data: ev } = await supabase.from('asistencias').select('fecha, donde, inicia, tipo_evento').eq('id_evento', idEvento).maybeSingle();
