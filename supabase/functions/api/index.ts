@@ -214,7 +214,8 @@ async function _ultimaAsistenciaPorPersonaTodas(idsEvento: string[]): Promise<Re
     const clave = fila.id_evento + '|' + fila.nombre_usuario;
     const marca = fila.marca_temporal ? new Date(fila.marca_temporal) : null;
     const actual = ultimaPorClave[clave];
-    if (!actual || (marca && marca > actual.marca)) {
+    const prioridad = (o: string) => o === 'Usuario' ? 1 : 0;
+    if (!actual || prioridad(fila.origen) > prioridad(actual.origen) || (prioridad(fila.origen) === prioridad(actual.origen) && marca && marca > actual.marca)) {
       ultimaPorClave[clave] = { idEvento: fila.id_evento, nombre: fila.nombre_usuario, origen: fila.origen, estado: fila.estado, marca };
     }
   });

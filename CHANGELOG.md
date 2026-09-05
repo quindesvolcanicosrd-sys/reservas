@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-09-05 — Fix en `_ultimaAsistenciaPorPersonaTodas`: la elección explícita del usuario (`origen==='Usuario'`) ahora siempre gana sobre una regla automática anticipada, sin importar el orden de los timestamps — se prioriza `origen` antes de comparar `marca_temporal`.
+
 2026-09-05 — Fix bug de asistencia en eventos de un día — `getEventosRango` ahora usa `logDeEvento` si tiene cualquier fila, en vez de requerir marks de admin (`logAdminReal`) para no caer al fallback legacy (`asistEF[idEvento]`).
 
 2026-09-03 — Push notifications de eventos/offseason: crear/cancelar/editar un evento y crear una temporada de descanso ahora disparan un push a todo el equipo (`pushEventoCreado`/`pushEventoCancelado`/`pushEventoEditado`/`pushOffseasonCreado`, Edge Function) desde el callback de éxito de cada operación en js/eventos.js — sin depender de si esa mutación corrió en la Edge Function, en GAS, o vía fetch directo a PostgREST. Una baja de RSVP (de "Asistiré" a "No asistiré"/"No jugador") ahora avisa a los admins.
