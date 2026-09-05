@@ -6808,7 +6808,7 @@ function _evAntReconciliarConReglas(reglas) {
     var yaGuardado = (ev.rsvps || []).some(function(r) { return _evNombresCoinciden(r.nombre, E.nombre); });
     if (yaGuardado) return;
     var estadoAplicado = ev.miEstado;
-    apiPost({ action: 'marcarAsistenciaUsuario', token: _token, nombre: E.nombre, idEvento: ev.id, estado: estadoAplicado }, function() {
+    apiPost({ action: 'marcarAsistenciaUsuario', token: _token, nombre: E.nombre, idEvento: ev.id, estado: estadoAplicado, origenAuto: true }, function() {
       if (!ev.rsvps) ev.rsvps = [];
       // Bug real corregido -- "lista de asistentes muestra username en vez
       // de nombre derby y sin foto" (mismo fix que _evMarcarAsistencia(),

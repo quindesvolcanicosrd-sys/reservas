@@ -1331,7 +1331,8 @@ async function marcarAsistenciaUsuario(params: Record<string, any>): Promise<Rec
     eraAsistire = previo?.estado === 'Asistiré';
   }
 
-  const { error: errLog } = await _agregarFilaLogAsistencia(String(idEvento).trim(), nombre, 'Usuario', estado);
+  const origenFinal = params.origenAuto === true || params.origenAuto === 'true' ? 'AsistenciaAnticipada' : 'Usuario';
+  const { error: errLog } = await _agregarFilaLogAsistencia(String(idEvento).trim(), nombre, origenFinal, estado);
   if (errLog) return { exito: false, error: 'No se pudo guardar la asistencia: ' + errLog };
 
   if (eraAsistire) {
