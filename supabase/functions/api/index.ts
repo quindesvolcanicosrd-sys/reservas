@@ -1238,18 +1238,25 @@ async function getEventosRango(params: Record<string, any>): Promise<Record<stri
     // por Victor, confirmado contra datos de Supabase).
     const logAdminReal = logDeEvento.filter((a: any) => a.origen === 'Admin' && (a.estado === 'A tiempo' || a.estado === 'Tarde'));
     // Fallback a las columnas legacy `a_horario`/`tarde` (`_asistenciaEFPorEvento()`)
-    // solo cuando NO hay ninguna marca real de admin para este evento --
-    // eventos históricos anteriores a la migración a `log_asistencias` (ver
-    // MANIFEST.md), o eventos con RSVPs pero sin rollcall, tienen datos
-    // únicamente en esas columnas. No se usa como fuente primaria: mezclarla
-    // siempre reintroducía el bug de RSVP anticipado mostrándose como
-    // "marcado por un admin" (ver MANIFEST.md). Cuando SÍ hay marca real, se
-    // sigue mandando `logDeEvento` completo (no `logAdminReal`) -- el
-    // frontend (`_evMapEventoBackend()`, js/eventos.js) ya separa por estado
-    // en `asistentes`/`rsvps`, y `rsvps` sigue haciendo falta ahí (resumen
-    // de RSVP de cuentas no-admin/no-quindes, rol combinado en el label de
+    // -- eventos históricos anteriores a la migración a `log_asistencias`
+    // (ver MANIFEST.md), o eventos donde el rollcall se marcó por el sistema
+    // legacy en paralelo, tienen la asistencia REAL únicamente en esas
+    // columnas. Se SUMA a `logDeEvento` (no lo reemplaza) cuando no hay
+    // marca real de admin en `log_asistencias` -- de lo contrario, un evento
+    // con RSVPs en `log_asistencias` pero asistencia real solo en las
+    // columnas legacy perdía esa asistencia real (bug real, fix del
+    // 2026-08-23); y si en cambio el fallback reemplazaba a `logDeEvento`
+    // entero, un evento con SOLO RSVPs (el caso normal antes de que pase el
+    // evento, sin marca real en ningún lado) perdía los RSVPs porque el
+    // fallback legacy está vacío (bug real reintroducido sin querer el
+    // 2026-09-05 al arreglar el primero -- ver CHANGELOG.md). Cuando SÍ hay
+    // marca real en `log_asistencias`, se sigue mandando `logDeEvento`
+    // completo (no `logAdminReal`) sin sumar el fallback -- el frontend
+    // (`_evMapEventoBackend()`, js/eventos.js) ya separa por estado en
+    // `asistentes`/`rsvps`, y `rsvps` sigue haciendo falta ahí (resumen de
+    // RSVP de cuentas no-admin/no-quindes, rol combinado en el label de
     // puntualidad) -- filtrar acá de más le borraría esa data sin necesidad.
-    const fuenteAsistencia = logDeEvento.length ? logDeEvento : (asistEF[idEvento] ?? []);
+    const fuenteAsistencia = logAdminReal.length ? logDeEvento : [...logDeEvento, ...(asistEF[idEvento] ?? [])];
     const asistencias = fuenteAsistencia.map((a: any) => {
       const eq = equipoPorNombre[String(a.nombre).trim().toUpperCase()] ?? {};
       return { nombre: a.nombre, estado: a.estado, origen: a.origen, nombreDerby: eq.nombreDerby ?? '', fotoPerfil: eq.fotoPerfil ?? '' };

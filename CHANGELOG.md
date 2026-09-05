@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-09-05 — Fix definitivo de `fuenteAsistencia` en `getEventosRango`: en vez de elegir entre `logDeEvento` y el fallback legacy `asistEF[idEvento]` (2 versiones excluyentes que se venían alternando y cada una rompía un caso distinto — ver detalle en MANIFEST.md, entrada `log_asistencias`), ahora se combinan cuando no hay marca real de admin en `log_asistencias`: `logAdminReal.length ? logDeEvento : [...logDeEvento, ...(asistEF[idEvento] ?? [])]`. Cubre a la vez el caso "solo RSVPs, sin nada más" y el caso "RSVPs + asistencia real solo en columnas legacy".
+
 2026-09-05 — Refactor (sin cambio de comportamiento) en `_evAntReconciliarConReglas`: el guard de RSVP explícito pasa de un objeto plano (`conRsvpExplicito`, construido desde `futuros`) a un `Set` (`eventosConRsvpReal`, construido desde `_EV_EVENTOS`) — mismo efecto, ya que solo se consulta contra eventos de `futuros` dentro del loop.
 
 2026-09-05 — Fix en `_evAntReconciliarConReglas`: una regla de asistencia anticipada ya no pisa un RSVP explícito real del usuario (`ev.miEstado` ya cargado desde el backend) — el snapshot de eventos con RSVP explícito se calcula una sola vez antes del loop de reglas (`conRsvpExplicito`), para no romper la prioridad entre reglas automáticas entre sí (indefinido < meses < periodo, según el orden del `.sort()`), que sigue funcionando igual que antes.
