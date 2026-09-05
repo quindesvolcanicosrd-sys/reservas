@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-09-05 — Refactor (sin cambio de comportamiento) en `_evAntReconciliarConReglas`: el guard de RSVP explícito pasa de un objeto plano (`conRsvpExplicito`, construido desde `futuros`) a un `Set` (`eventosConRsvpReal`, construido desde `_EV_EVENTOS`) — mismo efecto, ya que solo se consulta contra eventos de `futuros` dentro del loop.
+
 2026-09-05 — Fix en `_evAntReconciliarConReglas`: una regla de asistencia anticipada ya no pisa un RSVP explícito real del usuario (`ev.miEstado` ya cargado desde el backend) — el snapshot de eventos con RSVP explícito se calcula una sola vez antes del loop de reglas (`conRsvpExplicito`), para no romper la prioridad entre reglas automáticas entre sí (indefinido < meses < periodo, según el orden del `.sort()`), que sigue funcionando igual que antes.
 
 2026-09-05 — Deploy manual (`supabase functions deploy api`) de la Edge Function `api` con los 3 fixes de asistencia de esta fecha (fallback de `getEventosRango`, prioridad de origen 'Usuario' en `_ultimaAsistenciaPorPersonaTodas`, propagación de error en `marcarAsistenciaUsuario` — ver entradas debajo) — quedan confirmados en vivo, no solo en el repo.
