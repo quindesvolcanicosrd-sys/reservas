@@ -4,6 +4,10 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-09-05 — Deploy manual (`supabase functions deploy api`) de la Edge Function `api` con los 3 fixes de asistencia de esta fecha (fallback de `getEventosRango`, prioridad de origen 'Usuario' en `_ultimaAsistenciaPorPersonaTodas`, propagación de error en `marcarAsistenciaUsuario` — ver entradas debajo) — quedan confirmados en vivo, no solo en el repo.
+
+2026-09-05 — Verificación (sin cambio de código): se pidió agregar `nombre: E.nombre` a los dos call sites de `marcarAsistenciaUsuario` en `_evMarcarAsistencia()` (js/eventos.js). Ya estaba aplicado desde el commit 498dc78 (2026-09-03, "marcarAsistenciaUsuario no recibía nombre desde la migración a Edge Function") — confirmado con `git log -S` sobre ambos bloques (apiPost y apiParams del offline queue).
+
 2026-09-05 — Fix en `marcarAsistenciaUsuario`: si el INSERT de `_agregarFilaLogAsistencia` falla, ahora se propaga el error real (`{ exito: false, error }`) en vez de ignorarlo — el frontend recibe el error, revierte el estado optimista y muestra el toast, en vez de quedar con un RSVP marcado en pantalla que nunca se guardó.
 
 2026-09-05 — Fix en `_ultimaAsistenciaPorPersonaTodas`: la elección explícita del usuario (`origen==='Usuario'`) ahora siempre gana sobre una regla automática anticipada, sin importar el orden de los timestamps — se prioriza `origen` antes de comparar `marca_temporal`.
