@@ -41,7 +41,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=69d45028">
 <link rel="stylesheet" href="css/nav.css?v=4e85514c">
-<link rel="stylesheet" href="css/eventos.css?v=098de5fd">
+<link rel="stylesheet" href="css/eventos.css?v=8ff9b8e4">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/equipo.css?v=c369e273">
 <link rel="stylesheet" href="css/perfil.css">
@@ -3314,7 +3314,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=0e7bd355"></script>
-<script src="js/eventos.js?v=46f3d3c6"></script>
+<script src="js/eventos.js?v=7fef09f7"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=9376d780"></script>
 <script src="js/equipo.js?v=b88eccc6"></script>
@@ -5235,6 +5235,16 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Sheet de video instructivo del lugar (ver MANIFEST.md) -->
+<div id="ev-video-sheet" class="ev-video-sheet" style="display:none" onclick="if(event.target===this)_evCerrarVideoInstructivo()">
+  <div class="ev-video-contenedor">
+    <button type="button" class="ev-video-cerrar" onclick="_evCerrarVideoInstructivo()">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+    <iframe id="ev-video-iframe" src="" frameborder="0" allowfullscreen allow="autoplay; encrypted-media"></iframe>
   </div>
 </div>
 

@@ -5857,7 +5857,7 @@ function _evDetalleInfoHtml(ev) {
       (mapsUrl
         ? '<a class="fi-pill fi-pill-lugar" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '<span class="fi-pill-div">|</span><span class="material-symbols-outlined">navigation</span>Cómo llegar</a>'
         : '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</span>') +
-      (videoInstructivo ? '<a class="fi-pill fi-pill-video" href="' + videoInstructivo + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">play_circle</span>Video instructivo</a>' : '') +
+      (videoInstructivo ? '<button type="button" class="fi-pill fi-pill-video" onclick="_evAbrirVideoInstructivo(\'' + videoInstructivo.replace(/'/g, "\\'") + '\')"><span class="material-symbols-outlined">play_circle</span>Ver video</button>' : '') +
       '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>Inicia ' + ev.horaInicio + 'hs</span>' +
       '<span class="fi-pill fi-pill-fin"><span class="material-symbols-outlined">schedule</span>Finaliza ' + _evHoraFin(ev) + 'hs</span>' +
     '</div>' +
@@ -5941,6 +5941,40 @@ function _evDetalleInfoHtml(ev) {
     }
   }
   return html;
+}
+
+// Sheet in-app de video instructivo del lugar (ver MANIFEST.md) -- el pill
+// `.fi-pill-video` de _evDetalleInfoHtml() llama a _evAbrirVideoInstructivo()
+// en vez de abrir target="_blank" directo. Solo YouTube tiene embed in-app
+// (#ev-video-sheet, index.html) -- cualquier otra red cae a window.open()
+// de siempre, sin sheet.
+function _evYoutubeEmbedUrl(url) {
+  var m;
+  m = url.match(/youtube\.com\/shorts\/([A-Za-z0-9_-]+)/);
+  if (m) return 'https://www.youtube.com/embed/' + m[1];
+  m = url.match(/youtube\.com\/watch\?.*v=([A-Za-z0-9_-]+)/);
+  if (m) return 'https://www.youtube.com/embed/' + m[1];
+  m = url.match(/youtu\.be\/([A-Za-z0-9_-]+)/);
+  if (m) return 'https://www.youtube.com/embed/' + m[1];
+  return null;
+}
+function _evAbrirVideoInstructivo(url) {
+  var embedUrl = _evYoutubeEmbedUrl(url);
+  if (!embedUrl) { window.open(url, '_blank', 'noopener'); return; }
+  var frame = document.getElementById('ev-video-iframe');
+  if (frame) frame.src = embedUrl;
+  var sheet = document.getElementById('ev-video-sheet');
+  if (sheet) { sheet.style.display = 'flex'; void sheet.offsetWidth; sheet.classList.add('visible'); }
+}
+function _evCerrarVideoInstructivo() {
+  var sheet = document.getElementById('ev-video-sheet');
+  if (!sheet) return;
+  sheet.classList.remove('visible');
+  setTimeout(function() {
+    sheet.style.display = 'none';
+    var frame = document.getElementById('ev-video-iframe');
+    if (frame) frame.src = '';
+  }, 300);
 }
 
 /* ═══════════════════════════════════════════════════════
