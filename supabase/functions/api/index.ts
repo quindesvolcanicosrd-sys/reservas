@@ -1518,7 +1518,22 @@ async function adminBuscarPersonasParaEvento(params: Record<string, any>): Promi
   const asistLog = await _ultimaAsistenciaPorPersonaTodas([idEvento]);
   const yaMarcadas: Record<string, string> = {};
   (asistLog[idEvento] ?? []).forEach((a: any) => { yaMarcadas[a.nombre] = a.estado; });
-  const personas = (equipo ?? []).map((r: any) => ({ nombre: r.username, estadoActual: yaMarcadas[r.username] ?? null, estadoMiembro: r.estado_miembro ?? 'Activx' }));
+  // `ultimaAsistencia` no es una columna real de `equipo` -- se calcula
+  // desde `log_asistencias`, mismo criterio que `adminGetRosterEquipo()`/
+  // `getEquipo()` más abajo en este archivo (30+ días sin marca real de
+  // admin = inactivo). Sin `.in()` a propósito -- mismo fix que
+  // `_ultimaAsistenciaPorPersonaTodas()` (ver comentario ahí, evita
+  // truncado por el límite de 1000 filas de PostgREST con listas largas).
+  const { data: logsUlt } = await supabase.from('log_asistencias')
+    .select('nombre_usuario, fecha_entrenamiento')
+    .eq('origen', 'Admin').neq('estado', 'Ninguno').limit(100000);
+  const ultimaPorUsuario: Record<string, string> = {};
+  (logsUlt ?? []).forEach((l: any) => {
+    if (!l.fecha_entrenamiento) return;
+    const actual = ultimaPorUsuario[l.nombre_usuario];
+    if (!actual || l.fecha_entrenamiento > actual) ultimaPorUsuario[l.nombre_usuario] = l.fecha_entrenamiento;
+  });
+  const personas = (equipo ?? []).map((r: any) => ({ nombre: r.username, estadoActual: yaMarcadas[r.username] ?? null, estadoMiembro: r.estado_miembro ?? 'Activx', ultimaAsistencia: ultimaPorUsuario[r.username] ? ultimaPorUsuario[r.username].slice(0, 10) : null }));
   return { personas };
 }
 

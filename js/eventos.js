@@ -6514,7 +6514,11 @@ function _evRenderDetalleAsistencia(ev) {
     // tiene sentido reclamado como "sin respuesta" a un evento. No excluye
     // 'Técnico'/'Lesionadx' (categorías de membresía propias, no inactividad).
     var sinResponder = (res.personas || []).filter(function(p) {
-      return !respondieron[String(p.nombre).trim().toUpperCase()] && p.estadoMiembro !== 'Ausente';
+      if (respondieron[String(p.nombre).trim().toUpperCase()]) return false;
+      if (p.estadoMiembro === 'Ausente') return false;
+      if (!p.ultimaAsistencia) return false;
+      var diasSinAsistir = Math.floor((Date.now() - new Date(p.ultimaAsistencia).getTime()) / 86400000);
+      return diasSinAsistir < 30;
     }).map(function(p) { return { nombre: p.nombre, nombreDerby: p.nombreDerby || '', fotoPerfil: p.fotoPerfil || '' }; });
     _evPintarStatsAsistencia(grupos.concat([{ key: _EV_GRUPO_SIN_RESPONDER.key, label: _EV_GRUPO_SIN_RESPONDER.label, clase: _EV_GRUPO_SIN_RESPONDER.clase, personas: sinResponder }]));
     [
