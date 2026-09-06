@@ -1005,11 +1005,7 @@
 }
 .ev-card-compacta-wrap:hover { border-color: var(--brand); }
 .ev-card-compacta { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; }
-.ev-card-compacta .ev-card-icon { width: 36px; height: 36px; min-width: 36px; border-radius: 10px; }
-.ev-card-compacta .ev-card-icon .material-symbols-outlined { font-size: 1.1rem; }
 .ev-card-compacta-info { flex: 1; min-width: 0; }
-.ev-card-compacta-titulo { font-size: 0.83rem; font-weight: 700; color: var(--text); }
-.ev-card-compacta-sub { font-size: 0.73rem; color: var(--muted); margin-top: 2px; }
 /* Sin chevron propio para Cancelado/No se entrena (ver "Cambios recientes"
    -- eliminado, `.ev-chevron-ver` sin más consumidores): `.ev-card-compacta`
    entera ya es tocable, no hace falta la afordancia. */
@@ -1046,13 +1042,21 @@
    TODA la card compacta -- comprometía la legibilidad del contenido
    (nombre/hora/lista de asistentes), pedido explícito de Victor de sacarla.
    Reemplazada por 2 indicadores sutiles que no tocan el texto: ícono
-   forzado a gris apagado (ya existía, sin cambios) + borde algo más
-   marcado (`--border-mid` en vez de `--border-light`, el tono por default
-   de `.ev-card-compacta-wrap`) -- alcanza para diferenciar "esto ya pasó"
-   sin afectar el contraste de ningún texto. Futuros (`.ev-card`, la card
-   completa) sin cambios. */
+   forzado a gris apagado + borde algo más marcado (`--border-mid` en vez de
+   `--border-light`, el tono por default de `.ev-card-compacta-wrap`) --
+   alcanza para diferenciar "esto ya pasó" sin afectar el contraste de
+   ningún texto. Futuros (`.ev-card`, la card completa) sin cambios. */
 .ev-card-compacta-wrap.ev-pasado-atenuado { border-color: var(--border-mid); }
-.ev-card-compacta-wrap.ev-pasado-atenuado .ev-card-icon { background: var(--surface-2); color: var(--muted); }
+/* Único diferencial intencional entre el ícono de eventos pasados/futuros
+   (pedido explícito, ver MANIFEST.md -- unificación del resto del markup
+   ícono/hora/lugar de `_evTimelineFilaHtml()` con `_evCardEventoHtml()`):
+   antes vivía en `.ev-card-compacta-wrap.ev-pasado-atenuado .ev-card-icon`
+   (recuadro cuadrado propio, eliminado del todo de esta fila) -- ahora
+   sobre el ícono inline en sí, misma clase base `.ev-card-icono-inline` que
+   usa la card de futuro. `filter: grayscale(1)`, no `opacity` -- `--brand`
+   (color real del ícono, `.ev-card-icono-inline`) es un rojo saturado
+   (`#E8000D`); solo opacidad lo dejaría en un rojo desteñido, no gris. */
+.ev-card-icono--pasado { filter: grayscale(1); opacity: 0.6; }
 
 /* Buscador -- reusa `.app-nav-search` literal (css/nav.css, mismo pill que
    Ajustes). `caret-color:transparent` ya lo cubre la regla global por

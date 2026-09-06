@@ -5076,12 +5076,20 @@ function _evTimelineFilaHtml(e) {
   // afuera (mismo motivo que en la card completa: nunca hubo/habrá
   // asistencia que gestionar).
   var gestionAdmin = (_adminToken && !cancelado && _evYaEmpezo(e)) ? _evAccionAdminHtml(e) : '';
+  // Ícono/hora/lugar unificados con la card completa de futuro (pedido
+  // explícito, ver MANIFEST.md) -- mismo markup/clases EXACTAS que
+  // `_evCardEventoHtml()` (`.ev-card-titulo-row`/`.ev-card-icono-inline`/
+  // `.ev-card-titulo`, `.ev-card-sub`) en vez de las propias de esta fila
+  // (`.ev-card-icon` cuadrado + `.ev-card-compacta-titulo`/`.ev-card-compacta-sub`,
+  // eliminadas del todo -- sin más consumidores, ver css/eventos.css). Único
+  // diferencial intencional que se mantiene: el ícono en gris apagado
+  // (`.ev-card-icono--pasado`, `filter:grayscale(1)`) en vez del color de
+  // marca.
   return '<div class="ev-card-compacta-wrap ev-pasado-atenuado">' +
     '<div class="ev-card-compacta" onclick="abrirEvDetalle(\'' + e.id + '\')">' +
-      '<div class="ev-card-icon"><span class="material-symbols-outlined">' + icono + '</span></div>' +
       '<div class="ev-card-compacta-info">' +
-        '<div class="ev-card-compacta-titulo">' + e.lugar + '</div>' +
-        '<div class="ev-card-compacta-sub">' + e.horaInicio + ' · ' + e.tipo + '</div>' +
+        '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline ev-card-icono--pasado">' + icono + '</span><div class="ev-card-titulo">' + e.lugar + '</div></div>' +
+        '<div class="ev-card-sub"><span class="material-symbols-outlined">schedule</span>' + e.horaInicio + ' · ' + e.tipo + '</div>' +
       '</div>' +
     '</div>' +
     '<div id="ev-asist-real-' + e.id + '">' + nota + '</div>' +
