@@ -26,6 +26,21 @@
 .fi-pill-validez { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border-soft); }
 .fi-pill-div { opacity: 0.3; margin: 0 3px; }
 
+/* Pill de ubicación unificado — contenedor flex con hijos clicables
+   independientes (link Maps + botón video) sin anidar <a> en <a>. */
+.fi-pill-lugar { display: inline-flex; align-items: center; padding: 0; }
+.fi-pill-accion {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 10px; color: inherit; text-decoration: none;
+  background: none; border: none; font: inherit; font-size: inherit;
+  cursor: pointer;
+}
+.fi-pill-accion-static {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 10px;
+}
+.fi-pill-accion:hover { opacity: 0.75; }
+
 .fi-circle { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--brand-30); flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 1px; transition: background 0.2s, border-color 0.2s; }
 .fi-circle .material-symbols-outlined { font-size: 1rem; color: transparent; }
 .fecha-item.sel .fi-circle { background: var(--brand); border-color: var(--brand); }
