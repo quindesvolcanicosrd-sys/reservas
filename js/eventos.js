@@ -4495,7 +4495,7 @@ function _evRsvpAccordionHtml(e) {
   }).join('');
   return '<div class="ev-asistentes-list" onclick="event.stopPropagation()">' +
     '<div class="ev-asist-admin-header' + (abierto ? ' abierto' : '') + '" id="ev-asist-admin-header-' + e.id + '" onclick="_evAsistAdminToggle(\'' + e.id + '\')">' +
-      '<span class="ev-asist-admin-header-titulo">Asistencias' + _evAcordHeaderAvataresHtml(rsvps) + '</span>' +
+      '<span class="ev-asist-admin-header-titulo">' + _evAcordHeaderAvataresHtml(rsvps) + '</span>' +
       '<span class="material-symbols-outlined ev-asist-admin-chevron">expand_more</span>' +
     '</div>' +
     '<div class="ev-asist-admin-body' + (abierto ? ' abierto' : '') + '" id="ev-asist-admin-body-' + e.id + '">' +
