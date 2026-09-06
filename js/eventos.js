@@ -5861,7 +5861,7 @@ function _evDetalleInfoHtml(ev) {
   var html = '<div class="fi-pills">' +
       '<span class="fi-pill fi-pill-lugar">' +
         (mapsUrl
-          ? '<a class="fi-pill-accion" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '<span class="fi-pill-div">|</span><span class="material-symbols-outlined">navigation</span>Cómo llegar</a>'
+          ? '<a class="fi-pill-accion" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '<span class="fi-pill-div">|</span><span class="material-symbols-outlined">navigation</span>Indicaciones</a>'
           : '<span class="fi-pill-accion-static"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</span>') +
         (videoInstructivo ? '<span class="fi-pill-div">|</span><button type="button" class="fi-pill-accion" onclick="event.stopPropagation();_evAbrirVideoInstructivo(\'' + videoInstructivo.replace(/'/g, "\\'") + '\')"><span class="material-symbols-outlined">play_circle</span>Ver cómo llegar</button>' : '') +
       '</span>' +
