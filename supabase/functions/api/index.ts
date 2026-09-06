@@ -1362,6 +1362,14 @@ async function marcarAsistenciaUsuario(params: Record<string, any>): Promise<Rec
   }
 
   const origenFinal = esAuto ? 'AsistenciaAnticipada' : 'Usuario';
+  if (!esAuto) {
+    // Click manual: limpiar filas RSVP previas para que el click siempre sea definitivo
+    await supabase.from('log_asistencias')
+      .delete()
+      .eq('id_evento', idEvento)
+      .eq('nombre_usuario', nombre)
+      .in('origen', ['Usuario', 'AsistenciaAnticipada']);
+  }
   const { error: errLog } = await _agregarFilaLogAsistencia(String(idEvento).trim(), nombre, origenFinal, estado);
   if (errLog) return { exito: false, error: 'No se pudo guardar la asistencia: ' + errLog };
 
