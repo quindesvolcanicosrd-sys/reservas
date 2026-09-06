@@ -3948,6 +3948,13 @@ function irNuevaReservaConTipo(tipo) {
   }, 310);
 }
 function _evRsvpBarraHtml(e) {
+  // Ocultar RSVP si faltan menos de 10 minutos para el inicio o ya empezó
+  if (e.horaInicio) {
+    var _partesFecha = e.fecha.split('-');
+    var _partesHora = e.horaInicio.split(':');
+    var _inicioEvento = new Date(+_partesFecha[0], +_partesFecha[1] - 1, +_partesFecha[2], +_partesHora[0], +_partesHora[1], 0);
+    if (new Date() >= new Date(_inicioEvento.getTime() - 10 * 60 * 1000)) return '';
+  }
   // Entrenamiento futuro de un mes que mirlxs todavía no pagó: sin RSVP,
   // aunque tenga cuota al día para el mes actual (chequeo de más abajo) --
   // evita marcar "Asistiré" a una clase de un mes que aún no reservó.
