@@ -5857,7 +5857,7 @@ function _evDetalleInfoHtml(ev) {
       (mapsUrl
         ? '<a class="fi-pill fi-pill-lugar" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '<span class="fi-pill-div">|</span><span class="material-symbols-outlined">navigation</span>Cómo llegar</a>'
         : '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</span>') +
-      (videoInstructivo ? '<button type="button" class="fi-pill fi-pill-video" onclick="_evAbrirVideoInstructivo(\'' + videoInstructivo.replace(/'/g, "\\'") + '\')"><span class="material-symbols-outlined">play_circle</span>Ver video</button>' : '') +
+      (videoInstructivo ? '<button type="button" class="fi-pill fi-pill-video" onclick="_evAbrirVideoInstructivo(\'' + videoInstructivo.replace(/'/g, "\\'") + '\')"><span class="material-symbols-outlined">play_circle</span>Ver cómo llegar</button>' : '') +
       '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>Inicia ' + ev.horaInicio + 'hs</span>' +
       '<span class="fi-pill fi-pill-fin"><span class="material-symbols-outlined">schedule</span>Finaliza ' + _evHoraFin(ev) + 'hs</span>' +
     '</div>' +
