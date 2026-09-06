@@ -2641,7 +2641,7 @@ async function adminGetRosterEquipo(): Promise<Record<string, any>> {
 // acciones de solo-lectura.
 async function getEquipo(params: Record<string, any> = {}): Promise<Record<string, any>> {
   const { data: filas } = await supabase.from('equipo')
-    .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, prefijo, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano, termometro_pct, fecha_ingreso, necesita_patines, necesita_protecciones, puntos_anteriores')
+    .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, prefijo, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano, termometro_pct, fecha_ingreso, necesita_patines, necesita_protecciones, puntos_anteriores, racha_actual')
     .order('username');
   const personas = filas ?? [];
   if (!personas.length) return { personas: [] };
@@ -2934,6 +2934,17 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     // `puntos_bonificacion` + `puntos_extra` combinados -- ver comentario
     // grande junto a `puntosPeriodoPorUsuario` más arriba en esta función.
     puntosRacha: puntosPeriodoPorUsuario[r.username] ? puntosPeriodoPorUsuario[r.username].racha : 0,
+    // `equipo.racha_actual` (pedido explícito, ver MANIFEST.md -- "Mis
+    // estadísticas muestra sin racha pese a que la racha real es 14"):
+    // contador real de asistencias consecutivas (`adminMarcarAsistencia()`,
+    // arriba en este archivo), independiente del período de puntaje
+    // elegido -- a diferencia de `puntosRacha` (arriba), que son los PUNTOS
+    // bonus ganados por hitos de racha (cada 3ra consecutiva) DENTRO del
+    // período seleccionado, y puede dar 0 aunque la racha real siga viva si
+    // no hubo un hito nuevo en ese período puntual. Esta columna nunca se
+    // había expuesto acá -- solo se escribía (nunca se leía de vuelta) hasta
+    // este pedido.
+    rachaActual: Number(r.racha_actual) || 0,
     // `equipo.puntos_anteriores` es el arrastre de puntos previos a la
     // existencia de `puntos_mensuales` (importado a mano al migrar el
     // sistema de puntos) -- solo tiene sentido sumarlo al total histórico,

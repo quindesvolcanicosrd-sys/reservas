@@ -2388,6 +2388,18 @@ function _eqStatsContenidoHtml(p) {
   var rachaBadgeHtml = rachaPuntos > 0
     ? '<span class="eq-stat-combo-racha-badge" onclick="event.stopPropagation();' + _eqDesgloseOnclick(p.username, 'racha', 'Puntos por racha') + '"><span class="material-symbols-rounded">local_fire_department</span>+' + rachaPuntos + '</span>'
     : '';
+  // Racha REAL (pedido explícito, ver MANIFEST.md -- "Mis estadísticas
+  // muestra sin racha pese a que la racha real es 14"): `p.rachaActual`
+  // (equipo.racha_actual, ahora expuesto por getEquipo()) es el contador de
+  // asistencias consecutivas en sí, independiente del período de puntaje
+  // elegido -- distinto de `rachaBadgeHtml` (arriba), que son los PUNTOS
+  // bonus ganados por hitos de racha DENTRO de ese período, y puede dar 0
+  // aunque la racha real siga viva. Se suma al label "Asistencia" (no
+  // reemplaza el badge de puntos, que sigue con su propio desglose
+  // tappable) -- oculto del todo si la racha real es 0, mismo criterio que
+  // el resto de esta función.
+  var rachaActual = Number(p.rachaActual) || 0;
+  var labelAsistencia = 'Asistencia' + (rachaActual > 0 ? ' · Racha ' + rachaActual : '');
   // Divisor "Datos anuales" (pedido explícito) -- mismo estilo/clases
   // exactas que el separador "Puntos" de más abajo (`.eq-mis-stats-puntos-row`/
   // `.eq-grupo-linea`/`.eq-grupo-nombre`), sin el pill de total (acá no hay
@@ -2415,7 +2427,7 @@ function _eqStatsContenidoHtml(p) {
           '<span class="eq-stat-valor">' + (p.puntosAsistencia !== undefined && p.puntosAsistencia !== null ? p.puntosAsistencia : '—') + '</span>' +
           rachaBadgeHtml +
         '</div>' +
-        '<div class="eq-stat-label">Asistencia</div>' +
+        '<div class="eq-stat-label">' + labelAsistencia + '</div>' +
       '</div>' +
     '</div>' +
     rankHtml;
