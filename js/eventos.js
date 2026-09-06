@@ -4927,17 +4927,31 @@ function _evToggleFiltroBurbuja(campo) {
   _evActualizarBotonesFiltro();
   // El panel exterior (`#ev-busqueda-panel`, ver "Cambios recientes" --
   // antes `#ev-filtros-colapsable`, panel propio antes de fusionar
-  // búsqueda+filtros) fija su `max-height` a la altura real de SU contenido
-  // en el momento de abrirse (sin ninguna burbuja Lugar/Tipo abierta
-  // todavía) -- relajarlo acá a un techo holgado evita que esa misma altura
-  // ajustada recorte una burbuja que se expande DESPUÉS. Sin transición
-  // propia (salto directo, no animado): un techo más alto no cambia nada
-  // visible mientras el contenido real quepa adentro, así que no hay
-  // "golpe" que evitar acá, a diferencia del panel. Más alto que antes
-  // (550px, no 460px) porque el panel ahora también contiene el buscador +
-  // el subtítulo "Filtros" arriba de Lugar/Tipo.
+  // búsqueda+filtros) fija su `height` (ver `_evAbrirPanel()`, más arriba en
+  // este archivo -- `.ev-header-burbuja` anima `height`, no `max-height`,
+  // desde el refactor de perf) a la altura real de SU contenido en el
+  // momento de abrirse (sin ninguna burbuja Lugar/Tipo abierta todavía) --
+  // relajarlo acá a un techo holgado evita que esa misma altura ajustada
+  // recorte una burbuja que se expande DESPUÉS. Sin transición propia
+  // (salto directo, no animado): un techo más alto no cambia nada visible
+  // mientras el contenido real quepa adentro, así que no hay "golpe" que
+  // evitar acá, a diferencia del panel. Más alto que antes (550px, no
+  // 460px) porque el panel ahora también contiene el buscador + el
+  // subtítulo "Filtros" arriba de Lugar/Tipo.
+  // Bug real corregido (ver MANIFEST.md -- "filtro seleccionado aparece
+  // cortado"): esta línea seguía escribiendo `panelEl.style.maxHeight`, la
+  // propiedad VIEJA que `.ev-header-burbuja` dejó de animar/usar (mismo
+  // motivo ya documentado arriba, "búsqueda de Eventos rota/animación
+  // brusca" -- ese fix corrigió `_evAbrirPanel()`/`_evCerrarPanel()`, pero
+  // esta 3ra escritura de la misma propiedad, acá en
+  // `_evToggleFiltroBurbuja()`, quedó afuera sin que nadie lo notara). Como
+  // `maxHeight` no tenía ningún efecto real, el panel exterior nunca crecía
+  // al abrir Lugar/Tipo -- su `height` seguía siendo el medido ANTES de que
+  // esa burbuja existiera, así que `overflow:hidden` (regla base de
+  // `.ev-header-burbuja`) recortaba cualquier pill que cayera más abajo de
+  // esa altura vieja, la mismísima burbuja/pill recién seleccionada incluida.
   var panelEl = document.getElementById('ev-busqueda-panel');
-  if (panelEl && panelEl.classList.contains('abierta')) panelEl.style.maxHeight = '550px';
+  if (panelEl && panelEl.classList.contains('abierta')) panelEl.style.height = '550px';
 }
 function _evColapsarFiltroBurbuja(campo) {
   var el = document.getElementById('ev-filtro-burbuja-' + campo);
