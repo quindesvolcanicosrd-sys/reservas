@@ -4394,6 +4394,25 @@ function _evAsistAdminToggle(id) {
     _evHidratarAvatares();
   }
 }
+// Fila de avatares del header del acordeón "Asistencia" (pedido explícito,
+// reemplaza el "(N)" numérico) -- primeros 5 + "+N" con el resto, si hay más.
+// Reusada por _evAccionAdminHtml() (asistencia real, admin) y
+// _evRsvpAccordionHtml() (RSVP futuro) -- mismo shape de persona en los 2
+// casos (`nombre`/`fotoPerfil`). `<div>`, no `<span>`, para el avatar en sí
+// -- mismo motivo ya documentado en _evAsistentesFilasHtml(): `.avatar-pill`
+// no declara `display` propio, así que `width`/`height` no aplicarían sobre
+// un elemento inline.
+function _evAcordHeaderAvataresHtml(personas) {
+  var visibles = (personas || []).slice(0, 5);
+  var resto = (personas || []).length - visibles.length;
+  var avatares = visibles.map(function(p) {
+    var nombreAttr = String(p.nombre).replace(/"/g, '&quot;');
+    var fotoAttr = (p.fotoPerfil || '').replace(/"/g, '&quot;');
+    return '<div class="avatar-pill avatar-pill--xs ev-avatar-stack-item" data-nombre="' + nombreAttr + '" data-foto="' + fotoAttr + '"></div>';
+  }).join('');
+  var masHtml = resto > 0 ? '<span class="ev-acord-avatar-mas">+' + resto + '</span>' : '';
+  return '<div class="ev-acord-header-avatares">' + avatares + masHtml + '</div>';
+}
 // Extraída de _evAccionAdminHtml() para poder re-generar SOLO estas filas
 // (_evActualizarListaAsistAdmin(), _evMarcarAsistenciaAdmin() más abajo) sin
 // reconstruir el resto de la card (botón "Tomar asistencia" + header con
@@ -4430,7 +4449,7 @@ function _evAccionAdminHtml(e) {
   return '<div class="ev-asistentes-list" onclick="event.stopPropagation()">' +
     '<button class="ev-btn-agregar-persona" onclick="_evAbrirMarcarAsistencia(\'' + e.id + '\',\'s-eventos\')"><span class="material-symbols-outlined">person_add</span>Tomar asistencia</button>' +
     '<div class="ev-asist-admin-header' + (abierto ? ' abierto' : '') + '" id="ev-asist-admin-header-' + e.id + '" onclick="_evAsistAdminToggle(\'' + e.id + '\')">' +
-      '<span class="ev-asist-admin-header-titulo">Asistencia (' + (e.asistentes || []).length + ')</span>' +
+      '<span class="ev-asist-admin-header-titulo">Asistieron' + _evAcordHeaderAvataresHtml(e.asistentes) + '</span>' +
       '<span class="material-symbols-outlined ev-asist-admin-chevron">expand_more</span>' +
     '</div>' +
     '<div class="ev-asist-admin-body' + (abierto ? ' abierto' : '') + '" id="ev-asist-admin-body-' + e.id + '">' +
@@ -4476,7 +4495,7 @@ function _evRsvpAccordionHtml(e) {
   }).join('');
   return '<div class="ev-asistentes-list" onclick="event.stopPropagation()">' +
     '<div class="ev-asist-admin-header' + (abierto ? ' abierto' : '') + '" id="ev-asist-admin-header-' + e.id + '" onclick="_evAsistAdminToggle(\'' + e.id + '\')">' +
-      '<span class="ev-asist-admin-header-titulo">Asistencia (' + rsvps.length + ')</span>' +
+      '<span class="ev-asist-admin-header-titulo">Asistencias' + _evAcordHeaderAvataresHtml(rsvps) + '</span>' +
       '<span class="material-symbols-outlined ev-asist-admin-chevron">expand_more</span>' +
     '</div>' +
     '<div class="ev-asist-admin-body' + (abierto ? ' abierto' : '') + '" id="ev-asist-admin-body-' + e.id + '">' +
@@ -4730,7 +4749,9 @@ function _evMarcarAsistenciaAdmin(idEvento, nombre, estado, btnEl) {
 function _evActualizarContadorAsistAdmin(idEvento) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
   var titulo = document.querySelector('#ev-asist-admin-header-' + idEvento + ' .ev-asist-admin-header-titulo');
-  if (ev && titulo) titulo.textContent = 'Asistencia (' + (ev.asistentes || []).length + ')';
+  if (!ev || !titulo) return;
+  titulo.innerHTML = 'Asistieron' + _evAcordHeaderAvataresHtml(ev.asistentes);
+  _evHidratarAvatares();
 }
 // Repinta SOLO las filas nombre+badge de la lista "Asistencia (N)" que ya
 // vive en la card del timeline (`#ev-asist-admin-body-<id> .ev-asist-admin-body-inner`,

@@ -623,6 +623,16 @@
    + "Agregar persona" (`.ev-btn-agregar-persona`, más abajo). */
 .ev-asist-admin-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 2px; cursor: pointer; }
 .ev-asist-admin-header-titulo { font-size: 0.78rem; font-weight: 700; color: var(--text-2); }
+/* Fila de avatares del header (pedido explícito, reemplaza el "(N)" numérico
+   -- ver _evAcordHeaderAvataresHtml()/js/eventos.js). Vive DENTRO de
+   `.ev-asist-admin-header-titulo` (`<span>`), que sigue siendo el único
+   hijo "izquierdo" del header flex de arriba -- el `<div>` de acá adentro
+   de un `<span>` es HTML técnicamente inválido (div no es phrasing
+   content), pero los navegadores no auto-cierran `<span>` al toparse con
+   contenido de bloque (a diferencia de `<p>`/`<li>`) -- se renderiza
+   idéntico a como está escrito, sin reparenting. */
+.ev-acord-header-avatares { display: inline-flex; align-items: center; gap: 3px; vertical-align: middle; margin-left: 6px; }
+.ev-acord-avatar-mas { font-size: 0.72rem; font-weight: 700; color: var(--muted); margin-left: 2px; }
 .ev-asist-admin-chevron { color: var(--muted); font-size: 1.1rem; transition: transform 0.3s; flex-shrink: 0; }
 .ev-asist-admin-header.abierto .ev-asist-admin-chevron { transform: rotate(180deg); }
 .ev-asist-admin-body { max-height: 0; overflow: hidden; transition: max-height 0.35s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease; opacity: 0; }
