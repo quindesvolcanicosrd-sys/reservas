@@ -3087,6 +3087,27 @@ var _evTourLabelFinalizar = 'FINALIZAR TOUR';
 // pisen si de casualidad se disparan casi al mismo tiempo.
 function _evTourIniciarConPasos(pasos, lsKey, labelFinalizar) {
   if (_evTourActivo) return;
+  // Bug real corregido (ver MANIFEST.md -- "overlay de pantalla completa
+  // bloquea toda interacción, incluida la nav inferior, hasta recargar"):
+  // los 3 tours reales de este archivo se agendan con un `setTimeout`
+  // (650ms para el de bienvenida, ver `_evActualizarTopBarModo()` -- similar
+  // para "primera reserva"/"cambio de tipo de cuenta") sin cancelarse si el
+  // usuario navega a OTRA sección de la app (`_bottomNavClick()`) antes de
+  // que ese timeout dispare -- `alSalir` de la tab Eventos (js/ui.js) sí
+  // llama `_evTourCerrar(false)`, pero solo cubre un tour YA VISIBLE en ese
+  // instante, nunca uno todavía pendiente en un timer. Sin este guard, la
+  // función de todos modos pintaba `#ev-tour-overlay` a pantalla completa
+  // (`z-index:9900`) encima de lo que sea que estuviera activo en ese
+  // momento (reportado reproducido en Equipo, al colapsar "Mis
+  // estadísticas" -- coincidencia de timing, no relacionado a esa pantalla
+  // en sí) -- sin ningún target real de Eventos visible ahí para posicionar
+  // el tooltip, el usuario no tenía forma de encontrar/cerrar el tour,
+  // quedando bloqueado hasta recargar. Fix: no-op silencioso (mismo
+  // criterio que el resto de los guards de esta función) si `#s-eventos` ya
+  // no es la pantalla activa -- no marca `ev_tour_visto`, así que el
+  // próximo `irEventos()` real vuelve a intentarlo.
+  var pantallaEventos = document.getElementById('s-eventos');
+  if (!pantallaEventos || !pantallaEventos.classList.contains('activa')) return;
   var tooltip = document.getElementById('ev-tour-tooltip');
   if (!tooltip) return;
   _evTourPasos = pasos;
