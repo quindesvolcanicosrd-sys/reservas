@@ -208,15 +208,14 @@ async function _mapaVideoInstructivoPorLugar(): Promise<Record<string, string>> 
 
 async function _ultimaAsistenciaPorPersonaTodas(idsEvento: string[]): Promise<Record<string, any[]>> {
   if (idsEvento.length === 0) return {};
-  const { data } = await supabase.from('log_asistencias').select('id_evento, nombre_usuario, origen, estado, marca_temporal').in('id_evento', idsEvento);
+  const { data } = await supabase.from('log_asistencias').select('id_evento, nombre_usuario, origen, estado, marca_temporal').in('id_evento', idsEvento).order('marca_temporal', { ascending: true });
   const ultimaPorClave: Record<string, any> = {};
   (data ?? []).forEach((fila: any) => {
     const clave = fila.id_evento + '|' + fila.nombre_usuario;
-    const marca = fila.marca_temporal ? new Date(fila.marca_temporal) : null;
     const actual = ultimaPorClave[clave];
     const prioridad = (o: string) => o === 'Usuario' ? 1 : 0;
-    if (!actual || prioridad(fila.origen) > prioridad(actual.origen) || (prioridad(fila.origen) === prioridad(actual.origen) && marca && marca > actual.marca)) {
-      ultimaPorClave[clave] = { idEvento: fila.id_evento, nombre: fila.nombre_usuario, origen: fila.origen, estado: fila.estado, marca };
+    if (!actual || prioridad(fila.origen) > prioridad(actual.origen) || (prioridad(fila.origen) === prioridad(actual.origen))) {
+      ultimaPorClave[clave] = { idEvento: fila.id_evento, nombre: fila.nombre_usuario, origen: fila.origen, estado: fila.estado };
     }
   });
   const porEvento: Record<string, any[]> = {};
