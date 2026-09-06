@@ -841,7 +841,18 @@ function _bottomNavClick(id) {
       // de esta tab (`s4`/`s-eventos-detalle`/un aj-sub-* abierto/etc.) se
       // sigue de largo al reset real de siempre.
       var yaEnHome = actual && actual.id === item.pantalla && (id !== 'ajustes' || !_ajSubAbierto);
-      if (yaEnHome) return;
+      if (yaEnHome) {
+        // Eventos (pedido explícito, ver MANIFEST.md): tocar el ícono ya
+        // parado en la raíz del timeline (`s-eventos`) hace lo mismo que el
+        // botón "Ir a hoy" de la nav superior (`#ev-nav-hoy-btn`/`_evIrAHoy()`,
+        // js/eventos.js) en vez de quedar en un no-op sin efecto visual --
+        // mismo criterio que el resto de esta función ("tocar el tab activo
+        // es la forma de resetear/re-anclar esa sección"), pero acá el
+        // "ancla" útil es la fecha de hoy, no la pantalla en sí (ya estamos
+        // ahí). El resto de los tabs sigue siendo un no-op real.
+        if (id === 'eventos' && typeof _evIrAHoy === 'function') _evIrAHoy();
+        return;
+      }
       // Tab ya activo -- "volver a home" real: Ajustes descarta el sub-panel
       // recordado (mismo criterio que un cierre manual, cerrarAjSub()) antes
       // de navegar, así un futuro cambio de tab de ida y vuelta no lo
