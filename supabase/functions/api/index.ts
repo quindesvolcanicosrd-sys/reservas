@@ -208,9 +208,18 @@ async function _mapaVideoInstructivoPorLugar(): Promise<Record<string, string>> 
 
 async function _ultimaAsistenciaPorPersonaTodas(idsEvento: string[]): Promise<Record<string, any[]>> {
   if (idsEvento.length === 0) return {};
-  const { data } = await supabase.from('log_asistencias').select('id_evento, nombre_usuario, origen, estado, marca_temporal').in('id_evento', idsEvento);
+  const LOTE = 50;
+  let data: any[] = [];
+  for (let i = 0; i < idsEvento.length; i += LOTE) {
+    const lote = idsEvento.slice(i, i + LOTE);
+    const { data: filas, error } = await supabase.from('log_asistencias')
+      .select('id_evento, nombre_usuario, origen, estado, marca_temporal')
+      .in('id_evento', lote);
+    if (error) console.error('[asist] error en lote', i, error.message);
+    if (filas) data = data.concat(filas);
+  }
   const ultimaPorClave: Record<string, any> = {};
-  (data ?? []).forEach((fila: any) => {
+  data.forEach((fila: any) => {
     const clave = fila.id_evento + '|' + fila.nombre_usuario;
     const actual = ultimaPorClave[clave];
     const prioridad = (o: string) => o === 'Usuario' ? 1 : 0;
