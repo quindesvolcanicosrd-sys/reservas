@@ -630,7 +630,25 @@
 .ev-asist-admin-body-inner { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; }
 .ev-asistente-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-light); }
 .ev-asistente-row:last-child { border-bottom: none; }
-.ev-asistente-nombre { font-size: 0.8rem; font-weight: 600; color: var(--text); }
+/* `flex:1`+ellipsis (pedido explícito, avatar agregado a la fila) -- mismo
+   patrón que `.ev-asist-persona-nombre` (más abajo en este archivo): con el
+   avatar como 1er hijo y el badge como 3ro, esto empuja el badge al extremo
+   derecho sin romper el `justify-content:space-between` ya existente de
+   `.ev-asistente-row` (sin más espacio libre que distribuir, el resultado es
+   el mismo: avatar-izquierda / badge-derecha). */
+.ev-asistente-nombre { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8rem; font-weight: 600; color: var(--text); }
+/* Acordeón "Asistencia (N)" de RSVPs para eventos futuros (ver MANIFEST.md,
+   _evRsvpAccordionHtml()/js/eventos.js) -- mismo layout fila que
+   `.ev-asistente-row`/`.ev-asistente-nombre` de arriba, clases propias
+   porque agrupa por RSVP (Asistirá/No asistirá/No jugador) en vez de por
+   puntualidad real, con su propio pill de color en vez de `.badge`. */
+.ev-acord-fila { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-light); }
+.ev-acord-fila:last-child { border-bottom: none; }
+.ev-acord-nombre { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8rem; font-weight: 600; color: var(--text); }
+.ev-acord-pill { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; padding: 3px 7px; border-radius: 20px; }
+.ev-rsvp-asiste    { background: var(--success-bg); color: var(--success-dark); }
+.ev-rsvp-no-asiste { background: var(--danger-bg);  color: var(--danger); }
+.ev-rsvp-no-jugador{ background: var(--warning-bg); color: var(--amber-dark); }
 /* Roster completo de la subpantalla dedicada "Marcar asistencia" (ver
    "Cambios recientes" -- diseño final, #s-eventos-marcar-asistencia,
    index.html): buscador (`.app-nav-search`, reusado tal cual del resto de

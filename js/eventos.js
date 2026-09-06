@@ -2256,6 +2256,13 @@ function _evCardEventoHtml(e, sufijo) {
   // único caller en _evTimelineFilaHtml()).
   else if (_adminToken && _evYaEmpezo(e)) accionBody = '<div id="ev-asist-real-' + e.id + '">' + _evRsvpBarraHtml(e) + '</div>' + _evAccionAdminHtml(e);
   else accionBody = _evRsvpBarraHtml(e);
+  // Acordeón "Asistencia (N)" de RSVPs para eventos FUTUROS (pedido
+  // explícito, ver MANIFEST.md) -- mutuamente excluyente con la rama de
+  // arriba (`_evYaEmpezo(e)`): solo se suma cuando el evento todavía no
+  // arrancó y ya tiene al menos 1 RSVP, así que solo convive con la rama
+  // `else` (barra de RSVP propia) -- nunca con la gestión admin de
+  // asistencia REAL (esa es post-arranque) ni con el estado cancelado.
+  if (!cancelado && !_evYaEmpezo(e) && e.rsvps && e.rsvps.length > 0) accionBody += _evRsvpAccordionHtml(e);
 
   // Estado de una reserva ya hecha para este evento (mirlxs -- ver "Cambios
   // recientes"). `_todasReservas` (js/home.js, global, poblado por
@@ -4376,7 +4383,16 @@ function _evAsistAdminToggle(id) {
   var estabaAbierto = _evAsistAdminAbierto === id;
   if (_evAsistAdminAbierto) _evAsistAdminSetAbierto(_evAsistAdminAbierto, false);
   _evAsistAdminAbierto = estabaAbierto ? null : id;
-  if (_evAsistAdminAbierto) _evAsistAdminSetAbierto(_evAsistAdminAbierto, true);
+  if (_evAsistAdminAbierto) {
+    _evAsistAdminSetAbierto(_evAsistAdminAbierto, true);
+    // Las filas ya están en el DOM desde el render inicial de la card
+    // (oculto vía max-height:0, no removido) -- _evHidratarAvatares() ya
+    // corrió entonces, así que esto es defensivo/idempotente, no el
+    // mecanismo real de hidratación. Cubre igual el pedido explícito de
+    // "hidratar al expandir", por si a futuro este acordeón pasa a
+    // pintarse recién al abrir en vez de siempre.
+    _evHidratarAvatares();
+  }
 }
 // Extraída de _evAccionAdminHtml() para poder re-generar SOLO estas filas
 // (_evActualizarListaAsistAdmin(), _evMarcarAsistenciaAdmin() más abajo) sin
@@ -4390,7 +4406,16 @@ function _evAsistentesFilasHtml(e) {
     // sigue leyendo a.estado a secas (A tiempo/Tarde/Ausente): el rol nunca
     // cambia el color, solo agrega texto.
     var label = _evLabelPuntualidadRol(a.estado, _evRolDePersona(e, a.nombre));
-    return '<div class="ev-asistente-row"><span class="ev-asistente-nombre">' + (a.nombreDerby || a.nombre) + '</span>' +
+    // Avatar (pedido explícito, ver MANIFEST.md) -- `ev-avatar-stack-item`
+    // (además de `avatar-pill--sm`) es el selector real que hidrata
+    // _evHidratarAvatares() (ver esa función, más arriba); sin esa clase el
+    // avatar quedaría vacío para siempre, nunca se completa solo por tener
+    // `data-nombre`.
+    var nombreAttr = String(a.nombre).replace(/"/g, '&quot;');
+    var fotoAttr = (a.fotoPerfil || '').replace(/"/g, '&quot;');
+    return '<div class="ev-asistente-row">' +
+      '<div class="avatar-pill avatar-pill--sm ev-avatar-stack-item" data-nombre="' + nombreAttr + '" data-foto="' + fotoAttr + '"></div>' +
+      '<span class="ev-asistente-nombre">' + (a.nombreDerby || a.nombre) + '</span>' +
       '<span class="badge ' + (_EV_CHIP_BADGE[a.estado] || 'badge-pendiente') + '">' + label + '</span></div>';
   }).join('');
 }
@@ -4412,6 +4437,50 @@ function _evAccionAdminHtml(e) {
       '<div class="ev-asist-admin-body-inner">' +
         (filas || '<div style="font-size:0.76rem;color:var(--muted);">Nadie ha marcado todavía.</div>') +
       '</div>' +
+    '</div>' +
+  '</div>';
+}
+// Acordeón "Asistencia (N)" de RSVPs para eventos FUTUROS (pedido explícito,
+// ver MANIFEST.md), llamado desde _evCardEventoHtml() -- reusa LITERAL las
+// clases/ids del acordeón admin de arriba (`.ev-asist-admin-header`/
+// `.ev-asist-admin-body`, ids `ev-asist-admin-header-<id>`/
+// `ev-asist-admin-body-<id>`, `_evAsistAdminToggle()`/`_evAsistAdminAbierto`)
+// -- mutuamente excluyente por tiempo con `_evAccionAdminHtml()` (esa es
+// post-`_evYaEmpezo()`, esta es pre-), nunca compiten por el mismo id para
+// el mismo evento, así el toggle "solo uno a la vez" y el mecanismo de
+// abrir/cerrar funcionan sin ningún código nuevo. Sin botón "Tomar
+// asistencia" (no tiene sentido antes de que el evento arranque) -- filas
+// agrupadas por RSVP (Asistirá/No asistirá/No jugador) en vez de por
+// puntualidad real, mismo orden que `_EV_GRUPOS_ASISTENCIA` (detalle).
+var _EV_GRUPOS_RSVP_CARD = [
+  { estado: 'Asistiré', label: 'Asistirá', clase: 'ev-rsvp-asiste' },
+  { estado: 'No asistiré', label: 'No asistirá', clase: 'ev-rsvp-no-asiste' },
+  { estado: 'No jugador', label: 'No jugador', clase: 'ev-rsvp-no-jugador' }
+];
+function _evRsvpAccordionHtml(e) {
+  var rsvps = e.rsvps || [];
+  if (!rsvps.length) return '';
+  var abierto = _evAsistAdminAbierto === e.id;
+  var filas = _EV_GRUPOS_RSVP_CARD.map(function(g) {
+    var personas = rsvps.filter(function(p) { return p.estado === g.estado; });
+    if (!personas.length) return '';
+    return personas.map(function(p) {
+      var nombreAttr = String(p.nombre).replace(/"/g, '&quot;');
+      var fotoAttr = (p.fotoPerfil || '').replace(/"/g, '&quot;');
+      return '<div class="ev-acord-fila">' +
+        '<div class="avatar-pill avatar-pill--sm ev-avatar-stack-item" data-nombre="' + nombreAttr + '" data-foto="' + fotoAttr + '"></div>' +
+        '<span class="ev-acord-nombre">' + (p.nombreDerby || p.nombre) + '</span>' +
+        '<span class="ev-acord-pill ' + g.clase + '">' + g.label + '</span>' +
+      '</div>';
+    }).join('');
+  }).join('');
+  return '<div class="ev-asistentes-list" onclick="event.stopPropagation()">' +
+    '<div class="ev-asist-admin-header' + (abierto ? ' abierto' : '') + '" id="ev-asist-admin-header-' + e.id + '" onclick="_evAsistAdminToggle(\'' + e.id + '\')">' +
+      '<span class="ev-asist-admin-header-titulo">Asistencia (' + rsvps.length + ')</span>' +
+      '<span class="material-symbols-outlined ev-asist-admin-chevron">expand_more</span>' +
+    '</div>' +
+    '<div class="ev-asist-admin-body' + (abierto ? ' abierto' : '') + '" id="ev-asist-admin-body-' + e.id + '">' +
+      '<div class="ev-asist-admin-body-inner">' + filas + '</div>' +
     '</div>' +
   '</div>';
 }
@@ -4679,6 +4748,7 @@ function _evActualizarListaAsistAdmin(idEvento) {
   var inner = document.querySelector('#ev-asist-admin-body-' + idEvento + ' .ev-asist-admin-body-inner');
   if (!ev || !inner) return;
   inner.innerHTML = _evAsistentesFilasHtml(ev) || '<div style="font-size:0.76rem;color:var(--muted);">Nadie ha marcado todavía.</div>';
+  _evHidratarAvatares();
 }
 // Bug real corregido (Victor): distinto de _evActualizarListaAsistAdmin()
 // (arriba), que solo repinta el roster interno "Asistencia (N)" -- esta
