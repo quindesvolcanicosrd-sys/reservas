@@ -208,17 +208,13 @@ async function _mapaVideoInstructivoPorLugar(): Promise<Record<string, string>> 
 
 async function _ultimaAsistenciaPorPersonaTodas(idsEvento: string[]): Promise<Record<string, any[]>> {
   if (idsEvento.length === 0) return {};
-  const LOTE = 50;
-  let data: any[] = [];
-  for (let i = 0; i < idsEvento.length; i += LOTE) {
-    const lote = idsEvento.slice(i, i + LOTE);
-    const { data: filas, error } = await supabase.from('log_asistencias')
-      .select('id_evento, nombre_usuario, origen, estado, marca_temporal')
-      .in('id_evento', lote);
-    if (error) console.error('[asist] error en lote', i, JSON.stringify(error));
-    else console.log('[asist-debug] lote', i, '| filas:', filas?.length ?? 0);
-    if (filas) data = data.concat(filas);
-  }
+  const idsSet = new Set(idsEvento);
+  const { data: todasFilas, error } = await supabase.from('log_asistencias')
+    .select('id_evento, nombre_usuario, origen, estado, marca_temporal')
+    .limit(100000);
+  if (error) console.error('[asist] error query:', JSON.stringify(error));
+  const data = (todasFilas ?? []).filter((f: any) => idsSet.has(f.id_evento));
+  console.log('[asist-debug] total DB rows:', todasFilas?.length ?? 0, '| filtrados:', data.length);
   const ultimaPorClave: Record<string, any> = {};
   console.log('[asist-debug] idsEvento.length:', idsEvento.length, '| rows fetched:', data.length, '| incluye CCI sep7:', idsEvento.includes('ev_20260907_cci_2'));
   data.forEach((fila: any) => {
