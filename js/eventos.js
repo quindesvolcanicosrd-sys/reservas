@@ -5855,11 +5855,11 @@ function _evDetalleInfoHtml(ev) {
   var videoInstructivo = ev.videoInstructivo || '';
   var html = '<div class="fi-pills">' +
       (mapsUrl
-        ? '<a class="fi-pill fi-pill-lugar" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</a>'
+        ? '<a class="fi-pill fi-pill-lugar" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '<span class="fi-pill-div">|</span><span class="material-symbols-outlined">navigation</span>Cómo llegar</a>'
         : '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</span>') +
       (videoInstructivo ? '<a class="fi-pill fi-pill-video" href="' + videoInstructivo + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">play_circle</span>Video instructivo</a>' : '') +
-      '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + ev.horaInicio + 'hs</span>' +
-      '<span class="fi-pill fi-pill-fin"><span class="material-symbols-outlined">schedule</span>Fin ' + _evHoraFin(ev) + 'hs</span>' +
+      '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>Inicia ' + ev.horaInicio + 'hs</span>' +
+      '<span class="fi-pill fi-pill-fin"><span class="material-symbols-outlined">schedule</span>Finaliza ' + _evHoraFin(ev) + 'hs</span>' +
     '</div>' +
     (desc ? '<p class="ev-detalle-desc">' + desc + '</p>' : '');
   // Botón "Cancelar o re - agendar" (mirlxs, ver "Cambios recientes")
@@ -6421,7 +6421,7 @@ var _evDetalleFiltroGrupo = null;
 function _evPintarStatsAsistencia(grupos, conToggle, idEvento) {
   var stats = document.getElementById('ev-detalle-stats');
   if (stats) {
-    stats.innerHTML = grupos.map(function(g) {
+    stats.innerHTML = grupos.filter(function(g) { return g.personas.length > 0; }).map(function(g) {
       return '<div class="ev-stat-card ' + g.clase + '" data-grupo="' + g.key + '" onclick="_evFiltrarAsistenciaPorGrupo(this,\'' + g.key + '\')">' +
         '<div class="ev-stat-num">' + g.personas.length + '</div>' +
         '<div class="ev-stat-label">' + g.label + '</div>' +

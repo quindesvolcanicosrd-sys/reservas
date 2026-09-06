@@ -24,6 +24,7 @@
 .fi-pill-patines { background: var(--warning-bg); color: var(--amber); border: 1px solid var(--amber); }
 .fi-pill-equip { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-bdr); }
 .fi-pill-validez { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border-soft); }
+.fi-pill-div { opacity: 0.3; margin: 0 3px; }
 
 .fi-circle { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--brand-30); flex-shrink: 0; display: flex; align-items: center; justify-content: center; margin-top: 1px; transition: background 0.2s, border-color 0.2s; }
 .fi-circle .material-symbols-outlined { font-size: 1rem; color: transparent; }
