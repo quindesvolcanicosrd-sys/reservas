@@ -215,10 +215,12 @@ async function _ultimaAsistenciaPorPersonaTodas(idsEvento: string[]): Promise<Re
     const { data: filas, error } = await supabase.from('log_asistencias')
       .select('id_evento, nombre_usuario, origen, estado, marca_temporal')
       .in('id_evento', lote);
-    if (error) console.error('[asist] error en lote', i, error.message);
+    if (error) console.error('[asist] error en lote', i, JSON.stringify(error));
+    else console.log('[asist-debug] lote', i, '| filas:', filas?.length ?? 0);
     if (filas) data = data.concat(filas);
   }
   const ultimaPorClave: Record<string, any> = {};
+  console.log('[asist-debug] idsEvento.length:', idsEvento.length, '| rows fetched:', data.length, '| incluye CCI sep7:', idsEvento.includes('ev_20260907_cci_2'));
   data.forEach((fila: any) => {
     const clave = fila.id_evento + '|' + fila.nombre_usuario;
     const actual = ultimaPorClave[clave];
