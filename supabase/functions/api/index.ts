@@ -2746,6 +2746,45 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     }
   });
 
+  // Puntos por asistencia -- LIVE desde `log_asistencias`, NO el agregado
+  // guardado en `puntos_mensuales.puntos_asistencia` (bug real corregido,
+  // ver MANIFEST.md -- "card 'Asistencia' de Mis estadísticas muestra 1,
+  // el detalle 'Puntos por asistencia' muestra 2"): esa columna SOLO se
+  // escribe por `recalcularPuntosAsistencia()` (acción manual "Recalcular
+  // ahora") -- a diferencia de `puntos_extra`/`racha_actual` (arriba en
+  // este archivo, `adminMarcarAsistencia()`), que SÍ se acreditan en vivo
+  // en cada marca real, `puntos_asistencia` queda desactualizada apenas se
+  // marca/corrige una asistencia DESPUÉS del último recálculo manual --
+  // mientras tanto, `getDesglosePuntos()` (el detalle, más abajo en este
+  // archivo) siempre recalcula en vivo desde `log_asistencias`, así que los
+  // 2 números se desalinean. Mismo criterio EXACTO de de-duplicación
+  // (última marca real por evento+persona, por `marca_temporal`) que
+  // `getDesglosePuntos()`/concepto `'asistencia'`, para que coincidan
+  // siempre -- sin `.in()` (mismo motivo ya documentado en este archivo
+  // para `log_asistencias`, evita el truncado por el límite de 1000 filas
+  // de PostgREST). Solo toca `puntosAsistencia` -- `puntosTareas`/
+  // `puntosRacha`/`puntosTotal` siguen leyendo el agregado guardado, sin
+  // cambios (no reportados como desalineados).
+  const { data: logsAsistenciaPeriodo } = await supabase.from('log_asistencias')
+    .select('nombre_usuario, id_evento, estado, fecha_entrenamiento, marca_temporal')
+    .eq('origen', 'Admin')
+    .gte('fecha_entrenamiento', desdePeriodo).lt('fecha_entrenamiento', hastaPeriodo);
+  const ultimaPorClaveAsistencia: Record<string, { estado: string; nombre_usuario: string; marca: number }> = {};
+  (logsAsistenciaPeriodo ?? []).forEach((l: any) => {
+    const u = String(l.nombre_usuario ?? '').trim();
+    if (!u) return;
+    const clave = l.id_evento + '|' + u;
+    const marca = l.marca_temporal ? new Date(l.marca_temporal).getTime() : 0;
+    const actual = ultimaPorClaveAsistencia[clave];
+    if (!actual || marca >= actual.marca) ultimaPorClaveAsistencia[clave] = { estado: l.estado, nombre_usuario: u, marca };
+  });
+  const puntosAsistenciaLivePorUsuario: Record<string, number> = {};
+  Object.keys(ultimaPorClaveAsistencia).forEach((clave) => {
+    const l = ultimaPorClaveAsistencia[clave];
+    if (l.estado === 'A tiempo') puntosAsistenciaLivePorUsuario[l.nombre_usuario] = (puntosAsistenciaLivePorUsuario[l.nombre_usuario] || 0) + 1;
+    else if (l.estado === 'Tarde') puntosAsistenciaLivePorUsuario[l.nombre_usuario] = (puntosAsistenciaLivePorUsuario[l.nombre_usuario] || 0) + 0.5;
+  });
+
   // Tendencia de termómetro, hoy vs. hace 1 mes (feat re-hecha, ver
   // MANIFEST.md -- la 1ra versión comparaba puntosAsistencia+puntosTareas
   // del mes actual/anterior; pedido explícito de reemplazarla por "el mismo
@@ -2929,7 +2968,7 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     total_eventos_ano: Number(r.total_eventos_ano) || 0,
     termometro_pct: Number(r.termometro_pct) || 0,
     ultimaAsistencia: ultimaPorUsuario[r.username] ? ultimaPorUsuario[r.username].slice(0, 10) : null,
-    puntosAsistencia: puntosPeriodoPorUsuario[r.username] ? puntosPeriodoPorUsuario[r.username].asistencia : 0,
+    puntosAsistencia: puntosAsistenciaLivePorUsuario[r.username] || 0,
     puntosTareas: puntosPeriodoPorUsuario[r.username] ? puntosPeriodoPorUsuario[r.username].tareas : 0,
     // `puntos_bonificacion` + `puntos_extra` combinados -- ver comentario
     // grande junto a `puntosPeriodoPorUsuario` más arriba en esta función.
