@@ -326,6 +326,11 @@ function _evMapEventoBackend(raw) {
     miEstado: miEstado, miAsistenciaReal: miAsistenciaReal, asistentes: asistentes, rsvps: rsvps,
     mapsUrl: raw.mapsUrl || raw.google_maps || '',
     descripcion: raw.descripcion || raw.infoAdicional || raw.info_adicional || '',
+    // Bug real corregido (ver MANIFEST.md) -- getEventosRango() (backend)
+    // ya mandaba este campo, pero este mapeador nunca lo copiaba al objeto
+    // final, así que `ev.videoInstructivo` (_evDetalleInfoHtml()) siempre
+    // daba vacío y el pill de video nunca se mostraba.
+    videoInstructivo: raw.videoInstructivo || '',
   };
 }
 // getCumpleañosRango() no manda `fotoPerfil` (no está en el contrato
