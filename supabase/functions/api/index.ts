@@ -1325,6 +1325,30 @@ async function marcarAsistenciaUsuario(params: Record<string, any>): Promise<Rec
   if (!idEvento) return { exito: false, error: 'Evento inválido.' };
   if (!ESTADOS_RSVP.includes(estado)) return { exito: false, error: 'Estado inválido.' };
 
+  const esAuto = params.origenAuto === true || params.origenAuto === 'true';
+
+  // Auto-persist de reglas de asistencia anticipada (`origenAuto`, ver
+  // _evAntReconciliarConReglas() en js/eventos.js): esa función solo debe
+  // escribir si la persona TODAVÍA no tiene ninguna respuesta para este
+  // evento -- pero `_evCargarDatosReales()` se llama desde 6 puntos
+  // distintos del frontend sin ningún lock entre sí, así que 2+ pasadas de
+  // reconciliación pueden correr en paralelo (o desde pestañas/dispositivos
+  // distintos), leer las 2 "todavía sin responder" antes de que la primera
+  // termine de escribir, y disparar 2+ auto-persists para el mismo evento
+  // (bug real reportado por Victor -- decenas de filas 'AsistenciaAnticipada'
+  // duplicadas en log_asistencias para el mismo id_evento+nombre). El guard
+  // del cliente (`yaGuardado`, chequea `ev.rsvps` ya cargado) no alcanza para
+  // cerrar esa carrera porque lee un snapshot que puede quedar viejo antes de
+  // que la escritura anterior sea visible. Server-side, autoritativo: si YA
+  // existe CUALQUIER fila (de cualquier origen) para este idEvento+nombre,
+  // no-op -- la intención de "auto-persist" es completar un RSVP ausente,
+  // nunca agregar otra fila si ya hay una respuesta real o automática previa.
+  if (esAuto) {
+    const { data: existente } = await supabase.from('log_asistencias')
+      .select('id').eq('id_evento', idEvento).eq('nombre_usuario', nombre).limit(1).maybeSingle();
+    if (existente) return { exito: true };
+  }
+
   // RSVP anterior de ESTA persona en ESTE evento (origen 'Usuario', la última
   // fila por marca_temporal) -- leído ANTES de insertar la fila nueva de log,
   // igual criterio que adminMarcarAsistencia() usa para "marcaPrevia" más
@@ -1338,7 +1362,7 @@ async function marcarAsistenciaUsuario(params: Record<string, any>): Promise<Rec
     eraAsistire = previo?.estado === 'Asistiré';
   }
 
-  const origenFinal = params.origenAuto === true || params.origenAuto === 'true' ? 'AsistenciaAnticipada' : 'Usuario';
+  const origenFinal = esAuto ? 'AsistenciaAnticipada' : 'Usuario';
   const { error: errLog } = await _agregarFilaLogAsistencia(String(idEvento).trim(), nombre, origenFinal, estado);
   if (errLog) return { exito: false, error: 'No se pudo guardar la asistencia: ' + errLog };
 

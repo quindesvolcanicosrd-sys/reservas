@@ -6747,6 +6747,19 @@ function _evAntFetchReglas(onOk, onErr) {
 // mismo criterio que la grilla de meses del wizard, ver `_evAntData.meses`)
 // -- cada match sobreescribe `ev.miEstado`, así que el orden del `.sort()`
 // ES la prioridad real.
+// Auto-persists en vuelo (`idEvento`) dentro de esta sesión -- `_evCargarDatosReales()`
+// se llama desde 6 puntos distintos del archivo sin ningún lock entre sí, así
+// que 2+ pasadas de `_evAntReconciliarConReglas()` pueden solaparse (ej. una
+// navegación rápida entre pantallas dispara 2 recargas casi juntas) y las 2
+// leer el mismo snapshot "todavía sin responder" antes de que la primera
+// termine su `apiPost` -- cada una dispararía su propio auto-persist para el
+// mismo evento (bug real: decenas de filas 'AsistenciaAnticipada' duplicadas
+// en log_asistencias). Este Set frena esa redundancia DENTRO de la sesión;
+// el no-op idempotente del lado del servidor (`marcarAsistenciaUsuario`,
+// ver ese comentario en supabase/functions/api/index.ts) es la protección
+// real -- cierra el mismo caso entre pestañas/dispositivos distintos, que
+// esta variable de módulo (por pestaña) no puede ver.
+var _evAntAutoPersistEnVuelo = new Set();
 function _evAntReconciliarConReglas(reglas) {
   if (!reglas || !reglas.length) return;
   var hoy = _evHoyISO();
@@ -6807,14 +6820,21 @@ function _evAntReconciliarConReglas(reglas) {
     if (!tocados[ev.id]) return;
     var yaGuardado = (ev.rsvps || []).some(function(r) { return _evNombresCoinciden(r.nombre, E.nombre); });
     if (yaGuardado) return;
+    // Ver comentario de `_evAntAutoPersistEnVuelo` (arriba) -- evita disparar
+    // un 2do apiPost redundante para el mismo evento mientras el 1ro (de una
+    // pasada de reconciliación solapada) todavía no resolvió.
+    if (_evAntAutoPersistEnVuelo.has(ev.id)) return;
+    _evAntAutoPersistEnVuelo.add(ev.id);
     var estadoAplicado = ev.miEstado;
     apiPost({ action: 'marcarAsistenciaUsuario', token: _token, nombre: E.nombre, idEvento: ev.id, estado: estadoAplicado, origenAuto: true }, function() {
+      _evAntAutoPersistEnVuelo.delete(ev.id);
       if (!ev.rsvps) ev.rsvps = [];
       // Bug real corregido -- "lista de asistentes muestra username en vez
       // de nombre derby y sin foto" (mismo fix que _evMarcarAsistencia(),
       // más arriba en este archivo): faltaban acá también.
       ev.rsvps.push({ nombre: E.nombre, estado: estadoAplicado, origen: 'Usuario', nombreDerby: (E.datos && E.datos.nombreDerby) || '', fotoPerfil: (E.datos && E.datos.fotoPerfil) || '' });
     }, function(e) {
+      _evAntAutoPersistEnVuelo.delete(ev.id);
       if (window.console) console.warn('reglas_asistencia (auto-persist): ' + (e && e.message || 'error'));
     });
   });
