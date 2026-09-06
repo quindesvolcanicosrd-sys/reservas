@@ -5865,8 +5865,7 @@ function _evDetalleInfoHtml(ev) {
           : '<span class="fi-pill-accion-static"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</span>') +
         (videoInstructivo ? '<span class="fi-pill-div">|</span><button type="button" class="fi-pill-accion" onclick="event.stopPropagation();_evAbrirVideoInstructivo(\'' + videoInstructivo.replace(/'/g, "\\'") + '\')"><span class="material-symbols-outlined">play_circle</span>Ver cómo llegar</button>' : '') +
       '</span>' +
-      '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>Inicia ' + ev.horaInicio + 'hs</span>' +
-      '<span class="fi-pill fi-pill-fin"><span class="material-symbols-outlined">schedule</span>Finaliza ' + _evHoraFin(ev) + 'hs</span>' +
+      '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>Inicia ' + ev.horaInicio + 'hs<span class="fi-pill-div">|</span>Finaliza ' + _evHoraFin(ev) + 'hs</span>' +
     '</div>' +
     (desc ? '<p class="ev-detalle-desc">' + desc + '</p>' : '');
   // Botón "Cancelar o re - agendar" (mirlxs, ver "Cambios recientes")
