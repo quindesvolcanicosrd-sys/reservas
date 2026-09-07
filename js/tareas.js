@@ -723,9 +723,9 @@ function _tarCardHtml(t, contexto) {
     if (contexto !== 'baul') {
       if (t.cuposTotales === 1) {
         _textoCapacidad = '<p class="tar-capacidad-texto">Solo 1 persona puede tomar esta tarea.</p>';
-      } else if (t.cuposLibres > 0 && t.cuposTomados > 0) {
-        _textoCapacidad = '<p class="tar-capacidad-texto">' + t.cuposTomados + ' persona' + (t.cuposTomados > 1 ? 's' : '') + ' ya ' + (t.cuposTomados > 1 ? 'tomaron' : 'tomó') + ' esta tarea. Falta' + (t.cuposLibres > 1 ? 'n ' + t.cuposLibres : ' 1') + ' más.</p>';
-      } else if (t.cuposLibres > 0) {
+      } else if (t.cuposTomados > 0 && t.cuposLibres > 0) {
+        _textoCapacidad = '<p class="tar-capacidad-texto">' + t.cuposTomados + ' persona' + (t.cuposTomados > 1 ? 's ya tomaron' : ' ya tomó') + ' esta tarea. Falta' + (t.cuposLibres > 1 ? 'n ' + t.cuposLibres : ' 1') + ' cupo' + (t.cuposLibres > 1 ? 's' : '') + '.</p>';
+      } else {
         _textoCapacidad = '<p class="tar-capacidad-texto">Hasta ' + t.cuposTotales + ' personas pueden tomar esta tarea.</p>';
       }
     }
@@ -2444,9 +2444,9 @@ function _tarDetalleAccionesHtml(t) {
     var _textoCapacidad = '';
     if (total === 1) {
       _textoCapacidad = '<p class="tar-capacidad-texto">Solo 1 persona puede tomar esta tarea.</p>';
-    } else if (cuposLibres > 0 && cuposTomados > 0) {
-      _textoCapacidad = '<p class="tar-capacidad-texto">' + cuposTomados + ' persona' + (cuposTomados > 1 ? 's' : '') + ' ya ' + (cuposTomados > 1 ? 'tomaron' : 'tomó') + ' esta tarea. Falta' + (cuposLibres > 1 ? 'n ' + cuposLibres : ' 1') + ' más.</p>';
-    } else if (cuposLibres > 0) {
+    } else if (cuposTomados > 0 && cuposLibres > 0) {
+      _textoCapacidad = '<p class="tar-capacidad-texto">' + cuposTomados + ' persona' + (cuposTomados > 1 ? 's ya tomaron' : ' ya tomó') + ' esta tarea. Falta' + (cuposLibres > 1 ? 'n ' + cuposLibres : ' 1') + ' cupo' + (cuposLibres > 1 ? 's' : '') + '.</p>';
+    } else {
       _textoCapacidad = '<p class="tar-capacidad-texto">Hasta ' + total + ' personas pueden tomar esta tarea.</p>';
     }
     return _textoCapacidad + '<button type="button" class="btn btn-primary tar-card-btn" onclick="_tarDetalleTomar(\'' + idTarea + '\', this)"><span class="material-symbols-outlined">add_task</span>Tomar tarea</button>';
