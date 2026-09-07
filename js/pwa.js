@@ -448,8 +448,8 @@ function vincularPush(nombre) {
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   OneSignalDeferred.push(async function(OneSignal) {
     console.log('[VP] callback ejecutado, nombre:', nombre);
+    try { await OneSignal.Notifications.requestPermission(); } catch(eReq) { console.warn('[VP] requestPermission:', eReq.message); }
     try {
-      await OneSignal.Notifications.requestPermission();
       await OneSignal.User.PushSubscription.optIn().catch(function(){});
     await OneSignal.login(nombre);
     console.log('[VP] login OK, optedIn:', OneSignal.User.PushSubscription.optedIn);
