@@ -529,7 +529,14 @@ window.onload = function() {
           _irTabAterrizajeInicial();
         } else {
         mostrarCargando('Restaurando tu sesión...');
+        var _restaurarTimer = setTimeout(function() {
+          if (!window._restaurandoSesion) return;
+          var _c = localStorage.getItem('edat');
+          if (_c) { try { E.datos = JSON.parse(_c); E.datosCompletos = E.datos; } catch(e) {} }
+          window._restaurandoSesion = false; ocultarCargando(); _irTabAterrizajeInicial();
+        }, 10000);
         api({ action: 'restaurarSesion' }, function(res) {
+          clearTimeout(_restaurarTimer);
           if (!res.valido || !res.datos) { window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true); return; }
           E.datos = res.datos; E.datosCompletos = res.datos;
           try { localStorage.setItem('edat', JSON.stringify(E.datos)); } catch (exEdatSave) {}
@@ -573,11 +580,11 @@ window.onload = function() {
             } else { _irTabAterrizajeInicial(); _mostrarPermisosSiHaceFalta(); }
           }, function() { prepararHome(); _irTabAterrizajeInicial(); window._restaurandoSesion = false; });
         }, function() {
-  if (!navigator.onLine) {
-    window._restaurandoSesion = false;
-    ocultarCargando();
-    _irTabAterrizajeInicial();
-    return;
+  clearTimeout(_restaurarTimer);
+  var _c = localStorage.getItem('edat');
+  if (_c) {
+    try { E.datos = JSON.parse(_c); E.datosCompletos = E.datos; } catch(e) {}
+    window._restaurandoSesion = false; ocultarCargando(); _irTabAterrizajeInicial(); return;
   }
   window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true);
 });
