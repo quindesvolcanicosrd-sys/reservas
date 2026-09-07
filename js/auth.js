@@ -202,9 +202,10 @@ function onGoogleCredentialUsuario(resp) {
         setTimeout(function() { irNuevaReserva(true); }, 300);
       } else {
         _irTabAterrizajeInicial();
+        if (typeof _mostrarModalInstalacion === 'function') _mostrarModalInstalacion();
         _mostrarPermisosSiHaceFalta(_fotoGoogleLogin);
       }
-    }, function() { prepararHome(); _irTabAterrizajeInicial(); });
+    }, function() { prepararHome(); _irTabAterrizajeInicial(); if (typeof _mostrarModalInstalacion === 'function') _mostrarModalInstalacion(); });
   }, function(e) {
     ocultarCargando();
     var errEl = document.getElementById('err-google-login');
@@ -301,7 +302,8 @@ function continuar_pin() {
         _todasReservas = reservas;
         prepararHome();
         _irTabAterrizajeInicial();
-      }, function(e2) { prepararHome(); _irTabAterrizajeInicial(); mostrarToast(e2.message || 'Error al cargar reservas.', 'error'); });
+        if (typeof _mostrarModalInstalacion === 'function') _mostrarModalInstalacion();
+      }, function(e2) { prepararHome(); _irTabAterrizajeInicial(); if (typeof _mostrarModalInstalacion === 'function') _mostrarModalInstalacion(); mostrarToast(e2.message || 'Error al cargar reservas.', 'error'); });
 
     }, function(e1) { _validandoPin = false; ocultarCargando(); ir('s1b'); err('err-pin', 'Error: ' + e1.message); });
   });
@@ -394,7 +396,10 @@ window.onload = function() {
   // segundo plano sin esperar a ninguno de los 2 (ningún `return` acá), pero
   // la persona no ve ni puede operar nada detrás mientras la condición real
   // (instalar la app / conceder el permiso) siga sin resolverse.
-  if (typeof _verificarPwa === 'function') _verificarPwa();
+  // _verificarPwa() (gate bloqueante) desactivado -- reemplazado por
+  // _mostrarModalInstalacion() post-login (ver onGoogleCredentialUsuario/
+  // continuar_pin más abajo). #pwa-gate queda en el HTML sin usarse.
+  // if (typeof _verificarPwa === 'function') _verificarPwa();
   if (typeof _verificarNotificaciones === 'function') _verificarNotificaciones();
   document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
   var ov = document.getElementById('loading-overlay');

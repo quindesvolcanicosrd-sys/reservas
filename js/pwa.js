@@ -463,3 +463,17 @@ window.OneSignalDeferred = window.OneSignalDeferred || [];
 OneSignalDeferred.push(function(OneSignal) {
   OneSignal.init({ appId: 'f434ccdc-bcca-40b6-bb64-16b662b8b0d9' });
 });
+
+// Modal de instalación post-login (reemplaza al gate bloqueante _verificarPwa(),
+// desactivado en window.onload/js/auth.js) -- se llama desde
+// onGoogleCredentialUsuario()/continuar_pin() (js/auth.js) justo después de aterrizar.
+function _mostrarModalInstalacion() {
+  if (esStandalone()) return;
+  if (!/iPhone|iPad|iPod|Android/.test(navigator.userAgent)) return;
+  var modal = document.getElementById('pwa-modal-login');
+  if (modal) modal.style.display = 'flex';
+}
+function _cerrarModalInstalacion() {
+  var modal = document.getElementById('pwa-modal-login');
+  if (modal) modal.style.display = 'none';
+}

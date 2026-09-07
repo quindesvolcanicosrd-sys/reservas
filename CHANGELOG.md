@@ -285,6 +285,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Auth
 
+2026-09-07 — PWA: gate bloqueante desactivado; modal de instalación post-login en móvil (aparece en cada login). `_verificarPwa()` deja de llamarse en `window.onload` (js/auth.js) — `#pwa-gate` queda en el HTML sin usarse. Nuevo `_mostrarModalInstalacion()`/`_cerrarModalInstalacion()` (js/pwa.js) muestra `#pwa-modal-login`, llamado desde `onGoogleCredentialUsuario()` y `continuar_pin()` justo después de `_irTabAterrizajeInicial()`. El banner descartable `#pwa-banner` (Home) no se tocó.
+
 2026-09-03 — Fix real: `_activarNotificaciones()` (botón de `#notif-gate`, sin cierre propio) solo funcionaba si el SDK de OneSignal cargaba — si el CDN estaba bloqueado (ad-blocker, sin red) el callback de `OneSignalDeferred.push()` nunca corría y la persona quedaba encerrada detrás del gate para siempre. Agregado timeout de 4s con fallback al `Notification.requestPermission()` nativo del navegador, y estado "Activando..." en el botón mientras se resuelve.
 
 2026-09-03 — Detección de "ya instalada" en el gate de PWA: del lado Android, si `beforeinstallprompt` no llega 2.5s después de mostrar el gate, se asume que ya está instalada (o el navegador no la soporta) y se muestra un mensaje de confirmación en vez de instrucciones de instalación. `_pwaInstalarDirecto()` ya no cierra el gate al aceptar el prompt nativo — muestra el mismo mensaje con texto de "recién instalada" (el navegador tarda unos segundos en terminar de instalar). También: instrucciones más completas (3 pasos + botón "Ir a ajustes") para cuando las notificaciones quedaron bloqueadas — en Android intenta un intent directo a los ajustes del sitio en Chrome, con copiar-URL como respaldo siempre.

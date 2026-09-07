@@ -3307,7 +3307,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/perfil.js?v=d2df3c5b"></script>
 <script src="js/admin.js?v=5fa9666b"></script>
 <script src="js/pwa.js"></script>
-<script src="js/auth.js?v=ae85f4a4"></script>
+<script src="js/auth.js?v=6a035a69"></script>
 
   <!-- Modal primer login: permisos Google -->
   <div id="modal-permisos" style="display:none;position:fixed;inset:0;z-index:9600;background:var(--overlay-dark);align-items:center;justify-content:center;padding:16px;transition:opacity 0.25s ease;">
@@ -5231,6 +5231,17 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <span class="material-symbols-outlined">close</span>
     </button>
     <iframe id="ev-video-iframe" src="" frameborder="0" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+  </div>
+</div>
+
+<!-- Modal de instalación post-login (ver _mostrarModalInstalacion()/js/pwa.js) -->
+<div id="pwa-modal-login" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:24px;">
+  <div style="background:var(--card-bg);border-radius:16px;padding:28px 24px;max-width:340px;width:100%;text-align:center;">
+    <div style="font-size:2.5rem;margin-bottom:12px;">📱</div>
+    <h2 style="margin:0 0 8px;font-size:1.2rem;color:var(--text)">Instalá la app</h2>
+    <p style="margin:0 0 24px;font-size:0.9rem;color:var(--muted)">Accedé más rápido desde tu pantalla de inicio, sin abrir el navegador.</p>
+    <button onclick="pwaInstalar();_cerrarModalInstalacion();" style="width:100%;padding:14px;background:var(--brand);color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:600;margin-bottom:12px;cursor:pointer;">Instalar app</button>
+    <button onclick="_cerrarModalInstalacion();" style="width:100%;padding:14px;background:transparent;color:var(--muted);border:none;font-size:1rem;cursor:pointer;">Omitir por ahora</button>
   </div>
 </div>
 
