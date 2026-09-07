@@ -582,6 +582,7 @@ window.onload = function() {
           }, function() { prepararHome(); _irTabAterrizajeInicial(); window._restaurandoSesion = false; });
         }, function() {
   clearTimeout(_restaurarTimer);
+  if (!window._restaurandoSesion) return;
   var _c = localStorage.getItem('edat');
   if (_c) {
     try { E.datos = JSON.parse(_c); E.datosCompletos = E.datos; } catch(e) {}
