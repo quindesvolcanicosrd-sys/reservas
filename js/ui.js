@@ -852,11 +852,13 @@ function _bottomNavClick(id) {
         // ahí). El resto de los tabs sigue siendo un no-op real.
         // Bug real corregido (ver MANIFEST.md -- 3 bugs relacionados): un tap
         // de más mientras la sección TODAVÍA está entrando (timeline en
-        // skeleton, datos sin cargar -- `_evListoParaIrAHoy()`/js/eventos.js,
-        // `false` mientras dura ese flujo) competía con el propio salto
-        // inicial a "hoy" de `irEventos()`, pisándose entre sí. Guard acá: si
-        // la sección no está lista todavía, se ignora el tap de más -- la
-        // entrada normal ya va a caer en "hoy" sola, no hace falta nada más.
+        // skeleton, datos sin cargar), con el panel de calendario en medio de
+        // su propia animación de abrir/cerrar/cambiar de mes, con el
+        // timeline en medio de su propio fade, o repetido antes de 400ms del
+        // anterior, competía/pisaba al propio flujo en curso.
+        // `_evListoParaIrAHoy()`/js/eventos.js agrupa esas 4 condiciones --
+        // si cualquiera falla, se ignora el tap de más (la entrada/animación
+        // en curso ya va a terminar sola, no hace falta nada más).
         if (id === 'eventos' && typeof _evIrAHoy === 'function' &&
             (typeof _evListoParaIrAHoy !== 'function' || _evListoParaIrAHoy())) {
           _evIrAHoy();
