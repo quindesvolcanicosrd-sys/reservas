@@ -444,7 +444,6 @@ function activarPush() {
 }
 
 function vincularPush(nombre) {
-  if (!window.OneSignalDeferred) return;
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   OneSignalDeferred.push(async function(OneSignal) {
     try {
