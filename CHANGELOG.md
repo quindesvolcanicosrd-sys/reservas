@@ -4,6 +4,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-09-07 — Fix: FAB de reserva siempre visible para Quindes no-admin (antes se ocultaba si no tenía cuota, impedía hacer la primera reserva). `_evFabUnificadoActualizar()` (js/eventos.js) ya no llama a `_evTieneCuotaAlDia()` para decidir si oculta el FAB en este perfil — siempre lo muestra, y el toque sigue yendo directo a `_evFabReservaMesActual()` (`_evFabPlusClick()`, sin cambios).
+
 2026-09-05 — Fix definitivo de `fuenteAsistencia` en `getEventosRango`: en vez de elegir entre `logDeEvento` y el fallback legacy `asistEF[idEvento]` (2 versiones excluyentes que se venían alternando y cada una rompía un caso distinto — ver detalle en MANIFEST.md, entrada `log_asistencias`), ahora se combinan cuando no hay marca real de admin en `log_asistencias`: `logAdminReal.length ? logDeEvento : [...logDeEvento, ...(asistEF[idEvento] ?? [])]`. Cubre a la vez el caso "solo RSVPs, sin nada más" y el caso "RSVPs + asistencia real solo en columnas legacy".
 
 2026-09-05 — Refactor (sin cambio de comportamiento) en `_evAntReconciliarConReglas`: el guard de RSVP explícito pasa de un objeto plano (`conRsvpExplicito`, construido desde `futuros`) a un `Set` (`eventosConRsvpReal`, construido desde `_EV_EVENTOS`) — mismo efecto, ya que solo se consulta contra eventos de `futuros` dentro del loop.

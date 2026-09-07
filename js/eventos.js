@@ -3041,13 +3041,10 @@ function _evFabUnificadoActualizar() {
   var html = '';
   if (esQuindes && !esAdmin) {
     // Quindes no-admin: los 2 perfiles que NO son admin, ver el resumen de
-    // los 4 casos al inicio de este bloque. Sin cuota al día, el FAB no
-    // tiene ningún camino real (no puede crear eventos ni reservar sin
-    // pagar antes) -- se oculta entero. Con cuota, navega directo a
-    // reservar el mes sin speed-dial (_evFabPlusClick(), más arriba) -- una
-    // sola opción real sería ruido, mismo criterio que mirlxs sin equipo
-    // propio.
-    if (!_evTieneCuotaAlDia()) { fab.style.display = 'none'; _evFabCerrar(); return; }
+    // los 4 casos al inicio de este bloque. Navega directo a reservar el mes
+    // sin speed-dial (_evFabPlusClick(), más arriba) -- una sola opción real
+    // sería ruido, mismo criterio que mirlxs sin equipo propio.
+    // Se muestra siempre — el usuario necesita el FAB tanto para hacer su primera reserva como para renovar
     if (opciones) opciones.innerHTML = '';
     fab.style.display = '';
     return;
