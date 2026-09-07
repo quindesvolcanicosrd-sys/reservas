@@ -1033,6 +1033,19 @@ function _evToggleBusqueda() { _evTogglePanel('busqueda'); }
    para que ambas terminen exactamente juntas; los demás usos (label de mes)
    no lo pasan y siguen en el valor rápido de siempre. */
 var _EV_FADE_MS = 130;
+// Bug real corregido (ver MANIFEST.md -- "label de mes invisible en
+// Eventos"): el tramo final que restauraba `opacity:1` vivía en un doble
+// `requestAnimationFrame` anidado (el patrón usual para forzar 2 frames
+// reales entre fijar `opacity:0` y animar de vuelta a `1`, necesario para
+// que el navegador registre el cambio como una transición). `rAF` nunca
+// corre mientras el documento está en background (tab no visible/ventana
+// minimizada) -- si esta función se disparaba con la pestaña oculta (ej.
+// alguien cambia de app en el celular mientras Eventos todavía está
+// cargando), esos 2 rAF quedaban en pausa indefinida hasta que la pestaña
+// volviera a primer plano, dejando el elemento en `opacity:0` todo ese
+// tiempo. `setTimeout(fn, 20)` no depende del ciclo de render -- sigue
+// corriendo (con el throttling normal de timers en background, pero corre)
+// aunque la pestaña esté oculta.
 function _evFadeSwap(el, pintar, instant, ms) {
   if (instant) { pintar(); return; }
   ms = ms || _EV_FADE_MS;
@@ -1045,13 +1058,11 @@ function _evFadeSwap(el, pintar, instant, ms) {
     pintar();
     el.style.transition = 'none';
     el.style.opacity = '0';
-    requestAnimationFrame(function() {
-      requestAnimationFrame(function() {
-        if (el._fadeEpoch !== epoch) return;
-        el.style.transition = 'opacity ' + ms + 'ms ease';
-        el.style.opacity = '1';
-      });
-    });
+    setTimeout(function() {
+      if (el._fadeEpoch !== epoch) return;
+      el.style.transition = 'opacity ' + ms + 'ms ease';
+      el.style.opacity = '1';
+    }, 20);
   }, ms);
 }
 
