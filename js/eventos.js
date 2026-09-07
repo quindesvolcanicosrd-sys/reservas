@@ -1129,14 +1129,26 @@ function _evAnimarPanel(panel, desdePx, haciaPx, translateY, volverseAuto) {
     hijos[i].classList.add('ev-panel-inner-anim');
     hijos[i].style.transform = translateY + ' translateZ(0)';
   }
-  requestAnimationFrame(function() {
+  // Bug real corregido (ver MANIFEST.md -- misma causa que el fix de
+  // `_evFadeSwap()`): esto vivía en un `requestAnimationFrame` -- necesario
+  // para que el navegador registre `desdePx` como el valor de partida ANTES
+  // de pisarlo con `haciaPx` (sin eso, ambos sets caen en el mismo frame y
+  // no hay transición que reproducir, se ve un salto). `rAF` no corre
+  // mientras el documento está en background -- si el panel se abría/
+  // cerraba con la pestaña oculta, esta línea nunca llegaba a ejecutarse
+  // hasta que la pestaña volviera a primer plano, dejando el panel
+  // congelado en `desdePx` (abierto de golpe en 0 o cerrado de golpe en su
+  // alto real, según el caso) todo ese tiempo. `setTimeout(fn, 20)` no
+  // depende del ciclo de render -- sigue corriendo aunque la pestaña esté
+  // oculta, mismo criterio que el fix de `_evFadeSwap()`.
+  setTimeout(function() {
     panel.style.height = haciaPx;
     panel.addEventListener('transitionend', function limpiar() {
       panel.classList.remove('ev-panel-wrapper-anim');
       for (var j = 0; j < hijos.length; j++) hijos[j].classList.remove('ev-panel-inner-anim');
       if (volverseAuto) { panel.style.height = ''; panel.classList.add('ev-panel-auto'); }
     }, { once: true });
-  });
+  }, 20);
 }
 function _evAbrirCalendario() {
   _evCalUltimaAccionTs = Date.now();
@@ -1634,15 +1646,17 @@ function _evCalCambiarMes(nuevaFecha) {
   if (encogiendo && panel) panel.style.overflow = 'visible';
   _evCalRenderContenido(true); // instant: el panel salta directo a su alto final, sin animar
   _evCalRenderPills();
-  requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-      pillsRow.style.transition = 'transform 0.28s var(--ease-sheet)';
-      pillsRow.style.transform = 'translateY(0)';
-      if (encogiendo && panel) {
-        setTimeout(function() { panel.style.overflow = ''; }, 320);
-      }
-    });
-  });
+  // Mismo fix que `_evAnimarPanel()` más abajo (ver MANIFEST.md): doble-rAF
+  // reemplazado por `setTimeout(20)` -- si el swipe/pill de mes corre con la
+  // pestaña en background, el rAF anidado nunca llega a fijar la posición
+  // final, dejando la fila de pills congelada en su offset viejo.
+  setTimeout(function() {
+    pillsRow.style.transition = 'transform 0.28s var(--ease-sheet)';
+    pillsRow.style.transform = 'translateY(0)';
+    if (encogiendo && panel) {
+      setTimeout(function() { panel.style.overflow = ''; }, 320);
+    }
+  }, 20);
 }
 // Cirugía puntual del relleno de pill activa (Camino B de arriba) -- sin
 // re-pintar `#ev-mes-pills-row` entero, solo mueve la clase `.activa` del
