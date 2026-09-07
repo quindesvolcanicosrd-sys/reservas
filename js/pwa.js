@@ -448,6 +448,9 @@ function vincularPush(nombre) {
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   OneSignalDeferred.push(async function(OneSignal) {
     try {
+      if (OneSignal.Notifications.permission === false) {
+        await OneSignal.Notifications.requestPermission();
+      }
       await OneSignal.login(nombre);
       var perm = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
       if (perm === 'granted') {
