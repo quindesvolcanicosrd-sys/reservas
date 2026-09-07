@@ -298,6 +298,15 @@
    (css/eventos.css) para texto secundario centrado bajo un control. */
 .tar-limite-nota { font-size: 0.78rem; color: var(--muted); text-align: center; margin-top: 8px; line-height: 1.4; }
 
+/* Texto de capacidad (cuposTotales/cuposLibres/cuposTomados) sobre el
+   botón "Tomar tarea" -- card de lista y detalle. */
+.tar-capacidad-texto {
+  font-size: 0.82rem;
+  color: var(--text-2);
+  margin: 0 0 0.4rem 0;
+  text-align: center;
+}
+
 /* Lista de personas de una tarjeta de "Tareas archivadas" -- a diferencia
    de `.tar-avatar-stack` (avatares superpuestos, anónimos, en la esquina
    del header), acá cada fila necesita ser identificable por nombre CON su
