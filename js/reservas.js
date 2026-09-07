@@ -1132,6 +1132,7 @@ function continuar_s4() {
     if (res.cuponDisponible) localStorage.removeItem('cupon_' + E.nombre);
     _pagoSincronizarCuponWrapper();
   }, function() {});
+  _reservaYaRegistrada = false;
   ir('s-pago');
 }
 
@@ -1153,6 +1154,21 @@ function _resetChkPago() {
 function continuar_pago() {
   if (!document.getElementById('chk-pago').checked) { err('err-pago', 'Debes confirmar que realizaste el pago.'); return; }
   E.notaPago = E.nombre || ''; confirmarReserva(document.getElementById('btn-pago'));
+}
+
+// Reemplaza al checkbox "Ya realicé mi pago" -- la reserva se registra al
+// elegir un método de pago (DeUna o expandir Banco Internacional), no al
+// tildar una confirmación aparte. _reservaYaRegistrada evita duplicar el
+// guardado si la persona toca DeUna y después también expande/colapsa el
+// acordeón de Banco Internacional (o viceversa) en la misma visita a
+// #s-pago -- se resetea al entrar de nuevo a esa pantalla (ver continuar_s4()).
+var _reservaYaRegistrada = false;
+function _registrarYPagar(urlPago) {
+  if (_reservaYaRegistrada) { if (urlPago) window.open(urlPago, '_blank'); return; }
+  _reservaYaRegistrada = true;
+  if (urlPago) window.open(urlPago, '_blank');
+  E.notaPago = E.nombre || '';
+  confirmarReserva(document.getElementById('btn-pago'));
 }
 
 function confirmarReserva(btn) {

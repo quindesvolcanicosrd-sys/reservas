@@ -1148,6 +1148,7 @@ function _autoencadenarMeses(el) {
 function _autodesencadenarMeses(el) {}
 
 function togglePagoMetodo(header) {
+  _registrarYPagar(null);
   var body = header.nextElementSibling;
   var chevron = header.querySelector('.material-symbols-outlined');
   var abierto = body.style.maxHeight && body.style.maxHeight !== '0px';
