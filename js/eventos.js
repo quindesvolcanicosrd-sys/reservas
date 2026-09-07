@@ -4549,6 +4549,11 @@ function _evMarcarAsistencia(id, estado) {
     // de guardar la asistencia (que ya terminó arriba).
     if (estadoAnterior && estadoAnterior !== estado) {
       apiPost({ action: 'pushAsistenciaCambio', token: _token, evento_id: id, estado_nuevo: estado, estado_anterior: estadoAnterior }, function() {}, function() {});
+      // Aviso BROADCAST aparte a TODA suscripción push (feat nueva, ver
+      // MANIFEST.md/notificarCambioAsistencia()/supabase/functions/api/index.ts)
+      // -- pushAsistenciaCambio (arriba) solo llega al equipo activo. Mismo
+      // criterio fire-and-forget.
+      apiPost({ action: 'notificarCambioAsistencia', token: _token, idEvento: id, estadoNuevo: estado }, function(){}, function(){});
     }
   }, function(e) {
     ev.miEstado = estadoAnterior;

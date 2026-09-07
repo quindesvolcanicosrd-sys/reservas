@@ -3715,6 +3715,38 @@ async function adminEnviarPush(params: Record<string, any>): Promise<Record<stri
   return { exito: true, id: body.id ?? '' };
 }
 
+// Aviso BROADCAST (`included_segments:['Total Subscriptions']`, TODA
+// suscripción push registrada en OneSignal, sin distinguir equipo/admin/rol)
+// de un cambio de asistencia de un usuario -- complementa a
+// pushAsistenciaCambio() (arriba), que en cambio avisa solo al EQUIPO ACTIVO
+// (alias por username, tabla `equipo`, excluyendo a quien cambió, filtrado
+// por EQUIPO_ACTIVO_FILTRO). Llamada desde js/eventos.js
+// (_evMarcarAsistencia(), mismo call site que ya dispara pushAsistenciaCambio)
+// justo después de que marcarAsistenciaUsuario() confirma éxito.
+async function notificarCambioAsistencia(params: Record<string, any>): Promise<Record<string, any>> {
+  const nombre = await _validarToken(params.token);
+  if (!nombre) return { exito: false };
+  const idEvento = String(params.idEvento ?? '').trim();
+  const estadoNuevo = String(params.estadoNuevo ?? '').trim();
+  if (!idEvento || !estadoNuevo) return { exito: false };
+  if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) return { exito: false };
+  const { data: ev } = await supabase.from('asistencias').select('fecha, donde').eq('id_evento', idEvento).maybeSingle();
+  const fecha = ev?.fecha ? ev.fecha.slice(5).replace('-', '/') : '';
+  const lugar = ev?.donde ? ' — ' + ev.donde : '';
+  await fetch('https://api.onesignal.com/notifications', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Key ' + ONESIGNAL_API_KEY },
+    body: JSON.stringify({
+      app_id: ONESIGNAL_APP_ID,
+      target_channel: 'push',
+      headings: { en: 'Cambio de asistencia' },
+      contents: { en: nombre + ' → ' + estadoNuevo + (fecha ? ' (' + fecha + lugar + ')' : '') },
+      included_segments: ['Total Subscriptions'],
+    }),
+  });
+  return { exito: true };
+}
+
 // Notificaciones puntuales de eventos/offseason -- llamadas desde el
 // FRONTEND (js/eventos.js) justo después de que el fetch() directo a
 // PostgREST (crear/editar evento, crear temporada de descanso) ya resolvió
@@ -4115,6 +4147,7 @@ Deno.serve(async (req: Request) => {
       case 'adminGetQueLlevar':              return json(await adminGetQueLlevar());
       // Push
       case 'adminEnviarPush':               return json(await adminEnviarPush(params));
+      case 'notificarCambioAsistencia':     return json(await notificarCambioAsistencia(params));
       case 'pushEventoCreado':              return json(await pushEventoCreado(params));
       case 'pushEventoCancelado':           return json(await pushEventoCancelado(params));
       case 'pushEventoEditado':             return json(await pushEventoEditado(params));
