@@ -20,6 +20,15 @@ const APP_URL = Deno.env.get('APP_URL') ?? 'https://app.quindesvolcanicos.com';
 // (pg_cron -> net.http_post, ver supabase/migrations) -- sin este secret
 // configurado, cronDiario queda inalcanzable (falla cerrado, no abierto).
 const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? '';
+// Firma los tokens de RSVP-desde-push (ver _firmarTokenAccion()/sendPush de
+// pushEventoCreado() más abajo, y supabase/functions/record-attendance) --
+// secret DEDICADO a esto, no el JWT_SECRET interno de Supabase Auth (esta
+// app no usa Supabase Auth en absoluto, ver MANIFEST.md sección `activar/`
+// -- reusar ese secret acoplaría un mecanismo interno de la plataforma a un
+// feature de dominio sin relación). Mismo criterio que CRON_SECRET arriba:
+// configurar vía `supabase secrets set PUSH_TOKEN_SECRET=...`, nunca
+// hardcodeado.
+const PUSH_TOKEN_SECRET = Deno.env.get('PUSH_TOKEN_SECRET') ?? '';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
@@ -3363,6 +3372,7 @@ async function sendPush(payload: {
   contents: { es: string };
   url?: string;
   web_buttons?: { id: string; text: string; url: string }[];
+  data?: Record<string, any>;
 }): Promise<void> {
   if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) return;
   if (!payload.include_aliases && !payload.included_segments) return;
@@ -3453,20 +3463,75 @@ async function adminEnviarPush(params: Record<string, any>): Promise<Record<stri
 // base. `adminCancelarEvento` (todavía en GAS, ver comentario "Aún en GAS"
 // más abajo) también dispara `pushEventoCancelado` desde el mismo call site
 // del frontend -- el push no depende de dónde vive la mutación real.
+// ─── Token firmado para RSVP-desde-push en background (sin abrir la app) ──────
+// Payload `{ u: username, e: idEvento, exp: epoch ms }`, HMAC-SHA256 con
+// PUSH_TOKEN_SECRET (arriba), formato `base64url(payload).base64url(firma)`.
+// No es un JWT estándar (sin header/alg negociable, a propósito -- superficie
+// mínima para un token de un solo uso/propósito) pero mismo principio:
+// firmado + con expiración, verificado server-side antes de confiar en
+// `u`/`e`. Verificación en supabase/functions/record-attendance/index.ts
+// (mismo PUSH_TOKEN_SECRET, función standalone -- no puede importar de acá).
+function _b64urlEncode(bytes: Uint8Array): string {
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function _firmarTokenAccion(username: string, idEvento: string): Promise<string | null> {
+  if (!PUSH_TOKEN_SECRET) return null;
+  const payload = JSON.stringify({ u: username, e: idEvento, exp: Date.now() + 21 * 24 * 3600 * 1000 });
+  const payloadB64 = _b64urlEncode(new TextEncoder().encode(payload));
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(PUSH_TOKEN_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const firma = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payloadB64));
+  return payloadB64 + '.' + _b64urlEncode(new Uint8Array(firma));
+}
+
 async function pushEventoCreado(params: Record<string, any>): Promise<Record<string, any>> {
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { tipo, fecha, hora, lugar, idEvento } = params;
-  await sendPush({
-    included_segments: ['All'],
-    headings: { es: `Nuevo ${tipo || 'evento'}: ${_fechaEs(fecha)}` },
-    contents: { es: `${_horaEs(hora)} · ${lugar || ''}` },
-    url: APP_URL + '/?tab=eventos',
-    web_buttons: idEvento ? [
-      { id: 'asistire', text: 'Asistiré', url: APP_URL + '/?rsvp=' + encodeURIComponent(idEvento) + '&estado=' + encodeURIComponent('Asistiré') },
-      { id: 'no-asistire', text: 'No asistiré', url: APP_URL + '/?rsvp=' + encodeURIComponent(idEvento) + '&estado=' + encodeURIComponent('No asistiré') },
-    ] : undefined,
-  });
+  const headings = { es: `Nuevo ${tipo || 'evento'}: ${_fechaEs(fecha)}` };
+  const contents = { es: `${_horaEs(hora)} · ${lugar || ''}` };
+
+  // Con idEvento -- RSVP directo desde los 2 botones de acción, respondiendo
+  // en BACKGROUND (sin abrir la app, ver OneSignalSDKWorker.js) vía un token
+  // firmado POR PERSONA (_firmarTokenAccion arriba). Eso exige 1 llamada a
+  // OneSignal POR PERSONA -- a diferencia de cualquier otro sendPush() de
+  // este archivo (1 sola llamada broadcast a `included_segments:['All']`),
+  // el campo `data` de la API de OneSignal es compartido por TODA la
+  // llamada, no hay forma de variarlo por destinatario dentro de un mismo
+  // POST. `url: '_osp=do_not_open'` en cada botón (magic string documentado
+  // por OneSignal, Chrome/Firefox -- no soportado en Safari, ahí cae al
+  // default de abrir esa "url" literal) para que el handler default de
+  // OneSignal no abra ventana en esos 2 botones -- el clic en el CUERPO
+  // sigue abriendo la app normal (`url` de más arriba, sin tocar). Best-
+  // effort por persona (Promise.allSettled, nunca tumba el resto ni la
+  // acción real de crear el evento) -- mismo espíritu que sendPush().
+  if (idEvento && PUSH_TOKEN_SECRET) {
+    const { data: equipoRows } = await supabase.from('equipo').select('username');
+    const usernames: string[] = (equipoRows ?? []).map((r: any) => r.username).filter(Boolean);
+    await Promise.allSettled(usernames.map(async (username) => {
+      const token = await _firmarTokenAccion(username, String(idEvento));
+      if (!token) return;
+      await sendPush({
+        include_aliases: { external_id: [username] },
+        headings, contents,
+        url: APP_URL + '/?tab=eventos',
+        data: { token, evento_id: String(idEvento) },
+        web_buttons: [
+          { id: 'asistire', text: 'Asistiré', url: '_osp=do_not_open' },
+          { id: 'no-asistire', text: 'No asistiré', url: '_osp=do_not_open' },
+        ],
+      });
+    }));
+    return { exito: true };
+  }
+
+  // Sin idEvento, o sin PUSH_TOKEN_SECRET configurado todavía -- broadcast
+  // simple sin botones de acción (comportamiento previo, sin cambios).
+  await sendPush({ included_segments: ['All'], headings, contents, url: APP_URL + '/?tab=eventos' });
   return { exito: true };
 }
 

@@ -29,6 +29,47 @@ self.addEventListener('activate', function (e) {
   );
 });
 
+// RSVP en segundo plano desde los botones de acción "Asistiré"/"No asistiré"
+// (`web_buttons` id 'asistire'/'no-asistire', ver pushEventoCreado() en
+// supabase/functions/api/index.ts) -- a diferencia del clic en el CUERPO de
+// la notificación (que sigue abriendo la app normal, sin tocar acá, mismo
+// comportamiento de siempre vía el propio SDK de OneSignal importado abajo),
+// tocar uno de estos 2 botones NO debe abrir ninguna ventana: solo confirma
+// la asistencia en background (fetch a la Edge Function record-attendance)
+// y cierra la notificación. El `url` de cada uno de esos 2 botones se manda
+// como el string mágico '_osp=do_not_open' (documentado por OneSignal para
+// Chrome/Firefox -- no soportado en Safari, ahí cae al comportamiento
+// default de abrir esa "url" literal) para que el propio handler default
+// de OneSignal no abra nada -- este listener no necesita pelear por orden
+// de registro contra `self.addEventListener` de OneSignalSDK.sw.js (abajo).
+// `token`/`evento_id` viajan en `data` del payload de la notification
+// (mint-eado por usuario+evento en pushEventoCreado(), ver Edge Function),
+// expuestos acá vía `event.notification.data` (Notification API estándar --
+// lo que se pasó como `data` a `showNotification()`, que es lo que hace
+// internamente el worker de OneSignal con el `data` del payload REST).
+self.addEventListener('notificationclick', function (e) {
+  var accion = e.action;
+  if (accion !== 'asistire' && accion !== 'no-asistire') return; // deja pasar body-click/otros al handler default de OneSignal
+
+  e.notification.close();
+  var datos = (e.notification && e.notification.data) || {};
+  var token = datos.token;
+  var idEvento = datos.evento_id;
+  if (!token || !idEvento) return;
+
+  e.waitUntil(
+    fetch('https://uusbnreitoobqssizbfq.supabase.co/functions/v1/record-attendance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        token: token,
+        action: accion === 'asistire' ? 'asistire' : 'no_asistire',
+        evento_id: idEvento,
+      }),
+    }).catch(function () { /* best-effort, sin toast posible desde el SW */ })
+  );
+});
+
 self.addEventListener('fetch', function (e) {
   if (e.request.method !== 'GET') return;
   // Solo cachear recursos del mismo origen (HTML, manifest, iconos).
@@ -57,6 +98,3 @@ self.addEventListener('fetch', function (e) {
       .catch(function () { return caches.match(e.request); })
   );
 });
-
-/* Preparado para OneSignal/push en una fase futura:
-   aquí se agregarían los listeners 'push' y 'notificationclick'. */
