@@ -1821,12 +1821,29 @@ function _evIrAHoy() {
   // `_bottomNavClick()`/js/ui.js.
   _evUltimoIrAHoyTs = Date.now();
   var hoy = _evHoyISO();
+  // Buscar el próximo evento (hoy o futuro) para centrar el timeline en él,
+  // no simplemente en "hoy" que puede no tener ningún entrenamiento.
+  // Si hay un evento hoy → va a hoy; si el próximo es mañana/esta semana/
+  // próxima semana → va al separador de esa fecha. Si no hay eventos futuros,
+  // cae a hoy como antes.
+  var proximaFecha = hoy;
+  if (_EV_EVENTOS && _EV_EVENTOS.length) {
+    // Comparación por _evFechaCmp() (no string plano) -- ver el comentario
+    // grande junto a esa función, más arriba: un backend real puede mandar
+    // fechas sin cero-padding, donde ">="/"<" como texto da resultados
+    // cronológicos incorrectos.
+    var futuros = _EV_EVENTOS.filter(function(e) { return _evFechaCmp(e.fecha, hoy) >= 0; });
+    if (futuros.length) {
+      futuros.sort(function(a, b) { return _evFechaCmp(a.fecha, b.fecha); });
+      proximaFecha = futuros[0].fecha;
+    }
+  }
   // Tocar "hoy" es una acción explícita de ir a un día puntual -- también
   // actualiza "fecha seleccionada" (ver "Cambios recientes",
   // `_evCalFechaSeleccionada`), aunque al coincidir con `esHoy` no se note
   // ningún anillo extra (gana el relleno) -- resetea cualquier selección
   // previa de otro día.
-  _evCalFechaSeleccionada = hoy;
+  _evCalFechaSeleccionada = proximaFecha;
   // Bug real corregido (ver "Cambios recientes" -- "el mes no aparece en la
   // nav al entrar a Eventos"): el label de mes se sincronizaba SOLO si el
   // calendario ya estaba expandido (`_evCalVisible`) -- con el panel
@@ -1841,9 +1858,9 @@ function _evIrAHoy() {
   // el comentario grande de esa variable más arriba) se fija junto con él,
   // también sin condicionar a `_evCalVisible`.
   _evCalUltimaAccionTs = Date.now();
-  _evSincronizarNavMesDesde(hoy);
-  if (_evCalVisible) _evCalCambiarMes(hoy);
-  _evCalIrAFechaEnTimeline(hoy, false, true, true);
+  _evSincronizarNavMesDesde(proximaFecha);
+  if (_evCalVisible) _evCalCambiarMes(proximaFecha);
+  _evCalIrAFechaEnTimeline(proximaFecha, false, true, true);
 }
 
 /* ── Consultas sobre los datos de prueba (idénticas a como se filtrarían
