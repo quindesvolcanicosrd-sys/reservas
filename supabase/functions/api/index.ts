@@ -3700,6 +3700,7 @@ async function adminEnviarPush(params: Record<string, any>): Promise<Record<stri
   if (destino && destino !== 'todos') payload.include_aliases = { external_id: [destino] };
   else payload.included_segments = ['Total Subscriptions'];
   if (sendAfter) payload.send_after = sendAfter;
+  console.log('OneSignal key presente:', !!Deno.env.get('ONESIGNAL_API_KEY'), 'App ID presente:', !!Deno.env.get('ONESIGNAL_APP_ID'));
   const resp = await fetch('https://api.onesignal.com/notifications', {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Key ' + ONESIGNAL_API_KEY },
     body: JSON.stringify(payload),
