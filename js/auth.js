@@ -537,6 +537,7 @@ window.onload = function() {
         }, 10000);
         api({ action: 'restaurarSesion' }, function(res) {
           clearTimeout(_restaurarTimer);
+          if (!window._restaurandoSesion) return;
           if (!res.valido || !res.datos) { window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true); return; }
           E.datos = res.datos; E.datosCompletos = res.datos;
           try { localStorage.setItem('edat', JSON.stringify(E.datos)); } catch (exEdatSave) {}
