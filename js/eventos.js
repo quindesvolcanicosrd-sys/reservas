@@ -1143,11 +1143,46 @@ function _evAnimarPanel(panel, desdePx, haciaPx, translateY, volverseAuto) {
   // oculta, mismo criterio que el fix de `_evFadeSwap()`.
   setTimeout(function() {
     panel.style.height = haciaPx;
-    panel.addEventListener('transitionend', function limpiar() {
+    // Bug real corregido (ver MANIFEST.md -- "últimas filas del grid quedan
+    // visibles al cerrar el calendario"): el listener no filtraba por
+    // `event.target`/`propertyName` -- `transitionend` BURBUJEA, y los
+    // hijos (`#ev-cal-contenido`/`#ev-mes-pills-row`) tienen su PROPIA
+    // transición de `transform` (350ms, misma duración que la de `height`
+    // acá) que dispara su propio `transitionend` al terminar, burbujeando
+    // hasta `panel` -- con `{once:true}` sin filtro, ESE evento (no el de
+    // `height` del propio panel) podía ser el que ejecutara `limpiar()`,
+    // dejando `ev-panel-wrapper-anim`/`will-change:height` pegado en el
+    // panel si el bubble llegaba ANTES de que la transición de `height`
+    // arrancara/terminara de verdad -- o, al revés, si `height` no llegaba
+    // a cambiar de valor por alguna carrera (ej. 2 llamadas seguidas al
+    // panel ya en su valor final), `transitionend` de `height` nunca
+    // disparaba y las clases quedaban pegadas para siempre (mismo síntoma:
+    // `ev-panel-wrapper-anim` sigue puesta, contenido con el `transform`
+    // final -- `translateY(-100%)` al cerrar -- sin limpiar, y ese
+    // `will-change` pegado en un wrapper con `height:0` puede dejar al
+    // compositor sin recortar bien al hijo transformado, mostrando sus
+    // últimas filas afuera del área ya colapsada). Fix, 2 partes: (1) el
+    // listener ahora filtra `e.target === panel && e.propertyName ===
+    // 'height'`, ignora cualquier bubble ajeno; (2) un `setTimeout` de
+    // respaldo (350ms de la transición + margen) corre la misma limpieza
+    // igual si `transitionend` nunca llega -- `limpiar()` es idempotente
+    // (guardada por `yaLimpio`), así que no importa cuál de los 2 dispare
+    // primero, el otro es un no-op.
+    var yaLimpio = false;
+    function limpiar() {
+      if (yaLimpio) return;
+      yaLimpio = true;
+      panel.removeEventListener('transitionend', alTransicionar);
       panel.classList.remove('ev-panel-wrapper-anim');
       for (var j = 0; j < hijos.length; j++) hijos[j].classList.remove('ev-panel-inner-anim');
       if (volverseAuto) { panel.style.height = ''; panel.classList.add('ev-panel-auto'); }
-    }, { once: true });
+    }
+    function alTransicionar(e) {
+      if (e.target !== panel || e.propertyName !== 'height') return;
+      limpiar();
+    }
+    panel.addEventListener('transitionend', alTransicionar);
+    setTimeout(limpiar, 400);
   }, 20);
 }
 function _evAbrirCalendario() {
