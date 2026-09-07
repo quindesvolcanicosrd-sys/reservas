@@ -850,7 +850,17 @@ function _bottomNavClick(id) {
         // es la forma de resetear/re-anclar esa sección"), pero acá el
         // "ancla" útil es la fecha de hoy, no la pantalla en sí (ya estamos
         // ahí). El resto de los tabs sigue siendo un no-op real.
-        if (id === 'eventos' && typeof _evIrAHoy === 'function') _evIrAHoy();
+        // Bug real corregido (ver MANIFEST.md -- 3 bugs relacionados): un tap
+        // de más mientras la sección TODAVÍA está entrando (timeline en
+        // skeleton, datos sin cargar -- `_evListoParaIrAHoy()`/js/eventos.js,
+        // `false` mientras dura ese flujo) competía con el propio salto
+        // inicial a "hoy" de `irEventos()`, pisándose entre sí. Guard acá: si
+        // la sección no está lista todavía, se ignora el tap de más -- la
+        // entrada normal ya va a caer en "hoy" sola, no hace falta nada más.
+        if (id === 'eventos' && typeof _evIrAHoy === 'function' &&
+            (typeof _evListoParaIrAHoy !== 'function' || _evListoParaIrAHoy())) {
+          _evIrAHoy();
+        }
         return;
       }
       // Tab ya activo -- "volver a home" real: Ajustes descarta el sub-panel

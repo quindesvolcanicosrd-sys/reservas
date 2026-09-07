@@ -531,6 +531,33 @@ function _evPrecargarRoster() {
 // timeline, con los filtros/búsqueda/calendario tal cual estaban.
 var _evYaInicializadoEnSesion = false;
 
+// Bug real corregido (ver "Cambios recientes" -- 3 bugs relacionados
+// introducidos por "tocar el ícono de Eventos ya en Eventos ejecuta 'Ir a
+// hoy'"): `_bottomNavClick()`/js/ui.js llama a `_evIrAHoy()` en cuanto
+// detecta `tabActivo==='eventos'` -- eso ya es cierto en el mismo tick en
+// que `irEventos()` hace `volver('s-eventos')` (le pone `.activa` de
+// inmediato), MUCHO antes de que `_evCargarDatosReales()` resuelva y de que
+// el salto inicial a "hoy" (`setTimeout(...,50)` al final de `irEventos()`)
+// llegue a correr. Un 2do tap accidental sobre el mismo ícono durante esa
+// ventana (sección recién entrando, timeline todavía en skeleton) disparaba
+// `_evIrAHoy()` -> `_evCalIrAFechaEnTimeline()` -> `_evFadeSwap()` sobre
+// `#ev-timeline` EN PARALELO con el render real que dispara el callback de
+// `_evCargarDatosReales()` -- 2 pintados/fades del mismo contenedor
+// pisándose (ninguno de los 2 pasa por el mecanismo de "epoch" del otro,
+// uno vía `_evFadeSwap()`, el otro vía `_evRenderTimeline(true)` directo)
+// dejaban `#ev-timeline` con `opacity`/`transition` inline inconsistente
+// (animación de entrada trabada) y el label de mes de la nav sin
+// actualizar (`_evIrAHoy()` solo sincroniza el label si el calendario ya
+// está abierto, `_evCalVisible` -- con la sección recién entrando nunca lo
+// está, así que ese tap de más ni siquiera lo intentaba). `_evEntradaEnCurso`
+// -- `true` desde que arranca la inicialización real de `irEventos()` hasta
+// que el salto inicial a "hoy" termina de correr -- `_evListoParaIrAHoy()`
+// lo consulta desde `_bottomNavClick()` para ignorar el tap de más en vez
+// de competir con la entrada todavía en curso (el usuario ya va a caer en
+// "hoy" solo, es lo que la entrada normal ya hace).
+var _evEntradaEnCurso = false;
+function _evListoParaIrAHoy() { return !_evEntradaEnCurso; }
+
 /* ── FAB "+" unificado de #s-eventos (ver #ev-fab-menu en index.html) ────
    Reemplaza los 3 FAB previos de esta pantalla (`#ev-fab-menu` admin-only,
    `#ev-fab-reserva` quindes-no-admin, `#ev-mirlxs-fab` "Reservar <mes>") más
@@ -699,6 +726,11 @@ function irEventos() {
   var cont = document.getElementById('ev-timeline');
   if (cont) cont.innerHTML = _evTimelineSkeletonHtml();
   volver('s-eventos');
+  // Ver comentario de `_evEntradaEnCurso` más arriba -- true desde acá
+  // (sección recién entrando, timeline en skeleton, `.activa` ya puesta por
+  // `volver()`) hasta que el salto inicial a "hoy" termina de correr, unas
+  // líneas más abajo.
+  _evEntradaEnCurso = true;
   // Independiente de _evCargarDatosReales() -- no bloquea el render del
   // timeline (ver el comentario de _evPrecargarRoster() para el porqué).
   _evPrecargarRoster();
@@ -715,6 +747,7 @@ function irEventos() {
       _evScrollAFecha(_evHoyISO(), true);
       _evActualizarNavMesPorScroll();
       _evUpdateRsvpSliders(false);
+      _evEntradaEnCurso = false;
     }, 50);
   });
   _evYaInicializadoEnSesion = true;
