@@ -533,7 +533,7 @@ window.onload = function() {
           if (!window._restaurandoSesion) return;
           var _c = localStorage.getItem('edat');
           if (_c) { try { E.datos = JSON.parse(_c); E.datosCompletos = E.datos; } catch(e) {} }
-          window._restaurandoSesion = false; ocultarCargando(); _irTabAterrizajeInicial();
+          window._restaurandoSesion = false; ocultarCargando(); if (E.nombre) vincularPush(E.nombre); _irTabAterrizajeInicial();
         }, 10000);
         api({ action: 'restaurarSesion' }, function(res) {
           clearTimeout(_restaurarTimer);
@@ -586,7 +586,7 @@ window.onload = function() {
   var _c = localStorage.getItem('edat');
   if (_c) {
     try { E.datos = JSON.parse(_c); E.datosCompletos = E.datos; } catch(e) {}
-    window._restaurandoSesion = false; ocultarCargando(); _irTabAterrizajeInicial(); return;
+    window._restaurandoSesion = false; ocultarCargando(); if (E.nombre) vincularPush(E.nombre); _irTabAterrizajeInicial(); return;
   }
   window._restaurandoSesion = false; localStorage.removeItem('session'); _token = ''; E.nombre = ''; ocultarCargando(); ir('s1', true);
 });
