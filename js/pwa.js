@@ -452,13 +452,14 @@ function vincularPush(nombre) {
         await OneSignal.Notifications.requestPermission();
       }
       await OneSignal.login(nombre);
+      console.log('vincularPush completado - optedIn:', OneSignal.User.PushSubscription.optedIn, 'token:', !!OneSignal.User.PushSubscription.token);
       var perm = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
       if (perm === 'granted') {
         await OneSignal.User.PushSubscription.optIn().catch(function(){});
         var b = document.getElementById('notif-banner');
         if (b) b.style.display = 'none';
       }
-    } catch(e) { console.warn('OneSignal vincularPush:', e.message); }
+    } catch(e) { console.warn('OneSignal vincularPush:', e.message); console.error('vincularPush error:', e); }
   });
 }
 
