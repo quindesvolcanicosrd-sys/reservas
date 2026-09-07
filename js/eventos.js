@@ -4543,6 +4543,16 @@ function _evMarcarAsistencia(id, estado) {
     // la app antes de esa próxima carga completa dejaba el snapshot local
     // con el RSVP viejo, visible recién al reabrir sin conexión.
     if (typeof _offGuardarCache === 'function') _offGuardarCache();
+    // Push al resto del equipo avisando el cambio (feat nueva, pedido
+    // explícito -- ver pushAsistenciaCambio()/supabase/functions/api/index.ts)
+    // -- SOLO si `estadoAnterior` existe y es distinto del nuevo (un cambio
+    // real, no el primer RSVP de esta persona para el evento). Fire-and-
+    // forget, sin callbacks -- best-effort a propósito, mismo criterio que
+    // el resto de pushes de este proyecto: nunca debe afectar el flujo real
+    // de guardar la asistencia (que ya terminó arriba).
+    if (estadoAnterior && estadoAnterior !== estado) {
+      apiPost({ action: 'pushAsistenciaCambio', token: _token, evento_id: id, estado_nuevo: estado, estado_anterior: estadoAnterior }, function() {}, function() {});
+    }
   }, function(e) {
     ev.miEstado = estadoAnterior;
     ev.rsvps = rsvpsAnterior;

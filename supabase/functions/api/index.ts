@@ -3429,6 +3429,258 @@ function _hoyEcuadorISO(): string {
   return ecu.toISOString().substring(0, 10);
 }
 
+// 'YYYY-MM-DD' de hoy (hora de pared Ecuador) + `n` días -- usado por los
+// crons de recordatorio de abajo para acotar el `.in('fecha', [...])` a un
+// puñado de días candidatos antes de filtrar por instante real
+// (_instanteEventoUTC) -- evita traer TODA la tabla `asistencias`.
+function _fechaEcuadorMasDias(n: number): string {
+  const hoy = _hoyEcuadorISO();
+  return new Date(new Date(hoy + 'T00:00:00Z').getTime() + n * 24 * 3600 * 1000).toISOString().substring(0, 10);
+}
+
+// Instante real (epoch ms, UTC) de un evento a partir de `fecha`+`inicia` --
+// esas 2 columnas son componentes de hora de PARED de Ecuador, sin
+// timezone propia (mismo criterio que _hoyEcuadorISO()/_fechaEs() arriba),
+// así que el instante UTC real es la hora de pared + 5h (UTC-5 fijo, sin
+// DST). `null` si falta cualquiera de los 2 componentes (evento sin hora
+// fijada todavía, ej. offseason) -- nunca entra en ninguna ventana de los
+// crons de abajo.
+function _instanteEventoUTC(fecha: string | null, hora: string | null): number | null {
+  if (!fecha || !hora) return null;
+  const [y, m, d] = String(fecha).split('-').map(Number);
+  const [hh, mm] = String(hora).split(':').map(Number);
+  if (!y || !m || !d || Number.isNaN(hh)) return null;
+  return Date.UTC(y, m - 1, d, hh + 5, mm || 0, 0);
+}
+
+// ─── Crons: recordatorios de eventos + resumen admin (feat nueva) ─────────────
+// Mismo mecanismo que cronDiario (arriba): gateados por header x-cron-secret
+// en el router (Deno.serve), disparados por pg_net desde pg_cron -- ver
+// supabase/migrations/*_push_cron_recordatorios.sql. `equipo` "activo" =
+// `estado_miembro` distinto de 'Lesionadx'/'Ausente' (mismo criterio que
+// recalcular-categorias/index.ts salta Lesionadx del recálculo de tier --
+// alguien marcado como no-entrenando-ahora no debería recibir "¿vas
+// mañana?"/el resumen de asistentes de admin lo cuenta igual si de hecho
+// marcó 'Asistiré', eso no cambia).
+const EQUIPO_ACTIVO_FILTRO = (r: { estado_miembro?: string | null }) =>
+  r.estado_miembro !== 'Lesionadx' && r.estado_miembro !== 'Ausente';
+
+// Recordatorio 1h antes, SOLO a quien marcó 'Asistiré' -- ventana 55-65min
+// (10min de ancho = 1 tick del cron cada 10min, sin solaparse con el
+// siguiente). Con botones de acción + token firmado, igual que
+// pushEventoCreado() -- responde en background (ver OneSignalSDKWorker.js).
+async function cronRecordatorioEvento(): Promise<Record<string, any>> {
+  const ahora = Date.now();
+  const desde = ahora + 55 * 60 * 1000;
+  const hasta = ahora + 65 * 60 * 1000;
+  const fechas = [0, 1].map(_fechaEcuadorMasDias);
+  const { data: eventos } = await supabase.from('asistencias')
+    .select('id_evento, fecha, inicia, donde, tipo_evento')
+    .in('fecha', fechas)
+    .not('estado', 'in', '("Evento Cancelado","No se entrena")');
+  const enVentana = (eventos ?? []).filter((e: any) => {
+    const t = _instanteEventoUTC(e.fecha, e.inicia);
+    return t !== null && t >= desde && t <= hasta;
+  });
+  if (!enVentana.length) return { exito: true, eventos: 0, enviados: 0 };
+
+  const asistPorEvento = await _ultimaAsistenciaPorPersonaTodas(enVentana.map((e: any) => e.id_evento));
+  let enviados = 0;
+  for (const ev of enVentana) {
+    const asistentes: string[] = (asistPorEvento[ev.id_evento] ?? [])
+      .filter((a: any) => a.estado === 'Asistiré').map((a: any) => a.nombre);
+    await Promise.allSettled(asistentes.map(async (username: string) => {
+      const token = await _firmarTokenAccion(username, String(ev.id_evento));
+      if (!token) return;
+      const urlEventos = APP_URL + '/?tab=eventos';
+      await sendPush({
+        include_aliases: { external_id: [username] },
+        headings: { es: '¡Tu entrenamiento es en 1 hora!' },
+        contents: { es: `${ev.tipo_evento || 'Entrenamiento'} · ${_horaEs(ev.inicia)} · ${ev.donde || ''}` },
+        url: urlEventos,
+        data: { token, evento_id: String(ev.id_evento), url: urlEventos },
+        web_buttons: [
+          { id: 'asistire', text: 'Asistiré', url: '_osp=do_not_open' },
+          { id: 'no-asistire', text: 'No asistiré', url: '_osp=do_not_open' },
+        ],
+      });
+      enviados++;
+    }));
+  }
+  return { exito: true, eventos: enVentana.length, enviados };
+}
+
+// Recordatorio 1 día antes, SOLO a quien NO tiene ninguna fila en
+// log_asistencias para ese evento (cualquier origen/estado) -- ventana
+// 23-25h antes (2h de ancho = 1 tick del cron cada hora).
+async function cronRecordatorio1Dia(): Promise<Record<string, any>> {
+  const ahora = Date.now();
+  const desde = ahora + 23 * 3600 * 1000;
+  const hasta = ahora + 25 * 3600 * 1000;
+  const fechas = [0, 1, 2].map(_fechaEcuadorMasDias);
+  const { data: eventos } = await supabase.from('asistencias')
+    .select('id_evento, fecha, inicia, donde, tipo_evento')
+    .in('fecha', fechas)
+    .not('estado', 'in', '("Evento Cancelado","No se entrena")');
+  const enVentana = (eventos ?? []).filter((e: any) => {
+    const t = _instanteEventoUTC(e.fecha, e.inicia);
+    return t !== null && t >= desde && t <= hasta;
+  });
+  if (!enVentana.length) return { exito: true, eventos: 0, enviados: 0 };
+
+  const { data: equipoRows } = await supabase.from('equipo').select('username, estado_miembro');
+  const activos: string[] = (equipoRows ?? []).filter((r: any) => r.username && EQUIPO_ACTIVO_FILTRO(r)).map((r: any) => r.username);
+
+  const asistPorEvento = await _ultimaAsistenciaPorPersonaTodas(enVentana.map((e: any) => e.id_evento));
+  let enviados = 0;
+  for (const ev of enVentana) {
+    const respondieron = new Set((asistPorEvento[ev.id_evento] ?? []).map((a: any) => a.nombre));
+    const sinRespuesta = activos.filter((u) => !respondieron.has(u));
+    await Promise.allSettled(sinRespuesta.map(async (username) => {
+      const token = await _firmarTokenAccion(username, String(ev.id_evento));
+      if (!token) return;
+      const urlEventos = APP_URL + '/?tab=eventos';
+      await sendPush({
+        include_aliases: { external_id: [username] },
+        headings: { es: '¿Vas al entrenamiento mañana?' },
+        contents: { es: `${ev.tipo_evento || 'Entrenamiento'} · ${_fechaEs(ev.fecha)} · ${_horaEs(ev.inicia)}` },
+        url: urlEventos,
+        data: { token, evento_id: String(ev.id_evento), url: urlEventos },
+        web_buttons: [
+          { id: 'asistire', text: 'Asistiré', url: '_osp=do_not_open' },
+          { id: 'no-asistire', text: 'No asistiré', url: '_osp=do_not_open' },
+        ],
+      });
+      enviados++;
+    }));
+  }
+  return { exito: true, eventos: enVentana.length, enviados };
+}
+
+// Resumen para admins 1h antes -- 1 sola llamada a OneSignal (todos los
+// aliases admin de una, mismo criterio que el resto de este archivo) con
+// quiénes vienen + equipamiento a prestar. Sin action buttons -- solo
+// informativo. Nada si nadie marcó 'Asistiré' para ese evento.
+async function cronAdminEvento(): Promise<Record<string, any>> {
+  const ahora = Date.now();
+  const desde = ahora + 55 * 60 * 1000;
+  const hasta = ahora + 65 * 60 * 1000;
+  const fechas = [0, 1].map(_fechaEcuadorMasDias);
+  const { data: eventos } = await supabase.from('asistencias')
+    .select('id_evento, fecha, inicia, donde, tipo_evento')
+    .in('fecha', fechas)
+    .not('estado', 'in', '("Evento Cancelado","No se entrena")');
+  const enVentana = (eventos ?? []).filter((e: any) => {
+    const t = _instanteEventoUTC(e.fecha, e.inicia);
+    return t !== null && t >= desde && t <= hasta;
+  });
+  if (!enVentana.length) return { exito: true, eventos: 0, enviados: 0 };
+
+  const asistPorEvento = await _ultimaAsistenciaPorPersonaTodas(enVentana.map((e: any) => e.id_evento));
+  const adminAliases = await _adminOneSignalAliases();
+  let enviados = 0;
+  for (const ev of enVentana) {
+    const asistentes: string[] = (asistPorEvento[ev.id_evento] ?? [])
+      .filter((a: any) => a.estado === 'Asistiré').map((a: any) => a.nombre);
+    if (!asistentes.length) continue;
+
+    const { data: equipoRows } = await supabase.from('equipo')
+      .select('username, nombre_derby, necesita_patines, necesita_protecciones, talla')
+      .in('username', asistentes);
+    const porUsername: Record<string, any> = {};
+    (equipoRows ?? []).forEach((r: any) => { porUsername[r.username] = r; });
+
+    const nombresMostrar = asistentes.map((u) => porUsername[u]?.nombre_derby || u);
+    const equipamiento: string[] = [];
+    asistentes.forEach((u) => {
+      const r = porUsername[u];
+      if (!r) return;
+      const necesita: string[] = [];
+      if (r.necesita_patines === 'Sí') necesita.push(`patines${r.talla ? ' talla ' + r.talla : ''}`);
+      if (r.necesita_protecciones === 'Sí') necesita.push('protecciones');
+      if (necesita.length) equipamiento.push(`${r.nombre_derby || u} → ${necesita.join(', ')}`);
+    });
+
+    const partes = [`Vienen ${asistentes.length} ${asistentes.length === 1 ? 'persona' : 'personas'}: ${nombresMostrar.join(', ')}.`];
+    if (equipamiento.length) partes.push(`Equipamiento: ${equipamiento.join('; ')}.`);
+
+    const urlEventos = APP_URL + '/?tab=eventos';
+    await sendPush({
+      include_aliases: { external_id: adminAliases },
+      headings: { es: 'Resumen del entrenamiento en 1 hora' },
+      contents: { es: partes.join(' ') },
+      url: urlEventos,
+      data: { url: urlEventos },
+    });
+    enviados++;
+  }
+  return { exito: true, eventos: enVentana.length, enviados };
+}
+
+// ─── Push: cambio de asistencia + solicitud pendiente (feat nueva) ────────────
+
+// Llamada por el frontend cuando alguien CAMBIA una respuesta ya existente
+// (no cuando marca por primera vez -- ver `estado_anterior`, TAREA 7 en
+// js/eventos.js). Identidad SIEMPRE server-side vía `_validarToken(token)`
+// -- nunca se confía en un `usuario_id`/nombre que mande el body (spoofing
+// trivial si no), mismo criterio que el resto de acciones gateadas por
+// token de este archivo.
+async function pushAsistenciaCambio(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const idEvento = params.evento_id;
+  const estadoNuevo = params.estado_nuevo;
+  const estadoAnterior = params.estado_anterior;
+  if (!estadoAnterior) return { exito: true, omitido: true };
+  if (!idEvento || !estadoNuevo) return { exito: false, error: 'Parámetros inválidos.' };
+
+  const { data: equipoRows } = await supabase.from('equipo').select('username, nombre_derby, estado_miembro');
+  const propio = (equipoRows ?? []).find((r: any) => r.username === username);
+  const nombreMostrar = propio?.nombre_derby || username;
+  const destinatarios: string[] = (equipoRows ?? [])
+    .filter((r: any) => r.username && r.username !== username && EQUIPO_ACTIVO_FILTRO(r))
+    .map((r: any) => r.username);
+  if (!destinatarios.length) return { exito: true };
+
+  const urlEventos = APP_URL + '/?tab=eventos';
+  await sendPush({
+    include_aliases: { external_id: destinatarios },
+    headings: { es: 'Cambio de asistencia' },
+    contents: { es: `${nombreMostrar} cambió su asistencia a ${estadoNuevo}` },
+    url: urlEventos,
+    data: { url: urlEventos },
+  });
+  return { exito: true };
+}
+
+// Llamada por el frontend al crear una solicitud nueva (reserva, lesión,
+// excepción de cuota, etc.) -- avisa a todos los admins. Fuera de alcance
+// por ahora: un trigger de DB como caller alternativo (mencionado en el
+// pedido original) necesitaría su propio mecanismo de auth (esta acción
+// exige `token` de sesión real, un trigger de Postgres no tiene uno) --
+// solo se conectó el camino desde el frontend.
+async function pushSolicitudPendiente(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const tipoSolicitud = params.tipo_solicitud ?? '';
+  const descripcionBreve = params.descripcion_breve;
+  const urlSeccion = params.url_seccion;
+  if (!descripcionBreve) return { exito: false, error: 'Falta descripcion_breve.' };
+
+  const urlFinal = urlSeccion
+    ? (String(urlSeccion).startsWith('http') ? String(urlSeccion) : APP_URL + urlSeccion)
+    : APP_URL;
+  const adminAliases = await _adminOneSignalAliases();
+  await sendPush({
+    include_aliases: { external_id: adminAliases },
+    headings: { es: 'Nueva solicitud pendiente' },
+    contents: { es: String(descripcionBreve) },
+    url: urlFinal,
+    data: { url: urlFinal, tipo_solicitud: tipoSolicitud },
+  });
+  return { exito: true };
+}
+
 async function adminEnviarPush(params: Record<string, any>): Promise<Record<string, any>> {
   const { titulo, mensaje, destino, sendAfter } = params;
   if (!titulo || !mensaje) return { exito: false, error: 'Falta título o mensaje.' };
@@ -3859,6 +4111,26 @@ Deno.serve(async (req: Request) => {
         if (!CRON_SECRET || secretHeader !== CRON_SECRET) return json({ error: 'No autorizado.' }, 401);
         return json(await cronDiario());
       }
+      // Crons de recordatorios/resumen admin (ver supabase/migrations/*_push_cron_recordatorios.sql)
+      // -- mismo gate x-cron-secret que cronDiario arriba.
+      case 'cronRecordatorioEvento': {
+        const secretHeader = req.headers.get('x-cron-secret') ?? '';
+        if (!CRON_SECRET || secretHeader !== CRON_SECRET) return json({ error: 'No autorizado.' }, 401);
+        return json(await cronRecordatorioEvento());
+      }
+      case 'cronRecordatorio1Dia': {
+        const secretHeader = req.headers.get('x-cron-secret') ?? '';
+        if (!CRON_SECRET || secretHeader !== CRON_SECRET) return json({ error: 'No autorizado.' }, 401);
+        return json(await cronRecordatorio1Dia());
+      }
+      case 'cronAdminEvento': {
+        const secretHeader = req.headers.get('x-cron-secret') ?? '';
+        if (!CRON_SECRET || secretHeader !== CRON_SECRET) return json({ error: 'No autorizado.' }, 401);
+        return json(await cronAdminEvento());
+      }
+      // Push disparados por el frontend (gateados por _validarToken, no admin)
+      case 'pushAsistenciaCambio':          return json(await pushAsistenciaCambio(params));
+      case 'pushSolicitudPendiente':        return json(await pushSolicitudPendiente(params));
       // Reservas admin / sesión admin
       case 'adminGetReservas':              return json(await adminGetReservas(params));
       case 'adminSetEstadoReserva':         return json(await adminSetEstadoReserva(params));
