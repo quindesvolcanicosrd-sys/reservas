@@ -116,6 +116,13 @@ select:disabled { background: var(--disabled-bg-2); color: var(--text-faint); cu
 .btn-deuna:hover { background: var(--deuna-dk); transform: translateY(-2px); }
 .btn-deuna:active { transform: translateY(0) scale(0.98); }
 
+/* Chip/pill seleccionable — selector de tipo en el formulario de "Déjanos
+   tus comentarios" (#modal-contacto, index.html). El estado activo se marca
+   inline (font-weight/background) desde _fbSetTipo()/js/ui.js, no con una
+   clase .activo — esta regla es solo el estado base/inactivo. */
+.pill-btn { font-family: inherit; padding: 10px 6px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--bg-2); color: var(--text); font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.pill-btn:hover { border-color: var(--brand-secondary); }
+
 /* Texto clickeable sin contenedor — Cancelar/Omitir/Cerrar no destructivos.
    Mismo tamaño/peso de fuente que .btn-cancel-text (css/home.css), sin el
    rojo ni el subrayado (reservados ahí para "Cancelar reserva", la única

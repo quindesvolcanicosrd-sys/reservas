@@ -709,9 +709,7 @@ var AJ_SEARCH_KEYWORDS = {
     'atención médica', 'atencion medica', 'msp', 'iess',
     'seguro privado', 'seguro', 'saludsa', 'ecuasanitas', 'humana', 'confiamed'
   ],
-  notif: ['notificaciones', 'avisos'],
-  pwa: ['instalar', 'pwa', 'inicio'],
-  contactanos: ['whatsapp', 'instagram', 'contáctanos']
+  contactanos: ['whatsapp', 'comentarios', 'sugerencias', 'bugs', 'feedback']
 };
 
 /* ── Ajustes: buscador de la nav (ver "Cambios recientes",

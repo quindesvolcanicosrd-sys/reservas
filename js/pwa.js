@@ -417,28 +417,6 @@ function _ajSetToggleOn(cb, on) {
   cb.setAttribute('aria-pressed', on ? 'true' : 'false');
 }
 
-function toggleNotifHome(cb) {
-  if (cb.classList.contains('toggle-on')) { mostrarToast('Para desactivar, ve a ajustes del navegador.', 'error'); return; }
-  _ajSetToggleOn(cb, true);
-  activarPush();
-  setTimeout(function() {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      var row = document.getElementById('row-notif-home');
-      if (row) {
-        var t = row.querySelector('.hmr-titulo');
-        var s = row.querySelector('.hmr-sub');
-        if (t) t.textContent = 'Notificaciones activadas';
-        if (s) s.textContent = 'No te perderás de ninguna notificación ✅';
-        setTimeout(function() {
-          row.style.transition = 'opacity 0.6s ease';
-          row.style.opacity = '0';
-          setTimeout(function() { row.style.display = 'none'; }, 650);
-        }, 1800);
-      }
-    } else if (Notification.permission === 'denied') { _ajSetToggleOn(cb, false); }
-  }, 1500);
-}
-
 function activarPush() {
   if (!navegadorRecomendado()) return;
   var ua = navigator.userAgent;

@@ -36,7 +36,7 @@
 <script src="js/color-enfasis.js?v=d494e5a6"></script>
 <link rel="stylesheet" href="css/global.css?v=2422cd89">
 <link rel="stylesheet" href="css/estilos.css?v=7e3d0e54">
-<link rel="stylesheet" href="css/ui.css?v=626a894b">
+<link rel="stylesheet" href="css/ui.css?v=31fab976">
 <link rel="stylesheet" href="css/login.css">
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=6a5348f1">
@@ -2917,27 +2917,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 
     <!-- Aplicación -->
     <div class="aj-app-rows">
-      <div class="aj-app-row" id="row-notif-home" data-aj-key="notif" onclick="toggleNotifHome(document.getElementById('toggle-notif'))">
-        <div class="aj-icon aj-icon-orange"><span class="material-symbols-outlined">notifications</span></div>
-        <div class="aj-content">
-          <div class="aj-title">Notificaciones</div>
-          <div class="aj-value">Reservas, cambios y avisos</div>
-        </div>
-        <div class="toggle-wrap"><button type="button" id="toggle-notif" class="toggle-btn toggle-off" aria-pressed="false"><span class="toggle-thumb"></span></button></div>
-      </div>
-      <div class="aj-app-row" id="row-instalar-app" data-aj-key="pwa" onclick="pwaInstalar()">
-        <div class="aj-icon aj-icon-muted"><span class="material-symbols-outlined">install_mobile</span></div>
-        <div class="aj-content">
-          <div class="aj-title">Instalar la app</div>
-          <div class="aj-value">Agrega el portal a tu inicio</div>
-        </div>
-        <button class="aj-app-btn"><span class="material-symbols-outlined">download</span></button>
-      </div>
       <div class="aj-app-row" data-aj-key="contactanos" onclick="abrirContacto()">
         <div class="aj-icon aj-icon-muted"><span class="material-symbols-outlined">share</span></div>
         <div class="aj-content">
-          <div class="aj-title">Contáctanos</div>
-          <div class="aj-value">WhatsApp, Instagram, correo</div>
+          <div class="aj-title">Déjanos tus comentarios</div>
+          <div class="aj-value">Bugs, sugerencias o lo que sientas</div>
         </div>
         <button class="aj-app-btn"><span class="material-symbols-outlined">chevron_right</span></button>
       </div>
@@ -3313,14 +3297,14 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
-<script src="js/ui.js?v=27b067a8"></script>
+<script src="js/ui.js?v=ad0c4b27"></script>
 <script src="js/eventos.js?v=f791ec9d"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=9376d780"></script>
 <script src="js/equipo.js?v=372588f2"></script>
 <script src="js/home.js?v=cf4b0197"></script>
 <script src="js/reservas.js?v=c7b480d0"></script>
-<script src="js/perfil.js?v=18d0df1d"></script>
+<script src="js/perfil.js?v=d2df3c5b"></script>
 <script src="js/admin.js?v=5fa9666b"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js?v=ae85f4a4"></script>
@@ -3419,24 +3403,26 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div id="modal-contacto-overlay" class="bsheet-overlay" style="z-index:9500;" onclick="cerrarContacto()"></div>
   <div id="modal-contacto" class="bsheet" style="z-index:9550;">
     <div class="bsheet-handle"></div>
-    <div class="bsheet-title">Contáctanos</div>
+    <div class="bsheet-title">Déjanos tus comentarios</div>
     <div class="bsheet-body">
+      <p style="font-size:0.85rem;color:var(--muted);margin:0 0 14px;">¿Encontraste un bug, tenés una sugerencia o querés decirnos algo? Escribilo acá y elegí cómo enviarlo.</p>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button type="button" class="pill-btn" id="fb-tipo-bug" onclick="_fbSetTipo('Bug')" style="flex:1;">🐛 Bug</button>
+        <button type="button" class="pill-btn" id="fb-tipo-sugerencia" onclick="_fbSetTipo('Sugerencia')" style="flex:1;">💡 Sugerencia</button>
+        <button type="button" class="pill-btn" id="fb-tipo-otro" onclick="_fbSetTipo('Otro')" style="flex:1;">💬 Otro</button>
+      </div>
+      <textarea id="fb-mensaje" rows="4" placeholder="Escribí tu mensaje acá..." style="width:100%;box-sizing:border-box;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:var(--bg-2);color:var(--text);font-family:inherit;font-size:0.9rem;resize:none;outline:none;margin-bottom:14px;"></textarea>
       <div class="aj-group">
-        <a href="https://wa.me/593962773052" target="_blank" class="aj-dato-row">
+        <div class="aj-dato-row" onclick="_fbEnviarWhatsApp()" style="cursor:pointer;">
           <div class="aj-dato-icon"><span class="material-symbols-outlined">forum</span></div>
-          <div class="aj-dato-texts"><div class="aj-dato-label">WhatsApp</div></div>
+          <div class="aj-dato-texts"><div class="aj-dato-label">Enviar por WhatsApp</div></div>
           <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-        </a>
-        <a href="https://www.instagram.com/quindesvolcanicosrd/" target="_blank" class="aj-dato-row">
-          <div class="aj-dato-icon"><span class="material-symbols-outlined">favorite</span></div>
-          <div class="aj-dato-texts"><div class="aj-dato-label">Instagram</div></div>
-          <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-        </a>
-        <a href="mailto:quindesvolcanicosrd@gmail.com" class="aj-dato-row">
+        </div>
+        <div class="aj-dato-row" onclick="_fbEnviarMail()" style="cursor:pointer;">
           <div class="aj-dato-icon"><span class="material-symbols-outlined">mail</span></div>
-          <div class="aj-dato-texts"><div class="aj-dato-label">Mail</div></div>
+          <div class="aj-dato-texts"><div class="aj-dato-label">Enviar por correo</div></div>
           <div class="aj-dato-chevron"><span class="material-symbols-outlined">chevron_right</span></div>
-        </a>
+        </div>
       </div>
       <button onclick="cerrarContacto()" class="btn-text-simple" style="width:100%;margin-top:16px;">Cerrar</button>
     </div>

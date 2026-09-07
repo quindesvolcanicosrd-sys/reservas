@@ -150,6 +150,32 @@ function cerrarContacto(porGesto) {
   setTimeout(function() { m.style.display = 'none'; ov.style.display = 'none'; }, 350);
 }
 
+var _fbTipo = 'Otro';
+function _fbSetTipo(tipo) {
+  _fbTipo = tipo;
+  ['bug','sugerencia','otro'].forEach(function(t) {
+    var btn = document.getElementById('fb-tipo-' + t);
+    if (btn) btn.style.fontWeight = (tipo.toLowerCase() === t) ? '800' : '';
+    if (btn) btn.style.background = (tipo.toLowerCase() === t) ? 'var(--brand-light, var(--brand))' : '';
+  });
+}
+function _fbMensajeCompleto() {
+  var msg = (document.getElementById('fb-mensaje') || {}).value || '';
+  return '[' + _fbTipo + '] ' + msg.trim();
+}
+function _fbEnviarWhatsApp() {
+  var texto = _fbMensajeCompleto();
+  if (!texto.replace(/\[.*?\]\s*/, '').trim()) { mostrarToast('Escribí tu mensaje antes de enviar.', 'error'); return; }
+  window.open('https://wa.me/593962773052?text=' + encodeURIComponent(texto), '_blank');
+}
+function _fbEnviarMail() {
+  var texto = _fbMensajeCompleto();
+  if (!texto.replace(/\[.*?\]\s*/, '').trim()) { mostrarToast('Escribí tu mensaje antes de enviar.', 'error'); return; }
+  var asunto = encodeURIComponent('App Quindes — ' + _fbTipo);
+  var cuerpo = encodeURIComponent(texto);
+  window.open('mailto:quindesvolcanicosrd@gmail.com?subject=' + asunto + '&body=' + cuerpo, '_blank');
+}
+
 var PANTALLAS_RAIZ = ['s1', 's-home'];
 
 var TOP_BAR_CONFIG = {
