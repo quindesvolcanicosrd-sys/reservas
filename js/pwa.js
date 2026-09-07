@@ -444,12 +444,15 @@ function activarPush() {
 }
 
 function vincularPush(nombre) {
+  console.log('[VP] vincularPush llamado con:', nombre);
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   OneSignalDeferred.push(async function(OneSignal) {
+    console.log('[VP] callback ejecutado, nombre:', nombre);
     try {
       await OneSignal.Notifications.requestPermission();
       await OneSignal.User.PushSubscription.optIn().catch(function(){});
     await OneSignal.login(nombre);
+    console.log('[VP] login OK, optedIn:', OneSignal.User.PushSubscription.optedIn);
     var perm = (typeof Notification !== 'undefined') ? Notification.permission : 'default';
     if (perm === 'granted') {
     var b = document.getElementById('notif-banner');
