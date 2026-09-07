@@ -3386,7 +3386,7 @@ async function sendPush(payload: {
   try {
     await fetch('https://api.onesignal.com/notifications', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Key ' + ONESIGNAL_API_KEY },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ONESIGNAL_API_KEY },
       body: JSON.stringify({ app_id: ONESIGNAL_APP_ID, target_channel: 'push', ...payload }),
     });
   } catch (_e) { /* best-effort, no bloquea la acción que disparó el push */ }
@@ -3702,7 +3702,7 @@ async function adminEnviarPush(params: Record<string, any>): Promise<Record<stri
   if (sendAfter) payload.send_after = sendAfter;
   console.log('OneSignal key presente:', !!Deno.env.get('ONESIGNAL_API_KEY'), 'App ID presente:', !!Deno.env.get('ONESIGNAL_APP_ID'));
   const resp = await fetch('https://api.onesignal.com/notifications', {
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Key ' + ONESIGNAL_API_KEY },
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ONESIGNAL_API_KEY },
     body: JSON.stringify(payload),
   });
   const body = await resp.json().catch(() => ({}));
