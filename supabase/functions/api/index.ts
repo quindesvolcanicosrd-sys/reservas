@@ -762,6 +762,57 @@ async function actualizarPerfilGoogle(params: Record<string, any>): Promise<Reco
   return { exito: true };
 }
 
+async function _base64ToBuffer(base64Data: string): Promise<{ buffer: Uint8Array; mimeType: string } | null> {
+  const matches = base64Data.match(/^data:([^;]+);base64,(.+)$/);
+  if (!matches) return null;
+  try {
+    const buffer = Uint8Array.from(atob(matches[2]), c => c.charCodeAt(0));
+    return { buffer, mimeType: matches[1] };
+  } catch { return null; }
+}
+
+async function subirFotoPerfil(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const base64Data = (params.base64Data ?? '').toString().trim();
+  // Quitar foto
+  if (!base64Data) {
+    await supabase.from('equipo').update({ foto_perfil: '' }).eq('username', username);
+    return { exito: true, url: '' };
+  }
+  const parsed = await _base64ToBuffer(base64Data);
+  if (!parsed) return { exito: false, error: 'Formato de imagen inválido.' };
+  const path = `avatars/${username}.jpg`;
+  const { error: uploadError } = await supabase.storage
+    .from('fotos-perfil')
+    .upload(path, parsed.buffer, { contentType: parsed.mimeType, upsert: true });
+  if (uploadError) return { exito: false, error: 'Error al subir imagen: ' + uploadError.message };
+  const { data: urlData } = supabase.storage.from('fotos-perfil').getPublicUrl(path);
+  const url = urlData.publicUrl;
+  await supabase.from('equipo').update({ foto_perfil: url }).eq('username', username);
+  return { exito: true, url };
+}
+
+async function subirFotoInscripcion(params: Record<string, any>): Promise<Record<string, any>> {
+  const idToken = (params.idToken ?? '').toString();
+  const email = (params.email ?? '').toString().trim().toLowerCase();
+  const base64Data = (params.base64Data ?? '').toString().trim();
+  const info = await _verificarGoogleToken(idToken);
+  if (!info) return { exito: false, error: 'Token de Google inválido.' };
+  if ((info.email ?? '').toLowerCase() !== email) return { exito: false, error: 'El email no coincide con el token.' };
+  if (!base64Data) return { exito: true, url: '' };
+  const parsed = await _base64ToBuffer(base64Data);
+  if (!parsed) return { exito: false, error: 'Formato de imagen inválido.' };
+  const safeEmail = email.replace(/[^a-z0-9]/g, '_');
+  const path = `inscripcion/${safeEmail}.jpg`;
+  const { error: uploadError } = await supabase.storage
+    .from('fotos-perfil')
+    .upload(path, parsed.buffer, { contentType: parsed.mimeType, upsert: true });
+  if (uploadError) return { exito: false, error: 'Error al subir imagen: ' + uploadError.message };
+  const { data: urlData } = supabase.storage.from('fotos-perfil').getPublicUrl(path);
+  return { exito: true, url: urlData.publicUrl };
+}
+
 // ─── Acciones: config ─────────────────────────────────────────────────────────
 
 async function adminBorrarEvento(params: Record<string, any>): Promise<Record<string, any>> {
@@ -3601,25 +3652,6 @@ async function forwardToGAS(params: Record<string, any>): Promise<Response> {
   }
 }
 
-// POST a GAS para acciones con payloads grandes (subirFoto*) — el base64
-// no cabe en una URL de GET; GAS ya tiene doPost() que lee e.parameter igual.
-async function forwardToGASPost(params: Record<string, any>): Promise<Response> {
-  try {
-    const body = Object.entries(params)
-      .map(([k, v]) => encodeURIComponent(k) + '=' + encodeURIComponent(String(v ?? '')))
-      .join('&');
-    const resp = await fetch(GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Mirlxs-EdgeFunction/1.0' },
-      body,
-    });
-    const text = await resp.text();
-    return new Response(text, { headers: { ...CORS, 'Content-Type': 'application/json' } });
-  } catch (e) {
-    return json({ error: 'Error al contactar GAS: ' + (e as Error).message }, 502);
-  }
-}
-
 // ─── Entry point ─────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
@@ -3767,9 +3799,8 @@ Deno.serve(async (req: Request) => {
       case 'adminSetEstadoReserva':         return json(await adminSetEstadoReserva(params));
       case 'adminCerrarSesion':             { if (params.adminToken) await supabase.from('admin_sessions').delete().eq('token', params.adminToken); return json({ exito: true }); }
       case 'adminBorrarEvento':             return json(await adminBorrarEvento(params));
-      case 'subirFotoPerfil':
-      case 'subirFotoInscripcion':
-        return forwardToGASPost(params);
+      case 'subirFotoPerfil':        return json(await subirFotoPerfil(params));
+      case 'subirFotoInscripcion':   return json(await subirFotoInscripcion(params));
       // Mi Liga — config de tiers (categorías de equipo)
       case 'getTiers': {
         const adminEmail = await _validarAdminToken(params.adminToken);
