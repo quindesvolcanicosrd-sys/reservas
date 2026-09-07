@@ -5634,6 +5634,65 @@ function _evRenderTimeline(instant, alTerminar) {
    _evMarcarAsistencia() para refrescar el resumen de conteos in-place si la
    barra de RSVP de esta misma pantalla cambia de opción. */
 var _evDetalleActual = null;
+// Polling de asistencias en tiempo real (silencioso, sin Realtime todavía --
+// ver MANIFEST.md) -- mientras el detalle de un evento está abierto, cada 30s
+// se compara el estado real de `log_asistencias` en Supabase contra lo que ya
+// está pintado, y si difiere se dispara un refresco normal vía
+// `_evCargarDatosReales()` (mismo mecanismo que ya usa el resto del archivo
+// tras cualquier acción, ej. `_evAbrirSheetCancelar()`/etc.) -- nunca un
+// spinner ni indicador visible, es un refresco de fondo. `_evPollInterval`
+// (el id de `setInterval`) y `_evPollUltimaFirma` (snapshot comparable de la
+// última lectura -- `null` = todavía no se leyó ninguna vez) son variables de
+// módulo, `var` como el resto del archivo (nunca `let` acá). Arrancado desde
+// `abrirEvDetalle()` (más abajo) y detenido de forma centralizada desde
+// `ir()` (js/ui.js) al abandonar `s-eventos-detalle` por CUALQUIER vía
+// (flecha atrás, popstate, nav inferior) -- mismo patrón ya usado ahí para
+// `s4`/`s-eventos-anticipada`.
+var _evPollInterval = null;
+var _evPollUltimaFirma = null;
+function _evIniciarPoll(eventoId) {
+  _evDetenerPoll();
+  _evPollUltimaFirma = null;
+  _evPollInterval = setInterval(function() { _evPollAsistencias(eventoId); }, 30000);
+}
+function _evDetenerPoll() {
+  if (_evPollInterval) { clearInterval(_evPollInterval); _evPollInterval = null; }
+  _evPollUltimaFirma = null;
+}
+// Firma comparable de las filas de `log_asistencias` de un evento -- ordenada
+// (el orden de PostgREST no está garantizado entre pedidos) y por texto
+// simple (nombre_usuario/estado/origen), no por conteo solo -- un cambio de
+// ESTADO sin cambio de conteo (ej. alguien pasa de "Asistiré" a "No asistiré")
+// también debe disparar el refresco.
+function _evFirmaAsistencias(filas) {
+  return (filas || []).map(function(f) { return f.nombre_usuario + '|' + f.estado + '|' + f.origen; }).sort().join(',');
+}
+function _evPollAsistencias(eventoId) {
+  fetch(
+    SUPABASE_URL + '/rest/v1/log_asistencias?id_evento=eq.' + encodeURIComponent(eventoId) + '&select=nombre_usuario,estado,origen',
+    { headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY } }
+  ).then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function(filas) {
+    var firma = _evFirmaAsistencias(filas);
+    if (_evPollUltimaFirma === null) { _evPollUltimaFirma = firma; return; }
+    if (firma === _evPollUltimaFirma) return;
+    _evPollUltimaFirma = firma;
+    // Silencioso a propósito -- sin toast/spinner, ver comentario de arriba.
+    // Mismo guard que ya usa `abrirEvDetalle()` (más abajo) para el fetch de
+    // `getFechasDisponibles`: `_evDetalleActual` pudo cambiar (o cerrarse)
+    // mientras este fetch estaba en vuelo.
+    _evCargarDatosReales(function() {
+      if (!_evDetalleActual || _evDetalleActual.id !== eventoId) return;
+      var evActualizado = _EV_EVENTOS.filter(function(e) { return e.id === eventoId; })[0];
+      if (!evActualizado) return;
+      _evDetalleActual = evActualizado;
+      _evRenderDetalle(evActualizado);
+      _evDetalleActualizarSticky();
+    });
+  }).catch(function(e) { if (window.console) console.warn('Poll asistencias: ' + (e && e.message || e)); });
+}
 // Scroll del timeline (ver "Cambios recientes" -- `_evRestaurarScrollTimeline`
 // nació como "_evVolviendoDeDetalle", solo para volver de un detalle; se
 // generalizó para cubrir TAMBIÉN volver a Eventos por nav inferior en una
@@ -5658,6 +5717,7 @@ function abrirEvDetalle(id) {
   _evGuardarScrollTimeline();
   _evRestaurarScrollTimeline = true;
   _evDetalleActual = ev;
+  _evIniciarPoll(id);
   _evRenderDetalle(ev);
   // "Reservar esta clase" (_evDetalleInfoHtml(), más abajo) arranca oculto
   // (`display:none`, id fijo `ev-detalle-btn-reservar-clase`) -- recién se

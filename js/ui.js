@@ -296,6 +296,14 @@ function ir(id, desdeHistorial, sinTrampa) {
   if (actual && actual.id === 's-eventos-anticipada' && typeof _evAntOcultarFooter === 'function') {
     _evAntOcultarFooter();
   }
+  // Polling de asistencias en tiempo real de #s-eventos-detalle (ver
+  // MANIFEST.md, js/eventos.js) -- mismo criterio que los 2 guards de arriba:
+  // se detiene acá, en el único punto real de "cambio de pantalla", para
+  // cubrir los 3 caminos de salida (flecha atrás, popstate, nav inferior) sin
+  // depender de cuál de los 3 disparó la navegación.
+  if (actual && actual.id === 's-eventos-detalle' && typeof _evDetenerPoll === 'function') {
+    _evDetenerPoll();
+  }
   // Guardar el scroll de una sección raíz de la nav inferior AL ABANDONARLA
   // (ver "Cambios recientes" -- regla general, no solo para Eventos/detalle:
   // toda sección de APP_BOTTOM_NAV_ITEMS que quiera restaurar su posición al
