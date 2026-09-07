@@ -859,9 +859,15 @@ function _bottomNavClick(id) {
         // `_evListoParaIrAHoy()`/js/eventos.js agrupa esas 4 condiciones --
         // si cualquiera falla, se ignora el tap de más (la entrada/animación
         // en curso ya va a terminar sola, no hace falta nada más).
-        if (id === 'eventos' && typeof _evIrAHoy === 'function' &&
-            (typeof _evListoParaIrAHoy !== 'function' || _evListoParaIrAHoy())) {
-          _evIrAHoy();
+        // `setTimeout(...,0)` (pedido explícito): saca la llamada del stack
+        // sincrónico de este click, después de cualquier trabajo en curso de
+        // este mismo evento -- el guard de `_evListoParaIrAHoy()` se evalúa
+        // DENTRO del timeout (no antes de programarlo), por si el estado
+        // cambia en ese toque de reloj.
+        if (id === 'eventos' && typeof _evIrAHoy === 'function') {
+          setTimeout(function() {
+            if (typeof _evListoParaIrAHoy !== 'function' || _evListoParaIrAHoy()) _evIrAHoy();
+          }, 0);
         }
         return;
       }

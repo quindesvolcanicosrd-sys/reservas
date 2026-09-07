@@ -772,6 +772,16 @@ function irEventos() {
     setTimeout(function() {
       _evScrollAFecha(_evHoyISO(), true);
       _evActualizarNavMesPorScroll();
+      // Refuerzo defensivo (pedido explícito): fuerza el label a su valor
+      // final YA (`instant=true`, sin pasar por el fade de `_evFadeSwap()`)
+      // inmediatamente después de la resincronización de arriba -- no-op si
+      // `_evActualizarNavMesPorScroll()` ya lo dejó al día (caso normal, hay
+      // `.ev-mes-header` en el DOM) y sin efecto si no encontró ninguno
+      // (`_evNavMesActual` seguiría `null`, `_evActualizarNavMesLabel()`
+      // corta antes de tocar el span) -- cubre solo la ventana entre que
+      // `_evActualizarNavMesPorScroll()` deja el valor fijado y un eventual
+      // fade todavía en vuelo de una llamada anterior.
+      _evActualizarNavMesLabel(true);
       _evUpdateRsvpSliders(false);
       _evEntradaEnCurso = false;
     }, 50);
