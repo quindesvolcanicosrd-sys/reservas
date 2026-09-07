@@ -531,59 +531,6 @@ function _evPrecargarRoster() {
 // timeline, con los filtros/búsqueda/calendario tal cual estaban.
 var _evYaInicializadoEnSesion = false;
 
-// Bug real corregido (ver "Cambios recientes" -- 3 bugs relacionados
-// introducidos por "tocar el ícono de Eventos ya en Eventos ejecuta 'Ir a
-// hoy'"): `_bottomNavClick()`/js/ui.js llama a `_evIrAHoy()` en cuanto
-// detecta `tabActivo==='eventos'` -- eso ya es cierto en el mismo tick en
-// que `irEventos()` hace `volver('s-eventos')` (le pone `.activa` de
-// inmediato), MUCHO antes de que `_evCargarDatosReales()` resuelva y de que
-// el salto inicial a "hoy" (`setTimeout(...,50)` al final de `irEventos()`)
-// llegue a correr. Un 2do tap accidental sobre el mismo ícono durante esa
-// ventana (sección recién entrando, timeline todavía en skeleton) disparaba
-// `_evIrAHoy()` -> `_evCalIrAFechaEnTimeline()` -> `_evFadeSwap()` sobre
-// `#ev-timeline` EN PARALELO con el render real que dispara el callback de
-// `_evCargarDatosReales()` -- 2 pintados/fades del mismo contenedor
-// pisándose (ninguno de los 2 pasa por el mecanismo de "epoch" del otro,
-// uno vía `_evFadeSwap()`, el otro vía `_evRenderTimeline(true)` directo)
-// dejaban `#ev-timeline` con `opacity`/`transition` inline inconsistente
-// (animación de entrada trabada) y el label de mes de la nav sin
-// actualizar (`_evIrAHoy()` solo sincronizaba el label si el calendario ya
-// está abierto, `_evCalVisible` -- con la sección recién entrando nunca lo
-// está, así que ese tap de más ni siquiera lo intentaba, ver el fix de eso
-// en `_evIrAHoy()` más abajo). `_evEntradaEnCurso` -- `true` desde que
-// arranca la inicialización real de `irEventos()` hasta que el salto
-// inicial a "hoy" termina de correr -- una de las 4 condiciones que
-// `_evListoParaIrAHoy()` verifica antes de dejar pasar el tap (ver esa
-// función, agrupa las 4 acá para que `_bottomNavClick()`/js/ui.js consulte
-// un solo punto): además de "no en plena entrada", exige que la nav de mes
-// ya se haya sincronizado alguna vez (`_evNavMesActual`, null hasta el
-// primer render real -- sin esto un tap ultra-temprano podría colarse antes
-// de este mismo flag pasar a `true`), que el panel de calendario NO esté en
-// medio de su propia animación de abrir/cerrar/cambiar de mes
-// (`.ev-panel-wrapper-anim`, ver `_evAnimarPanel()` más abajo -- volver a
-// tocar `_evCalCambiarMes()`/`_evCalRenderMes()` mientras esa transición de
-// `height` sigue en curso pisa el punto de partida a mitad de animación) ni
-// el timeline en medio de su propio fade (`_evFadeSwap()` sobre
-// `#ev-timeline`, `opacity:'0'` mientras dura), y un debounce de 400ms
-// entre ejecuciones reales de `_evIrAHoy()` (`_evUltimoIrAHoyTs`, seteado
-// AL EJECUTAR -- no al intentar -- para que un tap ignorado por cualquiera
-// de las otras 3 condiciones no consuma la ventana) -- ningún dispositivo
-// real necesita repetir "ir a hoy" más rápido que eso, y un doble tap
-// accidental sobre el mismo ícono (el caso concreto reportado, "a veces
-// congela la pantalla") es exactamente lo que este margen absorbe.
-var _evEntradaEnCurso = false;
-var _evUltimoIrAHoyTs = 0;
-function _evListoParaIrAHoy() {
-  if (_evEntradaEnCurso) return false;
-  if (!_evNavMesActual) return false;
-  var panel = document.getElementById('ev-mes-panel');
-  if (panel && panel.classList.contains('ev-panel-wrapper-anim')) return false;
-  var timeline = document.getElementById('ev-timeline');
-  if (timeline && timeline.style.opacity === '0') return false;
-  if (Date.now() - _evUltimoIrAHoyTs < 400) return false;
-  return true;
-}
-
 /* ── FAB "+" unificado de #s-eventos (ver #ev-fab-menu en index.html) ────
    Reemplaza los 3 FAB previos de esta pantalla (`#ev-fab-menu` admin-only,
    `#ev-fab-reserva` quindes-no-admin, `#ev-mirlxs-fab` "Reservar <mes>") más
@@ -752,11 +699,6 @@ function irEventos() {
   var cont = document.getElementById('ev-timeline');
   if (cont) cont.innerHTML = _evTimelineSkeletonHtml();
   volver('s-eventos');
-  // Ver comentario de `_evEntradaEnCurso` más arriba -- true desde acá
-  // (sección recién entrando, timeline en skeleton, `.activa` ya puesta por
-  // `volver()`) hasta que el salto inicial a "hoy" termina de correr, unas
-  // líneas más abajo.
-  _evEntradaEnCurso = true;
   // Independiente de _evCargarDatosReales() -- no bloquea el render del
   // timeline (ver el comentario de _evPrecargarRoster() para el porqué).
   _evPrecargarRoster();
@@ -772,18 +714,7 @@ function irEventos() {
     setTimeout(function() {
       _evScrollAFecha(_evHoyISO(), true);
       _evActualizarNavMesPorScroll();
-      // Refuerzo defensivo (pedido explícito): fuerza el label a su valor
-      // final YA (`instant=true`, sin pasar por el fade de `_evFadeSwap()`)
-      // inmediatamente después de la resincronización de arriba -- no-op si
-      // `_evActualizarNavMesPorScroll()` ya lo dejó al día (caso normal, hay
-      // `.ev-mes-header` en el DOM) y sin efecto si no encontró ninguno
-      // (`_evNavMesActual` seguiría `null`, `_evActualizarNavMesLabel()`
-      // corta antes de tocar el span) -- cubre solo la ventana entre que
-      // `_evActualizarNavMesPorScroll()` deja el valor fijado y un eventual
-      // fade todavía en vuelo de una llamada anterior.
-      _evActualizarNavMesLabel(true);
       _evUpdateRsvpSliders(false);
-      _evEntradaEnCurso = false;
     }, 50);
   });
   _evYaInicializadoEnSesion = true;
@@ -1753,13 +1684,6 @@ window.addEventListener('scroll', function() {
 // fade ni el re-pintado de recuperación si el timeline ya estaba mostrando
 // ese aviso de una navegación previa.
 function _evIrAHoy() {
-  // Debounce real (ver "Cambios recientes" -- comentario grande junto a
-  // `_evListoParaIrAHoy()` más arriba): marca el instante de esta ejecución
-  // real ANTES de hacer nada más, así un 2do disparo que llegara a colarse
-  // (o cualquier otro caller directo -- `#ev-nav-hoy-btn`) durante los
-  // siguientes 400ms lo bloquea `_evListoParaIrAHoy()`, consultado por
-  // `_bottomNavClick()`/js/ui.js.
-  _evUltimoIrAHoyTs = Date.now();
   var hoy = _evHoyISO();
   // Tocar "hoy" es una acción explícita de ir a un día puntual -- también
   // actualiza "fecha seleccionada" (ver "Cambios recientes",
@@ -1767,22 +1691,11 @@ function _evIrAHoy() {
   // ningún anillo extra (gana el relleno) -- resetea cualquier selección
   // previa de otro día.
   _evCalFechaSeleccionada = hoy;
-  // Bug real corregido (ver "Cambios recientes" -- "el mes no aparece en la
-  // nav al entrar a Eventos"): el label de mes se sincronizaba SOLO si el
-  // calendario ya estaba expandido (`_evCalVisible`) -- con el panel
-  // colapsado (el estado normal al entrar a la sección) esta función nunca
-  // lo tocaba, dejando el label enteramente a merced del scroll-listener
-  // pasivo (`_evActualizarNavMesPorScroll()`), que no dispara si el scroll
-  // a "hoy" no llega a moverse (destino ya visible) o si corre antes de que
-  // el timeline real (con sus `.ev-mes-header`) esté pintado. "Ir a hoy" por
-  // definición ancla al mes de hoy -- el label debe reflejarlo siempre, sin
-  // depender de si el panel de calendario está abierto. `_evCalUltimaAccionTs`
-  // (evita que el scroll-listener "corrija" este valor recién fijado, ver
-  // el comentario grande de esa variable más arriba) se fija junto con él,
-  // también sin condicionar a `_evCalVisible`.
-  _evCalUltimaAccionTs = Date.now();
-  _evSincronizarNavMesDesde(hoy);
-  if (_evCalVisible) _evCalCambiarMes(hoy);
+  if (_evCalVisible) {
+    _evCalUltimaAccionTs = Date.now();
+    _evSincronizarNavMesDesde(hoy);
+    _evCalCambiarMes(hoy);
+  }
   _evCalIrAFechaEnTimeline(hoy, false, true, true);
 }
 

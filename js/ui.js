@@ -841,36 +841,7 @@ function _bottomNavClick(id) {
       // de esta tab (`s4`/`s-eventos-detalle`/un aj-sub-* abierto/etc.) se
       // sigue de largo al reset real de siempre.
       var yaEnHome = actual && actual.id === item.pantalla && (id !== 'ajustes' || !_ajSubAbierto);
-      if (yaEnHome) {
-        // Eventos (pedido explícito, ver MANIFEST.md): tocar el ícono ya
-        // parado en la raíz del timeline (`s-eventos`) hace lo mismo que el
-        // botón "Ir a hoy" de la nav superior (`#ev-nav-hoy-btn`/`_evIrAHoy()`,
-        // js/eventos.js) en vez de quedar en un no-op sin efecto visual --
-        // mismo criterio que el resto de esta función ("tocar el tab activo
-        // es la forma de resetear/re-anclar esa sección"), pero acá el
-        // "ancla" útil es la fecha de hoy, no la pantalla en sí (ya estamos
-        // ahí). El resto de los tabs sigue siendo un no-op real.
-        // Bug real corregido (ver MANIFEST.md -- 3 bugs relacionados): un tap
-        // de más mientras la sección TODAVÍA está entrando (timeline en
-        // skeleton, datos sin cargar), con el panel de calendario en medio de
-        // su propia animación de abrir/cerrar/cambiar de mes, con el
-        // timeline en medio de su propio fade, o repetido antes de 400ms del
-        // anterior, competía/pisaba al propio flujo en curso.
-        // `_evListoParaIrAHoy()`/js/eventos.js agrupa esas 4 condiciones --
-        // si cualquiera falla, se ignora el tap de más (la entrada/animación
-        // en curso ya va a terminar sola, no hace falta nada más).
-        // `setTimeout(...,0)` (pedido explícito): saca la llamada del stack
-        // sincrónico de este click, después de cualquier trabajo en curso de
-        // este mismo evento -- el guard de `_evListoParaIrAHoy()` se evalúa
-        // DENTRO del timeout (no antes de programarlo), por si el estado
-        // cambia en ese toque de reloj.
-        if (id === 'eventos' && typeof _evIrAHoy === 'function') {
-          setTimeout(function() {
-            if (typeof _evListoParaIrAHoy !== 'function' || _evListoParaIrAHoy()) _evIrAHoy();
-          }, 0);
-        }
-        return;
-      }
+      if (yaEnHome) return;
       // Tab ya activo -- "volver a home" real: Ajustes descarta el sub-panel
       // recordado (mismo criterio que un cierre manual, cerrarAjSub()) antes
       // de navegar, así un futuro cambio de tab de ida y vuelta no lo
