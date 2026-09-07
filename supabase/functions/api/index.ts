@@ -3697,8 +3697,13 @@ async function adminEnviarPush(params: Record<string, any>): Promise<Record<stri
     headings: { en: titulo }, contents: { en: mensaje },
     chrome_web_icon: 'https://app.quindesvolcanicos.com/icons/icon-192B.png',
   };
-  if (destino && destino !== 'todos') payload.include_aliases = { external_id: [destino] };
-  else payload.included_segments = ['Total Subscriptions'];
+  const destinoArr = Array.isArray(destino) ? destino : [destino];
+  const destinoUnico = [...new Set(destinoArr)];
+  if (destinoUnico.length > 0 && !(destinoUnico.length === 1 && destinoUnico[0] === 'todos')) {
+    payload.include_aliases = { external_id: destinoUnico };
+  } else {
+    payload.included_segments = ['Total Subscriptions'];
+  }
   if (sendAfter) payload.send_after = sendAfter;
   console.log('OneSignal key presente:', !!Deno.env.get('ONESIGNAL_API_KEY'), 'App ID presente:', !!Deno.env.get('ONESIGNAL_APP_ID'));
   const resp = await fetch('https://api.onesignal.com/notifications', {
