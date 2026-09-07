@@ -1758,14 +1758,21 @@ async function getFechasDisponibles(params: Record<string, any>): Promise<any[]>
 
 async function guardarReserva(params: Record<string, any>): Promise<Record<string, any>> {
   const { nombre, fecha, talla, protecciones, email } = params;
+  const esMensual = !fecha.startsWith('ev_');
 
   // Check duplicate
   const { data: dup } = await supabase.from('reservas').select('id').eq('nombre_usuario', nombre).eq('id_evento', fecha).neq('estado', 'Cancelada').maybeSingle();
   if (dup) return { exito: false, mensaje: 'Ya tienes una reserva para esta fecha.' };
 
+  // Check duplicate (reserva mensual pendiente/confirmada para el mismo mes -- id_evento
+  // queda null en reservas mensuales, así que el check de arriba nunca las atrapa)
+  if (esMensual) {
+    const { data: dupMensual } = await supabase.from('reservas').select('id').eq('nombre_usuario', nombre).eq('mes_texto', fecha).neq('estado', 'Cancelada').maybeSingle();
+    if (dupMensual) return { exito: false, mensaje: 'Ya tienes una reserva pendiente para ese mes. Espera a que sea revisada.' };
+  }
+
   // Precio server-side
   const precios = await getPreciosClases();
-  const esMensual = !fecha.startsWith('ev_');
   let montoFinal = esMensual ? Number(precios.precioMensual ?? 0) : Number(precios.precioPorClase ?? 0);
 
   // Consumir crédito o cupón

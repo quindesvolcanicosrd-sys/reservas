@@ -308,6 +308,7 @@ function irHomeDesdeExito() {
   // normal para cualquier reserva hecha por el camino S1-S4 de siempre).
   if (E.viaEventosInline) {
     E.viaEventosInline = false;
+    _evRestaurarScrollTimeline = false;
     ir('s-eventos');
     // Recarga _todasReservas (mismo fetch que _recargarYRenderReservas()
     // hace internamente, sin su parte de UI -- esa función anima/repinta

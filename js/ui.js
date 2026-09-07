@@ -1075,7 +1075,7 @@ function generarMeses() {
   if (!lista) return;
 
   var mesesConfirmados = (_todasReservas || [])
-    .filter(function(r) { return r.estado === 'Confirmada'; })
+    .filter(function(r) { return r.estado === 'Confirmada' || r.estado === 'Pendiente'; })
     .map(function(r) { return r.fecha.toLowerCase().trim(); });
 
   // Preselección de rango del FAB mensual (mirlxs y quindes, ver

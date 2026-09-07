@@ -179,6 +179,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Reservas
 
+2026-09-07 — Fix de reserva mensual duplicada: `guardarReserva` (Edge Function) solo chequeaba duplicados por `id_evento`, que siempre queda `null` en reservas mensuales (el mes vive en `mes_texto`) — el check nunca atrapaba una segunda reserva del mismo mes. Ahora agrega un segundo chequeo por `mes_texto` + `estado !== 'Cancelada'` cuando `esMensual`. En el front, `generarMeses()` (js/ui.js) también deshabilitaba el mes en el picker solo si había una reserva `'Confirmada'`, dejando reservar de nuevo un mes con reserva `'Pendiente'` — ahora deshabilita con `'Confirmada'` o `'Pendiente'`.
+2026-09-07 — Fix de scroll post-pago en el flujo inline desde Eventos: `irHomeDesdeExito()` (js/home.js) volvía a `#s-eventos` dejando `_evRestaurarScrollTimeline` en `true` (seteado antes por `_evContinuarReserva()`), así que `ir()` restauraba el scroll guardado antes del pago en vez de arrancar en "Hoy" — ahora se limpia el flag (`_evRestaurarScrollTimeline = false`) antes de `ir('s-eventos')`.
 2026-08-27 — 9 ajustes de texto/formato en "Realiza tu transferencia"/"Pago registrado" (flujo por clase y por mes).
 2026-08-24 — Cambio 21: registrar pago en efectivo desde admin (Mi Liga → Miembros); auto-RSVP "Asistiré" al pagar una reserva por clase.
 2026-08-24 — Cambio 18: degradación automática de categoría Quindes → Mirlxs al guardar equipamiento.
