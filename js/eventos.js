@@ -4296,7 +4296,7 @@ function _quindesGraciaAgotada(idEvento) {
   if (!ev || !ev.fecha) return false;
   var mesStr = ev.fecha.substring(0, 7);
   var count = (_EV_EVENTOS || []).filter(function(e) {
-    return e.tipo === 'Entrenamiento' && e.miEstado === 'Asistiré' &&
+    return e.tipo === 'Entrenamiento' && (e.miEstado === 'Asistiré' || e.miEstado === 'A tiempo' || e.miEstado === 'Tarde') &&
            (e.fecha || '').startsWith(mesStr) && e.id !== idEvento;
   }).length;
   return count >= 1;
