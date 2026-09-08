@@ -743,7 +743,7 @@ function _inscIniciarGoogleSignIn() {
 /* ── API helper (GET como en la app) ─────────── */
 function apiGet(params, ok, fail) {
   var qs = Object.keys(params).map(function(k){ return encodeURIComponent(k)+'='+encodeURIComponent(params[k]||''); }).join('&');
-  fetch(BACKEND + '?' + qs)
+  fetch(BACKEND + '?' + qs, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY } })
     .then(function(r){ return r.json(); })
     .then(function(d){ if(d.error&&fail)fail(new Error(d.error));else if(ok)ok(d); })
     .catch(function(e){ if(fail)fail(e); });
