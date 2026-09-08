@@ -6764,6 +6764,14 @@ function _evEditarConfirmar() {
       if (_cambiosTexto) {
         api({ action: 'pushEventoEditado', adminToken: _adminToken, fecha: _fechaParaNotif, lugar: _lugarParaNotif, cambios: _cambiosTexto }, function(){}, function(){});
       }
+      var _notifPartes = [];
+      if (campos.donde) _notifPartes.push('Lugar: ' + campos.donde);
+      if (campos.inicia) _notifPartes.push('Inicio: ' + campos.inicia.substring(0, 5));
+      if (campos.termina) _notifPartes.push('Fin: ' + campos.termina.substring(0, 5));
+      var _notifFp = (ev.fecha || '').split('-');
+      var _notifFecha = _notifFp.length === 3 ? _notifFp[2] + '/' + _notifFp[1] : (ev.fecha || '');
+      var _notifMsg = 'El evento del ' + _notifFecha + ' fue actualizado' + (_notifPartes.length ? ': ' + _notifPartes.join(', ') : '');
+      apiPost({ action: 'adminEnviarPush', adminToken: _adminToken, titulo: 'Evento actualizado', mensaje: _notifMsg, destino: 'todos' }, function(){}, function(){});
       ir('s-eventos');
       _evCargarDatosReales(function() { _evRenderTimeline(true); });
     },
