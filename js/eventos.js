@@ -4280,26 +4280,31 @@ function _quindesSinCuota() {
     !(_todasReservas || []).some(function(r) { return r.tipo === 'mensual' && r.estado !== 'Cancelada'; });
 }
 
-// "Gracia" de 1 Entrenamiento por mes -- para quindes CON historial mensual
-// (algo pagaron alguna vez, `!_quindesSinCuota()`) pero sin cuota vigente
-// para el mes de `idEvento` puntual: puede marcar "Asistiré" en 1 sola clase
-// de ese mes sin pagar antes de que se le bloquee (mismo criterio "probar
-// antes de pagar" que ya existe para reservar por clase, entrenamientos
-// pasados no cuentan -- ver _evMarcarAsistencia()). `mesStr` = "aaaa-mm" de
-// `e.fecha` (ISO), comparado con `startsWith` en vez de parsear a Date --
-// mismo criterio ligero que el resto de este archivo para agrupar por mes
+// "Gracia" de hasta 2 RSVPs ("Asistiré") por mes -- para quindes sin cuota
+// vigente para el mes de `idEvento` puntual: puede marcar "Asistiré" en
+// hasta 2 clases de ese mes sin pagar antes de que se le bloquee (mismo
+// criterio "probar antes de pagar" que ya existe para reservar por clase,
+// entrenamientos pasados no cuentan -- ver _evMarcarAsistencia()). Si ya
+// tiene alguna asistencia CONFIRMADA ('A tiempo'/'Tarde') ese mes, la
+// gracia se da por gastada de una -- ya se sabe que fue, no tiene sentido
+// seguir dejando reservar sin pagar. `mesStr` = "aaaa-mm" de `e.fecha`
+// (ISO), comparado con `startsWith` en vez de parsear a Date -- mismo
+// criterio ligero que el resto de este archivo para agrupar por mes
 // calendario. `e.id !== idEvento` excluye el evento que se está por marcar
-// AHORA del conteo -- cuenta solo asistencias YA confirmadas antes de esta.
+// AHORA del conteo -- cuenta solo asistencias/RSVPs YA registrados antes de
+// esta.
 function _quindesGraciaAgotada(idEvento) {
   if (E.datos && (E.datos.estado_miembro === 'Técnico' || E.datos.estado_miembro === 'Lesionadx')) return false;
   var ev = (_EV_EVENTOS || []).find(function(e) { return e.id === idEvento; });
   if (!ev || !ev.fecha) return false;
   var mesStr = ev.fecha.substring(0, 7);
-  var count = (_EV_EVENTOS || []).filter(function(e) {
-    return e.tipo === 'Entrenamiento' && (e.miEstado === 'Asistiré' || e.miEstado === 'A tiempo' || e.miEstado === 'Tarde') &&
-           (e.fecha || '').startsWith(mesStr) && e.id !== idEvento;
-  }).length;
-  return count >= 1;
+  var delMes = (_EV_EVENTOS || []).filter(function(e) {
+    return e.tipo === 'Entrenamiento' && (e.fecha || '').startsWith(mesStr) && e.id !== idEvento;
+  });
+  var confirmadas = delMes.filter(function(e) { return e.miEstado === 'A tiempo' || e.miEstado === 'Tarde'; }).length;
+  if (confirmadas >= 1) return true;
+  var rsvps = delMes.filter(function(e) { return e.miEstado === 'Asistiré'; }).length;
+  return rsvps >= 2;
 }
 
 // Fecha ISO hasta la que el mes pagado es válido (validezHasta de la cuota
@@ -4436,20 +4441,24 @@ function _evMarcarAsistencia(id, estado) {
     });
   }
   // Gracia para quindes sin cuota vigente (ver "Cambios recientes" --
-  // _quindesSinCuota()/_quindesGraciaAgotada()): mirlxs sin cuota (rama
-  // `else if`, comportamiento sin cambios de antes de esta tanda) sigue
-  // bloqueado directo. Quindes se abre en 3 casos, de más a menos permisivo:
-  // (a) `_quindesSinCuota()` true (nunca tuvo NINGÚN historial mensual) --
-  // ni siquiera entra acá, el `if` de más abajo no aplica; (b) el mes
-  // puntual del evento SÍ está pagado (`_evMesPagado()`, cuota de OTRO mes
-  // vigente pero este particular ya se cubrió aparte) -- sin restricción;
-  // (c) todavía no gastó su gracia de 1 Entrenamiento libre este mes
-  // (`!_quindesGraciaAgotada()`) -- se deja pasar, ya gastada -- se bloquea
-  // con el sheet de cuota pendiente en modo "gracia", guardando el evento en
+  // _quindesGraciaAgotada()): mirlxs sin cuota (rama `else`, comportamiento
+  // sin cambios de antes de esta tanda) sigue bloqueado directo. Quindes se
+  // abre en 2 casos, de más a menos permisivo: (a) el mes puntual del
+  // evento SÍ está pagado (`_evMesPagado()`, cuota de OTRO mes vigente pero
+  // este particular ya se cubrió aparte) -- sin restricción; (b) todavía no
+  // gastó su gracia de hasta 2 RSVPs libres este mes (`!_quindesGraciaAgotada()`)
+  // -- se deja pasar, ya gastada -- se bloquea con el sheet de cuota
+  // pendiente en modo "gracia", guardando el evento en
   // `E.quindesPendingRsvpEvento` para que `_evCuotaPagarAhora()` (abajo) y
-  // `finalizar()` (js/reservas.js) puedan retomarlo tras el pago.
+  // `finalizar()` (js/reservas.js) puedan retomarlo tras el pago. Bug real
+  // corregido (ver MANIFEST.md): antes se saltaba TODO este chequeo con
+  // `!_quindesSinCuota()` cuando la cuenta quindes nunca había tenido
+  // ninguna reserva mensual real -- esa cuenta quedaba con RSVP ilimitado
+  // para siempre, sin pasar nunca por `_quindesGraciaAgotada()`. La gracia
+  // de hasta 2 por mes aplica a TODA cuenta quindes sin cuota vigente, haya
+  // pagado alguna vez o no.
   if (estado === 'Asistiré' && !_evTieneCuotaAlDia()) {
-    if (!_quindesSinCuota() && _modoUsuario() === 'quindes') {
+    if (_modoUsuario() === 'quindes') {
       var _gEv = (_EV_EVENTOS || []).find(function(e) { return e.id === id; });
       var _gFp = _gEv ? (_gEv.fecha || '').split('-') : [];
       var _gMes = _gFp.length >= 2 ? parseInt(_gFp[1]) - 1 : -1;
@@ -4463,7 +4472,7 @@ function _evMarcarAsistencia(id, estado) {
         return;
       }
       // else: gracia disponible → continuar sin restricción
-    } else if (!_quindesSinCuota()) {
+    } else {
       _evAbrirSheetCuotaPendiente({});
       return;
     }
