@@ -2971,22 +2971,34 @@ function _evFabReservaMesActual() {
   setTimeout(function() { selTipoPago('mensual'); }, 80);
 }
 
-// _evFabReserva() (arriba) no acepta un mes como parámetro -- lee
-// _evNavMesActual directo (el mes que el timeline tiene navegado en este
-// instante). Este wrapper lo fuerza al mes de un evento puntual ANTES de
-// llamarla, para cuando hace falta preseleccionar un mes específico que
-// puede no coincidir con el navegado: el sheet de cuota pendiente en modo
-// "gracia" (_evCuotaPagarAhora(), arriba). Sin evento encontrado o sin
-// `fecha`, deja _evNavMesActual tal cual estaba -- _evFabReserva() sigue
-// funcionando con el mes que ya tenía navegado, no hay guard adicional que
-// agregar acá.
+// Bug real corregido (ver MANIFEST.md): antes este wrapper solo forzaba
+// `_evNavMesActual` al mes del evento puntual y delegaba en `_evFabReserva()`
+// -- pero esa función ENCADENA todos los meses desde HOY (mes calendario
+// real) hasta el mes preseleccionado, pensado para su otro uso (el FAB de
+// "Reserva por mes" con el timeline navegado a un mes futuro cualquiera, ver
+// el comentario de `_evFabReservaMesActual()`). Con un evento puntual de un
+// mes distinto al actual (ej. hoy es septiembre y la persona intenta marcar
+// "Asistiré" en un entrenamiento de octubre), esa cadena terminaba
+// preseleccionando septiembre Y octubre -- un mes de más que nadie pidió
+// pagar. Este wrapper necesita el comportamiento contrario: SIEMPRE un único
+// mes, el del evento puntual (sheet de cuota pendiente en modo "gracia",
+// `_evCuotaPagarAhora()`, y el botón "Reservar <mes>" del detalle de evento,
+// `_evDetalleAccionesHtml()` más abajo) -- arma la preselección acá mismo, en
+// vez de reusar `_evFabReserva()`. Sin evento encontrado o sin `fecha`
+// (defensivo, no debería pasar con datos reales), cae a `_evFabReserva()`
+// como antes -- sigue funcionando con el mes que el timeline tenga navegado.
 function _evFabReservaParaEvento(idEvento) {
   var ev = (_EV_EVENTOS || []).find(function(e) { return e.id === idEvento; });
-  if (ev && ev.fecha) {
-    var fp = ev.fecha.split('-');
-    _evNavMesActual = { year: parseInt(fp[0], 10), month: parseInt(fp[1], 10) - 1 };
-  }
-  _evFabReserva();
+  if (!ev || !ev.fecha) { _evFabReserva(); return; }
+  var fp = ev.fecha.split('-');
+  var mes = parseInt(fp[1], 10) - 1;
+  _evNavMesActual = { year: parseInt(fp[0], 10), month: mes };
+  E.mirlxsPreselMes = mes;
+  E.origenSeccionS4 = 's-eventos';
+  E.mirlxsMesesPresel = [mes];
+  irNuevaReserva(false, null);
+  E.viaEventosInline = true;
+  setTimeout(function() { selTipoPago('mensual'); }, 80);
 }
 
 // Arma el contenido (0/1/2 opciones) y la visibilidad de #ev-fab-menu según
