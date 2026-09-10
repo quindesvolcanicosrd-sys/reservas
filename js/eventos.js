@@ -4091,53 +4091,74 @@ function cerrarSheetCuotaPendiente(porGesto) {
     if (ov) ov.style.display = 'none';
   }, 300);
 }
-// "Pagar ahora"/"Solicitar ayuda" -- cierre sin argumento (pasa por
-// history.back(), no cierre directo) + navegación diferida por setTimeout,
-// mismo patrón que irNuevaReservaConTipo() (abajo): llamar acá mismo,
-// sincrónicamente, a evAbrirSheetTipoPago()/irNuevaReservaConTipo()/
-// abrirWizardExcepcion() (cada una con su propio _registrarOverlayAbierto(),
-// osea su propio history.pushState()) hubiera competido con el
-// history.back() todavía en curso de este cierre -- exactamente la carrera
-// que ya se corrigió una vez en este archivo para irNuevaReservaConTipo().
+// Bug real corregido (ver MANIFEST.md -- "Pagar [mes] se sentía lento"):
+// antes esta función cerraba el sheet con `cerrarSheetCuotaPendiente()` (sin
+// `porGesto` -> `history.back()`, asíncrono) y recién arrancaba la
+// navegación real en un `setTimeout(310)` -- ese valor estaba calibrado
+// para esperar a que el `history.back()` Y la transición CSS de cierre del
+// sheet (300ms, ver `cerrarSheetCuotaPendiente()`) terminaran del todo antes
+// de tocar `history`/`_overlayStack` de nuevo (evitar la carrera contra un
+// 2do `history.pushState()` documentada para `irNuevaReservaConTipo()`, más
+// abajo). En la práctica eso significaba ~310ms de espera VISIBLE entre
+// tocar "Pagar [mes]" y ver la pantalla de reserva, con el sheet
+// simplemente deslizándose fuera de la pantalla mientras tanto -- espera
+// innecesaria: `ir('s4')` (más abajo, vía `_evFabReservaParaEvento()`/
+// `irNuevaReserva()`, TODAS llamadas sincrónicamente, sin ningún
+// `setTimeout` de por medio) ya cierra cualquier entrada pendiente de
+// `_overlayStack` de forma INSTANTÁNEA y SIN animación en cuanto cambia de
+// pantalla (`while (_overlayStack.length > 0) { _overlayStack.pop()(true); }`,
+// ver el comentario grande de `ir()`/js/ui.js -- "ya estamos abandonando la
+// sección entera, no tiene sentido animar algo que el usuario no va a
+// alcanzar a ver"), mismo criterio que ya aplica a cualquier otro overlay
+// fijo al navegar -- no hace falta duplicar ese cierre acá ni esperarlo.
+// Lo único que `ir()` no resuelve solo es la entrada de historial que
+// `_registrarOverlayAbierto()` dejó al abrir el sheet (`{overlay:true}`,
+// para el gesto nativo de "atrás") -- sin consumirla, queda fantasma en el
+// historial ENTRE la pantalla de origen y la nueva (un "atrás" real desde
+// la reserva caería ahí, sin pantalla propia, en vez de volver a Eventos).
+// `history.replaceState()` la resuelve síncronamente (no dispara
+// `popstate`, no hay nada que esperar): la reescribe apuntando a la
+// pantalla que estaba realmente activa (`.pantalla.activa`, Eventos --
+// timeline o detalle, el sheet vive FUERA de `.pantalla`, no la tapa).
 function _evCuotaPagarAhora() {
   // Con E.quindesPendingRsvpEvento seteado (venimos del sheet en modo
   // "gracia", ver _evMarcarAsistencia()/_quindesGraciaAgotada()): el mes a
   // pagar es el DEL EVENTO puntual que se intentó marcar, no necesariamente
   // el mes que el timeline tenía navegado en ese momento (ej. tocar
-  // "Asistiré" desde una card fuera del mes actual) -- _evFabReserva()
-  // (js/eventos.js) no acepta un mes como parámetro, lee _evNavMesActual
-  // directo, así que _evFabReservaParaEvento() lo fuerza a ese mes antes de
-  // llamarla. E.quindesPendingRsvpEvento sigue seteado a propósito -- lo
+  // "Asistiré" desde una card fuera del mes actual) -- _evFabReservaParaEvento()
+  // (más arriba en este archivo) lo fuerza a ese mes puntual antes de armar
+  // la reserva. E.quindesPendingRsvpEvento sigue seteado a propósito -- lo
   // consume/limpia finalizar() (js/reservas.js) recién tras el pago real,
   // para poder auto-marcar "Asistiré" una vez confirmado.
   var pendingId = E.quindesPendingRsvpEvento;
-  cerrarSheetCuotaPendiente();
-  setTimeout(function() {
-    if (pendingId) { _evFabReservaParaEvento(pendingId); return; }
-    // Caso genérico -- re-ajuste (pedido explícito, ver MANIFEST.md/
-    // CHANGELOG.md -- "Pagar ahora lleva al checkout con los meses
-    // adeudados ya preseleccionados y el monto total visible"): mismo
-    // mecanismo que ya usa _evFabReserva() más arriba en este archivo
-    // (E.mirlxsMesesPresel, leído por generarMeses()/js/ui.js al armar los
-    // checkboxes) -- acotado al año actual (mismas 12 posiciones de
-    // siempre, generarMeses() no puede representar un mes de un año
-    // distinto -- limitación preexistente de ese mecanismo, no nueva de
-    // este cambio). Reemplaza el camino anterior (mirlxs abría
-    // evAbrirSheetTipoPago(), un sub-menú clase/mensual sin preselección;
-    // quindes iba directo a mensual pero también sin preseleccionar nada)
-    // -- unificado para los 2 modos, la cuota mensual es el mismo concepto
-    // sin importar quién la debe. El total ya queda visible solo: s4 lo
-    // recalcula en vivo (actualizarTotalS4()) apenas los checkboxes
-    // preseleccionados quedan marcados.
-    var anioActual = new Date().getFullYear();
-    E.mirlxsMesesPresel = _evMesesAdeudados()
-      .filter(function(m) { return m.anio === anioActual; })
-      .map(function(m) { return m.mesIdx; });
-    E.origenSeccionS4 = 's-eventos';
-    irNuevaReserva(false, null);
-    E.viaEventosInline = true;
-    setTimeout(function() { selTipoPago('mensual'); }, 80);
-  }, 310);
+  var _pantallaOrigen = document.querySelector('.pantalla.activa');
+  if (_overlayStack.length > 0 && _pantallaOrigen) {
+    history.replaceState({ pantalla: _pantallaOrigen.id }, '', location.hash);
+  }
+  if (pendingId) { _evFabReservaParaEvento(pendingId); return; }
+  // Caso genérico -- re-ajuste (pedido explícito, ver MANIFEST.md/
+  // CHANGELOG.md -- "Pagar ahora lleva al checkout con los meses
+  // adeudados ya preseleccionados y el monto total visible"): mismo
+  // mecanismo que ya usa _evFabReserva() más arriba en este archivo
+  // (E.mirlxsMesesPresel, leído por generarMeses()/js/ui.js al armar los
+  // checkboxes) -- acotado al año actual (mismas 12 posiciones de
+  // siempre, generarMeses() no puede representar un mes de un año
+  // distinto -- limitación preexistente de ese mecanismo, no nueva de
+  // este cambio). Reemplaza el camino anterior (mirlxs abría
+  // evAbrirSheetTipoPago(), un sub-menú clase/mensual sin preselección;
+  // quindes iba directo a mensual pero también sin preseleccionar nada)
+  // -- unificado para los 2 modos, la cuota mensual es el mismo concepto
+  // sin importar quién la debe. El total ya queda visible solo: s4 lo
+  // recalcula en vivo (actualizarTotalS4()) apenas los checkboxes
+  // preseleccionados quedan marcados.
+  var anioActual = new Date().getFullYear();
+  E.mirlxsMesesPresel = _evMesesAdeudados()
+    .filter(function(m) { return m.anio === anioActual; })
+    .map(function(m) { return m.mesIdx; });
+  E.origenSeccionS4 = 's-eventos';
+  irNuevaReserva(false, null);
+  E.viaEventosInline = true;
+  setTimeout(function() { selTipoPago('mensual'); }, 80);
 }
 function _evCuotaSolicitarAyuda() {
   cerrarSheetCuotaPendiente();
