@@ -2423,8 +2423,20 @@ function _eqStatsContenidoHtml(p) {
   // ANTES de comparar, sin cambiar el resultado para los casos reales
   // (string "Sí"/"No"/lista parcial, ver comentario de arriba).
   var necesitaProteccionesTxt = String(p.necesitaProtecciones || '').toLowerCase();
-  var necesitaEquipoClub = p.necesitaPatines === 'Sí' ||
-    (!!p.necesitaProtecciones && necesitaProteccionesTxt !== 'no');
+  // Bug real corregido (ver MANIFEST.md -- "Femme Fatale sigue sin mostrar
+  // termómetro de tiers"): ocultar el termómetro para quien necesita equipo
+  // del club es una restricción de la vista PÚBLICA (alguien evaluando su
+  // propio progreso hacia Quindes no tiene sentido si todavía depende de
+  // pedir equipo prestado) -- un admin evaluando la situación de tier de
+  // un miembro puntual necesita verlo SIEMPRE, sin importar ese campo (así
+  // lo pidió Victor explícitamente). `typeof _adminToken !== 'undefined' &&
+  // _adminToken` es el MISMO gate que ya usan `_eqTierAdminHtml()`/
+  // `_eqAdminGestionHtml()` (más abajo en este archivo) para todo lo demás
+  // admin-only de este mismo panel -- consistente con esas 2, no un
+  // criterio nuevo.
+  var esVistaAdmin = typeof _adminToken !== 'undefined' && !!_adminToken;
+  var necesitaEquipoClub = !esVistaAdmin && (p.necesitaPatines === 'Sí' ||
+    (!!p.necesitaProtecciones && necesitaProteccionesTxt !== 'no'));
   // Pill de tier DENTRO del termómetro (pedido explícito, "acá estás vos")
   // -- reemplaza el texto plano del lado que coincide con `p.rol`, mismo
   // `.eq-mis-stats-rol-pill` (var(--brand), ya destacado) que antes vivía

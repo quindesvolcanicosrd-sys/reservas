@@ -3245,6 +3245,16 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <input type="hidden" id="ml-fondos-viaje-meses" value="6">
         </div>
       </div>
+      <!-- Backfill de historial_tier (bug real investigado, ver MANIFEST.md
+           -- "todos aparecen como no califica para fondos de viaje"): la
+           tabla arranca vacía y solo se llena hacia adelante -- este botón
+           reconstruye los meses pasados con datos reales de asistencia/
+           puntos (inferido con los criterios ACTUALES de tier, no un
+           historial exacto). Reusable -- seguro correrlo de nuevo, nunca
+           pisa una fila que ya exista. -->
+      <button type="button" class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;" onclick="_mlBackfillHistorialTier(this)">
+        <span class="material-symbols-outlined" style="font-size:1.1rem;">history</span> Reconstruir historial de tiers
+      </button>
 
       <div class="seccion-label" style="margin-top:22px;">Estado actual del equipo</div>
       <div id="ml-miembros-lista"></div>
@@ -3346,11 +3356,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/eventos.js?v=83ff9527"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=63a97793"></script>
-<script src="js/equipo.js?v=f12e7915"></script>
+<script src="js/equipo.js?v=7200403d"></script>
 <script src="js/home.js?v=e715822d"></script>
 <script src="js/reservas.js?v=cacf57bd"></script>
 <script src="js/perfil.js?v=d2df3c5b"></script>
-<script src="js/admin.js?v=49f4d8e2"></script>
+<script src="js/admin.js?v=d16517bc"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js?v=d18bc0da"></script>
 

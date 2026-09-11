@@ -1669,6 +1669,28 @@ function _mlGuardarFondosViaje() {
   }, 500);
 }
 
+// Backfill de historial_tier (bug real investigado, ver MANIFEST.md --
+// "todos aparecen como no califica para fondos de viaje"): la tabla arranca
+// vacía y solo se llena hacia adelante en cada "Recalcular ahora" real --
+// este botón reconstruye los meses pasados con datos reales de asistencia/
+// puntos, aplicando los criterios ACTUALES de tier (inferido, no un
+// historial exacto de qué tier tenía cada quien -- ver el comentario grande
+// de adminBackfillHistorialTier()/supabase/functions/api/index.ts). Seguro
+// de correr más de una vez -- nunca pisa una fila que ya exista (ni el mes
+// actual, que ya tiene la evaluación real de "Recalcular ahora").
+function _mlBackfillHistorialTier(btn) {
+  if (!confirm('¿Reconstruir el historial de tiers con datos pasados? No afecta el mes actual ni nada ya guardado.')) return;
+  if (btn) btn.disabled = true;
+  adminApi({ action: 'adminBackfillHistorialTier' }, function(res) {
+    if (btn) btn.disabled = false;
+    if (!res.exito) { mostrarToast(res.error || 'Error al reconstruir el historial.', 'error'); return; }
+    mostrarToast('Historial reconstruido: ' + res.filasEscritas + ' fila(s) nueva(s).', 'ok', true);
+  }, function(e) {
+    if (btn) btn.disabled = false;
+    mostrarToast(e.message || 'Error al reconstruir el historial.', 'error');
+  });
+}
+
 function _mlCargarTiers() {
   adminApi({ action: 'getTiers' }, function(res) {
     _mlRenderTiers(res.tiers || []);

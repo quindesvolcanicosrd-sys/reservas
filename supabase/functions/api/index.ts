@@ -950,6 +950,153 @@ async function _calificaFondosViajePorUsuarios(usernames: string[]): Promise<Rec
   return resultado;
 }
 
+// Backfill de `historial_tier` con datos históricos reales (bug real
+// investigado -- "todos aparecen como 'no califica' para fondos de viaje",
+// ver MANIFEST.md): `historial_tier` arrancó vacía el día del deploy y solo
+// se llena hacia ADELANTE, una fila por mes, en cada "Recalcular ahora" real
+// -- confirmado contra la DB real (`select count(*), min(mes), max(mes)
+// from historial_tier` -- 47 filas, TODAS `mes='2026-09'`, ninguna anterior).
+// `_calificaFondosViajePorUsuarios()` (arriba) no falla ni silenciosa ni
+// ruidosamente -- hace exactamente lo que dice: exige una fila con tier
+// calificante para CADA uno de los últimos `fondosViajeMeses` meses
+// completos, y con la tabla recién nacida esos meses simplemente no existen
+// todavía -- `!!porMes[mes]` da `false` para todos, `.every()` corta en el
+// primero, `resultado[u]=false` para TODO el mundo. Es el comportamiento
+// correcto del código para una tabla vacía, no un bug de cálculo -- el bug
+// real es que nunca hubo un backfill al introducir la feature.
+//
+// Esta función reconstruye, para cada mes PASADO con datos reales
+// disponibles y cada miembro actual, el tier que le habría correspondido
+// aplicando los CRITERIOS ACTUALES de `config_tiers` contra sus clases/
+// puntos reales de ESE mes hacia atrás -- mismas fórmulas/ventanas que
+// `recalcular-categorias/index.ts` (`contarClases`/`sumarPuntos`/
+// `mejorTierPara`), con "hoy" reemplazado por "fin de ese mes". No existe
+// ningún snapshot histórico real de qué tier tenía cada persona en el
+// pasado (`equipo.categoria` es un valor mutable, se pisa en cada
+// recálculo) -- esto es una INFERENCIA retroactiva a partir de mérito, no
+// un historial exacto de decisiones pasadas (tampoco intenta simular
+// riesgo/gracia retroactivo -- ese sistema es inherentemente prospectivo,
+// no tiene sentido "qué hubiera pasado" para un período de prueba que nunca
+// corrió). Nunca pisa una fila que YA exista (`yaExiste`, chequeado ANTES de
+// armar cada fila) -- en particular, nunca toca el mes actual, que ya tiene
+// la evaluación REAL de `recalcular-categorias`, ni un backfill anterior si
+// esto se corre 2 veces.
+async function adminBackfillHistorialTier(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+
+  const { data: tiersData, error: tiersError } = await supabase.from('config_tiers').select('*').order('orden', { ascending: true });
+  if (tiersError) return { exito: false, error: tiersError.message };
+  const tiers = tiersData ?? [];
+  const tierDefault = tiers.find((t: any) => t.es_default === true);
+  if (!tierDefault) return { exito: false, error: 'No hay ningún tier marcado como es_default=true en config_tiers.' };
+  const tiersNoDefault = tiers.filter((t: any) => t.id !== tierDefault.id).sort((a: any, b: any) => a.orden - b.orden);
+
+  const { data: equipoData, error: equipoError } = await supabase.from('equipo').select('username');
+  if (equipoError) return { exito: false, error: equipoError.message };
+  const usernames: string[] = (equipoData ?? []).map((r: any) => r.username).filter(Boolean);
+  if (!usernames.length) return { exito: true, filasEscritas: 0 };
+
+  // Tope de meses hacia atrás -- `params.meses` opcional (default 8, cubre
+  // sobrado los 6 meses que pide fondos de viaje hoy más margen si ese
+  // config sube); no tiene sentido pedir más de lo que hay datos reales
+  // desde que existe `puntos_mensuales`/`log_asistencias` en este backend.
+  const mesesHaciaAtras = Math.min(36, Math.max(1, Number(params.meses) || 8));
+
+  const { data: asistData, error: asistError } = await supabase.from('asistencias')
+    .select('fecha, a_horario, tarde')
+    .not('estado', 'in', '("Evento Cancelado","No se entrena")');
+  if (asistError) return { exito: false, error: asistError.message };
+  const { data: puntosData, error: puntosError } = await supabase.from('puntos_mensuales')
+    .select('nombre_usuario, anio, mes, puntos_total');
+  if (puntosError) return { exito: false, error: puntosError.message };
+  const { data: existentesData, error: existentesError } = await supabase.from('historial_tier').select('username, mes');
+  if (existentesError) return { exito: false, error: existentesError.message };
+  const yaExiste = new Set((existentesData ?? []).map((r: any) => r.username + '|' + r.mes));
+
+  function nombresDe(s: string | null | undefined): string[] {
+    return String(s ?? '').split(',').map((n: string) => n.trim().toUpperCase()).filter(Boolean);
+  }
+  function fechaISO(d: Date): string { return d.toISOString().slice(0, 10); }
+  // Mismo cálculo que primerDiaMesesAtras()/recalcular-categorias/index.ts,
+  // parametrizado por `refFin` (ahí siempre era "hoy") para poder anclar la
+  // ventana al fin de un mes PASADO en vez de al momento actual.
+  function primerDiaMesesAntesDe(refFin: Date, n: number): Date {
+    const year = refFin.getUTCFullYear();
+    const month = refFin.getUTCMonth() - n;
+    const dia = Math.min(refFin.getUTCDate(), new Date(Date.UTC(year, month + 1, 0)).getUTCDate());
+    return new Date(Date.UTC(year, month, dia));
+  }
+  // Clases reales en `ventanaMeses` meses terminando en `refFin` (exclusivo,
+  // mismo criterio de rango [desde, hasta) que el resto de esta app).
+  function contarClasesAsOf(username: string, refFin: Date, ventanaMeses: number): number {
+    const desde = fechaISO(primerDiaMesesAntesDe(refFin, ventanaMeses));
+    const hasta = fechaISO(refFin);
+    const u = username.trim().toUpperCase();
+    let n = 0;
+    for (const fila of asistData ?? []) {
+      if (!fila.fecha || fila.fecha < desde || fila.fecha >= hasta) continue;
+      if (nombresDe(fila.a_horario).includes(u) || nombresDe(fila.tarde).includes(u)) n++;
+    }
+    return n;
+  }
+  // Puntos reales del mes `idxMes` (índice año*12+mes-1) más los
+  // `ventanaMeses` meses anteriores -- mismo criterio `diff` que
+  // sumarPuntos()/recalcular-categorias/index.ts, con "idxActual" ahí
+  // reemplazado por el índice del mes que se está reconstruyendo.
+  function sumarPuntosAsOf(username: string, idxMes: number, ventanaMeses: number): number {
+    let total = 0;
+    for (const fila of puntosData ?? []) {
+      if (fila.nombre_usuario !== username) continue;
+      const idxFila = Number(fila.anio) * 12 + (Number(fila.mes) - 1);
+      const diff = idxMes - idxFila;
+      if (diff < 0 || diff > ventanaMeses) continue;
+      total += Number(fila.puntos_total) || 0;
+    }
+    return total;
+  }
+  function mejorTierParaAsOf(username: string, refFin: Date, idxMes: number): string {
+    for (const tier of tiersNoDefault) {
+      const ventanaMeses = Number(tier.ventana_meses) || 0;
+      const clases = contarClasesAsOf(username, refFin, ventanaMeses);
+      const puntos = sumarPuntosAsOf(username, idxMes, ventanaMeses);
+      const cumpleClases = clases >= (Number(tier.min_clases) || 0);
+      const cumplePuntos = puntos >= (Number(tier.min_puntos) || 0);
+      const cumple = tier.logica === 'Y' ? (cumpleClases && cumplePuntos) : (cumpleClases || cumplePuntos);
+      if (cumple) return tier.nombre;
+    }
+    return tierDefault.nombre;
+  }
+
+  const hoy = new Date();
+  const idxMesActual = hoy.getUTCFullYear() * 12 + hoy.getUTCMonth();
+  const filas: { username: string; mes: string; tier_nombre: string }[] = [];
+  for (let i = 1; i <= mesesHaciaAtras; i++) {
+    const idxMes = idxMesActual - i;
+    const anio = Math.floor(idxMes / 12);
+    const mesNum1 = (idxMes % 12) + 1; // 1-12
+    const mesStr = anio + '-' + String(mesNum1).padStart(2, '0');
+    // Fin del mes que se reconstruye = primer día del mes SIGUIENTE (límite
+    // exclusivo) -- mismo rol que "hoy" en el algoritmo real.
+    const refFin = new Date(Date.UTC(anio, mesNum1, 1));
+    for (const username of usernames) {
+      if (yaExiste.has(username + '|' + mesStr)) continue;
+      filas.push({ username, mes: mesStr, tier_nombre: mejorTierParaAsOf(username, refFin, idxMes) });
+    }
+  }
+  if (!filas.length) return { exito: true, filasEscritas: 0 };
+  // Lotes de 500 (límite razonable de PostgREST por request) -- upsert, no
+  // insert: aunque `yaExiste` ya filtra arriba, 2 llamadas concurrentes a
+  // este mismo endpoint podrían pisarse -- el índice único de la migración
+  // (`username, mes`) es la garantía real contra duplicados, esto es cinturón
+  // y tirantes.
+  for (let i = 0; i < filas.length; i += 500) {
+    const { error } = await supabase.from('historial_tier').upsert(filas.slice(i, i + 500), { onConflict: 'username,mes' });
+    if (error) return { exito: false, error: error.message, filasEscritas: i };
+  }
+  return { exito: true, filasEscritas: filas.length };
+}
+
 // ─── Acciones: venues ─────────────────────────────────────────────────────────
 
 async function adminGetVenues(): Promise<any[]> {
@@ -4445,6 +4592,7 @@ Deno.serve(async (req: Request) => {
       // Liga.
       case 'getFondosViajeConfig':    return json(await getFondosViajeConfig());
       case 'adminSetFondosViajeConfig': return json(await adminSetFondosViajeConfig(params));
+      case 'adminBackfillHistorialTier': return json(await adminBackfillHistorialTier(params));
       // Mi Liga — roster con categoría actual (adminGetRosterEquipo ya existente no trae `categoria`, sin tocarla)
       case 'adminGetCategorias': {
         const adminEmail = await _validarAdminToken(params.adminToken);
