@@ -650,9 +650,23 @@ async function completarActivacion(params: Record<string, any>): Promise<Record<
   if (params.pronombres !== undefined) update.pronombres = params.pronombres;
   if (params.prefijo !== undefined) update.prefijo = params.prefijo;
   if (params.telefono !== undefined) update.telefono = params.telefono;
-  if (params.necesitaPatines !== undefined) update.necesita_patines = params.necesitaPatines;
-  if (params.talla !== undefined) update.talla = params.talla;
-  if (params.necesitaProtecciones !== undefined) update.necesita_protecciones = params.necesitaProtecciones;
+  // Quindes: se asume equipo propio, nunca patines/protecciones del club
+  // (ver MANIFEST.md — mismo criterio ya aplicado al perfil real de Cami/
+  // Femme Fatale) — hardcodeado server-side leyendo `categoria` de la fila
+  // real, NO del `params` que manda el form (activar/activar.js ya oculta
+  // esos 2 pasos para Quindes, pero esto es la fuente de verdad autoritativa,
+  // independiente de lo que llegue en el body).
+  const row = await _getEquipoRow(username);
+  const esQuindes = row?.categoria === 'Quindes';
+  if (esQuindes) {
+    update.necesita_patines = 'No';
+    update.talla = '';
+    update.necesita_protecciones = 'No';
+  } else {
+    if (params.necesitaPatines !== undefined) update.necesita_patines = params.necesitaPatines;
+    if (params.talla !== undefined) update.talla = params.talla;
+    if (params.necesitaProtecciones !== undefined) update.necesita_protecciones = params.necesitaProtecciones;
+  }
   const { error } = await supabase.from('equipo').update(update).eq('username', username);
   if (error) return { exito: false, error: error.message };
   const newRow = await _getEquipoRow(username);

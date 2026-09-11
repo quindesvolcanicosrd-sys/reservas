@@ -24,6 +24,12 @@ var _actCurIdx = 0;
 var _actInviteToken = '';
 var _actNecesitaPatines = false;
 var _actProtecOtro = '';
+// Quindes: se asume equipo propio -- los pasos 3a/3b/3c (patines/talla/
+// protecciones) nunca se muestran, ver actContinuar2()/actFinalizarQuindes()
+// más abajo. Poblado desde `res.datos.categoria` (activarCuenta(), única
+// fuente real disponible en este punto del flujo -- `datos_prefill` del
+// invite token, ver validarInviteToken()/Edge Function, no trae categoria).
+var _actEsQuindes = false;
 var _actTallasListo = false;
 var _actEnviando = false;
 var _AJ_PREFIJOS = [
@@ -191,6 +197,7 @@ function _actAlVerificarGoogle(response) {
     G.email = res.email || '';
     G.foto = res.foto || '';
     G.nombre = res.nombre || G.nombre;
+    _actEsQuindes = !!(res.datos && res.datos.categoria === 'Quindes');
     // Misma sesión que usa el resto de la app -- de acá en adelante, si la
     // persona cierra esta pestaña a mitad del flujo y vuelve más tarde
     // desde la app principal, ya puede entrar con Google normalmente (la
@@ -232,6 +239,9 @@ function actContinuar2() {
   if (!tel) { errMsg('err-p2', 'El número de teléfono es obligatorio.'); return; }
   var min = _actPrefijoSel.min, max = _actPrefijoSel.max;
   if (tel.length < min || tel.length > max) { errMsg('err-p2', 'Número inválido para ' + _actPrefijoSel.pais + '.'); return; }
+  // Quindes: se salta 3a/3b/3c (patines/talla/protecciones) entero -- nunca
+  // se le pregunta, se asume equipo propio (ver _actEsQuindes más arriba).
+  if (_actEsQuindes) { actFinalizarQuindes(); return; }
   actMostrarPaso(_ACT_STEPS.indexOf('act-step-3a'));
 }
 
@@ -347,6 +357,45 @@ function actConfirmarOtroProtec() {
   if (sub) { sub.textContent = '"' + v + '"'; sub.style.color = 'var(--brand)'; }
   _actCerrarSheet('insc-sheet-protec-overlay', 'insc-sheet-protec');
 }
+/* ── Finalizar (Quindes) ──────────────────────
+   Mismo cierre que actFinalizar() de abajo, pero sin pasar por 3a/3b/3c --
+   necesitaPatines/necesitaProtecciones van hardcodeados en 'No' (el backend,
+   completarActivacion()/index.ts, los vuelve a hardcodear igual si la
+   persona es Quindes, así que este valor del body es solo por consistencia
+   del ?patines=/?protec= de la URL de redirect, no la fuente de verdad). */
+function actFinalizarQuindes() {
+  if (_actEnviando) return;
+  _actEnviando = true;
+  var tel = (document.getElementById('f-telefono').value || '').trim();
+  var prefVal = _actPrefijoSel ? _actPrefijoSel.bandera + ' ' + _actPrefijoSel.cod + ' (' + _actPrefijoSel.pais + ')' : '';
+  mostrarCargando('Guardando tu perfil...');
+  apiPost({
+    action: 'completarActivacion', token: G.token,
+    pronombres: G.pronombres || '', prefijo: prefVal, telefono: tel,
+    necesitaPatines: 'No', talla: '', necesitaProtecciones: 'No'
+  }, function(res) {
+    ocultarCargando();
+    _actEnviando = false;
+    if (!res.exito) { errMsg('err-p2', res.error || 'Error al guardar. Intenta de nuevo.'); return; }
+    document.querySelectorAll('.cta-footer-fixed').forEach(function(f) { f.style.display = 'none'; });
+    document.getElementById('exito-nombre').textContent = G.nombre;
+    document.querySelector('.page-wrap').innerHTML = document.getElementById('section-exito').outerHTML;
+    var _exitoEl = document.getElementById('section-exito');
+    _exitoEl.style.display = 'block';
+    _exitoEl.style.transition = 'opacity 0.4s ease';
+    setTimeout(function() {
+      _exitoEl.style.opacity = '0';
+      setTimeout(function() {
+        window.location.href = 'https://app.quindesvolcanicos.com?nuevx=1&nombre=' + encodeURIComponent(G.nombre) + '&patines=no&protec=No&token=' + encodeURIComponent(G.idToken||'');
+      }, 400);
+    }, 2600);
+  }, function(e) {
+    ocultarCargando();
+    _actEnviando = false;
+    errMsg('err-p2', 'Error: ' + (e && e.message ? e.message : 'Intenta de nuevo'));
+  });
+}
+
 /* ── Finalizar ────────────────────────────────
    Llama completarActivacion() con la sesión real ya creada por
    activarCuenta() (paso 0) y redirige a la app -- mismo patrón de éxito
