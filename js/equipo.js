@@ -702,9 +702,17 @@ function _eqAvatarConTendenciaHtml(p, claseExtra, claseTamano) {
 // `puntosTotal` (getEquipo(), ya respeta el período elegido en el panel de
 // filtros -- mismo campo que usa el perfil de detalle) es el único dato que
 // queda en esta fila.
+// Bug real corregido (ver MANIFEST.md -- Fase 2 completa del sistema de
+// tiers, Parte 6): esta fila es la que ordena/rankea la lista
+// (_eqCompararPorPuntos(), más arriba) -- mostraba `puntosTotal` crudo,
+// desalineado con el orden real una vez que existe un tier que divide
+// puntos a la mitad. `puntosEfectivos` (con el mismo respaldo `!= null ? ...
+// : puntosTotal` que ya usa el comparador, por si un snapshot offline viejo
+// no lo trae) es el número que de verdad determina el orden en pantalla.
 function _eqStatsInlineHtml(p) {
-  if (p.puntosTotal === undefined || p.puntosTotal === null) return '';
-  return '<span class="eq-mini-stat"><span class="material-symbols-rounded">military_tech</span>' + p.puntosTotal + ' pts</span>';
+  var efectivos = p.puntosEfectivos != null ? p.puntosEfectivos : p.puntosTotal;
+  if (efectivos === undefined || efectivos === null) return '';
+  return '<span class="eq-mini-stat"><span class="material-symbols-rounded">military_tech</span>' + efectivos + ' pts</span>';
 }
 
 function _eqFilaHtml(p) {
@@ -832,8 +840,18 @@ function _eqBuscar(valor) {
 // en este archivo) -- NO se aplica a `_eqRenderPorRol()` (vista alternativa
 // de búsqueda por rol, fuera del alcance de este pedido, que habla de "cada
 // acordeón" refiriéndose a los reales de la lista, no a esa vista aparte).
+// Bug real corregido (ver MANIFEST.md -- "Fase 2 completa del sistema de
+// tiers", Parte 6 del pedido): el ranking ordenaba por `puntosTotal` crudo,
+// sin importar que el tier de la persona divida los puntos a la mitad
+// (`dividir_puntos_mitad`, ver getEquipo()/supabase/functions/api/index.ts)
+// -- alguien en un tier "a mitad" con muchos puntos crudos rankeaba por
+// encima de alguien con menos puntos crudos pero en un tier que cuenta
+// completo. `puntosEfectivos` (ya viene calculado del backend, `||
+// a.puntosTotal` de respaldo por si un snapshot offline viejo no lo trae
+// todavía) es el número real de ranking.
 function _eqCompararPorPuntos(a, b) {
-  var pa = Number(a.puntosTotal) || 0, pb = Number(b.puntosTotal) || 0;
+  var pa = Number(a.puntosEfectivos != null ? a.puntosEfectivos : a.puntosTotal) || 0;
+  var pb = Number(b.puntosEfectivos != null ? b.puntosEfectivos : b.puntosTotal) || 0;
   if (pb !== pa) return pb - pa;
   return String(a.nombreDerby || '').localeCompare(String(b.nombreDerby || ''), 'es');
 }
@@ -2435,6 +2453,33 @@ function _eqStatsContenidoHtml(p) {
   var rachaBadgeHtml = rachaActual > 0
     ? '<span class="eq-stat-combo-racha-badge" onclick="event.stopPropagation();' + _eqDesgloseOnclick(p.username, 'racha', 'Puntos por racha') + '"><span class="material-symbols-rounded">local_fire_department</span>' + rachaActual + '</span>'
     : '';
+  // Puntos efectivos (Fase 2 completa del sistema de tiers, Parte 6, ver
+  // MANIFEST.md) -- el pill de "Puntos" de abajo sigue mostrando el total
+  // crudo (`puntosTotal`, sin cambios), pero si el tier ACTUAL de la persona
+  // divide puntos a la mitad, `puntosEfectivos` (getEquipo()) viene distinto
+  // de `puntosTotal` -- se agrega una línea aparte con el número que de
+  // verdad cuenta en el ranking (mismo criterio `_eqCompararPorPuntos()`,
+  // más arriba en este archivo), en vez de dejar a la persona adivinando por
+  // qué su posición no coincide con lo que muestra el total. Sin diferencia
+  // real (tier que no divide, o total en 0) no se agrega nada.
+  var puntosTotalVal = (p.puntosTotal !== undefined && p.puntosTotal !== null) ? p.puntosTotal : 0;
+  var puntosEfectivosVal = (p.puntosEfectivos !== undefined && p.puntosEfectivos !== null) ? p.puntosEfectivos : puntosTotalVal;
+  var puntosEfectivosHtml = puntosEfectivosVal !== puntosTotalVal
+    ? '<p class="eq-perfil-stats-nota" style="text-align:center;">Puntos efectivos en el ranking: <strong>' + puntosEfectivosVal + '</strong> (este tier cuenta la mitad).</p>'
+    : '';
+  // Fondos de viaje (Parte 7, ver MANIFEST.md) -- mismo bloque compartido
+  // por "Mis estadísticas" y el perfil de detalle de Equipo (admin), ya que
+  // ambos consumen esta misma función (`_eqStatsContenidoHtml()`) -- un
+  // único lugar cubre los 2 pedidos de UI a la vez.
+  var calificaFondosViaje = p.calificaFondosViaje === true;
+  var fondosViajeHtml = '<div class="eq-mis-stats-puntos-row" style="margin-top:14px;">' +
+      '<span class="eq-grupo-linea"></span>' +
+      '<span class="eq-grupo-nombre">Fondos de viaje</span>' +
+      '<span class="eq-grupo-linea"></span>' +
+    '</div>' +
+    '<p class="eq-rank-texto" style="text-align:center;">' +
+      (calificaFondosViaje ? 'Califica para fondos de viaje ✓' : 'No califica para fondos de viaje') +
+    '</p>';
   // Divisor "Datos anuales" (pedido explícito) -- mismo estilo/clases
   // exactas que el separador "Puntos" de más abajo (`.eq-mis-stats-puntos-row`/
   // `.eq-grupo-linea`/`.eq-grupo-nombre`), sin el pill de total (acá no hay
@@ -2454,6 +2499,7 @@ function _eqStatsContenidoHtml(p) {
       '<span class="eq-mis-stats-total-pill">' + (p.puntosTotal !== undefined && p.puntosTotal !== null ? p.puntosTotal : '—') + '</span>' +
       '<span class="eq-grupo-linea"></span>' +
     '</div>' +
+    puntosEfectivosHtml +
     '<div class="eq-stats-grid">' +
       '<div class="eq-stat-card eq-stat-card--tappable" onclick="' + _eqDesgloseOnclick(p.username, 'tareas', 'Puntos por tareas') + '"><span class="eq-stat-icon material-symbols-rounded">task_alt</span><div class="eq-stat-valor">' + (p.puntosTareas !== undefined && p.puntosTareas !== null ? p.puntosTareas : '—') + '</div><div class="eq-stat-label">Puntos por tareas</div></div>' +
       '<div class="eq-stat-card eq-stat-card--combo eq-stat-card--tappable" onclick="' + _eqDesgloseOnclick(p.username, 'asistencia', 'Puntos por asistencia') + '">' +
@@ -2465,7 +2511,8 @@ function _eqStatsContenidoHtml(p) {
         '<div class="eq-stat-label">Asistencia</div>' +
       '</div>' +
     '</div>' +
-    rankHtml;
+    rankHtml +
+    fondosViajeHtml;
 }
 
 function _eqToggleGrupo(rol) {

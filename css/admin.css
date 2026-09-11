@@ -159,6 +159,14 @@
 .ml-tier-logica { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .ml-tier-logica-label { font-size: 0.68rem; color: var(--neutral-gray); font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; }
 .ml-tier-logica-toggle { display: flex; gap: 8px; }
+/* Fase 2 completa del sistema de tiers (Parte 8, ver MANIFEST.md) --
+   descripciones cortas debajo de cada etiqueta (`_mlStepperHtml()`/
+   `_mlToggleSiNoHtml()`, js/admin.js) y los 2 toggles booleanos nuevos
+   (`.ml-tier-booleanos`, mismo layout en columna que `.ml-tier-logica`
+   pero apilado -- 2 campos con su propia descripción cada uno, no entran
+   cómodos lado a lado como el par Y/O de arriba). */
+.ml-tier-field-desc { font-size: 0.7rem; color: var(--muted); margin: 0 0 6px; line-height: 1.35; }
+.ml-tier-booleanos { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
 
 /* Mi Liga — "Lesiones" (Cambio 54, burbuja #admin-burbuja-lesiones, ver
    _adminRenderSolicitudesLesion()/js/admin.js) -- fila simple nombre + 2

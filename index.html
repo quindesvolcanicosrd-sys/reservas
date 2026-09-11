@@ -253,6 +253,21 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <div id="home-nav-spacer" style="height:64px;"></div>
 <div id="ptr-helper-texto" class="ptr-helper-texto" style="display:none;"><span class="material-symbols-outlined">refresh</span>Desliza hacia abajo para recargar</div>
 
+      <!-- Aviso "tier en riesgo" (Fase 2 completa del sistema de tiers, Parte
+           5, ver MANIFEST.md) -- persistente, SIN botón de cierre a
+           propósito (pedido explícito "no descartable"): se re-evalúa cada
+           vez que se abre la app (_actualizarBannerTierRiesgo()/js/home.js,
+           llamada desde prepararHome()) y desaparece solo cuando
+           E.datos.tierRiesgoDesde deja de venir (el admin corrió "Recalcular
+           ahora" y la persona ya volvió a cumplir, o la gracia venció y ya
+           fue demotada -- en ningún caso queda un botón para ocultarlo a
+           mano). -->
+      <div id="banner-tier-riesgo" style="display:none;background:linear-gradient(135deg,var(--warning-bg),var(--amber-lighter));border:2px solid var(--amber);border-radius:14px;padding:14px 16px;margin-bottom:18px;">
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <span class="material-symbols-outlined" style="color:var(--amber-dark);font-size:1.4rem;flex-shrink:0;">error</span>
+          <p id="banner-tier-riesgo-texto" style="margin:0;font-size:0.85rem;color:var(--amber-darker);line-height:1.5;font-weight:600;"></p>
+        </div>
+      </div>
       <div id="banner-cupon" style="display:none;background:linear-gradient(135deg,var(--amber-lighter),var(--amber-light));border:2px solid var(--amber);border-radius:14px;margin-bottom:18px;box-shadow:0 4px 12px var(--warning-bg);overflow:hidden;">
         <div onclick="toggleBannerCupon()" style="display:flex;align-items:center;gap:12px;padding:16px;cursor:pointer;">
           <span style="font-size:1.6rem;flex-shrink:0;">🎟️</span>
@@ -3214,6 +3229,23 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <span class="material-symbols-outlined" style="font-size:1.1rem;">refresh</span> Recalcular puntos
       </button>
 
+      <!-- Fondos de viaje (Fase 2 completa del sistema de tiers, Parte 2/8,
+           ver MANIFEST.md) -- config global (config_app.fondos_viaje_meses,
+           reusando la misma tabla clave-valor de precio_por_clase/
+           precio_mensual), quién califica se define por tier arriba
+           ("Califica para fondos de viaje" en cada fila). -->
+      <div class="seccion-label" style="margin-top:22px;">Fondos de viaje</div>
+      <div class="ml-tier-field">
+        <label>Meses de historial requeridos</label>
+        <p class="ml-tier-field-desc">Cantidad de meses continuos en tier elegible para calificar a fondos de viaje.</p>
+        <div class="qty-stepper" data-step="1" data-min="0">
+          <button type="button" class="qty-btn" onclick="adminStepperChange(this,-1);_mlGuardarFondosViaje();">−</button>
+          <span class="qty-value">6</span>
+          <button type="button" class="qty-btn" onclick="adminStepperChange(this,1);_mlGuardarFondosViaje();">+</button>
+          <input type="hidden" id="ml-fondos-viaje-meses" value="6">
+        </div>
+      </div>
+
       <div class="seccion-label" style="margin-top:22px;">Estado actual del equipo</div>
       <div id="ml-miembros-lista"></div>
     </div>
@@ -3314,11 +3346,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/eventos.js?v=83ff9527"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=63a97793"></script>
-<script src="js/equipo.js?v=28cd34ff"></script>
-<script src="js/home.js?v=64325560"></script>
+<script src="js/equipo.js?v=f12e7915"></script>
+<script src="js/home.js?v=e715822d"></script>
 <script src="js/reservas.js?v=cacf57bd"></script>
 <script src="js/perfil.js?v=d2df3c5b"></script>
-<script src="js/admin.js?v=e70dd2c5"></script>
+<script src="js/admin.js?v=49f4d8e2"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js?v=d18bc0da"></script>
 

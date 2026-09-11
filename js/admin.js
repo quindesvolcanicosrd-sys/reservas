@@ -1638,6 +1638,35 @@ var _mlGuardarTimers = {};
 function _mlIrSeccion() {
   _mlCargarTiers();
   _mlCargarMiembros();
+  _mlCargarFondosViaje();
+}
+
+// Fase 2 completa del sistema de tiers (Parte 2/8, ver MANIFEST.md) -- config
+// global de fondos de viaje, `config_app.fondos_viaje_meses` (reusa la misma
+// tabla clave-valor que precio_por_clase/precio_mensual, ver
+// getFondosViajeConfig()/adminSetFondosViajeConfig()/supabase/functions/api/index.ts).
+function _mlCargarFondosViaje() {
+  adminApi({ action: 'getFondosViajeConfig' }, function(res) {
+    var input = document.getElementById('ml-fondos-viaje-meses');
+    var valorEl = input ? input.closest('.qty-stepper').querySelector('.qty-value') : null;
+    var meses = (res && res.fondosViajeMeses != null) ? res.fondosViajeMeses : 6;
+    if (input) input.value = meses;
+    if (valorEl) valorEl.textContent = meses;
+  }, function(e) { mostrarToast(e.message || 'Error al cargar fondos de viaje.', 'error'); });
+}
+
+// Mismo patrón debounced (500ms) que _mlGuardarTier() -- llamado por los 2
+// botones +/- del stepper de arriba.
+var _mlGuardarFondosViajeTimer = null;
+function _mlGuardarFondosViaje() {
+  clearTimeout(_mlGuardarFondosViajeTimer);
+  _mlGuardarFondosViajeTimer = setTimeout(function() {
+    var input = document.getElementById('ml-fondos-viaje-meses');
+    if (!input) return;
+    adminApi({ action: 'adminSetFondosViajeConfig', fondosViajeMeses: input.value }, function(res) {
+      if (!res.exito) mostrarToast(res.error || 'Error al guardar.', 'error');
+    }, function(e) { mostrarToast(e.message || 'Error al guardar.', 'error'); });
+  }, 500);
 }
 
 function _mlCargarTiers() {
@@ -1646,15 +1675,38 @@ function _mlCargarTiers() {
   }, function(e) { mostrarToast(e.message || 'Error al cargar los tiers.', 'error'); });
 }
 
-function _mlStepperHtml(campoClass, label, val, min) {
+// `desc` (Fase 2 completa del sistema de tiers, Parte 8, ver MANIFEST.md) --
+// descripción corta debajo de la etiqueta, pedido explícito para que cada
+// campo se explique solo sin tener que adivinar qué hace. Opcional (los
+// steppers de otras secciones de este archivo -- precios, tallas -- siguen
+// llamando esta MISMA función sin el parámetro nuevo, `undefined` no agrega
+// nada).
+function _mlStepperHtml(campoClass, label, val, min, desc) {
   val = (val === null || val === undefined) ? 0 : val;
   return '<div class="ml-tier-field"><label>' + label + '</label>' +
+    (desc ? '<p class="ml-tier-field-desc">' + desc + '</p>' : '') +
     '<div class="qty-stepper" data-step="1" data-min="' + min + '">' +
       '<button type="button" class="qty-btn" onclick="adminStepperChange(this,-1);_mlGuardarTier(this.closest(\'.ml-tier-row\').dataset.id);">−</button>' +
       '<span class="qty-value">' + val + '</span>' +
       '<button type="button" class="qty-btn" onclick="adminStepperChange(this,1);_mlGuardarTier(this.closest(\'.ml-tier-row\').dataset.id);">+</button>' +
       '<input type="hidden" class="' + campoClass + '" value="' + val + '">' +
     '</div></div>';
+}
+
+// Toggle simple SI/NO -- mismo patrón visual (.aj-pill/.activa) que el
+// selector de lógica de más abajo, para los 2 booleanos nuevos de la Parte 8
+// (`dividir_puntos_mitad`/`califica_fondos_viaje`). `campoClass` identifica
+// el estado real en un `<input type="hidden">` (mismo criterio que los
+// steppers) -- `_mlGuardarTier()` lo lee de ahí, no del texto del botón.
+function _mlToggleSiNoHtml(campoClass, label, desc, activo) {
+  return '<div class="ml-tier-field"><label>' + label + '</label>' +
+    (desc ? '<p class="ml-tier-field-desc">' + desc + '</p>' : '') +
+    '<div class="ml-tier-logica-toggle">' +
+      '<button type="button" class="aj-pill ml-tier-bool-btn' + (activo ? ' activa' : '') + '" data-val="true" onclick="_mlSetBooleano(this)">Sí</button>' +
+      '<button type="button" class="aj-pill ml-tier-bool-btn' + (!activo ? ' activa' : '') + '" data-val="" onclick="_mlSetBooleano(this)">No</button>' +
+    '</div>' +
+    '<input type="hidden" class="' + campoClass + '" value="' + (activo ? 'true' : '') + '">' +
+  '</div>';
 }
 
 function _mlTierFilaHtml(t) {
@@ -1670,18 +1722,39 @@ function _mlTierFilaHtml(t) {
     '</div>' +
     '<div class="ml-tier-steppers">' +
       _mlStepperHtml('ml-tier-orden', 'Orden', t.orden, 1) +
-      _mlStepperHtml('ml-tier-min-clases', 'Min. clases', t.min_clases, 0) +
-      _mlStepperHtml('ml-tier-min-puntos', 'Min. puntos', t.min_puntos, 0) +
-      _mlStepperHtml('ml-tier-ventana', 'Ventana (meses)', t.ventana_meses, 1) +
+      _mlStepperHtml('ml-tier-min-clases', 'Mín. clases mensuales', t.min_clases, 0, 'Cantidad de clases que debe asistir por mes dentro de la ventana.') +
+      _mlStepperHtml('ml-tier-min-puntos', 'Mín. puntos', t.min_puntos, 0, 'Cantidad de puntos que debe acumular dentro de la ventana.') +
+      _mlStepperHtml('ml-tier-ventana', 'Ventana (meses)', t.ventana_meses, 1, 'Cuántos meses hacia atrás se miran para contar clases y puntos.') +
+      _mlStepperHtml('ml-tier-gracia', 'Meses de período de prueba', t.meses_gracia_demotion, 0, 'Cuántos meses tiene el miembro para cumplir antes de ser movido al tier inferior. 0 = demotion inmediata.') +
+      _mlStepperHtml('ml-tier-ascenso', 'Meses consecutivos para ascender', t.meses_consecutivos_ascenso, 1, 'Cuántos meses seguidos cumpliendo criterios necesita un miembro en el tier inferior para ascender a este.') +
     '</div>' +
     '<div class="ml-tier-logica">' +
       '<span class="ml-tier-logica-label">Lógica</span>' +
+      '<p class="ml-tier-field-desc">Y exige clases Y puntos a la vez; O alcanza con cualquiera de los 2.</p>' +
       '<div class="ml-tier-logica-toggle">' +
         '<button type="button" class="aj-pill ml-tier-logica-btn' + (logicaY ? ' activa' : '') + '" data-val="Y" onclick="_mlSetLogica(this)">Y · ambos</button>' +
         '<button type="button" class="aj-pill ml-tier-logica-btn' + (!logicaY ? ' activa' : '') + '" data-val="O" onclick="_mlSetLogica(this)">O · cualquiera</button>' +
       '</div>' +
     '</div>' +
+    '<div class="ml-tier-booleanos">' +
+      _mlToggleSiNoHtml('ml-tier-mitad', 'Dividir puntos a la mitad', 'Los miembros de este tier acumulan puntos pero valen la mitad en el ranking.', !!t.dividir_puntos_mitad) +
+      _mlToggleSiNoHtml('ml-tier-fondos', 'Califica para fondos de viaje', 'Los miembros que se mantengan en este tier califican para fondos de viaje.', !!t.califica_fondos_viaje) +
+    '</div>' +
   '</div>';
+}
+
+// Mismo patrón que _mlSetLogica() (más abajo) -- selección única DENTRO del
+// par Sí/No de UN campo puntual (`.closest('.ml-tier-field')`, no toda la
+// fila -- a diferencia de la lógica, acá hay 2 pares de toggles booleanos
+// independientes en la misma fila).
+function _mlSetBooleano(btn) {
+  var campo = btn.closest('.ml-tier-field');
+  if (!campo) return;
+  var pills = campo.querySelectorAll('.ml-tier-bool-btn');
+  for (var i = 0; i < pills.length; i++) pills[i].classList.toggle('activa', pills[i] === btn);
+  var hidden = campo.querySelector('input[type="hidden"]');
+  if (hidden) hidden.value = btn.dataset.val;
+  _mlGuardarTier(btn.closest('.ml-tier-row').dataset.id);
 }
 
 function _mlRenderTiers(tiers) {
@@ -1713,7 +1786,10 @@ function _mlAgregarTier() {
   el.querySelectorAll('.ml-tier-orden').forEach(function(inp) { maxOrden = Math.max(maxOrden, Number(inp.value) || 0); });
   var vacio = el.querySelector('p');
   if (vacio) el.innerHTML = '';
-  var tierNuevo = { id: 'new-' + Date.now(), orden: maxOrden + 1, nombre: '', min_clases: 0, min_puntos: 0, ventana_meses: 2, logica: 'O', es_default: false };
+  var tierNuevo = {
+    id: 'new-' + Date.now(), orden: maxOrden + 1, nombre: '', min_clases: 0, min_puntos: 0, ventana_meses: 2, logica: 'O', es_default: false,
+    meses_gracia_demotion: 1, meses_consecutivos_ascenso: 3, dividir_puntos_mitad: false, califica_fondos_viaje: false,
+  };
   el.insertAdjacentHTML('beforeend', _mlTierFilaHtml(tierNuevo));
 }
 
@@ -1743,7 +1819,15 @@ function _mlGuardarTier(id) {
       // Cadena vacía en vez de 'false': upsertTier hace `!!es_default` en el
       // backend, y `!!'false'` da true (cualquier string no vacío es
       // truthy) -- solo '' o 'true' dan el resultado correcto ahí.
-      es_default: row.dataset.esDefault === 'true' ? 'true' : ''
+      es_default: row.dataset.esDefault === 'true' ? 'true' : '',
+      // Fase 2 completa del sistema de tiers (Parte 8, ver MANIFEST.md) -- 4
+      // campos nuevos. Los 2 booleanos leen el mismo `<input type="hidden">`
+      // que actualiza `_mlSetBooleano()` (mismo criterio '' / 'true' que
+      // `es_default`, arriba).
+      meses_gracia_demotion: row.querySelector('.ml-tier-gracia').value,
+      meses_consecutivos_ascenso: row.querySelector('.ml-tier-ascenso').value,
+      dividir_puntos_mitad: row.querySelector('.ml-tier-mitad').value,
+      califica_fondos_viaje: row.querySelector('.ml-tier-fondos').value,
     };
     if (key.indexOf('new-') !== 0) payload.id = key;
     adminApi(payload, function(res) {

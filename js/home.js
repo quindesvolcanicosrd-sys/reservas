@@ -30,6 +30,38 @@ function _fechaCalendarioATexto(fechaCalendario) {
   return _EV_DIAS_LARGOS[d.getDay()] + ' ' + d.getDate() + ' de ' + NOMBRES_MESES[d.getMonth()];
 }
 
+// Aviso "tier en riesgo" (Fase 2 completa del sistema de tiers, ver
+// MANIFEST.md, Parte 5 del pedido) -- `#banner-tier-riesgo` (index.html) es
+// persistente, SIN botón de cierre a propósito (pedido explícito): la única
+// forma de que desaparezca es que `E.datos.tierRiesgoDesde` deje de venir en
+// una carga posterior de `E.datos` (el admin corrió "Recalcular ahora" y la
+// persona ya volvió a cumplir el tier, o la gracia venció y ya fue demotada
+// -- en cualquiera de los 2 casos `recalcular-categorias/index.ts` limpia
+// esa columna). Llamada desde `prepararHome()`, en cada aterrizaje a Home
+// (no solo el primero de la sesión), para que el chequeo sea siempre fresco.
+function _actualizarBannerTierRiesgo() {
+  var banner = document.getElementById('banner-tier-riesgo');
+  var texto = document.getElementById('banner-tier-riesgo-texto');
+  if (!banner || !texto) return;
+  var d = E.datos;
+  if (!d || !d.tierRiesgoDesde) { banner.style.display = 'none'; return; }
+  // Fecha límite ya viene CONGELADA desde el backend (`tierRiesgoHasta`,
+  // calculada una sola vez al entrar en riesgo -- ver el comentario grande
+  // en la migración/recalcular-categorias/index.ts) -- acá solo se formatea
+  // para mostrar, sin recalcular nada.
+  var fechaTexto = '';
+  if (d.tierRiesgoHasta) {
+    var fh = new Date(d.tierRiesgoHasta);
+    if (!isNaN(fh.getTime())) fechaTexto = fh.getDate() + ' de ' + NOMBRES_MESES[fh.getMonth()] + ' de ' + fh.getFullYear();
+  }
+  var tierActual = d.categoria || '';
+  var tierObjetivo = d.tierRiesgoObjetivo || '';
+  texto.textContent = 'Tu categoría ' + tierActual + ' está en período de prueba.' +
+    (fechaTexto ? ' Tienes hasta ' + fechaTexto : '') +
+    ' para cumplir los requisitos' + (tierObjetivo ? ' o pasarás a ' + tierObjetivo + '.' : '.');
+  banner.style.display = 'block';
+}
+
 function prepararHome(saltarFadeInicial, onListo) {
   if (!E.datos) {
     // Backstop: si llegamos acá sin datos de persona (token válido pero sin
@@ -46,6 +78,13 @@ function prepararHome(saltarFadeInicial, onListo) {
   // re-render de Home) -- así los datos ya están en memoria cuando navegue
   // a la tab Equipo, en vez de recién arrancar el fetch en ese momento.
   if (!_eqYaInicializado && typeof _eqInit === 'function') _eqInit();
+  // Aviso "tier en riesgo" (Fase 2 completa del sistema de tiers, Parte 5,
+  // ver MANIFEST.md) -- se re-evalúa en CADA aterrizaje a Home (no solo la
+  // primera vez de la sesión), para que desaparezca solo apenas
+  // `E.datos.tierRiesgoDesde` deje de venir en una carga posterior (login de
+  // nuevo, restaurar sesión, o cualquier otro refresh de `E.datos`) sin
+  // necesitar un botón de cierre.
+  _actualizarBannerTierRiesgo();
   // Excepciones de cuota del mes actual (ver declaración de
   // _CUOTA_EXCEPCIONES más arriba) -- fire-and-forget, mismo criterio que
   // getCuponDisponible() más abajo en esta función: no bloquea el render de

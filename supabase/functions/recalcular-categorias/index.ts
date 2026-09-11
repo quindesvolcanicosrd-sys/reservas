@@ -76,11 +76,27 @@ Deno.serve(async (req: Request) => {
       .filter((t: any) => t.id !== tierDefault.id)
       .sort((a: any, b: any) => a.orden - b.orden);
 
-    const { data: equipoData, error: equipoError } = await supabase.from('equipo').select('username, estado_miembro, tier_modo');
+    // `categoria`/`tier_riesgo_*`/`meses_consecutivos_cumplidos` (Fase 2
+    // completa, ver MANIFEST.md) -- hacen falta para anclar la evaluación al
+    // tier ACTUAL de cada persona (riesgo/gracia se evalúan contra el tier
+    // en el que ya está, no contra "el mejor tier posible" desde cero, ver
+    // el comentario grande más abajo).
+    const { data: equipoData, error: equipoError } = await supabase.from('equipo')
+      .select('username, estado_miembro, tier_modo, categoria, tier_riesgo_desde, tier_riesgo_hasta, tier_riesgo_objetivo, meses_consecutivos_cumplidos');
     if (equipoError) return json({ ok: false, error: equipoError.message }, 500);
-    const miembros: { username: string; estadoMiembro: string | null; tierModo: string | null }[] = (equipoData ?? [])
+    const miembros: {
+      username: string; estadoMiembro: string | null; tierModo: string | null; categoria: string | null;
+      tierRiesgoDesde: string | null; tierRiesgoHasta: string | null; tierRiesgoObjetivo: string | null;
+      mesesConsecutivosCumplidos: number;
+    }[] = (equipoData ?? [])
       .filter((r: any) => r.username)
-      .map((r: any) => ({ username: r.username, estadoMiembro: r.estado_miembro ?? null, tierModo: r.tier_modo ?? 'auto' }));
+      .map((r: any) => ({
+        username: r.username, estadoMiembro: r.estado_miembro ?? null, tierModo: r.tier_modo ?? 'auto',
+        categoria: r.categoria ?? null,
+        tierRiesgoDesde: r.tier_riesgo_desde ?? null, tierRiesgoHasta: r.tier_riesgo_hasta ?? null,
+        tierRiesgoObjetivo: r.tier_riesgo_objetivo ?? null,
+        mesesConsecutivosCumplidos: Number(r.meses_consecutivos_cumplidos) || 0,
+      }));
 
     const maxVentana = Math.max(0, ...tiers.map((t: any) => Number(t.ventana_meses) || 0));
 
@@ -169,11 +185,48 @@ Deno.serve(async (req: Request) => {
       return Math.min(100, Math.max(0, combinado * 100));
     }
 
-    const resultados: { username: string; categoria: string }[] = [];
+    // ─── Fase 2 completa del sistema de tiers (ver MANIFEST.md) ───────────
+    // `evaluarCumpleTier()` -- ¿esta persona cumple HOY los criterios de UN
+    // tier puntual? Extraído del bucle viejo (única lógica de "cumple" que
+    // existía) para reusarlo tanto contra el tier ACTUAL de la persona
+    // (riesgo de demotion) como contra el tier SUPERIOR (re-ascenso).
+    function evaluarCumpleTier(username: string, tier: any): boolean {
+      const ventanaMeses = Number(tier.ventana_meses) || 0;
+      const clases = contarClases(username, ventanaMeses);
+      const puntos = sumarPuntos(username, ventanaMeses);
+      const cumpleClases = clases >= (Number(tier.min_clases) || 0);
+      const cumplePuntos = puntos >= (Number(tier.min_puntos) || 0);
+      return tier.logica === 'Y' ? (cumpleClases && cumplePuntos) : (cumpleClases || cumplePuntos);
+    }
+    // Comportamiento ORIGINAL (pre-Fase 2): el mejor tier que las clases/
+    // puntos ACTUALES de la persona alcanzan, recorriendo `tiersNoDefault`
+    // del más exigente al menos exigente y quedándose con el primero que
+    // cumple; sin ninguno, cae al tier default. Sigue siendo la función real
+    // que decide "a qué tier cae" -- tanto para una demotion inmediata
+    // (`meses_gracia_demotion=0`, mismo comportamiento de siempre) como para
+    // la demotion diferida al vencer la gracia, y para calcular
+    // `tier_riesgo_objetivo` (qué mostrarle a la persona mientras está en
+    // período de prueba).
+    function mejorTierPara(username: string): string {
+      for (const tier of tiersNoDefault) {
+        if (evaluarCumpleTier(username, tier)) return tier.nombre;
+      }
+      return tierDefault.nombre;
+    }
 
-    for (const { username, estadoMiembro, tierModo } of miembros) {
+    // "aaaa-mm" del mes en curso (hora del server, UTC) -- clave de
+    // `historial_tier` para esta corrida. Ver el comentario grande en la
+    // migración sobre por qué se escribe SIEMPRE (cambie o no el tier).
+    const mesActualStr = hoy.getUTCFullYear() + '-' + String(hoy.getUTCMonth() + 1).padStart(2, '0');
+
+    const resultados: { username: string; categoria: string; enRiesgo: boolean }[] = [];
+
+    for (const m of miembros) {
+      const { username, estadoMiembro, tierModo } = m;
       // Lesionadx: no se toca la categoría (queda como esté, no participa
-      // del recálculo -- ver MANIFEST.md "estado_miembro").
+      // del recálculo -- ver MANIFEST.md "estado_miembro"). Tampoco
+      // registra historial_tier este mes -- no hubo una evaluación real que
+      // registrar.
       if (estadoMiembro === 'Lesionadx') continue;
       // tier_modo fijado a mano (Cambio 55, control Quindes/Auto/Mirlxs del
       // perfil de Equipo, ver adminSetTierModo()/supabase/functions/api/index.ts)
@@ -182,27 +235,138 @@ Deno.serve(async (req: Request) => {
       if (tierModo && tierModo !== 'auto') continue;
 
       let categoriaAsignada: string;
+      // Campos de riesgo/ascenso -- por default, "sin cambios" (se
+      // sobreescriben más abajo según la rama que aplique). `undefined` deja
+      // el UPDATE sin tocar esa columna cuando no corresponde recalcularla
+      // (Técnico, ver abajo).
+      let nuevoRiesgoDesde: string | null | undefined;
+      let nuevoRiesgoHasta: string | null | undefined;
+      let nuevoRiesgoObjetivo: string | null | undefined;
+      let nuevosMesesConsecutivos: number | undefined;
+
       if (estadoMiembro === 'Técnico') {
-        // Técnico: siempre Quindes, sin calcular clases/puntos.
+        // Técnico: siempre Quindes, sin calcular clases/puntos ni tocar
+        // riesgo/ascenso -- mismo criterio que antes de esta Fase 2 (caso
+        // especial, no participa del sistema de mérito en absoluto).
         categoriaAsignada = 'Quindes';
       } else {
-        categoriaAsignada = tierDefault.nombre;
-        for (const tier of tiersNoDefault) {
-          const ventanaMeses = Number(tier.ventana_meses) || 0;
-          const clases = contarClases(username, ventanaMeses);
-          const puntos = sumarPuntos(username, ventanaMeses);
-          const cumpleClases = clases >= (Number(tier.min_clases) || 0);
-          const cumplePuntos = puntos >= (Number(tier.min_puntos) || 0);
-          const cumple = tier.logica === 'Y' ? (cumpleClases && cumplePuntos) : (cumpleClases || cumplePuntos);
-          if (cumple) {
-            categoriaAsignada = tier.nombre;
-            break;
+        const categoriaActual = m.categoria || tierDefault.nombre;
+        const tierActualCfg = tiers.find((t: any) => t.nombre === categoriaActual) ?? tierDefault;
+        const esTierDefault = tierActualCfg.id === tierDefault.id;
+        const idxActualEnTiers = tiers.findIndex((t: any) => t.id === tierActualCfg.id);
+        // "Tier superior" -- el que está justo antes en el orden (más
+        // exigente) que el tier actual de la persona; `tiers` ya viene
+        // ordenado ascendente por `orden` (más exigente = orden más chico).
+        // `null` si la persona ya está en el tier más exigente que existe.
+        const tierSuperior = idxActualEnTiers > 0 ? tiers[idxActualEnTiers - 1] : null;
+
+        if (esTierDefault) {
+          // En el tier piso (Mirlxs) -- acá NO se evalúa si "cumple su
+          // propio tier" (un tier default con 0 requisitos siempre se
+          // cumple, no tendría sentido) -- se evalúa contra el tier
+          // SUPERIOR, para el re-ascenso automático (Parte E del pedido).
+          if (!tierSuperior) {
+            // Un solo tier configurado (sin nada por encima) -- no hay a
+            // dónde ascender, nada que evaluar.
+            categoriaAsignada = categoriaActual;
+            nuevosMesesConsecutivos = m.mesesConsecutivosCumplidos;
+          } else if (evaluarCumpleTier(username, tierSuperior)) {
+            const nuevoContador = m.mesesConsecutivosCumplidos + 1;
+            const umbralAscenso = Number(tierSuperior.meses_consecutivos_ascenso) || 3;
+            if (nuevoContador >= umbralAscenso) {
+              // 3 (o lo que diga el tier) meses consecutivos cumpliendo ->
+              // ascenso automático. El contador vuelve a 0 en el tier nuevo
+              // -- empieza de cero para un eventual ascenso siguiente si
+              // hubiera más niveles.
+              categoriaAsignada = tierSuperior.nombre;
+              nuevosMesesConsecutivos = 0;
+            } else {
+              categoriaAsignada = categoriaActual;
+              nuevosMesesConsecutivos = nuevoContador;
+            }
+          } else {
+            // No cumplió este mes -- el contador vuelve a 0 (Parte E: "si
+            // falla un mes, el contador vuelve a 0").
+            categoriaAsignada = categoriaActual;
+            nuevosMesesConsecutivos = 0;
+          }
+          // El tier default nunca queda "en riesgo" -- no hay a dónde caer
+          // más abajo.
+          nuevoRiesgoDesde = null; nuevoRiesgoHasta = null; nuevoRiesgoObjetivo = null;
+        } else {
+          // En un tier no-default (ej. Quindes) -- se evalúa contra SU
+          // PROPIO tier (¿lo sigue cumpliendo?), que es lo que decide si
+          // entra/sale de riesgo de demotion.
+          if (evaluarCumpleTier(username, tierActualCfg)) {
+            categoriaAsignada = categoriaActual;
+            nuevosMesesConsecutivos = m.mesesConsecutivosCumplidos + 1;
+            nuevoRiesgoDesde = null; nuevoRiesgoHasta = null; nuevoRiesgoObjetivo = null;
+            // Generalización para una futura cadena de más de 2 tiers: si
+            // ya viene cumpliendo el tier actual el tiempo suficiente,
+            // también puede ascender a uno todavía más exigente. Con los 2
+            // tiers reales de hoy (Quindes es el más alto) esto nunca
+            // dispara -- `tierSuperior` da `null` para quien ya está en el
+            // tier de `orden` más chico.
+            if (tierSuperior) {
+              const umbralAscenso = Number(tierSuperior.meses_consecutivos_ascenso) || 3;
+              if (nuevosMesesConsecutivos >= umbralAscenso && evaluarCumpleTier(username, tierSuperior)) {
+                categoriaAsignada = tierSuperior.nombre;
+                nuevosMesesConsecutivos = 0;
+              }
+            }
+          } else {
+            // No cumple más su tier actual -- el contador de re-ascenso
+            // tampoco tendría sentido acumulando mientras está fallando.
+            nuevosMesesConsecutivos = 0;
+            const mesesGracia = Number(tierActualCfg.meses_gracia_demotion) || 0;
+            if (mesesGracia <= 0) {
+              // Sin período de gracia configurado -- demotion inmediata,
+              // comportamiento IDÉNTICO al que existía antes de esta Fase 2.
+              categoriaAsignada = mejorTierPara(username);
+              nuevoRiesgoDesde = null; nuevoRiesgoHasta = null; nuevoRiesgoObjetivo = null;
+            } else if (!m.tierRiesgoDesde) {
+              // Recién entra en riesgo -- NO se demota todavía. La fecha
+              // límite se calcula y se congela ACÁ (ver comentario grande en
+              // la migración sobre por qué no recalcularla al vuelo en cada
+              // lectura).
+              categoriaAsignada = categoriaActual;
+              const desde = hoy;
+              const hasta = new Date(Date.UTC(desde.getUTCFullYear(), desde.getUTCMonth() + mesesGracia, desde.getUTCDate()));
+              nuevoRiesgoDesde = desde.toISOString();
+              nuevoRiesgoHasta = hasta.toISOString();
+              nuevoRiesgoObjetivo = mejorTierPara(username);
+            } else if (hoy > new Date(m.tierRiesgoHasta as string)) {
+              // La gracia ya venció y sigue sin cumplir -- demotion
+              // efectiva. Se recalcula el mejor tier FRESCO (no se confía en
+              // el `tier_riesgo_objetivo` guardado como snapshot -- si algo
+              // cambió durante la gracia, esto refleja el estado real ahora).
+              categoriaAsignada = mejorTierPara(username);
+              nuevoRiesgoDesde = null; nuevoRiesgoHasta = null; nuevoRiesgoObjetivo = null;
+            } else {
+              // Sigue en período de gracia -- sin cambios, se deja como está.
+              categoriaAsignada = categoriaActual;
+              nuevoRiesgoDesde = m.tierRiesgoDesde; nuevoRiesgoHasta = m.tierRiesgoHasta; nuevoRiesgoObjetivo = m.tierRiesgoObjetivo;
+            }
           }
         }
       }
+
       const termometroPct = calcularTermometroPct(username);
-      await supabase.from('equipo').update({ categoria: categoriaAsignada, termometro_pct: termometroPct }).eq('username', username);
-      resultados.push({ username, categoria: categoriaAsignada });
+      const update: Record<string, any> = { categoria: categoriaAsignada, termometro_pct: termometroPct };
+      if (nuevoRiesgoDesde !== undefined) update.tier_riesgo_desde = nuevoRiesgoDesde;
+      if (nuevoRiesgoHasta !== undefined) update.tier_riesgo_hasta = nuevoRiesgoHasta;
+      if (nuevoRiesgoObjetivo !== undefined) update.tier_riesgo_objetivo = nuevoRiesgoObjetivo;
+      if (nuevosMesesConsecutivos !== undefined) update.meses_consecutivos_cumplidos = nuevosMesesConsecutivos;
+      await supabase.from('equipo').update(update).eq('username', username);
+
+      // Historial de tier (Parte 3, ver MANIFEST.md) -- una fila por persona
+      // por mes, SIEMPRE (cambie o no el tier resultante) -- fondos de viaje
+      // (Parte 7) necesita confirmar continuidad mes a mes, no solo los
+      // momentos de cambio.
+      await supabase.from('historial_tier')
+        .upsert({ username, mes: mesActualStr, tier_nombre: categoriaAsignada }, { onConflict: 'username,mes' });
+
+      resultados.push({ username, categoria: categoriaAsignada, enRiesgo: !!nuevoRiesgoDesde });
     }
 
     // Cambio 58 -- recalcular horas_ano/asistencias_ano/total_eventos_ano

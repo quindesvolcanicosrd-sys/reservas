@@ -106,6 +106,22 @@ function getDatosCompletos(row: Record<string, any> | null): Record<string, any>
     cuponDisponible:      row.cupon_disponible      === true,
     fotoPerfil:           row.foto_perfil           ?? '',
     permisosConfigurados: row.permisos_configurados === true,
+    // Fase 2 completa del sistema de tiers (Parte 5, ver MANIFEST.md) --
+    // `tierRiesgoDesde`/`tierRiesgoHasta` son columnas simples (sin `?? ''`,
+    // a propósito -- `null` real, no cadena vacía, para que el frontend
+    // pueda chequear `if (E.datos.tierRiesgoDesde)` directo, mismo criterio
+    // que `fechaIngreso` un poco más arriba). `tierRiesgoHasta` ya viene
+    // CONGELADA desde `recalcular-categorias/index.ts` (calculada una sola
+    // vez al entrar en riesgo, ver el comentario grande en la migración) --
+    // esta función NO recalcula nada, solo expone las 2 columnas tal cual,
+    // sin ningún JOIN extra ni volverse async (se llama desde ~10 flujos de
+    // login/restauración de sesión distintos, todos con este mismo shape
+    // síncrono). `tierRiesgoObjetivo` -- a qué tier caería si la gracia
+    // vence -- lo arma el banner del frontend (_evTierRiesgoBannerHtml()/
+    // js/home.js) para el mensaje "...o pasarás a X.".
+    tierRiesgoDesde:      row.tier_riesgo_desde     ?? null,
+    tierRiesgoHasta:      row.tier_riesgo_hasta     ?? null,
+    tierRiesgoObjetivo:   row.tier_riesgo_objetivo  ?? null,
   };
 }
 
@@ -474,7 +490,25 @@ async function resolverNombre(params: Record<string, any>): Promise<Record<strin
 async function getDatosCompletosAction(params: Record<string, any>): Promise<Record<string, any>> {
   const username = await _validarToken(params.token);
   if (!username || username !== params.nombre) return { error: 'Sesión inválida.' };
-  return getDatosCompletos(await _getEquipoRow(params.nombre)) ?? {};
+  const datos = getDatosCompletos(await _getEquipoRow(params.nombre));
+  if (!datos) return {};
+  // `calificaFondosViaje` (Parte 7, ver MANIFEST.md) -- a diferencia de
+  // `tierRiesgoDesde`/`tierRiesgoHasta` (columnas simples, expuestas desde
+  // `getDatosCompletos()` en sí para que los ~10 flujos de login/
+  // restauración de sesión la reciban gratis), este dato es GENUINAMENTE
+  // calculado en el momento de la lectura (depende de qué mes es "hoy" —
+  // el resultado puede cambiar con el simple paso del tiempo, sin que nada
+  // en la DB haya cambiado) -- no tiene sentido guardarlo como columna. Se
+  // agrega acá, en el ÚNICO call site async de `getDatosCompletos()` con un
+  // solo caller (a diferencia de la función de mapeo en sí, reusada por
+  // ~10 flujos de login síncronos que no vale la pena volver async solo
+  // por este campo -- ver ese comentario). `_calificaFondosViajePorUsuarios()`
+  // (cerca de getFondosViajeConfig(), más abajo en este archivo) acepta un
+  // array para poder reusarse tal cual desde getEquipo() con el roster
+  // completo en una sola consulta -- acá se llama con un array de 1 elemento.
+  const mapa = await _calificaFondosViajePorUsuarios([params.nombre]);
+  datos.calificaFondosViaje = mapa[params.nombre] === true;
+  return datos;
 }
 
 async function getDatosPersona(params: Record<string, any>): Promise<Record<string, any>> {
@@ -847,6 +881,73 @@ async function adminSetPreciosClases(params: Record<string, any>): Promise<Recor
     { key: 'precio_mensual',   value: String(params.precioMensual) },
   ], { onConflict: 'key' });
   return { exito: true };
+}
+
+// Config global de fondos de viaje (Fase 2 completa del sistema de tiers,
+// ver MANIFEST.md, Parte 2 del pedido) -- reusa `config_app` (mismo criterio
+// que precio_por_clase/precio_mensual arriba, ver esos comentarios) en vez
+// de crear una `config_liga` nueva, tabla clave-valor genérica que ya existe
+// para exactamente este propósito. Sin gate de admin en el getter -- lo
+// consumen `getEquipo()`/`_calificaFondosViajePorUsuarios()` (más abajo)
+// para CUALQUIER cuenta logueada, mismo criterio "directorio de solo
+// lectura sin sesión" que el resto de este archivo.
+async function getFondosViajeMeses(): Promise<number> {
+  const { data } = await supabase.from('config_app').select('value').eq('key', 'fondos_viaje_meses').maybeSingle();
+  return Number(data?.value) || 6;
+}
+async function getFondosViajeConfig(): Promise<Record<string, any>> {
+  return { fondosViajeMeses: await getFondosViajeMeses() };
+}
+async function adminSetFondosViajeConfig(params: Record<string, any>): Promise<Record<string, any>> {
+  const email = await _validarAdminToken(params.adminToken);
+  if (!email) return { exito: false, error: 'Sesión admin inválida.' };
+  const meses = Number(params.fondosViajeMeses);
+  if (!Number.isFinite(meses) || meses < 0) return { exito: false, error: 'Cantidad de meses inválida.' };
+  await supabase.from('config_app').upsert({ key: 'fondos_viaje_meses', value: String(Math.round(meses)) }, { onConflict: 'key' });
+  return { exito: true };
+}
+
+// Mapa username -> ¿califica para fondos de viaje? (Parte 7 del pedido) --
+// calificar significa: perteneció a un tier con `califica_fondos_viaje=true`
+// durante los últimos `fondosViajeMeses` meses COMPLETOS (sin incluir el mes
+// actual, todavía en curso) SIN NINGUNA interrupción -- un solo mes en un
+// tier no-calificante, o directamente sin fila en `historial_tier` para ese
+// mes (nunca se corrió "Recalcular ahora" ese mes, dato desconocido), ya
+// cuenta como interrupción -- no se asume calificación sobre un hueco de
+// datos. Recibe TODOS los usernames de una sola vez (usada por `getEquipo()`
+// para el roster completo) para hacer 1 sola consulta a `historial_tier` en
+// vez de N -- `getDatosCompletosAction()` (una sola persona) la llama igual,
+// con un array de 1 elemento.
+async function _calificaFondosViajePorUsuarios(usernames: string[]): Promise<Record<string, boolean>> {
+  const resultado: Record<string, boolean> = {};
+  if (!usernames.length) return resultado;
+  const meses = await getFondosViajeMeses();
+  if (meses <= 0) { usernames.forEach((u) => { resultado[u] = false; }); return resultado; }
+  const { data: tiersData } = await supabase.from('config_tiers').select('nombre, califica_fondos_viaje');
+  const calificaPorTier: Record<string, boolean> = {};
+  (tiersData ?? []).forEach((t: any) => { calificaPorTier[t.nombre] = t.califica_fondos_viaje === true; });
+  const hoy = new Date();
+  // Últimos `meses` meses COMPLETOS -- arranca en `i=1` (el mes pasado), NUNCA
+  // incluye el mes actual (todavía en curso, sin cerrar).
+  const mesesRequeridos: string[] = [];
+  for (let i = 1; i <= meses; i++) {
+    const d = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() - i, 1));
+    mesesRequeridos.push(d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0'));
+  }
+  const { data: historial } = await supabase.from('historial_tier')
+    .select('username, mes, tier_nombre')
+    .in('username', usernames)
+    .in('mes', mesesRequeridos);
+  const tierPorUsuarioYMes: Record<string, Record<string, string>> = {};
+  (historial ?? []).forEach((h: any) => {
+    if (!tierPorUsuarioYMes[h.username]) tierPorUsuarioYMes[h.username] = {};
+    tierPorUsuarioYMes[h.username][h.mes] = h.tier_nombre;
+  });
+  usernames.forEach((u) => {
+    const porMes = tierPorUsuarioYMes[u] ?? {};
+    resultado[u] = mesesRequeridos.every((mes) => !!porMes[mes] && calificaPorTier[porMes[mes]] === true);
+  });
+  return resultado;
 }
 
 // ─── Acciones: venues ─────────────────────────────────────────────────────────
@@ -2783,7 +2884,7 @@ async function adminGetRosterEquipo(): Promise<Record<string, any>> {
 // acciones de solo-lectura.
 async function getEquipo(params: Record<string, any> = {}): Promise<Record<string, any>> {
   const { data: filas } = await supabase.from('equipo')
-    .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, prefijo, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano, termometro_pct, fecha_ingreso, necesita_patines, necesita_protecciones, puntos_anteriores, racha_actual')
+    .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, prefijo, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano, termometro_pct, fecha_ingreso, necesita_patines, necesita_protecciones, puntos_anteriores, racha_actual, tier_riesgo_desde, tier_riesgo_hasta, tier_riesgo_objetivo')
     .order('username');
   const personas = filas ?? [];
   if (!personas.length) return { personas: [] };
@@ -2962,6 +3063,16 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     String(s ?? '').split(',').map((n: string) => n.trim().toUpperCase()).filter(Boolean);
   const { data: tiersData } = await supabase.from('config_tiers').select('*').order('orden', { ascending: true });
   const tiers = tiersData ?? [];
+  // Puntos efectivos (Parte 6, ver MANIFEST.md) -- mapa nombre de tier ->
+  // ¿divide los puntos a la mitad en display/ranking? Reusa este MISMO
+  // fetch de `config_tiers` (ya se pedía acá para el termómetro/tendencia,
+  // arriba) en vez de una consulta aparte.
+  const dividirMitadPorTier: Record<string, boolean> = {};
+  tiers.forEach((t: any) => { dividirMitadPorTier[t.nombre] = t.dividir_puntos_mitad === true; });
+  // Fondos de viaje (Parte 7) -- 1 sola consulta a `historial_tier` para
+  // TODO el roster (`_calificaFondosViajePorUsuarios()`, cerca de
+  // getFondosViajeConfig() más arriba en este archivo), no una por persona.
+  const calificaFondosViajePorUsuario = await _calificaFondosViajePorUsuarios(usernames);
   const tierDefaultTermometro = tiers.find((t: any) => t.es_default === true);
   const tiersNoDefaultTermometro = tierDefaultTermometro
     ? tiers.filter((t: any) => t.id !== tierDefaultTermometro.id).sort((a: any, b: any) => a.orden - b.orden)
@@ -3171,7 +3282,30 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     // vacío o 'No' cuentan como "no necesita".
     necesitaPatines: !!r.necesita_patines && String(r.necesita_patines).toLowerCase() !== 'no',
     necesitaProtecciones: !!r.necesita_protecciones && String(r.necesita_protecciones).toLowerCase() !== 'no',
-  }));
+    // Fase 2 completa del sistema de tiers (Parte 5, ver MANIFEST.md) --
+    // mismo shape/criterio que `getDatosCompletos()` (`null`, no `''`, ver
+    // ese comentario) para que el perfil de detalle de Equipo (admin) pueda
+    // mostrar el mismo aviso que ve la propia persona en su banner.
+    tierRiesgoDesde: r.tier_riesgo_desde ?? null,
+    tierRiesgoHasta: r.tier_riesgo_hasta ?? null,
+    tierRiesgoObjetivo: r.tier_riesgo_objetivo ?? null,
+  })).map((p: any) => {
+    // Puntos efectivos (Parte 6) -- ×0.5 si el tier ACTUAL de la persona
+    // (`p.rol`) tiene `dividir_puntos_mitad=true` (mapa armado más arriba en
+    // esta función, reusando el mismo fetch de `config_tiers` del
+    // termómetro/tendencia). Al ascender/descender de tier, esto se
+    // recalcula solo en la siguiente carga -- no hace falta ninguna
+    // migración de datos, `puntosTotal` real nunca cambia, solo cambia qué
+    // multiplicador se le aplica en este display.
+    const dividirMitad = dividirMitadPorTier[p.rol] === true;
+    return {
+      ...p,
+      puntosEfectivos: dividirMitad ? Math.round(p.puntosTotal * 0.5 * 10) / 10 : p.puntosTotal,
+      // Fondos de viaje (Parte 7) -- mapa armado arriba con 1 sola consulta
+      // para todo el roster (`_calificaFondosViajePorUsuarios()`).
+      calificaFondosViaje: calificaFondosViajePorUsuario[p.username] === true,
+    };
+  });
 
   return { personas: personasOut };
 }
@@ -4272,8 +4406,23 @@ Deno.serve(async (req: Request) => {
       case 'upsertTier': {
         const adminEmail = await _validarAdminToken(params.adminToken);
         if (!adminEmail) return json({ error: 'Sesión admin inválida.' }, 401);
-        const { id, orden, nombre, min_clases, min_puntos, ventana_meses, logica, es_default } = params;
-        const row = { orden, nombre, min_clases, min_puntos, ventana_meses, logica, es_default: !!es_default };
+        const {
+          id, orden, nombre, min_clases, min_puntos, ventana_meses, logica, es_default,
+          meses_consecutivos_ascenso, meses_gracia_demotion, dividir_puntos_mitad, califica_fondos_viaje,
+        } = params;
+        // Fase 2 completa del sistema de tiers (ver MANIFEST.md) -- 4 campos
+        // nuevos. Mismos criterios ya usados por `es_default` en esta misma
+        // función para los 2 booleanos nuevos (`!!x`, el frontend manda `''`
+        // o `'true'`, nunca el string `'false'` -- ver el comentario de
+        // `_mlGuardarTier()`/js/admin.js sobre por qué `!!'false'` daría
+        // `true`); los 2 enteros nuevos viajan tal cual, como ya hacen
+        // `min_clases`/`min_puntos`/`ventana_meses` (PostgREST coerciona el
+        // string a `integer` solo con el `default`/tipo de columna).
+        const row = {
+          orden, nombre, min_clases, min_puntos, ventana_meses, logica, es_default: !!es_default,
+          meses_consecutivos_ascenso, meses_gracia_demotion,
+          dividir_puntos_mitad: !!dividir_puntos_mitad, califica_fondos_viaje: !!califica_fondos_viaje,
+        };
         const { data, error } = id
           ? await supabase.from('config_tiers').update(row).eq('id', id).select().single()
           : await supabase.from('config_tiers').insert(row).select().single();
@@ -4289,6 +4438,13 @@ Deno.serve(async (req: Request) => {
         if (error) return json({ error: error.message }, 500);
         return json({ ok: true });
       }
+      // Fase 2 completa del sistema de tiers -- config global de fondos de
+      // viaje (Parte 2/8 del pedido, ver MANIFEST.md). `getFondosViajeConfig`
+      // sin gate de admin a propósito (mismo criterio que getEquipo()) --
+      // cualquier cuenta logueada puede necesitar saber el valor, no solo Mi
+      // Liga.
+      case 'getFondosViajeConfig':    return json(await getFondosViajeConfig());
+      case 'adminSetFondosViajeConfig': return json(await adminSetFondosViajeConfig(params));
       // Mi Liga — roster con categoría actual (adminGetRosterEquipo ya existente no trae `categoria`, sin tocarla)
       case 'adminGetCategorias': {
         const adminEmail = await _validarAdminToken(params.adminToken);
