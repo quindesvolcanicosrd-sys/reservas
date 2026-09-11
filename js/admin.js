@@ -541,6 +541,11 @@ var ADMIN_TILE_INFO = {
     bubbleId: 'admin-burbuja-tiers',
     listaId: 'ml-tiers-lista',
     cargar: function() { _mlIrSeccion(); }
+  },
+  'admin-cuota-excepciones': {
+    bubbleId: 'admin-burbuja-cuota-excepciones',
+    listaId: 'admin-cuotaexc-lista',
+    cargar: function() { adminCargarCuotaExcepciones(); }
   }
 };
 
@@ -963,6 +968,143 @@ function adminCambiarEstadoExcepcion(id, estado, btn) {
       adminRenderExcepciones();
     } else { btn.disabled = false; mostrarToast(res.error || 'Error al actualizar.', 'error'); }
   }, function(e) { btn.disabled = false; mostrarToast(e.message || 'Error al actualizar.', 'error'); });
+}
+
+// ── Excepciones de cuota (Mi Liga, feat nueva) -- distinta de "Excepciones
+// de pago" (arriba, `solicitudes_excepcion` -- una PERSONA pide una
+// excepción por ausencias/dificultad económica para que el admin la
+// revise): acá el admin marca DIRECTO, sin solicitud de por medio, a una
+// persona Quindes o Mirlxs como exenta de un mes puntual, o registra que ya
+// lo pagó por fuera del sistema de reservas mensuales -- tabla propia
+// `cuota_excepcion` (ver supabase/migrations/20260910191527_cuota_excepcion.sql).
+// Mismo patrón que Cupones (`_admUsuariosCupones`/`_adminRenderCupones()`,
+// más abajo en este archivo): roster + estado ya cargados en memoria,
+// re-render completo tras cada cambio (sin re-fetch), `confirm()`/`prompt()`
+// antes de aplicar -- sin toggle de input propio en el DOM, el `prompt()`
+// nativo ya cubre "un pequeño input para el monto" con mucho menos código.
+var _admCuotaExcMes = '';
+var _admCuotaExcRoster = []; // solo personas con categoria Quindes/Mirlxs
+var _admCuotaExcExcepciones = []; // excepciones del mes seleccionado (_admCuotaExcMes)
+
+function _admCuotaExcMesActualIso() { return new Date().toISOString().slice(0, 7); }
+
+// Mismo criterio "solo el año en curso" que generarMeses()/js/ui.js (esa
+// limitación ya documentada en varios lugares de este repo) -- un admin que
+// necesite ajustar un mes de otro año no está cubierto por este selector,
+// caso borde fuera de alcance de este pedido.
+function _admCuotaExcPoblarSelectMes() {
+  var sel = document.getElementById('admin-cuotaexc-mes');
+  if (!sel) return;
+  var anio = new Date().getFullYear();
+  var html = '';
+  for (var m = 0; m < 12; m++) {
+    var valor = anio + '-' + (m + 1 < 10 ? '0' + (m + 1) : '' + (m + 1));
+    html += '<option value="' + valor + '">' + NOMBRES_MESES[m] + ' ' + anio + '</option>';
+  }
+  sel.innerHTML = html;
+}
+
+function adminCargarCuotaExcepciones() {
+  _admCuotaExcMes = _admCuotaExcMesActualIso();
+  _admCuotaExcPoblarSelectMes();
+  var sel = document.getElementById('admin-cuotaexc-mes');
+  if (sel) sel.value = _admCuotaExcMes;
+  adminApi({ action: 'getEquipo' }, function(res) {
+    // `p.rol` (no `p.categoria`) -- getEquipo() (Edge Function) devuelve la
+    // columna `equipo.categoria` mapeada a `rol` en su salida (ver
+    // `personasOut`, supabase/functions/api/index.ts), 'Quindes'/'Mirlxs'
+    // capitalizado -- mismo campo que ya usa js/equipo.js para lo mismo.
+    _admCuotaExcRoster = (res.personas || []).filter(function(p) {
+      var modo = (p.rol || '').toLowerCase();
+      return modo === 'quindes' || modo === 'mirlxs';
+    });
+    _adminCuotaExcCargarExcepcionesDelMes();
+  }, function(e) { mostrarToast(e.message || 'Error al cargar el roster.', 'error'); });
+}
+
+function _adminCuotaExcCargarExcepcionesDelMes() {
+  adminApi({ action: 'listarExcepcionesCuota', mes: _admCuotaExcMes }, function(res) {
+    _admCuotaExcExcepciones = (res && res.excepciones) || [];
+    adminRenderCuotaExcepciones();
+  }, function(e) { mostrarToast(e.message || 'Error al cargar excepciones.', 'error'); });
+}
+
+// onchange del <select> de mes (index.html) -- mismo criterio de skeleton
+// mientras carga que _adminAbrirBurbuja() usa al abrir cualquier tile.
+function adminCambiarMesCuotaExcepciones(valor) {
+  _admCuotaExcMes = valor;
+  var lista = document.getElementById('admin-cuotaexc-lista');
+  if (lista) lista.innerHTML = _skeletonQueLlevarHtml();
+  _adminCuotaExcCargarExcepcionesDelMes();
+}
+
+function _admCuotaExcEstadoTexto(exc) {
+  if (!exc) return 'Sin excepción';
+  if (exc.tipo === 'exenta') return 'Exenta este mes';
+  return 'Ya pagó' + (exc.monto != null ? ' ($' + exc.monto + ')' : '');
+}
+
+function adminRenderCuotaExcepciones() {
+  var cont = document.getElementById('admin-cuotaexc-lista');
+  if (!cont) return;
+  if (!_admCuotaExcRoster.length) {
+    cont.innerHTML = '<p style="text-align:center;color:var(--muted);padding:20px 0;">No hay miembros Quindes o Mirlxs.</p>';
+    return;
+  }
+  var porMiembro = {};
+  _admCuotaExcExcepciones.forEach(function(x) { porMiembro[x.idMiembro] = x; });
+  var html = _admCuotaExcRoster.map(function(p) {
+    var exc = porMiembro[p.nombre];
+    var nombreEsc = p.nombre.replace(/'/g, "\\'");
+    var badgeClase = !exc ? 'badge-cancelada' : (exc.tipo === 'exenta' ? 'badge-confirmada' : 'badge-pendiente');
+    return '<div class="reserva-card">' +
+      '<div class="reserva-header"><span class="reserva-fecha">' + _admEscHtml(p.nombreDerby || p.nombre) + '</span>' +
+        '<span class="badge ' + badgeClase + '">' + _admEscHtml(_admCuotaExcEstadoTexto(exc)) + '</span></div>' +
+      '<div style="display:flex;gap:8px;margin-top:10px;">' +
+        '<button class="btn btn-outline" style="padding:11px;font-size:0.8rem;flex:1;" onclick="adminCuotaExcMarcarPago(\'' + nombreEsc + '\')">Ya pagó</button>' +
+        '<button class="btn btn-outline" style="padding:11px;font-size:0.8rem;flex:1;" onclick="adminCuotaExcMarcarExenta(\'' + nombreEsc + '\')">Exenta</button>' +
+        (exc ? '<button class="btn-cancelar" style="margin-top:0;padding:11px;font-size:0.8rem;flex:1;" onclick="adminCuotaExcQuitar(\'' + nombreEsc + '\')">Quitar excepción</button>' : '') +
+      '</div>' +
+    '</div>';
+  }).join('');
+  cont.innerHTML = html;
+}
+
+// `monto` -- number o null, NUNCA se manda como `null` literal en `adminApi()`
+// (esta app arma la query a mano con `encodeURIComponent(params[k])`, ver
+// js/api.js -- un `null` real se convertiría en el string `"null"`) -- se
+// omite el parámetro entero cuando no aplica, mismo criterio que ya usa el
+// resto de este archivo para params opcionales (ej. `notaAdmin` en
+// adminSetEstadoExcepcion(), arriba).
+function _admCuotaExcGuardar(idMiembro, tipo, monto) {
+  var params = { action: 'guardarExcepcionCuota', idMiembro: idMiembro, mes: _admCuotaExcMes, tipo: tipo };
+  if (monto != null) params.monto = monto;
+  adminApi(params, function(res) {
+    if (!res.exito) { mostrarToast(res.error || 'Error al guardar la excepción.', 'error'); return; }
+    _admCuotaExcExcepciones = _admCuotaExcExcepciones.filter(function(x) { return x.idMiembro !== idMiembro; });
+    if (tipo) _admCuotaExcExcepciones.push({ idMiembro: idMiembro, mes: _admCuotaExcMes, tipo: tipo, monto: monto });
+    adminRenderCuotaExcepciones();
+    mostrarToast(tipo ? 'Excepción guardada.' : 'Excepción eliminada.', 'ok');
+  }, function(e) { mostrarToast(e.message || 'Error al guardar la excepción.', 'error'); });
+}
+
+function adminCuotaExcMarcarPago(idMiembro) {
+  var texto = prompt('¿Cuánto pagó? (dejalo vacío si no querés registrar un monto)');
+  if (texto === null) return; // canceló el prompt
+  var textoLimpio = texto.trim();
+  var monto = textoLimpio === '' ? null : Number(textoLimpio.replace(',', '.'));
+  if (monto !== null && (isNaN(monto) || monto < 0)) { mostrarToast('Monto inválido.', 'error'); return; }
+  _admCuotaExcGuardar(idMiembro, 'pago', monto);
+}
+
+function adminCuotaExcMarcarExenta(idMiembro) {
+  if (!confirm('¿Marcar a esta persona como exenta de la cuota de este mes?')) return;
+  _admCuotaExcGuardar(idMiembro, 'exenta', null);
+}
+
+function adminCuotaExcQuitar(idMiembro) {
+  if (!confirm('¿Quitar la excepción de cuota de esta persona para este mes?')) return;
+  _admCuotaExcGuardar(idMiembro, '', null);
 }
 
 // ── Solicitudes de lesión (Cambio 54, auto-reporte de usuario + aprobación

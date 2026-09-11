@@ -2075,6 +2075,66 @@ async function adminSetExentaCuota(params: Record<string, any>): Promise<Record<
   return { exito: true };
 }
 
+// ─── Acciones: excepciones de cuota (admin marca a una persona Quindes/
+// Mirlxs como exenta de un mes puntual, o registra que ya lo pagó por
+// fuera del sistema de reservas mensuales) -- tabla propia `cuota_excepcion`
+// (ver supabase/migrations/20260910191527_cuota_excepcion.sql), sin tocar
+// `reservas`/`_evMesPagado()`. Distinta de `solicitudes_excepcion` (arriba,
+// "ausencias justificadas"/"dificultad económica" -- una PERSONA pide una
+// excepción para que el admin la revise); esto es la acción directa del
+// admin, sin solicitud de por medio, siempre atada a un mes calendario
+// concreto.
+//
+// listarExcepcionesCuota: SIN admin gate a propósito -- js/eventos.js la
+// llama para TODA cuenta logueada al cargar sesión (_evTieneCuotaAlDia()
+// necesita saber si la propia cuenta tiene una excepción este mes), mismo
+// criterio "directorio visible para cualquier cuenta logueada, sin token"
+// que ya usa getEquipo()/getNombres() (ver esos comentarios) -- ninguna
+// acción de solo lectura de este archivo exige sesión.
+async function listarExcepcionesCuota(params: Record<string, any>): Promise<Record<string, any>> {
+  const mes = String(params.mes ?? '').trim();
+  const { data, error } = mes
+    ? await supabase.from('cuota_excepcion').select('id_miembro, mes, tipo, monto, notas, creado_en').eq('mes', mes)
+    : await supabase.from('cuota_excepcion').select('id_miembro, mes, tipo, monto, notas, creado_en');
+  if (error) return { error: error.message };
+  return {
+    excepciones: (data ?? []).map((r: any) => ({
+      idMiembro: r.id_miembro, mes: r.mes, tipo: r.tipo, monto: r.monto, notas: r.notas ?? '', creadoEn: r.creado_en,
+    })),
+  };
+}
+
+// guardarExcepcionCuota: admin-only (`adminSetExentaCuota()`, arriba, mismo
+// criterio). Upsert por (id_miembro, mes) -- el índice único de la
+// migración es lo que hace que `onConflict` resuelva a UPDATE en vez de
+// duplicar la fila. `tipo` vacío/null borra la excepción en vez de
+// guardarla (equivalente a "Quitar excepción" del frontend) -- así el
+// mismo endpoint cubre los 3 botones ("Ya pagó"/"Exenta"/"Quitar
+// excepción") sin necesitar una acción de borrado aparte. `monto` se
+// descarta (queda `null`) salvo con `tipo:'pago'` -- 'exenta' nunca debería
+// llevar un monto (ver el `check` de la migración, que sí permite null en
+// cualquier caso, pero no tiene sentido guardar un monto con una exención).
+async function guardarExcepcionCuota(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const idMiembro = String(params.idMiembro ?? '').trim();
+  const mes = String(params.mes ?? '').trim();
+  if (!idMiembro || !mes) return { exito: false, error: 'Parámetros inválidos.' };
+  const tipo = String(params.tipo ?? '').trim();
+  if (!tipo) {
+    const { error } = await supabase.from('cuota_excepcion').delete().eq('id_miembro', idMiembro).eq('mes', mes);
+    if (error) return { exito: false, error: error.message };
+    return { exito: true };
+  }
+  if (!['pago', 'exenta'].includes(tipo)) return { exito: false, error: 'Tipo de excepción inválido.' };
+  const monto = tipo === 'pago' && params.monto != null && params.monto !== '' ? Number(params.monto) : null;
+  const notas = params.notas != null && params.notas !== '' ? String(params.notas) : null;
+  const { error } = await supabase.from('cuota_excepcion')
+    .upsert({ id_miembro: idMiembro, mes, tipo, monto, notas }, { onConflict: 'id_miembro,mes' });
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
 // Diferencia en horas entre 2 strings "HH:MM" (o "HH:MM:SS", el formato real
 // que devuelve un `time` de Postgres -- se ignoran los segundos) -- 0 si
 // cualquiera de los 2 falta o no parsea, en vez de tirar NaN a `equipo.horas_ano`.
@@ -4127,6 +4187,8 @@ Deno.serve(async (req: Request) => {
       case 'adminSetEstadoMiembro':          return json(await adminSetEstadoMiembro(params));
       case 'adminSetTierModo':               return json(await adminSetTierModo(params));
       case 'adminSetExentaCuota':            return json(await adminSetExentaCuota(params));
+      case 'listarExcepcionesCuota':         return json(await listarExcepcionesCuota(params));
+      case 'guardarExcepcionCuota':          return json(await guardarExcepcionCuota(params));
       case 'recalcularStatsEquipo':          return json(await recalcularStatsEquipo(params));
       case 'adminRecalcularStats':           return json(await adminRecalcularStats(params));
       case 'adminRecalcularPuntosAsistencia': return json(await adminRecalcularPuntosAsistencia(params));

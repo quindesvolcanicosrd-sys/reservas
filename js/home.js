@@ -1,4 +1,15 @@
 var _todasReservas = [];
+// Excepciones de cuota del mes actual (feat nueva, admin -- ver
+// MANIFEST.md/supabase/migrations/20260910191527_cuota_excepcion.sql):
+// cargadas acá, junto al resto de los datos de sesión (equipo/reservas),
+// para que ya estén en memoria cuando _evTieneCuotaAlDia()/js/eventos.js
+// las necesite -- esa función es síncrona (se llama inline desde un montón
+// de renders de Eventos, nunca con callback), así que no puede disparar su
+// propio fetch bajo demanda. Array de `{idMiembro, mes, tipo, monto, notas,
+// creadoEn}` -- SIN filtrar por persona (mismo shape que devuelve
+// listarExcepcionesCuota), _evTieneCuotaAlDia() filtra por E.nombre/mes acá
+// mismo en el cliente.
+var _CUOTA_EXCEPCIONES = [];
 var _proximosData = {};
 var _wpComprobanteEnviado = false;
 var _MESES_MAP = {enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11};
@@ -35,6 +46,14 @@ function prepararHome(saltarFadeInicial, onListo) {
   // re-render de Home) -- así los datos ya están en memoria cuando navegue
   // a la tab Equipo, en vez de recién arrancar el fetch en ese momento.
   if (!_eqYaInicializado && typeof _eqInit === 'function') _eqInit();
+  // Excepciones de cuota del mes actual (ver declaración de
+  // _CUOTA_EXCEPCIONES más arriba) -- fire-and-forget, mismo criterio que
+  // getCuponDisponible() más abajo en esta función: no bloquea el render de
+  // Home, y sin éxito deja el array vacío (_evTieneCuotaAlDia() sigue
+  // funcionando igual que antes de esta feature, solo sin la excepción).
+  api({ action: 'listarExcepcionesCuota', mes: new Date().toISOString().slice(0, 7) }, function(res) {
+    _CUOTA_EXCEPCIONES = (res && res.excepciones) || [];
+  }, function() { _CUOTA_EXCEPCIONES = []; });
   var saludoEl = document.getElementById('home-saludo');
   if (saludoEl) saludoEl.textContent = E.nombre + '!';
   var homeContent = document.getElementById('home-reservas-lista');

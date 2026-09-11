@@ -3099,6 +3099,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">military_tech</span></div>
         <div class="admin-dash-tile-label">Categorías</div>
       </div>
+      <div class="admin-dash-tile admin-dash-pill" data-tile="admin-cuota-excepciones" onclick="adminToggleBurbuja('admin-cuota-excepciones', this)">
+        <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">event_available</span></div>
+        <div class="admin-dash-tile-label">Excepciones de cuota</div>
+      </div>
     </div>
 
     <!-- Burbuja "Precios de clases". -->
@@ -3214,6 +3218,23 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div id="ml-miembros-lista"></div>
     </div>
 
+    <!-- Burbuja "Excepciones de cuota" (feat nueva) -- distinta de
+         "Excepciones de pago" (arriba, solicitudes de la persona para que el
+         admin revise): acá el admin marca DIRECTO a una persona Quindes o
+         Mirlxs como exenta de un mes puntual, o registra que ya lo pagó por
+         fuera del sistema de reservas mensuales -- ver
+         supabase/migrations/20260910191527_cuota_excepcion.sql y
+         adminCargarCuotaExcepciones()/js/admin.js. Mismo componente
+         .admin-tile-bubble que las demás, cards .reserva-card (mismo look
+         que Cupones/Excepciones de pago, arriba). -->
+    <div id="admin-burbuja-cuota-excepciones" class="admin-tile-bubble" style="display:none;">
+      <div class="admin-tile-bubble-header"><span class="material-symbols-outlined">event_available</span> Excepciones de cuota</div>
+      <div class="select-wrapper" style="margin-bottom:12px;">
+        <select id="admin-cuotaexc-mes" onchange="adminCambiarMesCuotaExcepciones(this.value)"></select>
+      </div>
+      <div id="admin-cuotaexc-lista"></div>
+    </div>
+
     <!-- Copiar link de registro-express/ -- .btn-text-simple, mismo botón
          "secundario" que ya usa Mi Liga (ver "Agregar administradorx"/
          "Agregar talla"/"Actualizar" en esta misma pantalla), no .btn-outline/
@@ -3290,14 +3311,14 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=397ac228"></script>
-<script src="js/eventos.js?v=42d4f40a"></script>
+<script src="js/eventos.js?v=0ac3af13"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=63a97793"></script>
 <script src="js/equipo.js?v=372588f2"></script>
-<script src="js/home.js?v=dec52978"></script>
+<script src="js/home.js?v=64325560"></script>
 <script src="js/reservas.js?v=cacf57bd"></script>
 <script src="js/perfil.js?v=d2df3c5b"></script>
-<script src="js/admin.js?v=5fa9666b"></script>
+<script src="js/admin.js?v=e70dd2c5"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js?v=d18bc0da"></script>
 

@@ -4285,7 +4285,24 @@ function _evUpdateRsvpSliders(animate) {
 // campo/parseo (`r.validezHasta` vía `_parseFechaSimple()`, formato real
 // `d/m/aaaa`, NO ISO -- `new Date(...)` directo sobre ese string da
 // `Invalid Date`/fecha mal interpretada).
+// Excepción de cuota (feat nueva, admin -- ver MANIFEST.md/
+// supabase/migrations/20260910191527_cuota_excepcion.sql): un admin marcó a
+// ESTA persona como exenta del mes actual o ya pagó ese mes por fuera del
+// sistema de reservas mensuales -- gana antes que cualquier otro chequeo de
+// abajo (`exenta_cuota` persistente, o la reserva mensual real). `mes` usa
+// el mismo formato ISO "aaaa-mm" que ya arma `wizExcEnviar()`/js/perfil.js
+// (`mesAplicacion: new Date().toISOString().slice(0, 7)`) -- consistente
+// con el mes que `prepararHome()`/js/home.js pidió al cargar
+// `_CUOTA_EXCEPCIONES`. `x.tipo` solo puede ser 'pago'/'exenta' en la BD (el
+// `check` de la migración no permite otro valor, y una fila borrada
+// simplemente deja de existir) -- el chequeo explícito de los 2 valores es
+// redundante en la práctica, pero documenta la intención sin depender de
+// esa restricción para seguir siendo correcto si algún día cambia.
 function _evTieneCuotaAlDia() {
+  var _cuotaExcMes = new Date().toISOString().slice(0, 7);
+  if ((_CUOTA_EXCEPCIONES || []).some(function(x) {
+    return x.idMiembro === E.nombre && x.mes === _cuotaExcMes && (x.tipo === 'pago' || x.tipo === 'exenta');
+  })) return true;
   if (E.datos && (E.datos.exenta_cuota || E.datos.estado_miembro === 'Técnico' || E.datos.estado_miembro === 'Lesionadx')) return true;
   var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   return (_todasReservas || []).some(function(r) {
