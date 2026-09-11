@@ -843,8 +843,15 @@ function _eqPasaBusqueda(p) {
   // vista normal (Favoritos/grupos), solo cambia el campo contra el que
   // compara.
   if (_eqBusqueda.indexOf('@') !== -1) return (p.email || '').toLowerCase().indexOf(_eqBusqueda) !== -1;
-  return p.nombreDerby.toLowerCase().indexOf(_eqBusqueda) !== -1 ||
-    p.username.toLowerCase().indexOf(_eqBusqueda) !== -1;
+  // Bug real corregido (ver MANIFEST.md -- ".toLowerCase() sobre un campo no
+  // string rompía el panel de detalle", mismo tipo de guard ya aplicado en
+  // _eqStatsContenidoHtml()): `nombreDerby`/`username` deberían llegar
+  // siempre string desde getEquipo() (`?? ''`/columna NOT NULL), pero un
+  // dato incompleto (snapshot offline viejo, ver js/offline.js) podía dejar
+  // cualquiera de los 2 en `null`/`undefined` -- sin guard, buscar con la
+  // lista ya cargada rompía toda la búsqueda, no solo esa fila.
+  return (p.nombreDerby || '').toLowerCase().indexOf(_eqBusqueda) !== -1 ||
+    (p.username || '').toLowerCase().indexOf(_eqBusqueda) !== -1;
 }
 // Vista alternativa "por rol" (Batch 4) -- un acordeón por rol real (mismas
 // clases `.eq-grupo*` que ya usan Quindes/Mirlxs, "reutilizá el patrón de
@@ -2388,8 +2395,18 @@ function _eqStatsContenidoHtml(p) {
   // vacío) -- exactamente al revés de la intención ("solo con equipo
   // propio"). Comparación explícita, mismo criterio que ya usa
   // `js/perfil.js` para estos mismos campos.
+  // Bug real corregido (ver MANIFEST.md -- ".toLowerCase() sobre un campo no
+  // string rompía el panel de detalle"): `p.necesitaProtecciones` puede
+  // llegar boolean (no solo `''`/`null`/`undefined`, que el `!!` de la
+  // izquierda ya cortaba antes de llegar acá) -- un boolean `true` PASA el
+  // chequeo de truthiness pero no tiene `.toLowerCase()` (solo `String`s la
+  // tienen), tirando `TypeError: p.necesitaProtecciones.toLowerCase is not
+  // a function`. `String(p.necesitaProtecciones || '')` normaliza a texto
+  // ANTES de comparar, sin cambiar el resultado para los casos reales
+  // (string "Sí"/"No"/lista parcial, ver comentario de arriba).
+  var necesitaProteccionesTxt = String(p.necesitaProtecciones || '').toLowerCase();
   var necesitaEquipoClub = p.necesitaPatines === 'Sí' ||
-    (!!p.necesitaProtecciones && p.necesitaProtecciones.toLowerCase() !== 'no');
+    (!!p.necesitaProtecciones && necesitaProteccionesTxt !== 'no');
   // Pill de tier DENTRO del termómetro (pedido explícito, "acá estás vos")
   // -- reemplaza el texto plano del lado que coincide con `p.rol`, mismo
   // `.eq-mis-stats-rol-pill` (var(--brand), ya destacado) que antes vivía
@@ -3418,10 +3435,20 @@ function _eqConfirmarAdminCancelar() {
 // vez de depender de que perfil.js ya haya cargado (carga DESPUÉS de
 // equipo.js, ver orden de scripts en index.html), mismo criterio ya usado
 // por _fechaCalendarioATexto()/js/home.js.
+// Bug real corregido (ver MANIFEST.md -- "métodos de string sobre campos no
+// string rompían el panel de detalle"): `iso` llega siempre truthy (el
+// único caller, `_eqPerfilContenidoHtml()`, ya hace `if (p.fechaIngreso)`
+// antes de llamar), pero truthy no es lo mismo que string -- `fecha_ingreso`
+// debería ser siempre un `date` de Postgres (string "aaaa-mm-dd" real vía
+// Supabase JS), pero sin garantía real contra un dato incompleto/legado
+// (snapshot offline viejo, ver js/offline.js). `String(iso || '')` normaliza
+// antes de `.split()`; sin 3 partes reales (fecha corrupta/no-ISO), se
+// devuelve `''` en vez de romper con `p[2].replace is not a function`.
 function _eqFormatearFechaIngreso(iso) {
-  var p = iso.split('-');
+  var partes = String(iso || '').split('-');
+  if (partes.length < 3) return '';
   var meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-  return p[2].replace(/^0/, '') + ' de ' + meses[+p[1] - 1] + ' de ' + p[0];
+  return partes[2].replace(/^0/, '') + ' de ' + meses[+partes[1] - 1] + ' de ' + partes[0];
 }
 
 function _eqPerfilContenidoHtml(p) {
