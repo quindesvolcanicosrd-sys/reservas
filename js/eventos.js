@@ -311,6 +311,21 @@ function _evMapEventoBackend(raw) {
   var miEstado = null, miAsistenciaReal = null;
   var asistentes = [], rsvps = [];
   (raw.asistencias || []).forEach(function(a) {
+    // Bug real corregido (ver MANIFEST.md -- "usuario con '?' y sin nombre
+    // en asistentes de eventos"): RSVP/marca real huérfana -- `a.nombre`
+    // (id_miembro de `log_asistencias`) ya no tiene fila en `equipo` (cuenta
+    // eliminada, sin cascada sobre `log_asistencias`) -- `getEventosRango()`
+    // (backend) ahora manda `existeEnEquipo` explícito para este caso
+    // (`=== false` estricto, no solo falsy -- un backend viejo sin deployar
+    // este campo todavía no lo manda, `undefined` no debe filtrar nada). Se
+    // descarta ACÁ, antes de separar en asistentes/rsvps -- un solo punto
+    // de filtrado que cubre TODOS los renders que consumen esos 2 arrays
+    // (`_evGrupoAsistenciaHtml()`/`_evAsistentesFilasHtml()`/
+    // `_evRsvpAccordionHtml()`/etc.), en vez de agregar el mismo chequeo en
+    // cada uno. No puede afectar `miEstado`/`miAsistenciaReal` (la cuenta
+    // logueada, `E.nombre`, por definición SÍ existe en `equipo` -- nunca es
+    // ella la que se descarta acá).
+    if (a.existeEnEquipo === false) return;
     if (_EV_ESTADOS_ROLLCALL.indexOf(a.estado) !== -1) {
       asistentes.push({ nombre: a.nombre, estado: a.estado, nombreDerby: a.nombreDerby || '', fotoPerfil: a.fotoPerfil || '' });
       if (_evNombresCoinciden(a.nombre, E.nombre)) miAsistenciaReal = a.estado;
@@ -2635,7 +2650,18 @@ var _EV_GRUPOS_ASISTENCIA_REAL = [
 // (A horario/Tarde), así que la opción activa sale directo de ahí, sin
 // recalcular nada. Toca `_evMarcarAsistenciaAdmin()`, la MISMA función ya
 // usada por el roster de la subpantalla -- sin ninguna acción nueva.
+// Bug real corregido (ver MANIFEST.md -- "usuario con '?' y sin nombre en
+// asistentes de eventos"): filtro defensivo de "fantasmas" -- una persona
+// sin `nombre` NI `nombreDerby` no tiene nada real que mostrar (ni texto ni
+// letra de avatar, cae al "?" de `_avatarSetFotoOInicial()`/js/ui.js) y
+// antes hasta podía romper esta función (`p.nombre.replace(...)` sobre
+// `undefined`). El filtrado real de huérfanos ya pasa por
+// `_evMapEventoBackend()` (`existeEnEquipo`, más arriba en este archivo) --
+// esto es una 2da capa, más barata que confiar en que TODO dato que llegue
+// acá haya pasado por ese filtro (ej. un snapshot offline cacheado antes de
+// este fix, ver js/offline.js).
 function _evGrupoAsistenciaHtml(label, personas, grupoKey, clase, conToggle, idEvento) {
+  personas = (personas || []).filter(function(p) { return !!(p.nombre || p.nombreDerby); });
   if (!personas.length) return '';
   var claseFila = 'ev-asist-persona-' + clase.replace('ev-stat-', '');
   var filas = personas.map(function(p) {
@@ -4663,7 +4689,11 @@ function _evAsistAdminToggle(id) {
 // no declara `display` propio, así que `width`/`height` no aplicarían sobre
 // un elemento inline.
 function _evAcordHeaderAvataresHtml(personas) {
-  var visibles = (personas || []).slice(0, 5);
+  // Filtro de fantasmas (ver MANIFEST.md -- "usuario con '?' y sin nombre en
+  // asistentes de eventos"), mismo criterio defensivo que el resto de los
+  // renders de asistentes de este archivo.
+  personas = (personas || []).filter(function(p) { return !!(p.nombre || p.nombreDerby); });
+  var visibles = personas.slice(0, 5);
   var resto = (personas || []).length - visibles.length;
   var avatares = visibles.map(function(p) {
     var nombreAttr = String(p.nombre).replace(/"/g, '&quot;');
@@ -4678,7 +4708,11 @@ function _evAcordHeaderAvataresHtml(personas) {
 // reconstruir el resto de la card (botón "Tomar asistencia" + header con
 // contador, que ya se actualizaba aparte vía _evActualizarContadorAsistAdmin()).
 function _evAsistentesFilasHtml(e) {
-  var asistentes = e.asistentes || [];
+  // Filtro de fantasmas (ver MANIFEST.md -- "usuario con '?' y sin nombre en
+  // asistentes de eventos") -- mismo criterio defensivo que
+  // _evGrupoAsistenciaHtml()/_evPintarStatsAsistencia(), 2da capa detrás del
+  // filtrado real en _evMapEventoBackend() (`existeEnEquipo`).
+  var asistentes = (e.asistentes || []).filter(function(p) { return !!(p.nombre || p.nombreDerby); });
   return asistentes.map(function(a) {
     // Puntualidad (a.estado) + rol (RSVP original de esa persona, si lo
     // hay) combinados -- ver _evLabelPuntualidadRol(). El badge de color
@@ -4737,7 +4771,10 @@ var _EV_GRUPOS_RSVP_CARD = [
   { estado: 'No jugador', label: 'No jugador', clase: 'ev-rsvp-no-jugador' }
 ];
 function _evRsvpAccordionHtml(e) {
-  var rsvps = e.rsvps || [];
+  // Filtro de fantasmas (ver MANIFEST.md -- "usuario con '?' y sin nombre en
+  // asistentes de eventos"), mismo criterio defensivo que el resto de los
+  // renders de asistentes de este archivo.
+  var rsvps = (e.rsvps || []).filter(function(p) { return !!(p.nombre || p.nombreDerby); });
   if (!rsvps.length) return '';
   var abierto = _evAsistAdminAbierto === e.id;
   var filas = _EV_GRUPOS_RSVP_CARD.map(function(g) {
@@ -6883,7 +6920,17 @@ var _evDetalleFiltroGrupo = null;
 // "Ausentes" (ver "Cambios recientes", punto 1/2 del pedido de Victor) -- y
 // propaga el toggle inline a cada fila de personas de la lista de abajo
 // (`_evGrupoAsistenciaHtml()`, punto 3).
+// Bug real corregido (ver MANIFEST.md -- "usuario con '?' y sin nombre en
+// asistentes de eventos"): filtro de fantasmas acá, ANTES de repartir
+// `g.personas` entre el conteo de las stat cards y la lista de abajo
+// (`_evGrupoAsistenciaHtml()`) -- filtrar solo en la lista (donde también
+// hay un filtro defensivo, ver ese comentario) hubiera dejado el número de
+// la stat card ("5 asisten") sin coincidir con las filas reales debajo (4,
+// si 1 era un fantasma). Un solo punto de filtrado para los 2 consumidores.
 function _evPintarStatsAsistencia(grupos, conToggle, idEvento) {
+  grupos = grupos.map(function(g) {
+    return { key: g.key, label: g.label, clase: g.clase, personas: (g.personas || []).filter(function(p) { return !!(p.nombre || p.nombreDerby); }) };
+  });
   var stats = document.getElementById('ev-detalle-stats');
   if (stats) {
     stats.innerHTML = grupos.filter(function(g) { return g.personas.length > 0; }).map(function(g) {

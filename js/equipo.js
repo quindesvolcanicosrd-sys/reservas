@@ -160,6 +160,24 @@ var _eqBusqueda = '';
 
 function _eqEsc(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
 
+// Bug real corregido (ver MANIFEST.md -- "card de un miembro no abre el
+// panel de detalle"): `p.id`/`p.username` (el username real, ver
+// `_eqAbrirPerfil()` más abajo) se embebía CRUDO dentro de un argumento de
+// comillas simples de un `onclick`/`onchange` inline (`onclick="_eqAbrirPerfil('`
+// + p.id + `')"`, `_eqFilaHtml()` y el resto de este archivo) -- un
+// username/nombre con un apostrofe real (confirmado con un caso mínimo,
+// `fem'me fatale`) corta el string de JS antes de tiempo: el navegador tira
+// `Uncaught SyntaxError: missing ) after argument list` recién AL TOCAR la
+// card (el atributo en sí se parsea bien, es contenido HTML válido -- el
+// error solo aparece cuando el handler se ejecuta) y el tap no hace nada,
+// sin ningún otro indicio en pantalla. Mismo criterio que ya usaba
+// `_eqDesgloseOnclick()` (más abajo en este archivo) para su propio
+// argumento, generalizado acá para reusar en cualquier onclick/onchange que
+// embeba un id/username crudo -- a diferencia de `_eqEsc()` (arriba,
+// protege atributos de comillas DOBLES), esta protege el argumento de JS de
+// comillas SIMPLES en sí.
+function _eqEscId(s) { return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+
 function _eqPersonaPorId(id) {
   return _eqPersonas.filter(function(p) { return p.id === id; })[0] || null;
 }
@@ -692,20 +710,22 @@ function _eqStatsInlineHtml(p) {
 function _eqFilaHtml(p) {
   var fav = _eqEsFavorito(p.id);
   var statsHtml = _eqStatsInlineHtml(p);
+  var idJs = _eqEscId(p.id); // seguro dentro de un argumento de onclick de comillas simples
+  var idAttr = _eqEsc(p.id); // seguro dentro de un atributo HTML de comillas dobles (data-eq-fav)
   // Bug real corregido (ver MANIFEST.md -- "no mostrar '#' si el usuario no
   // tiene número de derby"): `numeroDerby` puede llegar `null`/`undefined`/
   // `''` (getEquipo(), `numero_derby ?? ''`) -- antes se concatenaba
   // igual, mostrando un "#" pelado sin número al lado del nombre.
   var numeroHtml = (p.numeroDerby !== null && p.numeroDerby !== undefined && p.numeroDerby !== '')
     ? ' <span class="eq-miembro-numero">#' + p.numeroDerby + '</span>' : '';
-  return '<div class="eq-miembro-fila" onclick="_eqAbrirPerfil(\'' + p.id + '\')">' +
+  return '<div class="eq-miembro-fila" onclick="_eqAbrirPerfil(\'' + idJs + '\')">' +
       _eqAvatarConTendenciaHtml(p, 'avatar-pill--sm', 'eq-tendencia-badge--card') +
       '<div class="eq-miembro-info">' +
         '<div class="eq-miembro-nombre">' + _eqEsc(p.nombreDerby) + numeroHtml + '</div>' +
         '<div class="eq-miembro-username">@' + _eqEsc(p.username) + '</div>' +
         (statsHtml ? '<div class="eq-miembro-stats">' + statsHtml + '</div>' : '') +
       '</div>' +
-      '<button type="button" class="eq-fav-btn' + (fav ? ' activo' : '') + '" data-eq-fav="' + p.id + '" onclick="event.stopPropagation();_eqToggleFavorito(\'' + p.id + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '">' +
+      '<button type="button" class="eq-fav-btn' + (fav ? ' activo' : '') + '" data-eq-fav="' + idAttr + '" onclick="event.stopPropagation();_eqToggleFavorito(\'' + idJs + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '">' +
         '<span class="material-symbols-outlined">' + (fav ? 'favorite' : 'favorite_border') + '</span>' +
       '</button>' +
     '</div>';
@@ -2723,6 +2743,8 @@ var _EQ_WA_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" wi
 function _eqNavHtml(p) {
   var fav = _eqEsFavorito(p.id);
   var waUrl = _eqWhatsappUrl(p.prefijo, p.telefono);
+  var idJs = _eqEscId(p.id);
+  var idAttr = _eqEsc(p.id);
   // Bug real corregido (Batch 3, "botón de favoritos en detalle no muestra
   // estado activo") -- `.app-nav-icon-btn` (css/nav.css) no tiene NINGÚN
   // color propio de estado, a diferencia de `.eq-fav-btn.activo` (color:
@@ -2751,7 +2773,7 @@ function _eqNavHtml(p) {
   // desde una copia vieja cacheada por Fastly (ver "Cache-busting" en
   // MANIFEST.md -- estos 2 archivos NO estaban en `CACHEBUST_FILES` hasta
   // este mismo commit, fix aparte, ver ese archivo).
-  var acciones = '<button type="button" class="app-nav-icon-btn eq-nav-fav-btn' + (fav ? ' activo' : '') + '" data-eq-fav="' + p.id + '" onclick="_eqToggleFavorito(\'' + p.id + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '"><span class="material-symbols-outlined">' + (fav ? 'favorite' : 'favorite_border') + '</span></button>';
+  var acciones = '<button type="button" class="app-nav-icon-btn eq-nav-fav-btn' + (fav ? ' activo' : '') + '" data-eq-fav="' + idAttr + '" onclick="_eqToggleFavorito(\'' + idJs + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '"><span class="material-symbols-outlined">' + (fav ? 'favorite' : 'favorite_border') + '</span></button>';
   if (waUrl) {
     acciones += '<a class="app-nav-icon-btn eq-wa-btn" href="' + waUrl + '" target="_blank" rel="noopener" title="WhatsApp">' + _EQ_WA_SVG + '</a>';
   }
@@ -3106,10 +3128,12 @@ function _eqRankTexto(p) {
 // entero, incluido para el propio perfil del admin.
 function _eqTierAdminHtml(p) {
   if (typeof _adminToken === 'undefined' || !_adminToken) return '';
+  var idJs = _eqEscId(p.id);
+  var idAttr = _eqEsc(p.id);
   var modos = ['quinde', 'auto', 'mirlxs'];
   var textos = { quinde: 'Quindes', auto: 'Auto', mirlxs: 'Mirlxs' };
   var botones = modos.map(function(m) {
-    return '<button type="button" class="eq-tier-btn' + (p.tierModo === m ? ' activo' : '') + '" data-modo="' + m + '" onclick="_eqCambiarTier(\'' + p.id + '\',\'' + m + '\')">' + textos[m] + '</button>';
+    return '<button type="button" class="eq-tier-btn' + (p.tierModo === m ? ' activo' : '') + '" data-modo="' + m + '" onclick="_eqCambiarTier(\'' + idJs + '\',\'' + m + '\')">' + textos[m] + '</button>';
   }).join('');
   return '<div class="eq-tier-admin eq-acord">' +
       '<div class="eq-acord-header" onclick="eqToggleAcordeon(this)">' +
@@ -3117,8 +3141,8 @@ function _eqTierAdminHtml(p) {
         '<span class="eq-acord-icono"><span class="material-symbols-rounded">chevron_right</span></span>' +
       '</div>' +
       '<div class="eq-acord-cuerpo">' +
-        '<div class="eq-tier-control" data-id="' + p.id + '">' + botones + '</div>' +
-        '<p class="eq-tier-desc" id="eq-tier-desc-' + p.id + '">' + _eqEsc(_EQ_TIER_DESCRIPCIONES[p.tierModo]) + '</p>' +
+        '<div class="eq-tier-control" data-id="' + idAttr + '">' + botones + '</div>' +
+        '<p class="eq-tier-desc" id="eq-tier-desc-' + idAttr + '">' + _eqEsc(_EQ_TIER_DESCRIPCIONES[p.tierModo]) + '</p>' +
       '</div>' +
     '</div>';
 }
@@ -3189,9 +3213,11 @@ function _eqCambiarTier(id, modo) {
 // admin-only, mismo gate que `_eqTierAdminHtml()`.
 function _eqAdminGestionHtml(p) {
   if (typeof _adminToken === 'undefined' || !_adminToken) return '';
+  var idJs = _eqEscId(p.id);
+  var idAttr = _eqEsc(p.id);
   var estadoActual = _eqEstadoEfectivo(p);
   var botonesEstado = _EQ_ESTADOS.map(function(est) {
-    return '<button type="button" class="eq-estado-btn' + (estadoActual === est ? ' activo' : '') + '" data-estado="' + est + '" onclick="_eqCambiarEstado(\'' + p.id + '\',\'' + est + '\')">' + est + '</button>';
+    return '<button type="button" class="eq-estado-btn' + (estadoActual === est ? ' activo' : '') + '" data-estado="' + est + '" onclick="_eqCambiarEstado(\'' + idJs + '\',\'' + est + '\')">' + est + '</button>';
   }).join('');
   var hint = (estadoActual === 'Ausente' && p.estado !== 'Ausente')
     ? 'Marcada automáticamente como ausente por más de 30 días sin asistir.'
@@ -3216,7 +3242,7 @@ function _eqAdminGestionHtml(p) {
   // `_eqCambiarEstado()` (más abajo) siguen ubicando estos nodos por id
   // (`#eq-tog-cuota-<id>`/`#eq-tog-admin-<id>`/etc.) -- ningún cambio de
   // lógica, solo de posición en el DOM.
-  return '<div class="eq-admin-quindes' + (p.tierModo === 'mirlxs' ? ' eq-oculto' : '') + '" id="eq-admin-q-' + p.id + '">' +
+  return '<div class="eq-admin-quindes' + (p.tierModo === 'mirlxs' ? ' eq-oculto' : '') + '" id="eq-admin-q-' + idAttr + '">' +
       '<div class="eq-admin-sep"></div>' +
       '<div class="eq-admin-campo eq-acord">' +
         '<div class="eq-acord-header" onclick="eqToggleAcordeon(this)">' +
@@ -3225,26 +3251,26 @@ function _eqAdminGestionHtml(p) {
         '</div>' +
         '<div class="eq-acord-cuerpo">' +
           '<div class="eq-estado-opciones">' + botonesEstado + '</div>' +
-          '<p class="eq-admin-hint" id="eq-estado-hint-' + p.id + '">' + hint + '</p>' +
+          '<p class="eq-admin-hint" id="eq-estado-hint-' + idAttr + '">' + hint + '</p>' +
           '<div class="eq-admin-campo--row" style="margin-top:14px;">' +
             '<div>' +
               '<p class="eq-tier-label" style="margin-bottom:2px">Paga cuota</p>' +
-              '<p class="eq-admin-hint" style="margin:0" id="eq-cuota-hint-' + p.id + '">' + (estadoActual === 'Lesionadx' ? 'Exento/a de cuota mientras está Lesionadx.' : 'Indica si está al día con la cuota mensual.') + '</p>' +
+              '<p class="eq-admin-hint" style="margin:0" id="eq-cuota-hint-' + idAttr + '">' + (estadoActual === 'Lesionadx' ? 'Exento/a de cuota mientras está Lesionadx.' : 'Indica si está al día con la cuota mensual.') + '</p>' +
             '</div>' +
-            '<label class="eq-toggle" id="eq-tog-cuota-' + p.id + '">' +
+            '<label class="eq-toggle" id="eq-tog-cuota-' + idAttr + '">' +
               '<input type="checkbox"' + (pagaCuota ? ' checked' : '') + (estadoActual === 'Lesionadx' ? ' disabled' : '') +
-                ' onchange="_eqToggleCuota(\'' + p.id + '\', this.checked)">' +
+                ' onchange="_eqToggleCuota(\'' + idJs + '\', this.checked)">' +
               '<span class="eq-toggle-slider"></span>' +
             '</label>' +
           '</div>' +
           '<div class="eq-admin-campo--row" style="margin-top:14px;">' +
             '<div>' +
               '<p class="eq-tier-label" style="margin-bottom:2px">Admin</p>' +
-              '<p class="eq-admin-hint" style="margin:0" id="eq-admin-hint-' + p.id + '">' + (sinEmail ? 'Sin email registrado -- no se puede dar acceso admin.' : 'Tendrá acceso completo al panel de administración (Mi Liga).') + '</p>' +
+              '<p class="eq-admin-hint" style="margin:0" id="eq-admin-hint-' + idAttr + '">' + (sinEmail ? 'Sin email registrado -- no se puede dar acceso admin.' : 'Tendrá acceso completo al panel de administración (Mi Liga).') + '</p>' +
             '</div>' +
-            '<label class="eq-toggle" id="eq-tog-admin-' + p.id + '">' +
+            '<label class="eq-toggle" id="eq-tog-admin-' + idAttr + '">' +
               '<input type="checkbox"' + (p.esAdminMiembro ? ' checked' : '') + (sinEmail ? ' disabled' : '') +
-                ' onchange="_eqToggleAdmin(\'' + p.id + '\', this.checked, this)">' +
+                ' onchange="_eqToggleAdmin(\'' + idJs + '\', this.checked, this)">' +
               '<span class="eq-toggle-slider"></span>' +
             '</label>' +
           '</div>' +
@@ -3261,7 +3287,7 @@ function _eqAdminGestionHtml(p) {
                 '<p class="eq-tier-label" style="margin-bottom:2px">Activar cuenta</p>' +
                 '<p class="eq-admin-hint" style="margin:0">Genera un link de un solo uso para que vincule su cuenta de Google.</p>' +
               '</div>' +
-              '<button type="button" class="btn-text-simple" style="white-space:nowrap;" onclick="_eqGenerarInviteLink(\'' + p.id + '\')">Generar link</button>' +
+              '<button type="button" class="btn-text-simple" style="white-space:nowrap;" onclick="_eqGenerarInviteLink(\'' + idJs + '\')">Generar link</button>' +
             '</div>'
           ) : '') +
         '</div>' +

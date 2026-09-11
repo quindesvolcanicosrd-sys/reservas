@@ -1323,9 +1323,24 @@ async function getEventosRango(params: Record<string, any>): Promise<Record<stri
     // RSVP de cuentas no-admin/no-quindes, rol combinado en el label de
     // puntualidad) -- filtrar acá de más le borraría esa data sin necesidad.
     const fuenteAsistencia = logAdminReal.length ? logDeEvento : [...logDeEvento, ...(asistEF[idEvento] ?? [])];
+    // Bug real corregido (ver MANIFEST.md -- "usuario con '?' y sin nombre en
+    // asistentes de eventos"): un RSVP/marca real en `log_asistencias` cuyo
+    // `nombre_usuario` ya NO tiene fila en `equipo` (cuenta eliminada,
+    // `adminEliminarUsuario`, sin cascada sobre `log_asistencias` -- el RSVP
+    // queda huérfano) daba `eq = {}` acá, así que `nombreDerby`/`fotoPerfil`
+    // quedaban en `''` pero `a.nombre` (el username crudo) se seguía
+    // mandando tal cual -- el frontend lo mostraba como texto/avatar de
+    // respaldo (ver `(p.nombreDerby || p.nombre)`, js/eventos.js), no un "?"
+    // real, pero sí un fantasma con el nombre de una cuenta que ya no
+    // existe. `existeEnEquipo` (nuevo) es la señal explícita y confiable
+    // ("¿esta persona sigue siendo un miembro real?") que el frontend
+    // necesita para filtrar estos huérfanos ANTES de renderizar
+    // (`_evMapEventoBackend()`) -- más confiable que inferirlo de
+    // `nombreDerby`/`fotoPerfil` vacíos, que también pueden estar vacíos
+    // para un miembro REAL que simplemente no cargó esos datos.
     const asistencias = fuenteAsistencia.map((a: any) => {
-      const eq = equipoPorNombre[String(a.nombre).trim().toUpperCase()] ?? {};
-      return { nombre: a.nombre, estado: a.estado, origen: a.origen, nombreDerby: eq.nombreDerby ?? '', fotoPerfil: eq.fotoPerfil ?? '' };
+      const eq = equipoPorNombre[String(a.nombre).trim().toUpperCase()];
+      return { nombre: a.nombre, estado: a.estado, origen: a.origen, nombreDerby: eq?.nombreDerby ?? '', fotoPerfil: eq?.fotoPerfil ?? '', existeEnEquipo: !!eq };
     });
     return {
       idEvento, fecha: fila.fecha, lugar: fila.donde, horaInicio: fila.inicia?.substring(0, 5) ?? '', horaFin: fila.termina?.substring(0, 5) ?? '', estado: fila.estado, tipoIcono: fila.tipo_evento ?? tipoIcono[fila.donde] ?? 'Entrenamiento', requiereReserva: requiereReserva[fila.donde] !== false, asistencias,
