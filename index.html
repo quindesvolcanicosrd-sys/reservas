@@ -3229,6 +3229,19 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <span class="material-symbols-outlined" style="font-size:1.1rem;">refresh</span> Recalcular puntos
       </button>
 
+      <!-- Wizard "Registrar pago manual" (feat nueva, pedido explícito de
+           Victor) -- 4 pasos: persona / tipo (clase|mensual) / detalles
+           (clase del calendario + rollcall si es pasada, o mes+año si es
+           cuota) / monto+notas. Distinto del botón "Registrar pago" que ya
+           trae cada fila de `#ml-miembros-lista` (`_mlAbrirRegistrarPago()`,
+           bottom sheet de 1 solo paso, sin tocar) -- este es el punto de
+           entrada general, sin partir de un miembro puntual, y además puede
+           actualizar el rollcall de una clase pasada. Ver
+           `_mlPagoWizarAbrir()`/js/admin.js. -->
+      <button type="button" class="btn btn-outline" id="ml-btn-pago-wizard" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;" onclick="_mlPagoWizarAbrir()">
+        <span class="material-symbols-outlined" style="font-size:1.1rem;">payments</span> Registrar pago manual
+      </button>
+
       <!-- Fondos de viaje (Fase 2 completa del sistema de tiers, Parte 2/8,
            ver MANIFEST.md) -- config global (config_app.fondos_viaje_meses,
            reusando la misma tabla clave-valor de precio_por_clase/
@@ -3299,6 +3312,118 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 </div>
 
+<!-- Wizard "Registrar pago manual" (Mi Liga, solo admin, feat nueva --
+     pedido explícito de Victor). 4 pasos, mismo patrón que el wizard
+     "Nueva tarea" (#s-tareas-crear/js/tareas.js -- `.salud-paso`/
+     `.salud-prog`/footer fijo con botón único que cambia de rol en el
+     último paso) en vez de un bottom sheet (los sheets de esta app se usan
+     para selecciones cortas de 1 paso, ver `#ml-sheet-pago` arriba -- un
+     wizard de 4 pasos secuenciales es consistente con pantalla completa,
+     no con sheet). Lógica en `_mlpw*`/js/admin.js. -->
+<div class="pantalla" id="s-miliga-pago">
+  <div class="app-nav app-nav-sticky" id="mlpw-header">
+    <button class="app-nav-back" onclick="_mlpwBack()">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </button>
+    <span class="app-nav-title">Registrar pago</span>
+    <div style="width:40px;flex-shrink:0;"></div>
+  </div>
+  <div class="card" style="text-align:left;">
+    <div class="salud-prog" id="mlpw-prog"></div>
+
+    <!-- Paso 1: Persona -- mismo picker (roster precargado por Eventos,
+         `_evRosterEquipo`/`_evPrecargarRoster()`) que "Asignar a personas"
+         del wizard de tareas, pero de selección ÚNICA (un solo `.fi-circle`
+         activo a la vez, `_mlpwSelPersona()` reemplaza en vez de acumular). -->
+    <div class="salud-paso activo" id="mlpw-paso-persona">
+      <p class="ev-lugar-campo-label" style="margin-top:0;">¿A quién le vas a registrar el pago?</p>
+      <div class="app-nav-search" style="margin-bottom:12px;">
+        <span class="material-symbols-outlined">search</span>
+        <input type="text" id="mlpw-personas-search" placeholder="Buscar por nombre..." autocomplete="off" oninput="_mlpwFiltrarPersonas(this.value)">
+      </div>
+      <div id="mlpw-personas-lista" class="ev-marcar-lista"></div>
+    </div>
+
+    <!-- Paso 2: Tipo de pago -- mismo componente `.opciones`/`.opcion` que
+         "¿Cómo se asigna esta tarea?" (js/tareas.js). -->
+    <div class="salud-paso" id="mlpw-paso-tipo">
+      <p class="ev-lugar-campo-label" style="margin-top:0;">¿Qué tipo de pago es?</p>
+      <div class="opciones" id="mlpw-tipo-opciones" style="margin-bottom:0;">
+        <div class="opcion" data-val="clase" onclick="_mlpwSelTipo(this,'clase')">
+          <span class="material-symbols-outlined">event</span>
+          <div>
+            <div style="font-weight:700;">Clase</div>
+            <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Pago de una clase puntual del calendario.</div>
+          </div>
+        </div>
+        <div class="opcion" data-val="mensual" onclick="_mlpwSelTipo(this,'mensual')">
+          <span class="material-symbols-outlined">calendar_month</span>
+          <div>
+            <div style="font-weight:700;">Cuota mensual</div>
+            <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Cuota de un mes completo (pasado o futuro).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paso 3: Detalles -- contenido condicional según el tipo elegido en
+         el paso 2 (`_mlpwMostrarPaso()` alterna `display` entre los 2
+         bloques, nunca los 2 visibles a la vez). -->
+    <div class="salud-paso" id="mlpw-paso-detalle">
+      <div id="mlpw-detalle-clase" style="display:none;">
+        <p class="ev-lugar-campo-label" style="margin-top:0;">Elige la clase (pasadas primero)</p>
+        <div id="mlpw-clases-lista" class="ev-marcar-lista"></div>
+        <!-- Rollcall -- solo aparece si la clase elegida ya pasó
+             (`_mlpwSelClase()`). Reusa `adminMarcarAsistencia` tal cual
+             (js/eventos.js/`_evMarcarAsistenciaAdmin()`), mismos 2 estados
+             reales que ya usa esa pantalla ('A tiempo'/'Tarde') -- sin
+             inventar un vocabulario nuevo. -->
+        <div id="mlpw-clase-estado-wrap" style="display:none;margin-top:18px;">
+          <p class="ev-lugar-campo-label">¿Cómo asistió a esa clase?</p>
+          <div class="aj-pills-row" id="mlpw-clase-estado-pills">
+            <span class="aj-pill" data-val="A tiempo" onclick="_mlpwSelEstadoAsistencia(this,'A tiempo')">A tiempo</span>
+            <span class="aj-pill" data-val="Tarde" onclick="_mlpwSelEstadoAsistencia(this,'Tarde')">Tarde</span>
+          </div>
+        </div>
+      </div>
+      <div id="mlpw-detalle-mensual" style="display:none;">
+        <p class="ev-lugar-campo-label" style="margin-top:0;">¿De qué mes es la cuota?</p>
+        <div style="display:flex;gap:10px;">
+          <div style="flex:1;">
+            <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:4px;">Mes</label>
+            <select id="mlpw-mes" class="ml-estado-select" style="width:100%;" onchange="_mlpwSetMes(this.value)"></select>
+          </div>
+          <div style="flex:1;">
+            <label style="font-size:0.78rem;color:var(--muted);display:block;margin-bottom:4px;">Año</label>
+            <select id="mlpw-anio" class="ml-estado-select" style="width:100%;" onchange="_mlpwSetAnio(this.value)"></select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paso 4: Monto + notas -- toggle Automático (precio configurado de
+         Ajustes adicionales, `E.precioPorClase`/`E.precioMensual`, ya
+         precargados al entrar a Mi Liga -- `_adminCargarPrecios()`) vs
+         Manual (campo libre, mismo input que `#ml-pago-monto`). -->
+    <div class="salud-paso" id="mlpw-paso-monto">
+      <p class="ev-lugar-campo-label" style="margin-top:0;">Monto</p>
+      <div class="aj-pills-row" id="mlpw-monto-modo-pills" style="margin-bottom:12px;">
+        <span class="aj-pill activa" data-val="auto" onclick="_mlpwSetModoMonto(this,'auto')">Automático</span>
+        <span class="aj-pill" data-val="manual" onclick="_mlpwSetModoMonto(this,'manual')">Manual</span>
+      </div>
+      <p id="mlpw-monto-auto-texto" style="font-size:0.95rem;font-weight:700;margin:0 0 14px;"></p>
+      <input id="mlpw-monto-manual-input" type="number" min="0" placeholder="0" style="display:none;width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--card-bg);color:var(--text);font-size:0.9rem;margin-bottom:14px;" oninput="_mlpwSetMontoManual(this.value)">
+      <p class="ev-lugar-campo-label">Notas (opcional)</p>
+      <textarea id="mlpw-notas" maxlength="300" placeholder="Contexto del pago (ej: pagó en efectivo el día del evento)..." style="min-height:80px;resize:none;" oninput="_mlpwSetNotas(this.value)"></textarea>
+    </div>
+
+    <div class="cta-footer-spacer" style="height:calc(100px + var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));"></div>
+  </div>
+</div>
+<div class="cta-footer-fixed" id="cta-footer-s-miliga-pago">
+  <button class="btn btn-primary" id="mlpw-btn-footer" disabled>Continuar</button>
+</div>
+
     <div class="pantalla" id="s-admin-login">
     <div class="card" style="text-align:center;">
       <div class="seccion-label">Administradorx</div>
@@ -3360,7 +3485,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/home.js?v=e715822d"></script>
 <script src="js/reservas.js?v=cacf57bd"></script>
 <script src="js/perfil.js?v=d2df3c5b"></script>
-<script src="js/admin.js?v=d16517bc"></script>
+<script src="js/admin.js?v=d9ef0822"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js?v=d18bc0da"></script>
 

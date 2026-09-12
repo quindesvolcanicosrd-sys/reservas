@@ -1991,6 +1991,325 @@ function _mlConfirmarRegistrarPago(btn) {
     mostrarToast(e.message || 'Error al registrar el pago.', 'error');
   });
 }
+/* ── Wizard "Registrar pago manual" (feat nueva, pedido explícito de
+   Victor) -- 4 pasos: persona / tipo de pago (clase|mensual) / detalles
+   (clase del calendario + rollcall si ya pasó, o mes+año si es cuota) /
+   monto+notas. Mismo patrón exacto que el wizard "Nueva tarea"
+   (_TAR_CREAR_STEPS/js/tareas.js -- `.salud-paso`/`.salud-prog`/footer fijo
+   con un único botón que cambia de rol en el último paso), pantalla
+   completa en vez de bottom sheet (los sheets de esta app son para
+   selecciones de 1 paso, ver `#ml-sheet-pago` arriba). Reusa 3 piezas ya
+   existentes tal cual, sin backend nuevo: el picker de personas (mismo
+   roster precargado que "Asignar a personas"/"Marcar asistencia",
+   `_evRosterEquipo`/`_evPrecargarRoster()`, js/eventos.js), la lista de
+   clases (`_EV_EVENTOS`, ya poblada por `_evCargarDatosReales()` si el
+   admin visitó Eventos esta sesión -- si no, se dispara acá mismo, mismo
+   criterio que el roster) y `adminMarcarAsistencia` (rollcall real, mismos
+   2 estados que ya usa esa pantalla -- 'A tiempo'/'Tarde', sin inventar
+   vocabulario nuevo) + `adminRegistrarPago` extendido con `tipo`/`esManual`/
+   `idEvento` (ver ese comentario, supabase/functions/api/index.ts, y la
+   migración `20260912160000_pagos_manual_wizard.sql`). ────────────────── */
+var _MLPW_STEPS = ['mlpw-paso-persona', 'mlpw-paso-tipo', 'mlpw-paso-detalle', 'mlpw-paso-monto'];
+var _mlpwCurIdx = 0;
+var _mlpwData = { persona: null, tipo: null, idEvento: null, estadoAsistencia: null, mes: null, anio: null, modoMonto: 'auto', montoManual: null, notas: '' };
+
+function _mlPagoWizarAbrir() {
+  _mlpwData = { persona: null, tipo: null, idEvento: null, estadoAsistencia: null, mes: null, anio: null, modoMonto: 'auto', montoManual: null, notas: '' };
+  ir('s-miliga-pago');
+  var search = document.getElementById('mlpw-personas-search'); if (search) search.value = '';
+  document.querySelectorAll('#mlpw-tipo-opciones .opcion').forEach(function(o) { o.classList.remove('sel'); });
+  document.querySelectorAll('#mlpw-clase-estado-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  document.querySelectorAll('#mlpw-monto-modo-pills .aj-pill').forEach(function(p, i) { p.classList.toggle('activa', i === 0); });
+  var wrap = document.getElementById('mlpw-clase-estado-wrap'); if (wrap) wrap.style.display = 'none';
+  var notas = document.getElementById('mlpw-notas'); if (notas) notas.value = '';
+  // Vaciar para que _mlpwPoblarMesAnio() (chequea `!options.length`) los
+  // repueble de cero contra la fecha de HOY -- si quedaran las opciones de
+  // una apertura anterior del wizard, la relección de "mes actual" no se
+  // volvería a aplicar.
+  var mesEl = document.getElementById('mlpw-mes'); if (mesEl) mesEl.innerHTML = '';
+  var anioEl = document.getElementById('mlpw-anio'); if (anioEl) anioEl.innerHTML = '';
+  if (_adminToken && typeof _evRosterEquipo !== 'undefined' && _evRosterEquipo === null && typeof _evPrecargarRoster === 'function') _evPrecargarRoster();
+  _mlpwMostrarPaso(0);
+}
+function _mlpwBack() {
+  if (_mlpwCurIdx === 0) { ir('s-miliga'); return; }
+  _mlpwMostrarPaso(_mlpwCurIdx - 1);
+}
+function _mlpwIrSiguiente() {
+  if (!_mlpwPasoValido(_mlpwCurIdx)) return;
+  _mlpwMostrarPaso(_mlpwCurIdx + 1);
+}
+function _mlpwMostrarPaso(idx) {
+  _MLPW_STEPS.forEach(function(s, i) {
+    var el = document.getElementById(s);
+    if (el) el.classList.toggle('activo', i === idx);
+  });
+  _mlpwCurIdx = idx;
+  _mlpwRenderProg();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  var pasoId = _MLPW_STEPS[idx];
+  if (pasoId === 'mlpw-paso-persona') {
+    var inp = document.getElementById('mlpw-personas-search');
+    _mlpwRenderPersonas(inp ? inp.value : '');
+  } else if (pasoId === 'mlpw-paso-detalle') {
+    var claseDiv = document.getElementById('mlpw-detalle-clase');
+    var mensualDiv = document.getElementById('mlpw-detalle-mensual');
+    if (_mlpwData.tipo === 'clase') {
+      if (claseDiv) claseDiv.style.display = 'block';
+      if (mensualDiv) mensualDiv.style.display = 'none';
+      _mlpwRenderClases();
+    } else {
+      if (claseDiv) claseDiv.style.display = 'none';
+      if (mensualDiv) mensualDiv.style.display = 'block';
+      _mlpwPoblarMesAnio();
+    }
+  } else if (pasoId === 'mlpw-paso-monto') {
+    _mlpwActualizarMontoTexto();
+  }
+  _mlpwActualizarFooter();
+}
+function _mlpwRenderProg() {
+  var cont = document.getElementById('mlpw-prog'); if (!cont) return;
+  cont.innerHTML = '';
+  for (var i = 0; i < _MLPW_STEPS.length; i++) {
+    var d = document.createElement('div');
+    d.className = 'salud-prog-dot' + (i < _mlpwCurIdx ? ' done' : (i === _mlpwCurIdx ? ' active' : ''));
+    cont.appendChild(d);
+  }
+}
+function _mlpwPasoValido(idx) {
+  var pasoId = _MLPW_STEPS[idx];
+  if (pasoId === 'mlpw-paso-persona') return !!_mlpwData.persona;
+  if (pasoId === 'mlpw-paso-tipo') return !!_mlpwData.tipo;
+  if (pasoId === 'mlpw-paso-detalle') {
+    if (_mlpwData.tipo === 'clase') {
+      if (!_mlpwData.idEvento) return false;
+      var ev = (_EV_EVENTOS || []).filter(function(e) { return e.id === _mlpwData.idEvento; })[0];
+      // Clase pasada -- exige elegir el estado de asistencia real antes de
+      // avanzar (paso 4 de la ficha, "¿Cómo asistió a esa clase?"); una
+      // clase futura no tiene asistencia que marcar todavía.
+      if (ev && _evEsPasado(ev) && !_mlpwData.estadoAsistencia) return false;
+      return true;
+    }
+    return !!(_mlpwData.mes && _mlpwData.anio);
+  }
+  return true; // paso monto -- sin validación obligatoria, mismo criterio que el sheet simple ya existente (`#ml-sheet-pago`, monto "opcional")
+}
+function _mlpwActualizarFooter() {
+  var btn = document.getElementById('mlpw-btn-footer');
+  if (!btn) return;
+  if (_mlpwCurIdx === _MLPW_STEPS.length - 1) {
+    btn.textContent = 'Registrar pago';
+    btn.onclick = _mlpwGuardar;
+    btn.disabled = false;
+  } else {
+    btn.textContent = 'Continuar';
+    btn.onclick = _mlpwIrSiguiente;
+    btn.disabled = !_mlpwPasoValido(_mlpwCurIdx);
+  }
+}
+
+// Paso 1: persona -- mismo picker que "Asignar a personas" (js/tareas.js),
+// pero de selección ÚNICA: un solo `.fi-circle.sel` a la vez, sin acumular
+// en un array.
+function _mlpwFiltrarPersonas(q) { _mlpwRenderPersonas(q); }
+function _mlpwRenderPersonas(q) {
+  var cont = document.getElementById('mlpw-personas-lista');
+  if (!cont) return;
+  if (typeof _evRosterEquipo === 'undefined' || _evRosterEquipo === null) {
+    cont.innerHTML = '<div class="ev-roster-vacio">Cargando equipo...</div>';
+    return;
+  }
+  var roster = _evRosterEquipo || [];
+  var qn = (q || '').toLowerCase().trim();
+  var filtrado = qn ? roster.filter(function(p) { return (p.nombreDerby || '').toLowerCase().indexOf(qn) !== -1 || String(p.nombre).toLowerCase().indexOf(qn) !== -1; }) : roster;
+  if (!filtrado.length) {
+    cont.innerHTML = '<div class="ev-roster-vacio">' + (roster.length ? 'Sin resultados.' : 'No se pudo cargar el equipo.') + '</div>';
+    return;
+  }
+  cont.innerHTML = filtrado.map(function(p) {
+    var nombreAttr = String(p.nombre).replace(/'/g, "\\'");
+    var sel = _mlpwData.persona === p.nombre;
+    return '<div class="ev-roster-fila" onclick="_mlpwSelPersona(\'' + nombreAttr + '\')">' +
+      '<span class="ev-roster-nombre">' + (p.nombreDerby || p.nombre) + '</span>' +
+      '<div class="fi-circle' + (sel ? ' sel' : '') + '"><span class="material-symbols-outlined">check</span></div>' +
+    '</div>';
+  }).join('');
+}
+function _mlpwSelPersona(nombre) {
+  _mlpwData.persona = nombre;
+  var inp = document.getElementById('mlpw-personas-search');
+  _mlpwRenderPersonas(inp ? inp.value : '');
+  _mlpwActualizarFooter();
+}
+
+// Paso 2: tipo de pago -- mismo `.opcion`/`.opcion.sel` que
+// `_tarCrearSelModo()` (js/tareas.js), toggle exclusivo a mano.
+function _mlpwSelTipo(el, val) {
+  document.querySelectorAll('#mlpw-tipo-opciones .opcion').forEach(function(o) { o.classList.remove('sel'); });
+  el.classList.add('sel');
+  _mlpwData.tipo = val;
+  // Cambiar de tipo invalida cualquier clase/asistencia ya elegida del otro
+  // camino -- sin esto, ir Clase -> Mensual -> Clase de nuevo podría mandar
+  // un `idEvento` de una selección vieja sin que el paso 3 lo muestre más.
+  _mlpwData.idEvento = null;
+  _mlpwData.estadoAsistencia = null;
+  _mlpwActualizarFooter();
+}
+
+// Paso 3 (tipo='clase'): lista de clases del calendario, pasadas primero
+// (más reciente primero) y luego futuras (más próxima primero) -- reusa
+// `_EV_EVENTOS` ya cargado por Eventos (`_evCargarDatosReales()`) en vez de
+// pedirlo de nuevo; si todavía no cargó nada esta sesión (admin entró
+// directo a Mi Liga sin pasar por Eventos), se dispara acá, mismo criterio
+// que el precargado del roster.
+function _mlpwClasesOrdenadas() {
+  var pasadas = [], futuras = [];
+  (_EV_EVENTOS || []).forEach(function(e) {
+    if (e.estado === 'Cancelado' || e.estado === 'No se entrena') return;
+    if (_evEsPasado(e)) pasadas.push(e); else futuras.push(e);
+  });
+  pasadas.sort(function(a, b) { return a.fecha < b.fecha ? 1 : (a.fecha > b.fecha ? -1 : 0); });
+  futuras.sort(function(a, b) { return a.fecha < b.fecha ? -1 : (a.fecha > b.fecha ? 1 : 0); });
+  return pasadas.concat(futuras);
+}
+function _mlpwRenderClases() {
+  var cont = document.getElementById('mlpw-clases-lista');
+  if (!cont) return;
+  if (!_EV_EVENTOS || !_EV_EVENTOS.length) {
+    cont.innerHTML = '<div class="ev-roster-vacio">Cargando clases...</div>';
+    if (typeof _evCargarDatosReales === 'function') _evCargarDatosReales(function() { _mlpwRenderClases(); });
+    return;
+  }
+  var lista = _mlpwClasesOrdenadas();
+  if (!lista.length) { cont.innerHTML = '<div class="ev-roster-vacio">No hay clases en el calendario.</div>'; return; }
+  cont.innerHTML = lista.map(function(e) {
+    var sel = _mlpwData.idEvento === e.id;
+    var pasada = _evEsPasado(e);
+    return '<div class="ev-roster-fila" onclick="_mlpwSelClase(\'' + String(e.id).replace(/'/g, "\\'") + '\')">' +
+      '<span class="ev-roster-nombre">' + _evAntFechaLegible(e.fecha) + ' — ' + e.lugar + ' (' + e.horaInicio + 'hs)' + (pasada ? '' : ' <span style="color:var(--muted);font-weight:400;">(futura)</span>') + '</span>' +
+      '<div class="fi-circle' + (sel ? ' sel' : '') + '"><span class="material-symbols-outlined">check</span></div>' +
+    '</div>';
+  }).join('');
+}
+function _mlpwSelClase(idEvento) {
+  _mlpwData.idEvento = idEvento;
+  _mlpwData.estadoAsistencia = null;
+  document.querySelectorAll('#mlpw-clase-estado-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  var ev = (_EV_EVENTOS || []).filter(function(e) { return e.id === idEvento; })[0];
+  var wrap = document.getElementById('mlpw-clase-estado-wrap');
+  if (wrap) wrap.style.display = (ev && _evEsPasado(ev)) ? 'block' : 'none';
+  _mlpwRenderClases();
+  _mlpwActualizarFooter();
+}
+function _mlpwSelEstadoAsistencia(el, val) {
+  document.querySelectorAll('#mlpw-clase-estado-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  _mlpwData.estadoAsistencia = val;
+  _mlpwActualizarFooter();
+}
+
+// Paso 3 (tipo='mensual'): mes/año -- mismos selects/opciones que
+// `#ml-pago-mes`/`#ml-pago-anio` (`_mlAbrirRegistrarPago()`, arriba en este
+// archivo), ids propios (`mlpw-mes`/`mlpw-anio`) para no chocar con el sheet
+// simple si ambos llegaran a convivir en el DOM.
+function _mlpwPoblarMesAnio() {
+  var hoy = new Date();
+  var mesEl = document.getElementById('mlpw-mes');
+  var anioEl = document.getElementById('mlpw-anio');
+  if (mesEl && !mesEl.options.length) {
+    var MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    mesEl.innerHTML = MESES.map(function(m, i) { return '<option value="' + (i + 1) + '"' + (i === hoy.getMonth() ? ' selected' : '') + '>' + m + '</option>'; }).join('');
+    _mlpwData.mes = hoy.getMonth() + 1;
+  }
+  if (anioEl && !anioEl.options.length) {
+    var ay = hoy.getFullYear();
+    anioEl.innerHTML = [ay - 1, ay, ay + 1].map(function(y) { return '<option value="' + y + '"' + (y === ay ? ' selected' : '') + '>' + y + '</option>'; }).join('');
+    _mlpwData.anio = ay;
+  }
+}
+function _mlpwSetMes(v) { _mlpwData.mes = parseInt(v, 10); }
+function _mlpwSetAnio(v) { _mlpwData.anio = parseInt(v, 10); }
+
+// Paso 4: monto (Automático = precio configurado en Ajustes adicionales,
+// `E.precioPorClase`/`E.precioMensual`, ya precargados al entrar a Mi Liga
+// vía `_adminCargarPrecios()` -- ver ese comentario más arriba en este
+// archivo; Manual = campo numérico libre, mismo input que `#ml-pago-monto`)
+// + notas.
+function _mlpwMontoAutomatico() {
+  return _mlpwData.tipo === 'clase' ? (parseFloat(E.precioPorClase) || 0) : (parseFloat(E.precioMensual) || 0);
+}
+function _mlpwActualizarMontoTexto() {
+  var texto = document.getElementById('mlpw-monto-auto-texto');
+  var inputManual = document.getElementById('mlpw-monto-manual-input');
+  if (_mlpwData.modoMonto === 'auto') {
+    if (texto) { texto.style.display = 'block'; texto.textContent = '$' + _mlpwMontoAutomatico().toFixed(2) + ' (precio configurado)'; }
+    if (inputManual) inputManual.style.display = 'none';
+  } else {
+    if (texto) texto.style.display = 'none';
+    if (inputManual) { inputManual.style.display = 'block'; inputManual.value = _mlpwData.montoManual != null ? _mlpwData.montoManual : ''; }
+  }
+}
+function _mlpwSetModoMonto(el, val) {
+  document.querySelectorAll('#mlpw-monto-modo-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+  el.classList.add('activa');
+  _mlpwData.modoMonto = val;
+  _mlpwActualizarMontoTexto();
+}
+function _mlpwSetMontoManual(v) { _mlpwData.montoManual = v; }
+function _mlpwSetNotas(v) { _mlpwData.notas = v; }
+
+// Guardado -- si es una clase PASADA con estado de asistencia elegido,
+// primero actualiza el rollcall real (`adminMarcarAsistencia`, MISMA acción
+// que usa "Marcar asistencia" -- `_evMarcarAsistenciaAdmin()`/js/eventos.js)
+// y solo si eso confirma éxito registra el pago -- un pago registrado sin
+// que la asistencia real haya quedado bien grabada sería peor que no
+// intentarlo. Clase futura o cuota mensual: va directo a
+// `adminRegistrarPago()`, sin tocar rollcall.
+function _mlpwGuardar() {
+  if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible guardar cambios en este momento.', 'error'); return; }
+  var d = _mlpwData;
+  var monto = d.modoMonto === 'manual' ? (parseFloat(d.montoManual) || 0) : _mlpwMontoAutomatico();
+  var datos = {
+    nombre: d.persona, tipo: d.tipo, monto: monto, formaPago: 'Efectivo', esManual: true,
+    notas: (d.notas || '').trim() || undefined,
+  };
+  if (d.tipo === 'clase') {
+    var ev = (_EV_EVENTOS || []).filter(function(e) { return e.id === d.idEvento; })[0];
+    var partesFecha = ev ? ev.fecha.split('-') : null;
+    datos.idEvento = d.idEvento;
+    datos.anio = partesFecha ? parseInt(partesFecha[0], 10) : new Date().getFullYear();
+    datos.mes = partesFecha ? parseInt(partesFecha[1], 10) : (new Date().getMonth() + 1);
+    datos.fecha = ev ? ev.fecha : null;
+  } else {
+    datos.mes = d.mes;
+    datos.anio = d.anio;
+  }
+
+  function guardarPago() {
+    adminApi({ action: 'adminRegistrarPago', datosJson: JSON.stringify(datos) }, function(res) {
+      ocultarCargando();
+      if (res && res.exito === false) { mostrarToast(res.error || 'No se pudo registrar el pago.', 'error'); return; }
+      mostrarToast('Pago registrado correctamente.', 'ok', true);
+      ir('s-miliga');
+      _mlCargarMiembros();
+    }, function(e) {
+      ocultarCargando();
+      mostrarToast((e && e.message) || 'No se pudo registrar el pago.', 'error');
+    });
+  }
+
+  mostrarCargando('Registrando pago...');
+  if (d.tipo === 'clase' && d.estadoAsistencia) {
+    apiPost({ action: 'adminMarcarAsistencia', adminToken: _adminToken, idEvento: d.idEvento, nombre: d.persona, estado: d.estadoAsistencia }, guardarPago, function(e) {
+      ocultarCargando();
+      mostrarToast((e && e.message) || 'No se pudo actualizar la asistencia.', 'error');
+    });
+  } else {
+    guardarPago();
+  }
+}
+
 function _mlGuardarEstadoMiembro(username, valor) {
   adminApi({ action: 'adminSetEstadoMiembro', nombre: username, estadoMiembro: valor }, function(res) {
     if (!res.exito) { mostrarToast(res.error || 'Error al actualizar el estado.', 'error'); _mlCargarMiembros(); return; }

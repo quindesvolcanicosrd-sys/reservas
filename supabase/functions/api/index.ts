@@ -1734,7 +1734,18 @@ async function marcarAsistenciaUsuario(params: Record<string, any>): Promise<Rec
 }
 
 const ESTADOS_ROLLCALL = ['A tiempo', 'Tarde', 'Ninguno'];
+// Bug real corregido de paso (encontrado al probar el wizard de pagos
+// manuales, que reusa esta acción -- mismo patrón de hueco de seguridad ya
+// encontrado en `adminEliminarUsuario()`/`adminRegistrarPago()` de esta
+// misma sesión): esta función NO validaba `adminToken` -- cualquier caller
+// sin sesión admin podía forjar/alterar el rollcall real de asistencia de
+// cualquiera (impacta racha de puntualidad, tiers, todo lo que depende de
+// este dato). El frontend siempre la llamó vía `apiPost` con
+// `adminToken: _adminToken` (`_evMarcarAsistenciaAdmin()`/js/eventos.js),
+// así que este fix no cambia nada del flujo real existente.
 async function adminMarcarAsistencia(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const idEvento = String(params.idEvento ?? '').trim();
   const nombre   = String(params.nombre   ?? '').trim();
   const estado   = String(params.estado   ?? '').trim();
@@ -2169,19 +2180,43 @@ async function usarCreditos(params: Record<string, any>): Promise<Record<string,
 
 // ─── Acciones: pagos ──────────────────────────────────────────────────────────
 
+// Bug real corregido de paso (encontrado mientras se extendía esta función
+// para el wizard de pagos manuales, pedido explícito de Victor): NINGUNA de
+// estas 3 acciones (pago/ingreso/egreso) validaba `adminToken` -- mismo
+// patrón de hueco de seguridad ya encontrado y corregido en
+// `adminEliminarUsuario()` (ver ese comentario) -- cualquier caller sin
+// sesión admin podía insertar pagos/ingresos/egresos arbitrarios. El
+// frontend siempre las llamó vía `adminApi()` (inyecta `adminToken`
+// automáticamente), así que este fix no cambia nada del flujo real
+// existente.
+//
+// `tipo`/`esManual`/`idEvento` (nuevos, wizard de registro manual de pagos
+// en 4 pasos, Mi Liga, `_mlPagoWizarGuardar()`/js/admin.js): `tipo` --
+// 'clase' o 'mensual' (default 'mensual', compatible con el sheet simple
+// pre-existente que nunca manda este campo); `esManual` -- default `true`
+// (hoy el 100% de `pagos` se origina en una acción admin manual); `idEvento`
+// -- solo se completa para `tipo:'clase'`, trazabilidad hacia el evento real
+// (ver migración `20260912160000_pagos_manual_wizard.sql`).
 async function adminRegistrarPago(params: Record<string, any>): Promise<any> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   let datos = params.datosJson ?? params.datos;
   if (typeof datos === 'string') datos = JSON.parse(datos);
   const { data, error } = await supabase.from('pagos').insert({
     nombre_usuario: datos.nombre, mes: datos.mes, anio: datos.anio, exoneradx: !!datos.exoneradx,
     monto: datos.monto ?? 0, forma_pago: datos.formaPago ?? null, comprobante_url: datos.comprobanteUrl ?? null,
     notas: datos.notas ?? null, fecha: datos.fecha ?? null,
+    tipo: datos.tipo === 'clase' ? 'clase' : 'mensual',
+    es_manual: datos.esManual !== false,
+    id_evento: datos.tipo === 'clase' ? (datos.idEvento ?? null) : null,
   }).select();
   if (error) return { exito: false, error: error.message };
   return data;
 }
 
 async function adminRegistrarIngreso(params: Record<string, any>): Promise<any> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   let datos = params.datosJson ?? params.datos;
   if (typeof datos === 'string') datos = JSON.parse(datos);
   const { data, error } = await supabase.from('ingresos').insert({
@@ -2194,6 +2229,8 @@ async function adminRegistrarIngreso(params: Record<string, any>): Promise<any> 
 }
 
 async function adminRegistrarEgreso(params: Record<string, any>): Promise<any> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   let datos = params.datosJson ?? params.datos;
   if (typeof datos === 'string') datos = JSON.parse(datos);
   const { data, error } = await supabase.from('egresos').insert({
