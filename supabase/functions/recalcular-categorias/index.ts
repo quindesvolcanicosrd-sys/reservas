@@ -5,6 +5,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const CRON_SECRET = Deno.env.get('CRON_SECRET');
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
@@ -55,9 +56,27 @@ Deno.serve(async (req: Request) => {
     return json({ ok: false, error: 'Método no soportado.' }, 405);
   }
 
+  // Bug real corregido (pedido explícito de Victor): el cron
+  // `marcar-eventos-finalizados` (migración
+  // `20260912140000_cron_finalizados_recalcula_categorias.sql`) necesita
+  // disparar este recálculo automáticamente después de marcar eventos como
+  // finalizados -- pero no hay una sesión admin real detrás de un cron, así
+  // que el gate normal (`adminToken` de `admin_sessions`) no aplica ahí.
+  // Mismo mecanismo YA establecido en supabase/functions/api/index.ts para
+  // `cronDiario`/`cronRecordatorioEvento`/etc. -- header `x-cron-secret`
+  // comparado contra el secret `CRON_SECRET` (ya configurado en producción,
+  // reusado tal cual, sin secret nuevo) -- preferido sobre pegar la
+  // `SUPABASE_SERVICE_ROLE_KEY` literal en un archivo de migración
+  // versionado en git (esa key bypasea RLS de TODA la base; `CRON_SECRET`
+  // solo gatea estas acciones puntuales, mismo criterio ya documentado en
+  // `20260907180000_push_cron_recordatorios.sql`). El camino real de admin
+  // (botón "Recalcular ahora", `_mlRecalcular()`/js/admin.js) sigue
+  // funcionando exactamente igual, sin tocar.
+  const cronSecretHeader = req.headers.get('x-cron-secret');
+  const esLlamadaCron = !!CRON_SECRET && cronSecretHeader === CRON_SECRET;
   const authHeader = req.headers.get('Authorization') ?? '';
   const adminToken = authHeader.replace(/^Bearer\s+/i, '').trim();
-  const adminEmail = await _validarAdminToken(adminToken);
+  const adminEmail = esLlamadaCron ? 'cron' : await _validarAdminToken(adminToken);
   if (!adminEmail) return json({ ok: false, error: 'Sesión admin inválida.' }, 401);
 
   try {

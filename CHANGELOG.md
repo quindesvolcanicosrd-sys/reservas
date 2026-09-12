@@ -2,6 +2,10 @@
 
 Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.md anterior (que mezclaba estado actual + historial en un solo archivo de ~7000 líneas). Dentro de cada sección, más reciente primero. Las fechas exactas están confirmadas cuando el MANIFEST las traía en formato ISO; el resto del historial (desarrollado a lo largo de 2025 y 2026 sin registrar fecha por entrada) queda con el mes/año aproximado que se pudo inferir del contexto (migraciones con fecha en su nombre, menciones explícitas de mes, o posición relativa en el archivo original).
 
+## Edge Function / Backend
+
+2026-09-12 — Feature: cron `marcar-eventos-finalizados` ahora dispara `recalcular-categorias` automáticamente cuando el UPDATE marca al menos 1 evento como finalizado (PL/pgSQL + `GET DIAGNOSTICS ROW_COUNT` + `net.http_post` condicional). Auth vía `x-cron-secret` (no `SERVICE_ROLE_KEY` literal, mismo criterio ya usado por otras crons de este repo) — `recalcular-categorias` ahora acepta ese header como caller de sistema. De paso, encontrado y corregido: las 4 crons que llaman a `api` vía `pg_net` (`notificaciones-diarias`/3 de recordatorios push) nunca habían funcionado en producción — les faltaba `apikey` para pasar el gateway de plataforma (confirmado con un 401 real en `net._http_response`). Ver MANIFEST.md para el detalle completo, incluida la aplicación manual pendiente de las 2 migraciones nuevas.
+
 ## Eventos
 
 2026-09-12 — Fix: la descripción del venue mostrada en la vista detallada de un evento quedaba con la del lugar anterior tras editarlo. Mismo problema de raíz que el fix de `google_maps` del día anterior, pero en la aplicación optimista local, no en el PATCH: `_evDetalleInfoHtml()` cae a un blurb genérico por `tipo_evento` cuando el evento no tiene descripción propia, y esa columna ya la sincronizaba bien el PATCH (`upd.tipo_evento`) — lo que faltaba era que `_evEditarAplicarCambiosLocal()` reflejara ese mismo valor en el objeto local (`e.tipo`) al cambiar el lugar, igual que ya hacía con `e.mapsUrl`. Sin refetch de por medio, el PATCH y `_evVerificarPatchAplicado()` no necesitaron cambios.
