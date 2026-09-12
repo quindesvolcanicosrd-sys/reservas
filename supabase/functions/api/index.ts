@@ -4356,8 +4356,30 @@ async function adminSetEstadoReserva(params: Record<string, any>): Promise<Recor
   const id = params.id ?? params.fila;
   const { estado } = params;
   if (!id || !estado) return { exito: false, error: 'Parámetros inválidos.' };
+  const { data: reservaAntes } = await supabase.from('reservas').select('nombre_usuario, id_evento, tipo').eq('id', id).maybeSingle();
   const { error } = await supabase.from('reservas').update({ estado }).eq('id', id);
   if (error) return { exito: false, error: error.message };
+
+  // Auto-marcar "Asistiré" al aprobar una reserva de Mirlxs (feat nueva,
+  // pedido explícito -- ver MANIFEST.md). Solo reservas "por clase"
+  // (`tipo:'clase'`, `id_evento` real -- las mensuales guardan
+  // `id_evento:null`, sin un evento puntual al que asistir, ver
+  // `guardarReserva()`) y solo cuentas `categoria='Mirlxs'` (Quindes no pasa
+  // por este flujo de aprobación admin). Mismo criterio que
+  // `marcarAsistenciaUsuario()` con click manual: borra RSVPs previos
+  // (`Usuario`/`AsistenciaAnticipada`) e inserta la fila nueva
+  // `origen:'Usuario'` -- indistinguible de un RSVP manual para el resto de
+  // la app (`getEventosRango()`, el termómetro de racha, etc.).
+  if (estado === 'Confirmada' && reservaAntes?.tipo === 'clase' && reservaAntes?.id_evento) {
+    const { data: persona } = await supabase.from('equipo').select('categoria').eq('username', reservaAntes.nombre_usuario).maybeSingle();
+    if (persona?.categoria === 'Mirlxs') {
+      await supabase.from('log_asistencias').delete()
+        .eq('id_evento', reservaAntes.id_evento).eq('nombre_usuario', reservaAntes.nombre_usuario)
+        .in('origen', ['Usuario', 'AsistenciaAnticipada']);
+      await _agregarFilaLogAsistencia(reservaAntes.id_evento, reservaAntes.nombre_usuario, 'Usuario', 'Asistiré');
+    }
+  }
+
   return { exito: true };
 }
 

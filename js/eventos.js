@@ -4241,7 +4241,21 @@ function _evRsvpBarraHtml(e) {
     return r.fecha === e.id && r.estado !== 'Cancelada';
   });
   if (_tieneReservaEste) return '';
-  var botones = _EV_RESP_OPCIONES.map(function(estado) {
+  // Bug/feature nueva (pedido explícito, ver MANIFEST.md -- "Mirlxs: bloquear
+  // cambio a 'No asistiré' una vez marcado Asistiré"): un Mirlxs con
+  // `miEstado==='Asistiré'` ya cubierto por una reserva 'clase' cae en el
+  // `return ''` de arriba (_tieneReservaEste), mostrando Cancelar
+  // reserva/Reagendar en su lugar (_evBtnCancelarReagendarHtml(),
+  // _evDetalleInfoHtml()) -- ese camino ya existe, sin cambios acá. Este
+  // guard cubre el OTRO camino: Mirlxs con cuota mensual al día (sin
+  // reserva 'clase' puntual para ESTE evento) que marcó "Asistiré" a mano
+  // vía esta misma barra -- se saca la opción "No asistiré" del array para
+  // que no pueda retroceder con un solo tap, sin tocar "No jugador" (sigue
+  // siendo una corrección legítima, ej. "voy pero no juego").
+  var opciones = (_modoUsuario() === 'mirlxs' && e.miEstado === 'Asistiré')
+    ? _EV_RESP_OPCIONES.filter(function(estado) { return estado !== 'No asistiré'; })
+    : _EV_RESP_OPCIONES;
+  var botones = opciones.map(function(estado) {
     var act = e.miEstado === estado ? ' activa' : '';
     return '<div class="ev-rsvp-opt' + act + '" data-estado="' + estado + '" onclick="_evMarcarAsistencia(\'' + e.id + '\',\'' + estado + '\')"><span class="material-symbols-outlined">' + _EV_RESP_ICONO[estado] + '</span>' + estado + '</div>';
   }).join('');
@@ -6869,7 +6883,21 @@ function _evEditarConfirmar() {
       var _notifMsg = 'El evento del ' + _notifFecha + ' fue actualizado' + (_notifPartes.length ? ': ' + _notifPartes.join(', ') : '');
       apiPost({ action: 'adminEnviarPush', adminToken: _adminToken, titulo: 'Evento actualizado', mensaje: _notifMsg, destino: 'todos' }, function(){}, function(){});
       ir('s-eventos');
-      _evCargarDatosReales(function() { _evRenderTimeline(true); });
+      // Re-sincroniza `_evDetalleActual` con el objeto FRESCO que trae este
+      // refetch (mismo patrón que `_evPollAsistencias()`, más arriba en este
+      // archivo) -- `_evEditarAplicarCambiosLocal(ev)` ya mutó la copia
+      // vieja, pero `_evCargarDatosReales()` reemplaza `_EV_EVENTOS` entero
+      // con objetos NUEVOS: sin esto, si el usuario reabre el detalle antes
+      // de que termine este fetch, o algo vuelve a pintar `_evDetalleActual`
+      // por la referencia vieja, mostraría el snapshot local en vez de la
+      // data real recién confirmada por el backend.
+      _evCargarDatosReales(function() {
+        if (_evDetalleActual && _evDetalleActual.id === ev.id) {
+          var evFresco = _EV_EVENTOS.filter(function(e) { return e.id === ev.id; })[0];
+          if (evFresco) { _evDetalleActual = evFresco; _evRenderDetalle(evFresco); }
+        }
+        _evRenderTimeline(true);
+      });
     },
     function(e) {
       ocultarCargando();
@@ -11273,6 +11301,21 @@ function _evAdminEditarEvento(idEvento, campos, modo, fechaDesde, fechaHasta, on
   if (campos.inicia !== undefined) upd.inicia = campos.inicia;
   if (campos.termina !== undefined) upd.termina = campos.termina;
   if (campos.info_adicional !== undefined) upd.info_adicional = campos.info_adicional;
+  // Bug real corregido (ver MANIFEST.md/CHANGELOG.md -- "venue no se
+  // actualiza tras editar un evento"): `asistencias.google_maps`/`tipo_evento`
+  // son columnas PROPIAS de cada fila, no resueltas por JOIN contra `venues`
+  // al leer (`getEventosRango()` manda `fila.google_maps` tal cual) -- al
+  // cambiar `donde` sin tocar estas 2, la fila quedaba con el nombre del
+  // lugar NUEVO pero el link de Maps/ícono del lugar VIEJO (confirmado
+  // contra datos reales de producción, filas con `donde:'Rumipamba'` y
+  // `google_maps` todavía apuntando a Cumandá). `_EV_VENUES` (cache del
+  // picker de esta misma pantalla, `_evEditarCargarVenues()`) ya trae estos
+  // 2 campos por lugar -- se sincronizan acá cuando el lugar cambia.
+  var venueNuevo = campos.donde !== undefined ? (_EV_VENUES || []).filter(function(v) { return v.lugar === campos.donde; })[0] : null;
+  if (venueNuevo) {
+    upd.google_maps = venueNuevo.google_maps || null;
+    if (venueNuevo.tipo_icono) upd.tipo_evento = venueNuevo.tipo_icono;
+  }
 
   function patch(url, body, ok, fail) {
     fetch(url, { method: 'PATCH', headers: H, body: JSON.stringify(body) })
@@ -11314,15 +11357,21 @@ function _evAdminEditarEvento(idEvento, campos, modo, fechaDesde, fechaHasta, on
     // ya existentes quedaban bien, pero `venues.lugar` nunca se tocaba, así
     // que la próxima vez que la regla generara eventos nuevos
     // (`_mantenerVentanaAsistenciasInterno()`) seguían naciendo con el lugar
-    // viejo. Caveat conocido, no resuelto acá (fuera de alcance de este
-    // fix, señalado por honestidad): este PATCH solo manda `lugar`, no
-    // `google_maps`/`tipo_icono`/etc. del venue nuevo -- la regla queda con
-    // el nombre correcto pero el resto de los metadatos del venue anterior,
-    // mismo hueco que ya tenía el PATCH a `asistencias` (que tampoco
-    // sincroniza `asistencias.google_maps` al cambiar `donde`).
+    // viejo. 2do bug real corregido (ver MANIFEST.md -- "venue no se
+    // actualiza tras editar un evento"): este PATCH mandaba solo `lugar`,
+    // nunca `google_maps`/`tipo_icono` -- `regenerar_ventana_asistencias()`
+    // (cron cada 15min, Postgres) copia esos 2 campos de `venues` a cada
+    // ocurrencia NUEVA que genera, así que la regla quedaba con el nombre
+    // correcto pero seguía pariendo eventos futuros con el mapsUrl/ícono del
+    // lugar anterior indefinidamente. Mismo `venueNuevo` que ya resuelve
+    // `upd.google_maps`/`upd.tipo_evento` más arriba en esta función.
     var patchVenue = {};
     if (campos.inicia !== undefined) patchVenue.inicia = campos.inicia;
     if (campos.donde !== undefined) patchVenue.lugar = campos.donde;
+    if (venueNuevo) {
+      if (campos.donde !== undefined) patchVenue.google_maps = venueNuevo.google_maps || null;
+      if (venueNuevo.tipo_icono) patchVenue.tipo_icono = venueNuevo.tipo_icono;
+    }
 
     if (modo === 'desde_aqui' && Object.keys(patchVenue).length > 0) {
       patch(urlAsis, upd, function() {

@@ -4,6 +4,10 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Eventos
 
+2026-09-11 — Fix: venue/hora no se actualizaban al reabrir el detalle de un evento editado. Causa real (confirmada contra datos de producción): `_evAdminEditarEvento()` cambiaba `donde` pero nunca sincronizaba `google_maps`/`tipo_evento` (columnas propias de cada fila de `asistencias`, no un JOIN contra `venues`) — el pill quedaba con el nombre del lugar nuevo pero el link de Maps del lugar anterior. Fix: resuelve el venue nuevo contra `_EV_VENUES` y suma `google_maps`/`tipo_icono` al PATCH (`asistencias`, y también `venues` en modo `'desde_aqui'` para que el cron `regenerar_ventana_asistencias()` no siga generando eventos futuros con el mapsUrl viejo). De paso, `_evEditarConfirmar()` re-sincroniza `_evDetalleActual` con el objeto fresco tras el refetch post-guardado (mismo patrón que `_evPollAsistencias()`), ver MANIFEST.md para el detalle completo.
+
+2026-09-11 — Feature: Mirlxs — un Mirlxs con `miEstado==='Asistiré'` (marcado a mano, sin reserva `'clase'` puntual para ese evento) deja de ver la opción "No asistiré" en la barra de RSVP (`_evRsvpBarraHtml()`) — solo "Asistiré"/"No jugador". El caso con reserva `'clase'` activa ya mostraba "Cancelar reserva"/"Cambiar de fecha" en su lugar (código pre-existente, sin cambios). Ver también sección Reservas (Parte A de este mismo pedido).
+
 2026-09-07 — Fix: FAB de reserva siempre visible para Quindes no-admin (antes se ocultaba si no tenía cuota, impedía hacer la primera reserva). `_evFabUnificadoActualizar()` (js/eventos.js) ya no llama a `_evTieneCuotaAlDia()` para decidir si oculta el FAB en este perfil — siempre lo muestra, y el toque sigue yendo directo a `_evFabReservaMesActual()` (`_evFabPlusClick()`, sin cambios).
 
 2026-09-05 — Fix definitivo de `fuenteAsistencia` en `getEventosRango`: en vez de elegir entre `logDeEvento` y el fallback legacy `asistEF[idEvento]` (2 versiones excluyentes que se venían alternando y cada una rompía un caso distinto — ver detalle en MANIFEST.md, entrada `log_asistencias`), ahora se combinan cuando no hay marca real de admin en `log_asistencias`: `logAdminReal.length ? logDeEvento : [...logDeEvento, ...(asistEF[idEvento] ?? [])]`. Cubre a la vez el caso "solo RSVPs, sin nada más" y el caso "RSVPs + asistencia real solo en columnas legacy".
@@ -188,6 +192,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 2026-08-28 — Cambio 45: sección Equipo, greenfield completo — lista con favoritos/grupos colapsables + perfil de detalle (nuevos `js/equipo.js`/`css/equipo.css`).
 
 ## Reservas
+
+2026-09-11 — Feature: al aprobar (`estado:'Confirmada'`) una reserva `'clase'` de un Mirlxs (`adminSetEstadoReserva`, Edge Function, deployado), se auto-marca su asistencia como "Asistiré" en `log_asistencias` (mismo criterio que un RSVP manual, `origen:'Usuario'`) — no aplica a reservas mensuales (`id_evento:null`) ni a Quindes. Ver MANIFEST.md y la sección Eventos de este changelog (Parte B, RSVP bar) para el detalle completo.
 
 2026-09-07 — Rediseño de `#s-pago`: la reserva ya no requiere tildar "Ya realicé mi pago" + tocar "Continuar" -- se registra directo al elegir un método de pago. `_registrarYPagar(urlPago)` (nueva, js/reservas.js) abre DeUna en una pestaña nueva (`window.open()`, dentro del mismo gesto de click para no ser bloqueado en móvil) y llama a `confirmarReserva()`; `togglePagoMetodo()` (js/ui.js) hace lo mismo (sin URL) la primera vez que se toca el acordeón de Banco Internacional. Guard `_reservaYaRegistrada` evita duplicar el guardado si la persona toca ambos métodos en la misma visita a la pantalla -- se resetea en `continuar_s4()` antes de cada `ir('s-pago')`. El checkbox, el botón "Continuar" y su barra fija `#cta-footer-s-pago` quedan en el HTML ocultos (`display:none`) como fallback, sin uso real en este flujo.
 
