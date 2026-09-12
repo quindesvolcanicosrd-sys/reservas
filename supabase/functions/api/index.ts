@@ -2961,8 +2961,46 @@ async function adminRechazarLesion(params: Record<string, any>): Promise<Record<
   return { exito: true };
 }
 
+// Bug real corregido (pedido explícito de Victor -- "usuario eliminado sigue
+// apareciendo en listas de 'Asistiré' de eventos"): esta función NO
+// validaba `adminToken` (cualquiera podía borrar cualquier cuenta con solo
+// mandar `nombre`) y solo borraba `equipo`/`sessions` -- todo lo demás
+// (asistencias, reservas, puntos, tareas, pagos, etc.) quedaba huérfano en
+// silencio, confirmado contra la DB real: 151 filas huérfanas en
+// `log_asistencias`, 24 en `puntos_mensuales`, 13 en `pagos`, 12 en
+// `asignaciones_tareas`, 2 en `reservas`, 1 en `nivel_actual` (ver
+// `getEventosRango()` -- `existeEnEquipo` ya filtraba estos huérfanos en el
+// FRONTEND, pero nunca los borraba). Fix en 2 capas:
+// (1) esta función ahora borra explícitamente cada tabla con datos por
+// usuario ANTES de borrar `equipo` -- así el orden es correcto incluso si
+// la migración de abajo no llegara a estar aplicada en algún entorno.
+// (2) migración `20260912120000_cascade_delete_usuario.sql` agrega
+// `ON DELETE CASCADE` a `equipo(username)` en las 14 tablas reales del
+// schema con datos por usuario (confirmado contra `information_schema`) --
+// garantía a nivel DB para cualquier borrado futuro que no pase por acá
+// (`supabase db query --linked` directo, por ejemplo). Los huérfanos YA
+// existentes (de borrados históricos previos a este fix) no se tocaron --
+// decisión deliberada de no borrar datos reales (pagos/asistencias/puntos)
+// como efecto colateral, ver comentario de la migración.
 async function adminEliminarUsuario(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { nombre } = params;
+  if (!nombre) return { exito: false, error: 'Parámetros inválidos.' };
+  await Promise.all([
+    supabase.from('log_asistencias').delete().eq('nombre_usuario', nombre),
+    supabase.from('reservas').delete().eq('nombre_usuario', nombre),
+    supabase.from('puntos_mensuales').delete().eq('nombre_usuario', nombre),
+    supabase.from('asignaciones_tareas').delete().eq('nombre_usuario', nombre),
+    supabase.from('rectificaciones_asistencia').delete().eq('nombre', nombre),
+    supabase.from('solicitudes_excepcion').delete().eq('nombre', nombre),
+    supabase.from('solicitudes_pago').delete().eq('nombre_usuario', nombre),
+    supabase.from('pagos').delete().eq('nombre_usuario', nombre),
+    supabase.from('pin_attempts').delete().eq('username', nombre),
+    supabase.from('historial_tier').delete().eq('username', nombre),
+    supabase.from('cuota_excepcion').delete().eq('id_miembro', nombre),
+    supabase.from('nivel_actual').delete().eq('nombre_usuario', nombre),
+  ]);
   const { error } = await supabase.from('equipo').delete().eq('username', nombre);
   if (error) return { exito: false, error: error.message };
   await supabase.from('sessions').delete().eq('username', nombre);
