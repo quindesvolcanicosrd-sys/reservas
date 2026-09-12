@@ -6925,6 +6925,15 @@ function _evEditarAplicarCambiosLocal(ev) {
       e.lugar = _evEditarCambios.lugar;
       var venue = (_EV_VENUES || []).filter(function(v) { return v.lugar === e.lugar; })[0];
       if (venue && venue.google_maps) e.mapsUrl = venue.google_maps;
+      // Mismo problema de raíz que el mapsUrl de arriba: `_evDetalleInfoHtml()`
+      // cae a `_EV_DESCRIPCION_POR_TIPO[ev.tipo]` cuando el evento no tiene
+      // descripción propia (`info_adicional`) -- sin sincronizar `e.tipo` acá
+      // también, la vista de detalle seguía mostrando la descripción del
+      // lugar/tipo ANTERIOR hasta que terminara el refetch de
+      // `_evCargarDatosReales()` en segundo plano. El backend (`upd.tipo_evento`,
+      // `_evAdminEditarEvento()` más abajo en este archivo) ya guardaba el
+      // valor correcto -- esto solo pisaba el objeto local optimista.
+      if (venue && venue.tipo_icono) e.tipo = venue.tipo_icono;
     }
     if (_evEditarCambios.hasOwnProperty('horaInicio')) e.horaInicio = _evEditarCambios.horaInicio;
     if (_evEditarCambios.hasOwnProperty('horaFin')) e.horaFinReal = _evEditarCambios.horaFin;
