@@ -11323,9 +11323,56 @@ function _evAdminEditarEvento(idEvento, campos, modo, fechaDesde, fechaHasta, on
       .catch(fail);
   }
 
+  // Bug real corregido (ver MANIFEST.md -- "hora se restablece a la
+  // original tras editar un evento"): `patch()` de arriba usa `Prefer:
+  // return=minimal` -- PostgREST devuelve 204 (éxito) aunque el filtro haya
+  // matcheado 0 filas (`id_evento` mal armado, race, etc.) O aunque el
+  // trigger `trg_proteger_asistencias_excepciones` (ver
+  // `fn_proteger_asistencia_excepcion()`, migración
+  // `20260821_protect_excepcion_rows.sql`) haya descartado el UPDATE por
+  // completo (`RETURN OLD`) -- en NINGUNO de los 2 casos el cliente se
+  // enteraba: el toast decía "Cambios guardados" (éxito real desde su
+  // perspectiva, más el aplicado optimista de `_evEditarAplicarCambiosLocal()`
+  // mostrando el valor nuevo de inmediato), pero la fila en la DB nunca
+  // cambió -- el siguiente refetch (`_evCargarDatosReales()`, corre en el
+  // mismo flujo de guardado) traía de vuelta el valor ORIGINAL, pisando el
+  // optimista y dando la sensación de "se guardó un instante y después se
+  // restableció". Fix: tras cada PATCH exitoso (HTTP-wise), se relee la
+  // fila real de `asistencias` para ESTE `idEvento` puntual (el evento que
+  // el admin está viendo, sea cual sea el `modo`) y se compara cada campo
+  // de `upd` contra el valor persistido de verdad -- solo si TODOS
+  // coinciden se llama a `onOk()`; si no, `onErr()` con un mensaje
+  // explícito en vez de una falsa confirmación. `inicia`/`termina` se
+  // comparan por los primeros 5 caracteres (`HH:MM`) -- PostgREST devuelve
+  // columnas `time` con segundos (`HH:MM:SS`), el cliente solo manda
+  // `HH:MM`.
+  function _evVerificarPatchAplicado(upd2, onOkReal, onErrReal) {
+    var campos2 = Object.keys(upd2);
+    if (!campos2.length) { onOkReal(); return; }
+    fetch(SUPABASE_URL + '/rest/v1/asistencias?id_evento=eq.' + encodeURIComponent(idEvento) + '&select=' + campos2.join(',') + '&limit=1', {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
+    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(rows) {
+      var fila = rows[0];
+      if (!fila) { onErrReal(new Error('No se encontró el evento tras guardar.')); return; }
+      var okTodos = campos2.every(function(c) {
+        if (c === 'inicia' || c === 'termina') {
+          return String(fila[c] || '').substring(0, 5) === String(upd2[c] || '').substring(0, 5);
+        }
+        return (fila[c] ?? null) === (upd2[c] ?? null);
+      });
+      if (!okTodos) { onErrReal(new Error('Los cambios no se guardaron -- el evento sigue con los valores anteriores.')); return; }
+      onOkReal();
+    })
+    .catch(onErrReal);
+  }
+
   if (modo === 'individual') {
     upd.es_excepcion = true;
-    patch(SUPABASE_URL + '/rest/v1/asistencias?id_evento=eq.' + encodeURIComponent(idEvento), upd, onOk, onErr);
+    patch(SUPABASE_URL + '/rest/v1/asistencias?id_evento=eq.' + encodeURIComponent(idEvento), upd, function() {
+      _evVerificarPatchAplicado(upd, onOk, onErr);
+    }, onErr);
     return;
   }
 
@@ -11375,10 +11422,14 @@ function _evAdminEditarEvento(idEvento, campos, modo, fechaDesde, fechaHasta, on
 
     if (modo === 'desde_aqui' && Object.keys(patchVenue).length > 0) {
       patch(urlAsis, upd, function() {
-        patch(SUPABASE_URL + '/rest/v1/venues?id=eq.' + encodeURIComponent(idRegla), patchVenue, onOk, onErr);
+        patch(SUPABASE_URL + '/rest/v1/venues?id=eq.' + encodeURIComponent(idRegla), patchVenue, function() {
+          _evVerificarPatchAplicado(upd, onOk, onErr);
+        }, onErr);
       }, onErr);
     } else {
-      patch(urlAsis, upd, onOk, onErr);
+      patch(urlAsis, upd, function() {
+        _evVerificarPatchAplicado(upd, onOk, onErr);
+      }, onErr);
     }
   })
   .catch(onErr);
