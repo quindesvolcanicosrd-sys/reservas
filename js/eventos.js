@@ -6229,6 +6229,16 @@ function _evConfirmarCancelarEvento(btn) {
   var idEvento = _evCancelarPendienteId;
   _evCancelarPendienteId = null;
   _evCerrarSheetCancelar();
+  // Segunda barrera (la primera oculta la opción "Cancelar evento" en
+  // `_evAbrirFabAdminMenu()`) por si se llega igual a este sheet ya con el
+  // evento finalizado (por ejemplo, el evento terminó mientras el sheet
+  // estaba abierto) -- mismo criterio `_evEsPasado()` que el resto del
+  // archivo, ver MANIFEST.md "Cambios recientes".
+  var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
+  if (ev && _evEsPasado(ev)) {
+    mostrarToast('No se puede cancelar un evento que ya finalizó.', 'error');
+    return;
+  }
   _evCancelarEvento(idEvento, btn);
 }
 // Nav compacta sticky (ver "Cambios recientes" -- reemplaza el #top-bar
@@ -6293,8 +6303,13 @@ function _evDetalleStickyHtml(ev) {
 function _evAbrirFabAdminMenu() {
   var ev = _evDetalleActual;
   if (!ev) return;
+  // Bug real corregido (pedido explícito, ver MANIFEST.md "Cambios
+  // recientes"): mismo criterio `_evEsPasado()` que ya oculta "Editar
+  // evento" abajo -- un evento ya finalizado tampoco tiene nada que
+  // cancelar, se oculta la opción acá, bloqueada igual en
+  // `_evConfirmarCancelarEvento()` por si se llega al sheet por otro camino.
   var cancelarBtn = document.getElementById('ev-fab-admin-cancelar');
-  if (cancelarBtn) cancelarBtn.style.display = ev.estado === 'Cancelado' ? 'none' : 'flex';
+  if (cancelarBtn) cancelarBtn.style.display = (ev.estado === 'Cancelado' || _evEsPasado(ev)) ? 'none' : 'flex';
   // Bug real corregido (pedido explícito, ver MANIFEST.md "Cambios
   // recientes"): un evento ya finalizado (mismo criterio que el resto del
   // archivo, `_evEsPasado()` -- fecha < hoy o `estado === 'Finalizado'`, este
