@@ -1362,8 +1362,10 @@ async function soltarTarea(params: Record<string, any>): Promise<Record<string, 
   return { exito: true };
 }
 
+// Mismo bug real que tomarTarea() (ver ese comentario) -- `rescatarTarea()`
+// tampoco recibe nunca `tareaId`, solo `idTarea`.
 async function rescatarTarea(params: Record<string, any>): Promise<Record<string, any>> {
-  const { nombre, tareaId } = params;
+  const { nombre, idTarea: tareaId } = params;
   const { data: t } = await supabase.from('tareas').select('*').eq('id', tareaId).maybeSingle();
   if (!t) return { exito: false, error: 'Tarea no encontrada.' };
   if (t.estado !== 'expirada') return { exito: false, error: 'La tarea no está en el baúl.' };
