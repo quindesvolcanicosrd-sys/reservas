@@ -3325,9 +3325,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <button type="button" class="btn-text-simple" style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;" onclick="_mlBackfillHistorialTier(this)">
         <span class="material-symbols-outlined" style="font-size:1.1rem;">history</span> Reconstruir historial de tiers
       </button>
-
-      <div class="seccion-label" style="margin-top:22px;">Estado actual del equipo</div>
-      <div id="ml-miembros-lista"></div>
     </div>
 
     <!-- Burbuja "Excepciones de cuota" (feat nueva) -- distinta de
@@ -3346,6 +3343,21 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
       <div id="admin-cuotaexc-lista"></div>
     </div>
+
+    <!-- "Estado actual del equipo" -- bug real de visibilidad corregido
+         (mismo patrón que el botón "Registrar pago manual", commit
+         21af553, pedido explícito de Victor): vivía dentro de
+         `#admin-burbuja-tiers` (tile "Categorías"), oculta con
+         `display:none` hasta tocar esa tile puntual -- nadie iba a asociar
+         la lista de categoría/estado por persona ni el botón "Registrar
+         pago" de cada fila (`_mlRenderMiembros()`/js/admin.js) con la
+         config de tiers. Movida a nivel raíz de `#s-miliga-card`, visible
+         de entrada -- `_mlCargarMiembros()` (antes solo se disparaba al
+         abrir esa tile, `_mlIrSeccion()`) ahora también se llama desde
+         `_adminCargarMiLiga()` para que la data cargue apenas se entra a
+         Mi Liga, mismo criterio que `_adminCargarAdmins()` ahí mismo. -->
+    <div class="seccion-label" style="margin-top:8px;">Estado actual del equipo</div>
+    <div id="ml-miembros-lista"></div>
 
     <!-- Copiar link de registro-express/ -- .btn-text-simple, mismo botón
          "secundario" que ya usa Mi Liga (ver "Agregar administradorx"/
@@ -3542,7 +3554,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/home.js?v=e715822d"></script>
 <script src="js/reservas.js?v=cacf57bd"></script>
 <script src="js/perfil.js?v=d2df3c5b"></script>
-<script src="js/admin.js?v=d9ef0822"></script>
+<script src="js/admin.js?v=b924a9f3"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js?v=d18bc0da"></script>
 

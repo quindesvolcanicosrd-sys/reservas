@@ -1617,6 +1617,11 @@ function _adminCargarMiLiga() {
   _adminCargarSolicitudesLesion();
   _adminCargarAdmins();
   _adminCargarPrecios();
+  // "Estado actual del equipo" ahora vive a nivel raíz de Mi Liga (bug real
+  // de visibilidad corregido, ver comentario en index.html) -- antes solo
+  // cargaba al abrir la tile "Categorías" (`_mlIrSeccion()`), que es la
+  // única caller que le queda a esa función además de esta.
+  _mlCargarMiembros();
 }
 
 // ── Mi Liga — "Categorías" (Fase A del sistema de tiers, config_tiers) ──────
