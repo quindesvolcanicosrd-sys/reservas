@@ -5985,6 +5985,17 @@ function _evRenderDetalle(ev) {
     ? _evDetalleEstadoNotaHtml(ev)
     : (_yaMostradaEnInfo ? '' : (_preIngresoDetalle && _noAsistioDetalle ? '' : (_evOcultarRsvpPorEquipoClub(ev) ? '' : (_evRsvpBarraHtml(ev) || _evDetalleEstadoNotaHtml(ev)))));
   _evRenderDetalleAsistencia(ev);
+  // Bug real corregido (pedido explícito de Victor, ver MANIFEST.md "Cambios
+  // recientes"): con "Editar evento" y "Cancelar evento" ya ocultos para un
+  // evento pasado (_evEsPasado(), ver _evAbrirFabAdminMenu() más abajo en
+  // este archivo), el FAB principal (#ev-detalle-fab-btn) seguía mostrando
+  // el lápiz de "Editar" aunque esa ya no fuera ninguna de las opciones
+  // reales detrás -- a esta altura la única acción posible es "Eliminar
+  // evento". Ícono dinámico acá (único punto de entrada real a esta
+  // pantalla, ver abrirEvDetalle()/_evCancelarEvento()/etc. más abajo, todos
+  // pasan por acá): 'delete' para pasado, 'edit' (el de siempre) si no.
+  var fabIcono = document.getElementById('ev-detalle-fab-icono');
+  if (fabIcono) fabIcono.textContent = _evEsPasado(ev) ? 'delete' : 'edit';
 }
 // Mismo componente que la card (`_evEstadoNotaPillHtml()`, más arriba en
 // este archivo) para Cancelado/No se entrena -- reuso literal, no una
