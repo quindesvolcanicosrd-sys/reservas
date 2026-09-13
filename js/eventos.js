@@ -6295,6 +6295,15 @@ function _evAbrirFabAdminMenu() {
   if (!ev) return;
   var cancelarBtn = document.getElementById('ev-fab-admin-cancelar');
   if (cancelarBtn) cancelarBtn.style.display = ev.estado === 'Cancelado' ? 'none' : 'flex';
+  // Bug real corregido (pedido explícito, ver MANIFEST.md "Cambios
+  // recientes"): un evento ya finalizado (mismo criterio que el resto del
+  // archivo, `_evEsPasado()` -- fecha < hoy o `estado === 'Finalizado'`, este
+  // último seteado por el cron `marcar-eventos-finalizados` cuando ya pasó
+  // `fecha + termina`) no tiene nada que editar -- se oculta la opción acá,
+  // guardado bloqueado igual en `_evEditarConfirmar()` por si se llega al
+  // form por otro camino.
+  var editarBtn = document.getElementById('ev-fab-admin-editar');
+  if (editarBtn) editarBtn.style.display = _evEsPasado(ev) ? 'none' : 'flex';
   var ov = document.getElementById('ev-fab-admin-overlay');
   var sh = document.getElementById('ev-fab-admin-sheet');
   if (ov) ov.style.display = 'block';
@@ -6851,6 +6860,15 @@ function _evEditarConfirmar() {
   if (!_evEditarScopeValido()) return;
   var ev = _evDetalleActual;
   if (!ev) return;
+  // Segunda barrera (la primera oculta el botón "Editar evento" en
+  // `_evAbrirFabAdminMenu()`) por si se llega igual a este form ya con el
+  // evento finalizado (por ejemplo, el evento terminó mientras el form
+  // estaba abierto) -- mismo criterio `_evEsPasado()` que el resto del
+  // archivo, ver MANIFEST.md "Cambios recientes".
+  if (_evEsPasado(ev)) {
+    mostrarToast('No se puede editar un evento que ya finalizó.', 'error');
+    return;
+  }
 
   var campos = {};
   if (_evEditarCambios.hasOwnProperty('lugar')) campos.donde = _evEditarCambios.lugar;
