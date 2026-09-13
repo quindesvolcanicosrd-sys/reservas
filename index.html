@@ -3011,6 +3011,19 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div id="admin-banner-equip-slot-ml"></div>
     </div>
 
+    <!-- Wizard "Registrar pago manual" -- entrada SIEMPRE visible, sin
+         depender de abrir ninguna burbuja/tile (bug real corregido, pedido
+         explícito de Victor -- "el botón no aparece en Mi Liga"). Vivía
+         dentro de `#admin-burbuja-tiers` (tile "Categorías", más abajo en
+         esta pantalla), que arranca en `display:none` y solo se muestra si
+         el admin toca esa tile puntual -- ningún admin real iba a asociar
+         "Registrar pago manual" con "Categorías" (config de tiers), así que
+         el botón, aunque 100% funcional, era en la práctica inalcanzable.
+         Ver `_mlPagoWizarAbrir()`/js/admin.js, sin cambios de lógica. -->
+    <button type="button" class="btn btn-outline" id="ml-btn-pago-wizard" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:14px;" onclick="_mlPagoWizarAbrir()">
+      <span class="material-symbols-outlined" style="font-size:1.1rem;">payments</span> Registrar pago manual
+    </button>
+
     <!-- Fila 0: Rectificaciones de asistencia (siempre visible, solo muestra badge con conteo si hay pendientes). -->
     <div class="admin-dash-row">
       <div class="admin-dash-tile" style="grid-column:span 2;" data-tile="s-admin-rectificaciones" onclick="adminToggleBurbuja('s-admin-rectificaciones', this)">
@@ -3284,19 +3297,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            en esta pantalla. -->
       <button type="button" class="btn btn-primary" id="ml-btn-recalcular-puntos" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;" onclick="_mlRecalcularPuntos()">
         <span class="material-symbols-outlined" style="font-size:1.1rem;">refresh</span> Recalcular puntos
-      </button>
-
-      <!-- Wizard "Registrar pago manual" (feat nueva, pedido explícito de
-           Victor) -- 4 pasos: persona / tipo (clase|mensual) / detalles
-           (clase del calendario + rollcall si es pasada, o mes+año si es
-           cuota) / monto+notas. Distinto del botón "Registrar pago" que ya
-           trae cada fila de `#ml-miembros-lista` (`_mlAbrirRegistrarPago()`,
-           bottom sheet de 1 solo paso, sin tocar) -- este es el punto de
-           entrada general, sin partir de un miembro puntual, y además puede
-           actualizar el rollcall de una clase pasada. Ver
-           `_mlPagoWizarAbrir()`/js/admin.js. -->
-      <button type="button" class="btn btn-outline" id="ml-btn-pago-wizard" style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;" onclick="_mlPagoWizarAbrir()">
-        <span class="material-symbols-outlined" style="font-size:1.1rem;">payments</span> Registrar pago manual
       </button>
 
       <!-- Fondos de viaje (Fase 2 completa del sistema de tiers, Parte 2/8,
