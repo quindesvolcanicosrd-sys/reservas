@@ -2170,19 +2170,22 @@ function _mlpwSelTipo(el, val) {
 // pedirlo de nuevo; si todavía no cargó nada esta sesión (admin entró
 // directo a Mi Liga sin pasar por Eventos), se dispara acá, mismo criterio
 // que el precargado del roster.
-// "2026-09-13" -> "Sábado 13 de septiembre de 2026" -- pedido explícito de
-// Victor: "12/09/2026" no deja ver qué día de la semana es. Reusa
-// _EV_DIAS_LARGOS (js/eventos.js)/NOMBRES_MESES (js/ui.js) en vez de
-// _evAntFechaLegible() (dd/mm/aaaa, usada en otro contexto -- rango de
-// asistencia anticipada -- que no se toca acá), siempre con año (a
-// diferencia de _tarFechaInfo()/js/tareas.js, que lo omite si es el año
-// actual: acá la lista mezcla clases de años distintos sin un "hoy" de
-// referencia único, así que el año siempre suma claridad).
+// "2026-09-13" -> "Dom 13/09/2026" -- día de semana abreviado (3 letras) +
+// DD/MM/AAAA. Primera versión de este helper armaba "Domingo 13 de
+// septiembre de 2026" (pedido explícito de Victor en su momento para poder
+// ver el día de la semana), pero quedaba demasiado largo en la fila de la
+// lista -- este ajuste (también pedido explícito) mantiene el día de
+// semana visible sin el texto largo. Reusa _EV_DIAS_CORTOS (js/eventos.js,
+// orden lunes-primero -- de ahí el `(d.getDay() + 6) % 7`, mismo cálculo
+// que ya usa `_evFechaBadgeHtml()`/js/eventos.js para lo mismo) en vez de
+// _EV_DIAS_LARGOS, que ya no se usa acá.
 function _mlpwFechaLegible(iso) {
   if (!iso) return '';
   var d = _evParseISO(iso);
   if (isNaN(d.getTime())) return iso;
-  return _EV_DIAS_LARGOS[d.getDay()] + ' ' + d.getDate() + ' de ' + NOMBRES_MESES[d.getMonth()].toLowerCase() + ' de ' + d.getFullYear();
+  var dd = String(d.getDate()).padStart(2, '0');
+  var mm = String(d.getMonth() + 1).padStart(2, '0');
+  return _EV_DIAS_CORTOS[(d.getDay() + 6) % 7] + ' ' + dd + '/' + mm + '/' + d.getFullYear();
 }
 function _mlpwClasesOrdenadas() {
   var pasadas = [], futuras = [];
@@ -2196,11 +2199,10 @@ function _mlpwClasesOrdenadas() {
 }
 // Buscador del paso 3 (mejora pedida por Victor -- la lista de clases puede
 // ser larga): filtra por venue (`e.lugar`), descripción (`e.descripcion`) o
-// fecha, esta última tanto contra el texto legible ya mostrado ("sábado",
-// "septiembre", "2026") como contra el ISO crudo (para que "2026-09-13" o
-// "09-13" también matcheen). Mismo criterio que `_mlpwFiltrarPersonas()` --
-// filtra en memoria sobre `_EV_EVENTOS` ya cargado, sin pedir nada al
-// backend.
+// fecha, esta última tanto contra el texto legible ya mostrado ("dom",
+// "13/09/2026") como contra el ISO crudo (para que "2026-09-13" o "09-13"
+// también matcheen). Mismo criterio que `_mlpwFiltrarPersonas()` -- filtra
+// en memoria sobre `_EV_EVENTOS` ya cargado, sin pedir nada al backend.
 function _mlpwFiltrarClases(q) { _mlpwRenderClases(q); }
 function _mlpwRenderClases(q) {
   var cont = document.getElementById('mlpw-clases-lista');
@@ -2235,11 +2237,29 @@ function _mlpwSelClase(idEvento) {
   _mlpwData.estadoAsistencia = null;
   document.querySelectorAll('#mlpw-clase-estado-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   var ev = (_EV_EVENTOS || []).filter(function(e) { return e.id === idEvento; })[0];
+  var requiereEstado = !!(ev && _evEsPasado(ev));
   var wrap = document.getElementById('mlpw-clase-estado-wrap');
-  if (wrap) wrap.style.display = (ev && _evEsPasado(ev)) ? 'block' : 'none';
+  if (wrap) wrap.style.display = requiereEstado ? 'block' : 'none';
   var inp = document.getElementById('mlpw-clases-search');
   _mlpwRenderClases(inp ? inp.value : '');
   _mlpwActualizarFooter();
+  // Bug real (reportado por Victor -- "el botón Continuar sigue
+  // deshabilitado al seleccionar un evento"): la lista de clases puede
+  // tener cientos de filas (todo el historial + futuras, ver
+  // `_mlpwClasesOrdenadas()`) y este picker "¿Cómo asistió a esa clase?"
+  // vive DESPUÉS de la lista COMPLETA, no junto a la fila elegida -- para
+  // cualquier clase que no esté cerca del tope, el picker recién habilitado
+  // queda cientos de píxeles fuera de la vista. El botón SÍ se deshabilita
+  // correctamente por diseño (falta elegir el estado, ver
+  // `_mlpwPasoValido()`), pero sin este scroll el admin nunca ve el picker
+  // que lo exige -- confirmado con datos reales de producción (242 clases
+  // reales cargadas vía Playwright, cualquiera fuera de las primeras
+  // pantallas del viewport deja el picker invisible sin este fix). El rAF
+  // espera a que `_mlpwRenderClases()` (arriba) ya haya recalculado el
+  // layout de la lista con el checkmark nuevo antes de medir/scrollear.
+  if (requiereEstado && wrap) {
+    requestAnimationFrame(function() { wrap.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+  }
 }
 function _mlpwSelEstadoAsistencia(el, val) {
   document.querySelectorAll('#mlpw-clase-estado-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
