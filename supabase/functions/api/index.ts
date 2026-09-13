@@ -1313,8 +1313,28 @@ async function getMisTareas(params: Record<string, any>): Promise<any[]> {
   }));
 }
 
+// Bug real corregido (pedido explícito de Victor, investigado a fondo con
+// Playwright contra la app real -- ver MANIFEST.md sección 3): el frontend
+// SIEMPRE manda el id de la tarea bajo la key `idTarea` (`_tarTomar()`/
+// `_tarSoltar()`/`_tarRescatar()`, js/tareas.js: `api({..., idTarea:
+// idTarea})`) -- confirmado con una captura real del request que dispara
+// el botón "Tomar tarea" en producción (`idTarea=<uuid real>` en la URL).
+// Pero esta función (y `soltarTarea()`/`rescatarTarea()`, mismo bug)
+// destructuraba `params.tareaId` -- una key que el cliente NUNCA manda, así
+// que siempre daba `undefined`. `.eq('id', undefined)` en supabase-js NO
+// se omite ni tira una excepción visible acá -- serializa literal
+// `id=eq.undefined` en la request a PostgREST (confirmado corriendo el
+// mismo builder de consultas localmente), que falla por tipo inválido
+// (`id` es `uuid`) y devuelve `data: null` sin que el código chequee
+// `error` -- indistinguible de "la tarea no existe". Resultado real: EL
+// SELF-SERVICE DE TOMAR/SOLTAR/RESCATAR TAREAS ESTUVO ROTO PARA TODA TAREA,
+// no solo las recurrentes, desde que se escribió esta función (commit
+// f207182, 2026-08-13) -- nunca se notó porque hasta ahora los admins
+// asignaban tareas directo (`asignarA` al crear, o `adminEditarAsignacionesTarea`)
+// en vez de dejarlas para que alguien las tome; las tareas recurrentes son
+// las primeras que DEPENDEN de este flujo (se crean siempre sin asignar).
 async function tomarTarea(params: Record<string, any>): Promise<Record<string, any>> {
-  const { nombre, tareaId } = params;
+  const { nombre, idTarea: tareaId } = params;
   const { data: t } = await supabase.from('tareas').select('*').eq('id', tareaId).maybeSingle();
   if (!t) return { exito: false, error: 'Tarea no encontrada.' };
   if (t.estado !== 'no_iniciada' && t.estado !== 'en_progreso') return { exito: false, error: 'La tarea no está disponible.' };
@@ -1328,8 +1348,10 @@ async function tomarTarea(params: Record<string, any>): Promise<Record<string, a
   return { exito: true };
 }
 
+// Mismo bug real que tomarTarea() (ver ese comentario) -- `soltarTarea()`
+// tampoco recibe nunca `tareaId`, solo `idTarea`.
 async function soltarTarea(params: Record<string, any>): Promise<Record<string, any>> {
-  const { nombre, tareaId } = params;
+  const { nombre, idTarea: tareaId } = params;
   const { data: asigs } = await supabase.from('asignaciones_tareas').select('id').eq('tarea_id', tareaId).eq('nombre_usuario', nombre).eq('estado', 'iniciada');
   for (const a of (asigs ?? [])) await supabase.from('asignaciones_tareas').delete().eq('id', a.id);
   const { data: quedan } = await supabase.from('asignaciones_tareas').select('id').eq('tarea_id', tareaId).in('estado', ['iniciada', 'pendiente_revision']);
@@ -2603,12 +2625,27 @@ async function adminSetEstadoMiembro(params: Record<string, any>): Promise<Recor
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { nombre, estadoMiembro } = params;
   if (!nombre || !ESTADOS_MIEMBRO.includes(estadoMiembro)) return { exito: false, error: 'Parámetros inválidos.' };
+  const { data: actual } = await supabase.from('equipo')
+    .select('estado_miembro, categoria, categoria_pre_lesion').eq('username', nombre).maybeSingle();
+  const estadoPrevio = actual?.estado_miembro ?? null;
   // `exenta_cuota` sigue a Lesionadx como única fuente de verdad (Cambio 55)
   // sin importar el camino que llega acá -- este action es compartido por
   // el selector de Mi Liga → Categorías y por el perfil de Equipo.
-  const { error } = await supabase.from('equipo')
-    .update({ estado_miembro: estadoMiembro, exenta_cuota: estadoMiembro === 'Lesionadx' })
-    .eq('username', nombre);
+  const update: Record<string, any> = { estado_miembro: estadoMiembro, exenta_cuota: estadoMiembro === 'Lesionadx' };
+  // Tier en pausa mientras dura la lesión (`recalcular-categorias/index.ts`
+  // ya saltea a Lesionadx del recálculo) -- acá se guarda/restaura el
+  // `categoria` de ANTES de la lesión para que, al volver a Activx, no
+  // dependa de un historial reciente vacío por la ausencia. Se guarda solo
+  // al ENTRAR a Lesionadx desde otro estado (evita pisar el valor guardado
+  // con un no-op), y se restaura/limpia solo al SALIR de Lesionadx hacia
+  // Activx puntualmente (a Ausente/Técnico se deja para más adelante).
+  if (estadoMiembro === 'Lesionadx' && estadoPrevio !== 'Lesionadx') {
+    update.categoria_pre_lesion = actual?.categoria ?? null;
+  } else if (estadoPrevio === 'Lesionadx' && estadoMiembro === 'Activx') {
+    if (actual?.categoria_pre_lesion) update.categoria = actual.categoria_pre_lesion;
+    update.categoria_pre_lesion = null;
+  }
+  const { error } = await supabase.from('equipo').update(update).eq('username', nombre);
   if (error) return { exito: false, error: error.message };
   return { exito: true };
 }

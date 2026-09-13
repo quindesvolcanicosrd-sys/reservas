@@ -2186,13 +2186,17 @@ function _eqRenderFavoritos() {
   _eqActualizarListaVacia();
 }
 
+// `p.estado !== 'Lesionadx'` explícito (no alcanza con `!_eqEsInactivo(p)`):
+// alguien recién lesionadx puede tener asistencia reciente y colarse acá
+// además de en `_eqRenderLesionadxs()` -- Lesionadx tiene su propia sección
+// siempre, sin importar hace cuánto entrenó por última vez.
 function _eqRenderGrupo(rol) {
   var key = rol.toLowerCase();
   var wrap = document.getElementById('eq-grupo-' + key);
   var cont = document.getElementById('eq-grupo-' + key + '-lista');
   var pillEl = document.getElementById('eq-grupo-' + key + '-pill');
   if (!wrap || !cont) return;
-  var filtradas = _eqPersonas.filter(function(p) { return p.rol === rol; }).filter(function(p) { return !_eqEsUsuarioActual(p) && !_eqEsInactivo(p); }).filter(_eqPasaBusqueda).filter(_eqPasaFiltroRol).sort(_eqCompararPorPuntos);
+  var filtradas = _eqPersonas.filter(function(p) { return p.rol === rol; }).filter(function(p) { return !_eqEsUsuarioActual(p) && !_eqEsInactivo(p) && p.estado !== 'Lesionadx'; }).filter(_eqPasaBusqueda).filter(_eqPasaFiltroRol).sort(_eqCompararPorPuntos);
   wrap.style.display = filtradas.length ? '' : 'none';
   if (pillEl) pillEl.textContent = filtradas.length;
   cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
