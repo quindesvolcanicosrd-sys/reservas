@@ -1,0 +1,53 @@
+-- Bug real corregido (pedido explícito de Victor): "vik" (username real, no
+-- confundir con "Vic" -- el admin actual, cuenta DISTINTA y activa que no se
+-- toca acá) seguía apareciendo como 'Asistiré' en eventos semanas después de
+-- haber usado "Eliminar cuenta" (auto-borrado, `eliminarCuenta()`/
+-- `mecConfirmar()` en js/perfil.js).
+--
+-- Causa raíz real, confirmada contra producción (`supabase db query
+-- --linked`, barrido genérico sobre TODAS las columnas text/jsonb de
+-- `information_schema.columns` en el schema public): `equipo.username='vik'`
+-- seguía existiendo como fila ACTIVA (`estado_miembro='Activx'`) -- nunca se
+-- había borrado de verdad. `eliminarCuenta()` (supabase/functions/api/
+-- index.ts) tenía 2 bugs: (1) solo borraba `equipo`/`sessions`, sin las
+-- otras 12 tablas por usuario (mismo bug ya corregido en
+-- `adminEliminarUsuario()`, ver `20260912120000_cascade_delete_usuario.sql`
+-- -- este camino de auto-borrado nunca recibió ese fix); (2) el bug real que
+-- explica por qué la fila de `equipo` sigue viva: el `.delete()` de `equipo`
+-- no chequeaba `error` NI cuántas filas afectó -- si el `WHERE username`
+-- no matcheaba ninguna fila (por la razón que sea), Supabase no lo reporta
+-- como error, así que la función devolvía `{exito:true}` de todos modos --
+-- el cliente cerraba sesión mostrando éxito, pero la cuenta real nunca se
+-- tocó. Fix de código en el mismo commit que esta migración (agrega
+-- `.select('username')` al delete para verificar filas afectadas de verdad,
+-- + los 12 deletes explícitos como doble seguro, mismo patrón que
+-- `adminEliminarUsuario()`).
+--
+-- Esta migración limpia el caso real ya ocurrido. Como las 14 tablas reales
+-- del schema YA tienen `ON DELETE CASCADE` hacia `equipo(username)` (`CASCADE`
+-- real, no `NOT VALID` -- confirmado contra `information_schema` antes de
+-- escribir esto: a diferencia de los huérfanos de "Victor"/"Ale Lora"
+-- limpiados en `20260912170000`/`20260912180000` (huérfanos de ANTES de que
+-- esas FKs existieran), la fila de `equipo` de "vik" seguía existiendo
+-- HASTA AHORA, con las FKs ya activas -- así que un solo DELETE sobre
+-- `equipo` cascadea limpio a las 14 tablas de una vez, sin necesitar deletes
+-- manuales tabla por tabla). Confirmado con un 2do barrido genérico
+-- post-limpieza: 0 referencias a "vik" (como token exacto, no substring --
+-- "Vic"/"Gringa la Vikinga" son personas reales distintas, no tocadas) en
+-- TODO el schema public.
+--
+-- Único resto que la cascada de FK no cubre (no es una fila normalizada):
+-- la columna legado `asistencias.a_horario` (CSV de nombres) tenía "vik"
+-- como uno de varios nombres en un solo evento (`ev_20260907_cci_2`,
+-- `"Sant, vik, Vic, Laru, Alejandra"`) -- se quita solo ese token exacto,
+-- sin tocar a "Vic" (persona real distinta) ni al resto de asistentes.
+--
+-- Idempotente: si "vik" ya no existe en `equipo` (como ahora, tras correrla
+-- una vez a mano contra producción antes de escribir este archivo), el
+-- DELETE no afecta filas y el UPDATE del CSV es un no-op si el token ya no
+-- está presente.
+update asistencias
+set a_horario = trim(both ', ' from regexp_replace(', ' || a_horario || ', ', ',\s*vik\s*,', ',', 'gi'))
+where id_evento = 'ev_20260907_cci_2';
+
+delete from equipo where username = 'vik';

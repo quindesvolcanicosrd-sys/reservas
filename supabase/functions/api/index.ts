@@ -828,11 +828,51 @@ async function inscribirPersonaExpress(params: Record<string, any>): Promise<Rec
   return { exito: true, token, nombre, datos: getDatosCompletos(newRow) };
 }
 
+// Bug real corregido (pedido explícito de Victor, ver MANIFEST.md -- "vik"
+// seguía apareciendo como 'Asistiré' en eventos semanas después de haber
+// usado 'Eliminar cuenta"): esta función (auto-borrado, ver mecConfirmar()/
+// js/perfil.js) es un camino SEPARADO de `adminEliminarUsuario()` -- nunca
+// recibió el mismo fix (ver ese comentario, sección Equipo) pese a borrar
+// exactamente el mismo tipo de cuenta. Tenía 2 bugs reales, confirmados
+// contra producción (`supabase db query --linked`): (1) solo borraba
+// `equipo`/`sessions`, dejando huérfanos en las otras 12 tablas -- aunque
+// hoy esas 12 tienen `ON DELETE CASCADE` real hacia `equipo(username)`
+// (migración `20260912120000_cascade_delete_usuario.sql`), así que ya no
+// hace falta borrarlas a mano (a diferencia de `adminEliminarUsuario()`,
+// que sigue con los deletes explícitos por si corre en un entorno sin esa
+// migración aplicada) -- se agregan de todos modos, mismo criterio de
+// doble seguro. (2) **el bug real que causó el caso de "vik"**: el
+// `.delete()` de `equipo` nunca chequeaba `error` NI cuántas filas afectó
+// -- si el `WHERE username = usr` no matcheaba ninguna fila (token
+// desincronizado, condición de carrera, o cualquier otra causa), Supabase
+// no lo reporta como error (0 filas borradas es "éxito" para el cliente),
+// así que la función devolvía `{exito:true}` de todos modos -- el
+// frontend cerraba sesión y mostraba éxito, pero la cuenta real seguía
+// 100% intacta en la DB, indefinidamente, sin que nadie se enterara.
+// Fix: se agrega `.select('username')` al delete de `equipo` para poder
+// verificar cuántas filas se borraron de verdad -- si `error` o 0 filas,
+// se devuelve `{exito:false}` en vez de una falsa confirmación.
 async function eliminarCuenta(params: Record<string, any>): Promise<Record<string, any>> {
   const tok = params.token as string;
   const usr = await _validarToken(tok);
   if (!usr) return { exito: false, error: 'Sesión inválida.' };
-  await supabase.from('equipo').delete().eq('username', usr);
+  await Promise.all([
+    supabase.from('log_asistencias').delete().eq('nombre_usuario', usr),
+    supabase.from('reservas').delete().eq('nombre_usuario', usr),
+    supabase.from('puntos_mensuales').delete().eq('nombre_usuario', usr),
+    supabase.from('asignaciones_tareas').delete().eq('nombre_usuario', usr),
+    supabase.from('rectificaciones_asistencia').delete().eq('nombre', usr),
+    supabase.from('solicitudes_excepcion').delete().eq('nombre', usr),
+    supabase.from('solicitudes_pago').delete().eq('nombre_usuario', usr),
+    supabase.from('pagos').delete().eq('nombre_usuario', usr),
+    supabase.from('pin_attempts').delete().eq('username', usr),
+    supabase.from('historial_tier').delete().eq('username', usr),
+    supabase.from('cuota_excepcion').delete().eq('id_miembro', usr),
+    supabase.from('nivel_actual').delete().eq('nombre_usuario', usr),
+  ]);
+  const { data, error } = await supabase.from('equipo').delete().eq('username', usr).select('username');
+  if (error) return { exito: false, error: error.message };
+  if (!data || data.length === 0) return { exito: false, error: 'No se encontró la cuenta a eliminar.' };
   await supabase.from('sessions').delete().eq('username', usr);
   return { exito: true };
 }
