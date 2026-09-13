@@ -1670,12 +1670,49 @@ async function getTareasPendientesValidacion(): Promise<any[]> {
 
 // ─── Tareas recurrentes (plantillas, ver MANIFEST.md sección 3) ───────────────
 
+// "Ahora" en hora de pared Ecuador (UTC-5 fijo, sin DST) -- mismo criterio
+// que el resto de los crons de este archivo (ej. "Ecuador = UTC-5" en
+// `_puntosTareaCreditados()`). Un solo lugar para no repetir el ajuste de
+// -5h en cada función que necesita "el mes en curso" para tareas
+// recurrentes.
+function _mesEcuadorActual(): { anio: number; mes: number } {
+  const ahoraEcuador = new Date(Date.now() - 5 * 3600000);
+  return { anio: ahoraEcuador.getUTCFullYear(), mes: ahoraEcuador.getUTCMonth() + 1 };
+}
+
+// Extraída de lo que antes era el cuerpo inline de `cronGenerarTareasRecurrentes()`
+// (más abajo) para poder reusarla también desde `adminCrearTareaRecurrente()`
+// -- bug real corregido (reportado por Victor: "la instancia del mes actual
+// aparece archivada/finalizada en vez de activa"): antes, crear una
+// plantilla a mitad de mes no generaba NINGUNA instancia hasta el día 1 del
+// mes siguiente (el cron mensual es la única vía que existía) -- la ÚNICA
+// forma de conseguir algo antes de esa fecha era `adminAplicarTareaRecurrenteHistorico()`
+// ("aplicar a meses anteriores"), pensada para meses YA completados
+// (archiva + aprueba + acredita puntos de una), no para "esta activa
+// ahora mismo" -- de ahí el síntoma real: una instancia terminó
+// archivada/aprobada con el mes equivocado en vez de disponible para tomar.
+// Fix: generar de una la instancia del MES DE CREACIÓN, activa y sin
+// asignar, igual que hace el cron para los meses siguientes -- mismo
+// criterio de idempotencia (nunca duplica si ya existe una instancia de
+// esta plantilla con ese `fecha_vencimiento` exacto).
+async function _generarInstanciaTareaRecurrente(p: Record<string, any>, anio: number, mes: number): Promise<boolean> {
+  const ultimoDia = new Date(Date.UTC(anio, mes, 0)).getUTCDate();
+  const fechaVencimiento = anio + '-' + String(mes).padStart(2, '0') + '-' + String(ultimoDia).padStart(2, '0');
+  const { data: existe } = await supabase.from('tareas').select('id').eq('tarea_recurrente_id', p.id).eq('fecha_vencimiento', fechaVencimiento).maybeSingle();
+  if (existe) return false;
+  await supabase.from('tareas').insert({
+    titulo: p.titulo, notas: p.notas, area: p.area, puntos: p.puntos, max_asignados: p.max_asignados,
+    fecha_vencimiento: fechaVencimiento, estado: 'no_iniciada', creado_por: p.creado_por, tarea_recurrente_id: p.id,
+  });
+  return true;
+}
+
 // Paso nuevo del wizard "Nueva tarea" ("Tipo de tarea": única/recurrente,
 // ver `_TAR_CREAR_STEPS`/js/tareas.js) -- "recurrente" guarda una plantilla
-// acá en vez de una fila en `tareas` directo. La instancia mensual real la
-// genera `cronGenerarTareasRecurrentes()` más abajo (disparada por el cron
-// `generar-tareas-recurrentes`, ver la migración de ese nombre) -- este
-// endpoint NUNCA crea una fila en `tareas` por sí mismo.
+// acá. Genera DE UNA la instancia del mes en curso (ver
+// `_generarInstanciaTareaRecurrente()` arriba, bug real corregido) -- los
+// meses siguientes los sigue generando `cronGenerarTareasRecurrentes()` más
+// abajo (disparada por el cron `generar-tareas-recurrentes`).
 async function adminCrearTareaRecurrente(params: Record<string, any>): Promise<Record<string, any>> {
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
@@ -1687,7 +1724,10 @@ async function adminCrearTareaRecurrente(params: Record<string, any>): Promise<R
     activa: true, creado_por: datos.creadoPor ?? null,
   }).select();
   if (error) return { exito: false, error: error.message };
-  return { exito: true, idPlantilla: creada[0].id };
+  const plantilla = creada[0];
+  const { anio, mes } = _mesEcuadorActual();
+  await _generarInstanciaTareaRecurrente(plantilla, anio, mes);
+  return { exito: true, idPlantilla: plantilla.id };
 }
 
 // "¿Querés aplicar esta tarea a meses anteriores?" (paso posterior al
@@ -1699,6 +1739,15 @@ async function adminCrearTareaRecurrente(params: Record<string, any>): Promise<R
 // al crearla), reusado acá para el caso recurrente/histórico. Vencimiento
 // de cada instancia histórica = último día del mes/año elegido, mismo
 // criterio que usa el cron mensual para las instancias en curso.
+//
+// Bug real corregido (reportado por Victor -- una entrada con el mes/año
+// del día de HOY terminó archivada/aprobada en vez de disponible, ver el
+// bug de arriba): "meses anteriores" nunca debió aceptar el mes en curso ni
+// uno futuro -- ese mes ya tiene su propia instancia activa, generada por
+// `adminCrearTareaRecurrente()`/el cron mensual; aceptar el mismo mes acá
+// producía una 2da instancia duplicada y ya archivada, que es exactamente
+// el síntoma reportado. Ahora se saltan (`omitidas`, devuelto en la
+// respuesta -- js/tareas.js avisa si `omitidas > 0`) en vez de crearse.
 async function adminAplicarTareaRecurrenteHistorico(params: Record<string, any>): Promise<Record<string, any>> {
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
@@ -1708,10 +1757,12 @@ async function adminAplicarTareaRecurrenteHistorico(params: Record<string, any>)
   if (!Array.isArray(entradas) || !entradas.length) return { exito: false, error: 'No hay meses para aplicar.' };
   const { data: plantilla } = await supabase.from('tareas_recurrentes').select('*').eq('id', idPlantilla).maybeSingle();
   if (!plantilla) return { exito: false, error: 'Plantilla no encontrada.' };
-  let creadas = 0;
+  const actual = _mesEcuadorActual();
+  let creadas = 0, omitidas = 0;
   for (const e of entradas) {
     const anio = Number(e.anio), mes = Number(e.mes);
     if (!anio || !mes || !e.persona) continue;
+    if (anio > actual.anio || (anio === actual.anio && mes >= actual.mes)) { omitidas++; continue; }
     const ultimoDia = new Date(Date.UTC(anio, mes, 0)).getUTCDate();
     const fecha = anio + '-' + String(mes).padStart(2, '0') + '-' + String(ultimoDia).padStart(2, '0');
     const { data: creada } = await supabase.from('tareas').insert({
@@ -1728,34 +1779,22 @@ async function adminAplicarTareaRecurrenteHistorico(params: Record<string, any>)
     await _acreditarPuntosTarea(e.persona, anio, mes, Number(plantilla.puntos) || 0);
     creadas++;
   }
-  return { exito: true, creadas };
+  return { exito: true, creadas, omitidas };
 }
 
 // Disparada por el cron `generar-tareas-recurrentes` (día 1 de cada mes, ver
 // esa migración) vía el mismo gate `x-cron-secret` que cronDiario/etc. --
 // genera una instancia nueva en `tareas` (sin asignar, `no_iniciada`) por
 // cada plantilla activa, con vencimiento = último día del mes en curso
-// (hora Ecuador). Idempotente: si ya existe una instancia de esta plantilla
-// con ESE `fecha_vencimiento` exacto (ej. el cron corrió 2 veces el mismo
-// mes por un reintento), la salta -- mismo criterio de "seguro correr más
-// de una vez" que el resto de los crons de este archivo.
+// (hora Ecuador) -- ver `_generarInstanciaTareaRecurrente()` arriba
+// (extraída de acá, reusada también por `adminCrearTareaRecurrente()`).
 async function cronGenerarTareasRecurrentes(): Promise<Record<string, any>> {
   const { data: plantillas } = await supabase.from('tareas_recurrentes').select('*').eq('activa', true);
   if (!plantillas?.length) return { generadas: 0 };
-  const ahoraEcuador = new Date(Date.now() - 5 * 3600000);
-  const anio = ahoraEcuador.getUTCFullYear();
-  const mes = ahoraEcuador.getUTCMonth() + 1;
-  const ultimoDia = new Date(Date.UTC(anio, mes, 0)).getUTCDate();
-  const fechaVencimiento = anio + '-' + String(mes).padStart(2, '0') + '-' + String(ultimoDia).padStart(2, '0');
+  const { anio, mes } = _mesEcuadorActual();
   let generadas = 0;
   for (const p of plantillas) {
-    const { data: existe } = await supabase.from('tareas').select('id').eq('tarea_recurrente_id', p.id).eq('fecha_vencimiento', fechaVencimiento).maybeSingle();
-    if (existe) continue;
-    await supabase.from('tareas').insert({
-      titulo: p.titulo, notas: p.notas, area: p.area, puntos: p.puntos, max_asignados: p.max_asignados,
-      fecha_vencimiento: fechaVencimiento, estado: 'no_iniciada', creado_por: p.creado_por, tarea_recurrente_id: p.id,
-    });
-    generadas++;
+    if (await _generarInstanciaTareaRecurrente(p, anio, mes)) generadas++;
   }
   return { generadas };
 }
@@ -2909,12 +2948,16 @@ async function recalcularPuntosAsistencia(mes: number, anio: number): Promise<{ 
 // misma regla en los 2: +1 en cada asistencia real ('A tiempo'/'Tarde'),
 // reset a 0 en 'Ninguno', +2 de puntos_extra cada 3ra consecutiva.
 //
-// "Sus asistencias" (pedido) se interpreta como SOLO los eventos donde
-// la persona tiene una marca real de admin (`log_asistencias`,
-// `origen==='Admin'`) -- un evento sin ninguna fila para esa persona
-// (nunca se le tomó lista, ej. no pertenece a ese tier) no cuenta ni como
-// racha ni como corte: no todo evento aplica a toda persona en este
-// club (ver `_modoUsuario()`/Quindes-Mirlxs, MANIFEST.md).
+// "Sus asistencias" (pedido) se interpreta como SOLO los eventos ya
+// ocurridos (`fecha < hoy` -- uno futuro/pendiente no puede ser "training
+// perdido" todavía) desde que la persona tiene su PRIMERA marca real de
+// admin (`log_asistencias`, `origen==='Admin'`) -- eventos anteriores a esa
+// primera marca no cuentan ni como racha ni como corte (todavía no
+// empezaba a trackearse). DESDE esa primera marca en adelante, en cambio,
+// CUALQUIER evento real (no cancelado) sin una marca de presente para esa
+// persona SÍ corta la racha -- ver "Ruptura automática de racha" más abajo
+// (CAMBIO 1, ya no es "no todo evento aplica a toda persona", ver
+// MANIFEST.md para el detalle de este cambio de criterio explícito).
 //
 // `soloUsuario` (opcional, fix real "racha inflada en re-marcados" --
 // `adminMarcarAsistencia()`, arriba en este archivo): acota la
@@ -2923,23 +2966,71 @@ async function recalcularPuntosAsistencia(mes: number, anio: number): Promise<{ 
 // para corregir un click) necesita recalcular YA, no puede esperar a la
 // próxima corrida completa/manual de `recalcularPuntosAsistencia()`. Los
 // eventos siguen leyéndose completos (el orden cronológico es compartido,
-// no depende de quién se está recalculando) -- solo el filtro de
-// `log_asistencias` cambia.
+// no depende de quién se está recalculando) -- solo la lista de usuarios a
+// recorrer cambia.
+//
+// Ruptura automática de racha (CAMBIO 1, ver MANIFEST.md -- "racha
+// congelada para quien dejó de venir"): antes, un evento sin ninguna fila
+// para una persona (nunca se le tomó lista) simplemente se ignoraba -- ni
+// sumaba ni cortaba. Eso significa que alguien que deja de venir y a quien
+// ningún admin vuelve a marcarle nada (ni con 'Ninguno') conserva su racha
+// vieja CONGELADA para siempre (caso real confirmado: "Gringa la Vikinga",
+// racha=4 casi 2 semanas después de su última asistencia real). Fix: desde
+// la primera marca real de la persona en adelante, un evento real (no
+// cancelado) SIN marca para ella se trata como un 'Ninguno' implícito --
+// corta la racha igual que uno explícito.
+//
+// Eventos cancelados y CAMBIO 4 (ver MANIFEST.md -- "bug en
+// _reconstruirRachasHistoricas() con eventos cancelados"): antes, un
+// evento marcado luego como 'Evento Cancelado'/'No se entrena' se sacaba
+// por completo de `ordenPorEvento`, así que CUALQUIER fila de
+// `log_asistencias` apuntando a ese evento -- incluido un 'Ninguno' real
+// que un admin ya había registrado ahí -- se descartaba en silencio (línea
+// `if (!ordenPorEvento[...]) return`). Un corte de racha genuino
+// desaparecía sin dejar rastro (caso real confirmado: Vic, racha=17 en vez
+// de 13, por un 'Ninguno' del 10-ago en un evento cancelado después). Fix:
+// los eventos cancelados/"no se entrena" YA NO se sacan de `ordenPorEvento`
+// -- entran igual que cualquier otro (así ninguna fila de log queda
+// huérfana), pero al recorrer la secuencia de cada persona un evento
+// cancelado NUNCA incrementa la racha ni cuenta como "training perdido" si
+// no tiene marca -- excepto que, si tiene un 'Ninguno' explícito registrado
+// ahí, ESE reset se respeta igual (fue una decisión real de un admin, no
+// un hueco de datos).
 async function _reconstruirRachasHistoricas(soloUsuario?: string): Promise<void> {
-  const { data: eventos } = await supabase.from('asistencias')
-    .select('id_evento, fecha, inicia')
-    .not('estado', 'in', '("Evento Cancelado","No se entrena")')
+  const fechaISO = (d: Date): string => d.toISOString().slice(0, 10);
+  const hoyISO = fechaISO(new Date());
+  const { data: eventosTodos } = await supabase.from('asistencias')
+    .select('id_evento, fecha, inicia, estado')
     .order('fecha', { ascending: true })
     .order('inicia', { ascending: true, nullsFirst: false });
-  if (!eventos || !eventos.length) return;
+  if (!eventosTodos || !eventosTodos.length) return;
+  // Solo eventos YA ocurridos -- uno futuro no puede ser "training perdido"
+  // ni sumar asistencia todavía (mismo criterio de corte que
+  // `getEquipo()`/`recalcular-categorias` usan para el termómetro).
+  const eventos = eventosTodos.filter((ev: any) => String(ev.fecha) < hoyISO);
+  if (!eventos.length) return;
 
   const ordenPorEvento: Record<string, number> = {};
   const mesAnioPorEvento: Record<string, { anio: number; mes: number }> = {};
+  const canceladoPorEvento: Record<string, boolean> = {};
   eventos.forEach((ev: any, i: number) => {
     ordenPorEvento[ev.id_evento] = i;
     const partes = String(ev.fecha).split('-');
     mesAnioPorEvento[ev.id_evento] = { anio: Number(partes[0]), mes: Number(partes[1]) };
+    canceladoPorEvento[ev.id_evento] = ev.estado === 'Evento Cancelado' || ev.estado === 'No se entrena';
   });
+
+  // Usuarios a recorrer -- CAMBIO 1 necesita la secuencia completa de
+  // eventos para CADA persona (no solo las que tienen alguna fila en
+  // `log_asistencias`, ya que ahora un evento SIN fila también puede
+  // cortar la racha) -- sin `soloUsuario`, se recorre todo `equipo`.
+  let usuarios: string[];
+  if (soloUsuario) {
+    usuarios = [soloUsuario];
+  } else {
+    const { data: equipoRows } = await supabase.from('equipo').select('username');
+    usuarios = (equipoRows ?? []).map((r: any) => String(r.username ?? '').trim()).filter(Boolean);
+  }
 
   let queryLogs = supabase.from('log_asistencias')
     .select('id_evento, nombre_usuario, estado, marca_temporal')
@@ -2949,9 +3040,13 @@ async function _reconstruirRachasHistoricas(soloUsuario?: string): Promise<void>
 
   // Última marca real por (evento, persona) -- puede haber más de 1 fila
   // para el mismo evento+persona (re-marcados, rectificaciones aprobadas).
+  // Ya NO se descartan las filas de eventos cancelados (CAMBIO 4, ver
+  // comentario grande arriba) -- solo las de un evento futuro/inexistente
+  // (no entró a `ordenPorEvento` porque `eventos` ya está acotado a
+  // `fecha < hoy`, o porque el `id_evento` no existe más en `asistencias`).
   const ultimaPorClave: Record<string, { estado: string; marca: number }> = {};
   (logsTodos ?? []).forEach((l: any) => {
-    if (!Object.prototype.hasOwnProperty.call(ordenPorEvento, l.id_evento)) return; // evento cancelado/inexistente -- no cuenta
+    if (!Object.prototype.hasOwnProperty.call(ordenPorEvento, l.id_evento)) return;
     const u = String(l.nombre_usuario ?? '').trim();
     if (!u) return;
     const clave = l.id_evento + '|' + u;
@@ -2960,31 +3055,33 @@ async function _reconstruirRachasHistoricas(soloUsuario?: string): Promise<void>
     if (!actual || marca >= actual.marca) ultimaPorClave[clave] = { estado: l.estado, marca };
   });
 
-  // Agrupar por persona, cada entrada con el orden cronológico real del
-  // evento (no de la marca) para poder ordenar la secuencia correctamente.
-  const entradasPorUsuario: Record<string, Array<{ orden: number; estado: string; idEvento: string }>> = {};
-  Object.keys(ultimaPorClave).forEach((clave) => {
-    const sep = clave.lastIndexOf('|');
-    const idEvento = clave.substring(0, sep);
-    const u = clave.substring(sep + 1);
-    if (!entradasPorUsuario[u]) entradasPorUsuario[u] = [];
-    entradasPorUsuario[u].push({ orden: ordenPorEvento[idEvento], estado: ultimaPorClave[clave].estado, idEvento });
-  });
-
   const puntosExtraPorClaveMes: Record<string, number> = {}; // clave 'usuario|anio|mes' -> total del mes
   const rachaFinalPorUsuario: Record<string, number> = {};
 
-  Object.keys(entradasPorUsuario).forEach((u) => {
-    const entradas = entradasPorUsuario[u].sort(function(a, b) { return a.orden - b.orden; });
+  usuarios.forEach((u) => {
     let racha = 0;
-    entradas.forEach((e) => {
-      const mesAnio = mesAnioPorEvento[e.idEvento];
+    let empezo = false; // todavía sin primera marca real -- eventos previos no cuentan ni como racha ni como corte
+    eventos.forEach((ev: any) => {
+      const marcaInfo = ultimaPorClave[ev.id_evento + '|' + u];
+      if (!empezo) {
+        if (!marcaInfo) return; // sin ninguna marca real todavía para esta persona -- no aplica
+        empezo = true;
+      }
+      if (canceladoPorEvento[ev.id_evento]) {
+        // CAMBIO 4: cancelado nunca suma ni cuenta como perdido -- pero un
+        // 'Ninguno' explícito ahí sí se respeta como reset intencional.
+        if (marcaInfo && marcaInfo.estado === 'Ninguno') racha = 0;
+        return;
+      }
+      const mesAnio = mesAnioPorEvento[ev.id_evento];
       const claveMes = u + '|' + mesAnio.anio + '|' + mesAnio.mes;
       if (puntosExtraPorClaveMes[claveMes] === undefined) puntosExtraPorClaveMes[claveMes] = 0;
-      if (e.estado === 'A tiempo' || e.estado === 'Tarde') {
+      // CAMBIO 1: sin marca en un entrenamiento real ya ocurrido == 'Ninguno' implícito.
+      const estado = marcaInfo ? marcaInfo.estado : 'Ninguno';
+      if (estado === 'A tiempo' || estado === 'Tarde') {
         racha++;
         if (racha % 3 === 0) puntosExtraPorClaveMes[claveMes] += 2;
-      } else if (e.estado === 'Ninguno') {
+      } else {
         racha = 0;
       }
     });
@@ -3504,16 +3601,16 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
   const fechaISO = (d: Date): string => d.toISOString().slice(0, 10);
   // "n meses atrás desde una fecha de referencia" -- puerto directo de
   // primerDiaMesesAtras()/recalcular-categorias/index.ts, parametrizado por
-  // `refDate` (ahí siempre era "hoy") para poder pedir la ventana tanto
-  // desde hoy como desde `haceUnMes` (definida abajo, con `n=1` sobre este
-  // mismo helper -- sin duplicar la aritmética de fin-de-mes).
+  // `refDate` (ahí siempre era "hoy") para poder pedir la ventana del
+  // termómetro tanto desde "hoy" como desde una fecha de referencia distinta
+  // (`contarClases()`/`calcularTermometroPctAsOf()`, más abajo) -- sin
+  // duplicar la aritmética de fin-de-mes.
   const primerDiaMesesAtras = (refDate: Date, n: number): Date => {
     const year = refDate.getUTCFullYear();
     const month = refDate.getUTCMonth() - n;
     const dia = Math.min(refDate.getUTCDate(), new Date(Date.UTC(year, month + 1, 0)).getUTCDate());
     return new Date(Date.UTC(year, month, dia));
   };
-  const haceUnMes = primerDiaMesesAtras(hoy, 1);
   const nombresDe = (s: string | null | undefined): string[] =>
     String(s ?? '').split(',').map((n: string) => n.trim().toUpperCase()).filter(Boolean);
   const { data: tiersData } = await supabase.from('config_tiers').select('*').order('orden', { ascending: true });
@@ -3539,9 +3636,10 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
   const ventanaMesesTecho = tierTecho ? (Number(tierTecho.ventana_meses) || 0) : 0;
   // Ventana ancha (`ventanaMesesTecho + 1` meses atrás desde HOY) para cubrir
   // en un solo fetch tanto la ventana de "hoy" ([hoy−ventana, hoy)) como la
-  // de "hace 1 mes" ([haceUnMes−ventana, haceUnMes)) -- contarClases() de
-  // abajo filtra la porción exacta de cada una sobre este mismo array, sin
-  // pedirle a la DB 2 veces.
+  // de "hace 7 días" ([haceSieteDías−ventana, haceSieteDías)), apenas más
+  // angosta -- contarClases()/huboClaseUltimos7Dias() de abajo filtran la
+  // porción exacta de cada una sobre este mismo array, sin pedirle a la DB
+  // 2 veces.
   const { data: asistDataTermometro } = await supabase.from('asistencias')
     .select('fecha, a_horario, tarde')
     .not('estado', 'in', '("Evento Cancelado","No se entrena")')
@@ -3588,36 +3686,50 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     const combinado = tierTecho.logica === 'Y' ? Math.min(...ratios) : Math.max(...ratios);
     return Math.min(100, Math.max(0, combinado * 100));
   };
-  const idxActualTermometro = anioActual * 12 + (mesActual - 1);
-  // `tendencia` por persona ('sube'/'baja'/ausente = igual o sin tier techo
-  // configurado) -- calculada acá, aparte, en vez de inline en
-  // `personasOut` más abajo (mismo criterio que `puntosPeriodoPorUsuario`/
-  // `puntosAnioPorUsuario`: un objeto de una sola expresión por persona).
-  const tendenciaPorUsuario: Record<string, 'sube' | 'baja'> = {};
+  // `tendencia` por persona ('sube'/ausente = no subió o sin datos recientes)
+  // -- calculada acá, aparte, en vez de inline en `personasOut` más abajo
+  // (mismo criterio que `puntosPeriodoPorUsuario`/`puntosAnioPorUsuario`: un
+  // objeto de una sola expresión por persona).
+  //
+  // Re-hecho (bug real, ver MANIFEST.md -- "chevron de ascenso para alguien
+  // que no entrena hace 2 semanas"): la versión anterior comparaba el
+  // termómetro de "hoy" contra "hace 1 mes", ambos con ventana móvil de
+  // `ventanaMesesTecho` (1 mes) -- alguien que dejó de venir podía seguir
+  // viendo 'sube' semanas después de su última asistencia real, porque sus
+  // marcas viejas se iban "acomodando" distinto dentro de las 2 ventanas
+  // comparadas sin que hubiera pasado nada nuevo (caso real confirmado
+  // contra producción). Pedido explícito: el chevron debe reflejar
+  // actividad de la ÚLTIMA SEMANA, no una tendencia de mes contra mes.
+  // Nueva regla: 'sube' solo si (a) hubo al menos una clase real en los
+  // últimos 7 días (`huboClaseUltimos7Dias()`, abajo) Y (b) el termómetro
+  // "hoy" es estrictamente mayor que el termómetro "hace 7 días" (mismas
+  // `calcularTermometroPctAsOf()`/`contarClases()` de arriba, evaluadas con
+  // `asOf` de 7 días atrás en vez de 1 mes atrás). Sin datos en los últimos
+  // 7 días, o termómetro igual/menor -- sin chevron (ya no existe un estado
+  // 'baja': nunca se muestra en la UI desde el commit que lo sacó, ver
+  // js/equipo.js/_eqTendenciaBadgeHtml(), así que ni vale la pena
+  // calcularlo acá).
+  const idxDeFecha = (d: Date): number => d.getUTCFullYear() * 12 + d.getUTCMonth();
+  const haceSieteDias = new Date(hoy);
+  haceSieteDias.setUTCDate(haceSieteDias.getUTCDate() - 7);
+  const huboClaseUltimos7Dias = (username: string): boolean => {
+    const desde = fechaISO(haceSieteDias);
+    const hasta = fechaISO(hoy);
+    const u = username.trim().toUpperCase();
+    for (const fila of asistDataTermometro ?? []) {
+      if (!fila.fecha || fila.fecha < desde || fila.fecha >= hasta) continue;
+      if (nombresDe(fila.a_horario).includes(u) || nombresDe(fila.tarde).includes(u)) return true;
+    }
+    return false;
+  };
+  const tendenciaPorUsuario: Record<string, 'sube'> = {};
   if (tierTecho) {
     usernames.forEach((u: string) => {
-      // Reforzado (bug real, ver MANIFEST.md -- "chevron para personas que
-      // regresan de inactividad"): el chevron solo tiene sentido como
-      // COMPARACIÓN de una tendencia real, no para "alguien que no
-      // entrenaba nada empezó a entrenar de nuevo" -- ese caso es un
-      // regreso, no una mejora/caída medible. `contarClases()` (arriba en
-      // esta función) ya cuenta asistencia REAL (a_horario/tarde) en cada
-      // una de las 2 ventanas comparadas ("hoy" y "hace 1 mes") -- si
-      // CUALQUIERA de las 2 tiene 0 clases reales, no hay tendencia que
-      // mostrar (sin entrada en el mapa, `personasOut` la traduce a `null`,
-      // igual que el caso "dio lo mismo" de siempre) -- cubre tanto la
-      // primera vuelta tras inactividad (ventana de "hace 1 mes" en 0,
-      // todavía sin nada con qué comparar) como a alguien que dejó de venir
-      // (ventana de "hoy" en 0, no hay "tendencia" que reportar sobre una
-      // ausencia).
-      const clasesActual = contarClases(u, hoy);
-      const clasesAnterior = contarClases(u, haceUnMes);
-      if (clasesActual === 0 || clasesAnterior === 0) return;
-      const actualPct = calcularTermometroPctAsOf(u, hoy, idxActualTermometro);
-      const anteriorPct = calcularTermometroPctAsOf(u, haceUnMes, idxActualTermometro - 1);
-      if (actualPct > anteriorPct) tendenciaPorUsuario[u] = 'sube';
-      else if (actualPct < anteriorPct) tendenciaPorUsuario[u] = 'baja';
-      // Iguales -- queda sin entrada, `personasOut` la traduce a `null`.
+      if (!huboClaseUltimos7Dias(u)) return; // sin actividad en la última semana -- sin chevron, sin importar el histórico
+      const actualPct = calcularTermometroPctAsOf(u, hoy, idxDeFecha(hoy));
+      const pctHaceSieteDias = calcularTermometroPctAsOf(u, haceSieteDias, idxDeFecha(haceSieteDias));
+      if (actualPct > pctHaceSieteDias) tendenciaPorUsuario[u] = 'sube';
+      // Igual o menor -- queda sin entrada, `personasOut` la traduce a `null` (mismo criterio de siempre).
     });
   }
 
@@ -3661,6 +3773,41 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     console.log('[getEquipo][historico] equipo.puntos_anteriores por persona:',
       JSON.stringify(personas.map((r: any) => ({ username: r.username, puntos_anteriores_raw: r.puntos_anteriores, puntos_anteriores_num: Number(r.puntos_anteriores) || 0 }))));
   }
+
+  // Ruptura automática de racha (feat nueva, ver MANIFEST.md/CHANGELOG.md --
+  // "racha congelada para quien dejó de venir"): `equipo.racha_actual` solo
+  // se resetea a 0 cuando un admin marca 'Ninguno' A MANO -- si la persona
+  // simplemente dejó de venir y nadie volvió a tomarle lista (ni con
+  // 'Ninguno'), el contador queda congelado en su último valor PARA SIEMPRE
+  // (caso real confirmado contra producción: "Gringa la Vikinga", racha=4
+  // casi 2 semanas después de su última asistencia real, sin un solo
+  // 'Ninguno' de por medio). Corrección: antes de exponer `rachaActual`, se
+  // verifica si hubo algún entrenamiento real DISPONIBLE (no cancelado, ya
+  // ocurrido) después de la última asistencia real de la persona
+  // (`ultimaPorUsuario`, ya calculado arriba para otro fin) -- si lo hubo,
+  // esa persona faltó a un entrenamiento sin que quedara registrado como
+  // tal, así que la racha real es 0 sin importar lo que diga la columna.
+  // `fechaUltimoEventoDisponible` = fecha del entrenamiento real más
+  // reciente ya ocurrido -- reusa `asistDataTermometro` (ya filtrado a
+  // no-cancelados/no-"No se entrena", ya fetcheado arriba para el
+  // termómetro/chevron, sin pedir la DB de nuevo): si esa fecha es
+  // POSTERIOR a la última asistencia real de la persona, hay un hueco sin
+  // marcar. Esto solo corrige lo que se MUESTRA en este endpoint -- el
+  // valor persistido en `equipo.racha_actual` se corrige aparte, de forma
+  // consistente, en `_reconstruirRachasHistoricas()` (ver ese comentario,
+  // más abajo en este archivo), que sí lo sobreescribe.
+  let fechaUltimoEventoDisponible: string | null = null;
+  (asistDataTermometro ?? []).forEach((fila: any) => {
+    if (!fila.fecha) return;
+    if (!fechaUltimoEventoDisponible || fila.fecha > fechaUltimoEventoDisponible) fechaUltimoEventoDisponible = fila.fecha;
+  });
+  const rachaEfectiva = (username: string, rachaCruda: number): number => {
+    if (!rachaCruda || !fechaUltimoEventoDisponible) return rachaCruda;
+    const ultima = ultimaPorUsuario[username];
+    if (!ultima) return 0; // nunca tuvo una asistencia real -- no debería tener racha > 0, pero por las dudas
+    return ultima.slice(0, 10) < (fechaUltimoEventoDisponible as string) ? 0 : rachaCruda;
+  };
+
   const personasOut = personas.map((r: any) => ({
     id: r.username, nombre: r.username, username: r.username,
     nombreDerby: r.nombre_derby ?? '', numeroDerby: r.numero_derby ?? '',
@@ -3690,8 +3837,11 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     // período seleccionado, y puede dar 0 aunque la racha real siga viva si
     // no hubo un hito nuevo en ese período puntual. Esta columna nunca se
     // había expuesto acá -- solo se escribía (nunca se leía de vuelta) hasta
-    // este pedido.
-    rachaActual: Number(r.racha_actual) || 0,
+    // este pedido. `rachaEfectiva()` (arriba en esta función) la corrige a 0
+    // si detecta un entrenamiento real disponible sin marcar después de la
+    // última asistencia real -- ver ese comentario ("ruptura automática de
+    // racha").
+    rachaActual: rachaEfectiva(r.username, Number(r.racha_actual) || 0),
     // `equipo.puntos_anteriores` es el arrastre de puntos previos a la
     // existencia de `puntos_mensuales` (importado a mano al migrar el
     // sistema de puntos) -- solo tiene sentido sumarlo al total histórico,
@@ -3941,14 +4091,30 @@ async function getDesglosePuntos(params: Record<string, any>): Promise<Record<st
     // evento disponible en esta base -- sus meses con datos entran acá
     // como UNA fila por mes (`fecha` = primer día de ese mes, `legado:true`)
     // en vez de inventar una fecha de evento que no existe.
-    const { data: eventos } = await supabase.from('asistencias')
-      .select('id_evento, fecha, inicia')
-      .not('estado', 'in', '("Evento Cancelado","No se entrena")')
+    //
+    // CAMBIO 1 + CAMBIO 4 (ver MANIFEST.md, mismo criterio EXACTO que
+    // `_reconstruirRachasHistoricas()`, más abajo en este archivo -- sin
+    // compartir código por el mismo motivo de arriba, pero manteniendo el
+    // MISMO algoritmo a mano para que este desglose no se desalinee del
+    // total real de `puntos_extra` que ya corrigió esa función): solo
+    // eventos YA ocurridos (`fecha < hoy`), un evento sin marca para esta
+    // persona (después de su primera marca real) cuenta como 'Ninguno'
+    // implícito, y un evento cancelado nunca suma ni corta -- salvo que
+    // tenga un 'Ninguno' explícito, que sí se respeta.
+    const hoyISO = new Date().toISOString().slice(0, 10);
+    const { data: eventosTodos } = await supabase.from('asistencias')
+      .select('id_evento, fecha, inicia, estado')
       .order('fecha', { ascending: true })
       .order('inicia', { ascending: true, nullsFirst: false });
+    const eventos = (eventosTodos ?? []).filter((ev: any) => String(ev.fecha) < hoyISO);
     const ordenPorEvento: Record<string, number> = {};
     const fechaPorEvento: Record<string, string> = {};
-    (eventos ?? []).forEach((ev: any, i: number) => { ordenPorEvento[ev.id_evento] = i; fechaPorEvento[ev.id_evento] = ev.fecha; });
+    const canceladoPorEvento: Record<string, boolean> = {};
+    eventos.forEach((ev: any, i: number) => {
+      ordenPorEvento[ev.id_evento] = i;
+      fechaPorEvento[ev.id_evento] = ev.fecha;
+      canceladoPorEvento[ev.id_evento] = ev.estado === 'Evento Cancelado' || ev.estado === 'No se entrena';
+    });
 
     const { data: logsTodos } = await supabase.from('log_asistencias')
       .select('id_evento, estado, marca_temporal')
@@ -3960,16 +4126,24 @@ async function getDesglosePuntos(params: Record<string, any>): Promise<Record<st
       const actual = ultimaPorEvento[l.id_evento];
       if (!actual || marca >= actual.marca) ultimaPorEvento[l.id_evento] = { estado: l.estado, marca };
     });
-    const entradas = Object.keys(ultimaPorEvento)
-      .map((idEvento) => ({ idEvento, orden: ordenPorEvento[idEvento], estado: ultimaPorEvento[idEvento].estado }))
-      .sort((x, y) => x.orden - y.orden);
     let racha = 0;
+    let empezo = false;
     const filasExtra: Array<{ fecha: string; puntos: number; legado: boolean }> = [];
-    entradas.forEach((e) => {
-      if (e.estado === 'A tiempo' || e.estado === 'Tarde') {
+    eventos.forEach((ev: any) => {
+      const marcaInfo = ultimaPorEvento[ev.id_evento];
+      if (!empezo) {
+        if (!marcaInfo) return;
+        empezo = true;
+      }
+      if (canceladoPorEvento[ev.id_evento]) {
+        if (marcaInfo && marcaInfo.estado === 'Ninguno') racha = 0;
+        return;
+      }
+      const estado = marcaInfo ? marcaInfo.estado : 'Ninguno';
+      if (estado === 'A tiempo' || estado === 'Tarde') {
         racha++;
-        if (racha % 3 === 0) filasExtra.push({ fecha: String(fechaPorEvento[e.idEvento]).slice(0, 10), puntos: 2, legado: false });
-      } else if (e.estado === 'Ninguno') {
+        if (racha % 3 === 0) filasExtra.push({ fecha: String(fechaPorEvento[ev.id_evento]).slice(0, 10), puntos: 2, legado: false });
+      } else {
         racha = 0;
       }
     });

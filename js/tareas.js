@@ -1966,10 +1966,24 @@ function _tarRecurSetCampo(idx, campo, valor) {
   if (!_tarRecurEntradas[idx]) return;
   _tarRecurEntradas[idx][campo] = campo === 'persona' ? valor : (parseInt(valor, 10) || null);
 }
-function _tarRecurMesOpcionesHtml(seleccionado) {
+// Bug real corregido (reportado por Victor -- una entrada del mes en curso
+// terminó archivada/aprobada con vencimiento vencido en vez de aparecer
+// disponible, ver `adminAplicarTareaRecurrenteHistorico()`/index.ts):
+// "meses anteriores" es SOLO para meses YA pasados -- el mes en curso ya
+// tiene su propia instancia activa (generada de una al crear la plantilla,
+// `adminCrearTareaRecurrente()`). Meses >= al actual quedan deshabilitados
+// acá (mismo criterio que ya aplica el backend, doble guard) para no
+// repetir la confusión que causó el bug real. `anio` -- el año de ESTA fila
+// (cada fila puede tener un año distinto), sin el cual no se puede decidir
+// si un mes puntual ya pasó o no.
+function _tarRecurMesOpcionesHtml(seleccionado, anio) {
+  var hoy = new Date();
+  var anioActual = hoy.getFullYear(), mesActual = hoy.getMonth() + 1;
   var out = '<option value="">Mes...</option>';
   for (var i = 0; i < NOMBRES_MESES.length; i++) {
-    out += '<option value="' + (i + 1) + '"' + (seleccionado === (i + 1) ? ' selected' : '') + '>' + NOMBRES_MESES[i] + '</option>';
+    var val = i + 1;
+    var deshabilitado = anio > anioActual || (anio === anioActual && val >= mesActual);
+    out += '<option value="' + val + '"' + (seleccionado === val ? ' selected' : '') + (deshabilitado ? ' disabled' : '') + '>' + NOMBRES_MESES[i] + (deshabilitado ? ' (mes actual/futuro)' : '') + '</option>';
   }
   return out;
 }
@@ -1998,8 +2012,8 @@ function _tarRecurRenderHistorico() {
   // css/eventos.css/css/tareas.css, sin CSS nuevo para este modal chico.
   cont.innerHTML = _tarRecurEntradas.map(function(e, idx) {
     return '<div class="ev-lugar-cada-row">' +
-      '<select class="ev-lugar-input" style="width:auto;flex:1.3;" onchange="_tarRecurSetCampo(' + idx + ',\'mes\',this.value)">' + _tarRecurMesOpcionesHtml(e.mes) + '</select>' +
-      '<input type="number" class="ev-lugar-input ev-lugar-input-num" value="' + e.anio + '" onchange="_tarRecurSetCampo(' + idx + ',\'anio\',this.value)">' +
+      '<select class="ev-lugar-input" style="width:auto;flex:1.3;" onchange="_tarRecurSetCampo(' + idx + ',\'mes\',this.value)">' + _tarRecurMesOpcionesHtml(e.mes, e.anio) + '</select>' +
+      '<input type="number" class="ev-lugar-input ev-lugar-input-num" max="' + new Date().getFullYear() + '" value="' + e.anio + '" onchange="_tarRecurSetCampo(' + idx + ',\'anio\',this.value);_tarRecurRenderHistorico()">' +
       '<select class="ev-lugar-input" style="width:auto;flex:1.6;" onchange="_tarRecurSetCampo(' + idx + ',\'persona\',this.value)">' + _tarRecurPersonaOpcionesHtml(e.persona) + '</select>' +
       (_tarRecurEntradas.length > 1 ? '<button type="button" class="tar-card-archivar-btn" onclick="_tarRecurQuitarFila(' + idx + ')" aria-label="Quitar mes"><span class="material-symbols-outlined">close</span></button>' : '') +
     '</div>';
@@ -2032,6 +2046,14 @@ function _tarRecurGuardarHistorico() {
       if (errEl) errEl.textContent = res.error || 'No se pudo aplicar a meses anteriores.';
       return;
     }
+    // `omitidas` -- meses en curso/futuros que el backend rechazó (ver
+    // `adminAplicarTareaRecurrenteHistorico()`/index.ts, bug real corregido:
+    // ese mes ya tiene su propia instancia activa, aceptarlo acá también
+    // duplicaba una archivada encima). El select ya los deja `disabled`, así
+    // que esto solo puede pasar con datos ya viejos en `_tarRecurEntradas`
+    // (ej. la fila quedó armada antes de cambiar de año) -- avisar en vez de
+    // fallar en silencio.
+    if (res && res.omitidas) mostrarToast(res.omitidas + ' mes' + (res.omitidas > 1 ? 'es' : '') + ' no se aplicó por ser el mes actual o uno futuro.', 'error', true);
     _tarRecurCerrar();
   }, function(e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
