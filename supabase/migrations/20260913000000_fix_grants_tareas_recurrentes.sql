@@ -1,0 +1,24 @@
+-- Bug real corregido (pedido explícito de Victor, reportado en producción):
+-- "permission denied for table tareas_recurrentes" al crear una tarea
+-- recurrente (`adminCrearTareaRecurrente()`, supabase/functions/api/index.ts
+-- -- usa la service role key, que bypasea RLS pero SIGUE necesitando el
+-- GRANT de tabla de Postgres para poder leer/escribir).
+--
+-- Causa raíz confirmada contra la DB real (`supabase db query --linked`,
+-- solo lecturas antes de tocar nada): la migración que creó la tabla
+-- (`20260912190000_tareas_recurrentes.sql`) armó RLS + la policy permisiva
+-- de siempre, pero nunca le sumó los GRANT explícitos -- a diferencia de
+-- `tareas`/`asignaciones_tareas`/`config_tareas` (mismo dominio, mismo
+-- trust boundary, ver MANIFEST.md sección 3), que sí tienen
+-- SELECT/INSERT/UPDATE/DELETE para `anon`/`authenticated`/`service_role`
+-- (confirmado con `information_schema.role_table_grants`). Sin ese GRANT,
+-- `tareas_recurrentes` solo traía REFERENCES/TRIGGER/TRUNCATE para esos 3
+-- roles (privilegios que Postgres arma por default para el schema, no
+-- alcanzan para un `SELECT`/`INSERT` real) -- `postgres` (dueño de la
+-- tabla) sí tenía todo, por eso el error solo aparecía desde la Edge
+-- Function (`service_role`), nunca corriendo la migración misma.
+--
+-- Fix: réplica exacta del set de privilegios que ya tienen las 3 tablas
+-- hermanas, para los mismos 3 roles -- ningún cambio de RLS (la policy ya
+-- estaba bien, el problema era este nivel, uno por debajo de RLS).
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE tareas_recurrentes TO anon, authenticated, service_role;
