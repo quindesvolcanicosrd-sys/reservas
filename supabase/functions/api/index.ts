@@ -4927,10 +4927,46 @@ Deno.serve(async (req: Request) => {
       case 'getConfigTareas':                 return json(await getConfigTareas());
       case 'getTareasDisponibles':            return json(await getTareasDisponibles());
       case 'getMisTareas':                    return json(await getMisTareas(params));
-      case 'tomarTarea':                      return json(await tomarTarea(params));
-      case 'soltarTarea':                     return json(await soltarTarea(params));
-      case 'rescatarTarea':                   return json(await rescatarTarea(params));
-      case 'enviarRevisionTarea':             return json(await enviarRevisionTarea(params));
+      // Bug de seguridad real corregido (pedido explícito de Victor): las 4
+      // acciones de abajo (tomarTarea/soltarTarea/rescatarTarea/
+      // enviarRevisionTarea) recibían `nombre` directo de `params`, tal
+      // cual lo mandaba el cliente, sin validarlo contra el token de
+      // sesión -- cualquiera que conociera el `username` real de un
+      // compañero podía tomar/soltar/rescatar/enviar a revisión tareas EN
+      // SU NOMBRE (incluida la aprobación automática de admin de
+      // `enviarRevisionTarea`, que depende de ese mismo `nombre`). Fix,
+      // mismo patrón ya usado para las acciones admin-gated de este router
+      // (ver `case 'getTiers'`, más abajo): se valida `params.token` ACÁ,
+      // en el router, y se pisa `params.nombre` con el username real que
+      // devuelve `_validarToken()` antes de llamar a la función -- las 4
+      // funciones de abajo no cambiaron nada por dentro (ya usaban
+      // `params.nombre` correctamente, el problema era que ese valor venía
+      // sin validar). Token inválido/ausente → 401, nunca se llega a
+      // ejecutar la acción.
+      case 'tomarTarea': {
+        const nombreSesion = await _validarToken(params.token);
+        if (!nombreSesion) return json({ exito: false, error: 'Sesión inválida.' }, 401);
+        params.nombre = nombreSesion;
+        return json(await tomarTarea(params));
+      }
+      case 'soltarTarea': {
+        const nombreSesion = await _validarToken(params.token);
+        if (!nombreSesion) return json({ exito: false, error: 'Sesión inválida.' }, 401);
+        params.nombre = nombreSesion;
+        return json(await soltarTarea(params));
+      }
+      case 'rescatarTarea': {
+        const nombreSesion = await _validarToken(params.token);
+        if (!nombreSesion) return json({ exito: false, error: 'Sesión inválida.' }, 401);
+        params.nombre = nombreSesion;
+        return json(await rescatarTarea(params));
+      }
+      case 'enviarRevisionTarea': {
+        const nombreSesion = await _validarToken(params.token);
+        if (!nombreSesion) return json({ exito: false, error: 'Sesión inválida.' }, 401);
+        params.nombre = nombreSesion;
+        return json(await enviarRevisionTarea(params));
+      }
       case 'adminValidarTarea':               return json(await adminValidarTarea(params));
       case 'adminDesvalidarTarea':            return json(await adminDesvalidarTarea(params));
       case 'adminGetTareasActivas':           return json(await adminGetTareasActivas());
