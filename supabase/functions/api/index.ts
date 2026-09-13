@@ -239,13 +239,33 @@ async function _ultimaAsistenciaPorPersonaTodas(idsEvento: string[]): Promise<Re
     .limit(100000);
   if (error) console.error('[asist] error query:', JSON.stringify(error));
   const data = (todasFilas ?? []).filter((f: any) => idsSet.has(f.id_evento));
-  console.log('[asist-debug] total DB rows:', todasFilas?.length ?? 0, '| filtrados:', data.length);
   const ultimaPorClave: Record<string, any> = {};
-  console.log('[asist-debug] idsEvento.length:', idsEvento.length, '| rows fetched:', data.length, '| incluye CCI sep7:', idsEvento.includes('ev_20260907_cci_2'));
+  // Bug real corregido (pedido explícito de Victor, "asistencia marcada por
+  // el admin se pierde en eventos recientes"): la prioridad de `origen`
+  // agregada el 2026-09-05 (commit 4309d1d, "elección explícita del usuario
+  // gana sobre una regla automática anticipada") solo pensaba en el choque
+  // ENTRE LOS 2 SABORES DE RSVP pre-evento ('Usuario' vs
+  // 'AsistenciaAnticipada') -- pero la comparación real era
+  // `prioridad(o) = o === 'Usuario' ? 1 : 0`, así que 'Admin' (asistencia
+  // REAL tomada post-evento por un admin, un concepto completamente
+  // distinto y siempre más autoritativo que cualquier RSVP de intención)
+  // caía en el mismo bucket de prioridad 0 que 'AsistenciaAnticipada' --
+  // cualquier persona con una fila 'Usuario' (RSVP normal, con frecuencia
+  // hecha DÍAS antes del evento) le ganaba a su propia marca 'Admin'
+  // posterior sin importar el timestamp. Confirmado contra datos reales de
+  // producción (eventos `ev_20260907_cci_2`/`ev_20260912_cumanda`): cada
+  // persona con un RSVP 'Usuario' previo aparecía SIEMPRE como su estado de
+  // RSVP en vez de su asistencia real marcada por el admin, haciendo que el
+  // admin volviera a marcarla una y otra vez sin que nunca "quedara
+  // guardada" -- las 2 únicas personas de esos eventos sin ningún RSVP
+  // 'Usuario' (Kelly/kimberlly) fueron las únicas cuya marca sobrevivió a
+  // la primera. Fix: 'Admin' es su propia categoría, siempre por encima de
+  // cualquier RSVP -- 'Usuario' sigue ganándole a 'AsistenciaAnticipada'
+  // dentro del grupo de RSVPs, como pedía el fix original.
   data.forEach((fila: any) => {
     const clave = fila.id_evento + '|' + fila.nombre_usuario;
     const actual = ultimaPorClave[clave];
-    const prioridad = (o: string) => o === 'Usuario' ? 1 : 0;
+    const prioridad = (o: string) => o === 'Admin' ? 2 : o === 'Usuario' ? 1 : 0;
     if (!actual || prioridad(fila.origen) > prioridad(actual.origen) || (prioridad(fila.origen) === prioridad(actual.origen) && (!actual.marcaStr || (fila.marca_temporal ?? '') > actual.marcaStr))) {
       ultimaPorClave[clave] = { idEvento: fila.id_evento, nombre: fila.nombre_usuario, origen: fila.origen, estado: fila.estado, marcaStr: fila.marca_temporal };
     }
