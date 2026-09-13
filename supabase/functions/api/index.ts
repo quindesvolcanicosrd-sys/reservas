@@ -160,6 +160,18 @@ async function _esAdmin(email: string): Promise<boolean> {
   return !!data;
 }
 
+// Variante de _esAdmin() por `username` (nombre_usuario de asignaciones_tareas,
+// NO un email) -- usada por enviarRevisionTarea() para decidir si quien
+// completa una tarea es admin (aprobación automática, ver MANIFEST.md
+// sección 3 -- pedido explícito: "si quien completa la tarea es admin,
+// aprobación automática, aplica a TODOS los tipos de tarea").
+async function _esAdminPorUsername(username: string): Promise<boolean> {
+  if (!username) return false;
+  const { data } = await supabase.from('equipo').select('email').ilike('username', username).maybeSingle();
+  if (!data?.email) return false;
+  return _esAdmin(data.email);
+}
+
 async function _crearToken(username: string): Promise<string> {
   const token = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
@@ -1205,6 +1217,22 @@ async function adminGuardarEquipamiento(params: Record<string, any>): Promise<Re
 
 // ─── Acciones: tareas ─────────────────────────────────────────────────────────
 
+// Bug de seguridad real encontrado de paso y corregido en esta misma tanda
+// (mismo patrón ya fijado antes para adminEliminarUsuario/adminRegistrarPago
+// y compañía, ver MANIFEST.md sección 5): NINGUNA de las acciones admin-only
+// de esta sección (adminCrearTarea, adminEditarTarea,
+// adminEditarAsignacionesTarea, adminArchivarTarea, adminEliminarTarea,
+// adminEliminarTareaArchivada, adminValidarTarea, adminDesvalidarTarea)
+// validaba `params.adminToken` -- cualquiera con un token de sesión de
+// USUARIO normal (o directamente sin token) podía crear/editar/borrar
+// tareas o aprobar/rechazar asignaciones ajenas (créditos de puntos
+// incluidos) con solo conocer el `action` correcto. El frontend siempre
+// mandó `adminToken` en las 8 (todas via `adminApi()`, js/tareas.js), así
+// que agregar el gate acá no cambia ningún llamado legítimo. Quedan
+// pendientes, MISMA falla, MENOR severidad (exponen datos de solo lectura,
+// no mutan nada): `adminGetTareasActivas`/`getTareasPendientesValidacion` --
+// requerirían cambiar su firma (hoy no reciben `params`) para poder
+// validar, fuera del alcance de esta tanda.
 async function getConfigTareas(): Promise<Record<string, any>> {
   const { data } = await supabase.from('config_tareas').select('limite_tareas_activas').limit(1).maybeSingle();
   return { limiteTareasActivas: data?.limite_tareas_activas ?? 3 };
@@ -1297,12 +1325,21 @@ async function rescatarTarea(params: Record<string, any>): Promise<Record<string
   return { exito: true };
 }
 
+// Si quien completa la tarea es admin, se salta 'pendiente_revision' y se
+// aprueba de una -- ver `_aprobarAsignacionTarea()` más abajo (misma acción
+// que corre `adminValidarTarea('aprobar')`, reusada tal cual). Pedido
+// explícito de Victor: el botón correspondiente en el frontend
+// (`_tarAccionMisHtml()`/`_tarDetalleAccionesHtml()`, js/tareas.js) dice
+// "Finalizar tarea" en vez de "Enviar a revisión" cuando quien lo ve es
+// admin -- decisión tomada acá en el backend, el frontend solo refleja
+// `_adminToken` (mismo criterio ya usado en el resto de esta pantalla).
 async function enviarRevisionTarea(params: Record<string, any>): Promise<Record<string, any>> {
   const { idAsignacion, nombre } = params;
   const { data: a } = await supabase.from('asignaciones_tareas').select('nombre_usuario, estado').eq('id', idAsignacion).maybeSingle();
   if (!a) return { exito: false, error: 'Asignación no encontrada.' };
   if (a.nombre_usuario !== nombre) return { exito: false, error: 'No autorizado.' };
   if (a.estado !== 'iniciada') return { exito: false, error: 'La asignación no está iniciada.' };
+  if (await _esAdminPorUsername(nombre)) return await _aprobarAsignacionTarea(idAsignacion);
   await supabase.from('asignaciones_tareas').update({ estado: 'pendiente_revision', fecha_envio: new Date().toISOString() }).eq('id', idAsignacion);
   return { exito: true };
 }
@@ -1342,44 +1379,62 @@ function _puntosTareaCreditados(puntosOriginales: number, fechaVencimientoPerson
   return Math.max(puntosOriginales - diasTarde, puntosOriginales / 2);
 }
 
-async function adminValidarTarea(params: Record<string, any>): Promise<Record<string, any>> {
-  const { idAsignacion, accion, notaRechazo } = params;
+// Extraída de adminValidarTarea('aprobar') (antes inline ahí) para poder
+// reusarla también desde enviarRevisionTarea() cuando quien completa la
+// tarea es admin (aprobación automática, ver ese comentario más arriba) --
+// mismo camino exacto en los 2 casos, una sola vez.
+async function _aprobarAsignacionTarea(idAsignacion: string): Promise<Record<string, any>> {
   const { data: a } = await supabase.from('asignaciones_tareas').select('*').eq('id', idAsignacion).maybeSingle();
   if (!a) return { exito: false, error: 'Asignación no encontrada.' };
-  if (accion === 'aprobar') {
-    // Bug real corregido (ver MANIFEST.md/CHANGELOG.md -- "puntos por
-    // tareas inflados, 8 en vez de 2"): sin este guard, aprobar una
-    // asignación que YA está `estado==='aprobada'` volvía a correr TODO el
-    // camino de abajo -- `_acreditarPuntosTarea()` es aditivo
-    // (select-then-update, suma sobre lo que ya había, mismo patrón que
-    // `_acreditarPuntosExtra()`), así que cada re-aprobación sumaba los
-    // puntos de la tarea de nuevo, sin ningún tope. Vector real
-    // confirmado contra producción: `_tarGestionarToggle()`/js/tareas.js
-    // (el toggle de "Gestión de tareas activas") es optimista y NO
-    // deshabilita el control mientras la request está en vuelo -- a
-    // diferencia de `_tarValidarEnviar()`/"Tareas por validar", que sí
-    // bloquea los botones -- un doble-tap ahí puede disparar esta acción
-    // más de una vez para la misma asignación. Mismo criterio que ya usa
-    // `adminMarcarAsistencia()` (`esCorreccion`) para no inflar la racha
-    // en re-marcados -- acá más simple: aprobar algo que YA está aprobado
-    // no tiene ningún efecto nuevo que aplicar, se ignora sin error (la
-    // UI ya muestra el estado que pidió, no hace falta fallar).
-    if (a.estado === 'aprobada') return { exito: true };
-    await supabase.from('asignaciones_tareas').update({ estado: 'aprobada', fecha_revision: new Date().toISOString() }).eq('id', idAsignacion);
-    const { data: t } = await supabase.from('tareas').select('puntos').eq('id', a.tarea_id).maybeSingle();
-    const puntosOriginales = Number(t?.puntos) || 0;
-    const puntos = _puntosTareaCreditados(puntosOriginales, a.fecha_vencimiento_personal, a.fecha_envio);
-    const hoy = new Date();
-    await _acreditarPuntosTarea(a.nombre_usuario, hoy.getFullYear(), hoy.getMonth() + 1, puntos);
-    const { data: quedan } = await supabase.from('asignaciones_tareas').select('id').eq('tarea_id', a.tarea_id).in('estado', ['iniciada', 'pendiente_revision']);
-    if (!quedan?.length) await supabase.from('tareas').update({ estado: 'archivada', fecha_archivado: hoy.toISOString() }).eq('id', a.tarea_id);
-  } else {
-    await supabase.from('asignaciones_tareas').update({ estado: 'iniciada', nota_rechazo: notaRechazo ?? null, fecha_revision: new Date().toISOString() }).eq('id', idAsignacion);
-  }
+  // Bug real corregido (ver MANIFEST.md/CHANGELOG.md -- "puntos por
+  // tareas inflados, 8 en vez de 2"): sin este guard, aprobar una
+  // asignación que YA está `estado==='aprobada'` volvía a correr TODO el
+  // camino de abajo -- `_acreditarPuntosTarea()` es aditivo
+  // (select-then-update, suma sobre lo que ya había, mismo patrón que
+  // `_acreditarPuntosExtra()`), así que cada re-aprobación sumaba los
+  // puntos de la tarea de nuevo, sin ningún tope. Vector real
+  // confirmado contra producción: `_tarGestionarToggle()`/js/tareas.js
+  // (el toggle de "Gestión de tareas activas") es optimista y NO
+  // deshabilita el control mientras la request está en vuelo -- a
+  // diferencia de `_tarValidarEnviar()`/"Tareas por validar", que sí
+  // bloquea los botones -- un doble-tap ahí puede disparar esta acción
+  // más de una vez para la misma asignación. Mismo criterio que ya usa
+  // `adminMarcarAsistencia()` (`esCorreccion`) para no inflar la racha
+  // en re-marcados -- acá más simple: aprobar algo que YA está aprobado
+  // no tiene ningún efecto nuevo que aplicar, se ignora sin error (la
+  // UI ya muestra el estado que pidió, no hace falta fallar).
+  if (a.estado === 'aprobada') return { exito: true };
+  // `fechaEnvio` -- si la aprobación viene de enviarRevisionTarea() para un
+  // admin (nunca pasó por 'pendiente_revision', `a.fecha_envio` sigue
+  // `null`), se toma el instante actual como fecha de entrega real para el
+  // cálculo de tardanza (`_puntosTareaCreditados()`) -- mismo criterio que
+  // el flujo normal (fecha_envio = "cuándo se dio por completada").
+  const fechaEnvio = a.fecha_envio ?? new Date().toISOString();
+  await supabase.from('asignaciones_tareas').update({ estado: 'aprobada', fecha_envio: fechaEnvio, fecha_revision: new Date().toISOString() }).eq('id', idAsignacion);
+  const { data: t } = await supabase.from('tareas').select('puntos').eq('id', a.tarea_id).maybeSingle();
+  const puntosOriginales = Number(t?.puntos) || 0;
+  const puntos = _puntosTareaCreditados(puntosOriginales, a.fecha_vencimiento_personal, fechaEnvio);
+  const hoy = new Date();
+  await _acreditarPuntosTarea(a.nombre_usuario, hoy.getFullYear(), hoy.getMonth() + 1, puntos);
+  const { data: quedan } = await supabase.from('asignaciones_tareas').select('id').eq('tarea_id', a.tarea_id).in('estado', ['iniciada', 'pendiente_revision']);
+  if (!quedan?.length) await supabase.from('tareas').update({ estado: 'archivada', fecha_archivado: hoy.toISOString() }).eq('id', a.tarea_id);
+  return { exito: true };
+}
+
+async function adminValidarTarea(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const { idAsignacion, accion, notaRechazo } = params;
+  if (accion === 'aprobar') return await _aprobarAsignacionTarea(idAsignacion);
+  const { data: a } = await supabase.from('asignaciones_tareas').select('id').eq('id', idAsignacion).maybeSingle();
+  if (!a) return { exito: false, error: 'Asignación no encontrada.' };
+  await supabase.from('asignaciones_tareas').update({ estado: 'iniciada', nota_rechazo: notaRechazo ?? null, fecha_revision: new Date().toISOString() }).eq('id', idAsignacion);
   return { exito: true };
 }
 
 async function adminDesvalidarTarea(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { idAsignacion } = params;
   const { data: a } = await supabase.from('asignaciones_tareas').select('*').eq('id', idAsignacion).maybeSingle();
   if (!a) return { exito: false, error: 'Asignación no encontrada.' };
@@ -1427,6 +1482,8 @@ async function getTareasArchivadas(): Promise<any[]> {
 }
 
 async function adminEliminarTareaArchivada(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { idTarea } = params;
   const { data: t } = await supabase.from('tareas').select('*').eq('id', idTarea).maybeSingle();
   if (!t) return { exito: false, error: 'Tarea no encontrada.' };
@@ -1443,6 +1500,8 @@ async function adminEliminarTareaArchivada(params: Record<string, any>): Promise
 }
 
 async function adminArchivarTarea(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { idTarea } = params;
   const { data: pendientes } = await supabase.from('asignaciones_tareas').select('id').eq('tarea_id', idTarea).eq('estado', 'pendiente_revision');
   if (pendientes?.length) return { exito: false, error: 'Hay revisiones pendientes. Valídalas antes de archivar.' };
@@ -1452,6 +1511,8 @@ async function adminArchivarTarea(params: Record<string, any>): Promise<Record<s
 }
 
 async function adminCrearTarea(params: Record<string, any>): Promise<any> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   let datos = params.datosJson ?? params.datos;
   if (typeof datos === 'string') datos = JSON.parse(datos);
   const { data: creada, error } = await supabase.from('tareas').insert({
@@ -1495,6 +1556,8 @@ async function adminCrearTarea(params: Record<string, any>): Promise<any> {
 }
 
 async function adminEditarTarea(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   let datos = params.datosJson ?? params.datos;
   if (typeof datos === 'string') datos = JSON.parse(datos);
   const cambios: Record<string, any> = {};
@@ -1509,6 +1572,8 @@ async function adminEditarTarea(params: Record<string, any>): Promise<Record<str
 }
 
 async function adminEditarAsignacionesTarea(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   let nombresDeseados: string[] = params.nombresJson ?? params.nombres;
   if (typeof nombresDeseados === 'string') nombresDeseados = JSON.parse(nombresDeseados);
   const idTarea = params.idTarea;
@@ -1534,6 +1599,8 @@ async function adminEditarAsignacionesTarea(params: Record<string, any>): Promis
 }
 
 async function adminEliminarTarea(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { idTarea } = params;
   const { data: t } = await supabase.from('tareas').select('*').eq('id', idTarea).maybeSingle();
   if (!t) return { exito: false, error: 'Tarea no encontrada.' };
@@ -1559,6 +1626,98 @@ async function getTareasPendientesValidacion(): Promise<any[]> {
     idAsignacion: a.id, nombreUsuario: a.nombre_usuario, fechaEnvio: a.fecha_envio,
     tarea: tareasPorId[a.tarea_id] ? { idTarea: a.tarea_id, titulo: tareasPorId[a.tarea_id].titulo, puntos: tareasPorId[a.tarea_id].puntos } : null,
   }));
+}
+
+// ─── Tareas recurrentes (plantillas, ver MANIFEST.md sección 3) ───────────────
+
+// Paso nuevo del wizard "Nueva tarea" ("Tipo de tarea": única/recurrente,
+// ver `_TAR_CREAR_STEPS`/js/tareas.js) -- "recurrente" guarda una plantilla
+// acá en vez de una fila en `tareas` directo. La instancia mensual real la
+// genera `cronGenerarTareasRecurrentes()` más abajo (disparada por el cron
+// `generar-tareas-recurrentes`, ver la migración de ese nombre) -- este
+// endpoint NUNCA crea una fila en `tareas` por sí mismo.
+async function adminCrearTareaRecurrente(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  let datos = params.datosJson ?? params.datos;
+  if (typeof datos === 'string') datos = JSON.parse(datos);
+  const { data: creada, error } = await supabase.from('tareas_recurrentes').insert({
+    titulo: datos.titulo, notas: datos.notas ?? null, area: datos.area ?? null,
+    puntos: datos.puntos ?? 1, max_asignados: datos.maxAsignados ?? 1,
+    activa: true, creado_por: datos.creadoPor ?? null,
+  }).select();
+  if (error) return { exito: false, error: error.message };
+  return { exito: true, idPlantilla: creada[0].id };
+}
+
+// "¿Querés aplicar esta tarea a meses anteriores?" (paso posterior al
+// wizard, ver `_tarRecurAplicarAnterioresPreguntar()`/js/tareas.js) -- crea,
+// por cada {mes, anio, persona} elegido, una instancia YA `estado:'archivada'`
+// con su única asignación YA `estado:'aprobada'` y los puntos acreditados al
+// mes/año elegido (no al de hoy) -- mismo mecanismo que la rama
+// `yaRealizada` de `adminCrearTarea()` (tarea única marcada "ya realizada"
+// al crearla), reusado acá para el caso recurrente/histórico. Vencimiento
+// de cada instancia histórica = último día del mes/año elegido, mismo
+// criterio que usa el cron mensual para las instancias en curso.
+async function adminAplicarTareaRecurrenteHistorico(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const { idPlantilla } = params;
+  let entradas = params.entradasJson ?? params.entradas;
+  if (typeof entradas === 'string') entradas = JSON.parse(entradas);
+  if (!Array.isArray(entradas) || !entradas.length) return { exito: false, error: 'No hay meses para aplicar.' };
+  const { data: plantilla } = await supabase.from('tareas_recurrentes').select('*').eq('id', idPlantilla).maybeSingle();
+  if (!plantilla) return { exito: false, error: 'Plantilla no encontrada.' };
+  let creadas = 0;
+  for (const e of entradas) {
+    const anio = Number(e.anio), mes = Number(e.mes);
+    if (!anio || !mes || !e.persona) continue;
+    const ultimoDia = new Date(Date.UTC(anio, mes, 0)).getUTCDate();
+    const fecha = anio + '-' + String(mes).padStart(2, '0') + '-' + String(ultimoDia).padStart(2, '0');
+    const { data: creada } = await supabase.from('tareas').insert({
+      titulo: plantilla.titulo, notas: plantilla.notas, area: plantilla.area,
+      puntos: plantilla.puntos, max_asignados: plantilla.max_asignados,
+      fecha_vencimiento: fecha, estado: 'archivada', fecha_archivado: new Date().toISOString(),
+      creado_por: plantilla.creado_por, tarea_recurrente_id: idPlantilla,
+    }).select();
+    if (!creada?.length) continue;
+    await supabase.from('asignaciones_tareas').insert({
+      tarea_id: creada[0].id, nombre_usuario: e.persona, estado: 'aprobada', es_rescate: false,
+      fecha_vencimiento_personal: fecha, fecha_envio: fecha + 'T00:00:00.000Z', fecha_revision: fecha + 'T00:00:00.000Z',
+    });
+    await _acreditarPuntosTarea(e.persona, anio, mes, Number(plantilla.puntos) || 0);
+    creadas++;
+  }
+  return { exito: true, creadas };
+}
+
+// Disparada por el cron `generar-tareas-recurrentes` (día 1 de cada mes, ver
+// esa migración) vía el mismo gate `x-cron-secret` que cronDiario/etc. --
+// genera una instancia nueva en `tareas` (sin asignar, `no_iniciada`) por
+// cada plantilla activa, con vencimiento = último día del mes en curso
+// (hora Ecuador). Idempotente: si ya existe una instancia de esta plantilla
+// con ESE `fecha_vencimiento` exacto (ej. el cron corrió 2 veces el mismo
+// mes por un reintento), la salta -- mismo criterio de "seguro correr más
+// de una vez" que el resto de los crons de este archivo.
+async function cronGenerarTareasRecurrentes(): Promise<Record<string, any>> {
+  const { data: plantillas } = await supabase.from('tareas_recurrentes').select('*').eq('activa', true);
+  if (!plantillas?.length) return { generadas: 0 };
+  const ahoraEcuador = new Date(Date.now() - 5 * 3600000);
+  const anio = ahoraEcuador.getUTCFullYear();
+  const mes = ahoraEcuador.getUTCMonth() + 1;
+  const ultimoDia = new Date(Date.UTC(anio, mes, 0)).getUTCDate();
+  const fechaVencimiento = anio + '-' + String(mes).padStart(2, '0') + '-' + String(ultimoDia).padStart(2, '0');
+  let generadas = 0;
+  for (const p of plantillas) {
+    const { data: existe } = await supabase.from('tareas').select('id').eq('tarea_recurrente_id', p.id).eq('fecha_vencimiento', fechaVencimiento).maybeSingle();
+    if (existe) continue;
+    await supabase.from('tareas').insert({
+      titulo: p.titulo, notas: p.notas, area: p.area, puntos: p.puntos, max_asignados: p.max_asignados,
+      fecha_vencimiento: fechaVencimiento, estado: 'no_iniciada', creado_por: p.creado_por, tarea_recurrente_id: p.id,
+    });
+    generadas++;
+  }
+  return { generadas };
 }
 
 // ─── Acciones: eventos / asistencias ─────────────────────────────────────────
@@ -4567,6 +4726,13 @@ Deno.serve(async (req: Request) => {
       case 'adminCrearTarea':                 return json(await adminCrearTarea(params));
       case 'adminEditarTarea':                return json(await adminEditarTarea(params));
       case 'adminEditarAsignacionesTarea':    return json(await adminEditarAsignacionesTarea(params));
+      case 'adminCrearTareaRecurrente':       return json(await adminCrearTareaRecurrente(params));
+      case 'adminAplicarTareaRecurrenteHistorico': return json(await adminAplicarTareaRecurrenteHistorico(params));
+      case 'cronGenerarTareasRecurrentes': {
+        const secretHeader = req.headers.get('x-cron-secret') ?? '';
+        if (!CRON_SECRET || secretHeader !== CRON_SECRET) return json({ error: 'No autorizado.' }, 401);
+        return json(await cronGenerarTareasRecurrentes());
+      }
       case 'adminEliminarTarea':              return json(await adminEliminarTarea(params));
       case 'getTareasPendientesValidacion':        return json(await getTareasPendientesValidacion());
       case 'adminGetTareasPendientesValidacion':   return json(await getTareasPendientesValidacion());

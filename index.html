@@ -2003,6 +2003,35 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         </div>
       </div>
 
+      <!-- Paso nuevo (pedido explícito de Victor -- "Tareas recurrentes"):
+           "Tipo de tarea", ANTES del paso de asignación. "unica" = flujo de
+           siempre, sin cambios. "recurrente" -- salta DIRECTO a guardar
+           (`_tarCrearIrSiguiente()`/js/tareas.js): una plantilla en
+           `tareas_recurrentes` no tiene asignación/tipo/fecha propios (cada
+           instancia mensual generada por el cron se publica sin asignar,
+           con vencimiento = último día de ese mes) -- ver MANIFEST.md
+           sección 3. Mismo componente `.opciones`/`.opcion` que "¿Cómo se
+           asigna esta tarea?"/"¿Cuándo se hace esta tarea?" de abajo. -->
+      <div class="salud-paso" id="tar-crear-paso-recurrencia">
+        <p class="ev-lugar-campo-label" style="margin-top:0;">Tipo de tarea</p>
+        <div class="opciones" id="tar-crear-recurrencia-opciones" style="margin-bottom:0;">
+          <div class="opcion" data-val="unica" onclick="_tarCrearSelRecurrencia(this,'unica')">
+            <span class="material-symbols-outlined">task</span>
+            <div>
+              <div style="font-weight:700;">Tarea única</div>
+              <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Sucede una sola vez.</div>
+            </div>
+          </div>
+          <div class="opcion" data-val="recurrente" onclick="_tarCrearSelRecurrencia(this,'recurrente')">
+            <span class="material-symbols-outlined">event_repeat</span>
+            <div>
+              <div style="font-weight:700;">Tarea recurrente</div>
+              <div style="font-size:0.78rem;color:var(--muted);margin-top:2px;">Aparece todos los meses automáticamente para que alguien la tome.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Paso 3 (nuevo): ¿Cómo se asigna esta tarea? -- 2 opciones
            excluyentes: "libre" (self-service, salta directo al paso de
            fecha/notas sin mostrar el picker) o "elegir" (muestra el paso
@@ -2012,7 +2041,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            nuevo -- solo cambia el contenido interno (ícono+título+sub en
            vez de radio+texto) y el toggle de selección lo maneja
            `_tarCrearSelModo()` a mano, sin `<input type="radio">` real
-           (no hace falta el semántico de formulario acá). -->
+           (no hace falta el semántico de formulario acá). Solo se llega acá
+           si el paso anterior quedó en "unica" -- ver arriba. -->
       <div class="salud-paso" id="tar-crear-paso-modo">
         <p class="ev-lugar-campo-label" style="margin-top:0;">¿Cómo se asigna esta tarea?</p>
         <div class="opciones" id="tar-crear-modo-opciones" style="margin-bottom:0;">
@@ -2218,6 +2248,33 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <div id="tar-eliminar-archivada-impacto" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;"></div>
       <button class="btn btn-danger" id="tar-eliminar-archivada-btn-confirmar" onclick="_tarEliminarArchivadaConfirmar()" style="margin-bottom:10px;">Eliminar definitivamente</button>
       <button class="btn btn-outline" onclick="_tarEliminarArchivadaCerrar()">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- Modal post-creación de una tarea recurrente (admin, pedido explícito
+       de Victor -- "¿Querés aplicar esta tarea a meses anteriores?"): mismo
+       "idioma" que #modal-tar-eliminar-archivada de arriba (overlay fijo +
+       .modal-info-card, fade con doble rAF, _registrarOverlayAbierto()).
+       2 "vistas" dentro de la misma card (#tar-recur-vista-pregunta/
+       #tar-recur-vista-historico, ver `_tarRecurPreguntaSi()`/js/tareas.js)
+       -- evita cerrar y reabrir un 2do modal para el paso siguiente. -->
+  <div id="modal-tar-recur-anteriores" class="modal-info" style="display:none;opacity:0;position:fixed;inset:0;z-index:9500;background:var(--overlay-dark);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:24px;transition:opacity 0.3s ease;" onclick="if(event.target===this)_tarRecurCerrar()">
+    <div class="modal-info-card">
+      <div id="tar-recur-vista-pregunta">
+        <h3 style="margin:0 0 8px;font-size:1.05rem;color:var(--text);">¿Querés aplicar esta tarea a meses anteriores?</h3>
+        <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 20px;">Podés registrar quién hizo esta tarea en meses pasados -- se acreditan los puntos directo, ya aprobados.</p>
+        <button class="btn btn-primary" onclick="_tarRecurPreguntaSi()" style="margin-bottom:10px;">Sí, aplicar a meses anteriores</button>
+        <button class="btn btn-outline" onclick="_tarRecurCerrar()">No, ya terminé</button>
+      </div>
+      <div id="tar-recur-vista-historico" style="display:none;">
+        <h3 style="margin:0 0 8px;font-size:1.05rem;color:var(--text);">Aplicar a meses anteriores</h3>
+        <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 14px;">Elige el mes/año y quién hizo la tarea. Podés agregar varios meses.</p>
+        <div id="tar-recur-hist-filas" style="display:flex;flex-direction:column;gap:12px;margin-bottom:14px;"></div>
+        <button type="button" class="btn-text-simple" onclick="_tarRecurAgregarFila()" style="margin-bottom:16px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">add</span> Agregar otro mes</button>
+        <div class="error-msg" id="tar-recur-hist-err"></div>
+        <button class="btn btn-primary" id="tar-recur-hist-btn-guardar" onclick="_tarRecurGuardarHistorico()" style="margin-bottom:10px;">Guardar</button>
+        <button class="btn btn-outline" onclick="_tarRecurCerrar()">Cancelar</button>
+      </div>
     </div>
   </div>
 
@@ -3478,9 +3535,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js"></script>
 <script src="js/ui.js?v=397ac228"></script>
-<script src="js/eventos.js?v=11d8426c"></script>
+<script src="js/eventos.js?v=2e879841"></script>
 <script src="js/offline.js?v=35b214a2"></script>
-<script src="js/tareas.js?v=63a97793"></script>
+<script src="js/tareas.js?v=368b6c11"></script>
 <script src="js/equipo.js?v=7200403d"></script>
 <script src="js/home.js?v=e715822d"></script>
 <script src="js/reservas.js?v=cacf57bd"></script>

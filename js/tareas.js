@@ -1111,8 +1111,14 @@ function _tarAccionMisHtml(a) {
   // `_tarDetalleAccionesHtml()` más abajo: `.tar-acciones-row`, no
   // `.tar-acciones-col`).
   if (a.estado === 'iniciada') {
+    // Pedido explícito de Victor: si quien la ve es admin, esta acción
+    // aprueba de una (ver enviarRevisionTarea()/index.ts) -- el botón dice
+    // "Finalizar tarea" en vez de "Enviar a revisión" para que quede claro
+    // que no hay paso de validación intermedio. `_adminToken` -- mismo
+    // criterio ya usado en el resto de esta pantalla (ej. ícono "Archivar").
+    var esAdmin = !!_adminToken;
     return '<div class="tar-acciones-row">' +
-      '<button type="button" class="btn btn-outline tar-card-btn" onclick="event.stopPropagation();_tarEnviarRevision(\'' + a.idAsignacion + '\', this)"><span class="material-symbols-outlined">send</span>Enviar a revisión</button>' +
+      '<button type="button" class="btn btn-outline tar-card-btn" onclick="event.stopPropagation();_tarEnviarRevision(\'' + a.idAsignacion + '\', this)"><span class="material-symbols-outlined">' + (esAdmin ? 'check_circle' : 'send') + '</span>' + (esAdmin ? 'Finalizar tarea' : 'Enviar a revisión') + '</button>' +
       '<button type="button" class="btn btn-text-simple tar-card-btn" onclick="event.stopPropagation();_tarSoltar(\'' + a.idAsignacion + '\', \'' + t.idTarea + '\', this)"><span class="material-symbols-outlined">remove_circle</span>Soltar tarea</button>' +
     '</div>';
   }
@@ -1288,6 +1294,33 @@ function _tarSincronizarTrasSoltar() {
     _tarRenderDisponibles();
   }, function() {});
 }
+// Admin (pedido explícito de Victor -- "Finalizar tarea", aprobación
+// automática): a diferencia del flujo normal, acá la asignación NO se queda
+// en "Mis tareas" (queda 'aprobada' directo, getMisTareas ya no la va a
+// devolver) -- sale de la lista con la MISMA animación de salida que
+// "Soltar tarea" (`_tarAnimarSalida()`/`tar-card-saliendo-soltada`, ver esa
+// función) en vez del fade in-place de `_tarSwapAccionMis()` que usa el
+// flujo normal (pendiente_revision sigue siendo parte de "Mis tareas").
+function _tarEnviarRevisionAdmin(idAsignacion, btn, a) {
+  var card = document.getElementById('tar-mis-card-' + idAsignacion);
+  _tarAnimarSalida(card, 'tar-card-saliendo-soltada', function() {
+    var real = _tarMisTareas.indexOf(a);
+    if (real !== -1) _tarMisTareas.splice(real, 1);
+    _tarRenderMisTareas();
+  });
+  api({ action: 'enviarRevisionTarea', nombre: E.nombre, token: _token, idAsignacion: idAsignacion }, function(res) {
+    if (res && res.exito === false) {
+      _tarRevertirMisTareas(a, res.error || 'No se pudo finalizar la tarea.');
+      return;
+    }
+    // La tarea puede haber quedado archivada (si esta era la última
+    // asignación activa) -- sincroniza Disponibles/config en segundo plano,
+    // mismo mecanismo ya usado tras "Soltar tarea".
+    _tarSincronizarTrasSoltar();
+  }, function(e) {
+    _tarRevertirMisTareas(a, (e && e.message) || 'No se pudo finalizar la tarea.');
+  });
+}
 function _tarEnviarRevision(idAsignacion, btn) {
   if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible guardar cambios en este momento.', 'error'); return; }
   // El botón real desaparece con el fade de `_tarSwapAccionMis()` de abajo,
@@ -1299,6 +1332,7 @@ function _tarEnviarRevision(idAsignacion, btn) {
   for (var i = 0; i < _tarMisTareas.length; i++) { if (String(_tarMisTareas[i].idAsignacion) === String(idAsignacion)) { idx = i; break; } }
   var a = idx !== -1 ? _tarMisTareas[idx] : null;
   if (!a) return;
+  if (_adminToken) { _tarEnviarRevisionAdmin(idAsignacion, btn, a); return; }
   var estadoAnterior = a.estado;
   a.estado = 'pendiente_revision';
   _tarSwapAccionMis(a);
@@ -1382,17 +1416,20 @@ function _tarArchivar(idTarea, btn) {
 // del todo: el mismo campo `notas` ahora vive como "Descripción de la
 // tarea" dentro del paso 0, debajo de Área -- ver `_tarCrearSetNotas()`,
 // sin cambios de nombre/shape): 0 Nombre+Área+Descripción / 1 Puntos+
-// Máximo de personas / 2 Modo de asignación / 3 Asignar a personas (SOLO
-// si modoAsignacion==='elegir', ver `_tarCrearIrSiguiente()`/
-// `_tarCrearBack()`) / 4 "¿Cuándo se hace esta tarea?" (nuevo, ver
-// MANIFEST.md "Cambios recientes" -- por realizar/ya realizada, mismo
-// componente `.opciones` que el paso de Modo) / 5 Fecha límite (último
-// paso siempre, sin importar el modo -- "Crear tarea"; título y dirección
-// del calendario dependen de `_tarCrearData.tipo`, ver
-// `_tarCrearMostrarPaso()`/`_tarCrearCalRender()` más abajo).
-var _TAR_CREAR_STEPS = ['tar-crear-paso-0', 'tar-crear-paso-1', 'tar-crear-paso-modo', 'tar-crear-paso-personas', 'tar-crear-paso-tipo', 'tar-crear-paso-fecha'];
+// Máximo de personas / 2 Tipo de tarea (nuevo, pedido explícito -- única/
+// recurrente, ver `_tarCrearSelRecurrencia()` más abajo) / 3 Modo de
+// asignación / 4 Asignar a personas (SOLO si modoAsignacion==='elegir', ver
+// `_tarCrearIrSiguiente()`/`_tarCrearBack()`) / 5 "¿Cuándo se hace esta
+// tarea?" (por realizar/ya realizada, mismo componente `.opciones` que el
+// paso de Modo) / 6 Fecha límite (último paso siempre, sin importar el modo
+// -- "Crear tarea"; título y dirección del calendario dependen de
+// `_tarCrearData.tipo`, ver `_tarCrearMostrarPaso()`/`_tarCrearCalRender()`
+// más abajo). Si el paso 2 queda en "recurrente", los pasos 3-6 se saltan
+// enteros -- una plantilla recurrente no tiene asignación/tipo/fecha propios
+// (`_tarCrearIrSiguiente()` guarda directo desde el paso 2 en ese caso).
+var _TAR_CREAR_STEPS = ['tar-crear-paso-0', 'tar-crear-paso-1', 'tar-crear-paso-recurrencia', 'tar-crear-paso-modo', 'tar-crear-paso-personas', 'tar-crear-paso-tipo', 'tar-crear-paso-fecha'];
 var _tarCrearCurIdx = 0;
-var _tarCrearData = { titulo: '', area: null, fecha: null, notas: '', asignarA: [], modoAsignacion: null, tipo: null };
+var _tarCrearData = { titulo: '', area: null, fecha: null, notas: '', asignarA: [], modoAsignacion: null, tipo: null, recurrencia: null };
 var _tarCrearCal = { mostrado: null };
 // Último valor de "días para completar" mostrado (ver
 // `_tarActualizarDiasParaCompletar()` más abajo) -- `null` = todavía no se
@@ -1409,7 +1446,7 @@ var _tarCrearDiasAnterior = null;
 var _tarCrearEnLimiteAnterior = null;
 
 function irTarCrear() {
-  _tarCrearData = { titulo: '', area: null, fecha: null, notas: '', asignarA: [], modoAsignacion: null, tipo: null };
+  _tarCrearData = { titulo: '', area: null, fecha: null, notas: '', asignarA: [], modoAsignacion: null, tipo: null, recurrencia: null };
   _tarCrearCal.mostrado = _evHoyISO();
   ir('s-tareas-crear');
   _tarCrearResetUI();
@@ -1432,6 +1469,7 @@ function _tarCrearResetUI() {
   document.querySelectorAll('#tar-crear-area-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   _adminSetStepperValue('tar-crear-puntos', 0);
   _adminSetStepperValue('tar-crear-cupos', 1);
+  document.querySelectorAll('#tar-crear-recurrencia-opciones .opcion').forEach(function(o) { o.classList.remove('sel'); });
   document.querySelectorAll('#tar-crear-modo-opciones .opcion').forEach(function(o) { o.classList.remove('sel'); });
   document.querySelectorAll('#tar-crear-tipo-opciones .opcion').forEach(function(o) { o.classList.remove('sel'); });
   var n = document.getElementById('tar-crear-notas'); if (n) n.value = '';
@@ -1504,6 +1542,13 @@ function _tarCrearBack() {
 }
 function _tarCrearIrSiguiente() {
   if (_tarCrearCurIdx === 0 && !_tarCrearPaso0Valido()) return;
+  if (_TAR_CREAR_STEPS[_tarCrearCurIdx] === 'tar-crear-paso-recurrencia') {
+    if (!_tarCrearData.recurrencia) return;
+    // "recurrente" no tiene asignación/tipo/fecha propios -- guarda directo
+    // (mismo destino que tocar el botón "Guardar" del último paso, ver
+    // `_tarCrearActualizarFooter()`).
+    if (_tarCrearData.recurrencia === 'recurrente') { _tarCrearGuardar(); return; }
+  }
   if (_TAR_CREAR_STEPS[_tarCrearCurIdx] === 'tar-crear-paso-modo' && !_tarCrearData.modoAsignacion) return;
   if (_TAR_CREAR_STEPS[_tarCrearCurIdx] === 'tar-crear-paso-tipo' && !_tarCrearData.tipo) return;
   var next = _tarCrearCurIdx + 1;
@@ -1514,24 +1559,28 @@ function _tarCrearPaso0Valido() { return !!(_tarCrearData.titulo && _tarCrearDat
 function _tarCrearPasoFechaValido() { return !!_tarCrearData.fecha; }
 function _tarCrearActualizarFooter() {
   var btn = document.getElementById('tar-crear-btn-footer'); if (!btn) return;
-  // Último paso: "Notas" -- siempre el último sin importar el modo elegido
-  // (el picker de personas, si se muestra, va antes), el botón final se
+  var pasoId = _TAR_CREAR_STEPS[_tarCrearCurIdx];
+  // "recurrente" convierte al paso "Tipo de tarea" en el último de facto
+  // (ver `_tarCrearIrSiguiente()` -- guarda directo desde ahí, sin pasar por
+  // modo/personas/tipo/fecha). El resto de los pasos, sin cambios: "Notas"
+  // sigue siendo el último para el flujo "unica" -- el botón final se
   // calcula contra el largo real de _TAR_CREAR_STEPS para no tener que
   // tocar este número cada vez que se suma/saca un paso. La fecha sigue
   // siendo obligatoria para poder crear (se exige un paso antes, al salir
   // de "Fecha límite", pero se revalida acá también por las dudas).
-  if (_tarCrearCurIdx === _TAR_CREAR_STEPS.length - 1) {
+  var esUltimoPorRecurrente = pasoId === 'tar-crear-paso-recurrencia' && _tarCrearData.recurrencia === 'recurrente';
+  if (_tarCrearCurIdx === _TAR_CREAR_STEPS.length - 1 || esUltimoPorRecurrente) {
     btn.textContent = 'Crear tarea';
     btn.onclick = _tarCrearGuardar;
-    btn.disabled = !_tarCrearPasoFechaValido();
+    btn.disabled = esUltimoPorRecurrente ? false : !_tarCrearPasoFechaValido();
   } else {
     btn.textContent = 'Continuar';
     btn.onclick = _tarCrearIrSiguiente;
-    var pasoId = _TAR_CREAR_STEPS[_tarCrearCurIdx];
     btn.disabled = pasoId === 'tar-crear-paso-0' ? !_tarCrearPaso0Valido() :
+      (pasoId === 'tar-crear-paso-recurrencia' ? !_tarCrearData.recurrencia :
       (pasoId === 'tar-crear-paso-modo' ? !_tarCrearData.modoAsignacion :
       (pasoId === 'tar-crear-paso-tipo' ? !_tarCrearData.tipo :
-      (pasoId === 'tar-crear-paso-fecha' ? !_tarCrearPasoFechaValido() : false)));
+      (pasoId === 'tar-crear-paso-fecha' ? !_tarCrearPasoFechaValido() : false))));
   }
 }
 // Límites de caracteres del wizard "Nueva tarea" (ver MANIFEST.md "Cambios
@@ -1557,6 +1606,15 @@ function _tarCrearSelArea(el) {
   _tarCrearActualizarFooter();
 }
 function _tarCrearSetNotas(v) { _tarCrearData.notas = v; _tarActualizarContador('tar-crear-notas-contador', v, _TAR_NOTAS_MAXLEN); }
+/* Paso nuevo "Tipo de tarea" (única/recurrente, pedido explícito de Victor)
+   -- mismo patrón exacto que `_tarCrearSelModo()` de abajo (`.opcion`/
+   `.opcion.sel`, toggle exclusivo a mano). */
+function _tarCrearSelRecurrencia(el, val) {
+  document.querySelectorAll('#tar-crear-recurrencia-opciones .opcion').forEach(function(o) { o.classList.remove('sel'); });
+  el.classList.add('sel');
+  _tarCrearData.recurrencia = val;
+  _tarCrearActualizarFooter();
+}
 /* Paso nuevo "¿Cómo se asigna esta tarea?" -- reusa `.opcion`/`.opcion.sel`
    tal cual (css/ui.css), toggle de selección exclusiva a mano (sin
    `<input type="radio">` real, ver comentario en index.html). */
@@ -1788,9 +1846,41 @@ function _tarCrearTogglePersona(el, nombre) {
 // frontend.
 function _tarCrearGuardar() {
   if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible guardar cambios en este momento.', 'error'); return; }
-  if (!_tarCrearPaso0Valido() || !_tarCrearPasoFechaValido()) return;
+  if (!_tarCrearPaso0Valido()) return;
   var puntosEl = document.getElementById('tar-crear-puntos');
   var cuposEl = document.getElementById('tar-crear-cupos');
+  // "recurrente" (pedido explícito -- "Tareas recurrentes"): guarda una
+  // plantilla en `tareas_recurrentes` en vez de una fila en `tareas` --
+  // nunca pasa por "¿Cómo se asigna?"/personas/"¿Cuándo se hace?"/fecha (ver
+  // `_tarCrearIrSiguiente()`), así que no hay `asignarA`/`yaRealizada`/
+  // `fechaVencimiento` que mandar acá. Tras crearla, pregunta si aplicarla a
+  // meses anteriores (`_tarRecurAplicarAnterioresPreguntar()` más abajo).
+  if (_tarCrearData.recurrencia === 'recurrente') {
+    var datosRec = {
+      titulo: _tarCrearData.titulo.trim(),
+      notas: _tarCrearData.notas || '',
+      area: _tarCrearData.area,
+      puntos: puntosEl ? (parseFloat(puntosEl.value) || 0) : 0,
+      maxAsignados: cuposEl ? (parseInt(cuposEl.value, 10) || 1) : 1,
+      creadoPor: E.nombre
+    };
+    mostrarCargando('Creando tarea recurrente...');
+    adminApi({ action: 'adminCrearTareaRecurrente', datos: JSON.stringify(datosRec) }, function(res) {
+      ocultarCargando();
+      if (res && res.exito === false) {
+        mostrarToast(res.error || 'No se pudo crear la tarea recurrente.', 'error');
+        return;
+      }
+      ir('s-tareas');
+      _tarCargarTodo();
+      _tarRecurAplicarAnterioresPreguntar(res.idPlantilla);
+    }, function(e) {
+      ocultarCargando();
+      mostrarToast((e && e.message) || 'No se pudo crear la tarea recurrente.', 'error');
+    });
+    return;
+  }
+  if (!_tarCrearPasoFechaValido()) return;
   var datos = {
     titulo: _tarCrearData.titulo.trim(),
     notas: _tarCrearData.notas || '',
@@ -1820,6 +1910,132 @@ function _tarCrearGuardar() {
   }, function(e) {
     ocultarCargando();
     mostrarToast((e && e.message) || 'No se pudo crear la tarea.', 'error');
+  });
+}
+
+/* ── "¿Querés aplicar esta tarea a meses anteriores?" (post-creación de una
+   tarea recurrente, pedido explícito de Victor) -- modal con 2 "vistas"
+   (#tar-recur-vista-pregunta/#tar-recur-vista-historico, index.html), mismo
+   "idioma" que #modal-tar-eliminar-archivada (overlay + doble rAF,
+   _registrarOverlayAbierto()). La vista histórico arma N filas
+   mes/año/persona (`_tarRecurEntradas`) -- "Guardar" crea, por cada una, una
+   instancia YA aprobada con los puntos acreditados al mes elegido
+   (`adminAplicarTareaRecurrenteHistorico`, supabase/functions/api/index.ts). ── */
+var _tarRecurIdPlantilla = null;
+var _tarRecurEntradas = [];
+function _tarRecurAplicarAnterioresPreguntar(idPlantilla) {
+  if (!idPlantilla) return;
+  _tarRecurIdPlantilla = idPlantilla;
+  _tarRecurEntradas = [{ mes: null, anio: new Date().getFullYear(), persona: null }];
+  var pregunta = document.getElementById('tar-recur-vista-pregunta');
+  var historico = document.getElementById('tar-recur-vista-historico');
+  if (pregunta) pregunta.style.display = '';
+  if (historico) historico.style.display = 'none';
+  var m = document.getElementById('modal-tar-recur-anteriores');
+  if (!m) return;
+  m.style.display = 'flex';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { m.style.opacity = '1'; }); });
+  _registrarOverlayAbierto(_tarRecurCerrar);
+}
+function _tarRecurPreguntaSi() {
+  var pregunta = document.getElementById('tar-recur-vista-pregunta');
+  var historico = document.getElementById('tar-recur-vista-historico');
+  if (pregunta) pregunta.style.display = 'none';
+  if (historico) historico.style.display = '';
+  _tarRecurRenderHistorico();
+}
+function _tarRecurCerrar(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var m = document.getElementById('modal-tar-recur-anteriores');
+  if (!m) return;
+  m.style.opacity = '0';
+  setTimeout(function() { m.style.display = 'none'; }, 300);
+  _tarRecurIdPlantilla = null;
+  _tarRecurEntradas = [];
+}
+function _tarRecurAgregarFila() {
+  _tarRecurEntradas.push({ mes: null, anio: new Date().getFullYear(), persona: null });
+  _tarRecurRenderHistorico();
+}
+function _tarRecurQuitarFila(idx) {
+  if (_tarRecurEntradas.length <= 1) return;
+  _tarRecurEntradas.splice(idx, 1);
+  _tarRecurRenderHistorico();
+}
+function _tarRecurSetCampo(idx, campo, valor) {
+  if (!_tarRecurEntradas[idx]) return;
+  _tarRecurEntradas[idx][campo] = campo === 'persona' ? valor : (parseInt(valor, 10) || null);
+}
+function _tarRecurMesOpcionesHtml(seleccionado) {
+  var out = '<option value="">Mes...</option>';
+  for (var i = 0; i < NOMBRES_MESES.length; i++) {
+    out += '<option value="' + (i + 1) + '"' + (seleccionado === (i + 1) ? ' selected' : '') + '>' + NOMBRES_MESES[i] + '</option>';
+  }
+  return out;
+}
+// Selector nativo de personas (en vez del picker con búsqueda del paso
+// "Asignar a personas" del wizard) -- pedido puntual de bajo volumen (backfill
+// histórico, admin), no justifica N buscadores independientes, uno por fila.
+// Mismo roster que ya usa el wizard (`_evRosterEquipo`) -- guard "Cargando
+// equipo..." si todavía no llegó, mismo criterio que `_tarCrearRenderPersonas()`.
+function _tarRecurPersonaOpcionesHtml(seleccionado) {
+  if (typeof _evRosterEquipo === 'undefined' || _evRosterEquipo === null) {
+    return '<option value="">Cargando equipo...</option>';
+  }
+  var out = '<option value="">Persona...</option>';
+  (_evRosterEquipo || []).forEach(function(p) {
+    var val = String(p.nombre).replace(/"/g, '&quot;');
+    out += '<option value="' + val + '"' + (seleccionado === p.nombre ? ' selected' : '') + '>' + (p.nombreDerby || p.nombre) + '</option>';
+  });
+  return out;
+}
+function _tarRecurRenderHistorico() {
+  var cont = document.getElementById('tar-recur-hist-filas');
+  if (!cont) return;
+  // `.ev-lugar-cada-row`/`.ev-lugar-input`/`.ev-lugar-input-num` (fila
+  // flex + input numérico angosto centrado) y `.tar-card-archivar-btn`
+  // (ícono redondo, ya usado para "Archivar tarea") reusados tal cual --
+  // css/eventos.css/css/tareas.css, sin CSS nuevo para este modal chico.
+  cont.innerHTML = _tarRecurEntradas.map(function(e, idx) {
+    return '<div class="ev-lugar-cada-row">' +
+      '<select class="ev-lugar-input" style="width:auto;flex:1.3;" onchange="_tarRecurSetCampo(' + idx + ',\'mes\',this.value)">' + _tarRecurMesOpcionesHtml(e.mes) + '</select>' +
+      '<input type="number" class="ev-lugar-input ev-lugar-input-num" value="' + e.anio + '" onchange="_tarRecurSetCampo(' + idx + ',\'anio\',this.value)">' +
+      '<select class="ev-lugar-input" style="width:auto;flex:1.6;" onchange="_tarRecurSetCampo(' + idx + ',\'persona\',this.value)">' + _tarRecurPersonaOpcionesHtml(e.persona) + '</select>' +
+      (_tarRecurEntradas.length > 1 ? '<button type="button" class="tar-card-archivar-btn" onclick="_tarRecurQuitarFila(' + idx + ')" aria-label="Quitar mes"><span class="material-symbols-outlined">close</span></button>' : '') +
+    '</div>';
+  }).join('');
+}
+// Repinta los selects de persona de las filas ya armadas si el roster
+// resuelve DESPUÉS de que el modal ya estaba abierto -- mismo bug de raza ya
+// corregido para el picker del wizard (`_tarCrearRepintarPersonasSiHaceFalta()`)
+// y el de "Editar personas" del detalle (`_tarPersonasRepintarSiHaceFalta()`).
+// Llamada desde `_evPrecargarRoster()` (js/eventos.js) junto a esos 2 hooks.
+function _tarRecurRepintarSiHaceFalta() {
+  var historico = document.getElementById('tar-recur-vista-historico');
+  if (!historico || historico.style.display === 'none') return;
+  _tarRecurRenderHistorico();
+}
+function _tarRecurGuardarHistorico() {
+  if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible guardar cambios en este momento.', 'error'); return; }
+  var errEl = document.getElementById('tar-recur-hist-err');
+  if (errEl) errEl.textContent = '';
+  var incompleta = _tarRecurEntradas.some(function(e) { return !e.mes || !e.anio || !e.persona; });
+  if (incompleta) {
+    if (errEl) errEl.textContent = 'Completa mes, año y persona en cada fila.';
+    return;
+  }
+  var btn = document.getElementById('tar-recur-hist-btn-guardar');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+  adminApi({ action: 'adminAplicarTareaRecurrenteHistorico', idPlantilla: _tarRecurIdPlantilla, entradas: JSON.stringify(_tarRecurEntradas) }, function(res) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+    if (res && res.exito === false) {
+      if (errEl) errEl.textContent = res.error || 'No se pudo aplicar a meses anteriores.';
+      return;
+    }
+    _tarRecurCerrar();
+  }, function(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
+    if (errEl) errEl.textContent = (e && e.message) || 'No se pudo aplicar a meses anteriores.';
   });
 }
 
@@ -2424,8 +2640,12 @@ function _tarDetalleAccionesHtml(t) {
   var mia = _tarMiAsignacionEn(idTarea);
   if (mia) {
     if (mia.estado === 'iniciada') {
+      // Mismo criterio que `_tarAccionMisHtml()` (lista) -- admin ve
+      // "Finalizar tarea" (aprobación automática, ver enviarRevisionTarea()/
+      // index.ts), el resto ve "Enviar a revisión".
+      var esAdmin = !!_adminToken;
       return '<div class="tar-acciones-row">' +
-        '<button type="button" class="btn btn-outline tar-card-btn" onclick="_tarDetalleEnviarRevision(\'' + mia.idAsignacion + '\', this)"><span class="material-symbols-outlined">send</span>Enviar a revisión</button>' +
+        '<button type="button" class="btn btn-outline tar-card-btn" onclick="_tarDetalleEnviarRevision(\'' + mia.idAsignacion + '\', this)"><span class="material-symbols-outlined">' + (esAdmin ? 'check_circle' : 'send') + '</span>' + (esAdmin ? 'Finalizar tarea' : 'Enviar a revisión') + '</button>' +
         '<button type="button" class="btn btn-text-simple tar-card-btn" onclick="_tarDetalleSoltar(\'' + mia.idAsignacion + '\',\'' + idTarea + '\', this)"><span class="material-symbols-outlined">remove_circle</span>Soltar tarea</button>' +
       '</div>';
     }
