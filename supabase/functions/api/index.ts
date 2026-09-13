@@ -4605,22 +4605,58 @@ async function notificarCambioAsistencia(params: Record<string, any>): Promise<R
   if (!nombre) return { exito: false };
   const idEvento = String(params.idEvento ?? '').trim();
   const estadoNuevo = String(params.estadoNuevo ?? '').trim();
+  const estadoAnterior = String(params.estadoAnterior ?? '').trim();
   if (!idEvento || !estadoNuevo) return { exito: false };
+  // Solo notificar si había un RSVP previo (no en el primer RSVP)
+  if (!estadoAnterior) return { exito: true };
   if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) return { exito: false };
   const { data: ev } = await supabase.from('asistencias').select('fecha, donde').eq('id_evento', idEvento).maybeSingle();
   const fecha = ev?.fecha ? ev.fecha.slice(5).replace('-', '/') : '';
   const lugar = ev?.donde ? ' — ' + ev.donde : '';
-  await fetch('https://api.onesignal.com/notifications', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Key ' + ONESIGNAL_API_KEY },
-    body: JSON.stringify({
-      app_id: ONESIGNAL_APP_ID,
-      target_channel: 'push',
-      headings: { en: 'Cambio de asistencia' },
-      contents: { en: nombre + ' → ' + estadoNuevo + (fecha ? ' (' + fecha + lugar + ')' : '') },
-      included_segments: ['Total Subscriptions'],
-    }),
-  });
+  const contenido = nombre + ': ' + estadoAnterior + ' → ' + estadoNuevo + (fecha ? ' (' + fecha + (lugar || '') + ')' : '');
+  // Buscar email del usuario que cambió (para excluirlo de notifs admin)
+  const { data: quienCambio } = await supabase.from('equipo').select('email').eq('username', nombre).maybeSingle();
+  const emailQuienCambio = (quienCambio?.email ?? '').toLowerCase();
+  // Notificar a admins (cualquier cambio, excepto el propio usuario) -- reusa
+  // _adminOneSignalAliases() (ADMIN_PRINCIPAL + tabla admins, ya prefijado
+  // 'admin_', mismo helper que usan pushSolicitudPendiente()/cronAdminEvento())
+  // en vez de re-derivar la lista acá, evita depender de una env var
+  // (ADMIN_PRINCIPAL es un const en código, no un secret de Supabase).
+  const adminAliases = (await _adminOneSignalAliases()).filter((a) => a !== 'admin_' + emailQuienCambio);
+  if (adminAliases.length > 0) {
+    await fetch('https://api.onesignal.com/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Key ' + ONESIGNAL_API_KEY },
+      body: JSON.stringify({
+        app_id: ONESIGNAL_APP_ID,
+        target_channel: 'push',
+        headings: { en: 'Cambio de asistencia' },
+        contents: { en: contenido },
+        include_aliases: { external_id: adminAliases },
+      }),
+    });
+  }
+  // Notificar al resto de usuarios solo si cambió de "Asistiré" a "No asistiré"
+  if (estadoAnterior === 'Asistiré' && estadoNuevo === 'No asistiré') {
+    const { data: miembros } = await supabase.from('equipo').select('username, estado_miembro');
+    const destinatarios = (miembros ?? [])
+      .filter((m: any) => m.username && EQUIPO_ACTIVO_FILTRO(m))
+      .map((m: any) => m.username)
+      .filter((u: string) => u !== nombre);
+    if (destinatarios.length > 0) {
+      await fetch('https://api.onesignal.com/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Key ' + ONESIGNAL_API_KEY },
+        body: JSON.stringify({
+          app_id: ONESIGNAL_APP_ID,
+          target_channel: 'push',
+          headings: { en: 'Cambio de asistencia' },
+          contents: { en: contenido },
+          include_aliases: { external_id: destinatarios },
+        }),
+      });
+    }
+  }
   return { exito: true };
 }
 

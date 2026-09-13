@@ -4646,7 +4646,7 @@ function _evMarcarAsistencia(id, estado) {
     // -- fire-and-forget, sin callbacks -- best-effort a propósito, mismo
     // criterio que el resto de pushes de este proyecto: nunca debe afectar el
     // flujo real de guardar la asistencia (que ya terminó arriba).
-    apiPost({ action: 'notificarCambioAsistencia', token: _token, idEvento: id, estadoNuevo: estado }, function(){}, function(){});
+    apiPost({ action: 'notificarCambioAsistencia', token: _token, idEvento: id, estadoNuevo: estado, estadoAnterior: estadoAnterior }, function(){}, function(){});
   }, function(e) {
     ev.miEstado = estadoAnterior;
     ev.rsvps = rsvpsAnterior;
