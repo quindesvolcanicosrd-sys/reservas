@@ -2749,24 +2749,23 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
 
       <!-- Acordeón "LESIONADXS" (feat nueva, ver MANIFEST.md/CHANGELOG.md)
-           -- mismo markup .eq-grupo que Quindes/Mirlxs/Inactivxs, pero NO
-           colapsable (pedido explícito): mismo criterio que Favoritos --
-           sin chevron, body con max-height:'none' fijo, nunca pasa por
-           _eqToggleGrupo(). Arranca oculta -- _eqRenderLesionadxs()/
+           -- mismo markup/mecanismo .eq-grupo que Inactivxs de arriba:
+           colapsable vía `_eqToggleGrupo('Lesionadxs')`, colapsado por
+           defecto (sin `abierto` en header/body a propósito). Arranca
+           oculta (`style="display:none"`) -- _eqRenderLesionadxs()/
            js/equipo.js la muestra solo si hay al menos 1 persona con
            estado_miembro='Lesionadx' (getEquipo() ya lo devuelve como
-           `estado`, sin cambio de backend necesario). Header `<button>`,
-           mismo criterio que Favoritos (ver comentario de ese bloque, más
-           arriba). -->
+           `estado`, sin cambio de backend necesario). -->
       <div class="eq-grupo" id="eq-grupo-lesionadxs" style="display:none;">
         <div class="eq-grupo-header-spacer" id="eq-grupo-lesionadxs-header-spacer"></div>
-        <button type="button" class="eq-grupo-header eq-grupo-header--sticky" id="eq-grupo-lesionadxs-header" onclick="_eqGrupoHeaderTap('eq-grupo-lesionadxs-header', null)">
+        <button type="button" class="eq-grupo-header eq-grupo-header--sticky" id="eq-grupo-lesionadxs-header" onclick="_eqGrupoHeaderTap('eq-grupo-lesionadxs-header', 'Lesionadxs')">
           <span class="eq-grupo-linea"></span>
           <span class="eq-grupo-pill" id="eq-grupo-lesionadxs-pill">0</span>
           <span class="eq-grupo-nombre">Lesionadxs</span>
+          <span class="material-symbols-outlined eq-grupo-chevron">expand_more</span>
           <span class="eq-grupo-linea"></span>
         </button>
-        <div class="eq-grupo-body abierto">
+        <div class="eq-grupo-body" id="eq-grupo-lesionadxs-body">
           <div class="eq-grupo-body-inner" id="eq-grupo-lesionadxs-lista"></div>
         </div>
       </div>
@@ -3554,7 +3553,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/eventos.js?v=2e879841"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=cb09eb05"></script>
-<script src="js/equipo.js?v=c350bfef"></script>
+<script src="js/equipo.js?v=d2e2c48b"></script>
 <script src="js/home.js?v=e715822d"></script>
 <script src="js/reservas.js?v=cacf57bd"></script>
 <script src="js/perfil.js?v=d2df3c5b"></script>

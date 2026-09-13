@@ -2249,12 +2249,14 @@ function _eqRenderInactivos() {
 // Acordeón "LESIONADXS" (feat nueva, ver MANIFEST.md/CHANGELOG.md) --
 // `getEquipo()` ya devuelve `estado` (`equipo.estado_miembro` tal cual,
 // mismo campo que ya usa `_datosRenderStatsHtml()`/js/perfil.js para el
-// chip de estado en Ajustes) -- sin cambio de backend necesario. NO
-// colapsable (pedido explícito, mismo criterio que Favoritos): nunca pasa
-// por `_eqToggleGrupo()`, `max-height:'none'` fijo. Oculta por completo
-// (display:none, sin fade -- a diferencia de Favoritos, acá no se pidió
-// animación de entrada/salida de la sección) cuando no hay nadie
-// lesionadx.
+// chip de estado en Ajustes) -- sin cambio de backend necesario. Colapsable
+// igual que Inactivos: pasa por `_eqToggleGrupo('Lesionadxs')`, arranca
+// colapsado por defecto (sin clase `.abierto` en el body estático) -- por
+// eso, mismo criterio que `_eqRenderInactivos()`, acá NUNCA hay que tocar
+// `style.maxHeight` en el render (`_eqToggleGrupo()` ya lo maneja al abrir/
+// cerrar). Oculta por completo (display:none, sin fade -- a diferencia de
+// Favoritos, acá no se pidió animación de entrada/salida de la sección)
+// cuando no hay nadie lesionadx.
 function _eqRenderLesionadxs() {
   var wrap = document.getElementById('eq-grupo-lesionadxs');
   var cont = document.getElementById('eq-grupo-lesionadxs-lista');
@@ -2264,8 +2266,6 @@ function _eqRenderLesionadxs() {
   wrap.style.display = filtradas.length ? '' : 'none';
   if (pillEl) pillEl.textContent = filtradas.length;
   cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
-  var body = wrap.querySelector('.eq-grupo-body');
-  if (body) body.style.maxHeight = 'none';
   _eqHidratarAvatares();
   _eqActualizarListaVacia();
 }
@@ -2762,10 +2762,12 @@ function _eqScrollAlGrupo(header) {
   var umbral = _eqHeaderUmbral[header.id];
   window.scrollTo({ top: umbral || 0, behavior: 'smooth' });
 }
-// `rol` null para Favoritos/Lesionadxs -- no colapsables, nunca pasan por
-// `_eqToggleGrupo()` (ver ese comentario más arriba): "comportamiento
-// actual" en modo natural para esos 2 es no hacer nada, mismo que tenían
-// antes de sumar este handler, así que acá simplemente no llama a nada.
+// `rol` null solo para Favoritos -- el único no colapsable que queda, nunca
+// pasa por `_eqToggleGrupo()` (ver ese comentario más arriba): "comportamiento
+// actual" en modo natural es no hacer nada, mismo que tenía antes de sumar
+// este handler, así que acá simplemente no llama a nada. Lesionadxs pasa
+// 'Lesionadxs' como cualquier otro acordeón colapsable (Quindes/Mirlxs/
+// Inactivos) desde que dejó de ser de solo-lectura.
 function _eqGrupoHeaderTap(headerId, rol) {
   var header = document.getElementById(headerId);
   if (!header) return;
