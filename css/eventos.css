@@ -672,6 +672,18 @@
 .ev-roster-fila:last-child { border-bottom: none; }
 .ev-roster-nombre { font-size: 0.8rem; font-weight: 600; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ev-roster-vacio { padding: 14px 4px; color: var(--muted); font-size: 0.78rem; text-align: center; }
+/* Checkmark de selección de `.fi-circle` dentro de una `.ev-roster-fila` --
+   mismo bug/patrón ya documentado en css/tareas.css para `.tar-persona-fila
+   .fi-circle.sel`: `.fi-circle` por sí sola (arriba) es solo el círculo
+   vacío, y su estado "marcado" en otros lados vive en un ancestro tipo
+   `.fecha-item.sel .fi-circle` -- acá `.sel` se togglea directo sobre el
+   propio `.fi-circle` (picker de persona y de clase del wizard "Registrar
+   pago manual", `_mlpwSelPersona()`/`_mlpwSelClase()`, js/admin.js), que
+   nunca tenía una regla que lo pintara. Genérico sobre `.ev-roster-fila`
+   (no scoped a `tar-persona-fila`) para cubrir cualquier picker de
+   selección única que reuse esta fila. */
+.ev-roster-fila .fi-circle.sel { background: var(--brand); border-color: var(--brand); }
+.ev-roster-fila .fi-circle.sel .material-symbols-outlined { color: var(--white); }
 /* Slider de 2 estados por persona -- reusa LITERAL `.ev-rsvp-seg`/
    `.ev-rsvp-opt`/`.ev-rsvp-slider` (mismo componente que la barra "¿Asistiré?"
    de 3 opciones, más arriba), esta clase es solo el modificador de tamaño

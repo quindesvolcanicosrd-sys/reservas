@@ -2022,6 +2022,7 @@ function _mlPagoWizarAbrir() {
   _mlpwData = { persona: null, tipo: null, idEvento: null, estadoAsistencia: null, mes: null, anio: null, modoMonto: 'auto', montoManual: null, notas: '' };
   ir('s-miliga-pago');
   var search = document.getElementById('mlpw-personas-search'); if (search) search.value = '';
+  var searchClases = document.getElementById('mlpw-clases-search'); if (searchClases) searchClases.value = '';
   document.querySelectorAll('#mlpw-tipo-opciones .opcion').forEach(function(o) { o.classList.remove('sel'); });
   document.querySelectorAll('#mlpw-clase-estado-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
   document.querySelectorAll('#mlpw-monto-modo-pills .aj-pill').forEach(function(p, i) { p.classList.toggle('activa', i === 0); });
@@ -2062,7 +2063,8 @@ function _mlpwMostrarPaso(idx) {
     if (_mlpwData.tipo === 'clase') {
       if (claseDiv) claseDiv.style.display = 'block';
       if (mensualDiv) mensualDiv.style.display = 'none';
-      _mlpwRenderClases();
+      var inpC = document.getElementById('mlpw-clases-search');
+      _mlpwRenderClases(inpC ? inpC.value : '');
     } else {
       if (claseDiv) claseDiv.style.display = 'none';
       if (mensualDiv) mensualDiv.style.display = 'block';
@@ -2168,6 +2170,20 @@ function _mlpwSelTipo(el, val) {
 // pedirlo de nuevo; si todavía no cargó nada esta sesión (admin entró
 // directo a Mi Liga sin pasar por Eventos), se dispara acá, mismo criterio
 // que el precargado del roster.
+// "2026-09-13" -> "Sábado 13 de septiembre de 2026" -- pedido explícito de
+// Victor: "12/09/2026" no deja ver qué día de la semana es. Reusa
+// _EV_DIAS_LARGOS (js/eventos.js)/NOMBRES_MESES (js/ui.js) en vez de
+// _evAntFechaLegible() (dd/mm/aaaa, usada en otro contexto -- rango de
+// asistencia anticipada -- que no se toca acá), siempre con año (a
+// diferencia de _tarFechaInfo()/js/tareas.js, que lo omite si es el año
+// actual: acá la lista mezcla clases de años distintos sin un "hoy" de
+// referencia único, así que el año siempre suma claridad).
+function _mlpwFechaLegible(iso) {
+  if (!iso) return '';
+  var d = _evParseISO(iso);
+  if (isNaN(d.getTime())) return iso;
+  return _EV_DIAS_LARGOS[d.getDay()] + ' ' + d.getDate() + ' de ' + NOMBRES_MESES[d.getMonth()].toLowerCase() + ' de ' + d.getFullYear();
+}
 function _mlpwClasesOrdenadas() {
   var pasadas = [], futuras = [];
   (_EV_EVENTOS || []).forEach(function(e) {
@@ -2178,7 +2194,15 @@ function _mlpwClasesOrdenadas() {
   futuras.sort(function(a, b) { return a.fecha < b.fecha ? -1 : (a.fecha > b.fecha ? 1 : 0); });
   return pasadas.concat(futuras);
 }
-function _mlpwRenderClases() {
+// Buscador del paso 3 (mejora pedida por Victor -- la lista de clases puede
+// ser larga): filtra por venue (`e.lugar`), descripción (`e.descripcion`) o
+// fecha, esta última tanto contra el texto legible ya mostrado ("sábado",
+// "septiembre", "2026") como contra el ISO crudo (para que "2026-09-13" o
+// "09-13" también matcheen). Mismo criterio que `_mlpwFiltrarPersonas()` --
+// filtra en memoria sobre `_EV_EVENTOS` ya cargado, sin pedir nada al
+// backend.
+function _mlpwFiltrarClases(q) { _mlpwRenderClases(q); }
+function _mlpwRenderClases(q) {
   var cont = document.getElementById('mlpw-clases-lista');
   if (!cont) return;
   if (!_EV_EVENTOS || !_EV_EVENTOS.length) {
@@ -2187,12 +2211,21 @@ function _mlpwRenderClases() {
     return;
   }
   var lista = _mlpwClasesOrdenadas();
-  if (!lista.length) { cont.innerHTML = '<div class="ev-roster-vacio">No hay clases en el calendario.</div>'; return; }
+  var qn = (q || '').toLowerCase().trim();
+  if (qn) {
+    lista = lista.filter(function(e) {
+      return (e.lugar || '').toLowerCase().indexOf(qn) !== -1 ||
+        (e.descripcion || '').toLowerCase().indexOf(qn) !== -1 ||
+        (e.fecha || '').toLowerCase().indexOf(qn) !== -1 ||
+        _mlpwFechaLegible(e.fecha).toLowerCase().indexOf(qn) !== -1;
+    });
+  }
+  if (!lista.length) { cont.innerHTML = '<div class="ev-roster-vacio">' + (qn ? 'Sin resultados.' : 'No hay clases en el calendario.') + '</div>'; return; }
   cont.innerHTML = lista.map(function(e) {
     var sel = _mlpwData.idEvento === e.id;
     var pasada = _evEsPasado(e);
     return '<div class="ev-roster-fila" onclick="_mlpwSelClase(\'' + String(e.id).replace(/'/g, "\\'") + '\')">' +
-      '<span class="ev-roster-nombre">' + _evAntFechaLegible(e.fecha) + ' — ' + e.lugar + ' (' + e.horaInicio + 'hs)' + (pasada ? '' : ' <span style="color:var(--muted);font-weight:400;">(futura)</span>') + '</span>' +
+      '<span class="ev-roster-nombre">' + _mlpwFechaLegible(e.fecha) + ' — ' + e.lugar + ' (' + e.horaInicio + 'hs)' + (pasada ? '' : ' <span style="color:var(--muted);font-weight:400;">(futura)</span>') + '</span>' +
       '<div class="fi-circle' + (sel ? ' sel' : '') + '"><span class="material-symbols-outlined">check</span></div>' +
     '</div>';
   }).join('');
@@ -2204,7 +2237,8 @@ function _mlpwSelClase(idEvento) {
   var ev = (_EV_EVENTOS || []).filter(function(e) { return e.id === idEvento; })[0];
   var wrap = document.getElementById('mlpw-clase-estado-wrap');
   if (wrap) wrap.style.display = (ev && _evEsPasado(ev)) ? 'block' : 'none';
-  _mlpwRenderClases();
+  var inp = document.getElementById('mlpw-clases-search');
+  _mlpwRenderClases(inp ? inp.value : '');
   _mlpwActualizarFooter();
 }
 function _mlpwSelEstadoAsistencia(el, val) {

@@ -41,7 +41,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=6a5348f1">
 <link rel="stylesheet" href="css/nav.css?v=4e85514c">
-<link rel="stylesheet" href="css/eventos.css?v=b9ee10d0">
+<link rel="stylesheet" href="css/eventos.css?v=bd184642">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/equipo.css?v=c369e273">
 <link rel="stylesheet" href="css/perfil.css">
@@ -2262,13 +2262,13 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="modal-info-card">
       <div id="tar-recur-vista-pregunta">
         <h3 style="margin:0 0 8px;font-size:1.05rem;color:var(--text);">¿Querés aplicar esta tarea a meses anteriores?</h3>
-        <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 20px;">Podés registrar quién hizo esta tarea en meses pasados -- se acreditan los puntos directo, ya aprobados.</p>
+        <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 20px;">El mes en curso ya quedó disponible para tomar -- acá podés registrar quién la hizo en meses YA PASADOS, se acreditan los puntos directo, ya aprobados.</p>
         <button class="btn btn-primary" onclick="_tarRecurPreguntaSi()" style="margin-bottom:10px;">Sí, aplicar a meses anteriores</button>
         <button class="btn btn-outline" onclick="_tarRecurCerrar()">No, ya terminé</button>
       </div>
       <div id="tar-recur-vista-historico" style="display:none;">
         <h3 style="margin:0 0 8px;font-size:1.05rem;color:var(--text);">Aplicar a meses anteriores</h3>
-        <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 14px;">Elige el mes/año y quién hizo la tarea. Podés agregar varios meses.</p>
+        <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 14px;">Elige el mes/año y quién hizo la tarea. Podés agregar varios meses -- el mes en curso no aparece en la lista, ya está disponible para tomar aparte.</p>
         <div id="tar-recur-hist-filas" style="display:flex;flex-direction:column;gap:12px;margin-bottom:14px;"></div>
         <button type="button" class="btn-text-simple" onclick="_tarRecurAgregarFila()" style="margin-bottom:16px;"><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:middle;">add</span> Agregar otro mes</button>
         <div class="error-msg" id="tar-recur-hist-err"></div>
@@ -3441,6 +3441,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="salud-paso" id="mlpw-paso-detalle">
       <div id="mlpw-detalle-clase" style="display:none;">
         <p class="ev-lugar-campo-label" style="margin-top:0;">Elige la clase (pasadas primero)</p>
+        <div class="app-nav-search" style="margin-bottom:12px;">
+          <span class="material-symbols-outlined">search</span>
+          <input type="text" id="mlpw-clases-search" placeholder="Buscar por venue, fecha o descripción..." autocomplete="off" oninput="_mlpwFiltrarClases(this.value)">
+        </div>
         <div id="mlpw-clases-lista" class="ev-marcar-lista"></div>
         <!-- Rollcall -- solo aparece si la clase elegida ya pasó
              (`_mlpwSelClase()`). Reusa `adminMarcarAsistencia` tal cual
@@ -3554,7 +3558,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/home.js?v=e715822d"></script>
 <script src="js/reservas.js?v=cacf57bd"></script>
 <script src="js/perfil.js?v=d2df3c5b"></script>
-<script src="js/admin.js?v=b924a9f3"></script>
+<script src="js/admin.js?v=7cdc7ef8"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js?v=d18bc0da"></script>
 
