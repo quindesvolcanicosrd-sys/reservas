@@ -47,12 +47,16 @@ function irEditarDatos(sinNavegar) {
   // Equipamiento
   var eqVal = document.getElementById('aj-equip-val');
   if (eqVal) {
-    var eqPartes = [];
     var pat = d.necesitaPatines || '';
-    if (pat.toLowerCase() !== 'no' && pat) { eqPartes.push('Patines' + (d.talla ? ' talla ' + d.talla : '')); }
     var pro = d.necesitaProtecciones || '';
-    if (pro.toLowerCase() !== 'no' && pro) { eqPartes.push('Protecciones: ' + pro); } else { eqPartes.push('Protecciones propias'); }
-    eqVal.textContent = eqPartes.join(' · ') || '—';
+    if (pat.toLowerCase() === 'no' && pro.toLowerCase() === 'no') {
+      eqVal.textContent = 'Tienes tu equipamiento propio';
+    } else {
+      var eqPartes = [];
+      if (pat.toLowerCase() !== 'no' && pat) { eqPartes.push('Patines' + (d.talla ? ' talla ' + d.talla : '')); }
+      if (pro.toLowerCase() !== 'no' && pro) { eqPartes.push('Protecciones: ' + pro); } else { eqPartes.push('Protecciones propias'); }
+      eqVal.textContent = eqPartes.join(' · ') || '—';
+    }
   }
   // Teléfono
   var telVal = document.getElementById('aj-tel-val');
