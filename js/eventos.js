@@ -6348,29 +6348,36 @@ function _evCerrarFabAdminMenu(porGesto) {
 function _evFabAdminEditar() { _evCerrarFabAdminMenu(true); _evEditarAbrir(); }
 function _evFabAdminEliminar() { var ev = _evDetalleActual; _evCerrarFabAdminMenu(true); if (ev) _evAbrirSheetBorrar(ev.id); }
 function _evFabAdminCancelar() { var ev = _evDetalleActual; _evCerrarFabAdminMenu(true); if (ev) _evAbrirSheetCancelar(ev.id); }
-// Las 3 pills juntas -- Ubicación/Inicio/Fin, ver "Cambios recientes" --
-// corrección de orden + fusión + recorte: antes Inicio/Lugar/"Cómo
-// llegar"/Fin/Duración (5 pills, con el link a Maps viviendo aparte de
-// Lugar). Ahora Ubicación (`.fi-pill-lugar`) ES el link clickeable (mismo
-// patrón `<a href="mapsUrl">` que antes usaba solo "Cómo llegar", fusionado
-// acá en vez de vivir aparte -- sin mapsUrl, cae a `<span>` no clickeable,
-// mismo criterio de siempre), y la pill de Duración se saca del todo
-// (redundante con Inicio+Fin, ya visibles) -- CERO clases `.ev-detalle-pill*`
-// propias (reuso LITERAL de `.fi-pill*`/`.fi-pills`, css/reservas.css,
-// mismas clases que usa el panel "Más información" de Reservas). Todas acá,
-// afuera del sticky, scrollean con el resto del contenido.
+// Info del evento -- Ubicación + horario, ver "Cambios recientes" --
+// rediseño inline minimalista: `.ev-info-rows` (2 filas ícono + texto,
+// css/reservas.css) REEMPLAZA a las pills `.fi-pills`/`.fi-pill-lugar`/
+// `.fi-pill-hora` que se reusaban del panel "Más información" de Reservas.
+// Fila 1: ícono `location_on` + nombre del lugar (texto plano, truncado con
+// ellipsis) + botón pill "Cómo llegar" (`<a href="mapsUrl">`, solo si hay
+// mapsUrl -- sin él simplemente no se pinta, antes caía a un `<span>` no
+// clickeable) + botón pill "Ver video" (instructivo, si lo hay). Fila 2:
+// ícono `schedule` + hora de inicio – hora de fin (sin las etiquetas
+// "Inicia"/"Finaliza", el ícono ya dice qué es). La pill de Duración sigue
+// fuera (redundante con Inicio+Fin). `.fi-pill*` no se toca: lo siguen
+// usando Reservas, Tareas y admin. Todo esto va afuera del sticky, scrollea
+// con el resto del contenido.
 function _evDetalleInfoHtml(ev) {
   var desc = ev.descripcion || _EV_DESCRIPCION_POR_TIPO[ev.tipo] || '';
   var mapsUrl = ev.mapsUrl || _EV_MAPS_URL_POR_LUGAR[ev.lugar] || '';
   var videoInstructivo = ev.videoInstructivo || '';
-  var html = '<div class="fi-pills">' +
-      '<span class="fi-pill fi-pill-lugar">' +
-        (mapsUrl
-          ? '<a class="fi-pill-accion" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '<span class="fi-pill-div">|</span><span class="material-symbols-outlined">navigation</span>Indicaciones</a>'
-          : '<span class="fi-pill-accion-static"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</span>') +
-        (videoInstructivo ? '<span class="fi-pill-div">|</span><button type="button" class="fi-pill-accion" onclick="event.stopPropagation();_evAbrirVideoInstructivo(\'' + videoInstructivo.replace(/'/g, "\\'") + '\')"><span class="material-symbols-outlined">play_circle</span>Ver cómo llegar</button>' : '') +
-      '</span>' +
-      '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>Inicia ' + ev.horaInicio + 'hs<span class="fi-pill-div">|</span>Finaliza ' + _evHoraFin(ev) + 'hs</span>' +
+  var html = '<div class="ev-info-rows">' +
+      '<div class="ev-info-row-loc">' +
+        '<span class="material-symbols-outlined ev-info-icon">location_on</span>' +
+        '<span class="ev-info-loc-nombre">' + ev.lugar + '</span>' +
+        (mapsUrl ? '<a class="ev-info-btn-llegar" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">directions</span>Cómo llegar</a>' : '') +
+        (videoInstructivo ? '<button type="button" class="ev-info-btn-llegar ev-info-btn-video" onclick="event.stopPropagation();_evAbrirVideoInstructivo(\'' + videoInstructivo.replace(/'/g, "\\'") + '\')"><span class="material-symbols-outlined">play_circle</span>Ver video</button>' : '') +
+      '</div>' +
+      '<div class="ev-info-row-hora">' +
+        '<span class="material-symbols-outlined ev-info-icon">schedule</span>' +
+        '<span class="ev-info-hora-val">' + ev.horaInicio + ' hs</span>' +
+        '<span class="ev-info-hora-sep">–</span>' +
+        '<span class="ev-info-hora-fin">' + _evHoraFin(ev) + ' hs</span>' +
+      '</div>' +
     '</div>' +
     (desc ? '<p class="ev-detalle-desc">' + desc + '</p>' : '');
   // Botón "Cancelar o re - agendar" (mirlxs, ver "Cambios recientes")
@@ -6454,8 +6461,8 @@ function _evDetalleInfoHtml(ev) {
   return html;
 }
 
-// Sheet in-app de video instructivo del lugar (ver MANIFEST.md) -- el pill
-// `.fi-pill-video` de _evDetalleInfoHtml() llama a _evAbrirVideoInstructivo()
+// Sheet in-app de video instructivo del lugar (ver MANIFEST.md) -- el botón
+// `.ev-info-btn-video` de _evDetalleInfoHtml() llama a _evAbrirVideoInstructivo()
 // en vez de abrir target="_blank" directo. Solo YouTube tiene embed in-app
 // (#ev-video-sheet, index.html) -- cualquier otra red cae a window.open()
 // de siempre, sin sheet.

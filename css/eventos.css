@@ -739,7 +739,7 @@
    achicar SOLO la separación entre la descripción y la barra de RSVP que
    sigue, sin tocar el resto de las secciones (que comparten esa misma clase
    y deben seguir en 22px). Scoped por id, mismo criterio que
-   `#ev-detalle-info .fi-pills` arriba. */
+   `#ev-detalle-info .ev-info-rows` arriba. */
 #ev-detalle-info { margin-bottom: 11px; }
 /* Nav compacta sticky (ver "Cambios recientes" -- reemplaza el #top-bar
    genérico solo para esta pantalla, ver TOP_BAR_CONFIG/js/ui.js): vive
@@ -792,17 +792,15 @@
   font-size: 1.1rem; font-weight: 600; color: var(--brand); text-transform: uppercase; letter-spacing: 1.2px;
 }
 .ev-detalle-fechahora { font-size: 0.85rem; color: var(--text-2); font-weight: 600; margin-top: 2px; }
-/* Pills -- ver "Cambios recientes" -- rediseño, corrección sobre un intento
-   anterior: reuso LITERAL de `.fi-pill`/`.fi-pills`/`.fi-pill-hora`/
-   `.fi-pill-lugar`/`.fi-pill-maps`/`.fi-pill-fin`/`.fi-pill-dur`
-   (css/reservas.css, panel "Más información" de Reservas) -- cero clases
-   `.ev-detalle-pill*` propias, para que las 2 pantallas queden
-   pixel-idénticas (tamaño/padding/color/radio de borde) en vez de
-   "parecidas" con valores aproximados a mano. Solo el espaciado contra la
-   descripción que sigue (`.fi-pills` en Reservas no lo necesita -- ahí
-   siempre es el último elemento de `.fi-content`) se resuelve acá, scoped
-   al contenedor real de esta pantalla, sin tocar `.fi-pills` en sí. */
-#ev-detalle-info .fi-pills { margin-bottom: 14px; }
+/* Info del evento -- ver "Cambios recientes" -- rediseño inline: el bloque
+   ya no son pills (`.fi-pills`/`.fi-pill-lugar`/`.fi-pill-hora`) sino
+   `.ev-info-rows` (2 filas ícono + texto), definido en css/reservas.css al
+   lado de `.fi-pill*` -- vive allá porque reemplaza exactamente ese bloque y
+   reusa sus mismas variables de color. Acá solo queda el espaciado contra la
+   descripción que sigue, scoped al contenedor real de esta pantalla (mismo
+   criterio que tenía la regla anterior sobre `.fi-pills`, que nunca se tocó
+   en sí -- la siguen usando Reservas/Tareas/admin). */
+#ev-detalle-info .ev-info-rows { margin-bottom: 14px; }
 .ev-detalle-desc { font-size: 0.85rem; color: var(--text-2); line-height: 1.65; margin: 0; }
 .ev-detalle-titulo-seccion { font-size: 1rem; font-weight: 800; color: var(--text); margin-bottom: 12px; }
 /* Grid de 4 tarjetas de estadística (ver "Cambios recientes" -- reemplaza

@@ -325,3 +325,35 @@
 .modal-wp-card p { color: var(--muted); font-size: 0.9rem; line-height: 1.5; margin-bottom: 20px; }
 .modal-wp-card .btn-primary { display: flex; justify-content: center; margin-bottom: 12px; }
 
+/* ev-info-rows — reemplaza fi-pills en vista detallada de eventos
+   (`_evDetalleInfoHtml()`, js/eventos.js): inline minimalista (2 filas
+   ícono + texto) en vez de 2 pills con fondo. Vive acá, al lado de
+   `.fi-pill*`, porque reemplaza exactamente ese bloque y reusa sus mismas
+   variables de color -- `--text-2` (secundario, igual que `.ev-detalle-desc`),
+   `--purple-bg`/`--purple` (los de `.fi-pill-hora`/`.fi-pill-accion`), cero
+   valores hardcodeados. `.fi-pill*` NO se toca: lo sigue usando el panel
+   "Más información" de Reservas, Tareas y admin. */
+.ev-info-rows { display: flex; flex-direction: column; gap: 12px; }
+.ev-info-row-loc,
+.ev-info-row-hora { display: flex; align-items: center; gap: 8px; }
+.ev-info-icon { font-size: 18px; color: var(--text-2); flex-shrink: 0; }
+.ev-info-loc-nombre { font-size: 13px; font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-info-btn-llegar {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 11px 5px 8px; border-radius: 20px;
+  background: var(--purple-bg); color: var(--purple);
+  font-size: 12px; font-weight: 600; font-family: inherit;
+  text-decoration: none; border: none; cursor: pointer; flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+.ev-info-btn-llegar:active { opacity: 0.7; }
+.ev-info-btn-llegar .material-symbols-outlined { font-size: 15px; }
+.ev-info-hora-val { font-size: 13px; font-weight: 500; }
+.ev-info-hora-sep { color: var(--text-2); font-size: 11px; }
+.ev-info-hora-fin { font-size: 12px; color: var(--text-2); }
+/* Mismo ajuste dark que ya tiene `.fi-pill-hora` arriba (bloque DARK MODE):
+   `--purple` (#7c3aed) no se re-define en dark, solo su fondo -- el texto
+   púrpura sobre fondo oscuro necesita `--dk-purple-text` para contraste. */
+@media (prefers-color-scheme: dark) {
+  .ev-info-btn-llegar { color: var(--dk-purple-text); }
+}
