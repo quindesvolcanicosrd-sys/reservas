@@ -2961,6 +2961,26 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
     </div>
 
+    <!-- Ajustes de admin (pedido explícito, ver MANIFEST.md) -- convertida de
+         acordeones inline dentro de "Mi perfil" a subsección navegable
+         propia, igual patrón que el resto de filas de Ajustes. Oculta por
+         defecto (`style="display:none"`) -- solo `_datosRenderAdmin()`
+         (js/perfil.js) la muestra, y únicamente con `_adminToken` válido;
+         sin token, la fila no aparece y `#aj-sub-admin-body` (más abajo)
+         queda vacío. `irAjSub('aj-sub-admin')` no necesita gate propio
+         porque la única entrada al panel es esta fila ya oculta. Mismo
+         ícono `admin_panel_settings` que ya usa "Mi Liga"
+         (APP_BOTTOM_NAV_ITEMS/js/ui.js) para el mismo concepto. -->
+    <div class="aj-group">
+      <div class="aj-row" id="aj-admin-row" data-aj-key="admin" onclick="irAjSub('aj-sub-admin')" style="display:none">
+        <div class="aj-icon aj-icon-purple"><span class="material-symbols-outlined">admin_panel_settings</span></div>
+        <div class="aj-content">
+          <div class="aj-title">Ajustes de admin</div>
+        </div>
+        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
+      </div>
+    </div>
+
     <!-- Aplicación -->
     <div class="aj-app-rows">
       <div class="aj-app-row" data-aj-key="contactanos" onclick="abrirContacto()">
@@ -3536,10 +3556,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/eventos.js?v=37a59202"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=cb09eb05"></script>
-<script src="js/equipo.js?v=d2e2c48b"></script>
+<script src="js/equipo.js?v=4e50af83"></script>
 <script src="js/home.js?v=e715822d"></script>
 <script src="js/reservas.js?v=cacf57bd"></script>
-<script src="js/perfil.js?v=49c9f05e"></script>
+<script src="js/perfil.js?v=729fe6ff"></script>
 <script src="js/admin.js?v=60bc7a6c"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js?v=d18bc0da"></script>
@@ -4127,11 +4147,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       <button onclick="eliminarCuenta()" class="aj-btn-delete"><span class="material-symbols-outlined" style="font-size:1.1rem;">delete</span>Eliminar cuenta</button>
     </div>
 
-    <!-- "Ajustes de admin" (pedido explícito, ver MANIFEST.md) -- acordeones
-         de Categoría/Estado, admin-only, poblado por _datosRenderAdmin()
-         (js/perfil.js) reusando _eqTierAdminHtml()/_eqAdminGestionHtml()
-         (js/equipo.js) tal cual. Vacío para cualquier cuenta sin _adminToken. -->
-    <div id="aj-admin-wrap" style="margin-top:20px;"></div>
   </div>
 </div>
 
@@ -4674,6 +4689,24 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
 
   </div>
+</div>
+
+<!-- SUB: Ajustes de admin (pedido explícito, ver MANIFEST.md) -- mismo
+     patrón app-nav/aj-sub-inner que el resto de subsecciones de Ajustes.
+     `#aj-sub-admin-body` (== `.aj-sub-inner` de esta, con id propio para
+     que `_ajCargarSubAdmin()`/js/perfil.js le inyecte el HTML directo, sin
+     un div extra anidado) arranca vacío -- lo puebla `_datosRenderAdmin()`
+     al entrar a Ajustes, y `_ajCargarSub('aj-sub-admin')` (irAjSub()) cada
+     vez que se abre este panel puntual. -->
+<div class="aj-sub" id="aj-sub-admin">
+  <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
+    <button class="app-nav-back" onclick="cerrarAjSub('aj-sub-admin')">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </button>
+    <span class="app-nav-title">Ajustes de admin</span>
+    <div style="width:40px;flex-shrink:0;"></div>
+  </div>
+  <div class="aj-sub-inner" id="aj-sub-admin-body"></div>
 </div>
 
 <!-- BOTTOM SHEET: "Otro" del wizard de Salud (Enfermedad/Antecedentes/Seguro en modo multi, Dieta en modo single) -->

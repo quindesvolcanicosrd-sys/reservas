@@ -3229,6 +3229,33 @@ function _eqTierAdminHtml(p) {
     '</div>';
 }
 
+// Versión "flat" (pedido explícito, ver MANIFEST.md) -- mismo contenido
+// interno (botones de Categoría) que _eqTierAdminHtml() de arriba, sin el
+// wrapper `.eq-acord` ni el `onclick="eqToggleAcordeon(this)"` -- el label
+// pasa a ser un título directo en vez de la cabecera clickeable del
+// acordeón, y se pierde `.eq-acord-cuerpo` (colapsado por CSS por default,
+// solo se expande dentro de un `.eq-acord.eq-acord-abierto`) para que el
+// control quede siempre visible. Consumida por `_ajCargarSubAdmin()`/
+// js/perfil.js, la subsección navegable propia "Ajustes de admin" -- mismos
+// ids (`eq-tier-desc-*`) y mismo onclick real (`_eqCambiarTier()`) que la
+// versión con acordeón, así que el toggle funciona igual sea cual sea el
+// HTML que lo dibuja.
+function _eqTierAdminFlatHtml(p) {
+  if (typeof _adminToken === 'undefined' || !_adminToken) return '';
+  var idJs = _eqEscId(p.id);
+  var idAttr = _eqEsc(p.id);
+  var modos = ['quinde', 'auto', 'mirlxs'];
+  var textos = { quinde: 'Quindes', auto: 'Auto', mirlxs: 'Mirlxs' };
+  var botones = modos.map(function(m) {
+    return '<button type="button" class="eq-tier-btn' + (p.tierModo === m ? ' activo' : '') + '" data-modo="' + m + '" onclick="_eqCambiarTier(\'' + idJs + '\',\'' + m + '\')">' + textos[m] + '</button>';
+  }).join('');
+  return '<div class="eq-tier-admin">' +
+      '<p class="eq-tier-label">Categoría</p>' +
+      '<div class="eq-tier-control" data-id="' + idAttr + '">' + botones + '</div>' +
+      '<p class="eq-tier-desc" id="eq-tier-desc-' + idAttr + '">' + _eqEsc(_EQ_TIER_DESCRIPCIONES[p.tierModo]) + '</p>' +
+    '</div>';
+}
+
 // Toggle genérico de acordeón (Cambio 57) -- `header` es el `.eq-acord-header`
 // clickeado (`this` del onclick inline, mismo patrón sin listener delegado
 // que el resto de este archivo); el contenedor a togglear es su padre
@@ -3373,6 +3400,73 @@ function _eqAdminGestionHtml(p) {
             '</div>'
           ) : '') +
         '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+// Versión "flat" (pedido explícito, ver MANIFEST.md) -- mismo contenido
+// interno (opciones de Estado + toggles de Paga cuota/Admin/Activar cuenta)
+// que _eqAdminGestionHtml() de arriba, sin el wrapper `.eq-acord` ni el
+// `onclick="eqToggleAcordeon(this)"` -- mismo criterio que
+// _eqTierAdminFlatHtml() (ver esa función): label directo en vez de la
+// cabecera clickeable, sin `.eq-acord-cuerpo` (quedaría colapsado por CSS
+// sin un ancestro `.eq-acord-abierto` que nunca se agrega acá). El div
+// `.eq-admin-quindes` + su lógica `eq-oculto` (oculta esta sección entera
+// si `p.tierModo === 'mirlxs'`, ver _eqCambiarTier() más abajo) SÍ se
+// mantiene tal cual -- sigue aplicando igual sin acordeón de por medio.
+// Consumida por `_ajCargarSubAdmin()`/js/perfil.js -- mismos ids/onclick
+// reales (`_eqCambiarEstado()`/`_eqToggleCuota()`/`_eqToggleAdmin()`/
+// `_eqGenerarInviteLink()`) que la versión con acordeón.
+function _eqAdminGestionFlatHtml(p) {
+  if (typeof _adminToken === 'undefined' || !_adminToken) return '';
+  var idJs = _eqEscId(p.id);
+  var idAttr = _eqEsc(p.id);
+  var estadoActual = _eqEstadoEfectivo(p);
+  var botonesEstado = _EQ_ESTADOS.map(function(est) {
+    return '<button type="button" class="eq-estado-btn' + (estadoActual === est ? ' activo' : '') + '" data-estado="' + est + '" onclick="_eqCambiarEstado(\'' + idJs + '\',\'' + est + '\')">' + est + '</button>';
+  }).join('');
+  var hint = (estadoActual === 'Ausente' && p.estado !== 'Ausente')
+    ? 'Marcada automáticamente como ausente por más de 30 días sin asistir.'
+    : 'Si no asiste por 30 días seguidos, pasa a Ausente automáticamente.';
+  var pagaCuota = !p.exentaCuota;
+  var sinEmail = !p.email;
+  return '<div class="eq-admin-quindes' + (p.tierModo === 'mirlxs' ? ' eq-oculto' : '') + '" id="eq-admin-q-' + idAttr + '">' +
+      '<div class="eq-admin-sep"></div>' +
+      '<div class="eq-admin-campo">' +
+        '<p class="eq-tier-label">Estado</p>' +
+        '<div class="eq-estado-opciones">' + botonesEstado + '</div>' +
+        '<p class="eq-admin-hint" id="eq-estado-hint-' + idAttr + '">' + hint + '</p>' +
+        '<div class="eq-admin-campo--row" style="margin-top:14px;">' +
+          '<div>' +
+            '<p class="eq-tier-label" style="margin-bottom:2px">Paga cuota</p>' +
+            '<p class="eq-admin-hint" style="margin:0" id="eq-cuota-hint-' + idAttr + '">' + (estadoActual === 'Lesionadx' ? 'Exento/a de cuota mientras está Lesionadx.' : 'Indica si está al día con la cuota mensual.') + '</p>' +
+          '</div>' +
+          '<label class="eq-toggle" id="eq-tog-cuota-' + idAttr + '">' +
+            '<input type="checkbox"' + (pagaCuota ? ' checked' : '') + (estadoActual === 'Lesionadx' ? ' disabled' : '') +
+              ' onchange="_eqToggleCuota(\'' + idJs + '\', this.checked)">' +
+            '<span class="eq-toggle-slider"></span>' +
+          '</label>' +
+        '</div>' +
+        '<div class="eq-admin-campo--row" style="margin-top:14px;">' +
+          '<div>' +
+            '<p class="eq-tier-label" style="margin-bottom:2px">Admin</p>' +
+            '<p class="eq-admin-hint" style="margin:0" id="eq-admin-hint-' + idAttr + '">' + (sinEmail ? 'Sin email registrado -- no se puede dar acceso admin.' : 'Tendrá acceso completo al panel de administración (Mi Liga).') + '</p>' +
+          '</div>' +
+          '<label class="eq-toggle" id="eq-tog-admin-' + idAttr + '">' +
+            '<input type="checkbox"' + (p.esAdminMiembro ? ' checked' : '') + (sinEmail ? ' disabled' : '') +
+              ' onchange="_eqToggleAdmin(\'' + idJs + '\', this.checked, this)">' +
+            '<span class="eq-toggle-slider"></span>' +
+          '</label>' +
+        '</div>' +
+        (sinEmail ? (
+          '<div class="eq-admin-campo--row" style="margin-top:14px;">' +
+            '<div>' +
+              '<p class="eq-tier-label" style="margin-bottom:2px">Activar cuenta</p>' +
+              '<p class="eq-admin-hint" style="margin:0">Genera un link de un solo uso para que vincule su cuenta de Google.</p>' +
+            '</div>' +
+            '<button type="button" class="btn-text-simple" style="white-space:nowrap;" onclick="_eqGenerarInviteLink(\'' + idJs + '\')">Generar link</button>' +
+          '</div>'
+        ) : '') +
       '</div>' +
     '</div>';
 }

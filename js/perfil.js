@@ -168,11 +168,18 @@ function _datosRenderStats() {
   });
 }
 
-// "Ajustes de admin" (pedido explícito, ver MANIFEST.md) -- sección nueva al
-// final de Ajustes, admin-only (`_adminToken`, mismo gate que
-// _eqTierAdminHtml()/_eqAdminGestionHtml() en sí, js/equipo.js), con
-// acordeones de Categoría/Estado idénticos a los del perfil de detalle de
-// Equipo -- reusa esas 2 funciones tal cual en vez de duplicar el markup.
+// "Ajustes de admin" (pedido explícito, ver MANIFEST.md) -- subsección
+// navegable propia (`#aj-admin-row`/`#aj-sub-admin`, index.html), admin-only
+// (`_adminToken`, mismo gate que _eqTierAdminFlatHtml()/_eqAdminGestionFlatHtml()
+// en sí, js/equipo.js), con los mismos controles de Categoría/Estado del
+// perfil de detalle de Equipo pero "flat" (sin acordeón que colapsar, ver esas
+// 2 funciones hermanas) -- reusa esa lógica tal cual en vez de duplicar el
+// markup. `_datosRenderAdmin()` solo decide si la fila de entrada es visible
+// y arranca la resolución de la persona (async, ver `_eqAsegurarCargado()`
+// más abajo); `_ajCargarSubAdmin(persona)` (siguiente función) es la que
+// realmente puebla `#aj-sub-admin-body` -- separadas porque `_ajCargarSub()`
+// (más abajo en este archivo) necesita poder repoblar SOLO el cuerpo del
+// panel cada vez que se reabre, sin repetir el toggle de la fila.
 // `E.nombre` es la misma natural key que `p.id`/`p.nombre` en `_eqPersonas`
 // (el `username`, ver getEquipo()/supabase/functions/api/index.ts) -- si la
 // cuenta admin logueada tiene fila en Equipo, `_eqPersonaPorId(E.nombre)` la
@@ -187,10 +194,16 @@ function _datosRenderStats() {
 // efecto real en ese caso (no hay fila que actualizar), mismo criterio de
 // "degradación silenciosa" que el resto de esta pantalla con datos ausentes.
 function _datosRenderAdmin() {
-  var wrap = document.getElementById('aj-admin-wrap');
-  if (!wrap) return;
-  if (typeof _adminToken === 'undefined' || !_adminToken) { wrap.innerHTML = ''; return; }
-  if (typeof _eqAsegurarCargado === 'undefined' || typeof _eqTierAdminHtml === 'undefined' || typeof _eqAdminGestionHtml === 'undefined') return;
+  var row = document.getElementById('aj-admin-row');
+  if (!row) return;
+  if (typeof _adminToken === 'undefined' || !_adminToken) {
+    row.style.display = 'none';
+    var body = document.getElementById('aj-sub-admin-body');
+    if (body) body.innerHTML = '';
+    return;
+  }
+  row.style.display = '';
+  if (typeof _eqAsegurarCargado === 'undefined' || typeof _eqTierAdminFlatHtml === 'undefined' || typeof _eqAdminGestionFlatHtml === 'undefined') return;
   _eqAsegurarCargado(function() {
     var d = E.datos || {};
     var persona = (typeof _eqPersonaPorId === 'function' && _eqPersonaPorId(E.nombre)) || {
@@ -201,8 +214,17 @@ function _datosRenderAdmin() {
       esAdminMiembro: true,
       email: d.email || ''
     };
-    wrap.innerHTML = '<p class="seccion-label">Ajustes de admin</p>' + _eqTierAdminHtml(persona) + _eqAdminGestionHtml(persona);
+    _ajCargarSubAdmin(persona);
   });
+}
+
+// Puebla el cuerpo del panel navegable -- ver comentario de _datosRenderAdmin()
+// arriba para el porqué de la separación. `persona` ya viene resuelta (real o
+// fallback), esta función no hace ningún fetch/lookup propio.
+function _ajCargarSubAdmin(persona) {
+  var body = document.getElementById('aj-sub-admin-body');
+  if (!body) return;
+  body.innerHTML = _eqTierAdminFlatHtml(persona) + _eqAdminGestionFlatHtml(persona);
 }
 
 function _datosRenderStatsHtml(contenedor, persona) {
@@ -926,6 +948,7 @@ function _ajCargarSub(id) {
     document.getElementById('aj-equip-protec-val').textContent = d.necesitaProtecciones || '—';
     return;
   }
+  if (id === 'aj-sub-admin') { _datosRenderAdmin(); return; }
   if (id === 'aj-sub-perfil') {
     _ajSetDatoVal('aj-nombre-display', d.nombre || E.nombre, '—', false);
     _ajUsernameCancelarEdicion();
