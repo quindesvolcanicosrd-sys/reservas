@@ -2961,23 +2961,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
     </div>
 
-    <!-- Excepción de pago (ausencias justificadas / dificultad económica) --
-         punto de entrada no especificado en el pedido original -- ubicado
-         acá, mismo lugar/patrón que la fila de "Salud" de arriba, decisión
-         propia señalada para reubicar fácil si no es donde se quería. No usa
-         irAjSub() -- el wizard nuevo se abre/cierra vía _registrarOverlayAbierto()
-         (ver #wizard-excepcion más abajo), no vía el mecanismo aj-sub-*. -->
-    <div class="aj-group">
-      <div class="aj-row" data-aj-key="excepcion-pago" onclick="abrirWizardExcepcion()">
-        <div class="aj-icon aj-icon-orange"><span class="material-symbols-outlined">volunteer_activism</span></div>
-        <div class="aj-content">
-          <div class="aj-title">Excepción de pago</div>
-          <div class="aj-value">Ausencias justificadas o dificultad económica</div>
-        </div>
-        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
-      </div>
-    </div>
-
     <!-- Aplicación -->
     <div class="aj-app-rows">
       <div class="aj-app-row" data-aj-key="contactanos" onclick="abrirContacto()">
@@ -2986,7 +2969,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
           <div class="aj-title">Déjanos tus comentarios</div>
           <div class="aj-value">Bugs, sugerencias o lo que sientas</div>
         </div>
-        <button class="aj-app-btn"><span class="material-symbols-outlined">chevron_right</span></button>
+        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
       </div>
     </div>
 

@@ -12,7 +12,7 @@ App de gestión de un equipo de patinaje/derby (Mirlxs): reservas de clases/mens
 
 ```
 reservas/
-├── index.html                  Shell de la SPA principal (home/reservas/eventos/tareas/perfil/Mi Liga), solo <link>/<script src>
+├── index.html                  Shell de la SPA principal (home/reservas/eventos/tareas/perfil/Mi Liga), solo <link>/<script src>. **Ajustes (`#s-datos-card`) -- 2 ajustes puntuales (pedido explícito)**: (1) el chevron de "Déjanos tus comentarios" (`data-aj-key="contactanos"`, `.aj-app-row`) pasa de `<button class="aj-app-btn"><span class="material-symbols-outlined">chevron_right</span></button>` a `<span class="material-symbols-outlined aj-chevron">chevron_right</span>` -- mismo elemento/clase/ícono que ya usan las `.aj-row` de arriba (`.aj-chevron`, css/perfil.css), en vez de un patrón propio distinto. (2) se elimina la fila de entrada "Excepción de pago" (`.aj-row` + `.aj-group` que la envolvía, `data-aj-key="excepcion-pago"`, `onclick="abrirWizardExcepcion()"`) -- el wizard en sí (`#wizard-excepcion`/`#wizard-excepcion-overlay`, más abajo en este archivo, `abrirWizardExcepcion()`/js/perfil.js) NO se toca y sigue 100% funcional: queda accesible por su otro punto de entrada real, el link "¿No podés pagar la cuota?" del sheet "Cuota pendiente" (`_evCuotaSolicitarAyuda()`/js/eventos.js) -- no quedó huérfano.
 ├── OneSignalSDKWorker.js       Service worker de push notifications (OneSignal) -- también intercepta notificationclick de los botones "Asistiré"/"No asistiré" para RSVP en background (ver sección "Edge Function" -- record-attendance)
 ├── manifest.json               Web App Manifest (PWA)
 ├── CNAME                       Dominio custom de GitHub Pages
