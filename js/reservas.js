@@ -688,7 +688,7 @@ function cargarFechas() {
 
         var pillsHtml = '<div class="fi-pills">';
         if (hora) pillsHtml += '<span class="fi-pill fi-pill-hora"><span class="material-symbols-outlined">schedule</span>' + hora + '</span>';
-        if (lugar) pillsHtml += '<span class="fi-pill fi-pill-lugar"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span>';
+        if (lugar) pillsHtml += '<span class="fi-pill fi-pill-lugar"><span class="fi-pill-accion-static"><span class="material-symbols-outlined">location_on</span>' + lugar + '</span></span>';
         pillsHtml += '</div>';
 
         var esAgotadaTalla = esTallaAgotada(f);

@@ -672,7 +672,8 @@ function _evFabPlusClick() {
   // esta función para mirlxs sin equipo propio (ver más abajo) -- ver
   // _evFabUnificadoActualizar() más abajo para el resto de los 4 perfiles
   // de Quindes.
-  if (esAdmin && modo === 'quindes' && !_evTieneCuotaAlDia()) { irEvCrear(); return; }
+  var _exenta = E.datos && E.datos.exenta_cuota;
+  if (esAdmin && modo === 'quindes' && (!_evTieneCuotaAlDia() || _exenta)) { irEvCrear(); return; }
   if (!esAdmin) {
     // _evFabReservaClase() (más abajo, junto a _evFabReserva()) -- mismo fix
     // que ya se aplicó al botón "Reserva por clase" del speed-dial: llamar acá
@@ -3096,7 +3097,8 @@ function _evFabUnificadoActualizar() {
       // opción real" de arriba. Con cuota, speed-dial con las 2 opciones
       // reales (etiquetas propias de Quindes, distintas de las de mirlxs
       // admin más abajo).
-      if (!_evTieneCuotaAlDia()) {
+      var _exenta = E.datos && E.datos.exenta_cuota;
+      if (!_evTieneCuotaAlDia() || _exenta) {
         if (opciones) opciones.innerHTML = '';
         fab.style.display = '';
         return;

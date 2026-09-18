@@ -293,3 +293,8 @@ Fuente de verdad real: `supabase/functions/api/index.ts` (la Edge Function usa l
 - No hardcodear colores (ver sección 2); no dejar estilos inline repetidos sin convertir a clase.
 - Todo elemento transitorio lleva animación de entrada y salida desde que se crea (no como parche posterior).
 - Verificar con Playwright cuando el entorno lo permita; si no, dejar explícito que no se pudo probar y por qué, en vez de asumir que funciona.
+
+## Cambios recientes
+
+- **Fix FAB de eventos para admin Quindes con `exenta_cuota`** (`js/eventos.js`) — `_evFabPlusClick()` y `_evFabUnificadoActualizar()` mandaban al speed-dial (o lo mostraban) a un admin Quindes exento de cuota, porque solo se evaluaba `!_evTieneCuotaAlDia()`. Ahora ambos también consideran `E.datos.exenta_cuota`: cualquier admin Quindes sin cuota al día **o** exento va directo a `irEvCrear()`, sin speed-dial.
+- **Fix padding de pills de ubicación (CCI, Cumandá) en "por clase"** (`js/reservas.js`, `cargarFechas()`) — `.fi-pill-lugar` tiene `padding:0` por diseño y espera un hijo `.fi-pill-accion-static` (que aporta `padding: 6px 10px`). El pill de lugar se generaba sin ese wrapper y quedaba sin aire; ahora lleva `<span class="fi-pill-accion-static">`, igual que el detalle de eventos.
