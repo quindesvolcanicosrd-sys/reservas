@@ -2450,7 +2450,7 @@ function _evSinRollcallBannerHtml(ev) {
     '</div>' +
     '<div class="ev-sinrollcall-banner-texto">' +
       '<strong>Este evento no tiene asistencias registradas</strong>' +
-      '<span>Podés marcarlas aunque hayan pasado más de 24 hs, o cancelar el evento si no se realizó.</span>' +
+      '<span>Puedes marcarlas aunque hayan pasado más de 24 hs, o cancelar el evento si no se realizó.</span>' +
     '</div>' +
     '<div class="ev-sinrollcall-banner-acciones">' +
       '<button type="button" class="btn btn-outline" onclick="_evAbrirMarcarAsistencia(\'' + idEsc + '\',\'s-eventos-detalle\')">Marcar asistencias</button>' +
