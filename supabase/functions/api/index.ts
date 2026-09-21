@@ -1097,7 +1097,7 @@ async function adminBackfillHistorialTier(params: Record<string, any>): Promise<
 
   const { data: asistData, error: asistError } = await supabase.from('asistencias')
     .select('fecha, a_horario, tarde')
-    .not('estado', 'in', '("Evento Cancelado","No se entrena")');
+    .not('estado', 'in', '("Evento Cancelado","No se entrena","Eliminado")');
   if (asistError) return { exito: false, error: asistError.message };
   const { data: puntosData, error: puntosError } = await supabase.from('puntos_mensuales')
     .select('nombre_usuario, anio, mes, puntos_total');
@@ -2836,7 +2836,7 @@ async function recalcularStatsEquipo(params: Record<string, any>): Promise<Recor
   // contra la tabla -- no una lista vieja incorrecta como la de Cambio 62).
   const { data: filasAsist, error: errorAsist } = await supabase.from('asistencias')
     .select('fecha, a_horario, tarde, inicia, termina')
-    .not('estado', 'in', '("Evento Cancelado","No se entrena")')
+    .not('estado', 'in', '("Evento Cancelado","No se entrena","Eliminado")')
     .gte('fecha', inicioAnio).lt('fecha', hoyISO);
   if (errorAsist) return { exito: false, error: errorAsist.message };
   const eventos = filasAsist ?? [];
@@ -3070,7 +3070,7 @@ async function _reconstruirRachasHistoricas(soloUsuario?: string): Promise<void>
     ordenPorEvento[ev.id_evento] = i;
     const partes = String(ev.fecha).split('-');
     mesAnioPorEvento[ev.id_evento] = { anio: Number(partes[0]), mes: Number(partes[1]) };
-    canceladoPorEvento[ev.id_evento] = ev.estado === 'Evento Cancelado' || ev.estado === 'No se entrena';
+    canceladoPorEvento[ev.id_evento] = ev.estado === 'Evento Cancelado' || ev.estado === 'No se entrena' || ev.estado === 'Eliminado';
   });
 
   // Usuarios a recorrer -- CAMBIO 1 necesita la secuencia completa de
@@ -3245,7 +3245,7 @@ async function recalcularStatsUsuario(username: string): Promise<{ exito: boolea
   // entrena' reemplaza la dependencia de ese status.
   const { data: filasAsist, error: errorAsist } = await supabase.from('asistencias')
     .select('fecha, a_horario, tarde, inicia, termina')
-    .not('estado', 'in', '("Evento Cancelado","No se entrena")')
+    .not('estado', 'in', '("Evento Cancelado","No se entrena","Eliminado")')
     .gte('fecha', inicioAnio).lt('fecha', hoyISO);
   if (errorAsist) return { exito: false, error: errorAsist.message };
   const eventos = filasAsist ?? [];
@@ -3695,7 +3695,7 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
   // 2 veces.
   const { data: asistDataTermometro } = await supabase.from('asistencias')
     .select('fecha, a_horario, tarde')
-    .not('estado', 'in', '("Evento Cancelado","No se entrena")')
+    .not('estado', 'in', '("Evento Cancelado","No se entrena","Eliminado")')
     .gte('fecha', fechaISO(primerDiaMesesAtras(hoy, ventanaMesesTecho + 1)))
     .lt('fecha', fechaISO(hoy));
   const contarClases = (username: string, asOf: Date): number => {
@@ -4166,7 +4166,7 @@ async function getDesglosePuntos(params: Record<string, any>): Promise<Record<st
     eventos.forEach((ev: any, i: number) => {
       ordenPorEvento[ev.id_evento] = i;
       fechaPorEvento[ev.id_evento] = ev.fecha;
-      canceladoPorEvento[ev.id_evento] = ev.estado === 'Evento Cancelado' || ev.estado === 'No se entrena';
+      canceladoPorEvento[ev.id_evento] = ev.estado === 'Evento Cancelado' || ev.estado === 'No se entrena' || ev.estado === 'Eliminado';
     });
 
     const { data: logsTodos } = await supabase.from('log_asistencias')
@@ -4375,7 +4375,7 @@ async function cronRecordatorioEvento(): Promise<Record<string, any>> {
   const { data: eventos } = await supabase.from('asistencias')
     .select('id_evento, fecha, inicia, donde, tipo_evento')
     .in('fecha', fechas)
-    .not('estado', 'in', '("Evento Cancelado","No se entrena")');
+    .not('estado', 'in', '("Evento Cancelado","No se entrena","Eliminado")');
   const enVentana = (eventos ?? []).filter((e: any) => {
     const t = _instanteEventoUTC(e.fecha, e.inicia);
     return t !== null && t >= desde && t <= hasta;
@@ -4419,7 +4419,7 @@ async function cronRecordatorio1Dia(): Promise<Record<string, any>> {
   const { data: eventos } = await supabase.from('asistencias')
     .select('id_evento, fecha, inicia, donde, tipo_evento')
     .in('fecha', fechas)
-    .not('estado', 'in', '("Evento Cancelado","No se entrena")');
+    .not('estado', 'in', '("Evento Cancelado","No se entrena","Eliminado")');
   const enVentana = (eventos ?? []).filter((e: any) => {
     const t = _instanteEventoUTC(e.fecha, e.inicia);
     return t !== null && t >= desde && t <= hasta;
@@ -4467,7 +4467,7 @@ async function cronAdminEvento(): Promise<Record<string, any>> {
   const { data: eventos } = await supabase.from('asistencias')
     .select('id_evento, fecha, inicia, donde, tipo_evento')
     .in('fecha', fechas)
-    .not('estado', 'in', '("Evento Cancelado","No se entrena")');
+    .not('estado', 'in', '("Evento Cancelado","No se entrena","Eliminado")');
   const enVentana = (eventos ?? []).filter((e: any) => {
     const t = _instanteEventoUTC(e.fecha, e.inicia);
     return t !== null && t >= desde && t <= hasta;
@@ -4816,7 +4816,7 @@ async function cronDiario(): Promise<Record<string, any>> {
   const { data: eventosHoy } = await supabase.from('asistencias')
     .select('id_evento, inicia, donde, tipo_evento')
     .eq('fecha', hoyIso)
-    .not('estado', 'in', '("Evento Cancelado","No se entrena")');
+    .not('estado', 'in', '("Evento Cancelado","No se entrena","Eliminado")');
   const idsHoy = (eventosHoy ?? []).map((e: any) => e.id_evento);
   const asistPorEvento = await _ultimaAsistenciaPorPersonaTodas(idsHoy);
   for (const ev of (eventosHoy ?? [])) {
