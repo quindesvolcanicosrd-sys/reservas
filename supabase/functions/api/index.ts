@@ -401,7 +401,7 @@ async function _proximosEntrenamientos(): Promise<any[]> {
   const hoyISO = ecuadorNow.toISOString().substring(0, 10);
   const { data } = await supabase.from('asistencias')
     .select('id_evento, fecha, donde, inicia, termina, info_adicional, google_maps, dura, estado')
-    .neq('estado', 'Evento Cancelado').gte('fecha', hoyISO).order('fecha').order('inicia');
+    .not('estado', 'in', '("Evento Cancelado","Eliminado")').gte('fecha', hoyISO).order('fecha').order('inicia');
   const requiereReserva = await _mapaRequiereReservaPorLugar();
   const videoInstructivo = await _mapaVideoInstructivoPorLugar();
   const ahora = new Date();
@@ -947,7 +947,13 @@ async function subirFotoInscripcion(params: Record<string, any>): Promise<Record
 async function adminBorrarEvento(params: Record<string, any>): Promise<Record<string, any>> {
   const email = await _validarAdminToken(params.adminToken);
   if (!email) return { exito: false, error: 'Sesión admin inválida.' };
-  const { error } = await supabase.from('asistencias').delete().eq('id_evento', params.idEvento);
+  // Soft-delete, no DELETE real: `regenerar_ventana_asistencias()` (cron) volvía
+  // a insertar la fila borrada en la próxima corrida. `es_excepcion=true` la
+  // protege de la regeneración (ver 20260828) y `estado='Eliminado'` la
+  // esconde de `getEventosRango()`.
+  const { error } = await supabase.from('asistencias')
+    .update({ es_excepcion: true, estado: 'Eliminado' })
+    .eq('id_evento', params.idEvento);
   if (error) return { exito: false, error: error.message };
   return { exito: true };
 }
@@ -1829,7 +1835,7 @@ async function getEventosRango(params: Record<string, any>): Promise<Record<stri
   const desde = params.fechaInicio ?? params.desde,
         hasta  = params.fechaFin   ?? params.hasta;
   const d0 = desde.substring(0, 10), d1 = hasta.substring(0, 10);
-  const { data } = await supabase.from('asistencias').select('id_evento, fecha, donde, inicia, termina, estado, google_maps, info_adicional, tipo_evento').gte('fecha', d0).lte('fecha', d1);
+  const { data } = await supabase.from('asistencias').select('id_evento, fecha, donde, inicia, termina, estado, google_maps, info_adicional, tipo_evento, a_horario, tarde').neq('estado', 'Eliminado').gte('fecha', d0).lte('fecha', d1);
   const idsEvento = (data ?? []).map((f: any) => f.id_evento);
   const [tipoIcono, requiereReserva, asistLog, asistEF, equipoPorNombre, videoInstructivo] = await Promise.all([
     _mapaTipoIconoPorLugar(), _mapaRequiereReservaPorLugar(), _ultimaAsistenciaPorPersonaTodas(idsEvento), _asistenciaEFPorEvento(), _mapaEquipoPorNombre(), _mapaVideoInstructivoPorLugar()
@@ -1886,8 +1892,16 @@ async function getEventosRango(params: Record<string, any>): Promise<Record<stri
       const eq = equipoPorNombre[String(a.nombre).trim().toUpperCase()];
       return { nombre: a.nombre, estado: a.estado, origen: a.origen, nombreDerby: eq?.nombreDerby ?? '', fotoPerfil: eq?.fotoPerfil ?? '', existeEnEquipo: !!eq };
     });
+    // Auto-cancelar en tiempo real: si pasaron >24h sin rollcall, estado efectivo es 'Evento Cancelado'
+    const ahora = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Guayaquil' }));
+    const finEvento = new Date((fila.fecha + 'T' + (fila.termina || '23:59')).replace(' ', 'T'));
+    const sinRollcall = !fila.a_horario?.trim() && !fila.tarde?.trim();
+    const pasaron24h = (ahora.getTime() - finEvento.getTime()) > 24 * 60 * 60 * 1000;
+    const estadoEfectivo = (sinRollcall && pasaron24h && fila.estado !== 'Evento Cancelado' && fila.estado !== 'No se entrena' && fila.estado !== 'Eliminado')
+      ? 'Evento Cancelado'
+      : fila.estado;
     return {
-      idEvento, fecha: fila.fecha, lugar: fila.donde, horaInicio: fila.inicia?.substring(0, 5) ?? '', horaFin: fila.termina?.substring(0, 5) ?? '', estado: fila.estado, tipoIcono: fila.tipo_evento ?? tipoIcono[fila.donde] ?? 'Entrenamiento', requiereReserva: requiereReserva[fila.donde] !== false, asistencias,
+      idEvento, fecha: fila.fecha, lugar: fila.donde, horaInicio: fila.inicia?.substring(0, 5) ?? '', horaFin: fila.termina?.substring(0, 5) ?? '', estado: estadoEfectivo, tipoIcono: fila.tipo_evento ?? tipoIcono[fila.donde] ?? 'Entrenamiento', requiereReserva: requiereReserva[fila.donde] !== false, asistencias,
       mapsUrl: fila.google_maps ?? fila.mapsUrl ?? '',
       descripcion: fila.info_adicional ?? fila.descripcion ?? fila.infoAdicional ?? '',
       videoInstructivo: videoInstructivo[fila.donde] ?? '',
@@ -1918,7 +1932,7 @@ async function getCumpleañosRango(params: Record<string, any>): Promise<Record<
 
 async function getEventosFiltrados(params: Record<string, any>): Promise<Record<string, any>> {
   const { estado, mes, lugar, tipo } = params;
-  const { data } = await supabase.from('asistencias').select('id_evento, fecha, donde, inicia, termina, estado');
+  const { data } = await supabase.from('asistencias').select('id_evento, fecha, donde, inicia, termina, estado').neq('estado', 'Eliminado');
   const [tipoIcono, requiereReserva] = await Promise.all([_mapaTipoIconoPorLugar(), _mapaRequiereReservaPorLugar()]);
   const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
   const eventos: any[] = [];
