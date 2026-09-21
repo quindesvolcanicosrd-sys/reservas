@@ -346,6 +346,10 @@ function _evMapEventoBackend(raw) {
     // final, así que `ev.videoInstructivo` (_evDetalleInfoHtml()) siempre
     // daba vacío y el pill de video nunca se mostraba.
     videoInstructivo: raw.videoInstructivo || '',
+    // Pasaron >24h desde el fin del evento y no hay marca en a_horario/tarde
+    // (getEventosRango(), backend) -- solo lo usan admins (badge de la card +
+    // banner del detalle, ver _evSinRollcallBadgeHtml()/_evSinRollcallBannerHtml()).
+    sinRollcall: !!raw.sinRollcall,
   };
 }
 // getCumpleañosRango() no manda `fotoPerfil` (no está en el contrato
@@ -2421,6 +2425,48 @@ function _evContinuarReserva() {
   if (typeof _evFabCerrar === 'function') _evFabCerrar();
 }
 
+// Aviso "sin rollcall" (solo admin) -- `e.sinRollcall` viene del backend
+// (getEventosRango()): evento pasado hace >24h sin ninguna asistencia real
+// registrada. Cancelado/No se entrena quedan afuera: no hay asistencia que
+// registrar en un evento que no se hizo.
+function _evMostrarSinRollcall(e) {
+  return !!(_adminToken && e.sinRollcall && e.estado !== 'Cancelado' && e.estado !== 'No se entrena');
+}
+function _evSinRollcallBadgeHtml(e) {
+  if (!_evMostrarSinRollcall(e)) return '';
+  return '<div class="ev-card-sinrollcall-badge" data-ev-id="' + e.id + '">' +
+    '<span class="material-symbols-outlined">warning</span>' +
+    'Sin asistencias registradas' +
+  '</div>';
+}
+// Banner del detalle: marcar asistencias (la pantalla de rollcall no tiene
+// límite de tiempo, `_evYaEmpezo()`) o cancelar explícitamente.
+function _evSinRollcallBannerHtml(ev) {
+  if (!_evMostrarSinRollcall(ev)) return '';
+  var idEsc = String(ev.id).replace(/'/g, "\\'");
+  return '<div class="ev-sinrollcall-banner" id="ev-sinrollcall-banner">' +
+    '<div class="ev-sinrollcall-banner-icono">' +
+      '<span class="material-symbols-outlined">warning</span>' +
+    '</div>' +
+    '<div class="ev-sinrollcall-banner-texto">' +
+      '<strong>Este evento no tiene asistencias registradas</strong>' +
+      '<span>Podés marcarlas aunque hayan pasado más de 24 hs, o cancelar el evento si no se realizó.</span>' +
+    '</div>' +
+    '<div class="ev-sinrollcall-banner-acciones">' +
+      '<button type="button" class="btn btn-outline" onclick="_evAbrirMarcarAsistencia(\'' + idEsc + '\',\'s-eventos-detalle\')">Marcar asistencias</button>' +
+      '<button type="button" class="btn btn-danger-outline" onclick="_evAbrirSheetCancelar(\'' + idEsc + '\')">Cancelar evento</button>' +
+    '</div>' +
+  '</div>';
+}
+// Ya hay al menos 1 asistencia marcada: baja el aviso (badges + banner) sin
+// esperar al próximo _evCargarDatosReales().
+function _evSinRollcallResuelto(ev) {
+  if (!ev || !ev.sinRollcall) return;
+  ev.sinRollcall = false;
+  document.querySelectorAll('.ev-card-sinrollcall-badge[data-ev-id="' + ev.id + '"]').forEach(function(el) { el.remove(); });
+  var banner = document.getElementById('ev-sinrollcall-banner');
+  if (banner) banner.remove();
+}
 function _evCardEventoHtml(e, sufijo) {
   sufijo = sufijo || '';
   var icono = _EV_ICONOS[e.tipo] || 'event';
@@ -2519,6 +2565,7 @@ function _evCardEventoHtml(e, sufijo) {
         '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline">' + icono + '</span><div class="ev-card-titulo">' + e.lugar + '</div></div>' +
         '<div class="ev-card-sub"><span class="material-symbols-outlined">schedule</span>' + e.horaInicio + ' · ' + e.tipo + '</div>' +
         accionBody +
+        _evSinRollcallBadgeHtml(e) +
       '</div>' +
       miReservaChipHtml +
     '</div>' +
@@ -5020,6 +5067,7 @@ function _evMarcarAsistenciaAdmin(idEvento, nombre, estado, btnEl) {
   ev.asistentes = estadoAEnviar === 'Ninguno' ? sinPersona :
     sinPersona.concat([{ nombre: nombre, estado: estadoAEnviar, origen: 'Admin', nombreDerby: datosRoster.nombreDerby || '', fotoPerfil: datosRoster.fotoPerfil || '' }]);
   aplicarEnDom(estadoAEnviar === 'Ninguno' ? null : estadoAEnviar);
+  if (ev.asistentes.length) _evSinRollcallResuelto(ev);
   _evActualizarContadorAsistAdmin(idEvento);
   _evActualizarListaAsistAdmin(idEvento);
   _evActualizarAsistenciaPropiaCard(idEvento);
@@ -5407,6 +5455,7 @@ function _evTimelineFilaHtml(e) {
     '</div>' +
     '<div id="ev-asist-real-' + e.id + '">' + nota + '</div>' +
     gestionAdmin +
+    _evSinRollcallBadgeHtml(e) +
   '</div>';
 }
 // Filtrado 100% en cliente sobre los datos de prueba (Tanda 2) -- la Tanda 3
@@ -6072,7 +6121,10 @@ function _evCancelarEvento(idEvento, btn) {
     // todavía vive en GAS (ver "Aún en GAS", supabase/functions/api/index.ts),
     // pero el aviso no depende de dónde corrió la mutación real, solo de que
     // este callback de éxito haya llegado.
-    api({ action: 'pushEventoCancelado', adminToken: _adminToken, tipo: ev.tipo, fecha: ev.fecha, hora: ev.horaInicio, lugar: ev.lugar }, function(){}, function(){});
+    // Sin push si el evento ya pasó (cancelación "administrativa" de un evento
+    // sin rollcall, ver `sinRollcall`) -- avisarle a todo el equipo que se
+    // canceló algo de hace días no tiene sentido.
+    if (!_evEsPasado(ev)) api({ action: 'pushEventoCancelado', adminToken: _adminToken, tipo: ev.tipo, fecha: ev.fecha, hora: ev.horaInicio, lugar: ev.lugar }, function(){}, function(){});
   }, function(e) {
     ev.estado = estadoAnterior;
     if (btn) btn.disabled = false;
@@ -6250,7 +6302,10 @@ function _evConfirmarCancelarEvento(btn) {
   // estaba abierto) -- mismo criterio `_evEsPasado()` que el resto del
   // archivo, ver MANIFEST.md "Cambios recientes".
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
-  if (ev && _evEsPasado(ev)) {
+  // Excepción: un evento pasado hace >24h sin ninguna asistencia (`sinRollcall`,
+  // banner del detalle) SÍ se puede cancelar -- ese es justo el caso "el
+  // evento no se realizó".
+  if (ev && _evEsPasado(ev) && !ev.sinRollcall) {
     mostrarToast('No se puede cancelar un evento que ya finalizó.', 'error');
     return;
   }
@@ -6367,7 +6422,7 @@ function _evDetalleInfoHtml(ev) {
   var desc = ev.descripcion || _EV_DESCRIPCION_POR_TIPO[ev.tipo] || '';
   var mapsUrl = ev.mapsUrl || _EV_MAPS_URL_POR_LUGAR[ev.lugar] || '';
   var videoInstructivo = ev.videoInstructivo || '';
-  var html = '<div class="ev-info-rows">' +
+  var html = _evSinRollcallBannerHtml(ev) + '<div class="ev-info-rows">' +
       '<div class="ev-info-row-loc">' +
         '<span class="material-symbols-outlined ev-info-icon">location_on</span>' +
         '<span class="ev-info-loc-nombre">' + ev.lugar + '</span>' +

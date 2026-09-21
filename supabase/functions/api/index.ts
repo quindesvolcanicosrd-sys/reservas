@@ -1892,16 +1892,16 @@ async function getEventosRango(params: Record<string, any>): Promise<Record<stri
       const eq = equipoPorNombre[String(a.nombre).trim().toUpperCase()];
       return { nombre: a.nombre, estado: a.estado, origen: a.origen, nombreDerby: eq?.nombreDerby ?? '', fotoPerfil: eq?.fotoPerfil ?? '', existeEnEquipo: !!eq };
     });
-    // Auto-cancelar en tiempo real: si pasaron >24h sin rollcall, estado efectivo es 'Evento Cancelado'
+    // `sinRollcall`: pasaron >24h desde el fin del evento y no hay ninguna
+    // marca en las columnas legacy `a_horario`/`tarde`. El frontend lo usa
+    // para avisar a admins (badge en la card + banner en el detalle) -- NO
+    // cambia `estado`.
     const ahora = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Guayaquil' }));
-    const finEvento = new Date((fila.fecha + 'T' + (fila.termina || '23:59')).replace(' ', 'T'));
+    const finEvento = new Date((fila.fecha + 'T' + (fila.termina || '23:59')));
     const sinRollcall = !fila.a_horario?.trim() && !fila.tarde?.trim();
     const pasaron24h = (ahora.getTime() - finEvento.getTime()) > 24 * 60 * 60 * 1000;
-    const estadoEfectivo = (sinRollcall && pasaron24h && fila.estado !== 'Evento Cancelado' && fila.estado !== 'No se entrena' && fila.estado !== 'Eliminado')
-      ? 'Evento Cancelado'
-      : fila.estado;
     return {
-      idEvento, fecha: fila.fecha, lugar: fila.donde, horaInicio: fila.inicia?.substring(0, 5) ?? '', horaFin: fila.termina?.substring(0, 5) ?? '', estado: estadoEfectivo, tipoIcono: fila.tipo_evento ?? tipoIcono[fila.donde] ?? 'Entrenamiento', requiereReserva: requiereReserva[fila.donde] !== false, asistencias,
+      idEvento, fecha: fila.fecha, lugar: fila.donde, horaInicio: fila.inicia?.substring(0, 5) ?? '', horaFin: fila.termina?.substring(0, 5) ?? '', estado: fila.estado, sinRollcall: pasaron24h && sinRollcall, tipoIcono: fila.tipo_evento ?? tipoIcono[fila.donde] ?? 'Entrenamiento', requiereReserva: requiereReserva[fila.donde] !== false, asistencias,
       mapsUrl: fila.google_maps ?? fila.mapsUrl ?? '',
       descripcion: fila.info_adicional ?? fila.descripcion ?? fila.infoAdicional ?? '',
       videoInstructivo: videoInstructivo[fila.donde] ?? '',

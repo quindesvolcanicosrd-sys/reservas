@@ -408,6 +408,68 @@
 .ev-offline-banner-btn .material-symbols-outlined { font-size: 1.15rem; }
 .ev-offline-banner-btn--girando .material-symbols-outlined { animation: ev-offline-girar 0.8s linear infinite; }
 @keyframes ev-offline-girar { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+/* Aviso "sin rollcall" (solo admin, ver _evSinRollcallBadgeHtml()/
+   _evSinRollcallBannerHtml(), js/eventos.js) -- evento pasado hace >24h sin
+   ninguna asistencia registrada. Mismo tono ámbar (`--warning*`) que
+   `.ev-offline-banner`, arriba. */
+.ev-card-sinrollcall-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--warning-bg);
+  color: var(--warning);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.ev-card-sinrollcall-badge .material-symbols-outlined {
+  font-size: 1rem;
+}
+/* Fila compacta (evento pasado): mismo margen lateral/inferior que
+   `.ev-estado-pill`/`.ev-asistire-wrap` dentro de `.ev-card-compacta-wrap`. */
+.ev-card-compacta-wrap .ev-card-sinrollcall-badge { margin: 0 14px 12px; }
+.ev-sinrollcall-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  margin-bottom: 16px;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-bdr);
+  border-radius: 12px;
+}
+.ev-sinrollcall-banner-icono .material-symbols-outlined {
+  font-size: 1.4rem;
+  color: var(--warning);
+}
+.ev-sinrollcall-banner-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+.ev-sinrollcall-banner-texto strong {
+  font-size: 0.85rem;
+}
+.ev-sinrollcall-banner-acciones {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ev-sinrollcall-banner-acciones .btn {
+  flex: 1;
+  min-width: 120px;
+  font-size: 0.8rem;
+}
+/* `.btn-danger-outline` no existe en css/ui.css (solo `.btn-danger` sólido) --
+   mismo patrón que `.btn-outline` (fondo tenue + texto de color, sin borde),
+   con los tokens de peligro. */
+.ev-sinrollcall-banner-acciones .btn-danger-outline { background: var(--danger-bg); color: var(--danger); border: none; }
+.ev-sinrollcall-banner-acciones .btn-danger-outline:hover { filter: brightness(0.95); transform: translateY(-2px); }
+.ev-sinrollcall-banner-acciones .btn-danger-outline:active { transform: translateY(0) scale(0.98); }
 /* Ícono "pendiente de sincronizar" sobre un control tocado sin conexión
    (`.ev-rsvp-seg`/`#ev-asist-admin-header-<id>`) -- inyectado/sacado por
    `_offMarcarPendiente()`/js/offline.js, sobrevive un re-render completo
