@@ -77,3 +77,20 @@ document.addEventListener('touchend', function() {
     sheet.style.transform = 'translateY(0)'; // no llegó al umbral — snap back a la posición abierta, con la transition ya reactivada arriba (misma curva que .bsheet, var(--ease-sheet))
   }
 }, { passive: true });
+
+/* Botón X de cierre (`.sheet-close-btn`, sumado a todos los `.bsheet` de
+   index.html) -- listener propio, NO reusa `_BS_ZONA_CIERRE` de arriba: esa
+   lógica resuelve el overlay por `previousElementSibling`, que asume un
+   orden de DOM (overlay ANTES del sheet) que 2 sheets no siguen
+   (`sheet-cuota-pendiente`/`sheet-ev-tipo-pago` tienen el overlay DESPUÉS
+   del sheet en el HTML) -- resolver por `id` (`<sheetId>-overlay`,
+   convención real de TODOS los sheets de la app, sin excepción, confirmada
+   contra index.html) funciona sin importar el orden. */
+document.addEventListener('click', function(ev) {
+  var btn = ev.target.closest && ev.target.closest('.sheet-close-btn');
+  if (!btn) return;
+  var sheet = btn.closest('.bsheet');
+  if (!sheet || !sheet.id) return;
+  var overlay = document.getElementById(sheet.id + '-overlay');
+  if (overlay) overlay.click();
+});

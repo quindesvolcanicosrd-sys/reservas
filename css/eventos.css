@@ -500,10 +500,45 @@
 .ev-hoy-separador span { font-size: 0.72rem; font-weight: 800; color: var(--brand); text-transform: uppercase; letter-spacing: 1px; }
 /* ── Card de evento ───────────────────────────────────── */
 .ev-card {
+  position: relative;
   padding: 14px; border-radius: 14px; margin-bottom: 10px;
   background: var(--surface-2); border: 1.5px solid var(--border-light);
   animation: smoothSlideUp 0.35s var(--ease-sheet) both;
 }
+/* Avatar stack de asistencia real (pedido explícito, ver _evAvatarsStackHtml()/
+   js/eventos.js) -- `position:absolute` sobre `.ev-card` (por eso el
+   `position:relative` que se le acaba de sumar arriba), esquina superior
+   derecha, encima del resto del contenido de la card (que sigue en flujo
+   normal, sin `padding-right` extra a propósito -- el stack es chico y las
+   cards de este timeline no llevan texto largo pegado al borde derecho). */
+.ev-avatars-stack {
+  position: absolute; top: 14px; right: 14px;
+  display: flex; flex-direction: row-reverse; align-items: center;
+  cursor: pointer; z-index: 1;
+}
+.ev-av-circle {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.62rem; font-weight: 700; color: var(--white);
+  border: 2px solid var(--surface-2); margin-left: -8px;
+}
+.ev-avatars-stack > *:last-child { margin-left: 0; }
+.ev-av-extra { font-size: 0.68rem; font-weight: 700; color: var(--muted); margin-left: 4px; flex-shrink: 0; }
+/* Filas del bottom sheet "¿Quién marcó asistencia?" (#ev-avatars-sheet,
+   index.html) -- avatar con iniciales (mismo `.ev-av-circle` de arriba,
+   variante `--md` sin el borde/solape pensados para el stack apilado de la
+   card) + nombre + badge de estado (`.badge-confirmada`/`.badge-pendiente`,
+   css/ui.css, reusados tal cual). */
+.ev-avsheet-seccion { margin-bottom: 20px; }
+.ev-avsheet-seccion:last-child { margin-bottom: 0; }
+.ev-avsheet-seccion-titulo {
+  font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 0.6px; margin-bottom: 10px;
+}
+.ev-avsheet-fila { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border-light); }
+.ev-avsheet-fila:last-child { border-bottom: none; }
+.ev-avsheet-nombre { flex: 1; font-size: 0.85rem; font-weight: 600; color: var(--text); }
+.ev-av-circle--md { width: 34px; height: 34px; font-size: 0.72rem; border: none; margin-left: 0; }
 /* Fila superior (ícono+título+hora a la izquierda, ver "Cambios recientes" --
    revertido a este layout: 2 tandas atrás el ícono había pasado al badge de
    fecha compartido del timeline y la acción a una columna lateral, ambos

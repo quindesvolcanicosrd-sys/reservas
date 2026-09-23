@@ -15,7 +15,7 @@
 <!-- Motor de color de énfasis (Tanda 1/2, ver MANIFEST.md) — mismo script
      que ../index.html, ver ese archivo para el detalle de por qué va acá. -->
 <script src="../js/color-enfasis.js?v=d494e5a6"></script>
-<link rel="stylesheet" href="../css/global.css?v=2422cd89">
+<link rel="stylesheet" href="../css/global.css?v=c450b920">
 <link rel="stylesheet" href="../css/estilos.css?v=7e3d0e54">
 <link rel="stylesheet" href="../css/nav.css?v=4e85514c">
 <link rel="stylesheet" href="../css/reservas.css?v=3f9fd2fc">
@@ -306,6 +306,7 @@
 <!-- BOTTOM SHEET: Prefijo -->
 <div id="insc-sheet-prefijo-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="inscCerrarSheetPrefijo()"></div>
 <div id="insc-sheet-prefijo" class="bsheet bsheet-scroll" style="z-index:9601;max-height:75vh;">
+  <button type="button" class="sheet-close-btn" aria-label="Cerrar"><span class="material-symbols-outlined">close</span></button>
   <div class="bsheet-handle" style="flex-shrink:0;"></div>
   <div class="bsheet-title" style="flex-shrink:0;">Código de país</div>
   <input type="text" id="insc-prefijo-search" placeholder="Buscar país o código..." style="margin:12px 16px;padding:10px 14px;background:var(--surface-2);border:1.5px solid var(--border-light);border-radius:10px;font-size:0.85rem;font-family:inherit;width:calc(100% - 32px);flex-shrink:0;" oninput="inscFiltrarPrefijos(this.value)">
@@ -315,6 +316,7 @@
 <!-- BOTTOM SHEET: Protecciones otro -->
 <div id="insc-sheet-protec-overlay" class="bsheet-overlay" style="z-index:9600;" onclick="inscCancelarOtroProtec()"></div>
 <div id="insc-sheet-protec" class="bsheet" style="z-index:9601;">
+  <button type="button" class="sheet-close-btn" aria-label="Cerrar"><span class="material-symbols-outlined">close</span></button>
   <div class="bsheet-handle"></div>
   <div class="bsheet-title">Especifica qué necesitas</div>
   <div class="bsheet-body">
@@ -337,6 +339,7 @@
      foto" (no aplica en inscripción, solo en ajustes de perfil ya creado) -->
 <div id="sheet-foto-perfil-overlay" class="bsheet-overlay" style="z-index:9650;" onclick="cerrarSheetFotoPerfil()"></div>
 <div id="sheet-foto-perfil" class="bsheet" style="z-index:9651;">
+  <button type="button" class="sheet-close-btn" aria-label="Cerrar"><span class="material-symbols-outlined">close</span></button>
   <div class="bsheet-handle"></div>
   <div class="bsheet-title">Foto de perfil</div>
   <div class="bsheet-body" style="display:flex;flex-direction:column;gap:10px;">
@@ -365,6 +368,7 @@
 <!-- Modal contacto -->
 <div id="modal-contacto-insc-overlay" class="bsheet-overlay" style="z-index:9500;" onclick="cerrarContacto()"></div>
 <div id="modal-contacto-insc" class="bsheet" style="z-index:9550;">
+  <button type="button" class="sheet-close-btn" aria-label="Cerrar"><span class="material-symbols-outlined">close</span></button>
   <div class="bsheet-handle"></div>
   <div class="bsheet-title">Contáctanos</div>
   <div class="bsheet-body">

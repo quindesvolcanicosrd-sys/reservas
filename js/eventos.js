@@ -2560,6 +2560,7 @@ function _evCardEventoHtml(e, sufijo) {
   var cardOnclick = '_evTapCard(\'' + e.id + '\',\'' + e.tipo + '\')';
 
   return '<div class="ev-card" id="ev-card-' + e.id + sufijo + '" onclick="' + cardOnclick + '">' +
+    _evAvatarsStackHtml(e) +
     '<div class="ev-card-top-row">' +
       '<div class="ev-card-body">' +
         '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline">' + icono + '</span><div class="ev-card-titulo">' + e.lugar + '</div></div>' +
@@ -2572,6 +2573,91 @@ function _evCardEventoHtml(e, sufijo) {
     btnCancelarReagendarHtml +
     '<div class="ev-card-talla-conflicto" id="ev-talla-conflicto-' + e.id + sufijo + '" style="display:none;padding:0 12px 10px;animation:fadeIn 0.3s ease;"></div>' +
   '</div>';
+}
+// Avatar stack de asistencia real (pedido explícito, "avatar stack en las
+// cards del timeline") -- iniciales (no foto, a propósito, ver pedido
+// original) de hasta 3 personas con marca real 'A tiempo'/'Tarde' en ESTE
+// evento (`e.asistentes`, ya viene filtrado por `_evMapEventoBackend()` a
+// esos 2 estados + 'Ausente' -- se excluye 'Ausente' acá, solo interesa
+// quién SÍ llegó). `''` si no hay ninguna marca real todavía -- así
+// `_evCardEventoHtml()` no agrega un contenedor vacío de más. `position:
+// absolute` (css/eventos.css) sobre `.ev-card`, que por eso suma
+// `position:relative` en esa misma pasada.
+var _EV_AVATAR_COLORES = ['var(--brand)', 'var(--purple)', 'var(--info)', 'var(--amber-accent)', 'var(--success)'];
+function _evIniciales(nombre) {
+  var palabras = String(nombre || '').trim().split(/\s+/).filter(Boolean);
+  return palabras.slice(0, 2).map(function(p) { return p.charAt(0).toUpperCase(); }).join('');
+}
+function _evAvatarsStackHtml(e) {
+  var personas = (e.asistentes || []).filter(function(a) { return a.estado === 'A tiempo' || a.estado === 'Tarde'; });
+  // Dedup por nombre (defensivo -- `e.asistentes` no debería traer 2 filas
+  // para la misma persona en el mismo evento, pero el resto de este archivo
+  // ya es defensivo contra eso mismo en otros renders de asistentes).
+  var vistos = {}, unicos = [];
+  personas.forEach(function(p) {
+    var clave = String(p.nombre || '').toUpperCase();
+    if (!clave || vistos[clave]) return;
+    vistos[clave] = true;
+    unicos.push(p);
+  });
+  if (!unicos.length) return '';
+  var total = unicos.length;
+  var circulos = unicos.slice(0, 3).map(function(p, i) {
+    var color = _EV_AVATAR_COLORES[i % _EV_AVATAR_COLORES.length];
+    return '<div class="ev-av-circle" style="background:' + color + ';">' + _evIniciales(p.nombreDerby || p.nombre) + '</div>';
+  }).join('');
+  var extraHtml = total > 3 ? '<span class="ev-av-extra">+' + (total - 3) + '</span>' : '';
+  return '<div class="ev-avatars-stack" onclick="event.stopPropagation();_evAbrirSheetAvatares(\'' + e.id + '\')">' + circulos + extraHtml + '</div>';
+}
+// Bottom sheet "¿Quién marcó asistencia?" (#ev-avatars-sheet, index.html) --
+// abierto desde el tap en `.ev-avatars-stack` de arriba. 2 secciones fijas,
+// "A horario"/"Tarde" (mismo vocabulario corto que `_EV_ROLLCALL_LABEL_CORTO`,
+// ya usado en el resto del archivo), badge verde/amarillo reusando
+// `.badge-confirmada`/`.badge-pendiente` (css/ui.css, mismos colores que ya
+// usa el resto de la app para esos 2 estados) -- nada nuevo que inventar ahí.
+function _evAvatarSheetFilaHtml(p, i) {
+  var color = _EV_AVATAR_COLORES[i % _EV_AVATAR_COLORES.length];
+  var nombreVisible = p.nombreDerby || p.nombre;
+  var badgeClase = p.estado === 'A tiempo' ? 'badge-confirmada' : 'badge-pendiente';
+  return '<div class="ev-avsheet-fila">' +
+      '<div class="ev-av-circle ev-av-circle--md" style="background:' + color + ';">' + _evIniciales(nombreVisible) + '</div>' +
+      '<span class="ev-avsheet-nombre">' + nombreVisible + '</span>' +
+      '<span class="badge ' + badgeClase + '">' + (_EV_ROLLCALL_LABEL_CORTO[p.estado] || p.estado) + '</span>' +
+    '</div>';
+}
+function _evAvatarSheetSeccionHtml(titulo, personas) {
+  if (!personas.length) return '';
+  var filas = personas.map(function(p, i) { return _evAvatarSheetFilaHtml(p, i); }).join('');
+  return '<div class="ev-avsheet-seccion"><div class="ev-avsheet-seccion-titulo">' + titulo + '</div>' + filas + '</div>';
+}
+function _evAbrirSheetAvatares(eventoId) {
+  var e = _EV_EVENTOS.filter(function(x) { return x.id === eventoId; })[0];
+  if (!e) return;
+  var aHorario = (e.asistentes || []).filter(function(a) { return a.estado === 'A tiempo'; });
+  var tarde = (e.asistentes || []).filter(function(a) { return a.estado === 'Tarde'; });
+  var body = document.getElementById('ev-avatars-sheet-body');
+  if (body) body.innerHTML = _evAvatarSheetSeccionHtml('A horario', aHorario) + _evAvatarSheetSeccionHtml('Tarde', tarde);
+  var ov = document.getElementById('ev-avatars-sheet-overlay');
+  var sh = document.getElementById('ev-avatars-sheet');
+  if (!ov || !sh) return;
+  ov.style.display = 'block'; sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(_evCerrarSheetAvatares);
+}
+// Mismo patrón open/close que `evAbrirAccionCard()`/`cerrarSheetEvAccion()`
+// (más abajo en este archivo) -- `porGesto` ausente (overlay/back real)
+// dispara `history.back()`, que termina llamando a esta misma función con
+// `porGesto=true` vía `_overlayStack`/popstate (ver _registrarOverlayAbierto()/
+// js/ui.js) para el cierre visual real.
+function _evCerrarSheetAvatares(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var sh = document.getElementById('ev-avatars-sheet');
+  var ov = document.getElementById('ev-avatars-sheet-overlay');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() {
+    if (sh) sh.style.display = 'none';
+    if (ov) ov.style.display = 'none';
+  }, 350);
 }
 // Botón "Cancelar o re - agendar" -- reusa abrirGestionar() (js/home.js,
 // el sheet real "Reagendar"/"Cancelar reserva") sobre una reserva de tipo

@@ -275,6 +275,29 @@ select, option, optgroup { font-family: 'Be Vietnam Pro', sans-serif !important;
    en cada touchmove; se reactiva al soltar (cierre real o snap-back), ambos
    ya animados por la transition normal de .bsheet declarada arriba. */
 .bsheet.bsheet-sin-transicion { transition: none; }
+/* Botón X de cierre (pedido explícito, "todos los bottom sheets" -- sumado
+   a los ~30 `.bsheet` de la app, ver index.html) -- `position:absolute`
+   sobre `.bsheet` (que ya es `position:fixed`, contexto de posicionamiento
+   de sobra) en vez de vivir DENTRO de `.bsheet-title`: varios títulos se
+   pintan por JS con `.textContent =` directo sobre ese mismo div (ver
+   `ajCerrarSheetTexto()`/`aj-sheet-texto-titulo` y equivalentes) -- un botón
+   anidado ahí desaparecería en la próxima repintada. Cierre real vía
+   shared/bsheet.js (listener delegado nuevo, mismo mecanismo
+   overlay.click() que ya usan la manija/el título). */
+.sheet-close-btn {
+  position: absolute; top: 10px; right: 10px; z-index: 2;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  border: none;
+  color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.sheet-close-btn:hover { background: rgba(255,255,255,0.12); color: var(--text); }
+.sheet-close-btn .material-symbols-outlined { font-size: 1.1rem; }
 
 /* ─── AVATAR PILL (nombre de clase histórico — es un círculo simple, ver
    MANIFEST "Cambios recientes": se probaron 2 variantes de cápsula (cuadrado
