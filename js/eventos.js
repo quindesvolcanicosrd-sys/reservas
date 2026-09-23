@@ -6425,8 +6425,6 @@ function _evDetalleInfoHtml(ev) {
   var videoInstructivo = ev.videoInstructivo || '';
   var html = _evSinRollcallBannerHtml(ev) + '<div class="ev-info-rows">' +
       '<div class="ev-info-row-loc">' +
-        '<span class="material-symbols-outlined ev-info-icon">location_on</span>' +
-        '<span class="ev-info-loc-nombre">' + ev.lugar + '</span>' +
         (mapsUrl ? '<a class="ev-info-btn-llegar" href="' + mapsUrl + '" target="_blank" rel="noopener"><span class="material-symbols-outlined">directions</span>Cómo llegar</a>' : '') +
         (videoInstructivo ? '<button type="button" class="ev-info-btn-llegar ev-info-btn-video" onclick="event.stopPropagation();_evAbrirVideoInstructivo(\'' + videoInstructivo.replace(/'/g, "\\'") + '\')"><span class="material-symbols-outlined">play_circle</span>Ver video</button>' : '') +
       '</div>' +
