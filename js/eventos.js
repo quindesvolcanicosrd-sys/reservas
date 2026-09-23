@@ -6358,6 +6358,7 @@ function _evDetalleStickyHtml(ev) {
       '<div class="ev-detalle-nav-texto">' +
         '<div class="ev-detalle-tipo">' + ev.tipo + '</div>' +
         '<div class="ev-detalle-fechahora">' + _evFechaCompleta(ev.fecha) + '</div>' +
+        (ev.lugar ? '<div class="ev-detalle-nav-lugar"><span class="material-symbols-outlined">location_on</span>' + ev.lugar + '</div>' : '') +
       '</div>' +
     '</div>';
 }
@@ -9022,7 +9023,7 @@ function _evLugarFormPintar() {
   if (nombreInp) nombreInp.value = _evLugarData.nombre || '';
   var videoInp = document.getElementById('ev-lugar-video');
   if (videoInp) videoInp.value = _evLugarData.videoInstructivo || '';
-  _actualizarContadorTexto(_evLugarData.nombre, 'ev-lugar-nombre-contador', 15);
+  _actualizarContadorTexto(_evLugarData.nombre, 'ev-lugar-nombre-contador', 20);
 
   document.querySelectorAll('#ev-lugar-icono-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.tipoIcono); });
   document.querySelectorAll('#ev-lugar-recurrencia-pills .aj-pill').forEach(function(p) { p.classList.toggle('activa', p.dataset.val === _evLugarData.tipoRecurrencia); });
@@ -9124,7 +9125,7 @@ function _evLugarActualizarFooter() {
   }
 }
 
-function _evLugarSetNombre(v) { _evLugarData.nombre = v; _actualizarContadorTexto(v, 'ev-lugar-nombre-contador', 15); _evLugarActualizarFooter(); }
+function _evLugarSetNombre(v) { _evLugarData.nombre = v; _actualizarContadorTexto(v, 'ev-lugar-nombre-contador', 20); _evLugarActualizarFooter(); }
 
 function _evLugarSelIcono(el) {
   document.querySelectorAll('#ev-lugar-icono-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
@@ -9320,14 +9321,14 @@ function _evLugarInicializarBuscador() {
     // Sugerencia de nombre solo si el campo sigue vacío -- nunca pisa un
     // nombre que el usuario ya haya escrito a mano.
     if (!_evLugarData.nombre && place.name) {
-      // `.substring(0,15)` -- el nombre sugerido por Places puede superar el
+      // `.substring(0,20)` -- el nombre sugerido por Places puede superar el
       // límite del input (`maxlength`, que solo frena tipeo/paste real, no
       // una asignación de `.value` por JS como esta), mismo límite real que
       // el resto del campo.
-      _evLugarData.nombre = place.name.substring(0, 15);
+      _evLugarData.nombre = place.name.substring(0, 20);
       var nombreInp = document.getElementById('ev-lugar-nombre');
       if (nombreInp) nombreInp.value = _evLugarData.nombre;
-      _actualizarContadorTexto(_evLugarData.nombre, 'ev-lugar-nombre-contador', 15);
+      _actualizarContadorTexto(_evLugarData.nombre, 'ev-lugar-nombre-contador', 20);
       _evLugarActualizarFooter();
     }
   });
@@ -9371,6 +9372,15 @@ function _evLugarValido() {
 // propia base (default/trigger), el cliente nunca las setea.
 function _evLugarGuardar() {
   if (!_evLugarValido()) return;
+  // Defensivo -- `maxlength="20"` del input ya frena tipeo/paste real, pero
+  // no una asignación de `.value` por JS (ver sugerencia de nombre de
+  // Places, más abajo en este archivo, que por eso ya viene clampeada con
+  // `.substring(0,20)`). Mismo mensaje que la validación server-side
+  // (`adminCrearVenue`/`adminEditarVenue` en supabase/functions/api/index.ts).
+  if (_evLugarData.nombre && _evLugarData.nombre.length > 20) {
+    mostrarToast('El nombre del lugar no puede superar 20 caracteres.', 'error');
+    return;
+  }
   // "¿Requiere reserva?" ya no es una pregunta propia del form (ver
   // MANIFEST.md "Cambios recientes") -- se auto-deriva acá mismo, al armar
   // el payload final, a partir del tipo de evento elegido en el Paso 1:
@@ -9497,7 +9507,7 @@ function _evLugarEditarPintar() {
   if (titulo) titulo.textContent = 'Editar ' + (_evLugarData.nombre || 'lugar');
   var nombreInp = document.getElementById('ev-lugar-editar-nombre');
   if (nombreInp) nombreInp.value = _evLugarData.nombre || '';
-  _actualizarContadorTexto(_evLugarData.nombre, 'ev-lugar-editar-nombre-contador', 15);
+  _actualizarContadorTexto(_evLugarData.nombre, 'ev-lugar-editar-nombre-contador', 20);
   var videoEditInp = document.getElementById('ev-lugar-editar-video');
   if (videoEditInp) videoEditInp.value = _evLugarData.videoInstructivo || '';
   _evLugarEditarInicializarMapa();
@@ -9512,7 +9522,7 @@ function _evLugarEditarActualizarBoton() {
 
 function _evLugarEditarSetNombre(v) {
   _evLugarData.nombre = v;
-  _actualizarContadorTexto(v, 'ev-lugar-editar-nombre-contador', 15);
+  _actualizarContadorTexto(v, 'ev-lugar-editar-nombre-contador', 20);
   var titulo = document.getElementById('ev-lugar-editar-titulo');
   if (titulo) titulo.textContent = 'Editar ' + (v || 'lugar');
   _evLugarEditarActualizarBoton();

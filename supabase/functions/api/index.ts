@@ -1200,6 +1200,7 @@ async function adminCrearVenue(params: Record<string, any>): Promise<Record<stri
   let datos = params.datosJson ?? params.datos ?? params;
   if (typeof datos === 'string') datos = JSON.parse(datos);
   if (params.datosJson || params.datos) { /* already parsed */ } else { datos = params; delete datos.action; delete datos.adminToken; }
+  if (datos.lugar && String(datos.lugar).length > 20) return { exito: false, error: 'El nombre del lugar no puede superar 20 caracteres.' };
   const { data, error } = await supabase.from('venues').insert(datos).select().single();
   if (error) return { exito: false, error: error.message };
   return data;
@@ -1208,6 +1209,7 @@ async function adminCrearVenue(params: Record<string, any>): Promise<Record<stri
 async function adminEditarVenue(params: Record<string, any>): Promise<Record<string, any>> {
   let datos = params.datosJson ?? params.datos;
   if (typeof datos === 'string') datos = JSON.parse(datos);
+  if (datos.lugar && String(datos.lugar).length > 20) return { exito: false, error: 'El nombre del lugar no puede superar 20 caracteres.' };
   const { data, error } = await supabase.from('venues').update(datos).eq('id', params.id).select().single();
   if (error) return { exito: false, error: error.message };
   return data;

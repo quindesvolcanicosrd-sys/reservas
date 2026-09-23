@@ -854,6 +854,20 @@
   font-size: 1.1rem; font-weight: 600; color: var(--brand); text-transform: uppercase; letter-spacing: 1.2px;
 }
 .ev-detalle-fechahora { font-size: 0.85rem; color: var(--text-2); font-weight: 600; margin-top: 2px; }
+.ev-detalle-nav-lugar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ev-detalle-nav-lugar .material-symbols-outlined {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
 /* Info del evento -- ver "Cambios recientes" -- rediseño inline: el bloque
    ya no son pills (`.fi-pills`/`.fi-pill-lugar`/`.fi-pill-hora`) sino
    `.ev-info-rows` (2 filas ícono + texto), definido en css/reservas.css al
