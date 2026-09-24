@@ -2628,7 +2628,11 @@ function _evAvatarsStackHtml(e) {
   var total = personas.length;
   var circulos = personas.slice(0, 3).map(function(p) { return _evAvatarCirculoHtml(p); }).join('');
   var extraHtml = total > 3 ? '<span class="ev-av-extra">+' + (total - 3) + '</span>' : '';
-  return '<div class="ev-avatars-stack" onclick="event.stopPropagation();_evAbrirSheetAvatares(\'' + e.id + '\')">' + circulos + extraHtml + '</div>';
+  // "+N" FUERA de `.ev-av-stack` (hermano después) -- queda a la derecha de
+  // los círculos por el `gap` del contenedor, no mezclado en el `row-reverse`.
+  return '<div class="ev-avatars-stack" data-ev-id="' + e.id + '" onclick="event.stopPropagation();_evAbrirSheetAvatares(\'' + e.id + '\')">' +
+    '<div class="ev-av-stack">' + circulos + '</div>' + extraHtml +
+  '</div>';
 }
 // Repinta SOLO el stack de la card/fila del timeline tras un cambio de
 // asistencia (_evMarcarAsistenciaAdmin() / RSVP propio en

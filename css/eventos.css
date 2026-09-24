@@ -511,10 +511,14 @@
    cards de este timeline no llevan texto largo pegado al borde derecho). */
 .ev-avatars-stack {
   position: absolute; top: 12px; right: 12px;
-  display: flex; flex-direction: row-reverse; align-items: center;
+  display: flex; align-items: center; gap: 4px;
   cursor: pointer; z-index: 1;
   transition: opacity 0.3s;
 }
+/* Solo los círculos (máx. 3), superpuestos con `row-reverse` -- el "+N"
+   (`.ev-av-extra`) vive FUERA de este contenedor, como hermano después,
+   así queda siempre a la derecha del grupo. */
+.ev-av-stack { display: flex; flex-direction: row-reverse; align-items: center; }
 /* "Nadie asistirá aún" -- misma esquina que el stack, solo eventos futuros
    sin RSVPs 'Asistiré' (`_evAvatarsStackHtml()`). Fondo vía `color-mix()`
    sobre `--danger` (= `--brand`, que js/color-enfasis.js pisa en runtime) en
@@ -544,10 +548,10 @@
 /* Fondo/letra inline por persona (`_evAvatarCirculoHtml()`, misma paleta que
    los avatares sin foto de Equipo). Título de la card completa con espacio
    a la derecha para que no quede debajo del stack. */
-.ev-card:has(> .ev-avatars-stack) .ev-card-titulo-row { padding-right: 84px; }
+.ev-card:has(> .ev-avatars-stack) .ev-card-titulo-row { padding-right: 100px; }
 .ev-card:has(> .ev-av-empty-pill) .ev-card-titulo-row { padding-right: 120px; }
-.ev-avatars-stack > *:last-child { margin-left: 0; }
-.ev-av-extra { font-size: 0.68rem; font-weight: 700; color: var(--muted); margin-left: 4px; flex-shrink: 0; }
+.ev-av-stack > .ev-av-circle:last-child { margin-left: 0; }
+.ev-av-extra { font-size: 0.68rem; font-weight: 700; color: var(--muted); flex-shrink: 0; }
 /* Filas del bottom sheet "¿Quién marcó asistencia?" (#ev-avatars-sheet,
    index.html) -- avatar con iniciales (mismo `.ev-av-circle` de arriba,
    variante `--md` sin el borde/solape pensados para el stack apilado de la
@@ -1105,7 +1109,7 @@
 .ev-card-compacta-wrap:hover { border-color: var(--brand); }
 /* `padding-right` en la info para que el título no quede debajo del
    avatar stack (`top/right:12px`, ver `.ev-avatars-stack`). */
-.ev-card-compacta-wrap:has(.ev-avatars-stack) .ev-card-compacta-info { padding-right: 84px; }
+.ev-card-compacta-wrap:has(.ev-avatars-stack) .ev-card-compacta-info { padding-right: 100px; }
 .ev-card-compacta { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; }
 .ev-card-compacta-info { flex: 1; min-width: 0; }
 /* Sin chevron propio para Cancelado/No se entrena (ver "Cambios recientes"
