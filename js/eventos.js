@@ -2617,7 +2617,14 @@ function _evAvatarCirculoHtml(p, claseExtra) {
 }
 function _evAvatarsStackHtml(e) {
   var personas = _evPersonasStack(e);
-  if (!personas.length) return '';
+  if (!personas.length) {
+    // Pill "Nadie asistirá aún" (pedido explícito) en la misma esquina, SOLO
+    // en eventos futuros no cancelados -- en pasados sin rollcall ya está el
+    // badge/banner de "sin rollcall" para admin (`_evSinRollcallBadgeHtml()`),
+    // no se duplica. Con al menos 1 persona el pill no se pinta.
+    var cancelado = e.estado === 'Cancelado' || e.estado === 'No se entrena';
+    return (!cancelado && !_evYaEmpezo(e)) ? '<div class="ev-av-empty-pill">Nadie asistirá aún</div>' : '';
+  }
   var total = personas.length;
   var circulos = personas.slice(0, 3).map(function(p) { return _evAvatarCirculoHtml(p); }).join('');
   var extraHtml = total > 3 ? '<span class="ev-av-extra">+' + (total - 3) + '</span>' : '';
@@ -2636,10 +2643,17 @@ function _evActualizarAvatarsStack(idEvento) {
     card = ancla && ancla.closest('.ev-card-compacta-wrap');
   }
   if (!ev || !card) return;
-  var viejo = card.querySelector(':scope > .ev-avatars-stack');
+  var viejo = card.querySelector(':scope > .ev-avatars-stack, :scope > .ev-av-empty-pill');
   if (viejo) viejo.remove();
   var html = _evAvatarsStackHtml(ev);
-  if (html) card.insertAdjacentHTML('afterbegin', html);
+  if (!html) return;
+  card.insertAdjacentHTML('afterbegin', html);
+  // Fade de reemplazo (pill <-> avatares): arranca en 0 y la `transition:
+  // opacity` de css/eventos.css lo lleva a 1. Solo en este repintado
+  // parcial -- en el render completo la card entera ya entra animada.
+  var nuevo = card.firstElementChild;
+  nuevo.style.opacity = '0';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { nuevo.style.opacity = ''; }); });
 }
 // Bottom sheet del stack (#ev-avatars-sheet, index.html) -- abierto desde el
 // tap en `.ev-avatars-stack` de arriba. Evento ya arrancado -> "A horario"/

@@ -513,6 +513,23 @@
   position: absolute; top: 12px; right: 12px;
   display: flex; flex-direction: row-reverse; align-items: center;
   cursor: pointer; z-index: 1;
+  transition: opacity 0.3s;
+}
+/* "Nadie asistirá aún" -- misma esquina que el stack, solo eventos futuros
+   sin RSVPs 'Asistiré' (`_evAvatarsStackHtml()`). Fondo vía `color-mix()`
+   sobre `--danger` (= `--brand`, que js/color-enfasis.js pisa en runtime) en
+   vez de un `--danger-rgb` fijo que quedaría desfasado -- mismo recurso que
+   `--cumple-bg` (css/colors.css). */
+.ev-av-empty-pill {
+  position: absolute; top: 12px; right: 12px; z-index: 1;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border-radius: 20px;
+  padding: 3px 8px;
+  white-space: nowrap;
+  transition: opacity 0.3s;
 }
 .ev-av-circle {
   width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
@@ -528,6 +545,7 @@
    los avatares sin foto de Equipo). Título de la card completa con espacio
    a la derecha para que no quede debajo del stack. */
 .ev-card:has(> .ev-avatars-stack) .ev-card-titulo-row { padding-right: 84px; }
+.ev-card:has(> .ev-av-empty-pill) .ev-card-titulo-row { padding-right: 120px; }
 .ev-avatars-stack > *:last-child { margin-left: 0; }
 .ev-av-extra { font-size: 0.68rem; font-weight: 700; color: var(--muted); margin-left: 4px; flex-shrink: 0; }
 /* Filas del bottom sheet "¿Quién marcó asistencia?" (#ev-avatars-sheet,
