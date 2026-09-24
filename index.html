@@ -587,11 +587,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
        acá), una por cada estado real (A horario/Tarde) -- _evAvatarSheetSeccionHtml()
        omite la sección entera si esa lista viene vacía. -->
   <div id="ev-avatars-sheet-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_evCerrarSheetAvatares()"></div>
-  <div id="ev-avatars-sheet" class="bsheet" style="z-index:9701;">
+  <div id="ev-avatars-sheet" class="bsheet bsheet-scroll" style="z-index:9701;max-height:75vh;">
     <button type="button" class="sheet-close-btn" aria-label="Cerrar"><span class="material-symbols-outlined">close</span></button>
-    <div class="bsheet-handle"></div>
+    <div class="bsheet-handle" style="flex-shrink:0;"></div>
     <div class="bsheet-title" id="ev-avatars-sheet-titulo">Asistencia registrada</div>
-    <div class="bsheet-body" id="ev-avatars-sheet-body"></div>
+    <div class="bsheet-body" id="ev-avatars-sheet-body" style="overflow-y:auto;flex:1;min-height:0;"></div>
   </div>
 
   <!-- "Marcar asistencia" (Eventos, admin-only) -- subpantalla dedicada,
@@ -3572,7 +3572,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js?v=8e63a98b"></script>
 <script src="js/ui.js?v=397ac228"></script>
-<script src="js/eventos.js?v=10ecba73"></script>
+<script src="js/eventos.js?v=9fd02387"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=cb09eb05"></script>
 <script src="js/equipo.js?v=4e50af83"></script>

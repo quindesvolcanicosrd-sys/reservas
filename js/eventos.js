@@ -2579,9 +2579,12 @@ function _evPersonasStack(e) {
   var personas = _evYaEmpezo(e)
     ? (e.asistentes || []).filter(function(a) { return a.estado === 'A tiempo' || a.estado === 'Tarde'; })
     : (e.rsvps || []).filter(function(r) { return r.estado === 'Asistiré'; });
-  // Dedup por nombre (defensivo -- no debería venir 2 veces la misma persona
-  // en el mismo evento, pero el resto de este archivo ya es defensivo contra
-  // eso mismo en otros renders de asistentes).
+  return _evDedupPorNombre(personas);
+}
+// Dedup por nombre (defensivo -- no debería venir 2 veces la misma persona
+// en el mismo evento, pero el resto de este archivo ya es defensivo contra
+// eso mismo en otros renders de asistentes).
+function _evDedupPorNombre(personas) {
   var vistos = {}, unicos = [];
   personas.forEach(function(p) {
     var clave = String(p.nombre || '').toUpperCase();
@@ -2635,16 +2638,25 @@ function _evActualizarAvatarsStack(idEvento) {
   if (html) card.insertAdjacentHTML('afterbegin', html);
 }
 // Bottom sheet del stack (#ev-avatars-sheet, index.html) -- abierto desde el
-// tap en `.ev-avatars-stack` de arriba. Misma fuente que el stack
-// (`_evPersonasStack()`): evento ya arrancado -> "A horario"/"Tarde" (mismo
-// vocabulario corto que `_EV_ROLLCALL_LABEL_CORTO`); todavía no arrancó ->
-// una sola sección "Asistirá" con los RSVPs 'Asistiré'. Badge verde/amarillo
-// reusando `.badge-confirmada`/`.badge-pendiente` (css/ui.css).
+// tap en `.ev-avatars-stack` de arriba. Evento ya arrancado -> "A horario"/
+// "Tarde" (misma fuente que el stack, `_evPersonasStack()`; vocabulario corto
+// de `_EV_ROLLCALL_LABEL_CORTO`). Todavía no arrancó -> TODAS las respuestas
+// RSVP (`e.rsvps`, no solo 'Asistiré' como el stack), en 3 secciones
+// (`_EV_SHEET_SECCIONES_RSVP`). Secciones vacías se omiten; header con
+// "(N)". Badges de css/ui.css: verde `.badge-confirmada`, rojo
+// `.badge-cancelada`, amarillo `.badge-pendiente` ('Tarde' y 'No jugador' --
+// este último con el mismo tono ámbar que su card de stats en el detalle,
+// `.ev-stat-no-jugador`).
+var _EV_SHEET_BADGE = {
+  'A tiempo': 'badge-confirmada', 'Tarde': 'badge-pendiente',
+  'Asistiré': 'badge-confirmada', 'No asistiré': 'badge-cancelada', 'No jugador': 'badge-pendiente'
+};
+var _EV_SHEET_SECCIONES_RSVP = ['Asistiré', 'No asistiré', 'No jugador'];
 function _evAvatarSheetFilaHtml(p) {
   // Nombre completo (pedido explícito) -- nombre derby solo como respaldo.
   var nombreVisible = p.nombre || p.nombreDerby;
-  var badgeClase = p.estado === 'Tarde' ? 'badge-pendiente' : 'badge-confirmada';
-  var label = p.estado === 'Asistiré' ? 'Asistirá' : (_EV_ROLLCALL_LABEL_CORTO[p.estado] || p.estado);
+  var badgeClase = _EV_SHEET_BADGE[p.estado] || 'badge-sin-registrar';
+  var label = _EV_ROLLCALL_LABEL_CORTO[p.estado] || p.estado;
   return '<div class="ev-avsheet-fila">' +
       _evAvatarCirculoHtml(p, 'ev-av-circle--md') +
       '<span class="ev-avsheet-nombre">' + nombreVisible + '</span>' +
@@ -2654,16 +2666,22 @@ function _evAvatarSheetFilaHtml(p) {
 function _evAvatarSheetSeccionHtml(titulo, personas) {
   if (!personas.length) return '';
   var filas = personas.map(function(p) { return _evAvatarSheetFilaHtml(p); }).join('');
-  return '<div class="ev-avsheet-seccion"><div class="ev-avsheet-seccion-titulo">' + titulo + '</div>' + filas + '</div>';
+  return '<div class="ev-avsheet-seccion"><div class="ev-avsheet-seccion-titulo">' + titulo + ' (' + personas.length + ')</div>' + filas + '</div>';
 }
 function _evAbrirSheetAvatares(eventoId) {
   var e = _EV_EVENTOS.filter(function(x) { return x.id === eventoId; })[0];
   if (!e) return;
-  var personas = _evPersonasStack(e);
-  var html = _evYaEmpezo(e)
-    ? _evAvatarSheetSeccionHtml('A horario', personas.filter(function(a) { return a.estado === 'A tiempo'; })) +
-      _evAvatarSheetSeccionHtml('Tarde', personas.filter(function(a) { return a.estado === 'Tarde'; }))
-    : _evAvatarSheetSeccionHtml('Asistirá', personas);
+  var html;
+  if (_evYaEmpezo(e)) {
+    var personas = _evPersonasStack(e);
+    html = _evAvatarSheetSeccionHtml('A horario', personas.filter(function(a) { return a.estado === 'A tiempo'; })) +
+      _evAvatarSheetSeccionHtml('Tarde', personas.filter(function(a) { return a.estado === 'Tarde'; }));
+  } else {
+    var rsvps = _evDedupPorNombre(e.rsvps || []);
+    html = _EV_SHEET_SECCIONES_RSVP.map(function(estado) {
+      return _evAvatarSheetSeccionHtml(estado, rsvps.filter(function(r) { return r.estado === estado; }));
+    }).join('');
+  }
   var body = document.getElementById('ev-avatars-sheet-body');
   var titulo = document.getElementById('ev-avatars-sheet-titulo');
   if (titulo) titulo.textContent = e.tipo + ' · ' + e.lugar;
@@ -2671,7 +2689,11 @@ function _evAbrirSheetAvatares(eventoId) {
   var ov = document.getElementById('ev-avatars-sheet-overlay');
   var sh = document.getElementById('ev-avatars-sheet');
   if (!ov || !sh) return;
-  ov.style.display = 'block'; sh.style.display = 'block';
+  // `flex` (no `block`): `.bsheet-scroll` -- título/X fijos arriba y solo el
+  // listado (`#ev-avatars-sheet-body`, `overflow-y:auto; flex:1`) scrollea
+  // dentro del `max-height:75vh` del sheet. Mismo patrón que aj-sheet-prefijo.
+  if (body) body.scrollTop = 0;
+  ov.style.display = 'block'; sh.style.display = 'flex';
   requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
   _registrarOverlayAbierto(_evCerrarSheetAvatares);
 }
