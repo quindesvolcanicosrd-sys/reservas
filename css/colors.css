@@ -447,7 +447,9 @@
        proporción relativa entre sí. */
     --surface:        rgba(255,255,255,0.16);
     --surface-2:      rgba(255,255,255,0.13);
-    /* `--surface-2` compuesto sobre `--bg` (#0D0D0D): 13 + 0.13*(255-13) ≈ 44. */
+    /* Fallback: `--surface-2` de acá compuesto sobre `--bg` (#0D0D0D). El valor
+       real lo calcula js/color-enfasis.js en runtime junto con `--surface-2`
+       (que también pisa, con otro alpha) -- #171717 hoy. */
     --surface-2-solid: #2C2C2C;
     --surface-3:      rgba(255,255,255,0.08);
 

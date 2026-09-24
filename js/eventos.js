@@ -2609,7 +2609,11 @@ function _evAvatarCirculoHtml(p, claseExtra) {
   var fotoHtml = p.fotoPerfil
     ? '<img class="ev-av-foto" src="' + String(p.fotoPerfil).replace(/"/g, '&quot;') + '" alt="' + letra + '" onerror="this.style.display=\'none\'">'
     : '';
-  return '<div class="ev-av-circle' + (claseExtra ? ' ' + claseExtra : '') + '" style="background:' + c.bg + ';color:' + c.fg + ';">' + letra + fotoHtml + '</div>';
+  // Fondo SÓLIDO: el tinte de la paleta (rgba en varios tokens) va como capa
+  // sobre `--surface-2-solid` (fondo real de la card) -- mismo tono que se ve
+  // en Equipo, pero sin transparencia, así el círculo de abajo no se trasluce.
+  var fondo = 'linear-gradient(' + c.bg + ',' + c.bg + '),var(--surface-2-solid)';
+  return '<div class="ev-av-circle' + (claseExtra ? ' ' + claseExtra : '') + '" style="background:' + fondo + ';color:' + c.fg + ';">' + letra + fotoHtml + '</div>';
 }
 function _evAvatarsStackHtml(e) {
   var personas = _evPersonasStack(e);
@@ -2653,8 +2657,9 @@ var _EV_SHEET_BADGE = {
 };
 var _EV_SHEET_SECCIONES_RSVP = ['Asistiré', 'No asistiré', 'No jugador'];
 function _evAvatarSheetFilaHtml(p) {
-  // Nombre completo (pedido explícito) -- nombre derby solo como respaldo.
-  var nombreVisible = p.nombre || p.nombreDerby;
+  // Nombre derby primero, username como respaldo -- mismo criterio que la
+  // inicial del círculo (`_evAvatarCirculoHtml()`).
+  var nombreVisible = p.nombreDerby || p.nombre;
   var badgeClase = _EV_SHEET_BADGE[p.estado] || 'badge-sin-registrar';
   var label = _EV_ROLLCALL_LABEL_CORTO[p.estado] || p.estado;
   return '<div class="ev-avsheet-fila">' +

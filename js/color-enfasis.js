@@ -176,6 +176,7 @@ function _ceAplicarPaleta() {
     vars['--bg-2'] = '#FAFAFA';
     vars['--surface'] = '#F7F7F7';
     vars['--surface-2'] = '#F5F5F5';
+    vars['--surface-2-solid'] = '#F5F5F5'; // ya sólido en claro, mismo hex
     vars['--surface-3'] = '#F2F2F2';
     vars['--surface-light'] = '#FAFAFA';
     vars['--border-warm'] = '#EBEBEB';
@@ -219,6 +220,12 @@ function _ceAplicarPaleta() {
     vars['--bg-2'] = '#111111';
     vars['--surface'] = 'rgba(255,255,255,0.06)';
     vars['--surface-2'] = 'rgba(255,255,255,0.04)';
+    // `--surface-2` compuesto sobre `--bg` (`bgHex`) -- color final sólido
+    // del fondo de `.ev-card`, para el borde/base de los avatares apilados
+    // de Eventos (`.ev-av-circle`), que no pueden tener alpha.
+    var bgRgbSolido = hexToRgb(bgHex);
+    var sobreBg = function(c) { return Math.round(c + 0.04 * (255 - c)); };
+    vars['--surface-2-solid'] = 'rgb(' + sobreBg(bgRgbSolido.r) + ',' + sobreBg(bgRgbSolido.g) + ',' + sobreBg(bgRgbSolido.b) + ')';
     vars['--surface-3'] = 'rgba(255,255,255,0.025)';
     vars['--surface-light'] = 'rgba(255,255,255,0.04)';
     vars['--border-warm'] = 'rgba(255,255,255,0.10)';
