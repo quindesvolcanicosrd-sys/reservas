@@ -2567,25 +2567,21 @@ function _evCardEventoHtml(e, sufijo) {
     '<div class="ev-card-talla-conflicto" id="ev-talla-conflicto-' + e.id + sufijo + '" style="display:none;padding:0 12px 10px;animation:fadeIn 0.3s ease;"></div>' +
   '</div>';
 }
-// Avatar stack de asistencia real (pedido explícito, "avatar stack en las
-// cards del timeline") -- iniciales (no foto, a propósito, ver pedido
-// original) de hasta 3 personas con marca real 'A tiempo'/'Tarde' en ESTE
-// evento (`e.asistentes`, ya viene filtrado por `_evMapEventoBackend()` a
-// esos 2 estados + 'Ausente' -- se excluye 'Ausente' acá, solo interesa
-// quién SÍ llegó). `''` si no hay ninguna marca real todavía -- así
-// `_evCardEventoHtml()` no agrega un contenedor vacío de más. `position:
-// absolute` (css/eventos.css) sobre `.ev-card`, que por eso suma
-// `position:relative` en esa misma pasada.
-var _EV_AVATAR_COLORES = ['var(--brand)', 'var(--purple)', 'var(--info)', 'var(--amber-accent)', 'var(--success)'];
-function _evIniciales(nombre) {
-  var palabras = String(nombre || '').trim().split(/\s+/).filter(Boolean);
-  return palabras.slice(0, 2).map(function(p) { return p.charAt(0).toUpperCase(); }).join('');
-}
-function _evAvatarsStackHtml(e) {
-  var personas = (e.asistentes || []).filter(function(a) { return a.estado === 'A tiempo' || a.estado === 'Tarde'; });
-  // Dedup por nombre (defensivo -- `e.asistentes` no debería traer 2 filas
-  // para la misma persona en el mismo evento, pero el resto de este archivo
-  // ya es defensivo contra eso mismo en otros renders de asistentes).
+// Avatar stack de la card del timeline (pedido explícito) -- iniciales (no
+// foto, a propósito) de hasta 3 personas + "+N". Fuente según el momento
+// del evento (`_evPersonasStack()`): antes de arrancar (`!_evYaEmpezo()`),
+// RSVPs 'Asistiré' (`e.rsvps`); desde que arranca, marcas reales 'A tiempo'/
+// 'Tarde' (`e.asistentes`, sin 'Ausente'). `''` si no hay nadie o el evento
+// está cancelado -- así la card no agrega un contenedor vacío de más.
+// `position:absolute` (css/eventos.css) sobre `.ev-card`/`.ev-card-compacta-wrap`.
+function _evPersonasStack(e) {
+  if (e.estado === 'Cancelado' || e.estado === 'No se entrena') return [];
+  var personas = _evYaEmpezo(e)
+    ? (e.asistentes || []).filter(function(a) { return a.estado === 'A tiempo' || a.estado === 'Tarde'; })
+    : (e.rsvps || []).filter(function(r) { return r.estado === 'Asistiré'; });
+  // Dedup por nombre (defensivo -- no debería venir 2 veces la misma persona
+  // en el mismo evento, pero el resto de este archivo ya es defensivo contra
+  // eso mismo en otros renders de asistentes).
   var vistos = {}, unicos = [];
   personas.forEach(function(p) {
     var clave = String(p.nombre || '').toUpperCase();
@@ -2593,61 +2589,79 @@ function _evAvatarsStackHtml(e) {
     vistos[clave] = true;
     unicos.push(p);
   });
-  if (!unicos.length) return '';
-  var total = unicos.length;
-  var circulos = unicos.slice(0, 3).map(function(p, i) {
-    var color = _EV_AVATAR_COLORES[i % _EV_AVATAR_COLORES.length];
-    return '<div class="ev-av-circle" style="background:' + color + ';">' + _evIniciales(p.nombreDerby || p.nombre) + '</div>';
-  }).join('');
+  return unicos;
+}
+// Círculo de inicial con el MISMO estilo que los avatares sin foto de Equipo
+// (pedido explícito): 1 sola letra, del nombre derby primero y del nombre de
+// usuario como respaldo (mismo criterio que `_eqAvatarHtml()`), y color por
+// letra vía `_eqColorAvatarDe()` (js/equipo.js -- fondo tenue + letra en el
+// color sólido del par, tokens de css/colors.css con variante oscura).
+function _evAvatarCirculoHtml(p, claseExtra) {
+  var nombre = p.nombreDerby || p.nombre || '?';
+  var letra = String(nombre).trim().charAt(0).toUpperCase() || '?';
+  var c = _eqColorAvatarDe(nombre);
+  return '<div class="ev-av-circle' + (claseExtra ? ' ' + claseExtra : '') + '" style="background:' + c.bg + ';color:' + c.fg + ';">' + letra + '</div>';
+}
+function _evAvatarsStackHtml(e) {
+  var personas = _evPersonasStack(e);
+  if (!personas.length) return '';
+  var total = personas.length;
+  var circulos = personas.slice(0, 3).map(function(p) { return _evAvatarCirculoHtml(p); }).join('');
   var extraHtml = total > 3 ? '<span class="ev-av-extra">+' + (total - 3) + '</span>' : '';
   return '<div class="ev-avatars-stack" onclick="event.stopPropagation();_evAbrirSheetAvatares(\'' + e.id + '\')">' + circulos + extraHtml + '</div>';
 }
-// Repinta SOLO el stack de la card/fila del timeline tras marcar asistencia
-// (_evMarcarAsistenciaAdmin(), optimista + revert) -- reemplaza al refresco
-// del header del acordeón "Asistieron" (eliminado). Ancla:
-// `#ev-asist-real-<id>`, que vive tanto en la card completa (rama admin) como
-// en la fila compacta de pasados. No-op si la card no está montada.
+// Repinta SOLO el stack de la card/fila del timeline tras un cambio de
+// asistencia (_evMarcarAsistenciaAdmin() / RSVP propio en
+// _evMarcarAsistencia(), optimista + revert). Card completa por su id
+// (`#ev-card-<id>`, el timeline nunca le pasa sufijo); fila compacta de
+// pasados por su ancla `#ev-asist-real-<id>`. No-op si no está montada.
 function _evActualizarAvatarsStack(idEvento) {
   var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
-  var ancla = document.getElementById('ev-asist-real-' + idEvento);
-  var card = ancla && ancla.closest('.ev-card, .ev-card-compacta-wrap');
+  var card = document.getElementById('ev-card-' + idEvento);
+  if (!card) {
+    var ancla = document.getElementById('ev-asist-real-' + idEvento);
+    card = ancla && ancla.closest('.ev-card-compacta-wrap');
+  }
   if (!ev || !card) return;
   var viejo = card.querySelector(':scope > .ev-avatars-stack');
   if (viejo) viejo.remove();
   var html = _evAvatarsStackHtml(ev);
   if (html) card.insertAdjacentHTML('afterbegin', html);
 }
-// Bottom sheet "¿Quién marcó asistencia?" (#ev-avatars-sheet, index.html) --
-// abierto desde el tap en `.ev-avatars-stack` de arriba. 2 secciones fijas,
-// "A horario"/"Tarde" (mismo vocabulario corto que `_EV_ROLLCALL_LABEL_CORTO`,
-// ya usado en el resto del archivo), badge verde/amarillo reusando
-// `.badge-confirmada`/`.badge-pendiente` (css/ui.css, mismos colores que ya
-// usa el resto de la app para esos 2 estados) -- nada nuevo que inventar ahí.
-function _evAvatarSheetFilaHtml(p, i) {
-  var color = _EV_AVATAR_COLORES[i % _EV_AVATAR_COLORES.length];
+// Bottom sheet del stack (#ev-avatars-sheet, index.html) -- abierto desde el
+// tap en `.ev-avatars-stack` de arriba. Misma fuente que el stack
+// (`_evPersonasStack()`): evento ya arrancado -> "A horario"/"Tarde" (mismo
+// vocabulario corto que `_EV_ROLLCALL_LABEL_CORTO`); todavía no arrancó ->
+// una sola sección "Asistirá" con los RSVPs 'Asistiré'. Badge verde/amarillo
+// reusando `.badge-confirmada`/`.badge-pendiente` (css/ui.css).
+function _evAvatarSheetFilaHtml(p) {
   // Nombre completo (pedido explícito) -- nombre derby solo como respaldo.
   var nombreVisible = p.nombre || p.nombreDerby;
-  var badgeClase = p.estado === 'A tiempo' ? 'badge-confirmada' : 'badge-pendiente';
+  var badgeClase = p.estado === 'Tarde' ? 'badge-pendiente' : 'badge-confirmada';
+  var label = p.estado === 'Asistiré' ? 'Asistirá' : (_EV_ROLLCALL_LABEL_CORTO[p.estado] || p.estado);
   return '<div class="ev-avsheet-fila">' +
-      '<div class="ev-av-circle ev-av-circle--md" style="background:' + color + ';">' + _evIniciales(nombreVisible) + '</div>' +
+      _evAvatarCirculoHtml(p, 'ev-av-circle--md') +
       '<span class="ev-avsheet-nombre">' + nombreVisible + '</span>' +
-      '<span class="badge ' + badgeClase + '">' + (_EV_ROLLCALL_LABEL_CORTO[p.estado] || p.estado) + '</span>' +
+      '<span class="badge ' + badgeClase + '">' + label + '</span>' +
     '</div>';
 }
 function _evAvatarSheetSeccionHtml(titulo, personas) {
   if (!personas.length) return '';
-  var filas = personas.map(function(p, i) { return _evAvatarSheetFilaHtml(p, i); }).join('');
+  var filas = personas.map(function(p) { return _evAvatarSheetFilaHtml(p); }).join('');
   return '<div class="ev-avsheet-seccion"><div class="ev-avsheet-seccion-titulo">' + titulo + '</div>' + filas + '</div>';
 }
 function _evAbrirSheetAvatares(eventoId) {
   var e = _EV_EVENTOS.filter(function(x) { return x.id === eventoId; })[0];
   if (!e) return;
-  var aHorario = (e.asistentes || []).filter(function(a) { return a.estado === 'A tiempo'; });
-  var tarde = (e.asistentes || []).filter(function(a) { return a.estado === 'Tarde'; });
+  var personas = _evPersonasStack(e);
+  var html = _evYaEmpezo(e)
+    ? _evAvatarSheetSeccionHtml('A horario', personas.filter(function(a) { return a.estado === 'A tiempo'; })) +
+      _evAvatarSheetSeccionHtml('Tarde', personas.filter(function(a) { return a.estado === 'Tarde'; }))
+    : _evAvatarSheetSeccionHtml('Asistirá', personas);
   var body = document.getElementById('ev-avatars-sheet-body');
   var titulo = document.getElementById('ev-avatars-sheet-titulo');
   if (titulo) titulo.textContent = e.tipo + ' · ' + e.lugar;
-  if (body) body.innerHTML = _evAvatarSheetSeccionHtml('A horario', aHorario) + _evAvatarSheetSeccionHtml('Tarde', tarde);
+  if (body) body.innerHTML = html;
   var ov = document.getElementById('ev-avatars-sheet-overlay');
   var sh = document.getElementById('ev-avatars-sheet');
   if (!ov || !sh) return;
@@ -4752,6 +4766,8 @@ function _evMarcarAsistencia(id, estado) {
     // abierto en este momento -- si no, no hace falta (se arma fresco desde
     // `ev.rsvps`, ya actualizado, la próxima vez que se abra).
     if (_evDetalleActual && _evDetalleActual.id === id) _evRenderDetalleAsistencia(ev);
+    // Avatar stack de la card (RSVPs 'Asistiré' en eventos futuros).
+    _evActualizarAvatarsStack(id);
   };
   // Sin toast en el éxito, a propósito (ver "Cambios recientes") -- el
   // resaltado animado de la opción tocada ya es feedback suficiente, mismo
