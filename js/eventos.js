@@ -321,7 +321,7 @@ function _evMapEventoBackend(raw) {
     // descarta ACÁ, antes de separar en asistentes/rsvps -- un solo punto
     // de filtrado que cubre TODOS los renders que consumen esos 2 arrays
     // (`_evGrupoAsistenciaHtml()`/
-    // `_evRsvpAccordionHtml()`/etc.), en vez de agregar el mismo chequeo en
+    // `_evAvatarsStackHtml()`/etc.), en vez de agregar el mismo chequeo en
     // cada uno. No puede afectar `miEstado`/`miAsistenciaReal` (la cuenta
     // logueada, `E.nombre`, por definición SÍ existe en `equipo` -- nunca es
     // ella la que se descarta acá).
@@ -2497,13 +2497,6 @@ function _evCardEventoHtml(e, sufijo) {
   // único caller en _evTimelineFilaHtml()).
   else if (_adminToken && _evYaEmpezo(e)) accionBody = '<div id="ev-asist-real-' + e.id + '">' + _evRsvpBarraHtml(e) + '</div>' + _evAccionAdminHtml(e);
   else accionBody = _evRsvpBarraHtml(e);
-  // Acordeón "Asistencia (N)" de RSVPs para eventos FUTUROS (pedido
-  // explícito, ver MANIFEST.md) -- mutuamente excluyente con la rama de
-  // arriba (`_evYaEmpezo(e)`): solo se suma cuando el evento todavía no
-  // arrancó y ya tiene al menos 1 RSVP, así que solo convive con la rama
-  // `else` (barra de RSVP propia) -- nunca con la gestión admin de
-  // asistencia REAL (esa es post-arranque) ni con el estado cancelado.
-  if (!cancelado && !_evYaEmpezo(e) && e.rsvps && e.rsvps.length > 0) accionBody += _evRsvpAccordionHtml(e);
 
   // Estado de una reserva ya hecha para este evento (mirlxs -- ver "Cambios
   // recientes"). `_todasReservas` (js/home.js, global, poblado por
@@ -2632,7 +2625,8 @@ function _evActualizarAvatarsStack(idEvento) {
 // usa el resto de la app para esos 2 estados) -- nada nuevo que inventar ahí.
 function _evAvatarSheetFilaHtml(p, i) {
   var color = _EV_AVATAR_COLORES[i % _EV_AVATAR_COLORES.length];
-  var nombreVisible = p.nombreDerby || p.nombre;
+  // Nombre completo (pedido explícito) -- nombre derby solo como respaldo.
+  var nombreVisible = p.nombre || p.nombreDerby;
   var badgeClase = p.estado === 'A tiempo' ? 'badge-confirmada' : 'badge-pendiente';
   return '<div class="ev-avsheet-fila">' +
       '<div class="ev-av-circle ev-av-circle--md" style="background:' + color + ';">' + _evIniciales(nombreVisible) + '</div>' +
@@ -2651,6 +2645,8 @@ function _evAbrirSheetAvatares(eventoId) {
   var aHorario = (e.asistentes || []).filter(function(a) { return a.estado === 'A tiempo'; });
   var tarde = (e.asistentes || []).filter(function(a) { return a.estado === 'Tarde'; });
   var body = document.getElementById('ev-avatars-sheet-body');
+  var titulo = document.getElementById('ev-avatars-sheet-titulo');
+  if (titulo) titulo.textContent = e.tipo + ' · ' + e.lugar;
   if (body) body.innerHTML = _evAvatarSheetSeccionHtml('A horario', aHorario) + _evAvatarSheetSeccionHtml('Tarde', tarde);
   var ov = document.getElementById('ev-avatars-sheet-overlay');
   var sh = document.getElementById('ev-avatars-sheet');
@@ -4805,69 +4801,12 @@ function _evMarcarAsistencia(id, estado) {
   });
 }
 
-/* ── Variante admin: lista de asistentes con chip + botón de gestión ───
-   Lista colapsada por default (ver "Cambios recientes"), mismo mecanismo
-   que `_evAntSetAcordeon()`/`adminToggleBanner()` (js/admin.js): techo fijo
-   generoso vía clase `.abierto` en vez de medir `scrollHeight` en cada
-   toggle. `_evAsistAdminAbierto` (id de evento o null) es GLOBAL a todo el
-   timeline, no por-card -- abrir el acordeón de una card cierra el de
-   cualquier otra que hubiera quedado abierta, mismo criterio "solo uno a la
-   vez" que `_adminCerrarTodoAbierto()`. El estado se re-aplica en cada
-   render (`abierto` calculado contra `_evAsistAdminAbierto` al armar el
-   HTML) para sobrevivir a un re-render completo del timeline.
-
-   El botón "Tomar asistencia" (ver "Cambios recientes" -- texto y posición:
-   antes decía "Agregar persona" y vivía debajo de "Asistencia (N)", ahora
-   arriba del todo) navega a la subpantalla dedicada (`_evAbrirMarcarAsistencia()`,
-   ver más abajo -- consolidación final, ver MANIFEST.md) -- MISMO componente
-   que el botón equivalente del detalle de un evento (reemplaza a la card
-   "Ausentes" ahí), ambos puntos de entrada reusan el roster precargado
-   (`_evRosterEquipo`/`_evPrecargarRoster()`, más arriba) y las filas que arma
-   `_evRosterAdminFilasHtml()`. */
-var _evAsistAdminAbierto = null;
-function _evAsistAdminSetAbierto(id, abrir) {
-  var header = document.getElementById('ev-asist-admin-header-' + id);
-  var body = document.getElementById('ev-asist-admin-body-' + id);
-  if (header) header.classList.toggle('abierto', abrir);
-  if (body) body.classList.toggle('abierto', abrir);
-}
-function _evAsistAdminToggle(id) {
-  var estabaAbierto = _evAsistAdminAbierto === id;
-  if (_evAsistAdminAbierto) _evAsistAdminSetAbierto(_evAsistAdminAbierto, false);
-  _evAsistAdminAbierto = estabaAbierto ? null : id;
-  if (_evAsistAdminAbierto) {
-    _evAsistAdminSetAbierto(_evAsistAdminAbierto, true);
-    // Las filas ya están en el DOM desde el render inicial de la card
-    // (oculto vía max-height:0, no removido) -- _evHidratarAvatares() ya
-    // corrió entonces, así que esto es defensivo/idempotente, no el
-    // mecanismo real de hidratación. Cubre igual el pedido explícito de
-    // "hidratar al expandir", por si a futuro este acordeón pasa a
-    // pintarse recién al abrir en vez de siempre.
-    _evHidratarAvatares();
-  }
-}
-// Fila de avatares del header del acordeón "Asistencia" (pedido explícito,
-// reemplaza el "(N)" numérico) -- primeros 5 + "+N" con el resto, si hay más.
-// Usada por _evRsvpAccordionHtml() (RSVP futuro; el acordeón "Asistieron"
-// de _evAccionAdminHtml() que también la usaba se eliminó). `<div>`, no
-// `<span>`, para el avatar en sí -- `.avatar-pill`
-// no declara `display` propio, así que `width`/`height` no aplicarían sobre
-// un elemento inline.
-function _evAcordHeaderAvataresHtml(personas) {
-  // Filtro de fantasmas (ver MANIFEST.md -- "usuario con '?' y sin nombre en
-  // asistentes de eventos"), mismo criterio defensivo que el resto de los
-  // renders de asistentes de este archivo.
-  personas = (personas || []).filter(function(p) { return !!(p.nombre || p.nombreDerby); });
-  var visibles = personas.slice(0, 5);
-  var resto = (personas || []).length - visibles.length;
-  var avatares = visibles.map(function(p) {
-    var nombreAttr = String(p.nombre).replace(/"/g, '&quot;');
-    var fotoAttr = (p.fotoPerfil || '').replace(/"/g, '&quot;');
-    return '<div class="avatar-pill avatar-pill--xs ev-avatar-stack-item" data-nombre="' + nombreAttr + '" data-foto="' + fotoAttr + '"></div>';
-  }).join('');
-  var masHtml = resto > 0 ? '<span class="ev-acord-avatar-mas">+' + resto + '</span>' : '';
-  return '<div class="ev-acord-header-avatares">' + avatares + masHtml + '</div>';
-}
+/* ── Variante admin: botón "Tomar asistencia" de la card ───────────────
+   Navega a la subpantalla dedicada (`_evAbrirMarcarAsistencia()`, más
+   abajo) -- MISMO componente que el botón equivalente del detalle de un
+   evento. Los acordeones inline de la card ("Asistieron" admin y RSVPs de
+   eventos futuros) se eliminaron: la asistencia se ve solo en el avatar
+   stack (`_evAvatarsStackHtml()`) + su bottom sheet. */
 function _evAccionAdminHtml(e) {
   // stopPropagation: mismo motivo que _evRsvpBarraHtml() -- la card entera
   // ahora es clickeable (abre el detalle), esto evita que tocar "Tomar
@@ -4877,53 +4816,6 @@ function _evAccionAdminHtml(e) {
   // superior derecha de la card).
   return '<div class="ev-asistentes-list" onclick="event.stopPropagation()">' +
     '<button class="ev-btn-agregar-persona" onclick="_evAbrirMarcarAsistencia(\'' + e.id + '\',\'s-eventos\')"><span class="material-symbols-outlined">person_add</span>Tomar asistencia</button>' +
-  '</div>';
-}
-// Acordeón "Asistencia (N)" de RSVPs para eventos FUTUROS (pedido explícito,
-// ver MANIFEST.md), llamado desde _evCardEventoHtml() -- reusa LITERAL las
-// clases/ids del acordeón admin de arriba (`.ev-asist-admin-header`/
-// `.ev-asist-admin-body`, ids `ev-asist-admin-header-<id>`/
-// `ev-asist-admin-body-<id>`, `_evAsistAdminToggle()`/`_evAsistAdminAbierto`)
-// -- mutuamente excluyente por tiempo con `_evAccionAdminHtml()` (esa es
-// post-`_evYaEmpezo()`, esta es pre-), nunca compiten por el mismo id para
-// el mismo evento, así el toggle "solo uno a la vez" y el mecanismo de
-// abrir/cerrar funcionan sin ningún código nuevo. Sin botón "Tomar
-// asistencia" (no tiene sentido antes de que el evento arranque) -- filas
-// agrupadas por RSVP (Asistirá/No asistirá/No jugador) en vez de por
-// puntualidad real, mismo orden que `_EV_GRUPOS_ASISTENCIA` (detalle).
-var _EV_GRUPOS_RSVP_CARD = [
-  { estado: 'Asistiré', label: 'Asistirá', clase: 'ev-rsvp-asiste' },
-  { estado: 'No asistiré', label: 'No asistirá', clase: 'ev-rsvp-no-asiste' },
-  { estado: 'No jugador', label: 'No jugador', clase: 'ev-rsvp-no-jugador' }
-];
-function _evRsvpAccordionHtml(e) {
-  // Filtro de fantasmas (ver MANIFEST.md -- "usuario con '?' y sin nombre en
-  // asistentes de eventos"), mismo criterio defensivo que el resto de los
-  // renders de asistentes de este archivo.
-  var rsvps = (e.rsvps || []).filter(function(p) { return !!(p.nombre || p.nombreDerby); });
-  if (!rsvps.length) return '';
-  var abierto = _evAsistAdminAbierto === e.id;
-  var filas = _EV_GRUPOS_RSVP_CARD.map(function(g) {
-    var personas = rsvps.filter(function(p) { return p.estado === g.estado; });
-    if (!personas.length) return '';
-    return personas.map(function(p) {
-      var nombreAttr = String(p.nombre).replace(/"/g, '&quot;');
-      var fotoAttr = (p.fotoPerfil || '').replace(/"/g, '&quot;');
-      return '<div class="ev-acord-fila">' +
-        '<div class="avatar-pill avatar-pill--sm ev-avatar-stack-item" data-nombre="' + nombreAttr + '" data-foto="' + fotoAttr + '"></div>' +
-        '<span class="ev-acord-nombre">' + (p.nombreDerby || p.nombre) + '</span>' +
-        '<span class="ev-acord-pill ' + g.clase + '">' + g.label + '</span>' +
-      '</div>';
-    }).join('');
-  }).join('');
-  return '<div class="ev-asistentes-list" onclick="event.stopPropagation()">' +
-    '<div class="ev-asist-admin-header' + (abierto ? ' abierto' : '') + '" id="ev-asist-admin-header-' + e.id + '" onclick="_evAsistAdminToggle(\'' + e.id + '\')">' +
-      '<span class="ev-asist-admin-header-titulo">' + _evAcordHeaderAvataresHtml(rsvps.filter(function(p) { return p.estado !== 'No asistiré'; })) + '</span>' +
-      '<span class="material-symbols-outlined ev-asist-admin-chevron">expand_more</span>' +
-    '</div>' +
-    '<div class="ev-asist-admin-body' + (abierto ? ' abierto' : '') + '" id="ev-asist-admin-body-' + e.id + '">' +
-      '<div class="ev-asist-admin-body-inner">' + filas + '</div>' +
-    '</div>' +
   '</div>';
 }
 // Subpantalla dedicada "Marcar asistencia" (ver "Cambios recientes" --

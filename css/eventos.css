@@ -471,17 +471,15 @@
 .ev-sinrollcall-banner-acciones .btn-danger-outline:hover { filter: brightness(0.95); transform: translateY(-2px); }
 .ev-sinrollcall-banner-acciones .btn-danger-outline:active { transform: translateY(0) scale(0.98); }
 /* Ícono "pendiente de sincronizar" sobre un control tocado sin conexión
-   (`.ev-rsvp-seg`/`#ev-asist-admin-header-<id>`) -- inyectado/sacado por
+   (`.ev-rsvp-seg`) -- inyectado/sacado por
    `_offMarcarPendiente()`/js/offline.js, sobrevive un re-render completo
    del timeline porque se reaplica ahí mismo
    (`_offAplicarIndicadoresPendientes()`). Offset SIN negativos (`top`/
    `right` positivos, dentro de la caja) a propósito -- `.ev-rsvp-seg`
    (arriba) tiene `overflow:hidden` propio (para las esquinas redondeadas
    del indicador deslizante), un offset negativo hubiera quedado recortado
-   por ese mismo `overflow`. `.ev-asist-admin-header` ya es `position:relative`
-   implícito vía este mismo selector (no lo era antes, sin efecto en su
-   layout `flex` existente). */
-.ev-rsvp-seg, .ev-asist-admin-header { position: relative; }
+   por ese mismo `overflow`. */
+.ev-rsvp-seg { position: relative; }
 .ev-sync-badge {
   position: absolute; top: 3px; right: 3px; font-size: 12px; width: 16px; height: 16px;
   border-radius: 50%; background: var(--warning); color: var(--white);
@@ -512,7 +510,7 @@
    normal, sin `padding-right` extra a propósito -- el stack es chico y las
    cards de este timeline no llevan texto largo pegado al borde derecho). */
 .ev-avatars-stack {
-  position: absolute; top: 14px; right: 14px;
+  position: absolute; top: 12px; right: 12px;
   display: flex; flex-direction: row-reverse; align-items: center;
   cursor: pointer; z-index: 1;
 }
@@ -709,44 +707,6 @@
    abajo) + "Agregar persona" (bottom sheet remoto, usado por la card).
    ──────────────────────────────────────────────────────────────────── */
 .ev-asistentes-list { margin-top: 10px; }
-/* Acordeón de la lista de nombres de la CARD (ver "Cambios recientes" --
-   colapsada por default): mismo TIPO de mecanismo que `.admin-dash-banner-*`
-   (css/admin.css, `adminToggleBanner()`) y `.ev-ant-acc-*` (más abajo en
-   este archivo) -- techo fijo generoso en vez de medir `scrollHeight` en
-   cada toggle, ver `_evAsistAdminToggle()`/js/eventos.js. **Sin cambios**
-   en esta sesión -- una tanda anterior había reemplazado el CONTENIDO de
-   este acordeón por el roster+buscador (ver más abajo), revertido acá: el
-   contenido vuelve a ser la lista de chips (`.ev-asistente-row`, más abajo)
-   + "Agregar persona" (`.ev-btn-agregar-persona`, más abajo). */
-.ev-asist-admin-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 2px; cursor: pointer; }
-.ev-asist-admin-header-titulo { font-size: 0.78rem; font-weight: 700; color: var(--text-2); }
-/* Fila de avatares del header (pedido explícito, reemplaza el "(N)" numérico
-   -- ver _evAcordHeaderAvataresHtml()/js/eventos.js). Vive DENTRO de
-   `.ev-asist-admin-header-titulo` (`<span>`), que sigue siendo el único
-   hijo "izquierdo" del header flex de arriba -- el `<div>` de acá adentro
-   de un `<span>` es HTML técnicamente inválido (div no es phrasing
-   content), pero los navegadores no auto-cierran `<span>` al toparse con
-   contenido de bloque (a diferencia de `<p>`/`<li>`) -- se renderiza
-   idéntico a como está escrito, sin reparenting. */
-.ev-acord-header-avatares { display: inline-flex; align-items: center; gap: 3px; vertical-align: middle; margin-left: 6px; }
-.ev-acord-avatar-mas { font-size: 0.72rem; font-weight: 700; color: var(--muted); margin-left: 2px; }
-.ev-asist-admin-chevron { color: var(--muted); font-size: 1.1rem; transition: transform 0.3s; flex-shrink: 0; }
-.ev-asist-admin-header.abierto .ev-asist-admin-chevron { transform: rotate(180deg); }
-.ev-asist-admin-body { max-height: 0; overflow: hidden; transition: max-height 0.35s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease; opacity: 0; }
-.ev-asist-admin-body.abierto { max-height: 2000px; opacity: 1; }
-.ev-asist-admin-body-inner { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; }
-/* Acordeón "Asistencia (N)" de RSVPs para eventos futuros (ver MANIFEST.md,
-   _evRsvpAccordionHtml()/js/eventos.js) -- mismo layout fila que
-   `.ev-asistente-row`/`.ev-asistente-nombre` de arriba, clases propias
-   porque agrupa por RSVP (Asistirá/No asistirá/No jugador) en vez de por
-   puntualidad real, con su propio pill de color en vez de `.badge`. */
-.ev-acord-fila { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-light); }
-.ev-acord-fila:last-child { border-bottom: none; }
-.ev-acord-nombre { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8rem; font-weight: 600; color: var(--text); }
-.ev-acord-pill { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; padding: 3px 7px; border-radius: 20px; }
-.ev-rsvp-asiste    { background: var(--success-bg); color: var(--success-dark); }
-.ev-rsvp-no-asiste { background: var(--danger-bg);  color: var(--danger); }
-.ev-rsvp-no-jugador{ background: var(--warning-bg); color: var(--amber-dark); }
 /* Roster completo de la subpantalla dedicada "Marcar asistencia" (ver
    "Cambios recientes" -- diseño final, #s-eventos-marcar-asistencia,
    index.html): buscador (`.app-nav-search`, reusado tal cual del resto de
@@ -1117,10 +1077,8 @@
   border-radius: 12px; transition: border-color 0.15s; overflow: hidden;
 }
 .ev-card-compacta-wrap:hover { border-color: var(--brand); }
-/* Fila compacta: padding de 12px (no 14px como `.ev-card`) -- alinea el stack
-   con ese padding; `padding-right` en la info para que el título no quede
-   debajo de los avatares. */
-.ev-card-compacta-wrap .ev-avatars-stack { top: 12px; right: 12px; }
+/* `padding-right` en la info para que el título no quede debajo del
+   avatar stack (`top/right:12px`, ver `.ev-avatars-stack`). */
 .ev-card-compacta-wrap:has(.ev-avatars-stack) .ev-card-compacta-info { padding-right: 84px; }
 .ev-card-compacta { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; }
 .ev-card-compacta-info { flex: 1; min-width: 0; }
