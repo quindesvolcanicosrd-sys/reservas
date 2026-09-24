@@ -320,7 +320,7 @@ function _evMapEventoBackend(raw) {
     // este campo todavía no lo manda, `undefined` no debe filtrar nada). Se
     // descarta ACÁ, antes de separar en asistentes/rsvps -- un solo punto
     // de filtrado que cubre TODOS los renders que consumen esos 2 arrays
-    // (`_evGrupoAsistenciaHtml()`/`_evAsistentesFilasHtml()`/
+    // (`_evGrupoAsistenciaHtml()`/
     // `_evRsvpAccordionHtml()`/etc.), en vez de agregar el mismo chequeo en
     // cada uno. No puede afectar `miEstado`/`miAsistenciaReal` (la cuenta
     // logueada, `E.nombre`, por definición SÍ existe en `equipo` -- nunca es
@@ -2609,6 +2609,21 @@ function _evAvatarsStackHtml(e) {
   var extraHtml = total > 3 ? '<span class="ev-av-extra">+' + (total - 3) + '</span>' : '';
   return '<div class="ev-avatars-stack" onclick="event.stopPropagation();_evAbrirSheetAvatares(\'' + e.id + '\')">' + circulos + extraHtml + '</div>';
 }
+// Repinta SOLO el stack de la card/fila del timeline tras marcar asistencia
+// (_evMarcarAsistenciaAdmin(), optimista + revert) -- reemplaza al refresco
+// del header del acordeón "Asistieron" (eliminado). Ancla:
+// `#ev-asist-real-<id>`, que vive tanto en la card completa (rama admin) como
+// en la fila compacta de pasados. No-op si la card no está montada.
+function _evActualizarAvatarsStack(idEvento) {
+  var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
+  var ancla = document.getElementById('ev-asist-real-' + idEvento);
+  var card = ancla && ancla.closest('.ev-card, .ev-card-compacta-wrap');
+  if (!ev || !card) return;
+  var viejo = card.querySelector(':scope > .ev-avatars-stack');
+  if (viejo) viejo.remove();
+  var html = _evAvatarsStackHtml(ev);
+  if (html) card.insertAdjacentHTML('afterbegin', html);
+}
 // Bottom sheet "¿Quién marcó asistencia?" (#ev-avatars-sheet, index.html) --
 // abierto desde el tap en `.ev-avatars-stack` de arriba. 2 secciones fijas,
 // "A horario"/"Tarde" (mismo vocabulario corto que `_EV_ROLLCALL_LABEL_CORTO`,
@@ -4833,10 +4848,9 @@ function _evAsistAdminToggle(id) {
 }
 // Fila de avatares del header del acordeón "Asistencia" (pedido explícito,
 // reemplaza el "(N)" numérico) -- primeros 5 + "+N" con el resto, si hay más.
-// Reusada por _evAccionAdminHtml() (asistencia real, admin) y
-// _evRsvpAccordionHtml() (RSVP futuro) -- mismo shape de persona en los 2
-// casos (`nombre`/`fotoPerfil`). `<div>`, no `<span>`, para el avatar en sí
-// -- mismo motivo ya documentado en _evAsistentesFilasHtml(): `.avatar-pill`
+// Usada por _evRsvpAccordionHtml() (RSVP futuro; el acordeón "Asistieron"
+// de _evAccionAdminHtml() que también la usaba se eliminó). `<div>`, no
+// `<span>`, para el avatar en sí -- `.avatar-pill`
 // no declara `display` propio, así que `width`/`height` no aplicarían sobre
 // un elemento inline.
 function _evAcordHeaderAvataresHtml(personas) {
@@ -4854,54 +4868,15 @@ function _evAcordHeaderAvataresHtml(personas) {
   var masHtml = resto > 0 ? '<span class="ev-acord-avatar-mas">+' + resto + '</span>' : '';
   return '<div class="ev-acord-header-avatares">' + avatares + masHtml + '</div>';
 }
-// Extraída de _evAccionAdminHtml() para poder re-generar SOLO estas filas
-// (_evActualizarListaAsistAdmin(), _evMarcarAsistenciaAdmin() más abajo) sin
-// reconstruir el resto de la card (botón "Tomar asistencia" + header con
-// contador, que ya se actualizaba aparte vía _evActualizarContadorAsistAdmin()).
-function _evAsistentesFilasHtml(e) {
-  // Filtro de fantasmas (ver MANIFEST.md -- "usuario con '?' y sin nombre en
-  // asistentes de eventos") -- mismo criterio defensivo que
-  // _evGrupoAsistenciaHtml()/_evPintarStatsAsistencia(), 2da capa detrás del
-  // filtrado real en _evMapEventoBackend() (`existeEnEquipo`).
-  var asistentes = (e.asistentes || []).filter(function(p) { return !!(p.nombre || p.nombreDerby); });
-  return asistentes.map(function(a) {
-    // Puntualidad (a.estado) + rol (RSVP original de esa persona, si lo
-    // hay) combinados -- ver _evLabelPuntualidadRol(). El badge de color
-    // sigue leyendo a.estado a secas (A tiempo/Tarde/Ausente): el rol nunca
-    // cambia el color, solo agrega texto.
-    var label = _evLabelPuntualidadRol(a.estado, _evRolDePersona(e, a.nombre));
-    // Avatar (pedido explícito, ver MANIFEST.md) -- `ev-avatar-stack-item`
-    // (además de `avatar-pill--sm`) es el selector real que hidrata
-    // _evHidratarAvatares() (ver esa función, más arriba); sin esa clase el
-    // avatar quedaría vacío para siempre, nunca se completa solo por tener
-    // `data-nombre`.
-    var nombreAttr = String(a.nombre).replace(/"/g, '&quot;');
-    var fotoAttr = (a.fotoPerfil || '').replace(/"/g, '&quot;');
-    return '<div class="ev-asistente-row">' +
-      '<div class="avatar-pill avatar-pill--sm ev-avatar-stack-item" data-nombre="' + nombreAttr + '" data-foto="' + fotoAttr + '"></div>' +
-      '<span class="ev-asistente-nombre">' + (a.nombreDerby || a.nombre) + '</span>' +
-      '<span class="badge ' + (_EV_CHIP_BADGE[a.estado] || 'badge-pendiente') + '">' + label + '</span></div>';
-  }).join('');
-}
 function _evAccionAdminHtml(e) {
-  var filas = _evAsistentesFilasHtml(e);
-  var abierto = _evAsistAdminAbierto === e.id;
   // stopPropagation: mismo motivo que _evRsvpBarraHtml() -- la card entera
-  // ahora es clickeable (abre el detalle), esto evita que tocar el header,
-  // una fila o "Tomar asistencia" también dispare ese click.
-  // Orden (ver "Cambios recientes" -- pedido explícito de Victor): el botón
-  // va PRIMERO, arriba de "Asistencia (N)" -- antes vivía debajo del todo.
+  // ahora es clickeable (abre el detalle), esto evita que tocar "Tomar
+  // asistencia" también dispare ese click. El acordeón "Asistieron" que
+  // vivía debajo de este botón se eliminó (pedido explícito, ver
+  // MANIFEST.md) -- reemplazado por `_evAvatarsStackHtml()` (esquina
+  // superior derecha de la card).
   return '<div class="ev-asistentes-list" onclick="event.stopPropagation()">' +
     '<button class="ev-btn-agregar-persona" onclick="_evAbrirMarcarAsistencia(\'' + e.id + '\',\'s-eventos\')"><span class="material-symbols-outlined">person_add</span>Tomar asistencia</button>' +
-    '<div class="ev-asist-admin-header' + (abierto ? ' abierto' : '') + '" id="ev-asist-admin-header-' + e.id + '" onclick="_evAsistAdminToggle(\'' + e.id + '\')">' +
-      '<span class="ev-asist-admin-header-titulo">Asistieron' + _evAcordHeaderAvataresHtml(e.asistentes) + '</span>' +
-      '<span class="material-symbols-outlined ev-asist-admin-chevron">expand_more</span>' +
-    '</div>' +
-    '<div class="ev-asist-admin-body' + (abierto ? ' abierto' : '') + '" id="ev-asist-admin-body-' + e.id + '">' +
-      '<div class="ev-asist-admin-body-inner">' +
-        (filas || '<div style="font-size:0.76rem;color:var(--muted);">Nadie ha marcado todavía.</div>') +
-      '</div>' +
-    '</div>' +
   '</div>';
 }
 // Acordeón "Asistencia (N)" de RSVPs para eventos FUTUROS (pedido explícito,
@@ -5100,10 +5075,7 @@ function _evRosterAdminFilasHtml(e, q) {
 // propio, más arriba): resalta la opción y reposiciona SOLO el slider de
 // esa fila (`btnEl.closest('.ev-rsvp-seg')`, nunca un sweep de
 // `_evUpdateRsvpSliders()` sobre todo el roster) y actualiza
-// `ev.asistentes`/el contador del header Y las filas nombre+badge de la
-// lista "Asistencia (N)" de la card (`_evActualizarListaAsistAdmin()`, si
-// esa card sigue en el timeline detrás del detalle -- consistencia gratis,
-// sin costo, sin esperar a que el timeline se reconstruya entero) en
+// `ev.asistentes` en
 // memoria antes de que la escritura real resuelva. Repinta también las
 // tarjetas de estadística + lista del detalle (`_evActualizarStatsAsistenciaReal()`)
 // si ese evento está abierto ahí -- sin reconstruir la subpantalla "Marcar
@@ -5154,9 +5126,8 @@ function _evMarcarAsistenciaAdmin(idEvento, nombre, estado, btnEl) {
     sinPersona.concat([{ nombre: nombre, estado: estadoAEnviar, origen: 'Admin', nombreDerby: datosRoster.nombreDerby || '', fotoPerfil: datosRoster.fotoPerfil || '' }]);
   aplicarEnDom(estadoAEnviar === 'Ninguno' ? null : estadoAEnviar);
   if (ev.asistentes.length) _evSinRollcallResuelto(ev);
-  _evActualizarContadorAsistAdmin(idEvento);
-  _evActualizarListaAsistAdmin(idEvento);
   _evActualizarAsistenciaPropiaCard(idEvento);
+  _evActualizarAvatarsStack(idEvento);
   if (_evDetalleActual && _evDetalleActual.id === idEvento) _evActualizarStatsAsistenciaReal(ev);
   // Modo sin conexión (feat nueva, ver MANIFEST.md/CHANGELOG.md, js/offline.js)
   // -- mismo criterio que _evMarcarAsistencia(): el cambio optimista de
@@ -5188,40 +5159,13 @@ function _evMarcarAsistenciaAdmin(idEvento, nombre, estado, btnEl) {
   }, function(e) {
     ev.asistentes = asistentesAnterior;
     aplicarEnDom(anteriorDeEstaPersona ? anteriorDeEstaPersona.estado : null);
-    _evActualizarContadorAsistAdmin(idEvento);
-    _evActualizarListaAsistAdmin(idEvento);
     _evActualizarAsistenciaPropiaCard(idEvento);
+    _evActualizarAvatarsStack(idEvento);
     if (_evDetalleActual && _evDetalleActual.id === idEvento) _evActualizarStatsAsistenciaReal(ev);
     mostrarToast(e && e.message ? e.message : 'No se pudo guardar la asistencia.', 'error');
   });
 }
-function _evActualizarContadorAsistAdmin(idEvento) {
-  var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
-  var titulo = document.querySelector('#ev-asist-admin-header-' + idEvento + ' .ev-asist-admin-header-titulo');
-  if (!ev || !titulo) return;
-  titulo.innerHTML = 'Asistieron' + _evAcordHeaderAvataresHtml(ev.asistentes);
-  _evHidratarAvatares();
-}
-// Repinta SOLO las filas nombre+badge de la lista "Asistencia (N)" que ya
-// vive en la card del timeline (`#ev-asist-admin-body-<id> .ev-asist-admin-body-inner`,
-// armada por _evAccionAdminHtml()/_evAsistentesFilasHtml()) -- sin esto, tras
-// marcar a alguien desde el roster de "Marcar asistencia" o el toggle inline
-// del detalle, el contador del header ya se actualizaba (_evActualizarContadorAsistAdmin(),
-// arriba) pero las filas de abajo quedaban con los datos del render inicial
-// de la card hasta la próxima vez que se reconstruyera el timeline entero
-// (volver a Eventos, cambiar de mes, etc.) -- el bug real reportado ("el
-// timeline no refleja el cambio sin recargar"). Mismo criterio que esa
-// función: no-op silencioso si la card no está montada en este momento (la
-// pantalla de Eventos puede no ser la que está visible mientras se marca).
-function _evActualizarListaAsistAdmin(idEvento) {
-  var ev = _EV_EVENTOS.filter(function(e) { return e.id === idEvento; })[0];
-  var inner = document.querySelector('#ev-asist-admin-body-' + idEvento + ' .ev-asist-admin-body-inner');
-  if (!ev || !inner) return;
-  inner.innerHTML = _evAsistentesFilasHtml(ev) || '<div style="font-size:0.76rem;color:var(--muted);">Nadie ha marcado todavía.</div>';
-  _evHidratarAvatares();
-}
-// Bug real corregido (Victor): distinto de _evActualizarListaAsistAdmin()
-// (arriba), que solo repinta el roster interno "Asistencia (N)" -- esta
+// Bug real corregido (Victor): esta
 // refresca la nota/pill de "MI propia asistencia real" de la card del
 // timeline (`#ev-asist-real-<id>`, ver _evCardEventoHtml()/
 // _evTimelineFilaHtml()), que quedaba con el estado viejo cuando la cuenta
@@ -5486,9 +5430,7 @@ function _evBuscar(q) { _evBusqueda = q; _evRenderTimeline(true); }
 // Nota de asistencia propia de la fila compacta (pasado) -- extraída de
 // _evTimelineFilaHtml() (función pura, mismo resultado) para poder
 // recalcularla sola desde _evActualizarAsistenciaPropiaCard() sin
-// reconstruir la fila entera -- mismo criterio ya usado por
-// _evAsistentesFilasHtml()/_evActualizarListaAsistAdmin() para el roster
-// admin (ver "Cambios recientes").
+// reconstruir la fila entera.
 function _evNotaAsistenciaHtml(e) {
   var cancelado = (e.estado === 'Cancelado' || e.estado === 'No se entrena');
   var _preIngreso = E.datos && E.datos.fechaIngreso && _evFechaCmp(e.fecha, E.datos.fechaIngreso) < 0;
@@ -5532,7 +5474,12 @@ function _evTimelineFilaHtml(e) {
   // diferencial intencional que se mantiene: el ícono en gris apagado
   // (`.ev-card-icono--pasado`, `filter:grayscale(1)`) en vez del color de
   // marca.
+  // Avatar stack de asistencia real (`_evAvatarsStackHtml()`) -- bug real
+  // corregido: solo se sumaba en `_evCardEventoHtml()` (hoy/futuro), pero
+  // `e.asistentes` casi siempre llega recién en eventos YA pasados, que se
+  // pintan acá -- el stack nunca aparecía en la práctica.
   return '<div class="ev-card-compacta-wrap ev-pasado-atenuado">' +
+    _evAvatarsStackHtml(e) +
     '<div class="ev-card-compacta" onclick="abrirEvDetalle(\'' + e.id + '\')">' +
       '<div class="ev-card-compacta-info">' +
         '<div class="ev-card-titulo-row"><span class="material-symbols-outlined ev-card-icono-inline ev-card-icono--pasado">' + icono + '</span><div class="ev-card-titulo">' + e.lugar + '</div></div>' +

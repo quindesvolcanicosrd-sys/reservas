@@ -735,15 +735,6 @@
 .ev-asist-admin-body { max-height: 0; overflow: hidden; transition: max-height 0.35s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease; opacity: 0; }
 .ev-asist-admin-body.abierto { max-height: 2000px; opacity: 1; }
 .ev-asist-admin-body-inner { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; }
-.ev-asistente-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-light); }
-.ev-asistente-row:last-child { border-bottom: none; }
-/* `flex:1`+ellipsis (pedido explícito, avatar agregado a la fila) -- mismo
-   patrón que `.ev-asist-persona-nombre` (más abajo en este archivo): con el
-   avatar como 1er hijo y el badge como 3ro, esto empuja el badge al extremo
-   derecho sin romper el `justify-content:space-between` ya existente de
-   `.ev-asistente-row` (sin más espacio libre que distribuir, el resultado es
-   el mismo: avatar-izquierda / badge-derecha). */
-.ev-asistente-nombre { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8rem; font-weight: 600; color: var(--text); }
 /* Acordeón "Asistencia (N)" de RSVPs para eventos futuros (ver MANIFEST.md,
    _evRsvpAccordionHtml()/js/eventos.js) -- mismo layout fila que
    `.ev-asistente-row`/`.ev-asistente-nombre` de arriba, clases propias
@@ -1121,10 +1112,16 @@
    `.ev-card-compacta` adentro es solo la fila clickeable (ícono+info+chip de
    asistencia real, ver _evTimelineFilaHtml()). */
 .ev-card-compacta-wrap {
+  position: relative; /* ancla de `.ev-avatars-stack` (position:absolute) */
   margin-bottom: 8px; background: var(--surface-2); border: 1.5px solid var(--border-light);
   border-radius: 12px; transition: border-color 0.15s; overflow: hidden;
 }
 .ev-card-compacta-wrap:hover { border-color: var(--brand); }
+/* Fila compacta: padding de 12px (no 14px como `.ev-card`) -- alinea el stack
+   con ese padding; `padding-right` en la info para que el título no quede
+   debajo de los avatares. */
+.ev-card-compacta-wrap .ev-avatars-stack { top: 12px; right: 12px; }
+.ev-card-compacta-wrap:has(.ev-avatars-stack) .ev-card-compacta-info { padding-right: 84px; }
 .ev-card-compacta { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; }
 .ev-card-compacta-info { flex: 1; min-width: 0; }
 /* Sin chevron propio para Cancelado/No se entrena (ver "Cambios recientes"
