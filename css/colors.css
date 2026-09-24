@@ -108,6 +108,9 @@
      archivo. */
   --surface:        #F7F7F7;
   --surface-2:      #F5F5F5;
+  /* `--surface-2` sólido (sin alpha) -- borde separador del avatar stack de
+     Eventos (`.ev-av-circle`), que tiene que tapar el círculo de abajo. */
+  --surface-2-solid: #F5F5F5;
   --surface-3:      #F2F2F2;
   --surface-blur:   blur(16px);
 
@@ -444,6 +447,8 @@
        proporción relativa entre sí. */
     --surface:        rgba(255,255,255,0.16);
     --surface-2:      rgba(255,255,255,0.13);
+    /* `--surface-2` compuesto sobre `--bg` (#0D0D0D): 13 + 0.13*(255-13) ≈ 44. */
+    --surface-2-solid: #2C2C2C;
     --surface-3:      rgba(255,255,255,0.08);
 
     /* Bordes -- alphas subidas (pedido explícito #13): con el valor viejo,

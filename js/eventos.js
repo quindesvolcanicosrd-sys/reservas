@@ -2596,11 +2596,17 @@ function _evPersonasStack(e) {
 // usuario como respaldo (mismo criterio que `_eqAvatarHtml()`), y color por
 // letra vía `_eqColorAvatarDe()` (js/equipo.js -- fondo tenue + letra en el
 // color sólido del par, tokens de css/colors.css con variante oscura).
+// Con `fotoPerfil` (mismo campo que ya usan el resto de los avatares de este
+// archivo), la foto va ENCIMA de la inicial (`.ev-av-foto`, absolute) -- si
+// no carga, `onerror` la oculta y queda la inicial como fallback.
 function _evAvatarCirculoHtml(p, claseExtra) {
   var nombre = p.nombreDerby || p.nombre || '?';
   var letra = String(nombre).trim().charAt(0).toUpperCase() || '?';
   var c = _eqColorAvatarDe(nombre);
-  return '<div class="ev-av-circle' + (claseExtra ? ' ' + claseExtra : '') + '" style="background:' + c.bg + ';color:' + c.fg + ';">' + letra + '</div>';
+  var fotoHtml = p.fotoPerfil
+    ? '<img class="ev-av-foto" src="' + String(p.fotoPerfil).replace(/"/g, '&quot;') + '" alt="' + letra + '" onerror="this.style.display=\'none\'">'
+    : '';
+  return '<div class="ev-av-circle' + (claseExtra ? ' ' + claseExtra : '') + '" style="background:' + c.bg + ';color:' + c.fg + ';">' + letra + fotoHtml + '</div>';
 }
 function _evAvatarsStackHtml(e) {
   var personas = _evPersonasStack(e);
