@@ -2618,12 +2618,12 @@ function _evAvatarCirculoHtml(p, claseExtra) {
 function _evAvatarsStackHtml(e) {
   var personas = _evPersonasStack(e);
   if (!personas.length) {
-    // Pill "Nadie asistirá aún" (pedido explícito) en la misma esquina, SOLO
+    // Pill "Sin asistentes aún" (pedido explícito) en la misma esquina, SOLO
     // en eventos futuros no cancelados -- en pasados sin rollcall ya está el
     // badge/banner de "sin rollcall" para admin (`_evSinRollcallBadgeHtml()`),
     // no se duplica. Con al menos 1 persona el pill no se pinta.
     var cancelado = e.estado === 'Cancelado' || e.estado === 'No se entrena';
-    return (!cancelado && !_evYaEmpezo(e)) ? '<div class="ev-av-empty-pill">Nadie asistirá aún</div>' : '';
+    return (!cancelado && !_evYaEmpezo(e)) ? '<div class="ev-av-empty-pill">Sin asistentes aún</div>' : '';
   }
   var total = personas.length;
   var circulos = personas.slice(0, 3).map(function(p) { return _evAvatarCirculoHtml(p); }).join('');

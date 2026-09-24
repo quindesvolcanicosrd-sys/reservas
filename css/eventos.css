@@ -519,7 +519,7 @@
    (`.ev-av-extra`) vive FUERA de este contenedor, como hermano después,
    así queda siempre a la derecha del grupo. */
 .ev-av-stack { display: flex; flex-direction: row-reverse; align-items: center; }
-/* "Nadie asistirá aún" -- misma esquina que el stack, solo eventos futuros
+/* "Sin asistentes aún" -- misma esquina que el stack, solo eventos futuros
    sin RSVPs 'Asistiré' (`_evAvatarsStackHtml()`). Fondo vía `color-mix()`
    sobre `--danger` (= `--brand`, que js/color-enfasis.js pisa en runtime) en
    vez de un `--danger-rgb` fijo que quedaría desfasado -- mismo recurso que
