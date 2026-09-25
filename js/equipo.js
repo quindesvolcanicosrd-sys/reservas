@@ -3508,11 +3508,12 @@ function _eqGenerarInviteLink(id) {
 // cuenta" de `_eqAdminGestionHtml()`.
 function _eqAsistExternaHtml(p) {
   if (typeof _adminToken === 'undefined' || !_adminToken) return '';
+  var nombreMostrar = p.nombreDerby || p.nombre; // nombre derby, o username si no tiene
   return '<div class="eq-admin-sep"></div>' +
     '<div class="eq-admin-campo--row">' +
       '<div>' +
         '<p class="eq-tier-label" style="margin-bottom:2px">Asistencia externa</p>' +
-        '<p class="eq-admin-hint" style="margin:0">Entrenó con otro equipo -- suma 1 punto de asistencia.</p>' +
+        '<p class="eq-admin-hint" style="margin:0">Agrega una asistencia externa a un entrenamiento al que haya asistido ' + _eqEsc(nombreMostrar) + ' en otro equipo o en otro país para que se registre su punto de asistencia.</p>' +
       '</div>' +
       '<button type="button" class="btn-text-simple" style="white-space:nowrap;" onclick="_eqAbrirSheetAsistExterna(\'' + _eqEscId(p.id) + '\')">Registrar asistencia externa</button>' +
     '</div>';
