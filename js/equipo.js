@@ -3613,8 +3613,12 @@ function _eqCambiarEstado(id, nuevoEstado) {
 // guardado del sheet "De viaje".
 function _eqAplicarEstadoUI(id, persona, nuevoEstado) {
   persona.estado = nuevoEstado;
-  var filaViaje = document.getElementById('eq-viaje-fila');
-  if (filaViaje && nuevoEstado !== 'De viaje') filaViaje.parentNode.removeChild(filaViaje);
+  // Clase, no id: la fila puede estar a la vez en el perfil de Equipo y en
+  // Ajustes de admin de Mi perfil (`_ajRefrescarViajeAdmin()`, js/perfil.js).
+  if (nuevoEstado !== 'De viaje') {
+    Array.prototype.forEach.call(document.querySelectorAll('.eq-viaje-fila'), function(f) { f.parentNode.removeChild(f); });
+  }
+  if (typeof _ajRefrescarViajeAdmin === 'function') _ajRefrescarViajeAdmin(persona);
   var bots = document.querySelectorAll('.eq-estado-opciones .eq-estado-btn');
   for (var i = 0; i < bots.length; i++) {
     bots[i].className = 'eq-estado-btn' + (bots[i].getAttribute('data-estado') === nuevoEstado ? ' activo' : '');
@@ -3799,7 +3803,7 @@ function _eqViajeFilaHtml(p) {
   // 2 líneas (pedido explícito): "De viaje" arriba y el rango abajo, en su
   // propio bloque -- antes iban en el mismo texto y el rango se partía al
   // compartir la fila con "Cancelar viaje". Sin fechas, solo la 1ra línea.
-  return '<div class="eq-info-fila eq-viaje-fila" id="eq-viaje-fila">' +
+  return '<div class="eq-info-fila eq-viaje-fila">' +
       '<div class="eq-viaje-info">' +
         '<span class="material-symbols-outlined">flight</span>' +
         '<div class="eq-info-texto">' +

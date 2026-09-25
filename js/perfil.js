@@ -224,7 +224,29 @@ function _datosRenderAdmin() {
 function _ajCargarSubAdmin(persona) {
   var body = document.getElementById('aj-sub-admin-body');
   if (!body) return;
-  body.innerHTML = _eqTierAdminFlatHtml(persona) + _eqAdminGestionFlatHtml(persona);
+  body.innerHTML = _eqTierAdminFlatHtml(persona) + _eqAdminGestionFlatHtml(persona) +
+    '<div id="aj-admin-viaje">' + _ajViajeAdminHtml(persona) + '</div>';
+}
+
+// "De viaje" en Ajustes de admin (pedido explícito, ver MANIFEST.md) --
+// activar ya viene dado por la pill "De viaje" de `_eqAdminGestionFlatHtml()`
+// de arriba (mismo `_eqCambiarEstado()` -> sheet de período con fechas
+// opcionales -> `adminActualizarEstadoViaje`, con `persona.id` = E.nombre).
+// Acá se suma lo que faltaba con el viaje YA activo: la fila con las fechas y
+// "Cancelar viaje" (`_eqViajeFilaHtml()`, js/equipo.js -- misma fila que el
+// perfil de Equipo, `adminCancelarViaje`). Vacío si no está de viaje.
+function _ajViajeAdminHtml(persona) {
+  if (!persona || persona.estado !== 'De viaje' || typeof _eqViajeFilaHtml !== 'function') return '';
+  return '<div class="eq-admin-sep"></div>' + _eqViajeFilaHtml(persona);
+}
+// Llamada por `_eqAplicarEstadoUI()` (js/equipo.js) después de guardar o
+// cancelar un viaje -- repinta solo este bloque si la persona es la cuenta
+// logueada (el panel no se vuelve a armar solo, a diferencia del perfil de
+// Equipo que re-renderiza con `_eqAplicarFiltrosAhora()`).
+function _ajRefrescarViajeAdmin(persona) {
+  if (!persona || persona.id !== E.nombre) return;
+  var cont = document.getElementById('aj-admin-viaje');
+  if (cont) cont.innerHTML = _ajViajeAdminHtml(persona);
 }
 
 function _datosRenderStatsHtml(contenedor, persona) {
