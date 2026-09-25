@@ -997,7 +997,12 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
 /* Fila "De viaje" del perfil -- a la izquierda ícono + bloque de 2 líneas
    ("De viaje" / rango de fechas en gris, este último solo si hay fechas), a
    la derecha "Cancelar viaje" (admin). */
-.eq-viaje-fila { justify-content: space-between; }
+.eq-viaje-fila { display: flex; align-items: center; justify-content: space-between; }
+/* `.btn-text-simple` (css/ui.css) trae `width:100%` + `padding-bottom:20px`
+   pensado para botones de texto sueltos -- dentro de esta fila ocupaba todo
+   el ancho sobrante y centraba "Cancelar viaje" en vez de pegarlo a la
+   derecha. Ancho natural y sin ese padding acá. */
+.eq-viaje-fila .eq-viaje-cancelar { width: auto; padding: 0; text-align: right; }
 .eq-viaje-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .eq-viaje-titulo { font-weight: 600; }
 .eq-viaje-fechas { font-size: 0.85em; font-weight: 400; color: var(--muted); white-space: nowrap; }
