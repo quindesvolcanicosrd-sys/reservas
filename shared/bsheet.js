@@ -37,20 +37,49 @@ var _bsDragStartY = 0, _bsDragLastY = 0, _bsDragLastTime = 0, _bsDragVelocity = 
 var _BS_UMBRAL_PROGRESO = 0.4;   // 40% del alto visible del sheet
 var _BS_UMBRAL_VELOCIDAD = 0.5;  // px/ms hacia abajo — swipe rápido, cierra aunque sea corto
 
-document.addEventListener('touchstart', function(ev) {
-  var handle = ev.target.closest && ev.target.closest(_BS_ZONA_CIERRE);
-  if (!handle) return;
-  var sheet = handle.closest('.bsheet');
-  var overlay = sheet && sheet.previousElementSibling;
-  if (!overlay || !overlay.classList.contains('bsheet-overlay')) return;
+/* Drag-to-close también desde el contenido scrolleable (pedido explícito,
+   bug de scroll del sheet de asistentes) -- SOLO si el contenedor ya está en
+   su tope (scrollTop === 0) Y el primer movimiento del dedo es hacia abajo:
+   touchstart ahí deja el gesto "pendiente" (`_bsDragPendiente`), y recién el
+   primer touchmove decide -- hacia abajo arranca el arrastre real, hacia
+   arriba lo descarta y el scroll nativo sigue intacto. Con scrollTop > 0
+   nunca se arma nada: ese toque es scroll puro. Este touchmove llega por
+   `_bsDragMove()` llamado desde el listener propio del contenedor
+   (`_bsPrepararScroll()`, abajo), no desde el de document -- ese listener
+   hace stopPropagation. */
+var _bsDragPendiente = false;
+
+function _bsIniciarDrag(sheet, overlay, y) {
   _bsDragSheet = sheet; _bsDragOverlay = overlay; _bsDragging = true;
-  _bsDragStartY = _bsDragLastY = ev.touches[0].clientY;
+  _bsDragStartY = _bsDragLastY = y;
   _bsDragLastTime = Date.now();
   _bsDragVelocity = 0;
   sheet.classList.add('bsheet-sin-transicion');
+}
+
+document.addEventListener('touchstart', function(ev) {
+  _bsDragPendiente = false;
+  if (!ev.target.closest) return;
+  var handle = ev.target.closest(_BS_ZONA_CIERRE);
+  var scroller = handle ? null : ev.target.closest('[data-bs-scroll]');
+  if (!handle && !scroller) return;
+  var sheet = (handle || scroller).closest('.bsheet');
+  var overlay = sheet && sheet.previousElementSibling;
+  if (!overlay || !overlay.classList.contains('bsheet-overlay')) return;
+  if (handle) { _bsIniciarDrag(sheet, overlay, ev.touches[0].clientY); return; }
+  if (scroller.scrollTop > 0) return; // contenido ya scrolleado: el toque es scroll, nunca drag
+  _bsDragSheet = sheet; _bsDragOverlay = overlay; _bsDragPendiente = true;
+  _bsDragStartY = ev.touches[0].clientY;
 }, { passive: true });
 
-document.addEventListener('touchmove', function(ev) {
+function _bsDragMove(ev) {
+  if (_bsDragPendiente) {
+    var dy = ev.touches[0].clientY - _bsDragStartY;
+    if (dy === 0) return;
+    _bsDragPendiente = false;
+    if (dy < 0) { _bsDragSheet = null; _bsDragOverlay = null; return; } // hacia arriba: scroll normal del contenido
+    _bsIniciarDrag(_bsDragSheet, _bsDragOverlay, _bsDragStartY);
+  }
   if (!_bsDragging || !_bsDragSheet) return;
   var y = ev.touches[0].clientY;
   var now = Date.now();
@@ -59,9 +88,11 @@ document.addEventListener('touchmove', function(ev) {
   _bsDragLastY = y; _bsDragLastTime = now;
   var delta = Math.max(0, y - _bsDragStartY); // solo hacia abajo — arrastrar hacia arriba no hace nada (el sheet no "sobrepasa" su posición abierta)
   _bsDragSheet.style.transform = 'translateY(' + delta + 'px)';
-}, { passive: true });
+}
+document.addEventListener('touchmove', _bsDragMove, { passive: true });
 
 document.addEventListener('touchend', function() {
+  if (_bsDragPendiente) { _bsDragPendiente = false; _bsDragSheet = null; _bsDragOverlay = null; }
   if (!_bsDragging || !_bsDragSheet) return;
   _bsDragging = false;
   var sheet = _bsDragSheet, overlay = _bsDragOverlay;
@@ -94,3 +125,63 @@ document.addEventListener('click', function(ev) {
   var overlay = document.getElementById(sheet.id + '-overlay');
   if (overlay) overlay.click();
 });
+
+/* Bloqueo del scroll de fondo mientras hay un bottom sheet abierto (bug real:
+   scrollear dentro del sheet de asistentes movía el timeline de atrás).
+   Los ~30 sheets de la app se abren/cierran cada uno con su propia función
+   (`ov.style.display = 'block'` / `'none'`, sin un open/close central), así
+   que en vez de tocar cada una se observa el `style` de todo
+   `.bsheet-overlay`: con al menos uno visible -> body overflow hidden; al
+   cerrarse el último -> ''. `_bsBodyBloqueado` hace que solo se restaure lo
+   que este mecanismo puso (date-picker/pwa/tour también usan
+   body.style.overflow por su cuenta). Al abrir, además, se prepara el
+   contenedor scrolleable del sheet (`_bsPrepararScroll()`). */
+var _bsBodyBloqueado = false;
+
+/* Contenedores con scroll propio dentro del sheet (overflow-y auto/scroll,
+   p. ej. #ev-avatars-sheet-body): touchmove con stopPropagation para que el
+   gesto no llegue a los listeners de fondo (pull-to-refresh de js/home.js,
+   drag del calendario de js/eventos.js) + overscroll-behavior:contain para
+   que al llegar al tope/fondo el scroll no encadene al body. Como el
+   stopPropagation corta también el touchmove de document, el mismo listener
+   alimenta a `_bsDragMove()` (drag-to-close desde scrollTop === 0, arriba).
+   Una sola vez por contenedor (`data-bs-scroll`). */
+function _bsPrepararScroll(sheet) {
+  var nodos = [sheet].concat(Array.prototype.slice.call(sheet.querySelectorAll('*')));
+  nodos.forEach(function(el) {
+    if (el.hasAttribute('data-bs-scroll')) return;
+    var oy = getComputedStyle(el).overflowY;
+    if (oy !== 'auto' && oy !== 'scroll') return;
+    el.setAttribute('data-bs-scroll', '');
+    el.style.overscrollBehavior = 'contain';
+    el.addEventListener('touchmove', function(e) { e.stopPropagation(); _bsDragMove(e); }, { passive: true });
+  });
+}
+
+function _bsSincronizarBloqueo() {
+  var abierto = false;
+  document.querySelectorAll('.bsheet-overlay').forEach(function(ov) {
+    if (ov.style.display && ov.style.display !== 'none') abierto = true;
+  });
+  if (abierto && !_bsBodyBloqueado) {
+    _bsBodyBloqueado = true;
+    document.body.style.overflow = 'hidden';
+  } else if (!abierto && _bsBodyBloqueado) {
+    _bsBodyBloqueado = false;
+    document.body.style.overflow = '';
+  }
+}
+
+new MutationObserver(function(muts) {
+  var toca = false;
+  muts.forEach(function(m) {
+    var ov = m.target;
+    if (!ov.classList || !ov.classList.contains('bsheet-overlay')) return;
+    toca = true;
+    if (ov.style.display && ov.style.display !== 'none') {
+      var sheet = (ov.id && document.getElementById(ov.id.replace(/-overlay$/, ''))) || ov.nextElementSibling;
+      if (sheet && sheet.classList.contains('bsheet')) requestAnimationFrame(function() { _bsPrepararScroll(sheet); }); // rAF: el sheet recibe su display en la línea siguiente al overlay
+    }
+  });
+  if (toca) _bsSincronizarBloqueo();
+}).observe(document.documentElement, { subtree: true, attributes: true, attributeFilter: ['style'] });
