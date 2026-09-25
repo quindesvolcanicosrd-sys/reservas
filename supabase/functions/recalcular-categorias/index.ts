@@ -120,12 +120,12 @@ Deno.serve(async (req: Request) => {
     // en el que ya está, no contra "el mejor tier posible" desde cero, ver
     // el comentario grande más abajo).
     const { data: equipoData, error: equipoError } = await supabase.from('equipo')
-      .select('username, estado_miembro, tier_modo, categoria, tier_riesgo_desde, tier_riesgo_hasta, tier_riesgo_objetivo, meses_consecutivos_cumplidos');
+      .select('username, estado_miembro, tier_modo, categoria, tier_riesgo_desde, tier_riesgo_hasta, tier_riesgo_objetivo, meses_consecutivos_cumplidos, meses_consecutivos_ultimo_mes');
     if (equipoError) return json({ ok: false, error: equipoError.message }, 500);
     const miembros: {
       username: string; estadoMiembro: string | null; tierModo: string | null; categoria: string | null;
       tierRiesgoDesde: string | null; tierRiesgoHasta: string | null; tierRiesgoObjetivo: string | null;
-      mesesConsecutivosCumplidos: number;
+      mesesConsecutivosCumplidos: number; mesesUltimoMes: string | null;
     }[] = (equipoData ?? [])
       .filter((r: any) => r.username && (!soloUsuario || r.username === soloUsuario))
       .map((r: any) => ({
@@ -134,6 +134,7 @@ Deno.serve(async (req: Request) => {
         tierRiesgoDesde: r.tier_riesgo_desde ?? null, tierRiesgoHasta: r.tier_riesgo_hasta ?? null,
         tierRiesgoObjetivo: r.tier_riesgo_objetivo ?? null,
         mesesConsecutivosCumplidos: Number(r.meses_consecutivos_cumplidos) || 0,
+        mesesUltimoMes: r.meses_consecutivos_ultimo_mes ?? null,
       }));
 
     const maxVentana = Math.max(0, ...tiers.map((t: any) => Number(t.ventana_meses) || 0));
@@ -276,6 +277,17 @@ Deno.serve(async (req: Request) => {
     // migración sobre por qué se escribe SIEMPRE (cambie o no el tier).
     const mesActualStr = hoy.getUTCFullYear() + '-' + String(hoy.getUTCMonth() + 1).padStart(2, '0');
 
+    // Bug real corregido (ver MANIFEST.md -- "meses_consecutivos_cumplidos
+    // sumaba 1 por corrida"): este recálculo corre muchas veces por mes (cron
+    // cada vez que termina un evento, "Recalcular ahora", modo soloUsuario de
+    // "De viaje"), pero el contador de re-ascenso mide MESES. Solo suma si el
+    // mes actual todavía no se contó (`meses_consecutivos_ultimo_mes`,
+    // 'YYYY-MM'); cualquier otra corrida del mismo mes deja el valor igual. Un
+    // mes que falla lo resetea a 0 y limpia el mes (así, si en el mismo mes
+    // vuelve a cumplir, ese mes cuenta como 1).
+    const contadorDelMes = (m: { mesesConsecutivosCumplidos: number; mesesUltimoMes: string | null }): number =>
+      m.mesesUltimoMes === mesActualStr ? m.mesesConsecutivosCumplidos : m.mesesConsecutivosCumplidos + 1;
+
     const resultados: { username: string; categoria: string; enRiesgo: boolean }[] = [];
 
     for (const m of miembros) {
@@ -305,6 +317,7 @@ Deno.serve(async (req: Request) => {
       let nuevoRiesgoHasta: string | null | undefined;
       let nuevoRiesgoObjetivo: string | null | undefined;
       let nuevosMesesConsecutivos: number | undefined;
+      let nuevoUltimoMes: string | null | undefined; // `meses_consecutivos_ultimo_mes`, undefined = no tocar
 
       if (estadoMiembro === 'Técnico') {
         // Técnico: siempre Quindes, sin calcular clases/puntos ni tocar
@@ -333,7 +346,7 @@ Deno.serve(async (req: Request) => {
             categoriaAsignada = categoriaActual;
             nuevosMesesConsecutivos = m.mesesConsecutivosCumplidos;
           } else if (evaluarCumpleTier(username, tierSuperior)) {
-            const nuevoContador = m.mesesConsecutivosCumplidos + 1;
+            const nuevoContador = contadorDelMes(m);
             const umbralAscenso = Number(tierSuperior.meses_consecutivos_ascenso) || 3;
             if (nuevoContador >= umbralAscenso) {
               // 3 (o lo que diga el tier) meses consecutivos cumpliendo ->
@@ -341,16 +354,16 @@ Deno.serve(async (req: Request) => {
               // -- empieza de cero para un eventual ascenso siguiente si
               // hubiera más niveles.
               categoriaAsignada = tierSuperior.nombre;
-              nuevosMesesConsecutivos = 0;
+              nuevosMesesConsecutivos = 0; nuevoUltimoMes = mesActualStr; // el mes del ascenso no cuenta para el tier nuevo
             } else {
               categoriaAsignada = categoriaActual;
-              nuevosMesesConsecutivos = nuevoContador;
+              nuevosMesesConsecutivos = nuevoContador; nuevoUltimoMes = mesActualStr;
             }
           } else {
             // No cumplió este mes -- el contador vuelve a 0 (Parte E: "si
             // falla un mes, el contador vuelve a 0").
             categoriaAsignada = categoriaActual;
-            nuevosMesesConsecutivos = 0;
+            nuevosMesesConsecutivos = 0; nuevoUltimoMes = null;
           }
           // El tier default nunca queda "en riesgo" -- no hay a dónde caer
           // más abajo.
@@ -361,7 +374,7 @@ Deno.serve(async (req: Request) => {
           // entra/sale de riesgo de demotion.
           if (evaluarCumpleTier(username, tierActualCfg)) {
             categoriaAsignada = categoriaActual;
-            nuevosMesesConsecutivos = m.mesesConsecutivosCumplidos + 1;
+            nuevosMesesConsecutivos = contadorDelMes(m); nuevoUltimoMes = mesActualStr;
             nuevoRiesgoDesde = null; nuevoRiesgoHasta = null; nuevoRiesgoObjetivo = null;
             // Generalización para una futura cadena de más de 2 tiers: si
             // ya viene cumpliendo el tier actual el tiempo suficiente,
@@ -373,13 +386,13 @@ Deno.serve(async (req: Request) => {
               const umbralAscenso = Number(tierSuperior.meses_consecutivos_ascenso) || 3;
               if (nuevosMesesConsecutivos >= umbralAscenso && evaluarCumpleTier(username, tierSuperior)) {
                 categoriaAsignada = tierSuperior.nombre;
-                nuevosMesesConsecutivos = 0;
+                nuevosMesesConsecutivos = 0; nuevoUltimoMes = mesActualStr; // el mes del ascenso no cuenta para el tier nuevo
               }
             }
           } else {
             // No cumple más su tier actual -- el contador de re-ascenso
             // tampoco tendría sentido acumulando mientras está fallando.
-            nuevosMesesConsecutivos = 0;
+            nuevosMesesConsecutivos = 0; nuevoUltimoMes = null;
             const mesesGracia = Number(tierActualCfg.meses_gracia_demotion) || 0;
             if (mesesGracia <= 0) {
               // Sin período de gracia configurado -- demotion inmediata,
@@ -419,6 +432,7 @@ Deno.serve(async (req: Request) => {
       if (nuevoRiesgoHasta !== undefined) update.tier_riesgo_hasta = nuevoRiesgoHasta;
       if (nuevoRiesgoObjetivo !== undefined) update.tier_riesgo_objetivo = nuevoRiesgoObjetivo;
       if (nuevosMesesConsecutivos !== undefined) update.meses_consecutivos_cumplidos = nuevosMesesConsecutivos;
+      if (nuevoUltimoMes !== undefined) update.meses_consecutivos_ultimo_mes = nuevoUltimoMes;
       await supabase.from('equipo').update(update).eq('username', username);
 
       // Historial de tier (Parte 3, ver MANIFEST.md) -- una fila por persona

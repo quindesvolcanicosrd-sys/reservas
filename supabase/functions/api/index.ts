@@ -2776,6 +2776,26 @@ async function adminActualizarEstadoViaje(params: Record<string, any>): Promise<
   return { exito: true, recalculado };
 }
 
+// "Cancelar viaje" (feat nueva, ver MANIFEST.md) -- link admin-only en la
+// fila "De viaje" del perfil de Equipo: el viaje no ocurrió (o se cargó por
+// error). Vuelve a 'Activx' y limpia las fechas, SIN recálculo de tier (si
+// nunca viajó no hay ausencias que compensar; mientras estuvo 'De viaje' el
+// tier solo estuvo congelado). Solo actúa si la persona sigue 'De viaje'.
+async function adminCancelarViaje(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const idJugadora = String(params.idJugadora ?? '').trim();
+  if (!idJugadora) return { exito: false, error: 'Falta la jugadora.' };
+  const { data: persona } = await supabase.from('equipo').select('username, estado_miembro').eq('username', idJugadora).maybeSingle();
+  if (!persona) return { exito: false, error: 'No existe esa jugadora.' };
+  if (persona.estado_miembro !== 'De viaje') return { exito: false, error: 'No está marcadx como De viaje.' };
+  const { error } = await supabase.from('equipo')
+    .update({ estado_miembro: 'Activx', viaje_desde: null, viaje_hasta: null })
+    .eq('username', persona.username);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true };
+}
+
 // Fija/libera la categoría (Cambio 55, control Quindes/Auto/Mirlxs del
 // perfil de Equipo, ver _eqCambiarTier()/js/equipo.js) -- `categoria` se
 // actualiza también de una, no solo `tier_modo`: fijar a mano sin tocar la
@@ -5201,6 +5221,7 @@ Deno.serve(async (req: Request) => {
       case 'marcarAsistenciaUsuario':         return json(await marcarAsistenciaUsuario(params));
       case 'adminMarcarAsistencia':           return json(await adminMarcarAsistencia(params));
       case 'adminActualizarEstadoViaje':      return json(await adminActualizarEstadoViaje(params));
+      case 'adminCancelarViaje':              return json(await adminCancelarViaje(params));
       case 'adminRegistrarAsistenciaExterna': return json(await adminRegistrarAsistenciaExterna(params));
       case 'adminBuscarPersonasParaEvento':   return json(await adminBuscarPersonasParaEvento(params));
       case 'solicitarRectificacionAsistencia': return json(await solicitarRectificacionAsistencia(params));

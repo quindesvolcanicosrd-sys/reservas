@@ -3783,7 +3783,29 @@ function _eqViajeFilaHtml(p) {
   if (d && h) rango = _eqViajeFechaTxt(d) + ' – ' + _eqViajeFechaTxt(h);
   else if (d) rango = 'desde ' + _eqViajeFechaTxt(d);
   else if (h) rango = 'hasta ' + _eqViajeFechaTxt(h);
-  return '<div class="eq-info-fila" id="eq-viaje-fila"><span class="material-symbols-outlined">flight</span><span class="eq-info-texto">De viaje' + (rango ? ' · ' + _eqEsc(rango) : '') + '</span></div>';
+  // "Cancelar viaje" -- solo admins (mismo gate `_adminToken` que el resto
+  // de acciones admin de este perfil), a la derecha de la misma fila.
+  var cancelarHtml = (typeof _adminToken !== 'undefined' && _adminToken)
+    ? '<button type="button" class="btn-text-simple eq-viaje-cancelar" onclick="_eqCancelarViaje(\'' + _eqEscId(p.id) + '\')">Cancelar viaje</button>'
+    : '';
+  return '<div class="eq-info-fila" id="eq-viaje-fila"><span class="material-symbols-outlined">flight</span><span class="eq-info-texto">De viaje' + (rango ? ' · ' + _eqEsc(rango) : '') + '</span>' + cancelarHtml + '</div>';
+}
+// Confirmación con `confirm()` nativo -- mismo criterio que el resto de
+// acciones admin puntuales de la app (js/admin.js). Backend:
+// `adminCancelarViaje` (vuelve a Activx, limpia fechas, sin recálculo).
+function _eqCancelarViaje(id) {
+  if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible guardar cambios en este momento.', 'error'); return; }
+  var persona = _eqPersonaPorId(id);
+  if (!persona) return;
+  if (!confirm('¿Cancelar el viaje de ' + (persona.nombreDerby || persona.username) + '?')) return;
+  apiPost({ action: 'adminCancelarViaje', adminToken: _adminToken, idJugadora: persona.id }, function(res) {
+    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo cancelar el viaje.', 'error'); return; }
+    persona.viajeDesde = null; persona.viajeHasta = null;
+    _eqAplicarEstadoUI(id, persona, 'Activx'); // quita la fila de viaje y marca la pill Activx
+    mostrarToast('Viaje cancelado.', 'ok', true);
+  }, function(e) {
+    mostrarToast(e && e.message ? e.message : 'No se pudo cancelar el viaje.', 'error');
+  });
 }
 
 // "Paga cuota" (checked) es el inverso de `exentaCuota` (real) -- ver el

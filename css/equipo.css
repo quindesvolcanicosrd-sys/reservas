@@ -991,6 +991,9 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
 /* Pill "De viaje" (feat nueva, ver MANIFEST.md) -- ícono `flight` antes del
    texto, alineado y al tamaño del texto de la pill. */
 .eq-estado-btn-icono { font-size: 0.9rem; vertical-align: -2px; margin-right: 3px; }
+/* "Cancelar viaje" (admin) -- empujado a la derecha de la fila "De viaje"
+   del perfil (`.eq-info-fila` es flex). */
+.eq-viaje-cancelar { margin-left: auto; white-space: nowrap; flex-shrink: 0; }
 
 /* Toggle switch (paga cuota / es admin) -- checkbox real oculto
    (accesible, togglea con teclado/lector de pantalla) + slider visual. */
