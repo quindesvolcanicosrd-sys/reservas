@@ -988,6 +988,9 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
   -webkit-tap-highlight-color: transparent;
 }
 .eq-estado-btn.activo { background: var(--brand); color: var(--white); border-color: var(--brand); }
+/* Pill "De viaje" (feat nueva, ver MANIFEST.md) -- ícono `flight` antes del
+   texto, alineado y al tamaño del texto de la pill. */
+.eq-estado-btn-icono { font-size: 0.9rem; vertical-align: -2px; margin-right: 3px; }
 
 /* Toggle switch (paga cuota / es admin) -- checkbox real oculto
    (accesible, togglea con teclado/lector de pantalla) + slider visual. */

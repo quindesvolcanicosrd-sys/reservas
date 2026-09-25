@@ -107,7 +107,7 @@ var _EQ_TIER_DESCRIPCIONES = {
 // que le quita 'Satélite' al constraint -- Cambio 54, ver MANIFEST.md).
 // Se reusan acá tal cual para que el selector de esta demo no invente un
 // vocabulario paralelo que después no tenga a dónde mapear en la integración real.
-var _EQ_ESTADOS = ['Activx', 'Ausente', 'Técnico', 'Lesionadx'];
+var _EQ_ESTADOS = ['Activx', 'Ausente', 'Técnico', 'Lesionadx', 'De viaje'];
 
 // Estado "efectivo" a mostrar/resaltar -- si ya está fijado a mano en
 // 'Ausente' se respeta tal cual; si no, se deriva de `ultimaAsistencia`
@@ -119,6 +119,9 @@ var _EQ_ESTADOS = ['Activx', 'Ausente', 'Técnico', 'Lesionadx'];
 // arriba) es el estado más cercano semánticamente a "30 días sin venir".
 function _eqEstadoEfectivo(persona) {
   if (persona.estado === 'Ausente') return 'Ausente';
+  // De viaje (feat nueva, ver MANIFEST.md): sus ausencias no la penalizan --
+  // no pasa a Ausente por los 30 días sin asistir mientras dure el viaje.
+  if (persona.estado === 'De viaje') return 'De viaje';
   if (persona.ultimaAsistencia) {
     var dias = Math.floor((Date.now() - new Date(persona.ultimaAsistencia).getTime()) / 86400000);
     if (dias >= 30) return 'Ausente';
@@ -149,6 +152,7 @@ function _eqEstadoEfectivo(persona) {
 // propio que "reactivar" a mano.
 function _eqEsInactivo(p) {
   if (!p) return false;
+  if (p.estado === 'De viaje') return false; // mismo criterio que _eqEstadoEfectivo() de arriba
   if (!p.ultimaAsistencia) return true;
   var dias = Math.floor((Date.now() - new Date(p.ultimaAsistencia).getTime()) / 86400000);
   return dias >= 30;
@@ -3328,7 +3332,7 @@ function _eqAdminGestionHtml(p) {
   var idAttr = _eqEsc(p.id);
   var estadoActual = _eqEstadoEfectivo(p);
   var botonesEstado = _EQ_ESTADOS.map(function(est) {
-    return '<button type="button" class="eq-estado-btn' + (estadoActual === est ? ' activo' : '') + '" data-estado="' + est + '" onclick="_eqCambiarEstado(\'' + idJs + '\',\'' + est + '\')">' + est + '</button>';
+    return '<button type="button" class="eq-estado-btn' + (estadoActual === est ? ' activo' : '') + '" data-estado="' + est + '" onclick="_eqCambiarEstado(\'' + idJs + '\',\'' + est + '\')">' + _eqEstadoBtnTexto(est) + '</button>';
   }).join('');
   var hint = (estadoActual === 'Ausente' && p.estado !== 'Ausente')
     ? 'Marcada automáticamente como ausente por más de 30 días sin asistir.'
@@ -3425,7 +3429,7 @@ function _eqAdminGestionFlatHtml(p) {
   var idAttr = _eqEsc(p.id);
   var estadoActual = _eqEstadoEfectivo(p);
   var botonesEstado = _EQ_ESTADOS.map(function(est) {
-    return '<button type="button" class="eq-estado-btn' + (estadoActual === est ? ' activo' : '') + '" data-estado="' + est + '" onclick="_eqCambiarEstado(\'' + idJs + '\',\'' + est + '\')">' + est + '</button>';
+    return '<button type="button" class="eq-estado-btn' + (estadoActual === est ? ' activo' : '') + '" data-estado="' + est + '" onclick="_eqCambiarEstado(\'' + idJs + '\',\'' + est + '\')">' + _eqEstadoBtnTexto(est) + '</button>';
   }).join('');
   var hint = (estadoActual === 'Ausente' && p.estado !== 'Ausente')
     ? 'Marcada automáticamente como ausente por más de 30 días sin asistir.'
@@ -3586,7 +3590,23 @@ function _eqCambiarEstado(id, nuevoEstado) {
   if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible guardar cambios en este momento.', 'error'); return; }
   var persona = _eqPersonaPorId(id); // helper ya existente
   if (!persona) return;
+  // "De viaje" no se guarda directo -- primero el sheet de período
+  // (`_eqAbrirSheetViaje()`, más abajo), que recién al confirmar llama a
+  // `adminActualizarEstadoViaje` y aplica la UI con `_eqAplicarEstadoUI()`.
+  if (nuevoEstado === 'De viaje') { _eqAbrirSheetViaje(id); return; }
+  if (persona.estado === 'De viaje') { persona.viajeDesde = null; persona.viajeHasta = null; } // el backend limpia las fechas al salir del viaje
+  _eqAplicarEstadoUI(id, persona, nuevoEstado);
+  apiPost({ action: 'adminSetEstadoMiembro', adminToken: _adminToken, nombre: persona.nombre, estadoMiembro: nuevoEstado }, function() {}, function() {
+    mostrarToast('No se pudo guardar el cambio de estado.', 'error');
+  });
+}
+// Parte visual de un cambio de estado (pills + toggle de cuota + fila de
+// viaje del perfil) -- compartida entre el camino directo de arriba y el
+// guardado del sheet "De viaje".
+function _eqAplicarEstadoUI(id, persona, nuevoEstado) {
   persona.estado = nuevoEstado;
+  var filaViaje = document.getElementById('eq-viaje-fila');
+  if (filaViaje && nuevoEstado !== 'De viaje') filaViaje.parentNode.removeChild(filaViaje);
   var bots = document.querySelectorAll('.eq-estado-opciones .eq-estado-btn');
   for (var i = 0; i < bots.length; i++) {
     bots[i].className = 'eq-estado-btn' + (bots[i].getAttribute('data-estado') === nuevoEstado ? ' activo' : '');
@@ -3602,9 +3622,168 @@ function _eqCambiarEstado(id, nuevoEstado) {
   if (cuotaHint) cuotaHint.textContent = (nuevoEstado === 'Lesionadx') ? 'Exento/a de cuota mientras está Lesionadx.' : 'Indica si está al día con la cuota mensual.';
   persona.exentaCuota = (nuevoEstado === 'Lesionadx');
   if (cuotaInput) cuotaInput.checked = !persona.exentaCuota;
-  apiPost({ action: 'adminSetEstadoMiembro', adminToken: _adminToken, nombre: persona.nombre, estadoMiembro: nuevoEstado }, function() {}, function() {
-    mostrarToast('No se pudo guardar el cambio de estado.', 'error');
+}
+
+// Texto de cada pill del selector de Estado -- "De viaje" lleva el ícono
+// `flight` (Material Symbols) antes del texto.
+function _eqEstadoBtnTexto(est) {
+  if (est === 'De viaje') return '<span class="material-symbols-outlined eq-estado-btn-icono">flight</span>' + est;
+  return est;
+}
+
+/* ── Estado "De viaje" (feat nueva, ver MANIFEST.md) ─────────────────────
+   Sheet #eq-sheet-viaje (index.html) con calendario de rango "ida y
+   vuelta" -- el MISMO componente visual que "Descanso"
+   (`_evCrearDescRangoCal*`, js/eventos.js: markup, clases `.ev-ant-cal-*`/
+   `.ev-ant-rango-*`, helpers de fecha `_evCalMesDe()`/`_evLunesDeSemana()`/
+   `_evToISO()`/`_evFechaCmp()`/`_evFadeSwap()` y la pill de fecha
+   `_evCrearDescansoFechaPillHtml()`, todos globales de eventos.js), con
+   estado propio (`_eqViajeCal`) y SIN bloquear fechas pasadas (un viaje se
+   puede registrar a posteriori). Ambas fechas opcionales: "Guardar" manda
+   lo que haya elegido (0, 1 o 2 fechas), "Omitir fechas" manda ambas null.
+   ──────────────────────────────────────────────────────────────────────── */
+var _eqViajeCal = { id: null, desde: null, hasta: null, mostrado: null, touched: false, prevDesde: null, prevHasta: null };
+
+function _eqAbrirSheetViaje(id) {
+  var persona = _eqPersonaPorId(id);
+  if (!persona) return;
+  var st = _eqViajeCal;
+  st.id = id;
+  st.desde = persona.viajeDesde || null;
+  st.hasta = persona.viajeHasta || null;
+  st.mostrado = st.desde || _evHoyISO();
+  st.touched = !!(st.desde || st.hasta);
+  st.prevDesde = st.desde; st.prevHasta = st.hasta;
+  ['eq-viaje-btn-guardar', 'eq-viaje-btn-omitir'].forEach(function(bid) { var b = document.getElementById(bid); if (b) b.disabled = false; });
+  var btnG = document.getElementById('eq-viaje-btn-guardar');
+  if (btnG) btnG.textContent = 'Guardar';
+  _eqViajeCalRender();
+  _eqViajeActualizarResumen();
+  var ov = document.getElementById('eq-sheet-viaje-overlay');
+  var sh = document.getElementById('eq-sheet-viaje');
+  if (!ov || !sh) return;
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(_eqCerrarSheetViaje);
+}
+function _eqCerrarSheetViaje(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var ov = document.getElementById('eq-sheet-viaje-overlay');
+  var sh = document.getElementById('eq-sheet-viaje');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+function _eqViajeCalMoverMes(dir) {
+  var m = _evCalMesDe(_eqViajeCal.mostrado);
+  var year = m.year, month = m.month + dir;
+  if (month < 0) { month = 11; year--; } else if (month > 11) { month = 0; year++; }
+  _eqViajeCal.mostrado = _evToISO(new Date(year, month, 1));
+  _eqViajeCalRender();
+}
+// "Ida y vuelta" -- mismo criterio que `_evCrearDescRangoCalTocarDia()`
+// (js/eventos.js), sin el guard de fecha pasada.
+function _eqViajeCalTocarDia(iso) {
+  var st = _eqViajeCal;
+  if (!st.desde || st.hasta) { st.desde = iso; st.hasta = null; }
+  else if (_evFechaCmp(iso, st.desde) < 0) { st.desde = iso; }
+  else { st.hasta = iso; }
+  st.touched = true;
+  _eqViajeCalRender();
+  _eqViajeActualizarResumen();
+}
+function _eqViajeCalRestablecer() {
+  var st = _eqViajeCal;
+  st.desde = null; st.hasta = null; st.touched = false;
+  _eqViajeCalRender();
+  _eqViajeActualizarResumen();
+}
+function _eqViajeActualizarResumen() {
+  var cont = document.getElementById('eq-viaje-rango-resumen');
+  if (!cont) return;
+  var st = _eqViajeCal;
+  if (!st.desde) {
+    cont.innerHTML = '<span class="ev-ant-rango-vacio">Toca una fecha en el calendario para empezar</span>';
+  } else {
+    var html = 'Del ' + _evCrearDescansoFechaPillHtml(st.desde, st.desde !== st.prevDesde);
+    if (st.hasta) html += ' al ' + _evCrearDescansoFechaPillHtml(st.hasta, st.hasta !== st.prevHasta);
+    cont.innerHTML = html;
+  }
+  st.prevDesde = st.desde; st.prevHasta = st.hasta;
+  var btn = document.getElementById('eq-viaje-btn-restablecer');
+  if (btn) btn.style.display = st.touched ? 'flex' : 'none';
+}
+function _eqViajeCalRender() {
+  var cont = document.getElementById('eq-viaje-cal');
+  if (!cont) return;
+  var st = _eqViajeCal;
+  var m = _evCalMesDe(st.mostrado);
+  var labelEl = document.getElementById('eq-viaje-cal-label');
+  if (labelEl) labelEl.textContent = NOMBRES_MESES[m.month] + ' ' + m.year;
+  var inicioGrid = _evLunesDeSemana(new Date(m.year, m.month, 1));
+  var finGrid = _evLunesDeSemana(new Date(m.year, m.month + 1, 0)); finGrid.setDate(finGrid.getDate() + 6);
+  var hoy = _evHoyISO();
+  var html = _EV_DIAS_CORTOS.map(function(d) { return '<div class="ev-cal-dow">' + d + '</div>'; }).join('');
+  var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
+  while (cur <= finGrid) {
+    var celdaIso = _evToISO(cur);
+    var clases = 'ev-cal-celda' + (cur.getMonth() !== m.month ? ' ev-ajeno' : '');
+    if (st.desde && celdaIso === st.desde) clases += ' ev-ant-cal-sel';
+    if (st.hasta && celdaIso === st.hasta) clases += ' ev-ant-cal-sel';
+    if (st.desde && st.hasta && _evFechaCmp(celdaIso, st.desde) > 0 && _evFechaCmp(celdaIso, st.hasta) < 0) clases += ' ev-ant-cal-en-rango';
+    if (celdaIso === hoy) clases += ' ev-ant-cal-hoy';
+    html += '<div class="' + clases + '" data-iso="' + celdaIso + '" onclick="_eqViajeCalTocarDia(\'' + celdaIso + '\')"><div class="ev-cal-num">' + cur.getDate() + '</div></div>';
+    cur.setDate(cur.getDate() + 1);
+  }
+  _evFadeSwap(cont, function() { cont.innerHTML = '<div class="ev-cal-grid">' + html + '</div>'; }, false);
+}
+function _eqGuardarViaje(omitir) {
+  if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible guardar cambios en este momento.', 'error'); return; }
+  var st = _eqViajeCal;
+  var persona = _eqPersonaPorId(st.id);
+  if (!persona) return;
+  var desde = omitir ? null : st.desde;
+  var hasta = omitir ? null : st.hasta;
+  var btnG = document.getElementById('eq-viaje-btn-guardar');
+  var btnO = document.getElementById('eq-viaje-btn-omitir');
+  if (btnG) { btnG.disabled = true; btnG.textContent = 'Guardando...'; }
+  if (btnO) btnO.disabled = true;
+  var restaurar = function() {
+    if (btnG) { btnG.disabled = false; btnG.textContent = 'Guardar'; }
+    if (btnO) btnO.disabled = false;
+  };
+  apiPost({ action: 'adminActualizarEstadoViaje', adminToken: _adminToken, idJugadora: persona.id, viaje_desde: desde, viaje_hasta: hasta }, function(res) {
+    if (!res || !res.exito) { restaurar(); mostrarToast((res && res.error) || 'No se pudo guardar el estado.', 'error'); return; }
+    persona.viajeDesde = desde; persona.viajeHasta = hasta;
+    _eqAplicarEstadoUI(st.id, persona, 'De viaje');
+    _eqCerrarSheetViaje();
+    if (res.aviso) mostrarToast(res.aviso, 'error');
+    else mostrarToast(res.recalculado ? 'Estado guardado. Tier recalculado sin penalizar el viaje.' : 'Estado "De viaje" guardado.', 'ok', true);
+    // Re-pide `getEquipo()` y re-renderiza el perfil abierto (fila de
+    // viaje con las fechas + tier si hubo recálculo retroactivo).
+    _eqAplicarFiltrosAhora();
+  }, function(e) {
+    restaurar();
+    mostrarToast(e && e.message ? e.message : 'No se pudo guardar el estado.', 'error');
   });
+}
+// "10 sep" (día + mes corto en minúscula) -- año solo si no es el actual.
+var _EQ_MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+function _eqViajeFechaTxt(iso) {
+  var p = String(iso || '').split('-');
+  if (p.length !== 3) return '';
+  var txt = parseInt(p[2], 10) + ' ' + _EQ_MESES_CORTOS[parseInt(p[1], 10) - 1];
+  return (+p[0] !== new Date().getFullYear()) ? txt + ' ' + p[0] : txt;
+}
+// Fila del perfil (visible para todxs): "De viaje · 10 sep – 20 sep". Con
+// una sola fecha: "desde 10 sep"/"hasta 20 sep"; sin fechas: "De viaje".
+function _eqViajeFilaHtml(p) {
+  if (p.estado !== 'De viaje') return '';
+  var d = p.viajeDesde, h = p.viajeHasta, rango = '';
+  if (d && h) rango = _eqViajeFechaTxt(d) + ' – ' + _eqViajeFechaTxt(h);
+  else if (d) rango = 'desde ' + _eqViajeFechaTxt(d);
+  else if (h) rango = 'hasta ' + _eqViajeFechaTxt(h);
+  return '<div class="eq-info-fila" id="eq-viaje-fila"><span class="material-symbols-outlined">flight</span><span class="eq-info-texto">De viaje' + (rango ? ' · ' + _eqEsc(rango) : '') + '</span></div>';
 }
 
 // "Paga cuota" (checked) es el inverso de `exentaCuota` (real) -- ver el
@@ -3709,7 +3888,8 @@ function _eqPerfilContenidoHtml(p) {
   // acá habría requerido decidir de nuevo esa regla para un contexto distinto,
   // fuera de alcance de "reemplazar el demo por datos reales". Pendiente que
   // Victor decida si la quiere de vuelta en el perfil de Equipo.
-  var filas = '';
+  // Estado "De viaje" primero -- es lo más relevante mientras dure.
+  var filas = _eqViajeFilaHtml(p);
   if (p.telefono) filas += '<a class="eq-info-fila" href="tel:' + _eqEsc(p.telefono) + '"><span class="material-symbols-outlined">call</span><span class="eq-info-texto">' + _eqEsc(p.telefono) + '</span></a>';
   if (p.email) filas += '<a class="eq-info-fila" href="mailto:' + _eqEsc(p.email) + '"><span class="material-symbols-outlined">mail</span><span class="eq-info-texto">' + _eqEsc(p.email) + '</span></a>';
   // `fechaIngreso` ('fecha_ingreso', getEquipo()) -- mismo dato ya expuesto

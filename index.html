@@ -43,7 +43,7 @@
 <link rel="stylesheet" href="css/nav.css?v=4e85514c">
 <link rel="stylesheet" href="css/eventos.css?v=1b6aa2d1">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=76068790">
+<link rel="stylesheet" href="css/equipo.css?v=15a536cc">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2895,6 +2895,39 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
 
+  <!-- Estado "De viaje" (admin, feat nueva, ver MANIFEST.md) -- se abre al
+       tocar la pill "De viaje" del selector de Estado del perfil de Equipo
+       (`_eqCambiarEstado()`/`_eqAbrirSheetViaje()`, js/equipo.js).
+       Calendario de rango "ida y vuelta" con el MISMO markup/clases que el
+       de "Descanso" (#ev-crear-paso-descanso-rango, más abajo en este
+       archivo) -- estado propio (`_eqViajeCal`), sin bloquear fechas
+       pasadas. Guarda vía `adminActualizarEstadoViaje` (Edge Function). -->
+  <div id="eq-sheet-viaje-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_eqCerrarSheetViaje()"></div>
+  <div id="eq-sheet-viaje" class="bsheet" style="z-index:9701;">
+    <button type="button" class="sheet-close-btn" aria-label="Cerrar"><span class="material-symbols-outlined">close</span></button>
+    <div class="bsheet-handle"></div>
+    <div class="bsheet-title">De viaje</div>
+    <div class="bsheet-body">
+      <p style="font-size:0.82rem;color:var(--muted);line-height:1.5;margin:0 0 12px;">Elige el período del viaje (opcional). Mientras esté de viaje, su tier queda congelado.</p>
+      <div class="ev-ant-cal-nav">
+        <button type="button" class="ev-ant-cal-nav-btn" onclick="_eqViajeCalMoverMes(-1)"><span class="material-symbols-outlined">chevron_left</span></button>
+        <span class="ev-ant-cal-nav-label" id="eq-viaje-cal-label"></span>
+        <button type="button" class="ev-ant-cal-nav-btn" onclick="_eqViajeCalMoverMes(1)"><span class="material-symbols-outlined">chevron_right</span></button>
+      </div>
+      <div id="eq-viaje-cal"></div>
+      <div class="ev-ant-rango-fila" id="eq-viaje-rango-fila" style="margin-top:10px;">
+        <div class="ev-ant-rango-linea" id="eq-viaje-rango-resumen"></div>
+        <button type="button" class="btn-text-simple ev-ant-btn-restablecer-icono" id="eq-viaje-btn-restablecer" onclick="_eqViajeCalRestablecer()" aria-label="Restablecer fechas" title="Restablecer fechas" style="display:none;">
+          <span class="material-symbols-outlined">undo</span>
+        </button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;">
+        <button type="button" class="btn btn-primary" id="eq-viaje-btn-guardar" onclick="_eqGuardarViaje(false)">Guardar</button>
+        <button type="button" class="btn btn-outline" id="eq-viaje-btn-omitir" onclick="_eqGuardarViaje(true)">Omitir fechas</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Desglose detallado de puntos por concepto (feat nueva, ver
        MANIFEST.md/CHANGELOG.md -- "subpantalla de desglose de puntos por
        concepto") -- equivalente de `.aj-sub` (subsecciones de Ajustes,
@@ -3597,7 +3630,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/eventos.js?v=d792e7fe"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=cb09eb05"></script>
-<script src="js/equipo.js?v=f9a95914"></script>
+<script src="js/equipo.js?v=8ef36711"></script>
 <script src="js/home.js?v=e715822d"></script>
 <script src="js/reservas.js?v=d9f7492c"></script>
 <script src="js/perfil.js?v=729fe6ff"></script>

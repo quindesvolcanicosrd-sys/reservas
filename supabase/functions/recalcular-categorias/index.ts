@@ -79,6 +79,25 @@ Deno.serve(async (req: Request) => {
   const adminEmail = esLlamadaCron ? 'cron' : await _validarAdminToken(adminToken);
   if (!adminEmail) return json({ ok: false, error: 'Sesión admin inválida.' }, 401);
 
+  // Modo "una sola jugadora" (feat "De viaje", ver MANIFEST.md) -- lo usa
+  // `adminActualizarEstadoViaje` (supabase/functions/api/index.ts) cuando se
+  // registra un viaje que YA terminó: recalcula el tier SOLO de `soloUsuario`
+  // (aunque siga en 'De viaje', que el modo normal saltea) y sin penalizar
+  // las ausencias de [excluirDesde, excluirHasta]: la ventana de cada tier
+  // (`ventana_meses`) se estira hacia atrás tantos días como el viaje le
+  // "comió" a esa ventana, así la jugadora tiene el mismo tiempo real de
+  // entrenamiento disponible que si no hubiera viajado. Sin body (cron,
+  // "Recalcular ahora") = comportamiento de siempre, todo el equipo.
+  let body: any = {};
+  if (req.method === 'POST') { try { body = await req.json(); } catch { body = {}; } }
+  const soloUsuario: string | null = body && typeof body.soloUsuario === 'string' && body.soloUsuario.trim() ? body.soloUsuario.trim() : null;
+  const esFechaIso = (v: unknown) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+  const excluirDesde: string | null = soloUsuario && esFechaIso(body.excluirDesde) ? body.excluirDesde : null;
+  const excluirHasta: string | null = soloUsuario && esFechaIso(body.excluirHasta) ? body.excluirHasta : null;
+  const hayExclusion = !!(excluirDesde && excluirHasta && excluirHasta >= excluirDesde);
+  const DIA_MS = 86400000;
+  const diasExclusion = hayExclusion ? Math.round((Date.parse(excluirHasta!) - Date.parse(excluirDesde!)) / DIA_MS) + 1 : 0;
+
   try {
     const { data: tiersData, error: tiersError } = await supabase
       .from('config_tiers')
@@ -108,7 +127,7 @@ Deno.serve(async (req: Request) => {
       tierRiesgoDesde: string | null; tierRiesgoHasta: string | null; tierRiesgoObjetivo: string | null;
       mesesConsecutivosCumplidos: number;
     }[] = (equipoData ?? [])
-      .filter((r: any) => r.username)
+      .filter((r: any) => r.username && (!soloUsuario || r.username === soloUsuario))
       .map((r: any) => ({
         username: r.username, estadoMiembro: r.estado_miembro ?? null, tierModo: r.tier_modo ?? 'auto',
         categoria: r.categoria ?? null,
@@ -132,15 +151,19 @@ Deno.serve(async (req: Request) => {
     // migró a pg_cron nativo de Postgres. Mismo fix: `fecha < hoy` (no
     // `Evento Finalizado`) + excluir por nombre los 2 estados reales que
     // significan "no cuenta".
+    // Con exclusión de viaje, se trae historial extra (la ventana estirada,
+    // ver `diasExtraVentana()` más abajo, puede ir hasta `diasExclusion`
+    // días más atrás que la ventana normal más larga).
+    const inicioFetch = new Date(primerDiaMesesAtras(maxVentana).getTime() - diasExclusion * DIA_MS);
     const { data: asistData, error: asistError } = await supabase
       .from('asistencias')
       .select('fecha, a_horario, tarde')
       .not('estado', 'in', '("Evento Cancelado","No se entrena")')
-      .gte('fecha', fechaISO(primerDiaMesesAtras(maxVentana)))
+      .gte('fecha', fechaISO(inicioFetch))
       .lt('fecha', fechaISO(new Date()));
     if (asistError) return json({ ok: false, error: asistError.message }, 500);
 
-    const anioDesde = primerDiaMesesAtras(maxVentana).getUTCFullYear();
+    const anioDesde = inicioFetch.getUTCFullYear();
     const { data: puntosData, error: puntosError } = await supabase
       .from('puntos_mensuales')
       .select('nombre_usuario, anio, mes, puntos_total')
@@ -150,8 +173,20 @@ Deno.serve(async (req: Request) => {
     const hoy = new Date();
     const idxActual = hoy.getUTCFullYear() * 12 + hoy.getUTCMonth();
 
+    // Días de viaje (exclusión, solo en modo `soloUsuario`) que caen dentro
+    // de la ventana normal [inicio de la ventana, ayer] -- 0 para cualquier
+    // otra persona o sin exclusión. Es lo que se le devuelve a la ventana.
+    function diasExtraVentana(username: string, ventanaMeses: number): number {
+      if (!hayExclusion || username !== soloUsuario) return 0;
+      const inicioVentana = primerDiaMesesAtras(ventanaMeses).getTime();
+      const ayer = Date.parse(fechaISO(new Date())) - DIA_MS;
+      const desdeSolape = Math.max(Date.parse(excluirDesde!), inicioVentana);
+      const hastaSolape = Math.min(Date.parse(excluirHasta!), ayer);
+      return hastaSolape >= desdeSolape ? Math.round((hastaSolape - desdeSolape) / DIA_MS) + 1 : 0;
+    }
+
     function contarClases(username: string, ventanaMeses: number): number {
-      const desde = fechaISO(primerDiaMesesAtras(ventanaMeses));
+      const desde = fechaISO(new Date(primerDiaMesesAtras(ventanaMeses).getTime() - diasExtraVentana(username, ventanaMeses) * DIA_MS));
       const u = username.trim().toUpperCase();
       let n = 0;
       for (const fila of asistData ?? []) {
@@ -162,12 +197,15 @@ Deno.serve(async (req: Request) => {
     }
 
     function sumarPuntos(username: string, ventanaMeses: number): number {
+      // `puntos_mensuales` es por mes -- la compensación del viaje se
+      // redondea hacia arriba a meses enteros (30 días = 1 mes extra).
+      const mesesExtra = Math.ceil(diasExtraVentana(username, ventanaMeses) / 30);
       let total = 0;
       for (const fila of puntosData ?? []) {
         if (fila.nombre_usuario !== username) continue;
         const idxFila = Number(fila.anio) * 12 + (Number(fila.mes) - 1);
         const diff = idxActual - idxFila;
-        if (diff < 0 || diff > ventanaMeses) continue;
+        if (diff < 0 || diff > ventanaMeses + mesesExtra) continue;
         total += Number(fila.puntos_total) || 0;
       }
       return total;
@@ -247,6 +285,11 @@ Deno.serve(async (req: Request) => {
       // registra historial_tier este mes -- no hubo una evaluación real que
       // registrar.
       if (estadoMiembro === 'Lesionadx') continue;
+      // De viaje (feat nueva, ver MANIFEST.md): mismo criterio que Lesionadx
+      // -- tier congelado mientras dura el viaje. Excepción: el modo
+      // `soloUsuario` (viaje ya terminado registrado a posteriori) SÍ la
+      // evalúa, con la ventana compensada.
+      if (estadoMiembro === 'De viaje' && username !== soloUsuario) continue;
       // tier_modo fijado a mano (Cambio 55, control Quindes/Auto/Mirlxs del
       // perfil de Equipo, ver adminSetTierModo()/supabase/functions/api/index.ts)
       // -- mismo criterio que Lesionadx: la categoría queda como esté,
@@ -403,7 +446,8 @@ Deno.serve(async (req: Request) => {
     // Best-effort: un fallo acá no debe tirar abajo la respuesta de
     // "Recalcular ahora" (categorías/puntos ya se guardaron igual) -- solo
     // se registra en logs.
-    try {
+    // Modo `soloUsuario`: no hace falta recalcular los stats de todo el equipo.
+    if (!soloUsuario) try {
       await fetch(SUPABASE_URL + '/functions/v1/api', {
         method: 'POST',
         headers: {

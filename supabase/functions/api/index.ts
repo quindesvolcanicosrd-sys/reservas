@@ -2696,6 +2696,9 @@ async function adminSetEstadoMiembro(params: Record<string, any>): Promise<Recor
   // sin importar el camino que llega acá -- este action es compartido por
   // el selector de Mi Liga → Categorías y por el perfil de Equipo.
   const update: Record<string, any> = { estado_miembro: estadoMiembro, exenta_cuota: estadoMiembro === 'Lesionadx' };
+  // 'De viaje' se entra SOLO por adminActualizarEstadoViaje() (no está en
+  // ESTADOS_MIEMBRO); cualquier otro estado elegido acá cierra el viaje.
+  if (estadoPrevio === 'De viaje') { update.viaje_desde = null; update.viaje_hasta = null; }
   // Tier en pausa mientras dura la lesión (`recalcular-categorias/index.ts`
   // ya saltea a Lesionadx del recálculo) -- acá se guarda/restaura el
   // `categoria` de ANTES de la lesión para que, al volver a Activx, no
@@ -2712,6 +2715,65 @@ async function adminSetEstadoMiembro(params: Record<string, any>): Promise<Recor
   const { error } = await supabase.from('equipo').update(update).eq('username', nombre);
   if (error) return { exito: false, error: error.message };
   return { exito: true };
+}
+
+// Estado "De viaje" (feat nueva, ver MANIFEST.md) -- admin-only, desde el
+// selector de Estado del perfil de Equipo (pill "De viaje" + sheet de
+// período). `viaje_desde`/`viaje_hasta` opcionales (`YYYY-MM-DD` o null;
+// ambas null = "Omitir fechas", solo cambia el estado). Mismo efecto que
+// Lesionadx sobre el tier: `recalcular-categorias` saltea 'De viaje' (tier
+// congelado); a diferencia de Lesionadx NO exime de cuota (`exenta_cuota`
+// false, mismo "sync" que adminSetEstadoMiembro() aplica a todo estado que no
+// sea Lesionadx). Fin automático: `marcar_eventos_finalizados_y_recalcular()`
+// (migración 20260925010000_estado_de_viaje.sql) la pasa a Activx y limpia
+// las fechas cuando `viaje_hasta` ya pasó.
+//
+// Viaje registrado a posteriori (`viaje_hasta` < hoy, Ecuador) con AMBAS
+// fechas: dispara `recalcular-categorias` en modo `soloUsuario` con la
+// exclusión [viaje_desde, viaje_hasta] -- recalcula el tier de ESTA persona
+// sin penalizar las ausencias del viaje (ver ese archivo). Solo con
+// `viaje_hasta` (sin desde) no hay período que excluir -- no se recalcula.
+async function adminActualizarEstadoViaje(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const idJugadora = String(params.idJugadora ?? '').trim();
+  if (!idJugadora) return { exito: false, error: 'Falta la jugadora.' };
+  const normFecha = (v: unknown): string | null | false => {
+    if (v === null || v === undefined || v === '') return null;
+    const t = String(v).trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(t) && !isNaN(Date.parse(t + 'T00:00:00Z')) ? t : false;
+  };
+  const desde = normFecha(params.viaje_desde);
+  const hasta = normFecha(params.viaje_hasta);
+  if (desde === false || hasta === false) return { exito: false, error: 'Fecha inválida.' };
+  if (desde && hasta && hasta < desde) return { exito: false, error: 'La fecha de regreso no puede ser anterior a la de salida.' };
+
+  const { data: persona } = await supabase.from('equipo').select('username').eq('username', idJugadora).maybeSingle();
+  if (!persona) return { exito: false, error: 'No existe esa jugadora.' };
+
+  const { error } = await supabase.from('equipo')
+    .update({ estado_miembro: 'De viaje', exenta_cuota: false, viaje_desde: desde, viaje_hasta: hasta })
+    .eq('username', persona.username);
+  if (error) return { exito: false, error: error.message };
+
+  const hoyEc = new Date(Date.now() - 5 * 3600 * 1000).toISOString().substring(0, 10); // Ecuador = UTC-5, sin DST
+  let recalculado = false;
+  if (desde && hasta && hasta < hoyEc) {
+    if (!CRON_SECRET) return { exito: true, recalculado: false, aviso: 'Estado guardado, pero no se pudo recalcular el tier (falta CRON_SECRET).' };
+    try {
+      const resp = await fetch(SUPABASE_URL + '/functions/v1/recalcular-categorias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-cron-secret': CRON_SECRET },
+        body: JSON.stringify({ soloUsuario: persona.username, excluirDesde: desde, excluirHasta: hasta }),
+      });
+      const out = await resp.json().catch(() => ({}));
+      recalculado = resp.ok && out?.ok === true;
+      if (!recalculado) return { exito: true, recalculado: false, aviso: 'Estado guardado, pero falló el recálculo del tier: ' + (out?.error ?? resp.status) };
+    } catch (e) {
+      return { exito: true, recalculado: false, aviso: 'Estado guardado, pero falló el recálculo del tier: ' + String((e as any)?.message ?? e) };
+    }
+  }
+  return { exito: true, recalculado };
 }
 
 // Fija/libera la categoría (Cambio 55, control Quindes/Auto/Mirlxs del
@@ -3537,7 +3599,7 @@ async function adminGetRosterEquipo(): Promise<Record<string, any>> {
 // acciones de solo-lectura.
 async function getEquipo(params: Record<string, any> = {}): Promise<Record<string, any>> {
   const { data: filas } = await supabase.from('equipo')
-    .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, prefijo, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano, termometro_pct, fecha_ingreso, necesita_patines, necesita_protecciones, puntos_anteriores, racha_actual, tier_riesgo_desde, tier_riesgo_hasta, tier_riesgo_objetivo')
+    .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, prefijo, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano, termometro_pct, fecha_ingreso, necesita_patines, necesita_protecciones, puntos_anteriores, racha_actual, tier_riesgo_desde, tier_riesgo_hasta, tier_riesgo_objetivo, viaje_desde, viaje_hasta')
     .order('username');
   const personas = filas ?? [];
   if (!personas.length) return { personas: [] };
@@ -3916,6 +3978,7 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     pronombres: r.pronombres ?? '', prefijo: r.prefijo ?? '', telefono: r.telefono ?? '', email: r.email ?? '',
     fechaIngreso: r.fecha_ingreso ?? null,
     estado: r.estado_miembro ?? 'Activx',
+    viajeDesde: r.viaje_desde ?? null, viajeHasta: r.viaje_hasta ?? null,
     solicitudLesionPendiente: r.solicitud_lesion_pendiente === true,
     tierModo: r.tier_modo ?? 'auto', exentaCuota: r.exenta_cuota === true,
     esAdminMiembro: adminEmails.has(String(r.email ?? '').toLowerCase()),
@@ -4412,7 +4475,7 @@ function _instanteEventoUTC(fecha: string | null, hora: string | null): number |
 // mañana?"/el resumen de asistentes de admin lo cuenta igual si de hecho
 // marcó 'Asistiré', eso no cambia).
 const EQUIPO_ACTIVO_FILTRO = (r: { estado_miembro?: string | null }) =>
-  r.estado_miembro !== 'Lesionadx' && r.estado_miembro !== 'Ausente';
+  r.estado_miembro !== 'Lesionadx' && r.estado_miembro !== 'Ausente' && r.estado_miembro !== 'De viaje';
 
 // Recordatorio 1h antes, SOLO a quien marcó 'Asistiré' -- ventana 55-65min
 // (10min de ancho = 1 tick del cron cada 10min, sin solaparse con el
@@ -5137,6 +5200,7 @@ Deno.serve(async (req: Request) => {
       case 'getEventosFiltrados':             return json(await getEventosFiltrados(params));
       case 'marcarAsistenciaUsuario':         return json(await marcarAsistenciaUsuario(params));
       case 'adminMarcarAsistencia':           return json(await adminMarcarAsistencia(params));
+      case 'adminActualizarEstadoViaje':      return json(await adminActualizarEstadoViaje(params));
       case 'adminRegistrarAsistenciaExterna': return json(await adminRegistrarAsistenciaExterna(params));
       case 'adminBuscarPersonasParaEvento':   return json(await adminBuscarPersonasParaEvento(params));
       case 'solicitarRectificacionAsistencia': return json(await solicitarRectificacionAsistencia(params));
