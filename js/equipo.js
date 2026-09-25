@@ -690,12 +690,12 @@ function _eqTendenciaBadgeHtml(p, claseTamano) {
 // wrapper existente en vez de anidar uno nuevo). `claseTamano` se pasa tal
 // cual a `_eqTendenciaBadgeHtml()`.
 function _eqAvatarConTendenciaHtml(p, claseExtra, claseTamano) {
-  // "De viaje" (pedido explícito) -- badge ✈️ en la MISMA esquina inferior
+  // "De viaje" (pedido explícito) -- badge con ícono `flight` en la MISMA esquina inferior
   // derecha que el de tendencia, así que lo reemplaza en vez de apilarse
   // encima: mientras dura el viaje el tier está congelado, el viaje es el
   // dato relevante. `.badge-viaje`, css/equipo.css.
   var badge = p.estado === 'De viaje'
-    ? '<span class="badge-viaje" title="De viaje">✈️</span>'
+    ? '<span class="badge-viaje" title="De viaje"><span class="material-symbols-rounded">flight</span></span>'
     : _eqTendenciaBadgeHtml(p, claseTamano);
   return '<span class="eq-avatar-badge-wrap">' + _eqAvatarHtml(p, claseExtra) + badge + '</span>';
 }
