@@ -845,6 +845,10 @@
   font-size: 12px;
   color: #22c55e;
 }
+/* Perfil de detalle (foto de 96px) -- mismo tamaño que
+   `.eq-tendencia-badge--detalle`, el badge base se perdía ahí. */
+.badge-viaje--detalle { width: 28px; height: 28px; border-width: 2px; }
+.badge-viaje--detalle .material-symbols-rounded { font-size: 17px; }
 .eq-perfil-nombre { font-size: 1.3rem; font-weight: 800; color: var(--text); margin-top: 20px; }
 .eq-perfil-sub { font-size: 0.85rem; color: var(--muted); margin-top: 3px; }
 

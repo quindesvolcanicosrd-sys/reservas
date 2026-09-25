@@ -697,8 +697,11 @@ function _eqAvatarConTendenciaHtml(p, claseExtra, claseTamano) {
 // `.badge-viaje` en css/equipo.css) ocupa la MISMA esquina que el de
 // tendencia, así que lo reemplaza en vez de apilarse encima: mientras dura
 // el viaje el tier está congelado, el viaje es el dato relevante.
-function _eqBadgeAvatarHtml(p, claseTamano) {
-  if (p.estado === 'De viaje') return '<span class="badge-viaje" title="De viaje"><span class="material-symbols-rounded">flight</span></span>';
+// `claseViaje` opcional: modificador de tamaño del de viaje (perfil de
+// detalle, `badge-viaje--detalle`), mismo criterio que `claseTamano` del de
+// tendencia.
+function _eqBadgeAvatarHtml(p, claseTamano, claseViaje) {
+  if (p.estado === 'De viaje') return '<span class="badge-viaje' + (claseViaje ? ' ' + claseViaje : '') + '" title="De viaje"><span class="material-symbols-rounded">flight</span></span>';
   return _eqTendenciaBadgeHtml(p, claseTamano);
 }
 
@@ -4037,7 +4040,7 @@ function _eqPerfilContenidoHtml(p) {
   return '<div class="eq-perfil-header">' +
       '<div class="eq-avatar-wrap">' +
         _eqAvatarHtml(p, 'eq-avatar-grande') +
-        _eqTendenciaBadgeHtml(p, 'eq-tendencia-badge--detalle') +
+        _eqBadgeAvatarHtml(p, 'eq-tendencia-badge--detalle', 'badge-viaje--detalle') + // viaje reemplaza a tendencia, ver _eqBadgeAvatarHtml()
       '</div>' +
       '<div class="eq-perfil-nombre">' + _eqEsc(p.nombreDerby) + '</div>' +
       categoriaPronombresHtml +
