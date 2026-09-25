@@ -690,7 +690,14 @@ function _eqTendenciaBadgeHtml(p, claseTamano) {
 // wrapper existente en vez de anidar uno nuevo). `claseTamano` se pasa tal
 // cual a `_eqTendenciaBadgeHtml()`.
 function _eqAvatarConTendenciaHtml(p, claseExtra, claseTamano) {
-  return '<span class="eq-avatar-badge-wrap">' + _eqAvatarHtml(p, claseExtra) + _eqTendenciaBadgeHtml(p, claseTamano) + '</span>';
+  // "De viaje" (pedido explícito) -- badge ✈️ en la MISMA esquina inferior
+  // derecha que el de tendencia, así que lo reemplaza en vez de apilarse
+  // encima: mientras dura el viaje el tier está congelado, el viaje es el
+  // dato relevante. `.badge-viaje`, css/equipo.css.
+  var badge = p.estado === 'De viaje'
+    ? '<span class="badge-viaje" title="De viaje">✈️</span>'
+    : _eqTendenciaBadgeHtml(p, claseTamano);
+  return '<span class="eq-avatar-badge-wrap">' + _eqAvatarHtml(p, claseExtra) + badge + '</span>';
 }
 
 // Fila de stats inline (Batch 4) -- `pointer-events:none` propio de cada

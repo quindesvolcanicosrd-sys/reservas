@@ -818,6 +818,28 @@
 .eq-tendencia-badge--detalle .material-symbols-outlined { font-size: 20px; }
 .eq-tendencia-badge-sube { background: var(--success); color: var(--white); }
 .eq-tendencia-badge-baja { background: var(--danger); color: var(--white); }
+/* Badge "De viaje" sobre el avatar de la lista (`_eqAvatarConTendenciaHtml()`,
+   js/equipo.js) -- misma esquina que `.eq-tendencia-badge` (lo reemplaza,
+   no se apilan); el contenedor `.eq-avatar-badge-wrap` ya es
+   `position:relative`. `pointer-events:none`/`z-index` igual que el de
+   tendencia, para que el toque siga abriendo el perfil. */
+.badge-viaje {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  z-index: 2;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface-2, #2a2a2a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  line-height: 1;
+  border: 1.5px solid var(--bg);
+  pointer-events: none;
+}
 .eq-perfil-nombre { font-size: 1.3rem; font-weight: 800; color: var(--text); margin-top: 20px; }
 .eq-perfil-sub { font-size: 0.85rem; color: var(--muted); margin-top: 3px; }
 
