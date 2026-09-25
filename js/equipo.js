@@ -3509,13 +3509,20 @@ function _eqGenerarInviteLink(id) {
 function _eqAsistExternaHtml(p) {
   if (typeof _adminToken === 'undefined' || !_adminToken) return '';
   var nombreMostrar = p.nombreDerby || p.nombre; // nombre derby, o username si no tiene
+  // Acordeón (pedido explícito) -- MISMO componente que "Categoría"/"Estado"
+  // de este perfil (`.eq-acord` + `eqToggleAcordeon()`, chevron que rota y
+  // cuerpo con `max-height` animado, css/equipo.css), arranca cerrado. Sin
+  // texto de "toca para expandir": el chevron ya lo indica.
   return '<div class="eq-admin-sep"></div>' +
-    '<div class="eq-admin-campo--row">' +
-      '<div>' +
-        '<p class="eq-tier-label" style="margin-bottom:2px">Asistencia externa</p>' +
-        '<p class="eq-admin-hint" style="margin:0">Agrega una asistencia externa a un entrenamiento al que haya asistido ' + _eqEsc(nombreMostrar) + ' en otro equipo o en otro país para que se registre su punto de asistencia.</p>' +
+    '<div class="eq-admin-campo eq-acord">' +
+      '<div class="eq-acord-header" onclick="eqToggleAcordeon(this)">' +
+        '<p class="eq-tier-label" style="margin:0">Asistencia externa</p>' +
+        '<span class="eq-acord-icono"><span class="material-symbols-rounded">chevron_right</span></span>' +
       '</div>' +
-      '<button type="button" class="btn-text-simple" style="white-space:nowrap;" onclick="_eqAbrirSheetAsistExterna(\'' + _eqEscId(p.id) + '\')">Registrar asistencia externa</button>' +
+      '<div class="eq-acord-cuerpo">' +
+        '<p class="eq-admin-hint" style="margin:0 0 12px">Agrega una asistencia externa a un entrenamiento al que haya asistido ' + _eqEsc(nombreMostrar) + ' en otro equipo o en otro país para que se registre su punto de asistencia.</p>' +
+        '<button type="button" class="btn btn-danger" onclick="_eqAbrirSheetAsistExterna(\'' + _eqEscId(p.id) + '\')">Registrar asistencia externa</button>' +
+      '</div>' +
     '</div>';
 }
 
