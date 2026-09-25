@@ -690,14 +690,16 @@ function _eqTendenciaBadgeHtml(p, claseTamano) {
 // wrapper existente en vez de anidar uno nuevo). `claseTamano` se pasa tal
 // cual a `_eqTendenciaBadgeHtml()`.
 function _eqAvatarConTendenciaHtml(p, claseExtra, claseTamano) {
-  // "De viaje" (pedido explícito) -- badge con ícono `flight` en la MISMA esquina inferior
-  // derecha que el de tendencia, así que lo reemplaza en vez de apilarse
-  // encima: mientras dura el viaje el tier está congelado, el viaje es el
-  // dato relevante. `.badge-viaje`, css/equipo.css.
-  var badge = p.estado === 'De viaje'
-    ? '<span class="badge-viaje" title="De viaje"><span class="material-symbols-rounded">flight</span></span>'
-    : _eqTendenciaBadgeHtml(p, claseTamano);
-  return '<span class="eq-avatar-badge-wrap">' + _eqAvatarHtml(p, claseExtra) + badge + '</span>';
+  return '<span class="eq-avatar-badge-wrap">' + _eqAvatarHtml(p, claseExtra) + _eqBadgeAvatarHtml(p, claseTamano) + '</span>';
+}
+// Badge de la esquina inferior derecha del avatar (lista de Equipo y avatar
+// de "Mis estadísticas") -- "De viaje" (pedido explícito, ícono `flight`,
+// `.badge-viaje` en css/equipo.css) ocupa la MISMA esquina que el de
+// tendencia, así que lo reemplaza en vez de apilarse encima: mientras dura
+// el viaje el tier está congelado, el viaje es el dato relevante.
+function _eqBadgeAvatarHtml(p, claseTamano) {
+  if (p.estado === 'De viaje') return '<span class="badge-viaje" title="De viaje"><span class="material-symbols-rounded">flight</span></span>';
+  return _eqTendenciaBadgeHtml(p, claseTamano);
 }
 
 // Fila de stats inline (Batch 4) -- `pointer-events:none` propio de cada
@@ -2344,7 +2346,8 @@ function _eqRenderMisEstadisticas() {
   // mutado con `data-nombre`/`data-foto` arriba, nunca reconstruido) --
   // solo el badge se re-renderiza acá, adentro de su propio wrapper
   // `.eq-avatar-badge-wrap` (index.html) ya `position:relative`.
-  if (toggleTendencia) toggleTendencia.innerHTML = _eqTendenciaBadgeHtml(persona);
+  // + badge "De viaje" (reemplaza al de tendencia, ver `_eqBadgeAvatarHtml()`).
+  if (toggleTendencia) toggleTendencia.innerHTML = _eqBadgeAvatarHtml(persona);
   // Pill de nivel SACADO de la nav (pedido explícito, "se va a mover al
   // termómetro") -- vivía en `#eq-misstats-toggle-pills` (index.html), ahora
   // vacío a propósito, sin más consumidores acá. Reemplazado por el pill
