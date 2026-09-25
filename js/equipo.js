@@ -3789,10 +3789,19 @@ function _eqViajeFilaHtml(p) {
   var cancelarHtml = (typeof _adminToken !== 'undefined' && _adminToken)
     ? '<button type="button" class="btn-text-simple eq-viaje-cancelar" onclick="_eqCancelarViaje(\'' + _eqEscId(p.id) + '\')">Cancelar viaje</button>'
     : '';
-  // Fechas en su propio span `white-space:nowrap` (`.eq-viaje-fechas`,
-  // css/equipo.css) -- antes el texto partía el rango por la mitad
-  // ("10 sep –" / "20 sep") al compartir la fila con "Cancelar viaje".
-  return '<div class="eq-info-fila eq-viaje-fila" id="eq-viaje-fila"><span class="material-symbols-outlined">flight</span><span class="eq-info-texto">De viaje' + (rango ? ' · <span class="eq-viaje-fechas">' + _eqEsc(rango) + '</span>' : '') + '</span>' + cancelarHtml + '</div>';
+  // 2 líneas (pedido explícito): "De viaje" arriba y el rango abajo, en su
+  // propio bloque -- antes iban en el mismo texto y el rango se partía al
+  // compartir la fila con "Cancelar viaje". Sin fechas, solo la 1ra línea.
+  return '<div class="eq-info-fila eq-viaje-fila" id="eq-viaje-fila">' +
+      '<div class="eq-viaje-info">' +
+        '<span class="material-symbols-outlined">flight</span>' +
+        '<div class="eq-info-texto">' +
+          '<div class="eq-viaje-titulo">De viaje</div>' +
+          (rango ? '<div class="eq-viaje-fechas">' + _eqEsc(rango) + '</div>' : '') +
+        '</div>' +
+      '</div>' +
+      cancelarHtml +
+    '</div>';
 }
 // Confirmación con `confirm()` nativo -- mismo criterio que el resto de
 // acciones admin puntuales de la app (js/admin.js). Backend:
