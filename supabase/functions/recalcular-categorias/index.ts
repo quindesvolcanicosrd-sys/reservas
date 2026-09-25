@@ -177,6 +177,22 @@ Deno.serve(async (req: Request) => {
       .lt('fecha', fechaISO(new Date()));
     if (asistError) return json({ ok: false, error: asistError.message }, 500);
 
+    // Asistencias externas (`adminRegistrarAsistenciaExterna`, api) -- viven
+    // SOLO en `log_asistencias` (`origen:'Externa'`, `id_evento` 'ext_<uuid>'
+    // sin fila en `asistencias`, nunca en a_horario/tarde), así que el conteo
+    // de arriba no las ve. Pedido explícito: cuentan como clase para el tier.
+    // Una sola consulta para toda la corrida, misma ventana que asistData --
+    // `contarClases()` se llama varias veces por persona (termómetro, tier
+    // actual/superior, mejor tier), un query por llamada sería N consultas.
+    const { data: externasData, error: externasError } = await supabase
+      .from('log_asistencias')
+      .select('nombre_usuario, fecha_entrenamiento')
+      .eq('origen', 'Externa')
+      .gte('fecha_entrenamiento', fechaISO(inicioFetch))
+      .lt('fecha_entrenamiento', fechaISO(new Date()))
+      .limit(100000);
+    if (externasError) return json({ ok: false, error: externasError.message }, 500);
+
     const anioDesde = inicioFetch.getUTCFullYear();
     const { data: puntosData, error: puntosError } = await supabase
       .from('puntos_mensuales')
@@ -206,6 +222,12 @@ Deno.serve(async (req: Request) => {
       for (const fila of asistData ?? []) {
         if (!fila.fecha || fila.fecha < desde) continue;
         if (nombresDe(fila.a_horario).includes(u) || nombresDe(fila.tarde).includes(u)) n++;
+      }
+      // + asistencias externas de la misma ventana (ver `externasData` arriba).
+      for (const ext of externasData ?? []) {
+        const fechaExt = String(ext.fecha_entrenamiento ?? '').slice(0, 10);
+        if (!fechaExt || fechaExt < desde) continue;
+        if (String(ext.nombre_usuario ?? '').trim().toUpperCase() === u) n++;
       }
       return n;
     }
