@@ -3788,7 +3788,10 @@ function _eqViajeFilaHtml(p) {
   var cancelarHtml = (typeof _adminToken !== 'undefined' && _adminToken)
     ? '<button type="button" class="btn-text-simple eq-viaje-cancelar" onclick="_eqCancelarViaje(\'' + _eqEscId(p.id) + '\')">Cancelar viaje</button>'
     : '';
-  return '<div class="eq-info-fila" id="eq-viaje-fila"><span class="material-symbols-outlined">flight</span><span class="eq-info-texto">De viaje' + (rango ? ' · ' + _eqEsc(rango) : '') + '</span>' + cancelarHtml + '</div>';
+  // Fechas en su propio span `white-space:nowrap` (`.eq-viaje-fechas`,
+  // css/equipo.css) -- antes el texto partía el rango por la mitad
+  // ("10 sep –" / "20 sep") al compartir la fila con "Cancelar viaje".
+  return '<div class="eq-info-fila eq-viaje-fila" id="eq-viaje-fila"><span class="material-symbols-outlined">flight</span><span class="eq-info-texto">De viaje' + (rango ? ' · <span class="eq-viaje-fechas">' + _eqEsc(rango) + '</span>' : '') + '</span>' + cancelarHtml + '</div>';
 }
 // Confirmación con `confirm()` nativo -- mismo criterio que el resto de
 // acciones admin puntuales de la app (js/admin.js). Backend:

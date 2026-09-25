@@ -994,6 +994,14 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
 /* "Cancelar viaje" (admin) -- empujado a la derecha de la fila "De viaje"
    del perfil (`.eq-info-fila` es flex). */
 .eq-viaje-cancelar { margin-left: auto; white-space: nowrap; flex-shrink: 0; }
+/* Fila "De viaje" del perfil -- ícono, texto y "Cancelar viaje" en una sola
+   línea flex sin wrap (gap más corto que el resto de `.eq-info-fila`). El
+   rango de fechas nunca se parte (`.eq-viaje-fechas`, nowrap); si no entra,
+   baja entero a la 2da línea del texto (`min-width:0` deja que el texto se
+   achique en vez de desbordar la fila). */
+.eq-viaje-fila { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; }
+.eq-viaje-fila .eq-info-texto { min-width: 0; }
+.eq-viaje-fechas { white-space: nowrap; }
 
 /* Toggle switch (paga cuota / es admin) -- checkbox real oculto
    (accesible, togglea con teclado/lector de pantalla) + slider visual. */
