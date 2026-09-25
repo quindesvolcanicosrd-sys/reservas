@@ -1111,6 +1111,16 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
 .eq-desglose-fila-titulo { font-size: 0.88rem; font-weight: 700; color: var(--text); }
 .eq-desglose-fila-sub { font-size: 0.78rem; color: var(--muted); margin-top: 1px; }
 .eq-desglose-fila-valor { flex-shrink: 0; font-size: 0.9rem; font-weight: 800; color: var(--brand); }
+/* Badge "Externa" (asistencia registrada por admin fuera del club, ver
+   `adminRegistrarAsistenciaExterna`/MANIFEST.md) -- neutro a propósito, NO
+   el verde de `.badge-confirmada` de una asistencia normal (no existe un
+   token `--accent` en css/colors.css; se usan los grises de superficie). */
+.eq-badge-externa {
+  display: inline-block; vertical-align: middle; margin-left: 6px;
+  padding: 1px 7px; border-radius: 10px;
+  background: var(--surface-3); border: 1px solid var(--border-warm); color: var(--text-2);
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase;
+}
 
 /* Total, al final de la lista (pedido explícito) -- separador propio,
    mismo peso visual que `.eq-desglose-fila-valor` pero más grande, para

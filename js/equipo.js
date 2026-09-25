@@ -3170,8 +3170,10 @@ function _eqDesgloseMesTxt(fechaIso) {
 function _eqDesgloseFilaHtml(f, concepto, icono) {
   var titulo, sub;
   if (concepto === 'asistencia') {
+    // Asistencia externa (adminRegistrarAsistenciaExterna, backend) --
+    // badge "Externa" neutro al lado del estado + el lugar en el subtítulo.
     titulo = f.estado;
-    sub = _eqFormatearFechaIngreso(f.fecha);
+    sub = _eqFormatearFechaIngreso(f.fecha) + (f.externa && f.lugar ? ' · ' + f.lugar : '');
   } else if (concepto === 'tareas') {
     titulo = f.titulo;
     sub = f.reconciliacion ? _eqDesgloseMesTxt(f.fecha) : _eqFormatearFechaIngreso(f.fecha);
@@ -3182,7 +3184,7 @@ function _eqDesgloseFilaHtml(f, concepto, icono) {
   return '<div class="eq-desglose-fila">' +
       '<span class="eq-desglose-fila-icono"><span class="material-symbols-rounded">' + icono + '</span></span>' +
       '<div class="eq-desglose-fila-info">' +
-        '<div class="eq-desglose-fila-titulo">' + _eqEsc(titulo) + '</div>' +
+        '<div class="eq-desglose-fila-titulo">' + _eqEsc(titulo) + (f.externa ? ' <span class="eq-badge-externa">Externa</span>' : '') + '</div>' +
         '<div class="eq-desglose-fila-sub">' + _eqEsc(sub) + '</div>' +
       '</div>' +
       '<div class="eq-desglose-fila-valor">' + _eqDesglosePuntosTxt(f.puntos) + '</div>' +
@@ -3494,6 +3496,84 @@ function _eqGenerarInviteLink(id) {
   });
 }
 
+// Asistencia externa (feat nueva, ver MANIFEST.md) -- fila admin-only al
+// final del perfil de detalle, FUERA de `.eq-admin-quindes` a propósito:
+// esa sección se oculta para Mirlxs (`eq-oculto`) y una jugadora de
+// cualquier categoría puede entrenar afuera. Mismo gate `_adminToken` y
+// mismo layout (`.eq-admin-campo--row` + `btn-text-simple`) que "Activar
+// cuenta" de `_eqAdminGestionHtml()`.
+function _eqAsistExternaHtml(p) {
+  if (typeof _adminToken === 'undefined' || !_adminToken) return '';
+  return '<div class="eq-admin-sep"></div>' +
+    '<div class="eq-admin-campo--row">' +
+      '<div>' +
+        '<p class="eq-tier-label" style="margin-bottom:2px">Asistencia externa</p>' +
+        '<p class="eq-admin-hint" style="margin:0">Entrenó con otro equipo -- suma 1 punto de asistencia.</p>' +
+      '</div>' +
+      '<button type="button" class="btn-text-simple" style="white-space:nowrap;" onclick="_eqAbrirSheetAsistExterna(\'' + _eqEscId(p.id) + '\')">Registrar asistencia externa</button>' +
+    '</div>';
+}
+
+// Sheet #eq-sheet-asist-externa (index.html) -- mismo patrón open/close que
+// `_evAbrirRectSheet()`/`_evCerrarRectSheet()` (js/eventos.js): overlay +
+// translateY, `_registrarOverlayAbierto()` para que atrás/tap fuera lo
+// cierren vía history.back(). `max` del input = hoy (hora local del
+// dispositivo); el backend igual rechaza fechas futuras (hora Ecuador).
+var _eqAsistExternaId = null;
+function _eqHoyIso() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function _eqAbrirSheetAsistExterna(id) {
+  _eqAsistExternaId = id;
+  var fecha = document.getElementById('eq-asist-ext-fecha');
+  var lugar = document.getElementById('eq-asist-ext-lugar');
+  var btn = document.getElementById('eq-asist-ext-btn');
+  if (fecha) { fecha.value = ''; fecha.max = _eqHoyIso(); }
+  if (lugar) lugar.value = '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Registrar'; }
+  var ov = document.getElementById('eq-sheet-asist-externa-overlay');
+  var sh = document.getElementById('eq-sheet-asist-externa');
+  if (!ov || !sh) return;
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(_eqCerrarSheetAsistExterna);
+}
+function _eqCerrarSheetAsistExterna(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var ov = document.getElementById('eq-sheet-asist-externa-overlay');
+  var sh = document.getElementById('eq-sheet-asist-externa');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+function _eqAsistExternaValidar() {
+  var fecha = document.getElementById('eq-asist-ext-fecha');
+  var btn = document.getElementById('eq-asist-ext-btn');
+  if (btn) btn.disabled = !(fecha && fecha.value && fecha.value <= _eqHoyIso());
+}
+function _eqRegistrarAsistExterna(btn) {
+  if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible registrar la asistencia en este momento.', 'error'); return; }
+  var fecha = document.getElementById('eq-asist-ext-fecha').value;
+  var lugar = document.getElementById('eq-asist-ext-lugar').value.trim().slice(0, 60);
+  if (!_eqAsistExternaId || !fecha) return;
+  btn.disabled = true;
+  btn.textContent = 'Registrando...';
+  var restaurar = function() { btn.disabled = false; btn.textContent = 'Registrar'; };
+  apiPost({ action: 'adminRegistrarAsistenciaExterna', adminToken: _adminToken, idJugadora: _eqAsistExternaId, fecha: fecha, lugar: lugar }, function(res) {
+    if (!res || !res.exito) { restaurar(); mostrarToast((res && res.error) || 'No se pudo registrar la asistencia.', 'error'); return; }
+    _eqCerrarSheetAsistExterna();
+    mostrarToast('Asistencia externa registrada.', 'ok', true);
+    // Re-pide `getEquipo()` y re-renderiza el perfil abierto (ver el final
+    // de `_eqAplicarFiltrosAhora()`) -- el punto nuevo aparece en las
+    // stats sin recargar la app.
+    _eqAplicarFiltrosAhora();
+  }, function(e) {
+    restaurar();
+    mostrarToast(e && e.message ? e.message : 'No se pudo registrar la asistencia.', 'error');
+  });
+}
+
 // Cambia el estado manual de una persona -- botones del segmented control
 // de arriba, sin listener delegado (mismo criterio que `_eqCambiarTier()`).
 // `querySelectorAll` sin scope por id: hay como mucho UN perfil abierto a
@@ -3738,7 +3818,8 @@ function _eqPerfilContenidoHtml(p) {
     (filas ? '<div class="eq-info-lista">' + filas + '</div>' : '') +
     statsAcordHtml +
     _eqTierAdminHtml(p) +
-    _eqAdminGestionHtml(p);
+    _eqAdminGestionHtml(p) +
+    _eqAsistExternaHtml(p);
 }
 
 function _eqRenderPerfil(p) {

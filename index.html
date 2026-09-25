@@ -43,7 +43,7 @@
 <link rel="stylesheet" href="css/nav.css?v=4e85514c">
 <link rel="stylesheet" href="css/eventos.css?v=1b6aa2d1">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=c369e273">
+<link rel="stylesheet" href="css/equipo.css?v=76068790">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2873,6 +2873,28 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
 
+  <!-- Asistencia externa (admin, feat nueva, ver MANIFEST.md) -- se abre
+       desde el botón "Registrar asistencia externa" del perfil de detalle
+       (`_eqAsistExternaHtml()`/`_eqAbrirSheetAsistExterna()`, js/equipo.js),
+       guarda vía `adminRegistrarAsistenciaExterna` (Edge Function). -->
+  <div id="eq-sheet-asist-externa-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_eqCerrarSheetAsistExterna()"></div>
+  <div id="eq-sheet-asist-externa" class="bsheet" style="z-index:9701;">
+    <button type="button" class="sheet-close-btn" aria-label="Cerrar"><span class="material-symbols-outlined">close</span></button>
+    <div class="bsheet-handle"></div>
+    <div class="bsheet-title">Asistencia externa</div>
+    <div class="bsheet-body">
+      <div class="ev-lugar-campo">
+        <p class="ev-lugar-campo-label">Fecha</p>
+        <input type="date" id="eq-asist-ext-fecha" class="ev-lugar-input" required oninput="_eqAsistExternaValidar()">
+      </div>
+      <div class="ev-lugar-campo">
+        <p class="ev-lugar-campo-label">¿Dónde entrenó? <span style="font-weight:500;color:var(--muted);">(opcional)</span></p>
+        <input type="text" id="eq-asist-ext-lugar" class="ev-lugar-input" maxlength="60" placeholder="Ej: Bogotá Brawlers" autocomplete="off">
+      </div>
+      <button type="button" class="btn btn-primary" id="eq-asist-ext-btn" style="margin-top:20px;" onclick="_eqRegistrarAsistExterna(this)" disabled>Registrar</button>
+    </div>
+  </div>
+
   <!-- Desglose detallado de puntos por concepto (feat nueva, ver
        MANIFEST.md/CHANGELOG.md -- "subpantalla de desglose de puntos por
        concepto") -- equivalente de `.aj-sub` (subsecciones de Ajustes,
@@ -3575,7 +3597,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/eventos.js?v=d792e7fe"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=cb09eb05"></script>
-<script src="js/equipo.js?v=4e50af83"></script>
+<script src="js/equipo.js?v=f9a95914"></script>
 <script src="js/home.js?v=e715822d"></script>
 <script src="js/reservas.js?v=d9f7492c"></script>
 <script src="js/perfil.js?v=729fe6ff"></script>

@@ -2152,6 +2152,52 @@ async function adminMarcarAsistencia(params: Record<string, any>): Promise<Recor
   return { exito: true };
 }
 
+// Asistencia externa (feat nueva, ver MANIFEST.md) -- una jugadora entrenó
+// con otro equipo; un admin la registra desde su perfil de Equipo. Fila en
+// `log_asistencias` con `origen:'Externa'` + `estado:'A tiempo'` (1 punto,
+// misma escala que una marca real de admin) + `id_evento` único `ext_<uuid>`
+// (sin fila en `asistencias` -- nunca colisiona con la de-duplicación por
+// (evento, persona) de los cálculos de puntos, así 2 externas el mismo día
+// suman 2). Cuenta SOLO para `puntos_asistencia`: los 3 lectores de ese
+// concepto (`recalcularPuntosAsistencia()`, el total en vivo de
+// `getEquipo()`, `getDesglosePuntos()`/'asistencia') filtran
+// `origen IN ('Admin','Externa')`; todo lo demás que lee `origen==='Admin'`
+// (racha, clases/tiers, última asistencia/Ausente, rollcall) la ignora a
+// propósito -- no fue un entrenamiento del club. Los puntos se acreditan con
+// el recálculo autoritativo del mes de `fecha` (mismo que "Recalcular ahora"),
+// no con un incremento a mano que podría desalinearse del log.
+async function adminRegistrarAsistenciaExterna(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const idJugadora = String(params.idJugadora ?? '').trim();
+  const fecha      = String(params.fecha ?? '').trim();
+  const lugar      = String(params.lugar ?? '').trim();
+  if (!idJugadora) return { exito: false, error: 'Falta la jugadora.' };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || isNaN(new Date(fecha + 'T00:00:00Z').getTime())) return { exito: false, error: 'Fecha inválida.' };
+  if (lugar.length > 60) return { exito: false, error: 'El lugar no puede superar 60 caracteres.' };
+  const hoyEc = new Date(Date.now() - 5 * 3600 * 1000).toISOString().substring(0, 10); // Ecuador = UTC-5, sin DST
+  if (fecha > hoyEc) return { exito: false, error: 'La fecha no puede ser futura.' };
+
+  const { data: persona } = await supabase.from('equipo').select('username').eq('username', idJugadora).maybeSingle();
+  if (!persona) return { exito: false, error: 'No existe esa jugadora.' };
+
+  const { error } = await supabase.from('log_asistencias').insert({
+    id_evento: 'ext_' + crypto.randomUUID(),
+    fecha_entrenamiento: fecha + 'T00:00:00Z', // mismo formato que _agregarFilaLogAsistencia()
+    nombre_usuario: persona.username,
+    origen: 'Externa',
+    estado: 'A tiempo',
+    lugar_externo: lugar || null,
+    marca_temporal: new Date().toISOString(),
+  });
+  if (error) return { exito: false, error: 'Error guardando la asistencia: ' + error.message };
+
+  const [anio, mes] = fecha.split('-').map((n: string) => Number(n));
+  const recalc = await recalcularPuntosAsistencia(mes, anio);
+  if (!recalc.exito) return { exito: false, error: 'Asistencia guardada, pero falló el recálculo de puntos: ' + (recalc.error ?? '') };
+  return { exito: true };
+}
+
 async function adminBuscarPersonasParaEvento(params: Record<string, any>): Promise<Record<string, any>> {
   const idEvento = String(params.idEvento ?? '').trim();
   // `estado_miembro` sumada al select (feat nueva, ver MANIFEST.md --
@@ -2908,7 +2954,7 @@ async function recalcularPuntosAsistencia(mes: number, anio: number): Promise<{ 
 
   const { data: logs, error: errorLogs } = await supabase.from('log_asistencias')
     .select('nombre_usuario, id_evento, estado, fecha_entrenamiento, marca_temporal')
-    .eq('origen', 'Admin')
+    .in('origen', ['Admin', 'Externa']) // 'Externa' = adminRegistrarAsistenciaExterna(), ver ese comentario
     .gte('fecha_entrenamiento', desde).lt('fecha_entrenamiento', hasta);
   if (errorLogs) return { exito: false, error: errorLogs.message };
 
@@ -3617,7 +3663,7 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
   // cambios (no reportados como desalineados).
   const { data: logsAsistenciaPeriodo } = await supabase.from('log_asistencias')
     .select('nombre_usuario, id_evento, estado, fecha_entrenamiento, marca_temporal')
-    .eq('origen', 'Admin')
+    .in('origen', ['Admin', 'Externa']) // mismo criterio que recalcularPuntosAsistencia()
     .gte('fecha_entrenamiento', desdePeriodo).lt('fecha_entrenamiento', hastaPeriodo);
   const ultimaPorClaveAsistencia: Record<string, { estado: string; nombre_usuario: string; marca: number }> = {};
   (logsAsistenciaPeriodo ?? []).forEach((l: any) => {
@@ -4028,14 +4074,14 @@ async function getDesglosePuntos(params: Record<string, any>): Promise<Record<st
     // (a propósito) NO de-duplicaba acá, para calzar con el total viejo
     // (ya inflado). Ahora los 2 coinciden de nuevo, ambos de-duplicados.
     const { data: logs } = await supabase.from('log_asistencias')
-      .select('id_evento, estado, fecha_entrenamiento, marca_temporal')
-      .eq('nombre_usuario', nombreUsuario).eq('origen', 'Admin')
+      .select('id_evento, origen, estado, fecha_entrenamiento, marca_temporal, lugar_externo')
+      .eq('nombre_usuario', nombreUsuario).in('origen', ['Admin', 'Externa']) // mismo criterio que recalcularPuntosAsistencia()
       .gte('fecha_entrenamiento', periodo.desde).lt('fecha_entrenamiento', periodo.hasta);
-    const ultimaPorEventoDesglose: Record<string, { estado: string; fecha: string; marca: number }> = {};
+    const ultimaPorEventoDesglose: Record<string, { estado: string; fecha: string; marca: number; externa: boolean; lugar: string }> = {};
     (logs ?? []).forEach((l: any) => {
       const marca = l.marca_temporal ? new Date(l.marca_temporal).getTime() : 0;
       const actual = ultimaPorEventoDesglose[l.id_evento];
-      if (!actual || marca >= actual.marca) ultimaPorEventoDesglose[l.id_evento] = { estado: l.estado, fecha: l.fecha_entrenamiento, marca };
+      if (!actual || marca >= actual.marca) ultimaPorEventoDesglose[l.id_evento] = { estado: l.estado, fecha: l.fecha_entrenamiento, marca, externa: l.origen === 'Externa', lugar: l.lugar_externo ?? '' };
     });
     const filas = Object.keys(ultimaPorEventoDesglose)
       .map((idEvento) => ultimaPorEventoDesglose[idEvento])
@@ -4045,6 +4091,9 @@ async function getDesglosePuntos(params: Record<string, any>): Promise<Record<st
         fecha: String(l.fecha).slice(0, 10),
         estado: l.estado,
         puntos: l.estado === 'A tiempo' ? 1 : 0.5,
+        // Asistencia externa (adminRegistrarAsistenciaExterna()) -- el
+        // frontend la distingue con un badge "Externa" + el lugar, si hay.
+        ...(l.externa ? { externa: true, lugar: l.lugar } : {}),
       }));
     const total = filas.reduce((s: number, f: any) => s + f.puntos, 0);
     return { exito: true, concepto, filas, total };
@@ -5088,6 +5137,7 @@ Deno.serve(async (req: Request) => {
       case 'getEventosFiltrados':             return json(await getEventosFiltrados(params));
       case 'marcarAsistenciaUsuario':         return json(await marcarAsistenciaUsuario(params));
       case 'adminMarcarAsistencia':           return json(await adminMarcarAsistencia(params));
+      case 'adminRegistrarAsistenciaExterna': return json(await adminRegistrarAsistenciaExterna(params));
       case 'adminBuscarPersonasParaEvento':   return json(await adminBuscarPersonasParaEvento(params));
       case 'solicitarRectificacionAsistencia': return json(await solicitarRectificacionAsistencia(params));
       case 'adminGetRectificaciones':          return json(await adminGetRectificaciones(params));
