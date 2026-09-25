@@ -1,18 +1,18 @@
 // Edge Function — recalcula equipo.categoria de cada miembro según config_tiers.
 // Mismo patrón de env vars y CORS que supabase/functions/api/index.ts.
 //
-// DEPLOY — SIEMPRE con --no-verify-jwt, y por separado de `api`:
-//   supabase functions deploy recalcular-categorias --no-verify-jwt
-// Ninguno de sus 3 callers manda un JWT de Supabase: el cron
+// DEPLOY — verify_jwt DEBE quedar en false. Lo fija `supabase/config.toml`
+// (`[functions.recalcular-categorias] verify_jwt = false`), así que alcanza con
+//   supabase functions deploy recalcular-categorias
+// (verificado 2026-09-25: deploy sin flag -> verify_jwt:false). NO borrar esa
+// sección: ninguno de los 3 callers manda un JWT de Supabase -- el cron
 // `marcar-eventos-finalizados` (pg_net, solo header `x-cron-secret`), `api`
 // en el modo `soloUsuario` de "De viaje" (también `x-cron-secret`) y
 // "Recalcular ahora" de Mi Liga (js/admin.js, adminToken propio como Bearer).
 // Con verify_jwt activo el gateway de Supabase los rechaza con 401 ANTES de
-// llegar a este código, en silencio para el cron. No hay supabase/config.toml
-// en el repo, así que el flag sale del comando: un deploy sin él (por ejemplo
-// `supabase functions deploy recalcular-categorias api`, que publica ambas con
-// la verificación activada) rompe el recálculo de tiers. `api` en cambio va
-// SIN el flag (verify_jwt:true). Ver MANIFEST.md, "Fix meses_consecutivos_cumplidos".
+// llegar a este código, en silencio para el cron. `api` en cambio va con
+// verify_jwt:true (default, sin sección en config.toml). Ver MANIFEST.md,
+// "Fix meses_consecutivos_cumplidos".
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
