@@ -27,6 +27,14 @@
 --
 -- Idempotente -- protegido con el guard de `estado` (si ya se corrigió, el
 -- bloque completo se salta, seguro correr más de una vez).
+--
+-- Auditoría de migraciones (2026-09-28, ver MANIFEST.md "Migraciones"): la
+-- tarea 75fa9a7d YA NO EXISTE en producción (fue borrada después; la
+-- plantilla 4f942789 sigue activa). El guard original era
+-- `IF v_ya_ok IS NOT TRUE`, que con la tarea inexistente (`v_ya_ok` NULL)
+-- ENTRABA al bloque y volvía a restar 5 puntos a Vic en enero. Ahora solo
+-- actúa si la tarea existe y no está ya corregida (`IS FALSE`). Registrada
+-- como aplicada en el historial: no debe volver a correrse.
 DO $$
 DECLARE
   v_tarea_id  uuid := '75fa9a7d-bc68-4e69-a414-8bd179ab7651';
@@ -34,7 +42,7 @@ DECLARE
 BEGIN
   SELECT (estado = 'no_iniciada') INTO v_ya_ok FROM tareas WHERE id = v_tarea_id;
 
-  IF v_ya_ok IS NOT TRUE THEN
+  IF v_ya_ok IS FALSE THEN
     UPDATE puntos_mensuales
     SET puntos_tareas = GREATEST(0, puntos_tareas - 5)
     WHERE nombre_usuario = 'Vic' AND anio = 2026 AND mes = 1;

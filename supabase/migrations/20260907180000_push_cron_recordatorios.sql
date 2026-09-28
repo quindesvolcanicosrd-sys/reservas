@@ -2,7 +2,7 @@
 -- Edge Function (action:'cronRecordatorioEvento'/'cronRecordatorio1Dia'/
 -- 'cronAdminEvento', supabase/functions/api/index.ts) con el MISMO
 -- mecanismo pg_net + header x-cron-secret que ya usa
--- 20260903_cron_notificaciones_diarias.sql -- reusa el mismo CRON_SECRET
+-- 20260903000000_cron_notificaciones_diarias.sql -- reusa el mismo CRON_SECRET
 -- ya configurado en producción, no hace falta un secret nuevo.
 --
 -- Deliberadamente NO se usa la SERVICE_ROLE_KEY acá (a diferencia de lo
@@ -25,7 +25,7 @@
 -- Aplicar con `supabase db query --linked -f <archivo>` (NO
 -- `supabase db push`, roto en este repo por una colisión de versiones de
 -- migraciones preexistente -- ver la nota de infraestructura en
--- 20260903_cron_notificaciones_diarias.sql / MANIFEST.md).
+-- 20260903000000_cron_notificaciones_diarias.sql / MANIFEST.md).
 CREATE EXTENSION IF NOT EXISTS pg_net;
 
 -- 1) Recordatorio 1h antes (SOLO quien marcó 'Asistiré') -- cada 10min,

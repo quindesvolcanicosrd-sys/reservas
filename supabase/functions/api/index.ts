@@ -4454,7 +4454,7 @@ function _horaEs(horaStr: string | null): string {
 }
 
 // Fecha de hoy en hora de pared de Ecuador (UTC-5 fijo, sin DST -- mismo
-// criterio ya documentado en supabase/migrations/20260831_cron_eventos_finalizados.sql),
+// criterio ya documentado en supabase/migrations/20260831000000_cron_eventos_finalizados.sql),
 // como string 'YYYY-MM-DD'.
 function _hoyEcuadorISO(): string {
   const ecu = new Date(Date.now() - 5 * 3600 * 1000);

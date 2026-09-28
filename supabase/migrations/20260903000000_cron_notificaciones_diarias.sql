@@ -1,7 +1,7 @@
 -- Cron diario de notificaciones push (OneSignal) -- llama a la Edge Function
 -- (action:'cronDiario', supabase/functions/api/index.ts) todos los días a
 -- las 8am hora de Ecuador (UTC-5 fijo, sin DST -- mismo criterio ya
--- documentado en 20260831_cron_eventos_finalizados.sql) = 13:00 UTC.
+-- documentado en 20260831000000_cron_eventos_finalizados.sql) = 13:00 UTC.
 --
 -- A diferencia de regenerar_ventana_asistencias()/marcar-eventos-finalizados
 -- (SQL puro dentro de Postgres, sin salir de la base), esta tarea vive en la

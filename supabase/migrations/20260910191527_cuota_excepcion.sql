@@ -9,7 +9,7 @@
 --
 -- `id_miembro` (no `nombre`/`username` a secas, ver el resto del esquema)
 -- -- mismo criterio que `invite_tokens.username` (migración
--- 20260903_invite_tokens.sql): `equipo.username` es la PK real de esa
+-- 20260903000100_invite_tokens.sql): `equipo.username` es la PK real de esa
 -- tabla, FK directa en vez de duplicar el dato.
 --
 -- `mes` como texto 'aaaa-mm' (no una columna `date`) -- mismo criterio
@@ -40,7 +40,7 @@ create table if not exists cuota_excepcion (
 create unique index if not exists cuota_excepcion_miembro_mes_idx on cuota_excepcion (id_miembro, mes);
 
 -- RLS: bloqueada por completo a anon/authenticated, mismo criterio que
--- `equipo`/`invite_tokens` (ver 20260830_equipo_rls.sql/20260903_invite_tokens.sql)
+-- `equipo`/`invite_tokens` (ver 20260830_equipo_rls.sql/20260903000100_invite_tokens.sql)
 -- -- toda lectura/escritura real pasa por la Edge Function
 -- (listarExcepcionesCuota/guardarExcepcionCuota, service_role, bypasea
 -- RLS). Sin esto, la anon key (pública, embebida en el cliente) podría

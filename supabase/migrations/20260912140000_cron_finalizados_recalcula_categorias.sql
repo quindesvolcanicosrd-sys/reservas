@@ -1,5 +1,5 @@
 -- Feature nueva (pedido explícito de Victor): el cron
--- `marcar-eventos-finalizados` (migración 20260831_cron_eventos_finalizados.sql)
+-- `marcar-eventos-finalizados` (migración 20260831000000_cron_eventos_finalizados.sql)
 -- transiciona `asistencias.estado` a 'Evento Finalizado' cada 30min, pero
 -- nada disparaba `recalcular-categorias` automáticamente después -- el
 -- recálculo de categoría/tier solo corría manual ("Recalcular ahora", Mi
@@ -27,7 +27,7 @@
 -- Bug de seguridad real corregido (pedido explícito de Victor, 2026-09-13):
 -- la versión original de este archivo tenía el valor literal de
 -- `CRON_SECRET` embebido en el `net.http_post` de abajo -- a diferencia de
--- `20260903_cron_notificaciones_diarias.sql`/`20260907180000_push_cron_recordatorios.sql`
+-- `20260903000000_cron_notificaciones_diarias.sql`/`20260907180000_push_cron_recordatorios.sql`
 -- (que ya tenían el mismo problema, aceptado en su momento como "no peor
 -- que el resto de la config de este cron"), esta migración TODAVÍA no
 -- había sido aplicada contra producción -- se corrige acá antes de
@@ -72,7 +72,7 @@
 --
 -- Aplicar vía `supabase db query --linked -f <archivo>` (no
 -- `supabase db push`, roto en este repo -- ver la nota de infraestructura
--- ya documentada en MANIFEST.md/20260903_cron_notificaciones_diarias.sql).
+-- ya documentada en MANIFEST.md/20260903000000_cron_notificaciones_diarias.sql).
 CREATE OR REPLACE FUNCTION marcar_eventos_finalizados_y_recalcular()
 RETURNS void
 LANGUAGE plpgsql

@@ -3,7 +3,7 @@
 -- 20260912140000_cron_finalizados_recalcula_categorias.sql) y corregido en
 -- esta misma tanda: LAS 4 CRONS QUE LLAMAN A `api` VÍA `pg_net`
 -- (`notificaciones-diarias`, `push-recordatorio-1h`, `push-recordatorio-1dia`,
--- `push-admin-1h` -- migraciones `20260903_cron_notificaciones_diarias.sql`/
+-- `push-admin-1h` -- migraciones `20260903000000_cron_notificaciones_diarias.sql`/
 -- `20260907180000_push_cron_recordatorios.sql`) NUNCA FUNCIONARON EN
 -- PRODUCCIÓN desde que se crearon.
 --
