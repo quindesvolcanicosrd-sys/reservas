@@ -153,6 +153,12 @@ function _eqEstadoEfectivo(persona) {
 function _eqEsInactivo(p) {
   if (!p) return false;
   if (p.estado === 'De viaje') return false; // mismo criterio que _eqEstadoEfectivo() de arriba
+  // Lesionadx: sigue en su grupo (Quindes/Mirlxs) aunque lleve 30+ días sin
+  // entrenar -- antes lo garantizaba la sección "Lesionadxs" (eliminada,
+  // reemplazada por `.badge-lesion`, ver MANIFEST.md). Solo afecta al roster
+  // de Equipo: las listas de toma de asistencia usan `_evEsInactivo()`
+  // (js/eventos.js), un criterio propio que no pasa por acá.
+  if (p.estado === 'Lesionadx') return false;
   if (!p.ultimaAsistencia) return true;
   var dias = Math.floor((Date.now() - new Date(p.ultimaAsistencia).getTime()) / 86400000);
   return dias >= 30;
@@ -540,7 +546,6 @@ function _eqInit() {
     _eqRenderGrupo('Quindes');
     _eqRenderGrupo('Mirlxs');
     _eqRenderInactivos();
-    _eqRenderLesionadxs();
     _eqRenderMisEstadisticas();
     _eqTourIniciarSiCorresponde();
   });
@@ -696,12 +701,20 @@ function _eqAvatarConTendenciaHtml(p, claseExtra, claseTamano) {
 // de "Mis estadísticas") -- "De viaje" (pedido explícito, ícono `flight`,
 // `.badge-viaje` en css/equipo.css) ocupa la MISMA esquina que el de
 // tendencia, así que lo reemplaza en vez de apilarse encima: mientras dura
-// el viaje el tier está congelado, el viaje es el dato relevante.
-// `claseViaje` opcional: modificador de tamaño del de viaje (perfil de
-// detalle, `badge-viaje--detalle`), mismo criterio que `claseTamano` del de
-// tendencia.
-function _eqBadgeAvatarHtml(p, claseTamano, claseViaje) {
-  if (p.estado === 'De viaje') return '<span class="badge-viaje' + (claseViaje ? ' ' + claseViaje : '') + '" title="De viaje"><span class="material-symbols-rounded">flight</span></span>';
+// el viaje el tier está congelado, el viaje es el dato relevante. Mismo
+// criterio para "Lesionadx" (`.badge-lesion`, ícono `personal_injury`, el
+// mismo de "Reportar lesión" en js/perfil.js) -- reemplaza a la antigua
+// sección "Lesionadxs": la persona sigue en su grupo y se la identifica acá.
+// Geometría compartida en `.badge-estado` (css/equipo.css), color en la
+// clase de cada estado. `claseEstado` opcional: modificador de tamaño de
+// estos badges (perfil de detalle, `badge-estado--detalle`), mismo criterio
+// que `claseTamano` del de tendencia.
+function _eqBadgeEstadoHtml(clase, titulo, icono, claseEstado) {
+  return '<span class="badge-estado ' + clase + (claseEstado ? ' ' + claseEstado : '') + '" title="' + titulo + '"><span class="material-symbols-rounded">' + icono + '</span></span>';
+}
+function _eqBadgeAvatarHtml(p, claseTamano, claseEstado) {
+  if (p.estado === 'De viaje') return _eqBadgeEstadoHtml('badge-viaje', 'De viaje', 'flight', claseEstado);
+  if (p.estado === 'Lesionadx') return _eqBadgeEstadoHtml('badge-lesion', 'Lesionadx', 'personal_injury', claseEstado);
   return _eqTendenciaBadgeHtml(p, claseTamano);
 }
 
@@ -794,7 +807,6 @@ function _eqBuscar(valor) {
   var grupoQuindes = document.getElementById('eq-grupo-quindes');
   var grupoMirlxs = document.getElementById('eq-grupo-mirlxs');
   var grupoInactivos = document.getElementById('eq-grupo-inactivos');
-  var grupoLesionadxs = document.getElementById('eq-grupo-lesionadxs');
   var rolesWrap = document.getElementById('eq-roles-wrap');
   var mesVacio = document.getElementById('eq-mes-vacio');
   var esRol = !!_eqBusqueda && _eqEsQueryDeRol(_eqBusqueda);
@@ -804,7 +816,6 @@ function _eqBuscar(valor) {
     if (grupoQuindes) grupoQuindes.style.display = 'none';
     if (grupoMirlxs) grupoMirlxs.style.display = 'none';
     if (grupoInactivos) grupoInactivos.style.display = 'none';
-    if (grupoLesionadxs) grupoLesionadxs.style.display = 'none';
     if (mesVacio) mesVacio.style.display = 'none';
     if (rolesWrap) rolesWrap.style.display = '';
     _eqRenderPorRol();
@@ -820,17 +831,13 @@ function _eqBuscar(valor) {
     if (grupoQuindes) grupoQuindes.style.display = 'none';
     if (grupoMirlxs) grupoMirlxs.style.display = 'none';
     if (grupoInactivos) grupoInactivos.style.display = 'none';
-    if (grupoLesionadxs) grupoLesionadxs.style.display = 'none';
     if (rolesWrap) rolesWrap.style.display = 'none';
     if (mesVacio) mesVacio.style.display = '';
     _eqActualizarListaVacia();
     return;
   }
   // Modo normal (nombre/username/email) -- restaura los contenedores reales
-  // por si el query anterior había activado el modo rol/mes. `grupoLesionadxs`
-  // NO se fuerza a `''` acá a propósito (a diferencia de Quindes/Mirlxs/
-  // Inactivos) -- su visibilidad depende de si hay alguien lesionadx, no
-  // del modo de búsqueda; `_eqRenderLesionadxs()` de abajo decide sola.
+  // por si el query anterior había activado el modo rol/mes.
   if (rolesWrap) rolesWrap.style.display = 'none';
   if (mesVacio) mesVacio.style.display = 'none';
   if (grupoQuindes) grupoQuindes.style.display = '';
@@ -840,7 +847,6 @@ function _eqBuscar(valor) {
   _eqRenderGrupo('Quindes');
   _eqRenderGrupo('Mirlxs');
   _eqRenderInactivos();
-  _eqRenderLesionadxs();
 }
 // Orden de la lista dentro de cada acordeón (bug real corregido, ver
 // MANIFEST.md/CHANGELOG.md -- "ordenar por puntos totales, no
@@ -852,7 +858,7 @@ function _eqBuscar(valor) {
 // cual, sin recalcular nada acá. Empate -> alfabético por `nombreDerby`
 // (`localeCompare('es')`, ordena acentos/ñ correctamente) como desempate,
 // pedido explícito. Comparador compartido por los 4 renders que arman un
-// acordeón real (Favoritos/Quindes-Mirlxs/Inactivos/Lesionadxs, más abajo
+// acordeón real (Favoritos/Quindes-Mirlxs/Inactivos, más abajo
 // en este archivo) -- NO se aplica a `_eqRenderPorRol()` (vista alternativa
 // de búsqueda por rol, fuera del alcance de este pedido, que habla de "cada
 // acordeón" refiriéndose a los reales de la lista, no a esa vista aparte).
@@ -1209,7 +1215,7 @@ function _eqCerrarPanel(tag, instant) {
    achicaba `panel.style.maxHeight` (y con él, el alto real de
    `#eq-sticky-header`, que envuelve al panel) en cada frame del gesto, pero
    `_eqActualizarStickyHeaders()` -- la única función que mantiene el `top`
-   inline de los 5 headers de sección sincronizado con ese alto real -- solo
+   inline de los 4 headers de sección sincronizado con ese alto real -- solo
    se llamaba en `touchend` + 300ms, nunca durante el propio arrastre.
    Durante todo ese gesto (que puede durar varios segundos), los headers
    quedaban con un `top` desactualizado (el del panel todavía abierto del
@@ -1982,7 +1988,6 @@ function _eqFiltroRolToggle(rol) {
   _eqRenderGrupo('Quindes');
   _eqRenderGrupo('Mirlxs');
   _eqRenderInactivos();
-  if (typeof _eqRenderLesionadxs === 'function') _eqRenderLesionadxs();
   _eqActualizarBadgeFiltros();
 }
 // Badge numérico del ícono de lupa (feat nueva, ver MANIFEST.md -- "igual a
@@ -2063,7 +2068,6 @@ function _eqAplicarFiltrosAhora() {
     _eqRenderGrupo('Quindes');
     _eqRenderGrupo('Mirlxs');
     _eqRenderInactivos();
-    if (typeof _eqRenderLesionadxs === 'function') _eqRenderLesionadxs();
     if (typeof _eqRenderMisEstadisticas === 'function') _eqRenderMisEstadisticas();
     // Filtro de período del perfil de detalle (feat nueva, ver MANIFEST.md)
     // -- `_eqPersonas` se reemplazó entero arriba, así que `_eqPersonaActual`
@@ -2094,22 +2098,22 @@ function _eqAplicarFiltrosAhora() {
 // nace "abierto" (clase `.abierto` en el HTML, ver index.html) no quede
 // colapsado por el `max-height:0` default de `.eq-grupo-body`.
 // Bug real corregido (ver MANIFEST.md -- "lista de personas desaparece al
-// usar los filtros") -- Favoritos/Quindes/Mirlxs/Inactivos/Lesionadxs se
+// usar los filtros") -- Favoritos/Quindes/Mirlxs/Inactivos se
 // ocultan uno por uno (`wrap.style.display='none'`) cuando su propio
-// filtrado da 0 resultados; si los 5 dan 0 A LA VEZ (el caso real más
+// filtrado da 0 resultados; si los 4 dan 0 A LA VEZ (el caso real más
 // común: un pill de rol tildado que nadie tiene asignado en ESTE
 // dispositivo -- `_eqRolesDe()` es per-dispositivo/localStorage, ver
 // MANIFEST.md -- así que casi cualquier rol salvo "No definido" filtra a
 // TODO el mundo afuera) no quedaba NINGÚN contenido visible debajo de la
 // nav, sin ningún aviso -- indistinguible de un bug real de renderizado
 // (que es exactamente cómo se reportó). Revisa el resultado FINAL de los
-// 5 contenedores (nunca reconstruye nada -- solo lee `style.display`, ya
+// 4 contenedores (nunca reconstruye nada -- solo lee `style.display`, ya
 // escrito por cada render) y muestra `#eq-lista-vacia` (mismo componente
 // `.eq-favoritos-vacio` que ya usan `_eqRenderPorRol()`/`#eq-mes-vacio`)
 // en vez de dejar la pantalla en blanco. Se salta la vista alternativa
 // "por rol" (`#eq-roles-wrap`) y el empty-state de mes de cumpleaños
 // (`#eq-mes-vacio`) -- esos 2 ya tienen su propio aviso, no hay que
-// duplicarlo encima. Llamada al FINAL de cada una de las 5 funciones de
+// duplicarlo encima. Llamada al FINAL de cada una de las 4 funciones de
 // render de abajo -- así queda correcta sin importar qué combinación de
 // ellas corrió en cada ciclo (búsqueda, filtro de rol, filtro de período,
 // carga inicial) sin tener que acordarse de llamarla aparte en cada
@@ -2129,10 +2133,10 @@ function _eqAplicarFiltrosAhora() {
 // `_eqRenderPorRol()`, sin pedido de tocar esos 2).
 var _EQ_LISTA_VACIA_FADE_MS = 250;
 function _eqActualizarListaVacia() {
-  // Reusa este mismo punto de entrada (llamado al final de las 5 funciones
+  // Reusa este mismo punto de entrada (llamado al final de las 4 funciones
   // de render) para recalcular el apilado de headers sticky (ver
   // MANIFEST.md -- "sticky headers apilados") -- cualquier cambio de
-  // visibilidad de las 5 secciones (búsqueda, filtro de rol, filtro de
+  // visibilidad de las 4 secciones (búsqueda, filtro de rol, filtro de
   // período, carga inicial) puede correr headers dentro/fuera del apilado,
   // así que necesita el mismo trigger que este empty-state. Antes del
   // guard de abajo (`#eq-lista-vacia` siempre existe en el DOM real, pero
@@ -2146,7 +2150,7 @@ function _eqActualizarListaVacia() {
   if ((rolesWrap && rolesWrap.style.display !== 'none') || (mesVacio && mesVacio.style.display !== 'none')) {
     mostrar = false;
   } else {
-    var ids = ['eq-favoritos-wrap', 'eq-grupo-quindes', 'eq-grupo-mirlxs', 'eq-grupo-inactivos', 'eq-grupo-lesionadxs'];
+    var ids = ['eq-favoritos-wrap', 'eq-grupo-quindes', 'eq-grupo-mirlxs', 'eq-grupo-inactivos'];
     var algunaVisible = ids.some(function(id) {
       var wrap = document.getElementById(id);
       return wrap && wrap.style.display !== 'none';
@@ -2202,17 +2206,17 @@ function _eqRenderFavoritos() {
   _eqActualizarListaVacia();
 }
 
-// `p.estado !== 'Lesionadx'` explícito (no alcanza con `!_eqEsInactivo(p)`):
-// alguien recién lesionadx puede tener asistencia reciente y colarse acá
-// además de en `_eqRenderLesionadxs()` -- Lesionadx tiene su propia sección
-// siempre, sin importar hace cuánto entrenó por última vez.
+// Lesionadx se queda en su grupo (Quindes/Mirlxs), en su posición por
+// puntos, identificada con `.badge-lesion` sobre el avatar -- la sección
+// aparte "Lesionadxs" se eliminó (ver MANIFEST.md). `_eqEsInactivo()` nunca
+// la manda a Inactivxs mientras siga lesionadx.
 function _eqRenderGrupo(rol) {
   var key = rol.toLowerCase();
   var wrap = document.getElementById('eq-grupo-' + key);
   var cont = document.getElementById('eq-grupo-' + key + '-lista');
   var pillEl = document.getElementById('eq-grupo-' + key + '-pill');
   if (!wrap || !cont) return;
-  var filtradas = _eqPersonas.filter(function(p) { return p.rol === rol; }).filter(function(p) { return !_eqEsUsuarioActual(p) && !_eqEsInactivo(p) && p.estado !== 'Lesionadx'; }).filter(_eqPasaBusqueda).filter(_eqPasaFiltroRol).sort(_eqCompararPorPuntos);
+  var filtradas = _eqPersonas.filter(function(p) { return p.rol === rol; }).filter(function(p) { return !_eqEsUsuarioActual(p) && !_eqEsInactivo(p); }).filter(_eqPasaBusqueda).filter(_eqPasaFiltroRol).sort(_eqCompararPorPuntos);
   wrap.style.display = filtradas.length ? '' : 'none';
   if (pillEl) pillEl.textContent = filtradas.length;
   cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
@@ -2255,30 +2259,6 @@ function _eqRenderInactivos() {
   var pillEl = document.getElementById('eq-grupo-inactivos-pill');
   if (!wrap || !cont) return;
   var filtradas = _eqPersonas.filter(function(p) { return _eqEsInactivo(p) && !_eqEsUsuarioActual(p); }).filter(_eqPasaBusqueda).filter(_eqPasaFiltroRol).sort(_eqCompararPorPuntos);
-  wrap.style.display = filtradas.length ? '' : 'none';
-  if (pillEl) pillEl.textContent = filtradas.length;
-  cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
-  _eqHidratarAvatares();
-  _eqActualizarListaVacia();
-}
-
-// Acordeón "LESIONADXS" (feat nueva, ver MANIFEST.md/CHANGELOG.md) --
-// `getEquipo()` ya devuelve `estado` (`equipo.estado_miembro` tal cual,
-// mismo campo que ya usa `_datosRenderStatsHtml()`/js/perfil.js para el
-// chip de estado en Ajustes) -- sin cambio de backend necesario. Colapsable
-// igual que Inactivos: pasa por `_eqToggleGrupo('Lesionadxs')`, arranca
-// colapsado por defecto (sin clase `.abierto` en el body estático) -- por
-// eso, mismo criterio que `_eqRenderInactivos()`, acá NUNCA hay que tocar
-// `style.maxHeight` en el render (`_eqToggleGrupo()` ya lo maneja al abrir/
-// cerrar). Oculta por completo (display:none, sin fade -- a diferencia de
-// Favoritos, acá no se pidió animación de entrada/salida de la sección)
-// cuando no hay nadie lesionadx.
-function _eqRenderLesionadxs() {
-  var wrap = document.getElementById('eq-grupo-lesionadxs');
-  var cont = document.getElementById('eq-grupo-lesionadxs-lista');
-  var pillEl = document.getElementById('eq-grupo-lesionadxs-pill');
-  if (!wrap || !cont) return;
-  var filtradas = _eqPersonas.filter(function(p) { return p.estado === 'Lesionadx' && !_eqEsUsuarioActual(p); }).filter(_eqPasaBusqueda).filter(_eqPasaFiltroRol).sort(_eqCompararPorPuntos);
   wrap.style.display = filtradas.length ? '' : 'none';
   if (pillEl) pillEl.textContent = filtradas.length;
   cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
@@ -2349,7 +2329,7 @@ function _eqRenderMisEstadisticas() {
   // mutado con `data-nombre`/`data-foto` arriba, nunca reconstruido) --
   // solo el badge se re-renderiza acá, adentro de su propio wrapper
   // `.eq-avatar-badge-wrap` (index.html) ya `position:relative`.
-  // + badge "De viaje" (reemplaza al de tendencia, ver `_eqBadgeAvatarHtml()`).
+  // + badge "De viaje"/"Lesionadx" (reemplaza al de tendencia, ver `_eqBadgeAvatarHtml()`).
   if (toggleTendencia) toggleTendencia.innerHTML = _eqBadgeAvatarHtml(persona);
   // Pill de nivel SACADO de la nav (pedido explícito, "se va a mover al
   // termómetro") -- vivía en `#eq-misstats-toggle-pills` (index.html), ahora
@@ -2612,8 +2592,8 @@ function _eqToggleGrupo(rol) {
 }
 
 /* ── Headers sticky apilados (rediseño REAL, ver MANIFEST.md/CHANGELOG.md
-   -- "los sticky headers deben apilarse, no reemplazarse") -- los 5 headers
-   de sección (Favoritos/Quindes/Mirlxs/Inactivos/Lesionadxs,
+   -- "los sticky headers deben apilarse, no reemplazarse") -- los 4 headers
+   de sección (Favoritos/Quindes/Mirlxs/Inactivos,
    `.eq-grupo-header.eq-grupo-header--sticky` en index.html, ver ese
    modificador en css/equipo.css -- NUNCA fusionado a `.eq-grupo-header` a
    secas, que también generan al vuelo los acordeones de "por rol",
@@ -2642,7 +2622,7 @@ function _eqToggleGrupo(rol) {
      arriba en CUALQUIER punto del scroll posterior a su sección, sin
      depender de los límites de su `.eq-grupo` -- tap hace scroll-to.
    Cada header, recorrido en orden de DOM (Favoritos→Quindes→Mirlxs→
-   Inactivos→Lesionadxs), pasa a STUCK cuando `window.scrollY` supera su
+   Inactivos), pasa a STUCK cuando `window.scrollY` supera su
    propio umbral (posición natural menos el alto acumulado de los headers
    YA decididos STUCK antes que él en ESTA MISMA pasada) -- puro JS,
    recalculado en cada evento de `scroll` de la página (throttled por
@@ -2688,13 +2668,13 @@ function _eqToggleGrupo(rol) {
    `header.parentElement.offsetParent === null` (el header sigue siendo
    hijo real de su `.eq-grupo` en el DOM aunque esté `position:fixed` --
    eso nunca lo desconecta del árbol, solo cambia cómo se pinta) detecta
-   secciones ocultas (grupo sin resultados, Lesionadxs sin nadie
-   lesionadx, o `#s-equipo` no activa) -- se lee del PADRE, no del propio
+   secciones ocultas (grupo sin resultados, o `#s-equipo` no
+   activa) -- se lee del PADRE, no del propio
    header, porque un header `position:fixed` SIEMPRE da
    `offsetParent === null` así esté perfectamente visible (por spec,
    ningún elemento `fixed` tiene offsetParent), así que ese chequeo en el
    header mismo ya no serviría para detectar "oculto". */
-var _EQ_GRUPO_HEADERS = ['eq-favoritos-header', 'eq-grupo-quindes-header', 'eq-grupo-mirlxs-header', 'eq-grupo-inactivos-header', 'eq-grupo-lesionadxs-header'];
+var _EQ_GRUPO_HEADERS = ['eq-favoritos-header', 'eq-grupo-quindes-header', 'eq-grupo-mirlxs-header', 'eq-grupo-inactivos-header'];
 // Umbral de `window.scrollY` a partir del cual cada header pasa a STUCK --
 // recalculado en cada pasada de `_eqActualizarStickyHeaders()`, reusado
 // por `_eqScrollAlGrupo()` (destino del scroll suave al tocar un header
@@ -2782,9 +2762,7 @@ function _eqScrollAlGrupo(header) {
 // `rol` null solo para Favoritos -- el único no colapsable que queda, nunca
 // pasa por `_eqToggleGrupo()` (ver ese comentario más arriba): "comportamiento
 // actual" en modo natural es no hacer nada, mismo que tenía antes de sumar
-// este handler, así que acá simplemente no llama a nada. Lesionadxs pasa
-// 'Lesionadxs' como cualquier otro acordeón colapsable (Quindes/Mirlxs/
-// Inactivos) desde que dejó de ser de solo-lectura.
+// este handler, así que acá simplemente no llama a nada.
 function _eqGrupoHeaderTap(headerId, rol) {
   var header = document.getElementById(headerId);
   if (!header) return;
@@ -4040,7 +4018,7 @@ function _eqPerfilContenidoHtml(p) {
   return '<div class="eq-perfil-header">' +
       '<div class="eq-avatar-wrap">' +
         _eqAvatarHtml(p, 'eq-avatar-grande') +
-        _eqBadgeAvatarHtml(p, 'eq-tendencia-badge--detalle', 'badge-viaje--detalle') + // viaje reemplaza a tendencia, ver _eqBadgeAvatarHtml()
+        _eqBadgeAvatarHtml(p, 'eq-tendencia-badge--detalle', 'badge-estado--detalle') + // viaje/lesión reemplaza a tendencia, ver _eqBadgeAvatarHtml()
       '</div>' +
       '<div class="eq-perfil-nombre">' + _eqEsc(p.nombreDerby) + '</div>' +
       categoriaPronombresHtml +

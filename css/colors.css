@@ -159,6 +159,15 @@
   --info-light:     #7dd3fc;
   --info-dark:      #0369a1;
 
+  /* Badges de estado sobre el avatar (`.badge-estado`, css/equipo.css) --
+     fondo oscuro saturado + ícono brillante del mismo matiz, para que se
+     lean sobre cualquier foto. "De viaje" en verde (antes #1a6b3a/#22c55e
+     hardcodeados en css/equipo.css); "Lesionadx" en rojo/coral. */
+  --badge-viaje-bg:     #1a6b3a;
+  --badge-viaje-icon:   #22c55e;
+  --badge-lesion-bg:    #8f2418;
+  --badge-lesion-icon:  #ff8a70;
+
   /* Cyan — "información de ubicación" (pills de lugar/venue + "Cómo llegar"),
      unificado en toda la app para no repetir 3 colores distintos para el
      mismo concepto (antes marca/naranja-rojizo en unos lugares, --info/azul
@@ -534,6 +543,13 @@
     --danger-bg:      rgba(255,32,32,0.10);
     --danger-bdr:     rgba(255,32,32,0.25);
     --info-bg:        rgba(14,165,233,0.08);
+
+    /* Badges de estado dark -- fondo un punto más claro para que no se
+       pierda contra el borde `--bg` casi negro, ícono igual de brillante. */
+    --badge-viaje-bg:     #1f7a43;
+    --badge-viaje-icon:   #4ade80;
+    --badge-lesion-bg:    #a02a1c;
+    --badge-lesion-icon:  #ffa08a;
 
     /* Cyan dark -- más claro que el de modo claro (mismo criterio que
        --dk-info-text para .fi-pill-fin, css/reservas.css) para más contraste

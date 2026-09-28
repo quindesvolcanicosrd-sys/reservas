@@ -820,19 +820,20 @@
 .eq-tendencia-badge--detalle .material-symbols-outlined { font-size: 20px; }
 .eq-tendencia-badge-sube { background: var(--success); color: var(--white); }
 .eq-tendencia-badge-baja { background: var(--danger); color: var(--white); }
-/* Badge "De viaje" sobre el avatar de la lista (`_eqAvatarConTendenciaHtml()`,
-   js/equipo.js) -- misma esquina que `.eq-tendencia-badge` (lo reemplaza,
-   no se apilan); el contenedor `.eq-avatar-badge-wrap` ya es
-   `position:relative`. `pointer-events:none`/`z-index` igual que el de
-   tendencia, para que el toque siga abriendo el perfil. */
-.badge-viaje {
+/* Badges de estado sobre el avatar ("De viaje"/"Lesionadx",
+   `_eqBadgeAvatarHtml()`/js/equipo.js) -- misma esquina que
+   `.eq-tendencia-badge` (lo reemplazan, no se apilan); el contenedor
+   `.eq-avatar-badge-wrap` ya es `position:relative`. `pointer-events:none`/
+   `z-index` igual que el de tendencia, para que el toque siga abriendo el
+   perfil. `.badge-estado` tiene la geometría común; cada estado solo pone
+   sus colores (tokens `--badge-*` en css/colors.css). */
+.badge-estado {
   position: absolute;
   bottom: 0;
   right: 0;
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #1a6b3a;
   border: 1.5px solid var(--bg);
   display: flex;
   align-items: center;
@@ -840,15 +841,16 @@
   z-index: 2;
   pointer-events: none;
 }
-
-.badge-viaje .material-symbols-rounded {
-  font-size: 12px;
-  color: #22c55e;
-}
+.badge-estado .material-symbols-rounded { font-size: 12px; }
 /* Perfil de detalle (foto de 96px) -- mismo tamaño que
    `.eq-tendencia-badge--detalle`, el badge base se perdía ahí. */
-.badge-viaje--detalle { width: 28px; height: 28px; border-width: 2px; }
-.badge-viaje--detalle .material-symbols-rounded { font-size: 17px; }
+.badge-estado--detalle { width: 28px; height: 28px; border-width: 2px; }
+.badge-estado--detalle .material-symbols-rounded { font-size: 17px; }
+
+.badge-viaje { background: var(--badge-viaje-bg); }
+.badge-viaje .material-symbols-rounded { color: var(--badge-viaje-icon); }
+.badge-lesion { background: var(--badge-lesion-bg); }
+.badge-lesion .material-symbols-rounded { color: var(--badge-lesion-icon); }
 .eq-perfil-nombre { font-size: 1.3rem; font-weight: 800; color: var(--text); margin-top: 20px; }
 .eq-perfil-sub { font-size: 0.85rem; color: var(--muted); margin-top: 3px; }
 
