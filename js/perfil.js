@@ -13,6 +13,10 @@
 var _ajYaInicializadoEnSesion = false;
 var _ajHomeScrollY = 0;
 var _ajRestaurarScroll = false;
+// Pantalla a la que vuelve la flecha atrás del top bar de Ajustes (ver
+// TOP_BAR_CONFIG['s-datos'], js/ui.js) -- la fija `_eqIrAjustes()`
+// (js/equipo.js, lápiz del detalle propio); la nav inferior la limpia.
+var _ajVolverA = null;
 function _ajGuardarScrollHome() { _ajHomeScrollY = window.scrollY; }
 function irEditarDatos(sinNavegar) {
   // Cuenta admin "pura" (dashboardAdmin:true, sin fila en Equipo, nunca pisa
@@ -38,12 +42,12 @@ function irEditarDatos(sinNavegar) {
     if (d.pronombres) partes.push(d.pronombres.split(',').map(function(p){ return p.trim().split('/')[0]; }).join(', '));
     derbySub.textContent = partes.join(' · ') || '—';
   }
-  // Stats de Equipo (Cambio 51) -- horas patinadas/asistencia + termómetro
-  // de categoría del usuario logueado, ver _datosRenderStats() más abajo.
-  _datosRenderStats();
-  // Flujo de lesión (Cambio 54) -- reportar/cancelar/recuperarse, ver
-  // _datosRenderLesion() más abajo.
-  _datosRenderLesion();
+  // Stats, lesión y controles de admin propios ya no viven acá: Ajustes es
+  // solo datos privados/cuenta; la cara pública (stats, tier, lesión,
+  // admin) está en el detalle propio de Equipo (ver MANIFEST.md). Se
+  // precarga igual el roster (`_eqAsegurarCargado()`, js/equipo.js) -- lo
+  // usa el chequeo de disponibilidad de username (`_ajUsername*`, más abajo).
+  if (typeof _eqAsegurarCargado === 'function') _eqAsegurarCargado(function() {});
   // Equipamiento
   var eqVal = document.getElementById('aj-equip-val');
   if (eqVal) {
@@ -107,9 +111,6 @@ function irEditarDatos(sinNavegar) {
   // desde acá.
   var zonaCuenta = document.getElementById('aj-zona-cuenta');
   if (zonaCuenta) zonaCuenta.style.display = E.datos ? '' : 'none';
-  // "Ajustes de admin" (pedido explícito, ver MANIFEST.md) -- al final del
-  // render, ver _datosRenderAdmin() más abajo.
-  _datosRenderAdmin();
   // Restaurar scroll del home solo de la 2da visita en adelante (ver
   // "Cambios recientes" -- mismo criterio que Eventos): los campos de arriba
   // se repueblan SIEMPRE (a diferencia de Eventos, acá no hay ningún reset
@@ -121,7 +122,7 @@ function irEditarDatos(sinNavegar) {
   if (!sinNavegar) _ajTourIniciarSiCorresponde();
 }
 
-// ═══ Tour guiado de Mi Perfil (pedido explícito, "idéntico al tour de
+// ═══ Tour guiado de Ajustes (pedido explícito, "idéntico al tour de
 // Eventos -- mismos estilos, misma lógica, mismo componente") -- mismo
 // motor genérico que `_eqTourIniciarSiCorresponde()`/js/equipo.js, ver el
 // comentario grande de esa función para el detalle del mecanismo
@@ -144,236 +145,6 @@ function _ajTourIniciarSiCorresponde() {
   setTimeout(function() {
     _evTourIniciarConPasos(_AJ_TOUR_PASOS, 'aj_tour_visto', 'FINALIZAR TOUR');
   }, 650);
-}
-
-// Estado + botón "Reportar lesión" en Mi Perfil (Ajustes). Desde el Cambio
-// "filtros equipo / card Mis estadísticas" ya NO renderiza horas/asistencia
-// ni el termómetro acá -- esos datos se movieron a la card "Mis estadísticas"
-// de Equipo (`_eqRenderMisEstadisticas()`, js/equipo.js), que reusa la misma
-// persona de `_eqPersonas` sin pedir nada nuevo al backend. `_eqAsegurarCargado()`
-// (js/equipo.js, cargado ANTES que este archivo en index.html) trae el
-// roster real UNA sola vez por sesión, compartido con quien haya visitado
-// primero la sección Equipo -- por eso este render es asíncrono. `#dat-stats-wrap`
-// queda vacío/sin tocar si la cuenta no tiene fila en Equipo o el fetch no
-// encuentra a la persona -- sin toast ni error, mismo criterio que el resto
-// de esta pantalla con datos ausentes.
-function _datosRenderStats() {
-  var contenedor = document.getElementById('dat-stats-wrap');
-  if (!contenedor) return;
-  if (typeof _eqAsegurarCargado === 'undefined') return;
-  _eqAsegurarCargado(function() {
-    var persona = _eqPersonas.filter(function(p) { return p.nombre === E.nombre; })[0];
-    if (!persona) return;
-    _datosRenderStatsHtml(contenedor, persona);
-  });
-}
-
-// "Ajustes de admin" (pedido explícito, ver MANIFEST.md) -- subsección
-// navegable propia (`#aj-admin-row`/`#aj-sub-admin`, index.html), admin-only
-// (`_adminToken`, mismo gate que _eqTierAdminFlatHtml()/_eqAdminGestionFlatHtml()
-// en sí, js/equipo.js), con los mismos controles de Categoría/Estado del
-// perfil de detalle de Equipo pero "flat" (sin acordeón que colapsar, ver esas
-// 2 funciones hermanas) -- reusa esa lógica tal cual en vez de duplicar el
-// markup. `_datosRenderAdmin()` solo decide si la fila de entrada es visible
-// y arranca la resolución de la persona (async, ver `_eqAsegurarCargado()`
-// más abajo); `_ajCargarSubAdmin(persona)` (siguiente función) es la que
-// realmente puebla `#aj-sub-admin-body` -- separadas porque `_ajCargarSub()`
-// (más abajo en este archivo) necesita poder repoblar SOLO el cuerpo del
-// panel cada vez que se reabre, sin repetir el toggle de la fila.
-// `E.nombre` es la misma natural key que `p.id`/`p.nombre` en `_eqPersonas`
-// (el `username`, ver getEquipo()/supabase/functions/api/index.ts) -- si la
-// cuenta admin logueada tiene fila en Equipo, `_eqPersonaPorId(E.nombre)` la
-// encuentra ahí y se le pasa el objeto REAL (tierModo/exentaCuota/etc. al
-// día, y los onclick de esas 2 funciones -- `_eqCambiarTier()`/
-// `_eqCambiarEstado()`/etc. -- resuelven la persona a togglear buscando por
-// ese mismo id en `_eqPersonas`, así que el toggle real solo funciona con
-// el objeto que YA vive ahí). Sin fila en Equipo (cuenta admin "pura",
-// dashboardAdmin:true, ver irEditarDatos() más arriba) se arma un objeto
-// mínimo con `id:E.nombre` y los valores iniciales que sí trae `E.datos`
-// (categoria/estado_miembro) -- los toggles de esa sección quedan sin
-// efecto real en ese caso (no hay fila que actualizar), mismo criterio de
-// "degradación silenciosa" que el resto de esta pantalla con datos ausentes.
-function _datosRenderAdmin() {
-  var row = document.getElementById('aj-admin-row');
-  if (!row) return;
-  if (typeof _adminToken === 'undefined' || !_adminToken) {
-    row.style.display = 'none';
-    var body = document.getElementById('aj-sub-admin-body');
-    if (body) body.innerHTML = '';
-    return;
-  }
-  row.style.display = '';
-  if (typeof _eqAsegurarCargado === 'undefined' || typeof _eqTierAdminFlatHtml === 'undefined' || typeof _eqAdminGestionFlatHtml === 'undefined') return;
-  _eqAsegurarCargado(function() {
-    var d = E.datos || {};
-    var persona = (typeof _eqPersonaPorId === 'function' && _eqPersonaPorId(E.nombre)) || {
-      id: E.nombre, nombre: E.nombre, username: E.nombre,
-      tierModo: d.categoria === 'Quindes' ? 'quinde' : (d.categoria === 'Mirlxs' ? 'mirlxs' : 'auto'),
-      exentaCuota: !!d.exentaCuota,
-      estado: d.estado_miembro || 'Activx',
-      esAdminMiembro: true,
-      email: d.email || ''
-    };
-    _ajCargarSubAdmin(persona);
-  });
-}
-
-// Puebla el cuerpo del panel navegable -- ver comentario de _datosRenderAdmin()
-// arriba para el porqué de la separación. `persona` ya viene resuelta (real o
-// fallback), esta función no hace ningún fetch/lookup propio.
-function _ajCargarSubAdmin(persona) {
-  var body = document.getElementById('aj-sub-admin-body');
-  if (!body) return;
-  body.innerHTML = _eqTierAdminFlatHtml(persona) + _eqAdminGestionFlatHtml(persona) +
-    '<div id="aj-admin-viaje">' + _ajViajeAdminHtml(persona) + '</div>';
-}
-
-// "De viaje" en Ajustes de admin (pedido explícito, ver MANIFEST.md) --
-// activar ya viene dado por la pill "De viaje" de `_eqAdminGestionFlatHtml()`
-// de arriba (mismo `_eqCambiarEstado()` -> sheet de período con fechas
-// opcionales -> `adminActualizarEstadoViaje`, con `persona.id` = E.nombre).
-// Acá se suma lo que faltaba con el viaje YA activo: la fila con las fechas y
-// "Cancelar viaje" (`_eqViajeFilaHtml()`, js/equipo.js -- misma fila que el
-// perfil de Equipo, `adminCancelarViaje`). Vacío si no está de viaje.
-function _ajViajeAdminHtml(persona) {
-  if (!persona || persona.estado !== 'De viaje' || typeof _eqViajeFilaHtml !== 'function') return '';
-  return '<div class="eq-admin-sep"></div>' + _eqViajeFilaHtml(persona);
-}
-// Llamada por `_eqAplicarEstadoUI()` (js/equipo.js) después de guardar o
-// cancelar un viaje -- repinta solo este bloque si la persona es la cuenta
-// logueada (el panel no se vuelve a armar solo, a diferencia del perfil de
-// Equipo que re-renderiza con `_eqAplicarFiltrosAhora()`).
-function _ajRefrescarViajeAdmin(persona) {
-  if (!persona || persona.id !== E.nombre) return;
-  var cont = document.getElementById('aj-admin-viaje');
-  if (cont) cont.innerHTML = _ajViajeAdminHtml(persona);
-}
-
-function _datosRenderStatsHtml(contenedor, persona) {
-  // Cambio 5A (filtros equipo / card Mis estadísticas): las estadísticas
-  // (horas, % asistencia) y la barra de tier/termómetro se sacaron de acá --
-  // ahora viven en la card "Mis estadísticas" de Equipo (`_eqRenderMisEstadisticas()`,
-  // js/equipo.js), que reusa los mismos `_eqStatsCalc()`/`_eqRankTexto()` sobre
-  // los mismos datos de `_eqPersonas`. Esta función ahora solo renderiza el
-  // estado y el botón de "Reportar lesión".
-
-  // `estadoReal` (Batch 4) -- ya NO se pinta como chip visible acá (pedido
-  // explícito: sacar el campo "Estado" de Mi Perfil, solo lo visual -- ver
-  // MANIFEST.md "Cambios recientes"), pero SIGUE decidiendo si corresponde
-  // mostrar el botón "Reportar lesión" (`lesionBtnHtml` de abajo): oculto
-  // salvo `estado_miembro === 'Activx'` (ver ese criterio documentado en
-  // `_datLesionAbrirSheet()`/flujo de lesión, más abajo en este archivo) --
-  // ese dato/lógica no cambia, solo el chip de texto que lo mostraba.
-  var d = E.datos || null;
-  var estadoReal = d ? (d.estado_miembro || 'Activx') : null;
-
-  // Botón "Reportar lesión" (Batch 4) -- **movido acá** desde
-  // `_datosRenderLesion()` (antes su propio botón para el caso Activx sin
-  // solicitud pendiente, ver esa función más abajo -- ese branch se sacó de
-  // ahí) -- estilo `.btn-outline` (el secundario real de esta app, no existe
-  // ninguna clase `.btn-secondary`, confirmado antes de escribir esto) en
-  // vez del `.dat-lesion-btn` viejo (fondo naranja sólido), + ícono
-  // `personal_injury` (mismo patrón `<span class="material-symbols-outlined">`
-  // que el resto de la app).
-  var lesionBtnHtml = (d && estadoReal === 'Activx' && !d.solicitudLesionPendiente)
-    ? '<button type="button" class="btn btn-outline dat-lesion-btn-sutil" onclick="_datLesionAbrirSheet()"><span class="material-symbols-outlined">personal_injury</span>Reportar lesión</button>'
-    : '';
-
-  contenedor.innerHTML = lesionBtnHtml;
-}
-
-// Flujo de lesión (Cambio 54) -- auto-reporte de usuario + aprobación admin
-// (contraparte de aprobación en Mi Liga, ver js/admin.js). `estado_miembro`
-// (no camelCase -- así viaja tal cual desde getDatosCompletos()/index.ts,
-// mismo criterio que ya usa js/eventos.js para leerlo de E.datos) y
-// `solicitudLesionPendiente` (sí camelCase, campo nuevo agregado a
-// getDatosCompletos() para esta tanda) son los 2 datos reales que gobiernan
-// qué se muestra acá. `#dat-lesion-wrap` (index.html, dentro de #aj-sub-perfil
-// desde el Cambio 56, justo después de #dat-stats-wrap) queda vacío para
-// cualquier estado que no sea Lesionadx/con solicitud pendiente -- **el caso
-// Activx sin solicitud pendiente (el botón "Reportar lesión" en sí) se
-// movió a `_datosRenderStatsHtml()` (Batch 4, al final de "Estadísticas",
-// pedido explícito) -- ver ese comentario ahí.** Los otros 2 casos
-// (solicitud pendiente / ya Lesionadx) siguen acá tal cual, el pedido solo
-// pidió mover "el botón", no todo el flujo de lesión.
-function _datosRenderLesion() {
-  var contenedor = document.getElementById('dat-lesion-wrap');
-  if (!contenedor) return;
-  var d = E.datos || {};
-  var estado = d.estado_miembro || 'Activx';
-  var html = '';
-  if (d.solicitudLesionPendiente) {
-    html = '<p class="dat-lesion-texto">Solicitud enviada, esperando aprobación de los admins.</p>' +
-      '<a href="javascript:void(0)" class="dat-lesion-link" onclick="_datLesionCancelarSolicitud()">Cancelar solicitud</a>';
-  } else if (estado === 'Lesionadx') {
-    html = '<p class="dat-lesion-texto">Estás marcadx como Lesionadx. Estás exentx de la cuota durante este período.</p>' +
-      '<button type="button" class="dat-lesion-btn" onclick="_datLesionRecuperarse()">Estoy recuperadx</button>';
-  }
-  contenedor.innerHTML = html;
-}
-
-// Integración con el botón/gesto atrás (mantenida del Batch 4) -- abrir
-// empuja un estado de historial + registra el cierre; el cierre acepta
-// `porGesto` y, si se llama manual (click de "Cancelar", o desde
-// `_datLesionConfirmar()` más abajo), dispara `history.back()` en vez de
-// cerrar directo -- el popstate resultante es el que efectivamente cierra
-// (con `porGesto=true`), igual que en el resto de la app.
-// Rediseño (ver MANIFEST.md/CHANGELOG.md): migrado de `.eq-confirm-sheet-*`
-// (clase `.visible`) al componente `.bsheet-overlay`/`.bsheet` estándar de
-// Ajustes -- mismo mecanismo `style.display`+`transform` (doble
-// `requestAnimationFrame` al abrir, 350ms de espera antes de `display:none`
-// al cerrar) que usa el resto de sheets `.bsheet` de la app, ej.
-// `_evAbrirSheetCancelar()`/js/eventos.js.
-function _datLesionAbrirSheet() {
-  var ov = document.getElementById('dat-lesion-sheet-overlay');
-  var sh = document.getElementById('dat-lesion-sheet');
-  if (!ov || !sh) return;
-  ov.style.display = 'block';
-  sh.style.display = 'block';
-  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
-  _registrarOverlayAbierto(_datLesionCancelar);
-}
-function _datLesionCancelar(porGesto) {
-  if (!porGesto) { history.back(); return; }
-  var ov = document.getElementById('dat-lesion-sheet-overlay');
-  var sh = document.getElementById('dat-lesion-sheet');
-  if (sh) sh.style.transform = 'translateY(100%)';
-  setTimeout(function() {
-    if (sh) sh.style.display = 'none';
-    if (ov) ov.style.display = 'none';
-  }, 350);
-}
-function _datLesionConfirmar() {
-  _datLesionCancelar();
-  // apiPost() (js/api.js), a diferencia de api()/GET, NO inyecta `_token`
-  // solo -- hay que pasarlo explícito (mismo criterio que wizExcEnviar()/
-  // js/eventos.js con solicitarExcepcion()), o la acción real (que valida
-  // por token de sesión) rechaza el pedido como "Sesión inválida".
-  apiPost({ action: 'solicitarLesion', token: _token }, function(res) {
-    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo enviar la solicitud. Intenta de nuevo.', 'error'); return; }
-    if (E.datos) E.datos.solicitudLesionPendiente = true;
-    _datosRenderLesion();
-  }, function(e) {
-    mostrarToast((e && e.message) || 'No se pudo enviar la solicitud. Intenta de nuevo.', 'error');
-  });
-}
-function _datLesionCancelarSolicitud() {
-  apiPost({ action: 'cancelarSolicitudLesion', token: _token }, function(res) {
-    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo cancelar la solicitud.', 'error'); return; }
-    if (E.datos) E.datos.solicitudLesionPendiente = false;
-    _datosRenderLesion();
-  }, function(e) {
-    mostrarToast((e && e.message) || 'No se pudo cancelar la solicitud.', 'error');
-  });
-}
-function _datLesionRecuperarse() {
-  apiPost({ action: 'recuperarseLesion', token: _token }, function(res) {
-    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo actualizar tu estado.', 'error'); return; }
-    if (E.datos) E.datos.estado_miembro = 'Activx';
-    _datosRenderLesion();
-  }, function(e) {
-    mostrarToast((e && e.message) || 'No se pudo actualizar tu estado.', 'error');
-  });
 }
 
 function irEditarPerfil() { irAjSub('aj-sub-perfil'); }
@@ -970,7 +741,6 @@ function _ajCargarSub(id) {
     document.getElementById('aj-equip-protec-val').textContent = d.necesitaProtecciones || '—';
     return;
   }
-  if (id === 'aj-sub-admin') { _datosRenderAdmin(); return; }
   if (id === 'aj-sub-perfil') {
     _ajSetDatoVal('aj-nombre-display', d.nombre || E.nombre, '—', false);
     _ajUsernameCancelarEdicion();
@@ -1128,7 +898,7 @@ function _ajUsernameInput(valor) {
   }
   // Disponibilidad -- contra el roster real ya en memoria (`_eqPersonas`,
   // js/equipo.js, cargado por `_eqAsegurarCargado()` -- disparado desde
-  // esta misma pantalla por `_datosRenderStats()`, ver más abajo). No existe
+  // `irEditarDatos()` al entrar a Ajustes). No existe
   // ningún endpoint real de verificación de disponibilidad -- si el roster
   // todavía no cargó (cuenta que nunca visitó Equipo ni vio sus stats en
   // esta sesión), se asume disponible de forma optimista, mismo criterio

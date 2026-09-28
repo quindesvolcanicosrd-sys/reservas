@@ -19,55 +19,11 @@
    más frágil, dependería de que nadie lo retoque después). */
 #eq-search-input { caret-color: transparent; }
 
-/* ── "Mis estadísticas" (rediseño, ver MANIFEST.md/CHANGELOG.md) ────────
-   Antes card fija encima de Favoritos, ahora contenido de un panel
-   deslizable (`#eq-misstats-panel`, mecánica compartida con el panel de
-   búsqueda+filtros, ver bloque de abajo) -- `.eq-stats-grid`/`.eq-stat-card`/
-   `.eq-rank-wrap` (más abajo, "Perfil de detalle") y `.dat-estado-chip`
-   (css/perfil.css) se reusan tal cual, sin duplicar nada -- esto es SOLO
-   el layout del wrapper + la fila de header. Header recortado (pedido
-   explícito): sin foto/nombre/número -- `.eq-mis-stats-sub` (línea de
-   número+rol que vivía debajo del nombre) se sacó, ya no queda ningún
-   consumidor. Panel compactado (pedido explícito, re-ajuste) -- padding e
-   inner-gap más chicos que antes. */
-.eq-misstats-panel-inner {
-  background: var(--surface-2); border-radius: 16px; padding: 12px;
-  margin-top: 10px;
-}
-/* Máscara con border-radius en la esquina inferior del panel (ver
-   MANIFEST.md/CHANGELOG.md -- "el contenido de la lista aparece debajo con
-   esquinas rectas, cortándose abruptamente") -- bug real: al scrollear el
-   roster con este panel abierto, `_eqInicializarCierrePanelesPorScroll()`/
-   js/equipo.js (colapso progresivo al scrollear, ver ese bloque más abajo)
-   achica `#eq-misstats-panel.style.maxHeight` EN VIVO -- el panel ya tenía
-   `overflow:hidden` (`.eq-header-panel`, mecanismo compartido del
-   acordeón), pero SIN `border-radius` propio esa clip-line quedaba
-   perfectamente recta, así que la tarjeta redondeada de adentro
-   (`.eq-misstats-panel-inner`, 16px) se cortaba de golpe contra un borde
-   cuadrado en vez de "esconderse" con esquinas redondas a juego -- mismo
-   radio EXACTO acá (16px) para que ambos bordes coincidan. Sin efecto
-   visual mientras el panel está simplemente abierto/cerrado del todo (el
-   `max-height` coincide con el contenido real, nada que recortar) -- solo
-   se nota durante el arrastre en vivo, que es justo cuando hacía falta.
-   Redondea SOLO las esquinas de ABAJO (nunca se recorta desde arriba, el
-   arrastre siempre reduce el alto desde el piso) y SOLO este panel (pedido
-   explícito, "Mis estadísticas") -- `#eq-busqueda-panel` no lo pidió, así
-   que el radio queda scopeado por id en vez de sumado a `.eq-header-panel`
-   a secas. */
-#eq-misstats-panel { border-radius: 0 0 16px 16px; }
-/* Pill de nivel (Q/M/I) + pill de estado -- rediseño compacto (pedido
-   explícito, ver MANIFEST.md/CHANGELOG.md -- "rediseñar Mis estadísticas
-   para que sea más compacto"): MOVIDAS a la nav (`.eq-misstats-toggle-pills`,
-   más abajo) -- antes vivían dentro del panel (`.eq-mis-stats-header`/
-   `.eq-mis-stats-info`/`.eq-mis-stats-pills`, sacadas de acá, sin más
-   consumidores). `.eq-mis-stats-rol-pill` con BORDE nuevo (antes solo
-   fondo tenue + texto) -- pedido explícito, "borde naranja, fondo naranja
-   tenue, texto naranja" -- mismo selector reusado tal cual por
-   `.eq-mis-stats-total-pill` (el total al lado de "PUNTOS", más abajo):
-   "el mismo estilo naranja que los pills de nivel", pedido explícito,
-   comparten declaración en vez de duplicarla. `.dat-estado-chip` (estado,
-   css/perfil.css) queda sin tocar -- solo cambia de UBICACIÓN, nunca de
-   color/forma. */
+/* Pill de categoría (termómetro y header del perfil de detalle) + pill del
+   total de "PUNTOS" -- borde naranja, fondo naranja tenue, texto naranja;
+   comparten declaración. Nombres `.eq-mis-stats-*` heredados del panel
+   "Mis estadísticas" (eliminado, ver MANIFEST.md) -- siguen en uso por
+   `_eqStatsContenidoHtml()`/`_eqPerfilContenidoHtml()`. */
 .eq-mis-stats-rol-pill, .eq-mis-stats-total-pill {
   display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px;
   font-size: 0.72rem; font-weight: 800; border: 1px solid var(--brand);
@@ -80,23 +36,11 @@
    lista, más abajo en este archivo) -- `.eq-grupo-linea`/`.eq-grupo-nombre`
    reusadas tal cual (mismo look, sin duplicar esas 2 reglas). */
 .eq-mis-stats-puntos-row { display: flex; align-items: center; gap: 8px; width: 100%; margin: 14px 0 2px; }
-/* Compactación del contenido de stats (pedido explícito, re-ajuste) --
-   `.eq-stats-grid`/`.eq-stat-card`/`.eq-stat-icon`/`.eq-stat-valor`/
-   `.eq-stat-label` son compartidas con el perfil de detalle
-   (`_eqPerfilContenidoHtml()`, "Perfil de detalle" más abajo) -- estos
-   overrides van SCOPEADOS a `#eq-misstats-panel-inner` (nunca la clase a
-   secas) para no achicar también las cards del perfil, que no se pidió
-   tocar. */
-#eq-misstats-panel-inner .eq-stats-grid { gap: 8px; margin: 10px 0 4px; }
-#eq-misstats-panel-inner .eq-stat-card { padding: 10px 8px; }
-#eq-misstats-panel-inner .eq-stat-icon { font-size: 1.15rem; margin-bottom: 4px; }
-#eq-misstats-panel-inner .eq-stat-valor { font-size: 15px; }
-#eq-misstats-panel-inner .eq-stat-label { font-size: 13px; margin-top: 1px; }
 /* Card combinada "Asistencia + Racha" (rediseño compacto, pedido explícito
    -- "en lugar de 2 cards separadas, mostrar una sola") -- 2 íconos juntos
    arriba (`sports`/asistencia + `local_fire_department`/racha), valor
    principal (asistencia) + badge de racha inline al lado (SOLO si hay
-   puntos de racha ese período, `_eqRenderMisEstadisticas()`/js/equipo.js
+   puntos de racha ese período, `_eqStatsContenidoHtml()`/js/equipo.js
    -- mismo criterio "nunca 0" que el resto de esta sección), label único
    abajo. `.eq-stat-combo-racha-badge` es su PROPIO target de tap
    (`event.stopPropagation()`, ver ese comentario en js/equipo.js) -- mismo
@@ -113,67 +57,6 @@
   cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .eq-stat-combo-racha-badge .material-symbols-rounded { font-size: 0.8rem; }
-
-/* ── Trigger "Mis estadísticas" de la nav (rediseño, ver MANIFEST.md/
-   CHANGELOG.md) -- avatar 36px (escalón propio, ninguna variante global de
-   `.avatar-pill` -- css/global.css -- cae justo en 36px: --sm es 44px,
-   --xs es 26px) + texto + chevron, mismo look "botón fantasma" que
-   `.ev-nav-mes-label`/css/eventos.css (sin fondo propio en reposo). Oculto
-   por default (`style="display:none"` inline, index.html) -- lo muestra
-   `_eqRenderMisEstadisticas()`/js/equipo.js solo si la cuenta logueada
-   tiene fila propia en Equipo, mismo criterio que la card fija que
-   reemplaza. */
-.eq-misstats-toggle-btn {
-  display: flex; align-items: center; gap: 8px; min-width: 0;
-  background: none; border: none; padding: 4px 8px 4px 4px; border-radius: 12px;
-  cursor: pointer; font-family: inherit; -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s;
-}
-@media (hover: hover) {
-  .eq-misstats-toggle-btn:hover { background: var(--brand-lightest); }
-}
-/* Mismo tamaño que el avatar de las filas de la lista (`avatar-pill--sm`,
-   css/global.css: 44px / inicial 15px) -- pedido explícito, antes 36px/14px. */
-.eq-misstats-toggle-btn .eq-misstats-toggle-avatar { width: 44px; height: 44px; flex-shrink: 0; }
-.eq-misstats-toggle-btn .eq-misstats-toggle-avatar .avatar-pill-letter { font-size: 15px; }
-/* `min-width:0` (bug real corregido, ver MANIFEST.md/CHANGELOG.md --
-   "rediseño compacto de Mis estadísticas"): sin él, un flex-item con
-   contenido de texto no se achica más allá de su ancho natural
-   (`min-width:auto` default de flexbox, mismo gotcha ya documentado en
-   otros lugares de este archivo) -- con las 2 pills nuevas sumadas al
-   lado (`.eq-misstats-toggle-pills`, más abajo) en pantallas angostas el
-   texto "Mis estadísticas" necesita poder ceder ancho de verdad para que
-   `text-overflow:ellipsis` realmente entre en juego, en vez de empujar
-   las pills/el chevron fuera del botón. */
-/* Bug real corregido -- "nombre/'Estadísticas' no alineados a la
-   izquierda": `.eq-misstats-toggle-texto` vive dentro de un `<button>`
-   (`.eq-misstats-toggle-btn`), y el `text-align:center` del user-agent
-   sobre `<button>` se hereda hacia estos 2 spans (nada en la cadena lo
-   pisaba) -- con `align-items:stretch` (default de flex-column) las 2
-   líneas se estiran al ancho de la más larga, así que centradas dentro de
-   ESE ancho quedaban en diagonal entre sí en vez de arrancar las 2 del
-   mismo borde izquierdo. `text-align:left` explícito, se hereda a los 2
-   hijos. */
-.eq-misstats-toggle-texto {
-  display: flex; flex-direction: column; align-items: flex-start; min-width: 0; line-height: 1.25;
-  text-align: left;
-}
-/* Título personalizado (pedido explícito, "reemplazar 'Mis Estadísticas'
-   fijo por el nombre de la persona") -- mismo tamaño/peso que el texto fijo
-   de antes, ellipsis propio (en vez de heredarlo del padre, ahora flex
-   column) porque es la línea que puede ser larga (nombre derby). */
-.eq-misstats-toggle-nombre {
-  font-size: 0.86rem; font-weight: 700; color: var(--text);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.eq-misstats-toggle-sub { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
-/* Pills de nivel/estado en la nav (rediseño compacto, pedido explícito) --
-   `flex-shrink:0` (nunca se achican/truncan, a diferencia del texto de
-   arriba -- una pill cortada a la mitad no comunica nada) + `white-space:nowrap`
-   por si el texto de estado más largo ("Lesionadx") tentara a envolver. */
-.eq-misstats-toggle-pills { display: flex; align-items: center; gap: 6px; flex-shrink: 0; white-space: nowrap; }
-.eq-misstats-toggle-chevron { flex-shrink: 0; font-size: 1.2rem; color: var(--muted); transition: transform 0.25s; }
-.eq-misstats-toggle-btn.activo .eq-misstats-toggle-chevron { transform: rotate(180deg); color: var(--brand); }
 
 /* ── Header sticky nuevo (rediseño, ver MANIFEST.md -- "colapso progresivo
    al scrollear"): antes `#eq-search-header` (la fila de íconos) era el
@@ -218,24 +101,26 @@
    íconos y el primer panel, no después de los 2 (`padding-bottom` del
    wrapper, arriba, es el que corre DESPUÉS de ambos, siempre). */
 .eq-header-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 56px; margin-bottom: 4px; }
+/* Título de la sección a la izquierda de la fila de íconos -- ocupa el
+   lugar que dejó el trigger "Mis estadísticas" (eliminado), así la lupa no
+   queda sola con un hueco a la izquierda. Misma tipografía que
+   `.ev-nav-mes-label` (css/eventos.css), sin comportamiento de botón. */
+.eq-header-titulo {
+  flex: 1; min-width: 0; padding: 10px 4px; margin: 0;
+  font-size: 1rem; font-weight: 800; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 
-/* ── Paneles deslizables de la nav: "Mis estadísticas" + búsqueda/filtros
+/* ── Panel deslizable de la nav: búsqueda/filtros
    (rediseño, ver MANIFEST.md/CHANGELOG.md) -- mismo mecanismo de animación
    que `.ev-header-burbuja`/css/eventos.css (botón de búsqueda de Eventos):
    max-height animado + `.abierta`, JS idéntico en `_eqTogglePanel()`/
    js/equipo.js (lock del alto real antes de cerrar + doble
-   requestAnimationFrame), mutuamente excluyentes entre sí (abrir uno cierra
-   el otro) -- CSS propio en vez de reusar la clase de eventos.css literal,
+   requestAnimationFrame) -- CSS propio en vez de reusar la clase de eventos.css literal,
    mismo criterio de "cada sección mantiene su propio archivo" ya
-   establecido en el resto de la app. Clase compartida por los 2 paneles
-   (antes solo el de filtros, `.eq-filtros-panel`) -- el contenido interno
-   de cada uno sigue en su propia clase `-inner` (`.eq-misstats-panel-inner`/
-   `.eq-busqueda-panel-inner`, ver esos bloques). Colapso progresivo al
-   scrollear (ver MANIFEST.md) -- `_eqInicializarCierrePanelesPorScroll()`/
-   js/equipo.js pisa `max-height` en vivo con `transition:none` mientras el
-   dedo arrastra, así que la transición CSS de acá (0.28s) solo entra en
-   juego al soltar (termina de cerrar o vuelve al alto original), nunca
-   durante el propio arrastre. */
+   establecido en el resto de la app. El contenido interno vive en
+   `.eq-busqueda-panel-inner`. (El panel "Mis estadísticas" y su colapso
+   progresivo al scrollear se eliminaron, ver MANIFEST.md.) */
 .eq-filtro-toggle-btn.activo { background: var(--brand); color: var(--white); }
 /* Badge numérico del ícono de lupa (feat nueva, ver MANIFEST.md -- "igual a
    como funciona en Eventos") -- COPIADO 1:1 de `.ev-header-icon-btn`/
@@ -254,12 +139,11 @@
    -- "borde del panel con contenido de la lista transparentándose por
    debajo"): antes este contenedor (el que de verdad recorta el contenido,
    `overflow:hidden`, durante el colapso progresivo al scrollear -- ver
-   arriba) no pintaba NINGÚN fondo propio -- solo `.eq-misstats-panel-inner`/
-   `.eq-busqueda-panel-inner` (más abajo) lo hacen, con un `margin-top:10px`
+   arriba) no pintaba NINGÚN fondo propio -- solo
+   `.eq-busqueda-panel-inner` (más abajo) lo hace, con un `margin-top:10px`
    antes de esa tarjeta. En flujo normal ese hueco de 10px queda cubierto
    por `background:var(--bg)` de `.eq-sticky-header` (su padre, ver arriba
-   en este archivo) -- pero durante el arrastre en vivo (`_eqInicializarCierrePanelesPorScroll()`,
-   js/equipo.js, `panel.style.maxHeight` pisado en cada `touchmove`) el
+   en este archivo) -- pero durante la animación el
    recorte puede caer justo en ese hueco sin fondo propio, dejando ver una
    franja del roster que sigue scrolleando detrás -- exactamente el "borde
    transparentándose" reportado. Fondo opaco DIRECTO en el contenedor que
@@ -306,8 +190,8 @@
    recortar con el panel en su alto natural; vuelve a `hidden` (regla base)
    apenas se saca esta clase para animar un cierre real. */
 .eq-header-panel.eq-panel-auto { height: auto; overflow: visible; }
-.eq-misstats-panel-inner, .eq-busqueda-panel-inner { transition: transform 350ms ease; transform: translateZ(0); }
-.eq-misstats-panel-inner.eq-panel-inner-anim, .eq-busqueda-panel-inner.eq-panel-inner-anim { will-change: transform; }
+.eq-busqueda-panel-inner { transition: transform 350ms ease; transform: translateZ(0); }
+.eq-busqueda-panel-inner.eq-panel-inner-anim { will-change: transform; }
 .eq-busqueda-panel-inner {
   background: var(--surface-2); border-radius: 16px; padding: 16px;
   margin-top: 10px;
@@ -884,7 +768,7 @@
    (pedido explícito, re-ajuste, ver MANIFEST.md -- "mismo tamaño, padding
    y font-size que el pill de pronombres") -- pisa acá, SOLO en esta fila,
    el padding/font-size/radius chicos de `.eq-mis-stats-rol-pill` (arriba,
-   2px 10px / 0.72rem, pensados para la nav de "Mis estadísticas") con los
+   2px 10px / 0.72rem) con los
    mismos valores EXACTOS de `.aj-pill` (css/perfil.css, pill de
    pronombres) -- color/borde/fondo de `.eq-mis-stats-rol-pill` quedan
    igual, solo cambia el tamaño de la caja. */
@@ -896,9 +780,8 @@
    MANIFEST.md -- "colapsable y más compacta, igual de liviana que Mis
    estadísticas") -- `.eq-acord`/`.eq-acord-header`/`.eq-acord-cuerpo` ya
    existentes (ver "Acordeones Categoría/Estado" más abajo), esto es solo
-   el achique de `.eq-stat-card`/`.eq-rank-wrap` puertas adentro: MISMOS
-   valores que `#eq-misstats-panel-inner` (ver bloque "Mis estadísticas"
-   más arriba en este archivo) -- selector de descendiente, nunca la clase
+   el achique de `.eq-stat-card`/`.eq-rank-wrap` puertas adentro (mismos
+   valores que tenía el panel "Mis estadísticas", eliminado) -- selector de descendiente, nunca la clase
    a secas, para no achicar ninguna otra card de la app. */
 .eq-perfil-stats-acord { margin-top: 14px; }
 .eq-perfil-stats-acord .eq-stats-grid { gap: 8px; margin: 10px 0 4px; }
@@ -1190,3 +1073,36 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
    se quedan sin este modificador). */
 .eq-stat-card--tappable { cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background 0.15s; }
 .eq-stat-card--tappable:active { background: var(--brand-light); }
+
+/* ── Pill "Tú" en la fila propia del roster (ver MANIFEST.md -- la usuaria
+   actual vive en su grupo, primera posición) -- chica, junto al nombre,
+   mismo par brand-light/brand que el resto de pills de esta sección. */
+.eq-tu-pill {
+  display: inline-flex; align-items: center; vertical-align: middle;
+  margin-left: 6px; padding: 1px 8px; border-radius: 999px;
+  font-size: 0.66rem; font-weight: 800; line-height: 1.5;
+  background: var(--brand-light); color: var(--brand);
+}
+
+/* ── Flujo de lesión en el detalle propio (`#eq-lesion-wrap`,
+   `_eqLesionHtml()`/js/equipo.js; movido desde Ajustes/css/perfil.css).
+   `.eq-lesion-btn` (Estoy recuperadx) = acción primaria sólida;
+   `.eq-lesion-btn-sutil` (Reportar lesión) solo ajusta el layout encima de
+   `.btn`/`.btn-outline` (css/ui.css). Vacío -> sin aire. */
+.eq-lesion-wrap { margin-top: 14px; }
+.eq-lesion-wrap:empty { display: none; }
+.eq-lesion-texto { font-size: 0.85rem; color: var(--muted); text-align: center; line-height: 1.5; margin: 10px 0 8px; }
+.eq-lesion-btn {
+  display: block; width: 100%; padding: 12px; margin-top: 8px;
+  border: none; border-radius: var(--radius); background: var(--brand);
+  color: var(--white); font-size: 0.85rem; font-weight: 700; cursor: pointer; font-family: inherit;
+}
+.eq-lesion-link {
+  display: block; text-align: center; font-size: 0.8rem; font-weight: 600;
+  color: var(--brand); text-decoration: underline; cursor: pointer;
+}
+.eq-lesion-btn-sutil {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%;
+}
+.eq-lesion-btn-sutil .material-symbols-outlined { font-size: 18px; }

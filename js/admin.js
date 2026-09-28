@@ -1108,7 +1108,8 @@ function adminCuotaExcQuitar(idMiembro) {
 }
 
 // ── Solicitudes de lesión (Cambio 54, auto-reporte de usuario + aprobación
-// admin, ver #dat-lesion-wrap/js/perfil.js para la contraparte de usuario) ──
+// admin, ver #eq-lesion-wrap/_eqLesionHtml() en js/equipo.js para la
+// contraparte de usuario, en el detalle propio de Equipo) ──
 // Mismo patrón que Excepciones (arriba): fetch -> array en memoria -> render,
 // actualización optimista en aprobar/rechazar (sin re-fetch). `adminApi()`
 // (no `apiGet`, que no existe en este repo -- solo hay `api()`/`apiPost()`

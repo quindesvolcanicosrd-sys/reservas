@@ -43,7 +43,7 @@
 <link rel="stylesheet" href="css/nav.css?v=f9a04f6b">
 <link rel="stylesheet" href="css/eventos.css?v=0a25f4cd">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=cf94ec37">
+<link rel="stylesheet" href="css/equipo.css?v=9952d8a7">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -170,7 +170,7 @@
        real (flex:1) para poder ser interactivo. -->
   <div class="app-nav-search" id="aj-search-wrap" style="display:none;">
     <span class="material-symbols-outlined">search</span>
-    <input type="text" id="aj-search-input" placeholder="Buscar en Mi perfil" oninput="ajFiltrarSettings(this.value)">
+    <input type="text" id="aj-search-input" placeholder="Buscar en Ajustes" oninput="ajFiltrarSettings(this.value)">
   </div>
   <div style="width:40px;flex-shrink:0;" id="top-bar-spacer"></div>
 </div>
@@ -2547,51 +2547,18 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            `.ev-header-row`). -->
       <div class="eq-sticky-header" id="eq-sticky-header">
         <div class="eq-header-row" id="eq-search-header">
-          <!-- Rediseño de nav (ver MANIFEST.md/CHANGELOG.md) -- reemplaza el
-               buscador+botón "Filtros" siempre visibles por 2 triggers, mismo
-               mecanismo de burbuja mutuamente excluyente que Eventos
-               (`_evTogglePanel()`/`.ev-header-burbuja`, js/eventos.js+
-               css/eventos.css) pero con JS/CSS propios de esta sección
-               (`_eqTogglePanel()`/`.eq-header-panel`, más abajo en este
-               archivo/css/equipo.css) -- mismo criterio de siempre, cada
-               sección mantiene su propio archivo, ver MANIFEST.md.
-               Izquierda: avatar (36px) + "Mis estadísticas" + chevron --
-               reemplaza a la card fija que existía antes encima de
-               Favoritos, mismo contenido, ahora en un panel deslizable
-               (`_eqTogglePanel('stats')`). Arranca oculto (display:none) --
-               igual que la card vieja, `_eqRenderMisEstadisticas()`/js/equipo.js
-               lo muestra si la cuenta logueada tiene fila propia en Equipo.
-               Derecha: un solo ícono de lupa -- el buscador de texto libre y
-               el panel de Filtros (período de puntaje + rol) que antes vivían
-               separados ahora comparten un solo panel fusionado
-               (`_eqTogglePanel('busqueda')`), mismo criterio que el panel
-               único de búsqueda+filtros de Eventos. -->
-          <button type="button" class="eq-misstats-toggle-btn" id="eq-misstats-toggle-btn" onclick="_eqTogglePanel('stats')" style="display:none;">
-            <span class="eq-avatar-badge-wrap">
-              <span class="avatar-pill eq-avatar eq-misstats-toggle-avatar" id="eq-misstats-toggle-avatar" data-nombre="" data-foto=""></span>
-              <span id="eq-misstats-toggle-tendencia"></span>
-            </span>
-            <span class="eq-misstats-toggle-texto">
-              <span class="eq-misstats-toggle-nombre" id="eq-misstats-toggle-nombre"></span>
-              <span class="eq-misstats-toggle-sub">Estadísticas</span>
-            </span>
-            <span class="eq-misstats-toggle-pills" id="eq-misstats-toggle-pills"></span>
-            <span class="material-symbols-outlined eq-misstats-toggle-chevron">expand_more</span>
-          </button>
+          <!-- Fila de íconos del header sticky: un solo trigger (lupa) que
+               abre el panel fusionado de búsqueda + filtros
+               (`_eqTogglePanel('busqueda')`, js/equipo.js), mismo criterio
+               que el panel único de búsqueda+filtros de Eventos. El panel
+               "Mis estadísticas" se eliminó: la usuaria actual ahora aparece
+               dentro del roster (primera de su grupo, pill "Tú"); en su
+               lugar, a la izquierda, el título de la sección. -->
+          <h1 class="eq-header-titulo">Equipo</h1>
           <button type="button" class="app-nav-icon-btn eq-filtro-toggle-btn" id="eq-busqueda-toggle-btn" onclick="_eqTogglePanel('busqueda')" title="Buscar y filtrar">
             <span class="material-symbols-outlined">search</span>
             <span class="eq-filtro-badge" id="eq-filtro-badge" style="display:none;">0</span>
           </button>
-        </div>
-
-        <!-- Panel "Mis estadísticas" (rediseño, ver MANIFEST.md/CHANGELOG.md)
-             -- mismo contenido exacto que la card fija de antes (foto, nombre
-             derby, número, rol, status, horas patinadas, % asistencia, puntos
-             tareas, puntos asistencia, puntos totales del período, barra de
-             tier), poblado por _eqRenderMisEstadisticas()/js/equipo.js, solo
-             cambia dónde vive (panel deslizable en vez de card fija). -->
-        <div class="eq-header-panel" id="eq-misstats-panel">
-          <div class="eq-misstats-panel-inner" id="eq-misstats-panel-inner"></div>
         </div>
 
         <!-- Panel de búsqueda + filtros fusionados (rediseño, ver MANIFEST.md/
@@ -3008,26 +2975,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="aj-content">
           <div class="aj-title">Salud</div>
           <div class="aj-value" id="aj-salud-val">—</div>
-        </div>
-        <span class="material-symbols-outlined aj-chevron">chevron_right</span>
-      </div>
-    </div>
-
-    <!-- Ajustes de admin (pedido explícito, ver MANIFEST.md) -- convertida de
-         acordeones inline dentro de "Mi perfil" a subsección navegable
-         propia, igual patrón que el resto de filas de Ajustes. Oculta por
-         defecto (`style="display:none"`) -- solo `_datosRenderAdmin()`
-         (js/perfil.js) la muestra, y únicamente con `_adminToken` válido;
-         sin token, la fila no aparece y `#aj-sub-admin-body` (más abajo)
-         queda vacío. `irAjSub('aj-sub-admin')` no necesita gate propio
-         porque la única entrada al panel es esta fila ya oculta. Mismo
-         ícono `admin_panel_settings` que ya usa "Mi Liga"
-         (APP_BOTTOM_NAV_ITEMS/js/ui.js) para el mismo concepto. -->
-    <div class="aj-group">
-      <div class="aj-row" id="aj-admin-row" data-aj-key="admin" onclick="irAjSub('aj-sub-admin')" style="display:none">
-        <div class="aj-icon aj-icon-purple"><span class="material-symbols-outlined">admin_panel_settings</span></div>
-        <div class="aj-content">
-          <div class="aj-title">Ajustes de admin</div>
         </div>
         <span class="material-symbols-outlined aj-chevron">chevron_right</span>
       </div>
@@ -3604,15 +3551,15 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js?v=8e63a98b"></script>
-<script src="js/ui.js?v=397ac228"></script>
+<script src="js/ui.js?v=24cea86a"></script>
 <script src="js/eventos.js?v=7e45e5f5"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=f1afb381"></script>
-<script src="js/equipo.js?v=e76d2c3e"></script>
+<script src="js/equipo.js?v=c828b80b"></script>
 <script src="js/home.js?v=e715822d"></script>
 <script src="js/reservas.js?v=d9f7492c"></script>
-<script src="js/perfil.js?v=9c361a4a"></script>
-<script src="js/admin.js?v=60bc7a6c"></script>
+<script src="js/perfil.js?v=466b2999"></script>
+<script src="js/admin.js?v=3c3b5a63"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js?v=d18bc0da"></script>
 
@@ -4175,21 +4122,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
       </div>
     </div>
 
-    <!-- Stats de Equipo (Cambio 51, datos reales desde el Cambio 55 -- ver
-         MANIFEST.md; movido a "Mi perfil" en el Cambio 56) -- horas
-         patinadas/asistencia + termómetro de categoría del usuario logueado,
-         poblado (async) por _datosRenderStats() (js/perfil.js) desde el
-         roster real (getEquipo(), js/equipo.js). Vacío/sin tocar si la
-         cuenta no tiene fila en Equipo (ver el guard de esa función). -->
-    <div id="dat-stats-wrap"></div>
-
-    <!-- Flujo de lesión (Cambio 54, ver MANIFEST.md; movido a "Mi perfil" en
-         el Cambio 56) -- reportar/cancelar/recuperarse, poblado por
-         _datosRenderLesion() (js/perfil.js) desde E.datos
-         (estado_miembro/solicitudLesionPendiente, datos reales de
-         Supabase). Vacío para cualquier estado sin acción disponible. -->
-    <div id="dat-lesion-wrap"></div>
-
     <!-- Zona cuenta (ver "Cambios recientes" -- movida acá desde el fondo de
          la pantalla principal de Ajustes, debajo de la card de pronombres).
          Oculta para cuentas admin "puras" sin E.datos (ver irEditarDatos(),
@@ -4744,24 +4676,6 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
 
   </div>
-</div>
-
-<!-- SUB: Ajustes de admin (pedido explícito, ver MANIFEST.md) -- mismo
-     patrón app-nav/aj-sub-inner que el resto de subsecciones de Ajustes.
-     `#aj-sub-admin-body` (== `.aj-sub-inner` de esta, con id propio para
-     que `_ajCargarSubAdmin()`/js/perfil.js le inyecte el HTML directo, sin
-     un div extra anidado) arranca vacío -- lo puebla `_datosRenderAdmin()`
-     al entrar a Ajustes, y `_ajCargarSub('aj-sub-admin')` (irAjSub()) cada
-     vez que se abre este panel puntual. -->
-<div class="aj-sub" id="aj-sub-admin">
-  <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
-    <button class="app-nav-back" onclick="cerrarAjSub('aj-sub-admin')">
-      <span class="material-symbols-outlined">arrow_back</span>
-    </button>
-    <span class="app-nav-title">Ajustes de admin</span>
-    <div style="width:40px;flex-shrink:0;"></div>
-  </div>
-  <div class="aj-sub-inner" id="aj-sub-admin-body"></div>
 </div>
 
 <!-- BOTTOM SHEET: "Otro" del wizard de Salud (Enfermedad/Antecedentes/Seguro en modo multi, Dieta en modo single) -->
@@ -5431,22 +5345,20 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   </div>
 </div>
 
-<!-- Bottom sheet — confirmar reporte de lesión (Ajustes) -- rediseño, ver
-     MANIFEST.md/CHANGELOG.md: migrado de `.eq-confirm-sheet-*` (propio de
-     Equipo) al componente `.bsheet-overlay`/`.bsheet` estándar (mismo que
-     usa el resto de los sheets de Ajustes/Eventos, ej. #ev-sheet-cancelar)
-     para consistencia real dentro de Ajustes -- mismo criterio de apertura/
-     cierre (`style.display`+`transform`, no una clase `.visible`), ver
-     _datLesionAbrirSheet()/_datLesionCancelar() (js/perfil.js). -->
-<div id="dat-lesion-sheet-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_datLesionCancelar()"></div>
+<!-- Bottom sheet — confirmar reporte de lesión (detalle propio de Equipo;
+     antes en Mi perfil/Ajustes, ver MANIFEST.md) -- componente
+     `.bsheet-overlay`/`.bsheet` estándar, apertura/cierre con
+     `style.display`+`transform`, ver _eqLesionAbrirSheet()/
+     _eqLesionCerrarSheet() (js/equipo.js). -->
+<div id="dat-lesion-sheet-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_eqLesionCerrarSheet()"></div>
 <div id="dat-lesion-sheet" class="bsheet" style="z-index:9701;">
   <button type="button" class="sheet-close-btn" aria-label="Cerrar"><span class="material-symbols-outlined">close</span></button>
   <div class="bsheet-handle"></div>
   <div class="bsheet-title">Reportar lesión</div>
   <div class="bsheet-body">
     <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 20px;">Tu solicitud será enviada a los admins para aprobación. Mientras esté pendiente, tu estado no cambia.</p>
-    <button type="button" class="btn btn-primary" onclick="_datLesionConfirmar()" style="margin-bottom:10px;">Enviar solicitud</button>
-    <button type="button" class="btn btn-outline" onclick="_datLesionCancelar()">Cancelar</button>
+    <button type="button" class="btn btn-primary" onclick="_eqLesionConfirmar()" style="margin-bottom:10px;">Enviar solicitud</button>
+    <button type="button" class="btn btn-outline" onclick="_eqLesionCerrarSheet()">Cancelar</button>
   </div>
 </div>
 

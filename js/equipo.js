@@ -193,7 +193,7 @@ function _eqPersonaPorId(id) {
 }
 
 // Carga el roster real UNA sola vez por sesión y la reusa -- tanto
-// _eqInit() (visita a la sección Equipo) como _datosRenderStats()
+// _eqInit() (visita a la sección Equipo) como irEditarDatos()
 // (js/perfil.js, Cambio 51 -- stats del usuario logueado en Ajustes) la
 // necesitan, y pueden dispararse en cualquier orden según qué pantalla visite
 // primero la persona. Callbacks en cola mientras hay un fetch en curso, para
@@ -481,8 +481,8 @@ function _eqAnimarCambioFavorito(id, fav) {
 // abrir"): el orden ERA `_eqInit()` primero, `volver('s-equipo')` después.
 // `_eqInit()` -> `_eqAsegurarCargado(cb)` llama a `cb()` DE INMEDIATO
 // (síncrono, sin red) si el roster ya se cargó antes en la sesión -- caso
-// real y común, no un edge case: `_datosRenderStats()` (js/perfil.js,
-// stats de "Mi perfil" en Ajustes) dispara el mismo `_eqAsegurarCargado()`,
+// real y común, no un edge case: `irEditarDatos()` (js/perfil.js,
+// precarga del roster al entrar a Ajustes) dispara el mismo `_eqAsegurarCargado()`,
 // así que cualquiera que visite Ajustes ANTES que Equipo llega acá con
 // `_eqCargado` ya en `true`. En ese camino síncrono, `_eqRenderGrupo()`
 // (llamado dentro de ese mismo `cb()`) mide `body.scrollHeight` de los
@@ -506,7 +506,7 @@ function irEquipo() {
   // Bug real corregido -- "el tour no vuelve a intentar mostrarse al
   // renavegar a la sección" (pedido explícito): a diferencia de Eventos
   // (`_evActualizarTopBarModo()`, llamada SIN gate en cada `irEventos()`)
-  // y Mi Perfil (`_ajTourIniciarSiCorresponde()`, llamada en cada
+  // y Ajustes (`_ajTourIniciarSiCorresponde()`, llamada en cada
   // `irEditarDatos()` real), acá el chequeo vivía SOLO adentro de
   // `_eqInit()` -- una función que corre una única vez por sesión
   // (`_eqYaInicializado`, guard de arriba). Si la primera visita se
@@ -519,7 +519,7 @@ function irEquipo() {
   // (`_eqAsegurarCargado()`, más abajo), recién cuando el roster real ya
   // está pintado.
   if (!_eqYaInicializado) _eqInit();
-  else _eqTourIniciarSiCorresponde();
+  else { _eqAbrirGrupoPropio(); _eqTourIniciarSiCorresponde(); }
 }
 
 function _eqInit() {
@@ -542,11 +542,8 @@ function _eqInit() {
       return;
     }
     if (estadoEl) estadoEl.innerHTML = '';
-    _eqRenderFavoritos();
-    _eqRenderGrupo('Quindes');
-    _eqRenderGrupo('Mirlxs');
-    _eqRenderInactivos();
-    _eqRenderMisEstadisticas();
+    _eqRenderLista();
+    _eqAbrirGrupoPropio();
     _eqTourIniciarSiCorresponde();
   });
 }
@@ -564,7 +561,6 @@ function _eqInit() {
 // Eventos) -- deja asentar el layout real del roster recién renderizado
 // antes de medir geometría para posicionar el primer halo/tooltip. */
 var _EQ_TOUR_PASOS = [
-  { selector: '#eq-misstats-toggle-btn', titulo: 'Tus estadísticas', texto: 'Consulta tus estadísticas personales.' },
   { selector: '#eq-busqueda-toggle-btn', titulo: 'Busca y filtra', texto: 'Busca y filtra por puntos según períodos y filtra según rol en el equipo.' },
   { selector: '.eq-grupo-header', titulo: 'Colapsa secciones', texto: 'Colapsa las secciones que te interesan de las personas que te interesan.' },
   { selector: '.eq-fav-btn', titulo: 'Favoritos', texto: 'Agrega miembros del equipo a favoritos para tenerlos siempre visibles.' },
@@ -668,7 +664,7 @@ function _eqAvatarHtml(p, claseExtra) {
 // MANIFEST.md -- "quitar los chevrones de descenso en todos los lugares
 // donde aparecen en Equipo"): `tendencia === 'baja'` ahora se trata igual
 // que `null` -- vacío, sin badge -- en los 3 consumidores de esta función
-// (cards de la lista/favoritos y "Mis estadísticas" vía
+// (cards de la lista/favoritos vía
 // `_eqAvatarConTendenciaHtml()`, perfil de detalle vía llamada directa en
 // `_eqPerfilContenidoHtml()`), sin tocar el cálculo de `tendencia` en sí
 // (`getEquipo()`/supabase/functions/api/index.ts sigue devolviendo
@@ -676,8 +672,8 @@ function _eqAvatarHtml(p, claseExtra) {
 // solo tocar la UI). `.eq-tendencia-badge-baja` (css/equipo.css) queda sin
 // ningún consumidor -- ver ese archivo si hace falta limpiarla.
 // `claseTamano` opcional (pedido explícito, re-ajuste de tamaño): sin
-// pasarla, el badge queda en el tamaño base 18px (usado hoy solo en "Mis
-// estadísticas", sin pedido de agrandarlo ahí) -- `'eq-tendencia-badge--card'`
+// pasarla, el badge queda en el tamaño base 18px (hoy sin consumidores,
+// era el del panel "Mis estadísticas", eliminado) -- `'eq-tendencia-badge--card'`
 // (22px, filas de lista) o `'eq-tendencia-badge--detalle'` (28px, perfil de
 // detalle, foto mucho más grande) la agrandan, ver css/equipo.css.
 function _eqTendenciaBadgeHtml(p, claseTamano) {
@@ -688,8 +684,8 @@ function _eqTendenciaBadgeHtml(p, claseTamano) {
 
 // Avatar + badge de tendencia superpuesto (esquina inferior derecha, ver
 // `.eq-avatar-badge-wrap`/css/equipo.css) -- usado en las 2 fotos SIN
-// wrapper `position:relative` propio ya existente (fila de lista/favoritos
-// y "Mis estadísticas"; el perfil de detalle sí tiene el suyo,
+// wrapper `position:relative` propio ya existente (fila de lista/favoritos;
+// el perfil de detalle sí tiene el suyo,
 // `.eq-avatar-wrap`, `_eqPerfilContenidoHtml()` más abajo, así que ese caso
 // no pasa por acá -- pone `_eqTendenciaBadgeHtml()` directo adentro de ese
 // wrapper existente en vez de anidar uno nuevo). `claseTamano` se pasa tal
@@ -697,8 +693,8 @@ function _eqTendenciaBadgeHtml(p, claseTamano) {
 function _eqAvatarConTendenciaHtml(p, claseExtra, claseTamano) {
   return '<span class="eq-avatar-badge-wrap">' + _eqAvatarHtml(p, claseExtra) + _eqBadgeAvatarHtml(p, claseTamano) + '</span>';
 }
-// Badge de la esquina inferior derecha del avatar (lista de Equipo y avatar
-// de "Mis estadísticas") -- "De viaje" (pedido explícito, ícono `flight`,
+// Badge de la esquina inferior derecha del avatar (lista de Equipo y perfil
+// de detalle) -- "De viaje" (pedido explícito, ícono `flight`,
 // `.badge-viaje` en css/equipo.css) ocupa la MISMA esquina que el de
 // tendencia, así que lo reemplaza en vez de apilarse encima: mientras dura
 // el viaje el tier está congelado, el viaje es el dato relevante. Mismo
@@ -755,16 +751,22 @@ function _eqFilaHtml(p) {
   // igual, mostrando un "#" pelado sin número al lado del nombre.
   var numeroHtml = (p.numeroDerby !== null && p.numeroDerby !== undefined && p.numeroDerby !== '')
     ? ' <span class="eq-miembro-numero">#' + p.numeroDerby + '</span>' : '';
+  // Usuaria actual (ver `_eqRenderGrupo()`): pill "Tú" junto al nombre y sin
+  // corazón -- nunca aparece en Favoritos, marcarse a una misma no haría nada.
+  var esYo = _eqEsUsuarioActual(p);
+  var tuHtml = esYo ? ' <span class="eq-tu-pill">Tú</span>' : '';
+  var favHtml = esYo ? '' :
+      '<button type="button" class="eq-fav-btn' + (fav ? ' activo' : '') + '" data-eq-fav="' + idAttr + '" onclick="event.stopPropagation();_eqToggleFavorito(\'' + idJs + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '">' +
+        '<span class="material-symbols-outlined">' + (fav ? 'favorite' : 'favorite_border') + '</span>' +
+      '</button>';
   return '<div class="eq-miembro-fila" onclick="_eqAbrirPerfil(\'' + idJs + '\')">' +
       _eqAvatarConTendenciaHtml(p, 'avatar-pill--sm', 'eq-tendencia-badge--card') +
       '<div class="eq-miembro-info">' +
-        '<div class="eq-miembro-nombre">' + _eqEsc(p.nombreDerby) + numeroHtml + '</div>' +
+        '<div class="eq-miembro-nombre">' + _eqEsc(p.nombreDerby) + numeroHtml + tuHtml + '</div>' +
         '<div class="eq-miembro-username">@' + _eqEsc(p.username) + '</div>' +
         (statsHtml ? '<div class="eq-miembro-stats">' + statsHtml + '</div>' : '') +
       '</div>' +
-      '<button type="button" class="eq-fav-btn' + (fav ? ' activo' : '') + '" data-eq-fav="' + idAttr + '" onclick="event.stopPropagation();_eqToggleFavorito(\'' + idJs + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '">' +
-        '<span class="material-symbols-outlined">' + (fav ? 'favorite' : 'favorite_border') + '</span>' +
-      '</button>' +
+      favHtml +
     '</div>';
 }
 
@@ -843,10 +845,7 @@ function _eqBuscar(valor) {
   if (grupoQuindes) grupoQuindes.style.display = '';
   if (grupoMirlxs) grupoMirlxs.style.display = '';
   if (grupoInactivos) grupoInactivos.style.display = '';
-  _eqRenderFavoritos();
-  _eqRenderGrupo('Quindes');
-  _eqRenderGrupo('Mirlxs');
-  _eqRenderInactivos();
+  _eqRenderLista();
 }
 // Orden de la lista dentro de cada acordeón (bug real corregido, ver
 // MANIFEST.md/CHANGELOG.md -- "ordenar por puntos totales, no
@@ -904,7 +903,7 @@ function _eqRenderPorRol() {
   var html = '';
   _EQ_ROLES.forEach(function(rol) {
     var miembros = _eqPersonas.filter(function(p) {
-      return !_eqEsUsuarioActual(p) && !_eqEsInactivo(p) && _eqRolesDe(p.username).indexOf(rol) !== -1;
+      return (_eqEsUsuarioActual(p) || !_eqEsInactivo(p)) && _eqRolesDe(p.username).indexOf(rol) !== -1;
     });
     if (!miembros.length) return;
     var key = rol.toLowerCase().replace(/\s+/g, '-');
@@ -949,38 +948,23 @@ function _eqRenderPorRol() {
   });
 }
 
-/* ── Paneles de nav: "Mis estadísticas" + búsqueda/filtros (rediseño, ver
-   MANIFEST.md/CHANGELOG.md) -- 2 triggers en `#eq-search-header`
-   (`#eq-misstats-toggle-btn`/`#eq-busqueda-toggle-btn`), un solo panel
-   abierto a la vez (mismo criterio que `_evTogglePanel()`/`_EV_PANELES`,
-   Eventos, js/eventos.js+css/eventos.css -- abrir uno cierra el otro,
-   `_eqPanelAbierto` guarda cuál). Mecanismo de animación idéntico al que
-   tenía `_eqToggleFiltros()` (reemplazada por esto): abrir fija
-   `max-height` al `scrollHeight` real del panel; cerrar "aterriza" primero
-   en ese alto real y recién en el frame siguiente (doble
-   `requestAnimationFrame`) baja a `0px`, para que la transición tenga 2
-   valores numéricos entre los que interpolar (ver "Acordeones animados
-   con max-height" en MANIFEST.md). */
+/* ── Panel de nav: búsqueda/filtros (rediseño, ver MANIFEST.md/CHANGELOG.md)
+   -- un solo trigger en `#eq-search-header` (`#eq-busqueda-toggle-btn`).
+   Se mantiene el mapa `_EQ_PANELES`/`_eqPanelAbierto` (mismo criterio que
+   `_evTogglePanel()`/`_EV_PANELES`, js/eventos.js) aunque hoy haya un solo
+   panel -- "Mis estadísticas" se eliminó (la usuaria actual ahora vive
+   dentro del roster, ver `_eqRenderGrupo()`). Abrir fija el alto real del
+   panel y lo anima; cerrar "aterriza" primero en ese alto real y recién en
+   el frame siguiente baja a `0px` (ver "Acordeones animados con
+   max-height" en MANIFEST.md). */
 var _EQ_PANELES = {
-  stats: { el: 'eq-misstats-panel', btn: 'eq-misstats-toggle-btn' },
   busqueda: { el: 'eq-busqueda-panel', btn: 'eq-busqueda-toggle-btn' }
 };
 var _eqPanelAbierto = null;
 function _eqTogglePanel(tag) {
-  // localStorage SOLO acá (toque manual del chevron/trigger) -- ni el
-  // auto-open inicial (_eqRenderMisEstadisticas()) ni el auto-colapso por
-  // scroll (_eqInicializarColapsoStatsPorScroll(), más abajo) pasan por
-  // esta función, así que nunca pisan la preferencia guardada -- pedido
-  // explícito: "si el usuario nunca la tocó [manualmente], siempre
-  // expandido al abrir", un scroll no cuenta como haberla tocado.
-  if (_eqPanelAbierto === tag) {
-    _eqCerrarPanel(tag);
-    if (tag === 'stats') { try { localStorage.setItem('pivot_stats_collapsed', 'true'); } catch (e) {} }
-    return;
-  }
+  if (_eqPanelAbierto === tag) { _eqCerrarPanel(tag); return; }
   if (_eqPanelAbierto) _eqCerrarPanel(_eqPanelAbierto);
   _eqAbrirPanel(tag);
-  if (tag === 'stats') { try { localStorage.setItem('pivot_stats_collapsed', 'false'); } catch (e) {} }
 }
 // Fade out/in de los sticky headers mientras cualquier panel de la nav
 // está abierto (bug real corregido, ver MANIFEST.md/CHANGELOG.md --
@@ -1009,8 +993,7 @@ function _eqSincronizarClasePanelAbierto() {
 }
 // Perf real (pedido explícito, jank de Android Chrome al colapsar) -- fija
 // `height` (medido, nunca `auto`/infinito) en el wrapper Y `transform:
-// translateY` en sus hijos directos (`.eq-misstats-panel-inner`/
-// `.eq-busqueda-panel-inner`), en vez de un solo `max-height`: el `height`
+// translateY` en su hijo directo (`.eq-busqueda-panel-inner`), en vez de un solo `max-height`: el `height`
 // sigue disparando layout igual (es la misma familia de propiedad que
 // `max-height`, ninguna es GPU-only) pero el `transform` de los hijos SÍ
 // corre por compositor -- el contenido se desliza en vez de solo
@@ -1029,15 +1012,14 @@ function _eqSincronizarClasePanelAbierto() {
 // frame (`requestAnimationFrame`) fija `haciaPx`, para que el navegador
 // registre el cambio como una transición real de un valor a otro, no un
 // salto directo al destino en el mismo tick. `transform:translateY` en los
-// hijos directos (`.eq-misstats-panel-inner`/`.eq-busqueda-panel-inner`) en
+// hijos directos (`.eq-busqueda-panel-inner`) en
 // vez de animar solo `height`: `height` sigue disparando layout igual (es
 // la misma familia de propiedad que `max-height`, ninguna es GPU-only)
 // pero el `transform` de los hijos SÍ corre por compositor -- el contenido
 // se desliza en vez de solo aparecer/desaparecer recortado. `translateZ(0)`
 // sumado acá (no solo en la regla CSS de reposo) -- un `style.transform`
 // inline pisaría por completo cualquier `transform` de la clase, incluido
-// el `translateZ(0)` permanente de `.eq-misstats-panel-inner`/
-// `.eq-busqueda-panel-inner` -- sin esto la capa de compositing se perdía
+// el `translateZ(0)` permanente de `.eq-busqueda-panel-inner` -- sin esto la capa de compositing se perdía
 // justo durante la animación real. `will-change` como clase temporal
 // (`eq-panel-wrapper-anim`/`eq-panel-inner-anim`, css/equipo.css) -- se
 // saca sola en `transitionend` (`{once:true}`, sin acumular listeners).
@@ -1070,17 +1052,7 @@ function _eqAnimarPanel(panel, desdePx, haciaPx, translateY, volverseAuto) {
     }, { once: true });
   });
 }
-// `instantAuto` (pedido explícito, "estado inicial expandido" más robusto
-// que el doble rAF anterior): en vez de medir `scrollHeight` (puede dar 0
-// si `#s-equipo` sigue `display:none` en ese instante -- el bug real
-// reportado) y animar hasta ese valor, salta DIRECTO a `height:auto` (clase
-// `eq-panel-auto`) sin transición ni medición -- `auto` no depende de que
-// el ancestro ya sea visible, se recalcula solo cuando el layout real
-// corra. Uso: SOLO el auto-open inicial de "Mis estadísticas"
-// (`_eqRenderMisEstadisticas()`, más abajo); el toggle manual del chevron
-// sigue el camino animado de siempre (mide `scrollHeight`, transiciona,
-// recién después pasa a `auto` -- ver `_eqAnimarPanel()`, arriba).
-function _eqAbrirPanel(tag, instantAuto) {
+function _eqAbrirPanel(tag) {
   var cfg = _EQ_PANELES[tag];
   var panel = document.getElementById(cfg.el);
   var btn = document.getElementById(cfg.btn);
@@ -1088,20 +1060,7 @@ function _eqAbrirPanel(tag, instantAuto) {
   _eqPanelAbierto = tag;
   _eqSincronizarClasePanelAbierto();
   panel.classList.add('abierta');
-  var hijos = panel.children;
-  var i;
-  if (instantAuto) {
-    panel.style.transition = 'none';
-    for (i = 0; i < hijos.length; i++) hijos[i].style.transition = 'none';
-    panel.style.height = '';
-    panel.classList.add('eq-panel-auto');
-    for (i = 0; i < hijos.length; i++) hijos[i].style.transform = 'translateY(0) translateZ(0)';
-    void panel.offsetHeight; // fuerza reflow síncrono antes de restaurar la transición
-    panel.style.transition = '';
-    for (i = 0; i < hijos.length; i++) hijos[i].style.transition = '';
-  } else {
-    _eqAnimarPanel(panel, '0px', panel.scrollHeight + 'px', 'translateY(0)', true);
-  }
+  _eqAnimarPanel(panel, '0px', panel.scrollHeight + 'px', 'translateY(0)', true);
   btn.classList.add('activo');
   if (tag === 'busqueda') {
     setTimeout(function() { var inp = document.getElementById('eq-search-input'); if (inp) inp.focus(); }, 50);
@@ -1111,13 +1070,12 @@ function _eqAbrirPanel(tag, instantAuto) {
   // que ya estén stuck en ese momento necesitan correrse hacia abajo para no
   // quedar tapados. `setTimeout(300)` espera a que termine la transición de
   // `height` (0.35s, `.eq-header-panel`) para medir el alto FINAL, no el de
-  // a mitad de camino -- `instantAuto` no tiene transición que esperar.
-  setTimeout(_eqActualizarStickyHeaders, instantAuto ? 0 : 300);
+  // a mitad de camino.
+  setTimeout(_eqActualizarStickyHeaders, 300);
 }
 // `instant` -- `transition:none` real (en el wrapper Y en los hijos,
 // forzando reflow síncrono en el medio) en vez del camino animado de
-// siempre. Ya NO lo usa nadie en este archivo (`_eqInicializarColapsoStatsPorScroll()`
-// volvió al camino animado, ver ese comentario más abajo) -- el parámetro
+// siempre. Ya NO lo usa nadie en este archivo -- el parámetro
 // queda vivo, sin uso real por ahora, por si hace falta un cierre
 // instantáneo de nuevo más adelante (mismo mecanismo que sigue usando
 // `_evCerrarPanel(tag, instant)`/js/eventos.js para su panel de búsqueda).
@@ -1127,7 +1085,7 @@ function _eqCerrarPanel(tag, instant) {
   var btn = document.getElementById(cfg.btn);
   if (_eqPanelAbierto === tag) _eqPanelAbierto = null;
   // Bug real corregido (ver MANIFEST.md/CHANGELOG.md -- "glitch visual al
-  // colapsar Mis estadísticas: el header sticky aparece desplazado"): a
+  // colapsar un panel de la nav: el header sticky aparece desplazado"): a
   // diferencia de `_eqAbrirPanel()` (arriba -- ahí SÍ hay que sincronizar
   // la clase de una, para ocultar los headers ANTES de que la nav empiece
   // a crecer), acá NO se llama `_eqSincronizarClasePanelAbierto()` todavía
@@ -1179,212 +1137,10 @@ function _eqCerrarPanel(tag, instant) {
   }, instant ? 0 : 300);
 }
 
-/* ── Colapso progresivo de "Mis estadísticas" al scrollear (ver MANIFEST.md
-   -- "el panel debe cerrarse progresivamente/animado según el scroll, no de
-   golpe") -- puerto 1:1 de `_evInicializarCierreCalendarioPorScroll()`/
-   js/eventos.js (drag-to-dismiss EN VIVO sobre el contenedor que scrollea,
-   mismo criterio que Google Calendar: mientras el dedo sigue abajo, el
-   panel se achica proporcional al arrastre, como un acordeón que sigue el
-   gesto real; recién al soltar se decide terminar de cerrar -- si se pasó
-   el umbral -- o volver al alto original -- si no --, ambos animados).
-   SOLO aplica a `stats` (re-ajuste, ver MANIFEST.md -- "el panel de
-   búsqueda/filtros debe ocultarse rápido al scrollear, igual que en
-   Eventos, no progresivo"): una ronda anterior aplicaba este mismo drag a
-   los 2 paneles por igual (pedido explícito de ese momento), pero eso
-   dejaba a `busqueda` con un comportamiento DISTINTO al de Eventos, donde
-   el panel de búsqueda nunca sigue al dedo -- se cierra de una sola vez
-   apenas arranca cualquier gesto afuera, ver `_eqCerrarBurbujaSiFueraDe()`
-   más abajo, puerto de `_evCerrarBurbujaSiFueraDe()`/js/eventos.js. Ahora
-   Equipo replica esa MISMA distinción: `stats` sigue con el drag en vivo de
-   acá, `busqueda` usa el mecanismo instantáneo de abajo -- `_eqPanelAbierto`
-   decide cuál está activo en cada momento, nunca los 2 a la vez. Escucha
-   `#eq-lista-contenido` (roster completo, equivalente de `#ev-timeline`) --
-   nunca el panel en sí, que sigue cerrándose instantáneo por acción directa
-   (chevron/ícono). El dedo moviéndose hacia ARRIBA (`dy` negativo) es lo que
-   hace que el contenido scrollee hacia ABAJO -- por eso el panel se achica
-   cuando `dy` se hace más negativo, no al revés. Solo touch, mismo alcance
-   que el resto de los gestos de esta sección. A propósito NO reusa
-   `_eqCerrarPanel()` para terminar de cerrar -- esa función arranca fijando
-   `max-height` al `scrollHeight` COMPLETO antes de animar a 0 (pensada para
-   cerrar desde abierto-de-siempre, sin arrastre de por medio) -- llamarla
-   acá saltaría primero de vuelta al alto completo y recién ahí cerraría, un
-   "rebote" que el usuario no pidió (mismo motivo documentado en la versión
-   de Eventos).
-   Bug real corregido (ver MANIFEST.md -- "header sticky del acordeón se
-   superpone sobre los nombres de las personas"): antes, `touchmove`
-   achicaba `panel.style.maxHeight` (y con él, el alto real de
-   `#eq-sticky-header`, que envuelve al panel) en cada frame del gesto, pero
-   `_eqActualizarStickyHeaders()` -- la única función que mantiene el `top`
-   inline de los 4 headers de sección sincronizado con ese alto real -- solo
-   se llamaba en `touchend` + 300ms, nunca durante el propio arrastre.
-   Durante todo ese gesto (que puede durar varios segundos), los headers
-   quedaban con un `top` desactualizado (el del panel todavía abierto del
-   todo), position:sticky los pegaba mucho más abajo de lo real, y al ser
-   opacos con z-index por encima del roster (`.eq-grupo-header--sticky`,
-   css/equipo.css) terminaban tapando nombres de personas -- no era en
-   realidad un problema de VALORES de z-index (`.eq-sticky-header` ya es
-   100 contra 5 de `.eq-grupo-header--sticky`, jerarquía correcta) sino de
-   un `top` desincronizado durante el arrastre en vivo. Fix:
-   `_eqActualizarStickyHeadersThrottled()` (throttle por
-   `requestAnimationFrame`, evita forzar layout -- `offsetHeight` -- en
-   cada uno de los muchos eventos `touchmove` por segundo) se llama al
-   final de cada `touchmove`, así el `top` de los headers stuck se mantiene
-   al día con el alto real de la nav en todo momento, no solo al soltar. */
-var _eqListaDragY = 0, _eqListaDragActivo = false, _eqListaDragAlturaOriginal = 0;
-var _EQ_PANEL_DRAG_UMBRAL_FRACCION = 0.3;
-// Perf real (pedido explícito) -- `touchmove` puede disparar más de una vez
-// por frame en algunos dispositivos; el patrón rAF+flag ya usado en esta
-// app (`_eqActualizarStickyHeadersThrottled()`, más abajo) se aplica acá
-// TAMBIÉN al propio trabajo de arrastrar el panel (antes solo envolvía el
-// resync de headers sticky que corre al final) -- como mucho 1 escritura
-// real de `height`/`transform` por frame de pantalla.
-var _eqDragRafTicking = false;
-function _eqInicializarCierrePanelesPorScroll() {
-  var cont = document.getElementById('eq-lista-contenido');
-  if (!cont) return;
-  cont.addEventListener('touchstart', function(e) {
-    if (e.touches.length !== 1 || _eqPanelAbierto !== 'stats') return;
-    var cfg = _EQ_PANELES[_eqPanelAbierto];
-    var panel = cfg && document.getElementById(cfg.el);
-    if (!panel) return;
-    _eqListaDragAlturaOriginal = panel.getBoundingClientRect().height;
-    panel.style.height = _eqListaDragAlturaOriginal + 'px';
-    panel.classList.remove('eq-panel-auto'); // no se arrastra un height `auto` -- necesita un px real de partida
-    _eqListaDragY = e.touches[0].clientY;
-    _eqListaDragActivo = true;
-  }, { passive: true });
-  cont.addEventListener('touchmove', function(e) {
-    if (!_eqListaDragActivo || _eqPanelAbierto !== 'stats') return;
-    if (_eqDragRafTicking) return;
-    _eqDragRafTicking = true;
-    var clientY = e.touches[0].clientY;
-    requestAnimationFrame(function() {
-      _eqDragRafTicking = false;
-      if (!_eqListaDragActivo) return;
-      var cfg = _EQ_PANELES[_eqPanelAbierto];
-      var panel = cfg && document.getElementById(cfg.el);
-      if (!panel) return;
-      var dy = clientY - _eqListaDragY;
-      var hijos = panel.children;
-      var k;
-      if (dy >= 0) {
-        panel.style.transition = '';
-        panel.style.height = _eqListaDragAlturaOriginal + 'px';
-      } else {
-        panel.style.transition = 'none';
-        var nuevaAltura = Math.max(0, _eqListaDragAlturaOriginal + dy);
-        panel.style.height = nuevaAltura + 'px';
-      }
-      _eqActualizarStickyHeadersThrottled();
-    });
-  }, { passive: true });
-  cont.addEventListener('touchend', function(e) {
-    if (!_eqListaDragActivo) return;
-    _eqListaDragActivo = false;
-    if (!_eqPanelAbierto) return;
-    var tagCerrado = _eqPanelAbierto;
-    var cfg = _EQ_PANELES[tagCerrado];
-    var panel = cfg && document.getElementById(cfg.el);
-    var btn = cfg && document.getElementById(cfg.btn);
-    if (!panel) return;
-    var dy = e.changedTouches[0].clientY - _eqListaDragY;
-    var arrastrado = Math.max(0, -dy);
-    panel.style.transition = '';
-    if (arrastrado >= _eqListaDragAlturaOriginal * _EQ_PANEL_DRAG_UMBRAL_FRACCION) {
-      // Mismo bug real corregido que en `_eqCerrarPanel()` (ver ese
-      // comentario grande, más arriba) -- `_eqSincronizarClasePanelAbierto()`
-      // NO se llama acá todavía, para no reaparecer los headers stuck
-      // antes de que el snap final a `0px` (abajo) termine y
-      // `_eqActualizarStickyHeaders()` corrija sus posiciones (mismo
-      // `setTimeout(...,300)` de siempre, al final de este handler).
-      var panelH = panel.offsetHeight;
-      panel.style.height = panelH + 'px';
-      _eqPanelAbierto = null;
-      if (btn) btn.classList.remove('activo');
-      panel.classList.remove('eq-panel-auto');
-      panel.classList.remove('abierta');
-      void panel.offsetHeight;
-      panel.style.height = '0px';
-      panel.addEventListener('transitionend', function() { panel.style.height = ''; }, { once: true });
-    } else {
-      // `volverseAuto:true` -- el drag no llegó al umbral, el panel vuelve a
-      // abierto de verdad (no solo visualmente): mismo motivo que el toggle
-      // manual, queda flexible en `auto` en vez de congelado en el px que
-      // medía la nav en ESTE momento puntual. `desdePx` es el alto parcial
-      // actual del arrastre (`panel.style.height`, lo último que dejó el
-      // `touchmove`) -- no `scrollHeight`, que ya mide el alto COMPLETO.
-      _eqAnimarPanel(panel, panel.style.height, _eqListaDragAlturaOriginal + 'px', 'translateY(0)', true);
-    }
-    setTimeout(function() {
-      _eqActualizarStickyHeaders();
-      _eqSincronizarClasePanelAbierto();
-    }, 300);
-  }, { passive: true });
-}
-_eqInicializarCierrePanelesPorScroll();
-
-/* ── Colapso de "Mis estadísticas" por umbral de scroll (pedido explícito)
-   -- distinto del drag-to-dismiss de arriba (`_eqInicializarCierrePanelesPorScroll()`):
-   ese SOLO corre en `touchmove` (sigue el gesto en vivo, proporcional al
-   arrastre) -- nunca dispara con scroll de mouse/trackpad/rueda ni con
-   scroll inercial después de soltar el dedo (`touchend` ya pasó,
-   `_eqListaDragActivo` vuelve a `false`), porque nunca hubo un `touchstart`
-   que lo arranque. Esto cubre esos casos con un umbral fijo (80px) en vez
-   de seguir el gesto -- corta de una sola vez. Re-ajuste (pedido explícito,
-   "cierre consistente con el toggle manual, animado siempre") -- vuelve a
-   `_eqCerrarPanel('stats')`, SIN `instant:true` -- mismo camino animado
-   (350ms, `_eqAnimarPanel()` con `translateZ(0)` en los hijos) que ya usa
-   el toggle manual del chevron (`_eqTogglePanel()`). Revierte el pulido
-   anterior (ver CHANGELOG.md, "no se ve bien en Android Chrome" -- ese
-   pedido cambió esto a `instant:true`/`transition:none`) -- pedido
-   explícito de probar de nuevo con la promoción a capa GPU que ya tiene
-   `_eqAnimarPanel()` desde la ronda de perf posterior a ese fix (no
-   existía todavía cuando se hizo instantáneo). Si vuelve a trabarse en
-   Android Chrome, la causa más probable no es la falta de GPU layer (los
-   hijos ya la tienen) sino que animar `height` en sí dispara layout en
-   cada frame mientras el scroll compositor sigue corriendo en paralelo --
-   ahí el único fix real sería volver a `instant:true`.
-   El pedido original decía "contenedor interno de la sección, no window,
-   para no interferir con otras secciones" -- pero esta app no tiene
-   contenedor propio con scroll: cada `.pantalla` scrollea a nivel
-   `window`/`body` (css/global.css, sin `overflow-y` en `#s-equipo` ni en
-   `#eq-lista-contenido`) -- un listener de `scroll` en ese div nunca
-   dispararía (no es él quien scrollea). Se escucha `window` (mismo patrón
-   ya usado por `_eqActualizarStickyHeadersThrottled()`, más abajo en este
-   archivo) pero se sale de una si `#s-equipo` no es la pantalla activa --
-   ahí queda resuelto el "no interferir con otras secciones" del pedido
-   original, por otro camino. `!_eqListaDragActivo` evita pisar el drag en
-   vivo de arriba mientras el dedo sigue abajo (los 2 mecanismos conviven:
-   el drag maneja el gesto táctil en curso, este cubre todo lo demás). No
-   vuelve a expandir solo -- re-expandir es siempre manual, vía el chevron
-   (`_eqTogglePanel()`). */
-function _eqInicializarColapsoStatsPorScroll() {
-  var UMBRAL_PX = 80;
-  // Perf real (pedido explícito) -- rAF+flag ("ticking"), mismo patrón que
-  // el resto de esta app usa para listeners de `scroll` de bajo costo
-  // (`_eqActualizarStickyHeadersThrottled()`, más abajo): como mucho 1
-  // chequeo real por frame, sin importar cuántos eventos `scroll` lleguen.
-  var ticking = false;
-  window.addEventListener('scroll', function() {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(function() {
-      ticking = false;
-      if (_eqPanelAbierto !== 'stats' || _eqListaDragActivo) return;
-      var s = document.getElementById('s-equipo');
-      if (!s || !s.classList.contains('activa')) return;
-      if (window.scrollY > UMBRAL_PX) _eqCerrarPanel('stats');
-    });
-  }, { passive: true });
-}
-_eqInicializarColapsoStatsPorScroll();
-
 /* ── Cierre rápido del panel de búsqueda/filtros al iniciar cualquier gesto
    afuera (ver MANIFEST.md -- "el panel de búsqueda/filtros debe ocultarse
    rápido al scrollear, igual que en Eventos") -- puerto 1:1 de
-   `_evCerrarBurbujaSiFueraDe()`/js/eventos.js: a diferencia de `stats`
-   (arriba, colapso PROGRESIVO en vivo mientras el dedo arrastra sobre
-   `#eq-lista-contenido`), `busqueda` se cierra de UNA SOLA VEZ con la
+   `_evCerrarBurbujaSiFueraDe()`/js/eventos.js: `busqueda` se cierra de UNA SOLA VEZ con la
    transición CSS normal de siempre (`_eqCerrarPanel()`, sin arrastre en
    vivo) apenas arranca cualquier gesto -- `pointerdown`/`touchstart` en
    FASE DE CAPTURA sobre `document` (dispara con el simple inicio de un
@@ -1984,10 +1740,7 @@ function _eqFiltroRolToggle(rol) {
   var idx = _eqFiltroRoles.indexOf(rol);
   if (idx === -1) _eqFiltroRoles.push(rol); else _eqFiltroRoles.splice(idx, 1);
   _eqRenderFiltroRolPills();
-  _eqRenderFavoritos();
-  _eqRenderGrupo('Quindes');
-  _eqRenderGrupo('Mirlxs');
-  _eqRenderInactivos();
+  _eqRenderLista();
   _eqActualizarBadgeFiltros();
 }
 // Badge numérico del ícono de lupa (feat nueva, ver MANIFEST.md -- "igual a
@@ -2064,11 +1817,7 @@ function _eqAplicarFiltrosAhora() {
     _eqCargado = true;
     _eqCerrarPanel('busqueda');
     _eqActualizarBadgeFiltros();
-    _eqRenderFavoritos();
-    _eqRenderGrupo('Quindes');
-    _eqRenderGrupo('Mirlxs');
-    _eqRenderInactivos();
-    if (typeof _eqRenderMisEstadisticas === 'function') _eqRenderMisEstadisticas();
+    _eqRenderLista();
     // Filtro de período del perfil de detalle (feat nueva, ver MANIFEST.md)
     // -- `_eqPersonas` se reemplazó entero arriba, así que `_eqPersonaActual`
     // (si hay un perfil abierto -- puede o no estarlo, `_eqAplicarFiltrosAhora()`
@@ -2210,13 +1959,68 @@ function _eqRenderFavoritos() {
 // puntos, identificada con `.badge-lesion` sobre el avatar -- la sección
 // aparte "Lesionadxs" se eliminó (ver MANIFEST.md). `_eqEsInactivo()` nunca
 // la manda a Inactivxs mientras siga lesionadx.
+// Usuaria actual (ver MANIFEST.md -- "Equipo = cara pública, incluida la
+// propia"): vive en su grupo SIEMPRE en la primera posición (antes del orden
+// por puntos), aunque esté inactiva/lesionadx/de viaje -- nunca cae en
+// Inactivxs ni en Favoritos. Búsqueda y filtro de rol la tratan igual que a
+// cualquiera.
+function _eqCompararUsuariaPrimero(a, b) {
+  var ua = _eqEsUsuarioActual(a), ub = _eqEsUsuarioActual(b);
+  if (ua !== ub) return ua ? -1 : 1;
+  return _eqCompararPorPuntos(a, b);
+}
+function _eqUsuariaActual() {
+  return _eqPersonas.filter(_eqEsUsuarioActual)[0] || null;
+}
+// Render completo del roster (Favoritos + grupos + Inactivxs) -- punto único
+// para los re-renders "instantáneos" (init/búsqueda/filtros/volver del
+// detalle). Reordena primero los grupos según la usuaria actual.
+function _eqRenderLista() {
+  _eqOrdenarGrupos();
+  _eqRenderFavoritos();
+  _eqRenderGrupo('Quindes');
+  _eqRenderGrupo('Mirlxs');
+  _eqRenderInactivos();
+}
+// Orden de secciones: Favoritos -> grupo de la usuaria -> el otro grupo ->
+// Inactivxs. Default (sin usuaria en el roster, ej. cuenta admin "pura"):
+// Quindes antes que Mirlxs, como en index.html. Mueve los nodos reales en
+// el DOM y actualiza `_EQ_GRUPO_HEADERS` en el mismo orden -- el apilado de
+// headers sticky (`_eqActualizarStickyHeaders()`) recorre ese array
+// asumiendo orden de DOM.
+function _eqOrdenarGrupos() {
+  var yo = _eqUsuariaActual();
+  var primero = (yo && yo.rol === 'Mirlxs') ? 'mirlxs' : 'quindes';
+  var segundo = primero === 'mirlxs' ? 'quindes' : 'mirlxs';
+  var g1 = document.getElementById('eq-grupo-' + primero);
+  var g2 = document.getElementById('eq-grupo-' + segundo);
+  if (g1 && g2 && g1.parentNode === g2.parentNode && g1.nextElementSibling !== g2) {
+    g2.parentNode.insertBefore(g1, g2);
+  }
+  _EQ_GRUPO_HEADERS = ['eq-favoritos-header', 'eq-grupo-' + primero + '-header', 'eq-grupo-' + segundo + '-header', 'eq-grupo-inactivos-header'];
+}
+// El grupo de la usuaria arranca SIEMPRE abierto al entrar a Equipo (sigue
+// siendo colapsable a mano mientras está en la sección) -- sin animación,
+// mismo `max-height:'none'` que el primer render de `_eqRenderGrupo()`.
+function _eqAbrirGrupoPropio() {
+  var yo = _eqUsuariaActual();
+  if (!yo || (yo.rol !== 'Quindes' && yo.rol !== 'Mirlxs')) return;
+  var key = yo.rol.toLowerCase();
+  var header = document.getElementById('eq-grupo-' + key + '-header');
+  var body = document.getElementById('eq-grupo-' + key + '-body');
+  if (!header || !body) return;
+  header.classList.add('abierto');
+  body.classList.add('abierto');
+  body.style.maxHeight = 'none';
+  _eqActualizarStickyHeaders();
+}
 function _eqRenderGrupo(rol) {
   var key = rol.toLowerCase();
   var wrap = document.getElementById('eq-grupo-' + key);
   var cont = document.getElementById('eq-grupo-' + key + '-lista');
   var pillEl = document.getElementById('eq-grupo-' + key + '-pill');
   if (!wrap || !cont) return;
-  var filtradas = _eqPersonas.filter(function(p) { return p.rol === rol; }).filter(function(p) { return !_eqEsUsuarioActual(p) && !_eqEsInactivo(p); }).filter(_eqPasaBusqueda).filter(_eqPasaFiltroRol).sort(_eqCompararPorPuntos);
+  var filtradas = _eqPersonas.filter(function(p) { return p.rol === rol; }).filter(function(p) { return _eqEsUsuarioActual(p) || !_eqEsInactivo(p); }).filter(_eqPasaBusqueda).filter(_eqPasaFiltroRol).sort(_eqCompararUsuariaPrimero);
   wrap.style.display = filtradas.length ? '' : 'none';
   if (pillEl) pillEl.textContent = filtradas.length;
   cont.innerHTML = filtradas.map(_eqFilaHtml).join('');
@@ -2266,125 +2070,13 @@ function _eqRenderInactivos() {
   _eqActualizarListaVacia();
 }
 
-// "Mis estadísticas" -- panel deslizable de la nav de Equipo (rediseño, ver
-// MANIFEST.md/CHANGELOG.md; antes card fija debajo de la nav y encima de
-// Favoritos, mismo contenido, ahora dentro de `#eq-misstats-panel`/
-// `_eqTogglePanel('stats')`). La persona propia YA está en `_eqPersonas`
-// (roster completo, cargado una sola vez por `_eqAsegurarCargado()`) -- sin
-// ninguna llamada extra al backend, mismo criterio de búsqueda que
-// `_eqEsUsuarioActual()`. Mismos componentes visuales que el perfil de
-// detalle (`.eq-stats-grid`/`.eq-stat-card`/`.eq-rank-wrap`, ver
-// `_eqPerfilContenidoHtml()` más abajo) y que el chip de estado de Ajustes
-// (`.dat-estado-chip`/`.dat-estado-*`, css/perfil.css) -- sin duplicar
-// ningún estilo, solo el layout propio del wrapper (`.eq-mis-stats-*`,
-// css/equipo.css). Sin datos de contacto (pedido explícito) -- a diferencia
-// del perfil de detalle, acá nunca se muestra teléfono/email. Header
-// recortado (pedido explícito, ver MANIFEST.md): SIN foto, nombre real,
-// nombre derby ni número -- solo rol (Quindes/Mirlxs, `persona.rol`) +
-// chip de estado (activo/inactivo/lesionadx). Esos 3 datos sacados siguen
-// visibles en el trigger de la nav (`#eq-misstats-toggle-btn`/
-// `toggleAvatar` más abajo) y en el perfil de detalle -- este panel es el
-// único lugar donde dejan de mostrarse.
-function _eqRenderMisEstadisticas() {
-  var cont = document.getElementById('eq-misstats-panel-inner');
-  var toggleBtn = document.getElementById('eq-misstats-toggle-btn');
-  var toggleAvatar = document.getElementById('eq-misstats-toggle-avatar');
-  var toggleTendencia = document.getElementById('eq-misstats-toggle-tendencia');
-  var togglePills = document.getElementById('eq-misstats-toggle-pills');
-  if (!cont || !toggleBtn) return;
-  var persona = _eqPersonas.filter(function(p) { return _eqEsUsuarioActual(p); })[0];
-  if (!persona) {
-    toggleBtn.style.display = 'none';
-    // Nadie puede haber abierto un panel sin su trigger visible, pero por
-    // las dudas (ej. cambio de cuenta mid-sesión) -- lo cierra si había
-    // quedado abierto, mismo criterio defensivo que el resto de esta
-    // función.
-    if (_eqPanelAbierto === 'stats') _eqCerrarPanel('stats');
-    return;
-  }
-  toggleBtn.style.display = '';
-  if (toggleAvatar) {
-    toggleAvatar.setAttribute('data-nombre', persona.nombreDerby || persona.username);
-    toggleAvatar.setAttribute('data-foto', persona.fotoPerfil || '');
-  }
-  // Título personalizado (pedido explícito, "reemplazar 'Mis Estadísticas'
-  // fijo por el nombre de la persona") -- mismo fallback `nombreDerby ||
-  // username` que ya usa el avatar de arriba, único lugar de este archivo
-  // donde se resuelve ese nombre para esta persona.
-  var toggleNombre = document.getElementById('eq-misstats-toggle-nombre');
-  if (toggleNombre) toggleNombre.textContent = persona.nombreDerby || persona.username || '';
-  // Chevron de tendencia sobre el avatar chico del botón colapsado (bug
-  // real corregido, ver MANIFEST.md/CHANGELOG.md -- "chevron en Mis
-  // estadísticas"): el tamaño base de `.eq-tendencia-badge` (18px/13px,
-  // css/equipo.css) ya estaba pensado para este lugar exacto desde que se
-  // agregó la feature de tendencia ("usado hoy solo en 'Mis estadísticas'"
-  // dice el comentario de ese momento) pero nunca se llegó a conectar acá
-  // en el JS -- el panel en sí no tiene foto propia (recortada a propósito
-  // en una ronda anterior, "sin foto/nombre/número"), así que este avatar
-  // chico de la nav (siempre visible, panel abierto o cerrado) es el único
-  // lugar real donde puede vivir. `_eqTendenciaBadgeHtml()` sin
-  // `claseTamano` (tamaño base) -- mismo criterio que el resto de esta
-  // función, sin `_eqAvatarConTendenciaHtml()` completo porque el avatar
-  // en sí ya es markup estático en index.html (`#eq-misstats-toggle-avatar`,
-  // mutado con `data-nombre`/`data-foto` arriba, nunca reconstruido) --
-  // solo el badge se re-renderiza acá, adentro de su propio wrapper
-  // `.eq-avatar-badge-wrap` (index.html) ya `position:relative`.
-  // + badge "De viaje"/"Lesionadx" (reemplaza al de tendencia, ver `_eqBadgeAvatarHtml()`).
-  if (toggleTendencia) toggleTendencia.innerHTML = _eqBadgeAvatarHtml(persona);
-  // Pill de nivel SACADO de la nav (pedido explícito, "se va a mover al
-  // termómetro") -- vivía en `#eq-misstats-toggle-pills` (index.html), ahora
-  // vacío a propósito, sin más consumidores acá. Reemplazado por el pill
-  // dentro de `.eq-rank-labels` (`_eqStatsContenidoHtml()`, más abajo en
-  // este archivo) -- mismo `.eq-mis-stats-rol-pill`, misma persona, solo
-  // cambia dónde vive.
-  if (togglePills) togglePills.innerHTML = '';
-  // Contenido de stats -- función compartida con `_eqPerfilContenidoHtml()`
-  // (más abajo en este archivo, ver `_eqStatsContenidoHtml()`) -- pedido
-  // explícito, ver MANIFEST.md/CHANGELOG.md: "la vista detallada debe usar
-  // exactamente el mismo layout, clases y estructura HTML que Mis
-  // estadísticas" -- antes esta función tenía su propia copia de este
-  // bloque entero (horas/asistencia + separador PUNTOS + grid
-  // tareas/asistencia-combo + termómetro), duplicada a mano en las 2
-  // funciones -- extraída a un solo lugar, un solo caller cada una.
-  cont.innerHTML = _eqStatsContenidoHtml(persona);
-  _eqHidratarAvatares();
-  // Expandido por defecto (pedido explícito) -- una sola vez por carga de
-  // pantalla, no en cada re-render (esta función se re-llama en cada
-  // refresh/filtro del roster, ver los 2 callers más arriba en este
-  // archivo -- forzar el estado acá en CADA corrida pisaría un toggle
-  // manual de la persona a mitad de sesión). `_eqStatsColapsadoGuardado()`
-  // default `false` (expandido) si `pivot_stats_collapsed` nunca se guardó.
-  // Bug real corregido -- "chevron dice expandido, contenido no se ve",
-  // 2da vuelta (fix más robusto, el doble rAF de la ronda anterior no
-  // alcanzaba): esta función puede correr con `#s-equipo` todavía
-  // `display:none` (ej. re-render disparado por un fetch en segundo plano
-  // mientras otra pestaña está activa) -- `panel.scrollHeight` con un
-  // ancestro oculto da `0` SIN IMPORTAR cuánto se difiera la medición con
-  // rAF, porque el problema no es timing de layout sino que el ancestro
-  // sigue oculto en el momento en que se mide. Fix real: `_eqAbrirPanel('stats',
-  // true)` -- `instantAuto:true` salta DIRECTO a `height:auto` (clase
-  // `eq-panel-auto`, css/equipo.css) sin medir nada -- `auto` se recalcula
-  // solo cuando el layout real corra (cuando `#s-equipo` se vuelva visible
-  // de verdad), nunca depende de una medición congelada mientras estaba
-  // oculto. Sin transición (mismo `instantAuto`) -- es el estado de
-  // ARRANQUE, no una animación disparada por una acción real.
-  if (!_eqStatsPanelInicializado) {
-    _eqStatsPanelInicializado = true;
-    if (!_eqStatsColapsadoGuardado()) _eqAbrirPanel('stats', true);
-  }
-}
-var _eqStatsPanelInicializado = false;
-function _eqStatsColapsadoGuardado() {
-  try { return localStorage.getItem('pivot_stats_collapsed') === 'true'; } catch (e) { return false; }
-}
-// Contenido de stats compartido entre "Mis estadísticas" (arriba) y el
-// perfil de detalle (`_eqPerfilContenidoHtml()`, más abajo) -- pedido
+// Contenido de stats del perfil de detalle (`_eqPerfilContenidoHtml()`, más abajo) -- pedido
 // explícito, ver MANIFEST.md/CHANGELOG.md: "mismo layout, clases y
 // estructura HTML... mismas cards de Horas/Asistencia arriba, mismo
 // separador 'PUNTOS [total]', mismo grid de 2 cards (Tareas |
 // Asistencia con pill de racha si aplica), mismo termómetro abajo".
 // Termómetro solo con equipo propio -- mismo bug real/mismo criterio ya
-// corregido en `_datosRenderStatsHtml()` (js/perfil.js):
+// corregido antes en las stats de Ajustes (ya eliminadas):
 // `necesitaPatines`/`necesitaProtecciones` (getEquipo()) son el
 // equivalente real a "usa equipo del club". Racha inline en la card
 // combinada -- badge propio SOLO si hay puntos de racha ese período,
@@ -2440,10 +2132,8 @@ function _eqStatsContenidoHtml(p) {
     (!!p.necesitaProtecciones && necesitaProteccionesTxt !== 'no'));
   // Pill de tier DENTRO del termómetro (pedido explícito, "acá estás vos")
   // -- reemplaza el texto plano del lado que coincide con `p.rol`, mismo
-  // `.eq-mis-stats-rol-pill` (var(--brand), ya destacado) que antes vivía
-  // en la nav (`.eq-misstats-toggle-pills`, sacado de ahí -- ver
-  // `_eqRenderMisEstadisticas()` más abajo). El lado opuesto sigue texto
-  // plano, sin cambios.
+  // `.eq-mis-stats-rol-pill` (var(--brand), ya destacado). El lado opuesto
+  // sigue texto plano, sin cambios.
   var labelMirlxs = p.rol === 'Quindes' ? '<span>Mirlxs</span>' : '<span class="eq-mis-stats-rol-pill">Mirlxs</span>';
   var labelQuindes = p.rol === 'Quindes' ? '<span class="eq-mis-stats-rol-pill">Quindes</span>' : '<span>Quindes</span>';
   var rankHtml = necesitaEquipoClub ? '' :
@@ -2674,6 +2364,8 @@ function _eqToggleGrupo(rol) {
    `offsetParent === null` así esté perfectamente visible (por spec,
    ningún elemento `fixed` tiene offsetParent), así que ese chequeo en el
    header mismo ya no serviría para detectar "oculto". */
+// Orden dinámico: `_eqOrdenarGrupos()` lo reescribe según el grupo de la
+// usuaria actual (siempre en orden de DOM).
 var _EQ_GRUPO_HEADERS = ['eq-favoritos-header', 'eq-grupo-quindes-header', 'eq-grupo-mirlxs-header', 'eq-grupo-inactivos-header'];
 // Umbral de `window.scrollY` a partir del cual cada header pasa a STUCK --
 // recalculado en cada pasada de `_eqActualizarStickyHeaders()`, reusado
@@ -2716,12 +2408,8 @@ function _eqActualizarStickyHeaders() {
 }
 window.addEventListener('resize', _eqActualizarStickyHeaders);
 // Throttle por `requestAnimationFrame` -- usado tanto por el listener de
-// `scroll` de abajo (nuevo: el pegado ahora es 100% manejado a mano, así
-// que necesita reaccionar a CUALQUIER scroll de la página, no solo al
-// arrastre en vivo del panel "Mis estadísticas") como por el drag de
-// `_eqInicializarCierrePanelesPorScroll()` (bug real corregido antes, ver
-// MANIFEST.md -- "header sticky del acordeón se superpone sobre los
-// nombres") -- en ambos casos evita forzar `offsetHeight`/
+// `scroll` de abajo (el pegado es 100% manejado a mano, así que necesita
+// reaccionar a CUALQUIER scroll de la página) -- evita forzar `offsetHeight`/
 // `getBoundingClientRect()` (layout) en cada evento crudo, una sola vez
 // por frame de pantalla.
 var _eqStickyHeadersRafPendiente = false;
@@ -2778,7 +2466,20 @@ function _eqAbrirPerfil(id) {
   _eqRenderPerfil(p);
   ir('s-equipo-perfil');
 }
-function _eqVolverLista() { volver('s-equipo'); }
+// Lápiz del detalle propio -> Ajustes, con flecha atrás de vuelta a este
+// detalle (`_ajVolverA`, js/perfil.js; ver TOP_BAR_CONFIG['s-datos']).
+function _eqIrAjustes() {
+  if (typeof _ajVolverA !== 'undefined') _ajVolverA = 's-equipo-perfil';
+  irEditarDatos();
+}
+function _eqVolverLista() {
+  volver('s-equipo');
+  // Re-render local (sin fetch) del roster -- refleja cambios hechos desde
+  // el detalle (estado/tier por admin, lesión propia) en badges y orden.
+  // `_eqBuscar()` con el query ya normalizado respeta el modo actual
+  // (normal/por rol/mes).
+  if (_eqYaInicializado && _eqPersonas.length) _eqBuscar(_eqBusqueda);
+}
 
 // `E.nombre` es el username real (así llega desde loginGoogle()/adminLogin(),
 // supabase/functions/api/index.ts: `nombre: row.username`), NO el nombre
@@ -2850,12 +2551,15 @@ function _eqNavHtml(p) {
   // desde una copia vieja cacheada por Fastly (ver "Cache-busting" en
   // MANIFEST.md -- estos 2 archivos NO estaban en `CACHEBUST_FILES` hasta
   // este mismo commit, fix aparte, ver ese archivo).
-  var acciones = '<button type="button" class="app-nav-icon-btn eq-nav-fav-btn' + (fav ? ' activo' : '') + '" data-eq-fav="' + idAttr + '" onclick="_eqToggleFavorito(\'' + idJs + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '"><span class="material-symbols-outlined">' + (fav ? 'favorite' : 'favorite_border') + '</span></button>';
-  if (waUrl) {
+  var esYo = _eqEsUsuarioActual(p);
+  var acciones = esYo ? '' : '<button type="button" class="app-nav-icon-btn eq-nav-fav-btn' + (fav ? ' activo' : '') + '" data-eq-fav="' + idAttr + '" onclick="_eqToggleFavorito(\'' + idJs + '\')" title="' + (fav ? 'Quitar de favoritos' : 'Agregar a favoritos') + '"><span class="material-symbols-outlined">' + (fav ? 'favorite' : 'favorite_border') + '</span></button>';
+  if (waUrl && !esYo) {
     acciones += '<a class="app-nav-icon-btn eq-wa-btn" href="' + waUrl + '" target="_blank" rel="noopener" title="WhatsApp">' + _EQ_WA_SVG + '</a>';
   }
-  if (_eqEsUsuarioActual(p)) {
-    acciones += '<button type="button" class="app-nav-icon-btn" onclick="irEditarDatos()" title="Editar mis datos"><span class="material-symbols-outlined">edit</span></button>';
+  // Lápiz -> Ajustes (datos privados/cuenta, js/perfil.js). Al volver con
+  // atrás, `volver()` regresa a este mismo detalle.
+  if (esYo) {
+    acciones += '<button type="button" class="app-nav-icon-btn" onclick="_eqIrAjustes()" title="Ajustes"><span class="material-symbols-outlined">edit</span></button>';
   }
   return '<div class="eq-perfil-nav-row">' +
       '<button class="app-nav-back" onclick="_eqVolverLista()" title="Volver"><span class="material-symbols-outlined">arrow_back</span></button>' +
@@ -2876,9 +2580,8 @@ function _eqNavHtml(p) {
 // Horas/asistencia real del año (Cambio 58) -- `p.horas_ano`/
 // `p.asistencias_ano`/`p.total_eventos_ano` llegan tal cual de getEquipo()
 // (snake_case, ver ese comentario en supabase/functions/api/index.ts),
-// pobladas por recalcularStatsEquipo(). Reusada por el panel de Equipo
-// (_eqPerfilContenidoHtml(), más abajo) y por Ajustes (_datosRenderStatsHtml(),
-// js/perfil.js) para no duplicar la fórmula en 2 archivos.
+// pobladas por recalcularStatsEquipo(). Usada por el perfil de detalle
+// (_eqStatsContenidoHtml(), más abajo).
 function _eqStatsCalc(p) {
   return {
     horas: Math.round((p.horas_ano || 0) * 10) / 10,
@@ -2902,9 +2605,8 @@ function _eqStatsCalc(p) {
 // línea", no "sin dato togavía". `emoji_events` (trofeo, Material Symbols)
 // -- pedido explícito "estrella/trofeo", distinto del resto de íconos ya
 // usados en este desglose (`task_alt`/`stars`/`military_tech`) para no
-// repetir. Reusada por `_eqRenderMisEstadisticas()` y
-// `_eqPerfilContenidoHtml()`, más abajo -- mismo criterio que `_eqStatsCalc()`
-// de arriba, una sola fórmula para los 2 lugares.
+// repetir. Hoy sin consumidores (la racha se dobla dentro de la card de
+// asistencia de `_eqStatsContenidoHtml()`).
 function _eqPuntosRachaHtml(p) {
   var puntos = Number(p.puntosRacha) || 0;
   if (puntos <= 0) return '';
@@ -2943,10 +2645,9 @@ function _eqPuntosRachaHtml(p) {
    (ui.js) vuelve a llamar a esta función, ahora SÍ con `porGesto:true`,
    recién ahí anima/oculta de verdad. Evita duplicar la animación de
    cierre en 2 lugares (botón vs. gesto nativo).
-   Pantalla de ORIGEN -- puede abrirse desde "Mis estadísticas" (panel
-   deslizable dentro de `#s-equipo`) o desde el perfil de detalle
-   (`#s-equipo-perfil`) -- cada una con su propia card a retroceder
-   (`#eq-lista-card`/`#eq-perfil-card`, index.html) -- `_eqDesgloseCtx`
+   Pantalla de ORIGEN -- hoy solo el perfil de detalle (`#s-equipo-perfil`,
+   el panel "Mis estadísticas" de `#s-equipo` se eliminó); se mantiene el
+   fallback a `#eq-lista-card` por si se abre desde la lista -- `_eqDesgloseCtx`
    guarda cuál para que `_eqCerrarDesglosePuntos()` sepa a cuál devolverle
    la posición neutra, sin asumir siempre la misma. */
 var _EQ_DESGLOSE_ICONOS = { asistencia: 'stars', tareas: 'task_alt', racha: 'emoji_events' };
@@ -3226,33 +2927,6 @@ function _eqTierAdminHtml(p) {
     '</div>';
 }
 
-// Versión "flat" (pedido explícito, ver MANIFEST.md) -- mismo contenido
-// interno (botones de Categoría) que _eqTierAdminHtml() de arriba, sin el
-// wrapper `.eq-acord` ni el `onclick="eqToggleAcordeon(this)"` -- el label
-// pasa a ser un título directo en vez de la cabecera clickeable del
-// acordeón, y se pierde `.eq-acord-cuerpo` (colapsado por CSS por default,
-// solo se expande dentro de un `.eq-acord.eq-acord-abierto`) para que el
-// control quede siempre visible. Consumida por `_ajCargarSubAdmin()`/
-// js/perfil.js, la subsección navegable propia "Ajustes de admin" -- mismos
-// ids (`eq-tier-desc-*`) y mismo onclick real (`_eqCambiarTier()`) que la
-// versión con acordeón, así que el toggle funciona igual sea cual sea el
-// HTML que lo dibuja.
-function _eqTierAdminFlatHtml(p) {
-  if (typeof _adminToken === 'undefined' || !_adminToken) return '';
-  var idJs = _eqEscId(p.id);
-  var idAttr = _eqEsc(p.id);
-  var modos = ['quinde', 'auto', 'mirlxs'];
-  var textos = { quinde: 'Quindes', auto: 'Auto', mirlxs: 'Mirlxs' };
-  var botones = modos.map(function(m) {
-    return '<button type="button" class="eq-tier-btn' + (p.tierModo === m ? ' activo' : '') + '" data-modo="' + m + '" onclick="_eqCambiarTier(\'' + idJs + '\',\'' + m + '\')">' + textos[m] + '</button>';
-  }).join('');
-  return '<div class="eq-tier-admin">' +
-      '<p class="eq-tier-label">Categoría</p>' +
-      '<div class="eq-tier-control" data-id="' + idAttr + '">' + botones + '</div>' +
-      '<p class="eq-tier-desc" id="eq-tier-desc-' + idAttr + '">' + _eqEsc(_EQ_TIER_DESCRIPCIONES[p.tierModo]) + '</p>' +
-    '</div>';
-}
-
 // Toggle genérico de acordeón (Cambio 57) -- `header` es el `.eq-acord-header`
 // clickeado (`this` del onclick inline, mismo patrón sin listener delegado
 // que el resto de este archivo); el contenedor a togglear es su padre
@@ -3401,73 +3075,6 @@ function _eqAdminGestionHtml(p) {
     '</div>';
 }
 
-// Versión "flat" (pedido explícito, ver MANIFEST.md) -- mismo contenido
-// interno (opciones de Estado + toggles de Paga cuota/Admin/Activar cuenta)
-// que _eqAdminGestionHtml() de arriba, sin el wrapper `.eq-acord` ni el
-// `onclick="eqToggleAcordeon(this)"` -- mismo criterio que
-// _eqTierAdminFlatHtml() (ver esa función): label directo en vez de la
-// cabecera clickeable, sin `.eq-acord-cuerpo` (quedaría colapsado por CSS
-// sin un ancestro `.eq-acord-abierto` que nunca se agrega acá). El div
-// `.eq-admin-quindes` + su lógica `eq-oculto` (oculta esta sección entera
-// si `p.tierModo === 'mirlxs'`, ver _eqCambiarTier() más abajo) SÍ se
-// mantiene tal cual -- sigue aplicando igual sin acordeón de por medio.
-// Consumida por `_ajCargarSubAdmin()`/js/perfil.js -- mismos ids/onclick
-// reales (`_eqCambiarEstado()`/`_eqToggleCuota()`/`_eqToggleAdmin()`/
-// `_eqGenerarInviteLink()`) que la versión con acordeón.
-function _eqAdminGestionFlatHtml(p) {
-  if (typeof _adminToken === 'undefined' || !_adminToken) return '';
-  var idJs = _eqEscId(p.id);
-  var idAttr = _eqEsc(p.id);
-  var estadoActual = _eqEstadoEfectivo(p);
-  var botonesEstado = _EQ_ESTADOS.map(function(est) {
-    return '<button type="button" class="eq-estado-btn' + (estadoActual === est ? ' activo' : '') + '" data-estado="' + est + '" onclick="_eqCambiarEstado(\'' + idJs + '\',\'' + est + '\')">' + _eqEstadoBtnTexto(est) + '</button>';
-  }).join('');
-  var hint = (estadoActual === 'Ausente' && p.estado !== 'Ausente')
-    ? 'Marcada automáticamente como ausente por más de 30 días sin asistir.'
-    : 'Si no asiste por 30 días seguidos, pasa a Ausente automáticamente.';
-  var pagaCuota = !p.exentaCuota;
-  var sinEmail = !p.email;
-  return '<div class="eq-admin-quindes' + (p.tierModo === 'mirlxs' ? ' eq-oculto' : '') + '" id="eq-admin-q-' + idAttr + '">' +
-      '<div class="eq-admin-sep"></div>' +
-      '<div class="eq-admin-campo">' +
-        '<p class="eq-tier-label">Estado</p>' +
-        '<div class="eq-estado-opciones">' + botonesEstado + '</div>' +
-        '<p class="eq-admin-hint" id="eq-estado-hint-' + idAttr + '">' + hint + '</p>' +
-        '<div class="eq-admin-campo--row" style="margin-top:14px;">' +
-          '<div>' +
-            '<p class="eq-tier-label" style="margin-bottom:2px">Paga cuota</p>' +
-            '<p class="eq-admin-hint" style="margin:0" id="eq-cuota-hint-' + idAttr + '">' + (estadoActual === 'Lesionadx' ? 'Exento/a de cuota mientras está Lesionadx.' : 'Indica si está al día con la cuota mensual.') + '</p>' +
-          '</div>' +
-          '<label class="eq-toggle" id="eq-tog-cuota-' + idAttr + '">' +
-            '<input type="checkbox"' + (pagaCuota ? ' checked' : '') + (estadoActual === 'Lesionadx' ? ' disabled' : '') +
-              ' onchange="_eqToggleCuota(\'' + idJs + '\', this.checked)">' +
-            '<span class="eq-toggle-slider"></span>' +
-          '</label>' +
-        '</div>' +
-        '<div class="eq-admin-campo--row" style="margin-top:14px;">' +
-          '<div>' +
-            '<p class="eq-tier-label" style="margin-bottom:2px">Admin</p>' +
-            '<p class="eq-admin-hint" style="margin:0" id="eq-admin-hint-' + idAttr + '">' + (sinEmail ? 'Sin email registrado -- no se puede dar acceso admin.' : 'Tendrá acceso completo al panel de administración (Mi Liga).') + '</p>' +
-          '</div>' +
-          '<label class="eq-toggle" id="eq-tog-admin-' + idAttr + '">' +
-            '<input type="checkbox"' + (p.esAdminMiembro ? ' checked' : '') + (sinEmail ? ' disabled' : '') +
-              ' onchange="_eqToggleAdmin(\'' + idJs + '\', this.checked, this)">' +
-            '<span class="eq-toggle-slider"></span>' +
-          '</label>' +
-        '</div>' +
-        (sinEmail ? (
-          '<div class="eq-admin-campo--row" style="margin-top:14px;">' +
-            '<div>' +
-              '<p class="eq-tier-label" style="margin-bottom:2px">Activar cuenta</p>' +
-              '<p class="eq-admin-hint" style="margin:0">Genera un link de un solo uso para que vincule su cuenta de Google.</p>' +
-            '</div>' +
-            '<button type="button" class="btn-text-simple" style="white-space:nowrap;" onclick="_eqGenerarInviteLink(\'' + idJs + '\')">Generar link</button>' +
-          '</div>'
-        ) : '') +
-      '</div>' +
-    '</div>';
-}
-
 // "Activar cuenta" (fila de arriba) -- crea la invitación (Edge Function,
 // `generarInviteToken`) y copia el link listo para compartir por WhatsApp/
 // donde sea. `p.id` es el username (mismo criterio que el resto de esta
@@ -3604,12 +3211,15 @@ function _eqCambiarEstado(id, nuevoEstado) {
 // guardado del sheet "De viaje".
 function _eqAplicarEstadoUI(id, persona, nuevoEstado) {
   persona.estado = nuevoEstado;
-  // Clase, no id: la fila puede estar a la vez en el perfil de Equipo y en
-  // Ajustes de admin de Mi perfil (`_ajRefrescarViajeAdmin()`, js/perfil.js).
   if (nuevoEstado !== 'De viaje') {
     Array.prototype.forEach.call(document.querySelectorAll('.eq-viaje-fila'), function(f) { f.parentNode.removeChild(f); });
   }
-  if (typeof _ajRefrescarViajeAdmin === 'function') _ajRefrescarViajeAdmin(persona);
+  // Admin cambiando su PROPIO estado desde el detalle: mantiene `E.datos`
+  // al día para el bloque de lesión (`_eqLesionHtml()` lee de ahí).
+  if (_eqEsUsuarioActual(persona)) {
+    if (typeof E !== 'undefined' && E.datos) E.datos.estado_miembro = nuevoEstado;
+    _eqLesionRefrescar();
+  }
   var bots = document.querySelectorAll('.eq-estado-opciones .eq-estado-btn');
   for (var i = 0; i < bots.length; i++) {
     bots[i].className = 'eq-estado-btn' + (bots[i].getAttribute('data-estado') === nuevoEstado ? ' activo' : '');
@@ -3956,11 +3566,10 @@ function _eqPerfilContenidoHtml(p) {
   // colapsados por default), este nace YA abierto (`eq-acord-abierto` en el
   // HTML inicial): es el contenido principal que cualquiera que abre un
   // perfil quiere ver primero, solo colapsable para quien lo prefiera
-  // compacto. `.eq-perfil-stats-acord` (css/equipo.css) aplica el mismo
-  // achique de `.eq-stat-card`/`.eq-rank-wrap` que ya usa
-  // `#eq-misstats-panel-inner` ("Mis estadísticas", scopeado igual, sin
-  // duplicar valores). Re-ajuste (pedido explícito, ver MANIFEST.md/CHANGELOG.md
-  // -- "mismo layout, clases y estructura HTML que Mis estadísticas"):
+  // compacto. `.eq-perfil-stats-acord` (css/equipo.css) aplica un achique
+  // compacto de `.eq-stat-card`/`.eq-rank-wrap`. Re-ajuste (pedido
+  // explícito, ver MANIFEST.md/CHANGELOG.md -- "mismo layout, clases y
+  // estructura HTML que el viejo panel Mis estadísticas", ya eliminado):
   // el contenido real (horas/asistencia + separador PUNTOS + grid
   // tareas/asistencia-combo + termómetro) ahora es `_eqStatsContenidoHtml(p)`
   // (función compartida, ver ese bloque más arriba en este archivo) --
@@ -3972,18 +3581,14 @@ function _eqPerfilContenidoHtml(p) {
   // re-ajuste -- "sin filtros de período en estadísticas del detalle") --
   // reemplazado por una nota de texto chica (`.eq-perfil-stats-nota`,
   // color `var(--muted)`) que aclara que el período viene del filtro
-  // global de Equipo (el mismo que ya usa "Mis estadísticas", sin UI
-  // propia ahí tampoco) -- `_eqFiltroPeriodoModo()` sigue sincronizando
+  // global de Equipo -- `_eqFiltroPeriodoModo()` sigue sincronizando
   // TODAS las instancias de `.eq-periodo-pills` que queden en el DOM
   // (panel de Filtros de la lista, la única que sobrevive), sin romperse
   // por esta menos.
   // Bug real corregido (pedido explícito) -- "expandido por defecto solo en
   // la vista propia de la home de Equipo": este acordeón nacía SIEMPRE
   // abierto (`eq-acord-abierto` hardcodeado) sin importar de quién sea el
-  // perfil -- esta función es la vista de DETALLE (roster -> tocar a
-  // alguien), un componente distinto de "Mis estadísticas"
-  // (`_eqRenderMisEstadisticas()`, arriba en este archivo, el único lugar
-  // con expandido-por-defecto real). Ahora nace colapsado, igual que
+  // perfil. Ahora nace colapsado, igual que
   // Categoría/Estado (`_eqTierAdminHtml()`/`_eqAdminGestionHtml()`, mismo
   // mecanismo `.eq-acord`/`eqToggleAcordeon()`).
   var statsAcordHtml = '<div class="eq-acord eq-perfil-stats-acord">' +
@@ -4034,6 +3639,9 @@ function _eqPerfilContenidoHtml(p) {
     // Categoría -> `filas` -> Estado.
     (filas ? '<div class="eq-info-lista">' + filas + '</div>' : '') +
     statsAcordHtml +
+    // Flujo de lesión (movido desde Mi perfil/Ajustes, ver `_eqLesionHtml()`)
+    // -- solo en el detalle propio, nunca en el de otras personas.
+    (_eqEsUsuarioActual(p) ? '<div id="eq-lesion-wrap" class="eq-lesion-wrap">' + _eqLesionHtml() + '</div>' : '') +
     _eqTierAdminHtml(p) +
     _eqAdminGestionHtml(p) +
     _eqAsistExternaHtml(p);
@@ -4056,4 +3664,102 @@ function _eqRenderPerfil(p) {
       requestAnimationFrame(function() { rankWrap.classList.remove('sin-transicion'); });
     }
   }
+}
+
+/* ── Flujo de lesión propio (Cambio 54; movido desde Mi perfil/Ajustes,
+   js/perfil.js, al detalle propio de Equipo -- ver MANIFEST.md) ──────────
+   Auto-reporte de usuaria + aprobación admin (contraparte en Mi Liga, ver
+   js/admin.js). `estado_miembro` (snake_case, tal cual viaja desde
+   getDatosCompletos()) y `solicitudLesionPendiente` (E.datos) gobiernan qué
+   se muestra: Activx sin solicitud -> botón "Reportar lesión"; solicitud
+   pendiente -> texto + "Cancelar solicitud"; Lesionadx -> texto + "Estoy
+   recuperadx". Otros estados (Ausente/Técnico/De viaje) -> nada. Vive en
+   `#eq-lesion-wrap`, que `_eqPerfilContenidoHtml()` solo agrega en el
+   detalle propio. Sheet de confirmación: `#dat-lesion-sheet` (index.html). */
+function _eqLesionHtml() {
+  var d = (typeof E !== 'undefined' && E.datos) || null;
+  if (!d) return '';
+  var estado = d.estado_miembro || 'Activx';
+  if (d.solicitudLesionPendiente) {
+    return '<p class="eq-lesion-texto">Solicitud enviada, esperando aprobación de los admins.</p>' +
+      '<a href="javascript:void(0)" class="eq-lesion-link" onclick="_eqLesionCancelarSolicitud()">Cancelar solicitud</a>';
+  }
+  if (estado === 'Lesionadx') {
+    return '<p class="eq-lesion-texto">Estás marcadx como Lesionadx. Estás exentx de la cuota durante este período.</p>' +
+      '<button type="button" class="eq-lesion-btn" onclick="_eqLesionRecuperarse()">Estoy recuperadx</button>';
+  }
+  if (estado === 'Activx') {
+    return '<button type="button" class="btn btn-outline eq-lesion-btn-sutil" onclick="_eqLesionAbrirSheet()"><span class="material-symbols-outlined">personal_injury</span>Reportar lesión</button>';
+  }
+  return '';
+}
+function _eqLesionRefrescar() {
+  var cont = document.getElementById('eq-lesion-wrap');
+  if (cont) cont.innerHTML = _eqLesionHtml();
+}
+// Abrir empuja un estado de historial + registra el cierre; cerrar a mano
+// (botón "Cancelar" o desde `_eqLesionConfirmar()`) dispara `history.back()`
+// y el popstate resultante cierra de verdad (`porGesto=true`), igual que el
+// resto de sheets `.bsheet` de la app.
+function _eqLesionAbrirSheet() {
+  var ov = document.getElementById('dat-lesion-sheet-overlay');
+  var sh = document.getElementById('dat-lesion-sheet');
+  if (!ov || !sh) return;
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(_eqLesionCerrarSheet);
+}
+function _eqLesionCerrarSheet(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var ov = document.getElementById('dat-lesion-sheet-overlay');
+  var sh = document.getElementById('dat-lesion-sheet');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() {
+    if (sh) sh.style.display = 'none';
+    if (ov) ov.style.display = 'none';
+  }, 350);
+}
+// Tras un cambio real de estado (recuperarse), repinta el detalle abierto
+// (badge del avatar + bloque de lesión); el roster se re-renderiza al
+// volver (`_eqVolverLista()`).
+function _eqLesionAplicarEstado(nuevoEstado) {
+  if (E.datos) E.datos.estado_miembro = nuevoEstado;
+  var yo = _eqUsuariaActual();
+  if (yo) {
+    yo.estado = nuevoEstado;
+    yo.exentaCuota = (nuevoEstado === 'Lesionadx');
+    if (_eqPersonaActual && _eqPersonaActual.id === yo.id) _eqRenderPerfil(yo);
+  }
+  _eqLesionRefrescar();
+  if (_eqYaInicializado && _eqPersonas.length) _eqBuscar(_eqBusqueda);
+}
+function _eqLesionConfirmar() {
+  _eqLesionCerrarSheet();
+  // apiPost() (js/api.js), a diferencia de api()/GET, NO inyecta `_token`
+  // solo -- hay que pasarlo explícito o la acción responde "Sesión inválida".
+  apiPost({ action: 'solicitarLesion', token: _token }, function(res) {
+    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo enviar la solicitud. Intenta de nuevo.', 'error'); return; }
+    if (E.datos) E.datos.solicitudLesionPendiente = true;
+    _eqLesionRefrescar();
+  }, function(e) {
+    mostrarToast((e && e.message) || 'No se pudo enviar la solicitud. Intenta de nuevo.', 'error');
+  });
+}
+function _eqLesionCancelarSolicitud() {
+  apiPost({ action: 'cancelarSolicitudLesion', token: _token }, function(res) {
+    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo cancelar la solicitud.', 'error'); return; }
+    if (E.datos) E.datos.solicitudLesionPendiente = false;
+    _eqLesionRefrescar();
+  }, function(e) {
+    mostrarToast((e && e.message) || 'No se pudo cancelar la solicitud.', 'error');
+  });
+}
+function _eqLesionRecuperarse() {
+  apiPost({ action: 'recuperarseLesion', token: _token }, function(res) {
+    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo actualizar tu estado.', 'error'); return; }
+    _eqLesionAplicarEstado('Activx');
+  }, function(e) {
+    mostrarToast((e && e.message) || 'No se pudo actualizar tu estado.', 'error');
+  });
 }

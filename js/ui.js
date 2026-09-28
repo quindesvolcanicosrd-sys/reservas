@@ -213,7 +213,10 @@ var TOP_BAR_CONFIG = {
   // ver historial) hace que ir() (js/ui.js) oculte solo el botón atrás
   // (topBtn.style.display='none') sin ocultar el resto del top-bar -- el
   // título "AJUSTES" se sigue mostrando, solo desaparece la flecha.
-  's-datos': { titulo: 'Ajustes', volver: null },
+  // Flecha atrás solo si se entró desde el lápiz del detalle propio de
+  // Equipo (`_eqIrAjustes()`, js/equipo.js -> `_ajVolverA`); desde la nav
+  // inferior sigue siendo pantalla raíz sin flecha.
+  's-datos': { titulo: 'Ajustes', volver: function() { return (typeof _ajVolverA !== 'undefined' && _ajVolverA) || null; } },
   // "Mi Liga" -- mismo criterio que 's-datos' (pantalla raíz de
   // APP_BOTTOM_NAV_ITEMS, sin flecha atrás real): `volver: null` reusa acá
   // el ícono decorativo de la tab (_iconoRaizDeNav()) en el slot de la
@@ -644,8 +647,8 @@ var APP_BOTTOM_NAV_ITEMS = [
       if (typeof _evTourCerrar === 'function') _evTourCerrar(false);
     },
     visible: function() { return true; } },
-  // Orden de tabs (pedido explícito, re-ajuste): Eventos/Equipo/Tareas/Mi
-  // perfil/Mi Liga -- antes Eventos/Mi perfil/Tareas/Equipo/Mi Liga. Sin
+  // Orden de tabs (pedido explícito, re-ajuste): Eventos/Equipo/Tareas/
+  // Ajustes/Mi Liga -- antes Eventos/Ajustes/Tareas/Equipo/Mi Liga. Sin
   // cambios de ícono/label/id/pantalla en ninguno, solo la posición en este
   // array (el orden acá ES el orden visual real -- `_actualizarBottomNav()`,
   // más abajo en este archivo, itera este mismo array tal cual).
@@ -668,8 +671,8 @@ var APP_BOTTOM_NAV_ITEMS = [
   { id: 'tareas', icono: 'task_alt', texto: 'Tareas', pantalla: 's-tareas',
     entrar: function() { irTareas(); },
     visible: function() { return true; } },
-  { id: 'ajustes', icono: 'settings', texto: 'Mi perfil', pantalla: 's-datos',
-    entrar: function() { irEditarDatos(); },
+  { id: 'ajustes', icono: 'settings', texto: 'Ajustes', pantalla: 's-datos',
+    entrar: function() { if (typeof _ajVolverA !== 'undefined') _ajVolverA = null; irEditarDatos(); },
     // `alSalir` (ver "Cambios recientes") -- guarda el scroll del HOME de
     // Ajustes (`#s-datos`) al abandonar la sección, distinto de
     // `_ajUltimoSubAbierto`/js/perfil.js (que guarda qué SUB-sección estaba
@@ -970,7 +973,7 @@ function _actualizarBottomNav(id) {
   var html = '';
   APP_BOTTOM_NAV_ITEMS.forEach(function(item) {
     if (!item.visible()) return;
-    // "Mi perfil" (pedido explícito, antes "Ajustes"): si la cuenta tiene
+    // "Ajustes" (antes "Mi perfil"; ver MANIFEST.md): si la cuenta tiene
     // foto de perfil cargada, la nav usa su avatar circular (mismo tamaño
     // que los otros íconos, `.avatar-pill--xs`) en vez del ícono `settings`
     // -- sin foto, sigue siendo el gear de siempre (fallback explícito, no
