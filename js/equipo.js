@@ -596,7 +596,8 @@ function _eqInit() {
 // Eventos) -- deja asentar el layout real del roster recién renderizado
 // antes de medir geometría para posicionar el primer halo/tooltip. */
 var _EQ_TOUR_PASOS = [
-  { selector: '#eq-busqueda-toggle-btn', titulo: 'Busca y filtra', texto: 'Busca y filtra por puntos según períodos y filtra según rol en el equipo.' },
+  { selector: '#eq-search-header .app-nav-search', titulo: 'Busca rápido', texto: 'Busca a cualquier persona del equipo por nombre, correo o rol.' },
+  { selector: '#eq-filtros-toggle-btn', titulo: 'Filtra', texto: 'Filtra por puntos según períodos y por rol en el equipo.' },
   { selector: '.eq-grupo-header', titulo: 'Colapsa secciones', texto: 'Colapsa las secciones que te interesan de las personas que te interesan.' },
   { selector: '.eq-fav-btn', titulo: 'Favoritos', texto: 'Agrega miembros del equipo a favoritos para tenerlos siempre visibles.' },
   { selector: '.eq-miembro-fila', titulo: 'Detalle de cada persona', texto: 'Toca donde se encuentra alguien del equipo para consultar información adicional.' }
@@ -984,7 +985,8 @@ function _eqRenderPorRol() {
 }
 
 /* ── Panel de nav: búsqueda/filtros (rediseño, ver MANIFEST.md/CHANGELOG.md)
-   -- un solo trigger en `#eq-search-header` (`#eq-busqueda-toggle-btn`).
+   -- un solo trigger en `#eq-search-header` (`#eq-filtros-toggle-btn`,
+   ícono `tune`); el buscador vive fijo en la nav, fuera del panel.
    Se mantiene el mapa `_EQ_PANELES`/`_eqPanelAbierto` (mismo criterio que
    `_evTogglePanel()`/`_EV_PANELES`, js/eventos.js) aunque hoy haya un solo
    panel -- "Mis estadísticas" se eliminó (la usuaria actual ahora vive
@@ -993,7 +995,7 @@ function _eqRenderPorRol() {
    el frame siguiente baja a `0px` (ver "Acordeones animados con
    max-height" en MANIFEST.md). */
 var _EQ_PANELES = {
-  busqueda: { el: 'eq-busqueda-panel', btn: 'eq-busqueda-toggle-btn' }
+  filtros: { el: 'eq-filtros-panel', btn: 'eq-filtros-toggle-btn' }
 };
 var _eqPanelAbierto = null;
 function _eqTogglePanel(tag) {
@@ -1028,7 +1030,7 @@ function _eqSincronizarClasePanelAbierto() {
 }
 // Perf real (pedido explícito, jank de Android Chrome al colapsar) -- fija
 // `height` (medido, nunca `auto`/infinito) en el wrapper Y `transform:
-// translateY` en su hijo directo (`.eq-busqueda-panel-inner`), en vez de un solo `max-height`: el `height`
+// translateY` en su hijo directo (`.eq-filtros-panel-inner`), en vez de un solo `max-height`: el `height`
 // sigue disparando layout igual (es la misma familia de propiedad que
 // `max-height`, ninguna es GPU-only) pero el `transform` de los hijos SÍ
 // corre por compositor -- el contenido se desliza en vez de solo
@@ -1047,14 +1049,14 @@ function _eqSincronizarClasePanelAbierto() {
 // frame (`requestAnimationFrame`) fija `haciaPx`, para que el navegador
 // registre el cambio como una transición real de un valor a otro, no un
 // salto directo al destino en el mismo tick. `transform:translateY` en los
-// hijos directos (`.eq-busqueda-panel-inner`) en
+// hijos directos (`.eq-filtros-panel-inner`) en
 // vez de animar solo `height`: `height` sigue disparando layout igual (es
 // la misma familia de propiedad que `max-height`, ninguna es GPU-only)
 // pero el `transform` de los hijos SÍ corre por compositor -- el contenido
 // se desliza en vez de solo aparecer/desaparecer recortado. `translateZ(0)`
 // sumado acá (no solo en la regla CSS de reposo) -- un `style.transform`
 // inline pisaría por completo cualquier `transform` de la clase, incluido
-// el `translateZ(0)` permanente de `.eq-busqueda-panel-inner` -- sin esto la capa de compositing se perdía
+// el `translateZ(0)` permanente de `.eq-filtros-panel-inner` -- sin esto la capa de compositing se perdía
 // justo durante la animación real. `will-change` como clase temporal
 // (`eq-panel-wrapper-anim`/`eq-panel-inner-anim`, css/equipo.css) -- se
 // saca sola en `transitionend` (`{once:true}`, sin acumular listeners).
@@ -1097,9 +1099,6 @@ function _eqAbrirPanel(tag) {
   panel.classList.add('abierta');
   _eqAnimarPanel(panel, '0px', panel.scrollHeight + 'px', 'translateY(0)', true);
   btn.classList.add('activo');
-  if (tag === 'busqueda') {
-    setTimeout(function() { var inp = document.getElementById('eq-search-input'); if (inp) inp.focus(); }, 50);
-  }
   // El alto de `#eq-sticky-header` cambia al abrirse un panel (ver
   // "Headers sticky apilados" -- css/equipo.css) -- los headers de sección
   // que ya estén stuck en ese momento necesitan correrse hacia abajo para no
@@ -1175,7 +1174,7 @@ function _eqCerrarPanel(tag, instant) {
 /* ── Cierre rápido del panel de búsqueda/filtros al iniciar cualquier gesto
    afuera (ver MANIFEST.md -- "el panel de búsqueda/filtros debe ocultarse
    rápido al scrollear, igual que en Eventos") -- puerto 1:1 de
-   `_evCerrarBurbujaSiFueraDe()`/js/eventos.js: `busqueda` se cierra de UNA SOLA VEZ con la
+   `_evCerrarBurbujaSiFueraDe()`/js/eventos.js: `filtros` se cierra de UNA SOLA VEZ con la
    transición CSS normal de siempre (`_eqCerrarPanel()`, sin arrastre en
    vivo) apenas arranca cualquier gesto -- `pointerdown`/`touchstart` en
    FASE DE CAPTURA sobre `document` (dispara con el simple inicio de un
@@ -1185,13 +1184,12 @@ function _eqCerrarPanel(tag, instant) {
    que Eventos) -- solo la lupa lo cierra en ese caso, para no perder el
    query a mitad de tipeo por un scroll accidental. */
 function _eqCerrarBurbujaSiFueraDe(target) {
-  if (_eqPanelAbierto !== 'busqueda') return;
-  if (_eqBusqueda !== '') return;
-  var cfg = _EQ_PANELES.busqueda;
+  if (_eqPanelAbierto !== 'filtros') return;
+  var cfg = _EQ_PANELES.filtros;
   var panelEl = document.getElementById(cfg.el);
   var btnEl = document.getElementById(cfg.btn);
   if ((panelEl && panelEl.contains(target)) || (btnEl && btnEl.contains(target))) return;
-  _eqCerrarPanel('busqueda');
+  _eqCerrarPanel('filtros');
 }
 document.addEventListener('click', function(e) { _eqCerrarBurbujaSiFueraDe(e.target); });
 ['pointerdown', 'touchstart'].forEach(function(tipo) {
@@ -1239,7 +1237,7 @@ function _eqToggleFiltroBurbuja(campo) {
     _eqFiltroBurbujaAbierta = campo;
     _eqAbrirFiltroBurbuja(campo);
   }
-  // El panel exterior (#eq-busqueda-panel) fija su `max-height` al alto
+  // El panel exterior (#eq-filtros-panel) fija su `max-height` al alto
   // real de SU contenido en el momento de abrirse (`_eqAbrirPanel()`, más
   // arriba en este archivo), sin ninguna burbuja de categoría abierta
   // todavía -- relajarlo acá a un techo holgado evita que esa altura ya
@@ -1247,7 +1245,7 @@ function _eqToggleFiltroBurbuja(campo) {
   // aplicado en Eventos, `_evToggleFiltroBurbuja()`/js/eventos.js). Nunca
   // hay más de UNA burbuja abierta a la vez (comportamiento radio, ver
   // arriba), mismo techo que usa Eventos alcanza acá también.
-  var panelEl = document.getElementById('eq-busqueda-panel');
+  var panelEl = document.getElementById('eq-filtros-panel');
   if (panelEl && panelEl.classList.contains('abierta')) panelEl.style.maxHeight = '600px';
 }
 
@@ -1850,7 +1848,7 @@ function _eqAplicarFiltrosAhora() {
   api(params, function(res) {
     _eqPersonas = (res && res.personas) || [];
     _eqCargado = true;
-    _eqCerrarPanel('busqueda');
+    _eqCerrarPanel('filtros');
     _eqActualizarBadgeFiltros();
     _eqRenderLista();
     // Filtro de período del perfil de detalle (feat nueva, ver MANIFEST.md)
@@ -2941,7 +2939,7 @@ function _eqRankTexto(p) {
 // - Grupo público (`_eqPerfilGrupoPublicoHtml()`, lo ve cualquiera):
 //   Estadísticas (abre subsección), Estado (solo lectura para no admin,
 //   editable para admin) y, en el detalle propio, la fila de lesión.
-// - Grupo "Administración" (`_eqAdminBloqueHtml()`, SOLO con `_adminToken`;
+// - Grupo de administración, sin título (`_eqAdminBloqueHtml()`, SOLO con `_adminToken`;
 //   para no admin ni siquiera se genera el HTML): Categoría, Paga cuota,
 //   Acceso admin, Activar cuenta, Registrar asistencia externa. Sin regla de
 //   visibilidad por categoría: el admin ve y edita todo en Quindes y Mirlxs.
@@ -3075,8 +3073,7 @@ function _eqAdminBloqueHtml(p) {
     icono: 'travel_explore', color: 'aj-icon-muted', titulo: 'Registrar asistencia externa',
     valor: 'Entrenamiento en otro equipo o país', onclick: "_eqAbrirSheetAsistExterna('" + idJs + "')"
   });
-  return '<div class="seccion-label eq-perfil-grupo-titulo">Administración</div>' +
-    '<div class="aj-group eq-perfil-grupo">' +
+  return '<div class="aj-group eq-perfil-grupo">' +
       filaCategoria + filaCuota + filaAdmin + filaActivar + filaExterna +
     '</div>';
 }

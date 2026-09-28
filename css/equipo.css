@@ -101,17 +101,7 @@
    íconos y el primer panel, no después de los 2 (`padding-bottom` del
    wrapper, arriba, es el que corre DESPUÉS de ambos, siempre). */
 .eq-header-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 56px; margin-bottom: 4px; }
-/* Título de la sección a la izquierda de la fila de íconos -- ocupa el
-   lugar que dejó el trigger "Mis estadísticas" (eliminado), así la lupa no
-   queda sola con un hueco a la izquierda. Misma tipografía que
-   `.ev-nav-mes-label` (css/eventos.css), sin comportamiento de botón. */
-.eq-header-titulo {
-  flex: 1; min-width: 0; padding: 10px 4px; margin: 0;
-  font-size: 1rem; font-weight: 800; color: var(--text);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-
-/* ── Panel deslizable de la nav: búsqueda/filtros
+/* ── Panel deslizable de la nav: filtros (Puntos / Rol)
    (rediseño, ver MANIFEST.md/CHANGELOG.md) -- mismo mecanismo de animación
    que `.ev-header-burbuja`/css/eventos.css (botón de búsqueda de Eventos):
    max-height animado + `.abierta`, JS idéntico en `_eqTogglePanel()`/
@@ -119,15 +109,16 @@
    requestAnimationFrame) -- CSS propio en vez de reusar la clase de eventos.css literal,
    mismo criterio de "cada sección mantiene su propio archivo" ya
    establecido en el resto de la app. El contenido interno vive en
-   `.eq-busqueda-panel-inner`. (El panel "Mis estadísticas" y su colapso
+   `.eq-filtros-panel-inner`. (El panel "Mis estadísticas" y su colapso
    progresivo al scrollear se eliminaron, ver MANIFEST.md.) */
 .eq-filtro-toggle-btn.activo { background: var(--brand); color: var(--white); }
-/* Badge numérico del ícono de lupa (feat nueva, ver MANIFEST.md -- "igual a
+/* Badge numérico del botón de filtros (`tune`; feat nueva, ver MANIFEST.md -- "igual a
    como funciona en Eventos") -- COPIADO 1:1 de `.ev-header-icon-btn`/
    `.ev-filtro-badge` (css/eventos.css): `position:relative` ancla el badge
    (único aporte propio acá, igual que en Eventos -- tamaño/fondo/color/hover
    del botón en sí vienen de `.app-nav-icon-btn`, css/nav.css, sin tocar).
-   Cuenta real en `_eqActualizarBadgeFiltros()`/js/equipo.js. */
+   Cuenta real en `_eqActualizarBadgeFiltros()`/js/equipo.js (solo filtros,
+   nunca el texto de búsqueda). */
 .eq-filtro-toggle-btn { position: relative; }
 .eq-filtro-badge {
   position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; padding: 0 3px;
@@ -140,7 +131,7 @@
    debajo"): antes este contenedor (el que de verdad recorta el contenido,
    `overflow:hidden`, durante el colapso progresivo al scrollear -- ver
    arriba) no pintaba NINGÚN fondo propio -- solo
-   `.eq-busqueda-panel-inner` (más abajo) lo hace, con un `margin-top:10px`
+   `.eq-filtros-panel-inner` (más abajo) lo hace, con un `margin-top:10px`
    antes de esa tarjeta. En flujo normal ese hueco de 10px queda cubierto
    por `background:var(--bg)` de `.eq-sticky-header` (su padre, ver arriba
    en este archivo) -- pero durante la animación el
@@ -190,14 +181,16 @@
    recortar con el panel en su alto natural; vuelve a `hidden` (regla base)
    apenas se saca esta clase para animar un cierre real. */
 .eq-header-panel.eq-panel-auto { height: auto; overflow: visible; }
-.eq-busqueda-panel-inner { transition: transform 350ms ease; transform: translateZ(0); }
-.eq-busqueda-panel-inner.eq-panel-inner-anim { will-change: transform; }
-.eq-busqueda-panel-inner {
+.eq-filtros-panel-inner { transition: transform 350ms ease; transform: translateZ(0); }
+.eq-filtros-panel-inner.eq-panel-inner-anim { will-change: transform; }
+.eq-filtros-panel-inner {
+  /* `margin-top:14px` + `margin-bottom:4px` de `.eq-header-row` = 18px de
+     gap nav->panel (mismo valor que Eventos). */
   background: var(--surface-2); border-radius: 16px; padding: 16px;
-  margin-top: 10px;
+  margin-top: 14px;
   /* Border/stroke (rediseño, ver MANIFEST.md -- "revisar cómo está
      estilizado `.ev-header-burbuja-panel` y aplicar el mismo border/stroke
-     al `.eq-busqueda-panel-inner`") -- mismo valor exacto que
+     al `.eq-filtros-panel-inner`") -- mismo valor exacto que
      `.ev-header-burbuja-panel`/css/eventos.css (`1.5px solid
      var(--border-light)`), la única propiedad que le faltaba a este panel
      para quedar visualmente igual -- padding/radius/margin-top quedan como
@@ -205,11 +198,6 @@
      pedido tocarlos, solo el borde). */
   border: 1.5px solid var(--border-light);
 }
-/* Buscador dentro del panel fusionado -- mismo `.app-nav-search` de
-   siempre (css/nav.css). El año+12 pills que vivían acá se sacaron --
-   reemplazadas por la modal de calendario "Fecha" (`#eq-modal-fecha-*`,
-   index.html, ver "Modal calendario 'Fecha'" más abajo), sin nada de eso
-   inline en el panel. */
 
 /* ── "Filtros" + pills de categoría Puntos/Rol (rediseño, ver MANIFEST.md
    -- "rediseñar completamente el panel de filtros... para que funcione
@@ -239,7 +227,6 @@
    js/equipo.js abrir una cierra la otra si estaba abierta, un solo valor
    `_eqFiltroBurbujaAbierta` ('puntos'|'rol'|null), no un mapa de
    booleanos. */
-.eq-filtros-label { margin-top: 18px; }
 .eq-filtros-row { display: flex; gap: 8px; margin-bottom: 4px; }
 .eq-filtro-trigger {
   flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 4px;
@@ -878,11 +865,9 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
    (solo admin). Reusan `.aj-group`/`.aj-row`/`.aj-icon`/`.aj-content`/
    `.aj-title`/`.aj-value`/`.aj-chevron` (css/perfil.css) y el switch
    `.toggle-btn` (css/global.css); acá solo lo propio del detalle. Mismo
-   espacio entre grupos que Ajustes (`.aj-group` trae `margin-bottom:10px`);
-   título de grupo con `.seccion-label` (css/ui.css). */
-.eq-perfil-grupo { margin-top: 16px; }
-.eq-perfil-grupo-titulo { margin-top: 22px; }
-.eq-perfil-grupo-titulo + .eq-perfil-grupo { margin-top: 0; }
+   espacio entre grupos que Ajustes: solo el `margin-bottom:10px` de
+   `.aj-group`, sin título de grupo. */
+#eq-perfil-grupo-publico { margin-top: 16px; }
 /* Los hints de las filas (cuota/admin, lesión) pueden ocupar 2 líneas -- a
    diferencia de Ajustes, donde `.aj-value` es un resumen de 1 línea. */
 .eq-perfil-grupo .aj-value { white-space: normal; }

@@ -43,7 +43,7 @@
 <link rel="stylesheet" href="css/nav.css?v=f9a04f6b">
 <link rel="stylesheet" href="css/eventos.css?v=e0608f43">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=adeaba41">
+<link rel="stylesheet" href="css/equipo.css?v=c968af64">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2558,52 +2558,31 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
            `.ev-header-row`). -->
       <div class="eq-sticky-header" id="eq-sticky-header">
         <div class="eq-header-row" id="eq-search-header">
-          <!-- Fila de íconos del header sticky: un solo trigger (lupa) que
-               abre el panel fusionado de búsqueda + filtros
-               (`_eqTogglePanel('busqueda')`, js/equipo.js), mismo criterio
-               que el panel único de búsqueda+filtros de Eventos. El panel
-               "Mis estadísticas" se eliminó: la usuaria actual ahora aparece
-               dentro del roster (primera de su grupo, pill "Tú"); en su
-               lugar, a la izquierda, el título de la sección. -->
-          <h1 class="eq-header-titulo">Equipo</h1>
-          <button type="button" class="app-nav-icon-btn eq-filtro-toggle-btn" id="eq-busqueda-toggle-btn" onclick="_eqTogglePanel('busqueda')" title="Buscar y filtrar">
+          <!-- Nav de la home de Equipo (ver MANIFEST.md): buscador que ocupa
+               todo el ancho (`.app-nav-search`, mismo pill que el buscador de
+               Ajustes) + botón de filtros (`tune`) a la derecha, que abre/
+               cierra `#eq-filtros-panel` (`_eqTogglePanel('filtros')`,
+               js/equipo.js). El badge cuenta solo filtros activos (período
+               no default / roles), nunca el texto de búsqueda
+               (`_eqActualizarBadgeFiltros()`). -->
+          <div class="app-nav-search">
             <span class="material-symbols-outlined">search</span>
+            <input type="text" id="eq-search-input" placeholder="Busca en el equipo" oninput="_eqBuscar(this.value)" enterkeyhint="search">
+          </div>
+          <button type="button" class="app-nav-icon-btn eq-filtro-toggle-btn" id="eq-filtros-toggle-btn" onclick="_eqTogglePanel('filtros')" title="Filtros">
+            <span class="material-symbols-outlined">tune</span>
             <span class="eq-filtro-badge" id="eq-filtro-badge" style="display:none;">0</span>
           </button>
         </div>
 
-        <!-- Panel de búsqueda + filtros fusionados (rediseño, ver MANIFEST.md/
-             CHANGELOG.md -- "que funcione igual que Eventos": mismo patrón
-             `.ev-header-burbuja`/`.ev-header-burbuja-panel`/`.ev-filtros-row`/
-             `.ev-filtro-trigger`/`.ev-filtro-burbuja`/`.ev-filtro-burbuja-pills`
-             de css/eventos.css -- ver `#ev-busqueda-panel`, más arriba en este
-             archivo -- COPIADO a `.eq-*` propias en css/equipo.css, no
-             reusado cross-archivo (cada sección es dueña de sus propias
-             clases, mismo criterio ya aplicado en el resto de esta sección).
-             Buscador de texto libre arriba (mismo comportamiento de siempre,
-             `_eqBuscar()`/js/equipo.js sin cambios), subtítulo "Filtros"
-             (`.seccion-label`, como el resto de la app) y 2 pills de
-             categoría con chevron -- "Puntos" y "Rol", cada una despliega su
-             propia burbuja con los sub-pills reales debajo al tocarla
-             (`_eqToggleFiltroBurbuja()`/js/equipo.js) -- REEMPLAZAN los 2
-             títulos de sección fijos "Filtrar puntos según periodo"/"Filtrar
-             por rol" que había antes (pedido explícito: sacarlos, ahora
-             comunican lo mismo los pills de categoría). A diferencia de
-             Eventos (un panel Lugar/Tipo a la vez, `_evToggleFiltroBurbuja()`
-             colapsa cualquier otro antes de expandir el tocado) -- acá
-             "Puntos" y "Rol" son independientes, pueden estar los 2
-             expandidos a la vez (pedido explícito). Sub-pills sin cambios de
-             comportamiento: "Fecha"/"Histórico" (`_eqFiltroPeriodoModo()`) y
-             los pills de rol (`_eqFiltroRolToggle()`, multi-selección). Sin
-             botón "Aplicar filtros" -- cada elección aplica sola. -->
-        <div class="eq-header-panel" id="eq-busqueda-panel">
-          <div class="eq-busqueda-panel-inner">
-            <div class="app-nav-search">
-              <span class="material-symbols-outlined">search</span>
-              <input type="text" id="eq-search-input" placeholder="Busca en el equipo" oninput="_eqBuscar(this.value)">
-            </div>
-
-            <div class="seccion-label eq-filtros-label">Filtros</div>
+        <!-- Panel de filtros (Puntos / Rol) -- mismo mecanismo de
+             animación que antes (`.eq-header-panel`, `_eqAnimarPanel()`),
+             ahora sin buscador (vive en la nav) ni etiqueta "Filtros" (el
+             botón `tune` ya lo dice). Pills de categoría con chevron que
+             despliegan su burbuja (`_eqToggleFiltroBurbuja()`, una abierta a
+             la vez); cada elección aplica sola, sin botón "Aplicar". -->
+        <div class="eq-header-panel" id="eq-filtros-panel">
+          <div class="eq-filtros-panel-inner">
             <div class="eq-filtros-row">
               <button type="button" class="eq-filtro-trigger" id="eq-filtro-btn-puntos" onclick="_eqToggleFiltroBurbuja('puntos')">
                 <span class="eq-filtro-trigger-label">Puntos</span><span class="material-symbols-outlined">expand_more</span>
@@ -3580,11 +3559,11 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js?v=8e63a98b"></script>
-<script src="js/ui.js?v=24cea86a"></script>
+<script src="js/ui.js?v=7d6b9a77"></script>
 <script src="js/eventos.js?v=c2f7994e"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=f1afb381"></script>
-<script src="js/equipo.js?v=d8d424de"></script>
+<script src="js/equipo.js?v=0000c1ee"></script>
 <script src="js/home.js?v=e715822d"></script>
 <script src="js/reservas.js?v=d9f7492c"></script>
 <script src="js/perfil.js?v=466b2999"></script>

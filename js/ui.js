@@ -973,20 +973,9 @@ function _actualizarBottomNav(id) {
   var html = '';
   APP_BOTTOM_NAV_ITEMS.forEach(function(item) {
     if (!item.visible()) return;
-    // "Ajustes" (antes "Mi perfil"; ver MANIFEST.md): si la cuenta tiene
-    // foto de perfil cargada, la nav usa su avatar circular (mismo tamaño
-    // que los otros íconos, `.avatar-pill--xs`) en vez del ícono `settings`
-    // -- sin foto, sigue siendo el gear de siempre (fallback explícito, no
-    // el fallback de inicial que usa `_avatarSetFotoOInicial()` en el
-    // resto de la app -- acá una inicial no aportaría nada sobre el ícono
-    // ya reconocible). Hidratado DESPUÉS de `nav.innerHTML` (más abajo),
-    // mismo helper compartido que ya usa el resto de la app (`js/ui.js`).
+    // Todos los ítems (incluido "Ajustes", ícono `settings`) usan su ícono
+    // fijo -- el reemplazo por la foto de perfil se eliminó (ver MANIFEST.md).
     var iconoHtml = '<span class="material-symbols-outlined">' + item.icono + '</span>';
-    if (item.id === 'ajustes' && E.datos && E.datos.fotoPerfil) {
-      var nombreAttr = (E.nombre || '').replace(/"/g, '&quot;');
-      var fotoAttr = String(E.datos.fotoPerfil).replace(/"/g, '&quot;');
-      iconoHtml = '<div class="avatar-pill avatar-pill--xs app-bottom-nav-avatar" data-nombre="' + nombreAttr + '" data-foto="' + fotoAttr + '"></div>';
-    }
     html += '<button type="button" class="app-bottom-nav-item' + (item.pantalla === pantallaAResaltar ? ' activo' : '') + '" onclick="_bottomNavClick(\'' + item.id + '\')">' +
       iconoHtml +
       '<span class="app-bottom-nav-label">' + item.texto + '</span>' +
@@ -994,41 +983,7 @@ function _actualizarBottomNav(id) {
   });
   nav.innerHTML = html;
   nav.style.display = 'flex';
-  // Bug real corregido -- "flash de foto en nav inferior" (pedido
-  // explícito): `_actualizarBottomNav()` corre en CADA navegación (`ir()`
-  // la llama siempre, más abajo en este archivo) y reconstruye `nav.innerHTML`
-  // completo -- el `<div class="app-bottom-nav-avatar">` se destruye y se
-  // crea de cero en cada cambio de tab, así que el de-dupe propio de
-  // `_avatarSetFotoOInicial()` (`el.dataset.avatarClave`, vive en el
-  // ELEMENTO, no sobrevive a que ese elemento se recree) nunca llega a
-  // activarse -- vuelve a mostrar el skeleton + precargar la imagen de
-  // cero en cada tab, aunque ya se hubiera resuelto segundos antes.
-  // `_bottomNavAvatarCache` (variable de módulo, sobrevive entre renders)
-  // guarda el HTML YA resuelto (el `<img>` real, tal cual queda tras
-  // `_avatarSetFotoOInicial()`) la primera vez -- si la foto/nombre no
-  // cambiaron, se reinyecta directo, sin skeleton ni precarga de nuevo.
-  var avatarNav = nav.querySelector('.app-bottom-nav-avatar');
-  if (avatarNav) {
-    var claveAvatar = avatarNav.getAttribute('data-foto') + '|' + avatarNav.getAttribute('data-nombre');
-    if (_bottomNavAvatarCache && _bottomNavAvatarCache.clave === claveAvatar) {
-      avatarNav.innerHTML = _bottomNavAvatarCache.html;
-    } else {
-      _avatarSetFotoOInicial(avatarNav, avatarNav.getAttribute('data-foto'), avatarNav.getAttribute('data-nombre'));
-      // La carga real es async (precarga con Image() adentro del helper) --
-      // se observa el propio nodo para capturar el HTML recién cuando
-      // termina de resolverse (deja de ser el skeleton), no antes.
-      (function(elAvatar, clave) {
-        var obs = new MutationObserver(function() {
-          if (elAvatar.querySelector('.avatar-pill-skel')) return;
-          _bottomNavAvatarCache = { clave: clave, html: elAvatar.innerHTML };
-          obs.disconnect();
-        });
-        obs.observe(elAvatar, { childList: true });
-      })(avatarNav, claveAvatar);
-    }
-  }
 }
-var _bottomNavAvatarCache = null;
 
 // Bug real corregido (ver MANIFEST.md "Cambios recientes" -- scroll perdido
 // al volver de "Tomar asistencia" con el gesto/botón NATIVO de atrás, nunca
