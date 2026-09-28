@@ -200,12 +200,29 @@
   /* Inset estándar de contenido de pantalla — fuente única entre .contenedor
      (ui.css) y .aj-sub-inner (perfil.css), antes 16px duplicado en ambos. */
   --space-screen:   16px;
+
+  /* ── Tamaños táctiles (navs y FABs, +~10% sobre los valores previos) ── */
   /* Alto de contenido de .app-bottom-nav (css/nav.css), sin contar el
      env(safe-area-inset-bottom) que se suma aparte -- fuente única entre la
      nav en sí, el spacer de scroll de cada pantalla raíz y el offset de
      #cta-footer-s-home (css/estilos.css), para que los 3 se muevan juntos si
-     el alto de la nav cambia algún día. */
-  --bottom-nav-h:   71px;
+     el alto de la nav cambia algún día. Antes 71px. */
+  --bottom-nav-h:   78px;
+  /* Ícono de cada tab de la nav inferior (.app-bottom-nav-item). Antes 1.6rem. */
+  --bottom-nav-icon: 1.75rem;
+  /* Lado de los botones cuadrados de la nav superior (.app-nav-back,
+     .app-nav-icon-btn) y alto de .home-equip-btn. Antes 44px. */
+  --nav-btn-size:   48px;
+  /* Ícono dentro de .app-nav-back/.app-nav-icon-btn. Antes 1.5rem. */
+  --nav-btn-icon:   1.65rem;
+  /* Lado/alto del FAB (.ev-fab-btn, incluido #ev-fab-btn). Antes 56px. */
+  --fab-size:       62px;
+  /* Ícono outlined del FAB (.ev-fab-btn). Antes 1.6rem. */
+  --fab-icon:       1.75rem;
+  /* Ícono rounded de #ev-fab-btn ("Reservar", ícono+texto). Antes 1.4rem. */
+  --fab-icon-rounded: 1.55rem;
+  /* Ícono de cada opción del speed dial (.ev-fab-opcion). Antes 1.2rem. */
+  --fab-opcion-icon: 1.3rem;
 
   /* ── Sombras (runtime — neutras/negras en los 2 modos, re-ajuste, ver js/color-enfasis.js) ── */
   --shadow-sm:      0 4px 12px rgba(0,0,0,0.06);

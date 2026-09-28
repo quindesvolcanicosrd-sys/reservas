@@ -66,9 +66,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
+  width: var(--nav-btn-size);
+  height: var(--nav-btn-size);
+  min-width: var(--nav-btn-size);
   border-radius: 12px;
   background: var(--brand-light);
   border: none;
@@ -80,7 +80,7 @@
 }
 .app-nav-back:hover { background: var(--brand-20); }
 .app-nav-back:active { transform: scale(0.95); }
-.app-nav-back .material-symbols-outlined { font-size: 1.5rem; display: block; }
+.app-nav-back .material-symbols-outlined { font-size: var(--nav-btn-icon); display: block; }
 
 /* ── Variante decorativa (pantallas raíz sin "volver") ─
    Mismo tamaño/forma/color que .app-nav-back (ocupa exactamente el mismo
@@ -108,8 +108,12 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding-left: 80px;
-  padding-right: 64px;
+  /* Compensan el ancho del botón de cada lado (--nav-btn-size, css/colors.css)
+     + padding lateral de .app-nav + gap -- antes 80px/64px fijos con botones
+     de 44px; atados al token para que el título siga en el mismo lugar
+     relativo si el botón cambia de tamaño. */
+  padding-left: calc(var(--nav-btn-size) + 36px);
+  padding-right: calc(var(--nav-btn-size) + 20px);
 }
 
 /* ── Buscador de Ajustes (ver "Cambios recientes") ───────
@@ -202,8 +206,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: var(--nav-btn-size);
+  height: var(--nav-btn-size);
   border-radius: 12px;
   background: var(--brand-light);
   border: none;
@@ -231,7 +235,7 @@
   .app-nav-icon-btn:hover { background: var(--brand-lightest); }
   .app-nav-icon-btn-brand:hover { background: var(--brand-dk); }
 }
-.app-nav-icon-btn .material-symbols-outlined { font-size: 1.5rem; }
+.app-nav-icon-btn .material-symbols-outlined { font-size: var(--nav-btn-icon); }
 
 /* ── Variante naranja de marca (ej. ícono "Asistencia anticipada" de
    Eventos) -- mismo componente (.app-nav-icon-btn), no una clase de nav
@@ -254,7 +258,7 @@
 /* ── Botón "Cambiar mi equipamiento" (nav home) ──────────────────
    Variante de ancho variable de `.app-nav-icon-btn` (mismo alto/radio/tinte
    -- fondo `--brand-light`, ícono `--brand`) en vez de un cuadrado fijo de
-   44px: muestra inline qué necesita la cuenta (patín+talla y/o
+   `--nav-btn-size`: muestra inline qué necesita la cuenta (patín+talla y/o
    protección+"Sí"), no solo un ícono genérico -- contenido poblado por
    _renderHomeEquipBtn() (js/home.js) según los 4 estados posibles
    (ambos/solo patines/solo protecciones/ninguno). */
@@ -262,7 +266,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 44px;
+  height: var(--nav-btn-size);
   padding: 0 12px;
   border-radius: 12px;
   background: var(--brand-light);
@@ -420,7 +424,7 @@
   -webkit-tap-highlight-color: transparent;
   transition: color 0.2s ease;
 }
-.app-bottom-nav-item .material-symbols-outlined { font-size: 1.6rem; }
+.app-bottom-nav-item .material-symbols-outlined { font-size: var(--bottom-nav-icon); }
 /* Tab de la pantalla activa, resaltado con el color de énfasis -- el resto
    queda en var(--muted) por la regla base de arriba, sin clase extra. */
 .app-bottom-nav-item.activo { color: var(--brand); }

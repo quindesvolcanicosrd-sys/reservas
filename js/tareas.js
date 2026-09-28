@@ -1060,7 +1060,7 @@ function _tarActualizarSelectorHeader() {
   var cont = document.getElementById('tar-tablero');
   var chevron = document.getElementById('tar-secciones-chevron');
   if (!cont || !chevron) return;
-  var bottomNav = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-h')) || 71;
+  var bottomNav = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-h')) || (document.getElementById('app-bottom-nav') || {}).offsetHeight || 0;
   var disponible = window.innerHeight - _tarAlturaStickyHeader() - bottomNav;
   var necesario = !!_tarSeccionDefault && cont.scrollHeight > (disponible + _TAR_SELECTOR_TOLERANCIA);
   _tarSelectorNecesario = necesario;

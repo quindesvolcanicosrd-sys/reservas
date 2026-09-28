@@ -2033,7 +2033,7 @@ function _evScrollAFecha(iso, instant, forzar) {
   var absTop = _evOffsetAbsoluto(el);
   var destino = Math.max(0, absTop - margenSup);
   if (!forzar) {
-    var margenInf = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-h')) || 71;
+    var margenInf = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--bottom-nav-h')) || (document.getElementById('app-bottom-nav') || {}).offsetHeight || 0;
     var vh = window.innerHeight || document.documentElement.clientHeight;
     var yaVisible = window.scrollY <= destino && window.scrollY >= (absTop + el.offsetHeight - vh + margenInf);
     if (yaVisible) return;
