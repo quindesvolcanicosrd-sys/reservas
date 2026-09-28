@@ -1107,9 +1107,12 @@ function adminCuotaExcQuitar(idMiembro) {
   _admCuotaExcGuardar(idMiembro, '', null);
 }
 
-// ── Solicitudes de lesión (Cambio 54, auto-reporte de usuario + aprobación
-// admin, ver #eq-lesion-wrap/_eqLesionHtml() en js/equipo.js para la
-// contraparte de usuario, en el detalle propio de Equipo) ──
+// ── Solicitudes de lesión (Cambio 54) -- OBSOLETO desde el modelo de
+// autodeclaración (ver MANIFEST.md): "Reportar lesión" ya aplica Lesionadx
+// directo, sin aprobación, y no se crean solicitudes nuevas. Esta sección
+// queda solo para resolver las solicitudes pendientes que ya existían: la
+// pill "Lesiones" se muestra mientras quede alguna y se oculta sola cuando
+// no queda ninguna (`_adminLesionesSetVisible()`). ──
 // Mismo patrón que Excepciones (arriba): fetch -> array en memoria -> render,
 // actualización optimista en aprobar/rechazar (sin re-fetch). `adminApi()`
 // (no `apiGet`, que no existe en este repo -- solo hay `api()`/`apiPost()`
@@ -1123,7 +1126,16 @@ function _adminCargarSolicitudesLesion() {
   }, function() { _admLesiones = []; _adminRenderSolicitudesLesion(); });
 }
 
+// Pill + burbuja "Lesiones" solo con solicitudes pendientes. Al quedar en 0
+// con la burbuja abierta (se acaba de resolver la última) la cierra primero.
+function _adminLesionesSetVisible(visible) {
+  var tile = document.querySelector('.admin-dash-tile[data-tile="admin-lesiones"]');
+  if (!visible && _admDashAbierto === 'admin-lesiones') _adminCerrarTodoAbierto();
+  if (tile) tile.style.display = visible ? '' : 'none';
+}
+
 function _adminRenderSolicitudesLesion() {
+  _adminLesionesSetVisible(!!(_admLesiones && _admLesiones.length));
   var wrap = document.getElementById('miliga-lesion-lista');
   if (!wrap) return;
   if (!_admLesiones || _admLesiones.length === 0) {

@@ -1284,6 +1284,24 @@
 .ev-ant-acc-body.abierto { max-height: 900px; opacity: 1; margin-bottom: 10px; border-width: 0 1.5px 1.5px; }
 .ev-ant-acc-body-inner { padding: 2px 16px 16px; }
 
+/* Motivo obligatorio de "No asistiré" (ver `_evAntRenderMotivos()`/
+   `_evAntMostrarMotivo()`, js/eventos.js). Aparece/desaparece con fade +
+   slide + altura animada (grid-template-rows 0fr↔1fr, sin medir en JS),
+   nunca de golpe. Pills: `.aj-pill` de siempre + ícono de estado. */
+.ev-ant-motivo {
+  display: grid; grid-template-rows: 0fr; opacity: 0; transform: translateY(-6px);
+  transition: grid-template-rows 0.32s var(--ease-sheet), opacity 0.24s ease, transform 0.32s var(--ease-sheet), margin-top 0.32s var(--ease-sheet);
+  margin-top: 0; pointer-events: none;
+}
+.ev-ant-motivo.visible { grid-template-rows: 1fr; opacity: 1; transform: translateY(0); margin-top: 16px; pointer-events: auto; }
+.ev-ant-motivo-inner { min-height: 0; overflow: hidden; }
+.ev-ant-motivo-titulo { font-size: 0.85rem; font-weight: 800; color: var(--text); text-align: center; margin-bottom: 10px; }
+.ev-ant-motivo-pills { justify-content: center; }
+.ev-ant-motivo-pills .aj-pill { gap: 6px; }
+.ev-ant-motivo-pills .aj-pill .material-symbols-rounded { font-size: 1.05rem; }
+.ev-ant-motivo-ayuda { font-size: 0.78rem; color: var(--muted); text-align: center; line-height: 1.5; margin: 10px 0 0; transition: opacity 0.18s ease; }
+.ev-ant-motivo-ayuda:empty { margin: 0; }
+
 /* Paso "Tipo de rango" -> "Por meses": grilla de 3 columnas, año actual,
    meses pasados deshabilitados (ver _evAntRenderMesesGrid(), js/eventos.js
    -- no existía ningún componente reusable de grilla de meses en el

@@ -41,7 +41,7 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=3f9fd2fc">
 <link rel="stylesheet" href="css/nav.css?v=f9a04f6b">
-<link rel="stylesheet" href="css/eventos.css?v=0a25f4cd">
+<link rel="stylesheet" href="css/eventos.css?v=e0608f43">
 <link rel="stylesheet" href="css/tareas.css">
 <link rel="stylesheet" href="css/equipo.css?v=f27356e2">
 <link rel="stylesheet" href="css/perfil.css">
@@ -865,6 +865,17 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
                 <div class="ev-rsvp-opt" data-estado="Asistiré" onclick="_evAntSelEstado(this)"><span class="material-symbols-outlined">check_circle</span>Asistiré</div>
                 <div class="ev-rsvp-opt" data-estado="No asistiré" onclick="_evAntSelEstado(this)"><span class="material-symbols-outlined">cancel</span>No asistiré</div>
                 <div class="ev-rsvp-opt" data-estado="No jugador" onclick="_evAntSelEstado(this)"><span class="material-symbols-outlined">radio_button_checked</span>No jugador</div>
+              </div>
+            </div>
+            <!-- Motivo obligatorio con "No asistiré" (modelo de autodeclaración,
+                 ver MANIFEST.md): pills pintadas por `_evAntRenderMotivos()`
+                 con los íconos de `_EQ_ESTADO_ICONOS` (js/equipo.js). Entra/sale
+                 con fade+slide (`.ev-ant-motivo` / `.visible`, css/eventos.css). -->
+            <div class="ev-ant-motivo" id="ev-ant-motivo" aria-hidden="true">
+              <div class="ev-ant-motivo-inner">
+                <div class="ev-ant-motivo-titulo">¿Por qué no asistirás?</div>
+                <div class="aj-pills-row ev-ant-motivo-pills" id="ev-ant-motivo-pills"></div>
+                <p class="ev-ant-motivo-ayuda" id="ev-ant-motivo-ayuda"></p>
               </div>
             </div>
             <div class="error-msg" id="ev-ant-err-0"></div>
@@ -3193,7 +3204,9 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
         <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">volunteer_activism</span></div>
         <div class="admin-dash-tile-label">Excepciones de pago</div>
       </div>
-      <div class="admin-dash-tile admin-dash-pill" data-tile="admin-lesiones" onclick="adminToggleBurbuja('admin-lesiones', this)">
+      <!-- Oculta por defecto: solo aparece con solicitudes de lesión viejas
+           pendientes (flujo con aprobación OBSOLETO, ver _adminLesionesSetVisible()). -->
+      <div class="admin-dash-tile admin-dash-pill" data-tile="admin-lesiones" style="display:none;" onclick="adminToggleBurbuja('admin-lesiones', this)">
         <div class="admin-dash-tile-icon"><span class="material-symbols-outlined">personal_injury</span></div>
         <div class="admin-dash-tile-label">Lesiones</div>
       </div>
@@ -3568,14 +3581,14 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js?v=8e63a98b"></script>
 <script src="js/ui.js?v=24cea86a"></script>
-<script src="js/eventos.js?v=7e45e5f5"></script>
+<script src="js/eventos.js?v=e3932c57"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=f1afb381"></script>
-<script src="js/equipo.js?v=c05d2441"></script>
+<script src="js/equipo.js?v=e5ca8475"></script>
 <script src="js/home.js?v=e715822d"></script>
 <script src="js/reservas.js?v=d9f7492c"></script>
 <script src="js/perfil.js?v=466b2999"></script>
-<script src="js/admin.js?v=3c3b5a63"></script>
+<script src="js/admin.js?v=6d98bcbe"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js?v=d18bc0da"></script>
 
@@ -5372,8 +5385,8 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div class="bsheet-handle"></div>
   <div class="bsheet-title">Reportar lesión</div>
   <div class="bsheet-body">
-    <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 20px;">Tu solicitud será enviada a los admins para aprobación. Mientras esté pendiente, tu estado no cambia.</p>
-    <button type="button" class="btn btn-primary" onclick="_eqLesionConfirmar()" style="margin-bottom:10px;">Enviar solicitud</button>
+    <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 20px;">Pasarás a Lesionadx ahora mismo. Tu categoría queda congelada y quedas exento/a de cuota mientras dure la lesión. Si vienes a entrenar, vuelves a Activx automáticamente.</p>
+    <button type="button" class="btn btn-primary" onclick="_eqLesionConfirmar()" style="margin-bottom:10px;">Reportar lesión</button>
     <button type="button" class="btn btn-outline" onclick="_eqLesionCerrarSheet()">Cancelar</button>
   </div>
 </div>

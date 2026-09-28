@@ -7375,6 +7375,7 @@ function _evAntMapReglaSupabase(row) {
     fechaDesde: row.fecha_desde,
     fechaHasta: row.fecha_hasta,
     estado: row.estado,
+    motivo: row.motivo || null,
     meses: row.meses || [],
   };
 }
@@ -7638,7 +7639,7 @@ function _evAntRenderLista() {
   cont.innerHTML = _evAntReglas.map(function(r) {
     return '<div class="ev-ant-card">' +
       '<div class="ev-card-top-row">' +
-        '<div class="ev-card-icon"><span class="material-symbols-outlined">event_available</span></div>' +
+        '<div class="ev-card-icon"><span class="material-symbols-outlined">' + (_evAntMotivoIcono(r.motivo) || 'event_available') + '</span></div>' +
         '<div class="ev-card-body">' +
           '<div class="ev-card-titulo">' + _evAntResumenRango(r) + '</div>' +
           '<div class="ev-ant-card-sub">' + _evAntResumenDetalle(r) + '</div>' +
@@ -7679,7 +7680,7 @@ function _evAntFechaLegible(iso) {
   return parseInt(p[2], 10) + '/' + parseInt(p[1], 10) + '/' + p[0];
 }
 function _evAntResumenDetalle(r) {
-  return 'Estado: ' + r.estado;
+  return 'Estado: ' + r.estado + (r.estado === 'No asistiré' && r.motivo ? ' · ' + r.motivo : '');
 }
 
 // Sheet de confirmación "Eliminar asistencia anticipada" (#ev-ant-sheet-eliminar,
@@ -7720,15 +7721,20 @@ function _evAntConfirmarEliminar(btn) {
   if (!_evAntEliminarPendienteId) return;
   var id = _evAntEliminarPendienteId;
   _evAntEliminarPendienteId = null;
+  var vieja = _evAntReglas.filter(function(r) { return r.id === id; })[0] || null;
   _evAntCerrarSheetEliminar();
   mostrarCargando('Eliminando...');
   fetch(SUPABASE_URL + '/rest/v1/reglas_asistencia?id=eq.' + id, {
     method: 'DELETE',
     headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY }
   }).then(function(r) {
-    ocultarCargando();
-    if (!r.ok) { mostrarToast('No se pudo eliminar.', 'error'); return; }
-    _evAntRecargarLista();
+    if (!r.ok) { ocultarCargando(); mostrarToast('No se pudo eliminar.', 'error'); return; }
+    // Borrar una regla "De viaje" termina el viaje; Lesionadx/Inactivx no
+    // cambian el estado (ver `_evAntSincronizarEstado()`).
+    _evAntSincronizarEstado(null, vieja, function() {
+      ocultarCargando();
+      _evAntRecargarLista();
+    });
   }).catch(function() {
     ocultarCargando();
     mostrarToast('No se pudo eliminar la asistencia anticipada.', 'error');
@@ -7770,6 +7776,7 @@ function _evAntIniciarWizard(regla) {
     fechaDesde: regla ? (regla.fechaDesde || null) : null,
     fechaHasta: regla ? (regla.fechaHasta || null) : null,
     estado: regla ? regla.estado : null,
+    motivo: (regla && regla.estado === 'No asistiré') ? (regla.motivo || null) : null,
     editando: regla ? regla.id : null
   };
   // Editar una regla existente ya trae fecha(s) resueltas -- el botón
@@ -7801,6 +7808,8 @@ function _evAntIniciarWizard(regla) {
     if (opt) opt.classList.add('activa');
   }
   if (estadoSeg) _evPosicionarRsvpSlider(estadoSeg, false);
+  _evAntRenderMotivos();
+  _evAntMostrarMotivo(_evAntData.estado === 'No asistiré', false);
 
   ['ev-ant-paso1-meses', 'ev-ant-paso1-periodo', 'ev-ant-paso1-indefinido'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.style.display = 'none';
@@ -7980,15 +7989,103 @@ function _evAntSelEstado(el) {
   el.classList.add('activa');
   _evPosicionarRsvpSlider(seg, true);
   _evAntData.estado = el.getAttribute('data-estado');
+  var noAsistire = _evAntData.estado === 'No asistiré';
+  // "No asistiré" pide motivo (obligatorio): la sección queda abierta hasta
+  // elegirlo (`_evAntSelMotivo()` recién ahí pasa a "Frecuencia"). Con
+  // "Asistiré"/"No jugador" el motivo no aplica: se oculta y se limpia.
+  if (!noAsistire) { _evAntData.motivo = null; _evAntRenderMotivos(); }
+  _evAntMostrarMotivo(noAsistire, true);
   _evAntActualizarResumenEstado();
-  _evAntSetAcordeon('estado', false);
-  _evAntSetAcordeon('frecuencia', true);
+  if (!noAsistire || _evAntData.motivo) {
+    _evAntSetAcordeon('estado', false);
+    _evAntSetAcordeon('frecuencia', true);
+  }
   _evAntActualizarBotonAplicar();
 }
 
 function _evAntActualizarResumenEstado() {
   var el = document.getElementById('ev-ant-acc-estado-resumen');
-  if (el) el.textContent = _evAntData.estado || '';
+  if (el) el.textContent = (_evAntData.estado || '') + (_evAntData.estado === 'No asistiré' && _evAntData.motivo ? ' · ' + _evAntData.motivo : '');
+}
+
+// ── Motivo de "No asistiré" (modelo de autodeclaración, ver MANIFEST.md) ──
+// Obligatorio, sin texto ni justificación: la persona declara su estado y
+// se le cree; la validación es la asistencia real (backend,
+// `_reactivarPorAsistencia()`). Cada motivo mapea a un `estado_miembro` que
+// se aplica al guardar la regla (`_evAntSincronizarEstado()`). Íconos del
+// mapa central de estados (`_EQ_ESTADO_ICONOS`, js/equipo.js).
+var _EV_ANT_MOTIVOS = [
+  { valor: 'De viaje',  estado: 'De viaje',  ayuda: 'Tu categoría queda congelada durante el viaje.' },
+  { valor: 'Lesionadx', estado: 'Lesionadx', ayuda: 'Tu categoría queda congelada y quedas exento/a de cuota mientras dure la lesión.' },
+  { valor: 'Inactivx',  estado: 'Ausente',   ayuda: 'Tu categoría sigue las reglas normales de asistencia.' }
+];
+var _EV_ANT_MOTIVO_AYUDA_COMUN = 'Si vienes a entrenar, vuelves a Activx automáticamente.';
+function _evAntMotivoDef(valor) {
+  return _EV_ANT_MOTIVOS.filter(function(m) { return m.valor === valor; })[0] || null;
+}
+function _evAntMotivoIcono(valor) {
+  var def = _evAntMotivoDef(valor);
+  return (def && typeof _EQ_ESTADO_ICONOS !== 'undefined') ? (_EQ_ESTADO_ICONOS[def.estado] || '') : '';
+}
+function _evAntRenderMotivos() {
+  var cont = document.getElementById('ev-ant-motivo-pills');
+  if (cont) {
+    cont.innerHTML = _EV_ANT_MOTIVOS.map(function(m) {
+      var activa = _evAntData.motivo === m.valor;
+      var icono = _evAntMotivoIcono(m.valor);
+      return '<span class="aj-pill' + (activa ? ' activa' : '') + '" data-val="' + m.valor + '" role="radio" aria-checked="' + activa + '" onclick="_evAntSelMotivo(this)">' +
+        (icono ? '<span class="material-symbols-rounded">' + icono + '</span>' : '') + m.valor + '</span>';
+    }).join('');
+  }
+  _evAntActualizarAyudaMotivo();
+}
+function _evAntActualizarAyudaMotivo() {
+  var el = document.getElementById('ev-ant-motivo-ayuda');
+  if (!el) return;
+  var def = _evAntMotivoDef(_evAntData.motivo);
+  var texto = def ? def.ayuda + ' ' + _EV_ANT_MOTIVO_AYUDA_COMUN : '';
+  if (el.textContent === texto) return;
+  // Cambio de texto con un fade corto (nunca de golpe).
+  var habia = !!el.textContent;
+  el.style.opacity = '0';
+  setTimeout(function() { el.textContent = texto; el.style.opacity = '1'; }, habia ? 150 : 0);
+}
+// Muestra/oculta el bloque con la transición de `.ev-ant-motivo`
+// (css/eventos.css). `animar:false` (al abrir el wizard) lo deja en su
+// estado final sin transición.
+function _evAntMostrarMotivo(mostrar, animar) {
+  var el = document.getElementById('ev-ant-motivo');
+  if (!el) return;
+  if (!animar) {
+    el.style.transition = 'none';
+    el.classList.toggle('visible', !!mostrar);
+    void el.offsetWidth;
+    el.style.transition = '';
+  } else {
+    el.classList.toggle('visible', !!mostrar);
+  }
+  el.setAttribute('aria-hidden', mostrar ? 'false' : 'true');
+}
+function _evAntSelMotivo(el) {
+  var nuevo = el.getAttribute('data-val');
+  el.parentElement.querySelectorAll('.aj-pill').forEach(function(p) { p.classList.remove('activa'); p.setAttribute('aria-checked', 'false'); });
+  el.classList.add('activa');
+  el.setAttribute('aria-checked', 'true');
+  var primeraVez = !_evAntData.motivo;
+  _evAntData.motivo = nuevo;
+  _evAntActualizarAyudaMotivo();
+  _evAntActualizarResumenEstado();
+  _evAntActualizarBotonAplicar();
+  // Primera elección con la frecuencia todavía sin completar: pasa a
+  // "Frecuencia" (mismo flujo que el resto de estados), con una pausa para
+  // que se alcance a leer la línea de ayuda.
+  if (primeraVez && !_evAntFrecuenciaValida()) {
+    setTimeout(function() {
+      if (_evAntData.motivo !== nuevo) return;
+      _evAntSetAcordeon('estado', false);
+      _evAntSetAcordeon('frecuencia', true);
+    }, 900);
+  }
 }
 
 // Frecuencia (pill), con reveal inline de meses/período/indefinido según la
@@ -8391,7 +8488,10 @@ function _evAntFrecuenciaValida() {
   return false;
 }
 function _evAntCompleto() {
-  return !!_evAntData.estado && _evAntFrecuenciaValida();
+  if (!_evAntData.estado) return false;
+  // Motivo obligatorio con "No asistiré" (ver `_EV_ANT_MOTIVOS`).
+  if (_evAntData.estado === 'No asistiré' && !_evAntMotivoDef(_evAntData.motivo)) return false;
+  return _evAntFrecuenciaValida();
 }
 // Botón "Aplicar" del footer -- habilitado solo con Estado Y Frecuencia
 // completos (ver "Cambios recientes"), sin importar qué sección del
@@ -8519,6 +8619,9 @@ function _evAntAplicar() {
     // mismo formato que ya mandaba el cliente antes de esta migración.
     tipos_evento: ['Entrenamiento'].join(','),
     estado: _evAntData.estado,
+    // Obligatorio con "No asistiré", NULL con el resto (CHECK
+    // `reglas_asistencia_motivo_check`, migración 20260928000000).
+    motivo: _evAntData.estado === 'No asistiré' ? _evAntData.motivo : null,
     meses: null, fecha_desde: null, fecha_hasta: null
   };
   if (_evAntData.tipoRango === 'meses') body.meses = _evAntData.meses;
@@ -8526,6 +8629,7 @@ function _evAntAplicar() {
   else body.fecha_desde = _evAntData.fechaDesde;
 
   var editando = _evAntData.editando;
+  var vieja = editando ? (_evAntReglas.filter(function(r) { return r.id === editando; })[0] || null) : null;
 
   function crear() {
     fetch(SUPABASE_URL + '/rest/v1/reglas_asistencia', {
@@ -8534,9 +8638,11 @@ function _evAntAplicar() {
       body: JSON.stringify(body)
     }).then(function(r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      _evAntRecargarLista(function() {
-        ocultarCargando();
-        _evAntCerrarWizardAResumen();
+      _evAntSincronizarEstado(body, vieja, function() {
+        _evAntRecargarLista(function() {
+          ocultarCargando();
+          _evAntCerrarWizardAResumen();
+        });
       });
     }).catch(function(e) {
       ocultarCargando();
@@ -8559,6 +8665,67 @@ function _evAntAplicar() {
   } else {
     crear();
   }
+}
+
+// Rango del viaje a partir de una regla (fila cruda de `reglas_asistencia`):
+// 'periodo' -> [desde, hasta]; 'indefinido' -> [desde, null]; 'meses' ->
+// del 1ro del primer mes (o hoy, si ese mes es el actual) al último día del
+// último mes, año en curso (misma grilla que `_evAntRenderMesesGrid()`).
+function _evAntRangoViaje(regla) {
+  if (regla.tipo_rango === 'periodo') return { desde: regla.fecha_desde, hasta: regla.fecha_hasta };
+  if (regla.tipo_rango === 'indefinido') return { desde: regla.fecha_desde, hasta: null };
+  var meses = (regla.meses || []).map(Number).filter(function(m) { return m >= 1 && m <= 12; });
+  if (!meses.length) return { desde: null, hasta: null };
+  var anio = new Date().getFullYear();
+  var min = Math.min.apply(null, meses), max = Math.max.apply(null, meses);
+  var desde = anio + '-' + ('0' + min).slice(-2) + '-01';
+  var hoy = _evHoyISO();
+  if (_evFechaCmp(desde, hoy) < 0) desde = hoy;
+  var hasta = _evToISO(new Date(anio, max, 0)); // día 0 del mes siguiente = último día de `max`
+  return { desde: desde, hasta: hasta };
+}
+
+// Aplica al `estado_miembro` propio el efecto de guardar/editar/eliminar una
+// regla (modelo de autodeclaración, ver MANIFEST.md). `nueva` = body recién
+// guardado (null al eliminar), `vieja` = regla anterior mapeada (editar/
+// eliminar, null al crear).
+//  · Nueva "No asistiré" con motivo -> `autodeclararEstado` (De viaje con el
+//    rango de la regla, así editar la regla mueve las fechas del viaje;
+//    Lesionadx; Inactivx -> 'Ausente').
+//  · Si no, y la vieja era "No asistiré · De viaje" -> `terminarMiViaje`
+//    (vuelve a Activx con limpieza). Lesionadx NO se quita al borrar la
+//    regla (se sale con "Estoy recuperadx" o viniendo a entrenar) e Inactivx
+//    no cambia el estado.
+// La regla ya quedó guardada: un fallo acá solo avisa, nunca la deshace.
+// `cb` corre siempre.
+function _evAntSincronizarEstado(nueva, vieja, cb) {
+  var req = null, estadoLocal = null;
+  var def = nueva && nueva.estado === 'No asistiré' ? _evAntMotivoDef(nueva.motivo) : null;
+  if (def) {
+    req = { action: 'autodeclararEstado', token: _token, estado: def.estado };
+    if (def.estado === 'De viaje') {
+      var rango = _evAntRangoViaje(nueva);
+      // Solo si hay fecha: apiPost() serializa `null` como el texto "null".
+      if (rango.desde) req.viajeDesde = rango.desde;
+      if (rango.hasta) req.viajeHasta = rango.hasta;
+    }
+    estadoLocal = def.estado;
+  } else if (vieja && vieja.estado === 'No asistiré' && vieja.motivo === 'De viaje') {
+    req = { action: 'terminarMiViaje', token: _token };
+    estadoLocal = 'Activx';
+  }
+  if (!req) { cb(); return; }
+  apiPost(req, function(res) {
+    if (!res || !res.exito) {
+      mostrarToast('La asistencia anticipada se guardó, pero no se pudo actualizar tu estado: ' + ((res && res.error) || 'error desconocido'), 'error');
+    } else if (!res.sinCambio && typeof _eqAplicarEstadoPropio === 'function') {
+      _eqAplicarEstadoPropio(res.estado || estadoLocal, res);
+    }
+    cb();
+  }, function(e) {
+    mostrarToast('La asistencia anticipada se guardó, pero no se pudo actualizar tu estado: ' + ((e && e.message) || 'error de conexión'), 'error');
+    cb();
+  });
 }
 
 // Modal de conflicto (mismo idioma de animación que abrirModalInfoEstado()/

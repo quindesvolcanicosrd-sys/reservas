@@ -3768,30 +3768,34 @@ function _eqRenderPerfil(p) {
   }
 }
 
-/* ── Flujo de lesión propio (Cambio 54; movido desde Mi perfil/Ajustes,
-   js/perfil.js, al detalle propio de Equipo -- ver MANIFEST.md) ──────────
-   Auto-reporte de usuaria + aprobación admin (contraparte en Mi Liga, ver
-   js/admin.js). `estado_miembro` (snake_case, tal cual viaja desde
-   getDatosCompletos()) y `solicitudLesionPendiente` (E.datos) gobiernan qué
-   se muestra: Activx sin solicitud -> botón "Reportar lesión"; solicitud
-   pendiente -> texto + "Cancelar solicitud"; Lesionadx -> texto + "Estoy
-   recuperadx". Otros estados (Ausente/Técnico/De viaje) -> nada. Vive en
+/* ── Flujo de lesión propio (movido desde Mi perfil/Ajustes, js/perfil.js, al
+   detalle propio de Equipo -- ver MANIFEST.md) ──────────────────────────
+   Modelo de autodeclaración (ver MANIFEST.md): "Reportar lesión" aplica
+   Lesionadx DIRECTO (`autodeclararEstado`, sin aprobación ni justificación)
+   tras un sheet de confirmación simple; "Estoy recuperadx" sigue igual
+   (`recuperarseLesion`). Venir a entrenar también la devuelve a Activx
+   (backend, `_reactivarPorAsistencia()`). `estado_miembro` (snake_case, tal
+   cual viaja desde getDatosCompletos()) gobierna qué se muestra: Activx ->
+   botón "Reportar lesión"; Lesionadx -> texto + "Estoy recuperadx"; otros
+   estados (Ausente/Técnico/De viaje) -> nada. `solicitudLesionPendiente`
+   (flujo viejo con aprobación, OBSOLETO) solo se muestra si quedó una
+   solicitud creada antes del cambio, con su "Cancelar solicitud". Vive en
    `#eq-lesion-wrap`, que `_eqPerfilContenidoHtml()` solo agrega en el
    detalle propio. Sheet de confirmación: `#dat-lesion-sheet` (index.html). */
 function _eqLesionHtml() {
   var d = (typeof E !== 'undefined' && E.datos) || null;
   if (!d) return '';
   var estado = d.estado_miembro || 'Activx';
+  if (estado === 'Lesionadx') {
+    return '<p class="eq-lesion-texto">Estás marcadx como Lesionadx. Estás exentx de la cuota durante este período. Si vienes a entrenar, vuelves a Activx automáticamente.</p>' +
+      '<button type="button" class="eq-lesion-btn" onclick="_eqLesionRecuperarse()">Estoy recuperadx</button>';
+  }
   if (d.solicitudLesionPendiente) {
     return '<p class="eq-lesion-texto">Solicitud enviada, esperando aprobación de los admins.</p>' +
       '<a href="javascript:void(0)" class="eq-lesion-link" onclick="_eqLesionCancelarSolicitud()">Cancelar solicitud</a>';
   }
-  if (estado === 'Lesionadx') {
-    return '<p class="eq-lesion-texto">Estás marcadx como Lesionadx. Estás exentx de la cuota durante este período.</p>' +
-      '<button type="button" class="eq-lesion-btn" onclick="_eqLesionRecuperarse()">Estoy recuperadx</button>';
-  }
   if (estado === 'Activx') {
-    return '<button type="button" class="btn btn-outline eq-lesion-btn-sutil" onclick="_eqLesionAbrirSheet()"><span class="material-symbols-outlined">personal_injury</span>Reportar lesión</button>';
+    return '<button type="button" class="btn btn-outline eq-lesion-btn-sutil" onclick="_eqLesionAbrirSheet()">' + _eqEstadoIconoHtml('Lesionadx') + 'Reportar lesión</button>';
   }
   return '';
 }
@@ -3822,15 +3826,29 @@ function _eqLesionCerrarSheet(porGesto) {
     if (ov) ov.style.display = 'none';
   }, 350);
 }
-// Tras un cambio real de estado (recuperarse), repinta el detalle abierto
-// (badge del avatar + bloque de lesión); el roster se re-renderiza al
-// volver (`_eqVolverLista()`).
-function _eqLesionAplicarEstado(nuevoEstado) {
-  if (E.datos) E.datos.estado_miembro = nuevoEstado;
+// Refleja localmente un cambio de estado PROPIO ya confirmado por el backend
+// (`autodeclararEstado`/`terminarMiViaje`/`recuperarseLesion`) -- `E.datos`
+// (gating de cuota, `_evTieneCuotaAlDia()`), la persona en `_eqPersonas`, el
+// detalle abierto (badge del avatar + bloque de lesión) y el roster. Usada
+// también desde Asistencia anticipada (js/eventos.js). `datos` opcional:
+// `{ exentaCuota, categoria, viajeDesde, viajeHasta }` tal cual los devuelve
+// el backend (solo se aplican los que vienen definidos).
+function _eqAplicarEstadoPropio(nuevoEstado, datos) {
+  datos = datos || {};
+  var exenta = (datos.exentaCuota === true || datos.exentaCuota === false) ? datos.exentaCuota : null;
+  if (typeof E !== 'undefined' && E.datos) {
+    E.datos.estado_miembro = nuevoEstado;
+    E.datos.solicitudLesionPendiente = false;
+    if (exenta !== null) E.datos.exenta_cuota = exenta;
+    if (datos.categoria) E.datos.categoria = datos.categoria;
+  }
   var yo = _eqUsuariaActual();
   if (yo) {
     yo.estado = nuevoEstado;
-    yo.exentaCuota = (nuevoEstado === 'Lesionadx');
+    if (exenta !== null) yo.exentaCuota = exenta;
+    if (datos.categoria) yo.rol = datos.categoria;
+    yo.viajeDesde = nuevoEstado === 'De viaje' ? (datos.viajeDesde || null) : null;
+    yo.viajeHasta = nuevoEstado === 'De viaje' ? (datos.viajeHasta || null) : null;
     if (_eqPersonaActual && _eqPersonaActual.id === yo.id) _eqRenderPerfil(yo);
   }
   _eqLesionRefrescar();
@@ -3840,14 +3858,15 @@ function _eqLesionConfirmar() {
   _eqLesionCerrarSheet();
   // apiPost() (js/api.js), a diferencia de api()/GET, NO inyecta `_token`
   // solo -- hay que pasarlo explícito o la acción responde "Sesión inválida".
-  apiPost({ action: 'solicitarLesion', token: _token }, function(res) {
-    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo enviar la solicitud. Intenta de nuevo.', 'error'); return; }
-    if (E.datos) E.datos.solicitudLesionPendiente = true;
-    _eqLesionRefrescar();
+  apiPost({ action: 'autodeclararEstado', token: _token, estado: 'Lesionadx' }, function(res) {
+    if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo reportar la lesión. Intenta de nuevo.', 'error'); return; }
+    if (res.sinCambio) return;
+    _eqAplicarEstadoPropio('Lesionadx', res);
   }, function(e) {
-    mostrarToast((e && e.message) || 'No se pudo enviar la solicitud. Intenta de nuevo.', 'error');
+    mostrarToast((e && e.message) || 'No se pudo reportar la lesión. Intenta de nuevo.', 'error');
   });
 }
+// Solo para solicitudes pendientes creadas con el flujo viejo (OBSOLETO).
 function _eqLesionCancelarSolicitud() {
   apiPost({ action: 'cancelarSolicitudLesion', token: _token }, function(res) {
     if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo cancelar la solicitud.', 'error'); return; }
@@ -3860,7 +3879,7 @@ function _eqLesionCancelarSolicitud() {
 function _eqLesionRecuperarse() {
   apiPost({ action: 'recuperarseLesion', token: _token }, function(res) {
     if (!res || !res.exito) { mostrarToast((res && res.error) || 'No se pudo actualizar tu estado.', 'error'); return; }
-    _eqLesionAplicarEstado('Activx');
+    _eqAplicarEstadoPropio('Activx', { exentaCuota: false, categoria: res.categoria });
   }, function(e) {
     mostrarToast((e && e.message) || 'No se pudo actualizar tu estado.', 'error');
   });

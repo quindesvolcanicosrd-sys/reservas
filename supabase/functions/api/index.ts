@@ -2118,30 +2118,23 @@ async function adminMarcarAsistencia(params: Record<string, any>): Promise<Recor
   if (esCorreccion) {
     await _reconstruirRachasHistoricas(nombre);
   } else {
-    const { data: filaEquipo } = await supabase.from('equipo').select('racha_actual, estado_miembro').eq('username', nombre).maybeSingle();
+    const { data: filaEquipo } = await supabase.from('equipo').select('racha_actual').eq('username', nombre).maybeSingle();
     if (estado === 'A tiempo' || estado === 'Tarde') {
       const rachaNueva = (Number(filaEquipo?.racha_actual) || 0) + 1;
       await supabase.from('equipo').update({ racha_actual: rachaNueva }).eq('username', nombre);
       if (rachaNueva % 3 === 0) {
         await _acreditarPuntosExtra(nombre, anioEvento, mesEvento, 2);
       }
-      // Reactivación automática (feat nueva, ver MANIFEST.md -- "usuarios
-      // inactivos en Eventos"): una marca real de presente ('A
-      // tiempo'/'Tarde') ES la prueba de que la persona volvió -- si estaba
-      // 'Ausente' (el único estado que este mismo backend marca solo por
-      // inactividad -- ver `_eqEstadoEfectivo()`/js/equipo.js, "30+ días sin
-      // asistir"), pasa a 'Activx' sola, sin que el admin tenga que ir
-      // aparte al perfil de Equipo a cambiarla a mano. NO toca
-      // 'Técnico'/'Lesionadx' -- esos son categorías de membresía propias,
-      // no un estado de inactividad detectado por fecha, tomarle asistencia
-      // a alguien en esos estados no implica que deban dejar de serlo.
-      if (filaEquipo?.estado_miembro === 'Ausente') {
-        await supabase.from('equipo').update({ estado_miembro: 'Activx' }).eq('username', nombre);
-      }
     } else if (estado === 'Ninguno') {
       await supabase.from('equipo').update({ racha_actual: 0 }).eq('username', nombre);
     }
   }
+
+  // Reactivación automática (ver `_reactivarPorAsistencia()`): FUERA del
+  // if/else de `esCorreccion` a propósito -- antes vivía solo en la rama
+  // no-corrección, así que re-marcar a alguien (corrección) nunca lo
+  // reactivaba.
+  if (estado === 'A tiempo' || estado === 'Tarde') await _reactivarPorAsistencia(nombre, idEvento);
 
   // Batch 8 (ver MANIFEST.md): recalcula los stats de ESTA persona apenas
   // se confirma que la asistencia quedó guardada -- antes solo pasaba con
@@ -2293,6 +2286,9 @@ async function _aplicarRectificacion(idEvento: string, nombre: string, estadoSol
     // `aHorario`/`tarde` arriba).
     await recalcularStatsUsuario(nombre);
   }
+  // Una rectificación aprobada a 'A tiempo'/'Tarde' es una marca real de
+  // presente, mismo efecto que en adminMarcarAsistencia().
+  if (estadoSolicitado === 'A tiempo' || estadoSolicitado === 'Tarde') await _reactivarPorAsistencia(nombre, idEvento);
 }
 
 async function adminSetEstadoRectificacion(params: Record<string, any>): Promise<Record<string, any>> {
@@ -2684,37 +2680,214 @@ async function adminToggleCupon(params: Record<string, any>): Promise<Record<str
 
 const ESTADOS_MIEMBRO = ['Activx', 'Ausente', 'Técnico', 'Lesionadx'];
 
+// ─── Transiciones de estado_miembro (helpers compartidos) ────────────────────
+// Modelo de autodeclaración (ver MANIFEST.md): la persona declara su propio
+// estado (De viaje / Lesionadx / Ausente) sin aprobación, y una marca real de
+// presente la devuelve a Activx sola. Estos helpers son el ÚNICO lugar que
+// arma los campos de entrada/salida de cada estado -- los usan
+// adminSetEstadoMiembro(), autodeclararEstado(), recuperarseLesion(),
+// terminarMiViaje(), adminAprobarLesion() y la reactivación por asistencia.
+const SELECT_ESTADO_MIEMBRO = 'estado_miembro, categoria, categoria_pre_lesion';
+// Estados de los que una marca real de presente saca a la persona.
+const ESTADOS_REACTIVABLES = ['Ausente', 'Lesionadx', 'De viaje'];
+
+// Campos a limpiar al SALIR de `fila.estado_miembro` hacia `estadoNuevo`
+// (vacío si no cambia de estado).
+//  · De viaje → limpia viaje_desde/viaje_hasta.
+//  · Lesionadx → restaura `categoria` desde `categoria_pre_lesion` (tier en
+//    pausa durante la lesión, `recalcular-categorias` la saltea), limpia
+//    `categoria_pre_lesion`, `exenta_cuota=false` (la exención estaba atada a
+//    la lesión, Cambio 55) y `solicitud_lesion_pendiente=false`.
+function _camposSalidaEstado(fila: Record<string, any> | null, estadoNuevo: string): Record<string, any> {
+  const previo = fila?.estado_miembro ?? null;
+  const u: Record<string, any> = {};
+  if (!previo || previo === estadoNuevo) return u;
+  if (previo === 'De viaje') { u.viaje_desde = null; u.viaje_hasta = null; }
+  if (previo === 'Lesionadx') {
+    if (fila?.categoria_pre_lesion) u.categoria = fila.categoria_pre_lesion;
+    u.categoria_pre_lesion = null;
+    u.exenta_cuota = false;
+    u.solicitud_lesion_pendiente = false;
+  }
+  return u;
+}
+
+// Campos al ENTRAR a Lesionadx: guarda la categoría de antes (solo si viene
+// de otro estado, para no pisar el valor guardado con un no-op) y exime de
+// cuota.
+function _camposEntradaLesion(fila: Record<string, any> | null): Record<string, any> {
+  const u: Record<string, any> = { estado_miembro: 'Lesionadx', exenta_cuota: true, solicitud_lesion_pendiente: false };
+  if (fila?.estado_miembro !== 'Lesionadx') u.categoria_pre_lesion = fila?.categoria ?? null;
+  return u;
+}
+
+// Salida de estado hacia Activx, con limpieza completa + cierre de las reglas
+// "No asistiré" vigentes (para que la asistencia anticipada no le siga
+// marcando ausencias). `extra` se suma al UPDATE (adminSetEstadoMiembro manda
+// `exenta_cuota:false`, su sync histórico). `cerrarReglas:false` solo para
+// terminarMiViaje() (la regla del viaje ya se está borrando/editando).
+async function _reactivarMiembro(
+  nombre: string,
+  fila: Record<string, any> | null,
+  opts: { extra?: Record<string, any>; cerrarReglas?: boolean } = {},
+): Promise<Record<string, any>> {
+  const actual = fila ?? (await supabase.from('equipo').select(SELECT_ESTADO_MIEMBRO).eq('username', nombre).maybeSingle()).data;
+  if (!actual) return { exito: false, error: 'No existe esa persona.' };
+  const update = { estado_miembro: 'Activx', ..._camposSalidaEstado(actual, 'Activx'), ...(opts.extra ?? {}) };
+  const { error } = await supabase.from('equipo').update(update).eq('username', nombre);
+  if (error) return { exito: false, error: error.message };
+  if (opts.cerrarReglas !== false && ESTADOS_REACTIVABLES.includes(actual.estado_miembro)) {
+    await _cerrarReglasNoAsistireVigentes(nombre);
+  }
+  return { exito: true, categoria: update.categoria ?? actual.categoria ?? null };
+}
+
+// RSVP vigente de una persona para un evento: el último 'Usuario' si existe
+// (una respuesta real le gana a una regla automática, mismo criterio que
+// `_ultimaAsistenciaPorPersonaTodas()`), si no el último 'AsistenciaAnticipada'.
+async function _rsvpVigente(idEvento: string, nombre: string): Promise<string | null> {
+  const { data } = await supabase.from('log_asistencias')
+    .select('estado, origen').eq('id_evento', idEvento).eq('nombre_usuario', nombre)
+    .in('origen', ['Usuario', 'AsistenciaAnticipada'])
+    .order('marca_temporal', { ascending: false }).limit(50);
+  const filas = data ?? [];
+  const fila = filas.find((f: any) => f.origen === 'Usuario') ?? filas[0];
+  return fila?.estado ?? null;
+}
+
+// Reactivación automática al marcar 'A tiempo'/'Tarde' (adminMarcarAsistencia,
+// también en correcciones, y rectificaciones aprobadas). Una marca real de
+// presente ES la validación del estado autodeclarado: Ausente/Lesionadx/De
+// viaje → Activx. NO toca 'Técnico'. Excepción: Lesionadx con RSVP vigente
+// 'No jugador' para ESE evento sigue Lesionadx (vino a patinar, no a
+// entrenar) -- solo para Lesionadx, De viaje/Ausente se reactivan igual.
+// La asistencia externa (adminRegistrarAsistenciaExterna) no pasa por acá.
+async function _reactivarPorAsistencia(nombre: string, idEvento: string): Promise<void> {
+  const { data: fila } = await supabase.from('equipo').select(SELECT_ESTADO_MIEMBRO).eq('username', nombre).maybeSingle();
+  if (!fila || !ESTADOS_REACTIVABLES.includes(fila.estado_miembro)) return;
+  if (fila.estado_miembro === 'Lesionadx' && (await _rsvpVigente(idEvento, nombre)) === 'No jugador') return;
+  await _reactivarMiembro(nombre, fila);
+}
+
+// Cierra (fecha fin = hoy, Ecuador) las reglas de asistencia anticipada
+// "No asistiré" de la persona que ya están en curso. Las que todavía no
+// empezaron no se tocan. `reglas_asistencia` no tiene UPDATE para anon (el
+// frontend edita con DELETE+POST), acá va con service_role. 'indefinido'
+// ignora `fecha_hasta` y 'meses' no tiene fechas (ver
+// `_evAntReconciliarConReglas()`/js/eventos.js), así que ambas se convierten
+// a 'periodo' [inicio real, hoy].
+async function _cerrarReglasNoAsistireVigentes(nombre: string): Promise<void> {
+  const hoy = _hoyEcuadorISO();
+  const anio = hoy.slice(0, 4);
+  const mesHoy = Number(hoy.slice(5, 7));
+  const { data: reglas } = await supabase.from('reglas_asistencia')
+    .select('id, tipo_rango, fecha_desde, fecha_hasta, meses').eq('nombre', nombre).eq('estado', 'No asistiré');
+  for (const r of reglas ?? []) {
+    let desde: string | null = null;
+    if (r.tipo_rango === 'periodo') {
+      if (!r.fecha_desde || r.fecha_desde > hoy || (r.fecha_hasta && r.fecha_hasta <= hoy)) continue;
+      desde = r.fecha_desde;
+    } else if (r.tipo_rango === 'indefinido') {
+      if (!r.fecha_desde || r.fecha_desde > hoy) continue;
+      desde = r.fecha_desde;
+    } else if (r.tipo_rango === 'meses') {
+      const meses = (Array.isArray(r.meses) ? r.meses : []).map((m: any) => Number(m));
+      if (!meses.includes(mesHoy)) continue;
+      const primero = Math.min(...meses.filter((m: number) => m <= mesHoy));
+      desde = `${anio}-${String(primero).padStart(2, '0')}-01`;
+    } else continue;
+    await supabase.from('reglas_asistencia')
+      .update({ tipo_rango: 'periodo', fecha_desde: desde, fecha_hasta: hoy, meses: null }).eq('id', r.id);
+  }
+}
+
 async function adminSetEstadoMiembro(params: Record<string, any>): Promise<Record<string, any>> {
   const adminEmail = await _validarAdminToken(params.adminToken);
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { nombre, estadoMiembro } = params;
   if (!nombre || !ESTADOS_MIEMBRO.includes(estadoMiembro)) return { exito: false, error: 'Parámetros inválidos.' };
-  const { data: actual } = await supabase.from('equipo')
-    .select('estado_miembro, categoria, categoria_pre_lesion').eq('username', nombre).maybeSingle();
-  const estadoPrevio = actual?.estado_miembro ?? null;
+  const { data: actual } = await supabase.from('equipo').select(SELECT_ESTADO_MIEMBRO).eq('username', nombre).maybeSingle();
+  if (!actual) return { exito: false, error: 'No existe esa persona.' };
   // `exenta_cuota` sigue a Lesionadx como única fuente de verdad (Cambio 55)
   // sin importar el camino que llega acá -- este action es compartido por
   // el selector de Mi Liga → Categorías y por el perfil de Equipo.
-  const update: Record<string, any> = { estado_miembro: estadoMiembro, exenta_cuota: estadoMiembro === 'Lesionadx' };
   // 'De viaje' se entra SOLO por adminActualizarEstadoViaje() (no está en
-  // ESTADOS_MIEMBRO); cualquier otro estado elegido acá cierra el viaje.
-  if (estadoPrevio === 'De viaje') { update.viaje_desde = null; update.viaje_hasta = null; }
-  // Tier en pausa mientras dura la lesión (`recalcular-categorias/index.ts`
-  // ya saltea a Lesionadx del recálculo) -- acá se guarda/restaura el
-  // `categoria` de ANTES de la lesión para que, al volver a Activx, no
-  // dependa de un historial reciente vacío por la ausencia. Se guarda solo
-  // al ENTRAR a Lesionadx desde otro estado (evita pisar el valor guardado
-  // con un no-op), y se restaura/limpia solo al SALIR de Lesionadx hacia
-  // Activx puntualmente (a Ausente/Técnico se deja para más adelante).
-  if (estadoMiembro === 'Lesionadx' && estadoPrevio !== 'Lesionadx') {
-    update.categoria_pre_lesion = actual?.categoria ?? null;
-  } else if (estadoPrevio === 'Lesionadx' && estadoMiembro === 'Activx') {
-    if (actual?.categoria_pre_lesion) update.categoria = actual.categoria_pre_lesion;
-    update.categoria_pre_lesion = null;
+  // ESTADOS_MIEMBRO); cualquier otro estado elegido acá cierra el viaje
+  // (`_camposSalidaEstado()`).
+  if (estadoMiembro === 'Activx') {
+    return await _reactivarMiembro(nombre, actual, { extra: { exenta_cuota: false } });
   }
+  const update: Record<string, any> = estadoMiembro === 'Lesionadx'
+    ? { ..._camposSalidaEstado(actual, 'Lesionadx'), ..._camposEntradaLesion(actual) }
+    : { ..._camposSalidaEstado(actual, estadoMiembro), estado_miembro: estadoMiembro, exenta_cuota: false };
   const { error } = await supabase.from('equipo').update(update).eq('username', nombre);
   if (error) return { exito: false, error: error.message };
   return { exito: true };
+}
+
+// Autodeclaración de estado (modelo nuevo, ver MANIFEST.md) -- la PROPIA
+// persona (identidad por token, nunca por un nombre del cliente) pasa a
+// 'De viaje', 'Lesionadx' o 'Ausente', sin aprobación ni justificación. La
+// llaman el wizard de Asistencia anticipada (regla "No asistiré" con motivo
+// De viaje/Lesionadx/Inactivx) y "Reportar lesión" del detalle propio de
+// Equipo. Un admin puede corregir a mano; la validación real es la
+// asistencia (`_reactivarPorAsistencia()`).
+//  · De viaje: `viajeDesde`/`viajeHasta` (YYYY-MM-DD o null) = rango de la
+//    regla. Viaje futuro: mismo criterio que adminActualizarEstadoViaje() --
+//    el estado cambia ya y las fechas quedan guardadas (el cron lo cierra al
+//    pasar `viaje_hasta`).
+//  · Lesionadx: guarda `categoria_pre_lesion`, `exenta_cuota=true`.
+//  · Ausente ("Inactivx" en la UI): solo el estado.
+// 'Técnico' no se pisa (categoría de membresía propia): responde
+// `sinCambio:true` y la regla sigue aplicando solo los RSVPs.
+const ESTADOS_AUTODECLARABLES = ['De viaje', 'Lesionadx', 'Ausente'];
+async function autodeclararEstado(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const estado = String(params.estado ?? '').trim();
+  if (!ESTADOS_AUTODECLARABLES.includes(estado)) return { exito: false, error: 'Estado inválido.' };
+  const normFecha = (v: unknown): string | null | false => {
+    // apiPost() (form-urlencoded) manda `null` como el texto "null".
+    if (v === null || v === undefined || v === '' || v === 'null' || v === 'undefined') return null;
+    const t = String(v).trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(t) && !isNaN(Date.parse(t + 'T00:00:00Z')) ? t : false;
+  };
+  const desde = normFecha(params.viajeDesde);
+  const hasta = normFecha(params.viajeHasta);
+  if (desde === false || hasta === false) return { exito: false, error: 'Fecha inválida.' };
+  if (desde && hasta && hasta < desde) return { exito: false, error: 'La fecha de regreso no puede ser anterior a la de salida.' };
+
+  const { data: fila } = await supabase.from('equipo').select(SELECT_ESTADO_MIEMBRO).eq('username', username).maybeSingle();
+  if (!fila) return { exito: false, error: 'Usuarix no encontradx.' };
+  if (fila.estado_miembro === 'Técnico') return { exito: true, sinCambio: true, estado: 'Técnico' };
+
+  let update: Record<string, any>;
+  if (estado === 'Lesionadx') update = { ..._camposSalidaEstado(fila, estado), ..._camposEntradaLesion(fila) };
+  else if (estado === 'De viaje') update = { ..._camposSalidaEstado(fila, estado), estado_miembro: 'De viaje', viaje_desde: desde, viaje_hasta: hasta };
+  else update = { ..._camposSalidaEstado(fila, estado), estado_miembro: 'Ausente' };
+  const { error } = await supabase.from('equipo').update(update).eq('username', username);
+  if (error) return { exito: false, error: error.message };
+  return {
+    exito: true,
+    estado,
+    categoria: update.categoria ?? fila.categoria ?? null,
+    exentaCuota: estado === 'Lesionadx' ? true : (update.exenta_cuota ?? null),
+    viajeDesde: estado === 'De viaje' ? desde : null,
+    viajeHasta: estado === 'De viaje' ? hasta : null,
+  };
+}
+
+// Fin anticipado del viaje propio (eliminar/editar una regla "No asistiré ·
+// De viaje" en Asistencia anticipada). Solo actúa si la persona sigue
+// 'De viaje'; vuelve a Activx con limpieza de fechas. No cierra otras reglas.
+async function terminarMiViaje(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username) return { exito: false, error: 'Sesión inválida.' };
+  const { data: fila } = await supabase.from('equipo').select(SELECT_ESTADO_MIEMBRO).eq('username', username).maybeSingle();
+  if (!fila) return { exito: false, error: 'Usuarix no encontradx.' };
+  if (fila.estado_miembro !== 'De viaje') return { exito: true, sinCambio: true, estado: fila.estado_miembro };
+  const res = await _reactivarMiembro(username, fila, { cerrarReglas: false });
+  return res.exito ? { ...res, estado: 'Activx' } : res;
 }
 
 // Estado "De viaje" (feat nueva, ver MANIFEST.md) -- admin-only, desde el
@@ -3426,15 +3599,16 @@ async function recalcularStatsUsuario(username: string): Promise<{ exito: boolea
 // aparte -- el pedido es 1 solicitud pendiente por persona a la vez, así que
 // vive como 2 columnas directas en `equipo` (`estado_miembro`/
 // `solicitud_lesion_pendiente`, ver la migración 20260829_solicitud_lesion.sql).
+//
+// OBSOLETO desde el modelo de autodeclaración (ver MANIFEST.md): la lesión
+// ya no pasa por aprobación. `solicitarLesion` queda solo por clientes PWA con
+// JS viejo en caché y ahora aplica Lesionadx directo (misma lógica que
+// `autodeclararEstado`), sin crear solicitudes pendientes.
+// `cancelarSolicitudLesion`/`adminGetSolicitudesLesion`/`adminAprobarLesion`/
+// `adminRechazarLesion` siguen vivas solo para resolver las solicitudes
+// pendientes que ya existían antes del cambio.
 async function solicitarLesion(params: Record<string, any>): Promise<Record<string, any>> {
-  const username = await _validarToken(params.token);
-  if (!username) return { exito: false, error: 'Sesión inválida.' };
-  const row = await _getEquipoRow(username);
-  if (!row) return { exito: false, error: 'Usuarix no encontradx.' };
-  if (row.estado_miembro === 'Lesionadx') return { exito: false, error: 'Ya estás marcadx como Lesionadx.' };
-  const { error } = await supabase.from('equipo').update({ solicitud_lesion_pendiente: true }).eq('username', username);
-  if (error) return { exito: false, error: error.message };
-  return { exito: true };
+  return await autodeclararEstado({ token: params.token, estado: 'Lesionadx' });
 }
 
 async function cancelarSolicitudLesion(params: Record<string, any>): Promise<Record<string, any>> {
@@ -3448,13 +3622,12 @@ async function cancelarSolicitudLesion(params: Record<string, any>): Promise<Rec
 async function recuperarseLesion(params: Record<string, any>): Promise<Record<string, any>> {
   const username = await _validarToken(params.token);
   if (!username) return { exito: false, error: 'Sesión inválida.' };
-  const row = await _getEquipoRow(username);
-  if (!row || row.estado_miembro !== 'Lesionadx') return { exito: false, error: 'No estás marcadx como Lesionadx.' };
-  // exenta_cuota vuelve a false -- la exención estaba atada a Lesionadx
-  // (Cambio 55, ver adminAprobarLesion/adminSetEstadoMiembro).
-  const { error } = await supabase.from('equipo').update({ estado_miembro: 'Activx', solicitud_lesion_pendiente: false, exenta_cuota: false }).eq('username', username);
-  if (error) return { exito: false, error: error.message };
-  return { exito: true };
+  const { data: fila } = await supabase.from('equipo').select(SELECT_ESTADO_MIEMBRO).eq('username', username).maybeSingle();
+  if (!fila || fila.estado_miembro !== 'Lesionadx') return { exito: false, error: 'No estás marcadx como Lesionadx.' };
+  // Salida centralizada (`_reactivarMiembro()`): restaura la categoría de
+  // antes de la lesión, exenta_cuota=false, limpia la solicitud y cierra las
+  // reglas "No asistiré" vigentes.
+  return await _reactivarMiembro(username, fila);
 }
 
 async function adminGetSolicitudesLesion(params: Record<string, any>): Promise<any[]> {
@@ -3482,7 +3655,11 @@ async function adminAprobarLesion(params: Record<string, any>): Promise<Record<s
   if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
   const { nombre } = params;
   if (!nombre) return { exito: false, error: 'Parámetros inválidos.' };
-  const { error } = await supabase.from('equipo').update({ estado_miembro: 'Lesionadx', solicitud_lesion_pendiente: false, exenta_cuota: true }).eq('username', nombre);
+  const { data: fila } = await supabase.from('equipo').select(SELECT_ESTADO_MIEMBRO).eq('username', nombre).maybeSingle();
+  if (!fila) return { exito: false, error: 'No existe esa persona.' };
+  // Mismos campos que cualquier entrada a Lesionadx (antes no guardaba
+  // `categoria_pre_lesion`).
+  const { error } = await supabase.from('equipo').update({ ..._camposSalidaEstado(fila, 'Lesionadx'), ..._camposEntradaLesion(fila) }).eq('username', nombre);
   if (error) return { exito: false, error: error.message };
   return { exito: true };
 }
@@ -5264,6 +5441,8 @@ Deno.serve(async (req: Request) => {
       case 'solicitarLesion':                return json(await solicitarLesion(params));
       case 'cancelarSolicitudLesion':         return json(await cancelarSolicitudLesion(params));
       case 'recuperarseLesion':              return json(await recuperarseLesion(params));
+      case 'autodeclararEstado':             return json(await autodeclararEstado(params));
+      case 'terminarMiViaje':                return json(await terminarMiViaje(params));
       case 'adminGetSolicitudesLesion':      return json(await adminGetSolicitudesLesion(params));
       case 'adminAprobarLesion':             return json(await adminAprobarLesion(params));
       case 'adminRechazarLesion':            return json(await adminRechazarLesion(params));
