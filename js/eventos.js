@@ -7546,24 +7546,10 @@ function _evAntCargaVigente(miCarga) {
 // ícono del header de `#s-eventos` (`index.html`), siempre se abandona el
 // timeline en sí.
 function eventosAbrirAnticipada() {
-  // Con cuota mensual activa, "Indefinido" no tiene sentido -- la asistencia
-  // anticipada solo puede cubrir hasta el mes pagado (ver Cambios 2/3/4 en
-  // _evAntRenderMesesGrid()/_evAntCalTocarDia()/_evAntCalRender(), agnósticos
-  // a mirlxs/quindes -- mismo criterio de cuota para los 2 modos, sin ningún
-  // guard que los limite a mirlxs). Se oculta la pill acá, al abrir la
-  // pantalla, para toda la visita (no cambia de cuota a mitad de sesión) --
-  // el auto-cambio a "Por meses" si una regla existente ya tenía "Indefinido"
-  // seleccionado vive en _evAntIniciarWizard() (único lugar donde una pill
-  // puede quedar preseleccionada, ver ese comentario).
-  // Quindes sin cuota (_quindesSinCuota(), nunca tuvo ninguna reserva
-  // mensual): bypass explícito, sin restricciones -- aunque hoy ya coincide
-  // con `!_antTieneCuota` (sin historial mensual no puede haber cuota
-  // vigente), se deja como chequeo propio en vez de depender de esa
-  // equivalencia implícita, ver _quindesSinCuota() para el resto del criterio
-  // que Fase 2 va a reusar en RSVP.
-  var _antTieneCuota = _evTieneCuotaAlDia() && !_quindesSinCuota();
-  var _antPillIndef = document.querySelector('#ev-ant-tipo-pills [data-val="indefinido"]');
-  if (_antPillIndef) _antPillIndef.style.display = _antTieneCuota ? 'none' : '';
+  // La restricción por cuota de la frecuencia (meses pagados, período hasta
+  // el vencimiento, sin "Indefinido") depende del ESTADO elegido en el
+  // wizard, no de la visita -- ver `_evAntRestringePorCuota()`; la pill
+  // "Indefinido" se evalúa en `_evAntIniciarWizard()`/`_evAntSelEstado()`.
   _evGuardarScrollTimeline();
   _evRestaurarScrollTimeline = true;
   ir('s-eventos-anticipada');
@@ -7815,24 +7801,17 @@ function _evAntIniciarWizard(regla) {
     var el = document.getElementById(id); if (el) el.style.display = 'none';
   });
 
+  // Restricción por cuota según el estado de la regla (nuevo: ninguno ->
+  // sin restricción hasta elegir). Sin animación al abrir.
+  _evAntSetPillIndefinidoVisible(!_evAntRestringePorCuota(), false);
   if (_evAntData.tipoRango) {
-    // Regla existente con "Indefinido" (regla.tipoRango, ver arriba) pero la
-    // pill quedó oculta por cuota activa (eventosAbrirAnticipada(), más
-    // arriba en este archivo) -- único punto real donde "Indefinido" puede
-    // llegar preseleccionado (una regla ya guardada, vía _evAntEditar()), no
-    // dejarla como estado inválido/invisible: se auto-cambia a "Por meses",
-    // mismo mecanismo (_evAntSelFrecuencia(), resetea fechaDesde/Hasta) que
-    // usaría la persona si tocara la pill a mano.
-    var _pillIndef = document.querySelector('#ev-ant-tipo-pills [data-val="indefinido"]');
-    var _pillIndefOculta = _evAntData.tipoRango === 'indefinido' &&
-      _pillIndef && _pillIndef.style.display === 'none';
-    if (_pillIndefOculta) {
-      _evAntSelFrecuencia(document.querySelector('#ev-ant-tipo-pills [data-val="meses"]'));
-    } else {
-      var pill = document.querySelector('#ev-ant-tipo-pills .aj-pill[data-val="' + _evAntData.tipoRango + '"]');
-      if (pill) pill.classList.add('activa');
-      _evAntMostrarSubFrecuencia();
-    }
+    var pill = document.querySelector('#ev-ant-tipo-pills .aj-pill[data-val="' + _evAntData.tipoRango + '"]');
+    if (pill) pill.classList.add('activa');
+    _evAntMostrarSubFrecuencia();
+    // Regla existente "Asistiré" con meses/fechas fuera de cuota o
+    // "Indefinido" (p. ej. guardada antes de un cambio de cuota): se recorta
+    // lo que quedó afuera, con aviso.
+    _evAntAjustarFrecuenciaACuota();
   } else {
     document.body.classList.remove('ev-ant-cal-abierto');
   }
@@ -7995,6 +7974,10 @@ function _evAntSelEstado(el) {
   // "Asistiré"/"No jugador" el motivo no aplica: se oculta y se limpia.
   if (!noAsistire) { _evAntData.motivo = null; _evAntRenderMotivos(); }
   _evAntMostrarMotivo(noAsistire, true);
+  // La restricción por cuota depende del estado: re-evaluar la frecuencia
+  // (pill "Indefinido" con fade, meses/días habilitados, recorte si pasa a
+  // "Asistiré").
+  _evAntReevaluarFrecuenciaPorCuota();
   _evAntActualizarResumenEstado();
   if (!noAsistire || _evAntData.motivo) {
     _evAntSetAcordeon('estado', false);
@@ -8006,6 +7989,127 @@ function _evAntSelEstado(el) {
 function _evAntActualizarResumenEstado() {
   var el = document.getElementById('ev-ant-acc-estado-resumen');
   if (el) el.textContent = (_evAntData.estado || '') + (_evAntData.estado === 'No asistiré' && _evAntData.motivo ? ' · ' + _evAntData.motivo : '');
+}
+
+// ── Restricción por cuota de la frecuencia (ver MANIFEST.md) ──────────────
+// Solo tiene sentido si la persona VA A ASISTIR: con "Asistiré", quien paga
+// cuota mes a mes solo puede cubrir meses pagados, un período hasta el
+// vencimiento y nunca "Indefinido". Con "No asistiré"/"No jugador" no hay
+// restricción (solo se bloquea el pasado). Único punto de decisión:
+// `_evAntRestringePorCuota()`, usado por la pill "Indefinido", la grilla de
+// meses y el calendario de "Por período".
+// "Paga cuota mes a mes" = tiene historial de reserva mensual (no
+// cancelada) y no está exentx: `exenta_cuota`, Técnico/Lesionadx (mismo
+// criterio que `_evTieneCuotaAlDia()`) o quindes sin cuota
+// (`_quindesSinCuota()`, bypass explícito). Quien DEBE cuota (vencida) entra
+// igual: con "Asistiré" no puede elegir meses/fechas futuras sin pagar.
+function _evAntPagaCuotaMensual() {
+  var d = (typeof E !== 'undefined' && E.datos) || {};
+  if (d.exenta_cuota || d.estado_miembro === 'Técnico' || d.estado_miembro === 'Lesionadx') return false;
+  if (_quindesSinCuota()) return false;
+  return (_todasReservas || []).some(function(r) { return r.tipo === 'mensual' && r.estado !== 'Cancelada'; });
+}
+function _evAntRestringePorCuota() {
+  return _evAntData.estado === 'Asistiré' && _evAntPagaCuotaMensual();
+}
+// Excepción de cuota del mes (`_CUOTA_EXCEPCIONES`, solo trae el mes actual)
+// -- cuenta como pagado.
+function _evAntExcepcionCuotaMes(mesIdx, anio) {
+  var clave = anio + '-' + ('0' + (mesIdx + 1)).slice(-2);
+  return (_CUOTA_EXCEPCIONES || []).some(function(x) {
+    return x.idMiembro === E.nombre && x.mes === clave && (x.tipo === 'pago' || x.tipo === 'exenta');
+  });
+}
+function _evAntMesPermitido(mesNum, anio) {
+  if (!_evAntRestringePorCuota()) return true;
+  return _evMesPagado(mesNum - 1, anio) || _evAntExcepcionCuotaMes(mesNum - 1, anio);
+}
+// Última fecha elegible en "Por período" (ISO) o null = sin límite por
+// cuota. Cuota vigente -> `_evVencimientoCuota()` (null con cuota vigente
+// sin vencimiento detectable = permisivo, mismo caso borde de siempre; con
+// excepción del mes actual -> fin de mes). Cuota vencida (debe) -> ayer: no
+// hay ningún día futuro pagado.
+function _evAntLimiteCuota() {
+  if (!_evAntRestringePorCuota()) return null;
+  var vence = _evVencimientoCuota();
+  if (vence) return vence;
+  var hoy = new Date();
+  if (_evAntExcepcionCuotaMes(hoy.getMonth(), hoy.getFullYear())) return _evToISO(new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0));
+  if (_evTieneCuotaAlDia()) return null;
+  return _evToISO(new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - 1));
+}
+// Pill "Indefinido" con fade (nunca de golpe). `animar:false` al abrir.
+function _evAntSetPillIndefinidoVisible(visible, animar) {
+  var pill = document.querySelector('#ev-ant-tipo-pills [data-val="indefinido"]');
+  if (!pill) return;
+  clearTimeout(pill._fadeTimer);
+  if (!animar) {
+    pill.style.transition = ''; pill.style.opacity = '';
+    pill.style.display = visible ? '' : 'none';
+    return;
+  }
+  if (visible) {
+    if (pill.style.display === 'none') { pill.style.opacity = '0'; pill.style.display = ''; void pill.offsetWidth; }
+    pill.style.transition = 'opacity 0.22s ease';
+    pill.style.opacity = '1';
+  } else {
+    if (pill.style.display === 'none') return;
+    pill.style.transition = 'opacity 0.22s ease';
+    pill.style.opacity = '0';
+    pill._fadeTimer = setTimeout(function() { pill.style.display = 'none'; }, 230);
+  }
+}
+// Recorta SOLO lo que quedó fuera de cuota con la restricción activa:
+// meses no pagados (conserva los válidos), fin de período posterior al
+// límite (recorta al límite, o resetea si el inicio ya queda afuera) e
+// "Indefinido" (se deselecciona). Toast breve si cambió algo. Devuelve true
+// si ajustó.
+function _evAntAjustarFrecuenciaACuota() {
+  if (!_evAntRestringePorCuota() || !_evAntData.tipoRango) return false;
+  var ajusto = false;
+  var anio = new Date().getFullYear();
+  if (_evAntData.tipoRango === 'meses') {
+    var validos = _evAntData.meses.filter(function(m) { return _evAntMesPermitido(m, anio); });
+    if (validos.length !== _evAntData.meses.length) { _evAntData.meses = validos; ajusto = true; _evAntRenderMesesGrid(); }
+  } else if (_evAntData.tipoRango === 'periodo') {
+    var lim = _evAntLimiteCuota();
+    if (lim) {
+      if (_evAntData.fechaDesde && _evFechaCmp(_evAntData.fechaDesde, lim) > 0) {
+        _evAntData.fechaDesde = null; _evAntData.fechaHasta = null; _evAntCal.periodo.touched = false; ajusto = true;
+      } else if (_evAntData.fechaHasta && _evFechaCmp(_evAntData.fechaHasta, lim) > 0) {
+        _evAntData.fechaHasta = lim; ajusto = true;
+      }
+      if (ajusto) { _evAntCalRender('periodo'); _evAntCalActualizarResumen('periodo'); }
+    }
+  } else if (_evAntData.tipoRango === 'indefinido') {
+    _evAntData.tipoRango = null; _evAntData.fechaDesde = null; _evAntData.fechaHasta = null;
+    _evAntCal.indefinido.touched = false;
+    document.querySelectorAll('#ev-ant-tipo-pills .aj-pill').forEach(function(p) { p.classList.remove('activa'); });
+    _evAntMostrarSubFrecuencia();
+    ajusto = true;
+  }
+  if (ajusto) {
+    _evAntActualizarResumenFrecuencia();
+    _evAntActualizarBotonAplicar();
+    mostrarToast('Ajustamos la frecuencia a los meses que tienes pagados.', 'ok', true);
+  }
+  return ajusto;
+}
+// Tras cambiar el estado: pill "Indefinido" con fade y, si hay una
+// frecuencia abierta, se re-pinta (meses/días habilitados o no) con fade;
+// después recorta lo inválido si pasó a "Asistiré".
+function _evAntReevaluarFrecuenciaPorCuota() {
+  var restringe = _evAntRestringePorCuota();
+  _evAntSetPillIndefinidoVisible(!restringe, true);
+  if (!_evAntAjustarFrecuenciaACuota() && _evAntData.tipoRango) {
+    if (_evAntData.tipoRango === 'meses') {
+      var grid = document.getElementById('ev-ant-meses-grid');
+      if (grid) _evFadeSwap(grid, _evAntRenderMesesGrid, false);
+    } else {
+      _evAntCalRender(_evAntData.tipoRango); // ya repinta con _evFadeSwap()
+    }
+  }
+  _evAntActualizarBotonAplicar();
 }
 
 // ── Motivo de "No asistiré" (modelo de autodeclaración, ver MANIFEST.md) ──
@@ -8158,18 +8262,16 @@ function _evAntRenderMesesGrid() {
   cont.innerHTML = '';
   var mesActual = new Date().getMonth(); // 0-indexado
   var anio = new Date().getFullYear();
-  // Con cuota mensual activa, la asistencia anticipada solo puede aplicarse
-  // a meses efectivamente pagados (_evMesPagado(), 0-indexado -- mesNum acá
-  // es 1-12) -- sin cuota, el único criterio sigue siendo "mes ya pasado"
-  // (comportamiento sin cambios).
-  var _antTieneCuota = _evTieneCuotaAlDia();
+  // Con "Asistiré" y cuota mensual, solo meses pagados
+  // (`_evAntMesPermitido()`, ver `_evAntRestringePorCuota()`); con "No
+  // asistiré"/"No jugador" o sin cuota, el único criterio es "mes ya pasado".
   NOMBRES_MESES.forEach(function(nombre, idx) {
     var mesNum = idx + 1;
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'ev-ant-mes-cell' + (_evAntData.meses.indexOf(mesNum) !== -1 ? ' activo' : '');
     btn.textContent = nombre;
-    var _antMesDeshabilitado = idx < mesActual || (_antTieneCuota && !_evMesPagado(mesNum - 1, anio));
+    var _antMesDeshabilitado = idx < mesActual || !_evAntMesPermitido(mesNum, anio);
     if (_antMesDeshabilitado) {
       btn.classList.add('deshabilitado');
       btn.disabled = true;
@@ -8221,16 +8323,11 @@ function _evAntCalMoverMes(cual, dir) {
 // disparara esta función con una fecha inválida.
 function _evAntCalTocarDia(cual, iso) {
   if (_evFechaCmp(iso, _evHoyISO()) < 0) return;
-  // Con cuota mensual activa, "Por período" no puede extenderse más allá del
-  // mes pagado (_evVencimientoCuota()) -- "Indefinido" ya queda inalcanzable
-  // en este estado (pill oculta, ver eventosAbrirAnticipada()/
-  // _evAntIniciarWizard()), así que el chequeo solo aplica a 'periodo'.
-  // `_vence == null` (cuota activa pero sin fecha de vencimiento detectable,
-  // caso borde) no bloquea nada extra -- mismo criterio permisivo que
-  // _evTieneCuotaAlDia()/_evVencimientoCuota() ya usan en el resto del
-  // archivo.
-  if (cual === 'periodo' && _evTieneCuotaAlDia()) {
-    var _vence = _evVencimientoCuota();
+  // Con "Asistiré" y cuota mensual, "Por período" no puede pasar del límite
+  // de cuota (`_evAntLimiteCuota()`, null = sin límite). "Indefinido" no
+  // aplica: con restricción la pill está oculta (`_evAntRestringePorCuota()`).
+  if (cual === 'periodo') {
+    var _vence = _evAntLimiteCuota();
     if (_vence && _evFechaCmp(iso, _vence) > 0) return;
   }
   if (cual === 'indefinido') {
@@ -8532,13 +8629,10 @@ function _evAntCalRender(cual) {
   finGrid.setDate(finGrid.getDate() + 6);
   var hoy = _evHoyISO();
   var desde = _evAntData.fechaDesde, hasta = _evAntData.fechaHasta;
-  // Con cuota mensual activa, "Por período" no puede extenderse más allá del
-  // mes pagado -- mismo criterio (y mismo caso borde: `_antVence` null con
-  // cuota activa no bloquea nada extra) que _evAntCalTocarDia(), calculado
-  // UNA sola vez acá (no por celda). "Indefinido" no aplica (`cual` !==
-  // 'periodo'), ya inalcanzable con cuota activa (pill oculta, ver
-  // eventosAbrirAnticipada()/_evAntIniciarWizard()).
-  var _antVence = (cual === 'periodo' && _evTieneCuotaAlDia()) ? _evVencimientoCuota() : null;
+  // Mismo límite que _evAntCalTocarDia() (`_evAntLimiteCuota()`: solo con
+  // "Asistiré" y cuota mensual), calculado UNA sola vez acá (no por celda).
+  // "Indefinido" no aplica: con restricción la pill está oculta.
+  var _antVence = cual === 'periodo' ? _evAntLimiteCuota() : null;
   var html = _EV_DIAS_CORTOS.map(function(d) { return '<div class="ev-cal-dow">' + d + '</div>'; }).join('');
   var cur = new Date(inicioGrid.getFullYear(), inicioGrid.getMonth(), inicioGrid.getDate());
   while (cur <= finGrid) {
