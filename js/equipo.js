@@ -108,6 +108,21 @@ var _EQ_TIER_DESCRIPCIONES = {
 // Se reusan acá tal cual para que el selector de esta demo no invente un
 // vocabulario paralelo que después no tenga a dónde mapear en la integración real.
 var _EQ_ESTADOS = ['Activx', 'Ausente', 'Técnico', 'Lesionadx', 'De viaje'];
+// Ícono (Material Symbols Rounded) de cada estado -- fuente única para el
+// badge del avatar (`_eqBadgeAvatarHtml()`), las pills del selector de
+// Estado (`_eqEstadoBtnTexto()`) y el valor de la fila "Estado" del bloque
+// Administración (`_eqAdminValorEstadoHtml()`).
+var _EQ_ESTADO_ICONOS = {
+  'Activx': 'check_circle',
+  'Ausente': 'event_busy',
+  'Técnico': 'sports',
+  'Lesionadx': 'personal_injury',
+  'De viaje': 'flight'
+};
+function _eqEstadoIconoHtml(est, clase) {
+  var icono = _EQ_ESTADO_ICONOS[est];
+  return icono ? '<span class="material-symbols-rounded' + (clase ? ' ' + clase : '') + '">' + icono + '</span>' : '';
+}
 
 // Estado "efectivo" a mostrar/resaltar -- si ya está fijado a mano en
 // 'Ausente' se respeta tal cual; si no, se deriva de `ultimaAsistencia`
@@ -117,16 +132,20 @@ var _EQ_ESTADOS = ['Activx', 'Ausente', 'Técnico', 'Lesionadx', 'De viaje'];
 // marcar asistencia de nuevo, ver `_evMarcarAsistencia()`/js/eventos.js).
 // 'Ausente' (no 'Inactiva', que no es un valor válido del enum real de
 // arriba) es el estado más cercano semánticamente a "30 días sin venir".
+// Bug real corregido (ver MANIFEST.md, 2026-09-28): antes la derivación a
+// Ausente corría para CUALQUIER estado guardado -- una persona Lesionadx o
+// Técnico con 30+ días sin asistir aparecía con la pill "Ausente" marcada
+// aunque en la base siguiera Lesionadx/Técnico. Ahora solo se deriva desde
+// 'Activx'; Ausente/Técnico/Lesionadx/De viaje se muestran tal cual están
+// guardados (De viaje: sus ausencias no la penalizan).
 function _eqEstadoEfectivo(persona) {
-  if (persona.estado === 'Ausente') return 'Ausente';
-  // De viaje (feat nueva, ver MANIFEST.md): sus ausencias no la penalizan --
-  // no pasa a Ausente por los 30 días sin asistir mientras dure el viaje.
-  if (persona.estado === 'De viaje') return 'De viaje';
+  var guardado = persona.estado || 'Activx';
+  if (guardado !== 'Activx') return guardado;
   if (persona.ultimaAsistencia) {
     var dias = Math.floor((Date.now() - new Date(persona.ultimaAsistencia).getTime()) / 86400000);
     if (dias >= 30) return 'Ausente';
   }
-  return persona.estado;
+  return 'Activx';
 }
 
 // Usuarios inactivos (bug real corregido, ver MANIFEST.md -- "no aparecen
@@ -709,8 +728,8 @@ function _eqBadgeEstadoHtml(clase, titulo, icono, claseEstado) {
   return '<span class="badge-estado ' + clase + (claseEstado ? ' ' + claseEstado : '') + '" title="' + titulo + '"><span class="material-symbols-rounded">' + icono + '</span></span>';
 }
 function _eqBadgeAvatarHtml(p, claseTamano, claseEstado) {
-  if (p.estado === 'De viaje') return _eqBadgeEstadoHtml('badge-viaje', 'De viaje', 'flight', claseEstado);
-  if (p.estado === 'Lesionadx') return _eqBadgeEstadoHtml('badge-lesion', 'Lesionadx', 'personal_injury', claseEstado);
+  if (p.estado === 'De viaje') return _eqBadgeEstadoHtml('badge-viaje', 'De viaje', _EQ_ESTADO_ICONOS['De viaje'], claseEstado);
+  if (p.estado === 'Lesionadx') return _eqBadgeEstadoHtml('badge-lesion', 'Lesionadx', _EQ_ESTADO_ICONOS['Lesionadx'], claseEstado);
   return _eqTendenciaBadgeHtml(p, claseTamano);
 }
 
@@ -2123,8 +2142,8 @@ function _eqStatsContenidoHtml(p) {
   // pedir equipo prestado) -- un admin evaluando la situación de tier de
   // un miembro puntual necesita verlo SIEMPRE, sin importar ese campo (así
   // lo pidió Victor explícitamente). `typeof _adminToken !== 'undefined' &&
-  // _adminToken` es el MISMO gate que ya usan `_eqTierAdminHtml()`/
-  // `_eqAdminGestionHtml()` (más abajo en este archivo) para todo lo demás
+  // _adminToken` es el MISMO gate que ya usa `_eqAdminBloqueHtml()`
+  // (más abajo en este archivo) para todo lo demás
   // admin-only de este mismo panel -- consistente con esas 2, no un
   // criterio nuevo.
   var esVistaAdmin = typeof _adminToken !== 'undefined' && !!_adminToken;
@@ -2899,38 +2918,219 @@ function _eqRankTexto(p) {
   return 'Sigue sumando asistencia';
 }
 
-// Segmented control [Quindes | Auto | Mirlxs] del perfil de detalle,
-// admin-only (Cambio 52) -- fija/libera manualmente la categoría de una
-// persona (`persona.tierModo`, ver _EQ_TIER_DESCRIPCIONES/_eqCambiarTier()
-// más abajo). `_adminToken` (no un `E.esAdmin` que no existe en esta app --
-// el admin real se identifica con ese token, mismo criterio ya usado en
-// todo js/eventos.js, ej. `_evTourIniciarSiCorresponde()`) gatea el bloque
-// entero, incluido para el propio perfil del admin.
-function _eqTierAdminHtml(p) {
-  if (typeof _adminToken === 'undefined' || !_adminToken) return '';
+// ── Bloque "Administración" del perfil de detalle (rediseño estilo
+// Ajustes/Android, ver MANIFEST.md 2026-09-28) ─────────────────────────
+// Reemplaza los acordeones Categoría/Estado/Asistencia externa. Mismas
+// clases que las filas de Ajustes (`.aj-group`/`.aj-row`/`.aj-icon`/
+// `.aj-content`/`.aj-title`/`.aj-value`/`.aj-chevron`, css/perfil.css):
+// - Categoría / Estado -> abren la subsección `#eq-admin-sub` (mismo
+//   `.aj-sub` con slide "shared axis X" que Ajustes, ver
+//   `_eqAbrirAdminSub()`), con las pills y su descripción/hint.
+// - Paga cuota / Acceso admin -> switch directo en la fila (`.toggle-btn`,
+//   el mismo de Ajustes, css/global.css).
+// - Activar cuenta (solo sin email) / Registrar asistencia externa ->
+//   acción al tocar.
+// Visibilidad (se conserva la regla anterior): Estado/Paga cuota/Acceso
+// admin/Activar cuenta viven en `.eq-admin-quindes`, que se oculta con fade
+// (`.eq-oculto`) si la categoría está fijada en Mirlxs. `_adminToken` gatea
+// el bloque entero, incluido el propio perfil del admin.
+var _EQ_TIER_TEXTOS = { quinde: 'Quindes', auto: 'Auto', mirlxs: 'Mirlxs' };
+function _eqEsVistaAdmin() { return typeof _adminToken !== 'undefined' && !!_adminToken; }
+function _eqAdminValorCategoria(p) {
+  if (p.tierModo === 'auto') return 'Auto · ' + (p.rol || '—');
+  return 'Fija · ' + (_EQ_TIER_TEXTOS[p.tierModo] || p.rol || '—');
+}
+function _eqAdminValorEstadoHtml(p) {
+  var est = _eqEstadoEfectivo(p);
+  return _eqEstadoIconoHtml(est, 'eq-admin-valor-icono') + _eqEsc(est);
+}
+function _eqEstadoHint(p) {
+  var est = _eqEstadoEfectivo(p);
+  return (est === 'Ausente' && p.estado !== 'Ausente')
+    ? 'Marcada automáticamente como ausente por más de 30 días sin asistir.'
+    : 'Si está Activx y no asiste por 30 días seguidos, pasa a Ausente automáticamente.';
+}
+function _eqCuotaHint(p) {
+  return _eqEstadoEfectivo(p) === 'Lesionadx' ? 'Exento/a mientras está Lesionadx.' : 'Indica si está al día con la cuota mensual.';
+}
+function _eqAdminHint(p) {
+  return p.email ? 'Acceso completo al panel de administración (Mi Liga).' : 'Sin email registrado: no se puede dar acceso admin.';
+}
+// Switch estilo Ajustes (`.toggle-btn`, css/global.css). `accion` es el
+// onclick de la fila entera (tocar la fila o el switch hace lo mismo).
+function _eqToggleHtml(idEl, on, disabled, accion) {
+  return '<div class="toggle-wrap" id="' + idEl + '">' +
+      '<button type="button" class="toggle-btn ' + (on ? 'toggle-on' : 'toggle-off') + '" aria-pressed="' + (on ? 'true' : 'false') + '"' +
+        (disabled ? ' disabled' : '') + ' onclick="event.stopPropagation();' + accion + '"><span class="toggle-thumb"></span></button>' +
+    '</div>';
+}
+function _eqSetToggle(idEl, on, disabled) {
+  var wrap = document.getElementById(idEl);
+  var btn = wrap && wrap.querySelector('.toggle-btn');
+  if (!btn) return;
+  btn.classList.toggle('toggle-on', !!on);
+  btn.classList.toggle('toggle-off', !on);
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  if (disabled !== undefined) btn.disabled = !!disabled;
+}
+function _eqAdminFilaHtml(opts) {
+  return '<div class="aj-row' + (opts.clase ? ' ' + opts.clase : '') + '"' + (opts.onclick ? ' onclick="' + opts.onclick + '"' : '') + '>' +
+      '<div class="aj-icon ' + opts.color + '"><span class="material-symbols-outlined">' + opts.icono + '</span></div>' +
+      '<div class="aj-content">' +
+        '<div class="aj-title">' + opts.titulo + '</div>' +
+        (opts.valor !== undefined ? '<div class="aj-value"' + (opts.valorId ? ' id="' + opts.valorId + '"' : '') + '>' + opts.valor + '</div>' : '') +
+      '</div>' +
+      (opts.derecha !== undefined ? opts.derecha : '<span class="material-symbols-outlined aj-chevron">chevron_right</span>') +
+    '</div>';
+}
+function _eqAdminBloqueHtml(p) {
+  if (!_eqEsVistaAdmin()) return '';
   var idJs = _eqEscId(p.id);
   var idAttr = _eqEsc(p.id);
-  var modos = ['quinde', 'auto', 'mirlxs'];
-  var textos = { quinde: 'Quindes', auto: 'Auto', mirlxs: 'Mirlxs' };
-  var botones = modos.map(function(m) {
-    return '<button type="button" class="eq-tier-btn' + (p.tierModo === m ? ' activo' : '') + '" data-modo="' + m + '" onclick="_eqCambiarTier(\'' + idJs + '\',\'' + m + '\')">' + textos[m] + '</button>';
-  }).join('');
-  return '<div class="eq-tier-admin eq-acord">' +
-      '<div class="eq-acord-header" onclick="eqToggleAcordeon(this)">' +
-        '<p class="eq-tier-label" style="margin:0">Categoría</p>' +
-        '<span class="eq-acord-icono"><span class="material-symbols-rounded">chevron_right</span></span>' +
+  var sinEmail = !p.email;
+  var esLesion = _eqEstadoEfectivo(p) === 'Lesionadx';
+  var filaCategoria = _eqAdminFilaHtml({
+    icono: 'military_tech', color: 'aj-icon-purple', titulo: 'Categoría',
+    valor: _eqEsc(_eqAdminValorCategoria(p)), valorId: 'eq-admin-val-cat-' + idAttr,
+    onclick: "_eqAbrirAdminSub('" + idJs + "','categoria')"
+  });
+  var filaEstado = _eqAdminFilaHtml({
+    icono: 'how_to_reg', color: 'aj-icon-blue', titulo: 'Estado',
+    valor: _eqAdminValorEstadoHtml(p), valorId: 'eq-admin-val-estado-' + idAttr,
+    onclick: "_eqAbrirAdminSub('" + idJs + "','estado')"
+  });
+  var filaCuota = _eqAdminFilaHtml({
+    icono: 'payments', color: 'aj-icon-green', titulo: 'Paga cuota',
+    valor: _eqEsc(_eqCuotaHint(p)), valorId: 'eq-cuota-hint-' + idAttr,
+    onclick: "_eqToggleCuotaFila('" + idJs + "')",
+    derecha: _eqToggleHtml('eq-tog-cuota-' + idAttr, !p.exentaCuota, esLesion, "_eqToggleCuotaFila('" + idJs + "')")
+  });
+  var filaAdmin = _eqAdminFilaHtml({
+    icono: 'admin_panel_settings', color: 'aj-icon-orange', titulo: 'Acceso admin',
+    valor: _eqEsc(_eqAdminHint(p)), valorId: 'eq-admin-hint-' + idAttr,
+    onclick: "_eqToggleAdminFila('" + idJs + "')",
+    derecha: _eqToggleHtml('eq-tog-admin-' + idAttr, !!p.esAdminMiembro, sinEmail, "_eqToggleAdminFila('" + idJs + "')")
+  });
+  // Solo si todavía no tiene email vinculado: una cuenta con email ya pasó
+  // por inscripcion/ o ya se activó, el link no aplica.
+  var filaActivar = sinEmail ? _eqAdminFilaHtml({
+    icono: 'link', color: 'aj-icon-amber', titulo: 'Activar cuenta',
+    valor: 'Genera un link de un solo uso', onclick: "_eqGenerarInviteLink('" + idJs + "')"
+  }) : '';
+  // Fuera de `.eq-admin-quindes` a propósito: una jugadora de cualquier
+  // categoría puede entrenar afuera.
+  var filaExterna = _eqAdminFilaHtml({
+    icono: 'travel_explore', color: 'aj-icon-muted', titulo: 'Registrar asistencia externa',
+    valor: 'Entrenamiento en otro equipo o país', onclick: "_eqAbrirSheetAsistExterna('" + idJs + "')"
+  });
+  return '<div class="seccion-label eq-admin-titulo">Administración</div>' +
+    '<div class="aj-group eq-admin-grupo">' +
+      filaCategoria +
+      '<div class="eq-admin-quindes' + (p.tierModo === 'mirlxs' ? ' eq-oculto' : '') + '" id="eq-admin-q-' + idAttr + '">' +
+        filaEstado + filaCuota + filaAdmin + filaActivar +
       '</div>' +
-      '<div class="eq-acord-cuerpo">' +
-        '<div class="eq-tier-control" data-id="' + idAttr + '">' + botones + '</div>' +
-        '<p class="eq-tier-desc" id="eq-tier-desc-' + idAttr + '">' + _eqEsc(_EQ_TIER_DESCRIPCIONES[p.tierModo]) + '</p>' +
-      '</div>' +
+      filaExterna +
     '</div>';
+}
+
+// Contenido de la subsección (Categoría o Estado). Mismos ids/onclick que
+// usan `_eqCambiarTier()`/`_eqCambiarEstado()` para sincronizar las pills.
+function _eqAdminSubHtml(p, tipo) {
+  var idJs = _eqEscId(p.id);
+  var idAttr = _eqEsc(p.id);
+  if (tipo === 'categoria') {
+    var botones = ['quinde', 'auto', 'mirlxs'].map(function(m) {
+      return '<button type="button" class="eq-opcion-btn eq-tier-btn' + (p.tierModo === m ? ' activo' : '') + '" data-modo="' + m + '" onclick="_eqCambiarTier(\'' + idJs + '\',\'' + m + '\')">' + _EQ_TIER_TEXTOS[m] + '</button>';
+    }).join('');
+    return '<div class="eq-tier-control" data-id="' + idAttr + '">' + botones + '</div>' +
+      '<p class="eq-tier-desc" id="eq-tier-desc-' + idAttr + '">' + _eqEsc(_EQ_TIER_DESCRIPCIONES[p.tierModo]) + '</p>';
+  }
+  var estadoActual = _eqEstadoEfectivo(p);
+  var botonesEstado = _EQ_ESTADOS.map(function(est) {
+    return '<button type="button" class="eq-opcion-btn eq-estado-btn' + (estadoActual === est ? ' activo' : '') + '" data-estado="' + est + '" onclick="_eqCambiarEstado(\'' + idJs + '\',\'' + est + '\')">' + _eqEstadoBtnTexto(est) + '</button>';
+  }).join('');
+  var viaje = _eqViajeFilaHtml(p);
+  return '<div class="eq-estado-opciones">' + botonesEstado + '</div>' +
+    '<p class="eq-admin-hint" id="eq-estado-hint-' + idAttr + '">' + _eqEsc(_eqEstadoHint(p)) + '</p>' +
+    (viaje ? '<div class="eq-info-lista eq-admin-sub-viaje">' + viaje + '</div>' : '');
+}
+
+// Subsección `#eq-admin-sub` (index.html) -- mismo "shared axis X" que
+// `irAjSub()`/`cerrarAjSub()` de Ajustes (el panel entra desde la derecha
+// mientras `#eq-perfil-card` retrocede), pero cerrado vía `_overlayStack`
+// (`_registrarOverlayAbierto()`, js/ui.js) como `#eq-desglose-panel`: el
+// gesto/botón atrás cierra la subsección sin navegar la pantalla de fondo.
+var _eqAdminSubCtx = null; // { id, tipo }
+function _eqAbrirAdminSub(id, tipo) {
+  var p = _eqPersonaPorId(id);
+  var panel = document.getElementById('eq-admin-sub');
+  var body = document.getElementById('eq-admin-sub-body');
+  var titulo = document.getElementById('eq-admin-sub-titulo');
+  if (!p || !panel || !body) return;
+  _eqAdminSubCtx = { id: id, tipo: tipo };
+  if (titulo) titulo.textContent = tipo === 'categoria' ? 'Categoría' : 'Estado';
+  body.innerHTML = _eqAdminSubHtml(p, tipo);
+  body.scrollTop = 0;
+  var fondo = document.getElementById('eq-perfil-card');
+  panel.style.transform = '';
+  panel.style.opacity = '';
+  panel.classList.add('activa');
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      panel.style.transform = 'translateX(0)';
+      panel.style.opacity = '1';
+      if (fondo) { fondo.style.transform = 'translateX(-25%)'; fondo.style.opacity = '0.85'; }
+    });
+  });
+  _registrarOverlayAbierto(_eqCerrarAdminSub);
+}
+function _eqCerrarAdminSub(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var panel = document.getElementById('eq-admin-sub');
+  var fondo = document.getElementById('eq-perfil-card');
+  var ctx = _eqAdminSubCtx;
+  if (ctx) { var p = _eqPersonaPorId(ctx.id); if (p) _eqAdminActualizarFilas(p); }
+  if (panel) { panel.style.transform = 'translateX(100%)'; panel.style.opacity = '0.85'; }
+  if (fondo) { fondo.style.transform = 'translateX(0)'; fondo.style.opacity = '1'; }
+  setTimeout(function() {
+    if (_eqAdminSubCtx !== ctx) return; // se reabrió antes de terminar la salida
+    if (panel) { panel.classList.remove('activa'); panel.style.transform = ''; panel.style.opacity = ''; }
+    if (fondo) { fondo.style.transform = ''; fondo.style.opacity = ''; }
+    _eqAdminSubCtx = null;
+  }, 320);
+}
+// Repinta el cuerpo de la subsección si está abierta para esta persona
+// (tras guardar/revertir un cambio o un re-render del perfil).
+function _eqAdminRefrescarSub(p) {
+  var ctx = _eqAdminSubCtx;
+  if (!ctx || !p || ctx.id !== p.id) return;
+  var body = document.getElementById('eq-admin-sub-body');
+  if (body) body.innerHTML = _eqAdminSubHtml(p, ctx.tipo);
+}
+// Valores de las filas de la vista principal (Categoría/Estado/cuota/admin)
+// -- sin recargar el perfil.
+function _eqAdminActualizarFilas(p) {
+  var idAttr = p.id;
+  var cat = document.getElementById('eq-admin-val-cat-' + idAttr);
+  if (cat) cat.textContent = _eqAdminValorCategoria(p);
+  var est = document.getElementById('eq-admin-val-estado-' + idAttr);
+  if (est) est.innerHTML = _eqAdminValorEstadoHtml(p);
+  var cuotaHint = document.getElementById('eq-cuota-hint-' + idAttr);
+  if (cuotaHint) cuotaHint.textContent = _eqCuotaHint(p);
+  _eqSetToggle('eq-tog-cuota-' + idAttr, !p.exentaCuota, _eqEstadoEfectivo(p) === 'Lesionadx');
+  _eqSetToggle('eq-tog-admin-' + idAttr, !!p.esAdminMiembro, !p.email);
+  var secQ = document.getElementById('eq-admin-q-' + idAttr);
+  if (secQ) secQ.classList.toggle('eq-oculto', p.tierModo === 'mirlxs');
+  var rankWrap = document.querySelector('#s-equipo-perfil .eq-rank-wrap');
+  if (rankWrap && _eqPersonaActual && _eqPersonaActual.id === p.id) rankWrap.classList.toggle('eq-rank-oculto', p.tierModo !== 'auto');
 }
 
 // Toggle genérico de acordeón (Cambio 57) -- `header` es el `.eq-acord-header`
 // clickeado (`this` del onclick inline, mismo patrón sin listener delegado
 // que el resto de este archivo); el contenedor a togglear es su padre
-// directo (`.eq-acord`, ver `_eqTierAdminHtml()`/`_eqAdminGestionHtml()`).
+// directo (`.eq-acord`). Hoy lo usa solo el acordeón "Estadísticas" del
+// perfil de detalle -- Categoría/Estado pasaron al bloque "Administración"
+// estilo Ajustes (`_eqAdminBloqueHtml()`).
 function eqToggleAcordeon(header) {
   var acord = header.parentNode;
   var seAbrio = !acord.classList.contains('eq-acord-abierto');
@@ -2957,125 +3157,33 @@ function eqToggleAcordeon(header) {
 function _eqCambiarTier(id, modo) {
   if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible guardar cambios en este momento.', 'error'); return; }
   var persona = _eqPersonaPorId(id);
-  if (!persona) return;
+  if (!persona || persona.tierModo === modo) return;
+  var previo = persona.tierModo;
+  _eqAplicarTierUI(persona, modo);
+  // Optimista + reversión si falla (bug real corregido, ver MANIFEST.md
+  // 2026-09-28: antes el error descartaba el mensaje real y dejaba la UI
+  // con un valor que nunca se guardó).
+  apiPost({ action: 'adminSetTierModo', adminToken: _adminToken, nombre: persona.nombre, tierModo: modo }, function(res) {
+    if (res && res.exito === false) { _eqAplicarTierUI(persona, previo); mostrarToast(res.error || 'No se pudo guardar el cambio de categoría.', 'error'); }
+  }, function(e) {
+    _eqAplicarTierUI(persona, previo);
+    mostrarToast((e && e.message) || 'No se pudo guardar el cambio de categoría.', 'error');
+  });
+}
+function _eqAplicarTierUI(persona, modo) {
   persona.tierModo = modo;
-
-  document.querySelectorAll('.eq-tier-control[data-id="' + id + '"] .eq-tier-btn').forEach(function(btn) {
+  document.querySelectorAll('.eq-tier-control[data-id="' + persona.id + '"] .eq-tier-btn').forEach(function(btn) {
     btn.classList.toggle('activo', btn.getAttribute('data-modo') === modo);
   });
-
-  var desc = document.getElementById('eq-tier-desc-' + id);
+  var desc = document.getElementById('eq-tier-desc-' + persona.id);
   if (desc) desc.textContent = _EQ_TIER_DESCRIPCIONES[modo];
-
-  var rankWrap = document.querySelector('#s-equipo-perfil .eq-rank-wrap');
-  if (rankWrap) rankWrap.classList.toggle('eq-rank-oculto', modo !== 'auto');
-
-  // Sección de gestión admin (estado/cuota/admin, Cambio 53) -- solo tiene
-  // sentido para Quindes, se desvanece si la categoría pasa a Mirlxs (y
-  // vuelve si sale de ahí), mismo mecanismo `.eq-oculto` que el termómetro.
-  var secAdminQ = document.getElementById('eq-admin-q-' + id);
-  if (secAdminQ) {
-    if (modo === 'mirlxs') {
-      secAdminQ.classList.add('eq-oculto');
-    } else {
-      secAdminQ.classList.remove('eq-oculto');
-    }
-  }
-
-  apiPost({ action: 'adminSetTierModo', adminToken: _adminToken, nombre: persona.nombre, tierModo: modo }, function() {}, function() {
-    mostrarToast('No se pudo guardar el cambio de categoría.', 'error');
-  });
+  // Termómetro + sección de gestión (Estado/cuota/admin, solo Quindes) --
+  // fade+colapso con `.eq-oculto`/`.eq-rank-oculto`, ver
+  // `_eqAdminActualizarFilas()`.
+  _eqAdminActualizarFilas(persona);
 }
 
-// ── Gestión admin de miembro (Cambio 53): estado + cuota + admin ───────
-// Sección propia del perfil, solo Quindes (se oculta con fade si la
-// categoría es Mirlxs, ver `.eq-oculto`/`_eqCambiarTier()` arriba) --
-// admin-only, mismo gate que `_eqTierAdminHtml()`.
-function _eqAdminGestionHtml(p) {
-  if (typeof _adminToken === 'undefined' || !_adminToken) return '';
-  var idJs = _eqEscId(p.id);
-  var idAttr = _eqEsc(p.id);
-  var estadoActual = _eqEstadoEfectivo(p);
-  var botonesEstado = _EQ_ESTADOS.map(function(est) {
-    return '<button type="button" class="eq-estado-btn' + (estadoActual === est ? ' activo' : '') + '" data-estado="' + est + '" onclick="_eqCambiarEstado(\'' + idJs + '\',\'' + est + '\')">' + _eqEstadoBtnTexto(est) + '</button>';
-  }).join('');
-  var hint = (estadoActual === 'Ausente' && p.estado !== 'Ausente')
-    ? 'Marcada automáticamente como ausente por más de 30 días sin asistir.'
-    : 'Si no asiste por 30 días seguidos, pasa a Ausente automáticamente.';
-  // "Paga cuota" (visible) es el inverso de `exentaCuota` (real, Cambio 55) --
-  // el toggle sigue leyendo/mostrando "paga" (más natural para un admin que
-  // "está exenta"), pero internamente togglea `exenta_cuota` invertido, ver
-  // _eqToggleCuota() más abajo.
-  var pagaCuota = !p.exentaCuota;
-  // Sin email registrado, `adminAgregarAdmin`/`adminQuitarAdmin` (acciones
-  // reales, identifican por email -- no hay ningún flag de admin por
-  // username en el backend) no tienen a quién apuntar -- mismo criterio de
-  // "deshabilitar con hint" que el toggle de cuota en Lesionadx.
-  var sinEmail = !p.email;
-  // "Paga cuota"/"Admin" (pedido explícito, re-ajuste, ver MANIFEST.md) --
-  // se movieron DENTRO de `.eq-acord-cuerpo` de "Estado" (antes eran 2
-  // `.eq-admin-campo--row` propios, siempre visibles) -- al colapsar
-  // "Estado" (`eqToggleAcordeon()`, ya existente) ambos toggles se ocultan
-  // solos, sin lógica nueva: `.eq-acord-cuerpo` ya colapsa TODO su
-  // contenido vía `max-height:0` (css/equipo.css), pasen los toggles a
-  // formar parte de él o no. `_eqToggleCuota()`/`_eqToggleAdmin()`/
-  // `_eqCambiarEstado()` (más abajo) siguen ubicando estos nodos por id
-  // (`#eq-tog-cuota-<id>`/`#eq-tog-admin-<id>`/etc.) -- ningún cambio de
-  // lógica, solo de posición en el DOM.
-  return '<div class="eq-admin-quindes' + (p.tierModo === 'mirlxs' ? ' eq-oculto' : '') + '" id="eq-admin-q-' + idAttr + '">' +
-      '<div class="eq-admin-sep"></div>' +
-      '<div class="eq-admin-campo eq-acord">' +
-        '<div class="eq-acord-header" onclick="eqToggleAcordeon(this)">' +
-          '<p class="eq-tier-label" style="margin:0">Estado</p>' +
-          '<span class="eq-acord-icono"><span class="material-symbols-rounded">chevron_right</span></span>' +
-        '</div>' +
-        '<div class="eq-acord-cuerpo">' +
-          '<div class="eq-estado-opciones">' + botonesEstado + '</div>' +
-          '<p class="eq-admin-hint" id="eq-estado-hint-' + idAttr + '">' + hint + '</p>' +
-          '<div class="eq-admin-campo--row" style="margin-top:14px;">' +
-            '<div>' +
-              '<p class="eq-tier-label" style="margin-bottom:2px">Paga cuota</p>' +
-              '<p class="eq-admin-hint" style="margin:0" id="eq-cuota-hint-' + idAttr + '">' + (estadoActual === 'Lesionadx' ? 'Exento/a de cuota mientras está Lesionadx.' : 'Indica si está al día con la cuota mensual.') + '</p>' +
-            '</div>' +
-            '<label class="eq-toggle" id="eq-tog-cuota-' + idAttr + '">' +
-              '<input type="checkbox"' + (pagaCuota ? ' checked' : '') + (estadoActual === 'Lesionadx' ? ' disabled' : '') +
-                ' onchange="_eqToggleCuota(\'' + idJs + '\', this.checked)">' +
-              '<span class="eq-toggle-slider"></span>' +
-            '</label>' +
-          '</div>' +
-          '<div class="eq-admin-campo--row" style="margin-top:14px;">' +
-            '<div>' +
-              '<p class="eq-tier-label" style="margin-bottom:2px">Admin</p>' +
-              '<p class="eq-admin-hint" style="margin:0" id="eq-admin-hint-' + idAttr + '">' + (sinEmail ? 'Sin email registrado -- no se puede dar acceso admin.' : 'Tendrá acceso completo al panel de administración (Mi Liga).') + '</p>' +
-            '</div>' +
-            '<label class="eq-toggle" id="eq-tog-admin-' + idAttr + '">' +
-              '<input type="checkbox"' + (p.esAdminMiembro ? ' checked' : '') + (sinEmail ? ' disabled' : '') +
-                ' onchange="_eqToggleAdmin(\'' + idJs + '\', this.checked, this)">' +
-              '<span class="eq-toggle-slider"></span>' +
-            '</label>' +
-          '</div>' +
-          // "Generar link de activación" -- SOLO si todavía no tiene email
-          // vinculado (mismo campo/criterio que `sinEmail` arriba, ver
-          // MANIFEST.md — activar/): una cuenta con email ya pasó por
-          // inscripcion/ o ya se activó, este link no aplica más ahí. Fila
-          // propia en vez de acordeón nuevo -- mismo patrón visual que las
-          // 2 de arriba (`.eq-admin-campo--row`), pero un botón en vez de
-          // un toggle (acción puntual, no un estado persistente).
-          (sinEmail ? (
-            '<div class="eq-admin-campo--row" style="margin-top:14px;">' +
-              '<div>' +
-                '<p class="eq-tier-label" style="margin-bottom:2px">Activar cuenta</p>' +
-                '<p class="eq-admin-hint" style="margin:0">Genera un link de un solo uso para que vincule su cuenta de Google.</p>' +
-              '</div>' +
-              '<button type="button" class="btn-text-simple" style="white-space:nowrap;" onclick="_eqGenerarInviteLink(\'' + idJs + '\')">Generar link</button>' +
-            '</div>'
-          ) : '') +
-        '</div>' +
-      '</div>' +
-    '</div>';
-}
-
-// "Activar cuenta" (fila de arriba) -- crea la invitación (Edge Function,
+// "Activar cuenta" (fila del bloque Administración) -- crea la invitación (Edge Function,
 // `generarInviteToken`) y copia el link listo para compartir por WhatsApp/
 // donde sea. `p.id` es el username (mismo criterio que el resto de esta
 // función). Sin confirmación previa -- generar un link de más no tiene
@@ -3096,32 +3204,6 @@ function _eqGenerarInviteLink(id) {
   }, function(e) {
     mostrarToast(e && e.message ? e.message : 'No se pudo generar el link.', 'error');
   });
-}
-
-// Asistencia externa (feat nueva, ver MANIFEST.md) -- fila admin-only al
-// final del perfil de detalle, FUERA de `.eq-admin-quindes` a propósito:
-// esa sección se oculta para Mirlxs (`eq-oculto`) y una jugadora de
-// cualquier categoría puede entrenar afuera. Mismo gate `_adminToken` y
-// mismo layout (`.eq-admin-campo--row` + `btn-text-simple`) que "Activar
-// cuenta" de `_eqAdminGestionHtml()`.
-function _eqAsistExternaHtml(p) {
-  if (typeof _adminToken === 'undefined' || !_adminToken) return '';
-  var nombreMostrar = p.nombreDerby || p.nombre; // nombre derby, o username si no tiene
-  // Acordeón (pedido explícito) -- MISMO componente que "Categoría"/"Estado"
-  // de este perfil (`.eq-acord` + `eqToggleAcordeon()`, chevron que rota y
-  // cuerpo con `max-height` animado, css/equipo.css), arranca cerrado. Sin
-  // texto de "toca para expandir": el chevron ya lo indica.
-  return '<div class="eq-admin-sep"></div>' +
-    '<div class="eq-admin-campo eq-acord">' +
-      '<div class="eq-acord-header" onclick="eqToggleAcordeon(this)">' +
-        '<p class="eq-tier-label" style="margin:0">Asistencia externa</p>' +
-        '<span class="eq-acord-icono"><span class="material-symbols-rounded">chevron_right</span></span>' +
-      '</div>' +
-      '<div class="eq-acord-cuerpo">' +
-        '<p class="eq-admin-hint" style="margin:0 0 12px">Agrega una asistencia externa a un entrenamiento al que haya asistido ' + _eqEsc(nombreMostrar) + ' en otro equipo o en otro país para que se registre su punto de asistencia.</p>' +
-        '<button type="button" class="btn btn-danger" onclick="_eqAbrirSheetAsistExterna(\'' + _eqEscId(p.id) + '\')">Registrar asistencia externa</button>' +
-      '</div>' +
-    '</div>';
 }
 
 // Sheet #eq-sheet-asist-externa (index.html) -- mismo patrón open/close que
@@ -3200,48 +3282,52 @@ function _eqCambiarEstado(id, nuevoEstado) {
   // (`_eqAbrirSheetViaje()`, más abajo), que recién al confirmar llama a
   // `adminActualizarEstadoViaje` y aplica la UI con `_eqAplicarEstadoUI()`.
   if (nuevoEstado === 'De viaje') { _eqAbrirSheetViaje(id); return; }
+  if (persona.estado === nuevoEstado) return;
+  var previo = { estado: persona.estado, exentaCuota: persona.exentaCuota, viajeDesde: persona.viajeDesde, viajeHasta: persona.viajeHasta };
+  var revertir = function(msg) {
+    persona.viajeDesde = previo.viajeDesde; persona.viajeHasta = previo.viajeHasta;
+    _eqAplicarEstadoUI(id, persona, previo.estado);
+    persona.exentaCuota = previo.exentaCuota;
+    _eqAdminActualizarFilas(persona);
+    if (_eqPersonaActual && _eqPersonaActual.id === persona.id) _eqRenderPerfil(persona); // restaura la fila de viaje si había
+    mostrarToast(msg || 'No se pudo guardar el cambio de estado.', 'error');
+  };
   if (persona.estado === 'De viaje') { persona.viajeDesde = null; persona.viajeHasta = null; } // el backend limpia las fechas al salir del viaje
   _eqAplicarEstadoUI(id, persona, nuevoEstado);
-  apiPost({ action: 'adminSetEstadoMiembro', adminToken: _adminToken, nombre: persona.nombre, estadoMiembro: nuevoEstado }, function() {}, function() {
-    mostrarToast('No se pudo guardar el cambio de estado.', 'error');
+  // Optimista + reversión con el mensaje real del backend si falla (bug real
+  // corregido, ver MANIFEST.md 2026-09-28 -- antes el error se descartaba y
+  // la UI quedaba mostrando un estado que nunca se guardó).
+  apiPost({ action: 'adminSetEstadoMiembro', adminToken: _adminToken, nombre: persona.nombre, estadoMiembro: nuevoEstado }, function(res) {
+    if (res && res.exito === false) revertir(res.error);
+  }, function(e) {
+    revertir(e && e.message);
   });
 }
-// Parte visual de un cambio de estado (pills + toggle de cuota + fila de
-// viaje del perfil) -- compartida entre el camino directo de arriba y el
-// guardado del sheet "De viaje".
+// Parte visual de un cambio de estado -- compartida entre el camino directo
+// de arriba, el guardado del sheet "De viaje", "Cancelar viaje" y la
+// reversión por error. `exenta_cuota` sigue a Lesionadx (el backend la
+// fuerza en adminSetEstadoMiembro, ver supabase/functions/api/index.ts).
 function _eqAplicarEstadoUI(id, persona, nuevoEstado) {
   persona.estado = nuevoEstado;
+  persona.exentaCuota = (nuevoEstado === 'Lesionadx');
   if (nuevoEstado !== 'De viaje') {
     Array.prototype.forEach.call(document.querySelectorAll('.eq-viaje-fila'), function(f) { f.parentNode.removeChild(f); });
   }
+  // Pills + hint de la subsección (si está abierta) y valores de las filas.
+  _eqAdminRefrescarSub(persona);
+  _eqAdminActualizarFilas(persona);
   // Admin cambiando su PROPIO estado desde el detalle: mantiene `E.datos`
   // al día para el bloque de lesión (`_eqLesionHtml()` lee de ahí).
   if (_eqEsUsuarioActual(persona)) {
     if (typeof E !== 'undefined' && E.datos) E.datos.estado_miembro = nuevoEstado;
     _eqLesionRefrescar();
   }
-  var bots = document.querySelectorAll('.eq-estado-opciones .eq-estado-btn');
-  for (var i = 0; i < bots.length; i++) {
-    bots[i].className = 'eq-estado-btn' + (bots[i].getAttribute('data-estado') === nuevoEstado ? ' activo' : '');
-  }
-  // Auto-cuota: Lesionadx exime de cuota -- deshabilita el toggle con un
-  // hint (sin forzar su valor localmente; el backend sí la fuerza --
-  // adminSetEstadoMiembro mantiene exenta_cuota en sync con Lesionadx como
-  // única fuente de verdad, ver supabase/functions/api/index.ts), cualquier
-  // otro estado lo rehabilita y restaura el hint default.
-  var cuotaInput = document.querySelector('#eq-tog-cuota-' + id + ' input');
-  if (cuotaInput) cuotaInput.disabled = (nuevoEstado === 'Lesionadx');
-  var cuotaHint = document.getElementById('eq-cuota-hint-' + id);
-  if (cuotaHint) cuotaHint.textContent = (nuevoEstado === 'Lesionadx') ? 'Exento/a de cuota mientras está Lesionadx.' : 'Indica si está al día con la cuota mensual.';
-  persona.exentaCuota = (nuevoEstado === 'Lesionadx');
-  if (cuotaInput) cuotaInput.checked = !persona.exentaCuota;
 }
 
-// Texto de cada pill del selector de Estado -- "De viaje" lleva el ícono
-// `flight` (Material Symbols) antes del texto.
+// Texto de cada pill del selector de Estado -- ícono del estado
+// (`_EQ_ESTADO_ICONOS`) antes del texto.
 function _eqEstadoBtnTexto(est) {
-  if (est === 'De viaje') return '<span class="material-symbols-outlined eq-estado-btn-icono">flight</span>' + est;
-  return est;
+  return _eqEstadoIconoHtml(est) + est;
 }
 
 /* ── Estado "De viaje" (feat nueva, ver MANIFEST.md) ─────────────────────
@@ -3433,38 +3519,61 @@ function _eqCancelarViaje(id) {
   });
 }
 
-// "Paga cuota" (checked) es el inverso de `exentaCuota` (real) -- ver el
-// comentario de _eqAdminGestionHtml() de arriba.
+// "Paga cuota" (switch encendido) es el inverso de `exentaCuota` (real,
+// Cambio 55) -- más natural para un admin que "está exenta".
+function _eqToggleCuotaFila(id) {
+  var persona = _eqPersonaPorId(id);
+  if (!persona || _eqEstadoEfectivo(persona) === 'Lesionadx') return; // exento mientras está Lesionadx
+  _eqToggleCuota(id, !!persona.exentaCuota); // paga cuota <- inverso del valor actual
+}
 function _eqToggleCuota(id, valorPagaCuota) {
   if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible guardar cambios en este momento.', 'error'); return; }
   var persona = _eqPersonaPorId(id);
   if (!persona) return;
+  var previo = persona.exentaCuota;
   persona.exentaCuota = !valorPagaCuota;
-  apiPost({ action: 'adminSetExentaCuota', adminToken: _adminToken, nombre: persona.nombre, valor: !valorPagaCuota }, function() {}, function() {
-    mostrarToast('No se pudo guardar el cambio de cuota.', 'error');
+  _eqAdminActualizarFilas(persona);
+  var revertir = function(msg) {
+    persona.exentaCuota = previo;
+    _eqAdminActualizarFilas(persona);
+    mostrarToast(msg || 'No se pudo guardar el cambio de cuota.', 'error');
+  };
+  apiPost({ action: 'adminSetExentaCuota', adminToken: _adminToken, nombre: persona.nombre, valor: !valorPagaCuota }, function(res) {
+    if (res && res.exito === false) revertir(res.error);
+  }, function(e) {
+    revertir(e && e.message);
   });
 }
 
-function _eqToggleAdmin(id, valor, checkboxEl) {
+function _eqToggleAdminFila(id) {
+  var persona = _eqPersonaPorId(id);
+  if (!persona || !persona.email) return; // sin email no hay a quién dar acceso
+  _eqToggleAdmin(id, !persona.esAdminMiembro);
+}
+function _eqToggleAdmin(id, valor) {
+  if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible guardar cambios en este momento.', 'error'); return; }
+  var persona = _eqPersonaPorId(id);
+  if (!persona) return;
   if (!valor) {
-    var persona = _eqPersonaPorId(id);
-    if (!persona) return;
     persona.esAdminMiembro = false;
-    apiPost({ action: 'adminQuitarAdmin', adminToken: _adminToken, email: persona.email }, function() {}, function(e) {
+    _eqAdminActualizarFilas(persona);
+    var revertir = function(msg) {
       persona.esAdminMiembro = true;
-      checkboxEl.checked = true;
-      mostrarToast((e && e.message) || 'No se pudo quitar el acceso admin.', 'error');
-    });
+      _eqAdminActualizarFilas(persona);
+      mostrarToast(msg || 'No se pudo quitar el acceso admin.', 'error');
+    };
+    apiPost({ action: 'adminQuitarAdmin', adminToken: _adminToken, email: persona.email }, function(res) {
+      if (res && res.exito === false) revertir(res.error);
+    }, function(e) { revertir(e && e.message); });
     return;
   }
-  // Revertir visualmente hasta confirmación
-  checkboxEl.checked = false;
+  // Dar acceso: el switch no cambia hasta confirmar en el sheet.
   _eqAbrirConfirmAdmin(id);
 }
 
 function _eqAbrirConfirmAdmin(id) {
   var persona = _eqPersonaPorId(id);
-  if (!persona || !persona.email) return; // toggle ya viene disabled sin email, ver _eqAdminGestionHtml()
+  if (!persona || !persona.email) return; // switch ya viene disabled sin email, ver _eqAdminBloqueHtml()
   var sheet = document.getElementById('eq-sheet-confirm-admin');
   var msg = document.getElementById('eq-sheet-confirm-msg');
   // Mensaje real (Cambio 55) -- el admin de esta app es global (tabla
@@ -3482,13 +3591,15 @@ function _eqConfirmarAdminOk() {
   sheet.classList.remove('visible');
   if (!persona || !persona.email) return;
   persona.esAdminMiembro = true;
-  var cb = document.querySelector('#eq-tog-admin-' + id + ' input');
-  if (cb) cb.checked = true;
-  apiPost({ action: 'adminAgregarAdmin', adminToken: _adminToken, email: persona.email }, function() {}, function(e) {
+  _eqAdminActualizarFilas(persona);
+  var revertir = function(msg) {
     persona.esAdminMiembro = false;
-    if (cb) cb.checked = false;
-    mostrarToast((e && e.message) || 'No se pudo dar el acceso admin.', 'error');
-  });
+    _eqAdminActualizarFilas(persona);
+    mostrarToast(msg || 'No se pudo dar el acceso admin.', 'error');
+  };
+  apiPost({ action: 'adminAgregarAdmin', adminToken: _adminToken, email: persona.email }, function(res) {
+    if (res && res.exito === false) revertir(res.error);
+  }, function(e) { revertir(e && e.message); });
 }
 
 function _eqConfirmarAdminCancelar() {
@@ -3560,13 +3671,7 @@ function _eqPerfilContenidoHtml(p) {
   // Sección de stats -- rediseñada como acordeón compacto (pedido explícito,
   // ver MANIFEST.md: "colapsable y más compacta, igual de liviana que el
   // panel Mis estadísticas de la home") -- reusa `.eq-acord`/`.eq-acord-header`/
-  // `.eq-acord-cuerpo`/`eqToggleAcordeon()` (mismo mecanismo ya usado por
-  // "Categoría"/"Estado" en este mismo perfil, ver `_eqTierAdminHtml()`/
-  // `_eqAdminGestionHtml()` más abajo) -- a diferencia de esos 2 (admin-only,
-  // colapsados por default), este nace YA abierto (`eq-acord-abierto` en el
-  // HTML inicial): es el contenido principal que cualquiera que abre un
-  // perfil quiere ver primero, solo colapsable para quien lo prefiera
-  // compacto. `.eq-perfil-stats-acord` (css/equipo.css) aplica un achique
+  // `.eq-acord-cuerpo`/`eqToggleAcordeon()`. `.eq-perfil-stats-acord` (css/equipo.css) aplica un achique
   // compacto de `.eq-stat-card`/`.eq-rank-wrap`. Re-ajuste (pedido
   // explícito, ver MANIFEST.md/CHANGELOG.md -- "mismo layout, clases y
   // estructura HTML que el viejo panel Mis estadísticas", ya eliminado):
@@ -3588,9 +3693,7 @@ function _eqPerfilContenidoHtml(p) {
   // Bug real corregido (pedido explícito) -- "expandido por defecto solo en
   // la vista propia de la home de Equipo": este acordeón nacía SIEMPRE
   // abierto (`eq-acord-abierto` hardcodeado) sin importar de quién sea el
-  // perfil. Ahora nace colapsado, igual que
-  // Categoría/Estado (`_eqTierAdminHtml()`/`_eqAdminGestionHtml()`, mismo
-  // mecanismo `.eq-acord`/`eqToggleAcordeon()`).
+  // perfil. Ahora nace colapsado.
   var statsAcordHtml = '<div class="eq-acord eq-perfil-stats-acord">' +
       '<div class="eq-acord-header" onclick="eqToggleAcordeon(this)">' +
         '<p class="eq-tier-label" style="margin:0">Estadísticas</p>' +
@@ -3642,9 +3745,7 @@ function _eqPerfilContenidoHtml(p) {
     // Flujo de lesión (movido desde Mi perfil/Ajustes, ver `_eqLesionHtml()`)
     // -- solo en el detalle propio, nunca en el de otras personas.
     (_eqEsUsuarioActual(p) ? '<div id="eq-lesion-wrap" class="eq-lesion-wrap">' + _eqLesionHtml() + '</div>' : '') +
-    _eqTierAdminHtml(p) +
-    _eqAdminGestionHtml(p) +
-    _eqAsistExternaHtml(p);
+    _eqAdminBloqueHtml(p);
 }
 
 function _eqRenderPerfil(p) {
@@ -3652,6 +3753,7 @@ function _eqRenderPerfil(p) {
   var cont = document.getElementById('eq-perfil-contenido');
   if (nav) nav.innerHTML = _eqNavHtml(p);
   if (cont) cont.innerHTML = _eqPerfilContenidoHtml(p);
+  _eqAdminRefrescarSub(p);
   _eqHidratarAvatares();
   // Tier fijado a mano (Cambio 52) -- el termómetro arranca YA oculto, sin
   // animar el estado inicial (`.sin-transicion` se saca en el frame

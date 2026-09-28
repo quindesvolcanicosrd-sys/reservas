@@ -852,61 +852,65 @@
 a.eq-info-fila:active { background: var(--brand-lightest); }
 
 /* Control de categoría (tier), admin-only -- segmented control
-   [Quindes | Auto | Mirlxs] del perfil de detalle (Cambio 52,
-   `_eqTierAdminHtml()`/`_eqCambiarTier()`, js/equipo.js). `--border-light`
-   para el separador (mismo criterio que `.eq-info-fila` de arriba, no
-   `--border` -- ese es el tinte de marca de los inputs/cards con borde,
-   no un divisor neutro) y `--muted` para textos apagados (no existe
-   `--text-muted` en css/colors.css, `--muted` es el token real). */
-.eq-tier-admin { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-light); }
-/* `text-transform:uppercase` sacado (pedido explícito, re-ajuste) -- los 4
-   labels que usan esta clase ("Categoría"/"Estado"/"Paga cuota"/"Admin",
-   ver _eqTierAdminHtml()/_eqAdminGestionHtml()/js/equipo.js) ya vienen en
-   minúscula normal desde el string real, este `text-transform` era lo
-   único que los mostraba en mayúsculas. */
+   [Quindes | Auto | Mirlxs] de la subsección Categoría del bloque
+   Administración (Cambio 52, `_eqAdminSubHtml()`/`_eqCambiarTier()`,
+   js/equipo.js). `--muted` para textos apagados (no existe `--text-muted`
+   en css/colors.css). */
+/* `text-transform:uppercase` sacado (pedido explícito, re-ajuste) -- hoy
+   solo la usa el header del acordeón "Estadísticas" del perfil. */
 .eq-tier-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 8px; }
-.eq-tier-control { display: flex; gap: 6px; margin-bottom: 8px; }
-.eq-tier-btn {
-  flex: 1; padding: 8px 0; border-radius: var(--radius); border: 1px solid var(--border);
-  background: var(--surface); color: var(--muted); font-size: 0.8rem; font-weight: 700;
+/* Pills de opción del bloque Administración (Categoría y Estado) -- clase
+   base ÚNICA (pedido explícito 2026-09-28: mismas medidas en todas partes):
+   mismo alto, padding, font-size y radio. `.eq-tier-btn`/`.eq-estado-btn`
+   quedan solo como ganchos de JS (+ `flex:1` para las 3 de Categoría, que
+   reparten el ancho; las 5 de Estado envuelven con `flex-wrap`). */
+.eq-opcion-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  min-height: 36px; padding: 8px 12px; border-radius: var(--radius);
+  border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+  font-size: 0.8rem; font-weight: 700; line-height: 1.2; white-space: nowrap;
   cursor: pointer; font-family: inherit; transition: background 0.2s, color 0.2s, border-color 0.2s;
   -webkit-tap-highlight-color: transparent;
 }
-.eq-tier-btn.activo { background: var(--brand); color: var(--white); border-color: var(--brand); }
+.eq-opcion-btn.activo { background: var(--brand); color: var(--white); border-color: var(--brand); }
+.eq-opcion-btn .material-symbols-rounded { font-size: 1rem; }
+.eq-tier-control { display: flex; gap: 6px; margin-bottom: 8px; }
+.eq-tier-btn { flex: 1; }
 .eq-tier-desc { font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
 
-/* Sección admin-Quindes (Cambio 53) -- gestión de estado/cuota/admin de un
-   miembro, solo Quindes: fade+colapso con `.eq-oculto` al pasar a Mirlxs
-   (`_eqCambiarTier()`, js/equipo.js), mismo mecanismo que `.eq-rank-oculto`
-   de arriba (Cambio 52) -- `.eq-oculto` es genérica a propósito (no
-   `.eq-rank-oculto` de nuevo), reusable por cualquier bloque futuro que
-   necesite el mismo fade+colapso condicionado por tier. `!important` en
-   `.eq-oculto` porque conviven reglas de layout más específicas (flex,
-   grid) sobre los mismos elementos que podrían ganarle a `opacity`/
-   `max-height` en cascada normal -- necesita ganar siempre, sin importar
-   qué tan específico sea el selector del elemento al que se le aplica. */
+/* Sección admin-Quindes (Cambio 53) -- Estado/Paga cuota/Acceso admin/
+   Activar cuenta: fade+colapso con `.eq-oculto` si la categoría está fijada
+   en Mirlxs (`_eqAdminActualizarFilas()`, js/equipo.js), mismo mecanismo que
+   `.eq-rank-oculto`. `!important` en `.eq-oculto` porque conviven reglas de
+   layout más específicas sobre los mismos elementos. */
 .eq-admin-quindes { transition: opacity 0.3s ease, max-height 0.35s ease; max-height: 700px; overflow: hidden; }
 .eq-oculto { opacity: 0 !important; max-height: 0 !important; pointer-events: none; }
-.eq-admin-sep { height: 1px; background: var(--border-light); margin: 14px 0; }
-.eq-admin-campo { margin-bottom: 14px; }
-.eq-admin-campo--row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.eq-admin-hint { font-size: 0.68rem; color: var(--muted); line-height: 1.45; margin-top: 6px; }
+.eq-admin-hint { font-size: 0.72rem; color: var(--muted); line-height: 1.45; margin-top: 8px; }
 
-/* Botones de estado -- mismo look que .eq-tier-btn pero SIN flex:1 (son
-   `_EQ_ESTADOS`, 5 valores reales del enum de Supabase, ver la constante
-   en js/equipo.js -- envuelven en `flex-wrap`, no caben en una sola fila
-   de ancho parejo como los 3 botones de tier). */
+/* ── Bloque "Administración" del perfil de detalle (rediseño estilo
+   Ajustes/Android, 2026-09-28) -- reusa `.aj-group`/`.aj-row`/`.aj-icon`/
+   `.aj-content`/`.aj-title`/`.aj-value`/`.aj-chevron` (css/perfil.css) y el
+   switch `.toggle-btn` (css/global.css); acá solo lo propio del bloque.
+   Título con `.seccion-label` (css/ui.css) -- Ajustes no tiene título de
+   grupo propio. */
+.eq-admin-titulo { margin-top: 22px; }
+/* Los hints de las filas (cuota/admin) pueden ocupar 2 líneas -- a
+   diferencia de Ajustes, donde `.aj-value` es un resumen de 1 línea. */
+.eq-admin-grupo .aj-value { white-space: normal; }
+/* Las filas de `.eq-admin-quindes` viven en un wrapper propio: su última
+   fila conserva el divisor con "Registrar asistencia externa" (que sigue
+   afuera del wrapper). */
+.eq-admin-quindes > .aj-row:last-child { border-bottom: 1px solid var(--border-softest, var(--border-light)); }
+.eq-admin-valor-icono { font-size: 0.95rem; vertical-align: -3px; margin-right: 4px; }
+/* Fila de viaje dentro de la subsección Estado. */
+.eq-admin-sub-viaje { margin-top: 16px; }
+/* Fondo que retrocede mientras `#eq-admin-sub`/`#eq-desglose-panel` entran
+   por encima -- misma transición que `#s-datos-card` (css/perfil.css). */
+#eq-perfil-card { transition: transform 0.32s var(--ease-axis), opacity 0.32s var(--ease-axis); }
+
+/* Botones de estado -- base `.eq-opcion-btn` (arriba); acá solo el
+   contenedor que envuelve las 5 pills. */
 .eq-estado-opciones { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.eq-estado-btn {
-  padding: 6px 12px; border-radius: var(--radius); border: 1px solid var(--border-light);
-  background: var(--surface); color: var(--muted); font-size: 0.72rem; font-weight: 600;
-  cursor: pointer; font-family: inherit; transition: background 0.2s, color 0.2s, border-color 0.2s;
-  -webkit-tap-highlight-color: transparent;
-}
-.eq-estado-btn.activo { background: var(--brand); color: var(--white); border-color: var(--brand); }
-/* Pill "De viaje" (feat nueva, ver MANIFEST.md) -- ícono `flight` antes del
-   texto, alineado y al tamaño del texto de la pill. */
-.eq-estado-btn-icono { font-size: 0.9rem; vertical-align: -2px; margin-right: 3px; }
 /* "Cancelar viaje" (admin) -- empujado a la derecha de la fila "De viaje"
    del perfil (`.eq-info-fila` es flex). */
 .eq-viaje-cancelar { margin-left: auto; white-space: nowrap; flex-shrink: 0; }
@@ -922,19 +926,6 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
 .eq-viaje-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .eq-viaje-titulo { font-weight: 600; }
 .eq-viaje-fechas { font-size: 0.85em; font-weight: 400; color: var(--muted); white-space: nowrap; }
-
-/* Toggle switch (paga cuota / es admin) -- checkbox real oculto
-   (accesible, togglea con teclado/lector de pantalla) + slider visual. */
-.eq-toggle { position: relative; display: inline-block; width: 44px; height: 26px; flex-shrink: 0; }
-.eq-toggle input { opacity: 0; width: 0; height: 0; }
-.eq-toggle-slider { position: absolute; inset: 0; border-radius: 13px; background: var(--border-light); cursor: pointer; transition: background 0.2s; }
-.eq-toggle-slider::before { content: ''; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px; background: var(--white); border-radius: 50%; transition: transform 0.2s; }
-.eq-toggle input:checked + .eq-toggle-slider { background: var(--brand); }
-.eq-toggle input:checked + .eq-toggle-slider::before { transform: translateX(18px); }
-/* Deshabilitado -- toggle de cuota mientras el estado es Lesionadx (Cambio 54,
-   exención automática, ver _eqAdminGestionHtml()/_eqCambiarEstado() en
-   js/equipo.js): no togglea su valor, solo lo atenúa y marca como no-clickeable. */
-.eq-toggle input:disabled + .eq-toggle-slider { opacity: 0.5; cursor: not-allowed; }
 
 /* Bottom sheet de confirmación "dar acceso admin" (#eq-sheet-confirm-admin,
    index.html) -- hijo directo de <body>, mismo criterio de fade+slide que
@@ -982,10 +973,9 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
   color: var(--white); font-size: 0.92rem; font-weight: 700; cursor: pointer; font-family: inherit;
 }
 
-/* ── Acordeones Categoría/Estado del perfil de detalle (Cambio 57) ──────
-   `.eq-acord` es el contenedor (`.eq-tier-admin`/`.eq-admin-campo` ya
-   existentes, ver _eqTierAdminHtml()/_eqAdminGestionHtml() en js/equipo.js)
-   -- `eqToggleAcordeon(this)` (onclick inline del header) togglea
+/* ── Acordeón del perfil de detalle (Cambio 57) -- hoy solo
+   "Estadísticas" (Categoría/Estado pasaron al bloque Administración).
+   `eqToggleAcordeon(this)` (onclick inline del header) togglea
    `.eq-acord-abierto` ahí. Colapsado por default: sin esa clase, `max-height`
    en 0. */
 .eq-acord-header {

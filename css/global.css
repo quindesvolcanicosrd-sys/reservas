@@ -121,6 +121,9 @@ input, textarea,
 }
 .toggle-btn.toggle-on { background: var(--brand); }
 .toggle-btn.toggle-on .toggle-thumb { transform: translateX(22px); }
+/* Deshabilitado (ej. "Paga cuota" mientras la persona está Lesionadx, bloque
+   Administración de Equipo) -- no togglea, solo se atenúa. */
+.toggle-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .fnac-trigger-btn {
   width: 100%; display: flex; align-items: center; justify-content: space-between;

@@ -34,7 +34,7 @@
      del primer paint real (ambos coinciden hoy, el valor de entrada es el
      mismo naranja de siempre — sin flash). -->
 <script src="js/color-enfasis.js?v=52ba4a4c"></script>
-<link rel="stylesheet" href="css/global.css?v=c450b920">
+<link rel="stylesheet" href="css/global.css?v=7f8d26e3">
 <link rel="stylesheet" href="css/estilos.css?v=7e3d0e54">
 <link rel="stylesheet" href="css/ui.css?v=31fab976">
 <link rel="stylesheet" href="css/login.css">
@@ -43,7 +43,7 @@
 <link rel="stylesheet" href="css/nav.css?v=f9a04f6b">
 <link rel="stylesheet" href="css/eventos.css?v=0a25f4cd">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=9952d8a7">
+<link rel="stylesheet" href="css/equipo.css?v=f27356e2">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2893,6 +2893,22 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="eq-desglose-panel-inner" id="eq-desglose-lista"></div>
   </div>
 
+  <!-- Subsección del bloque "Administración" del perfil de detalle
+       (Categoría / Estado) -- mismo `.aj-sub` + slide "shared axis X" que
+       las subsecciones de Ajustes; abierta/cerrada por
+       `_eqAbrirAdminSub()`/`_eqCerrarAdminSub()` (js/equipo.js), cuerpo
+       armado por `_eqAdminSubHtml()`. -->
+  <div class="aj-sub" id="eq-admin-sub">
+    <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
+      <button class="app-nav-back" onclick="_eqCerrarAdminSub()">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <span class="app-nav-title" id="eq-admin-sub-titulo">Categoría</span>
+      <div style="width:40px;flex-shrink:0;"></div>
+    </div>
+    <div class="aj-sub-inner" id="eq-admin-sub-body"></div>
+  </div>
+
   <div class="pantalla" id="s-datos">
   <div class="card" id="s-datos-card">
 
@@ -3555,7 +3571,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="js/eventos.js?v=7e45e5f5"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=f1afb381"></script>
-<script src="js/equipo.js?v=c828b80b"></script>
+<script src="js/equipo.js?v=c05d2441"></script>
 <script src="js/home.js?v=e715822d"></script>
 <script src="js/reservas.js?v=d9f7492c"></script>
 <script src="js/perfil.js?v=466b2999"></script>
