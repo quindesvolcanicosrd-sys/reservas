@@ -220,6 +220,13 @@ function _eqPersonaPorId(id) {
 // tiempo. `cb` se invoca igual si el fetch falla (con `_eqPersonas` vacío) --
 // cada caller decide qué mostrar según el resultado, ninguno se queda
 // esperando para siempre.
+// `adminToken` solo si la sesión es admin: `getEquipo()` devuelve los campos
+// confidenciales (`exentaCuota`/`esAdminMiembro`/`solicitudLesionPendiente`)
+// únicamente con un `adminToken` válido (ver MANIFEST.md).
+function _eqParamsGetEquipo(params) {
+  if (typeof _adminToken !== 'undefined' && _adminToken) params.adminToken = _adminToken;
+  return params;
+}
 function _eqAsegurarCargado(cb) {
   if (_eqCargado) { cb(); return; }
   // Modo sin conexión (ver MANIFEST.md/CHANGELOG.md -- "soporte offline
@@ -242,11 +249,20 @@ function _eqAsegurarCargado(cb) {
   _eqCallbacksEspera.push(cb);
   if (_eqCargando) return;
   _eqCargando = true;
-  api({ action: 'getEquipo' }, function(res) {
+  api(_eqParamsGetEquipo({ action: 'getEquipo' }), function(res) {
     _eqPersonas = (res && res.personas) || [];
     _eqCargado = true;
     _eqCargando = false;
-    try { localStorage.setItem('eqcache', JSON.stringify({ equipo: _eqPersonas, ts: Date.now() })); } catch (exEqSave) {}
+    // Sin los campos confidenciales de admin (ver `_eqParamsGetEquipo()`):
+    // la caché offline queda en el dispositivo aunque se cierre la sesión.
+    try {
+      var _eqSinConfidencial = _eqPersonas.map(function(p) {
+        var copia = {};
+        Object.keys(p).forEach(function(k) { if (k !== 'exentaCuota' && k !== 'esAdminMiembro' && k !== 'solicitudLesionPendiente') copia[k] = p[k]; });
+        return copia;
+      });
+      localStorage.setItem('eqcache', JSON.stringify({ equipo: _eqSinConfidencial, ts: Date.now() }));
+    } catch (exEqSave) {}
     var cbs = _eqCallbacksEspera; _eqCallbacksEspera = [];
     cbs.forEach(function(fn) { fn(); });
   }, function() {
@@ -1817,7 +1833,7 @@ function _eqPasaFiltroRol(p) {
 // no hay botón que deshabilitar.
 function _eqAplicarFiltrosAhora() {
   var p = _eqFiltroPeriodo;
-  var params = { action: 'getEquipo' };
+  var params = _eqParamsGetEquipo({ action: 'getEquipo' });
   if (p.modo === 'historico') {
     params.historico = true;
   } else {
@@ -2918,31 +2934,42 @@ function _eqRankTexto(p) {
   return 'Sigue sumando asistencia';
 }
 
-// ── Bloque "Administración" del perfil de detalle (rediseño estilo
-// Ajustes/Android, ver MANIFEST.md 2026-09-28) ─────────────────────────
-// Reemplaza los acordeones Categoría/Estado/Asistencia externa. Mismas
-// clases que las filas de Ajustes (`.aj-group`/`.aj-row`/`.aj-icon`/
+// ── Detalle de perfil 100% estilo Ajustes (ver MANIFEST.md 2026-09-28) ──
+// Después de la foto/nombre/pills y las filas de info, 2 grupos con las
+// mismas clases que las filas de Ajustes (`.aj-group`/`.aj-row`/`.aj-icon`/
 // `.aj-content`/`.aj-title`/`.aj-value`/`.aj-chevron`, css/perfil.css):
-// - Categoría / Estado -> abren la subsección `#eq-admin-sub` (mismo
-//   `.aj-sub` con slide "shared axis X" que Ajustes, ver
-//   `_eqAbrirAdminSub()`), con las pills y su descripción/hint.
-// - Paga cuota / Acceso admin -> switch directo en la fila (`.toggle-btn`,
-//   el mismo de Ajustes, css/global.css).
-// - Activar cuenta (solo sin email) / Registrar asistencia externa ->
-//   acción al tocar.
-// Visibilidad (se conserva la regla anterior): Estado/Paga cuota/Acceso
-// admin/Activar cuenta viven en `.eq-admin-quindes`, que se oculta con fade
-// (`.eq-oculto`) si la categoría está fijada en Mirlxs. `_adminToken` gatea
-// el bloque entero, incluido el propio perfil del admin.
+// - Grupo público (`_eqPerfilGrupoPublicoHtml()`, lo ve cualquiera):
+//   Estadísticas (abre subsección), Estado (solo lectura para no admin,
+//   editable para admin) y, en el detalle propio, la fila de lesión.
+// - Grupo "Administración" (`_eqAdminBloqueHtml()`, SOLO con `_adminToken`;
+//   para no admin ni siquiera se genera el HTML): Categoría, Paga cuota,
+//   Acceso admin, Activar cuenta, Registrar asistencia externa. Sin regla de
+//   visibilidad por categoría: el admin ve y edita todo en Quindes y Mirlxs.
+// Subsecciones (Estadísticas/Estado/Categoría): `#eq-perfil-sub`, mismo
+// `.aj-sub` con slide "shared axis X" que Ajustes (`_eqAbrirSubPerfil()`).
 var _EQ_TIER_TEXTOS = { quinde: 'Quindes', auto: 'Auto', mirlxs: 'Mirlxs' };
+var _EQ_SUB_TITULOS = { stats: 'Estadísticas', estado: 'Estado', categoria: 'Categoría' };
 function _eqEsVistaAdmin() { return typeof _adminToken !== 'undefined' && !!_adminToken; }
 function _eqAdminValorCategoria(p) {
   if (p.tierModo === 'auto') return 'Auto · ' + (p.rol || '—');
   return 'Fija · ' + (_EQ_TIER_TEXTOS[p.tierModo] || p.rol || '—');
 }
-function _eqAdminValorEstadoHtml(p) {
+// Valor de la fila Estado: el estado efectivo y, si está De viaje, el rango
+// de fechas cuando existe (mismo formato que `_eqViajeFilaHtml()`).
+function _eqValorEstadoTexto(p) {
   var est = _eqEstadoEfectivo(p);
-  return _eqEstadoIconoHtml(est, 'eq-admin-valor-icono') + _eqEsc(est);
+  if (est !== 'De viaje') return est;
+  var d = p.viajeDesde, h = p.viajeHasta;
+  if (d && h) return est + ' · ' + _eqViajeFechaTxt(d) + ' – ' + _eqViajeFechaTxt(h);
+  if (d) return est + ' · desde ' + _eqViajeFechaTxt(d);
+  if (h) return est + ' · hasta ' + _eqViajeFechaTxt(h);
+  return est;
+}
+// Resumen corto de la fila Estadísticas: horas y % de asistencia del año
+// (`_eqStatsCalc()`, mismos datos que la subsección).
+function _eqValorStatsTexto(p) {
+  var st = _eqStatsCalc(p);
+  return st.horas + ' h patinadas · ' + st.asistenciaPct + ' % asistencia';
 }
 function _eqEstadoHint(p) {
   var est = _eqEstadoEfectivo(p);
@@ -2950,6 +2977,8 @@ function _eqEstadoHint(p) {
     ? 'Marcada automáticamente como ausente por más de 30 días sin asistir.'
     : 'Si está Activx y no asiste por 30 días seguidos, pasa a Ausente automáticamente.';
 }
+// Solo admin (fila "Paga cuota" del grupo Administración) -- el dato de
+// cuota es confidencial, nunca se muestra a quien no es admin.
 function _eqCuotaHint(p) {
   return _eqEstadoEfectivo(p) === 'Lesionadx' ? 'Exento/a mientras está Lesionadx.' : 'Indica si está al día con la cuota mensual.';
 }
@@ -2973,39 +3002,64 @@ function _eqSetToggle(idEl, on, disabled) {
   btn.setAttribute('aria-pressed', on ? 'true' : 'false');
   if (disabled !== undefined) btn.disabled = !!disabled;
 }
-function _eqAdminFilaHtml(opts) {
-  return '<div class="aj-row' + (opts.clase ? ' ' + opts.clase : '') + '"' + (opts.onclick ? ' onclick="' + opts.onclick + '"' : '') + '>' +
-      '<div class="aj-icon ' + opts.color + '"><span class="material-symbols-outlined">' + opts.icono + '</span></div>' +
+// Fila estilo Ajustes. Sin `onclick` -> fila de solo lectura
+// (`.eq-fila-lectura`: sin chevron, sin cursor ni efecto de tap).
+function _eqAjFilaHtml(opts) {
+  var lectura = !opts.onclick;
+  return '<div class="aj-row' + (lectura ? ' eq-fila-lectura' : '') + (opts.clase ? ' ' + opts.clase : '') + '"' + (opts.onclick ? ' onclick="' + opts.onclick + '"' : '') + '>' +
+      '<div class="aj-icon ' + opts.color + '"><span class="' + (opts.iconoClase || 'material-symbols-outlined') + '">' + opts.icono + '</span></div>' +
       '<div class="aj-content">' +
         '<div class="aj-title">' + opts.titulo + '</div>' +
         (opts.valor !== undefined ? '<div class="aj-value"' + (opts.valorId ? ' id="' + opts.valorId + '"' : '') + '>' + opts.valor + '</div>' : '') +
       '</div>' +
-      (opts.derecha !== undefined ? opts.derecha : '<span class="material-symbols-outlined aj-chevron">chevron_right</span>') +
+      (opts.derecha !== undefined ? opts.derecha : (lectura ? '' : '<span class="material-symbols-outlined aj-chevron">chevron_right</span>')) +
     '</div>';
 }
+
+// ── Grupo público ───────────────────────────────────────────────────────
+function _eqPerfilGrupoPublicoHtml(p) {
+  var idJs = _eqEscId(p.id);
+  var est = _eqEstadoEfectivo(p);
+  var filaStats = _eqAjFilaHtml({
+    icono: 'bar_chart', color: 'aj-icon-orange', titulo: 'Estadísticas',
+    valor: _eqEsc(_eqValorStatsTexto(p)),
+    onclick: "_eqAbrirSubPerfil('" + idJs + "','stats')"
+  });
+  // Estado: solo lectura para no admin (sin chevron/onclick/tap); el admin
+  // abre la subsección de Estado (pills con íconos, hint, fila de viaje).
+  var filaEstado = _eqAjFilaHtml({
+    icono: _EQ_ESTADO_ICONOS[est] || 'how_to_reg', iconoClase: 'material-symbols-rounded', color: 'aj-icon-blue', titulo: 'Estado',
+    valor: _eqEsc(_eqValorEstadoTexto(p)),
+    onclick: _eqEsVistaAdmin() ? "_eqAbrirSubPerfil('" + idJs + "','estado')" : null
+  });
+  var filaLesion = _eqEsUsuarioActual(p) ? _eqLesionFilaHtml() : '';
+  return filaStats + filaEstado + filaLesion;
+}
+// Re-render del grupo público del detalle abierto (estado/lesión cambiados).
+function _eqPerfilRefrescarGrupoPublico(p) {
+  var cont = document.getElementById('eq-perfil-grupo-publico');
+  if (cont && p && _eqPersonaActual && _eqPersonaActual.id === p.id) cont.innerHTML = _eqPerfilGrupoPublicoHtml(p);
+}
+
+// ── Grupo "Administración" (solo admin) ─────────────────────────────────
 function _eqAdminBloqueHtml(p) {
   if (!_eqEsVistaAdmin()) return '';
   var idJs = _eqEscId(p.id);
   var idAttr = _eqEsc(p.id);
   var sinEmail = !p.email;
   var esLesion = _eqEstadoEfectivo(p) === 'Lesionadx';
-  var filaCategoria = _eqAdminFilaHtml({
+  var filaCategoria = _eqAjFilaHtml({
     icono: 'military_tech', color: 'aj-icon-purple', titulo: 'Categoría',
     valor: _eqEsc(_eqAdminValorCategoria(p)), valorId: 'eq-admin-val-cat-' + idAttr,
-    onclick: "_eqAbrirAdminSub('" + idJs + "','categoria')"
+    onclick: "_eqAbrirSubPerfil('" + idJs + "','categoria')"
   });
-  var filaEstado = _eqAdminFilaHtml({
-    icono: 'how_to_reg', color: 'aj-icon-blue', titulo: 'Estado',
-    valor: _eqAdminValorEstadoHtml(p), valorId: 'eq-admin-val-estado-' + idAttr,
-    onclick: "_eqAbrirAdminSub('" + idJs + "','estado')"
-  });
-  var filaCuota = _eqAdminFilaHtml({
+  var filaCuota = _eqAjFilaHtml({
     icono: 'payments', color: 'aj-icon-green', titulo: 'Paga cuota',
     valor: _eqEsc(_eqCuotaHint(p)), valorId: 'eq-cuota-hint-' + idAttr,
     onclick: "_eqToggleCuotaFila('" + idJs + "')",
     derecha: _eqToggleHtml('eq-tog-cuota-' + idAttr, !p.exentaCuota, esLesion, "_eqToggleCuotaFila('" + idJs + "')")
   });
-  var filaAdmin = _eqAdminFilaHtml({
+  var filaAdmin = _eqAjFilaHtml({
     icono: 'admin_panel_settings', color: 'aj-icon-orange', titulo: 'Acceso admin',
     valor: _eqEsc(_eqAdminHint(p)), valorId: 'eq-admin-hint-' + idAttr,
     onclick: "_eqToggleAdminFila('" + idJs + "')",
@@ -3013,31 +3067,31 @@ function _eqAdminBloqueHtml(p) {
   });
   // Solo si todavía no tiene email vinculado: una cuenta con email ya pasó
   // por inscripcion/ o ya se activó, el link no aplica.
-  var filaActivar = sinEmail ? _eqAdminFilaHtml({
+  var filaActivar = sinEmail ? _eqAjFilaHtml({
     icono: 'link', color: 'aj-icon-amber', titulo: 'Activar cuenta',
     valor: 'Genera un link de un solo uso', onclick: "_eqGenerarInviteLink('" + idJs + "')"
   }) : '';
-  // Fuera de `.eq-admin-quindes` a propósito: una jugadora de cualquier
-  // categoría puede entrenar afuera.
-  var filaExterna = _eqAdminFilaHtml({
+  var filaExterna = _eqAjFilaHtml({
     icono: 'travel_explore', color: 'aj-icon-muted', titulo: 'Registrar asistencia externa',
     valor: 'Entrenamiento en otro equipo o país', onclick: "_eqAbrirSheetAsistExterna('" + idJs + "')"
   });
-  return '<div class="seccion-label eq-admin-titulo">Administración</div>' +
-    '<div class="aj-group eq-admin-grupo">' +
-      filaCategoria +
-      '<div class="eq-admin-quindes' + (p.tierModo === 'mirlxs' ? ' eq-oculto' : '') + '" id="eq-admin-q-' + idAttr + '">' +
-        filaEstado + filaCuota + filaAdmin + filaActivar +
-      '</div>' +
-      filaExterna +
+  return '<div class="seccion-label eq-perfil-grupo-titulo">Administración</div>' +
+    '<div class="aj-group eq-perfil-grupo">' +
+      filaCategoria + filaCuota + filaAdmin + filaActivar + filaExterna +
     '</div>';
 }
 
-// Contenido de la subsección (Categoría o Estado). Mismos ids/onclick que
-// usan `_eqCambiarTier()`/`_eqCambiarEstado()` para sincronizar las pills.
-function _eqAdminSubHtml(p, tipo) {
+// Contenido de cada subsección. Mismos ids/onclick que usan
+// `_eqCambiarTier()`/`_eqCambiarEstado()` para sincronizar las pills.
+function _eqSubPerfilHtml(p, tipo) {
   var idJs = _eqEscId(p.id);
   var idAttr = _eqEsc(p.id);
+  if (tipo === 'stats') {
+    return '<div class="eq-perfil-stats">' +
+        '<p class="eq-perfil-stats-nota">Los resultados se basan en los filtros aplicados en Equipo.</p>' +
+        _eqStatsContenidoHtml(p) +
+      '</div>';
+  }
   if (tipo === 'categoria') {
     var botones = ['quinde', 'auto', 'mirlxs'].map(function(m) {
       return '<button type="button" class="eq-opcion-btn eq-tier-btn' + (p.tierModo === m ? ' activo' : '') + '" data-modo="' + m + '" onclick="_eqCambiarTier(\'' + idJs + '\',\'' + m + '\')">' + _EQ_TIER_TEXTOS[m] + '</button>';
@@ -3054,23 +3108,34 @@ function _eqAdminSubHtml(p, tipo) {
     '<p class="eq-admin-hint" id="eq-estado-hint-' + idAttr + '">' + _eqEsc(_eqEstadoHint(p)) + '</p>' +
     (viaje ? '<div class="eq-info-lista eq-admin-sub-viaje">' + viaje + '</div>' : '');
 }
+// Termómetro oculto con categoría fijada a mano (Cambio 52), dentro de la
+// subsección de Estadísticas. `instant`: sin animar (estado de arranque).
+function _eqSubAplicarRank(p, instant) {
+  var rankWrap = document.querySelector('#eq-perfil-sub .eq-rank-wrap');
+  if (!rankWrap) return;
+  if (instant) rankWrap.classList.add('sin-transicion');
+  rankWrap.classList.toggle('eq-rank-oculto', p.tierModo !== 'auto');
+  if (instant) requestAnimationFrame(function() { rankWrap.classList.remove('sin-transicion'); });
+}
 
-// Subsección `#eq-admin-sub` (index.html) -- mismo "shared axis X" que
+// Subsección `#eq-perfil-sub` (index.html) -- mismo "shared axis X" que
 // `irAjSub()`/`cerrarAjSub()` de Ajustes (el panel entra desde la derecha
-// mientras `#eq-perfil-card` retrocede), pero cerrado vía `_overlayStack`
-// (`_registrarOverlayAbierto()`, js/ui.js) como `#eq-desglose-panel`: el
-// gesto/botón atrás cierra la subsección sin navegar la pantalla de fondo.
-var _eqAdminSubCtx = null; // { id, tipo }
-function _eqAbrirAdminSub(id, tipo) {
+// mientras `#eq-perfil-card` retrocede), cerrado vía `_overlayStack`
+// (`_registrarOverlayAbierto()`, js/ui.js): el gesto/botón atrás cierra la
+// subsección sin navegar la pantalla de fondo. Estado/Categoría solo admin.
+var _eqSubPerfilCtx = null; // { id, tipo }
+function _eqAbrirSubPerfil(id, tipo) {
+  if ((tipo === 'estado' || tipo === 'categoria') && !_eqEsVistaAdmin()) return;
   var p = _eqPersonaPorId(id);
-  var panel = document.getElementById('eq-admin-sub');
-  var body = document.getElementById('eq-admin-sub-body');
-  var titulo = document.getElementById('eq-admin-sub-titulo');
+  var panel = document.getElementById('eq-perfil-sub');
+  var body = document.getElementById('eq-perfil-sub-body');
+  var titulo = document.getElementById('eq-perfil-sub-titulo');
   if (!p || !panel || !body) return;
-  _eqAdminSubCtx = { id: id, tipo: tipo };
-  if (titulo) titulo.textContent = tipo === 'categoria' ? 'Categoría' : 'Estado';
-  body.innerHTML = _eqAdminSubHtml(p, tipo);
+  _eqSubPerfilCtx = { id: id, tipo: tipo };
+  if (titulo) titulo.textContent = _EQ_SUB_TITULOS[tipo] || '';
+  body.innerHTML = _eqSubPerfilHtml(p, tipo);
   body.scrollTop = 0;
+  if (tipo === 'stats') { _eqHidratarAvatares(); _eqSubAplicarRank(p, true); }
   var fondo = document.getElementById('eq-perfil-card');
   panel.style.transform = '';
   panel.style.opacity = '';
@@ -3082,68 +3147,45 @@ function _eqAbrirAdminSub(id, tipo) {
       if (fondo) { fondo.style.transform = 'translateX(-25%)'; fondo.style.opacity = '0.85'; }
     });
   });
-  _registrarOverlayAbierto(_eqCerrarAdminSub);
+  _registrarOverlayAbierto(_eqCerrarSubPerfil);
 }
-function _eqCerrarAdminSub(porGesto) {
+function _eqCerrarSubPerfil(porGesto) {
   if (!porGesto) { history.back(); return; }
-  var panel = document.getElementById('eq-admin-sub');
+  var panel = document.getElementById('eq-perfil-sub');
   var fondo = document.getElementById('eq-perfil-card');
-  var ctx = _eqAdminSubCtx;
+  var ctx = _eqSubPerfilCtx;
   if (ctx) { var p = _eqPersonaPorId(ctx.id); if (p) _eqAdminActualizarFilas(p); }
   if (panel) { panel.style.transform = 'translateX(100%)'; panel.style.opacity = '0.85'; }
   if (fondo) { fondo.style.transform = 'translateX(0)'; fondo.style.opacity = '1'; }
   setTimeout(function() {
-    if (_eqAdminSubCtx !== ctx) return; // se reabrió antes de terminar la salida
+    if (_eqSubPerfilCtx !== ctx) return; // se reabrió antes de terminar la salida
     if (panel) { panel.classList.remove('activa'); panel.style.transform = ''; panel.style.opacity = ''; }
     if (fondo) { fondo.style.transform = ''; fondo.style.opacity = ''; }
-    _eqAdminSubCtx = null;
+    _eqSubPerfilCtx = null;
   }, 320);
 }
 // Repinta el cuerpo de la subsección si está abierta para esta persona
 // (tras guardar/revertir un cambio o un re-render del perfil).
 function _eqAdminRefrescarSub(p) {
-  var ctx = _eqAdminSubCtx;
+  var ctx = _eqSubPerfilCtx;
   if (!ctx || !p || ctx.id !== p.id) return;
-  var body = document.getElementById('eq-admin-sub-body');
-  if (body) body.innerHTML = _eqAdminSubHtml(p, ctx.tipo);
+  var body = document.getElementById('eq-perfil-sub-body');
+  if (!body) return;
+  body.innerHTML = _eqSubPerfilHtml(p, ctx.tipo);
+  if (ctx.tipo === 'stats') { _eqHidratarAvatares(); _eqSubAplicarRank(p, true); }
 }
-// Valores de las filas de la vista principal (Categoría/Estado/cuota/admin)
-// -- sin recargar el perfil.
+// Valores de las filas de la vista principal (Estadísticas/Estado/lesión,
+// Categoría/cuota/admin) -- sin recargar el perfil.
 function _eqAdminActualizarFilas(p) {
   var idAttr = p.id;
+  _eqPerfilRefrescarGrupoPublico(p);
   var cat = document.getElementById('eq-admin-val-cat-' + idAttr);
   if (cat) cat.textContent = _eqAdminValorCategoria(p);
-  var est = document.getElementById('eq-admin-val-estado-' + idAttr);
-  if (est) est.innerHTML = _eqAdminValorEstadoHtml(p);
   var cuotaHint = document.getElementById('eq-cuota-hint-' + idAttr);
   if (cuotaHint) cuotaHint.textContent = _eqCuotaHint(p);
   _eqSetToggle('eq-tog-cuota-' + idAttr, !p.exentaCuota, _eqEstadoEfectivo(p) === 'Lesionadx');
   _eqSetToggle('eq-tog-admin-' + idAttr, !!p.esAdminMiembro, !p.email);
-  var secQ = document.getElementById('eq-admin-q-' + idAttr);
-  if (secQ) secQ.classList.toggle('eq-oculto', p.tierModo === 'mirlxs');
-  var rankWrap = document.querySelector('#s-equipo-perfil .eq-rank-wrap');
-  if (rankWrap && _eqPersonaActual && _eqPersonaActual.id === p.id) rankWrap.classList.toggle('eq-rank-oculto', p.tierModo !== 'auto');
-}
-
-// Toggle genérico de acordeón (Cambio 57) -- `header` es el `.eq-acord-header`
-// clickeado (`this` del onclick inline, mismo patrón sin listener delegado
-// que el resto de este archivo); el contenedor a togglear es su padre
-// directo (`.eq-acord`). Hoy lo usa solo el acordeón "Estadísticas" del
-// perfil de detalle -- Categoría/Estado pasaron al bloque "Administración"
-// estilo Ajustes (`_eqAdminBloqueHtml()`).
-function eqToggleAcordeon(header) {
-  var acord = header.parentNode;
-  var seAbrio = !acord.classList.contains('eq-acord-abierto');
-  acord.classList.toggle('eq-acord-abierto');
-  // Auto-scroll al abrir (pedido explícito, ver MANIFEST.md) -- espera a
-  // que termine la transición de `max-height` de `.eq-acord-cuerpo`
-  // (css/equipo.css, 0.3s) antes de medir/scrollear, si no el cálculo de
-  // `scrollIntoView` usa la altura vieja (colapsada) y no mueve nada.
-  if (seAbrio) {
-    setTimeout(function() {
-      acord.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 320);
-  }
+  if (_eqSubPerfilCtx && _eqSubPerfilCtx.id === p.id) _eqSubAplicarRank(p);
 }
 
 // Toggle de modo de tier -- llamada directa desde el `onclick` de cada
@@ -3177,9 +3219,8 @@ function _eqAplicarTierUI(persona, modo) {
   });
   var desc = document.getElementById('eq-tier-desc-' + persona.id);
   if (desc) desc.textContent = _EQ_TIER_DESCRIPCIONES[modo];
-  // Termómetro + sección de gestión (Estado/cuota/admin, solo Quindes) --
-  // fade+colapso con `.eq-oculto`/`.eq-rank-oculto`, ver
-  // `_eqAdminActualizarFilas()`.
+  // Valor de la fila Categoría + termómetro de la subsección de
+  // Estadísticas (`.eq-rank-oculto`), ver `_eqAdminActualizarFilas()`.
   _eqAdminActualizarFilas(persona);
 }
 
@@ -3317,7 +3358,7 @@ function _eqAplicarEstadoUI(id, persona, nuevoEstado) {
   _eqAdminRefrescarSub(persona);
   _eqAdminActualizarFilas(persona);
   // Admin cambiando su PROPIO estado desde el detalle: mantiene `E.datos`
-  // al día para el bloque de lesión (`_eqLesionHtml()` lee de ahí).
+  // al día para la fila de lesión (`_eqLesionFilaHtml()` lee de ahí).
   if (_eqEsUsuarioActual(persona)) {
     if (typeof E !== 'undefined' && E.datos) E.datos.estado_miembro = nuevoEstado;
     _eqLesionRefrescar();
@@ -3646,8 +3687,10 @@ function _eqPerfilContenidoHtml(p) {
   // acá habría requerido decidir de nuevo esa regla para un contexto distinto,
   // fuera de alcance de "reemplazar el demo por datos reales". Pendiente que
   // Victor decida si la quiere de vuelta en el perfil de Equipo.
-  // Estado "De viaje" primero -- es lo más relevante mientras dure.
-  var filas = _eqViajeFilaHtml(p);
+  // "De viaje" (con fechas) ahora vive en el valor de la fila Estado del
+  // grupo público (`_eqValorEstadoTexto()`); "Cancelar viaje" en su
+  // subsección (admin).
+  var filas = '';
   if (p.telefono) filas += '<a class="eq-info-fila" href="tel:' + _eqEsc(p.telefono) + '"><span class="material-symbols-outlined">call</span><span class="eq-info-texto">' + _eqEsc(p.telefono) + '</span></a>';
   if (p.email) filas += '<a class="eq-info-fila" href="mailto:' + _eqEsc(p.email) + '"><span class="material-symbols-outlined">mail</span><span class="eq-info-texto">' + _eqEsc(p.email) + '</span></a>';
   // `fechaIngreso` ('fecha_ingreso', getEquipo()) -- mismo dato ya expuesto
@@ -3668,42 +3711,6 @@ function _eqPerfilContenidoHtml(p) {
   var rolTexto = _eqRolesTexto(p.username);
   if (rolTexto) filas += '<div class="eq-info-fila"><span class="material-symbols-outlined">badge</span><span class="eq-info-texto">' + _eqEsc(rolTexto) + '</span></div>';
 
-  // Sección de stats -- rediseñada como acordeón compacto (pedido explícito,
-  // ver MANIFEST.md: "colapsable y más compacta, igual de liviana que el
-  // panel Mis estadísticas de la home") -- reusa `.eq-acord`/`.eq-acord-header`/
-  // `.eq-acord-cuerpo`/`eqToggleAcordeon()`. `.eq-perfil-stats-acord` (css/equipo.css) aplica un achique
-  // compacto de `.eq-stat-card`/`.eq-rank-wrap`. Re-ajuste (pedido
-  // explícito, ver MANIFEST.md/CHANGELOG.md -- "mismo layout, clases y
-  // estructura HTML que el viejo panel Mis estadísticas", ya eliminado):
-  // el contenido real (horas/asistencia + separador PUNTOS + grid
-  // tareas/asistencia-combo + termómetro) ahora es `_eqStatsContenidoHtml(p)`
-  // (función compartida, ver ese bloque más arriba en este archivo) --
-  // antes era una copia a mano de todo ese bloque, con la card de
-  // "Puntos totales" separada y las 2 cards de tareas/asistencia sin
-  // fusionar (versión vieja de "Mis estadísticas", desactualizada desde
-  // el rediseño compacto de esa función). Filtro de período (2 pills
-  // Fecha/Histórico, `.eq-periodo-pills`) SACADO (pedido explícito,
-  // re-ajuste -- "sin filtros de período en estadísticas del detalle") --
-  // reemplazado por una nota de texto chica (`.eq-perfil-stats-nota`,
-  // color `var(--muted)`) que aclara que el período viene del filtro
-  // global de Equipo -- `_eqFiltroPeriodoModo()` sigue sincronizando
-  // TODAS las instancias de `.eq-periodo-pills` que queden en el DOM
-  // (panel de Filtros de la lista, la única que sobrevive), sin romperse
-  // por esta menos.
-  // Bug real corregido (pedido explícito) -- "expandido por defecto solo en
-  // la vista propia de la home de Equipo": este acordeón nacía SIEMPRE
-  // abierto (`eq-acord-abierto` hardcodeado) sin importar de quién sea el
-  // perfil. Ahora nace colapsado.
-  var statsAcordHtml = '<div class="eq-acord eq-perfil-stats-acord">' +
-      '<div class="eq-acord-header" onclick="eqToggleAcordeon(this)">' +
-        '<p class="eq-tier-label" style="margin:0">Estadísticas</p>' +
-        '<span class="eq-acord-icono"><span class="material-symbols-rounded">chevron_right</span></span>' +
-      '</div>' +
-      '<div class="eq-acord-cuerpo">' +
-        '<p class="eq-perfil-stats-nota">Los resultados se basan en los filtros aplicados en Equipo.</p>' +
-        _eqStatsContenidoHtml(p) +
-      '</div>' +
-    '</div>';
   // Categoría (Quindes/Mirlxs) + pronombres, misma fila, justo debajo del
   // nombre (pedido explícito, re-ajuste, ver MANIFEST.md) -- la categoría
   // vivía como `.eq-rol-pill` superpuesta bajo la foto (ver comentario en
@@ -3733,18 +3740,11 @@ function _eqPerfilContenidoHtml(p) {
       '<div class="eq-perfil-sub">' + ((p.numeroDerby !== null && p.numeroDerby !== undefined && p.numeroDerby !== '') ? '#' + p.numeroDerby + ' &bull; ' : '') + '@' + _eqEsc(p.username) + '</div>' +
     '</div>' +
     (pillsHtml ? '<div class="eq-perfil-pills-row">' + pillsHtml + '</div>' : '') +
-    // Orden re-ajustado (pedido explícito, "los datos de contacto deben
-    // aparecer siempre ANTES de cualquier desplegable") -- `filas` (datos
-    // personales con ícono: teléfono/email/fecha de ingreso/rol) pasa a
-    // ser lo PRIMERO después del header, antes de los 3 acordeones
-    // (Estadísticas/Categoría/Estado). Orden anterior (ver "Cambios
-    // recientes" de una ronda previa, ya sin vigencia): Estadísticas ->
-    // Categoría -> `filas` -> Estado.
+    // Orden (ver MANIFEST.md): header -> filas de info (teléfono/email/
+    // fecha de ingreso/roles) -> grupo público -> grupo Administración.
     (filas ? '<div class="eq-info-lista">' + filas + '</div>' : '') +
-    statsAcordHtml +
-    // Flujo de lesión (movido desde Mi perfil/Ajustes, ver `_eqLesionHtml()`)
-    // -- solo en el detalle propio, nunca en el de otras personas.
-    (_eqEsUsuarioActual(p) ? '<div id="eq-lesion-wrap" class="eq-lesion-wrap">' + _eqLesionHtml() + '</div>' : '') +
+    // Grupo público: Estadísticas, Estado y (propio) lesión.
+    '<div class="aj-group eq-perfil-grupo" id="eq-perfil-grupo-publico">' + _eqPerfilGrupoPublicoHtml(p) + '</div>' +
     _eqAdminBloqueHtml(p);
 }
 
@@ -3755,53 +3755,45 @@ function _eqRenderPerfil(p) {
   if (cont) cont.innerHTML = _eqPerfilContenidoHtml(p);
   _eqAdminRefrescarSub(p);
   _eqHidratarAvatares();
-  // Tier fijado a mano (Cambio 52) -- el termómetro arranca YA oculto, sin
-  // animar el estado inicial (`.sin-transicion` se saca en el frame
-  // siguiente, mismo truco doble-rAF que el fill de acá abajo) en vez de
-  // aparecer un instante y recién ahí desvanecerse.
-  if (p.tierModo !== 'auto') {
-    var rankWrap = document.querySelector('#s-equipo-perfil .eq-rank-wrap');
-    if (rankWrap) {
-      rankWrap.classList.add('eq-rank-oculto', 'sin-transicion');
-      requestAnimationFrame(function() { rankWrap.classList.remove('sin-transicion'); });
-    }
-  }
 }
 
 /* ── Flujo de lesión propio (movido desde Mi perfil/Ajustes, js/perfil.js, al
    detalle propio de Equipo -- ver MANIFEST.md) ──────────────────────────
    Modelo de autodeclaración (ver MANIFEST.md): "Reportar lesión" aplica
    Lesionadx DIRECTO (`autodeclararEstado`, sin aprobación ni justificación)
-   tras un sheet de confirmación simple; "Estoy recuperadx" sigue igual
-   (`recuperarseLesion`). Venir a entrenar también la devuelve a Activx
-   (backend, `_reactivarPorAsistencia()`). `estado_miembro` (snake_case, tal
-   cual viaja desde getDatosCompletos()) gobierna qué se muestra: Activx ->
-   botón "Reportar lesión"; Lesionadx -> texto + "Estoy recuperadx"; otros
-   estados (Ausente/Técnico/De viaje) -> nada. `solicitudLesionPendiente`
-   (flujo viejo con aprobación, OBSOLETO) solo se muestra si quedó una
-   solicitud creada antes del cambio, con su "Cancelar solicitud". Vive en
-   `#eq-lesion-wrap`, que `_eqPerfilContenidoHtml()` solo agrega en el
-   detalle propio. Sheet de confirmación: `#dat-lesion-sheet` (index.html). */
-function _eqLesionHtml() {
+   tras un sheet de confirmación simple; "Me recuperé" (`recuperarseLesion`).
+   Venir a entrenar también la devuelve a Activx (backend,
+   `_reactivarPorAsistencia()`). `estado_miembro` (snake_case, tal cual viaja
+   desde getDatosCompletos()) gobierna qué fila se muestra en el grupo
+   público del detalle propio: Activx -> "Reportar lesión"; Lesionadx -> "Me
+   recuperé"; otros estados (Ausente/Técnico/De viaje) -> ninguna.
+   `solicitudLesionPendiente` (flujo viejo con aprobación, OBSOLETO) solo si
+   quedó una solicitud creada antes del cambio ("Cancelar solicitud de
+   lesión"). Sheet de confirmación: `#dat-lesion-sheet` (index.html). */
+// Fila de lesión del grupo público (solo detalle propio). Sin mención a la
+// cuota: ese dato es confidencial (solo admin, ver MANIFEST.md).
+function _eqLesionFilaHtml() {
   var d = (typeof E !== 'undefined' && E.datos) || null;
   if (!d) return '';
   var estado = d.estado_miembro || 'Activx';
+  var icono = _EQ_ESTADO_ICONOS['Lesionadx'];
   if (estado === 'Lesionadx') {
-    return '<p class="eq-lesion-texto">Estás marcadx como Lesionadx. Estás exentx de la cuota durante este período. Si vienes a entrenar, vuelves a Activx automáticamente.</p>' +
-      '<button type="button" class="eq-lesion-btn" onclick="_eqLesionRecuperarse()">Estoy recuperadx</button>';
+    return _eqAjFilaHtml({ icono: 'healing', color: 'aj-icon-green', titulo: 'Me recuperé',
+      valor: 'Si vienes a entrenar, vuelves a Activx automáticamente.', onclick: '_eqLesionRecuperarse()' });
   }
   if (d.solicitudLesionPendiente) {
-    return '<p class="eq-lesion-texto">Solicitud enviada, esperando aprobación de los admins.</p>' +
-      '<a href="javascript:void(0)" class="eq-lesion-link" onclick="_eqLesionCancelarSolicitud()">Cancelar solicitud</a>';
+    return _eqAjFilaHtml({ icono: icono, iconoClase: 'material-symbols-rounded', color: 'aj-icon-amber', titulo: 'Cancelar solicitud de lesión',
+      valor: 'Solicitud enviada, esperando aprobación de los admins.', onclick: '_eqLesionCancelarSolicitud()' });
   }
   if (estado === 'Activx') {
-    return '<button type="button" class="btn btn-outline eq-lesion-btn-sutil" onclick="_eqLesionAbrirSheet()">' + _eqEstadoIconoHtml('Lesionadx') + 'Reportar lesión</button>';
+    return _eqAjFilaHtml({ icono: icono, iconoClase: 'material-symbols-rounded', color: 'aj-icon-red', titulo: 'Reportar lesión',
+      valor: 'Pasas a Lesionadx al confirmar.', onclick: '_eqLesionAbrirSheet()' });
   }
   return '';
 }
 function _eqLesionRefrescar() {
-  var cont = document.getElementById('eq-lesion-wrap');
-  if (cont) cont.innerHTML = _eqLesionHtml();
+  var yo = _eqUsuariaActual();
+  if (yo) _eqPerfilRefrescarGrupoPublico(yo);
 }
 // Abrir empuja un estado de historial + registra el cierre; cerrar a mano
 // (botón "Cancelar" o desde `_eqLesionConfirmar()`) dispara `history.back()`

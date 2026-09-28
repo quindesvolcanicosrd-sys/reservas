@@ -43,7 +43,7 @@
 <link rel="stylesheet" href="css/nav.css?v=f9a04f6b">
 <link rel="stylesheet" href="css/eventos.css?v=e0608f43">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=f27356e2">
+<link rel="stylesheet" href="css/equipo.css?v=adeaba41">
 <link rel="stylesheet" href="css/perfil.css">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
@@ -2904,20 +2904,20 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="eq-desglose-panel-inner" id="eq-desglose-lista"></div>
   </div>
 
-  <!-- Subsección del bloque "Administración" del perfil de detalle
-       (Categoría / Estado) -- mismo `.aj-sub` + slide "shared axis X" que
-       las subsecciones de Ajustes; abierta/cerrada por
-       `_eqAbrirAdminSub()`/`_eqCerrarAdminSub()` (js/equipo.js), cuerpo
-       armado por `_eqAdminSubHtml()`. -->
-  <div class="aj-sub" id="eq-admin-sub">
+  <!-- Subsección del perfil de detalle (Estadísticas / Estado / Categoría)
+       -- mismo `.aj-sub` + slide "shared axis X" que las subsecciones de
+       Ajustes; abierta/cerrada por `_eqAbrirSubPerfil()`/
+       `_eqCerrarSubPerfil()` (js/equipo.js), cuerpo armado por
+       `_eqSubPerfilHtml()`. -->
+  <div class="aj-sub" id="eq-perfil-sub">
     <div class="app-nav" style="position:sticky;top:0;z-index:10;flex-shrink:0;">
-      <button class="app-nav-back" onclick="_eqCerrarAdminSub()">
+      <button class="app-nav-back" onclick="_eqCerrarSubPerfil()">
         <span class="material-symbols-outlined">arrow_back</span>
       </button>
-      <span class="app-nav-title" id="eq-admin-sub-titulo">Categoría</span>
+      <span class="app-nav-title" id="eq-perfil-sub-titulo">Estadísticas</span>
       <div style="width:40px;flex-shrink:0;"></div>
     </div>
-    <div class="aj-sub-inner" id="eq-admin-sub-body"></div>
+    <div class="aj-sub-inner" id="eq-perfil-sub-body"></div>
   </div>
 
   <div class="pantalla" id="s-datos">
@@ -3581,10 +3581,10 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js?v=8e63a98b"></script>
 <script src="js/ui.js?v=24cea86a"></script>
-<script src="js/eventos.js?v=e3932c57"></script>
+<script src="js/eventos.js?v=c2f7994e"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=f1afb381"></script>
-<script src="js/equipo.js?v=e5ca8475"></script>
+<script src="js/equipo.js?v=d8d424de"></script>
 <script src="js/home.js?v=e715822d"></script>
 <script src="js/reservas.js?v=d9f7492c"></script>
 <script src="js/perfil.js?v=466b2999"></script>
@@ -5385,7 +5385,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
   <div class="bsheet-handle"></div>
   <div class="bsheet-title">Reportar lesión</div>
   <div class="bsheet-body">
-    <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 20px;">Pasarás a Lesionadx ahora mismo. Tu categoría queda congelada y quedas exento/a de cuota mientras dure la lesión. Si vienes a entrenar, vuelves a Activx automáticamente.</p>
+    <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 20px;">Pasarás a Lesionadx ahora mismo. Tu categoría queda congelada mientras dure la lesión. Si vienes a entrenar, vuelves a Activx automáticamente.</p>
     <button type="button" class="btn btn-primary" onclick="_eqLesionConfirmar()" style="margin-bottom:10px;">Reportar lesión</button>
     <button type="button" class="btn btn-outline" onclick="_eqLesionCerrarSheet()">Cancelar</button>
   </div>

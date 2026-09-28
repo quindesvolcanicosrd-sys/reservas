@@ -396,7 +396,7 @@
    al cambiar de mes/vista (pedido explícito re-ajuste: "no debe
    expandirse/contraerse abruptamente") -- `overflow:hidden` +
    `transition:max-height` clásico de esta sección (mismo patrón que
-   `.eq-header-panel`/`.eq-acord-cuerpo`, más arriba/abajo en este archivo),
+   `.eq-header-panel`, más arriba en este archivo),
    `_eqCalFechaRenderContenido()`/js/equipo.js es quien anima el valor real
    en cada cambio (fija el alto ACTUAL antes de pintar, mide el alto NUEVO
    recién pintado, deja que esta `transition` interpole entre los 2) EN
@@ -776,20 +776,16 @@
   padding: 7px 16px; border-radius: 20px; font-size: 0.78rem;
 }
 
-/* ── Acordeón "Estadísticas" del perfil de detalle (rediseño, ver
-   MANIFEST.md -- "colapsable y más compacta, igual de liviana que Mis
-   estadísticas") -- `.eq-acord`/`.eq-acord-header`/`.eq-acord-cuerpo` ya
-   existentes (ver "Acordeones Categoría/Estado" más abajo), esto es solo
-   el achique de `.eq-stat-card`/`.eq-rank-wrap` puertas adentro (mismos
-   valores que tenía el panel "Mis estadísticas", eliminado) -- selector de descendiente, nunca la clase
-   a secas, para no achicar ninguna otra card de la app. */
-.eq-perfil-stats-acord { margin-top: 14px; }
-.eq-perfil-stats-acord .eq-stats-grid { gap: 8px; margin: 10px 0 4px; }
-.eq-perfil-stats-acord .eq-stat-card { padding: 10px 8px; }
-.eq-perfil-stats-acord .eq-stat-icon { font-size: 1.15rem; margin-bottom: 4px; }
-.eq-perfil-stats-acord .eq-stat-valor { font-size: 15px; }
-.eq-perfil-stats-acord .eq-stat-label { font-size: 13px; margin-top: 1px; }
-.eq-perfil-stats-acord .eq-rank-wrap { margin: 10px 0 4px; }
+/* ── Subsección "Estadísticas" del perfil de detalle (`#eq-perfil-sub`,
+   `_eqSubPerfilHtml(p,'stats')`/js/equipo.js; antes un acordeón) -- achique
+   compacto de `.eq-stat-card`/`.eq-rank-wrap`, selector de descendiente
+   para no achicar ninguna otra card de la app. */
+.eq-perfil-stats .eq-stats-grid { gap: 8px; margin: 10px 0 4px; }
+.eq-perfil-stats .eq-stat-card { padding: 10px 8px; }
+.eq-perfil-stats .eq-stat-icon { font-size: 1.15rem; margin-bottom: 4px; }
+.eq-perfil-stats .eq-stat-valor { font-size: 15px; }
+.eq-perfil-stats .eq-stat-label { font-size: 13px; margin-top: 1px; }
+.eq-perfil-stats .eq-rank-wrap { margin: 10px 0 4px; }
 /* Nota de período (re-ajuste, pedido explícito, ver MANIFEST.md -- "sin
    filtros de período en estadísticas del detalle") -- reemplaza las 2
    pills Fecha/Histórico que vivían acá (`.eq-perfil-stats-periodo`/
@@ -853,12 +849,9 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
 
 /* Control de categoría (tier), admin-only -- segmented control
    [Quindes | Auto | Mirlxs] de la subsección Categoría del bloque
-   Administración (Cambio 52, `_eqAdminSubHtml()`/`_eqCambiarTier()`,
+   Administración (Cambio 52, `_eqSubPerfilHtml()`/`_eqCambiarTier()`,
    js/equipo.js). `--muted` para textos apagados (no existe `--text-muted`
    en css/colors.css). */
-/* `text-transform:uppercase` sacado (pedido explícito, re-ajuste) -- hoy
-   solo la usa el header del acordeón "Estadísticas" del perfil. */
-.eq-tier-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.6px; color: var(--muted); margin-bottom: 8px; }
 /* Pills de opción del bloque Administración (Categoría y Estado) -- clase
    base ÚNICA (pedido explícito 2026-09-28: mismas medidas en todas partes):
    mismo alto, padding, font-size y radio. `.eq-tier-btn`/`.eq-estado-btn`
@@ -878,30 +871,26 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
 .eq-tier-btn { flex: 1; }
 .eq-tier-desc { font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
 
-/* Sección admin-Quindes (Cambio 53) -- Estado/Paga cuota/Acceso admin/
-   Activar cuenta: fade+colapso con `.eq-oculto` si la categoría está fijada
-   en Mirlxs (`_eqAdminActualizarFilas()`, js/equipo.js), mismo mecanismo que
-   `.eq-rank-oculto`. `!important` en `.eq-oculto` porque conviven reglas de
-   layout más específicas sobre los mismos elementos. */
-.eq-admin-quindes { transition: opacity 0.3s ease, max-height 0.35s ease; max-height: 700px; overflow: hidden; }
-.eq-oculto { opacity: 0 !important; max-height: 0 !important; pointer-events: none; }
 .eq-admin-hint { font-size: 0.72rem; color: var(--muted); line-height: 1.45; margin-top: 8px; }
 
-/* ── Bloque "Administración" del perfil de detalle (rediseño estilo
-   Ajustes/Android, 2026-09-28) -- reusa `.aj-group`/`.aj-row`/`.aj-icon`/
-   `.aj-content`/`.aj-title`/`.aj-value`/`.aj-chevron` (css/perfil.css) y el
-   switch `.toggle-btn` (css/global.css); acá solo lo propio del bloque.
-   Título con `.seccion-label` (css/ui.css) -- Ajustes no tiene título de
-   grupo propio. */
-.eq-admin-titulo { margin-top: 22px; }
-/* Los hints de las filas (cuota/admin) pueden ocupar 2 líneas -- a
+/* ── Grupos del perfil de detalle (100% estilo Ajustes, 2026-09-28) --
+   grupo público (Estadísticas/Estado/lesión) y grupo "Administración"
+   (solo admin). Reusan `.aj-group`/`.aj-row`/`.aj-icon`/`.aj-content`/
+   `.aj-title`/`.aj-value`/`.aj-chevron` (css/perfil.css) y el switch
+   `.toggle-btn` (css/global.css); acá solo lo propio del detalle. Mismo
+   espacio entre grupos que Ajustes (`.aj-group` trae `margin-bottom:10px`);
+   título de grupo con `.seccion-label` (css/ui.css). */
+.eq-perfil-grupo { margin-top: 16px; }
+.eq-perfil-grupo-titulo { margin-top: 22px; }
+.eq-perfil-grupo-titulo + .eq-perfil-grupo { margin-top: 0; }
+/* Los hints de las filas (cuota/admin, lesión) pueden ocupar 2 líneas -- a
    diferencia de Ajustes, donde `.aj-value` es un resumen de 1 línea. */
-.eq-admin-grupo .aj-value { white-space: normal; }
-/* Las filas de `.eq-admin-quindes` viven en un wrapper propio: su última
-   fila conserva el divisor con "Registrar asistencia externa" (que sigue
-   afuera del wrapper). */
-.eq-admin-quindes > .aj-row:last-child { border-bottom: 1px solid var(--border-softest, var(--border-light)); }
-.eq-admin-valor-icono { font-size: 0.95rem; vertical-align: -3px; margin-right: 4px; }
+.eq-perfil-grupo .aj-value { white-space: normal; }
+/* Fila de solo lectura (Estado para quien no es admin): sin cursor ni
+   efecto de tap/hover, sin chevron (lo omite el JS). */
+.aj-row.eq-fila-lectura { cursor: default; }
+.aj-row.eq-fila-lectura:hover, .aj-row.eq-fila-lectura:active { background: transparent; }
+.aj-row .aj-icon .material-symbols-rounded { font-size: 1.375rem; }
 /* Fila de viaje dentro de la subsección Estado. */
 .eq-admin-sub-viaje { margin-top: 16px; }
 /* Fondo que retrocede mientras `#eq-admin-sub`/`#eq-desglose-panel` entran
@@ -973,20 +962,6 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
   color: var(--white); font-size: 0.92rem; font-weight: 700; cursor: pointer; font-family: inherit;
 }
 
-/* ── Acordeón del perfil de detalle (Cambio 57) -- hoy solo
-   "Estadísticas" (Categoría/Estado pasaron al bloque Administración).
-   `eqToggleAcordeon(this)` (onclick inline del header) togglea
-   `.eq-acord-abierto` ahí. Colapsado por default: sin esa clase, `max-height`
-   en 0. */
-.eq-acord-header {
-  cursor: pointer; display: flex; justify-content: space-between;
-  align-items: center; padding: 12px 0;
-}
-.eq-acord-cuerpo { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
-.eq-acord-abierto .eq-acord-cuerpo { max-height: 600px; }
-.eq-acord-icono { transition: transform 0.3s; display: inline-block; color: var(--muted); }
-.eq-acord-abierto .eq-acord-icono { transform: rotate(90deg); }
-
 /* ── Desglose detallado de puntos por concepto (feat nueva, ver
    MANIFEST.md/CHANGELOG.md -- "subpantalla de desglose de puntos por
    concepto") -- `#eq-desglose-panel` (index.html) es el equivalente de
@@ -1005,7 +980,9 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
 .eq-desglose-panel {
   display: none; position: fixed; top: 0; right: 0; left: 0;
   bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px));
-  background: var(--bg); z-index: 950; flex-direction: column; overflow: hidden;
+  /* 960 > 950 de `.aj-sub`: el desglose se abre desde la subsección de
+     Estadísticas (`#eq-perfil-sub`) y tiene que quedar encima. */
+  background: var(--bg); z-index: 960; flex-direction: column; overflow: hidden;
   transform: translateX(100%); opacity: 0.85;
   transition: transform 0.32s var(--ease-axis), opacity 0.32s var(--ease-axis);
 }
@@ -1073,26 +1050,3 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
   font-size: 0.66rem; font-weight: 800; line-height: 1.5;
   background: var(--brand-light); color: var(--brand);
 }
-
-/* ── Flujo de lesión en el detalle propio (`#eq-lesion-wrap`,
-   `_eqLesionHtml()`/js/equipo.js; movido desde Ajustes/css/perfil.css).
-   `.eq-lesion-btn` (Estoy recuperadx) = acción primaria sólida;
-   `.eq-lesion-btn-sutil` (Reportar lesión) solo ajusta el layout encima de
-   `.btn`/`.btn-outline` (css/ui.css). Vacío -> sin aire. */
-.eq-lesion-wrap { margin-top: 14px; }
-.eq-lesion-wrap:empty { display: none; }
-.eq-lesion-texto { font-size: 0.85rem; color: var(--muted); text-align: center; line-height: 1.5; margin: 10px 0 8px; }
-.eq-lesion-btn {
-  display: block; width: 100%; padding: 12px; margin-top: 8px;
-  border: none; border-radius: var(--radius); background: var(--brand);
-  color: var(--white); font-size: 0.85rem; font-weight: 700; cursor: pointer; font-family: inherit;
-}
-.eq-lesion-link {
-  display: block; text-align: center; font-size: 0.8rem; font-weight: 600;
-  color: var(--brand); text-decoration: underline; cursor: pointer;
-}
-.eq-lesion-btn-sutil {
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  width: 100%;
-}
-.eq-lesion-btn-sutil .material-symbols-outlined { font-size: 18px; }

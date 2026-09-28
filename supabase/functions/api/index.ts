@@ -3795,6 +3795,11 @@ async function adminGetRosterEquipo(): Promise<Record<string, any>> {
 // logueada, no admin-only, y esta app no valida sesión en la mayoría de sus
 // acciones de solo-lectura.
 async function getEquipo(params: Record<string, any> = {}): Promise<Record<string, any>> {
+  // Campos confidenciales, SOLO con `adminToken` válido (ver MANIFEST.md --
+  // "campos restringidos a admin"): `exentaCuota` (dato de cuota, sensible),
+  // `esAdminMiembro` y `solicitudLesionPendiente`. Cualquier otra sesión
+  // (token de usuarix, o sin token) recibe el roster SIN esas claves.
+  const vistaAdmin = params.adminToken ? !!(await _validarAdminToken(String(params.adminToken))) : false;
   const { data: filas } = await supabase.from('equipo')
     .select('username, nombre_derby, numero_derby, foto_perfil, categoria, pronombres, prefijo, telefono, email, estado_miembro, solicitud_lesion_pendiente, tier_modo, exenta_cuota, horas_ano, asistencias_ano, total_eventos_ano, termometro_pct, fecha_ingreso, necesita_patines, necesita_protecciones, puntos_anteriores, racha_actual, tier_riesgo_desde, tier_riesgo_hasta, tier_riesgo_objetivo, viaje_desde, viaje_hasta')
     .order('username');
@@ -4176,9 +4181,12 @@ async function getEquipo(params: Record<string, any> = {}): Promise<Record<strin
     fechaIngreso: r.fecha_ingreso ?? null,
     estado: r.estado_miembro ?? 'Activx',
     viajeDesde: r.viaje_desde ?? null, viajeHasta: r.viaje_hasta ?? null,
-    solicitudLesionPendiente: r.solicitud_lesion_pendiente === true,
-    tierModo: r.tier_modo ?? 'auto', exentaCuota: r.exenta_cuota === true,
-    esAdminMiembro: adminEmails.has(String(r.email ?? '').toLowerCase()),
+    tierModo: r.tier_modo ?? 'auto',
+    ...(vistaAdmin ? {
+      solicitudLesionPendiente: r.solicitud_lesion_pendiente === true,
+      exentaCuota: r.exenta_cuota === true,
+      esAdminMiembro: adminEmails.has(String(r.email ?? '').toLowerCase()),
+    } : {}),
     horas_ano: Number(r.horas_ano) || 0,
     asistencias_ano: Number(r.asistencias_ano) || 0,
     total_eventos_ano: Number(r.total_eventos_ano) || 0,

@@ -8016,7 +8016,7 @@ function _evAntActualizarResumenEstado() {
 // mapa central de estados (`_EQ_ESTADO_ICONOS`, js/equipo.js).
 var _EV_ANT_MOTIVOS = [
   { valor: 'De viaje',  estado: 'De viaje',  ayuda: 'Tu categoría queda congelada durante el viaje.' },
-  { valor: 'Lesionadx', estado: 'Lesionadx', ayuda: 'Tu categoría queda congelada y quedas exento/a de cuota mientras dure la lesión.' },
+  { valor: 'Lesionadx', estado: 'Lesionadx', ayuda: 'Tu categoría queda congelada mientras dure la lesión.' },
   { valor: 'Inactivx',  estado: 'Ausente',   ayuda: 'Tu categoría sigue las reglas normales de asistencia.' }
 ];
 var _EV_ANT_MOTIVO_AYUDA_COMUN = 'Si vienes a entrenar, vuelves a Activx automáticamente.';
