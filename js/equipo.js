@@ -1757,7 +1757,7 @@ function _eqConfirmarModalFecha() {
 function _eqRenderFiltroRolPills() {
   var cont = document.getElementById('eq-filtro-rol-pills');
   if (!cont) return;
-  cont.innerHTML = _EQ_ROLES.map(function(r) {
+  cont.innerHTML = _EQ_ROLES.filter(function(r) { return r !== 'No definido'; }).map(function(r) {
     return '<span class="aj-pill' + (_eqFiltroRoles.indexOf(r) !== -1 ? ' activa' : '') + '" onclick="_eqFiltroRolToggle(\'' + r.replace(/'/g, "\\'") + '\')">' + _eqEsc(r) + '</span>';
   }).join('');
 }
