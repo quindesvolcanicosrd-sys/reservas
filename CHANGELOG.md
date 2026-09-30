@@ -125,6 +125,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Equipo
 
+2026-09-30 — Revertido: se quitó la pill "Abrir en WhatsApp" de la fila del teléfono del perfil de detalle (commit fcaa846). La fila vuelve a ser un enlace `tel:` simple, igual que la de email; se borraron sus estilos y el token `--wa-text`. El botón de WhatsApp de la nav del detalle ajeno sigue igual. Ver MANIFEST.md.
+
 2026-09-30 — Feat: los datos visibles para el equipo se editan en el perfil propio de Equipo. Grupo "Mis datos" con el mismo estilo que Estadísticas/Estado (nombre de usuario, nombre y número derby, pronombres, rol, fecha de ingreso, teléfono con prefijo en una sola fila, email de solo lectura), reusando los sheets de Ajustes; cada cambio se refleja en la fila, el header y el roster sin recargar. Foto editable desde el avatar o un badge de lápiz en la esquina superior derecha. Se quitó el lápiz de la nav del detalle propio. "Editar tu perfil" de Home abre este perfil. El perfil de otras personas no cambia. Ver MANIFEST.md.
 
 2026-09-30 — Feat: botón "Abrir en WhatsApp" (pill verde, token nuevo `--wa-text`) a la derecha de la fila del teléfono del perfil de detalle. La fila sigue llamando al tocarla; la pill es hermana del enlace `tel:` (no anidada), abre `wa.me` en otra pestaña y no aparece en el perfil propio ni sin teléfono/link válido. En pantallas angostas queda solo el ícono (container query). Ver MANIFEST.md.

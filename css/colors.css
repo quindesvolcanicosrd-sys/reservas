@@ -308,7 +308,6 @@
   --wa-bg:               rgba(37,211,102,0.1);
   --wa-bg-hover:         rgba(37,211,102,0.18);
   --wa-brand:            #25D366;
-  --wa-text:             #0B7A3B; /* texto sobre --wa-bg (el #25D366 no da contraste como texto en claro) */
   --instagram:           #E1306C;
 
   /* Divisores */
@@ -619,7 +618,6 @@
     /* Success dark */
     --success-lightest:    rgba(34,197,94,0.1);
     --green-border:        rgba(34,197,94,0.2);
-    --wa-text:             #25D366;
 
     /* Info dark */
     --info-bg-light:       var(--dk-info-bg);

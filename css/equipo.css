@@ -850,33 +850,6 @@
    el fallback de la fila de rol, css/equipo.css. */
 .eq-info-texto-vacio { color: var(--muted); font-weight: 400; }
 a.eq-info-fila:active { background: var(--brand-lightest); }
-/* Fila del teléfono -- el <a> de llamada ocupa todo lo que deja libre la
-   pill de WhatsApp (hermanos, no anidados); el padding vive en el <a> para
-   que toda esa zona siga siendo tappeable. `container-type` alimenta la
-   container query de abajo. */
-.eq-info-fila-tel { padding: 0; gap: 8px; container-type: inline-size; }
-.eq-info-tel {
-  display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0;
-  padding: 14px 4px; color: inherit; text-decoration: none;
-}
-.eq-info-tel .eq-info-texto { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.eq-info-tel:active { background: var(--brand-lightest); }
-/* Pill "Abrir en WhatsApp" -- verde de marca (tokens --wa-*, colors.css). */
-.eq-wa-pill {
-  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
-  margin-right: 4px; padding: 6px 12px; border-radius: 999px;
-  background: var(--wa-bg); color: var(--wa-text);
-  font-size: 0.75rem; font-weight: 700; line-height: 1.2; white-space: nowrap;
-  text-decoration: none; -webkit-tap-highlight-color: transparent;
-}
-.eq-wa-pill svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--wa-brand); }
-.eq-wa-pill:active { background: var(--wa-bg-hover); }
-@media (hover: hover) { .eq-wa-pill:hover { background: var(--wa-bg-hover); } }
-/* Sin espacio para número + pill con texto: solo el ícono. */
-@container (max-width: 330px) {
-  .eq-wa-pill { padding: 8px; }
-  .eq-wa-pill-texto { display: none; }
-}
 
 /* Control de categoría (tier), admin-only -- segmented control
    [Quindes | Auto | Mirlxs] de la subsección Categoría del bloque
