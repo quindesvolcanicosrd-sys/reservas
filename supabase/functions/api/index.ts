@@ -554,11 +554,19 @@ async function actualizarDatosPersona(params: Record<string, any>): Promise<Reco
   if (!username || username !== params.nombre) return { exito: false, error: 'Sesión inválida.' };
   let datos = params.datos;
   if (typeof datos === 'string') { try { datos = JSON.parse(datos); } catch { return { exito: false, error: 'datos inválido.' }; } }
+  // Whitelist de lo que la PROPIA persona puede escribir. `categoria` y
+  // `estado_miembro` NO están a propósito (endurecido 2026-09-30): la
+  // categoría solo la cambian `recalcular-categorias`, los admins
+  // (adminSetCategoria/adminSetTierModo) y la regla de equipamiento de
+  // `actualizarEquipamientoPersona()`; el estado, los endpoints específicos
+  // (autodeclararEstado, terminarMiViaje, recuperarseLesion,
+  // adminSetEstadoMiembro, `_reactivarPorAsistencia()` y la reactivación
+  // por RSVP de marcarAsistenciaUsuario()). Cualquier otra clave se ignora
+  // en silencio (clientes con JS viejo en caché no reciben error).
   const CAMPO_MAP: Record<string, string> = {
     nombreDerby: 'nombre_derby', numeroDerby: 'numero_derby', pronombres: 'pronombres',
     fechaIngreso: 'fecha_ingreso',
     dieta: 'dieta', prefijo: 'prefijo', telefono: 'telefono', email: 'email',
-    estado_miembro: 'estado_miembro', categoria: 'categoria',
     fechaPublica: 'fecha_publica', edadPublica: 'edad_publica', fechaNacimiento: 'fecha_nacimiento',
     tipoDocumento: 'tipo_documento', paisExpedicion: 'pais_expedicion', numeroDocumento: 'numero_documento',
     nombreLegal: 'nombre_legal', callePrincipal: 'calle_principal', calleSecundaria: 'calle_secundaria',
@@ -571,13 +579,43 @@ async function actualizarDatosPersona(params: Record<string, any>): Promise<Reco
   };
   const update: Record<string, any> = {};
   for (const camel of Object.keys(datos ?? {})) { if (CAMPO_MAP[camel]) update[CAMPO_MAP[camel]] = datos[camel]; }
+  if (!Object.keys(update).length) return { exito: true };
   await supabase.from('equipo').update(update).eq('username', params.nombre);
   return { exito: true };
 }
 
-async function actualizarEquipamientoPersona(params: Record<string, any>): Promise<boolean> {
-  await supabase.from('equipo').update({ necesita_patines: params.necesitaPatines, talla: params.talla, necesita_protecciones: params.necesitaProtecciones }).eq('username', params.nombre);
-  return true;
+// Equipamiento del club (patines/protecciones). `necesita_protecciones` puede
+// ser texto libre ("Muñequeras, Coderas") -- cualquier valor que no sea vacío
+// ni 'No' cuenta como necesitar; mismo criterio que canPayMonthly()
+// (js/reservas.js) y recalcular-categorias.
+function _necesitaEquipoClub(patines: unknown, protecciones: unknown): boolean {
+  const usa = (v: unknown) => { const t = String(v ?? '').trim().toLowerCase(); return t !== '' && t !== 'no'; };
+  return usa(patines) || usa(protecciones);
+}
+
+// Regla de negocio (2026-09-30): quien necesita patines O protecciones del
+// club no puede ser Quindes. Si tras guardar la persona necesita equipamiento
+// y es Quindes, pasa a Mirlxs en la MISMA operación (antes lo hacía el front
+// con una 2ª llamada a actualizarDatosPersona). Excepción: `tier_modo='quinde'`
+// fijado a mano por un admin se respeta (mismo criterio que
+// recalcular-categorias; si no, `categoria` y `tier_modo` quedarían
+// desincronizados). Lesionadx: `categoria_pre_lesion` 'Quindes' también baja,
+// para que la salida de la lesión no la restaure a Quindes. El camino inverso
+// (dejar de necesitar) NO sube a nadie: lo decide el recálculo por puntos.
+async function actualizarEquipamientoPersona(params: Record<string, any>): Promise<Record<string, any>> {
+  const username = await _validarToken(params.token);
+  if (!username || username !== params.nombre) return { exito: false, error: 'Sesión inválida.' };
+  const { data: fila } = await supabase.from('equipo').select('categoria, tier_modo, categoria_pre_lesion').eq('username', username).maybeSingle();
+  if (!fila) return { exito: false, error: 'Usuarix no encontradx.' };
+  const update: Record<string, any> = { necesita_patines: params.necesitaPatines, talla: params.talla, necesita_protecciones: params.necesitaProtecciones };
+  let categoriaCambiada = false;
+  if (_necesitaEquipoClub(params.necesitaPatines, params.necesitaProtecciones) && fila.tier_modo !== 'quinde') {
+    if (fila.categoria === 'Quindes') { update.categoria = 'Mirlxs'; categoriaCambiada = true; }
+    if (fila.categoria_pre_lesion === 'Quindes') update.categoria_pre_lesion = 'Mirlxs';
+  }
+  const { error } = await supabase.from('equipo').update(update).eq('username', username);
+  if (error) return { exito: false, error: error.message };
+  return { exito: true, categoriaCambiada, categoria: update.categoria ?? fila.categoria ?? null };
 }
 
 async function actualizarPin(params: Record<string, any>): Promise<Record<string, any>> {
@@ -2015,6 +2053,26 @@ async function marcarAsistenciaUsuario(params: Record<string, any>): Promise<Rec
   const { error: errLog } = await _agregarFilaLogAsistencia(String(idEvento).trim(), nombre, origenFinal, estado);
   if (errLog) return { exito: false, error: 'No se pudo guardar la asistencia: ' + errLog };
 
+  // Reactivación implícita por RSVP (movida desde js/eventos.js, 2026-09-30):
+  // quien marca 'Asistiré' a mano estando Ausente/Lesionadx vuelve a Activx.
+  // Antes el front lo hacía mandando `estado_miembro` por
+  // actualizarDatosPersona, que ya no acepta ese campo. Solo con token propio
+  // (este endpoint no lo exige para el RSVP en sí). Pasa por
+  // `_reactivarMiembro()` para la limpieza completa (categoría pre-lesión,
+  // exenta_cuota); `cerrarReglas:false` conserva el comportamiento anterior
+  // (el RSVP puntual no borra la asistencia anticipada vigente).
+  let reactivacion: Record<string, any> = {};
+  if (!esAuto && estado === 'Asistiré') {
+    const username = await _validarToken(params.token);
+    if (username && username === nombre) {
+      const { data: fila } = await supabase.from('equipo').select(SELECT_ESTADO_MIEMBRO).eq('username', nombre).maybeSingle();
+      if (fila && (fila.estado_miembro === 'Ausente' || fila.estado_miembro === 'Lesionadx')) {
+        const r = await _reactivarMiembro(nombre, fila, { cerrarReglas: false });
+        if (r.exito) reactivacion = { reactivado: true, categoria: r.categoria, exentaCuota: fila.estado_miembro === 'Lesionadx' ? false : null };
+      }
+    }
+  }
+
   if (eraAsistire) {
     const { data: ev } = await supabase.from('asistencias').select('fecha, donde, inicia, tipo_evento').eq('id_evento', idEvento).maybeSingle();
     if (ev) {
@@ -2028,7 +2086,7 @@ async function marcarAsistenciaUsuario(params: Record<string, any>): Promise<Rec
     }
   }
 
-  return { exito: true };
+  return { exito: true, ...reactivacion };
 }
 
 const ESTADOS_ROLLCALL = ['A tiempo', 'Tarde', 'Ninguno'];

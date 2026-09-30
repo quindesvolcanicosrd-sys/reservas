@@ -2215,20 +2215,27 @@ function ajCerrarSheetTallaAjustes(porGesto) {
   setTimeout(function() { sh.style.display = 'none'; ov.style.display = 'none'; }, 350);
 }
 
+// Respuesta de actualizarEquipamientoPersona(): si el backend bajó la
+// categoría (Quindes que ahora usa equipamiento del club ⇒ Mirlxs), la
+// refleja en E.datos. Devuelve true si cambió. Compartida con js/reservas.js.
+var _AJ_TOAST_CAT_EQUIP = 'Tu categoría cambió a Mirlxs porque ahora usas equipamiento del club.';
+function _ajAplicarCategoriaEquipamiento(res) {
+  if (!res || !res.categoriaCambiada || !E.datos) return false;
+  E.datos.categoria = res.categoria || 'Mirlxs';
+  return true;
+}
+
 function ajGuardarTallaAjustes(btn) {
   var sel = document.querySelector('#aj-talla-aj-grid .equip-talla-pill.sel');
   var talla = (sel && !sel.classList.contains('equip-talla-pill-no')) ? sel.textContent.trim() : '';
   var necesitaPatines = talla ? 'Sí' : 'No';
   if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
-  api({ action: 'actualizarEquipamientoPersona', nombre: E.nombre, necesitaPatines: necesitaPatines, talla: talla, necesitaProtecciones: E.datos.necesitaProtecciones || 'No' }, function() {
+  api({ action: 'actualizarEquipamientoPersona', nombre: E.nombre, necesitaPatines: necesitaPatines, talla: talla, necesitaProtecciones: E.datos.necesitaProtecciones || 'No' }, function(res) {
     E.datos.necesitaPatines = necesitaPatines;
     E.datos.talla = talla;
-    var _catDegradada = false;
-    if (necesitaPatines === 'Sí' && (E.datos.categoria || '').toLowerCase() === 'quindes') {
-      E.datos.categoria = 'Mirlxs';
-      api({ action: 'actualizarDatosPersona', nombre: E.nombre, datos: JSON.stringify({ categoria: 'Mirlxs' }) }, function() {}, function(e) { if (window.console) console.warn('ajustes: no se pudo actualizar categoría — ' + (e && e.message || 'error')); });
-      _catDegradada = true;
-    }
+    // Regla "equipamiento del club ⇒ Mirlxs": la aplica el backend en la
+    // misma operación (ver actualizarEquipamientoPersona()).
+    var _catDegradada = _ajAplicarCategoriaEquipamiento(res);
     if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
     document.getElementById('aj-equip-pat-val').textContent = talla ? 'Talla ' + talla : 'No necesitas patines';
     _actualizarResumenEquipAjustes();
@@ -2236,7 +2243,7 @@ function ajGuardarTallaAjustes(btn) {
     ajCerrarSheetTallaAjustes();
     if (typeof _evActualizarTopBarModo === 'function') _evActualizarTopBarModo();
     if (typeof _evRenderTimeline === 'function') _evRenderTimeline(true);
-    mostrarToast(_catDegradada ? 'Tu categoría cambió a Mirlxs porque ahora usas equipamiento del club.' : 'Equipamiento actualizado', 'ok');
+    mostrarToast(_catDegradada ? _AJ_TOAST_CAT_EQUIP : 'Equipamiento actualizado', 'ok');
   }, function(e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
     document.getElementById('err-aj-talla').textContent = e.message || 'Error al guardar.';
@@ -2303,8 +2310,9 @@ function ajGuardarProtecAjustes(btn) {
     protecFinal = vals.join(', ');
   }
   if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
-  api({ action: 'actualizarEquipamientoPersona', nombre: E.nombre, necesitaPatines: E.datos.necesitaPatines || 'No', talla: E.datos.talla || '', necesitaProtecciones: protecFinal }, function() {
+  api({ action: 'actualizarEquipamientoPersona', nombre: E.nombre, necesitaPatines: E.datos.necesitaPatines || 'No', talla: E.datos.talla || '', necesitaProtecciones: protecFinal }, function(res) {
     E.datos.necesitaProtecciones = protecFinal;
+    var _catDegradada = _ajAplicarCategoriaEquipamiento(res);
     if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
     document.getElementById('aj-equip-protec-val').textContent = protecFinal;
     _actualizarResumenEquipAjustes();
@@ -2312,7 +2320,7 @@ function ajGuardarProtecAjustes(btn) {
     ajCerrarSheetProtecAjustes();
     if (typeof _evActualizarTopBarModo === 'function') _evActualizarTopBarModo();
     if (typeof _evRenderTimeline === 'function') _evRenderTimeline(true);
-    mostrarToast('Equipamiento actualizado', 'ok');
+    mostrarToast(_catDegradada ? _AJ_TOAST_CAT_EQUIP : 'Equipamiento actualizado', 'ok');
   }, function(e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Guardar'; }
     document.getElementById('err-aj-protec-aj').textContent = e.message || 'Error al guardar.';

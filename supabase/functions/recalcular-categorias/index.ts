@@ -132,11 +132,20 @@ Deno.serve(async (req: Request) => {
     // tier ACTUAL de cada persona (riesgo/gracia se evalúan contra el tier
     // en el que ya está, no contra "el mejor tier posible" desde cero, ver
     // el comentario grande más abajo).
+    // Regla "equipamiento del club ⇒ Mirlxs" (2026-09-30, misma que
+    // `_necesitaEquipoClub()`/actualizarEquipamientoPersona() en api):
+    // `necesita_protecciones` puede ser texto libre -- cualquier valor que no
+    // sea vacío ni 'No' cuenta como necesitar.
+    const necesitaEquipoClub = (patines: unknown, protecciones: unknown): boolean => {
+      const usa = (v: unknown) => { const t = String(v ?? '').trim().toLowerCase(); return t !== '' && t !== 'no'; };
+      return usa(patines) || usa(protecciones);
+    };
     const { data: equipoData, error: equipoError } = await supabase.from('equipo')
-      .select('username, estado_miembro, tier_modo, categoria, tier_riesgo_desde, tier_riesgo_hasta, tier_riesgo_objetivo, meses_consecutivos_cumplidos, meses_consecutivos_ultimo_mes');
+      .select('username, estado_miembro, tier_modo, categoria, necesita_patines, necesita_protecciones, tier_riesgo_desde, tier_riesgo_hasta, tier_riesgo_objetivo, meses_consecutivos_cumplidos, meses_consecutivos_ultimo_mes');
     if (equipoError) return json({ ok: false, error: equipoError.message }, 500);
     const miembros: {
       username: string; estadoMiembro: string | null; tierModo: string | null; categoria: string | null;
+      necesitaEquipoClub: boolean;
       tierRiesgoDesde: string | null; tierRiesgoHasta: string | null; tierRiesgoObjetivo: string | null;
       mesesConsecutivosCumplidos: number; mesesUltimoMes: string | null;
     }[] = (equipoData ?? [])
@@ -144,6 +153,7 @@ Deno.serve(async (req: Request) => {
       .map((r: any) => ({
         username: r.username, estadoMiembro: r.estado_miembro ?? null, tierModo: r.tier_modo ?? 'auto',
         categoria: r.categoria ?? null,
+        necesitaEquipoClub: necesitaEquipoClub(r.necesita_patines, r.necesita_protecciones),
         tierRiesgoDesde: r.tier_riesgo_desde ?? null, tierRiesgoHasta: r.tier_riesgo_hasta ?? null,
         tierRiesgoObjetivo: r.tier_riesgo_objetivo ?? null,
         mesesConsecutivosCumplidos: Number(r.meses_consecutivos_cumplidos) || 0,
@@ -354,7 +364,20 @@ Deno.serve(async (req: Request) => {
       let nuevosMesesConsecutivos: number | undefined;
       let nuevoUltimoMes: string | null | undefined; // `meses_consecutivos_ultimo_mes`, undefined = no tocar
 
-      if (estadoMiembro === 'Técnico') {
+      if (m.necesitaEquipoClub) {
+        // Regla de negocio (2026-09-30): quien necesita patines o
+        // protecciones del club NO puede ser Quindes en modo 'auto' -- queda
+        // como máximo en Mirlxs, sin importar clases/puntos (y aunque sea
+        // Técnico). Solo llega acá con tier_modo 'auto': si un admin fijó
+        // 'quinde' a mano, el `continue` de arriba respeta su decisión.
+        // Contador de re-ascenso en 0 mientras use equipamiento: los meses
+        // con equipo del club no cuentan, así que al dejar de necesitarlo NO
+        // sube sola -- sigue la lógica normal de puntos desde cero (N meses
+        // consecutivos cumpliendo). Sin riesgo: Mirlxs es el piso.
+        categoriaAsignada = 'Mirlxs';
+        nuevosMesesConsecutivos = 0; nuevoUltimoMes = null;
+        nuevoRiesgoDesde = null; nuevoRiesgoHasta = null; nuevoRiesgoObjetivo = null;
+      } else if (estadoMiembro === 'Técnico') {
         // Técnico: siempre Quindes, sin calcular clases/puntos ni tocar
         // riesgo/ascenso -- mismo criterio que antes de esta Fase 2 (caso
         // especial, no participa del sistema de mérito en absoluto).

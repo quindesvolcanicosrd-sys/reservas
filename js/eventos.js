@@ -4737,11 +4737,11 @@ function _evMarcarAsistencia(id, estado) {
       return;
     }
   }
+  // Solo el reflejo local (optimista): la reactivación real la hace el
+  // backend dentro de marcarAsistenciaUsuario (actualizarDatosPersona ya no
+  // acepta `estado_miembro`); la categoría restaurada llega en su respuesta.
   if (estado === 'Asistiré' && E.datos && (E.datos.estado_miembro === 'Ausente' || E.datos.estado_miembro === 'Lesionadx')) {
     E.datos.estado_miembro = 'Activx';
-    api({ action: 'actualizarDatosPersona', nombre: E.nombre, datos: JSON.stringify({ estado_miembro: 'Activx' }) }, function() {}, function(e) {
-      if (window.console) console.warn('Eventos: no se pudo reactivar estado_miembro -- ' + (e && e.message || 'error'));
-    });
   }
   // Gracia para quindes sin cuota vigente (ver "Cambios recientes" --
   // _quindesGraciaAgotada()): mirlxs sin cuota (rama `else`, comportamiento
@@ -4846,7 +4846,12 @@ function _evMarcarAsistencia(id, estado) {
     if (typeof _offGuardarCache === 'function') _offGuardarCache();
     return;
   }
-  apiPost({ action: 'marcarAsistenciaUsuario', token: _token, nombre: E.nombre, idEvento: id, estado: estado }, function() {
+  apiPost({ action: 'marcarAsistenciaUsuario', token: _token, nombre: E.nombre, idEvento: id, estado: estado }, function(res) {
+    if (res && res.reactivado && E.datos) {
+      E.datos.estado_miembro = 'Activx';
+      if (res.categoria) E.datos.categoria = res.categoria;
+      if (res.exentaCuota === false) E.datos.exenta_cuota = false;
+    }
     // Mismo fix que la rama offline de arriba -- acá el estado ya está
     // CONFIRMADO por el backend (no solo optimista), así que persistir el
     // cache es directo, sin esperar al próximo `_evCargarDatosReales()`

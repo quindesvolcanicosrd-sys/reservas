@@ -125,6 +125,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Equipo
 
+2026-09-30 — Feat: botón "Abrir en WhatsApp" (pill verde, token nuevo `--wa-text`) a la derecha de la fila del teléfono del perfil de detalle. La fila sigue llamando al tocarla; la pill es hermana del enlace `tel:` (no anidada), abre `wa.me` en otra pestaña y no aparece en el perfil propio ni sin teléfono/link válido. En pantallas angostas queda solo el ícono (container query). Ver MANIFEST.md.
+
 2026-09-28 — Header de la home de Equipo: buscador a todo el ancho (como en Ajustes) + botón de filtros (`tune`) con el contador de filtros activos; el panel desplegable queda solo con Puntos y Rol. En el detalle de perfil se quitó el título "Administración" del grupo de admin. Bottom nav: "Ajustes" vuelve a mostrar siempre el ícono de engranaje en lugar de la foto de perfil.
 
 2026-09-28 — Rediseño: todo el detalle de perfil usa filas estilo Ajustes. Grupo público: Estadísticas (abre una subsección), Estado (solo lectura para quien no es admin, editable para admin) y, en el perfil propio, la fila de lesión. Grupo Administración solo para admin, ahora también en perfiles Mirlxs (se quitó la regla que lo ocultaba). Confidencialidad: el dato de cuota y el acceso admin ya no viajan en `getEquipo()` para quien no es admin, ni aparecen en ningún texto visible para no admin.
@@ -350,6 +352,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 2025–2026 (fundacional) — Flujo base de Google Sign-In + PIN, `window.onload`, restauración de sesión.
 
 ## Edge Function / Backend
+
+2026-09-30 — Regla de negocio: equipamiento del club ⇒ Mirlxs, ahora en el backend. `actualizarEquipamientoPersona` valida token y, si la persona Quindes pasa a necesitar patines o protecciones (cualquier valor distinto de vacío/'No'), la baja a Mirlxs en la misma operación y responde `categoriaCambiada`; respeta `tier_modo='quinde'` fijado por un admin. El front ya no hace la 2ª llamada y muestra el toast también al guardar protecciones. `recalcular-categorias` deja en Mirlxs (modo 'auto') a quien necesita equipamiento, con el contador de re-ascenso en 0: al dejar de necesitarlo no sube sola. Seguridad: `actualizarDatosPersona` ya no acepta `categoria` ni `estado_miembro`; la reactivación al marcar "Asistiré" estando Ausente/Lesionadx pasó a `marcarAsistenciaUsuario` (con token propio). Deployado: `api` v150, `recalcular-categorias` v28. Ver MANIFEST.md.
 
 2026-09-28 — Auditoría de migraciones: todas las de `supabase/migrations/` están aplicadas en producción (verificado contra el esquema real). `20260913010000` quedó obsoleta (la tarea que corregía fue borrada) y su guard se corrigió para no volver a restar puntos si se re-ejecuta. Se renombraron las 5 migraciones con versión duplicada (`20260831_*`, `20260903_*`) y se reparó el historial de Supabase, así `supabase db push` vuelve a funcionar. Flujo documentado en MANIFEST.md, sección "Migraciones".
 

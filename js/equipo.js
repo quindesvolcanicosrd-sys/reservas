@@ -3688,7 +3688,18 @@ function _eqPerfilContenidoHtml(p) {
   // grupo público (`_eqValorEstadoTexto()`); "Cancelar viaje" en su
   // subsección (admin).
   var filas = '';
-  if (p.telefono) filas += '<a class="eq-info-fila" href="tel:' + _eqEsc(p.telefono) + '"><span class="material-symbols-outlined">call</span><span class="eq-info-texto">' + _eqEsc(p.telefono) + '</span></a>';
+  // Fila del teléfono: tocarla llama (tel:). Pill "Abrir en WhatsApp" a la
+  // derecha, HERMANA del <a> de llamada (no anidada: un <a> dentro de otro
+  // es HTML inválido y el tap dispararía también la llamada). Solo si hay
+  // teléfono visible (misma privacidad que ya decide `p.telefono`), el link
+  // se puede armar y no es el perfil propio. En pantallas angostas el texto
+  // se oculta y queda solo el ícono (container query en css/equipo.css).
+  if (p.telefono) {
+    var filaTel = '<a class="eq-info-tel" href="tel:' + _eqEsc(p.telefono) + '"><span class="material-symbols-outlined">call</span><span class="eq-info-texto">' + _eqEsc(p.telefono) + '</span></a>';
+    var waUrlFila = _eqEsUsuarioActual(p) ? '' : _eqWhatsappUrl(p.prefijo, p.telefono);
+    if (waUrlFila) filaTel += '<a class="eq-wa-pill" href="' + _eqEsc(waUrlFila) + '" target="_blank" rel="noopener" aria-label="Abrir en WhatsApp" title="Abrir en WhatsApp">' + _EQ_WA_SVG + '<span class="eq-wa-pill-texto">Abrir en WhatsApp</span></a>';
+    filas += '<div class="eq-info-fila eq-info-fila-tel">' + filaTel + '</div>';
+  }
   if (p.email) filas += '<a class="eq-info-fila" href="mailto:' + _eqEsc(p.email) + '"><span class="material-symbols-outlined">mail</span><span class="eq-info-texto">' + _eqEsc(p.email) + '</span></a>';
   // `fechaIngreso` ('fecha_ingreso', getEquipo()) -- mismo dato ya expuesto
   // para la cuenta propia en Ajustes (E.datos.fechaIngreso, js/perfil.js),

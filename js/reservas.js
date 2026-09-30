@@ -212,14 +212,13 @@ function continuar_s3c_nuevo(btn) {
   // — mismo patrón que confirmarReserva() (ver MANIFEST, "Cambios recientes").
   var btnHtmlOriginal = btn ? btn.innerHTML : '';
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="btn-spinner"></span>Guardando...'; }
-  api({ action: 'actualizarEquipamientoPersona', nombre: E.nombre, necesitaPatines: E.editPat, talla: E.editTalla, necesitaProtecciones: protecFinal }, function() {
+  api({ action: 'actualizarEquipamientoPersona', nombre: E.nombre, necesitaPatines: E.editPat, talla: E.editTalla, necesitaProtecciones: protecFinal }, function(res) {
     E.datos.necesitaPatines = E.editPat;
     E.datos.talla = E.editTalla;
     E.datos.necesitaProtecciones = protecFinal;
-    if (E.editPat === 'Sí' && (E.datos.categoria || '').toLowerCase() === 'quindes') {
-      E.datos.categoria = 'Mirlxs';
-      api({ action: 'actualizarDatosPersona', nombre: E.nombre, datos: JSON.stringify({ categoria: 'Mirlxs' }) }, function() {}, function(e) { if (window.console) console.warn('reservas: no se pudo actualizar categoría — ' + (e && e.message || 'error')); });
-    }
+    // Regla "equipamiento del club ⇒ Mirlxs": la aplica el backend en la
+    // misma operación (actualizarEquipamientoPersona()); acá solo se refleja.
+    if (_ajAplicarCategoriaEquipamiento(res)) mostrarToast(_AJ_TOAST_CAT_EQUIP, 'ok');
     E.editProtec = '';
     if (btn) { btn.disabled = false; btn.innerHTML = btnHtmlOriginal; }
     if (E.editandoDesdeHome) { E.editandoDesdeHome = false; ir('s-datos'); } else { cargarFechas(); }
