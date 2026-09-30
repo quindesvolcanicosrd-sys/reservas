@@ -125,6 +125,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 
 ## Equipo
 
+2026-09-30 — Feat: en el detalle de perfil (propio y ajeno), el nombre aparece centrado en la nav con fade al scrollear y desaparece al volver arriba (IntersectionObserver sobre el nombre del header, desconectado al salir o abrir otro perfil). La fila Categoría del grupo Administración abre un bottom sheet con las pills Quindes/Auto/Mirlxs (guarda igual que antes, con reversión si falla; check y cierre automático al confirmar); se eliminó la subsección de Categoría. La fila de asistencia externa pasa a "Asistencias externas" (con el conteo) y abre una subsección con "+ Registrar asistencia externa" y la lista de las registradas (más reciente primero), cada una con eliminar y sheet de confirmación; lista, contador y estadísticas se refrescan sin recargar. La fecha del sheet de registro usa el date picker de la app con fechas futuras deshabilitadas (hoy en Ecuador). Ver MANIFEST.md.
+
 2026-09-30 — Revertido: se quitó la pill "Abrir en WhatsApp" de la fila del teléfono del perfil de detalle (commit fcaa846). La fila vuelve a ser un enlace `tel:` simple, igual que la de email; se borraron sus estilos y el token `--wa-text`. El botón de WhatsApp de la nav del detalle ajeno sigue igual. Ver MANIFEST.md.
 
 2026-09-30 — Feat: los datos visibles para el equipo se editan en el perfil propio de Equipo. Grupo "Mis datos" con el mismo estilo que Estadísticas/Estado (nombre de usuario, nombre y número derby, pronombres, rol, fecha de ingreso, teléfono con prefijo en una sola fila, email de solo lectura), reusando los sheets de Ajustes; cada cambio se refleja en la fila, el header y el roster sin recargar. Foto editable desde el avatar o un badge de lápiz en la esquina superior derecha. Se quitó el lápiz de la nav del detalle propio. "Editar tu perfil" de Home abre este perfil. El perfil de otras personas no cambia. Ver MANIFEST.md.
@@ -358,6 +360,8 @@ Historial de cambios del proyecto, reorganizado por área a partir del MANIFEST.
 2025–2026 (fundacional) — Flujo base de Google Sign-In + PIN, `window.onload`, restauración de sesión.
 
 ## Edge Function / Backend
+
+2026-09-30 — Nuevas acciones admin-only `adminGetAsistenciasExternas` (asistencias `origen='Externa'` de una persona, fecha desc) y `adminEliminarAsistenciaExterna` (solo `id_evento` con prefijo `ext_` y `origen='Externa'` en el mismo DELETE; recalcula los puntos del mes de esa fecha). Deployado `api`.
 
 2026-09-30 — Regla de negocio: equipamiento del club ⇒ Mirlxs, ahora en el backend. `actualizarEquipamientoPersona` valida token y, si la persona Quindes pasa a necesitar patines o protecciones (cualquier valor distinto de vacío/'No'), la baja a Mirlxs en la misma operación y responde `categoriaCambiada`; respeta `tier_modo='quinde'` fijado por un admin. El front ya no hace la 2ª llamada y muestra el toast también al guardar protecciones. `recalcular-categorias` deja en Mirlxs (modo 'auto') a quien necesita equipamiento, con el contador de re-ascenso en 0: al dejar de necesitarlo no sube sola. Seguridad: `actualizarDatosPersona` ya no acepta `categoria` ni `estado_miembro`; la reactivación al marcar "Asistiré" estando Ausente/Lesionadx pasó a `marcarAsistenciaUsuario` (con token propio). Deployado: `api` v150, `recalcular-categorias` v28. Ver MANIFEST.md.
 

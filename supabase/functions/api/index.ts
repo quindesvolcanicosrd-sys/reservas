@@ -2249,6 +2249,55 @@ async function adminRegistrarAsistenciaExterna(params: Record<string, any>): Pro
   return { exito: true };
 }
 
+// Lista de asistencias externas de una persona (subsección "Asistencias
+// externas" del perfil de Equipo, admin). Solo filas `origen:'Externa'`,
+// más reciente primero. `fecha` = 'YYYY-MM-DD' (la columna guarda
+// `fecha + 'T00:00:00Z'`, ver adminRegistrarAsistenciaExterna()).
+async function adminGetAsistenciasExternas(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const idJugadora = String(params.idJugadora ?? '').trim();
+  if (!idJugadora) return { exito: false, error: 'Falta la jugadora.' };
+  const { data, error } = await supabase.from('log_asistencias')
+    .select('id_evento, fecha_entrenamiento, lugar_externo, marca_temporal')
+    .eq('nombre_usuario', idJugadora).eq('origen', 'Externa')
+    .order('fecha_entrenamiento', { ascending: false })
+    .order('marca_temporal', { ascending: false });
+  if (error) return { exito: false, error: 'Error leyendo las asistencias externas: ' + error.message };
+  const asistencias = (data ?? []).map((r: any) => ({
+    idEvento: r.id_evento,
+    fecha: String(r.fecha_entrenamiento ?? '').substring(0, 10),
+    lugar: r.lugar_externo ?? null,
+    marcaTemporal: r.marca_temporal ?? null,
+  }));
+  return { exito: true, asistencias };
+}
+
+// Elimina UNA asistencia externa. Doble guard (prefijo `ext_` + `origen`
+// 'Externa' en el mismo DELETE) para que nunca pueda borrar una asistencia
+// real de un evento. Después recalcula los puntos del mes de esa fecha, igual
+// que al registrar.
+async function adminEliminarAsistenciaExterna(params: Record<string, any>): Promise<Record<string, any>> {
+  const adminEmail = await _validarAdminToken(params.adminToken);
+  if (!adminEmail) return { exito: false, error: 'Sesión admin inválida.' };
+  const idEvento = String(params.idEvento ?? '').trim();
+  if (!idEvento.startsWith('ext_')) return { exito: false, error: 'Solo se pueden eliminar asistencias externas.' };
+  const { data: borradas, error } = await supabase.from('log_asistencias')
+    .delete()
+    .eq('id_evento', idEvento).eq('origen', 'Externa')
+    .select('fecha_entrenamiento');
+  if (error) return { exito: false, error: 'Error eliminando la asistencia: ' + error.message };
+  if (!borradas || !borradas.length) return { exito: false, error: 'No se encontró esa asistencia externa.' };
+
+  const fecha = String(borradas[0].fecha_entrenamiento ?? '').substring(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    const [anio, mes] = fecha.split('-').map((n: string) => Number(n));
+    const recalc = await recalcularPuntosAsistencia(mes, anio);
+    if (!recalc.exito) return { exito: false, error: 'Asistencia eliminada, pero falló el recálculo de puntos: ' + (recalc.error ?? '') };
+  }
+  return { exito: true };
+}
+
 async function adminBuscarPersonasParaEvento(params: Record<string, any>): Promise<Record<string, any>> {
   const idEvento = String(params.idEvento ?? '').trim();
   // `estado_miembro` sumada al select (feat nueva, ver MANIFEST.md --
@@ -5466,6 +5515,8 @@ Deno.serve(async (req: Request) => {
       case 'adminActualizarEstadoViaje':      return json(await adminActualizarEstadoViaje(params));
       case 'adminCancelarViaje':              return json(await adminCancelarViaje(params));
       case 'adminRegistrarAsistenciaExterna': return json(await adminRegistrarAsistenciaExterna(params));
+      case 'adminGetAsistenciasExternas':     return json(await adminGetAsistenciasExternas(params));
+      case 'adminEliminarAsistenciaExterna':  return json(await adminEliminarAsistenciaExterna(params));
       case 'adminBuscarPersonasParaEvento':   return json(await adminBuscarPersonasParaEvento(params));
       case 'solicitarRectificacionAsistencia': return json(await solicitarRectificacionAsistencia(params));
       case 'adminGetRectificaciones':          return json(await adminGetRectificaciones(params));

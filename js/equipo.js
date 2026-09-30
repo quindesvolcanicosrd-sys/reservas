@@ -188,6 +188,8 @@ var _eqPersonaActual = null;
 var _eqBusqueda = '';
 
 function _eqEsc(s) { return String(s == null ? '' : s).replace(/"/g, '&quot;'); }
+// Texto libre como contenido HTML (ej. el lugar de una asistencia externa).
+function _eqEscHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
 // Bug real corregido (ver MANIFEST.md -- "card de un miembro no abre el
 // panel de detalle"): `p.id`/`p.username` (el username real, ver
@@ -2498,6 +2500,9 @@ function _eqAbrirPerfil(id) {
   _eqPersonaActual = p;
   _eqRenderPerfil(p);
   ir('s-equipo-perfil');
+  // Contador de la fila "Asistencias externas" (admin): siempre fresco al
+  // abrir; los re-renders usan la caché (`_eqExtCache`).
+  _eqExtCargar(p.id);
 }
 // Perfil propio de Equipo desde cualquier lado (entradas "Editar tu perfil"
 // de Home, etc. -- ver MANIFEST.md): ahí se editan los datos visibles para
@@ -2600,10 +2605,43 @@ function _eqNavHtml(p) {
   }
   // Sin lápiz en el detalle propio: los datos visibles se editan ahí mismo
   // ("Mis datos", `_eqMisDatosHtml()`) y la foto desde su badge.
-  return '<div class="eq-perfil-nav-row">' +
+  // Título (nombre) centrado que aparece al scrollear (`_eqNavTituloObservar()`):
+  // absoluto, no mueve los botones; `--eq-nav-lado` = botones del lado más
+  // ancho, para reservar el mismo espacio a ambos lados y truncar con ellipsis.
+  var nAcciones = esYo ? 0 : (waUrl ? 2 : 1);
+  return '<div class="eq-perfil-nav-row" style="--eq-nav-lado:' + Math.max(1, nAcciones) + ';">' +
       '<button class="app-nav-back" onclick="_eqVolverLista()" title="Volver"><span class="material-symbols-outlined">arrow_back</span></button>' +
+      '<span class="app-nav-title eq-perfil-nav-titulo" id="eq-perfil-nav-titulo" aria-hidden="true">' + _eqEscHtml(p.nombreDerby) + '</span>' +
       '<div class="app-nav-actions">' + acciones + '</div>' +
     '</div>';
+}
+
+// Nombre en la nav del detalle: IntersectionObserver sobre `.eq-perfil-nombre`
+// (sin listener de scroll). `rootMargin` descuenta el alto de la nav sticky:
+// el nombre cuenta como "fuera de vista" apenas queda tapado por ella. Un
+// solo observer vivo: se desconecta al re-renderizar/abrir otro perfil y al
+// salir de `#s-equipo-perfil` (`ir()`, js/ui.js).
+var _eqNavTituloObs = null;
+function _eqNavTituloDesconectar() {
+  if (_eqNavTituloObs) { _eqNavTituloObs.disconnect(); _eqNavTituloObs = null; }
+}
+function _eqNavTituloObservar() {
+  _eqNavTituloDesconectar();
+  var pantalla = document.getElementById('s-equipo-perfil');
+  var nombre = document.querySelector('#eq-perfil-contenido .eq-perfil-nombre');
+  var nav = document.getElementById('eq-perfil-nav');
+  if (!pantalla || !pantalla.classList.contains('activa') || !nombre || !nav || typeof IntersectionObserver === 'undefined') return;
+  var obs = new IntersectionObserver(function(entries) {
+    if (_eqNavTituloObs !== obs) return;
+    var e = entries[entries.length - 1];
+    var titulo = document.getElementById('eq-perfil-nav-titulo');
+    // Alto 0 = pantalla oculta (display:none): no cambiar nada.
+    if (!titulo || !e.boundingClientRect.height) return;
+    var tope = e.rootBounds ? e.rootBounds.top : 0;
+    titulo.classList.toggle('visible', !e.isIntersecting && e.boundingClientRect.top < tope);
+  }, { rootMargin: '-' + (nav.offsetHeight || 0) + 'px 0px 0px 0px', threshold: 0 });
+  _eqNavTituloObs = obs;
+  obs.observe(nombre);
 }
 
 // Texto contextual de la barra de rango -- mismos 3 escalones (>=75/>=50/<50)
@@ -2947,12 +2985,13 @@ function _eqRankTexto(p) {
 //   editable para admin) y, en el detalle propio, la fila de lesión.
 // - Grupo de administración, sin título (`_eqAdminBloqueHtml()`, SOLO con `_adminToken`;
 //   para no admin ni siquiera se genera el HTML): Categoría, Paga cuota,
-//   Acceso admin, Activar cuenta, Registrar asistencia externa. Sin regla de
+//   Acceso admin, Activar cuenta, Asistencias externas. Sin regla de
 //   visibilidad por categoría: el admin ve y edita todo en Quindes y Mirlxs.
-// Subsecciones (Estadísticas/Estado/Categoría): `#eq-perfil-sub`, mismo
-// `.aj-sub` con slide "shared axis X" que Ajustes (`_eqAbrirSubPerfil()`).
+// Subsecciones (Estadísticas/Estado/Asistencias externas): `#eq-perfil-sub`,
+// mismo `.aj-sub` con slide "shared axis X" que Ajustes (`_eqAbrirSubPerfil()`).
+// Categoría se elige en un bottom sheet (`_eqAbrirSheetCategoria()`).
 var _EQ_TIER_TEXTOS = { quinde: 'Quindes', auto: 'Auto', mirlxs: 'Mirlxs' };
-var _EQ_SUB_TITULOS = { stats: 'Estadísticas', estado: 'Estado', categoria: 'Categoría' };
+var _EQ_SUB_TITULOS = { stats: 'Estadísticas', estado: 'Estado', externas: 'Asistencias externas' };
 function _eqEsVistaAdmin() { return typeof _adminToken !== 'undefined' && !!_adminToken; }
 function _eqAdminValorCategoria(p) {
   if (p.tierModo === 'auto') return 'Auto · ' + (p.rol || '—');
@@ -3055,7 +3094,7 @@ function _eqAdminBloqueHtml(p) {
   var filaCategoria = _eqAjFilaHtml({
     icono: 'military_tech', color: 'aj-icon-purple', titulo: 'Categoría',
     valor: _eqEsc(_eqAdminValorCategoria(p)), valorId: 'eq-admin-val-cat-' + idAttr,
-    onclick: "_eqAbrirSubPerfil('" + idJs + "','categoria')"
+    onclick: "_eqAbrirSheetCategoria('" + idJs + "')"
   });
   var filaCuota = _eqAjFilaHtml({
     icono: 'payments', color: 'aj-icon-green', titulo: 'Paga cuota',
@@ -3076,8 +3115,9 @@ function _eqAdminBloqueHtml(p) {
     valor: 'Genera un link de un solo uso', onclick: "_eqGenerarInviteLink('" + idJs + "')"
   }) : '';
   var filaExterna = _eqAjFilaHtml({
-    icono: 'travel_explore', color: 'aj-icon-muted', titulo: 'Registrar asistencia externa',
-    valor: 'Entrenamiento en otro equipo o país', onclick: "_eqAbrirSheetAsistExterna('" + idJs + "')"
+    icono: 'travel_explore', color: 'aj-icon-muted', titulo: 'Asistencias externas',
+    valor: _eqEsc(_eqExtValorTexto(_eqExtCache[p.id])), valorId: 'eq-admin-val-ext-' + idAttr,
+    onclick: "_eqAbrirSubPerfil('" + idJs + "','externas')"
   });
   return '<div class="aj-group eq-perfil-grupo">' +
       filaCategoria + filaCuota + filaAdmin + filaActivar + filaExterna +
@@ -3095,12 +3135,10 @@ function _eqSubPerfilHtml(p, tipo) {
         _eqStatsContenidoHtml(p) +
       '</div>';
   }
-  if (tipo === 'categoria') {
-    var botones = ['quinde', 'auto', 'mirlxs'].map(function(m) {
-      return '<button type="button" class="eq-opcion-btn eq-tier-btn' + (p.tierModo === m ? ' activo' : '') + '" data-modo="' + m + '" onclick="_eqCambiarTier(\'' + idJs + '\',\'' + m + '\')">' + _EQ_TIER_TEXTOS[m] + '</button>';
-    }).join('');
-    return '<div class="eq-tier-control" data-id="' + idAttr + '">' + botones + '</div>' +
-      '<p class="eq-tier-desc" id="eq-tier-desc-' + idAttr + '">' + _eqEsc(_EQ_TIER_DESCRIPCIONES[p.tierModo]) + '</p>';
+  if (tipo === 'externas') {
+    return '<button type="button" class="btn btn-primary eq-ext-registrar-btn" onclick="_eqAbrirSheetAsistExterna(\'' + idJs + '\')">' +
+        '<span class="material-symbols-outlined">add</span>Registrar asistencia externa</button>' +
+      '<div id="eq-ext-lista">' + _eqExtListaHtml(p.id) + '</div>';
   }
   var estadoActual = _eqEstadoEfectivo(p);
   var botonesEstado = _EQ_ESTADOS.map(function(est) {
@@ -3125,10 +3163,11 @@ function _eqSubAplicarRank(p, instant) {
 // `irAjSub()`/`cerrarAjSub()` de Ajustes (el panel entra desde la derecha
 // mientras `#eq-perfil-card` retrocede), cerrado vía `_overlayStack`
 // (`_registrarOverlayAbierto()`, js/ui.js): el gesto/botón atrás cierra la
-// subsección sin navegar la pantalla de fondo. Estado/Categoría solo admin.
+// subsección sin navegar la pantalla de fondo. Estado/Asistencias externas
+// solo admin.
 var _eqSubPerfilCtx = null; // { id, tipo }
 function _eqAbrirSubPerfil(id, tipo) {
-  if ((tipo === 'estado' || tipo === 'categoria') && !_eqEsVistaAdmin()) return;
+  if ((tipo === 'estado' || tipo === 'externas') && !_eqEsVistaAdmin()) return;
   var p = _eqPersonaPorId(id);
   var panel = document.getElementById('eq-perfil-sub');
   var body = document.getElementById('eq-perfil-sub-body');
@@ -3139,6 +3178,7 @@ function _eqAbrirSubPerfil(id, tipo) {
   body.innerHTML = _eqSubPerfilHtml(p, tipo);
   body.scrollTop = 0;
   if (tipo === 'stats') { _eqHidratarAvatares(); _eqSubAplicarRank(p, true); }
+  if (tipo === 'externas') _eqExtCargar(id);
   var fondo = document.getElementById('eq-perfil-card');
   panel.style.transform = '';
   panel.style.opacity = '';
@@ -3199,20 +3239,85 @@ function _eqAdminActualizarFilas(p) {
 // (Cambio 55 -- `equipo` no tiene ningún id numérico propio, se identifica
 // por esa natural key en todas las acciones existentes), siempre string --
 // no hace falta `parseInt`/`+id`.
-function _eqCambiarTier(id, modo) {
-  if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible guardar cambios en este momento.', 'error'); return; }
+// `alTerminar(ok)` opcional (sheet de Categoría): se llama siempre, también
+// en los cortes tempranos (sin conexión/sin cambio).
+function _eqCambiarTier(id, modo, alTerminar) {
+  var fin = function(ok) { if (typeof alTerminar === 'function') alTerminar(ok); };
+  if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible guardar cambios en este momento.', 'error'); fin(false); return; }
   var persona = _eqPersonaPorId(id);
-  if (!persona || persona.tierModo === modo) return;
+  if (!persona || persona.tierModo === modo) { fin(false); return; }
   var previo = persona.tierModo;
   _eqAplicarTierUI(persona, modo);
   // Optimista + reversión si falla (bug real corregido, ver MANIFEST.md
   // 2026-09-28: antes el error descartaba el mensaje real y dejaba la UI
   // con un valor que nunca se guardó).
   apiPost({ action: 'adminSetTierModo', adminToken: _adminToken, nombre: persona.nombre, tierModo: modo }, function(res) {
-    if (res && res.exito === false) { _eqAplicarTierUI(persona, previo); mostrarToast(res.error || 'No se pudo guardar el cambio de categoría.', 'error'); }
+    if (res && res.exito === false) { _eqAplicarTierUI(persona, previo); mostrarToast(res.error || 'No se pudo guardar el cambio de categoría.', 'error'); fin(false); return; }
+    fin(true);
   }, function(e) {
     _eqAplicarTierUI(persona, previo);
     mostrarToast((e && e.message) || 'No se pudo guardar el cambio de categoría.', 'error');
+    fin(false);
+  });
+}
+
+// ── Sheet de Categoría (`#eq-sheet-categoria`, index.html) ──────────────
+// Pills Quindes/Auto/Mirlxs + descripción del modo. Tocar una pill guarda
+// (`_eqCambiarTier()`, optimista con reversión); si el backend confirma, la
+// pill muestra un check un instante y el sheet se cierra solo.
+var _EQ_CATEGORIA_CIERRE_MS = 650;
+var _eqCategoriaAbierta = null; // id de la persona con el sheet abierto
+var _eqCategoriaGuardando = false;
+function _eqCategoriaSheetHtml(p) {
+  var idJs = _eqEscId(p.id);
+  var idAttr = _eqEsc(p.id);
+  var botones = ['quinde', 'auto', 'mirlxs'].map(function(m) {
+    return '<button type="button" class="eq-opcion-btn eq-tier-btn' + (p.tierModo === m ? ' activo' : '') + '" data-modo="' + m + '" onclick="_eqCategoriaElegir(\'' + idJs + '\',\'' + m + '\',this)">' +
+      '<span class="material-symbols-outlined eq-tier-btn-check" aria-hidden="true">check</span>' + _EQ_TIER_TEXTOS[m] + '</button>';
+  }).join('');
+  return '<div class="eq-tier-control" data-id="' + idAttr + '">' + botones + '</div>' +
+    '<p class="eq-tier-desc" id="eq-tier-desc-' + idAttr + '">' + _eqEsc(_EQ_TIER_DESCRIPCIONES[p.tierModo]) + '</p>';
+}
+function _eqAbrirSheetCategoria(id) {
+  if (!_eqEsVistaAdmin()) return;
+  var p = _eqPersonaPorId(id);
+  var ov = document.getElementById('eq-sheet-categoria-overlay');
+  var sh = document.getElementById('eq-sheet-categoria');
+  var body = document.getElementById('eq-sheet-categoria-body');
+  if (!p || !ov || !sh || !body) return;
+  body.innerHTML = _eqCategoriaSheetHtml(p);
+  _eqCategoriaAbierta = id;
+  _eqCategoriaGuardando = false;
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(_eqCerrarSheetCategoria);
+}
+function _eqCerrarSheetCategoria(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  _eqCategoriaAbierta = null;
+  var ov = document.getElementById('eq-sheet-categoria-overlay');
+  var sh = document.getElementById('eq-sheet-categoria');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() {
+    if (_eqCategoriaAbierta) return; // se reabrió antes de terminar la salida
+    if (sh) sh.style.display = 'none';
+    if (ov) ov.style.display = 'none';
+  }, 350);
+}
+function _eqCategoriaElegir(id, modo, btn) {
+  var p = _eqPersonaPorId(id);
+  if (!p || _eqCategoriaGuardando) return;
+  if (p.tierModo === modo) { _eqCerrarSheetCategoria(); return; }
+  var control = btn && btn.closest('.eq-tier-control');
+  _eqCategoriaGuardando = true;
+  if (control) control.classList.add('guardando');
+  _eqCambiarTier(id, modo, function(ok) {
+    _eqCategoriaGuardando = false;
+    if (control) control.classList.remove('guardando');
+    if (!ok || _eqCategoriaAbierta !== id) return;
+    if (btn) btn.classList.add('confirmado');
+    setTimeout(function() { if (_eqCategoriaAbierta === id) _eqCerrarSheetCategoria(); }, _EQ_CATEGORIA_CIERRE_MS);
   });
 }
 function _eqAplicarTierUI(persona, modo) {
@@ -3250,24 +3355,158 @@ function _eqGenerarInviteLink(id) {
   });
 }
 
+// ── Asistencias externas (subsección `externas` de `#eq-perfil-sub`) ──────
+// Lista por persona vía `adminGetAsistenciasExternas` (más reciente
+// primero), cacheada en `_eqExtCache[id]` para el contador de la fila y los
+// re-renders; se vuelve a pedir al abrir el perfil, al abrir la subsección y
+// tras registrar/eliminar.
+var _eqExtCache = {};
+var _eqExtError = {};
+function _eqExtValorTexto(lista) {
+  if (!lista || !lista.length) return 'Entrenamientos en otro equipo o país';
+  return lista.length === 1 ? '1 registrada' : lista.length + ' registradas';
+}
+function _eqExtListaHtml(id) {
+  var lista = _eqExtCache[id];
+  if (!lista) {
+    return '<div class="eq-ext-vacio">' + (_eqExtError[id]
+      ? '<span class="material-symbols-outlined">cloud_off</span><p>No se pudieron cargar las asistencias externas.</p>'
+      : '<p>Cargando…</p>') + '</div>';
+  }
+  if (!lista.length) {
+    return '<div class="eq-ext-vacio"><span class="material-symbols-outlined">travel_explore</span>' +
+      '<p>Todavía no hay asistencias externas registradas.</p></div>';
+  }
+  return '<div class="aj-group eq-perfil-grupo">' + lista.map(function(a) {
+    return _eqAjFilaHtml({
+      icono: 'travel_explore', color: 'aj-icon-muted',
+      titulo: _eqEscHtml(_eqFormatearFechaIngreso(a.fecha) || a.fecha),
+      valor: a.lugar ? _eqEscHtml(a.lugar) : 'Sin lugar',
+      derecha: '<button type="button" class="eq-ext-borrar" aria-label="Eliminar asistencia externa" title="Eliminar" onclick="_eqExtAbrirSheetEliminar(\'' + _eqEscId(a.idEvento) + '\')">' +
+        '<span class="material-symbols-outlined">delete</span></button>'
+    });
+  }).join('') + '</div>';
+}
+function _eqExtRefrescarUI(id) {
+  var val = document.getElementById('eq-admin-val-ext-' + id);
+  if (val) val.textContent = _eqExtValorTexto(_eqExtCache[id]);
+  var ctx = _eqSubPerfilCtx;
+  var cont = document.getElementById('eq-ext-lista');
+  if (cont && ctx && ctx.id === id && ctx.tipo === 'externas') cont.innerHTML = _eqExtListaHtml(id);
+}
+function _eqExtCargar(id) {
+  if (!_eqEsVistaAdmin() || !id) return;
+  apiPost({ action: 'adminGetAsistenciasExternas', adminToken: _adminToken, idJugadora: id }, function(res) {
+    if (!res || res.exito === false) { _eqExtError[id] = true; _eqExtRefrescarUI(id); return; }
+    _eqExtError[id] = false;
+    _eqExtCache[id] = res.asistencias || [];
+    _eqExtRefrescarUI(id);
+  }, function() {
+    _eqExtError[id] = true;
+    _eqExtRefrescarUI(id);
+  });
+}
+// Tras registrar/eliminar: lista + contador, y stats del perfil (re-pide
+// `getEquipo()` y re-renderiza el perfil abierto, ver el final de
+// `_eqAplicarFiltrosAhora()`) sin recargar la app.
+function _eqExtTrasCambio(id) {
+  _eqExtCargar(id);
+  _eqAplicarFiltrosAhora();
+}
+
+// Confirmación de borrado (`#eq-sheet-ext-eliminar`, index.html).
+var _eqExtEliminarCtx = null; // { id, idEvento }
+function _eqExtAbrirSheetEliminar(idEvento) {
+  var ctx = _eqSubPerfilCtx;
+  if (!ctx || !_eqEsVistaAdmin()) return;
+  _eqExtEliminarCtx = { id: ctx.id, idEvento: idEvento };
+  var fila = (_eqExtCache[ctx.id] || []).filter(function(a) { return a.idEvento === idEvento; })[0];
+  var texto = document.getElementById('eq-sheet-ext-eliminar-texto');
+  if (texto) {
+    texto.textContent = (fila ? 'Se eliminará la asistencia del ' + (_eqFormatearFechaIngreso(fila.fecha) || fila.fecha) + ' y se descontará su punto de ese mes. ' : 'Se descontará su punto de asistencia de ese mes. ') +
+      'Esta acción no se puede deshacer.';
+  }
+  var btn = document.getElementById('eq-ext-eliminar-btn');
+  if (btn) { btn.disabled = false; btn.textContent = 'Eliminar'; }
+  var ov = document.getElementById('eq-sheet-ext-eliminar-overlay');
+  var sh = document.getElementById('eq-sheet-ext-eliminar');
+  if (!ov || !sh) return;
+  ov.style.display = 'block';
+  sh.style.display = 'block';
+  requestAnimationFrame(function() { requestAnimationFrame(function() { sh.style.transform = 'translateY(0)'; }); });
+  _registrarOverlayAbierto(_eqExtCerrarSheetEliminar);
+}
+function _eqExtCerrarSheetEliminar(porGesto) {
+  if (!porGesto) { history.back(); return; }
+  var ov = document.getElementById('eq-sheet-ext-eliminar-overlay');
+  var sh = document.getElementById('eq-sheet-ext-eliminar');
+  if (sh) sh.style.transform = 'translateY(100%)';
+  setTimeout(function() { if (sh) sh.style.display = 'none'; if (ov) ov.style.display = 'none'; }, 350);
+}
+function _eqExtConfirmarEliminar(btn) {
+  if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible eliminar la asistencia en este momento.', 'error'); return; }
+  var ctx = _eqExtEliminarCtx;
+  if (!ctx) return;
+  btn.disabled = true;
+  btn.textContent = 'Eliminando...';
+  var restaurar = function() { btn.disabled = false; btn.textContent = 'Eliminar'; };
+  apiPost({ action: 'adminEliminarAsistenciaExterna', adminToken: _adminToken, idEvento: ctx.idEvento }, function(res) {
+    if (!res || !res.exito) {
+      restaurar();
+      mostrarToast((res && res.error) || 'No se pudo eliminar la asistencia.', 'error');
+      _eqExtTrasCambio(ctx.id); // "eliminada, pero falló el recálculo" también cambia la lista
+      return;
+    }
+    _eqExtEliminarCtx = null;
+    _eqExtCerrarSheetEliminar();
+    if (_eqExtCache[ctx.id]) {
+      _eqExtCache[ctx.id] = _eqExtCache[ctx.id].filter(function(a) { return a.idEvento !== ctx.idEvento; });
+      _eqExtRefrescarUI(ctx.id);
+    }
+    mostrarToast('Asistencia externa eliminada.', 'ok', true);
+    _eqExtTrasCambio(ctx.id);
+  }, function(e) {
+    restaurar();
+    mostrarToast(e && e.message ? e.message : 'No se pudo eliminar la asistencia.', 'error');
+  });
+}
+
 // Sheet #eq-sheet-asist-externa (index.html) -- mismo patrón open/close que
 // `_evAbrirRectSheet()`/`_evCerrarRectSheet()` (js/eventos.js): overlay +
 // translateY, `_registrarOverlayAbierto()` para que atrás/tap fuera lo
-// cierren vía history.back(). `max` del input = hoy (hora local del
-// dispositivo); el backend igual rechaza fechas futuras (hora Ecuador).
+// cierren vía history.back(). La fecha se elige con el date picker genérico
+// (`abrirPickerMisDatos()`, js/perfil.js) con `maxFecha` = hoy en Ecuador
+// (UTC-5 fijo, mismo criterio que el backend, que igual rechaza futuras).
 var _eqAsistExternaId = null;
-function _eqHoyIso() {
-  var d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+function _eqHoyEcuadorIso() {
+  return new Date(Date.now() - 5 * 3600 * 1000).toISOString().substring(0, 10);
+}
+function _eqAsistExternaSetFecha(iso) {
+  var hidden = document.getElementById('eq-asist-ext-fecha');
+  var disp = document.getElementById('eq-asist-ext-fecha-display');
+  if (hidden) hidden.value = iso || '';
+  if (disp) {
+    disp.textContent = iso ? (_eqFormatearFechaIngreso(iso) || iso) : 'Selecciona una fecha';
+    disp.classList.toggle('fnac-placeholder', !iso);
+  }
+  _eqAsistExternaValidar();
+}
+function _eqAsistExternaAbrirPicker() {
+  var hidden = document.getElementById('eq-asist-ext-fecha');
+  abrirPickerMisDatos({
+    titulo: 'Fecha del entrenamiento',
+    valorInicial: hidden ? hidden.value : '',
+    maxFecha: _eqHoyEcuadorIso(),
+    callback: function(iso) { _eqAsistExternaSetFecha(iso); }
+  });
 }
 function _eqAbrirSheetAsistExterna(id) {
   _eqAsistExternaId = id;
-  var fecha = document.getElementById('eq-asist-ext-fecha');
   var lugar = document.getElementById('eq-asist-ext-lugar');
   var btn = document.getElementById('eq-asist-ext-btn');
-  if (fecha) { fecha.value = ''; fecha.max = _eqHoyIso(); }
   if (lugar) lugar.value = '';
-  if (btn) { btn.disabled = true; btn.textContent = 'Registrar'; }
+  if (btn) btn.textContent = 'Registrar';
+  _eqAsistExternaSetFecha('');
   var ov = document.getElementById('eq-sheet-asist-externa-overlay');
   var sh = document.getElementById('eq-sheet-asist-externa');
   if (!ov || !sh) return;
@@ -3286,24 +3525,23 @@ function _eqCerrarSheetAsistExterna(porGesto) {
 function _eqAsistExternaValidar() {
   var fecha = document.getElementById('eq-asist-ext-fecha');
   var btn = document.getElementById('eq-asist-ext-btn');
-  if (btn) btn.disabled = !(fecha && fecha.value && fecha.value <= _eqHoyIso());
+  var v = fecha ? fecha.value : '';
+  if (btn) btn.disabled = !(/^\d{4}-\d{2}-\d{2}$/.test(v) && v <= _eqHoyEcuadorIso());
 }
 function _eqRegistrarAsistExterna(btn) {
   if (!navigator.onLine) { mostrarToast('Sin conexión. No es posible registrar la asistencia en este momento.', 'error'); return; }
   var fecha = document.getElementById('eq-asist-ext-fecha').value;
   var lugar = document.getElementById('eq-asist-ext-lugar').value.trim().slice(0, 60);
   if (!_eqAsistExternaId || !fecha) return;
+  var id = _eqAsistExternaId;
   btn.disabled = true;
   btn.textContent = 'Registrando...';
   var restaurar = function() { btn.disabled = false; btn.textContent = 'Registrar'; };
-  apiPost({ action: 'adminRegistrarAsistenciaExterna', adminToken: _adminToken, idJugadora: _eqAsistExternaId, fecha: fecha, lugar: lugar }, function(res) {
+  apiPost({ action: 'adminRegistrarAsistenciaExterna', adminToken: _adminToken, idJugadora: id, fecha: fecha, lugar: lugar }, function(res) {
     if (!res || !res.exito) { restaurar(); mostrarToast((res && res.error) || 'No se pudo registrar la asistencia.', 'error'); return; }
     _eqCerrarSheetAsistExterna();
     mostrarToast('Asistencia externa registrada.', 'ok', true);
-    // Re-pide `getEquipo()` y re-renderiza el perfil abierto (ver el final
-    // de `_eqAplicarFiltrosAhora()`) -- el punto nuevo aparece en las
-    // stats sin recargar la app.
-    _eqAplicarFiltrosAhora();
+    _eqExtTrasCambio(id);
   }, function(e) {
     restaurar();
     mostrarToast(e && e.message ? e.message : 'No se pudo registrar la asistencia.', 'error');
@@ -3838,10 +4076,20 @@ function _eqPerfilContenidoHtml(p) {
 function _eqRenderPerfil(p) {
   var nav = document.getElementById('eq-perfil-nav');
   var cont = document.getElementById('eq-perfil-contenido');
-  if (nav) nav.innerHTML = _eqNavHtml(p);
+  // Re-render de la MISMA persona con el nombre ya en la nav (ej. tras
+  // registrar una asistencia externa): el título nace visible, sin repetir
+  // el fade-in. Otra persona siempre arranca oculto.
+  var tituloPrevio = document.getElementById('eq-perfil-nav-titulo');
+  var mantenerTitulo = !!(tituloPrevio && tituloPrevio.classList.contains('visible') && nav && nav.getAttribute('data-id') === String(p.id));
+  _eqNavTituloDesconectar();
+  if (nav) { nav.innerHTML = _eqNavHtml(p); nav.setAttribute('data-id', p.id); }
+  if (mantenerTitulo) document.getElementById('eq-perfil-nav-titulo').classList.add('visible');
   if (cont) cont.innerHTML = _eqPerfilContenidoHtml(p);
   _eqAdminRefrescarSub(p);
   _eqHidratarAvatares();
+  // Solo observa con la pantalla visible; al abrir desde la lista, `ir()`
+  // (js/ui.js) vuelve a llamar a `_eqNavTituloObservar()` al activarla.
+  requestAnimationFrame(_eqNavTituloObservar);
 }
 
 /* ── Flujo de lesión propio (movido desde Mi perfil/Ajustes, js/perfil.js, al

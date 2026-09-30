@@ -306,6 +306,12 @@ function ir(id, desdeHistorial, sinTrampa) {
   if (actual && actual.id === 's-eventos-detalle' && typeof _evDetenerPoll === 'function') {
     _evDetenerPoll();
   }
+  // Observer del nombre en la nav del detalle de Equipo (js/equipo.js,
+  // `_eqNavTituloObservar()`): mismo criterio, se corta al salir por
+  // cualquier camino y se re-crea al entrar (abajo).
+  if (actual && actual.id === 's-equipo-perfil' && id !== 's-equipo-perfil' && typeof _eqNavTituloDesconectar === 'function') {
+    _eqNavTituloDesconectar();
+  }
   // Guardar el scroll de una sección raíz de la nav inferior AL ABANDONARLA
   // (ver "Cambios recientes" -- regla general, no solo para Eventos/detalle:
   // toda sección de APP_BOTTOM_NAV_ITEMS que quiera restaurar su posición al
@@ -325,6 +331,7 @@ function ir(id, desdeHistorial, sinTrampa) {
   }
   document.querySelectorAll('.pantalla').forEach(function(p) { p.classList.remove('activa'); });
   document.getElementById(id).classList.add('activa');
+  if (id === 's-equipo-perfil' && typeof _eqNavTituloObservar === 'function') requestAnimationFrame(_eqNavTituloObservar);
   // Preservación de estado por tab (ver "Cambios recientes" -- regla general
   // de arquitectura, no específica de Eventos/Ajustes): cada vez que `ir()`
   // deja una pantalla activa que pertenece a algún tab de la nav inferior

@@ -368,8 +368,27 @@ function _poblarResumenEquipPerfil() {
 
 // ─── DATE PICKER (Mis Datos — ddp-*) ─────────────────────────────────────────
 var _MESES_DDP = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-var _ddpSt = { vy:1990, vm:0, sy:null, sm:null, sd:null, yearMode:false, monthMode:false };
+var _ddpSt = { vy:1990, vm:0, sy:null, sm:null, sd:null, yearMode:false, monthMode:false, max:null };
 var _ddpTarget = null; // { hiddenId, displayId } o { callback(iso, label) } — configurado en cada apertura
+var _ddpOverflowPrevio = ''; // overflow del body antes de abrir (un bottom sheet abierto debajo lo deja en 'hidden')
+// `target.maxFecha` ('YYYY-MM-DD', opcional): días/meses/años posteriores
+// quedan deshabilitados y el OK nunca acepta una fecha más allá. Sin la
+// opción, `_ddpSt.max` es null y nada cambia para los usos existentes.
+function _ddpExcede(y, m, d) {
+  var mx = _ddpSt.max;
+  if (!mx) return false;
+  if (y !== mx.y) return y > mx.y;
+  if (m !== mx.m) return m > mx.m;
+  return d !== null && d !== undefined && d > mx.d;
+}
+// Tras cambiar año/mes: la vista no queda en un mes posterior al máximo y
+// una selección que pasó a ser futura se descarta.
+function _ddpAjustarAlMax() {
+  var mx = _ddpSt.max;
+  if (!mx) return;
+  if (_ddpExcede(_ddpSt.vy, _ddpSt.vm)) _ddpSt.vm = mx.m;
+  if (_ddpSt.sd && _ddpExcede(_ddpSt.sy, _ddpSt.sm, _ddpSt.sd)) { _ddpSt.sy = null; _ddpSt.sm = null; _ddpSt.sd = null; }
+}
 
 function abrirPickerMisDatos(target) {
   _ddpTarget = target || null;
@@ -388,8 +407,12 @@ function abrirPickerMisDatos(target) {
     var hiddenEl = document.getElementById(hiddenId);
     iso = hiddenEl ? hiddenEl.value : '';
   }
+  var maxP = (_ddpTarget && /^\d{4}-\d{2}-\d{2}$/.test(_ddpTarget.maxFecha || '')) ? _ddpTarget.maxFecha.split('-') : null;
+  _ddpSt.max = maxP ? { y: parseInt(maxP[0]), m: parseInt(maxP[1]) - 1, d: parseInt(maxP[2]) } : null;
   if (iso) { var p=iso.split('-'); if(p.length===3){ _ddpSt.vy=parseInt(p[0]); _ddpSt.vm=parseInt(p[1])-1; _ddpSt.sy=parseInt(p[0]); _ddpSt.sm=parseInt(p[1])-1; _ddpSt.sd=parseInt(p[2]); } }
+  else if (_ddpSt.max && !(_ddpTarget && _ddpTarget.anioDefault)) { _ddpSt.vy=_ddpSt.max.y; _ddpSt.vm=_ddpSt.max.m; _ddpSt.sy=null; _ddpSt.sm=null; _ddpSt.sd=null; }
   else { _ddpSt.vy=(_ddpTarget && _ddpTarget.anioDefault) || 1990; _ddpSt.vm=0; _ddpSt.sy=null; _ddpSt.sm=null; _ddpSt.sd=null; }
+  _ddpAjustarAlMax();
   _ddpSt.yearMode=false; _ddpSt.monthMode=false;
   // Título del header -- '#ddp-header-label' vive hardcodeado en index.html
   // como "Fecha de nacimiento" (único uso histórico); reusos nuevos vía
@@ -400,12 +423,15 @@ function abrirPickerMisDatos(target) {
   if (ddpLbl) ddpLbl.textContent = (_ddpTarget && _ddpTarget.titulo) || 'Fecha de nacimiento';
   _ddpRender();
   document.getElementById('ddp-modal').classList.add('active');
+  _ddpOverflowPrevio = document.body.style.overflow;
   document.body.style.overflow='hidden';
   _registrarOverlayAbierto(_ddpCerrar);
 }
 function _ddpCerrar(porGesto) {
   if (!porGesto) { history.back(); return; }
-  document.getElementById('ddp-modal').classList.remove('active'); document.body.style.overflow='';
+  // Restaura lo que había (no '' fijo): abierto sobre un bottom sheet, el
+  // body tiene que seguir bloqueado al volver a ese sheet.
+  document.getElementById('ddp-modal').classList.remove('active'); document.body.style.overflow=_ddpOverflowPrevio;
 }
 function _ddpRender() {
   var lbl=document.getElementById('ddp-sel-label');
@@ -425,6 +451,7 @@ function _ddpRenderDias() {
     var btn=document.createElement('button');btn.type='button';btn.className='ddp-day';btn.textContent=day;
     if(_ddpSt.sy===vy&&_ddpSt.sm===vm&&_ddpSt.sd===day)btn.classList.add('ddp-sel');
     else if(hoy.getFullYear()===vy&&hoy.getMonth()===vm&&hoy.getDate()===day)btn.classList.add('ddp-today');
+    if(_ddpExcede(vy,vm,day)){btn.disabled=true;el.appendChild(btn);return;}
     btn.onclick=function(){_ddpSt.sy=vy;_ddpSt.sm=vm;_ddpSt.sd=day;_ddpRender();};
     el.appendChild(btn);
   })(d);}
@@ -434,7 +461,8 @@ function _ddpRenderAnios() {
   for(var y=new Date().getFullYear();y>=1920;y--){(function(yr){
     var btn=document.createElement('button');btn.type='button';
     btn.className='ddp-year-btn'+(yr===_ddpSt.vy?' ddp-year-sel':'');btn.textContent=yr;
-    btn.onclick=function(){_ddpSt.vy=yr;_ddpSt.sy=yr;_ddpSt.yearMode=false;_ddpRender();};
+    if(_ddpExcede(yr,0,1)){btn.disabled=true;yg.appendChild(btn);return;}
+    btn.onclick=function(){_ddpSt.vy=yr;_ddpSt.sy=yr;_ddpSt.yearMode=false;_ddpAjustarAlMax();_ddpRender();};
     yg.appendChild(btn);
   })(y);}
   requestAnimationFrame(function(){var s=yg.querySelector('.ddp-year-sel');if(s)s.scrollIntoView({block:'center'});});
@@ -444,7 +472,8 @@ function _ddpRenderMeses() {
   _MESES_DDP.forEach(function(n,idx){
     var btn=document.createElement('button');btn.type='button';
     btn.className='ddp-month-btn'+(idx===_ddpSt.vm?' ddp-month-sel':'');btn.textContent=n;
-    btn.onclick=function(){_ddpSt.vm=idx;_ddpSt.sm=idx;_ddpSt.monthMode=false;_ddpRender();};
+    if(_ddpExcede(_ddpSt.vy,idx,1)){btn.disabled=true;mg.appendChild(btn);return;}
+    btn.onclick=function(){_ddpSt.vm=idx;_ddpSt.sm=idx;_ddpSt.monthMode=false;_ddpAjustarAlMax();_ddpRender();};
     mg.appendChild(btn);
   });
 }
@@ -462,6 +491,7 @@ function _ddpRenderMeses() {
     var ok=document.getElementById('ddp-ok');
     if(ok)ok.onclick=function(){
       if(!_ddpSt.sd)return;
+      if(_ddpExcede(_ddpSt.sy,_ddpSt.sm,_ddpSt.sd))return;
       var iso=_ddpSt.sy+'-'+String(_ddpSt.sm+1).padStart(2,'0')+'-'+String(_ddpSt.sd).padStart(2,'0');
       var label=_ddpSt.sd+' de '+_MESES_DDP[_ddpSt.sm]+' de '+_ddpSt.sy;
       if (_ddpTarget && typeof _ddpTarget.callback === 'function') {

@@ -41,10 +41,10 @@
 <link rel="stylesheet" href="css/home.css">
 <link rel="stylesheet" href="css/reservas.css?v=3f9fd2fc">
 <link rel="stylesheet" href="css/nav.css?v=f9a04f6b">
-<link rel="stylesheet" href="css/eventos.css?v=329d711a">
+<link rel="stylesheet" href="css/eventos.css?v=e0608f43">
 <link rel="stylesheet" href="css/tareas.css">
-<link rel="stylesheet" href="css/equipo.css?v=91b3ce17">
-<link rel="stylesheet" href="css/perfil.css?v=5775c4ef">
+<link rel="stylesheet" href="css/equipo.css?v=5462aa07">
+<link rel="stylesheet" href="css/perfil.css?v=c83f5230">
 <link rel="stylesheet" href="css/admin.css">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" rel="stylesheet">
 <!-- Chrome default de Cropper.js apagado por completo — a propósito acá,
@@ -2808,10 +2808,24 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     </div>
   </div>
 
-  <!-- Asistencia externa (admin, feat nueva, ver MANIFEST.md) -- se abre
-       desde el botón "Registrar asistencia externa" del perfil de detalle
-       (`_eqAsistExternaHtml()`/`_eqAbrirSheetAsistExterna()`, js/equipo.js),
-       guarda vía `adminRegistrarAsistenciaExterna` (Edge Function). -->
+  <!-- Categoría (admin) -- se abre desde la fila "Categoría" del grupo
+       Administración del perfil de detalle (`_eqAbrirSheetCategoria()`,
+       js/equipo.js); cuerpo armado por `_eqCategoriaSheetHtml()`. Guarda al
+       tocar una pill (`_eqCategoriaElegir()` -> `_eqCambiarTier()`). -->
+  <div id="eq-sheet-categoria-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_eqCerrarSheetCategoria()"></div>
+  <div id="eq-sheet-categoria" class="bsheet" style="z-index:9701;">
+    <button type="button" class="sheet-close-btn" aria-label="Cerrar"><span class="material-symbols-outlined">close</span></button>
+    <div class="bsheet-handle"></div>
+    <div class="bsheet-title">Categoría</div>
+    <div class="bsheet-body" id="eq-sheet-categoria-body"></div>
+  </div>
+
+  <!-- Asistencia externa (admin, ver MANIFEST.md) -- se abre desde el botón
+       "+ Registrar asistencia externa" de la subsección "Asistencias
+       externas" del perfil de detalle (`_eqAbrirSheetAsistExterna()`,
+       js/equipo.js), guarda vía `adminRegistrarAsistenciaExterna` (Edge
+       Function). La fecha se elige con el date picker genérico
+       (`abrirPickerMisDatos()`, js/perfil.js) con `maxFecha` = hoy Ecuador. -->
   <div id="eq-sheet-asist-externa-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_eqCerrarSheetAsistExterna()"></div>
   <div id="eq-sheet-asist-externa" class="bsheet" style="z-index:9701;">
     <button type="button" class="sheet-close-btn" aria-label="Cerrar"><span class="material-symbols-outlined">close</span></button>
@@ -2820,13 +2834,33 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="bsheet-body">
       <div class="ev-lugar-campo">
         <p class="ev-lugar-campo-label">Fecha</p>
-        <input type="date" id="eq-asist-ext-fecha" class="ev-lugar-input" required oninput="_eqAsistExternaValidar()">
+        <button type="button" class="fnac-trigger-btn" id="eq-asist-ext-fecha-btn" onclick="_eqAsistExternaAbrirPicker()">
+          <span class="fnac-placeholder" id="eq-asist-ext-fecha-display">Selecciona una fecha</span>
+          <span class="material-symbols-outlined" style="color:var(--brand);font-size:1.1rem;">calendar_month</span>
+        </button>
+        <input type="hidden" id="eq-asist-ext-fecha">
       </div>
       <div class="ev-lugar-campo">
         <p class="ev-lugar-campo-label">¿Dónde entrenó? <span style="font-weight:500;color:var(--muted);">(opcional)</span></p>
         <input type="text" id="eq-asist-ext-lugar" class="ev-lugar-input" maxlength="60" placeholder="Ej: Bogotá Brawlers" autocomplete="off">
       </div>
       <button type="button" class="btn btn-primary" id="eq-asist-ext-btn" style="margin-top:20px;" onclick="_eqRegistrarAsistExterna(this)" disabled>Registrar</button>
+    </div>
+  </div>
+
+  <!-- "¿Eliminar asistencia externa?" (admin) -- confirmación desde el ícono
+       de borrar de cada fila de la subsección "Asistencias externas"
+       (`_eqExtAbrirSheetEliminar()`/`_eqExtConfirmarEliminar()`,
+       js/equipo.js), borra vía `adminEliminarAsistenciaExterna`. -->
+  <div id="eq-sheet-ext-eliminar-overlay" class="bsheet-overlay" style="z-index:9700;" onclick="_eqExtCerrarSheetEliminar()"></div>
+  <div id="eq-sheet-ext-eliminar" class="bsheet" style="z-index:9701;">
+    <button type="button" class="sheet-close-btn" aria-label="Cerrar"><span class="material-symbols-outlined">close</span></button>
+    <div class="bsheet-handle"></div>
+    <div class="bsheet-title" style="color:var(--danger);">¿Eliminar asistencia externa?</div>
+    <div class="bsheet-body">
+      <p style="font-size:0.85rem;color:var(--muted);line-height:1.5;margin:0 0 20px;" id="eq-sheet-ext-eliminar-texto">Se descontará el punto de asistencia de ese mes. Esta acción no se puede deshacer.</p>
+      <button type="button" class="btn btn-danger" id="eq-ext-eliminar-btn" onclick="_eqExtConfirmarEliminar(this)" style="margin-bottom:10px;">Eliminar</button>
+      <button type="button" class="btn btn-outline" onclick="_eqExtCerrarSheetEliminar()">Cancelar</button>
     </div>
   </div>
 
@@ -2883,7 +2917,7 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
     <div class="eq-desglose-panel-inner" id="eq-desglose-lista"></div>
   </div>
 
-  <!-- Subsección del perfil de detalle (Estadísticas / Estado / Categoría)
+  <!-- Subsección del perfil de detalle (Estadísticas / Estado / Asistencias externas)
        -- mismo `.aj-sub` + slide "shared axis X" que las subsecciones de
        Ajustes; abierta/cerrada por `_eqAbrirSubPerfil()`/
        `_eqCerrarSubPerfil()` (js/equipo.js), cuerpo armado por
@@ -3554,14 +3588,14 @@ style="display:flex;align-items:center;justify-content:center;padding:11px 18px;
 <script src="shared/axis-transicion.js"></script>
 <script src="shared/mapa-interactivo.js?v=fafc3b3a"></script>
 <script src="js/api.js?v=8e63a98b"></script>
-<script src="js/ui.js?v=d4d187b1"></script>
+<script src="js/ui.js?v=068448dc"></script>
 <script src="js/eventos.js?v=8594bf18"></script>
 <script src="js/offline.js?v=35b214a2"></script>
 <script src="js/tareas.js?v=f1afb381"></script>
-<script src="js/equipo.js?v=1c98abec"></script>
+<script src="js/equipo.js?v=7fceda14"></script>
 <script src="js/home.js?v=fd114576"></script>
 <script src="js/reservas.js?v=2b4519d4"></script>
-<script src="js/perfil.js?v=06ae9798"></script>
+<script src="js/perfil.js?v=f093f5b6"></script>
 <script src="js/admin.js?v=6d98bcbe"></script>
 <script src="js/pwa.js"></script>
 <script src="js/auth.js?v=d18bc0da"></script>

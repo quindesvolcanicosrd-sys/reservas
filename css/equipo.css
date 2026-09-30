@@ -608,10 +608,24 @@
    para que esta nav quede pixel-consistente con el resto, no solo con el
    mismo número de padding declarado. */
 .eq-perfil-nav-row {
+  position: relative;
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   padding: 22px 0px; background: var(--bg); flex-shrink: 0;
   width: 100%; box-sizing: border-box; min-height: 56px;
 }
+/* Nombre en la nav al scrollear (`_eqNavTituloObservar()`, js/equipo.js):
+   mismo `.app-nav-title` que el resto de las navs (absoluto, no empuja los
+   botones), centrado y con el mismo espacio reservado a ambos lados --
+   `--eq-nav-lado` (inline, `_eqNavHtml()`) = botones del lado más ancho
+   (1 atrás / 1-2 acciones); el gap entre botones es el de `.app-nav-actions`. */
+.eq-perfil-nav-titulo {
+  text-align: center;
+  padding-left: calc(var(--nav-btn-size) * var(--eq-nav-lado, 1) + 10px * (var(--eq-nav-lado, 1) - 1) + 12px);
+  padding-right: calc(var(--nav-btn-size) * var(--eq-nav-lado, 1) + 10px * (var(--eq-nav-lado, 1) - 1) + 12px);
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+.eq-perfil-nav-titulo.visible { opacity: 1; }
 /* Botón WhatsApp -- verde de marca, no el naranja de énfasis del resto de
    .app-nav-icon-btn (ver "Cambios recientes" en colors.css: --wa-brand no
    deriva del color de énfasis, es un color de marca fijo). */
@@ -852,10 +866,10 @@
 a.eq-info-fila:active { background: var(--brand-lightest); }
 
 /* Control de categoría (tier), admin-only -- segmented control
-   [Quindes | Auto | Mirlxs] de la subsección Categoría del bloque
-   Administración (Cambio 52, `_eqSubPerfilHtml()`/`_eqCambiarTier()`,
-   js/equipo.js). `--muted` para textos apagados (no existe `--text-muted`
-   en css/colors.css). */
+   [Quindes | Auto | Mirlxs] del bottom sheet de Categoría del bloque
+   Administración (`#eq-sheet-categoria`, `_eqCategoriaSheetHtml()`/
+   `_eqCategoriaElegir()`, js/equipo.js). `--muted` para textos apagados (no
+   existe `--text-muted` en css/colors.css). */
 /* Pills de opción del bloque Administración (Categoría y Estado) -- clase
    base ÚNICA (pedido explícito 2026-09-28: mismas medidas en todas partes):
    mismo alto, padding, font-size y radio. `.eq-tier-btn`/`.eq-estado-btn`
@@ -874,6 +888,33 @@ a.eq-info-fila:active { background: var(--brand-lightest); }
 .eq-tier-control { display: flex; gap: 6px; margin-bottom: 8px; }
 .eq-tier-btn { flex: 1; }
 .eq-tier-desc { font-size: 0.75rem; color: var(--muted); line-height: 1.5; }
+/* Mientras guarda: sin más toques. Al confirmar el backend, check en la
+   pill elegida un instante antes de que el sheet se cierre solo. */
+.eq-tier-control.guardando { pointer-events: none; }
+.eq-tier-btn-check { display: none; font-size: 1rem; }
+.eq-tier-btn.confirmado .eq-tier-btn-check { display: inline-block; animation: eqCheckPop 0.25s var(--ease-sheet, ease) both; }
+@keyframes eqCheckPop { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+#eq-sheet-categoria-body .eq-tier-desc { margin: 4px 0 8px; }
+
+/* Subsección "Asistencias externas" (`_eqSubPerfilHtml(p, 'externas')`):
+   botón de registrar arriba, lista `.aj-row` (fecha + lugar) con borrar a
+   la derecha, y estado vacío/cargando. */
+.eq-ext-registrar-btn { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 16px; }
+.eq-ext-registrar-btn .material-symbols-outlined { font-size: 1.2rem; }
+.eq-ext-borrar {
+  flex-shrink: 0; width: 36px; height: 36px; border: none; border-radius: 50%;
+  background: transparent; color: var(--muted); display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background 0.2s, color 0.2s; -webkit-tap-highlight-color: transparent;
+}
+.eq-ext-borrar .material-symbols-outlined { font-size: 1.25rem; }
+.eq-ext-borrar:active { background: var(--danger-bg); color: var(--danger); }
+@media (hover: hover) { .eq-ext-borrar:hover { background: var(--danger-bg); color: var(--danger); } }
+.eq-ext-vacio {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 32px 16px; text-align: center; color: var(--muted); font-size: 0.85rem; line-height: 1.5;
+}
+.eq-ext-vacio p { margin: 0; }
+.eq-ext-vacio .material-symbols-outlined { font-size: 2rem; }
 
 .eq-admin-hint { font-size: 0.72rem; color: var(--muted); line-height: 1.45; margin-top: 8px; }
 

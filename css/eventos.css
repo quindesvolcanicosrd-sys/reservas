@@ -437,6 +437,7 @@
   padding: 12px;
   margin-bottom: 16px;
   background: var(--warning-bg);
+  border: 1px solid var(--warning-bdr);
   border-radius: 12px;
 }
 .ev-sinrollcall-banner-icono .material-symbols-outlined {

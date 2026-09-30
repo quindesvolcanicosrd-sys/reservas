@@ -21,7 +21,9 @@
 
 /* ─── DATE PICKER (Mis Datos — ddp-*) ─────────────────────────────────── */
 #ddp-modal {
-  position: fixed; inset: 0; z-index: 9700; display: flex; align-items: center;
+  /* 9800 (antes 9700): se abre también sobre bottom sheets (`.bsheet`, 9701),
+     ej. la fecha de "Asistencia externa" en Equipo -- tiene que quedar encima. */
+  position: fixed; inset: 0; z-index: 9800; display: flex; align-items: center;
   justify-content: center; background: var(--overlay-light); backdrop-filter: blur(4px);
   padding: 24px; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
 }
@@ -56,6 +58,10 @@
 .ddp-month-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; padding: 8px 16px 16px; }
 .ddp-month-btn { padding: 14px 6px; border: none; border-radius: 12px; background: transparent; color: var(--neutral-dark); font-size: 14px; cursor: pointer; text-align: center; transition: background 0.15s; font-family: inherit; -webkit-tap-highlight-color: transparent; }
 .ddp-month-btn.ddp-month-sel { background: var(--brand); color: var(--white); font-weight: 700; }
+/* Fuera de rango (`maxFecha` de abrirPickerMisDatos(), js/perfil.js): solo
+   atenuado con opacity para que valga igual en claro y oscuro. */
+.ddp-day:disabled, .ddp-year-btn:disabled, .ddp-month-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.ddp-day:disabled:hover { background: transparent; }
 
 @media (prefers-color-scheme: dark) {
   #ddp-modal .ddp-card { background: var(--dk-overlay-97) !important; }
